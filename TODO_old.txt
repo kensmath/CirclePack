@@ -1,0 +1,884 @@
+These are things to work on for release of CirclePack java version ???:
+
+* When variable is defined, old value needs to be deleted first: e.g., old slider.
+
+* 'gen_mark -c b' reports on faces instead of vertices, (though the result may be a vertex)
+
+* Also, need to update "Variables" panel.
+
+* At Oberwolfach, someone described color vertex shader behavior and in particular
+  a weight scheme due to Shephard. Something about wi_bar = 1/norm(p-si)^alpha where
+  alpha is in [1, infty]. Then wi=wi_bar/sum(wj_bar). Recall, I want to attach color
+  r, g, b to each vert so it predominates as you approach that vert.
+
+* add flags to 'screenbump' to set "Dir" and "Base Name" elements for jpg
+  nameing, location.
+  
+* 'SetBuilderParse': Bracket builder notation should allow tiles as objects --- this 
+  means changing the current boolean (circles vs faces) to a bit encoded integer.
+
+* Tiling: When writing tiling with augmented edges, check that edges still seem valid, e.g.
+  compare to nodeCount and throw out all augVerts in case of any failure.
+  
+* Tiling: When reading, see if the augVerts are already there; may figure out way to use them. 
+
+* For "extended" edge specification should have 'es v u w' options, which means
+  to go from v to u and then extend "straight" (i.e., pass through symmmetrically
+  on interior, stop for verts on boundary or odd degree) until reaching w,
+  within usual number of steps.
+  
+* When swapping indices, have to go through all the tilings if tiledata exists;
+  careful, only the original tiles themselves are available outside the 
+  'ConformalTiling' pack extender.
+
+* Need way to adjust numbering in screen images.
+
+* 'create tri_group 6 5 5 2' works differently than 'create tri_group 6 2 5 5',
+  the latter being the correct outcome. Why the difference? Should we always
+  order the a b c by size? 
+
+* Future possibilities for migration: GraphML is widely accepted XML format for 
+  graphs. Netbeans has nice GUI builder. "dcel" structure for cell decompositions;
+  "doubly connected edge list" structure is efficient. "cgal" algorithms for 
+  line arrangements.
+  
+* Need way to save the dual cell decomposition to a file as a tiling.
+
+* Language option: #(....) applies computation to stuff inside, eg. r:=#(sin(Pi)).
+  call function routines to parse the stuff in the parentheses; in fact, 
+  variable substitution should apply since that's done in advance, as
+  with r:=#(sin(_theta)). Move to jep3.0 from singularsys.com, maybe ditch
+  Jim Rolf's stuff.
+  
+* in "adjoin" command call, saving of overlaps is done before calling
+  'adjoin' routine. Why not put that inside the adjoin routine itself?
+  
+* Need 'ScriptLibrary' repository.
+
+* hover "AboutImages" in the browser are handled with a separate
+  thread, and that leads to them appearing too late. Is there a
+  way for the tread to check if mouse is still in browser window?
+  
+* Should be able to specify default www page on startup: could put 
+  all your links, scripts, etc. to keep track of experimental
+  themes.
+  
+* Should www browser have an edit option?
+
+* On startup CPFlipper.jnlp doesn't show the tools on the left
+  of the active canvas.
+  
+* Create routines to represent circles in the Lorentz space form.
+  E.g., so we can apply Mobius transformations to them. 
+  
+* In the 'create' command, those methods that generate based on
+  tilings should generate the 'tile' data information (though I
+  don't recall right now what that is: see 'ConformalTiling'.)
+    
+* Regularize layouts in tabs of "Save" frame, get rid of Jigloo stuff.
+
+* Info Panel issues:
+  * 'mark' does not show up in Info panel for vertices.
+  * 'Choose edge' isn't showing
+  * 'desired edgelength' isn't shown.
+  * many unedited spots should still allow the cursor to show for scanning
+  * ?vert doesn't do anything.
+  * Should have "side pair" section showing corners, colors, pairings, etc.
+
+* Popup of images in www frame needs another check to make sure mouse
+  is still in the window. See 'PreviewImageHyperlinkListener'; need to
+  pass the window, perhaps, and check that before viewing. Problem: it
+  is running in another thread.
+
+* Need "browse" button for finding Tag image in script header editing.
+
+* what happened to the "scale_rad" command? is it part of some other 
+  command? 
+
+* may want to use new 'zlist' 'Zlink' lists of points in place of old
+  methods for paths.
+
+* catch up/down arrow to increase/decrease radii.
+
+* need new code to read FLOWERS: for tiling in 'readPack'. The petals are
+  vertex indices (not tile indices), so after reading in, have to process
+  to build the flowers of the vertices before calling 'barycentric' to
+  create the packing.
+  
+* script menus are 'boxmenu's, set to edit or show; created in, e.g.,
+'cmdActionPopup' in 'CmdSBox.java'.
+
+* 'radius_col_ramp' needs to be fixed to take account of horocycles (??)
+  
+* Need a "refine" command with various options: hex, bary, quad, pent,
+  twisted pent. Also, perhaps a "tile_refine", where a 'tile' is
+  the flower of some vertex; tiles would have to be indicated by
+  some marking. 
+  
+* CirclePack should have a "hidden" packing, a place to stash something
+  you want to save --- e.g. to have a circle you can draw on one of the
+  canvasses.
+  
+* need 'set_grid' option that uses current path and/or path in Function window.
+  e.g., can use this in ErfRefine.xmd.
+  
+* When script is in + mode (commands displayed) and you open a
+  section, its commands are not open.
+  
+* Why does 'gen_mark' message talk about the last "face" instead 
+  of vertex?
+  
+* strange effect when error interrupted script read: the title
+  appears (perhaps more than once) on top of the script stack,
+  even after another script is laoded or a new script requested.
+  Something needs to be cleared out.
+  
+* can I watch for a double click on a Pair screen and use that to make
+  it active? I've watched for double clicks in the small screens. (There
+  I should add that double click to the pack name area, as well.)
+  
+* In script writing, add an original date in addition to a last update date.
+
+* could sometimes use hidden initialization of variables when a script is
+  read in. That way the variable can be reset and the '*' start icon can
+  be invoked without moving it back to the original.
+  
+* 'print' should have a "save to file" option; perhaps default to that if
+  there is no printer.
+  
+* Need better feedback when 'cookie' fails: e.g., alpha too close.
+  
+* When new file, AboutImage, or data is added to the CPdata section, the
+  indication that the file is modified should be updated.
+
+* When removing data file, need to redraw File section
+
+* When saving a file to script, be sure to say that script needs saving.
+
+* 'max_pack' a closed genus 2 surface should do the right thing (namely, just 'repack').
+
+* see "// TODO: Alex, how do I "; I want to save directory as 'scriptDirectory'
+  if it is a file (versus the net) and not 'new_script'
+   
+* Need new 'rmsg' for "running messages", messages issued by methods
+  as they run: make it green in the history.
+     
+* When loading from chooser, should set directory so save goes back to
+  same directory.
+    
+* In list specifications, use '~' for logical "not". E.g., disp -c ~m,
+  to draw the circles which are not marked.
+  
+* Need to be able to read general locally planar graphs that are not
+  triangulations. Should read flowers in as usual, then identify faces
+  that are not triangles and add bary centers.
+
+* New problem (related, perhaps to others involving menus): In bringing
+  up menu on thumbnail in screen frame, often accidentally print an
+  earlier image. Seems that some mouse click or move has been waiting for
+  completion and the user accidentally triggers it. 
+ 
+* Not painting border of choosebox green when loading script (successfully) from web.
+
+* Change formatting of examples in CmdDetails.html: table format isn't 
+  working.
+
+* Experiment Sandbox: For intensive experiments, I should have a separate
+  sandbox where things run and don't get in the way of the rest of CirclePack.
+
+* Clever technique we might use with variable frame: hover over a number,
+  get a slider to come up, adjust it.
+  
+* Might have a "Map" feature that shows graphs (based on circle packings
+  of course) directing users through various scripts. It could be saved
+  in a parent script, would pop up when needed, and clicking on a topic-labelled
+  circle, would bring up that script.
+  
+* mnemonic is misbehaving on icons when editing the script --- latest letter
+  occurs rather than the appropriate one.
+
+* Is path given when packing is loaded from "Load" button? Or if read fails.
+
+* Fix the history, so the issued command comes first. What's the problem?
+  timing issues? Work on this thread, which may be causing lockup in Windows.
+  
+* Font issues:
+  * "Commands:" font gets cut off (sometimes). Do we have to put some fonts in jar?
+  * Titles of scripts are too large.
+  * tool exponent character is poor looking.
+
+* Need "temp" vlist, elist, flist that lives only during a given
+  sequence of commands.
+  
+* When a script read failed, seemed to get locked out of trying
+  another read.
+
+* Message window isn't updated when CirclePack first starts. Should have
+  one message at beginning if 'HeavyC' is not available. 
+
+* Check meaning, consistency, dependability of 'Face.rwbFlag'. Want to 
+  use it in non-simply connected cases to set actual vertex locations. 
+
+* Try to position windows: see 'getRect', called from 'setViewRect'.
+  Currently only called when positioning next command
+
+* Frank Martin suggest command line argument when starting CirclePack
+  that prevents drawing -- e.g., doesn't open the canvasses. Need a
+  command line version. Creating it would help separate GUI from core
+  functions.
+  
+* Need better control of directories: e.g., when writing .q files it 
+  should change directory when dialog is used. 
+  
+* 'delaunay' (and other commands) with no arguments should default to 
+  bring up a dialog to load a file.
+  
+* need command to go with '-f', '-s', and '-a' when writing to a socket
+  (or external program, such as matlab).
+  
+* Write specified list with '-l' or '-L' command: default to vertices,
+  faces, and edges, but, e.g., '-le' would just do 'elist' while
+  '-Le' would do 'Elist'.
+  
+* Would like to put ';' in 'output' files, cut semi-colons are caught by
+  my parser as command separation symbol. Maybe can do presearch for
+  'output', then hold it aside somehow and keep any ';'s that appear.
+  
+* When reading data files, should always search for and ignore # comment lines.
+
+* When data file is removed in editing a script, need to repopulate cpdata 
+  section to remove its icon.
+  
+* Build a cmd feedback 'packet', replacing what now goes to 'history',
+  so it will be more flexible.
+  
+* Build 'socket' command with flags for server/cleint (replace 'start_socket').
+  Need to give it 'host' and 'port' in client case. Should set up protocol so
+  every socket is given a name and they are put in a list. 
+  
+* Need to close, monitor sockets, open socket for outgoing, etc.
+
+* Should deprecate "add_edge" and make it "split_edge".
+
+* Should have a 'ping' command to show CirclePack is running, e.g. on a socket.
+
+* I used the GUI builder 'Jigloo' at one time: the only places it
+  seems to remain are: OutPanel.java and WritePackPanel.java. It
+  probably should be removed from these as well.
+
+* Consider allowing circles of radius 0 (in all geometries): what
+  are the implications? may need to modify layout procedures, e.g., to
+  avoid degenerate face, may need to prevent contiguous zero radii,
+  may have to adjust "aim", set negative?? etc. Is setting to small
+  positive OKERR, preferrable?
+
+* Now that I see 'split_vert' in action, it could subsume or augment
+  some other calls: add_bary, split_edge, add_cir, add_face.
+  Might be more efficient to call it --- less code to maintain.
+  Need system to save overlaps, if they exist.
+  
+* "merge_verts" is not done. Also, seems to be problem with 'split_vert' on bdry.
+
+* In 'split_vert' (whenever we add a new vert), have to check that we
+  allocate overlaps (if overlapstatus). Check that all things are set:
+  'plot_flag', bdryflag, etc. 
+
+* Need NSpole option which maps one circle to the outside of unit
+  disc so the others can be projected to hyperbolic geometry.
+  ?? could we geom_to_e and then scale?
+
+* No message when reading a packing in.
+
+* Drag/Drop packing file in data section into a packing.
+
+* Really need a "movie" making option; cross-platform is the issue.
+  On unix, use 'convert -delay 50 -loop 0 cpShot*.jpg crane_emulation2.gif'
+
+* Writing to script via the "save" dialog box should not use a chooser;
+  put in a text area.
+ 
+* 64-bit library problems: here's what libHeavyC seems to want: Also need
+  the 64-bit dll's.
+
+ markov:~/workspace/CirclePack/JavaCode/cdeps/libs> ldd libHeavyC_lib-x86_64.so 
+        linux-vdso.so.1 =>  (0x00007fffb91ff000)
+        libqhull.so => not found
+        libumfpack.so => not found
+        libamd.so => not found
+        libCPIbase.so => not found
+        libstdc++.so.6 => /usr/lib64/libstdc++.so.6 (0x0000000000267000)
+        libm.so.6 => /lib64/libm.so.6 (0x0000000000567000)
+        libgcc_s.so.1 => /lib64/libgcc_s.so.1 (0x00000000007ea000)
+        libc.so.6 => /lib64/libc.so.6 (0x00000000009f8000)
+        /lib64/ld-linux-x86-64.so.2 (0x0000003e54600000)
+ 
+
+* Frames like "Screen" should come up closer to button so they aren't
+  covered if you stray into main window.
+  
+* finish method 'split_vert' in PackData, which was only started; also make
+  it reversible, to merge verts.
+
+* norm_scale doesn't normalize the stored redchain center into.
+
+* I don't think we can display redchain on sphere, though data may be available
+  in redchain (when converted, that info is converted as well).
+
+* Problem with 'PackExtender's being attached to packings: can't
+  easily swap the packing. Need to consider alternatives. 
+    * Maybe just save the pack extenders to the new replacement packing ---
+  	  that could screw some things up.
+  	* Maybe the Extender should be attached to CPScreen instead?
+  	* Need a listener to know when packextender is out of sync?
+
+* computing "area" was giving an error in DateTree updating.
+
+* In "Info" frame, add angles to face data; improve layout for edge data
+
+* Open/close the last icon in line box, and its closed (compact) version
+  doesn't go back into a new line box --- some parent isn't being redislayed.
+  
+* loading user tools, failed to find icon, didn't use default.
+
+* in LineSBox of command icons, the embellishments are getting cut off (on Ayres desktop).
+
+* need at least a limited "undo" command: perhaps save (for one execution round) small
+packings in backup, light up a "undo" button if appropriate.
+
+* F2 does not, as it claims, lock the floating windows.
+
+* ?? Move 'VertScriptBar' to right side of MainFrame??
+
+* for tooltext with file icons, add type: e.g., packing, raw, etc.
+
+* does 'puncture' only do one at a time?
+
+* 'appending' data to script files is a mess. Need some standard structure,
+  since one must find the file, remove it from the script, append, add back
+  to script --- this after iterating through writing --- all with error
+  checks, e.g., default to writing file.
+
+* In BrooksQuad, H doesn't seem to change with the 'toggle'
+
+* fix hoverH.png
+
+* Fix pairedframe: a little smaller on set_displ -m, repaint after change.
+
+* Report canvas sizes after 'set_displ'
+
+* extend number of hex-extended edges allowed.
+
+* after disp -g, the color seems to be left in 'blue' mode; try
+  displaying a grid before and after disp -g.
+  
+* Fix description of 'set_grid' to say how it handles hyp case.
+
+* Get file to load with www button, so I can use it and link the scripts.
+
+* Build a print command for scripts: should convert to html and
+  print command section expanded and list the data included (unexpanded). 
+  
+* Want Owl Icon (large) for when jar is on the desktop.
+
+* Need to prevent script from moving over pairwindows whenever icon
+  is clicked.
+
+* Can I actually put in higher resolution icons and scale them for a
+  better look?
+  
+* In drag/drop, how does one change the temporary icon used for hovering
+  on drop target?
+  
+* Create toolbar "scroll" class, with arrows at end to scroll through
+  longer listings of tools.
+  
+* Strange problem: canvas drawing popup gets flaky. When you use it
+  near the edge, it's okay.  
+    
+* Have always needed "PackListener" feature, so code can be notified
+  of relevant changed in the packing combinatorics, etc. So, for
+  example, if an extender is started but the a flip is executed, then
+  maybe some data becomes invalid. Should catch this and recompute.
+
+* fix icon naming, searching. Need search strategy, then store only
+  name itself, no path. Icon names screwed up in Sass scripts: have
+  "script/<name>" instead of just "<name>".
+  
+* Might have "<JPG>" and "<PNG>" (or <IMAGE>) data type and allow 
+  images to be displayed on separate screen or on canvas (?).
+  Might also be able to designate one as a thumbnail that will
+  appear in directories, web pages, etc.  
+
+* Would be nice to have a "conditional" statement for scripts: if
+  condition doesn't hold, don't do the rest of the line, or set some
+  variable.
+  
+* Orick's hyp max routine should be changed to (upon request)
+  the current euclidean radii as starting radii. Then one can
+  hope to refine a partially computed packing.
+  
+* Pack extenders seem to get lost or disconnected when 'swapPackData'
+is called. (e.g. see necklace stuff)
+
+* Consider spanning trees as standard layout method. Would like to 
+  refine them to get better "spiral" layout sequence.
+  
+* make graph, dual graph, tree code more general.
+
+* disp -dff colors dual faces, but also boundary regions out to boundary 
+vertices. Why?
+
+* disp -De or -Df or -Dv would (for non-simply connected) call 'buildDualGraph'
+  and then recompute data as drawing progressed.
+  
+* The script history of files should not have tmp names: when loading
+  from the web, that URL is what should be saved. see 'loadNamedScript'
+  and 'getScript': will have to pass new argument giving the url name.
+  
+* Flesh out the "Display Commands" help file, make a test script
+
+* make graph, dual graph, tree code more general.
+
+* add new '-dt' and '-dw' dual 'trinket' and 'triangle' commands
+  to the 'post' command.
+
+* Should have "sorting" options: return linked list of [v,f,e]
+  sorted by criterion [.] (e.g., degree, radius, area, etc.)
+  in in/decreasing order.  
+
+* Cleanse should clear Vlist, Flist, Elist, ... others? ---
+
+* To try to improve display speed, how about drawing directly to 
+  an appropriate canvas? Problems: I draw to packings not currently
+  displayed; I put transient axes on the image; I need to copy the
+  image to pair canvases, thumbnails, jpg's, etc. I also have to
+  figure out when it's necessary to catch the paintcomponent calls
+  so I don't repeat unnecessarily. 
+  
+* In RationalMap, want to improve slitting process to avoid
+  combinatorial geodesic that come too close. Need to mark
+  'puffy' region around the segments as they are cut so that
+  new geodesics segments will stay away.
+
+* Should we be able to compute injectivity radius for surfaces 
+  using the side pairings? It will be the minimal distance between
+  points identified by a covering group, but that may be hard.
+  
+* Test 'PackData.cir_closest' and perhaps make cir_search call it.
+
+* Need many more drag/drop prescriptions:
+  * drag tool to different location.
+  * drop command tool or text into location in script.
+  * drag tool from "scratch" script into script and vice verse.
+  * drag box to position in script.
+
+* I don't seem to have my display flags (color, thickness) set up for
+  all calls. e.g., 'layout_facelist'. Should check every call so it
+  can include these options.
+ 
+* CMD_REORG marks places that command thread reorganization has to be
+  adjusted -- when I figure out the thread/timing issues.
+   * GUI and house cleaning actions --- careful of changing active pack, 
+        script, extenders. Commands already being processed should have
+        their packData fixed.
+   * active pack may need to be frozen when calling background processes
+   * Background --- long term (e.g., calling C code), separate thread,
+         may need separate progress indicator (with 'p'?)
+   * 'for' and 'delay' loops --- want spinning owl, but be careful of
+         self-reference. 
+   * All this processing seems to be causing delays. Need lightweight
+     method to look for "for"/"FOR", etc.      
+   * routine actions, spinning owl, but block until done 
+   
+* should be able to color code for qc in harmonic examples.
+
+* Fix 'in thread' error messages to pass along more information
+
+* on Windows, search for script started in 'temp'. Didn't I set the
+home directory? or does it need a 'scripts' subdirectory?
+
+* Missing as of 7/2010:
+  * resizing main canvas
+  * lousy "Cursor" button functionality
+  * poor "Cursor" button placement
+  * why do scripts load poorly from chooser/combobox 
+  * Script window scrolling: not positioned after edits
+  * drag/drop "tool" icons
+  * New Mobius panels
+  * Info panels needs: list display/edit, more info on faces 
+    (e.g., which circle it locates), more info on circles 
+    (e.g., mark)
+  * Commands return values to set variables
+  * Better reporting of messages/errors. (Some messages are
+    not being created, others are lost or not added to 
+    command history.)
+
+* in 'CommandStrParser', is 'memory_flag' of any use now?
+
+* good syntax: X:=?vert M, sets variable X to the value of the largest
+index. Can reestablish old "?.." style info commands for printing
+(default) or setting variables.
+
+* Need to fix C++ code calls to avoid, eg., some global variables,
+as in 'triangulation', by sending data back in a more standard way.
+
+* in runCP.jar, 'post' is sending images to the "temp" directory set
+up for libraries. Seems that working directory is set to temp.
+
+* Seems that the -oi -oa options for 'post' are not operational.
+  What gives? I vaguely recall something about inability to open file at
+  specified location in Java.
+    
+* Have to test 'build_j_function' routine.
+
+* Barrett ideas:
+  (1) Suggestion by Crane for branch parameter: branch circle broken
+      into two (or more) of different sizes.
+  (2) For trees, find "middle" (unique vert or edge) so two halves
+      have same diameter. Triangulate to get (perhaps) nice distribution
+      of ends.
+  (3) How to start jar with script: don't I have a jarbomb style?
+  (4) More combinatorial options (Crane. Not sure what he meant)
+  (5) Use Brooks parameter (a la Brock) to modify qc dilatation.
+      For each edge, could set parameter to modify that quad
+      interstice: t=0 or t=infty should be one edge or edge flip.
+  (6) Saw some crashes on apple. Maybe due to history writing snag.
+  (7) Start a user group or wiki page.
+  (8) include in Sage.
+  
+* Need way to tell command to await return from Library calls: e.g., when
+creating a random packing, processing must await return. Maybe a flag check?
+
+* map canvasses not repainting with changes (sometimes)
+
+* need more colors in color -c d (degree coding)
+
+* Problems in 'WeldManager'. One common problem is copying new pack data
+into one of pack[i].packData. Need to set hes, set name for thumbnail
+titlebar.
+
+* Extender icons in small canvasses added multiple times.
+
+* Fix axes locations for different screen sizes.
+
+* Allow *.png, *.gif output?
+
+* Regarding drawing ops: 'imageContextReal' is set with creation of 'CPScreen's,
+and points to 'packImage' (a 'BufferedImage').
+Where are paint operations?
+  + 'MainFrame.reDisplay'
+  + 'CPScreen.paintComponent'
+  + 'ActiveWrapper.paintComponent'
+  + 'PairWrapper.paintComponent'
+Where is 'packImage' referred to?
+  + 'CPScreen.getThumbnailImage'
+  + 'ImagePanel.storeCPImage'
+  + 'PostPanel.canvas2JPG' call
+look for key word 'GRAPHICS' to see the major changes
+
+* When screensize too small, need to adjust where windows pop open --
+  sometimes they're totally out of view.
+
+* In browser, should have special icon for *.xmd and *.p, *.q files.
+
+* Need something that keeps drawing operations from getting interrupted,
+  some command (Java has something) that watches until it's complete.
+
+* Put option for using reverse Beltrami coefficient --- invert the
+  affine map.
+
+* Turn "list" info file into html.
+
+* Should be able to provide "function" via a file hook, so better
+  descriptions can be supplied.
+
+* when saving script, name (if new) should be added to 
+  load window and address history. (Also, may want to
+  catch /tmp/new_script.xmd and NOT add to history.)
+
+* Need a generic "histogram" call that pops up histogram window
+  for generic read data and can be iconified somewhere.
+
+* Add popup, non interactive, canvas for things like "harmonic"
+  function (result of h+gbar). Should be able to screen dump it.
+
+* Why doesn't "extender" icon get updated on small canvas label?
+
+* I no longer have any way to read/manipulate lists of
+  verts/edges/faces. Need "list" command?? add to "info" panel?
+
+* reorganize packing "data"
+
+* Info panel doesn't show 'mark' or 'plotflag', edge desired length,
+  Also, geometry is not in "info" panel.
+
+* Windows problem: directories/names can have spaces. May need to
+  require '-f' flag for all {filename} instances in commands. (Will
+  be hard to find all and change syntax.)
+
+* 'plotFlag' can be inconsistent; e.g., can affect 'cir_search'
+  results. When can 'plotFlag' fail to be set? Is this mechanism
+  needed any longer?
+
+* loading new script removes its cursors from list, but doesn't
+  return to default cursor.
+
+* Tailor scrolling of message, scratch, history windows. If
+  slider is not at bottom (i.e., to watch some particular line),
+  then should stay; otherwise, should shift to show new line.
+
+* continuing problems with max_packing on the sphere: 
+  * 'puncture' choice is conflicted. Sometimes, antipodal points are
+    not good choice.
+  * Orick's C code punctures face instead of circle; need better options
+    for choice of face.
+    
+* Need to integrate C packages (with Orick's consent); get rid of some printf's
+  used for debugging.    	
+
+* Building MyTools, should add option for custom cursor. (Should it
+  be just on active pack? or on pairMap packs, too?)
+
+* read a spherical packing in and the first image doesn't have
+  the unit sphere drawn.
+
+* finish putting in 'textSizeSlider' stuff.
+
+* Auxiliary frames get too easily hidden when mouse enters 
+  active frame; can they go on top?
+
+* When using dialog to save a packing, it doesn't disappear
+  after the save.
+
+* Need tailored "package" approach to get CirclePack going in
+  select modes:
+	* want options for what menubar items should appear:
+		script? output? loading? printing?
+
+* occasional error in dropping "next" icon. Hm??
+
+* could allow drag/drop to copy one packing into another.	
+
+* icon choosers are getting several copies of the same icon.	
+
+* "Paginate" has not been implemented.
+
+* The "exec" command hasn't been implemented yet.
+
+* does "extender" actually implement F1-F10 keys, as Help says?
+
+* For various "cursor" uses, need more variety of icons in list.
+
+* Have to put the color/thickness options in "post" as in "disp".
+
+* repaints are still a problem: e.g., after 'enclose 0 v',
+  the edge is drawn, but doesn't show up.
+  
+* in 'PackExtender', need simpler way for user to specify
+  lists of vertices, edges, or faces, in the commands whose
+  parsing they write themselves.
+
+* Redo the tool Edit window to look more like the script 
+  CmdSBox edit window.
+
+* Fix help files on the new color codes 'compactDispFlag'
+options.
+
+* Get better mouse behavior on popup menus: namely, second
+hit should get rid of menu.
+
+* need temporary 'vlist', 'elist', 'flist' that only last
+as long as the current string of commands. Want to use, but
+not to destroy either local or global lists. Have I done
+this already?
+
+* More informative error messages: e.g., 'set_fill_opacity' range
+problems.
+
+* make "Messages" button glow or pulse when a message arrives?
+
+* graphics idea:
+  - log4j  logging tool
+  - may want to dispose of graphics2D objects
+  - use component.createImage to get buffer for imaging.
+  - java.awt.Area call to do intersections.
+  
+* find option for writing the sectors inside of faces. In AffineStruct perhaps?
+
+* If .packrc not found, pop up message on where's it's looking and
+  how/where user can create file.
+   
+* Add "tangency point" to edge data, add |z| to vertex data
+  in packinfo tab, add "mark" to vertex data
+  
+* When opening Mobius tool frame, need to select appropriate tab:
+  SO(3), disc, or general?
+  
+* Note: CPScreen.mobius is not currently use.
+
+* call to 'set_mobius' should put the result in the "general" mobius
+  vector (where is that?) and put icon out in "mobius" window.
+  
+* complete 'postPoly' 'postColorPoly' etc routines for other geometries.
+
+* 'postPath' calls not ready for spherical geometry.
+
+* redo 'output' tab: add scrollbar'd text area showing what you're
+  file looks like (and letting you add manually).
+  Might add functionality: e.g. "abs(VZ)" would automatically
+  be parsed to give absolute values of the centers.
+  
+* 'GlobalListPanel' isn't working to update text from CP;
+  other functions probably not working either.
+
+* Get "standalone" package, e.g., so Elias can have matlab call
+for repacking.
+
+* "random_tri..". Fix help file and parser terminology.
+
+* need new filefinder paradigm: .circlepack directory??
+
+* Finish 'PathInterpolator' for array-defined paths.
+
+* Clicking mouse once in small canvas of active pack should make
+the active window come to the top if hidden or iconified (and
+not in map-window mode).
+  (window manager seems to get in the way)
+
+* Need mechanism for setting and processing variable names. E.g., 
+set "X" to 'nodeCount' and then do 'disp -c X' to display it.
+Should use '_X' type notation to indicate that something is a variable
+in, eg., 'NodeLink' parsing. Several other things will eventually
+be needed:
+	+ classes for parsing real/complex number fields
+	+ class for maintaining, displaying, setting variables
+	+ local/global dichotomy
+
+* Add split in "screendumps" panel so thumbnails of postscript
+images can be shown. (Note: can't always use screendump; e.g.,
+if you want to put parts of different packings in the same image.
+But need conversion software.)
+
+* might incorporate 'Imagemagic' calls for processing images
+(eg making animations). Windows version is a problem
+
+* Implement map "connection" behavior; add to "Map" command. 
+
+* Fix standardize 'footprint' computations that determine how many
+division to use in drawing arcs.
+
+* Make variable 'pack[]' into 'PackData' instead of 'CPScreen'; i.e., 
+flip roles of PackData and CPScreen, making the former more central.
+** Related: split out code to make libraries less interconnected, 
+easier to use in separate packages.
+
+* "Beep" is not working right; never in linux, always in windows.
+
+* 'About' should show my book jacket and information
+
+* need "center" option for 'set_screen' (euclidean case)
+
+* formulae needed: 
+	* incircle data for spherical triangles
+	* mutually orthogonal circle to triple (all geometries)
+	
+* want to set 'screenshot' basename in JTextField from the 
+script (like 'set_disp_text')
+
+* For 'PackExtenders' (like Brooks, RiemHilbert, etc.) might not only
+have an icon attached to the canvas, but have an optional command
+line.
+
+* ??? flow layout not working for screen shot tab.
+
+* pack names not appearing correctly in small screens
+
+* Should have "self-registering" pack extenders --- don't have to
+change anything, just have new class. User would give command like
+'extender {name abbrev, blah..blah}', giving abbreviation and 
+(somehow) the class name, then commands '|abbrev| ...' would be
+fed to the extender
+
+* Switch to Jim Rolf's parser stuff; use it for parameterized paths 
+as well --- maybe other uses?? derivatives 
+
+* Color ramp should be handled with new 'Color' creation routine;
+use non-linear eye response to set up scaling method.
+
+* Need a PackExtender for laying out equilateral faces via
+'words', that is, by [0,1],[1,infty],[infty,0] edges encoded
+in words. Need way to color code edges, for example, and ways
+to follow two different commbinatorics as one time, a la the
+function pairs idea Sass is working on. (Is 'WordWalker' a start?)
+
+* Find how to execute, eg., popup ghostview (see Jeremy email, 9/07)
+
+* Have -R {s..} option in FaceLink for "sides" of red chain: e.g. -R a
+  or -R 2 5  or -Rm 1 4 (-Rm for mated sides, so this is for the mates
+  to 1 and 4.). Also an option for NodeLink? EdgeLink?
+
+* 'write' command should end in "[-a -as -s] <filename> " structure;
+get rid of 'A' append option. Also, get rid of 'f' option for plot
+flags and use 'f' for faces (listed as triples of vertices.
+
+* Fill colors are too bright in postscript: should wash them out to look 
+more like the live canvas (even though there's no transparency)
+
+* Finish reading all readpack data types, all "infile_" read types.
+
+* Fix post -oa, -oi so we can open files for new data: trouble with RandomAccessFile.
+
+* Should have a method for doing Marshall's zipper code within CirclePack.
+Maybe a "packExtender"
+
+* check repack: seems that we're 'reaping radii' perhaps more often than
+needed; do we need to store data there, or is it still in place when we
+restart the computation?
+
+* "Screen" settings (opacity, etc) aren't being reset on reads and
+  on changes such as 'setFillOpacity' in CPScreen.
+
+* In 'string_tokenizer', there should be a 'complexvalue' type
+and routines for identifying and reading an input string as a
+complex (in various possible forms).
+
+* Need better list manipulations operations: union (without
+repetition) of lists, intersections of lists, complement of
+one list in another, prune list of repeats, reorder list, etc.
+
+* Might have a new feature: as reader goes through script, 
+options are presented in a popup window (and generally default
+is defined). E.g., a window pops up and says "draw a closed
+curve with the path icon -- or accept default". 
+
+* Icon lists should be automatically generated (use all *.png's
+or all??) so user can add icons.
+
+* Screenshots should show thumbnail of postscript saves.
+
+* fix tool editor: no 'Mnemonic', drop icon, if named add '[.]' to
+tool tip.
+
+* When cmdSBox is in edit mode, repaints can wipe out temporary
+entries (like name); need temporary storage to prevent this.
+
+* in windows (some?) menu items disappear when greyed out.
+
+* need to catch arithmetic errors, especially in Mobius maps and
+illegal radii.
+
+* Arrange to draw 'polygon's on sphere sphere (but always keep
+data as complex pts; infinity just has to be a very large value.)
+
+* redo "tree" packing data storage format (what is standard? start index 0?)
+
+* Arrange consistent name updating for packings: when read in, when
+copied, override file info, etc. (e.g., see 'setPackName' in C code)
+
+* put in automatic timed save of script for backup.
+
+* put elements in 'Sections' by D&D'ing icon.
+
+* get "selected" feature (i.e., on active window menuitems) to work.
+
+* Improve formatting of script output: how to put in tabs, linebreaks?

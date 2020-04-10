@@ -1,0 +1,8 @@
+This is a new TODO list started with version 3.0, promulgated when I moved
+to GitHub early in 2020.
+
+See TODO_old for earlier TODO's (most still awaiting attention).
+
+Many of these tasks and others are labeled as "TODO" in comments
+in the Java code itself.
+

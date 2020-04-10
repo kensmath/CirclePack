@@ -1,0 +1,74 @@
+Alphabetic list of commands to CPack (the C++ backend library):
+(See 'Detailed Cmds' for the details)
+
+I. Basic commands:
+
+act {p}			add_cir {v..}		add_gen {n d}
+adjoin {p q v w n}	adjust {f} {v..}
+alpha {v}		cd {..}
+center_point {x y}	center_vert {v}		cookie [v]
+copy {q}		count [vef] {..}
+disp [options]		enclose {n v..}		fix
+Fix			focus {vc}		gamma {v}
+geom_to_[seh]		layout
+mark {v}		max_pack		post [options]
+pwd			quit			read {file}
+repack			rm_cir {v}		rm_edge {v w}
+rotate {a}		scale [t]		script [file]
+seed [n]		set_aim {a v..}		set_over {a v w..}
+set_rad {r v..}		set_sphere_view {a b c} write {file}
+!!			?{*}			[{script cmd}]
+
+II. More advanced (obscure?) commands:
+
+add_bary {f}		add_edge {v w..}	add_ideal {v}
+add_lay {v w [-d] [d]}		adjacency [-t] {file}	alt_rect {v0..v3}
+aspect {v}		bary_refine		blend
+brooks {}		cir_invert {v w}	
+color			create_parent 		delay {t}
+diagnostics		double			draw_order
+embed {}		elist			encircle
+erf {p1 p2 n}		eucl_write {file}	
+flist			fexec {file}		f_index {f j..}
+flat_hex {v}		flip {v w..}		f_next {f g..}
+gen_cut {v} {n}		gen_islands {v}		gen_mark
+get_data 		hex_refine 		h_dist {z w}
+h_g_bar
+infile_cmds {name}	infile_path {name}	infile_read {name}
+j_ftn {}		locate [fc] {x y}	Map p q data
+map {v}
+mend {}			Mobius[_inv] {v..}	molify_centers {flag}
+msg {msg}		msg_remote {pid} {msg}	nan {}
+NSpole {N S E [t]}	node_active {v}		norm_scale
+output [..] {file}      outlist	Paginate {filename}
+pair_mob {n..}		path_construct {v..}	puncture {v}
+put_data 		ratio_ftn {p q}		read_color [] {file}
+read_path {file}	reorient		rect_orient {v w}
+rect_ratio {v..w}	red_from_elist
+rm_quad {v w}		scale_aims x {v..}
+scale_rad q x {v..}	set_brush {k}
+set_center {x y v}	set_custom {name}	set_cycle {n}
+set_disp_flags c f	set_draw_speed {x}      set_err {x}
+set_[ev]list		set_eucl_scale {x}	set_fill_pattern
+set_function_text {text}	set_iter {n}	
+set_Mobius
+set_pix_box {..}	set_plot_flags 		
+set_poison -v {v} {v..} 	set_ps {name}
+set_post_size {k}	set_random {v..}	set_ratio p0 p1
+set_screen
+set_sph_pts {n}		set_toler {x}		show_red
+skeleton		slit {v..}		special{n}
+sq_fit {p}		sq_grid_layer {v,w}	sq_grid_overlaps
+surf_write		swap {v w}	test_repack
+trans {}		unflip {v w ..}		unweld
+vert_map_off		vert_order		vlist
+weld p q {} 		weld_map p q {}		win_save
+write_light(_raw)	write_path {file}	zip
+
+
+	Copyright (C) 1992--2006. Notice: The program "CirclePack" 
+	is copyrighted by Ken Stephenson. It may be used and 
+	distributed under the terms and conditions of the 
+	"GNU General Public License".
+
+

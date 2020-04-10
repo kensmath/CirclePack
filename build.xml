@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project default="all" name="Create Runnable Jar for Project CirclePack">
+
+    <target name="all" depends="clean,compile,cpjar,jar,source"/>
+
+    <target name="clean">
+        <delete dir="build"/>
+    </target> 
+
+    <target name="compile">
+        <mkdir dir="build"/>
+        <javac target="1.8" source="1.8" srcdir="src" destdir="build" includeantruntime="true">
+        	<compilerarg value="-Xlint:unchecked"/>
+            <classpath>
+                <fileset dir="jars">
+                    <include name="*.jar"/>
+                </fileset>
+            </classpath>
+        </javac>
+    </target>
+
+	
+    <target name="cpjar">
+    	<!-- AF: Added dir=".." to instruct Java to run from the parent directory.
+    	This is necessary because Info2HTML has hard coded file references. -->
+    	<java fork="true" failonerror="no" dir=".." classname="infoProcessing.Info2HTML">
+    		<!-- AF: Put build directory and each .jar file in jars directory on class path. -->
+    		<classpath>
+    			<pathelement location="build"/>
+    			<fileset dir="jars">
+    				<include name="*.jar"/>
+    			</fileset>
+    		</classpath>
+    	</java>
+
+        <jar destfile="${basedir}/cpcore.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Main-Class" value="allMains.SplashMain"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset  dir="${basedir}/build" excludes="runCirclePack/**" />
+            <fileset  dir="${basedir}/cdeps/" includes="**/*.dll" /> 
+            <fileset  dir="${basedir}/cdeps/" includes="**/*.so"/>
+            <fileset  dir="${basedir}/cdeps/" includes="**/*.jnilib"/>
+        	<fileset  dir="${basedir}/cdeps/" includes="**/*.dylib"/>
+        	<fileset  dir="${basedir}/src/" includes="Resources/**/*" />
+            <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/commons-codec-1.5.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/Complex.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/Convert2.0.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/DJEP2.4.0Minimal.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/FunctionChoiceBox.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/FunctionField.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/FunctionParser.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/xercesImpl.jar"/>
+	    <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/PackCircle.jar"/>
+	    <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/la4j-0.4.9.jar"/>
+        </jar>
+    </target>
+
+    <target name="source">
+        <java fork="true" failonerror="yes" classname="circlePack.Version" classpath="build" outputproperty="cpversion" />
+
+    	<jar destfile="${basedir}/cpcore-source-${cpversion}.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset  dir="${basedir}" includes="src/**/* jars/*"/>
+        </jar>
+    </target>
+
+    <target name="jar">
+        <java fork="true" failonerror="yes" classname="circlePack.Version" classpath="build" outputproperty="cpversion" />
+
+        <jar destfile="${basedir}/CirclePack-${cpversion}.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Main-Class" value="runCirclePack.RunCirclePack"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+	    <fileset dir="${basedir}/build" includes="runCirclePack/**" />
+            <fileset dir="${basedir}/"      includes="cpcore.jar" />
+        </jar> 
+    </target>
+
+    <target name="run">
+        <java jar="runCP.jar" fork="true" />
+    </target>
+
+</project>

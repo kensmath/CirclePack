@@ -1,0 +1,167 @@
+act {p}
+add_bary {f..}
+add_cir {v..}
+add_edge {v w..}
+add_face_triple {f..}
+add_gen {n d}
+add_ideal {v}
+add_lay {v w} [d] {d}
+adjacency [t] {file}
+adjoin {p q v w n}
+adjust {f} {v..}
+alpha {v}
+alt_rect {v0..v3}
+aspect {v..w}
+bary_refine
+blend
+cd {..}
+center_point {x y}
+center_vert {v}
+cir_aspect {v}
+cir_invert {v w}
+color
+cookie [v]
+copy {q}
+count [vef] {..}
+create_parent
+delaunay {name}
+diagnostics
+disp [options]
+double
+draw_order
+elist
+embed {}
+empty
+encircle
+enclose {n v..}
+erf {p1 p2 n}
+eucl_write {file}
+exit
+extender {name}
+f_index {f j..}
+f_next {f g..}
+fexec {file}
+fix
+Fix
+flat_hex {v}
+flip {v w..}
+flist
+focus {vc}
+gamma {v}
+gen_cut {v} {n}
+gen_islands {v}
+gen_mark
+geom_to_[seh]
+get_data
+h_dist {z w}
+h_g_bar
+hex_refine
+hex_slide {v..}
+hh_path {e}
+infile_cmds {name}
+infile_path {name}
+infile_read {name}
+j_ftn {}
+layout
+locate [fc] {x y}
+mark {v}
+Map p q data
+map {v}
+max_pack
+mend {}
+migrate {v} {w}
+Mobius[_inv] {v..}
+molify_centers {flag}
+msg {msg}
+msg_remote {pid}
+{msg}
+nan {}
+node_active {v}
+norm_scale
+NSpole {N S E [t]}
+output [..] {file}
+outlist
+Paginate {filename}
+pair_mob {n..}
+path_construct {v..}
+post [options]
+puncture {v}
+put_data
+pwd
+quit
+random_triangle
+ratio_ftn {p q}
+read {file}
+read_color [] {file}
+read_path {file}
+rect_orient {v w}
+red_from_elist
+reorient
+repack
+rm_cir {v}
+rm_edge {v w}
+rm_quad {v w}
+RH_read_curves {file}
+RH_draw_curves
+RH_color
+rotate {a}
+scale_aims x {v..}
+scale_rad q x {v..}
+scale [t]
+script [file]
+seed [n]
+set_aim {a v..}
+set_brush {k}
+set_center {x y v}
+set_custom {name}
+set_cycle {n}
+set_disp_flags c f
+set_disp_str flags
+set_[ev]list
+set_fill_opacity {t}
+set_function_text {text}
+set_iter {n}
+set_Mobius
+set_over {a v w..}
+set_pix_box {..}
+set_plot_flags
+set_poison [-v {v}] {v..}
+set_ps {name}
+set_post_size {k}
+set_rad {r v..}
+set_random {v..}
+set_ratio p0 p1
+set_screen
+set_sph_opacity {t}
+set_sph_pts {n}
+set_sphere_view {a b c}
+set_toler {x}
+set_xyz
+show_red
+skeleton
+slit {v..}
+special{n}
+sq_fit {p}
+sq_grid_layer {v,w}
+sq_grid_overlaps
+surf_write
+swap {v w}
+test_repack
+trans {}
+unflip {v w ..}
+unweld
+vert_map_off
+vert_order
+vlist
+weld p q {}
+weld_map p q {}
+win_save
+write_light(_raw)
+write_path {file}
+write {file}
+zip
+!!
+?{*}
+#XY
+[{script cmd}]
+

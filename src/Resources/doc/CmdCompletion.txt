@@ -1,0 +1,267 @@
+act {p} 
+add_bary {f..} 
+add_cir {v..} 
+add_edge {v1 w2  v2 w2 ..} 
+add_face_triple {f..} 
+add_gen {n} [{d}] [-dt] [-b {w..}] 
+add_ideal [-fs] {v..} 
+add_layer [-dt] {n} v w 
+adjacency [-t] {file} 
+adjoin {p q v w n} [or: {p q v w (v,u)}] 
+adjust_rad {f} {v..} 
+alpha {v} 
+alt_rect {v0..v3} 
+aspect {a b c d} 
+bary_refine 
+beta {v} 
+BeurlingFlow ('BF' PackExtender) 
+blend -q{qnum} v n 
+break 
+brooks [OPTIONS] {VH...} ('BQ' pack extension) 
+cd {..} 
+center_point {x y} 
+center_vert {v} 
+chgP {n} 
+chgS {n} 
+cir_aspect {v} 
+cir_invert [-u] {v} {w} 
+Cleanse 
+cleanse 
+close [window list] 
+color [options] 
+cookie [option] {v..} 
+copy {p} 
+count -[vef] {..} 
+create {type} [options] 
+DCEL [options] 
+debug [drsex] 
+delaunay -[cfgs] 
+Disp [options ...] (see 'disp') 
+disp [options ... ] (also 'Disp') 
+double {b..} 
+doyle_annulus p q n 
+doyle_point f 
+elist [options] 
+elist_to_path 
+embed -q{q} a b A B 
+encircle {v..} 
+enclose -[t] n {v..} 
+erf_ftn {p1 p2 n} 
+eucl_write {file} 
+exec [-n {moniker}] {command} 
+exit 
+extender  -[xr] {type} 
+face_err x {f..} 
+fexec [-s] {filename} 
+f_index {f j ..} 
+f_next {f g ..} 
+f_red {f i..} 
+f_rnext {f g..} 
+fix [options] 
+Fix 
+flat_hex {v..} 
+flip {v w..} 
+flip_priority [options] 
+flist [options] 
+focus [options] {v} 
+for (...) -d {x} {cmd;cmd;..} 
+gamma {v} 
+frack {v..} 
+gen_cut {v} {n} 
+gen_islands {v..} 
+gen_mark [option] {v} 
+geom_to_[ehs] [option] 
+get_data -q{q} [-t] {flag} {v..} 
+get_xyz [options] 
+GOpack [-v {v..}] -[ghqrsx] -[b{f}] -[c{n}] 
+h_dist z.re z.re w.re w.im 
+h_g_bar 
+hex_refine 
+hex_slide {v..} 
+hh_path [options] {e} 
+holonomy_trace {f..} [[-fas] {filename}] 
+IF .. THEN .. (ELSE ..) 
+infile_cmds {name} 
+infile_path [-a] {name} 
+infile_read {name} 
+j_ftn {n0 n1 maxsize} 
+layout -[ac[cdfs]defFKlrstT] 
+legal [options] [{e..}] 
+load_pack -[f] 
+locate -[cf] {x y} 
+Map [ox] [p q [options]] 
+map [options] {v..} 
+mark [options] 
+match -q{q} v w {V W} 
+max_pack [-r{v}] [k] 
+mend {data} 
+migrate v w 
+Mobius [s] {v..} (or Mobius_inv [s] {v..}) 
+mode_change {toolname} 
+molify_centers [option] {v..} 
+msg {text} 
+msg_remote {pid or moniker} {msg} 
+nan {filename} 
+NSpole [{N S {E} [t]} (or -a N {E} [t])] 
+norm_scale [options] 
+open [window list] 
+outlist 
+output [format] [-af] {filename} 
+overlay -q{q} {options} 
+pair_mob [-1] {label} 
+path_construct [options] {v1 v ..} 
+path_Mobius 
+path_to_elist 
+pave {v} 
+pdata 
+perron -[udUD] -[noC] {n} 
+polypack -[o] {w ..} 
+post [options] 
+pre_cookie 
+project [options] 
+puncture [{v}] [-f {f}] 
+put_data -q{q} [-t] {flag} {v..} 
+pwd 
+qc_dil -q{q} {f..} 
+quality -n -[ae {v..}] -[o {f..}] -[vr {e..}] 
+quit 
+random_pack [options] N 
+random_triangulation [options] 
+read {filename} 
+Read {filename} 
+readLite {filename} 
+ReadLite {filename} 
+read_CT [-q{p}] {filename} 
+Read_CT [-q{p}] {filename} 
+read_color [options] {filename} 
+read_path -[as] {filename} 
+Read_path {filename} 
+reorient 
+red_from_elist 
+repack [options] [k] 
+ring {v..} 
+rld 
+rm_bary {v..} 
+rm_cir {v..} [-x x y] 
+rm_edge [option] {v w..} 
+rm_quad {v w} 
+rotate {a} 
+scale [t] 
+scale_aims x {v..} 
+scale_rad -q{p} x {v..} 
+sch_layout -[c{flags}] -[f{flags}] [{f1 g1 ...}] 
+sch_report -[[ce]{flags}] {..} 
+screendump [-m -d -b -n] 
+script [filename] 
+seed [-q] [n] 
+set_accur {x} 
+set_active {v} 
+set_aim [{a v..} -[cdx%] 
+set_blist [fi] {z..}, [f b1 b2] 
+set_Blist {v..} 
+set_brush {k} 
+set_center [{x y}] -[mx] {v..} 
+set_custom {name} 
+set_cycle {n} 
+set_dir {dir_name} 
+set_disp_flags {flags} 
+set_display [-m] 
+set_dump_format [format] 
+set_elist {e..} 
+set_Elist {e..} 
+set_fill_opacity {t} 
+set_flist {f..} 
+set_Flist {f..} 
+set_function_text {text} 
+set_glist [options] {f1 f2 ..} 
+set_Glist [a] {f1 g1 f2 g2 ..} 
+set_grid -[crg] -[n] 
+set_invdist [option] {{x} (v w)..} 
+set_Mobius {a.re a.im b.re b.im c.re c.im d.re d.im flip} 
+set_over [option] {{x} (v w)..} 
+set_path_text {text} 
+set_path [{text}] 
+set_pix_box lx ly rx ry 
+set_plot_flags {flag} {v..} 
+set_poison [-e {e..}] {v..} 
+set_post_size {k} 
+set_ps_viewer {cmd} 
+set_ps {name} 
+set_rad [options] [{r v..}] 
+set_ratio p0 p1 
+set_random [options] {v..} 
+set_schwarzian -[cr{x}] {v w ...}] 
+set_screen [options] 
+set_sphere_view [options] {a b c} (abbrev: set_sv) 
+set_sph_opacity {t} 
+set_sph_pts {n} 
+set_tlist [options] {t1 t2 ..} 
+set_Tlist [options] {t1 t2 ..} 
+set_toler {x} 
+set_var {name} {str} 
+set_vertexMap -[a] {e ..} 
+set_vlist {v..} 
+set_Vlist {v..} 
+set_xyz 
+show_vlist (or 'show_flist' or 'show_elist') 
+show_red 
+skeleton {v..} 
+slit {v..} 
+spiral [-f] {a b} 
+split_edge v1 w1  v2 w2 .. 
+split_flower v w u 
+socketServe n 
+sq_fit 
+sq_grid_overlaps 
+surf_write [option] {f..} 
+svg [-c{} {v..}] -f {filename.html} 
+swap [-cma] {v w} 
+test_repack [options] 
+torus_t 
+timer -[sx] 
+transition {filename} 
+tree_pack [options] {filename} 
+triGroup [-d {a b }] [-g {n}] 
+unflip {v w ..} 
+unweld -q{p} [-o] {e..} 
+vert_map_off 
+vert_order 
+vlist [options] 
+weld {p} {q} {v} {w} [options] 
+weld_map {p} {q} {v} {w} {filename} [-gm] 
+write -[AcdegirRzZavloftmMy] {filename} 
+Write -[AcgirzavloftTmMy] {filename} 
+writeLite -[rzib] -[AG] -v {v..} -[fs] {file} 
+write_custom -[option] -[fa] {file} 
+write_carrier [option] {file} 
+writeL(_raw) {filename} 
+WriteL(_raw) {filename} 
+write_path {file} 
+Write_path {file} 
+write_select_radii {file} {v..} 
+Write_select_radii {file} {v..} 
+write_select_centers {file} {v..} 
+Write_select_centers {file} {v..} 
+write_tiling -s 
+Write_tiling -s 
+write_vert_list {filename} {v..} 
+Write_vert_list {filename} {v..} 
+zip v n 
+:= [[SLIDER..]'] {x} 
+!! 
+?aim {v} 
+?anglesum {v} 
+?antip {v...} 
+?cent {v} 
+?count {..} 
+?energy -[chlm] 
+?flower {v} 
+?f(z) {x [y]} 
+?gam(t) {t} 
+?invdist {v w} 
+?schwarz {v w} 
+?mark -[vft] {.} 
+?rad {v} 
+#XY 
+[{script cmd}] 
+{..cmd..} 

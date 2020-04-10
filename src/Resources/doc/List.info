@@ -1,0 +1,234 @@
+Lists:
+CirclePack has an extensive set of list features for handling linked 
+lists of circle (i.e., vertices), edges, and faces. Some lists are 
+created explicitly by the user, either in direct commands or by using 
+the "List" tab of the SupportPanel area of the interface, while others 
+are created temporarily in interpreting commands. In these help 
+files, command descriptions indicate user specifiable lists by {v..}, 
+{e..}, and {f..}. The syntax is described below. 
+
+Each packing in CirclePack has its own 'vlist', 'elist', and 'flist'. 
+In addition, there is a generic 'Vlist', 'Elist', and 'Flist' which 
+can be used with any packing (though each is processed before use 
+to ensure the data is legal for the packing to which it's being applied).
+
+Explicit list functions are 'set_vlist', 'set_elist', 'set_flist' 
+(attached to specific packings) and 'set_Vlist', 'set_Elist', 
+'set_Flist' (global).
+  
+List creation syntax:
+	a			'all' the objects (vertices, faces, or edges)
+	A			the packing 'alpha' vertex
+	A {f}		(faces only) alternating with given face (e.g., grey/white)
+ 	b			'boundary' objects
+ 	c {x y} {v..}	for vertices, closest in list to z=x+iy,
+ 				(takes first in list in case of ties)
+ 	d {..}		for edges, selects based on end and neighbor vert
+ 				degrees: E.g. d 5 G6 L4 ? gives edges having one end 
+ 				degree 5, other, degree greater than 6, one common 
+ 				neighbor degree less than 4, and other neighbor 
+ 				(if it exists) of any degree. If one of last two
+	 			entries is not '?', then only interior edges can
+ 				be selected. 
+ 	B			list with one vertex from each boundary component
+	D r v {n}  	all circles within distance r of 
+	D r z {x y}	center of circle n (or of point (x,y)) 
+				(this 'D' structure must be last in the cmd string)
+	e {e..}		when specifying circles, this returns those along
+				hex-extended edges. For instance, if e0 is the edge
+				e0 = <v1, v2> and the complex is then changed with 
+				up to 16 calls to 'hex_refine', then edge e0 acquires 
+				new vertices between v1 and v2. The 'e' flag will 
+				return vertices from v1 to v2, including all (if any) 
+				intervening hex vertices.
+	e {v w ..}	when creating an edge list, this converts the given 
+				vertex list to edges to extent possible. For instance,
+				'e {1 5 12 7}' will return any of the edges <1,5>, 
+				<5,12>, and	<12 7> that exist.
+	ee {v w ..}	same as above, only admits axis-extended edges		
+	eh {v w}	hex-extrapolated loop: v, w are interior hex (6-degree)
+		    	vertices. This returns a closed path of vertices along
+		    	a hex axis of interior vertices which starts and ends 
+		    	with v, passing through w, if one exists. (must 
+		    	be last entries in list)
+	elist (Elist)	will return edges from the current list
+	f {i ..}	when creating a circle list, this returns successive 
+				closed, oriented chains of circles defining the specified 
+				faces i.
+				when creating an edge list, this returns the closed, 
+				oriented edge-path around faces i.
+	flist (Flist)	will return faces from the current list
+	F (Fs)		faces only; list in drawing order. 's' indicates to
+				add stragglers (faces not needed in drawing order)
+	g			for circles, returns those inside current 'xy-path'.
+	g {v w}		for edges, returns combinatorial geodesic edgepath from v to w. 
+	G {(x,y)..}	(for vertices, edges or faces) returns the 
+				chain approximating the given polygonal path. Geometry for
+				path is that of the packing associated with the call.
+				If no points are given, default to current global closed 
+				path, if it exists.
+	Gf <f> {(x,y)..}	Same as above, but for faces and tries to start
+				with face 'f'.
+	Gv <v> {(x,y)..}	For edges or vertices, try starting at vertex 'v' 
+	h v w n		vertices only; hex_walk: starting with edge {vw},
+				walk as though counterclockwise around hexagon 
+				having sides of length n. List may truncate, eg,
+				if it encounters boundary. (Associated with
+				Berger's vector.) 
+	i			'interior' objects (as opposed to 'boundary')
+	Iv {list}, Ie {list}, If {list}
+				"Incident" to: lists all vertices, edges, or faces, 
+				respectively, which are incident to the objects 
+				(verts, edges, or faces as apporpriate) in the 
+				specified 'list'. (e.g., disp -cf If 10 draws the
+				filled circles incident to face 10, hence three
+				circles.)
+	Ivw {v..}	edges only; edges having both ends among given vertices
+	Ig {x}{v..} Incident (within distance x (must have decimal)) to 
+				current global path
+	It {t..}	Incident to (ie., corner of) a tile
+	j			faces only; faces which are negatively oriented
+				(ie. clockwise)
+	m			'marked' objects (e.g. 'mark', 'gen_mark' operations)
+	mc			'unmarked' objects
+	mp{p}		'marked' objects in pack p
+	mcp{p}		'unmarked' objects in pack p
+	n {+-}		for bdry circles, '+-' for next or previous bdry circle
+	n j {v..}	for circles, j indexed petal
+	nan			'nan': not-a-number (i.e., bad) data -- circle center/rad
+				or face vertices invalid (e.g. not-a-number).
+	o			for edge list, those edges having non-default 'overlap'
+				(or 'inversive distance') assigned
+	P			circles that are 'poison' or part of 'poison' edge;
+				or edges with both ends 'poison'
+	q {x} 		vert (or edge) with visual error worse than x (x defaults to .01)
+	M			the maximal circle index for the packing
+	r {..}		one random object (circle, face, or edge) from specified
+				list. 
+	Ra			for faces, returns the 'red' chain of faces that 
+				define the layout of the packing 
+				for circles, it returns those on the outside (right side)
+				of the red chain
+	R {j..}		for faces, returns the 'side' of 'red' chain faces given
+				by side index
+				for circles, same, but returns circles on the outside of
+				given side segments 			
+	v			'active' circle (every pack has an active circle; it is 
+				designated by clicking l-mouse on the circle in the 
+				window)
+	vlist (Vlist)	will return vertices from the current list
+	V {w..}		if there is a 'vertexMap', then find all v's in pairs
+				<v,w> in 'vertexMap' for the given w's.
+	w			for faces, this returns the 'white' faces, as designated in
+				the layout process.
+	w {v ..}	for circles, this attempts to return 'inside' of the 
+				combinatoric region defined by the given vertex list;
+				e.g. inside of simple closed positively	oriented chain of 
+				vertices.
+	W {v..} 	if there is a 'vertexMap', then find all w's in pairs
+				<v,w> in 'vertexMap' for the given v's
+	x			objects NOT flagged to be plotted (typically, this indicates
+				that their placement is not reliable)
+	z {x y} 	returns the circles or faces containing the point (x,y).
+	Z {x y} 	For sphere, take (x,y) as (theta,phi) coords; whereas 'z' 
+	        	call treats (x,y) as coords in visual plane, converts to
+	        	apparent sphere, then to real sphere (as needed, e.g., with
+	        	a mouse click).
+	
+Some of these can be followed (no intervening space) by "(n,m)",
+thereby limiting action to indices in range n to m. For instance, 
+"b(31 20)" will give vertices on the boundary starting with 31 and
+continuing counterclockwise, ending at 20.
+
+There is a special syntax for using the lists; note the lists are linked,
+so they have a well-defined order.
+
+  * vlist[{i}]	(where {i} indicates a numerical integer value) returns
+  				the ith entry (if there is one). Note that the first
+  				entry is vlist[0].
+  	
+  * vlist[r]  	returns the first entry of the list and also 'rotates' the
+  				list so this entry is moved to the end.
+
+  * vlist[n]    returns the first entry of the list and then removes it
+  				from the list.
+
+  * vlist[l]	returns last entry.				
+
+If an inappropriate entry is encountered in parsing such a
+list, the behavior is somewhat unpredictable; generally
+the list is closed with the last valid entry.
+
+EXAMPLES: 
+
+  * Command 'disp -c 4 5 b(7,12)' draws circles 4, 5, and all boundary 
+  	circles from 7 counterclockwise to 12. If 7 or 12 is not a boundary 
+  	circle, this will likely draw all circles.
+	
+  * Command 'set_elist e 23 5 12 Elist' will set the elist of the active
+  	packing to all legal edges among <23 5>, <5 12>, and those in the 
+  	general	'Elist'. 
+  	
+  * Command 'swap a M' will swap the index of the active vertex with
+    that of the maximal index.
+    
+  * Command 'set_rad 1.5 vlist[n]' will set the radius to 1.5 for the
+    first entry in 'vlist' and will then remove that entry from 'vlist'.
+    
+    
+Set-builder notation: There is a limited ability to use standard mathematical 
+set-builder notation. Formatting requirements are quite stringent (i.e., tricky!): 
+
+  * The whole thing is enclosed in curly brackets '{}'; 
+
+  * the first character must be 'c' or 'f' for circle/face; 
+
+  * that character may be followed by '-p{p}' if the selection is from 
+    a specific (i.e., possibly not active) pack p 
+
+  * then there must be a colon ':';
+
+  * Now you can give a sequence of up to five 'condition' statements 
+    separated by '&&', '||', or '!'	for 'and', 'inclusive or', or 
+    'and not'.
+
+  * Condition expressions (until the final one) are between parentheses 
+    '(..)'. (Formerly, used brackets '[..]'.)
+    Each such expression has three fields:
+
+	a. Target quantity:
+		r=radius of circle
+		c=color
+		d=degree of vertex
+		b=boundary?
+		i=interior?
+		s=angle sum
+		a=aim (desired angle sum)
+		m=marked?
+		n=index (of vertex or face)
+		c{pq}=ratio of radii, pack p to pack q
+		e{pq}=as c{pq}, but using euclidean radii
+		x=circle plot_flag
+		z=modulus of center (hyp or eucl)
+		ze=modulus of eucl center (hyp or eucl)
+		X=x-coord if pack has xyz data
+		Y=y-coord ..
+		Z=z-coord ..
+	b. Comparison: 
+	    preferred:  .eq.,.ne.,.lt.,.le.,.gt.,.ge.,.and.,.or.,.not.
+	    deprecated: =,!=,<,<=,>,>=,&&,||,!
+	    
+	c. Value
+	  		
+  EXAMPLES: 
+	"{c -p1:(d = 5).and.(b)}" would return a list of
+	indices for boundary circles from p1 having degree 5.
+
+	"{c:(e01.ge.1.0) || (s.lt.2.0)}" would list those circles
+	(of the active pack) whose euclidean radii in p0 are 
+	greater than or equal to their euclidean radii in p1 
+	or whose angle sums are less than 2*pi. 
+
+	"{f:m}" would return the indices of marked faces of the active pack.
+
+	

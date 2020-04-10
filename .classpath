@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="C:/share/workspace/JNIStuff2015/bin"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="jars/commons-codec-1.5.jar"/>
+	<classpathentry kind="lib" path="jars/Complex.jar"/>
+	<classpathentry kind="lib" path="jars/Convert2.0.jar"/>
+	<classpathentry kind="lib" path="jars/DJEP2.4.0Minimal.jar"/>
+	<classpathentry kind="lib" path="jars/FunctionChoiceBox.jar"/>
+	<classpathentry kind="lib" path="jars/FunctionField.jar"/>
+	<classpathentry kind="lib" path="jars/FunctionParser.jar"/>
+	<classpathentry kind="lib" path="jars/javabuilder.jar"/>
+	<classpathentry kind="lib" path="jars/jbcl.jar"/>
+	<classpathentry kind="lib" path="jars/PackCircle.jar"/>
+	<classpathentry kind="lib" path="jars/xercesImpl.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/libEDelaunay.dll">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="CirclePack/lib"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

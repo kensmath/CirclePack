@@ -1,0 +1,153 @@
+package packing;
+
+import java.util.Vector;
+
+import exceptions.DataException;
+import geometry.HyperbolicMath;
+import math.Point3D;
+import panels.CPScreen;
+
+/**
+ * Static methods for various colorizing actions --- wanted to move these
+ * out of 'PackData'.
+ * @author kens 2/2020
+ *
+ */
+public class ColorCoding {
+
+	/** 
+	 * Color gradations of area of faces, index 1-19 (blues) in pack p.
+	 * @param p PackData, face colors are changed in p 
+	 * @return int, 1 okay, 0 ????
+	 */
+	public static int face_area_comp(PackData p) {
+	    int flag=1;
+
+	    int mid=(int)(CPScreen.color_ramp_size/2);
+	    double t=0.0;
+	    // ??? I don't recall the reason for this call, p need not be hyperbolic
+	    double b=HyperbolicMath.h_area(p.rData[p.faces[1].vert[0]].rad,
+	    		p.rData[p.faces[1].vert[1]].rad,p.rData[p.faces[1].vert[2]].rad);
+	    double []areas=new double[p.faceCount+1];
+	    for (int i=1;i<=p.faceCount;i++) {
+	  	  	areas[i]=p.faceArea(i);
+	  	  	t=(areas[i]>t) ? areas[i]:t;
+	  	  	b=(areas[i]<b) ? areas[i]:b;
+	    }
+	    if (b==0.0) flag=0;
+	    if (t==0 || Math.abs(t-b)/t<.005)
+	      for (int i=1;i<=p.faceCount;i++) 
+	    	  p.faces[i].color=CPScreen.coLor(mid);
+	    else for (int i=1;i<=p.faceCount;i++) 
+	        p.faces[i].color=CPScreen.coLor(1+(int)((mid-2)*(areas[i]-t)/(b-t)));
+	    return (flag);
+	  }
+	
+	/** 
+	 * Compare ratio of eucl areas of faces from p and q. Color faces
+	 * of p using 2-color ramp, lower indices indicating q larger, 
+	 * uppers indicating p larger.
+	 * @param p Packdata, colors changed
+	 * @param q PackData, remains unchanged
+	 * @return int
+	*/
+	public static int e_compare_area(PackData p,PackData q) {
+	    int node,flag=1,mid;
+	    double b=1.0;
+	    double ratio=1.0;
+
+	    mid=(int)(CPScreen.color_ramp_size/2);
+	    node=(p.faceCount>q.faceCount) ? q.faceCount : p.faceCount;
+	    double []areas_p=new double[node+1];
+	    double []areas_q=new double[node+1];
+	    for (int f=1;f<=node;f++) {
+	        areas_p[f]=p.faceArea(f);
+	        areas_q[f]=q.faceArea(f);
+	        ratio=areas_q[f]/areas_p[f];
+	        if (ratio>b) b=ratio;
+	        if (1.0/ratio>b) b=1.0/ratio;
+	    }
+	    if (Math.abs(b-1)<PackData.OKERR) flag=0;
+	    else {
+	        for (int v=1;v<=node;v++) {
+	  	  if ((ratio=areas_p[v]/areas_q[v])>1.0)
+	  	    p.faces[v].color=CPScreen.coLor((int)(mid+(mid-1)*(ratio-1.0)/(b-1.0)));
+	  	  else 
+	  	    p.faces[v].color=CPScreen.coLor(1+(int)((mid-2)*(1.0-(1.0/ratio-1.0)/(b-1.0))));
+	  	}
+	      }
+	    if (node<p.faceCount) for (int v=node+1;v<=p.faceCount;v++)
+	      p.faces[v].color=CPScreen.coLor(mid);
+	    return (flag);
+	} 
+
+	/**
+	 * Compare ratio of hyperbolic areas of faces from p and q. 
+	 * In 2-color ramp, lower indices for q larger, uppers for p 
+	 * larger.
+	 * @param p Packdata, colors changed
+	 * @param q PackData, remains unchanged
+	 * @return int
+	 */
+	public static int h_compare_area(PackData p,PackData q) {
+	    int node,mid;
+	    double b=1.0;
+	    double ratio=1.0;
+
+	    mid=(int)(CPScreen.color_ramp_size/2);
+	    node=(p.faceCount>q.faceCount) ? q.faceCount : p.faceCount;
+	    double []areas_p=new double[node+1];
+	    double []areas_q=new double[node+1];
+	    for (int v=1;v<=node;v++) {
+	        areas_p[v]=HyperbolicMath.h_area(p.rData[p.faces[v].vert[0]].rad,
+	  			p.rData[p.faces[v].vert[1]].rad,
+	  			p.rData[p.faces[v].vert[2]].rad);
+	        areas_q[v]=HyperbolicMath.h_area(q.rData[q.faces[v].vert[0]].rad,
+	  			q.rData[q.faces[v].vert[1]].rad,
+	  			q.rData[q.faces[v].vert[2]].rad);
+	        ratio=areas_q[v]/areas_p[v];
+	        if (ratio>b) b=ratio;
+	        if ((1.0/ratio)>b) b=1.0/ratio;
+	    }
+	    if (Math.abs(b-1)<PackData.OKERR) { 
+	        for (int v=1;v<=p.faceCount;v++) p.faces[v].color=CPScreen.coLor(mid);
+	    }
+	    else {
+	        for (int v=1;v<=node;v++) {
+	  	  if ((ratio=areas_p[v]/areas_q[v])>1.0) {
+	  		  p.faces[v].color=CPScreen.coLor((int)(mid+(mid-1)*(ratio-1.0)/(b-1.0)));
+	  	  }
+	  	  else {
+	  	    p.faces[v].color=CPScreen.coLor(1+(int)((mid-2)*(1.0-(1.0/ratio-1.0)/(b-1.0))));
+	  	  }
+	        }
+	    }
+	    if (node<p.faceCount) 
+	    	for (int v=node+1;v<=p.faceCount;v++)
+	    		p.faces[v].color=CPScreen.coLor(mid);
+	    return 1;
+	  } 
+	  
+	  /**
+	   * Record eucl areas of 3-space faces based on 'p.xyz' data 
+	   * in 'p.utilDouble'. 
+	   * @param p PackData, 'p.utilDouble' is changed
+	   * @return count; 0 if 'p.xyz' data not available, -1 on error
+	   */
+	  public static int setXYZ_areas(PackData p) {
+		  int count=0;
+		  if (p.xyzpoint==null || p.xyzpoint.length<(p.nodeCount+1)) {
+			  throw new DataException("xyz data not available for p"+p.packNum);
+		  }
+		  p.utilDoubles=new Vector<Double>(p.faceCount+1);
+		  p.utilDoubles.add((Double)0.0); // empty 0th spot
+		  for (int f=1;f<=p.faceCount;f++) {
+			  Double dbl=Double.valueOf((double)Point3D.triArea(p.xyzpoint[p.faces[f].vert[0]],
+					  p.xyzpoint[p.faces[f].vert[1]],p.xyzpoint[p.faces[f].vert[2]]));
+			  p.utilDoubles.add(dbl);
+			  count++;
+		  }
+		  return count;
+	  }
+
+}
