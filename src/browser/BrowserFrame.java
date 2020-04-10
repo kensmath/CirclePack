@@ -329,7 +329,6 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		}
 	}
 
-
 	/**
 	 * Loads the page specified by the passed <code>String</code> object. 
 	 * Return value depends on objects: 
