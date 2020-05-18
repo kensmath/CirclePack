@@ -406,7 +406,7 @@ public class ChapBranchPt extends GenBranchPt {
 
 //			Mobius mob=new Mobius();
 //			if (myPackData.hes<0) {
-//				SimpleCircle sc=HyperbolicMath.e_to_h_data(A,e1);
+//				CircleSiimple sc=HyperbolicMath.e_to_h_data(A,e1);
 //				A=sc.center;
 //				sc=HyperbolicMath.e_to_h_data(B,em);
 //				B=sc.center;

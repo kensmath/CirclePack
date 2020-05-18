@@ -2,25 +2,34 @@ package geometry;
 import math.Point3D;
 import packing.PackData;
 import util.UtilPacket;
+import allMains.CPBase;
 import baryStuff.BaryPoint;
 import complex.Complex;
 
 /** 
- * Sphere is x^2 + y^2 + z^2 = 1. Store centers as complex numbers
- * with form (theta,phi); radii are spherical, in radians. To get the 
- * correct orientation on the sphere when viewed from outside, we 
- * project from the SOUTH pole (inlike the typical complex analysis
- * definition using the NORTH pole). So the origin is the NORTH pole 
- * and infinity is the SOUTH pole.
+ * The unit (Riemann) sphere is x^2 + y^2 + z^2 = 1 in 3-space. 
+ * Spherical points are stored as complex numbers in usual polar
+ * form (theta,phi); radii are spherical, measured in radians. 
+ * To get the correct orientation on the sphere when viewed from 
+ * outside, we project from the SOUTH pole (unlike the typical 
+ * complex analysis definition projecting from the NORTH pole). 
+ * (So a + oriented triple in the plane is + oriented when 
+ * looked at from OUTSIDE the sphere).
  * 
+ * So for us, the origin is N and infinity is S, the SOUTH pole.
+ * Under our stereographic projection, points (u,v) in the plane 
+ * and (x,y,z) on the sphere are related by:
+ *     u=x/(1+z); v=y/(1=z)
+ *     z=(1-(u*u+v*v))/(1+(u*u=v*v)); x=u(1+z); y=v(1+z).
+ *     
  * Inversive distance: if spherical circles c1 c2 are radius r1, r2, 
- * and their centers are distance d apart, then 
+ * and their centers are spherical distance d apart, then 
  *    delta(c1,c2)=(cos(d)-cos(r1)*cos(r2))/(sin(r1)*sin(r2)) 
  * 
  * See also SphereLayout.java. 
  * TODO: in the long run, using hyperboloid model and Minkowski space
  * may have advantages. There the sphere is the boundary of H^3 and
- * we can use "geometric algebra" both for the hyperbolic plane and
+ * we could use "geometric algebra" both for the hyperbolic plane and
  * the Riemann sphere. 
 */
 public class SphericalMath{
@@ -106,7 +115,7 @@ public class SphericalMath{
    * through the points of tangency. For center may have to consider
    * orientation for large face cases.
    * @param z1,z2,z3, Complex, sph centers
-   * @return SimpleCircle
+   * @return CircleSimple
    */
 	public static CircleSimple sph_tri_incircle(Complex z1,Complex z2,Complex z3) {
 
@@ -133,7 +142,7 @@ public class SphericalMath{
 	 * for the circle containing them; choose center to get
 	 * proper orientation {A, B, C}.
 	 * @param A, B, C, Complex sph points
-	 * @return SimpleCircle with spherical data
+	 * @return CircleSimple with spherical data
 	 */
 	public static CircleSimple circle_3_sph(Complex A,Complex B,Complex C) {
 		// 3D points
@@ -157,7 +166,7 @@ public class SphericalMath{
 		CircleSimple sc=EuclMath.circle_3(z1, z2, z3);
 		Complex cent=sc.center;
 		Point3D affineCenter= Point3D.vectorSum(a,
-				Point3D.vectorSum(X.mult(cent.x),Y.mult(cent.y)));
+				Point3D.vectorSum(X.times(cent.x),Y.times(cent.y)));
 		
 		// results:
 		CircleSimple resultSC=new CircleSimple();
@@ -177,6 +186,31 @@ public class SphericalMath{
 		}
 		return resultSC;
 	}
+	
+	/** 
+	 * Given three points on the sph, find the sph center/rad
+	 * for the circle containing them; choose center to get
+	 * proper orientation {A, B, C}.
+	 * @param A, B, C, Complex sph points
+	 * @return CircleSimple with spherical data
+	 */
+	public static CircleSimple circle_3_sph_planB(Complex A,Complex B,Complex C) {
+		// 3D points
+		Point3D a=new Point3D(A);
+		Point3D b=new Point3D(B);
+		Point3D c=new Point3D(C);
+
+		// use 3D edges to get o.n. {X,Y,Z} system: triangle in X,Y-plane
+		Point3D AB = new Point3D(b.x-a.x,b.y-a.y,b.z-a.z);
+		Point3D AC = new Point3D(c.x-a.x,c.y-a.y,c.z-a.z);
+		Point3D Z= Point3D.CrossProduct(AB,AC);
+		Complex sz=proj_vec_to_sph(Z);
+		double sr=s_dist(sz,A);
+		
+		return new CircleSimple(sz,sr,1);
+	}
+		
+	
 	
   /**
    * Spherical distance between two spherical (i.e., (theta,phi)) points
@@ -279,7 +313,7 @@ public class SphericalMath{
    * Return new Complex (theta,phi) representing projection of given 3D vector
    * to the unit sphere; recall, origin goes to NORTH pole.
    * @param x, y, z, 3D vector
-   * @return sph coords (theta,phi) 
+   * @return sph coords (theta,phi), default to N if vector norm is too small.
    */
   public static Complex proj_vec_to_sph(double x,double y,double z) {
 	  double dist;
@@ -351,7 +385,7 @@ public static double vec_norm(double X[]){
 	  if (AdotB<-.9999999) { // antipodal
 		  return new Point3D(0.0,0.0,0.0);
 	  }
-	  return Point3D.vectorSum(A,B).mult(1/(1+AdotB));
+	  return Point3D.vectorSum(A,B).times(1/(1+AdotB));
   }
   
   public static double[] crossProduct(double X[], double Y[]) {
@@ -363,16 +397,38 @@ public static double vec_norm(double X[]){
   }
   
   /**
-   * Given two circles which are supposed to be tangent, find the 
-   * tangency point on the geodesic between them. Actually, return
+   * Given two sph circles which are (supposed to be) tangent, find the 
+   * tangency point on the geodesic between them. Actually, returns
    * pt with distances from z1, z2 having proportions r1, r2.
-   * @param z1,z2, circle centers
-   * @param r1,r2, radii
+   * If z1 and z2 essentially antipodal, then result is numerically
+   * unstable. If r1+r2 > Pi, then have to distinguish which way to
+   * go from z1 toward z2.
+   * @param z1 Complex (theta,phi)
+   * @param z2 Complex (theta,phi)
+   * @param r1 double
+   * @param r2 double
    * @return new Complex, (theta,phi), null on error
    */
   public static Complex sph_tangency(Complex z1,Complex z2,double r1,double r2) {
-	  double len=s_dist(z1,z2);
-	  return (s_shoot(z1,z2,len*r1/(r1+r2)));
+	  double dratio=(s_dist(z1,z2))*r1/(r1+r2);
+	  // try first direction
+	  Point3D T3=new Point3D(sph_tangent(z1,z2));
+	  Complex tp1=sph_shoot(z1,T3,dratio);
+	  double err1=Math.abs(s_dist(z1,tp1)-r1);
+	  if (err1<S_TOLER) // looks good 
+		  return tp1;
+	  
+	  // try opposite direction
+	  T3=T3.times(-1.0); // flip tangent
+	  Complex tp2=sph_shoot(z1,T3,dratio);
+	  double err2=Math.abs(s_dist(z1,tp2)-r1);
+	  if (err2<S_TOLER) // looks good 
+		  return tp2;
+	  
+	  // else, take the one with the smallest error
+	  if (err1<=err2)
+		  return tp1;
+	  return tp2;
   }
 
   /** 
@@ -428,12 +484,14 @@ public static double vec_norm(double X[]){
    * @return new Complex
    */
   public static Complex s_shoot(Complex z,Complex w,double dist) {
+	  // if very close, just return z
 	  if (Math.abs(dist)<S_TOLER) return new Complex(z);
 	  
 	  // adjust mod 2*pi until dist lies in [0,2*pi]
 	  double pi2=2.0*Math.PI;
 	  while (dist<0) dist+=pi2;
 	  while (dist>pi2) dist -=pi2;
+	  
 	  double []T=sph_tangent(z,w);
 	  double []V=s_pt_to_vec(z);
 	  double []A=new double[3];
@@ -444,12 +502,37 @@ public static double vec_norm(double X[]){
 	  A[2]=cosd*V[2]+sind*T[2];
 	  return proj_vec_to_sph(A[0],A[1],A[2]);
   }
-	  		
+
+  /**
+   * Given sph point z, and T, unit vector tangent at z, compute
+   * the sph point which is distance 'dist' (in radians) from 
+   * z in direction T. 
+   * @param z Complex, (theta,phi)
+   * @param T Point3D, unit tangent
+   * @param dist double (radians)
+   * @return new Complex (theta,phi)
+   */
+  public static Complex sph_shoot(Complex z,Point3D T,double dist) {
+	  double []V=s_pt_to_vec(z);
+	  double []A=new double[3];
+	  double cosd=Math.cos(dist);
+	  double sind=Math.sin(dist);
+	  A[0]=cosd*V[0]+sind*T.x;
+	  A[1]=cosd*V[1]+sind*T.y;
+	  A[2]=cosd*V[2]+sind*T.z;
+	  return proj_vec_to_sph(A[0],A[1],A[2]);
+  }
+
   /** 
    * Given pts on sphere, return ptr to unit length 3-vector in 
-   * tangent space of first, pointing toward second. If pts are
-   * essentially equal or antipodal, return 0 and set to vector
-   * orthogonal to ctr1.
+   * tangent space of first, pointing toward second. Result is
+   * always a unit vector perp to the vector to the first point. 
+   * Ambiguities: 
+   *  + If pts are essentially equal or antipodal, result
+   *    will be numerically unstable. 
+   *  + In general, two directions point toward second point.
+   *    Calling routine must judge, accepting the result here
+   *    or using its negative.
    * @param ctr1 (theta,phi)
    * @param ctr2 (theta,phi)
    * @return double[3] unit vector
@@ -470,17 +553,19 @@ public static double vec_norm(double X[]){
     // A and B essentially parallel? 
     if ((vn=vec_norm(P))<S_TOLER)
     {
-    	double pn=Math.sqrt(A[1]*A[1]+A[2]*A[2]);
-    	if (pn>.001) {
+    	// if A is not N or S, point in horizontal direction
+    	double pn=Math.sqrt(A[0]*A[0]+A[1]*A[1]);
+    	if (pn>.0000001) {
     		// get orthogonal, X coord 0
-    		T[0]=0;
-    		T[1]=A[1]/pn;
-    		T[2]=-A[2]/pn;
-    	}
-    	else {
-    		T[0]=1;
-    		T[1]=0;
+    		T[0]=A[1]/pn;
+    		T[1]=-A[0]/pn;
     		T[2]=0;
+    	}
+    	// otherwise, point toward (0,1,0)
+    	else {
+    		T[0]=0.0;
+    		T[1]=1.0;
+    		T[2]=0.0;
     	}
         return T;
     }
@@ -523,10 +608,10 @@ public static double vec_norm(double X[]){
    * available or make provisions to save it somehow. Also, a circle 
    * essentially passing through infinity will be given a small expansion
    * in radius to get euclidean data, but of course it's fake. 
-   * return an error SimpleCircle if setting negative radius. 
+   * return an error CircleSimple if setting negative radius. 
    * @param z Complex (theta,phi) center
    * @param r double spherical radius
-   * @return SimpleCircle
+   * @return CircleSimple
   */
   public static CircleSimple s_to_e_data(Complex z,double r) {
     int flipflag=1;
@@ -577,159 +662,64 @@ public static double vec_norm(double X[]){
   }
   		
   /** 
-   * Converts circle data to the sphere, returning a new SimpleCircle.
-   * Caution: our projection is NOT the standard "stereographic" 
-   * projection. Our origin is at the north pole, infinity to the south. 
-   * This is more intuitive, since it preserves orientation (+ oriented 
-   * triple in the plane is + oriented when looked at from OUTSIDE 
-   * the sphere). 
-   * @param z Complex eucl center
-   * @param r double eucl radius
-   * @return SimpleCircle
+   * Converts circle data to the sphere in a new 'CircleSimple'.
+   * Caution: projection is NOT the standard "stereographic"; see
+   * comments at the beginning of this file.
+   * Note that r<0 means the circle bounds the outside disc, which 
+   * affects the spherical center/radius.
+   * @param ez Complex eucl center
+   * @param er double eucl radius
+   * @return CircleSimple
   */
-  public static CircleSimple e_to_s_data(Complex z,double r) {
-      Complex s=new Complex(0.0);
-      double []P1=new double[3];
-      double []P2=new double[3];
-      double []P3=new double[3];
+  public static CircleSimple e_to_s_data(Complex ez,double er) {
+	  
+      Complex sz=new Complex(0.0); // will be sph center
+      double []P3=new double[3]; // 3D point on sphere
 
-      double nsq=z.absSq();
-      double rr=Math.abs(r);
+      double nsq=ez.absSq();
+      double rr=Math.abs(er); // note, r negative handled later
       
-      // if r too small, project center, leave r unchanged.
+      // if er too small, project center, set sr=er unchanged.
       if (rr<S_TOLER) {
     	  double denom=nsq+1.0;
-    	  double tmpd=1.0/denom;
-    	  P3[0]=(2*z.x)*tmpd;
-    	  P3[1]=(2*z.y)*tmpd;
-    	  P3[2]=(2.0-denom)*tmpd;
-    	  if(P3[2]>(1.0-S_TOLER)) {
-    		  s.x=s.y=0.0;
-    		  return new CircleSimple(s,r,0);
+    	  P3[0]=(2*ez.x)/denom;
+    	  P3[1]=(2*ez.y)/denom;
+    	  P3[2]=(2.0-denom)/denom;
+    	  if(P3[2]>(1.0-S_TOLER)) { // near N pole
+    		  ez.x=ez.y=0.0;
+    		  return new CircleSimple(sz,er,0);
     	  }
-    	  if (P3[2]<(S_TOLER-1.0)) {
-    		  s.x=0.0;
-    		  s.y=Math.PI;
-    		  return new CircleSimple(s,r,0);
+    	  if (P3[2]<(S_TOLER-1.0)) { // near S pole
+    		  sz.x=0.0;
+    		  sz.y=Math.PI;
+    		  return new CircleSimple(sz,er,0);
     	  }
-    	  s.y=Math.acos(P3[2]);
-    	  s.x=Math.atan2(P3[1],P3[0]);
-    	  return new CircleSimple(s,r,1); 
-      	}
+    	  sz.y=Math.acos(P3[2]);
+    	  sz.x=Math.atan2(P3[1],P3[0]);
+    	  return new CircleSimple(sz,er,1); 
+      }
       
-      double []T=new double[3];
-      double []E=new double[3];
-      double x,y,a,b;
-      double norm=Math.sqrt(nsq);
-      double mn=-rr;
-      if (norm<S_TOLER) { // close to origin 
-        x=mn;
-        y=0.0;
-        a=rr;
-        b=0.0;
-      }
-      else {
-        double denom=1/norm;
-        mn=norm-rr;
-        // a point on the circle closest to origin */
-        x=mn*(z.x)*denom;
-        y=mn*(z.y)*denom;
-        // a point on the circle furthest from the origin */
-        a=(norm+rr)*(z.x)*denom;
-        b=(norm+rr)*(z.y)*denom;
-      }
-
-      // now we project these two points onto the sphere 
-      double d1=(x*x + y*y +1.0);
-      double tmpd=1.0/d1;
-      P1[0]=(2*x)*tmpd;  
-      P1[1]=(2*y)*tmpd;  
-      P1[2]=(2.0-d1)*tmpd;
-      double d2=a*a + b*b +1.0;
-      tmpd=1.0/d2;
-      P2[0]=(2*a)*tmpd;
-      P2[1]=(2*b)*tmpd;
-      P2[2]=(2.0-d2)*tmpd;
-
-      /* We may need some point along the geo between these, for they
-       themselves might be too far apart to get the correct angle
-       between them or to get the right tangent direction from one 
-       towards the other. 
-
-       We may use the origin, the euclidean center, or a point
-       on the unit circle, depending on which is well placed
-       vis-a-vis the endpoints. */
-
-      boolean midflag=false;
-      double brk=100.0*S_TOLER;
-      if (mn<=-brk) { // origin is well enclosed; use it. 
+      // General strategy: project three points of the
+      //   euclidean circle to 3-vectors on the sphere.
       
-        midflag=true;
-        P3[0]=P3[1]=0;
-        P3[2]=1.0;
+      Complex []epts=new Complex[3];
+      epts[0]=ez.plus(rr);
+      epts[1]=ez.plus(CPBase.omega3[1].times(rr));
+      epts[2]=ez.plus(CPBase.omega3[2].times(rr));
+      
+      Complex []spts=new Complex[3];
+      for (int j=0;j<3;j++) 
+    	  spts[j]=proj_pt_to_sph(epts[j]);
+      
+      // for er<0, reverse orientation
+      if (er<0) {  
+    	  Complex h=spts[0];
+    	  spts[0]=spts[2];
+    	  spts[2]=h;
       }
-      else if (mn<=brk && norm>2) { /* use pt on unit circle in direction
-  			       of center. */
-        midflag=true;
-        P3[0]=z.x/norm;
-        P3[1]=z.y/norm;
-        P3[2]=0.0;
-      }
+      CircleSimple cS=circle_3_sph_planB(spts[0],spts[1],spts[2]);
 
-      double srad;
-      if (midflag) { // use pt along geo; radius in two parts 
-        if ((d1=P1[0]*P3[0]+P1[1]*P3[1]+P1[2]*P3[2])>=1.0) 
-        	d1=1.0-S_TOLER;
-        if ((d2=P2[0]*P3[0]+P2[1]*P3[1]+P2[2]*P3[2])>=1.0) 
-        	d2=1.0-S_TOLER;
-        double ang13=Math.acos(d1);
-        double ang23=Math.acos(d2);
-        srad=(ang13+ang23)/2.0;
-        if (ang13<ang23) {E[0]=P1[0];E[1]=P1[1];E[2]=P1[2];}
-        else {E[0]=P2[0];E[1]=P2[1];E[2]=P2[2];}
-
-        /* Use E and P3 to find center; tangent direction from E
-  	 toward P3. */
-
-        Complex v=new Complex(Math.atan2(E[1],E[0]),Math.acos(E[2]));
-        Complex w=new Complex(Math.atan2(P3[1],P3[0]),Math.acos(P3[2]));
-        T=sph_tangent(v,w);
-      }
-      else {
-        if ((d1=P1[0]*P2[0]+P1[1]*P2[1]+P1[2]*P2[2])>=1.0) 
-        	d1=1.0-S_TOLER;
-        srad=Math.acos(d1)/2.0;
-        E[0]=P1[0];
-        E[1]=P1[1];
-        E[2]=P1[2];
-        Complex v=new Complex(Math.atan2(E[1],E[0]),Math.acos(E[2]));
-        Complex w=new Complex(Math.atan2(P2[1],P2[0]),Math.acos(P2[2]));
-        T=sph_tangent(v,w);
-      }
-
-      // C will be the rectangular coordinates of the center 
-      double []C=new double[3];
-      C[0]=E[0]*Math.cos(srad)+T[0]*Math.sin(srad);
-      C[1]=E[1]*Math.cos(srad)+T[1]*Math.sin(srad);
-      C[2]=E[2]*Math.cos(srad)+T[2]*Math.sin(srad);
-    
-      if (r<0) {// actually, wanted outside of circle 
-    	  srad=Math.PI-srad;
-    	  C[0] *= -1.0;
-    	  C[1] *= -1.0;
-    	  C[2] *= -1.0;
-      }
-      if (C[2]>1-S_TOLER) { // essentially N pole
-    	  s.x=s.y=0.0;
-      }
-      else if (C[2]<(S_TOLER-1.0)) { // essentially S pole
-    	  s.x=0.0;s.y=Math.PI;
-      }
-      else {
-    	  s.y=Math.acos(C[2]);
-    	  s.x=Math.atan2(C[1],C[0]);
-      }
-      return new CircleSimple(s,srad,1);
+      return cS;
   }
   
   /** 
@@ -932,6 +922,18 @@ public static double vec_norm(double X[]){
 		}
 
 		return new Point3D(xcoord/sz,ycoord/sz,zcoord/sz);
+	}
+	
+	/**
+	 *     z=(1-(u*u+v*v))/(1+(u*u=v*v)); x=u(1+z); y=v(1+z).
+	 * @param z
+	 * @return Point3D
+	 */
+	public static Point3D e_to_sph_vec(Complex ez) {
+		double z=ez.absSq();
+		double x=ez.x*(1.0+z);
+		double y=ez.y*(1.0+z);
+		return new Point3D(x,y,z);
 	}
 
 }

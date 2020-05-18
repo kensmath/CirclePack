@@ -8,16 +8,15 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
 import exceptions.DataException;
-import geometry.CommonMath;
-import geometry.HyperbolicMath;
 import geometry.CircleSimple;
+import geometry.CommonMath;
 import geometry.SphericalMath;
 import komplex.DualTri;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.NodeLink;
+import math.CirMatrix;
 import math.Mobius;
-import panels.CPScreen;
 import util.ColorUtil;
 import util.DispFlags;
 import util.StringUtil;
@@ -293,44 +292,40 @@ public class Schwarzian {
 
 	/**
 	 * Given a face 'f' in geometry 'hes' and schwarzian 's' across
-	 * edge j of f, find the circle across that edge. We are using the
-	 * baseMobius maps from base equilateral, so all we need about f 
-	 * is the mobius 'mob_f' from the base equilateral to f and the 
-	 * shared edge (and the geometry)
+	 * edge j of f, find the circle across that edge. All we need about f 
+	 * is the mobius 'mob_f' from the base equilateral to f and j for the 
+	 * shared edge. Calling routine must know the geometry.
 	 * @param s double, schwarzian
 	 * @param j int, index of shared edge
 	 * @param bm_f Mbbius, map from base to f
-	 * @param hes
-	 * @return SimpleCircle
+	 * @param hes int, geometry
+	 * @return CircleSimple
 	 */
 	public static CircleSimple getThirdCircle(double s,int j,Mobius bm_f,int hes) {
-		CircleSimple sC=new CircleSimple();
 		Mobius dMob_inv=new Mobius(new Complex(1-s),new Complex(s),new Complex(-s),new Complex(1+s));
-		
-		// for mob_f, pre-rotate so edge j contains 1
 		Mobius pre_f=new Mobius(CPBase.omega3[j],new Complex(0.0),new Complex(0.0),new Complex(1.0));
-		Mobius mu_f=(Mobius)bm_f.rmult(pre_f);
-	
 		
-		// circle across the base equilateral edge going through 1 
-		Complex z=new Complex(4.0); 
-		double r=CPBase.sqrt3by2*2.0; // radius sqrt(3)
+		Mobius mu_g=(Mobius)bm_f.rmult(pre_f);
+		mu_g=(Mobius)mu_g.rmult(dMob_inv);
+
+		CirMatrix circle3=new CirMatrix(new Complex(4.0),CPBase.sqrt3by2*2.0);
+		CirMatrix outCM=CirMatrix.applyTransform(mu_g,circle3,true);
 		
-		// compute mu_g = mu_f*dMob_inv; only to compute the eucl image circle
-		Mobius mu_g=(Mobius)mu_f.rmult(dMob_inv); 
-		Mobius.mobius_of_circle(mu_g, 0, z, r, sC, true);
-		if (hes>0) { // convert to spherical
-			z=sC.center;
-			r=sC.rad;
-			return SphericalMath.e_to_s_data(z, r);
+		boolean debug=false; // debug=true;
+		if (debug) {// debug=true;
+			Mobius tmpm=(Mobius)pre_f.rmult(dMob_inv);
+			deBugging.DebugHelp.mob4matlab("pre_f(dMob_inv)",tmpm);
+			CirMatrix tmpcm=CirMatrix.applyTransform(tmpm,circle3,true);
+			CircleSimple cS=CommonMath.cirMatrix_to_geom(tmpcm, 0);
+			System.out.println("tmpcm eucl  z/r: "+cS.center+" "+cS.rad);
+//			deBugging.DebugHelp.mob4matlab("dMob_inv",dMob_inv);
+//			deBugging.DebugHelp.mob4matlab("pre_f", pre_f);
+			deBugging.DebugHelp.mob4matlab("mu_g", mu_g);
+			cS=CommonMath.cirMatrix_to_geom(outCM,0);
+			System.out.println("outCM eucl z/r: "+cS.center+" "+cS.rad);
 		}
-		if (hes<0)  { // convert to hyperbolic
-			z=sC.center;
-			r=sC.rad;
-			return HyperbolicMath.e_to_h_data(z, r);
-		}
-		
-		return sC;
+
+		return CommonMath.cirMatrix_to_geom(outCM, hes);
 	}
 
 	/**
@@ -471,13 +466,13 @@ public class Schwarzian {
 	}
 	
 	/**
-	 * Compute Mobius transformation from base equilateral triangle
-	 * to packing face f. (The "base" refers to eucl equilateral triangle
+	 * Compute Mobius transformation from base equilateral to packing 
+	 * face f. (The "base" refers to eucl equilateral triangle
 	 * symmetric about origin with tangency points the cube roots 
 	 * of unity; 1 is the tangency point of the first edge.)
 	 * @param p CirclePack
 	 * @param f int, face index
-	 * @return
+	 * @return Mobius
 	 */
 	public static Mobius faceBaseMob(PackData p,int f) {
 		Complex []Z=new Complex[3];
@@ -489,9 +484,32 @@ public class Schwarzian {
 					Z[j]=SphericalMath.getAntipodal(Z[j]);
 			}
 		}
-		DualTri dtri=new DualTri(p.hes,Z[0],Z[1],Z[2]);
-		return Mobius.mob_xyzXYZ(CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
-				dtri.TangPts[0],dtri.TangPts[1],dtri.TangPts[2],0,p.hes);
+		
+		// find tangency points
+		Complex []tpts=new Complex[3];
+		for (int j=0;j<3;j++) {
+			Complex z1=p.rData[p.faces[f].vert[j]].center;
+			Complex z2=p.rData[p.faces[f].vert[(j+1)%3]].center;
+			double r1=p.rData[p.faces[f].vert[j]].rad;
+			double r2=p.rData[p.faces[f].vert[(j+1)%3]].rad;
+			tpts[j]=CommonMath.get_tang_pt(z1, z2, r1, r2, p.hes);
+		}
+
+		Mobius tmpMob=Mobius.mob_xyzXYZ(CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
+				tpts[0],tpts[1],tpts[2],0,p.hes);
+		
+		boolean debug=false; // debug=true;
+		if (debug) {
+			Complex tp0=SphericalMath.proj_pt_to_sph(
+					tmpMob.apply(CPBase.omega3[0])).minus(tpts[0]);
+			Complex tp1=SphericalMath.proj_pt_to_sph(
+					tmpMob.apply(CPBase.omega3[1])).minus(tpts[1]);
+			Complex tp2=SphericalMath.proj_pt_to_sph(
+					tmpMob.apply(CPBase.omega3[2])).minus(tpts[2]);
+			System.err.println("check: "+tp0+" "+tp1+" "+tp2);
+		}
+		
+		return tmpMob;
 	}
 
 	/**

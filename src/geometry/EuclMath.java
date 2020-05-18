@@ -27,7 +27,7 @@ public class EuclMath{
 	 * @param z1 Complex
 	 * @param z2 Complex
 	 * @param z3 Complex
-	 * @return SimpleCircle
+	 * @return CircleSimple
 	 */
 	public static CircleSimple circle_3(Complex z1, Complex z2, Complex z3) {
 		double a1 = z2.x-z1.x;
@@ -38,19 +38,13 @@ public class EuclMath{
 		if (Math.abs(det) < 0.0000000000001) // return with radius 0.0
 			return new CircleSimple(false);
 
-		double dum = z2.abs();
-		dum = dum * dum;
-		double c1 = z1.abs();
-		c1 = (-c1 * c1);
-		c1 += dum;
-		double c2 = z3.abs();
-		c2 = c2 * c2;
-		c2 -= dum;
+		double dum = z2.absSq();
+		double c1 = dum-z1.absSq();
+		double c2 = z3.absSq()-dum;
 
-		double c_real = (b2 * c1 - b1 * c2) / det;
-		double c_imag = (a1 * c2 - a2 * c1) / det;
-		double c_rad=Math.sqrt((c_real-z1.x)*(c_real-z1.x)+(c_imag-z1.y)*(c_imag-z1.y));
-		return new CircleSimple(c_real, c_imag, c_rad, 1);
+		Complex cent=new Complex((b2*c1-b1*c2)/det,(a1*c2-a2*c1)/det);
+		double c_rad=cent.minus(z1).abs();
+		return new CircleSimple(cent,c_rad,1);
 	}
     
   /**
@@ -393,14 +387,14 @@ public class EuclMath{
 	}
 
 	/**
-	 * Return 'SimpleCircle' with rad/cent of inscribed circle
+	 * Return 'CircleSimple' with rad/cent of inscribed circle
 	 * for triangular face with given corners. Incenter has 
 	 * barycentric coords a/p, b/p, c/p, where a, b, c are 
 	 * opposite edge lengths, p is perimeter.
 	 * @param z1 Complex
 	 * @param z2 Complex
 	 * @param z3 Complex, circle centers
-	 * @return SimpleCircle
+	 * @return CircleSimple
 	 */
 	public static CircleSimple eucl_tri_incircle(Complex z1,Complex z2,Complex z3) {
 		CircleSimple sc=new CircleSimple();
@@ -456,7 +450,7 @@ public class EuclMath{
 	 * @param o1 double
 	 * @param o2 double
 	 * @param o3 double
-	 * @return SimpleCircle
+	 * @return CircleSimple
 	 */
 	public static CircleSimple e_compcenter(Complex z1,Complex z2,double e1,
 			double e2,double e3,double o1,double o2,double o3) {
@@ -482,14 +476,14 @@ public class EuclMath{
 	
 	/**
 	 * Given two centers and three euclidean radii, compute third center. 
-	 * This is for tangency case. The 'SimpleCircle' class is
+	 * This is for tangency case. The 'CircleSimple' class is
 	 * simply for transferring data back.
 	 * @param z1 Complex
 	 * @param z2 Complex
 	 * @param e1 double
 	 * @param e2 double
 	 * @param e3 double
-	 * @return SimpleCircle
+	 * @return CircleSimple
 	*/
 	public static CircleSimple e_compcenter(Complex z1,Complex z2,double e1,
 			double e2,double e3) {

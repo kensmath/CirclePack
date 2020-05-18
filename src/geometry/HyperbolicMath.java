@@ -49,7 +49,7 @@ public class HyperbolicMath{
    *  for display purposes.
    *  @param h_center Complex
    *  @param x_rad double
-   *  @return SimpleCircle
+   *  @return CircleSimple
    */
   public static CircleSimple HyperbolicToEuclidean(Complex h_center, double x_rad){
     double s_rad;
@@ -90,7 +90,7 @@ public class HyperbolicMath{
    * Converts circle data from eucl to hyp. (Formerly 'e_to_h_data')
    * @param e_center Complex
    * @param e_rad double
-   * @return SimpleCircle, null circle doesn't lie in closed disc
+   * @return CircleSimple, null circle doesn't lie in closed disc
    */ 
   public static CircleSimple EuclideanToHyperbolic(Complex e_center,double e_rad) {
 	  CircleSimple h_circle=new CircleSimple(true);
@@ -135,12 +135,13 @@ public class HyperbolicMath{
   }
   
   /** 
-   * temp (??) routine to convert x-radius to s-radius
+   * temp (??) routine to convert x-radius to s-radius. 
+   * If x<=0, just return x; might be intentionally negative.
    * @param x double
    * @return double 
    */
   public static double x_to_s_rad(double x) {
-	  if (x<=0.0) return x; // might be intentionally negative
+	  if (x<=0.0) return x;
 	  return (Math.sqrt(1.0-x));
   }
   
@@ -166,14 +167,36 @@ public class HyperbolicMath{
    * the origin, then 
    *     e_rad=(1-s_rad)/(1+s_rad), s_rad=(1+e_rad)/(1-e_rad),
    * where s_rad = exp(-h_rad).
-   * Numerics can cause problems: insure x_rad>=0.
+   * Numerics can cause problems: if x_rad < 0, assume this is a horocycle, so
+   * eucl radius is -x_rad and center is in direction of h_center (or on pos
+   * real axis if h_center=0.0.)
    * @param h_center Complex
    * @param x_rad double (x-radii are our usual internal storage for hyp radii)
-   * @return SimpleCircle 
+   * @return CircleSimple 
   */
   public static CircleSimple h_to_e_data(Complex h_center,double x_rad) {
     double e_rad;
     Complex e_center=new Complex(0.0);
+    
+    // horocycle?
+    if (x_rad<0.0) {
+    	int warning_flag=1;
+    	e_rad=-x_rad;
+    	if (e_rad>=1.0) {
+    		warning_flag=-1;
+    		e_rad=1.0-OKERR;
+    	}
+    	Complex cent_vec=new Complex(1.0);
+    	double habs=h_center.abs();
+    	if (habs>OKERR)
+    		e_center=h_center.divide(habs).times(1-e_rad);
+    	else {
+    		warning_flag=-1;
+    		e_center=new Complex(1.0).times(1-e_rad);
+    	}
+
+    	return new CircleSimple(e_center,e_rad,warning_flag);
+    }
 
     // TODO: fixup: temp conversion 
     double s_rad=x_to_s_rad(x_rad);
@@ -182,9 +205,9 @@ public class HyperbolicMath{
         e_rad=(-s_rad); // assumes -s_rad is meaningful
         return new CircleSimple(e_center,e_rad,1);
       }
+    
     double ahc=h_center.abs();
     
-
     // new code using x-radii and other information 
     double n1 = (1+s_rad)*(1+s_rad);
     double n2 = n1 - ahc*ahc*x_rad*x_rad/n1;
@@ -212,7 +235,7 @@ public class HyperbolicMath{
         e_center.x = b*h_center.x;
         e_center.y=b*h_center.y;
       } 
-    return new SimpleCircle(e_center,e_rad,1);
+    return new CircleSimple(e_center,e_rad,1);
 
     /* old code
     if (ahc > .999999999999)  % almost horocycle? avoid error. 
@@ -244,7 +267,7 @@ public class HyperbolicMath{
    * invariant, so depends on the center too.) 
    * @param e_center Complex
    * @param e_rad double
-   * @return SimpleCircle (flag, center, radius)
+   * @return CircleSimple (flag, center, radius)
   */
   public static CircleSimple e_to_h_data(Complex e_center,double e_rad) {
     double x_rad;
@@ -253,7 +276,7 @@ public class HyperbolicMath{
     
     double aec=e_center.abs();
     double dist=aec+e_rad;
-    if (dist>(1.000000000001)) { // not in closed disc; push in to horocycle
+    if (dist>(1.000000000001)) { // not in closed disc; push in to form horocycle
     	aec /= dist;
     	e_rad /=dist;
     	dist=1.0;
@@ -383,7 +406,7 @@ public class HyperbolicMath{
    * @param o1 double
    * @param o2 double
    * @param o3 double
-   * @return SimpleCircle
+   * @return CircleSimple
    * 
   */
   public static CircleSimple h_horo_center(Complex z1,Complex z2,double e2,
@@ -482,7 +505,7 @@ used to be passed in here as an argument).
       return new CircleSimple(p1,-rad,1);
 /* ?? Don't know what to make of this old stuff
       if (S3<=.0000000000001) { // horocycle? p1 should be on unit circle 
-    	  return new SimpleCircle(p1,-rad,1);
+    	  return new CircleSimple(p1,-rad,1);
       }
       return EuclideanToHyperbolic(z3,x_rad3);
 */      
@@ -542,7 +565,7 @@ used to be passed in here as an argument).
    * @param r1 double (hyp x-radius)
    * @param r2 double (hyp x-radius)
    * @param r3 double (hyp x-radius)
-   * @return SimpleCircle
+   * @return CircleSimple
    */
 	public static CircleSimple hyp_tang_incircle(Complex z1,Complex z2,Complex z3,
 			double r1,double r2,double r3) {
@@ -558,7 +581,7 @@ used to be passed in here as an argument).
 	 * @param z1 Complex
 	 * @param z2 Complex
 	 * @param z3 Complex
-	 * @return SimpleCircle
+	 * @return CircleSimple
 	 */
 	public static CircleSimple hyp_tri_incircle(Complex z1,Complex z2,Complex z3) {
 		Complex w1=null;
@@ -585,14 +608,17 @@ used to be passed in here as an argument).
 			w3=z2;
 		}
 		
-		// all essentially horocycles? Apply mobius to put them at -1, 1, i, resp.,
-		//     then circle radius 1/4, center i/4
+		// all essentially horocycles? Apply mobius to put them at -1, 1, i, 
+		// resp., then circle radius 1/4, center i/4
 		if (w1==null) {
-			Mobius tmob=Mobius.trans_abAB(w1,w2,new Complex(-1.0),new Complex(1.0),w3,new Complex(0.0,1.0));
+			Mobius tmob=Mobius.trans_abAB(w1,w2,new Complex(-1.0),
+					new Complex(1.0),w3,new Complex(0.0,1.0));
 			CircleSimple sC=new CircleSimple();
-			int rslt=Mobius.mobius_of_circle(tmob, -1, new Complex(0.0,0.25), 0.25, sC, false);
+			int rslt=Mobius.mobius_of_circle(tmob, -1,
+					new Complex(0.0,0.25), 0.25, sC, false);
 			if (rslt==0)
-				throw new LayoutException("failed getting incircle for ideal triangle");
+				throw new LayoutException("failed getting incircle "+
+						"for ideal triangle");
 			return sC;
 		}
 		
@@ -649,12 +675,12 @@ used to be passed in here as an argument).
 
   /** 
    * Given 2 hyp centers/x-radii and x-radius of third, return 
-   * third as SimpleCircle. (Note: third circle has radius the
+   * third as CircleSimple. (Note: third circle has radius the
    * negative of euclidean radius if it is a horocycle).
    * oj=inv dist of edge opposite circle j. No consistency check on 
    * first two circles or incompatiblities. 'iflag' true reflects
    * incompatibilities (but not yet passed back). 
-   * Return empty SimpleCircle on error.
+   * Return empty CircleSimple on error.
    * @param z1 Complex 
    * @param z2 Complex
    * @param x1 double 
@@ -664,7 +690,7 @@ used to be passed in here as an argument).
    * @param o1 double
    * @param o2 double
    * @param o3 double
-   * @return SimpleCircle
+   * @return CircleSimple
    *  
   */
 public static CircleSimple h_compcenter(Complex z1, Complex z2,
@@ -805,7 +831,7 @@ public static CircleSimple h_compcenter(Complex z1, Complex z2,
  * @param x1
  * @param x2
  * @param x3
- * @return SimpleCircle
+ * @return CircleSimple
  */
 public static CircleSimple h_compcenter(Complex z1,Complex z2,
 	  		 double x1,double x2,double x3) {

@@ -414,7 +414,7 @@ public class SchwarzMap extends PackExtender {
 			if (baseface>0) {
 				TriAspect mytri=rangeTri[baseface];
 				if (geo_switch) {
-				if (dom_hes<0 && rangeHes==0) {
+				if (dom_hes<0 && rangeHes==0) { // domain is hyp, range eucl
 					for (int j=0;j<3;j++) {
 						int v=mytri.vert[j];
 						sC=HyperbolicMath.h_to_e_data(packData.rData[v].center,packData.rData[v].rad);

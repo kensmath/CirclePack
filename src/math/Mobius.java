@@ -1075,15 +1075,16 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	/* ----------------- applying Mobius to single circles ------- */
 
 	/**
-	 * Apply mobius (flag false) or inverse (flag true) to a single circle. Note
-	 * that in eucl case, negative newr means use outside of circle; user will
-	 * have to handle this in calling routine. Radius and center in specified
-	 * geometry returned in 'CircleSimple'.
+	 * Apply mobius (flag false) or inverse (flag true) to a single circle
+	 * in specified geometry. Note that in eucl case, negative newr 
+	 * means use outside of circle; user will have to handle this in 
+	 * calling routine. Center/radius in specified geometry returned 
+	 * in 'CircleSimple'.
 	 * @param Mob Mobius
 	 * @param hes int, geometry
 	 * @param z Complex, circle center
 	 * @param r double, circle radius
-	 * @param sC SimpleCircle, use this to return results
+	 * @param sC CircleSimple, use this to return results
 	 * @param oriented boolean, if false, use Mob^{-1}
 	 * @return int, 0 on error, results in 'sC' in specified geometry
 	 */
@@ -1100,7 +1101,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			CirMatrix C=new CirMatrix(tmpz,tmpr);
 			CirMatrix CC=CirMatrix.applyTransform(Mob,C,oriented);
 
-			sc=CirMatrix.euclCircle(CC);
+			sc=CirMatrix.cirMatrix2eucl(CC);
 			if (sc==null)
 				return 0;
 			
@@ -1122,10 +1123,9 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 				sC.rad = r;
 				return 1;
 			}
-			CirMatrix C = new CirMatrix();
-			CirMatrix.s_to_matrix_data(z, r, C);
+			CirMatrix C =CirMatrix.sph2CirMatrix(z, r);
 			CirMatrix CC = CirMatrix.applyTransform(Mob, C, oriented);
-			CirMatrix.matrix_to_s_data(CC, sC);
+			sC=CirMatrix.cirMatrix2sph(CC);
 			if (Double.isNaN(sC.center.x) || Double.isNaN(sC.center.y)) {
 				sC.center = Mob.apply(z);
 				/* fixup: see above */
@@ -1140,7 +1140,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			CirMatrix C=new CirMatrix(z,r);
 			CirMatrix CC=CirMatrix.applyTransform(Mob,C,oriented);
 
-			CircleSimple scl=CirMatrix.euclCircle(CC);
+			CircleSimple scl=CirMatrix.cirMatrix2eucl(CC);
 			sC.center=scl.center;
 			sC.rad=scl.rad;
 			

@@ -130,7 +130,7 @@ public class ShepherdCircles extends PackExtender {
 //			packData.rData[w].center=new Complex(x,0.0);
 			
 			// Third, compute like normal, then conjugate
-//			SimpleCircle sC=EuclMath.e_compcenter(packData.rData[v].center,packData.rData[w].center,
+//			CircleSimple sC=EuclMath.e_compcenter(packData.rData[v].center,packData.rData[w].center,
 //					packData.rData[v].rad,packData.rData[w].rad,packData.rData[u].rad,true,
 //					packData.kData[w].overlaps[packData.nghb(w, u)],
 //					packData.kData[v].overlaps[packData.nghb(v, u)],

@@ -6,3 +6,5 @@ See TODO_old for earlier TODO's (most still awaiting attention).
 Many of these tasks and others are labeled as "TODO" in comments
 in the Java code itself.
 
+* Convert uses of double[3] to Point3D, especially in sph computations.
+

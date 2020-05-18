@@ -8153,7 +8153,10 @@ public class CommandStrParser {
 				  // assume circles of f are in place, need only compute 
 				  //   the third circle of g, 'target' (across the shared edge).
 				  try {
-				  Mobius bm_f=Schwarzian.faceBaseMob(packData,f); // recomp map from base equilateral
+				  // compute map from base equilateral
+				  Mobius bm_f=Schwarzian.faceBaseMob(packData,f);
+				  
+				  // compute the target circle
 				  CircleSimple sC=Schwarzian.getThirdCircle(s, j, bm_f, packData.hes);
 
 				  // debug info
@@ -8184,6 +8187,7 @@ public class CommandStrParser {
 					  debug=false;
 				  }
 
+				  
 				  packData.rData[target].rad=sC.rad;
 				  packData.rData[target].center=sC.center;
 				  } catch (Exception ex) {

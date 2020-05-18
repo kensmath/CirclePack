@@ -1,0 +1,24 @@
+function outCir = appMobius2Cir(M,inCir,inv)
+%outCir = appMobius2Cir(M,inCir,inv) Apply mobius to circle
+%   Input circle inCir given as 2x2 matrix, apply mobius M and get
+%   output as 2x2 outCir.
+%      result = G^{t}*inCir*conj(G), 
+%   where G = M^{-1}*det(M). 
+
+C=circle2Matrix(z,r);
+
+G=zeros(2,2);
+G(1,1)=M(2,2);
+G(1,2)=-M(1,2);
+G(2,1)=-M(2,1);
+G(2,2)=M(1,1);
+GT=G;
+GT(1,2)=G(2,1);
+GT(2,1)=G(1,2);
+
+cirMatrix=GT*C*conj(G);
+[newz,newr]=matrix2Circle(cirMatrix);
+return;
+
+end
+

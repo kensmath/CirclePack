@@ -4773,7 +4773,7 @@ public class PackData{
 	 * complicated in non-simply connected situation.
 	 * @param f int
 	 * @param amb AmbiguousZ[]
-	 * @return SimpleCircle, null on error
+	 * @return CircleSimple, null on error
 	 */
 	public CircleSimple faceIncircle(int f,AmbiguousZ []amb) {
 		if (f<1 || f>faceCount) return null;
@@ -4785,7 +4785,7 @@ public class PackData{
 					rData[faces[f].vert[2]].rad);
 			
 			// TODO: the new method, hyp_tri_incircle is not working
-//			SimpleCircle sc2=HyperbolicMath.hyp_tri_incircle(pts[0],pts[1],pts[2]);
+//			CircleSimple sc2=HyperbolicMath.hyp_tri_incircle(pts[0],pts[1],pts[2]);
 //			return sc2;
 			return sc1;
 		}

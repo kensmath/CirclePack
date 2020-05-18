@@ -1,5 +1,6 @@
 package geometry;
 
+import allMains.CirclePack;
 import complex.Complex;
 import math.CirMatrix;
 
@@ -11,21 +12,6 @@ import math.CirMatrix;
  */
 public class CommonMath {
 	
-	/**
-	 * Convert 'CirMatrix' to 'SimpleCircle' in specified geometry
-	 * @param C CirMatrix
-	 * @param hes int
-	 * @return SimpleCircle
-	 */
-	public static CircleSimple any_cirMatrix2sC(CirMatrix C,int hes) {
-		CircleSimple sC=CirMatrix.euclCircle(C);
-		if (hes>0) 
-			return SphericalMath.e_to_s_data(sC.center,sC.rad);
-		if (hes<0)
-			return HyperbolicMath.e_to_h_data(sC.center,sC.rad);
-		return sC;
-	}
-	
 	/** 
 	 * Given radii, inv. distances, and geometry, place a triple of 
 	 * circles; first is at origin, next in standard orientation 
@@ -35,11 +21,11 @@ public class CommonMath {
 	 * TODO: use this to replace 'place_face' in other contexts
 	 *  
 	 * remain in s-radius, so we have to convert.
-	 * @param sC0 SimpleCircle,
-	 * @param sC1 SimpleCircle,
-	 * @param sC2 SimpleCircle,
+	 * @param sC0 CircleSimple,
+	 * @param sC1 CircleSimple,
+	 * @param sC2 CircleSimple,
 	 * @param hes int
-	 * @return int, 0 on layout error, circle data given in SimpleCircles
+	 * @return int, 0 on layout error, circle data given in CircleSimple's
 	*/
 	public static int placeOneFace(CircleSimple sC0,CircleSimple sC1,CircleSimple sC2,int hes) {
 		return placeOneFace(sC0,sC1,sC2,1.0,1.0,1.0,hes);
@@ -53,14 +39,14 @@ public class CommonMath {
 	 * 
 	 * TODO: use this to replace 'place_face' in other contexts
 	 *  
-	 * @param sC0 SimpleCircle,
-	 * @param sC1 SimpleCircle,
-	 * @param sC2 SimpleCircle,
+	 * @param sC0 CircleSimple,
+	 * @param sC1 CircleSimple,
+	 * @param sC2 CircleSimple,
 	 * @param id0 double
 	 * @param id1 double
 	 * @param id2 double
 	 * @param hes int
-	 * @return int, 0 on layout error, circle data given in SimpleCircles
+	 * @return int, 0 on layout error, circle data given in CircleSimple's
 	*/
 	public static int placeOneFace(CircleSimple sC0,CircleSimple sC1,CircleSimple sC2,
 			double id0,double id1,double id2,int hes) {
@@ -126,7 +112,7 @@ public class CommonMath {
 	 * @param o2 double, opposite z2
 	 * @param o3 double, opposite z3
 	 * @param hes int
-	 * @return SimpleCircle
+	 * @return CircleSimple
 	 */
 	public static CircleSimple comp_any_center(Complex z1, Complex z2,
 	  		 double r1,double r2,double r3, double o1,double o2,double o3,int hes) {
@@ -166,7 +152,7 @@ public class CommonMath {
 	 * @param z2
 	 * @param z3
 	 * @param hes int
-	 * @return SimpleCircle
+	 * @return CircleSimple
 	 */
 	public static CircleSimple tri_incircle(Complex z1,Complex z2,Complex z3,int hes) {
 		if (hes<0) 
@@ -215,6 +201,89 @@ public class CommonMath {
 			return SphericalMath.sph_tangency(z1,z2,r1,r2);
 		else
 			return HyperbolicMath.hyp_tangency(z1,z2,r1,r2);
+	}
+	
+	/**
+	 * Convert 'CirMatrix' to 'CircleSimple' in requested geometry. 
+	 * @param cM CirMatrix, 2x2 representation of a circle
+	 * @param hes int, geometry
+	 * @return CircleSimple, null on error (e.g. improper hyp case)
+	 */
+	public static CircleSimple cirMatrix_to_geom(CirMatrix cM,int hes) {
+		if (cM==null)
+			return null;
+		CircleSimple outCS=new CircleSimple();
+		CirMatrix CC=CirMatrix.normalize(cM); // a should be +-1 or 0
+		
+		// typical data (recall, a.x=-1 ==> all entries were multiplied by -1)
+		Complex ecent=CC.c.times(-1.0*CC.a.x); // c entry is -center
+		double reald=CC.d.x*CC.a.x; // throw out any extraneous imaginary part
+		double rsq=ecent.absSq()-reald;
+		if (rsq<=0) {
+			CirclePack.cpb.errMsg("error in a 'CirMatrix'");
+			return null;
+		}
+		// positive eucl radius
+		double erad=Math.sqrt(rsq); 
+
+		// sph case, radius/center. See the conventions about inside/outside, 
+		if (hes>0) {
+			// circle is a straight line (goes through south pole)
+			if (CC.a.abs() < CirMatrix.CM_TOLER) {
+				// through origin? Hence a hemisphere
+				if (CC.d.abs() < CirMatrix.CM_TOLER) {
+					outCS.center.y = outCS.rad = Math.PI / 2.0;
+					outCS.center.x=CC.b.conj().arg();
+					return outCS;
+				} 
+
+				// straight line, but NOT through origin
+				double R=CC.d.abs(); // distance to origin
+				double theta=Math.atan2(-1.0*CC.b.y,CC.b.x);
+				double atn=Math.atan(R);
+				double rho=Math.PI/2.0-atn; 
+				if (CC.d.x<0) // encloses origin (north pole)?
+					rho+=2.0*atn;
+				outCS.rad=rho;
+				outCS.center=new Complex(theta,Math.PI-rho);
+
+				return outCS;
+			} // end of 'straight line' cases
+
+			// else a circle
+			CircleSimple sc=SphericalMath.e_to_s_data(ecent, erad);
+			outCS.center=sc.center;
+			outCS.rad=sc.rad;
+			if (CC.a.x<0) { // want outside of euclidean circle
+				outCS.center=SphericalMath.getAntipodal(sc.center);
+				outCS.rad=Math.PI-sc.rad;
+			}
+			return outCS;
+		} // done with sph
+		
+		// hyp case: return null if circle is not in unit disc
+		if (hes<0) { 
+			if (CC.a.x<=0) { // straight line or outside
+				CirclePack.cpb.errMsg("Improper hyp conversion of 'CirMatrix'");
+				return null;
+			}
+			if (ecent.abs()+erad>1.0) // not in disc
+				return null;
+			
+			return HyperbolicMath.e_to_h_data(ecent, erad);
+		}
+		
+		// else eucl; watch for line
+		if (CC.a.x==0 && CC.a.y==0) { // yes, is a line
+			outCS.lineFlag=true;
+			outCS.center=CC.b.conj();  // unit normal toward interior
+			outCS.rad=-2.0*CC.d.x;     // signed distance from origin
+			return outCS;
+		}
+		outCS.center=ecent; 
+		outCS.rad=erad*CC.a.x; // may be negative if a=-1
+		return outCS;
+		
 	}
 	
 }

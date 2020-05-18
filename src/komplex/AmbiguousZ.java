@@ -106,12 +106,12 @@ public class AmbiguousZ {
 	 * Given another circle (c,r) and invDistance, find which of these centers
 	 * best matches the correct distance. Note: it is conceivable that the
 	 * result could still be ambiguous, but that should be unlikely. The 
-	 * relative error (min dist/truedist) is returned as 'SimpleCircle.rad'.
+	 * relative error (min dist/truedist) is returned as 'CircleSimple.rad'.
 	 * @param z Complex
 	 * @param r double
 	 * @param invD double
 	 * @param hes int, geometry
-	 * @return SimpleCircle, null on error
+	 * @return CircleSimple, null on error
 	 */
 	public CircleSimple theOne(Complex z, double r, double invD, int hes) {
 		int best = -1;

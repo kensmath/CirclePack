@@ -39,10 +39,13 @@ public class DualTri {
 	}
 	
 	/**
-	 * Compute/store the tangency points. The hyperbolic case
-	 * is somewhat complicated if one or more vertices is on
-	 * the unit circle. Set 'TangPts' to null if situation is
-	 * illegal.
+	 * Compute/store the tangency points based on 'corners' only;
+	 * intended for cases when radii are not available.
+	 * The hyperbolic case is somewhat complicated if one or 
+	 * more 'corners' is on the unit circle. Set 'TangPts' to 
+	 * null if situation is illegal.
+	 * In the sph case, can get the wrong distance between
+	 * 'corners'.
 	 */
 	public void setTangPts() {
 		double []len=new double[3];
@@ -240,17 +243,17 @@ public class DualTri {
 					r[j] = 2.0*r[j]*(1.0 - r[j]*(1.0-2.0*r[j]/3.0));
 			}
 		}
-		
+
 		// here's the actual computation
 		for (int j=0;j<3;j++) {
 				TangPts[j]=CommonMath.get_tang_pt(corners[j],corners[(j+1)%3],
 						r[j],r[(j+1)%3],hes);
 		}			
 		return;
-	}
-	
+	}		
+		
 	/**
-	 * Return the tangency point between centers {v(j),v((j+1)%3)}.
+	 * Get the tangency point between centers {v(j),v((j+1)%3)}.
 	 * @return new Complex, null if not set
 	 */
 	public Complex getTP(int j) {

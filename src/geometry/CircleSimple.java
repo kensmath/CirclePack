@@ -10,8 +10,9 @@ import complex.Complex;
  * Normally, 
  *     flag=-1 on error, flag=1 on success, flag=0 neutral. 
  * Other options may be agreed in particular calls.
- * lineFlag false, the regular circles (rad<0 means outside)
- *     true, then center=normal towards interior, rad= signed distance from origin
+ * lineFlag:
+ *     false: regular circles (rad<0 means outside)
+ *     true: center is normal vector towards interior, rad = signed distance from origin
 */
 public class CircleSimple{
 	public int flag;          // utility flag
@@ -27,22 +28,15 @@ public class CircleSimple{
 		
 		rad = r;
 	}
-
-	public CircleSimple(double x, double y, double r,int f) {
-		flag=f;
-		lineFlag=false;
-		center = new Complex(x, y);
-		rad = r;
-	}
 	
 	/**
-	 * Create empty SimpleCircle; ok true, set 'flag=0' (OK); else 'flag=-1', error.
+	 * Create empty CircleSimple; ok true, set 'flag=0' (OK); else 'flag=-1', error.
 	 * @param ok
 	 */
 	public CircleSimple(boolean ok) {
 		center=new Complex(0.0);
 		rad=0.0;
-		if (ok) flag=0; // create empty SimpleCircle
+		if (ok) flag=0; // create empty CircleSimple
 		else flag=-1; // some error 
 		lineFlag=false;
 	}
@@ -66,7 +60,7 @@ public class CircleSimple{
    * Store radius, center, and plotflag in 'p.rData[v]'
    * @param p @see PackData
    * @param v int, vertex
-   * @return int SimpleCircle.flag
+   * @return int CircleSimple.flag
    */
   public int save(PackData p,int v) {
 	  if (p==null || v<=0 || v>p.nodeCount) return -1;

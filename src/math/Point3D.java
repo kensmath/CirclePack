@@ -27,8 +27,9 @@ public class Point3D {
   
   /**
    * Convert point in spherical coords (theta,phi) to Point3D={x,y,z}
-   * @param theta
-   * @param phi
+   * on the unit sphere.
+   * @param theta double
+   * @param phi double
    */
   public Point3D(double theta, double phi) {
     x = Math.sin(phi) * Math.cos(theta);
@@ -37,11 +38,15 @@ public class Point3D {
   }
   
   /**
-   * Convert complex (theta,phi) to {x,y,z}
-   * @param z, Complex
+   * Convert complex (theta,phi) to {x,y,z} on unit sphere
+   * @param z Complex
    */
   public Point3D(Complex z) { // theta, phi packaged as complex
 	  this(z.x,z.y);
+  }
+  
+  public Point3D(double []T) { // given double[3] 
+	  this(T[0],T[1],T[2]);
   }
   
   /** 
@@ -195,25 +200,24 @@ public class Point3D {
   }
   
   /**
-   * scalar multiple by d
+   * multiple by scalar d
    * @param d double
    * @return new Point3D
    */
-  public Point3D mult(double d) {
+  public Point3D times(double d) {
     return new Point3D(x*d,y*d,z*d);
   }
   
   /**
-   * Length of remaining vector after projection of
-   * this vector in direction of v is removed.
+   * Return this vector minus projection in direction of vector v.
    * @param v Point3D
-   * @return double
+   * @return new Point3D
    */
-  double rem(Point3D v) {
-		double d = DotProduct(this,v) / v.norm();
-		return Math.sqrt(this.normSq() - d * d);
+  public Point3D mod(Point3D v) {
+	  Point3D V=proj_vector(this,v);
+	  return displacement(V,this);
   }
-  
+
   /**
    * projects (x,y,z) to point on projected horizon (unit circle in yz-plane),
    * returning complex sph point (theta,phi). Point near yz-origin defaults
@@ -253,17 +257,6 @@ public class Point3D {
     return new Complex(this.getTheta(),this.getPhi());
   }
   
-  
-  /**
-   * Return this vector minus projection in direction of vector v.
-   * @param v Point3D
-   * @return new Point3D
-   */
-  public Point3D mod(Point3D v) {
-	  Point3D V=proj_vector(this,v);
-	  return displacement(V,this);
-  }
-
   /**
    * produce a perp vector; default is <1 0 0>.
    * @return new Point3D
@@ -296,7 +289,7 @@ public class Point3D {
   }
 
   /**
-   * Return the projection of v in the direction of w.
+   * Return the vector projection of v in the direction of w.
    * If w is too small, return zero vector.
    * @param v Point3D
    * @param w Point3D
@@ -305,10 +298,7 @@ public class Point3D {
   public static Point3D proj_vector(Point3D v,Point3D w) {
 	  if (w.norm()<PackData.TOLER)
 		  return new Point3D(0.0,0.0,0.0);
-	  Point3D W=new Point3D(w);
-	  double d=DotProduct(v,w);
-	  W.mult(d/w.norm());
-	  return W;
+	  return w.times(DotProduct(v,w)/w.norm());
   }
   
   /**
