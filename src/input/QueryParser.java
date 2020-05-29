@@ -80,7 +80,8 @@ public class QueryParser {
 	 *        rather than used for something else, like setting a variable.
 	 * @return String representation of result, null on error
 	 */
-	public static String queryParse(PackData p,String query,Vector<Vector<String>> flagSegs,boolean forMsg) {
+	public static String queryParse(PackData p,String query,
+			Vector<Vector<String>> flagSegs,boolean forMsg) {
 		StringBuilder ans=new StringBuilder(""); // result of the query alone
 		// some utility variables
 		NodeLink vertlist=null;
@@ -90,6 +91,7 @@ public class QueryParser {
 		StringBuilder words=new StringBuilder(query+" (p"+p.packNum+") "); 
 		String suffix=null;
 		boolean gotone=false;
+		String exception_words=null; // words when an exception is caught
 		
 		// utility: note first set of strings and its first string
 		Vector<String> items=null;
@@ -470,8 +472,10 @@ public class QueryParser {
 						energy=PointEnergies.comp_energy(p,Energy.MIN_DIST);
 						words.append(", Min_distance");
 					}
-					else 
-						throw new ParserException("energy: valid type not indcated");
+					else {
+						exception_words="?energy usage: valid type not indicated";
+						throw new ParserException("");
+					}
 					// TODO: could consider negative infinity energy (e.g., power -100)
 					
 					ans.append(energy);
@@ -506,7 +510,8 @@ public class QueryParser {
 			  			  	}
 						}
 						else {
-							throw new ParserException("error in list of edges.");
+							exception_words="?edge_x usage: error in list of edges";
+							throw new ParserException("");
 						}
 						gotone=true;
 					} // end of while
@@ -529,7 +534,8 @@ public class QueryParser {
 					try {
 						vv=NodeLink.grab_one_vert(p,items.get(0));
 					} catch (Exception ex) {
-						throw new ParserException("usage: 'v'");
+						exception_words="?flower usage: 'v'";
+						throw new ParserException("");
 					}
 					words.append(" v"+vv); // show which vert
 					int n=p.kData[vv].num;
@@ -555,7 +561,8 @@ public class QueryParser {
 							y=Double.parseDouble(items.get(1));
 						} catch (Exception ex) {}
 					} catch (Exception ex) {
-						throw new ParserException("usage: 'x [y]' for complex argument");
+						exception_words="?f(z) usage: 'x [y]' for complex argument";
+						throw new ParserException("");
 					}
 					Complex w=PackControl.functionPanel.getFtnValue(new Complex(x,y));
 					if (Math.abs(y)<CPBase.GENERIC_TOLER) // if real, suppress the y
@@ -575,7 +582,8 @@ public class QueryParser {
 					try { // one real
 						t=Double.parseDouble(items.get(0));
 					} catch (Exception ex) {
-						throw new ParserException("usage: 't' for real argument");
+						exception_words="?gam(t) usage: 't' for real argument";
+						throw new ParserException("");
 					}
 					Complex w=PackControl.functionPanel.getParamValue(t);
 					ans.append(new String(w.x+" "+w.y));
@@ -720,8 +728,10 @@ public class QueryParser {
 				if (query.startsWith("Redchai")) {
 					FaceLink redlink=new FaceLink(p,"R");
 					int n;
-					if (redlink==null || (n=redlink.size())==0)
-						throw new CombException("redchain seems to be empty");
+					if (redlink==null || (n=redlink.size())==0) {
+						exception_words="?Redchain usage: appears to be empty";
+						throw new CombException("");
+					}
 					int firstf=redlink.get(0);
 					if (forMsg && n>50) {
 						n=50;
@@ -818,7 +828,8 @@ public class QueryParser {
 							int indx=p.nghb(edge.v,edge.w);
 							ans.append(String.format("%.6f",p.kData[edge.v].schwarzian[indx]));
 						} catch (Exception ex) {
-							throw new DataException("query usage: 'schwarzian' is not allocated");
+							exception_words="?schw usage: 'schwarzian' data space not allocated";
+							throw new DataException("");
 						}
 						if (forMsg) 
 							words.append(" <v,w>"+edge.v+" "+edge.w);
@@ -834,7 +845,8 @@ public class QueryParser {
 								accum += p.kData[vv].schwarzian[j];
 							ans.append(String.format("%.6f",accum));
 						} catch (Exception ex) {
-							throw new DataException("query usage: 'schwarzian' may not be allocated");
+							exception_words="?sch_flower usage: 'schwarzian' may not be allocated";
+							throw new DataException("");
 						}
 						if (forMsg)
 							words.append(" for vert "+vv);
@@ -847,8 +859,10 @@ public class QueryParser {
 			case 'v': { // --------------------------------------------------------
 
 				if (query.startsWith("vertexMap")) {
-					if (p.vertexMap==null)
-						throw new ParserException("packing doesn't have a vertex map");
+					if (p.vertexMap==null) {
+						exception_words="?vertexMap usage: packing has no vertex map";
+						throw new ParserException("");
+					}
 					int N=p.vertexMap.size();
 					Iterator<EdgeSimple> vm=p.vertexMap.iterator();
 					int count=0;
@@ -894,16 +908,20 @@ public class QueryParser {
 			{
 				forMsg=true; // can only go to message
 				int k=query.indexOf(" ");
-				if (query.length()<=1 || k==1)
-					throw new ParserException("No variable name was given");
+				if (query.length()<=1 || k==1) {
+					exception_words="?_<variable> usage: No variable name was given";
+					throw new ParserException("");
+				}
 				String vkey;
 				if (k<0)
 					vkey=query.substring(1);
 				else
 					vkey=query.substring(1,k);
 				String varValue=PackControl.varControl.getValue(vkey);
-				if (varValue==null || varValue.length()==0)
-					throw new ParserException("variable '"+vkey+"' has no stored value");
+				if (varValue==null || varValue.length()==0) {
+					exception_words="?_<variable> usage: variable '\"+vkey+\"' has no stored value";
+					throw new ParserException("");
+				}
 				if (varValue.length()>100) {
 					varValue=varValue.substring(0,100);
 					suffix=new String(" ... ");
@@ -914,6 +932,7 @@ public class QueryParser {
 				break;
 			}
 			default: {
+				exception_words="? no valid query key word";
 				throw new ParserException("");
 			}
 			
@@ -925,7 +944,9 @@ public class QueryParser {
 				}
 			
 		} catch (Exception ex) {
-			throw new ParserException("Query '"+query+"' has error or was not recognized: "+ex.getMessage());
+			if (exception_words!=null) 
+				throw new ParserException(" Query problem: "+exception_words);
+			throw new ParserException("Query '"+query+"' has error or was not recognized: ");
 		}
 		
 		// generic return method: note, string depends on 'forMsg'

@@ -34,14 +34,14 @@ public class SphWidget extends JFrame implements ActionListener {
 	CPScreen cpScreen;
 	PackData packData;
 	
-	static final int BAR_FOOTPRINT=25; // horizontal footprint of each bar
-	static final int TEXT_PADDING=60; // padding on left for scale text
-	static final int BAR_PADDING=50; // space above/below bars
-	static final int BAR_DROP=30; // how far bar top is below panel top
-	static final int RAD_BAR_HEIGHT=270;
-	static final int ANG_BAR_HEIGHT=200;
-	static final int INDX_HEIGHT=50;
-	static final double RAD_BAR_POWER=9.0;
+	public static final int BAR_FOOTPRINT=25; // horizontal footprint of each bar
+	public static final int TEXT_PADDING=60; // padding on left for scale text
+	public static final int BAR_PADDING=50; // space above/below bars
+	public static final int BAR_DROP=30; // how far bar top is below panel top
+	public static final int RAD_BAR_HEIGHT=270;
+	public static final int ANG_BAR_HEIGHT=200;
+	public static final int INDX_HEIGHT=50;
+	public static final double RAD_BAR_POWER=9.0;
 
 	JPanel controlPanel; // option buttons, readouts
 	JScrollPane mainScroll; // contains barsPanel, scroll for larger packings

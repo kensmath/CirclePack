@@ -769,6 +769,31 @@ public class StringUtil {
 		return null; // didn't find matching '{..}'
 	}
 	  
+	/**
+	 * Categorize a trimmed line as null or error (0), or first substring is 
+	 * non-digit (1), integer (2), or float (3)
+	 * @param line String (trimmed, no line break)
+	 * @return int: 0 (null or error), 1 (non-digit), 2 (integer), 3 (double)
+	 */
+	public static int lineType(String line) {
+		if (line==null) 
+			return 0;
+		if (!java.lang.Character.isDigit(line.charAt(0)))
+			return 1;
+		int k=line.indexOf(' ');
+		String str=line.substring(0,k);
+		try {
+			Integer.parseInt(str);
+			return 2;
+		} catch (Exception ex) {
+			try {
+				Double.parseDouble(str);
+				return 3;
+			} catch(Exception x) {}
+		}
+		return 0; // error
+	}
+
 	  /** 
 	   * Reconstitute (with separating spaces) a string from a vector of
 	   * vectors of strings. Return null if essentially empty.

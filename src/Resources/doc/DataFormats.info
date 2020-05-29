@@ -270,11 +270,25 @@ or
            edge shared with t 
 	END
 	
-4. Triangulations: This uses the OFF (open file format), no radii are specified, only centers and combinatorics. 
-Note that vertices are indexed from 0. Have optional colors for vertices (z coord must be given then).
+4. Triangulations: This allows any of several ascii formats, 
+such as "OFF" (open file format), "VTK" (visual tool kit), 
+"TRIANGULATION" (a CirclePack format), or generic data. 
+
+  * No radii are specified, only centers and combinatorics.
+  * CirclePack looks for lines starting with 2 or more doubles 
+and then reads successive lines as the node data: form is
+    x y [z] [r g b [a]] % 2D or 3D and optional colors
+  * CirclePack also looks for line starting with at least 3 integers and then reads the combinatorial data in form
+    v0 v1 v2 (trianglar) or n v0 v1 ... vn (polygonal)
+  * Note that CirclePack may reindex vertices to be contiguous
+from 1, with 'vertexMap' holding <new,old> information.
+  * For n-gon faces with n>3, CirclePack will add a barycenter
+and subdivide get a valid triangulation.
+
+Here's an "OFF" type example:
 
 	OFF
-	V F 	(number of vertices and faces)
+	V F 	(number of vertices and faces) (will be disregarded)
 	x_0 y_0 [z_0 [r_0 g_0 b_0 [a_0]]]  (coords, optional colors and alpha value)
 	...
 	x_{V-1} y_{V-1} [z_{V-1} [r_{V-1} g_{V-1} b_{V-1} [a_{V-1}]]]

@@ -80,10 +80,10 @@ import ftnTheory.TorusModulus;
 import ftnTheory.WeldManager;
 import ftnTheory.WordWalker;
 import ftnTheory.iGame;
+import geometry.CircleSimple;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.NSpole;
-import geometry.CircleSimple;
 import geometry.SphericalMath;
 import komplex.CookieMonster;
 import komplex.DualGraph;
@@ -1811,7 +1811,7 @@ public class CommandStrParser {
 	    			  returnVal=1;
 		    	  }
 	    	  }
-	    	  else if (str.equalsIgnoreCase("sz")) {
+	    	  else if (str.equalsIgnoreCase("sm")) {
 	    		  if (!packData.status || packData.nodeCount==0) return 0;
 	    		  SchwarzMap px=new SchwarzMap(packData);
 	    		  if (px.running) {

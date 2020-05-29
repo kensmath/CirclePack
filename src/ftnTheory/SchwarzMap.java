@@ -12,8 +12,8 @@ import allMains.CirclePack;
 import complex.Complex;
 import exceptions.DataException;
 import exceptions.ParserException;
-import geometry.HyperbolicMath;
 import geometry.CircleSimple;
+import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import input.CPFileManager;
 import komplex.DualGraph;
@@ -21,6 +21,7 @@ import komplex.DualTri;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.GraphLink;
+import listManip.NodeLink;
 import math.Mobius;
 import packing.PackData;
 import packing.PackExtender;
@@ -28,6 +29,7 @@ import util.CmdStruct;
 import util.DispFlags;
 import util.StringUtil;
 import util.TriAspect;
+import widgets.RadiusWidget;
 
 /** 
  * This is code for exploring discrete Schwarzian derivatives, 
@@ -95,6 +97,8 @@ public class SchwarzMap extends PackExtender {
 	public int rangeHes;          // range geometry
 	public int rangePackNum;
 	public GraphLink dTree;       // dual spanning tree for layout (root is removed) 
+	
+	public RadiusWidget radWidget;
 
 	// Constructor
 	public SchwarzMap(PackData p) {
@@ -120,9 +124,24 @@ public class SchwarzMap extends PackExtender {
 	 */
 	public int cmdParser(String cmd, Vector<Vector<String>> flagSegs) {
 		Vector<String> items = null;
+		
+		// ======= open radWidget ============
+		if (cmd.startsWith("radW")) {
+			NodeLink wlist;
+			try {
+				items=flagSegs.get(0);
+				wlist=new NodeLink(packData,items);
+			} catch(Exception ex) {
+				wlist=new NodeLink(packData,"a");
+			}
+			radWidget=new RadiusWidget(packData,wlist);
+			if (radWidget==null)
+				return 0;
+			radWidget.setVisible(true);
+		}
 
 		// ======= put ===========
-		if (cmd.startsWith("put")) {
+		else if (cmd.startsWith("put")) {
 			PackData qData=null;
 			if (flagSegs!=null && (items=flagSegs.get(0))!=null) {
 				int qnum=rangePackNum;
@@ -1123,6 +1142,8 @@ public class SchwarzMap extends PackExtender {
 	 */
 	public void initCmdStruct() {
 		super.initCmdStruct();
+		cmdStruct.add(new CmdStruct("radW","{v..}",null,"Create and display a widget "+ 
+				"for adjusting radii"));
 		cmdStruct.add(new CmdStruct("put","[-q{n} [{f g .. }]",null,"Put rangeTri "+
 				"radii/centers into packing {n} (default to image). First check "+
 				"p{n} geometry and combinatorics. Determine for dual edge pairs (f,g) "+
