@@ -646,9 +646,9 @@ public class Triangulation {
 					throw new InOutException();
 				}
 			}
+			line=StringUtil.ourNextLine(fp,true); 
 		}
 		
-		line=StringUtil.ourNextLine(fp,true); 
 		StringTokenizer tok=new StringTokenizer(line);
 		String str=tok.nextToken();
 		
@@ -673,31 +673,32 @@ public class Triangulation {
 		boolean faceHit=false;
 		boolean vertHit=false;
     	if (type==0 || type==3) { // generic, OFF data; discard V [F] in first line
-    		if (tok.countTokens()<3)
+    		if (tok.countTokens()<3 && StringUtil.lineType(line)==2)
     			line=StringUtil.ourNextLine(fp,true); 
     		
     		// search for face/xyz data 
-    		while (line!=null && !faceHit && !vertHit) {
+    		while (line!=null && (!faceHit || !vertHit)) {
     			// use line type: 2 (integer) or 3 (double)
-        		int lt=0; 
+        		int lt=-1; 
     			while ((lt=StringUtil.lineType(line))!=2 && lt!=3)
     				line=StringUtil.ourNextLine(fp,true); 
-    			if (lt==3 && !vertHit) {  // starts with a double, should be xyz data
+    			if (lt==2 && !faceHit) { // starts with int, should be face data
+    				faceHit=true;
+    				line=readFaces(fp,tmpFaces,faceColors,line);
+    				F=tmpFaces.size();
+    			}
+    			else if (lt==3 && !vertHit) {  // starts with a double, should be xyz data
     				vertHit=true;
     				line=readXYZ(fp,tmpVerts,vertColors,line);
     				V=tmpVerts.size();
     			}
-    			else if (lt==2 && !faceHit) { // starts with int, should be face data
-    				faceHit=true;
-    				readFaces(fp,tmpFaces,faceColors,line);
-    				F=tmpFaces.size();
-    			}
+
     		} // end search for data
     	} // done with generic and OFF format
     	
     	else if (type==1) { // CHECKCOUNT
     		// search for face/xyz data 
-    		while (line!=null && !faceHit && !vertHit) {
+    		while (line!=null && (!faceHit || !vertHit)) {
     			// flush lines until we get one of the key words
     			while ((line=StringUtil.ourNextLine(fp,true))!=null &&
     					!line.startsWith("FACE_TRIPLES:") &&
@@ -731,7 +732,7 @@ public class Triangulation {
     		}
     		
     		// otherwise, search for face/xyz data with key words
-    		while (line!=null && !faceHit && !vertHit) {
+    		while (line!=null && (!faceHit || !vertHit)) {
     			// flush lines until we get one of the key words
     			while ((line=StringUtil.ourNextLine(fp,true))!=null &&
     					!line.startsWith("FACE_TRIPLES:") &&
@@ -753,11 +754,11 @@ public class Triangulation {
     	
     	else if (type==4) {  // VTK style data
     		// search for face/xyz data 
-    		while (line!=null && !faceHit && !vertHit) {
+    		while (line!=null && (!faceHit || !vertHit)) {
     			// flush lines until we get one of the key words
-    			while ((line=StringUtil.ourNextLine(fp,true))!=null &&
-    					!line.startsWith("POINT") && !line.startsWith("POLYGON") &&
-								!line.startsWith("CELL_DATA"));
+    			while (!line.startsWith("POINT") && 
+    					!line.startsWith("POLYGON") && !line.startsWith("CELL_DATA"))
+    				line=StringUtil.ourNextLine(fp,true);
     			if (line!=null && (line.startsWith("POLY") || line.startsWith("CELL"))) {
     				faceHit=true;
     				line=StringUtil.ourNextLine(fp,true);
@@ -773,22 +774,43 @@ public class Triangulation {
     		} // end search for data
     	} // done with VTK case
     	
-    	// did we get face data?
-    	if (!faceHit || F==0) {
+    	// ========== now to build 'tri' ==================
+    	
+    	// first, reconfigure the data we gathered
+    	Face[] holdFaces=null;
+    	if (F>0) {
+    		holdFaces=new Face[F+1];
+    		Iterator<Face> tfst=tmpFaces.iterator();
+    		int tick=0;
+    		while (tfst.hasNext()) 
+    			holdFaces[++tick]=tfst.next();
+    	}
+    	else { // didn't get crucial data --- the faces
+    		tmpFaces=new Vector<Face>(0);
     		errMsg="No face data was found";
     		throw new InOutException();
     	}
     	
+    	Point3D[] holdPoints=null;
+    	if (V>0) {
+    		holdPoints=new Point3D[V+1];
+    		Iterator<Point3D> pst=tmpVerts.iterator();
+    		int tick=0;
+    		while (pst.hasNext())
+    			holdPoints[++tick]=pst.next();
+    	}
+
+
+    	// build with preliminary data, adjust indexing, etc. later
     	// Now process vert indices, faces
     	int baryCount=0; // number of barycenters to add
-    	int extraFaces=0; // number of extra faces due to bary subdivitions
+    	int extraFaces=0; // number of extra faces due to bary subdivisions
     	
     	// get range of vert indices
     	int min_indx=10000000; // get min/max indices
     	int max_indx=-1;
-    	Iterator<Face> flst=tmpFaces.iterator();
-    	while (flst.hasNext()) {
-    		int[] vs=flst.next().vert;
+    	for (int f=1;f<=F;f++) {
+    		int[] vs=holdFaces[f].vert;
     		int num=vs.length;
     		for (int j=0;j<num;j++) {
     			int v=vs[j];
@@ -797,26 +819,25 @@ public class Triangulation {
     		}
     	}
 
-    	// note all vertex indices that occur in faces
-    	int indxNum=max_indx-min_indx+1; // number of indices needed
-    	int []indxhits=new int[indxNum+1];
-    	flst=tmpFaces.iterator();
-    	while (flst.hasNext()) {
-    		int[] vs=flst.next().vert;
+    	// Mark array with all vertices that occur in faces
+    	int []indxhits=new int[max_indx+1];
+    	for (int f=1;f<=F;f++) {
+    		int[] vs=holdFaces[f].vert;
     		int num=vs.length;
     		for (int j=0;j<num;j++) {
     			indxhits[vs[j]]++;
 	    	}
     		if (num>3) { // will have to add barycenter
     			baryCount++;
-    			extraFaces +=num-3;
+    			extraFaces +=num-1;
     		}
     	}
     	
     	// Adjust vert indexing if necessary: contiguous from 1, store
-    	//   adjustments in triVertexMap as <new,old>
+    	//   adjustments in triVertexMap as <new,old>.
+    	// Note: order of vert data is the numerical order original indexing
 	    int new_nodeCount=0;
-	    for (int i=0;i<=indxNum;i++) {
+	    for (int i=0;i<=max_indx;i++) {
 	    	if (indxhits[i]>0) {
 	    		indxhits[i] = ++new_nodeCount; 	// note, i is the original index
 	    		if (i!=new_nodeCount) {
@@ -828,59 +849,63 @@ public class Triangulation {
 	    }
 
 	    // compare V (count of vertices read) and new_nodeCount. If they don't
-	    //   match, discard 'tmpVerts, keep face info
+	    //   match, discard 'tmpVerts, but keep working with face info
 	    if (V>0 && V!=new_nodeCount) {
 	    	CirclePack.cpb.errMsg("'readTriFile': counts disn't match, discard xy[z] info");
-	    	tmpVerts=new Vector<Point3D>(0);
-	    	vertColors=new Vector<Color>(0);
+	    	holdPoints=null;
+	    	vertColors=null;
 	    	V=0;
 	    }
 	    
-    	// build the triangulation; later adjust for any n-gons, n>3
+	    // now, properly size and fill tri data
     	tri=new Triangulation();
     	tri.faceCount=F+extraFaces;
     	tri.faces=new Face[tri.faceCount+1];
-    	// load the original n-gons 1 to fc
+    	// load the original F n-gons
     	for (int f=1;f<=F;f++) {
-    		tri.faces[f]=tmpFaces.get(f);
+    		tri.faces[f]=holdFaces[f];
     	}
-    	tri.nodeCount=new_nodeCount+baryCount;
     	
-    	// put the new indices in
+    	// replace original indices by new ones
+    	tri.nodeCount=new_nodeCount+baryCount;
     	for (int f=1;f<=F;f++) {
 	    	int num=tri.faces[f].vert.length;
 	    	for (int j=0;j<num;j++)
 	    		tri.faces[f].vert[j]=indxhits[tri.faces[f].vert[j]];
     	}
+    	
+    	// transfer colors if they exist
+    	tri.vertColors=null;
+    	if (vertColors!=null && vertColors.size()>0) {
+    		tri.vertColors=new Color[tri.nodeCount+1];
+    		Iterator<Color> clst=vertColors.iterator();
+    		int tick=0;
+    		while (clst.hasNext()) 
+    			tri.vertColors[++tick]=clst.next();
+    	}
+    	
+    	tri.faceColors=null;
+    	if (faceColors!=null && faceColors.size()>0) {
+    		tri.faceColors=new Color[tri.faceCount+1];
+    		Iterator<Color> flst=faceColors.iterator();
+    		int tick=0;
+    		while (flst.hasNext()) 
+    			tri.faceColors[++tick]=flst.next();
+    	}
 	    
     	// create barycenters for any n-gons, n>3
 	    if (baryCount>0) {
-    		// allocate new colors
-    		Vector<Color> newVertColors=null;
-    		if (vertColors!=null && vertColors.size()>0) {
-    			newVertColors=new Vector<Color>(0);
-	    		for (int j=1;j<=V;j++)
-	    			newVertColors.add(indxhits[j],vertColors.elementAt(j));
-    		}
-	    	Vector<Color> newFaceColors=null;
-	    	if (faceColors!=null && faceColors.size()>0) {
-	    		newFaceColors=new Vector<Color>(0);
-	    		for (int j=1;j<=F;j++)
-	    			newFaceColors.add(j,faceColors.elementAt(j));
-	    	}
-	    	
 	    	// new 3D points
 	    	Point3D[] newXYZs=null; 
 	    	if (V>0) {
 	    		newXYZs=new Point3D[tri.nodeCount+1];
 	    		for (int v=1;v<=V;v++) 
-	    			newXYZs[v]=tmpVerts.get(v); // copy originals
+	    			newXYZs[v]=holdPoints[v]; // copy originals
 	    	}
 	    		
 	    	// track new indices
 	    	int vtick=new_nodeCount; 
-	    	int ftick=tmpFaces.size(); 
-	    		
+	    	int ftick=F; 
 
 	    	// look for faces needing barycenters
     		Face[] newFaces=new Face[tri.faceCount+1];
@@ -901,15 +926,15 @@ public class Triangulation {
 	    				double zmean=0;
 	    				for (int j=0;j<num;j++) {
 	    					int k=vert[j];
-	    					Point3D pt=tmpVerts.get(k);
+	    					Point3D pt=newXYZs[k];
 	    					xmean+=pt.x;
 	    					ymean+=pt.y;
 	    					zmean+=pt.z;
 	    				}
 	    				double denm=1/((double)num);
 	    				newXYZs[vtick]=new Point3D(xmean*denm,ymean*denm,zmean*denm);
-	    				if (newVertColors!=null)
-	    					newVertColors.add(vtick,new Color(255,255,255)); // white
+	    				if (tri.vertColors!=null)
+	    					tri.vertColors[vtick]=new Color(255,255,255); // white
 	    			}
 	    				
 	    			// break face into num triangles; replace original face by first of these
@@ -921,8 +946,8 @@ public class Triangulation {
 	    				
 	    			// create rest of new faces
 	    			Color tmpCol=new Color(255,255,255);
-    				if (newFaceColors!=null) 
-    					tmpCol=(Color)newFaceColors.elementAt(f);
+    				if (tri.faceColors!=null) 
+    					tmpCol=(Color)tri.faceColors[f];
 	    				
 	    			for (int j=1;j<num;j++) {
 	    				newFaces[++ftick]=new Face(3);
@@ -930,34 +955,18 @@ public class Triangulation {
 	    				newFaces[ftick].vert[0]=vert[j];
 	    				newFaces[ftick].vert[1]=vert[(j+1)%num];
 	    				newFaces[ftick].vert[2]=vtick;
-	    				if (newFaceColors!=null) // same color
-	    					newFaceColors.add(ftick,new Color(tmpCol.getRed(),tmpCol.getGreen(),tmpCol.getBlue()));
+	    				if (tri.faceColors!=null) // same color
+	    					tri.faceColors[ftick]=new Color(tmpCol.getRed(),tmpCol.getGreen(),tmpCol.getBlue());
 	    			}
 	    			
 	    		} // done breaking up this face
 	    	} // done going through all the face
 	    	
-	    	vertColors=newVertColors;
-	    	faceColors=newFaceColors;
 	    	tri.nodes=newXYZs;
 	    	tri.faces=newFaces;
 	    	tri.triVertexMap=tVertMap;
 	    } // done with adding new stuff
-	    	
-    	// store colors in 'tri'
-   		if (vertColors!=null && vertColors.size()>0) {
-   			tri.vertColors=new Color[tri.nodeCount+1];
-    		for (int i=1;i<=tri.nodeCount;i++)
-    			tri.vertColors[i]=vertColors.get(i);
-		}
 
-    	// if there are vert colors, we want to save them in 'tri.vertColors'
-	    if (faceColors!=null && faceColors.size()>0) {
-	    	tri.faceColors=new Color[tri.faceCount+1];
-	    	for (int i=1;i<=tri.faceCount;i++)
-	    		tri.faceColors[i]=faceColors.get(i);
-	    }
-	    	
 		} catch (InOutException iox) {
 			if (errMsg.length()==0)
 				throw new InOutException(errMsg);
@@ -971,22 +980,34 @@ public class Triangulation {
 	/**
 	 * Read the original faces from the file, possibly not all triangles.
 	 * @param fp BufferedReader, open	
-	 * @param faceclrs Vector<Color>, instantiated by calling routine
-	 * @param tmpfaces Vector<Face>, instantiated by calling routine
+	 * @param tmpfaces Vector<Face>, instantiated, but must be size 0
+	 * @param faceclrs Vector<Color>, instantiated, but must be size 0
 	 * @param line String, current line
 	 * @return String, next line
+	 * @throws InOutException
+	 * @throws NumberFormatException
 	 */
 	public static String readFaces(BufferedReader fp,
-			Vector<Face> tmpFaces,Vector<Color> faceClrs,String line) throws InOutException {
+			Vector<Face> tmpFaces,Vector<Color> faceClrs,String line) 
+					throws InOutException, NumberFormatException {
 
     	boolean colorHit=false;
     	int r,g,b,a;
     	
+    	// check first line to see if colors are given
+    	StringTokenizer tok=new StringTokenizer(line);
+    	int toknum=tok.countTokens();
+    	if (toknum>3) {
+    		int n=Integer.parseInt(tok.nextToken());
+    		if (toknum>=n+4)
+    			colorHit=true;
+    	}
+    	
     	// will read as long as we're getting faces
-    	int f=1;
+    	int f=0;
     	while (StringUtil.lineType(line)==2) {
-        	StringTokenizer tok=new StringTokenizer(line);
-        	int toknum=tok.countTokens();
+        	tok=new StringTokenizer(line);
+        	toknum=tok.countTokens();
         	if (toknum<3) {
         		throw new InOutException("failed reading face line "+f);
         	}
@@ -1004,39 +1025,33 @@ public class Triangulation {
 				int v=Integer.parseInt(tok.nextToken());
 				newFace.vert[j]=v;
 			}
-			tmpFaces.add(f,newFace);
+			tmpFaces.add(newFace);
 			
-			// search for color codes
-			int cnum=toknum-numsides;
-    		if (cnum==3) { // have rgb data
-				r=(int)((Double.parseDouble(tok.nextToken()))*255);
-				g=(int)((Double.parseDouble(tok.nextToken()))*255);
-				b=(int)((Double.parseDouble(tok.nextToken()))*255);
-    			colorHit=true;
-				faceClrs.add(f,new Color(r,g,b));
+			// if colors are expected
+			if (colorHit) {
+				try {
+					int cnum=toknum-(numsides+1);
+					if (cnum>=3) { // may be rgb[a] data
+						r=(int)((Double.parseDouble(tok.nextToken()))*255);
+						g=(int)((Double.parseDouble(tok.nextToken()))*255);
+						b=(int)((Double.parseDouble(tok.nextToken()))*255);
+						if (cnum>3) { 
+							a=(int)((Double.parseDouble(tok.nextToken()))*255);
+							faceClrs.add(new Color(r,g,b,a));
+						}
+						else 
+							faceClrs.add(new Color(r,g,b));
+					}
+					else
+						faceClrs.add(new Color(255,255,255)); // white
+				} catch(Exception ex) {
+					faceClrs.add(new Color(255,255,255)); // white
+				}
     		}
-    		else if (cnum==4) { // have rgba data
-				r=(int)((Double.parseDouble(tok.nextToken()))*255);
-				g=(int)((Double.parseDouble(tok.nextToken()))*255);
-				b=(int)((Double.parseDouble(tok.nextToken()))*255);
-				a=(int)((Double.parseDouble(tok.nextToken()))*255);
-    			colorHit=true;
-				faceClrs.add(f,new Color(r,g,b,a));
-    		}
-    		
+
     		f++;
     		line=StringUtil.ourNextLine(fp,true);
     	} // finished while reading in lines for faces
-    	
-    	int F=f-1; // number of faces read
-    	
-    	if (!colorHit)
-    		faceClrs=new Vector<Color>(0);
-    	else { // any missing colors to white
-    		for (int ff=1;ff<=F;ff++) 
-    			if (faceClrs.elementAt(ff)==null)
-    				faceClrs.add(ff,new Color(255,255,255));
-    	}
     	
     	return line;
 	}
@@ -1045,14 +1060,16 @@ public class Triangulation {
      * Parse lines with doubles to get xyz data and possibly colors. 
      * Start with incoming line, return with next line.   	
      * @param fp BufferedReader, open by calling routine
-     * @param pts Vector<Point3D>, instantiated by calling routine
-     * @param vertClrs Vector<Color>, instantiated by calling routine
+     * @param pts Vector<Point3D>, instantiated, but must be size 0
+     * @param vertClrs Vector<Color>, instantiated, but must be size 0
      * @param line String, current line should start with integer
      * @return String, next line
      * @throws InOutException
+     * @throws NumberFormatException
      */
     public static String readXYZ(BufferedReader fp,
-    		Vector<Point3D> pts,Vector<Color> vertClrs,String line) throws InOutException {
+    		Vector<Point3D> pts,Vector<Color> vertClrs,String line) 
+    				throws InOutException, NumberFormatException {
     	if (line==null) 
     		throw new InOutException("bad data for readXYZ");
     	int dim=0;
@@ -1090,72 +1107,45 @@ public class Triangulation {
 			throw new InOutException("item count error "+toknum);
 		}
 		} // end of switch
-		if (dim==2)
-			pts.add(1,new Point3D(Double.parseDouble(tok.nextToken()),
-				Double.parseDouble(tok.nextToken()),0.0));
-		else 
-			pts.add(1,new Point3D(Double.parseDouble(tok.nextToken()),
-				Double.parseDouble(tok.nextToken()),
-				Double.parseDouble(tok.nextToken())));
-		if (toknum>3 && toknum<=6) {
-			r=(int)((Double.parseDouble(tok.nextToken()))*255);
-			g=(int)((Double.parseDouble(tok.nextToken()))*255);
-			b=(int)((Double.parseDouble(tok.nextToken()))*255);
-			colorHit=true;
-			vertClrs.add(1,new Color(r,g,b));
-		}
-		if (toknum>6) {
-			r=(int)((Double.parseDouble(tok.nextToken()))*255);
-			g=(int)((Double.parseDouble(tok.nextToken()))*255);
-			b=(int)((Double.parseDouble(tok.nextToken()))*255);
-			a=(int)((Double.parseDouble(tok.nextToken()))*255);
-			colorHit=true;
-			vertClrs.add(1,new Color(r,g,b,a));
-		}
 			
-		// now the rest of the vertices
-		int tick=1;
-		line=StringUtil.ourNextLine(fp,true);
+		// read this and following lines
 		while (StringUtil.lineType(line)==3) { // while doubles
     		tok=new StringTokenizer(line);
     		toknum=tok.countTokens();
     		if ((toknum=tok.countTokens())<=3 && toknum!=dim) 
     			throw new InOutException("dimension doesn't match");
-    		tick++;
-    		if (dim==2)
-    			pts.add(tick,new Point3D(Double.parseDouble(tok.nextToken()),
+    		if (dim==2) 
+    			pts.add(new Point3D(Double.parseDouble(tok.nextToken()),
     				Double.parseDouble(tok.nextToken()),0.0));
-    		else 
-    			pts.add(tick,new Point3D(Double.parseDouble(tok.nextToken()),
+    		else  // dim==3
+    			pts.add(new Point3D(Double.parseDouble(tok.nextToken()),
     				Double.parseDouble(tok.nextToken()),
     				Double.parseDouble(tok.nextToken())));
-			if (toknum>3 && toknum<=6) {
-				r=(int)((Double.parseDouble(tok.nextToken()))*255);
-				g=(int)((Double.parseDouble(tok.nextToken()))*255);
-				b=(int)((Double.parseDouble(tok.nextToken()))*255);
-    			colorHit=true;
-				vertClrs.add(tick,new Color(r,g,b));
-			}
-			if (toknum>6) {
-				r=(int)((Double.parseDouble(tok.nextToken()))*255);
-				g=(int)((Double.parseDouble(tok.nextToken()))*255);
-				b=(int)((Double.parseDouble(tok.nextToken()))*255);
-					a=(int)((Double.parseDouble(tok.nextToken()))*255);
-    			colorHit=true;
-				vertClrs.add(tick,new Color(r,g,b,a));
-			}
-		} // end of while through vertex info
-    	line=StringUtil.ourNextLine(fp,true);
+    		
+   			if (colorHit) {
+    	    	int rem=toknum-dim;
+    	    	try {
+    	    		if (rem>=3) {
+    	    			r=(int)((Double.parseDouble(tok.nextToken()))*255);
+    	    			g=(int)((Double.parseDouble(tok.nextToken()))*255);
+    	    			b=(int)((Double.parseDouble(tok.nextToken()))*255);
+    	    			if (rem>3) {
+    						a=(int)((Double.parseDouble(tok.nextToken()))*255);
+    						vertClrs.add(new Color(r,g,b,a));
+    					}
+    					else 
+    						vertClrs.add(new Color(r,g,b));
+    				}
+    	    		else 
+        				vertClrs.add(new Color(255,255,255));
+    			} catch(Exception ex) {
+    				vertClrs.add(new Color(255,255,255));
+    			}
+    		}
 
-		// if colors, then unspecified colors in white
-		if (!colorHit)
-			vertClrs=new Vector<Color>(0);
-		if (tick>0 && colorHit) {
-			for (int i=1;i<=tick;i++) {
-				if (vertClrs.get(i)==null)
-				vertClrs.add(i,new Color(255,255,255));
-			}
-		}
+	    	line=StringUtil.ourNextLine(fp,true);
+		} // end of while through vertex info
+
 		return line;
     }    		
 	

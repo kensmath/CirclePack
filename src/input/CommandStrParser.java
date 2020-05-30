@@ -657,6 +657,11 @@ public class CommandStrParser {
 				} catch (Exception ex) {
 					tri = null;
 				}
+				// yes another failure?
+				if (tri==null) {
+					CirclePack.cpb.errMsg("Some failure in reading "+filename+" as a triangulation");
+				}
+				
 				fp.close();
 				
 				if (tri!=null)

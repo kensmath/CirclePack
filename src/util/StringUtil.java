@@ -778,7 +778,8 @@ public class StringUtil {
 	public static int lineType(String line) {
 		if (line==null) 
 			return 0;
-		if (!java.lang.Character.isDigit(line.charAt(0)))
+		char c1=line.charAt(0);
+		if (!java.lang.Character.isDigit(line.charAt(0)) && c1!='-')
 			return 1;
 		int k=line.indexOf(' ');
 		String str=line.substring(0,k);
