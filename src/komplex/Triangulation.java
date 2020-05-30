@@ -800,9 +800,7 @@ public class Triangulation {
     			holdPoints[++tick]=pst.next();
     	}
 
-
-    	// build with preliminary data, adjust indexing, etc. later
-    	// Now process vert indices, faces
+    	// prepare to adjust indexing, etc, later
     	int baryCount=0; // number of barycenters to add
     	int extraFaces=0; // number of extra faces due to bary subdivisions
     	
@@ -833,8 +831,8 @@ public class Triangulation {
     		}
     	}
     	
-    	// Adjust vert indexing if necessary: contiguous from 1, store
-    	//   adjustments in triVertexMap as <new,old>.
+    	// Adjust vert indexing if needed, contiguous from 1; store 
+    	//   translation in 'triVertexMap' as <new,old>.
     	// Note: order of vert data is the numerical order original indexing
 	    int new_nodeCount=0;
 	    for (int i=0;i<=max_indx;i++) {
@@ -848,8 +846,8 @@ public class Triangulation {
 	    	}
 	    }
 
-	    // compare V (count of vertices read) and new_nodeCount. If they don't
-	    //   match, discard 'tmpVerts, but keep working with face info
+	    // if V (no. vertices read) and new_nodeCount disagree, 
+	    //   discard 'tmpVerts (but keep working with face info)
 	    if (V>0 && V!=new_nodeCount) {
 	    	CirclePack.cpb.errMsg("'readTriFile': counts disn't match, discard xy[z] info");
 	    	holdPoints=null;
@@ -857,9 +855,13 @@ public class Triangulation {
 	    	V=0;
 	    }
 	    
-	    // now, properly size and fill tri data
+	    // Create 'tri': properly size and fill tri data
     	tri=new Triangulation();
     	tri.faceCount=F+extraFaces;
+    	tri.nodeCount=new_nodeCount+baryCount;
+    	tri.triVertexMap=tVertMap;
+    	
+    	// here are the faces 
     	tri.faces=new Face[tri.faceCount+1];
     	// load the original F n-gons
     	for (int f=1;f<=F;f++) {
@@ -867,14 +869,22 @@ public class Triangulation {
     	}
     	
     	// replace original indices by new ones
-    	tri.nodeCount=new_nodeCount+baryCount;
     	for (int f=1;f<=F;f++) {
 	    	int num=tri.faces[f].vert.length;
 	    	for (int j=0;j<num;j++)
 	    		tri.faces[f].vert[j]=indxhits[tri.faces[f].vert[j]];
     	}
     	
-    	// transfer colors if they exist
+    	// did we get 3D locations?
+    	tri.nodes=null;
+    	if (holdPoints!=null) {
+    		tri.nodes=new Point3D[tri.nodeCount+1];
+    		for (int v=1;v<=V;v++) {
+    			tri.nodes[v]=holdPoints[v];
+    		}
+    	}
+    	
+    	// transfer vertex colors if they exist
     	tri.vertColors=null;
     	if (vertColors!=null && vertColors.size()>0) {
     		tri.vertColors=new Color[tri.nodeCount+1];
@@ -884,6 +894,7 @@ public class Triangulation {
     			tri.vertColors[++tick]=clst.next();
     	}
     	
+    	// transfer face colors if they exist
     	tri.faceColors=null;
     	if (faceColors!=null && faceColors.size()>0) {
     		tri.faceColors=new Color[tri.faceCount+1];
@@ -895,20 +906,12 @@ public class Triangulation {
 	    
     	// create barycenters for any n-gons, n>3
 	    if (baryCount>0) {
-	    	// new 3D points
-	    	Point3D[] newXYZs=null; 
-	    	if (V>0) {
-	    		newXYZs=new Point3D[tri.nodeCount+1];
-	    		for (int v=1;v<=V;v++) 
-	    			newXYZs[v]=holdPoints[v]; // copy originals
-	    	}
-	    		
-	    	// track new indices
+	    	// for tracking new indices/faces
 	    	int vtick=new_nodeCount; 
-	    	int ftick=F; 
+	    	int ftick=F;
 
-	    	// look for faces needing barycenters
-    		Face[] newFaces=new Face[tri.faceCount+1];
+	    	// Build new Face[] array
+	    	Face[] newFaces=new Face[tri.faceCount+1];
 	    	for (int f=1;f<=F;f++) {
 	    		int num=tri.faces[f].vert.length;
 	    		if (num==3) 
@@ -916,7 +919,7 @@ public class Triangulation {
 	    		else { // else new vertex for barycenter and new faces 
     				int []vert=tri.faces[f].vert;
 
-    				// new vertex for barycenter
+    				// new index for barycenter
     				vtick++;
     					
     				// locations specified? use mean value location
@@ -926,13 +929,13 @@ public class Triangulation {
 	    				double zmean=0;
 	    				for (int j=0;j<num;j++) {
 	    					int k=vert[j];
-	    					Point3D pt=newXYZs[k];
+	    					Point3D pt=tri.nodes[k];
 	    					xmean+=pt.x;
 	    					ymean+=pt.y;
 	    					zmean+=pt.z;
 	    				}
 	    				double denm=1/((double)num);
-	    				newXYZs[vtick]=new Point3D(xmean*denm,ymean*denm,zmean*denm);
+	    				tri.nodes[vtick]=new Point3D(xmean*denm,ymean*denm,zmean*denm);
 	    				if (tri.vertColors!=null)
 	    					tri.vertColors[vtick]=new Color(255,255,255); // white
 	    			}
@@ -961,10 +964,7 @@ public class Triangulation {
 	    			
 	    		} // done breaking up this face
 	    	} // done going through all the face
-	    	
-	    	tri.nodes=newXYZs;
 	    	tri.faces=newFaces;
-	    	tri.triVertexMap=tVertMap;
 	    } // done with adding new stuff
 
 		} catch (InOutException iox) {
