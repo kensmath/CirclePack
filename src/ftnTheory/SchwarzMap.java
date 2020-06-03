@@ -29,7 +29,7 @@ import util.CmdStruct;
 import util.DispFlags;
 import util.StringUtil;
 import util.TriAspect;
-import widgets.RadiusWidget;
+import widgets.RadiiSliders;
 
 /** 
  * This is code for exploring discrete Schwarzian derivatives, 
@@ -98,7 +98,7 @@ public class SchwarzMap extends PackExtender {
 	public int rangePackNum;
 	public GraphLink dTree;       // dual spanning tree for layout (root is removed) 
 	
-	public RadiusWidget radWidget;
+	public RadiiSliders radSliders;
 
 	// Constructor
 	public SchwarzMap(PackData p) {
@@ -125,8 +125,8 @@ public class SchwarzMap extends PackExtender {
 	public int cmdParser(String cmd, Vector<Vector<String>> flagSegs) {
 		Vector<String> items = null;
 		
-		// ======= open radWidget ============
-		if (cmd.startsWith("radW")) {
+		// ======= open radSlider ============
+		if (cmd.startsWith("radS")) {
 			NodeLink wlist;
 			try {
 				items=flagSegs.get(0);
@@ -134,10 +134,10 @@ public class SchwarzMap extends PackExtender {
 			} catch(Exception ex) {
 				wlist=new NodeLink(packData,"a");
 			}
-			radWidget=new RadiusWidget(packData,wlist);
-			if (radWidget==null)
+			radSliders=new RadiiSliders(packData,wlist);
+			if (radSliders==null)
 				return 0;
-			radWidget.setVisible(true);
+			radSliders.setVisible(true);
 		}
 
 		// ======= put ===========

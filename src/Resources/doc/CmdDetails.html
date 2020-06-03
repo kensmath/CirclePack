@@ -1545,7 +1545,7 @@ the face furthest from the boundary faces</td></tr>
 <td width="65%" align="left"> print current GOpack status</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href=" max_pack">max_pack</a>&nbsp;&nbsp; <a href=" repack">repack</a>&nbsp;&nbsp; <a href=" polypack">polypack</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href=" max_pack">max_pack</a>&nbsp;&nbsp; <a href=" repack">repack</a>&nbsp;&nbsp; <a href=" polypack">polypack</a>&nbsp;&nbsp; <a href=" perp_pack">perp_pack</a>&nbsp;&nbsp; 
 <br/><br/>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
@@ -2035,7 +2035,7 @@ these packings and the corresponding object is displayed in both.
      		if necessary).</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="repack">repack</a>&nbsp;&nbsp; <a href="set_radii">set_radii</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href="repack">repack</a>&nbsp;&nbsp; <a href="perp_pack">perp_pack</a>&nbsp;&nbsp; <a href="set_radii">set_radii</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="mend">mend</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{data}&nbsp;&nbsp; </font>
 <blockquote>
@@ -2443,6 +2443,22 @@ with the 'pentagonal' cases among the 'create' options.
 	this command updates it. There is also an "update" button in the frame
 	itself.
 </blockquote>
+<font size="+1" color="blue"><strong><a name="perp_pack">perp_pack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[k]&nbsp;&nbsp; </font>
+<blockquote>
+<strong>Description: </strong> This packing routine applies only to combinatorial
+    closed discs. This converts the packing to euclidean and 
+    computes a univalent circle packing in the plane whose 
+    boundary circles are perpendicular to the unit circle (their
+    centers are slighly outside the unit disc). The method involves
+    doubling the complex, repacking and normalizing on the sphere,
+    projecting to the plane, and reaping the resulting radii and
+    centers. Because the packing computation is on the sphere,
+    one cannot repeatedly repack, so one may want to set a larger
+    'k' for the number of repack cycles.
+</blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="repack">repack</a>&nbsp;&nbsp; <a href="max_pack">max_pack</a>&nbsp;&nbsp; <a href="set_cycles">set_cycles</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="perron">perron</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[udUD] -[noC] {n}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong> (Technical) Apply directed 'Perron' packing algorithms in  
@@ -3022,7 +3038,7 @@ script and append it to 'ClosedPath'.</td></tr>
 	after 'repack'.
 	
 	The computational cycles for this call can be set with 
-	the '-k' option (k from 1 to 100,000), or defaults to that 
+	k (from 1 to 100,000), else it defaults to that the number
 	set via 'set_cycle'.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
@@ -3037,7 +3053,7 @@ script and append it to 'ClosedPath'.</td></tr>
 <td width="65%" align="left"> use Java routines, don't call C/C++ libraries (e.g. Orick's algorithm)</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href=" max_pack">max_pack</a>&nbsp;&nbsp; <a href=" polypack">polypack</a>&nbsp;&nbsp; <a href=" GOpack">GOpack</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href=" max_pack">max_pack</a>&nbsp;&nbsp; <a href=" polypack">polypack</a>&nbsp;&nbsp; <a href=" GOpack">GOpack</a>&nbsp;&nbsp; <a href=" perp_pack">perp_pack</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="ring">ring</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v..}&nbsp;&nbsp; </font>
 <blockquote>

@@ -2355,6 +2355,7 @@ with the 'pentagonal' cases among the 'create' options.
 <see>repack</see>
 <see>max_pack</see>
 <see>set_cycles</see>
+</seealso>
 </command>
 
 
