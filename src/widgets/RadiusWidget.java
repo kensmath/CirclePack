@@ -2,6 +2,10 @@ package widgets;
 
 import java.util.ArrayList;
 
+/**
+ * OBE. Notion of adjustable bars replaced by Slider stuff, see 'RadiiSliders'
+ */
+
 import javax.swing.JPanel;
 
 import geometry.HyperbolicMath;

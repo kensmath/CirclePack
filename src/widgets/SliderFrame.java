@@ -79,7 +79,6 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		packData=p;
 		setLocation(new Point(200,100));
 		helpInfo=new StringBuilder("Put information here when instantiated");
-		setRange();
 		holdChangeCmd="";
 		holdMotionCmd="";
 		
@@ -173,6 +172,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		add(sliderScroll,BorderLayout.CENTER);
 
 		pack();
+		setRange();
 		setChangeField(holdChangeCmd);
 		setMotionField(holdMotionCmd);
 	}

@@ -8,6 +8,7 @@ import javax.swing.JSlider;
 import javax.swing.JTextField;
 import javax.swing.event.ChangeEvent;
 
+import input.CommandStrParser;
 import util.xNumField;
 
 /**
@@ -23,10 +24,8 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	serialVersionUID = 1L;
 
 	static final int SLIDER_WIDTH=150;
-	static final int MIN_VALUE=0;
-	static final int MAX_VALUE=1000;
 
-	SliderFrame parent;   
+	public SliderFrame sfparent;   
 	int index;       // index in 'mySliders' of object for this bar (e.g., vert index)
 	
 	String label;    // string describing the object: v, v w, f
@@ -44,16 +43,15 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	public ActiveSlider(SliderFrame slf, int indx, String lbl,double val,boolean actv) {
 		setOpaque(false);
 		setLayout(null);
-		parent = slf;
+		sfparent = (SliderFrame)slf;
 		index=indx;
 		value=val;
 		active=actv;
 		
-		slider=new IndexedJSlider(MIN_VALUE,MAX_VALUE,index);
-		slider.addChangeListener(parent.listener);
+		slider=new IndexedJSlider(sfparent.val_min,sfparent.val_max,val,index);
+		slider.addChangeListener(sfparent.listener);
 		labelField=new JTextField(label,8);
 		valueField=new xNumField(String.format("%.6f",value),8);
-		setValue(value);
 		
 		if (active)
 			addMouseMotionListener(this);
@@ -61,21 +59,15 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	}
 	
 	public double getValue() {
-		double f=(double)slider.getValue()/(double)MAX_VALUE;
-		return (f*(parent.val_max-parent.val_min)+parent.val_min);
+		return slider.getCurrentValue();
 	}
 	
 	/**
-	 * JSlider.setValue takes an integer, so convert. Set slider
-	 * and value field
+	 * set slider value
 	 * @param val
 	 */
 	public void setValue(double val) {
-		double x=val;
-		x=(val<parent.val_min) ? parent.val_min : x;
-		x=(val>parent.val_max) ? parent.val_max : x; 
-		slider.setValue((int)((val-parent.val_min)/(parent.val_max-parent.val_min)));
-		valueField.setField(val);
+		slider.setMyValue(val);
 	}
 
 	/**
@@ -91,6 +83,11 @@ public class ActiveSlider extends JPanel implements MouseListener,
 		}
 		if (!source.getValueIsAdjusting()) {  // is this last in a chain of mouse actions?
 			setValue(source.getValue());
+			if (sfparent.changeCheck.isSelected()) {
+				String cmdstr=sfparent.changeCmdField.getText();
+				if (cmdstr!=null && cmdstr.length()>0)
+					CommandStrParser.jexecute(sfparent.packData,cmdstr);
+			}
 		}
 	}
 	
@@ -98,7 +95,7 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	 * Notify parent when mouse enters this slider's zone
 	 */
 	public void mouseEntered(MouseEvent evt) {
-		parent.mouse_entry_action(index);
+		sfparent.mouse_entry_action(index);
 	}
 
 	// rest of needed mouse calls

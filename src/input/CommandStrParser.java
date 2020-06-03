@@ -9899,10 +9899,9 @@ public class CommandStrParser {
 	      	  boolean script_flag=false;
 	      	  File dir=CPFileManager.PackingDirectory;
 	      	  
-	      	  boolean faulty=false;
 	      	  try {
 	      		  // should be just one flag string for display codes and
-	      		  //   possibly one for filenames
+	      		  //   possibly one for trailing filename
 	      		  items=(Vector<String>)flagSegs.get(0);
 	      		  flagstr=items.firstElement();
 	     		  if (!StringUtil.isFlag(flagstr)) {
@@ -9917,18 +9916,18 @@ public class CommandStrParser {
 		      		  append_flag=true;
 		      	  if ((code | 04)==04)
 		      		  script_flag=true;
-		      	  if (code==0) 
-		      		  faulty=false;
 		      	  File tmpdir=new File(strbld.toString().trim());
 		      	  fname=tmpdir.getName();
-		      	  if (tmpdir.getParent()!=null)
-		      		  dir=tmpdir;
+		      	  if (tmpdir.getParentFile()!=null) {
+		      		  if (cmd.startsWith("W"))  // use given directory
+		      			  dir=tmpdir.getParentFile();
+		      		  else // append to current 'dir'
+		      			  dir=new File(dir.getName()+tmpdir.getParent()); 
+		      	  }
+		      	  // Note: if "Write" but no directory given, default to current 'dir'
 
 	      	  } catch (Exception ex) {
 	      		  throw new InOutException("check usage: "+ex.getMessage());
-	      	  }
-	      	  if (faulty) {
-	      		  throw new ParserException("check usage: [-<flags>] -[fas] <filename>");
 	      	  }
 	      	  
 	      	  if (flagstr!=null && flagstr.length()>0 && StringUtil.isFlag(flagstr)) {
