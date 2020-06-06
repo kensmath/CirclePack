@@ -135,7 +135,7 @@ public class SliderPanel extends JPanel
 
 		// current value (just for display)
 		currentValue=new xNumField("Current value",10);
-		currentValue.setField(value);
+		currentValue.setValue(value);
 		
 		// scale minimum
 		sliderMin=new xNumField("min",8);
@@ -228,10 +228,10 @@ public class SliderPanel extends JPanel
 	public void adjustValue4Range() {
 		if (sliderPacket.getMin()>value)
 			sliderPacket.setMin(value);
-		sliderMin.setField(sliderPacket.getMin());
+		sliderMin.setValue(sliderPacket.getMin());
 		if (sliderPacket.getMax()<value)
 			sliderPacket.setMax(value);
-		sliderMax.setField(sliderPacket.getMax());
+		sliderMax.setValue(sliderPacket.getMax());
 	    int tick=(int)(100*(value-sliderPacket.getMin()/(sliderPacket.getMax()-sliderPacket.getMin())));
 	    theSlider.setValue(tick);
 	    fireFlag=true;
@@ -265,7 +265,7 @@ public class SliderPanel extends JPanel
         if (!source.getValueIsAdjusting()) {  // ignore intermediate events 
             double factor = (double)(source.getValue()/100.0);
             value=sliderPacket.getMin()+(sliderPacket.getMax()-sliderPacket.getMin())*factor;
-            currentValue.setField(value);
+            currentValue.setValue(value);
             
             // try to update by adding using the same key
             PackControl.varControl.variables.put(varNameButton.getText(),new String("[SLIDER] "+Double.toString(value)));
@@ -285,7 +285,7 @@ public class SliderPanel extends JPanel
 			double minVal=sliderMin.getValue();
 			if (minVal>=value) {
 				minVal=value;
-				sliderMin.setField(minVal);
+				sliderMin.setValue(minVal);
 			}
 			sliderPacket.setMin(minVal);
 			int tick=(int)(100*(value-minVal)/(sliderPacket.getMax()-minVal));
@@ -298,7 +298,7 @@ public class SliderPanel extends JPanel
 			double maxVal=sliderMax.getValue();
 			if (maxVal<=value) {
 				maxVal=value;
-				sliderMax.setField(maxVal);
+				sliderMax.setValue(maxVal);
 			}
 			sliderPacket.setMax(maxVal);
 			int tick=(int)(100*(value-sliderPacket.getMin())/(maxVal-sliderPacket.getMin()));
@@ -325,19 +325,19 @@ public class SliderPanel extends JPanel
     	if (newValue<sliderMin.getValue()) {
     		tick=0;
     		sliderPacket.setMin(newValue);
-    		sliderMin.setField(newValue);
+    		sliderMin.setValue(newValue);
     	}
     	else if (newValue>sliderMax.getValue()) {
     		tick=100;
     		sliderPacket.setMax(newValue);
-    		sliderMax.setField(newValue);
+    		sliderMax.setValue(newValue);
     	}
     	tick=(int)(100.0*(newValue-sliderPacket.getMin())/(sliderPacket.getMax()-sliderPacket.getMin()));
     	
     	// TODO: will this automatically call 
     	theSlider.setValue(tick);
 
-    	currentValue.setField(newValue);
+    	currentValue.setValue(newValue);
     	value=newValue;
     }
     

@@ -125,7 +125,7 @@ public abstract class BarGraphFrame extends JFrame implements ActionListener {
 	 * @param val
 	 */
 	public void valueUpdate(double val) {
-		valueDisplay.setField(val);
+		valueDisplay.setValue(val);
 	}
 	
 	// Process button pressing events

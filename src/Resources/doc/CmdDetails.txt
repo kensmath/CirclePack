@@ -4079,6 +4079,39 @@ enters these in order</instance>
 </description>
 </command>
 
+<command cmd="slider" flags="-[RS] -[cm] {cmds}">
+<description>
+	This creates a frame with multiple sliders for cursor
+	control of values associated with the packing. Currently, 
+	only 'radii' and edge 'schwarzians' (which must be set
+	by the user in advance) can be controled via these sliders. 
+	Optionally, 'motion' commands can be executed when 
+	the mouse passes over a slider and/or 
+	'change' commands can be executed when a value is changed.
+	On initiation, substring 'Obj' in motion or change command
+	strings is replaced by '_Obj' so that the command can be
+	applied to the appropriate object (vertex or edge).
+</description>
+<obtions>
+<opt flag="-R"> The sliders control specified radii</opt>
+<opt flag="-S"> The sliders control specified edge schwarzians</opt>
+<opt flag="-c \"cmds\""> Optional commands to be executed when a
+value is changed; here 'cmds' is a string of text enclosed by double
+quotes</opt> 
+<opt flag="-m \"cmds\""> Optional commands to be executed when a
+a mouse moves across a slider; here 'cmds' is a string of text 
+enclosed by double quotes</opt>
+</options>
+<examples>
+<instance text="slider -R {v...}"> sliders for selected vertices</instance>
+<instance text="slider -R -c \"rld\" a"> sliders for all radii, execute 'rld'
+on change in any slider</instance>
+<instance text="slider -S -m  \"disp w -c -et5c5 Obj\" {e ..}"> sliders 
+for selected edge schwarzians, which motion in slider causing redisplay
+of circles with that particular edge displayed.</instance>
+</examples>
+</command>
+	
 
 <command cmd="slit" flags="{v..}">
 <description>

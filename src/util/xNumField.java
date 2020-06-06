@@ -9,8 +9,10 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 /**
- * A JTextField for entering/displaying real values with 8 digits,
- * with a title.
+ * A JTextField for entering/displaying formated real values. 
+ * Can specify 3 to 15 digit length (default 8) and specify a
+ * title that goes above the field. If no title is given, this
+ * just serves to format a number.
  * @author kens
  */
 public class xNumField extends JPanel {
@@ -63,8 +65,7 @@ public class xNumField extends JPanel {
 		xField.setText("");
 
 		// estimate width of number
-		width=8*(digits+7);
-
+		width=8*(digits+4); 
 
 		// find width of label, if titled
 		if (titled) {
@@ -91,7 +92,7 @@ public class xNumField extends JPanel {
 	 * enter double in scientific notation
 	 * @param x, double
 	 */
-	public void setField(double x) {
+	public void setValue(double x) {
 		xField.setText(String.format("%."+digits+"e",x));
 	}
 	

@@ -11,6 +11,36 @@ import exceptions.ParserException;
  * various static classes for string manipulations, parsing
  */
 public class StringUtil {
+
+	/**
+	 * Return a new String in which all occurances of substring
+	 * 'subOld' are replaced by substring 'subNew'.
+	 * @param origStr String
+	 * @param subOld String
+	 * @param subNew String
+	 * @return String, "" if origStr null or empty
+	 */
+	public static String replaceSubstring(String origStr,
+			String subOld, String subNew) {
+		if (origStr==null || origStr.length()==0)
+			return "";
+		if (subOld==null || subOld.length()==0 || subNew==null)
+			return origStr;
+		int k=subOld.length();
+		int m=subNew.length();
+		StringBuilder strbld=new StringBuilder(origStr);
+		int tick=0;
+		while (strbld.length()>tick) {
+			int n=strbld.indexOf(subOld,tick);
+			if (n>=0) {
+				strbld.delete(n, n+k);
+				strbld.insert(n,subNew);
+				tick=n+m;
+			}
+			else break;
+		}
+		return strbld.toString();
+	}
 	
 	/**
 	 * Given a string (normally a command string), search for and remove
@@ -45,7 +75,7 @@ public class StringUtil {
 	}
 	
 	/**
-	 * If trimmed string starts with character c (one of '(', '{', '[', or '<'), 
+	 * If trimmed string starts with character c (one of '(', '{', '[', '<', or '"'), 
 	 * then return the string properly between it and its matching closing 
 	 * character. Return null if nesting associated with c is inconsistent.
 	 * @param startstr String
@@ -61,6 +91,7 @@ public class StringUtil {
 		else if (c=='[') rc=']';
 		else if (c=='{') rc='}';
 		else if (c=='<') rc='>';
+		else if (c=='"') rc='"';
 		else return null;
 		
 		strbld.trimToSize();
@@ -798,13 +829,13 @@ public class StringUtil {
 	  /** 
 	   * Reconstitute (with separating spaces) a string from a vector of
 	   * vectors of strings. Return null if essentially empty.
-	   * @param segs
-	   * @return
+	   * @param segs Vector<Vector<String>>
+	   * @return String, trimmed, possibly empty
 	   */
 	  public static String reconstitute(Vector<Vector<String>> segs) {
 		  int count=0;
-		  String restring=new String("");
-		  if (segs==null)
+		  String restring="";
+		  if (segs==null || segs.size()==0)
 			  return restring;
     	  Iterator<Vector<String>> its=segs.iterator();
     	  while (its.hasNext()) {
@@ -814,7 +845,8 @@ public class StringUtil {
     			  count++;
     		  }
     	  }
-          if (count==0 || restring.trim().length()==0) return null;
+          if (count==0 || restring.trim().length()==0) 
+        	  return "";
           return restring;
 	  }
 	  
@@ -843,19 +875,81 @@ public class StringUtil {
 	  }
 	  
 	  /**
-	   * return first open and closed quoted substring.
-	   * @param instr
-	   * @return string, null on failure
+	   * Analyze at string with respect to substrings delineated
+	   * by double quotes, '"'. Note that we ignore escaped quotes, 
+	   * '\"', but accept '""' as delineating an empty string.
+	   * Note: nested quotes can lead to errors.
+	   * Return a vector of maximal substrings delineated by quotes
+	   * (and include the quotes themselves) or before/after/between 
+	   * those. 
+	   * Note: one whould be able to reconstruct the full original 
+	   * by concatenating the strings of the returned vector.
+	   * (e.g., if no quotes, get single string in returned vector)
+	   * @param inbld StringBuilder
+	   * @return new Vector<StringBuilder>, null on error such as 
+	   * inconsistent use of quotes, e.g. odd number of quotes.
 	   */
-	  public static String getQuoted(String instr) {
-		  if (instr==null) return null;
-		  instr=instr.trim();
-		  int k;
-		  if ((k=instr.indexOf('"'))<0 || instr.length()<k+3) return null;
-		  instr=instr.substring(k+1);
-		  int first=instr.indexOf('"');
-		  if (first<=1) return null;
-		  return instr.substring(0,first);
+	  public static Vector<StringBuilder> quoteAnaylizer(StringBuilder inbld) {
+		  Vector<StringBuilder> vec=new Vector<StringBuilder>(0);
+		  
+		  // no '"' marks? return full string
+		  if (inbld.indexOf("\"")<0) {
+			  vec.add(new StringBuilder(inbld.toString()));
+			  return vec;
+		  }
+		  
+		  int n=inbld.length();
+		  Vector<Integer> spots=new Vector<Integer>(0);
+		  int spot=0;
+		  while ((spot=nextQuoteMark(inbld,spot))>=0) {
+			  spots.add(spot);
+			  spot++;
+		  }
+		  int lng=spots.size();
+		  if ((lng/2)*2!=lng) // not an even number of quotes 
+			  return null;
+		  Iterator<Integer> sit=spots.iterator();
+		  int startspot=sit.next();
+		  
+		  // may pick off a first unquoted segment
+		  if (startspot>0) { 
+			  vec.add(new StringBuilder(inbld.substring(0,startspot)));
+		  }
+
+		  int endspot=0;
+		  while(sit.hasNext()) {
+			  endspot=sit.next();
+			  // include the quotes, so we could reconstruct original string
+			  vec.add(new StringBuilder(inbld.substring(startspot,endspot+1)));
+			  if (sit.hasNext()) {
+				  startspot=sit.next();
+				  // include the segment up to the next quote
+				  vec.add(new StringBuilder(inbld.substring(endspot+1,startspot)));
+			  }
+			  else 
+				  break;
+		  }
+		  
+		  // pick up the last segment
+		  if ((endspot-1)<n) 
+			  vec.add(new StringBuilder(inbld.substring(endspot+1)));
+
+		  return vec;
+	  }
+	  
+	  /**
+	   * Return index of next '"' quote character 
+	   * TODO: may be a problem if quote is escaped.
+	   * @param strbld StringBuilder
+	   * @param indx int
+	   * @return index of next '"' symbol, starting with location 'indx'.
+	   * return -1 on error, empty string, no '"' found.
+	   */
+	  public static int nextQuoteMark(StringBuilder strbld,int indx) {
+		  int n=strbld.indexOf("\"",indx);
+		  if (n<0)
+			  return -1;
+		  return n; 
 	  }
 	  
 	  /**

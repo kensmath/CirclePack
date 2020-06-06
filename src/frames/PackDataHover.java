@@ -404,16 +404,16 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 		RData rdata=p.rData[v];
 		
 		// set radius
-		radField.setField(p.getRadius(v));
+		radField.setValue(p.getRadius(v));
 		
 		// set center
 		centerField.setFields(new Complex(rdata.center.x,rdata.center.y));
 		
 		// set aim
-		aimField.setField(rdata.aim/Math.PI);
+		aimField.setValue(rdata.aim/Math.PI);
 		
 		// set angle sum
-		angleSumField.setField(rdata.curv/Math.PI);
+		angleSumField.setValue(rdata.curv/Math.PI);
 		
 		// bdry?
 		bdryCkBoxV.setSelected(false);
@@ -479,10 +479,10 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 				invDist=iD;
 		}
 		edgeChoice.setText(edge.v+" "+edge.w);
-		overlapField.setField(invDist);
+		overlapField.setValue(invDist);
 		try {
 			double el=QualMeasures.edge_length(p,edge.v,edge.w);
-			edgelenField.setField(el);
+			edgelenField.setValue(el);
 		} catch (Exception ex) {}
 	}
 	

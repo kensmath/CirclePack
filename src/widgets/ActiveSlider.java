@@ -1,21 +1,19 @@
 package widgets;
+import java.awt.Color;
+import java.awt.FlowLayout;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 
+import javax.swing.BorderFactory;
 import javax.swing.JPanel;
-import javax.swing.JSlider;
 import javax.swing.JTextField;
-import javax.swing.event.ChangeEvent;
 
-import input.CommandStrParser;
 import util.xNumField;
 
 /**
- * Part of the structure for general purpose bar graphs.
- * This JPanel contains a vertex label, a bar, and optionally an icon. 
- * Bar height, color, perhaps icon placement are controlled from outside. 
- * The bar may be adjustable via the mouse. 
+ * Part of the structure for general purpose groups of sliders.
+ * This JPanel contains an object label, a slider, and a value field.
  */
 public class ActiveSlider extends JPanel implements MouseListener,
 		MouseMotionListener {
@@ -41,20 +39,29 @@ public class ActiveSlider extends JPanel implements MouseListener,
 
 	// Constructor (default)
 	public ActiveSlider(SliderFrame slf, int indx, String lbl,double val,boolean actv) {
-		setOpaque(false);
-		setLayout(null);
+		setBorder(BorderFactory.createLineBorder(Color.blue));
+		setLayout(new FlowLayout(FlowLayout.LEADING));
 		sfparent = (SliderFrame)slf;
 		index=indx;
+		label=lbl;
 		value=val;
 		active=actv;
 		
 		slider=new IndexedJSlider(sfparent.val_min,sfparent.val_max,val,index);
 		slider.addChangeListener(sfparent.listener);
-		labelField=new JTextField(label,8);
-		valueField=new xNumField(String.format("%.6f",value),8);
+		labelField=new JTextField(label,6);
+		labelField.setEditable(false);
+		valueField=new xNumField("",8);
+		valueField.setValue(val);
 		
-		if (active)
+		add(labelField);
+		add(slider);
+		add(valueField);
+		
+		if (active) {
+			addMouseListener(this);
 			addMouseMotionListener(this);
+		}
 
 	}
 	
@@ -67,28 +74,22 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	 * @param val
 	 */
 	public void setValue(double val) {
-		slider.setMyValue(val);
+		sfparent.captureValue(val,index);
+		valueField.setValue(val);
 	}
-
+	
+	public String getLabel() {
+		return label;
+	}
+	
 	/**
 	 * Handle a slider change event
 	 * @param event
 	 */
-	public void changeReaction(ChangeEvent event) {
-		JSlider source=null;
-		try {
-			source=(JSlider)event.getSource();
-		} catch (Exception ex) {
-			return;
-		}
-		if (!source.getValueIsAdjusting()) {  // is this last in a chain of mouse actions?
-			setValue(source.getValue());
-			if (sfparent.changeCheck.isSelected()) {
-				String cmdstr=sfparent.changeCmdField.getText();
-				if (cmdstr!=null && cmdstr.length()>0)
-					CommandStrParser.jexecute(sfparent.packData,cmdstr);
-			}
-		}
+	public void changeReaction() {
+		double val=slider.getCurrentValue();
+		setValue(val);
+		sfparent.changeAction(index); // there may be commands to execute
 	}
 	
 	/**
@@ -112,6 +113,7 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	}
 
 	public void mouseMoved(MouseEvent evt) {
+//		sfparent.mouse_entry_action(index);
 	}
 
 	public void mouseClicked(MouseEvent arg0) {

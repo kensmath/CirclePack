@@ -55,7 +55,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	public EdgeLink(PackData p,String datastr,boolean xtd) {
 		super();
 		packData=p;
-		if (datastr!=null) addEdgeLinks(datastr,xtd);
+		if (datastr!=null && datastr.length()>0) 
+			addEdgeLinks(datastr,xtd);
 	}
 	
 	/**

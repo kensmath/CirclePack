@@ -330,16 +330,16 @@ public class VertDataPanel extends JPanel implements ActionListener {
 		RData rdata=p.rData[v];
 		
 		// set radius
-		radField.setField(p.getRadius(v));
+		radField.setValue(p.getRadius(v));
 		
 		// set center
 		centerField.setFields(new Complex(rdata.center.x,rdata.center.y));
 		
 		// set aim
-		aimField.setField(rdata.aim/Math.PI);
+		aimField.setValue(rdata.aim/Math.PI);
 		
 		// set angle sum
-		angleSumField.setField(rdata.curv/Math.PI);
+		angleSumField.setValue(rdata.curv/Math.PI);
 		
 		// bdry?
 		bdryCkBoxV.setSelected(false);
@@ -398,6 +398,6 @@ public class VertDataPanel extends JPanel implements ActionListener {
 			if (j>=0 && Math.abs(1.0-iD)>.0000001)
 				invDist=iD;
 		}
-		overlapField.setField(invDist);
+		overlapField.setValue(invDist);
 	}
 }

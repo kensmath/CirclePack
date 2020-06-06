@@ -85,6 +85,8 @@ import util.SphView;
 import util.StringUtil;
 import util.TriAspect;
 import util.UtilPacket;
+import widgets.RadiiSliders;
+import widgets.SchwarzSliders;
 
 /**
  * Fundamental data repository on a circle packing's data, associated 
@@ -193,6 +195,9 @@ public class PackData{
     public GraphLink drawingTree; // developmental (7/12): hope to layout using this tree
     public GraphLink utilGraph;  // utility for developing dual graph, tree, etc.
     public int layoutOption;     // for testing layout procedures
+    
+    public RadiiSliders radiiSliders;
+    public SchwarzSliders schwarzSliders; 
     
     // Constructor
     public PackData(CPScreen parentScreen){

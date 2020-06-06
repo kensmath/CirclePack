@@ -29,7 +29,8 @@ public class IndexedJSlider extends JSlider {
 		myMin=min;
 		myMax=max;
 		myIndx=indx;
-		setValue(convertDouble(val));
+		setMyValue(val);
+		this.fireStateChanged();
 	}
 	
 	public int getIndex() {
@@ -44,10 +45,10 @@ public class IndexedJSlider extends JSlider {
 	public int convertDouble(double x) {
 		if (x<=myMin) return MIN_VALUE;
 		if (x>=myMax) return MAX_VALUE;
-		return (int)((x-myMin)/(myMax-myMin));
+		return (int)((x-myMin)/(myMax-myMin)*(MAX_VALUE-MIN_VALUE))+MIN_VALUE;
 	}
 	
 	public void setMyValue(double x) {
-		
+		setValue(convertDouble(x));
 	}
 }

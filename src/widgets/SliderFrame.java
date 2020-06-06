@@ -2,12 +2,13 @@ package widgets;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Vector;
 
 import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
@@ -19,7 +20,9 @@ import javax.swing.border.EtchedBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import allMains.CPBase;
 import exceptions.DataException;
+import input.CommandStrParser;
 import packing.PackData;
 import panels.CPScreen;
 import util.xNumField;
@@ -42,14 +45,14 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	PackData packData;
 	
 	// try to starting with these sizes
-	public static final int DEFAULT_WIDTH=400; 
+	public static final int DEFAULT_WIDTH=420; 
 	public static final int DEFAULT_HEIGHT=400; 
 	
 	// abstract methods that must be implemented by derived classes
 	public abstract void populate(); // create and add the 'ActiveBar's
-	public abstract void downLoad(); // updating sliders from packData
+	public abstract void downloadData(); // updating sliders from packData
 	public abstract void captureValue(double value,int indx); // individual update from mouse action
-	public abstract JPanel createSliderPanel(); // may want, e.g., special border
+	public abstract void createSliderPanel(); // may want, e.g., special border
 	public abstract void setChangeField(String cmd);   // set optional command with value change
 	public abstract void setMotionField(String cmd);   // set optional command on motion into slider 
 	public abstract void mouse_entry_action(int indx); 
@@ -87,16 +90,29 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 			public void stateChanged(ChangeEvent event) {
 				// update text field when the slider value changes
 				IndexedJSlider source = (IndexedJSlider) event.getSource();
-				int indx=source.getIndex();
-				mySliders[indx].changeReaction(event);// pass on to 'ActiveSlider'
+				if (!source.getValueIsAdjusting()) {  // is this last in a chain of mouse actions?
+					int indx=source.getIndex();
+					mySliders[indx].changeReaction();// pass on to 'ActiveSlider'
+				}
 			}
 		};
 	}
 	
 	public SliderFrame(PackData p,String chgcmd,String movcmd) {
 		this(p);
-		holdChangeCmd=chgcmd;
-		holdMotionCmd=movcmd;
+		// strings should have been processed to remove quotes, 
+		//    convert 'Obj' to '_Obj', and
+		// TODO: need to catch semicolons which occur between quotes
+		if (chgcmd.length()>0) {
+			holdChangeCmd=chgcmd;
+		}
+		else 
+			holdChangeCmd="";
+		if (movcmd.length()>0) {
+			holdMotionCmd=movcmd;
+		}
+		else
+			holdMotionCmd="";
 	}
 	
 	/**
@@ -104,75 +120,97 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	 */
 	public void initGUI() {
 		setLayout(new BorderLayout());
-		
+
+		setRange();
+
 		// Create control/data display area
-		controlPanel = new JPanel();
+		controlPanel = new JPanel(new BorderLayout());
 		controlPanel.setBounds(1,1,DEFAULT_WIDTH,60);
-		controlPanel.setSize(new Dimension(DEFAULT_WIDTH,60));
-		controlPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,60));
+		controlPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,120));
 		controlPanel.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED));
 
 		// three panels
-		JPanel leftPanel=new JPanel();
-		BoxLayout bleft=new BoxLayout(leftPanel,BoxLayout.PAGE_AXIS);
-		leftPanel.setLayout(bleft);
-		JPanel midPanel=new JPanel();
-		BoxLayout blmid=new BoxLayout(midPanel,BoxLayout.PAGE_AXIS);
-		midPanel.setLayout(blmid);
-		JPanel rightPanel=new JPanel();
-		BoxLayout blright=new BoxLayout(rightPanel,BoxLayout.PAGE_AXIS);
-		rightPanel.setLayout(blright);
+		JPanel topPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
+		JPanel midPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
+		midPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,60));
+		JPanel bottomPanel=new JPanel(new BorderLayout());
 
-		JButton button = new JButton("Update");
+		// top has buttons, 2 for now
+		JButton button = new JButton("Info");
+		button.addActionListener(this);
+		button.setActionCommand("Slider Info");
+		button.setPreferredSize(new Dimension(80, 22));
+		button.setToolTipText("Help window for some 'Widget'");
+		topPanel.add(button);
+
+		button = new JButton("Update");
 		button.addActionListener(this);
 		button.setActionCommand("Update");
 		button.setPreferredSize(new Dimension(90, 22));
 		button.setToolTipText("Recompute all values");
-		leftPanel.add(button);
-
-		button = new JButton("Help");
-		button.addActionListener(this);
-		button.setActionCommand("Help");
-		button.setPreferredSize(new Dimension(80, 22));
-		button.setToolTipText("Help window for some 'Widget'");
-		leftPanel.add(button);
+		topPanel.add(button);
 		
-		minValue=new xNumField("Min",8);
-		maxValue=new xNumField("Max",8);
-		midPanel.add(minValue);
-		midPanel.add(maxValue);
-		
-		// third panel has two panels
 		JPanel righttopPanel=new JPanel();
 		motionCheck=new JCheckBox("motion cmd");
 		motionCheck.setSelected(false);
-		motionCmdField=new JTextField("",30);
+		motionCmdField=new JTextField("",15);
+		righttopPanel.add(motionCheck);
 		righttopPanel.add(motionCmdField);
-		
-		JPanel rightbottomPanel=new JPanel();
-		changeCheck=new JCheckBox("chamge cmd");
-		changeCheck.setSelected(false);
-		changeCmdField=new JTextField("",30);
-		rightbottomPanel.add(changeCmdField);
 
-		controlPanel.add(leftPanel);
-		controlPanel.add(midPanel);
-		controlPanel.add(rightPanel);
+		// middle panel has two panels for commands
+		JPanel midleftPanel=new JPanel(new BorderLayout());
+		changeCheck=new JCheckBox("change cmd");
+		changeCheck.setSelected(false);
+		if (holdChangeCmd.length()>0)
+			changeCheck.setSelected(true);
+		changeCmdField=new JTextField("",15);
+		midleftPanel.add(changeCheck,BorderLayout.NORTH);
+		midleftPanel.add(changeCmdField,BorderLayout.CENTER);
+		
+		JPanel midrightPanel=new JPanel(new BorderLayout());;
+		motionCheck=new JCheckBox("motion cmd");
+		motionCheck.setSelected(false);
+		if (holdMotionCmd.length()>0)
+			motionCheck.setSelected(true);
+		motionCmdField=new JTextField("",15);
+		midrightPanel.add(motionCheck,BorderLayout.NORTH);
+		midrightPanel.add(motionCmdField,BorderLayout.CENTER);
+
+		midPanel.add(midleftPanel);
+		midPanel.add(midrightPanel);
+
+		// bottom panel has min/max values
+		JPanel bottomleftPanel = new JPanel();
+		JTextField minText=new JTextField("min value: "+String.format("%.5e",val_min));
+		minText.setEditable(false);
+		bottomleftPanel.add(minText);
+		
+		JPanel bottomrightPanel=new JPanel();
+		JTextField maxText=new JTextField("Max value: "+String.format("%.5e",val_max));
+		maxText.setEditable(false);
+		bottomrightPanel.add(maxText);
+		
+		bottomPanel.add(bottomleftPanel,BorderLayout.WEST);
+		bottomPanel.add(bottomrightPanel,BorderLayout.EAST);
+
+		controlPanel.add(topPanel,BorderLayout.NORTH);
+		controlPanel.add(midPanel,BorderLayout.CENTER);
+		controlPanel.add(bottomPanel,BorderLayout.SOUTH);
 		
 		add(controlPanel, BorderLayout.NORTH);
 
 		// Create sliderPanel
-		sliderPanel=createSliderPanel();
+		createSliderPanel();
 		sliderPanel.setSize(new Dimension(DEFAULT_WIDTH,DEFAULT_HEIGHT));
 		sliderPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,DEFAULT_HEIGHT));
 		populate();
 		
 		sliderScroll=new JScrollPane(sliderPanel,
-				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER,JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+				JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		add(sliderScroll,BorderLayout.CENTER);
-
+		
 		pack();
-		setRange();
 		setChangeField(holdChangeCmd);
 		setMotionField(holdMotionCmd);
 	}
@@ -183,6 +221,44 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	 */
 	public void setHelpText(StringBuilder strbld) {
 		helpInfo=strbld;
+	}
+	
+	/**
+	 * Execute a command
+	 * @param cmdstr String
+	 * @return int
+	 */
+	public int cpCommand(String cmdstr) {
+		return CommandStrParser.jexecute(packData,cmdstr);
+	}
+	
+	public int changeAction(int indx) {
+		setObjVariable(mySliders[indx].getLabel()); // set variable 'Obj' in any case
+		String chgstr=changeCmdField.getText();
+		if (changeCheck.isSelected() && chgstr.length()>0) {
+			return cpCommand(chgstr);
+		}
+		return 0;
+	}
+	
+	public int motionAction(int indx) {
+		setObjVariable(mySliders[indx].getLabel()); // set variable 'Obj' in any case
+		String mvstr=motionCmdField.getText();
+		if (motionCheck.isSelected() && mvstr.length()>0)
+			return cpCommand(mvstr);
+		return 0;
+	}
+	
+	/**
+	 * Set variable "Obj" to given string value
+	 * @param obj
+	 */
+	public void setObjVariable(String obj) {
+		Vector<Vector<String>> fseg=new Vector<Vector<String>>(1);
+		Vector<String> itm=new Vector<String>(0);
+		itm.add(obj);
+		fseg.add(itm);
+		CPBase.varControl.putVariable(packData,"Obj",fseg); 
 	}
 	
 	/**
@@ -201,9 +277,9 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	public void actionPerformed(ActionEvent evt) {
 		String cmd=evt.getActionCommand();
 
-		if (cmd.equals("Help")) {
+		if (cmd.equals("Info")) {
 			JFrame auxHelpFrame=new JFrame();
-			auxHelpFrame.setTitle("Help for BarGraph");
+			auxHelpFrame.setTitle("Help for SliderFrame");
 			JTextArea helpText=new JTextArea();
 			helpText.setText(helpInfo.toString());
 			auxHelpFrame.add(helpText);
@@ -216,7 +292,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		}
 
 		else if (cmd.equals("Update")) {
-			downLoad();
+			downloadData();
 		}
 	}
 	

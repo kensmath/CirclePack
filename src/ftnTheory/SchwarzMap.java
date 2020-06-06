@@ -134,7 +134,7 @@ public class SchwarzMap extends PackExtender {
 			} catch(Exception ex) {
 				wlist=new NodeLink(packData,"a");
 			}
-			radSliders=new RadiiSliders(packData,wlist);
+			radSliders=new RadiiSliders(packData,"","",wlist);
 			if (radSliders==null)
 				return 0;
 			radSliders.setVisible(true);
