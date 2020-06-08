@@ -7,6 +7,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JPanel;
 
 import allMains.CirclePack;
+import input.CommandStrParser;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import packing.PackData;
@@ -56,12 +57,96 @@ public class SchwarzSliders extends SliderFrame {
 
 	// ============= abstract methods ==================
 	public void populate() {
-		for (int j=0;j<N;j++) {
-			EdgeSimple edge=edges.get(j);
+		EdgeLink newEdges= new EdgeLink(packData);
+		ActiveSlider[] tmpSliders = new ActiveSlider[edges.size()];
+		Iterator<EdgeSimple> elst=edges.iterator();
+		int tick=0;
+		while (elst.hasNext()) {
+			EdgeSimple edge=elst.next();
+			if (EdgeLink.getVW(newEdges,edge.v,edge.w)>-1) 
+				continue;
+			newEdges.add(edge);
 			String str=new String(edge.v+" "+edge.w);
-			mySliders[j]=new ActiveSlider(this,j,str,getSchwarzian(j),true);
-			sliderPanel.add(mySliders[j]);
+			int k=packData.nghb(edge.v,edge.w);
+			double sch=packData.kData[edge.v].schwarzian[k];
+			tmpSliders[tick]=new ActiveSlider(this,tick,str,sch,true);
+			sliderPanel.add(tmpSliders[tick]);
+			tick++;
 		}
+		N=newEdges.size();
+		mySliders = new ActiveSlider[N];
+		for (int j=0;j<N;j++)
+			mySliders[j]=tmpSliders[j];
+	}
+	
+	public int addObject(String objstr) {
+		EdgeLink el=new EdgeLink(packData,objstr);
+		if (el==null || el.size()==0)
+			return 0;
+		ActiveSlider[] tmpSliders=new ActiveSlider[N+el.size()];
+		for (int j=0;j<N;j++) 
+			tmpSliders[j]=mySliders[j];
+		Iterator<EdgeSimple> els=el.iterator();
+		int hit=0;
+		while (els.hasNext()) {
+			EdgeSimple edge=els.next();
+			if (EdgeLink.getVW(edges, edge.v, edge.w)>=0)
+				continue;
+			String str=new String(edge.v+" "+edge.w);
+			int k=packData.nghb(edge.v,edge.w);
+			double sch=packData.kData[edge.v].schwarzian[k];
+			tmpSliders[N+hit]=new ActiveSlider(this,N+hit,str,sch,true);
+			sliderPanel.add(tmpSliders[N+hit]);
+			edges.add(edge);
+			hit++;
+		}
+		if (hit>0) {
+			N=N+hit;
+			mySliders=new ActiveSlider[N];
+			for (int j=0;j<N;j++)
+				mySliders[j]=tmpSliders[j];
+		}
+		this.pack();
+		return hit;
+	}
+	
+	public int removeObject(String objstr) {
+		EdgeLink el=new EdgeLink(packData,objstr);
+		if (el==null || el.size()==0)
+			return 0;
+		ActiveSlider[] tmpSliders=new ActiveSlider[N];
+		for (int j=0;j<N;j++) 
+			tmpSliders[j]=mySliders[j];
+		Iterator<EdgeSimple> els=el.iterator();
+		int hit=0;
+		while (els.hasNext()) {
+			EdgeSimple edge=els.next();
+			int eindx=-1;
+			if ((eindx=EdgeLink.getVW(edges, edge.v, edge.w))<0)
+				continue;
+			for (int j=(eindx+1);j<(N-hit);j++) {
+				tmpSliders[j-1]=tmpSliders[j];
+				tmpSliders[j-1].setIndex(j-1);
+			}	
+			edges.remove(eindx);
+			sliderPanel.remove(mySliders[eindx]);
+			mySliders[eindx]=null;
+			hit++;
+		}
+		
+		if (hit>0) {
+			N=N-hit;
+			mySliders=new ActiveSlider[N];
+			for (int j=0;j<N;j++)
+				mySliders[j]=tmpSliders[j];
+		}
+		this.pack();
+		this.repaint();
+		return hit;
+	}
+	
+	public int getCount() {
+		return N;
 	}
 	
 	/**
@@ -127,5 +212,9 @@ public class SchwarzSliders extends SliderFrame {
 		val_max *=2.0;
 	}
 	
+	public void killMe() {
+		CommandStrParser.jexecute(packData,"slider -S -x");
+	}
+
 }
 

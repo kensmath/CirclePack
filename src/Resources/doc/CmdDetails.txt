@@ -4079,12 +4079,13 @@ enters these in order</instance>
 </description>
 </command>
 
-<command cmd="slider" flags="-[RS] -[cm] {cmds}">
+<command cmd="slider" flags="-[RS] -[cmarx] {cmds} {..}">
 <description>
-	This creates a frame with multiple sliders for cursor
-	control of values associated with the packing. Currently, 
-	only 'radii' and edge 'schwarzians' (which must be set
-	by the user in advance) can be controled via these sliders. 
+	CirclePack allows the user to create a frame with multiple 
+	sliders to control values associated with the packing using
+	the mouse. Currently, only 'radii' and edge 'schwarzians' 
+	(which must be set in advance by the user) can be controlled,
+	and only one slider frame is allowed for each packing.
 	Optionally, 'motion' commands can be executed when 
 	the mouse passes over a slider and/or 
 	'change' commands can be executed when a value is changed.
@@ -4092,7 +4093,7 @@ enters these in order</instance>
 	strings is replaced by '_Obj' so that the command can be
 	applied to the appropriate object (vertex or edge).
 </description>
-<obtions>
+<options>
 <opt flag="-R"> The sliders control specified radii</opt>
 <opt flag="-S"> The sliders control specified edge schwarzians</opt>
 <opt flag="-c \"cmds\""> Optional commands to be executed when a
@@ -4101,6 +4102,9 @@ quotes</opt>
 <opt flag="-m \"cmds\""> Optional commands to be executed when a
 a mouse moves across a slider; here 'cmds' is a string of text 
 enclosed by double quotes</opt>
+<opt flag="-a {..}"> Add a slider for a new object</opt>
+<opt flag="-r {.}"> Remove an individual object</opt>
+<opt flag="-x"> Destroy this frame</opt>
 </options>
 <examples>
 <instance text="slider -R {v...}"> sliders for selected vertices</instance>

@@ -1554,4 +1554,21 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 		 }
 		 return NodeLink.separates(p,nodes);
 	 }
+	 
+		/**
+		 * Create a list of entries as a string
+		 * @return String, null on error
+		 */
+		public String toString() {
+			if (this.size()==0)
+				return null;
+			StringBuilder sb=new StringBuilder();
+			Iterator<EdgeSimple> myit=this.iterator();
+			while (myit.hasNext()) {
+				EdgeSimple edge=myit.next();
+				sb.append(" "+edge.v+" "+edge.w);
+			}
+			return sb.toString();
+		}
+		
 }

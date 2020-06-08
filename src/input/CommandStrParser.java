@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.Vector;
@@ -137,8 +136,7 @@ import util.SphView;
 import util.StringUtil;
 import util.UtilPacket;
 import util.ViewBox;
-import widgets.RadiiSliders;
-import widgets.SchwarzSliders;
+import widgets.CreateSliderFrame;
 
 /**
  * This class handles parsing of individual commands for CirclePack.
@@ -8045,153 +8043,107 @@ public class CommandStrParser {
 				if (flagSegs == null || flagSegs.size() == 0)
 					return 0;
 
-				// different 0=radii, 2=edge schwarzian
-				int type = -1;
-				String chgCmd = ""; // optional change command string
-				String mvCmd = ""; // optional move command string
-				NodeLink vlist = null;
-				EdgeLink elist = null;
-				String trailing = null; // hold trailing if needed later
-
-				// Note: because there may be command strings in quotes
-				// and these may contain semicolons and flags and 'Obj',
-				// we have to process flagSegs by hand.
-				// TODO: Because of semicolons, command parser may have
-				// incorrectly broken up the command strings. Have to
-				// look into this.
-
-				// break input into maximal segments defined by quotes '"'.
-				StringBuilder itembld = new StringBuilder(StringUtil.reconstitute(flagSegs));
-				Vector<StringBuilder> segments = StringUtil.quoteAnaylizer(itembld);
-
-				// a single segment? no -c -m flags and strings
-				String firstSeg;
-				String lastSeg;
-				if (segments.size() == 1) {
-					firstSeg = segments.get(0).toString().trim();
-					if (firstSeg.startsWith("-R")) {
-						type = 0;
-						firstSeg = firstSeg.substring(2).trim();
-						if (firstSeg.length() == 0)
-							vlist = new NodeLink(packData, "a"); // default to all
-						else
-							vlist = new NodeLink(packData, firstSeg);
-					} else if (firstSeg.startsWith("-S")) {
-						type = 1;
-						firstSeg = firstSeg.substring(2).trim();
-						if (firstSeg.length() == 0)
-							elist = new EdgeLink(packData, "a"); // default to all
-						else
-							elist = new EdgeLink(packData, firstSeg);
-					}
+				// must be initial flag: -R, -S
+				int type = -1; // 0=radii, 1=edge schwarzian
+				items = flagSegs.get(0);
+				if (!StringUtil.isFlag(items.get(0))) {
+					CirclePack.cpb.errMsg("usage: 'slider' must start with -R or -S flag");
+					return 0;
 				}
 
-				// multiple segments
-				else {
-					try {
+				char c = items.remove(0).charAt(1);
+				switch (c) {
+				case 'R': // start for radii
+				{
+					type = 0;
+					break;
+				}
+				case 'S': // start for schwarzians
+				{
+					type = 1;
+					break;
+				}
+				default: {
+					CirclePack.cpb.errMsg("usage: 'slider' must start with -R or -S flag");
+					return 0;
+				}
+				} // end of switch
 
-						// pick off first and look for -R or -S
-						firstSeg = segments.remove(0).toString().trim();
-						if (firstSeg.startsWith("-R")) // radii
-							type = 0;
-						else if (firstSeg.startsWith("-S")) // Schwarzians
-							type = 1;
-						else {
-							CirclePack.cpb.errMsg("usage: slider -[RS] -c {..} -m {..} {v..}");
-							return 0;
+				// three situations:
+				// * no other flags: create with specified objects (perhaps defaulting to all)
+				// * nothing else in first item, but then flags such as -a or -r (add/remove)
+				// * else reconstitute flagSegs and pass for creation
+				int hit = 0;
+				if (flagSegs.size() == 1) {
+					return CreateSliderFrame.createSliderFrame(packData, type, items);
+				} 
+				if (items.size()==0) {
+					flagSegs.remove(0);
+					items = flagSegs.get(0);
+					char fc = items.get(0).charAt(1);
+					switch (fc) {
+					case 'a': // add object
+					{
+						items.remove(0);
+						if (type == 0 && packData.radiiSliders != null) {
+							NodeLink nl = new NodeLink(packData, items);
+							hit +=packData.radiiSliders.addObject(nl.toString());
+						} else if (type == 1 && packData.schwarzSliders != null) {
+							EdgeLink el= new EdgeLink(packData, items);
+							hit +=packData.schwarzSliders.addObject(el.toString());
 						}
-
-						// trim remainder of this lead segment for later use
-						firstSeg = firstSeg.substring(2).trim();
-
-						// pick off last segment
-						int s = segments.size();
-						lastSeg = segments.get(s - 1).toString().trim();
-						if (lastSeg.length() > 0 && lastSeg.charAt(0) != '"') // not a quote segment, should be object
-																				// list
-							segments.remove(s - 1);
-						else
-							lastSeg = "a";
-
-						// process to get object list
-						if (type == 0) { // vertices
-							if (lastSeg.length() == 0)
-								vlist = new NodeLink(packData, "a"); // default to all
-							else
-								vlist = new NodeLink(packData, lastSeg);
-							if (vlist == null || vlist.size() == 0) {
-								CirclePack.cpb.errMsg("usage: malformed 'slider' command");
-								return 0;
-							}
-						} else if (type == 1) { // schwarzians
-							if (lastSeg.length() == 0)
-								elist = new EdgeLink(packData, "a"); // default to all
-							else
-								elist = new EdgeLink(packData, lastSeg);
-							if (elist == null || elist.size() == 0) {
-								CirclePack.cpb.errMsg("usage: malformed 'slider' command");
-								return 0;
-							}
+						break;
+					}
+					case 'r': // remove object
+					{
+						items.remove(0);
+						if (type == 0 && packData.radiiSliders != null) {
+							NodeLink nl = new NodeLink(packData, items);
+							hit +=packData.radiiSliders.removeObject(nl.toString());
+						} else if (type == 1 && packData.schwarzSliders != null) {
+							EdgeLink el= new EdgeLink(packData, items);
+							hit +=packData.schwarzSliders.addObject(el.toString());
 						}
-					} catch (ArrayIndexOutOfBoundsException aox) {
-						CirclePack.cpb.errMsg("usage: malformed 'slider' command");
-						return 0;
+						break;
 					}
-
-					// note: next segment must be quoted, so must have -c or -m flag
-					if (firstSeg.length() == 0) {
-						CirclePack.cpb.errMsg("usage: slider missing '-c' or '-m' flag");
-						return 0;
+					case 'c': // okay, intended for creation call
+					{
+						break;
 					}
-
-					// remaining segments come in pairs <leadStr,quoteStr>
-					segments.add(0, new StringBuilder(firstSeg)); // re-insert first segment
-
-					try {
-						Iterator<StringBuilder> sit = segments.iterator();
-						while (sit.hasNext()) {
-							String leadStr = sit.next().toString().trim();
-							String quoteStr = sit.next().toString().trim();
-							if (leadStr.contains("-c")) {
-								if (quoteStr.charAt(0) != '"')
-									throw new DataException();
-								chgCmd = quoteStr.substring(1, quoteStr.length() - 1); // get change cmd, removing '"'
-							} else if (leadStr.contains("-m")) {
-								if (quoteStr.charAt(0) != '"')
-									throw new DataException();
-								mvCmd = quoteStr.substring(1, quoteStr.length() - 1); // get move cmd, removing '"'
-							}
+					case 'm': // okay, intended for creation call
+					{
+						break;
+					}
+					case 'x': // destroy the slider and frame
+					{
+						if (type==0) {
+							if (packData.radiiSliders!=null)
+								packData.radiiSliders.dispose();
+							packData.radiiSliders=null;
 						}
-					} catch (NoSuchElementException nse) {
-						// just continue with what we have
-					} catch (DataException dex) {
-						CirclePack.cpb.errMsg("usage: malformed 'slider' command");
-						return 0;
+						else if (type==1) {
+							if (packData.schwarzSliders!=null)
+								packData.schwarzSliders.dispose();
+							packData.schwarzSliders=null;
+						}
+						return 1;
 					}
+					default:
+					{
+						throw new ParserException("usage: illegal slider flag");
+					}
+					} // end of switch
 
-				} // end of else
+					if (hit>0)	// got another flag (only one is allowed) 
+						return hit;
+				} // end of other flage
 				
-				if (chgCmd.length()>0)
-					chgCmd=StringUtil.replaceSubstring(chgCmd,"Obj","_Obj");
-				if (mvCmd.length()>0)
-					mvCmd=StringUtil.replaceSubstring(mvCmd,"Obj","_Obj");
+				// else process as a creation call
+				StringBuilder strbld=new StringBuilder(StringUtil.reconstitute(flagSegs));
+				return CreateSliderFrame.createSliderFrame(packData,type,strbld);
 
-				// ready to start slider
-				if (type == 0) { // radii
-					packData.radiiSliders = null;
-					packData.radiiSliders = new RadiiSliders(packData, chgCmd, mvCmd, vlist);
-					packData.radiiSliders.setVisible(true);
-					return 1;
-				}
-				if (type == 1) { // schwarzians
-					packData.schwarzSliders = null;
-					packData.schwarzSliders = new SchwarzSliders(packData, chgCmd, mvCmd, elist);
-					packData.schwarzSliders.setVisible(true);
-					return 1;
-				}
-				return 0;
 			}
-
+			
 		  // =============== sch_reprot =======
 		  else if (cmd.startsWith("sch_repo")) {
 			  return Schwarzian.schwarzReport(packData,flagSegs);

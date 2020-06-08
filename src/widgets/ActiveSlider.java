@@ -82,6 +82,10 @@ public class ActiveSlider extends JPanel implements MouseListener,
 		return label;
 	}
 	
+	public void setIndex(int newIndx) {
+		index=newIndx;
+	}
+	
 	/**
 	 * Handle a slider change event
 	 * @param event

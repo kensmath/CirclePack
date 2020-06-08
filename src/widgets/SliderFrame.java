@@ -3,9 +3,12 @@ package widgets;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Insets;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.Vector;
 
 import javax.swing.BorderFactory;
@@ -37,7 +40,8 @@ import util.xNumField;
  */
 
 public abstract class SliderFrame extends JFrame implements ActionListener {
-
+	
+	
 	private static final long 
 	serialVersionUID = 1L;
 
@@ -57,6 +61,10 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	public abstract void setMotionField(String cmd);   // set optional command on motion into slider 
 	public abstract void mouse_entry_action(int indx); 
 	public abstract void setRange();   // compute val_min, val_max
+	public abstract int addObject(String obj);  // add object(s) 
+	public abstract int removeObject(String obj); // remove object(s)
+	public abstract int getCount(); // how many objects?
+	public abstract void killMe(); // to call CirclePack to kill this frame
 	
 	public double val_min;
 	public double val_max;
@@ -72,13 +80,22 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	JCheckBox changeCheck;  // whether to apply change command
 	JTextField motionCmdField; // optional command: execute when mouse enters 
 	JCheckBox motionCheck;  // whether to apply motion command
-	
+	JTextField addField;
+	JTextField removeField;
 	public ActiveSlider[] mySliders; // number depends on what's being displayed
 	public ChangeListener listener; // listener for all the ActiveSlider's
 	public StringBuilder helpInfo;
 
 	public SliderFrame(PackData p) {
 		super();
+		
+		// throw back to CirclePack to kill this window
+		this.addWindowListener(new WindowAdapter(){  
+	        public void windowClosing(WindowEvent e) {
+	        	killMe();
+	        }
+		});
+
 		packData=p;
 		setLocation(new Point(200,100));
 		helpInfo=new StringBuilder("Put information here when instantiated");
@@ -125,7 +142,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 
 		// Create control/data display area
 		controlPanel = new JPanel(new BorderLayout());
-		controlPanel.setBounds(1,1,DEFAULT_WIDTH,60);
+		controlPanel.setBounds(1,1,DEFAULT_WIDTH/2,60);
 		controlPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,120));
 		controlPanel.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED));
 
@@ -135,28 +152,53 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		midPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,60));
 		JPanel bottomPanel=new JPanel(new BorderLayout());
 
-		// top has buttons, 2 for now
+		// top has buttons 
 		JButton button = new JButton("Info");
+		button.setBorder(null);
+		button.setMargin(new Insets(10,25,10,25));
+		button.setPreferredSize(new Dimension(45,18));
 		button.addActionListener(this);
 		button.setActionCommand("Slider Info");
-		button.setPreferredSize(new Dimension(80, 22));
-		button.setToolTipText("Help window for some 'Widget'");
+		button.setToolTipText("Help window");
 		topPanel.add(button);
 
 		button = new JButton("Update");
+		button.setBorder(null);
+		button.setMargin(new Insets(1,5,1,5));
+		button.setPreferredSize(new Dimension(60,18));
 		button.addActionListener(this);
 		button.setActionCommand("Update");
-		button.setPreferredSize(new Dimension(90, 22));
 		button.setToolTipText("Recompute all values");
 		topPanel.add(button);
 		
-		JPanel righttopPanel=new JPanel();
-		motionCheck=new JCheckBox("motion cmd");
-		motionCheck.setSelected(false);
-		motionCmdField=new JTextField("",15);
-		righttopPanel.add(motionCheck);
-		righttopPanel.add(motionCmdField);
-
+		JPanel addremovePanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
+		
+		button = new JButton("+");
+		button.setBorderPainted(false);
+		button.setMargin(new Insets(2,6,2,6));
+		button.addActionListener(this);
+		button.setPreferredSize(new Dimension(25,18));
+		button.setActionCommand("add object");
+		button.setToolTipText("Add a new object");
+		addField=new JTextField(3);
+		addField.setEditable(true);
+		addremovePanel.add(button);
+		addremovePanel.add(addField);
+		
+		button = new JButton("-");
+		button.setBorder(null);
+		button.setMargin(new Insets(2,2,2,2));
+		button.addActionListener(this);
+		button.setPreferredSize(new Dimension(25,18));
+		button.setActionCommand("remove object");
+		button.setToolTipText("Remove an object");
+		removeField=new JTextField(3);
+		removeField.setEditable(true);
+		addremovePanel.add(button);
+		addremovePanel.add(removeField);
+		
+		topPanel.add(addremovePanel);
+		
 		// middle panel has two panels for commands
 		JPanel midleftPanel=new JPanel(new BorderLayout());
 		changeCheck=new JCheckBox("change cmd");
@@ -214,7 +256,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		setChangeField(holdChangeCmd);
 		setMotionField(holdMotionCmd);
 	}
-	
+
 	/**
 	 * Set the "Help" popup information
 	 * @param strbld StringBuilder
@@ -293,6 +335,15 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 
 		else if (cmd.equals("Update")) {
 			downloadData();
+		}
+		
+		else if (cmd.equals("add object")) {
+			String obj=addField.getText().trim();
+			addObject(obj);
+		}
+		else if (cmd.equals("remove object")) {
+			String obj=removeField.getText().trim();
+			removeObject(obj);
 		}
 	}
 	
