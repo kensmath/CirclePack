@@ -14,20 +14,17 @@ public class IndexedJSlider extends JSlider {
 	static final int MAX_VALUE=1000;
 	
 	int myIndx; // holds the user-rescribed index 
-	double myMin; 
-	double myMax;
+	SliderFrame sfparent; // slider frame parent
 	
-	public IndexedJSlider(double min, double max,int indx) {
+	public IndexedJSlider(SliderFrame sfp,int indx) {
 		super(MIN_VALUE,MAX_VALUE);
-		myMin=min;
-		myMax=max;
+		sfparent=sfp;
 		myIndx=indx;
 	}
 	
-	public IndexedJSlider(double min,double max,double val, int indx) {
+	public IndexedJSlider(SliderFrame sfp,double val, int indx) {
 		super(MIN_VALUE,MAX_VALUE);
-		myMin=min;
-		myMax=max;
+		sfparent=sfp;
 		myIndx=indx;
 		setMyValue(val);
 		this.fireStateChanged();
@@ -39,16 +36,27 @@ public class IndexedJSlider extends JSlider {
 	
 	public double getCurrentValue() {
 		double f=((double)getValue())/(double)MAX_VALUE;
-		return (f*(myMax-myMin)+myMin);
+		return (f*(sfparent.val_max-sfparent.val_min)+sfparent.val_min);
 	}
 	
+	/**
+	 * Have to convert to integer, but restrict to slider range
+	 * @param x double
+	 * @return int
+	 */
 	public int convertDouble(double x) {
-		if (x<=myMin) return MIN_VALUE;
-		if (x>=myMax) return MAX_VALUE;
-		return (int)((x-myMin)/(myMax-myMin)*(MAX_VALUE-MIN_VALUE))+MIN_VALUE;
+		if (x<=sfparent.val_min) return MIN_VALUE;
+		if (x>=sfparent.val_max) return MAX_VALUE;
+		return (int)((x-sfparent.val_min)/
+				(sfparent.val_max-sfparent.val_min)*
+				((double)(MAX_VALUE-MIN_VALUE)))+MIN_VALUE;
 	}
 	
+	/**
+	 * For JSlider, have to convert to integer
+	 * @param x double
+	 */
 	public void setMyValue(double x) {
-		setValue(convertDouble(x));
+		setValue(convertDouble(x)); 
 	}
 }

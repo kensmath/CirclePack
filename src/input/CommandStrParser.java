@@ -137,6 +137,7 @@ import util.StringUtil;
 import util.UtilPacket;
 import util.ViewBox;
 import widgets.CreateSliderFrame;
+import widgets.SliderFrame;
 
 /**
  * This class handles parsing of individual commands for CirclePack.
@@ -5740,7 +5741,7 @@ public class CommandStrParser {
 	    	  }
 	    	  return 0;
 	      }
-	      
+		  
 		  // ========= disp (and dISp) ======== 
 	      // 'dISp' is used internally: just paint active, not secondary canvasses
 	      if (cmd.startsWith("dISp") || cmd.startsWith("disp")
@@ -6840,7 +6841,7 @@ public class CommandStrParser {
 			  String dir=file.getParent();
 			  if (dir==null)
 				  dir=CPFileManager.CurrentDirectory.toString();
-			  else if (dir==null && cmd.charAt(0)=='W')
+			  else if (cmd.charAt(0)=='W')
 				  dir=CPFileManager.HomeDirectory.toString();
 			  boolean script_flag=((code & 04)==04);
 			  boolean append_flag=((code & 02)==02);
@@ -8045,7 +8046,7 @@ public class CommandStrParser {
 
 				// must be initial flag: -R, -S
 				int type = -1; // 0=radii, 1=edge schwarzian
-				items = flagSegs.get(0);
+				items = flagSegs.remove(0);
 				if (!StringUtil.isFlag(items.get(0))) {
 					CirclePack.cpb.errMsg("usage: 'slider' must start with -R or -S flag");
 					return 0;
@@ -8068,258 +8069,300 @@ public class CommandStrParser {
 					return 0;
 				}
 				} // end of switch
-
+				
+				if (type==1 && !packData.haveSchwarzians()) {
+					CirclePack.cpb.errMsg("usage: 'slider -S' requires that schwarzians be set, see 'set_sch'");
+					return 0;
+				}
+				
 				// three situations:
 				// * no other flags: create with specified objects (perhaps defaulting to all)
+				// * -c or -m flags, reconstitute flagSegs and pass for creation
 				// * nothing else in first item, but then flags such as -a or -r (add/remove)
-				// * else reconstitute flagSegs and pass for creation
-				int hit = 0;
-				if (flagSegs.size() == 1) {
+				if (flagSegs.size() == 0) {
 					return CreateSliderFrame.createSliderFrame(packData, type, items);
-				} 
-				if (items.size()==0) {
-					flagSegs.remove(0);
-					items = flagSegs.get(0);
-					char fc = items.get(0).charAt(1);
-					switch (fc) {
-					case 'a': // add object
-					{
-						items.remove(0);
-						if (type == 0 && packData.radiiSliders != null) {
-							NodeLink nl = new NodeLink(packData, items);
-							hit +=packData.radiiSliders.addObject(nl.toString());
-						} else if (type == 1 && packData.schwarzSliders != null) {
-							EdgeLink el= new EdgeLink(packData, items);
-							hit +=packData.schwarzSliders.addObject(el.toString());
+				}
+				items = flagSegs.get(0);
+				try {
+					
+					// -c or -m flags mean a creation event
+					char fc=items.get(0).charAt(1);
+					if (fc=='c' || fc=='m') {
+						StringBuilder strbld=new StringBuilder(StringUtil.reconstitute(flagSegs));
+						return CreateSliderFrame.createSliderFrame(packData,type,strbld);
+					}
+					
+					// check that sliderframe exists
+					SliderFrame generic=packData.radiiSliders;
+					if (type==1) 
+						generic=packData.schwarzSliders;
+					if (generic==null) { 
+						throw new ParserException("expected sliderframe does not exist.");
+					}
+						
+					int hits=0;
+					Iterator<Vector<String>> fls=flagSegs.iterator();
+					if (type==0) 
+					while (fls.hasNext()) {
+						items=fls.next();
+						fc = items.remove(0).charAt(1);
+						switch (fc) {
+						case 'a': // add object
+						{
+							items.remove(0);
+							if (type == 0 && packData.radiiSliders != null) {
+								NodeLink nl = new NodeLink(packData, items);
+								hits +=packData.radiiSliders.addObject(nl.toString());
+							} else if (type == 1 && packData.schwarzSliders != null) {
+								GraphLink el= new GraphLink(packData, items);
+								hits +=packData.schwarzSliders.addObject(el.toString());
+							}
+							break;
 						}
-						break;
-					}
-					case 'r': // remove object
-					{
-						items.remove(0);
-						if (type == 0 && packData.radiiSliders != null) {
-							NodeLink nl = new NodeLink(packData, items);
-							hit +=packData.radiiSliders.removeObject(nl.toString());
-						} else if (type == 1 && packData.schwarzSliders != null) {
-							EdgeLink el= new EdgeLink(packData, items);
-							hit +=packData.schwarzSliders.addObject(el.toString());
+						case 'r': // remove object
+						{
+							items.remove(0);
+							if (type == 0 && packData.radiiSliders != null) {
+								NodeLink nl = new NodeLink(packData, items);
+								hits +=packData.radiiSliders.removeObject(nl.toString());
+							} else if (type == 1 && packData.schwarzSliders != null) {
+								GraphLink gl= new GraphLink(packData, items);
+								hits +=packData.schwarzSliders.addObject(gl.toString());
+							}
+							break;
 						}
-						break;
-					}
-					case 'c': // okay, intended for creation call
-					{
-						break;
-					}
-					case 'm': // okay, intended for creation call
-					{
-						break;
-					}
-					case 'x': // destroy the slider and frame
-					{
-						if (type==0) {
-							if (packData.radiiSliders!=null)
-								packData.radiiSliders.dispose();
-							packData.radiiSliders=null;
+						case 'd': // download from packdata to sliders
+						{
+							generic.downloadData();
+							hits++;
+							break;
 						}
-						else if (type==1) {
-							if (packData.schwarzSliders!=null)
-								packData.schwarzSliders.dispose();
-							packData.schwarzSliders=null;
+						case 'l': // set lower (min) value for sliders
+						{
+							double min=0.0;
+							try {
+								min=Double.parseDouble(items.get(0));
+							} catch(NumberFormatException nfx) {
+								throw new DataException(nfx.getMessage());
+							}
+							generic.resetMin(min);
+							hits++;
+							break;
 						}
-						return 1;
-					}
-					default:
-					{
-						throw new ParserException("usage: illegal slider flag");
-					}
-					} // end of switch
+						case 'u': // set lower (min) value for sliders
+						{
+							double max=0.0;
+							try {
+								max=Double.parseDouble(items.get(0));
+							} catch(NumberFormatException nfx) {
+								throw new ParserException(nfx.getMessage());
+							}
+							generic.resetMax(max);
+							hits++;
+							break;
+						}
+						case 'x': // destroy the slider and frame
+						{
+							if (type==0) {
+								if (packData.radiiSliders!=null)
+									packData.radiiSliders.dispose();
+								packData.radiiSliders=null;
+							}
+							else if (type==1) {
+								if (packData.schwarzSliders!=null)
+									packData.schwarzSliders.dispose();
+								packData.schwarzSliders=null;
+							}
+							return 1;
+						}
+						default:
+						{
+							throw new ParserException("usage: illegal slider flag");
+						}
+						} // end of switch
+					} // end of while though flag segments
+					if (hits>0)	// got some flags
+						return hits;
+				} catch (Exception ex) {
+					throw new ParserException("problem in slider call");
+				}
 
-					if (hit>0)	// got another flag (only one is allowed) 
-						return hit;
-				} // end of other flage
-				
-				// else process as a creation call
-				StringBuilder strbld=new StringBuilder(StringUtil.reconstitute(flagSegs));
-				return CreateSliderFrame.createSliderFrame(packData,type,strbld);
-
-			}
+			} // done with 'slider'
 			
-		  // =============== sch_reprot =======
-		  else if (cmd.startsWith("sch_repo")) {
-			  return Schwarzian.schwarzReport(packData,flagSegs);
-			  
-		  }
-		  
-		  // =============== sch_layout ========
-		  else if (cmd.startsWith("sch_layout")) {
-			  if (!packData.haveSchwarzians()) {
-				  CirclePack.cpb.errMsg("Schwarzians are not allocated");
-				  return 0;
-			  }
-			  if (packData.hes<0) {
-				  CirclePack.cpb.errMsg("usage: sch_layout is not used for hyperbolic packings");
-				  return 0;
-			  }
-			  // look for list of face pairs; default to a spanning tree
-			  boolean debug=false;
-			  GraphLink graph=null;
-			  String cflags=null; // flags for drawing circles
-			  String fflags=null; // flags for drawing faces
-			  if (flagSegs!=null && flagSegs.size()>0 && flagSegs.get(0).size()>0) {
-				  Iterator<Vector<String>> its=flagSegs.iterator();
-				  items=null;
-				  // may have flags to see results -c{disp_ops} and/or -f{disp_ops} 
-				  while (its.hasNext()) {
-					  items=its.next();
-					  if (StringUtil.isFlag(items.get(0))) {
-						  String str=items.remove(0);
-						  char c=str.charAt(1);
-						  switch(c) {
-						  case 'v': 
-						  case 'c': // draw as laid out 
-						  {
-							  cflags=new String(str);
-							  break;
-						  }
-						  case 'f': // report and (if draw==true) draw face labels
-						  {
-							  fflags=new String(str);
-							  break;
-						  }
-						  } // end of switch
-					  }
-				  }
-				  
-				  // 'items' should be dual edge list, default to spanning tree
-				  if (items!=null && items.size()>0)
-					  graph=new GraphLink(packData,items);
-				  else 
-					  graph=DualGraph.easySpanner(packData,true);
-			  }
-			  else // no flags or list?
-				  graph=DualGraph.easySpanner(packData,true);
-			  
-			  // Do we need to place the first face? Only if
-			  //  we start with a "root".
-			  EdgeSimple edge=graph.get(0);
-			  int baseface=0;
-			  if (edge.v==0) { // root? yes, then have to place
-				  graph.remove(0); 
-				  baseface=edge.w;
-			  }
-			  
-			  // yes, place first face
-			  if (baseface>0) {
-				  packData.place_face(baseface,0);
-				  
-				  // layout problems can occur if we don't convert to sph geometry
-				  if (packData.hes<=0) {
-					  packData.geom_to_s();
-			    	  packData.fillcurves();
-			    	  packData.setGeometry(packData.hes);
-			    	  if (cpS!=null) cpS.setPackName();
-			    	  jexecute(packData,"disp -w");
-				  }
-				  
-				  if (cflags!=null) {
-					  StringBuilder strbld=new StringBuilder("disp "+cflags);
-					  for (int j=0;j<3;j++) { // show all three circles
-						  strbld.append(" "+packData.faces[baseface].vert[j]);
-					  }
-					  jexecute(packData,strbld.toString());
-				  }
-				  if (fflags!=null) {
-					  StringBuilder strbld=new StringBuilder("disp "+fflags+" "+baseface);
-					  jexecute(packData,strbld.toString());
-				  }
-				  count++;
-			  }
-			  
-			  // layout problems can occur if we don't convert to sph geometry
-			  if (packData.hes<=0) {
-				  packData.geom_to_s();
-		    	  packData.fillcurves();
-		    	  packData.setGeometry(packData.hes);
-		    	  if (cpS!=null) cpS.setPackName();
-		    	  jexecute(packData,"disp -w");
-			  }
-			  
-			  // now progress through edges <f,g> of 'graph'
-			  Iterator<EdgeSimple> gst=graph.iterator();
-			  while (gst.hasNext()) {
-				  EdgeSimple dedge=gst.next();
-				  int f=dedge.v;
-				  int g=dedge.w;
-				  if (f==0) // root should have been handled
-					  break; 
-				  int j=packData.face_nghb(g, f);
-				  
-				  // to get s, need edge <v,w>, f on its left
-				  int v=packData.faces[f].vert[j];
-				  int w=packData.faces[f].vert[(j+1)%3];
-				  int k=packData.nghb(v, w);
-				  double s=packData.kData[v].schwarzian[k];
-				  
-				  int m=packData.face_nghb(f,g);
-				  int target=packData.faces[g].vert[(m+2)%3]; 
+			// =============== sch_report =======
+			if (cmd.startsWith("sch_repo")) {
+				return Schwarzian.schwarzReport(packData,flagSegs);
+			}
 
-				  // assume circles of f are in place, need only compute 
-				  //   the third circle of g, 'target' (across the shared edge).
-				  try {
-				  // compute map from base equilateral
-				  Mobius bm_f=Schwarzian.faceBaseMob(packData,f);
-				  
-				  // compute the target circle
-				  CircleSimple sC=Schwarzian.getThirdCircle(s, j, bm_f, packData.hes);
+			// =============== sch_layout ========
+			else if (cmd.startsWith("sch_lay")) {
+				if (!packData.haveSchwarzians()) {
+					CirclePack.cpb.errMsg("Schwarzians are not allocated");
+					return 0;
+				}
+				if (packData.hes < 0) {
+					CirclePack.cpb.errMsg("usage: dual_layout is not used for hyperbolic packings");
+					return 0;
+				}
+				// look for list of face pairs; default to a spanning tree
+				boolean debug = false;
+				GraphLink graph = null;
+				String cflags = null; // flags for drawing circles
+				String fflags = null; // flags for drawing faces
+				if (flagSegs != null && flagSegs.size() > 0 && flagSegs.get(0).size() > 0) {
+					Iterator<Vector<String>> its = flagSegs.iterator();
+					items = null;
+					// may have flags to see results -c{disp_ops} and/or -f{disp_ops}
+					while (its.hasNext()) {
+						items = its.next();
+						if (StringUtil.isFlag(items.get(0))) {
+							String str = items.remove(0);
+							char c = str.charAt(1);
+							switch (c) {
+							case 'v':
+							case 'c': // draw as laid out
+							{
+								cflags = new String(str);
+								break;
+							}
+							case 'f': // report and (if draw==true) draw face labels
+							{
+								fflags = new String(str);
+								break;
+							}
+							} // end of switch
+						}
+					}
 
-				  // debug info
-				  if (debug) {// debug=true;
-					  deBugging.DebugHelp.mob4matlab("bm_f", bm_f);
-					  
-					  // display the computed tangency points, print cents/rads
-					  if (packData.hes>0) {
-						  Complex []tp=new Complex[3];
-						  int []vert=packData.faces[f].vert;
-						  System.out.println("circles <"+vert[0]+" "+vert[1]+" "+vert[2]+"> :\nSchwarian is s ="+s);
-						  for (int jj=0;jj<3;jj++) {
-							  Complex zjj=packData.rData[vert[jj]].center;
-							  double rjj=packData.rData[vert[jj]].rad;
-							  System.out.println("C("+jj+",:) = ["+zjj.x+" "+zjj.y+" "+rjj+"]");
-							  tp[jj]=SphericalMath.sph_tangency(zjj,
-									  packData.rData[vert[(jj+1)%3]].center,
-									  rjj,
-									  packData.rData[vert[(jj+1)%3]].rad);
-							  String str=new String("disp -dpfc5 "+vert[jj]+" "+vert[(jj+1)%3]);
-							  // draw the tangency point
-							  CommandStrParser.jexecute(packData,str); 
-						  } 
-					  }
+					// 'items' should be dual edge list, default to spanning tree
+					if (items != null && items.size() > 0)
+						graph = new GraphLink(packData, items);
+					else
+						graph = DualGraph.easySpanner(packData, true);
+				} else // no flags or list?
+					graph = DualGraph.easySpanner(packData, true);
 
-					  // the outcome circle
-					  System.out.println("new circles: cent = "+sC.center+"; r = "+sC.rad);
-					  debug=false;
-				  }
+				// Do we need to place the first face? Only if
+				// we start with a "root".
+				EdgeSimple edge = graph.get(0);
+				int baseface = 0;
+				if (edge.v == 0) { // root? yes, then have to place
+					graph.remove(0);
+					baseface = edge.w;
+				}
 
-				  
-				  packData.rData[target].rad=sC.rad;
-				  packData.rData[target].center=sC.center;
-				  } catch (Exception ex) {
-					  CirclePack.cpb.errMsg("problem applying some schwarzian\n");
-				  }
-				  if (cflags!=null) {
-					  StringBuilder strbld=new StringBuilder("disp "+cflags+" "+target);
-					  jexecute(packData,strbld.toString());
-				  }
-				  if (fflags!=null) {
-					  StringBuilder strbld=new StringBuilder("disp "+fflags+" "+g);
-					  jexecute(packData,strbld.toString());
-				  }
+				// yes, place first face
+				if (baseface > 0) {
+					packData.place_face(baseface, 0);
 
-				  count++;
-			  }
-			  return count;
-		  }
-		  
+					// layout problems can occur if we don't convert to sph geometry
+					if (packData.hes <= 0) {
+						packData.geom_to_s();
+						packData.fillcurves();
+						packData.setGeometry(packData.hes);
+						if (cpS != null)
+							cpS.setPackName();
+						jexecute(packData, "disp -w");
+					}
+
+					if (cflags != null) {
+						StringBuilder strbld = new StringBuilder("disp " + cflags);
+						for (int j = 0; j < 3; j++) { // show all three circles
+							strbld.append(" " + packData.faces[baseface].vert[j]);
+						}
+						jexecute(packData, strbld.toString());
+					}
+					if (fflags != null) {
+						StringBuilder strbld = new StringBuilder("disp " + fflags + " " + baseface);
+						jexecute(packData, strbld.toString());
+					}
+					count++;
+				}
+
+				// layout problems can occur if we don't convert to sph geometry
+				if (packData.hes <= 0) {
+					packData.geom_to_s();
+					packData.fillcurves();
+					packData.setGeometry(packData.hes);
+					if (cpS != null)
+						cpS.setPackName();
+					jexecute(packData, "disp -w");
+				}
+
+				// now progress through edges <f,g> of 'graph'
+				Iterator<EdgeSimple> gst = graph.iterator();
+				while (gst.hasNext()) {
+					EdgeSimple dedge = gst.next();
+					int f = dedge.v;
+					int g = dedge.w;
+					if (f == 0) // root should have been handled
+						break;
+					int j = packData.face_nghb(g, f);
+
+					// to get s, need edge <v,w>, f on its left
+					int v = packData.faces[f].vert[j];
+					int w = packData.faces[f].vert[(j + 1) % 3];
+					int k = packData.nghb(v, w);
+					double s = packData.kData[v].schwarzian[k];
+
+					int m = packData.face_nghb(f, g);
+					int target = packData.faces[g].vert[(m + 2) % 3];
+
+					// assume circles of f are in place, need only compute
+					// the third circle of g, 'target' (across the shared edge).
+					try {
+						// compute map from base equilateral
+						Mobius bm_f = Schwarzian.faceBaseMob(packData, f);
+
+						// compute the target circle
+						CircleSimple sC = Schwarzian.getThirdCircle(s, j, bm_f, packData.hes);
+
+						// debug info
+						if (debug) {// debug=true;
+							deBugging.DebugHelp.mob4matlab("bm_f", bm_f);
+
+							// display the computed tangency points, print cents/rads
+							if (packData.hes > 0) {
+								Complex[] tp = new Complex[3];
+								int[] vert = packData.faces[f].vert;
+								System.out.println("circles <" + vert[0] + " " + vert[1] + " " + vert[2]
+										+ "> :\nSchwarian is s =" + s);
+								for (int jj = 0; jj < 3; jj++) {
+									Complex zjj = packData.rData[vert[jj]].center;
+									double rjj = packData.rData[vert[jj]].rad;
+									System.out.println("C(" + jj + ",:) = [" + zjj.x + " " + zjj.y + " " + rjj + "]");
+									tp[jj] = SphericalMath.sph_tangency(zjj, packData.rData[vert[(jj + 1) % 3]].center,
+											rjj, packData.rData[vert[(jj + 1) % 3]].rad);
+									String str = new String("disp -dpfc5 " + vert[jj] + " " + vert[(jj + 1) % 3]);
+									// draw the tangency point
+									CommandStrParser.jexecute(packData, str);
+								}
+							}
+
+							// the outcome circle
+							System.out.println("new circles: cent = " + sC.center + "; r = " + sC.rad);
+							debug = false;
+						}
+
+						packData.rData[target].rad = sC.rad;
+						packData.rData[target].center = sC.center;
+					} catch (Exception ex) {
+						CirclePack.cpb.errMsg("problem applying some schwarzian\n");
+					}
+					if (cflags != null) {
+						StringBuilder strbld = new StringBuilder("disp " + cflags + " " + target);
+						jexecute(packData, strbld.toString());
+					}
+					if (fflags != null) {
+						StringBuilder strbld = new StringBuilder("disp " + fflags + " " + g);
+						jexecute(packData, strbld.toString());
+					}
+
+					count++;
+				}
+				return count;
+			}
+
 		  // =============== scale ==========
 		  else if (cmd.startsWith("scale") && !cmd.startsWith("scale_")) {
 			  
@@ -8594,7 +8637,7 @@ public class CommandStrParser {
     					  throw new InOutException("usage: set_sch x {v w ...}");
     				  }
     				  EdgeLink elink=new EdgeLink(packData,items);
-    				  if (elink==null)
+    				  if (elink==null || elink.size()==0)
     					  return count;
     				  
     				  // allocate if needed

@@ -2,7 +2,8 @@ package komplex;
 
 /**
  * Simply an ordered pair (v,w) of vertices for use in, eg, EdgeLink.java.
- * Added (12/2010) 'util' element for optional additional info. 
+ * Added (12/2010) 'util' element for optional additional info. See
+ * new 'GraphSimple' for, e.g., dual edges.
  * @author kens
  *
  */
@@ -35,11 +36,27 @@ public class EdgeSimple {
 		return util;
 	}
 	
-	public boolean isEqual_ordered(EdgeSimple ed) {
-		return (v==ed.v && w==ed.w); 
+	/**
+	 * does this equal given es
+	 * @param es
+	 * @param orient
+	 * @return
+	 */
+	public boolean isEqual(EdgeSimple es,boolean orient) {
+		if (orient)
+			return (v==es.v && w==es.w);
+		else
+			return ((v==es.v && w==es.w) || (v==es.w && w==es.v));
 	}
 	
-	public boolean isEqual_unordered(EdgeSimple ed) {
-		return ((v==ed.v && w==ed.w) || (v==ed.w && w==ed.v));
+	/** is this actually a 'GraphSimple' (e.g., a face pair)?
+	 * @param edge EdgeSimple
+	 * @return boolean
+	 */
+	public boolean isGraphSimple(EdgeSimple edge) {
+		if (edge instanceof GraphSimple)
+			return true;
+		return false;
 	}
+	
 }

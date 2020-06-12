@@ -275,6 +275,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			// check for '?list' first
 			else if (str.substring(1).startsWith("list")) {
 				EdgeLink elink=null;
+				GraphLink glink=null;
 				
 				// elist or Elist
 				if ((str.startsWith("e") && (elink=packData.elist)!=null
@@ -329,6 +330,60 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 						}
 					}
 				} // end of handling elist/Elist
+				
+				// elist or Elist
+				else if ((str.startsWith("g") && (glink=packData.glist)!=null
+						&& glink.size()>0) ||
+						(str.startsWith("G") && (glink=CPBase.Glink)!=null
+								&& CPBase.Glink.size()>0)) {
+					EdgeSimple edge=null;
+
+					// check for brackets first
+					String brst=StringUtil.brackets(str);
+					if (brst!=null) {
+						if (brst.startsWith("r")) { // rotate list
+							glink.add(glink.getFirst());
+						}
+						if (brst.startsWith("r") 
+								|| brst.startsWith("n")) { // use up first
+							edge=(EdgeSimple)glink.remove(0);
+							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+									add(edge);
+									count++;
+							}
+						}
+						if (brst.startsWith("l")) { // last
+							edge=(EdgeSimple)glink.getLast();
+							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+								add(edge);
+								count++;
+							}
+						}
+						else {
+							try{
+								int n=MathUtil.MyInteger(brst);
+								if (n>=0 && n<glink.size()) {
+									edge=(EdgeSimple)glink.get(n);
+									if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+										add(edge);
+										count++;
+									}
+								}
+							} catch (NumberFormatException nfe) {}
+						}
+					}
+					// else just adjoin the lists
+					else { 
+						Iterator<EdgeSimple> glst=glink.iterator();
+						while (glst.hasNext()) {
+							edge=(EdgeSimple)glst.next();
+							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+								add(edge);
+								count++;
+							}
+						}
+					}
+				} // end of handling glist/Glist
 			}
 			
 			// For 'random', 2 steps: get edge list, then make selection
@@ -1553,6 +1608,50 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			 nodes.add(edge.w);
 		 }
 		 return NodeLink.separates(p,nodes);
+	 }
+	 
+	 /**
+	  * Create a new EdgeLink that eliminates duplicate edges.
+	  * @param el
+	  * @param orient boolean, true, then take account of orientation
+	  * @return new EdgeLink
+	  */
+	 public static EdgeLink removeDuplicates(EdgeLink el,boolean orient) {
+		 EdgeLink newEL=new EdgeLink(el.packData);
+		 Iterator<EdgeSimple> els=el.iterator();
+		 while (els.hasNext()) {
+			 EdgeSimple edge=els.next();
+			 if (newEL.containsVW(edge, orient))
+				 continue;
+			 newEL.add(edge);
+		 }
+		 return newEL;
+	 }
+	 
+	 /**
+	  * Check if this list contains (v,w) ( or (w,v) if orient=false)
+	  * @param v int
+	  * @param w int
+	  * @param orient boolean, true, enforce orientation
+	  * @return boolean
+	  */
+	 public boolean containsVW(int v,int w,boolean orient) {
+		 return containsVW(new EdgeSimple(v,w),orient);
+	 }
+	 
+	 /**
+	  * Check if this list contains (v,w) ( or (w,v) if orient=false)
+	  * @param edge EdgeSimple
+	  * @param orient boolean, true, enforce orientation
+	  * @return boolean
+	  */
+	 public boolean containsVW(EdgeSimple edge,boolean orient) {
+		 Iterator<EdgeSimple> els=this.iterator();
+		 while (els.hasNext()) {
+			 if (els.next().isEqual(edge,orient))
+				 return true;
+		 }
+		 return false;
 	 }
 	 
 		/**

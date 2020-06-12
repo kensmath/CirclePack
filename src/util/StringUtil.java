@@ -875,6 +875,137 @@ public class StringUtil {
 	  }
 	  
 	  /**
+	   * For breaking incoming string into command segments. The
+	   * returned strings must be non-empty and lie between ';'s, 
+	   * but we keep quoted substrings in tact. So, e.g., a quoted 
+	   * substring may have ';'s which are shielded from the splitting 
+	   * operation. We also catch things like repeated ';'s, empty
+	   * commands, and we 'trim' the command strings. This code is 
+	   * sensitive, so on some error, just abandon by returning null.
+	   * @param origStr StringBuilder
+	   * @return Vector<StringBuilder>, null on error
+	   */
+	  public static Vector<StringBuilder> cmdSplitter(StringBuilder origStr) {
+		  Vector<StringBuilder> cmdSegs=new Vector<StringBuilder>(0); 
+
+		  // break into alternating unquoted/quoted segments
+		  Vector<StringBuilder> q_segs=quoteAnalyzer(origStr);
+		  if (q_segs==null || q_segs.size()==1 || q_segs.get(0).charAt(0)=='"')
+			  return null;
+		  
+		  // build single command string in 'gotcmd'
+		  StringBuilder gotcmd=null;
+		  Iterator<StringBuilder> q_ls=q_segs.iterator(); // q_segs.get(3).toString()
+		  while (q_ls.hasNext()) {
+
+			  // get unquoted and quoted segments
+			  StringBuilder unquoted=q_ls.next();
+			  StringBuilder quoted=null;
+			  if (q_ls.hasNext()) {
+				  quoted=q_ls.next();
+			  }
+			  
+			  // break 'unquoted' into pieces so we can parse it
+			  Vector<StringBuilder> segsegs=StringUtil.semicolonSeparated(unquoted);
+			  if (segsegs==null || segsegs.size()==0) {
+				  if (quoted==null) {
+					  if (gotcmd!=null && gotcmd.length()>0)
+						  cmdSegs.add(gotcmd);
+					  if (cmdSegs.size()>0)
+						  return cmdSegs;
+				  }
+				  return null; // else error: e.g., empty unquoted before or between quoted 
+			  }
+			  
+			  // iterator over the pieces of 'unquoted'
+			  Iterator<StringBuilder> ssls=segsegs.iterator();
+			  while (ssls.hasNext()) {
+				  StringBuilder seg=ssls.next();
+				  int sc=seg.indexOf(";");
+				  
+				  // ends with ';'
+				  if (sc>0) {
+					  if (gotcmd==null) { 
+						  cmdSegs.add(new StringBuilder(seg.substring(0,sc)));
+					  }
+					  else { // finish up a command in progress
+						  gotcmd.append(" ");
+						  gotcmd.append(new StringBuilder(seg.substring(0,sc)));
+						  cmdSegs.add(gotcmd);
+						  gotcmd=null;
+					  }
+					  continue;
+				  }
+
+				  // else we've got the last piece of the 'unquoted'
+				  if (gotcmd==null) 
+					  gotcmd=new StringBuilder(seg);
+				  else { // add to a command in progress
+					  gotcmd.append(" ");
+					  gotcmd.append(new StringBuilder(seg.substring(0)));
+				  }
+				  
+				  // are we all done?
+				  if (quoted==null) { 
+					  cmdSegs.add(gotcmd);
+					  return cmdSegs;
+				  }
+				  
+				  // add quoted 
+				  gotcmd.append(" ");
+				  gotcmd.append(quoted);
+			  } // end of while through pieces of unquoted
+		  } // done with while though q_segs
+
+		  // command still waiting to finish? close and add it in
+		  if (gotcmd!=null) 
+			  cmdSegs.add(gotcmd);
+		  
+		  // then done
+		  return cmdSegs;
+	  }
+	  
+	  /**
+	   * Break SpringBuilder into semicolon-separated non-empty segments. 
+	   * For segments ending with ';', remove the ';' to trim, then add it
+	   * back in so we can identify such segments.
+	   * @param inbld StringBuilder
+	   * @return Vector<StringBuilder>, null on error
+	   */
+	  public static Vector<StringBuilder> semicolonSeparated(StringBuilder inbld) {
+		  if (inbld.indexOf("\"")>=0) // should have no double quotes
+			  return null;
+		  char c;
+		  Vector<StringBuilder> ansvec=new Vector<StringBuilder>(0);
+		  StringBuilder seg=null;
+		  
+		  int hit=0;
+		  int spot=0;
+		  int N=inbld.length();
+		  while (spot<N) {
+			  // get rid of leading ';' and whitespace
+			  while (spot<N && 
+				  ((c=inbld.charAt(spot))==';' || Character.isWhitespace(c)))
+				  spot++;
+			  if (spot==N)
+				  return ansvec;
+			  hit=inbld.indexOf(";",spot);
+			  if (hit>spot) { // string is non-empty, include the ending ';'
+				  StringBuilder tmpbld=new StringBuilder(inbld.substring(spot,hit).trim());
+				  tmpbld.append(";");
+				  spot=hit+1;
+			  }
+			  else { // must be last segment
+				  StringBuilder tmpbld=new StringBuilder(inbld.substring(spot).trim()); 
+				  if (tmpbld.length()>0)
+					  ansvec.add(tmpbld);
+				  return ansvec;
+			  }
+		  } // end of while
+		  return ansvec;
+	  }
+	  
+	  /**
 	   * Analyze at string with respect to substrings delineated
 	   * by double quotes, '"'. Note that we ignore escaped quotes, 
 	   * '\"', but accept '""' as delineating an empty string.
@@ -882,14 +1013,15 @@ public class StringUtil {
 	   * Return a vector of maximal substrings delineated by quotes
 	   * (and include the quotes themselves) or before/after/between 
 	   * those. 
-	   * Note: one whould be able to reconstruct the full original 
+	   * Note: one should be able to reconstruct the full original 
 	   * by concatenating the strings of the returned vector.
-	   * (e.g., if no quotes, get single string in returned vector)
+	   * (e.g., if no quotes, get single original string in returned 
+	   * vector; so, e.g., we do not 'trim' the unquoted segments)
 	   * @param inbld StringBuilder
 	   * @return new Vector<StringBuilder>, null on error such as 
 	   * inconsistent use of quotes, e.g. odd number of quotes.
 	   */
-	  public static Vector<StringBuilder> quoteAnaylizer(StringBuilder inbld) {
+	  public static Vector<StringBuilder> quoteAnalyzer(StringBuilder inbld) {
 		  Vector<StringBuilder> vec=new Vector<StringBuilder>(0);
 		  
 		  // no '"' marks? return full string

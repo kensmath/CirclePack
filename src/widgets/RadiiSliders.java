@@ -22,8 +22,8 @@ public class RadiiSliders extends SliderFrame {
 	private static final long serialVersionUID = 1L;
 	
 	NodeLink verts;  // objects for the widget
-	int N;           // number of objects
-	int V;           // holds the vertex index, for communicating objects of sliders
+//	int N;           // number of objects
+
 	
 	// constructors
 	public RadiiSliders(PackData p,NodeLink vlist) {
@@ -40,8 +40,8 @@ public class RadiiSliders extends SliderFrame {
 	        }
 		});
 
-		verts=vlist;
-		N=verts.size();
+		verts=NodeLink.removeDuplicates(vlist);
+		sliderCount=verts.size();
 		setTitle("Selected Radii of packing "+packData.packNum);
 		setHelpText(new StringBuilder("These sliders control selected radii. The "
 				+ "user can specify two command strings, marked 'motion cmd' and "
@@ -52,7 +52,7 @@ public class RadiiSliders extends SliderFrame {
 				+ "sliders -Rad -cc 'rld' -mc 'disp -wr -c_Obj' {v...}.\n\n"
 				+ "The variable 'Obj' is set to an object when the commands are"
 				+ "executed."));
-		mySliders=new ActiveSlider[N];
+		mySliders=new ActiveSlider[sliderCount];
 		initGUI();
 
 		setChangeField(holdChangeCmd);
@@ -61,31 +61,23 @@ public class RadiiSliders extends SliderFrame {
 
 	// ============= abstract methods ==================
 	public void populate() {
-		NodeLink newVerts=new NodeLink(packData);
-		ActiveSlider[] tmpSliders = new ActiveSlider[verts.size()];
+		mySliders = new ActiveSlider[sliderCount];
 		Iterator<Integer> vlst=verts.iterator();
 		int tick=0;
 		while (vlst.hasNext()) {
 			int v=vlst.next();
-			if (newVerts.contains(v))
-				continue;
-			newVerts.add(v);
-			tmpSliders[tick]=new ActiveSlider(this,tick,Integer.toString(v),packData.rData[v].rad,true);
-			sliderPanel.add(tmpSliders[tick]);
+			mySliders[tick]=new ActiveSlider(this,tick,Integer.toString(v),packData.rData[v].rad,true);
+			sliderPanel.add(mySliders[tick]);
 			tick++;
 		}
-		N=newVerts.size();
-		mySliders=new ActiveSlider[N];
-		for (int j=0;j<N;j++)
-			mySliders[j]=tmpSliders[j];
 	}
 	
 	public int addObject(String objstr) {
 		NodeLink nl=new NodeLink(packData,objstr);
 		if (nl==null || nl.size()==0)
 			return 0;
-		ActiveSlider[] tmpSliders=new ActiveSlider[N+nl.size()];
-		for (int j=0;j<N;j++) 
+		ActiveSlider[] tmpSliders=new ActiveSlider[+sliderCount+nl.size()];
+		for (int j=0;j<sliderCount;j++) 
 			tmpSliders[j]=mySliders[j];
 		Iterator<Integer> nls=nl.iterator();
 		int hit=0;
@@ -95,15 +87,15 @@ public class RadiiSliders extends SliderFrame {
 				continue;
 			String str=Integer.toString(v);
 			double rad=packData.rData[v].rad;
-			tmpSliders[N+hit]=new ActiveSlider(this,N+hit,str,rad,true);
-			sliderPanel.add(tmpSliders[N+hit]);
+			tmpSliders[sliderCount+hit]=new ActiveSlider(this,sliderCount+hit,str,rad,true);
+			sliderPanel.add(tmpSliders[sliderCount+hit]);
 			verts.add(v);
 			hit++;
 		}
 		if (hit>0) {
-			N=N+hit;
-			mySliders=new ActiveSlider[N];
-			for (int j=0;j<N;j++)
+			sliderCount += hit;
+			mySliders=new ActiveSlider[sliderCount];
+			for (int j=0;j<sliderCount;j++)
 				mySliders[j]=tmpSliders[j];
 		}
 		this.pack();
@@ -114,8 +106,8 @@ public class RadiiSliders extends SliderFrame {
 		NodeLink nl=new NodeLink(packData,objstr);
 		if (nl==null || nl.size()==0)
 			return 0;
-		ActiveSlider[] tmpSliders=new ActiveSlider[N];
-		for (int j=0;j<N;j++) 
+		ActiveSlider[] tmpSliders=new ActiveSlider[sliderCount];
+		for (int j=0;j<sliderCount;j++) 
 			tmpSliders[j]=mySliders[j];
 		Iterator<Integer> vls=nl.iterator();
 		int hit=0;
@@ -124,7 +116,7 @@ public class RadiiSliders extends SliderFrame {
 			int vindx=-1;
 			if ((vindx=verts.containsV(v))<0) // no such object
 				continue;
-			for (int j=(vindx+1);j<(N-hit);j++) {
+			for (int j=(vindx+1);j<(sliderCount-hit);j++) {
 				tmpSliders[j-1]=tmpSliders[j];
 				tmpSliders[j-1].setIndex(j-1);
 			}	
@@ -135,42 +127,36 @@ public class RadiiSliders extends SliderFrame {
 		}
 		
 		if (hit>0) {
-			N=N-hit;
-			mySliders=new ActiveSlider[N];
-			for (int j=0;j<N;j++)
+			sliderCount -= hit;
+			mySliders=new ActiveSlider[sliderCount];
+			for (int j=0;j<sliderCount;j++)
 				mySliders[j]=tmpSliders[j];
 		}
 		this.pack();
 		this.repaint();
 		return hit;
 	}
-
-	public int getCount() {
-		return N;
-	}
 		
 	/**
-	 * Update slider values from PackData
+	 * when a slider changes, it sends the new value to packData
 	 */
-	public void downloadData() {
-		for (int j=0;j<N;j++) {
-			int v=verts.get(j);
-			int n=mySliders[j].slider.convertDouble(packData.rData[v].rad);
-			mySliders[j].slider.setValue(n);
-		}
-		this.repaint();
+	public void upValue(int indx) {
+		packData.rData[verts.get(indx)].rad=mySliders[indx].value;
 	}
 	
 	/**
-	 * when a slider changes, it sends the new value
+	 * Set slider value from packing data
 	 */
-	public void captureValue(double value,int indx) {
-		packData.rData[verts.get(indx)].rad=value;
+	public void downValue(int indx) {
+		mySliders[indx].setValue(packData.rData[verts.get(indx)].rad);
 	}
 	
+	/**
+	 * Done here in case there are embellishments to the panel
+	 */
 	public void createSliderPanel() {
 		sliderPanel=new JPanel();
-		sliderPanel.setBorder(BorderFactory.createLineBorder(Color.green));
+        sliderPanel.setBackground(new Color(200,230,255));
 	}
 	
 	public void setChangeField(String cmd) {
@@ -185,7 +171,7 @@ public class RadiiSliders extends SliderFrame {
 		motionAction(indx); // see if there's a motion command to execute
 	}
 	
-	public void setRange() {
+	public void initRange() {
 		val_min=1000000;
 		val_max=-1;
 		Iterator<Integer> vlst=verts.iterator();

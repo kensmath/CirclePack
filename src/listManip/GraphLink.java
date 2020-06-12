@@ -11,6 +11,7 @@ import exceptions.DataException;
 import komplex.DualGraph;
 import komplex.EdgePair;
 import komplex.EdgeSimple;
+import komplex.GraphSimple;
 import komplex.RedList;
 import packing.PackData;
 import util.MathUtil;
@@ -18,10 +19,11 @@ import util.StringUtil;
 
 /**
  * Describes a graph with nodes in linked list of 'EdgeSimple's.
- * Nodes indexed by natural numbers (zero not included) and we
- * must keep track of maximum node index. Graphs don't allow 
- * multiple edges or loops (i.e., of form <f,f>). Examples of
- * use are graphs or dual graphs of circle packings.
+ * Nodes indexed by natural numbers (zero not included, though
+ * 0 can be used to denote a root) and we must keep track of 
+ * maximum node index. Our graphs do not allow multiple edges 
+ * or loops (i.e., of form <f,f>). Examples of use are graphs 
+ * and dual graphs of circle packings.
  * 
  * Acyclic graphs have no closed edge-paths. Tree's are special 
  * case: only a tree/forest (union of disjoint trees) can have
@@ -1244,6 +1246,73 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 		return count;
 	}
 	
+	 /**
+	  * Create a new EdgeLink that eliminates duplicate edges.
+	  * @param el
+	  * @param orient boolean, true, then take account of orientation
+	  * @return new EdgeLink
+	  */
+	 public static GraphLink removeDuplicates(GraphLink gl,boolean orient) {
+		 GraphLink newGL=new GraphLink(gl.packData);
+		 Iterator<EdgeSimple> gls=gl.iterator(); // 'GraphLink' still has 'EdgeSimple' type
+		 while (gls.hasNext()) {
+			 GraphSimple gedge=new GraphSimple(gls.next());
+			 if (newGL.containsFG(gedge, orient))
+				 continue;
+			 newGL.add(gedge);
+		 }
+		 return newGL;
+	 }
+	 
+	 /**
+	   * Find index of <f,g> or <g,f> in the list
+	   * @param glist GraphLink
+	   * @param f int
+	   * @param g int
+	   * @return -1 on error
+	   */
+	 public static int getFG(GraphLink glist,int f,int g) {
+	   	if (g>f) {
+	   		int hold=g;
+	   		g=f;
+	   		f=hold;
+	   	}
+	   	for (int i=0;i<glist.size();i++) {
+	   		GraphSimple edge=new GraphSimple(glist.get(i));
+	   		if (edge.v==f && edge.w==g)
+	   			return i;
+	   	}
+	   	return -1;
+	 }
+	 
+	 /**
+	  * Check if this list contains (f,g) ( or (g,f) if orient=false)
+	  * @param f int
+	  * @param g int
+	  * @param orient boolean, true, enforce orientation
+	  * @return boolean
+	  */
+	 public boolean containsFG(int f,int g,boolean orient) {
+		 return containsFG(new GraphSimple(f,g),orient);
+	 }
+	 
+	 /**
+	  * Check if this list contains (f,g) ( or (g,f) if orient=false)
+	  * TODO: convert temporarily to 'EdgeSimple
+	  * @param edge GraphSimple
+	  * @param orient boolean, true, enforce orientation
+	  * @return boolean
+	  */
+	 public boolean containsFG(GraphSimple gedge,boolean orient) {
+		 Iterator<EdgeSimple> els=this.iterator(); // this is still list of 'EdgeSimple'
+		 while (els.hasNext()) {
+			 EdgeSimple edge=new EdgeSimple(gedge.v,gedge.w); // tmp convert
+			 if (els.next().isEqual(edge,orient))
+				 return true;
+		 }
+		 return false;
+	 }
+	 
 	/**
 	 * Clear out this linked list.
 	 */

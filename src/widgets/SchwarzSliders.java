@@ -1,16 +1,23 @@
 package widgets;
 
 import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.Iterator;
 
-import javax.swing.BorderFactory;
+import javax.swing.JButton;
 import javax.swing.JPanel;
 
 import allMains.CirclePack;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
+import komplex.GraphSimple;
 import listManip.EdgeLink;
+import listManip.GraphLink;
 import packing.PackData;
+import util.intNumField;
 
 /**
  * A Frame for sliders controlling specified edge schwarzians.
@@ -21,22 +28,24 @@ public class SchwarzSliders extends SliderFrame {
 	
 	private static final long serialVersionUID = 1L;
 	
-	EdgeLink edges;  // objects for the widget
-	int N;           // number of objects
-	int V;           // holds the vertex index, for communicating objects of sliders
+	GraphLink edges;  // objects for the widget
+	int root; 		  // root face (if given) is generally laid out first  
+	intNumField rootField;  
 	
 	// constructors
-	public SchwarzSliders(PackData p,EdgeLink elist) {
-		this(p,"","",elist);
+	public SchwarzSliders(PackData p,GraphLink glist) {
+		this(p,"","",glist);
 	}
 
-	public SchwarzSliders(PackData p,String chgcmd,String movcmd,EdgeLink elist) {
+	public SchwarzSliders(PackData p,String chgcmd,String movcmd,GraphLink glist) {
 		super(p,chgcmd,movcmd);
+		root=0;
 		if (packData.kData[1].schwarzian==null) {
 			CirclePack.cpb.errMsg("slider usage: -S, packing needs to have schwarzians");
 		}
-		edges=elist;
-		N=edges.size();
+		// Note: schwarzians are independent of edge order
+		edges=GraphLink.removeDuplicates(glist,false); 
+		sliderCount=edges.size();
 		setTitle("Selected edge Schwarzians for packing "+packData.packNum);
 		setHelpText(new StringBuilder("These sliders control selected edge "
 				+ "real schwarzians. The user can specify two command strings, "
@@ -48,62 +57,104 @@ public class SchwarzSliders extends SliderFrame {
 				+ "sliders -S -c \"rld\" -m \"disp -wr -c _Obj\" {v...}.\n\n"
 				+ "The variable 'Obj' is set to an object when the commands are"
 				+ "executed."));
-		mySliders=new ActiveSlider[N];
+		mySliders=new ActiveSlider[sliderCount];
 		initGUI();
 
+		// add extra button and integer field for root
+		JButton button = new JButton("Root");
+		button.setBorder(null);
+		button.setMargin(new Insets(10,25,10,25));
+		button.setPreferredSize(new Dimension(45,20));
+			
+		rootField=new intNumField("",4);
+		rootField.setField(root);
+			
+		button.addActionListener(new ActionListener() {
+		    @Override
+		    public void actionPerformed(ActionEvent evt) {
+		    	int rf=rootField.getValue();
+		    	if (rf>0 && rf<=packData.faceCount)
+		    		root=rf;
+		    	rootAction();
+		    }
+		});
+		topPanel.add(button);
+		topPanel.add(rootField);
+			
+//		this.pack();
+		
 		setChangeField(holdChangeCmd);
 		setMotionField(holdMotionCmd);
 	}
+	
+	public int getRoot() {
+		return rootField.getValue();
+	}
+	
+	/**
+	 * Action for root button? just hold the index for now
+	 * @return 0 for now
+	 */
+	public int rootAction() {
+		return 0;
+	}
 
 	// ============= abstract methods ==================
+	
 	public void populate() {
-		EdgeLink newEdges= new EdgeLink(packData);
-		ActiveSlider[] tmpSliders = new ActiveSlider[edges.size()];
+		GraphLink newEdges= new GraphLink(packData);
+		ActiveSlider[] tmpSliders = new ActiveSlider[sliderCount];
 		Iterator<EdgeSimple> elst=edges.iterator();
 		int tick=0;
 		while (elst.hasNext()) {
-			EdgeSimple edge=elst.next();
-			if (EdgeLink.getVW(newEdges,edge.v,edge.w)>-1) 
+			GraphSimple edge=new GraphSimple(elst.next());
+			if (edge.v==0) { // this gives a root face
+				if (edge.w>0 && root==0 && edge.w<=packData.faceCount)
+					root=edge.w;
+				continue;
+			}
+			if (GraphLink.getFG(newEdges,edge.v,edge.w)>-1) 
 				continue;
 			newEdges.add(edge);
 			String str=new String(edge.v+" "+edge.w);
-			int k=packData.nghb(edge.v,edge.w);
-			double sch=packData.kData[edge.v].schwarzian[k];
+			double sch=packData.getSchwarzian(edge);
 			tmpSliders[tick]=new ActiveSlider(this,tick,str,sch,true);
 			sliderPanel.add(tmpSliders[tick]);
 			tick++;
 		}
-		N=newEdges.size();
-		mySliders = new ActiveSlider[N];
-		for (int j=0;j<N;j++)
+		edges=newEdges;
+		sliderCount=edges.size();
+		mySliders = new ActiveSlider[sliderCount];
+		for (int j=0;j<sliderCount;j++)
 			mySliders[j]=tmpSliders[j];
 	}
 	
 	public int addObject(String objstr) {
-		EdgeLink el=new EdgeLink(packData,objstr);
+		GraphLink el=new GraphLink(packData,objstr);
 		if (el==null || el.size()==0)
 			return 0;
-		ActiveSlider[] tmpSliders=new ActiveSlider[N+el.size()];
-		for (int j=0;j<N;j++) 
+		ActiveSlider[] tmpSliders=new ActiveSlider[sliderCount+el.size()];
+		for (int j=0;j<sliderCount;j++) 
 			tmpSliders[j]=mySliders[j];
 		Iterator<EdgeSimple> els=el.iterator();
 		int hit=0;
 		while (els.hasNext()) {
-			EdgeSimple edge=els.next();
-			if (EdgeLink.getVW(edges, edge.v, edge.w)>=0)
+			GraphSimple edge=(GraphSimple)els.next();
+			if (edges.containsFG(edge,false))
 				continue;
 			String str=new String(edge.v+" "+edge.w);
-			int k=packData.nghb(edge.v,edge.w);
-			double sch=packData.kData[edge.v].schwarzian[k];
-			tmpSliders[N+hit]=new ActiveSlider(this,N+hit,str,sch,true);
-			sliderPanel.add(tmpSliders[N+hit]);
+			EdgeSimple vw=packData.reDualEdge(edge.v,edge.w); // regular edge <v,w>
+			int k=packData.nghb(vw.v,vw.w);
+			double sch=packData.kData[vw.v].schwarzian[k];
+			tmpSliders[sliderCount+hit]=new ActiveSlider(this,sliderCount+hit,str,sch,true);
+			sliderPanel.add(tmpSliders[sliderCount+hit]);
 			edges.add(edge);
 			hit++;
 		}
 		if (hit>0) {
-			N=N+hit;
-			mySliders=new ActiveSlider[N];
-			for (int j=0;j<N;j++)
+			sliderCount += hit;
+			mySliders=new ActiveSlider[sliderCount];
+			for (int j=0;j<sliderCount;j++)
 				mySliders[j]=tmpSliders[j];
 		}
 		this.pack();
@@ -114,17 +165,17 @@ public class SchwarzSliders extends SliderFrame {
 		EdgeLink el=new EdgeLink(packData,objstr);
 		if (el==null || el.size()==0)
 			return 0;
-		ActiveSlider[] tmpSliders=new ActiveSlider[N];
-		for (int j=0;j<N;j++) 
+		ActiveSlider[] tmpSliders=new ActiveSlider[sliderCount];
+		for (int j=0;j<sliderCount;j++) 
 			tmpSliders[j]=mySliders[j];
 		Iterator<EdgeSimple> els=el.iterator();
 		int hit=0;
 		while (els.hasNext()) {
-			EdgeSimple edge=els.next();
+			GraphSimple edge=(GraphSimple)els.next();
 			int eindx=-1;
-			if ((eindx=EdgeLink.getVW(edges, edge.v, edge.w))<0)
+			if ((eindx=GraphLink.getFG(edges, edge.v, edge.w))<0)
 				continue;
-			for (int j=(eindx+1);j<(N-hit);j++) {
+			for (int j=(eindx+1);j<(sliderCount-hit);j++) {
 				tmpSliders[j-1]=tmpSliders[j];
 				tmpSliders[j-1].setIndex(j-1);
 			}	
@@ -135,9 +186,9 @@ public class SchwarzSliders extends SliderFrame {
 		}
 		
 		if (hit>0) {
-			N=N-hit;
-			mySliders=new ActiveSlider[N];
-			for (int j=0;j<N;j++)
+			sliderCount -= hit;
+			mySliders=new ActiveSlider[sliderCount];
+			for (int j=0;j<sliderCount;j++)
 				mySliders[j]=tmpSliders[j];
 		}
 		this.pack();
@@ -145,44 +196,34 @@ public class SchwarzSliders extends SliderFrame {
 		return hit;
 	}
 	
-	public int getCount() {
-		return N;
-	}
-	
 	/**
-	 * Update slider values from PackData
-	 */
-	public void downloadData() {
-		for (int j=0;j<N;j++) {
-			int n=mySliders[j].slider.convertDouble(getSchwarzian(j));
-			mySliders[j].slider.setValue(n);
-		}
-		this.repaint();
-	}
-
-	/**
-	 * Get the schwarzian for given edge
+	 * Get the schwarzian for given edge from packData
+	 * and set slider.
 	 * @param indx integer
 	 * @return
 	 */
-	public double getSchwarzian(int indx) {
-		EdgeSimple edge=edges.get(indx);
-		int k=packData.nghb(edge.v,edge.w);
-		return packData.kData[edge.v].schwarzian[k];
+	public void downValue(int indx) {
+		GraphSimple edge=(GraphSimple)edges.get(indx);
+		double val= packData.getSchwarzian(edge); 
+		mySliders[indx].setValue(val);
 	}
 	
 	/**
-	 * when a slider changes, it stores the new value in packData
+	 * Stores the slider's value in packData
 	 */
-	public void captureValue(double value,int indx) {
-		EdgeSimple edge=edges.get(indx);
-		int k=packData.nghb(edge.v,edge.w);
-		packData.kData[edge.v].schwarzian[k]=value;
+	public void upValue(int indx) {
+		GraphSimple edge=(GraphSimple)edges.get(indx);
+		// find regular edge <v,w>
+		EdgeSimple vw=packData.reDualEdge(edge.v,edge.w);
+		packData.setSchwarzian(vw,mySliders[indx].value);
 	}
 	
+	/**
+	 * Done here in case one wants embellishments
+	 */
 	public void createSliderPanel() {
 		sliderPanel=new JPanel();
-		sliderPanel.setBorder(BorderFactory.createLineBorder(Color.green));
+        sliderPanel.setBackground(new Color(255,230,200));
 	}
 	
 	public void setChangeField(String cmd) {
@@ -196,20 +237,28 @@ public class SchwarzSliders extends SliderFrame {
 	public void mouse_entry_action(int indx) {
 		motionAction(indx); // see if there's a motion command to execute
 	}
-	
-	public void setRange() {
+
+	/**
+	 * Set the initial values of val_min and val_max
+	 */
+	public void initRange() {
 		val_min=1000000;
 		val_max=-1000000;
 		Iterator<EdgeSimple> elst=edges.iterator();
 		while (elst.hasNext()) {
-			EdgeSimple edge=elst.next();
-			int k=packData.nghb(edge.v,edge.w);
-			double sch=packData.kData[edge.v].schwarzian[k];
+			EdgeSimple es=elst.next();
+			if (es.v==0 || es.w==0)
+				continue;
+			double sch=packData.getSchwarzian(es);
 			val_min= (sch<val_min) ? sch :val_min;
 			val_max= (sch>val_max) ? sch :val_max;
 		}
-		val_min /=2.0;
-		val_max *=2.0;
+		double val=Math.abs(val_min);
+		double valmax=Math.abs(val_max);
+		val= (valmax>val) ? valmax : val;
+		if (val<.125) val=.125;
+		val_min = -val*2;
+		val_max = val*2;
 	}
 	
 	public void killMe() {

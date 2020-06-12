@@ -1,5 +1,6 @@
 package input;
 
+import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CPBase;
@@ -27,20 +28,26 @@ import util.StringUtil;
  * continue operating on its thread. Handles: 
  * 1) immediate GUI, housecleaning, etc. (where efficiency important)
  * 2) Main work, pick off individual commands from strings, and send
- *    them to 'CommandStrParser.jexecute'. Preprocessing includes:
+ *    them to 'CommandStrParser.jexecute'. 
+ *    
+ *    Preprocessing includes (can be sensitive to order of processing
+ *    and must avoid infinite recursion):
+ *    
  *    * resolving 'script' named commands
- *    * processes "-p?" packing flags
+ *    * finding double quoted strings
+ *    * processes "-p?" packing number flags
  *    * processes ":=" variable assignment
  *    * processes "_*" variable substitution
  *    * processes !! repeats, recursive calls
  *    * catches 'CirclePack' "for/FOR" loops
  *    * handles "delay" calls (in appropriate thread)
  *    * manages 'PackExtender' handoffs
+ *    
  * 3) "background" thread (or those likely to last long?)
  *    Might want separate progress indicator? stop button?
  * 
- * NOTE: Lots of issues on self/cross-reference, sequence of
- * execution, results reporting, etc.
+ * NOTE: Lots of issues on self/cross-reference, sequence of processing,
+ * sequence of execution, result/error reporting, history, etc.
  */
 public class TrafficCenter {
 
@@ -108,7 +115,7 @@ public class TrafficCenter {
 			});
 			workerThread.start();
 			
-//			System.out.println("cmd="+cmdf+". threadOK is"+threadOK);
+//			System.out.println("cmd="+cmdf+". threadOK is "+threadOK);
 			
 			// wait for thread to finish before continuing
 			if (!threadOK) { 
@@ -146,7 +153,30 @@ public class TrafficCenter {
 		PackControl.consoleActive.dispConsoleMsg("");
 		PackControl.consolePair.dispConsoleMsg("");
 		
-		String cmds[] = rP.origCmdString.split(";");
+		StringBuilder cmdbldr=new StringBuilder(rP.origCmdString);
+		String[] cmds=null;
+		
+		// Manage case of double-quoted strings: new as of 6/2020
+		if (cmdbldr.indexOf("\"")>=0) { // a double quote occurs
+			
+			// break into alternating unquoted/quoted segments
+			Vector<StringBuilder> sbvec=StringUtil.cmdSplitter(cmdbldr);
+			
+			if (sbvec==null || sbvec.size()==0) {
+				cmds = rP.origCmdString.split(";");
+			}
+			else {
+				cmds=new String[sbvec.size()];
+				Iterator<StringBuilder> sls=sbvec.iterator();
+				int tick=0;
+				while (sls.hasNext()) {
+					cmds[tick++]=sls.next().toString();
+				}
+			}
+		}
+		else {
+			cmds = rP.origCmdString.split(";");
+		}
 
 		// cycle through the individual commands.
 		for (int j = 0; j < cmds.length; j++) {

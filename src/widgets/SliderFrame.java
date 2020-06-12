@@ -24,10 +24,11 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import allMains.CPBase;
-import exceptions.DataException;
+import allMains.CirclePack;
 import input.CommandStrParser;
 import packing.PackData;
 import panels.CPScreen;
+import util.ResultPacket;
 import util.xNumField;
 
 /**
@@ -41,7 +42,6 @@ import util.xNumField;
 
 public abstract class SliderFrame extends JFrame implements ActionListener {
 	
-	
 	private static final long 
 	serialVersionUID = 1L;
 
@@ -50,28 +50,29 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	
 	// try to starting with these sizes
 	public static final int DEFAULT_WIDTH=420; 
-	public static final int DEFAULT_HEIGHT=400; 
+	public static final int DEFAULT_HEIGHT=300; 
 	
 	// abstract methods that must be implemented by derived classes
 	public abstract void populate(); // create and add the 'ActiveBar's
-	public abstract void downloadData(); // updating sliders from packData
-	public abstract void captureValue(double value,int indx); // individual update from mouse action
+	public abstract void downValue(int indx); // from packing to slider
+	public abstract void upValue(int indx); // send slider value to packing
 	public abstract void createSliderPanel(); // may want, e.g., special border
 	public abstract void setChangeField(String cmd);   // set optional command with value change
 	public abstract void setMotionField(String cmd);   // set optional command on motion into slider 
 	public abstract void mouse_entry_action(int indx); 
-	public abstract void setRange();   // compute val_min, val_max
 	public abstract int addObject(String obj);  // add object(s) 
 	public abstract int removeObject(String obj); // remove object(s)
-	public abstract int getCount(); // how many objects?
 	public abstract void killMe(); // to call CirclePack to kill this frame
+	public abstract void initRange(); // set the initial slider ranges
 	
+	public int sliderCount;
 	public double val_min;
 	public double val_max;
 	public String holdChangeCmd;
 	public String holdMotionCmd;
 	
 	JPanel controlPanel; // option buttons, readouts
+	JPanel topPanel;  // top of controlPanel
 	JPanel sliderPanel;  // scale lines and 'myBars' go here
 	JScrollPane sliderScroll;   // contains sliderPanel
 	xNumField minValue;  // 
@@ -133,21 +134,22 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	}
 	
 	/**
-	 * Basic GUI start, adjusted by instantiating code
+	 * Basic GUI start: data has been initiated by instantiating code
 	 */
 	public void initGUI() {
+		
+		this.setBounds(50,350,DEFAULT_WIDTH,200);//DEFAULT_HEIGHT);
 		setLayout(new BorderLayout());
 
-		setRange();
+		initRange(); 
 
 		// Create control/data display area
 		controlPanel = new JPanel(new BorderLayout());
-		controlPanel.setBounds(1,1,DEFAULT_WIDTH/2,60);
 		controlPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,120));
 		controlPanel.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED));
 
 		// three panels
-		JPanel topPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
+		topPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
 		JPanel midPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
 		midPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,60));
 		JPanel bottomPanel=new JPanel(new BorderLayout());
@@ -156,7 +158,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		JButton button = new JButton("Info");
 		button.setBorder(null);
 		button.setMargin(new Insets(10,25,10,25));
-		button.setPreferredSize(new Dimension(45,18));
+		button.setPreferredSize(new Dimension(45,20));
 		button.addActionListener(this);
 		button.setActionCommand("Slider Info");
 		button.setToolTipText("Help window");
@@ -165,7 +167,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		button = new JButton("Update");
 		button.setBorder(null);
 		button.setMargin(new Insets(1,5,1,5));
-		button.setPreferredSize(new Dimension(60,18));
+		button.setPreferredSize(new Dimension(60,20));
 		button.addActionListener(this);
 		button.setActionCommand("Update");
 		button.setToolTipText("Recompute all values");
@@ -177,7 +179,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		button.setBorderPainted(false);
 		button.setMargin(new Insets(2,6,2,6));
 		button.addActionListener(this);
-		button.setPreferredSize(new Dimension(25,18));
+		button.setPreferredSize(new Dimension(25,20));
 		button.setActionCommand("add object");
 		button.setToolTipText("Add a new object");
 		addField=new JTextField(3);
@@ -189,7 +191,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		button.setBorder(null);
 		button.setMargin(new Insets(2,2,2,2));
 		button.addActionListener(this);
-		button.setPreferredSize(new Dimension(25,18));
+		button.setPreferredSize(new Dimension(25,20));
 		button.setActionCommand("remove object");
 		button.setToolTipText("Remove an object");
 		removeField=new JTextField(3);
@@ -223,14 +225,30 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 
 		// bottom panel has min/max values
 		JPanel bottomleftPanel = new JPanel();
-		JTextField minText=new JTextField("min value: "+String.format("%.5e",val_min));
-		minText.setEditable(false);
-		bottomleftPanel.add(minText);
+
+		button = new JButton("min");
+		button.setBorder(null);
+		button.setMargin(new Insets(10,25,10,25));
+		button.setPreferredSize(new Dimension(45,18));
+		button.addActionListener(this);
+		button.setActionCommand("set minimum");
+		bottomleftPanel.add(button);
+		minValue=new xNumField("",6);
+		minValue.setValue(val_min);
+		bottomleftPanel.add(minValue);
 		
 		JPanel bottomrightPanel=new JPanel();
-		JTextField maxText=new JTextField("Max value: "+String.format("%.5e",val_max));
-		maxText.setEditable(false);
-		bottomrightPanel.add(maxText);
+
+		button = new JButton("Max");
+		button.setBorder(null);
+		button.setMargin(new Insets(10,25,10,25));
+		button.setPreferredSize(new Dimension(45,18));
+		button.addActionListener(this);
+		button.setActionCommand("set maximum");
+		bottomrightPanel.add(button);
+		maxValue=new xNumField("",6);
+		maxValue.setValue(val_max);
+		bottomrightPanel.add(maxValue);
 		
 		bottomPanel.add(bottomleftPanel,BorderLayout.WEST);
 		bottomPanel.add(bottomrightPanel,BorderLayout.EAST);
@@ -243,7 +261,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 
 		// Create sliderPanel
 		createSliderPanel();
-		sliderPanel.setSize(new Dimension(DEFAULT_WIDTH,DEFAULT_HEIGHT));
+//		sliderPanel.setSize(new Dimension(DEFAULT_WIDTH,DEFAULT_HEIGHT));
 		sliderPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,DEFAULT_HEIGHT));
 		populate();
 		
@@ -278,7 +296,9 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		setObjVariable(mySliders[indx].getLabel()); // set variable 'Obj' in any case
 		String chgstr=changeCmdField.getText();
 		if (changeCheck.isSelected() && chgstr.length()>0) {
-			return cpCommand(chgstr);
+			ResultPacket rP=new ResultPacket(packData,chgstr);
+			CPBase.trafficCenter.parseCmdSeq(rP,0,null);
+			return Integer.valueOf(rP.cmdCount);
 		}
 		return 0;
 	}
@@ -286,11 +306,56 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	public int motionAction(int indx) {
 		setObjVariable(mySliders[indx].getLabel()); // set variable 'Obj' in any case
 		String mvstr=motionCmdField.getText();
-		if (motionCheck.isSelected() && mvstr.length()>0)
-			return cpCommand(mvstr);
+		if (motionCheck.isSelected() && mvstr.length()>0) {
+			ResultPacket rP=new ResultPacket(packData,mvstr);
+			CPBase.trafficCenter.parseCmdSeq(rP,0,null);
+			return Integer.valueOf(rP.cmdCount);
+		}
 		return 0;
 	}
 	
+	/**
+	 * Reset the minimum value common to all sliders; should
+	 * not trigger change commands
+	 * @param minval double
+	 */
+	public void resetMin(double minval) {
+		if (minval>=val_max) {
+			CirclePack.cpb.errMsg("usage: trying to set slider min too large");
+			return;
+		}
+		val_min=minval;
+		minValue.setValue(val_min); // display in the value window
+		for (int j=0;j<sliderCount;j++)
+			mySliders[j].refreshValue();
+	}
+
+	/**
+	 * Reset the maximum value common to all sliders; should
+	 * not trigger change commands
+	 * @param minval double
+	 */
+	public void resetMax(double maxval) {
+		if (maxval<=val_min) {
+			CirclePack.cpb.errMsg("usage: trying to set slider max too small");
+			return;
+		}
+		val_max=maxval;
+		maxValue.setValue(val_max); // display in the value window
+		for (int j=0;j<sliderCount;j++)
+			mySliders[j].refreshValue();
+	}
+
+	/**
+	 * Update all slider values from PackData
+	 */
+	public void downloadData() {
+		for (int j=0;j<sliderCount;j++) {
+			downValue(j);
+		}
+		this.repaint();
+	}
+
 	/**
 	 * Set variable "Obj" to given string value
 	 * @param obj
@@ -302,21 +367,10 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		fseg.add(itm);
 		CPBase.varControl.putVariable(packData,"Obj",fseg); 
 	}
-	
-	/**
-	 * Set min/max values for the slider
-	 * @param min double
-	 * @param max double
-	 */
-	public void setRange(double min, double max) {
-		val_min=min;
-		val_max=max;
-		if (val_max<=val_min)
-			throw new DataException("min/max reversed");
-	}
-	
+
 	// Process button pressing events
 	public void actionPerformed(ActionEvent evt) {
+
 		String cmd=evt.getActionCommand();
 
 		if (cmd.equals("Info")) {
@@ -332,11 +386,9 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 			auxHelpFrame.pack();
 			auxHelpFrame.setVisible(true);
 		}
-
 		else if (cmd.equals("Update")) {
 			downloadData();
 		}
-		
 		else if (cmd.equals("add object")) {
 			String obj=addField.getText().trim();
 			addObject(obj);
@@ -345,6 +397,15 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 			String obj=removeField.getText().trim();
 			removeObject(obj);
 		}
+		else if (cmd.equals("set minimum")) {
+			double min=minValue.getValue();
+			this.resetMin(min);;
+		}
+		else if (cmd.equals("set maximum")) {
+			double max=maxValue.getValue();
+			this.resetMax(max);;
+		}
+
 	}
 	
 } 

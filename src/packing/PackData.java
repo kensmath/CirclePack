@@ -47,6 +47,7 @@ import komplex.DualTri;
 import komplex.EdgePair;
 import komplex.EdgeSimple;
 import komplex.Face;
+import komplex.GraphSimple;
 import komplex.KData;
 import komplex.RedEdge;
 import komplex.RedList;
@@ -1521,7 +1522,6 @@ public class PackData{
                     else if (mainTok.equals("BARY_DATA:") && !newPacking)
                     {
                         state = PackState.BARY_DATA;
-                        int count=0;
                         
                         try {
                         // store results in 'utilBary'
@@ -1573,7 +1573,6 @@ public class PackData{
                             	bptd.utilint=face;
                             
                             utilBary.add(bptd);
-                        	count++;
                         } // end of while
                         } catch(Exception ex) {
                         	break; // got no data, so stop this loop
@@ -3579,20 +3578,6 @@ public class PackData{
 	 */
 	public EdgeSimple getEdge(int v,int w) {
 		if (nghb(v,w)>=0) return new EdgeSimple(v,w);
-		return (EdgeSimple)null;
-	}
-	
-	/**
-	 * Return 'EdgeSimple' with oriented dual edge <f,g>
-	 * if faces f and g share an edge.
-	 * @param f int
-	 * @param g int
-	 * @return EdgeSimple or null
-	 */
-	public EdgeSimple getDualEdge(int f,int g) {
-		if (f>0 && g>0 && f<=faceCount && g<=faceCount 
-				&& face_nghb(f,g)>=0) 
-			return new EdgeSimple(f,g);
 		return (EdgeSimple)null;
 	}
 	
@@ -13215,6 +13200,54 @@ public class PackData{
 	  return 1;
 	  } 
 	  
+	  /**
+	   * Return schwarzian for edge <v,w>
+	   * @param fg
+	   * @return
+	   */
+	  public double getSchwarzian(EdgeSimple es) { // given <v,w>
+		  int k=nghb(es.v,es.w);
+		  return kData[es.v].schwarzian[k];
+		  
+	  }
+	  
+	  /**
+	   * Return schwarzian for  dual edge <f,g>, 
+	   * @param fg
+	   * @return
+	   */
+	  public double getSchwarzian(GraphSimple fg) {
+		  return getSchwarzian(reDualEdge(fg.v,fg.w));
+	  }
+	  
+	  /**
+	   * Store schwarzian for EdgeSimple <v,w>
+	   * @param edge EdgeSimple
+	   * @param sch double
+	   * @return int 1 on success
+	   */
+	  public int setSchwarzian(EdgeSimple edge,double sch) {
+		  return setSchwarzian(edge.v,edge.w,sch);
+	  }
+	  
+	  /**
+	   * Store schwarzian for edge <v,w>
+	   * @param v int
+	   * @param w int
+	   * @param sch double
+	   * @return int 1 on success
+	   */
+	  public int setSchwarzian(int v,int w,double sch) {
+		  try {
+			  int indx_vw=nghb(v,w);
+			  int indx_wv=nghb(w,v);
+			  kData[v].schwarzian[indx_vw]=sch;
+			  kData[w].schwarzian[indx_wv]=sch;
+			  return 1;
+		  } catch(Exception ex) {}
+		  return 0;
+	  }
+	  
 	  /** 
 	   * Store one legal inversive distance value in all approp places. Storage for
 	   * inv distances must be allocated.
@@ -13435,9 +13468,10 @@ public class PackData{
 	  /**
 	   * If {v,w} is an edge between vertices, this returns the
 	   * dual edge {f,g} of neighboring faces to left/right of 
-	   * {v,w}, respectively.
-	   * @param v
-	   * @param w
+	   * {v,w}, respectively. Note, dual edge direction is 
+	   * clockwise of original edge.
+	   * @param v int
+	   * @param w int
 	   * @return EdgeSimple, null on error
 	   */
 	  public EdgeSimple dualEdge(int v,int w) {
@@ -17899,7 +17933,8 @@ public class PackData{
 		for (int v=1;v<=nodeCount;v++) {
 			try {
 				for (int j=0;j<=kData[v].num;j++) { 
-					double dumy=kData[v].schwarzian[j];
+					if (kData[v].schwarzian==null || kData[v].schwarzian.length<(kData[v].num+1))
+						return false;
 				}
 			} catch (Exception ex) {
 				return false;

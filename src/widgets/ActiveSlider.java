@@ -27,7 +27,7 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	int index;       // index in 'mySliders' of object for this bar (e.g., vert index)
 	
 	String label;    // string describing the object: v, v w, f
-	double value;    // current double value
+	double value;    // current value is kept here only
 
 	boolean active;  // true if mouse movement over slider triggers action
 	
@@ -38,16 +38,16 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	xNumField valueField;     // holds value
 
 	// Constructor (default)
-	public ActiveSlider(SliderFrame slf, int indx, String lbl,double val,boolean actv) {
+	public ActiveSlider(SliderFrame sfp, int indx, String lbl,double val,boolean actv) {
 		setBorder(BorderFactory.createLineBorder(Color.blue));
 		setLayout(new FlowLayout(FlowLayout.LEADING));
-		sfparent = (SliderFrame)slf;
+		sfparent = (SliderFrame)sfp;
 		index=indx;
 		label=lbl;
 		value=val;
 		active=actv;
 		
-		slider=new IndexedJSlider(sfparent.val_min,sfparent.val_max,val,index);
+		slider=new IndexedJSlider(sfparent,val,index);
 		slider.addChangeListener(sfparent.listener);
 		labelField=new JTextField(label,6);
 		labelField.setEditable(false);
@@ -62,20 +62,36 @@ public class ActiveSlider extends JPanel implements MouseListener,
 			addMouseListener(this);
 			addMouseMotionListener(this);
 		}
-
-	}
-	
-	public double getValue() {
-		return slider.getCurrentValue();
 	}
 	
 	/**
-	 * set slider value
+	 * Read the value from the slider
+	 * @return double
+	 */
+	public double getValue() {
+		value=slider.getCurrentValue();
+		return value;
+	}
+	
+	/**
+	 * Just refresh the slider location, don't trigger 
+	 * chgCmd; e.g., when min or max changes
+	 */
+	public void refreshValue() {
+		boolean holdck=sfparent.changeCheck.isSelected();
+		sfparent.changeCheck.setSelected(false);
+		slider.setMyValue(value);
+		sfparent.changeCheck.setSelected(holdck);
+	}
+	
+	/**
+	 * set value for slider 
 	 * @param val
 	 */
 	public void setValue(double val) {
-		sfparent.captureValue(val,index);
-		valueField.setValue(val);
+		value=val;
+		slider.setMyValue(val);  // set slider
+		valueField.setValue(val); // set field
 	}
 	
 	public String getLabel() {
@@ -93,6 +109,7 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	public void changeReaction() {
 		double val=slider.getCurrentValue();
 		setValue(val);
+		sfparent.upValue(index); // change PackData after 'this.value' is set 
 		sfparent.changeAction(index); // there may be commands to execute
 	}
 	

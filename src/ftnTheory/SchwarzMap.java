@@ -1047,7 +1047,7 @@ public class SchwarzMap extends PackExtender {
 					CPFileManager.PackingDirectory);
 		}
 		return 1;
-	}
+	} // end of 'cmdParser'
 
 	/**
 	 * Get the schwarzian coefficient and tangency point for edge <v,w>
@@ -1142,7 +1142,7 @@ public class SchwarzMap extends PackExtender {
 	 */
 	public void initCmdStruct() {
 		super.initCmdStruct();
-		cmdStruct.add(new CmdStruct("radW","{v..}",null,"Create and display a widget "+ 
+		cmdStruct.add(new CmdStruct("radS","{v..}",null,"Create and display a widget "+ 
 				"for adjusting radii"));
 		cmdStruct.add(new CmdStruct("put","[-q{n} [{f g .. }]",null,"Put rangeTri "+
 				"radii/centers into packing {n} (default to image). First check "+

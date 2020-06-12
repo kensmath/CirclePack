@@ -4340,6 +4340,59 @@ enters these in order</td></tr>
 	all vertices along the original edges of a hex-refined 
 	complex for use with parallel packing routines.
 </blockquote>
+<font size="+1" color="blue"><strong><a name="slider">slider</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[RS] -[cmarx] {cmds} {..}&nbsp;&nbsp; </font>
+<blockquote>
+<strong>Description: </strong>
+	CirclePack allows the user to create a frame with multiple 
+	sliders to control values associated with the packing using
+	the mouse. Currently, only 'radii' and edge 'schwarzians' 
+	(which must be set in advance by the user) can be controlled,
+	and only one slider frame is allowed for each packing.
+	Optionally, 'motion' commands can be executed when 
+	the mouse passes over a slider and/or 
+	'change' commands can be executed when a value is changed.
+	On initiation, substring 'Obj' in motion or change command
+	strings is replaced by '_Obj' so that the command can be
+	applied to the appropriate object (vertex or edge).
+</blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
+<blockquote>
+<table>
+<tr><td width="25%" valign="top">-R</td>
+<td width="65%" align="left"> The sliders control specified radii</td></tr>
+<tr><td width="25%" valign="top">-S</td>
+<td width="65%" align="left"> The sliders control specified edge schwarzians</td></tr>
+<tr><td width="25%" valign="top">-c ''cmds''</td>
+<td width="65%" align="left"> Optional commands to be executed when a
+value is changed; here 'cmds' is a string of text enclosed by double
+quotes</td></tr>
+<tr><td width="25%" valign="top">-m ''cmds''</td>
+<td width="65%" align="left"> Optional commands to be executed when a
+a mouse moves across a slider; here 'cmds' is a string of text 
+enclosed by double quotes</td></tr>
+<tr><td width="25%" valign="top">-a {..}</td>
+<td width="65%" align="left"> Add a slider for a new object</td></tr>
+<tr><td width="25%" valign="top">-r {.}</td>
+<td width="65%" align="left"> Remove an individual object</td></tr>
+<tr><td width="25%" valign="top">-x</td>
+<td width="65%" align="left"> Destroy this frame</td></tr>
+</table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
+<blockquote>
+<table>
+<tr><td width="30%"><font color="blue">slider -R {v...}</font></td>
+<td width="68%"> sliders for selected vertices</td></tr>
+<tr><td width="30%"><font color="blue">slider -R -c ''rld'' a</font></td>
+<td width="68%"> sliders for all radii, execute 'rld'
+on change in any slider</td></tr>
+<tr><td width="30%"><font color="blue">slider -S -m  ''disp w -c -et5c5 Obj'' {e ..}</font></td>
+<td width="68%"> sliders 
+for selected edge schwarzians, which motion in slider causing redisplay
+of circles with that particular edge displayed.</td></tr>
+</table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="set_schwarzian">set_schwarzian</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="slit">slit</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>

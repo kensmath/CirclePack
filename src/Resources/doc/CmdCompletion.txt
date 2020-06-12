@@ -207,6 +207,7 @@ set_xyz
 show_vlist (or 'show_flist' or 'show_elist') 
 show_red 
 skeleton {v..} 
+slider -[RS] -[cmarx] {cmds} {..} 
 slit {v..} 
 spiral [-f] {a b} 
 split_edge v1 w1  v2 w2 .. 

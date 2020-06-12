@@ -1409,6 +1409,22 @@ public class NodeLink extends LinkedList<Integer> {
 	 }
 	 
 	 /**
+	  * Create a new NodeLink that eliminates duplication.
+	  * @param nl, NodeLink
+	  * @return new NodeLink
+	  */
+	 public static NodeLink removeDuplicates(NodeLink nl) {
+		 NodeLink newNL=new NodeLink(nl.packData);
+		 Iterator<Integer> vls=nl.iterator();
+		 while (vls.hasNext()) {
+			 int v=vls.next();
+			 if (newNL.containsV(v)<0)
+				 newNL.add(v);
+		 }
+		 return newNL;
+	 }
+	 
+	 /**
 	  * Return fresh NodeLink with entries translated from 'nlink'
 	  * using 'vmap'. So, entry v in 'nlink' and entry <v,V> in
 	  * 'vmap' leads to new entry V. If there's no translation

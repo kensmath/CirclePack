@@ -6,7 +6,7 @@ import java.util.Vector;
 
 import allMains.CirclePack;
 import exceptions.DataException;
-import listManip.EdgeLink;
+import listManip.GraphLink;
 import listManip.NodeLink;
 import packing.PackData;
 import util.StringUtil;
@@ -36,16 +36,16 @@ public class CreateSliderFrame {
 			}
 			p.radiiSliders = new RadiiSliders(p,"","",new NodeLink(p,items));
 			p.radiiSliders.setVisible(true);
-			return p.radiiSliders.getCount();
+			return p.radiiSliders.sliderCount;
 		}
 		if (type == 1) { // schwarzians
 			if (p.schwarzSliders != null) {
 				p.schwarzSliders.dispose();
 				p.schwarzSliders=null;
 			}
-			p.schwarzSliders = new SchwarzSliders(p,"","", new EdgeLink(p,items));
+			p.schwarzSliders = new SchwarzSliders(p,"","", new GraphLink(p,items));
 			p.schwarzSliders.setVisible(true);
-			return p.schwarzSliders.getCount();
+			return p.schwarzSliders.sliderCount;
 		}
 		return 0;
 	}
@@ -58,18 +58,17 @@ public class CreateSliderFrame {
 	 * look into this.
 	 * @param p PackData
 	 * @param type int
-	 * @param strbld StringBuilder
-	 * @return count of sliders created, -1 on error
+	 * @param strbld StringBuilder, flagSegs reconstituted by calling routine
+	 * @return count of sliders created, 0 on error
 	 */
-
 	public static int createSliderFrame(PackData p,int type,StringBuilder strbld) {
 
 		// break input into maximal segments defined by quotes '"'.
-		Vector<StringBuilder> segments = StringUtil.quoteAnaylizer(strbld);
+		Vector<StringBuilder> segments = StringUtil.quoteAnalyzer(strbld);
 		String chgCmd="";
 		String mvCmd="";
 		NodeLink vlist=null;
-		EdgeLink elist=null;
+		GraphLink glist=null;
 		
 		if (segments==null || segments.size()<2) {
 			CirclePack.cpb.errMsg("usage: slider: looking for -c {cmd} and/or -m {cmd}");
@@ -88,9 +87,9 @@ public class CreateSliderFrame {
 		String lastStr = segments.get(s - 1).toString().trim();
 		if (lastStr.length() > 0 && lastStr.charAt(0) != '"') 
 			segments.remove(s - 1); // yes, this should be specifying objects
-		else
-			lastStr = "a"; // otherwise, default to all
-
+		else 
+			lastStr="";
+		
 		try {
 		if (type == 0) { // vertices
 			if (lastStr.length() == 0)
@@ -102,12 +101,13 @@ public class CreateSliderFrame {
 				return 0;
 			}
 		}
+		// Note: for schwarzians, 'lastStr' should be face pairs <f,g>
 		else if (type == 1) { // schwarzians
 			if (lastStr.length() == 0)
-				elist = new EdgeLink(p, "a"); // default to all
+				glist = new GraphLink(p, "s"); // spanning tree
 			else
-				elist = new EdgeLink(p, lastStr);
-			if (elist == null || elist.size() == 0) {
+				glist = new GraphLink(p, lastStr);
+			if (glist == null || glist.size() == 0) {
 				CirclePack.cpb.errMsg("usage: malformed 'slider' command");
 				return 0;
 			}
@@ -117,7 +117,7 @@ public class CreateSliderFrame {
 			return 0;
 		}
 
-//		segments.add(0, new StringBuilder(firstStr)); // re-insert first segment
+		// now go through the segments
 		try {
 			Iterator<StringBuilder> sit = segments.iterator();
 			while (sit.hasNext()) {
@@ -153,16 +153,16 @@ public class CreateSliderFrame {
 			}
 			p.radiiSliders = new RadiiSliders(p, chgCmd, mvCmd, vlist);
 			p.radiiSliders.setVisible(true);
-			return p.radiiSliders.getCount();
+			return p.radiiSliders.sliderCount;
 		}
 		if (type == 1) { // schwarzians
 			if (p.schwarzSliders != null) {
 				p.schwarzSliders.dispose();
 				p.schwarzSliders=null;
 			}
-			p.schwarzSliders = new SchwarzSliders(p, chgCmd, mvCmd, elist);
+			p.schwarzSliders = new SchwarzSliders(p, chgCmd, mvCmd, glist);
 			p.schwarzSliders.setVisible(true);
-			return p.schwarzSliders.getCount();
+			return p.schwarzSliders.sliderCount;
 		}
 		
 		return -1;

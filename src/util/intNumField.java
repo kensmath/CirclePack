@@ -99,7 +99,7 @@ public class intNumField extends JPanel {
 	/**
 	 * Return the current integer value, with any variables
 	 * interpreted.
-	 * @return int
+	 * @return int, 0 on error
 	 */
 	public int getValue() {
 		try {
