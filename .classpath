@@ -26,5 +26,6 @@
 			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="CirclePack/lib"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="C:/Program Files/processing-3.5.4/core/library/core.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

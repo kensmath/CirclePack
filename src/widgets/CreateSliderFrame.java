@@ -67,18 +67,19 @@ public class CreateSliderFrame {
 		Vector<StringBuilder> segments = StringUtil.quoteAnalyzer(strbld);
 		String chgCmd="";
 		String mvCmd="";
+		String optCmd="";
 		NodeLink vlist=null;
 		GraphLink glist=null;
 		
 		if (segments==null || segments.size()<2) {
-			CirclePack.cpb.errMsg("usage: slider: looking for -c {cmd} and/or -m {cmd}");
+			CirclePack.cpb.errMsg("usage: slider: looking for '-[cmo] {cmd}' flags");
 			return 0;
 		}
 		
 		// get firstStr
 		String firstStr=segments.get(0).toString().trim();
 		if (firstStr.length()==0 || firstStr.charAt(0)=='"') {
-			CirclePack.cpb.errMsg("usage: slider: looking for -c or -m flag first);");
+			CirclePack.cpb.errMsg("usage: slider: looking for -[cmo] flag first);");
 			return 0;
 		}
 		
@@ -131,6 +132,10 @@ public class CreateSliderFrame {
 					if (quoteStr.charAt(0) != '"')
 						throw new DataException();
 					mvCmd = quoteStr.substring(1, quoteStr.length() - 1); // get move cmd, removing '"'
+				} else if (leadStr.contains("-0")) {
+					if (quoteStr.charAt(0) != '"')
+						throw new DataException();
+					optCmd = quoteStr.substring(1, quoteStr.length() - 1); // get optional cmd, removing '"'
 				}
 			}
 		} catch (NoSuchElementException nse) {
@@ -144,6 +149,8 @@ public class CreateSliderFrame {
 			chgCmd=StringUtil.replaceSubstring(chgCmd,"Obj","_Obj");
 		if (mvCmd.length()>0)
 			mvCmd=StringUtil.replaceSubstring(mvCmd,"Obj","_Obj");
+		if (optCmd.length()>0)
+			optCmd=StringUtil.replaceSubstring(optCmd,"Obj","_Obj");
 
 		// ready to start slider
 		if (type == 0) { // radii
@@ -152,6 +159,8 @@ public class CreateSliderFrame {
 				p.radiiSliders=null;
 			}
 			p.radiiSliders = new RadiiSliders(p, chgCmd, mvCmd, vlist);
+			if (optCmd.length()>0)
+				p.radiiSliders.optCmdField.setText(optCmd);
 			p.radiiSliders.setVisible(true);
 			return p.radiiSliders.sliderCount;
 		}
@@ -161,6 +170,8 @@ public class CreateSliderFrame {
 				p.schwarzSliders=null;
 			}
 			p.schwarzSliders = new SchwarzSliders(p, chgCmd, mvCmd, glist);
+			if (optCmd.length()>0)
+				p.schwarzSliders.optCmdField.setText(optCmd);
 			p.schwarzSliders.setVisible(true);
 			return p.schwarzSliders.sliderCount;
 		}

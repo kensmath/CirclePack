@@ -513,87 +513,100 @@ public class StringUtil {
 		return true;
 	}
 
+	/**
+	 * In combination with 'string2vec', this consolidates strings between 
+	 * paired symbols which were inadvertently split up in processing: 
+	 * "()", "{}", and "\"\"". It is not sophisticated; slightly recursive,
+	 * but can't handle nested situations. 
+	 * @param invec Vector<String>
+	 * @param char c
+	 * @return Vector<String>, return original on error
+	 */
+	public static Vector<String> reattach(Vector<String> invec,char c) {
+
+		// what is matching symbol? 
+		char ce;
+		switch(c) {
+		case '(':
+		{
+			ce=')';
+			break;
+		}
+		case '{': 
+		{
+			ce='}';
+			break;
+		}
+		case '"':
+		{
+			ce='"';
+			break;
+		}
+		default:
+			return invec;
+		} // end of switch
+		
+		Vector<String> newvec= new Vector<String>(invec.size());
+		boolean fixed=true;
+		String nxtstr;
+		int k;
+		for (int n=0;n<invec.size();n++) {
+			nxtstr=(String)invec.get(n);
+			
+			// found c
+			if ((k=nxtstr.indexOf(c))>=0) {
+				
+				// if no later ce in same string, look downstream to complete
+				if (nxtstr.length()==k+1 || nxtstr.substring(k+1).indexOf(ce,k)<0) { 
+					fixed=false;
+					int m=n+1;
+					while(m<invec.size()) {
+						String ths=(String)invec.get(m);
+						if (ths.indexOf(ce)>=0) {
+							String remade=new String(nxtstr); // remade string; substrings with spaces
+							for (int j=n+1;j<=m;j++) 
+								remade=remade.concat(" "+(String)invec.get(j));
+							newvec.add(remade);
+							n=m; // set beyond vector spot we've used
+							m=invec.size(); // kick out of 'while'
+							fixed=true;
+						}
+						m++;
+					}
+					if (!fixed) {
+						throw new ParserException("Unmatched '(' in expression.");
+					}
+				}
+				else newvec.add(nxtstr);
+			}
+			else newvec.add(nxtstr);
+		}
+		return newvec;
+	}
+	
 	/** 
 	 * Utility to convert string into vector of substrings (by whitespace).
-	 * Return empty vector if nothing is found. 
+	 * Return empty vector if nothing is found. Reassemble substrings
+	 * occurring between matching parens, curly brackets, or double quotes
+	 * which are inadvertently separated in call to 'string2vec'.
 	 * (TODO: not very sophisticated; can't handle nesting, etc.)
 	 * @param str String
-	 * @param bfix boolean: true, reattach substrings inadvertently
-	 * broken between matching parents or curly brackets.
+	 * @param bfix boolean, true, then reattach
 	 * @return Vector<String>, empty on error or nothing found
 	 */
 	public static Vector<String> string2vec(String str,boolean bfix) {
-		  
-		// matching pairs of parens and of curly brackets.
+		
+		// first, split into vector of strings by whitespace
 		Vector<String> vec= string2vec(str);
-		if (!bfix || (!str.contains("(") && !str.contains("{"))) 
-			return (vec);
-		  
-		// put broken pairs back together.
-		Vector<String> newvec= new Vector<String>(vec.size());
-		boolean fixed=true;
-		  String nxt;
-		  int k;
-		  for (int n=0;n<vec.size();n++) {
-			  nxt=(String)vec.get(n);
-			  if ((k=nxt.indexOf('('))>=0) {
-				  if (nxt.length()==k+1 || !nxt.substring(k+1).contains(")")) { // look downstream to complete
-					  fixed=false;
-					  int m=n+1;
-					  while(m<vec.size()) {
-						  String ths=(String)vec.get(m);
-						  if (ths.contains(")")) {
-							  String remade=new String(nxt); // remade string; substrings with spaces
-							  for (int j=n+1;j<=m;j++) 
-								  remade=remade.concat(" "+(String)vec.get(j));
-							  newvec.add(remade);
-							  n=m; // set beyond vector spot we've used
-							  m=vec.size(); // kick out of 'while'
-							  fixed=true;
-						  }
-						  m++;
-					  }
-					  if (!fixed) {
-						  throw new ParserException("Unmatched '(' in expression.");
-					  }
-				  }
-				  else newvec.add(nxt);
-			  }
-			  else newvec.add(nxt);
-		  }
-		  vec=newvec;
-		  newvec=new Vector<String>(vec.size());
-		  	  
-		  // repeat same thing with '{' '}'
-		  for (int n=0;n<vec.size();n++) {
-			  nxt=(String)vec.get(n);
-			  if ((k=nxt.indexOf('{'))>=0) {
-				  if (nxt.length()==k+1 || !nxt.substring(k+1).contains("}")) { // look downstream to complete
-					  fixed=false;
-					  int m=n+1;
-					  while(m<vec.size()) {
-						  String ths=(String)vec.get(m);
-						  if (ths.contains("}")) {
-							  String remade=new String(nxt); // remade string; substrings with spaces
-							  for (int j=n+1;j<=m;j++) 
-								  remade=remade.concat(" "+(String)vec.get(j));
-							  newvec.add(remade);
-							  n=m; // set beyond vector spot we've used
-							  m=vec.size(); // kick out of 'while'
-							  fixed=true;
-						  }
-						  m++;
-					  }
-					  if (!fixed) {
-						  throw new ParserException("Unmatched '{' in expression.");
-					  }
-				  }
-				  else newvec.add(nxt);
-			  }
-			  else newvec.add(nxt);
-		  }
-		  return newvec;
-	  }
+
+		// Reattaching order: (), then {}, then finally "". 
+		if (bfix) {
+			Vector<String> new1=reattach(vec,'(');
+			Vector<String> new2=reattach(new1,'{');
+			return reattach(new2,'"');
+		}
+		return vec;
+	}		  
 		  
 	/** 
 	 * Utility to convert string into vector of substrings (by whitespace).

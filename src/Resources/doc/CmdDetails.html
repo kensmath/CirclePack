@@ -992,6 +992,28 @@ CAUTION: This call will not work if the C++ library is not operational.
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="spiral">spiral</a>&nbsp;&nbsp; 
 <br/><br/>
+<font size="+1" color="blue"><strong><a name="dual_layout">dual_layout</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[c{flags}] -[f{flags}] [{f1 g1 ...}]&nbsp;&nbsp; </font>
+<blockquote>
+<strong>Description: </strong>
+	Use the real schwarzians (if they are set) to layout faces
+	associated with a directed tree of dual edges; default to
+	a layout dual spanning tree. If (f,g) is a dual edge, then we 
+	assume f is in place and use the real schwarzian for the 
+	associated edge to place the opposite circle of g. This is 
+	used only in spherical or euclidean geometry. See 
+	'Schwarzian.java' for details.
+</blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
+<blockquote>
+<table>
+<tr><td width="25%" valign="top">f</td>
+<td width="65%" align="left"> draw each new face as laid out with usual display flags</td></tr>
+<tr><td width="25%" valign="top">c</td>
+<td width="65%" align="left"> draw each new circle with usual display flags</td></tr>
+</table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="sch_report">sch_report</a>&nbsp;&nbsp; <a href="set_schwarzian">set_schwarzian</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="elist">elist</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>A utility "edge list" attached to a particular packing; 
@@ -1754,7 +1776,7 @@ the new path.</td></tr>
 <td width="65%" align="left"> set "aims" to their defaults</td></tr>
 <tr><td width="25%" valign="top">-c[cdfs]</td>
 <td width="65%" align="left"> recompute pack centers.
-		added options (allow no spaces between):</td></tr>
+		added options follow (allow no spaces between):</td></tr>
 <tr><td width="25%" valign="top">c {x}</td>
 <td width="65%" align="left"> set decimal number 'x' as threshold for 
 		   placement accuracy; e.g., x=.00001 for 5-decimal places.</td></tr>
@@ -3181,28 +3203,6 @@ script and append it to 'ClosedPath'.</td></tr>
 	    rad_p(v)=rad_p(v) + x*[rad_q(v)-rad_p(v)].
 	Infinite hyperbolic radii treated as radius 10.0.
 </blockquote>
-<font size="+1" color="blue"><strong><a name="sch_layout">sch_layout</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[c{flags}] -[f{flags}] [{f1 g1 ...}]&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong>
-	Use the real schwarzians (if they are set) to layout faces
-	associated with a directed tree of dual edges; default to
-	a layout dual spanning tree. If (f,g) is a dual edge, then we 
-	assume f is in place and use the real schwarzian for the 
-	associated edge to place the opposite circle of g. This is 
-	used only in spherical or euclidean geometry. See 
-	'Schwarzian.java' for details.
-</blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
-<blockquote>
-<table>
-<tr><td width="25%" valign="top">f</td>
-<td width="65%" align="left"> draw each new face as laid out with usual display flags</td></tr>
-<tr><td width="25%" valign="top">c</td>
-<td width="65%" align="left"> draw each new circle with usual display flags</td></tr>
-</table></blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="sch_report">sch_report</a>&nbsp;&nbsp; <a href="set_schwarzian">set_schwarzian</a>&nbsp;&nbsp; 
-<br/><br/>
 <font size="+1" color="blue"><strong><a name="sch_report">sch_report</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[[ce]{flags}] {..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
@@ -3226,7 +3226,7 @@ their schwarzians</td></tr>
 to draw selected edges</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="set_schwarzian">set_schwarzian</a>&nbsp;&nbsp; <a href="sch_layout">sch_layout</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href="set_schwarzian">set_schwarzian</a>&nbsp;&nbsp; <a href="dual_layout">dual_layout</a>&nbsp;&nbsp; 
 <br/><br/>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
@@ -3648,9 +3648,10 @@ enters these in order</td></tr>
 'Ra' for all, but closed up; given {j}, just dual chain along the
 index 'j' side among the side-pairings.</td></tr>
 <tr><td width="25%" valign="top">s {f}</td>
-<td width="65%" align="left">default: spanning tree for the dual graph based on the packing's
-face drawing order. Given first face 'f', generate spanning tree not crossing
-any 'poison' edges</td></tr>
+<td width="65%" align="left">generate a spanning tree for the dual graph. If 'f' is
+given, use it as the root face and avoid crossing any 'poison' edges. 
+Otherwise, based the tree on the packing's
+face drawing order.</td></tr>
 <tr><td width="25%" valign="top">?list</td>
 <td width="65%" align="left">various lists (glist, Glist, flist, Flist) may be specified.</td></tr>
 </table></blockquote>
@@ -4041,11 +4042,11 @@ any 'poison' edges</td></tr>
 	transforms and with the dual spanning tree can be used 
 	to layout a packing determined up to Mobius 
 	transformations by the layout of the first face. 
-	(Layout work spherical or euclidean geometry, not 
+	(Layout work in spherical or euclidean geometry, not 
 	hyperbolic.) Flags may specify use of current centers 
-	or radii, otherwise, a value x must be given. If 
-	schwarzian data has not been allocated, then this call 
-	will allocate the space. 
+	or radii to compute the schwarzians, or a value x may be
+	specified for given edges. This call will allocate 
+	schwarzian storage space if not already set.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
@@ -4056,7 +4057,7 @@ any 'poison' edges</td></tr>
 <td width="65%" align="left"> schwarzians based on existing layout radii</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="sch_layout">sch_layout</a>&nbsp;&nbsp; <a href="sch_report">sch_report</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href="dual_layout">dual_layout</a>&nbsp;&nbsp; <a href="sch_report">sch_report</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="set_screen">set_screen</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options]&nbsp;&nbsp; </font>
 <blockquote>
@@ -4340,20 +4341,24 @@ enters these in order</td></tr>
 	all vertices along the original edges of a hex-refined 
 	complex for use with parallel packing routines.
 </blockquote>
-<font size="+1" color="blue"><strong><a name="slider">slider</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[RS] -[cmarx] {cmds} {..}&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="slider">slider</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[RS] -[cmarux] {cmds} {..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
 	CirclePack allows the user to create a frame with multiple 
 	sliders to control values associated with the packing using
 	the mouse. Currently, only 'radii' and edge 'schwarzians' 
 	(which must be set in advance by the user) can be controlled,
-	and only one slider frame is allowed for each packing.
-	Optionally, 'motion' commands can be executed when 
-	the mouse passes over a slider and/or 
-	'change' commands can be executed when a value is changed.
-	On initiation, substring 'Obj' in motion or change command
-	strings is replaced by '_Obj' so that the command can be
-	applied to the appropriate object (vertex or edge).
+	and only one of each of these slider frames is allowed for 
+	each packing. Slider ranges are initialized to go from half 
+	the quantities minimum value to twice its maximum value, but
+	can be adjusted later.
+	
+	Optionally, specified 'change' commands can be executed when a 
+	value is changed and/or 'motion' commands can be executed when 
+	the mouse passes over a slider. On initiation, substring 'Obj' 
+	in motion or change command	strings is replaced by '_Obj' so 
+	that the command can be	applied to the appropriate object 
+	(vertex or edge).
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
@@ -4370,10 +4375,20 @@ quotes</td></tr>
 <td width="65%" align="left"> Optional commands to be executed when a
 a mouse moves across a slider; here 'cmds' is a string of text 
 enclosed by double quotes</td></tr>
+<tr><td width="25%" valign="top">-o ''cmds''</td>
+<td width="65%" align="left"> Optional commands to be executed by user
+with a button click; here 'cmds' is a string of text 
+enclosed by double quotes</td></tr>
 <tr><td width="25%" valign="top">-a {..}</td>
 <td width="65%" align="left"> Add a slider for a new object</td></tr>
 <tr><td width="25%" valign="top">-r {.}</td>
 <td width="65%" align="left"> Remove an individual object</td></tr>
+<tr><td width="25%" valign="top">-d</td>
+<td width="65%" align="left"> Download frame data from the parent packing</td></tr>
+<tr><td width="25%" valign="top">-l {x}</td>
+<td width="65%" align="left"> Update slider minimum range</td></tr>
+<tr><td width="25%" valign="top">-u {x}</td>
+<td width="65%" align="left"> Update slider maximum range</td></tr>
 <tr><td width="25%" valign="top">-x</td>
 <td width="65%" align="left"> Destroy this frame</td></tr>
 </table></blockquote>
@@ -4391,7 +4406,7 @@ for selected edge schwarzians, which motion in slider causing redisplay
 of circles with that particular edge displayed.</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="set_schwarzian">set_schwarzian</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href="set_schwarzian">set_schwarzian</a>&nbsp;&nbsp; <a href="dual_layout">dual_layout</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="slit">slit</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v..}&nbsp;&nbsp; </font>
 <blockquote>

@@ -41,6 +41,7 @@ disp [options ... ] (also 'Disp')
 double {b..} 
 doyle_annulus p q n 
 doyle_point f 
+dual_layout -[c{flags}] -[f{flags}] [{f1 g1 ...}] 
 elist [options] 
 elist_to_path 
 embed -q{q} a b A B 
@@ -150,7 +151,6 @@ rotate {a}
 scale [t] 
 scale_aims x {v..} 
 scale_rad -q{p} x {v..} 
-sch_layout -[c{flags}] -[f{flags}] [{f1 g1 ...}] 
 sch_report -[[ce]{flags}] {..} 
 screendump [-m -d -b -n] 
 script [filename] 
@@ -207,7 +207,7 @@ set_xyz
 show_vlist (or 'show_flist' or 'show_elist') 
 show_red 
 skeleton {v..} 
-slider -[RS] -[cmarx] {cmds} {..} 
+slider -[RS] -[cmarux] {cmds} {..} 
 slit {v..} 
 spiral [-f] {a b} 
 split_edge v1 w1  v2 w2 .. 

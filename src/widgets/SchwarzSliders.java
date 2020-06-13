@@ -72,7 +72,7 @@ public class SchwarzSliders extends SliderFrame {
 		button.addActionListener(new ActionListener() {
 		    @Override
 		    public void actionPerformed(ActionEvent evt) {
-		    	int rf=rootField.getValue();
+		    	int rf=rootField.getValue(); // this may have been changed
 		    	if (rf>0 && rf<=packData.faceCount)
 		    		root=rf;
 		    	rootAction();
@@ -96,7 +96,11 @@ public class SchwarzSliders extends SliderFrame {
 	 * @return 0 for now
 	 */
 	public int rootAction() {
-		return 0;
+		int hit= cpCommand("sch_layout 0 "+root); // layout root face
+		if (hit==0)
+			return 0;
+		hit += cpCommand("disp -w -ffc80 "+root); // display the root face
+		return hit;
 	}
 
 	// ============= abstract methods ==================

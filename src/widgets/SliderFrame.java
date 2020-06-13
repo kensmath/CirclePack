@@ -15,6 +15,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -73,16 +74,19 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	
 	JPanel controlPanel; // option buttons, readouts
 	JPanel topPanel;  // top of controlPanel
+	JPanel midPanel;  // middle of controlPanel
+	JPanel bottomPanel;  // bottom of controlPanel
 	JPanel sliderPanel;  // scale lines and 'myBars' go here
 	JScrollPane sliderScroll;   // contains sliderPanel
-	xNumField minValue;  // 
-	xNumField maxValue;
-	JTextField changeCmdField; // optional command: execute on slider change
+	public xNumField minValue;  // 
+	public xNumField maxValue;
+	public JTextField changeCmdField; // optional command: execute on slider change
 	JCheckBox changeCheck;  // whether to apply change command
-	JTextField motionCmdField; // optional command: execute when mouse enters 
+	public JTextField motionCmdField; // optional command: execute when mouse enters 
 	JCheckBox motionCheck;  // whether to apply motion command
-	JTextField addField;
-	JTextField removeField;
+	public JTextField optCmdField; // optional command 
+	public JTextField addField;
+	public JTextField removeField;
 	public ActiveSlider[] mySliders; // number depends on what's being displayed
 	public ChangeListener listener; // listener for all the ActiveSlider's
 	public StringBuilder helpInfo;
@@ -150,9 +154,9 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 
 		// three panels
 		topPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
-		JPanel midPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
+		midPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
 		midPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,60));
-		JPanel bottomPanel=new JPanel(new BorderLayout());
+		bottomPanel=new JPanel(new BorderLayout());
 
 		// top has buttons 
 		JButton button = new JButton("Info");
@@ -201,26 +205,42 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		
 		topPanel.add(addremovePanel);
 		
-		// middle panel has two panels for commands
+		// middle panel has three panels for commands
 		JPanel midleftPanel=new JPanel(new BorderLayout());
 		changeCheck=new JCheckBox("change cmd");
 		changeCheck.setSelected(false);
 		if (holdChangeCmd.length()>0)
 			changeCheck.setSelected(true);
-		changeCmdField=new JTextField("",15);
+		changeCmdField=new JTextField("",13);
 		midleftPanel.add(changeCheck,BorderLayout.NORTH);
 		midleftPanel.add(changeCmdField,BorderLayout.CENTER);
 		
-		JPanel midrightPanel=new JPanel(new BorderLayout());;
+		JPanel midmidPanel=new JPanel(new BorderLayout());;
 		motionCheck=new JCheckBox("motion cmd");
 		motionCheck.setSelected(false);
 		if (holdMotionCmd.length()>0)
 			motionCheck.setSelected(true);
-		motionCmdField=new JTextField("",15);
-		midrightPanel.add(motionCheck,BorderLayout.NORTH);
-		midrightPanel.add(motionCmdField,BorderLayout.CENTER);
+		motionCmdField=new JTextField("",13);
+		midmidPanel.add(motionCheck,BorderLayout.NORTH);
+		midmidPanel.add(motionCmdField,BorderLayout.CENTER);
+
+		JPanel midrightPanel=new JPanel(new BorderLayout());
+		button=new JButton("optional cmd");
+//		button.setBorder(null);
+//		button.setMargin(new Insets(10,2,8,2));
+		button.setPreferredSize(new Dimension(25,22));
+		button.addActionListener(this);
+		button.setActionCommand("optional cmd");
+		button.setToolTipText("Execute this optional command");
+//		JCheckBox jbox=new JCheckBox("optional cmd"); // just used for dispaly
+//		jbox.setSelected(true);
+		optCmdField=new JTextField("",13);
+		optCmdField.setEditable(true);
+		midrightPanel.add(button,BorderLayout.NORTH);
+		midrightPanel.add(optCmdField,BorderLayout.CENTER);
 
 		midPanel.add(midleftPanel);
+		midPanel.add(midmidPanel);
 		midPanel.add(midrightPanel);
 
 		// bottom panel has min/max values
@@ -399,11 +419,18 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		}
 		else if (cmd.equals("set minimum")) {
 			double min=minValue.getValue();
-			this.resetMin(min);;
+			this.resetMin(min);
 		}
 		else if (cmd.equals("set maximum")) {
 			double max=maxValue.getValue();
-			this.resetMax(max);;
+			this.resetMax(max);
+		}
+		else if (cmd.equals("optional cmd")) {
+			String cmdStr=optCmdField.getText();
+			if (cmdStr.length()>0) {
+				ResultPacket rP=new ResultPacket(packData,cmdStr);
+				CPBase.trafficCenter.parseCmdSeq(rP,0,null);
+			}
 		}
 
 	}

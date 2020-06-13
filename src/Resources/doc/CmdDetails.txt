@@ -3805,11 +3805,11 @@ face drawing order.</opt>
 	transforms and with the dual spanning tree can be used 
 	to layout a packing determined up to Mobius 
 	transformations by the layout of the first face. 
-	(Layout work spherical or euclidean geometry, not 
+	(Layout work in spherical or euclidean geometry, not 
 	hyperbolic.) Flags may specify use of current centers 
-	or radii, otherwise, a value x must be given. If 
-	schwarzian data has not been allocated, then this call 
-	will allocate the space. 
+	or radii to compute the schwarzians, or a value x may be
+	specified for given edges. This call will allocate 
+	schwarzian storage space if not already set.
 </description>
 <options>
 <opt flag="-c {v w ...}"> schwarzians based on existing layout centers</opt>
@@ -4105,6 +4105,9 @@ value is changed; here 'cmds' is a string of text enclosed by double
 quotes</opt> 
 <opt flag="-m ''cmds''"> Optional commands to be executed when a
 a mouse moves across a slider; here 'cmds' is a string of text 
+enclosed by double quotes</opt>
+<opt flag="-o ''cmds''"> Optional commands to be executed by user
+with a button click; here 'cmds' is a string of text 
 enclosed by double quotes</opt>
 <opt flag="-a {..}"> Add a slider for a new object</opt>
 <opt flag="-r {.}"> Remove an individual object</opt>

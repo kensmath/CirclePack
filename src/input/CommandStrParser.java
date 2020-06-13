@@ -8102,7 +8102,6 @@ public class CommandStrParser {
 						
 					int hits=0;
 					Iterator<Vector<String>> fls=flagSegs.iterator();
-					if (type==0) 
 					while (fls.hasNext()) {
 						items=fls.next();
 						fc = items.remove(0).charAt(1);
@@ -8147,6 +8146,20 @@ public class CommandStrParser {
 							}
 							generic.resetMin(min);
 							hits++;
+							break;
+						}
+						// set optional command: quoted text
+						case 'o': 
+						{
+							StringBuilder opbld=new StringBuilder(StringUtil.reconItem(items));
+							// get first quote-enclosed string
+							int k=opbld.indexOf("\"",0);
+							if (k>=0 && k<opbld.length()-1) {
+								int n=opbld.indexOf("\"",k+1);
+								if (n>=0) {
+									generic.optCmdField.setText(opbld.substring(k+1,n));
+								}
+							}
 							break;
 						}
 						case 'u': // set lower (min) value for sliders
@@ -8197,7 +8210,7 @@ public class CommandStrParser {
 			// =============== sch_layout ========
 			else if (cmd.startsWith("sch_lay")) {
 				if (!packData.haveSchwarzians()) {
-					CirclePack.cpb.errMsg("Schwarzians are not allocated");
+					CirclePack.cpb.errMsg("Schwarzians are not allocated for p"+packData.packNum);
 					return 0;
 				}
 				if (packData.hes < 0) {
@@ -8255,15 +8268,16 @@ public class CommandStrParser {
 				if (baseface > 0) {
 					packData.place_face(baseface, 0);
 
-					// layout problems can occur if we don't convert to sph geometry
-					if (packData.hes <= 0) {
-						packData.geom_to_s();
-						packData.fillcurves();
-						packData.setGeometry(packData.hes);
-						if (cpS != null)
-							cpS.setPackName();
-						jexecute(packData, "disp -w");
-					}
+					// TODO: layout problems can occur if not in sph geometry,
+					//  but should figure out check and just warn user.
+//					if (packData.hes <= 0) {
+//						packData.geom_to_s();
+//						packData.fillcurves();
+//						packData.setGeometry(packData.hes);
+//						if (cpS != null)
+//							cpS.setPackName();
+//						jexecute(packData, "disp -w");
+//					}
 
 					if (cflags != null) {
 						StringBuilder strbld = new StringBuilder("disp " + cflags);
@@ -8279,15 +8293,17 @@ public class CommandStrParser {
 					count++;
 				}
 
-				// layout problems can occur if we don't convert to sph geometry
-				if (packData.hes <= 0) {
-					packData.geom_to_s();
-					packData.fillcurves();
-					packData.setGeometry(packData.hes);
-					if (cpS != null)
-						cpS.setPackName();
-					jexecute(packData, "disp -w");
-				}
+				// TODO: layout problems can occur if we don't convert to sph geometry,
+				//    but instead of automatically converting, I should check to outcome
+				//    for problems and just send a message to the user.
+//				if (packData.hes <= 0) {
+//					packData.geom_to_s();
+//					packData.fillcurves();
+//					packData.setGeometry(packData.hes);
+//					if (cpS != null)
+//						cpS.setPackName();
+//					jexecute(packData, "disp -w");
+//				}
 
 				// now progress through edges <f,g> of 'graph'
 				Iterator<EdgeSimple> gst = graph.iterator();
@@ -8622,7 +8638,7 @@ public class CommandStrParser {
     						  }
     						  } // end of switch
     					  }
-    					  else
+    					  else // default to all using current layout
     						  clink=new EdgeLink(packData,items);
     				  } // end of reading option
     			  }
