@@ -10,7 +10,12 @@ import java.util.Iterator;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 
+import allMains.CPBase;
 import allMains.CirclePack;
+import complex.Complex;
+import geometry.CircleSimple;
+import geometry.HyperbolicMath;
+import geometry.SphericalMath;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
 import komplex.GraphSimple;
@@ -61,10 +66,10 @@ public class SchwarzSliders extends SliderFrame {
 		initGUI();
 
 		// add extra button and integer field for root
-		JButton button = new JButton("Root");
+		JButton button = new JButton("Lay out Base face");
 		button.setBorder(null);
 		button.setMargin(new Insets(10,25,10,25));
-		button.setPreferredSize(new Dimension(45,20));
+		button.setPreferredSize(new Dimension(85,20));
 			
 		rootField=new intNumField("",4);
 		rootField.setField(root);
@@ -92,15 +97,47 @@ public class SchwarzSliders extends SliderFrame {
 	}
 	
 	/**
-	 * Action for root button? just hold the index for now
-	 * @return 0 for now
+	 * Action for root button? Lay out the 'base equilateral' triangle.
+	 * Depends on geometry: prefer euclidean or spherical, so tangency
+	 * points are on the unit circle at cube roots of unity. For hyperbolic,
+	 * make much smaller.
+	 * @return int, 0 on error
 	 */
 	public int rootAction() {
-		int hit= cpCommand("sch_layout 0 "+root); // layout root face
-		if (hit==0)
+		int f=root;
+		if (f<0 || f>packData.faceCount) {
+			CirclePack.cpb.errMsg("slider usage: not 'root' specified");
 			return 0;
-		hit += cpCommand("disp -w -ffc80 "+root); // display the root face
-		return hit;
+		}
+		
+		// set the cclw order of vertices for the root face
+		int[] verts=packData.faces[f].vert;
+		int J=-1;
+		for (int j=0;(j<3 && J<0);j++) {
+			if (verts[j]==packData.alpha)
+				J=verts[j];
+		}
+		if (J==-1)
+			J=0;
+
+		// place euclidean circles
+		double sqrt3=Math.sqrt(3.0);
+		CircleSimple cS=new CircleSimple();
+		for (int j=0;j<3;j++) {
+			int v=verts[(j+J)%3];
+			Complex rot=new Complex(1.0,-sqrt3);
+			cS.center=CPBase.omega3[j].times(rot);  // rotate clw by pi/3
+			cS.rad=sqrt3;
+			if (packData.hes<0)  // shrink factor .05, convert
+				cS=HyperbolicMath.e_to_h_data(cS.center.times(0.05), cS.rad*0.05);
+			else if (packData.hes>0)  // sph, convert
+				cS=SphericalMath.e_to_s_data(cS.center, cS.rad);
+
+			packData.rData[v].center=new Complex(cS.center);
+			packData.rData[v].rad=cS.rad;
+		}
+
+		return cpCommand("disp -w -ffc90 "+f); // display the root face
 	}
 
 	// ============= abstract methods ==================

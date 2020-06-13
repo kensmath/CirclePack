@@ -46,8 +46,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	private static final long 
 	serialVersionUID = 1L;
 
-	CPScreen cpScreen;
-	PackData packData;
+	public PackData packData;
 	
 	// try to starting with these sizes
 	public static final int DEFAULT_WIDTH=420; 
@@ -81,9 +80,9 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	public xNumField minValue;  // 
 	public xNumField maxValue;
 	public JTextField changeCmdField; // optional command: execute on slider change
-	JCheckBox changeCheck;  // whether to apply change command
+	public JCheckBox changeCheck;  // whether to apply change command
 	public JTextField motionCmdField; // optional command: execute when mouse enters 
-	JCheckBox motionCheck;  // whether to apply motion command
+	public JCheckBox motionCheck;  // whether to apply motion command
 	public JTextField optCmdField; // optional command 
 	public JTextField addField;
 	public JTextField removeField;

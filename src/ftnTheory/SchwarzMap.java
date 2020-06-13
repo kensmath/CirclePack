@@ -245,7 +245,6 @@ public class SchwarzMap extends PackExtender {
 					(items=flagSegs.get(0)).get(0).length()<1) {
 				CirclePack.cpb.errMsg("usage: s_set {v w s ....}");
 			}
-			int count=0;
 			int v;
 			int w;
 			double s_coeff;

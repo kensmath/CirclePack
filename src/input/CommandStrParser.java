@@ -8075,27 +8075,29 @@ public class CommandStrParser {
 					return 0;
 				}
 				
+				SliderFrame generic=packData.radiiSliders;
+				if (type==1) 
+					generic=packData.schwarzSliders;
+								
 				// three situations:
-				// * no other flags: create with specified objects (perhaps defaulting to all)
+				// * no other flags: create with specified objects (perhaps to default)
 				// * -c or -m flags, reconstitute flagSegs and pass for creation
 				// * nothing else in first item, but then flags such as -a or -r (add/remove)
 				if (flagSegs.size() == 0) {
 					return CreateSliderFrame.createSliderFrame(packData, type, items);
 				}
 				items = flagSegs.get(0);
+				
 				try {
 					
-					// -c or -m flags mean a creation event
+					// not open? ONly the -c, -m, or -o flag means to create
 					char fc=items.get(0).charAt(1);
-					if (fc=='c' || fc=='m') {
+					if ((generic==null || generic.packData.nodeCount!=packData.nodeCount) &&
+							(fc=='c' || fc=='m' || fc=='o')) {
 						StringBuilder strbld=new StringBuilder(StringUtil.reconstitute(flagSegs));
 						return CreateSliderFrame.createSliderFrame(packData,type,strbld);
 					}
-					
-					// check that sliderframe exists
-					SliderFrame generic=packData.radiiSliders;
-					if (type==1) 
-						generic=packData.schwarzSliders;
+
 					if (generic==null) { 
 						throw new ParserException("expected sliderframe does not exist.");
 					}
@@ -8106,6 +8108,53 @@ public class CommandStrParser {
 						items=fls.next();
 						fc = items.remove(0).charAt(1);
 						switch (fc) {
+						// set change command: quoted text
+						case 'c': 
+						{
+							StringBuilder chgbld=new StringBuilder(StringUtil.reconItem(items));
+							// get first quote-enclosed string
+							int k=chgbld.indexOf("\"",0);
+							if (k>=0 && k<chgbld.length()-1) {
+								int n=chgbld.indexOf("\"",k+1);
+								if (n>=0) {
+									generic.changeCmdField.setText(chgbld.substring(k+1,n));
+									generic.changeCheck.setSelected(true);
+									hits++;
+								}
+							}
+							break;
+						}
+						// set move command: quoted text
+						case 'm': 
+						{
+							StringBuilder mvbld=new StringBuilder(StringUtil.reconItem(items));
+							// get first quote-enclosed string
+							int k=mvbld.indexOf("\"",0);
+							if (k>=0 && k<mvbld.length()-1) {
+								int n=mvbld.indexOf("\"",k+1);
+								if (n>=0) {
+									generic.optCmdField.setText(mvbld.substring(k+1,n));
+									generic.motionCheck.setSelected(true);
+									hits++;
+								}
+							}
+							break;
+						}
+						// set optional command: quoted text
+						case 'o': 
+						{
+							StringBuilder opbld=new StringBuilder(StringUtil.reconItem(items));
+							// get first quote-enclosed string
+							int k=opbld.indexOf("\"",0);
+							if (k>=0 && k<opbld.length()-1) {
+								int n=opbld.indexOf("\"",k+1);
+								if (n>=0) {
+									generic.optCmdField.setText(opbld.substring(k+1,n));
+									hits++;
+								}
+							}
+							break;
+						}
 						case 'a': // add object
 						{
 							items.remove(0);
@@ -8146,20 +8195,6 @@ public class CommandStrParser {
 							}
 							generic.resetMin(min);
 							hits++;
-							break;
-						}
-						// set optional command: quoted text
-						case 'o': 
-						{
-							StringBuilder opbld=new StringBuilder(StringUtil.reconItem(items));
-							// get first quote-enclosed string
-							int k=opbld.indexOf("\"",0);
-							if (k>=0 && k<opbld.length()-1) {
-								int n=opbld.indexOf("\"",k+1);
-								if (n>=0) {
-									generic.optCmdField.setText(opbld.substring(k+1,n));
-								}
-							}
 							break;
 						}
 						case 'u': // set lower (min) value for sliders

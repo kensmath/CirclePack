@@ -574,7 +574,7 @@ public class StringUtil {
 						m++;
 					}
 					if (!fixed) {
-						throw new ParserException("Unmatched '(' in expression.");
+						throw new ParserException("Unmatched '"+c+"' in expression.");
 					}
 				}
 				else newvec.add(nxtstr);
