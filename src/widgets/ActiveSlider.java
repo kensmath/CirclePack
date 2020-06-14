@@ -59,8 +59,8 @@ public class ActiveSlider extends JPanel implements MouseListener,
 		add(valueField);
 		
 		if (active) {
-			addMouseListener(this);
-			addMouseMotionListener(this);
+			labelField.addMouseListener(this);
+//			labelField.addMouseMotionListener(this);
 		}
 	}
 	

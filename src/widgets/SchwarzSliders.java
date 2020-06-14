@@ -66,10 +66,10 @@ public class SchwarzSliders extends SliderFrame {
 		initGUI();
 
 		// add extra button and integer field for root
-		JButton button = new JButton("Lay out Base face");
+		JButton button = new JButton("Lay Base face");
 		button.setBorder(null);
 		button.setMargin(new Insets(10,25,10,25));
-		button.setPreferredSize(new Dimension(85,20));
+		button.setPreferredSize(new Dimension(95,20));
 			
 		rootField=new intNumField("",4);
 		rootField.setField(root);
@@ -106,7 +106,7 @@ public class SchwarzSliders extends SliderFrame {
 	public int rootAction() {
 		int f=root;
 		if (f<0 || f>packData.faceCount) {
-			CirclePack.cpb.errMsg("slider usage: not 'root' specified");
+			CirclePack.cpb.errMsg("slider usage: no 'root' specified");
 			return 0;
 		}
 		
