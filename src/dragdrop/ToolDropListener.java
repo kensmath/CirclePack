@@ -101,10 +101,10 @@ public class ToolDropListener implements DropTargetListener {
 //				System.err.println("got here: newCmd "+newCmd);
 				// NOTE: for spherical packing, parser must convert to real point 
 				CPBase.trafficCenter.parseWrapper(newCmd,
-						CPBase.pack[thePackNum].packData,false,false,0,null);
+						CPBase.pack[thePackNum].getPackData(),false,false,0,null);
 				return;
 			}
-			mytool.execute(CPBase.pack[thePackNum].packData);
+			mytool.execute(CPBase.pack[thePackNum].getPackData());
 		}
 	}
 	

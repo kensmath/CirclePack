@@ -289,7 +289,7 @@ public class MyTool extends JButton {
 	 */
 	public void execute() { // apply to canvas packing or active packing
 		if (activeWrapper!=null) // tool created to apply to particular window
-			execute(activeWrapper.getCPScreen().packData);
+			execute(activeWrapper.getCPScreen().getPackData());
 		else execute(CirclePack.cpb.getActivePackData());
 	}
 

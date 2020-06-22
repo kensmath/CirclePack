@@ -893,7 +893,8 @@ public class StringUtil {
 	   * but we keep quoted substrings in tact. So, e.g., a quoted 
 	   * substring may have ';'s which are shielded from the splitting 
 	   * operation. We also catch things like repeated ';'s, empty
-	   * commands, and we 'trim' the command strings. This code is 
+	   * commands; we 'trim' the command strings, but put a space 
+	   * before abutting a quoted string. This code is 
 	   * sensitive, so on some error, just abandon by returning null.
 	   * @param origStr StringBuilder
 	   * @return Vector<StringBuilder>, null on error
@@ -901,12 +902,13 @@ public class StringUtil {
 	  public static Vector<StringBuilder> cmdSplitter(StringBuilder origStr) {
 		  Vector<StringBuilder> cmdSegs=new Vector<StringBuilder>(0); 
 
-		  // break into alternating unquoted/quoted segments
+		  // break into alternating unquoted/quoted un-trimmed segments
 		  Vector<StringBuilder> q_segs=quoteAnalyzer(origStr);
 		  if (q_segs==null || q_segs.size()==1 || q_segs.get(0).charAt(0)=='"')
 			  return null;
 		  
-		  // build single command string in 'gotcmd'
+		  // build single command string in 'gotcmd' and add to 'cmdSegs' only
+		  //   when done.
 		  StringBuilder gotcmd=null;
 		  Iterator<StringBuilder> q_ls=q_segs.iterator(); // q_segs.get(3).toString()
 		  while (q_ls.hasNext()) {
@@ -920,6 +922,8 @@ public class StringUtil {
 			  
 			  // break 'unquoted' into pieces so we can parse it
 			  Vector<StringBuilder> segsegs=StringUtil.semicolonSeparated(unquoted);
+			  
+			  // no more unquoted pieces, so wrap up what we have 
 			  if (segsegs==null || segsegs.size()==0) {
 				  if (quoted==null) {
 					  if (gotcmd!=null && gotcmd.length()>0)
@@ -935,6 +939,18 @@ public class StringUtil {
 			  while (ssls.hasNext()) {
 				  StringBuilder seg=ssls.next();
 				  int sc=seg.indexOf(";");
+				  
+				  // leading ';'? finish this command and get ready for next
+				  if (sc==0) {
+					  if (gotcmd!=null && gotcmd.length()>0) {
+						  cmdSegs.add(gotcmd);
+						  gotcmd=null;
+					  }
+					  seg.deleteCharAt(0);
+					  if (seg.length()>0) {
+						  sc=seg.indexOf(";");
+					  }
+				  }
 				  
 				  // ends with ';'
 				  if (sc>0) {
@@ -981,35 +997,54 @@ public class StringUtil {
 	  /**
 	   * Break SpringBuilder into semicolon-separated non-empty segments. 
 	   * For segments ending with ';', remove the ';' to trim, then add it
-	   * back in so we can identify such segments.
+	   * back in so we can identify such segments. May also begin with a ';',
+	   * which (after clearing redundant ';' and whitespace) we include at
+	   * the beginning and calling routine must handle it.
 	   * @param inbld StringBuilder
 	   * @return Vector<StringBuilder>, null on error
 	   */
 	  public static Vector<StringBuilder> semicolonSeparated(StringBuilder inbld) {
-		  if (inbld.indexOf("\"")>=0) // should have no double quotes
+		  if (inbld.indexOf("\"")>=0) // error: should have no double quotes
 			  return null;
 		  char c;
 		  Vector<StringBuilder> ansvec=new Vector<StringBuilder>(0);
-		  StringBuilder seg=null;
 		  
 		  int hit=0;
 		  int spot=0;
+		  boolean lead_semicolon=false;
 		  int N=inbld.length();
 		  while (spot<N) {
-			  // get rid of leading ';' and whitespace
-			  while (spot<N && 
-				  ((c=inbld.charAt(spot))==';' || Character.isWhitespace(c)))
+			  // get rid of leading whitespace
+			  while (spot<N && Character.isWhitespace(inbld.charAt(spot)))
 				  spot++;
 			  if (spot==N)
 				  return ansvec;
+			  // note if there's a leading ';'
+			  if (inbld.charAt(spot)==';') {
+				  lead_semicolon=true;
+				  spot++;
+				  // eliminate subsequent redundant semicolons and whitespace
+				  while (spot<N &&
+						  ((c=inbld.charAt(spot))==';' || Character.isWhitespace(c)))
+					  spot++;
+			  }
+			  if (spot==N) { // nothing here, return 
+				  return ansvec;
+			  }
+			  
+			  // now look for subsequent ';'
 			  hit=inbld.indexOf(";",spot);
 			  if (hit>spot) { // string is non-empty, include the ending ';'
 				  StringBuilder tmpbld=new StringBuilder(inbld.substring(spot,hit).trim());
 				  tmpbld.append(";");
+				  if (lead_semicolon)
+					  tmpbld.insert(0, ";");
 				  spot=hit+1;
 			  }
 			  else { // must be last segment
 				  StringBuilder tmpbld=new StringBuilder(inbld.substring(spot).trim()); 
+				  if (lead_semicolon)
+					  tmpbld.insert(0, ";");
 				  if (tmpbld.length()>0)
 					  ansvec.add(tmpbld);
 				  return ansvec;
@@ -1027,8 +1062,8 @@ public class StringUtil {
 	   * (and include the quotes themselves) or before/after/between 
 	   * those. 
 	   * Note: one should be able to reconstruct the full original 
-	   * by concatenating the strings of the returned vector.
-	   * (e.g., if no quotes, get single original string in returned 
+	   * by concatenating the strings of the returned vector, so we
+	   * do not trim. (e.g., if no quotes, get single original string in returned 
 	   * vector; so, e.g., we do not 'trim' the unquoted segments)
 	   * @param inbld StringBuilder
 	   * @return new Vector<StringBuilder>, null on error such as 

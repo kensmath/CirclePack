@@ -210,7 +210,7 @@ public class Necklace extends PackExtender {
 			// save the resulting packing as the parent packing
 			CPScreen cpS=packData.cpScreen;
 			cpS.swapPackData(topPack,false);
-			packData=cpS.packData;
+			packData=cpS.getPackData();
 			
 			// do some fixup
 			packData.setCombinatorics();
@@ -284,11 +284,11 @@ public class Necklace extends PackExtender {
 				Oops("problem saving");
 			if (cmd.charAt(4)=='B' || cmd.charAt(4)=='b') {
 				cpS.swapPackData(bottomPack,false);
-				packData=cpS.packData;
+				packData=cpS.getPackData();
 			}
 			else {
 				cpS.swapPackData(topPack,false);
-				packData=cpS.packData;
+				packData=cpS.getPackData();
 			}
 			return 1;
 		}
@@ -325,7 +325,7 @@ System.err.println("starting bottomHemi:");
 			// save the resulting packing as the parent packing
 			CPScreen cpS=packData.cpScreen;
 			cpS.swapPackData(topHemi,false);
-			packData=cpS.packData;
+			packData=cpS.getPackData();
 			
 			return packData.nodeCount;
 		}

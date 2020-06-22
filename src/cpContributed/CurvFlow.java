@@ -222,7 +222,7 @@ public class CurvFlow extends PackExtender {
 					case 'q':
 					{ // compare to another packing
 						return setRadRatio(packData,
-								PackControl.pack[StringUtil.qFlagParse(items.get(0))].packData);
+								PackControl.pack[StringUtil.qFlagParse(items.get(0))].getPackData());
 					}
 					} // end of switch
 				}
@@ -542,7 +542,7 @@ public class CurvFlow extends PackExtender {
 					case 'q':
 					{ // compare to another packing
 						return setAngDiff(packData,
-								PackControl.pack[StringUtil.qFlagParse(items.get(0))].packData);
+								PackControl.pack[StringUtil.qFlagParse(items.get(0))].getPackData());
 					}
 					} // end of switch
 				}
@@ -580,7 +580,7 @@ public class CurvFlow extends PackExtender {
 					case 'q':
 					{ // compare to another packing
 						int ans=setAimDiff(packData,
-								PackControl.pack[StringUtil.qFlagParse(items.get(0))].packData);
+								PackControl.pack[StringUtil.qFlagParse(items.get(0))].getPackData());
 						return ans;
 					}
 					} // end of switch

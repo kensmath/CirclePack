@@ -224,7 +224,7 @@ public class MainFrame extends JFrame {
 	public void updateTitle() {
 		int pnum=getActivePackNum();
 		setTitle("Active Packing p"+pnum+": "+
-				CPBase.pack[pnum].packData.fileName);
+				CPBase.pack[pnum].getPackData().fileName);
 	}
 	
 	/**
@@ -321,7 +321,7 @@ public class MainFrame extends JFrame {
 		activeScreen.setBorder(new LineBorder(Color.blue,2,false));
 		// Note: the canvas itself if drop target to get correct coords.
 		new DropTarget(activeScreen,
-				new ToolDropListener(activeScreen,cpScreen.packData.packNum,true));
+				new ToolDropListener(activeScreen,cpScreen.getPackNum(),true));
 	}	
 	
 	public void removeScriptTools() {
@@ -356,7 +356,7 @@ public class MainFrame extends JFrame {
 	 * @return PackData
 	 */
 	public PackData getPackData() {
-		return activeScreen.getCPScreen().packData;
+		return activeScreen.getCPScreen().getPackData();
 	}
 	
 	/**
@@ -364,7 +364,7 @@ public class MainFrame extends JFrame {
 	 * @return int
 	 */
 	public int getActivePackNum() {
-		return activeScreen.getCPScreen().packData.packNum;
+		return activeScreen.getCPScreen().getPackNum();
 	}
 
 	/**

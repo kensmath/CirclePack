@@ -191,7 +191,7 @@ public class MyCanvasMode extends MyTool {
 			cmd=cmd.replace("#xy"," "+pt2D.x+" "+pt2D.y+" ");
 		}
 		try {
-			ans=CPBase.trafficCenter.parseWrapper(cmd,aW.cpScreen.packData,false,false,0,null);
+			ans=CPBase.trafficCenter.parseWrapper(cmd,aW.cpScreen.getPackData(),false,false,0,null);
 		} catch (Exception ex) {
 			CirclePack.cpb.errMsg("myCursor execution failed");
 			return -1;
@@ -232,7 +232,7 @@ public class MyCanvasMode extends MyTool {
 			Matrix3D matrix=Matrix3D.times(rot,cpS.sphView.viewMatrix);
 			if (!Matrix3D.isNaN(matrix)) {
 				cpS.sphView.viewMatrix=new Matrix3D(matrix);
-				TrafficCenter.cmdGUI(cpS.packData,"disp -wr");
+				TrafficCenter.cmdGUI(cpS.getPackData(),"disp -wr");
 			}
 		} catch (Exception ex) {return;}
 	}
@@ -263,7 +263,7 @@ public class MyCanvasMode extends MyTool {
 		Point2D.Double pt=aW.cpScreen.pt2RealPt(point, dim.width,dim.height);
 		int ans=0;
 		try {
-			ans=TrafficCenter.cmdGUI(aW.cpScreen.packData,"locate -c " + pt.x + " " + pt.y);
+			ans=TrafficCenter.cmdGUI(aW.cpScreen.getPackData(),"locate -c " + pt.x + " " + pt.y);
 		} catch (Exception ex) {return;}
 		if (ans>0) 
 			rePaint(aW);
@@ -283,7 +283,7 @@ public class MyCanvasMode extends MyTool {
 		Point2D.Double pt=aW.cpScreen.pt2RealPt(point, dim.width,dim.height);
 		int ans=0;
 		try {
-			ans=TrafficCenter.cmdGUI(aW.cpScreen.packData,"locate -f " + pt.x + " " + pt.y);
+			ans=TrafficCenter.cmdGUI(aW.cpScreen.getPackData(),"locate -f " + pt.x + " " + pt.y);
 		} catch (Exception ex) {return;}
 		if (ans>0) 
 			rePaint(aW);
@@ -323,7 +323,7 @@ public class MyCanvasMode extends MyTool {
 		CPScreen cpS=aW.getCPScreen();
 		ACTIVEHandler mH=aW.activeHandler;
 		Point point=e.getPoint();
-		if (cpS.packData.getGeometry()>0) { // sphere
+		if (cpS.getGeom()>0) { // sphere
 			mH.handX=point.x;
 			mH.handY=point.y;
 			rotate(aW);
@@ -333,7 +333,7 @@ public class MyCanvasMode extends MyTool {
 					mH.handStartX-point.x)*cpS.XWidth/aW.getWidth(),
 					(point.y-mH.handStartY)*cpS.YHeight/aW.getHeight());
 	  		try {
-	  			TrafficCenter.cmdGUI(cpS.packData,"disp -wr"); // repaint only active screen
+	  			TrafficCenter.cmdGUI(cpS.getPackData(),"disp -wr"); // repaint only active screen
 	  		} catch (Exception ex) {}
 		}
 		mH.handStartX = point.x;

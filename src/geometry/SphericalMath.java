@@ -65,7 +65,8 @@ public class SphericalMath{
    * TODO: Is this okay if r1+r2+r3 > M_PI? 
   */
   public static double s_comp_cos(double r1,double r2,double r3) {
-	  double denom,sumr;
+	  double denom;
+	  double sumr;
 
 	  sumr=r1+r2+r3;
 	  if (Math.abs(Math.PI-sumr)<S_TOLER) { // three centers lie on great circle

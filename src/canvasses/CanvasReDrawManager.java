@@ -52,7 +52,7 @@ public class CanvasReDrawManager {
 	}
 	
 	public void changeActive(CPScreen cps) {
-		changeActive(cps.packData.packNum);
+		changeActive(cps.getPackData().packNum);
 	}
 	
 	// After initiation, only called through ComboBox action
@@ -110,7 +110,7 @@ public class CanvasReDrawManager {
 	 * @param aO boolean: yes means active pack only 
 	 */
 	public void paintMyCanvasses(CPScreen cps,boolean aO) {
-		paintMyCanvasses(cps.packData.packNum,aO);
+		paintMyCanvasses(cps.getPackNum(),aO);
 	}
 	
 }

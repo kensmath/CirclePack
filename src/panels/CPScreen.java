@@ -109,7 +109,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 	public static final String customGlobal="CP_custom.ps"; // global default file for PostScript
 	public String customPS; // default PostScript file chosen for this packing; may be null.
 
-	public PackData packData;
+	PackData packData;
 	int packNum; // (should be more general, say 'userNum')
 	
 	// instance variables
@@ -911,6 +911,39 @@ public class CPScreen extends JPanel implements	MouseListener {
 			this.drawYAxis(g2);
 		}
 	}
+
+	/**
+	 * get the current 'packData' for this screen
+	 * @return PackData
+	 */
+	public PackData getPackData() {
+		return packData;
+	}
+	
+	/**
+	 * Replace the 'packData' for this screen; clean out any
+	 * 'SliderFrame' objects.
+	 * @param p
+	 * @return int, nodeCount
+	 */
+	public int setPackData(PackData p) {
+		if (packData!=p) { // a different packing?
+			if (packData.radiiSliders!=null) {
+				packData.radiiSliders.dispose();
+				packData.radiiSliders=null;
+			}
+			if (packData.schwarzSliders!=null) {
+				packData.schwarzSliders.dispose();
+				packData.schwarzSliders=null;
+			}
+			if (packData.angSumSliders!=null) {
+				packData.angSumSliders.dispose();
+				packData.angSumSliders=null;
+			}
+		}
+		packData=p;
+		return packData.nodeCount;
+	}
 	
 	public Image getThumbnailImage(){
 	    if(packImage != null)
@@ -932,6 +965,14 @@ public class CPScreen extends JPanel implements	MouseListener {
 			case 0:	return new String(" (eucl)");
 			default: return new String(" (sph)");
 		}
+	}
+	
+	/**
+	 * Return the geometry of 'packData'
+	 * @return
+	 */
+	public int getGeom(){
+		return packData.hes;
 	}
 	
 	/**
@@ -1001,7 +1042,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 		}
 		if (keepX) 
 			pNew.packExtensions=packData.packExtensions;
-		packData=pNew; // old pack info to garbage.
+		setPackData(pNew); // old pack info to garbage.
 		packData.cpScreen=this;
 		packData.packNum=packNum;
 		setGeometry(packData.hes);
@@ -1014,7 +1055,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 	 * and 'dispOptions'.
 	 */
 	public int emptyPacking() {
-		packData=new PackData(this);
+		setPackData(new PackData(this));
 		reset();
 		sphView.defaultView();
 		clearCanvas(true);

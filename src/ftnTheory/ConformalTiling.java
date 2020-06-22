@@ -232,7 +232,7 @@ public class ConformalTiling extends PackExtender {
 			if (newData==null)
 				Oops("Failed to build initial seed.");
 			cps.swapPackData(newData,true);
-			packData=cps.packData;
+			packData=cps.getPackData();
   		  	packData.tileData.myTiles[1].tileType=type;
   		  	
   		  	// now build subdivision tiling to depth, specified now in 'flgS'

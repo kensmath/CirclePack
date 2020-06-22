@@ -77,11 +77,11 @@ public class ShapeShifter extends PackExtender {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
 				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS.packData.nodeCount!=baseData.nodeCount) {
+				if (cpS.getPackData().nodeCount!=baseData.nodeCount) {
 					errorMsg("getDom: range packing complex must match domain");
 					return 0;
 				}
-				baseData=cpS.packData.copyPackTo();
+				baseData=cpS.getPackData().copyPackTo();
 				int rslt;
 				try {
 					rslt=cpCommand(baseData,"geom_to_e");

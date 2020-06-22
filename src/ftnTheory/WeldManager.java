@@ -1309,7 +1309,7 @@ public class WeldManager extends PackExtender {
 		  			{
 		  				try {
 		  					p2=PackControl.pack[StringUtil.
-		  					         qFlagParse(str)].packData;
+		  					         qFlagParse(str)].getPackData();
 		  				} catch (Exception ex) {
 		  					throw new ParserException("Indicated weld partner "+
 		  							"pack is not valid");
@@ -1404,7 +1404,7 @@ public class WeldManager extends PackExtender {
 		  			{
 		  				try {
 		  					qnum=StringUtil.qFlagParse(str);
-		  					p2=CPBase.pack[qnum].packData.copyPackTo();
+		  					p2=CPBase.pack[qnum].getPackData().copyPackTo();
 		  				} catch (Exception ex) {
 		  					throw new ParserException("Indicated weld partner "+
 		  							"pack is not valid");

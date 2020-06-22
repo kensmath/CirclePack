@@ -102,7 +102,7 @@ public class ActiveWrapper extends JPanel implements KeyListener,
 		try {
 			cpScreen.realBox.scaleView(zoomOutMultiplier);
 			cpScreen.update(2);
-			TrafficCenter.cmdGUI(cpScreen.packData,"disp -wr");
+			TrafficCenter.cmdGUI(cpScreen.getPackData(),"disp -wr");
 		} catch (Exception ex) {return;}
 		repaint();
 	}
@@ -111,7 +111,7 @@ public class ActiveWrapper extends JPanel implements KeyListener,
 		try {
 			cpScreen.realBox.scaleView(zoomInMultiplier);
 			cpScreen.update(2);
-			TrafficCenter.cmdGUI(cpScreen.packData,"disp -wr");
+			TrafficCenter.cmdGUI(cpScreen.getPackData(),"disp -wr");
 		} catch (Exception ex) {return;}
 		repaint();
 	}
@@ -209,11 +209,11 @@ public class ActiveWrapper extends JPanel implements KeyListener,
 	public void mouseMoved(MouseEvent e) {
 		Point2D.Double pt2D=cpScreen.pt2RealPt(e.getPoint(),getWidth(),getHeight());
 		Complex z=new Complex(pt2D.x,pt2D.y);
-		if (cpScreen.packData.hes>0) { // sphere
+		if (cpScreen.getGeom()>0) { // sphere
 			if (z.abs()>1.0) return;
   		  	z=cpScreen.sphView.toRealSph(SphView.visual_plane_to_s_pt(z));
 		}
-		PackControl.activeFrame.updateLocPanel(cpScreen.packData.hes,z);
+		PackControl.activeFrame.updateLocPanel(cpScreen.getGeom(),z);
 	}
 	
 	//AF>>>//

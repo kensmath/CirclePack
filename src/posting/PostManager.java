@@ -236,7 +236,7 @@ public class PostManager {
 	    bw.write("   72 72 sc % inches\n   "+4.25+" "+5.5+" tr\n"+
 	    "   1 slc  1 slj\n");
 	    post_size_settings(bw,cpScreen,6); // BoundingBox, size info, clip window
-	    if (cpScreen.packData.hes!=0) // sph/hyp case: draw sphere/disc first
+	    if (cpScreen.getGeom()!=0) // sph/hyp case: draw sphere/disc first
 	    	bw.write("n 0 0 1 c\n\n");
 	}
 

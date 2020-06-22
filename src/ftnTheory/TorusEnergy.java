@@ -161,7 +161,7 @@ public class TorusEnergy extends PackExtender {
 				if (tmpPack!=null && (compEnergy<energy || Math.exp(-(compEnergy-energy)/temp)>cutoff)) {
 					CPScreen cps=packData.cpScreen;
 					cps.swapPackData(tmpPack,true);
-					packData=cps.packData;
+					packData=cps.getPackData();
 					hits++;
 				}
 				tick++;

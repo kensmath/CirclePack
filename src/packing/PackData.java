@@ -86,6 +86,7 @@ import util.SphView;
 import util.StringUtil;
 import util.TriAspect;
 import util.UtilPacket;
+import widgets.AngSumSliders;
 import widgets.RadiiSliders;
 import widgets.SchwarzSliders;
 
@@ -198,7 +199,8 @@ public class PackData{
     public int layoutOption;     // for testing layout procedures
     
     public RadiiSliders radiiSliders;
-    public SchwarzSliders schwarzSliders; 
+    public SchwarzSliders schwarzSliders;
+    public AngSumSliders angSumSliders;
     
     // Constructor
     public PackData(CPScreen parentScreen){
@@ -227,6 +229,7 @@ public class PackData{
     	vertexMap=null;
     	colorIndx=0;
     }
+    
 
     /**
      * Read new circle packing (or data for existing packing) 
@@ -2184,14 +2187,6 @@ public class PackData{
 	public void setGeometry(int hes) {
 		if (cpScreen!=null) 
 			cpScreen.setGeometry(hes);
-	}
-	
-	/**
-	 * return integer in {0,-1,1} for the geometry
-	 * @return int
-	 */
-	public int getGeometry() {
-		return hes;
 	}
 	
 	/**
@@ -9943,7 +9938,7 @@ public class PackData{
 				  }
 			  }
 			  if (qnum>=0 && qnum<CPBase.NUM_PACKS) 
-				  qackData=PackControl.pack[qnum].packData;
+				  qackData=PackControl.pack[qnum].getPackData();
 			  else 
 				  throw new ParserException("Specified pack numbe, "+qnum+", is out of range");
 			  if (hes!=qackData.hes) {
@@ -9979,7 +9974,7 @@ public class PackData{
 				  }
 			  }
 			  if (pnum>=0 && pnum<CPBase.NUM_PACKS) 
-				  qackData=PackControl.pack[pnum].packData;
+				  qackData=PackControl.pack[pnum].getPackData();
 			  else throw new ParserException("Pack number, "+pnum+", is out of range");
 			  
 			  if (items!=null && items.size()>0)
@@ -10145,7 +10140,7 @@ public class PackData{
 					  }
 				  }
 				  if (qnum>=0 && qnum<CPBase.NUM_PACKS) 
-					  qackData=PackControl.pack[qnum].packData;
+					  qackData=PackControl.pack[qnum].getPackData();
 				  else throw new ParserException("Pack number, "+qnum+", out of range");
 				  if (hes!=qackData.hes) {
 					  throw new ParserException("set_color: area comparision only if  both hyp or both eucl.");
@@ -10171,7 +10166,7 @@ public class PackData{
 					  }
 				  }
 				  if (pnum>=0 && pnum<CPBase.NUM_PACKS) 
-					  qackData=PackControl.pack[pnum].packData;
+					  qackData=PackControl.pack[pnum].getPackData();
 				  else throw new ParserException("Pack number, "+pnum+", out of range");
 
 				  facelist=new FaceLink(this,items);
@@ -10430,7 +10425,7 @@ public class PackData{
 					  }
 					  if (qnum<0 || qnum>=CPBase.NUM_PACKS)
 						  throw new ParserException();
-					  qackData=PackControl.pack[qnum].packData;
+					  qackData=PackControl.pack[qnum].getPackData();
 					  break;
 				  }
 				  case 'm':

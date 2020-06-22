@@ -81,6 +81,7 @@ import ftnTheory.WeldManager;
 import ftnTheory.WordWalker;
 import ftnTheory.iGame;
 import geometry.CircleSimple;
+import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.NSpole;
@@ -225,8 +226,8 @@ public class CommandStrParser {
     	  for (int i=0;i<CPBase.NUM_PACKS;i++) {
     		  CPScreen cps=CPBase.pack[i];
     		  // TODO: want to white out underlying canvas to avoid flashing
-    		  if (cps.packData.status) {
-    			  cps.packData.packExtensions=new Vector<PackExtender>(2);
+    		  if (cps.getPackData().status) {
+    			  cps.getPackData().packExtensions=new Vector<PackExtender>(2);
     			  cps.emptyPacking();
     			  cps.updateXtenders();
     			  count++;
@@ -456,7 +457,7 @@ public class CommandStrParser {
 			  CirclePack.cpb.msg("Have replaced packing with new one derived from '"+filename+"'.");
 			  CPScreen cps=packData.cpScreen; 
 			  cps.swapPackData(newPack,false);
-			  packData=cps.packData;
+			  packData=cps.getPackData();
 			  count=packData.nodeCount;
 			  
 			  try {
@@ -584,7 +585,7 @@ public class CommandStrParser {
 				  p_from_lite.packNum=packData.packNum;
 				  p_from_lite.cpScreen=packData.cpScreen;
 				  packData=p_from_lite;
-				  packData.cpScreen.packData=packData;
+				  packData.cpScreen.setPackData(packData);
 				  packData.cpScreen.setGeometry(packData.hes);
 				  packData.status=true;
 				  packData.setName(filename);
@@ -712,7 +713,7 @@ public class CommandStrParser {
 		  if (pdata!=null) {
 			  CPScreen cpS=packData.cpScreen;
 			  cpS.swapPackData(pdata,false);
-			  packData=cpS.packData;
+			  packData=cpS.getPackData();
 			  
 			  packData.chooseAlpha();
 			  packData.chooseGamma();
@@ -792,12 +793,12 @@ public class CommandStrParser {
 	    	  int pnum2=Integer.parseInt((String)items.get(1));
 
 	    	  if (pnum1<0 || pnum1>=CPBase.NUM_PACKS 
-	    			  || !CPBase.pack[pnum1].packData.status 
+	    			  || !CPBase.pack[pnum1].getPackData().status 
 	    			  || pnum2<0 || pnum2>=CPBase.NUM_PACKS 
-	    			  || !CPBase.pack[pnum2].packData.status) 
+	    			  || !CPBase.pack[pnum2].getPackData().status) 
 	    		  throw new ParserException("illegal or inactive packings specified");
-	    	  packData=CPBase.pack[pnum1].packData; // this is where the final pack will go
-	    	  PackData qackData=CPBase.pack[pnum2].packData;
+	    	  packData=CPBase.pack[pnum1].getPackData(); // this is where the final pack will go
+	    	  PackData qackData=CPBase.pack[pnum2].getPackData();
 	    	  
 	    	  int v1=NodeLink.grab_one_vert(packData,(String)items.get(2));
 	    	  int v2=NodeLink.grab_one_vert(qackData,(String)items.get(3));
@@ -990,7 +991,7 @@ public class CommandStrParser {
 	      if (cmd.startsWith("clean")) {
 			  packData.packExtensions=new Vector<PackExtender>(2); // trash any extensions
 			  cpScreen.emptyPacking();
-			  packData=cpScreen.packData;
+			  packData=cpScreen.getPackData();
 			  cpScreen.updateXtenders();
 			  return 1;
 	      }
@@ -1290,7 +1291,7 @@ public class CommandStrParser {
 			  
 			  CPScreen cps=packData.cpScreen; 
 			  cps.swapPackData(newPack,false);
-			  packData=cps.packData;
+			  packData=cps.getPackData();
 			  count=packData.nodeCount;
 
 			  return count;
@@ -1431,7 +1432,7 @@ public class CommandStrParser {
 			  randPack.fileName=new String("Delaunay"+N);
 			  CPScreen cpS=packData.cpScreen;
 			  cpS.swapPackData(randPack,false);
-			  packData=cpS.packData;
+			  packData=cpS.getPackData();
 			  
 			  packData.chooseAlpha();
 			  packData.chooseGamma();
@@ -1509,10 +1510,10 @@ public class CommandStrParser {
 	    			  || n<1 || n>3) {
 	    		  throw new ParserException("improper call");
 	    	  }
-	    	  PackData p=Erf_function.erf_ftn(CPBase.pack[p1num].packData,n);
+	    	  PackData p=Erf_function.erf_ftn(CPBase.pack[p1num].getPackData(),n);
 	    	  if (p==null) return 0;
 	    	  CPBase.pack[p2num].swapPackData(p,false); // install as new pack[p2num]
-	    	  return CPBase.pack[p2num].packData.nodeCount;
+	    	  return CPBase.pack[p2num].getPackData().nodeCount;
 	      }
 	      
 	      // ============= extender ===========
@@ -1638,7 +1639,7 @@ public class CommandStrParser {
 	    			  int qnum=StringUtil.qFlagParse(srpt);
 	    			  
 	    			  MicroGrid px=new MicroGrid(packData,
-	    					  CPBase.pack[qnum].packData,null,script_flag);
+	    					  CPBase.pack[qnum].getPackData(),null,script_flag);
 	    			  if (px.running) {
 	    				  CirclePack.cpb.msg("Pack "+packData.packNum+
 	    						  ": started "+px.extensionAbbrev+" extender, mode 2");
@@ -2381,8 +2382,8 @@ public class CommandStrParser {
 	  {
 	      // =========== h_g_bar ===========
 	      if (cmd.startsWith("h_g_bar")) {
-	    	  PackData Hp=CPBase.pack[0].packData;
-	    	  PackData Gp=CPBase.pack[1].packData;
+	    	  PackData Hp=CPBase.pack[0].getPackData();
+	    	  PackData Gp=CPBase.pack[1].getPackData();
 	    	  
 	    	  // check: status? euclidean? same size? 
 	    	  if (HarmonicMap.ck_size(Hp,Gp)==0) {
@@ -2420,17 +2421,17 @@ public class CommandStrParser {
 	    	  int holdPNum=packData.packNum;
 	    	  PackData tmpPD=Hp.copyPackTo();
 			  CPBase.pack[2].swapPackData(tmpPD,false);
-			  if (holdPNum==2) packData=CPBase.pack[2].packData;
-			  CPBase.pack[2].packData.rData=newRdata;
-	    	  jexecute(CPBase.pack[2].packData,"set_screen -a");
+			  if (holdPNum==2) packData=CPBase.pack[2].getPackData();
+			  CPBase.pack[2].getPackData().rData=newRdata;
+	    	  jexecute(CPBase.pack[2].getPackData(),"set_screen -a");
 	    	  CirclePack.cpb.msg("h_g_bar: p2 contains the data for h+conj(g)");
 	    	  return 1;
 	      }
 	      
 	      // =========== h_g_add ===========
 	      if (cmd.startsWith("h_g_add")) {
-	    	  PackData Hp=CPBase.pack[0].packData;
-	    	  PackData Gp=CPBase.pack[1].packData;
+	    	  PackData Hp=CPBase.pack[0].getPackData();
+	    	  PackData Gp=CPBase.pack[1].getPackData();
 	    	  
 	    	  // check: status? euclidean? same size? 
 	    	  if (HarmonicMap.ck_size(Hp,Gp)==0) {
@@ -2447,9 +2448,9 @@ public class CommandStrParser {
 	    	  int holdPNum=packData.packNum;
 	    	  PackData tmpPD=Hp.copyPackTo();
 			  CPBase.pack[2].swapPackData(tmpPD,false);
-			  if (holdPNum==2) packData=CPBase.pack[2].packData;
-			  CPBase.pack[2].packData.rData=newRdata;
-	    	  jexecute(CPBase.pack[2].packData,"set_screen -a");
+			  if (holdPNum==2) packData=CPBase.pack[2].getPackData();
+			  CPBase.pack[2].getPackData().rData=newRdata;
+	    	  jexecute(CPBase.pack[2].getPackData(),"set_screen -a");
 	    	  CirclePack.cpb.msg("h_g_add: p2 contains the data for h+conj(g)");
 	    	  return 1;
 	      }
@@ -2479,7 +2480,7 @@ public class CommandStrParser {
 	    		  if (newData==null) 
 	    			  throw new CombException("new packing failed");
 	    		  cps.swapPackData(newData,false);
-	    		  packData=cps.packData;
+	    		  packData=cps.getPackData();
 	    	  } catch(CombException cex) {
 	    		  throw new ParserException("build failed.");
 	    	  }
@@ -2562,8 +2563,8 @@ public class CommandStrParser {
 				  qnm=Integer.parseInt((String)items.remove(0));
 				  if (pnm<0 || pnm>=CPBase.NUM_PACKS || qnm<0 || qnm>=CPBase.NUM_PACKS)
 					  throw new ParserException();
-				  p=CPBase.pack[pnm].packData;
-				  q=CPBase.pack[qnm].packData;
+				  p=CPBase.pack[pnm].getPackData();
+				  q=CPBase.pack[qnm].getPackData();
 			  } catch (Exception ex) {
 				  throw new ParserException("usage: Map p q [options]");
 			  }
@@ -2656,7 +2657,7 @@ public class CommandStrParser {
 			  if (pdata!=null) {
 				  CPScreen cpS=packData.cpScreen;
 				  cpS.swapPackData(pdata,false);
-				  packData=cpS.packData;
+				  packData=cpS.getPackData();
 				  return 1;
 			  }
 			  return 0;
@@ -2768,7 +2769,7 @@ public class CommandStrParser {
 				  else 
 					  items.remove(0);
 				  String st=(String)items.get(0);
-				  qackData=PackControl.pack[StringUtil.qFlagParse(st)].packData;
+				  qackData=PackControl.pack[StringUtil.qFlagParse(st)].getPackData();
 				  qCPS=qackData.cpScreen;
 				  if (qackData==null || qCPS==null)
 					  throw new ParserException();
@@ -3023,7 +3024,7 @@ public class CommandStrParser {
 			  randPack.fileName=new String(filename);
 			  CPScreen cps=packData.cpScreen;
 			  cps.swapPackData(randPack,false);
-			  packData=cps.packData;
+			  packData=cps.getPackData();
 
 			  packData.hes=heS;
 			  packData.chooseAlpha();
@@ -3215,7 +3216,7 @@ public class CommandStrParser {
 			  randPack.fileName=new String("rand_pack");
 			  CPScreen cps=packData.cpScreen;
 			  cps.swapPackData(randPack,false);
-			  packData=cps.packData;
+			  packData=cps.getPackData();
 			  packData.hes=heS;
 			  
 			  // for rectangles, 1,2,3,4 are to be the corners
@@ -3286,7 +3287,7 @@ public class CommandStrParser {
 						  // put new packing in place
 						  CPScreen cps=packData.cpScreen;
 						  cps.swapPackData(randPack,false);
-						  packData=cps.packData;
+						  packData=cps.getPackData();
 						  jexecute(packData,"max_pack 2000");
 
 						  CirclePack.cpb.msg("Created a random packing in the disc with "+packData.nodeCount
@@ -3464,7 +3465,7 @@ public class CommandStrParser {
 	     		  if (newData==null) 
 	     			  throw new CombException("seed has failed");
 	     		  cps.swapPackData(newData,false);
-	     		  packData=cps.packData; 
+	     		  packData=cps.getPackData(); 
 	     		  jexecute(packData,"disp -w -c");
 	     	  } catch(Exception ex) {
 	     		  throw new ParserException(" "+ex.getMessage());
@@ -3518,9 +3519,9 @@ public class CommandStrParser {
     	  multiplied by values from function specified in "Function" panel. */
     	  if (cmd.startsWith("ratio")) {
 //    		  items=(Vector<String>)flagSegs.get(0); // one segment
-    		  PackData p1=CPBase.pack[Integer.parseInt((String)items.get(0))].packData;
+    		  PackData p1=CPBase.pack[Integer.parseInt((String)items.get(0))].getPackData();
     		  NodeLink blist=new NodeLink(p1,"b");
-    		  PackData p2=CPBase.pack[Integer.parseInt((String)items.get(1))].packData;
+    		  PackData p2=CPBase.pack[Integer.parseInt((String)items.get(1))].getPackData();
     		  if (!p1.status || !p2.status || p1.hes>0 || p2.hes!=0
     				|| blist==null || blist.size()<=0) {
     			  throw new ParserException("need two appropriate packings.");
@@ -4311,7 +4312,7 @@ public class CommandStrParser {
 	   		  PackData newPack=PackCreation.triGroup(A,B,C,maxgen);
 	   		  if (newPack!=null) {
 	   			  cpScreen.swapPackData(newPack,false);
-	   			  packData=cpScreen.packData;
+	   			  packData=cpScreen.getPackData();
 	   			  return packData.nodeCount;
 	   		  }
 	   		  CirclePack.cpb.errMsg("triGroup failed to create a packing");
@@ -4654,7 +4655,7 @@ public class CommandStrParser {
     	  String str=(String)items.get(0);
     	  int qnum=StringUtil.qFlagParse(str);
     	  PackData q=null;
-    	  if (qnum<0 || (q=CPBase.pack[qnum].packData)==null || 
+    	  if (qnum<0 || (q=CPBase.pack[qnum].getPackData())==null || 
     			  !q.status) {
     		  throw new ParserException("usage: get_data must start with '-q{p}' indicating the "+
     				  "other packing");
@@ -5206,7 +5207,7 @@ public class CommandStrParser {
 	    	  PackData qackData=null;
 	    	  int v,n;
 	    	  try {
-	    		  qackData=CPBase.pack[qnum].packData;
+	    		  qackData=CPBase.pack[qnum].getPackData();
 	    		  if (qackData==null) throw new ParserException();
 	    		  v=NodeLink.grab_one_vert(packData,(String)items.get(1));
 	    		  n=Integer.parseInt((String)items.get(2));
@@ -5239,7 +5240,7 @@ public class CommandStrParser {
 	    	  PackData newp=cM.cookie_out();
 	    	  if (newp!=null) {
 	    		  cpS.swapPackData(newp,false);
-	    		  packData=cpS.packData;
+	    		  packData=cpS.getPackData();
 	    	  }
 	    	  return packData.nodeCount;
 		  }
@@ -5281,7 +5282,7 @@ public class CommandStrParser {
 	    	  
 	    	  if (outcome>0) {
 	    		  cpS.swapPackData(cM.getPackData(),false);
-	    		  packData=cpS.packData;
+	    		  packData=cpS.getPackData();
 	    	  }
 	    	  CirclePack.cpb.msg("Cookie seems to have succeeded");
 	    	  packData.poisonEdges=null;
@@ -5347,8 +5348,8 @@ public class CommandStrParser {
 	    		  CPScreen cps=CPBase.pack[qnum];
 	    		  PackData tmpPD=packData.copyPackTo();
 	    		  cps.swapPackData(tmpPD,false);
-	    		  cps.packData.setName(packData.fileName);
-//	    		  packData=cps.packData; 
+	    		  cps.getPackData().setName(packData.fileName);
+//	    		  packData=cps.getPackData(); 
 	    		  return 1;
 	    	  } catch (Exception ex) {}
 	    	  return 0;
@@ -5445,9 +5446,210 @@ public class CommandStrParser {
 	  case 'D': // fall through
 	  case 'd':
 	  {
-		  // ========= DCEL <stuff> ==========
-		  // TODO: this is experimental related to DCEL combinatorics
-			if (cmd.startsWith("DCE")) {
+			// =============== dual_layout (OBE: sch_layout)
+			if (cmd.startsWith("dual_lay")) {
+				if (!packData.haveSchwarzians()) {
+					CirclePack.cpb.errMsg("Schwarzians are not allocated for p"+packData.packNum);
+					return 0;
+				}
+				if (packData.hes < 0) {
+					CirclePack.cpb.errMsg("usage: dual_layout is not used for hyperbolic packings");
+					return 0;
+				}
+				// look for list of face pairs; default to a spanning tree
+				boolean debug = false;
+				GraphLink graph = null;
+				String cflags = null; // flags for drawing circles
+				String fflags = null; // flags for drawing faces
+				if (flagSegs != null && flagSegs.size() > 0 && flagSegs.get(0).size() > 0) {
+					Iterator<Vector<String>> its = flagSegs.iterator();
+					items = null;
+					// may have flags to see results -c{disp_ops} and/or -f{disp_ops}
+					while (its.hasNext()) {
+						items = its.next();
+						if (StringUtil.isFlag(items.get(0))) {
+							String str = items.remove(0);
+							char c = str.charAt(1);
+							switch (c) {
+							case 'v':
+							case 'c': // draw as laid out
+							{
+								cflags = new String(str);
+								break;
+							}
+							case 'f': // report and (if draw==true) draw face labels
+							{
+								fflags = new String(str);
+								break;
+							}
+							} // end of switch
+						}
+					}
+
+					// 'items' should be dual edge list, default to spanning tree
+					if (items != null && items.size() > 0)
+						graph = new GraphLink(packData, items);
+					else
+						graph = DualGraph.easySpanner(packData, true);
+				} else // no flags or list?
+					graph = DualGraph.easySpanner(packData, true);
+
+				// Do we need to place the first face? Only if
+				// we start with a "root".
+				EdgeSimple edge = graph.get(0);
+				int baseface = 0;
+				if (edge.v == 0) { // root? yes, then have to place
+					graph.remove(0);
+					baseface = edge.w;
+				}
+
+				// yes, place first face, zero out 'curv'
+				if (baseface > 0) {
+					
+					for (int v=1;v<=packData.intNodeCount;v++)
+						packData.rData[v].curv=0.0;
+					
+					// get angles
+					packData.place_face(baseface, 0);
+					int[] verts=packData.faces[baseface].vert;
+					double[] radii=new double[3];
+					for (int q=0;q<3;q++) { 
+						double ang=CommonMath.get_face_angle(
+								packData.rData[verts[q]].rad,
+								packData.rData[verts[(q+1)%3]].rad,
+								packData.rData[verts[(q+2)%3]].rad,
+								packData.hes);
+						packData.rData[verts[q]].curv +=ang;
+					}
+
+					// TODO: layout problems can occur if not in sph geometry,
+					//  but should figure out check and just warn user.
+//					if (packData.hes <= 0) {
+//						packData.geom_to_s();
+//						packData.fillcurves();
+//						packData.setGeometry(packData.hes);
+//						if (cpS != null)
+//							cpS.setPackName();
+//						jexecute(packData, "disp -w");
+//					}
+
+					if (cflags != null) {
+						StringBuilder strbld = new StringBuilder("disp " + cflags);
+						for (int j = 0; j < 3; j++) { // show all three circles
+							strbld.append(" " + packData.faces[baseface].vert[j]);
+						}
+						jexecute(packData, strbld.toString());
+					}
+					if (fflags != null) {
+						StringBuilder strbld = new StringBuilder("disp " + fflags + " " + baseface);
+						jexecute(packData, strbld.toString());
+					}
+					count++;
+				}
+
+				// TODO: layout problems can occur if we don't convert to sph geometry,
+				//    but instead of automatically converting, I should check to outcome
+				//    for problems and just send a message to the user.
+//				if (packData.hes <= 0) {
+//					packData.geom_to_s();
+//					packData.fillcurves();
+//					packData.setGeometry(packData.hes);
+//					if (cpS != null)
+//						cpS.setPackName();
+//					jexecute(packData, "disp -w");
+//				}
+
+				// now progress through edges <f,g> of 'graph'
+				Iterator<EdgeSimple> gst = graph.iterator();
+				while (gst.hasNext()) {
+					EdgeSimple dedge = gst.next();
+					int f = dedge.v;
+					int g = dedge.w;
+					if (f == 0) // root should have been handled
+						break;
+					int j = packData.face_nghb(g, f);
+
+					// to get s, need edge <v,w>, f on its left
+					int[] verts=new int[3];
+					verts[0] = packData.faces[f].vert[j];
+					verts[1] = packData.faces[f].vert[(j + 1) % 3];
+					int k = packData.nghb(verts[0],verts[1]);
+					double s = packData.kData[verts[0]].schwarzian[k];
+
+					int m = packData.face_nghb(f, g);
+					int target = packData.faces[g].vert[(m + 2) % 3];
+
+					// assume circles of f are in place, need only compute
+					// the third circle of g, 'target' (across the shared edge).
+					try {
+						// compute map from base equilateral
+						Mobius bm_f = Schwarzian.faceBaseMob(packData, f);
+
+						// compute the target circle
+						CircleSimple sC = Schwarzian.getThirdCircle(s, j, bm_f, packData.hes);
+
+						// debug info
+						if (debug) {// debug=true;
+							deBugging.DebugHelp.mob4matlab("bm_f", bm_f);
+
+							// display the computed tangency points, print cents/rads
+							if (packData.hes > 0) {
+								Complex[] tp = new Complex[3];
+								int[] vert = packData.faces[f].vert;
+								System.out.println("circles <" + vert[0] + " " + vert[1] + " " + vert[2]
+										+ "> :\nSchwarian is s =" + s);
+								for (int jj = 0; jj < 3; jj++) {
+									Complex zjj = packData.rData[vert[jj]].center;
+									double rjj = packData.rData[vert[jj]].rad;
+									System.out.println("C(" + jj + ",:) = [" + zjj.x + " " + zjj.y + " " + rjj + "]");
+									tp[jj] = SphericalMath.sph_tangency(zjj, packData.rData[vert[(jj + 1) % 3]].center,
+											rjj, packData.rData[vert[(jj + 1) % 3]].rad);
+									String str = new String("disp -dpfc5 " + vert[jj] + " " + vert[(jj + 1) % 3]);
+									// draw the tangency point
+									CommandStrParser.jexecute(packData, str);
+								}
+							}
+
+							// the outcome circle
+							System.out.println("new circles: cent = " + sC.center + "; r = " + sC.rad);
+							debug = false;
+						}
+
+						packData.rData[target].rad = sC.rad;
+						packData.rData[target].center = sC.center;
+						
+						// compute and store angles
+						verts[2]=target;
+						double[] radii=new double[3];
+						radii[0]=packData.rData[verts[0]].rad;
+						radii[1]=packData.rData[verts[1]].rad;
+						radii[2]=sC.rad;
+
+						for (int q=0;q<3;q++) {
+							double ang=CommonMath.get_face_angle(radii[q],radii[(q+1)%3],radii[(q+2)%3],packData.hes);
+							packData.rData[verts[q]].curv +=ang;
+						}
+						
+					} catch (Exception ex) {
+						CirclePack.cpb.errMsg("problem applying some schwarzian\n");
+					}
+					if (cflags != null) {
+						StringBuilder strbld = new StringBuilder("disp " + cflags + " " + target);
+						jexecute(packData, strbld.toString());
+					}
+					if (fflags != null) {
+						StringBuilder strbld = new StringBuilder("disp " + fflags + " " + g);
+						jexecute(packData, strbld.toString());
+					}
+
+					count++;
+				}
+				return count;
+			}
+
+			// ========= DCEL <stuff> ==========
+			// TODO: this is experimental related to DCEL combinatorics
+			else if (cmd.startsWith("DCE")) {
 				
 				// have to pull off the dcel command and maintain the rest
 				if (flagSegs==null || flagSegs.size()==0) // nothing?
@@ -5791,11 +5993,11 @@ public class CommandStrParser {
 				  int qnum=StringUtil.qFlagParse(fs);
 				  if (qnum>=0) {
 					  CPScreen qScreen=CPBase.pack[qnum];
-					  if (qScreen.packData.status) {
+					  if (qScreen.getPackData().status) {
 						  flagSegs.remove(0); // dump this -q segment
 						  count +=DisplayParser.dispParse(packData,qScreen,flagSegs);
 						  if (count>0) 
-							  PackControl.canvasRedrawer.paintMyCanvasses(qScreen.packData,dispLite);
+							  PackControl.canvasRedrawer.paintMyCanvasses(qScreen.getPackData(),dispLite);
 						  return count;
 					  }
 				  }
@@ -5922,7 +6124,7 @@ public class CommandStrParser {
 	    	  PackData q=null;
 	    	  try {
 	    		  if ((q=CPBase.pack[StringUtil.qFlagParse(str)].
-	    				  packData)==packData) {
+	    				  getPackData())==packData) {
 	    			  throw new ParserException();
 	    		  }
 	    	  } catch (Exception ex) {
@@ -6218,9 +6420,10 @@ public class CommandStrParser {
 	    	  }
 	    	  CPScreen cps=packData.cpScreen;
 	    	  cps.swapPackData(pd,false);
-	    	  packData=cps.packData;
-			  CirclePack.cpb.msg("gen_cut: the new packing has "+cps.packData.nodeCount+" vertices");
-	    	  return cps.packData.nodeCount;
+	    	  packData=cps.getPackData();
+			  CirclePack.cpb.msg("gen_cut: the new packing has "+
+					  cps.getPackData().nodeCount+" vertices");
+	    	  return cps.getPackData().nodeCount;
 	      }
 	      
 	      // =========== gen_mark ==========
@@ -6827,7 +7030,7 @@ public class CommandStrParser {
 	          String str=(String)items.remove(0);
 	          PackData qackData=null;
 	          try {
-	        	  qackData=CPBase.pack[StringUtil.qFlagParse(str)].packData;
+	        	  qackData=CPBase.pack[StringUtil.qFlagParse(str)].getPackData();
 	          } catch (Exception ex) {
         		  throw new ParserException("'q' packing is not active");
 	          }
@@ -6882,7 +7085,7 @@ public class CommandStrParser {
 	          NodeLink pverts=null;
 	          NodeLink qverts=null;
 	          try {
-	        	  qackData=CPBase.pack[StringUtil.qFlagParse(str)].packData;
+	        	  qackData=CPBase.pack[StringUtil.qFlagParse(str)].getPackData();
 	        	  if (qackData==null) throw new ParserException("'q' packing is not active");
 
 	        	  // next two entries are verts from this packing
@@ -7188,13 +7391,13 @@ public class CommandStrParser {
 	    		  {
 	    			  int q=Integer.parseInt((String)items.remove(0));
 	    			  if (q<0 || q>=CPBase.NUM_PACKS 
-	    					  || !CPBase.pack[q].packData.status) 
+	    					  || !CPBase.pack[q].getPackData().status) 
 	    				  throw new ParserException("pack q not valid");
 	    			  NodeLink vertlist=new NodeLink(packData,items);
 	    			  int v=(Integer)vertlist.get(0);
 	    			  double rad=packData.rData[v].rad;
 	    			  int w=(Integer)vertlist.get(1);
-	    			  PackData qackData=CPBase.pack[q].packData;
+	    			  PackData qackData=CPBase.pack[q].getPackData();
 	    			  if (w>qackData.nodeCount || rad<PackData.OKERR) 
 	    				  throw new ParserException("problem with 'w'");
 	    			  double factor=qackData.rData[w].rad/rad;
@@ -7757,7 +7960,7 @@ public class CommandStrParser {
 	    	  PackData q=null;
 	    	  // must start with other packing number
 	    	  try {
-	    		  if ((q=CPBase.pack[StringUtil.qFlagParse(str)].packData)==packData) {
+	    		  if ((q=CPBase.pack[StringUtil.qFlagParse(str)].getPackData())==packData) {
 	    			  throw new ParserException();
 	    		  }
 	    	  } catch (Exception ex) {
@@ -8045,10 +8248,10 @@ public class CommandStrParser {
 					return 0;
 
 				// must be initial flag: -R, -S
-				int type = -1; // 0=radii, 1=edge schwarzian
+				int type = -1; // 0=radii, 1=edge schwarzian, 2=angle sum
 				items = flagSegs.remove(0);
 				if (!StringUtil.isFlag(items.get(0))) {
-					CirclePack.cpb.errMsg("usage: 'slider' must start with -R or -S flag");
+					CirclePack.cpb.errMsg("usage: 'slider' must start with -[RSA] flag");
 					return 0;
 				}
 
@@ -8064,8 +8267,13 @@ public class CommandStrParser {
 					type = 1;
 					break;
 				}
+				case 'A': // start for angle sum sliders
+				{
+					type=2;
+					break;
+				}
 				default: {
-					CirclePack.cpb.errMsg("usage: 'slider' must start with -R or -S flag");
+					CirclePack.cpb.errMsg("usage: 'slider' must start with -R, -S, or -A flag");
 					return 0;
 				}
 				} // end of switch
@@ -8078,10 +8286,12 @@ public class CommandStrParser {
 				SliderFrame generic=packData.radiiSliders;
 				if (type==1) 
 					generic=packData.schwarzSliders;
+				else if (type==2)
+					generic=packData.angSumSliders;
 								
 				// three situations:
 				// * no other flags: create with specified objects (perhaps to default)
-				// * -c or -m flags, reconstitute flagSegs and pass for creation
+				// * -c, -m, or -o flags, reconstitute flagSegs and pass for creation
 				// * nothing else in first item, but then flags such as -a or -r (add/remove)
 				if (flagSegs.size() == 0) {
 					return CreateSliderFrame.createSliderFrame(packData, type, items);
@@ -8164,7 +8374,11 @@ public class CommandStrParser {
 							} else if (type == 1 && packData.schwarzSliders != null) {
 								GraphLink el= new GraphLink(packData, items);
 								hits +=packData.schwarzSliders.addObject(el.toString());
+							} else if (type == 2 && packData.angSumSliders != null) {
+								NodeLink nl= new NodeLink(packData, items);
+								hits +=packData.angSumSliders.addObject(nl.toString());
 							}
+
 							break;
 						}
 						case 'r': // remove object
@@ -8176,6 +8390,9 @@ public class CommandStrParser {
 							} else if (type == 1 && packData.schwarzSliders != null) {
 								GraphLink gl= new GraphLink(packData, items);
 								hits +=packData.schwarzSliders.addObject(gl.toString());
+							} else if (type == 1 && packData.schwarzSliders != null) {
+								NodeLink nl= new NodeLink(packData, items);
+								hits +=packData.angSumSliders.addObject(nl.toString());
 							}
 							break;
 						}
@@ -8221,6 +8438,11 @@ public class CommandStrParser {
 									packData.schwarzSliders.dispose();
 								packData.schwarzSliders=null;
 							}
+							else if (type==2) {
+								if (packData.angSumSliders!=null)
+									packData.angSumSliders.dispose();
+								packData.angSumSliders=null;
+							}
 							return 1;
 						}
 						default:
@@ -8244,175 +8466,10 @@ public class CommandStrParser {
 
 			// =============== sch_layout ========
 			else if (cmd.startsWith("sch_lay")) {
-				if (!packData.haveSchwarzians()) {
-					CirclePack.cpb.errMsg("Schwarzians are not allocated for p"+packData.packNum);
-					return 0;
-				}
-				if (packData.hes < 0) {
-					CirclePack.cpb.errMsg("usage: dual_layout is not used for hyperbolic packings");
-					return 0;
-				}
-				// look for list of face pairs; default to a spanning tree
-				boolean debug = false;
-				GraphLink graph = null;
-				String cflags = null; // flags for drawing circles
-				String fflags = null; // flags for drawing faces
-				if (flagSegs != null && flagSegs.size() > 0 && flagSegs.get(0).size() > 0) {
-					Iterator<Vector<String>> its = flagSegs.iterator();
-					items = null;
-					// may have flags to see results -c{disp_ops} and/or -f{disp_ops}
-					while (its.hasNext()) {
-						items = its.next();
-						if (StringUtil.isFlag(items.get(0))) {
-							String str = items.remove(0);
-							char c = str.charAt(1);
-							switch (c) {
-							case 'v':
-							case 'c': // draw as laid out
-							{
-								cflags = new String(str);
-								break;
-							}
-							case 'f': // report and (if draw==true) draw face labels
-							{
-								fflags = new String(str);
-								break;
-							}
-							} // end of switch
-						}
-					}
-
-					// 'items' should be dual edge list, default to spanning tree
-					if (items != null && items.size() > 0)
-						graph = new GraphLink(packData, items);
-					else
-						graph = DualGraph.easySpanner(packData, true);
-				} else // no flags or list?
-					graph = DualGraph.easySpanner(packData, true);
-
-				// Do we need to place the first face? Only if
-				// we start with a "root".
-				EdgeSimple edge = graph.get(0);
-				int baseface = 0;
-				if (edge.v == 0) { // root? yes, then have to place
-					graph.remove(0);
-					baseface = edge.w;
-				}
-
-				// yes, place first face
-				if (baseface > 0) {
-					packData.place_face(baseface, 0);
-
-					// TODO: layout problems can occur if not in sph geometry,
-					//  but should figure out check and just warn user.
-//					if (packData.hes <= 0) {
-//						packData.geom_to_s();
-//						packData.fillcurves();
-//						packData.setGeometry(packData.hes);
-//						if (cpS != null)
-//							cpS.setPackName();
-//						jexecute(packData, "disp -w");
-//					}
-
-					if (cflags != null) {
-						StringBuilder strbld = new StringBuilder("disp " + cflags);
-						for (int j = 0; j < 3; j++) { // show all three circles
-							strbld.append(" " + packData.faces[baseface].vert[j]);
-						}
-						jexecute(packData, strbld.toString());
-					}
-					if (fflags != null) {
-						StringBuilder strbld = new StringBuilder("disp " + fflags + " " + baseface);
-						jexecute(packData, strbld.toString());
-					}
-					count++;
-				}
-
-				// TODO: layout problems can occur if we don't convert to sph geometry,
-				//    but instead of automatically converting, I should check to outcome
-				//    for problems and just send a message to the user.
-//				if (packData.hes <= 0) {
-//					packData.geom_to_s();
-//					packData.fillcurves();
-//					packData.setGeometry(packData.hes);
-//					if (cpS != null)
-//						cpS.setPackName();
-//					jexecute(packData, "disp -w");
-//				}
-
-				// now progress through edges <f,g> of 'graph'
-				Iterator<EdgeSimple> gst = graph.iterator();
-				while (gst.hasNext()) {
-					EdgeSimple dedge = gst.next();
-					int f = dedge.v;
-					int g = dedge.w;
-					if (f == 0) // root should have been handled
-						break;
-					int j = packData.face_nghb(g, f);
-
-					// to get s, need edge <v,w>, f on its left
-					int v = packData.faces[f].vert[j];
-					int w = packData.faces[f].vert[(j + 1) % 3];
-					int k = packData.nghb(v, w);
-					double s = packData.kData[v].schwarzian[k];
-
-					int m = packData.face_nghb(f, g);
-					int target = packData.faces[g].vert[(m + 2) % 3];
-
-					// assume circles of f are in place, need only compute
-					// the third circle of g, 'target' (across the shared edge).
-					try {
-						// compute map from base equilateral
-						Mobius bm_f = Schwarzian.faceBaseMob(packData, f);
-
-						// compute the target circle
-						CircleSimple sC = Schwarzian.getThirdCircle(s, j, bm_f, packData.hes);
-
-						// debug info
-						if (debug) {// debug=true;
-							deBugging.DebugHelp.mob4matlab("bm_f", bm_f);
-
-							// display the computed tangency points, print cents/rads
-							if (packData.hes > 0) {
-								Complex[] tp = new Complex[3];
-								int[] vert = packData.faces[f].vert;
-								System.out.println("circles <" + vert[0] + " " + vert[1] + " " + vert[2]
-										+ "> :\nSchwarian is s =" + s);
-								for (int jj = 0; jj < 3; jj++) {
-									Complex zjj = packData.rData[vert[jj]].center;
-									double rjj = packData.rData[vert[jj]].rad;
-									System.out.println("C(" + jj + ",:) = [" + zjj.x + " " + zjj.y + " " + rjj + "]");
-									tp[jj] = SphericalMath.sph_tangency(zjj, packData.rData[vert[(jj + 1) % 3]].center,
-											rjj, packData.rData[vert[(jj + 1) % 3]].rad);
-									String str = new String("disp -dpfc5 " + vert[jj] + " " + vert[(jj + 1) % 3]);
-									// draw the tangency point
-									CommandStrParser.jexecute(packData, str);
-								}
-							}
-
-							// the outcome circle
-							System.out.println("new circles: cent = " + sC.center + "; r = " + sC.rad);
-							debug = false;
-						}
-
-						packData.rData[target].rad = sC.rad;
-						packData.rData[target].center = sC.center;
-					} catch (Exception ex) {
-						CirclePack.cpb.errMsg("problem applying some schwarzian\n");
-					}
-					if (cflags != null) {
-						StringBuilder strbld = new StringBuilder("disp " + cflags + " " + target);
-						jexecute(packData, strbld.toString());
-					}
-					if (fflags != null) {
-						StringBuilder strbld = new StringBuilder("disp " + fflags + " " + g);
-						jexecute(packData, strbld.toString());
-					}
-
-					count++;
-				}
-				return count;
+				CirclePack.cpb.errMsg("OBE: 'sch_layout' has been replaced by 'dual_layout'.");
+				return 0;
 			}
+			
 
 		  // =============== scale ==========
 		  else if (cmd.startsWith("scale") && !cmd.startsWith("scale_")) {
@@ -8990,7 +9047,7 @@ public class CommandStrParser {
 	    				  if (qnum<0) {
 	    					  throw new ParserException("-q{p} option failed");
 	    				  }
-	    				  qackData=CPBase.pack[qnum].packData;
+	    				  qackData=CPBase.pack[qnum].getPackData();
 	    				  
 	    				  // there must be additional flags
 	    				  try {
@@ -9763,7 +9820,7 @@ public class CommandStrParser {
 		   		  PackData newPack=PackCreation.triGroup(A,B,C,maxgen);
 		   		  if (newPack!=null) {
 		   			  cpS.swapPackData(newPack,false);
-		   			  packData=cpS.packData;
+		   			  packData=cpS.getPackData();
 		   			  return packData.nodeCount;
 		   		  }
 		   		  CirclePack.cpb.errMsg("triGroup failed to create a packing");
@@ -10303,7 +10360,7 @@ public static CallPacket valueExecute(PackData packData,String cmdstr) {
 		StringBuilder sb=new StringBuilder(allitems.remove(0));
 		int pnum=StringUtil.extractPackNum(sb);
 		if (pnum>=0)
-			p=CPBase.pack[pnum].packData;
+			p=CPBase.pack[pnum].getPackData();
 	}
 	
 	/* NOTE: Vector 'flagSegs' will hold only the flag strings 

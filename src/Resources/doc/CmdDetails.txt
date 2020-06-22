@@ -942,6 +942,11 @@ CAUTION: This call will not work if the C++ library is not operational.
 	associated edge to place the opposite circle of g. This is 
 	used only in spherical or euclidean geometry. See 
 	'Schwarzian.java' for details.
+	If the first pair has form (0,f) (as when created as dual spanning
+	tree), then f is designated as base face and is laid out first 
+	using its current radii. Also, all vertex angle sums (ie. 'curv') 
+	are set to and accumulated as contiguous faces are laid out. 
+	OBE: original command's name was 'sch_layout'
 </description>
 <options>
 <opt flag="f"> draw each new face as laid out with usual display flags</opt>
@@ -4083,21 +4088,25 @@ enters these in order</instance>
 <description>
 	CirclePack allows the user to create a frame with multiple 
 	sliders to control values associated with the packing using
-	the mouse. Currently, only 'radii' and edge 'schwarzians' 
-	(which must be set in advance by the user) can be controlled,
-	and only one of each of these slider frames is allowed for 
-	each packing. Slider ranges are initialized to go from half 
-	the quantities minimum value to twice its maximum value, but
+	the mouse. Currently, 'angle sums' , 'radii', and edge 
+	'schwarzians' (which must be set in advance by the user) 
+	can be displayed/controlled; a single slider frame of each type
+	is allowed for each packing. Slider ranges for radii and
+	schwarzians are initialized to go from half the quantities 
+	intiial minimum value to twice its initial maximum value, but
 	can be adjusted later.
 	
 	Optionally, specified 'change' commands can be executed when a 
-	value is changed and/or 'motion' commands can be executed when 
-	the mouse passes over a slider. On initiation, substring 'Obj' 
-	in motion or change command	strings is replaced by '_Obj' so 
-	that the command can be	applied to the appropriate object 
-	(vertex or edge).
+	value is changed, 'motion' commands can be executed when 
+	the mouse passes over a slider's label, and/or an optional
+	command can be executed by clicking a button. On initiation, 
+	substring 'Obj'	in motion, change, or optional command
+	strings is replaced by '_Obj' so that the command can be
+	applied to the appropriate object (vertex or edge).
 </description>
 <options>
+<opt flag="-A"> The sliders display selected angle sums,
+usually from 0 to 3.0 (all values are multiplied by pi)</opt>
 <opt flag="-R"> The sliders control specified radii</opt>
 <opt flag="-S"> The sliders control specified edge schwarzians</opt>
 <opt flag="-c ''cmds''"> Optional commands to be executed when a
@@ -4111,9 +4120,9 @@ with a button click; here 'cmds' is a string of text
 enclosed by double quotes</opt>
 <opt flag="-a {..}"> Add a slider for a new object</opt>
 <opt flag="-r {.}"> Remove an individual object</opt>
-<opt flag="-d"> Download frame data from the parent packing</opt>
-<opt flag="-l {x}"> Update slider minimum range</opt>
-<opt flag="-u {x}"> Update slider maximum range</opt>
+<opt flag="-d"> Download data from parent packing to the sliders</opt>
+<opt flag="-l {x}"> Update slider range minimum</opt>
+<opt flag="-u {x}"> Update slider range maximum</opt>
 <opt flag="-x"> Destroy this frame</opt>
 </options>
 <examples>

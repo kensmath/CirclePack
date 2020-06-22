@@ -385,7 +385,7 @@ public class JammedPack extends PackExtender {
 				if (backPack!=null) {
 					CPScreen cps=packData.cpScreen; 
 					cps.swapPackData(backPack,true);
-					packData=cps.packData;
+					packData=cps.getPackData();
 					addrmPack=null; // outdated
 					return packData.nodeCount;
 				}
@@ -397,13 +397,13 @@ public class JammedPack extends PackExtender {
 				if (addrmPack!=null) { // leave 'backpack' in place
 					CPScreen cps=packData.cpScreen; 
 					cps.swapPackData(addrmPack,true);
-					packData=cps.packData;
+					packData=cps.getPackData();
 					return packData.nodeCount;
 				}
 				if (backPack!=null) {
 					CPScreen cps=packData.cpScreen; 
 					cps.swapPackData(backPack,true);
-					packData=cps.packData;
+					packData=cps.getPackData();
 					addrmPack=null; // outdated
 					return packData.nodeCount;
 				}

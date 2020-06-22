@@ -265,7 +265,7 @@ public class ComplexAnalysis extends PackExtender {
 			while (flist.hasNext()) {
 				int f=flist.next();
 				count++;
-				int hes=cpScreen.packData.hes; // use geom of target screen
+				int hes=cpScreen.getGeom(); // use geom of target screen
 				Complex []tps=new Complex[3]; 
 				for (int j=0;j<3;j++) {
 					tps[j]=domTPs[f].getTP(j);
@@ -354,11 +354,11 @@ public class ComplexAnalysis extends PackExtender {
 				Oops("perhaps 'set_div' first?");
 			
 			// what packing to apply to? default to active
-			PackData toPack=CPBase.pack[PackControl.activeFrame.getActivePackNum()].packData;
+			PackData toPack=CPBase.pack[PackControl.activeFrame.getActivePackNum()].getPackData();
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
-				toPack=CPBase.pack[pnum].packData;
+				toPack=CPBase.pack[pnum].getPackData();
 			} catch(Exception ex) {}
 
 			// set up complex ftn vector and interpolator
@@ -445,12 +445,12 @@ public class ComplexAnalysis extends PackExtender {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
 				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS.packData.nodeCount!=domainData.nodeCount) {
+				if (cpS.getPackData().nodeCount!=domainData.nodeCount) {
 					errorMsg("getDom: range packing complex must match domain");
 					return 0;
 				}
-				domainData=cpS.packData.copyPackTo();
-				outputData=cpS.packData.copyPackTo();
+				domainData=cpS.getPackData().copyPackTo();
+				outputData=cpS.getPackData().copyPackTo();
 				conductance=setConductances(domainData);
 			} catch (Exception ex) {
 				return 0;
@@ -474,11 +474,11 @@ public class ComplexAnalysis extends PackExtender {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
 				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS.packData.nodeCount!=domainData.nodeCount) {
+				if (cpS.getPackData().nodeCount!=domainData.nodeCount) {
 					errorMsg("getRan: range packing complex must match domain");
 					return 0;
 				}
-				rangeData=cpS.packData.copyPackTo();
+				rangeData=cpS.getPackData().copyPackTo();
 			} catch (Exception ex) {
 				return 0;
 			}

@@ -47,6 +47,15 @@ public class CreateSliderFrame {
 			p.schwarzSliders.setVisible(true);
 			return p.schwarzSliders.sliderCount;
 		}
+		if (type == 2) { // angle sums
+			if (p.angSumSliders != null) {
+				p.angSumSliders.dispose();
+				p.angSumSliders=null;
+			}
+			p.angSumSliders = new AngSumSliders(p,"","", new NodeLink(p,items));
+			p.angSumSliders.setVisible(true);
+			return p.angSumSliders.sliderCount;
+		}
 		return 0;
 	}
 
@@ -63,7 +72,7 @@ public class CreateSliderFrame {
 	 */
 	public static int createSliderFrame(PackData p,int type,StringBuilder strbld) {
 
-		// break input into maximal segments defined by quotes '"'.
+		// break input into maximal un-trimmed segments defined by quotes '"'.
 		Vector<StringBuilder> segments = StringUtil.quoteAnalyzer(strbld);
 		String chgCmd="";
 		String mvCmd="";
@@ -92,16 +101,16 @@ public class CreateSliderFrame {
 			lastStr="";
 		
 		try {
-		if (type == 0) { // vertices
-			if (lastStr.length() == 0)
-				vlist = new NodeLink(p, "a"); // default to all
-			else
-				vlist = new NodeLink(p, lastStr);
-			if (vlist == null || vlist.size() == 0) {
-				CirclePack.cpb.errMsg("usage: malformed 'slider' object list");
-				return 0;
+			if (type == 0) { // vertices
+				if (lastStr.length() == 0)
+					vlist = new NodeLink(p, "a"); // default to all
+				else
+					vlist = new NodeLink(p, lastStr);
+				if (vlist == null || vlist.size() == 0) {
+					CirclePack.cpb.errMsg("usage: malformed 'slider' object list");
+					return 0;
+				}
 			}
-		}
 		// Note: for schwarzians, 'lastStr' should be face pairs <f,g>
 		else if (type == 1) { // schwarzians
 			if (lastStr.length() == 0)
@@ -109,9 +118,19 @@ public class CreateSliderFrame {
 			else
 				glist = new GraphLink(p, lastStr);
 			if (glist == null || glist.size() == 0) {
-				CirclePack.cpb.errMsg("usage: malformed 'slider' command");
+				CirclePack.cpb.errMsg("usage: slider ..... {glist}");
 				return 0;
 			}
+		}
+		else if (type == 2) { // vertices
+				if (lastStr.length() == 0)
+					vlist = new NodeLink(p, "i"); // default to interior
+				else
+					vlist = new NodeLink(p, lastStr);
+				if (vlist == null || vlist.size() == 0) {
+					CirclePack.cpb.errMsg("usage: malformed 'slider' object list");
+					return 0;
+				}
 		}
 		} catch (ArrayIndexOutOfBoundsException aox) {
 			CirclePack.cpb.errMsg("usage: malformed 'slider' command");
@@ -132,7 +151,7 @@ public class CreateSliderFrame {
 					if (quoteStr.charAt(0) != '"')
 						throw new DataException();
 					mvCmd = quoteStr.substring(1, quoteStr.length() - 1); // get move cmd, removing '"'
-				} else if (leadStr.contains("-0")) {
+				} else if (leadStr.contains("-o")) {
 					if (quoteStr.charAt(0) != '"')
 						throw new DataException();
 					optCmd = quoteStr.substring(1, quoteStr.length() - 1); // get optional cmd, removing '"'
@@ -174,6 +193,17 @@ public class CreateSliderFrame {
 				p.schwarzSliders.optCmdField.setText(optCmd);
 			p.schwarzSliders.setVisible(true);
 			return p.schwarzSliders.sliderCount;
+		}
+		if (type == 2) { // angle sums
+			if (p.angSumSliders != null) {
+				p.angSumSliders.dispose();
+				p.angSumSliders=null;
+			}
+			p.angSumSliders = new AngSumSliders(p, chgCmd, mvCmd, vlist);
+			if (optCmd.length()>0)
+				p.angSumSliders.optCmdField.setText(optCmd);
+			p.angSumSliders.setVisible(true);
+			return p.angSumSliders.sliderCount;
 		}
 		
 		return -1;

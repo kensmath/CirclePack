@@ -44,7 +44,7 @@ public class DRAGRECTmode extends MyCanvasMode {
 					dim.width,dim.height);
 			try {
 				cpS.realBox.setView(new Complex(ll.x,ll.y),new Complex(ur.x,ur.y));
-				TrafficCenter.cmdGUI(cpS.packData,"disp -wr"); 
+				TrafficCenter.cmdGUI(cpS.getPackData(),"disp -wr"); 
 			} catch (Exception ex) {return;}
 		}
 		moreReset();

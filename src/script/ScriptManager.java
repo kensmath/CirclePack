@@ -1301,7 +1301,7 @@ public class ScriptManager implements ActionListener {
 		 if (cmd==null || !(myComp instanceof ActiveWrapper)) return;
 		 ActiveWrapper aWrapper=(ActiveWrapper)myComp;
 		 CPScreen cpS=aWrapper.getCPScreen();
-		 PackData thePack=cpS.packData;
+		 PackData thePack=cpS.getPackData();
 
 		 // check command for variables '#..': Currently check only ' #XY'
 		 if (cmd.contains(" #XY") || cmd.contains(" #xy")) { // command requires mouse location;

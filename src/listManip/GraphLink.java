@@ -61,7 +61,10 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 	
 	public GraphLink(PackData p,Vector<String> items) {
 		packData=p;
-		addDualLinks(items);
+		if (items==null || items.size()==0) // default to spanning tree
+			addDualLinks("s");
+		else 
+			addDualLinks(items);
 	}
 	
 	public GraphLink(PackData p,String datastr) {

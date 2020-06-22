@@ -63,11 +63,11 @@ public class BeurlingFlow extends PackExtender {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
 				cpS=CPBase.pack[pnum];
-				if (cpS.packData.nodeCount!=domainData.nodeCount) {
+				if (cpS.getPackData().nodeCount!=domainData.nodeCount) {
 					errorMsg("getDom: range complex must match domain");
 					return 0;
 				}
-				domainData=cpS.packData.copyPackTo();
+				domainData=cpS.getPackData().copyPackTo();
 			} catch (Exception ex) {
 				return 0;
 			}

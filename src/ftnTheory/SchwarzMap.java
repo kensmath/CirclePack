@@ -151,12 +151,12 @@ public class SchwarzMap extends PackExtender {
 					//   minimal check that packing is same and not hyperbolic; else copy 
 					//   packData into qdata.
 					if (qnum!=packData.packNum) {
-						qData=CPBase.pack[qnum].packData;
+						qData=CPBase.pack[qnum].getPackData();
 						if ((qData.faceCount!=packData.faceCount) || qData.hes<0) {
 							CirclePack.cpb.msg("Copy domain packing into target, p"+qData.packNum+", "+
 									"because current packing does not match nodeCount. Convert to spherical.");
 							cpCommand(packData,"copy "+qnum);
-							qData=CPBase.pack[qnum].packData;
+							qData=CPBase.pack[qnum].getPackData();
 							qData.setCombinatorics();
 							cpCommand(qData,"geom_to_s"); //  make range spherical
 						}
@@ -370,7 +370,7 @@ public class SchwarzMap extends PackExtender {
 					//   minimal check that packing is same and not hyperbolic; else copy 
 					//   packData into qdata.
 					if (qnum!=packData.packNum) {
-						qData=CPBase.pack[qnum].packData;
+						qData=CPBase.pack[qnum].getPackData();
 						if ((qData.faceCount!=packData.faceCount) || qData.hes<0) {
 							CirclePack.cpb.msg("Copy domain packing into target, p"+qData.packNum+", "+
 									" with spherical geometry because original target does "+
@@ -732,7 +732,7 @@ public class SchwarzMap extends PackExtender {
 				items=flagSegs.get(0);
 				int qnum=StringUtil.qItemParse(items);
 				if (qnum>=0) {
-					pd=CPBase.pack[qnum].packData;
+					pd=CPBase.pack[qnum].getPackData();
 					rangePackNum=pd.packNum;
 				}
 			}

@@ -15,7 +15,6 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -26,9 +25,9 @@ import javax.swing.event.ChangeListener;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import circlePack.PackControl;
 import input.CommandStrParser;
 import packing.PackData;
-import panels.CPScreen;
 import util.ResultPacket;
 import util.xNumField;
 
@@ -57,14 +56,17 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	public abstract void downValue(int indx); // from packing to slider
 	public abstract void upValue(int indx); // send slider value to packing
 	public abstract void createSliderPanel(); // may want, e.g., special border
-	public abstract void setChangeField(String cmd);   // set optional command with value change
-	public abstract void setMotionField(String cmd);   // set optional command on motion into slider 
+	public abstract void setChangeField(String cmd); // set optional command with value change
+	public abstract void setMotionField(String cmd); // set optional command on motion into slider
+	public abstract void setOptCmdField(String cmd); // set optional 'OptCmd' command
 	public abstract void mouse_entry_action(int indx); 
+	public abstract void changeValueField_action(double val,int indx); 
 	public abstract int addObject(String obj);  // add object(s) 
 	public abstract int removeObject(String obj); // remove object(s)
 	public abstract void killMe(); // to call CirclePack to kill this frame
 	public abstract void initRange(); // set the initial slider ranges
 	
+	public int type;  // 0=radii, 1=schwarzians, 2=angle sums
 	public int sliderCount;
 	public double val_min;
 	public double val_max;
@@ -73,9 +75,9 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	
 	JPanel controlPanel; // option buttons, readouts
 	JPanel topPanel;  // top of controlPanel
-	JPanel midPanel;  // middle of controlPanel
 	JPanel bottomPanel;  // bottom of controlPanel
 	JPanel sliderPanel;  // scale lines and 'myBars' go here
+	JPanel commandPanel;  // bottom panel for command string
 	JScrollPane sliderScroll;   // contains sliderPanel
 	public xNumField minValue;  // 
 	public xNumField maxValue;
@@ -141,20 +143,19 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	 */
 	public void initGUI() {
 		
-		this.setBounds(50,350,DEFAULT_WIDTH,200);//DEFAULT_HEIGHT);
+		int w=PackControl.displayDimension.width;
+		this.setBounds(w-DEFAULT_WIDTH,350+20*type,DEFAULT_WIDTH,200);//DEFAULT_HEIGHT);
 		setLayout(new BorderLayout());
 
 		initRange(); 
 
 		// Create control/data display area
 		controlPanel = new JPanel(new BorderLayout());
-		controlPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,120));
+		controlPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,70));
 		controlPanel.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED));
 
-		// three panels
+		// two panels
 		topPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
-		midPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
-		midPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,60));
 		bottomPanel=new JPanel(new BorderLayout());
 
 		// top has buttons 
@@ -204,7 +205,57 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		
 		topPanel.add(addremovePanel);
 		
-		// middle panel has three panels for commands
+		// bottom panel has min/max values
+		JPanel bottomleftPanel = new JPanel();
+
+		button = new JButton("min");
+		button.setBorder(null);
+		button.setMargin(new Insets(10,25,10,25));
+		button.setPreferredSize(new Dimension(45,20));
+		button.addActionListener(this);
+		button.setActionCommand("set minimum");
+		bottomleftPanel.add(button);
+		minValue=new xNumField("",6);
+		minValue.setValue(val_min);
+		bottomleftPanel.add(minValue);
+		
+		JPanel bottomrightPanel=new JPanel();
+
+		button = new JButton("Max");
+		button.setBorder(null);
+		button.setMargin(new Insets(10,25,10,25));
+		button.setPreferredSize(new Dimension(45,20));
+		button.addActionListener(this);
+		button.setActionCommand("set maximum");
+		bottomrightPanel.add(button);
+		maxValue=new xNumField("",6);
+		maxValue.setValue(val_max);
+		bottomrightPanel.add(maxValue);
+		
+		bottomPanel.add(bottomleftPanel,BorderLayout.WEST);
+		bottomPanel.add(bottomrightPanel,BorderLayout.EAST);
+
+		controlPanel.add(topPanel,BorderLayout.NORTH);
+//		controlPanel.add(midPanel,BorderLayout.CENTER);
+		controlPanel.add(bottomPanel,BorderLayout.SOUTH);
+		
+		add(controlPanel, BorderLayout.NORTH);
+
+		// Create sliderPanel
+		createSliderPanel();
+//		sliderPanel.setSize(new Dimension(DEFAULT_WIDTH,DEFAULT_HEIGHT));
+		sliderPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,DEFAULT_HEIGHT));
+		populate();
+		
+		sliderScroll=new JScrollPane(sliderPanel,
+				JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		add(sliderScroll,BorderLayout.CENTER);
+		
+		// Command string options at bottom
+		commandPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
+		commandPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,60));
+		// command panel has three panels for commands
 		JPanel midleftPanel=new JPanel(new BorderLayout());
 		changeCheck=new JCheckBox("change cmd");
 		changeCheck.setSelected(false);
@@ -238,56 +289,11 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		midrightPanel.add(button,BorderLayout.NORTH);
 		midrightPanel.add(optCmdField,BorderLayout.CENTER);
 
-		midPanel.add(midleftPanel);
-		midPanel.add(midmidPanel);
-		midPanel.add(midrightPanel);
+		commandPanel.add(midleftPanel);
+		commandPanel.add(midmidPanel);
+		commandPanel.add(midrightPanel);
 
-		// bottom panel has min/max values
-		JPanel bottomleftPanel = new JPanel();
-
-		button = new JButton("min");
-		button.setBorder(null);
-		button.setMargin(new Insets(10,25,10,25));
-		button.setPreferredSize(new Dimension(45,18));
-		button.addActionListener(this);
-		button.setActionCommand("set minimum");
-		bottomleftPanel.add(button);
-		minValue=new xNumField("",6);
-		minValue.setValue(val_min);
-		bottomleftPanel.add(minValue);
-		
-		JPanel bottomrightPanel=new JPanel();
-
-		button = new JButton("Max");
-		button.setBorder(null);
-		button.setMargin(new Insets(10,25,10,25));
-		button.setPreferredSize(new Dimension(45,18));
-		button.addActionListener(this);
-		button.setActionCommand("set maximum");
-		bottomrightPanel.add(button);
-		maxValue=new xNumField("",6);
-		maxValue.setValue(val_max);
-		bottomrightPanel.add(maxValue);
-		
-		bottomPanel.add(bottomleftPanel,BorderLayout.WEST);
-		bottomPanel.add(bottomrightPanel,BorderLayout.EAST);
-
-		controlPanel.add(topPanel,BorderLayout.NORTH);
-		controlPanel.add(midPanel,BorderLayout.CENTER);
-		controlPanel.add(bottomPanel,BorderLayout.SOUTH);
-		
-		add(controlPanel, BorderLayout.NORTH);
-
-		// Create sliderPanel
-		createSliderPanel();
-//		sliderPanel.setSize(new Dimension(DEFAULT_WIDTH,DEFAULT_HEIGHT));
-		sliderPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,DEFAULT_HEIGHT));
-		populate();
-		
-		sliderScroll=new JScrollPane(sliderPanel,
-				JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
-				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-		add(sliderScroll,BorderLayout.CENTER);
+		add(commandPanel,BorderLayout.SOUTH);
 		
 		pack();
 		setChangeField(holdChangeCmd);
@@ -331,6 +337,13 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 			return Integer.valueOf(rP.cmdCount);
 		}
 		return 0;
+	}
+	
+	public void valueField_action(double val, int indx) {
+		mySliders[indx].value=val;
+		upValue(indx);
+		mySliders[indx].refreshValue();
+		changeAction(indx);
 	}
 	
 	/**
@@ -392,7 +405,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 
 		String cmd=evt.getActionCommand();
 
-		if (cmd.equals("Info")) {
+		if (cmd.equals("Slider Info")) {
 			JFrame auxHelpFrame=new JFrame();
 			auxHelpFrame.setTitle("Help for SliderFrame");
 			JTextArea helpText=new JTextArea();

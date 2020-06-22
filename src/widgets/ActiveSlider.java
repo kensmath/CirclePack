@@ -1,6 +1,8 @@
 package widgets;
 import java.awt.Color;
 import java.awt.FlowLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -52,6 +54,11 @@ public class ActiveSlider extends JPanel implements MouseListener,
 		labelField=new JTextField(label,6);
 		labelField.setEditable(false);
 		valueField=new xNumField("",8);
+		valueField.addActionListener(new ActionListener() {
+			  public void actionPerformed(ActionEvent event) {
+			    sfparent.changeValueField_action(valueField.getValue(),index);
+			  }
+			});
 		valueField.setValue(val);
 		
 		add(labelField);

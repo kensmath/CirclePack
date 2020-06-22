@@ -83,7 +83,7 @@ public class BrooksQuad extends PackExtender {
 		if (newData==null)
 			Oops("Failed to build initial seed.");
 		cps.swapPackData(newData,true);
-		packData=cps.packData;
+		packData=cps.getPackData();
 		packData.swap_nodes(1,5);
 		for (int v=1;v<=4;v++) {
 			packData.kData[v].color=CPScreen.coLor(209); // yellow

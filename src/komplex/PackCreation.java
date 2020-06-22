@@ -367,6 +367,7 @@ public class PackCreation {
 		if (heS>0) p.geom_to_s();
 		if (heS<0) p.geom_to_h();
 			
+		p.rData[1].curv=2*Math.PI;
 		p.set_plotFlags();
 		p.setName("Seed "+n);
 

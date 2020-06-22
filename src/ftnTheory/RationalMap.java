@@ -294,7 +294,7 @@ public class RationalMap extends PackExtender {
 				CPScreen cpS=CPBase.pack[pnum];
 				if (cpS!=null) {
 					cpS.swapPackData(domainPack,false);
-					cpS.packData.vertexMap=masterMap.makeCopy();
+					cpS.getPackData().vertexMap=masterMap.makeCopy();
 				}
 			} catch (Exception ex) {
 				return 0;

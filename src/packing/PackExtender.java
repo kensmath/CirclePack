@@ -127,7 +127,7 @@ public abstract class PackExtender {
 		
 		// reconnect pack and screen
 		packData.cpScreen=holdcpS;
-		holdcpS.packData=packData;
+		holdcpS.setPackData(packData);
 		packData.packNum=holdcpS.getPackNum();
 		packData.setGeometry(packData.hes);
 

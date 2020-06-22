@@ -2,7 +2,9 @@ package geometry;
 
 import allMains.CirclePack;
 import complex.Complex;
+import exceptions.DataException;
 import math.CirMatrix;
+import util.UtilPacket;
 
 /**
  * General calls to math routines that then call the appropriate geometry.
@@ -284,6 +286,35 @@ public class CommonMath {
 		outCS.rad=erad*CC.a.x; // may be negative if a=-1
 		return outCS;
 		
+	}
+	
+	/**
+	 * Compute angle at v0 in mutually tangent triple of circles with
+	 * given radii. Assume tangency. x-radii in hyp case.
+	 * @param rad0 double. 
+	 * @param rad1 double
+	 * @param rad2 double
+	 * @param hes int, geometry
+	 * @return double, -1.0 on error
+	 */
+	public static double get_face_angle(double rad0,double rad1,double rad2,int hes)
+			throws DataException {
+		double theCos=0.0;
+		if (hes<0) // hyp 
+			theCos=HyperbolicMath.h_comp_x_cos(rad0,rad1,rad2);
+		else if (hes>0) { // sph
+			theCos=SphericalMath.s_comp_cos(rad0, rad1, rad2);
+		}
+		else { // eucl
+			UtilPacket up=new UtilPacket();
+			if (EuclMath.e_cos_overlap(rad0, rad1, rad2, up))
+				theCos=up.value;
+			else
+				throw new DataException("euclidean incompatibility.");
+		}
+		if (Math.abs(theCos)>1.0)
+			throw new DataException("error calculating angle");
+		return Math.acos(theCos);
 	}
 	
 }

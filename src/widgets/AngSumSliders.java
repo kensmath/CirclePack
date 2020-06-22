@@ -12,26 +12,24 @@ import listManip.NodeLink;
 import packing.PackData;
 
 /**
- * A Frame for sliders controlling specified radii.
+ * A Frame for sliders displaying specified angle sums.
  * @author kstephe2, June 2020
  *
  */
-public class RadiiSliders extends SliderFrame {
+public class AngSumSliders extends SliderFrame {
 	
 	private static final long serialVersionUID = 1L;
 	
 	NodeLink verts;  // objects for the widget
-//	int N;           // number of objects
-
 	
-	// constructors
-	public RadiiSliders(PackData p,NodeLink vlist) {
+	// constructor(s)
+	public AngSumSliders(PackData p,NodeLink vlist) {
 		this(p,"","",vlist);
 	}
 
-	public RadiiSliders(PackData p,String chgcmd,String movcmd,NodeLink vlist) {
+	public AngSumSliders(PackData p,String chgcmd,String movcmd,NodeLink vlist) {
 		super(p,chgcmd,movcmd);
-		type=0;
+		type=2;
 		
 		// throw back to CirclePack to kill this window
 		this.addWindowListener(new WindowAdapter(){  
@@ -42,14 +40,15 @@ public class RadiiSliders extends SliderFrame {
 
 		verts=NodeLink.removeDuplicates(vlist);
 		sliderCount=verts.size();
-		setTitle("Selected Radii of packing "+packData.packNum);
-		setHelpText(new StringBuilder("These sliders control selected radii. The "
-				+ "user can specify two active command strings, 'change cmd' and "
-				+ "'motion cmd'. When checked to activate, the associated command "
-				+ "string will be executed when the mouse changes a slider or "
-				+ "enters slider label, respectively.\n\n"
+		setTitle("Angle Sums, p"+packData.packNum);
+		setHelpText(new StringBuilder("These sliders display selected angle sums. "
+				+ "Generally, angle sums are not used for control, nonetheless, the"
+				+ "user can specify two active command strings, marked 'change cmd'"
+				+ "and 'motion cmd', executed (if checked) when the mouse changes a"
+				+ "slider value or enters a slider label, respectively."
+				+ "There's also an 'optional cmd' for user use. \n\n"
 				+ "Implement with, e.g.\n\n"
-				+ "sliders -R -c ''rld'' -m ''disp -wr -c_Obj'' -o ''dual_layout'' {v...}.\n\n"
+				+ "sliders -A -c \"rld\" -m \"disp -wr -c_Obj\" -o \"dual_layout\" {v...}.\n\n"
 				+ "The variable 'Obj' is set to an object when the commands are"
 				+ "executed."));
 		mySliders=new ActiveSlider[sliderCount];
@@ -66,7 +65,7 @@ public class RadiiSliders extends SliderFrame {
 		int tick=0;
 		while (vlst.hasNext()) {
 			int v=vlst.next();
-			mySliders[tick]=new ActiveSlider(this,tick,Integer.toString(v),packData.rData[v].rad,true);
+			mySliders[tick]=new ActiveSlider(this,tick,Integer.toString(v),packData.rData[v].curv/Math.PI,true);
 			sliderPanel.add(mySliders[tick]);
 			tick++;
 		}
@@ -86,8 +85,8 @@ public class RadiiSliders extends SliderFrame {
 			if (verts.contains(v))
 				continue;
 			String str=Integer.toString(v);
-			double rad=packData.rData[v].rad;
-			tmpSliders[sliderCount+hit]=new ActiveSlider(this,sliderCount+hit,str,rad,true);
+			double angsum=packData.rData[v].curv/Math.PI;
+			tmpSliders[sliderCount+hit]=new ActiveSlider(this,sliderCount+hit,str,angsum,true);
 			sliderPanel.add(tmpSliders[sliderCount+hit]);
 			verts.add(v);
 			hit++;
@@ -141,14 +140,14 @@ public class RadiiSliders extends SliderFrame {
 	 * when a slider changes, it sends the new value to packData
 	 */
 	public void upValue(int indx) {
-		packData.rData[verts.get(indx)].rad=mySliders[indx].value;
+		packData.rData[verts.get(indx)].curv=(mySliders[indx].value)*Math.PI;
 	}
 	
 	/**
 	 * Set slider value from packing data
 	 */
 	public void downValue(int indx) {
-		mySliders[indx].setValue(packData.rData[verts.get(indx)].rad);
+		mySliders[indx].setValue(packData.rData[verts.get(indx)].curv/Math.PI);
 	}
 	
 	/**
@@ -156,7 +155,7 @@ public class RadiiSliders extends SliderFrame {
 	 */
 	public void createSliderPanel() {
 		sliderPanel=new JPanel();
-        sliderPanel.setBackground(new Color(200,230,255));
+        sliderPanel.setBackground(new Color(200,255,230));
 	}
 	
 	public void setChangeField(String cmd) {
@@ -179,23 +178,13 @@ public class RadiiSliders extends SliderFrame {
 		valueField_action(val,indx);
 	}
 
-	public void initRange() {
-		val_min=1000000;
-		val_max=-1;
-		Iterator<Integer> vlst=verts.iterator();
-		while (vlst.hasNext()) {
-			int v=vlst.next();
-			double rad=packData.rData[v].rad;
-			val_min= (rad<val_min) ? rad :val_min;
-			val_max= (rad>val_max) ? rad :val_max;
-		}
-		val_min /=2.0;
-		val_max *=2.0;
+	public void initRange() { // [0,4], always multiplied by pi
+		val_min=0.0;
+		val_max=4.0;
 	}
 
 	public void killMe() {
-		CommandStrParser.jexecute(packData,"slider -R -x");
+		CommandStrParser.jexecute(packData,"slider -A -x");
 	}
 
 }
-

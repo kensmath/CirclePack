@@ -919,7 +919,7 @@ public class MicroGrid extends PackExtender {
 			try {
 				items=flagSegs.get(0);
 				qnum=StringUtil.qFlagParse(items.get(0));
-				qdata=CPBase.pack[qnum].packData;
+				qdata=CPBase.pack[qnum].getPackData();
 			} catch(Exception ex) {
 				throw new ParserException("must specify '-q{n}' for pack number");
 			}
@@ -931,7 +931,7 @@ public class MicroGrid extends PackExtender {
 		
 		// ============== clean delaunay (developing) ============
 		else if (cmd.startsWith("clean")) {
-			PackData qPack=CPBase.pack[1].packData;
+			PackData qPack=CPBase.pack[1].getPackData();
 			if (!qPack.status || qPack.nodeCount<=3) 
 				Oops("write_dual: p1 does not seem to be ready");
 
@@ -963,7 +963,7 @@ public class MicroGrid extends PackExtender {
 		    	else if (outcome>0) {
 		    		if (!debug) { // debug=true;
 		    			qPack.cpScreen.swapPackData(cM.getPackData(),true);
-		    			qPack=qPack.cpScreen.packData;
+		    			qPack=qPack.cpScreen.getPackData();
 		    		}
 		    	}
 //		    	else {
@@ -982,7 +982,7 @@ public class MicroGrid extends PackExtender {
 
 		// ============== write dual dcel structure from p1 ======
 		else if (cmd.startsWith("write_dual")) {
-			PackData qPack=CPBase.pack[1].packData;
+			PackData qPack=CPBase.pack[1].getPackData();
 			if (!qPack.status || qPack.nodeCount<=3) 
 				Oops("write_dual: p1 does not seem to be ready");
 			StringBuilder strbld=new StringBuilder();
@@ -1046,7 +1046,7 @@ public class MicroGrid extends PackExtender {
 		
 		// ============== grid_length =====
 		else if (cmd.startsWith("grid_l")) {
-			PackData qpack=CPBase.pack[1].packData; 
+			PackData qpack=CPBase.pack[1].getPackData(); 
 			if (!qpack.status || qpack.nodeCount<10 || CPBase.ClosedPath==null)
 				Oops("The packing must be put in p1, must have a path");
 
@@ -1867,7 +1867,7 @@ public class MicroGrid extends PackExtender {
 			gridPack.set_aim_current(true);
 			gridPack.fillcurves();
 			CommandStrParser.jexecute(gridPack,"layout");
-			CommandStrParser.jexecute(CPBase.pack[2].packData,"disp -w -c -e b");
+			CommandStrParser.jexecute(CPBase.pack[2].getPackData(),"disp -w -c -e b");
 			gridPack.facedraworder(false);
 			CPBase.pack[2].swapPackData(gridPack,false);
 		}

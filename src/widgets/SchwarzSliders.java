@@ -44,6 +44,7 @@ public class SchwarzSliders extends SliderFrame {
 
 	public SchwarzSliders(PackData p,String chgcmd,String movcmd,GraphLink glist) {
 		super(p,chgcmd,movcmd);
+		type=1;
 		root=0;
 		if (packData.kData[1].schwarzian==null) {
 			CirclePack.cpb.errMsg("slider usage: -S, packing needs to have schwarzians");
@@ -53,13 +54,13 @@ public class SchwarzSliders extends SliderFrame {
 		sliderCount=edges.size();
 		setTitle("Selected edge Schwarzians for packing "+packData.packNum);
 		setHelpText(new StringBuilder("These sliders control selected edge "
-				+ "real schwarzians. The user can specify two command strings, "
-				+ "marked 'motion cmd' and change cmd'. When checked to "
+				+ "real schwarzians. The user can specify two active command "
+				+ "strings, marked 'change cmd' and 'motion cmd'. When checked to "
 				+ "activate, the associated command string will be executed "
-				+ "when the mouse enters a slider or changes a slider value, "
+				+ "when the mouse changes a slider value or enters a slider's label, "
 				+ "respectively.\n\n"
 				+ "Implement with, e.g.\n\n"
-				+ "sliders -S -c \"rld\" -m \"disp -wr -c _Obj\" {v...}.\n\n"
+				+ "sliders -S -c \"rld\" -m \"disp -wr -c _Obj\" -o \"dual_layout\" {e...}.\n\n"
 				+ "The variable 'Obj' is set to an object when the commands are"
 				+ "executed."));
 		mySliders=new ActiveSlider[sliderCount];
@@ -275,8 +276,16 @@ public class SchwarzSliders extends SliderFrame {
 		motionCmdField.setText(cmd);
 	}
 	
+	public void setOptCmdField(String cmd) {
+		optCmdField.setText(cmd);
+	}
+	
 	public void mouse_entry_action(int indx) {
 		motionAction(indx); // see if there's a motion command to execute
+	}
+	
+	public void changeValueField_action(double val, int indx) {
+		valueField_action(val,indx);
 	}
 
 	/**

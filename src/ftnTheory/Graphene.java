@@ -1212,7 +1212,7 @@ public class Graphene extends PackExtender {
 	  	  	// copy to packData
 			CPScreen cps=packData.cpScreen; 
 			cps.swapPackData(stitchBase,true);
-			packData=cps.packData;
+			packData=cps.getPackData();
 		}
 		
 		// no more?
