@@ -93,7 +93,6 @@ import komplex.Embedder;
 import komplex.Face;
 import komplex.HexPaths;
 import komplex.KData;
-import komplex.PackCreation;
 import komplex.RedList;
 import komplex.Triangulation;
 import listManip.BaryCoordLink;
@@ -108,6 +107,7 @@ import listManip.VertexMap;
 import math.Matrix3D;
 import math.Mobius;
 import packQuality.QualMeasures;
+import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
 import packing.PackMethods;
@@ -1143,6 +1143,9 @@ public class CommandStrParser {
 				  else if (type.startsWith("fib") || type.startsWith("Fib")) {
 					  mode=11;
 				  }
+				  else if (type.startsWith("tetra") || type.startsWith("Tetra")) {
+					  mode=13;
+				  }
 			  } catch (Exception ex) {
 				  throw new ParserException("usage: create "+type+" {n}");
 			  }
@@ -1282,7 +1285,11 @@ public class CommandStrParser {
 	        	  
 	        	  break;
 			  }
-			  
+			  case 13: // regular tetrahedron on the sphere
+			  {
+				  newPack=PackCreation.tetrahedron();
+				  break;
+			  }
 			  } // end of switch
 
 			  if (newPack==null) {
@@ -3659,9 +3666,9 @@ public class CommandStrParser {
     	  // ========== set_sv (set_sphere_view) =======
     	  if (cmd.startsWith("sphere_vi") || cmd.startsWith("sv")) {
     		  boolean inc_flag=false;
-    		  double xang;
-    		  double yang;
-    		  double zang;
+    		  double xang=0.0;
+    		  double yang=0.0;
+    		  double zang=0.0;
     		  try {
 //    			  items=(Vector<String>)flagSegs.elementAt(0); // should be just one flag string
     			  if (StringUtil.isFlag(items.elementAt(0))) {
@@ -3670,7 +3677,6 @@ public class CommandStrParser {
     				  items.remove(0);
     				  if (c=='d') { // default
     					  cpScreen.sphView.defaultView();
-    					  Matrix3D.FromEulerAnglesXYZ(0.0,0.1*Math.PI,-0.03*Math.PI);
     					  return 1;
     				  }
     				  if (c=='t') { // set or set and update
@@ -3689,14 +3695,24 @@ public class CommandStrParser {
     					  }
     					  return 1;
     				  }
-    				  if (c=='i') // incremental
+    				  if (c=='N') { // look directly at the origin, the north pole
+    					  cpScreen.sphView.viewMatrix=
+    							  Matrix3D.FromEulerAnglesXYZ(0.0,0.5*Math.PI,0.5*Math.PI);
+    					  return 1;
+    				  }
+    				  else if (c=='S') { // look directly at infinity, the south pole
+    					  cpScreen.sphView.viewMatrix=
+    							  Matrix3D.FromEulerAnglesXYZ(0.0,-0.5*Math.PI,0.5*Math.PI);
+    					  return 1;
+    				  }
+    				  else if (c=='i') // incremental, increments should be given
     					  inc_flag=true;
     			  }
     			  xang=Double.parseDouble(items.elementAt(0))*Math.PI;
     			  yang=Double.parseDouble(items.elementAt(1))*Math.PI;
     			  zang=Double.parseDouble(items.elementAt(2))*Math.PI;
     		  } catch(Exception ex) {
-    			  throw new ParserException("error reading data");
+    			  throw new ParserException("error in sph_view data");
     		  }
     		  Matrix3D trans=Matrix3D.FromEulerAnglesXYZ(xang,yang,zang);
     		  if (!Matrix3D.isNaN(trans)) {
@@ -5503,23 +5519,34 @@ public class CommandStrParser {
 					baseface = edge.w;
 				}
 
-				// yes, place first face, zero out 'curv'
+				// yes, place the base equilateral face and zero out  all 'curv'
 				if (baseface > 0) {
 					
-					for (int v=1;v<=packData.intNodeCount;v++)
+					// zero out the curvatures
+					for (int v=1;v<=packData.nodeCount;v++)
 						packData.rData[v].curv=0.0;
 					
-					// get angles
-					packData.place_face(baseface, 0);
+					// note that we reset the radii and centers of 'baseface'
+					double sqrt3=Math.sqrt(3);
 					int[] verts=packData.faces[baseface].vert;
-					double[] radii=new double[3];
-					for (int q=0;q<3;q++) { 
-						double ang=CommonMath.get_face_angle(
-								packData.rData[verts[q]].rad,
-								packData.rData[verts[(q+1)%3]].rad,
-								packData.rData[verts[(q+2)%3]].rad,
-								packData.hes);
-						packData.rData[verts[q]].curv +=ang;
+					Complex[] Z=new Complex[3];
+					Z[0]=new Complex(1.0,-sqrt3);
+					Z[1]=new Complex(1.0,sqrt3);
+					Z[2]=new Complex(-2.0);
+					if (packData.hes>0) {
+						for (int j=0;j<3;j++) { 
+							CircleSimple cS=SphericalMath.e_to_s_data(Z[j],sqrt3);
+							packData.rData[verts[j]].center=new Complex(cS.center);
+							packData.rData[verts[j]].rad=cS.rad;
+							packData.rData[verts[j]].curv +=Math.PI;
+						}
+					}
+					else {
+						for (int j=0;j<3;j++) {
+							packData.rData[verts[j]].center=Z[j];
+							packData.rData[verts[j]].rad=sqrt3;
+							packData.rData[verts[j]].curv +=Math.PI/3.0;
+						}
 					}
 
 					// TODO: layout problems can occur if not in sph geometry,

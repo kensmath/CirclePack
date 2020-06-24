@@ -7,9 +7,9 @@ import exceptions.CombException;
 import exceptions.DataException;
 import komplex.EdgeSimple;
 import komplex.Face;
-import komplex.PackCreation;
 import listManip.NodeLink;
 import listManip.VertexMap;
+import packing.PackCreation;
 import packing.PackData;
 
 /**
@@ -125,7 +125,7 @@ public class Tile extends Face {
 		if (mode==1) { // simple tiling
 			if(vertCount<3)
 				throw new DataException("unigons and digons are not allowed in 'simple' mode");
-			PackData p=komplex.PackCreation.seed(vertCount,0);
+			PackData p=packing.PackCreation.seed(vertCount,0);
 			p.tileData=new TileData(1,1);
 			Tile tile=new Tile(p.tileData,vertCount);
 			tile.tileType=tileType;
@@ -148,7 +148,7 @@ public class Tile extends Face {
 		if (mode==2) { // edge barycenters added
 			if(vertCount<2)
 				throw new DataException("unigons are not allowed in tile mode 2");
-			PackData p=komplex.PackCreation.seed(2*vertCount,0);
+			PackData p=packing.PackCreation.seed(2*vertCount,0);
 			p.tileData=new TileData(1,2);
 			Tile tile=new Tile(p.tileData,vertCount);
 			tile.tileType=tileType;

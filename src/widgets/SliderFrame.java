@@ -139,12 +139,14 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	}
 	
 	/**
-	 * Basic GUI start: data has been initiated by instantiating code
+	 * Basic GUI start: data has been initiated by instantiating code.
+	 * They appear on the right of the screen, varying colors, positions
 	 */
 	public void initGUI() {
 		
-		int w=PackControl.displayDimension.width;
-		this.setBounds(w-DEFAULT_WIDTH,350+20*type,DEFAULT_WIDTH,200);//DEFAULT_HEIGHT);
+		int w=PackControl.displayDimension.width-DEFAULT_WIDTH-50*type+20*packData.packNum;
+		// vary location depending on type and packNum
+		this.setBounds(w,60+100*type,DEFAULT_WIDTH,200);//DEFAULT_HEIGHT);
 		setLayout(new BorderLayout());
 
 		initRange(); 

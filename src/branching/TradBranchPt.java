@@ -5,11 +5,11 @@ import input.CommandStrParser;
 import java.util.Vector;
 
 import komplex.EdgeSimple;
-import komplex.PackCreation;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.VertexMap;
 import math.Mobius;
+import packing.PackCreation;
 import packing.PackData;
 import util.UtilPacket;
 import canvasses.DisplayParser;

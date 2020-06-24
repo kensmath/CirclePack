@@ -2,20 +2,21 @@ package graphObjects;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Arc2D;
+import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 
+import allMains.CPBase;
+import complex.Complex;
+import complex.MathComplex;
 import math.Point3D;
 import panels.CPScreen;
 import util.ColorUtil;
-import allMains.CPBase;
-
-import complex.Complex;
-import complex.MathComplex;
 
 /**
  * CPCircle extends Complex. x,y,radius set from outside. 
@@ -387,7 +388,8 @@ public class CPCircle extends Complex {
 
 		// draw using Ellipse2D.Double for circles larger than 5 pixels in radius;
 		//   by hand with varying numbers of points for smaller circles
-		double visSize=radius*parent.pixFactor; // size in pixels
+		double abrad=Math.abs(radius); // in case radius is negative
+		double visSize=abrad*parent.pixFactor; // size in pixels
 		if (visSize<5) { // do by hand
 			path.reset();
 			int indx_inc=8; // default: 128/8 pts in polygonal approx
@@ -396,18 +398,26 @@ public class CPCircle extends Complex {
 			else if (visSize<4) 
 				indx_inc=16;
 
-			path.moveTo(parent.toPixX(radius+x),parent.toPixY(y));
+			path.moveTo(parent.toPixX(abrad+x),parent.toPixY(y));
 			for (int i=indx_inc;i<128;i += indx_inc)
-				path.lineTo(parent.toPixX(x+radius*cosine[i]),
-						parent.toPixY(y+radius*sine[i]));
+				path.lineTo(parent.toPixX(x+abrad*cosine[i]),
+						parent.toPixY(y+abrad*sine[i]));
 			path.closePath();
 			if (!path.intersects(g2.getClipBounds())) // view test
 				return;
 			// fill option
 			if (fill) {
+				// TOTO: if radius < 0, need to fill outside
 				path.closePath();
 				if (fcolor!=null)
 					g2.setColor(fcolor);
+				if (radius<0) {
+					Area outdisc=new Area(
+							new Rectangle(0,0,parent.pixWidth,parent.pixHeight));
+					Area ell=new Area(path);
+					outdisc.subtract(ell);
+					g2.fill(outdisc);
+				}
 				g2.fill(path);
 			}
 			// draw option
@@ -425,9 +435,9 @@ public class CPCircle extends Complex {
 		} 
 		
 		// else, use Ellipse2D
-		Ellipse2D.Double shape=new Ellipse2D.Double(parent.toPixX(x-radius),
-				parent.toPixY(y+radius),
-				2.0*radius*parent.pixFactor,2.0*radius*parent.pixFactor);
+		Ellipse2D.Double shape=new Ellipse2D.Double(parent.toPixX(x-abrad),
+				parent.toPixY(y+abrad),
+				2.0*abrad*parent.pixFactor,2.0*abrad*parent.pixFactor);
 		// TODO: might try "area" in Graphics2D.
 		if (!shape.intersects(g2.getClipBounds())) {  // view test
 //			System.out.println("no hit");
@@ -437,7 +447,17 @@ public class CPCircle extends Complex {
 		if (fill) {
 			if (fcolor!=null)
 				g2.setColor(fcolor);
-			g2.fill(shape);
+			if (radius<0) {
+				Area outdisc=new Area(
+						new Rectangle(0,0,parent.pixWidth,parent.pixHeight));
+				Area ell=new Area(shape);
+				outdisc.subtract(ell);
+				g2.fill(outdisc);
+			}
+			// TOTO: if radius < 0, need to fill outside
+			else {
+				g2.fill(shape);
+			}
 		}
 		// draw option
 		if (draw) {
@@ -455,7 +475,7 @@ public class CPCircle extends Complex {
 		// Revert to hands-on drawing: (12/2009) still bugs in Ellipse2D
 /*		path.reset();
 		int indx_inc=1;
-		double visSize=radius*parent.pixFactor; // size in pixels
+		double visSize=abrad*parent.pixFactor; // size in pixels
 		if (visSize<cir_sizes[0]) // note problem (fixed above): using real world size 
 			indx_inc=32;
 		else if (visSize<cir_sizes[1]) 
@@ -464,11 +484,11 @@ public class CPCircle extends Complex {
 		else if (visSize<cir_sizes[3]) indx_inc=4;
 		else if (visSize<cir_sizes[4]) indx_inc=2; 
 
-		path.moveTo(parent.toPixX(radius+x),parent.toPixY(y));
+		path.moveTo(parent.toPixX(abrad+x),parent.toPixY(y));
 		int i=indx_inc;
 		for (i=indx_inc;i<128;i += indx_inc)
-			path.lineTo(parent.toPixX(x+radius*cosine[i]),
-					parent.toPixY(y+radius*sine[i]));
+			path.lineTo(parent.toPixX(x+abrad*cosine[i]),
+					parent.toPixY(y+abrad*sine[i]));
 		path.closePath();
 		// fill options
 		if (fill) {

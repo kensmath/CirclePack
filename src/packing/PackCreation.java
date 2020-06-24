@@ -1,4 +1,4 @@
-package komplex;
+package packing;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -12,10 +12,11 @@ import exceptions.CombException;
 import exceptions.ParserException;
 import ftnTheory.GenBranching;
 import input.CommandStrParser;
+import komplex.EdgeSimple;
+import komplex.KData;
+import komplex.RedList;
 import listManip.EdgeLink;
 import listManip.NodeLink;
-import packing.PackData;
-import packing.RData;
 import panels.CPScreen;
 import tiling.TileData;
 
@@ -105,6 +106,81 @@ public class PackCreation {
 		workPack.setCombinatorics();
 		return workPack;
 
+	}
+	
+	/**
+	 * Create a symmetric tetrahedron on the sphere,
+	 * all radii arcsin(sqrt(2/3)).
+	 * @return PackData
+	 */
+	public static PackData tetrahedron() {
+		PackData p=new PackData(null);
+		p.nodeCount=4;
+		p.alpha=1;
+		p.gamma=2;
+		p.status=true;
+		p.locks=0;
+		p.activeNode=1;
+		p.hes=1;
+		for (int j=1;j<=4;j++) {
+			p.kData[j]=new KData();
+			p.rData[j]=new RData();
+		}
+
+		// create flowers, etc.
+		p.kData[1].num=3;
+		p.kData[1].flower=new int[4];
+		p.kData[1].flower[0]=2;
+		p.kData[1].flower[1]=3;
+		p.kData[1].flower[2]=4;
+		p.kData[1].flower[3]=2;
+
+		p.kData[2].num=3;
+		p.kData[2].flower=new int[4];
+		p.kData[2].flower[0]=1;
+		p.kData[2].flower[1]=4;
+		p.kData[2].flower[2]=3;
+		p.kData[2].flower[3]=1;
+
+		p.kData[3].num=3;
+		p.kData[3].flower=new int[4];
+		p.kData[3].flower[0]=1;
+		p.kData[3].flower[1]=2;
+		p.kData[3].flower[2]=4;
+		p.kData[3].flower[3]=1;
+
+		p.kData[4].num=3;
+		p.kData[4].flower=new int[4];
+		p.kData[4].flower[0]=1;
+		p.kData[4].flower[1]=3;
+		p.kData[4].flower[2]=2;
+		p.kData[4].flower[3]=1;
+		
+		// When all radii are equal, every face is equilateral with angles 2pi/3.
+		// Using spherical half-side formula, we get radii=arcsin(sqrt(2/3)).
+		double sphrad=Math.asin(Math.sqrt(2.0/3.0));
+		for (int i=1;i<=4;i++) {
+			p.kData[i].bdryFlag=0;
+			p.kData[i].utilFlag=p.kData[i].mark=0;
+			p.kData[i].schwarzian=null;
+			p.rData[i].rad=sphrad;
+			p.rData[i].curv=Math.PI;
+			p.rData[i].aim=Math.PI;
+		}
+		
+		// set centers, 1 at origin
+		sphrad *=2.0; // edge length
+		p.rData[1].center=new Complex(0.0);
+		p.rData[2].center=new Complex(Math.PI/2.0,sphrad);
+		p.rData[3].center=new Complex(Math.PI*(7.0/6.0),sphrad);
+		p.rData[4].center=new Complex(Math.PI*(11.0/6.0),sphrad);
+			
+		// process the combinatorics 
+		p.complex_count(true);
+		p.facedraworder(false);
+		p.set_plotFlags();
+		p.setName("Tetrahedron");
+		return p;
 	}
 
 	/**

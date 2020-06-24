@@ -52,7 +52,7 @@ public class SchwarzSliders extends SliderFrame {
 		// Note: schwarzians are independent of edge order
 		edges=GraphLink.removeDuplicates(glist,false); 
 		sliderCount=edges.size();
-		setTitle("Selected edge Schwarzians for packing "+packData.packNum);
+		setTitle("Schwarzians for p"+packData.packNum);
 		setHelpText(new StringBuilder("These sliders control selected edge "
 				+ "real schwarzians. The user can specify two active command "
 				+ "strings, marked 'change cmd' and 'motion cmd'. When checked to "

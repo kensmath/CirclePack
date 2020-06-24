@@ -3,7 +3,7 @@ package ftnTheory;
 import java.awt.Color;
 import java.util.Vector;
 
-import komplex.PackCreation;
+import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
 import panels.CPScreen;

@@ -8,10 +8,10 @@ import complex.Complex;
 import exceptions.CombException;
 import komplex.EdgeSimple;
 import komplex.KData;
-import komplex.PackCreation;
 import listManip.EdgeLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
+import packing.PackCreation;
 import packing.PackData;
 import packing.RData;
 

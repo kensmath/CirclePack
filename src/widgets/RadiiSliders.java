@@ -42,7 +42,7 @@ public class RadiiSliders extends SliderFrame {
 
 		verts=NodeLink.removeDuplicates(vlist);
 		sliderCount=verts.size();
-		setTitle("Selected Radii of packing "+packData.packNum);
+		setTitle("Radii from p"+packData.packNum);
 		setHelpText(new StringBuilder("These sliders control selected radii. The "
 				+ "user can specify two active command strings, 'change cmd' and "
 				+ "'motion cmd'. When checked to activate, the associated command "

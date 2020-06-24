@@ -103,7 +103,8 @@ import geometry.SphericalMath;
         /**
          * Matrix determined from Euler angles. Product of rotations,
          * each in radian angles, counterclockwise rotation as viewed
-         * from the positive end of the axis.
+         * from the positive end of the axis involved; first apply z-rotation,
+         * the x-rotation, then y-rotation.
          * @param xRot, rotation of (y,z) plane
          * @param yRot, rotation of (x,z) plane
          * @param zRot, rotation of (x,y) plane

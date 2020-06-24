@@ -1092,9 +1092,10 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			double r, CircleSimple sC, boolean oriented) {
 		double tmpr;
 		Complex tmpz;
+		CircleSimple sc;
 
 		if (hes < 0) { // hyperbolic
-			CircleSimple sc = HyperbolicMath.h_to_e_data(z, r);
+			sc = HyperbolicMath.h_to_e_data(z, r);
 			tmpz = new Complex(sc.center);
 			tmpr = sc.rad;
 			
@@ -1125,25 +1126,26 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			}
 			CirMatrix C =CirMatrix.sph2CirMatrix(z, r);
 			CirMatrix CC = CirMatrix.applyTransform(Mob, C, oriented);
-			sC=CirMatrix.cirMatrix2sph(CC);
+			sc=CirMatrix.cirMatrix2sph(CC);
 			if (Double.isNaN(sC.center.x) || Double.isNaN(sC.center.y)) {
-				sC.center = Mob.apply(z);
+				sc.center = Mob.apply(z);
 				/* fixup: see above */
 				/*
 				 * fixup: problem is sometimes that imaginary part comes out
 				 * negative. Have to check why? is this (or could it be) okay?
 				 */
-				sC.rad = r;
+				sc.rad = r;
 			}
+			sC.center=new Complex(sc.center);
+			sC.rad=sc.rad;
 			return 1;
 		} else { // euclidean
 			CirMatrix C=new CirMatrix(z,r);
 			CirMatrix CC=CirMatrix.applyTransform(Mob,C,oriented);
 
 			CircleSimple scl=CirMatrix.cirMatrix2eucl(CC);
-			sC.center=scl.center;
+			sC.center=new Complex(scl.center);
 			sC.rad=scl.rad;
-			
 			return 1;
 		}
 	}

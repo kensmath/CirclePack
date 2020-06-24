@@ -630,6 +630,9 @@ does not eliminate redundancies, as other counts do.)
 	The Fibonacci tilings are "fusion" type of Frank and Sadun. Parameters W H X
 	determine combinatorial edge lengths, defaulting to 1 1 1.
 	
+	A regular "tetrahedron" on there sphere; 4 circles, each of radius
+	arcsin(sqrt(2/3)).
+	
 	Additional types can be anticipated, potentially with further
 	required options.
 </description>
@@ -648,6 +651,7 @@ does not eliminate redundancies, as other counts do.)
 	2 = atan(2) = .35241638*Pi, 3 = atan(1/2) = .1475836*Pi.</instance>
 	<instance text="create dyadic 6"> 6 generations of Penrose's hyperbolic tiling (Carleson squares in the limit)</instance>
 	<instance text="create fib 5 6 3 2"> 5 generations of Fibonnacci-related tiling, W=6,H=3,X=2.</instance>
+	<instance text="tetra"> regular tetrahedron on the sphere</instance>
 </examples>
 <seealso>
 <see>seed</see>
@@ -935,22 +939,28 @@ CAUTION: This call will not work if the C++ library is not operational.
 
 <command cmd="dual_layout" flags="-[c{flags}] -[f{flags}] [{f1 g1 ...}]">
 <description>
-	Use the real schwarzians (if they are set) to layout faces
-	associated with a directed tree of dual edges; default to
-	a layout dual spanning tree. If (f,g) is a dual edge, then we 
-	assume f is in place and use the real schwarzian for the 
-	associated edge to place the opposite circle of g. This is 
-	used only in spherical or euclidean geometry. See 
-	'Schwarzian.java' for details.
-	If the first pair has form (0,f) (as when created as dual spanning
-	tree), then f is designated as base face and is laid out first 
-	using its current radii. Also, all vertex angle sums (ie. 'curv') 
-	are set to and accumulated as contiguous faces are laid out. 
+	This is for laying out a circle packing using schwarzians of
+	its edges (if they are set). The layout order is associated
+	with the given list of dual edges specified by pairs (f,g) of
+	contiguous faces --- often a directed tree and by default,
+	a dual spanning tree. We assume f is in place and use the 
+	real schwarzian for the	common edge to place the opposite 
+	circle of g. This is used only in spherical or euclidean 
+	geometry. See 'Schwarzian.java' for details. Also, all vertex 
+	angle sums (ie. 'curv')	are set to and new angles accumulate
+	at vertices as successive faces are laid out.
+	
+	If the first pair has form (0,f) (as when created as a dual 
+	spanning tree), then f is designated as base face to be laid
+	out first. This face is our 'base equilateral' face, meaning
+	it is an equilateral triangle formed by three circles of (eucl)
+	radius sqrt(3) with barycenter at the origin, and tangency 
+	points in the direction of the cube roots of unity.  
 	OBE: original command's name was 'sch_layout'
 </description>
 <options>
-<opt flag="f"> draw each new face as laid out with usual display flags</opt>
-<opt flag="c"> draw each new circle with usual display flags</opt>
+<opt flag="f"> draw each new face as laid out with usual display options</opt>
+<opt flag="c"> draw each new circle with usual display options</opt>
 </options>
 <seealso>
 <see>sch_report</see>
@@ -3849,8 +3859,10 @@ for a canvas
 
 <command cmd="set_sphere_view" flags="[options] {a b c} (abbrev: set_sv)">
 <description>
-	Each canvas has a view it uses for spherical packings. The
-	coords used on the sphere are the usual spherical (t,p),
+	Each canvas has a view set to display packings on the sphere; 
+	in particular, this is a projection to the 2D screen of the
+	unit sphere positioned in a user-defined way. The coordinates 
+	used on the sphere are the usual spherical (t,p),
 	where t is "theta", measured from positive x-axis, and 
 	p is "phi" measured down from north pole. A matrix is stored
 	which transforms graphical operations so that the currently
@@ -3863,6 +3875,10 @@ for a canvas
 </description>
 <options> (one of, optional)
 	<opt flag="-d"> set to default.</opt>
+	<opt flag="-N"> look down at the north pole (i.e., the origin),
+	x-axis to the right</opt>
+	<opt flag="-S"> look up at the south pole (i.e., infinity),
+	x-axis to the right</opt>
 	<opt flag="-i"> increment current view by additional rotations.</opt>
 	<opt flag="-t {m00, m01, .., m22}"> set transformation directly using 3x3 matrix entries. (It is assumed that this is an orthogonal matrix.)</opt>
 </options>
