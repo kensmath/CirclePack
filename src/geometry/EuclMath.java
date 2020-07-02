@@ -1,19 +1,18 @@
 package geometry;
-import exceptions.DataException;
-
+import java.awt.geom.Point2D;
 import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CPBase;
 import baryStuff.BaryPoint;
+import complex.Complex;
+import exceptions.DataException;
 import komplex.EdgeSimple;
 import komplex.RedEdge;
 import komplex.RedList;
 import math.Point3D;
 import packing.PackData;
 import util.UtilPacket;
-
-import complex.Complex;
 /**
  * Static methods for mathematical operations in euclidean geometry.
  */
@@ -735,7 +734,7 @@ public class EuclMath{
 	} 
 	
 	/**
-	 * Find distance from z to a path. (See GenPathUtil.gpDistance
+	 * Find distance from z to a path. (See 'PathUtil.gpDistance'
 	 * for (signed) distance to Path2D.Double.)
 	 * @param z Complex z
 	 * @param plist Vector<Complex>
@@ -780,6 +779,44 @@ public class EuclMath{
 		// if yes, then closest point is in between, else is closest endpoint
 		if ((w1.x*w.x+w1.y*w.y)*(w2.x*w.x+w2.y*w.y)<=0.0) return toline;
 		return minm;
+	}
+	
+	/**
+	 * Return the point on segment [z1,z2] which is closest to z; may
+	 * be a projection to interior point or may be an end point.
+	 * @param pt Point3D
+	 * @param z1 Point3D
+	 * @param z2 Point3D
+	 * @return Point3D, 
+	 */
+	public static Point3D proj_to_seg(Point3D pt,Point3D z1,Point3D z2) {
+		Point3D base=new Point3D(z2.x-z1.x,z2.y-z1.y,z2.z-z1.z);
+		if (base.norm()<OKERR) // z1 and z2 are too close together
+			return new Point3D(z1);
+		Point3D z1z=new Point3D(pt.x-z1.x,pt.y-z1.y,pt.z-z1.z);
+		Point3D proj=Point3D.proj_vector(z1z, base);
+		if (Point3D.DotProduct(proj,base)<=0.0) // z1 is closest
+			return new Point3D(z1);
+		if (proj.normSq()>base.normSq()) // z2 is closest
+			return new Point3D(z2);
+		return new Point3D(proj.x+base.x,proj.y+base.y,proj.z+base.z);
+	}	
+
+	/**
+	 * Return the point on segment [z1,z2] which is closest to z
+	 * @param pt Complex
+	 * @param z1 Complex
+	 * @param z2 Complex
+	 * @return Complex, null on error
+	 */
+	public static Complex proj_to_seg(Complex pt,Complex z1,Complex z2) {
+		Point3D pt3=new Point3D(pt.x,pt.y,0.0);
+		Point3D z13=new Point3D(z1.x,z1.y,0.0);
+		Point3D z23=new Point3D(z2.x,z2.y,0.0);
+		Point3D proj=proj_to_seg(pt3,z13,z23);
+		if (proj==null)
+			return null;
+		return new Complex(proj.x,proj.y);
 	}
 	
 	/**

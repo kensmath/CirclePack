@@ -37,7 +37,7 @@ import math.Point3D;
 import packing.PackData;
 import util.CallPacket;
 import util.DataFormater;
-import util.GenPathUtil;
+import util.PathUtil;
 import util.StringUtil;
 
 /**
@@ -286,7 +286,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 					case 'P': 
 					{
 						if (thing.equals("PATH")) { // current path 
-							Vector<Vector<Complex>> path=GenPathUtil.gpPolygon(CPBase.ClosedPath);
+							Vector<Vector<Complex>> path=PathUtil.gpPolygon(CPBase.ClosedPath);
 							Iterator<Vector<Complex>> ZP=path.iterator();
 							while (ZP.hasNext()) {
 								Vector<Complex> loc_path=(Vector<Complex>)ZP.next();

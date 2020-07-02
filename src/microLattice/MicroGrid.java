@@ -1,4 +1,4 @@
-package ftnTheory;
+package microLattice;
 
 import java.awt.Color;
 import java.awt.Rectangle;
@@ -24,7 +24,6 @@ import komplex.AmbiguousZ;
 import komplex.CookieMonster;
 import komplex.EdgeSimple;
 import komplex.Face;
-import komplex.GridMethods;
 import komplex.KData;
 import listManip.EdgeLink;
 import listManip.FaceLink;
@@ -41,7 +40,7 @@ import panels.PathManager;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.DispFlags;
-import util.GenPathUtil;
+import util.PathUtil;
 import util.PlatenParams;
 import util.StringUtil;
 
@@ -53,8 +52,8 @@ import util.StringUtil;
  * 
  *  * Intensities will be interpolated from data provided in a file: 
  *    the intensity "field" has been a rectangular grid, 0 intensity 
- *    outside; however, I need more general methods of getting
- *    intensities.
+ *    outside; 
+ *    TOTO: we need more general methods of getting intensities.
  *  * The intensity file or the user should also specify: 'center' 
  *    and 'angle' for positioning the microgrid.
  *  * Shape will be cut out after construction instead of before.
@@ -94,8 +93,6 @@ import util.StringUtil;
  */
 public class MicroGrid extends PackExtender {
 	
-	final double sqrt3=Math.sqrt(3.0);
-	final double sq32=sqrt3/2.0;
 	final int MAX_GEN=300;
 	final int MAX_LEVELS=15; 
 
@@ -103,14 +100,16 @@ public class MicroGrid extends PackExtender {
 	int mode;                   // 1 = using intensity file, general shape (original mode)
 								// 2 = in disc, intensity+area density (2/2020)
 	String pathFileName;  	    // If given file name, mode 1
+	Path2D.Double myClosedPath; // backup for 'CPBase.ClosedPath' in case that is reused
 	String intensityFile;   	// type of intensity file depends on mode  
-	Vector<Double> areaDensity;  // used in mode 2.
+	Vector<Double> areaDensity; // used in mode 2.
 	boolean script_flag;        // are files in the script? 
+
+	PackData smoothPack;        // results packing with attached 'smoother'
+	PackData qackData;          // base packing, packing in disc, bdry perpendicular to unit circle 
+								// domain for conformal map to the target curved surface 
 	
-	PackData qackData;          // base packing, perp packing in disc; 
-								// domain for conformal map to the target curves surface 
-	
-	PlatenParams platenP;		// hold the various parameters
+	PlatenParams platenP;		// hold the various microGrid parameters
 	int max_gen;                // maximum number of generations in microGrid
 	int microN;					// computed number of generations of microGrid
 	
@@ -126,9 +125,12 @@ public class MicroGrid extends PackExtender {
 	Complex [][]gridPoints;		// intensity field grid points for debugging
 
 	// 'level's start at 1 (smallest circles) to 'levelcount'
+	int basediam;               // smallest combinatorial diameter; depends on ratio of radii between steps
 	int levelCount;				// number of levels of circle sizes
 	int []stepDiam;				// combinatorial diameters in terms of microgrid steps; index from 1
 	double []stepIntensity;		// minimum intensity level for each step; index from 1
+	double []stepRad;           // radius associated with each intensity step, index from 1
+	int []gridN;				// if n=gridN[level], then nodeLUW[level] is (2*n+1)x(2*n+1), index from 1
 	
 	// microgrid alignment
 	double encircleRad;			// rad of disc containing the path's rectangle
@@ -142,7 +144,6 @@ public class MicroGrid extends PackExtender {
 	Path2D.Double trimPath;		// for trimming final packing to avoid false edge around the boundary
 	
 	Node [][][]nodeLUW;			// 'Node' associated with level L, location <u,w>, U=u+microN, W=w+microN  
-	int []gridN;				// if n=gridN[level], then nodeLUW[level] is (2*n+1)x(2*n+1)
 
 	NodeLink latestBdry;		// outer bdry from the support from the latest processed level
 	
@@ -183,7 +184,7 @@ public class MicroGrid extends PackExtender {
 		registerXType();
 		if (running)
 			packData.packExtensions.add(this);
-	
+		smoothPack=null;
 		initialize();
 	}
 	
@@ -200,6 +201,7 @@ public class MicroGrid extends PackExtender {
 		registerXType();
 		if (running)
 			packData.packExtensions.add(this);
+		smoothPack=null;
 		initialize();
 	}
 
@@ -224,6 +226,7 @@ public class MicroGrid extends PackExtender {
 			// read the path, set center
 			File dir=CPFileManager.PackingDirectory;
 			CPBase.ClosedPath=PathManager.readpath(dir,pathFileName,script_flag);
+			myClosedPath=PathManager.readpath(dir,pathFileName,script_flag); // hold as backup
 			Rectangle rect=CPBase.ClosedPath.getBounds();
 			// (x,y) is lower left corner (not upper left) due to orientation of y.
 			Complex corner=new Complex(rect.getX(),rect.getY());
@@ -246,7 +249,8 @@ public class MicroGrid extends PackExtender {
 			microCenter=new Complex(0.0);
 			microAngle=0.0;
 			encircleRad=1.1; // slightly larger than unit disc
-			CPBase.ClosedPath=GenPathUtil.getCirclePath(1.0,new Complex(0.0),180);
+			CPBase.ClosedPath=PathUtil.getCirclePath(1.0,new Complex(0.0),180);
+			myClosedPath=PathUtil.getCirclePath(1.0,new Complex(0.0),180); // backup
 			
 			// TODO: gridPoints are for debugging, not used yet in mode 2
 //			gridPoints=mode2_Intensity(intensityFile,script_flag);
@@ -258,20 +262,20 @@ public class MicroGrid extends PackExtender {
 		trimPath=new Path2D.Double();
 		Complex z=new Complex(1.0);
 		trimPath.moveTo(z.x, z.y);
-		z=new Complex(1/2.0,sq32);
+		z=new Complex(1/2.0,CPBase.sqrt3by2);
 		trimPath.lineTo(z.x,z.y);
-		z=new Complex(-1.0/2.0,sq32);
+		z=new Complex(-1.0/2.0,CPBase.sqrt3by2);
 		trimPath.lineTo(z.x,z.y);
 		z=new Complex(-1.0);
 		trimPath.lineTo(z.x,z.y);
-		z=new Complex(-1.0/2.0,-1.0*sq32);
+		z=new Complex(-1.0/2.0,-1.0*CPBase.sqrt3by2);
 		trimPath.lineTo(z.x,z.y);
-		z=new Complex(1.0/2.0,-1.0*sq32);
+		z=new Complex(1.0/2.0,-1.0*CPBase.sqrt3by2);
 		trimPath.lineTo(z.x,z.y);
 		trimPath.closePath();
 		
 		// get everything started
-		reset();
+		reset(0); // default mode=0
 	}
 	
 	/**
@@ -415,7 +419,7 @@ public class MicroGrid extends PackExtender {
 			Oops("Failed in reading intensity field from '"+intensityfile+"'");
 		}
         
-        // if not box specified
+        // if no box specified
         if (!boxhit) {
     		iBox=new double[4];
     		iBox[0]=0.0; // lower x
@@ -451,29 +455,27 @@ public class MicroGrid extends PackExtender {
 	
 	/**
 	 * Here we check the specified parameters and if they're in place, we
-	 * compute the various quantities that depend on them: 
-	 * @return in nodeCount
+	 * compute the various quantities that depend on them:
+	 * TODO: for future tailoring, we call with a 'mode' 
+	 * @param mode int, default to mode=0.
 	 * @return int nodeCount
 	 */
-	public int reset() {
+	public int reset(int mode) {
 		
 		lastProcessed=0;
 		double Qm1=platenP.get_Q()-1;
-		int basediam=1;
 	
-		// integral diameter of smallest circle that can accommodate 
-		//    'ratioQ' ratio with radii of neighboring circles. However, we 
-		//    enforce minimum of diameter 2.     
+		// integral diameter of smallest circle accommodating 'ratioQ' 
+		//   ratio of radii for neighboring circles, enforcing basediam>=2.     
+		basediam=1;
 		while (Math.floor(Qm1*basediam)<=0)
 			basediam++;
-		
-		// compute 'microN', no. of hex generations in microgrid, up to max_gen.
-
 
 		if (platenP.minR<encircleRad/max_gen) // avoid minR being too small
 			platenP.set_minR(encircleRad,encircleRad/max_gen);
 		
-		microN=(int)Math.floor(encircleRad/(sqrt3*platenP.minR))*basediam+2*basediam;
+		// compute 'microN', no. of hex generations in microgrid, up to max_gen.
+		microN=(int)Math.floor(encircleRad/(CPBase.sqrt3*platenP.minR))*basediam+2*basediam;
 		double denom=(double)basediam;
 		microScaling=2.0*platenP.minR/denom;
 		
@@ -492,7 +494,7 @@ public class MicroGrid extends PackExtender {
 		for (int v=1;v<=packData.nodeCount;v++) {
 			int flg=0;
 			packData.rData[v].center=packData.rData[v].center.times(microScaling);
-			packData.rData[v].rad *=microScaling;
+			packData.rData[v].rad *=microScaling; // so radii = microScalling/2.0.
 			int []uw=v2micro[v];
 			if ((uw[0]%basediam)==0 && (uw[1]%basediam)==0)
 				flg=-1;
@@ -527,22 +529,9 @@ public class MicroGrid extends PackExtender {
 		// store intensity values at microgrid centers, get min/max;
 		setMicroIntensity(mode);
 
-		// set number and size of steps, intensity levels:
-		// Use logs to find how many integral levels we can have
-		//    with ratio (1.0+Qm1).
-		double LR=Math.log(platenP.maxR)-Math.log(platenP.minR);
-		levelCount=(int)Math.floor(LR/Math.log((double)(Qm1+1)))+1;
-		stepDiam=new int[levelCount+1];
-		stepIntensity=new double[levelCount+1];
-		double tdiff=(maxIntensity-minIntensity)/(double)(levelCount);
-		// Note: indexing from 1
-		stepDiam[1]=basediam;
-		stepIntensity[1]=maxIntensity-tdiff;
-		for (int j=2;j<=levelCount;j++) {
-			stepDiam[j]=stepDiam[j-1]+(int)Math.floor(Qm1*(double)stepDiam[j-1]);
-			stepIntensity[j]=stepIntensity[j-1]-tdiff;
-		}
-		stepIntensity[levelCount]=0.00; 
+		// set up all the step arrays, 'gridN[]', 'stepDiam[]', etc.
+		setStepData(mode); 
+		
 		numChosen=new int[levelCount+1]; // reset the counters
 		
 		// set up our exclusion zones: when a vertex is chosen at some level 'lev'
@@ -565,7 +554,7 @@ public class MicroGrid extends PackExtender {
 //			rads[lev]=(d+dpre)/2.0;
 		}
 
-		boolean debug=true; // false;
+		boolean debug=false; // debug=true; 
 
 		// now populate the stencils.
 		nixSmall=new EdgeLink[levelCount+1];
@@ -635,12 +624,6 @@ public class MicroGrid extends PackExtender {
 //				nixTangPt[lev]=formStencil((double)stepDiam[lev-1]/2.0-.01);
 		}
 
-		// find number of generations in the superlattices
-		gridN=new int[levelCount+1];
-		for (int lev=1;lev<=levelCount;lev++) {
-			gridN[lev]=(int) (Math.floor(microN/stepDiam[lev]));
-		}
-		
 		// create arrays of 'Node's from the various superlattice levels 
 		//   nodeLUW[L,U,W] is the 'Node' for level L for superlattice
 		//   coords <U,W>.
@@ -688,8 +671,7 @@ public class MicroGrid extends PackExtender {
 		// assume we have accommodated all parameter changes.
 		platenP.chgTrigger=false; 
 
-// debug=true; // color code microGrid circles by their intensity bracket
-		if (debug) {
+		if (debug) { // debug=true; // color code microGrid circles by their intensity bracket
 			for (int v=1;v<=packData.nodeCount;v++) {
 				double ity=microIntensity[v];
 				int l=1;
@@ -736,7 +718,7 @@ public class MicroGrid extends PackExtender {
 	 * It's 'VertexMap' entrys <v,mv> identify each vert v with 
 	 * the associated vert mv in the full microGrid. 
 	 * @param level int
-	 * @return
+	 * @return new PackData
 	 */
 	public PackData getNGrid(int level) {
 		int N=gridN[level];
@@ -770,7 +752,7 @@ public class MicroGrid extends PackExtender {
 			}
 		
 		// set radii/centers
-		double rad=1.0/(Math.sqrt(3)*N);
+		double rad=1.0/(CPBase.sqrt3*N);
 		for (int v=1;v<=newPack.nodeCount;v++) {
 			int v_macro=newPack.kData[v].mark;
 			newPack.rData[v].rad=rad;
@@ -781,7 +763,7 @@ public class MicroGrid extends PackExtender {
 	}
 
 	/**
-	 * TODO: want to allow either formula or data set with interpolation.
+	 * TODO: want to allow either formula or data set via interpolation.
 	 * Currently use 'intensityField'.
 	 * @param z Complex
 	 * @return non-negative double, intensity; 0 for outside intensity field
@@ -812,6 +794,24 @@ public class MicroGrid extends PackExtender {
 			System.out.println(" problem setting intensityField.");
 		}
 		return ans;
+	}
+	
+	/**
+	 * Get the radius from 'stepRad' associated with intensity
+	 * at the point z.
+	 * @param z Complex
+	 * @return double
+	 */
+	public double getRadius(Complex z) {
+		double ity=getIntensity(z);
+		if (ity>=stepIntensity[1])
+			return stepRad[1];
+		for (int s=2;s<levelCount;s++) {
+			if (ity>=stepIntensity[s] && ity<stepIntensity[s-1]) {
+				return stepRad[s];
+			}
+		}
+		return stepRad[levelCount];
 	}
 
 	/**
@@ -870,8 +870,50 @@ public class MicroGrid extends PackExtender {
 		Node node=null;
 		boolean debug=false;
 		
+		// ============= smooth =========
+		if (cmd.startsWith("smoo")) {
+			
+			// There must be a -q{n} flag
+			int qnum=-1;
+			for (int i=0;i<flagSegs.size();i++) {
+				items=flagSegs.get(i);
+				qnum=StringUtil.qFlagParse(items.get(0));
+				if (qnum>=0) // got it
+					flagSegs.remove(i);
+			}
+				
+			// failed?
+			if (qnum<0 || qnum>CPBase.NUM_PACKS) {
+				errorMsg("usage: smoother must have -q{n}");
+				return 0;
+			}
+				
+			// target packing not there 
+			smoothPack=CPBase.pack[qnum].getPackData();
+			if (!smoothPack.status) {
+//				errorMsg("usage: smoother -q{"+qnum+"}; packing "+qnum+" is empty");
+				return 0;
+			}
+			
+			System.out.println("dummy");
+			
+			// do we need to start the smoother?
+			if (smoothPack.smoother==null) {
+				smoothPack.smoother=new Smoother(smoothPack,this);
+				count++;
+			}
+
+			if (flagSegs==null || flagSegs.size()==0)
+				return count;
+				
+			// else, handle other flags in 'smoother' call
+			StringBuilder strbld=new StringBuilder("smooth -p"+qnum+" ");
+			strbld.append(StringUtil.reconstitute(flagSegs));
+			return cpCommand(strbld.toString());
+		}
+		
 		// ============= v_status ======
-		if (cmd.startsWith("v_stat")) {
+		else if (cmd.startsWith("v_stat")) {
 			NodeLink vlink=null;
 			try {
 				items=flagSegs.get(0);
@@ -935,7 +977,7 @@ public class MicroGrid extends PackExtender {
 			if (!qPack.status || qPack.nodeCount<=3) 
 				Oops("write_dual: p1 does not seem to be ready");
 
-			double basefactor=encircleRad/sq32;
+			double basefactor=encircleRad/CPBase.sqrt3by2;
 			double scalefactor=0.90; // default
 			try {// read scale factor
 				double sf=Double.parseDouble(flagSegs.get(0).get(0)); 
@@ -1202,7 +1244,6 @@ public class MicroGrid extends PackExtender {
 		    			for (j=0;j<=D;j++) {
 		    				nde=nodeL[i][j];
 		    				if (nde!=null && nde.mark==lev) {
-			    				int v=nde.myVert;
 		    					Complex z=packData.rData[nde.myVert].center;
 		    					double rad=0.5*microScaling*stepDiam[lev];
 		    					fp.write(" "+tick+"   "+rad+"   "+z.x+" "+z.y+"\n");
@@ -1396,7 +1437,7 @@ public class MicroGrid extends PackExtender {
 		}
 		
 		else if (cmd.startsWith("reset")) {
-			return reset();
+			return reset(0); // default mode=0
 		}
 		
 		else if (cmd.startsWith("set_mark")) {
@@ -1668,7 +1709,7 @@ public class MicroGrid extends PackExtender {
 		int count=0;
 		
 		if (lastProcessed<0) {
-			reset();
+			reset(0); // default mode=0
 			CirclePack.cpb.msg("MultiGrid was reset\n");
 		}
 		if (L>levelCount)
@@ -1676,7 +1717,7 @@ public class MicroGrid extends PackExtender {
 		if (L<=lastProcessed) {
 			CirclePack.cpb.msg("Process?" +
 					"Already processed to level "+lastProcessed+", so we have reset");
-			reset();
+			reset(0); // default mode=0
 		}
 		
 		// do from last up to and including L (up to step)
@@ -2543,21 +2584,21 @@ public class MicroGrid extends PackExtender {
 	 */
 	public EdgeLink formStencil(double rad) {
 		// count generations of hex to encircle rad
-		int nrad=(int)Math.floor(rad/sq32);
+		int nrad=(int)Math.floor(rad/CPBase.sqrt3by2);
 		EdgeLink elist=new EdgeLink();
 		for (int i=nrad;i>=0;i--) {
 		for (int j=nrad;j>=1;j--) {
 			double x=(double)(i+j)/2.0;
-			double y=(double)(j-i)*sq32;
+			double y=(double)(j-i)*CPBase.sqrt3by2;
 			double dis=Math.sqrt(x*x+y*y);
 			if (dis<=rad) 
 				elist.add(new EdgeSimple(i,j));
 			x=(double)(j-i-i)/2.0;
-			y=(double)(j)*sq32;
+			y=(double)(j)*CPBase.sqrt3by2;
 			if (dis<=rad)
 				elist.add(new EdgeSimple(j-i,-i));
 			x=(double)(i-j-2)/2.0;
-			y=(double)(i)*sq32;
+			y=(double)(i)*CPBase.sqrt3by2;
 			if (dis<=rad)
 				elist.add(new EdgeSimple(-j,i-j));
 		}
@@ -2565,19 +2606,6 @@ public class MicroGrid extends PackExtender {
 		return elist;
 	}
 		
-	/**
-	 * Greatest common divisor of two integers 
-	 * @param a int
-	 * @param b int
-	 * @return int
-	 */
-	public int GCD(int a, int b) {
-		a=Math.abs(a);
-		b=Math.abs(b);
-	    if (b == 0) return a;
-	    else return (GCD (b, a % b));
-	}
-	
 	/**
 	 * Utility to parse 'level' in command strings: usage "-L{n}". Remove first 
 	 * string of fsegs(0) and return n. 
@@ -2620,6 +2648,47 @@ public class MicroGrid extends PackExtender {
 			return null;
 		}
 		return nde;
+	}
+	
+	/**
+	 * This initializes 'levelCount', 'gridN[]', 'stepRad[]', 'stepDiam[]', 'stepIntensity[]'.
+	 * Default (mode==0) means equal increments (using log scale and max ratio). 
+	 * TODO: in future, allow user to specify how to set up relation between radii and intensity
+	 * @param mode
+	 */
+	public void setStepData(int mode) {
+		
+		double Qm1=platenP.get_Q()-1;
+
+		// default: equal increments (wrt. log) based on Qm1.
+		if (mode==0) {
+			// Use log to find how many integral levels we can have
+			//    with radius ratio (1.0+Qm1).
+			double LR=Math.log(platenP.maxR)-Math.log(platenP.minR);
+
+			// set number and size of steps, intensity levels:
+			// Note: intensity goes down as level goes up.
+			levelCount=(int)Math.floor(LR/Math.log((double)(Qm1+1)))+1;
+			stepDiam=new int[levelCount+1];
+			stepIntensity=new double[levelCount+1];
+			double tdiff=(maxIntensity-minIntensity)/(double)(levelCount);
+			// Note: indexing from 1
+			stepDiam[1]=basediam;
+			stepIntensity[1]=maxIntensity-tdiff;
+			for (int j=2;j<=levelCount;j++) {
+				stepDiam[j]=stepDiam[j-1]+(int)Math.floor(Qm1*(double)stepDiam[j-1]);
+				stepIntensity[j]=stepIntensity[j-1]-tdiff;
+			}
+			stepIntensity[levelCount]=0.00;
+			
+			gridN=new int[levelCount+1]; // number of generations in the superlattices
+			stepRad=new double[levelCount+1]; // radii for each level
+			for (int lev=1;lev<=levelCount;lev++) {
+				int N=(int) (Math.floor(microN/stepDiam[lev]));
+				gridN[lev]=N;
+				stepRad[lev]=1.0/(CPBase.sqrt3*N);
+			}
+		}
 	}
 	
 	public void initCmdStruct() {
@@ -2683,7 +2752,10 @@ public class MicroGrid extends PackExtender {
 				"Show microgrid coords, nodes, etc. for given vertices"));
 		cmdStruct.add(new CmdStruct("stencil","-L{} {sht} v",null,
 				"Draw stencil in dots about v, given level L and s/h/t, small/large/tang"));
-		
+		cmdStruct.add(new CmdStruct("smooth","-q{n}",null,"Initiate a 'Smoother' object for "+
+				"'field-based smoothing' so that it is attached to this 'MicroGrid', but also "+
+				"to the independent packing p{n}, which should contain the exported results. "+
+				"For other options, see 'smooth' in Help."));
 	}
 	
 
@@ -2692,8 +2764,8 @@ public class MicroGrid extends PackExtender {
 	 * A 'Node' represents a point of the basic microgrid (before scaling). 
 	 * A node location is in integer coords (n,m), where location is
 	 * v = n*u + m*w where
-	 * 		u = <1/2, -CPBase.sqrt32> and 
-	 * 		w = <1/2, CPBase.sqrt32>.
+	 * 		u = <1/2, -CPBase.sqrt3by2> and 
+	 * 		w = <1/2, CPBase.sqrt3by2>.
 	 * 
 	 * 'numDiam' is in grid units, so diameter 1 is smallest circle possible
 	 * and radius is 1/2 (in unscaled grid).
@@ -2704,24 +2776,17 @@ public class MicroGrid extends PackExtender {
 		public int myVert;		// index in 'packData'
 		int u;			// u coord in microgrid
 		int w;			// w coord in microgrid
-		int numDiam;	// diameter in terms of microgrid steps
 		Color color;	// 
 		boolean chosen; // true if node is a center at its level
-		boolean covered;// true if node is NOT eligible to be a center at its level
 		int mark;		
-		int num;		// likely to be 6 at most
-		int []flower;   // for building complex K
 		
 		// constructor
 		public Node(int v,int uu,int ww,int nR) {
 			myVert=v;
 			u=uu;
 			w=ww;
-			numDiam=nR;
 			chosen=false;
-			covered=false;
-			flower=null;
-			num=-1;
+			mark=0;
 		}
 		
 		/** 
@@ -2730,7 +2795,7 @@ public class MicroGrid extends PackExtender {
 		 */
 		public Complex getZ() {
 			double mrad=microScaling/2.0;
-			return new Complex(mrad*((double)(u+w)),mrad*sqrt3*((double)(w-u)));
+			return new Complex(mrad*((double)(u+w)),mrad*CPBase.sqrt3*((double)(w-u)));
 		}
 		
 

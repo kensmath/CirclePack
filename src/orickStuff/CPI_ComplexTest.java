@@ -311,7 +311,7 @@ public class CPI_ComplexTest {
 	view.xstd();
 	//view.skew();
 
-	CPI_Complex2 U = new CPI_Complex2(1.0, 2.0*CPBase.sqrt32);
+	CPI_Complex2 U = new CPI_Complex2(1.0, 2.0*CPBase.sqrt3by2);
 	CPI_Complex2 V = new CPI_Complex2(2.0, 0.0);
 
 	int i,j, NNN;

@@ -122,13 +122,12 @@ public class SchwarzSliders extends SliderFrame {
 			J=0;
 
 		// place euclidean circles
-		double sqrt3=Math.sqrt(3.0);
 		CircleSimple cS=new CircleSimple();
 		for (int j=0;j<3;j++) {
 			int v=verts[(j+J)%3];
-			Complex rot=new Complex(1.0,-sqrt3);
+			Complex rot=new Complex(1.0,-CPBase.sqrt3);
 			cS.center=CPBase.omega3[j].times(rot);  // rotate clw by pi/3
-			cS.rad=sqrt3;
+			cS.rad=CPBase.sqrt3;
 			if (packData.hes<0)  // shrink factor .05, convert
 				cS=HyperbolicMath.e_to_h_data(cS.center.times(0.05), cS.rad*0.05);
 			else if (packData.hes>0)  // sph, convert

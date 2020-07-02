@@ -13,7 +13,7 @@ import komplex.EdgeSimple;
 import listManip.BaryCoordLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
-import util.PathUtil;
+import util.PathBaryUtil;
 
 /**
  * 'PackData' is bloated, so starting in 2020, I'm offloading some static
@@ -65,7 +65,7 @@ public class PackMethods {
 				Path2D.Double path = new Path2D.Double();
 				path.moveTo(pts[0].x, pts[0].y);
 				path.lineTo(pts[1].x, pts[1].y);
-				Vector<BaryCoordLink> barycoordlink = PathUtil.fromPath(bp, path);
+				Vector<BaryCoordLink> barycoordlink = PathBaryUtil.fromPath(bp, path);
 
 				// iterate through; there may be more than one barycoordlink
 				Iterator<BaryCoordLink> bclits = barycoordlink.iterator();

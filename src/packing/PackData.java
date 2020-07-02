@@ -68,6 +68,7 @@ import listManip.VertexMap;
 import math.Matrix3D;
 import math.Mobius;
 import math.Point3D;
+import microLattice.Smoother;
 import panels.CPScreen;
 import posting.PostFactory;
 import rePack.EuclPacker;
@@ -79,7 +80,7 @@ import tiling.TileData;
 import util.BuildPacket;
 import util.ColorUtil;
 import util.DispFlags;
-import util.GenPathUtil;
+import util.PathBaryUtil;
 import util.PathUtil;
 import util.SelectSpec;
 import util.SphView;
@@ -91,9 +92,10 @@ import widgets.RadiiSliders;
 import widgets.SchwarzSliders;
 
 /**
- * Fundamental data repository on a circle packing's data, associated 
- * with a CPScreen for display. Methods here for reading/writing packings.
- * @author kens
+ * This is the fundamental data repository for a circle packing and is
+ * associated with a CPScreen for display. This is a workhorse, with 
+ * methods for reading/writing, combinatorics, and manipulations.
+ * @author kens, sometime last century
  *
  */
 public class PackData{
@@ -202,6 +204,8 @@ public class PackData{
     public SchwarzSliders schwarzSliders;
     public AngSumSliders angSumSliders;
     
+    public Smoother smoother;    // 6/2020. add a smoother
+    
     // Constructor
     public PackData(CPScreen parentScreen){
         cpScreen = parentScreen;
@@ -228,6 +232,7 @@ public class PackData{
     	utilComplexes=null;
     	vertexMap=null;
     	colorIndx=0;
+    	smoother=null;
     }
     
 
@@ -17124,9 +17129,9 @@ public class PackData{
 			ray.moveTo(cent.x,cent.y);
 			double ang=(double)j*Math.PI*2.0/lineCount;
 			ray.lineTo(Math.cos(ang),Math.sin(ang));
-			CPBase.gridLines.addAll(PathUtil.fromPath(localPD,ray));
-			CPBase.gridLines.addAll(PathUtil.fromPath(localPD,
-					GenPathUtil.getCirclePath((double)j/(lineCount+1),
+			CPBase.gridLines.addAll(PathBaryUtil.fromPath(localPD,ray));
+			CPBase.gridLines.addAll(PathBaryUtil.fromPath(localPD,
+					PathUtil.getCirclePath((double)j/(lineCount+1),
 							new Complex(0.0),128)));
 		}
 		return 1;
@@ -17162,13 +17167,13 @@ public class PackData{
 			Path2D.Double ray=new Path2D.Double();
 			ray.moveTo(spot,lowl.y);
 			ray.lineTo(spot,upr.y);
-			CPBase.gridLines.addAll(PathUtil.fromPath(localPD,ray));
+			CPBase.gridLines.addAll(PathBaryUtil.fromPath(localPD,ray));
 			// horizontal line
 			spot=lowl.y+(double)j*high;
 			ray=new Path2D.Double();
 			ray.moveTo(lowl.x,spot);
 			ray.lineTo(upr.x,spot);
-			CPBase.gridLines.addAll(PathUtil.fromPath(localPD,ray));
+			CPBase.gridLines.addAll(PathBaryUtil.fromPath(localPD,ray));
 		}
 		return lineCount;	
 	}
@@ -17415,7 +17420,7 @@ public class PackData{
 			double []val=new double[p.nodeCount+1];
 			double maxdepth=-100000;
 			for (int v=1;v<=p.nodeCount;v++) {
-				val[v]=EuclMath.dist_to_path(p.rData[v].center,GenPathUtil.gpPolygon(Gamma).get(0));
+				val[v]=EuclMath.dist_to_path(p.rData[v].center,PathUtil.gpPolygon(Gamma).get(0));
 				maxdepth=(val[v]>maxdepth) ? val[v] : maxdepth;
 			}
 			if (maxdepth<=.000000001) {

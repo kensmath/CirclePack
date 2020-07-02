@@ -75,7 +75,7 @@ public class PathInterpolator {
 		// Note: we just want the first entry in vector of Vector<Complex>
 		Vector<Complex> pz;
 		try {
-			pz=(Vector<Complex>)GenPathUtil.gpPolygon(gpath).get(0);
+			pz=(Vector<Complex>)PathUtil.gpPolygon(gpath).get(0);
 		} catch (Exception ex) {
 			return;
 		}

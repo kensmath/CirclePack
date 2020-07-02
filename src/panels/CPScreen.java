@@ -940,6 +940,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 				packData.angSumSliders.dispose();
 				packData.angSumSliders=null;
 			}
+			packData.smoother=null;
 		}
 		packData=p;
 		return packData.nodeCount;

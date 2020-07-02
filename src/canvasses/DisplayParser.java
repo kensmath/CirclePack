@@ -35,7 +35,7 @@ import packing.PackData;
 import panels.CPScreen;
 import tiling.Tile;
 import util.DispFlags;
-import util.PathUtil;
+import util.PathBaryUtil;
 import util.StringUtil;
 
 /**
@@ -236,7 +236,7 @@ public class DisplayParser {
 				if (dispFlags.colorIsSet)  // if color was specified
 					cpScreen.imageContextReal.setColor(dispFlags.getColor());
 				for (int j = 0; j < myLines.size(); j++) {
-					mypath = PathUtil.baryLink2path(localPD, myLines.get(j));
+					mypath = PathBaryUtil.baryLink2path(localPD, myLines.get(j));
 					if (mypath != null) {
 						cpScreen.drawPath(mypath);
 						count++;

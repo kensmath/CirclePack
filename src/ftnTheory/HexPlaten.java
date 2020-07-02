@@ -68,8 +68,6 @@ import util.StringUtil;
  */
 public class HexPlaten extends PackExtender {
 	
-	final double sqrt3=Math.sqrt(3.0);
-	
 	int [][]nodeV;				// <u+microN,w+microN> entry is associated vert v
 	
 	PlatenParams platenP;		// hold the various parameters
@@ -177,7 +175,7 @@ public class HexPlaten extends PackExtender {
 			basediam++;
 		
 		// compute 'microN', number of hex generations in underlying microgrid
-		microN=(int)Math.floor(platenP.extentOmega/(sqrt3*platenP.minR))*basediam+2*basediam;
+		microN=(int)Math.floor(platenP.extentOmega/(CPBase.sqrt3*platenP.minR))*basediam+2*basediam;
 		double denom=(double)basediam;
 		microScaling=2.0*platenP.minR/denom;
 		
@@ -453,12 +451,12 @@ public class HexPlaten extends PackExtender {
 		}
 		
 		// biggest radius we need to search 
-		int H=2*(int)Math.floor(rads[levelCount]/sqrt3);
+		int H=2*(int)Math.floor(rads[levelCount]/CPBase.sqrt3);
 		
 		for (int i=0;i<=H;i++) {
 			for (int j=1;j<=H;j++) {
 				double x=(double)(i+j)/2.0;
-				double y=(double)(j-i)*sqrt3/2.0;
+				double y=(double)(j-i)*CPBase.sqrt3/2.0;
 				double dis=Math.sqrt(x*x+y*y);
 				int tick=1;
 				while (tick<=levelCount && dis>rads[tick])
@@ -1714,8 +1712,8 @@ public class HexPlaten extends PackExtender {
 	 * @return double
 	 */
 	public double getInvDist(Node n1,Node n2) {
-		Complex z1=new Complex((double)n1.u/2.0,sqrt3*(double)n1.w/2.0);
-		Complex z2=new Complex((double)n2.u/2.0,sqrt3*(double)n2.w/2.0);
+		Complex z1=new Complex((double)n1.u/2.0,CPBase.sqrt3*(double)n1.w/2.0);
+		Complex z2=new Complex((double)n2.u/2.0,CPBase.sqrt3*(double)n2.w/2.0);
 		double r1=(double)(n1.numDiam)/2.0;
 		double r2=(double)(n2.numDiam)/2.0;
 		return EuclMath.inv_dist(z1, z2,r1, r2);
@@ -1795,8 +1793,8 @@ public class HexPlaten extends PackExtender {
 		double factor=1/microScaling;
 		double x=z.x*factor;
 		double y=z.y*factor;
-		ans[0]=(int)Math.round(x-y/sqrt3);
-		ans[1]=(int)Math.round(x+y/sqrt3);
+		ans[0]=(int)Math.round(x-y/CPBase.sqrt3);
+		ans[1]=(int)Math.round(x+y/CPBase.sqrt3);
 		return ans;
 	}
 
@@ -2066,8 +2064,8 @@ public class HexPlaten extends PackExtender {
 	 * A 'Node' represents a point of the basic microgrid (before scaling). 
 	 * A node location is in integer coords (n,m), where location is
 	 * v = n*u + m*w where
-	 * 		u = <1/2, -CPBase.sqrt32> and 
-	 * 		w = <1/2, CPBase.sqrt32>.
+	 * 		u = <1/2, -CPBase.sqrt3by2> and 
+	 * 		w = <1/2, CPBase.sqrt3by2>.
 	 * 
 	 * 'numDiam' is in grid units, so diameter 1 is smallest circle possible
 	 * and radius is 1/2 (in unscaled grid).
@@ -2104,7 +2102,7 @@ public class HexPlaten extends PackExtender {
 		 */
 		public Complex getZ() {
 			double mrad=microScaling/2.0;
-			return new Complex(mrad*((double)(u+w)),mrad*sqrt3*((double)(w-u)));
+			return new Complex(mrad*((double)(u+w)),mrad*CPBase.sqrt3*((double)(w-u)));
 		}
 		
 		/**

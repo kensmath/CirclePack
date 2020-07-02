@@ -24,7 +24,7 @@ import panels.CPScreen;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.DispFlags;
-import util.GenPathUtil;
+import util.PathUtil;
 import util.RH_curve;
 import util.StringUtil;
 
@@ -207,7 +207,7 @@ public class RiemHilbert extends PackExtender {
 		if (rhc.isCircle) {
 			return rhc.rad-rhc.center.minus(cent).abs();
 		}
-		double dist=GenPathUtil.gpDistance(rhc.restCurve,cent);
+		double dist=PathUtil.gpDistance(rhc.restCurve,cent);
 		if (rhc.restCurve.contains(cent.x,cent.y)) return dist;
 		return -dist;
 	}
@@ -238,7 +238,7 @@ public class RiemHilbert extends PackExtender {
 			dist=radius+rhc.center.minus(cent).abs();
 			return rhc.rad-dist;
 		}
-		dist=GenPathUtil.gpDistance(rhc.restCurve,cent);
+		dist=PathUtil.gpDistance(rhc.restCurve,cent);
 		if (dist>=0.0) return dist-radius;
 		return dist-radius;
 	}

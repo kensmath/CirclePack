@@ -6,7 +6,7 @@ import listManip.PathLink;
 import packing.PackData;
 import packing.PackExtender;
 import panels.CPScreen;
-import util.GenPathUtil;
+import util.PathUtil;
 import allMains.CPBase;
 import allMains.CirclePack;
 
@@ -155,7 +155,7 @@ public class ShapeShifter extends PackExtender {
 	PathLink setPathList() {
 		if (CPBase.ClosedPath==null) return null;
 		Vector<Vector<Complex>> cpath=
-			GenPathUtil.gpPolygon(CPBase.ClosedPath);
+			PathUtil.gpPolygon(CPBase.ClosedPath);
 		if (cpath==null || cpath.size()==0) return null;
 		Vector<Complex> comp1=(Vector<Complex>)cpath.get(0);
 		PathLink plink=new PathLink();

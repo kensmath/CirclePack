@@ -101,10 +101,12 @@ import geometry.SphericalMath;
         }
         
         /**
-         * Matrix determined from Euler angles. Product of rotations,
-         * each in radian angles, counterclockwise rotation as viewed
-         * from the positive end of the axis involved; first apply z-rotation,
-         * the x-rotation, then y-rotation.
+         * Matrix determined by the product of rotations about axis
+         * of xyz coord system (treated as fixed). Each angle in radians, 
+         * counterclockwise rotation as viewed from the positive end 
+         * of the axis involved; first apply z-rotation, then x-rotation, 
+         * then y-rotation. (I'm not sure of the connection to Euler
+         * angles.)
          * @param xRot, rotation of (y,z) plane
          * @param yRot, rotation of (x,z) plane
          * @param zRot, rotation of (x,y) plane
@@ -125,6 +127,23 @@ import geometry.SphericalMath;
             sn = Math.sin(zRot);
             Matrix3D zMat = new Matrix3D(cs, -sn, 0, sn, cs, 0, 0, 0, 1);
             return times(yMat,times(xMat,zMat));
+        }
+        
+        /**
+         * Given 'mob' which is a rigid motion of the sphere, find
+         * the three angles to produce 'mob' using 'FromEulerAnglesXYZ'
+         * above.  
+         * @param mob Mobius
+         * @return double[3]={x-angle,y-angle,z-angle}, exception if 'mob'
+         * is not a rigid motion
+         */
+        public static double[] getRotAngles(Mobius mob) {
+        	double[] ans=new double[3];
+        	
+        	// TODO: check for rigid motion
+        	// TODO; do computation
+        	
+        	return ans;
         }
         
         /**

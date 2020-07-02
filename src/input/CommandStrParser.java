@@ -61,7 +61,6 @@ import ftnTheory.HexPlaten;
 import ftnTheory.HypDensity;
 import ftnTheory.JammedPack;
 import ftnTheory.MeanMove;
-import ftnTheory.MicroGrid;
 import ftnTheory.Necklace;
 import ftnTheory.Percolation;
 import ftnTheory.PolyBranching;
@@ -106,6 +105,8 @@ import listManip.TileLink;
 import listManip.VertexMap;
 import math.Matrix3D;
 import math.Mobius;
+import microLattice.MicroGrid;
+import microLattice.Smoother;
 import packQuality.QualMeasures;
 import packing.PackCreation;
 import packing.PackData;
@@ -130,8 +131,8 @@ import tiling.TileData;
 import util.BuildPacket;
 import util.CallPacket;
 import util.DispFlags;
-import util.GenPathUtil;
 import util.PathUtil;
+import util.PathBaryUtil;
 import util.ResultPacket;
 import util.SphView;
 import util.StringUtil;
@@ -3142,7 +3143,7 @@ public class CommandStrParser {
 						  }
 						  case 'u': // unit disc
 						  {
-							  Gamma=GenPathUtil.getCirclePath(1.0,new Complex(0.0),128);
+							  Gamma=PathUtil.getCirclePath(1.0,new Complex(0.0),128);
 							  break;
 						  }
 						  case 'N': // number of interior random points; default 200
@@ -3903,7 +3904,7 @@ public class CommandStrParser {
         					  if (CPBase.ClosedPath==null)
         						  break;
         					  CPBase.gridLines=new Vector<BaryCoordLink>(2*lineCount+2);
-        					  CPBase.gridLines.addAll(PathUtil.fromPath(packData,CPBase.ClosedPath));
+        					  CPBase.gridLines.addAll(PathBaryUtil.fromPath(packData,CPBase.ClosedPath));
         					  return 1;
         				  }
         				  case 'N': // drop through
@@ -4111,6 +4112,90 @@ public class CommandStrParser {
           
       } // done with all 'set_' commands
 	      
+	  // ============= smooth =========
+	  if (cmd.startsWith("smoo")) {
+		  // Note: if smoother is to work in concert with a 'MicroGrid', then it
+		  //   is initiated in that 'MicroGrid'.
+		  if (packData.smoother==null) { // try to create
+			  // start the smoother
+			  packData.smoother=new Smoother(packData,null); // no 'MicroGrid' attached
+			  if (packData.smoother==null) {
+				  CirclePack.cpb.errMsg("error: smoother failed to start for pack "+packData.packNum);
+				  return 0;
+			  }
+		  }
+		  if (flagSegs==null || flagSegs.size()==0)
+			  return 1;
+
+		  // parse the various flags
+		  Iterator<Vector<String>> fst=flagSegs.iterator();
+		  while (fst.hasNext()) {
+			  items=fst.next();
+			  String str=items.get(0);
+			  if (str.startsWith("-q")) // toss, redundant (or wrong)
+				  continue;
+			  if (!StringUtil.isFlag(str)) {
+				  CirclePack.cpb.errMsg("usage: smoother -q{n} -a -b {b} -c {n] -d {flags} -r -s {x} -x");
+				  return 0;
+			  }
+			  items.remove(0); // toss the flag, there may be other stuff
+			  char c=str.charAt(1);
+			  switch(c) {
+			  case 'a': // accept adjustments
+			  {
+				  count +=packData.smoother.acceptNewData();
+				  break;
+			  }
+			  case 'b':  // set balance
+			  {
+				  try {
+					  double value=Double.parseDouble(items.get(0));
+					  count += packData.smoother.setRadPressure(value);
+				  } catch(Exception ex) {
+					  CirclePack.cpb.errMsg("usage: smoother -b {b}");
+				  }
+				  break;
+			  }
+			  case 'c': // cycles to run 
+			  {
+				  try {
+					  int cycles=Integer.parseInt(items.get(0));
+					  count += packData.smoother.computeCycles(cycles);
+				  } catch(Exception ex) {
+					  CirclePack.cpb.errMsg("usage: smoother -c {n}");
+				  }
+				  break;
+			  }
+			  case 'd': // display 
+			  {
+				  packData.smoother.dispNewData(flagSegs);
+				  break;
+			  }
+			  case 'r': 
+			  {
+				  packData.smoother.reset();
+				  break;
+			  }
+			  case 's': 
+			  {
+				  try {
+					  double value=Double.parseDouble(items.get(0));
+					  count += packData.smoother.setSpeed(value);
+				  } catch(Exception ex) {
+					  CirclePack.cpb.errMsg("usage: smoother -s {s}");
+				  }
+				  break;
+			  }
+			  case 'x': // kill the smoother
+			  {
+				  count +=packData.smoother.exit();
+				  break;
+			  }
+			  } // end of switch
+			  return count;				
+		  } // end of while
+	  }
+			
 	  // ========= socketServer =========
 	  if (cmd.startsWith("socketS")) {
 		  if (CPBase.cpMultiServer!=null)
@@ -5527,15 +5612,14 @@ public class CommandStrParser {
 						packData.rData[v].curv=0.0;
 					
 					// note that we reset the radii and centers of 'baseface'
-					double sqrt3=Math.sqrt(3);
 					int[] verts=packData.faces[baseface].vert;
 					Complex[] Z=new Complex[3];
-					Z[0]=new Complex(1.0,-sqrt3);
-					Z[1]=new Complex(1.0,sqrt3);
+					Z[0]=new Complex(1.0,-CPBase.sqrt3);
+					Z[1]=new Complex(1.0,CPBase.sqrt3);
 					Z[2]=new Complex(-2.0);
 					if (packData.hes>0) {
 						for (int j=0;j<3;j++) { 
-							CircleSimple cS=SphericalMath.e_to_s_data(Z[j],sqrt3);
+							CircleSimple cS=SphericalMath.e_to_s_data(Z[j],CPBase.sqrt3);
 							packData.rData[verts[j]].center=new Complex(cS.center);
 							packData.rData[verts[j]].rad=cS.rad;
 							packData.rData[verts[j]].curv +=Math.PI;
@@ -5544,7 +5628,7 @@ public class CommandStrParser {
 					else {
 						for (int j=0;j<3;j++) {
 							packData.rData[verts[j]].center=Z[j];
-							packData.rData[verts[j]].rad=sqrt3;
+							packData.rData[verts[j]].rad=CPBase.sqrt3;
 							packData.rData[verts[j]].curv +=Math.PI/3.0;
 						}
 					}

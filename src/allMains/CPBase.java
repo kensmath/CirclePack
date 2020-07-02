@@ -48,9 +48,11 @@ import util.VarControl;
 public abstract class CPBase {
 	
 	// Some useful constants, objects
+	public static final double sqrt3=Math.sqrt(3);           // sqrt{3}
 	public static final double sqrt3by2=Math.sqrt(3)/2.0;    // sqrt{3}/2
 	// 3rd roots of unity; unit normals to base equilateral triangle edges
-	public static final Complex []omega3= {new Complex(1.0),new Complex(-.5,CPBase.sqrt3by2),new Complex(-.5,-CPBase.sqrt3by2)};
+	public static final Complex []omega3= 
+		{new Complex(1.0),new Complex(-.5,CPBase.sqrt3by2),new Complex(-.5,-CPBase.sqrt3by2)};
 	
 	// abstract methods that must be implemented by derived classes
 	public abstract void myMsg(String str); // generic message

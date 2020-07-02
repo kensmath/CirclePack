@@ -1,7 +1,9 @@
-package komplex;
+package microLattice;
 
 import complex.Complex;
 import exceptions.CombException;
+import komplex.EdgeSimple;
+import komplex.KData;
 import listManip.EdgeLink;
 import packing.PackData;
 import packing.RData;
@@ -18,12 +20,13 @@ public class GridMethods {
 	
 	/**
 	 * Create hex packing as in 'hexBuild', but by direct build
-	 * rather than adding generations in succession. Advantage should
-	 * be speed, but vert numbering does not spiral out so nicely.
+	 * rather than adding generations in succession. (Advantage should
+	 * be speed, but vert numbering does not spiral out so nicely.)
 	 * The hex grid here is identified with span of independent vectors
 	 * u=<1/2,-sqrt(3)/2> and w=<1/2,sqrt(3)/2>, so <i,j> is i*u+j*w.
 	 * We also set up translation info in 'micro2v' and 'v2micro'.
 	 * Alpha is set to center vertex and gamma so positive x-axis goes through u+w.
+	 * The faces are unit-sided equilateral triangles, radii = 1/2.
 	 * @param n int, number of generations (seed is 1 generation)
 	 * @param m2v [][]int, allocated with proper size by calling routing
 	 * @param v2m [][]int, allocated with proper size by calling routing

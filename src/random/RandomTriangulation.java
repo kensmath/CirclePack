@@ -26,7 +26,7 @@ import komplex.Triangulation;
 import listManip.EdgeLink;
 import math.Point3D;
 import packing.PackData;
-import util.GenPathUtil;
+import util.PathUtil;
 import util.StringUtil;
 import util.UtilPacket;
 
@@ -56,10 +56,10 @@ public class RandomTriangulation {
 			throws DataException {
 		setSeed=sS;
 		// need length and polynomial approx of Gamma (should be just one component)
-		double flatness = GenPathUtil.gpExtent(gpath) * GenPathUtil.FLAT_FACTOR;
-		double length = GenPathUtil.gpLength(gpath, flatness);
+		double flatness = PathUtil.gpExtent(gpath) * PathUtil.FLAT_FACTOR;
+		double length = PathUtil.gpLength(gpath, flatness);
 		Vector<Complex> poly;
-		Vector<Vector<Complex>> polyGamma = GenPathUtil.gpPolygon(gpath,
+		Vector<Vector<Complex>> polyGamma = PathUtil.gpPolygon(gpath,
 				flatness);
 		try {
 			poly = (Vector<Complex>) polyGamma.get(0);
@@ -223,8 +223,8 @@ public class RandomTriangulation {
 	  else if (Gamma!=null) { /* Reset default affine transform to map random 
 		  	points of unit disc to random points in disc centered at bounding
 		  	box of Gamma and containing Gamma.*/
-		      double flatness=GenPathUtil.gpExtent(Gamma)*GenPathUtil.FLAT_FACTOR;
-		      double []cr=GenPathUtil.gpCentRad(Gamma,flatness);
+		      double flatness=PathUtil.gpExtent(Gamma)*PathUtil.FLAT_FACTOR;
+		      double []cr=PathUtil.gpCentRad(Gamma,flatness);
 		      atrans= new AffineTransform(cr[2],0.0,0.0,cr[2],cr[0],cr[1]);
 	  }
 	  else if (hes>0) { // sphere
@@ -459,8 +459,8 @@ public class RandomTriangulation {
 		/* Reset default affine transform to map random 
 		 * points of unit disc to random points in disc centered at bounding
 	  	 * box of polypath and containing polypath.*/
-		double flatness=GenPathUtil.gpExtent(polypath)*GenPathUtil.FLAT_FACTOR;
-		double []cr=GenPathUtil.gpCentRad(polypath,flatness);
+		double flatness=PathUtil.gpExtent(polypath)*PathUtil.FLAT_FACTOR;
+		double []cr=PathUtil.gpCentRad(polypath,flatness);
 		AffineTransform atrans= new AffineTransform(cr[2],0.0,0.0,cr[2],cr[0],cr[1]);
 		Random CPrand=new Random();
 		int hits=1;

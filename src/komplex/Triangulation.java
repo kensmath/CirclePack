@@ -680,7 +680,7 @@ public class Triangulation {
     		while (line!=null && (!faceHit || !vertHit)) {
     			// use line type: 2 (integer) or 3 (double)
         		int lt=-1; 
-    			while ((lt=StringUtil.lineType(line))!=2 && lt!=3)
+    			while (line!=null && (lt=StringUtil.lineType(line))!=2 && lt!=3)
     				line=StringUtil.ourNextLine(fp,true); 
     			if (lt==2 && !faceHit) { // starts with int, should be face data
     				faceHit=true;

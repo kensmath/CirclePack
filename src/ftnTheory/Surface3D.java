@@ -12,9 +12,6 @@ import util.StringUtil;
 
 public class Surface3D extends PackExtender {
 
-	final double sqrt3=Math.sqrt(3.0);
-	final double sq32=sqrt3/2.0;
-	
 	public PackData basePack; // store for reference; we will be using 'this' for microgrid
 	public int gridGen;
 	

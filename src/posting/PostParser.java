@@ -26,8 +26,8 @@ import packing.PackData;
 import panels.CPScreen;
 import tiling.Tile;
 import util.DispFlags;
-import util.GenPathUtil;
 import util.PathUtil;
+import util.PathBaryUtil;
 import util.SphView;
 import util.StringUtil;
 
@@ -208,7 +208,7 @@ public class PostParser {
 			{
 				Vector<Vector<Complex>> paths = null;
 				if (CPBase.ClosedPath != null)
-					paths = GenPathUtil.gpPolygon(CPBase.ClosedPath);
+					paths = PathUtil.gpPolygon(CPBase.ClosedPath);
 				if (tx < 0.0)
 					tx = 2.0; // default is thicker
 				if (!dispFlags.colorIsSet)
@@ -231,9 +231,9 @@ public class PostParser {
 					// create paths from global vector Blink
 					Path2D.Double path = null;
 					for (int j = 0; j < myLines.size(); j++) {
-						path = PathUtil.baryLink2path(p, myLines.get(j));
+						path = PathBaryUtil.baryLink2path(p, myLines.get(j));
 						if (path != null) {
-							paths = GenPathUtil.gpPolygon(path);
+							paths = PathUtil.gpPolygon(path);
 							pF.postPath(paths, CPScreen.coLor(1), tx, true);
 							count++;
 						}

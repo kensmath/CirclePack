@@ -5,7 +5,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Vector;
 
-import util.GenPathUtil;
+import util.PathUtil;
 import util.StringUtil;
 import allMains.CPBase;
 import allMains.CirclePack;
@@ -97,7 +97,7 @@ public class PathLink extends LinkedList<Complex> {
 		if (items==null || items.size()==0) { // default to 'ClosedPath', if it exists
 			if (CPBase.ClosedPath!=null) {
 				try {
-					Vector<Vector<Complex>> gp=GenPathUtil.gpPolygon(CPBase.ClosedPath);
+					Vector<Vector<Complex>> gp=PathUtil.gpPolygon(CPBase.ClosedPath);
 					Vector<Complex> comp1=gp.get(0);
 					for (int j=0;j<comp1.size();j++) { 
 						add(comp1.get(j));
