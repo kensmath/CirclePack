@@ -8,3 +8,8 @@ in the Java code itself.
 
 * Convert uses of double[3] to Point3D, especially in sph computations.
 
+* Complete separation of 'EdgeSimple' (for edges <v,w>) and 'GraphSimple' (for dual edges <f,g>)
+
+* Start whole MCV (model-controller-view) conversion: This may be good place to use modules.
+
+* 'TriAspect' is trying to play too many roles: simplify by creating some derived classes.

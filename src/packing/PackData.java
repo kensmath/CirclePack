@@ -14565,7 +14565,7 @@ public class PackData{
 	/** 
 	 * Create 'TriAspect' face data, which contains data face-by-face
 	 * for use, e.g., in 'Schwarzian' and 'ProjStruct'. This does not
-	 * change any of the packing data. 
+	 * change data in the packing itself.
 	 * @return int count 
 	 */
 	public static TriAspect []getTriAspects(PackData p) {

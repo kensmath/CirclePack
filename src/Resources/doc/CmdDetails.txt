@@ -4213,8 +4213,7 @@ of circles with that particular edge displayed.</instance>
 	<opt flag="-x"> Exit; this kills the smoothing tool within
 		'MicroGrid', perhaps to restart with a new packing</opt>
 </options>
-    
-    reflect thThe former determines the increment size
+</command>
 
 <command cmd="spiral" flags="[-f] {a b}">
 <description>

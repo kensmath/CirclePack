@@ -6083,7 +6083,9 @@ public class CommandStrParser {
 			  if (fs.startsWith("-w")) {
 				  cpS.clearCanvas(false);
 				  if (fs.startsWith("-wr")) {
-					  String tmpstr=cpS.dispOptions.toString();
+					  String tmpstr=cpS.dispOptions.toString().trim();
+					  if (tmpstr.equals("-w"))
+						  return jexecute(packData,cmd+" ");
 					  if (tmpstr.startsWith("-w")) 
 						  tmpstr=tmpstr.substring(3); // remove redundant -w (or -wr)
 					  return jexecute(packData,cmd+" "+tmpstr);

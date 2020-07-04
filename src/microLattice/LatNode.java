@@ -1,6 +1,9 @@
 package microLattice;
 
-/** 
+/**
+ * TODO: I haven't yet replace the internal class 'Node' of 'MicroGrid'
+ * with this type of 'LatNode'. 7/2020
+ *  
  * A 'latNode' is a node used in 'MicroGrid'; it represents combinatoric
  * information on a node in the basic microgrid. Its location in the
  * microgrid is in the signed integer coords (u,w), where location is

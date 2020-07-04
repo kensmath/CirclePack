@@ -294,7 +294,7 @@ public class Schwarzian {
 	 * Given a face 'f' in geometry 'hes' and schwarzian 's' across
 	 * edge j of f, find the circle across that edge. All we need about f 
 	 * is the mobius 'mob_f' from the base equilateral to f and j for the 
-	 * shared edge. Calling routine must know the geometry.
+	 * shared edge.
 	 * @param s double, schwarzian
 	 * @param j int, index of shared edge
 	 * @param bm_f Mbbius, map from base to f

@@ -638,8 +638,18 @@ public class DisplayParser {
 			case 'f': { // faces
 				int f;
 				boolean circleToo=false;
-				if (sub_cmd.contains("b"))
-					circleToo=true;
+				
+				// check for 'b' which is not part of 'bg'
+				int k=0;
+				if ((k=sub_cmd.indexOf('b'))>=0) { // is it 'bg' for 'background'?
+					if (k<(sub_cmd.length()-1) && sub_cmd.charAt(k+1)=='g') { 
+						// ignore 'bg' and look for a later 'b'
+						if (k+2<(sub_cmd.length()-1) && sub_cmd.indexOf('c',k+2)>0)
+							circleToo=true;
+					}
+					else
+						circleToo=true;
+				}
 				FaceLink faceLink = new FaceLink(p, items);
 				if (faceLink.size() <= 0)
 					break; // nothing in list

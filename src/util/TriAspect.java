@@ -3,6 +3,8 @@ package util;
 import allMains.CPBase;
 import complex.Complex;
 import geometry.EuclMath;
+import geometry.HyperbolicMath;
+import geometry.SphericalMath;
 import geometry.CircleSimple;
 import komplex.DualTri;
 import komplex.RedList;
@@ -45,7 +47,7 @@ public class TriAspect {
 	
 	public int hes;  // geometry, passed on creation from parent packing
 	public RedList redList; // 'redChain' entry for this face (generally 'null')
-	
+
 	// Various triples:
 	public int face;  // index of this face
 	public int []vert;     // 'Face.vert' vector (as ordered in packdata 'faces')
@@ -153,6 +155,11 @@ public class TriAspect {
 		needupdate=true;
 	}
 	
+	/**
+	 * Get the center as new Complex
+	 * @param j int
+	 * @return new Complex
+	 */
 	public Complex getCenter(int j) {
 		return new Complex(center[j]);
 	}
@@ -193,6 +200,24 @@ public class TriAspect {
 	}
 	
 	/**
+	 * Return index of initial vertex of first shared edge 
+	 * with 'ntri', it it exists.
+	 * @param ntri
+	 * @return int index, -1 on failure
+	 */
+	public int nghb_Tri(TriAspect ntri) {
+		int[] nverts=ntri.vert;
+		for (int j=0;j<3;j++) {
+			int v=nverts[j];
+			int w=nverts[(j+1)%3];
+			if (vertIndex(v)>=0 && vertIndex(w)>=0) { // shared edge
+				return vertIndex(w);
+			}
+		}
+		return -1;
+	}
+	
+	/**
 	 * Compute the centers in normalized position (v0 at origin,
 	 * v1 on positive real, v2 in upper half plane) using 'labels' 
 	 * entries as the current euclidean radii.
@@ -209,6 +234,31 @@ public class TriAspect {
 		center[2]=sp.center;
 		return true;
 	}
+
+	/**
+	 * Utility routine: only use 'TriAspect' to hold rad/cent data.
+	 * Create a baseEquilateral in geometry 'hes'. In eucl and spherical 
+	 * case, the edge tangency points are at the cube roots of unit 
+	 * on the unit circle, with the 0th edge tangency point at z=1. 
+	 * In hyp case, shrink this down by euclidean factor .05.
+	 * @return TriAspect, null on error
+	 */
+	public static TriAspect baseEquilaterl(int hes) {
+		TriAspect tri=new TriAspect(hes);
+		CircleSimple cS=new CircleSimple();
+		for (int j=0;j<3;j++) {
+			Complex rot=new Complex(1.0,-CPBase.sqrt3);
+			cS.center=CPBase.omega3[j].times(rot);  // rotate clw by pi/3 or 2pi/3
+			cS.rad=CPBase.sqrt3;
+			if (hes<0)  // shrink factor .05, convert
+				cS=HyperbolicMath.e_to_h_data(cS.center.times(0.05), cS.rad*0.05);
+			else if (hes>0)  // sph, convert
+			cS=SphericalMath.e_to_s_data(cS.center, cS.rad);
+			tri.setRadius(cS.rad, j);
+			tri.setCenter(cS.center, j);
+		}
+		return tri;
+	}
 	
 	/**
 	 * Compute the Mobius that would align this 'TriAspect' 
@@ -219,7 +269,6 @@ public class TriAspect {
 	 */
 	public Mobius alignMe(int indx,TriAspect across) {
 
-		int v=vert[indx];
 		int w=vert[(indx+1)%3];
 		int windx=across.vertIndex(w);
 		

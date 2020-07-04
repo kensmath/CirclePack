@@ -75,7 +75,7 @@ public class DispFlags {
 			while (k < strbuf.length() && !Character.isWhitespace(strbuf.charAt(k))) {
 				k++;
 			}
-			if (k < strbuf.length())
+			if (k < (strbuf.length()-1))
 				strbuf.delete(k, strbuf.length());
 
 			// =========== searches ================
@@ -198,7 +198,8 @@ public class DispFlags {
 	 */
 	public void setLabel(String lab) {
 		label=true;
-		labelStr=new String(lab);
+		if (lab!=null)
+			labelStr=new String(lab);
 	}
 	
 	/**

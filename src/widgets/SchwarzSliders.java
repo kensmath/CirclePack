@@ -22,6 +22,7 @@ import komplex.GraphSimple;
 import listManip.EdgeLink;
 import listManip.GraphLink;
 import packing.PackData;
+import util.TriAspect;
 import util.intNumField;
 
 /**
@@ -100,8 +101,9 @@ public class SchwarzSliders extends SliderFrame {
 	/**
 	 * Action for root button? Lay out the 'base equilateral' triangle.
 	 * Depends on geometry: prefer euclidean or spherical, so tangency
-	 * points are on the unit circle at cube roots of unity. For hyperbolic,
-	 * make much smaller.
+	 * points are on the unit circle at cube roots of unity, with tangency
+	 * point of 0th edge at z=1. For hyperbolic, shrink by eucl factor
+	 * of .05 first.
 	 * @return int, 0 on error
 	 */
 	public int rootAction() {
@@ -110,34 +112,17 @@ public class SchwarzSliders extends SliderFrame {
 			CirclePack.cpb.errMsg("slider usage: no 'root' specified");
 			return 0;
 		}
-		
-		// set the cclw order of vertices for the root face
+
+		// create as 'TriAspect', then transfer to 'packData'
+		TriAspect tri=TriAspect.baseEquilaterl(packData.hes);
 		int[] verts=packData.faces[f].vert;
-		int J=-1;
-		for (int j=0;(j<3 && J<0);j++) {
-			if (verts[j]==packData.alpha)
-				J=verts[j];
-		}
-		if (J==-1)
-			J=0;
-
-		// place euclidean circles
-		CircleSimple cS=new CircleSimple();
 		for (int j=0;j<3;j++) {
-			int v=verts[(j+J)%3];
-			Complex rot=new Complex(1.0,-CPBase.sqrt3);
-			cS.center=CPBase.omega3[j].times(rot);  // rotate clw by pi/3
-			cS.rad=CPBase.sqrt3;
-			if (packData.hes<0)  // shrink factor .05, convert
-				cS=HyperbolicMath.e_to_h_data(cS.center.times(0.05), cS.rad*0.05);
-			else if (packData.hes>0)  // sph, convert
-				cS=SphericalMath.e_to_s_data(cS.center, cS.rad);
-
-			packData.rData[v].center=new Complex(cS.center);
-			packData.rData[v].rad=cS.rad;
+			packData.rData[verts[j]].rad=tri.getRadius(j);
+			packData.rData[verts[j]].center=tri.getCenter(j);
 		}
-
-		return cpCommand("disp -w -ffc90 "+f); // display the root face
+		
+		// display the roor face
+		return cpCommand("disp -w -ffc90 "+f); 
 	}
 
 	// ============= abstract methods ==================

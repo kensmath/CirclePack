@@ -25,6 +25,7 @@ import listManip.NodeLink;
 import math.Mobius;
 import packing.PackData;
 import packing.PackExtender;
+import packing.Schwarzian;
 import util.CmdStruct;
 import util.DispFlags;
 import util.StringUtil;
@@ -47,19 +48,19 @@ import widgets.RadiiSliders;
  * enclosing the interstice and inscribed in the dual circle for the face. 
  * 
  * A "circle packing quadrangle" refers to two faces sharing edge e. 
- * Given map F:P --> P', for each face f and f'=F(f), M(f) is the
- * "face Mobius map" of f onto f' identifying corresponding tangency 
+ * Given map phi:P --> P', for each face f and F=phi(f), M(f) is the
+ * "face Mobius map" of f onto F identifying corresponding tangency 
  * points. These maps were used by He/Schramm to define maps between 
- * circle packings and used to prove convergence. 
+ * circle packings and prove convergence results. 
  * 
  * **** CONVENTION: Given directed edge <v,w> shared by faces f and g, we
  * reverse Orick's convention and let f be the face on the LEFT of <v,w>,
  * g the face on the RIGHT. Note that the ordered pair <f,g> is the "dual"
- * edge to <v,w>. 
+ * edge to <v,w> and geometrically ends up clockwise perpendicular to <v,w>
  * 
  * For each interior edge e sharing faces f and g, define the "directed 
  * Mobius edge derivative" by dM(e)=M(g)^{-1}.M(f). This is invariant: 
- * dM(e) is unchanged if we replace P' by P" = phi(P'), phi a Mobius. 
+ * dM(e) is unchanged if we replace P' by P" = m(P'), m a Mobius map. 
  * 
  * The Mobius maps dM(e) fix the tangency point within e and are always 
  * parabolic, and we normalize so trace(dM(e))=2 and det(dM(e))=1. If
@@ -96,9 +97,9 @@ public class SchwarzMap extends PackExtender {
 	public TriAspect []rangeTri;  // created with 'set_range' or filled by 'go'
 	public int rangeHes;          // range geometry
 	public int rangePackNum;
-	public GraphLink dTree;       // dual spanning tree for layout (root is removed) 
+	public GraphLink dTree;       // dual spanning tree for layout (root is removed)
 	
-	public RadiiSliders radSliders;
+	public RadiiSliders radSliders; // for opening a slider window
 
 	// Constructor
 	public SchwarzMap(PackData p) {
@@ -112,11 +113,16 @@ public class SchwarzMap extends PackExtender {
 			packData.packExtensions.add(this);
 		}
 		domainTri=PackData.getTriAspects(packData); // default: look at 'set_domain' call
-		rangeTri=null;
-		rangeHes=0; // resent when rangeTri is filled.
+		rangeTri=PackData.getTriAspects(packData); // could change: look at 'set_range' call
+		rangeHes=packData.hes; // may be reset when rangeTri is filled.
+		
+		// get the spanning tree (without stragglers)
 		dTree=DualGraph.easySpanner(packData,false);
 		if (dTree.get(0).v==0) // prune root
 			dTree.remove(0);
+		
+		// compute/store the 'schwarzian's for 'packData'
+		cpCommand(packData,"set_sch"); 
 	}
 	
 	/**
@@ -125,8 +131,170 @@ public class SchwarzMap extends PackExtender {
 	public int cmdParser(String cmd, Vector<Vector<String>> flagSegs) {
 		Vector<String> items = null;
 		
+		// ======= s_layout ================
+		if (cmd.startsWith("s_lay")) {
+
+			// copy from "s_map"
+
+			if (!packData.haveSchwarzians()) {
+				CirclePack.cpb.errMsg("seems 'packData' doesn't have 'schwarzian's set");
+				return 0;
+			}
+			PackData qData=packData;
+			String cirFlags=null;
+			String faceFlags=null;
+			GraphLink graph=null;
+			int qnum=packData.packNum; // default to this packing itself
+			
+			// normally there's a -q{} flag; it has to be first
+			if (flagSegs!=null && flagSegs.size()>0) {
+				items=flagSegs.get(0);
+				if (items!=null && items.size()>0 && items.get(0).startsWith("-q")) {
+					if ((qnum=StringUtil.qFlagParse(items.get(0)))>=0) {
+						items.remove(0);
+						flagSegs.remove(0);
+						
+						// minimal compatibility check or hyp check:
+						//   default is copy of packData
+						if (qnum!=packData.packNum) {
+							qData=CPBase.pack[qnum].getPackData();
+							if ((qData.faceCount!=packData.faceCount) || qData.hes<0) {
+								CirclePack.cpb.msg("Copy domain packing into target, p"+qData.packNum+", "+
+										" with spherical geometry because original target does "+
+										"not match nodeCount or is hyperbolic.");
+								cpCommand(packData,"copy "+qnum);
+								cpCommand(qData,"geom_to_s"); //  make range spherical
+							}
+						}
+					}
+					else
+						Oops("failed to parse '-q' flag");
+					if (flagSegs.size()>0 && items.size()>0) { 
+						Oops("There shouldn't be items left if there are more segments");
+					}
+				}
+				
+				// there are other flag segments: must be -c or -f
+				if (flagSegs!=null && flagSegs.size()>0) {
+					Iterator<Vector<String>> flst=flagSegs.iterator();
+					while (flst.hasNext()) {
+						items=flst.next();
+						if (StringUtil.isFlag(items.get(0))) {
+							String str=items.remove(0);
+							char c=str.charAt(1);
+							if (c=='c') { // draw circles
+								cirFlags=str;
+							}
+							else if (c=='f') { // draw faces
+								faceFlags=str;
+							}
+						}
+					}
+				}
+
+				// Now look for list of face pairs; default is spanning tree
+				if (items.size()>0) {
+					graph=new GraphLink(packData,items);
+				}
+			} // done with flags
+			
+			// default to 'dTree'
+			if (graph==null || graph.size()==0)
+				graph=dTree;
+			
+			// keeping track of processed faces
+			int []hitfaces=new int[packData.faceCount+1];
+			
+			// ensure radii/centers are in 'rangeTri' (in geometry of 'qData')
+			if (rangeTri==null || rangeTri.length!=packData.faceCount+1 || 
+					rangeTri[1].hes!=qData.hes)
+				rangeTri=PackData.getTriAspects(qData);
+			
+			// Do we need to place the first face?
+			EdgeSimple edge=graph.get(0);
+			int baseface=0;
+			if (edge.v==0) { // root? yes, then will have to place
+				graph.remove(0); 
+				baseface=edge.w;
+			}
+			else if (graph==dTree) { // yes, will place the first face
+				baseface=edge.v;
+			}
+			
+			int count=0;
+			CircleSimple sC=new CircleSimple();
+			
+			// If we need to place the base face, we make it a 'baseEquilateral',
+			//   as used in 'Schwarzian.java'.
+			if (baseface>0) {
+				TriAspect tri=TriAspect.baseEquilaterl(qData.hes);
+				TriAspect myTri=rangeTri[baseface];
+				for (int j=0;j<3;j++) {
+					myTri.setRadius(tri.getRadius(j), j);
+					myTri.setCenter(tri.getCenter(j), j);
+					
+					// put in qData as well (though may be changed later)
+					qData.rData[myTri.vert[j]].rad=myTri.getRadius(j);
+					qData.rData[myTri.vert[j]].center=myTri.getCenter(j);
+				}
+				rangeTri[baseface].setTanPts();
+			
+				// Draw (can use qData since data was just updated there
+				if (cirFlags!=null)
+					for (int j=0;j<3;j++) {
+						cpCommand(qData,"disp "+cirFlags+" "+myTri.vert[j]);
+					}
+				if (faceFlags!=null) 
+					cpCommand(qData,"disp "+faceFlags+" "+baseface);
+				qData.cpScreen.repaint();
+				
+				hitfaces[baseface]=1;
+				count=1;
+			}
+			// Now proceed through 'graph', propogating from face to face.
+			// Note: each 'TriAspect' has rad/center and data for a given circle
+			//       may differ as the layout progresses. Nevertheless, we but 
+			//       the latest rad/cent into qData
+			Iterator<EdgeSimple> dit=graph.iterator();
+			while (dit.hasNext()) {
+				edge=dit.next();
+				int f=edge.v; // should already have its data
+				int g=edge.w;
+				
+				int j=rangeTri[f].nghb_Tri(rangeTri[g]);
+				if (j<0)
+					Oops("faces "+f+" and "+g+" don't see to share an edge");
+				
+				int v=rangeTri[f].vert[j];
+				int w=rangeTri[f].vert[(j+1)%3];
+				int k=qData.nghb(v, w);
+				int V=rangeTri[g].vert[(rangeTri[g].vertIndex(v)+1)%3]; // the new circle in g
+				// get schwarzian from 'packData'
+				double s=packData.kData[v].schwarzian[k];
+				SchwarzMap.propogate(rangeTri[f],rangeTri[g], s, qData.hes);
+				
+				int[] verts=rangeTri[g].vert;
+				for (int jj=0;jj<3;jj++) {
+					qData.rData[verts[jj]].rad=rangeTri[g].getRadius(jj);
+					qData.rData[verts[jj]].center=new Complex(rangeTri[g].getCenter(jj));
+				}
+				
+				// Now, draw this face
+				// Draw (can use qData since data was just updated there
+				if (cirFlags!=null) 
+					cpCommand(qData,"disp "+cirFlags+" "+V);
+				if (faceFlags!=null) 
+					cpCommand(qData,"disp "+faceFlags+" "+g);
+				qData.cpScreen.repaint();
+				
+				hitfaces[g]=1;
+				count++;
+			} // end of while through dTree
+			return count;
+		}
+
 		// ======= open radSlider ============
-		if (cmd.startsWith("radS")) {
+		else if (cmd.startsWith("radS")) {
 			NodeLink wlist;
 			try {
 				items=flagSegs.get(0);
@@ -726,6 +894,8 @@ public class SchwarzMap extends PackExtender {
 		}
 		
 		// ======== set_domain/range ===========
+		// TODO: 7/2020. I'm not adjusting this right now, because I'm moving
+		//       tom implement for real schwarzians for domain packing. 
 		else if (cmd.startsWith("set_domain") || cmd.startsWith("set_range")) {
 			PackData pd=packData;
 			if (flagSegs!=null && flagSegs.size()>0) {
@@ -1136,6 +1306,53 @@ public class SchwarzMap extends PackExtender {
 		return faceMobs;
 	}
 	
+	/**
+	 * Compute rad/cent data for 'gtri' based on existing data for 'ftri'
+	 * if these faces share an edge. 's' is the 'schwarzian' for that edge.
+	 * Assume tanPts of 'ftri' are set, update the tanPts of the new 'gtri'.
+	 * @param ftri TriAspect
+	 * @param gtri TriAspect
+	 * @param s double, schwarzian
+	 * @param hes int, geometry
+	 * @return index of computed circle in 'gtri', -1 on error
+	 */
+	public static int propogate(TriAspect ftri,TriAspect gtri,double s,int hes) {
+		int J=-1;
+		try {
+			int j=ftri.nghb_Tri(gtri);
+			if (j==-1)
+				return -1;
+			
+			// edge <v,w> of f and its recorded 'schwarzian'
+			int v=ftri.vert[j];
+
+			// copy over shared rad/cents:
+			J=(gtri.vertIndex(v)+1)%3; // index of target circle in 'gtri'
+			gtri.setRadius(ftri.getRadius(j), (J+2)%3);
+			gtri.setRadius(ftri.getRadius((j+1)%3),(J+1)%3);
+			gtri.setCenter(ftri.getCenter(j), (J+2)%3);
+			gtri.setCenter(ftri.getCenter((j+1)%3),(J+1)%3);
+			
+			// compute map from base equilateral
+			Mobius bm_f=Mobius.mob_xyzXYZ(CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
+					ftri.tanPts[0],ftri.tanPts[1],ftri.tanPts[2],0,ftri.hes);
+			
+			// compute the target circle
+			CircleSimple sC = Schwarzian.getThirdCircle(s, j, bm_f, ftri.hes);
+
+			gtri.setRadius(sC.rad, J);
+			gtri.setCenter(sC.center, J);
+			
+			// reset the tangency points
+			gtri.setTanPts();
+			
+		} catch (Exception ex) {
+			throw new DataException("propogate via schwarzian problem.");
+		}
+		
+		return J;
+	}
+		
 	/** 
 	 * Override method for cataloging command structures
 	 */
@@ -1172,7 +1389,8 @@ public class SchwarzMap extends PackExtender {
 				"matlab-style file: 'v w tangPt dM'"));
 		cmdStruct.add(new CmdStruct("field",null,null,"display vector field of "+
 				"Schwarzian derivatives, color/length encoded."));
+		cmdStruct.add(new CmdStruct("s_layout","[-d{flags}] {f g ...}",null,"Us the "+
+				"schwarzians stored with the domain packing to compute and lay out "+
+				"successive face pairs <f,g>, placing data in the domain's 'TriAspect's."));
 	}
-
-
 }
