@@ -34,7 +34,7 @@ public class SchwarzSliders extends SliderFrame {
 	
 	private static final long serialVersionUID = 1L;
 	
-	GraphLink edges;  // objects for the widget
+	GraphLink dedges;  // objects for the widget, dual edges
 	int root; 		  // root face (if given) is generally laid out first  
 	intNumField rootField;  
 	
@@ -51,8 +51,8 @@ public class SchwarzSliders extends SliderFrame {
 			CirclePack.cpb.errMsg("slider usage: -S, packing needs to have schwarzians");
 		}
 		// Note: schwarzians are independent of edge order
-		edges=GraphLink.removeDuplicates(glist,false); 
-		sliderCount=edges.size();
+		dedges=GraphLink.removeDuplicates(glist,false); 
+		sliderCount=dedges.size();
 		setTitle("Schwarzians for p"+packData.packNum);
 		setHelpText(new StringBuilder("These sliders control selected edge "
 				+ "real schwarzians. The user can specify two active command "
@@ -130,7 +130,7 @@ public class SchwarzSliders extends SliderFrame {
 	public void populate() {
 		GraphLink newEdges= new GraphLink(packData);
 		ActiveSlider[] tmpSliders = new ActiveSlider[sliderCount];
-		Iterator<EdgeSimple> elst=edges.iterator();
+		Iterator<EdgeSimple> elst=dedges.iterator();
 		int tick=0;
 		while (elst.hasNext()) {
 			GraphSimple edge=new GraphSimple(elst.next());
@@ -148,8 +148,8 @@ public class SchwarzSliders extends SliderFrame {
 			sliderPanel.add(tmpSliders[tick]);
 			tick++;
 		}
-		edges=newEdges;
-		sliderCount=edges.size();
+		dedges=newEdges;
+		sliderCount=dedges.size();
 		mySliders = new ActiveSlider[sliderCount];
 		for (int j=0;j<sliderCount;j++)
 			mySliders[j]=tmpSliders[j];
@@ -166,7 +166,7 @@ public class SchwarzSliders extends SliderFrame {
 		int hit=0;
 		while (els.hasNext()) {
 			GraphSimple edge=(GraphSimple)els.next();
-			if (edges.containsFG(edge,false))
+			if (dedges.containsFG(edge,false))
 				continue;
 			String str=new String(edge.v+" "+edge.w);
 			EdgeSimple vw=packData.reDualEdge(edge.v,edge.w); // regular edge <v,w>
@@ -174,7 +174,7 @@ public class SchwarzSliders extends SliderFrame {
 			double sch=packData.kData[vw.v].schwarzian[k];
 			tmpSliders[sliderCount+hit]=new ActiveSlider(this,sliderCount+hit,str,sch,true);
 			sliderPanel.add(tmpSliders[sliderCount+hit]);
-			edges.add(edge);
+			dedges.add(edge);
 			hit++;
 		}
 		if (hit>0) {
@@ -199,13 +199,13 @@ public class SchwarzSliders extends SliderFrame {
 		while (els.hasNext()) {
 			GraphSimple edge=(GraphSimple)els.next();
 			int eindx=-1;
-			if ((eindx=GraphLink.getFG(edges, edge.v, edge.w))<0)
+			if ((eindx=GraphLink.getFG(dedges, edge.v, edge.w))<0)
 				continue;
 			for (int j=(eindx+1);j<(sliderCount-hit);j++) {
 				tmpSliders[j-1]=tmpSliders[j];
 				tmpSliders[j-1].setIndex(j-1);
 			}	
-			edges.remove(eindx);
+			dedges.remove(eindx);
 			sliderPanel.remove(mySliders[eindx]);
 			mySliders[eindx]=null;
 			hit++;
@@ -229,7 +229,7 @@ public class SchwarzSliders extends SliderFrame {
 	 * @return
 	 */
 	public void downValue(int indx) {
-		GraphSimple edge=(GraphSimple)edges.get(indx);
+		GraphSimple edge=(GraphSimple)dedges.get(indx);
 		double val= packData.getSchwarzian(edge); 
 		mySliders[indx].setValue(val);
 	}
@@ -238,7 +238,7 @@ public class SchwarzSliders extends SliderFrame {
 	 * Stores the slider's value in packData
 	 */
 	public void upValue(int indx) {
-		GraphSimple edge=(GraphSimple)edges.get(indx);
+		GraphSimple edge=(GraphSimple)dedges.get(indx);
 		// find regular edge <v,w>
 		EdgeSimple vw=packData.reDualEdge(edge.v,edge.w);
 		packData.setSchwarzian(vw,mySliders[indx].value);
@@ -273,17 +273,19 @@ public class SchwarzSliders extends SliderFrame {
 	}
 
 	/**
-	 * Set the initial values of val_min and val_max
+	 * Set the initial values of val_min and val_max. 
+	 * list should be of faces, i.e., 'GraphSimple'.
 	 */
 	public void initRange() {
 		val_min=1000000;
 		val_max=-1000000;
-		Iterator<EdgeSimple> elst=edges.iterator();
+		Iterator<EdgeSimple> elst=dedges.iterator();
 		while (elst.hasNext()) {
 			EdgeSimple es=elst.next();
-			if (es.v==0 || es.w==0)
+			if (es.v==0 || es.w==0) // root?
 				continue;
-			double sch=packData.getSchwarzian(es);
+			GraphSimple gs=new GraphSimple(es.v,es.w);
+			double sch=packData.getSchwarzian(gs);
 			val_min= (sch<val_min) ? sch :val_min;
 			val_max= (sch>val_max) ? sch :val_max;
 		}

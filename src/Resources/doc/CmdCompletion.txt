@@ -207,5 +207,5 @@ set_xyz
 show_vlist (or 'show_flist' or 'show_elist') 
 show_red 
 skeleton {v..} 
-slider -[RS] -[cmarux] {cmds} {..} 
+slider -[ARS] -[cmarux] {cmds} {..} 
 slit {v..} 

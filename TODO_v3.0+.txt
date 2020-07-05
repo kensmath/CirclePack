@@ -13,3 +13,10 @@ in the Java code itself.
 * Start whole MCV (model-controller-view) conversion: This may be good place to use modules.
 
 * 'TriAspect' is trying to play too many roles: simplify by creating some derived classes.
+
+* as of 7/2020, getting errors I can't trace which seem to relate to 'HoverFrame's. 
+  I'm currently trying to disable them by stopping mouse actions.
+  
+* Add "clear" / "reset numering" buttons to screen shots window, reformati layout
+
+* Add screen shot directory to configuration options 

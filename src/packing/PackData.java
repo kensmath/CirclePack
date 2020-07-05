@@ -2551,7 +2551,7 @@ public class PackData{
 		int num = kData[v].num;
 		int []flower=kData[v].flower;
 		int []faceflower=kData[v].faceFlower;
-		Complex []pts=null;
+		Complex []pts=new Complex[num];
 		boolean easycase= (ambigZs==null) || (hes>0); // 
 		CircleSimple sC=null;
 		int offset=-1; // offset for starting petal
@@ -2571,7 +2571,6 @@ public class PackData{
 
 		if (easycase) {
 			if (kData[v].bdryFlag==0) { // interior case
-				pts=new Complex[num];
 				for (int j=0;j<num;j++) {
 					int f=faceflower[j];
 					sC=faceIncircle(f,ambigZs);
@@ -2689,7 +2688,9 @@ public class PackData{
 	
 	/**
 	 * Return non-closed list of corners for face f, in correct order. 
-	 * May be complicated in non-simply connected situations.
+	 * May be complicated in non-simply connected situations when
+	 * 'ambigZs' is non-trivial; then we have to search for the best
+	 * three centers. 
 	 * @param f int
 	 * @return Complex[]
 	 */
@@ -2711,7 +2712,9 @@ public class PackData{
 				else if (baseindx < 0)
 					baseindx = j; // catch first non-ambiguous corner
 			}
-			if (!ambig)
+			
+			// none of these is ambiguous?
+			if (!ambig) 
 				easycase=true;
 		}
 		
@@ -2728,7 +2731,8 @@ public class PackData{
 		double ovlp12=getInvDist(vert[1],nghb(vert[1],vert[2]));
 		double ovlp20=getInvDist(vert[2],nghb(vert[2],vert[0]));
 
-		// see if there are two verts non-ambiguous.
+		// Cases when two are non-ambiguous, can compute the third
+		// base 0 and next non-ambiguous
 		if (baseindx==0 && ambigZs[vert[1]]==null) {
 			pts[0]=new Complex(rData[vert[0]].center);
 			pts[1]=new Complex(rData[vert[1]].center);
@@ -2742,6 +2746,7 @@ public class PackData{
 			pts[2]=sC.center;
 			return pts;
 		}
+		// base 0 and previous non-ambiguous
 		if (baseindx==0 && ambigZs[vert[2]]==null) {
 			pts[0]=new Complex(rData[vert[0]].center);
 			pts[2]=new Complex(rData[vert[2]].center);
@@ -2755,6 +2760,7 @@ public class PackData{
 			pts[1]=sC.center;
 			return pts;
 		}
+		// base 1 and next non-ambiguous (base =1 ==> previous must be ambiguous)
 		if (baseindx==1 && ambigZs[vert[2]]==null) {
 			pts[1]=new Complex(rData[vert[1]].center);
 			pts[2]=new Complex(rData[vert[2]].center);
@@ -2769,8 +2775,9 @@ public class PackData{
 			return pts;
 		}
 		
-		boolean firsttest=false;
-		boolean secondtest=false;
+		// There msut be at least 2 that are ambiguous
+		boolean firsttest=false; // acceptable error with first edge?
+		boolean secondtest=false; // acceptable error with second edge?
 		Complex z=new Complex(0.0);
 		Complex best1=new Complex(0.0);
 		Complex best2=new Complex(0.0);
@@ -2785,6 +2792,7 @@ public class PackData{
 			double ovlp=getInvDist(v,nghb(v,v1));
 			CircleSimple sC=ambigZs[v1].theOne(z,rad,ovlp,hes);
 			best1=sC.center;
+			// recall that sC.rad contains rel error (mindist/truedist)
 			if (sC.rad<0.1*rad) 
 				firsttest=true;
 			ovlp=getInvDist(v,nghb(v,v2));
@@ -2792,7 +2800,7 @@ public class PackData{
 			best2=sC.center;
 			if (sC.rad<0.1*rad) 
 				secondtest=true;
-			if (firsttest && secondtest) { // but what about the last leg?
+			if (firsttest && secondtest) { // TODO: how is the last leg?
 				ovlp=getInvDist(v1,nghb(v1,v2));
 				sC=ambigZs[v2].theOne(best1,rData[v1].rad,ovlp,hes);
 				if (sC.rad<0.1*rad) {
@@ -2802,28 +2810,32 @@ public class PackData{
 					return pts;
 				}
 			}
+			// else, go with best1 and best2
 		}
 		
 		// all ambiguous (e.g., as with vertices of a blue face in redchain)
-		int n=ambigZs[vert[0]].centers.size();
-		for (int j=0;j<n;j++) {
-			z=ambigZs[vert[0]].centers.get(j);
-			double rad=rData[vert[0]].rad;
-			CircleSimple sC=ambigZs[vert[1]].theOne(z,rad,ovlp01,hes);
-			best1=sC.center;
-			if (sC.rad<0.1*rad) 
-				firsttest=true;
-			sC=ambigZs[vert[2]].theOne(z,rad,ovlp20,hes);
-			best2=sC.center;
-			if (sC.rad<0.1*rad) 
-				secondtest=true;
-			if (firsttest && secondtest) { // but what about the last leg?
-				sC=ambigZs[vert[2]].theOne(best1,rData[vert[1]].rad,ovlp12,hes);
-				if (sC.rad<0.1*rad) {
-					pts[0]=z;
-					pts[1]=best1;
-					pts[2]=best2;
-					return pts;
+		if (baseindx<0) {
+			int n=ambigZs[vert[0]].centers.size();
+			for (int j=0;j<n;j++) {
+				z=ambigZs[vert[0]].centers.get(j);
+				double rad=rData[vert[0]].rad;
+				CircleSimple sC=ambigZs[vert[1]].theOne(z,rad,ovlp01,hes);
+				best1=sC.center;
+				// recall that sC.rad contains rel error (mindist/truedist)
+				if (sC.rad<0.1*rad) 
+					firsttest=true;
+				sC=ambigZs[vert[2]].theOne(z,rad,ovlp20,hes);
+				best2=sC.center;
+				if (sC.rad<0.1*rad) 
+					secondtest=true;
+				if (firsttest && secondtest) { // but what about the last leg?
+					sC=ambigZs[vert[2]].theOne(best1,rData[vert[1]].rad,ovlp12,hes);
+					if (sC.rad<0.1*rad) {
+						pts[0]=z;
+						pts[1]=best1;
+						pts[2]=best2;
+						return pts;
+					}
 				}
 			}
 		}
@@ -13207,6 +13219,9 @@ public class PackData{
 	   */
 	  public double getSchwarzian(EdgeSimple es) { // given <v,w>
 		  int k=nghb(es.v,es.w);
+		  if (k<0) 
+			  throw new DataException("schwarzian failure: "+
+					  es.v+" and "+es.w+" are not neighbors");
 		  return kData[es.v].schwarzian[k];
 		  
 	  }

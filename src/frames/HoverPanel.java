@@ -2,7 +2,6 @@ package frames;
 
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Frame;
 import java.awt.Insets;
 import java.awt.MouseInfo;
 import java.awt.Point;
@@ -175,16 +174,19 @@ public class HoverPanel extends JPanel implements MouseListener {
 		return new Point(x,y);
 	}
 	
-	public void mousePressed(MouseEvent me) {
-		// if the user presses the mouse, interrupt hoverFrame waiting to lock
-		appearSleeper.interrupt();
-	}
-
 	public void mouseReleased(MouseEvent me) {}
 	public void mouseClicked(MouseEvent me) {}
 
+	public void mousePressed(MouseEvent me) {
+/* TODO: Need method to disable: I'm getting deep error of some sort as of 6/2020		// if the user presses the mouse, interrupt hoverFrame waiting to lock
+		appearSleeper.interrupt();
+*/		
+	}
+
 	public void mouseEntered(MouseEvent me) {
-        final Point pt=setXY(me);
+	
+/* TODO: Need method to disable: I'm getting deep error of some sort as of 6/2020
+         final Point pt=setXY(me);
 			
         // create a new thread
         appearSleeper = new Thread(new Runnable() {
@@ -221,9 +223,12 @@ public class HoverPanel extends JPanel implements MouseListener {
 
         //run the thread
         appearSleeper.start();
+        */
 	}
 	
 	public void mouseExited(MouseEvent me) {
+		
+/*  TODO: Need method to disable: I'm getting deep error of some sort as of 6/2020		
 		// if mouse leaves the parent component
 		// (no need to run this code if frame is locked)
 		appearSleeper.interrupt();
@@ -262,10 +267,11 @@ public class HoverPanel extends JPanel implements MouseListener {
 				disappearSleeper.start();
 			}
 		}
+*/		
 	}
 	
 	private boolean isMouseInHover() {
-		// return true if mouse is in hoverFrame, false otherwise
+/*  TODO: Need method to disable: I'm getting deep error of some sort as of 6/2020				// return true if mouse is in hoverFrame, false otherwise
 		int curX = (int) MouseInfo.getPointerInfo().getLocation().x;
 		int curY = (int) MouseInfo.getPointerInfo().getLocation().y;
 
@@ -273,6 +279,7 @@ public class HoverPanel extends JPanel implements MouseListener {
 		if (curX >= pt.x && curX <= pt.x + myWidth && curY >= pt.y && curY <= pt.y + myHeight) {
 			return true;
 		}
+*/		
 		return false;
 	}
 

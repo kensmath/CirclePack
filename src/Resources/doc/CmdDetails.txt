@@ -4100,7 +4100,7 @@ enters these in order</instance>
 </description>
 </command>
 
-<command cmd="slider" flags="-[RS] -[cmarux] {cmds} {..}">
+<command cmd="slider" flags="-[ARS] -[cmarux] {cmds} {..}">
 <description>
 	CirclePack allows the user to create a frame with multiple 
 	sliders to control values associated with the packing using
@@ -4118,13 +4118,13 @@ enters these in order</instance>
 	command can be executed by clicking a button. On initiation, 
 	substring 'Obj'	in motion, change, or optional command
 	strings is replaced by '_Obj' so that the command can be
-	applied to the appropriate object (vertex or edge).
+	applied to the appropriate object (vertex or dual edge).
 </description>
 <options>
-<opt flag="-A"> The sliders display selected angle sums,
+<opt flag="-A {v..}"> The sliders display selected angle sums,
 usually from 0 to 3.0 (all values are multiplied by pi)</opt>
-<opt flag="-R"> The sliders control specified radii</opt>
-<opt flag="-S"> The sliders control specified edge schwarzians</opt>
+<opt flag="-R {v..}"> The sliders control specified radii</opt>
+<opt flag="-S {f g..}"> The sliders control specified edge schwarzians</opt>
 <opt flag="-c ''cmds''"> Optional commands to be executed when a
 value is changed; here 'cmds' is a string of text enclosed by double
 quotes</opt> 
@@ -4145,7 +4145,7 @@ enclosed by double quotes</opt>
 <instance text="slider -R {v...}"> sliders for selected vertices</instance>
 <instance text="slider -R -c ''rld'' a"> sliders for all radii, execute 'rld'
 on change in any slider</instance>
-<instance text="slider -S -m  ''disp w -c -et5c5 Obj'' {e ..}"> sliders 
+<instance text="slider -S -m  ''disp w -c -et5c5 Obj'' {f g ..}"> sliders 
 for selected edge schwarzians, which motion in slider causing redisplay
 of circles with that particular edge displayed.</instance>
 </examples>

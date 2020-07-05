@@ -8599,25 +8599,48 @@ public class CommandStrParser {
 		  }
 		  
 	      //  ============= scale_aims =============
-	      if (cmd.startsWith("scale_aims")) {
-	    	  items=(Vector<String>)flagSegs.get(0); // just one segment
-	    	  String str=(String)items.remove(0);
-	    	  double factor=Double.parseDouble(str);
-	    	  if (factor<0.0) {
-	    	  	throw new ParserException("given factor x is negative");
-	    	  }
-	    	  NodeLink vertlist=new NodeLink(packData,items);
-	    	  return packData.scale_aims(factor,vertlist);
-	      }
-		  
+		  else if (cmd.startsWith("scale_aim")) {
+			  items=(Vector<String>)flagSegs.get(0); // just one segment
+			  String str=(String)items.remove(0);
+			  double factor=Double.parseDouble(str);
+			  if (factor<0.0) {
+				  throw new ParserException("given factor x is negative");
+			  }
+			  NodeLink vertlist=new NodeLink(packData,items);
+			  return packData.scale_aims(factor,vertlist);
+		  }
+		      
+	      // ============= scale_radii =============
+		  else if (cmd.startsWith("scale_rad")) {
+			  // just one segment: -q{} x {v..} 
+			  items=(Vector<String>)flagSegs.get(0); 
+			  String str=(String)items.remove(0);
+			  int qnum=-1;
+			  if (!StringUtil.isFlag(str) || items.size()==0) {
+				  CirclePack.cpb.errMsg("usage: scale_radii -q{.} x {v..}");
+				  return 0;
+			  }
+			  else 
+				  qnum=StringUtil.qFlagParse(str);
+			  if (qnum<0 || qnum>=CPBase.NUM_PACKS)
+				  throw new ParserException("Failed to read '-q{}' flag");
+			  str=(String)items.remove(0);
+			  double factor=Double.parseDouble(str);
+			  if (factor<0.0) {
+				  throw new ParserException("given factor x is negative");
+			  }
+			  NodeLink vertlist=new NodeLink(packData,items);
+			  return packData.scale_rad(CPBase.pack[qnum].getPackData(),factor,vertlist);
+		  }
+		    	      
 	      // =========== sq_grid_overlaps ===========
-	      if (cmd.startsWith("sq_grid_ov")) {
+		  else if (cmd.startsWith("sq_grid_ov")) {
 	    	  return packData.sq_grid_overlaps();
 	      }
 	      
 	      // =========== svg ========================
 	      // TODO: this is very simple preliminary routine
-	      if (cmd.startsWith("svg")) {
+		  else if (cmd.startsWith("svg")) {
 //	      	  boolean append_flag=false; // no append option for now
 	      	  boolean script_flag=false;
 	      	  // Get and remove trailing filename as first step
@@ -8642,7 +8665,7 @@ public class CommandStrParser {
 	      }
 	      
 	      // =============== swap =========  
-	      if (cmd.startsWith("swap")) { // swap vert indices
+		  else if (cmd.startsWith("swap")) { // swap vert indices
 	    	  
 	    	  // look for any flags first
 	    	  int keepFlag=0;
@@ -8678,7 +8701,7 @@ public class CommandStrParser {
 	      /** For euclidean packings only. Scale packing up or down so it just
 	      fits in the square having corners (-1,-1), (1,1).
 	      */
-	      if (cmd.startsWith("square_fit")) {
+		  else if (cmd.startsWith("square_fit")) {
 	        double maxdist=0.0,x=0.0,y=0.0;
 
 	        if (packData.hes!=0) {
@@ -8696,7 +8719,7 @@ public class CommandStrParser {
 	      }
 
 		  // ========= set =========
-	      if (cmd.startsWith("set_")) {
+		  else if (cmd.startsWith("set_")) {
 	    	  cmd=cmd.substring(4);
 	    	  	  
 	    	  // ========= set_active ==========

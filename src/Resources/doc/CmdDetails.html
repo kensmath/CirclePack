@@ -4365,7 +4365,7 @@ enters these in order</td></tr>
 	all vertices along the original edges of a hex-refined 
 	complex for use with parallel packing routines.
 </blockquote>
-<font size="+1" color="blue"><strong><a name="slider">slider</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[RS] -[cmarux] {cmds} {..}&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="slider">slider</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[ARS] -[cmarux] {cmds} {..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
 	CirclePack allows the user to create a frame with multiple 
@@ -4384,17 +4384,17 @@ enters these in order</td></tr>
 	command can be executed by clicking a button. On initiation, 
 	substring 'Obj'	in motion, change, or optional command
 	strings is replaced by '_Obj' so that the command can be
-	applied to the appropriate object (vertex or edge).
+	applied to the appropriate object (vertex or dual edge).
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
 <table>
-<tr><td width="25%" valign="top">-A</td>
+<tr><td width="25%" valign="top">-A {v..}</td>
 <td width="65%" align="left"> The sliders display selected angle sums,
 usually from 0 to 3.0 (all values are multiplied by pi)</td></tr>
-<tr><td width="25%" valign="top">-R</td>
+<tr><td width="25%" valign="top">-R {v..}</td>
 <td width="65%" align="left"> The sliders control specified radii</td></tr>
-<tr><td width="25%" valign="top">-S</td>
+<tr><td width="25%" valign="top">-S {f g..}</td>
 <td width="65%" align="left"> The sliders control specified edge schwarzians</td></tr>
 <tr><td width="25%" valign="top">-c ''cmds''</td>
 <td width="65%" align="left"> Optional commands to be executed when a
@@ -4429,7 +4429,7 @@ enclosed by double quotes</td></tr>
 <tr><td width="30%"><font color="blue">slider -R -c ''rld'' a</font></td>
 <td width="68%"> sliders for all radii, execute 'rld'
 on change in any slider</td></tr>
-<tr><td width="30%"><font color="blue">slider -S -m  ''disp w -c -et5c5 Obj'' {e ..}</font></td>
+<tr><td width="30%"><font color="blue">slider -S -m  ''disp w -c -et5c5 Obj'' {f g ..}</font></td>
 <td width="68%"> sliders 
 for selected edge schwarzians, which motion in slider causing redisplay
 of circles with that particular edge displayed.</td></tr>

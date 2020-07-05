@@ -141,8 +141,8 @@ public class SchwarzMap extends PackExtender {
 				return 0;
 			}
 			PackData qData=packData;
-			String cirFlags=null;
-			String faceFlags=null;
+			DispFlags cirFlags=null;
+			DispFlags faceFlags=null;
 			GraphLink graph=null;
 			int qnum=packData.packNum; // default to this packing itself
 			
@@ -183,10 +183,20 @@ public class SchwarzMap extends PackExtender {
 							String str=items.remove(0);
 							char c=str.charAt(1);
 							if (c=='c') { // draw circles
-								cirFlags=str;
+								if (str.length()>2) {
+									str=str.substring(2);
+									cirFlags=new DispFlags(str);
+								}
+								else
+									cirFlags=new DispFlags("");
 							}
 							else if (c=='f') { // draw faces
-								faceFlags=str;
+								if (str.length()>2) {
+									str=str.substring(2);
+									faceFlags=new DispFlags(str);
+								}
+								else
+									faceFlags=new DispFlags("");
 							}
 						}
 					}
@@ -222,7 +232,6 @@ public class SchwarzMap extends PackExtender {
 			}
 			
 			int count=0;
-			CircleSimple sC=new CircleSimple();
 			
 			// If we need to place the base face, we make it a 'baseEquilateral',
 			//   as used in 'Schwarzian.java'.
@@ -239,13 +248,15 @@ public class SchwarzMap extends PackExtender {
 				}
 				rangeTri[baseface].setTanPts();
 			
-				// Draw (can use qData since data was just updated there
+				// Draw  using 'TriAspect' data
 				if (cirFlags!=null)
 					for (int j=0;j<3;j++) {
-						cpCommand(qData,"disp "+cirFlags+" "+myTri.vert[j]);
+						qData.cpScreen.drawCircle(
+								myTri.getCenter(j), myTri.getRadius(j), cirFlags);
 					}
 				if (faceFlags!=null) 
-					cpCommand(qData,"disp "+faceFlags+" "+baseface);
+					qData.cpScreen.drawFace(myTri.getCenter(0),myTri.getCenter(1),myTri.getCenter(2),
+							myTri.getRadius(0),myTri.getRadius(1),myTri.getRadius(2),faceFlags);
 				qData.cpScreen.repaint();
 				
 				hitfaces[baseface]=1;
@@ -268,7 +279,7 @@ public class SchwarzMap extends PackExtender {
 				int v=rangeTri[f].vert[j];
 				int w=rangeTri[f].vert[(j+1)%3];
 				int k=qData.nghb(v, w);
-				int V=rangeTri[g].vert[(rangeTri[g].vertIndex(v)+1)%3]; // the new circle in g
+				int J=(rangeTri[g].vertIndex(v)+1)%3;
 				// get schwarzian from 'packData'
 				double s=packData.kData[v].schwarzian[k];
 				SchwarzMap.propogate(rangeTri[f],rangeTri[g], s, qData.hes);
@@ -279,12 +290,15 @@ public class SchwarzMap extends PackExtender {
 					qData.rData[verts[jj]].center=new Complex(rangeTri[g].getCenter(jj));
 				}
 				
-				// Now, draw this face
-				// Draw (can use qData since data was just updated there
-				if (cirFlags!=null) 
-					cpCommand(qData,"disp "+cirFlags+" "+V);
+				// Now, draw this face using 'TriAspect' data
+				if (cirFlags!=null)  
+					qData.cpScreen.drawCircle(
+							rangeTri[g].getCenter(J), rangeTri[g].getRadius(J), cirFlags);
 				if (faceFlags!=null) 
-					cpCommand(qData,"disp "+faceFlags+" "+g);
+					qData.cpScreen.drawFace(rangeTri[g].getCenter(0),
+							rangeTri[g].getCenter(1),rangeTri[g].getCenter(2),
+							rangeTri[g].getRadius(0),rangeTri[g].getRadius(1),
+							rangeTri[g].getRadius(2),faceFlags);
 				qData.cpScreen.repaint();
 				
 				hitfaces[g]=1;
