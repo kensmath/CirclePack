@@ -4040,11 +4040,16 @@ face drawing order.</td></tr>
 <blockquote>
 <table>
 <tr><td width="30%"><font color="blue">set_random -r .5 1.2 -f b</font></td>
-<td width="68%"> will multiply each boundary radius by a factor uniformly distributed between .5 and 1.2.</td></tr>
+<td width="68%"> 
+	   will multiply each boundary radius by a factor uniformly 
+	   distributed between .5 and 1.2.</td></tr>
 <tr><td width="30%"><font color="blue">set_random i</font></td>
-<td width="68%"> will randomly set all interior radii to random values between (about) 0.005 and 5.0 (the default range).</td></tr>
+<td width="68%"> 
+	   will randomly set all interior radii to random values between 
+	   (about) 0.005 and 5.0 (the default range).</td></tr>
 <tr><td width="30%"><font color="blue">set_rand -o -r .1 10 a</font></td>
-<td width="68%"> sets overlaps between .1 (overlap)and 10 (inversive distance).</td></tr>
+<td width="68%">  
+	   sets overlaps between .1 (overlap)and 10 (inversive distance).</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="adjust_rad">adjust_rad</a>&nbsp;&nbsp; <a href="set_rad">set_rad</a>&nbsp;&nbsp; 
@@ -4052,25 +4057,26 @@ face drawing order.</td></tr>
 <font size="+1" color="blue"><strong><a name="set_schwarzian">set_schwarzian</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[cr{x}] {v w ...}]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
-	Store (possibly compute) the real schwarzians for given 
-	edges, defaulting to 'all'. See 'Schwarzian.java' for more 
-	details. The schwarzian here is based on 'baseMobius' 
-	transforms and with the dual spanning tree can be used 
-	to layout a packing determined up to Mobius 
-	transformations by the layout of the first face. 
-	(Layout work in spherical or euclidean geometry, not 
-	hyperbolic.) Flags may specify use of current centers 
-	or radii to compute the schwarzians, or a value x may be
-	specified for given edges. This call will allocate 
-	schwarzian storage space if not already set.
+	Compute and store the real schwarzians for given edges, 
+	defaulting to 'all'. See 'Schwarzian.java' for more details
+	and the PackExtender 'SchwarzMap.java' for related methods. 
+	The schwarzian here is based on 'baseMobius' transforms and 
+	with the dual spanning tree can be used	to layout a packing 
+	determined up to Mobius	transformation by the layout of the 
+	first face.	(Layout works in spherical or euclidean geometry, 
+	but not	hyperbolic.) Flags may specify use of current radii
+	(default) or current centers to compute the schwarzians, 
+	or a value x may be	specified for one or more given edges. 
+	This call will allocate	schwarzian storage space if not 
+	already set.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
 <table>
+<tr><td width="25%" valign="top">-r {v w ...}</td>
+<td width="65%" align="left"> schwarzians based on existing layout radii (default)</td></tr>
 <tr><td width="25%" valign="top">-c {v w ...}</td>
 <td width="65%" align="left"> schwarzians based on existing layout centers</td></tr>
-<tr><td width="25%" valign="top">-r {v w ...}</td>
-<td width="65%" align="left"> schwarzians based on existing layout radii</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="dual_layout">dual_layout</a>&nbsp;&nbsp; <a href="sch_report">sch_report</a>&nbsp;&nbsp; 

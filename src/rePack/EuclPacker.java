@@ -415,10 +415,10 @@ public class EuclPacker extends RePacker {
 	    if ((localPasses % 10)==0) repack_activity_msg();
 	    
 	    localPasses++;
-	} // end of main while loop
+	} // end of main while loop 
 	
 	reapResults();
-	totalPasses=localPasses;
+	totalPasses+=localPasses;
 	return RIFFLE;
     }
     

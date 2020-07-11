@@ -1,5 +1,6 @@
 package infoProcessing;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileWriter;
@@ -328,17 +329,19 @@ public class Info2HTML {
 			if (!outfile.exists())
 				System.err.println("'CirclePack/src/Resources/doc/CmdDetails.html' doesn't see to exist");
 			
-			FileWriter fw = new FileWriter("CirclePack/src/Resources/doc/CmdDetails.html", false);
+//			FileWriter fw = new FileWriter("CirclePack/src/Resources/doc/CmdDetails.html", false);
+			BufferedWriter fw = new BufferedWriter(
+					new FileWriter("CirclePack/src/Resources/doc/CmdDetails.html", false));
 	    	fw.write(fp.toString());
 	    	fw.flush();
 	    	fw.close();
 	    	
-	    	fw = new FileWriter("CirclePack/src/Resources/doc/CmdIndex.html", false);
+	    	fw = new BufferedWriter(new FileWriter("CirclePack/src/Resources/doc/CmdIndex.html", false));
 	    	fw.write(indxfp.toString());
 	    	fw.flush();
 	    	fw.close();
 	    	
-	    	fw = new FileWriter("CirclePack/src/Resources/doc/CmdCompletion.txt", false);
+	    	fw = new BufferedWriter(new FileWriter("CirclePack/src/Resources/doc/CmdCompletion.txt", false));
 	    	fw.write(compfp.toString());
 	    	fw.flush();
 	    	fw.close();

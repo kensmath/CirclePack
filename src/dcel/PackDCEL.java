@@ -2021,9 +2021,8 @@ public class PackDCEL {
 	
 	/**
 	 * Write the dual graph to a file.
-	 * TODO: This is an early format, 4/2017, and should
-	 * probably be rethought, but need if for 3D modeling work 
-	 * now.
+	 * TODO: This is an early format, 4/2017, and should probably 
+	 * be rethought, but need if for 3D modeling work now.
 	 * @param filename
 	 * @return 0 on failure
 	 */

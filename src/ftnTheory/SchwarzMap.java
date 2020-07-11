@@ -242,7 +242,8 @@ public class SchwarzMap extends PackExtender {
 					myTri.setRadius(tri.getRadius(j), j);
 					myTri.setCenter(tri.getCenter(j), j);
 					
-					// put in qData as well (though may be changed later)
+					// put in qData as well (though may be changed later)\
+					// TODO: here and later, put new data in redchain, if appropriate
 					qData.rData[myTri.vert[j]].rad=myTri.getRadius(j);
 					qData.rData[myTri.vert[j]].center=myTri.getCenter(j);
 				}

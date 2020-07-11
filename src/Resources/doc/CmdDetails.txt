@@ -3801,9 +3801,14 @@ face drawing order.</opt>
 	distribute round-off error.</opt>
 </options>
 <examples>
-	<instance text="set_random -r .5 1.2 -f b"> will multiply each boundary radius by a factor uniformly distributed between .5 and 1.2.</instance>
-	<instance text="set_random i"> will randomly set all interior radii to random values between (about) 0.005 and 5.0 (the default range).</instance>
-	<instance text="set_rand -o -r .1 10 a"> sets overlaps between .1 (overlap)and 10 (inversive distance).</instance>  
+	<instance text="set_random -r .5 1.2 -f b"> 
+	   will multiply each boundary radius by a factor uniformly 
+	   distributed between .5 and 1.2.</instance>
+	<instance text="set_random i"> 
+	   will randomly set all interior radii to random values between 
+	   (about) 0.005 and 5.0 (the default range).</instance>
+	<instance text="set_rand -o -r .1 10 a">  
+	   sets overlaps between .1 (overlap)and 10 (inversive distance).</instance>  
 </examples>
 <seealso>
 <see>adjust_rad</see>
@@ -3814,21 +3819,22 @@ face drawing order.</opt>
 
 <command cmd="set_schwarzian" flags="-[cr{x}] {v w ...}]">
 <description>
-	Store (possibly compute) the real schwarzians for given 
-	edges, defaulting to 'all'. See 'Schwarzian.java' for more 
-	details. The schwarzian here is based on 'baseMobius' 
-	transforms and with the dual spanning tree can be used 
-	to layout a packing determined up to Mobius 
-	transformations by the layout of the first face. 
-	(Layout work in spherical or euclidean geometry, not 
-	hyperbolic.) Flags may specify use of current centers 
-	or radii to compute the schwarzians, or a value x may be
-	specified for given edges. This call will allocate 
-	schwarzian storage space if not already set.
+	Compute and store the real schwarzians for given edges, 
+	defaulting to 'all'. See 'Schwarzian.java' for more details
+	and the PackExtender 'SchwarzMap.java' for related methods. 
+	The schwarzian here is based on 'baseMobius' transforms and 
+	with the dual spanning tree can be used	to layout a packing 
+	determined up to Mobius	transformation by the layout of the 
+	first face.	(Layout works in spherical or euclidean geometry, 
+	but not	hyperbolic.) Flags may specify use of current radii
+	(default) or current centers to compute the schwarzians, 
+	or a value x may be	specified for one or more given edges. 
+	This call will allocate	schwarzian storage space if not 
+	already set.
 </description>
 <options>
+<opt flag="-r {v w ...}"> schwarzians based on existing layout radii (default)</opt>
 <opt flag="-c {v w ...}"> schwarzians based on existing layout centers</opt>
-<opt flag="-r {v w ...}"> schwarzians based on existing layout radii</opt>
 </options>
 <seealso>
 <see>dual_layout</see>

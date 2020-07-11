@@ -49,7 +49,7 @@ public class CPFileManager {
 	  // starts same as HomeDirectory, but user can change
 	public static File ScriptDirectory; // where scripts are kept
 	public static File PackingDirectory; // where packings are kept
-	public static File PostScriptDirectory; // for output files
+	public static File ImageDirectory; // for output files, like 'jpg's
 	public static File ToolDirectory = new File(HomeDirectory+
 			File.separator+"Resources"+File.separator+"mytools/"); 
 	public static File ExtenderDirectory=new File(System.getProperty("user.home"));

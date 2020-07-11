@@ -53,7 +53,7 @@ public class ActiveSlider extends JPanel implements MouseListener,
 		slider.addChangeListener(sfparent.listener);
 		labelField=new JTextField(label,6);
 		labelField.setEditable(false);
-		valueField=new xNumField("",8);
+		valueField=new xNumField("",9);
 		valueField.addActionListener(new ActionListener() {
 			  public void actionPerformed(ActionEvent event) {
 			    sfparent.changeValueField_action(valueField.getValue(),index);

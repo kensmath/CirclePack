@@ -978,7 +978,11 @@ public class CommandStrParser {
 				  if (tryfile.exists()) // if "scripts" exists under new directory, change to it 
 					  CPFileManager.ScriptDirectory=tryfile;
 				  tryfile=new File(CPFileManager.CurrentDirectory,"packings");
-				  if (tryfile.exists()) CPFileManager.PackingDirectory=tryfile;
+				  if (tryfile.exists()) 
+					  CPFileManager.PackingDirectory=tryfile;
+				  tryfile=new File(CPFileManager.CurrentDirectory,"pics");
+				  if (tryfile.exists()) 
+					  CPFileManager.ImageDirectory=tryfile;
 		    	  str=new String(file.getCanonicalPath());
 			  } catch (Exception ex) {
 				  return 0;
@@ -1588,6 +1592,11 @@ public class CommandStrParser {
 	    				  }
 	    			  }
 	    			  cpScreen.updateXtenders();
+	    		  }
+	    		  
+	    		  // may be no flag, just the abbreviation
+	    		  else if (stg!=null && stg.charAt(0)!='-') {
+	    			  str=stg;
 	    		  }
 
 	    	  } // end of while for flags
@@ -8360,7 +8369,7 @@ public class CommandStrParser {
 				if (flagSegs == null || flagSegs.size() == 0)
 					return 0;
 
-				// must be initial flag: -R, -S
+				// must be initial flag: -R, -S, -A
 				int type = -1; // 0=radii, 1=edge schwarzian, 2=angle sum
 				items = flagSegs.remove(0);
 				if (!StringUtil.isFlag(items.get(0))) {
@@ -8378,6 +8387,10 @@ public class CommandStrParser {
 				case 'S': // start for schwarzians
 				{
 					type = 1;
+					if (!packData.haveSchwarzians()) {
+						if (CommandStrParser.jexecute(packData,"set_sch")<=0)
+							throw new DataException("failed to compute schwarzians");
+					}
 					break;
 				}
 				case 'A': // start for angle sum sliders
@@ -8390,11 +8403,6 @@ public class CommandStrParser {
 					return 0;
 				}
 				} // end of switch
-				
-				if (type==1 && !packData.haveSchwarzians()) {
-					CirclePack.cpb.errMsg("usage: 'slider -S' requires that schwarzians be set, see 'set_sch'");
-					return 0;
-				}
 				
 				SliderFrame generic=packData.radiiSliders;
 				if (type==1) 
@@ -8843,9 +8851,9 @@ public class CommandStrParser {
     			  EdgeLink clink=null; // those done using current layout
     			  EdgeLink rlink=null; // those done using current radii only
 
-	    		  // no arguments, set all to current values based on layout
+	    		  // no arguments, set all to current values based on radii
     			  if (flagSegs==null || flagSegs.size()==0 || flagSegs.get(0).size()==0) 
-    				  clink=new EdgeLink(packData,"a");
+    				  rlink=new EdgeLink(packData,"a");
     			  else if ((items=flagSegs.get(0)).size()!=0 && StringUtil.isFlag(items.get(0))) {
     				  Iterator<Vector<String>> its=flagSegs.iterator();
     				  while (its.hasNext()) {

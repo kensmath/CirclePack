@@ -422,7 +422,7 @@ public class PostPanel extends JPanel implements ActionListener {
 	 		String []jpgFileName=jpgOutputDialog();
 	 		if (jpgFileName==null) return;
 	 	    try {
-	 	        File file = new File(CPFileManager.PostScriptDirectory,jpgFileName[1]);
+	 	        File file = new File(CPFileManager.ImageDirectory,jpgFileName[1]);
 	 	        ImageIO.write(PackControl.getActiveCPScreen().packImage, "jpg", file);
 	 	    } catch (Exception exc) {
 	 	    	return;
@@ -436,7 +436,7 @@ public class PostPanel extends JPanel implements ActionListener {
 	 			return;
 	 		File file=null;
 	 	    try {
-	 	        file = new File(CPFileManager.PostScriptDirectory,jpgFileName[1]);
+	 	        file = new File(CPFileManager.ImageDirectory,jpgFileName[1]);
 	 	        CPFileManager.copyFile(aboutFile, file);
 	 	    } catch (Exception exc) {
 	 	    	CirclePack.cpb.errMsg("problem copying 'AboutImage' to "+file);
@@ -491,7 +491,7 @@ public class PostPanel extends JPanel implements ActionListener {
    			fileInfo[1]=null;
    			fileInfo[0]=theFile.getParent();
    			if (fileInfo[0]!=null && fileInfo[0].length()>0)
-   				CPFileManager.PostScriptDirectory=new File(fileInfo[0]);
+   				CPFileManager.ImageDirectory=new File(fileInfo[0]);
    			fileInfo[1]=theFile.getName();
    			if (fileInfo[1].length()==0) 
    				throw new ParserException("error: post: no file name given");
@@ -516,7 +516,7 @@ public class PostPanel extends JPanel implements ActionListener {
    			fileInfo[1]=null;
    			fileInfo[0]=theFile.getParent();
    			if (fileInfo[0]!=null && fileInfo[0].length()>0)
-   				CPFileManager.PostScriptDirectory=new File(fileInfo[0]);
+   				CPFileManager.ImageDirectory=new File(fileInfo[0]);
    			fileInfo[1]=theFile.getName();
    			if (fileInfo[1].length()==0) 
    				throw new ParserException("error: jpg: no file name given");
@@ -541,7 +541,7 @@ public class PostPanel extends JPanel implements ActionListener {
    			fileInfo[1]=null;
    			fileInfo[0]=theFile.getParent();
    			if (fileInfo[0]!=null && fileInfo[0].length()>0)
-   				CPFileManager.PostScriptDirectory=new File(fileInfo[0]);
+   				CPFileManager.ImageDirectory=new File(fileInfo[0]);
    			fileInfo[1]=theFile.getName();
    			if (fileInfo[1].length()==0) 
    				throw new ParserException("error: jpg: no file name given");

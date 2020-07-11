@@ -48,7 +48,7 @@ public class SchwarzSliders extends SliderFrame {
 		type=1;
 		root=0;
 		if (packData.kData[1].schwarzian==null) {
-			CirclePack.cpb.errMsg("slider usage: -S, packing needs to have schwarzians");
+			CirclePack.cpb.errMsg("slider usage: -S, schwarzians should have been set");
 		}
 		// Note: schwarzians are independent of edge order
 		dedges=GraphLink.removeDuplicates(glist,false); 
@@ -87,9 +87,6 @@ public class SchwarzSliders extends SliderFrame {
 		});
 		topPanel.add(button);
 		topPanel.add(rootField);
-			
-//		this.pack();
-		
 		setChangeField(holdChangeCmd);
 		setMotionField(holdMotionCmd);
 	}
@@ -145,14 +142,15 @@ public class SchwarzSliders extends SliderFrame {
 			String str=new String(edge.v+" "+edge.w);
 			double sch=packData.getSchwarzian(edge);
 			tmpSliders[tick]=new ActiveSlider(this,tick,str,sch,true);
-			sliderPanel.add(tmpSliders[tick]);
 			tick++;
 		}
 		dedges=newEdges;
 		sliderCount=dedges.size();
 		mySliders = new ActiveSlider[sliderCount];
-		for (int j=0;j<sliderCount;j++)
+		for (int j=0;j<sliderCount;j++) { 
 			mySliders[j]=tmpSliders[j];
+			sliderPanel.add(mySliders[j]);
+		}
 	}
 	
 	public int addObject(String objstr) {

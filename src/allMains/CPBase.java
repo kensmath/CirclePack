@@ -127,6 +127,7 @@ public abstract class CPBase {
 	// ---------- Preferences
 	public static String PACKINGS_DIR="packings/";
 	public static String SCRIPT_DIR="scripts/";
+	public static String IMAGE_DIR="pics/";
 	public static String TOOL_DIR="mytools/";
 	public static String EXTENDER_DIR="myCirclePack/bin/";
 	public static String PRINT_COMMAND="lpr ";

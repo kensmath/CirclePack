@@ -87,7 +87,7 @@ public class PostManager {
 		else postFilename=psFilename;
 		if (!postFilename.endsWith(".ps")) // user may forget .ps
 			postFilename=new String(postFilename+".ps");
-		psUltimateFile=new File(CPFileManager.PostScriptDirectory,postFilename);
+		psUltimateFile=new File(CPFileManager.ImageDirectory,postFilename);
 		
 		// temporarily, the main contents are put in 'bodyFile'
 		File bodyFile = new File( System.getProperty("java.io.tmpdir"),

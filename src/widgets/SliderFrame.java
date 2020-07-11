@@ -12,6 +12,7 @@ import java.awt.event.WindowEvent;
 import java.util.Vector;
 
 import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
@@ -217,7 +218,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		button.addActionListener(this);
 		button.setActionCommand("set minimum");
 		bottomleftPanel.add(button);
-		minValue=new xNumField("",6);
+		minValue=new xNumField("",7);
 		minValue.setValue(val_min);
 		bottomleftPanel.add(minValue);
 		
@@ -230,7 +231,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		button.addActionListener(this);
 		button.setActionCommand("set maximum");
 		bottomrightPanel.add(button);
-		maxValue=new xNumField("",6);
+		maxValue=new xNumField("",7);
 		maxValue.setValue(val_max);
 		bottomrightPanel.add(maxValue);
 		
@@ -238,21 +239,21 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		bottomPanel.add(bottomrightPanel,BorderLayout.EAST);
 
 		controlPanel.add(topPanel,BorderLayout.NORTH);
-//		controlPanel.add(midPanel,BorderLayout.CENTER);
 		controlPanel.add(bottomPanel,BorderLayout.SOUTH);
 		
 		add(controlPanel, BorderLayout.NORTH);
 
 		// Create sliderPanel
 		createSliderPanel();
-//		sliderPanel.setSize(new Dimension(DEFAULT_WIDTH,DEFAULT_HEIGHT));
-		sliderPanel.setPreferredSize(new Dimension(DEFAULT_WIDTH,DEFAULT_HEIGHT));
+		sliderPanel.setLayout(new BoxLayout(sliderPanel,BoxLayout.PAGE_AXIS));
 		populate();
 		
 		sliderScroll=new JScrollPane(sliderPanel,
 				JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
 				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		sliderScroll.setPreferredSize(new Dimension(DEFAULT_WIDTH,DEFAULT_HEIGHT));
 		add(sliderScroll,BorderLayout.CENTER);
+
 		
 		// Command string options at bottom
 		commandPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));

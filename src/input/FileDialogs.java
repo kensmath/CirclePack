@@ -171,8 +171,8 @@ public class FileDialogs {
 		}
 		case JPG: {
 			if (actStr==null) actionStr="Save JPG File";
-			dbox.setCurrentDirectory(new File(CPFileManager.PostScriptDirectory.getPath()));
-			dbox.setSelectedFile(new File(CPFileManager.PostScriptDirectory+File.separator+
+			dbox.setCurrentDirectory(new File(CPFileManager.ImageDirectory.getPath()));
+			dbox.setSelectedFile(new File(CPFileManager.ImageDirectory+File.separator+
 				"generic.jpg")); 
 			dbox.setFileFilter(new JPGFilter());
 			result = dbox.showDialog(
@@ -180,14 +180,14 @@ public class FileDialogs {
 			if (result == JFileChooser.APPROVE_OPTION) {
 				targetFile = dbox.getSelectedFile();
 				if (swDir)
-					CPFileManager.PostScriptDirectory=dbox.getCurrentDirectory();
+					CPFileManager.ImageDirectory=dbox.getCurrentDirectory();
 				return targetFile;
 			}
 			return null;
 		}
 		case ABOUT: {
 			if (actStr==null) actionStr="Save AboutImage";
-			dbox.setCurrentDirectory(CPFileManager.PostScriptDirectory);
+			dbox.setCurrentDirectory(CPFileManager.ImageDirectory);
 			
 			// get the script name (without .xmd)
 			String sName=null;
@@ -202,14 +202,14 @@ public class FileDialogs {
 			if (result == JFileChooser.APPROVE_OPTION) {
 				targetFile = dbox.getSelectedFile();
 				if (swDir)
-					CPFileManager.PostScriptDirectory=dbox.getCurrentDirectory();
+					CPFileManager.ImageDirectory=dbox.getCurrentDirectory();
 				return targetFile;
 			}
 			return null;
 		}
 		case POSTSCRIPT: {
 			if (actStr==null) actionStr="Save PostScript file";
-			dbox.setCurrentDirectory(CPFileManager.PostScriptDirectory);
+			dbox.setCurrentDirectory(CPFileManager.ImageDirectory);
 			dbox.setSelectedFile(new File(CPFileManager.PackingDirectory+File.separator+
 					CirclePack.cpb.getActivePackData().getName())); 
 			dbox.setFileFilter(new PostScriptFilter());
@@ -218,7 +218,7 @@ public class FileDialogs {
 			if (result == JFileChooser.APPROVE_OPTION) {
 				targetFile = dbox.getSelectedFile();
 				if (swDir)
-					CPFileManager.PostScriptDirectory=dbox.getCurrentDirectory();
+					CPFileManager.ImageDirectory=dbox.getCurrentDirectory();
 				return targetFile;
 			}
 			return null;

@@ -277,7 +277,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		invDistanceField.setActionCommand("set_inv_dist");
 		invDistanceField.addActionListener(this);
 		schwarzianField=new RealField("Schwarzian");
-		schwarzianField.setActionCommand("set_schwarzian");
+		schwarzianField.setActionCommand("put_schwarzian");
 		schwarzianField.addActionListener(this);
 		edgeLengthField = new RealField("Length (actual)");
 		edgeLengthField.setEditable(false);
@@ -977,7 +977,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		else if (cmd.equals("set_inv_dist")) {
 			updateActions.putInvDist(p);
 		}
-		else if (cmd.equals("set_schwarzian")) {
+		else if (cmd.equals("put_schwarzian")) {
 			updateActions.putSchwarzian(p);
 		}
 
