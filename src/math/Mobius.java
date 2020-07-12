@@ -9,11 +9,12 @@ import complex.MathComplex;
 import exceptions.DataException;
 import exceptions.MobException;
 import ftnTheory.SchwarzMap;
-import geometry.HyperbolicMath;
 import geometry.CircleSimple;
+import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import math.group.ComplexTransformation;
 import math.group.GroupElement;
+import packing.PackData;
 import packing.Schwarzian;
 
 /**
@@ -594,6 +595,27 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		mob=Mobius.mob_xyzXYZ(z1,z2,z,Z1,Z2,Z,0,0);
 		
 		return mob;
+	}
+	
+	/**
+	 * Find Mobius that maps centers of 3 circles of eucl packing p to 
+	 * the centers of 3 other circles.
+	 * @param p PackData, eucl only for now
+	 * @param v
+	 * @param u
+	 * @param w
+	 * @param V
+	 * @param U
+	 * @param W
+	 * @return new Mobius, null on error
+	 */
+	public static Mobius mob_vuwVUW(PackData p,int v,int u,int w, int V,int U,int W) {
+		if (p.hes!=0) {
+			CirclePack.cpb.errMsg("usage: 'mob_vuwVUW' only applies to euclidean packings");
+			return null;
+		}
+		return mob_xyzXYZ(p.rData[v].center,p.rData[u].center,p.rData[w].center,
+				p.rData[V].center,p.rData[U].center,p.rData[W].center,p.hes,p.hes);
 	}
 
 	/**

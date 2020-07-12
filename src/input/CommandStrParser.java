@@ -4783,7 +4783,8 @@ public class CommandStrParser {
       }
       
       // ============ Mobius ===============
-      if (cmd.startsWith("Mobius") || cmd.startsWith("inv_Mobius")) {
+      if (cmd.startsWith("Mobius") || cmd.startsWith("inv_Mobius") ||
+    		  cmd.startsWith("mobiu") || cmd.startsWith("inv_obiu")) {
     	  String str=null;
     	  if (flagSegs.size()==0 || 
     			  (items=(Vector<String>)flagSegs.remove(0))==null || 

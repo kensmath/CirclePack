@@ -3,13 +3,16 @@ package ftnTheory;
 import java.awt.Color;
 import java.util.Vector;
 
+import allMains.CPBase;
+import exceptions.CombException;
+import listManip.NodeLink;
+import math.Mobius;
 import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
 import panels.CPScreen;
 import util.CmdStruct;
 import util.StringUtil;
-import exceptions.CombException;
 
 /** 
  * "Brooks" packings are patterns of circles inside quadrilateral interstices.
@@ -269,9 +272,25 @@ public class BrooksQuad extends PackExtender {
 	} 
 
 	public int cmdParser(String cmd,Vector<Vector<String>> flagSegs) {
-//		Vector<String> items=null;
+		Vector<String> items=null;
 
-		if (cmd.startsWith("HV") || cmd.startsWith("VH")) {
+		if (cmd.startsWith("remat")) {
+			if (flagSegs==null || flagSegs.size()==0 || (items=flagSegs.get(0)).size()<6)
+				Oops("usage: rematch v u w V U W");
+			Mobius mob=Mobius.mob_vuwVUW(packData,Integer.parseInt(items.get(0)),
+					Integer.parseInt(items.get(1)),Integer.parseInt(items.get(2)),
+					Integer.parseInt(items.get(3)),Integer.parseInt(items.get(4)),
+									Integer.parseInt(items.get(5)));
+			Mobius hold=CPBase.Mob;
+			CPBase.Mob=mob;
+			int ans=cpCommand(packData,"mobius");
+			if (hold!=null) {
+				CPBase.Mob=hold;
+			}
+			return ans;
+		}
+		
+		else if (cmd.startsWith("HV") || cmd.startsWith("VH")) {
 			String hvString=StringUtil.reconstitute(flagSegs);
 			for (int i=0;i<hvString.length();i++) {
 				char c=hvString.charAt(i);
@@ -367,6 +386,7 @@ public class BrooksQuad extends PackExtender {
 		cmdStruct.add(new CmdStruct("norm",null,null,"normalize in standard position"));
 		cmdStruct.add(new CmdStruct("toggle",null,null,"toggles between 'Brooks' and 'alternating' modes"));
 		cmdStruct.add(new CmdStruct("cfrac","<n1 n2 ..>",null,"n1 v's followed by n2 h's, etc"));
+		cmdStruct.add(new CmdStruct("rematch","uvwVUW",null,"apply Mobius to move 3 circles to 3 circles"));
 	}
 
 }

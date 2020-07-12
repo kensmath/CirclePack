@@ -24,3 +24,6 @@ in the Java code itself.
 * spanning tree needs work for multiply connected cases.
 
 * html version of Help file is being truncated. See info2HTML.java.
+
+* should allow negative euclidean radii for reerse oriented circle and be able to
+  draw with fill on the outside.
