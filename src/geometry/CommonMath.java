@@ -7,8 +7,9 @@ import math.CirMatrix;
 import util.UtilPacket;
 
 /**
- * General calls to math routines that then call the appropriate geometry.
- * Try to have the same name and arguments in every geometry.
+ * General calls to math routines; these call the relevant routine in
+ * the appropriate geometry. I try to get similar names and arguments 
+ * in every geometry.
  * @author kstephe2
  *
  */
@@ -164,6 +165,23 @@ public class CommonMath {
 		return EuclMath.eucl_tri_incircle(z1, z2, z3);
 	}
 	
+	/** 
+	 * Compute the distance between two points. Note that in the spherical
+	 * case, centers are expected to be (theta,phi) form.
+	 * @param z Complex
+	 * @param w Complex
+	 * @param hes int, geometry
+	 * @return double
+	 */
+	public static double get_pt_dist(Complex z,Complex w,int hes) {
+		if (hes<0)
+			return HyperbolicMath.h_dist(z, w);
+		else if (hes>0)
+			return SphericalMath.s_dist(z, w);
+		else
+			return EuclMath.e_dist(z,w);
+	}
+	
 	/**
 	 * Compute inversive distance between two circles
 	 * @param z1 Complex
@@ -183,6 +201,24 @@ public class CommonMath {
 			return SphericalMath.s_inv_dist(z1, z2, r1, r2);
 		}
 		return EuclMath.inv_dist(z1, z2,r1, r2);
+	}
+	
+	/**
+	 * Compute the length an edge should have between circles of radii r1 and r2
+	 * if inversive distance is given.
+	 * @param r1 double
+	 * @param r2 double
+	 * @param inv_dist double
+	 * @param hes geometry
+	 * @return double
+	 */
+	public static double inv_dist_edge_length(double r1,double r2, double inv_dist,int hes) {
+		if (hes<0)
+			return HyperbolicMath.h_invdist_length(r1, r2, inv_dist);
+		else if (hes>0)
+			return SphericalMath.s_invdist_length(r1, r2, inv_dist);
+		else 
+			return EuclMath.e_invdist_length(r1, r2, inv_dist);
 	}
 
 	/**

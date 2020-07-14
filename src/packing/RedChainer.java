@@ -56,9 +56,9 @@ public class RedChainer {
 	}
 	
 	/** 
-	 * Given vertex 'seed' vertex in simply connected complex and 
+	 * Given a 'seed' vertex in simply connected complex and 
 	 * 'gen' > 1, return a new redchain for the smallest simply 
-	 * connected sub-complex containing 'seed' and vertices up 
+	 * connected sub-complex containing 'seed' and having vertices up 
 	 * to/including generation 'gen'. 
 	 * NOTE: 'count' comes back in 'p.util_A' from call to 
 	 * 'label_seed_generation' and is returned via 'util_1'; the 

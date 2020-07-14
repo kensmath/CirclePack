@@ -2980,7 +2980,7 @@ public class PackData{
 	}
 	
 	/** 
-	 * Find edge point of given edge; complicated only in non-simply
+	 * Find endpoints of given edge; complicated only in non-simply
 	 * connected case (eucl or hyp only).
 	 * @param edge EdgeSimple
 	 * @return Complex[2]
@@ -2989,7 +2989,7 @@ public class PackData{
 		if (nghb(edge.v,edge.w)<0)
 			return null;
 		Complex []pts=new Complex[2];
-		boolean easycase= (ambigZs==null) || (hes>0);
+		boolean easycase= ((ambigZs==null) || (hes>0));
 		
 		// generic case, use stored centers
 		if (easycase) {
@@ -3005,7 +3005,7 @@ public class PackData{
 		boolean oriented=true;
 		if (!easycase) {
 			if (ambigZs==null)
-				throw new CombException("problems in 'ends_edge' creating 'ambigZs'");
+				throw new CombException("problems creating 'ambigZs' in 'ends_edge' call");
 			if (ambigZs[edge.v]==null && ambigZs[edge.w]==null) {
 				pts[0]=rData[edge.v].center;
 				pts[1]=rData[edge.w].center;

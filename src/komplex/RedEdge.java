@@ -12,7 +12,7 @@ import complex.Complex;
  * convert certain 'RedList' objects to 'RedEdge's and set up
  * 'nextRed', 'prevRed' for linking. In addition, we clone any "blue"
  * red faces so we have a representative for each of its two red
- * edges (though the second copy is invisible in the 'next/prev'
+ * edges (though the second copy is invisible in the 'RedList.next/prev'
  * linking). 
  * 
  * Thus, 'RedEdge' is only constructed as a replacement for a 'RedList'

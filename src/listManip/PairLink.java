@@ -30,8 +30,8 @@ public class PairLink extends LinkedList<EdgePair> {
 	 * is a mate to 'edgePair'. Match involves 'startEdge' of one equal
 	 * to 'endEdge' of other and vice verse. Return -1 if not found; may
 	 * indicate an error.
-	 * @param pairLink, 'PairLink' list of side pairings
-	 * @param edgePair, 'EdgePair'
+	 * @param pairLink PairLink, list of side pairings
+	 * @param edgePair EdgePair
 	 * @return index of mate to edgePair, -1 on failure.
 	 */
 	public static int find_mate(PairLink pairLink,EdgePair edgePair) {

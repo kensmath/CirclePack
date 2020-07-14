@@ -11,6 +11,7 @@ import exceptions.DataException;
 import geometry.CircleSimple;
 import geometry.CommonMath;
 import geometry.SphericalMath;
+import komplex.AmbiguousZ;
 import komplex.DualTri;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
@@ -47,12 +48,15 @@ public class Schwarzian {
 	/**
 	 * Compute real schwarzians for specified edges based relevant radii 
 	 * only, not positions. For each edge, layout the four circles, then 
-	 * compute/store schwarzian.
+	 * compute/store schwarzian. In multi-connected case, may have to get
+	 * appropriate radii from the redchain faces (e.g., when packing is
+	 * an affine torus).
 	 * @param p PackData
 	 * @param elink EdgeLink, default to all
 	 * @return count, 0 on error
 	 */
 	public static int setByRadii(PackData p,EdgeLink elink) {
+		AmbiguousZ []ambigZs=AmbiguousZ.getAmbiguousZs(p);
 		int count=0;
 		if (elink==null || elink.size()==0) // default to all
 			elink=new EdgeLink(p,"a");

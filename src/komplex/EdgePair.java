@@ -36,7 +36,7 @@ public class EdgePair{
 	public RedEdge startEdge; // the first 'RedEdge' of this "side"
 	public RedEdge endEdge;   // the final 'RedEdge' of this "side"
 	public EdgePair pairedEdge;  // if side-paired, this is the mate (null if not paired)
-	public Mobius mob;        // Mobius transform when side is paired (not yet for spherical) 
+	public Mobius mob;        // Mobius transform when side is paired (TODO: for spherical) 
 	public double mobErr;     // error in the Mobius transform (mainly for hyp
                         	  //   case; mob is always an automorphism, but roundoff 
                         	  //   can prevent it from providing exact match).
@@ -124,7 +124,8 @@ public class EdgePair{
     		mob=Mobius.affine_mob(a,b,A,B);
     		mobErr=mob.error;
     	}
-    	else return 0; // sph not implemented 
+    	// TODO: sph not yet implemented 
+    	else return 0; 
     	return 1;
     }
     
@@ -132,8 +133,8 @@ public class EdgePair{
      * Search 'pairLink' to find the 'EdgePair' for the 
      * "side" of the complex which contains 'RedList' redface;
      * return null on failure. 
-     * @param pairLink, 'PairLink'
-     * @param redface, 'RedList' (or 'RedEdge')
+     * @param pairLink PairLink
+     * @param redface RedList (or may be 'RedEdge')
      * @return 'EdgePair' of containing side or null on failure
      */
     public static EdgePair which_side(PairLink pairLink,RedList redface) {

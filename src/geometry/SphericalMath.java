@@ -210,24 +210,22 @@ public class SphericalMath{
 		
 		return new CircleSimple(sz,sr,1);
 	}
-		
-	
 	
   /**
    * Spherical distance between two spherical (i.e., (theta,phi)) points
-   * @param z1 Complex
-   * @param z2 Complex
+   * @param z Complex
+   * @param w Complex
    * @return double
    */
-  public static double s_dist(Complex z1, Complex z2){
+  public static double s_dist(Complex z, Complex w){
     double[] v1, v2;
     double dotprod;
 
-    if((Math.abs(z1.x-z2.x) < S_TOLER) && (Math.abs(z1.y-z2.y) < S_TOLER))
+    if((Math.abs(z.x-w.x) < S_TOLER) && (Math.abs(z.y-w.y) < S_TOLER))
       return (0.0);
 
-    v1 = s_pt_to_vec(z1);
-    v2 = s_pt_to_vec(z2);
+    v1 = s_pt_to_vec(z);
+    v2 = s_pt_to_vec(w);
     dotprod = dot_prod(v1, v2);
     if(Math.abs(dotprod) > (1.0 - S_TOLER))
       return Math.PI;

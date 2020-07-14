@@ -7,26 +7,29 @@ import deBugging.LayoutBugs;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.CircleSimple;
+import geometry.CommonMath;
 import packing.PackData;
 
 /**
- * Structure to hold and manipulate multiple possible radii/centers 
- * for vertices laid out via the redchain. (radii often in common, but
- * may differ, e.g., in projective packings like affine tori.)
- * Generally, the user will call 'getAmbiguousZs' to get an array of all
- * ambiguities, using only those that are encountered and have non-null
- * 'AmbiguousZ'.
+ * An 'AmbiguousZ' has vectors that hold multiple possible 
+ * radii/centers for a given vertex as may be laid out 
+ * via the redchain; e.g., in multi-connected settings. 
+ * (Even radii may be ambiguous, as in projective packings like 
+ * affine tori.) Generally, the user will call 'getAmbiguousZs' 
+ * to get an array of all ambiguities, and then use only those 
+ * that are encountered and have non-null 'AmbiguousZ'.
  * @author kstephe2, Summer 2017
 
  */
 public class AmbiguousZ {
 
+	// vectors (in parallel) of possible radii and centers (in whatever geometry)
 	public Vector<Double> radii; 
-	public Vector<Complex> centers; // optional centers (in whatever geometry)
+	public Vector<Complex> centers;
 
 	// constructor
-	public AmbiguousZ(double r, Complex initCent) { // note: "real" center is
-													// first
+	public AmbiguousZ(double r, Complex initCent) { 
+		// first entries are generally the normal stored values
 		centers = new Vector<Complex>(0);
 		centers.add(initCent);
 		radii = new Vector<Double>(0);
@@ -34,7 +37,7 @@ public class AmbiguousZ {
 	}
 
 	/**
-	 * Fill an array of ambiguous centers for packing p based on its 'RedEdges'. 
+	 * Fill an array of ambiguous radi/centers for packing p based on its 'RedEdges'. 
 	 * We assume the user has created the standard layout, so the centers can 
 	 * be found by going around the red edge list. An array entry is 'null' if 
 	 * there is no ambiguity for that vertex. When p is simply connected return null.
@@ -42,7 +45,7 @@ public class AmbiguousZ {
 	 * @param p PackData
 	 * @return []AmbiguousZ, null if p simply connected or on error
 	 */
-	public static AmbiguousZ []getAmbiguousZs(PackData p) {
+	public static AmbiguousZ[] getAmbiguousZs(PackData p) {
 
 		boolean debug=false;
 		
@@ -103,8 +106,8 @@ public class AmbiguousZ {
 	}
 	
 	/**
-	 * Given another circle (c,r) and invDistance, find which of these centers
-	 * best matches the correct distance. Note: it is conceivable that the
+	 * Given another circle (c,r) and invDistance, find among this rad/cents
+	 * the best match with correct distance. Note: it is conceivable that the
 	 * result could still be ambiguous, but that should be unlikely. The 
 	 * relative error (min dist/truedist) is returned as 'CircleSimple.rad'.
 	 * @param z Complex
@@ -126,15 +129,8 @@ public class AmbiguousZ {
 			cent = centers.get(j);
 			rad = (double)radii.get(j);
 			thislength=rad+r;
-			if (hes == 0) { // eucl
-				truedist = z.minus(cent).abs();
-				thislength = EuclMath.e_invdist_length(rad, r, invD);
-			} else if (hes < 0) { // hyp
-				truedist = HyperbolicMath.h_dist(z, cent);
-				thislength = HyperbolicMath.h_invdist_length(rad, r, invD);
-			} else // sph case not yet done
-				return null;
-			
+			truedist=CommonMath.get_pt_dist(z, cent,hes);
+			thislength=CommonMath.inv_dist_edge_length(rad, r, invD, hes);
 			newerr = Math.abs(truedist - thislength);
 			if (newerr < minerr) {
 				best = j;

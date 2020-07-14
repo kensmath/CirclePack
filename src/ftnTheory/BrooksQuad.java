@@ -89,7 +89,7 @@ public class BrooksQuad extends PackExtender {
 		packData=cps.getPackData();
 		packData.swap_nodes(1,5);
 		for (int v=1;v<=4;v++) {
-			packData.kData[v].color=CPScreen.coLor(209); // yellow
+			packData.kData[v].color=CPScreen.coLor(208); // line green
 		}
 		packData.kData[5].color=CPScreen.getBGColor();
 		packData.alpha=5;

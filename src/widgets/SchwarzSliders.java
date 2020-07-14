@@ -139,7 +139,15 @@ public class SchwarzSliders extends SliderFrame {
 			if (GraphLink.getFG(newEdges,edge.v,edge.w)>-1) 
 				continue;
 			newEdges.add(edge);
-			String str=new String(edge.v+" "+edge.w);
+			// arrange so v < w.
+			int vv=edge.v;
+			int ww=edge.w;
+			if (vv>ww) {
+				int hld=vv;
+				vv=ww;
+				ww=hld;
+			}
+			String str=new String(vv+" "+ww);
 			double sch=packData.getSchwarzian(edge);
 			tmpSliders[tick]=new ActiveSlider(this,tick,str,sch,true);
 			tick++;

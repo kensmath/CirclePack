@@ -27,3 +27,8 @@ in the Java code itself.
 
 * should allow negative euclidean radii for reerse oriented circle and be able to
   draw with fill on the outside.
+  
+* Should rethink whole redchain business, perhaps reformulate using 'TriAspects'.
+
+* Compute side-pairing Mobius transformations in spherical case.
+  Probably first set up parallel structure and debug it before throwing out current.
