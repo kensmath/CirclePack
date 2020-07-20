@@ -7,7 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 
-import komplex.EdgePair;
+import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.Face;
 import komplex.RedEdge;
@@ -155,57 +155,71 @@ public class LayoutBugs {
 			  dbw.write("List from 'log_RedCenters' ------ "+
 					  "'firstRedEdge'="+p.firstRedEdge.face+"; 'redChain'="+p.redChain.face+"\n\n");
 			  
-			  if (p.getSidePairs()!=null) {
-				  int n=p.getSidePairs().size();
-				  try{
-					  dbw.write("There are "+n+" side pairs:\n");
-				  } catch(Exception ex) {
-		    		  System.err.print(ex.toString());
-				  }
-				  
-				  for (int k=0;k<n;k++) {
-					  RedEdge startedge=((EdgePair)p.getSidePairs().get(k)).startEdge;
-					  RedEdge endedge=((EdgePair)p.getSidePairs().get(k)).endEdge;
-
-			    	  try {
-			    		  dbw.write("startEdge("+k+") face = "+startedge.face+" (with hash="+startedge.hashCode()+")");
-			    		  dbw.write("\n vert = "+p.faces[startedge.face].vert[startedge.vIndex]+", radius="+startedge.rad);
-			    		  dbw.write("\n center ("+startedge.center.x+","+startedge.center.y+")\n\n");
-			    		  dbw.write("endEdge("+k+") face = "+endedge.face+" (with hash="+endedge.hashCode()+")");
-			    		  dbw.write("\n vert = "+p.faces[endedge.face].vert[endedge.vIndex]+", radius="+endedge.rad);
-			    		  dbw.write("\n center ("+endedge.center.x+","+endedge.center.y+")\n\n");
-			    	  } catch (Exception ex) {
-			    		  System.err.print(ex.toString());
-			    	  }		  
-				  }
-				  dbw.write("-------- \n\n");
-			  }
-			  
 			  boolean goon=true;
 		      while ((trace!= p.redChain || goon) && count<1000) {
 		    	  goon=false;
 		    	  try {
 		    		  if (trace instanceof RedEdge) {
+		    			  RedEdge redg=(RedEdge)trace;
+		    			  if (redg.face==redg.prevRed.face)
+		    				  dbw.write("RedEdge: ++++++++++++++++++ Second copy");
 		    			  dbw.write("RedEdge:\n");
 		    		  }
 		    		  else { 
-		    			  dbw.write("  --- List:\n");
+		    			  dbw.write("--- List:\n");
 		    		  }
-		    		  dbw.write("  Face " + trace.face+" (trace hash="+trace.hashCode()+")");
-		    		  dbw.write("\n   vert = "+p.faces[trace.face].vert[trace.vIndex]);
-		    		  dbw.write("\n   center ("+trace.center.x+","+trace.center.y+")\n");
+		    		  int[] verts=p.faces[trace.face].vert;
+		    		  dbw.write(" Face " + trace.face+", <"+verts[0]+","+verts[1]+","+verts[2]+
+		    				  ">    (trace hash="+trace.hashCode()+")");
+		    		  dbw.write("\n          prev/next face = "+trace.prev.face+"/"+trace.next.face);
+		    		  if (trace.next.face==trace.prev.face)
+		    			  dbw.write(" ++++++++++ [blue face:]");
+		    		  dbw.write("\n    Lays out vert "+p.faces[trace.face].vert[trace.vIndex]);
+		    		  dbw.write("\n          center = ("+trace.center+"), and rad = "+trace.rad+"\n");
 		    	  } catch (Exception ex) {
 		    		  System.err.print(ex.toString());
 		    	  }		  
 		    	  count++;
-			      trace=trace.next;
+		    	  if (trace instanceof RedEdge) { // handle duplicated 'RedEdge'
+		    		  RedEdge redg=(RedEdge)trace;
+		    		  if (redg.face==redg.nextRed.face)
+		    			  trace=(RedList)redg.nextRed;
+		    		  else
+		    			  trace=trace.next;
+		    	  }
+		    	  else 
+		    		  trace=trace.next;
 		      }
-		      
-		      dbw.flush();
-		      dbw.close();
+			  dbw.write("----------------------------------------------- \n\n");
+
 		  } catch(Exception ex) {
 		      System.err.print(ex.toString());
 		  }
+		  
+		  if (p.getSidePairs()!=null) {
+			  int n=p.getSidePairs().size();
+			  try{
+			  dbw.write("There are "+n+" side pairs:\n");
+
+			  for (int k=0;k<n;k++) {
+				  RedEdge startedge=((SideDescription)p.getSidePairs().get(k)).startEdge;
+				  RedEdge endedge=((SideDescription)p.getSidePairs().get(k)).endEdge;
+
+		    		  dbw.write("startEdge("+k+") face = "+startedge.face+" (with hash="+startedge.hashCode()+")");
+		    		  dbw.write("\n   vert = "+p.faces[startedge.face].vert[startedge.vIndex]+", radius="+startedge.rad);
+		    		  dbw.write("\n   center ("+startedge.center.x+","+startedge.center.y+")\n\n");
+		    		  dbw.write("endEdge("+k+") face = "+endedge.face+" (with hash="+endedge.hashCode()+")");
+		    		  dbw.write("\n   vert = "+p.faces[endedge.face].vert[endedge.vIndex]+", radius="+endedge.rad);
+		    		  dbw.write("\n   center ("+endedge.center.x+","+endedge.center.y+")\n\n");
+			  }
+		      dbw.flush();
+		      dbw.close();
+	    	  } catch (Exception ex) {
+	    		  System.err.print(ex.toString());
+	    	  }		  
+
+		  }
+		  
 		  return count;
 	}
 	
@@ -320,7 +334,7 @@ public class LayoutBugs {
 	}
 
 	/** 
-	 * Log details of 'PairLink' of 'EdgePair's in 'edgePair_xxxx_log.txt'
+	 * Log details of 'PairLink' of 'SideDescription's in 'SideDescriptions_xxxx_log.txt'
 	 * @param p, PackData
 	 * @param pairs, PairLink
 	 * @return count 
@@ -328,15 +342,15 @@ public class LayoutBugs {
 	public static int log_PairLink(PackData p,PairLink pairs) {
 		  int count=0;
 
-		  String filename=new String("edgePair_"+(rankStamp++)+"_log.txt");
+		  String filename=new String("SideDescriptions_"+(rankStamp++)+"_log.txt");
 		  BufferedWriter dbw=CPFileManager.appendToFP(tmpdir,filename,false);
 		  try {
-			  CirclePack.cpb.msg("debug EdgePair to: "+tmpdir.toString()+File.separator+filename);
-			  dbw.write("EdgePairs ============================= \n\n");
+			  CirclePack.cpb.msg("debug 'SideDescription' to: "+tmpdir.toString()+File.separator+filename);
+			  dbw.write("SideDesriptions ============================= \n\n");
 			  
-			  Iterator<EdgePair> eps=pairs.iterator();
+			  Iterator<SideDescription> eps=pairs.iterator();
 			  while (eps.hasNext()) {
-				  EdgePair ep=(EdgePair)eps.next();
+				  SideDescription ep=(SideDescription)eps.next();
 				  dbw.write("Index "+count+":\n");
 				  count++;
 				  dbw.write("spIndex="+ep.spIndex+";  mateIndex="+ep.mateIndex+"\n");
@@ -427,7 +441,9 @@ public class LayoutBugs {
 		System.err.println("Pack RedEdge order: "+stop.face+"\n");
 		while (rtrace!=stop || keepon) {
 			keepon=false;
-			System.err.println(" f="+(rtrace.face)+" , v="+p.faces[rtrace.face].vert[rtrace.vIndex]+", center = "+rtrace.center.x+" "+rtrace.center.y);
+			System.err.println(" f="+(rtrace.face)+" , v="+
+					p.faces[rtrace.face].vert[rtrace.vIndex]+
+					", center = "+rtrace.center.x+" "+rtrace.center.y);
 			rtrace=rtrace.nextRed;
 			count++;
 		}
@@ -436,6 +452,32 @@ public class LayoutBugs {
 		return count;
 	}
 
+	/** 
+     * print ordered 'RedList' list to System.err 
+     * @param p, PackData
+     * @return count
+     */
+	public static int pRedList(PackData p) {
+
+		int count=1;
+
+		RedList stop=p.redChain;
+		RedList rtrace= stop;
+		boolean keepon=true;
+		System.err.println("Pack RedList: "+stop.face+"\n");
+		while (rtrace!=stop || keepon) {
+			keepon=false;
+			System.err.println(" f="+(rtrace.face)+" , v="+
+					p.faces[rtrace.face].vert[rtrace.vIndex]+
+					", center = "+rtrace.center.x+" "+rtrace.center.y);
+			rtrace=rtrace.next;
+			count++;
+		}
+
+		System.err.println("count was "+count);
+		return count;
+	}
+		
 	/** 
 	 * Check doubly linked 'RedList' and print info to System.err
 	 * @param handle, RedList
@@ -536,8 +578,8 @@ public class LayoutBugs {
 	/**
 	 * Print drawing order of faces in System.out. Include vertex being
 	 * placed.
-	 * @param p, PackData
-	 * @verts_too, boolean: true, then also print face's vertices
+	 * @param p PackData
+	 * @param verts_too boolean: true, then also print face's vertices
 	 * @return 1;
 	 */
 	public static int print_drawingorder(PackData p, boolean verts_too) {

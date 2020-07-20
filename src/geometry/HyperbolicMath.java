@@ -868,16 +868,16 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
    * TODO: seems to be an error in this.
    * @param x1 double
    * @param x2 double
-   * @param ovlp double
+   * @param inv_dist double
    * @return double
   */
-  public static double h_invdist_length(double x1,double x2,double ovlp) {
+  public static double h_invdist_length(double x1,double x2,double inv_dist) {
       if (x1<0 || x2<0) return -1.0;
       double s1=x_to_s_rad(x1);
       double s2=x_to_s_rad(x2);
       double ss1=s1*s2;
       double ss2=s2*s2;
-      return acosh( (1/(4.0*s1*s2))*((1+ss1)*(1+ss2)+(1-ss1)*(1-ss2)*ovlp) );
+      return acosh( (1/(4.0*s1*s2))*((1+ss1)*(1+ss2)+(1-ss1)*(1-ss2)*inv_dist) );
   }
   
   /**

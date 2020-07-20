@@ -1,6 +1,7 @@
 package komplex;
 
 import complex.Complex;
+import deBugging.LayoutBugs;
 import exceptions.RedListException;
 import packing.PackData;
 
@@ -152,76 +153,41 @@ public class RedList {
 	 */
 	public static RedList whos_your_daddy(RedList redface,int indx) {
 		PackData p=redface.packData;
-		boolean blue=redface.prev.face==redface.next.face; // is this a blue face
-		// LayoutBugs.log_Red_Hash(p,redface,redface);
+		
+		boolean debug=false; // debug=true;
+		if (debug) {
+			LayoutBugs.log_RedCenters(p);
+			debug=false;
+		}
+		
+		// special circumstance: 'redface' is a "blue" 'RedEdge'.
+		//   In this case, there are 2 copies, and we must point
+		//   to the FIRST, because that is the one which is visible
+		//   in the 'redChain' list used in setting centers.
+		if (redface instanceof RedEdge) {
+			RedEdge redge=(RedEdge)redface;
+			if (redface.face==redge.prevRed.face)
+				redface=(RedList)redge.prevRed;
+		}
 		
 		// is redface itself responsible?
 		if (indx==redface.vIndex) 
 			return redface;
-//		{
-			// special circumstance: 'redface' is a "blue" 'RedEdge'.
-			//   In this case, there are 2 copies, and we must point
-			//   to the FIRST, because that is the one which is visible
-			//   in the 'redChain' list used in setting centers.
-//			if (blue) {
-//				RedEdge re=(RedEdge)redface; // cast to 'RedEdge'
-//				 're' is SECOND of two copies, so center is held by 'prev' face
-//				if (re.face==re.prevRed.face)  
-					//  which is FIRST
-//					return (RedList)re.prev;
-//			}
-//			return redface;
-//		}
 
 		// so, some other face is responsible
 		int targetVert=p.faces[redface.face].vert[indx];
+		int safety=p.kData[targetVert].num;
+		RedList rtrace=redface.prev;
+		int tick=0;
 
-		// see if this is a 'redEdge'
-		if (redface instanceof RedEdge) {
-			RedEdge re=(RedEdge)redface; // cast to 'redEdge'
-			
-			// first end of edge desired, daddy is previous redEdge
-			if (indx==(redface.vIndex+2)%3)
-				return (RedList)re.prevRed;
-			
-			// reaching here, target vert must be opposite the red edge;
-			//    should only happen for SECOND copy of blue
-			if (!blue || re.nextRed.face!=re.face) {
-				throw new RedListException("should be blue in this case");
-			}
-			return (RedList)(re.nextRed); // point to SECOND copy of blue
-		} // done with 'RedEdge' cases, so is just 'RedList'
-		
-		// is previous redface responsible?
-		if (p.faces[redface.prev.face].vert[redface.prev.vIndex]==targetVert) 
-			return redface.prev;
-		
-		// check backward on 'pivotVert' on right side of redChain
-		RedList preTrace=redface.prev;
-		int idx=p.face_nghb(redface.face,preTrace.face);
-		if (idx<0) 
-			throw new RedListException();
-		int pivotVert=p.faces[preTrace.face].vert[idx];
-		if (targetVert==pivotVert) {
-			while ((idx=p.find_index(preTrace.prev.face,targetVert))>=0 && preTrace.prev.face!=redface.face)
-				preTrace=preTrace.prev;
-			if (p.faces[preTrace.face].vert[preTrace.vIndex]==targetVert) 
-				return preTrace;
-//			RedList upFace=p.redChainer.upstream_red(pivotVert,redface);
-//			if (p.faces[upFace.face].vert[upFace.vIndex]==vert) return upFace;
-			else  
-				throw new RedListException();
-		}
-		
-		// move back through redChain watching the other side
-		idx=p.face_nghb(preTrace.next.face,preTrace.face);
-		int offVert=p.faces[preTrace.face].vert[idx];
-		while (offVert==pivotVert) {
-			if (p.faces[preTrace.face].vert[preTrace.vIndex]==targetVert) 
-				return preTrace;
-			preTrace=preTrace.prev;
-			idx=p.face_nghb(preTrace.next.face,preTrace.face);
-			offVert=p.faces[preTrace.face].vert[idx];
+		// move back through the red faces until you get the
+		//   one that holds data for 'targetVert'
+		while (tick<safety) {
+			int v=p.faces[rtrace.face].vert[rtrace.vIndex];
+			if (v==targetVert)
+				return (RedList)rtrace;
+			rtrace=rtrace.prev;
+			tick++;
 		}
 		throw new RedListException(); // something must have gone wrong
 	}
@@ -325,7 +291,7 @@ public class RedList {
 	public int redEdgeIndex() {
 		int vp=sharedPrev();
 		if (sharedNext()==vp) return -1;
-		return packData.find_index(face, vp);
+		return packData.face_index(face, vp);
 	}
 
 	/**

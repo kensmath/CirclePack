@@ -276,7 +276,7 @@ public class FracBranchPt extends GenBranchPt {
 		int F=borderLink.get(0);
 
 		// place first face 
-		int indx=myPackData.find_index(F,1);
+		int indx=myPackData.face_index(F,1);
 		myPackData.place_face(F,indx);
 		
 		// initial location of F

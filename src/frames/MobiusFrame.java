@@ -23,7 +23,7 @@ import handlers.PACKMOBHandler;
 import images.CPIcon;
 import input.CPFileManager;
 import input.CommandStrParser;
-import komplex.EdgePair;
+import komplex.SideDescription;
 import mytools.MyTool;
 import packing.PackData;
 import util.PopupBuilder;
@@ -114,10 +114,10 @@ public class MobiusFrame extends JFrame implements ActionListener {
 				|| packData.getSidePairs()==null || packData.getSidePairs().size()==0) return 0;
 		sidePairHandler.wipeoutTools();
 		sidePairHandler.clearToolBar();
-		Iterator<EdgePair> sides=packData.getSidePairs().iterator();
-		EdgePair ep=null;
+		Iterator<SideDescription> sides=packData.getSidePairs().iterator();
+		SideDescription ep=null;
 		while (sides.hasNext()) {
-			  ep=(EdgePair)sides.next();
+			  ep=(SideDescription)sides.next();
 			  // yes, this is part of a side-pairing, add its tool 
 			  if (ep.label!=null && ep.pairedEdge!=null) {
 				  String letterIcon=new String("mobius/mob_"+ep.label+".png");

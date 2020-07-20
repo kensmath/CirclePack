@@ -574,7 +574,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		Complex vec=z2.minus(z1);
 		double vmod=vec.abs();
 		Complex Vec=Z2.minus(Z1);
-		double Vmod=vec.abs();
+		double Vmod=Vec.abs();
 		if (vmod<.0000000001 || Vmod<.0000000001) {
 			CirclePack.cpb.errMsg("In 'mob_tang_circles', centers "+
 					"too close for computation");
@@ -1571,7 +1571,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 * Useful for seeing how close a mobius is to being the identity.
 	 * 
 	 * @param mob Mobius
-	 * @return double, Frobenius norm, -1 on error (such as extreme det(mob))
+	 * @return double, Frobenius norm, >=0, but -1 on error (such as extreme det(mob))
 	 */
 	public static double frobeniusNorm(Mobius mob) {
 		if (mob == null)

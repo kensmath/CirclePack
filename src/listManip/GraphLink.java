@@ -9,7 +9,7 @@ import allMains.CPBase;
 import exceptions.CombException;
 import exceptions.DataException;
 import komplex.DualGraph;
-import komplex.EdgePair;
+import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.GraphSimple;
 import komplex.RedList;
@@ -1163,7 +1163,7 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 				}
 
 				// else, do the chosen side
-				EdgePair ep=packData.getSidePairs().get(sideNum);
+				SideDescription ep=packData.getSidePairs().get(sideNum);
 				rlst=(RedList)ep.startEdge;
 				add(new EdgeSimple(0,rlst.face)); // root
 				int curr=rlst.face;

@@ -54,7 +54,7 @@ public class TriAspect {
 	public boolean []redFlags; // true if vertex is on outside of redChain
 	
 	// radii/centers: when changed, need to update things
-	boolean needupdate;
+	boolean need_update;
 	Complex []center;  // centers of circles
 	public Complex []tanPts;  // tangency points, if saved
 	
@@ -98,7 +98,7 @@ public class TriAspect {
 		baseMobius=new Mobius();
 		baseSchwarz=new double[3];
 		MobDeriv=null;
-		needupdate=true;
+		need_update=true;
 		
 		for (int j=0;j<3;j++) center[j]=null;
 	}
@@ -143,7 +143,7 @@ public class TriAspect {
 	
 	public void setRadius(double r,int j) {
 		radii[j]=r;
-		needupdate=true;
+		need_update=true;
 	}
 	
 	public double getRadius(int j) {
@@ -152,7 +152,7 @@ public class TriAspect {
 	
 	public void setCenter(Complex z,int j) {
 		center[j]=new Complex(z);
-		needupdate=true;
+		need_update=true;
 	}
 	
 	/**

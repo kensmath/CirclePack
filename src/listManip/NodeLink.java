@@ -14,7 +14,7 @@ import exceptions.ParserException;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import input.SetBuilderParser;
-import komplex.EdgePair;
+import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.KData;
 import komplex.RedEdge;
@@ -737,12 +737,12 @@ public class NodeLink extends LinkedList<Integer> {
 				  } while (its.hasNext());
 
 				  // now to traverse the 'RedEdge's in chosen segments
-				  Iterator<EdgePair> sp=packData.getSidePairs().iterator();
-				  EdgePair ep=null;
+				  Iterator<SideDescription> sp=packData.getSidePairs().iterator();
+				  SideDescription ep=null;
 				  RedEdge rlst=null;
 				  int tick=0;
 				  while (sp.hasNext()) {
-					  ep=(EdgePair)sp.next();
+					  ep=(SideDescription)sp.next();
 					  if (tag[tick++]) { // yes, do this one
 						  rlst=ep.startEdge;
 						  add(rlst.vert(rlst.startIndex));

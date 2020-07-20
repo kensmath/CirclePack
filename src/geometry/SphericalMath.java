@@ -51,11 +51,17 @@ public class SphericalMath{
   
   /** 
 	 * Return sph length of edge with spherical radii r1, r2, and inv dist 'ovlap'.
-	 * TODO: Not yet done
+	 * For two circles, 'inv_dist'=(-cos(phi)+cos(r1)*cos(r2))/(sin(r1)*sin(r2)),
+	 * where phi is the angle between the unit vectors p1, p2 to the centers of the
+	 * two circles. That is, phi=dot(p1,p2).
+	 * @param r1 double 
+	 * @param r2 double
+	 * @param inv_dict double
+	 * @return double  
 	*/
-  public static double s_invdist_length(double r1,double r2,double ovlap) {
-	  // TODO: what is the computation?
-	  return (r1+r2);
+  public static double s_invdist_length(double r1,double r2,double inv_dist) {
+	  double cosphi=Math.cos(r1)*Math.cos(r2)-inv_dist*Math.sin(r1)*Math.sin(r2);
+	  return Math.acos(cosphi);
   }
   
   /** 

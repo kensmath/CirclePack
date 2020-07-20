@@ -18,7 +18,7 @@ import complex.Complex;
  * identified in the complex. In the non-simply connected case 
  * there may also be "border" segments (maximal unpaired segments).
  * 
- * A linked list 'sidePairs' of 'EdgePairs' encodes the side-pairing 
+ * A linked list 'sidePairs' of 'SideDescription's encodes the side-pairing 
  * information. 
  * 
  * Caution: 'mob' element can easily be out of date. Likewise, the 
@@ -28,14 +28,14 @@ import complex.Complex;
  * the 'RedList.center' information.
  * @author kens
  */
-public class EdgePair{
+public class SideDescription{
 	
 	public PackData packData;
 	public int spIndex;       // index in 'sidePairs' linked list
 	public int mateIndex;     // index of paired side (-1 if no mate)
 	public RedEdge startEdge; // the first 'RedEdge' of this "side"
 	public RedEdge endEdge;   // the final 'RedEdge' of this "side"
-	public EdgePair pairedEdge;  // if side-paired, this is the mate (null if not paired)
+	public SideDescription pairedEdge;  // if side-paired, this is the mate (null if not paired)
 	public Mobius mob;        // Mobius transform when side is paired (TODO: for spherical) 
 	public double mobErr;     // error in the Mobius transform (mainly for hyp
                         	  //   case; mob is always an automorphism, but roundoff 
@@ -47,7 +47,7 @@ public class EdgePair{
 							  //   of case, label 'A' is stored as 'aa', etc.
 
     // Constructor
-    public EdgePair(PackData p) {
+    public SideDescription(PackData p) {
     	packData=p;
     	startEdge=null;
     	endEdge=null;
@@ -130,19 +130,19 @@ public class EdgePair{
     }
     
     /**
-     * Search 'pairLink' to find the 'EdgePair' for the 
+     * Search 'pairLink' to find the 'SideDescription' for the 
      * "side" of the complex which contains 'RedList' redface;
      * return null on failure. 
      * @param pairLink PairLink
      * @param redface RedList (or may be 'RedEdge')
-     * @return 'EdgePair' of containing side or null on failure
+     * @return 'SideDescription' of containing side or null on failure
      */
-    public static EdgePair which_side(PairLink pairLink,RedList redface) {
+    public static SideDescription which_side(PairLink pairLink,RedList redface) {
     	if (pairLink==null || pairLink.size()==0) return null;
-    	Iterator<EdgePair> pl=pairLink.iterator();
-    	EdgePair ep=null;
+    	Iterator<SideDescription> pl=pairLink.iterator();
+    	SideDescription ep=null;
     	while (pl.hasNext()) {
-    		ep=(EdgePair)pl.next();
+    		ep=(SideDescription)pl.next();
     		RedEdge rdl=ep.startEdge;
     		if (rdl==null) return null;
     		do {

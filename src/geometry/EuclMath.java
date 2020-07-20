@@ -709,11 +709,11 @@ public class EuclMath{
 	 * Return eucl length of edge with eucl radii r1, r2, and inv dist 'ovlap'.
 	 * @param r1 double
 	 * @param r2 double
-	 * @param ovlap double
+	 * @param inv_dist double
 	 * @return double
 	*/
-	public static double e_invdist_length(double r1,double r2,double ovlap) {
-		return (Math.sqrt(r1*r1+r2*r2+2.0*r1*r2*ovlap));
+	public static double e_invdist_length(double r1,double r2,double inv_dist) {
+		return (Math.sqrt(r1*r1+r2*r2+2.0*r1*r2*inv_dist));
 	}
 	
 	/** 

@@ -94,9 +94,24 @@ public class zNumField extends JPanel {
 			
 	}
 
-	public void setFields(complex.Complex z) {
-		xField.setText(String.format("%."+digits+"e",z.x));
-		yField.setText(String.format("%."+digits+"e",z.y));
+	/**
+	 * Set parts to "0" or "-0" if too small
+	 * @param z Complex
+	 */
+	public void setValue(complex.Complex z) {
+		// real part
+		if (z.x>0 && z.x<.00000000000001)
+			xField.setText("0");
+		else if (z.x<0 && z.x>-.00000000000001)
+			xField.setText("-0");
+		else 
+			xField.setText(String.format("%."+digits+"e",z.x));
+		if (z.y>0 && z.y<.00000000000001)
+			yField.setText("0");
+		else if (z.y<0 && z.y>-.00000000000001)
+			yField.setText("-0");
+		else 
+			yField.setText(String.format("%."+digits+"e",z.y));
 	}
 	
 	public Complex getValue() {

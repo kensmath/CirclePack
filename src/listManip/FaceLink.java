@@ -15,7 +15,7 @@ import exceptions.DataException;
 import exceptions.ParserException;
 import geometry.EuclMath;
 import input.SetBuilderParser;
-import komplex.EdgePair;
+import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.Face;
 import komplex.RedList;
@@ -449,12 +449,12 @@ public class FaceLink extends LinkedList<Integer> {
 				  // now to get the chosen segments
 				  // NOTE: some faces between end of one segment and
 				  //       start of next are not picked up.
-				  Iterator<EdgePair> sp=packData.getSidePairs().iterator();
-				  EdgePair ep=null;
+				  Iterator<SideDescription> sp=packData.getSidePairs().iterator();
+				  SideDescription ep=null;
 				  RedList rlst=null;
 				  int tick=0;
 				  while (sp.hasNext()) {
-					  ep=(EdgePair)sp.next();
+					  ep=(SideDescription)sp.next();
 					  if (tag[tick++]) { // yes, do this one
 						  rlst=(RedList)ep.startEdge;
 //System.err.println(" startEdge (tick "+tick+") "+ep.startEdge+", face="+ep.startEdge.face+

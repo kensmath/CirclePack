@@ -21,7 +21,7 @@ import geometry.EuclMath;
 import geometry.CircleSimple;
 import input.CPFileManager;
 import komplex.DualGraph;
-import komplex.EdgePair;
+import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.Face;
 import komplex.RedEdge;
@@ -50,18 +50,25 @@ import util.TriAspect;
  * The idea is to replace radii as the parameters, using 
  * localized geometry. In particular, to each face is attached
  * 'labels' r1:r2:r3 of radii (in eucl case, the radii are not
- * important, only the ratio). The angle sum at a vertex v is
+ * important, only their ratios). The angle sum at a vertex v is
  * obtained face-by-face. 
  * 
- * Initial scenario: Open torus K to get a combinatorial quadrilateral,
+ * Initial scenario was for tori: First open as a combinatorial quadrilateral, 
  * noting identifications of top/bottom, left/right end vertices.
  * Assign radii, assuring that those on top are 'a' times those
  * at the bottom and those on the right are 'b' times those on
  * the left. Now record all face labels. Run an iterative 
  * routine to get angle sums 2pi at all vertices. With luck,
- * we get an affine torus, with the arguments of the side
- * pairings determined by the process.
+ * we get an affine torus, with the arguments of the side pairings 
+ * determined by the process (so, 2 real parameters result in 2 complex
+ * parameters).
+ * 
+ * As of summer 2020, I'm trying to generalize whatever I can to
+ * accommodate surfaces other than tori, geometries other than euclidean,
+ * and possibly branch points. I also hope to introduce schwarzians, 
+ * though how to create and manipulate them are still open issues.
  *
+ * kens
  */
 
 public class ProjStruct extends PackExtender {
@@ -88,8 +95,8 @@ public class ProjStruct extends PackExtender {
 		packData=p;
 		extensionType="PROJSTRUCT";
 		extensionAbbrev="PS";
-		toolTip="'ProjStruct' provides for projective structure "+
-			"on a circle packing";
+		toolTip="'ProjStruct' is for handling discrete projective structures, "+
+			"that is, projective structures associated with circle packings.";
 		registerXType();
 		if (running) {
 			dTree= DualGraph.easySpanner(packData,false);
@@ -98,6 +105,9 @@ public class ProjStruct extends PackExtender {
 		}
 	}
 	
+	/**
+	 * create the 'aspects' array
+	 */
 	public void setupAspects() {
 		for (int v=1;v<=packData.nodeCount;v++)
 			packData.kData[v].utilFlag=0;
@@ -148,10 +158,10 @@ public class ProjStruct extends PackExtender {
 	}
 	
 	/** 
-	 * These are iterative adjustment routines patterned after 'oldReliable' 
+	 * Euclidean iterative adjustment routines patterned after 'oldReliable' 
 	 * euclidean riffle routines, but now computation are done to local
 	 * labels face-by-face. For each vertex, a factor t>0 is computed and
-	 * all the local label at 'v' is multiplied by t in every face containing v.
+	 * the local label at 'v' is multiplied by t in every face containing v.
 	 * There are two goals with this same process, differing only in the
 	 * objective functions we want to minimize.
 	 * 
@@ -301,7 +311,7 @@ public class ProjStruct extends PackExtender {
 	} 
 
 	/** 
-	 * Riffle side lengths to get aims: for each vertex v, find 
+	 * Euclidean riffle of side lengths to get aims: for each vertex v, find 
 	 * factor f>0 so that multiplying all 'sides' from v by f 
 	 * in all faces containing v gives the 'aim' anglesum at v. 
 	 * Currently, do all vertices with aim>0, whether bdry or interior.
@@ -743,7 +753,7 @@ public class ProjStruct extends PackExtender {
 		//  outside of that edge.
 		for (int i=0;i<p.getSidePairs().size();i++) {
 
-			EdgePair thisSide=p.getSidePairs().get(i);
+			SideDescription thisSide=p.getSidePairs().get(i);
 
 			// go through outer red edges and their initial red
 			//    verts 'vi'; find fans of ref faces about vi and
@@ -795,7 +805,7 @@ public class ProjStruct extends PackExtender {
 	}
 	
 	/**
-	 * Compute the PackData radii based on TriAspect 'labels' 
+	 * Compute the PackData eucl radii based on TriAspect 'labels' 
 	 * for faces by going trough the faces in drawing order. 
 	 * Store in 'rData', but because those on paired boundaries 
 	 * may be multi-valued, store them in 'radii' also, indexed 
@@ -804,8 +814,8 @@ public class ProjStruct extends PackExtender {
 	 * 
 	 * After this is done, use 'radii' and redchain to set 'rad' 
 	 * for the redChain.
-	 * @param p, PackData
-	 * @param asp[], TriAspect
+	 * @param p PackData
+	 * @param asp TriAspect[]
 	 * @return -1 on error
 	 */
 	public static int affineLayout(PackData p,TriAspect []asp) {
@@ -1357,7 +1367,6 @@ public class ProjStruct extends PackExtender {
 	 */
 	public int cmdParser(String cmd, Vector<Vector<String>> flagSegs) {
 		Vector<String> items = null;
-		
 
 		// ======== testTree =========
 		// for testing new 'DualGraph' routines
@@ -2058,10 +2067,12 @@ public class ProjStruct extends PackExtender {
 	 * sides (in the red chain) based on current 'TriAspect'
 	 * data. Note that argument vectors must be allocated by 
 	 * the calling routine and should be empty.
-	 * @param sideBaseVerts (must be allocated)
-	 * @param cornerZs (can be null)
-	 * @param sideArgs (can be null)
-	 * @param sideMobs, SidePair Mobius transformations (can be null)
+	 * @param p PackData
+	 * @param asps TriAspcet[]
+	 * @param sideStarts Vector<Integer) (must be allocated)
+	 * @param cornerZs Vector<Complex> (can be null)
+	 * @param sideArgs Vector<Double> (can be null)
+	 * @param sideMobs Vector<Mobius>, SidePair Mobius transformations (can be null)
 	 * @return index of corner vert if there is only one
 	 *  (as obtained in 'torus4layout'), else return 0 or
 	 *  -1 on error.
@@ -2072,8 +2083,8 @@ public class ProjStruct extends PackExtender {
 		if (p.getSidePairs()==null || p.getSidePairs().size()==0)
 			throw new ParserException("side pairs not set or nonexistent");
 		
-		Iterator<EdgePair> sides=p.getSidePairs().iterator();
-		EdgePair epair=null;
+		Iterator<SideDescription> sides=p.getSidePairs().iterator();
+		SideDescription epair=null;
 		int theCorner=-1;
 		while (sides.hasNext()) {
 				epair=sides.next();

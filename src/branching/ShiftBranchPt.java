@@ -224,7 +224,7 @@ public class ShiftBranchPt extends GenBranchPt {
 
 		// place first face? 
 		if (norm) { // 1 should be at origin
-			int indx=myPackData.find_index(F,1);
+			int indx=myPackData.face_index(F,1);
 			if (indx<0) 
 				throw new CombException("vert 1 is not in the first face");
 			myPackData.place_face(F,indx);

@@ -44,13 +44,13 @@ import komplex.AmbiguousZ;
 import komplex.CookieMonster;
 import komplex.DualGraph;
 import komplex.DualTri;
-import komplex.EdgePair;
 import komplex.EdgeSimple;
 import komplex.Face;
 import komplex.GraphSimple;
 import komplex.KData;
 import komplex.RedEdge;
 import komplex.RedList;
+import komplex.SideDescription;
 import komplex.Triangulation;
 import listManip.BaryCoordLink;
 import listManip.BaryLink;
@@ -2386,7 +2386,7 @@ public class PackData{
 		mainLink.add(v);
 		mainLink.add(w);
 		first_face=lastface=kData[alpha].faceFlower[nbr];
-		newfaces[lastface].indexFlag=find_index(lastface,alpha);
+		newfaces[lastface].indexFlag=face_index(lastface,alpha);
 		fflag[lastface]=true;
 		
 		/* set all 'nextFace' to 'lastface', so we always have that
@@ -2443,7 +2443,7 @@ public class PackData{
 								System.err.println("face " + face);
 							}
 							if (!fflag[face]) { // face not marked as done
-								indx = find_index(face, vert);
+								indx = face_index(face, vert);
 								v1 = newfaces[face].vert[(indx + 1) % 3];
 								v2 = newfaces[face].vert[(indx + 2) % 3];
 								// can we place either v1 or v2?
@@ -3165,7 +3165,7 @@ public class PackData{
 	 * @param v int
 	 * @return index or -1 if v not a vert of face f
 	 */
-	public int find_index(int f,int v) {
+	public int face_index(int f,int v) {
 		int m=0;
 		while (m<3) { 
 			if (faces[f].vert[m]==v) 
@@ -3641,7 +3641,7 @@ public class PackData{
 	      rtrace=rtrace.next();
 	      cf=rtrace.face;
 	    }
-	  int n1=nghb(v,faces[cf].vert[(find_index(cf,v)+1)% 3]);
+	  int n1=nghb(v,faces[cf].vert[(face_index(cf,v)+1)% 3]);
 	  int n=1;
 	  while (((f=rtrace.prev().face)!=cf) 
 		 && v==faces[f].vert[face_nghb(rtrace.face,f)]) {
@@ -4073,7 +4073,7 @@ public class PackData{
 	      w=stop_vert=kData[v].flower[0];
 		  redChain=trace=new RedList(this,kData[w].faceFlower[kData[w].num-1]);
 		  trace.center=new Complex(rData[w].center);
-		  trace.vIndex=find_index(trace.face,w);
+		  trace.vIndex=face_index(trace.face,w);
 		  
 		  // rwbFlag is reset later in 'build_redchain' and used to identify
 		  //   when we get to a red face.
@@ -5205,6 +5205,7 @@ public class PackData{
 	    			count++;
 	    		}
 	    		else if (kData[vert].plotFlag>=0 && dflag)
+	  	    	  logwriter.write("\t"+count+"\t"+vert+"\t"+nf+"\n");
 	    		
 	    		// position the first outer circle of the red chain
 	    		redChain.rad=rData[faces[redChain.face].vert[redChain.vIndex]].rad;
@@ -5467,7 +5468,7 @@ public class PackData{
 	public int update_pair_mob() throws RedListException, MobException {
 	  if (redChain==null || firstRedEdge==null || sidePairs==null) return 0;
 	  for (int j=0;j<sidePairs.size();j++) {
-		  EdgePair ep=(EdgePair)sidePairs.get(j);
+		  SideDescription ep=(SideDescription)sidePairs.get(j);
 		  ep.set_sp_Mobius();
 	  }
 	  return 1;
@@ -5937,7 +5938,7 @@ public class PackData{
 	 * e_indx must point to vert for which redface (or a predecessor, 
 	 * if blue) keeps center info. 
 
-	 * (Key example: redface=edge and e_indx=edge_indx from EdgePair structure.)
+	 * (Key example: redface=edge and e_indx=edge_indx from SideDescription structure.)
 
 	  Return 0 on failure. */
 
@@ -6323,10 +6324,10 @@ public class PackData{
 
 		if ((act & 04000) == 04000 && sidePairs != null) { // edge-pairing
 															// Mobius
-			Iterator<EdgePair> epM = sidePairs.iterator();
+			Iterator<SideDescription> epM = sidePairs.iterator();
 			// TODO: make sure we start with correct one
 			while (epM.hasNext()) {
-				EdgePair pL = (EdgePair) epM.next();
+				SideDescription pL = (SideDescription) epM.next();
 				if (pL.pairedEdge != null) {
 					Mobius mB = pL.mob;
 					file.write("EDGE_PAIRING MOBIUS: \n\n");
@@ -6722,8 +6723,8 @@ public class PackData{
 		if (label.length()!=1)
 			return null;
         
-		Iterator<EdgePair> sides=sidePairs.iterator();
-		EdgePair ep=null;
+		Iterator<SideDescription> sides=sidePairs.iterator();
+		SideDescription ep=null;
 		String tmpLabel=new String(label);
 		// Upper case (e.g. 'A') must be changed to double lower ('aa').
 		char h=tmpLabel.charAt(0);
@@ -6732,7 +6733,7 @@ public class PackData{
 			tmpLabel=new String(String.valueOf(h)+String.valueOf(h));
 		}
 		while (sides.hasNext()) {
-			ep=(EdgePair)sides.next();
+			ep=(SideDescription)sides.next();
 			if (ep.label.equals(tmpLabel) && ep.mob!=null)
 				return ep.mob;
 		}
@@ -9420,7 +9421,7 @@ public class PackData{
 	}
 
 	  /**
-	   * Apply side-pairing Mobius having the specified 'EdgePair.label'. 
+	   * Apply side-pairing Mobius having the specified 'SideDescription.label'. 
 	   * Return 'index' on success, zero on failure.
 	   * @param pairLabel String
 	   * @return int, index on success, 0 on error.
@@ -9428,10 +9429,10 @@ public class PackData{
 	  public int apply_pair_mobius(String pairLabel) {
 		  int count=0;
 		  if (sidePairs==null || sidePairs.size()==0) return 0;
-		  Iterator<EdgePair> sides=sidePairs.iterator();
-		  EdgePair edge=null;
+		  Iterator<SideDescription> sides=sidePairs.iterator();
+		  SideDescription edge=null;
 		  while (sides.hasNext()) {
-			  edge=(EdgePair)sides.next();
+			  edge=(SideDescription)sides.next();
 			  if (edge.label.equals(pairLabel)) {
 				  // apply to whole packing, plus redchain, but not to side-pairings
 				  apply_Mobius(edge.mob, new NodeLink(this,"a"),true,true,false);
@@ -15213,7 +15214,7 @@ public class PackData{
 		  f2=f3;
 		  f3=(Integer)flst.next();
 		  if ((j=face_nghb(f1,f2))>=0) 
-			  if (find_index(f3,faces[f2].vert[j])>=0) // share inside vert, hence leave outside edge
+			  if (face_index(f3,faces[f2].vert[j])>=0) // share inside vert, hence leave outside edge
 				  edgelist.add(new EdgeSimple(faces[f2].vert[(j+1)%3],faces[f2].vert[(j+2)%3]));
 	  }	    		  		
 	  return edgelist;
@@ -15662,7 +15663,7 @@ public class PackData{
 	  endmain=endmain.next=new VertList();
 	  endmain.v=w;
 	  util_A=lastface=kData[alpha].faceFlower[nbr];// **** *(face_org[alpha]+nbr+1);
-	  newfaces[lastface].indexFlag=find_index(lastface,alpha);
+	  newfaces[lastface].indexFlag=face_index(lastface,alpha);
 	  newfaces[lastface].plotFlag=1;
 	  for (int i=1;i<=faceCount;i++) newfaces[i].nextFace=lastface;
 
@@ -15715,7 +15716,7 @@ public class PackData{
 			  for (int f=0;(f<num && kData[vert].utilFlag!=nnum);f++) 
 			      // **** replaced a face_org here. okay??
 			      if (newfaces[(face=kData[vert].faceFlower[f])].plotFlag<=0) {
-			      indx=find_index(face,vert);
+			      indx=face_index(face,vert);
 			      v1=newfaces[face].vert[(indx+1)%3];
 			      v2=newfaces[face].vert[(indx+2)%3];
 			      // can we place either v1 or v2? 
@@ -16266,9 +16267,9 @@ public class PackData{
 	*/
 	public int sa_draw_bdry_seg_num(int n) {
 		RedEdge trace=null;
-	    EdgePair epair=null;
+	    SideDescription epair=null;
 	    if (sidePairs==null || n<0 || n>=sidePairs.size() 
-	    		|| (epair=(EdgePair)sidePairs.get(n))==null
+	    		|| (epair=(SideDescription)sidePairs.get(n))==null
 	    		|| (trace=epair.startEdge)==null) 
 	    	return 0;
 		Complex ctr=new Complex(RedList.whos_your_daddy(trace,trace.startIndex).center);
@@ -16282,9 +16283,9 @@ public class PackData{
 	*/
 	public int post_bdry_seg_num(PostFactory pF,int n) {
 		RedEdge trace=null;
-	    EdgePair epair=null;
+	    SideDescription epair=null;
 	    if (sidePairs==null || n<0 || n>=sidePairs.size() 
-	    		|| (epair=(EdgePair)sidePairs.get(n))==null
+	    		|| (epair=(SideDescription)sidePairs.get(n))==null
 	    		|| (trace=epair.startEdge)==null) 
 	    	return 0;
 		Complex ctr=new Complex(RedList.whos_your_daddy(trace,trace.startIndex).center);
@@ -16309,10 +16310,10 @@ public class PackData{
 	public int sa_draw_bdry_seg(int n,boolean do_label,boolean do_circle,
 			Color ecol,int thickness) {
 	  RedEdge trace=null;
-	  EdgePair epair=null;
+	  SideDescription epair=null;
 	  
 	  if (sidePairs==null || n<0 || n>=sidePairs.size() 
-			  || (epair=(EdgePair)sidePairs.get(n))==null
+			  || (epair=(SideDescription)sidePairs.get(n))==null
 			  || (trace=epair.startEdge)==null)  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
 		  return 0;
 	  int old_thickness=cpScreen.getLineThickness();
@@ -16370,10 +16371,10 @@ public class PackData{
 	  int w_indx=0;
 	  Complex v_cent,w_cent;
 	  RedEdge trace=null;
-	  EdgePair epair=null;
+	  SideDescription epair=null;
 	  
 	  if (sidePairs==null || n<0 || n>=sidePairs.size() 
-			  || (epair=(EdgePair)sidePairs.get(n))==null
+			  || (epair=(SideDescription)sidePairs.get(n))==null
 			  || (trace=epair.startEdge)==null) 
 		  return 0;
 	  w_cent=new Complex(RedList.whos_your_daddy(trace,trace.startIndex).center);
@@ -17032,10 +17033,10 @@ public class PackData{
 		int pairNum=0;
 		int edgeNum=1;
 		if (sidePairs==null || sidePairs.size()==0) return 0;
-		Iterator<EdgePair> sides=sidePairs.iterator();
-		EdgePair epair=null;
+		Iterator<SideDescription> sides=sidePairs.iterator();
+		SideDescription epair=null;
 		while (sides.hasNext()) {
-				epair=(EdgePair)sides.next();
+				epair=(SideDescription)sides.next();
 				if (epair.label==null) { // need label
 					if (epair.pairedEdge!=null) {
 						char c=(char)('a'+pairNum);

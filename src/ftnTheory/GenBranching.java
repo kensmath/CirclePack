@@ -1761,7 +1761,7 @@ public class GenBranching extends PackExtender {
 				ans[0]=2.0;
 				ans[1]=(double)v;
 
-				int k=refPack.find_index(myface,v);
+				int k=refPack.face_index(myface,v);
 				int w1=refPack.faces[myface].vert[(k+1)%3];
 				int w2=refPack.faces[myface].vert[(k+2)%3];
 				Complex w1w2tangency=refPack.tangencyPoint(new EdgeSimple(w1,w2));

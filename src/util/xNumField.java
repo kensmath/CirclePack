@@ -89,11 +89,17 @@ public class xNumField extends JPanel {
 	}
 
 	/**
-	 * enter double in scientific notation
-	 * @param x, double
+	 * Enter double in scientific notation; if < e-14, set
+	 * to "0" or "-0"; 
+	 * @param x double
 	 */
-	public void setValue(double x) {
-		xField.setText(String.format("%."+digits+"e",x));
+	public void setValue(double x) { // 
+		if (x>0 && x<.00000000000001)
+			xField.setText("0");
+		else if (x<0 && x>-.00000000000001)
+			xField.setText("-0");
+		else
+			xField.setText(String.format("%."+digits+"e",x));
 	}
 	
 	public double getValue() {
@@ -104,6 +110,9 @@ public class xNumField extends JPanel {
 		}
 	}
 	
+	/**
+	 * @param ed boolean
+	 */
 	public void setEditable(boolean ed) {
 		xField.setEditable(ed);
 	}

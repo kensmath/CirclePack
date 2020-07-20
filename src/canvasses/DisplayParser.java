@@ -20,7 +20,7 @@ import geometry.SphericalMath;
 import komplex.AmbiguousZ;
 import komplex.DualGraph;
 import komplex.DualTri;
-import komplex.EdgePair;
+import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.Face;
 import listManip.BaryCoordLink;
@@ -756,7 +756,7 @@ public class DisplayParser {
 				int n, k;
 				for (int j = 0; j < verts.size(); j++) {
 					n = (Integer) verts.get(j);
-					EdgePair epair = p.getSidePairs().get(n);
+					SideDescription epair = p.getSidePairs().get(n);
 					int thickness = cpScreen.getLineThickness();
 					if (thickness<4) thickness=4;
 
@@ -766,7 +766,7 @@ public class DisplayParser {
 					
 					if (do_mate) {
 						// do the paired edge?
-						EdgePair ep = (EdgePair) p.getSidePairs().get(n);
+						SideDescription ep = (SideDescription) p.getSidePairs().get(n);
 						if ((k = ep.mateIndex) >= 0)
 							p.sa_draw_bdry_seg(k, do_label, do_circle,
 									epair.color, thickness);

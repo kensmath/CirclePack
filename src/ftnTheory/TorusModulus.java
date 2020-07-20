@@ -2,7 +2,7 @@ package ftnTheory;
 
 import java.util.Iterator;
 
-import komplex.EdgePair;
+import komplex.SideDescription;
 import math.Mobius;
 import packing.PackData;
 
@@ -36,8 +36,8 @@ public class TorusModulus {
 	  }
 
 	  // Compute array of values mob.a/mob.b for the side-pairings.
-	  Iterator<EdgePair> pl=p.getSidePairs().iterator();
-	  EdgePair epair=null;
+	  Iterator<SideDescription> pl=p.getSidePairs().iterator();
+	  SideDescription epair=null;
 	  j=1;
 	  while(pl.hasNext()) {
 		  epair=pl.next();

@@ -10,7 +10,7 @@ import complex.Complex;
 import exceptions.CombException;
 import exceptions.ParserException;
 import komplex.DualGraph;
-import komplex.EdgePair;
+import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.Face;
 import komplex.KData;
@@ -514,12 +514,12 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			  } while (its.hasNext()); // eating rest of 'items'
 
 			  // now to traverse the 'RedEdge's in chosen segments
-			  Iterator<EdgePair> sp=packData.getSidePairs().iterator();
-			  EdgePair ep=null;
+			  Iterator<SideDescription> sp=packData.getSidePairs().iterator();
+			  SideDescription ep=null;
 			  RedEdge rlst=null;
 			  int tick=0;
 			  while (sp.hasNext()) {
-				  ep=(EdgePair)sp.next();
+				  ep=(SideDescription)sp.next();
 				  if (tag[tick++]) { // yes, do this one
 					  rlst=ep.startEdge;
 					  int v=rlst.vert(rlst.startIndex);
@@ -1519,23 +1519,23 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 		if (startV==endV) return null;
 		
 		// Remove any unneeded faces at beginning (i.e, next face has startV)
-		while (startFP.next!=null && p.find_index(startFP.next.face,startV)>=0)
+		while (startFP.next!=null && p.face_index(startFP.next.face,startV)>=0)
 			startFP=startFP.next;
 		
 		// Remove any unneeded faces at end (i.e., previous face has endV)
 		ftrace=startFP; 
-		while (ftrace!=null && p.find_index(ftrace.face,endV)<0) // find first face containing endV
+		while (ftrace!=null && p.face_index(ftrace.face,endV)<0) // find first face containing endV
 			ftrace=ftrace.next;
 		if (ftrace==null) return null; // should not happen
 		// ftrace is first 'FaceParam' whose face contains endV; do the rest?
 		boolean done=false;
 		FaceParam ntrace=ftrace;
 		while (!done) {
-			while (ntrace.next!=null && p.find_index(ntrace.next.face,endV)>=0)
+			while (ntrace.next!=null && p.face_index(ntrace.next.face,endV)>=0)
 				ntrace=ntrace.next;
 			if (ntrace.next==null) done=true; 
 			else ftrace=ntrace.next; // a face that doesn't have endV
-			while (ftrace!=null && p.find_index(ftrace.face,endV)<0) // find next face with endV
+			while (ftrace!=null && p.face_index(ftrace.face,endV)<0) // find next face with endV
 				ftrace=ftrace.next; 
 			if (ftrace==null) return null; // should not happen
 		}				
@@ -1572,7 +1572,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			}
 			// no success, but check last face: if v,endV are in it, add last edge 
 			else if (ftrace!=null && ftrace.next==null && v!=endV
-					&& p.find_index(ftrace.face,endV)>=0 && p.find_index(ftrace.face,v)>=0) {
+					&& p.face_index(ftrace.face,endV)>=0 && p.face_index(ftrace.face,v)>=0) {
 				elink.add(new EdgeSimple(v,endV));
 				v=endV;
 			}

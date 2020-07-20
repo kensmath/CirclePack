@@ -1243,7 +1243,7 @@ public class SchwarzMap extends PackExtender {
 		if (v<1 || v>packData.nodeCount || w<1 || w>packData.nodeCount)
 			CirclePack.cpb.errMsg("something wrong with v or w");
 		int f=packData.face_right_of_edge(w,v);
-		int j=packData.find_index(f, v);
+		int j=packData.face_index(f, v);
 		if (domainTri[f].sch_coeffs==null || domainTri[f].tanPts==null)
 			CirclePack.cpb.errMsg("'sch_coeffs' of 'tanPts' do not exist");
 		double []ans=new double[3];

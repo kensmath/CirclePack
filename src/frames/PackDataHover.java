@@ -407,7 +407,7 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 		radField.setValue(p.getRadius(v));
 		
 		// set center
-		centerField.setFields(new Complex(rdata.center.x,rdata.center.y));
+		centerField.setValue(new Complex(rdata.center.x,rdata.center.y));
 		
 		// set aim
 		aimField.setValue(rdata.aim/Math.PI);

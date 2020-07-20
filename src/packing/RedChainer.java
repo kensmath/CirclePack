@@ -10,7 +10,7 @@ import deBugging.LayoutBugs;
 import exceptions.CombException;
 import exceptions.LayoutException;
 import exceptions.RedListException;
-import komplex.EdgePair;
+import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.RedEdge;
 import komplex.RedList;
@@ -251,7 +251,7 @@ public class RedChainer {
 	  RedList kill_start,kill_stop,up_red;
 
 	  if (!p.status || redlist==null || keep_ptr==null || keep_vert==0
-	      || p.find_index(keep_ptr.face,keep_vert)<0
+	      || p.face_index(keep_ptr.face,keep_vert)<0
 	      || (keep_vert!=red_share_vert(p,keep_ptr) 
 	    		  && keep_vert!=red_share_vert(p,keep_ptr.prev)
 	    		  && keep_ptr.next.face!=keep_ptr.prev.face)
@@ -355,7 +355,7 @@ public class RedChainer {
 		    	  throw new skip_to_end();
 		      if (rtrace==focus_red || rtrace==up_red
 			  || rtrace.face==focus_red.face
-			  ||(dum=p.find_index(rtrace.face,new_vert))<0)
+			  ||(dum=p.face_index(rtrace.face,new_vert))<0)
 		    	  throw new skip_to_end();
 		      if ((up_new_vert=p.faces[rtrace.face].vert[(dum+2)%3])==focus_vert)
 		    	  throw new CombException(); // shouldn't happen 
@@ -571,11 +571,11 @@ public class RedChainer {
 	  int cface,pface,indx,v;
 	  RedList trace;
 
-	  if (redlist==null || p.find_index((cface=redlist.face),vert)<0) 
+	  if (redlist==null || p.face_index((cface=redlist.face),vert)<0) 
 	    return null;
 	  if ((redlist.next.face==redlist.prev.face)) { // blue? 
 	      v=red_share_vert(p,redlist.prev);
-	      indx=p.find_index(cface,v);
+	      indx=p.face_index(cface,v);
 	      if (vert==p.faces[cface].vert[(indx+1)%3]) {
 		  util_1=p.nghb(vert,v);
 		  return redlist;
@@ -587,7 +587,7 @@ public class RedChainer {
 	    }
 	  else if (redlist.face==redlist.prev.prev.face
 		   && vert==red_share_vert(p,redlist.prev)) { // prev is blue 
-	      indx=p.find_index(redlist.prev.face,vert);
+	      indx=p.face_index(redlist.prev.face,vert);
 	      util_1=p.nghb(vert,p.faces[redlist.prev.face].vert[(indx+2)%3]);
 	      return redlist.prev;
 	    }
@@ -599,7 +599,7 @@ public class RedChainer {
 	  }
 	  if (pface==cface) /* red chain encircles vert */
 	    return null; 
-	  indx=p.find_index(trace.face,vert);
+	  indx=p.face_index(trace.face,vert);
 	  util_1=p.nghb(vert,p.faces[trace.face].vert[(indx+2)%3]);
 	  return trace;
 	}
@@ -614,11 +614,11 @@ public class RedChainer {
 	  int cface,nface,indx,v;
 	  RedList trace;
 
-	  if (redlist==null || p.find_index((cface=redlist.face),vert)<0)
+	  if (redlist==null || p.face_index((cface=redlist.face),vert)<0)
 	    return null;
 	  if ((redlist.next.face==redlist.prev.face)) { // blue? 
 	      v=red_share_vert(p,redlist);
-	      indx=p.find_index(cface,v);
+	      indx=p.face_index(cface,v);
 	      if (vert==p.faces[cface].vert[(indx+1)%3]) {
 		  util_2=p.nghb(vert,p.faces[cface].vert[(indx+2)%3]);
 		  return redlist;
@@ -630,7 +630,7 @@ public class RedChainer {
 	    }
 	  else if (redlist.face==redlist.next.next.face
 		   && vert==red_share_vert(p,redlist)) { // next is blue 
-	      indx=p.find_index(redlist.next.face,vert);
+	      indx=p.face_index(redlist.next.face,vert);
 	      util_2=p.nghb(vert,p.faces[redlist.next.face].vert[(indx+1)%3]);
 	      return redlist.next;
 	  }
@@ -642,7 +642,7 @@ public class RedChainer {
 	  }
 	  if (nface==cface) /* red chain encircles vert */
 	    return null;
-	  indx=p.find_index(trace.face,vert);
+	  indx=p.face_index(trace.face,vert);
 	  util_2=p.nghb(vert,p.faces[trace.face].vert[(indx+1)%3]);
 	  return trace;
 	} 
@@ -664,7 +664,7 @@ public class RedChainer {
 	  util_1=0;
 	  if (start.next.face==start.prev.face) { // at blue face? 
 	      f=start.face;
-	      indx=p.find_index(f,start_vert);
+	      indx=p.face_index(f,start_vert);
 	      if (start_vert!=red_share_vert(p,start)) { // at isolated vert 
 		  n=p.faces[f].vert[(indx+1)%3];
 		  new_ptr=start;
@@ -681,7 +681,7 @@ public class RedChainer {
 	  new_ptr=ptr;
 	  if (ptr.next.face==ptr.prev.face) { // new one is blue? return its isolated vert.
 	      f=ptr.face;
-	      n=p.faces[f].vert[(p.find_index(f,n)+2)%3];
+	      n=p.faces[f].vert[(p.face_index(f,n)+2)%3];
 	  }
 	  return n;
 	}
@@ -758,23 +758,24 @@ public class RedChainer {
 	   * an attempt is made to build the new redchain using the red 
 	   * edges. May want options to force a check, eg, that all 
 	   * faces are hit.
-	   * @param p
-	   * @param mode (int not yet used)
+	   * @param p PackData
+	   * @param mode int (not yet used)
 	   * @return EdgeLink, null if there's a problem.
 	  */
 	  public EdgeLink red_to_outlist(PackData p,int mode) {
 	    int w,lv=1,count=0;
 	    RedList spot,Spot;
 
-	    if (p.redChain==null) return null;
-
-	    EdgeLink elist=new EdgeLink(p);
+	    // is there a 'redChain'?
+	    if (p.redChain==null) 
+	    	return null;
 
 	    // keep pointer
 	    Spot=spot=p.redChain;
 
 	    // Getting started:
 	    // first face blue? put two edges in.
+	    EdgeLink elist=new EdgeLink(p);
 	    if (spot.prev.face==spot.next.face) { // blue
 	        w=p.faces[spot.face].vert[(spot.vIndex+2)%3];
 	        elist.add(new EdgeSimple(p.faces[spot.face].vert[(spot.vIndex+1)%3],w));
@@ -1137,13 +1138,13 @@ public class RedChainer {
 			  etrace=etrace.nextRed;
 		  }
 		  
-		  // ============= create 'EdgePair's ===========
+		  // ============= create 'SideDescription's ===========
 		  // no pairings found? iff red chain defines complex simply connected.
 		  if (click==0) { 
 			  if (firstRedEdge==null) return null; // is a sphere or there's an error
 			  firstRedEdge.cornerFlag = 1; // call this the start
 			  firstRedEdge.prevRed.cornerFlag=2; // call this the end
-			  EdgePair epair=new EdgePair(p);
+			  SideDescription epair=new SideDescription(p);
 			  epair.startEdge=firstRedEdge;
 			  epair.endEdge=firstRedEdge.prevRed;
 			  epair.color=CPScreen.getFGColor();
@@ -1159,7 +1160,7 @@ public class RedChainer {
 		  
 		  etrace=firstRedEdge;
 		  keepon=true;
-		  EdgePair edgepair=null;
+		  SideDescription sideDes=null;
 		  
 // DEbug			  
 //		  System.out.println("firstRedEdge vert="+firstRedEdge.vert(firstRedEdge.vIndex)+" and hash = "+firstRedEdge.hashCode());
@@ -1169,12 +1170,12 @@ public class RedChainer {
 			  keepon=false;
 
 			  if ((etrace.cornerFlag & 1)==1) { // beginning
-				  edgepair=new EdgePair(p);
-				  edgepair.startEdge=etrace;
+				  sideDes=new SideDescription(p);
+				  sideDes.startEdge=etrace;
 
 // DEbug
 //				  System.out.println("etrace hash is "+etrace.hashCode());
-//				  System.out.println("edgepair.startEdge is "+edgepair.startEdge.hashCode()+"\n");
+//				  System.out.println("sideDrs.startEdge is "+sideDes.startEdge.hashCode()+"\n");
 
 				  RedEdge goalong=null;
 				  if ((etrace.cornerFlag & 2)==2) // same edge also an end?
@@ -1185,11 +1186,11 @@ public class RedChainer {
 						  goalong=goalong.nextRed;
 					  if (goalong==etrace) throw new RedListException();
 				  }
-				  edgepair.endEdge=goalong;
+				  sideDes.endEdge=goalong;
 				  int sz=e_pairs.size();
-				  edgepair.spIndex=sz;
-				  edgepair.color=ColorUtil.spreadColor(sz); // distinct colors
-				  e_pairs.add(edgepair);
+				  sideDes.spIndex=sz;
+				  sideDes.color=ColorUtil.spreadColor(sz); // distinct colors
+				  e_pairs.add(sideDes);
 			  }
 			  etrace=etrace.nextRed;
 		  }
@@ -1199,16 +1200,16 @@ public class RedChainer {
 		  // find, record pairings
 		  if (debug) LayoutBugs.log_PairLink(p,e_pairs);
 		  
-		  Iterator<EdgePair> spit=e_pairs.iterator();
+		  Iterator<SideDescription> spit=e_pairs.iterator();
 		  
-		  EdgePair tmppair=null;
+		  SideDescription tmppair=null;
 		  while (spit.hasNext()) {
-			  tmppair=(EdgePair)spit.next();
+			  tmppair=(SideDescription)spit.next();
 			  if ((tmppair.startEdge.cornerFlag & 1)==1) {
 				  int matedex=PairLink.find_mate(e_pairs,tmppair);
 				  if (matedex>=0) {
 					  tmppair.mateIndex=matedex;
-					  tmppair.pairedEdge=(EdgePair)e_pairs.get(matedex);
+					  tmppair.pairedEdge=(SideDescription)e_pairs.get(matedex);
 				  }
 				  else {
 					  tmppair.mateIndex=-1;
@@ -1221,7 +1222,7 @@ public class RedChainer {
 		  spit=e_pairs.iterator();
 		  tmppair=null;
 		  while (spit.hasNext()) {
-			  tmppair=(EdgePair)spit.next();
+			  tmppair=(SideDescription)spit.next();
 			  if (tmppair.pairedEdge!=null)
 				  tmppair.pairedEdge.color=new Color(tmppair.color.getRed(),tmppair.color.getGreen(),tmppair.color.getBlue());
 		  }
@@ -1369,7 +1370,7 @@ public class RedChainer {
 		  f=p.kData[seed].faceFlower[0];
 		  red_chain=new RedList(p,f); // start fresh
 		  p.faces[f].rwbFlag=1;
-		  p.faces[f].indexFlag=red_chain.vIndex=p.find_index(f,seed);
+		  p.faces[f].indexFlag=red_chain.vIndex=p.face_index(f,seed);
 		  
 		  VertList faceOrder=new VertList(f);
 		  fDo_tmp=faceOrder; // global pointer to faceOrder 
@@ -1379,7 +1380,7 @@ public class RedChainer {
 		      red_chain=new RedList(red_chain,f);
 		      red_chain.done=isDone(p,red_chain);
 		      p.faces[f].rwbFlag++;
-		      p.faces[f].indexFlag=p.find_index(f,seed);
+		      p.faces[f].indexFlag=p.face_index(f,seed);
 		      red_chain.vIndex=((p.faces[f].indexFlag+2)%3);
 		  }
 		  
@@ -1390,7 +1391,7 @@ public class RedChainer {
 			      red_chain.done=isDone(p,red_chain);
 				  f=p.kData[seed].faceFlower[i];
 				  w=p.kData[seed].flower[i];
-				  red_chain.vIndex=p.find_index(f,w);
+				  red_chain.vIndex=p.face_index(f,w);
 		      }
 
 		  stop_ptr=red_chain;
@@ -1698,7 +1699,7 @@ public class RedChainer {
 		      hold=red_chain;
 		      boolean keepon=true;
 		      while (hold.next!=red_chain && keepon) {
-		    	  if (p.find_index(hold.face,vert)<0) keepon=false;
+		    	  if (p.face_index(hold.face,vert)<0) keepon=false;
 		    	  hold=hold.next;
 		      }
 		      if (keepon) throw new RedListException();

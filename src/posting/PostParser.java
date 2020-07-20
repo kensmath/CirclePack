@@ -13,7 +13,7 @@ import geometry.CircleSimple;
 import geometry.SphericalMath;
 import komplex.AmbiguousZ;
 import komplex.DualTri;
-import komplex.EdgePair;
+import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.Face;
 import listManip.BaryCoordLink;
@@ -713,11 +713,11 @@ public class PostParser {
 				int n, k;
 				for (int j = 0; j < verts.size(); j++) {
 					n = (Integer) verts.get(j);
-					EdgePair epair = p.getSidePairs().get(n);
+					SideDescription epair = p.getSidePairs().get(n);
 					count += p.post_bdry_seg(pF, n, do_label, do_circle,
 							epair.color, tx);
 					if (do_mate) { // do paired edge?
-						EdgePair ep = (EdgePair) p.getSidePairs().get(n);
+						SideDescription ep = (SideDescription) p.getSidePairs().get(n);
 						if ((k = ep.mateIndex) >= 0)
 							p.post_bdry_seg(pF, k, do_label, do_circle,
 									epair.color, tx);

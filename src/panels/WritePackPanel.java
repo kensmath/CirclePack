@@ -338,7 +338,7 @@ public class WritePackPanel extends javax.swing.JPanel {
 			{
 				edgeBox = new JCheckBox();
 				jPanel3.add(edgeBox);
-				edgeBox.setText("EdgePairs");
+				edgeBox.setText("SideDescriptions");
 			}
 			{
 				vefBox = new JCheckBox();

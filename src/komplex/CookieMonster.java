@@ -765,13 +765,13 @@ public class CookieMonster {
 				int i = temp.index1;
 				if (temp.index1 == temp.index2) { // just one face
 					int f = monsterPackData.kData[vert].faceFlower[i];
-					int j = monsterPackData.find_index(f, vert);
+					int j = monsterPackData.face_index(f, vert);
 					new_faces[f].vert[j] = temp.newIndex;
 				} else
 					for (int iii = 0; iii < temp.num; iii++) {
 						int ii = (temp.index1 + iii) % monsterPackData.kData[vert].num;
 						int f = monsterPackData.kData[vert].faceFlower[ii];
-						int j = monsterPackData.find_index(f, vert);
+						int j = monsterPackData.face_index(f, vert);
 						new_faces[f].vert[j] = temp.newIndex;
 					}
 				temp = temp.nextObj;
@@ -796,7 +796,7 @@ public class CookieMonster {
 			vert = trace.v;
 			// nghb vert of first face
 			int f = monsterPackData.kData[vert].faceFlower[trace.index1];
-			int j = monsterPackData.find_index(f, vert); // distinguished vert index
+			int j = monsterPackData.face_index(f, vert); // distinguished vert index
 			nK_ptr[trace.newIndex].flower[0] = v = new_faces[f].vert[(j + 1) % 3];
 			int num;
 			if (v <= old_nodecount) {
@@ -834,7 +834,7 @@ public class CookieMonster {
 			while (i < trace.num) {
 				f = monsterPackData.kData[vert].faceFlower[(trace.index1 + i)
 						% (monsterPackData.kData[vert].num)];
-				int jj = (monsterPackData.find_index(f, vert) + 2) % 3;
+				int jj = (monsterPackData.face_index(f, vert) + 2) % 3;
 				nK_ptr[trace.newIndex].flower[i + 1] = new_faces[f].vert[jj];
 				/* old vert number; need to adjust its flower */
 				if ((v = new_faces[f].vert[jj]) <= monsterPackData.nodeCount) {

@@ -13,7 +13,8 @@ import complex.Complex;
  * 'nextRed', 'prevRed' for linking. In addition, we clone any "blue"
  * red faces so we have a representative for each of its two red
  * edges (though the second copy is invisible in the 'RedList.next/prev'
- * linking). 
+ * linking). Finally each 'RedEdge' is responsible for a single outer
+ * edge.
  * 
  * Thus, 'RedEdge' is only constructed as a replacement for a 'RedList'
  * object, i.e., clone and replace.
@@ -32,7 +33,7 @@ public class RedEdge extends RedList {
 	
 	/** 
 	 * Constructor -- ALWAYS cloning an existing 'RedList', BUT note
-	 * that we use the SAME pointers to its next/prev.
+	 * that we clone the SAME pointers to its next/prev.
 	 */
 	public RedEdge(RedList redface) {
 		super(redface.packData);

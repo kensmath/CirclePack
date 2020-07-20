@@ -8925,10 +8925,10 @@ public class CommandStrParser {
     			  }
     			  
     			  if (clink!=null) {
-    				  count += Schwarzian.setByLayout(packData, clink);
+    				  count += Schwarzian.set_rad_or_cents(packData, clink,2);
 	    		  }
     			  if (rlink!=null) {
-    				  count += Schwarzian.setByRadii(packData, rlink);
+    				  count += Schwarzian.set_rad_or_cents(packData, rlink,1);
 	    		  }
 	    		  
     			  return count;
