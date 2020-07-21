@@ -1,23 +1,23 @@
 package deBugging;
 
-import input.CPFileManager;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 
-import komplex.SideDescription;
+import allMains.CirclePack;
+import dcel.PackDCEL;
+import input.CPFileManager;
 import komplex.EdgeSimple;
 import komplex.Face;
 import komplex.RedEdge;
 import komplex.RedList;
+import komplex.SideDescription;
 import listManip.FaceLink;
 import listManip.GraphLink;
 import listManip.PairLink;
 import listManip.VertList;
 import packing.PackData;
-import allMains.CirclePack;
 
 /**
  * Debugging aids: 
@@ -735,6 +735,55 @@ public class LayoutBugs {
 		} catch (Exception ex) {
 			System.err.print(ex.toString());
 		}
+	}
+	
+	/**
+	 * Log triples <v,u,w> of dcel faces and ideal faces. Results 
+	 * in 'DCEL_faces_*_log.txt'.
+	 * @param dcel PackDCEL
+	 * @return count, -1 on error
+	 */
+	public static int log_DCEL_faces(PackDCEL dcel) {
+		  int count=0;
+
+		  if (dcel==null || dcel.faces==null || dcel.faces.size()==0)
+			  return -1;
+		  
+		  // open file
+		  String filename=new String("DCEL_faces_"+(rankStamp++)+"_log.txt");
+		  BufferedWriter dbw=CPFileManager.openWriteFP(tmpdir,filename,false);
+ 
+		  try {
+			  dbw.write("Dcel faces in order of 'dcel.faces' vector.\n");;
+			  Iterator<dcel.Face> flst=dcel.faces.iterator();
+			  while (flst.hasNext()) {
+				  dcel.Face face=flst.next();
+				  int[] verts=face.getVerts();
+				  dbw.write("\nFace "+face.faceIndx+": <");
+				  int s=verts.length;
+				  for (int j=0;j<s;j++)
+					  dbw.write(verts[j]+", ");
+				  dbw.write(">");
+				  count++;
+			  }
+			  dbw.write("\n\nDecel ideal faces in order of 'dcel.idealFaces' vector.\n");
+			  flst=dcel.idealFaces.iterator();
+			  while (flst.hasNext()) {
+				  dcel.Face face=flst.next();
+				  int[] verts=face.getVerts();
+				  dbw.write("\nidealFace "+face.faceIndx+": <");
+				  int s=verts.length;
+				  for (int j=0;j<s;j++)
+					  dbw.write(verts[j]+", ");
+				  dbw.write(">");
+				  count++;
+			  }
+			  dbw.flush();
+			  dbw.close();
+		  } catch (Exception ex) {
+			  CirclePack.cpb.errMsg("error in 'log_DCEL_faces' routine");
+		  }
+		  return count;
 	}
 
 }

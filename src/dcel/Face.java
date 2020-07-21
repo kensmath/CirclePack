@@ -92,8 +92,8 @@ public class Face {
 	}
 	
 	/**
-	 * return counterclockwise (non-closed) list of vertices 
-	 * defining this face.
+	 * Return counterclockwise (non-closed) array of vertices 
+	 * defining this face (possibly ideal).
 	 * TODO: may want to start with particular vertex.
 	 * @return int[]
 	 */

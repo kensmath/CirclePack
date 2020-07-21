@@ -11,8 +11,8 @@ import exceptions.CombException;
  * Part of effort for managing covering spaces using DCEL structures.
 
  * FDomVertex is associated with a vertex of a fundamental region.
- * The index points to the associated 'PackData' vertex; this is how we get 
- * concrete geometric info, e.g., circle centers. 
+ * The index points to the associated 'PackData' vertex; this helps 
+ * get concrete geometric info, e.g., circle centers. 
  * If this is a boundary vertex, then its FDomHalfedge should point 
  * to downstream (counterclockwise) bdry neighbor.
  * @author kstephe2, 8/2019

@@ -4177,7 +4177,7 @@ of circles with that particular edge displayed.</instance>
 </description>
 </command>
 
-<command> cmd="smooth" flags=" -[abcdsx]">
+<command cmd="smooth" flags=" -[abcdsx]">
 <description>
     This implements 'field-based smoothing' associating a 
     "smoother" with the packing. This is often called from 

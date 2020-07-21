@@ -23,10 +23,11 @@ import listManip.VertexMap;
 import packing.PackData;
 import packing.RData;
 
-/** The "DCEL" is a common way that computer scientists 
+/** 
+ * The "DCEL" is a common way that computer scientists 
  * encode graphs; it's also called a 'HalfEdge' structure.
  * At the suggestion of John Bowers, I may incorporate this 
- * in CirclePack; it should only effect the combinatorics.
+ * in CirclePack; it is only concerned with the combinatorics.
  * 
  * This preliminary class is for testing DCEL methods. 
  * In particular, things are not sync'ed well with the 
@@ -911,7 +912,7 @@ public class PackDCEL {
 	 * computing circle centers. Start with edge 'alpha'
 	 * and its face. As each face is added to the array,
 	 * its 'edge' is set to that from v to u, where v and
-	 * u will have been laid out in earlier in the process;
+	 * u will have been laid out earlier in the process;
 	 * one uses these to find the third circle w.
 	 * @return ArrayList<Face>
 	 */
@@ -1008,13 +1009,11 @@ public class PackDCEL {
 		return farray;
 	}
 
-
-
 	/**
 	 * 'alpha' is a designed 'HalfEdge' used for various
 	 * normalizations. It should have an interior origin
-	 * whose circle is put at the origin. Checking given
-	 * e first to see if it is suitable.
+	 * whose circle is put at the origin. Checking given e
+	 * first to see if it is suitable.
 	 * @param e HalfEdge, generally will be null
 	 * @return Halfedge, null on error or none found
 	 */
