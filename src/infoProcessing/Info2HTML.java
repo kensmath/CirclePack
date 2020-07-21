@@ -38,26 +38,8 @@ public class Info2HTML {
 			int idx=htmlname.indexOf('.');
 			if (idx>0)
 				htmlname=htmlname.substring(0,idx); // hold this for later use
-//			cmdName=new String(htmlname+".html");
-//			URL output=Info2HTML.class.getClassLoader().getResource("Resources/doc/CmdDetails.html");
-//			cmdfile=new File(output.toString());
-			
-//			cmdfile=new File("../JavaCode/src/Resources/doc/",cmdName);
-	    	//fp = new BufferedWriter(new FileWriter(cmdfile,false));
 	    	fp = new StringWriter(); 
-	    		
-	    	// index file
-//	    	indexName=new String("CmdIndex.html");
-	    	
-//	    	/JavaCode/src/Resources/doc/",indexName);
-	    	//indxfp=new BufferedWriter(new FileWriter(indexfile,false));
 	    	indxfp = new StringWriter();
-	    	
-	    	// completion file
-	    	
-//	    	completionfile=new File("../JavaCode/src/Resources/doc/",compName);
-	    	//
-	    	//compfp=new BufferedWriter(new FileWriter(completionfile,false));
 	    	compfp = new StringWriter();
 	    	
 		} catch(Exception ex) {
@@ -300,18 +282,8 @@ public class Info2HTML {
 		
 		} // end of loop for 'CPdoc'
 		
-		
-		
-		
 		try
 		{
-			//cmdfile=new File();
-	    	//indexfile=new File("/tmp/CmdIndex.html");
-	    	//completionfile=new File("/tmp/CmdCompletion.txt");
-	    	
-			
-
-			
 			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 			dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
 			DocumentBuilder builder = dbf.newDocumentBuilder();
@@ -345,8 +317,10 @@ public class Info2HTML {
 	    	fw.write(compfp.toString());
 	    	fw.flush();
 	    	fw.close();
-	    	System.out.println("Have written: \n   'CirclePack/src/Resources/doc/CmdIndex.html' and\n"+
-	    			"   'CirclePack/src/Resources/doc/CmdCompletion.txt'.");
+	    	System.out.println("Have written: "+
+	    			"\n   'CirclePack/src/Resources/doc/CmdDetails.html',"+
+	    			"\n   'CirclePack/src/Resources/doc/CmdIndex.html', and"+
+	    			"\n   'CirclePack/src/Resources/doc/CmdCompletion.txt'.");
 	    	
 
 		}catch(IOException e)
