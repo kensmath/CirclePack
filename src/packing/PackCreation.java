@@ -1,5 +1,6 @@
 package packing;
 
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Random;
@@ -7,6 +8,10 @@ import java.util.Random;
 import allMains.CirclePack;
 import complex.Complex;
 import complex.MathComplex;
+import dcel.Face;
+import dcel.HalfEdge;
+import dcel.PackDCEL;
+import deBugging.DCELdebug;
 import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.ParserException;

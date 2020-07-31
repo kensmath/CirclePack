@@ -92,8 +92,23 @@ public class Face {
 	}
 	
 	/**
-	 * Return counterclockwise (non-closed) array of vertices 
-	 * defining this face (possibly ideal).
+	 * Does this face share an edge (not just a vertex) with an ideal face
+	 * @return 'HalfEdge', first shared, or null if none shared
+	 */
+	public HalfEdge isRed() {
+		ArrayList<HalfEdge> bdryedges=getEdges();
+		Iterator<HalfEdge> bit=bdryedges.iterator();
+		while (bit.hasNext()) {
+			HalfEdge he=bit.next();
+			if (he.twin.face==null || he.twin.face.faceIndx<0) 
+				return he;
+		}
+		return null;
+	}
+	
+	/**
+	 * Return counterclockwise (non-closed) array of vertex indices 
+	 * defining this (possibly ideal) face.
 	 * TODO: may want to start with particular vertex.
 	 * @return int[]
 	 */

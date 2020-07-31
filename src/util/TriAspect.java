@@ -137,8 +137,13 @@ public class TriAspect {
 		}
 	}
 	
+	/**
+	 * allocate 'center[]' and create with value 0.0
+	 */
 	public void allocCenters() {
 		center=new Complex[3];
+		for (int j=0;j<3;j++)
+			center[j]=new Complex(0.0);
 	}
 	
 	public void setRadius(double r,int j) {
@@ -156,8 +161,8 @@ public class TriAspect {
 	}
 	
 	/**
-	 * Get the center as new Complex
-	 * @param j int
+	 * Get the center as new Complex.
+	 * @param j int, index in 'vert'
 	 * @return new Complex
 	 */
 	public Complex getCenter(int j) {

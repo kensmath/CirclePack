@@ -4,14 +4,15 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Vector;
 
 import allMains.CirclePack;
 import complex.Complex;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
-import geometry.EuclMath;
 import geometry.CircleSimple;
+import geometry.EuclMath;
 import input.CPFileManager;
 import komplex.EdgeSimple;
 import komplex.KData;
@@ -28,6 +29,7 @@ import packing.RData;
  * encode graphs; it's also called a 'HalfEdge' structure.
  * At the suggestion of John Bowers, I may incorporate this 
  * in CirclePack; it is only concerned with the combinatorics.
+ * The triangulation is assumed to be 3-connected.
  * 
  * This preliminary class is for testing DCEL methods. 
  * In particular, things are not sync'ed well with the 
@@ -65,6 +67,7 @@ public class PackDCEL {
 	public ArrayList<Face> LayoutOrder; // order for computing centers
 	public VertexMap newOld; // NEEDED FOR CIRCLEPACK
 	public RedHEdge redChain; // doubly-linked, cclw edges about a fundamental region
+	public ArrayList<RedHEdge> sideStarts; // red edges starting sides will have 'mobIndx'
 	boolean debug;
 	public HalfEdge alpha;
 	
@@ -90,7 +93,7 @@ public class PackDCEL {
 	public PackDCEL(int [][]bouquet) {
 		this();
 		vertCount=bouquet.length-1;
-		euler=createDCEL(bouquet); 
+		euler=CombDCEL.createVE(this,bouquet,0); 
 		alpha=chooseAlpha(null);
 		try {
 			LayoutOrder=simpleLayout();
@@ -111,7 +114,7 @@ public class PackDCEL {
 		int [][]bouquet= new int[vertCount+1][];
 		for (int v=1;v<=vertCount;v++)
 			bouquet[v]=p.kData[v].flower;
-		euler=createDCEL(bouquet);
+		euler=CombDCEL.createVE(this,bouquet,0); 
 		alpha=chooseAlpha(null);
 		LayoutOrder=simpleLayout();
 	}
@@ -137,124 +140,9 @@ public class PackDCEL {
 			for (int j=0;j<=num;j++)
 				bouquet[v][j]=kData[v].flower[j];
 		}
-
-		euler=createDCEL(bouquet);
+		
+		// TODO: how to call CombDCEL.createVEF?
 	}		
-	
-	/**
-	 * Use traditional combinatoric data alone to create a
-	 * DCEL structure based on array of flowers (with usual
-	 * counterclockwise order, indexed contiguously from 1, 
-	 * bdry/interior flower conventions). For bdry vertices,
-	 * 'HalfEdge' should have 'twin.face' which is ideal face.
-	 * Return the Euler Characteristic (including ideal faces).
-	 * @param bouguet int[][]
-	 * @return euler characteristic of closed surface 
-	 */
-	public int createDCEL(int [][]bouquet) {
-		edges=new ArrayList<HalfEdge>();
-		ArrayList<HalfEdge> bdryedges=new ArrayList<HalfEdge>();
-		idealFaces=new ArrayList<Face>(); // bdry face list, may be empty
-		
-		vertCount=bouquet.length-1;
-		vertices=new Vertex[vertCount+1];
-		int degreecount=0;
-		edgeCount=0;
-		int facecount=0;
-		
-		// create arrays of 'HalfEdge's for all vertices
-		HalfEdge [][]heArrays=new HalfEdge[vertCount+1][];
-		
-		// create new 'Vertex's and array of 'HalfEdge's
-		for (int v=1;v<=vertCount;v++) {
-			int []flower=bouquet[v];
-			int count=flower.length;
-// debug			
-//			System.err.println("vert "+v+", count "+count);
-			if (flower[0]==flower[count-1]) // v interior
-				count--;
-			degreecount+=count; // add in the degree of this vert
-			if (count==0)
-				throw new CombException("bad count for vertex "+v);
-			heArrays[v]=new HalfEdge[count];
-
-			// create the new 'Vertex' and first edge
-			Vertex newV=new Vertex();
-			newV.vertIndx=v;
-			heArrays[v][0]=new HalfEdge(newV);
-			heArrays[v][0].edgeIndx=++edgeCount;
-			newV.halfedge=heArrays[v][0];
-			vertices[v]=newV;
-			edges.add(heArrays[v][0]);
-			
-			// create the rest of outgoing edges
-			for (int k=1;k<count;k++) {
-				heArrays[v][k]=new HalfEdge(newV);
-				heArrays[v][k].edgeIndx=++edgeCount;
-				edges.add(heArrays[v][k]);
-			}
-		} // end of for loop on 'vertCount'
-		
-		// establish all twins (using info in 'bouquet')
-		for (int v=1;v<=vertCount;v++) {
-			int []flower=bouquet[v];
-			int count=flower.length;
-			if (flower[0]==flower[count-1]) // v interior
-				count--;
-			for (int k=0;k<count;k++) {
-				int w=flower[k];
-				int indx_wv=nghb(w, v,bouquet);
-				if (indx_wv<0) {
-					CirclePack.cpb.errMsg("Error: missing edge in 'CreateDCEL'");
-				}
-				heArrays[v][k].twin=heArrays[w][indx_wv];
-			}
-		}
-		
-		// establish next/prev
-		for (int v=1;v<=vertCount;v++) {
-			int []flower=bouquet[v];
-			int count=flower.length;
-			if (flower[0]==flower[count-1]) // v interior
-				count--;
-			for (int k=0;k<count;k++) {
-				HalfEdge he=heArrays[v][k];
-				int w=flower[k];
-				
-				// prev = twin of cclw edge
-				int m=(k+1)%count;
-				he.prev=heArrays[v][m].twin;
-				
-				// next = edge from w clw to edge to v
-				m=nghb(w, v,bouquet);
-				int []wflower=bouquet[w];
-				int wcount=wflower.length;
-				if (wflower[0]==wflower[wcount-1]) // w interior
-					wcount--;
-				m=(m-1+wcount)%wcount; // clockwise
-				he.next=heArrays[w][m];
-			}
-		}
-		
-		// find bdryedges (use criteria in 'bouquet' --- flower not closed)
-		for (int v=1;v<=vertCount;v++) {
-			int []flower=bouquet[v];
-			if (flower[0]!=flower[flower.length-1]) 
-				bdryedges.add(heArrays[v][0].twin);
-		}
-		
-		// Establish faces, face indices, 'bdryFaces'
-		facecount=indexFaces(edges,bdryedges);
-		if (facecount<=0)
-			throw new CombException("Failed to form packDCEL; 'facecount' negative");
-		
-		if ((degreecount & 1)!=0 || (edgeCount & 1)!=0 || degreecount!=edgeCount) // one/both are odd
-			throw new CombException("Failed to form packDCEL; 'degreeCount' and 'edgecount' diff or are odd");
-		
-		// return euler characteristic
-		return (vertCount-(edgeCount/2)+facecount);
-		
-	} // end of createDCEL 
 	
 	/**
 	 * The "red" chain is a closed cclw chain of edges about
@@ -274,516 +162,12 @@ public class PackDCEL {
 			vhits[vit.next()]=1;
 		
 		// make up 'Vertex' array
-		ArrayList<Vertex> arrayV=new ArrayList<Vertex>();
+		NodeLink arrayV=new NodeLink();
 		for (int n=1;n<=vertCount;n++)
 			if (vhits[n]==1) 
-				arrayV.add(vertices[n]);
+				arrayV.add(n);
 		
-		return redCookie(arrayV);
-	}
-	
-	/**
-	 * The "red" chain is a closed cclw chain of edges about
-	 * a simple connected fundamental domain for the complex.
-	 * This is rather difficult because 'this' PackDCEL should 
-	 * remain unchanged --- we depend on 'bouquet' to create 
-	 * new 'Vertex's and 'HalfEdge's.
-	 * @param arrayV ArrayList<Vertex>, vertices to keep, if null, keep all
-	 * @return PackDCEL
-	 */
-	public PackDCEL redCookie(ArrayList<Vertex> arrayV) {
-		
-		// we're building a new 'PackDCEL' (without parent p)
-		//   and new 'vertices', 'edges', 'faces', 'bdryFaces'
-		PackDCEL pdcel=new PackDCEL();
-		int [][]bouquet=getBouquet();
-		euler=pdcel.createDCEL(bouquet);
-		
-		// do we have a stand in for alpha?
-		int alpIndx=-1;
-		if (alpha!=null) {
-			alpIndx=alpha.origin.vertIndx;
-			if (alpIndx<=0 || alpIndx>pdcel.vertCount)
-				alpIndx=-1;
-		}
-
-		int[] keepV = new int[pdcel.vertCount + 1];
-		if (arrayV != null) {
-			Iterator<Vertex> ait = arrayV.iterator();
-			while (ait.hasNext()) {
-				int an=ait.next().vertIndx;
-				if (an>0 && an<=pdcel.vertCount)
-					keepV[an] = 1;
-			}
-		} 
-		else // keep all
-			for (int k = 1; k <= pdcel.vertCount; k++)
-				keepV[k] = 1;
-
-		// prepare various lists
-		int[] doneV = new int[vertCount + 1]; // -1=touched; 1=engulfed
-		int[] doneF = new int[faces.size()]; // 1=placed
-		
-		// Or processing leads to a drawing order. Until we have faces,
-		//   however, we keep a tmp list of 'HalfEdge's until the 
-		//   faces are indexed at the end.
-		ArrayList<HalfEdge> orderEdges=new ArrayList<HalfEdge>(); 
-		
-		// mark ideal faces as done
-		Iterator<Face> fit = pdcel.idealFaces.iterator();
-		while (fit.hasNext())
-			doneF[Math.abs(fit.next().faceIndx)] = 1;
-
-		// find first interior keeper with petal keepers
-		ArrayList<Integer> keepX=new ArrayList<Integer>();
-		for (int k=1;k<=pdcel.vertCount;k++)
-			if (keepV[k]>0)
-				keepX.add(k);
-		
-		// can we set 'alpha'
-		if (alpIndx>0) {
-			keepX.add(0,alpIndx); // put alpha first in list
-			pdcel.alpha=pdcel.vertices[alpIndx].halfedge;
-		}
-		
-		Vertex firstV = null;
-		Iterator<Integer> xit=keepX.iterator();
-		while (firstV == null && xit.hasNext()) {
-			Vertex vert = pdcel.vertices[(int)xit.next()];
-			int v = vert.vertIndx;
-			if (pdcel.vertIsBdry(vert) == null && keepV[v] == 1) {
-				ArrayList<HalfEdge> spokes = vert.getEdgeFlower();
-				boolean good = true;
-				Iterator<HalfEdge> sit = spokes.iterator();
-				while (sit.hasNext() && good)
-					if (keepV[sit.next().origin.vertIndx] == 0)
-						good = false;
-				if (good) { // success
-					firstV = vert;
-				}
-			}
-		}
-		if (firstV == null)
-			throw new CombException("no appropriate keeper vertex");
-
-		// get redchain started at firstV
-		doneV[firstV.vertIndx] = 1; // engulfed
-		ArrayList<HalfEdge> spokes = firstV.getEdgeFlower();
-		ArrayList<RedHEdge> redchain = new ArrayList<RedHEdge>();
-		for (int k = 0; k < spokes.size(); k++) {
-			HalfEdge he = spokes.get(k);
-			redchain.add(new RedHEdge(he.next));
-			he.face.edge = he;
-			doneF[Math.abs(he.face.faceIndx)] = 1; // done with this face
-			orderEdges.add(he);
-			he.twin.origin.halfedge=he.next;
-		}
-		
-		// interlink the red chain, touch the petal vertices
-		int n = redchain.size();
-		for (int k = 0; k < redchain.size(); k++) {
-			RedHEdge re = redchain.get(k);
-			if (debug)
-				deBugging.DCELdebug.halfedgeends(pdcel, re.myedge);
-			re.prev = redchain.get((k - 1 + n) % n);
-			re.next = redchain.get((k + 1) % n);
-			doneV[re.myedge.origin.vertIndx] = -1; // touched
-			re.myedge.origin.halfedge = re.myedge;
-		}
-
-		// ======================= main loop ==============
-		// loop through red chain as long as we're adding faces
-		
-		pdcel.redChain=redchain.get(0); // must always point to a link
-		if (debug)
-			deBugging.DCELdebug.printRedChain(pdcel);
-		RedHEdge currRed=null;
-		boolean hit = true; // true if we got a hit this time around
-		while (hit && pdcel.redChain!=null) {
-			hit = false;
-			
-			// current count of red chain as stop mechanism
-			int redN=0;
-			RedHEdge re=pdcel.redChain;
-			do {
-				redN++;
-				re=re.next;
-			} while(re!=pdcel.redChain);
-			
-			if (redN<=2) {
-				pdcel.redChain=null;
-				break;
-			}
-			
-			// look at 'redN'+1 successive 'RedHEdge's 
-			for (int N=0;N<=redN;N++) {
-				
-				if (debug) {
-					deBugging.DCELdebug.printRedChain(pdcel);
-					deBugging.DCELdebug.halfedgeends(pdcel, pdcel.redChain.myedge);
-				}
-				
-				currRed = pdcel.redChain;
-				pdcel.redChain = currRed.next; // should be there for next pass
-
-				// check for degeneracy: triangulation of sphere
-				if (currRed.next.next == currRed) {
-					pdcel.redChain = null;
-					break;
-				}
-
-				// ****************** main work *****************
-
-				// processing the current red edge
-				// note: we set 'halfedge' of red edge 'origin' to red edge
-				// 'myedge'
-				int v = currRed.myedge.origin.vertIndx;
-				if (doneV[v] == -1) {
-
-				// not done, so process fan of faces outside red chain
-				HalfEdge upspoke = currRed.prev.myedge.twin;
-				HalfEdge downspoke = currRed.myedge;
-				ArrayList<HalfEdge> fan = currRed.myedge.origin.getEdgeFlower(upspoke, downspoke);
-
-				// doubling back on itself? then collapse this edge
-				if (upspoke == downspoke) {
-					upspoke.origin.halfedge=downspoke; // safety measure
-					currRed.prev.prev.next = currRed.next;
-					currRed.next.prev = currRed.prev.prev;
-					doneV[v] = 1;
-					currRed.next.myedge.origin.halfedge = currRed.next.myedge;
-					hit = true;
-				}
-
-				// bdry vertex we're done with?
-				else if (pdcel.idealFaces.contains(upspoke.face) && 
-						pdcel.idealFaces.contains(downspoke.twin.face)) {
-					downspoke.origin.halfedge=downspoke;
-					doneV[v] = 1;
-				}
-
-				// else we have to look closer at fan
-				else {
-
-					// start cclw adding faces as possible
-					Iterator<HalfEdge> ffit = fan.iterator();
-					boolean goon = true;
-					Face lastface = null;
-					HalfEdge lastspoke=null;
-					ArrayList<RedHEdge> redseg = new ArrayList<RedHEdge>();
-					while (ffit.hasNext() && goon) {
-						goon = false;
-						lastspoke = ffit.next();
-						lastface = lastspoke.face;
-						Vertex opp = lastspoke.next.twin.origin;
-
-						// face not added? opposite vert included?
-						if (doneF[Math.abs(lastface.faceIndx)] == 0 && keepV[opp.vertIndx] == 1) {
-							lastface.edge = lastspoke;
-							doneF[Math.abs(lastface.faceIndx)] = 1;
-							orderEdges.add(lastspoke);
-							redseg.add(new RedHEdge(lastspoke.next));
-							lastspoke.next.origin.halfedge = lastspoke.next;
-							int u = lastspoke.next.origin.vertIndx;
-							if (doneV[u] == 0)
-								doneV[u] = -1; // touched
-							opp.halfedge=lastspoke.next.next;
-							goon = true;
-						}
-					} // end of while cclw through fan
-
-					// did we get something
-					if (redseg.size() > 0) {
-						RedHEdge firstre=redseg.get(0);
-						int m=redseg.size();
-						RedHEdge lastre = redseg.get(m - 1);
-
-						// internally link up the new red edges
-						for (int kk = 0; kk < (m - 1); kk++) {
-							redseg.get(kk).next = redseg.get(kk + 1);
-							redseg.get(kk + 1).prev = redseg.get(kk);
-						}
-
-						// now link begin of 'redseg' into red chain
-						currRed.prev.prev.next = firstre;
-						firstre.prev = currRed.prev.prev;
-						firstre.myedge.origin.halfedge = firstre.myedge;
-
-						// Typical: bypass 'currRed' and 'currRed.prev'
-						if (lastface == downspoke.twin.face) {
-							lastre.next = currRed.next;
-							currRed.next.prev = lastre;
-							doneV[currRed.myedge.origin.vertIndx] = 1;
-						}
-
-						// else just get cclw part (so far) ending with 'lastspoke' 
-						else {
-							RedHEdge newre = new RedHEdge(lastspoke.twin);
-							lastre.next = newre;
-							newre.prev = lastre;
-							newre.next=currRed;
-							currRed.prev=newre;
-							currRed.myedge.origin.halfedge = currRed.myedge;
-						}
-						hit = true;
-					} // done with cclw
-
-					// now look for clw faces
-					redseg = new ArrayList<RedHEdge>();
-					HalfEdge nxtspoke = null;
-					lastspoke=null;
-					lastface=null;
-					goon=true;
-					for (int j = fan.size() - 1; (j > 0 && goon); j--) {
-						goon=false;
-						nxtspoke = fan.get(j);
-						// in clw direction, end of spoke is the potential new vert
-						Vertex tip = nxtspoke.twin.origin;  
-
-						// okay? 
-						if (keepV[tip.vertIndx]==1 && doneF[Math.abs(nxtspoke.face.faceIndx)] == 0) {
-							lastspoke=nxtspoke; // hold these for when we exit
-							lastface=lastspoke.face;
-							lastface.edge = lastspoke;
-							RedHEdge newre = new RedHEdge(lastspoke.next);
-							tip.halfedge = lastspoke.next;
-							doneF[Math.abs(lastface.faceIndx)]=1;
-							orderEdges.add(lastspoke);
-							redseg.add(0, newre); // insert first to orient
-							if (doneV[tip.vertIndx] == 0)
-								doneV[tip.vertIndx] = -1; // touched
-							goon=true;
-						}
-					}
-
-					// any to add to the red chain?
-					if (redseg.size() > 0) {
-						RedHEdge firstre=redseg.get(0);
-						int m=redseg.size();
-						RedHEdge lastre=redseg.get(m-1);
-						// first internal links
-						for (int j = 0; j < (m - 1); j++) {
-							redseg.get(j).next = redseg.get(j + 1);
-							redseg.get(j + 1).prev = redseg.get(j);
-						}
-
-						// now link into full chain, starting with 'lastspoke'
-						RedHEdge ns = new RedHEdge(lastspoke); 
-						ns.prev=currRed.prev;
-						currRed.prev.next=ns;
-						ns.next=firstre;
-						firstre.prev = ns;
-						lastspoke.origin.halfedge=lastspoke;
-						lastre.next = currRed.next;
-						currRed.next.prev = lastre;
-						hit = true;
-					} // done with this origin
-				} // done processing fan
-			} // done processing this 'RedNEdge'
-			} // end for loop on N
-		} // end of while(hit)
-		
-		// ------------------ create new dcel structure -----------------
-		
-		if (debug)
-			deBugging.DCELdebug.printRedChain(pdcel);
-		
-		// count remaining vertices: note, even some keepV may be cut out
-		ArrayList<Vertex> verts=new ArrayList<Vertex>();
-		int tick=0;
-		for (int m=1;m<=pdcel.vertCount;m++) 
-			if (doneV[pdcel.vertices[m].vertIndx]!=0) {
-				verts.add(pdcel.vertices[m]); 
-				tick++;
-			}
-		pdcel.vertCount=tick;
-		
-		// select edges with both ends remaining
-		ArrayList<HalfEdge> newedges=new ArrayList<HalfEdge>();
-		Iterator<HalfEdge> eit=pdcel.edges.iterator();
-		while(eit.hasNext()) {
-			HalfEdge he=eit.next();
-			int a=he.origin.vertIndx;
-			int b=he.twin.origin.vertIndx;
-			if (doneV[a]!=0 && doneV[b]!=0) // both ends must be valid
-				newedges.add(he);
-		}
-		pdcel.edges=newedges;
-		
-		if (debug) {
-			System.out.println("before fixing red chain");
-			deBugging.DCELdebug.showEdges(pdcel);
-		}
-		
-		// Any choke points? vertices (orig indexing) have two
-		//    or more boundary arcs through them
-		int []redverts=new int[vertCount+1];
-		RedHEdge nxtre=pdcel.redChain;
-		boolean chit=false;
-		do {
-			int v=nxtre.myedge.origin.vertIndx;
-			redverts[v]++;
-			if (redverts[v]>1)
-				chit=true;
-			nxtre=nxtre.next;
-		} while (nxtre!=pdcel.redChain);
-		
-		// yes, some potential choke points to check out
-		ChokeData []chokeData=new ChokeData[vertCount+1];
-		if (chit) {
-			nxtre=pdcel.redChain;
-			do {
-				int v=nxtre.myedge.origin.vertIndx;
-				if (redverts[v]>1 || redverts[v]<0) {
-					if (redverts[v]>1) {
-						
-						// create ChokeData
-						chokeData[v]=new ChokeData();
-						chokeData[v].vert=v;
-						chokeData[v].redpairs=new HalfEdge[redverts[v]][2];
-						int ii=redverts[v]-1;
-						chokeData[v].redpairs[ii][0]=nxtre.prev.myedge.twin; // upspoke
-						chokeData[v].redpairs[ii][1]=nxtre.myedge; // downspoke
-						redverts[v] =-(redverts[v]-1); // change sign to help count
-					}
-					else {
-						int ij=-redverts[v]-1;
-						chokeData[v].redpairs[ij][0]=nxtre.prev.myedge.twin; // upspoke
-						chokeData[v].redpairs[ij][1]=nxtre.myedge; //downspoke
-						redverts[v] +=1;
-					}
-				} 
-				nxtre=nxtre.next;
-			} while (nxtre!=pdcel.redChain);
-		}
-		
-		// travel around red chain, adjusting 'HalfEdge.next/prev' to remove
-		//   unneeded edges.
-		nxtre=pdcel.redChain;
-		do {
-			Vertex vert=nxtre.myedge.origin;
-			vert.halfedge=nxtre.myedge; // deBugging.DCELdebug.showEdges(pdcel);
-			HalfEdge uedge=null;
-			HalfEdge dedge=null;
-			
-			// choke point? Must determine the spokes involved
-			if (chokeData[vert.vertIndx]!=null) {
-				ChokeData cdata=chokeData[vert.vertIndx];
-				
-				// get edge flower from first pair downstream spoke
-				HalfEdge start=cdata.redpairs[0][1];
-				ArrayList<HalfEdge> eflower=vert.getEdgeFlower(start,start);
-				int k=eflower.size();
-				int []indxflower=new int[k];
-				int []hitflower=new int[k]; // 1 if downstream, -1 if upstream, 0 else
-				for (int j=0;j<k;j++) // gather ordered indices 
-					indxflower[j]=eflower.get(j).origin.vertIndx;
-				int cdn=cdata.redpairs.length;
-				for (int jk=0;jk<cdn;jk++) {
-					int us=eflower.indexOf(cdata.redpairs[jk][0]); // upstream hit
-					hitflower[us] -=1; // subtract 1
-					int ds=eflower.indexOf(cdata.redpairs[jk][1]); // downstream hit
-					hitflower[ds] +=1; // add 1
-				}
-				
-				// any gaps? ups/downs might well cancel, or partially cancel
-				if (hitflower[k-1]==-1) { // gap between up at end and down at beginning
-					uedge=eflower.get(k-1);
-					dedge=eflower.get(0);
-					dedge.twin.next=uedge;
-					uedge.prev=dedge.twin;
-					hitflower[0]=hitflower[k-1]=0; // fixed
-				}
-				for (int mk=1;mk<k;mk++) {
-					if (hitflower[mk]==-1) { // beginning of gap
-						int gapend=-1;
-						for (int mm=mk+1;(mm<=k && gapend<0) ;mm++)
-							if (hitflower[mm%k]==1)
-								gapend=mm%k;
-						uedge=eflower.get(mk);
-						dedge=eflower.get(gapend);
-						dedge.twin.next=uedge;
-						uedge.prev=dedge.twin;
-						hitflower[mk]=hitflower[gapend]=0; // fixed
-					}
-				}
-			}
-			// fix things at a normal non-choke vertex
-			else {
-				uedge=nxtre.prev.myedge.twin; 
-				dedge=nxtre.myedge.twin; 
-				dedge.next=uedge;
-				uedge.prev=dedge;
-				// deBugging.DCELdebug.halfedgeends(pdcel,nxtre.myedge);
-				// deBugging.DCELdebug.halfedgeends(pdcel,uedge);
-				// deBugging.DCELdebug.halfedgeends(pdcel,dedge);
-			}
-			nxtre=nxtre.next;
-		} while (nxtre!=pdcel.redChain);
-
-		if (debug) {
-			System.out.println("after fixing red chain");
-			deBugging.DCELdebug.showEdges(pdcel);
-		}
-
-		// store and reindex the remaining vertices
-		pdcel.vertices=new Vertex[tick+1];
-		Iterator<Vertex> vit=verts.iterator();
-		tick=1;
-		pdcel.newOld=new VertexMap();
-		while (vit.hasNext()) {
-			Vertex v=vit.next();
-			pdcel.newOld.add(new EdgeSimple(tick,v.vertIndx));
-			v.vertIndx=tick;
-			pdcel.vertices[tick]=v;
-			tick++;
-		}
-		
-		// find bdry edges
-		ArrayList<HalfEdge> bdrys=new ArrayList<HalfEdge>();
-		
-		// reset original bdry faces as not done
-		Iterator<Face> bit=pdcel.idealFaces.iterator();
-		while(bit.hasNext())
-			doneF[Math.abs(bit.next().faceIndx)]=0;
-		
-		if (debug)		
-			deBugging.DCELdebug.printRedChain(pdcel);
-		
-		// boundary have twins with faces not done
-		if (pdcel.redChain!=null) { // else is a sphere
-			RedHEdge re=pdcel.redChain;
-			do {
-				if (doneF[Math.abs(re.myedge.twin.face.faceIndx)]==0)
-					bdrys.add(re.myedge.twin);
-				re=re.next;
-			} while (re!=pdcel.redChain);
-		}
-
-		// index the faces
-		int cnt=pdcel.indexFaces(pdcel.edges, bdrys);
-		if (cnt==0) {
-			CirclePack.cpb.errMsg("failed in 'indexFaces'");
-			return null;
-		}
-			
-		// use 'orderEdges' to set 'LayoutOrder'
-		pdcel.LayoutOrder=new ArrayList<Face>();
-		// only add face if opposite vert not yet placed
-		int []vhit=new int[pdcel.vertCount+1]; 
-		Iterator<HalfEdge> oit=orderEdges.iterator();
-		while (oit.hasNext()) {
-			HalfEdge he=oit.next();
-			Face face =he.face;
-			face.edge=he;
-			int oppv=he.next.next.origin.vertIndx;
-			if (vhit[oppv]==0) {
-				vhit[oppv]=1;
-				pdcel.LayoutOrder.add(face);
-			}
-		}
-		
-		return pdcel;
+		return CombDCEL.redDCELbuilder(this.getBouquet(),arrayV,0);
 	}
 	
 	/**
@@ -1558,7 +942,7 @@ public class PackDCEL {
 		
 		for (int v=1;v<=vertCount;v++) {
 			try{
-				bouq[v]=usualFlower(vertices[v]);
+				bouq[v]=vertices[v].getFlower();
 			} catch (Exception ex) {
 				System.err.println("getFlower fails for "+v);
 			}
@@ -1678,22 +1062,6 @@ public class PackDCEL {
 		return false;
 	}
 
-	/**
-	 * Find index of w in flower of v. See 'PackData.nghb' 
-	 * @param v int
-	 * @param w int
-	 * @param bouq int[][], array of flowers
-	 * @return int, -1 on error
-	 */
-	public static int nghb(int v,int w,int [][]bouq) {
-		int len=bouq.length-1;
-		if (v<1 || v>len || w<1 || w>len) 
-			return -1; 
-		int []flower=bouq[v];
-		for (int j=0;j<=flower.length;j++)
-			if (flower[j]==w) return j;
-		return -1;
-	}
 
 	/**
 	 * Find if there is a halfedge from v to w. 
@@ -1831,7 +1199,7 @@ public class PackDCEL {
 			return null;
 		}
 		int []flower=bouquet[v];
-		int indx_vw=nghb(v,w,bouquet);
+		int indx_vw=CombDCEL.nghb(v,w,bouquet);
 		if (indx_vw<0)
 			return null;
 		
@@ -1845,7 +1213,7 @@ public class PackDCEL {
 			nlink.add(nextv);
 			flower=bouquet[nextv];
 			int num=flower.length;
-			int indx=nghb(nextv,v,bouquet);
+			int indx=CombDCEL.nghb(nextv,v,bouquet);
 			if (indx==0) // first and last repeat
 				indx=num-2;
 			else
@@ -2126,8 +1494,18 @@ public class PackDCEL {
 	}
 }
 
+// inner utility class to keep track when multiple 'RedHEdge's imping
+//    on the same vertex.
 class ChokeData {
-	public int vert;
-	public HalfEdge [][]redpairs;
+	public int vert;  // vertex index
+	public int util;
+	public RedHEdge[] redSpokes; // outgoing red spokes 
+	public RedHEdge[] inSpokes;  // incoming red spokes
+	
+	// built temp list of in/out red edges based on index in flower 
+	public int k;                // number of spokes
+	public RedHEdge[] inEdge;    // null unless this spoke has incoming
+	public RedHEdge[] outEdge;    // null unless this spoke has outgoing
+	public int doublecount;      // how many edges are both in and out
 }
 

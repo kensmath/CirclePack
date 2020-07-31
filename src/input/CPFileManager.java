@@ -472,8 +472,7 @@ public class CPFileManager {
 	 * else to the given directory or to CurrentDirectory.
 	 * Return null on error.
 	 * @param File dir (specified directory)
-	 * @param append (append to file)
-	 * @param filename
+	 * @param filename String
 	 * @param script_flag (file is for script)
 	 * @return
 	 */

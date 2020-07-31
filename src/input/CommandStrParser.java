@@ -33,6 +33,8 @@ import complex.MathComplex;
 import cpContributed.BoundaryValueProblems;
 import cpContributed.CurvFlow;
 import cpContributed.FracBranching;
+import dcel.CombDCEL;
+import dcel.DataDCEL;
 import dcel.PackDCEL;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
@@ -131,8 +133,8 @@ import tiling.TileData;
 import util.BuildPacket;
 import util.CallPacket;
 import util.DispFlags;
-import util.PathUtil;
 import util.PathBaryUtil;
+import util.PathUtil;
 import util.ResultPacket;
 import util.SphView;
 import util.StringUtil;
@@ -5769,6 +5771,7 @@ public class CommandStrParser {
 			}
 
 			// ========= DCEL <stuff> ==========
+			
 			// TODO: this is experimental related to DCEL combinatorics
 			else if (cmd.startsWith("DCE")) {
 				
@@ -5777,10 +5780,22 @@ public class CommandStrParser {
 					return 0;
 				items=(Vector<String>)flagSegs.get(0);
 				String str=items.remove(0);
-				if (items.size()==0) {
+				if (items.size()==0) { // get next items
 					flagSegs.remove(0);
 					if (flagSegs.size()>0)
 						items=flagSegs.get(0);
+				}
+			
+				// Create
+				if (str.contains("clone")) {
+					int qnum= StringUtil.qFlagParse(str);
+					NodeLink vlist=new NodeLink(packData,items);
+					int[][] bouq=packData.getBouquet();
+
+					PackDCEL pdcel=CombDCEL.redDCELbuilder(bouq,vlist,packData.alpha);
+					PackData p=DataDCEL.dcel_to_packing(pdcel);
+					CirclePack.cpb.pack[qnum].swapPackData(p,false);
+					return 1;
 				}
 
 				if (str.contains("dcel")) {

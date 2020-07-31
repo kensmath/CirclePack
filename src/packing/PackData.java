@@ -7682,6 +7682,21 @@ public class PackData{
 			  return 1.0;
 		  return kData[v].overlaps[j];
 	  }
+	  
+	  /**
+	   * Get normal bouquet of vertices.
+	   * @return
+	   */
+	  public int[][] getBouquet() {
+		  int bouq[][]=new int[nodeCount+1][];
+		  for (int v=1;v<=nodeCount;v++) {
+			  int num=kData[v].num;
+			  bouq[v]=new int[num+1];
+			  for (int j=0;j<=num;j++)
+				  bouq[v][j]=kData[v].flower[j];
+		  }
+		  return bouq;
+	  }
 
 	  /**
 	   * Given v1 and v2, build edgelist from v1 to v2 through up to 
