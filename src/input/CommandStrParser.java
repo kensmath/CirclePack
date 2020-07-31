@@ -5788,11 +5788,12 @@ public class CommandStrParser {
 			
 				// Create
 				if (str.contains("clone")) {
-					int qnum= StringUtil.qFlagParse(str);
+					int qnum= StringUtil.qFlagParse(items.get(0));
 					NodeLink vlist=new NodeLink(packData,items);
 					int[][] bouq=packData.getBouquet();
 
 					PackDCEL pdcel=CombDCEL.redDCELbuilder(bouq,vlist,packData.alpha);
+					pdcel.p=packData;
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
 					CirclePack.cpb.pack[qnum].swapPackData(p,false);
 					return 1;

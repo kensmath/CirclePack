@@ -147,7 +147,7 @@ public class PackData{
     public int beta;          // -- no longer used --
     public int gamma;         // index of node to be plotted on positive y-axis
     public int euler;   	  // Euler characteristic
-    public int genus;         // genus of complex. Euler+#bdry=2-2g 
+    public int genus;         // genus of complex. Euler+#bdry=2-2g, g=(2-Euler-#bdy)/2 
     public int activeNode;    // currently active_node 
     public int locks;         // locks placed by remote processes; bitwise flags
     public boolean overlapStatus; // true if non-default overlaps/inv dists set
@@ -2106,6 +2106,11 @@ public class PackData{
         return 0;
     } 
 
+    /**
+     * Set packing 'gamma' index
+     * @param i int, can't be 'alpha'
+     * @return 1 on success, 0 on failure
+     */
     public int setGamma(int i) {
         if (status && i>0 && i<= nodeCount && i != alpha){
             gamma=i;

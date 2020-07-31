@@ -79,17 +79,14 @@ public class DCELdebug {
 		return count;
 	}
 
-	public static void printRedChain(PackDCEL pdcel) {
-		if (pdcel.redChain==null) {
-			System.err.println("'redChain' is null");
-			return;
-		}
-		dcel.RedHEdge nxtre=pdcel.redChain;
+	public static void printRedChain(RedHEdge redge) {
 		StringBuilder sb=new StringBuilder("vertices are:\n");
+		RedHEdge nxtre=redge;
 		do {
-			sb.append(" "+nxtre.myEdge.origin.vertIndx);
+			sb.append(" --> "+nxtre.myEdge.origin.vertIndx);
 			nxtre=nxtre.nextRed;
-		} while (nxtre!=pdcel.redChain);
+		} while (nxtre!=redge);
+		sb.append(" --> "+nxtre.myEdge.origin.vertIndx);
 		System.out.println(sb.toString());
 	}
 	

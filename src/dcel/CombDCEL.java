@@ -2,7 +2,6 @@ package dcel;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Vector;
 
 import allMains.CirclePack;
 import deBugging.DCELdebug;
@@ -269,18 +268,20 @@ public class CombDCEL {
 
 		// =========== now we're going to build the 'redChain' ==========
 
-		// Processing leads to a drawing order. Until we have faces at
-		//   the end, however, we keep a tmp ordered list of 'HalfEdge's 
-		int[] doneV = new int[pdcel.vertCount + 1]; // -1=touched; 1=engulfed
+		// build 'orderEdges' as we encounter new faces: convention is that
+		//   'HalfEdge' in the list is associated with its face (ie. that
+		//   on its left).
+		int[] doneV = new int[pdcel.vertCount + 1]; // 1 if engulfed
 		ArrayList<HalfEdge> orderEdges=new ArrayList<HalfEdge>(); 
 		Vertex firstV=pdcel.alpha.origin; // should be interior
 
-		// get redchain started as closed edge chain about firstV
+		// Initial redChain is chain of outer edges cclw about firstV.
+		// Also begin the 'orderEdges' list from spoke twins.
 		ArrayList<HalfEdge> spokes = firstV.getEdgeFlower();
 		HalfEdge he=spokes.get(0);
 		he.origin.halfedge=he; // point firstV at this first spoke 
-		pdcel.redChain=new RedHEdge(he.next); // start of 'redChain'
 		orderEdges.add(he);
+		pdcel.redChain=new RedHEdge(he.next); // start of 'redChain'
 		he.twin.origin.halfedge=he.next;
 		RedHEdge rtrace=pdcel.redChain;
 		for (int k = 1; k < spokes.size(); k++) { // add rest about
@@ -298,7 +299,7 @@ public class CombDCEL {
 		// ======================= main loop ==============
 		// loop through red chain as long as we keep adding faces
 		//    or collapsing the redchain.
-		
+//		boolean tmpdebug=false;
 		RedHEdge currRed=null;
 		boolean hit = true; // true if we added a face or collapsed an edge
 		boolean redisDone=false; // totally done?
@@ -321,7 +322,7 @@ public class CombDCEL {
 			for (int N=0;(N<=redN && !redisDone);N++) {
 				
 				if (debug) {
-					deBugging.DCELdebug.printRedChain(pdcel);
+					deBugging.DCELdebug.printRedChain(currRed);
 					deBugging.DCELdebug.halfedgeends(pdcel, pdcel.redChain.myEdge);
 				}
 				
@@ -344,8 +345,12 @@ public class CombDCEL {
 				int u = currRed.prevRed.myEdge.origin.vertIndx;
 				int w = currRed.myEdge.twin.origin.vertIndx;
 				
+//				if (tmpdebug) { // tmpdebug=true;
+//					DCELdebug.printRedChain(currRed);
+//				}
+				
 				// if v is not done yet
-				if (doneV[v] == -1) {
+				if (doneV[v] ==0 ) { 
 					// not done, so process fan of faces outside red chain
 					HalfEdge upspoke = currRed.prevRed.myEdge.twin;
 					HalfEdge downspoke = currRed.myEdge;
@@ -362,6 +367,7 @@ public class CombDCEL {
 						if (keepV[v]!=0) { // enclose this vertex
 							currRed.prevRed.prevRed.nextRed = currRed.nextRed;
 							currRed.nextRed.prevRed = currRed.prevRed.prevRed;
+//System.err.println(v+" got done");							
 							doneV[v] = 1;
 							currRed.nextRed.myEdge.origin.halfedge = currRed.nextRed.myEdge;
 							hit = true;
@@ -376,6 +382,7 @@ public class CombDCEL {
 					// Done? none of these are keepers? done with v
 					else if (keepV[v]==0 && keepV[u]==0 && keepV[w]==0) {
 						downspoke.origin.halfedge=downspoke;
+//System.err.println(v+" done");							
 						doneV[v] = 1;
 					}
 
@@ -403,13 +410,14 @@ public class CombDCEL {
 							while (spktrace!=downspoke) { // add a new link
 								cclw.nextRed=new RedHEdge(spktrace.next);
 								cclw.nextRed.prevRed=cclw;
-								orderEdges.add(spktrace.twin);
+								orderEdges.add(spktrace);
 								hit=true;
 								spktrace=spktrace.prev.twin;
 								cclw=cclw.nextRed;
 							}
 							cclw.nextRed=currRed.nextRed;
 							currRed.nextRed.prevRed=cclw;
+//System.err.println(v+" is done");							
 							doneV[v]=1;
 						}
 						// else we try to add just one cclw face about v;
@@ -417,7 +425,7 @@ public class CombDCEL {
 						else if ((redge=isMyEdge(pdcel.redChain,upspoke.next))==null && 
 								(keepV[v]!=0 || keepV[upspoke.twin.origin.vertIndx]!=0)) {
 							cclw.nextRed=new RedHEdge(upspoke.next);
-							orderEdges.add(upspoke.twin);
+							orderEdges.add(upspoke);
 							hit=true;
 							cclw.nextRed.prevRed=cclw;
 							cclw=cclw.nextRed;
@@ -428,10 +436,12 @@ public class CombDCEL {
 							currRed.prevRed=cclw;
 						}
 					}
-				} // done with v
+				} // done with v;
 			} // done on this cycling through redchain
 		} // end of main loop while, should be done with red chain
 
+//		tmpdebug=false;
+		
 		// TODO: may want to reconfigure redChain to minimize the 
 		//   occurrence of 'blue' elements --- successive red edges
 		//   belonging to the same face.
@@ -477,8 +487,8 @@ public class CombDCEL {
 			nxtre=nxtre.nextRed;
 		} while (nxtre!=pdcel.redChain);
 		
-		if (debug) { // debug=truw;
-			DCELdebug.printRedChain(pdcel);
+		if (debug && pdcel.redChain!=null) { // debug=truw;
+			DCELdebug.printRedChain(pdcel.redChain);
 			debug=false;
 		}
 		
@@ -644,8 +654,8 @@ public class CombDCEL {
 		} while (nxtre!=pdcel.redChain);
 
 		// Step 3: catalog side pairings, free sides, create ideal faces.
-		
 		pdcel.sideStarts=new ArrayList<RedHEdge>();
+		pdcel.bdryStarts=new ArrayList<RedHEdge>();
 		pdcel.idealFaces=new ArrayList<Face>();
 		int sidecount=0; 
 		nxtre=pdcel.redChain;
@@ -683,7 +693,8 @@ public class CombDCEL {
 				
 				// else have the start
 				RedHEdge freeStart=trace.nextRed;
-				pdcel.sideStarts.add(freeStart);
+				pdcel.bdryStarts.add(freeStart);
+				pdcel.sideStarts.add(freeStart); // for completeness sake
 				newface.edge=freeStart.myEdge.twin;
 				
 				// now have to propagate downstream
@@ -698,7 +709,7 @@ public class CombDCEL {
 				trace.prevRed.myEdge.twin.prev=freeStart.myEdge.twin;
 				freeStart.myEdge.twin.next=trace.prevRed.myEdge.twin;
 
-				// Finally for this free edge, point 'origin.halfedge'
+				// Finally for this free edge, point 'origin.halfedge's
 				//    in backward direction (forward direction wrt interior), though
 				//    this may be ambiguous because ideal faces may not be 
 				//    combinatorial polygons; some edges can be repeated in 
@@ -763,21 +774,24 @@ public class CombDCEL {
 		int ftick=0;
 		int etick=0;
 		
-		// Each edge in 'orderEdges' is associate with a new face. 
-		//   The face is pointed to by the twin and in turn its 'edge'
-		//   points back to that twin.
+		// Each edge in 'orderEdges' is associated with a new face,
+		//   namely, it's own face, and in turn 'face.edge' is this edge.
+		pdcel.faces=new ArrayList<Face>();
 		Iterator<HalfEdge> oit=orderEdges.iterator();
 		while (oit.hasNext()) {
 			HalfEdge hfe=oit.next();
-			Face tface=he.twin.face;
+			Face tface=hfe.face;
+			pdcel.faces.add(tface);
 			if (tface.faceIndx==0)
 				tface.faceIndx=++ftick;
-			tface.edge=hfe.twin;
-			int oppv=hfe.twin.next.next.origin.vertIndx;
+			tface.edge=hfe;
+			int oppv=hfe.next.next.origin.vertIndx;
 			if (vhit[oppv]==0) { // yes, add to 'LayoutOrder'
 				vhit[oppv]=1;
 				pdcel.LayoutOrder.add(hfe.face);
 			}
+			
+			// also index any new edges of this face
 			HalfEdge fhe=tface.edge;
 			do {
 				if (fhe.edgeIndx==0)
@@ -853,7 +867,7 @@ public class CombDCEL {
 	 * @return boolean
 	 */
 	public static boolean isBouqBdry(int[][] bouq,int w) {
-		if (w<1 || w>=(bouq.length-1))
+		if (w<1 || w>=bouq.length)
 			return false;
 		int[] flower=bouq[w];
 		if (flower[0]!=flower[flower.length-1])

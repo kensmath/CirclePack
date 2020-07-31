@@ -4,7 +4,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Vector;
 
 import allMains.CirclePack;
 import complex.Complex;
@@ -67,7 +66,8 @@ public class PackDCEL {
 	public ArrayList<Face> LayoutOrder; // order for computing centers
 	public VertexMap newOld; // NEEDED FOR CIRCLEPACK
 	public RedHEdge redChain; // doubly-linked, cclw edges about a fundamental region
-	public ArrayList<RedHEdge> sideStarts; // red edges starting sides will have 'mobIndx'
+	public ArrayList<RedHEdge> bdryStarts; // red edges at start of a free (unpasted) side
+	public ArrayList<RedHEdge> sideStarts; // red edges starting paired sides, will have 'mobIndx'
 	boolean debug;
 	public HalfEdge alpha;
 	

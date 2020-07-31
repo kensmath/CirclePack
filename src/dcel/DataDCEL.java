@@ -74,8 +74,9 @@ public class DataDCEL {
 		p.nodeCount=pdcel.vertCount;
 		p.faceCount=pdcel.intFaceCount;
 		p.bdryCompCount=pdcel.idealFaces.size();
-		p.alloc_pack_space(p.nodeCount+10,false);
+		p.alloc_pack_space(p.nodeCount+10,true);
 		p.alpha=pdcel.alpha.origin.vertIndx;
+		p.activeNode=p.alpha;
 		p.firstFace=1;
 		
 		if (debug) 
@@ -142,6 +143,20 @@ public class DataDCEL {
 			}
 		}
 		
+		// misc data to arrange
+		p.euler=p.nodeCount-pdcel.edges.size()/2+p.faceCount;
+		p.genus=(2-p.euler-p.bdryCompCount)/2;
+		p.bdryStarts=new int[p.bdryCompCount+1];
+		for (int j=1;j<=p.bdryCompCount;j++) {
+			Face iface=pdcel.idealFaces.get(j-1);
+			p.bdryStarts[j]=iface.edge.twin.origin.vertIndx;
+		}
+		p.vertexMap=pdcel.newOld;
+		p.chooseGamma();
+		p.fileName=new String("clone");
+		p.status=true;
+        pdcel.p=p;				
+		p.packDCEL=pdcel;
 		return p;
 	}
 	
@@ -158,7 +173,6 @@ public class DataDCEL {
 	 * @return Complex, null on error (e.g., improper v)
 	 */
 	public static Complex getCenter(PackDCEL pdcel,RedHEdge redge,int v) {
-		Complex ans=null;
 		TriAspect tri=redge.myTri;
 		if (tri==null)
 			throw new CombException("'RedHEdge' does not have a 'TriAspect'");
