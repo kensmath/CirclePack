@@ -13,6 +13,7 @@ public class HalfEdge {
 	public HalfEdge next;
 	public HalfEdge prev;
 	public int edgeIndx;
+	public int util;
 	
 	// constructor(s)
 	public HalfEdge() {
@@ -22,6 +23,7 @@ public class HalfEdge {
 		next=null;
 		prev=null;
 		edgeIndx=-1; // indicates index is not set
+		util=0;
 	}
 	
 	public HalfEdge(Vertex v) {
@@ -100,5 +102,12 @@ public class HalfEdge {
 		he.edgeIndx=edgeIndx; // may want to reset
 		return he;
 	}
-	
+
+	/** 
+	 * spit out the two end vertex indices
+	 */
+	public String toString() {
+		return(" "+origin.vertIndx+" "+twin.origin.vertIndx+" ");
+	}
+
 }

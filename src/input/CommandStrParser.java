@@ -5788,12 +5788,23 @@ public class CommandStrParser {
 			
 				// Create
 				if (str.contains("clone")) {
-					int qnum= StringUtil.qFlagParse(items.get(0));
-					NodeLink vlist=new NodeLink(packData,items);
+					int qnum= StringUtil.qFlagParse(items.remove(0));
+					
+					// 'vlist' of non-keepers defaults to empty
+					NodeLink vlist=null;
+					if (items.size()>0)
+						vlist=new NodeLink(packData,items); // non-keepers
 					int[][] bouq=packData.getBouquet();
 
-					PackDCEL pdcel=CombDCEL.redDCELbuilder(bouq,vlist,packData.alpha);
-					pdcel.p=packData;
+					// Now three situations: 'vlist' takes precedence over 'poisonVerts'
+					PackDCEL pdcel=null;
+					if (vlist!=null && vlist.size()>0)
+						pdcel=CombDCEL.redDCELbuilder(packData,bouq,vlist,false);
+					else if (packData.poisonVerts!=null && packData.poisonVerts.size()>0)	
+						pdcel=CombDCEL.redDCELbuilder(packData,bouq,packData.poisonVerts,true);
+					else
+						pdcel=CombDCEL.redDCELbuilder(packData,bouq,null,false);
+					
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
 					CirclePack.cpb.pack[qnum].swapPackData(p,false);
 					return 1;

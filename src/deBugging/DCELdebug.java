@@ -11,6 +11,9 @@ import dcel.PackDCEL;
 import dcel.RedHEdge;
 import dcel.Vertex;
 import input.CPFileManager;
+import input.CommandStrParser;
+import komplex.EdgeSimple;
+import packing.PackData;
 
 public class DCELdebug {
 	
@@ -77,6 +80,46 @@ public class DCELdebug {
 		      } catch (Exception exe) {}
 		  }			
 		return count;
+	}
+	
+	/**
+	 * Given oriented edge, draw in blue and face on left in pale red
+	 * @param p PackData
+	 * @param edge EdgeSimple 
+	 */
+	public static void drawEdgeFace(PackData p,EdgeSimple edge) {
+		if (p!=null) {
+			StringBuilder strbld=new StringBuilder("disp -et5c5 "+edge.v+" "+edge.w+" ");
+			int[] ans=p.left_face(edge);
+			if (ans[0]!=0) {
+				strbld.append(" -ffc120 "+ans[0]);
+			}
+			CommandStrParser.jexecute(p,strbld.toString());
+		}
+	}
+	
+	/**
+	 * Draw whole redChain starting at redge
+	 * @param p PackData
+	 * @param redge RedHEdge
+	 */
+	public static void drawRedChain(PackData p,RedHEdge redge) {
+		RedHEdge rtrace=redge;
+		do {
+			drawRedEdge(p,rtrace);
+			rtrace=rtrace.nextRed;
+		} while (rtrace!=redge);
+	}
+	
+	/**
+	 * Given a red edge, draw it in red on packing p's screen
+	 * @param p PackData
+	 * @param redge RedHEdge
+	 */
+	public static void drawRedEdge(PackData p,RedHEdge redge) {
+		int v=redge.myEdge.origin.vertIndx;
+		int w=redge.myEdge.twin.origin.vertIndx;
+		CommandStrParser.jexecute(p,"disp -et9c195 "+v+" "+w);
 	}
 
 	public static void printRedChain(RedHEdge redge) {
@@ -162,4 +205,26 @@ public class DCELdebug {
 		return sb;
 	}
 
+	/**
+	 * for a HalfEdge, show the 5 next edges and 5 previous edges
+	 * @param edge
+	 */
+	public static void show5edges(HalfEdge edge) {
+		if (edge==null) 
+			return;
+		StringBuilder strbld=new StringBuilder("Data on edge: "+edge+"\n   next's are: ");
+		HalfEdge he=edge;
+		for (int j=0;j<5;j++) {
+			he=he.next;
+			strbld.append(" --> "+he);
+		}
+		strbld.append("\n    prev's are: ");
+		he=edge;
+		for (int j=0;j<5;j++) {
+			he=he.prev;
+			strbld.append(" <-- "+he);
+		}
+		strbld.append("\n");
+		System.err.println(strbld.toString());
+	}
 }

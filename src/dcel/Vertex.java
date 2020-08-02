@@ -203,6 +203,13 @@ public class Vertex {
 
 	}
 
+	/** return the index of the vertex opposite 'halfedge'
+	 * @return int
+	 */
+	public int getOpposite() {
+		return halfedge.next.twin.origin.vertIndx;
+	}
+	
 	/**
 	 * Clone: caution, 'halfedge' pointer may be outdated.
 	 * @return new Vertex
@@ -211,6 +218,9 @@ public class Vertex {
 		Vertex nv=new Vertex();
 		nv.halfedge=halfedge;
 		nv.vertIndx=vertIndx;
+		nv.rad=rad;
+		nv.vertIndx=vertIndx;
+		nv.center=new Complex(center);
 		return nv;
 	}
 

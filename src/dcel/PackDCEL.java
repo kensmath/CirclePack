@@ -167,7 +167,8 @@ public class PackDCEL {
 			if (vhits[n]==1) 
 				arrayV.add(n);
 		
-		return CombDCEL.redDCELbuilder(this.getBouquet(),arrayV,0);
+		// TODO: have to adjust call for ones to eliminate.
+		return CombDCEL.redDCELbuilder(this.p,this.getBouquet(),arrayV,false);
 	}
 	
 	/**
@@ -1199,7 +1200,7 @@ public class PackDCEL {
 			return null;
 		}
 		int []flower=bouquet[v];
-		int indx_vw=CombDCEL.nghb(v,w,bouquet);
+		int indx_vw=CombDCEL.nghb(bouquet,v,w);
 		if (indx_vw<0)
 			return null;
 		
@@ -1213,7 +1214,7 @@ public class PackDCEL {
 			nlink.add(nextv);
 			flower=bouquet[nextv];
 			int num=flower.length;
-			int indx=CombDCEL.nghb(nextv,v,bouquet);
+			int indx=CombDCEL.nghb(bouquet,nextv,v);
 			if (indx==0) // first and last repeat
 				indx=num-2;
 			else
@@ -1494,18 +1495,16 @@ public class PackDCEL {
 	}
 }
 
-// inner utility class to keep track when multiple 'RedHEdge's imping
-//    on the same vertex.
+// inner utility class to catalog incoming/outgoing red spokes.
 class ChokeData {
-	public int vert;  // vertex index
-	public int util;
 	public RedHEdge[] redSpokes; // outgoing red spokes 
 	public RedHEdge[] inSpokes;  // incoming red spokes
-	
-	// built temp list of in/out red edges based on index in flower 
-	public int k;                // number of spokes
 	public RedHEdge[] inEdge;    // null unless this spoke has incoming
 	public RedHEdge[] outEdge;    // null unless this spoke has outgoing
 	public int doublecount;      // how many edges are both in and out
+	
+	public ChokeData() {
+	}
+	
 }
 
