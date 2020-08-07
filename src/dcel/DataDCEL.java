@@ -73,9 +73,10 @@ public class DataDCEL {
 			p.hes=pdcel.p.hes;
 		p.nodeCount=pdcel.vertCount;
 		p.faceCount=pdcel.intFaceCount;
-		p.bdryCompCount=pdcel.idealFaces.size();
+		p.bdryCompCount=pdcel.idealFaceCount;
 		p.alloc_pack_space(p.nodeCount+10,true);
-		p.alpha=pdcel.alpha.origin.vertIndx;
+		p.alpha=pdcel.alpha.origin.vertIndx; // <alpha,beta> is the initial edge
+		p.beta=pdcel.alpha.twin.origin.vertIndx;
 		p.activeNode=p.alpha;
 		p.firstFace=1;
 		

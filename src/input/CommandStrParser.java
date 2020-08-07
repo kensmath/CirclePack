@@ -36,6 +36,7 @@ import cpContributed.FracBranching;
 import dcel.CombDCEL;
 import dcel.DataDCEL;
 import dcel.PackDCEL;
+import deBugging.DCELdebug;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
 import exceptions.DataException;
@@ -5808,6 +5809,10 @@ public class CommandStrParser {
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
 					CirclePack.cpb.pack[qnum].swapPackData(p,false);
 					return 1;
+				}
+				
+				if (str.contains("red")) {
+					DCELdebug.drawRedChain(packData, packData.packDCEL.redChain);
 				}
 
 				if (str.contains("dcel")) {

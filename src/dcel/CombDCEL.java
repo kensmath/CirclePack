@@ -73,8 +73,7 @@ public class CombDCEL {
 			heArrays[v] = new HalfEdge[count];
 
 			// create the new 'Vertex' and its first 'HaldEdge'
-			Vertex newV = new Vertex();
-			newV.vertIndx = v;
+			Vertex newV = new Vertex(v);
 			heArrays[v][0] = new HalfEdge(newV);
 			heArrays[v][0].edgeIndx = ++edgecount;
 			newV.halfedge = heArrays[v][0];
@@ -155,7 +154,7 @@ public class CombDCEL {
 			}
 		}
 		}
-		// still didn't work?
+		// still didn't work? need to set it to something.
 		if (alpha==null) {
 			alpha=heArrays[firstInterior][0];
 		}
@@ -166,6 +165,7 @@ public class CombDCEL {
 		pdcel.alpha=alpha;
 		pdcel.faceCount=0;
 		pdcel.intFaceCount=0;
+		pdcel.idealFaceCount=0;
 		pdcel.vertices=vertices;
 		pdcel.edges=edges;
 		pdcel.faces=null;
@@ -201,10 +201,12 @@ public class CombDCEL {
 	 * @param p PackData, could be null
 	 * @param bouquet int[][], normal bouquet
 	 * @param nonKeepers NodeLink,
-	 * @param poisonFlag boolean, true, then augment 'nonKeepers' with their neighbors 
+	 * @param poisonFlag boolean, true, then augment 
+	 *    'nonKeepers' with their neighbors 
 	 * @return PackDCEL
 	 */
-	public static PackDCEL redDCELbuilder(PackData p,int[][] bouquet, NodeLink nonKeepers,boolean poisonFlag) {
+	public static PackDCEL redDCELbuilder(PackData p,
+			int[][] bouquet, NodeLink nonKeepers,boolean poisonFlag) {
 		boolean debug=false;
 		PackDCEL pdcel=new PackDCEL(); 
 		pdcel.p=p;
@@ -219,7 +221,7 @@ public class CombDCEL {
 //				DCELdebug.show5edges(ne);
 //		}
 			
-		// =============== early bookkeeping re 'alpha' and keepers =============== 
+		//============ early bookkeeping re 'alpha' and keepers ========== 
 
 		// Build 'keepV[]' to classify vertices: 
 		int[] keepV = new int[pdcel.vertCount + 1];
@@ -249,7 +251,7 @@ public class CombDCEL {
 			if (isBouqBdry(bouquet,k)) 
 				keepV[k]=0;
 		
-		// Identify appropriate 'alpha'; * keeper, * interior.
+		// Identify appropriate 'alpha'; a keeper interior.
 		//    prefer interior keeper petals as well.
 		int alph=pdcel.alpha.origin.vertIndx;
 		if (keepV[alph]==0) { // oops, not a keeper
@@ -260,7 +262,8 @@ public class CombDCEL {
 				if (keepV[v]!=0 && !isBouqBdry(bouquet,v)) {
 					for (int j=0;(j<flower.length && !toss);j++) {
 						int w=flower[j];
-						if (isBouqBdry(bouquet,w) || keepV[w]==0) // bdry or not a keeper? 
+						// bdry or not a keeper? 
+						if (isBouqBdry(bouquet,w) || keepV[w]==0) 
 							toss=true;
 					}
 				}
@@ -354,8 +357,7 @@ public class CombDCEL {
 		he.origin.halfedge=he; // point firstV at this first spoke 
 		orderEdges.add(he);
 		
-		// start of 'redChain'; when new 'RedHEdge' is added, create
-		//   'chokeData' object for it's origin vertex.
+		// start of 'redChain'
 		pdcel.redChain=new RedHEdge(he.next);
 		he.twin.origin.halfedge=he.next;
 		RedHEdge rtrace=pdcel.redChain;
@@ -422,8 +424,6 @@ public class CombDCEL {
 				// processing the current red edge. 
 				// working on v; u,v,w successive verts cclw along redchain 
 				int v = currRed.myEdge.origin.vertIndx;
-				int u = currRed.prevRed.myEdge.origin.vertIndx;
-				int w = currRed.myEdge.twin.origin.vertIndx;
 				
 				if (debug) { // debug=true;
 					DCELdebug.drawRedChain(pdcel.p,currRed);
@@ -436,13 +436,11 @@ public class CombDCEL {
 					HalfEdge downspoke = currRed.myEdge;
 
 					// doubling back on itself? So u==w.
-					//  Three possibilites:
-					//  (1) degeneracy to sphere: handled above
-					//  (2) v is keeper: enclose it
-					//  (3) v is not a keeper: no change, just mark 'util' for later
+					// degeneracy to sphere is handled above;
+					// If v is keeper: enclose it
 					if (upspoke == downspoke) {
 						upspoke.origin.halfedge=downspoke; // safety 
-						
+					
 						// enclose v if a keeper (hence interior)
 						if (keepV[v]!=0) { // enclose this vertex
 							currRed.prevRed.prevRed.nextRed = currRed.nextRed;
@@ -454,13 +452,9 @@ public class CombDCEL {
 							}
 
 							doneV[v] = true;
-							currRed.nextRed.myEdge.origin.halfedge = currRed.nextRed.myEdge;
+							currRed.nextRed.myEdge.origin.halfedge = 
+									currRed.nextRed.myEdge;
 							hit = true;
-						}
-						// mark to avoid pasting later
-						else {
-							currRed.util=1;
-							currRed.prevRed.util=1;
 						}
 					}
 					
@@ -512,7 +506,7 @@ public class CombDCEL {
 							doneV[v]=true;
 						}
 						// else we try to add just one cclw face about v;
-						//    check that it's eligible and that one or other end is keeper
+						//    check that it's eligible and that one of ends is keeper
 						else if (isMyEdge(pdcel.redChain,upspoke)==null &&
 								(redge=isMyEdge(pdcel.redChain,upspoke.next))==null && 
 								(keepV[v]!=0 || keepV[upspoke.twin.origin.vertIndx]!=0)) {
@@ -544,18 +538,89 @@ public class CombDCEL {
 		
 		// TODO: may want to reconfigure redChain to minimize the 
 		//   occurrence of 'blue' elements --- successive red edges
-		//   belonging to the same face.
+		//   belonging to the same face. This will cause tough changes
+		//   in 'layoutEdges' as well.
 		
-		// -------- finish dcel structure, red pastings, find sides -----------
-
-		// Count how many times each redchain vert is visited
-		int[] redverts=new int[vertcount+1];
+		// ============ identify red twin'ing ===============
+		// If edge has normal twins and both ends are keepers, then
+		//   make them red twins as well. Also mark all redChain 
+		//   vertices as done. The 'redChain' is not changed.
 		RedHEdge nxtre=pdcel.redChain;
 		do {
-			int v=nxtre.myEdge.origin.vertIndx;
-			redverts[v]++;
+			RedHEdge crossRed=isMyEdge(pdcel.redChain,nxtre.myEdge.twin);
+			if (crossRed!=null && keepV[nxtre.myEdge.origin.vertIndx]!=0 &&
+					keepV[crossRed.myEdge.origin.vertIndx]!=0) {
+				nxtre.twinRed=crossRed;
+				crossRed.twinRed=nxtre;
+			}
+			doneV[nxtre.myEdge.origin.vertIndx]=true;
 			nxtre=nxtre.nextRed;
 		} while (nxtre!=pdcel.redChain);
+
+		// ============ create, then swap out 'RedVertex's ============
+		RedVertex[] redV=new RedVertex[pdcel.vertCount+1];
+		rtrace=pdcel.redChain;
+		do {
+			int v=rtrace.myEdge.origin.vertIndx;
+			if (redV[v]==null) {
+				redV[v]=new RedVertex(v);
+				redV[v].halfedge=pdcel.vertices[v].halfedge;
+				int bnum=bouquet[v].length;
+				redV[v].num=bnum-1;
+				redV[v].redSpoke=new RedHEdge[bnum];
+				redV[v].inSpoke=new RedHEdge[bnum];
+				redV[v].tmpopen=!(bouquet[v][0]==bouquet[v][bnum-1]);
+				pdcel.vertices[v]=redV[v];
+			}
+		} while (rtrace!=pdcel.redChain);
+		
+		// swap out in 'edges.origin'
+		Iterator<HalfEdge> eit=pdcel.edges.iterator();
+		while (eit.hasNext()) {
+			HalfEdge ohe=eit.next();
+			Vertex origv=ohe.origin;
+			int v=origv.vertIndx;
+			if (redV[v]!=null) {
+				he.origin=redV[v];
+				if (origv.halfedge==ohe)
+					redV[v].halfedge=ohe;
+			}
+		}
+
+		// To process 'redVertex's, nee all 'redSpoke', 'inSpoke' hits 
+		rtrace=pdcel.redChain;
+		do {
+			int v=rtrace.myEdge.origin.vertIndx;
+			int w=rtrace.myEdge.twin.origin.vertIndx;
+			RedVertex rV=(RedVertex)pdcel.vertices[v];
+			RedVertex rW=(RedVertex)pdcel.vertices[w];
+			int j=-1;
+			for (int k=0;(k<=rV.num && j<0);k++) { 
+				if (bouquet[v][k]==w) {
+					j=k;
+					rV.redSpoke[j]=rtrace;
+				}
+				if (k==0 && !rV.tmpopen) {
+					rV.redSpoke[rV.num]=rtrace;
+				}
+			}
+			j=-1;
+			for (int k=0;(k<rW.num && j<0);k++) {
+				if (bouquet[w][k]==w) {
+					j=k;
+					rW.redSpoke[j]=rtrace;
+				}
+				if (k==0 && !rW.tmpopen) {
+					rW.redSpoke[rW.num]=rtrace;
+				}
+			}
+		} while (rtrace!=pdcel.redChain);
+		
+		// now process the new 'RedVertex's
+		for (int j=0;j<redV.length;j++)
+			redV[j].process(bouquet);
+
+/*		
 
 		// create 'ChokeData' to record outgoing/incoming 'RedHEdge's
 		ChokeData []chokeData=new ChokeData[vertcount+1];
@@ -590,12 +655,12 @@ public class CombDCEL {
 			DCELdebug.printRedChain(pdcel.redChain);
 		}
 		
-		nxtre=pdcel.redChain;
+		RedHEdge nxtre=pdcel.redChain;
 		do {
 			Vertex vert=nxtre.myEdge.origin;
 			int v=vert.vertIndx;
 
-			ChokeData cdata=chokeData[v];
+			RedVertex redV=(RedVertex)pdcel.vertices[v];
 				
 			// get flower for origin based on first emerging red spoke
 			// (Careful: we need the corresponding 'HalfEdge' versus 'RedHEdge'.)
@@ -632,14 +697,8 @@ public class CombDCEL {
 			}
 			nxtre=nxtre.nextRed;
 		} while (nxtre!=pdcel.redChain);
-		
-		// mark redChain vertices as done.
-		nxtre=pdcel.redChain;
-		do {
-			doneV[nxtre.myEdge.origin.vertIndx]=true;
-			nxtre=nxtre.nextRed;
-		} while (nxtre!=pdcel.redChain);
-		
+*/
+
 		// ========== Process redChain and bdry =================
 		// Several stages: 
 		//   (1) mark switchback red edges, those are across from a red edge,
@@ -656,7 +715,8 @@ public class CombDCEL {
 
 		// RedChain: ====================================================
 		// We use 'chokeData' to find free and paired red edges.
-		
+
+/*		
 		// Step (1): ----------- use 'util' to mark red edges not needing twins
 		nxtre=pdcel.redChain;
 		do { // set 'util's to 0
@@ -703,7 +763,7 @@ public class CombDCEL {
 				nxtre=nxtre.nextRed;
 			}  while (nxtre!=pdcel.redChain);
 		}
-					
+		
 		// Step (2): --------- survey verts to find remaining red matchup to twins	
 		nxtre=pdcel.redChain;
 		do {
@@ -725,8 +785,9 @@ public class CombDCEL {
 			}
 			nxtre=nxtre.nextRed;
 		} while (nxtre!=pdcel.redChain);
+*/
 
-		// Step 3: catalog side pairings, free sides, create ideal faces.
+		// ======== Catalog side pairings, free sides, create ideal faces.
 		pdcel.sideStarts=new ArrayList<RedHEdge>();
 		pdcel.bdryStarts=new ArrayList<RedHEdge>();
 		pdcel.idealFaces=new ArrayList<Face>();
@@ -734,56 +795,70 @@ public class CombDCEL {
 		nxtre=pdcel.redChain;
 		do {
 			// look for unpasted redChain edge, hence a free side.
-			//    For free edges, fix 'myEdge' next/prev to form a closed
-			//    linked chain about the boundary; this may cut out some 
-			//    original edges that are dead. 
 			if (nxtre.twinRed==null) {
 				nxtre.mobIndx=++sidecount; // index is non-zero
 				Face newface=new Face(); // new ideal face
+				pdcel.idealFaceCount++;
 				pdcel.idealFaces.add(newface);
-				nxtre.myEdge.twin.face=newface;
-				nxtre.myEdge.twin.face.edge=nxtre.myEdge.twin;  // point to normal twin of red edge
+				HalfEdge hold=nxtre.myEdge.twin;
+				hold.face=newface;
+				newface.edge=hold;  // point to normal twin of red edge
 				
 				// propagate free side upstream to find its first edge 
 				RedHEdge trace=nxtre.prevRed;
 				while (trace.twinRed==null && trace!=nxtre) {
 					trace.mobIndx=sidecount;
 					trace.myEdge.twin.face=newface;
+					
+					trace.myEdge.twin.prev=hold;
+					hold.next=trace.myEdge.twin;
+					hold=hold.next;
+					
 					trace=trace.prevRed;
 				}
 
-				// maybe simply connected?
+				// maybe surface is simply connected?
 				if (trace==nxtre) {
 					nxtre=pdcel.redChain;
+					nxtre.prevRed.myEdge.next=hold;
+					hold.prev=nxtre.prevRed.myEdge;
 					pdcel.sideStarts.add(nxtre);
 					newface.edge=nxtre.myEdge.twin;
-					break;
+					break; // brek out of 'do' loop
 				}
-				
-				// else have the start
+
+				// else we have the start: note in non-simply
+				//   connected cases, ideal faces always have more
+				//   than one free bdry arc.
 				RedHEdge freeStart=trace.nextRed;
 				pdcel.bdryStarts.add(freeStart);
 				pdcel.sideStarts.add(freeStart); // for completeness sake
 				newface.edge=freeStart.myEdge.twin;
 				
 				// now have to propagate downstream
+				hold=nxtre.myEdge.twin; // reset to follow downstream
 				trace=nxtre.nextRed;
 				while (trace.twinRed==null && trace!=nxtre) {
 					trace.mobIndx=sidecount;
 					trace.myEdge.twin.face=newface;
+					
+					trace.myEdge.twin.next=hold;
+					hold.prev=trace.myEdge.twin;
 					trace=trace.nextRed;
 				}
 
-				// Finally for this free edge, point 'origin.halfedge's
-				//    in backward direction (forward direction wrt ideal face).
-				//    Note: may be ambiguous because ideal faces may not be 
-				//    combinatorial polygons; some edges can be repeated in 
-				//    opposite directions (but are not pasted).
-				HalfEdge frtr=freeStart.myEdge.twin;
-				do {
-					frtr.twin.origin.halfedge=frtr.twin;
-					frtr=frtr.next;
-				} while (frtr!=freeStart.myEdge.twin);
+				// At end use 'RedVertex.bdryFan' to set next/prev
+				//   to continue around the ideal face as other bdry
+				//   arcs are encountered.
+				RedVertex rV=(RedVertex)pdcel.vertices[trace.myEdge.origin.vertIndx];
+				HalfEdge cclwhe=trace.myEdge.prev.twin;
+				RedHEdge[] fan=rV.myBdryFan(cclwhe,true);
+				fan[0].myEdge.twin.next=fan[1].myEdge;
+				fan[1].myEdge.prev=fan[0].myEdge.twin;
+				
+				if (debug) { // debug=true;
+					DCELdebug.faceVerts(pdcel,freeStart.myEdge.face);
+				}
 				
 				nxtre=trace;
 			}
@@ -819,20 +894,16 @@ public class CombDCEL {
 		} while (nxtre!=pdcel.redChain);
 
 		// Faces and Edges: ================================================
-		// 
+
 		// zero out 'edgeIndx's and create faces for every edge
-		Iterator<HalfEdge> eit=pdcel.edges.iterator();
-		while(eit.hasNext()) {
-			HalfEdge ne=eit.next();
+		heit=pdcel.edges.iterator();
+		while(heit.hasNext()) {
+			HalfEdge ne=heit.next();
 			ne.edgeIndx=0;
 			ne.face=new Face();
-			
-			if (debug && ne.origin.vertIndx==14 && ne.twin.origin.vertIndx==13) {
-				DCELdebug.show5edges(ne);
-			}
 		}
 		
-		// Using 'orderEdges':
+		// Using 'orderEdges': (note 'vertIndx's still have original values)
 		//    * index interior faces, 
 		//    * catalog and re-index edges
 		//    * set 'LayoutOrder', adding faces only if opposite vert not hit
@@ -883,8 +954,8 @@ public class CombDCEL {
 
 		debug=false;
 		// Vertices: ========================================
-		
-		// gather and re-index all done 'Vertex's
+
+		// gather and re-index all done 'Vertex's (some are 'RedVertex's)
 		ArrayList<Vertex> verts=new ArrayList<Vertex>();
 		pdcel.newOld=new VertexMap();
 		int tick=0;
@@ -905,7 +976,6 @@ public class CombDCEL {
 			pdcel.vertices[++tick]=vit.next();
 		}
 		
-		
 		// index ideal faces and their edges
 		rtrace=pdcel.redChain;
 		do {
@@ -913,7 +983,7 @@ public class CombDCEL {
 				HalfEdge ihe=rtrace.myEdge.twin;
 				Face iface=ihe.face;
 				if (iface.faceIndx==0) {
-					iface.faceIndx=-(++ftick); // not negative denoting ideal
+					iface.faceIndx=-(++ftick); // note negative denoting ideal
 				}
 				do {
 					if (ihe.edgeIndx==0) {
@@ -1016,7 +1086,7 @@ public class CombDCEL {
 	}
 
 	/**
-	 * set 'util' to 1 for face defined by this 'edge'
+	 * set 'util' to 1 for all edges around face defined by this 'edge'
 	 * @param edge HalfEdge
 	 */
 	public static void markFaceUtils(HalfEdge edge) {

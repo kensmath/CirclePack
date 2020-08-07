@@ -25,7 +25,13 @@ public class Vertex {
 
 	public Vertex() {
 		halfedge=null;
-		vertIndx=-1;
+		vertIndx=-0;
+		center=null;
+	}
+	
+	public Vertex(int v) {
+		halfedge=null;
+		vertIndx=v;
 		center=null;
 	}
 
@@ -46,7 +52,7 @@ public class Vertex {
 	}
 	
 	/**
-	 * return traditional flower of neighbor indices, closed is not bdry.
+	 * return traditional flower of neighbor indices, closed if not bdry.
 	 * Careful: due to some edges possibly being 'RedHEdges's, the normal
 	 * chasing edge method may loop, so we use indices to keep track.	
 	 * @return int[]
@@ -215,9 +221,8 @@ public class Vertex {
 	 * @return new Vertex
 	 */
 	public Vertex clone() {
-		Vertex nv=new Vertex();
+		Vertex nv=new Vertex(vertIndx);
 		nv.halfedge=halfedge;
-		nv.vertIndx=vertIndx;
 		nv.rad=rad;
 		nv.vertIndx=vertIndx;
 		nv.center=new Complex(center);

@@ -23,10 +23,31 @@ in the Java code itself.
 
 * spanning tree needs work for multiply connected cases.
 
-* should allow negative euclidean radii for reerse oriented circle and be able to
+* should allow negative euclidean radii for reverse oriented circle and be able to
   draw with fill on the outside.
   
 * Should rethink whole redchain business, perhaps reformulate using 'TriAspects'.
 
 * Compute side-pairing Mobius transformations in spherical case.
   Probably first set up parallel structure and debug it before throwing out current.
+  
+ 
+* ==================================  major =========================================
+*
+* Three major structural changes are needed: MCV, standalone, and DCEL 
+  How to do these? while keeping CirclePack running? Which first? Should I also 
+  consider java modules? Can I possibly make it backward compatible so existing
+  scripts work?
+  
+  August 2020:
+  + Start with DCEL transition (since I want to use that with Schwarzians).
+    * Link in usual PackData, e.g. KData, RData, 
+    * Keep changes simple --- modify things, then go back and rebuild the DCEL
+    * adjust routines to see if DCEL is available and increasingly try to use it.
+    
+    
+* Need some new conventions for 'flower' or 'bouquet' since in the DCEL structure
+  a vertex can be repeated in different 'bdryFan's. 
+  We might convert to "POLYGONS" instead of "FLOWERS" as CirclePack's main
+  organizing principle. Big change!
+    

@@ -121,7 +121,7 @@ public class DCELdebug {
 		int w=redge.myEdge.twin.origin.vertIndx;
 		CommandStrParser.jexecute(p,"disp -et9c195 "+v+" "+w);
 	}
-
+	
 	public static void printRedChain(RedHEdge redge) {
 		StringBuilder sb=new StringBuilder("vertices are:\n");
 		RedHEdge nxtre=redge;
@@ -134,12 +134,23 @@ public class DCELdebug {
 	}
 	
 	public static void faceVerts(PackDCEL pdcel,dcel.Face face) {
-		StringBuilder sb=new StringBuilder("vertices for face "+face.faceIndx+"\n");
+		StringBuilder sb=new StringBuilder("vertices for face: "+face.faceIndx+"\n");
 		HalfEdge he=face.edge;
+		sb.append(he.origin.vertIndx);
+		int safety=10;
 		do {
-			sb.append(" "+he.origin.vertIndx);
-			he=he.next;
-		} while (he!=face.edge);
+			int nbr=10;
+			do {sb.append(" --> "+he.origin.vertIndx);
+				he=he.next;
+				nbr--;
+			} while (he!=face.edge && nbr>0);
+			System.out.println(sb.toString());
+			sb=new StringBuilder();
+			safety--;
+		} while (he!=face.edge && safety>0);
+		if (safety>0)
+			sb.append("   ended.\n");
+
 		System.out.println(sb.toString());		
 	}
 	

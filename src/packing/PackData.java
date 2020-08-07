@@ -144,7 +144,7 @@ public class PackData{
     public int intrinsicGeom; // intrinsic geometry (due to combinatorics)
     public int sizeLimit;     // current max number of nodes without reallocating
     public int alpha;         // index of alpha node (origin)
-    public int beta;          // -- no longer used --
+    public int beta;          // nghb of alpha, <alpha,beta> is base edge
     public int gamma;         // index of node to be plotted on positive y-axis
     public int euler;   	  // Euler characteristic
     public int genus;         // genus of complex. Euler+#bdry=2-2g, g=(2-Euler-#bdy)/2 
@@ -2391,6 +2391,7 @@ public class PackData{
 		mainLink.add(v);
 		mainLink.add(w);
 		first_face=lastface=kData[alpha].faceFlower[nbr];
+		beta=kData[alpha].flower[nbr]; // <alpha,beta> is base edge
 		newfaces[lastface].indexFlag=face_index(lastface,alpha);
 		fflag[lastface]=true;
 		

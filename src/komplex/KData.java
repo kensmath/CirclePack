@@ -2,12 +2,16 @@ package komplex;
 
 import java.awt.Color;
 
-import panels.CPScreen;
 import allMains.CirclePack;
+import dcel.RedVertex;
+import panels.CPScreen;
 
 
 /**
- * Stucture for combinatoric info on packings.
+ * Stucture for combinatoric info on packings. 
+ * Being modified 8/2020 to accommodate DCEL structure; there can be
+ * problems with 'flower', e.g., when vert is in more than one bdry
+ * segment and may not have contiguous fan. 
  * @author kens
  *
  */
@@ -17,6 +21,8 @@ public class KData{
 						// Note: 'flower' has entries from 0 to num 
     public int []flower; // list of nodes in flower, positive orientation
      					  //last = first if flower is closed (node is interior) 
+    public RedVertex redFlag;  // DCEL: null unless this vertex is on the redChain
+    
     public int bdryFlag; // 1 for boundary nodes (last != first);else 0 
     public Color color;		 // Java Color class.
     public int mark;     // mark 

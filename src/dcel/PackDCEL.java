@@ -57,9 +57,10 @@ public class PackDCEL {
 	public int edgeCount;
 	public int faceCount;
 	public int intFaceCount;	// number of interior faces (larger face indices are ideal faces)
+	public int idealFaceCount;  // indexes are the largest and set to negative
 	public int euler;           // euler characteristic of surface
 	
-	public Vertex []vertices; // indexed from 1 
+	public Vertex []vertices; // indexed from 1; some being 'RedVertex's.
 	public ArrayList<HalfEdge> edges;
 	public ArrayList<Face> faces; // indexed from 1 (first entry 'null')
 	public ArrayList<Face> idealFaces; // "ideal" faces
