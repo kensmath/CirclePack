@@ -59,4 +59,8 @@ public class EdgeSimple {
 		return false;
 	}
 	
+	public String toString() {
+		return new String("["+this.v+","+this.w+"]");
+	}
+	
 }

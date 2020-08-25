@@ -5,6 +5,7 @@ import java.util.Iterator;
 
 import complex.Complex;
 import exceptions.CombException;
+import exceptions.DCELException;
 
 /** DCEL Vertex. The 'vertIndx' is typically the index of the
  * vertex in the associated 'PackData'; this is how we get 
@@ -19,6 +20,7 @@ public class Vertex {
 	
 	public HalfEdge halfedge;	// a halfedge pointing away from this vert
 	public int vertIndx;		// index from associated 'PackData'
+	public int bdryFlag;
 	// TODO: deciding on whether to keep data here or, as usual, in packData
 	public Complex center;		
 	public double rad;
@@ -52,69 +54,38 @@ public class Vertex {
 	}
 	
 	/**
-	 * return traditional flower of neighbor indices, closed if not bdry.
-	 * Careful: due to some edges possibly being 'RedHEdges's, the normal
-	 * chasing edge method may loop, so we use indices to keep track.	
+	 * Return normal cclw flower of nghb indices, closed if interior.
+	 * Get it by chasing spokes, which will close up whether bdry or
+	 * interior, so have to use 'bdryFlag'.
+	 * If this is a 'RedVertex', call 'getRedFlower'; it may be interior
+	 * or boundary. If not a 'RedVertex', it should be interior and we
+	 * get the flower in the usual way, starting with 'halfedge'.
 	 * @return int[]
 	 */
 	public int[] getFlower() {
 		ArrayList<Integer> vlist=new ArrayList<Integer>();
-		boolean bdry=false; // is this a bdry vertex?
-		boolean backfill=false; // set if we need to fill clw
-		
-		int firstV=halfedge.twin.origin.vertIndx;
-		vlist.add(firstV);
-		HalfEdge nxtedge=halfedge;
-
-		// common bdry case: first edge twin is a bdry edge. get rest cclw
-		if (nxtedge.twin.face==null || nxtedge.twin.face.faceIndx<0) {
-			bdry=true;
-			while (nxtedge.face!=null && nxtedge.face.faceIndx>=0) {
-				vlist.add(nxtedge.prev.origin.vertIndx);
-				nxtedge=nxtedge.prev.twin;
-			}
-		}
-		// first edge itself is bdry edge? Then just backfill
-		else if (nxtedge.face==null || nxtedge.face.faceIndx<0) {
-			bdry=true;
-			backfill=true;
-		}
-		// else add cclw until hitting bdry or returning to firstV
-		else {
-			int currV=nxtedge.prev.origin.vertIndx;
-			while (currV!=firstV && !bdry) {
-				vlist.add(currV);
-				nxtedge=nxtedge.prev.twin;
-				currV=nxtedge.prev.origin.vertIndx;
-				if (nxtedge.face==null || nxtedge.face.faceIndx<0) 
-					bdry=true;
-			}
-			if (currV==firstV) { // close up, interior vertex
-				backfill=false;
-				vlist.add(currV);
-			}
-			else
-				backfill=true;
-		}
-
-		// bdry vertex, rest of flower clw  
-		if (backfill) {
-			nxtedge=halfedge.twin.next;
-			int upV=nxtedge.twin.origin.vertIndx;
-			while(upV!=firstV && nxtedge.face!=null && nxtedge.face.faceIndx>=0) {
-				vlist.add(upV);
-				nxtedge=nxtedge.twin.next;
-				upV=nxtedge.twin.origin.vertIndx;
-			}
-		}			
+		HalfEdge he=halfedge;
+		int safety=1000;
+		do {
+			vlist.add(he.twin.origin.vertIndx);
+			he=he.prev.twin;
+			safety--;
+		} while (he!=halfedge && safety>0);
+		if (safety==0) 
+			throw new DCELException("triggered safety exit.");
+		if (bdryFlag==0)
+			vlist.add(halfedge.twin.origin.vertIndx); // close up
 
 		int[] flower=new int[vlist.size()];
-		for (int j=0;j<vlist.size();j++)
-			flower[j]=vlist.get(j);
+		Iterator<Integer> vit=vlist.iterator();
+		int tick=0;
+		while (vit.hasNext()) {
+			flower[tick++]=vit.next();
+		}
 		
 		return flower;
 	}
-
+		
 	/**
 	 * Get cclw ordered vector of 'HalfEdge's with this
 	 * vertex as origin, starting with 'halfedge'. Expect

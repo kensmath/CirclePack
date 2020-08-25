@@ -83,30 +83,29 @@ public class DataDCEL {
 		if (debug) 
 			DCELdebug.log_full(pdcel);
 		
-		// create kData
-		for (int v=1;v<=pdcel.vertCount;v++) { 
-
-			int[] flower=pdcel.vertices[v].getFlower();
-			int num=flower.length;
-			if (flower[0]!=flower[num-1])
-				p.kData[v].bdryFlag=1;
+		// create kData/rData
+		for (int v=1;v<=pdcel.vertCount;v++) {
+//			System.out.println("k/rData got to v "+v);
+			Vertex vtx=pdcel.vertices[v];
+			int[] flower=vtx.getFlower();
+			int num=flower.length-1;
+			p.kData[v].bdryFlag=0;
+			if (vtx instanceof RedVertex)
+				p.kData[v].bdryFlag=((RedVertex)vtx).bdryFlag;
 			p.kData[v].flower=flower;
-			p.kData[v].num=num-1;
-			p.rData[v]=new RData();
+			p.kData[v].num=num;
+			p.rData[v]=new RData(); // duplicated data below
 		}
 		
 		// create traditional 'PackData.faces' entries
 		p.faces=new komplex.Face[pdcel.faceCount+1];
 		Iterator<Face> fit=pdcel.faces.iterator();
+		fit.next(); // toss the null first entry
 		while(fit.hasNext()) {
-			komplex.Face fce=new komplex.Face(3);
 			Face face=fit.next();
-			HalfEdge he=face.edge;
-			int[] vert=new int[3];
-			vert[0]=he.origin.vertIndx; // start with first end of 'edge'
-			vert[1]=he.next.origin.vertIndx;
-			vert[2]=he.next.next.origin.vertIndx;
-			fce.vert=vert;
+			int[] vts=face.getVerts();
+			komplex.Face fce=new komplex.Face(vts.length);
+			fce.vert=vts;
 			fce.indexFlag=0;
 			fce.plotFlag=1;
 			p.faces[face.faceIndx]=fce;
@@ -158,6 +157,8 @@ public class DataDCEL {
 		p.status=true;
         pdcel.p=p;				
 		p.packDCEL=pdcel;
+		p.alpha=pdcel.alpha.origin.vertIndx;
+		p.beta=pdcel.alpha.twin.origin.vertIndx;
 		return p;
 	}
 	

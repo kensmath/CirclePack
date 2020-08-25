@@ -9,15 +9,16 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
+import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import input.SetBuilderParser;
-import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.KData;
 import komplex.RedEdge;
+import komplex.SideDescription;
 import packQuality.QualMeasures;
 import packing.PackData;
 import panels.PathManager;
@@ -393,11 +394,14 @@ public class NodeLink extends LinkedList<Integer> {
 						int strt=packData.bdryStarts[i];
 						add(strt);
 						count++;
-						next=kdata[strt].flower[0];
-						while (next!=strt) {
+						next=kdata[strt].flower[0]; 
+						while (next!=strt && count<10000) {
 							add(next);
 							count++;
 							next=kdata[next].flower[0];
+						}
+						if (count==10000) {
+							throw new CombException("looping in 'NodeLink' boundary call");
 						}
 					}
 				}

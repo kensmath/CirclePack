@@ -8,8 +8,11 @@ import java.util.Iterator;
 import dcel.Face;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
+import dcel.PreRedVertex;
 import dcel.RedHEdge;
+import dcel.RedVertex;
 import dcel.Vertex;
+import exceptions.DCELException;
 import input.CPFileManager;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
@@ -133,25 +136,186 @@ public class DCELdebug {
 		System.out.println(sb.toString());
 	}
 	
-	public static void faceVerts(PackDCEL pdcel,dcel.Face face) {
-		StringBuilder sb=new StringBuilder("vertices for face: "+face.faceIndx+"\n");
-		HalfEdge he=face.edge;
+	// ================ check consistency of twin origins ==================
+	
+	public static void EdgeOriginProblem(ArrayList<HalfEdge> edges) {
+		Iterator<HalfEdge> eit=edges.iterator();
+		System.out.println("Comparing red edge origin' to red edge prev.twin origin:");
+		while (eit.hasNext()) {
+			EdgeSimple es=OPrevTwinO(eit.next());
+			if (es.v!=es.w)
+				System.out.println(" !! "+es.toString());
+				System.out.println("  "+es.toString());
+		}
+	}
+	
+	public static void RedOriginProblem(RedHEdge redge) {
+		RedHEdge re=redge;
+		System.out.println("Comparing red edge origin' to red edge prev.twin origin:");
+		int safety=100;
+		do {
+			EdgeSimple es=OPrevTwinO(re.myEdge);
+			System.out.println("   "+es.toString());
+			re=re.nextRed;
+			safety--;
+		} while (re!=redge && safety>0);
+		if (safety==0) {
+			throw new DCELException("Kaboom on redchain");
+		}
+	}
+
+	/**
+	 * Find origin of edge and edge.prev.twin (clw spoke); 
+	 * should be same.
+	 * @param edge
+	 * @return EdgeSimple, or null
+	 */
+	public static EdgeSimple OPrevTwinO(HalfEdge edge) {
+		if (edge==null || edge.twin==null) {
+			System.err.println(" edge (or twin) is null, vert ");
+			return null;
+		}
+		int v=edge.origin.vertIndx;
+		int w=edge.prev.twin.origin.vertIndx;
+		if (v!=w) {
+			System.err.println("origin inconsistency: my vert = "+v+" and prev.twin vert ="+w);
+		}
+		return new EdgeSimple(v,w);
+	}
+			
+
+// ================= plot face based on edge 
+	public static void tri_of_edge(PackDCEL pdcel,int v,int w) {
+		Iterator<HalfEdge> eit=pdcel.edges.iterator();
+		while (eit.hasNext()) {
+			HalfEdge he=eit.next();
+			if (Math.abs(he.origin.vertIndx)==v && Math.abs(he.twin.origin.vertIndx)==w)
+				triVerts(he);
+		}
+	}
+
+	public static void triVerts(HalfEdge edge) {
+		StringBuilder sb=new StringBuilder("vertices for face of edge <"+edge.origin.vertIndx+" "
+				+edge.twin.origin.vertIndx+">\n");
+		sb.append(triVertString(edge));
+		System.out.println(sb.toString());
+	}
+	
+	/**
+	 * List next vertices up until closure, limit of 5
+	 * @param edge
+	 * @return
+	 */
+	public static String triVertString(HalfEdge edge) {
+		HalfEdge nxte=edge;
+		StringBuilder sb=new StringBuilder(" "+nxte.origin.vertIndx+" --> ");
+		int count=5;
+		do {
+			if (nxte.next==null) {
+				System.err.println("edge "+nxte.toString()+" 'next' is null.");
+				return sb.toString();
+			}
+			nxte=nxte.next;
+			sb.append(nxte.origin.vertIndx+" --> ");
+			count--;
+		} while (nxte!=edge && count>0);
+		return sb.toString();
+	}
+	
+	public static int vertFaces(Vertex V) {
+		StringBuilder sb=new StringBuilder("Vertex "+V.vertIndx+" successive faces:\n");
+		int safety=12;
+		HalfEdge edge=V.halfedge;
+		do {
+			sb.append("    next face: "+triVertString(edge)+"\n");
+			edge=edge.prev.twin;
+			safety--;
+		} while (edge!=V.halfedge && safety>0);
+		System.out.println(sb.toString());
+		return 12-safety;
+	}
+	
+	/** 
+	 * list edges forming all the faces at 'redV'
+	 * @param redV RedVertex
+	 * @return int, count
+	 */
+	public static int redVertFaces(PreRedVertex redV) {
+		RedHEdge firstRE=redV.redSpoke[0];
+		if (firstRE==null) {
+			System.err.println("redV = "+redV.vertIndx+": problem with 'spokes' or 'redSpoke'");
+			return 0;
+		}
+		StringBuilder sb=new StringBuilder("RedVertex "+redV.vertIndx+" successive faces:\n");
+		int safety=12;
+		HalfEdge edge=firstRE.myEdge;
+		do {
+			sb.append("    next face: "+triVertString(edge)+"\n");
+			edge=edge.prev.twin;
+			safety--;
+		} while (edge!=firstRE.myEdge && safety>0);
+		System.out.println(sb.toString());
+		return 12-safety;
+	}
+		
+	public static int spokeFaces(RedVertex redV) {
+		if (redV.spokes==null)
+			return 0;
+		StringBuilder sb=new StringBuilder("RedVertex "+redV.vertIndx+":\n");
+		int n=redV.spokes.length;
+		for (int j=0;j<n;j++) {
+			sb.append("  spoke "+j+": "+triVertString(redV.spokes[j])+"\n");
+		}
+		System.out.println(sb.toString());
+		return n;
+	}
+	
+	public static void faceVerts(HalfEdge edge) {
+		StringBuilder sb=new StringBuilder("follow 12 edges from <"+edge.origin.vertIndx+","+
+				edge.twin.origin.vertIndx+">, face "+edge.face.faceIndx+"\n");
+		HalfEdge he=edge;
 		sb.append(he.origin.vertIndx);
-		int safety=10;
+		int safety=12;
 		do {
 			int nbr=10;
 			do {sb.append(" --> "+he.origin.vertIndx);
 				he=he.next;
 				nbr--;
-			} while (he!=face.edge && nbr>0);
+			} while (he!=edge && nbr>0);
 			System.out.println(sb.toString());
 			sb=new StringBuilder();
 			safety--;
-		} while (he!=face.edge && safety>0);
+		} while (he!=edge && safety>0);
 		if (safety>0)
 			sb.append("   ended.\n");
 
 		System.out.println(sb.toString());		
+	}
+	
+	/**
+	 * print the edge ends around the redChain using 'myEdge' and its twin
+	 * @param redge RedHEdge
+	 */
+	public static void redChainEnds(RedHEdge redge) {
+		int safety=1000;
+		System.out.println("Here are ends of 'redChain' edges: ");
+		RedHEdge nxtre=redge;
+		do {
+			if (nxtre.twinRed!=null) {
+				System.out.println("   <"+nxtre.myEdge.origin.vertIndx+
+						","+nxtre.myEdge.twin.origin.vertIndx+">;  "+
+						"twinRed <"+nxtre.twinRed.myEdge.origin.vertIndx+
+						","+nxtre.twinRed.myEdge.twin.origin.vertIndx+">");
+			}
+			else 
+				System.out.println("   <"+nxtre.myEdge.origin.vertIndx+
+						","+nxtre.myEdge.twin.origin.vertIndx+">");
+			nxtre=nxtre.nextRed;
+			safety--;
+		} while (nxtre!=redge && safety>0);
+		if (safety==0) {
+			System.err.println("redChain closure problem");
+		}
 	}
 	
 	public static void halfedgeends(PackDCEL pdcel,dcel.HalfEdge edge) {
