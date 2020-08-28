@@ -11,7 +11,7 @@ import exceptions.CombException;
  * persistent data but may be changed, e.g., when 'alpha'
  * is reset. Typically, the 'edge' is chosen based on layout
  * order: its vertices are assumed in place, next vertex 
- * around is computed based on these. 'faceIndx' does not
+ * around is computed based on these. 'faceIndx' may not
  * correspond to face index in 'PackData'.
  * 
  * @author kstephe2

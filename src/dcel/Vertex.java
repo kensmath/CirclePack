@@ -6,8 +6,10 @@ import java.util.Iterator;
 import complex.Complex;
 import exceptions.CombException;
 import exceptions.DCELException;
+import geometry.CircleSimple;
 
-/** DCEL Vertex. The 'vertIndx' is typically the index of the
+/** 
+ * DCEL Vertex. The 'vertIndx' is typically the index of the
  * vertex in the associated 'PackData'; this is how we get 
  * concrete geometric info, e.g., circle centers. 
  * If this is a boundary vertex, then its halfedge should point 
@@ -22,19 +24,20 @@ public class Vertex {
 	public int vertIndx;		// index from associated 'PackData'
 	public int bdryFlag;
 	// TODO: deciding on whether to keep data here or, as usual, in packData
-	public Complex center;		
-	public double rad;
+	Complex center;		
+	double rad;
 
 	public Vertex() {
 		halfedge=null;
 		vertIndx=-0;
-		center=null;
+		center=new Complex(0.0);
+		rad=.1;
 	}
 	
 	public Vertex(int v) {
 		halfedge=null;
 		vertIndx=v;
-		center=null;
+		center=new Complex(0.0); 
 	}
 
 	/**
@@ -185,6 +188,26 @@ public class Vertex {
 	 */
 	public int getOpposite() {
 		return halfedge.next.twin.origin.vertIndx;
+	}
+	
+	public void setCenter(Complex z) {
+		center=new Complex(z);
+	}
+	
+	public Complex getCenter() {
+		return new Complex(center);
+	}
+	
+	public void setRadius(double r) {
+		rad=r;
+	}
+	
+	public double getRadius() {
+		return rad;
+	}
+	
+	public CircleSimple getData() {
+		return new CircleSimple(getCenter(),getRadius(),1);
 	}
 	
 	/**

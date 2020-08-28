@@ -746,7 +746,7 @@ public class LayoutBugs {
 	public static int log_DCEL_faces(PackDCEL dcel) {
 		  int count=0;
 
-		  if (dcel==null || dcel.faces==null || dcel.faces.size()==0)
+		  if (dcel==null || dcel.tmpFaceList==null || dcel.tmpFaceList.size()==0)
 			  return -1;
 		  
 		  // open file
@@ -755,7 +755,7 @@ public class LayoutBugs {
  
 		  try {
 			  dbw.write("Dcel faces in order of 'dcel.faces' vector.\n");;
-			  Iterator<dcel.Face> flst=dcel.faces.iterator();
+			  Iterator<dcel.Face> flst=dcel.tmpFaceList.iterator();
 			  while (flst.hasNext()) {
 				  dcel.Face face=flst.next();
 				  int[] verts=face.getVerts();
@@ -767,7 +767,7 @@ public class LayoutBugs {
 				  count++;
 			  }
 			  dbw.write("\n\nDecel ideal faces in order of 'dcel.idealFaces' vector.\n");
-			  flst=dcel.idealFaces.iterator();
+			  flst=dcel.tmpIdeals.iterator();
 			  while (flst.hasNext()) {
 				  dcel.Face face=flst.next();
 				  int[] verts=face.getVerts();

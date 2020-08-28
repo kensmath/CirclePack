@@ -5811,11 +5811,15 @@ public class CommandStrParser {
 					return 1;
 				}
 				
-				if (str.contains("red")) {
+				else if (str.contains("layout")) {
+					return packData.packDCEL.DCELCompCenters();
+				}
+				
+				else if (str.contains("red")) {
 					DCELdebug.drawRedChain(packData, packData.packDCEL.redChain);
 				}
 
-				if (str.contains("dcel")) {
+				else if (str.contains("dcel")) {
 					packData.packDCEL = new PackDCEL(packData);
 					if (packData.packDCEL == null || packData.packDCEL.vertCount != packData.nodeCount)
 						throw new CombException("failed to create packDCEL");
@@ -5892,7 +5896,7 @@ public class CommandStrParser {
 				else if (str.contains("layout")) {
 					if (packData.packDCEL==null)
 						return 0;
-					return packData.packDCEL.dcelCompCenters(packData.packDCEL.LayoutOrder);
+					return packData.packDCEL.dcelCompCenters(packData.packDCEL.tmpLayout);
 				} 
 				else if (str.contains("syncF")) { // sync p.faces to packDCEL.faces
 					if (packData.packDCEL==null)

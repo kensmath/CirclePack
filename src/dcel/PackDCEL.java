@@ -7,10 +7,13 @@ import java.util.Iterator;
 
 import allMains.CirclePack;
 import complex.Complex;
+import deBugging.DCELdebug;
 import exceptions.CombException;
+import exceptions.DCELException;
 import exceptions.DataException;
 import exceptions.InOutException;
 import geometry.CircleSimple;
+import geometry.CommonMath;
 import geometry.EuclMath;
 import input.CPFileManager;
 import komplex.EdgeSimple;
@@ -18,6 +21,7 @@ import komplex.KData;
 import komplex.Triangulation;
 import listManip.EdgeLink;
 import listManip.FaceLink;
+import listManip.GraphLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
@@ -60,11 +64,23 @@ public class PackDCEL {
 	public int idealFaceCount;  // indexes are the largest and set to negative
 	public int euler;           // euler characteristic of surface
 	
-	public Vertex []vertices; // indexed from 1; some being 'RedVertex's.
-	public ArrayList<HalfEdge> edges;
-	public ArrayList<Face> faces; // indexed from 1 (first entry 'null')
-	public ArrayList<Face> idealFaces; // "ideal" faces
-	public ArrayList<Face> LayoutOrder; // order for computing centers
+	public Vertex[] vertices; // indexed from 1; some being 'RedVertex's.
+	public HalfEdge[] edges;  // indexed from 1; some have pointers to 'RedHEdge's
+	public Face[] faces;      // indexed from 1
+	public Face[] idealFaces; // indexed from 1 (but 'faceIndx' is the negative of the index)
+	// note edges and faces are subject to change with new layout
+	
+	// temporary data structures used during processing
+	public ArrayList<HalfEdge> tmpEdges; //
+	public ArrayList<Face> tmpFaceList; // intended to be temporary (first entry 'null')
+	public ArrayList<Face> tmpIdeals; // intended to be temporary 
+	public ArrayList<Face> tmpLayout; // order of faces responsible for new vertices
+	public ArrayList<Face> tmpfullLayout; // order all faces are encountered
+
+	// final layout information in 'Graphlink's
+	public GraphLink faceOrder; // order for laying out all 
+	public GraphLink computeOrder;  // sub order for computing centers/radii
+	
 	public VertexMap newOld; // NEEDED FOR CIRCLEPACK
 	public RedHEdge redChain; // doubly-linked, cclw edges about a fundamental region
 	public ArrayList<RedHEdge> bdryStarts; // red edges at start of a free (unpasted) side
@@ -77,9 +93,18 @@ public class PackDCEL {
 		p=null;
 		vertCount=0;
 		vertices=null;
-		edges=null;
-		faces=null;
-		idealFaces=null;
+		
+		// tmp stuff
+		tmpEdges=null;
+		tmpFaceList=null;
+		tmpIdeals=null;
+		tmpLayout=null;
+		tmpfullLayout=null;
+
+		// things to fill at end of dcel construction
+		faceOrder=null;
+		computeOrder=null;
+
 		newOld=null;
 		redChain=null;
 		debug=false;
@@ -97,7 +122,7 @@ public class PackDCEL {
 		euler=CombDCEL.createVE(this,bouquet,0); 
 		alpha=chooseAlpha(null);
 		try {
-			LayoutOrder=simpleLayout();
+			tmpLayout=simpleLayout();
 		} catch (Exception ex) {
 			CirclePack.cpb.msg("LayoutOrder failed: this may not be an error (e.g. laying out dual)."
 					+" euler char is "+euler);
@@ -117,7 +142,7 @@ public class PackDCEL {
 			bouquet[v]=p.kData[v].flower;
 		euler=CombDCEL.createVE(this,bouquet,0); 
 		alpha=chooseAlpha(null);
-		LayoutOrder=simpleLayout();
+		tmpLayout=simpleLayout();
 	}
 	
 	/** 
@@ -204,9 +229,9 @@ public class PackDCEL {
 		}
 		
 		// toss old 'faces' away
-		faces=new ArrayList<Face>();
-		faces.add(null); // index from 1, first entry 'null'
-		idealFaces=new ArrayList<Face>();
+		tmpFaceList=new ArrayList<Face>();
+		tmpFaceList.add(null); // index from 1, first entry 'null'
+		tmpIdeals=new ArrayList<Face>();
 		
 		// start with 'alpha'
 		edges.remove(alpha);
@@ -242,12 +267,12 @@ public class PackDCEL {
 					// ideal face? (reset indx later)
 					if (bdryedges.contains(he)) { 
 						newFace.faceIndx=-(++idealIndx);
-						idealFaces.add(newFace);
+						tmpIdeals.add(newFace);
 					}
 					// else, regular face
 					else {
 						newFace.faceIndx=++faceCount;
-						faces.add(newFace);
+						tmpFaceList.add(newFace);
 					}
 					
 					// point edges to it
@@ -281,11 +306,11 @@ public class PackDCEL {
 		// put ideal faces at the end of the list, giving them negative indices
 		intFaceCount=faceCount; // now have all the interiors
 		if (idealIndx>0) { // any ideal faces?
-			Iterator<Face> ifit=idealFaces.iterator();
+			Iterator<Face> ifit=tmpIdeals.iterator();
 			while (ifit.hasNext()) {
 				Face idealface=ifit.next();
 				idealface.faceIndx=-faceCount+idealface.faceIndx; // convert tmp index, make negative
-				faces.add(idealface);
+				tmpFaceList.add(idealface);
 			}
 			faceCount +=idealIndx; // 'faceCount' counts both regular and ideal faces
 		}
@@ -344,7 +369,7 @@ public class PackDCEL {
 						HalfEdge he=fflower.get((j+k)%n);
 						
 						// should he.face be used in layout? 
-						if (!idealFaces.contains(he.face) && 
+						if (!tmpIdeals.contains(he.face) && 
 								vhits[he.twin.origin.vertIndx]!=0 &&
 								vhits[he.next.twin.origin.vertIndx]==0) {
 							// touched new vert
@@ -367,7 +392,7 @@ public class PackDCEL {
 						HalfEdge he=fflower.get((k-j+n)%n).twin;
 						
 						// should he.face be used in layout? 
-						if (!idealFaces.contains(he.face) && 
+						if (!tmpIdeals.contains(he.face) && 
 								vhits[he.origin.vertIndx]!=0 &&
 								vhits[he.next.twin.origin.vertIndx]==0) {
 							// touched new vert
@@ -406,13 +431,87 @@ public class PackDCEL {
 	public HalfEdge chooseAlpha(HalfEdge e) {
 		if (e!=null && vertIsBdry(e.origin)==null)
 			return e;
-		Iterator<HalfEdge> eit=edges.iterator();
+		Iterator<HalfEdge> eit=tmpEdges.iterator();
 		while (eit.hasNext()) {
 			HalfEdge he=eit.next();
 			if (vertIsBdry(he.origin)==null)
 				return he;
 		}
 		return null;
+	}
+	
+	/**
+	 * Place the face associated with 'edge', with 'edge.origin' at 
+	 * the origin, and 'edge.next.origin' on the positive real axis. 
+	 * @param edge HalfEdge
+	 * @return CircleSimple
+	 */
+	public CircleSimple placeFirstFace(HalfEdge edge) {
+		double r0=getVertRadius(edge);
+		double r1=getVertRadius(edge.next);
+		setVertCenter(edge,new Complex(0.0));
+		double invd=getInvDist(edge);
+		double dist=CommonMath.inv_dist_edge_length(r0,r1,invd,p.hes);
+		if (p.hes>0)
+			setVertCenter(edge.next,new Complex(0.0,dist));
+		else 
+			setVertCenter(edge.next,new Complex(dist,0.0));
+		CircleSimple cS=computeFaceCenter(edge);
+		setVertCenter(edge.next.next,cS.center);
+		return cS;
+	}
+	
+	/**
+	 * Compute the center of third vertex of the face for the
+	 * given 'edge'. Use radii stored in 'Vertex's of the face 
+	 * and the centers of the ends of 'edge' to compute the 
+	 * center of the third vertex. 
+	 * @param edge HalfEdge
+	 * @return CircleSimple
+	 */
+	public CircleSimple computeFaceCenter(HalfEdge edge) {
+		CircleSimple c0=getVertData(edge);
+		CircleSimple c1=getVertData(edge.next);
+		CircleSimple c2=getVertData(edge.next.next);
+		double ov0=getInvDist(edge);
+		double ov1=getInvDist(edge.next);
+		double ov2=getInvDist(edge.next.next);
+		CircleSimple sC=CommonMath.comp_any_center(c0.center,
+			c1.center,c0.rad,c1.rad,c2.rad,ov0,ov1,ov2,p.hes);
+		return sC;
+	}
+	
+	/**
+	 * Use 'computeOrder' to compute circle centers, laying base face
+	 * first, then the rest. Note that some circles get laid down more
+	 * than once, so last position is what is stored in 'PackData'.
+	 * @return count
+	 */
+	public int DCELCompCenters() {
+		placeFirstFace(alpha);
+		Iterator<EdgeSimple> esit=computeOrder.iterator();
+		esit.next(); // first already laid down
+		int count=1;
+		boolean debug=false;
+		while (esit.hasNext()) {
+			EdgeSimple es=esit.next();
+			HalfEdge he=faces[es.w].edge;
+			CircleSimple cs=computeFaceCenter(he);
+			setVertCenter(he.next.next,cs.center);
+			count++;
+			
+			if (debug) { // debug=true;  debug=false;
+				System.out.println("face "+es.w+" with vertex v2 "+
+					he.next.next.origin.vertIndx+" computes center ("+cs.center+")");
+				System.out.println("   v0 "+
+					he.origin.vertIndx+" computes center ("+he.origin.getCenter()+")");
+				System.out.println("   v1 "+
+					he.next.origin.vertIndx+" computes center ("+he.next.origin.getCenter()+")");
+				DCELdebug.drawEdgeFace(p,es);
+			}
+			
+		}
+		return count;
 	}
 		
 	/**
@@ -485,12 +584,12 @@ public class PackDCEL {
 		ArrayList<Face> arrayf=new ArrayList<Face>();
 		if (facelink==null) {
 			for (int j=1;j<=intFaceCount;j++)
-				arrayf.add(faces.get(j)); // get face
+				arrayf.add(tmpFaceList.get(j)); // get face
 		}
 		else {
 			Iterator<Integer> flst=facelink.iterator();
 			while (flst.hasNext()) {
-				arrayf.add(faces.get(flst.next())); // get face of that index
+				arrayf.add(tmpFaceList.get(flst.next())); // get face of that index
 			}
 		}
 		return addBaryCenters(arrayf);
@@ -534,13 +633,13 @@ public class PackDCEL {
 					he.twin=new HalfEdge(nextHE.origin);
 					he.twin.edgeIndx=++edgeCount;
 					he.twin.twin=he;
-					edges.add(he); // add both to parent array
-					edges.add(he.twin);
+					tmpEdges.add(he); // add both to parent array
+					tmpEdges.add(he.twin);
 				}	
 				
 				// set 'edge' null to avoid reuse
 				face.edge=null;
-				idealFaces.remove(face); // a bdry face becomes interior
+				tmpIdeals.remove(face); // a bdry face becomes interior
 				
 				// fix up 'newV'
 				count++;
@@ -582,7 +681,7 @@ public class PackDCEL {
 		vertCount=tick;
 		
 		// reindex all the faces
-		indexFaces(edges,getBdryEdges());
+		indexFaces(tmpEdges,getBdryEdges());
 		return count;
 	}
 
@@ -604,7 +703,7 @@ public class PackDCEL {
 		while (eit.hasNext()) {
 			EdgeSimple edge=eit.next();
 			HalfEdge he=null;
-			if ((he=findEdge(edge.v,edge.w))!=null)
+			if ((he=findHalfEdge(edge.v,edge.w))!=null)
 				flipthese.add(he);
 		}
 		return flipEdges(flipthese);
@@ -720,7 +819,7 @@ public class PackDCEL {
 				Iterator<Face> fit=myfaceflower.iterator();
 				while (fit.hasNext()) {
 					Face face=fit.next();
-					if (!idealFaces.contains(face)) // omit ideal faces
+					if (!tmpIdeals.contains(face)) // omit ideal faces
 						arrayF.add(face);
 				}
 				ArrayList<HalfEdge> eflower=vert.getEdgeFlower();
@@ -757,7 +856,7 @@ public class PackDCEL {
 		heit=arrayBdry.iterator();
 		while (heit.hasNext()) {
 			HalfEdge he=heit.next();
-			if (idealFaces.contains(he.twin.face))
+			if (tmpIdeals.contains(he.twin.face))
 				he=he.twin;
 			Face bface=he.face;
 			HalfEdge pre=he.prev;
@@ -777,13 +876,13 @@ public class PackDCEL {
 			he.twin.origin.halfedge=twpre.twin;
 			twpre.origin.halfedge=twpost.twin;
 			
-			edges.remove(he);
-			edges.remove(he.twin);
+			tmpEdges.remove(he);
+			tmpEdges.remove(he.twin);
 		}				
 
 		// we flip the interior ones
 		n=flipEdges(arrayInt);
-		indexFaces(edges,getBdryEdges());
+		indexFaces(tmpEdges,getBdryEdges());
 		
 		return n;
 	}
@@ -820,6 +919,10 @@ public class PackDCEL {
 	 */
 	public int cookie(ArrayList<Vertex> arrayV) {
 		
+		CirclePack.cpb.errMsg("OBE: should use 'RedDCELBuilder'");
+		return 0;
+		
+/*		
 		// We will need to identify new boundary edges later.
 		//   We will do this via the bdry vertices; prepare by ensuring
 		//   that for each original bdry edge, its 'origin' points to 
@@ -931,7 +1034,11 @@ public class PackDCEL {
 		// establish new faces, face indices, new 'bdryFaces'
 		return indexFaces(edges,newbdry);
 	}
-	
+*/
+
+	} // end of OBE 'cookie'
+
+
 	/**
 	 * Form bouquet of the combinatorial flowers, eg., for writing or
 	 * creating DCEL structure.
@@ -961,7 +1068,7 @@ public class PackDCEL {
 		PackData pdata=new PackData(null);
 		pdata.alloc_pack_space(vertCount+100,true);
 		// sphere? (note: 'faces' starts with 'null' entry)
-		if ((vertCount-edges.size()+(faces.size()-1))==2) 
+		if ((vertCount-tmpEdges.size()+(tmpFaceList.size()-1))==2) 
 			pdata.hes=1; 
 		else 
 			pdata.hes=0;
@@ -995,7 +1102,7 @@ public class PackDCEL {
 	 */
 	public ArrayList<HalfEdge> getBdryEdges() {
 		ArrayList<HalfEdge> bdryedges=new ArrayList<HalfEdge>();
-		Iterator<Face> bit=idealFaces.iterator();
+		Iterator<Face> bit=tmpIdeals.iterator();
 		while (bit.hasNext()) {
 			HalfEdge he=bit.next().edge;
 			HalfEdge nxtedge=he;
@@ -1008,6 +1115,42 @@ public class PackDCEL {
 	}
 	
 	/**
+	 * Given directed dual <f,g> between faces, return 
+	 * directed edge <v,w>; edge <v,w> is cclw to <f,g>. 
+	 * @param dedge EdgeSimple
+	 * @return EdgeSimple, null on failure
+	 */
+	public EdgeSimple dualEdge_to_Edge(EdgeSimple dedge) {
+		int f=dedge.v;
+		int g=dedge.w;
+		HalfEdge edge=faces[f].edge;
+		if (edge.twin.face.faceIndx==g) {
+			return new EdgeSimple(edge.origin.vertIndx,edge.twin.origin.vertIndx);
+		}
+		HalfEdge trace=edge;
+		do {
+			trace=edge.next;
+			if (trace.twin.origin.vertIndx==g) 
+				return new EdgeSimple(trace.origin.vertIndx,trace.twin.origin.vertIndx);
+			trace=trace.next;
+		} while (trace!=edge);
+		
+		// reaching here, found no dual
+		return null;
+	}
+	
+	/**
+	 * Given directed edge <v,w>, return directed edge <f,g> 
+	 * between faces; note that <f,g> is clw from <v,w>.
+	 * @param dedge EdgeSimple
+	 * @return EdgeSimple, null on failure
+	 */
+	public EdgeSimple edge_to_dualEdge(EdgeSimple dedge) {
+		HalfEdge edge=findHalfEdge(dedge);
+		return new EdgeSimple(edge.face.faceIndx,edge.twin.face.faceIndx);
+	}
+
+	/**
  	 * NEEDED FOR CIRCLEPACK
 	 * Dual graph store in 'EdgeLink'. This is linked list of 
 	 * 'EdgeSimple' objects, which are just pairs {f,g} of 
@@ -1017,7 +1160,7 @@ public class PackDCEL {
 	 */
 	public EdgeLink getDualEdges(boolean ideal) {
 		EdgeLink elink=new EdgeLink();
-		Iterator<Face> fit=faces.iterator();
+		Iterator<Face> fit=tmpFaceList.iterator();
 		fit.next();  // toss first 'null' entry
 		while(fit.hasNext()) {
 			Face f=fit.next();
@@ -1025,13 +1168,168 @@ public class PackDCEL {
 			HalfEdge nxtedge=edge;
 			do {
 				Face tf=nxtedge.twin.face;
-				if ((ideal || !idealFaces.contains(tf)) && 
+				if ((ideal || !tmpIdeals.contains(tf)) && 
 						Math.abs(tf.faceIndx)>Math.abs(f.faceIndx))
 					elink.add(new EdgeSimple(f.faceIndx,tf.faceIndx));
 				nxtedge=nxtedge.next;
 			} while (nxtedge!=edge);
 		}
 		return elink;
+	}
+	
+	/**
+	 * Find the official rad/cent for the origin of the 
+	 * given 'HalfEdge'. If the origin is 'RedVertex', 
+	 * then look clw for first 'RedHEdge'. If normal 
+	 * 'Vertex', then data is stored in 'PackData'. 
+	 * @return CircleSimple
+	 */
+	public CircleSimple getVertData(HalfEdge edge) {
+		// is itself a 'RedHEdge'?
+		if (edge.myRedEdge!=null)
+			return edge.myRedEdge.getData();
+		Vertex vert=edge.origin;
+		
+		// is a normal 'Vertex'?
+		if (!(vert instanceof RedVertex)) {
+			return vert.getData();
+		}
+		
+		// else, go clw to reach a spoke that has 'myRedEdge'
+		HalfEdge he=edge;
+		do {
+			he=he.twin.next;
+			if (he.myRedEdge!=null) 
+				return he.myRedEdge.getData();
+		} while (he!=edge);
+		return null;
+	}
+	
+	public double getVertRadius(HalfEdge edge) {
+		// is itself a 'RedHEdge'? Note, also set in 'PackData'
+		if (edge.myRedEdge!=null) {
+			return edge.myRedEdge.getRadius();
+		}
+
+		Vertex vert=edge.origin;
+		
+		// is a normal 'Vertex'? set in 'PackData'
+		if (!(vert instanceof RedVertex)) {
+			return vert.getRadius();
+		}
+		
+		// else, go clw to reach a spoke that has 'myRedEdge'
+		HalfEdge he=edge;
+		do {
+			he=he.twin.next;
+			if (he.myRedEdge!=null) {
+				return he.myRedEdge.getRadius();
+			}
+		} while (he!=edge);
+		throw new DCELException("didn't find any 'RedHEdge' for this 'Vertex'");
+	}
+	
+	public Complex getVertCenter(HalfEdge edge) {
+		// is itself a 'RedHEdge'? Note, also set in 'PackData'
+		if (edge.myRedEdge!=null) {
+			return edge.myRedEdge.getCenter();
+		}
+
+		Vertex vert=edge.origin;
+		
+		// is a normal 'Vertex'? set in 'PackData'
+		if (!(vert instanceof RedVertex)) {
+			return vert.getCenter();
+		}
+		
+		// else, go clw to reach a spoke that has 'myRedEdge'
+		HalfEdge he=edge;
+		do {
+			he=he.twin.next;
+			if (he.myRedEdge!=null) {
+				return he.myRedEdge.getCenter();
+			}
+		} while (he!=edge);
+		throw new DCELException("didn't find any 'RedHEdge' for this 'Vertex'");
+	}
+	
+	/**
+	 * Set the center in 'PackData', 'origin' and in the appropriate
+	 * 'RedHEdge' if 'origin' is a 'RedVertex'.
+	 * @param edge HalfEdge
+	 * @param z
+	 */
+	public void setVertCenter(HalfEdge edge,Complex z) {
+		Vertex vert=edge.origin;
+
+		// is itself a 'RedHEdge'? Note, also set in 'PackData'
+		if (edge.myRedEdge!=null) {
+			edge.myRedEdge.setCenter(z);
+			vert.setCenter(z);
+			p.rData[vert.vertIndx].center=new Complex(z);
+			return;
+		}
+		
+		// is a normal 'Vertex'? set in 'PackData'
+		if (!(vert instanceof RedVertex)) {
+			vert.setCenter(z);
+			p.rData[vert.vertIndx].center=new Complex(z);
+			return;
+		}
+		
+		// else, go clw to reach a spoke that has 'myRedEdge'
+		HalfEdge he=edge;
+		do {
+			he=he.twin.next;
+			if (he.myRedEdge!=null) {
+				he.myRedEdge.setCenter(z);
+				he.origin.setCenter(z);
+				p.rData[he.origin.vertIndx].center=new Complex(z);
+			}
+		} while (he!=edge);
+	}
+
+	public void setVertRadius(HalfEdge edge,double rad) {
+		// is itself a 'RedHEdge'?
+		if (edge.myRedEdge!=null) {
+			edge.origin.setRadius(rad);
+			edge.myRedEdge.setRadius(rad);
+			p.rData[edge.origin.vertIndx].rad=rad;
+			return;
+		}
+
+		Vertex vert=edge.origin;
+		
+		// is a normal 'Vertex'?
+		if (!(vert instanceof RedVertex)) {
+			vert.setRadius(rad);
+			p.rData[vert.vertIndx].rad=rad;
+			return;
+		}
+		
+		// else, go clw to reach a spoke that has 'myRedEdge'
+		HalfEdge he=edge;
+		do {
+			he=he.twin.next;
+			if (he.myRedEdge!=null) {
+				he.origin.setRadius(rad);
+				he.myRedEdge.setRadius(rad);
+				p.rData[he.origin.vertIndx].rad=rad;
+			}
+		} while (he!=edge);
+	}
+	
+	public void setVertData(HalfEdge edge,CircleSimple cS) {
+		setVertCenter(edge,cS.center);
+		setVertRadius(edge,cS.rad);
+	}
+
+	public double getInvDist(HalfEdge edge) {
+		if (!p.overlapStatus)
+			return 1.0;
+		int v=edge.origin.vertIndx;
+		int w=edge.twin.origin.vertIndx;
+		return p.kData[v].overlaps[p.nghb(v,w)];
 	}
 	
 	/**
@@ -1046,7 +1344,7 @@ public class PackDCEL {
 	public HalfEdge vertIsBdry(Vertex v) {
 		HalfEdge nxtedge=v.halfedge;
 		do {
-			if (idealFaces!=null && idealFaces.contains(nxtedge.twin.face))
+			if (tmpIdeals!=null && tmpIdeals.contains(nxtedge.twin.face))
 				return nxtedge;
 			nxtedge=nxtedge.prev.twin;
 		} while(nxtedge!=v.halfedge);
@@ -1059,33 +1357,29 @@ public class PackDCEL {
 	 * @return boolean
 	 */
 	public boolean edgeIsBdry(HalfEdge he) {
-		if (idealFaces.contains(he.face))
+		if (tmpIdeals.contains(he.face))
 			return true;
 		return false;
 	}
 
-
 	/**
-	 * Find if there is a halfedge from v to w. 
-	 * @param v int
-	 * @param w int
-	 * @return HalfEdge, null if not found
+	 * Find the 'HalfEdge' for edge <v.w>
+	 * @param es EdgeSimple
+	 * @return HalfEdge or null on failure
 	 */
-	public HalfEdge findEdge(int v,int w) {
-		Iterator<HalfEdge> eit=edges.iterator();
-		while (eit.hasNext()) {
-			HalfEdge he=eit.next();
-			if (he.origin.vertIndx==v) {
-				ArrayList<HalfEdge> eflower=he.origin.getEdgeFlower();
-				Iterator<HalfEdge> heit=eflower.iterator();
-				while (heit.hasNext()) {
-					HalfEdge hfe=heit.next();
-					if (hfe.twin.origin.vertIndx==w)
-						return hfe;
-				}
-			}
-		}
+	public HalfEdge findHalfEdge(EdgeSimple es) {
+		Vertex vert=vertices[es.v];
+		HalfEdge trace=vert.halfedge;
+		do {
+			if (trace.twin.origin.vertIndx==es.w) 
+				return trace;
+			trace=trace.prev.twin;
+		} while (trace!=vert.halfedge);
 		return null;
+	}
+
+	public HalfEdge findHalfEdge(int v,int w) {
+		return findHalfEdge(new EdgeSimple(v,w));
 	}
 	
 	/**
@@ -1102,14 +1396,14 @@ public class PackDCEL {
 		// minimal check on compatibility
 		if (p.nodeCount!=vertCount)
 			return 0;
-		p.faceCount=(faces.size()-1)-idealFaces.size(); 
+		p.faceCount=(tmpFaceList.size()-1)-tmpIdeals.size(); 
 		p.faces=new komplex.Face[p.faceCount+1]; // new face structure
-		Iterator<Face> flst=faces.iterator();
+		Iterator<Face> flst=tmpFaceList.iterator();
 		flst.next(); // toss first 'null' entry
 		int tick=0;
 		while (flst.hasNext()) {
 			Face face=flst.next();
-			if (!idealFaces.contains(face)) {
+			if (!tmpIdeals.contains(face)) {
 				face.faceIndx=++tick; // reset indices (perhaps already in order)
 				// for new komplex.Face
 				p.faces[tick]=new komplex.Face();
@@ -1119,8 +1413,8 @@ public class PackDCEL {
 			}
 		}
 		
-		if (LayoutOrder!=null) 
-			p.firstFace=LayoutOrder.get(0).faceIndx;
+		if (tmpLayout!=null) 
+			p.firstFace=tmpLayout.get(0).faceIndx;
 		// TODO: could transfer layout order to parent 'p' too.
 		return tick;
 	}
@@ -1138,7 +1432,7 @@ public class PackDCEL {
 		ArrayList<Integer> petals=new ArrayList<Integer>();
 		HalfEdge nxtedge=v.halfedge;
 		boolean bdry=false;
-		if (idealFaces.contains(nxtedge.twin.face))
+		if (tmpIdeals.contains(nxtedge.twin.face))
 			bdry=true;
 		int safety=vertCount;
 		do {
@@ -1160,7 +1454,7 @@ public class PackDCEL {
 	public void debug() {
 		System.out.println("PackDCEL debug: edges with null twins");
 		
-		Iterator<HalfEdge> eit=edges.iterator();
+		Iterator<HalfEdge> eit=tmpEdges.iterator();
 		while (eit.hasNext()) {
 			HalfEdge he= eit.next();
 			if (he.twin==null)
@@ -1239,10 +1533,11 @@ public class PackDCEL {
 	 * three vertices (typical), then return center of incircle of
 	 * triangle formed by vertices. Else, return average of centers
 	 * of vertices. 
+	 * TODO: OBE
 	 * @param face Face
 	 * @return Complex, null on error
 	 */
-	public Complex faceCenter(Face face) {
+	public Complex faceOppCenter(Face face) {
 		int []verts=face.getVerts();
 		if (verts.length==3) {
 			Complex p0=new Complex(p.rData[verts[0]].center);
@@ -1269,7 +1564,7 @@ public class PackDCEL {
 	public PackDCEL createDual(boolean full) {
 		
 		int [][]bouquet=new int[intFaceCount+1][];
-		Iterator<Face> fit=faces.iterator();
+		Iterator<Face> fit=tmpFaceList.iterator();
 		Face face=fit.next(); // flush first null face
 		while (fit.hasNext()) {
 			face=fit.next();
@@ -1299,12 +1594,12 @@ public class PackDCEL {
 		PackDCEL qdcel = new PackDCEL(bouquet);
 		
 		// set centers of the new vertices
-		fit=faces.iterator();
+		fit=tmpFaceList.iterator();
 		face=fit.next(); // flush first null face
 		while (fit.hasNext()) {
 			face=fit.next();
 			if (face.faceIndx>0) // ignore ideal faces
-				qdcel.vertices[face.faceIndx].center=faceCenter(face);
+				qdcel.vertices[face.faceIndx].center=faceOppCenter(face);
 		}
 		
 		return qdcel;
@@ -1337,10 +1632,10 @@ public class PackDCEL {
 	    	fp.write("</VERTICES>\n");
 	    	
 	    	// first, some bookkeeping
-	    	edgeCount=edges.size();
+	    	edgeCount=tmpEdges.size();
 	    	HalfEdge []edgearray=new HalfEdge[edgeCount+1];
 	    	int eindx=0;
-	    	Iterator<HalfEdge> eit=edges.iterator();
+	    	Iterator<HalfEdge> eit=tmpEdges.iterator();
 	    	while(eit.hasNext()) {
 	    		HalfEdge he=eit.next();
 	    		he.edgeIndx=++eindx;
@@ -1415,7 +1710,7 @@ public class PackDCEL {
 		HalfEdge []dverts=new HalfEdge[faceCount];
 		
 		// dual edges are regular edges
-		Iterator<HalfEdge> deit=edges.iterator();
+		Iterator<HalfEdge> deit=tmpEdges.iterator();
 		while (deit.hasNext()) {
 			HalfEdge he=deit.next();
 			if (he!=null)
@@ -1423,7 +1718,7 @@ public class PackDCEL {
 		}
 				
 		// dual vertices are regular faces
-		Iterator<Face> dvit=faces.iterator();
+		Iterator<Face> dvit=tmpFaceList.iterator();
 		Face face=dvit.next(); // flush the first, which is null
 		while (dvit.hasNext()) {
 			face=dvit.next();
@@ -1444,7 +1739,7 @@ public class PackDCEL {
 	    	for (int i=0;i<faceCount;i++) {
 	    		
 	    		face=dverts[i].face;
-	    		Complex z=faceCenter(face);
+	    		Complex z=faceOppCenter(face);
 	    		int xi=(int)Math.round(z.x*1000000.0); // convert to microns
 	    		int yi=(int)Math.round(z.y*1000000.0); // convert to microns
 	    		fp.write(i+"  "+xi+" "+yi+" 1000 0 \n");

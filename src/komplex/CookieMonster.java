@@ -1289,12 +1289,12 @@ public class CookieMonster {
 
 		// Now the processing to prune this; work with DCEL data
 		PackDCEL myDCEL = new PackDCEL(Tri);
-		int facecount = myDCEL.faces.size()-1-myDCEL.idealFaces.size(); // number of interior faces		
+		int facecount = myDCEL.tmpFaceList.size()-1-myDCEL.tmpIdeals.size(); // number of interior faces		
 
 		// find the centroids
 		Complex[] faceC = new Complex[facecount+1]; // centroids
 		int tick = 0;
-		Iterator<dcel.Face> dcf = myDCEL.faces.iterator();
+		Iterator<dcel.Face> dcf = myDCEL.tmpFaceList.iterator();
 		dcf.next(); // toss first 'null' entry
 		while (dcf.hasNext() && tick<facecount) {
 			ArrayList<HalfEdge> edges=dcf.next().getEdges();
@@ -1317,7 +1317,7 @@ public class CookieMonster {
 				facestat[j] = 1;
 				if (firstC == null) { // mark the first included centroid and its face
 					firstC = new Complex(faceC[j]);
-					firstFace=myDCEL.faces.get(j);
+					firstFace=myDCEL.tmpFaceList.get(j);
 				}
 			}
 		}
@@ -1331,7 +1331,7 @@ public class CookieMonster {
 		Vector<HalfEdge> putbdry = new Vector<HalfEdge>(0);
 		for (int f = 1; f <= Tri.faceCount; f++) {
 			if (facestat[f] > 0) {
-				ArrayList<HalfEdge> edges=myDCEL.faces.get(f).getEdges();
+				ArrayList<HalfEdge> edges=myDCEL.tmpFaceList.get(f).getEdges();
 				Iterator<HalfEdge> eit=edges.iterator();
 				while (eit.hasNext()) {
 					HalfEdge he=eit.next();
@@ -1432,7 +1432,7 @@ public class CookieMonster {
 		// Two steps: (1) find all faces inside 'outerPath'; 
 		//    (2) build out simply connected patch
 		int startindx=-1;
-		int []inouter=new int[myDCEL.faces.size()];
+		int []inouter=new int[myDCEL.tmpFaceList.size()];
 		for (int j = 1; j <= facecount; j++) { 
 			if (outerPath.contains(faceC[j].x, faceC[j].y)) { 
 				inouter[j]=1;
@@ -1443,13 +1443,13 @@ public class CookieMonster {
 		
 		// if 'firstFace' is no longer included, use new starting place
 		if (inouter[Math.abs(firstFace.faceIndx)]==0)
-			firstFace=myDCEL.faces.get(startindx);
+			firstFace=myDCEL.tmpFaceList.get(startindx);
 			
 		// cycle through adding faces to 'firstFace'
 		Vector<dcel.Face> nextF=new Vector<dcel.Face>();
 		Vector<dcel.Face> currF=nextF;
 		nextF.add(firstFace);
-		int[] newfaces = new int[myDCEL.faces.size()];
+		int[] newfaces = new int[myDCEL.tmpFaceList.size()];
 		newfaces[Math.abs(firstFace.faceIndx)]=1;
 		int infacecount = 1;
 		tick=0;
@@ -1479,13 +1479,13 @@ public class CookieMonster {
 			if (newfaces[j]>0) {
 				
 				// debug
-				int []fv= myDCEL.faces.get(j).getVerts();
+				int []fv= myDCEL.tmpFaceList.get(j).getVerts();
 				StringBuilder ddstr=new StringBuilder("face: ");
 				for (int nm=0;nm<fv.length;nm++)
 					ddstr.append(" "+fv[nm]);
 				System.err.println(ddstr.toString());
 				
-				int []verts=myDCEL.faces.get(j).getVerts();
+				int []verts=myDCEL.tmpFaceList.get(j).getVerts();
 				for (int m=0;m<verts.length;m++) {
 					int v=verts[m];
 					if (old2new[v] == 0)
@@ -1507,7 +1507,7 @@ public class CookieMonster {
 		for (int j = 1; j <= facecount; j++) {
 			if (newfaces[j] == 1) {
 				Vector<Integer> vertvec = new Vector<Integer>(0);
-				HalfEdge he = myDCEL.faces.get(j).edge;
+				HalfEdge he = myDCEL.tmpFaceList.get(j).edge;
 				vertvec.add(old2new[he.origin.vertIndx]); // new index
 				HalfEdge nhe = he.next;
 				while (nhe != he) {

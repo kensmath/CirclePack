@@ -1,7 +1,9 @@
 package dcel;
 
-/** DCEL HalfEdge. Its 'face' is on its left. If face==null,
- * then this haldedge and its twin are bdry halfedges.
+/** 
+ * DCEL HalfEdge. Its 'face' is on its left. As we transition to a DCEL
+ * core model of packings, each edge will carry an 'inversive distance'
+ * and a 'schwarzian' (though these will be redundant for now).
  * @author kstephe2
  *
  */
@@ -13,8 +15,14 @@ public class HalfEdge {
 	public HalfEdge next;
 	public HalfEdge prev;
 	public int edgeIndx;
-	public int util;
+	RedHEdge myRedEdge; // set when finishing up construction.
 	
+	//
+	double invDist;  // inversive distance assigned, default 1.0 (tangency)
+	double schwarzian; // see 'Schwarzian.java'
+	
+	public int util; 
+
 	// constructor(s)
 	public HalfEdge() {
 		origin=null;
@@ -23,6 +31,9 @@ public class HalfEdge {
 		next=null;
 		prev=null;
 		edgeIndx=-1; // indicates index is not set
+		myRedEdge=null;
+		invDist=1.0;
+		schwarzian=0.0;
 		util=0;
 	}
 	
@@ -86,6 +97,30 @@ public class HalfEdge {
 		if (face==null || face.faceIndx<0 || twin.face==null || twin.face.faceIndx<0)
 			return true;
 		return false;
+	}
+	
+	public RedHEdge getRedEdge() {
+		return myRedEdge;
+	}
+	
+	public void setRedEdge(RedHEdge redE) {
+		myRedEdge=redE;
+	}
+	
+	public void setSchwarzian(double sch) {
+		schwarzian=sch;
+	}
+	
+	public double getSchwarzain() {
+		return schwarzian;
+	}
+	
+	public void setInvDist(double invd) {
+		invDist=invd;
+	}
+	
+	public double getInvDist() {
+		return invDist;
 	}
 	
 	/**

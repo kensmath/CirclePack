@@ -97,12 +97,10 @@ public class DataDCEL {
 			p.rData[v]=new RData(); // duplicated data below
 		}
 		
-		// create traditional 'PackData.faces' entries
+		// create traditional 'PackData.faces' entries (not ideal faces)
 		p.faces=new komplex.Face[pdcel.faceCount+1];
-		Iterator<Face> fit=pdcel.faces.iterator();
-		fit.next(); // toss the null first entry
-		while(fit.hasNext()) {
-			Face face=fit.next();
+		for (int f=1;f<=p.faceCount;f++) {
+			Face face=pdcel.faces[f];
 			int[] vts=face.getVerts();
 			komplex.Face fce=new komplex.Face(vts.length);
 			fce.vert=vts;
@@ -111,15 +109,25 @@ public class DataDCEL {
 			p.faces[face.faceIndx]=fce;
 		}
 		
-		// set face drawing order
-		Iterator<Face> lit=pdcel.LayoutOrder.iterator();
-		int faceIndx=lit.next().faceIndx;
-		p.firstFace=faceIndx;
-		while (lit.hasNext()) {
-			Face face=lit.next();
-			int nxtIndx=face.faceIndx;
-			p.faces[faceIndx].nextFace=nxtIndx;
-			faceIndx=nxtIndx;
+		// drawing order record 'nextFace' info in 'PackData' 
+		//    in the traditional way
+		for (int f=1;f<=p.faceCount;f++) {
+			p.faces[f].nextFace=0;
+		}
+		Iterator<EdgeSimple> git=pdcel.computeOrder.iterator();
+		EdgeSimple es=git.next(); // first is the root
+		p.firstFace=es.w;
+		while (git.hasNext()) {
+			es=git.next();
+			p.faces[es.v].nextFace=es.w;
+		}
+		// set drawing order for remaining all faces
+		git=pdcel.faceOrder.iterator();
+		git.next(); // toss the root 
+		while (git.hasNext()) {
+			es=git.next();
+			if (p.faces[es.v].nextFace!=0)
+				p.faces[es.v].nextFace=es.w;
 		}
 
 		// TODO: temporary: transfer cent/rad data from pdcel.p,
@@ -130,75 +138,51 @@ public class DataDCEL {
 			}
 			Iterator<EdgeSimple> noit=pdcel.newOld.iterator();
 			while (noit.hasNext()) {
-				EdgeSimple es=noit.next();
+				es=noit.next();
 				int newindx=es.v;
 				int oldindx=es.w;
-				pdcel.vertices[newindx].center=new Complex(pdcel.p.rData[oldindx].center);
+				// put in 'Vertex'
+				Vertex vert=pdcel.vertices[newindx];
+				vert.setCenter(pdcel.p.rData[oldindx].center);
+				vert.setRadius(pdcel.p.rData[oldindx].rad);
 				p.rData[newindx].center=new Complex(pdcel.p.rData[oldindx].center);
 				p.rData[newindx].rad=pdcel.p.rData[oldindx].rad;
-				pdcel.vertices[newindx].center=new Complex(pdcel.p.rData[oldindx].center);
-				pdcel.vertices[newindx].rad=pdcel.p.rData[oldindx].rad;
 				p.rData[newindx].aim=pdcel.p.rData[oldindx].aim;
 				p.rData[newindx].curv=pdcel.p.rData[oldindx].curv;
 			}
 		}
 		
+		// set radii in 'RedHEdge's
+		RedHEdge rtrace=pdcel.redChain;
+		do {
+			HalfEdge edge=rtrace.myEdge;
+			int v=edge.origin.vertIndx;
+			int newv=pdcel.newOld.findW(v);
+			pdcel.setVertCenter(edge,pdcel.p.rData[newv].center);
+			pdcel.setVertRadius(edge,pdcel.p.rData[newv].rad);
+			rtrace=rtrace.nextRed;
+		} while (rtrace!=pdcel.redChain);
+		
 		// misc data to arrange
-		p.euler=p.nodeCount-pdcel.edges.size()/2+p.faceCount;
+		p.euler=pdcel.euler;
 		p.genus=(2-p.euler-p.bdryCompCount)/2;
 		p.bdryStarts=new int[p.bdryCompCount+1];
 		for (int j=1;j<=p.bdryCompCount;j++) {
-			Face iface=pdcel.idealFaces.get(j-1);
+			Face iface=pdcel.idealFaces[j];
 			p.bdryStarts[j]=iface.edge.twin.origin.vertIndx;
 		}
 		p.vertexMap=pdcel.newOld;
 		p.chooseGamma();
 		p.fileName=new String("clone");
 		p.status=true;
-        pdcel.p=p;				
 		p.packDCEL=pdcel;
+		pdcel.p.packDCEL=null;
+		pdcel.p=p;
 		p.alpha=pdcel.alpha.origin.vertIndx;
 		p.beta=pdcel.alpha.twin.origin.vertIndx;
 		return p;
 	}
 	
-	
-	/**
-	 * Get the center appropriate to the vertex 'v', where v is
-	 * a vertex of this 'RedHEdge's face. This value may be held
-	 * by the 'TriAspect' for this face, or that of 'preRed',
-	 * or in the case of a "blue" face, by 'nextRed', or if
-	 * not these, then by 'pdcel.p'.
-	 * @param pdcel PackDCEL
-	 * @param redge RedHEdge   
-	 * @param v int
-	 * @return Complex, null on error (e.g., improper v)
-	 */
-	public static Complex getCenter(PackDCEL pdcel,RedHEdge redge,int v) {
-		TriAspect tri=redge.myTri;
-		if (tri==null)
-			throw new CombException("'RedHEdge' does not have a 'TriAspect'");
-		int vindx=tri.vertIndex(v);
-		if (vindx<0)
-			return null;
-		
-		// tri is responsible for v (i.e., is v the end of 'redge'?)
-		if (v==redge.myEdge.twin.origin.vertIndx)
-			return tri.getCenter(vindx);
-		
-		// else if v is origin of 'redge', then look to 'prevRed'
-		else if (v==redge.myEdge.origin.vertIndx)
-			return redge.prevRed.myTri.getCenter(v);
-		
-		// else if v is end of 'nextRed.myEdge.twin'
-		else if (v==redge.nextRed.myEdge.twin.origin.vertIndx)
-			return redge.nextRed.myTri.getCenter(v);
-		
-		// else, get it from 'Vertex'
-		return new Complex(pdcel.vertices[v].center);
-		
-	}
-
 	/**
 	 * Find the vertices for the 'face' associated with this
 	 * 'RedHEdge'. Note, the three cclw vertices are origins of

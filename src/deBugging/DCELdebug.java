@@ -16,6 +16,8 @@ import exceptions.DCELException;
 import input.CPFileManager;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
+import komplex.GraphSimple;
+import listManip.GraphLink;
 import packing.PackData;
 
 public class DCELdebug {
@@ -43,7 +45,7 @@ public class DCELdebug {
 			
 			// Edges
 			dbw.write("\nEdges: ==================== \n\n");
-			Iterator<HalfEdge> eits=pdcel.edges.iterator();
+			Iterator<HalfEdge> eits=pdcel.tmpEdges.iterator();
 			while (eits.hasNext() && count<100) {
 				dbw.write(thisEdge(eits.next()).toString());
 				count++;
@@ -52,8 +54,8 @@ public class DCELdebug {
 			
 			// Faces
 			dbw.write("\nFaces: ==================== \n\n");
-			for (int f=1;(f<pdcel.faces.size() && count<100);f++) {
-				dbw.write(thisFace(pdcel.faces.get(f)).toString());
+			for (int f=1;(f<pdcel.tmpFaceList.size() && count<100);f++) {
+				dbw.write(thisFace(pdcel.tmpFaceList.get(f)).toString());
 				count++;
 			}
 			count=0;
@@ -83,6 +85,29 @@ public class DCELdebug {
 		      } catch (Exception exe) {}
 		  }			
 		return count;
+	}
+	
+	/**
+	 * draw on pack p the edges dual to the give dual edges and
+	 * their faces.
+	 * @param p PackData
+	 * @param glink GraphLink
+	 */
+	public static void drawEdgeFace(PackData p,GraphLink glink) {
+		Iterator<EdgeSimple> git=glink.iterator();
+		while (git.hasNext()) {
+			GraphSimple gs=(GraphSimple)git.next();
+			EdgeSimple es=p.packDCEL.dualEdge_to_Edge(gs);
+			drawEdgeFace(p,es);
+		}
+	}
+	
+	public static void drawEdgeFace(PackData p,ArrayList<Face> facelist) {
+		Iterator<Face> fit=facelist.iterator();
+		while (fit.hasNext()) {
+			Face f=fit.next();
+			drawEdgeFace(p,new EdgeSimple(f.edge.origin.vertIndx,f.edge.twin.origin.vertIndx));
+		}
 	}
 	
 	/**
@@ -186,7 +211,7 @@ public class DCELdebug {
 
 // ================= plot face based on edge 
 	public static void tri_of_edge(PackDCEL pdcel,int v,int w) {
-		Iterator<HalfEdge> eit=pdcel.edges.iterator();
+		Iterator<HalfEdge> eit=pdcel.tmpEdges.iterator();
 		while (eit.hasNext()) {
 			HalfEdge he=eit.next();
 			if (Math.abs(he.origin.vertIndx)==v && Math.abs(he.twin.origin.vertIndx)==w)
@@ -323,11 +348,11 @@ public class DCELdebug {
 	}
 	
 	public static void showEdges(PackDCEL pdcel) {
-		showEdges(pdcel,pdcel.edges);
+		showEdges(pdcel,pdcel.tmpEdges);
 	}
 	
 	public static void showEdges(PackDCEL pdcel,ArrayList<HalfEdge> edges) {
-		if (pdcel.edges==null) {
+		if (pdcel.tmpEdges==null) {
 			System.err.println("'edges' is null");
 			return;
 		}
