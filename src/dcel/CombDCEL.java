@@ -584,6 +584,14 @@ public class CombDCEL {
 		//   occurrence of 'blue' elements --- successive red edges
 		//   belonging to the same face. This will cause tough changes
 		//   in 'layoutEdges' as well.
+
+		// ============ set 'myRedEdge' pointers ====================
+		
+		RedHEdge nxtre=pdcel.redChain;
+		do {
+			nxtre.myEdge.setRedEdge(nxtre);
+			nxtre=nxtre.nextRed;
+		} while (nxtre!=pdcel.redChain);
 		
 		// ============ identify red twins ==========================
 		
@@ -595,12 +603,13 @@ public class CombDCEL {
 		//   Also, mark all redChain vertices as done. 
 		// The 'redChain' is not changed by this or subsequent operations,
 		//   though it may gain new 'RedVertex's.
+		// Set 'myRedEdge's
 
-		RedHEdge nxtre=pdcel.redChain;
+		nxtre=pdcel.redChain;
 		do {
 			if (nxtre.twinRed==null) {
 				// is the opposite edge also red?
-				RedHEdge crossRed=isMyEdge(pdcel.redChain,nxtre.myEdge.twin);
+				RedHEdge crossRed=nxtre.myEdge.twin.getRedEdge();
 				if (crossRed!=null) {
 					int v=nxtre.myEdge.origin.vertIndx;
 					int w=crossRed.myEdge.origin.vertIndx;
@@ -684,7 +693,7 @@ public class CombDCEL {
 
 				// debug=true;
 				if (debug) {
-					DCELdebug.redVertFaces(rV); // DCELdebug.vertFaces(newVertices.get(31));
+					DCELdebug.redVertFaces(rV); // DCELdebug.vertFaces(pdcel.vertices[14]);
 				}
 
 				// process, convert to 'RedVertex's, possibly create new ones
@@ -708,7 +717,7 @@ public class CombDCEL {
 		
 		// ========== set new edge next/prev =============
 		
-		// redChain vertices that are interior, got no new edges;
+		// redChain vertices that were interior, got no new edges;
 		// others got a new twin for the 'inSpoke' of their fan
 		rtrace=pdcel.redChain;
 		do {
@@ -770,10 +779,12 @@ public class CombDCEL {
 		// (1) First pass is to catalog faces and edges. There's
 		//     a one-to-one correspondence between 'orderEdges'
 		//     and faces. Create face and set its edge
+		
+		// DCELdebug.drawOrderEdgeFace(pdcel.p,orderEdges);
+		
 		Iterator<HalfEdge> oit=orderEdges.iterator();
 		while (oit.hasNext()) {
 			HalfEdge hfe=oit.next();
-// System.out.println(" hfe: "+hfe.toString());			
 			hfe.edgeIndx=++etick;
 			pdcel.tmpEdges.add(hfe);
 			Face newface=new Face();
@@ -782,9 +793,11 @@ public class CombDCEL {
 			newface.faceIndx=++ftick;
 			pdcel.tmpFaceList.add(newface);
 			
+// System.out.println("edge(face): "+hfe+"("+ftick+")");			
+			
 			// get the other edges of this face (typically 2 others)
 			HalfEdge nxe=hfe.next;
-			int safety=20;
+			int safety=200;
 			do {
 				nxe.edgeIndx=++etick;
 				pdcel.tmpEdges.add(nxe);
@@ -793,25 +806,29 @@ public class CombDCEL {
 				safety--;
 			} while (nxe!=hfe && safety>0);
 			if (safety==0) {
-				throw new DCELException("run away face edge tracing");
+				throw new DCELException("runaway face edge tracing");
 			}
 								
 			if (debug) { // debug=true;
-				int hfev=pdcel.newOld.findW(hfe.origin.vertIndx);
-				int hfew=pdcel.newOld.findW(hfe.twin.origin.vertIndx);
+				int hfev=hfe.origin.vertIndx;
+				int hfew=hfe.twin.origin.vertIndx;
 				EdgeSimple es=new EdgeSimple(hfev,hfew);
 				DCELdebug.drawEdgeFace(pdcel.p,es);
 				System.out.println("["+hfe.origin.vertIndx+","+hfe.twin.origin.vertIndx+
-						"] (or in origin indexing, "+es.toString()+")");
+						"]");
 			}
 		}
+		debug=false;
 		
-		// (2) Second pass is to determine layout order and set the
-		//     proper first 'RedHEdge' for 'redChain'.
-		int[] vhit=new int[pdcel.vertCount+1];
-		vhit[pdcel.alpha.origin.vertIndx]=1;
-		vhit[pdcel.alpha.twin.origin.vertIndx]=1;
+		// (2) Second pass is to determine layout order by ensuring
+		//     all vertices get laid out, including 'RedVertex's, 
+		//     which may get multiple locations, and to set 'redChain'
+		//     to a proper first 'RedHEdge'.
 		boolean[] fhits=new boolean[ftick+1];
+		pdcel.alpha.origin.util=1;
+		pdcel.alpha.twin.origin.util=1;
+		int count_vhits=2;
+		
 		oit=orderEdges.iterator();
 		pdcel.tmpLayout=new ArrayList<Face>();
 		pdcel.tmpfullLayout=new ArrayList<Face>();
@@ -819,34 +836,122 @@ public class CombDCEL {
 			HalfEdge hfe=oit.next();
 			if (!fhits[hfe.face.faceIndx]) {
 				pdcel.tmpfullLayout.add(hfe.face);
-				fhits[hfe.face.faceIndx]=true;
+ 				fhits[hfe.face.faceIndx]=true;
+				
+				if (debug) { // debug=true;
+					System.out.println("face      "+hfe.face.faceIndx+
+							" = <"+hfe.face.toString()+">");
+					DCELdebug.drawEdgeFace(p,hfe);
+				}
+
 			}
 		
-			// check second edge around and opposite vertex 
+			// check second edge around to identify opposite vertex 
 			HalfEdge sea=hfe.next.next;
-			int oppv=sea.origin.vertIndx;
-			if (vhit[oppv]==0) { // yes, add 'hfe' to 'LayoutListing'
-				vhit[oppv]=1;
-				pdcel.tmpLayout.add(hfe.face);
-			}
+			Vertex oppVert=sea.origin;
 			
-			// search for appropriate 'redChain' start: find first 'RedVertex'
-			//   encountered and then add clw faces until finding one with 
-			//   'RedHEdge'; this will be 'redChain'. When computing layout, 
-			//   have to store cent/rad for the first 'RedVertex' in 
-			//   'redChain.prevRed', then everything is ready to store
-			//   cent/rad in 'Vertex's as we go successively around the redChain.
-			// DCELdebug.RedOriginProblem(pdcel.redChain);
-			if (newRedChain==null && sea.origin instanceof RedVertex) {
-				while (newRedChain==null) {
-					pdcel.tmpLayout.add(sea.twin.face);
-					pdcel.tmpfullLayout.add(sea.twin.face);
-					fhits[sea.twin.face.faceIndx]=true; // can't have been hit already
-					sea=sea.prev.twin;
-					newRedChain=isMyEdge(pdcel.redChain,sea); // may still be null
+			// if normal 'Vertex' 
+			if (!(oppVert instanceof RedVertex)) {
+				if (oppVert.util==0) { // yes, add 'hfe' to 'LayoutListing'
+					oppVert.util=1;
+					count_vhits++;
+					pdcel.tmpLayout.add(hfe.face);
+					
+					if (debug) { // debug=true;
+						System.out.println("  normal "+hfe.face.faceIndx+" = <"+
+								hfe.face.toString()+">, oppVErt "+oppVert.vertIndx+
+								", add to 'tmpLayout'");				
+						DCELdebug.drawEdgeFace(p,hfe);
+					}
 				}
 			}
+			
+			// for 'RedVertex', have to process: 
+			//     * decide if this instance of this vertex (there may be 
+			//       many) has already been hit
+			//     * search for appropriate 'redChain' start. 
+			else {
+				RedHEdge redge=nextRedEdge(sea);
+				if (redge.util==0) {
+					redge.util=1;
+					count_vhits++;
+					pdcel.tmpLayout.add(hfe.face);
+					
+					if (debug) { // debug=true;
+						System.out.println("  red case "+hfe.face.faceIndx+" = <"+
+								hfe.face.toString()+">, oppVErt "+oppVert.vertIndx+
+								", add to 'tmpLayout'; red edge = "+redge.myEdge);				
+						DCELdebug.drawEdgeFace(p,hfe);
+					}
+
+				}
+			
+				// search for appropriate 'redChain' start: find first 'RedVertex'
+				//   encountered and then add clw faces to the first 'RedHEdge'.
+				// TODO: this may be first edge of "blue" face. May want to avoid
+				//   this. 
+				if (newRedChain==null) { 
+					
+					// pivot clw adding faces until hitting redge
+					// Note: none of this faces could have been hit before
+					while (sea!=redge.myEdge) {
+						pdcel.tmpfullLayout.add(sea.twin.face);
+						fhits[sea.twin.face.faceIndx]=true;
+						oppVert=sea.twin.next.next.origin;
+
+						if (debug) { // debug=true;
+							System.out.println(" normal pivot "+sea.twin.face.faceIndx+
+									" = <"+sea.twin.face.toString()+">");
+							DCELdebug.drawEdgeFace(p,sea.twin);
+						}
+						
+						boolean alreadyhit=false;
+						if ((oppVert instanceof RedVertex)) {
+							RedHEdge nre=nextRedEdge(sea.twin.next.next);
+							if (nre.util==1) // already plotted?
+								alreadyhit=true;
+							nre.util=1; // in any case, will be plotted
+						}
+						else if (oppVert.util==1) {
+							alreadyhit=true;
+						}
+
+						// put in 'tmpLayout'?
+						if (!alreadyhit) {  
+							oppVert.util=1;
+							pdcel.tmpLayout.add(sea.twin.face);
+							count_vhits++;
+
+							if (debug) { // debug=true;
+								System.out.println("  clw face "+sea.twin.face.faceIndx+" = <"+
+										sea.twin.face.toString()+">, oppVErt "+oppVert.vertIndx+
+										", add to 'tmpLayout'; red edge = "+redge.myEdge);				
+								DCELdebug.drawEdgeFace(p,hfe);
+							}
+						}							
+						sea=sea.twin.next;
+					}
+					newRedChain=redge;
+				}
+				else {
+					if (redge.util==0) { // yes, add 'hfe' to 'tmpLayout'
+						redge.util=1;
+						count_vhits++;
+						pdcel.tmpLayout.add(hfe.face);
+
+						if (debug) { // debug=true;
+							System.out.println("  later red "+hfe.face.faceIndx+" = <"+
+									hfe.face.toString()+">, oppVErt "+oppVert.vertIndx+
+									", add to 'tmpLayout'; red edge = "+redge.myEdge);				
+							DCELdebug.drawEdgeFace(p,hfe);
+						}
+					}
+				}
+			} // done when red
 		} // end of while through 'orderEdges'
+		
+System.out.println("'count_vhits = "+count_vhits);
+
 		pdcel.intFaceCount=ftick;
 
 		debug=false;
@@ -988,19 +1093,11 @@ public class CombDCEL {
 		// (for help with debugging, convert the vertices last)
 
 		// (1) Edges: --------------------------------------------------------
-		//     Index and set 'myRedEdge's for all 'HalfEdge's
 		pdcel.edges=new HalfEdge[etick+1];
 		for (int j=1;j<=etick;j++) {
 			pdcel.edges[j]=pdcel.tmpEdges.get(j);
 			pdcel.edges[j].edgeIndx=j; // may be set already
-			pdcel.edges[j].myRedEdge=null;
 		}
-		// set any 'myRedEdge's
-		rtrace=pdcel.redChain;
-		do {
-			rtrace.myEdge.setRedEdge(rtrace);
-			rtrace=rtrace.nextRed;
-		} while (rtrace!=pdcel.redChain);
 		pdcel.tmpEdges=null;
 		
 		// (2) Faces: --------------------------------------------------------
@@ -1022,6 +1119,7 @@ public class CombDCEL {
 		if (debug) { // debug=true;
 			DCELdebug.drawEdgeFace(pdcel.p,pdcel.tmpLayout);
 			DCELdebug.drawEdgeFace(pdcel.p,pdcel.tmpfullLayout);
+			debug=false;
 		}
 		
 		// (4) Vertices; -----------------------------------------------------
@@ -1031,7 +1129,7 @@ public class CombDCEL {
 		ArrayList<Vertex> newVertices=new ArrayList<Vertex>(); 
 		VertexMap newold=new VertexMap();
 		int vcount=0;
-		vhit=new int[pdcel.vertCount+1];
+		int[] vhit=new int[pdcel.vertCount+1];
 		
 		// get all interiors first
 		for (int v=1;v<=pdcel.vertCount;v++) {
@@ -1080,7 +1178,11 @@ public class CombDCEL {
 		while (lit.hasNext()) {
 			Face face=lit.next();
 			int nxtIndx=face.faceIndx;
-			pdcel.computeOrder.add(new EdgeSimple(face.edge.twin.face.faceIndx,nxtIndx));
+			EdgeSimple es=new EdgeSimple(face.edge.twin.face.faceIndx,nxtIndx);
+			pdcel.computeOrder.add(es);
+			
+//System.out.println(es.toString());
+			
 			faceIndx=nxtIndx;
 		}
 		
@@ -1106,6 +1208,27 @@ public class CombDCEL {
 		if (newRedChain!=null)
 			pdcel.redChain=newRedChain;
 		return pdcel;
+	}
+	
+	/**
+	 * Given a 'HalfEdge', check if origin is 'RedVertex'. If so,
+	 * return the next clw 'RedHEdge' (possibly itself). If not,
+	 * return null;
+	 * @param edge HalfEdge
+	 * @return RedHEdge or null 
+	 */
+	public static RedHEdge nextRedEdge(HalfEdge edge) {
+		if (!(edge.origin instanceof RedVertex))
+			return null;
+		if (edge.myRedEdge!=null)
+			return edge.myRedEdge;
+		HalfEdge he=edge;
+		do {
+			if (he.myRedEdge!=null)
+				return he.myRedEdge;
+			he=he.twin.next;
+		} while(he!=edge);
+		return null;
 	}
 
 	/**

@@ -5,6 +5,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import complex.Complex;
 import dcel.Face;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
@@ -19,6 +20,7 @@ import komplex.EdgeSimple;
 import komplex.GraphSimple;
 import listManip.GraphLink;
 import packing.PackData;
+import util.DispFlags;
 
 public class DCELdebug {
 	
@@ -86,7 +88,15 @@ public class DCELdebug {
 		  }			
 		return count;
 	}
-	
+
+	public static void drawOrderEdgeFace(PackData p,ArrayList<HalfEdge> elist) {
+		Iterator<HalfEdge> eit=elist.iterator();
+		while (eit.hasNext()) {
+			HalfEdge he=eit.next();
+			drawEdgeFace(p,new EdgeSimple(he.origin.vertIndx,he.twin.origin.vertIndx));
+		}
+	}
+
 	/**
 	 * draw on pack p the edges dual to the give dual edges and
 	 * their faces.
@@ -106,8 +116,14 @@ public class DCELdebug {
 		Iterator<Face> fit=facelist.iterator();
 		while (fit.hasNext()) {
 			Face f=fit.next();
-			drawEdgeFace(p,new EdgeSimple(f.edge.origin.vertIndx,f.edge.twin.origin.vertIndx));
+			EdgeSimple es=new EdgeSimple(f.edge.origin.vertIndx,f.edge.twin.origin.vertIndx);
+			drawEdgeFace(p,es);
+			System.out.println("edge "+es+" and faceIndx "+f.faceIndx);
 		}
+	}
+	
+	public static void drawEdgeFace(PackData p,HalfEdge hfe) {
+		drawEdgeFace(p,new EdgeSimple(hfe.origin.vertIndx,hfe.twin.origin.vertIndx));
 	}
 	
 	/**
@@ -145,9 +161,11 @@ public class DCELdebug {
 	 * @param redge RedHEdge
 	 */
 	public static void drawRedEdge(PackData p,RedHEdge redge) {
-		int v=redge.myEdge.origin.vertIndx;
-		int w=redge.myEdge.twin.origin.vertIndx;
-		CommandStrParser.jexecute(p,"disp -et9c195 "+v+" "+w);
+		Complex z0=redge.getCenter();
+		Complex z1=redge.nextRed.getCenter();
+		DispFlags dflags=new DispFlags("c195t4");
+		p.cpScreen.drawEdge(z0, z1, dflags);
+		p.cpScreen.repaint();
 	}
 	
 	public static void printRedChain(RedHEdge redge) {

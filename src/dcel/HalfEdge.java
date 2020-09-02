@@ -1,5 +1,7 @@
 package dcel;
 
+import java.awt.Color;
+
 /** 
  * DCEL HalfEdge. Its 'face' is on its left. As we transition to a DCEL
  * core model of packings, each edge will carry an 'inversive distance'
@@ -20,6 +22,7 @@ public class HalfEdge {
 	//
 	double invDist;  // inversive distance assigned, default 1.0 (tangency)
 	double schwarzian; // see 'Schwarzian.java'
+	public Color color; 
 	
 	public int util; 
 

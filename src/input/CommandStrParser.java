@@ -5817,6 +5817,8 @@ public class CommandStrParser {
 				
 				else if (str.contains("red")) {
 					DCELdebug.drawRedChain(packData, packData.packDCEL.redChain);
+					PackControl.canvasRedrawer.paintMyCanvasses(packData,false);
+					return 1;
 				}
 
 				else if (str.contains("dcel")) {

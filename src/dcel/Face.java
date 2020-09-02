@@ -145,4 +145,12 @@ public class Face {
 		} while (nxtedge!=edge);
 		return rslt;
 	}
+	
+	public String toString() {
+		int[] myverts=getVerts();
+		StringBuilder sb=new StringBuilder();
+		for (int j=0;j<myverts.length;j++)
+			sb.append(myverts[j]+" ");
+		return sb.toString();
+	}
 }

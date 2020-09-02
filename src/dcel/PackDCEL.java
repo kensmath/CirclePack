@@ -16,6 +16,7 @@ import geometry.CircleSimple;
 import geometry.CommonMath;
 import geometry.EuclMath;
 import input.CPFileManager;
+import input.CommandStrParser;
 import komplex.EdgeSimple;
 import komplex.KData;
 import komplex.Triangulation;
@@ -501,16 +502,36 @@ public class PackDCEL {
 			count++;
 			
 			if (debug) { // debug=true;  debug=false;
-				System.out.println("face "+es.w+" with vertex v2 "+
-					he.next.next.origin.vertIndx+" computes center ("+cs.center+")");
-				System.out.println("   v0 "+
-					he.origin.vertIndx+" computes center ("+he.origin.getCenter()+")");
-				System.out.println("   v1 "+
-					he.next.origin.vertIndx+" computes center ("+he.next.origin.getCenter()+")");
-				DCELdebug.drawEdgeFace(p,es);
+				System.out.println("face "+es.w+": <"+faces[es.w].toString()+">:  centers(radii): ");
+				System.out.println("   "+he.origin.getCenter()+"  ("+he.origin.getRadius()+")");
+				System.out.println("   "+he.next.origin.getCenter()+"  ("+he.next.origin.getRadius()+")");
+				System.out.println("  compute: "+cs.center+"  ("+he.next.next.origin.getRadius()+")");
+				DCELdebug.drawEdgeFace(p,new EdgeSimple(he.origin.vertIndx,he.next.origin.vertIndx));
+				
+				// draw dot
+				int v=he.next.next.origin.vertIndx;
+				p.rData[v].center=cs.center;
+				StringBuilder strbld=new StringBuilder("disp -tf "+v);
+				CommandStrParser.jexecute(p,strbld.toString());
 			}
 			
 		}
+		
+		// final pass around red chain: set 'PackData' centers at first hits
+		RedHEdge rtrace=redChain;
+		do {
+			rtrace.myEdge.origin.util=0;
+			rtrace=rtrace.nextRed;
+		} while (rtrace!=redChain);
+		do {
+			if (rtrace.myEdge.origin.util==0) {
+				int v=rtrace.myEdge.origin.vertIndx;
+				p.rData[v].center=new Complex(rtrace.center);
+				rtrace.myEdge.origin.util=1;
+			}
+			rtrace=rtrace.nextRed;
+		} while (rtrace!=redChain);
+		
 		return count;
 	}
 		
@@ -1285,6 +1306,7 @@ public class PackDCEL {
 				he.myRedEdge.setCenter(z);
 				he.origin.setCenter(z);
 				p.rData[he.origin.vertIndx].center=new Complex(z);
+				he=edge; // kick out
 			}
 		} while (he!=edge);
 	}

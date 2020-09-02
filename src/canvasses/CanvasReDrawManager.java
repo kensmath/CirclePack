@@ -97,7 +97,7 @@ public class CanvasReDrawManager {
 	
 	/**
 	 * Paint all canvasses (or active only) for given packing
-	 * @param p @see packData
+	 * @param p PackData
 	 * @param aO boolean: yes means active pack only 
 	 */
 	public void paintMyCanvasses(PackData p,boolean aO) {

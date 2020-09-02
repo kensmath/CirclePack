@@ -22,8 +22,10 @@ public class Vertex {
 	
 	public HalfEdge halfedge;	// a halfedge pointing away from this vert
 	public int vertIndx;		// index from associated 'PackData'
-	public int bdryFlag;
-	// TODO: deciding on whether to keep data here or, as usual, in packData
+	public int bdryFlag;		// 0 for interior, 1 for boundary
+	public int util;
+	
+	// TODO: for now, keep data both here and 'PackData'
 	Complex center;		
 	double rad;
 
@@ -37,7 +39,7 @@ public class Vertex {
 	public Vertex(int v) {
 		halfedge=null;
 		vertIndx=v;
-		center=new Complex(0.0); 
+		center=new Complex(0.0);
 	}
 
 	/**
