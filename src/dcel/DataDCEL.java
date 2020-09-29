@@ -154,14 +154,13 @@ public class DataDCEL {
 			}
 		}
 		
-		// set radii in 'RedHEdge's
+		// set initial data in 'RedHEdge's
 		RedHEdge rtrace=pdcel.redChain;
 		do {
 			HalfEdge edge=rtrace.myEdge;
 			int v=edge.origin.vertIndx;
-			int newv=pdcel.newOld.findW(v);
-			pdcel.setVertCenter(edge,pdcel.p.rData[newv].center);
-			pdcel.setVertRadius(edge,pdcel.p.rData[newv].rad);
+			rtrace.setCenter(new Complex(p.rData[v].center));
+			rtrace.setRadius(p.rData[v].rad);
 			rtrace=rtrace.nextRed;
 		} while (rtrace!=pdcel.redChain);
 		

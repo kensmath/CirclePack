@@ -476,7 +476,7 @@ public class PackDCEL {
 	 * and the centers of the ends of 'edge' to compute the 
 	 * center of the third vertex. 
 	 * @param edge HalfEdge
-	 * @return CircleSimple
+	 * @return CircleSimple  
 	 */
 	public CircleSimple computeFaceCenter(HalfEdge edge) {
 		CircleSimple c0=getVertData(edge);
@@ -518,9 +518,12 @@ public class PackDCEL {
 				System.out.println("   "+c0.center+"  ("+c0.rad+")");
 				System.out.println("   "+c1.center+"  ("+c1.rad+")");
 				System.out.println("  compute: "+cs.center+"  ("+c2.rad+")");
-				p.cpScreen.drawEdge(c0.center,c1.center,new DispFlags("tc5"));
-				p.cpScreen.drawFace(c0.center, c1.center, c2.center, .5, .5, .5, new DispFlags("fc120"));
+				p.cpScreen.drawEdge(c0.center,c1.center,new DispFlags("c5"));
+				p.cpScreen.drawFace(c0.center, c1.center, c2.center, .05, .05, .05, new DispFlags("fc120"));
 
+				// draw third circle
+				p.cpScreen.drawCircle(c2.center, c2.rad,new DispFlags("cn"));
+				
 				// draw dot
 				int v=he.next.next.origin.vertIndx;
 				p.rData[v].center=cs.center;
