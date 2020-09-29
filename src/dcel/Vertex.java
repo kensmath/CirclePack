@@ -212,6 +212,10 @@ public class Vertex {
 		return new CircleSimple(getCenter(),getRadius(),1);
 	}
 	
+	public String toString() {
+		return new String(""+vertIndx);
+	}
+	
 	/**
 	 * Clone: caution, 'halfedge' pointer may be outdated.
 	 * @return new Vertex

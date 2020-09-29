@@ -767,7 +767,7 @@ public class LayoutBugs {
 				  count++;
 			  }
 			  dbw.write("\n\nDecel ideal faces in order of 'dcel.idealFaces' vector.\n");
-			  flst=dcel.tmpIdeals.iterator();
+			  flst=dcel.tmpIdealFaces.iterator();
 			  while (flst.hasNext()) {
 				  dcel.Face face=flst.next();
 				  int[] verts=face.getVerts();

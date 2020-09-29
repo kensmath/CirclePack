@@ -875,9 +875,9 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
       if (x1<0 || x2<0) return -1.0;
       double s1=x_to_s_rad(x1);
       double s2=x_to_s_rad(x2);
-      double ss1=s1*s2;
+      double ss1=s1*s1;
       double ss2=s2*s2;
-      return acosh( (1/(4.0*s1*s2))*((1+ss1)*(1+ss2)+(1-ss1)*(1-ss2)*inv_dist) );
+      return acosh( (1.0/(4.0*s1*s2)) * ( (1+ss1)*(1+ss2) + (1-ss1)*(1-ss2)*inv_dist) );
   }
   
   /**

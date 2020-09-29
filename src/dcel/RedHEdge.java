@@ -21,7 +21,7 @@ public class RedHEdge {
 	public RedHEdge prevRed;
 	public RedHEdge twinRed; // across a red edge
 	public int mobIndx;    // index into sidepair Mobius maps
-	public int util;
+	public int redutil;
 	
 	// A red edge 'origin' may have several cent/rad's
 	Complex center;

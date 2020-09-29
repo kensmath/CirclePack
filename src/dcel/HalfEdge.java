@@ -2,6 +2,8 @@ package dcel;
 
 import java.awt.Color;
 
+import komplex.EdgeSimple;
+
 /** 
  * DCEL HalfEdge. Its 'face' is on its left. As we transition to a DCEL
  * core model of packings, each edge will carry an 'inversive distance'
@@ -17,6 +19,7 @@ public class HalfEdge {
 	public HalfEdge next;
 	public HalfEdge prev;
 	public int edgeIndx;
+	public int mark;
 	RedHEdge myRedEdge; // set when finishing up construction.
 	
 	//
@@ -43,6 +46,19 @@ public class HalfEdge {
 	public HalfEdge(Vertex v) {
 		this();
 		origin=v;
+	}
+	
+	public HalfEdge(HalfEdge he) { // clone
+		origin=he.origin;
+		twin=he.twin;
+		face=he.face;
+		next=null;
+		prev=null;
+		edgeIndx=-1;
+		myRedEdge=null;
+		invDist=he.invDist;
+		schwarzian=he.schwarzian;
+		util=0;
 	}
 	
 	/**
@@ -118,16 +134,29 @@ public class HalfEdge {
 		return schwarzian;
 	}
 	
+	/**
+	 * Set to 1.0 unless 'invd' differs by more than .000001
+	 * @param invd double
+	 */
 	public void setInvDist(double invd) {
-		invDist=invd;
+		if (Math.abs(invd-1.0)<.000001)
+			invDist=1.0;
+		else
+			invDist=invd;
 	}
 	
+	/**
+	 * return 1.0 unless 'invDist' differs by more than .000001
+	 * @return
+	 */
 	public double getInvDist() {
+		if (Math.abs(invDist-1.0)<.000001)
+			return 1.0;
 		return invDist;
 	}
 	
 	/**
-	 * clone: caution, pointer may be outdated, 
+	 * clone: caution, pointers may be conflict or be outdated, 
 	 * @return new HalfEdge
 	 */
 	public HalfEdge clone() {
@@ -146,6 +175,15 @@ public class HalfEdge {
 	 */
 	public String toString() {
 		return(" "+origin.vertIndx+" "+twin.origin.vertIndx+" ");
+	}
+	
+	/**
+	 * Give oriented 'EdgeSimple' <v,w> of endpoints
+	 * @param he HalfEdge
+	 * @return EdgeSimple
+	 */
+	public static EdgeSimple getEdgeSimple(HalfEdge he) {
+		return new EdgeSimple(he.origin.vertIndx,he.twin.origin.vertIndx);
 	}
 
 }

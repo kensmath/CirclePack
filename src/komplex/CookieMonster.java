@@ -1289,7 +1289,7 @@ public class CookieMonster {
 
 		// Now the processing to prune this; work with DCEL data
 		PackDCEL myDCEL = new PackDCEL(Tri);
-		int facecount = myDCEL.tmpFaceList.size()-1-myDCEL.tmpIdeals.size(); // number of interior faces		
+		int facecount = myDCEL.tmpFaceList.size()-1-myDCEL.tmpIdealFaces.size(); // number of interior faces		
 
 		// find the centroids
 		Complex[] faceC = new Complex[facecount+1]; // centroids

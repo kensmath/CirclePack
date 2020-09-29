@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import complex.Complex;
+import dcel.D_SideData;
 import dcel.Face;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
@@ -17,8 +18,7 @@ import exceptions.DCELException;
 import input.CPFileManager;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
-import komplex.GraphSimple;
-import listManip.GraphLink;
+import listManip.VertexMap;
 import packing.PackData;
 import util.DispFlags;
 
@@ -88,44 +88,38 @@ public class DCELdebug {
 		  }			
 		return count;
 	}
-
-	public static void drawOrderEdgeFace(PackData p,ArrayList<HalfEdge> elist) {
-		Iterator<HalfEdge> eit=elist.iterator();
-		while (eit.hasNext()) {
-			HalfEdge he=eit.next();
-			drawEdgeFace(p,new EdgeSimple(he.origin.vertIndx,he.twin.origin.vertIndx));
-		}
-	}
-
-	/**
-	 * draw on pack p the edges dual to the give dual edges and
-	 * their faces.
-	 * @param p PackData
-	 * @param glink GraphLink
-	 */
-	public static void drawEdgeFace(PackData p,GraphLink glink) {
-		Iterator<EdgeSimple> git=glink.iterator();
-		while (git.hasNext()) {
-			GraphSimple gs=(GraphSimple)git.next();
-			EdgeSimple es=p.packDCEL.dualEdge_to_Edge(gs);
-			drawEdgeFace(p,es);
-		}
-	}
 	
-	public static void drawEdgeFace(PackData p,ArrayList<Face> facelist) {
+	public static void edgeFlowerUtils(PackDCEL pdcel,Vertex vert) {
+		HalfEdge he=vert.halfedge;
+		do {
+			System.out.println(" spoke ("+he+"), util = "+he.util);
+			he=he.prev.twin;
+		} while (he!=vert.halfedge);
+	}
+
+	public static void drawEdgeFace(PackDCEL pdcel,ArrayList<Face> facelist) {
 		Iterator<Face> fit=facelist.iterator();
 		while (fit.hasNext()) {
 			Face f=fit.next();
 			EdgeSimple es=new EdgeSimple(f.edge.origin.vertIndx,f.edge.twin.origin.vertIndx);
-			drawEdgeFace(p,es);
+			if (pdcel.newOld!=null) {
+				es.v=pdcel.newOld.findW(es.v);
+				es.w=pdcel.newOld.findW(es.w);
+			}
+			drawEdgeFace(pdcel.p,es);
 			System.out.println("edge "+es+" and faceIndx "+f.faceIndx);
 		}
 	}
-	
-	public static void drawEdgeFace(PackData p,HalfEdge hfe) {
-		drawEdgeFace(p,new EdgeSimple(hfe.origin.vertIndx,hfe.twin.origin.vertIndx));
+
+	public static void drawEdgeFace(PackDCEL pdcel,HalfEdge hfe) {
+		EdgeSimple es=new EdgeSimple(hfe.origin.vertIndx,hfe.twin.origin.vertIndx);
+		if (pdcel.newOld!=null) {
+			es.v=pdcel.newOld.findW(es.v);
+			es.w=pdcel.newOld.findW(es.w);
+		}
+		drawEdgeFace(pdcel.p,es);
 	}
-	
+
 	/**
 	 * Given oriented edge, draw in blue and face on left in pale red
 	 * @param p PackData
@@ -141,9 +135,28 @@ public class DCELdebug {
 			CommandStrParser.jexecute(p,strbld.toString());
 		}
 	}
+
+	/**
+	 * Draw redchain edges on parent packing
+	 * @param p
+	 * @param redge
+	 */
+	public static void drawTmpRedChain(PackData p,RedHEdge redge) {
+		RedHEdge rtrace=redge;
+		do {
+			Complex z0=p.rData[rtrace.myEdge.origin.vertIndx].center;
+			Complex z1=p.rData[rtrace.myEdge.twin.origin.vertIndx].center;
+			DispFlags dflags=new DispFlags("c195t4");
+			p.cpScreen.drawEdge(z0, z1, dflags);
+			p.cpScreen.rePaintAll();
+			rtrace=rtrace.nextRed;
+		} while (rtrace!=null && rtrace!=redge);
+		
+	}
 	
 	/**
-	 * Draw whole redChain starting at redge
+	 * Draw whole redChain starting at redge; this uses newly
+	 * stored centers, not the parent packing
 	 * @param p PackData
 	 * @param redge RedHEdge
 	 */
@@ -151,6 +164,7 @@ public class DCELdebug {
 		RedHEdge rtrace=redge;
 		do {
 			drawRedEdge(p,rtrace);
+System.out.println(" red edge "+rtrace.myEdge);
 			rtrace=rtrace.nextRed;
 		} while (rtrace!=redge);
 	}
@@ -165,18 +179,95 @@ public class DCELdebug {
 		Complex z1=redge.nextRed.getCenter();
 		DispFlags dflags=new DispFlags("c195t4");
 		p.cpScreen.drawEdge(z0, z1, dflags);
-		p.cpScreen.repaint();
+		p.cpScreen.rePaintAll();
+	}
+
+	public static void printRedChain(RedHEdge redge,VertexMap vmap) {
+		StringBuilder sb=new StringBuilder("vertices are:\n");
+		StringBuilder sbold=new StringBuilder("old indices:\n");
+		RedHEdge nxtre=redge;
+		do {
+			sb.append(" ("+nxtre.mobIndx+") -> "+nxtre.myEdge.origin.vertIndx);
+			if (vmap!=null)
+				sbold.append(" -> "+vmap.findW(nxtre.myEdge.origin.vertIndx));
+			nxtre=nxtre.nextRed;
+		} while (nxtre!=redge);
+		sb.append(" ("+nxtre.mobIndx+") -> "+nxtre.myEdge.origin.vertIndx);
+		if (vmap!=null)
+			sbold.append(" -> "+vmap.findW(nxtre.myEdge.origin.vertIndx));
+		System.out.println(sb.toString());
+		if (vmap!=null)
+			System.out.println(sbold.toString());
 	}
 	
 	public static void printRedChain(RedHEdge redge) {
-		StringBuilder sb=new StringBuilder("vertices are:\n");
-		RedHEdge nxtre=redge;
+		printRedChain(redge,null);
+	}
+	
+	public static void redChainDetail(PackDCEL pdcel) {
+		StringBuilder strbld=new StringBuilder("RedChain Detail: \n");
+		
+		// redchain and twinRed's
+		strbld.append("  RedChain/twinRed: \n");
+		RedHEdge rtrace=pdcel.redChain;
 		do {
-			sb.append(" --> "+nxtre.myEdge.origin.vertIndx);
-			nxtre=nxtre.nextRed;
-		} while (nxtre!=redge);
-		sb.append(" --> "+nxtre.myEdge.origin.vertIndx);
-		System.out.println(sb.toString());
+			try {
+				if (rtrace.twinRed!=null)
+					strbld.append("    ["+rtrace.myEdge+"]/["+rtrace.twinRed.myEdge+"] ->");
+				else 
+					strbld.append("    ["+rtrace.myEdge+"] ->");
+				// is this a "blue" face?
+				if (rtrace.nextRed.myEdge.next==rtrace.myEdge.prev) {
+					strbld.append("  (this and next form BLUE face)\n");
+				}
+				else strbld.append("\n");
+
+				rtrace=rtrace.nextRed;
+			} catch (Exception ex) {}
+		} while (rtrace!=pdcel.redChain);
+		
+		// do by side pairs
+		if (pdcel.pairLink!=null && pdcel.pairLink.size()>0) {
+			strbld.append("Side pairs:\n");
+			Iterator<D_SideData> sit=pdcel.pairLink.iterator();
+			while (sit.hasNext()) {
+				D_SideData sdata=sit.next();
+				if (sdata==null)
+					continue;
+				try {
+					strbld.append("Side  spIndex "+sdata.spIndex+"; mateIndex "+
+						sdata.mateIndex+"; start/end Edge "+sdata.startEdge.myEdge+"/"+
+						sdata.endEdge.myEdge+"; pairedEdge indx "+
+						sdata.pairedEdge.spIndex+"; label "+sdata.label+"\n");
+					rtrace=sdata.startEdge.prevRed;
+					while (rtrace!=sdata.endEdge) {
+						rtrace=rtrace.nextRed;
+						if (rtrace.twinRed!=null)
+							strbld.append("    ["+rtrace.myEdge+"]/["+rtrace.twinRed.myEdge+"] ->");
+						else
+							strbld.append("    ["+rtrace.myEdge+"] ->");
+						// is this a "blue" face?
+						if (rtrace.nextRed.myEdge.next==rtrace.myEdge.prev) {
+							strbld.append("    (this and next form BLUE face)\n");
+						}
+						else strbld.append("\n");
+					}
+				} catch (Exception ex) {}
+			}
+		}
+		
+		// bdryStarts.
+		if (pdcel.bdryStarts!=null && pdcel.bdryStarts.size()>0) {
+			try {
+				strbld.append("BdryStarts : ");
+				Iterator<RedHEdge> bsit=pdcel.bdryStarts.iterator();
+				while (bsit.hasNext()) {
+					strbld.append(""+bsit.next().myEdge+":  ");
+				}
+			} catch(Exception ex) {}
+		}
+		
+		System.out.println(strbld.toString());
 	}
 	
 	// ================ check consistency of twin origins ==================

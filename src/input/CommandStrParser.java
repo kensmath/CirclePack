@@ -5800,11 +5800,11 @@ public class CommandStrParser {
 					// Now three situations: 'vlist' takes precedence over 'poisonVerts'
 					PackDCEL pdcel=null;
 					if (vlist!=null && vlist.size()>0)
-						pdcel=CombDCEL.redDCELbuilder(packData,bouq,vlist,false);
+						pdcel=CombDCEL.d_redChainBuilder(packData,bouq,vlist,false);
 					else if (packData.poisonVerts!=null && packData.poisonVerts.size()>0)	
-						pdcel=CombDCEL.redDCELbuilder(packData,bouq,packData.poisonVerts,true);
+						pdcel=CombDCEL.d_redChainBuilder(packData,bouq,packData.poisonVerts,true);
 					else
-						pdcel=CombDCEL.redDCELbuilder(packData,bouq,null,false);
+						pdcel=CombDCEL.d_redChainBuilder(packData,bouq,null,false);
 					
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
 					CirclePack.cpb.pack[qnum].swapPackData(p,false);
@@ -5812,10 +5812,24 @@ public class CommandStrParser {
 				}
 				
 				else if (str.contains("layout")) {
-					return packData.packDCEL.DCELCompCenters();
+					return packData.packDCEL.D_CompCenters();
+				}
+				
+				// keep redchain, reprocess the interior with/w.o. blueshift option
+				else if (str.contains("refil")) {
+					boolean blueshift=(items.size()>0);
+					packData.packDCEL=CombDCEL.d_FillInside(packData.packDCEL, blueshift);
+				}
+				
+				// show redChain edges and their twinRed,
+				//    show starts/stops of sides
+				else if (str.contains("reddebug")) {
+					DCELdebug.redChainDetail(packData.packDCEL);
+					return 1;
 				}
 				
 				else if (str.contains("red")) {
+					// TODO: have to replace after debugging
 					DCELdebug.drawRedChain(packData, packData.packDCEL.redChain);
 					PackControl.canvasRedrawer.paintMyCanvasses(packData,false);
 					return 1;

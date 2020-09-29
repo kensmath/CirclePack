@@ -3,18 +3,17 @@ package packQuality;
 import java.util.Iterator;
 
 import allMains.CPBase;
+import complex.Complex;
+import dcel.HalfEdge;
+import exceptions.DataException;
+import geometry.CircleSimple;
+import geometry.HyperbolicMath;
+import geometry.SphericalMath;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import packing.PackData;
 import util.UtilPacket;
-
-import complex.Complex;
-
-import exceptions.DataException;
-import geometry.HyperbolicMath;
-import geometry.CircleSimple;
-import geometry.SphericalMath;
 
 /**
  * Various measures of packing quality to help identify layout errors,
@@ -399,6 +398,40 @@ public class QualMeasures {
 		
 		else { // eucl
 			verr=visual_error(r1,r2,z1,z2,inv_dist);
+		}
+		return verr;
+	}
+
+	/** 
+	 * get visual error for DCEL 'HalfEdge'
+	 * @param p PackData
+	 * @param edge HalfEdge
+	 * @return double
+	 */
+	public static double d_edge_vis_error(PackData p,HalfEdge edge) {
+		int v=edge.origin.vertIndx;
+		int w=edge.twin.origin.vertIndx;
+		Complex zv=p.packDCEL.getVertCenter(edge);
+		Complex zw=p.packDCEL.getVertCenter(edge.twin);
+		double rv=p.rData[v].rad;
+		double rw=p.rData[w].rad;
+		double verr=-1.0;
+		if (p.hes<0) { // hyperbolic
+			CircleSimple sc=HyperbolicMath.h_to_e_data(zv, rv);
+			zv=sc.center;
+			rv=sc.rad;
+			sc=HyperbolicMath.h_to_e_data(zw, rw);
+			zw=sc.center;
+			rw=sc.rad;
+			verr=visual_error(rv,rw,zv,zw,edge.getInvDist());
+		}
+		
+		else if (p.hes>0) { // spherical
+			verr=sph_visual_error(rv,rw,zv,zw,edge.getInvDist());
+		}
+		
+		else { // eucl
+			verr=visual_error(rv,rw,zv,zw,edge.getInvDist());
 		}
 		return verr;
 	}

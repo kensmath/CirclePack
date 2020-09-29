@@ -894,6 +894,13 @@ public class CPScreen extends JPanel implements	MouseListener {
 			}
 		}
 	}
+	
+	/**
+	 * Call for repaint of canvas and small canvas.
+	 */
+	public void rePaintAll() {
+		PackControl.canvasRedrawer.paintMyCanvasses(this,false);
+	}
 
 	/**
 	 * CPScreen directly manages only the small canvass. For more

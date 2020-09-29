@@ -20,6 +20,7 @@ import listManip.BaryLink;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.PointLink;
 import listManip.TileLink;
@@ -97,6 +98,7 @@ public abstract class CPBase {
 	public static NodeLink Vlink;
 	public static FaceLink Flink;
 	public static EdgeLink Elink;
+	public static HalfLink HLink;
 	public static TileLink Tlink;
 	public static GraphLink Glink; 
 	public static PointLink Zlink;
