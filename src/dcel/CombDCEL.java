@@ -1430,6 +1430,22 @@ public class CombDCEL {
 		return pdcel;
 	}
 	
+	/** 
+	 * Convert a chain of 'HalfEdge's to form a new "red chain", and
+	 * process its side pairings. Typically this will now pass to
+	 * 'd_FillInside'. If the given chain is improper, return null.
+	 * @param edges
+	 * @return RedHEdge, null on error
+	 */
+	// TODO: under development, 10/2020
+//	public static RedHEdge chain2Red(ArrayList<HalfEdge> edges) {
+//		RedHEdge newChain=-new RedHEdge();
+//		Iterator<HalfEdge> eit=edges.iterator();
+//		while (eit.hasNext()) {
+			
+//		}
+//	}
+	
 	/**
 	 * Given a 'HalfEdge', check if origin is 'RedVertex'. If so,
 	 * return the next clw 'RedHEdge' (possibly itself). If not,
