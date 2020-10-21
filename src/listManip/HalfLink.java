@@ -274,7 +274,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				boolean not_m=false;
 				// 'mc'? want those NOT marked?
 				if (str.length()>1 && str.charAt(1)=='c') not_m=true;
-				int m,w;
+				int m;
 				for (int e=1;e<=packData.packDCEL.edgeCount;e++) {
 					m=packData.packDCEL.edges[e].mark;
 					if ((not_m && m==0) || (!not_m && m!=0)) { // this end is marked

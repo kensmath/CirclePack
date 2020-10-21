@@ -828,8 +828,40 @@ public class CombDCEL {
 			pdcel.vertices[vt.vertIndx]=vt;
 		}
 		pdcel.newOld=newold;
-
+		
+		blueCleanup(pdcel); // try to illiminate blue faces in the 'redChain'
+		
 		return d_FillInside(pdcel,false); // for now, do not redshift
+	}
+	
+	/** 
+	 * See if the red chain can be shifted to eliminate some blue
+	 * faces. Cycle through because some may need to be eliminated
+	 * before others.
+	 * TODO: finish this
+	 * @param pdcel
+	 */
+	public static void blueCleanup(PackDCEL pdcel) {
+		boolean gotone=true;
+		while (gotone) {
+			gotone=false;
+			RedHEdge rtrace=pdcel.redChain;
+			do {
+				// do next two red edges form blue face? 
+				if (rtrace.myEdge.prev==rtrace.nextRed.myEdge.next && 
+						(rtrace.twinRed!=null || rtrace.nextRed.twinRed!=null)) {
+					
+					// evaluation stage: possibilites are 
+					//    1. move first edge cclw
+					//    2. move second edge clw
+					// check feasibility and quality
+					RedHEdge upedge=rtrace.prevRed;
+
+					// TODO: put off for now: 10/3/2020
+
+				}
+			} while (rtrace!=pdcel.redChain);
+		}
 	}
 
 	/**

@@ -10,19 +10,21 @@ import allMains.CirclePack;
 import baryStuff.BaryPoint;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.D_SideData;
+import dcel.PackDCEL;
 import deBugging.LayoutBugs;
 import exceptions.ParserException;
+import geometry.CircleSimple;
 import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
-import geometry.CircleSimple;
 import geometry.SphericalMath;
 import komplex.AmbiguousZ;
 import komplex.DualGraph;
 import komplex.DualTri;
-import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.Face;
+import komplex.SideDescription;
 import listManip.BaryCoordLink;
 import listManip.BaryLink;
 import listManip.EdgeLink;
@@ -720,8 +722,17 @@ public class DisplayParser {
 			case 'R': // display side-pairings
 			{
 				// TODO: should we allow color info override??
-				int numSides = -1;
-				if (p.getSidePairs() == null || (numSides = p.getSidePairs().size()) == 0)
+
+				int thickness = cpScreen.getLineThickness();
+				if (thickness<4) thickness=4;
+
+				PackDCEL pdcel=p.packDCEL;
+				
+				int numSides = -1; // in pdcel case, 'pairLink' starts with null entry
+				if (pdcel!=null && (pdcel.pairLink==null || (numSides=pdcel.pairLink.size()-1)==0))
+					break;
+				if (pdcel==null && 
+						(p.getSidePairs() == null || (numSides = p.getSidePairs().size()) == 0))
 					break;
 				boolean do_mate = false;
 				boolean do_circle = false;
@@ -737,39 +748,57 @@ public class DisplayParser {
 							do_circle = true;
 					}
 				}
-				Vector<Integer> verts = new Vector<Integer>(numSides);
+				Vector<Integer> indices = new Vector<Integer>(numSides);
+				
+				// indexing from 1 in pdcel case, else from 0
+				int offset=0;
+				if (pdcel!=null) 
+					offset=1;
+
 				// default or 'a' to all
 				if (items == null || items.size() == 0
 						|| ((String) items.get(0)).contains("a")) {
 					for (int j = 0; j < numSides; j++)
-						verts.add(j, j);
+						indices.add(j, j+offset);
 				} else {
 					for (int j = 0; j < items.size(); j++) {
 						try {
 							int n = Integer.valueOf(items.get(j));
-							if (n >= 0 && n < numSides)
-								verts.add(j, n);
+							if (n >= offset && n < (numSides+offset))
+								indices.add(j, n);
 						} catch (Exception ex) {
 						}
 					}
 				}
 				int n, k;
-				for (int j = 0; j < verts.size(); j++) {
-					n = (Integer) verts.get(j);
-					SideDescription epair = p.getSidePairs().get(n);
-					int thickness = cpScreen.getLineThickness();
-					if (thickness<4) thickness=4;
+				for (int j = 0; j < indices.size(); j++) {
+					n = (Integer) indices.get(j);
 
-					count += p.sa_draw_bdry_seg(n, do_label, do_circle,
+					if (pdcel!=null) {
+						D_SideData sdata=pdcel.pairLink.get(n);
+						count +=pdcel.d_draw_bdry_seg(n, do_label, do_circle, sdata.color, thickness);
+					}
+					else {
+						SideDescription epair = p.getSidePairs().get(n);
+						count += p.sa_draw_bdry_seg(n, do_label, do_circle,
 							epair.color, thickness);
-					// deBugging.LayoutBugs.log_RedCenters(p); // LayoutBugs.pfacered(p);
+					}
 					
 					if (do_mate) {
 						// do the paired edge?
-						SideDescription ep = (SideDescription) p.getSidePairs().get(n);
-						if ((k = ep.mateIndex) >= 0)
-							p.sa_draw_bdry_seg(k, do_label, do_circle,
-									epair.color, thickness);
+						if (pdcel!=null) {
+							D_SideData sdata=pdcel.pairLink.get(n);
+							if (sdata.mateIndex>0) {
+								count +=pdcel.d_draw_bdry_seg(sdata.mateIndex, 
+										do_label, do_circle, sdata.color, thickness);
+							}
+						}
+						else {
+							SideDescription ep = (SideDescription) p.getSidePairs().get(n);
+							if ((k = ep.mateIndex) >= 0)
+							count+=p.sa_draw_bdry_seg(k, do_label, do_circle,
+									ep.color, thickness);
+						}
 					}
 				}
 				break;

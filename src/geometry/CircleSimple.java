@@ -24,8 +24,10 @@ public class CircleSimple{
 	public CircleSimple(Complex c, double r,int f) {
 		flag=f;
 		lineFlag=false;
-		center = new Complex(c);
-		
+		if (c!=null)
+			center = new Complex(c);
+		else 
+			center=null;
 		rad = r;
 	}
 	

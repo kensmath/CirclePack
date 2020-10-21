@@ -1,5 +1,6 @@
 package dcel;
 
+import java.awt.Color;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.util.ArrayList;
@@ -19,6 +20,9 @@ import input.CPFileManager;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
 import komplex.KData;
+import komplex.RedEdge;
+import komplex.RedList;
+import komplex.SideDescription;
 import komplex.Triangulation;
 import listManip.EdgeLink;
 import listManip.FaceLink;
@@ -465,20 +469,20 @@ public class PackDCEL {
 			}
 			setVertCenter(edge.next,new Complex(dist,0.0));
 		}
-		CircleSimple cS=computeFaceCenter(edge);
+		CircleSimple cS=d_compOppCenter(edge);
 		setVertCenter(edge.next.next,cS.center);
 		return cS;
 	}
 	
 	/**
-	 * Compute the center of third vertex of the face for the
-	 * given 'edge'. Use radii stored in 'Vertex's of the face 
+	 * Compute the center of the vertex oppose 'edge' in its 
+	 * face. Use radii stored for 'Vertex's of the face 
 	 * and the centers of the ends of 'edge' to compute the 
 	 * center of the third vertex. 
 	 * @param edge HalfEdge
 	 * @return CircleSimple  
 	 */
-	public CircleSimple computeFaceCenter(HalfEdge edge) {
+	public CircleSimple d_compOppCenter(HalfEdge edge) {
 		CircleSimple c0=getVertData(edge);
 		CircleSimple c1=getVertData(edge.next);
 		CircleSimple c2=getVertData(edge.next.next);
@@ -493,7 +497,9 @@ public class PackDCEL {
 	/**
 	 * Use 'computeOrder' to compute circle centers, laying base face
 	 * first, then the rest. Note that some circles get laid down more
-	 * than once, so last position is what is stored in 'PackData'.
+	 * than once, so last position is what is stored in 'PackData' for now.
+	 * TODO: for more accuracy, average all computations of center that are
+	 * available: Ides: make all centers null so we can see which are set.
 	 * @return count
 	 */
 	public int D_CompCenters() {
@@ -505,7 +511,7 @@ public class PackDCEL {
 		while (esit.hasNext()) {
 			EdgeSimple es=esit.next();
 			HalfEdge he=faces[es.w].edge;
-			CircleSimple cs=computeFaceCenter(he);
+			CircleSimple cs=d_compOppCenter(he);
 			setVertCenter(he.next.next,cs.center);
 			count++;
 			
@@ -605,6 +611,66 @@ public class PackDCEL {
 	    }
 	    return count;
 	}
+	
+	
+	/** 
+	 * Draw an edge-pairing boundary segment.
+	 * @param n int, index of side-pair (indices start at 1)
+	 * @param do_label boolean, label also?
+	 * @param do_circle boolean, circles also?
+	 * @param ecol Color
+	 * @param int thickness to draw
+	 * @return 1
+	 */
+	public int d_draw_bdry_seg(int n,boolean do_label,boolean do_circle,
+			Color ecol,int thickness) {
+		RedHEdge trace=null;
+		D_SideData epair=null;
+	  
+		if (pairLink==null || n<0 || n>=pairLink.size() 
+				|| (epair=(D_SideData)pairLink.get(n))==null
+				|| (trace=epair.startEdge)==null)  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
+			return 0;
+		int old_thickness=p.cpScreen.getLineThickness();
+
+		RedHEdge rtrace=epair.startEdge;
+		Complex w_cent=new Complex(getVertCenter(rtrace.myEdge));
+		double rad_w=getVertRadius(rtrace.myEdge);
+		if (do_label) // label first circle with side indx
+			p.cpScreen.drawIndex(w_cent,n,1);
+		DispFlags dflags=new DispFlags(""); // System.out.println("v_indx="+v_indx+", wyd_w center.x "+wyd_w.center.x+" and hash "+wyd_w.hashCode());
+		if (do_circle) { // handle draw/label for first circle
+			int w_indx=rtrace.myEdge.origin.vertIndx;
+			if (do_label) { 
+				dflags.label=true;
+				dflags.setLabel(Integer.toString(w_indx));
+			}
+			p.cpScreen.drawCircle(w_cent,rad_w,dflags);
+		}
+		Complex v_cent=null;
+		do {
+			rtrace=rtrace.nextRed;
+			v_cent=w_cent;
+			w_cent=new Complex(getVertCenter(rtrace.myEdge));
+			p.cpScreen.setLineThickness(thickness);
+			int w_indx=rtrace.myEdge.origin.vertIndx;
+			DispFlags df=new DispFlags(null);
+			df.setColor(ecol);
+			p.cpScreen.drawEdge(v_cent,w_cent,df);
+			if (do_circle) { 
+				if (do_label) { 
+					dflags.label=true;
+					dflags.setLabel(Integer.toString(w_indx));
+				}
+				p.cpScreen.setLineThickness(old_thickness);
+				p.cpScreen.drawCircle(w_cent,getVertRadius(rtrace.myEdge),dflags);
+				p.cpScreen.setLineThickness(thickness);
+			}
+	    } while (rtrace!=epair.endEdge.nextRed);
+		p.cpScreen.setLineThickness(old_thickness);
+		return 1;
+	}
+	
 	
 	/**
  	 * NEEDED FOR CIRCLEPACK

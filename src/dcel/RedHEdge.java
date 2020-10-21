@@ -39,14 +39,20 @@ public class RedHEdge {
 	}
 
 	/**
-	 * Get center/radius
+	 * Get center/radius. Center may be null.
 	 * @return CircleSimple
 	 */
 	public CircleSimple getData() {
-		return new CircleSimple(new Complex(center),rad,1);
+		return new CircleSimple(getCenter(),rad,1);
 	}
 	
+	/**
+	 * Get center, but return null if it's null
+	 * @return
+	 */
 	public Complex getCenter() {
+		if (center==null)
+			return null;
 		return new Complex(center);
 	}
 	

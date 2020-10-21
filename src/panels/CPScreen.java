@@ -353,7 +353,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 	 * visual plane, and checks if it's on front.
 	 * @param z Complex: real-world Complex location
 	 * @param n int, index to display
-	 * @param msg_flag, bit 1=in canvas, 2=in scratch, 3=both (default)
+	 * @param msg_flag boolean, bit 1=in canvas, 2=in scratch, 3=both (default)
 	 */
 	public void drawIndex(Complex z, int n, int msg_flag) {
 		Integer N = Integer.valueOf(n);

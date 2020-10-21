@@ -196,7 +196,13 @@ public class Vertex {
 		center=new Complex(z);
 	}
 	
+	/**
+	 * Note: if center is null, return null
+	 * @return Complex
+	 */
 	public Complex getCenter() {
+		if (center==null)
+			return null;
 		return new Complex(center);
 	}
 	

@@ -29,7 +29,7 @@ import panels.CPScreen;
 public class D_SideData{
 	
 	public PackData packData;
-	public int spIndex;       // index in 'PairLink' linked list
+	public int spIndex;       // index in 'PairLink' linked list (indexed from 1)
 	public int mateIndex;     // index of paired side (-1 if no mate)
 	public RedHEdge startEdge; // the first 'RedEdge' of this "side"
 	public RedHEdge endEdge;   // the final 'RedEdge' of this "side"

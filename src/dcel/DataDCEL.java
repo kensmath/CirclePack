@@ -197,7 +197,7 @@ public class DataDCEL {
 				pdcel.pairLink.add(sptick,sideData); // 0 entry is null
 			}
 			
-			// find label the pairings and free sides
+			// find and label the pairings and free sides
 			int pairCount=0;
 			int freeCount=1;
 			Iterator<D_SideData> pdpit=pdcel.pairLink.iterator();
