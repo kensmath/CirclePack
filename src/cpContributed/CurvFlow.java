@@ -157,8 +157,8 @@ public class CurvFlow extends PackExtender {
 					int f=flst.next();
 					int []vert=domainData.faces[f].vert;
 					// put face barycenter in the list
-					zlink.add(EuclMath.eucl_tri_center(domainData.rData[vert[0]].center,
-							domainData.rData[vert[1]].center,domainData.rData[vert[2]].center));
+					zlink.add(EuclMath.eucl_tri_center(domainData.getCenter(vert[0]),
+							domainData.getCenter(vert[1]),domainData.getCenter(vert[2])));
 				}
 			}
 
@@ -239,13 +239,13 @@ public class CurvFlow extends PackExtender {
 					rad1=new double[domainData.nodeCount+1];
 					for (int v=1;v<=packData.nodeCount;v++) 
 						if (v<=domainData.nodeCount)
-							rad1[v]=packData.rData[v].rad;
+							rad1[v]=packData.getRadius(v);
 				}
 				else {
 					rad2=new double[domainData.nodeCount+1];
 					for (int v=1;v<=packData.nodeCount;v++) 
 						if (v<=domainData.nodeCount)
-							rad2[v]=packData.rData[v].rad;
+							rad2[v]=packData.getRadius(v);
 				}
 				return 1;
 			} catch (Exception ex) {
@@ -324,7 +324,7 @@ public class CurvFlow extends PackExtender {
 			double radsum=0.0;
 			for (int v=1;v<=packData.nodeCount;v++) {
 				if (packData.kData[v].bdryFlag>0) {
-					radsum += packData.rData[v].rad;
+					radsum += packData.getRadius(v);
 				}
 			}
 
@@ -332,7 +332,8 @@ public class CurvFlow extends PackExtender {
 			for (int v=1;v<=packData.nodeCount;v++) {
 				if (packData.kData[v].bdryFlag>0) {
 					double factor=.1;
-					packData.rData[v].rad += (-1.0)*factor*(bdryCurv[v]/total)*packData.rData[v].rad;
+					double prad=packData.getRadius(v);
+					packData.setRadius(v,prad+ (-1.0)*factor*(bdryCurv[v]/total)*prad);
 				}
 			}
 			
@@ -493,8 +494,8 @@ public class CurvFlow extends PackExtender {
 			int v=1;
 			while (vlist.hasNext()) {
 				v=(Integer)vlist.next();
-				double rad=domainData.rData[v].rad;
-				if (incremental) rad=packData.rData[v].rad;
+				double rad=domainData.getRadius(v);
+				if (incremental) rad=packData.getRadius(v);
 					
 				// what data are we using? does it exist?
 				if ((!useUtilDoubles && v<radRatio.length) ||
@@ -504,7 +505,7 @@ public class CurvFlow extends PackExtender {
 						factor=packData.utilDoubles.get(v-1);
 
 					// apply
-					packData.rData[v].rad=rad*(Math.exp(x*Math.log(factor)));
+					packData.setRadius(v,rad*(Math.exp(x*Math.log(factor))));
 					count++;
 				}
 			} // end of while
@@ -750,7 +751,7 @@ public class CurvFlow extends PackExtender {
 			return 0;
 		}
 		for (int v=1;v<=p.nodeCount;v++) {
-			radRatio[v]=p.rData[v].rad/q.rData[v].rad;
+			radRatio[v]=p.getRadius(v)/q.getRadius(v);
 		}
 		NodeLink bdry=new NodeLink(q,"b");
 		drSize=bdry.size()+1;
@@ -761,8 +762,8 @@ public class CurvFlow extends PackExtender {
 		int count=0;
 		while (blist.hasNext()) {
 			w=(int)blist.next();
-			domArgs[count]=q.rData[w].center.arg();
-			rangeZ[count]=new Complex(p.rData[w].rad/q.rData[w].rad);
+			domArgs[count]=q.getCenter(w).arg();
+			rangeZ[count]=new Complex(p.getRadius(w)/q.getRadius(w));
 			count++;
 		}
 		// close up

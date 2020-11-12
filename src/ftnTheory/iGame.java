@@ -79,22 +79,23 @@ public class iGame extends PackExtender {
 	 */
 	public void set4Aspect() {
 		// get 'factor' for multiplying imaginary part
-		double wide=(packData.rData[corner[1]].center).minus(packData.rData[corner[0]].center).abs();
-		double high=(packData.rData[corner[2]].center).minus(packData.rData[corner[1]].center).abs();
+		double wide=(packData.getCenter(corner[1])).minus(packData.getCenter(corner[0])).abs();
+		double high=(packData.getCenter(corner[2])).minus(packData.getCenter(corner[1])).abs();
 		double factor=wide/(high*GameAspect);
 		
 		// find average of 4 corner locations
-		Complex c0=packData.rData[corner[0]].center;
-		Complex c1=packData.rData[corner[1]].center;
-		Complex c2=packData.rData[corner[2]].center;
-		Complex c3=packData.rData[corner[3]].center;
+		Complex c0=packData.getCenter(corner[0]);
+		Complex c1=packData.getCenter(corner[1]);
+		Complex c2=packData.getCenter(corner[2]);
+		Complex c3=packData.getCenter(corner[3]);
 		Complex mid=c0.add(c1).add(c2).add(c3);
 		mid=mid.times(.25);
 		
 		// adjust all centers
 		for (int v=1;v<=packData.nodeCount;v++) {
-			packData.rData[v].center=packData.rData[v].center.minus(mid);
-			packData.rData[v].center.y *=factor;
+			Complex z=packData.getCenter(v).minus(mid);
+			z.y*=factor;
+			packData.setCenter(v,z);
 		}
 
 	}

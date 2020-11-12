@@ -53,7 +53,7 @@ public class HarmonicMap {
 		RData []rdata=new RData[Hp.nodeCount+1];
 		for (int j=1;j<=Hp.nodeCount;j++) {
 			rdata[j]=Hp.rData[j].clone();
-			rdata[j].center=Hp.rData[j].center.add(Gp.rData[j].center.conj());
+			rdata[j].center=Hp.getCenter(j).add(Gp.getCenter(j).conj());
 		}
 		return rdata;
 	}
@@ -73,8 +73,8 @@ public class HarmonicMap {
 		RData []rdata=new RData[Hp.nodeCount+1];
 		for (int j=1;j<=Hp.nodeCount;j++) {
 			rdata[j]=Hp.rData[j].clone();
-			rdata[j].center=Hp.rData[j].center.add(Gp.rData[j].center);
-			rdata[j].rad=Hp.rData[j].rad+Gp.rData[j].rad;
+			rdata[j].center=Hp.getCenter(j).add(Gp.getCenter(j));
+			rdata[j].rad=Hp.getRadius(j)+Gp.getRadius(j);
 		}
 		return rdata;
 	} 

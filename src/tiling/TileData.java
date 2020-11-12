@@ -386,7 +386,7 @@ public class TileData {
 				int w=tile.vert[(j-1+tile.vertCount)%tile.vertCount];
 				int indx=thePack.nghb(v,w);
 				thePack.insert_petal(v, indx, nextgap);
-				cent=cent.add(thePack.rData[v].center);
+				cent=cent.add(thePack.getCenter(v));
 				rad +=thePack.rData[v].rad;
 			}
 			tmpflower[tile.vertCount]=tmpflower[0];
@@ -398,7 +398,7 @@ public class TileData {
 			thePack.kData[nextgap].bdryFlag=0;
 			thePack.kData[nextgap].mark=nextgap; // marked with vert index
 			thePack.rData[nextgap]=new RData();
-			thePack.rData[nextgap].center=cent.divide((double)(tile.vertCount));
+			thePack.setCenter(nextgap,cent.divide((double)(tile.vertCount)));
 			thePack.rData[nextgap].aim=Math.PI*2.0;
 			thePack.rData[nextgap].rad=rad/((double)tile.vertCount);
 		} // end of 'while' for tiles

@@ -149,8 +149,7 @@ public class BrooksQuad extends PackExtender {
 		  packData.kData[P].flower=new int[5];
 		  packData.kData[P].num=4;
 		  packData.kData[P].bdryFlag=0;
-		  packData.rData[P].rad=.5;
-		  packData.rData[P].rad=2.0*Math.PI;	  
+		  packData.setRadius(P,2.0*Math.PI);	  
 		  packData.kData[P].flower[0]=N;
 		  packData.kData[P].flower[1]=B;
 		  packData.kData[P].flower[2]=R;
@@ -211,8 +210,7 @@ public class BrooksQuad extends PackExtender {
 		  packData.kData[P].flower=new int[5];
 		  packData.kData[P].num=4;
 		  packData.kData[P].bdryFlag=0;
-		  packData.rData[P].rad=.5;
-		  packData.rData[P].rad=2.0*Math.PI;	  
+		  packData.setRadius(P,2.0*Math.PI);	  
 		  packData.kData[P].flower[0]=N;
 		  packData.kData[P].flower[1]=L;
 		  packData.kData[P].flower[2]=B;

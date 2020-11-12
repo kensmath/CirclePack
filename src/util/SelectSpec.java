@@ -208,7 +208,7 @@ public class SelectSpec {
 					return uP;
 				}
 				
-				Complex ctrp = packData.rData[node].center;
+				Complex ctrp = packData.getCenter(node);
 				if (packData.hes < 0 && myStr.charAt(1) == 'e') { // eucl cent
 					CircleSimple sc = HyperbolicMath.h_to_e_data(ctrp,
 							packData.rData[node].rad);
@@ -241,12 +241,12 @@ public class SelectSpec {
 				if (c == 'e') { // compare in eucl geom
 					if (Pp.hes < 0) {
 						CircleSimple sc = HyperbolicMath.h_to_e_data(
-								Pp.rData[node].center, rp);
+								Pp.getCenter(node), rp);
 						rp = sc.rad;
 					}
 					if (Pq.hes < 0) {
 						CircleSimple sc = HyperbolicMath.h_to_e_data(
-								Pq.rData[node].center, rq);
+								Pq.getCenter(node), rq);
 						rq = sc.rad;
 					}
 				}
@@ -430,7 +430,7 @@ public class SelectSpec {
 			case 'z': // modulus of barycenter circle 
 			{
 				int v=packData.tileData.myTiles[node].baryVert;
-				Complex ctrp = packData.rData[v].center;
+				Complex ctrp = packData.getCenter(v);
 				if (packData.hes < 0 && myStr.charAt(1) == 'e') { // eucl cent
 					CircleSimple sc = HyperbolicMath.h_to_e_data(ctrp,
 							packData.rData[node].rad);

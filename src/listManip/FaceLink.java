@@ -362,8 +362,8 @@ public class FaceLink extends LinkedList<Integer> {
 				if (packData.hes>0) break;
 				for (int f=1;f<=packData.faceCount;f++) {
 					int []vert=packData.faces[f].vert;
-					if (!EuclMath.ccWise(packData.rData[vert[0]].center,
-							packData.rData[vert[1]].center,packData.rData[vert[2]].center)) {
+					if (!EuclMath.ccWise(packData.getCenter(vert[0]),
+							packData.getCenter(vert[1]),packData.getCenter(vert[2]))) {
 						add(f);
 						count++;
 					}
@@ -377,10 +377,10 @@ public class FaceLink extends LinkedList<Integer> {
 					for (int j=0;j<3;j++) {
 						hit=false;
 						int v=packData.faces[f].vert[j];
-						if (Double.isNaN(packData.rData[v].rad)
-							|| Double.isNaN(packData.rData[v].center.x)
-							|| Double.isNaN(packData.rData[v].center.y)
-							|| (packData.hes>0 && packData.rData[v].rad-Math.PI<
+						if (Double.isNaN(packData.getRadius(v))
+							|| Double.isNaN(packData.getCenter(v).x)
+							|| Double.isNaN(packData.getCenter(v).y)
+							|| (packData.hes>0 && packData.getRadius(v)-Math.PI<
 									PackData.TOLER)) {
 							j=3;
 							hit=true;
@@ -1300,18 +1300,18 @@ public class FaceLink extends LinkedList<Integer> {
 		// find min of radii of f and contiguous faces
 		int initFace=f;
 		Face face=p.faces[initFace];
-		double step=p.rData[face.vert[0]].rad;
-		double rad=p.rData[face.vert[1]].rad;
+		double step=p.getRadius(face.vert[0]);
+		double rad=p.getRadius(face.vert[1]);
 		if (rad<step) step=rad;
-		rad=p.rData[face.vert[2]].rad;
+		rad=p.getRadius(face.vert[2]);
 		if (rad<step) step=rad;
 		
 		int v=p.find_common_left_nghb(face.vert[1],face.vert[0]);
-		if (v>0 && (rad=p.rData[v].rad)<step) step=rad;
+		if (v>0 && (rad=p.getRadius(v))<step) step=rad;
 		v=p.find_common_left_nghb(face.vert[2],face.vert[1]);
-		if (v>0 && (rad=p.rData[v].rad)<step) step=rad;
+		if (v>0 && (rad=p.getRadius(v))<step) step=rad;
 		v=p.find_common_left_nghb(face.vert[0],face.vert[2]);
-		if (v>0 && (rad=p.rData[v].rad)<step) step=rad;
+		if (v>0 && (rad=p.getRadius(v))<step) step=rad;
 		
 		if (step<=0)
 			throw new DataException("problem with radii of face or neighbors");

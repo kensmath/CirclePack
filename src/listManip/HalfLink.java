@@ -631,12 +631,12 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		int eindx=0;
 		double ut=0.0;
 		for (int i=0;i<3;i++) {
-			ut=startZ.minus(p.rData[sface.vert[i]].center).abs();
+			ut=startZ.minus(p.getCenter(sface.vert[i])).abs();
 			if (ut<smin) {
 				smin=ut;
 				sindx=i;
 			}
-			ut=endZ.minus(p.rData[eface.vert[i]].center).abs();
+			ut=endZ.minus(p.getCenter(eface.vert[i])).abs();
 			if (ut<emin) {
 				emin=ut;
 				eindx=i;

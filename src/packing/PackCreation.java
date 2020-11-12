@@ -1,6 +1,5 @@
 package packing;
 
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Random;
@@ -8,10 +7,6 @@ import java.util.Random;
 import allMains.CirclePack;
 import complex.Complex;
 import complex.MathComplex;
-import dcel.Face;
-import dcel.HalfEdge;
-import dcel.PackDCEL;
-import deBugging.DCELdebug;
 import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.ParserException;
@@ -168,17 +163,17 @@ public class PackCreation {
 			p.kData[i].bdryFlag=0;
 			p.kData[i].utilFlag=p.kData[i].mark=0;
 			p.kData[i].schwarzian=null;
-			p.rData[i].rad=sphrad;
+			p.setRadius(i,sphrad);
 			p.rData[i].curv=Math.PI;
 			p.rData[i].aim=Math.PI;
 		}
 		
 		// set centers, 1 at origin
 		sphrad *=2.0; // edge length
-		p.rData[1].center=new Complex(0.0);
-		p.rData[2].center=new Complex(Math.PI/2.0,sphrad);
-		p.rData[3].center=new Complex(Math.PI*(7.0/6.0),sphrad);
-		p.rData[4].center=new Complex(Math.PI*(11.0/6.0),sphrad);
+		p.setCenter(1,new Complex(0.0));
+		p.setCenter(2,new Complex(Math.PI/2.0,sphrad));
+		p.setCenter(3,new Complex(Math.PI*(7.0/6.0),sphrad));
+		p.setCenter(4,new Complex(Math.PI*(11.0/6.0),sphrad));
 			
 		// process the combinatorics 
 		p.complex_count(true);
@@ -238,7 +233,7 @@ public class PackCreation {
 	   		rad[1]=.2*(len[0]+len[2]-len[1])/2.0;
 	   		rad[2]=.2*(len[1]+len[0]-len[2])/2.0;
 	   		for (int k=1;k<=p.nodeCount;k++)
-	   			p.rData[k].rad=rad[p.kData[k].mark];
+	   			p.setRadius(k,rad[p.kData[k].mark]);
 	   	}
 
 	   	while (gencount<=maxgen) {
@@ -302,7 +297,7 @@ public class PackCreation {
 	   				} // done with sphere check				   		
 	   				p.add_vert(w);
 	   				p.kData[p.nodeCount].mark=alt[i%2];
-	   				p.rData[p.nodeCount].rad=rad[alt[i%2]];
+	   				p.setRadius(p.nodeCount,rad[alt[i%2]]);
 	   				// for sph, check whether to close up
 	   				if (hees>0) {
 	   					p.complex_count(false);
@@ -404,7 +399,7 @@ public class PackCreation {
 		p.kData[1].flower=new int[n+1];
 		for (int i=0;i<n;i++) p.kData[1].flower[i]=i+2;
 		p.kData[1].flower[n]=2;
-		p.rData[1].rad=.5;
+		p.setRadius(1,0.5);
 		for (int i=2;i<=(n+1);i++) {
 			p.kData[i].flower=new int[3];
 			p.kData[i].num=2;
@@ -414,7 +409,7 @@ public class PackCreation {
 			p.kData[i].bdryFlag=1;
 			p.kData[i].utilFlag=p.kData[i].mark=0;
 			p.kData[i].schwarzian=null;
-			p.rData[i].rad=2.5/(double)n;
+			p.setRadius(i,2.5/(double)n);
 		}
 		p.kData[2].flower[2]=n+1;
 		p.kData[n+1].flower[0]=2;
@@ -429,10 +424,10 @@ public class PackCreation {
 		} catch(Exception ex) {}
 			
 		// scale the packing to lie in the unit disc
-		double sc=.75/(p.rData[2].center.abs()+p.rData[2].rad);
+		double sc=.75/(p.getCenter(2).abs()+p.getRadius(2));
 		for (int v=1;v<=p.nodeCount;v++) {
-			p.rData[v].center=p.rData[v].center.times(sc);
-			p.rData[v].rad *=sc;
+			p.setCenter(v,p.getCenter(v).times(sc));
+			p.setRadius(v,p.getRadius(v)*sc);
 		}
 		RedList trace=null;
 		if ((trace=p.redChain)!=null) { // scale red faces also.
@@ -887,10 +882,10 @@ public class PackCreation {
 		p.hes = -1;
 		for (int j = 1; j <= p.nodeCount; j++) {
 			if (kData[j].bdryFlag != 0)
-				p.rData[j].rad = 10.0;
+				p.setRadius(j,10.0);
 			// bdry radii essentially infinite
 			else
-				p.rData[j].rad = .5;
+				p.setRadius(j,0.5);
 		}
 		p.alpha = 1;
 		p.gamma = 2;
@@ -1280,7 +1275,7 @@ public class PackCreation {
 		}
 		double newrad = 1.0 / ((double) (pp + qq));
 		for (int j = 1; j <= p.nodeCount; j++)
-			p.rData[j].rad = newrad;
+			p.setRadius(j,newrad);
 
 		// fix packing up
 		p.setName("Doyle_annulus");
@@ -1784,10 +1779,10 @@ public class PackCreation {
 		}
 		
 		// normalize: 2 3 horizontal, 3 on unit circle.
-		Complex z=growWheel.rData[3].center.minus(growWheel.rData[2].center);
+		Complex z=growWheel.getCenter(3).minus(growWheel.getCenter(2));
 		double ang=(-1.0)*(MathComplex.Arg(z));
 		growWheel.rotate(ang);
-		double scl=growWheel.rData[3].center.abs();
+		double scl=growWheel.getCenter(3).abs();
 		if (scl>.000001)
 			growWheel.eucl_scale(1.0/scl);
 
@@ -1916,10 +1911,10 @@ public class PackCreation {
 		}
 		
 		// normalize: 3 on unit circle, 5 7 horizontal
-		double ctr=growChair.rData[3].center.abs();
+		double ctr=growChair.getCenter(3).abs();
 		double factor=1.0/ctr;
 		growChair.eucl_scale(factor);
-		Complex z=growChair.rData[7].center.minus(growChair.rData[5].center);
+		Complex z=growChair.getCenter(7).minus(growChair.getCenter(5));
 		double ang=(-1.0)*(MathComplex.Arg(z));
 		growChair.rotate(ang);
 		
@@ -2117,10 +2112,10 @@ public class PackCreation {
 		}
 		
 		// normalize: 3 on unit circle, 5 7 horizontal
-		double ctr=fusionA.rData[1].center.abs();
+		double ctr=fusionA.getCenter(1).abs();
 		double factor=1.0/ctr;
 		fusionC.eucl_scale(factor);
-		Complex z=fusionA.rData[3].center.minus(fusionA.rData[2].center);
+		Complex z=fusionA.getCenter(3).minus(fusionA.getCenter(2));
 		double ang=(-1.0)*(MathComplex.Arg(z));
 		fusionA.rotate(ang);
 		
@@ -2246,10 +2241,10 @@ public class PackCreation {
 		}
 		
 		// normalize: 1 on unit circle, 3 4 horizontal
-		double ctr=sgPack.rData[1].center.abs();
+		double ctr=sgPack.getCenter(1).abs();
 		double factor=1.0/ctr;
 		sgPack.eucl_scale(factor);
-		Complex z=sgPack.rData[4].center.minus(sgPack.rData[3].center);
+		Complex z=sgPack.getCenter(4).minus(sgPack.getCenter(3));
 		double ang=(-1.0)*(MathComplex.Arg(z));
 		sgPack.rotate(ang);
 		
@@ -2319,10 +2314,10 @@ public class PackCreation {
 			pent.comp_pack_centers(false,false,2,.00001);
 		} catch(Exception ex) {}
 		
-		double mod=pent.rData[2].center.abs();
+		double mod=pent.getCenter(2).abs();
 		for (int v=1;v<=pent.nodeCount;v++) {
-			pent.rData[v].center=pent.rData[v].center.divide(mod);
-			pent.rData[v].rad /=mod;
+			pent.setCenter(v,pent.getCenter(v).divide(mod));
+			pent.setRadius(v,pent.getRadius(v)/mod);
 		}
 		
 		try {
@@ -2363,7 +2358,7 @@ public class PackCreation {
 		heap.setCombinatorics();
 		heap.set_aim_default();
 		for (int v=1;v<=heap.nodeCount;v++) {
-			heap.rData[v].rad=.1;
+			heap.setRadius(v,0.1);
 			if (heap.kData[v].bdryFlag!=0)
 				heap.rData[v].aim=Math.PI;
 		}
@@ -2375,10 +2370,10 @@ public class PackCreation {
 			heap.comp_pack_centers(false,false,2,.00001);
 		} catch(Exception ex) {}
 		
-		double mod=heap.rData[3].center.abs();
+		double mod=heap.getCenter(3).abs();
 		for (int v=1;v<=heap.nodeCount;v++) {
-			heap.rData[v].center=heap.rData[v].center.divide(mod);
-			heap.rData[v].rad /=mod;
+			heap.setCenter(v,heap.getCenter(v).divide(mod));
+			heap.setRadius(v,heap.getRadius(v)/mod);
 		}
 
 		try {
@@ -2432,10 +2427,10 @@ public class PackCreation {
 			triPent.comp_pack_centers(false,false,2,.00001);
 		} catch(Exception ex) {}
 		
-		double mod=triPent.rData[2].center.abs();
+		double mod=triPent.getCenter(2).abs();
 		for (int v=1;v<=triPent.nodeCount;v++) {
-			triPent.rData[v].center=triPent.rData[v].center.divide(mod);
-			triPent.rData[v].rad /=mod;
+			triPent.setCenter(v,triPent.getCenter(v).divide(mod));
+			triPent.setRadius(v,triPent.getRadius(v)/mod);
 		}
 			
 		return triPent;
@@ -2482,10 +2477,10 @@ public class PackCreation {
 			quadPent.comp_pack_centers(false,false,2,.00001);
 		} catch(Exception ex) {}
 		
-		double mod=quadPent.rData[2].center.abs();
+		double mod=quadPent.getCenter(2).abs();
 		for (int v=1;v<=quadPent.nodeCount;v++) {
-			quadPent.rData[v].center=quadPent.rData[v].center.divide(mod);
-			quadPent.rData[v].rad /=mod;
+			quadPent.setCenter(v,quadPent.getCenter(v).divide(mod));
+			quadPent.setRadius(v,quadPent.getRadius(v)/mod);
 		}
 			
 		return quadPent;

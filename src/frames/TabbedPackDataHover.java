@@ -620,7 +620,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 
 			// Update the UI elements.
 			vertexChoiceField.setText(Integer.toString(currentVertex));
-			radiusField.setValue(packData.getRadius(currentVertex));
+			radiusField.setValue(packData.getActualRadius(currentVertex));
 			centerField.setValue(new Complex(rData.center.x, rData.center.y));
 			aimField.setValue(rData.aim / Math.PI);
 			angleSumField.setValue(rData.curv / Math.PI);
@@ -845,8 +845,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		public void putRadius(PackData p) {
 			int vert = NodeLink.grab_one_vert(p, vertexChoiceField.getText());
 			if (vert==0) return;
-			p.rData[vert].rad=radiusField.getValue();
-			radiusField.setValue(p.rData[vert].rad);
+			p.setRadius(vert,radiusField.getValue());
+			radiusField.setValue(p.getRadius(vert));
 		}
 		
 		public void putAim(PackData p) {
@@ -869,7 +869,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			try {
 				double xval=Double.parseDouble(xstr);
 				double yval=Double.parseDouble(ystr);
-				p.rData[vert].center=new Complex(xval,yval);
+				p.setCenter(vert,new Complex(xval,yval));
 				centerField.setValue(new Complex(xval,yval));
 			} catch (Exception ex) {
 				return;

@@ -190,7 +190,7 @@ public abstract class GenBranchPt {
 		int count=0;
 		for (int v=1;v<=this.matchCount;v++) {
 			int V=vertexMap.findW(v);
-			packData.rData[V].rad=myPackData.rData[v].rad;
+			packData.setRadius(V,myPackData.getRadius(v));
 			count++;
 		}
 		return count;
@@ -204,7 +204,7 @@ public abstract class GenBranchPt {
 		int count=0;
 		for (int v=1;v<=this.matchCount;v++) {
 			int V=vertexMap.findW(v);
-			packData.rData[V].center=new Complex(myPackData.rData[v].center);
+			packData.setCenter(V,new Complex(myPackData.getCenter(v)));
 			count++;
 		}
 		return count;
@@ -272,7 +272,7 @@ public abstract class GenBranchPt {
 	public void applyMob(Mobius mob) {
 		if (myPackData.nodeCount>matchCount)
 			for (int v=(matchCount+1);v<=myPackData.nodeCount;v++)
-				myPackData.rData[v].center=mob.apply(myPackData.rData[v].center);
+				myPackData.setCenter(v,mob.apply(myPackData.getCenter(v)));
 	}
 	
 	/**
@@ -368,12 +368,12 @@ public abstract class GenBranchPt {
 		int lFw=attachFace.vert[(indx+1)%3];
 		
 		// local centers
-		Complex a=myPackData.rData[vertexMap.findV(lFv)].center;
-		Complex b=myPackData.rData[vertexMap.findV(lFw)].center;
+		Complex a=myPackData.getCenter(vertexMap.findV(lFv));
+		Complex b=myPackData.getCenter(vertexMap.findV(lFw));
 		
 		// parent centers
-		Complex A=packData.rData[lFv].center;
-		Complex B=packData.rData[lFw].center;
+		Complex A=packData.getCenter(lFv);
+		Complex B=packData.getCenter(lFw);
 		
 		// compute/apply mobius
 		Mobius mb=null;
@@ -382,7 +382,7 @@ public abstract class GenBranchPt {
 		else 
 			mb =Mobius.affine_mob(a,b,A,B);
 		for (int v=1;v<=myPackData.nodeCount;v++) {
-			myPackData.rData[v].center=mb.apply(myPackData.rData[v].center);
+			myPackData.setCenter(v,mb.apply(myPackData.getCenter(v)));
 			count++;
 		}
 		return count;

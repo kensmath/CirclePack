@@ -39,17 +39,19 @@ public class Exponential {
 		}
 		CircleSimple sc;
 		alpha=p.alpha;
-		p.rData[alpha].center.x=0.0;p.rData[alpha].center.y=0.0;
-		p.rData[alpha].rad=1.0;p.kData[alpha].utilFlag=1;
+		p.setCenter(alpha, new Complex(0.0));
+		p.setRadius(alpha,1.0);
+		p.kData[alpha].utilFlag=1;
 		k=p.kData[alpha].flower[0];
 		l=p.kData[alpha].flower[1];
-		p.rData[k].center.x=1.0+a;p.rData[k].center.y=0;
-		p.rData[k].rad=a;
+		p.setCenter(k,1.0+a,0.0);
+		p.setRadius(k,a);
 		p.kData[k].utilFlag=1;
-		z1=p.rData[alpha].center;z2=p.rData[k].center;
+		z1=p.getCenter(alpha);
+		z2=p.getCenter(k);
 		sc=EuclMath.e_compcenter(z1,z2,1.0,a,b);
-		p.rData[l].center=new Complex(sc.center);
-		p.rData[l].rad=sc.rad;
+		p.setCenter(l,new Complex(sc.center));
+		p.setRadius(l,sc.rad);
 		p.kData[l].utilFlag=1;
 
 		count=3;
@@ -77,12 +79,14 @@ public class Exponential {
 									&& p.kData[p.kData[k2].flower[m+2]].utilFlag!=0)
 							{k0=p.kData[k2].flower[m+2];flag=true;}
 							if (flag) {
-								z1=p.rData[k1].center;r1=p.rData[k1].rad;
-								z2=p.rData[k2].center;r2=p.rData[k2].rad;
-								r0=p.rData[k0].rad;
+								z1=p.getCenter(k1);
+								r1=p.getRadius(k1);
+								z2=p.getCenter(k2);
+								r2=p.getRadius(k2);
+								r0=p.getRadius(k0);
 								sc=EuclMath.e_compcenter(z1,z2,r1,r2,(r1*r2/r0));
-								p.rData[j].center=new Complex(sc.center);
-								p.rData[j].rad=sc.rad;
+								p.setCenter(j,new Complex(sc.center));
+								p.setRadius(j,sc.rad);
 								p.kData[j].utilFlag=1;
 							}
 							else k++;
@@ -102,9 +106,9 @@ public class Exponential {
 			Maxy = 1;
 			miny = -1;
 			for (int i = 1; i <= p.nodeCount; i++) {
-				x = p.rData[i].center.x;
-				y = p.rData[i].center.y;
-				r = p.rData[i].rad;
+				x = p.getCenter(i).x;
+				y = p.getCenter(i).y;
+				r = p.getRadius(i);
 				Maxx = (x + r > Maxx) ? x + r : Maxx;
 				minx = (x - r < minx) ? x - r : minx;
 				Maxy = (y + r > Maxy) ? y + r : Maxy;
@@ -115,11 +119,11 @@ public class Exponential {
 			scale = ((Maxx - minx > Maxy - miny) ? Maxx - minx : Maxy - miny) * 0.5;
 			factor = (0.9) / (scale * 1.4142136);
 			for (int i = 1; i <= p.nodeCount; i++) {
-				cent = p.rData[i].center.minus(z1).times(factor);
-				r = p.rData[i].rad * factor;
+				cent = p.getCenter(i).minus(z1).times(factor);
+				r = p.getRadius(i) * factor;
 				sc = HyperbolicMath.e_to_h_data(cent, r);
-				p.rData[i].center = new Complex(sc.center);
-				p.rData[i].rad = sc.rad;
+				p.setCenter(i,new Complex(sc.center));
+				p.setRadius(i,sc.rad);
 			}
 		}
 		p.free_overlaps(); // outdated.

@@ -373,8 +373,8 @@ public class Percolation extends PackExtender {
 			nlink=new NodeLink(packData,sbd.toString());
 			if (nlink==null || nlink.size()!=3)
 				return null;
-			Complex leftEnd=new Complex(packData.rData[nlink.get(2)].center);
-			Complex rightEnd=new Complex(packData.rData[nlink.get(0)].center);
+			Complex leftEnd=packData.getCenter(nlink.get(2));
+			Complex rightEnd=packData.getCenter(nlink.get(0));
 			Complex spot=leftEnd.times(1.0-x).add(rightEnd.times(x));
 			NodeLink closest=new NodeLink(packData,"-c "+spot.x+" "+spot.y+" b");
 			if (closest==null || closest.size()==0)
@@ -405,8 +405,8 @@ public class Percolation extends PackExtender {
 		// two ends of the bottom edge
 		int left=verts3.get(2);
 		int right=verts3.get(0);
-		Complex leftZ=new Complex(p.rData[left].center);
-		Complex rightZ=new Complex(p.rData[right].center);
+		Complex leftZ=p.getCenter(left);
+		Complex rightZ=p.getCenter(right);
 		double bottomLength=rightZ.minus(leftZ).abs();
 		
 		// linked list along bottom; need to toss first 2 and last 2
@@ -426,7 +426,7 @@ public class Percolation extends PackExtender {
 		Iterator<Integer>  spts=spots.iterator();
 		while (spts.hasNext()) {
 			int v=spts.next();
-			double x=p.rData[v].center.minus(leftZ).abs()/bottomLength;
+			double x=p.getCenter(v).minus(leftZ).abs()/bottomLength;
 			NodeLink corners=verts3.makeCopy();
 			corners.add(v);
 			setCorners(corners);

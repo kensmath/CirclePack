@@ -94,7 +94,7 @@ public class TradBranchPt extends GenBranchPt {
 	public UtilPacket riffleMe(int cycles) {
 		// get parent radii
 		for (int i=2;i<=matchCount;i++)
-			myPackData.rData[i].rad=packData.rData[transData[i]].rad;
+			myPackData.setRadius(i,packData.getRadius(transData[i]));
 		UtilPacket uP=new UtilPacket();
 		uP.rtnFlag=-1;
 	    if (myPackData.hes<0) 
@@ -102,7 +102,7 @@ public class TradBranchPt extends GenBranchPt {
 		else if (myPackData.hes==0)
 			uP.rtnFlag +=myPackData.e_riffle_vert(1,myAim);
 		uP.value = Math.abs(myPackData.rData[1].curv-myAim);
-		packData.rData[myIndex].rad=myPackData.rData[1].rad;
+		packData.setRadius(myIndex,myPackData.getRadius(1));
 		return uP;
 	}
 	
@@ -204,12 +204,12 @@ public class TradBranchPt extends GenBranchPt {
 	public int placeMyCircles() {
 		// get parent centers
 		for (int i=2;i<=matchCount;i++)
-			myPackData.rData[i].center=new Complex(packData.rData[transData[i]].center);
+			myPackData.setCenter(i,new Complex(packData.getCenter(transData[i])));
 		for (int v=2;v<=matchCount;v++)
 			myPackData.kData[v].plotFlag=1;
 		int ans=myPackData.fancy_comp_center(1,0,0,myPackData.kData[1].num,2,false,false,0.000001);
 		myPackData.kData[1].plotFlag=ans;
-		packData.rData[myIndex].center=new Complex(myPackData.rData[1].center);
+		packData.setCenter(myIndex,new Complex(myPackData.getCenter(1)));
 		return ans;
 	}
 

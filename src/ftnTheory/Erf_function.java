@@ -36,15 +36,15 @@ public class Erf_function {
 	    boolean keepon=true;
 	    while (v!=endv || keepon) {
 	    	keepon=false;
-	    	z=new Complex(p.rData[v].center);
-	    	w=new Complex(p.rData[v].center);
+	    	z=p.getCenter(v);
+	    	w=p.getCenter(v);
 	    	int i=1;
 	    	while (i<n) { // z^n
 	    		w=z.times(z); 
 	    		i++;
 	    	}
 	    	// modulus of derivative is |e^{w^n}| = e^{Re(w)}.
-	    	packData.rData[v].rad=C*Math.exp(-w.x)*p.rData[v].rad;
+	    	packData.setRadius(v,C*Math.exp(-w.x)*p.getRadius(v));
 	    	v=p.kData[v].flower[0];
 	    }
 	    return packData;

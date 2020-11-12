@@ -47,17 +47,16 @@ public class DCELdebug {
 			
 			// Edges
 			dbw.write("\nEdges: ==================== \n\n");
-			Iterator<HalfEdge> eits=pdcel.tmpEdges.iterator();
-			while (eits.hasNext() && count<100) {
-				dbw.write(thisEdge(eits.next()).toString());
+			for (int e=1;e<=pdcel.edgeCount;e++) {
+				dbw.write(thisEdge(pdcel.edges[e]).toString());
 				count++;
 			}
 			count=0;
 			
 			// Faces
 			dbw.write("\nFaces: ==================== \n\n");
-			for (int f=1;(f<pdcel.tmpFaceList.size() && count<100);f++) {
-				dbw.write(thisFace(pdcel.tmpFaceList.get(f)).toString());
+			for (int f=1;(f<=pdcel.faceCount && count<100);f++) {
+				dbw.write(thisFace(pdcel.faces[f]).toString());
 				count++;
 			}
 			count=0;
@@ -144,8 +143,8 @@ public class DCELdebug {
 	public static void drawTmpRedChain(PackData p,RedHEdge redge) {
 		RedHEdge rtrace=redge;
 		do {
-			Complex z0=p.rData[rtrace.myEdge.origin.vertIndx].center;
-			Complex z1=p.rData[rtrace.myEdge.twin.origin.vertIndx].center;
+			Complex z0=p.getCenter(rtrace.myEdge.origin.vertIndx);
+			Complex z1=p.getCenter(rtrace.myEdge.twin.origin.vertIndx);
 			DispFlags dflags=new DispFlags("c195t4");
 			p.cpScreen.drawEdge(z0, z1, dflags);
 			p.cpScreen.rePaintAll();
@@ -319,10 +318,9 @@ System.out.println(" red edge "+rtrace.myEdge);
 			
 
 // ================= plot face based on edge 
-	public static void tri_of_edge(PackDCEL pdcel,int v,int w) {
-		Iterator<HalfEdge> eit=pdcel.tmpEdges.iterator();
-		while (eit.hasNext()) {
-			HalfEdge he=eit.next();
+	public static void tri_of_edge(HalfEdge []edges,int v,int w) {
+		for (int e=1;e<edges.length;e++) {
+			HalfEdge he=edges[e];
 			if (Math.abs(he.origin.vertIndx)==v && Math.abs(he.twin.origin.vertIndx)==w)
 				triVerts(he);
 		}
@@ -454,29 +452,6 @@ System.out.println(" red edge "+rtrace.myEdge);
 	
 	public static void halfedgeends(PackDCEL pdcel,dcel.HalfEdge edge) {
 		System.out.println(" ("+edge.origin.vertIndx+","+edge.twin.origin.vertIndx+") ");
-	}
-	
-	public static void showEdges(PackDCEL pdcel) {
-		showEdges(pdcel,pdcel.tmpEdges);
-	}
-	
-	public static void showEdges(PackDCEL pdcel,ArrayList<HalfEdge> edges) {
-		if (pdcel.tmpEdges==null) {
-			System.err.println("'edges' is null");
-			return;
-		}
-		System.out.println("First 25 edges: ");
-		int n=0;
-		Iterator<HalfEdge> heit=edges.iterator();
-		while (heit.hasNext() && n<25) {
-			HalfEdge edge=heit.next();
-			StringBuilder sb=new StringBuilder("edge=("+edge.origin.vertIndx+","+edge.twin.origin.vertIndx+"),  ");
-			sb.append("prev=("+edge.prev.origin.vertIndx+","+edge.prev.twin.origin.vertIndx+"),  ");
-			sb.append("next=("+edge.next.origin.vertIndx+","+edge.next.twin.origin.vertIndx+")");
-			System.out.println(sb.toString());
-			n++;
-		}
-		System.out.println("done after n="+n+"\n");
 	}
 	
 	public static StringBuilder thisVertex(Vertex vert) {

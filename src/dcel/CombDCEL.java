@@ -169,9 +169,12 @@ public class CombDCEL {
 		pdcel.intFaceCount=0;
 		pdcel.idealFaceCount=0;
 		pdcel.vertices=vertices;
-		pdcel.tmpEdges=edges;
-		pdcel.tmpFaceList=null;
-		pdcel.tmpIdealFaces=null;
+		pdcel.edges=new HalfEdge[edges.size()+1];
+		Iterator<HalfEdge> eit=edges.iterator();
+		int tick=0;
+		while (eit.hasNext()) {
+			pdcel.edges[++tick]=eit.next();
+		}
 		pdcel.euler = 0;
 			
 		return vertcount;
@@ -216,7 +219,7 @@ public class CombDCEL {
 		int vertcount=pdcel.vertCount;
 
 		if (debug) { // debug=true;
-			DCELdebug.tri_of_edge(pdcel,24,37);
+			DCELdebug.tri_of_edge(pdcel.edges,24,37);
 		}
 		
 		//============ early bookkeeping re 'alpha' and keepers ========== 
@@ -365,14 +368,15 @@ public class CombDCEL {
 		//    during processing, set for edges eliminated from being 
 		//    added to the evolving redChain. Later, if found that 
 		//    all edges from a vertex are excluded, set 'doneV' true.
-		Iterator<HalfEdge> heit=pdcel.tmpEdges.iterator();
-		while (heit.hasNext()) { // set all to 0  
-			heit.next().util=0;
+		int ecount=pdcel.edges.length-1;
+		for (int e=1;e<=ecount;e++) {  // set all to 0  
+			HalfEdge edge=pdcel.edges[e];
+			edge.util=0;
 		}
-		// First, all edges with origin not connected to firstV are done. 
-		heit=pdcel.tmpEdges.iterator();
-		while (heit.hasNext()) { 
-			HalfEdge edge=heit.next();
+		
+		// First, all edges with origin not connected to firstV are done.
+		for (int e=1;e<=ecount;e++) {
+			HalfEdge edge=pdcel.edges[e];
 			int ov=edge.twin.origin.vertIndx;
 			if (keepV[ov]<0) {
 				edge.util=1;
@@ -829,7 +833,7 @@ public class CombDCEL {
 		}
 		pdcel.newOld=newold;
 		
-		blueCleanup(pdcel); // try to illiminate blue faces in the 'redChain'
+		blueCleanup(pdcel); // try to eliminate blue faces in the 'redChain'
 		
 		return d_FillInside(pdcel,false); // for now, do not redshift
 	}
@@ -869,7 +873,8 @@ public class CombDCEL {
 	 * and established 'alpha' edge, process the interior to create
 	 * the faces, layout order, etc. This can be used when we modify 
 	 * the structure inside but can keep the red chain, e.g., when
-	 * flipping an edge.
+	 * flipping an edge. The 'HalfEdge's already exist, but we find them
+	 * using 'pdcel.vertices' and create 'pdcel.edges' at the end.
 	 * @param pdcel
 	 * @param blueshift boolean, try to eliminate "blue" faces?
 	 * @return PackDCEL
@@ -900,6 +905,7 @@ public class CombDCEL {
 		// creating any new "blue" and keeping twins, etc.
 		if (blueshift) {
 			
+			// TODO: we may have already done this.
 			
 		}
 		
@@ -1043,10 +1049,10 @@ public class CombDCEL {
 		//    * catalog and re-index all edges, face=by=face
 		//    * set 'LayoutOrder', adding faces only if opposite vert not hit
 		//    * find first face that places a 'RedVertex'; this will be 'redChain'
-		pdcel.tmpEdges=new ArrayList<HalfEdge>();
-		pdcel.tmpEdges.add(null); // null in first spot
-		pdcel.tmpFaceList=new ArrayList<Face>();
-		pdcel.tmpFaceList.add(null); // null in first spot
+		ArrayList<HalfEdge> tmpEdges=new ArrayList<HalfEdge>();
+		tmpEdges.add(null); // null in first spot
+		ArrayList<Face> tmpFaceList=new ArrayList<Face>();
+		tmpFaceList.add(null); // null in first spot
 		RedHEdge newRedChain=null;
 		int ftick=0;
 		int etick=0;
@@ -1061,12 +1067,12 @@ public class CombDCEL {
 		while (oit.hasNext()) {
 			HalfEdge hfe=oit.next();
 			hfe.edgeIndx=++etick;
-			pdcel.tmpEdges.add(hfe);
+			tmpEdges.add(hfe);
 			Face newface=new Face();
 			hfe.face=newface;
 			newface.edge=hfe;
 			newface.faceIndx=++ftick;
-			pdcel.tmpFaceList.add(newface);
+			tmpFaceList.add(newface);
 			
 // System.out.println("edge(face): "+hfe+"("+ftick+")");			
 			
@@ -1075,7 +1081,7 @@ public class CombDCEL {
 			int safety=200;
 			do {
 				nxe.edgeIndx=++etick;
-				pdcel.tmpEdges.add(nxe);
+				tmpEdges.add(nxe);
 				nxe.face=newface;
 				nxe=nxe.next;
 				safety--;
@@ -1109,12 +1115,12 @@ public class CombDCEL {
 		int count_vhits=2;
 		
 		oit=orderEdges.iterator();
-		pdcel.tmpLayout=new ArrayList<Face>();
-		pdcel.tmpfullLayout=new ArrayList<Face>();
+		ArrayList<Face> tmpLayout=new ArrayList<Face>();
+		ArrayList<Face> tmpfullLayout=new ArrayList<Face>();
 		while (oit.hasNext()) {
 			HalfEdge hfe=oit.next();
 			if (!fhits[hfe.face.faceIndx]) {
-				pdcel.tmpfullLayout.add(hfe.face);
+				tmpfullLayout.add(hfe.face);
  				fhits[hfe.face.faceIndx]=true;
 				
 				if (debug) { // debug=true;
@@ -1134,7 +1140,7 @@ public class CombDCEL {
 				if (oppVert.util==0) { // yes, add 'hfe' to 'tmpLayout'
 					oppVert.util=1;
 					count_vhits++;
-					pdcel.tmpLayout.add(hfe.face);
+					tmpLayout.add(hfe.face);
 					
 					if (debug) { // debug=true;
 						System.out.println("  normal "+hfe.face.faceIndx+" = <"+
@@ -1154,7 +1160,7 @@ public class CombDCEL {
 				if (redge.redutil==0) {
 					redge.redutil=1;
 					count_vhits++;
-					pdcel.tmpLayout.add(hfe.face);
+					tmpLayout.add(hfe.face);
 					
 					if (debug) { // debug=true;
 						System.out.println("  red case "+hfe.face.faceIndx+" = <"+
@@ -1174,7 +1180,7 @@ public class CombDCEL {
 					// pivot clw adding faces until hitting redge
 					// Note: none of this faces could have been hit before
 					while (sea!=redge.myEdge) {
-						pdcel.tmpfullLayout.add(sea.twin.face);
+						tmpfullLayout.add(sea.twin.face);
 						fhits[sea.twin.face.faceIndx]=true;
 						oppVert=sea.twin.next.next.origin;
 
@@ -1198,7 +1204,7 @@ public class CombDCEL {
 						// put in 'tmpLayout'?
 						if (!alreadyhit) {  
 							oppVert.util=1;
-							pdcel.tmpLayout.add(sea.twin.face);
+							tmpLayout.add(sea.twin.face);
 							count_vhits++;
 
 							if (debug) { // debug=true;
@@ -1216,7 +1222,7 @@ public class CombDCEL {
 					if (redge.redutil==0) { // yes, add 'hfe' to 'tmpLayout'
 						redge.redutil=1;
 						count_vhits++;
-						pdcel.tmpLayout.add(hfe.face);
+						tmpLayout.add(hfe.face);
 
 						if (debug) { // debug=true;
 							System.out.println("  later red "+hfe.face.faceIndx+" = <"+
@@ -1259,8 +1265,6 @@ public class CombDCEL {
 				if (rtrace==nxtre) {
 					Face newface=new Face(); // new ideal face
 					newface.faceIndx=-1;
-					pdcel.tmpIdealFaces=new ArrayList<Face>();
-					pdcel.tmpIdealFaces.add(newface);
 					pdcel.redChain.myEdge.twin.face=newface;
 					newface.edge=pdcel.redChain.myEdge.twin;
 					pdcel.bdryStarts.add(pdcel.redChain);
@@ -1271,7 +1275,7 @@ public class CombDCEL {
 					do {
 						rtrace.mobIndx=sidecount;
 						rtrace.myEdge.twin.edgeIndx=++etick;
-						pdcel.tmpEdges.add(rtrace.myEdge.twin);
+						tmpEdges.add(rtrace.myEdge.twin);
 						rtrace.myEdge.twin.face=newface;
 						rtrace=rtrace.nextRed;
 					} while (rtrace!=pdcel.redChain);
@@ -1292,7 +1296,7 @@ public class CombDCEL {
 				do {
 					rtrace.mobIndx=sidecount;
 					rtrace.myEdge.twin.edgeIndx=++etick;
-					pdcel.tmpEdges.add(rtrace.myEdge.twin);
+					tmpEdges.add(rtrace.myEdge.twin);
 					rtrace.myEdge.twin.face=null;
 					rtrace=rtrace.nextRed;
 				} while (rtrace.twinRed==null);
@@ -1377,21 +1381,21 @@ public class CombDCEL {
 		// (1) Edges: --------------------------------------------------------
 		pdcel.edges=new HalfEdge[etick+1];
 		for (int j=1;j<=etick;j++) {
-			pdcel.edges[j]=pdcel.tmpEdges.get(j);
+			pdcel.edges[j]=tmpEdges.get(j);
 			pdcel.edges[j].edgeIndx=j; // may be set already
 		}
-		pdcel.tmpEdges=null;
+		tmpEdges=null;
 		
 		// (2) Faces: --------------------------------------------------------
 		pdcel.faces=new Face[ftick+1];
 		for (int f=1;f<=ftick;f++) {
-			pdcel.faces[f]=pdcel.tmpFaceList.get(f); // pdcel.tmpFaceList.size();
+			pdcel.faces[f]=tmpFaceList.get(f); // pdcel.tmpFaceList.size();
 		}
-		pdcel.tmpFaceList=null;
+		tmpFaceList=null;
 		
 		// (3) Ideal faces: --------------------------------------------------
 		if (pdcel.bdryStarts!=null && pdcel.bdryStarts.size()>0) {
-			pdcel.tmpIdealFaces=new ArrayList<Face>(0);
+			ArrayList<Face> tmpIdealFaces=new ArrayList<Face>(0);
 			Iterator<RedHEdge> rit=pdcel.bdryStarts.iterator();
 			int idtick=0;
 			while (rit.hasNext()) {
@@ -1409,25 +1413,25 @@ public class CombDCEL {
 					he.face=newface;
 					he=he.next;
 				} while (he!=redge.myEdge.twin);
-				pdcel.tmpIdealFaces.add(newface);
+				tmpIdealFaces.add(newface);
 			}
 			pdcel.idealFaceCount=idtick;
 			pdcel.idealFaces=new Face[idtick+1];
 			for (int j=0;j<idtick;j++) {
-				pdcel.idealFaces[j+1]=pdcel.tmpIdealFaces.get(j);
+				pdcel.idealFaces[j+1]=tmpIdealFaces.get(j);
 			}
 		}
 		
 		if (debug) { // debug=true;
-			DCELdebug.drawEdgeFace(pdcel,pdcel.tmpLayout);
-			DCELdebug.drawEdgeFace(pdcel,pdcel.tmpfullLayout);
+			DCELdebug.drawEdgeFace(pdcel,tmpLayout);
+			DCELdebug.drawEdgeFace(pdcel,tmpfullLayout);
 			debug=false;
 		}
 		
 		// (4) Create 'faceOrder' and 'computeOrder': ------------------------
 		// set drawing order for computations of cent/rad
 		pdcel.computeOrder=new GraphLink();
-		Iterator<Face> lit=pdcel.tmpLayout.iterator();
+		Iterator<Face> lit=tmpLayout.iterator();
 		int faceIndx=lit.next().faceIndx;
 		pdcel.computeOrder.add(new EdgeSimple(0,faceIndx)); // root 
 		while (lit.hasNext()) {
@@ -1440,7 +1444,7 @@ public class CombDCEL {
 		
 		// set drawing order for all faces
 		pdcel.faceOrder=new GraphLink();
-		lit=pdcel.tmpfullLayout.iterator();
+		lit=tmpfullLayout.iterator();
 		faceIndx=lit.next().faceIndx;
 		pdcel.faceOrder.add(new EdgeSimple(0,faceIndx));
 		while (lit.hasNext()) {
@@ -1449,8 +1453,8 @@ public class CombDCEL {
 			pdcel.faceOrder.add(new EdgeSimple(face.edge.twin.face.faceIndx,nxtIndx));
 			faceIndx=nxtIndx;
 		}
-		pdcel.tmpfullLayout=null;
-		pdcel.tmpLayout=null;
+		tmpfullLayout=null;
+		tmpLayout=null;
 
 		// ==================================================================
 		//                  should be done!!

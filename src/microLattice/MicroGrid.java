@@ -14,6 +14,7 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.CombDCEL;
 import dcel.PackDCEL;
 import exceptions.CombException;
 import exceptions.InOutException;
@@ -279,7 +280,7 @@ public class MicroGrid extends PackExtender {
 	}
 	
 	/**
-	 * Still working on this new mode=2 situation. We have two effects, the 
+	 * TODO: Still working on this new mode=2 situation. We have two effects, the 
 	 * area density attached to faces of 'qackData'; this comes with the 
 	 * conformal map. On top of that we may impose an additional density 
 	 * pulled back from the surface under the conformal map. These will be
@@ -290,9 +291,9 @@ public class MicroGrid extends PackExtender {
 	 */
 	public Complex [][]mode2_Intensity(String intensityfile,boolean s_flag) {
 
-		// load the input file
-		File dir=CPFileManager.PackingDirectory;
-		BufferedReader fp=CPFileManager.openReadFP(dir,intensityfile,s_flag);
+		// TODO: load the input file
+//		File dir=CPFileManager.PackingDirectory;
+//		BufferedReader fp=CPFileManager.openReadFP(dir,intensityfile,s_flag);
 		
 		qackData.utilBary=null;
 		Complex [][]ans=null;
@@ -493,8 +494,8 @@ public class MicroGrid extends PackExtender {
 
 		for (int v=1;v<=packData.nodeCount;v++) {
 			int flg=0;
-			packData.rData[v].center=packData.rData[v].center.times(microScaling);
-			packData.rData[v].rad *=microScaling; // so radii = microScalling/2.0.
+			packData.setCenter(v,packData.getCenter(v).times(microScaling));
+			packData.setRadius(v,packData.getRadius(v)*microScaling); // so radii = microScalling/2.0.
 			int []uw=v2micro[v];
 			if ((uw[0]%basediam)==0 && (uw[1]%basediam)==0)
 				flg=-1;
@@ -507,7 +508,7 @@ public class MicroGrid extends PackExtender {
 		else microAngle=0.0;
 		if (microCenter.abs()>.0001) 
 			for (int v=1;v<=packData.nodeCount;v++)
-				packData.rData[v].center=packData.rData[v].center.add(microCenter);
+				packData.setCenter(v,packData.getCenter(v).add(microCenter));
 		else microCenter=new Complex(0.0);
 		
 		// debug
@@ -702,8 +703,8 @@ public class MicroGrid extends PackExtender {
 			Iterator<EdgeSimple> git=dgraph.iterator();
 			while(git.hasNext()) {
 				EdgeSimple edge=git.next();
-				Complex z=p.rData[edge.v].center;
-				Complex w=p.rData[edge.w].center;
+				Complex z=p.getCenter(edge.v);
+				Complex w=p.getCenter(edge.w);
 				if (CPBase.ClosedPath.contains(z.x,z.y) || CPBase.ClosedPath.contains(w.x,w.y))
 					theEdges.add(edge);
 			}
@@ -755,8 +756,8 @@ public class MicroGrid extends PackExtender {
 		double rad=1.0/(CPBase.sqrt3*N);
 		for (int v=1;v<=newPack.nodeCount;v++) {
 			int v_macro=newPack.kData[v].mark;
-			newPack.rData[v].rad=rad;
-			newPack.rData[v].center=new Complex(packData.rData[v_macro].center);
+			newPack.setRadius(v,rad);
+			newPack.setCenter(v,new Complex(packData.getCenter(v_macro)));
 		}
 		
 		return newPack;
@@ -829,7 +830,7 @@ public class MicroGrid extends PackExtender {
 		for (int v=1;v<=packData.nodeCount;v++) {
 //			System.out.println("v="+v);
 			try {
-			Complex z=packData.rData[v].center;
+			Complex z=packData.getCenter(v);
 			double value=0.0;
 			// mode 1, get from intensity data
 			if (md==1)
@@ -841,10 +842,10 @@ public class MicroGrid extends PackExtender {
 					int qv=-1;
 					if (nlist!=null && nlist.size()>0 && (qv=nlist.get(0))>0) {
 						// find average radius of qv and nghbs
-						value=qackData.rData[qv].rad;
+						value=qackData.getRadius(qv);
 						int nbr=qackData.kData[qv].num+qackData.kData[qv].bdryFlag;
 						for (int j=0;j<nbr;j++) 
-							value += qackData.rData[qackData.kData[qv].flower[j]].rad;
+							value += qackData.getRadius(qackData.kData[qv].flower[j]);
 						value =(double)(nbr+1)/value;
 					}
 				}
@@ -1033,7 +1034,7 @@ public class MicroGrid extends PackExtender {
 				Oops("usage: write_dual <filename>");
 			
 			// create dcel
-			qPack.packDCEL = new PackDCEL(qPack);
+			qPack.packDCEL = CombDCEL.d_redChainBuilder(qPack,qPack.getBouquet(),null,false);
 			PackDCEL qdcel=qPack.packDCEL.createDual(false);
 			BufferedWriter fp=null;
 			File file=null;
@@ -1168,7 +1169,7 @@ public class MicroGrid extends PackExtender {
 	    			for (int j=0;j<=D;j++) {
 	    				Node nde=nodeL[i][j];
 	    				if (nde!=null && nde.chosen) {
-	    					packData.rData[nde.myVert].rad=rad;
+	    					packData.setRadius(nde.myVert,rad);
 	    					count++;
 	    				}
 	    			}
@@ -1244,7 +1245,7 @@ public class MicroGrid extends PackExtender {
 		    			for (j=0;j<=D;j++) {
 		    				nde=nodeL[i][j];
 		    				if (nde!=null && nde.mark==lev) {
-		    					Complex z=packData.rData[nde.myVert].center;
+		    					Complex z=packData.getCenter(nde.myVert);
 		    					double rad=0.5*microScaling*stepDiam[lev];
 		    					fp.write(" "+tick+"   "+rad+"   "+z.x+" "+z.y+"\n");
 		    					packData.vertexMap.add(
@@ -1628,7 +1629,7 @@ public class MicroGrid extends PackExtender {
 					Iterator<Node> sit=selects.iterator();
 					while (sit.hasNext()) {
 						node=sit.next();
-						Complex z=packData.rData[node.myVert].center;
+						Complex z=packData.getCenter(node.myVert);
 						double rad=0.5*microScaling*stepDiam[level];
 						dispflgs.setColor(node.color);
 						cpScreen.drawCircle(z,rad,dispflgs);
@@ -1656,7 +1657,7 @@ public class MicroGrid extends PackExtender {
 						if (f.mark==level) {
 							double []corners=new double[6];
 							for (int kk=0;kk<3;kk++) {
-								Complex z=packData.rData[f.vert[kk]].center;
+								Complex z=packData.getCenter(f.vert[kk]);
 								corners[2*kk]=z.x;
 								corners[2*kk+1]=z.y;
 							}
@@ -2328,7 +2329,7 @@ public class MicroGrid extends PackExtender {
 			int []vert=q.faces[f].vert;
 			double []radii=new double[3];
 			for (int j=0;j<3;j++) {
-				radii[j]=q.rData[vert[j]].rad;
+				radii[j]=q.getRadius(vert[j]);
 			}
 			
 			// first check if the 3 radii are not (essentially) equal
@@ -2373,8 +2374,8 @@ public class MicroGrid extends PackExtender {
 			    q.kData[newval].bdryFlag=0;
 			    q.kData[newval].mark=++count;
 			    q.kData[newval].color=CPScreen.getFGColor();
-			    q.rData[newval].rad=brad;
-			    q.rData[newval].center=new Complex(bcent);
+			    q.setRadius(newval,brad);
+			    q.setCenter(newval,new Complex(bcent));
 			    q.rData[newval].aim=2.0*Math.PI;
 			    
 			    // adjust nghb flowers

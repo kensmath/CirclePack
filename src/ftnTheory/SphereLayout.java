@@ -251,7 +251,7 @@ public class SphereLayout extends PackExtender {
 					Iterator<Integer> blt = blist.iterator();
 					while (blt.hasNext()) {
 						int k = blt.next();
-						puncturedPack[b].setRadius(k, 10.0);
+						puncturedPack[b].setRadiusActual(k, 10.0);
 					}
 					int repackCount = puncturedPack[b].repack_call(cycles,false,
 							false);
@@ -273,26 +273,26 @@ public class SphereLayout extends PackExtender {
 					// store the inversive distances
 					for (int v = 1; v < bea[b]; v++) {
 						vertGPS[v].coord[b] = HyperbolicMath
-								.x_rad2invdist(puncturedPack[b].rData[v].rad); 
+								.x_rad2invdist(puncturedPack[b].getRadius(v)); 
 					}
 					for (int v = bea[b] + 1; v <= nodes; v++) { // indices are
 																// shifted due
 																// to puncture
 						vertGPS[v].coord[b] = HyperbolicMath
-								.x_rad2invdist(puncturedPack[b].rData[v - 1].rad);
+								.x_rad2invdist(puncturedPack[b].getRadius(v-1));
 					}
 					vertGPS[bea[b]].coord[b] = -1.0;
 					for (int j = 0; j < 4; j++) {
 						if (j != b) {
 							if (bea[j] < bea[b]) {
 								bD[j][b] += HyperbolicMath
-										.x_rad2invdist(puncturedPack[b].rData[bea[j]].rad);
+										.x_rad2invdist(puncturedPack[b].getRadius(bea[j]));
 								if (Double.isNaN(bD[j][b]))
 									throw new DataException("bD[" + j + "]["
 											+ b + "] is NaN");
 							} else {
 								bD[j][b] += HyperbolicMath
-										.x_rad2invdist(puncturedPack[b].rData[bea[j] - 1].rad);
+										.x_rad2invdist(puncturedPack[b].getRadius(bea[j] - 1));
 								if (Double.isNaN(bD[j][b]))
 									throw new DataException("bD[" + j + "]["
 											+ b + "] is NaN");
@@ -442,12 +442,12 @@ public class SphereLayout extends PackExtender {
 				
 				// store spherical centers, radii in layoutPack
 				double R=Math.sqrt(x*x+y*y+z*z);
-				layoutPack.rData[v].center=SphericalMath.proj_vec_to_sph(x,y,z);
+				layoutPack.setCenter(v,SphericalMath.proj_vec_to_sph(x,y,z));
 				double rho=Math.acos(t/R);
 				if (Double.isNaN(rho)) {
 					CirclePack.cpb.errMsg("vertex "+v+": t is "+t+" and R is "+R);
 				}
-				layoutPack.rData[v].rad=rho;
+				layoutPack.setRadius(v,rho);
 				count++;
 			}
 			

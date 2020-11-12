@@ -145,9 +145,9 @@ public class ProjStruct extends PackExtender {
 				int v=packData.faces[f].vert[j];
 				tas.vert[j]=v;
 				// set 'labels'
-				tas.labels[j]=packData.rData[v].rad;
+				tas.labels[j]=packData.getRadius(v);
 				// set 'centers'
-				tas.setCenter(new Complex(packData.rData[v].center),j);
+				tas.setCenter(packData.getCenter(v),j);
 				if (packData.kData[v].utilFlag==1)
 					tas.redFlags[j]=true;
 				else tas.redFlags[j]=false;
@@ -590,7 +590,7 @@ public class ProjStruct extends PackExtender {
 	 * @return int -1 on error
 	 */
 	public static int adjustRadii(PackData p,int v,double factor,TriAspect []asp) {
-		p.rData[v].rad *=factor;
+		p.setRadius(v,factor*p.getRadius(v));
 		for (int j=0;j<p.kData[v].num;j++) {
 			int f=p.kData[v].faceFlower[j];
 			int k=asp[f].vertIndex(v);
@@ -848,13 +848,12 @@ public class ProjStruct extends PackExtender {
 		
 		// store first two radii in rData: these arn't associated
 		//   with any face and they shouldn't change
-		p.rData[baseVert].rad=0.1;
-		p.rData[nf.vert[(nf.indexFlag+1)%3]].rad=
-			baseFactor*asp[fIndx].labels[(nf.indexFlag+1)%3];
+		p.setRadius(baseVert,0.1);
+		p.setRadius(nf.vert[(nf.indexFlag+1)%3],baseFactor*asp[fIndx].labels[(nf.indexFlag+1)%3]);
 		
 		// store myVert radius in 'rData' and radii
-		radii[fIndx]=p.rData[myVert].rad=
-			baseFactor*asp[fIndx].labels[(nf.indexFlag+2)%3];
+		radii[fIndx]=baseFactor*asp[fIndx].labels[(nf.indexFlag+2)%3];
+		p.setRadius(myVert,radii[fIndx]);
 		
 		// now set rest of radii entries (one for each face in drawing order)
 		while (flist.hasNext()) {
@@ -864,7 +863,7 @@ public class ProjStruct extends PackExtender {
 			baseVert=p.faces[fIndx].vert[nf.indexFlag];
 			// Except when face is blue, 'baseVert' should not be on
 			//   redchain and its radius should have been placed in rData
-			baseRad=p.rData[baseVert].rad;
+			baseRad=p.getRadius(baseVert);
 			// However, baseVert may be in redchain; this should happen iff 
 			//    face is 'blue', have to get radius from preceeding face.
 			if (p.kData[baseVert].utilFlag==1) {  
@@ -879,8 +878,9 @@ public class ProjStruct extends PackExtender {
 			
 			// use baseRad (known) and labels (known) to compute 'myVert' radius
 			baseFactor=baseRad/asp[fIndx].labels[nf.indexFlag]; 
-			radii[fIndx]=p.rData[myVert].rad=
-				baseFactor*asp[fIndx].labels[(nf.indexFlag+2)%3];
+			radii[fIndx]=baseFactor*asp[fIndx].labels[(nf.indexFlag+2)%3];
+			p.setRadius(myVert,radii[fIndx]);
+				
 			
 			if (debug)
 				System.out.println("myVert: "+myVert+" rad "+radii[fIndx]+
@@ -895,7 +895,7 @@ public class ProjStruct extends PackExtender {
 			fIndx=flist.next();
 			nf=p.faces[fIndx];
 			myVert=nf.vert[(nf.indexFlag+2)%3]; // vert this face is responsible for
-			p.rData[myVert].rad=radii[fIndx];
+			p.setRadius(myVert,radii[fIndx]);
 		
 			if (debug) {
 				printRadRatios(p,fIndx,asp);
@@ -909,7 +909,7 @@ public class ProjStruct extends PackExtender {
 			// only store the radius if vert is on outside of redChain
 //			if (packData.kData[myVert].utilFlag==1) 
 				rtrace.rad=radii[rtrace.face];
-			p.rData[myVert].rad=radii[rtrace.face];
+			p.setRadius(myVert,radii[rtrace.face]);
 			if (debug)
 				printRadRatios(p,rtrace.face,asp);
 			rtrace=(RedList)rtrace.next;
@@ -948,7 +948,7 @@ public class ProjStruct extends PackExtender {
 				asp[dedge.w].setCenters();
 				for (int j=0;j<3;j++) {
 					int k=asp[dedge.w].vert[j];
-					p.rData[k].center=asp[dedge.w].getCenter(j);
+					p.setCenter(k,asp[dedge.w].getCenter(j));
 				}
 			}
 			else {
@@ -958,14 +958,14 @@ public class ProjStruct extends PackExtender {
 				if (newasp==null) 
 					return;
 				asp[dedge.w]=new TriAspect(newasp);
-				p.rData[v2].center=asp[dedge.w].getCenter((k+2)%3);
+				p.setCenter(v2,asp[dedge.w].getCenter((k+2)%3));
 			}
 			
 			// draw the new face
 			if (debug) {
 				int []vts=p.faces[dedge.w].vert;
 				for (int j=0;j<3;j++)
-				p.cpScreen.drawCircle(asp[dedge.w].getCenter(j), p.rData[vts[j]].rad, dispflags);
+				p.cpScreen.drawCircle(asp[dedge.w].getCenter(j), p.getRadius(vts[j]), dispflags);
 				PackControl.canvasRedrawer.paintMyCanvasses(p,false);
 			}
 				
@@ -1032,11 +1032,11 @@ public class ProjStruct extends PackExtender {
 			for (int j=0;j<3;j++) {
 				int v=verts[j];
 				if (cck[v]==0) {
-					p.rData[v].center=new Complex(asp[f].getCenter(j));
-					p.rData[v].rad=asp[f].labels[j];
+					p.setCenter(v,new Complex(asp[f].getCenter(j)));
+					p.setRadius(v,asp[f].labels[j]);
 					cck[v]=1; // mark as set
 				if (debug) {// draw the circle	
-					p.cpScreen.drawCircle(p.rData[v].center, p.rData[v].rad, dispflags);
+					p.cpScreen.drawCircle(p.getCenter(v), p.getRadius(v), dispflags);
 					PackControl.canvasRedrawer.paintMyCanvasses(p,false);
 				}
 				}
@@ -1213,9 +1213,9 @@ public class ProjStruct extends PackExtender {
 	 */
 	public static void printRadRatios(PackData p,int fnum,TriAspect []asp) {
 		int []vts=p.faces[fnum].vert;
-		double r0=p.rData[vts[0]].rad;
-		double r1=p.rData[vts[1]].rad;
-		double r2=p.rData[vts[2]].rad;
+		double r0=p.getRadius(vts[0]);
+		double r1=p.getRadius(vts[1]);
+		double r2=p.getRadius(vts[2]);
 		System.out.println("face "+fnum+": <"+vts[0]+","+vts[1]+","+vts[2]+">");
 		System.out.println("   rad labels:   "+1+",  "+r1/r0+",  "+r2/r0);
 		double rat0=asp[fnum].labels[0];
@@ -1290,7 +1290,7 @@ public class ProjStruct extends PackExtender {
 							areaSum += asp[fv].sectorAreaZ(v);
 							angSum +=asp[fv].angleV(v,1.0)[0];
 						}
-						p.rData[v].rad=Math.sqrt(2.0*areaSum/angSum);
+						p.setRadius(v,Math.sqrt(2.0*areaSum/angSum));
 						cck[v]=1;
 					}
 				}
@@ -1789,7 +1789,7 @@ public class ProjStruct extends PackExtender {
 							int f=flt.next();
 							for (int j = 0; j < 3; j++)
 								aspects[f].labels[j]=
-									packData.rData[packData.faces[f].vert[j]].rad;
+									packData.getRadius(packData.faces[f].vert[j]);
 							count++;
 						}
 						break;

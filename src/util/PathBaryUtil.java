@@ -194,8 +194,8 @@ public class PathBaryUtil {
 				Complex holdStart=null;
 				while (elst.hasNext()) {
 					EdgeSimple edge=elst.next();
-					Complex a=new Complex(p.rData[edge.v].center);
-					Complex b=new Complex(p.rData[edge.w].center);
+					Complex a=p.getCenter(edge.v);
+					Complex b=p.getCenter(edge.w);
 					Complex hitPt=EuclMath.segIntersect(start,nextz,a,b);
 					if (hitPt!=null) {
 						double dist=start.minus(hitPt).abs();
@@ -214,13 +214,13 @@ public class PathBaryUtil {
 						return new segAnswer(healthy,null);
 					}
 					// is 'start' an endpoint?
-					if (start.minus(p.rData[holdEdge.v].center).abs()<EuclMath.OKERR*10) {
+					if (start.minus(p.getCenter(holdEdge.v)).abs()<EuclMath.OKERR*10) {
 						currFaceIndx=faceFromZ(p,holdEdge.v,nextz);
-						start=new Complex(p.rData[holdEdge.v].center);
+						start=p.getCenter(holdEdge.v);
 					}
-					else if (start.minus(p.rData[holdEdge.w].center).abs()<EuclMath.OKERR*10) {
+					else if (start.minus(p.getCenter(holdEdge.w)).abs()<EuclMath.OKERR*10) {
 						currFaceIndx=faceFromZ(p,holdEdge.w,nextz);
-						start=new Complex(p.rData[holdEdge.w].center);
+						start=p.getCenter(holdEdge.w);
 					} 
 					else currFaceIndx=p.kData[holdEdge.v].faceFlower[0]; // face
 					gothit=true;
@@ -260,9 +260,9 @@ public class PathBaryUtil {
 			
 				// check if segment [start,nextz] actually enters the face
 				currface=p.faces[currFaceIndx];
-				z[0]=new Complex(p.rData[currface.vert[0]].center);
-				z[1]=new Complex(p.rData[currface.vert[1]].center);
-				z[2]=new Complex(p.rData[currface.vert[2]].center);
+				z[0]=p.getCenter(currface.vert[0]);
+				z[1]=p.getCenter(currface.vert[1]);
+				z[2]=p.getCenter(currface.vert[2]);
 				currfbp=new BaryPacket(p,currFaceIndx);
 				currfbp.setStart(EuclMath.e_pt_to_bary(start, z[0],z[1],z[2]));
 				BaryPoint baryNext=EuclMath.e_pt_to_bary(nextz, z[0],z[1],z[2]);
@@ -342,9 +342,9 @@ public class PathBaryUtil {
 					
 					// else have our new face to try with same 'nextz'
 					currface=p.faces[currFaceIndx];
-					z[0]=new Complex(p.rData[currface.vert[0]].center);
-					z[1]=new Complex(p.rData[currface.vert[1]].center);
-					z[2]=new Complex(p.rData[currface.vert[2]].center);
+					z[0]=p.getCenter(currface.vert[0]);
+					z[1]=p.getCenter(currface.vert[1]);
+					z[2]=p.getCenter(currface.vert[2]);
 					currfbp=new BaryPacket(p,currFaceIndx);
 					currfbp.setStart(EuclMath.e_pt_to_bary(start,z[0],z[1],z[2]));
 					baryNext=EuclMath.e_pt_to_bary(nextz,z[0],z[1],z[2]);
@@ -425,14 +425,13 @@ public class PathBaryUtil {
 	 */
 	public static int faceFromZ(PackData p,int v,Complex p2) {
 		int num=p.kData[v].num;
-		Complex me=p.rData[v].center;
+		Complex me=p.getCenter(v);
 		Complex vp2=p2.minus(me);
 		double arg1;
-		double arg2=p.rData[p.kData[v].flower[0]].center.minus(me).divide(vp2).arg();
+		double arg2=p.getCenter(p.kData[v].flower[0]).minus(me).divide(vp2).arg();
 		for (int j=1;j<=num;j++) {
 			arg1=arg2;
-			arg2=p.rData[p.kData[v].flower[j]].
-			center.minus(me).divide(vp2).arg();
+			arg2=p.getCenter(p.kData[v].flower[j]).minus(me).divide(vp2).arg();
 			if (arg1<=0 && arg2>0)
 				return p.kData[v].faceFlower[j-1];
 		}

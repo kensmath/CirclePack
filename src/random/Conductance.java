@@ -79,19 +79,19 @@ public class Conductance {
 		Complex f2=null;
 		for (int v=1;v<=domData.nodeCount;v++) {
 			int num=domData.kData[v].num;
-			Complex z=domData.rData[v].center;
+			Complex z=domData.getCenter(v);
 			spokes=new double[num+1];
 			inCenters=new Complex[num];
 
 			conductance[v]=new double[num+1];
 
 			// store edge lengths, incenters
-			f2=domData.rData[domData.kData[v].flower[0]].center;
+			f2=domData.getCenter(domData.kData[v].flower[0]);
 			spokes[0]=z.minus(f2).abs();
 			CircleSimple sc=null;
 			for (int j=1;j<=num;j++) {
 				f1=f2;
-				f2=domData.rData[domData.kData[v].flower[j]].center;
+				f2=domData.getCenter(domData.kData[v].flower[j]);
 				sc=EuclMath.eucl_tri_incircle(z,f1,f2);
 				spokes[j]=z.minus(f2).abs();
 				inCenters[j-1]=sc.center;
@@ -101,12 +101,12 @@ public class Conductance {
 			
 			// for bdry, use ratio of inRad/length for first and last edges
 			if (domData.kData[v].bdryFlag!=0) {
-				f1=domData.rData[domData.kData[v].flower[0]].center;
-				f2=domData.rData[domData.kData[v].flower[1]].center;
+				f1=domData.getCenter(domData.kData[v].flower[0]);
+				f2=domData.getCenter(domData.kData[v].flower[1]);
 				double inRad=EuclMath.eucl_tri_inradius(spokes[0],spokes[1],f1.minus(f2).abs());
 				conductance[v][0]=inRad/spokes[0];
-				f1=domData.rData[domData.kData[v].flower[num-1]].center;
-				f2=domData.rData[domData.kData[v].flower[num]].center;
+				f1=domData.getCenter(domData.kData[v].flower[num-1]);
+				f2=domData.getCenter(domData.kData[v].flower[num]);
 				inRad=EuclMath.eucl_tri_inradius(spokes[num-1],spokes[num],f1.minus(f2).abs());
 				conductance[v][num]=inRad/spokes[num];
 			}

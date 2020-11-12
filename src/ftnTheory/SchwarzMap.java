@@ -244,8 +244,8 @@ public class SchwarzMap extends PackExtender {
 					
 					// put in qData as well (though may be changed later)\
 					// TODO: here and later, put new data in redchain, if appropriate
-					qData.rData[myTri.vert[j]].rad=myTri.getRadius(j);
-					qData.rData[myTri.vert[j]].center=myTri.getCenter(j);
+					qData.setRadius(myTri.vert[j],myTri.getRadius(j));
+					qData.setCenter(myTri.vert[j],myTri.getCenter(j));
 				}
 				rangeTri[baseface].setTanPts();
 			
@@ -287,8 +287,8 @@ public class SchwarzMap extends PackExtender {
 				
 				int[] verts=rangeTri[g].vert;
 				for (int jj=0;jj<3;jj++) {
-					qData.rData[verts[jj]].rad=rangeTri[g].getRadius(jj);
-					qData.rData[verts[jj]].center=new Complex(rangeTri[g].getCenter(jj));
+					qData.setRadius(verts[jj],rangeTri[g].getRadius(jj));
+					qData.setCenter(verts[jj],new Complex(rangeTri[g].getCenter(jj)));
 				}
 				
 				// Now, draw this face using 'TriAspect' data
@@ -371,8 +371,8 @@ public class SchwarzMap extends PackExtender {
 				TriAspect mytri=rangeTri[baseface];
 				for (int j=0;j<3;j++) {
 					int v=mytri.vert[j];
-					qData.rData[v].center=new Complex(mytri.getCenter(j));
-					qData.rData[v].rad=mytri.getRadius(j);
+					qData.setCenter(v,new Complex(mytri.getCenter(j)));
+					qData.setRadius(v,mytri.getRadius(j));
 					verthits[v]++;
 				}
 			}
@@ -389,13 +389,13 @@ public class SchwarzMap extends PackExtender {
 				if (verthits[v]>0) {
 					double diff=0.0;
 					if (qData.hes>0) 
-						diff=SphericalMath.s_dist(z,qData.rData[v].center);
+						diff=SphericalMath.s_dist(z,qData.getCenter(v));
 					else
-						diff=z.minus(qData.rData[v].center).abs();
+						diff=z.minus(qData.getCenter(v)).abs();
 					maxError=(diff>maxError) ? diff:maxError;
 				}
-				qData.rData[v].center=new Complex(z);
-				qData.rData[v].rad=mytri.getRadius(indx);
+				qData.setCenter(v,new Complex(z));
+				qData.setRadius(v,mytri.getRadius(indx));
 				verthits[v]++;
 			}
 			
@@ -618,7 +618,7 @@ public class SchwarzMap extends PackExtender {
 				if (dom_hes<0 && rangeHes==0) { // domain is hyp, range eucl
 					for (int j=0;j<3;j++) {
 						int v=mytri.vert[j];
-						sC=HyperbolicMath.h_to_e_data(packData.rData[v].center,packData.rData[v].rad);
+						sC=HyperbolicMath.h_to_e_data(packData.getCenter(v),packData.getRadius(v));
 						mytri.setCenter(sC.center,j);
 						mytri.setRadius(sC.rad,j);
 					}
@@ -626,7 +626,7 @@ public class SchwarzMap extends PackExtender {
 				else if (dom_hes<0 && rangeHes>0) {
 					for (int j=0;j<3;j++) {
 						int v=mytri.vert[j];
-						sC = HyperbolicMath.h_to_e_data(packData.rData[v].center, packData.rData[v].rad);
+						sC = HyperbolicMath.h_to_e_data(packData.getCenter(v), packData.getRadius(v));
 						sC = SphericalMath.e_to_s_data(sC.center, sC.rad);
 						mytri.setCenter(sC.center,j);
 						mytri.setRadius(sC.rad,j);
@@ -635,7 +635,7 @@ public class SchwarzMap extends PackExtender {
 				else if (dom_hes==0 && rangeHes>0) {
 					for (int j=0;j<3;j++) {
 						int v=mytri.vert[j];
-						sC=SphericalMath.e_to_s_data(packData.rData[v].center,packData.rData[v].rad);
+						sC=SphericalMath.e_to_s_data(packData.getCenter(v),packData.getRadius(v));
 						mytri.setCenter(sC.center,j);
 						mytri.setRadius(sC.rad,j);
 					}
@@ -670,7 +670,7 @@ public class SchwarzMap extends PackExtender {
 				else if (dom_hes>0 && rangeHes==0) {
 					for (int j=0;j<3;j++) {
 						int v=mytri.vert[j];
-						sC = SphericalMath.s_to_e_data(packData.rData[v].center, packData.rData[v].rad);
+						sC = SphericalMath.s_to_e_data(packData.getCenter(v), packData.getRadius(v));
 						mytri.setCenter(sC.center,j);
 						mytri.setRadius(sC.rad,j);
 					}

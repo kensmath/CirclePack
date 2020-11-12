@@ -121,12 +121,12 @@ public class BaryLink extends LinkedList<BaryPoint> {
 						int []verts=packData.faces[f].vert;
 						BaryPoint bp=null;
 						if (packData.hes==0) { // eucl
-							bp=EuclMath.e_pt_to_bary(z,packData.rData[verts[0]].center,
-									packData.rData[verts[1]].center,packData.rData[verts[2]].center);
+							bp=EuclMath.e_pt_to_bary(z,packData.getCenter(verts[0]),
+									packData.getCenter(verts[1]),packData.getCenter(verts[2]));
 						}
 						else if (packData.hes<0) { // hyp
-							bp=HyperbolicMath.h_pt_to_bary(z,packData.rData[verts[0]].center,
-									packData.rData[verts[1]].center,packData.rData[verts[2]].center);
+							bp=HyperbolicMath.h_pt_to_bary(z,packData.getCenter(verts[0]),
+									packData.getCenter(verts[1]),packData.getCenter(verts[2]));
 						}
 						if (bp!=null) {
 							bp.face=f;

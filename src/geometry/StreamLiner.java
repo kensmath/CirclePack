@@ -52,9 +52,9 @@ public class StreamLiner {
 		if (flk==null || flk.size()==0)
 			return null;
 		int face=flk.get(0);
-		Complex v0=basePack.rData[basePack.faces[face].vert[0]].center;
-		Complex v1=basePack.rData[basePack.faces[face].vert[1]].center;
-		Complex v2=basePack.rData[basePack.faces[face].vert[2]].center;
+		Complex v0=basePack.getCenter(basePack.faces[face].vert[0]);
+		Complex v1=basePack.getCenter(basePack.faces[face].vert[1]);
+		Complex v2=basePack.getCenter(basePack.faces[face].vert[2]);
 
 		// find the first 'BaryPoint'
 		BaryPoint startBpt=BaryPoint.complex2bp(basePack.hes, pt, v0, v1, v2);
@@ -110,8 +110,8 @@ public class StreamLiner {
 			grad=grad.times(-1.0);
 		int []vert=basePack.faces[spt.face].vert;
 		
-		Complex vec=BaryPoint.vec2simplex(grad,basePack.rData[vert[0]].center,
-				basePack.rData[vert[1]].center,basePack.rData[vert[2]].center);
+		Complex vec=BaryPoint.vec2simplex(grad,basePack.getCenter(vert[0]),
+				basePack.getCenter(vert[1]),basePack.getCenter(vert[2]));
 		double []baryc=BaryPoint.upGrad(spt.b0,spt.b1,vec);
 		if (baryc==null)
 			return null;
@@ -141,9 +141,9 @@ public class StreamLiner {
 		normals=new Point3D[basePack.faceCount+1];
 		for (int f=1;f<=basePack.faceCount;f++) {
 			int []v=basePack.faces[f].vert;
-			Complex z0=basePack.rData[v[0]].center;
-			Complex z1=basePack.rData[v[1]].center;
-			Complex z2=basePack.rData[v[2]].center;
+			Complex z0=basePack.getCenter(v[0]);
+			Complex z1=basePack.getCenter(v[1]);
+			Complex z2=basePack.getCenter(v[2]);
 			
 			// get the sides as 3 vectors
 			Point3D side01=new Point3D(z1.x-z0.x,z1.y-z0.y,dataValues[v[1]]-dataValues[v[0]]);
@@ -223,7 +223,7 @@ public class StreamLiner {
 			int []flower=basePack.kData[v].flower;
 			Complex []edgevec=new Complex[num+1];
 			for (int j=0;j<num;j++) {
-				edgevec[j]=basePack.rData[flower[j]].center.minus(basePack.rData[v].center);
+				edgevec[j]=basePack.getCenter(flower[j]).minus(basePack.getCenter(v));
 			}
 			edgevec[num]=edgevec[0];
 			
@@ -309,7 +309,7 @@ public class StreamLiner {
 			int num=basePack.kData[v].num;
 			int face_l=inpt.face;
 			int face_r=basePack.kData[v].faceFlower[(vw_indx-1+num)%num];
-			Complex vw_edge=basePack.rData[w].center.minus(basePack.rData[v].center);
+			Complex vw_edge=basePack.getCenter(w).minus(basePack.getCenter(v));
 			
 			// have to decide if going left (this same face) or going right (neighboring
 			//   face) are viable, then compare them.

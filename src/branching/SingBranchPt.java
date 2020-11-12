@@ -305,7 +305,7 @@ public class SingBranchPt extends GenBranchPt {
 		// get parent radii
 		for (int i=1;i<=matchCount;i++) {
 			if (transData[i]>0)
-				myPackData.rData[i].rad=packData.rData[transData[i]].rad;
+				myPackData.setRadius(i,packData.getRadius(transData[i]));
 		}
 		if (cycles<0)
 			cycles = 5; // subject to trial and error
@@ -321,7 +321,7 @@ public class SingBranchPt extends GenBranchPt {
 		// transfer radii to parent
 		for (int i=1;i<=matchCount;i++) {
 			if (transData[i]<0)
-				packData.rData[-transData[i]].rad=myPackData.rData[i].rad;
+				packData.setRadius(-transData[i],myPackData.getRadius(i));
 		}
 		return uP;
 	}
@@ -348,16 +348,16 @@ public class SingBranchPt extends GenBranchPt {
 			if (myPackData.place_face(F,myPackData.faces[F].indexFlag)==0)
 				throw new DataException("failed to locate first local face");
 			Complex []firstF=new Complex[2];
-			firstF[0]=new Complex(myPackData.rData[V].center);
-			firstF[1]=new Complex(myPackData.rData[W].center);
+			firstF[0]=myPackData.getCenter(V);
+			firstF[1]=myPackData.getCenter(W);
 		
 			// now use 'drawingTree' computed in 'createMyPack' to layout
 			myPackData.layoutTree(null,myPackData.drawingTree,null,null,true,false,1.0);
 
 			// final location of F (only different if 'borderLink' is closed)
 			Complex []lastF=new Complex[2];
-			lastF[0]=new Complex(myPackData.rData[V].center);
-			lastF[1]=new Complex(myPackData.rData[W].center);
+			lastF[0]=myPackData.getCenter(V);
+			lastF[1]=myPackData.getCenter(W);
 
 			// update myHolonomy
 			if (myPackData.hes<0) // hyp
@@ -374,8 +374,8 @@ public class SingBranchPt extends GenBranchPt {
 		// normalize: 1 center is at rad[1]*i on imaginary axis; center of chap2
 		//    has argument -pi/2 + overlap[2], modulus radius of newBrSpot-2.
 		if (norm) {
-			double e1=myPackData.rData[1].rad; // radius for 1
-			double em=myPackData.rData[chap[2]].rad; // radius for newBrSpot-2
+			double e1=myPackData.getRadius(1); // radius for 1
+			double em=myPackData.getRadius(chap[2]); // radius for newBrSpot-2
 			
 			// hyperbolic? have to adjust to euclidean data
 			if (myPackData.hes<0) {
@@ -398,14 +398,14 @@ public class SingBranchPt extends GenBranchPt {
 				A=sc.center;
 				sc=HyperbolicMath.e_to_h_data(B,em);
 				B=sc.center;
-				mob=Mobius.auto_abAB(myPackData.rData[1].center,
-						myPackData.rData[chap[2]].center,A,B);
+				mob=Mobius.auto_abAB(myPackData.getCenter(1),
+						myPackData.getCenter(chap[2]),A,B);
 			}
 			else
-				mob=Mobius.affine_mob(myPackData.rData[1].center,
-						myPackData.rData[chap[2]].center,A,B);
+				mob=Mobius.affine_mob(myPackData.getCenter(1),
+						myPackData.getCenter(chap[2]),A,B);
 			for (int v=1;v<=myPackData.nodeCount;v++) 
-				myPackData.rData[v].center=mob.apply(myPackData.rData[v].center);
+				myPackData.setCenter(v,mob.apply(myPackData.getCenter(v)));
 			
 			// put barycenter chaperone at the origin
 //			myPackData.rData[newBrSpot].center=new Complex(0.0);
@@ -703,7 +703,7 @@ public class SingBranchPt extends GenBranchPt {
 		
 		// get centers from parent
 		for (int i=1;i<=matchCount;i++) {
-			myPackData.rData[i].center=new Complex(packData.rData[Math.abs(transData[i])].center);
+			myPackData.setCenter(i,new Complex(packData.getCenter(Math.abs(transData[i]))));
 			count++;
 		}
 		

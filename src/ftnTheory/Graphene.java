@@ -400,10 +400,10 @@ public class Graphene extends PackExtender {
 				for (int v=1;v<=packData.nodeCount;v++) {
 					gradNorm += grad[v]*grad[v];
 					if (packData.kData[v].bdryFlag!=1) { // leave bdry unchanged
-						double newrad=packData.rData[v].rad-eps*grad[v];
+						double newrad=packData.getRadius(v)-eps*grad[v];
 						if (newrad<=0)
-							newrad=packData.rData[v].rad/2.0;
-						packData.rData[v].rad=newrad;
+							newrad=packData.getRadius(v)/2.0;
+						packData.setRadius(v,newrad);
 					}
 				}
 				gradNorm=Math.sqrt(gradNorm);
@@ -486,7 +486,7 @@ public class Graphene extends PackExtender {
 				rad=CPBase.sqrt3by2;
 			}
 			for (int v=1;v<=packData.nodeCount;v++)
-				packData.rData[v].rad=rad;
+				packData.setRadius(v,rad);
 			
 			return 1;
 		}
@@ -653,7 +653,7 @@ public class Graphene extends PackExtender {
 			double newE = ringEnergy(v);
 			double newASE=0.0;
 			if (packData.kData[v].bdryFlag==0) {
-				packData.e_anglesum_overlap(v,packData.rData[v].rad,uPkt);
+				packData.e_anglesum_overlap(v,packData.getRadius(v),uPkt);
 				double term=2.0*Math.PI-uPkt.value;
 				newASE=planarParam*term*term;
 			}
@@ -723,7 +723,7 @@ public class Graphene extends PackExtender {
 			}
 			angE += cE.getAngleEnergy(v);
 		}
-		if (!packData.e_anglesum_overlap(v,packData.rData[v].rad,uPkt))
+		if (!packData.e_anglesum_overlap(v,packData.getRadius(v),uPkt))
 			Oops("Error in computing angle sum");
 		double planarE=0.0;
 		if (packData.kData[v].bdryFlag==0) { // interior?
@@ -885,7 +885,7 @@ public class Graphene extends PackExtender {
 		double []grad=new double[packData.nodeCount+1];
 		for (int vert=1;vert<=packData.nodeCount;vert++) {
 			int num=packData.kData[vert].num;
-			double r=packData.rData[vert].rad;
+			double r=packData.getRadius(vert);
 			boolean bdryvert=packData.kData[vert].bdryFlag==1;
 			
 			// each contribution due to anglesums = ASfactor*partial.
@@ -895,13 +895,13 @@ public class Graphene extends PackExtender {
 			// get data for faces {r,s,t}, {r,t,u}, and {r,u,v}
 			for (int j=0;j<num;j++) {
 				int sv=packData.kData[vert].flower[(j-1+num)%num];
-				double s=packData.rData[sv].rad;
+				double s=packData.getRadius(sv);
 				int tv=packData.kData[vert].flower[j];
-				double t=packData.rData[tv].rad;
+				double t=packData.getRadius(tv);
 				int uv=packData.kData[vert].flower[(j+1)%num];
-				double u=packData.rData[uv].rad;
+				double u=packData.getRadius(uv);
 				int vv=packData.kData[vert].flower[(j+2)%num];
-				double v=packData.rData[vv].rad;
+				double v=packData.getRadius(vv);
 
 				if (j==0 && bdryvert) { 
 					s=u; // reflected data for phantom bond
@@ -1264,7 +1264,7 @@ public class Graphene extends PackExtender {
 		newPack.poisonEdges=null;
 		newPack.poisonVerts=new NodeLink(newPack);
 		for (int v=1;v<=newPack.nodeCount;v++) {
-			if (newPack.rData[v].center.times(rot).y<(-0.01*newPack.rData[1].rad))
+			if (newPack.getCenter(v).times(rot).y<(-0.01*newPack.getRadius(1)))
 				newPack.poisonVerts.add(v);
 		}
 		newPack.gen_mark(newPack.poisonVerts, -1, true);
@@ -1432,7 +1432,7 @@ public class Graphene extends PackExtender {
 			
 			// update radii and overlaps
 			for (int j=0;j<3;j++) 
-				rad[j]=packData.rData[verts[j]].rad;
+				rad[j]=packData.getRadius(verts[j]);
 			if (packData.overlapStatus) {
 				for (int j=0;j<3;j++) {
 					ov[j]=packData.kData[verts[(j+1)%3]].

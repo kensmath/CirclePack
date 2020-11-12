@@ -59,7 +59,7 @@ public class CranePoint {
 	 */
 	public void refreshPackRadii() {
 		for (int j=0;j<=num;j++) {
-			petalR[j]=pd.rData[vert].rad;
+			petalR[j]=pd.getRadius(vert);
 		}
 	}
 	

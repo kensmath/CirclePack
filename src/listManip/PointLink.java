@@ -217,7 +217,7 @@ public class PointLink extends LinkedList<Complex> {
 				NodeLink vlit=new NodeLink(packData,items);
 				Iterator<Integer> vlt=vlit.iterator();
 				while (vlt.hasNext()) {
-					if (add(packData.rData[vlt.next()].center))
+					if (add(packData.getCenter(vlt.next())))
 						count++;
 				}
 				break;

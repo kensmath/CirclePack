@@ -87,9 +87,9 @@ public class WordWalker extends PackExtender {
 	 */
 	public void imprintFace(int face) {
 		int []vert=packData.faces[face].vert;
-		Complex c0=packData.rData[vert[0]].center;
-		Complex c1=packData.rData[vert[1]].center;
-		Complex c2=packData.rData[vert[2]].center;
+		Complex c0=packData.getCenter(vert[0]);
+		Complex c1=packData.getCenter(vert[1]);
+		Complex c2=packData.getCenter(vert[2]);
 		Complex cc=packData.face_center(face);
 		
 		DispFlags dflags=new DispFlags("f");

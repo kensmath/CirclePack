@@ -98,7 +98,7 @@ public class Smoother {
 			minRadius=Double.MAX_VALUE;
 			maxRadius=0.0;
 			for (int v=1;v<=myPackData.nodeCount;v++) {
-				double rad=myPackData.rData[v].rad;
+				double rad=myPackData.getRadius(v);
 				minRadius=(rad<minRadius) ? rad:minRadius;
 				maxRadius=(rad>maxRadius) ? rad:maxRadius;
 			}
@@ -116,8 +116,8 @@ public class Smoother {
 		newRadii=new double[myPackData.nodeCount+1];
 		newCenters=new Complex[myPackData.nodeCount+1];
 		for (int v=1;v<=myPackData.nodeCount;v++) {
-			newRadii[v]=myPackData.rData[v].rad;
-			newCenters[v]=new Complex(myPackData.rData[v].center);
+			newRadii[v]=myPackData.getRadius(v);
+			newCenters[v]=myPackData.getCenter(v);
 		}
 	}
 	

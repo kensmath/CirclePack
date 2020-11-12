@@ -90,23 +90,23 @@ public class PolyBranching extends PackExtender {
 
 			// accumulate the data
 			CircleSimple sc =HyperbolicMath.h_to_e_data(
-					rangePack.rData[rangePack.alpha].center,
-					rangePack.rData[rangePack.alpha].rad);
+					rangePack.getCenter(rangePack.alpha),
+					rangePack.getRadius(rangePack.alpha));
 			double imageScale=sc.rad;
 				
 			sc =HyperbolicMath.h_to_e_data(
-					packData.rData[packData.alpha].center,
-					packData.rData[packData.alpha].rad);
+					packData.getCenter(packData.alpha),
+					packData.getRadius(packData.alpha));
 			double domainScale=sc.rad;
 				
 			Vector<Double> objectives=new Vector<Double>(branchVerts.size());
 			for (int j=0;j<branchVerts.size();j++) {
 				int v=branchVerts.get(j);
 				sc=HyperbolicMath.h_to_e_data(
-						rangePack.rData[v].center,rangePack.rData[v].rad);
+						rangePack.getCenter(v),rangePack.getRadius(v));
 				double rangeAbs=sc.center.abs()/imageScale;
 				sc=HyperbolicMath.h_to_e_data(
-						packData.rData[v].center,packData.rData[v].rad);
+						packData.getCenter(v),packData.getRadius(v));
 				double domainAbs=sc.center.abs()/domainScale;
 				objectives.add(rangeAbs/domainAbs);
 			}
@@ -159,8 +159,8 @@ public class PolyBranching extends PackExtender {
 		   *  -  last_face is the same as face1.
 		   */
 		  int face1=(Integer)facelist.get(0);
-		  Complex z1=new Complex(p.rData[p.faces[face1].vert[0]].center);
-		  Complex z2=new Complex(p.rData[p.faces[face1].vert[1]].center);
+		  Complex z1=p.getCenter(p.faces[face1].vert[0]);
+		  Complex z2=p.getCenter(p.faces[face1].vert[1]);
 		  
 		  String opts=null;
 		  if (fix) opts=new String("-ff"); // draw the colored faces as we go
@@ -169,8 +169,8 @@ public class PolyBranching extends PackExtender {
 		  if (last_face!=face1) {
 			  throw new DataException("last face not equal to first face");
 		  }
-		  Complex w1=new Complex(p.rData[p.faces[last_face].vert[0]].center);
-		  Complex w2=new Complex(p.rData[p.faces[last_face].vert[1]].center);
+		  Complex w1=p.getCenter(p.faces[last_face].vert[0]);
+		  Complex w2=p.getCenter(p.faces[last_face].vert[1]);
 		  Mobius mob=new Mobius(); // initialize transformation 
 		  if (p.hes<0) mob=Mobius.auto_abAB(z1,z2,w1,w2);
 		  else {

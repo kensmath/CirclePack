@@ -279,13 +279,12 @@ public class VertDataPanel extends JPanel implements ActionListener {
 		else if (cmd.equals("vert_radius")) {
 			int v=NodeLink.grab_one_vert(p,vertChoice.getText());
 			if (v>0 && v<=p.nodeCount)
-				p.setRadius(v,radField.getValue());
+				p.setRadiusActual(v,radField.getValue());
 		}
 		else if (cmd.equals("vert_center")) {
 			int v=NodeLink.grab_one_vert(p,vertChoice.getText());
 			if (v>0 && v<=p.nodeCount) {
-				Complex a=centerField.getValue();
-				p.rData[v].center=a;
+				p.setCenter(v,centerField.getValue());
 			}
 		}
 		else if (cmd.equals("vert_aim")) {
@@ -330,7 +329,7 @@ public class VertDataPanel extends JPanel implements ActionListener {
 		RData rdata=p.rData[v];
 		
 		// set radius
-		radField.setValue(p.getRadius(v));
+		radField.setValue(p.getActualRadius(v));
 		
 		// set center
 		centerField.setValue(new Complex(rdata.center.x,rdata.center.y));

@@ -107,10 +107,10 @@ public class Schwarzian {
 
 				if (mode==1) { // use radii only
 					double[] rad = new double[4];
-					rad[0] = p.rData[v].rad;
-					rad[1] = p.rData[w].rad;
-					rad[2] = p.rData[u].rad;
-					rad[3] = p.rData[a].rad;
+					rad[0] = p.getRadius(v);
+					rad[1] = p.getRadius(w);
+					rad[2] = p.getRadius(u);
+					rad[3] = p.getRadius(a);
 
 					// now get the schwarzian using the radii
 					try {
@@ -124,10 +124,10 @@ public class Schwarzian {
 				}
 				else if (mode==2) { // use centers only
 					Complex[] cents=new Complex[4];
-					cents[0]=new Complex(p.rData[v].center);
-					cents[1]=new Complex(p.rData[2].center);
-					cents[2]=new Complex(p.rData[u].center);
-					cents[3]=new Complex(p.rData[a].center);
+					cents[0]=p.getCenter(v);
+					cents[1]=p.getCenter(2);
+					cents[2]=p.getCenter(u);
+					cents[3]=p.getCenter(a);
 					
 					// now get the schwarzian using the radii
 					try {
@@ -388,7 +388,7 @@ public class Schwarzian {
 				if (mode==1) { // radii
 					double[] rad=new double[4];
 					for (int j=0;j<4;j++)
-						rad[j]=p.rData[vrts[j]].rad;
+						rad[j]=p.getRadius(vrts[j]);
 					double sch=rad_to_schwarzian(rad,p.hes);
 					p.setSchwarzian(edge,sch);
 					count++;
@@ -396,7 +396,7 @@ public class Schwarzian {
 				else if (mode==2) { // centers
 					Complex[] cents=new Complex[4];
 					for (int j=0;j<4;j++)
-						cents[j]=new Complex(p.rData[vrts[j]].center);
+						cents[j]=new Complex(p.getCenter(vrts[j]));
 					double sch=cents_to_schwarzian(cents,p.hes);
 					p.setSchwarzian(edge,sch);
 					count++;
@@ -605,11 +605,11 @@ public class Schwarzian {
 			triasp[f]=new TriAspect(p.hes);
 			for (int j=0;j<3;j++)
 				triasp[f].vert[j]=p.faces[f].vert[j];
-			DualTri dtri=new DualTri(p.hes,p.rData[triasp[f].vert[0]].center,
-			    p.rData[triasp[f].vert[1]].center,p.rData[triasp[f].vert[2]].center);
+			DualTri dtri=new DualTri(p.hes,p.getCenter(triasp[f].vert[0]),
+			    p.getCenter(triasp[f].vert[1]),p.getCenter(triasp[f].vert[2]));
 			triasp[f].tanPts=new Complex[3];
 			for (int j=0;j<3;j++) {
-				triasp[f].setCenter(new Complex(p.rData[triasp[f].vert[j]].center),j);
+				triasp[f].setCenter(p.getCenter(triasp[f].vert[j]),j);
 				triasp[f].tanPts[j]=dtri.getTP(j);
 			}
 		}
@@ -680,7 +680,7 @@ public class Schwarzian {
 							dflags.setColor(p.kData[v].color);
 						if (dflags.label)
 							dflags.setLabel(Integer.toString(v));
-						p.cpScreen.drawCircle(p.rData[v].center,p.rData[v].rad,dflags);
+						p.cpScreen.drawCircle(p.getCenter(v),p.getRadius(v),dflags);
 						count++;
 					}
 					p.cpScreen.repaint();
@@ -709,7 +709,7 @@ public class Schwarzian {
 								dflags.setColor(e_color.remove(0));
 								if (dflags.thickness==0)
 									dflags.thickness=5;
-								p.cpScreen.drawEdge(p.rData[v].center, p.rData[w].center, dflags);
+								p.cpScreen.drawEdge(p.getCenter(v), p.getCenter(w), dflags);
 								count++;
 							}
 						}
@@ -737,10 +737,10 @@ public class Schwarzian {
 	public static Mobius faceBaseMob(PackData p,int f) {
 		Complex []Z=new Complex[3];
 		for (int j=0;j<3;j++) 
-			Z[j]=new Complex(p.rData[p.faces[f].vert[j]].center);
+			Z[j]=p.getCenter(p.faces[f].vert[j]);
 		if (p.hes > 0) { // sph? check for circles containing infinity
 			for (int j=0;j<3;j++) {
-				if ((Z[j].y+p.rData[p.faces[f].vert[j]].rad)>Math.PI)
+				if ((Z[j].y+p.getRadius(p.faces[f].vert[j]))>Math.PI)
 					Z[j]=SphericalMath.getAntipodal(Z[j]);
 			}
 		}
@@ -748,10 +748,10 @@ public class Schwarzian {
 		// find tangency points
 		Complex []tpts=new Complex[3];
 		for (int j=0;j<3;j++) {
-			Complex z1=p.rData[p.faces[f].vert[j]].center;
-			Complex z2=p.rData[p.faces[f].vert[(j+1)%3]].center;
-			double r1=p.rData[p.faces[f].vert[j]].rad;
-			double r2=p.rData[p.faces[f].vert[(j+1)%3]].rad;
+			Complex z1=p.getCenter(p.faces[f].vert[j]);
+			Complex z2=p.getCenter(p.faces[f].vert[(j+1)%3]);
+			double r1=p.getRadius(p.faces[f].vert[j]);
+			double r2=p.getRadius(p.faces[f].vert[(j+1)%3]);
 			tpts[j]=CommonMath.get_tang_pt(z1, z2, r1, r2, p.hes);
 		}
 

@@ -221,16 +221,16 @@ public class WeldManager extends PackExtender {
 
 		// normalize args in both p and q to start at zero
 		weldmapDomain[0] = 0.0;
-		p_arg0 = p.rData[V].center.arg();
+		p_arg0 = p.getCenter(V).arg();
 		count = 1;
 		Iterator<Integer> pl = p_blist.iterator();
 		int v = (Integer)pl.next();
 		while (pl.hasNext()) {
 			v = (Integer) pl.next();
-			weldmapDomain[count] = p.rData[v].center.arg() - p_arg0;
+			weldmapDomain[count] = p.getCenter(v).arg() - p_arg0;
 			while (weldmapDomain[count] < weldmapDomain[count - 1])
 				weldmapDomain[count] += 2.0 * Math.PI;
-			maxx = ((dist = Math.abs(1.0 - (p.rData[v].center).abs())) > maxx) ? dist
+			maxx = ((dist = Math.abs(1.0 - (p.getCenter(v)).abs())) > maxx) ? dist
 					: maxx;
 			if (maxx>.01) 
 				System.out.println("p "+v);
@@ -242,16 +242,16 @@ public class WeldManager extends PackExtender {
 		// reverse normalization for q (recall: ordering of q_blist already
 		// reversed)
 		weldmapRange[0] = 0.0;
-		q_arg0 = q.rData[W].center.arg();
+		q_arg0 = q.getCenter(W).arg();
 		count = 1;
 		Iterator<Integer> ql = q_blist.iterator();
 		v=(Integer)ql.next();
 		while (ql.hasNext()) {
 			v = (Integer) ql.next();
-			weldmapRange[count] = q_arg0 - q.rData[v].center.arg();
+			weldmapRange[count] = q_arg0 - q.getCenter(v).arg();
 			while (weldmapRange[count] < weldmapRange[count - 1])
 				weldmapRange[count] += 2.0 * Math.PI;
-			maxx = ((dist = Math.abs(1.0 - (q.rData[v].center).abs())) > maxx) ? dist
+			maxx = ((dist = Math.abs(1.0 - (q.getCenter(v)).abs())) > maxx) ? dist
 					: maxx;
 			if (maxx>.01) 
 				System.out.println("q "+v);
@@ -500,8 +500,8 @@ public class WeldManager extends PackExtender {
 				}
 				v = p.nodeCount;
 				targ[v] = 1;
-				p.rData[v].rad = 1.0;
-				p.rData[v].center.x = p.rData[v].center.y = 0.0;
+				p.setRadius(v,1.0);
+				p.setCenter(v,new Complex(0.0));
 				p.kData[v].plotFlag = 1;
 			}
 		}
@@ -604,8 +604,8 @@ public class WeldManager extends PackExtender {
 		q.hes = p.hes;
 		for (int n = 1; n <= p.nodeCount; n++)
 			if ((v = targ[n]) != 0) {
-				q.rData[v].rad = p.rData[n].rad;
-				q.rData[v].center = p.rData[n].center;
+				q.setRadius(v,p.getRadius(n));
+				q.setCenter(v,p.getCenter(n));
 				q.kData[v].plotFlag = 1;
 			}
 		edge = (EdgeSimple) elist.get(0);
@@ -745,11 +745,11 @@ public class WeldManager extends PackExtender {
 			double qmax=0.0;
 			if ((opt_flag & (0001 | 0002 | 0004)) == 0) { 
 				for (n = 0; n <= p_count; n++)
-					pmax = ((dist = Math.abs(1.0 - p.rData[p_vert[n]].center
-							.abs())) > pmax) ? dist : pmax;
+					pmax = ((dist = Math.abs(1.0 - p.getCenter(p_vert[n]).abs())) 
+							> pmax) ? dist : pmax;
 				for (n = 0; n <= q_count; n++)
-					qmax = ((dist = Math.abs(1.0 - q.rData[q_vert[n]].center
-							.abs())) > qmax) ? dist : qmax;
+					qmax = ((dist = Math.abs(1.0 - q.getCenter(q_vert[n]).abs())) 
+							> qmax) ? dist : qmax;
 
 				if (pmax > .01 || qmax > .01) {
 					Oops("weld_map: packings don't seem to be maximal.");
@@ -757,11 +757,11 @@ public class WeldManager extends PackExtender {
 
 				// put coords in vectors, normalize each to [0,1].
 				p_coord = new double[p_count + 1];
-				double p_ang0 = p.rData[p_vert[0]].center.arg();
+				double p_ang0 = p.getCenter(p_vert[0]).arg();
 				p_coord[0] = 0.0;
 				double p_arg;
 				for (n = 1; n <= p_count; n++) {
-					p_arg = p.rData[p_vert[n]].center.arg();
+					p_arg = p.getCenter(p_vert[n]).arg();
 					p_coord[n] = p_arg - p_ang0;
 					// make arguments monotone
 					while (p_coord[n] < p_coord[n - 1])
@@ -771,11 +771,11 @@ public class WeldManager extends PackExtender {
 					p_coord[n] /= p_coord[p_count];
 
 				q_coord = new double[q_count + 2];
-				double q_ang0 = q.rData[q_vert[0]].center.arg();
+				double q_ang0 = q.getCenter(q_vert[0]).arg();
 				q_coord[0] = 0.0;
 				double q_arg;
 				for (n = 1; n <= q_count; n++) {
-					q_arg = q.rData[q_vert[n]].center.arg();
+					q_arg = q.getCenter(q_vert[n]).arg();
 					q_coord[n] = q_ang0 - q_arg;
 					// make arguments monotone
 					while (q_coord[n] < q_coord[n - 1])
@@ -796,15 +796,15 @@ public class WeldManager extends PackExtender {
 				p_coord = new double[p_count + 2];
 				p_coord[0] = 0.0;
 				for (n = 1; n <= p_count; n++)
-					p_coord[n] = p_coord[n - 1] + p.rData[p_vert[n - 1]].rad
-							+ p.rData[p_vert[n]].rad;
+					p_coord[n] = p_coord[n - 1] + p.getRadius(p_vert[n - 1])
+							+ p.getRadius(p_vert[n]);
 				for (j = 1; j <= p_count; j++)
 					p_coord[j] /= p_coord[p_count]; // normalize
 				q_coord = new double[q_count + 2];
 				q_coord[0] = 0.0;
 				for (n = 1; n <= q_count; n++)
-					q_coord[n] = q_coord[n - 1] + q.rData[q_vert[n - 1]].rad
-							+ q.rData[q_vert[n]].rad;
+					q_coord[n] = q_coord[n - 1] + q.getRadius(q_vert[n - 1])
+							+ q.getRadius(q_vert[n]);
 				for (j = 1; j <= q_count; j++)
 					q_coord[j] /= q_coord[q_count]; // normalize
 			} // end of eucl case
@@ -1181,7 +1181,7 @@ public class WeldManager extends PackExtender {
 			p.kData[new_v].flower = newflower;
 			p.kData[new_v].plotFlag = 1;
 			p.kData[new_v].color=CPScreen.getFGColor();
-			p.rData[new_v].rad = p.rData[v].rad;
+			p.setRadius(new_v,p.getRadius(v));
 
 			// fix w
 			if ((indx = p.nghb(w, a)) < 0)
@@ -1220,8 +1220,8 @@ public class WeldManager extends PackExtender {
 		p.kData[i].num = 2;
 		p.kData[i].bdryFlag = 1;
 		p.kData[i].color=CPScreen.getFGColor();
-		p.rData[i].rad = p.rData[v].rad;
-		p.rData[i].center = new Complex(0.0);
+		p.setRadius(i,p.getRadius(v));
+		p.setCenter(i,new Complex(0.0));
 
 		// fix u
 

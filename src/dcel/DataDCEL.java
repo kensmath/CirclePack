@@ -2,7 +2,6 @@ package dcel;
 
 import java.util.Iterator;
 
-import complex.Complex;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import komplex.EdgeSimple;
@@ -123,7 +122,7 @@ public class DataDCEL {
 			es=git.next();
 			p.faces[es.v].nextFace=es.w;
 		}
-		// set drawing order for remaining all faces
+		// set old drawing order in PackDAta for remaining faces
 		git=pdcel.faceOrder.iterator();
 		git.next(); // toss the root 
 		while (git.hasNext()) {
@@ -145,10 +144,10 @@ public class DataDCEL {
 				int oldindx=es.w;
 				// put in 'Vertex'
 				Vertex vert=pdcel.vertices[newindx];
-				vert.setCenter(pdcel.p.rData[oldindx].center);
-				vert.setRadius(pdcel.p.rData[oldindx].rad);
-				p.rData[newindx].center=new Complex(pdcel.p.rData[oldindx].center);
-				p.rData[newindx].rad=pdcel.p.rData[oldindx].rad;
+				vert.setCenter(pdcel.p.getCenter(oldindx));
+				vert.setRadius(pdcel.p.getRadius(oldindx));
+				p.setCenter(newindx,pdcel.p.getCenter(oldindx));
+				p.setRadius(newindx,pdcel.p.getRadius(oldindx));
 				p.rData[newindx].aim=pdcel.p.rData[oldindx].aim;
 				p.rData[newindx].curv=pdcel.p.rData[oldindx].curv;
 			}
@@ -159,8 +158,8 @@ public class DataDCEL {
 		do {
 			HalfEdge edge=rtrace.myEdge;
 			int v=edge.origin.vertIndx;
-			rtrace.setCenter(new Complex(p.rData[v].center));
-			rtrace.setRadius(p.rData[v].rad);
+			rtrace.setCenter(p.getCenter(v));
+			rtrace.setRadius(p.getRadius(v));
 			rtrace=rtrace.nextRed;
 		} while (rtrace!=pdcel.redChain);
 		

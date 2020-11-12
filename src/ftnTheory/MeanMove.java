@@ -80,7 +80,7 @@ public class MeanMove extends PackExtender {
 			// only now do we store the new radii
 			for (int i=0;i<N;i++) {
 				int v=bdryVerts[i];
-				packData.rData[v].rad=bdryRads[i];
+				packData.setRadius(v,bdryRads[i]);
 			}
 			
 			return count;
@@ -114,7 +114,7 @@ public class MeanMove extends PackExtender {
 		for (int j=0;j<N;j++) {
 			int v=bdry.get(j);
 			bdryVerts[j]=v;
-			bdryRads[j]=packData.rData[v].rad;
+			bdryRads[j]=packData.getRadius(v);
 			bdryAngSums[j]=packData.rData[v].curv;
 		}
 		
@@ -245,8 +245,8 @@ public class MeanMove extends PackExtender {
 		// compute the derivative of theta w.r.t. r
 		for (int j=0;j<p.kData[v].num;j++) {
 			int k=p.kData[v].flower[j];
-			double y=p.rData[k].rad;
-			double z=p.rData[k].rad;
+			double y=p.getRadius(k);
+			double z=p.getRadius(k);
 			dtdr +=EuclMath.Fx(r,y,z);
 		}
 		
@@ -283,7 +283,7 @@ public class MeanMove extends PackExtender {
 			int N=bdryVerts.length;
 			for (int i=0;i<N;i++) {
 				int v=bdryVerts[i];
-				double dist=packData.rData[v].center.abs();
+				double dist=packData.getCenter(v).abs();
 				maxdist=(dist>maxdist) ? dist: maxdist;
 			}
 			cpCommand("scale "+1/maxdist);

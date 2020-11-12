@@ -456,7 +456,7 @@ public class CommandStrParser {
 
 		  // create a new 'PackData' from pDCEL
 
-		  PackData newPack=pDCEL.getPackData();
+		  PackData newPack=DataDCEL.dcel_to_packing(pDCEL);
 		  if (newPack!=null && newPack.status==true && newPack.nodeCount>3) {
 			  CirclePack.cpb.msg("Have replaced packing with new one derived from '"+filename+"'.");
 			  CPScreen cps=packData.cpScreen; 
@@ -735,7 +735,7 @@ public class CommandStrParser {
 			  double rad=0.025; 
 			  if (packData.hes<0) rad=1.0-Math.exp(-1.0);
 			  for (int i=1;i<=packData.nodeCount;i++)
-				  packData.rData[i].rad=rad;
+				  packData.setRadius(i,rad);
 			  
 			  // if 'nodes' were obtained, save them, store centers
 			  if (tri.nodes!=null) {
@@ -744,13 +744,13 @@ public class CommandStrParser {
 				  if (hes>0) { // sphere? assume xyz info is (theta,phi,0) form
 					  for (int i=1;i<=packData.nodeCount;i++) {
 						  if (tri.nodes[i]!=null) 
-							  packData.rData[i].center=new Complex(packData.xyzpoint[i]);
+							  packData.setCenter(i,new Complex(packData.xyzpoint[i]));
 					  }
 				  }
 				  else { // assume (x,y) is center in the plane (or disc)
 					  for (int i=1;i<=packData.nodeCount;i++) {
 						  if (tri.nodes[i]!=null) 
-							  packData.rData[i].center=new Complex(tri.nodes[i].x,tri.nodes[i].y);
+							  packData.setCenter(i,new Complex(tri.nodes[i].x,tri.nodes[i].y));
 					  }
 				  }
 			  }
@@ -1380,10 +1380,10 @@ public class CommandStrParser {
 								  if (str.contains("m")) {
 									  if (PackControl.functionPanel.ftnField.getText().trim().length()==0)
 										  throw new ParserException("No specification in function frame");
-									  pts.add(PackControl.functionPanel.getFtnValue(packData.rData[v].center));
+									  pts.add(PackControl.functionPanel.getFtnValue(packData.getCenter(v)));
 								  }
 								  else
-									  pts.add(new Complex(packData.rData[v].center));
+									  pts.add(packData.getCenter(v));
 							  }
 						  }
 						  
@@ -3553,16 +3553,16 @@ public class CommandStrParser {
     		  int v;
     		  while (bl.hasNext()) {
     			  v=(Integer)bl.next();
-    			  Complex ctr=p1.rData[v].center;
-    			  double rad=p1.rData[v].rad;
+    			  Complex ctr=p1.getCenter(v);
+    			  double rad=p1.getRadius(v);
     			  if (p1.hes<0) {
     				  CircleSimple sc=
-    					  HyperbolicMath.h_to_e_data(p1.rData[v].center,p1.rData[v].rad);
+    					  HyperbolicMath.h_to_e_data(p1.getCenter(v),p1.getRadius(v));
     				  ctr=sc.center;
     				  rad=sc.rad;
     			  }
     			  Complex w=PackControl.functionPanel.getFtnValue(ctr);
-    			  p2.rData[v].rad=w.abs()*rad;
+    			  p2.setRadius(v,w.abs()*rad);
     			  count++;
     		  }
     		  return count;
@@ -5423,8 +5423,8 @@ public class CommandStrParser {
 	        NodeLink vertlist=new NodeLink(packData,items);
 	        int v1=(Integer)vertlist.get(0);
 	        if (packData.hes<0) packData.geom_to_e(); 
-	        Complex ctr1=new Complex(packData.rData[v1].center);
-	        double CPrad1=packData.rData[v1].rad;
+	        Complex ctr1=packData.getCenter(v1);
+	        double CPrad1=packData.getRadius(v1);
 	        if (packData.hes>0) {
 	      	CircleSimple sc=SphericalMath.s_to_e_data(ctr1,CPrad1);
 	      	ctr1=new Complex(sc.center);
@@ -5432,8 +5432,8 @@ public class CommandStrParser {
 	        }
 	        if (!u_flag) { // use v2
 	            int v2=(Integer)vertlist.get(1); // not -u, so get w
-	            ctr2=new Complex(packData.rData[v2].center);
-	            CPrad2=packData.rData[v2].rad;
+	            ctr2=packData.getCenter(v2);
+	            CPrad2=packData.getRadius(v2);
 	            if (packData.hes>0) {
 	            	CircleSimple sc=SphericalMath.s_to_e_data(ctr2,CPrad2);
 	            	ctr2=new Complex(sc.center);
@@ -5517,11 +5517,11 @@ public class CommandStrParser {
 			  String str=new String("Circle aspects:");
 			  while (tick<5 && vlist.hasNext()) {
 				  v=(Integer)vlist.next();
-				  double cabs=packData.rData[v].center.abs();
-				  if (packData.rData[v].rad >= cabs) {
+				  double cabs=packData.getCenter(v).abs();
+				  if (packData.getRadius(v) >= cabs) {
 					  str=str.concat(" v "+v+": encloses origin\n");
 				  }
-				  else str=str.concat(" v "+v+" "+(double)(packData.rData[v].rad/cabs)+"\n");
+				  else str=str.concat(" v "+v+" "+(double)(packData.getRadius(v)/cabs)+"\n");
 				  tick++;
 			  }
 			  return tick;
@@ -5536,7 +5536,7 @@ public class CommandStrParser {
 	    	  int v=packData.activeNode;
 	    	  if (cmd.startsWith("center_vert")) {
 	    		  v=NodeLink.grab_one_vert(packData,str);
-	    		  z=new Complex(packData.rData[v].center);
+	    		  z=packData.getCenter(v);
 	    	  }
 	    	  else if (cmd.startsWith("center_point")) {
 	    		  z=new Complex(Double.parseDouble(items.get(0)),Double.parseDouble(items.get(1)));
@@ -5545,7 +5545,7 @@ public class CommandStrParser {
 	    		  if (str.startsWith("-v")) {
 	    			  str=(String)items.get(1);
 	        		  v=NodeLink.grab_one_vert(packData,str);
-	        		  z=new Complex(packData.rData[v].center);
+	        		  z=packData.getCenter(v);
 	    		  }
 	    		  else if (str.startsWith("-z")) {
 	        		  z=new Complex(Double.parseDouble(items.get(1)),Double.parseDouble(items.get(2)));
@@ -5633,16 +5633,16 @@ public class CommandStrParser {
 					if (packData.hes>0) {
 						for (int j=0;j<3;j++) { 
 							CircleSimple cS=SphericalMath.e_to_s_data(Z[j],CPBase.sqrt3);
-							packData.rData[verts[j]].center=new Complex(cS.center);
-							packData.rData[verts[j]].rad=cS.rad;
+							packData.setCenter(verts[j],new Complex(cS.center));
+							packData.setRadius(verts[j],cS.rad);
 							packData.rData[verts[j]].curv +=Math.PI;
 						}
 					}
 					else {
 						for (int j=0;j<3;j++) {
-							packData.rData[verts[j]].center=Z[j];
-							packData.rData[verts[j]].rad=CPBase.sqrt3;
-							packData.rData[verts[j]].curv +=Math.PI/3.0;
+							packData.setCenter(verts[j],Z[j]);
+							packData.setRadius(verts[j],CPBase.sqrt3);
+							packData.setRadius(verts[j],packData.getRadius(verts[j]) +Math.PI/3.0);
 						}
 					}
 
@@ -5723,11 +5723,11 @@ public class CommandStrParser {
 								System.out.println("circles <" + vert[0] + " " + vert[1] + " " + vert[2]
 										+ "> :\nSchwarian is s =" + s);
 								for (int jj = 0; jj < 3; jj++) {
-									Complex zjj = packData.rData[vert[jj]].center;
-									double rjj = packData.rData[vert[jj]].rad;
+									Complex zjj = packData.getCenter(vert[jj]);
+									double rjj = packData.getRadius(vert[jj]);
 									System.out.println("C(" + jj + ",:) = [" + zjj.x + " " + zjj.y + " " + rjj + "]");
-									tp[jj] = SphericalMath.sph_tangency(zjj, packData.rData[vert[(jj + 1) % 3]].center,
-											rjj, packData.rData[vert[(jj + 1) % 3]].rad);
+									tp[jj] = SphericalMath.sph_tangency(zjj, packData.getCenter(vert[(jj + 1) % 3]),
+											rjj, packData.getRadius(vert[(jj + 1) % 3]));
 									String str = new String("disp -dpfc5 " + vert[jj] + " " + vert[(jj + 1) % 3]);
 									// draw the tangency point
 									CommandStrParser.jexecute(packData, str);
@@ -5739,14 +5739,14 @@ public class CommandStrParser {
 							debug = false;
 						}
 
-						packData.rData[target].rad = sC.rad;
-						packData.rData[target].center = sC.center;
+						packData.setRadius(target,sC.rad);
+						packData.setCenter(target,sC.center);
 						
 						// compute and store angles
 						verts[2]=target;
 						double[] radii=new double[3];
-						radii[0]=packData.rData[verts[0]].rad;
-						radii[1]=packData.rData[verts[1]].rad;
+						radii[0]=packData.getRadius(verts[0]);
+						radii[1]=packData.getRadius(verts[1]);
 						radii[2]=sC.rad;
 
 						for (int q=0;q<3;q++) {
@@ -5807,7 +5807,7 @@ public class CommandStrParser {
 						pdcel=CombDCEL.d_redChainBuilder(packData,bouq,null,false);
 					
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
-					CirclePack.cpb.pack[qnum].swapPackData(p,false);
+					CPBase.pack[qnum].swapPackData(p,false);
 					return 1;
 				}
 				
@@ -5836,7 +5836,7 @@ public class CommandStrParser {
 				}
 
 				else if (str.contains("dcel")) {
-					packData.packDCEL = new PackDCEL(packData);
+					packData.packDCEL = CombDCEL.d_redChainBuilder(packData,packData.getBouquet(),null,false);
 					if (packData.packDCEL == null || packData.packDCEL.vertCount != packData.nodeCount)
 						throw new CombException("failed to create packDCEL");
 					return 1;
@@ -5855,7 +5855,7 @@ public class CommandStrParser {
 							items.remove(0);
 					}
 					
-					PackData pdata=packData.packDCEL.getPackData();
+					PackData pdata=DataDCEL.dcel_to_packing(packData.packDCEL);
 					pdata.setCombinatorics();
 					pdata.set_aim_default();
 					CPScreen cpScreen=CPBase.pack[qnum];
@@ -5886,7 +5886,7 @@ public class CommandStrParser {
 					}
 					
 					// convert to a new packing
-					PackData tmppack=tmpdcel.getPackData();
+					PackData tmppack=DataDCEL.dcel_to_packing(tmpdcel);
 					if (tmppack==null) {
 						CirclePack.cpb.errMsg("failed to convert 'PackDCEL' into packing");
 						return 0;
@@ -5912,17 +5912,12 @@ public class CommandStrParser {
 				else if (str.contains("layout")) {
 					if (packData.packDCEL==null)
 						return 0;
-					return packData.packDCEL.dcelCompCenters(packData.packDCEL.tmpLayout);
+					return packData.packDCEL.dcelCompCenters(packData.packDCEL.faceOrder);
 				} 
 				else if (str.contains("syncF")) { // sync p.faces to packDCEL.faces
 					if (packData.packDCEL==null)
 						return 0;
 					return packData.packDCEL.syncFaceData();
-				}
-				else if (str.contains("debug")) {
-					if (packData.packDCEL==null)
-						return 0;
-					packData.packDCEL.debug();
 				}
 				else if (str.contains("flip")) { // baryrefine given faces
 					EdgeLink elink=null;
@@ -6050,12 +6045,12 @@ public class CommandStrParser {
 	    	  if (packData.hes!=0 || f<1 || f>packData.faceCount) {
 	    		  throw new ParserException("must specify face f of eucl packing");
 	    	  }
-	        r0=packData.rData[packData.faces[f].vert[0]].rad;
-	        r1=packData.rData[packData.faces[f].vert[1]].rad;
-	        r2=packData.rData[packData.faces[f].vert[2]].rad;
-	        z0=packData.rData[packData.faces[f].vert[0]].center;
-	        z1=packData.rData[packData.faces[f].vert[1]].center;
-	        z2=packData.rData[packData.faces[f].vert[2]].center;
+	        r0=packData.getRadius(packData.faces[f].vert[0]);
+	        r1=packData.getRadius(packData.faces[f].vert[1]);
+	        r2=packData.getRadius(packData.faces[f].vert[2]);
+	        z0=packData.getCenter(packData.faces[f].vert[0]);
+	        z1=packData.getCenter(packData.faces[f].vert[1]);
+	        z2=packData.getCenter(packData.faces[f].vert[2]);
 	        double []ans=new double[4];
 	        if (Exponential.doyle_point(packData,r0,r1,r2,z0,z1,z2,ans)==0) 
 	            throw new ParserException("failed");
@@ -6207,18 +6202,18 @@ public class CommandStrParser {
 			  Complex z=null;
 			  if (elt.hasNext()) { // start
 				  edge=elt.next();
-				  z=packData.rData[edge.v].center;
+				  z=packData.getCenter(edge.v);
 				  if (packData.hes>0) // spherical is moved to plane
 					  z=SphericalMath.s_pt_to_plane(z);
 				  gpath.moveTo(z.x,z.y);
-				  z=packData.rData[edge.w].center;
+				  z=packData.getCenter(edge.w);
 				  if (packData.hes>0) // spherical is moved to plane
 					  z=SphericalMath.s_pt_to_plane(z);
 				  gpath.lineTo(z.x,z.y);
 			  }
 			  while(elt.hasNext()) { // add point
 				  edge=elt.next();
-				  z=packData.rData[edge.w].center;
+				  z=packData.getCenter(edge.w);
 				  if (packData.hes>0) // spherical is moved to plane
 					  z=SphericalMath.s_pt_to_plane(z);
 				  gpath.lineTo(z.x,z.y);
@@ -6272,10 +6267,10 @@ public class CommandStrParser {
     				  // add the n circles and close up
     				  for (int i=1;i<=n;i++) packData.add_vert(vert);
     				  packData.enfold(vert);
-    				  Complex z=packData.rData[packData.kData[vert].
-    				                           flower[0]].center;
-    				  Complex w=packData.rData[packData.kData[vert].
-    				                           flower[packData.kData[vert].num-1]].center;
+    				  Complex z=packData.getCenter(packData.kData[vert].
+    				                           flower[0]);
+    				  Complex w=packData.getCenter(packData.kData[vert].
+    				                           flower[packData.kData[vert].num-1]);
     				  cpS.drawEdge(z,w,new DispFlags(null));
     				  count++;
     			  }
@@ -6526,8 +6521,8 @@ public class CommandStrParser {
 	    		  v=packData.activeNode;
 	    	  }
 	    	  if (vert_mode) {
-	    		  z=packData.rData[v].center;
-	    		  rad=packData.rData[v].rad;
+	    		  z=packData.getCenter(v);
+	    		  rad=packData.getRadius(v);
 	    		  if (packData.hes<0) {
 	    			  CircleSimple sc=HyperbolicMath.h_to_e_data(z,rad);
 	    			  z=sc.center;
@@ -6629,7 +6624,8 @@ public class CommandStrParser {
 	    	  }
 	    	  
 	    	  if (leave_flag) {
-	    		for (int v=1;v<=packData.nodeCount;v++) radii[v]=packData.rData[v].rad;
+	    		for (int v=1;v<=packData.nodeCount;v++) 
+	    			radii[v]=packData.getRadius(v);
 	    	  }
 	    	  int old_hes=packData.hes;
 	    	  char c=cmd.charAt(8);
@@ -6657,7 +6653,7 @@ public class CommandStrParser {
 	    			  }
 	    		  }
 				  for (int v=1;v<=packData.nodeCount;v++) {
-					  packData.rData[v].rad=radii[v];
+					  packData.setRadius(v,radii[v]);
 				  }
 	    	  }
 	    	  
@@ -7511,7 +7507,7 @@ public class CommandStrParser {
 	    		  case 'u': // designated vert on unit circle 
 	    		  {
 	    			  int v=NodeLink.grab_one_vert(packData,(String)items.get(0));
-	    			  double ctr=packData.rData[v].center.abs();
+	    			  double ctr=packData.getCenter(v).abs();
 	    			  if (ctr < PackData.OKERR) return 1; // don't bother, close enough
 	    			  double factor=1.0/ctr;
 	    			  return packData.eucl_scale(factor);
@@ -7525,7 +7521,7 @@ public class CommandStrParser {
 	    			  Iterator<Integer> bl=blist.iterator();
 	    			  while (bl.hasNext()) {
 	    				  int v=bl.next();
-	    				  double dist=packData.rData[v].center.abs()+packData.rData[v].rad;
+	    				  double dist=packData.getCenter(v).abs()+packData.getRadius(v);
 	    				  max=(dist>max) ? dist:max;
 	    			  }
 	    			  // scale down
@@ -7538,7 +7534,7 @@ public class CommandStrParser {
 	    		  {
 	    			  int v=NodeLink.grab_one_vert(packData,(String)items.get(0));
 	    			  double rad=Double.parseDouble((String)items.get(1));
-	    			  double factor=rad/packData.rData[v].rad;
+	    			  double factor=rad/packData.getRadius(v);
 	    			  return packData.eucl_scale(factor);
 	    		  }
 	    		  case 'h': // v --> w horizontal, left to right
@@ -7546,14 +7542,14 @@ public class CommandStrParser {
 	    			  NodeLink vertlist=new NodeLink(packData,items);
 	    			  int v=vertlist.get(0);
 	    			  int w=vertlist.get(1);
-	    			  Complex z=packData.rData[w].center.minus(packData.rData[v].center);
+	    			  Complex z=packData.getCenter(w).minus(packData.getCenter(v));
 	    			  double ang=(-1.0)*(MathComplex.Arg(z));
 	    			  return (packData.rotate(ang));
 	    		  }
 	    		  case 'i': // center v at z=i (if v is not too close to origin)
 	    		  {
 	    			  int v=NodeLink.grab_one_vert(packData,(String)items.get(0));
-	    			  Complex z=packData.rData[v].center;
+	    			  Complex z=packData.getCenter(v);
 	    			  double x=z.abs();
 	    			  if (x<PackData.OKERR) return 1; // don't need to adjust
 	    			  double factor=1.0/x;
@@ -7570,12 +7566,12 @@ public class CommandStrParser {
 	    				  throw new ParserException("pack q not valid");
 	    			  NodeLink vertlist=new NodeLink(packData,items);
 	    			  int v=(Integer)vertlist.get(0);
-	    			  double rad=packData.rData[v].rad;
+	    			  double rad=packData.getRadius(v);
 	    			  int w=(Integer)vertlist.get(1);
 	    			  PackData qackData=CPBase.pack[q].getPackData();
 	    			  if (w>qackData.nodeCount || rad<PackData.OKERR) 
 	    				  throw new ParserException("problem with 'w'");
-	    			  double factor=qackData.rData[w].rad/rad;
+	    			  double factor=qackData.getRadius(w)/rad;
 	    			  return packData.eucl_scale(factor);
 	    		  }	  
 	    		  case 't': // u v z1 z2 apply linear transformation to center
@@ -7595,7 +7591,7 @@ public class CommandStrParser {
 	    			  }
 	    			  Mobius mymob=null;
 	    			  try {
-	    				  mymob=Mobius.affine_mob(packData.rData[u].center,packData.rData[v].center,z1,z2);
+	    				  mymob=Mobius.affine_mob(packData.getCenter(u),packData.getCenter(v),z1,z2);
 	    			  } catch (Exception ex) {
 	    				  throw new DataException("failed to create Mobius: "+ex.getMessage());
 	    			  }
@@ -7760,8 +7756,8 @@ public class CommandStrParser {
 	    	  
 	    	  // now copy centers and radii into 'packData'
 	    	  for (int v=1;v<=packData.nodeCount;v++) {
-	    		  packData.setRadius(v,holdPack.rData[v].rad);
-	    		  packData.setCenter(v,holdPack.rData[v].center);
+	    		  packData.setRadiusActual(v,holdPack.getActualRadius(v));
+	    		  packData.setCenter(v,holdPack.getCenter(v));
 	    	  }
 	    	  
 	    	  return packData.nodeCount;
@@ -8770,8 +8766,8 @@ public class CommandStrParser {
 	        }
 	        for (int i=1;i<=packData.nodeCount;i++)
 	            if (packData.kData[i].bdryFlag!=0) {
-	      	  x=Math.abs(packData.rData[i].center.x)+packData.rData[i].rad;
-	      	  y=Math.abs(packData.rData[i].center.y)+packData.rData[i].rad;
+	      	  x=Math.abs(packData.getCenter(i).x)+packData.getRadius(i);
+	      	  y=Math.abs(packData.getCenter(i).y)+packData.getRadius(i);
 	      	  maxdist = (x>maxdist) ? x : maxdist;
 	      	  maxdist = (y>maxdist) ? y : maxdist;
 	            }
@@ -8884,9 +8880,9 @@ public class CommandStrParser {
 	    						  factor=Math.exp(randizer.nextGaussian()*pctg);
 	    					  }
 	    					  else factor=low+randizer.nextDouble()*(high-low);
-	    					  packData.setRadius(v,packData.getRadius(v)*factor);
+	    					  packData.setRadiusActual(v,packData.getActualRadius(v)*factor);
 	    				  }
-	    				  else packData.setRadius(v,low+randizer.nextDouble()*(high-low));
+	    				  else packData.setRadiusActual(v,low+randizer.nextDouble()*(high-low));
 	    				  count++;
 	    			  }
 	    		  }
@@ -9261,24 +9257,24 @@ public class CommandStrParser {
 	    						  int v=nlist.next();
 	    						  if (v<=packData.nodeCount) {
 	    							  count++;
-	    							  double qr=qackData.rData[v].rad;
+	    							  double qr=qackData.getRadius(v);
 	    							  switch(mode) {
 	    							  case 'M': // maximum 
 	    							  {
-	    								  if (qr>packData.rData[v].rad)
-	    									  packData.rData[v].rad=qr;
+	    								  if (qr>packData.getRadius(v))
+	    									  packData.setRadius(v,qr);
 	    								  break;
 	    							  }
 	    							  case 'm': // minimum
 	    							  {
-	    								  if (qr<packData.rData[v].rad)
-	    									  packData.rData[v].rad=qr;
+	    								  if (qr<packData.getRadius(v))
+	    									  packData.setRadius(v,qr);
 	    								  break;
 	    							  }
 	    							  case 'a': // average
 	    							  {
-	    								  packData.rData[v].rad +=qr;
-	    								  packData.rData[v].rad /=2.0;
+	    								  packData.setRadius(v,packData.getRadius(v)+qr);
+	    								  packData.setRadius(v,packData.getRadius(v)/2.0);
 	    								  break;
 	    							  }
 	    							  } // end of switch
@@ -9310,7 +9306,7 @@ public class CommandStrParser {
 	    		  
 	    			  Iterator<Integer> vlist=nodeLink.iterator();
 	    			  while (vlist.hasNext()) {
-	    				  packData.setRadius((Integer)vlist.next(),rad);
+	    				  packData.setRadiusActual((Integer)vlist.next(),rad);
 	    				  count++;
 	    			  }
 	    			  return count;
@@ -9377,7 +9373,7 @@ public class CommandStrParser {
 	    			  Iterator<Integer> vlst=vertlist.iterator();
 	    			  while (vlst.hasNext()) {
 	    				  int v=vlst.next();
-	    				  Complex z=packData.rData[v].center;
+	    				  Complex z=packData.getCenter(v);
 	    				  // convert to complex to pass to function
 	    				  if (packData.hes>0)  
 	    					  z=SphericalMath.s_pt_to_plane(z);
@@ -9399,13 +9395,11 @@ public class CommandStrParser {
 		    				  
 		    				  // hyp/eucl, just use x, y coords
 		    				  if (packData.hes<=0) {
-		    					  packData.rData[vv].center.x=packData.xyzpoint[vv].x;
-		    					  packData.rData[vv].center.y=packData.xyzpoint[vv].y;
+		    					  packData.setCenter(vv,packData.xyzpoint[vv].x,packData.xyzpoint[vv].y);
 		    					  count++;
 		    				  }
 		    				  else { // sphere?
-		    					  packData.rData[vv].center=
-		    						  SphericalMath.proj_vec_to_sph(packData.xyzpoint[vv]);
+		    					  packData.setCenter(vv,SphericalMath.proj_vec_to_sph(packData.xyzpoint[vv]));
 		    					  count++;
 		    				  }
 		    			  }
@@ -9875,9 +9869,9 @@ public class CommandStrParser {
 	    				  if (c=='v') { // did not fall through
 	    					  try {
 							  int v=NodeLink.grab_one_vert(packData,(String)items.get(1));
-	    					  utilz=packData.rData[v].center;
+	    					  utilz=packData.getCenter(v);
 	    					  if (packData.hes<0) {
-	    						  CircleSimple sc=HyperbolicMath.h_to_e_data(utilz,packData.rData[v].rad);
+	    						  CircleSimple sc=HyperbolicMath.h_to_e_data(utilz,packData.getRadius(v));
 	    						  utilz=sc.center;
 	    					  }
 	    					  else if (packData.hes>0) {
@@ -9924,14 +9918,14 @@ public class CommandStrParser {
 		    	  
 	    	  if (inc_flag) {
 	    		  int al=packData.alpha;
-	    	  double rad=packData.rData[al].rad;
+	    	  double rad=packData.getRadius(al);
 //		    	  if (rad<=packData.OKERR) { // this shouldn't happen 
 //		    		  throw new DataException();
 //		    	  }
 	    	  int j=packData.kData[al].flower[0];
-	    	  a=a*packData.rData[j].rad/rad;
+	    	  a=a*packData.getRadius(j)/rad;
 	    	  j=packData.kData[al].flower[1];
-	    	  b=b*packData.rData[j].rad/rad;
+	    	  b=b*packData.getRadius(j)/rad;
 	    	  }
 	    	  return Exponential.spiral(packData,a,b);
 	      }
@@ -10820,7 +10814,7 @@ public static CallPacket valueExecute(PackData packData,String cmd,Vector<Vector
 	    		case 'n': 
 	    		{
 	    			for (int v=1;v<=packData.nodeCount;v++) {
-	    				if (Double.isNaN(packData.rData[v].rad)) {
+	    				if (Double.isNaN(packData.getRadius(v))) {
 	    					rtnCp = new CallPacket("qual");
 							rtnCp.strValue="nr";
 							rtnCp.int_vec = new Vector<Integer>(1);
@@ -10828,7 +10822,7 @@ public static CallPacket valueExecute(PackData packData,String cmd,Vector<Vector
 							rtnCp.error=true;
 							return rtnCp;
 	    				}
-	    				if (Complex.isNaN(packData.rData[v].center)) {
+	    				if (Complex.isNaN(packData.getCenter(v))) {
 	    					rtnCp = new CallPacket("qual");
 							rtnCp.strValue = "nc";
 							rtnCp.int_vec = new Vector<Integer>();

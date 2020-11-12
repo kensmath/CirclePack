@@ -81,7 +81,7 @@ public class NSpole {
 					// else save the results and run again
 					saveCircles(mob);
 					for (int v=1;v<=packData.nodeCount;v++)
-						T[v]=new Complex(packData.rData[v].center);
+						T[v]=packData.getCenter(v);
 					
 					best=SphericalMath.getCentroid(T).normSq();
 					cnt++;
@@ -242,15 +242,15 @@ public class NSpole {
 				return 0;
 
 			if (E_pole > 0) {
-				Ectr = packData.rData[E_pole].center;
-				Erad = packData.rData[E_pole].rad;
+				Ectr = packData.getCenter(E_pole);
+				Erad = packData.getRadius(E_pole);
 			}
 
 			Mob = Mobius.NS_mobius(
-				packData.rData[N_pole].center,
-				packData.rData[S_pole].center, Ectr,
-				packData.rData[N_pole].rad,
-				packData.rData[S_pole].rad, Erad, factor);
+				packData.getCenter(N_pole),
+				packData.getCenter(S_pole), Ectr,
+				packData.getRadius(N_pole),
+				packData.getRadius(S_pole), Erad, factor);
 			if (Mob.error < Mobius.MOB_TOLER) {
 				NodeLink vlist = new NodeLink(packData, "a");
 				packData.apply_Mobius(Mob, vlist);
@@ -274,13 +274,13 @@ public class NSpole {
 		Complex []ans=new Complex[edgeCount+1];
 		int tick=0;
 		for (int v=1;v<=packData.nodeCount;v++) {
-			Complex z=new Complex(packData.rData[v].center); 
-			double rz=packData.rData[v].rad;
+			Complex z=packData.getCenter(v);
+			double rz=packData.getRadius(v);
 			int []flower=packData.kData[v].flower;
 			for (int j=0;j<(packData.kData[v].num+packData.kData[v].bdryFlag);j++) {
 				int k=flower[j];
 				if (k>v) {
-					ans[++tick]=SphericalMath.sph_tangency(z,packData.rData[k].center,rz,packData.rData[k].rad);
+					ans[++tick]=SphericalMath.sph_tangency(z,packData.getCenter(k),rz,packData.getRadius(k));
 				}
 			}
 		}
@@ -295,7 +295,7 @@ public class NSpole {
 
 		Complex []ans=new Complex[packData.nodeCount+1];
 		for (int v=1;v<=packData.nodeCount;v++) {
-			ans[v]=new Complex(packData.rData[v].center);
+			ans[v]=packData.getCenter(v);
 		}
 		return ans;
 	}
@@ -455,9 +455,9 @@ public class NSpole {
 		// apply M to circles to set new centers and radii
 		CircleSimple sC=new CircleSimple();
 		for (int v=1;v<=packData.nodeCount;v++) {
-			Mobius.mobius_of_circle(M,1,packData.rData[v].center,packData.rData[v].rad,sC,true);
-			packData.rData[v].center=new Complex(sC.center);
-			packData.rData[v].rad=sC.rad;
+			Mobius.mobius_of_circle(M,1,packData.getCenter(v),packData.getRadius(v),sC,true);
+			packData.setCenter(v,new Complex(sC.center));
+			packData.setRadius(v,sC.rad);
 		}
 		return 1;
 	}

@@ -235,15 +235,15 @@ public class FracBranching extends PackExtender {
 			fbState =0;
 			throw new ParserException("failed to get v1, v2, v");
 		}
-		if (packData.rData[v1].rad>=packData.rData[v2].rad) {
-			ratio =packData.rData[v2].rad/packData.rData[v1].rad;v_big=v1;
+		if (packData.getRadius(v1)>=packData.getRadius(v2)) {
+			ratio =packData.getRadius(v2)/packData.getRadius(v1);v_big=v1;
 		} 
 		else {
-			ratio =packData.rData[v1].rad/packData.rData[v2].rad;v_big=v2;
+			ratio =packData.getRadius(v1)/packData.getRadius(v2);v_big=v2;
 	 	}
-		double angle =genAngleSides(genPtDist(packData.rData[v_big].center,packData.rData[vp].center)
-				,genPtDist(packData.rData[v_big].center,packData.rData[alpha].center)
-				,genPtDist(packData.rData[alpha].center,packData.rData[vp].center));
+		double angle =genAngleSides(genPtDist(packData.getCenter(v_big),packData.getCenter(vp)),
+				genPtDist(packData.getCenter(v_big),packData.getCenter(alpha)),
+				genPtDist(packData.getCenter(alpha),packData.getCenter(vp)));
 		double theta =angle/Math.PI;
 		alpha =packData.nghb(v_big, alpha);
 		msg("|fb| spt "+theta+" "+ratio+" "+alpha+" "+v_big);
@@ -1058,8 +1058,8 @@ public class FracBranching extends PackExtender {
 		} catch (Exception ex) {
 			throw new ParserException("failed to get 2 vertices");
 		}
-		Complex c1 = packData.rData[v1].center;
-		Complex c2 = packData.rData[v2].center;
+		Complex c1 = packData.getCenter(v1);
+		Complex c2 = packData.getCenter(v2);
 		double dist = genPtDist(c1, c2);
 		msg("distance between vertices "+v1+"&"+v2+"= "+dist);
 		return 1;
@@ -1074,8 +1074,8 @@ public class FracBranching extends PackExtender {
 		} catch (Exception ex) {
 			throw new ParserException("failed to get 2 vertices");
 		}
-		double r1 = xRadToH(packData.rData[v1].rad);
-		double r2 = xRadToH(packData.rData[v2].rad);
+		double r1 = xRadToH(packData.getRadius(v1));
+		double r2 = xRadToH(packData.getRadius(v2));
 		//getRad converts x-radius to Hyperbolic radius used in CP display
 		double diff = Math.abs(r1-r2);
 		msg("difference of radii at "+v1+"&"+v2+"= "+diff);
@@ -1118,13 +1118,13 @@ public class FracBranching extends PackExtender {
 				if (R-r<0) Rotate =-1*Math.PI+spt.jumpAng; //rotate pos if r is bigger
 				
 				Complex littleN = HES_Norm(xRadToH(R)-xRadToH(r),Rotate); //r's normalized center
-				Complex alphaN = HES_Norm(xRadToH(packData.rData[packData.kData[spt.vert].flower[P]]
-				                                                 .rad)+xRadToH(spt.radius), spt.theta); // alpha circle's normalized center
-				Mobius mob=genMob(sptN,alphaN,packData.rData[spt.vert].center,
-						packData.rData[packData.kData[spt.vert].flower[P]].center);
+				Complex alphaN = HES_Norm(xRadToH(packData.getRadius(packData.kData[spt.vert].flower[P]))
+						+xRadToH(spt.radius), spt.theta); // alpha circle's normalized center
+				Mobius mob=genMob(sptN,alphaN,packData.getCenter(spt.vert),
+						packData.getCenter(packData.kData[spt.vert].flower[P]));
 				//mobius map that takes sptN and alphaN to their respective laid out centers
 				Complex littleC =spt.littleCenter = mob.apply(littleN);
-				packData.cpScreen.drawCircle(littleC,spt.shiftratio*packData.rData[spt.vert].rad,dflags);
+				packData.cpScreen.drawCircle(littleC,spt.shiftratio*packData.getRadius(spt.vert),dflags);
 				spt.littleHES =packData.hes;
 				count++;
 			}
@@ -1147,11 +1147,17 @@ public class FracBranching extends PackExtender {
 						}//for j
 					}//if i
 				}//for i
-			double lcR=packData.rData[spt.vert].rad,x=0.1;int n=0;
-			double ra =packData.rData[a].rad,rb =packData.rData[b].rad;
-			double rc =packData.rData[c].rad,rd =packData.rData[d].rad;
-			Complex Ca =packData.rData[a].center,Cb =packData.rData[b].center;
-			Complex Cc =packData.rData[c].center,Cd =packData.rData[d].center;
+			double lcR=packData.getRadius(spt.vert);
+			double x=0.1;
+			int n=0;
+			double ra =packData.getRadius(a);
+			double rb =packData.getRadius(b);
+			double rc =packData.getRadius(c);
+			double rd =packData.getRadius(d);
+			Complex Ca =packData.getCenter(a);
+			Complex Cb =packData.getCenter(b);
+			Complex Cc =packData.getCenter(c);
+			Complex Cd =packData.getCenter(d);
 			sc1 =SphericalMath.s_compcenter(Ca, Cb, ra, rb, lcR);
 			sc2 =SphericalMath.s_compcenter(Cc, Cd, rc, rd, lcR);
 			double low_err = SphericalMath.s_dist(sc1.center,sc2.center);
@@ -1200,7 +1206,7 @@ public class FracBranching extends PackExtender {
 		}		
 		
 		CranePoint spt=new CranePoint(packData,v,t,s,P);
-		spt.radius=packData.rData[spt.vert].rad;
+		spt.radius=packData.getRadius(spt.vert);
 		// put this at front of vector (updateStatus will eliminate the later ones)
 		cranePts.insertElementAt(spt,0);  
 		updateStatus();
@@ -1332,11 +1338,11 @@ public class FracBranching extends PackExtender {
 		if (type ==1) {
 			cpCommand(packData,"disp -F "+items+""); //layout
 			cpCommand(packData,"disp -F "+items+""); //layout
-			Complex z0 =packData.rData[packData.faces[faces1.getFirst()].vert[0]].center;
-			Complex z1 =packData.rData[packData.faces[faces1.getFirst()].vert[1]].center;
+			Complex z0 =packData.getCenter(packData.faces[faces1.getFirst()].vert[0]);
+			Complex z1 =packData.getCenter(packData.faces[faces1.getFirst()].vert[1]);
 			cpCommand(packData,"disp -F "+items+""); //layout
-			Complex w0 =packData.rData[packData.faces[faces1.getFirst()].vert[0]].center;
-			Complex w1 =packData.rData[packData.faces[faces1.getFirst()].vert[1]].center;
+			Complex w0 =packData.getCenter(packData.faces[faces1.getFirst()].vert[0]);
+			Complex w1 =packData.getCenter(packData.faces[faces1.getFirst()].vert[1]);
 			error =genPtDist(z0,w0)+genPtDist(z1,w1);
 		}
 		else if (type ==0) {
@@ -1437,18 +1443,21 @@ public class FracBranching extends PackExtender {
 		double err =DWFerror(Fl1,Fl2,0,500);
 
 		//adjusts border circles
-		double newerr=-1.0;int counter=0;int b1=bd;
+		double newerr=-1.0;
+		int counter=0;
+		int b1=bd;
 		while (err>TOLER && counter<n) {
 			int next_b =packData.kData[b1].flower[packData.kData[b1].nextVert];
 			if (packData.kData[next_b].bdryFlag==0) {
 				Oops(""+next_b+" is not a border circle");//TODO delete check?
 			}
 			cpCommand(packData,"norm_scale -c "+bd+" 1.0");
-			double oldRad =packData.rData[b1].rad;
+			double oldRad =packData.getRadius(b1);
 			Random generator = new Random();
 			double lim =0.0;
 			while (lim<0.005 || lim>50.0) {//controls growth of border radii.
-				lim =packData.rData[b1].rad =oldRad*(generator.nextDouble()*x+(1-x/2));//sets b1 to new rad
+				lim =oldRad*(generator.nextDouble()*x+(1-x/2));//sets b1 to new rad
+				packData.setRadius(b1, lim);
 			}
 			//pack with new border
 			if (new_or_old==0) {
@@ -1464,7 +1473,7 @@ public class FracBranching extends PackExtender {
 
 			if (newerr<err || err==-1.0) {
 				err =newerr; //new low error and keep border radii change
-			} else packData.rData[b1].rad =oldRad; //reset border change
+			} else packData.setRadius(b1,oldRad); //reset border change
 			b1 =next_b;
 			counter++;
 			if (counter % 10 ==0) {
@@ -1490,17 +1499,17 @@ public class FracBranching extends PackExtender {
 		cpCommand(pd,"fix");
 //		normScale(pd,v1,1.0,b1);
 //		double err1 =genPtDist(pd.rData[v1].center,pd.rData[v2].center);
-		double err =Math.sqrt(Math.pow(1-pd.rData[v1].rad/pd.rData[v2].rad,2)
-				+Math.pow(1-pd.rData[v2].rad/pd.rData[v1].rad,2));
+		double err =Math.sqrt(Math.pow(1-pd.getRadius(v1)/pd.getRadius(v2),2)
+				+Math.pow(1-pd.getRadius(v2)/pd.getRadius(v1),2));
 //		double err=Math.sqrt(err1*err1+err2*err2);
 		double newerr =0.0;
 		while (err>TOLER && counter<n) {
 			int next =pd.kData[b1].flower[pd.kData[b1].nextVert];//next vertex in border element
-			double oldRad =pd.rData[b1].rad;
+			double oldRad =pd.getRadius(b1);
 			double lim =0.0;
 			while (lim<0.05 || lim>5.0) { //bound border adjustments
 				Random generator = new Random();
-				pd.rData[b1].rad =oldRad*(generator.nextDouble()*x+(1-x/2));//sets b1 to new rad
+				pd.setRadius(b1,oldRad*(generator.nextDouble()*x+(1-x/2)));//sets b1 to new rad
 				cpCommand(pd,"repack");
 				cpCommand(pd,"norm_scale -c "+v1+" 1.0");
 				cpCommand(pd,"layout");
@@ -1509,11 +1518,11 @@ public class FracBranching extends PackExtender {
 				//lim =pd.rData[b1].rad;
 				lim=1.0;
 				if (lim>5.0) {
-					pd.rData[b1].rad=oldRad;
+					pd.setRadius(b1,oldRad);
 					lim=1.0;
 				}
 				if (lim<0.05) {
-					pd.rData[b1].rad=oldRad;
+					pd.setRadius(b1,oldRad);
 					lim=1.0;
 				}
 			}
@@ -1521,12 +1530,12 @@ public class FracBranching extends PackExtender {
 //			Random generator = new Random();
 //			pd.rData[b1].rad =oldRad*(generator.nextDouble()*0.5+0.75);//sets b1 to new rad
 //			normScale(pd,v1,1.0,b1);
-			newerr =Math.sqrt(Math.pow(1-pd.rData[v1].rad/pd.rData[v2].rad,2)
-					+Math.pow(1-pd.rData[v2].rad/pd.rData[v1].rad,2));
+			newerr =Math.sqrt(Math.pow(1-pd.getRadius(v1)/pd.getRadius(v2),2)
+					+Math.pow(1-pd.getRadius(v2)/pd.getRadius(v1),2));
 //			double newerr2 =genPtDist(pd.rData[v1].center,pd.rData[v2].center); //finds error with new rad
 //				newerr =Math.sqrt(newerr1*newerr1+newerr2*newerr2);
 				if (newerr>err) {
-					pd.rData[b1].rad =oldRad;
+					pd.setRadius(b1,oldRad);
 				}
 				else if (newerr<=err) {
 					err = newerr;
@@ -1574,16 +1583,16 @@ public class FracBranching extends PackExtender {
 //		double err =frobNorm(mob);
 //////		double err1 = Math.sqrt(2)-frobNorm(mob);
 //////		double err =Math.sqrt(err1*err1);
-		double err1 =genPtDist(packData.rData[v1].center,packData.rData[v2].center);
-		double err2 =Math.abs(packData.rData[v1].rad-packData.rData[v2].rad);
+		double err1 =genPtDist(packData.getCenter(v1),packData.getCenter(v2));
+		double err2 =Math.abs(packData.getRadius(v1)-packData.getRadius(v2));
 		double err= err1+err2*Math.sqrt(2);
 		double newerr =0.0;
 		int counter=0;
 		while (err>TOLER && counter<n) {
 			int next =packData.kData[b1].flower[packData.kData[b1].nextVert];//next vertex in border element
-			double oldRad =packData.rData[b1].rad;
+			double oldRad =packData.getRadius(b1);
 			Random generator = new Random();
-			packData.rData[b1].rad =oldRad*(generator.nextDouble()*x+(1-x/2));//sets b1 to new rad
+			packData.setRadius(b1,oldRad*(generator.nextDouble()*x+(1-x/2)));//sets b1 to new rad
 			if (new_or_old==0) {
 				cpCommand(packData,"repack -o");
 			}
@@ -1599,11 +1608,11 @@ public class FracBranching extends PackExtender {
 //			newerr =frobNorm(mob);
 ////			double newerr1 = Math.sqrt(2)-frobNorm(mob);
 ////			newerr =Math.sqrt(newerr1*newerr1);
-			double newerr1 =genPtDist(packData.rData[v1].center,packData.rData[v2].center);
-			double newerr2 =Math.abs(packData.rData[v1].rad-packData.rData[v2].rad);
+			double newerr1 =genPtDist(packData.getCenter(v1),packData.getCenter(v2));
+			double newerr2 =Math.abs(packData.getRadius(v1)-packData.getRadius(v2));
 			newerr= newerr1+newerr2*Math.sqrt(2);
 			if (newerr>=err || java.lang.Double.isNaN(newerr)==true) {
-				packData.rData[b1].rad =oldRad;
+				packData.setRadius(b1,oldRad);
 			}
 			else {
 				err = newerr;
@@ -1654,15 +1663,15 @@ public class FracBranching extends PackExtender {
 //////		double err1 = Math.sqrt(2)-frobNorm(mob);
 //////		double err =Math.sqrt(err1*err1);
 //		double err =genPtDist(packData.rData[v1].center,packData.rData[v2].center);
-		double err =Math.abs(packData.rData[v1].rad-packData.rData[v2].rad);
+		double err =Math.abs(packData.getRadius(v1)-packData.getRadius(v2));
 //		double err= err1+err2*Math.sqrt(2);
 		double newerr =0.0;
 		int counter=0;
 		while (err>TOLER && counter<n) {
 			int next =packData.kData[b1].flower[packData.kData[b1].nextVert];//next vertex in border element
-			double oldRad =packData.rData[b1].rad;
+			double oldRad =packData.getRadius(b1);
 			Random generator = new Random();
-			packData.rData[b1].rad =oldRad*(generator.nextDouble()*x+(1-x/2));//sets b1 to new rad
+			packData.setRadius(b1,oldRad*(generator.nextDouble()*x+(1-x/2)));//sets b1 to new rad
 			if (new_or_old==0) {
 				cpCommand(packData,"repack -o");
 			}
@@ -1676,14 +1685,14 @@ public class FracBranching extends PackExtender {
 //					packData.rData[v2].center,
 //					packData.rData[v2].center.add(packData.rData[v2].rad));
 //			newerr =frobNorm(mob);
-			newerr =Math.abs(packData.rData[v1].rad-packData.rData[v2].rad);
+			newerr =Math.abs(packData.getRadius(v1)-packData.getRadius(v2));
 ////			double newerr1 = Math.sqrt(2)-frobNorm(mob);
 ////			newerr =Math.sqrt(newerr1*newerr1);
 //			double newerr1 =genPtDist(packData.rData[v1].center,packData.rData[v2].center);
 //			double newerr2 =Math.abs(packData.rData[v1].rad-packData.rData[v2].rad);
 //			newerr= newerr1+newerr2*Math.sqrt(2);
 			if (newerr>=err || java.lang.Double.isNaN(newerr)==true) {
-				packData.rData[b1].rad =oldRad;
+				packData.setRadius(b1,oldRad);
 			}
 			else {
 				err = newerr;
@@ -1704,7 +1713,7 @@ public class FracBranching extends PackExtender {
 		double t0= 0.0;
 		int P =0;
 		CranePoint spt0=new CranePoint(pd,v0,t0,s0,P);
-		spt0.radius=pd.rData[spt0.vert].rad; // put this at front of vector (updateStatus will eliminate the later ones)
+		spt0.radius=pd.getRadius(spt0.vert); // put this at front of vector (updateStatus will eliminate the later ones)
 		updateStatus();
 //		cranePts.insertElementAt(spt0,0);  
 		
@@ -1716,7 +1725,7 @@ public class FracBranching extends PackExtender {
 //				pd.rData[v2].center,
 //				pd.rData[v2].center.add(pd.rData[v2].rad));
 //		double err1 = 1000000*Math.abs(2-Math.pow(frobNorm(mob),2));
-		double err = Math.abs(pd.rData[v1].rad-pd.rData[v2].rad);
+		double err = Math.abs(pd.getRadius(v1)-pd.getRadius(v2));
 //		double err =genPtDist(pd.rData[v1].center,pd.rData[v2].center); //finds error with new rad
 		double newerr =0.0;
 		int counter=0;
@@ -1729,7 +1738,7 @@ public class FracBranching extends PackExtender {
 			t0= 0.0; //generator.nextDouble();
 //			spt0.shiftratio =s0; spt0.theta =t0;
 			spt0=new CranePoint(pd,v0,t0,s0,P);
-			spt0.radius=pd.rData[spt0.vert].rad; // put this at front of vector (updateStatus will eliminate the later ones)
+			spt0.radius=pd.getRadius(spt0.vert); // put this at front of vector (updateStatus will eliminate the later ones)
 			updateStatus();
 			double rif_err =1.0; int counter2 =0; double lay_err =1.0;
 			while (rif_err>OKERR && counter2<1000 && lay_err>0.0001) {
@@ -1745,7 +1754,7 @@ public class FracBranching extends PackExtender {
 //					pd.rData[v2].center.add(pd.rData[v2].rad));
 //			double newerr1 =1000000*Math.abs(2-Math.pow(frobNorm(newmob),2));
 //			newerr =genPtDist(pd.rData[v1].center,pd.rData[v2].center); //finds error with new rad
-			newerr = Math.abs(pd.rData[v1].rad-pd.rData[v2].rad);
+			newerr = Math.abs(pd.getRadius(v1)-pd.getRadius(v2));
 //			newerr =Math.sqrt(newerr1*newerr1);
 				if (newerr>=err || rif_err>OKERR || lay_err>0.0001) {
 					spt0.shiftratio =old_s0; spt0.theta =old_t0;
@@ -1795,11 +1804,12 @@ public class FracBranching extends PackExtender {
 	public void normScale(PackData p, int v, double norm, int b) {
 		cpCommand(p,"repack");
 		cpCommand(p,"layout");
-		double scale =norm/p.rData[v].rad;
-		p.rData[v].rad =norm;
+		double scale =norm/p.getRadius(v);
+		p.setRadius(v,norm);
 		int next =p.kData[b].flower[p.kData[b].nextVert];
 		while (next!=b) {
-			p.rData[next].rad =scale*p.rData[next].rad;
+			double rrad=p.getRadius(next);
+			p.setRadius(next,scale*rrad);
 			next =p.kData[next].flower[p.kData[next].nextVert];
 		}
 	}
@@ -1835,10 +1845,10 @@ public class FracBranching extends PackExtender {
 	 */
 	public double findInv(int v1,int v2) {
 		double inv=-10;
-		double v1_rad =packData.rData[v1].rad; 
-		double v2_rad =packData.rData[v2].rad;
-		Complex v1_cent =packData.rData[v1].center; 
-		Complex v2_cent =packData.rData[v2].center;
+		double v1_rad =packData.getRadius(v1);
+		double v2_rad =packData.getRadius(v2);
+		Complex v1_cent =packData.getCenter(v1);
+		Complex v2_cent =packData.getCenter(v2);
 		double dist =genPtDist(v1_cent,v2_cent);
 		if (packData.hes==1) { //Spherical Case
 			Oops("spherical case not complete");
@@ -2309,16 +2319,16 @@ public class FracBranching extends PackExtender {
 					if (packData.kData[B2].bdryFlag==0 && B1!=B2 && packData.nghb(B1, B2)==-1 && B2!=B1) {
 						Complex z1=new Complex(0,0),z2=new Complex(0,0);double r1=0,r2=0;
 						if (packData.hes==-1) {
-							CircleSimple sC1=HyperbolicMath.h_to_e_data(packData.rData[B1].center,
-									packData.rData[B1].rad);
-							CircleSimple sC2=HyperbolicMath.h_to_e_data(packData.rData[B2].center,
-									packData.rData[B2].rad);
+							CircleSimple sC1=HyperbolicMath.h_to_e_data(packData.getCenter(B1),
+									packData.getRadius(B1));
+							CircleSimple sC2=HyperbolicMath.h_to_e_data(packData.getCenter(B2),
+									packData.getRadius(B2));
 							z1 =sC1.center;r1 =sC1.rad;
 							z2 =sC2.center;r2 =sC2.rad;
 						}
 						if (packData.hes==0) {
-							z1 =packData.rData[B1].center;r1 =packData.rData[B1].rad;
-							z2 =packData.rData[B2].center;r2 =packData.rData[B2].rad;
+							z1 =packData.getCenter(B1);r1 =packData.getRadius(B1);
+							z2 =packData.getCenter(B2);r2 =packData.getRadius(B2);
 						}
 						Mobius mob =genMob(z1, z1.add(r1),z2, z2.add(r2));
 						double err = frobNorm(mob);
@@ -2432,12 +2442,12 @@ public class FracBranching extends PackExtender {
 //				S[i]= generator.nextDouble()*s+b;
 				//Set shiftpoint parameters and create Cranepoint constructor
 				CranePoint spt1=new CranePoint(packData,V[i],T[i],S[i],P[i]);
-				spt1.radius=packData.rData[spt1.vert].rad; // put this at front of vector (updateStatus will eliminate the later ones)
+				spt1.radius=packData.getRadius(spt1.vert); // put this at front of vector (updateStatus will eliminate the later ones)
 				cranePts.insertElementAt(spt1,0);  
 				updateStatus();
 				//Set 2nd shiftpoint
 				CranePoint spt2=new CranePoint(packData,V[(i+1)%m],T[(i+1)%m],S[(i+1)%m],P[(i+1)%m]);
-				spt2.radius=packData.rData[spt2.vert].rad; // put this at front of vector (updateStatus will eliminate the later ones)
+				spt2.radius=packData.getRadius(spt2.vert); // put this at front of vector (updateStatus will eliminate the later ones)
 				cranePts.insertElementAt(spt2,0);  
 				updateStatus();
 
@@ -2597,7 +2607,7 @@ public class FracBranching extends PackExtender {
 				//shuffle gets an error for t approx 2.0; this needs to be fixed
 				s1= generator.nextDouble()*es1+b1;//shift ratio
 				CranePoint spt1=new CranePoint(packData,v1,t1,s1,P1);
-				spt1.radius=packData.rData[spt1.vert].rad; // put this at front of vector (updateStatus will eliminate the later ones)
+				spt1.radius=packData.getRadius(spt1.vert); // put this at front of vector (updateStatus will eliminate the later ones)
 				cranePts.insertElementAt(spt1,0); 
 				updateStatus();
 			}
@@ -2611,7 +2621,7 @@ public class FracBranching extends PackExtender {
 				if (s2>1.0) s2=1.0;
 				
 				CranePoint spt2 =new CranePoint(packData,v2,t2,s2,P2);
-				spt2.radius=packData.rData[spt2.vert].rad; // put this at front of vector (updateStatus will eliminate the later ones)
+				spt2.radius=packData.getRadius(spt2.vert); // put this at front of vector (updateStatus will eliminate the later ones)
 				cranePts.insertElementAt(spt2,0);  
 				updateStatus();
 			}
@@ -2692,23 +2702,23 @@ public class FracBranching extends PackExtender {
 			s1= generator.nextDouble()*es1+b1;//shift ratio
 
 			CranePoint spt1=new CranePoint(packData,v1,t1,s1,P1);
-			spt1.radius=packData.rData[spt1.vert].rad; // put this at front of vector (updateStatus will eliminate the later ones)
+			spt1.radius=packData.getRadius(spt1.vert); // put this at front of vector (updateStatus will eliminate the later ones)
 			cranePts.insertElementAt(spt1,0); 
 			updateStatus();
 			
 			shuffle(300);fullLayout(packData);
 			Complex z1=new Complex(0,0),z2=new Complex(0,0);double r1=0,r2=0;
 			if (packData.hes==-1) {
-				CircleSimple sC1=HyperbolicMath.h_to_e_data(packData.rData[B1].center,
-						packData.rData[B1].rad);
-				CircleSimple sC2=HyperbolicMath.h_to_e_data(packData.rData[B2].center,
-						packData.rData[B2].rad);
+				CircleSimple sC1=HyperbolicMath.h_to_e_data(packData.getCenter(B1),
+						packData.getRadius(B1));
+				CircleSimple sC2=HyperbolicMath.h_to_e_data(packData.getCenter(B2),
+						packData.getRadius(B2));
 				z1 =sC1.center;r1 =sC1.rad;
 				z2 =sC2.center;r2 =sC2.rad;
 			}
 			if (packData.hes==0) {
-				z1 =packData.rData[B1].center;r1 =packData.rData[B1].rad;
-				z2 =packData.rData[B2].center;r2 =packData.rData[B2].rad;
+				z1 =packData.getCenter(B1);r1 =packData.getRadius(B1);
+				z2 =packData.getCenter(B2);r2 =packData.getRadius(B2);
 			}
 			Mobius mob =genMob(z1, z1.add(r1),z2, z2.add(r2));
 			double err = frobNorm(mob);
@@ -2815,7 +2825,7 @@ public class FracBranching extends PackExtender {
 				s1= generator.nextDouble()*es1+b1;//shift ratio
 				if (s1>1) s1=1.0;if (s1<1E-8) s1=1E-8;
 				CranePoint spt1=new CranePoint(packData,v1,t1,s1,P1);
-				spt1.radius=packData.rData[spt1.vert].rad; // put this at front of vector (updateStatus will eliminate the later ones)
+				spt1.radius=packData.getRadius(spt1.vert); // put this at front of vector (updateStatus will eliminate the later ones)
 				cranePts.insertElementAt(spt1,0); 
 				updateStatus();
 			}
@@ -2827,7 +2837,7 @@ public class FracBranching extends PackExtender {
 				s2= generator.nextDouble()*es2+b2;//shift angle
 				if (s2>1) s2=1.0;if (s2<1E-8) s2=1E-8;
 				CranePoint spt2 =new CranePoint(packData,v2,t2,s2,P2);
-				spt2.radius=packData.rData[spt2.vert].rad; // put this at front of vector (updateStatus will eliminate the later ones)
+				spt2.radius=packData.getRadius(spt2.vert); // put this at front of vector (updateStatus will eliminate the later ones)
 				cranePts.insertElementAt(spt2,0);  
 				updateStatus();
 			}
@@ -2840,7 +2850,7 @@ public class FracBranching extends PackExtender {
 				s3= generator.nextDouble()*es3+b3;//shift ratio
 				if (s3>1) s3=1.0;if (s3<1E-8) s3=1E-8;
 				CranePoint spt3=new CranePoint(packData,v3,t3,s3,P3);
-				spt3.radius=packData.rData[spt3.vert].rad; // put this at front of vector (updateStatus will eliminate the later ones)
+				spt3.radius=packData.getRadius(spt3.vert); // put this at front of vector (updateStatus will eliminate the later ones)
 				cranePts.insertElementAt(spt3,0); 
 				updateStatus();
 			}
@@ -2953,17 +2963,17 @@ public class FracBranching extends PackExtender {
 				int P =0;
 				//Set shiftpoint parameters and create Cranepoint constructor
 				CranePoint spt1=new CranePoint(packData,V[i],T[i],S[i],P);
-				spt1.radius=packData.rData[spt1.vert].rad; // put this at front of vector (updateStatus will eliminate the later ones)
+				spt1.radius=packData.getRadius(spt1.vert); // put this at front of vector (updateStatus will eliminate the later ones)
 				cranePts.insertElementAt(spt1,0);  
 				updateStatus();
 				//Set 2nd shiftpoint
 				CranePoint spt2=new CranePoint(packData,V[(i+1)%m],T[(i+1)%m],S[(i+1)%m],P);
-				spt2.radius=packData.rData[spt2.vert].rad; // put this at front of vector (updateStatus will eliminate the later ones)
+				spt2.radius=packData.getRadius(spt2.vert); // put this at front of vector (updateStatus will eliminate the later ones)
 				cranePts.insertElementAt(spt2,0);  
 				updateStatus();
 				//Set 3rd shiftpoint
 				CranePoint spt3=new CranePoint(packData,V[(i+2)%m],T[(i+2)%m],S[(i+2)%m],P);
-				spt3.radius=packData.rData[spt3.vert].rad; // put this at front of vector (updateStatus will eliminate the later ones)
+				spt3.radius=packData.getRadius(spt3.vert); // put this at front of vector (updateStatus will eliminate the later ones)
 				cranePts.insertElementAt(spt3,0);  
 				updateStatus();
 				//Find shiftpoint label
@@ -3016,10 +3026,10 @@ public class FracBranching extends PackExtender {
 			cpCommand(p,"norm_scale -c "+v1+" 2.0");
 			cpCommand(p,"layout");
 			cpCommand(p,"fix");
-			Mobius mob =getMob(p, p.rData[v1].center, 
-					p.rData[v1].center.add(p.rData[v1].rad),
-					p.rData[v2].center,
-					p.rData[v2].center.add(p.rData[v2].rad));
+			Mobius mob =getMob(p, p.getCenter(v1), 
+					p.getCenter(v1).add(p.getRadius(v1)),
+					p.getCenter(v2),
+					p.getCenter(v2).add(p.getRadius(v2)));
 
 			double err =1000000*Math.abs(2-Math.pow(frobNorm(mob),2));
 			A[j][0]= r1;//Double.toString(r1); 
@@ -3140,8 +3150,8 @@ public class FracBranching extends PackExtender {
 //				pd.rData[v2].center,
 //				pd.rData[v2].center.add(pd.rData[v2].rad));
 //		double err1 = 1000000*Math.abs(2-Math.pow(frobNorm(mob),2));
-		double err1 = 1000000*Math.abs(pd.rData[v1].rad-pd.rData[v2].rad);
-		double err2 = 1000000*genPtDist(pd.rData[v1].center,pd.rData[v2].center); //finds error with new rad
+		double err1 = 1000000*Math.abs(pd.getRadius(v1)-pd.getRadius(v2));
+		double err2 = 1000000*genPtDist(pd.getCenter(v1),pd.getCenter(v2)); //finds error with new rad
 		double err =Math.sqrt(err1*err1+err2*err2);
 		double newerr =0.0;
 		int counter=0;
@@ -3169,8 +3179,8 @@ public class FracBranching extends PackExtender {
 //					pd.rData[v2].center,
 //					pd.rData[v2].center.add(pd.rData[v2].rad));
 //			double newerr1 =1000000*Math.abs(2-Math.pow(frobNorm(newmob),2));
-			double newerr1 = 1000000*Math.abs(pd.rData[v1].rad-pd.rData[v2].rad);
-			double newerr2 =1000000*genPtDist(pd.rData[v1].center,pd.rData[v2].center); //finds error with new rad
+			double newerr1 = 1000000*Math.abs(pd.getRadius(v1)-pd.getRadius(v2));
+			double newerr2 =1000000*genPtDist(pd.getCenter(v1),pd.getCenter(v2)); //finds error with new rad
 			newerr =Math.sqrt(newerr1*newerr1+newerr2*newerr2);
 			if (newerr>=err) {
 				pd.kData[b1].overlaps[next_f] = oldInv;
@@ -3279,10 +3289,10 @@ public class FracBranching extends PackExtender {
 	}
 
 	public double overlapEdgeShuffle(PackData pd, int n, int e1, int e2, int v1, int v2, double x) {
-		Mobius mob =getMob(pd, pd.rData[v1].center, 
-				pd.rData[v1].center.add(pd.rData[v1].rad),
-				pd.rData[v2].center,
-				pd.rData[v2].center.add(pd.rData[v2].rad));
+		Mobius mob =getMob(pd, pd.getCenter(v1),
+				pd.getCenter(v1).add(pd.getRadius(v1)),
+				pd.getCenter(v2),
+				pd.getCenter(v2).add(pd.getRadius(v2)));
 		cpCommand(pd,"repack");
 		cpCommand(pd,"norm_scale -c "+v1+" 2.0");
 		cpCommand(pd,"layout");
@@ -3294,10 +3304,10 @@ public class FracBranching extends PackExtender {
 				&& pd.kData[e1].overlaps[pd.nghb(e1,e2)]>=0.0) {
 			pd.kData[e1].overlaps[pd.nghb(e1,e2)]=pd.kData[e1].overlaps[pd.nghb(e1,e2)]-inc;
 			//keep adjusting until sign changes
-			Mobius newmob =getMob(pd, pd.rData[v1].center, 
-					pd.rData[v1].center.add(pd.rData[v1].rad),
-					pd.rData[v2].center,
-					pd.rData[v2].center.add(pd.rData[v2].rad));
+			Mobius newmob =getMob(pd, pd.getCenter(v1),
+					pd.getCenter(v1).add(pd.getRadius(v1)),
+					pd.getCenter(v2),
+					pd.getCenter(v2).add(pd.getRadius(v2)));
 			cpCommand(pd,"repack");
 			cpCommand(pd,"norm_scale -c "+v1+" 2.0");
 			cpCommand(pd,"layout");
@@ -3416,16 +3426,16 @@ public class FracBranching extends PackExtender {
         	int k = 0; //counter for petals at i
         	while (k<j+1) {
         		int p =packData.kData[i].flower[k]; //vertex of petal on center i
-        		double act_dist = genPtDist(packData.rData[i].center
-        									,packData.rData[p].center);
+        		double act_dist = genPtDist(packData.getCenter(i),
+        				packData.getCenter(p));
         		double cor_dist=0.0;
         		if (packData.overlapStatus==true) {
-        			cor_dist = genOverlapDist(packData.rData[i].rad
-        					,packData.rData[p].rad
-        					,packData.kData[i].overlaps[k]);
+        			cor_dist = genOverlapDist(packData.getRadius(i),
+        					packData.getRadius(p),
+        					packData.kData[i].overlaps[k]);
         		} else {
-        			cor_dist = genOverlapDist(packData.rData[i].rad
-        					,packData.rData[p].rad,1);
+        			cor_dist = genOverlapDist(packData.getRadius(i),
+        					packData.getRadius(p),1);
         		}
         		double err = Math.sqrt(Math.pow(act_dist-cor_dist,2));
         		if (isSP(i)!=null || isSP(p)!=null) {
@@ -3476,7 +3486,7 @@ public class FracBranching extends PackExtender {
 			  		throw new ParserException("face"+face1+" is not a boundary face");
 			  	}
 		  }
-		  Complex z1=packData.rData[v_int].center; //initial location of v_int
+		  Complex z1=packData.getCenter(v_int); //initial location of v_int
 		  
 		  String opts=null;
 		  DispFlags dflags=new DispFlags(opts);
@@ -3486,7 +3496,7 @@ public class FracBranching extends PackExtender {
 			  throw new DataException("last face not equal to first face");
 		  }
 		  
-		  Complex z2=packData.rData[v_int].center; //final location of v_int
+		  Complex z2=packData.getCenter(v_int); //final location of v_int
 		  double err = (z2.arg()-z1.arg());
 		  err = err*err;
 		  err = Math.sqrt(err);
@@ -3611,11 +3621,11 @@ public class FracBranching extends PackExtender {
 					if (vertStatus[v2]==2) {
 						CranePoint spt =isSP(v2);
 						Mobius mob=getMob(pd,spt.petalZ[pd.nghb(v2,v0)], spt.petalZ[pd.nghb(v2, v1)],
-								pd.rData[v0].center, pd.rData[v1].center);
-						pd.rData[v2].center =mob.apply(new Complex(spt.radius*spt.shiftratio-spt.radius,0.0));
-						pd.rData[v2].rad=spt.shiftratio*spt.radius;
-						packData.rData[v2].center =mob.apply(new Complex(spt.radius*spt.shiftratio-spt.radius,0.0));
-						packData.rData[v2].rad=spt.shiftratio*spt.radius;
+								pd.getCenter(v0), pd.getCenter(v1));
+						pd.setCenter(v2,mob.apply(new Complex(spt.radius*spt.shiftratio-spt.radius,0.0)));
+						pd.setRadius(v2,spt.shiftratio*spt.radius);
+						packData.setCenter(v2,mob.apply(new Complex(spt.radius*spt.shiftratio-spt.radius,0.0)));
+						packData.setRadius(v2,spt.shiftratio*spt.radius);
 						//set overlaps according to shiftpoint layout
 						if (!pd.overlapStatus) { //alocates space for overlaps
 							pd.alloc_overlaps();
@@ -3629,12 +3639,12 @@ public class FracBranching extends PackExtender {
 						double o0 = pd.kData[v1].overlaps[pd.nghb(v1, v2)];
 						double o1 = pd.kData[v2].overlaps[pd.nghb(v2, v0)];
 						double o2 = pd.kData[v0].overlaps[pd.nghb(v0, v1)];
-						sc = CommonMath.comp_any_center(pd.rData[v0].center, pd.rData[v1].center,
-								pd.rData[v0].rad, pd.rData[v1].rad,
-								pd.rData[v2].rad, o0, o1, o2,pd.hes);
+						sc = CommonMath.comp_any_center(pd.getCenter(v0), pd.getCenter(v1),
+								pd.getRadius(v0), pd.getRadius(v1),
+								pd.getRadius(v2), o0, o1, o2,pd.hes);
 					} else
-						sc = CommonMath.comp_any_center(pd.rData[v0].center, pd.rData[v1].center,
-								pd.rData[v0].rad, pd.rData[v1].rad,pd.rData[v2].rad,pd.hes);
+						sc = CommonMath.comp_any_center(pd.getCenter(v0), pd.getCenter(v1),
+								pd.getRadius(v0), pd.getRadius(v1),pd.getRadius(v2),pd.hes);
 					
 					
 					// compute and store new center
@@ -3675,8 +3685,8 @@ public class FracBranching extends PackExtender {
 			  }
 			  cpCommand(packData,"center_vert "+vM);
 		  }
-		  z1=new Complex(packData.rData[packData.faces[face1].vert[0]].center);
-		  z2=new Complex(packData.rData[packData.faces[face1].vert[fIndex]].center);
+		  z1=packData.getCenter(packData.faces[face1].vert[0]);
+		  z2=new Complex(packData.getCenter(packData.faces[face1].vert[fIndex]));
 		  String opts=null;
 //		  if (fix) opts=new String("-ff"); // draw the colored faces as we go
 		  DispFlags dflags=new DispFlags(opts);
@@ -3688,8 +3698,8 @@ public class FracBranching extends PackExtender {
 		  }
 //		  cpCommand(p,"disp -F "+Fl);
 		  
-		  w1=new Complex(packData.rData[packData.faces[last_face].vert[0]].center);
-		  w2=new Complex(packData.rData[packData.faces[last_face].vert[fIndex]].center);
+		  w1=packData.getCenter(packData.faces[last_face].vert[0]);
+		  w2=packData.getCenter(packData.faces[last_face].vert[fIndex]);
 		  Mobius mob=new Mobius(); // initialize transformation 
 		  if (packData.hes<0) {
 			  mob=Mobius.auto_abAB(z1,z2,w1,w2);
@@ -3805,7 +3815,7 @@ public class FracBranching extends PackExtender {
 	public int place_firstFace(int ff,int indx) {
 		int count=0;
 		int v=packData.faces[ff].vert[indx]; // first circle at origin.
-		packData.rData[v].center=new Complex(0,0); 
+		packData.setCenter(v,new Complex(0,0)); 
 		packData.kData[v].plotFlag=1;
 		count++;
 		UtilPacket uPff = new UtilPacket();
@@ -3823,7 +3833,7 @@ public class FracBranching extends PackExtender {
 			int num =packData.kData[v].num+packData.kData[v].bdryFlag;
 			for (int j=0;j<num;j++) {
 				int k=packData.kData[v].flower[(alphaX+j)%num];
-				packData.rData[k].center=spt.petalZ[(alphaX+j)%num].divide(rot);
+				packData.setCenter(k,spt.petalZ[(alphaX+j)%num].divide(rot));
 				packData.kData[k].plotFlag=1;
 				count++;
 			}
@@ -3837,12 +3847,13 @@ public class FracBranching extends PackExtender {
 			for (int i=0;i<(packData.kData[v].num);i++) {
 				if ((spt=isSP(packData.kData[v].flower[i]))!=null) {
 					SPuF(spt,2);
-					packData.rData[spt.vert].center=spt.center=new Complex(0,0);
+					spt.center=new Complex(0,0);
+					packData.setCenter(spt.vert,spt.center);
 					Complex z=spt.petalZ[0];
 					Complex rot=z.divide(z.abs()); 
 					for (int j=0;j<(packData.kData[spt.vert].num+packData.kData[spt.vert].bdryFlag);j++) {
 						int k=packData.kData[spt.vert].flower[j];
-						packData.rData[k].center=spt.petalZ[j].divide(rot);
+						packData.setCenter(k,spt.petalZ[j].divide(rot));
 						packData.kData[k].plotFlag=1;
 						count++;
 					}
@@ -3855,18 +3866,18 @@ public class FracBranching extends PackExtender {
 		//   the second circle is placed on the positive x-axis
 		if (vertStatus[v]==0) {
 			int u=packData.faces[ff].vert[(indx+1)%3]; //second circle to place
-			packData.rData[u].center=HES_Norm(xRadToH(packData.rData[v].rad)
-					+xRadToH(packData.rData[u].rad),0);
+			packData.setCenter(u,HES_Norm(xRadToH(packData.getRadius(v))
+					+xRadToH(packData.getRadius(u)),0));
 			packData.kData[u].plotFlag=1;
 			count++;
 			
 			// compute third point
 			int w=packData.faces[ff].vert[(indx+2)%3];
-			genCosOverlap(packData.rData[v].rad,packData.rData[w].rad,
-					packData.rData[u].rad,uPff);
+			genCosOverlap(packData.getRadius(v),packData.getRadius(w),
+					packData.getRadius(u),uPff);
 			double ang = Math.acos(uPff.value);
-			packData.rData[w].center = HES_Norm(xRadToH(packData.rData[v].rad)
-					+xRadToH(packData.rData[w].rad), ang);
+			packData.setCenter(w,HES_Norm(xRadToH(packData.getRadius(v))
+					+xRadToH(packData.getRadius(w)), ang));
 			packData.kData[w].plotFlag=1;
 			count++;
 		}
@@ -3889,8 +3900,8 @@ public class FracBranching extends PackExtender {
 		int w=packData.faces[face].vert[indx]; 
 		int u=packData.faces[face].vert[(indx+1)%3]; 
 		int v=packData.faces[face].vert[(indx+2)%3]; // circle to be place
-		Complex zw=packData.rData[w].center;
-		Complex zu=packData.rData[u].center;
+		Complex zw=packData.getCenter(w);
+		Complex zu=packData.getCenter(u);
 		if (packData.kData[w].plotFlag==0 || packData.kData[u].plotFlag==0)
 			return 0;
 		CranePoint spt=null;
@@ -3910,12 +3921,11 @@ public class FracBranching extends PackExtender {
 			Mobius mob=genMob(Cw,Cu,zw,zu);
 			//Mobius mob=Mobius.affine_mob(Cw,Cu,zw,zu);
 
-			packData.rData[v].center=mob.apply(new Complex(0.0,0.0));
+			packData.setCenter(v,mob.apply(new Complex(0.0,0.0)));
 			packData.kData[v].plotFlag=1;
 			for (int j=0;j<(packData.kData[v].num+packData.kData[v].bdryFlag);j++) {
 				int k=packData.kData[v].flower[j];
-				packData.rData[k].center=
-					mob.apply(spt.petalZ[j]);
+				packData.setCenter(k,mob.apply(spt.petalZ[j]));
 				packData.kData[k].plotFlag=1;
 				count++;
 			}
@@ -3925,12 +3935,12 @@ public class FracBranching extends PackExtender {
 		// Note: If neighbor of CranePoint, it should already be plotted.
 
 		// compute third point
-		double rv=packData.rData[v].rad;
-		double rw=packData.rData[w].rad;
-		double ru=packData.rData[u].rad;
-		Complex Cw = packData.rData[w].center;
-		Complex Cu = packData.rData[u].center;
-		double dist = genPtDist(Cu,Cw); //note the small difference
+		double rv=packData.getRadius(v);
+		double rw=packData.getRadius(w);
+		double ru=packData.getRadius(u);
+		Complex Cw = packData.getCenter(w);
+		Complex Cu = packData.getCenter(u);
+		double dist = genPtDist(Cu,Cw); //nsote the small difference
 		genCosOverlap(rw,ru,rv,uPnf);
 		double ang =genAngleSides(dist,xRadToH(rv)+xRadToH(ru),xRadToH(rw)+xRadToH(rv));
 		
@@ -3942,7 +3952,7 @@ public class FracBranching extends PackExtender {
 		
 		Complex zv_N = HES_Norm(xRadToH(ru)+xRadToH(rv),-ang);
 		Mobius mobN=genMob(new Complex(0,0),HES_Norm(xRadToH(ru)+xRadToH(rw),0),zu,zw);
-		packData.rData[v].center = mobN.apply(zv_N);
+		packData.setCenter(v,mobN.apply(zv_N));
 		
 		//original 
 //		Complex tmp=new Complex(0.0,-ang);
@@ -3969,7 +3979,7 @@ public class FracBranching extends PackExtender {
 		spt.center = new Complex(0.0);
 		UtilPacket utpk = new UtilPacket();
 	
-		double radius = spt.pd.rData[v].rad; //TODO change rif to update spt.radius
+		double radius = spt.pd.getRadius(v); //TODO change rif to update spt.radius
 											
 		Complex c1 = HES_to_Ecent(radius*(1-spt.shiftratio),Math.PI);
 		spt.center = new Complex(c1); //little circle center
@@ -3979,31 +3989,31 @@ public class FracBranching extends PackExtender {
 		int num = spt.pd.kData[v].num;
 		int j = 0;
 		int vv = spt.pd.kData[v].flower[0];
-		spt.petalZ[0]=HES_to_Ecent(radius+spt.pd.rData[vv].rad,baseAng);
+		spt.petalZ[0]=HES_to_Ecent(radius+spt.pd.getRadius(vv),baseAng);
 		
 		while (accum < Math.PI && j <= spt.pd.kData[v].num) {
 			if (!genCosOverlap(radius,
-					spt.pd.rData[spt.pd.kData[v].flower[j]].rad,
-					spt.pd.rData[spt.pd.kData[v].flower[(j + 1)%num]].rad, utpk))
+					spt.pd.getRadius(spt.pd.kData[v].flower[j]),
+					spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]), utpk))
 				Oops("error computing cos");
 			double ang = genAngleRad(radius,
-					spt.pd.rData[spt.pd.kData[v].flower[j]].rad,
-					spt.pd.rData[spt.pd.kData[v].flower[(j + 1)%num]].rad);
+					spt.pd.getRadius(spt.pd.kData[v].flower[j]),
+					spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]));
 			
 			if ((accum + ang) > Math.PI)
 				break;
 			accum += ang;
 			j++;
 			vv = spt.pd.kData[v].flower[j];
-			spt.petalZ[j]=HES_to_Ecent(radius+spt.pd.rData[vv].rad,accum);
+			spt.petalZ[j]=HES_to_Ecent(radius+spt.pd.getRadius(vv),accum);
 			
 		}// end of pi while
 
 		if (j != packData.kData[v].num) {
 			accum = Math.PI
 					+ jasheRoutine(radius, radius * spt.shiftratio, accum,
-							spt.pd.rData[spt.pd.kData[v].flower[j]].rad,
-							spt.pd.rData[spt.pd.kData[v].flower[(j + 1)%num]].rad);
+							spt.pd.getRadius(spt.pd.kData[v].flower[j]),
+							spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]));
 			j++;
 			vv = spt.pd.kData[v].flower[j];
 			if (spt.pd.hes==-1) {
@@ -4011,18 +4021,18 @@ public class FracBranching extends PackExtender {
 						HES_to_Ecent(radius*spt.shiftratio,Math.PI), c1,
 						HES_to_Ecent(radius,Math.PI)); 
 				spt.petalZ[j]=mob_Lc.apply(HES_to_Ecent(radius*spt.shiftratio
-						+spt.pd.rData[vv].rad,accum));
-			} else spt.petalZ[j]=(new Complex(radius*spt.shiftratio+spt.pd.rData[vv].rad,0))
+						+spt.pd.getRadius(vv),accum));
+			} else spt.petalZ[j]=(new Complex(radius*spt.shiftratio+spt.pd.getRadius(vv),0))
 				.times((new Complex(0,accum)).exp()).add(c1);
 			
 			while ((accum) < 3.0 * Math.PI && j <= spt.pd.kData[v].num) {
 				if (!genCosOverlap(radius * spt.shiftratio,
-						spt.pd.rData[spt.pd.kData[v].flower[j]].rad,
-						spt.pd.rData[spt.pd.kData[v].flower[(j + 1)%num]].rad, utpk))
+						spt.pd.getRadius(spt.pd.kData[v].flower[j]),
+						spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]), utpk))
 					Oops("error computing cos");
 				double ang = genAngleRad(radius * spt.shiftratio,
-						spt.pd.rData[spt.pd.kData[v].flower[j]].rad,
-						spt.pd.rData[spt.pd.kData[v].flower[(j + 1)%num]].rad);
+						spt.pd.getRadius(spt.pd.kData[v].flower[j]),
+						spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]));
 				
 				if ((accum + ang) > 3.0 * Math.PI)
 					break;
@@ -4034,8 +4044,8 @@ public class FracBranching extends PackExtender {
 							HES_to_Ecent(radius*spt.shiftratio,Math.PI), c1,
 							HES_to_Ecent(radius,Math.PI)); 
 					spt.petalZ[j]=mob_Lc.apply(HES_to_Ecent(radius*spt.shiftratio
-							+spt.pd.rData[vv].rad,accum));
-				} else spt.petalZ[j]=(new Complex(radius*spt.shiftratio+spt.pd.rData[vv].rad,0))
+							+spt.pd.getRadius(vv),accum));
+				} else spt.petalZ[j]=(new Complex(radius*spt.shiftratio+spt.pd.getRadius(vv),0))
 					.times((new Complex(0,accum)).exp()).add(c1);
 			} //end of 3pi while
 
@@ -4043,26 +4053,26 @@ public class FracBranching extends PackExtender {
 				accum = 3.0* Math.PI
 						+ jasheRoutine(spt.shiftratio * radius, radius, accum
 								- 2.0 * Math.PI,
-								spt.pd.rData[spt.pd.kData[v].flower[j]].rad,
-								spt.pd.rData[spt.pd.kData[v].flower[(j + 1)%num]].rad);
+								spt.pd.getRadius(spt.pd.kData[v].flower[j]),
+								spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]));
 				j++;
 				vv = spt.pd.kData[v].flower[j];
-				spt.petalZ[j]=HES_to_Ecent(radius+spt.pd.rData[vv].rad,accum);
+				spt.petalZ[j]=HES_to_Ecent(radius+spt.pd.getRadius(vv),accum);
 				
 				while (j <= spt.pd.kData[v].num) {
 					if (!genCosOverlap(radius,
-							spt.pd.rData[spt.pd.kData[v].flower[j]].rad,
-							spt.pd.rData[spt.pd.kData[v].flower[(j + 1)%num]].rad,
+							spt.pd.getRadius(spt.pd.kData[v].flower[j]),
+							spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]),
 							utpk))
 						Oops("error computing cos");
 					accum += genAngleSides(radius,
-							spt.pd.rData[spt.pd.kData[v].flower[j]].rad,
-							spt.pd.rData[spt.pd.kData[v].flower[(j + 1)%num]].rad);
+							spt.pd.getRadius(spt.pd.kData[v].flower[j]),
+							spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]));
 					
 					j++;
 					if (j<=num) {
 						vv = spt.pd.kData[v].flower[j];
-						spt.petalZ[j]=HES_to_Ecent(radius+spt.pd.rData[vv].rad,accum);
+						spt.petalZ[j]=HES_to_Ecent(radius+spt.pd.getRadius(vv),accum);
 					}
 				}
 			}
@@ -4078,7 +4088,7 @@ public class FracBranching extends PackExtender {
 	 * @return array of angles
 	 */
 	public double NghbSPangle(int k) {
-		packData.rData[k].center=new Complex(0.0);
+		packData.setCenter(k,new Complex(0.0));
 		UtilPacket utpk=new UtilPacket();
 		Iterator<CranePoint> cps=cranePts.iterator();
 		CranePoint spt=null;
@@ -4095,90 +4105,90 @@ public class FracBranching extends PackExtender {
 		}
 		
 		// yes, v is a 'CranePoint'
-		double radius=packData.rData[k].rad;
+		double radius=packData.getRadius(k);
 		Complex c1=new Complex(radius*(spt.shiftratio-1.0));
 		spt.center=new Complex(c1);
 		double baseAng=spt.theta;
 		double accum=baseAng;
 		int j=0;
 		int a=packData.kData[k].flower[0];
-		packData.rData[k].center=(new Complex(radius+packData.rData[a].rad,0))
-			.times((new Complex(0,baseAng)).exp());
+		packData.setCenter(k,(new Complex(radius+packData.getRadius(a),0))
+			.times((new Complex(0,baseAng)).exp()));
 		
 		while(accum<Math.PI && j<=packData.kData[k].num) {
 			if (!genCosOverlap(radius,
-					packData.rData[packData.kData[k].flower[j]].rad,
-					packData.rData[packData.kData[k].flower[j+1]].rad,
+					packData.getRadius(packData.kData[k].flower[j]),
+					packData.getRadius(packData.kData[k].flower[j+1]),
 					utpk))
 				Oops("error computing cos");
 			//prev double ang=Math.acos(utpk.value);
 			double ang = genAngleRad(radius,
-					packData.rData[packData.kData[k].flower[j]].rad,
-					packData.rData[packData.kData[k].flower[j+1]].rad);
+					packData.getRadius(packData.kData[k].flower[j]),
+					packData.getRadius(packData.kData[k].flower[j+1]));
 			
 			if ((accum+ang)>Math.PI)
 				break;
 			accum += ang;
 			j++;
 			k=packData.kData[k].flower[j];
-			packData.rData[k].center=(new Complex(radius+packData.rData[a].rad,0))
-				.times((new Complex(0,accum)).exp());
+			packData.setCenter(k,(new Complex(radius+packData.getRadius(a),0))
+				.times((new Complex(0,accum)).exp()));
 		}
 
 		if (j!=packData.kData[k].num) {
 			accum = Math.PI+jasheRoutine(radius,radius*spt.shiftratio,accum,
-					packData.rData[packData.kData[k].flower[j]].rad,
-					packData.rData[packData.kData[k].flower[j+1]].rad);
+					packData.getRadius(packData.kData[k].flower[j]),
+					packData.getRadius(packData.kData[k].flower[j+1]));
 			j++;
 			k=packData.kData[k].flower[j];
-			packData.rData[a].center=(new Complex(radius*spt.shiftratio+packData.rData[a].rad,0))
-				.times((new Complex(0,accum)).exp()).add(c1);
+			packData.setCenter(a,(new Complex(radius*spt.shiftratio+packData.getRadius(a),0))
+				.times((new Complex(0,accum)).exp()).add(c1));
 		
 			
 			while((accum)<3.0*Math.PI && j<packData.kData[k].num) {
 				if (!genCosOverlap(radius*spt.shiftratio,
-					packData.rData[packData.kData[k].flower[j]].rad,
-					packData.rData[packData.kData[k].flower[j+1]].rad,
+					packData.getRadius(packData.kData[k].flower[j]),
+					packData.getRadius(packData.kData[k].flower[j+1]),
 					utpk))
 					Oops("error computing cos");
 			//prev double ang=Math.acos(utpk.value);
 			double ang = genAngleRad(radius*spt.shiftratio,
-					packData.rData[packData.kData[k].flower[j]].rad,
-					packData.rData[packData.kData[k].flower[j+1]].rad);
+					packData.getRadius(packData.kData[k].flower[j]),
+					packData.getRadius(packData.kData[k].flower[j+1]));
 				
 			if ((accum+ang)>3.0*Math.PI)
 				break;
 			accum += ang;
 			j++;
 			k=packData.kData[k].flower[j];
-			packData.rData[a].center=(new Complex(radius*spt.shiftratio+packData.rData[a].rad,0))
-				.times((new Complex(0,accum)).exp()).add(c1);
+			packData.setCenter(a,(new Complex(radius*spt.shiftratio+packData.getRadius(a),0))
+				.times((new Complex(0,accum)).exp()).add(c1));
 		}
 		
 		if (j!=packData.kData[k].num) {
 			accum = 3.0*Math.PI+jasheRoutine(spt.shiftratio*radius,radius,accum-2.0*Math.PI,
-					packData.rData[packData.kData[k].flower[j]].rad,
-					packData.rData[packData.kData[k].flower[j+1]].rad);
+					packData.getRadius(packData.kData[k].flower[j]),
+					packData.getRadius(packData.kData[k].flower[j+1]));
 			j++;
 			a=packData.kData[k].flower[j];
-			packData.rData[a].center=(new Complex(radius+packData.rData[a].rad,0))
-				.times((new Complex(0,accum)).exp());
+			packData.setCenter(a,(new Complex(radius+packData.getRadius(a),0))
+				.times((new Complex(0,accum)).exp()));
 
 			while (j<packData.kData[k].num) {
 				if (!genCosOverlap(radius,
-						packData.rData[packData.kData[k].flower[j]].rad,
-						packData.rData[packData.kData[k].flower[j+1]].rad,
+						packData.getRadius(packData.kData[k].flower[j]),
+						packData.getRadius(packData.kData[k].flower[j+1]),
 						utpk))
 					Oops("error computing cos");
 				//prev accum +=Math.acos(utpk.value);
 				accum += genAngleRad(radius,
-						packData.rData[packData.kData[k].flower[j]].rad,
-						packData.rData[packData.kData[k].flower[j+1]].rad);
+						packData.getRadius(packData.kData[k].flower[j]),
+						packData.getRadius(packData.kData[k].flower[j+1]));
 				
 				j++;
 				a=packData.kData[k].flower[j];
-				packData.rData[a].center=(new Complex(radius+packData.rData[a].rad,0))
-				.times((new Complex(0,accum)).exp());
+				packData.setCenter(a,(new Complex(radius+packData.getRadius(a),0))
+				.times((new Complex(0,accum)).exp()));
 			}
 		}
 		}
@@ -4215,8 +4225,8 @@ public class FracBranching extends PackExtender {
     					rr=-1;
     				}
     				else {
-    					rl=packData.rData[packData.kData[v].flower[1]].rad;
-    					rr=packData.rData[packData.kData[v].flower[N-1]].rad;
+    					rl=packData.getRadius(packData.kData[v].flower[1]);
+    					rr=packData.getRadius(packData.kData[v].flower[N-1]);
     				}
     			}
     			else if (j==N) {
@@ -4225,27 +4235,27 @@ public class FracBranching extends PackExtender {
     					rr=-1;
     				}
     				else {
-    					rl=packData.rData[packData.kData[v].flower[1]].rad;
-    					rr=packData.rData[packData.kData[v].flower[N-1]].rad;
+    					rl=packData.getRadius(packData.kData[v].flower[1]);
+    					rr=packData.getRadius(packData.kData[v].flower[N-1]);
     				}
     			}
     			
     			// now the rest of the petals
     			else {
-    				rr=packData.rData[packData.kData[v].flower[j-1]].rad; 
-    				rl=packData.rData[packData.kData[v].flower[j+1]].rad; 
+    				rr=packData.getRadius(packData.kData[v].flower[j-1]);
+    				rl=packData.getRadius(packData.kData[v].flower[j+1]);
     			}
     			
     			//in storeSPangles spt.ang[0]=spt.ang[N]=two faces
     			double gr = -1;
-    			gr = ghostrad(packData.rData[v].rad, rl, rr, spt.radius, 
+    			gr = ghostrad(packData.getRadius(v), rl, rr, spt.radius, 
     					spt.petalAng[packData.nghb(spt.vert,v)]); 
     				//TODO make certain spt.radius gets updated from shiftRadCalc
     			rad[j] = gr;
     		}
     		// petal k not 'CranePoint'? just store usual radius. 
     		else { 
-    			rad[j]=packData.rData[k].rad;
+    			rad[j]=packData.getRadius(k);
     		}    		
     	}
     	
@@ -4255,19 +4265,19 @@ public class FracBranching extends PackExtender {
     	try {
         	for (int j=0; j< N; j++) {
         		int k = packData.kData[v].flower[j];
-        		oldrad[j]=packData.rData[k].rad;
-        		packData.rData[k].rad=rad[j];
+        		oldrad[j]=packData.getRadius(k);
+        		packData.setRadius(k,rad[j]);
     		}
          	boolean dah=genAngleSumOverlap(v, radius, uP); //shift angle sum is stored in uP.value
            	for (int j=0; j< N; j++) {
         		int k = packData.kData[v].flower[j];
-        		packData.rData[k].rad=oldrad[j];
+        		packData.setRadius(k,oldrad[j]);
     		}
            	return dah;
     	} catch (Exception ex) { // on exception, want to restore the old radii
         	for (int j=0; j< N; j++) {
         		int k = packData.kData[v].flower[j];
-        		packData.rData[k].rad=oldrad[j];
+        		packData.setRadius(k,oldrad[j]);
     		}
         	return false;
     	}
@@ -4305,8 +4315,8 @@ public class FracBranching extends PackExtender {
     					rr=-1;
     				}
     				else {
-    					rl=packData.rData[packData.kData[v].flower[1]].rad;
-    					rr=packData.rData[packData.kData[v].flower[N-1]].rad;
+    					rl=packData.getRadius(packData.kData[v].flower[1]);
+    					rr=packData.getRadius(packData.kData[v].flower[N-1]);
     				}
     			}
     			
@@ -4316,24 +4326,24 @@ public class FracBranching extends PackExtender {
     					rr=-1;
     				}
     				else {
-    					rl=packData.rData[packData.kData[v].flower[1]].rad;
-    					rr=packData.rData[packData.kData[v].flower[N-1]].rad;
+    					rl=packData.getRadius(packData.kData[v].flower[1]);
+    					rr=packData.getRadius(packData.kData[v].flower[N-1]);
     				}
     			}
     			
     			// now the rest of the petals
     			else {
-    				rr=packData.rData[packData.kData[v].flower[j-1]].rad;
-    				rl=packData.rData[packData.kData[v].flower[j+1]].rad;
+    				rr=packData.getRadius(packData.kData[v].flower[j-1]);
+    				rl=packData.getRadius(packData.kData[v].flower[j+1]);
     			}
     			
     			// find the ghost radius that serves as radius for petal k
-    			rad[j]=ghostrad(packData.rData[v].rad,
+    			rad[j]=ghostrad(packData.getRadius(v),
     					rl, rr, spt.radius,spt.petalAng[packData.nghb(spt.vert,v)]);
     		}
     		// petal k not 'CranePoint'? just store usual radius. 
     		else { 
-    			rad[j]=packData.rData[k].rad;
+    			rad[j]=packData.getRadius(k);
     		}
     		
     	}
@@ -4344,21 +4354,21 @@ public class FracBranching extends PackExtender {
     	try {
         	for (int j=0; j< N; j++) {
         		int k = packData.kData[v].flower[j];
-        		oldrad[j]=packData.rData[k].rad;
-        		packData.rData[k].rad=rad[j];
+        		oldrad[j]=packData.getRadius(k);
+        		packData.setRadius(k,rad[j]);
     		}
         	//before changes
         	HES_RadCalc(v,radius,aim,its,uP);//stores newrad in uP.value;
         	for (int j=0; j< N; j++) { 
         		int k = packData.kData[v].flower[j];
-        		packData.rData[k].rad=oldrad[j];
+        		packData.setRadius(k,oldrad[j]);
     		}
         	return true;
 
     	} catch (Exception ex) { 
         	for (int j=0; j< N; j++) { 
         		int k = packData.kData[v].flower[j];
-        		packData.rData[k].rad=oldrad[j];
+        		packData.setRadius(k,oldrad[j]);
     		}
         	return false;
     	}
@@ -4381,14 +4391,14 @@ public class FracBranching extends PackExtender {
 		double ang;
 		while(accum<Math.PI && j<=packData.kData[v0].num) {
 			if (!genCosOverlap(radius,
-					packData.rData[packData.kData[v0].flower[j]].rad,
-					packData.rData[packData.kData[v0].flower[j+1]].rad,
+					packData.getRadius(packData.kData[v0].flower[j]),
+					packData.getRadius(packData.kData[v0].flower[j+1]),
 					utpk))
 					return false;
 			//prev ang=Math.acos(utpk.value);
 			ang = genAngleRad(radius,
-					packData.rData[packData.kData[v0].flower[j]].rad,
-					packData.rData[packData.kData[v0].flower[j+1]].rad);
+					packData.getRadius(packData.kData[v0].flower[j]),
+					packData.getRadius(packData.kData[v0].flower[j+1]));
 			
 			if ((accum+ang)>Math.PI)
 				break;
@@ -4398,20 +4408,20 @@ public class FracBranching extends PackExtender {
 		
 		if (j!=packData.kData[v0].num) {
 		accum = Math.PI+jasheRoutine(radius,radius*sPt.shiftratio,accum,
-				packData.rData[packData.kData[v0].flower[j]].rad,
-				packData.rData[packData.kData[v0].flower[j+1]].rad);
+				packData.getRadius(packData.kData[v0].flower[j]),
+				packData.getRadius(packData.kData[v0].flower[j+1]));
 		j++;
 		
 		while((accum)<3.0*Math.PI && j<packData.kData[v0].num) {
 			if (!genCosOverlap(radius*sPt.shiftratio,
-					packData.rData[packData.kData[v0].flower[j]].rad,
-					packData.rData[packData.kData[v0].flower[j+1]].rad,
+					packData.getRadius(packData.kData[v0].flower[j]),
+					packData.getRadius(packData.kData[v0].flower[j+1]),
 					utpk))
 					return false;
 			//prev ang=Math.acos(utpk.value);
 			ang = genAngleRad(radius*sPt.shiftratio,
-					packData.rData[packData.kData[v0].flower[j]].rad,
-					packData.rData[packData.kData[v0].flower[j+1]].rad);
+					packData.getRadius(packData.kData[v0].flower[j]),
+					packData.getRadius(packData.kData[v0].flower[j+1]));
 			
 			if ((accum+ang)>3.0*Math.PI)
 				break;
@@ -4421,20 +4431,20 @@ public class FracBranching extends PackExtender {
 		
 		if (j!=packData.kData[v0].num) {
 			accum = 3.0*Math.PI+jasheRoutine(sPt.shiftratio*radius,radius,accum-2.0*Math.PI,
-					packData.rData[packData.kData[v0].flower[j]].rad,
-					packData.rData[packData.kData[v0].flower[j+1]].rad);
+					packData.getRadius(packData.kData[v0].flower[j]),
+					packData.getRadius(packData.kData[v0].flower[j+1]));
 			j++;
 
 			while (j<packData.kData[v0].num) {
 				if (!genCosOverlap(radius,
-						packData.rData[packData.kData[v0].flower[j]].rad,
-						packData.rData[packData.kData[v0].flower[j+1]].rad,
+						packData.getRadius(packData.kData[v0].flower[j]),
+						packData.getRadius(packData.kData[v0].flower[j+1]),
 						utpk))
 					return false;
 				//prev accum+=Math.acos(utpk.value);
 				accum+=genAngleRad(radius,
-						packData.rData[packData.kData[v0].flower[j]].rad,
-						packData.rData[packData.kData[v0].flower[j+1]].rad);
+						packData.getRadius(packData.kData[v0].flower[j]),
+						packData.getRadius(packData.kData[v0].flower[j+1]));
 				//
 				j++;
 			}
@@ -4559,7 +4569,9 @@ public class FracBranching extends PackExtender {
 		  CranePoint spt=cps.next();
 		  v=spt.vert;
 		  if (spt.shiftratio>1 && packData.hes==-1) {
-			  packData.rData[v].rad=packData.rData[v].rad=spt.radius=spt.radius/spt.shiftratio;
+			  spt.radius=spt.radius/spt.shiftratio;
+			  packData.setRadius(v,spt.radius);
+			  packData.setRadius(v,spt.radius);
 		  }
 		  UtilPacket upTemp=new UtilPacket();
 		  SPuF(spt,upTemp,1);
@@ -4579,8 +4591,9 @@ public class FracBranching extends PackExtender {
 			  CranePoint spt=cps.next();
 			  v=spt.vert;
 			  int N = passes; //TODO adjust		  
-			  genRadCalc(v, packData.rData[v].rad, packData.rData[v].aim, N, uP);
-			  packData.rData[v].rad=spt.radius=uP.value;//prev null
+			  genRadCalc(v, packData.getRadius(v), packData.rData[v].aim, N, uP);
+			  spt.radius=uP.value;
+			  packData.setRadius(v,spt.radius);//prev null
 
 			  SPuF(spt,uP,1);
 		  } 
@@ -4588,7 +4601,7 @@ public class FracBranching extends PackExtender {
 		  //loop for vertices
     	  for (int j=0;j<aimNum;j++) {
     		  v=inDex[j];
-    		  r=packData.rData[v].rad;    		  
+    		  r=packData.getRadius(v);
     		  uP=new UtilPacket();
     		  
     		  if (!genAngleSum(v,r,uP)) 
@@ -4597,8 +4610,8 @@ public class FracBranching extends PackExtender {
     		  verr=packData.rData[v].curv-packData.rData[v].aim;
     		  
     		  if (Math.abs(verr)>cut && vertStatus[v]!=2) {
-    			  if (genRadCalc(v,packData.rData[v].rad,packData.rData[v].aim,passes,uP)) //TODO adjust N {
-    				  packData.rData[v].rad=uP.value;	//records new radius
+    			  if (genRadCalc(v,packData.getRadius(v),packData.rData[v].aim,passes,uP)) //TODO adjust N {
+    				  packData.setRadius(v,uP.value);	//records new radius
     			  if (!genAngleSum(v,uP.value,uP)) 
     					  return -1.0;
     			  packData.rData[v].curv=uP.value;
@@ -4646,12 +4659,12 @@ public class FracBranching extends PackExtender {
         	  v=inDex[j];
       	  CranePoint spt=null;
       	  if (vertStatus[v]==2 && (spt=isSP(v))!=null) { 
-      		  if (!genAngleSum(v,packData.rData[v].rad,uP)) 
+      		  if (!genAngleSum(v,packData.getRadius(v),uP)) 
       			  return -1.0;
       		  packData.rData[v].curv=uP.value;
       		  err=packData.rData[v].curv-packData.rData[v].aim;
       		  // store angs for use by neighbors
-      		  spt.radius=packData.rData[v].rad;
+      		  spt.radius=packData.getRadius(v);
       		  SPuF(spt,uP,1);
 //    		  storeSPangles(spt,spt.pd.rData[v].rad,uP);
       		  accum += (err<0) ? (-err) : err;
@@ -4662,7 +4675,7 @@ public class FracBranching extends PackExtender {
         for (int j=0;j<aimNum;j++) {
         	  v=inDex[j];
         	  if (vertStatus[v]!=2) {
-        		  if (!genAngleSum(v,packData.rData[v].rad,uP)) 
+        		  if (!genAngleSum(v,packData.getRadius(v),uP)) 
           			  return -1.0;
           		  packData.rData[v].curv=uP.value;
           		  err=packData.rData[v].curv-packData.rData[v].aim;
@@ -4976,14 +4989,14 @@ public class FracBranching extends PackExtender {
 
 		Complex littleCent = HES_Norm(xRadToH(r) - xRadToH(R),Rotate);
 		spt.petalZ[P] = cents[P] = HES_Norm(xRadToH(R)
-				+ xRadToH(packData.rData[packData.kData[v].flower[P]].rad),spt.theta);
+				+ xRadToH(packData.getRadius(packData.kData[v].flower[P])),spt.theta);
 		spt.petalI[P] =findInv(littleCent,spt.petalZ[P],r
-				,packData.rData[packData.kData[v].flower[0]].rad); 
+				,packData.getRadius(packData.kData[v].flower[0])); 
 		// F=0: measure shiftangle
 		while (accum < jumpAng && j < num) {
 			if (!genCosOverlap(R,
-					packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad,
-					packData.rData[packData.kData[v].flower[mod(j+1+P,num)]].rad, inUp))
+					packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
+					packData.getRadius(packData.kData[v].flower[mod(j+1+P,num)]), inUp))
 				return false;
 			ang = Math.acos(inUp.value);
 			if ((accum + ang) > jumpAng)
@@ -4992,16 +5005,16 @@ public class FracBranching extends PackExtender {
 			j++;
 			// F=1
 			spt.petalZ[mod(j+P,num)] = cents[mod(j+P,num)] = HES_Norm(xRadToH(R)
-					+ xRadToH(packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad),
+					+ xRadToH(packData.getRadius(packData.kData[v].flower[mod(j+P,num)])),
 					accum);
 			spt.petalI[mod(j+P,num)] =findInv(littleCent,spt.petalZ[mod(j+P,num)],r
-					,packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad); //TODO Inv
+					,packData.getRadius(packData.kData[v].flower[mod(j+P,num)])); //TODO Inv
 		} // end of Pi while
 
 		if (j != num) {
 			accum = jumpAng + jumpAngle(R, r, accum-jumpAng, 
-							packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad,
-							packData.rData[packData.kData[v].flower[mod(j+1+P,num)]].rad);//TODO just add accum to itself
+							packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
+							packData.getRadius(packData.kData[v].flower[mod(j+1+P,num)]));//TODO just add accum to itself
 			//NOTE: jumpangle expects x-radii, and expects jump-point to be at (R,0).
 			// Hence 'accum+Math.PI'. Jump-angle calcs are in normalized positions.
 			j++;
@@ -5012,22 +5025,22 @@ public class FracBranching extends PackExtender {
 						littleCent, HES_Norm(xRadToH(R),jumpAng)); 
 				//mob taking normalized littlecent back to standard
 				spt.petalZ[mod(j+P,num)] = cents[mod(j+P,num)] = mob_Lc.apply(HES_Norm(xRadToH(r)
-								+ xRadToH(packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad),
+								+ xRadToH(packData.getRadius(packData.kData[v].flower[mod(j+P,num)])),
 								accum));//to set angles in H at origin.
 				spt.petalI[mod(j+P,num)] =findInv(littleCent,spt.petalZ[mod(j+P,num)],r
-						,packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad); //TODO Inv
+						,packData.getRadius(packData.kData[v].flower[mod(j+P,num)])); //TODO Inv
 
 			} else
 				spt.petalZ[mod(j+P,num)] = cents[mod(j+P,num)] = (new Complex(r
-						+ packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad, 0))
+						+ packData.getRadius(packData.kData[v].flower[mod(j+P,num)]), 0))
 						.times((new Complex(0, accum)).exp()).add(littleCent);
 				spt.petalI[mod(j+P,num)] =findInv(littleCent,spt.petalZ[mod(j+P,num)],r
-						,packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad); //TODO remove this repeats spt.petalI above
+						,packData.getRadius(packData.kData[v].flower[mod(j+P,num)])); //TODO remove this repeats spt.petalI above
 			// F=0
 			while ((accum) < 2.0*Math.PI+jumpAng && j < num) {
 				if (!genCosOverlap(r,
-						packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad,
-						packData.rData[packData.kData[v].flower[mod(j+P+1,num)]].rad,
+						packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
+						packData.getRadius(packData.kData[v].flower[mod(j+P+1,num)]),
 						inUp))
 					return false;
 				ang = Math.acos(inUp.value);
@@ -5043,37 +5056,37 @@ public class FracBranching extends PackExtender {
 							littleCent, HES_Norm(xRadToH(R), jumpAng)); 
 					// mob taking normalized littlecent back to standard
 					spt.petalZ[mod(j+P,num)] = cents[mod(j+P,num)] = mob_Lc.apply(HES_Norm(xRadToH(r)
-									+ xRadToH(packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad),
+									+ xRadToH(packData.getRadius(packData.kData[v].flower[mod(j+P,num)])),
 									accum));
 					spt.petalI[mod(j+P,num)] =findInv(littleCent,spt.petalZ[mod(j+P,num)],r
-							,packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad); //TODO Inv
+							,packData.getRadius(packData.kData[v].flower[mod(j+P,num)])); //TODO Inv
 				} else
 					spt.petalZ[mod(j+P,num)] = cents[mod(j+P,num)] = (new Complex(r
-							+ packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad,
+							+ packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
 							0)).times((new Complex(0, accum)).exp()).add(
 							littleCent);
 					spt.petalI[mod(j+P,num)] =findInv(littleCent,spt.petalZ[mod(j+P,num)],r
-							,packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad); //TODO Inv
+							,packData.getRadius(packData.kData[v].flower[mod(j+P,num)])); //TODO Inv
 			} // end of 3pi while
 			// F=0
 			if (j != packData.kData[v].num) {
 				accum = 2.0*Math.PI+jumpAng
 						+ jumpAngle(r,R, accum-jumpAng,
-								packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad,
-								packData.rData[packData.kData[v].flower[mod(j+P+1,num)]].rad);
+								packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
+								packData.getRadius(packData.kData[v].flower[mod(j+P+1,num)]));
 				j++;
 				// F=1
 				spt.petalZ[mod(j+P,num)] = cents[mod(j+P,num)] = HES_Norm(xRadToH(R)
-						+ xRadToH(packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad),
+						+ xRadToH(packData.getRadius(packData.kData[v].flower[mod(j+P,num)])),
 						accum);
 				spt.petalI[mod(j+P,num)] =findInv(littleCent,spt.petalZ[mod(j+P,num)],r
-						,packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad); //TODO Inv
+						,packData.getRadius(packData.kData[v].flower[mod(j+P,num)])); //TODO Inv
 				// F=0
 				while (j < packData.kData[v].num) {
 					if (!genCosOverlap(
 							R,
-							packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad,
-							packData.rData[packData.kData[v].flower[mod(j+P+1,num)]].rad,
+							packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
+							packData.getRadius(packData.kData[v].flower[mod(j+P+1,num)]),
 							inUp))
 						return false;
 					ang = Math.acos(inUp.value);
@@ -5082,17 +5095,17 @@ public class FracBranching extends PackExtender {
 					// F=1
 					if (j == num) {
 						spt.petalZ[mod(j+P,num)] = cents[mod(j+P,num)] = HES_Norm(xRadToH(R)
-								+ xRadToH(packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad),
+								+ xRadToH(packData.getRadius(packData.kData[v].flower[mod(j+P,num)])),
 								accum);
 						spt.petalI[mod(j+P,num)] =findInv(littleCent,spt.petalZ[mod(j+P,num)],r
-								,packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad); //TODO Inv
+								,packData.getRadius(packData.kData[v].flower[mod(j+P,num)])); //TODO Inv
 						break;
 					}
 					spt.petalZ[mod(j+P,num)] = cents[mod(j+P,num)] = HES_Norm(xRadToH(R)
-							+ xRadToH(packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad),
+							+ xRadToH(packData.getRadius(packData.kData[v].flower[mod(j+P,num)])),
 							accum);
 					spt.petalI[mod(j+P,num)] =findInv(littleCent,spt.petalZ[mod(j+P,num)],r
-							,packData.rData[packData.kData[v].flower[mod(j+P,num)]].rad); //TODO Inv
+							,packData.getRadius(packData.kData[v].flower[mod(j+P,num)])); //TODO Inv
 				} // end of while
 			}
 		}
@@ -5167,17 +5180,17 @@ public class FracBranching extends PackExtender {
 		while (err>LOC_TOLER && count<n) {
 			//branchVert[1] and [3]
 			for (int j=1;j<4;j=j+2) {
-				genCosOverlap(packData.rData[branchVert[0][j]].rad,
-						packData.rData[branchVert[0][(j-1)%4]].rad,//TODO inv rotates!!
-						packData.rData[branchVert[0][(j+1)%4]].rad,1.0,1.0,inv,uP);
+				genCosOverlap(packData.getRadius(branchVert[0][j]),
+						packData.getRadius(branchVert[0][(j-1)%4]),//TODO inv rotates!!
+						packData.getRadius(branchVert[0][(j+1)%4]),1.0,1.0,inv,uP);
 				ang =Math.acos(uP.value);
 				packData.rData[branchVert[0][j]].aim=pi2+2.0*ang;
 			}
 			//branchVert[0] and [2]
 			for (int j=0;j<4;j=j+2) {
-				genCosOverlap(packData.rData[branchVert[0][j]].rad,
-						packData.rData[branchVert[0][(j+2)%4]].rad,
-						packData.rData[branchVert[0][(j*2+3)%4]].rad,inv,1.0,1.0,uP);
+				genCosOverlap(packData.getRadius(branchVert[0][j]),
+						packData.getRadius(branchVert[0][(j+2)%4]),
+						packData.getRadius(branchVert[0][(j*2+3)%4]),inv,1.0,1.0,uP);
 				ang =Math.acos(uP.value);
 				packData.rData[branchVert[0][j]].aim=pi2+2.0*ang;
 			}
@@ -5224,8 +5237,8 @@ public class FracBranching extends PackExtender {
 		UtilPacket uP =new UtilPacket();
 		int R=branchVert[i][j];int r=branchVert[i][(j+1)%3];int l=branchVert[i][(j+2)%3];
 		if (!packData.overlapStatus) {
-			genCosOverlap(packData.rData[R].rad, packData.rData[l].rad,packData.rData[r].rad
-					,1,1,1, uP);
+			genCosOverlap(packData.getRadius(R), packData.getRadius(1),packData.getRadius(r),
+					1,1,1, uP);
 			return Math.acos(uP.value);
 		} 
 		else return genAngleSides(genDistInv(R,r),genDistInv(R,l),genDistInv(r,l));
@@ -5244,7 +5257,8 @@ public class FracBranching extends PackExtender {
 			inv =packData.kData[v1].overlaps[packData.nghb(v1, v2)];
 		}
 		int G = packData.hes; //geometry, 0=Euc -1=Hyp 1=Sphr
-		double r1 =packData.rData[v1].rad,r2 =packData.rData[v2].rad;
+		double r1 =packData.getRadius(v1);
+		double r2 =packData.getRadius(v2);
 		switch (G) {
 			case -1: { //Hyperbolic case 
 				double x =Math.cosh(r1)*Math.cosh(r2)+inv*Math.sinh(r1)*Math.sinh(r2);

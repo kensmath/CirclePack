@@ -67,8 +67,8 @@ public class CircleSimple{
   public int save(PackData p,int v) {
 	  if (p==null || v<=0 || v>p.nodeCount) return -1;
 	  if (flag>=0) { // seems to be good data
-		  p.rData[v].center=new Complex(center);
-		  p.rData[v].rad=rad;
+		  p.setCenter(v,new Complex(center));
+		  p.setRadius(v,rad);
 		  p.kData[v].plotFlag=flag;
 	  }
 	  return flag; 

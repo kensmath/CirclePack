@@ -54,7 +54,7 @@ public class HilbertTransform extends PackExtender
 			if (packData.kData[k].bdryFlag >= 1)
 			{
 				temp_bndry[sz_bndry] = k; 
-				temp_cz[sz_bndry] = packData.rData[k].center;
+				temp_cz[sz_bndry] = packData.getCenter(k);
 				sz_bndry++;
 			}
 		}
@@ -157,7 +157,8 @@ public class HilbertTransform extends PackExtender
 			for(int k = 0; k < sz_bndry; k++)
 			{
 				val = PackControl.functionPanel.getFtnValue(cz_hyper[k]);
-				newPack.rData[bndry[k]].rad *= Math.exp(lambda * val.real());
+				double krad=newPack.getRadius(k);
+				newPack.setRadius(bndry[k],krad* Math.exp(lambda * val.real()));
 				values_fct[k] = val.real();
 			}
 			
@@ -178,11 +179,11 @@ public class HilbertTransform extends PackExtender
 			for(int k = 0; k < sz_bndry; k++)
 			{
 				if (k <= 0)
-					z1 = packData.rData[bndry[sz_bndry - 1]].center;
+					z1 = packData.getCenter(bndry[sz_bndry - 1]);
 				else
-					z1 = packData.rData[bndry[k - 1]].center;
-				z2 = packData.rData[bndry[k]].center;
-				z3 = packData.rData[bndry[(k + 1) % sz_bndry]].center;
+					z1 = packData.getCenter(bndry[k - 1]);
+				z2 = packData.getCenter(bndry[k]);
+				z3 = packData.getCenter(bndry[(k + 1) % sz_bndry]);
 				
 				z = z1.minus(z2);
 				w = z3.minus(z2);
@@ -194,11 +195,11 @@ public class HilbertTransform extends PackExtender
 				arg1 = Math.atan2(Math.sin(arg1), Math.cos(arg1)); // normalize to [-pi, pi]
 				
 				if (k <= 0)
-					w1 = newPack.rData[bndry[sz_bndry - 1]].center;
+					w1 = newPack.getCenter(bndry[sz_bndry - 1]);
 				else
-					w1 = newPack.rData[bndry[k - 1]].center;
-				w2 = newPack.rData[bndry[k]].center;
-				w3 = newPack.rData[bndry[(k + 1) % sz_bndry]].center;
+					w1 = newPack.getCenter(bndry[k - 1]);
+				w2 = newPack.getCenter(bndry[k]);
+				w3 = newPack.getCenter(bndry[(k + 1) % sz_bndry]);
 				
 				z = w1.minus(w2);
 				w = w3.minus(w2);

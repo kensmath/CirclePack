@@ -232,25 +232,25 @@ public class ShiftBranchPt extends GenBranchPt {
 		
 		// initial location of F
 		Complex []firstF=new Complex[3];
-		firstF[0]=new Complex(myPackData.rData[myPackData.faces[F].vert[0]].center);
-		firstF[1]=new Complex(myPackData.rData[myPackData.faces[F].vert[1]].center);
-		firstF[2]=new Complex(myPackData.rData[myPackData.faces[F].vert[2]].center);
+		firstF[0]=myPackData.getCenter(myPackData.faces[F].vert[0]);
+		firstF[1]=myPackData.getCenter(myPackData.faces[F].vert[1]);
+		firstF[2]=myPackData.getCenter(myPackData.faces[F].vert[2]);
 		
 		// layout in order
 		myPackData.layout_report(0,false,false);
 		
 		// final location of F (only different if 'bdryLink' is closed)
 		Complex []lastF=new Complex[3];
-		lastF[0]=new Complex(myPackData.rData[myPackData.faces[F].vert[0]].center);
-		lastF[1]=new Complex(myPackData.rData[myPackData.faces[F].vert[1]].center);
-		lastF[2]=new Complex(myPackData.rData[myPackData.faces[F].vert[2]].center);
+		lastF[0]=myPackData.getCenter(myPackData.faces[F].vert[0]);
+		lastF[1]=myPackData.getCenter(myPackData.faces[F].vert[1]);
+		lastF[2]=myPackData.getCenter(myPackData.faces[F].vert[2]);
 
 		// update myHolonomy
 		myHolonomy=Mobius.mob_xyzXYZ(firstF[0],firstF[1],firstF[2],lastF[0],lastF[1],lastF[2],0,0);
 		
 		// rotate to get 2 on positive y-axis
 		if (norm) {
-			double theta=(-1.0)*myPackData.rData[2].center.arg();
+			double theta=(-1.0)*myPackData.getCenter(2).arg();
 			myPackData.rotate(theta+Math.PI/2.0);
 		}
 		
@@ -302,7 +302,7 @@ public class ShiftBranchPt extends GenBranchPt {
 				sisterRatio=Double.parseDouble(items.get(1));
 				if (sisterRatio<=0)
 					throw new ParserException("sister ratio must be > 0");
-				myPackData.rData[0].rad=sisterRatio*myPackData.rData[1].rad;
+				myPackData.setRadius(0,sisterRatio*myPackData.getRadius(1));
 				
 				count += 2;
 			} catch(Exception ex) {
@@ -638,12 +638,12 @@ public class ShiftBranchPt extends GenBranchPt {
 	 * Vert 0 is sister2, so we have to adjust this center.
 	 */
 	public void applyMob(Mobius mob) {
-		myPackData.rData[0].center=mob.apply(myPackData.rData[0].center);
+		myPackData.setCenter(0,mob.apply(myPackData.getCenter(0)));
 	}
 
 	/**
 	 * No additional parent circles need to be placed
-	 * @return 1
+	 * @return 
 	 */
 	public int placeMyCircles() {
 		return 1;

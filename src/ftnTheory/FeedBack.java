@@ -121,7 +121,7 @@ public class FeedBack extends PackExtender {
 			for (int i=0;i<min;i++) {
 				int v=sourceVerts.get(i);
 				int w=targetVerts.get(i);
-				packData.rData[w].rad=x*packData.rData[v].rad;
+				packData.setRadius(w,x*packData.getRadius(v));
 				count++;
 			}
 			return count;
@@ -151,16 +151,16 @@ public class FeedBack extends PackExtender {
 				w=packet.fromVert;
 				x=packet.coeff;
 				if (useRatio)  
-					newRad[v] +=x*packData.rData[w].rad/maxEucl.rData[w].rad;
+					newRad[v] +=x*packData.getRadius(w)/maxEucl.getRadius(w);
 				else 
-					newRad[v] +=x*packData.rData[w].rad;
+					newRad[v] +=x*packData.getRadius(w);
 			}
 			
 			// apply feedback
 			int icount=0;
 			for (int i=1;i<=packData.nodeCount;i++) {
 				if (newRad[i]>0) {
-					packData.rData[i].rad=newRad[i];
+					packData.setRadius(i,newRad[i]);
 					icount++;
 				}
 			}

@@ -180,24 +180,25 @@ public class BeurlingFlow extends PackExtender {
 		// cycle through bdry pr 
 		for (int v=1;v<=packData.nodeCount;v++) {
 			if (packData.kData[v].bdryFlag!=0) {
-				z=packData.rData[v].center;
-				e_rad=domainData.rData[v].rad;
+				z=packData.getCenter(v);
+				e_rad=domainData.getRadius(v);
 				CPhz=evaluate_h(z);
 	  
 				// Set the new radius 
 				if (xpnt!=1.0) CPhz=Math.exp(xpnt*Math.log(CPhz));
-				cur=packData.rData[v].rad/e_rad;
+				cur=packData.getRadius(v)/e_rad;
 				factor=Math.exp(t*Math.log(CPhz/cur));
+				double vrad=packData.getRadius(v);
 				if (option==1) {
-					if (factor>1.0) // increases only 
-						packData.rData[v].rad *= factor;
+					if (factor>1.0) // increases only
+						packData.setRadius(v,factor*vrad);
 				}
 				else if (option==2) {
 					if (factor<1.0) // decreases only 
-						packData.rData[v].rad *= factor;
+						packData.setRadius(v,factor*vrad);
 				}
 				else
-					packData.rData[v].rad *= factor;
+					packData.setRadius(v,factor*vrad);
 				count++;
 			}
 		} // end of for loop

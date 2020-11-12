@@ -122,10 +122,10 @@ public class Triangulation {
 			for (int i=1;i<=p.nodeCount;i++) {
 				int j=p.kData[i].mark;
 				if (hes<=0) {
-					p.rData[i].center=new Complex(Tri.nodes[j].x,Tri.nodes[j].y);
+					p.setCenter(i,new Complex(Tri.nodes[j].x,Tri.nodes[j].y));
 				}
 				else 
-					p.rData[i].center=new Complex(Tri.nodes[p.kData[i].mark]); // (theta,phi) form
+					p.setCenter(i,new Complex(Tri.nodes[p.kData[i].mark])); // (theta,phi) form
 			}
 		}
 		if (Tri.vertColors!=null) {

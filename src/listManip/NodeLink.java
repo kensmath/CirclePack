@@ -450,8 +450,8 @@ public class NodeLink extends LinkedList<Integer> {
 							"hex_walk completed, edgelength "+n+", first vert "+v+
 							", last "+(Integer)this.getLast()+"."); 
 					if (packData.hes<=0) {
-						Complex vec=packData.rData[(Integer)this.getLast()].center.
-							minus(packData.rData[(Integer)this.getFirst()].center);
+						Complex vec=packData.getCenter((Integer)this.getLast()).
+							minus(packData.getCenter((Integer)this.getFirst()));
 						// print the "Berger's vector: displacement from first
 						//    center to last center
 						CirclePack.cpb.msg("Berger's vector is "+
@@ -537,9 +537,9 @@ public class NodeLink extends LinkedList<Integer> {
 			case 'g': // same side of global 'ClosedPath' as 'alpha'?
 			{
 				if (CPBase.ClosedPath==null) break;
-				boolean alpha_side=PathManager.path_wrap(packData.rData[packData.alpha].center);
+				boolean alpha_side=PathManager.path_wrap(packData.getCenter(packData.alpha));
 				for (int v=1;v<=nodecount;v++) {
-					if (PathManager.path_wrap(packData.rData[v].center)==alpha_side) {
+					if (PathManager.path_wrap(packData.getCenter(v))==alpha_side) {
 						add(v);
 						count++;
 					}
@@ -672,7 +672,7 @@ public class NodeLink extends LinkedList<Integer> {
 					Iterator<Integer> vlst=vertlist.iterator();
 					while (vlst.hasNext()) {
 						int v=vlst.next();
-						if (pathdist.distance(packData.rData[v].center)) {
+						if (pathdist.distance(packData.getCenter(v))) {
 							add(v);
 							count++;
 						}
@@ -773,10 +773,10 @@ public class NodeLink extends LinkedList<Integer> {
 			{
 				if (str.startsWith("nan")) {
 					for (int v=1;v<=nodecount;v++) {
-						if (Double.isNaN(packData.rData[v].rad)
-								|| Double.isNaN(packData.rData[v].center.x)
-								|| Double.isNaN(packData.rData[v].center.y)
-								|| (packData.hes>0 && packData.rData[v].rad-Math.PI<PackData.TOLER)) {
+						if (Double.isNaN(packData.getRadius(v))
+								|| Double.isNaN(packData.getCenter(v).x)
+								|| Double.isNaN(packData.getCenter(v).y)
+								|| (packData.hes>0 && packData.getRadius(v)-Math.PI<PackData.TOLER)) {
 							add(v);
 							count++;
 						}
@@ -970,7 +970,7 @@ public class NodeLink extends LinkedList<Integer> {
 				double dist=1.0;
 				while (nits.hasNext()) {
 					v=(Integer)nits.next();
-					z=packData.rData[v].center;
+					z=packData.getCenter(v);
 					if (packData.hes<0) {
 					    dist=HyperbolicMath.h_dist(xypt,z);
 					    if (dist<0) // improper or one/both on/near unit circle
@@ -1004,7 +1004,7 @@ public class NodeLink extends LinkedList<Integer> {
 							if (v<1 || v>packData.nodeCount) {
 								throw new ParserException();
 							}
-							ctr=new Complex(packData.rData[v].center);
+							ctr=packData.getCenter(v);
 						}
 						else if (locs.charAt(0)=='z') { // use x, y center
 							ctr=new Complex(Double.parseDouble((String)its.next()),Double.parseDouble((String)its.next()));
@@ -1031,7 +1031,7 @@ public class NodeLink extends LinkedList<Integer> {
 					else { // process next string for a single vertex
 						try {
 							NodeLink nodel=new NodeLink(packData,locs);
-							ctr=new Complex(packData.rData[nodel.get(0)].center);
+							ctr=packData.getCenter(nodel.get(0));
 						} catch (Exception ex) {
 							throw new ParserException("error getting vertex in new 'D' format: D {r} {v}");
 						}
@@ -1042,10 +1042,10 @@ public class NodeLink extends LinkedList<Integer> {
 				for (int v=1;v<=packData.nodeCount;v++) {
 					double dist;
 					if (packData.hes<0)
-						dist=HyperbolicMath.h_dist(packData.rData[v].center,ctr);
+						dist=HyperbolicMath.h_dist(packData.getCenter(v),ctr);
 					else if (packData.hes>0)
-						dist=SphericalMath.s_dist(packData.rData[v].center,ctr);
-					else dist=ctr.minus(packData.rData[v].center).abs();
+						dist=SphericalMath.s_dist(packData.getCenter(v),ctr);
+					else dist=ctr.minus(packData.getCenter(v)).abs();
 					if (dist<rad) {
 						add(v);
 					    count++;

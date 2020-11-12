@@ -26,8 +26,8 @@ public class ColorCoding {
 	    int mid=(int)(CPScreen.color_ramp_size/2);
 	    double t=0.0;
 	    // ??? I don't recall the reason for this call, p need not be hyperbolic
-	    double b=HyperbolicMath.h_area(p.rData[p.faces[1].vert[0]].rad,
-	    		p.rData[p.faces[1].vert[1]].rad,p.rData[p.faces[1].vert[2]].rad);
+	    double b=HyperbolicMath.h_area(p.getRadius(p.faces[1].vert[0]),
+	    		p.getRadius(p.faces[1].vert[1]),p.getRadius(p.faces[1].vert[2]));
 	    double []areas=new double[p.faceCount+1];
 	    for (int i=1;i<=p.faceCount;i++) {
 	  	  	areas[i]=p.faceArea(i);
@@ -99,12 +99,12 @@ public class ColorCoding {
 	    double []areas_p=new double[node+1];
 	    double []areas_q=new double[node+1];
 	    for (int v=1;v<=node;v++) {
-	        areas_p[v]=HyperbolicMath.h_area(p.rData[p.faces[v].vert[0]].rad,
-	  			p.rData[p.faces[v].vert[1]].rad,
-	  			p.rData[p.faces[v].vert[2]].rad);
-	        areas_q[v]=HyperbolicMath.h_area(q.rData[q.faces[v].vert[0]].rad,
-	  			q.rData[q.faces[v].vert[1]].rad,
-	  			q.rData[q.faces[v].vert[2]].rad);
+	        areas_p[v]=HyperbolicMath.h_area(p.getRadius(p.faces[v].vert[0]),
+	  			p.getRadius(p.faces[v].vert[1]),
+	  			p.getRadius(p.faces[v].vert[2]));
+	        areas_q[v]=HyperbolicMath.h_area(q.getRadius(q.faces[v].vert[0]),
+	  			q.getRadius(q.faces[v].vert[1]),
+	  			q.getRadius(q.faces[v].vert[2]));
 	        ratio=areas_q[v]/areas_p[v];
 	        if (ratio>b) b=ratio;
 	        if ((1.0/ratio)>b) b=1.0/ratio;

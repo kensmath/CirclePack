@@ -164,13 +164,13 @@ public class JammedPack extends PackExtender {
 					// find centroid of rim centers
 					Complex centd=new Complex(0.0);
 					for (int j=0;j<N;j++)
-						centd=centd.add(packData.rData[iFlowers[i][j]].center);
+						centd=centd.add(packData.getCenter(iFlowers[i][j]));
 					centd=centd.divide((double)N);
 					
 					// find max radius to encircle centers
 					double maxR=0.0;
 					for (int j=0;j<N;j++) {
-						double dist=centd.sub(packData.rData[iFlowers[i][j]].center).abs();
+						double dist=centd.sub(packData.getCenter(iFlowers[i][j])).abs();
 						maxR=(dist>maxR) ? dist:maxR;
 					}
 					maxR=maxR*2;
@@ -199,7 +199,7 @@ public class JammedPack extends PackExtender {
 						double sqrs=0.0;
 						int N=iflower.length;
 						for (int j=0;j<N;j++) {
-							double r=packData.rData[iflower[j]].rad;
+							double r=packData.getRadius(iflower[j]);
 							sqrs=sqrs+r*r;
 							mean=mean+r;
 						}

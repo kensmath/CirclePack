@@ -933,7 +933,7 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
 		// is a non-zero enough to bother to move?
 		if (a.abs()>OKERR) {
 			for (int i = 1; i <= p.nodeCount; i++)
-				p.rData[i].center = Mobius.mob_trans(p.rData[i].center,a).times(z);
+				p.setCenter(i,Mobius.mob_trans(p.getCenter(i),a).times(z));
 			if ((trace = p.redChain) != null) {
 				keepon = true;
 				while (trace != p.redChain || keepon) {
@@ -955,7 +955,7 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
 		
 		else if (retn==2) { // just do rotation
 			for (int i = 1; i <= p.nodeCount; i++)
-				p.rData[i].center = p.rData[i].center.times(z);
+				p.setCenter(i,p.getCenter(i).times(z));
 			if ((trace = p.redChain) != null) {
 				keepon = true;
 				while (trace != p.redChain || keepon) {

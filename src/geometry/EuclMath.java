@@ -1,5 +1,4 @@
 package geometry;
-import java.awt.geom.Point2D;
 import java.util.Iterator;
 import java.util.Vector;
 
@@ -616,15 +615,15 @@ public class EuclMath{
 		// treat w first
 		verts[0]=edge.w;
 		verts[4]=verts[0];
-		cents[0]=p.rData[verts[0]].center;
+		cents[0]=p.getCenter(verts[0]);
 		cents[4]=cents[0];
-		rads[0]=p.rData[verts[0]].rad;
+		rads[0]=p.getRadius(verts[0]);
 		rads[4]=rads[0];
 		
 		// then v 
 		verts[2]=edge.v;
-		cents[2]=p.rData[verts[2]].center;
-		rads[2]=p.rData[verts[2]].rad;
+		cents[2]=p.getCenter(verts[2]);
+		rads[2]=p.getRadius(verts[2]);
 		
 		// if bdry edge return null
 		int indxvw=p.nghb(verts[0],verts[2]);
@@ -634,13 +633,13 @@ public class EuclMath{
 		
 		// next is v
 		verts[1]=p.kData[verts[2]].flower[indxvw+1];
-		cents[1]=p.rData[verts[1]].center;
-		rads[1]=p.rData[verts[1]].rad;
+		cents[1]=p.getCenter(verts[1]);
+		rads[1]=p.getRadius(verts[1]);
 
 		// finally, vr
 		verts[3]=p.kData[verts[2]].flower[(indxvw-1+num)%num];
-		cents[3]=p.rData[verts[3]].center;
-		rads[3]=p.rData[verts[3]].rad;
+		cents[3]=p.getCenter(verts[3]);
+		rads[3]=p.getRadius(verts[3]);
 		
 		// find intersection points cclw: <w,vl>,<vl,v>,<v,vr>,<vr,w> 
 		Complex []pts=new Complex[5];
@@ -832,15 +831,15 @@ public class EuclMath{
 	public static int effectiveRad(PackData p,double []radii) {
 		for (int v=1;v<=p.nodeCount;v++) {
 			// for each node find the area sum and angle sum
-			Complex z=p.rData[v].center;
+			Complex z=p.getCenter(v);
 
 			double thsum = 0.0;
 			double asum = 0.0;
 			for (int j=0;j<p.kData[v].num;j++) {
-				Complex spoke0 = z.minus(p.rData[p.kData[v].flower[j]].center);
-				Complex spoke1 = z.minus(p.rData[p.kData[v].flower[j+1]].center);
-				Complex farside = (p.rData[p.kData[v].flower[j]].center).
-					minus(p.rData[p.kData[v].flower[j+1]].center);
+				Complex spoke0 = z.minus(p.getCenter(p.kData[v].flower[j]));
+				Complex spoke1 = z.minus(p.getCenter(p.kData[v].flower[j+1]));
+				Complex farside = (p.getCenter(p.kData[v].flower[j])).
+					minus(p.getCenter(p.kData[v].flower[j+1]));
 				double a, b, c;
 				a = spoke0.abs(); b = farside.abs(); c = spoke1.abs();
 				double facerad = (a+c-b)/2.0;
@@ -849,7 +848,7 @@ public class EuclMath{
 				asum += facerad*facerad*th/2.0;
 			}
 			if (radii==null)
-				p.rData[v].rad = Math.sqrt(asum/(thsum/2.0));
+				p.setRadius(v,Math.sqrt(asum/(thsum/2.0)));
 			else radii[v]= Math.sqrt(asum/(thsum/2.0));
 		}
 		return 1;
@@ -895,7 +894,7 @@ public class EuclMath{
     	
 	    // translate and rotate
 	    for (i=1;i<=p.nodeCount;i++) 
-	    	p.rData[i].center=p.rData[i].center.sub(a).times(z);
+	    	p.setCenter(i,p.getCenter(i).sub(a).times(z));
 
 	    // normalize info in redchain as well
 	    RedList trace=p.redChain;

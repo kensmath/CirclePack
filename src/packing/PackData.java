@@ -24,6 +24,7 @@ import baryStuff.BaryPtData;
 import circlePack.PackControl;
 import complex.Complex;
 import complex.MathComplex;
+import dcel.CombDCEL;
 import dcel.PackDCEL;
 import deBugging.DebugHelp;
 import deBugging.LayoutBugs;
@@ -404,7 +405,7 @@ public class PackData{
                     else {
                     	
                     	try {
-                    		int nbr=Integer.parseInt(mainTok);
+                    		Integer.parseInt(mainTok);
                     	} catch (Exception ex) {
                     		break;
                     	}
@@ -858,11 +859,11 @@ public class PackData{
                     		while (vert<=nodeCount && (line=StringUtil.ourNextLine(fp))!=null) {
                     			StringTokenizer loctok = new StringTokenizer(line);
                     			f=Double.parseDouble(loctok.nextToken());
-                    			setRadius(vert,f);
+                    			setRadiusActual(vert,f);
                     			vert++;
                     			while (vert<=nodeCount && loctok.hasMoreElements()) {
                     				f=Double.parseDouble(loctok.nextToken());
-                    				setRadius(vert,f);
+                    				setRadiusActual(vert,f);
                     				vert++;
                     			}
                     		}
@@ -872,7 +873,7 @@ public class PackData{
                             	double rad=0.5;
                             	if (hes<0) rad=1.0-Math.exp(-1.0);
                         		for (int i=vert;i<=nodeCount;i++) 
-                            		rData[i].rad=rad;
+                            		setRadius(i,rad);
                         	}
                     		try {fp.reset();} catch(IOException ioe) {
                     			flashError("IOException: "+ioe.getMessage());
@@ -885,7 +886,7 @@ public class PackData{
                         	double rad=0.5;
                         	if (hes<0) rad=1.0-Math.exp(-1.0);
                     		for (int i=vert;i<=nodeCount;i++) 
-                        		rData[i].rad=rad;
+                        		setRadius(i,rad);
                     	}
                     	else flags |= 0010;
                     }
@@ -911,7 +912,7 @@ public class PackData{
                         		flashError("Shortage in number of centers; remainder set to zero");
                             	Complex z=new Complex(0.0,0.0);
                         		for (int i=vert;i<=nodeCount;i++) 
-                            		rData[i].center=z;
+                            		setCenter(i,z);
                         	}
                     		try {fp.reset();} catch(IOException ioe) {
                     			flashError("IOException: "+ioe.getMessage());
@@ -922,7 +923,7 @@ public class PackData{
                     		flashError("Shortage in number of centers; remainder set to zero");
                         	Complex z=new Complex(0.0,0.0);
                     		for (int i=vert;i<=nodeCount;i++) 
-                        		rData[i].center=z;
+                        		setCenter(i,z);
                     	}
                     	else flags |= 0020;
                     	state=PackState.INITIAL; 
@@ -1058,7 +1059,7 @@ public class PackData{
                 				String str=(String)loctok.nextToken();
                 				int v=Integer.parseInt(str);
                 				double rad=Double.parseDouble((String)loctok.nextToken());
-                				setRadius(v,rad);
+                				setRadiusActual(v,rad);
                 			} catch(Exception ex) {state=PackState.INITIAL;}
                 		}
 
@@ -1509,7 +1510,7 @@ public class PackData{
                          multiply rad(j) by (rad(i)/rad(j))^f. */
                         double []newrad=new double[nodeCount+1];
                         int count=0;
-                        for (int i=1;i<=nodeCount;i++) newrad[i]=rData[i].rad;
+                        for (int i=1;i<=nodeCount;i++) newrad[i]=getRadius(i);
                         while(state==PackState.RADII_INTERACTIONS 
                         		&& (line=StringUtil.ourNextLine(fp))!=null) {
                         	StringTokenizer loctok = new StringTokenizer(line);
@@ -1518,12 +1519,12 @@ public class PackData{
                         		int v=Integer.parseInt(str);
                         		int w=Integer.parseInt((String)loctok.nextToken());
                         		double fac=Double.parseDouble((String)loctok.nextToken());
-                        		newrad[v] *= Math.pow(rData[w].rad/rData[v].rad,fac);
+                        		newrad[v] *= Math.pow(getRadius(w)/getRadius(v),fac);
                         		count++;
                         	} catch(Exception ex) {state=PackState.INITIAL;}
                         }
                         if (count>0)
-                        	for (int i=1;i<=nodeCount;i++) rData[i].rad=newrad[i];
+                        	for (int i=1;i<=nodeCount;i++) setRadius(i,newrad[i]);
                         flags |= 0400000; // 040000;
                     }
                     
@@ -1722,12 +1723,12 @@ public class PackData{
         	double rad=0.025;
         	if (hes<0) rad=1.0-Math.exp(-1.0);
         	for (int i=1;i<=nodeCount;i++)
-        		rData[i].rad=rad;
+        		setRadius(i,rad);
         }
         
         if ((flags & 0020)!=0020) { // set centers
         	for (int i=1;i<=nodeCount;i++)
-        		rData[i].center=new Complex(0.0,0.0);
+        		setCenter(i,new Complex(0.0,0.0));
         }
         
         chooseAlpha();
@@ -2199,30 +2200,6 @@ public class PackData{
 			cpScreen.setGeometry(hes);
 	}
 	
-	/**
-	 * Enter radius in rData; in hyp case, convert hyperbolic radius 
-	 * to our special "x-radius". For numerical reasons, small hyp radii
-	 * r is converted to x=2*r*(2-r*(1-2*r/3)).
-	 * Recall x=1-exp(-2h)=1-s^2.
-	 * @param vert int
-	 * @param rad double
-	 */
-	public void setRadius(int vert,double rad) {
-		if (vert<1 || vert>nodeCount) return;
-		if(hes < 0) { // hyperbolic: store as x-radii
-			if(rad > 0.0) {
-				if(rad > 0.0001) rData[vert].rad = 1-Math.exp(-2.0*rad);
-				else rData[vert].rad = 2.0*rad*(1.0 - rad*(1.0-2.0*rad/3.0));
-			}
-			// can be negative (useful as storage of eucl radius for horocycles)
-			else if (rad<=0.0) rData[vert].rad = rad;
-			else rData[vert].rad=1-Math.exp(-1.0);// default
-			return;
-		}
-		else if (hes>0) if (rad>=Math.PI) rData[vert].rad=Math.PI-OKERR;
-		else if (rad<=0.0) rad=OKERR;
-		rData[vert].rad=rad;
-	}
 	
 	/**
 	 * Enter center (x,y) in rData
@@ -2254,9 +2231,86 @@ public class PackData{
 			while (z.y<0.0) z.y += Math.PI;
 			while (z.y>Math.PI) z.y = Math.PI; // truncate at Pi
 		}
-		rData[vert].center=z;
+		rData[vert].center=new Complex(z);
 	}
 	
+	/**
+	 * Return center as a new 'Complex'.
+	 * @param vert int
+	 * @return new Complex
+	 */
+	public Complex getCenter(int vert) {
+		return new Complex(rData[vert].center);
+	}
+	
+	/** 
+	 * Return actual radius of a vertex, meaning in the hyp case the
+	 * "x-radius" is converted to the actual hyperbolic radius, which 
+	 * is what outside world should see. In hyp case, when x-radius<0, 
+	 * it is -r for eucl radius r, so we just return -r.
+	 * @param v int
+	 * @return double
+	*/
+	public double getActualRadius(int v) {
+		double x=rData[v].rad;
+	    if (hes<0 && x> 0.0) {
+	    	if (x>.0001) return ((-0.5)*Math.log(1.0-x));
+	    	else return (x*(1.0+x*(0.5+x/3))/2);
+	    }
+	    return x;
+	}
+	
+	/**
+	 * Return the internal radius. This means in the hyp case,
+	 * return the x-radius. (See 'getActualRadius' to instead
+	 * convert x-radius to actual hyp radius.).
+	 * TODO: want to turn "rData[].rad" to private as part of DCEL
+	 * conversion, so I've set this up
+	 * @param v int
+	 * @return double
+	 */
+	public double getRadius(int v) {
+		return rData[v].rad;
+	}
+	  
+	/**
+	 * Store radius from actual radius 'rad'; only issue is hyp case,
+	 * when 'rad' is the actual hyperbolic radius, and is converted 
+	 * to x_radius for rData. 
+	 * For numerical reasons, small hyp radii 'rad' is converted 
+	 * to x=2*r*(2-r*(1-2*r/3)). (Recall x=1-exp(-2h)=1-s^2.)
+	 * @param vert int
+	 * @param rad double
+	 */
+	public void setRadiusActual(int vert,double rad) {
+		if (vert<1 || vert>nodeCount) return;
+		if(hes < 0) { // hyperbolic: store as x-radii
+			if(rad > 0.0) {
+				if(rad > 0.0001) setRadius(vert,1-Math.exp(-2.0*rad));
+				else setRadius(vert,2.0*rad*(1.0 - rad*(1.0-2.0*rad/3.0)));
+			}
+			// can be negative (useful as storage of eucl radius for horocycles)
+			else if (rad<=0.0) setRadius(vert,rad);
+			else setRadius(vert,1-Math.exp(-1.0));// default
+			return;
+		}
+		else if (hes>0) if (rad>=Math.PI) setRadius(vert,Math.PI-OKERR);
+		else if (rad<=0.0) rad=OKERR;
+		setRadius(vert,rad);
+	}
+	
+	/** 
+	 * Store radius with 'rad' in its internal form; the only
+	 * issue is hyp case, so then 'rad' should already be in
+	 * x_radius form. If it needs to be converted, call
+	 * 'setRadiusActual'. 
+	 * @param vert
+	 * @param rad
+	 */
+	public void setRadius(int vert,double rad) {
+		rData[vert].rad=rad;
+	}
+
 	/**
 	 * Currently, just send error to statusPanel.
 	 * TODO: would like to have 'beep' sound
@@ -2587,10 +2641,10 @@ public class PackData{
 			
 			// else is bdry case
 			pts=new Complex[num+2];
-			pts[0]=CommonMath.get_tang_pt(rData[v].center, rData[flower[0]].center,
-					rData[v].rad,rData[flower[0]].rad,hes);
-			pts[num+1]=CommonMath.get_tang_pt(rData[v].center, rData[flower[num]].center,
-					rData[v].rad,rData[flower[num]].rad,hes);
+			pts[0]=CommonMath.get_tang_pt(getCenter(v), getCenter(flower[0]),
+					getRadius(v),getRadius(flower[0]),hes);
+			pts[num+1]=CommonMath.get_tang_pt(getCenter(v), getCenter(flower[num]),
+					getRadius(v),getRadius(flower[num]),hes);
 			for (int j=0;j<num;j++) {
 				int f=faceflower[j];
 				sC=faceIncircle(f,ambigZs);
@@ -2602,8 +2656,8 @@ public class PackData{
 		// for non-easy cases, keep v in place, find solid petal,
 		//   then recompute the rest of the centers (though we don't
 		//   record these in rData).
-		Complex vcent=rData[v].center;
-		double rad = rData[v].rad;
+		Complex vcent=getCenter(v);
+		double rad = getRadius(v);
 		int v2 = -1;
 		int v1 = -1;
 		Complex pt1 = null;
@@ -2618,7 +2672,7 @@ public class PackData{
 		if (kData[v].bdryFlag == 1) {
 			offset=0;
 			v2 = flower[offset];
-			pt2 = new Complex(rData[v2].center);
+			pt2 = new Complex(getCenter(v2));
 			if (ambigZs[v2] != null) {
 				ovlp2=getInvDist(v,offset);
 				sC=ambigZs[v2].theOne(vcent, rad, ovlp2, hes);
@@ -2632,7 +2686,7 @@ public class PackData{
 				if (offset >= 0) { // use this first non-ambiguous nghb
 					v2 = flower[offset];
 					ovlp2=getInvDist(v,offset);
-					pt2 = new Complex(rData[v2].center);
+					pt2 = new Complex(getCenter(v2));
 				} 
 				else { // no non-ambiguous petal, so position first petal
 					offset = 0;
@@ -2647,15 +2701,15 @@ public class PackData{
 				for (int j = 0; j < num && offset < 0; j++) {
 					v2 = flower[j];
 					ovlp2=getInvDist(v,j);
-					pt2 = new Complex(rData[v2].center);
+					pt2 = getCenter(v2);
 					double thislength=-1.0;
 					double actuallength=-1.0;
 					if (hes<0) {
-						thislength=HyperbolicMath.h_invdist_length(rad, rData[v2].rad, ovlp2);
+						thislength=HyperbolicMath.h_invdist_length(rad, getRadius(v2), ovlp2);
 						actuallength=HyperbolicMath.h_dist(vcent,pt2);
 					}
 					else {
-						thislength= EuclMath.e_invdist_length(rad, rData[v2].rad,ovlp2);
+						thislength= EuclMath.e_invdist_length(rad,getRadius(v2),ovlp2);
 						actuallength=vcent.minus(pt2).abs();
 					}
 					if (Math.abs((thislength - actuallength) / rad) < .001)
@@ -2676,14 +2730,15 @@ public class PackData{
 			pt1 = pt2;
 			ovlp=getInvDist(v1,nghb(v1, v2));
 			if (hes<0) // hyp
-				sC = HyperbolicMath.h_compcenter(vcent, pt1, rad, rData[v1].rad,
-						rData[v2].rad, ovlp, ovlp2, ovlp1);
+				sC = HyperbolicMath.h_compcenter(vcent, pt1, rad, getRadius(v1),
+						getRadius(v2), ovlp, ovlp2, ovlp1);
 			else 
-				sC=EuclMath.e_compcenter(vcent, pt1, rad, rData[v1].rad,
-						rData[v2].rad, ovlp, ovlp2, ovlp1);
+				sC=EuclMath.e_compcenter(vcent, pt1, rad, getRadius(v1),
+						getRadius(v2), ovlp, ovlp2, ovlp1);
 			pt2=sC.center;
 			if (hes<0) 
-				sC=HyperbolicMath.hyp_tang_incircle(vcent,pt1,pt2,rad,rData[v1].rad,rData[v2].rad);
+				sC=HyperbolicMath.hyp_tang_incircle(vcent,pt1,pt2,rad,
+						getRadius(v1),getRadius(v2));
 			else
 				sC=EuclMath.eucl_tri_incircle(vcent,pt1,pt2);
 			pts[j-1]=sC.center;
@@ -2727,7 +2782,7 @@ public class PackData{
 		// in generic easy case, just list vert centers
 		if (easycase) {
 			for (int j=0;j<3;j++) {
-				pts[j]=new Complex(rData[vert[j]].center);
+				pts[j]=getCenter(vert[j]);
 			}
 			return pts;
 		}
@@ -2740,43 +2795,49 @@ public class PackData{
 		// Cases when two are non-ambiguous, can compute the third
 		// base 0 and next non-ambiguous
 		if (baseindx==0 && ambigZs[vert[1]]==null) {
-			pts[0]=new Complex(rData[vert[0]].center);
-			pts[1]=new Complex(rData[vert[1]].center);
+			pts[0]=getCenter(vert[0]);
+			pts[1]=getCenter(vert[1]);
 			CircleSimple sC=new CircleSimple();
 			if (hes<0) // hyp
-				sC = HyperbolicMath.h_compcenter(pts[0], pts[1],rData[vert[0]].rad,rData[vert[1]].rad,
-						rData[vert[2]].rad, ovlp12, ovlp20, ovlp01);
+				sC = HyperbolicMath.h_compcenter(pts[0], pts[1],
+						getRadius(vert[0]),getRadius(vert[1]),
+						getRadius(vert[2]), ovlp12, ovlp20, ovlp01);
 			else 
-				sC=EuclMath.e_compcenter(pts[0], pts[1],rData[vert[0]].rad,rData[vert[1]].rad,
-						rData[vert[2]].rad, ovlp12, ovlp20, ovlp01);
+				sC=EuclMath.e_compcenter(pts[0], pts[1],
+						getRadius(vert[0]),getRadius(vert[1]),
+						getRadius(vert[2]), ovlp12, ovlp20, ovlp01);
 			pts[2]=sC.center;
 			return pts;
 		}
 		// base 0 and previous non-ambiguous
 		if (baseindx==0 && ambigZs[vert[2]]==null) {
-			pts[0]=new Complex(rData[vert[0]].center);
-			pts[2]=new Complex(rData[vert[2]].center);
+			pts[0]=getCenter(vert[0]);
+			pts[2]=getCenter(vert[2]);
 			CircleSimple sC=new CircleSimple();
 			if (hes<0) // hyp
-				sC = HyperbolicMath.h_compcenter(pts[2], pts[0],rData[vert[2]].rad,rData[vert[0]].rad,
-						rData[vert[1]].rad, ovlp01, ovlp12, ovlp20);
+				sC = HyperbolicMath.h_compcenter(pts[2], pts[0],
+						getRadius(vert[2]),getRadius(vert[0]),
+						getRadius(vert[1]), ovlp01, ovlp12, ovlp20);
 			else 
-				sC=EuclMath.e_compcenter(pts[2], pts[0],rData[vert[2]].rad,rData[vert[0]].rad,
-						rData[vert[1]].rad, ovlp01, ovlp12, ovlp20);
+				sC=EuclMath.e_compcenter(pts[2], pts[0],
+						getRadius(vert[2]),getRadius(vert[0]),
+						getRadius(vert[1]), ovlp01, ovlp12, ovlp20);
 			pts[1]=sC.center;
 			return pts;
 		}
 		// base 1 and next non-ambiguous (base =1 ==> previous must be ambiguous)
 		if (baseindx==1 && ambigZs[vert[2]]==null) {
-			pts[1]=new Complex(rData[vert[1]].center);
-			pts[2]=new Complex(rData[vert[2]].center);
+			pts[1]=getCenter(vert[1]);
+			pts[2]=getCenter(vert[2]);
 			CircleSimple sC=new CircleSimple();
 			if (hes<0) // hyp
-				sC = HyperbolicMath.h_compcenter(pts[1], pts[2],rData[vert[1]].rad,rData[vert[2]].rad,
-					rData[vert[0]].rad, ovlp12, ovlp20, ovlp01);
+				sC = HyperbolicMath.h_compcenter(pts[1], pts[2],
+					getRadius(vert[1]),getRadius(vert[2]),
+					getRadius(vert[0]), ovlp12, ovlp20, ovlp01);
 			else 
-				sC=EuclMath.e_compcenter(pts[1], pts[2],rData[vert[1]].rad,rData[vert[2]].rad,
-						rData[vert[0]].rad,ovlp12, ovlp20, ovlp01);
+				sC=EuclMath.e_compcenter(pts[1], pts[2],
+						getRadius(vert[1]),getRadius(vert[2]),
+						getRadius(vert[0]),ovlp12, ovlp20, ovlp01);
 			pts[0]=sC.center;
 			return pts;
 		}
@@ -2793,8 +2854,8 @@ public class PackData{
 			int v=vert[baseindx];
 			int v1=vert[(baseindx+1)%3];
 			int v2=vert[(baseindx+2)%3];
-			z=rData[v].center;
-			double rad=rData[v].rad;
+			z=getCenter(v);
+			double rad=getRadius(v);
 			double ovlp=getInvDist(v,nghb(v,v1));
 			CircleSimple sC=ambigZs[v1].theOne(z,rad,ovlp,hes);
 			best1=sC.center;
@@ -2808,7 +2869,7 @@ public class PackData{
 				secondtest=true;
 			if (firsttest && secondtest) { // TODO: how is the last leg?
 				ovlp=getInvDist(v1,nghb(v1,v2));
-				sC=ambigZs[v2].theOne(best1,rData[v1].rad,ovlp,hes);
+				sC=ambigZs[v2].theOne(best1,getRadius(v1),ovlp,hes);
 				if (sC.rad<0.1*rad) {
 					pts[baseindx]=z;
 					pts[(baseindx+1)%3]=best1;
@@ -2824,7 +2885,7 @@ public class PackData{
 			int n=ambigZs[vert[0]].centers.size();
 			for (int j=0;j<n;j++) {
 				z=ambigZs[vert[0]].centers.get(j);
-				double rad=rData[vert[0]].rad;
+				double rad=getRadius(vert[0]);
 				CircleSimple sC=ambigZs[vert[1]].theOne(z,rad,ovlp01,hes);
 				best1=sC.center;
 				// recall that sC.rad contains rel error (mindist/truedist)
@@ -2835,7 +2896,7 @@ public class PackData{
 				if (sC.rad<0.1*rad) 
 					secondtest=true;
 				if (firsttest && secondtest) { // but what about the last leg?
-					sC=ambigZs[vert[2]].theOne(best1,rData[vert[1]].rad,ovlp12,hes);
+					sC=ambigZs[vert[2]].theOne(best1,getRadius(vert[1]),ovlp12,hes);
 					if (sC.rad<0.1*rad) {
 						pts[0]=z;
 						pts[1]=best1;
@@ -2886,18 +2947,18 @@ public class PackData{
 		//    center of v if v is bdry.
 		if (easycase) {
 			for (int j=0;j<(num+kData[v].bdryFlag);j++) {
-				pts[j]=new Complex(rData[flower[j]].center);
+				pts[j]=getCenter(flower[j]);
 			}
 			if (kData[v].bdryFlag==1) 
-				pts[num+1]=new Complex(rData[v].center);
+				pts[num+1]=getCenter(v);
 			return pts;
 		}
 		
 		// for non-easy cases, keep v in place, find solid petal,
 		//   then recompute the rest of the centers (though we don't
 		//   record these in rData).
-		Complex vcent=rData[v].center;
-		double rad = rData[v].rad;
+		Complex vcent=getCenter(v);
+		double rad = getRadius(v);
 		int v2 = -1;
 		int v1 = -1;
 		Complex pt1 = null;
@@ -2912,7 +2973,7 @@ public class PackData{
 		if (kData[v].bdryFlag == 1) {
 			offset=0;
 			v2 = flower[offset];
-			pt2 = new Complex(rData[v2].center);
+			pt2 = getCenter(v2);
 			if (ambigZs[v2] != null) {
 				ovlp2=getInvDist(v,offset);
 				CircleSimple sC=ambigZs[v2].theOne(vcent, rad, ovlp2, hes);
@@ -2926,7 +2987,7 @@ public class PackData{
 				if (offset >= 0) { // use this first non-ambiguous nghb
 					v2 = flower[offset];
 					ovlp2=getInvDist(v,offset);
-					pt2 = new Complex(rData[v2].center);
+					pt2 = getCenter(v2);
 				} 
 				else { // no non-ambiguous petal, so position first petal
 					offset = 0;
@@ -2941,15 +3002,15 @@ public class PackData{
 				for (int j = 0; j < num && offset < 0; j++) {
 					v2 = flower[j];
 					ovlp2=getInvDist(v,j);
-					pt2 = new Complex(rData[v2].center);
+					pt2 = getCenter(v2);
 					double thislength=-1.0;
 					double actuallength=-1.0;
 					if (hes<0) {
-						thislength=HyperbolicMath.h_invdist_length(rad, rData[v2].rad, ovlp2);
+						thislength=HyperbolicMath.h_invdist_length(rad, getRadius(v2), ovlp2);
 						actuallength=HyperbolicMath.h_dist(vcent,pt2);
 					}
 					else {
-						thislength= EuclMath.e_invdist_length(rad, rData[v2].rad,ovlp2);
+						thislength= EuclMath.e_invdist_length(rad,getRadius(v2),ovlp2);
 						actuallength=vcent.minus(pt2).abs();
 					}
 					if (Math.abs((thislength - actuallength) / rad) < .001)
@@ -2962,7 +3023,7 @@ public class PackData{
 		}
 		
 		// position the 'offset' center, then recompute the rest
-		pts[0]=new Complex(rData[v2].center);
+		pts[0]=getCenter(v2);
 		for (int j = 1; j < (num+kData[v].bdryFlag); j++) {
 			v1 = v2;
 			v2 = flower[(j + offset) % num];
@@ -2972,15 +3033,15 @@ public class PackData{
 			ovlp=getInvDist(v1,nghb(v1, v2));
 			CircleSimple sC=null;
 			if (hes<0) // hyp
-				sC = HyperbolicMath.h_compcenter(vcent, pt1, rad, rData[v1].rad,
-						rData[v2].rad, ovlp, ovlp2, ovlp1);
+				sC = HyperbolicMath.h_compcenter(vcent, pt1, rad,getRadius(v1),
+						getRadius(v2), ovlp, ovlp2, ovlp1);
 			else 
-				sC=EuclMath.e_compcenter(vcent, pt1, rad, rData[v1].rad,
-						rData[v2].rad,ovlp, ovlp2, ovlp1);
+				sC=EuclMath.e_compcenter(vcent, pt1, rad,getRadius(v1),
+						getRadius(v2),ovlp, ovlp2, ovlp1);
 			pts[j]=pt2=sC.center;
 		}
 		if (kData[v].bdryFlag==1) // for bdry, include center of v
-			pts[num+1]=new Complex(rData[v].center);
+			pts[num+1]=getCenter(v);
 		
 		return pts;
 	}
@@ -2999,8 +3060,8 @@ public class PackData{
 		
 		// generic case, use stored centers
 		if (easycase) {
-			pts[0]=rData[edge.v].center;
-			pts[1]=rData[edge.w].center;
+			pts[0]=getCenter(edge.v);
+			pts[1]=getCenter(edge.w);
 			return pts;
 		}
 
@@ -3013,8 +3074,8 @@ public class PackData{
 			if (ambigZs==null)
 				throw new CombException("problems creating 'ambigZs' in 'ends_edge' call");
 			if (ambigZs[edge.v]==null && ambigZs[edge.w]==null) {
-				pts[0]=rData[edge.v].center;
-				pts[1]=rData[edge.w].center;
+				pts[0]=getCenter(edge.v);
+				pts[1]=getCenter(edge.w);
 				return pts;
 			}
 			else if (ambigZs[edge.v]==null) {
@@ -3039,7 +3100,7 @@ public class PackData{
 			// note that the current location is first among ambiguous 'centers'
 			Iterator<Complex> vit=ambigZs[edge.v].centers.iterator();
 			while (vit.hasNext()) {
-				double rad=rData[edge.v].rad;
+				double rad=getRadius(edge.v);
 				Complex zv=vit.next();
 				// get the best fit 
 				CircleSimple sC=ambigZs[edge.w].theOne(zv,rad,ovlp,hes); 
@@ -3056,8 +3117,8 @@ public class PackData{
 				}
 			}
 			if (bestz0==null || bestz1==null) {
-				pts[0]=new Complex(rData[edge.v].center);
-				pts[1]=new Complex(rData[edge.w].center);
+				pts[0]=getCenter(edge.v);
+				pts[1]=getCenter(edge.w);
 			}
 			else {
 				pts[0]=bestz0;
@@ -3067,8 +3128,8 @@ public class PackData{
 		}
 		
 		// 'goodone' not ambiguous, so find best match 
-		pts[0]=new Complex(rData[goodone].center);
-		double rad=rData[goodone].rad;
+		pts[0]=getCenter(goodone);
+		double rad=getRadius(goodone);
 		CircleSimple sC=ambigZs[badone].theOne(pts[0],rad,ovlp,hes); // get the best fit
 		pts[1]=sC.center;
 
@@ -3115,7 +3176,8 @@ public class PackData{
 		double ovlp2=getInvDist(v,nghb(v,w));
 		double ovlp1=getInvDist(w,nghb(w,oddg));
 		double ovlp0=getInvDist(v,nghb(v,oddg));
-		zg[2]=CommonMath.comp_any_center(zg[0], zg[1],rData[w].rad,rData[v].rad,rData[oddg].rad,ovlp0,ovlp1,ovlp2,hes).center;
+		zg[2]=CommonMath.comp_any_center(zg[0], zg[1],
+				getRadius(2),getRadius(v),getRadius(oddg),ovlp0,ovlp1,ovlp2,hes).center;
 		pts[0]=CommonMath.tri_incircle(zf[0],zf[1],zf[2],hes).center;
 		pts[1]=CommonMath.tri_incircle(zg[0],zg[1],zg[2],hes).center;
 		return pts;
@@ -3395,10 +3457,10 @@ public class PackData{
 	public Complex tangencyPoint(EdgeSimple edge) {
 		if (nghb(edge.v,edge.w)<0)
 			return null;
-		Complex z1 = rData[edge.v].center;
-		double r1 = rData[edge.v].rad;
-		Complex z2 = rData[edge.w].center;
-		double r2 = rData[edge.w].rad;
+		Complex z1 = getCenter(edge.v);
+		double r1 = getRadius(edge.v);
+		Complex z2 = getCenter(edge.w);
+		double r2 = getRadius(edge.w);
 		Complex ctr = null;
 		if (hes < 0)
 			ctr = HyperbolicMath.hyp_tangency(z1,z2,r1,r2);
@@ -4078,7 +4140,7 @@ public class PackData{
 		  //    at v (which won't be blue)
 	      w=stop_vert=kData[v].flower[0];
 		  redChain=trace=new RedList(this,kData[w].faceFlower[kData[w].num-1]);
-		  trace.center=new Complex(rData[w].center);
+		  trace.center=getCenter(w);
 		  trace.vIndex=face_index(trace.face,w);
 		  
 		  // rwbFlag is reset later in 'build_redchain' and used to identify
@@ -4788,9 +4850,9 @@ public class PackData{
 		Complex []pts=corners_face(f,amb);
 		if (hes<0) { //
 			CircleSimple sc1=HyperbolicMath.hyp_tang_incircle(pts[0],pts[1],pts[2],
-					rData[faces[f].vert[0]].rad,
-					rData[faces[f].vert[1]].rad,
-					rData[faces[f].vert[2]].rad);
+					getRadius(faces[f].vert[0]),
+					getRadius(faces[f].vert[1]),
+					getRadius(faces[f].vert[2]));
 			
 			// TODO: the new method, hyp_tri_incircle is not working
 //			CircleSimple sc2=HyperbolicMath.hyp_tri_incircle(pts[0],pts[1],pts[2]);
@@ -4854,7 +4916,7 @@ public class PackData{
        	double rad=0.5;
     	if (hes<0) rad=1.0-Math.exp(-1.0);
 	    for (int i=1;i<=nodeCount;i++) 
-	    	rData[i].rad=rad;
+	    	setRadius(i,rad);
 	}
 
 	/**
@@ -4930,14 +4992,14 @@ public class PackData{
 	    ovlp=kData[a].overlaps[nghb(a,k)];
 	  else ovlp=1.0;
 	  if (hes<0) { // hyp case 
-	    double x1=rData[a].rad;
+	    double x1=getRadius(a);
 	    double s1=HyperbolicMath.x_to_s_rad(x1);
-	    double x2=rData[k].rad;
+	    double x2=getRadius(k);
 	    double s2=HyperbolicMath.x_to_s_rad(x2);
 	    if (s1<=0) {
 	      x1 = 0.99;
 	      s1=HyperbolicMath.x_to_s_rad(x1);
-	      rData[a].rad=x1;
+	      setRadius(a,x1);
 	      /* strcpy(msgbuf,"Circle at origin had "
 		     "infinite radius; radius reset.");*/
 	    }
@@ -4945,7 +5007,7 @@ public class PackData{
 	    if (s2<=0) { /* if next one is infinite radius */
 	      setCenter(k,1.0,0.0);
 	      double erad=x1/((1+s1)*(1+s1));
-	      setRadius(k,(-1)*(1-erad*erad)/(2.0+2.0*erad*ovlp));
+	      setRadiusActual(k,(-1)*(1-erad*erad)/(2.0+2.0*erad*ovlp));
 	    }
 	    else { 
 	      double x12 = x1*x2;
@@ -4961,14 +5023,14 @@ public class PackData{
 	    setCenter(a,0.0,0.0);
 	    // next out pos x-axis 
 	    // TODO: need to incorporate overlaps
-	    setCenter(k,0.0,rData[a].rad+rData[k].rad);
+	    setCenter(k,0.0,getActualRadius(a)+getActualRadius(k));
 	  }
 	  else { // eucl case 
 	      // alpha at origin 
-	    double r=rData[a].rad;
+	    double r=getRadius(a);
 	    setCenter(a,0.0,0.0);
 	    // next on x-axis
-	    double r2=rData[k].rad;
+	    double r2=getRadius(k);
 	    setCenter(k,Math.sqrt(r*r+r2*r2+2*r*r2*ovlp),0.0);
 	  }
 	  return (fancy_comp_center(v,nghb(v,a),0,1,1,true,false,TOLER));
@@ -5017,18 +5079,18 @@ public class PackData{
 					double o1 = kData[k].overlaps[nghb(k, vert)];
 					double o2 = kData[vert].overlaps[nghb(vert, j)];
 					double o3 = kData[j].overlaps[nghb(j, k)];
-					sc = CommonMath.comp_any_center(rData[j].center, rData[k].center,
-							rData[j].rad, rData[k].rad,rData[vert].rad, o1, o2, o3,hes);
+					sc = CommonMath.comp_any_center(getCenter(j), getCenter(k),
+							getRadius(j),getRadius(k),getRadius(vert), o1, o2, o3,hes);
 				} 
 				else
-					sc = CommonMath.comp_any_center(rData[j].center, rData[k].center,
-							rData[j].rad, rData[k].rad,rData[vert].rad,hes);
+					sc = CommonMath.comp_any_center(getCenter(j),getCenter(k),
+							getRadius(j),getRadius(k),getRadius(vert),hes);
 				if (!sc.gotError()
 						|| !crit_flag
 						|| (Math.abs(invdist_err(vert, j)) < crit && Math
 								.abs(invdist_err(vert, k)) < crit)) {
 					if (sc.save(this, vert) >= 0) { // 
-						z = z.add(rData[vert].center);
+						z = z.add(getCenter(vert));
 						count++;
 					}
 				}
@@ -5214,8 +5276,8 @@ public class PackData{
 	  	    	  logwriter.write("\t"+count+"\t"+vert+"\t"+nf+"\n");
 	    		
 	    		// position the first outer circle of the red chain
-	    		redChain.rad=rData[faces[redChain.face].vert[redChain.vIndex]].rad;
-	    		redChain.center=new Complex(rData[faces[redChain.face].vert[redChain.vIndex]].center);
+	    		redChain.rad=getRadius(faces[redChain.face].vert[redChain.vIndex]);
+	    		redChain.center=new Complex(getCenter(faces[redChain.face].vert[redChain.vIndex]));
 	    		
 	    		/*
 	    		 * Now proceed through rest of the redchain. Which center to compute is
@@ -5290,8 +5352,8 @@ public class PackData{
 	    					n0=nghb(v_ind,faces[nf].vert[((trace.vIndex)+1)%3]);
 	    					fancy_comp_center(v_ind,n0,0,0,1,true,false,crit);
 	    				}
-	    				trace.center=new Complex(rData[v_ind].center);
-	    				trace.rad=rData[v_ind].rad;
+	    				trace.center=getCenter(v_ind);
+	    				trace.rad=getRadius(v_ind);
 	    				
 	    				// Suppose this is 'RedEdge' and it's blue; then 'nextRed' is a repeat
 	    				//    of this face, and we store its center and rad. The center is 
@@ -5305,7 +5367,7 @@ public class PackData{
 	    						rtrace=rtrace.nextRed;
 	    						vert=faces[nf].vert[rtrace.vIndex];
 	    						rtrace.center=new Complex(rtrace.prev.center);
-	    						rtrace.rad=rData[vert].rad;
+	    						rtrace.rad=getRadius(vert);
 	    					}
 	    				}
 	    				lastface=nf;
@@ -5394,19 +5456,19 @@ public class PackData{
 	    			// first use plotted neighbors
 	    			for (int j=0;j<kData[vert].num+kData[vert].bdryFlag;j++) 
 	    				if (kData[(v=kData[vert].flower[j])].plotFlag!=0) {
-	    					z=z.add(rData[v].center);
+	    					z=z.add(getCenter(v));
 	    					n++;
 	    				}
 	    			if (n==0) { // none? try qualFlag neighbors
 	    				for (int j=0;j<kData[vert].num+kData[vert].bdryFlag;j++) 
 	    					if (kData[(v=kData[vert].flower[j])].qualFlag!=0) {
-	    						z=z.add(rData[v].center);
+	    						z=z.add(getCenter(v));
 	    						n++;
 	    					}
 	    			}
 	    			if (n!=0) { // got something!
 	    				z=z.times(1/n);
-	    				rData[vert].center=z;
+	    				setCenter(vert,z);
 	    				kData[vert].qualFlag=1;
 	    				count++;
 	    				keepon=true;
@@ -5421,8 +5483,8 @@ public class PackData{
 	    while (trace!=redChain || keepon) {
 		keepon=false;
 	      v=faces[trace.face].vert[trace.vIndex];
-	      trace.center=new Complex(rData[v].center);
-	      trace.rad=rData[v].rad;
+	      trace.center=getCenter(v);
+	      trace.rad=getRadius(v);
 	      trace=trace.next;
 	    }
 	  }
@@ -5451,7 +5513,7 @@ public class PackData{
 	    
 	  // Normalize: fixup? what if errflag is set and gamma is poorly plotted?
 
-	  norm_any_pack(rData[alpha].center,rData[gamma].center); 
+	  norm_any_pack(getCenter(alpha),getCenter(gamma)); 
 
 	  if (!simp_conn_flag) {
 	    // Record any edge-pairing Mobius transforms
@@ -5524,28 +5586,28 @@ public class PackData{
 	  if (v<1 || w<1 || v>nodeCount || w>nodeCount) return 1.0; 
 	  // note: tangency is default 
 	  if (hes>0) { // spherical
-		  double []xyz_v=SphericalMath.s_pt_to_vec(rData[v].center);
-		  double []xyz_w=SphericalMath.s_pt_to_vec(rData[w].center);
+		  double []xyz_v=SphericalMath.s_pt_to_vec(getCenter(v));
+		  double []xyz_w=SphericalMath.s_pt_to_vec(getCenter(w));
 		  // formula: (cos(r_v)*cos(r_w)-cos(dist(v,w))/(sin(r_v)*sin(r_w));
-		  double I=1.0/(Math.tan(rData[v].rad)*Math.tan(rData[w].rad))-
+		  double I=1.0/(Math.tan(getRadius(v))*Math.tan(getRadius(w)))-
 		  	(xyz_v[0]*xyz_w[0]+xyz_v[1]*xyz_w[1]+xyz_v[2]*xyz_w[2])/
-		  	(Math.sin(rData[v].rad)*Math.sin(rData[w].rad));
+		  	(Math.sin(getRadius(v))*Math.sin(getRadius(w)));
 		  return I;
 	  }
 	  if (hes<0) { // hyperbolic: use euclidean dat 
-	      sc=HyperbolicMath.h_to_e_data(rData[v].center,rData[v].rad);
+	      sc=HyperbolicMath.h_to_e_data(getCenter(v),getRadius(v));
 	      ectr1=new Complex(sc.center);
 	      erad1=sc.rad;
-	      sc =HyperbolicMath.h_to_e_data(rData[w].center,rData[w].rad);
+	      sc =HyperbolicMath.h_to_e_data(getCenter(w),getRadius(w));
 	      ectr2=new Complex(sc.center);
 	      erad2=sc.rad;
 	    }
 	  else
 	    {
-	      ectr1=rData[v].center;
-	      erad1=rData[v].rad;
-	      ectr2=rData[w].center;
-	      erad2=rData[w].rad;
+	      ectr1=getCenter(v);
+	      erad1=getRadius(v);
+	      ectr2=getCenter(w);
+	      erad2=getRadius(w);
 	    }
 	  return (EuclMath.inv_dist(ectr1,ectr2,Math.abs(erad1),Math.abs(erad2)));
 	}
@@ -5596,17 +5658,17 @@ public class PackData{
 	  uP.value=0.0;
 	  if (hes<0)
 	    for (v=1;v<=nodeCount;v++) {
-	      flag &= h_anglesum_overlap(v,rData[v].rad,uP);
+	      flag &= h_anglesum_overlap(v,getRadius(v),uP);
 	      rData[v].curv = uP.value;
 	    }
 	  else if (hes>0)
 	    for (v=1;v<=nodeCount;v++) {
-	      flag &= s_anglesum(v,rData[v].rad,uP);
+	      flag &= s_anglesum(v,getRadius(v),uP);
 	      rData[v].curv = uP.value;
 	    }
 	  else
 	    for (v=1;v<=nodeCount;v++) {
-	      flag &= e_anglesum_overlap(v,rData[v].rad,uP);
+	      flag &= e_anglesum_overlap(v,getRadius(v),uP);
 	      rData[v].curv = uP.value;
 	    }
 	  return 1;
@@ -5626,13 +5688,13 @@ public class PackData{
 		  UtilPacket tmpUP=new UtilPacket();
 
 		  int j2=kData[v].flower[0];
-		  double r2=rData[j2].rad;
+		  double r2=getRadius(j2);
 		  uP.value=0.0;
 		  if (!overlapStatus) {
 		      double m2 = r2/(r+r2);
 		      for (int n=1;n<=kData[v].num;n++) {
 		    	  double m1 = m2;
-		    	  r2 = rData[kData[v].flower[n]].rad;
+		    	  r2 = getRadius(kData[v].flower[n]);
 		    	  m2 = r2/(r+r2);
 		    	  uP.value += Math.acos(1-2*m1*m2);
 		      }
@@ -5644,7 +5706,7 @@ public class PackData{
 		    	  double r1=r2;
 		    	  double o1=o2;
 		    	  j2=kData[v].flower[n];
-		    	  r2=rData[j2].rad;
+		    	  r2=getRadius(j2);
 		    	  o2=kData[v].overlaps[n];
 		    	  double ovlp=kData[j1].overlaps[nghb(j1,j2)];
 		    	  flag &= EuclMath.e_cos_overlap(r,r1,r2,ovlp,o2,o1,tmpUP);
@@ -5670,10 +5732,10 @@ public class PackData{
 	  uP.value=0.0;
 	  if (r<=0) return false;
 	  j2=kData[v].flower[0];
-	  r2=rData[j2].rad;
+	  r2=getRadius(j2);
 	  for (k=1;k<=kData[v].num;k++) {
 	      r1=r2;
-	      r2=rData[kData[v].flower[k]].rad;
+	      r2=getRadius(kData[v].flower[k]);
 	      uP.value += Math.acos(SphericalMath.s_comp_cos(r,r1,r2));
 	  }
 	  return true;
@@ -5697,11 +5759,11 @@ public class PackData{
 	        return true;
 	    } 
 	    int j2=kData[v].flower[0];
-	    double x2=rData[j2].rad;
+	    double x2=getRadius(j2);
 	    if (!overlapStatus) {
 	        for (int k=1;k<=kData[v].num;k++) {
 	        	x1=x2;
-	        	x2=rData[kData[v].flower[k]].rad;
+	        	x2=getRadius(kData[v].flower[k]);
 	        	uP.value += Math.acos(HyperbolicMath.h_comp_x_cos(x,x1,x2));
 	        }
 	    }
@@ -5712,7 +5774,7 @@ public class PackData{
 	        	double o1=o2;
 	        	int j1=j2;
 	        	j2=kData[v].flower[k];
-	        	x2=rData[j2].rad;
+	        	x2=getRadius(j2);
 	        	o2=kData[v].overlaps[k];
 	        	double o3=kData[j1].overlaps[nghb(j1,j2)];
 	        	flag &= HyperbolicMath.h_cos_s_overlap(x,x1,x2,o3,o2,o1,tmpUP);
@@ -5875,7 +5937,7 @@ public class PackData{
 		int n=0;
 		UtilPacket uP=new UtilPacket();
 
-		double r=rData[v].rad;
+		double r=getRadius(v);
 		if (!h_anglesum_overlap(v,r,uP)) 
 			return 0;
 	    double curv=uP.value;
@@ -5890,8 +5952,8 @@ public class PackData{
 	    	diff=curv-aim;
 	    	n++;
 	    }
-	    if (n>0 && r!=rData[v].rad) { // changed?
-	    	setRadius(v,r);
+	    if (n>0 && r!=getRadius(v)) { // changed?
+	    	setRadiusActual(v,r);
 	    	rData[v].curv=curv;
 	    }  
 	    return 1; // seemed to go okay
@@ -5918,7 +5980,7 @@ public class PackData{
 		int n=0;
 		UtilPacket uP=new UtilPacket();
 
-		double r=rData[v].rad;
+		double r=getRadius(v);
 		if (!e_anglesum_overlap(v,r,uP)) return 0;
 	    double curv=uP.value;
 	    double diff=curv-aim;
@@ -5930,8 +5992,8 @@ public class PackData{
 	    	diff=curv-aim;
 	    	n++;
 	    }
-	    if (n>0 && r!=rData[v].rad) { // changed?
-	    	setRadius(v,r);
+	    if (n>0 && r!=getRadius(v)) { // changed?
+	    	setRadiusActual(v,r);
 	    	rData[v].curv=curv;
 	    }  
 	    return 1; // seemed to go okay
@@ -6175,7 +6237,7 @@ public class PackData{
 			file.write("RADII: \n");
 			for (int i = 1; i <= nodeCount; i++) {
 				String fms = new String("%." + digits + "e");
-				file.write(String.format(fms, this.getRadius(i)) + "  ");
+				file.write(String.format(fms, this.getActualRadius(i)) + "  ");
 				if ((i % 4) == 0)
 					file.write("\n");
 				else
@@ -6186,8 +6248,8 @@ public class PackData{
 		if ((act & 0020) == 0020) { // centers? (often easier to recompute)
 			file.write("CENTERS:\n");
 			for (int i = 1; i <= nodeCount; i++) {
-				file.write(String.format("%.10e", rData[i].center.x) + " "
-						+ String.format("%.10e", rData[i].center.y) + "  ");
+				file.write(String.format("%.10e", getCenter(i).x) + " "
+						+ String.format("%.10e", getCenter(i).y) + "  ");
 				if ((i % 2) == 0)
 					file.write("\n");
 			}
@@ -6473,7 +6535,7 @@ public class PackData{
 		if (packDCEL==null || packDCEL.vertCount<=0) {
 			
 			// create the DCEL structure 
-			packDCEL=new PackDCEL(this);
+			packDCEL=CombDCEL.d_redChainBuilder(this,this.getBouquet(),null,false);
 		}
 		if (dual) {
 			PackDCEL dualdcel=packDCEL.createDual(false);
@@ -6517,18 +6579,20 @@ public class PackData{
 		double minx,miny,maxx,maxy;
 		Iterator<Integer> vlst=vlist.iterator();
 		int v=vlst.next();
-		minx=rData[v].center.x-rData[v].rad;
-		maxx=rData[v].center.x+rData[v].rad;
-		miny=rData[v].center.y-rData[v].rad;
-		maxy=rData[v].center.y+rData[v].rad;
+		Complex vz=getCenter(v);
+		double vr=getRadius(v);
+		minx=vz.x-vr;
+		maxx=vz.x+vr;
+		miny=vz.y-vr;
+		maxy=vz.y+vr;
 		while (vlst.hasNext()) {
 			v=vlst.next();
-			double r=rData[v].rad;
-			double m=rData[v].center.x-r;
+			double r=getRadius(v);
+			double m=getCenter(v).x-r;
 			if (m<minx) minx=m;
 			m +=2*r;
 			if (m>maxx) maxx=m;
-			m=rData[v].center.y-r;
+			m=getCenter(v).y-r;
 			if (m<miny) miny=m;
 			m +=2*r;
 			if (m>maxy) maxy=m;
@@ -6549,8 +6613,8 @@ public class PackData{
 			vlst=vlist.iterator();
 			while (vlst.hasNext()) {
 				v=vlst.next();
-				file.write("<circle cx=\""+(rData[v].center.x-minx+.05*sz)+"\" cy=\""+
-				(maxy-rData[v].center.y+.05*sz)+"\" r=\""+rData[v].rad+
+				file.write("<circle cx=\""+(getCenter(v).x-minx+.05*sz)+"\" cy=\""+
+				(maxy-getCenter(v).y+.05*sz)+"\" r=\""+getRadius(v)+
 				"\" stroke=\"black\" stroke-width=\""+.5*thick+"\" fill=\"white\"/>\n");
 				count++;
 			}
@@ -6819,9 +6883,9 @@ public class PackData{
 			return 1; // eucl already
 		else if (hes < 0) { // hyp
 			for (int v = 1; v <= nodeCount; v++) {
-				sc = HyperbolicMath.h_to_e_data(rData[v].center, rData[v].rad);
-				rData[v].center = sc.center;
-				rData[v].rad = sc.rad;
+				sc = HyperbolicMath.h_to_e_data(getCenter(v), getRadius(v));
+				setCenter(v,sc.center);
+				setRadius(v,sc.rad);
 			}
 			if ((trace = redChain) != null) {
 				try {
@@ -6839,9 +6903,9 @@ public class PackData{
 			}
 		} else if (hes > 0) { // sph
 			for (int v = 1; v <= nodeCount; v++) {
-				sc = SphericalMath.s_to_e_data(rData[v].center, rData[v].rad);
-				rData[v].center = sc.center;
-				rData[v].rad = Math.abs(sc.rad);
+				sc = SphericalMath.s_to_e_data(getCenter(v), getRadius(v));
+				setCenter(v,sc.center);
+				setRadius(v,Math.abs(sc.rad));
 			}
 			if ((trace = redChain) != null) {
 				try {
@@ -6876,14 +6940,14 @@ public class PackData{
 		if (hes < 0)
 			return 1; // hyp already
 		else if (hes == 0) { // eucl
-			double mx = rData[alpha].center.abs() + rData[alpha].rad;
+			double mx = getCenter(alpha).abs() + getRadius(alpha);
 			for (int v = 1; v <= nodeCount; v++) { // translate, set scale
 													// factor
 			// System.out.println("vert v"+v);
 			// rData[v].center=rData[v].center.minus(cent);
-				double m = rData[v].center.abs();
-				if ((m + rData[v].rad) > mx)
-					mx = m + rData[v].rad;
+				double m = getCenter(v).abs();
+				if ((m + getRadius(v)) > mx)
+					mx = m + getRadius(v);
 			}
 			if (mx > .999999999)
 				mx *= 1.000005; // so roundoff doesn't push a circle outside
@@ -6891,11 +6955,11 @@ public class PackData{
 			else
 				mx = 1.0;
 			for (int v = 1; v <= nodeCount; v++) {
-				rData[v].center = rData[v].center.divide(mx);
-				rData[v].rad /= mx;
-				sc = HyperbolicMath.e_to_h_data(rData[v].center, rData[v].rad);
-				rData[v].center = sc.center;
-				rData[v].rad = sc.rad;
+				setCenter(v,getCenter(v).divide(mx));
+				setRadius(v,getRadius(v)/mx);
+				sc = HyperbolicMath.e_to_h_data(getCenter(v),getRadius(v));
+				setCenter(v,sc.center);
+				setRadius(v,sc.rad);
 			}
 			if ((trace = redChain) != null) { // adjust redface data too.
 				try {
@@ -6937,10 +7001,10 @@ public class PackData{
 			return 1; // sph already
 		if (hes < 0) { // from hyp
 			for (int v = 1; v <= nodeCount; v++) {
-				sc = HyperbolicMath.h_to_e_data(rData[v].center, rData[v].rad);
+				sc = HyperbolicMath.h_to_e_data(getCenter(v),getRadius(v));
 				sc = SphericalMath.e_to_s_data(sc.center, sc.rad);
-				rData[v].center = sc.center;
-				rData[v].rad = sc.rad;
+				setCenter(v,sc.center);
+				setRadius(v,sc.rad);
 			}
 			if ((trace = redChain) != null) {
 				try {
@@ -6959,9 +7023,9 @@ public class PackData{
 			}
 		} else { // from eucl
 			for (int v = 1; v <= nodeCount; v++) {
-				sc = SphericalMath.e_to_s_data(rData[v].center, rData[v].rad);
-				rData[v].center = new Complex(sc.center);
-				rData[v].rad = sc.rad;
+				sc = SphericalMath.e_to_s_data(getCenter(v),getRadius(v));
+				setCenter(v,new Complex(sc.center));
+				setRadius(v,sc.rad);
 			}
 			if ((trace = redChain) != null) {
 				try {
@@ -7000,8 +7064,8 @@ public class PackData{
 				&& alloc_pack_space(node, true) == 0) {
 			throw new CombException("Pack space allocation failure");
 		}
-		if (rData[v].rad <= 0) { // avoid infinite rad
-			rData[v].rad = .1;
+		if (getRadius(v) <= 0) { // avoid infinite rad
+			setRadius(v,.1);
 		}
 		// add to flower of v
 		n = kData[v].num;
@@ -7048,34 +7112,34 @@ public class PackData{
 		kData[node].mark = 0;
 		kData[node].color = CPScreen.getFGColor();
 		rData[node] = new RData();
-		rData[node].rad = rData[v].rad;
-		CircleSimple sc = CommonMath.comp_any_center(rData[v].center,
-				rData[v2].center, rData[v].rad, rData[v2].rad, rData[node].rad,
+		setRadius(node,getRadius(v));
+		CircleSimple sc = CommonMath.comp_any_center(getCenter(v),
+				getCenter(v2), getRadius(v),getRadius(v2), getRadius(node),
 				hes);
 		sc.save(this, node);
 
 		// fix affected curvatures
 		UtilPacket utilp = new UtilPacket();
 		if (hes < 0) {
-			h_anglesum_overlap(node, rData[node].rad, utilp);
+			h_anglesum_overlap(node, getRadius(node), utilp);
 			rData[node].curv = utilp.value;
-			h_anglesum_overlap(v, rData[v].rad, utilp);
+			h_anglesum_overlap(v, getRadius(v), utilp);
 			rData[v].curv = utilp.value;
-			h_anglesum_overlap(v2, rData[v2].rad, utilp);
+			h_anglesum_overlap(v2, getRadius(v2), utilp);
 			rData[v2].curv = utilp.value;
 		} else if (hes == 0) {
-			e_anglesum_overlap(node, rData[node].rad, utilp);
+			e_anglesum_overlap(node, getRadius(node), utilp);
 			rData[node].curv = utilp.value;
-			e_anglesum_overlap(v, rData[v].rad, utilp);
+			e_anglesum_overlap(v, getRadius(v), utilp);
 			rData[v].curv = utilp.value;
-			e_anglesum_overlap(v2, rData[v2].rad, utilp);
+			e_anglesum_overlap(v2,getRadius(v2), utilp);
 			rData[v2].curv = utilp.value;
 		} else if (hes > 0) {
-			s_anglesum(node, rData[node].rad, utilp);
+			s_anglesum(node, getRadius(node), utilp);
 			rData[node].curv = utilp.value;
-			s_anglesum(v, rData[v].rad, utilp);
+			s_anglesum(v, getRadius(v), utilp);
 			rData[v].curv = utilp.value;
-			s_anglesum(v2, rData[v2].rad, utilp);
+			s_anglesum(v2, getRadius(v2), utilp);
 			rData[v2].curv = utilp.value;
 		}
 		// set defualt aims
@@ -7118,8 +7182,8 @@ public class PackData{
 		kData[v1].bdryFlag = 0;
 		rData[v1].aim = 2.0 * Math.PI;
 		kData[v1].num++;
-		if (rData[v1].rad <= 0) { // avoid infinity rad
-			rData[v1].rad = .1;
+		if (getRadius(v1) <= 0) { // avoid infinity rad
+			setRadius(v2,0.1);
 		}
 
 		// add to flower of v2
@@ -7139,8 +7203,8 @@ public class PackData{
 		}
 		if (kData[v2].flower[0] == v3) {
 			kData[v2].bdryFlag = 0;
-			if (rData[v2].rad <= 0) { // avoid infinity
-				rData[v2].rad = .1;
+			if (getRadius(v2) <= 0) { // avoid infinity
+				setRadius(v2,0.1);
 			}
 			if (kData[v2].overlaps != null)
 				kData[v2].overlaps[n + 1] = kData[v2].overlaps[0];
@@ -7164,8 +7228,8 @@ public class PackData{
 		kData[v3].num++;
 		if (kData[v3].flower[kData[v3].num] == v2) {
 			kData[v3].bdryFlag = 0;
-			if (rData[v3].rad <= 0) { // avoid infinity
-				rData[v3].rad = .1;
+			if (getRadius(v1) <= 0) { // avoid infinity
+				setRadius(v3,0.1);
 			}
 			if (kData[v3].overlaps != null)
 				kData[v3].overlaps[0] = kData[v3].overlaps[n + 1];
@@ -7507,14 +7571,14 @@ public class PackData{
 		if (face < 1 || face > faceCount)
 			return null;
 		CircleSimple sc = null;
-		Complex p0 = new Complex(rData[faces[face].vert[0]].center);
-		Complex p1 = new Complex(rData[faces[face].vert[1]].center);
-		Complex p2 = new Complex(rData[faces[face].vert[2]].center);
+		Complex p0 = getCenter(faces[face].vert[0]);
+		Complex p1 = getCenter(faces[face].vert[1]);
+		Complex p2 = getCenter(faces[face].vert[2]);
 		if (hes < 0)
 			sc = HyperbolicMath.hyp_tang_incircle(p0, p1, p2,
-					rData[faces[face].vert[0]].rad,
-					rData[faces[face].vert[1]].rad,
-					rData[faces[face].vert[2]].rad);
+					getRadius(faces[face].vert[0]),
+					getRadius(faces[face].vert[1]),
+					getRadius(faces[face].vert[2]));
 		else if (hes > 0)
 			sc = SphericalMath.sph_tri_incircle(p0, p1, p2);
 		else
@@ -7555,8 +7619,8 @@ public class PackData{
 	   * @return double, -1 on error (e.g., if geometry is spherical)
 	   */
 	  public double intendedEdgeLength(int v,int w) {
-		  double rv=rData[v].rad;
-		  double rw=rData[w].rad;
+		  double rv=getRadius(v);
+		  double rw=getRadius(w);
 		  double t=1.0;
 		  if (hes>0) { // spherical: not-well defined
 			  return -1;
@@ -7578,8 +7642,8 @@ public class PackData{
 	   * @return double
 	   */
 	  public double edgeLength(int v,int w) {
-		  Complex zv=new Complex(rData[v].center);
-		  Complex zw=new Complex(rData[w].center);
+		  Complex zv=getCenter(v);
+		  Complex zw=getCenter(w);
 		  if (hes>0) { // spherical: not-well defined
 			  return SphericalMath.s_dist(zv, zw);
 		  }
@@ -7649,9 +7713,9 @@ public class PackData{
 		  int v0=faces[f].vert[0];
 		  int v1=faces[f].vert[1];
 		  int v2=faces[f].vert[2];
-		  double r0=rData[v0].rad;
-		  double r1=rData[v1].rad;
-		  double r2=rData[v2].rad;
+		  double r0=getRadius(v0);
+		  double r1=getRadius(v1);
+		  double r2=getRadius(v2);
 		  double t0=1.0;
 		  double t1=1.0;
 		  double t2=1.0;
@@ -8035,7 +8099,7 @@ public class PackData{
 				  kData[newV].flower[j+1]=kData[v].flower[(ind_vu+j)%kData[v].num];
 			  }
 			  kData[newV].bdryFlag=0; // newV is interior
-			  rData[newV].rad=rData[v].rad;
+			  setRadius(newV,getRadius(v));
 			  rData[newV].aim=2.0*Math.PI; // default aim
 			  
 			  // v's flower; let it start and end with newV;
@@ -8096,7 +8160,7 @@ public class PackData{
 					  kData[newV].flower[j+1]=kData[v].flower[(ind_vu+j)];
 				  }
 				  kData[newV].bdryFlag=0;
-				  rData[newV].rad=rData[v].rad;
+				  setRadius(newV,getRadius(v));
 				  rData[newV].aim=2.0*Math.PI;
 				  
 				  // v's flower; find up to u and after w
@@ -8168,7 +8232,7 @@ public class PackData{
 					  kData[newV].flower[k+j+1]=kData[v].flower[ind_vu+j];
 
 				  kData[newV].bdryFlag=1; // boundary vertex this time
-				  rData[newV].rad=rData[v].rad;
+				  setRadius(newV,getRadius(v));
 				  rData[newV].aim=-2.0*Math.PI;
 				  
 				  // v's flower, starts/ends with newV
@@ -8669,8 +8733,8 @@ public class PackData{
 						  kData[newV].overlaps[k]=1.0;
 				  }
 				  rData[newV]=new RData();
-				  rData[newV].center=new Complex(rData[centV].center);
-				  rData[newV].rad=rData[centV].rad;
+				  setCenter(newV,getCenter(centV));
+				  setRadius(newV,getRadius(centV));
 				  rData[newV].aim=2*Math.PI;
 			  }
 
@@ -8704,7 +8768,7 @@ public class PackData{
 			  int upB=kData[centV].flower[centNum];
 			  int newDown=++nodeCount;
 			  int newUp=++nodeCount;
-			  double rad=rData[centV].rad;
+			  double rad=getRadius(centV);
 			  if (hes<0 && (rad<0 || rad>1.0))
 					  rad=.5;
 			  
@@ -8730,8 +8794,8 @@ public class PackData{
 					  kData[newDown].overlaps[k]=1.0;
 			  }
 			  rData[newDown]=new RData();
-			  rData[newDown].center=new Complex(rData[centV].center);
-			  rData[newDown].rad=rad;
+			  setCenter(newDown,getCenter(centV));
+			  setRadius(newDown,rad);
 			  rData[newDown].aim=-.1;
 			  
 			  // build newUp
@@ -8748,8 +8812,8 @@ public class PackData{
 					  kData[newUp].overlaps[k]=1.0;
 			  }
 			  rData[newUp]=new RData();
-			  rData[newUp].center=new Complex(rData[centV].center);
-			  rData[newUp].rad=rad;
+			  setCenter(newUp,getCenter(centV));
+			  setRadius(newUp,rad);
 			  rData[newUp].aim=-.1;
 			  
 			  // create first new interior vertex
@@ -8769,8 +8833,8 @@ public class PackData{
 					  kData[newV].overlaps[k]=1.0;
 			  }
 			  rData[newV]=new RData();
-			  rData[newV].center=new Complex(rData[centV].center);
-			  rData[newV].rad=rad;
+			  setCenter(newV,getCenter(centV));
+			  setRadius(newV,rad);
 			  rData[newV].aim=2*Math.PI;
 			  
 			  // create last new interior vertex
@@ -8790,8 +8854,8 @@ public class PackData{
 					  kData[newV].overlaps[k]=1.0;
 			  }
 			  rData[newV]=new RData();
-			  rData[newV].center=new Complex(rData[centV].center);
-			  rData[newV].rad=rad;
+			  setCenter(newV,getCenter(centV));
+			  setRadius(newV,rad);
 			  rData[newV].aim=2*Math.PI;
 			  
 			  // create rest of new interiors
@@ -8813,8 +8877,8 @@ public class PackData{
 						  kData[newDown].overlaps[k]=1.0;
 				  }
 				  rData[newV]=new RData();
-				  rData[newV].center=new Complex(rData[centV].center);
-				  rData[newV].rad=rad;
+				  setCenter(newV,getCenter(centV));
+				  setRadius(newV,rad);
 				  rData[newV].aim=2*Math.PI;
 			  }
 
@@ -8920,7 +8984,7 @@ public class PackData{
 			kData[newV].bdryFlag = 1;
 			kData[newV].mark = 0;
 			kData[newV].color=CPScreen.getFGColor();
-			rData[newV].rad = rData[v].rad;
+			setRadius(newV,getRadius(v));
 			rData[newV].aim = -.1;
 		} 
 		
@@ -8936,7 +9000,7 @@ public class PackData{
 				kData[newV].overlaps[0] = kData[newV].overlaps[1] = kData[newV].overlaps[2] = kData[newV].overlaps[3] = 1.0;
 			kData[newV].mark = 0;
 			kData[newV].color=CPScreen.getFGColor();
-			rData[newV].rad = .5 * rData[v].rad;
+			setRadius(newV,.5 * getRadius(v));
 			rData[newV].aim = 2.0 * Math.PI;
 			// compute packed radius
 			if (hes < 0)
@@ -8948,11 +9012,11 @@ public class PackData{
 		
 		// set center
 		if (hes <= 0) {
-			rData[newV].center.x = (rData[v].center.x + rData[w].center.x) / 2.0;
-			rData[newV].center.y = (rData[v].center.y + rData[w].center.y) / 2.0;
+			Complex vz=getCenter(v);
+			Complex wz=getCenter(w);
+			setCenter(newV,new Complex((vz.x+wz.x) / 2.0,(vz.y+wz.y) / 2.0));
 		} else {
-			rData[newV].center.x = 0.0;
-			rData[newV].center.x = Math.PI;
+			setCenter(newV,0.0,Math.PI);
 		}
 		
 		// adjust nghb flowers
@@ -9060,23 +9124,21 @@ public class PackData{
 	    kData[newval].bdryFlag=0;
 	    kData[newval].mark=mark;
 	    kData[newval].color=CPScreen.getFGColor();
-	    rData[newval].rad=rData[faces[f].vert[0]].rad;
+	    setRadius(newval,getRadius(faces[f].vert[0]));
 	    rData[newval].aim=2.0*Math.PI;
 	    // compute packed radius
 	    if (hes<0) h_riffle_vert(newval);
 	    else if (hes==0) e_riffle_vert(newval);
 //	    else e_riffle_vert(newval);
 	    if (hes<=0) {
-	        rData[newval].center.x=
-	        		(rData[faces[f].vert[0]].center.x
-	        				+rData[faces[f].vert[1]].center.x
-	        				+rData[faces[f].vert[2]].center.x)/3.0;
-	        rData[newval].center.y=
-	        		(rData[faces[f].vert[0]].center.y
-	        				+rData[faces[f].vert[1]].center.y
-	        				+rData[faces[f].vert[2]].center.y)/3.0;
+	    	Complex z0=getCenter(faces[f].vert[0]);
+	    	Complex z1=getCenter(faces[f].vert[1]);
+	    	Complex z2=getCenter(faces[f].vert[2]);
+	    	setCenter(newval,(z0.x+z1.x+z2.x)/3.0,(z0.y+z1.y+z2.y)/3.0);
 	    }
-	    else {rData[newval].center.x=0.0;rData[newval].center.x=Math.PI;}
+	    else {
+	    	setCenter(newval,0.0,Math.PI);
+	    }
 	    
 	    // adjust nghb flowers
 	    int v=faces[f].vert[0];
@@ -9106,7 +9168,7 @@ public class PackData{
 	    for (int i=0;i<3;i++) {
 	    	kData[newV[i]]=new KData();
 	    	rData[newV[i]]=new RData();
-	    	rData[newV[i]].center=new Complex(rData[faces[f].vert[i]].center);
+	    	setCenter(newV[i],getCenter(faces[f].vert[i]));
 	    	kData[newV[i]].num=4;
 	    	kData[newV[i]].flower=new int[5];
 	    	kData[newV[i]].flower[0]=kData[newV[i]].flower[4]=faces[f].vert[i];
@@ -9122,7 +9184,7 @@ public class PackData{
 	    	kData[newV[i]].bdryFlag=0;
 	    	kData[newV[i]].mark=0;
 	    	kData[newV[i]].color=CPScreen.getFGColor();
-	    	rData[newV[i]].rad=rData[faces[f].vert[i]].rad;
+	    	setRadius(newV[i],getRadius(faces[f].vert[i]));
 	    	rData[newV[i]].aim=2.0*Math.PI;
 	    }
 	    // adjust nghb flowers 
@@ -9191,10 +9253,10 @@ public class PackData{
 		  if (hes!=0) 
 			  throw new DataException("packing must be euclidean");
 	    // note: first corner is assumed to be upper-left, rest ctrclkwise.
-	    double leng=rData[lr].center.minus(rData[ll].center).abs();
-	    double high=rData[ur].center.minus(rData[lr].center).abs();
-	    double leng2=rData[ur].center.minus(rData[ul].center).abs();
-	    double high2=rData[ul].center.minus(rData[ll].center).abs();
+	    double leng=getCenter(lr).minus(getCenter(ll)).abs();
+	    double high=getCenter(ur).minus(getCenter(lr)).abs();
+	    double leng2=getCenter(ur).minus(getCenter(ul)).abs();
+	    double high2=getCenter(ul).minus(getCenter(ll)).abs();
 	    // check for inconsistency with rectangle 
 	    if (leng<OKERR || leng2<OKERR || high<OKERR || high2<OKERR
 	        || Math.abs(leng-leng2)/leng>.05 || Math.abs(high-high2)/high>.05)
@@ -9499,7 +9561,7 @@ public class PackData{
 	    while (vlist.hasNext()) {
 	        int v=(Integer)vlist.next();
 	        
-	        count += Mobius.mobius_of_circle(Mob,hes,rData[v].center,rData[v].rad,
+	        count += Mobius.mobius_of_circle(Mob,hes,getCenter(v),getRadius(v),
 	  	       sc,oriented);
 	        Complex Z=new Complex(sc.center);
 	        double R=sc.rad;
@@ -9510,8 +9572,8 @@ public class PackData{
 	  	  flashError("bad data "+v);
 	  	}
 	        */
-	        rData[v].center=Z;
-	        rData[v].rad=R;
+	        setCenter(v,Z);
+	        setRadius(v,R);
 	    }
 
 		// if 'red_flag', adjust centers/radii for redlist/redchain
@@ -9646,12 +9708,12 @@ public class PackData{
 		      for (int j=0;j<=count;j++) 
 		    	  kData[newnode].overlaps[j]=1.0;
 	    }
-	    rData[newnode].rad=0.5;
-	    rData[newnode].center=new Complex(0.0);
-	    rData[newnode].rad=.5;
+	    setRadius(newnode,0.5);
+	    setCenter(newnode,0.0,0.0);
+	    setRadius(newnode,0.5);
 	    if (hes>0) { // sphere: newnode is southern hemisphere.
-	        rData[newnode].center.y=Math.PI;
-	        rData[newnode].rad=Math.PI/2.0;
+	        setCenter(newnode,0.0,Math.PI);
+	        setRadius(newnode,Math.PI/2.0);
 	      }
 	    
 	    // have to capture next downstream vert
@@ -9821,10 +9883,10 @@ public class PackData{
 	        ratio=1.0;
 	    }
 	    if (E>0 && E<=nodeCount && 
-	        (cabs=rData[E].center.abs())>Mobius.MOB_TOLER) { // have vertex 
-	        rad=rData[E].rad;
+	        (cabs=getCenter(E).abs())>Mobius.MOB_TOLER) { // have vertex 
+	        rad=getRadius(E);
 	        lam=1.0/Math.sqrt((cabs+rad)*(cabs-rad));
-	        factor=new Complex(0.0,(-1.0)*rData[E].center.arg()).exp().times(lam);
+	        factor=new Complex(0.0,(-1.0)*getCenter(E).arg()).exp().times(lam);
 	        ratio=0.0;
 	    }
 	    else if (ratio>0.0 && ratio<=1.0){ // have ratio instead
@@ -9833,22 +9895,23 @@ public class PackData{
 	        E=0;
 	    }
 
-	    for (int j=1;j<=nodeCount;j++) { // scale, rotate 
-	      rData[j].center=rData[j].center.times(factor);
-	      rData[j].rad *= lam;
+	    for (int j=1;j<=nodeCount;j++) { // scale, rotate
+	    	Complex zz=getCenter(j);
+	    	setCenter(j,zz.times(factor));
+	      setRadius(j,lam*getRadius(j));
 	    }
 	    geom_to_s(); // project to sphere 
   	  	setGeometry(1);
   	  	Integer b=Integer.valueOf(bdryStarts[1]);
 	    NodeLink vlist=new NodeLink(this,b.toString());
 	    add_ideal(vlist);
-	    rData[nodeCount].center=new Complex(0.0,Math.PI);
-	    rData[nodeCount].rad=Math.asin(2.0*lam/(1.0+lam*lam));
+	    setCenter(nodeCount,new Complex(0.0,Math.PI));
+	    setRadius(nodeCount,Math.asin(2.0*lam/(1.0+lam*lam)));
 	    if (ratio>0.0 && Math.abs(ratio-1.0)>Mobius.MOB_TOLER) {
 	        // adjust for specified ratio when on sphere 
 	        factor=new Complex(0.0);
-	        Mobius Mob=Mobius.NS_mobius(rData[alpha].center,rData[nodeCount].center,
-	  	      MathComplex.ID,rData[alpha].rad,rData[nodeCount].rad,0.0,
+	        Mobius Mob=Mobius.NS_mobius(getCenter(alpha),getCenter(nodeCount),
+	  	      MathComplex.ID,getRadius(alpha),getRadius(nodeCount),0.0,
 	  	      ratio);
 	        vlist=new NodeLink(this,"a");
 	        apply_Mobius(Mob,vlist);
@@ -9864,10 +9927,11 @@ public class PackData{
 	    int mid;
 
 	    mid=(int)(CPScreen.color_ramp_size/2);
-	    b=t=rData[1].rad;
+	    b=t=getRadius(1);
 	    for (int v=2;v<=nodeCount;v++) {
-	        if (rData[v].rad>t) t=rData[v].rad;
-	        if (rData[v].rad<b) b=rData[v].rad;
+	    	double rad=getRadius(v);
+	        if (rad>t) t=rad;
+	        if (rad<b) b=rad;
 	    }
 	    if (b<0) b=0.0;
 	    if (t<=0 || Math.abs(t-b)/t<.005) { // problem of small variation
@@ -9876,12 +9940,12 @@ public class PackData{
 	    }
 	    if (hes<0) {
 	        for (int v=1;v<=nodeCount;v++) {
-	  	kData[v].color=CPScreen.coLor(1+(int)((mid-2)*(rData[v].rad-b)/(t-b)));
+	        	kData[v].color=CPScreen.coLor(1+(int)((mid-2)*(getRadius(v)-b)/(t-b)));
 	        }
 	    }
 	    else if (hes>=0) {
 	        for (int v=1;v<=nodeCount;v++) {
-	  	  kData[v].color=CPScreen.coLor(1+(int)((mid-2)*(rData[v].rad-t)/(b-t)));
+	  	  kData[v].color=CPScreen.coLor(1+(int)((mid-2)*(getRadius(v)-t)/(b-t)));
 	        }
 	    }
 	    return 1;
@@ -9912,8 +9976,8 @@ public class PackData{
 	    	if (v>0 && v<=node) {
 	    		if (radcomp) { 
 	    			if (hes<0) { 
-	    				double rp=rData[v].rad;
-	    				double rq=q.rData[v].rad;
+	    				double rp=getRadius(v);
+	    				double rq=q.getRadius(v);
 	    				if (rp<=0.0) rp=1.0;
 	    				if (rq<=0.0) rq=1.0;
 	    				data.add(rp/rq);
@@ -9925,7 +9989,7 @@ public class PackData{
 //	    		        }
 	    			}
 	    			else {
-	    				data.add(rData[v].rad/q.rData[v].rad);
+	    				data.add(getRadius(v)/q.getRadius(v));
 	    				indx.add(v);
 	    			}
 	    		}
@@ -10075,7 +10139,7 @@ public class PackData{
 			  Iterator<Integer> vlist=vertlist.iterator();
 			  while(vlist.hasNext()) {
 				  int v=(int)vlist.next();
-				  theta=rData[v].center.arg();
+				  theta=getCenter(v).arg();
 				  kData[v].color=ColorUtil.ArgWheel(theta);
 				  count++;
 			  }
@@ -10132,14 +10196,14 @@ public class PackData{
 			  while(flist.hasNext()) {
 				  int f=flist.next();
 				  double arg=0.0;
-				  Complex z0=rData[faces[f].vert[0]].center;
-				  Complex z1=rData[faces[f].vert[1]].center;
-				  Complex z2=rData[faces[f].vert[2]].center;
+				  Complex z0=getCenter(faces[f].vert[0]);
+				  Complex z1=getCenter(faces[f].vert[1]);
+				  Complex z2=getCenter(faces[f].vert[2]);
 				  CircleSimple sc=null;
 				  if (hes<0) { 
 					  sc=HyperbolicMath.hyp_tang_incircle(z0,z1,z2,
-							  rData[faces[f].vert[0]].rad,rData[faces[f].vert[1]].rad,
-							  rData[faces[f].vert[2]].rad);
+							  getRadius(faces[f].vert[0]),getRadius(faces[f].vert[1]),
+							  getRadius(faces[f].vert[2]));
 					  arg=sc.center.arg();
 				  }
 				  else if (hes>0) {
@@ -10641,28 +10705,28 @@ public class PackData{
 	    		  // need euclidean side lengths A, B, C
 	    		  Point3D []pt=new Point3D[3];
 	    		  if (hes>0) { // sph
-	    			  pt[0]=new Point3D(rData[i].center);
-	    			  pt[1]=new Point3D(rData[j].center);
-	    			  pt[2]=new Point3D(rData[k].center);
+	    			  pt[0]=new Point3D(getCenter(i));
+	    			  pt[1]=new Point3D(getCenter(j));
+	    			  pt[2]=new Point3D(getCenter(k));
 	    		  }
 	    		  if (hes<0) { // hyp
 	    			  CircleSimple sc=null;
-	    			  sc=HyperbolicMath.h_to_e_data(rData[i].center,
-	    					  rData[i].rad);
+	    			  sc=HyperbolicMath.h_to_e_data(getCenter(i),
+	    					  getRadius(i));
 	    			  pt[0]=new Point3D(sc.center);
-	    			  sc=HyperbolicMath.h_to_e_data(rData[j].center,
-	    					  rData[j].rad);
+	    			  sc=HyperbolicMath.h_to_e_data(getCenter(j),
+	    					  getRadius(j));
 	    			  pt[1]=new Point3D(sc.center);
-	    			  sc=HyperbolicMath.h_to_e_data(rData[k].center,
-	    					  rData[k].rad);
+	    			  sc=HyperbolicMath.h_to_e_data(getCenter(k),
+	    					  getRadius(k));
 	    			  pt[2]=new Point3D(sc.center);
 	    		  }
 	    		  else {
-	    			  Complex z=rData[i].center;
+	    			  Complex z=getCenter(i);
 	    			  pt[0]=new Point3D(z.x,z.y,0.0);
-	    			  z=rData[j].center;
+	    			  z=getCenter(j);
 	    			  pt[1]=new Point3D(z.x,z.y,0.0);
-	    			  z=rData[k].center;
+	    			  z=getCenter(k);
 	    			  pt[2]=new Point3D(z.x,z.y,0.0);
 	    		  }
 	    		  
@@ -10724,9 +10788,9 @@ public class PackData{
 
 		  // eucl lengths from 'this'
 		  double A,B,C;
-		  Complex z0 = rData[faces[face].vert[0]].center;
-		  Complex z1 = rData[faces[face].vert[1]].center;
-		  Complex z2 = rData[faces[face].vert[2]].center;
+		  Complex z0 = getCenter(faces[face].vert[0]);
+		  Complex z1 = getCenter(faces[face].vert[1]);
+		  Complex z2 = getCenter(faces[face].vert[2]);
 		  if (hes<=0) { // hyp or eucl
 			  A=z0.minus(z1).abs();
 			  B=z1.minus(z2).abs();
@@ -10740,9 +10804,9 @@ public class PackData{
 		  
 		  // eucl lengths from 'this'
 		  double a,b,c;
-		  z0 = q.rData[faces[face].vert[0]].center;
-		  z1 = q.rData[faces[face].vert[1]].center;
-		  z2 = q.rData[faces[face].vert[2]].center;
+		  z0 = q.getCenter(faces[face].vert[0]);
+		  z1 = q.getCenter(faces[face].vert[1]);
+		  z2 = q.getCenter(faces[face].vert[2]);
 		  if (q.hes<=0) { // hyp or eucl
 			  a=z0.minus(z1).abs();
 			  b=z1.minus(z2).abs();
@@ -10832,7 +10896,7 @@ public class PackData{
 		    if (circles) {
 		    	while (list.hasNext()) {
 		    		n=(Integer)list.next();
-		    		cpScreen.drawIndex(rData[n].center,n,msg_flag);
+		    		cpScreen.drawIndex(getCenter(n),n,msg_flag);
 		    		count++;
 		    	}
 		    	return count;
@@ -10858,7 +10922,7 @@ public class PackData{
 		  NodeLink vlist=new NodeLink(this);
 		  if (hes>0) { 
 			    for (int i=1;i<=nodeCount;i++) {
-				      if ( (SphericalMath.s_dist(z,rData[i].center)<rData[i].rad) 
+				      if ( (SphericalMath.s_dist(z,getCenter(i))<getRadius(i)) 
 							   && kData[i].plotFlag>0) 
 							  vlist.add(i);
 			    }
@@ -10890,8 +10954,8 @@ public class PackData{
 			int vert=0;
 			if (hes>0) {
 				for (int i=1;i<=nodeCount;i++) {
-					mydist=SphericalMath.s_dist(z,rData[i].center);
-					if (mydist<rData[i].rad && kData[i].plotFlag>0) 
+					mydist=SphericalMath.s_dist(z,getCenter(i));
+					if (mydist<getRadius(i) && kData[i].plotFlag>0) 
 						vlist.add(i);
 					if (mydist<dist) {
 						dist = mydist;
@@ -10904,13 +10968,13 @@ public class PackData{
 				double rad=0.0;
 				for (int i=1;i<=nodeCount;i++) {
 					if (hes<0) {
-						CircleSimple sc=HyperbolicMath.h_to_e_data(rData[i].center,rData[i].rad);
+						CircleSimple sc=HyperbolicMath.h_to_e_data(getCenter(i),getRadius(i));
 						ectr=sc.center;
 						rad=sc.rad;
 					}
 					else {
-						ectr=rData[i].center;
-						rad=rData[i].rad;
+						ectr=getCenter(i);
+						rad=getRadius(i);
 					}
 					mydist=z.minus(ectr).abs();
 					if (mydist<rad && kData[i].plotFlag>0) 
@@ -10998,10 +11062,10 @@ public class PackData{
 			double dist;
 
 			// find minimum edge length
-			double minlen = edgelen[0] = geom_dist(rData[vert[0]].center,
+			double minlen = edgelen[0] = geom_dist(getCenter(vert[0]),
 					vert[1]);
-			edgelen[1] = geom_dist(rData[vert[1]].center, vert[2]);
-			edgelen[2] = geom_dist(rData[vert[2]].center, vert[0]);
+			edgelen[1] = geom_dist(getCenter(vert[1]), vert[2]);
+			edgelen[2] = geom_dist(getCenter(vert[2]), vert[0]);
 			minlen = (edgelen[1] < minlen) ? edgelen[1] : minlen;
 			minlen = (edgelen[2] < minlen) ? edgelen[2] : minlen;
 
@@ -11019,14 +11083,14 @@ public class PackData{
 			if (hes <= 0) { // hyp/eucl
 				for (int j = 0; j < 3; j++) {
 					lindist[j] = EuclMath.dist_to_line(z,
-							rData[vert[j]].center,
-							rData[vert[(j + 1) % 3]].center);
+							getCenter(vert[j]),
+							getCenter(vert[(j + 1) % 3]));
 				}
 			} else { // spherical
 				for (int j = 0; j < 3; j++) {
 					lindist[j] = SphericalMath.s_dist_pt_to_line(z,
-							rData[vert[j]].center,
-							rData[vert[(j + 1) % 3]].center);
+							getCenter(vert[j]),
+							getCenter(vert[(j + 1) % 3]));
 				}
 			}
 			int v = 0;
@@ -11042,8 +11106,8 @@ public class PackData{
 			// want closest center to be first vert in the edge
 			int e1=vert[v];
 			int e2=vert[(v+1)%3];
-			Complex z1=rData[e1].center;
-			Complex z2=rData[e2].center;
+			Complex z1=getCenter(e1);
+			Complex z2=getCenter(e2);
 			if (hes>0) {
 				edgelen[1]=SphericalMath.s_dist(z1,z);
 				edgelen[2]=SphericalMath.s_dist(z2,z);
@@ -11057,8 +11121,8 @@ public class PackData{
 				edgelen[2]=z2.minus(z).abs();
 			}
 			
-			if (edgelen[1]<rData[e1].rad && edgelen[2]>rData[e2].rad); // okay
-			else if (edgelen[1]>rData[e1].rad && edgelen[2]<rData[e2].rad
+			if (edgelen[1]<getRadius(e1) && edgelen[2]>getRadius(e2)); // okay
+			else if (edgelen[1]>getRadius(e1) && edgelen[2]<getRadius(e2)
 					|| edgelen[2]<edgelen[1]) { // switch order
 				int hold=e1;
 				e1=e2;
@@ -11088,16 +11152,16 @@ public class PackData{
 		// if not, look for closest circle; we use eucl computations
 		else {
 			circle = 1;
-			Complex cent = rData[circle].center;
+			Complex cent = getCenter(circle);
 			if (hes < 0) {
-				sc = HyperbolicMath.h_to_e_data(cent, rData[circle].rad);
+				sc = HyperbolicMath.h_to_e_data(cent, getRadius(circle));
 				cent = new Complex(sc.center);
 			}
 			mindist = z.minus(cent).abs();
 			for (int j = 2; j <= nodeCount; j++) {
-				cent = rData[j].center;
+				cent = getCenter(j);
 				if (hes < 0) {
-					sc = HyperbolicMath.h_to_e_data(cent, rData[j].rad);
+					sc = HyperbolicMath.h_to_e_data(cent,getRadius(j));
 					cent = new Complex(sc.center);
 				} else
 					dist = z.minus(cent).abs();
@@ -11109,8 +11173,8 @@ public class PackData{
 		}
 
 		// now, have the closest circle; use arguments to choose petal
-		double crad = rData[circle].rad;
-		Complex ccent = rData[circle].center;
+		double crad = getRadius(circle);
+		Complex ccent = getCenter(circle);
 		if (hes < 0) {
 			sc = HyperbolicMath.h_to_e_data(ccent, crad);
 			ccent = new Complex(sc.center);
@@ -11133,9 +11197,9 @@ public class PackData{
 		double[] args = new double[num + 1];
 		for (int k = 0; k < num + kData[circle].bdryFlag; k++) {
 			int j = kData[circle].flower[k];
-			fz = rData[j].center;
+			fz = getCenter(j);
 			if (hes < 0) {
-				sc = HyperbolicMath.h_to_e_data(fz, rData[j].rad);
+				sc = HyperbolicMath.h_to_e_data(fz, getRadius(j));
 				fz = new Complex(sc.center);
 			}
 			args[k] = ccent.minus(fz).arg();
@@ -11170,12 +11234,12 @@ public class PackData{
 	 * geometry; use euclidean in both hyp and eucl cases.
 	 */
 	public double geom_dist(Complex z,int v) {
-		Complex cent=rData[v].center;
+		Complex cent=getCenter(v);
 		if (hes>0) { // spherical
 			return SphericalMath.s_dist(cent,z);
 		}
 		if (hes<0) { // hyp
-		    CircleSimple sc=HyperbolicMath.h_to_e_data(cent,rData[v].rad);
+		    CircleSimple sc=HyperbolicMath.h_to_e_data(cent,getRadius(v));
 		    cent=sc.center;
 		}
 		return z.minus(cent).abs();
@@ -11190,17 +11254,17 @@ public class PackData{
 		Complex ectr=null;
 	  
 		if (hes>0) {
-			if (SphericalMath.s_dist(z,rData[n].center)<rData[n].rad) return 1;
+			if (SphericalMath.s_dist(z,getCenter(n))<getRadius(n)) return 1;
 			return 0;
 		}
 		if (hes<0) {
-			CircleSimple sc=HyperbolicMath.h_to_e_data(rData[n].center,rData[n].rad);
+			CircleSimple sc=HyperbolicMath.h_to_e_data(getCenter(n),getRadius(n));
 		    ectr=sc.center;
 		    rad=sc.rad;
 		}
 		else if (hes==0) {
-		    rad=rData[n].rad;
-		    ectr=rData[n].center;
+		    rad=getRadius(n);
+		    ectr=getCenter(n);
 		}
 		w=z.minus(ectr);
 		if (w.abs()<rad) return 1;
@@ -11233,9 +11297,9 @@ public class PackData{
 	public int pt_in_tri(int f, Complex z) {
 		Complex[] ctr = new Complex[3];
 
-		ctr[0]=rData[faces[f].vert[0]].center;
-		ctr[1]=rData[faces[f].vert[1]].center;
-		ctr[2]=rData[faces[f].vert[2]].center;
+		ctr[0]=getCenter(faces[f].vert[0]);
+		ctr[1]=getCenter(faces[f].vert[1]);
+		ctr[2]=getCenter(faces[f].vert[2]);
 		if (hes > 0) {
 			if (SphericalMath.pt_in_sph_tri(z,ctr[0],ctr[1],ctr[2]))
 				return 1;
@@ -11246,11 +11310,11 @@ public class PackData{
 		for (int k = 0; k <= 2; k++) {
 			if (hes < 0) { // hypebolic case: use euclidean data
 				CircleSimple sc = HyperbolicMath.h_to_e_data(
-					ctr[k],rData[faces[f].vert[k]].rad);
+					ctr[k],getRadius(faces[f].vert[k]));
 				ctr[k] = new Complex(sc.center);
 			} 
 			else
-				ctr[k] = rData[faces[f].vert[k]].center;
+				ctr[k] = getCenter(faces[f].vert[k]);
 		}
 		if (EuclMath.pt_in_eucl_tri(z,ctr[0],ctr[1],ctr[2]))
 			return 1;
@@ -11301,25 +11365,7 @@ public class PackData{
 		  
 		return (tick-1); // in general, tick-1 should equal nodecount 
 	} 
-
 		
-	/** 
-	 * Return radius of a vertex. In hyp case, converts "x-radius" to 
-	 * actual hyperbolic radius, which is what outside world should see.
-	 * In hyp case, when x-radius<0, it is -r for eucl radius r, 
-	 * so we just return -r.
-	 * @param v int
-	 * @return double
-	*/
-	public double getRadius(int v) {
-		double x=rData[v].rad;
-	    if (hes<0 && x> 0.0) {
-	    	if (x>.0001) return ((-0.5)*Math.log(1.0-x));
-	    	else return (x*(1.0+x*(0.5+x/3))/2);
-	    }
-	    return x;
-	}
-	  
 	/** 
 	 * Routine to remove vertex from pack: This routine assuming flowers 
 	 * pointing to v have already been adjusted. It fixes indices and
@@ -11557,17 +11603,17 @@ public class PackData{
 	    			tempK[Nn].flower[1]=tempK[e.w].flower[kData[e.w].num-1];
 	    			tempK[Nn].flower[2]=tempK[e.v].flower[1];
 	    			tempK[Nn].flower[3]=e.v;
-		    		rData[Nn].rad=rData[e.v].rad;
+		    		setRadius(Nn,getRadius(e.v));
 	    		}
 	    		else {
 	    			tempK[Nn].flower[0]=e.v;
 	    			tempK[Nn].flower[1]=tempK[e.v].flower[kData[e.v].num-1];
 	    			tempK[Nn].flower[2]=tempK[e.w].flower[1];
 	    			tempK[Nn].flower[3]=e.w;
-		    		rData[Nn].rad=rData[e.w].rad;
+		    		setRadius(Nn,getRadius(e.w));
 	    		}
 	    		// average end centers to set center
-	    		rData[Nn].center=rData[e.v].center.add(rData[e.w].center).divide(2.0);
+	    		setCenter(Nn,getCenter(e.v).add(getCenter(e.w)).divide(2.0));
 	    		rData[Nn].aim=-1.0;
 	    	}
 
@@ -11603,8 +11649,8 @@ public class PackData{
 		    		tempK[Nn].flower[4]=tempK[e.v].flower[(dir_vw-1+num_v)%num_v];
 	    		
 	    		// average end centers/radii to set center/rad
-	    		rData[Nn].rad=(rData[e.v].rad+rData[e.w].rad)/2.0;
-	    		rData[Nn].center=rData[e.v].center.add(rData[e.w].center).divide(2.0);
+	    		setRadius(Nn,(getRadius(e.v)+getRadius(e.w))/2.0);
+	    		setCenter(Nn,getCenter(e.v).add(getCenter(e.w)).divide(2.0));
 	    		rData[Nn].aim=2.0*Math.PI;
 	    	}
 	    }
@@ -11647,7 +11693,7 @@ public class PackData{
 	      xyzpoint=new Point3D[nodeCount+1];
 	      if (hes>0) { // spherical
 	      	for (int i=1;i<=nodeCount;i++) {
-	  	    Complex z=rData[i].center;
+	  	    Complex z=getCenter(i);
 	  	    xyzpoint[i]=new Point3D(Math.sin(z.y)*Math.cos(z.x),
 	  			Math.sin(z.y)*Math.sin(z.x),Math.cos(z.y));
 	      	}
@@ -11655,14 +11701,14 @@ public class PackData{
 	      }
 	      if (hes<0) { // hyperbolic ((x,y) only)
 	      	for (int i=1;i<=nodeCount;i++) {
-	  	    CircleSimple sc=HyperbolicMath.h_to_e_data(rData[i].center,rData[i].rad);
+	  	    CircleSimple sc=HyperbolicMath.h_to_e_data(getCenter(i),getRadius(i));
 	      	    xyzpoint[i]=new Point3D(sc.center.x,sc.center.y,0.0);
 	      	}
 	      	return 1;
 	      }
 	      else { // euclidean ((x,y) only)
 	     	for (int i=1;i<=nodeCount;i++) {
-	  	    xyzpoint[i]=new Point3D(rData[i].center.x,rData[i].center.y,0.0);
+	     		xyzpoint[i]=new Point3D(getCenter(i).x,getCenter(i).y,0.0);
 	     	}
 	     	return 1;
 	      }
@@ -12679,14 +12725,14 @@ public class PackData{
 			double e_rad;
 			Complex e_center;
 			for (int i = 1; i <= nodeCount; i++) {
-				sc = HyperbolicMath.h_to_e_data(rData[i].center, rData[i].rad);
+				sc = HyperbolicMath.h_to_e_data(getCenter(i), getRadius(i));
 				e_center = sc.center.times(factor);
 				e_rad = sc.rad * factor;
 				sc = HyperbolicMath.e_to_h_data(e_center, e_rad);
 				if (sc.flag == 0)
 					hyp_out = true; // circle was forced into disc
-				rData[i].center = sc.center;
-				rData[i].rad = sc.rad;
+				setCenter(i,sc.center);
+				setRadius(i,sc.rad);
 			}
 			if (redChain != null) {
 				boolean keepon = true;
@@ -12724,12 +12770,14 @@ public class PackData{
 	  public int rotate(double ang) {
 		  Mobius mob=Mobius.rotation(ang/Math.PI);
 		  if (hes>0) {
-		      for (int i=1;i<=nodeCount;i++)
-		    	  rData[i].center.x += ang;
+		      for (int i=1;i<=nodeCount;i++) {
+		    	  Complex z=getCenter(i);
+		    	  setCenter(i,z.x+ang,z.y);
+		      }
 		      return 1;
 		  }
 	      for (int i=1;i<=nodeCount;i++)
-	    	  rData[i].center=mob.apply(rData[i].center);
+	    	  setCenter(i,mob.apply(rData[i].center));
 	      return 1;
 	  } 
 
@@ -12744,12 +12792,16 @@ public class PackData{
 	      Path2D.Double gpath=new Path2D.Double();
 	      Iterator<EdgeSimple> elist=edgelist.iterator();
 	      EdgeSimple edge=(EdgeSimple)elist.next();
-	      gpath.moveTo(rData[edge.v].center.x,rData[edge.v].center.y);
-	      gpath.lineTo(rData[edge.w].center.x,rData[edge.w].center.y);
+	      Complex vz=getCenter(edge.v);
+	      gpath.moveTo(vz.x,vz.y);
+	      Complex wz=getCenter(edge.w);
+	      gpath.moveTo(wz.x,wz.y);
 	      while(elist.hasNext()) {
-	  	edge=(EdgeSimple)elist.next();
-	  	gpath.lineTo(rData[edge.v].center.x,rData[edge.v].center.y);
-	  	gpath.lineTo(rData[edge.w].center.x,rData[edge.w].center.y);
+	    	  edge=(EdgeSimple)elist.next();
+		      vz=getCenter(edge.v);
+		      gpath.lineTo(vz.x,vz.y);
+		      wz=getCenter(edge.w);
+		      gpath.lineTo(wz.x,wz.y);
 	      }
 	      gpath.closePath();
 	      if (count>3) return gpath;
@@ -13046,8 +13098,8 @@ public class PackData{
 	        		kData[j].num = ll+mm;
 	        	}
 	        	else {
-	        		rData[j].center=new Complex(p2.rData[i].center);
-	        		rData[j].rad=p2.rData[i].rad;
+	        		setCenter(j,new Complex(p2.getCenter(i)));
+	        		setRadius(j,p2.getRadius(i));
 	        		kData[j].num=p2.kData[i].num;
 	        		newflower=new int[p2.kData[i].num+1];
 	        		for (int k=0;k<=p2.kData[i].num;k++)
@@ -13217,7 +13269,7 @@ public class PackData{
 	  for (int i=1;i<=nodeCount;i++) { // set bdry and plot flags
 		  if (kData[i].flower[0]==kData[i].flower[kData[i].num]) {
 			  kData[i].bdryFlag=0;
-			  if (rData[i].rad<=0) rData[i].rad=.7;
+			  if (getRadius(i)<=0) setRadius(i,0.7);
 			  // so ones now in interior don't have infinite radius
 		  }
 	      else kData[i].bdryFlag=1;
@@ -13903,8 +13955,8 @@ public class PackData{
 	    	   if (back==0 && kData[u].flower[kData[u].num]==w)
 	    		   kData[u].flower[kData[u].num]=newval;
 	       }
-	       rData[newval].rad=rData[w].rad;
-	       rData[newval].center=rData[w].center;
+	       setRadius(newval,getRadius(w));
+	       setCenter(newval,getCenter(w));
 	       ecount++;
 	       vertexMap.add(new EdgeSimple(newval,w));
 	   } // end of else
@@ -13986,8 +14038,8 @@ public class PackData{
 			kData[new_V].overlaps = null;
 		kData[new_V].bdryFlag = 1;
 		rData[new_V].aim = -1.0;
-		rData[new_V].rad = rData[v].rad;
-		rData[new_V].center = new Complex(rData[v].center);
+		setRadius(new_V,getRadius(v));
+		setCenter(new_V,new Complex(getCenter(v)));
 		
 		// fix ngb's pointing to new_V (except for w, handled later)
 		for (int k = 1; k <= kData[new_V].num; k++) {
@@ -14029,8 +14081,8 @@ public class PackData{
 				kData[new_W].overlaps = null;
 			kData[new_W].bdryFlag = 1;
 			rData[new_W].aim = -1.0;
-			rData[new_W].rad = rData[w].rad;
-			rData[new_W].center = new Complex(rData[w].center);
+			setRadius(new_W, getRadius(w));
+			setCenter(new_W, new Complex(getCenter(w)));
 			
 			// fix ngb's pointing to neww
 			kData[new_V].flower[0]=new_W;
@@ -14161,9 +14213,9 @@ public class PackData{
 			}
 			for (int i = 1; i <= nodeCount; i++) {
 				// catch horocycles to modify their radii
-				radius = (-rData[i].rad);
+				radius = (-1)*getRadius(i);
 				if (radius > 0) { // yes, a horocycle
-					z1 = rData[i].center;
+					z1 = getCenter(i);
 					z2 = z1.times(1.0 - 2.0 * radius);
 					z3.x = (1 - radius) * z1.x - radius * z1.y;
 					z3.y = (1 - radius) * z1.y + radius * z1.x;
@@ -14171,10 +14223,10 @@ public class PackData{
 					z2 = Mobius.mob_trans(z2, ctr);
 					z3 = Mobius.mob_trans(z3, ctr);
 					CircleSimple sc = EuclMath.circle_3(z1, z2, z3);
-					rData[i].rad = (-sc.rad);
+					setRadius(i,(-sc.rad));
 				}
-				rData[i].center = Mobius.mob_trans(rData[i].center, ctr);
-				rData[i].center.times(-1.0);
+				setCenter(i,Mobius.mob_trans(getCenter(i), ctr));
+				setCenter(i,getCenter(i).times(-1.0));
 			}
 			if ((trace = redChain) != null) // adjust centers in red list
 				while (trace != redChain || keepon) {
@@ -14183,7 +14235,7 @@ public class PackData{
 					// again, catch horocycles
 					radius = (-(trace.rad));
 					if (radius > 0) {
-						z1 = rData[j].center;
+						z1 = getCenter(j);
 						z2 = z1.times(1.0 - 2.0 * radius);
 						z3.x = (1 - radius) * z1.x - radius * z1.y;
 						z3.y = (1 - radius) * z1.y + radius * z1.x;
@@ -14208,14 +14260,16 @@ public class PackData{
 		else if (hes>0) { // sph
 			Matrix3D m3d=Matrix3D.rigid2North(ctr);
 			for (int i = 1; i <= nodeCount; i++) {
-				Point3D pt=Matrix3D.times(m3d,new Point3D(rData[i].center)); // pt.norm();
-				rData[i].center=Point3D.p3D_2_sph(pt); // pt.norm();
+				Point3D pt=Matrix3D.times(m3d,new Point3D(getCenter(i))); // pt.norm();
+				setCenter(i,Point3D.p3D_2_sph(pt)); // pt.norm();
 			}
 			return 1;
 		}
 		else { // eucl
-			for (int i = 1; i <= nodeCount; i++)
-				rData[i].center = rData[i].center.minus(ctr);
+			for (int i = 1; i <= nodeCount; i++) {
+				Complex zc=getCenter(i).minus(ctr);
+				setCenter(i,zc);
+			}
 			keepon = true;
 			if ((trace = redChain) != null)
 				while (trace != redChain || keepon) {
@@ -14277,13 +14331,13 @@ public class PackData{
 					double o0 = kData[v1].overlaps[nghb(v1, v2)];
 					double o1 = kData[v2].overlaps[nghb(v2, v0)];
 					double o2 = kData[v0].overlaps[nghb(v0, v1)];
-					sc = CommonMath.comp_any_center(rData[v0].center, rData[v1].center,
-							rData[v0].rad, rData[v1].rad,
-							rData[v2].rad, o0, o1, o2,hes);
+					sc = CommonMath.comp_any_center(getCenter(v0),getCenter(v1),
+							getRadius(v0), getRadius(v1),
+							getRadius(v2), o0, o1, o2,hes);
 				} 
 				else
-					sc = CommonMath.comp_any_center(rData[v0].center, rData[v1].center,
-							rData[v0].rad, rData[v1].rad,rData[v2].rad,hes);
+					sc = CommonMath.comp_any_center(getCenter(v0), getCenter(v1),
+							getRadius(v0), getRadius(v1),getRadius(v2),hes);
 				// compute and store new center
 				sc.save(this, v2);
 			}
@@ -14328,14 +14382,14 @@ public class PackData{
 				myVerts[2] = faces[next].vert[(k+2)%3]; // this is one computed
 
 				// radii to use?
-				myRadii[0]=rData[myVerts[0]].rad;
-				myRadii[1]=rData[myVerts[1]].rad;
-				myRadii[2]=rData[myVerts[2]].rad;
+				myRadii[0]=getRadius(myVerts[0]);
+				myRadii[1]=getRadius(myVerts[1]);
+				myRadii[2]=getRadius(myVerts[2]);
 
 				// centers
-				myCenters[0] = rData[myVerts[0]].center;
-				myCenters[1] = rData[myVerts[1]].center;
-				myCenters[2] = rData[myVerts[2]].center;
+				myCenters[0] = getCenter(myVerts[0]);
+				myCenters[1] = getCenter(myVerts[1]);
+				myCenters[2] = getCenter(myVerts[2]);
 
 				// compute new center
 				CircleSimple sc;
@@ -14440,14 +14494,14 @@ public class PackData{
 //System.err.println(" next_face = "+next_face+"; v0="+myVerts[0]+" v1="+myVerts[1]+" v2="+myVerts[2]);
 
 					// radii to use?
-					myRadii[0]=rData[myVerts[0]].rad;
-					myRadii[1]=rData[myVerts[1]].rad;
-					myRadii[2]=rData[myVerts[2]].rad;
+					myRadii[0]=getRadius(myVerts[0]);
+					myRadii[1]=getRadius(myVerts[1]);
+					myRadii[2]=getRadius(myVerts[2]);
 
 					// centers
-					myCenters[0] = rData[myVerts[0]].center;
-					myCenters[1] = rData[myVerts[1]].center;
-					myCenters[2] = rData[myVerts[2]].center;
+					myCenters[0] = getCenter(myVerts[0]);
+					myCenters[1] = getCenter(myVerts[1]);
+					myCenters[2] = getCenter(myVerts[2]);
 					
 					// Want to use 'red-to-red'? (that is, 'useRed' is set, this
 					//    face is red, and 'next_face' is 'nextRed'.
@@ -14501,13 +14555,13 @@ public class PackData{
 				}
 				
 				// get centers/radii
-				myCenters[0] = rData[myVerts[0]].center;
-				myCenters[1] = rData[myVerts[1]].center;
-				myCenters[2] = rData[myVerts[2]].center;
+				myCenters[0] = getCenter(myVerts[0]);
+				myCenters[1] = getCenter(myVerts[1]);
+				myCenters[2] = getCenter(myVerts[2]);
 				
-				myRadii[0]=rData[myVerts[0]].rad;
-				myRadii[1]=rData[myVerts[1]].rad;
-				myRadii[2]=rData[myVerts[2]].rad;
+				myRadii[0]=getRadius(myVerts[0]);
+				myRadii[1]=getRadius(myVerts[1]);
+				myRadii[2]=getRadius(myVerts[2]);
 				
 				if (faceDo && pF==null) { // draw the faces
 					if (!faceFlags.colorIsSet && 
@@ -14525,7 +14579,7 @@ public class PackData{
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(myVerts[2]));
 					cpScreen.drawCircle(myCenters[2],
-							rData[myVerts[2]].rad,circFlags);
+							getRadius(myVerts[2]),circFlags);
 				}
 				
 				if (pF!=null && hes>0) { // post routines don't know how to convert
@@ -14568,19 +14622,20 @@ public class PackData{
 				if (circDo && pF!=null) { // also post the circles
 					if (!circFlags.fill) { // not filled
 						if (circFlags.colBorder)
-							pF.postColorCircle(hes,myCenters[2],rData[myVerts[2]].rad,kData[myVerts[2]].color,tx);
+							pF.postColorCircle(hes,myCenters[2],
+									getRadius(myVerts[2]),kData[myVerts[2]].color,tx);
 						else 
-							pF.postCircle(hes,myCenters[2],rData[myVerts[2]].rad,tx);
+							pF.postCircle(hes,myCenters[2],getRadius(myVerts[2]),tx);
 					} 
 					else {
 						Color ccOl=CPScreen.getFGColor();
 						if (!circFlags.colorIsSet)
 							ccOl = kData[myVerts[2]].color;
 						if (circFlags.colBorder) {
-							pF.postFilledColorCircle(hes,myCenters[2],rData[myVerts[2]].rad,ccOl,ccOl,tx);
+							pF.postFilledColorCircle(hes,myCenters[2],getRadius(myVerts[2]),ccOl,ccOl,tx);
 						}
 						else 
-							pF.postFilledCircle(hes,myCenters[2],rData[myVerts[2]].rad,ccOl,tx);
+							pF.postFilledCircle(hes,myCenters[2],getRadius(myVerts[2]),ccOl,tx);
 					}
 					if (circFlags.label) { // label the face
 						if (hes>0) {
@@ -14641,12 +14696,12 @@ public class PackData{
 				// set rad/centers; root face must be placed already
 				if (last_face==0) { // this is root, use stored centers
 					int []mv=p.faces[next_face].vert;
-					aspect[next_face].setCenter(new Complex(p.rData[mv[0]].center),0);
-					aspect[next_face].setCenter(new Complex(p.rData[mv[1]].center),1);
-					aspect[next_face].setCenter(new Complex(p.rData[mv[2]].center),2);
-					aspect[next_face].setRadius(p.rData[mv[0]].rad,0);
-					aspect[next_face].setRadius(p.rData[mv[1]].rad,1);
-					aspect[next_face].setRadius(p.rData[mv[2]].rad,2);
+					aspect[next_face].setCenter(new Complex(p.getCenter(mv[0])),0);
+					aspect[next_face].setCenter(new Complex(p.getCenter(mv[1])),1);
+					aspect[next_face].setCenter(new Complex(p.getCenter(mv[2])),2);
+					aspect[next_face].setRadius(p.getRadius(mv[0]),0);
+					aspect[next_face].setRadius(p.getRadius(mv[1]),1);
+					aspect[next_face].setRadius(p.getRadius(mv[2]),2);
 				}
 				
 				// else recompute center of opposite vert of next_face
@@ -14663,9 +14718,9 @@ public class PackData{
 					myVerts[1]=p.faces[next_face].vert[(jj+1)%3];
 					myVerts[2]=p.faces[next_face].vert[(jj+2)%3];
 					double []myRadii=new double[3];
-					myRadii[0]=p.rData[myVerts[0]].rad;
-					myRadii[1]=p.rData[myVerts[1]].rad;
-					myRadii[2]=p.rData[myVerts[2]].rad;
+					myRadii[0]=p.getRadius(myVerts[0]);
+					myRadii[1]=p.getRadius(myVerts[1]);
+					myRadii[2]=p.getRadius(myVerts[2]);
 					Complex []myCenters=new Complex[3]; // two centers from aspect of last_face
 					myCenters[0]=new Complex(aspect[last_face].getCenter((j+1)%3));
 					myCenters[1]=new Complex(aspect[last_face].getCenter(j));
@@ -14787,14 +14842,14 @@ public class PackData{
 //System.err.println(" next_face = "+next_face+"; v0="+myVerts[0]+" v1="+myVerts[1]+" v2="+myVerts[2]);
 
 					// radii to use?
-					myRadii[0]=rData[myVerts[0]].rad;
-					myRadii[1]=rData[myVerts[1]].rad;
-					myRadii[2]=rData[myVerts[2]].rad;
+					myRadii[0]=getRadius(myVerts[0]);
+					myRadii[1]=getRadius(myVerts[1]);
+					myRadii[2]=getRadius(myVerts[2]);
 
 					// centers
-					myCenters[0] = rData[myVerts[0]].center;
-					myCenters[1] = rData[myVerts[1]].center;
-					myCenters[2] = rData[myVerts[2]].center;
+					myCenters[0] = getCenter(myVerts[0]);
+					myCenters[1] = getCenter(myVerts[1]);
+					myCenters[2] = getCenter(myVerts[2]);
 					
 					// Want to use 'red-to-red'? (that is, 'useRed' is set, this
 					//    face is red, and 'next_face' is 'nextRed'.
@@ -14814,7 +14869,8 @@ public class PackData{
 							
 						// we found the local index; use redchain radius
 						if (hitindx>=0) {
-							myRadii[hitindx]=rData[myVerts[hitindx]].rad=redlist.rad;
+							myRadii[hitindx]=redlist.rad;
+							setRadius(myVerts[hitindx],redlist.rad);
 //System.err.println(" hitindx="+hitindx+", vert="+myVerts[hitindx]+", and rad="+redlist.rad);								
 							if (hitindx!=2) { // rotate so computed center is index 2
 								int myvert=myVerts[hitindx];
@@ -14848,13 +14904,13 @@ public class PackData{
 				}
 				
 				// get centers/radii
-				myCenters[0] = rData[myVerts[0]].center;
-				myCenters[1] = rData[myVerts[1]].center;
-				myCenters[2] = rData[myVerts[2]].center;
+				myCenters[0] = getCenter(myVerts[0]);
+				myCenters[1] = getCenter(myVerts[1]);
+				myCenters[2] = getCenter(myVerts[2]);
 				
-				myRadii[0]=rData[myVerts[0]].rad;
-				myRadii[1]=rData[myVerts[1]].rad;
-				myRadii[2]=rData[myVerts[2]].rad;
+				myRadii[0]=getRadius(myVerts[0]);
+				myRadii[1]=getRadius(myVerts[1]);
+				myRadii[2]=getRadius(myVerts[2]);
 				
 				if (faceDo && pF==null) { // draw the faces
 					if (!faceFlags.colorIsSet && 
@@ -14873,7 +14929,7 @@ public class PackData{
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(myVerts[2]));
 					cpScreen.drawCircle(myCenters[2],
-							rData[myVerts[2]].rad,circFlags);
+							getRadius(myVerts[2]),circFlags);
 				}
 				
 				if (pF!=null && hes>0) { // post routines don't know how to convert
@@ -14917,19 +14973,22 @@ public class PackData{
 				if (circDo && pF!=null) { // also post the circles
 					if (!circFlags.fill) { // not filled
 						if (circFlags.colBorder)
-							pF.postColorCircle(hes,myCenters[2],rData[myVerts[2]].rad,kData[myVerts[2]].color,tx);
+							pF.postColorCircle(hes,myCenters[2],getRadius(myVerts[2]),
+									kData[myVerts[2]].color,tx);
 						else 
-							pF.postCircle(hes,myCenters[2],rData[myVerts[2]].rad,tx);
+							pF.postCircle(hes,myCenters[2],getRadius(myVerts[2]),tx);
 					} 
 					else {
 						Color ccOl=CPScreen.getFGColor();
 						if (!circFlags.colorIsSet)
 							ccOl = kData[myVerts[2]].color;
 						if (circFlags.colBorder) {
-							pF.postFilledColorCircle(hes,myCenters[2],rData[myVerts[2]].rad,ccOl,ccOl,tx);
+							pF.postFilledColorCircle(hes,myCenters[2],
+									getRadius(myVerts[2]),ccOl,ccOl,tx);
 						}
 						else 
-							pF.postFilledCircle(hes,myCenters[2],rData[myVerts[2]].rad,ccOl,tx);
+							pF.postFilledCircle(hes,myCenters[2],
+									getRadius(myVerts[2]),ccOl,tx);
 					}
 					if (circFlags.label) { // label the face
 						if (hes>0) {
@@ -14965,9 +15024,9 @@ public class PackData{
 		int v2 = faces[g].vert[(k+2)%3]; // this is one the one to compute
 
 		// radii to use?
-		double r0=rData[v0].rad;
-		double r1=rData[v1].rad;
-		double r2=rData[v2].rad;
+		double r0=getRadius(v0);
+		double r1=getRadius(v1);
+		double r2=getRadius(v2);
 
 		// compute new center
 		CircleSimple sc;
@@ -14978,10 +15037,10 @@ public class PackData{
 			o0=kData[v1].overlaps[nghb(v1,v2)];
 			o1=kData[v2].overlaps[nghb(v2,v0)];
 			o2=kData[v0].overlaps[nghb(v0,v1)];
-			sc = CommonMath.comp_any_center(rData[v0].center,rData[v1].center,r0,r1,r2,o0,o1,o2,hes);
+			sc = CommonMath.comp_any_center(getCenter(v0),getCenter(v1),r0,r1,r2,o0,o1,o2,hes);
 		} 
 		else {
-			sc = CommonMath.comp_any_center(rData[v0].center,rData[v1].center,r0,r1,r2,hes);
+			sc = CommonMath.comp_any_center(getCenter(v0),getCenter(v1),r0,r1,r2,hes);
 		}
 			
 		// store the new center
@@ -15187,11 +15246,10 @@ public class PackData{
 				
 				// move the data
 				if (tgt_v>0 && tgt_v<=target_p.nodeCount) {
-					if (radii) {target_p.rData[tgt_v].rad=source_p.rData[src_v].rad;count++;}
+					if (radii) {target_p.setRadius(tgt_v,source_p.getRadius(src_v));count++;}
 					if (aims) {target_p.rData[tgt_v].aim=source_p.rData[src_v].aim;count++;}
 					if (marks) {target_p.kData[tgt_v].mark=source_p.kData[src_v].mark;count++;}
-					if (centers) {target_p.rData[tgt_v].center=
-						new Complex(source_p.rData[src_v].center);count++;}
+					if (centers) {target_p.setCenter(tgt_v,new Complex(source_p.getCenter(src_v)));count++;}
 					if (cir_colors) {
 						Color col=source_p.kData[src_v].color;
 						target_p.kData[tgt_v].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
@@ -15334,11 +15392,11 @@ public class PackData{
 	    v=(Integer)vtrace.next();
 	    if (rData[v].aim>0) {
 	      if (hes<0)
-		h_anglesum_overlap(v,rData[v].rad,uP);
+		h_anglesum_overlap(v,getRadius(v),uP);
 	      else if (hes>0)
-		s_anglesum(v,rData[v].rad,uP);
+		s_anglesum(v,getRadius(v),uP);
 	      else 
-		e_anglesum_overlap(v,rData[v].rad,uP);
+		e_anglesum_overlap(v,getRadius(v),uP);
 	      rData[v].curv=uP.value;
 	      rData[v].aim = rData[v].curv-x*(rData[v].curv-rData[v].aim);
 	      count++;
@@ -15361,13 +15419,13 @@ public class PackData{
 	  Iterator<Integer> vlist=vertlist.iterator();
 	  while (vlist.hasNext()) {
 	      v=(Integer)vlist.next();
-	      rp=rData[v].rad;
-	      rq=q.rData[v].rad;
+	      rp=getRadius(v);
+	      rq=q.getRadius(v);
 	    if (hes<0) {
 	      if (rp<0) rp=1-Math.exp(-2.0*10.0);
 	      if (rq<0) rq=1-Math.exp(-2.0*10.0);
 	    }
-	    rData[v].rad = rp+x*(rq-rp);
+	    setRadius(v,rp+x*(rq-rp));
 	    count++;
 	  }
 	  return count;
@@ -15855,7 +15913,7 @@ public class PackData{
 			if (faces[nf].vert[j] == v) { // record first center
 				start = j + 1;
 				ctmp = new CentList();
-				ctmp.z = new Complex(rData[v].center);
+				ctmp.z = new Complex(getCenter(v));
 				if (centlist == null)
 					centlist = ctrace = ctmp;
 				else
@@ -15871,7 +15929,7 @@ public class PackData{
 			if (vflag == 0 && vert == v) { // record center
 				move++;
 				ctmp = new CentList();
-				ctmp.z = new Complex(rData[v].center);
+				ctmp.z = getCenter(v);
 				if (centlist == null)
 					centlist = ctrace = ctmp;
 				else
@@ -15886,7 +15944,7 @@ public class PackData{
 		if (vflag == 0 && start != 0 && move != 0) {
 			// if v in first face and has moved, also include final location
 			ctmp = new CentList();
-			ctmp.z = new Complex(rData[v].center);
+			ctmp.z = getCenter(v);
 			if (centlist == null)
 				centlist = ctrace = ctmp;
 			else
@@ -15895,8 +15953,8 @@ public class PackData{
 
 		// normalize?
 		if (norm) {
-			Complex a = rData[alpha].center;
-			Complex g = rData[gamma].center;
+			Complex a = getCenter(alpha);
+			Complex g = getCenter(gamma);
 			norm_any_pack(a, g);
 
 			// adjust locations reported for v because of normalization
@@ -16186,16 +16244,16 @@ public class PackData{
 	    }
 		if (nface!=0) {
 			// draw for this packing
-			Complex c0=rData[faces[face].vert[0]].center;
-			Complex c1=rData[faces[face].vert[1]].center;
-			Complex c2=rData[faces[face].vert[2]].center;
+			Complex c0=getCenter(faces[face].vert[0]);
+			Complex c1=getCenter(faces[face].vert[1]);
+			Complex c2=getCenter(faces[face].vert[2]);
 			DispFlags dflags=new DispFlags("f");
 			dflags.setColor(faces[face].color);
 			cpScreen.drawFace(c0,c1,c2,null,null,null,dflags);   
 			// draw other packing
-		    c0=q.rData[q.faces[nface].vert[0]].center;
-		    c1=q.rData[q.faces[nface].vert[1]].center;
-		    c2=q.rData[q.faces[nface].vert[2]].center;
+		    c0=q.getCenter(q.faces[nface].vert[0]);
+		    c1=q.getCenter(q.faces[nface].vert[1]);
+		    c2=q.getCenter(q.faces[nface].vert[2]);
 			dflags.setColor(q.faces[nface].color);
 		    q.cpScreen.drawFace(c0,c1,c2,null,null,null,dflags);
 		}
@@ -16235,13 +16293,13 @@ public class PackData{
 				if (nv>0 && nv<=q.nodeCount) {
 					if (!donep) { // draw once for this packing
 						dispFlags.setColor(kData[v].color);
-						cpScreen.drawCircle(rData[v].center,rData[v].rad,dispFlags);
+						cpScreen.drawCircle(getCenter(v),getRadius(v),dispFlags);
 					}
 					donep=true;
 				}
 				if (nv<=q.nodeCount) { // draw all the translates 
 					dispFlags.setColor(q.kData[nv].color);
-					q.cpScreen.drawCircle(q.rData[nv].center,q.rData[nv].rad,dispFlags);
+					q.cpScreen.drawCircle(q.getCenter(nv),q.getRadius(nv),dispFlags);
 					count++;
 				}
 			}
@@ -16349,7 +16407,7 @@ public class PackData{
 	    	  dflags.label=true;
 	    	  dflags.setLabel(Integer.toString(w_indx));
 	      }
-	      cpScreen.drawCircle(w_cent,rData[w_indx].rad,dflags);
+	      cpScreen.drawCircle(w_cent,getRadius(w_indx),dflags);
 	  }
 	  RedEdge goon=trace;
       cpScreen.setLineThickness(thickness);
@@ -16367,7 +16425,7 @@ public class PackData{
 	        	  dflags.setLabel(Integer.toString(w_indx));
 	          }
 		      cpScreen.setLineThickness(old_thickness);
-	    	  cpScreen.drawCircle(w_cent,rData[w_indx].rad,dflags);
+	    	  cpScreen.drawCircle(w_cent,getRadius(w_indx),dflags);
 	          cpScreen.setLineThickness(thickness);
 	      }
 	      goon=goon.nextRed;
@@ -16402,7 +16460,7 @@ public class PackData{
 	  if (do_circle) { // handle draw/label for first circle
 	      w_indx=trace.vert(trace.startIndex);
 	      if (hes>0) w_cent=cpScreen.sphView.toApparentSph(w_cent);
-	      pF.postCircle(hes,w_cent,rData[w_indx].rad);
+	      pF.postCircle(hes,w_cent,getRadius(w_indx));
 	      if (do_label) {
 	    	  if (hes>0 && Math.cos(w_cent.x)>=0) 
 	    		  pF.postIndex(w_cent,w_indx);
@@ -16420,7 +16478,7 @@ public class PackData{
 	      }
 	      pF.postColorEdge(hes,v_cent,w_cent,ecol,tx);
 	      if (do_circle) { 
-	    	  pF.postCircle(hes,w_cent,rData[w_indx].rad);
+	    	  pF.postCircle(hes,w_cent,getRadius(w_indx));
 	    	  if (do_label) pF.postIndex(w_cent,w_indx);
 	      }
 	      goon=goon.nextRed;
@@ -16536,8 +16594,8 @@ public class PackData{
 						alp_sym=v;
 					old2new[v] = v;
 					oldnewflag[v] = 1;
-					if (hes < 0 && rData[v].rad <= 0)
-						rData[v].rad = .5;
+					if (hes < 0 && getRadius(v) <= 0)
+						setRadius(v,0.5);
 					// fix flower
 					num = kData[v].num;
 					newK_ptr[v].num = 2 * num;
@@ -16766,10 +16824,10 @@ public class PackData{
 		if (!status || !qackData.status || hes > 0 || hes != qackData.hes)
 			return 0;
 		if (hes < 0) { // hyperbolic automorphism
-			a1 = rData[v1].center;
-			a2 = rData[v2].center;
-			b1 = qackData.rData[w1].center;
-			b2 = qackData.rData[w2].center;
+			a1 = getCenter(v1);
+			a2 = getCenter(v2);
+			b1 = qackData.getCenter(w1);
+			b2 = qackData.getCenter(w2);
 			if (a1.abs() >= Mobius.MOD1 && a2.abs() >= Mobius.MOD1
 					&& b1.abs() >= Mobius.MOD1 && b2.abs() >= Mobius.MOD1)
 			/*
@@ -16792,10 +16850,10 @@ public class PackData{
 		}
 
 		// else: eucl automorphism
-		a1 = rData[v1].center;
-		a2 = rData[v2].center;
-		b1 = qackData.rData[w1].center;
-		b2 = qackData.rData[w2].center;
+		a1 = getCenter(v1);
+		a2 = getCenter(v2);
+		b1 = qackData.getCenter(w1);
+		b2 = qackData.getCenter(w2);
 		mob = Mobius.affine_mob(a1, a2, b1, b2);
 		return 1;
 	}
@@ -16884,8 +16942,8 @@ public class PackData{
 	  if (hes==0) { // eucl case: should be affine map 
 	      factor=M.a.abs();
 	      for (int i=1;i<=q.nodeCount;i++) {
-		  q.rData[i].rad *= factor;
-		  q.rData[i].center = q.rData[i].center.times(M.a).add(M.b);
+		  q.setRadius(i,getRadius(i)*factor);
+		  q.setCenter(i,q.getCenter(i).times(M.a).add(M.b));
 	      }
 	  }
 	  else q.apply_Mobius(M,vertlist);
@@ -16942,11 +17000,14 @@ public class PackData{
 	      while (vlist.hasNext()) {
 		  v=(Integer)vlist.next();
 		  if ((tv=maplist[v])==0 || tv>nodeCount) 
-		      return 0; // failed translation 
-		  rData[tv].center=rData[tv].center.times(ofactor).
-		      add(q.rData[v].center.times(factor));
-		  rData[tv].rad=ofactor*rData[tv].rad+
-		    factor*q.rData[v].rad;
+		      return 0; // failed translation
+		  Complex zt=getCenter(tv);
+		  Complex zz=q.getCenter(v);
+		  setCenter(tv,zt.times(ofactor).
+		      add(zz.times(factor)));
+		 
+		  setRadius(tv,ofactor*getRadius(tv)+
+		    factor*q.getRadius(v));
 	      }
 	    }
 
@@ -16955,8 +17016,8 @@ public class PackData{
 	  for (int i=1;i<=q.nodeCount;i++) {
 	      if ((q.kData[i].mark>depth || q.kData[i].mark==0)
 		  && (tv=maplist[i])!=0 && tv<=nodeCount) {
-		  rData[tv].center=q.rData[i].center;
-		  rData[tv].rad=q.rData[i].rad;
+	    	  setCenter(tv,q.getCenter(i));
+	    	  setRadius(tv,q.getRadius(i));
 	      }
 	  }
 	  return 1;
@@ -17089,7 +17150,7 @@ public class PackData{
 		if (v<1 || v>nodeCount || factor<=0.0) return 0;
 		double newrad;
 		int count=0;
-		double rad=rData[v].rad;
+		double rad=getRadius(v);
 		if (hes<0) { // hyperbolic
 			if (rad<0) { // infinite radius becomes large, finite
 				newrad=.9995;
@@ -17109,7 +17170,7 @@ public class PackData{
 			newrad=rad*factor;
 			count++;
 		}
-		if (count>0) rData[v].rad=newrad;
+		if (count>0) setRadius(v,newrad);
 		return count;
 	}
 
@@ -17128,7 +17189,7 @@ public class PackData{
 			keepon=false;
 			int f=rtrace.face;
 			int v=faces[f].vert[rtrace.vIndex];
-			z=rData[v].center;
+			z=getCenter(v);
 			if (z!=null)
 				rtrace.center=new Complex(z);
 			else 
@@ -17422,7 +17483,7 @@ public class PackData{
 		
 		// store locations
 		for (int v=1;v<=nodeCount;v++) {
-			Complex z=rData[v].center;
+			Complex z=getCenter(v);
 			Tri.nodes[v]=new Point3D(z.x,z.y,0.0);
 		}
 		
@@ -17457,7 +17518,7 @@ public class PackData{
 			double []val=new double[p.nodeCount+1];
 			double maxdepth=-100000;
 			for (int v=1;v<=p.nodeCount;v++) {
-				val[v]=EuclMath.dist_to_path(p.rData[v].center,PathUtil.gpPolygon(Gamma).get(0));
+				val[v]=EuclMath.dist_to_path(p.getCenter(v),PathUtil.gpPolygon(Gamma).get(0));
 				maxdepth=(val[v]>maxdepth) ? val[v] : maxdepth;
 			}
 			if (maxdepth<=.000000001) {
@@ -17531,7 +17592,7 @@ public class PackData{
 		  int hit=1;  // previous code suggests numbering from 1
 		  while (vlst.hasNext()) {
 			  v=vlst.next();
-			  Complex pz=p.rData[v].center;
+			  Complex pz=p.getCenter(v);
 			  dData.ptX[hit]=pz.x;
 			  dData.ptY[hit]=pz.y;
 			  p.vertexMap.add(new EdgeSimple(v,hit)); // {original,new}

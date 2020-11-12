@@ -195,15 +195,15 @@ public class RiemHilbert extends PackExtender {
 		Complex cent=null;
 		if (packData.hes<0) {
 			CircleSimple sc =HyperbolicMath.h_to_e_data(
-					packData.rData[v].center,packData.rData[v].rad);
+					packData.getCenter(v),packData.getRadius(v));
 			cent=sc.center;
 		}
 		else if (packData.hes>0) {
 			CircleSimple sc =SphericalMath.s_to_e_data(
-					packData.rData[v].center,packData.rData[v].rad);
+					packData.getCenter(v),packData.getRadius(v));
 			cent=sc.center;
 		}
-		else cent=new Complex(packData.rData[v].center);
+		else cent=packData.getCenter(v);
 		if (rhc.isCircle) {
 			return rhc.rad-rhc.center.minus(cent).abs();
 		}
@@ -223,16 +223,16 @@ public class RiemHilbert extends PackExtender {
 		Complex cent=null;
 		if (packData.hes<0) {
 			CircleSimple sc =HyperbolicMath.h_to_e_data(
-					packData.rData[v].center,packData.rData[v].rad);
+					packData.getCenter(v),packData.getRadius(v));
 			cent=sc.center;
 		}
 		else if (packData.hes>0) {
 			CircleSimple sc =SphericalMath.s_to_e_data(
-					packData.rData[v].center,packData.rData[v].rad);
+					packData.getCenter(v),packData.getRadius(v));
 			cent=sc.center;
 		}
-		else cent=new Complex(packData.rData[v].center);
-		double radius=packData.rData[v].rad;
+		else cent=packData.getCenter(v);
+		double radius=packData.getRadius(v);
 		double dist;
 		if (rhc.isCircle) {
 			dist=radius+rhc.center.minus(cent).abs();
@@ -367,7 +367,7 @@ public class RiemHilbert extends PackExtender {
 				if (packData.kData[v].bdryFlag == 0)
 					break;
 				sdist = circleDistance(v);
-				rad = packData.rData[v].rad;
+				rad = packData.getRadius(v);
 				// lies inside? shade of blue, further=darker
 				if (sdist > 0) {
 					if (sdist > rad)
@@ -383,16 +383,16 @@ public class RiemHilbert extends PackExtender {
 
 				// do the fill first
 				dflags.setColor(col);
-				packData.cpScreen.drawCircle(packData.rData[v].center, 
-						packData.rData[v].rad, dflags);
+				packData.cpScreen.drawCircle(packData.getCenter(v),
+						packData.getRadius(v), dflags);
 				
 				// change color for the bdry
 				dflags.setColor(packData.kData[v].color);
 				dflags.fill=false;
 				dflags.draw=true;
 				dflags.colBorder=true;
-				packData.cpScreen.drawCircle(packData.rData[v].center, 
-						packData.rData[v].rad, dflags);
+				packData.cpScreen.drawCircle(packData.getCenter(v),
+						packData.getRadius(v), dflags);
 				count++;
 			}
 			packData.cpScreen.setLineThickness(old_thickness);

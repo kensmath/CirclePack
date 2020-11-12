@@ -305,12 +305,12 @@ public class FlattenTri extends PackExtender {
 		int []vert=flatPack.faces[rootface].vert;
 		double d=fixRad/Math.sqrt(3.0);
 		matchfaces[rootface]=new MatchFace(rootface,0);
-		matchfaces[rootface].myCenters[0]=flatPack.rData[vert[0]].center=
-				new Complex(-fixRad,-d);
-		matchfaces[rootface].myCenters[1]=flatPack.rData[vert[1]].center=
-				new Complex(fixRad,-d);
-		matchfaces[rootface].myCenters[2]=flatPack.rData[vert[2]].center=
-				new Complex(0,2*d);
+		matchfaces[rootface].myCenters[0]=new Complex(-fixRad,-d);
+		flatPack.setCenter(vert[0],matchfaces[rootface].myCenters[0]);
+		matchfaces[rootface].myCenters[1]=new Complex(fixRad,-d);
+		flatPack.setCenter(vert[1],matchfaces[rootface].myCenters[1]);
+		matchfaces[rootface].myCenters[2]=new Complex(0,2*d);
+		flatPack.setCenter(vert[2],matchfaces[rootface].myCenters[2]);
 		matchfaces[rootface].myCentroid=new Complex(0.0);
 		flatPack.faces[rootface].color=CPScreen.coLor(80);
 		matchfaces[rootface].mySpot=new EdgeSimple(0,0);

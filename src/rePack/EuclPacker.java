@@ -74,7 +74,7 @@ public class EuclPacker extends RePacker {
     public void reapResults() {
     	for (int i=0;i<aimnum;i++) {
     		int j=index[i];
-    		p.rData[j].rad= rdata[j].rad; 
+    		p.setRadius(j,rdata[j].rad); 
     	}
     }
         
@@ -462,7 +462,7 @@ public class EuclPacker extends RePacker {
       while ((cut > TOLER && count<passes)) {
     	  for (int j=0;j<aimNum;j++) {
     		  v=inDex[j];
-    		  r=pd.rData[v].rad;
+    		  r=pd.getRadius(v);
     		  
     		  uP=new UtilPacket();
     		  if (!pd.e_anglesum_overlap(v,r,uP)) 
@@ -471,7 +471,7 @@ public class EuclPacker extends RePacker {
     		  verr=pd.rData[v].curv-pd.rData[v].aim;
     		  if (Math.abs(verr)>cut) {
     			  if (pd.e_radcalc(v,pd.rData[v].rad,pd.rData[v].aim,5,uP)) {
-    				  pd.rData[v].rad=uP.value;	
+    				  pd.setRadius(v,uP.value);	
     				  if (!pd.e_anglesum_overlap(v,r,uP)) 
     					  return 0;
     				  pd.rData[v].curv=uP.value;

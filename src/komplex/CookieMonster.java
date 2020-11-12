@@ -10,10 +10,12 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.CombDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
+import exceptions.DataException;
 import exceptions.ParserException;
 import listManip.EdgeLink;
 import listManip.NodeLink;
@@ -328,9 +330,9 @@ public class CookieMonster {
 		if (!gotPoison) {
 			if (CPBase.ClosedPath==null) 
 				throw new ParserException("cookie: No path defined.");
-			boolean seed_wrap=PathManager.path_wrap(monsterPackData.rData[seed].center); // which side is seed on?
+			boolean seed_wrap=PathManager.path_wrap(monsterPackData.getCenter(seed)); // which side is seed on?
 			for (int v=1;v<=monsterPackData.nodeCount;v++) {
-				if (seed_wrap!=PathManager.path_wrap(monsterPackData.rData[v].center)) { 
+				if (seed_wrap!=PathManager.path_wrap(monsterPackData.getCenter(v))) { 
 					cmPoison[v]=-1;
 					gotPoison=true;
 				}
@@ -759,8 +761,8 @@ public class CookieMonster {
 					nK_ptr[indx].overlaps = new double[nK_ptr[indx].num + 1];
 				Color col=monsterPackData.kData[vert].color;
 				nK_ptr[indx].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
-				nR_ptr[indx].rad = monsterPackData.rData[vert].rad;
-				nR_ptr[indx].center = new Complex(monsterPackData.rData[vert].center);
+				nR_ptr[indx].rad = monsterPackData.getRadius(vert);
+				nR_ptr[indx].center = new Complex(monsterPackData.getCenter(vert));
 				nR_ptr[indx].aim = -.1;
 				int i = temp.index1;
 				if (temp.index1 == temp.index2) { // just one face
@@ -1286,18 +1288,30 @@ public class CookieMonster {
 		for (int n = 1; n <= Tri.nodeCount; n++)
 			Z[n] = new Complex(Tri.nodes[n].x, Tri.nodes[n].y);
 		
-
-		// Now the processing to prune this; work with DCEL data
-		PackDCEL myDCEL = new PackDCEL(Tri);
-		int facecount = myDCEL.tmpFaceList.size()-1-myDCEL.tmpIdealFaces.size(); // number of interior faces		
+		// Now the processing to prune this; create and work with DCEL data
+		int []ans=new int[2];
+		KData []kData=Triangulation.parse_triangles(Tri,0,ans);
+		int nodecount=ans[0];
+		if (nodecount<=2)
+			throw new DataException("DCEL: parse_triangles came up short");
+		
+		// get the bouquet of flowers
+		int [][]bouquet=new int[nodecount+1][];
+		for (int v=1;v<=nodecount;v++) {
+			int num=kData[v].num;
+			bouquet[v]=new int[num+1];
+			for (int j=0;j<=num;j++)
+				bouquet[v][j]=kData[v].flower[j];
+		}
+		
+		PackDCEL myDCEL = CombDCEL.d_redChainBuilder(null,bouquet,null,false);
+		int facecount = myDCEL.intFaceCount;
 
 		// find the centroids
 		Complex[] faceC = new Complex[facecount+1]; // centroids
 		int tick = 0;
-		Iterator<dcel.Face> dcf = myDCEL.tmpFaceList.iterator();
-		dcf.next(); // toss first 'null' entry
-		while (dcf.hasNext() && tick<facecount) {
-			ArrayList<HalfEdge> edges=dcf.next().getEdges();
+		for (int f=1;f<=myDCEL.faceCount;f++) {
+			ArrayList<HalfEdge> edges=myDCEL.faces[f].getEdges();
 			Iterator<HalfEdge> eit=edges.iterator();
 			Complex accum=new Complex(0.0);
 			while (eit.hasNext()) {
@@ -1317,7 +1331,7 @@ public class CookieMonster {
 				facestat[j] = 1;
 				if (firstC == null) { // mark the first included centroid and its face
 					firstC = new Complex(faceC[j]);
-					firstFace=myDCEL.tmpFaceList.get(j);
+					firstFace=myDCEL.faces[j];
 				}
 			}
 		}
@@ -1326,12 +1340,12 @@ public class CookieMonster {
 		// Idea is to find simple closed path from included, and
 		// add those inside this path.
 
-		// Find all halfedges of included faces with non-included (or
+		// Find all 'HalfEdge's of included faces with non-included (or
 		// ideal) face on the other side.
 		Vector<HalfEdge> putbdry = new Vector<HalfEdge>(0);
 		for (int f = 1; f <= Tri.faceCount; f++) {
 			if (facestat[f] > 0) {
-				ArrayList<HalfEdge> edges=myDCEL.tmpFaceList.get(f).getEdges();
+				ArrayList<HalfEdge> edges=myDCEL.faces[f].getEdges();
 				Iterator<HalfEdge> eit=edges.iterator();
 				while (eit.hasNext()) {
 					HalfEdge he=eit.next();
@@ -1432,7 +1446,7 @@ public class CookieMonster {
 		// Two steps: (1) find all faces inside 'outerPath'; 
 		//    (2) build out simply connected patch
 		int startindx=-1;
-		int []inouter=new int[myDCEL.tmpFaceList.size()];
+		int []inouter=new int[myDCEL.faceCount+1];
 		for (int j = 1; j <= facecount; j++) { 
 			if (outerPath.contains(faceC[j].x, faceC[j].y)) { 
 				inouter[j]=1;
@@ -1443,13 +1457,13 @@ public class CookieMonster {
 		
 		// if 'firstFace' is no longer included, use new starting place
 		if (inouter[Math.abs(firstFace.faceIndx)]==0)
-			firstFace=myDCEL.tmpFaceList.get(startindx);
+			firstFace=myDCEL.faces[startindx];
 			
 		// cycle through adding faces to 'firstFace'
 		Vector<dcel.Face> nextF=new Vector<dcel.Face>();
 		Vector<dcel.Face> currF=nextF;
 		nextF.add(firstFace);
-		int[] newfaces = new int[myDCEL.tmpFaceList.size()];
+		int[] newfaces = new int[myDCEL.faceCount+1];
 		newfaces[Math.abs(firstFace.faceIndx)]=1;
 		int infacecount = 1;
 		tick=0;
@@ -1479,13 +1493,13 @@ public class CookieMonster {
 			if (newfaces[j]>0) {
 				
 				// debug
-				int []fv= myDCEL.tmpFaceList.get(j).getVerts();
+				int []fv= myDCEL.faces[j].getVerts();
 				StringBuilder ddstr=new StringBuilder("face: ");
 				for (int nm=0;nm<fv.length;nm++)
 					ddstr.append(" "+fv[nm]);
 				System.err.println(ddstr.toString());
 				
-				int []verts=myDCEL.tmpFaceList.get(j).getVerts();
+				int []verts=myDCEL.faces[j].getVerts();
 				for (int m=0;m<verts.length;m++) {
 					int v=verts[m];
 					if (old2new[v] == 0)
@@ -1507,7 +1521,7 @@ public class CookieMonster {
 		for (int j = 1; j <= facecount; j++) {
 			if (newfaces[j] == 1) {
 				Vector<Integer> vertvec = new Vector<Integer>(0);
-				HalfEdge he = myDCEL.tmpFaceList.get(j).edge;
+				HalfEdge he = myDCEL.faces[j].edge;
 				vertvec.add(old2new[he.origin.vertIndx]); // new index
 				HalfEdge nhe = he.next;
 				while (nhe != he) {

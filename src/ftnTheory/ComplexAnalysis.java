@@ -119,13 +119,13 @@ public class ComplexAnalysis extends PackExtender {
 		for (int f=1;f<=domainData.faceCount;f++) {
 			int []verts=domainData.faces[f].vert;
 			domTPs[f]=new DualTri(domainData.hes,
-					domainData.rData[verts[0]].center,
-					domainData.rData[verts[1]].center,
-					domainData.rData[verts[2]].center);
+					domainData.getCenter(verts[0]),
+					domainData.getCenter(verts[1]),
+					domainData.getCenter(verts[2]));
 			ranTPs[f]=new DualTri(rangeData.hes,
-					rangeData.rData[verts[0]].center,
-					rangeData.rData[verts[1]].center,
-					rangeData.rData[verts[2]].center);
+					rangeData.getCenter(verts[0]),
+					rangeData.getCenter(verts[1]),
+					rangeData.getCenter(verts[2]));
 		}
 		return true;
 	}
@@ -340,8 +340,8 @@ public class ComplexAnalysis extends PackExtender {
 			int tick=0;
 			while(blst.hasNext()) {
 				int b=blst.next();
-				circlePts[tick]=domainData.rData[b].center.arg();
-				moddiv[tick]=rangeData.rData[b].rad/domainData.rData[b].rad;
+				circlePts[tick]=domainData.getCenter(b).arg();
+				moddiv[tick]=rangeData.getRadius(b)/domainData.getRadius(b);
 				tick++;
 			}
 			return cnt;
@@ -373,9 +373,9 @@ public class ComplexAnalysis extends PackExtender {
 			Iterator<Integer> blst=bdry.iterator();
 			while (blst.hasNext()) {
 				int v=blst.next();
-				double s=toPack.rData[v].center.arg();
+				double s=toPack.getCenter(v).arg();
 				double ftnvalue=finterp.interpValue(s).x;
-				toPack.rData[v].rad *= ftnvalue;
+				toPack.setRadius(v,toPack.getRadius(v)*ftnvalue);
 			}
 			return cnt;
 		}
@@ -403,7 +403,7 @@ public class ComplexAnalysis extends PackExtender {
 			double []logr=new double[packData.nodeCount+1];
 			double []laplace=new double[packData.nodeCount+1];
 			for (int v=1;v<=packData.nodeCount;v++) 
-				logr[v]=Math.log(rangeData.rData[v].rad)-Math.log(domainData.rData[v].rad);
+				logr[v]=Math.log(rangeData.getRadius(v))-Math.log(domainData.getRadius(v));
 			laplace=LaplaceIt(logr);
 			Vector<Double> data=new Vector<Double>(packData.nodeCount);
 			for (int v=1;v<=packData.nodeCount;v++)
@@ -538,18 +538,18 @@ public class ComplexAnalysis extends PackExtender {
 	 */
 	public int SR_parameterize(double aparam) {
 		for (int v=1;v<=packData.nodeCount;v++) {
-			double r=domainData.rData[v].rad;
+			double r=domainData.getRadius(v);
 			double expal;
 			//  at z=0 replace |f(z)/z| by |f'(z)| (typically, 1)
-			if (domainData.rData[v].center.abs()<.0000001) {
-				expal=Math.exp(aparam*Math.log(packData.rData[v].rad/r)); 
+			if (domainData.getCenter(v).abs()<.0000001) {
+				expal=Math.exp(aparam*Math.log(packData.getRadius(v)/r)); 
 			}
 			else {
-				double rc_dc=packData.rData[v].center.
-					divide(domainData.rData[v].center).abs();
+				double rc_dc=packData.getCenter(v).
+					divide(domainData.getCenter(v)).abs();
 				expal=Math.exp(aparam*Math.log(rc_dc));
 			}
-			outputData.rData[v].rad=packData.rData[v].rad/expal;
+			outputData.setRadius(v,packData.getRadius(v)/expal);
 		}
 		return 1;
 	}
@@ -577,19 +577,19 @@ public class ComplexAnalysis extends PackExtender {
 		Complex f2=null;
 		for (int v=1;v<=domData.nodeCount;v++) {
 			int num=domData.kData[v].num;
-			Complex z=domData.rData[v].center;
+			Complex z=domData.getCenter(v);
 			spokes=new double[num+1];
 			inCenters=new Complex[num];
 
 			conductance[v]=new double[num+1];
 
 			// store edge lengths, incenters
-			f2=domData.rData[domData.kData[v].flower[0]].center;
+			f2=domData.getCenter(domData.kData[v].flower[0]);
 			spokes[0]=z.minus(f2).abs();
 			CircleSimple sc=null;
 			for (int j=1;j<=num;j++) {
 				f1=f2;
-				f2=domData.rData[domData.kData[v].flower[j]].center;
+				f2=domData.getCenter(domData.kData[v].flower[j]);
 				sc=EuclMath.eucl_tri_incircle(z,f1,f2);
 				spokes[j]=z.minus(f2).abs();
 				inCenters[j-1]=sc.center;
@@ -599,12 +599,12 @@ public class ComplexAnalysis extends PackExtender {
 			
 			// for bdry, use ratio of inRad/length for first and last edges
 			if (domData.kData[v].bdryFlag!=0) {
-				f1=domData.rData[domData.kData[v].flower[0]].center;
-				f2=domData.rData[domData.kData[v].flower[1]].center;
+				f1=domData.getCenter(domData.kData[v].flower[0]);
+				f2=domData.getCenter(domData.kData[v].flower[1]);
 				double inRad=EuclMath.eucl_tri_inradius(spokes[0],spokes[1],f1.minus(f2).abs());
 				conductance[v][0]=inRad/spokes[0];
-				f1=domData.rData[domData.kData[v].flower[num-1]].center;
-				f2=domData.rData[domData.kData[v].flower[num]].center;
+				f1=domData.getCenter(domData.kData[v].flower[num-1]);
+				f2=domData.getCenter(domData.kData[v].flower[num]);
 				inRad=EuclMath.eucl_tri_inradius(spokes[num-1],spokes[num],f1.minus(f2).abs());
 				conductance[v][num]=inRad/spokes[num];
 			}
@@ -648,8 +648,8 @@ public class ComplexAnalysis extends PackExtender {
 			
 			// data at v
 			int num=dData.kData[v].num;
-			z=dData.rData[v].center;
-			w=rData.rData[v].center;
+			z=dData.getCenter(v);
+			w=rData.getCenter(v);
 
 			// check if packings match here
 			if (num!=rData.kData[v].num || num!=dData.kData[v].num  
@@ -664,15 +664,15 @@ public class ComplexAnalysis extends PackExtender {
 
 			// store complex edge vectors
 			for (int j=0;j<dData.kData[v].num+dData.kData[v].bdryFlag;j++) {
-				domSpokes[j]=z.minus(dData.rData[dData.kData[v].flower[j]].center);
-				ranSpokes[j]=w.minus(rData.rData[rData.kData[v].flower[j]].center);
+				domSpokes[j]=z.minus(dData.getCenter(dData.kData[v].flower[j]));
+				ranSpokes[j]=w.minus(rData.getCenter(rData.kData[v].flower[j]));
 				totalWeight+=conductance[v][j];
 			}
 
 			deriv=new Complex(0.0);
 			for (int j=0;j<num+dData.kData[v].bdryFlag;j++) 
 				deriv=deriv.add(ranSpokes[j].divide(domSpokes[j]).times(conductance[v][j]));
-			outputData.rData[v].center=deriv.divide(totalWeight);
+			outputData.setCenter(v,deriv.divide(totalWeight));
 		}
 		} catch(Exception ex) {
 			errorMsg("error in computing derivative: "+ex.getMessage());
@@ -694,9 +694,9 @@ public class ComplexAnalysis extends PackExtender {
 			
 			// data at v
 			int num=packData.kData[v].num;
-			double rad=packData.rData[v].rad;
-			Complex z=packData.rData[v].center;
-			Complex w=rangeData.rData[v].center;
+			double rad=packData.getRadius(v);
+			Complex z=packData.getCenter(v);
+			Complex w=rangeData.getCenter(v);
 
 			// check if packings match here
 			if (num!=rangeData.kData[v].num 
@@ -709,13 +709,13 @@ public class ComplexAnalysis extends PackExtender {
 
 			// compute the 'weights'
 			// compute for first edge
-			double rad1=packData.rData[packData.kData[v].flower[0]].rad;
-			double rad2=packData.rData[packData.kData[v].flower[1]].rad;
+			double rad1=packData.getRadius(packData.kData[v].flower[0]);
+			double rad2=packData.getRadius(packData.kData[v].flower[1]);
 			double inRad=EuclMath.eucl_tri_inradius(rad+rad1,rad+rad2,rad1+rad2);
-			domSpokes[0]=z.minus(packData.rData[packData.kData[v].flower[0]].center);
-			domSpokes[1]=z.minus(packData.rData[packData.kData[v].flower[1]].center);
-			ranSpokes[0]=w.minus(rangeData.rData[rangeData.kData[v].flower[0]].center);
-			ranSpokes[1]=w.minus(rangeData.rData[rangeData.kData[v].flower[1]].center);
+			domSpokes[0]=z.minus(packData.getCenter(packData.kData[v].flower[0]));
+			domSpokes[1]=z.minus(packData.getCenter(packData.kData[v].flower[1]));
+			ranSpokes[0]=w.minus(rangeData.getCenter(rangeData.kData[v].flower[0]));
+			ranSpokes[1]=w.minus(rangeData.getCenter(rangeData.kData[v].flower[1]));
 			weights[0]=inRad/domSpokes[0].abs();
 			totalWeight=weights[0];
 			weights[1]=inRad/domSpokes[1].abs();
@@ -724,10 +724,10 @@ public class ComplexAnalysis extends PackExtender {
 			// Note: for interior v, weight = weights[0]+weights[num]
 			for (int j=1;j<packData.kData[v].num;j++) {
 				rad1=rad2;
-				rad2=packData.rData[packData.kData[v].flower[j+1]].rad;
+				rad2=packData.getRadius(packData.kData[v].flower[j+1]);
 				inRad=EuclMath.eucl_tri_inradius(rad+rad1,rad+rad2,rad1+rad2);
-				domSpokes[j+1]=z.minus(packData.rData[packData.kData[v].flower[j+1]].center);
-				ranSpokes[j+1]=w.minus(rangeData.rData[rangeData.kData[v].flower[j+1]].center);
+				domSpokes[j+1]=z.minus(packData.getCenter(packData.kData[v].flower[j+1]));
+				ranSpokes[j+1]=w.minus(rangeData.getCenter(rangeData.kData[v].flower[j+1]));
 				weights[j]+=inRad/domSpokes[j].abs(); // for this edge
 				weights[j+1]=inRad/domSpokes[j+1].abs(); // add to next weight
 				totalWeight+=weights[j];
@@ -737,7 +737,7 @@ public class ComplexAnalysis extends PackExtender {
 			Complex deriv=new Complex(0.0);
 			for (int j=0;j<=num;j++) 
 				deriv=deriv.add(ranSpokes[j].divide(domSpokes[j]).times(weights[j]));
-			outputData.rData[v].center=deriv.divide(totalWeight);
+			outputData.setCenter(v,deriv.divide(totalWeight));
 		}
 		
 		EuclMath.effectiveRad(outputData,null);

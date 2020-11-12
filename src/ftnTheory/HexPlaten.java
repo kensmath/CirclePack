@@ -219,7 +219,7 @@ public class HexPlaten extends PackExtender {
 	    Iterator<Integer> bit=bdryNghb.iterator();
 	    while (bit.hasNext()) {
 	    	int v=bit.next();
-	    	Complex z=packData.rData[v].center;
+	    	Complex z=packData.getCenter(v);
 	    	
 	    	// is it inside 'Omega'?
 	    	if (CPBase.ClosedPath.contains(new Point2D.Double(z.x,z.y))) {
@@ -344,7 +344,7 @@ public class HexPlaten extends PackExtender {
 		}
 		for (int v=1;v<=packData.nodeCount;v++) {
 			int flg=0;
-			int []uw=getCoords(packData.rData[v].center);
+			int []uw=getCoords(packData.getCenter(v));
 			micro2v[uw[0]+microN][uw[1]+microN]=v;
 			if ((uw[0]%basediam)==0 && (uw[1]%basediam)==0)
 				flg=-1;
@@ -641,7 +641,7 @@ public class HexPlaten extends PackExtender {
 		double mxI=-1.0;
 		double mnI=1000000.0;
 		for (int v=1;v<=packData.nodeCount;v++) {
-			Complex z=packData.rData[v].center;
+			Complex z=packData.getCenter(v);
 			if (platenP.myOmega.contains(new Point2D.Double(z.x,z.y))) {
 				double value=getIntensity(z);
 				mxI =(value>mxI)?value:mxI;
@@ -685,7 +685,7 @@ public class HexPlaten extends PackExtender {
 	    			for (int j=0;j<=D;j++) {
 	    				Node nde=nodeL[i][j];
 	    				if (nde!=null && nde.chosen) {
-	    					packData.rData[nde.myVert].rad=rad;
+	    					packData.setRadius(nde.myVert,rad);
 	    					count++;
 	    				}
 	    			}
@@ -710,7 +710,7 @@ public class HexPlaten extends PackExtender {
 	    			for (int j=0;j<=D;j++) {
 	    				Node nde=nodeL[i][j];
 	    				if (nde!=null && nde.chosen) {
-	    					Zvec.add(packData.rData[nde.myVert].center);
+	    					Zvec.add(packData.getCenter(nde.myVert));
 	    					packData.vertexMap.add(new EdgeSimple(nde.myVert,++tick));
 	    				}
 	    			}
@@ -1148,7 +1148,7 @@ public class HexPlaten extends PackExtender {
 					Iterator<Node> sit=selects.iterator();
 					while (sit.hasNext()) {
 						node=sit.next();
-						Complex z=packData.rData[node.myVert].center;
+						Complex z=packData.getCenter(node.myVert);
 						double rad=0.5*microScaling*stepDiam[level];
 						dispflgs.setColor(node.color);
 						cpScreen.drawCircle(z,rad,dispflgs);
@@ -1175,7 +1175,7 @@ public class HexPlaten extends PackExtender {
 						if (f.mark==level) {
 							double []corners=new double[6];
 							for (int kk=0;kk<3;kk++) {
-								Complex z=packData.rData[f.vert[kk]].center;
+								Complex z=packData.getCenter(f.vert[kk]);
 								corners[2*kk]=z.x;
 								corners[2*kk+1]=z.y;
 							}
@@ -1222,7 +1222,7 @@ public class HexPlaten extends PackExtender {
 			
 			for (int v=1;v<=packData.nodeCount;v++) {
 				packData.kData[v].mark=0;
-//				packData.rData[v].rad=0.5*microScaling*(double)stepDiam[1]; // smallest radius
+//				packData.setRadius(v,0.5*microScaling*(double)stepDiam[1]); // smallest radius
 			}
 			for (int f=1;f<=packData.faceCount;f++) {
 				packData.faces[f].mark=0;
@@ -1245,7 +1245,7 @@ public class HexPlaten extends PackExtender {
 					int v=lit.next();
 
 					// Get surrounding neighbors at this level
-					int []vuw=getCoords(packData.rData[v].center);
+					int []vuw=getCoords(packData.getCenter(v));
 					vecnode=getHexRing(level,vuw[0],vuw[1]);
 					Iterator<Node> vit=vecnode.iterator();
 					while(vit.hasNext()) {
@@ -1290,7 +1290,7 @@ public class HexPlaten extends PackExtender {
 					int v=lit.next();
 					if (processed[v]<=0) {
 						// get surrounding neighbors at previous level
-						int[] vuw = getCoords(packData.rData[v].center);
+						int[] vuw = getCoords(packData.getCenter(v));
 						vecnode = getHexRing(level - 1, vuw[0], vuw[1]);
 						Iterator<Node> vit = vecnode.iterator();
 						while (vit.hasNext()) {

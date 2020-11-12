@@ -8,10 +8,8 @@ import java.util.Iterator;
 
 import allMains.CirclePack;
 import complex.Complex;
-import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
-import exceptions.DataException;
 import exceptions.InOutException;
 import geometry.CircleSimple;
 import geometry.CommonMath;
@@ -19,18 +17,12 @@ import geometry.EuclMath;
 import input.CPFileManager;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
-import komplex.KData;
-import komplex.RedEdge;
-import komplex.RedList;
-import komplex.SideDescription;
-import komplex.Triangulation;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
-import packing.RData;
 import util.DispFlags;
 
 /** 
@@ -56,6 +48,16 @@ import util.DispFlags;
  * indices are not sync'ed with face indices in 'p', since these
  * are ephemeral. 
  * 
+ * The principal route to creating DCEL structures uses 'bouquet's
+ * in 'CombDCEL.d_redChainBuilder', which first calls 'CombDCEL.createVE'
+ * to build vertices and faces and set 'alpha', then creates the
+ * redchain, and then calls 'CombDCEL.d_FillInside' to finish.
+ * (This is done because many manipulations, such as adding barycenters,
+ * need only call 'd_FillInside' to adjust the DCEL structure if
+ * the redchain was not disturbed.) Note that these routines create 
+ * only a 'PackDCEL' object; a call to 'DataDCEL.dcel_to_packing' 
+ * will create an associated packing.
+ * 
  * @author kstephe2, July 2016
  *
  */
@@ -75,13 +77,6 @@ public class PackDCEL {
 	public Face[] faces;      // indexed from 1
 	public Face[] idealFaces; // indexed from 1 (but 'faceIndx' is the negative of the index)
 	// note edges and faces are subject to change with new layout
-	
-	// temporary data structures used during processing
-	public ArrayList<HalfEdge> tmpEdges; //
-	public ArrayList<Face> tmpFaceList; // intended to be temporary (first entry 'null')
-	public ArrayList<Face> tmpIdealFaces; // intended to be temporary 
-	public ArrayList<Face> tmpLayout; // order of faces responsible for new vertices
-	public ArrayList<Face> tmpfullLayout; // order all faces are encountered
 
 	// final layout information in 'Graphlink's
 	public GraphLink faceOrder; // order for laying out all 
@@ -102,13 +97,6 @@ public class PackDCEL {
 		vertCount=0;
 		vertices=null;
 		
-		// tmp stuff
-		tmpEdges=null;
-		tmpFaceList=null;
-		tmpIdealFaces=null;
-		tmpLayout=null;
-		tmpfullLayout=null;
-
 		// things to fill at end of dcel construction
 		faceOrder=null;
 		computeOrder=null;
@@ -128,55 +116,7 @@ public class PackDCEL {
 		this();
 		vertCount=bouquet.length-1;
 		euler=CombDCEL.createVE(this,bouquet,0); 
-		alpha=chooseAlpha(null);
-		try {
-			tmpLayout=simpleLayout();
-		} catch (Exception ex) {
-			CirclePack.cpb.msg("LayoutOrder failed: this may not be an error (e.g. laying out dual)."
-					+" euler char is "+euler);
-		}
 	}
-	
-	/** 
-	 * Build DCEL structure associate with 'pdata'
-	 * @param pdata PackData, 
-	 */
-	public PackDCEL(PackData pdata) {
-		this();
-		p=pdata;
-		vertCount=p.nodeCount;
-		int [][]bouquet= new int[vertCount+1][];
-		for (int v=1;v<=vertCount;v++)
-			bouquet[v]=p.kData[v].flower;
-		euler=CombDCEL.createVE(this,bouquet,0); 
-		alpha=chooseAlpha(null);
-		tmpLayout=simpleLayout();
-	}
-	
-	/** 
-	 * Build from triangulation; 'p' remains null
-	 * @param Tri Triangulation
-	 */
-	public PackDCEL(Triangulation Tri) {
-		this();
-		p=null;
-		int []ans=new int[2];
-		KData []kData=Triangulation.parse_triangles(Tri,0,ans);
-		int nodecount=ans[0];
-		if (nodecount<=2)
-			throw new DataException("DCEL: parse_triangles came up short");
-		
-		// get the bouquet of flowers
-		int [][]bouquet=new int[nodecount+1][];
-		for (int v=1;v<=nodecount;v++) {
-			int num=kData[v].num;
-			bouquet[v]=new int[num+1];
-			for (int j=0;j<=num;j++)
-				bouquet[v][j]=kData[v].flower[j];
-		}
-		
-		// TODO: how to call CombDCEL.createVEF?
-	}		
 	
 	/**
 	 * The "red" chain is a closed cclw chain of edges about
@@ -237,9 +177,9 @@ public class PackDCEL {
 		}
 		
 		// toss old 'faces' away
-		tmpFaceList=new ArrayList<Face>();
+		ArrayList<Face> tmpFaceList=new ArrayList<Face>();
 		tmpFaceList.add(null); // index from 1, first entry 'null'
-		tmpIdealFaces=new ArrayList<Face>(0);
+		ArrayList<Face> tmpIdealFaces=new ArrayList<Face>(0);
 		
 		// start with 'alpha'
 		edges.remove(alpha);
@@ -251,7 +191,7 @@ public class PackDCEL {
 			egs.next().face=null;
 		
 		// have to look out for bdry components; each gets an ideal face
-		//   mark via temporary negative indices, update them later
+		//   marked via temporary negative indices, update them later
 		int idealIndx=0; 
 
 		// move out systematically looking for new faces; keep two lists
@@ -314,13 +254,25 @@ public class PackDCEL {
 		// put ideal faces at the end of the list, giving them negative indices
 		intFaceCount=faceCount; // now have all the interiors
 		if (idealIndx>0) { // any ideal faces?
-			Iterator<Face> ifit=tmpIdealFaces.iterator();
-			while (ifit.hasNext()) {
-				Face idealface=ifit.next();
-				idealface.faceIndx=-faceCount+idealface.faceIndx; // convert tmp index, make negative
-				tmpFaceList.add(idealface);
+			idealFaces=new Face[idealIndx+1];
+			Iterator<Face> tif=tmpIdealFaces.iterator();
+			int tick=0;
+			while (tif.hasNext()) {
+				Face face=tif.next();
+				idealFaces[++tick]=face;
+				face.faceIndx=-(faceCount+tick); // increment index, make negative
+				tmpFaceList.add(face);
 			}
 			faceCount +=idealIndx; // 'faceCount' counts both regular and ideal faces
+		}
+		
+		// store all the faces
+		faces=new Face[faceCount+1];
+		Iterator<Face> fit=tmpFaceList.iterator();
+		fit.hasNext(); // shuck first null entry
+		int tick=0;
+		while (fit.hasNext()) {
+			faces[++tick]=fit.next();
 		}
 		
 		return faceCount;
@@ -377,7 +329,7 @@ public class PackDCEL {
 						HalfEdge he=fflower.get((j+k)%n);
 						
 						// should he.face be used in layout? 
-						if (!tmpIdealFaces.contains(he.face) && 
+						if (he.face.faceIndx>0 && 
 								vhits[he.twin.origin.vertIndx]!=0 &&
 								vhits[he.next.twin.origin.vertIndx]==0) {
 							// touched new vert
@@ -400,7 +352,7 @@ public class PackDCEL {
 						HalfEdge he=fflower.get((k-j+n)%n).twin;
 						
 						// should he.face be used in layout? 
-						if (!tmpIdealFaces.contains(he.face) && 
+						if (he.face.faceIndx>0 && 
 								vhits[he.origin.vertIndx]!=0 &&
 								vhits[he.next.twin.origin.vertIndx]==0) {
 							// touched new vert
@@ -428,26 +380,6 @@ public class PackDCEL {
 		return farray;
 	}
 
-	/**
-	 * 'alpha' is a designed 'HalfEdge' used for various
-	 * normalizations. It should have an interior origin
-	 * whose circle is put at the origin. Checking given e
-	 * first to see if it is suitable.
-	 * @param e HalfEdge, generally will be null
-	 * @return Halfedge, null on error or none found
-	 */
-	public HalfEdge chooseAlpha(HalfEdge e) {
-		if (e!=null && vertIsBdry(e.origin)==null)
-			return e;
-		Iterator<HalfEdge> eit=tmpEdges.iterator();
-		while (eit.hasNext()) {
-			HalfEdge he=eit.next();
-			if (vertIsBdry(he.origin)==null)
-				return he;
-		}
-		return null;
-	}
-	
 	/**
 	 * Place the face associated with 'edge', with 'edge.origin' at 
 	 * the origin, and 'edge.next.origin' on the positive real axis. 
@@ -532,7 +464,7 @@ public class PackDCEL {
 				
 				// draw dot
 				int v=he.next.next.origin.vertIndx;
-				p.rData[v].center=cs.center;
+				p.setCenter(v,cs.center);
 				StringBuilder strbld=new StringBuilder("disp -tf "+v);
 				CommandStrParser.jexecute(p,strbld.toString());
 			}
@@ -548,7 +480,7 @@ public class PackDCEL {
 		do {
 			if (rtrace.myEdge.origin.util==0) {
 				int v=rtrace.myEdge.origin.vertIndx;
-				p.rData[v].center=new Complex(rtrace.center);
+				p.setCenter(v,new Complex(rtrace.center));
 				rtrace.myEdge.origin.util=1;
 			}
 			rtrace=rtrace.nextRed;
@@ -558,54 +490,62 @@ public class PackDCEL {
 	}
 		
 	/**
-	 * List of faces used in order to compute circle
-	 * centers. The first the 'alpha' edge has its 'origin'
-	 * vertex centered at the origin, its other end on the
-	 * positive real axis. Taking faces in turn (order is
-	 * that created in 'simpleLayout' for example), the next
-	 * face should have two of its vertices in place and we
-	 * compute the third. 
-	 * Note: This is for euclidean packings and radii are
-	 * already computed.
-	 * @param faceorder ArrayList<Face>
-	 * @return int, count (should be 'vertCount').
+	 * Compute circle centers based on GraphLink of faces. 
+	 * The first is the 'alpha' edge 'origin' vertex at the 
+	 * origin, its other end on the positive real axis. Taking 
+	 * faces in turn the next face should have two of its 
+	 * vertices in place and we compute and store the third. 
+	 * Note: radii are already computed.
+	 * 
+	 * TODO: only euclidean, ignore overlaps, etc.
+	 * 
+	 * @param faceorder GraphLink
+	 * @return int, count (may exceed 'vertCount' as some vertices
+	 * are placed multiple times).
 	 */
-	public int dcelCompCenters(ArrayList<Face> faceorder) {
+	public int dcelCompCenters(GraphLink faceorder) {
+		
+		Iterator<EdgeSimple> git=faceorder.iterator();
+		EdgeSimple edge=faceorder.get(0);
+		int f=edge.v;
+		if (f==0) { // this is a root (as expected)
+			f=edge.w;
+			git.next(); // donw with this first face
+		}
 		
 		// lay out the first face
-		Face face=faceorder.get(0);
+		Face face=faces[f];
 		int v=face.edge.origin.vertIndx;
 		int u=face.edge.twin.origin.vertIndx;
 		int w=face.edge.next.twin.origin.vertIndx;
 		
 		// v at origin
-	    double rv=p.rData[v].rad;
+	    double rv=p.getRadius(v);
 	    p.setCenter(v,0.0,0.0);
 	    
 	    // u on x-axis
-	    double ru=p.rData[u].rad;
+	    double ru=p.getRadius(u);
 	    double ovlp=1.0; // default overlap (tangency)
 	    p.setCenter(u,Math.sqrt(rv*rv+ru*ru+2*rv*ru*ovlp),0.0);
 	    int count=1;
 	    
 	    // find center for w
-	    CircleSimple sc=EuclMath.e_compcenter(p.rData[v].center,p.rData[u].center,
-	    		rv,ru,p.rData[w].rad);
+	    CircleSimple sc=EuclMath.e_compcenter(p.getCenter(v),p.getCenter(u),
+	    		rv,ru,p.getRadius(w));
 	    p.setCenter(w, sc.center.x,sc.center.y);
 	    
-	    // now layout by face
-	    Iterator<Face> foi=faceorder.iterator();
-	    while (foi.hasNext()) {
-	    	face=foi.next();
+	    // now layout by face-by-face
+	    while (git.hasNext()) {
+	    	face=faces[git.next().w];
 	    	v=face.edge.origin.vertIndx;
 			u=face.edge.twin.origin.vertIndx;
 			w=face.edge.next.twin.origin.vertIndx;
-		    rv=p.rData[v].rad;
-		    ru=p.rData[u].rad;
+		    rv=p.getRadius(v);
+		    ru=p.getRadius(u);
 		    
 		    // find location for w
-		    sc=EuclMath.e_compcenter(p.rData[v].center,p.rData[u].center,
-		    		rv,ru,p.rData[w].rad);
+		    sc=EuclMath.e_compcenter(p.getCenter(v),p.getCenter(u),
+		    		rv,ru,p.getRadius(w));
 		    p.setCenter(w, sc.center.x,sc.center.y);
 		    count++;
 	    }
@@ -624,12 +564,11 @@ public class PackDCEL {
 	 */
 	public int d_draw_bdry_seg(int n,boolean do_label,boolean do_circle,
 			Color ecol,int thickness) {
-		RedHEdge trace=null;
 		D_SideData epair=null;
 	  
 		if (pairLink==null || n<0 || n>=pairLink.size() 
 				|| (epair=(D_SideData)pairLink.get(n))==null
-				|| (trace=epair.startEdge)==null)  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
+				|| epair.startEdge==null)  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
 			return 0;
 		int old_thickness=p.cpScreen.getLineThickness();
 
@@ -687,20 +626,20 @@ public class PackDCEL {
 		ArrayList<Face> arrayf=new ArrayList<Face>();
 		if (facelink==null) {
 			for (int j=1;j<=intFaceCount;j++)
-				arrayf.add(tmpFaceList.get(j)); // get face
+				arrayf.add(faces[j]); // get face
 		}
 		else {
 			Iterator<Integer> flst=facelink.iterator();
 			while (flst.hasNext()) {
-				arrayf.add(tmpFaceList.get(flst.next())); // get face of that index
+				arrayf.add(faces[flst.next()]); // get face of that index
 			}
 		}
 		return addBaryCenters(arrayf);
 	}
 	
 	/**
-	 * Add barycenters to faces. A barycenter is a
-	 * new vertex inside the face which is connected to all the 
+	 * Add barycenters to faces. A barycenter is a new vertex 
+	 * interior to the face which is connected to all the 
 	 * bdry vertices of the face. 
 	 * NOTE: added vertices and edges put data out of sync with 
 	 * parent packing 'p'. For testing purposes, we can write combinatorics
@@ -711,6 +650,14 @@ public class PackDCEL {
 	public int addBaryCenters(ArrayList<Face> arrayf) {
 		int count=0;
 		int oldVertCount=vertCount;
+		
+		// create array of existing edges so we can add to it
+		ArrayList<HalfEdge> tmpedges=new ArrayList<HalfEdge>();
+		tmpedges.add(null);
+		for (int e=1;e<=edgeCount;e++) {
+			tmpedges.add(edges[e]);
+		}
+		
 		Iterator<Face> flst=arrayf.iterator();
 		ArrayList<Vertex> newVertices=new ArrayList<Vertex>();
 		while (flst.hasNext()) {
@@ -719,7 +666,7 @@ public class PackDCEL {
 			ArrayList<HalfEdge> polyE=null;
 			
 			// note: after processing 'face', set 'face.edge=null' so we don't process 
-			//   it again due to repeat in 'facelist'
+			//   it again due to repeat in 'arrayf'
 			if (face.edge!=null && (polyE=face.getEdges())!=null && 
 					(n=polyE.size())>2) { 
 				
@@ -736,13 +683,22 @@ public class PackDCEL {
 					he.twin=new HalfEdge(nextHE.origin);
 					he.twin.edgeIndx=++edgeCount;
 					he.twin.twin=he;
-					tmpEdges.add(he); // add both to parent array
-					tmpEdges.add(he.twin);
+					tmpedges.add(he); // add both to parent array
+					tmpedges.add(he.twin);
 				}	
 				
 				// set 'edge' null to avoid reuse
 				face.edge=null;
-				tmpIdealFaces.remove(face); // a bdry face becomes interior
+				
+				// if boundary face, remove
+				if (face.faceIndx<0) {
+					for (int j=1;j<=idealFaceCount;j++) {
+						if (idealFaces[j]==face) {
+							for (int k=j;k<idealFaceCount;k++) 
+								idealFaces[k]=idealFaces[k+1];
+						}
+					}
+				}
 				
 				// fix up 'newV'
 				count++;
@@ -784,7 +740,7 @@ public class PackDCEL {
 		vertCount=tick;
 		
 		// reindex all the faces
-		indexFaces(tmpEdges,getBdryEdges());
+		indexFaces(tmpedges,getBdryEdges());
 		return count;
 	}
 
@@ -828,7 +784,7 @@ public class PackDCEL {
 		while (lst.hasNext()) {
 			HalfEdge he=lst.next();
 
-			if (!edgeIsBdry(he)) {
+			if (edgeIsBdry(he)<0) {
 				Face leftf=he.face;
 				Face rightf=he.twin.face;
 				Vertex leftv=he.next.twin.origin;
@@ -908,6 +864,13 @@ public class PackDCEL {
 		ArrayList<HalfEdge> arrayE=new ArrayList<HalfEdge>();
 		ArrayList<Face> arrayF=new ArrayList<Face>();
 		
+		// create array of existing edges so we can add to it
+		ArrayList<HalfEdge> tmpedges=new ArrayList<HalfEdge>();
+		tmpedges.add(null);
+		for (int e=1;e<=edgeCount;e++) {
+			tmpedges.add(edges[e]);
+		}
+		
 		// to avoid 'Vertex' repeats
 		int []vhits=new int[vertCount+1];
 		Iterator<Vertex> ait=arrayV.iterator();
@@ -922,7 +885,7 @@ public class PackDCEL {
 				Iterator<Face> fit=myfaceflower.iterator();
 				while (fit.hasNext()) {
 					Face face=fit.next();
-					if (!tmpIdealFaces.contains(face)) // omit ideal faces
+					if (face.faceIndx>0) // omit ideal faces
 						arrayF.add(face);
 				}
 				ArrayList<HalfEdge> eflower=vert.getEdgeFlower();
@@ -949,7 +912,7 @@ public class PackDCEL {
 		Iterator<HalfEdge> heit=arrayE.iterator();
 		while (heit.hasNext()) {
 			HalfEdge he=heit.next();
-			if (edgeIsBdry(he)) 
+			if (edgeIsBdry(he)>0) 
 				arrayBdry.add(he);
 			else 
 				arrayInt.add(he);
@@ -959,7 +922,7 @@ public class PackDCEL {
 		heit=arrayBdry.iterator();
 		while (heit.hasNext()) {
 			HalfEdge he=heit.next();
-			if (tmpIdealFaces.contains(he.twin.face))
+			if (he.twin.face.faceIndx<0) // twin is ideal face
 				he=he.twin;
 			Face bface=he.face;
 			HalfEdge pre=he.prev;
@@ -979,13 +942,13 @@ public class PackDCEL {
 			he.twin.origin.halfedge=twpre.twin;
 			twpre.origin.halfedge=twpost.twin;
 			
-			tmpEdges.remove(he);
-			tmpEdges.remove(he.twin);
+			tmpedges.remove(he);
+			tmpedges.remove(he.twin);
 		}				
 
 		// we flip the interior ones
 		n=flipEdges(arrayInt);
-		indexFaces(tmpEdges,getBdryEdges());
+		indexFaces(tmpedges,getBdryEdges());
 		
 		return n;
 	}
@@ -1163,51 +1126,13 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Create a traditional packing from this DCEL; this is a
-	 * raw packing and the calling routine must further process it.
-	 * @return PackData, null on error
-	 */
-	public PackData getPackData() {
-		PackData pdata=new PackData(null);
-		pdata.alloc_pack_space(vertCount+100,true);
-		// sphere? (note: 'faces' starts with 'null' entry)
-		if ((vertCount-tmpEdges.size()+(tmpFaceList.size()-1))==2) 
-			pdata.hes=1; 
-		else 
-			pdata.hes=0;
-		pdata.status=true;
-		pdata.nodeCount=vertCount;
-		
-		int [][]bouquet=getBouquet();
-		for (int v=1;v<=vertCount;v++) {
-			pdata.kData[v]=new KData();
-			pdata.kData[v].flower=bouquet[v];
-			int num=pdata.kData[v].flower.length;
-			pdata.kData[v].num=num-1;
-			if (pdata.kData[v].flower[0]!=pdata.kData[v].flower[num-1]) // v bdry
-				pdata.kData[v].bdryFlag=1;
-			pdata.rData[v]=new RData();
-			pdata.rData[v].center=new Complex(0.0);
-			pdata.rData[v].rad=.5;
-		}
-		
-		// vertexMap?
-		if (newOld!=null)
-			pdata.vertexMap=newOld.makeCopy();
-		
-		// calling routine needs to organize
-		return pdata;
-	}
-	
-	/**
 	 * Based on current 'bdryFaces', find all bdry edges
 	 * @return ArrayList<HalfEdge>
 	 */
 	public ArrayList<HalfEdge> getBdryEdges() {
 		ArrayList<HalfEdge> bdryedges=new ArrayList<HalfEdge>();
-		Iterator<Face> bit=tmpIdealFaces.iterator();
-		while (bit.hasNext()) {
-			HalfEdge he=bit.next().edge;
+		for (int k=1;k<=idealFaceCount;k++) {
+			HalfEdge he=idealFaces[k].edge;
 			HalfEdge nxtedge=he;
 			do {
 				bdryedges.add(nxtedge);
@@ -1259,25 +1184,28 @@ public class PackDCEL {
 	 * 'EdgeSimple' objects, which are just pairs {f,g} of 
 	 * indices of faces sharing an edge.
 	 * @param ideal boolean; if true, include edges to ideal faces.
-	 * @return Edgelink, null on error
+	 * @return Graphlink, null on error
 	 */
-	public EdgeLink getDualEdges(boolean ideal) {
-		EdgeLink elink=new EdgeLink();
-		Iterator<Face> fit=tmpFaceList.iterator();
-		fit.next();  // toss first 'null' entry
-		while(fit.hasNext()) {
-			Face f=fit.next();
-			HalfEdge edge=f.edge;
-			HalfEdge nxtedge=edge;
-			do {
-				Face tf=nxtedge.twin.face;
-				if ((ideal || !tmpIdealFaces.contains(tf)) && 
-						Math.abs(tf.faceIndx)>Math.abs(f.faceIndx))
-					elink.add(new EdgeSimple(f.faceIndx,tf.faceIndx));
-				nxtedge=nxtedge.next;
-			} while (nxtedge!=edge);
+	public GraphLink getDualEdges(boolean ideal) {
+		GraphLink glink=new GraphLink();
+		for (int f=1;f<=faceCount;f++) {
+			int fdx=faces[f].faceIndx;
+			if (fdx<0 && !ideal)
+				continue;
+			fdx=Math.abs(faces[f].faceIndx);
+			ArrayList<HalfEdge> edgs=faces[f].getEdges();
+			Iterator<HalfEdge> eit=edgs.iterator();
+			while (eit.hasNext()) {
+				HalfEdge he=eit.next();
+				int gdx=he.twin.face.faceIndx;
+				if (gdx<0 && !ideal)
+					continue;
+				gdx=Math.abs(he.twin.face.faceIndx);
+				if (gdx>fdx)
+					glink.add(new EdgeSimple(fdx,gdx));
+			}
 		}
-		return elink;
+		return glink;
 	}
 	
 	/**
@@ -1369,14 +1297,14 @@ public class PackDCEL {
 		if (edge.myRedEdge!=null) {
 			edge.myRedEdge.setCenter(z);
 			vert.setCenter(z);
-			p.rData[vert.vertIndx].center=new Complex(z);
+			p.setCenter(vert.vertIndx,new Complex(z));
 			return;
 		}
 		
 		// is a normal 'Vertex'? set in 'PackData'
 		if (!(vert instanceof RedVertex)) {
 			vert.setCenter(z);
-			p.rData[vert.vertIndx].center=new Complex(z);
+			p.setCenter(vert.vertIndx,new Complex(z));
 			return;
 		}
 		
@@ -1387,7 +1315,7 @@ public class PackDCEL {
 			if (he.myRedEdge!=null) {
 				he.myRedEdge.setCenter(z);
 				he.origin.setCenter(z);
-				p.rData[he.origin.vertIndx].center=new Complex(z);
+				p.setCenter(he.origin.vertIndx,new Complex(z));
 				he=edge; // kick out
 			}
 		} while (he!=edge);
@@ -1398,7 +1326,7 @@ public class PackDCEL {
 		if (edge.myRedEdge!=null) {
 			edge.origin.setRadius(rad);
 			edge.myRedEdge.setRadius(rad);
-			p.rData[edge.origin.vertIndx].rad=rad;
+			p.setRadius(edge.origin.vertIndx,rad);
 			return;
 		}
 
@@ -1407,7 +1335,7 @@ public class PackDCEL {
 		// is a normal 'Vertex'?
 		if (!(vert instanceof RedVertex)) {
 			vert.setRadius(rad);
-			p.rData[vert.vertIndx].rad=rad;
+			p.setRadius(vert.vertIndx,rad);
 			return;
 		}
 		
@@ -1418,7 +1346,7 @@ public class PackDCEL {
 			if (he.myRedEdge!=null) {
 				he.origin.setRadius(rad);
 				he.myRedEdge.setRadius(rad);
-				p.rData[he.origin.vertIndx].rad=rad;
+				p.setRadius(he.origin.vertIndx,rad);
 			}
 		} while (he!=edge);
 	}
@@ -1448,7 +1376,7 @@ public class PackDCEL {
 	public HalfEdge vertIsBdry(Vertex v) {
 		HalfEdge nxtedge=v.halfedge;
 		do {
-			if (tmpIdealFaces!=null && tmpIdealFaces.contains(nxtedge.twin.face))
+			if (idealFaceCount>0 && nxtedge.twin.face.faceIndx<0) // ideal face?
 				return nxtedge;
 			nxtedge=nxtedge.prev.twin;
 		} while(nxtedge!=v.halfedge);
@@ -1458,12 +1386,14 @@ public class PackDCEL {
 	/**
 	 * Is this a boundary edge?
 	 * @param he HalfEdge
-	 * @return boolean
+	 * @return int, index or -1 if not bdry
 	 */
-	public boolean edgeIsBdry(HalfEdge he) {
-		if (tmpIdealFaces.contains(he.face))
-			return true;
-		return false;
+	public int edgeIsBdry(HalfEdge he) {
+		for (int j=0;j<idealFaceCount;j++) {
+			if (idealFaces[j+1]==he.face)
+				return j+1;
+		}
+		return -1;
 	}
 
 	/**
@@ -1493,34 +1423,36 @@ public class PackDCEL {
 	 * to sync 'p' with the local data. Here's one example: after redoing
 	 * the face indexing, we may want to set corresponding 'PackData.faces' 
 	 * structure, and if all looks okay, we can insert that in 'p'. 
-	 * @return int face count, 0 on error
+	 * @return intFaceCount
 	 */
 	public int syncFaceData() {
 		
 		// minimal check on compatibility
 		if (p.nodeCount!=vertCount)
 			return 0;
-		p.faceCount=(tmpFaceList.size()-1)-tmpIdealFaces.size(); 
+		p.faceCount=intFaceCount;
 		p.faces=new komplex.Face[p.faceCount+1]; // new face structure
-		Iterator<Face> flst=tmpFaceList.iterator();
-		flst.next(); // toss first 'null' entry
-		int tick=0;
-		while (flst.hasNext()) {
-			Face face=flst.next();
-			if (!tmpIdealFaces.contains(face)) {
-				face.faceIndx=++tick; // reset indices (perhaps already in order)
+		for (int f=1;f<=intFaceCount;f++) {
+			Face face=faces[f];
+			if (face.faceIndx>0) {
+				face.faceIndx=f; // reset indices (perhaps already in order)
 				// for new komplex.Face
-				p.faces[tick]=new komplex.Face();
-				p.faces[tick].vert=face.getVerts();
-				p.faces[tick].vertCount=p.faces[tick].vert.length;
-				p.faces[tick].indexFlag=0;
+				p.faces[f]=new komplex.Face();
+				p.faces[f].vert=face.getVerts();
+				p.faces[f].vertCount=p.faces[f].vert.length;
+				p.faces[f].indexFlag=0;
 			}
 		}
 		
-		if (tmpLayout!=null) 
-			p.firstFace=tmpLayout.get(0).faceIndx;
+		if (faceOrder!=null) {
+			EdgeSimple edge=faceOrder.get(0); 
+			p.firstFace=edge.v;
+			if (edge.v==0)
+				p.firstFace=edge.w;
+		}
+
 		// TODO: could transfer layout order to parent 'p' too.
-		return tick;
+		return intFaceCount;
 	}
 	
 	/**
@@ -1536,7 +1468,7 @@ public class PackDCEL {
 		ArrayList<Integer> petals=new ArrayList<Integer>();
 		HalfEdge nxtedge=v.halfedge;
 		boolean bdry=false;
-		if (tmpIdealFaces.contains(nxtedge.twin.face))
+		if (nxtedge.twin.face.faceIndx<0) // ideal face
 			bdry=true;
 		int safety=vertCount;
 		do {
@@ -1553,17 +1485,6 @@ public class PackDCEL {
 		for (int k=0;k<n;k++)
 			rslt[k]=petals.get(k);
 		return rslt;
-	}
-	
-	public void debug() {
-		System.out.println("PackDCEL debug: edges with null twins");
-		
-		Iterator<HalfEdge> eit=tmpEdges.iterator();
-		while (eit.hasNext()) {
-			HalfEdge he= eit.next();
-			if (he.twin==null)
-				System.err.println(he.origin.vertIndx);
-		}
 	}
 	
 	/**
@@ -1644,14 +1565,14 @@ public class PackDCEL {
 	public Complex faceOppCenter(Face face) {
 		int []verts=face.getVerts();
 		if (verts.length==3) {
-			Complex p0=new Complex(p.rData[verts[0]].center);
-			Complex p1=new Complex(p.rData[verts[1]].center);
-			Complex p2=new Complex(p.rData[verts[2]].center);
+			Complex p0=p.getCenter(verts[0]);
+			Complex p1=p.getCenter(verts[1]);
+			Complex p2=p.getCenter(verts[2]);
 			return PackData.face_center(p.hes,p0,p1,p2);
 		}
-		Complex accum=new Complex(p.rData[verts[0]].center);
+		Complex accum=p.getCenter(verts[0]);
 		for (int j=1;j<verts.length;j++)
-			accum=accum.plus(p.rData[verts[j]].center);
+			accum=accum.plus(p.getCenter(verts[j]));
 		return accum.divide(verts.length);
 	}
 	
@@ -1668,10 +1589,8 @@ public class PackDCEL {
 	public PackDCEL createDual(boolean full) {
 		
 		int [][]bouquet=new int[intFaceCount+1][];
-		Iterator<Face> fit=tmpFaceList.iterator();
-		Face face=fit.next(); // flush first null face
-		while (fit.hasNext()) {
-			face=fit.next();
+		for (int f=1;f<=faceCount;f++) {
+			Face face=faces[f];
 			int fi=Math.abs(face.faceIndx);
 			ArrayList<Integer> flower=face.faceFlower();
 			if (flower==null || flower.size()==0)
@@ -1698,10 +1617,8 @@ public class PackDCEL {
 		PackDCEL qdcel = new PackDCEL(bouquet);
 		
 		// set centers of the new vertices
-		fit=tmpFaceList.iterator();
-		face=fit.next(); // flush first null face
-		while (fit.hasNext()) {
-			face=fit.next();
+		for (int f=1;f<=faceCount;f++) {
+			Face face=faces[f];
 			if (face.faceIndx>0) // ignore ideal faces
 				qdcel.vertices[face.faceIndx].center=faceOppCenter(face);
 		}
@@ -1712,7 +1629,7 @@ public class PackDCEL {
 	/**
 	 * Write this DCEL structure to a file.
 	 * TODO: This is an early format, 4/2017, and should
-	 * probably be rethought, but need if for 3D modeling work 
+	 * probably be rethought, but need it for 3D modeling work 
 	 * now.
 	 * @param filename
 	 * @return 0 on failure
@@ -1728,31 +1645,18 @@ public class PackDCEL {
 	    		// center may be from 'PackData' or is recorded, e.g., for dual
 	    		Complex z=v.center;
 	    		if (p!=null) 
-	    			z=p.rData[v.vertIndx].center;
+	    			z=p.getCenter(v.vertIndx);
 	    		int xi=(int)Math.round(z.x*1000000.0); // convert to microns
 	    		int yi=(int)Math.round(z.y*1000000.0); // convert to microns
 	    		fp.write(i+"  "+xi+" "+yi+" 1000 0 \n"); // radius is fake, flag is fake
 	    	}
 	    	fp.write("</VERTICES>\n");
 	    	
-	    	// first, some bookkeeping
-	    	edgeCount=tmpEdges.size();
-	    	HalfEdge []edgearray=new HalfEdge[edgeCount+1];
-	    	int eindx=0;
-	    	Iterator<HalfEdge> eit=tmpEdges.iterator();
-	    	while(eit.hasNext()) {
-	    		HalfEdge he=eit.next();
-	    		he.edgeIndx=++eindx;
-	    		edgearray[he.edgeIndx]=he;
-	    	}
-	    	
 	    	int []eticks=new int[edgeCount];
 	    	int ecount=0;
 	    	for (int e=1;e<=edgeCount;e++) {
-	    		HalfEdge he=edgearray[e];
+	    		HalfEdge he=edges[e];
 	    		int indx=he.edgeIndx-1;
-// debug
-//	    		System.out.println("e = "+e);
 	    		if (eticks[indx]==0) {
 	    			int te=he.twin.edgeIndx-1;
 	    			eticks[indx]=te;  // points to twin indx
@@ -1761,10 +1665,11 @@ public class PackDCEL {
 	    		}
 	    	}
 	    	
+	    	// TODO: note the shift in indices to start at 0. reason?
 	    	fp.write("<EDGES>\n"+ecount+"\n");
 	    	for (int e=0;e<edgeCount;e++) 
 	    		if (eticks[e]>0) {
-	    			HalfEdge he=edgearray[e+1];
+	    			HalfEdge he=edges[e+1];
 	    			int v=he.origin.vertIndx-1;
 	    			int w=he.twin.origin.vertIndx-1;
 	    			fp.write(e+" "+eticks[e]+" "+v+" "+w+"\n");
@@ -1814,18 +1719,15 @@ public class PackDCEL {
 		HalfEdge []dverts=new HalfEdge[faceCount];
 		
 		// dual edges are regular edges
-		Iterator<HalfEdge> deit=tmpEdges.iterator();
-		while (deit.hasNext()) {
-			HalfEdge he=deit.next();
+    	for (int e=1;e<=edgeCount;e++) {
+			HalfEdge he=edges[e];
 			if (he!=null)
 				dedges[he.edgeIndx-1]=he;
 		}
 				
 		// dual vertices are regular faces
-		Iterator<Face> dvit=tmpFaceList.iterator();
-		Face face=dvit.next(); // flush the first, which is null
-		while (dvit.hasNext()) {
-			face=dvit.next();
+    	for (int f=1;f<=faceCount;f++) {
+    		Face face=faces[f];
 			if (face.edge!=null)
 				dverts[face.faceIndx-1]=face.edge;
 		}
@@ -1842,7 +1744,7 @@ public class PackDCEL {
 	    	fp.write("<VERTICES>\n"+faceCount+"\n");
 	    	for (int i=0;i<faceCount;i++) {
 	    		
-	    		face=dverts[i].face;
+	    		Face face=dverts[i].face;
 	    		Complex z=faceOppCenter(face);
 	    		int xi=(int)Math.round(z.x*1000000.0); // convert to microns
 	    		int yi=(int)Math.round(z.y*1000000.0); // convert to microns

@@ -114,8 +114,8 @@ public class SchwarzSliders extends SliderFrame {
 		TriAspect tri=TriAspect.baseEquilaterl(packData.hes);
 		int[] verts=packData.faces[f].vert;
 		for (int j=0;j<3;j++) {
-			packData.rData[verts[j]].rad=tri.getRadius(j);
-			packData.rData[verts[j]].center=tri.getCenter(j);
+			packData.setRadius(verts[j],tri.getRadius(j));
+			packData.setCenter(verts[j],tri.getCenter(j));
 		}
 		
 		// display the roor face

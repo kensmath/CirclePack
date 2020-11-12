@@ -2,7 +2,6 @@ package dcel;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 import exceptions.CombException;
 
@@ -113,7 +112,7 @@ public class Face {
 	 * @return int[]
 	 */
 	public int[] getVerts() {
-		List<Integer> vertlist=new ArrayList<Integer>();
+		ArrayList<Integer> vertlist=new ArrayList<Integer>();
 		HalfEdge nxtedge=edge;
 		int safety=100;
 		do {

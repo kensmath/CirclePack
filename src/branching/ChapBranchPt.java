@@ -321,7 +321,7 @@ public class ChapBranchPt extends GenBranchPt {
 		// get parent radii
 		for (int i=1;i<=matchCount;i++) {
 			if (transData[i]>0)
-				myPackData.rData[i].rad=packData.rData[transData[i]].rad;
+				myPackData.setRadius(i,packData.getRadius(transData[i]));
 		}
 		if (cycles<0)
 			cycles = 5; // subject to trial and error
@@ -337,7 +337,7 @@ public class ChapBranchPt extends GenBranchPt {
 		// transfer radii to parent
 		for (int i=1;i<=matchCount;i++) {
 			if (transData[i]<0)
-				packData.rData[-transData[i]].rad=myPackData.rData[i].rad;
+				packData.setRadius(-transData[i],myPackData.getRadius(i));
 		}
 		return uP;
 	}
@@ -361,16 +361,16 @@ public class ChapBranchPt extends GenBranchPt {
 			if (myPackData.place_face(F,myPackData.faces[F].indexFlag)==0)
 				throw new DataException("failed to locate first local face");
 			Complex []firstF=new Complex[2];
-			firstF[0]=new Complex(myPackData.rData[V].center);
-			firstF[1]=new Complex(myPackData.rData[W].center);
+			firstF[0]=myPackData.getCenter(V);
+			firstF[1]=myPackData.getCenter(W);
 		
 			// compute holonomy
 			// use 'drawingTree' (computed in 'modifyMyPack') for temp layout
 			myPackData.layoutTree(null,myPackData.drawingTree,null,null,true,false,1.0);
 			// final location of F (only different if 'borderLink' is closed)
 			Complex []lastF=new Complex[2];
-			lastF[0]=new Complex(myPackData.rData[V].center);
-			lastF[1]=new Complex(myPackData.rData[W].center);
+			lastF[0]=myPackData.getCenter(V);
+			lastF[1]=myPackData.getCenter(W);
 			// update myHolonomy
 			if (myPackData.hes<0) // hyp
 				myHolonomy=Mobius.auto_abAB(firstF[0],firstF[1],lastF[0],lastF[1]);
@@ -385,8 +385,8 @@ public class ChapBranchPt extends GenBranchPt {
 		// normalize: 1 center is at rad[1]*i on imaginary axis; center of chap[2]
 		//    has argument -pi/2 + overlap[2], modulus radius of newBrSpot-2.
 		if (norm) {
-			double e1=myPackData.rData[1].rad; // radius for 1
-			double em=myPackData.rData[chap[2]].rad; // radius for newBrSpot-2
+			double e1=myPackData.getRadius(1); // radius for 1
+			double em=myPackData.getRadius(chap[2]); // radius for newBrSpot-2
 			
 			// hyperbolic? have to adjust to euclidean data
 			if (myPackData.hes<0) {
@@ -460,7 +460,7 @@ public class ChapBranchPt extends GenBranchPt {
 		int count=0;
 		// get centers from parent
 		for (int v=1;v<=matchCount;v++) {
-			myPackData.rData[v].center=new Complex(packData.rData[Math.abs(transData[v])].center);
+			myPackData.setCenter(v,packData.getCenter(Math.abs(transData[v])));
 			myPackData.kData[v].plotFlag=1;
 			count++;
 		}
@@ -479,18 +479,18 @@ public class ChapBranchPt extends GenBranchPt {
 
 		// initial location of F
 		Complex []firstF=new Complex[3];
-		firstF[0]=new Complex(myPackData.rData[myPackData.faces[F].vert[0]].center);
-		firstF[1]=new Complex(myPackData.rData[myPackData.faces[F].vert[1]].center);
-		firstF[2]=new Complex(myPackData.rData[myPackData.faces[F].vert[2]].center);
+		firstF[0]=myPackData.getCenter(myPackData.faces[F].vert[0]);
+		firstF[1]=myPackData.getCenter(myPackData.faces[F].vert[1]);
+		firstF[2]=myPackData.getCenter(myPackData.faces[F].vert[2]);
 		
 		// if borderLink closed, compute holonomy
 		myPackData.recomp_facelist(borderLink);
 		
 		// final location of F (only different if 'bdryLink' is closed)
 		Complex []lastF=new Complex[3];
-		lastF[0]=new Complex(myPackData.rData[myPackData.faces[F].vert[0]].center);
-		lastF[1]=new Complex(myPackData.rData[myPackData.faces[F].vert[1]].center);
-		lastF[2]=new Complex(myPackData.rData[myPackData.faces[F].vert[2]].center);
+		lastF[0]=myPackData.getCenter(myPackData.faces[F].vert[0]);
+		lastF[1]=myPackData.getCenter(myPackData.faces[F].vert[1]);
+		lastF[2]=myPackData.getCenter(myPackData.faces[F].vert[2]);
 
 		// update myHolonomy
 		return Mobius.mob_xyzXYZ(firstF[0],firstF[1],firstF[2],lastF[0],lastF[1],lastF[2],0,0);
@@ -572,7 +572,7 @@ public class ChapBranchPt extends GenBranchPt {
 				{
 					myAim=Double.parseDouble(items.get(0))*Math.PI;
 					myPackData.rData[newBrSpot].aim=myAim;
-					myPackData.rData[newBrSpot].rad=.5; // kick-start repacking
+					myPackData.setRadius(newBrSpot,0.5); // kick-start repacking
 					count++;
 					break;
 				}
@@ -786,7 +786,7 @@ public class ChapBranchPt extends GenBranchPt {
 		newK.bdryFlag=0;
 		newK.plotFlag=1;
 		newR.aim=pi2;
-		newR.rad=origChild.rData[1].rad;
+		newR.rad=origChild.getRadius(1);
 
 		modifyPack.kData[1]=newK.clone();
 		modifyPack.rData[1]=newR.clone();
@@ -814,7 +814,7 @@ public class ChapBranchPt extends GenBranchPt {
 		newK.flower=newflower;
 		newK.bdryFlag=0;
 		newK.plotFlag=1;
-		newR.rad=.75*origChild.rData[1].rad;
+		newR.rad=.75*origChild.getRadius(1);
 		newR.center=new Complex(0.0);
 		newR.aim=pi2;
 		

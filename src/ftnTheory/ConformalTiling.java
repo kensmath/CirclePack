@@ -379,7 +379,7 @@ public class ConformalTiling extends PackExtender {
 			// initial 'mark's = -1, recursively set to depth; all radii = .025
 			for (int v=1;v<=packData.nodeCount;v++) {
 				packData.kData[v].mark=-1;
-				packData.rData[v].rad=.025;
+				packData.setRadius(v,0.025);
 			}
 			
 			// go to depth of current subdivision grading
@@ -702,8 +702,8 @@ public class ConformalTiling extends PackExtender {
 					int ccwv=tile.augVert[(hit+1)%tile.augVertCount];
 					
 					int num=packData.kData[v].num;
-					double vrad=packData.rData[v].rad;
-					double rad1=packData.rData[ccwv].rad;
+					double vrad=packData.getRadius(v);
+					double rad1=packData.getRadius(ccwv);
 					double rad2=rad1;
 					int ccwv_indx=packData.nghb(v, ccwv);
 					int indxdiff=(packData.nghb(v, cwv)-ccwv_indx+num)%num;
@@ -711,7 +711,7 @@ public class ConformalTiling extends PackExtender {
 					double angsum=0.0;
 					for (int k=1;k<=indxdiff;k++) {
 						rad1=rad2;
-						rad2=packData.rData[packData.kData[v].flower[(ccwv_indx+k)%num]].rad;
+						rad2=packData.getRadius(packData.kData[v].flower[(ccwv_indx+k)%num]);
 						UtilPacket uP=new UtilPacket();
 						if (hes<0) { // hyp
 							HyperbolicMath.h_cos_s_overlap(vrad,rad1,rad2,1.0,1.0,1.0,uP);
@@ -1415,7 +1415,7 @@ public class ConformalTiling extends PackExtender {
 						else 
 							count += cpCommand(packData,"disp -s"+df.reconstitute()+" "+flwr.toString());
 						if (df.label) { // want label
-							packData.cpScreen.drawIndex(packData.rData[tile.baryVert].center, tile.tileIndex, 1);
+							packData.cpScreen.drawIndex(packData.getCenter(tile.baryVert), tile.tileIndex, 1);
 						}
 					}
 				} // end of while
@@ -2183,8 +2183,8 @@ public class ConformalTiling extends PackExtender {
 		int ccwv=tile.augVert[(av+1)%tile.augVertCount];
 		
 		int num=packData.kData[v].num;
-		double vrad=packData.rData[v].rad;
-		double rad1=packData.rData[ccwv].rad;
+		double vrad=packData.getRadius(v);
+		double rad1=packData.getRadius(ccwv);
 		double rad2=rad1;
 		int ccwv_indx=packData.nghb(v, ccwv);
 		int indxdiff=(packData.nghb(v, cwv)-ccwv_indx+num)%num;
@@ -2192,7 +2192,7 @@ public class ConformalTiling extends PackExtender {
 		double angsum=0.0;
 		for (int k=1;k<=indxdiff;k++) {
 			rad1=rad2;
-			rad2=packData.rData[packData.kData[v].flower[(ccwv_indx+k)%num]].rad;
+			rad2=packData.getRadius(packData.kData[v].flower[(ccwv_indx+k)%num]);
 			UtilPacket uP=new UtilPacket();
 			if (hes<0) { // hyp
 				HyperbolicMath.h_cos_s_overlap(vrad,rad1,rad2,1.0,1.0,1.0,uP);
@@ -2230,7 +2230,7 @@ public class ConformalTiling extends PackExtender {
 		int n=tile.vertCount;
 		double []stdC=new double[2*n];
 		for (int j=0;j<n;j++) {
-			Complex z=packData.rData[tile.vert[j]].center;
+			Complex z=packData.getCenter(tile.vert[j]);
 			stdC[2*j]=z.x;
 			stdC[2*j+1]=z.y;
 		}
@@ -2267,7 +2267,7 @@ public class ConformalTiling extends PackExtender {
 		
 		// first, locate your own vertices (just vertices, not augmented vertices)
 		for (int j=0;j<topRule.stdCorners.length;j++) {
-			p.rData[toptile.vert[j]].center=new Complex(topRule.stdCorners[j].times(basedir).add(origin));
+			p.setCenter(toptile.vert[j],new Complex(topRule.stdCorners[j].times(basedir).add(origin)));
 			if (p.kData[toptile.vert[j]].mark<0)
 				p.kData[toptile.vert[j]].mark=depth;
 		}
@@ -2965,10 +2965,10 @@ public class ConformalTiling extends PackExtender {
 				int dj=p.nghb(w,bdryverts[(i+1)%bcount]); // index of downstrem nghb
 				int []fan=p.flowerFan(w,dj,uj);
 				int N=fan.length;
-				double r=p.rData[w].rad;
+				double r=p.getRadius(w);
 				for (int j=0;j<(N-1);j++) {  // note: assuming euclidean tangency packing
-					double e1=r+p.rData[fan[j]].rad; // edge lengths
-					double e2=r+p.rData[fan[j+1]].rad;
+					double e1=r+p.getRadius(fan[j]); // edge lengths
+					double e2=r+p.getRadius(fan[j+1]);
 					double eo=e1+e2-2*r; // opp edge length
 					accum = accum+Math.acos((e1*e1+e2*e2-eo*eo)/(2.0*e1*e2));
 				}

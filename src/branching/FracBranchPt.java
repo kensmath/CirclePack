@@ -215,7 +215,7 @@ public class FracBranchPt extends GenBranchPt {
 			double []rad=new double[3];
 			UtilPacket inuP=new UtilPacket();
 			for (int i=0;i<3;i++)
-				rad[i]=myPackData.rData[i+1].rad;
+				rad[i]=myPackData.getRadius(i+1);
 			
 			// set new aims based on current face angles
 			for (int i=0;i<3;i++) { 
@@ -243,7 +243,7 @@ public class FracBranchPt extends GenBranchPt {
 			// compute new angles and get error
 			double accum=0.0;
 			for (int i=0;i<3;i++) 
-				rad[i]=myPackData.rData[i+1].rad;
+				rad[i]=myPackData.getRadius(i+1);
 			for (int i=0;i<3;i++) { 
 				if (myPackData.hes<0) {
 					HyperbolicMath.h_cos_s_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],
@@ -281,25 +281,25 @@ public class FracBranchPt extends GenBranchPt {
 		
 		// initial location of F
 		Complex []firstF=new Complex[3];
-		firstF[0]=new Complex(myPackData.rData[myPackData.faces[F].vert[0]].center);
-		firstF[1]=new Complex(myPackData.rData[myPackData.faces[F].vert[1]].center);
-		firstF[2]=new Complex(myPackData.rData[myPackData.faces[F].vert[2]].center);
+		firstF[0]=myPackData.getCenter(myPackData.faces[F].vert[0]);
+		firstF[1]=myPackData.getCenter(myPackData.faces[F].vert[1]);
+		firstF[2]=myPackData.getCenter(myPackData.faces[F].vert[2]);
 		
 		// layout in order
 		myPackData.recomp_facelist(borderLink);
 		
 		// final location of F (only different if 'bdryLink' is closed)
 		Complex []lastF=new Complex[3];
-		lastF[0]=new Complex(myPackData.rData[myPackData.faces[F].vert[0]].center);
-		lastF[1]=new Complex(myPackData.rData[myPackData.faces[F].vert[1]].center);
-		lastF[2]=new Complex(myPackData.rData[myPackData.faces[F].vert[2]].center);
+		lastF[0]=myPackData.getCenter(myPackData.faces[F].vert[0]);
+		lastF[1]=myPackData.getCenter(myPackData.faces[F].vert[1]);
+		lastF[2]=myPackData.getCenter(myPackData.faces[F].vert[2]);
 
 		// update myHolonomy
 		myHolonomy=Mobius.mob_xyzXYZ(firstF[0],firstF[1],firstF[2],lastF[0],lastF[1],lastF[2],0,0);
 		
 		// rotate to get 2 on positive y-axis
 		if (norm) {
-			double theta=(-1.0)*myPackData.rData[2].center.arg();
+			double theta=(-1.0)*myPackData.getCenter(2).arg();
 			myPackData.rotate(theta+Math.PI/2.0);
 		}
 		
@@ -316,7 +316,7 @@ public class FracBranchPt extends GenBranchPt {
 		UtilPacket inuP=new UtilPacket();
 		
 		for (int i=0;i<3;i++) 
-			rad[i]=myPackData.rData[i+1].rad;
+			rad[i]=myPackData.getRadius(i+1);
 		for (int i=0;i<3;i++) { 
 			if (myPackData.hes<0) {
 				HyperbolicMath.h_cos_s_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],

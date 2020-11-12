@@ -430,7 +430,7 @@ public class QueryParser {
 				if (query.startsWith("cent")) {
 					v=NodeLink.grab_one_vert(p,flagSegs);
 					if (v!=0) {
-						Complex z=p.rData[v].center;
+						Complex z=p.getCenter(v);
 						ans.append(z.x+" "+z.y);
 						if (forMsg)
 							words.append(" for v"+v+" ");
@@ -757,7 +757,7 @@ public class QueryParser {
 				if (query.startsWith("rad")) {
 					v=NodeLink.grab_one_vert(p, flagSegs);
 					if (v!=0) {
-						ans.append(p.getRadius(v));
+						ans.append(p.getActualRadius(v));
 						if (forMsg) 
 							words.append(" v"+v);
 						gotone=true;
@@ -885,8 +885,8 @@ public class QueryParser {
 		  	      	int count=0;
 		  	      	while (vlist.hasNext() && count<5) {
 		  	      		v=(Integer)vlist.next();
-		  	      		words.append("\n vert#"+v+", p"+p.packNum+": rad="+p.getRadius(v)+
-		  	      				", center=("+p.rData[v].center.x+","+p.rData[v].center.y+")"+
+		  	      		words.append("\n vert#"+v+", p"+p.packNum+": rad="+p.getActualRadius(v)+
+		  	      				", center=("+p.getCenter(v).x+","+p.getCenter(v).y+")"+
 		  	      				", ang sum="+p.rData[v].curv/Math.PI+
 		  	      				" Pi, aim="+p.rData[v].aim/Math.PI+
 		  	      				" Pi, boundaryFlag="+p.kData[v].bdryFlag+

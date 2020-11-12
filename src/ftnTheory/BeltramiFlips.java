@@ -302,15 +302,15 @@ public class BeltramiFlips extends PackExtender {
 		corn_vert[3]=packData.kData[v].flower[k];
 
 		// affine map based on Beltrami coeff at centroid of these 4 verts  
-		Complex midZ=packData.rData[v].center.add(packData.rData[corn_vert[1]].center).
-		add(packData.rData[w].center).add(packData.rData[corn_vert[3]].center);
+		Complex midZ=packData.getCenter(v).add(packData.getCenter(corn_vert[1])).
+		add(packData.getCenter(w)).add(packData.getCenter(corn_vert[3]));
 		midZ=midZ.times(0.25);
 
 		// get 2x2 real matrix
 		double []affine=getAffine(getCoefficient(midZ));
 		Complex []corner=new Complex[4];
 		for (int i=0;i<4;i++) {
-			Complex Z=new Complex(packData.rData[corn_vert[i]].center);
+			Complex Z=packData.getCenter(corn_vert[i]);
 			// apply affine
 			double x=affine[0]*Z.x+affine[1]*Z.y;
 			double y=affine[2]*Z.x+affine[3]*Z.y;

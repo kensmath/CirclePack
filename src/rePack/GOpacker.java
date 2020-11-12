@@ -6,7 +6,6 @@ import java.util.Vector;
 
 import JNI.SolverData;
 import JNI.SolverFunction;
-import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
 import complex.MathComplex;
@@ -14,10 +13,10 @@ import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.MiscException;
 import exceptions.ParserException;
+import geometry.CircleSimple;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.NSpole;
-import geometry.CircleSimple;
 import geometry.SphericalMath;
 import listManip.NodeLink;
 import packing.PackData;
@@ -328,7 +327,7 @@ public class GOpacker extends RePacker {
 			return 0;
 		}
 		for (int k=1;k<=myPLite.vertCount;k++) 
-			myPLite.radii[k]=p.rData[myPLite.v2parent[k]].rad;
+			myPLite.radii[k]=p.getRadius(myPLite.v2parent[k]);
 		if (passNum<0)
 			passNum=passLimit;
 		else
@@ -789,8 +788,8 @@ public class GOpacker extends RePacker {
 			for (int v=1;v<=p.nodeCount;v++) {
 				int k=myPLite.parent2v[v];
 				if (k>0) {
-					p.rData[v].rad=myPLite.radii[k];
-					p.rData[v].center=new Complex(myPLite.centers[k]);
+					p.setRadius(v,myPLite.radii[k]);
+					p.setCenter(v,new Complex(myPLite.centers[k]));
 				}
 			}
 			return;
@@ -800,8 +799,8 @@ public class GOpacker extends RePacker {
 				int k=myPLite.parent2v[v];
 				CircleSimple sc=SphericalMath.e_to_s_data(myPLite.centers[k],myPLite.radii[k]);
 				if (k>0) {
-					p.rData[v].center=new Complex(sc.center);
-					p.rData[v].rad=sc.rad;
+					p.setCenter(v,new Complex(sc.center));
+					p.setRadius(v,sc.rad);
 				}
 			}
 			
@@ -814,8 +813,8 @@ public class GOpacker extends RePacker {
 				int k=myPLite.parent2v[v];
 				CircleSimple sc=HyperbolicMath.e_to_h_data(myPLite.centers[k],myPLite.radii[k]);
 				if (k>0) {
-					p.rData[v].center=new Complex(sc.center);
-					p.rData[v].rad=sc.rad;
+					p.setCenter(v,new Complex(sc.center));
+					p.setRadius(v,sc.rad);
 				}
 			}
 			return;
@@ -1369,7 +1368,7 @@ public class GOpacker extends RePacker {
     	for (int j=0;j<myPLite.bdryCount;j++) {
     		int k=myPLite.intVertCount+1+j; // local index
     		int w=myPLite.v2parent[k]; // parent index
-    		myPLite.centers[k]=new Complex(p.rData[w].center);
+    		myPLite.centers[k]=p.getCenter(w);
     		myPLite.radii[k]=p.rData[w].rad;
     		count++;
     	}

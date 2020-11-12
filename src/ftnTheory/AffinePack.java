@@ -16,8 +16,8 @@ import deBugging.LayoutBugs;
 import exceptions.CombException;
 import exceptions.InOutException;
 import exceptions.ParserException;
-import geometry.EuclMath;
 import geometry.CircleSimple;
+import geometry.EuclMath;
 import input.CPFileManager;
 import komplex.DualGraph;
 import komplex.EdgeSimple;
@@ -139,9 +139,9 @@ public class AffinePack extends PackExtender {
 				int v=packData.faces[f].vert[j];
 				tas.vert[j]=v;
 				// set 'labels'
-				tas.labels[j]=packData.rData[v].rad;
+				tas.labels[j]=packData.getRadius(v);
 				// set 'centers'
-				tas.setCenter(new Complex(packData.rData[v].center),j);
+				tas.setCenter(new Complex(packData.getCenter(v)),j);
 				if (packData.kData[v].utilFlag==1)
 					tas.redFlags[j]=true;
 				else tas.redFlags[j]=false;
@@ -170,14 +170,14 @@ public class AffinePack extends PackExtender {
 			int bd=bdry.next();
 			
 			if (bd==1){
-				EL+=p.rData[1].rad;
+				EL+=p.getRadius(1);
 			}
 			
 			else if (bd==2){
-				EL+=p.rData[2].rad;
+				EL+=p.getRadius(2);
 			}
 			
-			else EL+=2*p.rData[bd].rad;
+			else EL+=2*p.getRadius(bd);
 	
 		}
 		
@@ -229,14 +229,14 @@ public class AffinePack extends PackExtender {
 			int bd=bdry.next();
 			
 			if (bd==3){
-				EL+=p.rData[3].rad;
+				EL+=p.getRadius(3);
 			}
 			
 			else if (bd==4){
-				EL+=p.rData[4].rad;
+				EL+=p.getRadius(4);
 			}
 			
-			else EL+=2*p.rData[bd].rad;
+			else EL+=2*p.getRadius(bd);
 	
 		}
 		
@@ -287,14 +287,14 @@ public class AffinePack extends PackExtender {
 			int bd=bdry.next();
 			
 			if (bd==2){
-				EL+=p.rData[2].rad;
+				EL+=p.getRadius(2);
 			}
 			
 			else if (bd==3){
-				EL+=p.rData[3].rad;
+				EL+=p.getRadius(3);
 			}
 			
-			else EL+=2*p.rData[bd].rad;
+			else EL+=2*p.getRadius(bd);
 	
 		}
 		
@@ -345,14 +345,14 @@ public class AffinePack extends PackExtender {
 			int bd=bdry.next();
 			
 			if (bd==4){
-				EL+=p.rData[4].rad;
+				EL+=p.getRadius(4);
 			}
 			
 			else if (bd==1){
-				EL+=p.rData[1].rad;
+				EL+=p.getRadius(1);
 			}
 			
-			else EL+=2*p.rData[bd].rad;
+			else EL+=2*p.getRadius(bd);
 	
 		}
 		
@@ -405,14 +405,14 @@ public class AffinePack extends PackExtender {
 			int bd=bdry.next();
 			
 			if (bd==1){
-				EL12+=p.rData[1].rad;
+				EL12+=p.getRadius(1);
 			}
 			
 			else if (bd==2){
-				EL12+=p.rData[2].rad;
+				EL12+=p.getRadius(2);
 			}
 			
-			else EL12+=2*p.rData[bd].rad;
+			else EL12+=2*p.getRadius(bd);
 	
 		}
 		
@@ -469,7 +469,7 @@ public class AffinePack extends PackExtender {
 				Complex T = Z.minus(z1).divide(z2.minus(z1));
 				double t=L12*T.x;
 				
-				double s = p.rData[v].rad+g+p.rData[w].rad+t;
+				double s = p.getRadius(v)+g+p.getRadius(w)+t;
 				Complex S = z2.times(s/L12).add(z1.times(1.0-(s/L12)));
 				
 				for (int j=0;j<p.kData[w].num;j++){
@@ -483,8 +483,7 @@ public class AffinePack extends PackExtender {
 			}
 			
 		}
-		
-		else {
+				else {
 			
 			int count = 0;
 			
@@ -529,14 +528,14 @@ public class AffinePack extends PackExtender {
 			int bd=bdry.next();
 			
 			if (bd==3){
-				EL34+=p.rData[3].rad;
+				EL34+=p.getRadius(3);
 			}
 			
 			else if (bd==4){
-				EL34+=p.rData[4].rad;
+				EL34+=p.getRadius(4);
 			}
 			
-			else EL34+=2*p.rData[bd].rad;
+			else EL34+=2*p.getRadius(bd);
 	
 		}
 		
@@ -593,7 +592,7 @@ public class AffinePack extends PackExtender {
 				Complex T = Z.minus(z3).divide(z4.minus(z3));
 				double t=L34*T.x;
 				
-				double s = p.rData[v].rad+g+p.rData[w].rad+t;
+				double s = p.getRadius(v)+g+p.getRadius(w)+t;
 				Complex S = z4.times(s/L34).add(z3.times(1.0-(s/L34)));
 				
 				for (int j=0;j<p.kData[w].num;j++){
@@ -653,14 +652,14 @@ public class AffinePack extends PackExtender {
 			int bd=bdry.next();
 			
 			if (bd==2){
-				EL23+=p.rData[2].rad;
+				EL23+=p.getRadius(2);
 			}
 			
 			else if (bd==3){
-				EL23+=p.rData[3].rad;
+				EL23+=p.getRadius(3);
 			}
 			
-			else EL23+=2*p.rData[bd].rad;
+			else EL23+=2*p.getRadius(bd);
 	
 		}
 		
@@ -717,7 +716,7 @@ public class AffinePack extends PackExtender {
 				Complex T = Z.minus(z2).divide(z3.minus(z2));
 				double t=L23*T.x;
 				
-				double s = p.rData[v].rad+g+p.rData[w].rad+t;
+				double s = p.getRadius(v)+g+p.getRadius(w)+t;
 				Complex S = z3.times(s/L23).add(z2.times(1.0-(s/L23)));
 				
 				for (int j=0;j<p.kData[w].num;j++){
@@ -777,14 +776,14 @@ public class AffinePack extends PackExtender {
 			int bd=bdry.next();
 			
 			if (bd==4){
-				EL41+=p.rData[4].rad;
+				EL41+=p.getRadius(4);
 			}
 			
 			else if (bd==1){
-				EL41+=p.rData[1].rad;
+				EL41+=p.getRadius(1);
 			}
 			
-			else EL41+=2*p.rData[bd].rad;
+			else EL41+=2*p.getRadius(bd);
 	
 		}
 		
@@ -841,7 +840,7 @@ public class AffinePack extends PackExtender {
 				Complex T = Z.minus(z4).divide(z1.minus(z4));
 				double t=L41*T.x;
 				
-				double s = p.rData[v].rad+g+p.rData[w].rad+t;
+				double s = p.getRadius(v)+g+p.getRadius(w)+t;
 				Complex S = z1.times(s/L41).add(z4.times(1.0-(s/L41)));
 				
 				for (int j=0;j<p.kData[w].num;j++){
@@ -916,14 +915,14 @@ public class AffinePack extends PackExtender {
 			int bd=bdry.next();
 			
 			if (bd==1){
-				EL12+=p.rData[1].rad;
+				EL12+=p.getRadius(1);
 			}
 			
 			else if (bd==2){
-				EL12+=p.rData[2].rad;
+				EL12+=p.getRadius(2);
 			}
 			
-			else EL12+=2*p.rData[bd].rad;
+			else EL12+=2*p.getRadius(bd);
 	
 		}
 		
@@ -972,7 +971,7 @@ public class AffinePack extends PackExtender {
 			Complex T = Z.minus(z1).divide(z2.minus(z1));
 			double t=L12*T.x;
 			
-			double s = t+((L12/EL12)*(p.rData[v].rad+p.rData[w].rad));
+			double s = t+((L12/EL12)*(p.getRadius(v)+p.getRadius(w)));
 			Complex S = z2.times(s/L12).add(z1.times(1.0-(s/L12)));
 			
 			for (int j=0;j<p.kData[w].num;j++){
@@ -999,14 +998,14 @@ public class AffinePack extends PackExtender {
 			int bd=bdry.next();
 			
 			if (bd==3){
-				EL34+=p.rData[3].rad;
+				EL34+=p.getRadius(3);
 			}
 			
 			else if (bd==4){
-				EL34+=p.rData[4].rad;
+				EL34+=p.getRadius(4);
 			}
 			
-			else EL34+=2*p.rData[bd].rad;
+			else EL34+=2*p.getRadius(bd);
 	
 		}
 		
@@ -1055,7 +1054,7 @@ public class AffinePack extends PackExtender {
 			Complex T = Z.minus(z3).divide(z4.minus(z3));
 			double t=L34*T.x;
 			
-			double s = t+((L34/EL34)*(p.rData[v].rad+p.rData[w].rad));
+			double s = t+((L34/EL34)*(p.getRadius(v)+p.getRadius(w)));
 			Complex S = z4.times(s/L34).add(z3.times(1.0-(s/L34)));
 			
 			for (int j=0;j<p.kData[w].num;j++){
@@ -1082,14 +1081,14 @@ public class AffinePack extends PackExtender {
 			int bd=bdry.next();
 			
 			if (bd==2){
-				EL23+=p.rData[2].rad;
+				EL23+=p.getRadius(2);
 			}
 			
 			else if (bd==3){
-				EL23+=p.rData[3].rad;
+				EL23+=p.getRadius(3);
 			}
 			
-			else EL23+=2*p.rData[bd].rad;
+			else EL23+=2*p.getRadius(bd);
 	
 		}
 		
@@ -1138,7 +1137,7 @@ public class AffinePack extends PackExtender {
 			Complex T = Z.minus(z2).divide(z3.minus(z2));
 			double t=L23*T.x;
 			
-			double s = t+((L23/EL23)*(p.rData[v].rad+p.rData[w].rad));
+			double s = t+((L23/EL23)*(p.getRadius(v)+p.getRadius(w)));
 			Complex S = z3.times(s/L23).add(z2.times(1.0-(s/L23)));
 			
 			for (int j=0;j<p.kData[w].num;j++){
@@ -1165,14 +1164,14 @@ public class AffinePack extends PackExtender {
 			int bd=bdry.next();
 			
 			if (bd==4){
-				EL41+=p.rData[4].rad;
+				EL41+=p.getRadius(4);
 			}
 			
 			else if (bd==1){
-				EL41+=p.rData[1].rad;
+				EL41+=p.getRadius(1);
 			}
 			
-			else EL41+=2*p.rData[bd].rad;
+			else EL41+=2*p.getRadius(bd);
 	
 		}
 		
@@ -1221,7 +1220,7 @@ public class AffinePack extends PackExtender {
 			Complex T = Z.minus(z4).divide(z1.minus(z4));
 			double t=L41*T.x;
 			
-			double s = t+((L41/EL41)*(p.rData[v].rad+p.rData[w].rad));
+			double s = t+((L41/EL41)*(p.getRadius(v)+p.getRadius(w)));
 			Complex S = z1.times(s/L41).add(z4.times(1.0-(s/L41)));
 			
 			for (int j=0;j<p.kData[w].num;j++){
@@ -1266,7 +1265,7 @@ public class AffinePack extends PackExtender {
 			w0=p.faces[f].vert[0];
 			w1=p.faces[f].vert[1];
 			w2=p.faces[f].vert[2];
-			sc=EuclMath.eucl_tri_incircle(p.rData[w0].center,p.rData[w1].center,p.rData[w2].center);
+			sc=EuclMath.eucl_tri_incircle(p.getCenter(w0),p.getCenter(w1),p.getCenter(w2));
 			z=sc.center;
 			x[j]=z.x;
 			y[j]=z.y;
@@ -1344,7 +1343,7 @@ public class AffinePack extends PackExtender {
 			s = (int)(Math.floor(count*(rand.nextDouble())));
 			r=vert[s];
 			
-			p.rData[r].center=NewCenter(p,asp,r);
+			p.setCenter(r,NewCenter(p,asp,r));
 			
 			for (int j=0;j<p.kData[r].num;j++){
 				int f=p.kData[r].faceFlower[j];
@@ -2287,8 +2286,8 @@ public class AffinePack extends PackExtender {
 				aspects[f].labels[j] *= divfac;
 				
 				// reset packing itself (some change more than once)
-				packData.rData[k].center=new Complex(newCtr);
-				packData.rData[k].rad=aspects[f].labels[j];
+				packData.setCenter(k,new Complex(newCtr));
+				packData.setRadius(k,aspects[f].labels[j]);
 			}
 		}
 		
@@ -2297,10 +2296,10 @@ public class AffinePack extends PackExtender {
 		int ff=packData.firstFace;
 		int frf=packData.redChain.face;
 		for (int j=0;j<3;j++) {
-			packData.rData[packData.faces[ff].vert[j]].rad=aspects[ff].labels[j];
-			packData.rData[packData.faces[ff].vert[j]].center=new Complex(aspects[ff].getCenter(j));
-			packData.rData[packData.faces[frf].vert[j]].rad=aspects[frf].labels[j];
-			packData.rData[packData.faces[frf].vert[j]].center=new Complex(aspects[frf].getCenter(j));
+			packData.setRadius(packData.faces[ff].vert[j],aspects[ff].labels[j]);
+			packData.setCenter(packData.faces[ff].vert[j],new Complex(aspects[ff].getCenter(j)));
+			packData.setRadius(packData.faces[frf].vert[j],aspects[frf].labels[j]);
+			packData.setCenter(packData.faces[frf].vert[j],new Complex(aspects[frf].getCenter(j)));
 		}
 		
 		// store normalized data in redchain
@@ -3389,7 +3388,7 @@ public class AffinePack extends PackExtender {
 							int f=flt.next();
 							for (int j = 0; j < 3; j++)
 								aspects[f].labels[j]=
-									packData.rData[packData.faces[f].vert[j]].rad;
+									packData.getRadius(packData.faces[f].vert[j]);
 							count++;
 						}
 						break;
@@ -3663,7 +3662,7 @@ public class AffinePack extends PackExtender {
 				v=Integer.parseInt(items.get(0));
 			} catch (Exception ex) {}
 			
-			packData.rData[v].center=NewCenter(packData,aspects,v);
+			packData.setCenter(v,NewCenter(packData,aspects,v));
 			
 			for (int j=0;j<packData.kData[v].num;j++){
 				
@@ -3692,7 +3691,7 @@ public class AffinePack extends PackExtender {
 				}
 			}
 			
-			packData.rData[v].center=NewCenter(packData,aspects,v);
+			packData.setCenter(v,NewCenter(packData,aspects,v));
 			
 			for (int j=0;j<packData.kData[v].num;j++){
 				

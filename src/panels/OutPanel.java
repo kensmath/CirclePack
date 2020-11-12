@@ -460,7 +460,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 			  return 1;
 		  }
 		  if (code==dataCode.VERT_CENTER) {
-			  z=p.rData[v].center;
+			  z=p.getCenter(v);
 			  fp.write(z.x+" "+z.y+" ");
 			  return 1;
 		  }
@@ -486,7 +486,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 			  return 1;
 		  }
 		  if (code==dataCode.VERT_RADII) {
-			  fp.write(p.rData[v].rad+" ");
+			  fp.write(p.getRadius(v)+" ");
 			  return 1;
 		  }
 		  if (code==dataCode.VERT_XYZ) {
@@ -502,12 +502,12 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 			  }
 			  
 			  else  if (p.hes>0) {
-				  xyz=SphericalMath.s_pt_to_vec(p.rData[v].center);
+				  xyz=SphericalMath.s_pt_to_vec(p.getCenter(v));
 			  }
 			  else { // eucl/hyp, just store flat data
 				  xyz=new double[3];
-				  xyz[0]=p.rData[v].center.x;
-				  xyz[1]=p.rData[v].center.y;
+				  xyz[0]=p.getCenter(v).x;
+				  xyz[1]=p.getCenter(v).y;
 				  xyz[2]=0.0;
 			  }
 			  
@@ -529,7 +529,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		  if (code==dataCode.SHARP_PQ) {
 		    double shp;
 		    if (pData.status && qData.status && v<qData.nodeCount) {
-		      shp=qData.getRadius(v)/pData.getRadius(v);
+		      shp=qData.getActualRadius(v)/pData.getActualRadius(v);
 		      fp.write(shp+" ");
 		      return 1;
 		    }

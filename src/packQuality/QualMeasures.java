@@ -53,10 +53,10 @@ public class QualMeasures {
 				int indx = p.nghb(edge.v, edge.w);
 				if (p.overlapStatus && indx >= 0)
 					inv_dist=p.kData[edge.v].overlaps[indx];
-				Complex z1=p.rData[edge.v].center;
-				Complex z2=p.rData[edge.w].center;
-				double r1=p.rData[edge.v].rad;
-				double r2=p.rData[edge.w].rad;
+				Complex z1=p.getCenter(edge.v);
+				Complex z2=p.getCenter(edge.w);
+				double r1=p.getRadius(edge.v);
+				double r2=p.getRadius(edge.w);
 				double verr=-1.0;
 				if (p.hes<0) { // hyperbolic
 					CircleSimple sc=HyperbolicMath.h_to_e_data(z1, r1);
@@ -174,8 +174,8 @@ public class QualMeasures {
 
 		// TODO: are these formulae right?
 		if (p.hes > 0) { 
-			double rv=p.rData[v].rad;
-			double rw=p.rData[w].rad;
+			double rv=p.getRadius(v);
+			double rw=p.getRadius(w);
 			if (p.overlapStatus && (indx = p.nghb(v, w)) >= 0)
 				// spherical cosine law: cos(c)=cos(a)*cos(b)+sin(a)*sin(b)*cos(theta) 
 				return Math.acos(Math.cos(rv)*Math.cos(rw)+Math.sin(rv)*Math.sin(rw)*p.kData[v].overlaps[indx]);
@@ -183,21 +183,21 @@ public class QualMeasures {
 		} 
 		
 		else if (p.hes == 0) { // eucl
-			double rv=p.rData[v].rad;
-			double rw=p.rData[w].rad;
+			double rv=p.getRadius(v);
+			double rw=p.getRadius(w);
 			if (p.overlapStatus && (indx = p.nghb(v, w)) >= 0)
 				return Math.sqrt(rv*rv+rw*rw+2.0*rv*rw*p.kData[v].overlaps[indx]);
 			return (rv+rw);
 		} 
 		
 		else { // hyp
-			if (p.rData[v].rad <= 0 || p.rData[w].rad <= 0)
+			if (p.getRadius(v) <= 0 || p.getRadius(w) <= 0)
 				return -1;
 			if (p.overlapStatus && (indx = p.nghb(v, w)) >= 0)
-				return (HyperbolicMath.h_invdist_length(p.rData[v].rad,
-						p.rData[w].rad, p.kData[v].overlaps[indx]));
+				return (HyperbolicMath.h_invdist_length(p.getRadius(v),
+						p.getRadius(w), p.kData[v].overlaps[indx]));
 			else
-				return (p.getRadius(v) + p.getRadius(w));
+				return (p.getActualRadius(v) + p.getActualRadius(w));
 		}
 	} 
 
@@ -210,8 +210,8 @@ public class QualMeasures {
 	public static double edge_length(PackData p, int v, int w) {
 		Complex a, b;
 
-		a = p.rData[v].center;
-		b = p.rData[w].center;
+		a = p.getCenter(v);
+		b = p.getCenter(w);
 		if (Complex.isNaN(a) || Complex.isNaN(b))
 			throw new DataException("encountered NaN");
 		if (p.hes > 0) // sph
@@ -278,8 +278,8 @@ public class QualMeasures {
 				double length=edge_length(p,edge.v,edge.w);
 				
 				// get smallest of two radii
-				double smaller=p.rData[edge.v].rad;
-				smaller = (p.rData[edge.w].rad<smaller) ? p.rData[edge.w].rad : smaller;
+				double smaller=p.getRadius(edge.v);
+				smaller = (p.getRadius(edge.w)<smaller) ? p.getRadius(edge.w) : smaller;
 				double myrelerr=Math.abs((desired-length)/smaller);
 				if (myrelerr>uP.value) {
 					uP.value=myrelerr;
@@ -314,9 +314,9 @@ public class QualMeasures {
 			int f=flk.next();
 			int []vert=p.faces[f].vert;
 			try {
-				Complex vz=p.rData[vert[0]].center;
-				Complex uz=p.rData[vert[1]].center;
-				Complex wz=p.rData[vert[2]].center;
+				Complex vz=p.getCenter(vert[0]);
+				Complex uz=p.getCenter(vert[1]);
+				Complex wz=p.getCenter(vert[2]);
 				if (p.hes>0) { // sphere case
 					double []vu_tan=SphericalMath.sph_tangent(vz, uz);
 					double []vw_tan=SphericalMath.sph_tangent(vz, wz);
@@ -377,10 +377,10 @@ public class QualMeasures {
 			int indx=p.nghb(v,w);
 			inv_dist=p.kData[v].overlaps[indx];
 		}
-		Complex z1=p.rData[v].center;
-		Complex z2=p.rData[w].center;
-		double r1=p.rData[v].rad;
-		double r2=p.rData[w].rad;
+		Complex z1=p.getCenter(v);
+		Complex z2=p.getCenter(w);
+		double r1=p.getRadius(v);
+		double r2=p.getRadius(w);
 		double verr=-1.0;
 		if (p.hes<0) { // hyperbolic
 			CircleSimple sc=HyperbolicMath.h_to_e_data(z1, r1);
@@ -413,8 +413,8 @@ public class QualMeasures {
 		int w=edge.twin.origin.vertIndx;
 		Complex zv=p.packDCEL.getVertCenter(edge);
 		Complex zw=p.packDCEL.getVertCenter(edge.twin);
-		double rv=p.rData[v].rad;
-		double rw=p.rData[w].rad;
+		double rv=p.getRadius(v);
+		double rw=p.getRadius(w);
 		double verr=-1.0;
 		if (p.hes<0) { // hyperbolic
 			CircleSimple sc=HyperbolicMath.h_to_e_data(zv, rv);

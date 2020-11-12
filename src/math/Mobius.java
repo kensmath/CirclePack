@@ -614,8 +614,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			CirclePack.cpb.errMsg("usage: 'mob_vuwVUW' only applies to euclidean packings");
 			return null;
 		}
-		return mob_xyzXYZ(p.rData[v].center,p.rData[u].center,p.rData[w].center,
-				p.rData[V].center,p.rData[U].center,p.rData[W].center,p.hes,p.hes);
+		return mob_xyzXYZ(p.getCenter(v),p.getCenter(u),p.getCenter(w),
+				p.getCenter(V),p.getCenter(U),p.getCenter(W),p.hes,p.hes);
 	}
 
 	/**
@@ -1676,8 +1676,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 */
 	public void debugMob(SchwarzMap schwarzMap, int f, int v, int w) {
 		System.out.println("Face "+f+": First circle "+v);
-		Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.rData[v].rad,schwarzMap.packData.rData[v].center);
+		Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.getRadius(v),schwarzMap.packData.getCenter(v));
 		System.out.println("Second circle "+w);
-		Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.rData[w].rad,schwarzMap.packData.rData[w].center);
+		Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.getRadius(w),schwarzMap.packData.getCenter(w));
 	}
 }

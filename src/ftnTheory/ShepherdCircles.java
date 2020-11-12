@@ -4,7 +4,6 @@ import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CirclePack;
-import complex.Complex;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import listManip.FaceLink;
@@ -135,7 +134,7 @@ public class ShepherdCircles extends PackExtender {
 //					packData.kData[w].overlaps[packData.nghb(w, u)],
 //					packData.kData[v].overlaps[packData.nghb(v, u)],
 //					packData.kData[v].overlaps[packData.nghb(v, w)]);
-			packData.rData[u].center=new Complex(packData.rData[u].center.conj());
+			packData.setCenter(u,packData.getCenter(u).conj());
 			return 1;
 		}
 		
@@ -209,9 +208,9 @@ public class ShepherdCircles extends PackExtender {
 			// get 'excess', how much each angle of triangle exceeds 2pi divided by 2
 			UtilPacket uP=new UtilPacket();
 			for (int j=0;j<3;j++) {
-				if (!genCosOverlap(packData.rData[verts[j]].rad,
-						packData.rData[verts[(j+1)%3]].rad,
-						packData.rData[verts[(j+2)%3]].rad,
+				if (!genCosOverlap(packData.getRadius(verts[j]),
+						packData.getRadius(verts[(j+1)%3]),
+						packData.getRadius(verts[(j+2)%3]),
 						cF.overlps[j],cF.overlps[(j+1)%3],cF.overlps[(j+2)%3],uP)) {
 					Oops("some problem in getting cos of overlaps");
 				}

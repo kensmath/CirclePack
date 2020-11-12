@@ -236,7 +236,7 @@ public class TorusEnergy extends PackExtender {
 		for (int v=1;v<=p.nodeCount;v++) {
 			for (int j=0;j<p.kData[v].num;j++)
 				if (j>v) {
-					double len=groundLength-(p.rData[v].rad+p.rData[p.kData[v].flower[j]].rad);
+					double len=groundLength-(p.getRadius(v)+p.getRadius(p.kData[v].flower[j]));
 					erg += len*len;
 				}
 		}
@@ -253,14 +253,14 @@ public class TorusEnergy extends PackExtender {
 			int []verts=packData.faces[f].vert;
 		
 			// assume tangency
-			double r0=packData.rData[verts[0]].rad;
-			double r1=packData.rData[verts[1]].rad;
-			double r2=packData.rData[verts[2]].rad;
+			double r0=packData.getRadius(verts[0]);
+			double r1=packData.getRadius(verts[1]);
+			double r2=packData.getRadius(verts[2]);
 			area += EuclMath.eArea(r0,r1,r2,1.0,1.0,1.0);
 		}
 		double factor=Math.sqrt(area);
 		for (int v=1;v<=packData.nodeCount;v++) 
-			packData.rData[v].rad =packData.rData[v].rad/factor;
+			packData.setRadius(v,packData.getRadius(v)/factor);
 		return 1;
 	}
 	

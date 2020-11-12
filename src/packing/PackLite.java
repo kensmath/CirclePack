@@ -530,8 +530,8 @@ public class PackLite {
 		tick=1;
 		for (int n=1;n<=vertCount;n++) {
 			int v=p_Indices[n];
-			radii[tick]=p.rData[v].rad;
-			centers[tick]=new Complex(p.rData[v].center);
+			radii[tick]=p.getRadius(v);
+			centers[tick]=p.getCenter(v);
 			tick++;
 		}
 		
@@ -610,8 +610,8 @@ public class PackLite {
 		if (hes < 0)
 			rad = 1.0 - Math.exp(-1.0);
 		for (int v = 1; v <= vertCount; v++) {
-			p.rData[v].rad = rad;
-			p.rData[v].center = new Complex(0.0);
+			p.setRadius(v,rad);
+			p.setCenter(v,new Complex(0.0));
 		}
 
 		// set vertexMap (whether we converted back to original or not)
@@ -625,13 +625,13 @@ public class PackLite {
 		// store radii
 		if (radii != null) {
 			for (int v = 1; v <= vertCount; v++)
-				p.rData[vertConvert[v]].rad = radii[v];
+				p.setRadius(vertConvert[v],radii[v]);
 		}
 
 		// store centers
 		if (centers != null) {
 			for (int v = 1; v <= vertCount; v++)
-				p.rData[vertConvert[v]].center = new Complex(centers[v]);
+				p.setCenter(vertConvert[v],new Complex(centers[v]));
 		}
 
 		// process packing, drawingorder and complex_count

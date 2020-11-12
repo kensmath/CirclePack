@@ -111,7 +111,7 @@ public class DisplayParser {
 												// of v
 							v = NodeLink
 									.grab_one_vert(p, (String) items.get(0));
-							cpScreen.drawStr(p.rData[v].center, (String) items
+							cpScreen.drawStr(p.getCenter(v), (String) items
 									.get(1));
 							count++;
 						} else if (sc == 'z') { // -nl {x} {y} {str}
@@ -197,12 +197,12 @@ public class DisplayParser {
 					Complex[] sides = new Complex[3];
 					double[] lgths = new double[3];
 					for (int j = 0; j < 3; j++) {
-						sides[j] = p.rData[p.faces[f].vert[(j + 1) % 3]].center
-								.minus(p.rData[p.faces[f].vert[j]].center);
+						sides[j] = p.getCenter(p.faces[f].vert[(j + 1) % 3])
+								.minus(p.getCenter(p.faces[f].vert[j]));
 						lgths[j] = sides[j].abs();
 					}
 					for (int j = 0; j < 3; j++) {
-						Complex cent = p.rData[p.faces[f].vert[j]].center;
+						Complex cent = p.getCenter(p.faces[f].vert[j]);
 						double arg1 = sides[j].arg()*r2deg;
 						double extent = sides[(j + 2) % 3].times(-1.0)
 								.divide(sides[j]).arg()*r2deg;
@@ -293,7 +293,12 @@ public class DisplayParser {
 				int first_face = 0;
 				if (items.size() == 0) { // default to drawing order (plus stragglers 
 										 // (i.e., not needed in drawing order)) 
-					graphlist=new GraphLink(p,"s");
+					if (p.packDCEL!=null) {
+						graphlist=p.packDCEL.faceOrder;
+					}
+					else {
+						graphlist=new GraphLink(p,"s");
+					}
 				}
 				else { // there is a given list
 					graphlist=new GraphLink(p,items);
@@ -315,7 +320,7 @@ public class DisplayParser {
 					Face face = p.faces[first_face];
 					for (int i = 0; i < 2; i++) {
 						v = face.vert[(indx + i) % 3];
-						z = new Complex(p.rData[v].center);
+						z = p.getCenter(v);
 						
 						// set up color (there's only one)
 						if (!dispFlags.colorIsSet)
@@ -326,7 +331,7 @@ public class DisplayParser {
 							dispFlags.setLabel(Integer.toString(v));
 						
 						// now draw it
-						cpScreen.drawCircle(z, p.rData[v].rad, dispFlags);
+						cpScreen.drawCircle(z, p.getRadius(v), dispFlags);
 						
 					} // end of for loop
 					count++;
@@ -356,7 +361,7 @@ public class DisplayParser {
 				Iterator<Integer> vlist = nodeLink.iterator();
 				while (vlist.hasNext()) {
 					v = (Integer) vlist.next();
-					z = p.rData[v].center;
+					z = p.getCenter(v);
 
 					// color? label?
 					if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
@@ -364,7 +369,7 @@ public class DisplayParser {
 					if (dispFlags.label)
 						dispFlags.setLabel(Integer.toString(v));
 
-					cpScreen.drawCircle(z,p.rData[v].rad,dispFlags);
+					cpScreen.drawCircle(z,p.getRadius(v),dispFlags);
 					count++;
 				}
 				break;
@@ -539,8 +544,8 @@ public class DisplayParser {
 								dispFlags.setColor(p.faces[g].color);
 							if (dispFlags.label)
 								dispFlags.setLabel(Integer.toString(g));
-							cpScreen.drawFace(p.rData[verts[0]].center,p.rData[verts[1]].center,p.rData[verts[2]].center,
-									p.rData[verts[0]].rad,p.rData[verts[1]].rad,p.rData[verts[2]].rad,dispFlags);
+							cpScreen.drawFace(p.getCenter(verts[0]),p.getCenter(verts[1]),p.getCenter(verts[2]),
+									p.getRadius(verts[0]),p.getRadius(verts[1]),p.getRadius(verts[2]),dispFlags);
 							count++;
 						}
 					} // end of while
@@ -558,8 +563,8 @@ public class DisplayParser {
 						f = flist.next();
 						int[] vts = p.faces[f].vert;
 						DualTri dtri = new DualTri(p.hes,
-								p.rData[vts[0]].center, p.rData[vts[1]].center,
-								p.rData[vts[2]].center);
+								p.getCenter(vts[0]), p.getCenter(vts[1]),
+								p.getCenter(vts[2]));
 						if (!dispFlags.colorIsSet)
 							dispFlags.setColor(p.faces[f].color);
 						if (dispFlags.label)
@@ -674,7 +679,7 @@ public class DisplayParser {
 						// suppress label
 						dispFlags.setLabel(null);
 						
-						cpScreen.drawCircle(pts[cirIndx],p.rData[cirIndx].rad,
+						cpScreen.drawCircle(pts[cirIndx],p.getRadius(cirIndx),
 								dispFlags);
 					}
 // debug			System.out.println("count = "+count);
@@ -712,7 +717,7 @@ public class DisplayParser {
 					cpScreen.drawClosedPoly(n, fanCenters, dispFlags);
 
 					if (dispFlags.label)
-						cpScreen.drawIndex(p.rData[v].center, v, 1);
+						cpScreen.drawIndex(p.getCenter(v), v, 1);
 
 					count++;
 				} // end of while on v
@@ -816,14 +821,14 @@ public class DisplayParser {
 				int lnum=elist.size();
 				double[] corners = new double[2 * (lnum+1)];
 				int tick=0;
-				z=new Complex(p.rData[((EdgeSimple)elist.get(0)).v].center);
+				z=p.getCenter(((EdgeSimple)elist.get(0)).v);
 				corners[tick*2]=z.x;
 				corners[tick*2+1]=z.y;
 				Iterator<EdgeSimple> el=elist.iterator();
 				EdgeSimple edge=null;
 				while (el.hasNext()) {
 					edge=el.next();
-					z=new Complex(p.rData[edge.w].center);
+					z=p.getCenter(edge.w);
 					corners[tick*2]=z.x;
 					corners[tick*2+1]=z.y;
 					tick++;
@@ -860,8 +865,8 @@ public class DisplayParser {
 						BaryPoint bp=byl.next();
 						if (bp.face>0 && bp.face<=p.faceCount) { // must have face index
 							int []vert=p.faces[bp.face].vert;
-							z=bp.bp2Complex(p.hes,p.rData[vert[0]].center,p.rData[vert[1]].center,
-									p.rData[vert[2]].center);
+							z=bp.bp2Complex(p.hes,p.getCenter(vert[0]),p.getCenter(vert[1]),
+									p.getCenter(vert[2]));
 							cpScreen.drawTrinket(trinket,z,dispFlags);
 							count++;
 						}
@@ -877,7 +882,7 @@ public class DisplayParser {
 				Iterator<Integer> vit = nodeLink.iterator();
 				while (vit.hasNext()) {
 					v = (Integer) vit.next();
-					z = p.rData[v].center;
+					z = p.getCenter(v);
 					if (!dispFlags.colorIsSet)
 						dispFlags.setColor(p.kData[v].color);
 					cpScreen.drawTrinket(trinket, z,dispFlags);
@@ -919,12 +924,12 @@ public class DisplayParser {
 							int lnum=tedgelist.size();
 							double[] corners = new double[2 * (lnum+1)];
 							int tick=0;
-							z=new Complex(p.rData[((EdgeSimple)tedgelist.get(0)).v].center);
+							z=p.getCenter(((EdgeSimple)tedgelist.get(0)).v);
 							corners[tick*2]=z.x;
 							corners[tick*2+1]=z.y;
 							while (tel.hasNext()) {
 								edge=tel.next();
-								z=new Complex(p.rData[edge.w].center);
+								z=p.getCenter(edge.w);
 								corners[tick*2]=z.x;
 								corners[tick*2+1]=z.y;
 								tick++;
@@ -942,14 +947,14 @@ public class DisplayParser {
 								// if there is a 'baryVert', use its center
 								int bv=tile.baryVert;
 								if (bv>0 && bv<=p.nodeCount) {
-									wc=p.rData[tile.baryVert].center;
+									wc=p.getCenter(tile.baryVert);
 								}
 								
 								// else use average of corner verts centers
 								else {
 									Vector<Complex> cz=new Vector<Complex>(0);
 									for (int jj=0;jj<tile.vertCount;jj++) 
-										cz.add(p.rData[tile.vert[jj]].center);
+										cz.add(p.getCenter(tile.vert[jj]));
 									
 									// for sphere, compute via vectors --- may end up at antipodal point 
 									if (p.hes>0) {
@@ -1015,15 +1020,15 @@ public class DisplayParser {
 					Complex z2=null;
 					if (face>0 && face<=p.faceCount) {
 						int []vert=p.faces[face].vert;
-						z0=p.rData[vert[0]].center;
-						z1=p.rData[vert[1]].center;
-						z2=p.rData[vert[2]].center;
+						z0=p.getCenter(vert[0]);
+						z1=p.getCenter(vert[1]);
+						z2=p.getCenter(vert[2]);
 						if (p.hes<0) {  // hyp
-							sc=HyperbolicMath.h_to_e_data(z0, p.rData[vert[0]].rad);
+							sc=HyperbolicMath.h_to_e_data(z0, p.getRadius(vert[0]));
 							z0=sc.center;
-							sc=HyperbolicMath.h_to_e_data(z1, p.rData[vert[1]].rad);
+							sc=HyperbolicMath.h_to_e_data(z1, p.getRadius(vert[1]));
 							z1=sc.center;
-							sc=HyperbolicMath.h_to_e_data(z2, p.rData[vert[2]].rad);
+							sc=HyperbolicMath.h_to_e_data(z2, p.getRadius(vert[2]));
 							z2=sc.center;
 							sc=EuclMath.circle_3(z0,z1,z2);
 						}

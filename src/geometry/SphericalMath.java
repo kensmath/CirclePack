@@ -108,8 +108,8 @@ public class SphericalMath{
 		double mx=0.0;
 		int num=p.kData[vert].num;
 		for (int j=0;j<num;j++) {
-			double sum =p.rData[p.kData[vert].flower[j]].rad
-				+p.rData[p.kData[vert].flower[j+1]].rad;
+			double sum =p.getRadius(p.kData[vert].flower[j])
+				+p.getRadius(p.kData[vert].flower[j+1]);
 			mx = (sum>mx) ? sum : mx;
 		}
 		return Math.PI-mx;

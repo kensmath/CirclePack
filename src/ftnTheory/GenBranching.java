@@ -1083,8 +1083,8 @@ public class GenBranching extends PackExtender {
 		}
 		
 		// normalize
-		Complex az=packData.rData[packData.alpha].center;
-		Complex gz=packData.rData[packData.gamma].center;
+		Complex az=packData.getCenter(packData.alpha);
+		Complex gz=packData.getCenter(packData.gamma);
 		double agdist=az.minus(gz).abs();
 		Mobius mob=null;
 		if (agdist>=0.00001) {
@@ -1095,7 +1095,7 @@ public class GenBranching extends PackExtender {
 		}
 		if (mob!=null) {
 			for (int v=1;v<=packData.nodeCount;v++)
-				packData.rData[v].center=mob.apply(packData.rData[v].center);
+				packData.setCenter(v,mob.apply(packData.getCenter(v)));
 			for (int b=1;b<branchPts.size();b++) {
 				GenBranchPt gbp=branchPts.get(b);
 				gbp.applyMob(mob);
@@ -1498,8 +1498,8 @@ public class GenBranching extends PackExtender {
 
 		// Key variables are R, r, and shadow.
 		int num=refPack.kData[v].num;
-		double R=refPack.rData[v].rad;
-		Complex cent=refPack.rData[v].center;
+		double R=refPack.getRadius(v);
+		Complex cent=refPack.getCenter(v);
 		Complex cent2pt=pt.minus(cent);
 		double r=R-cent2pt.abs(); // ideally, radius of smaller sister when packed
 		double c2pt_arg=cent2pt.arg();
@@ -1509,7 +1509,7 @@ public class GenBranching extends PackExtender {
 		// close to center of v? use traditional branch point
 		// TODO: need to experiment to find best 'dcutoff'
 		double dcutoff=.025;
-		if ((R-r)<dcutoff*refPack.rData[v].rad) {
+		if ((R-r)<dcutoff*refPack.getRadius(v)) {
 			ans=new double[2];
 			ans[0]=3.0;
 			ans[1]=(double)v;
@@ -1528,7 +1528,7 @@ public class GenBranching extends PackExtender {
 //		int nearOne=-1;
 		double []petalAngs=new double[num+1]; // closed cycle of angles to petals
 		for (int j=0;j<num;j++) {
-			Complex c2pet=refPack.rData[refPack.kData[v].flower[j]].center.minus(cent);
+			Complex c2pet=refPack.getCenter(refPack.kData[v].flower[j]).minus(cent);
 			petalAngs[j]=(c2pet.arg()+m2pi)%m2pi;
 //			c2pet=c2pet.times(R/c2pet.abs());
 //			if (c2pet.minus(cent2pt).abs()<.025*R) {
@@ -1709,8 +1709,8 @@ public class GenBranching extends PackExtender {
 			throw new DataException(v+" is a bdry vertex");
 		}
 
-		double rad=refPack.rData[v].rad;
-		Complex dvec=pt.minus(refPack.rData[v].center);
+		double rad=refPack.getRadius(v);
+		Complex dvec=pt.minus(refPack.getCenter(v));
 		double dist=dvec.abs();
 		if (dist>rad) // error: not in the right circle
 			throw new DataException("hum...?, selected point is not in circle "+v);
@@ -1718,7 +1718,7 @@ public class GenBranching extends PackExtender {
 		// close to center? use traditional branch point
 		// TODO: need to experiment to find best 'dcutoff'
 		double dcutoff=.025;
-		if (dist<dcutoff*refPack.rData[v].rad) {
+		if (dist<dcutoff*refPack.getRadius(v)) {
 			ans=new double[2];
 			ans[0]=3.0;
 			ans[1]=(double)v;
@@ -1739,7 +1739,7 @@ public class GenBranching extends PackExtender {
 		Complex []petalTangency=new Complex[num+1];
 		for (int j=0;j<=num;j++) {
 			petalTangency[j]=refPack.tangencyPoint(new EdgeSimple(v,refPack.kData[v].flower[j]));
-			if (petalTangency[j].minus(pt).abs()<.025*refPack.rData[v].rad) {
+			if (petalTangency[j].minus(pt).abs()<.025*refPack.getRadius(v)) {
 				nearOne=refPack.kData[v].flower[j];
 			}
 		}
@@ -1797,15 +1797,15 @@ public class GenBranching extends PackExtender {
 		Complex []petalVectors=new Complex[num+1];
 		for (int j=0;j<=num;j++) {
 			int k=refPack.kData[v].flower[j];
-			petalVectors[j]=new Complex(refPack.rData[k].center).minus(refPack.rData[v].center);
+			petalVectors[j]=new Complex(refPack.getCenter(k).minus(refPack.getCenter(v)));
 			petalVectors[j]=petalVectors[j].divide(petalVectors[j].abs()); 
 		}
 		
 		// angle sum at sister2 in <sister2, petal[j], petal[j+1]>
 		double []petalAngles=new double[num+1];
 		for (int j=0;j<=num;j++) {
-			double r1=refPack.rData[refPack.kData[v].flower[j]].rad;
-			double r2=refPack.rData[refPack.kData[v].flower[(j+1)%num]].rad;
+			double r1=refPack.getRadius(refPack.kData[v].flower[j]);
+			double r2=refPack.getRadius(refPack.kData[v].flower[(j+1)%num]);
 			double m1=r1/(smallrad+r1);
 			double m2=r2/(smallrad+r2);
 			petalAngles[j]=Math.acos(1-2*m1*m2);
@@ -1846,11 +1846,11 @@ public class GenBranching extends PackExtender {
 		// get angle at sister2 as if jump1 were tangent to prejump and sister2
 		int jumpCir1=refPack.kData[v].flower[jump1];
 		int pv1=refPack.kData[v].flower[pj];
-		double sp=pt.minus(refPack.rData[refPack.kData[v].flower[pj]].center).abs(); // distance pv1 to sister2
-		double pv1v1=refPack.rData[pv1].rad+refPack.rData[jumpCir1].rad;
-		double v1s=rad+refPack.rData[jumpCir1].rad;
+		double sp=pt.minus(refPack.getCenter(refPack.kData[v].flower[pj])).abs(); // distance pv1 to sister2
+		double pv1v1=refPack.getRadius(pv1)+refPack.getRadius(jumpCir1);
+		double v1s=rad+refPack.getRadius(jumpCir1);
 		double ang=Math.acos((sp*sp+pv1v1*pv1v1-v1s*v1s)/(2.0*sp*pv1v1));
-		Complex stpv=refPack.rData[pv1].center.minus(pt); // vector, pt to center of prejump1
+		Complex stpv=refPack.getCenter(pv1).minus(pt); // vector, pt to center of prejump1
 		double pva=dvec.divide(stpv).arg(); // angle along sister1; subtract this
 		double anglesum=ang-pva;
 		
