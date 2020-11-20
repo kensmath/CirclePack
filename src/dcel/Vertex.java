@@ -198,7 +198,7 @@ public class Vertex {
 	
 	/**
 	 * Note: if center is null, return null
-	 * @return Complex
+	 * @return new Complex
 	 */
 	public Complex getCenter() {
 		if (center==null)

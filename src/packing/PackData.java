@@ -25,6 +25,7 @@ import circlePack.PackControl;
 import complex.Complex;
 import complex.MathComplex;
 import dcel.CombDCEL;
+import dcel.HalfEdge;
 import dcel.PackDCEL;
 import deBugging.DebugHelp;
 import deBugging.LayoutBugs;
@@ -2231,7 +2232,10 @@ public class PackData{
 			while (z.y<0.0) z.y += Math.PI;
 			while (z.y>Math.PI) z.y = Math.PI; // truncate at Pi
 		}
-		rData[vert].center=new Complex(z);
+		if (packDCEL!=null)
+			packDCEL.setVertCenter(packDCEL.vertices[vert].halfedge,z);
+		else
+			rData[vert].center=new Complex(z);
 	}
 	
 	/**
@@ -2240,7 +2244,11 @@ public class PackData{
 	 * @return new Complex
 	 */
 	public Complex getCenter(int vert) {
-		return new Complex(rData[vert].center);
+		Complex z= new Complex(rData[vert].center);
+		if (packDCEL!=null) {
+			z=packDCEL.getVertCenter(packDCEL.vertices[vert].halfedge);
+		}
+		return z;
 	}
 	
 	/** 
@@ -2248,11 +2256,16 @@ public class PackData{
 	 * "x-radius" is converted to the actual hyperbolic radius, which 
 	 * is what outside world should see. In hyp case, when x-radius<0, 
 	 * it is -r for eucl radius r, so we just return -r.
-	 * @param v int
+	 * @param vert int
 	 * @return double
 	*/
-	public double getActualRadius(int v) {
-		double x=rData[v].rad;
+	public double getActualRadius(int vert) {
+		double x=rData[vert].rad;
+		if (packDCEL!=null) {
+			x=packDCEL.getVertRadius(packDCEL.vertices[vert].halfedge);
+		}
+		
+		// check for hyp case
 	    if (hes<0 && x> 0.0) {
 	    	if (x>.0001) return ((-0.5)*Math.log(1.0-x));
 	    	else return (x*(1.0+x*(0.5+x/3))/2);
@@ -2266,49 +2279,59 @@ public class PackData{
 	 * convert x-radius to actual hyp radius.).
 	 * TODO: want to turn "rData[].rad" to private as part of DCEL
 	 * conversion, so I've set this up
-	 * @param v int
+	 * @param vert int
 	 * @return double
 	 */
-	public double getRadius(int v) {
-		return rData[v].rad;
+	public double getRadius(int vert) {
+		double x=rData[vert].rad;
+		if (packDCEL!=null) {
+			x=packDCEL.getVertRadius(packDCEL.vertices[vert].halfedge);
+		}
+	    return x;
 	}
 	  
 	/**
-	 * Store radius from actual radius 'rad'; only issue is hyp case,
-	 * when 'rad' is the actual hyperbolic radius, and is converted 
+	 * Store actual radius 'r' in internal form; only issue is hyp case,
+	 * when 'r' is the actual hyperbolic radius, and is converted 
 	 * to x_radius for rData. 
-	 * For numerical reasons, small hyp radii 'rad' is converted 
+	 * For numerical reasons, small hyp radii 'r' is converted 
 	 * to x=2*r*(2-r*(1-2*r/3)). (Recall x=1-exp(-2h)=1-s^2.)
 	 * @param vert int
-	 * @param rad double
+	 * @param r double
 	 */
-	public void setRadiusActual(int vert,double rad) {
-		if (vert<1 || vert>nodeCount) return;
+	public void setRadiusActual(int vert,double r) {
+		double rad=r;
 		if(hes < 0) { // hyperbolic: store as x-radii
-			if(rad > 0.0) {
-				if(rad > 0.0001) setRadius(vert,1-Math.exp(-2.0*rad));
-				else setRadius(vert,2.0*rad*(1.0 - rad*(1.0-2.0*rad/3.0)));
+			if(r > 0.0) {
+				if(r > 0.0001) 
+					rad=1-Math.exp(-2.0*r);
+				else 
+					rad=2.0*r*(1.0 - r*(1.0-2.0*r/3.0));
 			}
 			// can be negative (useful as storage of eucl radius for horocycles)
-			else if (rad<=0.0) setRadius(vert,rad);
-			else setRadius(vert,1-Math.exp(-1.0));// default
-			return;
 		}
-		else if (hes>0) if (rad>=Math.PI) setRadius(vert,Math.PI-OKERR);
-		else if (rad<=0.0) rad=OKERR;
 		setRadius(vert,rad);
 	}
 	
 	/** 
-	 * Store radius with 'rad' in its internal form; the only
-	 * issue is hyp case, so then 'rad' should already be in
+	 * Store radius with 'r' given in its internal form; the only
+	 * issue is hyp case, so then 'r' should already be in
 	 * x_radius form. If it needs to be converted, call
 	 * 'setRadiusActual'. 
 	 * @param vert
-	 * @param rad
+	 * @param r
 	 */
-	public void setRadius(int vert,double rad) {
+	public void setRadius(int vert,double r) {
+		if (vert<1 || vert>nodeCount) 
+			return;
+		double rad=r;
+		if (hes>0 && r>=Math.PI) 
+			rad=Math.PI-OKERR;
+		if (hes>=0 && r<=0.0) 
+			rad=OKERR;
 		rData[vert].rad=rad;
+		if (packDCEL!=null) 
+			packDCEL.setVertRadius(packDCEL.vertices[vert].halfedge,rad);
 	}
 
 	/**
@@ -14296,6 +14319,25 @@ public class PackData{
 	      setCenter(v,ctr);
 	  }
 	  return 1;
+	}
+	
+	public double get_invDist(int v,int w) {
+		if (!overlapStatus)
+			return 1.0;
+		if (packDCEL==null) {
+			int j=nghb(v,w);
+			if (j>=0)
+				return kData[v].overlaps[j];
+			else 
+				throw new CombException("invDist error: "+w+" is not a neighbor of "+v);
+		}
+		else {
+			HalfEdge he=packDCEL.findHalfEdge(v,w);
+			if (he!=null)
+				return he.getInvDist();
+			else
+				throw new CombException("invDist error: "+v+" and "+w+" do not share a halfedge");
+		}
 	}
 	
 	/**

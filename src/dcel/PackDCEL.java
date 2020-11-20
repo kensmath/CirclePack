@@ -1236,6 +1236,11 @@ public class PackDCEL {
 		return null;
 	}
 	
+	/**
+	 * Get the radius in its internal form (i.e., x-rad for hyp case)
+	 * @param edge
+	 * @return
+	 */
 	public double getVertRadius(HalfEdge edge) {
 		// is itself a 'RedHEdge'? Note, also set in 'PackData'
 		if (edge.myRedEdge!=null) {
@@ -1260,6 +1265,11 @@ public class PackDCEL {
 		throw new DCELException("didn't find any 'RedHEdge' for this 'Vertex'");
 	}
 	
+	/**
+	 * Get appropriate center
+	 * @param edge HalfEdge
+	 * @return new Complex
+	 */
 	public Complex getVertCenter(HalfEdge edge) {
 		// is itself a 'RedHEdge'? Note, also set in 'PackData'
 		if (edge.myRedEdge!=null) {
@@ -1285,10 +1295,11 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Set the center in 'PackData', 'origin' and in the appropriate
+	 * Set the center for 'origin' and in the appropriate
 	 * 'RedHEdge' if 'origin' is a 'RedVertex'.
+	 * Note: I no longer set rData[].center.
 	 * @param edge HalfEdge
-	 * @param z
+	 * @param z Complex
 	 */
 	public void setVertCenter(HalfEdge edge,Complex z) {
 		Vertex vert=edge.origin;
@@ -1297,14 +1308,12 @@ public class PackDCEL {
 		if (edge.myRedEdge!=null) {
 			edge.myRedEdge.setCenter(z);
 			vert.setCenter(z);
-			p.setCenter(vert.vertIndx,new Complex(z));
 			return;
 		}
 		
 		// is a normal 'Vertex'? set in 'PackData'
 		if (!(vert instanceof RedVertex)) {
 			vert.setCenter(z);
-			p.setCenter(vert.vertIndx,new Complex(z));
 			return;
 		}
 		
@@ -1321,12 +1330,16 @@ public class PackDCEL {
 		} while (he!=edge);
 	}
 
+	/**
+	 * Set the radius in its internal form (i.e., x-rad for hyp case)
+	 * @param edge HalfEdge
+	 * @param rad double
+	 */
 	public void setVertRadius(HalfEdge edge,double rad) {
 		// is itself a 'RedHEdge'?
 		if (edge.myRedEdge!=null) {
 			edge.origin.setRadius(rad);
 			edge.myRedEdge.setRadius(rad);
-			p.setRadius(edge.origin.vertIndx,rad);
 			return;
 		}
 
@@ -1335,7 +1348,6 @@ public class PackDCEL {
 		// is a normal 'Vertex'?
 		if (!(vert instanceof RedVertex)) {
 			vert.setRadius(rad);
-			p.setRadius(vert.vertIndx,rad);
 			return;
 		}
 		
@@ -1346,11 +1358,15 @@ public class PackDCEL {
 			if (he.myRedEdge!=null) {
 				he.origin.setRadius(rad);
 				he.myRedEdge.setRadius(rad);
-				p.setRadius(he.origin.vertIndx,rad);
 			}
 		} while (he!=edge);
 	}
 	
+	/**
+	 * set center and radius (in its internal form)
+	 * @param edge HalfEdge
+	 * @param cS CircleSimple
+	 */
 	public void setVertData(HalfEdge edge,CircleSimple cS) {
 		setVertCenter(edge,cS.center);
 		setVertRadius(edge,cS.rad);

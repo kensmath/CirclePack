@@ -47,8 +47,8 @@ public class RedHEdge {
 	}
 	
 	/**
-	 * Get center, but return null if it's null
-	 * @return
+	 * Get center; return null if it's null
+	 * @return new Complex
 	 */
 	public Complex getCenter() {
 		if (center==null)
