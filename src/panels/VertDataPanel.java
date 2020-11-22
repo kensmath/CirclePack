@@ -299,8 +299,7 @@ public class VertDataPanel extends JPanel implements ActionListener {
 			double ovlp=overlapField.getValue();
 			if (ovlp<=0.0) return;
 			int v=edge.v;
-			int j=p.nghb(v,edge.w);
-				p.set_single_overlap(v,j,ovlp);
+			p.set_single_invDist(v,edge.w,ovlp);
 		}
 		} catch (Exception e) {
 			CirclePack.cpb.errMsg("data update error: "+e.getMessage());
@@ -393,7 +392,7 @@ public class VertDataPanel extends JPanel implements ActionListener {
 		double invDist=1.0;
 		if (p.overlapStatus) {
 			int j=p.nghb(edge.v,edge.w);
-			double iD=p.kData[edge.v].overlaps[j];
+			double iD=p.getInvDist(edge.v,p.kData[edge.v].flower[j]);
 			if (j>=0 && Math.abs(1.0-iD)>.0000001)
 				invDist=iD;
 		}

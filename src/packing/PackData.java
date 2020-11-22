@@ -1092,7 +1092,7 @@ public class PackData{
                 				int v=Integer.parseInt(str);
                 				int w=Integer.parseInt((String)loctok.nextToken());
                 				double invDist=Double.parseDouble((String)loctok.nextToken());
-                				this.set_single_overlap(v,nghb(v,w),invDist);
+                				this.set_single_invDist(v,w,invDist);
                 			} catch(Exception ex) {state=PackState.INITIAL;}
                 		}
                 		flags |= 00004;
@@ -2038,13 +2038,15 @@ public class PackData{
      * values are lost, set to default 1.0 (tangency).
     */
     public int alloc_overlaps() {
-      for (int v=1;v<=nodeCount;v++) {
-          kData[v].overlaps=new double[kData[v].num+1];
-          for (int i=0;i<=kData[v].num;i++)
-    	kData[v].overlaps[i]=1.0;
+        overlapStatus=true;
+        for (int v=1;v<=nodeCount;v++) {
+        	kData[v].invDist=new double[kData[v].num+1];
         }
-      overlapStatus=true;
-      return 1;
+        for (int v=1;v<=nodeCount;v++) {
+        	for (int i=0;i<=kData[v].num;i++)
+        		set_single_invDist(v,kData[v].flower[i],1.0);
+        }
+        return 1;
     }
 
     /** 
@@ -2697,7 +2699,7 @@ public class PackData{
 			v2 = flower[offset];
 			pt2 = new Complex(getCenter(v2));
 			if (ambigZs[v2] != null) {
-				ovlp2=getInvDist(v,offset);
+				ovlp2=getInvDist(v,v2);
 				sC=ambigZs[v2].theOne(vcent, rad, ovlp2, hes);
 				pt2=sC.center;
 			} 
@@ -2708,13 +2710,13 @@ public class PackData{
 			if (ambigZs[v] == null) {
 				if (offset >= 0) { // use this first non-ambiguous nghb
 					v2 = flower[offset];
-					ovlp2=getInvDist(v,offset);
+					ovlp2=getInvDist(v,v2);
 					pt2 = new Complex(getCenter(v2));
 				} 
 				else { // no non-ambiguous petal, so position first petal
 					offset = 0;
 					v2 = flower[offset];
-					ovlp2=getInvDist(v,offset);
+					ovlp2=getInvDist(v,v2);
 					pt2 = ambigZs[v2].theOne(vcent, rad, ovlp2, hes).center;
 				}
 			}
@@ -2723,7 +2725,7 @@ public class PackData{
 				offset = -1;
 				for (int j = 0; j < num && offset < 0; j++) {
 					v2 = flower[j];
-					ovlp2=getInvDist(v,j);
+					ovlp2=getInvDist(v,v2);
 					pt2 = getCenter(v2);
 					double thislength=-1.0;
 					double actuallength=-1.0;
@@ -2749,9 +2751,9 @@ public class PackData{
 			v1 = v2;
 			v2 = flower[(j + offset) % num];
 			ovlp1 = ovlp2;
-			ovlp2=getInvDist(v,(j+offset)%num);
+			ovlp2=getInvDist(v,v2);
 			pt1 = pt2;
-			ovlp=getInvDist(v1,nghb(v1, v2));
+			ovlp=getInvDist(v1,v2);
 			if (hes<0) // hyp
 				sC = HyperbolicMath.h_compcenter(vcent, pt1, rad, getRadius(v1),
 						getRadius(v2), ovlp, ovlp2, ovlp1);
@@ -2811,9 +2813,9 @@ public class PackData{
 		}
 		
 		// for non-easy cases, various situations:
-		double ovlp01=getInvDist(vert[0],nghb(vert[0],vert[1]));
-		double ovlp12=getInvDist(vert[1],nghb(vert[1],vert[2]));
-		double ovlp20=getInvDist(vert[2],nghb(vert[2],vert[0]));
+		double ovlp01=getInvDist(vert[0],vert[1]);
+		double ovlp12=getInvDist(vert[1],vert[2]);
+		double ovlp20=getInvDist(vert[2],vert[0]);
 
 		// Cases when two are non-ambiguous, can compute the third
 		// base 0 and next non-ambiguous
@@ -2879,19 +2881,19 @@ public class PackData{
 			int v2=vert[(baseindx+2)%3];
 			z=getCenter(v);
 			double rad=getRadius(v);
-			double ovlp=getInvDist(v,nghb(v,v1));
+			double ovlp=getInvDist(v,v1);
 			CircleSimple sC=ambigZs[v1].theOne(z,rad,ovlp,hes);
 			best1=sC.center;
 			// recall that sC.rad contains rel error (mindist/truedist)
 			if (sC.rad<0.1*rad) 
 				firsttest=true;
-			ovlp=getInvDist(v,nghb(v,v2));
+			ovlp=getInvDist(v,v2);
 			sC=ambigZs[v2].theOne(z,rad,ovlp,hes);
 			best2=sC.center;
 			if (sC.rad<0.1*rad) 
 				secondtest=true;
 			if (firsttest && secondtest) { // TODO: how is the last leg?
-				ovlp=getInvDist(v1,nghb(v1,v2));
+				ovlp=getInvDist(v1,v2);
 				sC=ambigZs[v2].theOne(best1,getRadius(v1),ovlp,hes);
 				if (sC.rad<0.1*rad) {
 					pts[baseindx]=z;
@@ -2998,7 +3000,7 @@ public class PackData{
 			v2 = flower[offset];
 			pt2 = getCenter(v2);
 			if (ambigZs[v2] != null) {
-				ovlp2=getInvDist(v,offset);
+				ovlp2=getInvDist(v,v2);
 				CircleSimple sC=ambigZs[v2].theOne(vcent, rad, ovlp2, hes);
 				pt2=sC.center;
 			} 
@@ -3009,13 +3011,13 @@ public class PackData{
 			if (ambigZs[v] == null) {
 				if (offset >= 0) { // use this first non-ambiguous nghb
 					v2 = flower[offset];
-					ovlp2=getInvDist(v,offset);
+					ovlp2=getInvDist(v,v2);
 					pt2 = getCenter(v2);
 				} 
 				else { // no non-ambiguous petal, so position first petal
 					offset = 0;
 					v2 = flower[offset];
-					ovlp2=getInvDist(v,offset);
+					ovlp2=getInvDist(v,v2);
 					pt2 = ambigZs[v2].theOne(vcent, rad, ovlp2, hes).center;
 				}
 			}
@@ -3024,7 +3026,7 @@ public class PackData{
 				offset = -1;
 				for (int j = 0; j < num && offset < 0; j++) {
 					v2 = flower[j];
-					ovlp2=getInvDist(v,j);
+					ovlp2=getInvDist(v,v2);
 					pt2 = getCenter(v2);
 					double thislength=-1.0;
 					double actuallength=-1.0;
@@ -3051,9 +3053,9 @@ public class PackData{
 			v1 = v2;
 			v2 = flower[(j + offset) % num];
 			ovlp1 = ovlp2;
-			ovlp2=getInvDist(v,(j+offset)%num);
+			ovlp2=getInvDist(v,v2);
 			pt1 = pt2;
-			ovlp=getInvDist(v1,nghb(v1, v2));
+			ovlp=getInvDist(v1,v2);
 			CircleSimple sC=null;
 			if (hes<0) // hyp
 				sC = HyperbolicMath.h_compcenter(vcent, pt1, rad,getRadius(v1),
@@ -3112,7 +3114,7 @@ public class PackData{
 			}
 		}
 		
-		double ovlp=getInvDist(edge.v,nghb(edge.v,edge.w));
+		double ovlp=getInvDist(edge.v,edge.w);
 		
 		if (goodone<0) { // both ambiguous? 
 			// try pairings until you meet threshold or return best.
@@ -3196,9 +3198,9 @@ public class PackData{
 		Complex []zg=new Complex[3];
 		zg[0]=zf[(indx+1)%3];
 		zg[1]=zf[indx];
-		double ovlp2=getInvDist(v,nghb(v,w));
-		double ovlp1=getInvDist(w,nghb(w,oddg));
-		double ovlp0=getInvDist(v,nghb(v,oddg));
+		double ovlp2=getInvDist(v,w);
+		double ovlp1=getInvDist(w,oddg);
+		double ovlp0=getInvDist(v,oddg);
 		zg[2]=CommonMath.comp_any_center(zg[0], zg[1],
 				getRadius(2),getRadius(v),getRadius(oddg),ovlp0,ovlp1,ovlp2,hes).center;
 		pts[0]=CommonMath.tri_incircle(zf[0],zf[1],zf[2],hes).center;
@@ -5012,7 +5014,7 @@ public class PackData{
 	  int k=faces[face].vert[(indx+1) % 3]; // on positive x-axis
 	  int v=faces[face].vert[(indx+2) % 3]; // to be computed
 	  if (overlapStatus)
-	    ovlp=kData[a].overlaps[nghb(a,k)];
+	    ovlp=getInvDist(a,k);
 	  else ovlp=1.0;
 	  if (hes<0) { // hyp case 
 	    double x1=getRadius(a);
@@ -5099,9 +5101,9 @@ public class PackData{
 	    if (npf || (kData[j].plotFlag > 0 && kData[k].plotFlag > 0)) {
 	    	
 				if (overlapStatus) {
-					double o1 = kData[k].overlaps[nghb(k, vert)];
-					double o2 = kData[vert].overlaps[nghb(vert, j)];
-					double o3 = kData[j].overlaps[nghb(j, k)];
+					double o1 = getInvDist(k,vert);
+					double o2 = getInvDist(vert,j);
+					double o3 = getInvDist(j, k);
 					sc = CommonMath.comp_any_center(getCenter(j), getCenter(k),
 							getRadius(j),getRadius(k),getRadius(vert), o1, o2, o3,hes);
 				} 
@@ -5578,7 +5580,7 @@ public class PackData{
 
 	  if (v<0 || w<0 || v>nodeCount || w>nodeCount 
 	      || (k=nghb(v,w))<0) return 0.0;
-	  if (overlapStatus) target=kData[v].overlaps[k];
+	  if (overlapStatus) target=getInvDist(v,kData[v].flower[k]);
 	  return (target-comp_inv_dist(v,w));
 	}
 
@@ -5723,15 +5725,15 @@ public class PackData{
 		      }
 		  }
 		  else  {
-		      double o2=kData[v].overlaps[0];
+		      double o2=getInvDist(v,kData[v].flower[0]);
 		      for (int n=1;n<=kData[v].num;n++) {
 		    	  int j1=j2;
 		    	  double r1=r2;
 		    	  double o1=o2;
 		    	  j2=kData[v].flower[n];
 		    	  r2=getRadius(j2);
-		    	  o2=kData[v].overlaps[n];
-		    	  double ovlp=kData[j1].overlaps[nghb(j1,j2)];
+		    	  o2=getInvDist(v,kData[v].flower[n]);
+		    	  double ovlp=getInvDist(j1,j2);
 		    	  flag &= EuclMath.e_cos_overlap(r,r1,r2,ovlp,o2,o1,tmpUP);
 		    	  uP.value += Math.acos(tmpUP.value);
 		      }
@@ -5791,15 +5793,15 @@ public class PackData{
 	        }
 	    }
 	    else {
-	        double o2=kData[v].overlaps[0];
+	        double o2=getInvDist(v,kData[v].flower[0]);
 	        for (int k=1;(k<=kData[v].num && flag);k++) {
 	        	x1=x2;
 	        	double o1=o2;
 	        	int j1=j2;
 	        	j2=kData[v].flower[k];
 	        	x2=getRadius(j2);
-	        	o2=kData[v].overlaps[k];
-	        	double o3=kData[j1].overlaps[nghb(j1,j2)];
+	        	o2=getInvDist(v,kData[v].flower[k]);
+	        	double o3=getInvDist(j1,j2);
 	        	flag &= HyperbolicMath.h_cos_s_overlap(x,x1,x2,o3,o2,o1,tmpUP);
 	        	uP.value += Math.acos(tmpUP.value);
 	        }
@@ -6212,13 +6214,13 @@ public class PackData{
 				for (int i = 1; i <= nodeCount; i++)
 					for (int j = 0; j < (kData[i].num + kData[i].bdryFlag); j++)
 						if (i < (k = kData[i].flower[j])
-								&& Math.abs((angle = kData[i].overlaps[j]) - 1.0) > OKERR)
+								&& Math.abs((angle = getInvDist(i,kData[i].flower[j])) - 1.0) > OKERR)
 							flag++;
 				if (flag>0) {
 					for (int i = 1; i <= nodeCount; i++)
 						for (int j = 0; j < (kData[i].num + kData[i].bdryFlag); j++) {
 							if (i < (k = kData[i].flower[j])
-								&& Math.abs((angle = kData[i].overlaps[j]) - 1.0) > OKERR)
+								&& Math.abs((angle = getInvDist(i,kData[i].flower[j])) - 1.0) > OKERR)
 								file.write("\n" + i + " " + k + "  "
 									+ String.format("%.6e", angle));
 						}
@@ -7097,12 +7099,12 @@ public class PackData{
 			newflower[i] = kData[v].flower[i];
 		newflower[n + 1] = node;
 		kData[v].flower = newflower;
-		if (kData[v].overlaps != null) {
+		if (kData[v].invDist != null) {
 			newoverlaps = new double[n + 2];
 			for (int i = 0; i <= n; i++)
-				newoverlaps[i] = kData[v].overlaps[i];
+				newoverlaps[i] = getInvDist(v,kData[v].flower[i]);
 			newoverlaps[n + 1] = 1.0;
-			kData[v].overlaps = newoverlaps;
+			kData[v].invDist = newoverlaps;
 		}
 		kData[v].num = n + 1;
 		// add to flower of v2
@@ -7112,12 +7114,12 @@ public class PackData{
 			newflower[i] = kData[v2].flower[i - 1];
 		newflower[0] = node;
 		kData[v2].flower = newflower;
-		if (kData[v2].overlaps != null) {
+		if (kData[v2].invDist != null) {
 			newoverlaps = new double[n + 2];
 			for (int i = 1; i <= n + 1; i++)
-				newoverlaps[i] = kData[v2].overlaps[i - 1];
+				newoverlaps[i] = getInvDist(v2,kData[v2].flower[i - 1]);
 			newoverlaps[0] = 1.0;
-			kData[v2].overlaps = newoverlaps;
+			kData[v2].invDist = newoverlaps;
 		}
 		kData[v2].num = n + 1;
 		// add new node
@@ -7128,8 +7130,9 @@ public class PackData{
 		kData[node].flower[0] = v;
 		kData[node].flower[1] = v2;
 		if (overlapStatus) {
-			kData[node].overlaps = new double[2];
-			kData[node].overlaps[0] = kData[node].overlaps[1] = 1.0;
+			kData[node].invDist = new double[2];
+			set_single_invDist(node,kData[node].flower[0],1.0);
+			set_single_invDist(node,kData[node].flower[1],1.0);
 		}
 		kData[node].bdryFlag = kData[node].plotFlag = 1;
 		kData[node].mark = 0;
@@ -7195,12 +7198,12 @@ public class PackData{
 			newflower[i] = kData[v1].flower[i];
 		newflower[n + 1] = v2;
 		kData[v1].flower = newflower;
-		if (kData[v1].overlaps != null) {
+		if (kData[v1].invDist != null) {
 			newoverlaps = new double[n + 2];
 			for (int i = 0; i <= n; i++)
-				newoverlaps[i] = kData[v1].overlaps[i];
-			newoverlaps[n + 1] = kData[v1].overlaps[0];
-			kData[v1].overlaps = newoverlaps;
+				newoverlaps[i] = getInvDist(v1,kData[v1].flower[i]);
+			newoverlaps[n + 1] = getInvDist(v1,kData[v1].flower[0]);
+			kData[v1].invDist = newoverlaps;
 		}
 		kData[v1].bdryFlag = 0;
 		rData[v1].aim = 2.0 * Math.PI;
@@ -7217,20 +7220,20 @@ public class PackData{
 		newflower[n + 1] = v3;
 		kData[v2].flower = newflower;
 		kData[v2].num++;
-		if (kData[v2].overlaps != null) {
+		if (kData[v2].invDist != null) {
 			newoverlaps = new double[n + 2];
 			for (int i = 0; i <= n; i++)
-				newoverlaps[i] = kData[v2].overlaps[i];
+				newoverlaps[i] = getInvDist(v2,kData[v2].flower[i]);
 			newoverlaps[n + 1] = 1.0;
-			kData[v2].overlaps = newoverlaps;
+			kData[v2].invDist = newoverlaps;
 		}
 		if (kData[v2].flower[0] == v3) {
 			kData[v2].bdryFlag = 0;
 			if (getRadius(v2) <= 0) { // avoid infinity
 				setRadius(v2,0.1);
 			}
-			if (kData[v2].overlaps != null)
-				kData[v2].overlaps[n + 1] = kData[v2].overlaps[0];
+			if (kData[v2].invDist != null)
+				set_single_invDist(v2,kData[v2].flower[n + 1],getInvDist(v2,kData[v2].flower[0]));
 			rData[v2].aim = 2.0 * Math.PI;
 		}
 
@@ -7241,12 +7244,12 @@ public class PackData{
 			newflower[i] = kData[v3].flower[i - 1];
 		newflower[0] = v2;
 		kData[v3].flower = newflower;
-		if (kData[v3].overlaps != null) {
+		if (kData[v3].invDist != null) {
 			newoverlaps = new double[n + 2];
 			for (int i = 1; i <= n + 1; i++)
-				newoverlaps[i] = kData[v3].overlaps[i - 1];
+				newoverlaps[i] = getInvDist(v3,kData[v3].flower[i - 1]);
 			newoverlaps[0] = 1.0;
-			kData[v3].overlaps = newoverlaps;
+			kData[v3].invDist = newoverlaps;
 		}
 		kData[v3].num++;
 		if (kData[v3].flower[kData[v3].num] == v2) {
@@ -7254,8 +7257,8 @@ public class PackData{
 			if (getRadius(v1) <= 0) { // avoid infinity
 				setRadius(v3,0.1);
 			}
-			if (kData[v3].overlaps != null)
-				kData[v3].overlaps[0] = kData[v3].overlaps[n + 1];
+			if (kData[v3].invDist != null)
+				set_single_invDist(v3,kData[v3].flower[0],getInvDist(v3,kData[v3].flower[n + 1]));
 			rData[v2].aim = 2.0 * Math.PI;
 		}
 
@@ -7649,7 +7652,7 @@ public class PackData{
 			  return -1;
 		  }
 		  if (overlapStatus) {
-			  t=kData[v].overlaps[nghb(v,w)];
+			  t=getInvDist(v,w);
 		  }
 		  if (hes<0) { // hyperbolic
 			  return HyperbolicMath.h_invdist_length(rv,rw,t);
@@ -7743,9 +7746,9 @@ public class PackData{
 		  double t1=1.0;
 		  double t2=1.0;
 		  if (overlapStatus) {
-			  t0=kData[v1].overlaps[nghb(v1,v2)];
-			  t1=kData[v1].overlaps[nghb(v2,v0)];
-			  t2=kData[v1].overlaps[nghb(v1,v0)];
+			  t0=getInvDist(v1,v2);
+			  t1=getInvDist(v2,v0);
+			  t2=getInvDist(v1,v0);
 		  }
 
 		  if (hes<0) { // hyperbolic
@@ -7761,19 +7764,6 @@ public class PackData{
 			  return SphericalMath.s_area(r0,r1,r2);
 		  }
 		  return EuclMath.eArea(r0,r1,r2,t0,t1,t2);
-	  }
-	  
-	  /**
-	   * Return the inversive distance recorded for edge from
-	   * v to nghb with index j. 1.0 is default.
-	   * @param v int
-	   * @param j int, index to petal of interest
-	   * @return double
-	   */
-	  public double getInvDist(int v,int j) {
-		  if (!overlapStatus)
-			  return 1.0;
-		  return kData[v].overlaps[j];
 	  }
 	  
 	  /**
@@ -8442,9 +8432,9 @@ public class PackData{
 			  newK[nextv].flower[1]=faces[f].vert[1];
 			  newK[nextv].flower[2]=faces[f].vert[2];
 			  if (overlapStatus) {
-				  newK[nextv].overlaps=new double[4];
-				  newK[nextv].overlaps[0]=newK[nextv].overlaps[1]=1.0;
-		          newK[nextv].overlaps[2]=newK[nextv].overlaps[3]=1.0;
+				  newK[nextv].invDist=new double[4];
+				  newK[nextv].invDist[0]=newK[nextv].invDist[1]=1.0;
+		          newK[nextv].invDist[2]=newK[nextv].invDist[3]=1.0;
 			  }
 			  newK[nextv].bdryFlag=0;
 			  newK[nextv].color=CPScreen.getFGColor();
@@ -8623,10 +8613,10 @@ public class PackData{
 	    kData[v].flower=newflower;
 	    if (overlapStatus) {
 	    	newol=new double[kData[v].num];
-	    	for (int j=0;j<ind_v;j++) newol[j]=kData[v].overlaps[j];
+	    	for (int j=0;j<ind_v;j++) newol[j]=getInvDist(v,kData[v].flower[j]);
 	    	for (int j=ind_v+1;j<=kData[v].num;j++)
-	    		newol[j-1]=kData[v].overlaps[j];
-	    	kData[v].overlaps=newol;
+	    		newol[j-1]=getInvDist(v,kData[v].flower[j]);
+	    	kData[v].invDist=newol;
 	    }
 	    kData[v].num--;
 	    if (ind_v==0 && kData[v].bdryFlag==0) 
@@ -8640,10 +8630,10 @@ public class PackData{
 	    kData[w].flower=newflower;
 	    if (overlapStatus) {
 	    	newol=new double[kData[w].num];
-	    	for (int j=0;j<ind_w;j++) newol[j]=kData[w].overlaps[j];
+	    	for (int j=0;j<ind_w;j++) newol[j]=getInvDist(w,kData[w].flower[j]);
 	    	for (int j=ind_w+1;j<=kData[w].num;j++)
-	    		newol[j-1]=kData[w].overlaps[j];
-	  	  	kData[w].overlaps=newol;
+	    		newol[j-1]=getInvDist(w,kData[w].flower[j]);
+	  	  	kData[w].invDist=newol;
 	    }
 	    kData[w].num--;
 	    if (ind_w==0 && kData[w].bdryFlag==0) 
@@ -8659,11 +8649,11 @@ public class PackData{
 	    kData[lv].flower=newflower;
 	    if (overlapStatus) {
 	    	newol=new double[kData[lv].num+2];
-	    	for (int j=0;j<=ind_v;j++) newol[j]=kData[lv].overlaps[j];
+	    	for (int j=0;j<=ind_v;j++) newol[j]=getInvDist(lv,kData[lv].flower[j]);
 	    	for (int j=kData[lv].num;j>ind_v;j--)
-	    		newol[j+1]=kData[lv].overlaps[j];
+	    		newol[j+1]=getInvDist(lv,kData[lv].flower[j]);
 	  	  	newol[ind_v+1]=1.0;
-	  	  	kData[lv].overlaps=newol;
+	  	  	kData[lv].invDist=newol;
 	    }
 	    kData[lv].num++;
 	    ind_w=nghb(rv,w);
@@ -8675,11 +8665,11 @@ public class PackData{
 	    kData[rv].flower=newflower;
 	    if (overlapStatus) {
 	    	newol=new double[kData[rv].num+2];
-	    	for (int j=0;j<=ind_w;j++) newol[j]=kData[rv].overlaps[j];
+	    	for (int j=0;j<=ind_w;j++) newol[j]=getInvDist(rv,kData[rv].flower[j]);
 	    	for (int j=kData[rv].num;j>ind_w;j--)
-	    		newol[j+1]=kData[rv].overlaps[j];
+	    		newol[j+1]=getInvDist(rv,kData[rv].flower[j]);
 	    	newol[ind_w+1]=1.0;
-	    	kData[rv].overlaps=newol;
+	    	kData[rv].invDist=newol;
 	    }
 	    kData[rv].num++;
 	    return 1;
@@ -8751,9 +8741,9 @@ public class PackData{
 				  kData[newV].num=5;
 				  kData[newV].flower=newflower;
 				  if (overlapStatus) { // default
-					  kData[newV].overlaps=new double[kData[newV].num+1];
+					  kData[newV].invDist=new double[kData[newV].num+1];
 					  for (int k=0;k<=kData[newV].num;k++)
-						  kData[newV].overlaps[k]=1.0;
+						  set_single_invDist(newV,kData[newV].flower[k],1.0);
 				  }
 				  rData[newV]=new RData();
 				  setCenter(newV,getCenter(centV));
@@ -8769,20 +8759,20 @@ public class PackData{
 				  int indx=nghb(v,centV);
 				  kData[v].flower[indx]=lastNew;
 				  if (overlapStatus)
-					  kData[v].overlaps[indx]=1.0;
+					  set_single_invDist(v,kData[v].flower[indx],1.0);
 				  if (indx==0 && kData[v].bdryFlag==0) {
 					  kData[v].flower[kData[v].num]=lastNew;
 					  if (overlapStatus)
-						  kData[v].overlaps[kData[v].num]=1.0;
+						  set_single_invDist(v,kData[v].flower[kData[v].num],1.0);
 				  }
 				  insert_petal(v,indx,nextNew);
 			  }
 			  
 			  kData[centV].flower=newCentFlower;
 			  if (overlapStatus) { // any overlaps are lost
-				  kData[centV].overlaps=new double[kData[centV].num+1];
+				  kData[centV].invDist=new double[kData[centV].num+1];
 				  for (int k=0;k<=kData[centV].num;k++)
-					  kData[centV].overlaps[k]=1.0;
+					  set_single_invDist(centV,kData[centV].flower[k],1.0);
 			  }
 		  }
 		  else { // centV is on the boundary
@@ -8812,9 +8802,9 @@ public class PackData{
 			  kData[newDown].flower[1]=origCount+3;
 			  kData[newDown].flower[2]=centV;
 			  if (overlapStatus) { 
-				  kData[newDown].overlaps=new double[3];
+				  kData[newDown].invDist=new double[3];
 				  for (int k=0;k<=2;k++)
-					  kData[newDown].overlaps[k]=1.0;
+					  set_single_invDist(newDown,kData[newDown].flower[k],1.0);
 			  }
 			  rData[newDown]=new RData();
 			  setCenter(newDown,getCenter(centV));
@@ -8830,9 +8820,9 @@ public class PackData{
 			  kData[newUp].flower[1]=nodeCount; // last new vertex
 			  kData[newUp].flower[2]=upB;
 			  if (overlapStatus) { // 
-				  kData[newUp].overlaps=new double[3];
+				  kData[newUp].invDist=new double[3];
 				  for (int k=0;k<=2;k++)
-					  kData[newUp].overlaps[k]=1.0;
+					  set_single_invDist(newUp,kData[newUp].flower[k],1.0);
 			  }
 			  rData[newUp]=new RData();
 			  setCenter(newUp,getCenter(centV));
@@ -8851,9 +8841,9 @@ public class PackData{
 			  kData[newV].flower[3]=kData[centV].flower[1];
 			  kData[newV].flower[4]=origCount+4;
 			  if (overlapStatus) { 
-				  kData[newV].overlaps=new double[6];
+				  kData[newV].invDist=new double[6];
 				  for (int k=0;k<=5;k++)
-					  kData[newV].overlaps[k]=1.0;
+					  set_single_invDist(newV,kData[newV].flower[k],1.0);
 			  }
 			  rData[newV]=new RData();
 			  setCenter(newV,getCenter(centV));
@@ -8872,9 +8862,9 @@ public class PackData{
 			  kData[newV].flower[3]=upB;
 			  kData[newV].flower[4]=newUp;
 			  if (overlapStatus) { 
-				  kData[newV].overlaps=new double[6];
+				  kData[newV].invDist=new double[6];
 				  for (int k=0;k<=5;k++)
-					  kData[newV].overlaps[k]=1.0;
+					  set_single_invDist(newV,kData[newV].flower[k],1.0);
 			  }
 			  rData[newV]=new RData();
 			  setCenter(newV,getCenter(centV));
@@ -8895,9 +8885,9 @@ public class PackData{
 				  kData[newV].num=5;
 				  kData[newV].flower=newflower;
 				  if (overlapStatus) { 
-					  kData[newV].overlaps=new double[6];
+					  kData[newV].invDist=new double[6];
 					  for (int k=0;k<=5;k++)
-						  kData[newDown].overlaps[k]=1.0;
+						  set_single_invDist(newDown,kData[newDown].flower[k],1.0);
 				  }
 				  rData[newV]=new RData();
 				  setCenter(newV,getCenter(centV));
@@ -8908,13 +8898,13 @@ public class PackData{
 			  // fix up downB
 			  kData[downB].flower[kData[downB].num]=newDown;
 			  if (overlapStatus)
-				  kData[downB].overlaps[kData[downB].num]=1.0;
+				  set_single_invDist(downB,kData[downB].flower[kData[downB].num],1.0);
 			  insert_petal(downB,kData[downB].num,origCount+3);
 			  
 			  // fix up upB
 			  kData[upB].flower[0]=newUp;
 			  if (overlapStatus)
-				  kData[upB].overlaps[0]=1.0;
+				  set_single_invDist(upB,kData[upB].flower[0],1.0);
 			  insert_petal(upB,1,nodeCount);
 			  
 			  // fix up rest of original nghbs to centV
@@ -8927,11 +8917,11 @@ public class PackData{
 				  int indx=nghb(v,centV);
 				  kData[v].flower[indx]=lastNew;
 				  if (overlapStatus)
-					  kData[v].overlaps[indx]=1.0;
+					  set_single_invDist(v,kData[v].flower[indx],1.0);
 				  if (indx==0 && kData[v].bdryFlag==0) {
 					  kData[v].flower[kData[v].num]=lastNew;
 					  if (overlapStatus)
-						  kData[v].overlaps[kData[v].num]=1.0;
+						  set_single_invDist(v,kData[v].flower[kData[v].num],1.0);
 				  }
 				  insert_petal(v,indx,nextNew);
 			  }
@@ -8941,9 +8931,9 @@ public class PackData{
 			  kData[centV].num++;
 			  
 			  if (overlapStatus) { // any overlaps are lost
-				  kData[centV].overlaps=new double[kData[centV].num+1];
+				  kData[centV].invDist=new double[kData[centV].num+1];
 				  for (int k=0;k<=kData[centV].num;k++)
-					  kData[centV].overlaps[k]=1.0;
+					  set_single_invDist(centV,kData[centV].flower[k],1.0);
 			  }
 		  }
 		  return nodeCount;
@@ -8994,7 +8984,7 @@ public class PackData{
 		int newV = ++nodeCount;
 		kData[newV].flower = new int[5-2*bflag];
 		if (overlapStatus)
-			kData[newV].overlaps = new double[5-2*bflag];
+			kData[newV].invDist = new double[5-2*bflag];
 		
 		// if boundary edge
 		if (bflag != 0) {
@@ -9002,8 +8992,11 @@ public class PackData{
 			kData[newV].flower[0] = w;
 			kData[newV].flower[1] = lv;
 			kData[newV].flower[2] = v;
-			if (overlapStatus)
-				kData[newV].overlaps[0] = kData[newV].overlaps[1] = kData[newV].overlaps[2] = 1.0;
+			if (overlapStatus) {
+				set_single_invDist(newV,kData[newV].flower[0],1.0);
+				set_single_invDist(newV,kData[newV].flower[1],1.0);
+				set_single_invDist(newV,kData[newV].flower[2],1.0);
+			}
 			kData[newV].bdryFlag = 1;
 			kData[newV].mark = 0;
 			kData[newV].color=CPScreen.getFGColor();
@@ -9019,8 +9012,12 @@ public class PackData{
 			kData[newV].flower[2] = w;
 			kData[newV].flower[3] = lv;
 			kData[newV].bdryFlag = 0;
-			if (overlapStatus)
-				kData[newV].overlaps[0] = kData[newV].overlaps[1] = kData[newV].overlaps[2] = kData[newV].overlaps[3] = 1.0;
+			if (overlapStatus) {
+				set_single_invDist(newV,kData[newV].flower[0],1.0);
+				set_single_invDist(newV,kData[newV].flower[1],1.0);
+				set_single_invDist(newV,kData[newV].flower[2],1.0);
+				set_single_invDist(newV,kData[newV].flower[3],1.0);
+			}
 			kData[newV].mark = 0;
 			kData[newV].color=CPScreen.getFGColor();
 			setRadius(newV,.5 * getRadius(v));
@@ -9056,11 +9053,11 @@ public class PackData{
 		if (overlapStatus) {
 			newol = new double[kData[lv].num + 2];
 			for (int j = 0; j <= ind_vl; j++)
-				newol[j] = kData[lv].overlaps[j];
+				newol[j] = getInvDist(lv,kData[lv].flower[j]);
 			for (int j = kData[lv].num; j > ind_vl; j--)
-				newol[j + 1] = kData[lv].overlaps[j];
+				newol[j + 1] = getInvDist(lv,kData[lv].flower[j]);
 			newol[ind_vl + 1] = 1.0;
-			kData[lv].overlaps = newol;
+			kData[lv].invDist = newol;
 		}
 		kData[lv].num++;
 		
@@ -9077,11 +9074,11 @@ public class PackData{
 			if (overlapStatus) {
 				newol = new double[kData[rv].num + 2];
 				for (int j = 0; j <= ind_rw; j++)
-					newol[j] = kData[rv].overlaps[j];
+					newol[j] = getInvDist(rv,kData[rv].flower[j]);
 				for (int j = kData[rv].num; j > ind_rw; j--)
-					newol[j + 1] = kData[rv].overlaps[j];
+					newol[j + 1] = getInvDist(rv,kData[rv].flower[j]);
 				newol[ind_rw + 1] = 1.0;
-				kData[rv].overlaps = newol;
+				kData[rv].invDist = newol;
 			}
 			kData[rv].num++;
 		}
@@ -9090,13 +9087,13 @@ public class PackData{
 		ind_vw = nghb(v, w);
 		kData[v].flower[ind_vw] = newV;
 		if (overlapStatus)
-			kData[v].overlaps[ind_vw] = 1.0;
+			set_single_invDist(v,kData[v].flower[ind_vw],1.0);
 		if (ind_vw == 0 && kData[v].bdryFlag == 0)
 			kData[v].flower[kData[v].num] = newV;
 		ind_wv = nghb(w, v);
 		kData[w].flower[ind_wv] = newV;
 		if (overlapStatus)
-			kData[w].overlaps[ind_wv] = 1.0;
+			set_single_invDist(w,kData[w].flower[ind_wv],1.0);
 		if (ind_wv == 0 && kData[w].bdryFlag == 0)
 			kData[w].flower[kData[w].num] = newV;
 		
@@ -9140,9 +9137,11 @@ public class PackData{
 	    kData[newval].flower[1]=faces[f].vert[1];
 	    kData[newval].flower[2]=faces[f].vert[2];
 	    if (overlapStatus) {
-	        kData[newval].overlaps=new double[4];
-	        kData[newval].overlaps[0]=kData[newval].overlaps[1]=1.0;
-	        kData[newval].overlaps[2]=kData[newval].overlaps[3]=1.0;
+	        kData[newval].invDist=new double[4];
+	        set_single_invDist(newval,kData[newval].flower[0],1.0);
+	        set_single_invDist(newval,kData[newval].flower[1],1.0);
+	        set_single_invDist(newval,kData[newval].flower[2],1.0);
+	        set_single_invDist(newval,kData[newval].flower[3],1.0);
 	    }
 	    kData[newval].bdryFlag=0;
 	    kData[newval].mark=mark;
@@ -9199,10 +9198,12 @@ public class PackData{
 	    	kData[newV[i]].flower[2]=newV[(i+1)%3];
 	    	kData[newV[i]].flower[3]=newV[(i+2)%3];
 	    	if (overlapStatus) {
-	    		kData[newV[i]].overlaps=new double[5];
-	    		kData[newV[i]].overlaps[0]=kData[newV[i]].overlaps[1]=1.0;
-	    		kData[newV[i]].overlaps[2]=kData[newV[i]].overlaps[3]=1.0;
-	    		kData[newV[i]].overlaps[4]=1.0;
+	    		kData[newV[i]].invDist=new double[5];
+	    		set_single_invDist(newV[i],kData[newV[i]].flower[0],1.0);
+	    		set_single_invDist(newV[i],kData[newV[i]].flower[1],1.0);
+	    		set_single_invDist(newV[i],kData[newV[i]].flower[2],1.0);
+	    		set_single_invDist(newV[i],kData[newV[i]].flower[3],1.0);
+	    		set_single_invDist(newV[i],kData[newV[i]].flower[4],1.0);
 	    	}
 	    	kData[newV[i]].bdryFlag=0;
 	    	kData[newV[i]].mark=0;
@@ -9224,12 +9225,12 @@ public class PackData{
 	    	kData[v].flower=newflower;
 	    	if (overlapStatus) {
 	    		double []newol=new double[kData[v].num+3];
-	    		for (int j=0;j<=indx;j++) newol[j]=kData[v].overlaps[j];
+	    		for (int j=0;j<=indx;j++) newol[j]=getInvDist(v,kData[v].flower[j]);
 	    		for (int j=kData[v].num;j>indx;j--)
-	    			newol[j+2]=kData[v].overlaps[j];
+	    			newol[j+2]=getInvDist(v,kData[v].flower[j]);
 	    		newol[indx+1]=1.0;
 	    		newol[indx+2]=1.0;
-	    		kData[v].overlaps=newol;
+	    		kData[v].invDist=newol;
 	    	}
 	    	kData[v].num +=2;
 	    }
@@ -9251,10 +9252,10 @@ public class PackData{
 			for (int j = 0; j <= num; j++)
 				// change orientation
 				newKData.flower[j] = kData[i].flower[num - j];
-			if (kData[i].overlaps != null) {
-				newKData.overlaps = new double[num + 1];
+			if (kData[i].invDist != null) {
+				newKData.invDist = new double[num + 1];
 				for (int j = 0; j <= num; j++)
-					newKData.overlaps[j] = kData[i].overlaps[num - j];
+					newKData.invDist[j] = getInvDist(i,kData[i].flower[num - j]);
 			}
 			kData[i] = newKData;
 		}
@@ -9727,9 +9728,9 @@ public class PackData{
 	    kData[newnode].mark=0;
 	    kData[newnode].color=CPScreen.getFGColor();
 	    if (overlapStatus) {
-		      kData[newnode].overlaps=new double[count+1];
+		      kData[newnode].invDist=new double[count+1];
 		      for (int j=0;j<=count;j++) 
-		    	  kData[newnode].overlaps[j]=1.0;
+		    	  set_single_invDist(newnode,kData[newnode].flower[j],1.0);
 	    }
 	    setRadius(newnode,0.5);
 	    setCenter(newnode,0.0,0.0);
@@ -9754,9 +9755,9 @@ public class PackData{
 		    if (overlapStatus) {
 			      newoverlaps=new double[numb+1];
 			      for (int j=0;j<=(numb-2);j++) 
-			    	  newoverlaps[j]=kData[v].overlaps[j];
+			    	  newoverlaps[j]=getInvDist(v,kData[v].flower[j]);
 			      newoverlaps[numb-1]=newoverlaps[numb]=1.0;
-			      kData[v].overlaps=newoverlaps;
+			      kData[v].invDist=newoverlaps;
 		    }
 	    	kData[v].num=numb;
 	    	kData[v].bdryFlag=0;
@@ -9775,9 +9776,9 @@ public class PackData{
 		    if (overlapStatus) {
 			      newoverlaps=new double[numb+1];
 			      for (int j=0;j<=(numb-1);j++) 
-			    	  newoverlaps[j+1]=kData[v].overlaps[j];
+			    	  newoverlaps[j+1]=getInvDist(v,kData[v].flower[j]);
 			      newoverlaps[0]=1.0;
-			      kData[v].overlaps=newoverlaps;
+			      kData[v].invDist=newoverlaps;
 		    }
 	    	
 	    	// fix w
@@ -9791,9 +9792,9 @@ public class PackData{
 		    if (overlapStatus) {
 			      newoverlaps=new double[numb+1];
 			      for (int j=0;j<=(numb-1);j++) 
-			    	  newoverlaps[j]=kData[w].overlaps[j];
+			    	  newoverlaps[j]=getInvDist(w,kData[w].flower[j]);
 			      newoverlaps[numb]=1.0;
-			      kData[w].overlaps=newoverlaps;
+			      kData[w].invDist=newoverlaps;
 		    }
 	    }
 
@@ -9815,10 +9816,10 @@ public class PackData{
 	        if (overlapStatus) {
 	    	  	newoverlaps=new double[numb+1];
 	    	  	for (int j=0;j<=(numb-2);j++)
-	    	  		newoverlaps[j]=kData[nextvert].overlaps[j];
+	    	  		newoverlaps[j]=getInvDist(nextvert,kData[nextvert].flower[j]);
 	    	  	newoverlaps[numb-1]=1.0;
 	    	  	newoverlaps[numb]=newoverlaps[0];
-	    	  	kData[nextvert].overlaps=newoverlaps;
+	    	  	kData[nextvert].invDist=newoverlaps;
 	        }
 	        nextvert=newnext;
 	    }
@@ -11400,7 +11401,7 @@ public class PackData{
 				for (int k=0;k<=kData[i].num;k++)
 					if (kData[i].flower[k]>v) kData[i].flower[k]--;
 		kData[v].flower=null;
-	    kData[v].overlaps=null;
+	    kData[v].invDist=null;
 	    for (int i=v;i<nodeCount;i++) {
 	        kData[i]=kData[i+1];
 	        rData[i]=rData[i+1];
@@ -11492,20 +11493,20 @@ public class PackData{
 	    	  int start;
 	    	  if ((start=nghb(w,v))<0) return 0; // data will be screwy 
 	    	  int []newflower=new int[kData[w].num-1];
-	    	  if (kData[w].overlaps!=null) 
+	    	  if (kData[w].invDist!=null) 
 	    		  newoverlaps=new double[kData[w].num-1];
 	    	  for (int k=0;k<kData[w].num-1;k++) {
 	    		  int indx=(start+1+k) % (kData[w].num);
 	    		  newflower[k]=kData[w].flower[indx];
 	    		  if (newoverlaps!=null)
-	    			  newoverlaps[k]=kData[w].overlaps[indx];
+	    			  newoverlaps[k]=getInvDist(w,kData[w].flower[indx]);
 	    	  }
 	    	  kData[w].num -= 2;
 	    	  kData[w].bdryFlag=1;
 	    	  rData[w].aim=-.1;
 	    	  kData[w].flower=newflower;
 	    	  if (newoverlaps!=null) {
-	    		  kData[w].overlaps=newoverlaps;
+	    		  kData[w].invDist=newoverlaps;
 	    	  }
 	      }
 	      delete_vert(v);
@@ -11617,9 +11618,9 @@ public class PackData{
 	    		tempK[Nn].bdryFlag=1;
 	    		tempK[Nn].flower=new int[4];
 	    		if (overlapStatus) {
-	    			tempK[Nn].overlaps=new double[4];
-	    			tempK[Nn].overlaps[0]=tempK[Nn].overlaps[3]=kData[e.v].overlaps[nghb(e.v,e.w)];
-	    			tempK[Nn].overlaps[1]=tempK[Nn].overlaps[2]=1.0;
+	    			tempK[Nn].invDist=new double[4];
+	    			tempK[Nn].invDist[0]=tempK[Nn].invDist[3]=kData[e.v].invDist[nghb(e.v,e.w)];
+	    			tempK[Nn].invDist[1]=tempK[Nn].invDist[2]=1.0;
 	    		}
 	    		if (kData[e.v].flower[0]==e.w) {
 	    			tempK[Nn].flower[0]=e.w;
@@ -11649,10 +11650,10 @@ public class PackData{
 	    		tempK[Nn].flower[0]=tempK[Nn].flower[6]=e.w;
 	    		tempK[Nn].flower[3]=e.v;
 	    		if (overlapStatus) {
-	    			tempK[Nn].overlaps=new double[7];
-	    			for (int j=0;j<7;j++) tempK[Nn].overlaps[j]=1.0;
-	    			tempK[Nn].overlaps[0]=tempK[Nn].overlaps[3]=
-	    				kData[e.v].overlaps[nghb(e.v,e.w)];
+	    			tempK[Nn].invDist=new double[7];
+	    			for (int j=0;j<7;j++) tempK[Nn].invDist[j]=1.0;
+	    			tempK[Nn].invDist[0]=tempK[Nn].invDist[3]=
+	    				kData[e.v].invDist[nghb(e.v,e.w)];
 	    		}
 	    		// petals 1 and 5 are obtained from e.w
 	    		int num_w=kData[e.w].num;
@@ -11781,7 +11782,7 @@ public class PackData{
 					if ((k = kData[i].flower[j]) > i && i <= count
 							&& k <= count) {
 						ovlp = xyz_inv_dist(xyz_list[i], xyz_list[k], rad, rad);
-						set_single_overlap(i, j, ovlp);
+						set_single_invDist(i, k, ovlp);
 						ovlpmax = (ovlp > ovlpmax) ? ovlp : ovlpmax;
 						ovlpmin = (ovlp < ovlpmin) ? ovlp : ovlpmin;
 					}
@@ -11821,7 +11822,7 @@ public class PackData{
 							&& k <= count) {
 						ovlp = xyz_inv_dist(xyz_list[i], xyz_list[k],
 								tmprads[i], tmprads[k]);
-						set_single_overlap(i, j, ovlp);
+						set_single_invDist(i, k, ovlp);
 						ovlpmax = (ovlp > ovlpmax) ? ovlp : ovlpmax;
 						ovlpmin = (ovlp < ovlpmin) ? ovlp : ovlpmin;
 					}
@@ -11862,15 +11863,15 @@ public class PackData{
 	  	  else if (kData[w].flower[kData[w].num]==v)
 	  	    for (int j=0;j<kData[w].num;j++)
 	  	      newflower[j]=kData[w].flower[j];
-	  	  if (kData[w].overlaps!=null) {
+	  	  if (kData[w].invDist!=null) {
 	  	      newoverlaps=new double[kData[w].num];
 	  	      if (kData[w].flower[0]==v) 
 	  		for (int j=0;j<kData[w].num;j++) 
-	  		  newoverlaps[j]=kData[w].overlaps[j+1];
+	  		  newoverlaps[j]=getInvDist(w,kData[w].flower[j+1]);
 	  	      else if (kData[w].flower[kData[w].num]==v)
 	  		for (int j=0;j<kData[w].num;j++)
-	  		  newoverlaps[j]=kData[w].overlaps[j];
-	  	      kData[w].overlaps=newoverlaps;
+	  		  newoverlaps[j]=getInvDist(w,kData[w].flower[j]);
+	  	      kData[w].invDist=newoverlaps;
 	  	    }
 	  	  kData[w].flower=newflower;
 	  	  kData[w].num--;
@@ -11881,12 +11882,12 @@ public class PackData{
 	  	  start=(indx+1)%kData[w].num;
 	  	  for (int j=0;j<kData[w].num-1;j++) newflower[j]=
 	  	    kData[w].flower[(start+j)%kData[w].num];
-	  	  if (kData[w].overlaps!=null) {
+	  	  if (kData[w].invDist!=null) {
 	  	      newoverlaps=new double[kData[w].num-1];
 	  	      start=(indx+1)%kData[w].num;
-	  	      for (int j=0;j<kData[w].num-1;j++) newoverlaps[j]=
-	  		kData[w].overlaps[(start+j)%kData[w].num];
-	  	      kData[w].overlaps=newoverlaps;
+	  	      for (int j=0;j<kData[w].num-1;j++) 
+	  	    	  newoverlaps[j]=getInvDist(w,kData[w].flower[(start+j)%kData[w].num]);
+	  	      kData[w].invDist=newoverlaps;
 	  	  }
 	  	  kData[w].flower=newflower;
 	  	  kData[w].num=num-2;
@@ -11920,21 +11921,21 @@ public class PackData{
 	  	  newflower[j]=kData[w].flower[j+1];
 	        }
 	        kData[w].flower=newflower;
-	        if (kData[w].overlaps!=null) {
+	        if (kData[w].invDist!=null) {
 	  	  newoverlaps=new double[kData[w].num];
 	  	  for (int j=0;j<indx;j++) 
-	  	    newoverlaps[j]=kData[w].overlaps[j];
+	  	    newoverlaps[j]=getInvDist(w,kData[w].flower[j]);
 	  	  for (int j=indx;j<kData[w].num;j++) {
-	  	      newoverlaps[j]=kData[w].overlaps[j+1];
+	  	      newoverlaps[j]=getInvDist(w,kData[w].flower[j+1]);
 	  	  }
-	  	  kData[w].overlaps=newoverlaps;
+	  	  kData[w].invDist=newoverlaps;
 	        }
 	        kData[w].num--;
 	        if (indx==0 && kData[w].bdryFlag==0) {
 	  	  kData[w].flower[kData[w].num]=
 	  	    kData[w].flower[0];
-	  	  if (kData[w].overlaps!=null)
-	  	    kData[w].overlaps[kData[w].num]= kData[w].overlaps[0];
+	  	  if (kData[w].invDist!=null)
+	  	    set_single_invDist(w,kData[w].flower[kData[w].num],getInvDist(w,kData[w].flower[0]));
 	        }
 	      }
 	    delete_vert(v);
@@ -11960,23 +11961,27 @@ public class PackData{
 	    // fix data for w and z
 	    if (indx==0) {
 	        kData[w].flower[0]=kData[w].flower[kData[w].num]=z;
-	        if (overlapStatus)
-	        	kData[w].overlaps[0]=kData[w].overlaps[kData[w].num]=1.0;
+	        if (overlapStatus) {
+	        	set_single_invDist(w,kData[w].flower[0],1.0);
+	        	set_single_invDist(w,kData[w].flower[kData[w].num],1.0);
+	        }
 	    }
 	    else {
 	        kData[w].flower[indx]=z;
 	        if (overlapStatus)
-	        	kData[w].overlaps[indx]=1.0;
+	        	set_single_invDist(w,kData[w].flower[indx],1.0);
 	    }
 	    if ((indx=nghb(z,v))==0) {
 	        kData[z].flower[0]=kData[z].flower[kData[z].num]=w;
-	        if (overlapStatus) 
-	        	kData[z].overlaps[0]=kData[z].overlaps[kData[z].num]=1.0;
+	        if (overlapStatus) {
+	        	set_single_invDist(z,kData[z].flower[0],1.0);
+	        	set_single_invDist(z,kData[z].flower[kData[z].num],1.0);
+	        }
 	    }
 	    else {
 	        kData[z].flower[indx]=w;
 	        if (overlapStatus)
-	        	kData[z].overlaps[indx]=1.0;
+	        	set_single_invDist(z,kData[z].flower[indx],1.0);
 	    }
 	    // remove v from others 
 	    x=kData[v].flower[(nghb(v,w)+1)%kData[v].num];
@@ -11988,10 +11993,11 @@ public class PackData{
 	    kData[x].flower=newflower;
 	    if (overlapStatus) {
 	        newol=new double[kData[x].num];
-	        for (int j=0;j<indx;j++) newol[j]=kData[x].overlaps[j];
+	        for (int j=0;j<indx;j++) 
+	        	newol[j]=getInvDist(x,kData[x].flower[j]);
 	        for (int j=indx;j<kData[x].num;j++)
-	        	newol[j]=kData[x].overlaps[j+1];
-	        kData[x].overlaps=newol;
+	        	newol[j]=getInvDist(x,kData[x].flower[j+1]);
+	        kData[x].invDist=newol;
 	    }
 	    kData[x].num--;
 	    x=kData[v].flower[(nghb(v,z)+1)%kData[v].num];
@@ -12003,10 +12009,11 @@ public class PackData{
 	    kData[x].flower=newflower;
 	    if (overlapStatus) {
 	        newol=new double[kData[x].num];
-	        for (int j=0;j<indx;j++) newol[j]=kData[x].overlaps[j];
+	        for (int j=0;j<indx;j++) 
+	        	newol[j]=getInvDist(x,kData[x].flower[j]);
 	        for (int j=indx;j<kData[x].num;j++)
-	  	newol[j]=kData[x].overlaps[j+1];
-	        kData[x].overlaps=newol;
+	        	newol[j]=getInvDist(x,kData[x].flower[j+1]);
+	        kData[x].invDist=newol;
 	    }
 	    kData[x].num--;
 	    delete_vert(v);
@@ -12038,11 +12045,11 @@ public class PackData{
 			  for (int k=0;k<=num;k++) {
 				  newflower[k+1]=kData[v].flower[k];
 				  if (overlapStatus)
-					  newInvDist[k+1]=kData[v].overlaps[k];
+					  newInvDist[k+1]=getInvDist(v,kData[v].flower[k]);
 			  }
 			  num++;
 			  kData[v].flower=newflower;
-			  kData[v].overlaps=newInvDist;
+			  kData[v].invDist=newInvDist;
 			  kData[v].num=num;
 			  return num;
 		  }
@@ -12050,14 +12057,14 @@ public class PackData{
 			  for (int k=0;k<=num;k++) {
 				  newflower[k]=kData[v].flower[k];
 				  if (overlapStatus)
-					  newInvDist[k]=kData[v].overlaps[k];
+					  newInvDist[k]=getInvDist(v,kData[v].flower[k]);
 			  }
 			  newflower[num+1]=newV;
 			  if (overlapStatus)
 				  newInvDist[num+1]=1.0;
 			  num++;
 			  kData[v].flower=newflower;
-			  kData[v].overlaps=newInvDist;
+			  kData[v].invDist=newInvDist;
 			  kData[v].num=num;
 			  return num;
 		  }
@@ -12071,21 +12078,21 @@ public class PackData{
 			  for (int k=0;k<num;k++) {
 				  newflower[k+1]=kData[v].flower[k];
 			  	  if (overlapStatus)
-			  		  newInvDist[k+1]=kData[v].overlaps[k];
+			  		  newInvDist[k+1]=getInvDist(v,kData[v].flower[k]);
 			  }
 			  num++;
 			  newflower[num]=newV; // repeat at end
 			  if (overlapStatus)
 				  newInvDist[num]=1.0;
 			  kData[v].flower=newflower;
-			  kData[v].overlaps=newInvDist;
+			  kData[v].invDist=newInvDist;
 			  kData[v].num=num;
 			  return num;
 		  }
 		  for (int k=0;k<indx;k++) {
 			  newflower[k]=kData[v].flower[k];
 			  if (overlapStatus) 
-				  newInvDist[k]=kData[v].overlaps[k];
+				  newInvDist[k]=getInvDist(v,kData[v].flower[k]);
 		  }
 		  newflower[indx]=newV;
 		  if (overlapStatus)
@@ -12093,11 +12100,11 @@ public class PackData{
 		  for (int k=indx;k<=num;k++) {
 			  newflower[k+1]=kData[v].flower[k];
 			  if (overlapStatus)
-				  newInvDist[k+1]=kData[v].overlaps[k];
+				  newInvDist[k+1]=getInvDist(v,kData[v].flower[k]);
 		  }
 		  num++;
 		  kData[v].flower=newflower;
-		  kData[v].overlaps=newInvDist;
+		  kData[v].invDist=newInvDist;
 		  kData[v].num=num;
 		  return num;
 	  }
@@ -12415,11 +12422,11 @@ public class PackData{
 	        for (int i=1;i<=kData[v1].num;i++) {
 	        	newflower[i-1]=kData[v1].flower[i];
 	        	if (overlapStatus)
-	        		newoverlaps[i-1]=kData[v1].overlaps[i];
+	        		newoverlaps[i-1]=getInvDist(v1,kData[v1].flower[i]);
 	        }
 	        kData[v1].flower=newflower;
 	        if (overlapStatus) {
-	        	kData[v1].overlaps=newoverlaps;
+	        	kData[v1].invDist=newoverlaps;
 	        }
 	        kData[v1].num--;
 	        kData[kData[v1].flower[0]].bdryFlag=1;
@@ -12432,11 +12439,11 @@ public class PackData{
 	        for (int i=0;i<kData[v2].num;i++) {
 	        	newflower[i]=kData[v2].flower[i];
 	        	if (overlapStatus)
-	        		newoverlaps[i]=kData[v2].overlaps[i];
+	        		newoverlaps[i]=getInvDist(v2,kData[v2].flower[i]);
 	        }
 	        kData[v2].flower=newflower;
 	        if (overlapStatus) {
-	        	kData[v2].overlaps=newoverlaps;
+	        	kData[v2].invDist=newoverlaps;
 	        }
 	        kData[v2].num--;
 	        rData[v2].aim=-1;
@@ -12451,17 +12458,17 @@ public class PackData{
 	        for (int i=n;i<=m;i++) {
 	        	newflower[i-n]=kData[v].flower[i];
 	        	if (overlapStatus)
-		  	      newoverlaps[i-n]=kData[v].overlaps[i];
+		  	      newoverlaps[i-n]=getInvDist(v,kData[v].flower[i]);
 	        }
 	        for (int i=1;i<n;i++) {
 	        	newflower[m-n+i]=kData[v].flower[i];
 	        	if (overlapStatus)
-	        		newoverlaps[m-n+i]=kData[v].overlaps[i];
+	        		newoverlaps[m-n+i]=getInvDist(v,kData[v].flower[i]);
 	        }
 	        kData[v].num--;
 	        kData[v].flower=newflower;
 	        if (overlapStatus) {
-	        	kData[v].overlaps=newoverlaps;
+	        	kData[v].invDist=newoverlaps;
 	        }
 	        rData[v].aim=-1;
 	        count++;
@@ -12833,7 +12840,7 @@ public class PackData{
 
 	  public void free_overlaps() {
 		  for (int v=1;v<=nodeCount;v++)
-			  kData[v].overlaps=null;
+			  kData[v].invDist=null;
 		  overlapStatus=false;
 	  }
 	  
@@ -12866,10 +12873,10 @@ public class PackData{
 	    kData[vert].bdryFlag=0;
 	    rData[vert].aim=2.0*Math.PI;
 	    if (overlapStatus) { // average the overlaps with v and next 
-	        vert_next_angle=(0.5)*(kData[vert].overlaps[0]+
-	  			     kData[vert].overlaps[kData[vert].num]);
-	        kData[vert].overlaps[0]=
-	  	kData[vert].overlaps[kData[vert].num]=vert_next_angle;
+	        vert_next_angle=(0.5)*(getInvDist(vert,kData[vert].flower[0])+
+	  			     getInvDist(vert,kData[vert].flower[kData[vert].num]));
+	        set_single_invDist(vert,kData[vert].flower[0],vert_next_angle);
+	        set_single_invDist(vert,kData[vert].flower[kData[vert].num],vert_next_angle);
 	    }
 
 	    /* if next and v share common neighbors: either {v,vert,next} or
@@ -12890,32 +12897,32 @@ public class PackData{
 	        if (overlapStatus) {
 	  	  newoverlaps=new double[newnum+1];
 	  	  next_w_angle=(0.5)*
-	  	    (kData[w].overlaps[0]+
-	  	     kData[w].overlaps[kData[w].num]);
+	  	    (getInvDist(w,kData[w].flower[0])+
+	  	     getInvDist(w,kData[w].flower[kData[w].num]));
 	        }
 	        hold=kData[next].num;
 	        for (int i=0;i<=kData[next].num;i++) {
 	  	  newflower[i]=kData[next].flower[i];
-	  	  if (overlapStatus) newoverlaps[i]=kData[next].overlaps[i];
+	  	  if (overlapStatus) newoverlaps[i]=getInvDist(next,kData[next].flower[i]);
 	        }
 	        for (int i=1;i<=kData[v].num;i++) {
 	  	  newflower[i+kData[next].num]=kData[v].flower[i];
 	  	  if (overlapStatus) newoverlaps[i+kData[next].num]=
-	  				   kData[next].overlaps[i];
+	  				   getInvDist(next,kData[next].flower[i]);
 	        }
 	        kData[next].flower=newflower;
 	        kData[next].num=newnum;
 	        if (overlapStatus) {
-	  	  kData[next].overlaps=newoverlaps;
-	  	  kData[next].overlaps[0]=
-	  	    kData[next].overlaps[newnum]=vert_next_angle;
-	  	  kData[next].overlaps[hold]=next_w_angle;	
+	  	  kData[next].invDist=newoverlaps;
+	  	  set_single_invDist(next,kData[next].flower[0],vert_next_angle);
+	  	  set_single_invDist(next,kData[next].flower[newnum],vert_next_angle);
+	  	  set_single_invDist(next,kData[next].flower[hold],next_w_angle);	
 	        }
 	        // fix up w 
 	        kData[w].flower[kData[w].num]=next;
 	        if (overlapStatus)
-	  	kData[w].overlaps[0]=kData[w].overlaps[kData[w].num]
-	  	  = vert_next_angle;
+	        	set_single_invDist(w,kData[w].flower[0],vert_next_angle);
+	        	set_single_invDist(w,kData[w].flower[kData[w].num],vert_next_angle);
 	        kData[next].bdryFlag=kData[w].bdryFlag=0;
 	        rData[next].aim=rData[w].aim=2.0*Math.PI;
 	      }
@@ -12929,19 +12936,19 @@ public class PackData{
 	        for (int i=0;i<=kData[v].num;i++) {
 	  	  newflower[i]=kData[v].flower[i];
 	  	  if (overlapStatus)
-	  	    newoverlaps[i]=kData[v].overlaps[i];
+	  	    newoverlaps[i]=getInvDist(v,kData[v].flower[i]);
 	        }
 	        for (int i=1;i<=kData[next].num;i++) {
-	  	  newflower[i+kData[v].num]=kData[next].flower[i];
-	  	  if (overlapStatus)
-	  	    newoverlaps[i+kData[v].num]=kData[v].overlaps[i];
+	        	newflower[i+kData[v].num]=kData[next].flower[i];
+	        	if (overlapStatus)
+	        		newoverlaps[i+kData[v].num]=getInvDist(v,kData[v].flower[i]);
 	        }
 	        if (overlapStatus)
-	  	newflower[kData[v].num]=(int) vert_next_angle;
+	        	newflower[kData[v].num]=(int) vert_next_angle;
 	        kData[next].flower=newflower;
 	        kData[next].num=newnum;
 	        if (overlapStatus) {
-	  	  kData[w].overlaps=newoverlaps;
+	        	kData[w].invDist=newoverlaps;
 	        }
 	        rData[next].aim=-1.0;
 	    }
@@ -13311,22 +13318,30 @@ public class PackData{
 	  
 	  /**
 	   * Return schwarzian for edge <v,w>
-	   * @param fg
-	   * @return
+	   * @param es EdgeSimple
+	   * @return double, 
 	   */
 	  public double getSchwarzian(EdgeSimple es) { // given <v,w>
+		  if (packDCEL!=null) {
+			  HalfEdge he=packDCEL.findHalfEdge(es);
+			  if (he==null)
+				  throw new DataException("schwarzian failure: "+
+						  es.v+" and "+es.w+" are not neighbors");
+			  return he.getSchwarzain();
+		  }
+		  
+		  // else check in kData.
 		  int k=nghb(es.v,es.w);
 		  if (k<0) 
 			  throw new DataException("schwarzian failure: "+
 					  es.v+" and "+es.w+" are not neighbors");
 		  return kData[es.v].schwarzian[k];
-		  
 	  }
 	  
 	  /**
 	   * Return schwarzian for  dual edge <f,g>, 
-	   * @param fg
-	   * @return
+	   * @param fg GraphSimple
+	   * @return double
 	   */
 	  public double getSchwarzian(GraphSimple fg) {
 		  return getSchwarzian(reDualEdge(fg.v,fg.w));
@@ -13343,21 +13358,47 @@ public class PackData{
 	  }
 	  
 	  /**
-	   * Store schwarzian for edge <v,w>
+	   * Store schwarzian for edge <v,w> either in packDCEL
+	   * or in kData.
 	   * @param v int
 	   * @param w int
 	   * @param sch double
 	   * @return int 1 on success
 	   */
 	  public int setSchwarzian(int v,int w,double sch) {
+		  if (packDCEL!=null) {
+			  HalfEdge he=packDCEL.findHalfEdge(v,w);
+			  he.setSchwarzian(sch);
+			  he.twin.setSchwarzian(sch);
+			  return 1;
+		  }
 		  try {
-			  int indx_vw=nghb(v,w);
-			  int indx_wv=nghb(w,v);
-			  kData[v].schwarzian[indx_vw]=sch;
-			  kData[w].schwarzian[indx_wv]=sch;
+			  kData[v].schwarzian[nghb(v,w)]=sch;
+			  kData[w].schwarzian[nghb(w,v)]=sch;
 			  return 1;
 		  } catch(Exception ex) {}
 		  return 0;
+	  }
+	  
+	  /**
+	   * Return the inversive distance recorded for edge from
+	   * v to nghb w. 1.0 is default.
+	   * @param v int
+	   * @param w int
+	   * @return double
+	   */
+	  public double getInvDist(int v,int w) {
+		  if (packDCEL!=null) {
+			  HalfEdge he=packDCEL.findHalfEdge(v,w);
+			  if (he!=null)
+				  return he.getSchwarzain();
+			  throw new CombException("invDist error: <"+v+","+w+"> is not a valid edge");
+		  }
+		  
+		  // else look in kData
+		  if (!overlapStatus)
+			  return 1.0;
+		  return kData[v].invDist[nghb(v,w)];
 	  }
 	  
 	  /** 
@@ -13373,20 +13414,28 @@ public class PackData{
 	   * @return int, 1 on success
 	   * @exception ParserException if space has not been allocated. 
 	   */
-	  public int set_single_overlap(int v,int j,double invDist) {
-	    int w,indx;
-
+	  public int set_single_invDist(int v,int w,double invDist) {
 	    if (!overlapStatus) throw new ParserException("set_overlaps: space not allocated");
-	    if (j<0 || j>kData[v].num) throw new ParserException("set_single_overlap: error in arg 2");
-	    w=kData[v].flower[j];
-	    indx=nghb(v,w);
-	    kData[v].overlaps[indx]=invDist;
-	    if (indx==0 && kData[v].bdryFlag==0) 
-	      kData[v].overlaps[kData[v].num]=invDist;
+	    int indx=nghb(v,w);
+	    if (indx<0)
+	    	throw new ParserException("set_single_overlap error: "+w+" is not a petal of "+v);
+	    if (packDCEL!=null) {
+	    	HalfEdge he=packDCEL.findHalfEdge(v,w);
+	    	if (he==null)
+		    	throw new ParserException("set_single_overlap error: "+w+" is not a petal of "+v);
+	    	he.setInvDist(invDist);
+	    	he.twin.setInvDist(invDist);
+	    	return 1;
+	    }
+	    
+	    // else, store in kData
+	    kData[v].invDist[indx]=invDist;
+	    if (indx==0 && kData[v].bdryFlag==0)
+	    	kData[v].invDist[kData[v].num]=invDist;
 	    indx=nghb(w,v);
-	    kData[w].overlaps[indx]=invDist;
-	    if (indx==0 && kData[w].bdryFlag==0) 
-	      kData[w].overlaps[kData[w].num]=invDist;
+	    kData[w].invDist[indx]=invDist;
+	    if (indx==0 && kData[w].bdryFlag==0)
+	    	kData[w].invDist[kData[w].num]=invDist;
 	    return 1;
 	  }
 	  
@@ -13774,9 +13823,9 @@ public class PackData{
 			if (kData[v].bdryFlag != 0 && kData[v].num == 2) {
 				if (!overlapStatus && alloc_overlaps() == 0)
 					return 0;
-				set_single_overlap(v, 1, -0.5); // overlap 2*pi/3 
-				set_single_overlap(v, 0, 0.5); // overlap pi/3 
-				set_single_overlap(v, 2, 0.5); // overlap pi/3 
+				set_single_invDist(v, kData[v].flower[1], -0.5); // overlap 2*pi/3 
+				set_single_invDist(v, kData[v].flower[0], 0.5); // overlap pi/3 
+				set_single_invDist(v, kData[v].flower[2], 0.5); // overlap pi/3 
 				count++;
 			}
 		}
@@ -13802,7 +13851,7 @@ public class PackData{
 	   for (int v=1;v<=nodeCount;v++) {
 	     if (kData[v].bdryFlag==0 && kData[v].num==4) {
 	       for (int j=0;j<4;j++) 
-	 	  if (set_single_overlap(v,j,Math.cos(Math.PI/2.0))!=0) count++;
+	 	  if (set_single_invDist(v,kData[v].flower[j],Math.cos(Math.PI/2.0))!=0) count++;
 	     }
 	   }
 	   if (count==0 && setflag!=0) free_overlaps();
@@ -14054,11 +14103,11 @@ public class PackData{
 		for (int k = 0; k <= kData[new_V].num; k++)
 			kData[new_V].flower[k] = kData[v].flower[k + ind];
 		if (overlapStatus) {
-			kData[new_V].overlaps = new double[kData[new_V].num + 1];
+			kData[new_V].invDist = new double[kData[new_V].num + 1];
 			for (int k = 0; k <= kData[new_V].num; k++)
-				kData[new_V].overlaps[k] = kData[v].overlaps[k + ind];
+				set_single_invDist(new_V,kData[new_V].flower[k],getInvDist(v,kData[v].flower[k + ind]));
 		} else
-			kData[new_V].overlaps = null;
+			kData[new_V].invDist = null;
 		kData[new_V].bdryFlag = 1;
 		rData[new_V].aim = -1.0;
 		setRadius(new_V,getRadius(v));
@@ -14078,13 +14127,13 @@ public class PackData{
 		for (int k = 0; k <= ind; k++)
 			newflower[k] = kData[v].flower[k];
 		kData[v].flower = newflower;
-		if (kData[v].overlaps != null) {
+		if (kData[v].invDist != null) {
 			newoverlaps = new double[ind + 1];
 			for (int k = 0; k <= ind; k++)
-				newoverlaps[k] = kData[v].overlaps[k];
-			kData[v].overlaps = newoverlaps;
+				newoverlaps[k] = getInvDist(v,kData[v].flower[k]);
+			kData[v].invDist = newoverlaps;
 		} else
-			kData[v].overlaps=null;
+			kData[v].invDist=null;
 		kData[v].num = ind;
 		
 		// consider w: if bdry, we have to clone it as well
@@ -14097,11 +14146,11 @@ public class PackData{
 				kData[new_W].flower[k] = kData[w].flower[k];
 			kData[new_W].flower[kData[new_W].num]=new_V;  // points to v's clone
 			if (overlapStatus) {
-				kData[new_W].overlaps = new double[kData[new_W].num + 1];
+				kData[new_W].invDist = new double[kData[new_W].num + 1];
 				for (int k = 0; k <= kData[new_W].num; k++)
-					kData[new_W].overlaps[k] = kData[w].overlaps[k];
+					set_single_invDist(new_W,kData[new_W].flower[k],getInvDist(w,kData[w].flower[k]));
 			} else
-				kData[new_W].overlaps = null;
+				kData[new_W].invDist = null;
 			kData[new_W].bdryFlag = 1;
 			rData[new_W].aim = -1.0;
 			setRadius(new_W, getRadius(w));
@@ -14132,12 +14181,12 @@ public class PackData{
 				newflower[k] = kData[w].flower[(k + indwv) % kData[w].num];
 			newflower[kData[w].num] = new_V;
 			kData[w].flower = newflower;
-			if (kData[w].overlaps != null) {
+			if (kData[w].invDist != null) {
 				newoverlaps = new double[kData[w].num + 1];
 				for (int k = 0; k < kData[w].num; k++)
-					newoverlaps[k] = kData[w].overlaps[(k + indwv) % kData[w].num];
-				newoverlaps[kData[w].num] = kData[w].overlaps[indwv];
-				kData[w].overlaps = newoverlaps;
+					newoverlaps[k] = getInvDist(w,kData[w].flower[(k + indwv) % kData[w].num]);
+				newoverlaps[kData[w].num] = getInvDist(w,kData[w].flower[indwv]);
+				kData[w].invDist = newoverlaps;
 			}
 			kData[w].bdryFlag = 1;
 		}
@@ -14321,25 +14370,6 @@ public class PackData{
 	  return 1;
 	}
 	
-	public double get_invDist(int v,int w) {
-		if (!overlapStatus)
-			return 1.0;
-		if (packDCEL==null) {
-			int j=nghb(v,w);
-			if (j>=0)
-				return kData[v].overlaps[j];
-			else 
-				throw new CombException("invDist error: "+w+" is not a neighbor of "+v);
-		}
-		else {
-			HalfEdge he=packDCEL.findHalfEdge(v,w);
-			if (he!=null)
-				return he.getInvDist();
-			else
-				throw new CombException("invDist error: "+v+" and "+w+" do not share a halfedge");
-		}
-	}
-	
 	/**
 	 * Layout faces along a given facelist, recomputing as you go
 	 * @param facelist
@@ -14370,9 +14400,9 @@ public class PackData{
 
 				CircleSimple sc;
 				if (overlapStatus) { // oj for edge opposite vj
-					double o0 = kData[v1].overlaps[nghb(v1, v2)];
-					double o1 = kData[v2].overlaps[nghb(v2, v0)];
-					double o2 = kData[v0].overlaps[nghb(v0, v1)];
+					double o0 = getInvDist(v1,v2);
+					double o1 = getInvDist(v2,v0);
+					double o2 = getInvDist(v0,v1);
 					sc = CommonMath.comp_any_center(getCenter(v0),getCenter(v1),
 							getRadius(v0), getRadius(v1),
 							getRadius(v2), o0, o1, o2,hes);
@@ -14436,9 +14466,9 @@ public class PackData{
 				// compute new center
 				CircleSimple sc;
 				if (overlapStatus) { // oj for edge opposite vj
-					myOvl[0] = kData[myVerts[1]].overlaps[nghb(myVerts[1],myVerts[2])];
-					myOvl[1] = kData[myVerts[2]].overlaps[nghb(myVerts[2],myVerts[0])];
-					myOvl[2] = kData[myVerts[0]].overlaps[nghb(myVerts[0],myVerts[1])];
+					myOvl[0] = getInvDist(myVerts[1],myVerts[2]);
+					myOvl[1] = getInvDist(myVerts[2],myVerts[0]);
+					myOvl[2] = getInvDist(myVerts[0],myVerts[1]);
 					sc = CommonMath.comp_any_center(myCenters[0],myCenters[1],myRadii[0],myRadii[1],
 							myRadii[2],myOvl[0],myOvl[1],myOvl[2],hes);
 				} 
@@ -14583,9 +14613,9 @@ public class PackData{
 					// compute and store new center
 					CircleSimple sc;
 					if (overlapStatus) { // oj for edge opposite vj
-						myOvl[0] = kData[myVerts[1]].overlaps[nghb(myVerts[1],myVerts[2])];
-						myOvl[1] = kData[myVerts[2]].overlaps[nghb(myVerts[2],myVerts[0])];
-						myOvl[2] = kData[myVerts[0]].overlaps[nghb(myVerts[0],myVerts[1])];
+						myOvl[0] = getInvDist(myVerts[1],myVerts[2]);
+						myOvl[1] = getInvDist(myVerts[2],myVerts[0]);
+						myOvl[2] = getInvDist(myVerts[0],myVerts[1]);
 						sc = CommonMath.comp_any_center(myCenters[0],myCenters[1],myRadii[0],myRadii[1],
 								myRadii[2],myOvl[0],myOvl[1],myOvl[2],hes);
 					} 
@@ -14771,9 +14801,9 @@ public class PackData{
 					CircleSimple sc;
 					if (p.overlapStatus) { // oj for edge opposite vj
 						double []myOvl=new double[3];
-						myOvl[0] = p.kData[myVerts[1]].overlaps[p.nghb(myVerts[1],myVerts[2])];
-						myOvl[1] = p.kData[myVerts[2]].overlaps[p.nghb(myVerts[2],myVerts[0])];
-						myOvl[2] = p.kData[myVerts[0]].overlaps[p.nghb(myVerts[0],myVerts[1])];
+						myOvl[0] = p.getInvDist(myVerts[1],myVerts[2]);
+						myOvl[1] = p.getInvDist(myVerts[2],myVerts[0]);
+						myOvl[2] = p.getInvDist(myVerts[0],myVerts[1]);
 						sc = CommonMath.comp_any_center(myCenters[0],myCenters[1],myRadii[0],myRadii[1],
 								myRadii[2],myOvl[0],myOvl[1],myOvl[2],p.hes);
 					} 
@@ -14932,9 +14962,9 @@ public class PackData{
 					// compute and store new center
 					CircleSimple sc;
 					if (overlapStatus) { // oj for edge opposite vj
-						myOvl[0] = kData[myVerts[1]].overlaps[nghb(myVerts[1],myVerts[2])];
-						myOvl[1] = kData[myVerts[2]].overlaps[nghb(myVerts[2],myVerts[0])];
-						myOvl[2] = kData[myVerts[0]].overlaps[nghb(myVerts[0],myVerts[1])];
+						myOvl[0] = getInvDist(myVerts[1],myVerts[2]);
+						myOvl[1] = getInvDist(myVerts[2],myVerts[0]);
+						myOvl[2] = getInvDist(myVerts[0],myVerts[1]);
 						sc = CommonMath.comp_any_center(myCenters[0],myCenters[1],myRadii[0],myRadii[1],
 								myRadii[2],myOvl[0],myOvl[1],myOvl[2],hes);
 					} 
@@ -15076,9 +15106,9 @@ public class PackData{
 		double o1=1.0;
 		double o2=1.0;
 		if (overlapStatus) { // oj for edge opposite vj
-			o0=kData[v1].overlaps[nghb(v1,v2)];
-			o1=kData[v2].overlaps[nghb(v2,v0)];
-			o2=kData[v0].overlaps[nghb(v0,v1)];
+			o0=getInvDist(v1,v2);
+			o1=getInvDist(v2,v0);
+			o2=getInvDist(v0,v1);
 			sc = CommonMath.comp_any_center(getCenter(v0),getCenter(v1),r0,r1,r2,o0,o1,o2,hes);
 		} 
 		else {
@@ -15253,9 +15283,8 @@ public class PackData{
 					if (j>=0 && (ne=Translators.edge_translate(this,vertexMap,
 							edge,q,putget).get(0))!=null) {
 						if (invD) {
-							double ovlp=source_p.kData[edge.v].overlaps[j];
-							count+=target_p.set_single_overlap(ne.v,
-									target_p.nghb(ne.v,ne.w),ovlp);
+							double ovlp=source_p.getInvDist(edge.v,kData[edge.v].flower[j]);
+							count+=target_p.set_single_invDist(ne.v,ne.w,ovlp);
 						}
 					}
 				} catch (Exception ex) {}
@@ -16605,8 +16634,8 @@ public class PackData{
 				newol = new double[num + 1];
 				for (int j = 0; j <= num; j++)
 					// change orientation
-					newol[j] = kData[i].overlaps[num - j];
-				newK_ptr[i + node].overlaps = newol;
+					newol[j] = getInvDist(i,kData[i].flower[num - j]);
+				newK_ptr[i + node].invDist = newol;
 			}
 		}
 
@@ -16657,11 +16686,11 @@ public class PackData{
 					if (overlapStatus) {
 						newol = new double[2 * num + 1];
 						for (int j = 0; j <= num; j++)
-							newol[j] = newK_ptr[v].overlaps[j];
+							newol[j] = newK_ptr[v].invDist[j];
 						for (int j = 1; j < num; j++)
-							newol[j + num] = newK_ptr[v + node].overlaps[j];
-						newK_ptr[v].overlaps = newol;
-						newK_ptr[v].overlaps[2 * num] = newK_ptr[v].overlaps[0];
+							newol[j + num] = newK_ptr[v + node].invDist[j];
+						newK_ptr[v].invDist = newol;
+						newK_ptr[v].invDist[2 * num] = newK_ptr[v].invDist[0];
 					}
 					/* remove refs to old nums; flowers get only (temporarily) good numbers */
 					for (int j = 0; j <= kData[v].num; j++) {

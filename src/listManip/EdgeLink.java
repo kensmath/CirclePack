@@ -567,7 +567,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 					for (int j=0;j<packData.kData[v].num+packData.kData[v].bdryFlag;j++) {
 						w=packData.kData[v].flower[j];
 						// add only if w>v
-						if (w>v && Math.abs(packData.kData[v].overlaps[j]-1.0)>PackData.TOLER) {
+						if (w>v && Math.abs(packData.getInvDist(v,packData.kData[v].flower[j])-1.0)>PackData.TOLER) {
 							add(new EdgeSimple(v,w));
 							count++;
 						}

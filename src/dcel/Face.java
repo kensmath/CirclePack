@@ -1,5 +1,6 @@
 package dcel;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -20,6 +21,7 @@ public class Face {
 
 	public HalfEdge edge; // 'this' is on the left of its halfedge
 	public int faceIndx;  // utility index for this face
+	public Color color;
 	
 	// Constructor
 	public Face() {

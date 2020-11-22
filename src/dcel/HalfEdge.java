@@ -126,6 +126,11 @@ public class HalfEdge {
 		myRedEdge=redE;
 	}
 	
+	/**
+	 * set schwarzian of this edge; user must handle setting of
+	 * twin edge.
+	 * @param sch double
+	 */
 	public void setSchwarzian(double sch) {
 		schwarzian=sch;
 	}

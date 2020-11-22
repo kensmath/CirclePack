@@ -264,7 +264,7 @@ public class QuadBranchPt extends GenBranchPt {
 				if (ovlp<-1.0 || ovlp>1.0)
 					throw new ParserException("overlap not in [-1,1]");
 				cosOver=Math.cos(ovlp*Math.PI);
-				myPackData.set_single_overlap(1,myPackData.nghb(1,2),cosOver);
+				myPackData.set_single_invDist(1,2,cosOver);
 				count=1;
 			} catch(Exception ex) {
 				throw new ParserException();

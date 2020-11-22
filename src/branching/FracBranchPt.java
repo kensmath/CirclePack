@@ -353,9 +353,9 @@ public class FracBranchPt extends GenBranchPt {
 						throw new ParserException("inv distance not in (0,1]");
 					cos_overs[i]=Math.cos(ovlp*Math.PI);
 				}
-				myPackData.set_single_overlap(2,myPackData.nghb(2,3),cos_overs[0]);
-				myPackData.set_single_overlap(3,myPackData.nghb(3,1),cos_overs[1]);
-				myPackData.set_single_overlap(1,myPackData.nghb(1,2),cos_overs[2]);
+				myPackData.set_single_invDist(2,3,cos_overs[0]);
+				myPackData.set_single_invDist(3,1,cos_overs[1]);
+				myPackData.set_single_invDist(1,2,cos_overs[2]);
 				count=3;
 			} catch(Exception ex) {
 				throw new ParserException();

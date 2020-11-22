@@ -117,7 +117,7 @@ public class CookieMonster {
 			for (int v = 1; v <= monsterPackData.nodeCount; v++)
 				for (int j=0;j<(monsterPackData.kData[v].num + monsterPackData.kData[v].bdryFlag);j++)
 					if (v < monsterPackData.kData[v].flower[j]
-							&& (oangle=monsterPackData.kData[v].overlaps[j])!=1.0) { // non-default?
+							&& (oangle=monsterPackData.getInvDist(v,monsterPackData.kData[v].flower[j]))!=1.0) { // non-default?
 						overlaps.add(new EdgeMore(v,monsterPackData.kData[v].flower[j], oangle));
 						ocount++;
 					}
@@ -240,13 +240,15 @@ public class CookieMonster {
 			while (nlap.hasNext()) {
 				edgeM = (EdgeMore) nlap.next();
 				indx = monsterPackData.nghb(edgeM.v, edgeM.w);
-				monsterPackData.kData[edgeM.v].overlaps[indx] = edgeM.overlap;
+				monsterPackData.set_single_invDist(edgeM.v,edgeM.w,edgeM.overlap);
 				if (monsterPackData.kData[edgeM.v].bdryFlag == 0 && indx == 0)
-					monsterPackData.kData[edgeM.v].overlaps[monsterPackData.kData[edgeM.v].num] = edgeM.overlap;
+					monsterPackData.set_single_invDist(edgeM.v,
+							monsterPackData.kData[edgeM.v].flower[monsterPackData.kData[edgeM.v].num],edgeM.overlap);
 				indx = monsterPackData.nghb(edgeM.w, edgeM.v);
-				monsterPackData.kData[edgeM.w].overlaps[indx] = edgeM.overlap;
+				monsterPackData.set_single_invDist(edgeM.w,edgeM.w,edgeM.overlap);
 				if (monsterPackData.kData[edgeM.w].bdryFlag == 0 && indx == 0)
-					monsterPackData.kData[edgeM.w].overlaps[monsterPackData.kData[edgeM.w].num] = edgeM.overlap;
+					monsterPackData.set_single_invDist(edgeM.w,
+							monsterPackData.kData[edgeM.w].flower[monsterPackData.kData[edgeM.w].num],edgeM.overlap);
 			}
 		} 
 		
@@ -572,7 +574,7 @@ public class CookieMonster {
 			Color col=p.kData[V].color;
 			newP.kData[v].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
 			newP.kData[v].mark=p.kData[V].mark;
-			newP.kData[v].overlaps=null;
+			newP.kData[v].invDist=null;
 			
 			newP.rData[v]=p.rData[V].clone();
 		}
@@ -718,9 +720,9 @@ public class CookieMonster {
 		}
 		if (monsterPackData.overlapStatus) // overlaps? replicate data.
 			for (int i = 1; i <= old_nodecount; i++) {
-				nK_ptr[i].overlaps = new double[nK_ptr[i].num + 1];
+				nK_ptr[i].invDist = new double[nK_ptr[i].num + 1];
 				for (int j = 0; j <= nK_ptr[i].num; j++)
-					nK_ptr[i].overlaps[j] = monsterPackData.kData[i].overlaps[j];
+					nK_ptr[i].invDist[j] = monsterPackData.getInvDist(i,monsterPackData.kData[i].flower[j]);
 			}
 		new_faces = new Face[monsterPackData.faceCount + 1];
 		for (int j = 1; j <= monsterPackData.faceCount; j++) {
@@ -758,7 +760,7 @@ public class CookieMonster {
 				nK_ptr[indx].num = temp.num;
 				nK_ptr[indx].flower = new int[nK_ptr[indx].num + 1];
 				if (monsterPackData.overlapStatus)
-					nK_ptr[indx].overlaps = new double[nK_ptr[indx].num + 1];
+					nK_ptr[indx].invDist = new double[nK_ptr[indx].num + 1];
 				Color col=monsterPackData.kData[vert].color;
 				nK_ptr[indx].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
 				nR_ptr[indx].rad = monsterPackData.getRadius(vert);

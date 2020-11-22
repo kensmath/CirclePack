@@ -339,16 +339,28 @@ public class DisplayParser {
 
 				// now proceed with layout
 				if (c == 'F') {
-					count += p.layoutTree(null, graphlist, dispFlags,null,
-							true, useRed,-1.0);
+					if (p.packDCEL!=null) 
+						count += p.packDCEL.layoutTree(null, graphlist, dispFlags,null,
+								true, false,-1.0);
+					else 
+						count += p.layoutTree(null, graphlist, dispFlags,null,
+								true, useRed,-1.0);
 				} 
 				else if (c == 'C') {
-					count += p.layoutTree(null, graphlist, null,dispFlags,
-							true,useRed,-1.0);
+					if (p.packDCEL!=null) 
+						count += p.packDCEL.layoutTree(null, graphlist, null,dispFlags,
+								true, false,-1.0);
+					else
+						count += p.layoutTree(null, graphlist, null,dispFlags,
+								true,useRed,-1.0);
 				} 
 				else if (c == 'B') { // we have only one color we can use
-					count += p.layoutTree(null, graphlist, dispFlags,dispFlags,
-							true, useRed,-1.0);
+					if (p.packDCEL!=null) 
+						count += p.packDCEL.layoutTree(null, graphlist,dispFlags,dispFlags,
+								true, false,-1.0);
+					else
+						count += p.layoutTree(null, graphlist, dispFlags,dispFlags,
+								true, useRed,-1.0);
 				}
 				break;
 			} // done with C/B/F

@@ -359,7 +359,7 @@ class CraneFace {
 		for (int j=0;j<3;j++) {
 			int v=packData.faces[face].vert[j];
 			int w=packData.faces[face].vert[(j+1)%3];
-			packData.set_single_overlap(v,packData.nghb(v,w),overlps[(j+2)%3]);
+			packData.set_single_invDist(v,w,overlps[(j+2)%3]);
 		}
 		
 		return 1;

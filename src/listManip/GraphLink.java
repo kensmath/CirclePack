@@ -255,7 +255,7 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 				glink.add(new EdgeSimple(edge));
 			}
 			else if (hit[edge.w]!=0) // get the root 
-				glink.add(new EdgeSimple(edge));
+				glink.add(0,new EdgeSimple(edge));
 		}
 		return glink;
 	}

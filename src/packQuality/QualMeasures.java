@@ -52,7 +52,7 @@ public class QualMeasures {
 				double inv_dist=1.0;
 				int indx = p.nghb(edge.v, edge.w);
 				if (p.overlapStatus && indx >= 0)
-					inv_dist=p.kData[edge.v].overlaps[indx];
+					inv_dist=p.getInvDist(edge.v,p.kData[edge.v].flower[indx]);
 				Complex z1=p.getCenter(edge.v);
 				Complex z2=p.getCenter(edge.w);
 				double r1=p.getRadius(edge.v);
@@ -178,7 +178,7 @@ public class QualMeasures {
 			double rw=p.getRadius(w);
 			if (p.overlapStatus && (indx = p.nghb(v, w)) >= 0)
 				// spherical cosine law: cos(c)=cos(a)*cos(b)+sin(a)*sin(b)*cos(theta) 
-				return Math.acos(Math.cos(rv)*Math.cos(rw)+Math.sin(rv)*Math.sin(rw)*p.kData[v].overlaps[indx]);
+				return Math.acos(Math.cos(rv)*Math.cos(rw)+Math.sin(rv)*Math.sin(rw)*p.getInvDist(v,p.kData[v].flower[indx]));
 			return (rv+rw);
 		} 
 		
@@ -186,7 +186,7 @@ public class QualMeasures {
 			double rv=p.getRadius(v);
 			double rw=p.getRadius(w);
 			if (p.overlapStatus && (indx = p.nghb(v, w)) >= 0)
-				return Math.sqrt(rv*rv+rw*rw+2.0*rv*rw*p.kData[v].overlaps[indx]);
+				return Math.sqrt(rv*rv+rw*rw+2.0*rv*rw*p.getInvDist(v,p.kData[v].flower[indx]));
 			return (rv+rw);
 		} 
 		
@@ -195,7 +195,7 @@ public class QualMeasures {
 				return -1;
 			if (p.overlapStatus && (indx = p.nghb(v, w)) >= 0)
 				return (HyperbolicMath.h_invdist_length(p.getRadius(v),
-						p.getRadius(w), p.kData[v].overlaps[indx]));
+						p.getRadius(w), p.getInvDist(v,p.kData[v].flower[indx])));
 			else
 				return (p.getActualRadius(v) + p.getActualRadius(w));
 		}
@@ -375,7 +375,7 @@ public class QualMeasures {
 		int w=edge.w;
 		if (p.overlapStatus) {
 			int indx=p.nghb(v,w);
-			inv_dist=p.kData[v].overlaps[indx];
+			inv_dist=p.getInvDist(v,p.kData[v].flower[indx]);
 		}
 		Complex z1=p.getCenter(v);
 		Complex z2=p.getCenter(w);

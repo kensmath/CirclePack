@@ -474,7 +474,7 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 			return;
 		double invDist=1.0;
 		if (p.overlapStatus) {
-			double iD=p.kData[edge.v].overlaps[j];
+			double iD=p.getInvDist(edge.v,edge.w);
 			if (j>=0 && Math.abs(1.0-iD)>.0000001)
 				invDist=iD;
 		}

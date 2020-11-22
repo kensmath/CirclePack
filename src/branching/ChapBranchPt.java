@@ -680,10 +680,10 @@ public class ChapBranchPt extends GenBranchPt {
 		
 		// set overlaps
 		myPackData.alloc_overlaps();
-		myPackData.set_single_overlap(chap[1],myPackData.nghb(chap[1],preJump[1]),cos_overs[1]);
-		myPackData.set_single_overlap(chap[1],myPackData.nghb(chap[1],jumpCircle[1]),(-1.0)*cos_overs[1]);
-		myPackData.set_single_overlap(chap[2],myPackData.nghb(chap[2],preJump[2]),cos_overs[2]);
-		myPackData.set_single_overlap(chap[2],myPackData.nghb(chap[2],jumpCircle[2]),(-1.0)*cos_overs[2]);
+		myPackData.set_single_invDist(chap[1],preJump[1],cos_overs[1]);
+		myPackData.set_single_invDist(chap[1],jumpCircle[1],(-1.0)*cos_overs[1]);
+		myPackData.set_single_invDist(chap[2],preJump[2],cos_overs[2]);
+		myPackData.set_single_invDist(chap[2],jumpCircle[2],(-1.0)*cos_overs[2]);
 		
 		return 1;
 	}
@@ -855,10 +855,10 @@ public class ChapBranchPt extends GenBranchPt {
 				
 		// set overlaps
 		modifyPack.alloc_overlaps();
-		modifyPack.set_single_overlap(chap[1],modifyPack.nghb(chap[1],preJump[1]),cos_overs[1]);
-		modifyPack.set_single_overlap(chap[1],modifyPack.nghb(chap[1],jumpCircle[1]),(-1.0)*cos_overs[1]);
-		modifyPack.set_single_overlap(chap[2],modifyPack.nghb(chap[2],preJump[2]),cos_overs[2]);
-		modifyPack.set_single_overlap(chap[2],modifyPack.nghb(chap[2],jumpCircle[2]),(-1.0)*cos_overs[2]);
+		modifyPack.set_single_invDist(chap[1],preJump[1],cos_overs[1]);
+		modifyPack.set_single_invDist(chap[1],jumpCircle[1],(-1.0)*cos_overs[1]);
+		modifyPack.set_single_invDist(chap[2],preJump[2],cos_overs[2]);
+		modifyPack.set_single_invDist(chap[2],jumpCircle[2],(-1.0)*cos_overs[2]);
 		
 		// unbranched packing to start
 		try {

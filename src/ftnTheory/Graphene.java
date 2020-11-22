@@ -1435,8 +1435,7 @@ public class Graphene extends PackExtender {
 				rad[j]=packData.getRadius(verts[j]);
 			if (packData.overlapStatus) {
 				for (int j=0;j<3;j++) {
-					ov[j]=packData.kData[verts[(j+1)%3]].
-						overlaps[packData.nghb((j+1)%3,(j+2)%3)];
+					ov[j]=packData.getInvDist(verts[(j+1)%3],verts[(j+2)%3]);
 				}
 			}
 

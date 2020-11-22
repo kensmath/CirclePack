@@ -2342,7 +2342,7 @@ public class MicroGrid extends PackExtender {
 			if (maybe) {
 				for (int j=0;(j<3 && !marked);j++) {
 					// an edge overlap exceeds the given threshold?
-					if (q.getInvDist(vert[j],q.nghb(vert[j],vert[(j+1)%3]))>thresh)
+					if (q.getInvDist(vert[j],vert[(j+1)%3])>thresh)
 						marked=true;
 				}
 			}
@@ -2367,9 +2367,11 @@ public class MicroGrid extends PackExtender {
 			    q.kData[newval].flower[1]=q.faces[f].vert[1];
 			    q.kData[newval].flower[2]=q.faces[f].vert[2];
 			    if (q.overlapStatus) {
-			    	q.kData[newval].overlaps=new double[4];
-			    	q.kData[newval].overlaps[0]=q.kData[newval].overlaps[1]=1.0;
-			    	q.kData[newval].overlaps[2]=q.kData[newval].overlaps[3]=1.0;
+			    	q.kData[newval].invDist=new double[4];
+			    	q.set_single_invDist(newval,q.kData[newval].flower[0],1.0);
+			    	q.set_single_invDist(newval,q.kData[newval].flower[1],1.0);
+			    	q.set_single_invDist(newval,q.kData[newval].flower[2],1.0);
+			    	q.set_single_invDist(newval,q.kData[newval].flower[0],1.0);
 			    }
 			    q.kData[newval].bdryFlag=0;
 			    q.kData[newval].mark=++count;

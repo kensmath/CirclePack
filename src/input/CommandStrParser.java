@@ -850,7 +850,7 @@ public class CommandStrParser {
 	    			  for (int j=0;j<(packData.kData[v].num+packData.kData[v].bdryFlag);j++) {
 	    				  // only store for petals with larger indices
 	    				  if (v<packData.kData[v].flower[j]
-	    				     && (angle=packData.kData[v].overlaps[j])!=1.0 ) {
+	    				     && (angle=packData.getInvDist(v,packData.kData[v].flower[j]))!=1.0 ) {
 	    					  trace.v=v;
 	    					  trace.w=packData.kData[v].flower[j];
 	    					  trace.angle=angle;
@@ -907,15 +907,14 @@ public class CommandStrParser {
 				      while (trace!=null && trace.next!=null) {
 				    	  int vv=packData.vertexMap.findW(trace.v);
 				    	  int ww=packData.vertexMap.findW(trace.w);
-				    	  packData.set_single_overlap(vv,packData.nghb(vv,ww),trace.angle);
+				    	  packData.set_single_invDist(vv,ww,trace.angle);
 				    	  trace=trace.next;
 				      }
 				  }
 				  else if (overlaps!=null) { // reestablish pnum1 overlaps 
 				      trace=overlaps;
 				      while (trace!=null && trace.next!=null) {
-				    	  packData.set_single_overlap(trace.v,
-				    			  packData.nghb(trace.v,trace.w),trace.angle);
+				    	  packData.set_single_invDist(trace.v,trace.w,trace.angle);
 				    	  trace=trace.next;
 				      }
 				  }
@@ -927,8 +926,8 @@ public class CommandStrParser {
 				    	  	qackData.kData[v].bdryFlag;j++)
 				    		  if (v<qackData.kData[v].flower[j]) {
 				    			  int ww=packData.vertexMap.findW(qackData.kData[v].flower[j]);
-				    			  if ((angle=qackData.kData[v].overlaps[j])!=1.0)
-				    				  packData.set_single_overlap(vv,packData.nghb(vv,ww),angle);
+				    			  if ((angle=qackData.getInvDist(v,qackData.kData[v].flower[j]))!=1.0)
+				    				  packData.set_single_invDist(vv,ww,angle);
 				    		  }
 				      }
 				  }
@@ -8862,10 +8861,10 @@ public class CommandStrParser {
 	    						  factor=Math.exp(randizer.nextGaussian()*pctg);
 	    					  }
 	    					  else factor=low+randizer.nextDouble()*(high/low);
-	    					  value=packData.kData[edge.v].overlaps[j]*factor;
+	    					  value=packData.getInvDist(edge.v,packData.kData[edge.v].flower[j])*factor;
 	    				  }
 	    				  else value=low+randizer.nextDouble()*(high/low);
-	    				  packData.set_single_overlap(edge.v,j,value);
+	    				  packData.set_single_invDist(edge.v,edge.w,value);
 	    				  count++;
 	    			  }
 	    		  }
@@ -8996,7 +8995,7 @@ public class CommandStrParser {
 	    				  Iterator<EdgeSimple> elist=edgelist.iterator();
 	    				  while(elist.hasNext()) {
 	    					  edge=(EdgeSimple)elist.next();
-	    					  count+=packData.set_single_overlap(edge.v,packData.nghb(edge.v, edge.w),1.0);
+	    					  count+=packData.set_single_invDist(edge.v,edge.w,1.0);
 	    				  }
 	    			  }
 	    			  else {
@@ -9017,9 +9016,8 @@ public class CommandStrParser {
 	    			  Iterator<EdgeSimple> elist=edgelist.iterator();
 	    			  while(elist.hasNext()) {
 	    				  edge=(EdgeSimple)elist.next();
-	    				  int nb=packData.nghb(edge.v,edge.w);
-	    				  count+=packData.set_single_overlap(
-	    						  edge.v,nb,packData.comp_inv_dist(edge.v,edge.w));
+	    				  count+=packData.set_single_invDist(
+	    						  edge.v,edge.w,packData.comp_inv_dist(edge.v,edge.w));
 	    				  // note: inv_dist routine not very robust 
 	    			  }
 	    			  packData.fillcurves();
@@ -9038,8 +9036,8 @@ public class CommandStrParser {
 					  while(elist.hasNext()) {
 						  edge=(EdgeSimple)elist.next();
 						  int nb=packData.nghb(edge.v,edge.w);
-						  if (packData.kData[edge.v].overlaps[nb]>uplim)
-						  count+=packData.set_single_overlap(edge.v,packData.nghb(edge.v,edge.w),uplim);
+						  if (packData.getInvDist(edge.v,packData.kData[edge.v].flower[nb])>uplim)
+						  count+=packData.set_single_invDist(edge.v,edge.w,uplim);
 					  }
 	    			  packData.fillcurves();
 	    			  CirclePack.cpb.msg("Cut "+(int)count/2+
@@ -9087,7 +9085,7 @@ public class CommandStrParser {
 	     		  Iterator<EdgeSimple> elist=edgelist.iterator();
 	     		  while (elist.hasNext()) {
 	     			  edge=(EdgeSimple)elist.next();
-	     			  count+=packData.set_single_overlap(edge.v,packData.nghb(edge.v, edge.w),invDist);
+	     			  count+=packData.set_single_invDist(edge.v,edge.w,invDist);
 	     		  }
 				  packData.fillcurves();
 				  CirclePack.cpb.msg("Set "+count+
@@ -9111,7 +9109,7 @@ public class CommandStrParser {
 	    				  Iterator<EdgeSimple> elist=edgelist.iterator();
 	    				  while(elist.hasNext()) {
 	    					  edge=(EdgeSimple)elist.next();
-	    					  count+=packData.set_single_overlap(edge.v,packData.nghb(edge.v, edge.w),1.0);
+	    					  count+=packData.set_single_invDist(edge.v,edge.w,1.0);
 	    				  }
 	    			  }
 	    			  else {
@@ -9132,9 +9130,8 @@ public class CommandStrParser {
 	    			  Iterator<EdgeSimple> elist=edgelist.iterator();
 	    			  while(elist.hasNext()) {
 	    				  edge=(EdgeSimple)elist.next();
-	    				  int nb=packData.nghb(edge.v,edge.w);
-	    				  count+=packData.set_single_overlap(
-	    						  edge.v,nb,packData.comp_inv_dist(edge.v,edge.w));
+	    				  count+=packData.set_single_invDist(
+	    						  edge.v,edge.w,packData.comp_inv_dist(edge.v,edge.w));
 	    				  // note: inv_dist routine not very robust 
 	    			  }
 	    			  packData.fillcurves();
@@ -9153,8 +9150,8 @@ public class CommandStrParser {
 					  while(elist.hasNext()) {
 						  edge=(EdgeSimple)elist.next();
 						  int nb=packData.nghb(edge.v,edge.w);
-						  if (packData.kData[edge.v].overlaps[nb]>uplim)
-						  count+=packData.set_single_overlap(edge.v,packData.nghb(edge.v,edge.w),uplim);
+						  if (packData.getInvDist(edge.v,packData.kData[edge.v].flower[nb])>uplim)
+						  count+=packData.set_single_invDist(edge.v,edge.w,uplim);
 					  }
 	    			  packData.fillcurves();
 	    			  CirclePack.cpb.msg("Cut "+(int)count/2+
@@ -9207,7 +9204,7 @@ public class CommandStrParser {
 	     		  Iterator<EdgeSimple> elist=edgelist.iterator();
 	     		  while (elist.hasNext()) {
 	     			  edge=(EdgeSimple)elist.next();
-	     			  count+=packData.set_single_overlap(edge.v,packData.nghb(edge.v, edge.w),invDist);
+	     			  count+=packData.set_single_invDist(edge.v,edge.w,invDist);
 	     		  }
 				  packData.fillcurves();
 				  CirclePack.cpb.msg("Set "+count+

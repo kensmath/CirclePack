@@ -8,12 +8,15 @@ import java.util.Iterator;
 
 import allMains.CirclePack;
 import complex.Complex;
+import deBugging.LayoutBugs;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.InOutException;
 import geometry.CircleSimple;
 import geometry.CommonMath;
 import geometry.EuclMath;
+import geometry.HyperbolicMath;
+import geometry.SphericalMath;
 import input.CPFileManager;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
@@ -23,6 +26,8 @@ import listManip.GraphLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
+import panels.CPScreen;
+import posting.PostFactory;
 import util.DispFlags;
 
 /** 
@@ -1377,7 +1382,7 @@ public class PackDCEL {
 			return 1.0;
 		int v=edge.origin.vertIndx;
 		int w=edge.twin.origin.vertIndx;
-		return p.kData[v].overlaps[p.nghb(v,w)];
+		return p.getInvDist(v,w);
 	}
 	
 	/**
@@ -1470,6 +1475,218 @@ public class PackDCEL {
 		// TODO: could transfer layout order to parent 'p' too.
 		return intFaceCount;
 	}
+	
+
+	/** 
+	 * Recompute, draw, and/or post circles and/or faces along a 
+	 * specified GraphLink tree. NOTE: must be a tree, so starts with
+	 * {0,f} root. 
+	 * @param pF PostFactory
+	 * @param faceTree GraphLink
+	 * @param faceFlags DispFlags, may be null
+	 * @param circFlags DispFlags, may be null
+	 * @param fix boolean
+	 * @param placeFirst boolean: true = place anew; false, assume 2 verts in place
+	 * @param tx double
+	 * @return int count 
+	 */
+	public int layoutTree(PostFactory pF,GraphLink faceTree,
+			DispFlags faceFlags,DispFlags circFlags,boolean fix,
+			boolean placeFirst,double tx) {
+
+		boolean debug=false;
+		// debug=true;
+		if (debug) {
+			LayoutBugs.log_GraphLink(this.p,faceTree);
+		}
+		
+		int count=0; // CPBase.Glink=faceTree;DualGraph.printGraph(faceTree);
+		// not drawing anything? this just serves to redo layout
+		boolean faceDo=false;
+		if (faceFlags!=null && faceFlags.draw)
+			faceDo=true;
+		boolean circDo=false;
+		if (circFlags!=null && circFlags.draw)
+			circDo=true;
+		
+		
+		// check for root; if there's not one, create one
+		int rootface=-1;
+		if (faceTree == null || faceTree.get(0).v!=0) { // no root?
+			rootface=faceTree.get(0).v;
+			faceTree.add(0, new EdgeSimple(0,rootface));
+		}
+
+		int []myVerts=new int[3];
+		double []myRadii=new double[3];
+		Complex []myCenters=new Complex[3];
+		
+		int next_spot=0; // last spot for root; (in future, may be more components)
+		int next_root_indx=-1;
+		while ((next_root_indx=faceTree.findRootSpot(next_spot))>=0) {
+			next_spot++;
+			int new_root=faceTree.get(next_root_indx).w;
+			if (new_root<=0 || new_root>faceCount)
+				break;
+			
+			GraphLink thisTree=faceTree.extractComponent(new_root);
+			rootface=thisTree.get(0).w;
+			HalfEdge he=faces[rootface].edge;
+			if (placeFirst) { // place in standard position 
+				placeFirstFace(he);
+			}
+			else if (fix) { // assume 'he' ends in place
+				CircleSimple cS=d_compOppCenter(he);
+				setVertCenter(he.next.next,cS.center);
+			}
+
+			// now go through the list
+			Iterator<EdgeSimple> elist = thisTree.iterator();
+			while (elist.hasNext()) {
+				EdgeSimple edge = elist.next();
+				int last_face=edge.v;
+				int next_face=edge.w;
+				
+				he=faces[next_face].edge; // normally, this edge is already in place
+				if (last_face!=0 && he.twin.face.faceIndx!=last_face) {
+					HalfEdge nhe=he.next;
+					while (nhe.twin.face.faceIndx!=last_face && nhe!=he) {
+						nhe=nhe.next;
+					}
+					if (nhe==he) 
+						throw new CombException("Didn't find last face "+last_face+" next to next_face "+next_face);
+					he=nhe;
+				}
+				if (fix) {
+					CircleSimple cS=d_compOppCenter(he);
+					setVertCenter(he.next.next,cS.center);
+				}
+				
+				myCenters[0]=getVertCenter(he);
+				myCenters[1]=getVertCenter(he.next);
+				myCenters[2]=getVertCenter(he.next.next);
+				myRadii[0]=getVertRadius(he);
+				myRadii[1]=getVertRadius(he.next);
+				myRadii[2]=getVertRadius(he.next.next);
+				
+				if (faceDo && pF==null) { // draw the faces
+					if (!faceFlags.colorIsSet && 
+							(faceFlags.fill || faceFlags.colBorder)) 
+						faceFlags.setColor(faces[next_face].color);
+					if (faceFlags.label)
+						faceFlags.setLabel(Integer.toString(next_face));
+					p.cpScreen.drawFace(getVertCenter(he),getVertCenter(he.next),getVertCenter(he.next.next),
+							getVertRadius(he),getVertRadius(he.next),getVertRadius(he.next.next),faceFlags);
+				}
+				
+				if (circDo && pF==null) { // also draw the circles
+					if (!circFlags.colorIsSet && 
+							(circFlags.fill || circFlags.colBorder)) 
+						circFlags.setColor(he.next.next.origin.color);
+					if (circFlags.label)
+						circFlags.setLabel(Integer.toString(he.next.next.origin.vertIndx));
+					p.cpScreen.drawCircle(myCenters[2],myRadii[2],circFlags);
+				}
+				
+				if (pF!=null && p.hes>0) { // post routines don't know how to convert
+					myCenters[0]=new Complex(p.cpScreen.sphView.toApparentSph(myCenters[0]));
+					myCenters[1]=new Complex(p.cpScreen.sphView.toApparentSph(myCenters[1]));
+					myCenters[2]=new Complex(p.cpScreen.sphView.toApparentSph(myCenters[2]));
+				}
+
+				// postscript
+				if (faceDo && pF!=null) { // also post the faces
+					
+					// set face/bdry colors
+					Color fcolor=null;
+					Color bcolor=null;
+					if (faceFlags.fill) {  
+						if (!faceFlags.colorIsSet) 
+							fcolor=faces[next_face].color;
+						if (faceFlags.colBorder)
+							bcolor=fcolor;
+					}
+					if (faceFlags.draw) {
+						if (faceFlags.colBorder)
+							bcolor=faces[next_face].color;
+						else 
+							bcolor=CPScreen.getFGColor();
+					}
+					pF.post_Poly(p.hes, myCenters, fcolor, bcolor, tx);
+
+					if (faceFlags.label) { // label the face
+						Complex z=getFaceCenter(faces[next_face]);
+						if (p.hes>0) {
+							z=p.cpScreen.sphView.toApparentSph(z);
+							if(Math.cos(z.x)>=0.0) {
+								z=util.SphView.s_pt_to_visual_plane(z);
+								pF.postIndex(z,next_face);
+							}
+						}
+						else pF.postIndex(z,next_face);
+					}
+				}
+				if (circDo && pF!=null) { // also post the circles
+					if (!circFlags.fill) { // not filled
+						if (circFlags.colBorder)
+							pF.postColorCircle(p.hes,myCenters[2],myRadii[2],
+									he.next.next.origin.color,tx);
+						else 
+							pF.postCircle(p.hes,myCenters[2],myRadii[2],tx);
+					} 
+					else {
+						Color ccOl=CPScreen.getFGColor();
+						if (!circFlags.colorIsSet)
+							ccOl = he.next.next.origin.color;
+						if (circFlags.colBorder) {
+							pF.postFilledColorCircle(p.hes,myCenters[2],
+									myRadii[2],ccOl,ccOl,tx);
+						}
+						else 
+							pF.postFilledCircle(p.hes,myCenters[2],
+									myRadii[2],ccOl,tx);
+					}
+					if (circFlags.label) { // label the face
+						if (p.hes>0) {
+							Complex z=p.cpScreen.sphView.toApparentSph(myCenters[2]);
+							if(Math.cos(z.x)>=0.0) {
+								z=util.SphView.s_pt_to_visual_plane(z);
+								pF.postIndex(z,myVerts[2]);
+							}
+						}
+						else pF.postIndex(myCenters[2],myVerts[2]);
+					}
+				}
+				count++;
+			} // end of while through edgelist
+
+		} // end of while through trees
+		return count;
+	}
+
+	/**
+	 * Return center of incircle of face with given index.
+	 * @param face int
+	 * @return Complex, null on error
+	 */
+	public Complex getFaceCenter(Face face) {
+		CircleSimple sc = null;
+		HalfEdge he=face.edge;
+		Complex p0 = getVertCenter(he);
+		Complex p1 = getVertCenter(he.next);
+		Complex p2 = getVertCenter(he.next.next);
+		if (p.hes < 0)
+			sc = HyperbolicMath.hyp_tang_incircle(p0, p1, p2,
+					getVertRadius(he),
+					getVertRadius(he.next),
+					getVertRadius(he.next.next));
+		else if (p.hes > 0)
+			sc = SphericalMath.sph_tri_incircle(p0, p1, p2);
+		else
+			sc = EuclMath.eucl_tri_incircle(p0, p1, p2);
+		return sc.center;
+	}
+
 	
 	/**
  	 * NEEDED FOR CIRCLEPACK

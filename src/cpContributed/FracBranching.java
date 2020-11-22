@@ -336,8 +336,7 @@ public class FracBranching extends PackExtender {
 		if (!packData.overlapStatus) { //alocates space for overlaps
 			packData.alloc_overlaps();
 		}
-		packData.set_single_overlap(v1,packData.nghb(v1,v2),
-				packData.kData[v1].overlaps[packData.nghb(v1,v2)]+inv_inc);
+		packData.set_single_invDist(v1,v2,packData.getInvDist(v1, v2)+inv_inc);
 		return 1;
 	}
 	
@@ -1828,8 +1827,9 @@ public class FracBranching extends PackExtender {
 		int np =packData.kData[v].num;
 		p =0; //petal counter
 		while (p<=np) {
-			double idist =findInv(v,packData.kData[v].flower[p]);
-			packData.set_single_overlap(v,p,idist);
+			int w=packData.kData[v].flower[p];
+			double idist =findInv(v,w);
+			packData.set_single_invDist(v,w,idist);
 			p++;
 		}
 		cpCommand(packData,"repack -o");
@@ -1936,17 +1936,17 @@ public class FracBranching extends PackExtender {
 			double x1 =generator.nextDouble(),x2 =generator.nextDouble(),x3 =generator.nextDouble();
 			double sum=x1+x2+x3;
 			iv1=2*x1/sum-1; iv2=2*x2/sum-1; iv3=2*x3/sum-1;
-			pd.set_single_overlap(v1,pd.nghb(v1, v2),iv1); //set overlaps across branch point
-			pd.set_single_overlap(v2,pd.nghb(v2, v3),iv2); //set overlaps across branch point
-			pd.set_single_overlap(v3,pd.nghb(v3, v1),iv3); //set overlaps across branch point
+			pd.set_single_invDist(v1,v2,iv1); //set overlaps across branch point
+			pd.set_single_invDist(v2,v3,iv2); //set overlaps across branch point
+			pd.set_single_invDist(v3,v1,iv3); //set overlaps across branch point
 			
 			//second frac face
 			x1 =generator.nextDouble(); x2 =generator.nextDouble(); x3 =generator.nextDouble();
 			sum=x1+x2+x3;
 			iu1=2*x1/sum-1; iu2=2*x2/sum-1; iu3=2*x3/sum-1;
-			pd.set_single_overlap(u1,pd.nghb(u1, u2),iu1); //set overlaps across branch point
-			pd.set_single_overlap(u2,pd.nghb(u2, u3),iu2); //set overlaps across branch point
-			pd.set_single_overlap(u3,pd.nghb(u3, u1),iu3); //set overlaps across branch point
+			pd.set_single_invDist(u1,u2,iu1); //set overlaps across branch point
+			pd.set_single_invDist(u2,u3,iu2); //set overlaps across branch point
+			pd.set_single_invDist(u3,u1,iu3); //set overlaps across branch point
 			
 			double loc_err=1.0; int count2=1;
 			//bounces back and forth computing fracbranching at v1 and v2.
@@ -2028,8 +2028,8 @@ public class FracBranching extends PackExtender {
 							if (!packData.overlapStatus) packData.alloc_overlaps(); //Allocate space for overlaps in packData
 							double invV= generator.nextDouble(); //overlap
 							double invU= generator.nextDouble();
-							packData.set_single_overlap(v0,packData.nghb(v0, v2),invV); //set overlaps across branch point
-							packData.set_single_overlap(u0,packData.nghb(u0, u2),invU);
+							packData.set_single_invDist(v0,v2,invV); //set overlaps across branch point
+							packData.set_single_invDist(u0,u2,invU);
 
 							double fracerr =fracShuffle3(300,0);
 							if (fracerr>OKERR) msg("WARNING: fracShuffle error = "+fracerr);
@@ -2135,8 +2135,8 @@ public class FracBranching extends PackExtender {
 							if (!packData.overlapStatus) packData.alloc_overlaps(); //Allocate space for overlaps in packData
 							double invV= generator.nextDouble(); //overlap
 							double invU= generator.nextDouble();
-							packData.set_single_overlap(v0,packData.nghb(v0, v2),invV); //set overlaps across branch point
-							packData.set_single_overlap(u0,packData.nghb(u0, u2),invU);
+							packData.set_single_invDist(v0,v2,invV); //set overlaps across branch point
+							packData.set_single_invDist(u0,u2,invU);
 							
 							fracShuffle3(250,0);
 							double err =DAFerror(type);
@@ -2189,12 +2189,12 @@ public class FracBranching extends PackExtender {
 			int u1= generator.nextInt(3);int u2= generator.nextInt(2)+1;
 			double invV= 2*generator.nextDouble()-1; //overlap
 			double invU= 2*generator.nextDouble()-1;
-			packData.set_single_overlap(packData.faces[f1].vert[v1]
-			         ,packData.nghb(packData.faces[f1].vert[v1], packData.faces[f1].vert[(v1+v2)%3])
-			         ,invV); //set overlaps across branch point
-			packData.set_single_overlap(packData.faces[f2].vert[u1]
-                      ,packData.nghb(packData.faces[f2].vert[u1], packData.faces[f2].vert[(u1+u2)%3])
-                      ,invV); //set overlaps across branch point
+			packData.set_single_invDist(packData.faces[f1].vert[v1],
+			         packData.faces[f1].vert[(v1+v2)%3],
+			         invV); //set overlaps across branch point
+			packData.set_single_invDist(packData.faces[f2].vert[u1],
+                      packData.faces[f2].vert[(u1+u2)%3],
+                      invV); //set overlaps across branch point
 			
 			fracShuffle3(250,0);
 			double err =DAFerror(type);
@@ -3050,22 +3050,23 @@ public class FracBranching extends PackExtender {
 		while (err>TOLER && counter<n) {
 			int i = 0; //counter for v's petals
 			while (i<n_p) {
+				int w=packData.kData[v].flower[i];
 				if (!packData.overlapStatus) { //alocates space for overlaps
 					packData.alloc_overlaps();
 				}
-				if (packData.kData[v].overlaps[i]<0) { //checks for deep overlaps
-					packData.kData[v].overlaps[i]=0;
+				if (packData.getInvDist(v,w)<0) { //checks for deep overlaps
+					packData.set_single_invDist(v, w,0);
 				}
 				Random generator = new Random();
 				double newInv = generator.nextDouble();
-				double oldInv = packData.kData[v].overlaps[i];
-				packData.set_single_overlap(v,i,newInv);
+				double oldInv = packData.getInvDist(v,w);
+				packData.set_single_invDist(v,w,newInv);
 				cpCommand(packData,"repack");
 //				cpCommand(packData,"layout");
 
 				newerr =DAFerror(0);
 				if (newerr>err) {
-					packData.set_single_overlap(v,i,oldInv);
+					packData.set_single_invDist(v,w,oldInv);
 					cpCommand(packData,"repack");
 //					packData.repack_call(1000);
 					}
@@ -3088,28 +3089,28 @@ public class FracBranching extends PackExtender {
 		while (err>TOLER && counter<n) {
 			int i = 0; //counter for v's petals
 			while (i<n_p) {
-				int p_0 =packData.kData[v].flower[i];//vertex of v's ith petal
-				if (packData.kData[v].overlaps==null) { //poor method for creating overlap arrays
-					cpCommand(packData,"set_over 0.5 "+v+" "+p_0);
+				int v_0 =packData.kData[v].flower[i];//vertex of v's ith petal
+				if (packData.kData[v].invDist==null) { //poor method for creating overlap arrays
+					cpCommand(packData,"set_over 0.5 "+v+" "+v_0);
 					cpCommand(packData,"repack");
-					cpCommand(packData,"set_over 0.0 "+v+" "+p_0);
+					cpCommand(packData,"set_over 0.0 "+v+" "+v_0);
 					cpCommand(packData,"repack");
 				}
-				if (packData.kData[v].overlaps[i]<0) { //checks for deep overlaps
-					packData.kData[v].overlaps[i]=0;
+				if (packData.getInvDist(v,v_0)<0) { //checks for deep overlaps
+					packData.set_single_invDist(v,v_0,0.0);
 				}
 				Random generator = new Random();
-				int p_1 = packData.nghb(p_0,packData.kData[v].flower[i+1]);//index of i+1 in i's flower
-				double oldInv = packData.kData[p_0].overlaps[p_1];
+				int v_1=packData.kData[v].flower[i+1];
+				double oldInv = packData.getInvDist(v_0,v_1);
 //				double newInv =oldInv*(generator.nextDouble()*x+(1-x/2));
 				double newInv= generator.nextDouble();//*.025+0.25;///10+0.35;
 				newerr =DAFerror(0);
 				if (newerr>err) {
-					packData.kData[p_0].overlaps[p_1] = oldInv;
+					packData.set_single_invDist(v_0,v_1,oldInv);
 					packData.repack_call(n);
 				}
 				else if (newerr<=err) {
-					packData.kData[p_0].overlaps[p_1] = newInv;
+					packData.set_single_invDist(v_0,v_1,newInv);
 					err = newerr;
 				}
 				i++;
@@ -3139,7 +3140,7 @@ public class FracBranching extends PackExtender {
 		cpCommand(pd,"norm_scale -c "+v1+" 1.0");
 		cpCommand(pd,"layout");
 		int next =pd.kData[b1].flower[pd.kData[b1].nextVert];//next vertex in border element
-		if (pd.kData[b1].overlaps==null) { //poor method for creating overlap arrays
+		if (pd.kData[b1].invDist==null) { //poor method for creating overlap arrays
 			cpCommand(pd,"set_over 0.5 "+b1+" "+next);
 			cpCommand(pd,"repack -o");
 			cpCommand(pd,"set_over 0.0 "+b1+" "+next);
@@ -3160,15 +3161,17 @@ public class FracBranching extends PackExtender {
 			int next_f =pd.nghb(b1, next);
 			Random generator = new Random();
 			double newInv = generator.nextDouble(); //includes deep overlaps
-			double oldInv = pd.kData[b1].overlaps[next_f];
-			pd.kData[b1].overlaps[next_f] =newInv;
+			double oldInv = pd.getInvDist(b1,next);
+			pd.set_single_invDist(b1,next,newInv);
 			if (next_f==0 & pd.kData[b1].flower[0]==pd.kData[b1].flower[pd.kData[b1].num]) {
-				pd.kData[b1].overlaps[pd.kData[b1].num] =newInv; //matches first and last overlap in flower index
+				pd.set_single_invDist(b1,pd.kData[b1].flower[pd.kData[b1].num],newInv);
+					//matches first and last overlap in flower index
 			}
-			pd.kData[next].overlaps[pd.nghb(next,b1)] =newInv;
+			pd.set_single_invDist(next,b1,newInv);
 			if (pd.nghb(next,b1)==0 
 					& pd.kData[next].flower[0]==pd.kData[next].flower[pd.kData[next].num]) {
-				pd.kData[next].overlaps[pd.kData[next].num] =newInv; //matches first and last overlap in flower index
+				pd.set_single_invDist(next,pd.kData[next].flower[pd.kData[next].num],newInv); 
+					//matches first and last overlap in flower index
 			}
 			cpCommand(pd,"repack -o");
 //			pd.repack_call(1000);
@@ -3183,14 +3186,15 @@ public class FracBranching extends PackExtender {
 			double newerr2 =1000000*genPtDist(pd.getCenter(v1),pd.getCenter(v2)); //finds error with new rad
 			newerr =Math.sqrt(newerr1*newerr1+newerr2*newerr2);
 			if (newerr>=err) {
-				pd.kData[b1].overlaps[next_f] = oldInv;
+				pd.set_single_invDist(b1,pd.kData[b1].flower[next_f],oldInv);
 				if (next_f==0 & pd.kData[b1].flower[0]==pd.kData[b1].flower[pd.kData[b1].num]) {
-					pd.kData[b1].overlaps[pd.kData[b1].num] =oldInv; //matches first and last overlap in flower index
+					pd.set_single_invDist(b1,pd.kData[b1].flower[pd.kData[b1].num],oldInv);
+						//matches first and last overlap in flower index
 				}
-				pd.kData[next].overlaps[pd.nghb(next,b1)] =oldInv;//matches first and last overlap in flower index
+				pd.set_single_invDist(next,b1,oldInv); //matches first and last overlap in flower index
 				if (pd.nghb(next,b1)==0 
 						& pd.kData[next].flower[0]==pd.kData[next].flower[pd.kData[next].num]) {
-					pd.kData[next].overlaps[pd.kData[next].num] =oldInv; 
+					pd.set_single_invDist(next,pd.kData[next].flower[pd.kData[next].num],oldInv);
 				}
 //				pd.repack_call(1000);
 				cpCommand(pd,"repack -o");
@@ -3212,15 +3216,15 @@ public class FracBranching extends PackExtender {
 		double err=1.0;
 		while (err>TOLER && counter<n) {
 			int next =pd.kData[b1].flower[pd.kData[b1].nextVert];//next vertex in border element
-			if (pd.kData[b1].overlaps==null) {
+			if (pd.kData[b1].invDist==null) {
 				cpCommand(pd,"set_over 0.5 "+b1+" "+next);
 				cpCommand(pd,"repack");
 				cpCommand(pd,"set_over 0.0 "+b1+" "+next);
 				cpCommand(pd,"repack");
 				cpCommand(pd,"norm_scale -c "+v1+" 2.0");
 			}
-			if (pd.kData[b1].overlaps[pd.kData[b1].nextVert]<0) { //checks for deep overlaps
-				pd.kData[b1].overlaps[pd.kData[b1].nextVert]=0;
+			if (pd.getInvDist(b1,next)<0) { //checks for deep overlaps
+				pd.set_single_invDist(b1,next,0.0);
 			}
 			err = overlapEdgeShuffle(pd,1000,b1,next,v1,v2,x);
 			b1 =next;
@@ -3261,7 +3265,7 @@ public class FracBranching extends PackExtender {
 		double err =DAFerror(0);
 		int counter=0;
 		int p=pd.kData[v].flower[0];
-		if (pd.kData[v].overlaps==null) {
+		if (pd.kData[v].invDist==null) {
 			cpCommand(pd,"set_over 0.5 "+v+" "+p);
 			cpCommand(pd,"repack");
 			cpCommand(pd,"set_over 0.0 "+v+" "+p);
@@ -3301,8 +3305,8 @@ public class FracBranching extends PackExtender {
 		int counter =0;
 		double inc=x;
 		while (err>TOLER && counter < n && inc>0.000000000001 
-				&& pd.kData[e1].overlaps[pd.nghb(e1,e2)]>=0.0) {
-			pd.kData[e1].overlaps[pd.nghb(e1,e2)]=pd.kData[e1].overlaps[pd.nghb(e1,e2)]-inc;
+				&& pd.getInvDist(e1,e2)>=0.0) {
+			pd.set_single_invDist(e1,e2,pd.getInvDist(e1,e2)-inc);
 			//keep adjusting until sign changes
 			Mobius newmob =getMob(pd, pd.getCenter(v1),
 					pd.getCenter(v1).add(pd.getRadius(v1)),
@@ -3313,14 +3317,14 @@ public class FracBranching extends PackExtender {
 			cpCommand(pd,"layout");
 			cpCommand(pd,"fix");
 			double newerr =1000000*Math.abs(2-Math.pow(frobNorm(newmob),2));
-			if (err<=newerr || pd.kData[e1].overlaps[pd.nghb(e1, e2)]<0) {
-				pd.kData[e1].overlaps[pd.nghb(e1,e2)]=pd.kData[e1].overlaps[pd.nghb(e1, e2)]+inc; 
+			if (err<=newerr || pd.getInvDist(e1,e2)<0) {
+				pd.set_single_invDist(e1,e2,pd.getInvDist(e1,e2)+inc); 
 				//went too far;resets overlap to prev
 				inc=inc/2; //chooses a smaller increment
 				newerr=err;//resets overlap error
 			}
-			if (pd.kData[e1].overlaps[pd.nghb(e1, e2)]<-1.0) {
-				pd.kData[e1].overlaps[pd.nghb(e1, e2)]=-1.0;
+			if (pd.getInvDist(e1,e2)<-1.0) {
+				pd.set_single_invDist(e1,e2,-1.0);
 			}
 			err=newerr;
 			counter++;
@@ -3342,31 +3346,35 @@ public class FracBranching extends PackExtender {
 	 */
 	public double overlapEdgeShuffle(PackData pd, int n, int v, int i,FaceLink faces1) {
 		double err =DAFerror(0);
+		int w=pd.kData[v].flower[i];
 		int n_p = pd.kData[v].num;
-		double inc=pd.kData[v].overlaps[i]/10;
+		int u=pd.kData[v].flower[n_p];
+		double inc=pd.getInvDist(v,w)/10;
 		int counter =0;
-		while (err>TOLER && counter < n && inc>0.00000000001 && pd.kData[v].overlaps[i]>=0.0) {
-			double oldInv =pd.kData[v].overlaps[i];
-			double newInv=pd.kData[v].overlaps[i]-inc;//keep adjusting until sign changes
-			pd.kData[v].overlaps[i] =newInv;
-			if (i==0 & pd.kData[v].flower[0]==pd.kData[v].flower[n_p]) {
-				pd.kData[v].overlaps[n_p] =newInv; //matches first and last overlap in flower index
+		while (err>TOLER && counter < n && inc>0.00000000001 && pd.getInvDist(v,w)>=0.0) {
+			double oldInv =pd.getInvDist(v,w);
+			double newInv=oldInv-inc;//keep adjusting until sign changes
+			pd.set_single_invDist(v,w,newInv);
+			if (i==0 & pd.kData[v].flower[0]==u) {
+				pd.set_single_invDist(v,u,newInv); //matches first and last overlap in flower index
 			}
 			int vi =pd.kData[v].flower[i]; //vertex of i
-			pd.kData[vi].overlaps[pd.nghb(vi,v)] =newInv; //matched overlap in vi's flower
+			pd.set_single_invDist(vi,v,newInv); //matched overlap in vi's flower
 			if (pd.nghb(vi,v)==0 & pd.kData[vi].flower[0]==pd.kData[vi].flower[pd.kData[vi].num]) {
-				pd.kData[vi].overlaps[pd.kData[vi].num] =newInv; //matches first and last overlap in flower index
+				pd.set_single_invDist(vi,pd.kData[vi].flower[pd.kData[vi].num],newInv); 
+				//matches first and last overlap in flower index
 			}
 			double newerr =DAFerror(0);
 			if (err<=newerr) {
-				pd.kData[v].overlaps[i]=oldInv; //went too far;resets overlap to prev
-				if (i==0 & pd.kData[v].flower[0]==pd.kData[v].flower[n_p]) {
-					pd.kData[v].overlaps[n_p] =oldInv; //matches first and last overlap in flower index
+				pd.set_single_invDist(v,w,oldInv); //went too far;resets overlap to prev
+				if (i==0 & pd.kData[v].flower[0]==u) {
+					pd.set_single_invDist(v,u,oldInv); //matches first and last overlap in flower index
 				}
 				vi =pd.kData[v].flower[i]; //vertex of i
-				pd.kData[vi].overlaps[pd.nghb(vi,v)] =oldInv; //matched overlap in vi's flower
+				pd.set_single_invDist(vi,v,oldInv); //matched overlap in vi's flower
 				if (pd.nghb(vi,v)==0 & pd.kData[vi].flower[0]==pd.kData[vi].flower[pd.kData[vi].num]) {
-					pd.kData[vi].overlaps[pd.kData[vi].num] =oldInv; //matches first and last overlap in flower index
+					pd.set_single_invDist(vi,pd.kData[vi].flower[pd.kData[vi].num],oldInv); 
+						//matches first and last overlap in flower index
 				}
 				pd.repack_call(1000);
 				cpCommand(pd,"layout");
@@ -3432,7 +3440,7 @@ public class FracBranching extends PackExtender {
         		if (packData.overlapStatus==true) {
         			cor_dist = genOverlapDist(packData.getRadius(i),
         					packData.getRadius(p),
-        					packData.kData[i].overlaps[k]);
+        					packData.getInvDist(i,p));
         		} else {
         			cor_dist = genOverlapDist(packData.getRadius(i),
         					packData.getRadius(p),1);
@@ -3574,7 +3582,7 @@ public class FracBranching extends PackExtender {
 		while (p<np) {
 			if (spt.shiftratio<=1 || spt.shiftratio>1) {
 				double inv =spt.petalI[p];
-				packData.set_single_overlap(v,p,inv);
+				packData.set_single_invDist(v,packData.kData[v].flower[p],inv);
 //			} else {
 //				double inv =findInv(v,packData.kData[v].flower[p]);
 //				packData.set_single_overlap(v,p,inv);
@@ -3630,15 +3638,15 @@ public class FracBranching extends PackExtender {
 						if (!pd.overlapStatus) { //alocates space for overlaps
 							pd.alloc_overlaps();
 						}
-						pd.set_single_overlap(v2,pd.nghb(v2, v0),findInv(v2,v0));
-						pd.set_single_overlap(v2,pd.nghb(v2, v1),findInv(v2,v1));
+						pd.set_single_invDist(v2,v0,findInv(v2,v0));
+						pd.set_single_invDist(v2,v1,findInv(v2,v1));
 					}
 					
 					CircleSimple sc;
 					if (pd.overlapStatus) { // oj for edge opposite vj
-						double o0 = pd.kData[v1].overlaps[pd.nghb(v1, v2)];
-						double o1 = pd.kData[v2].overlaps[pd.nghb(v2, v0)];
-						double o2 = pd.kData[v0].overlaps[pd.nghb(v0, v1)];
+						double o0 = pd.getInvDist(v1,v2);
+						double o1 = pd.getInvDist(v2,v0);
+						double o2 = pd.getInvDist(v0,v1);
 						sc = CommonMath.comp_any_center(pd.getCenter(v0), pd.getCenter(v1),
 								pd.getRadius(v0), pd.getRadius(v1),
 								pd.getRadius(v2), o0, o1, o2,pd.hes);
@@ -5176,7 +5184,7 @@ public class FracBranching extends PackExtender {
 		}
 		
 		UtilPacket uP =new UtilPacket();
-		packData.set_single_overlap(branchVert[0][0],packData.nghb(branchVert[0][0],branchVert[0][2]),inv);
+		packData.set_single_invDist(branchVert[0][0],branchVert[0][2],inv);
 		while (err>LOC_TOLER && count<n) {
 			//branchVert[1] and [3]
 			for (int j=1;j<4;j=j+2) {
@@ -5254,7 +5262,7 @@ public class FracBranching extends PackExtender {
 		}
 		double inv =1;
 		if (packData.overlapStatus==true) {
-			inv =packData.kData[v1].overlaps[packData.nghb(v1, v2)];
+			inv =packData.getInvDist(v1,v2);
 		}
 		int G = packData.hes; //geometry, 0=Euc -1=Hyp 1=Sphr
 		double r1 =packData.getRadius(v1);

@@ -1,5 +1,6 @@
 package dcel;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -23,6 +24,7 @@ public class Vertex {
 	public HalfEdge halfedge;	// a halfedge pointing away from this vert
 	public int vertIndx;		// index from associated 'PackData'
 	public int bdryFlag;		// 0 for interior, 1 for boundary
+	public Color color;
 	public int util;
 	
 	// TODO: for now, keep data both here and 'PackData'

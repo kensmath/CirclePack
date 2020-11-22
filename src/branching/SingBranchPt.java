@@ -281,13 +281,10 @@ public class SingBranchPt extends GenBranchPt {
 		int v1=Math.abs(transData[1]);
 		int v2=Math.abs(transData[2]);
 		int v3=Math.abs(transData[3]);
-		int indx12=packData.nghb(v1,v2);
-		int indx23=packData.nghb(v2,v3);
-		int indx31=packData.nghb(v3,v1);
 		if (packData.overlapStatus) {
-			packData.set_single_overlap(v1, indx12,1.0);
-			packData.set_single_overlap(v2, indx23,1.0);
-			packData.set_single_overlap(v3, indx31,1.0);
+			packData.set_single_invDist(v1, v2,1.0);
+			packData.set_single_invDist(v2, v3,1.0);
+			packData.set_single_invDist(v3, v1,1.0);
 		}
 		
 		// remove poison edges
@@ -515,29 +512,26 @@ public class SingBranchPt extends GenBranchPt {
 		// To get overlap ov on edge (2,3), we have vertex 1 overlap 
 		//    chap2 and chap3 (i.e. the neighboring chaperone circles) by ov.
 		myPackData.alloc_overlaps();
-		myPackData.set_single_overlap(1,myPackData.nghb(1,chap[2]),cos_overs[0]);
-		myPackData.set_single_overlap(1,myPackData.nghb(1,chap[3]),cos_overs[0]);
-		myPackData.set_single_overlap(2,myPackData.nghb(2,chap[1]),cos_overs[1]);
-		myPackData.set_single_overlap(2,myPackData.nghb(2,chap[3]),cos_overs[1]);
-		myPackData.set_single_overlap(3,myPackData.nghb(3,chap[1]),cos_overs[2]);
-		myPackData.set_single_overlap(3,myPackData.nghb(3,chap[2]),cos_overs[2]);
+		myPackData.set_single_invDist(1,chap[2],cos_overs[0]);
+		myPackData.set_single_invDist(1,chap[3],cos_overs[0]);
+		myPackData.set_single_invDist(2,chap[1],cos_overs[1]);
+		myPackData.set_single_invDist(2,chap[3],cos_overs[1]);
+		myPackData.set_single_invDist(3,chap[1],cos_overs[2]);
+		myPackData.set_single_invDist(3,chap[2],cos_overs[2]);
 		
 		// Adjust parent info: parent will see circles of singFace as overlapping,
 		//   which affects its own angle sums in its repacking process.
 		int v1=Math.abs(transData[1]);
 		int v2=Math.abs(transData[2]);
 		int v3=Math.abs(transData[3]);
-		int indx12=packData.nghb(v1,v2);
-		int indx23=packData.nghb(v2,v3);
-		int indx31=packData.nghb(v3,v1);
 		if (!packData.overlapStatus)
 			packData.alloc_overlaps();
 		double invdist=Math.cos(Math.PI-Math.acos(cos_overs[0])-Math.acos(cos_overs[1]));
-		packData.set_single_overlap(v1, indx12, invdist);
+		packData.set_single_invDist(v1, v2, invdist);
 		invdist=Math.cos(Math.PI-Math.acos(cos_overs[1])-Math.acos(cos_overs[2]));
-		packData.set_single_overlap(v2, indx23, invdist);
+		packData.set_single_invDist(v2, v3, invdist);
 		invdist=Math.cos(Math.PI-Math.acos(cos_overs[2])-Math.acos(cos_overs[0]));
-		packData.set_single_overlap(v3, indx31, invdist);
+		packData.set_single_invDist(v3, v1, invdist);
 		
 		return 1;
 	 }

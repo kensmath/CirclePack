@@ -286,7 +286,7 @@ public abstract class RePacker {
 				for (int j=0;j<=num;j++) kdata[i].flower[j]=p.kData[i].flower[j];
 				if (p.overlapStatus) {
 					kdata[i].overlaps=new double[kdata[i].num+1];
-					for (int j=0;j<=num;j++) kdata[i].overlaps[j]=p.kData[i].overlaps[j];
+					for (int j=0;j<=num;j++) kdata[i].overlaps[j]=p.getInvDist(i,p.kData[i].flower[j]);
 				}
 			}
 			// load 'petallaps' (vectors of overlaps between successive petals of flowers)
@@ -297,7 +297,7 @@ public abstract class RePacker {
 						int v=kdata[i].flower[j];
 						int w=kdata[i].flower[j+1];
 						int k=p.nghb(w,v);
-						kdata[i].petallaps[j]=p.kData[w].overlaps[k];
+						kdata[i].petallaps[j]=p.getInvDist(w,p.kData[w].flower[k]);
 					}
 				}
 			}

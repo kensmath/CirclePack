@@ -713,7 +713,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 
 				double invDist = 1.0;
 				if (packData.overlapStatus) {
-					double actualInvDist = packData.kData[edge.v].overlaps[flowerIndexWFromV];
+					double actualInvDist = packData.getInvDist(edge.v,
+							packData.kData[edge.v].flower[flowerIndexWFromV]);
 					if (Math.abs(1.0D - actualInvDist) > 0.0000001D) invDist = actualInvDist;
 				}
 

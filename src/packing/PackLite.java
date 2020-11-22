@@ -445,10 +445,10 @@ public class PackLite {
 			}
 
 			// does it have new inversive distances? (only pairs (v,w) with w>v) 
-			if (p.overlapStatus && p.kData[v].overlaps!=null) {
+			if (p.overlapStatus && p.kData[v].invDist!=null) {
 				for (int jj=0;jj<(p.kData[v].num+p.kData[v].bdryFlag);jj++) {
 					int w=p.kData[v].flower[jj];
-					if (w>v && p.kData[v].overlaps[jj]!=1.0)
+					if (w>v && p.getInvDist(v,p.kData[v].flower[jj])!=1.0)
 						invDistCount++;
 				}
 			}
@@ -478,12 +478,12 @@ public class PackLite {
 			}
 
 			// does it have new inversive distances? (only pairs (v,w) with w>v) 
-			if (invDistCount>0 && p.overlapStatus && p.kData[v].overlaps!=null) {
+			if (invDistCount>0 && p.overlapStatus && p.kData[v].invDist!=null) {
 				for (int jj=0;jj<(p.kData[v].num+p.kData[v].bdryFlag);jj++) {
 					int w=p.kData[v].flower[jj];
-					if (w>v && p.kData[v].overlaps[jj]!=1.0) {
+					if (w>v && p.getInvDist(v,p.kData[v].flower[jj])!=1.0) {
 						invDistLink.add(new EdgeSimple(v,w));
-						invDistances[iDtick++]=p.kData[v].overlaps[jj];
+						invDistances[iDtick++]=p.getInvDist(v,p.kData[v].flower[jj]);
 					}
 				}
 			}
@@ -653,8 +653,7 @@ public class PackLite {
 			Iterator<EdgeSimple> iL = invDistLink.iterator();
 			while (tick < invDistCount && iL.hasNext()) {
 				EdgeSimple edge = iL.next();
-				p.set_single_overlap(vertConvert[edge.v],
-						p.nghb(vertConvert[edge.v], vertConvert[edge.w]),
+				p.set_single_invDist(vertConvert[edge.v],vertConvert[edge.w],
 						invDistances[tick++]);
 			}
 		}

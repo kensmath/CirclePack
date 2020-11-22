@@ -29,7 +29,7 @@ public class KData{
     public int qualFlag; /* keeps info on quality of layout */
     public int plotFlag; /* >0 if node (seems) successfully placed during layout; */
      			   /* <=0 usually implies placement problem */
-    public double []overlaps; /* optional list of prescribed 'inversive distances',
+    public double []invDist; /* optional list of prescribed 'inversive distances',
      					   one for each petal node.
      					   Equals cosine of overlap angle or inv dist */
     public double []schwarzian; // real Schwarzians for edges: currently used
@@ -72,17 +72,17 @@ public class KData{
     	Kout.plotFlag=plotFlag; 
     	Kout.utilFlag=0;
     	Kout.nextVert=0;
-    	if (overlaps!=null) {
+    	if (invDist!=null) {
    		 try{
-			 Kout.overlaps=new double[num+1];
+			 Kout.invDist=new double[num+1];
 			 for (int j=0;j<=num;j++)
-				 Kout.overlaps[j]=overlaps[j];
+				 Kout.invDist[j]=invDist[j];
 		 } catch (Exception ex) {
 			 CirclePack.cpb.errMsg("problem with 'overlaps' in 'kData' clone");
-			 Kout.overlaps=null; // this data is generally not essential
+			 Kout.invDist=null; // this data is generally not essential
 		 }
     	}
-    	else Kout.overlaps=null;
+    	else Kout.invDist=null;
     	if (schwarzian!=null) {
    		 try{
 			 Kout.schwarzian=new double[num+1];
@@ -150,15 +150,15 @@ public class KData{
     	 flower=newflower;
     	 
     	 // fix overlaps
-    	 if (overlaps!=null) {
+    	 if (invDist!=null) {
     		 try {
     	    	 double []newov=new double[num+2];
     	    	 for (int k=0;k<=j;k++)
-    	    		 newov[k]=overlaps[k];
+    	    		 newov[k]=invDist[k];
     	    	 newov[j+1]=1.0;
     	    	 for (int k=(j+1);k<=num;k++)
-    	    		 newov[k+1]=overlaps[k];
-    	    	 overlaps=newov;
+    	    		 newov[k+1]=invDist[k];
+    	    	 invDist=newov;
     		 } catch (Exception ex) {}
     	 }
     	 
@@ -218,21 +218,21 @@ public class KData{
     		 }
     		 
     		 // fix overlaps
-    		 if (overlaps!=null) {
+    		 if (invDist!=null) {
     			 try {
     	    		 if (j==0 || j==num) {
     	    			 for (int k=1;k<num;k++)
-    	    				 overlaps[k-1]=overlaps[k];
-    	    			 overlaps[num-1]=overlaps[0]; // close up again
+    	    				 invDist[k-1]=invDist[k];
+    	    			 invDist[num-1]=invDist[0]; // close up again
     	    		 }
     	    		 else {
     	    			 double []newov=new double[num];
     	    			 for (int k=0;k<=(num-j);k++)
-    	    				 newov[k]=overlaps[j+k];
+    	    				 newov[k]=invDist[j+k];
     	    			 for (int k=0;k<j;k++)
-    	    				 newov[j+k]=overlaps[k];
-    	    			 overlaps=newov;
-    	    			 overlaps[num-1]=overlaps[0]; // close up
+    	    				 newov[j+k]=invDist[k];
+    	    			 invDist=newov;
+    	    			 invDist[num-1]=invDist[0]; // close up
     	    		 }
     			 } catch (Exception ex) {} // ignore on error
     		 }
@@ -253,10 +253,10 @@ public class KData{
     		 flower[k-1]=flower[k];
     	 
     	 // fix overlaps
-    	 if (overlaps!=null) {
+    	 if (invDist!=null) {
     		 try {
     			 for (int k=(j+1);k<=num;k++)
-    				 overlaps[k-1]=overlaps[k];
+    				 invDist[k-1]=invDist[k];
     		 } catch (Exception ex) {}
     	 }
     	 
@@ -303,14 +303,14 @@ public class KData{
     	 flower=newflower;
     	 
     	 // fix overlaps, too
-    	 if (overlaps!=null) {
+    	 if (invDist!=null) {
     		 double []newov=new double[num+1];
     		 try {
     			 for (int k=0;k<num;k++)
-    				 newov[k]=overlaps[(j+k)%num];
+    				 newov[k]=invDist[(j+k)%num];
     			 newov[num]=newov[0];
     		 } catch(Exception ex) {}
-    		 overlaps=newov;
+    		 invDist=newov;
     	 }
     	 return v;
      }
