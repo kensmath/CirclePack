@@ -3,11 +3,14 @@ package dcel;
 import java.awt.Color;
 
 import komplex.EdgeSimple;
+import panels.CPScreen;
 
 /** 
  * DCEL HalfEdge. Its 'face' is on its left. As we transition to a DCEL
- * core model of packings, each edge will carry an 'inversive distance'
- * and a 'schwarzian' (though these will be redundant for now).
+ * core model of packings, each edge will carry an 'inversive distance',
+ * 'schwarzian', and color (though these will be redundant for now). 
+ * Careful, as edges are not persistent. 
+ * TODO: figure out how to transfer date when edges change.
  * @author kstephe2
  *
  */
@@ -22,12 +25,12 @@ public class HalfEdge {
 	public int mark;
 	RedHEdge myRedEdge; // set when finishing up construction.
 	
-	//
+	// TODO: figure out how to transfer this info as edges change.
 	double invDist;  // inversive distance assigned, default 1.0 (tangency)
 	double schwarzian; // see 'Schwarzian.java'
-	public Color color; 
+	Color color; 
 	
-	public int util; 
+	public int util;  // for temporary use only
 
 	// constructor(s)
 	public HalfEdge() {
@@ -36,6 +39,7 @@ public class HalfEdge {
 		face=null;
 		next=null;
 		prev=null;
+		color=CPScreen.getFGColor();
 		edgeIndx=-1; // indicates index is not set
 		myRedEdge=null;
 		invDist=1.0;
@@ -137,6 +141,14 @@ public class HalfEdge {
 	
 	public double getSchwarzain() {
 		return schwarzian;
+	}
+	
+	public Color getColor() {
+		return new Color(color.getRed(),color.getGreen(),color.getBlue(),color.getAlpha());
+	}
+	
+	public void setColor(Color col) {
+		color=new Color(col.getRed(),col.getGreen(),col.getBlue(),col.getAlpha());
 	}
 	
 	/**

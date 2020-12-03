@@ -1,13 +1,11 @@
 package dcel;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Iterator;
 
 import complex.Complex;
 import exceptions.CombException;
 import exceptions.DCELException;
-import geometry.CircleSimple;
 
 /** 
  * DCEL Vertex. The 'vertIndx' is typically the index of the
@@ -24,13 +22,14 @@ public class Vertex {
 	public HalfEdge halfedge;	// a halfedge pointing away from this vert
 	public int vertIndx;		// index from associated 'PackData'
 	public int bdryFlag;		// 0 for interior, 1 for boundary
-	public Color color;
-	public int util;
+//	Color color;
 	
 	// TODO: for now, keep data both here and 'PackData'
 	Complex center;		
 	double rad;
 
+	public int util;			// temporary data only
+	
 	public Vertex() {
 		halfedge=null;
 		vertIndx=-0;
@@ -39,9 +38,8 @@ public class Vertex {
 	}
 	
 	public Vertex(int v) {
-		halfedge=null;
+		this();
 		vertIndx=v;
-		center=new Complex(0.0);
 	}
 
 	/**
@@ -193,33 +191,7 @@ public class Vertex {
 	public int getOpposite() {
 		return halfedge.next.twin.origin.vertIndx;
 	}
-	
-	public void setCenter(Complex z) {
-		center=new Complex(z);
-	}
-	
-	/**
-	 * Note: if center is null, return null
-	 * @return new Complex
-	 */
-	public Complex getCenter() {
-		if (center==null)
-			return null;
-		return new Complex(center);
-	}
-	
-	public void setRadius(double r) {
-		rad=r;
-	}
-	
-	public double getRadius() {
-		return rad;
-	}
-	
-	public CircleSimple getData() {
-		return new CircleSimple(getCenter(),getRadius(),1);
-	}
-	
+
 	public String toString() {
 		return new String(""+vertIndx);
 	}
@@ -231,9 +203,7 @@ public class Vertex {
 	public Vertex clone() {
 		Vertex nv=new Vertex(vertIndx);
 		nv.halfedge=halfedge;
-		nv.rad=rad;
 		nv.vertIndx=vertIndx;
-		nv.center=new Complex(center);
 		return nv;
 	}
 

@@ -7,7 +7,7 @@ import complex.Complex;
  * @author kens
  *
  */
-public class RData{
+public class RData{ 
 	
 	public Complex center;	// center as complex number 
 	public double rad;		// radius of circle (note: x-radius form in hyp case

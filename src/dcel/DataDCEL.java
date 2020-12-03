@@ -144,8 +144,6 @@ public class DataDCEL {
 				int oldindx=es.w;
 				// put in 'Vertex'
 				Vertex vert=pdcel.vertices[newindx];
-				vert.setCenter(pdcel.p.getCenter(oldindx));
-				vert.setRadius(pdcel.p.getRadius(oldindx));
 				p.setCenter(newindx,pdcel.p.getCenter(oldindx));
 				p.setRadius(newindx,pdcel.p.getRadius(oldindx));
 				p.rData[newindx].aim=pdcel.p.rData[oldindx].aim;
@@ -244,11 +242,14 @@ public class DataDCEL {
 		p.chooseGamma();
 		p.fileName=new String("clone");
 		p.status=true;
-		p.packDCEL=pdcel;
-		pdcel.p.packDCEL=null;
+		if (pdcel.p!=null)
+			pdcel.p.packDCEL=null;
 		pdcel.p=p;
 		p.alpha=pdcel.alpha.origin.vertIndx;
 		p.beta=pdcel.alpha.twin.origin.vertIndx;
+		
+		// attach this dcel
+		p.attachDCEL(pdcel);
 		return p;
 	}
 	

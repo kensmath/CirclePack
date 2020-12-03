@@ -447,7 +447,7 @@ public class CommandStrParser {
 			  }
 		  }
 		  
-		  PackDCEL pDCEL=new PackDCEL(bouquet);
+		  PackDCEL pDCEL = CombDCEL.createVE(null,bouquet);
 		  int origVCount=pDCEL.vertCount;
 		  if (pDCEL==null || pDCEL.addBaryCenters((FaceLink)null)==0) {
 			  CirclePack.cpb.myErrorMsg("Failed to get initial DCEL, or failed to add barycenters to faces");
@@ -5799,14 +5799,27 @@ public class CommandStrParser {
 					// Now three situations: 'vlist' takes precedence over 'poisonVerts'
 					PackDCEL pdcel=null;
 					if (vlist!=null && vlist.size()>0)
-						pdcel=CombDCEL.d_redChainBuilder(packData,bouq,vlist,false);
+						pdcel=CombDCEL.d_redChainBuilder(bouq,vlist,false,packData.alpha);
 					else if (packData.poisonVerts!=null && packData.poisonVerts.size()>0)	
-						pdcel=CombDCEL.d_redChainBuilder(packData,bouq,packData.poisonVerts,true);
+						pdcel=CombDCEL.d_redChainBuilder(bouq,packData.poisonVerts,true,packData.alpha);
 					else
-						pdcel=CombDCEL.d_redChainBuilder(packData,bouq,null,false);
+						pdcel=CombDCEL.d_redChainBuilder(bouq,null,false,packData.alpha);
 					
+					pdcel.p=packData;
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
 					CPBase.pack[qnum].swapPackData(p,false);
+					pdcel.D_CompCenters();
+					return 1;
+				}
+				
+				else if (str.contains("reorie")) {
+					int qnum= StringUtil.qFlagParse(items.remove(0));
+
+					int[][] newBouquet=CombDCEL.reverseOrientation(packData.getBouquet());
+					PackDCEL pdcel=CombDCEL.d_redChainBuilder(newBouquet,null,false,0);
+					PackData p=DataDCEL.dcel_to_packing(pdcel);
+					CPBase.pack[qnum].swapPackData(p,false);
+					pdcel.D_CompCenters();
 					return 1;
 				}
 				
@@ -5816,8 +5829,7 @@ public class CommandStrParser {
 				
 				// keep redchain, reprocess the interior with/w.o. blueshift option
 				else if (str.contains("refil")) {
-					boolean blueshift=(items.size()>0);
-					packData.packDCEL=CombDCEL.d_FillInside(packData.packDCEL, blueshift);
+					CombDCEL.d_FillInside(packData.packDCEL);
 				}
 				
 				// show redChain edges and their twinRed,
@@ -5835,7 +5847,7 @@ public class CommandStrParser {
 				}
 
 				else if (str.contains("dcel")) {
-					packData.packDCEL = CombDCEL.d_redChainBuilder(packData,packData.getBouquet(),null,false);
+					packData.packDCEL = CombDCEL.d_redChainBuilder(packData.getBouquet(),null,false,packData.alpha);
 					if (packData.packDCEL == null || packData.packDCEL.vertCount != packData.nodeCount)
 						throw new CombException("failed to create packDCEL");
 					return 1;
@@ -5911,7 +5923,7 @@ public class CommandStrParser {
 				else if (str.contains("layout")) {
 					if (packData.packDCEL==null)
 						return 0;
-					return packData.packDCEL.dcelCompCenters(packData.packDCEL.faceOrder);
+					return packData.packDCEL.dcelCompCenters(packData.packDCEL.computeOrder);
 				} 
 				else if (str.contains("syncF")) { // sync p.faces to packDCEL.faces
 					if (packData.packDCEL==null)
@@ -6564,6 +6576,8 @@ public class CommandStrParser {
 	      // =========== gamma ============
 	      if (cmd.startsWith("gamma")) {
 	    	  int a=NodeLink.grab_one_vert(packData,flagSegs);
+	    	  if (packData.packDCEL!=null)
+	    		  return packData.packDCEL.setGamma(a);
 	    	  return packData.setGamma(a);
 	      }
 	      
@@ -7795,7 +7809,7 @@ public class CommandStrParser {
 	    	  	if (flagSegs==null || flagSegs.size()==0) { 
 	    	  		pv=packData.nodeCount;
 	  				if (packData.puncture_vert(pv)==0) return 0;
-	  				packData.xyzpoint=null;
+	  				packData.xyzpoint=null; // ditch any xyz data
 	    	  		packData.setCombinatorics();
 	    	  		return 1;
 	    	  	}
@@ -8394,6 +8408,11 @@ public class CommandStrParser {
 	    	  int ans=packData.reverse_orient();
 	    	  if (ans>0) {
 	    		  packData.setCombinatorics();
+		    	  if (packData.packDCEL!=null) {
+		    		  PackDCEL pdcel=packData.packDCEL.reverseOrientation();
+		    		  pdcel.p=packData;
+		    		  packData.packDCEL=pdcel;
+		    	  }
 	    	  }
 	    	  return ans;
 	      }

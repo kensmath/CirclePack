@@ -303,7 +303,8 @@ public class NSpole {
 	/**
 	 * Given vector of points in the plane, return the Mobius transformation that
 	 * puts the centroid of their stereo projections to the sphere close to the 
-	 * origin in 3-space. Return null on error.
+	 * origin in 3-space. Return null on error. Note that the point at infinity
+	 * remains unmoved, i.e., returned Mobius is linear.
 	 * @param pts Complex[], plane points
 	 * @param cycles int
 	 * @param debug boolean
@@ -319,7 +320,7 @@ public class NSpole {
 		if (debug)
 			System.out.println("starting 'bestsq' = "+String.format("%.6f",bestsq));
 
-		// Nested while loops; after an inner loop, adjustments are applied
+		// Nested 'while' loops; after an inner loop, adjustments are applied
 		//   to 'pts' and the mobius is accumulated in 'accP'.
 		int outercount=0;
 		while (bestsq > N_TOLER && outercount < cycles) {

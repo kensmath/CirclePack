@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import exceptions.CombException;
+import panels.CPScreen;
 
 /**
  * DCEL face. Careful, the 'edge' and 'faceIndx' are not
@@ -21,12 +22,13 @@ public class Face {
 
 	public HalfEdge edge; // 'this' is on the left of its halfedge
 	public int faceIndx;  // utility index for this face
-	public Color color;
+	Color color;
 	
 	// Constructor
 	public Face() {
 		edge=null;
 		faceIndx=0;
+		color=CPScreen.getFGColor();
 	}
 	
 	/**
@@ -132,6 +134,15 @@ public class Face {
 		}
 		return ans;
 	}
+	
+	public Color getColor() {
+		return new Color(color.getRed(),color.getGreen(),color.getBlue(),color.getAlpha());
+	}
+	
+	public void setColor(Color col) {
+		color=new Color(col.getRed(),col.getGreen(),col.getBlue(),col.getAlpha());
+	}
+	
 
 	/**
 	 * Return ordered array of 'HalfEdge's around the face

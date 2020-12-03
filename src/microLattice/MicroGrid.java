@@ -1034,7 +1034,7 @@ public class MicroGrid extends PackExtender {
 				Oops("usage: write_dual <filename>");
 			
 			// create dcel
-			qPack.packDCEL = CombDCEL.d_redChainBuilder(qPack,qPack.getBouquet(),null,false);
+			qPack.packDCEL = CombDCEL.d_redChainBuilder(qPack.getBouquet(),null,false,qPack.alpha);
 			PackDCEL qdcel=qPack.packDCEL.createDual(false);
 			BufferedWriter fp=null;
 			File file=null;

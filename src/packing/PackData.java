@@ -27,9 +27,11 @@ import complex.MathComplex;
 import dcel.CombDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
+import dcel.VData;
 import deBugging.DebugHelp;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
+import exceptions.DCELException;
 import exceptions.DataException;
 import exceptions.InOutException;
 import exceptions.LayoutException;
@@ -127,6 +129,7 @@ public class PackData{
 	// Main data vectors
 	public KData kData[];   // pointer to combinatoric data 
 	public RData rData[];   // pointer to double data 
+	public VData vData[];   // instantiated only with packDCEL
 	public Vector<PackExtender> packExtensions;  // vector of extensions
 	public TileData tileData; // for associated tilings 
 	
@@ -235,8 +238,50 @@ public class PackData{
     	vertexMap=null;
     	colorIndx=0;
     	smoother=null;
+    	vData=null;
     }
     
+    /**
+     * Attach a new or modified DCEL structure for this packing and 
+     * sync the associated 'vData[]'. If this is an existing packing 
+     * and the dcel structure is just created, then populate the new 
+     * 'vData' using existing 'rData', with 'pdcel.newOld' to 
+     * translate indices. If this is a modified dcel (for example,
+     * if a new structure was cookied from the origin), then go to
+     * the existing 'vData' to populate the new 'vData', using
+     * 'pdcel.newOld'.
+     *  
+     * TODO: may need to save additional info when swapping in new dcel:
+     * e.g., 'invDist's, 'schwarzian's, face colors, etc.
+     * 
+     * @param pdcel PackDCEL
+     * @return int, vertCount on success, 0 on failure
+     */
+    public int attachDCEL(PackDCEL pdcel) {
+    	packDCEL=pdcel;
+    	VData[] newVData=new VData[pdcel.vertCount+1];
+    	if (vData==null) { // no existing dcel structure
+    		for (int v=1;v<=pdcel.vertCount;v++) {
+    			newVData[v]=new VData();
+    			int w=pdcel.newOld.findW(v); // old index
+    			if (w>0) {
+    				newVData[v].center=new Complex(rData[w].center);
+    				newVData[v].rad=rData[w].rad;
+    				newVData[v].color=kData[v].color;
+    			}
+    		}
+    	}
+    	else {
+    		for (int v=1;v<=pdcel.vertCount;v++) {
+    			newVData[v]=new VData();
+    			int w=pdcel.newOld.findW(v); // old index
+    			if (w>0)
+    				newVData[v]=vData[w];
+    		}
+    	}
+    	vData=newVData; 
+    	return pdcel.vertCount;
+    }
 
     /**
      * Read new circle packing (or data for existing packing) 
@@ -2101,13 +2146,15 @@ public class PackData{
      * @return 1, 0 on failure
      */
     public int setAlpha(int v) {
-        if (status && v>0 && v<= nodeCount && kData[v].bdryFlag==0){
-            alpha=v;
-            if (v==gamma) gamma=kData[v].flower[0];
-            facedraworder(false);
-            return 1;
+    	if (packDCEL!=null) {
+    		return packDCEL.setAlpha(v);
         }
-        return 0;
+    	if (!status || v<=0 || v>nodeCount)
+    		return 0;
+        alpha=v;
+        if (v==gamma) gamma=kData[v].flower[0];
+        facedraworder(false);
+        return 1;
     } 
 
     /**
@@ -6560,7 +6607,7 @@ public class PackData{
 		if (packDCEL==null || packDCEL.vertCount<=0) {
 			
 			// create the DCEL structure 
-			packDCEL=CombDCEL.d_redChainBuilder(this,this.getBouquet(),null,false);
+			packDCEL=CombDCEL.d_redChainBuilder(getBouquet(),null,false,alpha);
 		}
 		if (dual) {
 			PackDCEL dualdcel=packDCEL.createDual(false);
@@ -11474,8 +11521,18 @@ public class PackData{
 	   * @return 1 on success, 0 if not suitable
 	   */
 	  public int puncture_vert(int v) {
-	      int w;
-	      for (int j=0;j<kData[v].num;j++) { // check suitability
+		  if (packDCEL!=null) {
+			  PackDCEL newDCEL=CombDCEL.d_puncture_vert(packDCEL, v);
+			  if (newDCEL==null) {
+				  throw new DCELException("DCEL puncture for "+v+" failed");
+			  }
+			  attachDCEL(newDCEL);
+			  return 1;
+		  }
+		  
+		  // else non-DCEL case
+		  int w;
+		  for (int j=0;j<kData[v].num;j++) { // check suitability
 	    	  // TODO: why was this needed?
 //	    	  if (kData[w=kData[v].flower[j]].num<4) return 0;
 	    	  w=kData[v].flower[j];

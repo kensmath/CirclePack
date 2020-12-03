@@ -198,7 +198,9 @@ public class SphericalMath{
 	 * Given three points on the sph, find the sph center/rad
 	 * for the circle containing them; choose center to get
 	 * proper orientation {A, B, C}.
-	 * @param A, B, C, Complex sph points
+	 * @param A Complex; sph points
+	 * @param B Complex
+	 * @param C Complex
 	 * @return CircleSimple with spherical data
 	 */
 	public static CircleSimple circle_3_sph_planB(Complex A,Complex B,Complex C) {
@@ -307,7 +309,7 @@ public class SphericalMath{
   /**
    * Return new Complex (theta,phi) representing projection of given Point3D
    * to the unit sphere; recall, origin goes to NORTH pole.
-   * @param p3d, Point3D
+   * @param p3d Point3D
    * @return sph coords (theta,phi) 
    */
   public static Complex proj_vec_to_sph(Point3D p3d) {
@@ -316,8 +318,10 @@ public class SphericalMath{
   
   /**
    * Return new Complex (theta,phi) representing projection of given 3D vector
-   * to the unit sphere; recall, origin goes to NORTH pole.
-   * @param x, y, z, 3D vector
+   * (x,y,z) to the unit sphere; recall, origin goes to NORTH pole.
+   * @param x double
+   * @param y double
+   * @param z double
    * @return sph coords (theta,phi), default to N if vector norm is too small.
    */
   public static Complex proj_vec_to_sph(double x,double y,double z) {
@@ -704,8 +708,8 @@ public static double vec_norm(double X[]){
     	  return new CircleSimple(sz,er,1); 
       }
       
-      // General strategy: project three points of the
-      //   euclidean circle to 3-vectors on the sphere.
+      // General strategy: project 3 equally spaced points of the
+      //   euclidean circle to 3 points on the sphere.
       
       Complex []epts=new Complex[3];
       epts[0]=ez.plus(rr);
@@ -722,6 +726,8 @@ public static double vec_norm(double X[]){
     	  spts[0]=spts[2];
     	  spts[2]=h;
       }
+      
+      // find the circle through the 3 spherical points
       CircleSimple cS=circle_3_sph_planB(spts[0],spts[1],spts[2]);
 
       return cS;
@@ -930,7 +936,8 @@ public static double vec_norm(double X[]){
 	}
 	
 	/**
-	 *     z=(1-(u*u+v*v))/(1+(u*u=v*v)); x=u(1+z); y=v(1+z).
+	 * Stereographic projection: (u,v) --> (x,y,z) on unit sphere
+	 *     z=(1-(u*u+v*v))/(1+(u*u=v*v));    x=u(1+z);    y=v(1+z).
 	 * @param z
 	 * @return Point3D
 	 */

@@ -7,7 +7,6 @@ import allMains.CirclePack;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
-import input.CommandStrParser;
 import komplex.EdgeSimple;
 import listManip.GraphLink;
 import listManip.NodeLink;
@@ -27,11 +26,11 @@ public class CombDCEL {
 	 * Bouquet satisfies usual conventions: counterclockwise order, 
 	 * indexed contiguously from 1, bdry/interior flower 
 	 * open/closed, resp.
-	 * @param pdcel PackDCEL
+	 * @param pdcel PackDCEL, may be null
 	 * @param bouquet int[][]
-	 * @return vertcount
+	 * @return PackDCEL
 	 */
-	public static int createVE(PackDCEL pdcel,int[][] bouquet) {
+	public static PackDCEL createVE(PackDCEL pdcel,int[][] bouquet) {
 		return createVE(pdcel,bouquet,0);
 	}
 	
@@ -41,12 +40,14 @@ public class CombDCEL {
 	 * Bouquet satisfies usual conventions: counterclockwise order, 
 	 * indexed contiguously from 1, bdry/interior flower 
 	 * open/closed, resp. 'alpha' helpedge should start at interior  
-	 * @param pdcel PackDCEL (included because it is instantiated by calling routine)
+	 * @param pdcel PackDCEL, may be null
 	 * @param bouquet int[][]
 	 * @param alphaIndx int, suggested 'alpha' vertex, may be 0
-	 * @return vertcount
+	 * @return packDCEL
 	 */
-	public static int createVE(PackDCEL pdcel,int[][] bouquet,int alphaIndx) {
+	public static PackDCEL createVE(PackDCEL pdcel,int[][] bouquet,int alphaIndx) {
+		if (pdcel==null)
+			pdcel=new PackDCEL();
 		int vertcount = bouquet.length - 1; // 0th entry is empty
 		Vertex[] vertices = new Vertex[vertcount + 1];
 		int[] bdryverts=new int[vertcount+1];  // flag bdry vertices
@@ -177,12 +178,12 @@ public class CombDCEL {
 		}
 		pdcel.euler = 0;
 			
-		return vertcount;
+		return pdcel;
 	}
 	
 	/**
-	 * Given a minimal DCEL (with vertices, edges) and a list
-	 * (possibly empty) of vertices that are non-keepers, generate 
+	 * Given 'bouquet', create minimal DCEL (vertices, edges) and with
+	 * a list (possibly empty) of vertices that are non-keepers, generate 
 	 * a new DCEL which adds the non-keepers to the boundary.
 	 * 
 	 * This creates new face indices, idealfaces, redchain, sides, 
@@ -202,20 +203,19 @@ public class CombDCEL {
 	 *   * An isolated vertex in 'nonKeeper' should be okay, except
 	 *     for a combinatorial sphere with a single vert in 
 	 *     'nonKeepers'. (If you want to "puncture" a point, you need
-	 *     to include its neighbors in 'nonKeepers'
-	 * @param p PackData, could be null
+	 *     to include its neighbors in 'nonKeepers')
 	 * @param bouquet int[][], normal bouquet
 	 * @param nonKeepers NodeLink,
 	 * @param poisonFlag boolean, if true, then augment 
 	 *    'nonKeepers' with their neighbors 
+	 * @param alphaIndx int
 	 * @return PackDCEL
 	 */
-	public static PackDCEL d_redChainBuilder(PackData p,
-			int[][] bouquet, NodeLink nonKeepers,boolean poisonFlag) {
+	public static PackDCEL d_redChainBuilder(int[][] bouquet,
+			NodeLink nonKeepers,boolean poisonFlag,int alphaIndx) {
 		boolean debug=false;
-		PackDCEL pdcel=new PackDCEL(); 
-		pdcel.p=p;
-		createVE(pdcel,bouquet,p.alpha);
+		PackDCEL pdcel=createVE(null,bouquet,alphaIndx);
+
 		int vertcount=pdcel.vertCount;
 
 		if (debug) { // debug=true;
@@ -406,13 +406,14 @@ public class CombDCEL {
 			rtrace=rtrace.nextRed;
 			markFaceUtils(he);			
 
-			if (debug) { // debug=true;
+/*			if (debug) { // debug=true;
 				EdgeSimple es=new EdgeSimple(he.origin.vertIndx,
 						he.twin.origin.vertIndx);
 				DCELdebug.drawEdgeFace(p, es);
 				DCELdebug.drawTmpRedChain(pdcel.p,pdcel.redChain);
 			}
-
+*/
+			
 			he.next.origin.halfedge=he.next;
 		}
 		rtrace.nextRed=pdcel.redChain;
@@ -486,10 +487,10 @@ public class CombDCEL {
 							currRed.prevRed.prevRed.nextRed = currRed.nextRed;
 							currRed.nextRed.prevRed = currRed.prevRed.prevRed;
 							
-							if (debug) {
+//							if (debug) {
 //								System.err.println(v+" collapse done");
-								CommandStrParser.jexecute(p,"disp -tfc218 "+v);
-							}
+//								CommandStrParser.jexecute(p,"disp -tfc218 "+v);
+//							}
 
 							doneV[v] = true;
 							currRed.nextRed.myEdge.origin.halfedge = 
@@ -525,11 +526,11 @@ public class CombDCEL {
 								markFaceUtils(spktrace);			
 								hit=true;
 								
-								if (debug) {
-									EdgeSimple es=new EdgeSimple(spktrace.origin.vertIndx,
-											spktrace.twin.origin.vertIndx);
-									DCELdebug.drawEdgeFace(p, es);
-								}
+//								if (debug) {
+//									EdgeSimple es=new EdgeSimple(spktrace.origin.vertIndx,
+//											spktrace.twin.origin.vertIndx);
+//									DCELdebug.drawEdgeFace(p, es);
+//								}
 								
 								spktrace=spktrace.prev.twin;
 								cclw=cclw.nextRed;
@@ -537,10 +538,10 @@ public class CombDCEL {
 							cclw.nextRed=currRed.nextRed;
 							currRed.nextRed.prevRed=cclw;
 
-							if (debug) {
+//							if (debug) {
 //								System.err.println(v+" flat, done");
-								CommandStrParser.jexecute(p,"disp -tfc218 "+v);
-							}
+//								CommandStrParser.jexecute(p,"disp -tfc218 "+v);
+//							}
 
 							doneV[v]=true;
 						}
@@ -552,11 +553,11 @@ public class CombDCEL {
 							cclw.nextRed=new RedHEdge(upspoke.next);
 							markFaceUtils(upspoke);			
 
-							if (debug) {
-								EdgeSimple es=new EdgeSimple(upspoke.origin.vertIndx,
-										upspoke.twin.origin.vertIndx);
-								DCELdebug.drawEdgeFace(p, es);
-							}
+//							if (debug) {
+//								EdgeSimple es=new EdgeSimple(upspoke.origin.vertIndx,
+//										upspoke.twin.origin.vertIndx);
+//								DCELdebug.drawEdgeFace(p, es);
+//							}
 							
 							hit=true;
 							cclw.nextRed.prevRed=cclw;
@@ -835,7 +836,8 @@ public class CombDCEL {
 		
 		blueCleanup(pdcel); // try to eliminate blue faces in the 'redChain'
 		
-		return d_FillInside(pdcel,false); // for now, do not redshift
+		d_FillInside(pdcel);
+		return pdcel;
 	}
 	
 	/** 
@@ -876,10 +878,9 @@ public class CombDCEL {
 	 * flipping an edge. The 'HalfEdge's already exist, but we find them
 	 * using 'pdcel.vertices' and create 'pdcel.edges' at the end.
 	 * @param pdcel
-	 * @param blueshift boolean, try to eliminate "blue" faces?
 	 * @return PackDCEL
 	 */
-	public static PackDCEL d_FillInside(PackDCEL pdcel,boolean blueshift) {
+	public static void d_FillInside(PackDCEL pdcel) {
 		PackData p=pdcel.p;
 		boolean debug=false;
 		// NOTE about debugging: Many debug routines depend on
@@ -887,7 +888,7 @@ public class CombDCEL {
 		//      pdcel.newold.
 		
 		// use 'HalfEdge.util' to keep track of edges hit; this
-		//   should initializing interior edges.
+		//   should be used in initializing interior edges.
 		for (int v=1;v<=pdcel.vertCount;v++) {
 			pdcel.vertices[v].util=0;
 			HalfEdge edge=pdcel.vertices[v].halfedge; 
@@ -900,14 +901,12 @@ public class CombDCEL {
 			} while(trace!=edge);
 		}
 		
-		// search for and try to eliminate "blue" edges: these have
-		// two red edges on same face. Try to shift the redChain, not
-		// creating any new "blue" and keeping twins, etc.
-		if (blueshift) {
-			
-			// TODO: we may have already done this.
-			
-		}
+		// zero out 'RedHEdge.redutil'
+		RedHEdge rtrace=pdcel.redChain;
+		do {
+			rtrace.redutil=0;
+			rtrace=rtrace.nextRed;
+		} while (rtrace!=pdcel.redChain);
 		
 		// Build list of edges as we encounter new faces: convention is that
 		//   each 'HalfEdge' in 'orderEdges' is associated with its face (ie. that
@@ -915,13 +914,13 @@ public class CombDCEL {
 		ArrayList<HalfEdge> orderEdges=new ArrayList<HalfEdge>(); 	
 		int ordertick=0;
 		
-		// get non-red connected to alpha first: use two lists 
+		// get non-red vertices connected to alpha first: use two lists 
 		int[] vhits=new int[pdcel.vertCount+1];
 		ArrayList<Vertex> currv=new ArrayList<Vertex>(0);
 		ArrayList<Vertex> nxtv=new ArrayList<Vertex>(0);
 		nxtv.add(pdcel.alpha.origin);
 
-		// put alpha in first
+		// put alpha in first and mark its edges
 		orderEdges.add(pdcel.alpha);
 		ordertick++;
 		
@@ -996,7 +995,7 @@ public class CombDCEL {
 				|| startred.myEdge.prev==startred.prevRed.myEdge))
 			startred=startred.nextRed;
 		
-		RedHEdge rtrace=startred;
+		rtrace=startred;
 		do {
 			
 			// if associated face already plotted, continue
@@ -1463,7 +1462,6 @@ public class CombDCEL {
 		pdcel.euler=pdcel.vertCount -etick/2 + ftick;
 		if (newRedChain!=null)
 			pdcel.redChain=newRedChain;
-		return pdcel;
 	}
 	
 	/** 
@@ -1515,7 +1513,7 @@ public class CombDCEL {
 		if (v < 1 || v > len || w < 1 || w > len)
 			return -1;
 		int[] flower = bouq[v];
-		for (int j = 0; j <= flower.length; j++)
+		for (int j = 0; j < flower.length; j++)
 			if (flower[j] == w)
 				return j;
 		return -1;
@@ -1583,6 +1581,26 @@ public class CombDCEL {
 			he=he.next;
 		} while(he!=edge);
 	}
+	
+	
+	/**
+	 * Given a bouquet, return a bouquet with reverse orientation.
+	 * @param bouq int[][]
+	 * @return new bouquet[][]
+	 */
+	public static int[][] reverseOrientation(int[][] bouq) {
+		int vcount=bouq.length-1;
+		int [][] newBouquet=new int[vcount+1][];
+		for (int v=1;v<=vcount;v++) {
+			int len=bouq[v].length;
+			newBouquet[v]=new int[len];
+			for (int j=0;j<len;j++) {
+				newBouquet[v][j]=bouq[v][len-j-1];
+			}
+		}
+		return newBouquet;
+	}
+	
 
 	/**
 	 * check if all all edges from 'edge' origin vertex
@@ -1599,5 +1617,83 @@ public class CombDCEL {
 		} while(he!=edge);
 		return true;
 	}
-
+	
+	/** 
+	 * Remove one interior vert; must have at least 2 generations 
+	 * of interior neighbors. Geometry is not changed; lists are 
+	 * adjusted, but any face list data is tossed. Calling routine
+	 * will have to do 'complex_count', etc.
+	 * @param pdcel PackDCEL
+	 * @param v int
+	 * @return PackDCEL, null on failure
+	 */
+	public static PackDCEL d_puncture_vert(PackDCEL pdcel,int v) {
+	    // check suitability
+	    boolean failed=false;
+	    int[] flower=pdcel.usualFlower(pdcel.vertices[v]);
+	    for (int j=0;(j<flower.length && !failed);j++) { 
+	    	if (pdcel.vertices[flower[j]].bdryFlag!=0) {
+	    		failed=true;
+	    		break;
+	    	}
+	    	int[] petflower=pdcel.usualFlower(pdcel.vertices[flower[j]]);
+	    	for (int k=0;(k<petflower.length && !failed);k++)
+		    if (pdcel.vertices[flower[j]].bdryFlag!=0) 
+		    	  failed=true;
+	    }
+	    if (failed) {
+	    	return null;
+	    }
+	      
+	    NodeLink nonks=new NodeLink();
+	    nonks.add(v);
+	    for (int j=0;j<flower.length;j++)
+	    	nonks.add(flower[j]);
+	      
+	    return(d_redChainBuilder(pdcel.getBouquet(),nonks,false,0));
+	}
+	  
+	  /** 
+	   * Remove a face, converting its three vertices to form a new
+	   * 3-edge boundary component. Face needs to be at least 2 
+	   * generations distant from the original boundary to avoid
+	   * disconnecting things. Geometry is not changed; local face list
+	   * data is tossed. Calling routine does 'complex_count', etc.
+	   * @param f
+	   * @return 1 on success, 0 if not suitable
+	   */
+/*	  public int puncture_face(int f) {
+		  if (f<1 || f>faceCount)
+			  return 0;
+		  Face face=faces[f];
+		  
+		  // find faces next to boundary, then vertices next to these
+		  flist= new FaceLink(this,"-Iv b");
+		  NodeLink nlink=new NodeLink(this,"-If flist");
+		  for (int k=0;k<3;k++) {
+			  int v=face.vert[k];
+			  if (kData[v].bdryFlag!=0 || nlink.containsV(v)>0) {
+				  CirclePack.cpb.errMsg("face is too close to the bdry to puncture");
+				  return 0;
+			  }
+		  }
+		  flist=null; // wanted to empty 'flist' in any case.
+		  
+		  // fix flowers
+		  for (int j=0;j<3;j++) {
+			  int v=face.vert[j];
+			  int indx=nghb(v,face.vert[(j+2)%3]);
+			  int num=kData[v].num;
+			  int []newflower=new int[num+1];
+			  for (int kk=0;kk<num;kk++)
+				  newflower[kk]=kData[v].flower[(kk+indx)%num];
+			  kData[v].num--;
+			  kData[v].flower=newflower;
+			  kData[v].bdryFlag=1;
+		  }
+			  
+		  return 1;
+	  }
+*/
+	      
 }

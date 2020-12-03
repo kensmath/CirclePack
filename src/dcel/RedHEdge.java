@@ -11,6 +11,9 @@ import util.TriAspect;
  * interior faces. In non-simply connected cases, segments of red edges
  * may be identified. Outside the redChain are one or more ideal faces.
  * NOTE: the dcel structure still lies with the 'HalfEdge's via 'myEdge'.
+ * This is not persistent data; these edges change, e.g., when we change
+ * the DCEL.
+ * TODO: do we need to save data when changing the DCEL?
  * @author kstephe2, 7/2020
  *
  */
@@ -21,12 +24,14 @@ public class RedHEdge {
 	public RedHEdge prevRed;
 	public RedHEdge twinRed; // across a red edge
 	public int mobIndx;    // index into sidepair Mobius maps
-	public int redutil;
 	
-	// A red edge 'origin' may have several cent/rad's
+	// The 'origin' for this red edge may have several other red edges
+	//    with different cent/rad's
 	Complex center;
 	double rad;
 	
+	public int redutil; // for temporary use only
+
 	// Constructor
 	public RedHEdge(HalfEdge he) {
 		myEdge=he;
@@ -57,7 +62,7 @@ public class RedHEdge {
 	}
 	
 	/**
-	 * This does not set center in parent 'PackData'
+	 * Doesn't set center in 'PackData' or in 'origin' 
 	 * @param z Complex
 	 */
 	public void setCenter(Complex z) {
@@ -69,7 +74,7 @@ public class RedHEdge {
 	}
 	
 	/**
-	 * This does not set rad in parent 'PackData'
+	 * This does not set rad or in 'origin'
 	 * @param r double
 	 */
 	public void setRadius(double r) {

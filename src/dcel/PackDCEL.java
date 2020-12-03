@@ -8,7 +8,7 @@ import java.util.Iterator;
 
 import allMains.CirclePack;
 import complex.Complex;
-import deBugging.LayoutBugs;
+import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.InOutException;
@@ -92,7 +92,8 @@ public class PackDCEL {
 	public ArrayList<RedHEdge> bdryStarts; // red edges at start of a free (unpasted) side
 	public ArrayList<RedHEdge> sideStarts; // red edges starting paired sides, will have 'mobIndx'
 	boolean debug;
-	public HalfEdge alpha;
+	public HalfEdge alpha; // origin normally placed at origin
+	public HalfEdge gamma; // origin normally on positive y-axis, default 'alpha.twin'
 	
 	public D_PairLink pairLink;  // linked list of 'D_SideData' on side-pairings
 	
@@ -110,17 +111,6 @@ public class PackDCEL {
 		redChain=null;
 		debug=false;
 		euler=3; // impossible euler char 
-	}
-	
-	/**
-	 * Build from "bouquet", which has a row for each vertex giving
-	 * its cclw neighbors. 'p' remains null.
-	 * @param bouquet [][]int
-	 */
-	public PackDCEL(int [][]bouquet) {
-		this();
-		vertCount=bouquet.length-1;
-		euler=CombDCEL.createVE(this,bouquet,0); 
 	}
 	
 	/**
@@ -147,7 +137,7 @@ public class PackDCEL {
 				arrayV.add(n);
 		
 		// TODO: have to adjust call for ones to eliminate.
-		return CombDCEL.d_redChainBuilder(this.p,this.getBouquet(),arrayV,false);
+		return CombDCEL.d_redChainBuilder(this.getBouquet(),arrayV,false,0);
 	}
 	
 	/**
@@ -432,11 +422,43 @@ public class PackDCEL {
 	}
 	
 	/**
+	 * Compute/store centers for 'edge.face' from the opposed 
+	 * 'edge.twin.face'. That is, get the centers for the ends 
+	 * of 'edge' from the opposing face, compute the center 
+	 * opposite 'edge' in 'edge.face', then store all three 
+	 * centers for 'edge.face'. Note: if 'edge.myRedEdge' is 
+	 * not null, this will change the centers stored for the 
+	 * two red vertices at the ends of 'edge'. 
+	 * @param edge HalfEdge
+	 * @return int, 1 or 3 centers set.
+	 */
+	public int d_faceXedge(HalfEdge edge) {
+		
+		// get centers of end vertices from opposed face 
+		HalfEdge etwin=edge.twin;
+		CircleSimple c0=getVertData(etwin.next);
+		CircleSimple c1=getVertData(etwin);
+		double rad2=getVertRadius(edge.next.next);
+		double ov0=getInvDist(etwin.next);
+		double ov1=getInvDist(etwin);
+		double ov2=getInvDist(edge.next.next);
+		CircleSimple sC=CommonMath.comp_any_center(c0.center,
+			c1.center,c0.rad,c1.rad,rad2,ov0,ov1,ov2,p.hes);
+		setVertData(edge.next.next,sC);
+		if (edge.myRedEdge!=null) {
+			setVertData(edge,c0);
+			setVertData(edge.next,c1);
+			return 3;
+		}
+		return 1;
+	}
+	
+	/**
 	 * Use 'computeOrder' to compute circle centers, laying base face
 	 * first, then the rest. Note that some circles get laid down more
-	 * than once, so last position is what is stored in 'PackData' for now.
+	 * than once, so last position is what is stored in 'Vertex' for now.
 	 * TODO: for more accuracy, average all computations of center that are
-	 * available: Ides: make all centers null so we can see which are set.
+	 * available: Idea: make all centers null so we can see which are set.
 	 * @return count
 	 */
 	public int D_CompCenters() {
@@ -475,8 +497,9 @@ public class PackDCEL {
 			}
 			
 		}
+
 		
-		// final pass around red chain: set 'PackData' centers at first hits
+/* OBE: final pass around red chain: set 'PackData' centers at first hits
 		RedHEdge rtrace=redChain;
 		do {
 			rtrace.myEdge.origin.util=0;
@@ -490,6 +513,7 @@ public class PackDCEL {
 			}
 			rtrace=rtrace.nextRed;
 		} while (rtrace!=redChain);
+*/
 		
 		return count;
 	}
@@ -520,38 +544,32 @@ public class PackDCEL {
 		
 		// lay out the first face
 		Face face=faces[f];
-		int v=face.edge.origin.vertIndx;
-		int u=face.edge.twin.origin.vertIndx;
-		int w=face.edge.next.twin.origin.vertIndx;
 		
-		// v at origin
-	    double rv=p.getRadius(v);
-	    p.setCenter(v,0.0,0.0);
+		// face edge starts at origin
+	    double rv=getVertRadius(face.edge);
+	    setVertCenter(face.edge,new Complex(0.0));
 	    
-	    // u on x-axis
-	    double ru=p.getRadius(u);
+	    // other end on x-axis
+	    double ru=getVertRadius(face.edge.twin);
 	    double ovlp=1.0; // default overlap (tangency)
-	    p.setCenter(u,Math.sqrt(rv*rv+ru*ru+2*rv*ru*ovlp),0.0);
+	    setVertCenter(face.edge.twin,new Complex(Math.sqrt(rv*rv+ru*ru+2*rv*ru*ovlp)));
 	    int count=1;
 	    
 	    // find center for w
-	    CircleSimple sc=EuclMath.e_compcenter(p.getCenter(v),p.getCenter(u),
-	    		rv,ru,p.getRadius(w));
-	    p.setCenter(w, sc.center.x,sc.center.y);
+	    CircleSimple sc=EuclMath.e_compcenter(getVertCenter(face.edge),getVertCenter(face.edge.twin),
+	    		rv,ru,getVertRadius(face.edge.next.twin));
+	    setVertCenter(face.edge.next.twin, sc.center);
 	    
 	    // now layout by face-by-face
 	    while (git.hasNext()) {
 	    	face=faces[git.next().w];
-	    	v=face.edge.origin.vertIndx;
-			u=face.edge.twin.origin.vertIndx;
-			w=face.edge.next.twin.origin.vertIndx;
-		    rv=p.getRadius(v);
-		    ru=p.getRadius(u);
+		    rv=getVertRadius(face.edge);
+		    ru=getVertRadius(face.edge.twin);
 		    
 		    // find location for w
-		    sc=EuclMath.e_compcenter(p.getCenter(v),p.getCenter(u),
-		    		rv,ru,p.getRadius(w));
-		    p.setCenter(w, sc.center.x,sc.center.y);
+		    sc=EuclMath.e_compcenter(getVertCenter(face.edge),getVertCenter(face.edge.twin),
+		    		rv,ru,getVertRadius(face.edge.next.twin));
+		    setVertCenter(face.edge.next.twin, sc.center);
 		    count++;
 	    }
 	    return count;
@@ -570,6 +588,7 @@ public class PackDCEL {
 	public int d_draw_bdry_seg(int n,boolean do_label,boolean do_circle,
 			Color ecol,int thickness) {
 		D_SideData epair=null;
+		boolean debug=false;
 	  
 		if (pairLink==null || n<0 || n>=pairLink.size() 
 				|| (epair=(D_SideData)pairLink.get(n))==null
@@ -601,6 +620,11 @@ public class PackDCEL {
 			DispFlags df=new DispFlags(null);
 			df.setColor(ecol);
 			p.cpScreen.drawEdge(v_cent,w_cent,df);
+			
+			if (debug) { // debug=true;
+				p.cpScreen.rePaintAll();
+			}
+			
 			if (do_circle) { 
 				if (do_label) { 
 					dflags.label=true;
@@ -748,6 +772,7 @@ public class PackDCEL {
 		indexFaces(tmpedges,getBdryEdges());
 		return count;
 	}
+
 
 	/**
  	 * NEEDED FOR CIRCLEPACK
@@ -1217,7 +1242,7 @@ public class PackDCEL {
 	 * Find the official rad/cent for the origin of the 
 	 * given 'HalfEdge'. If the origin is 'RedVertex', 
 	 * then look clw for first 'RedHEdge'. If normal 
-	 * 'Vertex', then data is stored in 'PackData'. 
+	 * 'Vertex', then data is stored in 'PackData.vData'. 
 	 * @return CircleSimple
 	 */
 	public CircleSimple getVertData(HalfEdge edge) {
@@ -1228,7 +1253,8 @@ public class PackDCEL {
 		
 		// is a normal 'Vertex'?
 		if (!(vert instanceof RedVertex)) {
-			return vert.getData();
+			int v=vert.vertIndx;
+			return new CircleSimple(p.vData[v].center,p.vData[v].rad);
 		}
 		
 		// else, go clw to reach a spoke that has 'myRedEdge'
@@ -1256,7 +1282,7 @@ public class PackDCEL {
 		
 		// is a normal 'Vertex'? set in 'PackData'
 		if (!(vert instanceof RedVertex)) {
-			return vert.getRadius();
+			return p.vData[vert.vertIndx].rad;
 		}
 		
 		// else, go clw to reach a spoke that has 'myRedEdge'
@@ -1283,9 +1309,9 @@ public class PackDCEL {
 
 		Vertex vert=edge.origin;
 		
-		// is a normal 'Vertex'? set in 'PackData'
+		// is a normal 'Vertex'? set in 'PackData.vData'
 		if (!(vert instanceof RedVertex)) {
-			return vert.getCenter();
+			return new Complex(p.vData[vert.vertIndx].center);
 		}
 		
 		// else, go clw to reach a spoke that has 'myRedEdge'
@@ -1308,31 +1334,20 @@ public class PackDCEL {
 	 */
 	public void setVertCenter(HalfEdge edge,Complex z) {
 		Vertex vert=edge.origin;
+		p.vData[vert.vertIndx].center=new Complex(z);
 
-		// is itself a 'RedHEdge'? Note, also set in 'PackData'
-		if (edge.myRedEdge!=null) {
-			edge.myRedEdge.setCenter(z);
-			vert.setCenter(z);
-			return;
-		}
-		
-		// is a normal 'Vertex'? set in 'PackData'
+		// a normal 'Vertex'? 
 		if (!(vert instanceof RedVertex)) {
-			vert.setCenter(z);
 			return;
 		}
-		
+
 		// else, go clw to reach a spoke that has 'myRedEdge'
 		HalfEdge he=edge;
-		do {
+		while (he.myRedEdge==null) {
 			he=he.twin.next;
-			if (he.myRedEdge!=null) {
-				he.myRedEdge.setCenter(z);
-				he.origin.setCenter(z);
-				p.setCenter(he.origin.vertIndx,new Complex(z));
-				he=edge; // kick out
-			}
-		} while (he!=edge);
+		}
+		he.myRedEdge.setCenter(z);
+		return;
 	}
 
 	/**
@@ -1341,30 +1356,21 @@ public class PackDCEL {
 	 * @param rad double
 	 */
 	public void setVertRadius(HalfEdge edge,double rad) {
-		// is itself a 'RedHEdge'?
-		if (edge.myRedEdge!=null) {
-			edge.origin.setRadius(rad);
-			edge.myRedEdge.setRadius(rad);
-			return;
-		}
-
 		Vertex vert=edge.origin;
+		p.vData[vert.vertIndx].rad=rad;
 		
-		// is a normal 'Vertex'?
+		// a normal 'Vertex'?
 		if (!(vert instanceof RedVertex)) {
-			vert.setRadius(rad);
 			return;
 		}
 		
 		// else, go clw to reach a spoke that has 'myRedEdge'
 		HalfEdge he=edge;
-		do {
+		while (he.myRedEdge==null) {
 			he=he.twin.next;
-			if (he.myRedEdge!=null) {
-				he.origin.setRadius(rad);
-				he.myRedEdge.setRadius(rad);
-			}
-		} while (he!=edge);
+		}
+		he.myRedEdge.setRadius(rad);
+		return;
 	}
 	
 	/**
@@ -1487,7 +1493,7 @@ public class PackDCEL {
 	 * @param circFlags DispFlags, may be null
 	 * @param fix boolean
 	 * @param placeFirst boolean: true = place anew; false, assume 2 verts in place
-	 * @param tx double
+	 * @param tx double, only used for postscrupt output
 	 * @return int count 
 	 */
 	public int layoutTree(PostFactory pF,GraphLink faceTree,
@@ -1495,9 +1501,10 @@ public class PackDCEL {
 			boolean placeFirst,double tx) {
 
 		boolean debug=false;
-		// debug=true;
-		if (debug) {
-			LayoutBugs.log_GraphLink(this.p,faceTree);
+		if (debug) { // debug=true;
+//			LayoutBugs.log_GraphLink(this.p,faceTree);
+			DCELdebug.drawRedChain(p, redChain);
+			DCELdebug.printRedChain(redChain);
 		}
 		
 		int count=0; // CPBase.Glink=faceTree;DualGraph.printGraph(faceTree);
@@ -1509,10 +1516,12 @@ public class PackDCEL {
 		if (circFlags!=null && circFlags.draw)
 			circDo=true;
 		
+		if (faceTree==null || faceTree.size()==0)
+			faceTree=faceOrder;
 		
 		// check for root; if there's not one, create one
-		int rootface=-1;
-		if (faceTree == null || faceTree.get(0).v!=0) { // no root?
+		int rootface=1;
+		if (faceTree.get(0).v!=0) { // no root?
 			rootface=faceTree.get(0).v;
 			faceTree.add(0, new EdgeSimple(0,rootface));
 		}
@@ -1528,8 +1537,9 @@ public class PackDCEL {
 			int new_root=faceTree.get(next_root_indx).w;
 			if (new_root<=0 || new_root>faceCount)
 				break;
-			
 			GraphLink thisTree=faceTree.extractComponent(new_root);
+			
+			// handle root first
 			rootface=thisTree.get(0).w;
 			HalfEdge he=faces[rootface].edge;
 			if (placeFirst) { // place in standard position 
@@ -1537,10 +1547,43 @@ public class PackDCEL {
 			}
 			else if (fix) { // assume 'he' ends in place
 				CircleSimple cS=d_compOppCenter(he);
-				setVertCenter(he.next.next,cS.center);
 			}
+			
+			myCenters[0]=getVertCenter(he);
+			myCenters[1]=getVertCenter(he.next);
+			myCenters[2]=getVertCenter(he.next.next);
+			myRadii[0]=getVertRadius(he);
+			myRadii[1]=getVertRadius(he.next);
+			myRadii[2]=getVertRadius(he.next.next);
+			
+			if (faceDo && pF==null) { // draw the faces
+				if (!faceFlags.colorIsSet && 
+						(faceFlags.fill || faceFlags.colBorder)) 
+					faceFlags.setColor(faces[rootface].color);
+				if (faceFlags.label)
+					faceFlags.setLabel(Integer.toString(rootface));
+				p.cpScreen.drawFace(myCenters[0],myCenters[1],myCenters[2],
+						myRadii[0],myRadii[1],myRadii[2],faceFlags);
+			}  // p.cpScreen.rePaintAll();
+			
+			if (circDo && pF==null) { // also draw the circles
+				if (!circFlags.colorIsSet && 
+						(circFlags.fill || circFlags.colBorder)) 
+					circFlags.setColor(p.vData[he.next.next.origin.vertIndx].color);
+				if (circFlags.label)
+					circFlags.setLabel(Integer.toString(he.origin.vertIndx));
+				p.cpScreen.drawCircle(myCenters[0],myRadii[0],circFlags);
+				if (circFlags.label)
+					circFlags.setLabel(Integer.toString(he.next.origin.vertIndx));
+				p.cpScreen.drawCircle(myCenters[1],myRadii[1],circFlags);
+				if (circFlags.label)
+					circFlags.setLabel(Integer.toString(he.next.next.origin.vertIndx));
+				p.cpScreen.drawCircle(myCenters[2],myRadii[2],circFlags);
+			}  // p.cpScreen.rePaintAll();
 
-			// now go through the list
+			thisTree.remove(0);
+
+			// now go through the rest of the tree
 			Iterator<EdgeSimple> elist = thisTree.iterator();
 			while (elist.hasNext()) {
 				EdgeSimple edge = elist.next();
@@ -1558,8 +1601,14 @@ public class PackDCEL {
 					he=nhe;
 				}
 				if (fix) {
-					CircleSimple cS=d_compOppCenter(he);
-					setVertCenter(he.next.next,cS.center);
+					d_faceXedge(he);
+					
+					if (debug) { // debug=true;
+						System.out.println("next_face = "+next_face+"; "+
+								"edge "+he.next.next);
+						System.out.println("put vert "+he.next.next.origin.vertIndx+" at "+
+								getVertCenter(he.next.next));
+					}
 				}
 				
 				myCenters[0]=getVertCenter(he);
@@ -1575,14 +1624,14 @@ public class PackDCEL {
 						faceFlags.setColor(faces[next_face].color);
 					if (faceFlags.label)
 						faceFlags.setLabel(Integer.toString(next_face));
-					p.cpScreen.drawFace(getVertCenter(he),getVertCenter(he.next),getVertCenter(he.next.next),
-							getVertRadius(he),getVertRadius(he.next),getVertRadius(he.next.next),faceFlags);
-				}
+					p.cpScreen.drawFace(myCenters[0],myCenters[1],myCenters[2],
+							myRadii[0],myRadii[1],myRadii[2],faceFlags);
+				}  // p.cpScreen.rePaintAll();
 				
 				if (circDo && pF==null) { // also draw the circles
 					if (!circFlags.colorIsSet && 
 							(circFlags.fill || circFlags.colBorder)) 
-						circFlags.setColor(he.next.next.origin.color);
+						circFlags.setColor(p.vData[he.next.next.origin.vertIndx].color);
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(he.next.next.origin.vertIndx));
 					p.cpScreen.drawCircle(myCenters[2],myRadii[2],circFlags);
@@ -1630,14 +1679,14 @@ public class PackDCEL {
 					if (!circFlags.fill) { // not filled
 						if (circFlags.colBorder)
 							pF.postColorCircle(p.hes,myCenters[2],myRadii[2],
-									he.next.next.origin.color,tx);
+									p.vData[he.next.next.origin.vertIndx].color,tx);
 						else 
 							pF.postCircle(p.hes,myCenters[2],myRadii[2],tx);
 					} 
 					else {
 						Color ccOl=CPScreen.getFGColor();
 						if (!circFlags.colorIsSet)
-							ccOl = he.next.next.origin.color;
+							ccOl = p.vData[he.next.next.origin.vertIndx].color;
 						if (circFlags.colBorder) {
 							pF.postFilledColorCircle(p.hes,myCenters[2],
 									myRadii[2],ccOl,ccOl,tx);
@@ -1810,6 +1859,16 @@ public class PackDCEL {
 	}
 	
 	/**
+	 * Create a new packDCEL object, with p=null, whose orientation is opposite
+	 * to that of this.
+	 * @return
+	 */
+	public PackDCEL reverseOrientation() {
+		int[][] bouq=CombDCEL.reverseOrientation(getBouquet()); 
+		return CombDCEL.d_redChainBuilder(bouq, null,false,0);
+	}
+	
+	/**
 	 * Create the dual DCEL structure. 
 	 * 
 	 * If 'full' is false, don't include dual edges to ideal 
@@ -1847,7 +1906,7 @@ public class PackDCEL {
 			}
 		}
 		
-		PackDCEL qdcel = new PackDCEL(bouquet);
+		PackDCEL qdcel = CombDCEL.createVE(null,bouquet,0);
 		
 		// set centers of the new vertices
 		for (int f=1;f<=faceCount;f++) {
@@ -1858,7 +1917,41 @@ public class PackDCEL {
 		
 		return qdcel;
 	}
+
+	/**
+	 * Set 'alpha' edge; it's vertex generally set to origin.
+	 * @param v int
+	 * @return 0 on failure
+	 */
+	public int setAlpha(int v) {
+		if (v<=0 || v>vertCount)
+			return 0;
+		Vertex vertex =vertices[v];
+		if (vertex.bdryFlag!=0)
+			return 0;
+		alpha=vertex.halfedge;
+		if (gamma==alpha)
+			gamma=alpha.twin;
+		CombDCEL.d_FillInside(this);
+		return v;
+	}
 	
+    /**
+     * Set packing 'gamma' index; it's vertex generally placed on y+ axis.
+     * @param i int, can't be 'alpha'
+     * @return 1 on success, 0 on failure
+     */
+    public int setGamma(int v) {
+        if (v<=0 || v>vertCount)
+        	return 0;
+		Vertex vertex =vertices[v];
+		if (vertex==alpha.origin) { 
+			CirclePack.cpb.errMsg("'gamma' cannot be set to the 'alpha' edge origin");
+			return 0;
+		}
+		gamma=vertex.halfedge;
+        return 0;
+    } 
 	/**
 	 * Write this DCEL structure to a file.
 	 * TODO: This is an early format, 4/2017, and should

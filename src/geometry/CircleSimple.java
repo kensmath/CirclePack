@@ -21,6 +21,10 @@ public class CircleSimple{
 	public double rad;
 
 	// Constructors
+	public CircleSimple(Complex c,double r) {
+		this(c,r,0);
+	}
+	
 	public CircleSimple(Complex c, double r,int f) {
 		flag=f;
 		lineFlag=false;
@@ -33,7 +37,7 @@ public class CircleSimple{
 	
 	/**
 	 * Create empty CircleSimple; ok true, set 'flag=0' (OK); else 'flag=-1', error.
-	 * @param ok
+	 * @param ok boolean
 	 */
 	public CircleSimple(boolean ok) {
 		center=new Complex(0.0);
