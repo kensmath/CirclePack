@@ -137,7 +137,7 @@ public class PackDCEL {
 				arrayV.add(n);
 		
 		// TODO: have to adjust call for ones to eliminate.
-		return CombDCEL.d_redChainBuilder(this.getBouquet(),arrayV,false,0);
+		return CombDCEL.d_redChainBuilder(this,arrayV,false,0);
 	}
 	
 	/**
@@ -1545,7 +1545,7 @@ public class PackDCEL {
 			if (placeFirst) { // place in standard position 
 				placeFirstFace(he);
 			}
-			else if (fix) { // assume 'he' ends in place
+			else if (fix) { // assume 'he' ends are in place
 				CircleSimple cS=d_compOppCenter(he);
 			}
 			
@@ -1859,13 +1859,13 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Create a new packDCEL object, with p=null, whose orientation is opposite
-	 * to that of this.
-	 * @return
+	 * Create a new packDCEL object, with p=null, whose orientation 
+	 * is opposite to 'this'.
+	 * @return PackDCEL
 	 */
 	public PackDCEL reverseOrientation() {
 		int[][] bouq=CombDCEL.reverseOrientation(getBouquet()); 
-		return CombDCEL.d_redChainBuilder(bouq, null,false,0);
+		return CombDCEL.d_redChainBuilder(CombDCEL.getRawDCEL(bouq),null,false,0);
 	}
 	
 	/**
@@ -1906,7 +1906,7 @@ public class PackDCEL {
 			}
 		}
 		
-		PackDCEL qdcel = CombDCEL.createVE(null,bouquet,0);
+		PackDCEL qdcel = CombDCEL.getRawDCEL(bouquet,0);
 		
 		// set centers of the new vertices
 		for (int f=1;f<=faceCount;f++) {

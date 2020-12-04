@@ -26,28 +26,35 @@ public class CombDCEL {
 	 * Bouquet satisfies usual conventions: counterclockwise order, 
 	 * indexed contiguously from 1, bdry/interior flower 
 	 * open/closed, resp.
-	 * @param pdcel PackDCEL, may be null
 	 * @param bouquet int[][]
 	 * @return PackDCEL
 	 */
-	public static PackDCEL createVE(PackDCEL pdcel,int[][] bouquet) {
-		return createVE(pdcel,bouquet,0);
+	public static PackDCEL getRawDCEL(int[][] bouquet) {
+		return getRawDCEL(bouquet,0);
+	}
+
+	/**
+	 * Given a packing, create its bouquet and get minimal
+	 * DCEL structure with 'vertices' and 'edges' only.
+	 * @param p PackData
+	 * @return PackDCEL
+	 */
+	public static PackDCEL getRawDCEL(PackData p) {
+		return getRawDCEL(p.getBouquet(),p.alpha);
 	}
 	
 	/**
-	 * Given a bouquet of combinatoric data alone, create a
-	 * DCEL structure with 'vertices' and 'edges' only.
+	 * Given a bouquet of combinatoric data alone, create a minimal
+	 * DCEL structure, including 'vertices' and 'edges' only.
 	 * Bouquet satisfies usual conventions: counterclockwise order, 
 	 * indexed contiguously from 1, bdry/interior flower 
 	 * open/closed, resp. 'alpha' helpedge should start at interior  
-	 * @param pdcel PackDCEL, may be null
 	 * @param bouquet int[][]
 	 * @param alphaIndx int, suggested 'alpha' vertex, may be 0
 	 * @return packDCEL
 	 */
-	public static PackDCEL createVE(PackDCEL pdcel,int[][] bouquet,int alphaIndx) {
-		if (pdcel==null)
-			pdcel=new PackDCEL();
+	public static PackDCEL getRawDCEL(int[][] bouquet,int alphaIndx) {
+		PackDCEL pdcel=new PackDCEL();
 		int vertcount = bouquet.length - 1; // 0th entry is empty
 		Vertex[] vertices = new Vertex[vertcount + 1];
 		int[] bdryverts=new int[vertcount+1];  // flag bdry vertices
@@ -80,6 +87,8 @@ public class CombDCEL {
 			heArrays[v][0] = new HalfEdge(newV);
 			heArrays[v][0].edgeIndx = ++edgecount;
 			newV.halfedge = heArrays[v][0];
+			if (bdryverts[v]==1)
+				newV.bdryFlag=1;
 			vertices[v] = newV;
 			edges.add(heArrays[v][0]);
 
@@ -182,11 +191,11 @@ public class CombDCEL {
 	}
 	
 	/**
-	 * Given 'bouquet', create minimal DCEL (vertices, edges) and with
+	 * Given a DCEL, (perhaps only minimal, with vertices, edges) and 
 	 * a list (possibly empty) of vertices that are non-keepers, generate 
 	 * a new DCEL which adds the non-keepers to the boundary.
 	 * 
-	 * This creates new face indices, idealfaces, redchain, sides, 
+	 * This creates new face indices, ideal faces, red chain, sides, 
 	 * and so forth, returning a fully prepared 'PackDCEL'.
 	 * The "red" chain is a closed cclw chain of edges about a
 	 * simple connected fundamental domain within the complex.
@@ -204,17 +213,16 @@ public class CombDCEL {
 	 *     for a combinatorial sphere with a single vert in 
 	 *     'nonKeepers'. (If you want to "puncture" a point, you need
 	 *     to include its neighbors in 'nonKeepers')
-	 * @param bouquet int[][], normal bouquet
+	 * @param pdcel PackDCEL
 	 * @param nonKeepers NodeLink,
 	 * @param poisonFlag boolean, if true, then augment 
 	 *    'nonKeepers' with their neighbors 
 	 * @param alphaIndx int
 	 * @return PackDCEL
 	 */
-	public static PackDCEL d_redChainBuilder(int[][] bouquet,
+	public static PackDCEL d_redChainBuilder(PackDCEL pdcel,
 			NodeLink nonKeepers,boolean poisonFlag,int alphaIndx) {
 		boolean debug=false;
-		PackDCEL pdcel=createVE(null,bouquet,alphaIndx);
 
 		int vertcount=pdcel.vertCount;
 
@@ -288,14 +296,28 @@ public class CombDCEL {
 			}
 		}
 		
-		// (6) Good 'alpha'? a keeper interior (prefer int/keeper petals, too)
+		// (6) Good 'alpha'? // want interior keeper (prefer int/keeper petals, too)
 		int alph=pdcel.alpha.origin.vertIndx;
-		if (keepV[alph]==0) { // oops, not a keeper
-			pdcel.alpha=null;
+		pdcel.alpha=null;
+		if (keepV[alph]!=0) { // see if alph is okay
+			int[] flower=bouquet[alph];
+			boolean toss=false;
+			for (int j=0;(j<flower.length && !toss);j++) {
+				int w=flower[j];
+				// bdry or not a keeper? 
+				if (isBouqBdry(bouquet,w) || keepV[w]==0) 
+					toss=true;
+			}
+			if (!toss) // got our alpha
+				pdcel.alpha=pdcel.vertices[alph].halfedge;
+		}
+		if (pdcel.alpha==null)  { // look further
 			for (int v=1;(v<=pdcel.vertCount && pdcel.alpha==null);v++) {
 				int[] flower=bouquet[v];
 				boolean toss=false;
-				if (keepV[v]!=0 && !isBouqBdry(bouquet,v)) {
+				if (keepV[v]==0 || isBouqBdry(bouquet,v)) 
+					toss=true;
+				if (!toss) {
 					for (int j=0;(j<flower.length && !toss);j++) {
 						int w=flower[j];
 						// bdry or not a keeper? 
@@ -306,22 +328,7 @@ public class CombDCEL {
 				if (!toss) // got our alpha
 					pdcel.alpha=pdcel.vertices[v].halfedge;
 			}
-			// still nothing? at least require that all petals are keepers
-			if (pdcel.alpha==null) {
-				for (int v=1;(v<=pdcel.vertCount && pdcel.alpha==null);v++) {
-					int[] flower=bouquet[v];
-					boolean toss=false;
-					if (keepV[v]!=0 && !isBouqBdry(bouquet,v)) {
-						for (int j=0;(j<flower.length && !toss);j++) {
-							int w=flower[j];
-							if (keepV[w]==0) // not a keeper? 
-								toss=true;
-						}
-					}
-					if (!toss) // got our alpha
-						pdcel.alpha=pdcel.vertices[v].halfedge;
-				}
-			}
+
 			// still nothing? choose first keeper interior
 			if (pdcel.alpha==null) {
 				for (int v=1;(v<=pdcel.vertCount && pdcel.alpha==null);v++) 
@@ -1650,7 +1657,7 @@ public class CombDCEL {
 	    for (int j=0;j<flower.length;j++)
 	    	nonks.add(flower[j]);
 	      
-	    return(d_redChainBuilder(pdcel.getBouquet(),nonks,false,0));
+	    return(d_redChainBuilder(pdcel,nonks,false,0));
 	}
 	  
 	  /** 

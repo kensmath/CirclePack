@@ -280,6 +280,7 @@ public class PackData{
     		}
     	}
     	vData=newVData; 
+    	pdcel.p=this;
     	return pdcel.vertCount;
     }
 
@@ -2181,6 +2182,17 @@ public class PackData{
 			cpScreen.setPackName(); // record in small canvas label
 	}
 
+	/**
+	 * Typically 'nodeCount', but if 'packDCEL' exists, use 'vertCount'
+	 * @return
+	 */
+	public int getNodeCount() {
+		if (packDCEL==null)
+			return nodeCount;
+		else
+			return packDCEL.vertCount;
+	}
+	
 	/** 
 	 * Get 'fileName' for this packing
 	 * @return new String
@@ -6607,7 +6619,8 @@ public class PackData{
 		if (packDCEL==null || packDCEL.vertCount<=0) {
 			
 			// create the DCEL structure 
-			packDCEL=CombDCEL.d_redChainBuilder(getBouquet(),null,false,alpha);
+			packDCEL=CombDCEL.d_redChainBuilder(
+					CombDCEL.getRawDCEL(this),null,false,alpha);
 		}
 		if (dual) {
 			PackDCEL dualdcel=packDCEL.createDual(false);

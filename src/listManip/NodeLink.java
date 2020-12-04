@@ -42,23 +42,30 @@ public class NodeLink extends LinkedList<Integer> {
 	serialVersionUID = 1L;
 	
 	PackData packData;
+	int vCount=0;
 	
 	// Constructors
 	public NodeLink(PackData p,String datastr) {
 		super();
 		packData=p;
+		if (p!=null)
+			vCount=p.getNodeCount();
 		if (datastr!=null) addNodeLinks(datastr);
 	}
 	
 	public NodeLink(PackData p,int n) {
 		super();
 		packData=p;
-		if (n>0 && (packData==null || n<=p.nodeCount)) add(n);
+		if (p!=null)
+			vCount=p.getNodeCount();
+		if (n>0 && (packData==null || n<=vCount)) add(n);
 	}
 	
 	public NodeLink(PackData p,Vector<String> items) {
 		super();
 		packData=p;
+		if (p!=null)
+			vCount=p.getNodeCount();
 		if (items==null || items.size()==0) { // default to 'a' (all vertices)
 			items=new Vector<String>(1);
 			items.add("a");
@@ -68,7 +75,7 @@ public class NodeLink extends LinkedList<Integer> {
 	
 	/**
 	 * Not associated with any PackData
-	 * @param datastr
+	 * @param datastr String
 	 */
 	public NodeLink(String datastr) {
 		this(null,datastr);
@@ -91,13 +98,13 @@ public class NodeLink extends LinkedList<Integer> {
 	}
 	
 	public boolean add(int v) {
-		if ((packData!=null && v>0 && v<=packData.nodeCount) || packData==null)
+		if ((packData!=null && v>0 && v<=vCount) || packData==null)
 			return super.add((Integer)v);
 		return false;
 	}
 	
 	public boolean add(Integer v) {
-		if ((packData!=null && v.intValue()>0 && v.intValue()<=packData.nodeCount) || packData==null)
+		if ((packData!=null && v.intValue()>0 && v.intValue()<=vCount) || packData==null)
 			return super.add(v);
 		return false;
 	}
@@ -128,7 +135,7 @@ public class NodeLink extends LinkedList<Integer> {
 	
 		if (packData==null) return -1;
 		kdata=packData.kData;
-		nodecount=packData.nodeCount;
+		nodecount=vCount;
 		
 		Iterator<String> its=items.iterator();
 		
@@ -173,7 +180,7 @@ public class NodeLink extends LinkedList<Integer> {
 						if (brst.startsWith("r") 
 								|| brst.startsWith("n")) { // use up first
 							v=(Integer)vlink.remove(0);
-							if (ck && v>packData.nodeCount) {}
+							if (ck && v>vCount) {}
 							else { 
 								add(v);
 								count++;
@@ -181,7 +188,7 @@ public class NodeLink extends LinkedList<Integer> {
 						}
 						if (brst.startsWith("l")) { // last
 							v=(Integer)vlink.getLast();
-							if (ck && v>packData.nodeCount) {}
+							if (ck && v>vCount) {}
 							else { 
 								add(v);
 								count++;
@@ -192,7 +199,7 @@ public class NodeLink extends LinkedList<Integer> {
 								int n=MathUtil.MyInteger(brst);
 								if (n>=0 && n<vlink.size()) {
 									v=vlink.get(n);
-									if (ck && v>packData.nodeCount) {}
+									if (ck && v>vCount) {}
 									else { 
 										add(v);
 										count++;
@@ -212,7 +219,7 @@ public class NodeLink extends LinkedList<Integer> {
 							Iterator<Integer> vlst=vlink.iterator();
 							while (vlst.hasNext()) {
 								v=(Integer)vlst.next();
-								if (v<=packData.nodeCount) {
+								if (v<=vCount) {
 									add(v);
 									count++;
 								}
@@ -242,11 +249,11 @@ public class NodeLink extends LinkedList<Integer> {
 								|| brst.startsWith("n")) { // use up first
 							edge=(EdgeSimple)elink.remove(0);
 							if (ck) {
-								if (edge.v<=packData.nodeCount) {
+								if (edge.v<=vCount) {
 									add(edge.v);
 									count++;
 								}
-								if (edge.w<=packData.nodeCount) {
+								if (edge.w<=vCount) {
 									add(edge.w);
 									count++;
 								}
@@ -263,11 +270,11 @@ public class NodeLink extends LinkedList<Integer> {
 								if (n>=0 && n<elink.size()) {
 									edge=(EdgeSimple)elink.get(n);
 									if (ck) {
-										if (edge.v<=packData.nodeCount) {
+										if (edge.v<=vCount) {
 											add(edge.v);
 											count++;
 										}
-										if (edge.w<=packData.nodeCount) {
+										if (edge.w<=vCount) {
 											add(edge.w);
 											count++;
 										}
@@ -288,12 +295,12 @@ public class NodeLink extends LinkedList<Integer> {
 						while (elst.hasNext()) {
 							edge=(EdgeSimple)elst.next();
 							if (ck) {
-								if (edge.v<=packData.nodeCount && edge.v!=lastV) {
+								if (edge.v<=vCount && edge.v!=lastV) {
 									lastV=edge.v;
 									add(lastV);
 									count++;
 								}
-								if (edge.w<=packData.nodeCount && edge.w!=lastV) {
+								if (edge.w<=vCount && edge.w!=lastV) {
 									lastV=edge.w;
 									add(lastV);
 									count++;
@@ -339,7 +346,7 @@ public class NodeLink extends LinkedList<Integer> {
 			case 'a':
 			{
 				int first=1;
-				int last=packData.nodeCount;
+				int last=vCount;
 				String []pair_str=StringUtil.parens_parse(str); // get two strings
 				if (pair_str!=null) { // must have 2 strings
 					int a,b;
@@ -358,7 +365,7 @@ public class NodeLink extends LinkedList<Integer> {
 			{
 				int next;
 				int first=1;
-				int last=packData.nodeCount;
+				int last=vCount;
 				boolean bad=false;
 				String []pair_str=StringUtil.parens_parse(str); // get two strings
 				if (pair_str!=null) { // must have 2 strings
@@ -411,7 +418,7 @@ public class NodeLink extends LinkedList<Integer> {
 			case 'i':
 			{
 				int first=1;
-				int last=packData.nodeCount;
+				int last=vCount;
 				String []pair_str=StringUtil.parens_parse(str); // get two strings
 				if (pair_str!=null) { // must have 2 strings
 					int a,b;
@@ -526,7 +533,7 @@ public class NodeLink extends LinkedList<Integer> {
 					}
 				} catch(Exception ex) {}
 				for (int v=1;v<=nodecount;v++)
-					if (v<=qackData.nodeCount 
+					if (v<=vCount 
 							&& ((notmarked && qackData.kData[v].mark==0) 
 									|| (!notmarked && qackData.kData[v].mark!=0))) {
 						add(v);
@@ -550,7 +557,7 @@ public class NodeLink extends LinkedList<Integer> {
 				// Iv {v..}, Ie {e..}, If {f..}, It {t..}, Ig {x}
 			{
 				if (str.length()<=1) break;
-				int []hits=new int[packData.nodeCount+1];
+				int []hits=new int[vCount+1];
 				switch(str.charAt(1)) {
 				case 'f':
 				{
@@ -1001,7 +1008,7 @@ public class NodeLink extends LinkedList<Integer> {
 					try {
 						if (locs.charAt(0)=='v') { // use center of vertex
 							int v=Integer.parseInt((String)its.next());
-							if (v<1 || v>packData.nodeCount) {
+							if (v<1 || v>vCount) {
 								throw new ParserException();
 							}
 							ctr=packData.getCenter(v);
@@ -1039,7 +1046,7 @@ public class NodeLink extends LinkedList<Integer> {
 				}
 				
 				// okay, should have both center and radius now 
-				for (int v=1;v<=packData.nodeCount;v++) {
+				for (int v=1;v<=vCount;v++) {
 					double dist;
 					if (packData.hes<0)
 						dist=HyperbolicMath.h_dist(packData.getCenter(v),ctr);
@@ -1104,7 +1111,7 @@ public class NodeLink extends LinkedList<Integer> {
 				if (str.length()>1 && str.charAt(1)=='v') {
 					try {
 						startVert=Integer.parseInt((String)items.remove(0));
-						if (startVert<1 || startVert>packData.nodeCount)
+						if (startVert<1 || startVert>vCount)
 							throw new ParserException("usage: Gf <v>");
 					} catch (Exception ex) {
 						throw new ParserException(ex.getMessage());
@@ -1385,14 +1392,15 @@ public class NodeLink extends LinkedList<Integer> {
 	  * non-green; else 0, and complex is NOT separated.
 	  */
 	 public static int separates(PackData p,NodeLink vertlist) {
-		 int []greens=new int[p.nodeCount+1];
+		 int vCount=p.getNodeCount();
+		 int []greens=new int[vCount+1];
 		 Iterator<Integer> vlst=vertlist.iterator();
 		 while (vlst.hasNext()) {
 			 int v=vlst.next();
 			 greens[v]=-1;
 		 }
 		int seed=0;
-		for (int v=1;(v<=p.nodeCount && seed==0);v++) { 
+		for (int v=1;(v<=vCount && seed==0);v++) { 
 			if (greens[v]==0) {
 				seed=v;
 			}
@@ -1405,7 +1413,7 @@ public class NodeLink extends LinkedList<Integer> {
 		
 		// are their any vertices not reached (not counting green)?
 		int not_reached=0;
-		for (int v=1;(v<=p.nodeCount && not_reached==0);v++)
+		for (int v=1;(v<=vCount && not_reached==0);v++)
 			if (greens[v]>=0 && gens[v]==0) // not green and not reached
 				not_reached=v;
 		

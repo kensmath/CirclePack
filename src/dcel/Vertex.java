@@ -3,7 +3,6 @@ package dcel;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import complex.Complex;
 import exceptions.CombException;
 import exceptions.DCELException;
 
@@ -22,24 +21,31 @@ public class Vertex {
 	public HalfEdge halfedge;	// a halfedge pointing away from this vert
 	public int vertIndx;		// index from associated 'PackData'
 	public int bdryFlag;		// 0 for interior, 1 for boundary
-//	Color color;
 	
-	// TODO: for now, keep data both here and 'PackData'
-	Complex center;		
-	double rad;
-
 	public int util;			// temporary data only
 	
 	public Vertex() {
 		halfedge=null;
 		vertIndx=-0;
-		center=new Complex(0.0);
-		rad=.1;
 	}
 	
 	public Vertex(int v) {
 		this();
 		vertIndx=v;
+	}
+
+	/**
+	 * Get usual number of faces (not counting ideal)
+	 * @return int
+	 */
+	public int getNum() {
+		HalfEdge he=halfedge;
+		int tick=0;
+		do {
+			tick++;
+			he=he.prev.twin;
+		} while (he!=halfedge);
+		return tick-bdryFlag; // subtract 1 for bdry vertex
 	}
 
 	/**

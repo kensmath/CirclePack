@@ -447,7 +447,7 @@ public class CommandStrParser {
 			  }
 		  }
 		  
-		  PackDCEL pDCEL = CombDCEL.createVE(null,bouquet);
+		  PackDCEL pDCEL = CombDCEL.getRawDCEL(bouquet);
 		  int origVCount=pDCEL.vertCount;
 		  if (pDCEL==null || pDCEL.addBaryCenters((FaceLink)null)==0) {
 			  CirclePack.cpb.myErrorMsg("Failed to get initial DCEL, or failed to add barycenters to faces");
@@ -5794,16 +5794,17 @@ public class CommandStrParser {
 					NodeLink vlist=null;
 					if (items.size()>0)
 						vlist=new NodeLink(packData,items); // non-keepers
-					int[][] bouq=packData.getBouquet();
 
 					// Now three situations: 'vlist' takes precedence over 'poisonVerts'
+					PackDCEL raw=CombDCEL.getRawDCEL(packData);
 					PackDCEL pdcel=null;
 					if (vlist!=null && vlist.size()>0)
-						pdcel=CombDCEL.d_redChainBuilder(bouq,vlist,false,packData.alpha);
+						pdcel=CombDCEL.d_redChainBuilder(raw,vlist,false,packData.alpha);
 					else if (packData.poisonVerts!=null && packData.poisonVerts.size()>0)	
-						pdcel=CombDCEL.d_redChainBuilder(bouq,packData.poisonVerts,true,packData.alpha);
+						pdcel=CombDCEL.d_redChainBuilder(raw,
+								packData.poisonVerts,true,packData.alpha);
 					else
-						pdcel=CombDCEL.d_redChainBuilder(bouq,null,false,packData.alpha);
+						pdcel=CombDCEL.d_redChainBuilder(raw,null,false,packData.alpha);
 					
 					pdcel.p=packData;
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
@@ -5816,7 +5817,8 @@ public class CommandStrParser {
 					int qnum= StringUtil.qFlagParse(items.remove(0));
 
 					int[][] newBouquet=CombDCEL.reverseOrientation(packData.getBouquet());
-					PackDCEL pdcel=CombDCEL.d_redChainBuilder(newBouquet,null,false,0);
+					PackDCEL pdcel=CombDCEL.d_redChainBuilder(
+							CombDCEL.getRawDCEL(newBouquet),null,false,0);
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
 					CPBase.pack[qnum].swapPackData(p,false);
 					pdcel.D_CompCenters();
@@ -5847,7 +5849,8 @@ public class CommandStrParser {
 				}
 
 				else if (str.contains("dcel")) {
-					packData.packDCEL = CombDCEL.d_redChainBuilder(packData.getBouquet(),null,false,packData.alpha);
+					PackDCEL raw=CombDCEL.getRawDCEL(packData.getBouquet());
+					packData.packDCEL = CombDCEL.d_redChainBuilder(raw,null,false,packData.alpha);
 					if (packData.packDCEL == null || packData.packDCEL.vertCount != packData.nodeCount)
 						throw new CombException("failed to create packDCEL");
 					return 1;
@@ -7848,9 +7851,11 @@ public class CommandStrParser {
 	    	  		}
 	    	  	} catch (Exception ex) {}
     	  	
-	    	  	packData.chooseAlpha();
-	    	  	packData.chooseGamma();
-	    	  	packData.setCombinatorics();
+	    	  	if (packData.packDCEL==null) {
+	    	  		packData.chooseAlpha();
+	    	  		packData.chooseGamma();
+	    	  		packData.setCombinatorics();
+	    	  	}
 	    	  	return count;
 	      }
 	      
