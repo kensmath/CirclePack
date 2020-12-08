@@ -5797,6 +5797,7 @@ public class CommandStrParser {
 
 					// Now three situations: 'vlist' takes precedence over 'poisonVerts'
 					PackDCEL raw=CombDCEL.getRawDCEL(packData);
+					raw.p=packData;
 					PackDCEL pdcel=null;
 					if (vlist!=null && vlist.size()>0)
 						pdcel=CombDCEL.d_redChainBuilder(raw,vlist,false,packData.alpha);

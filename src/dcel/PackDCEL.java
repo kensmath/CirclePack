@@ -1908,12 +1908,14 @@ public class PackDCEL {
 		
 		PackDCEL qdcel = CombDCEL.getRawDCEL(bouquet,0);
 		
-		// set centers of the new vertices
+		// TODO: OBE. vertices no longer hold center/rad data
+/*		// set centers of the new vertices
 		for (int f=1;f<=faceCount;f++) {
 			Face face=faces[f];
 			if (face.faceIndx>0) // ignore ideal faces
-				qdcel.vertices[face.faceIndx].center=faceOppCenter(face);
+				qdcel.vertices[face.faceIndx]=faceOppCenter(face);
 		}
+*/
 		
 		return qdcel;
 	}
@@ -1969,7 +1971,7 @@ public class PackDCEL {
 	    		Vertex v=vertices[i+1];
 	    		
 	    		// center may be from 'PackData' or is recorded, e.g., for dual
-	    		Complex z=v.center;
+	    		Complex z=getVertCenter(v.halfedge);
 	    		if (p!=null) 
 	    			z=p.getCenter(v.vertIndx);
 	    		int xi=(int)Math.round(z.x*1000000.0); // convert to microns

@@ -21,6 +21,8 @@ public class PreRedVertex extends RedVertex {
 	// Constructor
 	public PreRedVertex(int v) {
 		super(v);
+		closed=false;
+		num=-1;
 	}
 
 	/**
@@ -100,9 +102,9 @@ public class PreRedVertex extends RedVertex {
 		bdryFlag=1;
 		ArrayList<RedVertex> redList=new ArrayList<RedVertex>();
 
-		// rotate to get 'redSpole' as first edge so we avoid worrying 
+		// rotate to get 'redSpoke' as first edge so we avoid worrying 
 		//   about index wrapping around; finish if it's interior 
-		//   (i.e. all red edges are paired and poasted) 
+		//   (i.e. all red edges are paired and pasted) 
 		if (closed && rotateMe()==0) { 
 			RedVertex newV = new RedVertex(vertIndx);
 			newV.bdryFlag=0;

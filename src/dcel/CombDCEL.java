@@ -7,6 +7,7 @@ import allMains.CirclePack;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
+import input.CommandStrParser;
 import komplex.EdgeSimple;
 import listManip.GraphLink;
 import listManip.NodeLink;
@@ -258,12 +259,14 @@ public class CombDCEL {
 		if (!poisonFlag) {
 			for (int k=1;k<=pdcel.vertCount;k++) {
 				if (keepV[k]==0) {
-					int num=bouquet[k].length-1;
-					if (bouquet[k][0]==bouquet[k][num]) { // k is ineterior
+					Vertex vert=pdcel.vertices[k];
+					int[] flower=vert.getFlower();
+					if (vert.bdryFlag==0) { // k is interior
+						int num=flower.length-1;
 						boolean keepme=true;
 						// is some nghb nonkeeper or bdry? then don't keepme
 						for (int j=0;(j<num && keepme);j++) { 
-							if (keepV[bouquet[k][j]]==0 || isBouqBdry(bouquet,bouquet[k][j]))
+							if (keepV[flower[j]]==0 || pdcel.vertices[flower[j]].bdryFlag==1)
 								keepme=false;
 						}
 						if (keepme)
@@ -278,10 +281,11 @@ public class CombDCEL {
 			boolean[] poison = new boolean[pdcel.vertCount + 1];
 			for (int k=1;k<=pdcel.vertCount;k++) 
 				if (keepV[k]==0) {
-					poison[k]=true;
-					int num=bouquet[k].length;
-					for (int j=0;j<num;j++)
-						poison[bouquet[k][j]]=true;
+					Vertex vert=pdcel.vertices[k];
+					int[] flower=vert.getFlower();
+					int num=flower.length-1;
+					for (int j=0;j<num;j++) 
+						poison[flower[j]]=true;
 				}
 			for (int k=1;k<=pdcel.vertCount;k++) 
 				if (poison[k]) {
@@ -291,21 +295,20 @@ public class CombDCEL {
 			
 		// (5) Make all bdry nonkeepers
 		for (int k=1;k<=pdcel.vertCount;k++) { 
-			if (isBouqBdry(bouquet,k)) {
+			if (pdcel.vertices[k].bdryFlag==1)
 				keepV[k]=0;
-			}
 		}
 		
 		// (6) Good 'alpha'? // want interior keeper (prefer int/keeper petals, too)
 		int alph=pdcel.alpha.origin.vertIndx;
 		pdcel.alpha=null;
 		if (keepV[alph]!=0) { // see if alph is okay
-			int[] flower=bouquet[alph];
+			int[] flower=pdcel.vertices[alph].getFlower();
 			boolean toss=false;
 			for (int j=0;(j<flower.length && !toss);j++) {
 				int w=flower[j];
-				// bdry or not a keeper? 
-				if (isBouqBdry(bouquet,w) || keepV[w]==0) 
+				// not a keeper? (e.g., bdry) 
+				if (keepV[w]==0) 
 					toss=true;
 			}
 			if (!toss) // got our alpha
@@ -313,15 +316,15 @@ public class CombDCEL {
 		}
 		if (pdcel.alpha==null)  { // look further
 			for (int v=1;(v<=pdcel.vertCount && pdcel.alpha==null);v++) {
-				int[] flower=bouquet[v];
+				int[] flower=pdcel.vertices[v].getFlower();
 				boolean toss=false;
-				if (keepV[v]==0 || isBouqBdry(bouquet,v)) 
+				if (keepV[v]==0)
 					toss=true;
 				if (!toss) {
 					for (int j=0;(j<flower.length && !toss);j++) {
 						int w=flower[j];
-						// bdry or not a keeper? 
-						if (isBouqBdry(bouquet,w) || keepV[w]==0) 
+						// not a keeper? (e.g., bdry) 
+						if (keepV[w]==0) 
 							toss=true;
 					}
 				}
@@ -332,7 +335,7 @@ public class CombDCEL {
 			// still nothing? choose first keeper interior
 			if (pdcel.alpha==null) {
 				for (int v=1;(v<=pdcel.vertCount && pdcel.alpha==null);v++) 
-					if (keepV[v]!=0 && !isBouqBdry(bouquet,v))
+					if (keepV[v]!=0)
 						pdcel.alpha=pdcel.vertices[v].halfedge;
 			}			
 		}
@@ -356,9 +359,10 @@ public class CombDCEL {
 			nextV=new NodeLink();
 			Iterator<Integer> cvit=currV.iterator();
 			while (cvit.hasNext()) {
-				int v=cvit.next();
-				for (int j=0;j<bouquet[v].length;j++) {
-					int w=bouquet[v][j];
+				Vertex vert=pdcel.vertices[cvit.next()];
+				int[] flower=vert.getFlower();
+				for (int j=0;j<flower.length;j++) {
+					int w=flower[j];
 					if (keepV[w]<0) {
 						keepV[w]=1;
 						alphaComp[w]=true;
@@ -413,13 +417,13 @@ public class CombDCEL {
 			rtrace=rtrace.nextRed;
 			markFaceUtils(he);			
 
-/*			if (debug) { // debug=true;
+			if (debug) { // debug=true;
 				EdgeSimple es=new EdgeSimple(he.origin.vertIndx,
 						he.twin.origin.vertIndx);
-				DCELdebug.drawEdgeFace(p, es);
+				DCELdebug.drawEdgeFace(pdcel.p, es);
 				DCELdebug.drawTmpRedChain(pdcel.p,pdcel.redChain);
 			}
-*/
+
 			
 			he.next.origin.halfedge=he.next;
 		}
@@ -494,10 +498,10 @@ public class CombDCEL {
 							currRed.prevRed.prevRed.nextRed = currRed.nextRed;
 							currRed.nextRed.prevRed = currRed.prevRed.prevRed;
 							
-//							if (debug) {
-//								System.err.println(v+" collapse done");
-//								CommandStrParser.jexecute(p,"disp -tfc218 "+v);
-//							}
+							if (debug) {
+								System.err.println(v+" collapse done");
+								CommandStrParser.jexecute(pdcel.p,"disp -tfc218 "+v);
+							}
 
 							doneV[v] = true;
 							currRed.nextRed.myEdge.origin.halfedge = 
@@ -533,11 +537,11 @@ public class CombDCEL {
 								markFaceUtils(spktrace);			
 								hit=true;
 								
-//								if (debug) {
-//									EdgeSimple es=new EdgeSimple(spktrace.origin.vertIndx,
-//											spktrace.twin.origin.vertIndx);
-//									DCELdebug.drawEdgeFace(p, es);
-//								}
+								if (debug) {
+									EdgeSimple es=new EdgeSimple(spktrace.origin.vertIndx,
+											spktrace.twin.origin.vertIndx);
+									DCELdebug.drawEdgeFace(pdcel.p, es);
+								}
 								
 								spktrace=spktrace.prev.twin;
 								cclw=cclw.nextRed;
@@ -545,10 +549,10 @@ public class CombDCEL {
 							cclw.nextRed=currRed.nextRed;
 							currRed.nextRed.prevRed=cclw;
 
-//							if (debug) {
-//								System.err.println(v+" flat, done");
-//								CommandStrParser.jexecute(p,"disp -tfc218 "+v);
-//							}
+							if (debug) {
+								System.err.println(v+" flat, done");
+								CommandStrParser.jexecute(pdcel.p,"disp -tfc218 "+v);
+							}
 
 							doneV[v]=true;
 						}
@@ -560,11 +564,11 @@ public class CombDCEL {
 							cclw.nextRed=new RedHEdge(upspoke.next);
 							markFaceUtils(upspoke);			
 
-//							if (debug) {
-//								EdgeSimple es=new EdgeSimple(upspoke.origin.vertIndx,
-//										upspoke.twin.origin.vertIndx);
-//								DCELdebug.drawEdgeFace(p, es);
-//							}
+							if (debug) {
+								EdgeSimple es=new EdgeSimple(upspoke.origin.vertIndx,
+										upspoke.twin.origin.vertIndx);
+								DCELdebug.drawEdgeFace(pdcel.p, es);
+							}
 							
 							hit=true;
 							cclw.nextRed.prevRed=cclw;
@@ -591,7 +595,7 @@ public class CombDCEL {
 
 		debug=false; // DCELdebug.drawRedChain(pdcel.p,pdcel.redChain);
 	     // DCELdebug.EdgeOriginProblem(pdcel.edges);
-
+		// debug=true;
 		// DCELdebug.redChainEnds(pdcel.redChain);
 				     
 		// TODO: may want to reconfigure redChain to minimize the 
@@ -649,9 +653,12 @@ public class CombDCEL {
 			if (!(pdcel.vertices[v] instanceof PreRedVertex)) {
 				PreRedVertex redV=new PreRedVertex(v);
 				redV.halfedge=pdcel.vertices[v].halfedge;
+				redV.num=pdcel.vertices[v].getNum();
+				redV.bdryFlag=pdcel.vertices[v].bdryFlag;
 				redV.halfedge.origin=redV;
-				redV.num=bouquet[v].length-1;
-				redV.closed=bouquet[v][0]==bouquet[v][redV.num]; // closed flower?
+				if (pdcel.vertices[v].bdryFlag==0)
+					redV.closed=true;
+				else redV.closed=false;
 				redV.redSpoke=new RedHEdge[redV.num+1];
 				redV.inSpoke=new RedHEdge[redV.num+1];
 				rtrace.myEdge.origin=redV;
@@ -670,19 +677,24 @@ public class CombDCEL {
 			PreRedVertex rV=(PreRedVertex)pdcel.vertices[v];
 			PreRedVertex rW=(PreRedVertex)pdcel.vertices[w];
 			int j=-1;
+			int[] flower=pdcel.vertices[v].getFlower();
 			for (int k=0;(k<=rV.num && j<0);k++) { 
-				if (bouquet[v][k]==w) {
+				if (flower[k]==w) {
 					j=k;
 					rV.redSpoke[j]=rtrace;
 				}
 			}
 			j=-1;
+			flower=pdcel.vertices[w].getFlower();
 			for (int k=0;(k<=rW.num && j<0);k++) {
-				if (bouquet[w][k]==v) {
+				if (flower[k]==v) {
 					j=k;
 					rW.inSpoke[j]=rtrace;
 				}
 			}
+			
+//System.out.println("spokes for "+v+" and "+w);			
+			
 			rtrace=rtrace.nextRed;
 		} while (rtrace!=pdcel.redChain);
 
@@ -843,7 +855,7 @@ public class CombDCEL {
 		
 		blueCleanup(pdcel); // try to eliminate blue faces in the 'redChain'
 		
-		d_FillInside(pdcel);
+		d_FillInside(pdcel); // DCELdebug.drawRedChain(pdcel.p,pdcel.redChain);
 		return pdcel;
 	}
 	
@@ -1042,7 +1054,7 @@ public class CombDCEL {
 		if (debug) 
 			System.out.println("ordertick = "+ordertick);
 			
-		debug=false;
+		debug=false; // debug=true;
 		
 		// ============== Faces and Edges: ==================================
 

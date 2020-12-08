@@ -1306,7 +1306,8 @@ public class CookieMonster {
 				bouquet[v][j]=kData[v].flower[j];
 		}
 		
-		PackDCEL myDCEL = CombDCEL.d_redChainBuilder(bouquet,null,false,0);
+		PackDCEL myDCEL = CombDCEL.d_redChainBuilder(
+				CombDCEL.getRawDCEL(bouquet),null,false,0);
 		int facecount = myDCEL.intFaceCount;
 
 		// find the centroids

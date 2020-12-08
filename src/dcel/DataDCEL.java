@@ -249,6 +249,7 @@ public class DataDCEL {
 		p.beta=pdcel.alpha.twin.origin.vertIndx;
 		
 		// attach this dcel
+		pdcel.newOld=null;
 		p.attachDCEL(pdcel);
 		return p;
 	}

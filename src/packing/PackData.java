@@ -247,7 +247,7 @@ public class PackData{
      * and the dcel structure is just created, then populate the new 
      * 'vData' using existing 'rData', with 'pdcel.newOld' to 
      * translate indices. If this is a modified dcel (for example,
-     * if a new structure was cookied from the origin), then go to
+     * if a new structure was cookied from the original), then go to
      * the existing 'vData' to populate the new 'vData', using
      * 'pdcel.newOld'.
      *  
@@ -259,27 +259,41 @@ public class PackData{
      */
     public int attachDCEL(PackDCEL pdcel) {
     	packDCEL=pdcel;
-    	VData[] newVData=new VData[pdcel.vertCount+1];
-    	if (vData==null) { // no existing dcel structure
+    	
+    	// no existing dcel structure? store from 'rData'
+    	if (vData==null) {
+    		vData=new VData[pdcel.vertCount+1];
+    		for (int v=1;v<=pdcel.vertCount;v++) 
+    			vData[v]=new VData();
     		for (int v=1;v<=pdcel.vertCount;v++) {
-    			newVData[v]=new VData();
-    			int w=pdcel.newOld.findW(v); // old index
-    			if (w>0) {
-    				newVData[v].center=new Complex(rData[w].center);
-    				newVData[v].rad=rData[w].rad;
-    				newVData[v].color=kData[v].color;
-    			}
+    			int oldv=v;
+    			int w=0;
+    			if (pdcel.newOld!=null && (w=pdcel.newOld.findW(v))>0) 
+    				oldv=w;
+    			setRadius(v,rData[oldv].rad);
+    			setCenter(v,rData[oldv].center);
+    			vData[v].color=kData[oldv].color;
     		}
+    		nodeCount=pdcel.vertCount;
+    		pdcel.p=this;
+    		return pdcel.vertCount;
     	}
-    	else {
-    		for (int v=1;v<=pdcel.vertCount;v++) {
-    			newVData[v]=new VData();
-    			int w=pdcel.newOld.findW(v); // old index
-    			if (w>0)
-    				newVData[v]=vData[w];
-    		}
+
+    	// else, hold old data, replace with new 'vData'
+    	VData[] oldVData=new VData[nodeCount+1];
+		for (int ov=1;ov<=nodeCount;ov++) 
+			oldVData[ov]=vData[ov];
+		vData=new VData[pdcel.vertCount+1];
+		for (int v=1;v<=pdcel.vertCount;v++) 
+			vData[v]=new VData();
+		for (int v=1;v<=pdcel.vertCount;v++) {
+			HalfEdge he=pdcel.vertices[v].halfedge;
+   			int oldv=v;
+   			int w=0;
+   			if (pdcel.newOld!=null && (w=pdcel.newOld.findW(v))>0) 
+   				oldv=w;
+   			pdcel.setVertData(he, new CircleSimple(oldVData[oldv].center,oldVData[oldv].rad));
     	}
-    	vData=newVData; 
     	pdcel.p=this;
     	return pdcel.vertCount;
     }
@@ -2265,23 +2279,23 @@ public class PackData{
 	
 	/**
 	 * Enter center (x,y) in rData
-	 * @param vert int
+	 * @param v int
 	 * @param x double
 	 * @param y double
 	*/
-	public void setCenter(int vert,double x,double y) {
-		setCenter(vert,new Complex(x,y));
+	public void setCenter(int v,double x,double y) {
+		setCenter(v,new Complex(x,y));
 	}
 	
 	/**
 	 * Set the center for 'vert'. If hyperbolic and |z| greater than 1,
 	 * scale to put in disc. If spherical, assume z=(theta,phi)
 	 * and store as (theta, phi).
-	 * @param vert int
+	 * @param v int
 	 * @param z Complex
 	 */
-	public void setCenter(int vert,Complex z) {
-		if (vert<1 || vert>nodeCount) return;
+	public void setCenter(int v,Complex z) {
+		if (v<1 || v>nodeCount) return;
 		if(hes < 0) { // hyperbolic: must be in unit disc
 			double abval=z.absSq();
 			if (abval>1.0) { // error; scale until it's in the unit disc
@@ -2294,20 +2308,20 @@ public class PackData{
 			while (z.y>Math.PI) z.y = Math.PI; // truncate at Pi
 		}
 		if (packDCEL!=null)
-			packDCEL.setVertCenter(packDCEL.vertices[vert].halfedge,z);
+			packDCEL.setVertCenter(packDCEL.vertices[v].halfedge,z);
 		else
-			rData[vert].center=new Complex(z);
+			rData[v].center=new Complex(z);
 	}
 	
 	/**
 	 * Return center as a new 'Complex'.
-	 * @param vert int
+	 * @param v int
 	 * @return new Complex
 	 */
-	public Complex getCenter(int vert) {
-		Complex z= new Complex(rData[vert].center);
+	public Complex getCenter(int v) {
+		Complex z= new Complex(rData[v].center);
 		if (packDCEL!=null) {
-			z=packDCEL.getVertCenter(packDCEL.vertices[vert].halfedge);
+			z=packDCEL.getVertCenter(packDCEL.vertices[v].halfedge);
 		}
 		return z;
 	}
@@ -2317,13 +2331,13 @@ public class PackData{
 	 * "x-radius" is converted to the actual hyperbolic radius, which 
 	 * is what outside world should see. In hyp case, when x-radius<0, 
 	 * it is -r for eucl radius r, so we just return -r.
-	 * @param vert int
+	 * @param v int
 	 * @return double
 	*/
-	public double getActualRadius(int vert) {
-		double x=rData[vert].rad;
+	public double getActualRadius(int v) {
+		double x=rData[v].rad;
 		if (packDCEL!=null) {
-			x=packDCEL.getVertRadius(packDCEL.vertices[vert].halfedge);
+			x=packDCEL.getVertRadius(packDCEL.vertices[v].halfedge);
 		}
 		
 		// check for hyp case
@@ -2340,13 +2354,13 @@ public class PackData{
 	 * convert x-radius to actual hyp radius.).
 	 * TODO: want to turn "rData[].rad" to private as part of DCEL
 	 * conversion, so I've set this up
-	 * @param vert int
+	 * @param v int
 	 * @return double
 	 */
-	public double getRadius(int vert) {
-		double x=rData[vert].rad;
+	public double getRadius(int v) {
+		double x=rData[v].rad;
 		if (packDCEL!=null) {
-			x=packDCEL.getVertRadius(packDCEL.vertices[vert].halfedge);
+			x=packDCEL.getVertRadius(packDCEL.vertices[v].halfedge);
 		}
 	    return x;
 	}
@@ -2357,10 +2371,10 @@ public class PackData{
 	 * to x_radius for rData. 
 	 * For numerical reasons, small hyp radii 'r' is converted 
 	 * to x=2*r*(2-r*(1-2*r/3)). (Recall x=1-exp(-2h)=1-s^2.)
-	 * @param vert int
+	 * @param v int
 	 * @param r double
 	 */
-	public void setRadiusActual(int vert,double r) {
+	public void setRadiusActual(int v,double r) {
 		double rad=r;
 		if(hes < 0) { // hyperbolic: store as x-radii
 			if(r > 0.0) {
@@ -2371,7 +2385,7 @@ public class PackData{
 			}
 			// can be negative (useful as storage of eucl radius for horocycles)
 		}
-		setRadius(vert,rad);
+		setRadius(v,rad);
 	}
 	
 	/** 
@@ -2379,20 +2393,20 @@ public class PackData{
 	 * issue is hyp case, so then 'r' should already be in
 	 * x_radius form. If it needs to be converted, call
 	 * 'setRadiusActual'. 
-	 * @param vert
-	 * @param r
+	 * @param v int
+	 * @param r double
 	 */
-	public void setRadius(int vert,double r) {
-		if (vert<1 || vert>nodeCount) 
+	public void setRadius(int v,double r) {
+		if (v<1 || v>nodeCount) 
 			return;
 		double rad=r;
 		if (hes>0 && r>=Math.PI) 
 			rad=Math.PI-OKERR;
 		if (hes>=0 && r<=0.0) 
 			rad=OKERR;
-		rData[vert].rad=rad;
+		rData[v].rad=rad;
 		if (packDCEL!=null) 
-			packDCEL.setVertRadius(packDCEL.vertices[vert].halfedge,rad);
+			packDCEL.setVertRadius(packDCEL.vertices[v].halfedge,rad);
 	}
 
 	/**
@@ -11540,6 +11554,8 @@ public class PackData{
 				  throw new DCELException("DCEL puncture for "+v+" failed");
 			  }
 			  attachDCEL(newDCEL);
+			  packDCEL.newOld=null;
+//			  delete_vert(v);
 			  return 1;
 		  }
 		  
