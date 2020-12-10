@@ -1564,7 +1564,8 @@ public class PackDCEL {
 					faceFlags.setLabel(Integer.toString(rootface));
 				p.cpScreen.drawFace(myCenters[0],myCenters[1],myCenters[2],
 						myRadii[0],myRadii[1],myRadii[2],faceFlags);
-			}  // p.cpScreen.rePaintAll();
+				if (debug) p.cpScreen.rePaintAll(); 
+			}  
 			
 			if (circDo && pF==null) { // also draw the circles
 				if (!circFlags.colorIsSet && 
@@ -1579,7 +1580,8 @@ public class PackDCEL {
 				if (circFlags.label)
 					circFlags.setLabel(Integer.toString(he.next.next.origin.vertIndx));
 				p.cpScreen.drawCircle(myCenters[2],myRadii[2],circFlags);
-			}  // p.cpScreen.rePaintAll();
+				if (debug) p.cpScreen.rePaintAll(); 
+			}
 
 			thisTree.remove(0);
 
@@ -1603,12 +1605,13 @@ public class PackDCEL {
 				if (fix) {
 					d_faceXedge(he);
 					
-					if (debug) { // debug=true;
-						System.out.println("next_face = "+next_face+"; "+
-								"edge "+he.next.next);
-						System.out.println("put vert "+he.next.next.origin.vertIndx+" at "+
-								getVertCenter(he.next.next));
-					}
+//					if (debug) { // debug=true;
+//						System.out.println("next_face = "+next_face+"; "+
+//								"edge "+he.next.next);
+//						System.out.println("put vert "+he.next.next.origin.vertIndx+" at "+
+//								getVertCenter(he.next.next));
+//					}
+					
 				}
 				
 				myCenters[0]=getVertCenter(he);
@@ -1626,7 +1629,8 @@ public class PackDCEL {
 						faceFlags.setLabel(Integer.toString(next_face));
 					p.cpScreen.drawFace(myCenters[0],myCenters[1],myCenters[2],
 							myRadii[0],myRadii[1],myRadii[2],faceFlags);
-				}  // p.cpScreen.rePaintAll();
+					if (debug) p.cpScreen.rePaintAll();
+				} 
 				
 				if (circDo && pF==null) { // also draw the circles
 					if (!circFlags.colorIsSet && 
@@ -1635,6 +1639,7 @@ public class PackDCEL {
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(he.next.next.origin.vertIndx));
 					p.cpScreen.drawCircle(myCenters[2],myRadii[2],circFlags);
+					if (debug) p.cpScreen.rePaintAll();
 				}
 				
 				if (pF!=null && p.hes>0) { // post routines don't know how to convert

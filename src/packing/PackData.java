@@ -27,7 +27,9 @@ import complex.MathComplex;
 import dcel.CombDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
+import dcel.RedVertex;
 import dcel.VData;
+import dcel.Vertex;
 import deBugging.DebugHelp;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
@@ -287,12 +289,27 @@ public class PackData{
 		for (int v=1;v<=pdcel.vertCount;v++) 
 			vData[v]=new VData();
 		for (int v=1;v<=pdcel.vertCount;v++) {
-			HalfEdge he=pdcel.vertices[v].halfedge;
+			Vertex vert=pdcel.vertices[v];
+			HalfEdge he=vert.halfedge;
    			int oldv=v;
    			int w=0;
    			if (pdcel.newOld!=null && (w=pdcel.newOld.findW(v))>0) 
    				oldv=w;
-   			pdcel.setVertData(he, new CircleSimple(oldVData[oldv].center,oldVData[oldv].rad));
+   			Complex z=oldVData[oldv].center;
+   			double rad=oldVData[oldv].rad;
+   			
+   			// need to store in any 'RedHEdge's from this vertex
+   			if (vert instanceof RedVertex) {
+   				HalfEdge trace=he.prev.twin;
+   				do {
+   					if(trace.myRedEdge!=null) {
+   						trace.myRedEdge.setCenter(z);
+   						trace.myRedEdge.setRadius(rad);
+   					}
+   					trace=trace.prev.twin;
+   				} while (trace!=he);
+   			}
+			pdcel.setVertData(he, new CircleSimple(z,rad));
     	}
     	pdcel.p=this;
     	return pdcel.vertCount;

@@ -223,14 +223,10 @@ public class CombDCEL {
 	 */
 	public static PackDCEL d_redChainBuilder(PackDCEL pdcel,
 			NodeLink nonKeepers,boolean poisonFlag,int alphaIndx) {
-		boolean debug=false;
+		boolean debug=false; // debug=true;
 
 		int vertcount=pdcel.vertCount;
 
-		if (debug) { // debug=true;
-			DCELdebug.tri_of_edge(pdcel.edges,24,37);
-		}
-		
 		//============ early bookkeeping re 'alpha' and keepers ========== 
 		// Classify verts in 'keepV[]' and 'bdryNon[]' in steps (1) - (7). 
 		// 'bdryNon[v]' is true, meaning v is nonkeeper only because it is bdry,

@@ -23,7 +23,7 @@ public class HalfEdge {
 	public HalfEdge prev;
 	public int edgeIndx;
 	public int mark;
-	RedHEdge myRedEdge; // set when finishing up construction.
+	public RedHEdge myRedEdge; // set when finishing up construction.
 	
 	// TODO: figure out how to transfer this info as edges change.
 	double invDist;  // inversive distance assigned, default 1.0 (tangency)
