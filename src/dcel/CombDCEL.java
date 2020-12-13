@@ -7,7 +7,6 @@ import allMains.CirclePack;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
-import input.CommandStrParser;
 import komplex.EdgeSimple;
 import listManip.GraphLink;
 import listManip.NodeLink;
@@ -193,27 +192,35 @@ public class CombDCEL {
 	
 	/**
 	 * Given a DCEL, (perhaps only minimal, with vertices, edges) and 
-	 * a list (possibly empty) of vertices that are non-keepers, generate 
-	 * a new DCEL which adds the non-keepers to the boundary.
+	 * a list (possibly empty) of vertices that are 'nonKeeper's, generate 
+	 * a new DCEL which includes the nonKeepers as part of the boundary.
+	 * If 'poisonFlag' is set, then nghbs of nonKeepers are included
+	 * as nonKeepers.
 	 * 
 	 * This creates new face indices, ideal faces, red chain, sides, 
-	 * and so forth, returning a fully prepared 'PackDCEL'.
-	 * The "red" chain is a closed cclw chain of edges about a
-	 * simple connected fundamental domain within the complex.
+	 * and so forth, returning a fully prepared 'PackDCEL'. If not a
+	 * combinatorial sphere, then build a "red" chain as a closed 
+	 * cclw chain of edges about a simple connected fundamental 
+	 * domain within the complex.
 	 * 
 	 * Notes: 
+	 *   * bdry vertices are automatically included in nonKeepers.
 	 *   * 'nonKeepers' may or may not end up in the final DCEL;
-	 *     any that remain are part of the boundary and may occur
-	 *     in the redChain more than once. E.g. you can introduce
-	 *     a cut along some edges, putting them in the boundary.
+	 *     any that remain are part of the boundary. Note: they 
+	 *     may occur in the redChain more than once. E.g. you 
+	 *     can introduce a cut along some formerly interior edges, 
+	 *     putting them into the boundary and introducing an ideal
+	 *     face.
 	 *   * Additional vertices may be lost -- e.g., 'keepers' that
-	 *     are surrounded by nonKeepers.
-	 *   * If you want to excise a set of "poison" vertices, then
-	 *     set 'poisonFlag' and include their neighboring vertices
-	 *   * An isolated vertex in 'nonKeeper' should be okay, except
-	 *     for a combinatorial sphere with a single vert in 
-	 *     'nonKeepers'. (If you want to "puncture" a point, you need
-	 *     to include its neighbors in 'nonKeepers')
+	 *     are separated from the 'alpaIndx' by nonKeepers.
+	 *   * Set 'poisonFlag' if you want to treat the nonKeepers as 
+	 *     "poison"; this will include their neighboring vertices 
+	 *     as nonKeepers.
+	 *   * Unless the 'poisonFlag' is set, isolated interior vertices
+	 *     in 'nonKeeper' will remain as keepers. (If you want to 
+	 *     "puncture" a point, you need to include its neighbors 
+	 *     in 'nonKeepers'. E.g., to puncture a single point, list
+	 *     it in 'nonKeepers' and set 'poisonFlag'.)
 	 * @param pdcel PackDCEL
 	 * @param nonKeepers NodeLink,
 	 * @param poisonFlag boolean, if true, then augment 
@@ -229,16 +236,16 @@ public class CombDCEL {
 
 		//============ early bookkeeping re 'alpha' and keepers ========== 
 		// Classify verts in 'keepV[]' and 'bdryNon[]' in steps (1) - (7). 
-		// 'bdryNon[v]' is true, meaning v is nonkeeper only because it is bdry,
-		// is used only in setting red twins. 'keepV'is further modified.
+		// 'bdryNon[v]' is true, meaning v is nonKeeper only because it is bdry,
+		// is used only in setting red twins. 'keepV' is further modified.
 
 		// (1) initialize to keepV to -1.
-		int[] keepV = new int[pdcel.vertCount + 1];
-		for (int k=1;k<=pdcel.vertCount;k++) {
+		int[] keepV = new int[vertcount + 1];
+		for (int k=1;k<=vertcount;k++) {
 			keepV[k]=-1;
 		}
 		
-		// (2) set keepV 0 for all specified 'nonkeepers'
+		// (2) set keepV 0 for all specified 'nonKeepers'
 		if (nonKeepers!=null && nonKeepers.size()>0) {
 			Iterator<Integer> vit=nonKeepers.iterator();
 			while (vit.hasNext()) {
@@ -249,11 +256,11 @@ public class CombDCEL {
 			}
 		}
 		
-		// (3) if not 'poisonFlag' then restore interior nonkeepers
-		//     without some nonkeeper or bdry nghb. (Because the results
-		//     are ambiguous if a nonkeeper is isolated.)
+		// (3) if not 'poisonFlag' then restore any interior nonKeeper
+		//     not having some nonKeeper or bdry nghb. (Because the results
+		//     are ambiguous if a nonKeeper is isolated.)
 		if (!poisonFlag) {
-			for (int k=1;k<=pdcel.vertCount;k++) {
+			for (int k=1;k<=vertcount;k++) {
 				if (keepV[k]==0) {
 					Vertex vert=pdcel.vertices[k];
 					int[] flower=vert.getFlower();
@@ -272,10 +279,10 @@ public class CombDCEL {
 			}
 		}
 		
-		// (4) 'poisonFlag' means make nghbs of nonkeepers also nonkeepers
+		// (4) 'poisonFlag' means make nghbs of nonKeepers also nonKeepers
 		else { 
-			boolean[] poison = new boolean[pdcel.vertCount + 1];
-			for (int k=1;k<=pdcel.vertCount;k++) 
+			boolean[] poison = new boolean[vertcount + 1];
+			for (int k=1;k<=vertcount;k++) 
 				if (keepV[k]==0) {
 					Vertex vert=pdcel.vertices[k];
 					int[] flower=vert.getFlower();
@@ -283,16 +290,21 @@ public class CombDCEL {
 					for (int j=0;j<num;j++) 
 						poison[flower[j]]=true;
 				}
-			for (int k=1;k<=pdcel.vertCount;k++) 
+			for (int k=1;k<=vertcount;k++) 
 				if (poison[k]) {
 					keepV[k]=0;
 				}
 		}
 			
-		// (5) Make all bdry nonkeepers
-		for (int k=1;k<=pdcel.vertCount;k++) { 
-			if (pdcel.vertices[k].bdryFlag==1)
+		// (5) Make bdry verties into nonKeepers, nonKeepers into bdry
+		boolean[] bdryNon=new boolean[vertcount+1];
+		for (int k=1;k<=vertcount;k++) { 
+			if (pdcel.vertices[k].bdryFlag==1 && keepV[k]==-1) {
+				bdryNon[k]=true;
 				keepV[k]=0;
+			}
+			if (keepV[k]==0)
+				pdcel.vertices[k].bdryFlag=1;
 		}
 		
 		// (6) Good 'alpha'? // want interior keeper (prefer int/keeper petals, too)
@@ -381,7 +393,7 @@ public class CombDCEL {
 			edge.util=0;
 		}
 		
-		// First, all edges with origin not connected to firstV are done.
+		// First, all edges whose origin is not connected to firstV are done.
 		for (int e=1;e<=ecount;e++) {
 			HalfEdge edge=pdcel.edges[e];
 			int ov=edge.twin.origin.vertIndx;
@@ -393,8 +405,6 @@ public class CombDCEL {
 		}
 		
 		// =========== now we're going to build the 'redChain' ==========
-
-
 
 		// Initial redChain is chain of outer edges cclw about 'firstV'.
 		// Also begin the 'orderEdges' list from incoming spokes of 'firstV'
@@ -472,10 +482,10 @@ public class CombDCEL {
 				// working on v; u,v,w successive verts cclw along redchain 
 				int v = currRed.myEdge.origin.vertIndx;
 				
-				if (debug) { // debug=true;
+//				if (debug) { // debug=true;
 //					DCELdebug.drawTmpRedChain(pdcel.p,currRed);
-					DCELdebug.printRedChain(pdcel.redChain);
-				}
+//					DCELdebug.printRedChain(pdcel.redChain);
+//				}
 				
 				// if v is not done yet 
 				if (!doneV[v] && !(doneV[v]=isVertDone(currRed.myEdge))) { 
@@ -494,10 +504,10 @@ public class CombDCEL {
 							currRed.prevRed.prevRed.nextRed = currRed.nextRed;
 							currRed.nextRed.prevRed = currRed.prevRed.prevRed;
 							
-							if (debug) {
-								System.err.println(v+" collapse done");
-								CommandStrParser.jexecute(pdcel.p,"disp -tfc218 "+v);
-							}
+//							if (debug) {
+//								System.err.println(v+" collapse done");
+//								CommandStrParser.jexecute(pdcel.p,"disp -tfc218 "+v);
+//							}
 
 							doneV[v] = true;
 							currRed.nextRed.myEdge.origin.halfedge = 
@@ -537,6 +547,7 @@ public class CombDCEL {
 									EdgeSimple es=new EdgeSimple(spktrace.origin.vertIndx,
 											spktrace.twin.origin.vertIndx);
 									DCELdebug.drawEdgeFace(pdcel.p, es);
+									DCELdebug.drawTmpRedChain(pdcel.p,pdcel.redChain);
 								}
 								
 								spktrace=spktrace.prev.twin;
@@ -545,10 +556,10 @@ public class CombDCEL {
 							cclw.nextRed=currRed.nextRed;
 							currRed.nextRed.prevRed=cclw;
 
-							if (debug) {
-								System.err.println(v+" flat, done");
-								CommandStrParser.jexecute(pdcel.p,"disp -tfc218 "+v);
-							}
+//							if (debug) {
+//								System.err.println(v+" flat, done");
+//								CommandStrParser.jexecute(pdcel.p,"disp -tfc218 "+v);
+//							}
 
 							doneV[v]=true;
 						}
@@ -590,15 +601,16 @@ public class CombDCEL {
 		} // end of main loop while, should be done creating red chain
 
 		debug=false; // DCELdebug.drawRedChain(pdcel.p,pdcel.redChain);
+		 // DCELdebug.printRedChain(pdcel.redChain);
 	     // DCELdebug.EdgeOriginProblem(pdcel.edges);
-		// debug=true;
-		// DCELdebug.redChainEnds(pdcel.redChain);
-				     
-		// TODO: may want to reconfigure redChain to minimize the 
-		//   occurrence of 'blue' elements --- successive red edges
-		//   belonging to the same face. This will cause tough changes
-		//   in 'layoutEdges' as well.
+		 // debug=true;
+		 // DCELdebug.redChainEnds(pdcel.redChain);
 
+		// A sphere?
+		if (pdcel.redChain==null) {
+			d_FillInside(pdcel);
+			return pdcel;
+		}
 		
 		// ============ set 'myRedEdge' pointers ====================
 		
@@ -614,7 +626,7 @@ public class CombDCEL {
 		//   whether these should be red twins. Rule: if both ends are 
 		//   keepers  or one is a keeper and the other is either interior
 		//   of not a keeper but neighbored a keeper, twin them. 'bdryNon[u]'
-		//   true if nonkeeper only because 'u' is bdry.
+		//   true if nonKeeper only because 'u' is bdry.
 		//   Also, mark all redChain vertices as done. 
 		// The 'redChain' is not changed by this or subsequent operations,
 		//   though it may gain new 'RedVertex's.
@@ -896,7 +908,6 @@ public class CombDCEL {
 	 * @return PackDCEL
 	 */
 	public static void d_FillInside(PackDCEL pdcel) {
-		PackData p=pdcel.p;
 		boolean debug=false;
 		// NOTE about debugging: Many debug routines depend on
 		//      original vertex indices, which can be found in
@@ -918,10 +929,11 @@ public class CombDCEL {
 		
 		// zero out 'RedHEdge.redutil'
 		RedHEdge rtrace=pdcel.redChain;
-		do {
-			rtrace.redutil=0;
-			rtrace=rtrace.nextRed;
-		} while (rtrace!=pdcel.redChain);
+		if (rtrace!=null) // not spherical case
+			do {
+				rtrace.redutil=0;
+				rtrace=rtrace.nextRed;
+			} while (rtrace!=pdcel.redChain);
 		
 		// Build list of edges as we encounter new faces: convention is that
 		//   each 'HalfEdge' in 'orderEdges' is associated with its face (ie. that
@@ -1256,123 +1268,130 @@ public class CombDCEL {
 		debug=false;
 		// DCELdebug.printRedChain(pdcel.redChain,pdcel.newOld); 
 		
-		// ======== Catalog side pairings, free sides, create ideal faces ========
-		pdcel.sideStarts=new ArrayList<RedHEdge>();
-		pdcel.bdryStarts=new ArrayList<RedHEdge>();
-		int sidecount=0; 
-		RedHEdge nxtre=pdcel.redChain;
-		int safety=1000;
-		RedHEdge stopEdge=null;
-		do {
-			// see if this is unpasted redChain edge, hence a free side.
-			if (nxtre.twinRed==null) {
-				++sidecount; // index is non-zero
-				
-				// search upstream to find first edge
-				rtrace=nxtre.prevRed;
-				while (rtrace.twinRed==null && rtrace!=nxtre) {
-					rtrace.myEdge.twin.face=null;
-					rtrace=rtrace.prevRed;
-				}
+		pdcel.sideStarts=null;
+		pdcel.bdryStarts=null;
+		
+		// not a sphere?
+		if (pdcel.redChain!=null) {
+			// ======== Catalog side pairings, free sides, create ideal faces ========
+			pdcel.sideStarts=new ArrayList<RedHEdge>();
+			pdcel.bdryStarts=new ArrayList<RedHEdge>();
+			int sidecount=0; 
+			RedHEdge nxtre=pdcel.redChain;
+			int safety=1000;
+			RedHEdge stopEdge=null;
+			do {
+				// see if this is unpasted redChain edge, hence a free side.
+				if (nxtre.twinRed==null) {
+					++sidecount; // index is non-zero
+					
+					// search upstream to find first edge
+					rtrace=nxtre.prevRed;
+					while (rtrace.twinRed==null && rtrace!=nxtre) {
+						rtrace.myEdge.twin.face=null;
+						rtrace=rtrace.prevRed;
+					}
 
-				// check if simply connected
-				if (rtrace==nxtre) {
-					Face newface=new Face(); // new ideal face
-					newface.faceIndx=-1;
-					pdcel.redChain.myEdge.twin.face=newface;
-					newface.edge=pdcel.redChain.myEdge.twin;
-					pdcel.bdryStarts.add(pdcel.redChain);
-					pdcel.sideStarts.add(pdcel.redChain);
+					// check if simply connected
+					if (rtrace==nxtre) {
+						Face newface=new Face(); // new ideal face
+						newface.faceIndx=-1;
+						pdcel.redChain.myEdge.twin.face=newface;
+						newface.edge=pdcel.redChain.myEdge.twin;
+						pdcel.bdryStarts.add(pdcel.redChain);
+						pdcel.sideStarts.add(pdcel.redChain);
 
-					// go around and catalog
-					rtrace=pdcel.redChain;
+						// go around and catalog
+						rtrace=pdcel.redChain;
+						do {
+							rtrace.mobIndx=sidecount;
+							rtrace.myEdge.twin.edgeIndx=++etick;
+							tmpEdges.add(rtrace.myEdge.twin);
+							rtrace.myEdge.twin.face=newface;
+							rtrace=rtrace.nextRed;
+						} while (rtrace!=pdcel.redChain);
+						pdcel.idealFaceCount=1;
+						break;
+					}
+						
+					// else record in 'bdryStarts' and 'sideStarts'
+					RedHEdge freeStart=rtrace.nextRed;
+					if (stopEdge==null)
+						stopEdge=freeStart;
+					pdcel.idealFaceCount++;
+					pdcel.bdryStarts.add(freeStart);
+					pdcel.sideStarts.add(freeStart); 
+					
+					// propagate downstream
+					rtrace=freeStart;
 					do {
 						rtrace.mobIndx=sidecount;
 						rtrace.myEdge.twin.edgeIndx=++etick;
 						tmpEdges.add(rtrace.myEdge.twin);
-						rtrace.myEdge.twin.face=newface;
+						rtrace.myEdge.twin.face=null;
 						rtrace=rtrace.nextRed;
-					} while (rtrace!=pdcel.redChain);
-					pdcel.idealFaceCount=1;
-					break;
-				}
+					} while (rtrace.twinRed==null);
 					
-				// else we have the start:
-				RedHEdge freeStart=rtrace.nextRed;
-				if (stopEdge==null)
-					stopEdge=freeStart;
-				pdcel.idealFaceCount++;
-				pdcel.bdryStarts.add(freeStart);
-				pdcel.sideStarts.add(freeStart); 
-				
-				// propagate downstream
-				rtrace=freeStart;
-				do {
-					rtrace.mobIndx=sidecount;
-					rtrace.myEdge.twin.edgeIndx=++etick;
-					tmpEdges.add(rtrace.myEdge.twin);
-					rtrace.myEdge.twin.face=null;
-					rtrace=rtrace.nextRed;
-				} while (rtrace.twinRed==null);
-				
-				if (debug) { // debug=true;
-					DCELdebug.faceVerts(freeStart.myEdge);
-				}
-				
-				nxtre=rtrace;
-			}
-			// else, get side pairing; move back, then forward, while twins match
-			else {				
-				int sideIndx=nxtre.twinRed.mobIndx; // should be positive
-				rtrace=nxtre;
-
-				// if not 0, then this is paired with earlier side
-				if (sideIndx!=0) {
-					pdcel.sideStarts.add(rtrace);
-					do {
-						rtrace.mobIndx=-sideIndx;
-						rtrace=rtrace.nextRed;
-					} while (rtrace.twinRed!=null && rtrace.twinRed.mobIndx==sideIndx);
+					if (debug) { // debug=true;
+						DCELdebug.faceVerts(freeStart.myEdge);
+					}
+					
+					// set to look for next side
 					nxtre=rtrace;
 				}
-				
-				// else this is a new paired edge
-				else { 
-					sideIndx=++sidecount;;
-					rtrace.mobIndx=sideIndx;
-				
-					// first look upstream to find start
-					RedHEdge twintrace=rtrace.twinRed;
-					while (rtrace.prevRed.twinRed==twintrace.nextRed && 
-						twintrace.nextRed.twinRed==rtrace.prevRed) {
-						rtrace=rtrace.prevRed;
-						twintrace=rtrace.twinRed;
-						rtrace.mobIndx=sideIndx;
-					}
-					pdcel.sideStarts.add(rtrace);
-					if (stopEdge==null)
-						stopEdge=rtrace;
-				
-					// look downstream while still pasted
+				// else, get side pairing; move back, then forward, while twins match
+				else {				
+					int sideIndx=nxtre.twinRed.mobIndx; // should be positive
 					rtrace=nxtre;
-					twintrace=rtrace.twinRed;
-					while (rtrace.nextRed.twinRed==twintrace.prevRed && 
-						twintrace.prevRed.twinRed==rtrace.nextRed) { 
-						rtrace=rtrace.nextRed;
-						twintrace=rtrace.twinRed;
-						rtrace.mobIndx=sideIndx;
-					}
 
-					nxtre=rtrace.nextRed;
+					// if not 0, then this is paired with earlier side
+					if (sideIndx!=0) {
+						pdcel.sideStarts.add(rtrace);
+						do {
+							rtrace.mobIndx=-sideIndx;
+							rtrace=rtrace.nextRed;
+						} while (rtrace.twinRed!=null && rtrace.twinRed.mobIndx==sideIndx);
+						nxtre=rtrace;
+					}
+					
+					// else this is a new paired edge
+					else { 
+						sideIndx=++sidecount;;
+						rtrace.mobIndx=sideIndx;
+					
+						// first look upstream to find start
+						RedHEdge twintrace=rtrace.twinRed;
+						while (rtrace.prevRed.twinRed==twintrace.nextRed && 
+							twintrace.nextRed.twinRed==rtrace.prevRed) {
+							rtrace=rtrace.prevRed;
+							twintrace=rtrace.twinRed;
+							rtrace.mobIndx=sideIndx;
+						}
+						pdcel.sideStarts.add(rtrace);
+						if (stopEdge==null)
+							stopEdge=rtrace;
+					
+						// look downstream while still pasted
+						rtrace=nxtre;
+						twintrace=rtrace.twinRed;
+						while (rtrace.nextRed.twinRed==twintrace.prevRed && 
+							twintrace.prevRed.twinRed==rtrace.nextRed) { 
+							rtrace=rtrace.nextRed;
+							twintrace=rtrace.twinRed;
+							rtrace.mobIndx=sideIndx;
+						}
+
+						nxtre=rtrace.nextRed;
+					}
 				}
+				safety--;
+			} while (nxtre!=stopEdge && safety>0);
+			
+			// DCELdebug.printRedChain(pdcel.redChain,null);
+			
+			if (safety==0) {
+				System.err.println("Failed in indexing free side.");
 			}
-			safety--;
-		} while (nxtre!=stopEdge && safety>0);
-		
-		// DCELdebug.printRedChain(pdcel.redChain,null);
-		
-		if (safety==0) {
-			System.err.println("Failed in indexing free side.");
 		}
 		
 		if (debug) {   // debug=true;
@@ -1384,7 +1403,7 @@ public class CombDCEL {
 					es.v=pdcel.newOld.findW(es.v);
 					es.w=pdcel.newOld.findW(es.w);
 				}
-				DCELdebug.drawEdgeFace(p,es);
+				DCELdebug.drawEdgeFace(pdcel.p,es);
 			}
 		}
 
@@ -1634,81 +1653,41 @@ public class CombDCEL {
 	}
 	
 	/** 
-	 * Remove one interior vert; must have at least 2 generations 
-	 * of interior neighbors. Geometry is not changed; lists are 
-	 * adjusted, but any face list data is tossed. Calling routine
-	 * will have to do 'complex_count', etc.
+	 * Remove one vertex. This is called a "puncture" if 'v' has 2 
+	 * generations of interior neighbors. Otherwise, may result in
+	 * bdry vertices with no interior neighbors. 
+	 * 
+	 * TODO: coordinate with "rm_cir", adjust lists of verts/faces 
+	 * 
 	 * @param pdcel PackDCEL
 	 * @param v int
 	 * @return PackDCEL, null on failure
 	 */
 	public static PackDCEL d_puncture_vert(PackDCEL pdcel,int v) {
-	    // check suitability
-	    boolean failed=false;
-	    int[] flower=pdcel.usualFlower(pdcel.vertices[v]);
-	    for (int j=0;(j<flower.length && !failed);j++) { 
-	    	if (pdcel.vertices[flower[j]].bdryFlag!=0) {
-	    		failed=true;
-	    		break;
-	    	}
-	    	int[] petflower=pdcel.usualFlower(pdcel.vertices[flower[j]]);
-	    	for (int k=0;(k<petflower.length && !failed);k++)
-		    if (pdcel.vertices[flower[j]].bdryFlag!=0) 
-		    	  failed=true;
-	    }
-	    if (failed) {
-	    	return null;
-	    }
-	      
 	    NodeLink nonks=new NodeLink();
 	    nonks.add(v);
-	    for (int j=0;j<flower.length;j++)
-	    	nonks.add(flower[j]);
-	      
-	    return(d_redChainBuilder(pdcel,nonks,false,0));
+	    return(d_redChainBuilder(pdcel,nonks,true,0));
 	}
-	  
-	  /** 
-	   * Remove a face, converting its three vertices to form a new
-	   * 3-edge boundary component. Face needs to be at least 2 
-	   * generations distant from the original boundary to avoid
-	   * disconnecting things. Geometry is not changed; local face list
-	   * data is tossed. Calling routine does 'complex_count', etc.
-	   * @param f
-	   * @return 1 on success, 0 if not suitable
-	   */
-/*	  public int puncture_face(int f) {
-		  if (f<1 || f>faceCount)
-			  return 0;
-		  Face face=faces[f];
-		  
-		  // find faces next to boundary, then vertices next to these
-		  flist= new FaceLink(this,"-Iv b");
-		  NodeLink nlink=new NodeLink(this,"-If flist");
-		  for (int k=0;k<3;k++) {
-			  int v=face.vert[k];
-			  if (kData[v].bdryFlag!=0 || nlink.containsV(v)>0) {
-				  CirclePack.cpb.errMsg("face is too close to the bdry to puncture");
-				  return 0;
-			  }
-		  }
-		  flist=null; // wanted to empty 'flist' in any case.
-		  
-		  // fix flowers
-		  for (int j=0;j<3;j++) {
-			  int v=face.vert[j];
-			  int indx=nghb(v,face.vert[(j+2)%3]);
-			  int num=kData[v].num;
-			  int []newflower=new int[num+1];
-			  for (int kk=0;kk<num;kk++)
-				  newflower[kk]=kData[v].flower[(kk+indx)%num];
-			  kData[v].num--;
-			  kData[v].flower=newflower;
-			  kData[v].bdryFlag=1;
-		  }
-			  
-		  return 1;
-	  }
-*/
+
+	/** Remove one face. 
+	 * 
+	 * TODO: coordinate with "rm_face", adjust lists of verts/faces
+	 * 
+	 * @param pdcel PackDCEL
+	 * @param f int
+	 * @return PackDCEL
+	 */
+	public static PackDCEL d_puncture_face(PackDCEL pdcel,int f) {
+		Face face=pdcel.faces[f];
+		NodeLink nonks=new NodeLink();
+		HalfEdge he=face.edge;
+		nonks.add(he.origin.vertIndx);
+		HalfEdge trace=he;
+		do {
+			nonks.add(trace.origin.vertIndx);
+			trace=trace.next;
+		} while (trace!=he);
+		return(d_redChainBuilder(pdcel,nonks,false,0));
+	}
 	      
 }
