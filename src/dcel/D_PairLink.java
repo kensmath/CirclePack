@@ -19,9 +19,8 @@ public class D_PairLink extends LinkedList<D_SideData> {
 	PackData packData;
 	
 	// Constructors
-	public D_PairLink(PackData p) {
+	public D_PairLink() {
 		super();
-		packData=p;
 	}
 
 	/**

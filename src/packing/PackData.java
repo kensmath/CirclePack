@@ -2276,11 +2276,22 @@ public class PackData{
 	 * return string for geometry associated with integer hes
 	 * @param hes int
 	 * @return String, empty if hes not in {
-	 */
+	 */ 
 	public static String intToGeometry(int hes) {
 		if (hes >0 )	return "Spherical";
 		if (hes <0 ) return "Hyperbolic";
 		return "Euclidean";
+	}
+	
+	/**
+	 * Return the bdryFlag of vertex v
+	 * @param v int
+	 * @return int
+	 */
+	public int getBdryFlag(int v) {
+		if (packDCEL!=null)
+			return packDCEL.vertices[v].bdryFlag;
+		return kData[v].bdryFlag;
 	}
 	
 	/**

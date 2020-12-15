@@ -8,10 +8,12 @@ import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
 import komplex.EdgeSimple;
+import listManip.EdgeLink;
 import listManip.GraphLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
+import util.ColorUtil;
 
 /**
  * Static combinatorial routines for working with DCEL structures.
@@ -296,15 +298,13 @@ public class CombDCEL {
 				}
 		}
 			
-		// (5) Make bdry verties into nonKeepers, nonKeepers into bdry
+		// (5) Make bdry verties into nonKeepers
 		boolean[] bdryNon=new boolean[vertcount+1];
 		for (int k=1;k<=vertcount;k++) { 
 			if (pdcel.vertices[k].bdryFlag==1 && keepV[k]==-1) {
 				bdryNon[k]=true;
 				keepV[k]=0;
 			}
-			if (keepV[k]==0)
-				pdcel.vertices[k].bdryFlag=1;
 		}
 		
 		// (6) Good 'alpha'? // want interior keeper (prefer int/keeper petals, too)
@@ -722,6 +722,9 @@ public class CombDCEL {
 		rtrace=pdcel.redChain;
 		do {
 			int v=Math.abs(rtrace.myEdge.origin.vertIndx);
+			
+System.out.println("handle vert "+v);
+
 			// if not processed, then it's siblings are not created yet either
 			if (pdcel.vertices[v] instanceof PreRedVertex) { 
 				PreRedVertex rV=(PreRedVertex)pdcel.vertices[v];
@@ -1488,6 +1491,75 @@ public class CombDCEL {
 		}
 		tmpfullLayout=null;
 		tmpLayout=null;
+
+		// Arrange the side pairings in order of 'sideStarts'
+		if (pdcel.sideStarts!=null) {
+			Iterator<RedHEdge> rit=pdcel.sideStarts.iterator();
+			int sptick=0;
+			pdcel.pairLink=new D_PairLink();
+			pdcel.pairLink.add(null); // first is null
+			EdgeLink oldnew=new EdgeLink();
+			while (rit.hasNext()) {
+				RedHEdge rstart=rit.next();
+				
+				D_SideData sideData=new D_SideData();
+				sideData.spIndex=++sptick; // indexed from 1
+				oldnew.add(new EdgeSimple(rstart.mobIndx,sptick));
+				sideData.startEdge=rstart;
+
+				// if paired, find the end
+				RedHEdge rtrc=rstart;
+				if (rstart.twinRed!=null) {
+					while (rtrc.twinRed!=null &&
+							rtrc.nextRed==rtrc.twinRed.prevRed.twinRed) {
+						rtrc=rtrc.nextRed;
+					}
+					sideData.endEdge=rtrc;
+				}
+				else { // part (perhaps not all) of boundary component
+					do {
+						rtrc=rtrc.nextRed;
+					} while (rtrc!=rstart && rtrc.twinRed==null);
+					sideData.endEdge=rtrc.prevRed;
+				}
+				pdcel.pairLink.add(sptick,sideData); // 0 entry is null
+			}
+			
+			// find and label the pairings and free sides
+			int pairCount=0;
+			int freeCount=1;
+			Iterator<D_SideData> pdpit=pdcel.pairLink.iterator();
+			pdpit.next(); // flush null entry 
+			while(pdpit.hasNext()) {
+				D_SideData sdata=pdpit.next();
+				
+				// a paired side
+				if (sdata.startEdge.twinRed!=null) {
+					int oldindx=oldnew.findV(sdata.spIndex);
+					if (oldindx>0) {
+						int mate=oldnew.findW(-oldindx);
+						D_SideData oppData=pdcel.pairLink.get(mate);
+						sdata.mateIndex=oppData.spIndex;
+						oppData.mateIndex=sdata.spIndex;
+						sdata.pairedEdge=oppData;
+						oppData.pairedEdge=sdata;
+						char c=(char)('a'+pairCount);
+						sdata.label=String.valueOf(c);
+						c=(char)('A'+pairCount);
+						oppData.label=String.valueOf(c);
+						sdata.color=ColorUtil.spreadColor(pairCount); // distinct colors
+						oppData.color=ColorUtil.spreadColor(pairCount); // distinct colors
+						pairCount++;
+					}
+				}
+				else {
+					sdata.mateIndex=-1;
+					sdata.pairedEdge=null;
+					sdata.label=String.valueOf(freeCount);
+					freeCount++;
+				}
+			}
+		}
 
 		// ==================================================================
 		//                  should be done!!

@@ -745,11 +745,13 @@ public class DisplayParser {
 
 				PackDCEL pdcel=p.packDCEL;
 				
-				int numSides = -1; // in pdcel case, 'pairLink' starts with null entry
-				if (pdcel!=null && (pdcel.pairLink==null || (numSides=pdcel.pairLink.size()-1)==0))
+				int numSides = -1; // pdcel case ('pairLink' starts with null)
+				if (pdcel!=null && (pdcel.pairLink==null || 
+						(numSides=pdcel.pairLink.size()-1)==0))
 					break;
 				if (pdcel==null && 
-						(p.getSidePairs() == null || (numSides = p.getSidePairs().size()) == 0))
+						(p.getSidePairs() == null || 
+						(numSides = p.getSidePairs().size()) == 0))
 					break;
 				boolean do_mate = false;
 				boolean do_circle = false;

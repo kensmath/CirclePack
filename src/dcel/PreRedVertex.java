@@ -2,6 +2,7 @@ package dcel;
 
 import java.util.ArrayList;
 
+import allMains.CirclePack;
 import deBugging.DCELdebug;
 import exceptions.DCELException;
 
@@ -137,6 +138,7 @@ public class PreRedVertex extends RedVertex {
 					}
 				}
 				if (v == w) { // didn't find a match to form the fan
+					CirclePack.cpb.errMsg("problem matching in/red spokes");
 					throw new DCELException("'didn't find 'inSpoke' match with 'redSpoke'");
 				}
 				

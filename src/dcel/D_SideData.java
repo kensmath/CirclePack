@@ -45,8 +45,7 @@ public class D_SideData{
 							  //   of case, label 'A' is stored as 'aa', etc.
 
     // Constructor
-    public D_SideData(PackData p) {
-    	packData=p;
+    public D_SideData() {
     	startEdge=null;
     	endEdge=null;
     	pairedEdge=null;

@@ -9,6 +9,8 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.Face;
+import dcel.PackDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -370,10 +372,13 @@ public class NodeLink extends LinkedList<Integer> {
 				String []pair_str=StringUtil.parens_parse(str); // get two strings
 				if (pair_str!=null) { // must have 2 strings
 					int a,b;
-					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))!=0) first=a;
-					if ((b=NodeLink.grab_one_vert(packData,pair_str[1]))!=0) last=b;
+					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))!=0) 
+						first=a;
+					if ((b=NodeLink.grab_one_vert(packData,pair_str[1]))!=0) 
+						last=b;
 					// check first/last: on bdry? on same component?
-					if (kdata[first].bdryFlag==0 || kdata[last].bdryFlag==0) bad=true;
+					if (packData.getBdryFlag(first)==0 || packData.getBdryFlag(last)==0) 
+						bad=true;
 					else { // on same component?
 						next=kdata[first].flower[0];
 						int hit=0;
@@ -396,19 +401,30 @@ public class NodeLink extends LinkedList<Integer> {
 						else bad=true;
 					}
 				}
-				if (pair_str==null || bad) { // whole boundary; note, 'starts' indices go from 1
-					for (int i=1;i<=packData.bdryCompCount;i++) {
-						int strt=packData.bdryStarts[i];
-						add(strt);
-						count++;
-						next=kdata[strt].flower[0]; 
-						while (next!=strt && count<10000) {
-							add(next);
-							count++;
-							next=kdata[next].flower[0];
+				if (pair_str==null || bad) { // whole boundary
+					PackDCEL pdcel=packData.packDCEL;
+					if (pdcel!=null) {
+						for (int f=1;f<=pdcel.idealFaceCount;f++) {
+							Face idealface=pdcel.idealFaces[f];
+							int[] vs=idealface.getVerts();
+							for (int i=0;i<vs.length;i++)
+								add(vs[i]);
 						}
-						if (count==10000) {
-							throw new CombException("looping in 'NodeLink' boundary call");
+					}
+					else {
+						for (int i=1;i<=packData.bdryCompCount;i++) {
+							int strt=packData.bdryStarts[i];
+							add(strt);
+							count++;
+							next=kdata[strt].flower[0]; 
+							while (next!=strt && count<10000) {
+								add(next);
+								count++;
+								next=kdata[next].flower[0];
+							}
+							if (count==10000) {
+								throw new CombException("looping in 'NodeLink' boundary call");
+							}
 						}
 					}
 				}
@@ -422,11 +438,13 @@ public class NodeLink extends LinkedList<Integer> {
 				String []pair_str=StringUtil.parens_parse(str); // get two strings
 				if (pair_str!=null) { // must have 2 strings
 					int a,b;
-					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))!=0) first=a;
-					if ((b=NodeLink.grab_one_vert(packData,pair_str[1]))!=0) last=b;
+					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))!=0) 
+						first=a;
+					if ((b=NodeLink.grab_one_vert(packData,pair_str[1]))!=0) 
+						last=b;
 				}
 				for (int j=first;j<=last;j++) 
-					if (packData.kData[j].bdryFlag==0) {
+					if (packData.getBdryFlag(j)==1) {
 						add(j);
 						count++;
 					}
@@ -485,8 +503,8 @@ public class NodeLink extends LinkedList<Integer> {
 					v=edge.v;
 					w=edge.w;
 					// v, w must be interior and hex and form an edge 
-					if (packData.kData[v].bdryFlag!=0 || packData.kData[v].num!=6
-							|| packData.kData[w].bdryFlag!=0 || packData.kData[w].num!=6
+					if (packData.getBdryFlag(v)==1 || packData.kData[v].num!=6
+							|| packData.getBdryFlag(w)==1 || packData.kData[w].num!=6
 							|| (indx=packData.hex_extend(v,w,1))<0) break; // no hex edges to w
 					EdgeLink hex_loop=packData.hex_extrapolate(v,indx,v,1025);
 					if (hex_loop==null || hex_loop.size()==0) break;
@@ -612,7 +630,7 @@ public class NodeLink extends LinkedList<Integer> {
 				    while (vlist.hasNext()) {
 					v=(Integer)vlist.next();
 					int num=packData.kData[v].num;
-					for (int j=0;j<(num+packData.kData[v].bdryFlag);j++) {
+					for (int j=0;j<(num+packData.getBdryFlag(v));j++) {
 					    vert=packData.kData[v].flower[j];
 					    if (hits[vert]==0) {
 						add(vert);
@@ -790,7 +808,8 @@ public class NodeLink extends LinkedList<Integer> {
 					}
 				}
 				
-				else if (str.length()>1 && (str.charAt(1)=='+' || str.charAt(1)=='-')) {
+				else if (str.length()>1 && (str.charAt(1)=='+' || 
+						str.charAt(1)=='-')) {
 					boolean nxt=true;
 					if (str.charAt(1)=='-')
 						nxt=false;
@@ -798,7 +817,7 @@ public class NodeLink extends LinkedList<Integer> {
 					Iterator<Integer> vsi=vs.iterator();
 					while (vsi.hasNext()) {
 						int v=vsi.next();
-						if (packData.kData[v].bdryFlag!=0) {
+						if (packData.getBdryFlag(v)!=0) {
 							int w=packData.kData[v].flower[0];
 							if (!nxt)
 								w=packData.kData[v].flower[packData.kData[v].num];
