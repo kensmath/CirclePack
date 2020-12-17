@@ -4,12 +4,14 @@ import allMains.CirclePack;
 import complex.Complex;
 import exceptions.DataException;
 import math.CirMatrix;
+import packing.PackData;
 import util.UtilPacket;
 
 /**
  * General calls to math routines; these call the relevant routine in
  * the appropriate geometry. I try to get similar names and arguments 
- * in every geometry.
+ * in every geometry. Only towards the end of this file are routines
+ * that require 'PackData'.
  * @author kstephe2
  *
  */
@@ -352,5 +354,23 @@ public class CommonMath {
 			throw new DataException("error calculating angle");
 		return Math.acos(theCos);
 	}
+
+	/**
+	 * Compute any anlge sum
+	 * @param p PackData
+	 * @param v int
+	 * @param rad double
+	 * @param uP UtilPacket, instantiate by calling routine
+	 * @return boolean, false on some failutre
+	 */
+	public static boolean get_anglesum(PackData p,int v,double rad,UtilPacket uP) {
+		  if (p.hes<0) // hyp
+			  return p.h_anglesum_overlap(v,rad,uP);
+		  else if (p.hes>0) // sph
+			  return p.s_anglesum(v,rad,uP);
+		  else // eucl
+			  return p.e_anglesum_overlap(v,rad,uP);
+	}
 	
+
 }

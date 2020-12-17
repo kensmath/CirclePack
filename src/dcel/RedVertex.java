@@ -17,4 +17,15 @@ public class RedVertex extends Vertex {
 		super(v);
 	}
  
+	/** Revert to regular 'Vertex'
+	 * @return new Vertex
+	 */
+	public Vertex revert() {
+		Vertex vtx=new Vertex();
+		vtx.halfedge=halfedge;
+		vtx.vertIndx=vertIndx;
+		vtx.bdryFlag=bdryFlag;
+		vtx.util=util;
+		return vtx;
+	}
 }

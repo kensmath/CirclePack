@@ -156,7 +156,7 @@ public class HypPacker extends RePacker {
 		fct = 2; // Type 2 minimum count
 
 		// do one iteration to get started
-		c0 = 0;
+		accumErr2 = 0;
 		try {
 			for (j = 0; j < aimnum; j++) {
 				fbest = 0;
@@ -217,10 +217,10 @@ public class HypPacker extends RePacker {
 				rdata[i].rad = r2; // store new label
 				rdata[i].curv = fbest; // store new anglesum
 				fbest = fbest - faim;
-				c0 += fbest * fbest; // accumulate error
+				accumErr2 += fbest * fbest; // accumulate error
 			} // end of for loop
 
-			c0 = Math.sqrt(c0);
+			accumErr2 = Math.sqrt(accumErr2);
 		} catch (Exception ex) {
 			status = FAILURE;
 			throw new PackingException();
@@ -244,7 +244,7 @@ public class HypPacker extends RePacker {
 		passLimit = passL;
 
 		// Begin Main Loop
-		while ((c0 > ttoler && localPasses < passLimit)) {
+		while ((accumErr2 > ttoler && localPasses < passLimit)) {
 
 			for (int i = 1; i <= p.nodeCount; i++)
 				R1[i] = rdata[i].rad;
@@ -311,9 +311,9 @@ public class HypPacker extends RePacker {
 				}
 				c1 = Math.sqrt(c1);
 
-				factor = c1 / c0;
+				factor = c1 / accumErr2;
 				if (factor >= 1.0) {
-					c0 = c1;
+					accumErr2 = c1;
 					key = 1;
 					numBadCuts++;
 				}
@@ -382,7 +382,7 @@ public class HypPacker extends RePacker {
 			// end of superstep
 
 			// do step/check superstep
-			c0 = 0;
+			accumErr2 = 0;
 			for (int j = 0; j < aimnum; j++) {
 				fbest = 0;
 				v = index[j];
@@ -435,13 +435,13 @@ public class HypPacker extends RePacker {
 				rdata[v].rad = r2; // store new label
 				rdata[v].curv = fbest; // store new anglesum
 				fbest = fbest - faim;
-				c0 += fbest * fbest; // accumulate error
+				accumErr2 += fbest * fbest; // accumulate error
 			}
-			c0 = Math.sqrt(c0);
+			accumErr2 = Math.sqrt(accumErr2);
 
 			// check results
 			pred = Math.exp(lambda * Math.log(factor)); // predicted improvement
-			act = c0 / c1; // actual improvement
+			act = accumErr2 / c1; // actual improvement
 			if (act < 1) { // did some good
 				if (act > pred) { // not as good as expected: reset
 					m = 1;
@@ -455,7 +455,7 @@ public class HypPacker extends RePacker {
 				for (int i = 1; i <= p.nodeCount; i++)
 					rdata[i].rad = R2[i];
 
-				c0 = c1;
+				accumErr2 = c1;
 				if (key == 2)
 					key = 1;
 			}

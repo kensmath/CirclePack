@@ -1372,6 +1372,21 @@ public class StringUtil {
 		  }
 	  }
 
+	  /** Add "-dc" to packing name to indicate presence of DCEL
+	   * structure. If no name, return 'noname-dc'.
+	   * @param name String
+	   * @return new String
+	   */
+	  public static String dc2name(String name) {
+		  if (name==null || name.length()==0)
+			  return new String("noname-dc");
+		  if (name.contains("-dc"))
+			  return new String(name);
+		  StringBuilder strbld=new StringBuilder(name);
+		  strbld.append("-dc");
+		  return strbld.toString();
+	  }
+	  
 	/**
 	   * Check if flag sequence has filename-type flags as last sequence;
 	   * that is, last sequence starts with '-f', '-a', or '-s' for

@@ -275,16 +275,22 @@ public class PackData{
     			setRadius(v,rData[oldv].rad);
     			setCenter(v,rData[oldv].center);
     			vData[v].color=kData[oldv].color;
+    			vData[v].aim=rData[oldv].aim;
+    			vData[v].curv=rData[oldv].curv;
     		}
     		nodeCount=pdcel.vertCount;
+    		faceCount=pdcel.faceCount;
     		pdcel.p=this;
+        	fileName=StringUtil.dc2name(fileName);
     		return pdcel.vertCount;
     	}
 
-    	// else, hold old data, replace with new 'vData'
+    	// else, hold old data
     	VData[] oldVData=new VData[nodeCount+1];
 		for (int ov=1;ov<=nodeCount;ov++) 
 			oldVData[ov]=vData[ov];
+		
+		// allocate new 'vData'
 		vData=new VData[pdcel.vertCount+1];
 		for (int v=1;v<=pdcel.vertCount;v++) 
 			vData[v]=new VData();
@@ -295,6 +301,8 @@ public class PackData{
    			int w=0;
    			if (pdcel.newOld!=null && (w=pdcel.newOld.findW(v))>0) 
    				oldv=w;
+			vData[v].aim=rData[oldv].aim;
+			vData[v].curv=rData[oldv].curv;
    			Complex z=oldVData[oldv].center;
    			double rad=oldVData[oldv].rad;
    			
@@ -311,7 +319,10 @@ public class PackData{
    			}
 			pdcel.setVertData(he, new CircleSimple(z,rad));
     	}
+		nodeCount=pdcel.vertCount;
+		faceCount=pdcel.faceCount;
     	pdcel.p=this;
+    	fileName=StringUtil.dc2name(fileName);
     	return pdcel.vertCount;
     }
 
@@ -2281,6 +2292,72 @@ public class PackData{
 		if (hes >0 )	return "Spherical";
 		if (hes <0 ) return "Hyperbolic";
 		return "Euclidean";
+	}
+	
+	/**
+	 * 'aim' from 'vData', if available, else from 'rData'
+	 * @param v int
+	 * @return double
+	 */
+	public double getAim(int v) {
+		try {
+			if (packDCEL!=null) 
+				return vData[v].aim;
+			else
+				return rData[v].aim;
+		} catch(Exception ex) {
+			throw new DataException("error in getting 'aim' for v = "+v);
+		}
+	}
+	
+	/** Store 'aim' in 'vData', if available, else in 'rData'
+	 * @param v int
+	 * @param aim double
+	 */
+	public void setAim(int v,double aim) {
+		try {
+			if (packDCEL!=null) { 
+				vData[v].aim=aim;
+				rData[v].aim=aim; // backup
+			}
+			else
+				rData[v].aim=aim;
+		} catch(Exception ex) {
+			throw new DataException("error in setting 'aim' for v = "+v);
+		}
+	}
+	
+	/**
+	 * 'aim' from 'vData', if available, else from 'rData'
+	 * @param v int
+	 * @return double
+	 */
+	public double getCurv(int v) {
+		try {
+			if (packDCEL!=null) 
+				return vData[v].curv;
+			else
+				return rData[v].curv;
+		} catch(Exception ex) {
+			throw new DataException("error in getting 'curv' for v = "+v);
+		}
+	}
+	
+	/** Store 'curv' in 'vData', if available, else in 'rData'
+	 * @param v int
+	 * @param aim double
+	 */
+	public void setCurv(int v,double curv) {
+		try {
+			if (packDCEL!=null) { 
+				vData[v].curv=curv;
+				rData[v].curv=curv; // backup
+			}
+			else
+				rData[v].curv=curv;
+		} catch(Exception ex) {
+			throw new DataException("error in setting 'curv' for v = "+v);
+		}
 	}
 	
 	/**
@@ -5772,32 +5849,20 @@ public class PackData{
 
 	/**
 	 * Fill in curvatures of the packing. 
-	 * (Flag false if problems occur, but this is not yet used.)
 	 * @return int 1
 	*/
 	@SuppressWarnings("unused")
 	public int fillcurves() {
-	  int v;
-	  boolean flag=true;
-	  UtilPacket uP=new UtilPacket();
+		int v;
+		UtilPacket uP=new UtilPacket();
 
-	  uP.value=0.0;
-	  if (hes<0)
-	    for (v=1;v<=nodeCount;v++) {
-	      flag &= h_anglesum_overlap(v,getRadius(v),uP);
-	      rData[v].curv = uP.value;
+		uP.value=0.0;
+		for (v=1;v<=nodeCount;v++) {
+			if (!CommonMath.get_anglesum(this, v,getRadius(v), uP)) 
+				throw new DataException("failed to compute angle sum for "+v);
+			setCurv(v,uP.value);
 	    }
-	  else if (hes>0)
-	    for (v=1;v<=nodeCount;v++) {
-	      flag &= s_anglesum(v,getRadius(v),uP);
-	      rData[v].curv = uP.value;
-	    }
-	  else
-	    for (v=1;v<=nodeCount;v++) {
-	      flag &= e_anglesum_overlap(v,getRadius(v),uP);
-	      rData[v].curv = uP.value;
-	    }
-	  return 1;
+		return 1;
 	}
 	
 	/** 

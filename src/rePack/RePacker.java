@@ -77,7 +77,7 @@ public abstract class RePacker {
 	public int sct;
 	public int fct;
 	public double m;
-	public double c0;
+	public double accumErr2;
 	public double ttoler;
 	public double []R1;
 	public double []R2;

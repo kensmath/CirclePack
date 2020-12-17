@@ -52,7 +52,7 @@ public class EuclPacker extends RePacker {
     	aimnum = 0;
     	index =new int[p.nodeCount+1];
     	for (int i=1;i<=p.nodeCount;i++) {
-    		if (p.rData[i].aim>0) {
+    		if (p.getAim(i)>0) {
     			index[aimnum]=i;
     			aimnum++;
     		}
@@ -120,9 +120,7 @@ public class EuclPacker extends RePacker {
        bad steps. Anglesum calculations are in-line. */
     
     public int startRiffle() throws PackingException { // initiate packing computation
-	int j, j1, j2, N;
-	double r, r1, r2,fbest, faim, del, bet;
-	double m2,o1,o2;
+
 	UtilPacket utilPacket=new UtilPacket();
 	
 	if (status!=LOADED) throw new PackingException();
@@ -133,7 +131,6 @@ public class EuclPacker extends RePacker {
 	cntBadCuts = 0;
 	
 	// set up parameters
-	
 	ttoler = 3*aimnum*TOLER;              // adjust tolerance 
 	key = 1;                              // initial superstep type 
 	m = 1;                                // Type 1 multiplier 
@@ -141,20 +138,19 @@ public class EuclPacker extends RePacker {
 	fct = 2;                              // Type 2 minimum count 
 	
 	// do one iteration to get started 
-	c0 = 0;                           
+	accumErr2 = 0;                           
 	try {
-		double m1,ovlp;
-		int v;
-	    for (j=0;j<aimnum;j++) {
-	    	v = index[j];
-	    	faim = rdata[v].aim;         // get target sum 
-	    	r = rdata[v].rad;            // get present label
+		double m1;
+	    for (int j=0;j<aimnum;j++) {
+	    	int v = index[j];
+	    	double faim = rdata[v].aim;         // get target sum 
+	    	double r = rdata[v].rad;            // get present label
 	    	// compute anglesum inline (using local data)
-	    	fbest=0.0;
-	    	j2=kdata[v].flower[0];
-	    	r2=rdata[j2].rad;
+	    	double fbest=0.0;
+	    	int j2=kdata[v].flower[0];
+	    	double r2=rdata[j2].rad;
 	    	if (!p.overlapStatus) {
-	    		m2 = r2/(r+r2);
+	    		double m2 = r2/(r+r2);
 	    		for (int n=1;n<=kdata[v].num;n++) {
 	    			m1 = m2;
 	    			r2 = rdata[kdata[v].flower[n]].rad;
@@ -163,13 +159,15 @@ public class EuclPacker extends RePacker {
 	    		}
 	    	}
 	    	else  {
-	    		o2=kdata[v].overlaps[0];
+	    		double o2=kdata[v].overlaps[0];
 			    for (int n=1;n<=kdata[v].num;n++) {
-			    	j1=j2;r1=r2;o1=o2;
+			    	int j1=j2;
+			    	double r1=r2;
+			    	double o1=o2;
 			    	j2=kdata[v].flower[n];
 			    	r2=rdata[j2].rad;
 			    	o2=kdata[v].overlaps[n];
-			    	ovlp=kdata[j1].overlaps[p.nghb(j1,j2)];
+			    	double ovlp=kdata[j1].overlaps[p.nghb(j1,j2)];
 			    	// note: we don't check for errors in utilPacket
 			    	EuclMath.e_cos_overlap(r,r1,r2,ovlp,o2,o1,utilPacket);
 			    	fbest += Math.acos(utilPacket.value);
@@ -177,9 +175,9 @@ public class EuclPacker extends RePacker {
 	    	}
 
 	    	// use the model to predict the next value 
-	    	N = 2*kdata[v].num;
-	    	del = Math.sin(faim/N);
-	    	bet = Math.sin(fbest/N);
+	    	int N = 2*kdata[v].num;
+	    	double del = Math.sin(faim/N);
+	    	double bet = Math.sin(fbest/N);
 	    	r2 = r*bet*(1-del)/(del*(1-bet));
 	    	// store as new radius label 
 	    	if (r2<0) 
@@ -187,9 +185,9 @@ public class EuclPacker extends RePacker {
 	    	rdata[v].rad = r2;
 	    	rdata[v].curv = fbest;  // store new angle sum
 	    	fbest -= faim;
-	    	c0 += fbest*fbest;   // accum abs error 
+	    	accumErr2 += fbest*fbest;   // accum abs error 
 	    }
-	    c0 = Math.sqrt(c0);
+	    accumErr2 = Math.sqrt(accumErr2);
 
 	} catch (Exception ex) {
 	    status=FAILURE;
@@ -205,121 +203,131 @@ public class EuclPacker extends RePacker {
      * (We don't change 'totalPasses'.)
      */
     public int continueRiffle(int passL) throws PackingException {
-	int N,j1,j2,numBadCuts,v;
-	double c1,fbest,faim,m1,m2;
-	double r,r1,r2,o1,o2,ovlp;
-	double del,bet,fact0=0.0,ftol=0.0,pred,act;
-	double factor,lmax,rat,tr,lambda,mmax,mm;
+	double fbest;
+	double faim;
+	double c1;
+
 	UtilPacket utilPacket=new UtilPacket();
 	
 	if (status!=RIFFLE) throw new PackingException();
 	localPasses=0;
 	passLimit=passL;
-	
+
 	// Begin Main Loop 
-	while ((c0 >ttoler && localPasses<passLimit)) {
+	while ((accumErr2 >ttoler && localPasses<passLimit)) {
 	    
-	    for (int i=1;i<=p.nodeCount;i++) R1[i] = rdata[i].rad;
+	    for (int i=1;i<=p.nodeCount;i++) 
+	    	R1[i] = rdata[i].rad;
 	    
-	    numBadCuts = 0;
+	    int numBadCuts = 0;
+	    double factor=0.0;
 	    do {   // Make sure factor < 1.0
 	    	c1 = 0.0;
 	    	for (int j=0;j<aimnum;j++) {
-		  
-            v = index[j];   // point to active node
-            faim = rdata[v].aim; // get target sum 
-            r = rdata[v].rad;    // get present label
-            
-	    	// compute anglesum inline (using local data)
-	    	fbest=0.0;
-	    	j2=kdata[v].flower[0];
-	    	r2=rdata[j2].rad;
-	    	if (!p.overlapStatus) {
-	    		m2 = r2/(r+r2);
-	    		for (int n=1;n<=kdata[v].num;n++) {
-	    			m1 = m2;
-	    			r2 = rdata[kdata[v].flower[n]].rad;
-	    			m2 = r2/(r+r2);
-	    			fbest += Math.acos(1-2*m1*m2);
-	    		}
+	  		  
+	            int v = index[j];   // point to active node
+	            faim = rdata[v].aim; // get target sum 
+	            double ra = rdata[v].rad;    // get present label
+	            
+		    	// compute anglesum inline (using local data)
+		    	fbest=0.0;
+		    	int j2=kdata[v].flower[0];
+		    	double r2=rdata[j2].rad;
+		    	if (!p.overlapStatus) {
+		    		double m2 = r2/(ra+r2);
+		    		for (int n=1;n<=kdata[v].num;n++) {
+		    			double m1 = m2;
+		    			r2 = rdata[kdata[v].flower[n]].rad;
+		    			m2 = r2/(ra+r2);
+		    			fbest += Math.acos(1-2*m1*m2);
+		    		}
+		    	}
+		    	else  {
+		    		double o2=kdata[v].overlaps[0];
+				    for (int n=1;n<=kdata[v].num;n++) {
+				    	int j1=j2;
+				    	double r1=r2;
+				    	double o1=o2;
+				    	j2=kdata[v].flower[n];
+				    	r2=rdata[j2].rad;
+				    	o2=kdata[v].overlaps[n];
+				    	double ovlp=kdata[j1].overlaps[p.nghb(j1,j2)];
+				    	// note: we don't check for errors in utilPacket
+				    	EuclMath.e_cos_overlap(ra,r1,r2,ovlp,o2,o1,utilPacket);
+				    	fbest += Math.acos(utilPacket.value);
+				    }
+		    	}
+	            
+	            // use the model to predict the next value 
+	            int N = 2*kdata[v].num;
+	            double del = Math.sin(faim/N);
+	            double bet = Math.sin(fbest/N);
+	            r2 = ra*bet*(1-del)/(del*(1-bet));
+	            // store as new radius label 
+	            if (r2<0) 
+	            	throw new PackingException();
+	            rdata[v].rad = r2;
+	            rdata[v].curv = fbest;       // store new angle sum
+	            fbest -= faim;
+	            c1 += fbest*fbest;   // accum abs error 
 	    	}
-	    	else  {
-	    		o2=kdata[v].overlaps[0];
-			    for (int n=1;n<=kdata[v].num;n++) {
-			    	j1=j2;r1=r2;o1=o2;
-			    	j2=kdata[v].flower[n];
-			    	r2=rdata[j2].rad;
-			    	o2=kdata[v].overlaps[n];
-			    	ovlp=kdata[j1].overlaps[p.nghb(j1,j2)];
-			    	// note: we don't check for errors in utilPacket
-			    	EuclMath.e_cos_overlap(r,r1,r2,ovlp,o2,o1,utilPacket);
-			    	fbest += Math.acos(utilPacket.value);
-			    }
-	    	}
-            
-            // use the model to predict the next value 
-            N = 2*kdata[v].num;
-            del = Math.sin(faim/N);
-            bet = Math.sin(fbest/N);
-            r2 = r*bet*(1-del)/(del*(1-bet));
-            // store as new radius label 
-            if (r2<0) 
-            	throw new PackingException();
-            rdata[v].rad = r2;
-            rdata[v].curv = fbest;       // store new angle sum
-            fbest -= faim;
-            c1 += fbest*fbest;   // accum abs error 
-          }
-        c1 = Math.sqrt(c1);
+	    	c1 = Math.sqrt(c1);
 	
-		factor = c1/c0;
-		if (factor >= 1.0) {
-		    c0 = c1;
-		    key = 1;
-		    numBadCuts++;
-		}
-		if(numBadCuts > MAX_ALLOWABLE_BAD_CUTS) {
-		    throw new PackingException();
-		}
+	    	factor = c1/accumErr2;
+	    	if (factor >= 1.0) {
+	    		accumErr2 = c1;
+	    		key = 1;
+	    		numBadCuts++;
+	    	}
+	    	if(numBadCuts > MAX_ALLOWABLE_BAD_CUTS) {
+	    		throw new PackingException();
+	    	}
 	    } while(factor >= 1.0);
 	    
 	    if(cntBadCuts == 0)  {
-		maxBadCuts = numBadCuts;
-		minBadCuts = numBadCuts;
-		sumBadCuts = numBadCuts;
+	    	maxBadCuts = numBadCuts;
+	    	minBadCuts = numBadCuts;
+	    	sumBadCuts = numBadCuts;
 	    }
 	    else  {
-		maxBadCuts = (numBadCuts > maxBadCuts) ? numBadCuts : maxBadCuts;
-		minBadCuts = (numBadCuts < minBadCuts) ? numBadCuts : minBadCuts;
-		sumBadCuts += numBadCuts;
+	    	maxBadCuts = (numBadCuts > maxBadCuts) ? numBadCuts : maxBadCuts;
+	    	minBadCuts = (numBadCuts < minBadCuts) ? numBadCuts : minBadCuts;
+	    	sumBadCuts += numBadCuts;
 	    }
 	    cntBadCuts++;
 	    
-	    // superstep calculation 
+	    // ================= superstep calculation ==================== 
 	    
 	    // save values 
-	    for (int i=1;i<=p.nodeCount;i++) R2[i] = rdata[i].rad;
+	    for (int i=1;i<=p.nodeCount;i++) 
+	    	R2[i] = rdata[i].rad;
 	    
-	    // find maximum step one can safely take 
-	    lmax = 10000;
+	    // find maximum step one can safely take
+	    double lmax = 10000;
+	    double fact0=0.0;
 	    for (int j=0;j<aimnum;j++) {       // find max step 
-		v = index[j];
-		r = rdata[v].rad;
-		rat = r - R1[v];
+		int v = index[j];
+		double rb = rdata[v].rad;
+		double rat = rb - R1[v];
+		double tr=0.0;
 		if (rat < 0)
-		    lmax = (lmax < (tr= (-r/rat))) ? lmax : tr; // to keep R>0
+		    lmax = (lmax < (tr= (-rb/rat))) ? lmax : tr; // to keep R>0
 	    }
 	    lmax = lmax/2;
 	    
-	    // do super step 
+	    // do super step
+	    double lambda=0.0;
 	    if (key==1) {            //  type 1  SS 
-		lambda = m*factor;
-		mmax = 0.75/(1-factor);               // upper limit on m
-		m = (mmax < (mm=(1+0.8/(sct+1))*m)) ? mmax : mm;
+	    	lambda = m*factor;
+	    	double mmax = 0.75/(1-factor);               // upper limit on m
+	    	double mm=0.0;
+	    	m = (mmax < (mm=(1+0.8/(sct+1))*m)) ? mmax : mm;
 	    }
-	    else  {               //  type 2 SS 
-		if (sct>fct && Math.abs(factor-fact0)<ftol) { // try SS-2 
-		    lambda = factor/(1-factor);
+	    else  {               //  type 2 SS
+	    	fact0=0.0;
+	    	double ftol=0.0;
+	    	if (sct>fct && Math.abs(factor-fact0)<ftol) { // try SS-2 
+	    		lambda = factor/(1-factor);
 		    sct = -1;
 		}
 		else
@@ -329,10 +337,10 @@ public class EuclPacker extends RePacker {
 	    
 	    // interpolate new labels
 	    for (int j=0;j<aimnum;j++) {
-	    	v = index[j];
+	    	int v = index[j];
 	    	rdata[v].rad += lambda*(rdata[v].rad-R1[v]);
 	    	if(rdata[v].rad<0)
-	    		throw new PackingException();
+	    		throw new PackingException("negative rad at "+v);
 	    }
 	    sct++;
 	    fact0 = factor;
@@ -340,79 +348,82 @@ public class EuclPacker extends RePacker {
 	    // end of superstep 
 	    
 	    // do step/check superstep 
-	    c0 = 0;                             
+	    accumErr2 = 0;                             
 	    for (int j=0;j<aimnum;j++) {
-		fbest = 0;
-		v = index[j];
+			fbest = 0.0;
+			int v = index[j];
 
-        faim = rdata[v].aim; // get target sum 
-        r = rdata[v].rad;    // get present label
-        
-    	// compute anglesum inline (using local data)
-    	fbest=0.0;
-    	j2=kdata[v].flower[0];
-    	r2=rdata[j2].rad;
-    	if (!p.overlapStatus) {
-    		m2 = r2/(r+r2);
-    		for (int n=1;n<=kdata[v].num;n++) {
-    			m1 = m2;
-    			r2 = rdata[kdata[v].flower[n]].rad;
-    			m2 = r2/(r+r2);
-    			fbest += Math.acos(1-2*m1*m2);
-    		}
-    	}
-    	else  {
-    		o2=kdata[v].overlaps[0];
-		    for (int n=1;n<=kdata[v].num;n++) {
-		    	j1=j2;r1=r2;o1=o2;
-		    	j2=kdata[v].flower[n];
-		    	r2=rdata[j2].rad;
-		    	o2=kdata[v].overlaps[n];
-		    	ovlp=kdata[j1].overlaps[p.nghb(j1,j2)];
-		    	// note: we don't check for errors in utilPacket
-		    	EuclMath.e_cos_overlap(r,r1,r2,ovlp,o2,o1,utilPacket);
-		    	fbest += Math.acos(utilPacket.value);
-		    }
-    	}
-        
-        // use the model to predict the next value
-        N = 2*kdata[v].num;
-		// set up for model 
+	        faim = rdata[v].aim; // get target sum 
+	        double rc = rdata[v].rad;    // get present label
+	        
+	    	// compute anglesum inline (using local data)
+	    	int j2=kdata[v].flower[0];
+	    	double r2=rdata[j2].rad;
+	    	if (!p.overlapStatus) {
+	    		double m2 = r2/(rc+r2);
+	    		for (int n=1;n<=kdata[v].num;n++) {
+	    			double m1 = m2;
+	    			r2 = rdata[kdata[v].flower[n]].rad;
+	    			m2 = r2/(rc+r2);
+	    			fbest += Math.acos(1-2*m1*m2);
+	    		}
+	    	}
+	    	else  {
+	    		double o2=kdata[v].overlaps[0];
+			    for (int n=1;n<=kdata[v].num;n++) {
+			    	int j1=j2;
+			    	double r1=r2;
+			    	double o1=o2;
+			    	j2=kdata[v].flower[n];
+			    	r2=rdata[j2].rad;
+			    	o2=kdata[v].overlaps[n];
+			    	double ovlp=kdata[j1].overlaps[p.nghb(j1,j2)];
+			    	// note: we don't check for errors in utilPacket
+			    	EuclMath.e_cos_overlap(rc,r1,r2,ovlp,o2,o1,utilPacket);
+			    	fbest += Math.acos(utilPacket.value);
+			    }
+	    	}
+	        
+	        // use the model to predict the next value
+	        int N = 2*kdata[v].num;
+			// set up for model 
 
-		del = Math.sin(faim/N);
-		bet = Math.sin(fbest/N);
-		
-        r2 = r*bet*(1-del)/(del*(1-bet));
-        // store as new radius label 
-        if (r2<0) 
-        	throw new PackingException();
-        rdata[v].rad = r2;
-        rdata[v].curv = fbest;       /* store new angle sum */
-        fbest -= faim;
-        c0 += fbest*fbest;   /* accum abs error */
+			double del = Math.sin(faim/N);
+			double bet = Math.sin(fbest/N);
+			
+	        r2 = rc*bet*(1-del)/(del*(1-bet));
+	        // store as new radius label 
+	        if (r2<0) 
+	        	throw new PackingException();
+	        rdata[v].rad = r2;
+	        rdata[v].curv = fbest;       /* store new angle sum */
+	        fbest -= faim;
+	        accumErr2 += fbest*fbest;   /* accum abs error */
 	    }
-        c0 = Math.sqrt(c0);
+        accumErr2 = Math.sqrt(accumErr2);
         
 	    // check results 
-	    pred = Math.exp(lambda*Math.log(factor)); // predicted improvement
-	    act = c0/c1;                   // actual improvement 
+	    double pred = Math.exp(lambda*Math.log(factor)); // predicted improvement
+	    double act = accumErr2/c1;                   // actual improvement 
 	    if (act<1) {                   // did some good 
-		if (act>pred) {          // not as good as expected: reset 
-		    m = 1;
-		    sct = 0;
-		    if (key==1) key = 2;
-		}                       // implied else: accept result 
+	    	if (act>pred) {          // not as good as expected: reset 
+	    		m = 1;
+	    		sct = 0;
+	    		if (key==1) key = 2;
+	    	}                       // implied else: accept result 
 	    }
 	    else {                           // reset to before superstep 
-		m = 1;
-		sct =0;
-		for (int i=1;i<=p.nodeCount;i++) rdata[i].rad  = R2[i];
-		c0 = c1;
-		if (key==2) key = 1;
+	    	m = 1;
+	    	sct =0;
+	    	for (int i=1;i<=p.nodeCount;i++) 
+	    		rdata[i].rad  = R2[i];
+	    	accumErr2 = c1;
+	    	if (key==2) key = 1;
 	    }
 	    
 	    // show activity 
-	    if ((localPasses % 10)==0) repack_activity_msg();
+	    if ((localPasses % 10)==0) 
+	    	repack_activity_msg();
 	    
 	    localPasses++;
 	} // end of main while loop 
@@ -421,7 +432,7 @@ public class EuclPacker extends RePacker {
 	totalPasses+=localPasses;
 	return RIFFLE;
     }
-    
+
     /**
      * Original repack algorithm implemented in Java. Used, e.g., with 
      * overlap packings, where the more sophisticated Java routines and
