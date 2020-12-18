@@ -44,9 +44,12 @@ public class VertexMap extends EdgeLink {
 		return newlist;
 	}
 	
-	public VertexMap reverseList() {
+	/** interchange entries of each 'EdgeSimple'. 
+	 * Used, e.g., to convert 'newOld' to 'oldNew'. 
+	 */
+	public VertexMap flipEachEntry() {
 		EdgeLink el=(EdgeLink)this;
-		return (VertexMap)el.reverseList();
+		return (VertexMap)el.flipEachEntry();
 	}
 	
 	/**

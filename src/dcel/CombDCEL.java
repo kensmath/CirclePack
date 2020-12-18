@@ -1300,6 +1300,7 @@ public class CombDCEL {
 						rtrace=rtrace.prevRed;
 					}
 
+					
 					// check if simply connected
 					if (rtrace==nxtre) {
 						pdcel.bdryStarts.add(pdcel.redChain);
@@ -1310,6 +1311,7 @@ public class CombDCEL {
 						do {
 							rtrace.mobIndx=sidecount;
 							rtrace.myEdge.twin.edgeIndx=++etick;
+							rtrace.myEdge.twin.face=null;
 							tmpEdges.add(rtrace.myEdge.twin);
 							rtrace=rtrace.nextRed;
 						} while (rtrace!=pdcel.redChain);

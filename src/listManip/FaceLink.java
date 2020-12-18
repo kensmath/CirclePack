@@ -1353,6 +1353,14 @@ public class FaceLink extends LinkedList<Integer> {
 		return ans;
 	}
 
+	 /**
+	  * Set 'packData' (which helps determine eligibility of entries)
+	  * @param p PackData
+	  */
+	 public void setPackData(PackData p) {
+		 packData=p;
+	 }
+
 	/**
      * Return random entry from facelist; caution, does not adjust
      * for repeat entries.

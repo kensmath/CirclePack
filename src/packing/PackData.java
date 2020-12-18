@@ -11637,7 +11637,7 @@ public class PackData{
 	   * of interior neighbors. Geometry is not changed; lists are 
 	   * adjusted, but any face list data is tossed. Calling routine
 	   * will have to do 'complex_count', etc.
-	   * @param v
+	   * @param v int
 	   * @return 1 on success, 0 if not suitable
 	   */
 	  public int puncture_vert(int v) {
@@ -11648,7 +11648,6 @@ public class PackData{
 			  }
 			  attachDCEL(newDCEL);
 			  packDCEL.newOld=null;
-//			  delete_vert(v);
 			  return 1;
 		  }
 		  
@@ -11704,6 +11703,16 @@ public class PackData{
 	  public int puncture_face(int f) {
 		  if (f<1 || f>faceCount)
 			  return 0;
+		  if (packDCEL!=null) {
+			  PackDCEL newDCEL=CombDCEL.d_puncture_face(packDCEL, f);
+			  if (newDCEL==null) {
+				  throw new DCELException("DCEL puncturing face "+f+" failed");
+			  }
+			  attachDCEL(newDCEL);
+			  packDCEL.newOld=null;
+			  return 1;
+		  }
+		  
 		  Face face=faces[f];
 		  
 		  // find faces next to boundary, then vertices next to these

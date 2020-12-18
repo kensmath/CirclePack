@@ -1323,4 +1323,11 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 		this.removeAll(this);
 	}
 	
+	 /**
+	  * Set 'packData' (which helps determine eligibility of entries)
+	  * @param p PackData
+	  */
+	 public void setPackData(PackData p) {
+		 packData=p;
+	 }
 }

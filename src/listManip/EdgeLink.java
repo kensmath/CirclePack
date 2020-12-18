@@ -1201,7 +1201,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	 * are each reversed.
 	 * @return new 'EdgeLink', possibly empty.
 	 */
-	public EdgeLink reverseList() {
+	public EdgeLink flipEachEntry() {
 		EdgeLink rL=new EdgeLink(packData);
 	    if (this.size()==0) return rL;
 		Iterator<EdgeSimple> el=this.iterator();
@@ -1226,6 +1226,27 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	    while (it.hasNext()) {
 	    	edge=(EdgeSimple)it.next();
 	    	qtmp.add(0,new EdgeSimple(edge.w,edge.v));
+	    }
+	    return qtmp;
+	}
+
+	/**
+	 * Given 'VertexMap' with <old, new>, translate this 
+	 * 'EdgeLink' from old to the new indices.
+	 * @param oldnew VertexMap
+	 * @return new EdgeLink (with null PackData)
+	 */
+	public EdgeLink translateMe(VertexMap oldnew) {
+	    EdgeLink qtmp=new EdgeLink();
+	    if (this.size()==0) return qtmp;
+	    EdgeSimple edge=null;
+	    Iterator<EdgeSimple> it=this.iterator();
+	    while (it.hasNext()) {
+	    	edge=(EdgeSimple)it.next();
+	    	int v=oldnew.findW(edge.v);
+	    	int w=oldnew.findW(edge.w);
+	    	if (v>0 && w>0)
+	    		qtmp.add(new EdgeSimple(v,w));
 	    }
 	    return qtmp;
 	}
@@ -1653,21 +1674,29 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 		 }
 		 return false;
 	 }
+
+	 /**
+	  * Set 'packData' (which helps determine eligibility of entries)
+	  * @param p PackData
+	  */
+	 public void setPackData(PackData p) {
+		 packData=p;
+	 }
 	 
-		/**
-		 * Create a list of entries as a string
-		 * @return String, null on error
-		 */
-		public String toString() {
-			if (this.size()==0)
-				return null;
-			StringBuilder sb=new StringBuilder();
-			Iterator<EdgeSimple> myit=this.iterator();
-			while (myit.hasNext()) {
-				EdgeSimple edge=myit.next();
-				sb.append(" "+edge.v+" "+edge.w);
-			}
-			return sb.toString();
+	/**
+	 * Create a list of entries as a string
+	 * @return String, null on error
+	 */
+	public String toString() {
+		if (this.size()==0)
+			return null;
+		StringBuilder sb=new StringBuilder();
+		Iterator<EdgeSimple> myit=this.iterator();
+		while (myit.hasNext()) {
+			EdgeSimple edge=myit.next();
+			sb.append(" "+edge.v+" "+edge.w);
 		}
+		return sb.toString();
+	}
 		
 }

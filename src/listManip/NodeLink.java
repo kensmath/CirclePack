@@ -444,7 +444,7 @@ public class NodeLink extends LinkedList<Integer> {
 						last=b;
 				}
 				for (int j=first;j<=last;j++) 
-					if (packData.getBdryFlag(j)==1) {
+					if (packData.getBdryFlag(j)==0) {
 						add(j);
 						count++;
 					}
@@ -1388,6 +1388,24 @@ public class NodeLink extends LinkedList<Integer> {
 	}
 	
 	/**
+	 * Given 'VertexMap' with <old, new>, translate this 
+	 * 'NodeLink' from old to the new indices.
+	 * @param oldnew VertexMap
+	 * @return new NodeLink (with null PackData)
+	 */
+	public NodeLink translateMe(VertexMap oldnew) {
+	    NodeLink qtmp=new NodeLink();
+	    if (this.size()==0) return qtmp;
+	    Iterator<Integer> it=this.iterator();
+	    while (it.hasNext()) {
+	    	int v=oldnew.findW(it.next());
+	    	if (v>0)
+	    		qtmp.add(v);
+	    }
+	    return qtmp;
+	}
+	
+	/**
      * Return random entry from vertlist; caution, does not adjust
      * for repeat entries.
      * @param vertlist VertList
@@ -1453,6 +1471,14 @@ public class NodeLink extends LinkedList<Integer> {
 				 newNL.add(v);
 		 }
 		 return newNL;
+	 }
+	 
+	 /**
+	  * Set 'packData' (which helps determine eligibility of entries)
+	  * @param p PackData
+	  */
+	 public void setPackData(PackData p) {
+		 packData=p;
 	 }
 	 
 	 /**

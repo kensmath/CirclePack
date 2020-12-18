@@ -279,4 +279,11 @@ public class BaryLink extends LinkedList<BaryPoint> {
 		return ticks;
 	}
 
+	 /**
+	  * Set 'packData' (which helps determine eligibility of entries)
+	  * @param p PackData
+	  */
+	 public void setPackData(PackData p) {
+		 packData=p;
+	 }
 }

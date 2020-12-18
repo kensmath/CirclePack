@@ -389,4 +389,11 @@ public class PointLink extends LinkedList<Complex> {
     	return ptlist.get(n);
     }
 
+	 /**
+	  * Set 'packData' (which helps determine eligibility of entries)
+	  * @param p PackData
+	  */
+	 public void setPackData(PackData p) {
+		 packData=p;
+	 }
 }
