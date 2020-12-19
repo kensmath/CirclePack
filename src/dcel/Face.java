@@ -134,6 +134,24 @@ public class Face {
 		}
 		return ans;
 	}
+
+	/** 
+	 * Count the number of edges
+	 * @return int
+	 */
+	public int getNum() {
+		int count=0;
+		HalfEdge nxtedge=edge;
+		int safety=100;
+		do {
+			count++;
+			nxtedge=nxtedge.next;
+			safety--;
+		} while (nxtedge!=edge && safety>0);
+		if (safety==0) 
+			System.out.println("Break out with face "+faceIndx);
+		return count;
+	}
 	
 	public Color getColor() {
 		return new Color(color.getRed(),color.getGreen(),color.getBlue(),color.getAlpha());

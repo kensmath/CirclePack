@@ -27,7 +27,7 @@ public class PreRedVertex extends RedVertex {
 	}
 
 	/**
-	 * This vertex has a closed flower, and we rotate so the
+	 * This vertex must have a closed flower, and we rotate so the
 	 * first petal is 'redSpoke'. Further, if there is a "slit", 
 	 * meaning a common direction with 'red/inSpoke' which are 
 	 * not pasted, then the first slit's 'redSpoke' will be rotated
@@ -94,7 +94,7 @@ public class PreRedVertex extends RedVertex {
 	 * each fan and also add new 'HalfEdge's to last 'inSpoke' of each fan. 
 	 * Note that the first of the returned 'RedVertex's will replace the
 	 * original, the others will have 'vertIndx's adjusted when the calling 
-	 * routine catalogs and vertices.
+	 * routine catalogs vertices.
 	 * @return ArrayList<RedVertex> count of new 'RedVertex's
 	 */
 	public ArrayList<RedVertex> process() {

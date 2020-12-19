@@ -11752,6 +11752,15 @@ public class PackData{
 	  */
 
 	  public int hex_refine() {
+		  if (packDCEL!=null) {
+			  int vertcount=packDCEL.vertCount; // hold to idenfity originals
+			  PackDCEL pdcel=CombDCEL.hexRefine(packDCEL);
+			  CombDCEL.d_FillInside(pdcel);
+			  
+			  // TODO: try to salvage and interpolate rad/cent data
+			  
+			  return attachDCEL(pdcel);
+		  }
 	    int count=1;
 	    EdgeSimple []new_verts=null;
 

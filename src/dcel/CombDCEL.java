@@ -193,9 +193,10 @@ public class CombDCEL {
 	}
 	
 	/**
-	 * Given a DCEL, (perhaps only minimal, with vertices, edges) and 
-	 * a list (possibly empty) of vertices that are 'nonKeeper's, generate 
-	 * a new DCEL which includes the nonKeepers as part of the boundary.
+	 * Given a DCEL, (perhaps only minimal, with vertices, edges, 
+	 * not faces) and a list (possibly empty) of vertices that 
+	 * are 'nonKeeper's, generate a new DCEL which includes the 
+	 * nonKeepers as part of the boundary.
 	 * If 'poisonFlag' is set, then nghbs of nonKeepers are included
 	 * as nonKeepers.
 	 * 
@@ -214,7 +215,8 @@ public class CombDCEL {
 	 *     putting them into the boundary and introducing an ideal
 	 *     face.
 	 *   * Additional vertices may be lost -- e.g., 'keepers' that
-	 *     are separated from the 'alpaIndx' by nonKeepers.
+	 *     are separated from the 'alpaIndx' by nonKeepers and 
+	 *     vertices that don't have an interior neighbor.
 	 *   * Set 'poisonFlag' if you want to treat the nonKeepers as 
 	 *     "poison"; this will include their neighboring vertices 
 	 *     as nonKeepers.
@@ -247,7 +249,17 @@ public class CombDCEL {
 			keepV[k]=-1;
 			if (pdcel.vertices[k] instanceof RedVertex) {
 				RedVertex rdv=(RedVertex)(pdcel.vertices[k]);
-				pdcel.vertices[k]=rdv.revert();
+				Vertex vtx=new Vertex();
+				vtx.halfedge=rdv.halfedge;
+				vtx.vertIndx=rdv.vertIndx;
+				vtx.bdryFlag=rdv.bdryFlag;
+				vtx.util=rdv.util;
+				HalfEdge rtr=vtx.halfedge;
+				do {
+					rtr.origin=vtx;
+					rtr=rtr.prev.twin;
+				} while (rtr!=null && rtr!=vtx.halfedge);
+				pdcel.vertices[k]=vtx;
 			}
 		}
 		pdcel.redChain=null;
@@ -571,7 +583,7 @@ public class CombDCEL {
 						// else we try to add just one cclw face about v;
 						//    check that it's eligible and that one of ends is keeper
 						else if (isMyEdge(pdcel.redChain,upspoke)==null &&
-								(redge=isMyEdge(pdcel.redChain,upspoke.next))==null && 
+								isMyEdge(pdcel.redChain,upspoke.next)==null && 
 								(keepV[v]!=0 || keepV[upspoke.twin.origin.vertIndx]!=0)) {
 							cclw.nextRed=new RedHEdge(upspoke.next);
 							markFaceUtils(upspoke);			
@@ -825,7 +837,7 @@ public class CombDCEL {
 						newVertices.add(wtx);
 						newold.add(new EdgeSimple(vcount,w));
 					}
-				} // end ow hile through spokes
+				} // end of while through spokes
 			} // end of while through 'currv'
 		} // end of while 
 
@@ -1588,6 +1600,191 @@ public class CombDCEL {
 //	}
 	
 	/**
+	 * Generate a minimal DCEL (vertices, edges only) by subdividing 
+	 * each edge into 2 edges, and each n-sided (non-ideal) face of 
+	 * 'pdcel' into n+1 faces. 'pdcel' data is modified, but we preserve 
+	 * much of the original structure: orig vert indices unchanged; 
+	 * orig vert halfedge's unchanged; 'pdcel.redChain' subdivided to
+	 * get new red chain. All new edges and red edges come from new 
+	 * vertices and red vertices.
+	 * Calling routine should run 'd_redChainBuilder' next.
+	 * @param pdcel PackDCEL, complete with faces,edges,vertices 
+	 * @return new PackDCEL
+	 */
+	public static PackDCEL hexRefine(PackDCEL pdcel) {
+		PackDCEL ndcel=new PackDCEL();
+		
+		// tmp lists for vertices/edges, starting with originals
+		ArrayList<Vertex> tmpVerts=new ArrayList<Vertex>();
+		ArrayList<HalfEdge> tmpEdges=new ArrayList<HalfEdge>();
+		
+		for (int v=1;v<=pdcel.vertCount;v++) 
+			tmpVerts.add(pdcel.vertices[v]);
+
+		// use 'util' to mark edges already handled
+		pdcel.edgeCount=pdcel.edges.length-1;
+		for (int e=1;e<=pdcel.edgeCount;e++) {
+			pdcel.edges[e].util=0;;
+			tmpEdges.add(pdcel.edges[e]);
+		}
+		
+		// keep track of counts/indices
+		int etick=pdcel.edgeCount;
+		int vtick=pdcel.vertCount;
+		
+		// first loop to subdivide original edges 
+		for (int e=1;e<=pdcel.edgeCount;e++) {
+			HalfEdge edge=pdcel.edges[e];
+			
+			// if not already handled
+			if (edge.util==0) {
+				HalfEdge tedge=edge.twin;
+				edge.util=etick;
+				tedge.util=etick;
+				tmpEdges.add(edge);
+				tmpEdges.add(tedge);
+				
+				RedHEdge redge=edge.myRedEdge;
+				RedHEdge tredge=tedge.myRedEdge;
+				
+				// two new edges
+				HalfEdge newEdge=new HalfEdge();
+				newEdge.util=++etick;
+				newEdge.edgeIndx=etick;
+				HalfEdge newTwin=new HalfEdge();
+				newTwin.util=++etick;
+				newTwin.edgeIndx=etick;
+				tmpEdges.add(newEdge);
+				tmpEdges.add(newTwin);
+				
+				// link edge and new twin
+				edge.twin=newTwin;
+				newTwin.twin=edge;
+				newEdge.prev=edge;
+				newEdge.next=edge.next;
+				edge.next=newEdge;
+
+				tedge.twin=newEdge;
+				newEdge.twin=tedge;
+				newTwin.prev=tedge;
+				newTwin.next=tedge.next;
+				tedge.next=newTwin;
+
+				// if this is a red edge
+				if (redge!=null || tredge!=null) {
+					RedVertex midRedvert=new RedVertex(++vtick);
+					tmpVerts.add(midRedvert);
+					newEdge.origin=midRedvert;
+					newTwin.origin=midRedvert;
+					midRedvert.halfedge=newEdge;
+
+					// does 'edge' have red edge?
+					if (redge!=null) {
+						RedHEdge newRedge=new RedHEdge(newEdge);
+						newEdge.myRedEdge=newRedge;
+						newRedge.nextRed=redge.nextRed;
+						newRedge.prevRed=redge;
+						redge.nextRed.prevRed=newRedge;
+						redge.nextRed=newRedge;
+					}
+					// does 'tedge' have red edge?
+					if (tredge!=null) {
+						RedHEdge newRedge=new RedHEdge(newTwin);
+						newTwin.myRedEdge=newRedge;
+						newRedge.nextRed=tredge.nextRed;
+						newRedge.prevRed=tredge;
+						tredge.nextRed.prevRed=newRedge;
+						tredge.nextRed=newRedge;
+					}
+					// if both, then set up red twinning
+					if (redge!=null && tredge!=null) {
+						redge.twinRed=newTwin.myRedEdge;
+						newTwin.myRedEdge.twinRed=redge;
+						tredge.twinRed=newEdge.myRedEdge;
+						newEdge.myRedEdge.twinRed=tredge;
+					}
+				}
+				// else a normal vertex
+				else {
+					Vertex midvert=new Vertex(++vtick);
+					tmpVerts.add(midvert);
+					newEdge.origin=midvert;
+					newTwin.origin=midvert;
+					midvert.halfedge=newEdge;
+				}
+			}				
+		} // done with look through edges
+		
+		// loop on faces, new edges -- one associated to each vert
+		for (int f=1;f<=pdcel.intFaceCount;f++) {
+			Face face=pdcel.faces[f];
+			ArrayList<HalfEdge> edges=face.getEdges();
+			int num=edges.size();
+			Iterator<HalfEdge> eits=edges.iterator();
+			while (eits.hasNext()) {
+				
+				// starting edges
+				HalfEdge edgeout=eits.next();
+				HalfEdge edgeout2=edgeout.next;
+				HalfEdge edgein=edgeout.prev;
+				HalfEdge edgein2=edgein.prev;
+				
+				// new twins
+				HalfEdge newedge=new HalfEdge(edgeout.twin.origin);
+				newedge.edgeIndx=++etick;
+				tmpEdges.add(newedge);
+				HalfEdge newtwin=new HalfEdge(edgein.origin);
+				newtwin.edgeIndx=++etick;
+				tmpEdges.add(newtwin);
+				
+				newedge.twin=newtwin;
+				newtwin.twin=newedge;
+				
+				// fix newedge
+				newedge.next=edgein;
+				edgein.prev=newedge;
+				
+				edgeout.next=newedge;
+				newedge.prev=edgeout;
+				
+				// fix newtwin
+				newtwin.next=edgeout2;
+				edgeout2.prev=newtwin;
+				
+				edgein2.next=newtwin;
+				newtwin.prev=edgein2;
+			} // end of while through face edges
+		} // done with faces
+
+		// count/store vertices
+		ndcel.vertCount=tmpVerts.size();
+		ndcel.vertices=new Vertex[ndcel.vertCount+1];
+		Iterator<Vertex> tvit=tmpVerts.iterator();
+		vtick=0;
+		while(tvit.hasNext()) {
+			ndcel.vertices[++vtick]=tvit.next();
+		}
+		
+		// count/store edges
+		ndcel.edgeCount=tmpEdges.size();
+		ndcel.edges=new HalfEdge[ndcel.edgeCount+1];
+		if (etick!=ndcel.edgeCount) {
+			throw new CombException("'ndcel' edge counts don't match: etick="+etick
+					+" and edgeCount="+ndcel.edgeCount);
+		}
+		Iterator<HalfEdge> tis=tmpEdges.iterator();
+		etick=0;
+		while (tis.hasNext()) {
+			ndcel.edges[++etick]=tis.next();
+		}
+		
+		// final settings
+		ndcel.redChain=pdcel.redChain;
+		ndcel.alpha=pdcel.alpha;
+		return ndcel;
+	}
+	
+	/**
 	 * Given a 'HalfEdge', check if origin is 'RedVertex'. If so,
 	 * return the next clw 'RedHEdge' (possibly itself). If not,
 	 * return null;
@@ -1758,8 +1955,10 @@ public class CombDCEL {
 		HalfEdge trace=he;
 		do {
 			nonks.add(trace.origin.vertIndx);
+			trace.face=null;
 			trace=trace.next;
 		} while (trace!=he);
+		
 		return(d_redChainBuilder(pdcel,nonks,false,0));
 	}
 	      
