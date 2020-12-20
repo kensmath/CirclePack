@@ -326,7 +326,7 @@ public class HyperbolicMath{
 	 * @param t1  double
 	 * @param t2  double
 	 * @param t3  double
-	 * @param uP  @see UtilPacket, holding results
+	 * @param uP  @see UtilPacket, holding cos of angle
 	 * @return boolean, true if seems OK
 	 */
 	public static boolean h_cos_s_overlap(double x1, double x2, double x3,

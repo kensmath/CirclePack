@@ -356,6 +356,43 @@ public class CommonMath {
 	}
 
 	/**
+	 * Compute angle at v0 in mutually tangent triple of circles with
+	 * given radii. x-radii in hyp case.
+	 * @param r0 double
+	 * @param r1 double
+	 * @param r2 double
+	 * @param o0 double
+	 * @param o1 double
+	 * @param o2 double
+	 * @param hes int
+	 * @return double
+	 * @throws DataException
+	 */
+	public static double get_face_angle(double r0,double r1,double r2,
+			double o0,double o1,double o2,int hes) throws DataException {
+		double theCos=0.0;
+		UtilPacket uP=new UtilPacket();
+		if (hes<0) { // hyp 
+			if (HyperbolicMath.h_cos_s_overlap(r0,r1,r2,o0,o1,o2,uP))
+				theCos=uP.value;
+			else
+				throw new DataException("hyperbolic incompatibility computing angle.");
+		}
+		else if (hes>0) { // sph
+			theCos=SphericalMath.s_comp_cos(r0, r1, r2);
+		}
+		else { // eucl
+			if (EuclMath.e_cos_overlap(r0, r1, r2, o0,o1,o2,uP))
+				theCos=uP.value;
+			else
+				throw new DataException("euclidean incompatibility computing angle.");
+		}
+		if (Math.abs(theCos)>1.0)
+			throw new DataException("error calculating angle");
+		return Math.acos(theCos);
+	}
+
+	/**
 	 * Compute any anlge sum
 	 * @param p PackData
 	 * @param v int

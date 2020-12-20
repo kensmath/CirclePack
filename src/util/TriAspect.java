@@ -11,10 +11,10 @@ import komplex.RedList;
 import math.Mobius;
 
 /**
- * Utility class holding geometric info localized to faces of 
- * some parent circle packing. Used, e.g., with projective
- * and affine structures and with discrete Schwarzians. 
- * Geometry depends on parent packing.
+ * Utility class holding geometric info localized to 
+ * (triangular only) faces of some parent circle packing. 
+ * Used, e.g., with projective and affine structures and with 
+ * discrete Schwarzians. Geometry depends on parent packing.
  * 
  * TODO: some routines assume eucl data; trying to update as needed
  * 
@@ -43,22 +43,14 @@ import math.Mobius;
  *  
  * @author kens
  */
-public class TriAspect {
+public class TriAspect extends TriData {
 	
-	public int hes;  // geometry, passed on creation from parent packing
 	public RedList redList; // 'packData.redChain' entry for this (generally 'null')
-
-	// Various triples:
-	public int face;  // index of this face
-	public int []vert;     // 'Face.vert' vector (as ordered in packdata 'faces')
+	boolean need_update; // signal when data changes require update
+	
+	// various triples of data
 	public boolean []redFlags; // true if vertex is on outside of redChain
-	
-	// radii/centers: when changed, need to update things
-	boolean need_update;
-	Complex []center;  // centers of circles
 	public Complex []tanPts;  // tangency points, if saved
-	
-	double []radii;  // concrete numbers representing labels
 	public double []labels; // labels for verts: often, treated as homogeneous coords
 	public double []sides; // edge lengths, [j] = <v[j],v[j+1]>
 	public double []t_vals;  // label ratios: t_vals[j]=labels[(j+1)%3]/labels[j]
@@ -70,11 +62,10 @@ public class TriAspect {
 	
 	// store data for use in, e.g., 'Schwarzian.java'
 	public Mobius []MobDeriv; // directed edge Mobius derivative
-	public double []schwarzian; // signed scalar coeffs for schwarzian derivative 
 	
 	// constructor(s)
 	public TriAspect() { // default euclidean
-		this(0);
+		super();
 	}
 	
 	public TriAspect(int geom) {
@@ -87,17 +78,13 @@ public class TriAspect {
 			face=rl.face;
 		}
 		redList=rl;
-		vert=new int[3];
 		redFlags=new boolean[3];
-		center=new Complex[3];
 		tanPts=null;
-		radii=new double[3];
 		labels=new double[3];
 		sides=new double[3];
 		t_vals=new double[3];
 		baseMobius=new Mobius();
 		baseSchwarz=new double[3];
-		MobDeriv=null;
 		need_update=true;
 		
 		for (int j=0;j<3;j++) center[j]=null;
@@ -137,38 +124,17 @@ public class TriAspect {
 		}
 	}
 	
-	/**
-	 * allocate 'center[]' and create with value 0.0
-	 */
-	public void allocCenters() {
-		center=new Complex[3];
-		for (int j=0;j<3;j++)
-			center[j]=new Complex(0.0);
-	}
 	
 	public void setRadius(double r,int j) {
 		radii[j]=r;
 		need_update=true;
 	}
 	
-	public double getRadius(int j) {
-		return radii[j];
-	}
-	
 	public void setCenter(Complex z,int j) {
 		center[j]=new Complex(z);
 		need_update=true;
 	}
-	
-	/**
-	 * Get the center as new Complex.
-	 * @param j int, index in 'vert'
-	 * @return new Complex
-	 */
-	public Complex getCenter(int j) {
-		return new Complex(center[j]);
-	}
-	
+
 	/**
 	 * Compute 'baseMobius' based on current 'tanPts'. This is
 	 * Mobius mapping FROM base equilateral TO this face. 
@@ -178,7 +144,6 @@ public class TriAspect {
 		baseMobius=Mobius.mob_xyzXYZ(new Complex(1.0),rt3,rt3.conj(),
 				tanPts[0],tanPts[1],tanPts[2],0,hes);
 	}
-	
 		
 	/**
 	 * Compute and store the tangency points based on current
@@ -190,18 +155,6 @@ public class TriAspect {
 		tanPts=new Complex[3];
 		for (int j=0;j<3;j++) 
 			tanPts[j]=dtri.getTP(j);
-	}
-	
-	/** 
-	 * Find local index (0,1, or 2) for vertex v in this 
-	 * triangle; return -1 if v is not among its vertices.
-	 * @param v int
-	 * @return int, local index or -1 on failure
-	 */
-	public int vertIndex(int v) {
-		for (int j=0;j<3;j++)
-			if (vert[j]==v) return j;
-		return -1;
 	}
 	
 	/**
