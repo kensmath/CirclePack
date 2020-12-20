@@ -46,7 +46,7 @@ import math.Mobius;
 public class TriAspect {
 	
 	public int hes;  // geometry, passed on creation from parent packing
-	public RedList redList; // 'redChain' entry for this face (generally 'null')
+	public RedList redList; // 'packData.redChain' entry for this (generally 'null')
 
 	// Various triples:
 	public int face;  // index of this face
