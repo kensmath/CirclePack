@@ -261,6 +261,7 @@ public class PackData{
      */
     public int attachDCEL(PackDCEL pdcel) {
     	packDCEL=pdcel;
+    	pdcel.p=this;
     	
     	// no existing dcel structure? store from 'rData'
     	if (vData==null) {
@@ -294,6 +295,8 @@ public class PackData{
 		vData=new VData[pdcel.vertCount+1];
 		for (int v=1;v<=pdcel.vertCount;v++) 
 			vData[v]=new VData();
+		
+		// note: vertCount may be larger than nodeCount
 		for (int v=1;v<=pdcel.vertCount;v++) {
 			Vertex vert=pdcel.vertices[v];
 			HalfEdge he=vert.halfedge;
@@ -301,27 +304,29 @@ public class PackData{
    			int w=0;
    			if (pdcel.newOld!=null && (w=pdcel.newOld.findW(v))>0) 
    				oldv=w;
-			vData[v].aim=rData[oldv].aim;
-			vData[v].curv=rData[oldv].curv;
-   			Complex z=oldVData[oldv].center;
-   			double rad=oldVData[oldv].rad;
+   			// copy existing?
+   			if (oldv<=nodeCount) {
+   				vData[v].aim=rData[oldv].aim;
+   				vData[v].curv=rData[oldv].curv;
+   				Complex z=oldVData[oldv].center;
+   				double rad=oldVData[oldv].rad;
    			
-   			// need to store in any 'RedHEdge's from this vertex
-   			if (vert instanceof RedVertex) {
-   				HalfEdge trace=he.prev.twin;
-   				do {
-   					if(trace.myRedEdge!=null) {
-   						trace.myRedEdge.setCenter(z);
-   						trace.myRedEdge.setRadius(rad);
-   					}
-   					trace=trace.prev.twin;
-   				} while (trace!=he);
+   				// need to store in any 'RedHEdge's from this vertex
+   				if (vert instanceof RedVertex) {
+   					HalfEdge trace=he.prev.twin;
+   					do {
+   						if(trace.myRedEdge!=null) {
+   							trace.myRedEdge.setCenter(z);
+   							trace.myRedEdge.setRadius(rad);
+   						}
+   						trace=trace.prev.twin;
+   					} while (trace!=he);
+   				}
+   				pdcel.setVertData(he, new CircleSimple(z,rad));
    			}
-			pdcel.setVertData(he, new CircleSimple(z,rad));
     	}
 		nodeCount=pdcel.vertCount;
 		faceCount=pdcel.faceCount;
-    	pdcel.p=this;
     	fileName=StringUtil.dc2name(fileName);
     	return pdcel.vertCount;
     }

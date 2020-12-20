@@ -449,7 +449,7 @@ public class SchwarzMap extends PackExtender {
 		
 		// =========== s_get =============
 		else if (cmd.startsWith("s_get")) {
-			if (domainTri[1].sch_coeffs==null) {
+			if (domainTri[1].schwarzian==null) {
 				CirclePack.cpb.errMsg("'seems there are no schwarz coefficients");
 				return 0;
 			}
@@ -532,7 +532,7 @@ public class SchwarzMap extends PackExtender {
 			// debugging the layouts
 			boolean debug=false;
 			
-			if (domainTri[1].sch_coeffs==null) {
+			if (domainTri[1].schwarzian==null) {
 				CirclePack.cpb.errMsg("seems 'domainTri' doesn't have 'sch_coeffs' data");
 				return 0;
 			}
@@ -993,7 +993,7 @@ public class SchwarzMap extends PackExtender {
 			for (int f=1;f<=packData.faceCount;f++) {
 				TriAspect myasp=domainTri[f];
 				myasp.MobDeriv=new Mobius[3];
-				myasp.sch_coeffs=new double[3];
+				myasp.schwarzian=new double[3];
 				for (int j=0;j<3;j++) {
 					int g=-1;
 					int jf=j;
@@ -1087,7 +1087,7 @@ public class SchwarzMap extends PackExtender {
 							
 							// compute s
 							Complex sder=myasp.MobDeriv[jf].c.divide(vw_perp);
-							myasp.sch_coeffs[jf]=sder.x;
+							myasp.schwarzian[jf]=sder.x;
 							
 							if (Math.abs(sder.y)>.001) {
 								CirclePack.cpb.errMsg("schwarz coeff should be real; imag = "+sder.y);
@@ -1127,7 +1127,7 @@ public class SchwarzMap extends PackExtender {
 				CirclePack.cpb.errMsg("'domainTri' does not exist");
 				return 0;
 			}
-			if (domainTri[1].sch_coeffs==null) {
+			if (domainTri[1].schwarzian==null) {
 				CirclePack.cpb.errMsg("Schwarzians are not computed in 'domainTri'");
 				return 0;
 			}
@@ -1155,7 +1155,7 @@ public class SchwarzMap extends PackExtender {
 						if (v<w && (packData.kData[v].bdryFlag==0 || 
 								packData.kData[w].bdryFlag==0)) { 
 							fp.write(v+" "+w+"  "+String.format("%.8f",
-									ftri.sch_coeffs[j])+"\n");
+									ftri.schwarzian[j])+"\n");
 						}
 					}
 				}
@@ -1244,10 +1244,10 @@ public class SchwarzMap extends PackExtender {
 			CirclePack.cpb.errMsg("something wrong with v or w");
 		int f=packData.face_right_of_edge(w,v);
 		int j=packData.face_index(f, v);
-		if (domainTri[f].sch_coeffs==null || domainTri[f].tanPts==null)
+		if (domainTri[f].schwarzian==null || domainTri[f].tanPts==null)
 			CirclePack.cpb.errMsg("'sch_coeffs' of 'tanPts' do not exist");
 		double []ans=new double[3];
-		ans[0]=domainTri[f].sch_coeffs[j];
+		ans[0]=domainTri[f].schwarzian[j];
 		ans[1]=domainTri[f].tanPts[j].x;
 		ans[2]=domainTri[f].tanPts[j].y;
 		return ans;
@@ -1272,9 +1272,9 @@ public class SchwarzMap extends PackExtender {
         TriAspect ftri=domainTri[f];
         TriAspect gtri=domainTri[g];		
         int jf=ftri.vertIndex(v);
-        ftri.sch_coeffs[jf]=s_coeff;
+        ftri.schwarzian[jf]=s_coeff;
         int jg=gtri.vertIndex(w);
-        gtri.sch_coeffs[jg]=-1.0*s_coeff;
+        gtri.schwarzian[jg]=-1.0*s_coeff;
     
         // store the Mobius edge derivatives for f and g
         Mobius mobf=new Mobius();

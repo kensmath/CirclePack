@@ -70,7 +70,7 @@ public class TriAspect {
 	
 	// store data for use in, e.g., 'Schwarzian.java'
 	public Mobius []MobDeriv; // directed edge Mobius derivative
-	public double []sch_coeffs; // signed scalar coeffs for schwarzian derivative 
+	public double []schwarzian; // signed scalar coeffs for schwarzian derivative 
 	
 	// constructor(s)
 	public TriAspect() { // default euclidean

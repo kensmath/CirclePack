@@ -1618,7 +1618,8 @@ public class CombDCEL {
 		ArrayList<Vertex> tmpVerts=new ArrayList<Vertex>();
 		ArrayList<HalfEdge> tmpEdges=new ArrayList<HalfEdge>();
 		
-		for (int v=1;v<=pdcel.vertCount;v++) 
+		int origCount=pdcel.vertCount;
+		for (int v=1;v<=origCount;v++) 
 			tmpVerts.add(pdcel.vertices[v]);
 
 		// use 'util' to mark edges already handled
@@ -1641,8 +1642,6 @@ public class CombDCEL {
 				HalfEdge tedge=edge.twin;
 				edge.util=etick;
 				tedge.util=etick;
-				tmpEdges.add(edge);
-				tmpEdges.add(tedge);
 				
 				RedHEdge redge=edge.myRedEdge;
 				RedHEdge tredge=tedge.myRedEdge;
@@ -1657,17 +1656,21 @@ public class CombDCEL {
 				tmpEdges.add(newEdge);
 				tmpEdges.add(newTwin);
 				
-				// link edge and new twin
+				// fix twins
 				edge.twin=newTwin;
 				newTwin.twin=edge;
-				newEdge.prev=edge;
-				newEdge.next=edge.next;
-				edge.next=newEdge;
-
-				tedge.twin=newEdge;
 				newEdge.twin=tedge;
-				newTwin.prev=tedge;
+				tedge.twin=newEdge;
+				
+				// fix 
+				newEdge.next=edge.next;
+				newEdge.next.prev=newEdge;
+				edge.next=newEdge;
+				newEdge.prev=edge;
+
 				newTwin.next=tedge.next;
+				newTwin.next.prev=newTwin;
+				newTwin.prev=tedge;
 				tedge.next=newTwin;
 
 				// if this is a red edge
@@ -1719,12 +1722,13 @@ public class CombDCEL {
 		for (int f=1;f<=pdcel.intFaceCount;f++) {
 			Face face=pdcel.faces[f];
 			ArrayList<HalfEdge> edges=face.getEdges();
-			int num=edges.size();
 			Iterator<HalfEdge> eits=edges.iterator();
 			while (eits.hasNext()) {
+				HalfEdge edgeout=eits.next();
+				if (edgeout.origin.vertIndx>origCount)
+					continue;
 				
 				// starting edges
-				HalfEdge edgeout=eits.next();
 				HalfEdge edgeout2=edgeout.next;
 				HalfEdge edgein=edgeout.prev;
 				HalfEdge edgein2=edgein.prev;
