@@ -114,6 +114,43 @@ public class PackDCEL {
 	}
 	
 	/**
+	 * Given vertex 'v', store its "indices" in 'p.Vdata[v]';
+	 * these point to the faces containing v and the indices
+	 * of v in those faces.
+	 * @param v int
+	 * @return int num
+	 */
+	public int fillIndices(int v) {
+		if (p.vData==null || p.vData[v]==null)
+			throw new CombException("'vData' is not allocated");
+		Vertex vert=vertices[v];
+		ArrayList<Face> facelist=vert.getFaceFlower();
+		ArrayList<Integer> f_indices=new ArrayList<Integer>();
+		ArrayList<Integer> v_indices=new ArrayList<Integer>();
+		Iterator<Face> fist=facelist.iterator();
+		while (fist.hasNext()) {
+			Face face=fist.next();
+			int f=face.faceIndx;
+			if (f>0) {
+				f_indices.add(f);
+				int j=face.getVertIndx(v);
+				if (j<0) 
+					throw new CombException("v="+v+" is not a vertex of face "+f);
+				v_indices.add(j);
+			}
+		}
+		int num=f_indices.size();
+		p.vData[v].num=num;
+		p.vData[v].findices=new int[num];
+		p.vData[v].myIndices=new int[num];
+		for (int j=0;j<num;j++) {
+			p.vData[v].findices[j]=f_indices.get(j);
+			p.vData[v].myIndices[j]=v_indices.get(j);
+		}
+		return num;
+	}
+				;
+	/**
 	 * The "red" chain is a closed cclw chain of edges about
 	 * a simple connected fundamental domain for the complex.
 	 * This is rather difficult because 'this' PackDCEL should 

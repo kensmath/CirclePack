@@ -21,6 +21,9 @@ public class VData{
 							//    for h infinite (horocycle) stores negative of 
 							//    eucl radius (if computed) for plotting convenience.
 							//    (x_radius, x_radii, x_rad, x-radius, x-radii, x-rad)
+	public int num;         // number of nghb'ing (non-ideal) faces
+	public int[] findices;  // indices of nghb'ing (non-ideal) faces
+	public int[] myIndices; // my index in corresponding face (aligned with 'findices') 
 	public double curv;	    // angle sum at this vertex. 
 	public double aim;		// desired angle sum at this vertex (actual angle, not divided by Pi)
 	public Color color;
@@ -34,10 +37,17 @@ public class VData{
 	
 	public VData clone() {
 		VData Vout=new VData();
+		Vout.num=num;
 		Vout.center=new Complex(center);
 		Vout.rad=rad;
-		Vout.aim=aim;
+		Vout.findices=new int[num];
+		Vout.myIndices=new int[num];
+		for (int k=0;k<num;k++) {
+			Vout.findices[k]=findices[k];
+			Vout.myIndices[k]=myIndices[k];
+		}
 		Vout.curv=curv;
+		Vout.aim=aim;
 		Vout.color=new Color(color.getRed(),color.getGreen(),color.getBlue(),color.getAlpha());
 		return Vout;
 	}

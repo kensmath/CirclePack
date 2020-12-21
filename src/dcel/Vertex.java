@@ -188,7 +188,6 @@ public class Vertex {
 			nxtedge=nxtedge.prev.twin;
 		} while (nxtedge!=halfedge);
 		return fflower;
-
 	}
 
 	/** return the index of the vertex opposite 'halfedge'

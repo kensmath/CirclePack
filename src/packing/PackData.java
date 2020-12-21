@@ -263,7 +263,7 @@ public class PackData{
     	packDCEL=pdcel;
     	pdcel.p=this;
     	
-    	// no existing dcel structure? store from 'rData'
+    	// no existing dcel structure? get data from 'rData'
     	if (vData==null) {
     		vData=new VData[pdcel.vertCount+1];
     		for (int v=1;v<=pdcel.vertCount;v++) 
@@ -278,10 +278,10 @@ public class PackData{
     			vData[v].color=kData[oldv].color;
     			vData[v].aim=rData[oldv].aim;
     			vData[v].curv=rData[oldv].curv;
+    			pdcel.fillIndices(v);
     		}
     		nodeCount=pdcel.vertCount;
     		faceCount=pdcel.faceCount;
-    		pdcel.p=this;
         	fileName=StringUtil.dc2name(fileName);
     		return pdcel.vertCount;
     	}
@@ -304,7 +304,7 @@ public class PackData{
    			int w=0;
    			if (pdcel.newOld!=null && (w=pdcel.newOld.findW(v))>0) 
    				oldv=w;
-   			// copy existing?
+   			// if there is existing data, copy it
    			if (oldv<=nodeCount) {
    				vData[v].aim=rData[oldv].aim;
    				vData[v].curv=rData[oldv].curv;
@@ -324,6 +324,7 @@ public class PackData{
    				}
    				pdcel.setVertData(he, new CircleSimple(z,rad));
    			}
+			pdcel.fillIndices(v);
     	}
 		nodeCount=pdcel.vertCount;
 		faceCount=pdcel.faceCount;

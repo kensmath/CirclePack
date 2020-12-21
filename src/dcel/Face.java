@@ -161,6 +161,23 @@ public class Face {
 		color=new Color(col.getRed(),col.getGreen(),col.getBlue(),col.getAlpha());
 	}
 	
+	/**
+	 * Find the index of vertex 'v' in the list of vertices around
+	 * this face. Index 0 is index of the origin of 'face.edge'.
+	 * @param v int
+	 * @return int indx, -1 on error
+	 */
+	public int getVertIndx(int v) {
+		int indx=0;
+		HalfEdge nxtedge=edge;
+		do {
+			if (nxtedge.origin.vertIndx==v)
+				return indx;
+			indx++;
+			nxtedge=nxtedge.next;
+		} while (nxtedge!=edge);
+		return -1;
+	}
 
 	/**
 	 * Return ordered array of 'HalfEdge's around the face

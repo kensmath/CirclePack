@@ -67,7 +67,7 @@ public class TriData {
 				invDist[j]=he.getInvDist();
 				schwarzian[j]=he.getSchwarzain();
 			}
-			fillAngles();
+			computeAngles();
 		} catch(Exception ex) {
 			throw new DataException("error building 'TriData' for face f="+f);
 		}
@@ -92,12 +92,30 @@ public class TriData {
 		return radii[j];
 	}
 	
-	public void setCenter(Complex z,int j) {
-		if (center==null || center.length!=3)
-			center=new Complex[3];
-		center[j]=new Complex(z);
+	public double getAngle(int j) {
+		return angles[j];
 	}
 	
+	public void setAngle(int j,double ang) {
+		angles[j]=ang;
+	}
+	
+	public double getSchwarzian(int j) {
+		return schwarzian[j];
+	}
+	
+	public void setSchwarzian(int j, double sch) {
+		schwarzian[j]=sch;
+	}
+	
+	public double getInvDist(int j) {
+		return invDist[j];
+	}
+	
+	public void setInvDist(int j, double sch) {
+		invDist[j]=sch;
+	}
+	 
 	/**
 	 * Get the center as new Complex.
 	 * @param j int, index in 'vert'
@@ -105,6 +123,12 @@ public class TriData {
 	 */
 	public Complex getCenter(int j) {
 		return new Complex(center[j]);
+	}
+	
+	public void setCenter(Complex z,int j) {
+		if (center==null || center.length!=3)
+			center=new Complex[3];
+		center[j]=new Complex(z);
 	}
 	
 	/** 
@@ -119,7 +143,7 @@ public class TriData {
 		return -1;
 	}
 
-	public void fillAngles() {
+	public void computeAngles() {
 		for (int j=0;j<3;j++) {
 			angles[j]=CommonMath.get_face_angle(radii[j],radii[(j+1)%3],radii[(j+2)%3],
 					invDist[j],invDist[(j+1)%3],invDist[(j+2)%3],hes);
