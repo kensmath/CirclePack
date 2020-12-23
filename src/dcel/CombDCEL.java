@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import allMains.CirclePack;
+import complex.Complex;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
@@ -14,6 +15,7 @@ import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
 import util.ColorUtil;
+import util.TriData;
 
 /**
  * Static combinatorial routines for working with DCEL structures.
@@ -932,6 +934,8 @@ public class CombDCEL {
 		// NOTE about debugging: Many debug routines depend on
 		//      original vertex indices, which can be found in
 		//      pdcel.newold.
+		
+		pdcel.triData=null;  // filled when needed for repacking
 		
 		// use 'HalfEdge.util' to keep track of edges hit; this
 		//   should be used in initializing interior edges.

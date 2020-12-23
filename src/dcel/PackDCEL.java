@@ -11,6 +11,7 @@ import complex.Complex;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
+import exceptions.DataException;
 import exceptions.InOutException;
 import geometry.CircleSimple;
 import geometry.CommonMath;
@@ -29,6 +30,7 @@ import packing.PackData;
 import panels.CPScreen;
 import posting.PostFactory;
 import util.DispFlags;
+import util.TriData;
 
 /** 
  * The "DCEL" is a common way that computer scientists 
@@ -97,11 +99,14 @@ public class PackDCEL {
 	
 	public D_PairLink pairLink;  // linked list of 'D_SideData' on side-pairings
 	
+	public TriData[] triData;    // 'TriData' array for repacking work
+	
 	// Constructor(s)
 	public PackDCEL() {
 		p=null;
 		vertCount=0;
 		vertices=null;
+		triData=null;
 		
 		// things to fill at end of dcel construction
 		faceOrder=null;
@@ -111,6 +116,33 @@ public class PackDCEL {
 		redChain=null;
 		debug=false;
 		euler=3; // impossible euler char 
+	}
+	
+	/**
+	 * Create and populate 'triData[]'. This loads 'radii', 'invDist's, 'aim',
+	 * and computes 'angles'.
+	 * @return int faceCount
+	 */
+	public int allocTriData() {
+		triData=new TriData[faceCount+1];
+		for (int f=1;f<=faceCount;f++) {
+			triData[f]=new TriData(this,f);
+		}
+		return faceCount;
+	}
+	
+	public void updateTriDataRadii() {
+		for (int f=1;f<=faceCount;f++) { 
+			ArrayList<HalfEdge> eflower=faces[f].getEdges();
+			if (eflower.size()!=3)
+				throw new DataException();
+			for (int j=0;j<3;j++) {
+				HalfEdge he=eflower.get(j);
+				int v=he.origin.vertIndx;
+				triData[f].radii[j]=p.getRadius(v);
+				triData[f].invDist[j]=he.getInvDist();
+			}	
+		}
 	}
 	
 	/**

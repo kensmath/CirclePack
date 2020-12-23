@@ -1,5 +1,10 @@
 package rePack;
 
+import JNI.JNIinit;
+import allMains.CPBase;
+import allMains.CirclePack;
+import dcel.PackDCEL;
+import exceptions.PackingException;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
@@ -7,11 +12,8 @@ import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
 import packing.RData;
+import util.TriData;
 import util.UtilPacket;
-import JNI.JNIinit;
-import allMains.CPBase;
-import allMains.CirclePack;
-import exceptions.PackingException;
 
 /**
  * An abstract class to manage repacking in hyperbolic, euclidean, and
@@ -41,10 +43,13 @@ public abstract class RePacker {
 	public static final int IN_THREAD=3;      // packing underway in some thread (e.g., native code)
 
 	public static int MAX_ALLOWABLE_BAD_CUTS=300;
-	public static double TOLER=.00000000001;
+	public static double RP_TOLER=.00000000001;
+	public static double RP_OKERR=.000000001; 
 	public static int PASSLIMIT=1000;    // default upper bound, may be changed
 	
 	public PackData p;      // parent packing
+	public PackDCEL pdcel;  // prepare for DCEL version
+	
 	public int chkCount;    // minimal check on whether packing has been switched
 	
 	// status information
@@ -59,6 +64,7 @@ public abstract class RePacker {
 	public RData []rdata;
 	public int []index;			// indices of adjustable radii
 	public TmpData []kdata;     // locally copy of needed part of p.kData.
+	public TriData []triData;   // for use with DCEL data
 
 	// holding area for list
 	NodeLink holdv=null;
@@ -303,6 +309,25 @@ public abstract class RePacker {
 			}
 		} catch (Exception ex) {
 			CirclePack.cpb.myErrorMsg("The 'RePacker' has failed to load");
+			return FAILURE;
+		}
+		return 1;
+	}
+	
+	// Convenience: for DCEL packing, this is first call in 'load()' calls.
+	public int triDataLoad() {
+		try {
+		if (pdcel.triData==null) {
+			pdcel.triData=new TriData[pdcel.faceCount+1];
+			for (int f=1;f<=pdcel.faceCount;f++) {
+				pdcel.triData[f]=new TriData(pdcel,f);
+			}
+		}
+		else {
+			pdcel.updateTriDataRadii();
+		}
+		} catch (Exception ex) {
+			CirclePack.cpb.myErrorMsg("'RePacker' has failed with DCEL load");
 			return FAILURE;
 		}
 		return 1;

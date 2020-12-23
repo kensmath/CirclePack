@@ -6063,14 +6063,20 @@ public class PackData{
 	 * @return boolean, 
 	*/
 	public boolean e_radcalc(int v,double r,double aim,int N,UtilPacket uP) {
-	  double bestcurv,lower=0.5,upper=0.5,upcurv,lowcurv,factor=0.5;
-	  UtilPacket curveUp=new UtilPacket();
-
-	  if (!e_anglesum_overlap(v,r,curveUp)) return false;
-	  bestcurv=lowcurv=upcurv=curveUp.value;
+		double lower=0.5;
+		double upper=0.5;
+		double factor=0.5;
+		double upcurv;
+		double lowcurv;
+	    UtilPacket curveUp=new UtilPacket();
+	  
+	  if (!e_anglesum_overlap(v,r,curveUp)) 
+		  return false;
+	  double bestcurv=lowcurv=upcurv=curveUp.value;
 	  if (bestcurv>(aim+OKERR)) {
 	      upper=r/factor;
-	      if (!e_anglesum_overlap(v,upper,curveUp)) return false;
+	      if (!e_anglesum_overlap(v,upper,curveUp)) 
+	    	  return false;
 	      upcurv=curveUp.value;
 	      if (upcurv>aim) {
 	    	  uP.value=upper;
@@ -6079,7 +6085,8 @@ public class PackData{
 	  }
 	  else if (bestcurv<(aim-OKERR)) {
 	      lower=r*factor;
-	      if (!e_anglesum_overlap(v,lower,curveUp)) return false;
+	      if (!e_anglesum_overlap(v,lower,curveUp)) 
+	    	  return false;
 	      lowcurv=curveUp.value;
 	      if (lowcurv<aim) {
 	    	  uP.value=lower;

@@ -48,7 +48,9 @@ public class TriAspect extends TriData {
 	public RedList redList; // 'packData.redChain' entry for this (generally 'null')
 	boolean need_update; // signal when data changes require update
 	
-	// various triples of data
+	// various triples of data (other data in 'TriData' super)
+	public Complex[] center;    // centers of circles
+	public double []schwarzian; // signed scalar coeffs for schwarzian derivative 
 	public boolean []redFlags; // true if vertex is on outside of redChain
 	public Complex []tanPts;  // tangency points, if saved
 	public double []labels; // labels for verts: often, treated as homogeneous coords
@@ -66,6 +68,7 @@ public class TriAspect extends TriData {
 	// constructor(s)
 	public TriAspect() { // default euclidean
 		super();
+		
 	}
 	
 	public TriAspect(int geom) {
@@ -86,8 +89,11 @@ public class TriAspect extends TriData {
 		baseMobius=new Mobius();
 		baseSchwarz=new double[3];
 		need_update=true;
-		
-		for (int j=0;j<3;j++) center[j]=null;
+		allocCenters();
+		schwarzian=new double[3];
+		for (int j=0;j<3;j++) {
+			schwarzian[j]=0.0;
+		}
 	}
 	
 	// clone
@@ -102,6 +108,8 @@ public class TriAspect extends TriData {
 			sides[j]=asp.sides[j];
 			redFlags[j]=asp.redFlags[j];
 			t_vals[j]=asp.t_vals[j];
+			invDist[j]=asp.invDist[j];
+			schwarzian[j]=asp.schwarzian[j];
 		}
 		if (asp.baseMobius!=null) {
 			baseMobius=new Mobius(asp.baseMobius);
@@ -124,7 +132,12 @@ public class TriAspect extends TriData {
 		}
 	}
 	
-	
+	public void allocCenters() {
+		center=new Complex[3];
+		for (int j=0;j<3;j++)
+			center[j]=new Complex(0.0);
+	}
+
 	public void setRadius(double r,int j) {
 		radii[j]=r;
 		need_update=true;
@@ -191,6 +204,23 @@ public class TriAspect extends TriData {
 				labels[0],labels[1],labels[2],1.0,1.0,1.0);
 		center[2]=sp.center;
 		return true;
+	}
+	
+	/**
+	 * Get the center as new Complex.
+	 * @param j int, index in 'vert'
+	 * @return new Complex
+	 */
+	public Complex getCenter(int j) {
+		return new Complex(center[j]);
+	}
+	
+	public double getSchwarzian(int j) {
+		return schwarzian[j];
+	}
+
+	public void setSchwarzian(int j, double sch) {
+		schwarzian[j]=sch;
 	}
 
 	/**
