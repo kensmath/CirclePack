@@ -1306,6 +1306,54 @@ public class PackDCEL {
 		}
 		return glink;
 	}
+
+	/**
+	 * Get angle in 'edge.face' at 'edge.origin' using current origin
+	 * radius.
+	 * @param edge HalfEdge
+	 * @return double, 0.0 if bdry edge
+	 */
+	public double getEdgeAngle(HalfEdge edge) {
+		return getEdgeAngle(edge,getVertRadius(edge));
+	}
+
+	/**
+	 * Get angle in 'edge.face' at 'edge.origin' assuming origin
+	 * radius is 'r'.
+	 * @param edge HalfEdge
+	 * @param r double
+	 * @return double, 0.0 if bdry edge
+	 */
+	public double getEdgeAngle(HalfEdge edge,double r) {
+		if (edge.face==null || edge.face.faceIndx<0) {
+			CirclePack.cpb.errMsg("this is a boundary edge, "+edge.toString());
+			return 0.0;
+		}
+		double r0=r;
+		double r1=getVertRadius(edge.next);
+		double r2=getVertRadius(edge.prev);
+		double o0=edge.invDist;
+		double o1=edge.next.invDist;
+		double o2=edge.prev.invDist;
+		return CommonMath.get_face_angle(r0, r1, r2, o0, o1, o2, p.hes);
+	}
+	
+	/**
+	 * Get the angle sum at 'vert' using radius 'rad'
+	 * @param vert Vertex
+	 * @param rad double
+	 * @return
+	 */
+	public double getVertAngSum(Vertex vert,double rad) {
+		double angsum=0.0;
+		HalfEdge he=vert.halfedge;
+		do {
+			if (he.face.faceIndx>0)
+				angsum=getEdgeAngle(he,rad);
+			he=he.prev.twin;
+		} while (he!=vert.halfedge);
+		return angsum;
+	}
 	
 	/**
 	 * Find the official rad/cent for the origin of the 
@@ -1810,39 +1858,6 @@ public class PackDCEL {
 		return sc.center;
 	}
 
-	
-	/**
- 	 * NEEDED FOR CIRCLEPACK
-	 * Return the traditional type of 'flower', that is, the 
-	 * list of petal indices about v. This is closed if v is an interior 
-	 * vertex. Return null on error (e.g., more than two bdry edges from v). 
-	 * (This routine is helpful to connect new routines with the old ones.)
-	 * @param v Vertex
-	 * @return int[], null on error
-	 */
-	public int []usualFlower(Vertex v) {
-		ArrayList<Integer> petals=new ArrayList<Integer>();
-		HalfEdge nxtedge=v.halfedge;
-		boolean bdry=false;
-		if (nxtedge.twin.face.faceIndx<0) // ideal face
-			bdry=true;
-		int safety=vertCount;
-		do {
-			petals.add(nxtedge.twin.origin.vertIndx);
-			nxtedge=nxtedge.prev.twin;
-			safety--;
-		} while (safety>0 && nxtedge!=v.halfedge);
-		if (safety==0)
-			throw new CombException("usualFlower, unending loop, vert "+v.vertIndx);
-		if (!bdry)
-			petals.add(petals.get(0));
-		int n=petals.size();
-		int []rslt=new int[n];
-		for (int k=0;k<n;k++)
-			rslt[k]=petals.get(k);
-		return rslt;
-	}
-	
 	/**
 	 * Various checks on consistency of a bouquet:
 	 *  * vertices match vertex count

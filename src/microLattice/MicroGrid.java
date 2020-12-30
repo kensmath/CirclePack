@@ -2379,7 +2379,7 @@ public class MicroGrid extends PackExtender {
 			    q.kData[newval].color=CPScreen.getFGColor();
 			    q.setRadius(newval,brad);
 			    q.setCenter(newval,new Complex(bcent));
-			    q.rData[newval].aim=2.0*Math.PI;
+			    q.setAim(newval,2.0*Math.PI);
 			    
 			    // adjust nghb flowers
 			    q.kData[vert[0]].add_petal_w(newval,vert[1]);

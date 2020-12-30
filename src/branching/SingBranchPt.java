@@ -199,8 +199,10 @@ public class SingBranchPt extends GenBranchPt {
 		myPack.kData[chap[3]].color=new Color(0,0,255); // light blue
 		// set aims 
 		myPack.set_aim_default();
-		myPack.rData[newBrSpot].aim=myAim; // 4*pi is only real possibility
-		myPack.rData[chap[1]].aim=myPack.rData[chap[2]].aim=myPack.rData[chap[3]].aim=pi2;
+		myPack.setAim(newBrSpot,myAim); // 4*pi is only real possibility
+		myPack.setAim(chap[1],pi2);
+		myPack.setAim(chap[2],pi2);
+		myPack.setAim(chap[3],pi2);
 		
 		myPack.setCombinatorics(); // DebugHelp.debugPackWrite(myPack,"myPack_debug.p");
 		
@@ -217,7 +219,7 @@ public class SingBranchPt extends GenBranchPt {
 		
 		// Verts 1,2,3 are packed locally; set aim < 0 in parent
 		for (int vv=1;vv<=3;vv++)
-			packData.rData[vertexMap.findW(vv)].aim=-1.0;
+			packData.setAim(vertexMap.findW(vv),-1.0);
 		
 		// need to convert 'bdryLink' to local face numbers
 		borderLink=new FaceLink(myPack);
@@ -254,7 +256,7 @@ public class SingBranchPt extends GenBranchPt {
 				transData[i]=ww; // positive: parent sends this to local
 			else {
 				transData[i]=-ww; // negative: local sends this to parent
-				packData.rData[ww].aim=-1.0;
+				packData.setAim(ww,-1.0);
 			}
 		}
 		
@@ -271,9 +273,9 @@ public class SingBranchPt extends GenBranchPt {
 		for (int i=1;i<=matchCount;i++) { // bdry are +, rest minus
 			int ww=vertexMap.findW(i);
 			if (packData.kData[ww].bdryFlag!=0)
-				packData.rData[ww].aim=-1.0;
+				packData.setAim(ww,-1.0);
 			else {
-				packData.rData[ww].aim=2.0*Math.PI;
+				packData.setAim(ww,2.0*Math.PI);
 			}
 		}
 		
@@ -470,7 +472,7 @@ public class SingBranchPt extends GenBranchPt {
 		} // end of while
 		
 		// set overlaps
-		myPackData.rData[myPackData.nodeCount].aim=myAim;
+		myPackData.setAim(myPackData.nodeCount,myAim);
 		if (gotovers)
 			count+=resetOverlaps(ovlp[0],ovlp[1]);
 		

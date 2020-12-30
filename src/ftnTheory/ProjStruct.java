@@ -214,7 +214,7 @@ public class ProjStruct extends PackExtender {
 		int []inDex =new int[p.nodeCount+1];
 		// only verts with aim>0 for mode 1 or interior for mode 2 and in the list
 		for (int vv=1;vv<=p.nodeCount;vv++) {
-			if (((mode==1 && p.rData[vv].aim>0) || (mode==2 && p.kData[vv].bdryFlag==0)) 
+			if (((mode==1 && p.getAim(vv)>0) || (mode==2 && p.kData[vv].bdryFlag==0)) 
 					&& (vlist==null || vlist.contains(Integer.valueOf(vv)))) {
 				inDex[aimNum]=vv;
 				aimNum++;
@@ -227,7 +227,7 @@ public class ProjStruct extends PackExtender {
 	    for (int j=0;j<aimNum;j++) {
 	    	v=inDex[j];
 	    	if (mode==1)  // mode=1, default
-	    		accum += Math.abs(angSumTri(p,v,1.0,aspts)[0]-p.rData[v].aim);
+	    		accum += Math.abs(angSumTri(p,v,1.0,aspts)[0]-p.getAim(v));
 	    	else if (mode==2) 
 	    		accum += Math.abs(skewTri(p,v,1.0,aspts)[0]);
 	    }
@@ -244,11 +244,11 @@ public class ProjStruct extends PackExtender {
 	    	catch (Exception ex){}
 	    	for (int j=0;j<aimNum;j++) {
 	    		v=inDex[j];
-	    		double vAim=p.rData[v].aim;
+	    		double vAim=p.getAim(v);
 	    		  
 	    		// find/apply factor to labels at 'v' if error is bad enough to riffle
 	    		if (mode==1)  // mode=1, default
-	    			verr = Math.abs(angSumTri(p,v,1.0,aspts)[0]-p.rData[v].aim);
+	    			verr = Math.abs(angSumTri(p,v,1.0,aspts)[0]-p.getAim(v));
 	    		else if (mode==2) 
 	    			verr = Math.abs(skewTri(p,v,1.0,aspts)[0]);
 	    		if (Math.abs(verr)>cut) {
@@ -297,7 +297,7 @@ public class ProjStruct extends PackExtender {
 	    		int V=inDex[jj];
 	    		v=Math.abs(V);
 	    		if (mode==1) { // mode=1, default
-	    			accum += Math.abs(angSumTri(p,v,1.0,aspts)[0]-p.rData[v].aim);
+	    			accum += Math.abs(angSumTri(p,v,1.0,aspts)[0]-p.getAim(v));
 	    		}
 	    		else if (mode==2) {
 	    			accum += Math.abs(skewTri(p,v,1.0,aspts)[0]);
@@ -343,7 +343,7 @@ public class ProjStruct extends PackExtender {
 		int[] inDex = new int[p.nodeCount + 1];
 		for (int vv = 1; vv <= p.nodeCount; vv++) {
 			// TODO: can speed up with temp matrix instead of search of vlist
-			if (p.rData[vv].aim > 0
+			if (p.getAim(vv) > 0
 					&& (vlist == null || vlist.contains(Integer.valueOf(vv)))) {
 				inDex[aimNum] = vv;
 				aimNum++;
@@ -362,7 +362,7 @@ public class ProjStruct extends PackExtender {
 		double accum = 0.0;
 		for (int j = 0; j < aimNum; j++) {
 			v = inDex[j];
-			err = curv[v] - p.rData[v].aim;
+			err = curv[v] - p.getAim(v);
 			accum += (err < 0) ? (-err) : err;
 		}
 		double recip = .333333 / aimNum;
@@ -373,11 +373,11 @@ public class ProjStruct extends PackExtender {
 			for (int j = 0; j < aimNum; j++) {
 				v = inDex[j];
 				curv[v] = angSumSide(p, v,1.0,aspts);
-				verr = curv[v] - p.rData[v].aim;
+				verr = curv[v] - p.getAim(v);
 
 				// find/apply factor to radius or sides at v
 				if (Math.abs(verr) > cut) {
-					double sideFactor = sideCalc(p,v, p.rData[v].aim, 5,
+					double sideFactor = sideCalc(p,v, p.getAim(v), 5,
 							aspts);
 					adjustSides(p,v, sideFactor,aspts);
 					curv[v] = angSumSide(p, v,1.0, aspts);
@@ -388,7 +388,7 @@ public class ProjStruct extends PackExtender {
 				int V = inDex[j];
 				v = Math.abs(V);
 				curv[v] = angSumSide(p, v, 1.0,aspts);
-				err = curv[v] - p.rData[v].aim;
+				err = curv[v] - p.getAim(v);
 				accum += (err < 0) ? (-err) : err;
 			}
 			cut = accum * recip;
@@ -1335,9 +1335,9 @@ public class ProjStruct extends PackExtender {
 	 * @return double, abs(error); 0 if 'aim' <=0
 	 */
 	public double angsumError(int v) {
-		if (packData.rData[v].aim<=0)
+		if (packData.getAim(v)<=0)
 			return 0;
-		return Math.abs(angSumTri(packData,v,1.0,aspects)[0]-packData.rData[v].aim);
+		return Math.abs(angSumTri(packData,v,1.0,aspects)[0]-packData.getAim(v));
 	}
 	
 	/** 
@@ -2160,7 +2160,7 @@ public class ProjStruct extends PackExtender {
 			weak_max=(werr>weak_max) ? werr:weak_max;
 			
 			// angle sum
-			double ang=Math.abs(angSumTri(p,v,1.0,aspects)[0]-p.rData[v].aim);
+			double ang=Math.abs(angSumTri(p,v,1.0,aspects)[0]-p.getAim(v));
 			ang_err += ang*ang;
 			ang_max=(ang>ang_max) ? ang:ang_max;
 		}

@@ -181,7 +181,7 @@ public class SassStuff extends PackExtender {
 		int aimNum = 0;
 		int[] inDex = new int[p.nodeCount + 1];
 		for (int vv = 1; vv <= p.nodeCount; vv++) {
-			if (p.rData[vv].aim > 0
+			if (p.getAim(vv) > 0
 					&& (vlist == null || vlist.contains(Integer.valueOf(vv)))) {
 				inDex[aimNum] = vv;
 				aimNum++;
@@ -200,7 +200,7 @@ public class SassStuff extends PackExtender {
 		double accum = 0.0;
 		for (int j = 0; j < aimNum; j++) {
 			v = inDex[j];
-			err = curv[v] - p.rData[v].aim;
+			err = curv[v] - p.getAim(v);
 			accum += (err < 0) ? (-err) : err;
 		}
 		double recip = .333333 / aimNum;
@@ -211,11 +211,11 @@ public class SassStuff extends PackExtender {
 			for (int j = 0; j < aimNum; j++) {
 				v = inDex[j];
 				curv[v] = angSumSide(p, v,1.0,aspts);
-				verr = curv[v] - p.rData[v].aim;
+				verr = curv[v] - p.getAim(v);
 
 				// find/apply factor to radius or sides at v
 				if (Math.abs(verr) > cut) {
-					double sideFactor = sideCalc(p,v, p.rData[v].aim, 5,
+					double sideFactor = sideCalc(p,v, p.getAim(v), 5,
 							aspts);
 					adjustSides(p,v, sideFactor,aspts);
 					curv[v] = angSumSide(p, v,1.0, aspts);
@@ -226,7 +226,7 @@ public class SassStuff extends PackExtender {
 				int V = inDex[j];
 				v = Math.abs(V);
 				curv[v] = angSumSide(p, v, 1.0,aspts);
-				err = curv[v] - p.rData[v].aim;
+				err = curv[v] - p.getAim(v);
 				accum += (err < 0) ? (-err) : err;
 			}
 			cut = accum * recip;
@@ -1793,7 +1793,7 @@ public class SassStuff extends PackExtender {
 		int aimNum = 0;
 		int[] inDex = new int[p.nodeCount + 1];
 		for (int vv = 1; vv <= p.nodeCount; vv++) {
-			if (p.rData[vv].aim > 0) {
+			if (p.getAim(vv) > 0) {
 				inDex[aimNum] = vv;
 				aimNum++;
 			}
@@ -1811,7 +1811,7 @@ public class SassStuff extends PackExtender {
 		double accum = 0.0;
 		for (int j = 0; j < aimNum; j++) {
 			v = inDex[j];
-			err = curv[v] - p.rData[v].aim;
+			err = curv[v] - p.getAim(v);
 			accum += (err < 0) ? (-err) : err;
 		}
 		double recip = .333333 / aimNum;
@@ -1821,11 +1821,11 @@ public class SassStuff extends PackExtender {
 			for (int j = 0; j < aimNum; j++) {
 				v = inDex[j];
 				curv[v] = angSumSide(p, v,1.0,aspts);
-				verr = curv[v] - p.rData[v].aim;
+				verr = curv[v] - p.getAim(v);
 
 				// find/apply factor to radius or sides at v
 				if (Math.abs(verr) > cut) {
-					double sideFactor = sideCalc(p,v, p.rData[v].aim, 5,
+					double sideFactor = sideCalc(p,v, p.getAim(v), 5,
 							aspts);
 					adjustSides(p,v, sideFactor,aspts);
 					curv[v] = angSumSide(p, v,1.0, aspts);
@@ -3361,7 +3361,7 @@ public class SassStuff extends PackExtender {
 								int v=(int)vlist.get(0);
 								msg("Curvature (angle sum - aim) of "+v+" is "+
 										String.format("%.8e",Math.abs(ProjStruct.angSumTri(packData,v,1.0,aspects)[0]-
-												packData.rData[v].aim)));
+												packData.getAim(v))));
 								return 1;
 							}
 							break;
@@ -3398,9 +3398,9 @@ public class SassStuff extends PackExtender {
 			
 			// find sum[angsum-aim]^2 (for verts with aim>0)
 			for (int v=1;v<=packData.nodeCount;v++) {
-				if (packData.rData[v].aim>0.0) {
+				if (packData.getAim(v)>0.0) {
 					double diff=Math.abs(ProjStruct.angSumTri(packData,v,1.0,aspects)[0]-
-						packData.rData[v].aim);
+						packData.getAim(v));
 					Angsum_err += diff*diff;
 				}
 				

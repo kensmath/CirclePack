@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import allMains.CirclePack;
-import complex.Complex;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
@@ -15,7 +14,6 @@ import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
 import util.ColorUtil;
-import util.TriData;
 
 /**
  * Static combinatorial routines for working with DCEL structures.
@@ -1617,33 +1615,53 @@ public class CombDCEL {
 	 */
 	public static PackDCEL hexRefine(PackDCEL pdcel) {
 		PackDCEL ndcel=new PackDCEL();
+		ndcel.idealFaceCount=pdcel.idealFaceCount;
+		int eCount=pdcel.edges.length-1;
+		
+		// 'util' < 0 will mark bdry edges
+		for (int e=1;e<=eCount;e++) {
+			HalfEdge he=pdcel.edges[e];
+			if (he.isBdry())
+				he.util=-1;
+			else
+				he.util=0;
+		}
 		
 		// tmp lists for vertices/edges, starting with originals
 		ArrayList<Vertex> tmpVerts=new ArrayList<Vertex>();
 		ArrayList<HalfEdge> tmpEdges=new ArrayList<HalfEdge>();
-		
+		ArrayList<Face> tmpFaces=new ArrayList<Face>();
+
 		int origCount=pdcel.vertCount;
+		for (int v=1;v<=origCount;v++) { // half all radii
+			HalfEdge he=pdcel.vertices[v].halfedge;
+			double rad=pdcel.getVertRadius(he);
+			pdcel.setVertRadius(he,rad/2.0);
+		}
+
+		// add vertices to 'tmpVerts'
 		for (int v=1;v<=origCount;v++) 
 			tmpVerts.add(pdcel.vertices[v]);
 
-		// use 'util' to mark edges already handled
-		pdcel.edgeCount=pdcel.edges.length-1;
-		for (int e=1;e<=pdcel.edgeCount;e++) {
-			pdcel.edges[e].util=0;;
+		// add edges to 'tmpEdges'
+		for (int e=1;e<=eCount;e++) {
 			tmpEdges.add(pdcel.edges[e]);
 		}
 		
 		// keep track of counts/indices
-		int etick=pdcel.edgeCount;
+		int etick=eCount;
 		int vtick=pdcel.vertCount;
 		
 		// first loop to subdivide original edges 
-		for (int e=1;e<=pdcel.edgeCount;e++) {
+		for (int e=1;e<=eCount;e++) {
 			HalfEdge edge=pdcel.edges[e];
 			
 			// if not already handled
-			if (edge.util==0) {
+			if (edge.util<=0) {
+				boolean bdry=(edge.util==-1);
 				HalfEdge tedge=edge.twin;
+				
+				// make > 0 so we don't revisit
 				edge.util=etick;
 				tedge.util=etick;
 				
@@ -1654,9 +1672,11 @@ public class CombDCEL {
 				HalfEdge newEdge=new HalfEdge();
 				newEdge.util=++etick;
 				newEdge.edgeIndx=etick;
+				newEdge.invDist=edge.invDist;
 				HalfEdge newTwin=new HalfEdge();
 				newTwin.util=++etick;
 				newTwin.edgeIndx=etick;
+				newTwin.invDist=edge.invDist;
 				tmpEdges.add(newEdge);
 				tmpEdges.add(newTwin);
 				
@@ -1719,16 +1739,23 @@ public class CombDCEL {
 					newTwin.origin=midvert;
 					midvert.halfedge=newEdge;
 				}
+				
+				// original 'edge' bdry? Same for new vert 
+				if (bdry) {
+					edge.twin.origin.bdryFlag=1;
+				}
 			}				
 		} // done with look through edges
 		
-		// loop on faces, new edges -- one associated to each vert
+		// loop on faces, create new edges -- one pair for each vert
+		int ftick=0;
 		for (int f=1;f<=pdcel.intFaceCount;f++) {
 			Face face=pdcel.faces[f];
 			ArrayList<HalfEdge> edges=face.getEdges();
 			Iterator<HalfEdge> eits=edges.iterator();
 			while (eits.hasNext()) {
 				HalfEdge edgeout=eits.next();
+				edgeout.face=null;
 				if (edgeout.origin.vertIndx>origCount)
 					continue;
 				
@@ -1761,10 +1788,22 @@ public class CombDCEL {
 				
 				edgein2.next=newtwin;
 				newtwin.prev=edgein2;
+				
+				// create/store faces
+				Face newface=new Face();
+				newface.faceIndx=++ftick;
+				newface.edge=edgeout;
+				tmpFaces.add(newface);
+				HalfEdge he=edgeout;
+				do {
+					he.face=newface;
+					he=he.next;
+				} while (he!=edgeout);
+				
 			} // end of while through face edges
 		} // done with faces
 
-		// count/store vertices
+		// count/store vertices, 
 		ndcel.vertCount=tmpVerts.size();
 		ndcel.vertices=new Vertex[ndcel.vertCount+1];
 		Iterator<Vertex> tvit=tmpVerts.iterator();
@@ -1785,10 +1824,23 @@ public class CombDCEL {
 		while (tis.hasNext()) {
 			ndcel.edges[++etick]=tis.next();
 		}
+
+/*		
+		// count/store faces
+		ndcel.intFaceCount=ftick;
+		ndcel.faces=new Face[ftick+1];
+		Iterator<Face> tfit=tmpFaces.iterator();
+		ftick=0;
+		while(tfit.hasNext()) {
+			Face face=tfit.next();
+			ndcel.faces[face.faceIndx]=face;
+		}
+*/
 		
 		// final settings
 		ndcel.redChain=pdcel.redChain;
 		ndcel.alpha=pdcel.alpha;
+		ndcel.gamma=pdcel.gamma;
 		return ndcel;
 	}
 	

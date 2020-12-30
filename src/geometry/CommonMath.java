@@ -393,20 +393,29 @@ public class CommonMath {
 	}
 
 	/**
-	 * Compute any anlge sum
+	 * Compute angle sum at 'v' given radius 'rad'
 	 * @param p PackData
 	 * @param v int
 	 * @param rad double
-	 * @param uP UtilPacket, instantiate by calling routine
-	 * @return boolean, false on some failutre
+	 * @param uP UtilPacket, instantiated by calling routine
+	 * @return boolean, false on some failure
 	 */
 	public static boolean get_anglesum(PackData p,int v,double rad,UtilPacket uP) {
-		  if (p.hes<0) // hyp
-			  return p.h_anglesum_overlap(v,rad,uP);
-		  else if (p.hes>0) // sph
-			  return p.s_anglesum(v,rad,uP);
-		  else // eucl
-			  return p.e_anglesum_overlap(v,rad,uP);
+		if (p.packDCEL!=null) {
+			try {
+				uP.value=p.packDCEL.getVertAngSum(p.packDCEL.vertices[v],rad);
+			} catch (Exception ex) {
+				return false;
+			}
+			return true;
+		}
+		
+		if (p.hes<0) // hyp
+			return p.h_anglesum_overlap(v,rad,uP);
+		else if (p.hes>0) // sph
+			return p.s_anglesum(v,rad,uP);
+		else // eucl
+			return p.e_anglesum_overlap(v,rad,uP);
 	}
 	
 

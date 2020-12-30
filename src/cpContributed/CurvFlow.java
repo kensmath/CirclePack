@@ -411,9 +411,9 @@ public class CurvFlow extends PackExtender {
 				v=(Integer)vlist.next();
 				double curraim=0.0;
 				if (incremental) 
-					curraim=packData.rData[v].aim;
+					curraim=packData.getAim(v);
 				else
-					curraim=domainData.rData[v].aim;
+					curraim=domainData.getAim(v);
 				// what data are we using? does it exist?
 				if ((!useUtilDoubles && v<aimDiff.length) ||
 						(useUtilDoubles && v<=packData.utilDoubles.size())) {
@@ -424,7 +424,7 @@ public class CurvFlow extends PackExtender {
 						term=aimDiff[v];
 					
 					// apply
-					packData.rData[v].aim=curraim+x*(term);
+					packData.setAim(v,curraim+x*(term));
 					count++;
 				}
 			} // end of while
@@ -661,11 +661,11 @@ public class CurvFlow extends PackExtender {
 		// collect info
 		for (int v=1;v<=p.nodeCount;v++) {
 			if (p.kData[v].bdryFlag>0) {
-				bdryCurv[v]=Math.PI-p.rData[v].curv;
+				bdryCurv[v]=Math.PI-p.getCurv(v);
 				accum += Math.abs(bdryCurv[v]);
 			}
 			else {
-				int n=(int)((p.rData[v].aim+.01)/(2.0*Math.PI));
+				int n=(int)((p.getAim(v)+.01)/(2.0*Math.PI));
 				if (n>1)
 					branchOrder += n-1;
 			}
@@ -697,7 +697,7 @@ public class CurvFlow extends PackExtender {
 		q.fillcurves();
 		anglesumDiff=new double[p.nodeCount+1];
 		for (int v=1;v<=p.nodeCount;v++) {
-			anglesumDiff[v]=p.rData[v].curv-q.rData[v].curv;
+			anglesumDiff[v]=p.getCurv(v)-q.getCurv(v);
 		}
 		return 1;
 	}
@@ -725,7 +725,7 @@ public class CurvFlow extends PackExtender {
 		// update angle sums 
 		aimDiff=new double[p.nodeCount+1];
 		for (int v=1;v<=p.nodeCount;v++) {
-			aimDiff[v]=p.rData[v].aim-q.rData[v].aim;
+			aimDiff[v]=p.getAim(v)-q.getAim(v);
 		}
 		return 1;
 	}

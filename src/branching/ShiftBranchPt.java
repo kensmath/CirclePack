@@ -166,9 +166,9 @@ public class ShiftBranchPt extends GenBranchPt {
 		matchCount=myPack.nodeCount;
 		
 		// 'singVert' and its petals are packed here; set aim < 0 in parent
-		packData.rData[myIndex].aim=-1.0;
+		packData.setAim(myIndex,-1.0);
 		for (int j=0;j<packData.kData[myIndex].num+packData.kData[myIndex].num;j++)
-			packData.rData[vertexMap.findW(packData.kData[myIndex].flower[j])].aim=-1.0;
+			packData.setAim(vertexMap.findW(packData.kData[myIndex].flower[j]),-1.0);
 
 		setPoisonEdges();
 		return myPack;
@@ -178,11 +178,11 @@ public class ShiftBranchPt extends GenBranchPt {
 		
 		// reset aims in parent
 		if (packData.kData[myIndex].bdryFlag==0)
-			packData.rData[myIndex].aim=2.0*Math.PI;
+			packData.setAim(myIndex,2.0*Math.PI);
 		for (int j=0;j<packData.kData[myIndex].num+packData.kData[myIndex].num;j++) {
 			int k=vertexMap.findW(packData.kData[myIndex].flower[j]);
 			if (packData.kData[k].bdryFlag==0)
-				packData.rData[k].aim=2.0*Math.PI;
+				packData.setAim(k,2.0*Math.PI);
 		}
 		
 		// remove poison edges

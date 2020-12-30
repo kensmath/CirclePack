@@ -26,29 +26,13 @@ public class d_EuclPacker extends RePacker {
 
     // Constructors
     public d_EuclPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
-    	super(pd,pass_limit,false);
+    	p=pd;
+    	if (pass_limit<0) passLimit=PASSLIMIT;
+		else passLimit=pass_limit;
+		status=load(); 
+		if (status!=LOADED) 
+			throw new PackingException("'d_EuclPacker' failed to load");
     }
-    
-    public d_EuclPacker(PackData pd,boolean useC) {
-    	super(pd,CPBase.RIFFLE_COUNT,useC);
-    }
-    
-    public d_EuclPacker(PackData pd) {
-    	super(pd,CPBase.RIFFLE_COUNT,true);
-    }
-    
-	public void setSparseC(boolean useC) {
-		useSparseC=false;
-		if (useC) { // requested to use GOpacker routines if possible
-			if (p.nodeCount<EUCL_GOPACK_THRESHOLD) { // for smaller packing, use Java
-				useSparseC=false;
-				return;
-			}
-			if (JNIinit.SparseStatus())
-				useSparseC=true;
-		}
-		return;
-	}
   
     /**
      * Load relevant radius data
@@ -77,12 +61,14 @@ public class d_EuclPacker extends RePacker {
     }
     
     /**
-     * Store newly computed radii in 'rData'
+     * Store any newly computed radii; get from a 'triData'
      */
     public void reapResults() {
     	for (int i=0;i<aimnum;i++) {
-    		int j=index[i];
-    		p.setRadius(j,rdata[j].rad); 
+    		int v=index[i];
+    		int findx=p.vData[v].findices[0];
+    		int vindx=p.vData[v].myIndices[0];
+    		p.setRadius(v,pdcel.triData[findx].radii[vindx]);
     	}
     }
         
@@ -444,45 +430,46 @@ public class d_EuclPacker extends RePacker {
     /**
      * DCEL version of original repack algorithm implemented in Java. 
      * Accommodates inversive distances, where other methods may fail.
-     * This manipulates radii in 'pdcel.triData' structure, so must 
-     * 'load' first. 
+     * This manipulates radii in 'pdcel.triData' structure, so user must 
+     * call 'load' first and then 'reapResults' after. 
      * @param passes int 
-     * @return int
+     * @return int count, -1 on error
      */
     public int d_oldReliable(int passes) {
       int count = 0;
-      int aimNum = 0;
       double accum=0.0;
-      int N=5; // number of iterations
+      int N=5; // iterations in each radius comp
 
       // find vertices to work on and set cutoff value
       int []inDex =new int[p.nodeCount+1];
+      aimnum=0;
       for (int v=1;v<=p.nodeCount;v++) {
-    	  double curv=getVertCurv(v);
-    	  if (curv>0) { //   p.getAim(j)>0) {
-    		  inDex[aimNum]=v;
-    		  aimNum++;
+    	  if (p.getAim(v)>0) { //   p.getAim(j)>0) {
+    		  inDex[aimnum++]=v;
+        	  double curv=compVertCurv(v,getRadius(v));
         	  double err=curv-p.getAim(v);
     		  accum += (err<0) ? (-err) : err;
     	  }
       }
-      if (aimNum==0) return FAILURE; // nothing to repack
+      if (aimnum==0) return FAILURE; // nothing to repack
       
-      double recip=.333333/aimNum;
+      double recip=.333333/aimnum;
       double cut=accum*recip;
 
       while ((cut > RP_TOLER && count<passes)) {
-    	  for (int j=0;j<aimNum;j++) {
+    	  double r=.5; // to help with debugging
+    	  double rr=.5;
+    	  for (int j=0;j<aimnum;j++) {
     		  int v=inDex[j];
-    		  double r=getRadius(v);
+    		  r=getRadius(v);
     		  
-    		  if (Math.abs(getVertCurv(v)-p.getAim(v))>cut) {
-    			  double rr=d_euclRadCalc(v,r,p.getAim(v),N);
+    		  if (Math.abs(compVertCurv(v,r)-p.getAim(v))>cut) {
+    			  rr=d_euclRadCalc(v,r,p.getAim(v),N);
     			  setRadius(v,rr);
     		  }
           }
           accum=0;
-          for (int j=0;j<aimNum;j++) {
+          for (int j=0;j<aimnum;j++) {
         	  int v=inDex[j];
         	  double err=compVertCurv(v,getRadius(v))-p.getAim(v);
         	  accum += (err<0) ? (-err) : err;
@@ -494,11 +481,6 @@ public class d_EuclPacker extends RePacker {
                 
           count++;
       } /* end of while */
-      
-      // store all 'triData' angles
-      for (int v=1;v<=p.nodeCount;v++) {
-    	  pdcel.triData[v].compAllAngles();
-      }
       return count;
     }
     
@@ -821,21 +803,7 @@ public class d_EuclPacker extends RePacker {
     	results[3]=sqError;
     	return results;
     }
-    
-    /**
-     * Get angle sum at v using stored 'angles'
-     * @param v int
-     * @return double
-     */
-    public double getVertCurv(int v) {
-    	int[] findices=p.vData[v].findices;
-    	double curv=0;
-    	for (int j=0;j<findices.length;j++) {
-    		curv += pdcel.triData[findices[j]].angles[p.vData[v].myIndices[j]];
-    	}
-    	return curv;
-    }
-    
+      
     /**
      * Compute the angle sum at 'v' using radius 'rad' at v.
      * @param v int
@@ -846,7 +814,8 @@ public class d_EuclPacker extends RePacker {
     	int[] findices=p.vData[v].findices;
     	double curv=0;
     	for (int j=0;j<findices.length;j++) {
-    		curv += pdcel.triData[findices[j]].compOneAngle(j,rad);
+    		int k=p.vData[v].myIndices[j];
+    		curv += pdcel.triData[findices[j]].compOneAngle(k,rad);
     	}
     	return curv;
     }
@@ -887,7 +856,8 @@ public class d_EuclPacker extends RePacker {
   	  	double upcurv;
   	  	double lowcurv;
   	  	
-  	  	double curv=getVertCurv(v);
+  	  	// compute initial curvature
+  	  	double curv=compVertCurv(v,r); 
   	    double bestcurv=lowcurv=upcurv=curv;
   	    
   	    // may hit upper/lower bounds on radius
@@ -929,4 +899,17 @@ public class d_EuclPacker extends RePacker {
   	    return r;
     }
     
+	public void setSparseC(boolean useC) {
+		useSparseC=false;
+		if (useC) { // requested to use GOpacker routines if possible
+			if (p.nodeCount<EUCL_GOPACK_THRESHOLD) { // for smaller packing, use Java
+				useSparseC=false;
+				return;
+			}
+			if (JNIinit.SparseStatus())
+				useSparseC=true;
+		}
+		return;
+	}
+
 }

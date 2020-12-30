@@ -20,6 +20,7 @@ public class RData{
 	
 	// Constructor (needed only to create 'center')
 	public RData() {
+		rad=0.5;
 		center=new Complex(0.0); 
 	}
 	

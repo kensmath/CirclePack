@@ -598,49 +598,44 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		/**
 		 * Update the vertex information.
 		 * 
-		 * @param packData the <code>PackData</code> to reflect in the update
+		 * @param p the <code>PackData</code> to reflect in the update
 		 * @param useActiveVertex whether or not to use the packing's active vertex
 		 */
-		public void updateVertex(PackData packData, boolean useActiveVertex) {
+		public void updateVertex(PackData p, boolean useActiveVertex) {
 			// If packData is null or empty just return.
-			if (packData == null || !packData.status) return;
+			if (p == null || !p.status) return;
 
 			// Update for the current active or chosen vertex, depending on the call signature.
-			int currentVertex;
+			int v;
 			try {
-			if (useActiveVertex) currentVertex = packData.activeNode;
-			else currentVertex = NodeLink.grab_one_vert(packData, vertexChoiceField.getText());
+			if (useActiveVertex) v = p.activeNode;
+			else v = NodeLink.grab_one_vert(p, vertexChoiceField.getText());
 
 			// If the current vertex is invalid, use the zero vertex.
-			if (currentVertex <= 0 || currentVertex > packData.nodeCount) currentVertex = 1;
+			if (v <= 0 || v > p.nodeCount) v = 1;
 
 			// Get the corresponding KData and RData.
-			KData kData = packData.kData[currentVertex];
-			RData rData = packData.rData[currentVertex];
+//			KData kData = p.kData[v];
+//			RData rData = p.rData[v];
 
 			// Update the UI elements.
-			vertexChoiceField.setText(Integer.toString(currentVertex));
-			radiusField.setValue(packData.getActualRadius(currentVertex));
-			centerField.setValue(new Complex(rData.center.x, rData.center.y));
-			aimField.setValue(rData.aim / Math.PI);
-			angleSumField.setValue(rData.curv / Math.PI);
-			degreeField.setValue(kData.num);
-			vertexColorField.setValue(CPScreen.col_to_table(kData.color));
-			vertMarkField.setValue(kData.mark);
+			vertexChoiceField.setText(Integer.toString(v));
+			radiusField.setValue(p.getActualRadius(v));
+			centerField.setValue(new Complex(p.rData[v].center));
+			aimField.setValue(p.getAim(v)/Math.PI);
+			angleSumField.setValue(p.getCurv(v)/Math.PI);
+			degreeField.setValue(p.kData[v].num);
+			vertexColorField.setValue(CPScreen.col_to_table(p.kData[v].color));
+			vertMarkField.setValue(p.kData[v].mark);
 
-			if (kData.bdryFlag > 0) boundaryCheckBox.setSelected(true);
+			if (p.kData[v].bdryFlag > 0) boundaryCheckBox.setSelected(true);
 			else boundaryCheckBox.setSelected(false);
 
 			StringBuilder flowerBuilder = new StringBuilder();
-			for (int i = 0; i <= kData.num; i++) {
-				/*
-				 * TODO: NullPointerException on kData.flower array. If possible, avoid
-				 * checking the value or catching the exception and instead address the
-				 * implementation problem in KData that is allowing this field to be
-				 * null (it probably shouldn't be).
-				 */
-				flowerBuilder.append(Integer.toString(kData.flower[i]));
-				if (i != kData.num) flowerBuilder.append(" ");
+			int[] flwr=p.getFlower(v);
+			for (int i = 0; i < flwr.length; i++) {
+				flowerBuilder.append(Integer.toString(flwr[i]));
+				if (i < (flwr.length-1)) flowerBuilder.append(" ");
 			}
 			flowerField.setText(flowerBuilder.toString());
 			
@@ -853,8 +848,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		public void putAim(PackData p) {
 			int vert = NodeLink.grab_one_vert(p, vertexChoiceField.getText());
 			if (vert==0) return;
-			p.rData[vert].aim=aimField.getValue();
-			aimField.setValue(p.rData[vert].aim);
+			p.setAim(vert,aimField.getValue());
+			aimField.setValue(p.getAim(vert));
 		}
 		
 		public void putCenter(PackData p) {

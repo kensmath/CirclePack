@@ -115,7 +115,7 @@ public class MeanMove extends PackExtender {
 			int v=bdry.get(j);
 			bdryVerts[j]=v;
 			bdryRads[j]=packData.getRadius(v);
-			bdryAngSums[j]=packData.rData[v].curv;
+			bdryAngSums[j]=packData.getCurv(v);
 		}
 		
 		return N;
@@ -234,7 +234,7 @@ public class MeanMove extends PackExtender {
 	static double []kissingCurv(PackData p,int v,double r) {
 		if (p.kData[v].bdryFlag==0 || p.hes!=0)
 			return null;
-		double t2=p.rData[v].curv/2.0;
+		double t2=p.getCurv(v)/2.0;
 		double tant2=Math.tan(t2);
 		double cost2=Math.cos(t2);
 		double sect22=1.0/(cost2*cost2);

@@ -91,6 +91,9 @@ public abstract class RePacker {
 	
 	// Constructor: 
 	// NOTE: calling routine should kill if 'pd.status' is not positive
+	public RePacker() {
+	}
+	
 	public RePacker(PackData pd,int pass_limit,boolean useC) {
 		p=pd;
 		if (pass_limit<0) passLimit=PASSLIMIT;
@@ -194,10 +197,10 @@ public abstract class RePacker {
 			boolean hit=false;
 			for (int i=1;(!hit && i<=p.nodeCount);i++) {
 				if (p.kData[i].bdryFlag>0) {
-					if (p.rData[i].aim>0.0)	
+					if (p.getAim(i)>0.0)	
 						hit=true;
 				}
-				else if (Math.abs(p.rData[i].aim-mp2)>.00000001) 
+				else if (Math.abs(p.getAim(i)-mp2)>.00000001) 
 					hit=true;
 			}
 			// encountered non-default aims, use Java routines
@@ -285,7 +288,7 @@ public abstract class RePacker {
 			for (int i=1;i<=p.nodeCount;i++) {
 				rdata[i]=new RData();
 				kdata[i]=new TmpData();
-				rdata[i].aim=p.rData[i].aim;
+				rdata[i].aim=p.getAim(i);
 				rdata[i].rad=p.rData[i].rad;
 				kdata[i].num=num=p.kData[i].num;
 				kdata[i].flower=new int[kdata[i].num+1];

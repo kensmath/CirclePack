@@ -196,7 +196,7 @@ public class ShepherdCircles extends PackExtender {
 		// set initial excess to pi/3
 		for (int j=0;j<3;j++) {
 			weights[j]=Math.PI/3.0;
-			packData.rData[verts[j]].aim=2.0*(Math.PI+weights[j]);
+			packData.setAim(verts[j],2.0*(Math.PI+weights[j]));
 		}
 
 		// now iterate
@@ -228,7 +228,7 @@ public class ShepherdCircles extends PackExtender {
 			
 			// use excess to set new weights
 			for (int j=0;j<3;j++) {
-				packData.rData[verts[j]].aim=2*(Math.PI+weights[j]);
+				packData.setAim(verts[j],2*(Math.PI+weights[j]));
 			}
 
 			msg("FracBranching 3: error="+offBy+" after "+count+" iterations");

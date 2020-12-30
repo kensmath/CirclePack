@@ -56,10 +56,10 @@ public class QuadBranchPt extends GenBranchPt {
 		int w=packData.faces[singFace_f].vert[(indx+1)%3];
 
 		// organize face vertices so vert[0] is interior
-		if (packData.kData[v].bdryFlag!=0) {
+		if (packData.isBdry(v)) {
 				indx=(indx+1)%3;
 				v=packData.faces[singFace_f].vert[indx];
-				if (packData.kData[v].bdryFlag!=0) 
+				if (packData.isBdry(v)) 
 					throw new CombException("Shared edge has no inteior end");
 		}
 		
@@ -173,7 +173,7 @@ public class QuadBranchPt extends GenBranchPt {
 		
 		// Verts 1,2,3,4 are packed here; set aim < 0 in parent
 		for (int vv=1;vv<=4;vv++)
-			packData.rData[vertexMap.findW(vv)].aim=-1.0;
+			packData.setAim(vertexMap.findW(vv),-1.0);
 		
 		// 'rData' points to corresponding parent 'rData'
 		for (int vv=1;vv<=matchCount;vv++)
@@ -187,8 +187,8 @@ public class QuadBranchPt extends GenBranchPt {
 		
 		// Verts 1,2,3,4 are packed here; set aim < 0 in parent
 		for (int vv=1;vv<=4;vv++) {
-			if (packData.kData[vv].bdryFlag==0)
-				packData.rData[vertexMap.findW(vv)].aim=2.0*Math.PI;
+			if (!packData.isBdry(vv))
+				packData.setAim(vertexMap.findW(vv),2.0*Math.PI);
 		}
 		
 		// remove poison edges

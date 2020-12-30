@@ -65,7 +65,8 @@ public class AngSumSliders extends SliderFrame {
 		int tick=0;
 		while (vlst.hasNext()) {
 			int v=vlst.next();
-			mySliders[tick]=new ActiveSlider(this,tick,Integer.toString(v),packData.rData[v].curv/Math.PI,true);
+			mySliders[tick]=new ActiveSlider(this,tick,Integer.toString(v),
+					packData.getCurv(v)/Math.PI,true);
 			sliderPanel.add(mySliders[tick]);
 			tick++;
 		}
@@ -85,7 +86,7 @@ public class AngSumSliders extends SliderFrame {
 			if (verts.contains(v))
 				continue;
 			String str=Integer.toString(v);
-			double angsum=packData.rData[v].curv/Math.PI;
+			double angsum=packData.getCurv(v)/Math.PI;
 			tmpSliders[sliderCount+hit]=new ActiveSlider(this,sliderCount+hit,str,angsum,true);
 			sliderPanel.add(tmpSliders[sliderCount+hit]);
 			verts.add(v);
@@ -140,14 +141,14 @@ public class AngSumSliders extends SliderFrame {
 	 * when a slider changes, it sends the new value to packData
 	 */
 	public void upValue(int indx) {
-		packData.rData[verts.get(indx)].curv=(mySliders[indx].value)*Math.PI;
+		packData.setCurv(verts.get(indx),(mySliders[indx].value)*Math.PI);
 	}
 	
 	/**
 	 * Set slider value from packing data
 	 */
 	public void downValue(int indx) {
-		mySliders[indx].setValue(packData.rData[verts.get(indx)].curv/Math.PI);
+		mySliders[indx].setValue(packData.getCurv(verts.get(indx))/Math.PI);
 	}
 	
 	/**

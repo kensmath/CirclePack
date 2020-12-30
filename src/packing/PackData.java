@@ -269,6 +269,7 @@ public class PackData{
     		for (int v=1;v<=pdcel.vertCount;v++) 
     			vData[v]=new VData();
     		for (int v=1;v<=pdcel.vertCount;v++) {
+    			vData[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
     			int oldv=v;
     			int w=0;
     			if (pdcel.newOld!=null && (w=pdcel.newOld.findW(v))>0) 
@@ -276,13 +277,20 @@ public class PackData{
     			setRadius(v,rData[oldv].rad);
     			setCenter(v,rData[oldv].center);
     			vData[v].color=kData[oldv].color;
-    			vData[v].aim=rData[oldv].aim;
-    			vData[v].curv=rData[oldv].curv;
+    			// save aims where possible
+    			vData[v].aim=getAim(oldv);
+    			if (vData[v].getBdryFlag()!=kData[oldv].bdryFlag) {
+    				if (vData[v].getBdryFlag()==1) // new bdry vert?
+    					vData[v].aim=-1.0;
+    				else // new interior
+    					vData[v].aim=2.0*Math.PI;
+    			}
     			pdcel.fillIndices(v);
     		}
     		nodeCount=pdcel.vertCount;
     		faceCount=pdcel.faceCount;
         	fileName=StringUtil.dc2name(fileName);
+        	fillcurves(); // compute all curvatures
     		return pdcel.vertCount;
     	}
 
@@ -299,6 +307,7 @@ public class PackData{
 		// note: vertCount may be larger than nodeCount
 		for (int v=1;v<=pdcel.vertCount;v++) {
 			Vertex vert=pdcel.vertices[v];
+			vData[v].setBdryFlag(vert.bdryFlag);
 			HalfEdge he=vert.halfedge;
    			int oldv=v;
    			int w=0;
@@ -306,8 +315,16 @@ public class PackData{
    				oldv=w;
    			// if there is existing data, copy it
    			if (oldv<=nodeCount) {
-   				vData[v].aim=rData[oldv].aim;
-   				vData[v].curv=rData[oldv].curv;
+   				
+   				// copy 'aim' when appropriate
+   				vData[v].aim=getAim(oldv);
+   				if (vData[v].getBdryFlag()!=oldVData[oldv].getBdryFlag()) {
+   					if (vData[v].getBdryFlag()==1)
+   						vData[v].aim=-1.0;
+   					else
+   						vData[v].aim=2.0*Math.PI;
+   				}
+   				
    				Complex z=oldVData[oldv].center;
    				double rad=oldVData[oldv].rad;
    			
@@ -324,11 +341,19 @@ public class PackData{
    				}
    				pdcel.setVertData(he, new CircleSimple(z,rad));
    			}
+   			// for new vertices
+   			else {
+   				if (vData[v].getBdryFlag()==1)
+   					setAim(v,-0.1);
+   				else
+   					setAim(v,2.0*Math.PI);
+   			}
 			pdcel.fillIndices(v);
     	}
 		nodeCount=pdcel.vertCount;
 		faceCount=pdcel.faceCount;
     	fileName=StringUtil.dc2name(fileName);
+    	fillcurves();
     	return pdcel.vertCount;
     }
 
@@ -1170,7 +1195,7 @@ public class PackData{
                 				String str=(String)loctok.nextToken();
                 				int v=Integer.parseInt(str);
                 				double aim=Double.parseDouble((String)loctok.nextToken());
-                				rData[v].aim=aim;
+                				setAim(v,aim);
                 			} catch(Exception ex) {state=PackState.INITIAL;}
                 		}
                 		flags |= 00004;
@@ -1202,7 +1227,7 @@ public class PackData{
                 				try {
                 					String str=(String)loctok.nextToken();
                 					double anglesums=Double.parseDouble(str);
-                					rData[v].curv=anglesums;
+                					setCurv(v,anglesums);
                 					v++;
                 				} catch(Exception ex) {state=PackState.INITIAL;}
                 			}
@@ -2333,6 +2358,12 @@ public class PackData{
 		}
 	}
 	
+	public int getNum(int v) {
+		if (packDCEL!=null)
+			return vData[v].num;
+		return kData[v].num;
+	}
+	
 	/**
 	 * 'aim' from 'vData', if available, else from 'rData'
 	 * @param v int
@@ -2367,14 +2398,43 @@ public class PackData{
 	}
 	
 	/**
-	 * Return the bdryFlag of vertex v
+	 * Return the bdryFlag of vertex v; often used for its
+	 * value '1' in for loops.
 	 * @param v int
-	 * @return int
+	 * @return int (should be 0 or 1)
 	 */
 	public int getBdryFlag(int v) {
 		if (packDCEL!=null)
-			return packDCEL.vertices[v].bdryFlag;
+			return vData[v].getBdryFlag();
 		return kData[v].bdryFlag;
+	}
+	
+	/**
+	 * Is this a boundary vertex?
+	 * @param v int
+	 * @return boolean
+	 */
+	public boolean isBdry(int v) {
+		if (packDCEL!=null) {
+			if (vData[v].getBdryFlag()!=0)
+				return true;
+			return false;
+		}
+		if (kData[v].bdryFlag!=0)
+			return true;
+		return false;
+	}
+	
+	/**
+	 * Get array of nghb'ing vertices, closed if interior
+	 * @param v int
+	 * @return int[]
+	 */
+	public int[] getFlower(int v) {
+		if (packDCEL!=null) {
+			return packDCEL.vertices[v].getFlower();
+		}
+		return kData[v].flower;
 	}
 	
 	/**
@@ -5083,9 +5143,9 @@ public class PackData{
 	*/
 	public int set_aim_current(boolean flag) {
 	    for (int i=1;i<=nodeCount;i++) {
-	      rData[i].aim=rData[i].curv;
+	      setAim(i,getCurv(i));
 	      if (flag && kData[i].bdryFlag!=0) 
-		  rData[i].aim=-1;
+		  setAim(i,-1.0);
 	    }
 	    return nodeCount;
 	}
@@ -5108,10 +5168,10 @@ public class PackData{
 				angsum +=Math.acos(EuclMath.e_cos_3D(xyzpoint[v],xyzpoint[n],xyzpoint[m]));
 			}
 			if (flag && kData[v].bdryFlag!=0) {
-				rData[v].aim=-1.0*angsum;
+				setAim(v,-1.0*angsum);
 			}
 			else {
-				rData[v].aim=angsum;
+				setAim(v,angsum);
 				count++;
 			}
 		}
@@ -5133,8 +5193,9 @@ public class PackData{
 	*/
 	public void set_aim_default() {
 	    for (int i=1;i<=nodeCount;i++) {
-		      if (kData[i].bdryFlag!=0) rData[i].aim=-1;
-		      else rData[i].aim=2.0*Math.PI;
+		      if (getBdryFlag(i)==1) 
+		    	  setAim(i,-1.0);
+		      else setAim(i,2.0*Math.PI);
 		    }
 	} 
 	
@@ -5148,8 +5209,8 @@ public class PackData{
 			throw new ParserException("set_aim -t flag: value x "+x+" should be in (0,1]");
 		for (int i=1;i<=nodeCount;i++) {
 		      if (kData[i].bdryFlag==0)  {
-		    	  double curv=2.0*Math.PI-rData[i].aim;
-		    	  rData[i].aim=rData[i].aim+x*curv;
+		    	  double curv=2.0*Math.PI-getAim(i);
+		    	  setAim(i,getAim(i)+x*curv);
 		      }
 		}
 	}
@@ -5166,8 +5227,8 @@ public class PackData{
 		while (vit.hasNext()) {
 			int v=vit.next();
 		    if (kData[v].bdryFlag!=0) 
-		    	rData[v].aim=-1;
-		    else rData[v].aim=2.0*Math.PI;
+		    	setAim(v,-1.0);
+		    else setAim(v,2.0*Math.PI);
 		}
 	} 
 	
@@ -6121,13 +6182,13 @@ public class PackData{
 	}
 	
 	/**
-	  * Compute and store hyp radius of given vertex based on rData[v].aim. 
+	  * Compute and store hyp radius of given vertex based on 'aim'. 
 	  * Currently using 20 naive iterations.
 	  * @param v int
 	  * @param int, 0 on error
 	  */
 	public int h_riffle_vert(int v) throws PackingException {
-		return h_riffle_vert(v,rData[v].aim);
+		return h_riffle_vert(v,getAim(v));
 	}
 	
 	/**
@@ -6158,19 +6219,19 @@ public class PackData{
 	    }
 	    if (n>0 && r!=getRadius(v)) { // changed?
 	    	setRadiusActual(v,r);
-	    	rData[v].curv=curv;
+	    	setCurv(v,curv);
 	    }  
 	    return 1; // seemed to go okay
 	  } 
 
 	/**
-	  * Compute and store eucl radius of given vertex to get rData[v].aim. 
+	  * Compute and store eucl radius of given vertex to get 'aim'. 
 	  * Currently using 20 naive iterations.
 	  * @param v int
 	  * @param int, 0 on error
 	  */
 	public int e_riffle_vert(int v) throws PackingException {
-		return e_riffle_vert(v,rData[v].aim);
+		return e_riffle_vert(v,getAim(v));
 	}
 	
 	/**
@@ -6198,7 +6259,7 @@ public class PackData{
 	    }
 	    if (n>0 && r!=getRadius(v)) { // changed?
 	    	setRadiusActual(v,r);
-	    	rData[v].curv=curv;
+	    	setCurv(v,curv);
 	    }  
 	    return 1; // seemed to go okay
 	  } 
@@ -6408,26 +6469,26 @@ public class PackData{
 			}
 			flag = 0;
 			for (int i = 1; (i <= nodeCount && flag==0); i++) {
-				if (kData[i].bdryFlag != 0 && rData[i].aim >= 0.0)
+				if (kData[i].bdryFlag != 0 && getAim(i) >= 0.0)
 					flag++;
 				else if (kData[i].bdryFlag == 0
-						&& Math.abs(rData[i].aim - 2.0 * Math.PI) > (10.0) * TOLER)
+						&& Math.abs(getAim(i) - 2.0 * Math.PI) > (10.0) * TOLER)
 					flag++;
 			}
 			if (flag > 0) { // at least one interior aim out of tolerance
 				int jj = 0;
 				for (int i = 1; i <= nodeCount && jj == 0; i++) {
-					if ((kData[i].bdryFlag != 0 && rData[i].aim >= 0)
-							|| (kData[i].bdryFlag == 0 && (rData[i].aim < (2.0 * Math.PI + OKERR) || rData[i].aim > (2.0 * Math.PI - OKERR))))
+					if ((kData[i].bdryFlag != 0 && getAim(i) >= 0)
+							|| (kData[i].bdryFlag == 0 && (getAim(i) < (2.0 * Math.PI + OKERR) || getAim(i) > (2.0 * Math.PI - OKERR))))
 						jj++;
 				}
 				if (jj > 0) { // at least one non-default aim
 					file.write("ANGLE_AIMS:\n");
 					for (int i = 1; i <= nodeCount; i++)
-						if ((kData[i].bdryFlag != 0 && rData[i].aim >= 0)
-								|| (kData[i].bdryFlag == 0 && (rData[i].aim < (2.0 * Math.PI - OKERR) || rData[i].aim > (2.0 * Math.PI + OKERR)))) {
+						if ((kData[i].bdryFlag != 0 && getAim(i) >= 0)
+								|| (kData[i].bdryFlag == 0 && (getAim(i) < (2.0 * Math.PI - OKERR) || getAim(i) > (2.0 * Math.PI + OKERR)))) {
 							file.write(" " + i + "  "
-									+ String.format("%.6e\n", rData[i].aim));
+									+ String.format("%.6e\n",getAim(i)));
 						}
 				}
 				file.write("\n  (done)\n\n");
@@ -6491,7 +6552,7 @@ public class PackData{
 		if ((act & 0040) == 0040) { // angle sums? (often easier to recompute)
 			file.write("ANGLESUMS: \n");
 			for (int i = 1; i <= nodeCount; i++) {
-				file.write(" " + String.format("%.10e", rData[i].curv) + "\t");
+				file.write(" " + String.format("%.10e", getCurv(i)) + "\t");
 				if ((i % 5) == 0)
 					file.write("\n");
 			}
@@ -7328,28 +7389,30 @@ public class PackData{
 		UtilPacket utilp = new UtilPacket();
 		if (hes < 0) {
 			h_anglesum_overlap(node, getRadius(node), utilp);
-			rData[node].curv = utilp.value;
+			setCurv(node,utilp.value);
 			h_anglesum_overlap(v, getRadius(v), utilp);
-			rData[v].curv = utilp.value;
+			setCurv(v,utilp.value);
 			h_anglesum_overlap(v2, getRadius(v2), utilp);
-			rData[v2].curv = utilp.value;
+			setCurv(v2,utilp.value);
 		} else if (hes == 0) {
 			e_anglesum_overlap(node, getRadius(node), utilp);
-			rData[node].curv = utilp.value;
+			setCurv(node,utilp.value);
 			e_anglesum_overlap(v, getRadius(v), utilp);
-			rData[v].curv = utilp.value;
+			setCurv(v,utilp.value);
 			e_anglesum_overlap(v2,getRadius(v2), utilp);
-			rData[v2].curv = utilp.value;
+			setCurv(v2,utilp.value);
 		} else if (hes > 0) {
 			s_anglesum(node, getRadius(node), utilp);
-			rData[node].curv = utilp.value;
+			setCurv(node,utilp.value);
 			s_anglesum(v, getRadius(v), utilp);
-			rData[v].curv = utilp.value;
+			setCurv(v,utilp.value);
 			s_anglesum(v2, getRadius(v2), utilp);
-			rData[v2].curv = utilp.value;
+			setCurv(v2,utilp.value);
 		}
 		// set defualt aims
-		rData[node].aim = rData[v].aim = rData[v2].aim = -1;
+		setAim(node,-1.0);
+		setAim(v,-1.0);
+		setAim(v2,-1.0);
 		return 1;
 	}
 
@@ -7386,7 +7449,7 @@ public class PackData{
 			kData[v1].invDist = newoverlaps;
 		}
 		kData[v1].bdryFlag = 0;
-		rData[v1].aim = 2.0 * Math.PI;
+		setAim(v1,2.0 * Math.PI);
 		kData[v1].num++;
 		if (getRadius(v1) <= 0) { // avoid infinity rad
 			setRadius(v2,0.1);
@@ -7414,7 +7477,7 @@ public class PackData{
 			}
 			if (kData[v2].invDist != null)
 				set_single_invDist(v2,kData[v2].flower[n + 1],getInvDist(v2,kData[v2].flower[0]));
-			rData[v2].aim = 2.0 * Math.PI;
+			setAim(v2,2.0 * Math.PI);
 		}
 
 		// add to flower of v3
@@ -7439,7 +7502,7 @@ public class PackData{
 			}
 			if (kData[v3].invDist != null)
 				set_single_invDist(v3,kData[v3].flower[0],getInvDist(v3,kData[v3].flower[n + 1]));
-			rData[v2].aim = 2.0 * Math.PI;
+			setAim(v2,2.0 * Math.PI);
 		}
 
 		// calling routine should update pack after returning
@@ -7740,9 +7803,9 @@ public class PackData{
 			kData[w].mark = holdmark;
 		}
 		if ((keepFlags & 0004) == 0004) { // swap 'aim'
-			double holdaim = rData[v].aim;
-			rData[v].aim = rData[w].aim;
-			rData[w].aim = holdaim;
+			double holdaim = getAim(v);
+			setAim(v,getAim(v));
+			setAim(w,holdaim);
 		}
 		return ans;
 	}
@@ -7868,8 +7931,8 @@ public class PackData{
 		  fillcurves();
 		  double err=0.0;
 		  for (int v=1;v<=nodeCount;v++) {
-			  if (rData[v].aim>0.0) {
-				  double diff=Math.abs(rData[v].aim-rData[v].curv);
+			  if (getAim(v)>0.0) {
+				  double diff=Math.abs(getAim(v)-getCurv(v));
 				  err += diff*diff;
 			  }
 		  }
@@ -7899,9 +7962,9 @@ public class PackData{
 		  fillcurves();
 		  int count=0;
 		  for (int v=1;v<=nodeCount;v++) {
-			  if (rData[v].aim>=0.0) {
+			  if (getAim(v)>=0.0) {
 				  count++;
-				  ans[0] += Math.abs(rData[v].aim-rData[v].curv);
+				  ans[0] += Math.abs(getAim(v)-getCurv(v));
 			  }
 		  }
 		  if (count>0) 
@@ -8293,7 +8356,7 @@ public class PackData{
 			  }
 			  kData[newV].bdryFlag=0; // newV is interior
 			  setRadius(newV,getRadius(v));
-			  rData[newV].aim=2.0*Math.PI; // default aim
+			  setAim(newV,2.0*Math.PI); // default aim
 			  
 			  // v's flower; let it start and end with newV;
 			  int num=kData[v].num;
@@ -8354,7 +8417,7 @@ public class PackData{
 				  }
 				  kData[newV].bdryFlag=0;
 				  setRadius(newV,getRadius(v));
-				  rData[newV].aim=2.0*Math.PI;
+				  setAim(newV,2.0*Math.PI);
 				  
 				  // v's flower; find up to u and after w
 				  int num=kData[v].num;
@@ -8426,7 +8489,7 @@ public class PackData{
 
 				  kData[newV].bdryFlag=1; // boundary vertex this time
 				  setRadius(newV,getRadius(v));
-				  rData[newV].aim=-2.0*Math.PI;
+				  setAim(newV,-2.0*Math.PI);
 				  
 				  // v's flower, starts/ends with newV
 				  k=ind_vu-ind_vw;
@@ -8436,7 +8499,7 @@ public class PackData{
 				  for (int j=0;j<=k;j++)
 					  newFlower[j+1]=kData[v].flower[ind_vw+j];
 				  kData[v].flower=newFlower;
-				  rData[v].aim=2.0*Math.PI;
+				  setAim(v,2.0*Math.PI);
 
 				  // fix w; add newV after v in flower
 				  newFlower=new int[kData[w].num+2];
@@ -8634,7 +8697,7 @@ public class PackData{
 			  }
 			  newR[nextv].rad /=6.0;
 			  newR[nextv].center=newR[nextv].center.times(1.0/3.0);
-			  newR[nextv].aim=2.0*Math.PI;
+			  setAim(nextv,2.0*Math.PI);
 		  }
 		  
 		  int newNodeCount=nodeCount+vcount;
@@ -8928,7 +8991,7 @@ public class PackData{
 				  rData[newV]=new RData();
 				  setCenter(newV,getCenter(centV));
 				  setRadius(newV,getRadius(centV));
-				  rData[newV].aim=2*Math.PI;
+				  setAim(newV,2*Math.PI);
 			  }
 
 			  // fix up original nghbs to centV: new vert
@@ -8989,7 +9052,7 @@ public class PackData{
 			  rData[newDown]=new RData();
 			  setCenter(newDown,getCenter(centV));
 			  setRadius(newDown,rad);
-			  rData[newDown].aim=-.1;
+			  setAim(newDown,-1.0);
 			  
 			  // build newUp
 			  kData[newUp]=new KData();
@@ -9007,7 +9070,7 @@ public class PackData{
 			  rData[newUp]=new RData();
 			  setCenter(newUp,getCenter(centV));
 			  setRadius(newUp,rad);
-			  rData[newUp].aim=-.1;
+			  setAim(newUp,-0.1);
 			  
 			  // create first new interior vertex
 			  int newV=origCount+3;
@@ -9028,7 +9091,7 @@ public class PackData{
 			  rData[newV]=new RData();
 			  setCenter(newV,getCenter(centV));
 			  setRadius(newV,rad);
-			  rData[newV].aim=2*Math.PI;
+			  setAim(newV,2*Math.PI);
 			  
 			  // create last new interior vertex
 			  newV=nodeCount;
@@ -9049,7 +9112,7 @@ public class PackData{
 			  rData[newV]=new RData();
 			  setCenter(newV,getCenter(centV));
 			  setRadius(newV,rad);
-			  rData[newV].aim=2*Math.PI;
+			  setAim(newV,2*Math.PI);
 			  
 			  // create rest of new interiors
 			  for (int j=1;j<(centNum-1);j++) {
@@ -9072,7 +9135,7 @@ public class PackData{
 				  rData[newV]=new RData();
 				  setCenter(newV,getCenter(centV));
 				  setRadius(newV,rad);
-				  rData[newV].aim=2*Math.PI;
+				  setAim(newV,2*Math.PI);
 			  }
 
 			  // fix up downB
@@ -9181,7 +9244,7 @@ public class PackData{
 			kData[newV].mark = 0;
 			kData[newV].color=CPScreen.getFGColor();
 			setRadius(newV,getRadius(v));
-			rData[newV].aim = -.1;
+			setAim(newV,-0.1);
 		} 
 		
 		// else interior edge
@@ -9201,7 +9264,7 @@ public class PackData{
 			kData[newV].mark = 0;
 			kData[newV].color=CPScreen.getFGColor();
 			setRadius(newV,.5 * getRadius(v));
-			rData[newV].aim = 2.0 * Math.PI;
+			setAim(newV,2.0 * Math.PI);
 			// compute packed radius
 			if (hes < 0)
 				h_riffle_vert(newV);
@@ -9327,7 +9390,7 @@ public class PackData{
 	    kData[newval].mark=mark;
 	    kData[newval].color=CPScreen.getFGColor();
 	    setRadius(newval,getRadius(faces[f].vert[0]));
-	    rData[newval].aim=2.0*Math.PI;
+	    setAim(newval,2.0*Math.PI);
 	    // compute packed radius
 	    if (hes<0) h_riffle_vert(newval);
 	    else if (hes==0) e_riffle_vert(newval);
@@ -9389,7 +9452,7 @@ public class PackData{
 	    	kData[newV[i]].mark=0;
 	    	kData[newV[i]].color=CPScreen.getFGColor();
 	    	setRadius(newV[i],getRadius(faces[f].vert[i]));
-	    	rData[newV[i]].aim=2.0*Math.PI;
+	    	setAim(newV[i],2.0*Math.PI);
 	    }
 	    // adjust nghb flowers 
 	    for (int ii=0;ii<3;ii++) {
@@ -9898,10 +9961,10 @@ public class PackData{
 	    newflower[tick]=v;
 	    kData[newnode].flower=newflower;
 	    kData[newnode].bdryFlag=1;
-	    rData[newnode].aim=-1.0;
+	    setAim(newnode,-1.0);
 	    if (w==v) {
 	    	kData[newnode].bdryFlag=0;
-		    rData[newnode].aim=2.0*Math.PI;
+		    setAim(newnode,2.0*Math.PI);
 	    }
 	    
 	    kData[newnode].plotFlag=1;
@@ -9941,7 +10004,7 @@ public class PackData{
 		    }
 	    	kData[v].num=numb;
 	    	kData[v].bdryFlag=0;
-	    	rData[v].aim=2.0*Math.PI;
+	    	setAim(v,2.0*Math.PI);
 	    }
 	    else { // v and w are bdry
 	    	
@@ -9992,7 +10055,7 @@ public class PackData{
 	        kData[nextvert].flower=newflower;
 	        kData[nextvert].num=numb;
 	        kData[nextvert].bdryFlag=0;
-	        rData[nextvert].aim=2.0*Math.PI;
+	        setAim(nextvert,2.0*Math.PI);
 	        if (overlapStatus) {
 	    	  	newoverlaps=new double[numb+1];
 	    	  	for (int j=0;j<=(numb-2);j++)
@@ -10198,7 +10261,7 @@ public class PackData{
 	    			}
 	    		}
 	    		else {
-	    			data.add(rData[v].curv/q.rData[v].curv);
+	    			data.add(getCurv(v)/q.getCurv(v));
 	    			indx.add(v);
 	    		}
 	    	}
@@ -11694,7 +11757,7 @@ public class PackData{
 	    	  }
 	    	  kData[w].num -= 2;
 	    	  kData[w].bdryFlag=1;
-	    	  rData[w].aim=-.1;
+	    	  setAim(v,-0.1);
 	    	  kData[w].flower=newflower;
 	    	  if (newoverlaps!=null) {
 	    		  kData[w].invDist=newoverlaps;
@@ -11766,7 +11829,6 @@ public class PackData{
 
 	  public int hex_refine() {
 		  if (packDCEL!=null) {
-			  int vertcount=packDCEL.vertCount; // hold to idenfity originals
 			  PackDCEL pdcel=CombDCEL.hexRefine(packDCEL);
 			  CombDCEL.d_FillInside(pdcel);
 			  
@@ -11774,7 +11836,9 @@ public class PackData{
 			  
 			  return attachDCEL(pdcel);
 		  }
-	    int count=1;
+		  
+		// else, old style
+	    int count=0;
 	    EdgeSimple []new_verts=null;
 
 	    int Num=(faceCount)+(nodeCount)-(euler); // number of edges 
@@ -11787,26 +11851,27 @@ public class PackData{
 		     * long to hold crossref data for vert_for_edge. */
 	    	tempK[j]=kData[j].clone();
 	    	tempK[j].flower=new int[tempK[j].num+2];
+	    	rData[j].rad /=2.0; // half the radii
 	    }
-	    for (int j=nodeCount+1;j<=sizeLimit;j++) 
+	    for (int j=nodeCount+1;j<=nodeCount+Num;j++) {
 	    	tempK[j]=new KData();
+	    	rData[j]=new RData();
+	    }
 	    
 	    // Catalog edges {v,w} having v<w 
 	    new_verts=new EdgeSimple[Num+2];
 	    for (int v=1;v<nodeCount;v++) {
 	    	int w;
 	    	for (int k=0;k<(kData[v].num+kData[v].bdryFlag);k++)
-	    		if ((w=kData[v].flower[k])>v) {
-	    			new_verts[count]=new EdgeSimple(v,w);
-	    			count++;
-	    		}
+	    		if ((w=kData[v].flower[k])>v)
+	    			new_verts[++count]=new EdgeSimple(v,w);
 	    }
-	    if (count!=(Num+1)) throw new CombException();
+	    if (count!=Num) throw new CombException();
 
 	    for (int v=1;v<=nodeCount;v++)
 	    	tempK[v].flower=new int[kData[v].num+1];
 	    
-	    // build new flowers for the original vertices
+	    // adjust flowers for the original vertices
 	    for (int n=1;n<=Num;n++) {
 	    	EdgeSimple e=new_verts[n];
 	    	tempK[e.v].flower[nghb(e.v,e.w)]=nodeCount+n;
@@ -11819,7 +11884,6 @@ public class PackData{
 	    for (int n=1;n<=Num;n++) {
 	    	EdgeSimple e=new_verts[n];
     		int Nn=nodeCount+n; // the new index
-    		rData[Nn]=new RData();
 
     		// if the new vertex is on a boundary edge
 	    	if ((kData[e.v].bdryFlag!=0 && kData[e.v].flower[0]==e.w)
@@ -11829,7 +11893,8 @@ public class PackData{
 	    		tempK[Nn].flower=new int[4];
 	    		if (overlapStatus) {
 	    			tempK[Nn].invDist=new double[4];
-	    			tempK[Nn].invDist[0]=tempK[Nn].invDist[3]=kData[e.v].invDist[nghb(e.v,e.w)];
+	    			tempK[Nn].invDist[0]=tempK[Nn].invDist[3]=
+	    					kData[e.v].invDist[nghb(e.v,e.w)];
 	    			tempK[Nn].invDist[1]=tempK[Nn].invDist[2]=1.0;
 	    		}
 	    		if (kData[e.v].flower[0]==e.w) {
@@ -11846,9 +11911,7 @@ public class PackData{
 	    			tempK[Nn].flower[3]=e.w;
 		    		setRadius(Nn,getRadius(e.w));
 	    		}
-	    		// average end centers to set center
-	    		setCenter(Nn,getCenter(e.v).add(getCenter(e.w)).divide(2.0));
-	    		rData[Nn].aim=-1.0;
+	    		setAim(Nn,-1.0);
 	    	}
 
 	    	// else new vertex is interior
@@ -11882,11 +11945,11 @@ public class PackData{
 	    		else 
 		    		tempK[Nn].flower[4]=tempK[e.v].flower[(dir_vw-1+num_v)%num_v];
 	    		
-	    		// average end centers/radii to set center/rad
-	    		setRadius(Nn,(getRadius(e.v)+getRadius(e.w))/2.0);
-	    		setCenter(Nn,getCenter(e.v).add(getCenter(e.w)).divide(2.0));
-	    		rData[Nn].aim=2.0*Math.PI;
+	    		setAim(Nn,2.0*Math.PI);
 	    	}
+    		// average end centers/radii
+    		rData[Nn].center=new Complex(getCenter(e.v).add(getCenter(e.w)).divide(2.0));
+    		rData[Nn].rad = (getRadius(e.v)+getRadius(e.w))/2.0;
 	    }
 
 	    kData=tempK;
@@ -11897,7 +11960,7 @@ public class PackData{
 	    if (debug) LayoutBugs.log_Red_Hash(this, this.redChain,this.firstRedEdge);
 	    
 	    fillcurves();
-	    return 1;
+	    return count;
 	  }
 
 	  /** 
@@ -12363,7 +12426,7 @@ public class PackData{
 	  	    	boolean didit=false;
 	  	    	if (kData[v].bdryFlag!=0) {
 	  	    		for (int i=0;i<=kData[v].num;i++) 
-	  	    			rData[kData[v].flower[i]].aim=-.1;
+	  	    			setAim(kData[v].flower[i],-0.1);
 	  	    		if (remove_bdry_vert(v)!=0) didit=true;
 	  	    	}
 	  	    	else if (remove_tri_vert(v)!=0) didit=true;
@@ -12640,7 +12703,7 @@ public class PackData{
 	        }
 	        kData[v1].num--;
 	        kData[kData[v1].flower[0]].bdryFlag=1;
-	        rData[v1].aim=-1;
+	        setAim(v1,-1.0);
 
 	        // fix up v2 
 	        newflower=new int[kData[v2].num+1];
@@ -12656,7 +12719,7 @@ public class PackData{
 	        	kData[v2].invDist=newoverlaps;
 	        }
 	        kData[v2].num--;
-	        rData[v2].aim=-1;
+	        setAim(v2,-1.0);
 
 	        // fix up common neighbor v 
 	        v=kData[v1].flower[0];
@@ -12680,7 +12743,7 @@ public class PackData{
 	        if (overlapStatus) {
 	        	kData[v].invDist=newoverlaps;
 	        }
-	        rData[v].aim=-1;
+	        setAim(v,-1.0);
 	        count++;
 	    } // end of while
 	    return count;
@@ -12877,7 +12940,7 @@ public class PackData{
 			  
 			  // fix v1
 			  kData[v1].bdryFlag=newBdryFlag;
-			  if (newBdryFlag==1) rData[v1].aim=-.1;
+			  if (newBdryFlag==1) setAim(v1,-0.1);
 			  kData[v1].num=newNum;
 			  kData[v1].flower=newflower;
 			  
@@ -13075,13 +13138,14 @@ public class PackData{
 	    // if next==v, then vert and next should be interior; nothing more to do 
 	    if (next==v) {
 	        kData[vert].bdryFlag=kData[next].bdryFlag=0;
-	        rData[vert].aim=rData[next].aim=2.0*Math.PI; 
+	        setAim(vert,2.0*Math.PI);
+	        setAim(next,2.0*Math.PI); 
 	        return 0;
 	    }
 	    // fix up vert 
 	    kData[vert].flower[0]=next;
 	    kData[vert].bdryFlag=0;
-	    rData[vert].aim=2.0*Math.PI;
+	    setAim(vert,2.0*Math.PI);
 	    if (overlapStatus) { // average the overlaps with v and next 
 	        vert_next_angle=(0.5)*(getInvDist(vert,kData[vert].flower[0])+
 	  			     getInvDist(vert,kData[vert].flower[kData[vert].num]));
@@ -13134,7 +13198,8 @@ public class PackData{
 	        	set_single_invDist(w,kData[w].flower[0],vert_next_angle);
 	        	set_single_invDist(w,kData[w].flower[kData[w].num],vert_next_angle);
 	        kData[next].bdryFlag=kData[w].bdryFlag=0;
-	        rData[next].aim=rData[w].aim=2.0*Math.PI;
+	        setAim(next,2.0*Math.PI);
+	        setAim(w,2.0*Math.PI);
 	      }
 
 	    // otherwise, next remains boundary vertex 
@@ -13160,7 +13225,7 @@ public class PackData{
 	        if (overlapStatus) {
 	        	kData[w].invDist=newoverlaps;
 	        }
-	        rData[next].aim=-1.0;
+	        setAim(next,-1.0);
 	    }
 
 	    // fix up things with v in their flowers (v will be removed) 
@@ -14319,7 +14384,7 @@ public class PackData{
 		} else
 			kData[new_V].invDist = null;
 		kData[new_V].bdryFlag = 1;
-		rData[new_V].aim = -1.0;
+		setAim(new_V,-1.0);
 		setRadius(new_V,getRadius(v));
 		setCenter(new_V,new Complex(getCenter(v)));
 		
@@ -14362,7 +14427,7 @@ public class PackData{
 			} else
 				kData[new_W].invDist = null;
 			kData[new_W].bdryFlag = 1;
-			rData[new_W].aim = -1.0;
+			setAim(new_W,-1.0);
 			setRadius(new_W, getRadius(w));
 			setCenter(new_W, new Complex(getCenter(w)));
 			
@@ -14400,7 +14465,7 @@ public class PackData{
 			}
 			kData[w].bdryFlag = 1;
 		}
-		rData[w].aim = -1.0;
+		setAim(w,-1.0);
 		return ans;
 	}
 	 
@@ -15528,7 +15593,7 @@ public class PackData{
 				// move the data
 				if (tgt_v>0 && tgt_v<=target_p.nodeCount) {
 					if (radii) {target_p.setRadius(tgt_v,source_p.getRadius(src_v));count++;}
-					if (aims) {target_p.rData[tgt_v].aim=source_p.rData[src_v].aim;count++;}
+					if (aims) {target_p.setAim(tgt_v,source_p.getAim(src_v));count++;}
 					if (marks) {target_p.kData[tgt_v].mark=source_p.kData[src_v].mark;count++;}
 					if (centers) {target_p.setCenter(tgt_v,new Complex(source_p.getCenter(src_v)));count++;}
 					if (cir_colors) {
@@ -15671,15 +15736,15 @@ public class PackData{
 
 	  while (vtrace.hasNext()) {
 	    v=(Integer)vtrace.next();
-	    if (rData[v].aim>0) {
+	    if (getAim(v)>0) {
 	      if (hes<0)
 		h_anglesum_overlap(v,getRadius(v),uP);
 	      else if (hes>0)
 		s_anglesum(v,getRadius(v),uP);
 	      else 
 		e_anglesum_overlap(v,getRadius(v),uP);
-	      rData[v].curv=uP.value;
-	      rData[v].aim = rData[v].curv-x*(rData[v].curv-rData[v].aim);
+	      setCurv(v,uP.value);
+	      setAim(v,getCurv(v)-x*(getCurv(v)-getAim(v)));
 	      count++;
 	    }
 	  }

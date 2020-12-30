@@ -2,6 +2,7 @@ package dcel;
 import java.awt.Color;
 
 import complex.Complex;
+import exceptions.CombException;
 import panels.CPScreen;
 
 
@@ -27,6 +28,7 @@ public class VData{
 	public double curv;	    // angle sum at this vertex. 
 	public double aim;		// desired angle sum at this vertex (actual angle, not divided by Pi)
 	public Color color;
+	int bdryFlag;           // set in 'PackData.attachDCEL' according to 'Vertex.bdryFlag' 
 	
 	// Constructor (needed only to create 'center')
 	public VData() {
@@ -49,7 +51,18 @@ public class VData{
 		Vout.curv=curv;
 		Vout.aim=aim;
 		Vout.color=new Color(color.getRed(),color.getGreen(),color.getBlue(),color.getAlpha());
+		Vout.bdryFlag=bdryFlag;
 		return Vout;
+	}
+	
+	public int getBdryFlag() {
+		return bdryFlag;
+	}
+	
+	public void setBdryFlag(int bf) {
+		if (bf!=0 && bf!=1)
+			throw new CombException("error setting 'bdryFlag'");
+		bdryFlag=bf;
 	}
 
 }

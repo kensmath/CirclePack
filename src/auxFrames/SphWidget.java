@@ -201,15 +201,15 @@ public class SphWidget extends JFrame implements ActionListener {
 			// compute, set angle sum
 			UtilPacket uP=new UtilPacket();
 			if (packData.s_anglesum(j,packData.getRadius(j),uP)) {
-				packData.rData[j].curv=uP.value;
+				packData.setCurv(j,uP.value);
 			}
-			else packData.rData[j].curv=0.0;
-			angsumBars[j]=new DisplayBar(this,j,false,packData.rData[j].curv);
+			else packData.setCurv(j,0.0);
+			angsumBars[j]=new DisplayBar(this,j,false,packData.getCurv(j));
 			angsumBars[j].setBounds(startX,startY,BAR_FOOTPRINT,ANG_BAR_HEIGHT+BAR_PADDING);
 			angsumPanel.add(angsumBars[j]);
 			angsumBars[j].barArea.setVisible(true);
 			if (!lock[j]) // only set initially for unlocked vertices 
-				angsumBars[j].placePointer(packData.rData[j].aim);
+				angsumBars[j].placePointer(packData.getAim(j));
 			
 			// enter indices
 			indexLabel=new JLabel(Integer.toString(j),JLabel.LEFT);
@@ -228,8 +228,8 @@ public class SphWidget extends JFrame implements ActionListener {
 		int hit=0;
 		double aimSum=0.0;
 		for (int k=1;k<=packData.nodeCount;k++) {
-			if (packData.kData[k].bdryFlag!=0) hit++;
-			aimSum+=packData.rData[k].aim-2*Math.PI;
+			if (packData.getBdryFlag(k)!=0) hit++;
+			aimSum+=packData.getAim(k)-2*Math.PI;
 		}
 		if (hit>0) areaField.setVisible(false);
 		else {
@@ -251,7 +251,7 @@ public class SphWidget extends JFrame implements ActionListener {
 			UtilPacket uP=new UtilPacket();
 			packData.s_anglesum(v,packData.getRadius(v),uP);
 			angsumBars[v].setBarHeight(uP.value);
-			angsumBars[v].placePointer(packData.rData[v].aim);
+			angsumBars[v].placePointer(packData.getAim(v));
 		}
 	}
 	
@@ -262,15 +262,15 @@ public class SphWidget extends JFrame implements ActionListener {
 	
 	public void displayAngSum(int vert) {
 		angsumField.setText(String.format("%.6e",
-				(double)(packData.rData[vert].curv/Math.PI)));
+				(double)(packData.getCurv(vert)/Math.PI)));
 		// display sum of signed errors of (interior) curvatures
 		double accum=0.0;
-		if (packData.kData[vert].bdryFlag==0) 
-			accum=packData.rData[vert].curv-packData.rData[vert].aim;
+		if (packData.getBdryFlag(vert)==0) 
+			accum=packData.getCurv(vert)-packData.getAim(vert);
 		for (int j=0;j<packData.kData[vert].num;j++) {
 			int k=packData.kData[vert].flower[j];
-			if (packData.kData[k].bdryFlag==0)
-				accum += Math.abs(packData.rData[k].curv-packData.rData[k].aim);
+			if (!packData.isBdry(k))
+				accum += Math.abs(packData.getCurv(k)-packData.getAim(k));
 		}
 		angError.setText(String.format("%.6e",(double)(accum/Math.PI)));
 	}
@@ -279,7 +279,7 @@ public class SphWidget extends JFrame implements ActionListener {
 		double area=packData.complexArea();
 		double aimSum=0.0;
 		for (int k=1;k<=packData.nodeCount;k++) {
-			aimSum+=packData.rData[k].aim-2*Math.PI;
+			aimSum+=packData.getAim(k)-2*Math.PI;
 		}
 		areaField.setText(String.format("%.6e",
 				(double)(area-4*Math.PI-aimSum/Math.PI)));
@@ -326,7 +326,8 @@ public class SphWidget extends JFrame implements ActionListener {
 			packData.setRadius(vert,value);
 			UtilPacket uP=new UtilPacket();
 			if (packData.s_anglesum(vert,packData.getRadius(vert),uP)) {
-				packData.rData[vert].curv=angsum=uP.value;
+				packData.setCurv(vert,uP.value);
+				angsum=uP.value;
 				angsumBars[vert].setBarHeight(angsum);
 				radBars[vert].placePointer(SphericalMath.sph_rad_max(packData,vert));
 			}
@@ -336,7 +337,8 @@ public class SphWidget extends JFrame implements ActionListener {
 				int v=packData.kData[vert].flower[k];
 				uP=new UtilPacket();
 				if (packData.s_anglesum(v,packData.getRadius(v),uP)) {
-					packData.rData[v].curv=angsum=uP.value;
+					packData.setCurv(v,uP.value);
+					angsum=uP.value;
 					angsumBars[v].setBarHeight(angsum);
 					radBars[v].placePointer(SphericalMath.sph_rad_max(packData,v));
 				}
@@ -345,7 +347,7 @@ public class SphWidget extends JFrame implements ActionListener {
 			displayAngSum(vert);
 		}
 		else { // just record chosen aim
-			packData.rData[vert].aim=value;
+			packData.setAim(vert,value);
 		}
 	}
 	
@@ -386,8 +388,8 @@ public class SphWidget extends JFrame implements ActionListener {
 				radBars[j].setBarHeight(packData.getRadius(j));
 				UtilPacket uP=new UtilPacket();
 				if (packData.s_anglesum(j,packData.getRadius(j),uP)) {
-					packData.rData[j].curv=uP.value;
-					angsumBars[j].setBarHeight(packData.rData[j].curv);
+					packData.setCurv(j,uP.value);
+					angsumBars[j].setBarHeight(packData.getCurv(j));
 				}
 			}
 		}
@@ -413,7 +415,7 @@ public class SphWidget extends JFrame implements ActionListener {
 					radBars[j].setBarHeight(packData.getRadius(j));
 					UtilPacket uP=new UtilPacket();
 					if (packData.s_anglesum(j,packData.getRadius(j),uP)) {
-						packData.rData[j].curv=uP.value;
+						packData.setCurv(j,uP.value);
 						angsumBars[j].setBarHeight(uP.value);
 					}
 				}

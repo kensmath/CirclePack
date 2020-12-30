@@ -434,7 +434,7 @@ public class PackLite {
 			flowerCount += p.kData[v].num+3;
 			
 			// is this a variable vertex
-			if ((aim=p.rData[v].aim)>=0.0) {
+			if ((aim=p.getAim(v))>=0.0) {
 
 				// list as variable vert
 				vCount++;
@@ -469,7 +469,7 @@ public class PackLite {
 			int v=p_Indices[n];
 
 			// variable vertex
-			if ((aim=p.rData[v].aim)>=0.0) {
+			if ((aim=p.getAim(v))>=0.0) {
 				varIndices[vtick++]=n;
 				
 				// is aim also non-default? (non-default 'aims' indexed from 0)
@@ -644,7 +644,7 @@ public class PackLite {
 		p.set_aim_default();
 		if (aimCount > 0) {
 			for (int i = 0; i < aimCount; i++)
-				p.rData[vertConvert[aimIndices[i]]].aim = aims[i];
+				p.setAim(vertConvert[aimIndices[i]],aims[i]);
 		}
 
 		if (invDistCount > 0 && invDistLink != null) {

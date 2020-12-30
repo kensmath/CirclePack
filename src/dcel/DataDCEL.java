@@ -143,8 +143,8 @@ public class DataDCEL {
 				// put in 'Vertex'
 				p.setCenter(newindx,pdcel.p.getCenter(oldindx));
 				p.setRadius(newindx,pdcel.p.getRadius(oldindx));
-				p.rData[newindx].aim=pdcel.p.rData[oldindx].aim;
-				p.rData[newindx].curv=pdcel.p.rData[oldindx].curv;
+				p.setAim(newindx,pdcel.p.getAim(oldindx));
+				p.setCurv(newindx,pdcel.p.getCurv(oldindx));
 			}
 		}
 		

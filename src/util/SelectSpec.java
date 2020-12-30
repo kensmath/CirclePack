@@ -136,7 +136,7 @@ public class SelectSpec {
 			// specifications requiring double 'value' to compare to
 			case 'a': // aim?
 			{
-				uP.value = packData.rData[node].aim / Math.PI;
+				uP.value = packData.getAim(node)/Math.PI;
 				uP.rtnFlag = 1;
 				return uP;
 			}
@@ -185,7 +185,7 @@ public class SelectSpec {
 			}
 			case 's': // angle sum?
 			{
-				uP.value = packData.rData[node].curv / Math.PI;
+				uP.value = packData.getCurv(node)/Math.PI;
 				uP.rtnFlag = 1;
 				return uP;
 			}

@@ -618,13 +618,14 @@ public class ConformalTiling extends PackExtender {
 			while (fbv.hasNext()) {
 				VertAim vertaim=fbv.next();
 				hits[vertaim.vert]=1;
-				packData.rData[vertaim.vert].aim=0.0;
+				packData.setAim(vertaim.vert,0.0);
 			}
 			fbv=feedbackVec.iterator();
 			int count=0;
 			while (fbv.hasNext()) {
 				VertAim vertaim=fbv.next();
-				packData.rData[vertaim.vert].aim += vertaim.aim; // may be more than one angle to add in
+				packData.setAim(vertaim.vert, packData.getAim(vertaim.vert)+vertaim.aim);
+				// may be more than one angle to add in
 				count++;
 			}
 			
@@ -634,13 +635,15 @@ public class ConformalTiling extends PackExtender {
 //			double turning=0.0;
 //			while (blink.hasNext()) {
 //				int w=blink.next();
-//				turning += (Math.PI-packData.rData[w].aim);
+//				turning += (Math.PI-packData.getAim(w));
 //			}
 //			double factor=2.0*Math.PI/turning;
 //			blink=bdryLink.iterator();
 //			while (blink.hasNext()) {
 //				int w=blink.next();
-//				packData.rData[w].aim *= Math.PI+(Math.PI-packData.rData[w].aim)*factor;
+//			    packData.setAim(w,
+//			    		packData.getAim(w)*
+//			    		(Math.PI+(Math.PI-packData.getAim(w))*factor));
 //			}
 
 			return count;

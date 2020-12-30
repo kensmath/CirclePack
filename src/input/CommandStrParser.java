@@ -44,6 +44,7 @@ import exceptions.InOutException;
 import exceptions.JNIException;
 import exceptions.LayoutException;
 import exceptions.MobException;
+import exceptions.PackingException;
 import exceptions.ParserException;
 import exceptions.VarException;
 import ftnTheory.AffinePack;
@@ -129,6 +130,7 @@ import rePack.EuclPacker;
 import rePack.GOpacker;
 import rePack.HypPacker;
 import rePack.SphPacker;
+import rePack.d_EuclPacker;
 import script.ScriptBundle;
 import tiling.TileData;
 import util.BuildPacket;
@@ -5621,7 +5623,7 @@ public class CommandStrParser {
 					
 					// zero out the curvatures
 					for (int v=1;v<=packData.nodeCount;v++)
-						packData.rData[v].curv=0.0;
+						packData.setCurv(v,0.0);
 					
 					// note that we reset the radii and centers of 'baseface'
 					int[] verts=packData.faces[baseface].vert;
@@ -5634,7 +5636,7 @@ public class CommandStrParser {
 							CircleSimple cS=SphericalMath.e_to_s_data(Z[j],CPBase.sqrt3);
 							packData.setCenter(verts[j],new Complex(cS.center));
 							packData.setRadius(verts[j],cS.rad);
-							packData.rData[verts[j]].curv +=Math.PI;
+							packData.setCurv(verts[j],packData.getCurv(verts[j])+Math.PI);
 						}
 					}
 					else {
@@ -5750,7 +5752,7 @@ public class CommandStrParser {
 
 						for (int q=0;q<3;q++) {
 							double ang=CommonMath.get_face_angle(radii[q],radii[(q+1)%3],radii[(q+2)%3],packData.hes);
-							packData.rData[verts[q]].curv +=ang;
+							packData.setCurv(verts[q],packData.getCurv(verts[q])+ang);
 						}
 						
 					} catch (Exception ex) {
@@ -5811,6 +5813,21 @@ public class CommandStrParser {
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
 					CPBase.pack[qnum].swapPackData(p,false);
 					pdcel.D_CompCenters();
+					p.fillcurves();
+					p.set_aim_default();
+					return 1;
+				}
+				
+				else if (str.contains("repack")) {
+					d_EuclPacker e_packer=new d_EuclPacker(packData,1000);
+					int ans=e_packer.d_oldReliable(1000); // TODO: specify in call
+					if (ans>0) {
+						e_packer.reapResults();
+						CirclePack.cpb.msg("Did DCEL eucl repack, count="+ans);
+						return ans;
+					}
+					else if (ans<0)
+						throw new PackingException("dcel repack failure");
 					return 1;
 				}
 				
@@ -9529,8 +9546,8 @@ public class CommandStrParser {
 	        		  NodeLink vertlist=new NodeLink(packData,items);
 	        		  if (vertlist.size()>0) {
 	        			  Iterator<Integer> vl=vertlist.iterator();
-	        			  KData []kData=packData.kData;
-	        			  RData []rData=packData.rData;
+	        			  KData []kdata=packData.kData;
+	        			  RData []rdata=packData.rData;
 	        			  
 	        			  while (vl.hasNext()) {
 	        				  int v=(Integer)vl.next();
@@ -9538,30 +9555,30 @@ public class CommandStrParser {
 	        					  packData.set_aim_default(vertlist);
 	        					  count++;
 	        				  }
-	        				  else if (mode==2) { rData[v].aim=rData[v].curv;count++;} // current
-	        				  else if (mode==3) { rData[v].aim=rData[v].aim+inc*Math.PI;count++;} // TODO: not right adjustment
+	        				  else if (mode==2) { rdata[v].aim=rdata[v].curv;count++;} // current
+	        				  else if (mode==3) { rdata[v].aim=rdata[v].aim+inc*Math.PI;count++;} // TODO: not right adjustment
 	        				  else if (mode==0) {
-	        					  if (aim!=0.0 || ((packData.hes < 0) && kData[v].bdryFlag!=0)) {
-	        						  rData[v].aim=aim*Math.PI;
+	        					  if (aim!=0.0 || ((packData.hes < 0) && kdata[v].bdryFlag!=0)) {
+	        						  rdata[v].aim=aim*Math.PI;
 	        					  	  count++;
 	        					  }
 	        					  else count--;
 	        				  }
 	        				  else if (mode==4) { // based on 'xyzpoint' data
 	        						double angsum=0.0;
-	        						for (int j=0;j<kData[v].num;j++) {
-	        							int n=kData[v].flower[j];
-	        							int m=kData[v].flower[j+1];
+	        						for (int j=0;j<kdata[v].num;j++) {
+	        							int n=kdata[v].flower[j];
+	        							int m=kdata[v].flower[j+1];
 	        							angsum += Math.acos(EuclMath.e_cos_3D(
 	        									packData.xyzpoint[v],packData.xyzpoint[n],
 	        									packData.xyzpoint[m]));
 	        						}
-	        						rData[v].aim=angsum;
+	        						rdata[v].aim=angsum;
 	  	        				  count++;
 	        				  }
-	        				  else if (mode==5 && kData[v].bdryFlag==0) { // towards flat by increment
-	        					  double curv=2.0*Math.PI-rData[v].aim;
-	        					  rData[v].aim += inc*curv;
+	        				  else if (mode==5 && kdata[v].bdryFlag==0) { // towards flat by increment
+	        					  double curv=2.0*Math.PI-rdata[v].aim;
+	        					  rdata[v].aim += inc*curv;
 		        				  count++;
 	        				  }
 	        			  }
@@ -10886,8 +10903,8 @@ public static CallPacket valueExecute(PackData packData,String cmd,Vector<Vector
 	    			Iterator<Integer> nlst=nlink.iterator();
 	    			while(nlst.hasNext()) {
 	    				int v=nlst.next();
-	    				if (packData.rData[v].aim>0) {
-	    					double diff=Math.abs(packData.rData[v].curv-packData.rData[v].aim);
+	    				if (packData.getAim(v)>0) {
+	    					double diff=Math.abs(packData.getCurv(v)-packData.getAim(v));
 	    					angsumerr=(diff>angsumerr) ? diff:angsumerr;
 	    					vert=v;
 	    				}

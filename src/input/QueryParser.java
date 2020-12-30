@@ -377,7 +377,7 @@ public class QueryParser {
 				// angle aim/pi (just one)
 				if (query.startsWith("aim")) {
 					v=NodeLink.grab_one_vert(p,flagSegs);
-					ans.append(Double.toString(p.rData[v].aim/Math.PI));
+					ans.append(Double.toString(p.getAim(v)/Math.PI));
 					gotone=true;
 				}
 				
@@ -385,7 +385,7 @@ public class QueryParser {
 				else if (query.startsWith("anglesum")) {
 					v=NodeLink.grab_one_vert(p,flagSegs);
 					if (v!=0) {
-						ans.append(Double.toString(p.rData[v].curv/Math.PI));
+						ans.append(Double.toString(p.getCurv(v)/Math.PI));
 						if (forMsg)
 							words.append("v"+v+": ");
 						gotone=true;
@@ -887,8 +887,8 @@ public class QueryParser {
 		  	      		v=(Integer)vlist.next();
 		  	      		words.append("\n vert#"+v+", p"+p.packNum+": rad="+p.getActualRadius(v)+
 		  	      				", center=("+p.getCenter(v).x+","+p.getCenter(v).y+")"+
-		  	      				", ang sum="+p.rData[v].curv/Math.PI+
-		  	      				" Pi, aim="+p.rData[v].aim/Math.PI+
+		  	      				", ang sum="+p.getCurv(v)/Math.PI+
+		  	      				" Pi, aim="+p.getAim(v)/Math.PI+
 		  	      				" Pi, boundaryFlag="+p.kData[v].bdryFlag+
 		  	      				", star="+p.kData[v].num+
 		  	      				", mark="+p.kData[v].mark+

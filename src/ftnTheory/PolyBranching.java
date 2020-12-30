@@ -75,7 +75,8 @@ public class PolyBranching extends PackExtender {
 				// make 'rangePack' into branched max packing
 				cpCommand(rangePack,"set_aim -d");
 				for (int j=0;j<branchVerts.size();j++) {
-					rangePack.rData[branchVerts.get(j)].aim += 2*Math.PI;
+					rangePack.setAim(branchVerts.get(j),
+							rangePack.getAim(branchVerts.get(j))+2.0*Math.PI);
 				}
 				cpCommand(rangePack,"geom_to_h");
 				cpCommand(rangePack,"set_rad 5.0 b");
@@ -217,7 +218,7 @@ public class PolyBranching extends PackExtender {
 		for (int v=1;v<=packData.nodeCount;v++) {
 			int i=1;
 			while (packData.kData[v].bdryFlag==0 && 
-					packData.rData[v].aim>(2*i+1)*Math.PI) {
+					packData.getAim(v)>(2*i+1)*Math.PI) {
 				branchVerts.add(v);
 				i++;
 			}

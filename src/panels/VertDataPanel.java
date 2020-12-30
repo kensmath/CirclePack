@@ -291,7 +291,7 @@ public class VertDataPanel extends JPanel implements ActionListener {
 			int v=NodeLink.grab_one_vert(p,vertChoice.getText());
 			double val=aimField.getValue();
 			if (v>0 && v<=p.nodeCount && val>0.0)
-				p.rData[v].aim=val;
+				p.setAim(v,val);
 		}
 		else if (cmd.equals("edge_overlap")) {
 			EdgeSimple edge=EdgeLink.grab_one_edge(p,edgeChoice.getText());

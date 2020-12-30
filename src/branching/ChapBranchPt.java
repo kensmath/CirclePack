@@ -108,7 +108,7 @@ public class ChapBranchPt extends GenBranchPt {
 		myIndex=v;
 		int numSV=p.kData[myIndex].num;
 		
-		if (packData.kData[myIndex].bdryFlag!=0 || packData.kData[myIndex].num<5)
+		if (packData.getBdryFlag(myIndex)!=0 || packData.getNum(myIndex)<5)
 			throw new CombException("singular vert must be interior, degree at least 5");
 
 		// set jump indices: note, these are local petal indices for flower of 'myIndex' 
@@ -145,7 +145,7 @@ public class ChapBranchPt extends GenBranchPt {
 		myType=GenBranchPt.CHAPERONE;
 		myIndex=v;
 		
-		if (packData.kData[myIndex].bdryFlag!=0 || packData.kData[myIndex].num<5)
+		if (packData.getBdryFlag(myIndex)!=0 || packData.getNum(myIndex)<5)
 			throw new CombException("chaperone vert must be interior, degree at least 5");
 
 		// set jump indices: note, these are local flower indices for 'myIndex' but
@@ -275,18 +275,18 @@ public class ChapBranchPt extends GenBranchPt {
 		transData=new int[matchCount+1];
 		for (int i=1;i<=matchCount;i++) { // bdry are +, rest minus
 			int ww=vertexMap.findW(i);
-			if (myPack.kData[i].bdryFlag!=0) 
+			if (myPack.getBdryFlag(i)!=0) 
 				transData[i]=ww; // positive: parent sends info on this vert to local
 			else {
 				transData[i]=-ww; // negative: local sends info on this vert to parent
-				packData.rData[ww].aim=-1.0;
+				packData.setAim(ww,-1.0);
 			}
 		}
 		
 		// 'myIndex' and its petals are packed locally; set aim < 0 in parent
-		packData.rData[myIndex].aim=-1.0;
-		for (int j=0;j<packData.kData[myIndex].num+packData.kData[myIndex].bdryFlag;j++)
-			packData.rData[packData.kData[myIndex].flower[j]].aim=-1.0;
+		packData.setAim(myIndex,-1.0);
+		for (int j=0;j<packData.getNum(myIndex)+packData.getBdryFlag(myIndex);j++)
+			packData.setAim(packData.kData[myIndex].flower[j],-1.0);
 
 		// store as permanent 'origChild' 
 		origChild=myPack;
@@ -297,12 +297,12 @@ public class ChapBranchPt extends GenBranchPt {
 	
 	public void delete() {
 		// reset aims of parent
-		if (packData.kData[myIndex].bdryFlag==0)
-			packData.rData[myIndex].aim=2.0*Math.PI;
-		for (int j=0;j<packData.kData[myIndex].num+packData.kData[myIndex].bdryFlag;j++) {
+		if (packData.getBdryFlag(myIndex)==0)
+			packData.setAim(myIndex,2.0*Math.PI);
+		for (int j=0;j<packData.getNum(myIndex)+packData.getBdryFlag(myIndex);j++) {
 			int k=packData.kData[myIndex].flower[j];
-			if (packData.kData[k].bdryFlag==0)
-				packData.rData[k].aim=2.0*Math.PI;
+			if (packData.getBdryFlag(k)==0)
+				packData.setAim(k,2.0*Math.PI);
 		}
 		
 		// remove poison edges associated with this branch point
@@ -571,7 +571,7 @@ public class ChapBranchPt extends GenBranchPt {
 				case 'a': // new aim
 				{
 					myAim=Double.parseDouble(items.get(0))*Math.PI;
-					myPackData.rData[newBrSpot].aim=myAim;
+					myPackData.setAim(newBrSpot,myAim);
 					myPackData.setRadius(newBrSpot,0.5); // kick-start repacking
 					count++;
 					break;
@@ -802,7 +802,7 @@ public class ChapBranchPt extends GenBranchPt {
 			
 			// have to replace 1 by sister2 in flower of w
 			int dx=origChild.nghb(w,1);
-			if (dx==0 && origChild.kData[w].bdryFlag==0) 
+			if (dx==0 && origChild.getBdryFlag(w)==0) 
 				modifyPack.kData[w].flower[0]=modifyPack.kData[w].flower[modifyPack.kData[w].num]=sister2;
 			else
 				modifyPack.kData[w].flower[dx]=sister2;
@@ -873,7 +873,7 @@ public class ChapBranchPt extends GenBranchPt {
 		}
 		
 		// now reset aim to get branching
-		modifyPack.rData[newBrSpot].aim=myAim;
+		modifyPack.setAim(newBrSpot,myAim);
 		
 		// first face is {1,chap[2],u)
 		modifyPack.firstFace=modifyPack.what_face(1,chap[2],modifyPack.kData[1].flower[(modifyPack.nghb(1,chap[2])+1)%modifyPack.kData[1].num]);
@@ -885,7 +885,7 @@ public class ChapBranchPt extends GenBranchPt {
 		// need to redefine 'borderLink'; first mark the bdry faces
 		int []futil=new int[modifyPack.faceCount+1];
 		for (int v=1;v<=modifyPack.nodeCount;v++) {
-			if (modifyPack.kData[v].bdryFlag!=0) {
+			if (modifyPack.isBdry(v)) {
 				for (int j=0;j<modifyPack.kData[v].num;j++)
 					futil[modifyPack.kData[v].faceFlower[j]]=1;
 			}
@@ -1089,7 +1089,7 @@ public class ChapBranchPt extends GenBranchPt {
 	 */
 	public int setPoisonEdges() {
 		EdgeLink elink=new EdgeLink(packData);
-		if (packData.kData[myIndex].bdryFlag!=0)
+		if (packData.isBdry(myIndex))
 			throw new ParserException("'myIndex' should be interior");
 		int []flower=packData.kData[myIndex].flower;
 		int num=packData.kData[myIndex].num;

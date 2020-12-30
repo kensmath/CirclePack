@@ -30,7 +30,6 @@ public class TriData {
 	// triples of data
 	public int[] vert;   // 'Face.vert' vector (as ordered in packdata 'faces')
 	public double[] radii;      // concrete numbers representing labels
-	public double[] angles;     // angle 
 	
 	// edge data: [i] entry for edge <i,i+1>
 	public double[] invDist;    // inversive distance
@@ -47,11 +46,9 @@ public class TriData {
 			hes=pdcel.p.hes;
 		vert=new int[3];
 		radii=new double[3];
-		angles=new double[3];
 		invDist=new double[3];
 		for (int i=0;i<3;i++) {
 			radii[i]=.05;
-			angles[i]=Math.PI/3.0;
 			invDist[i]=1.0; // default to tangency
 		}
 	}
@@ -59,6 +56,7 @@ public class TriData {
 	public TriData(PackDCEL pdc,int f) {
 		this(pdc);
 		try {
+			face=f;
 			hes=pdcel.p.hes;
 			ArrayList<HalfEdge> eflower=pdcel.faces[f].getEdges();
 			if (eflower.size()!=3)
@@ -66,10 +64,10 @@ public class TriData {
 			for (int j=0;j<3;j++) {
 				HalfEdge he=eflower.get(j);
 				int v=he.origin.vertIndx;
+				vert[j]=v;
 				radii[j]=pdcel.p.getRadius(v);
 				invDist[j]=he.getInvDist();
 			}
-			compAllAngles();
 		} catch(Exception ex) {
 			throw new DataException("error building 'TriData' for face f="+f);
 		}
@@ -94,14 +92,6 @@ public class TriData {
 	
 	public double getRadius(int j) {
 		return radii[j];
-	}
-	
-	public double getAngle(int j) {
-		return angles[j];
-	}
-	
-	public void setAngle(int j,double ang) {
-		angles[j]=ang;
 	}
 	
 	public double getInvDist(int j) {
@@ -144,15 +134,6 @@ public class TriData {
 	public double compOneAngle(int j) {
 		return CommonMath.get_face_angle(radii[j],radii[(j+1)%3],radii[(j+2)%3],
 				invDist[j],invDist[(j+1)%3],invDist[(j+2)%3],hes);
-	}
-
-	/**
-	 * Compute/store angles at all vertices based on current data
-	 */
-	public void compAllAngles() {
-		for (int j=0;j<3;j++) {
-			angles[j]=compOneAngle(j,radii[j]);
-		}
 	}
 
 }

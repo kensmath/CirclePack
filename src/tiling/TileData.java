@@ -399,7 +399,7 @@ public class TileData {
 			thePack.kData[nextgap].mark=nextgap; // marked with vert index
 			thePack.rData[nextgap]=new RData();
 			thePack.setCenter(nextgap,cent.divide((double)(tile.vertCount)));
-			thePack.rData[nextgap].aim=Math.PI*2.0;
+			thePack.setAim(nextgap,Math.PI*2.0);
 			thePack.rData[nextgap].rad=rad/((double)tile.vertCount);
 		} // end of 'while' for tiles
 		

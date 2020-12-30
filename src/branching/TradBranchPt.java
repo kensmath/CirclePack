@@ -51,7 +51,7 @@ public class TradBranchPt extends GenBranchPt {
 		
 		// build from a seed
 		PackData myPack=PackCreation.seed(packData.kData[myIndex].num, packData.hes);
-		myPack.rData[1].aim=myAim;
+		myPack.setAim(1,myAim);
 	
 		// set up vertexMap, 'bdryLink', transData, etc.
 		matchCount=packData.kData[myIndex].num+1; // petals plus center
@@ -69,7 +69,7 @@ public class TradBranchPt extends GenBranchPt {
 		if (packData.kData[myIndex].bdryFlag==0) // close up? 
 			bdryLink.add(bdryLink.get(0)); 
 		
-		packData.rData[myIndex].aim=-1.0; // 1 is packed locally 
+		packData.setAim(myIndex,-1.0); // 1 is packed locally 
 		
 		setPoisonEdges();
 		return myPack;
@@ -79,7 +79,7 @@ public class TradBranchPt extends GenBranchPt {
 		
 		// reset parent aim at 'myIndex'
 		if (packData.kData[myIndex].bdryFlag==0)
-			packData.rData[myIndex].aim=2.0*Math.PI;
+			packData.setAim(myIndex,2.0*Math.PI);
 		
 		// remove poison edges
 		packData.poisonEdges.removeUnordered(parentPoison);
@@ -101,7 +101,7 @@ public class TradBranchPt extends GenBranchPt {
 			uP.rtnFlag +=myPackData.h_riffle_vert(1,myAim);
 		else if (myPackData.hes==0)
 			uP.rtnFlag +=myPackData.e_riffle_vert(1,myAim);
-		uP.value = Math.abs(myPackData.rData[1].curv-myAim);
+		uP.value = Math.abs(myPackData.getCurv(1)-myAim);
 		packData.setRadius(myIndex,myPackData.getRadius(1));
 		return uP;
 	}
@@ -160,7 +160,7 @@ public class TradBranchPt extends GenBranchPt {
 	 */
 	public String getParameters() {
 		return new String("Traditional branch point, aim "+
-				myPackData.rData[1].aim/Math.PI+"*Pi at vertex "+vertexMap.findW(1));
+				myPackData.getAim(1)/Math.PI+"*Pi at vertex "+vertexMap.findW(1));
 	}
 	
 	
@@ -190,7 +190,7 @@ public class TradBranchPt extends GenBranchPt {
 		
 		// myHolonomy is just rotation by angle sum in this case
 		myPackData.fillcurves();
-		myHolonomy=Mobius.rotation(myPackData.rData[1].curv/Math.PI);
+		myHolonomy=Mobius.rotation(myPackData.getCurv(1)/Math.PI);
 		
 		return Mobius.frobeniusNorm(myHolonomy);
 	}

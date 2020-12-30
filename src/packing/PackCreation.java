@@ -164,8 +164,8 @@ public class PackCreation {
 			p.kData[i].utilFlag=p.kData[i].mark=0;
 			p.kData[i].schwarzian=null;
 			p.setRadius(i,sphrad);
-			p.rData[i].curv=Math.PI;
-			p.rData[i].aim=Math.PI;
+			p.setCurv(i,Math.PI);
+			p.setAim(i,Math.PI);
 		}
 		
 		// set centers, 1 at origin
@@ -443,7 +443,7 @@ public class PackCreation {
 		if (heS>0) p.geom_to_s();
 		if (heS<0) p.geom_to_h();
 			
-		p.rData[1].curv=2*Math.PI;
+		p.setCurv(1,2*Math.PI);
 		p.set_plotFlags();
 		p.setName("Seed "+n);
 
@@ -1761,11 +1761,11 @@ public class PackCreation {
 		growWheel.set_aim_default();
 		for (int v=1;v<=growWheel.nodeCount;v++) {
 			if (growWheel.kData[v].bdryFlag!=0)
-				growWheel.rData[v].aim=1.0*Math.PI;
+				growWheel.setAim(v,1.0*Math.PI);
 		}
-		growWheel.rData[1].aim = .5*Math.PI; 
-		growWheel.rData[3].aim = Math.atan(.5); // 0.463647609 
-		growWheel.rData[2].aim = .5*Math.PI-growWheel.rData[3].aim; // 0.463647609, 1.107148717794
+		growWheel.setAim(1,.5*Math.PI); 
+		growWheel.setAim(3,Math.atan(.5)); // 0.463647609 
+		growWheel.setAim(2,.5*Math.PI-growWheel.getAim(3)); // 0.463647609, 1.107148717794
 
 		// repack, layout
 		double crit=GenBranching.LAYOUT_THRESHOLD;
@@ -1892,12 +1892,14 @@ public class PackCreation {
 		growChair.set_aim_default();
 		for (int v=1;v<=growChair.nodeCount;v++) {
 			if (growChair.kData[v].bdryFlag!=0)
-				growChair.rData[v].aim=1.0*Math.PI;
+				growChair.setAim(v,1.0*Math.PI);
 		}
-		growChair.rData[1].aim = 1.5*Math.PI;
-		growChair.rData[2].aim = growChair.rData[3].aim=0.5*Math.PI;
-		growChair.rData[5].aim = growChair.rData[7].aim=0.5*Math.PI;
-		growChair.rData[8].aim = 0.5*Math.PI;
+		growChair.setAim(1,1.5*Math.PI);
+		growChair.setAim(2,0.5*Math.PI);
+		growChair.setAim(3,0.5*Math.PI);
+		growChair.setAim(5,0.5*Math.PI);
+		growChair.setAim(7,0.5*Math.PI);
+		growChair.setAim(8,0.5*Math.PI);
 		
 		// repack, layout
 		double crit=GenBranching.LAYOUT_THRESHOLD;
@@ -2096,9 +2098,12 @@ public class PackCreation {
 		fusionA.set_aim_default();
 		for (int v=1;v<=fusionA.nodeCount;v++) {
 			if (fusionA.kData[v].bdryFlag!=0)
-				fusionA.rData[v].aim=1.0*Math.PI;
+				fusionA.setAim(v,1.0*Math.PI);
 		}
-		fusionA.rData[1].aim=fusionA.rData[2].aim=fusionA.rData[3].aim=fusionA.rData[4].aim=0.5*Math.PI;
+		fusionA.setAim(1,0.5*Math.PI);
+		fusionA.setAim(2,0.5*Math.PI);
+		fusionA.setAim(3,0.5*Math.PI);
+		fusionA.setAim(4,0.5*Math.PI);
 				
 		// repack, layout
 		double crit=GenBranching.LAYOUT_THRESHOLD;
@@ -2224,10 +2229,10 @@ public class PackCreation {
 		sgPack.set_aim_default();
 		for (int v=1;v<=sgPack.nodeCount;v++) {
 			if (sgPack.kData[v].bdryFlag!=0)
-				sgPack.rData[v].aim=1.0*Math.PI;
+				sgPack.setAim(v,1.0*Math.PI);
 		}
 		for (int j=1;j<=4;j++)
-			sgPack.rData[j].aim = 0.5*Math.PI;
+			sgPack.setAim(j,0.5*Math.PI);
 
 		// repack, layout
 		double crit=GenBranching.LAYOUT_THRESHOLD;
@@ -2304,10 +2309,10 @@ public class PackCreation {
 		pent.set_aim_default();
 		for (int v=1;v<=pent.nodeCount;v++) {
 			if (pent.kData[v].bdryFlag!=0)
-				pent.rData[v].aim=Math.PI;
+				pent.setAim(v,Math.PI);
 		}
 		for (int v=1;v<=5;v++)
-			pent.rData[v].aim=3.0*Math.PI/5.0;
+			pent.setAim(v,3.0*Math.PI/5.0);
 		pent.repack_call(1000);
 
 		try {
@@ -2360,10 +2365,10 @@ public class PackCreation {
 		for (int v=1;v<=heap.nodeCount;v++) {
 			heap.setRadius(v,0.1);
 			if (heap.kData[v].bdryFlag!=0)
-				heap.rData[v].aim=Math.PI;
+				heap.setAim(v,Math.PI);
 		}
 		for (int v=2;v<=5;v++)
-			heap.rData[v].aim=Math.PI/2.0;
+			heap.setAim(v,Math.PI/2.0);
 		heap.repack_call(1000);
 
 		try {
@@ -2415,11 +2420,17 @@ public class PackCreation {
 		triPent.set_aim_default();
 		for (int v=1;v<=triPent.nodeCount;v++) {
 			if (triPent.kData[v].bdryFlag!=0)
-				triPent.rData[v].aim=Math.PI;
+				triPent.setAim(v,Math.PI);
 		}
-		triPent.rData[2].aim=triPent.rData[3].aim=triPent.rData[5].aim=3.0*Math.PI/5.0;
-		triPent.rData[6].aim=triPent.rData[8].aim=triPent.rData[9].aim=3.0*Math.PI/5.0;
-		triPent.rData[1].aim=triPent.rData[4].aim=triPent.rData[7].aim=17.0*Math.PI/15.0;
+		triPent.setAim(2, 3.0*Math.PI/5.0);
+		triPent.setAim(3, 3.0*Math.PI/5.0);
+		triPent.setAim(5, 3.0*Math.PI/5.0);
+		triPent.setAim(6, 3.0*Math.PI/5.0);
+		triPent.setAim(8, 3.0*Math.PI/5.0);
+		triPent.setAim(9, 3.0*Math.PI/5.0);
+		triPent.setAim(1, 17.0*Math.PI/15.0);
+		triPent.setAim(4, 17.0*Math.PI/15.0);
+		triPent.setAim(7, 17.0*Math.PI/15.0);
 		
 		triPent.repack_call(1000);
 
@@ -2466,10 +2477,10 @@ public class PackCreation {
 		quadPent.set_aim_default();
 		for (int v=1;v<=quadPent.nodeCount;v++) {
 			if (quadPent.kData[v].bdryFlag!=0)
-				quadPent.rData[v].aim=Math.PI;
+				quadPent.setAim(v,Math.PI);
 		}
 		for (int v=1;v<=8;v++)
-			quadPent.rData[v].aim=0.75*Math.PI;
+			quadPent.setAim(v,0.75*Math.PI);
 		
 		quadPent.repack_call(1000);
 

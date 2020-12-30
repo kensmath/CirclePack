@@ -599,9 +599,9 @@ public class FracBranching extends PackExtender {
 		packData.fillcurves();
 		msg("FracBranching data: \n" +
 				"  '(v,w/pi)' = ("+
-				branchVert[0][0]+","+String.format("%.6e",(packData.rData[branchVert[0][0]].curv-pi2)/Math.PI)+"); ("+
-				branchVert[0][1]+","+String.format("%.6e",(packData.rData[branchVert[0][1]].curv-pi2)/Math.PI)+"); ("+
-				branchVert[0][2]+","+String.format("%.6e",(packData.rData[branchVert[0][2]].curv-pi2)/Math.PI)+")\n");
+				branchVert[0][0]+","+String.format("%.6e",(packData.getCurv(branchVert[0][0])-pi2)/Math.PI)+"); ("+
+				branchVert[0][1]+","+String.format("%.6e",(packData.getCurv(branchVert[0][1])-pi2)/Math.PI)+"); ("+
+				branchVert[0][2]+","+String.format("%.6e",(packData.getCurv(branchVert[0][2])-pi2)/Math.PI)+")\n");
 		msg("  '(v,angle/pi)' = ("+
 				branchVert[0][0]+","+String.format("%.6e",triAngle(0,0)/Math.PI)+"); ("+
 				branchVert[0][1]+","+String.format("%.6e",triAngle(0,1)/Math.PI)+"); ("+
@@ -1247,9 +1247,12 @@ public class FracBranching extends PackExtender {
 			throw new ParserException("usage: weight <w1,w2>");
 		}
 		packData.set_aim_default();
-		packData.rData[branchVert[0][0]].aim += x1*Math.PI;
-		packData.rData[branchVert[0][1]].aim += x2*Math.PI;
-		packData.rData[branchVert[0][2]].aim += excessBranching-(x1+x2)*Math.PI; // remainder
+		packData.setAim(branchVert[0][0],
+				packData.getAim(branchVert[0][0])+x1*Math.PI);
+		packData.setAim(branchVert[0][1],
+				packData.getAim(branchVert[0][1])+x2*Math.PI);
+		packData.setAim(branchVert[0][2],
+				packData.getAim(branchVert[0][2])+excessBranching-(x1+x2)*Math.PI); // remainder
 		return 1;
 	}
 	//End cmd.starts
@@ -2063,8 +2066,8 @@ public class FracBranching extends PackExtender {
 				msg("Lowest Error = "+lowest_err+" after "+total+" trials");
 				msg("["+v0+" "+best_v1+" "+best_v2+"] inv dist "+best_invV+" "+v0+" "+best_v2);
 				msg("["+u0+" "+best_u1+" "+best_u2+"] inv dist "+best_invU+" "+u0+" "+best_u2);
-				msg("["+packData.rData[v0].aim+" "+packData.rData[best_v1].aim+" "+packData.rData[best_v2].aim+"]");
-				msg("["+packData.rData[u0].aim+" "+packData.rData[best_u1].aim+" "+packData.rData[best_u2].aim+"]");
+				msg("["+packData.getAim(v0)+" "+packData.getAim(best_v1)+" "+packData.getAim(best_v2)+"]");
+				msg("["+packData.getAim(u0)+" "+packData.getAim(best_u1)+" "+packData.getAim(best_u2)+"]");
 			}//end for i
 		}//end bdry check
 		msg("DONE: expDWfracfind "+v0+" "+u0+" "+n+" "+type);
@@ -2157,8 +2160,8 @@ public class FracBranching extends PackExtender {
 					msg("Lowest Error = "+lowest_err+" after "+total+" trials");
 					msg("["+v0+" "+v1+" "+v2+"] inv dist "+best_invV+" "+v0+" "+best_v2);
 					msg("["+u0+" "+u1+" "+u2+"] inv dist "+best_invU+" "+u0+" "+best_u2);
-					msg("["+packData.rData[v0].aim+" "+packData.rData[best_v1].aim+" "+packData.rData[best_v2].aim+"]");
-					msg("["+packData.rData[u0].aim+" "+packData.rData[best_u1].aim+" "+packData.rData[best_u2].aim+"]");
+					msg("["+packData.getAim(v0)+" "+packData.getAim(best_v1)+" "+packData.getAim(best_v2)+"]");
+					msg("["+packData.getAim(u0)+" "+packData.getAim(best_u1)+" "+packData.getAim(best_u2)+"]");
 				}//end for j
 			}//end if bdryFlag check
 		}//end for i
@@ -3740,7 +3743,7 @@ public class FracBranching extends PackExtender {
 		}
 		else {
 			double sum =0.0;
-			sum = Math.PI-p.rData[s].curv; //first turning angle
+			sum = Math.PI-p.getCurv(s); //first turning angle
 			int i = 0;
 			int v = p.kData[s].flower[i];
 			while (p.kData[v].bdryFlag<1 & i<p.nodeCount+1) { //finds next border vertex
@@ -3750,7 +3753,7 @@ public class FracBranching extends PackExtender {
 			n = v;
 			while (v!=s) { //adds turning angle and finds next border vertex
 				n=v;
-				sum += Math.PI-p.rData[n].curv;
+				sum += Math.PI-p.getCurv(n);
 				i = 0;
 				v = p.kData[n].flower[i];
 				while (p.kData[v].bdryFlag<1 & v!=n & i<p.nodeCount+1) {
@@ -4086,7 +4089,7 @@ public class FracBranching extends PackExtender {
 			}
 		}
 	
-		return Math.abs(accum - spt.theta - spt.pd.rData[v].aim);
+		return Math.abs(accum - spt.theta - spt.pd.getAim(v));
 	}
 	
 	/**
@@ -4200,7 +4203,7 @@ public class FracBranching extends PackExtender {
 			}
 		}
 		}
-		return Math.abs(accum-spt.theta-packData.rData[k].aim);
+		return Math.abs(accum-spt.theta-packData.getAim(k));
 	}
 	
 	/**
@@ -4564,7 +4567,7 @@ public class FracBranching extends PackExtender {
       int aimNum = 0;
       int []inDex =new int[packData.nodeCount+1];
       for (int j=1;j<=packData.nodeCount;j++) {
-    	  if (packData.rData[j].aim>0) {
+    	  if (packData.getAim(j)>0) {
     		  inDex[aimNum]=j;
     		  aimNum++;
     	  }
@@ -4599,7 +4602,7 @@ public class FracBranching extends PackExtender {
 			  CranePoint spt=cps.next();
 			  v=spt.vert;
 			  int N = passes; //TODO adjust		  
-			  genRadCalc(v, packData.getRadius(v), packData.rData[v].aim, N, uP);
+			  genRadCalc(v, packData.getRadius(v), packData.getAim(v), N, uP);
 			  spt.radius=uP.value;
 			  packData.setRadius(v,spt.radius);//prev null
 
@@ -4614,15 +4617,15 @@ public class FracBranching extends PackExtender {
     		  
     		  if (!genAngleSum(v,r,uP)) 
     			  return -1.0;
-    		  packData.rData[v].curv=uP.value;
-    		  verr=packData.rData[v].curv-packData.rData[v].aim;
+    		  packData.setCurv(v,uP.value);
+    		  verr=packData.getCurv(v)-packData.getAim(v);
     		  
     		  if (Math.abs(verr)>cut && vertStatus[v]!=2) {
-    			  if (genRadCalc(v,packData.getRadius(v),packData.rData[v].aim,passes,uP)) //TODO adjust N {
+    			  if (genRadCalc(v,packData.getRadius(v),packData.getAim(v),passes,uP)) //TODO adjust N {
     				  packData.setRadius(v,uP.value);	//records new radius
     			  if (!genAngleSum(v,uP.value,uP)) 
     					  return -1.0;
-    			  packData.rData[v].curv=uP.value;
+    			  packData.setCurv(v,uP.value);
     		  }
           }
     	  
@@ -4637,7 +4640,7 @@ public class FracBranching extends PackExtender {
       while (cps.hasNext()) {
     	  CranePoint spt=cps.next();
     	  v=spt.vert;
-    	  accum += Math.abs(packData.rData[v].curv-packData.rData[v].aim);
+    	  accum += Math.abs(packData.getCurv(v)-packData.getAim(v));
       }
       return accum;
     } 
@@ -4655,7 +4658,7 @@ public class FracBranching extends PackExtender {
         int aimNum = 0;
         int []inDex =new int[packData.nodeCount+1];
         for (int j=1;j<=packData.nodeCount;j++) {
-      	  if (packData.rData[j].aim>0) {
+      	  if (packData.getAim(j)>0) {
       		  inDex[aimNum]=j;
       		  aimNum++;
       	  }
@@ -4669,8 +4672,8 @@ public class FracBranching extends PackExtender {
       	  if (vertStatus[v]==2 && (spt=isSP(v))!=null) { 
       		  if (!genAngleSum(v,packData.getRadius(v),uP)) 
       			  return -1.0;
-      		  packData.rData[v].curv=uP.value;
-      		  err=packData.rData[v].curv-packData.rData[v].aim;
+      		  packData.setCurv(v,uP.value);
+      		  err=packData.getCurv(v)-packData.getAim(v);
       		  // store angs for use by neighbors
       		  spt.radius=packData.getRadius(v);
       		  SPuF(spt,uP,1);
@@ -4685,8 +4688,8 @@ public class FracBranching extends PackExtender {
         	  if (vertStatus[v]!=2) {
         		  if (!genAngleSum(v,packData.getRadius(v),uP)) 
           			  return -1.0;
-          		  packData.rData[v].curv=uP.value;
-          		  err=packData.rData[v].curv-packData.rData[v].aim;
+          		  packData.setCurv(v,uP.value);
+          		  err=packData.getCurv(v)-packData.getAim(v);
           		  accum += (err<0) ? (-err) : err;
         	  }
         }
@@ -5147,7 +5150,7 @@ public class FracBranching extends PackExtender {
 					if (packData.kData[branchVert[i][j]].bdryFlag==0) {
 						//skip boundary circles
 						ang =triAngle(i,j);
-						packData.rData[branchVert[i][j]].aim=pi2+2.0*ang;
+						packData.setAim(branchVert[i][j],pi2+2.0*ang);
 					}
 				}
 			}
@@ -5192,7 +5195,7 @@ public class FracBranching extends PackExtender {
 						packData.getRadius(branchVert[0][(j-1)%4]),//TODO inv rotates!!
 						packData.getRadius(branchVert[0][(j+1)%4]),1.0,1.0,inv,uP);
 				ang =Math.acos(uP.value);
-				packData.rData[branchVert[0][j]].aim=pi2+2.0*ang;
+				packData.setAim(branchVert[0][j],pi2+2.0*ang);
 			}
 			//branchVert[0] and [2]
 			for (int j=0;j<4;j=j+2) {
@@ -5200,7 +5203,7 @@ public class FracBranching extends PackExtender {
 						packData.getRadius(branchVert[0][(j+2)%4]),
 						packData.getRadius(branchVert[0][(j*2+3)%4]),inv,1.0,1.0,uP);
 				ang =Math.acos(uP.value);
-				packData.rData[branchVert[0][j]].aim=pi2+2.0*ang;
+				packData.setAim(branchVert[0][j],pi2+2.0*ang);
 			}
 			try {
 				cpCommand(packData,"repack -o;layout");
@@ -5227,7 +5230,7 @@ public class FracBranching extends PackExtender {
 		for (int i=0;i<branchVert.length;i++) {
 			for (int j=0;j<3;j++) {
 				if (packData.kData[branchVert[i][j]].bdryFlag==0) {
-					w=packData.rData[branchVert[i][j]].aim-pi2;
+					w=packData.getAim(branchVert[i][j])-pi2;
 					diff=2.0*triAngle(i, j)-w;
 					accum += diff*diff;
 				}

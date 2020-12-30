@@ -149,7 +149,7 @@ public class HypPacker extends RePacker {
 
 		// set up parameters
 
-		ttoler = 3 * aimnum * TOLER; // adjust tolerance
+		ttoler = 3 * aimnum * RP_TOLER; // adjust tolerance
 		key = 1; // initial superstep type
 		m = 1; // Type 1 multiplier
 		sct = 1; // Type 1 count
@@ -534,7 +534,7 @@ public class HypPacker extends RePacker {
       int aimNum = 0;
       int []inDex =new int[pd.nodeCount+1];
       for (int j=1;j<=pd.nodeCount;j++) {
-    	  if (pd.rData[j].aim>0) {
+    	  if (pd.getAim(j)>0) {
     		  inDex[aimNum]=j;
     		  aimNum++;
     	  }
@@ -545,13 +545,13 @@ public class HypPacker extends RePacker {
       double accum=0.0;
       for (int j=0;j<aimNum;j++) {
     	  v=inDex[j];
-    	  err=pd.rData[v].curv-pd.rData[v].aim;
+    	  err=pd.getCurv(v)-pd.getAim(v);
               accum += (err<0) ? (-err) : err;
       }
       double recip=.333333/aimNum;
       double cut=accum*recip;
 
-      while ((cut > TOLER && count<passes)) {
+      while ((cut > RP_TOLER && count<passes)) {
     	  for (int j=0;j<aimNum;j++) {
     		  v=inDex[j];
     		  r=pd.rData[v].rad;
@@ -559,21 +559,21 @@ public class HypPacker extends RePacker {
     		  uP=new UtilPacket();
     		  if (!pd.h_anglesum_overlap(v,r,uP)) 
     			  return 0;
-    		  pd.rData[v].curv=uP.value;
-    		  verr=pd.rData[v].curv-pd.rData[v].aim;
+    		  pd.setCurv(v,uP.value);
+    		  verr=pd.getCurv(v)-pd.getAim(v);
     		  if (Math.abs(verr)>cut) {
-    			  if (pd.h_radcalc(v,pd.rData[v].rad,pd.rData[v].aim,5,uP)) {
+    			  if (pd.h_radcalc(v,pd.rData[v].rad,pd.getAim(v),5,uP)) {
     				  pd.rData[v].rad=uP.value;	
     				  if (!pd.h_anglesum_overlap(v,r,uP)) 
     					  return 0;
-    				  pd.rData[v].curv=uP.value;
+    				  pd.setCurv(v,uP.value);
     			  }
     		  }
           }
           accum=0;
           for (int j=0;j<aimNum;j++) {
         	  v=inDex[j];
-        	  err=pd.rData[v].curv-pd.rData[v].aim;
+        	  err=pd.getCurv(v)-pd.getAim(v);
         	  accum += (err<0) ? (-err) : err;
           }
           cut=accum*recip;
@@ -639,7 +639,7 @@ public class HypPacker extends RePacker {
         int aimNum = 0;
         int []inDex =new int[p.nodeCount+1];
         for (int k=1;k<=p.nodeCount;k++) {
-      	  if (p.rData[k].aim>0) {
+      	  if (p.getAim(k)>0) {
       		  inDex[aimNum]=k;
       		  aimNum++;
       	  }
@@ -673,7 +673,7 @@ public class HypPacker extends RePacker {
         	
         // Perron until we have a super/subpacking (or pass out)
         int safety=0;
-        while (safety<passes && discrepency>TOLER) {
+        while (safety<passes && discrepency>RP_TOLER) {
         	safety++;
         	discrepency=0.0;
             for (int j=0;j<aimNum;j++) {
@@ -694,7 +694,7 @@ public class HypPacker extends RePacker {
     			
     			// sub/superpacking at v? want to adjust radius
     			double diff2=dirSign*(rdata[v].curv-rdata[v].aim);
-    			if (diff2>TOLER) { 
+    			if (diff2>RP_TOLER) { 
     				
     				// get current anglesum at v
     				fbest=0.0;
@@ -737,7 +737,7 @@ public class HypPacker extends RePacker {
     			
         			// get squared discrepency
         			diff2=dirSign*(rdata[v].curv-rdata[v].aim);
-        			if (diff2<-(100*TOLER)) {
+        			if (diff2<-(100*RP_TOLER)) {
         				throw new PackingException("uniform neighbor computation overshoots at v="+v);
         			}
     			}
@@ -799,7 +799,7 @@ public class HypPacker extends RePacker {
         double cut=sqError*recip;
         
         safety=0;
-        while (both && (cut > TOLER) && safety<passes) {
+        while (both && (cut > RP_TOLER) && safety<passes) {
         	safety++;
         	accum=0.0;
         	discrepency=0.0;
@@ -823,7 +823,7 @@ public class HypPacker extends RePacker {
         		double diff2=dirSign*(rdata[v].curv-rdata[v].aim);
 
                 // Change radii in one direction only: down if direction>0 or else up: 
-        		if (diff2<-(100*TOLER)) {
+        		if (diff2<-(100*RP_TOLER)) {
         			
         			// set up for uniform neighbor model
     				double denom = 1.0 / (2.0 * ((double)kdata[v].num));
@@ -858,7 +858,7 @@ public class HypPacker extends RePacker {
         		// update diff2 and gather data
     			diff2=dirSign*(rdata[v].curv-rdata[v].aim);
     			double sqdiff=diff2*diff2;
-    			if (diff2<-(100*TOLER)) {
+    			if (diff2<-(100*RP_TOLER)) {
     				discrepency+=sqdiff;
     			}
         		accum += sqdiff;

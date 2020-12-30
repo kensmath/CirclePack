@@ -465,11 +465,11 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 			  return 1;
 		  }
 		  if (code==dataCode.VERT_CURV) {
-			  fp.write(p.rData[v].curv+" ");
+			  fp.write(p.getCurv(v)+" ");
 			  return 1;
 		  }
 		  if (code==dataCode.VERT_AIM) {
-		    fp.write(p.rData[v].aim+" ");
+		    fp.write(p.getAim(v)+" ");
 		    return 1;
 		  }
 		  if (code==dataCode.VERT_DEG) {

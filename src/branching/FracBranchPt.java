@@ -59,19 +59,19 @@ public class FracBranchPt extends GenBranchPt {
 		for (int i=0;i<3;i++)
 			vert[i]=face.vert[i];
 		int v=vert[0];
-		if (packData.kData[v].bdryFlag!=0) {
+		if (packData.isBdry(v)) {
 			int hold=vert[0];
 			vert[0]=vert[1];
 			vert[1]=vert[2];
 			vert[2]=hold;
 			v=vert[0];
-			if (packData.kData[v].bdryFlag!=0) {
+			if (packData.isBdry(v)) {
 				hold=vert[0];
 				vert[0]=vert[1];
 				vert[1]=vert[2];
 				vert[2]=hold;
 				v=vert[0];
-				if (packData.kData[v].bdryFlag!=0)
+				if (packData.isBdry(v))
 					throw new CombException("face "+myIndex+" has no interior vertex");
 			}
 		}
@@ -171,7 +171,7 @@ public class FracBranchPt extends GenBranchPt {
 		
 		// Verts 1,2,3 are packed here; set aim < 0 in parent
 		for (int vv=1;vv<=3;vv++)
-			packData.rData[vertexMap.findW(vv)].aim=-1.0;
+			packData.setAim(vertexMap.findW(vv),-1.0);
 		
 		// 'rData' points to corresponding parent 'rData'
 		for (int vv=1;vv<=matchCount;vv++)
@@ -186,8 +186,8 @@ public class FracBranchPt extends GenBranchPt {
 		// reset aims in parent
 		for (int vv=1;vv<=3;vv++) {
 			int k=vertexMap.findW(vv);
-			if (packData.kData[k].bdryFlag==0)
-				packData.rData[k].aim=2.0*Math.PI;
+			if (!packData.isBdry(k))
+				packData.setAim(k,2.0*Math.PI);
 		}
 		
 		// remove poison edges
@@ -227,7 +227,7 @@ public class FracBranchPt extends GenBranchPt {
 					EuclMath.e_cos_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],
 							cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3],inuP);
 				}
-				myPackData.rData[i+1].aim=pi2+2.0*Math.acos(inuP.value);
+				myPackData.setAim(i+1,pi2+2.0*Math.acos(inuP.value));
 			}
 			
 			// repack
@@ -253,7 +253,7 @@ public class FracBranchPt extends GenBranchPt {
 					EuclMath.e_cos_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],
 							cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3],inuP);
 				}
-				double diff=2.0*Math.acos(inuP.value)-(myPackData.rData[i+1].aim-pi2);
+				double diff=2.0*Math.acos(inuP.value)-(myPackData.getAim(i+1)-pi2);
 				accum +=diff*diff;
 			}
 			offBy=Math.sqrt(accum);
@@ -326,7 +326,7 @@ public class FracBranchPt extends GenBranchPt {
 				EuclMath.e_cos_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],
 						cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3],inuP);
 			}
-			double diff=2.0*Math.acos(inuP.value)-(myPackData.rData[i+1].aim-pi2);
+			double diff=2.0*Math.acos(inuP.value)-(myPackData.getAim(i+1)-pi2);
 			accum +=diff*diff;
 		}
 		return Math.sqrt(accum);
