@@ -495,7 +495,7 @@ public class d_EuclPacker extends RePacker {
     public static int polyPack(PackData p,NodeLink crns,boolean okayC) {
     	int n=crns.size();
     	for (int i=0;i<n;i++) {
-    		if (p.kData[crns.get(i)].bdryFlag==0)
+    		if (!p.isBdry(crns.get(i)))
     			throw new DataException("corners must be bdry vertices");
     	}
     	int v=crns.get(1); // last 

@@ -106,7 +106,7 @@ public class ChapBranchPt extends GenBranchPt {
 		super(p,bID,(FaceLink)null,aim);
 		myType=GenBranchPt.CHAPERONE;
 		myIndex=v;
-		int numSV=p.kData[myIndex].num;
+		int numSV=p.getNum(myIndex);
 		
 		if (packData.getBdryFlag(myIndex)!=0 || packData.getNum(myIndex)<5)
 			throw new CombException("singular vert must be interior, degree at least 5");
@@ -153,7 +153,7 @@ public class ChapBranchPt extends GenBranchPt {
 		jumpIndx=new int[3];
 		jumpIndx[1]=p.nghb(myIndex,w1);
 		jumpIndx[2]=p.nghb(myIndex,w2);
-		int numSV=p.kData[myIndex].num;
+		int numSV=p.getNum(myIndex);
 		jumpCircle=new int[3];
 		jumpCircle[1]=p.kData[myIndex].flower[jumpIndx[1]];
 		jumpCircle[2]=p.kData[myIndex].flower[jumpIndx[2]];
@@ -196,7 +196,7 @@ public class ChapBranchPt extends GenBranchPt {
 		
 		// identify island containing branch circle
 		NodeLink petals=new NodeLink(packData);
-		for (int j=0;j<packData.kData[myIndex].num;j++)
+		for (int j=0;j<packData.getNum(myIndex);j++)
 			petals.add(packData.kData[myIndex].flower[j]);
 		bdryLink=PackData.islandSurround(packData,petals);
 		if (bdryLink==null)
@@ -522,7 +522,7 @@ public class ChapBranchPt extends GenBranchPt {
 		jumpCircle=new int[3];
 		jumpCircle[1]=packData.kData[myIndex].flower[jumpIndx[1]];
 		jumpCircle[2]=packData.kData[myIndex].flower[jumpIndx[2]];
-		int numSV=packData.kData[myIndex].num;
+		int numSV=packData.getNum(myIndex);
 		preJump=new int[3];
 		preJump[1]=packData.kData[myIndex].flower[(jumpIndx[1]-1+numSV)%numSV];
 		preJump[2]=packData.kData[myIndex].flower[(jumpIndx[2]-1+numSV)%numSV];
@@ -579,7 +579,7 @@ public class ChapBranchPt extends GenBranchPt {
 				case 'j': // jump petals (as vertex indices from parent)
 				{
 					jumpIndx=new int[3]; // jumpIndx[0] empty
-					int numV=origChild.kData[1].num;
+					int numV=origChild.getNum(1);
 					// get local vertices for jumps, store
 					int locV=vertexMap.findV(Integer.parseInt(items.get(0)));
 					jumpIndx[1]=origChild.nghb(1,locV);
@@ -650,7 +650,7 @@ public class ChapBranchPt extends GenBranchPt {
 			throw new DataException("'chaperon' usage: 2 overlaps in [0,1]");
 		
 		// restriction: if jumps are only 1 circle apart (only one circle on sister2)
-		int numV=origChild.kData[1].num;
+		int numV=origChild.getNum(1);
 		int jdist=(jumpIndx[2]-jumpIndx[1]+numV)%numV;
 		if (jdist==1) {
 			
@@ -698,7 +698,7 @@ public class ChapBranchPt extends GenBranchPt {
 		
 		// Create the new packing starting with the original cutout patch
 		PackData modifyPack=origChild.copyPackTo();
-		int numV=modifyPack.kData[1].num;
+		int numV=modifyPack.getNum(1);
 		
   		// DebugHelp.debugPackWrite(myPackData,"ChapChild.p");
 		modifyPack.alloc_pack_space(modifyPack.nodeCount+5,true);
@@ -803,7 +803,7 @@ public class ChapBranchPt extends GenBranchPt {
 			// have to replace 1 by sister2 in flower of w
 			int dx=origChild.nghb(w,1);
 			if (dx==0 && origChild.getBdryFlag(w)==0) 
-				modifyPack.kData[w].flower[0]=modifyPack.kData[w].flower[modifyPack.kData[w].num]=sister2;
+				modifyPack.kData[w].flower[0]=modifyPack.kData[w].flower[modifyPack.getNum(w)]=sister2;
 			else
 				modifyPack.kData[w].flower[dx]=sister2;
 			
@@ -830,11 +830,11 @@ public class ChapBranchPt extends GenBranchPt {
 		modifyPack.insert_petal(jumpCircle[1],indx,chap[1]);
 		
 		// fix preJump2 (careful, this may be jump1)
-		indx=(modifyPack.nghb(preJump[2],jumpCircle[2])+1)%(modifyPack.kData[preJump[2]].num);
+		indx=(modifyPack.nghb(preJump[2],jumpCircle[2])+1)%(modifyPack.getNum(preJump[2]));
 		modifyPack.insert_petal(preJump[2],indx,chap[2]);
 		
 		// fix jump2
-		indx=(modifyPack.nghb(jumpCircle[2],1)+1)%(modifyPack.kData[jumpCircle[2]].num+1);
+		indx=(modifyPack.nghb(jumpCircle[2],1)+1)%(modifyPack.getNum(jumpCircle[2])+1);
 		modifyPack.insert_petal(jumpCircle[2],indx,chap[2]);
 
 	  	// new pack should be ready
@@ -876,7 +876,9 @@ public class ChapBranchPt extends GenBranchPt {
 		modifyPack.setAim(newBrSpot,myAim);
 		
 		// first face is {1,chap[2],u)
-		modifyPack.firstFace=modifyPack.what_face(1,chap[2],modifyPack.kData[1].flower[(modifyPack.nghb(1,chap[2])+1)%modifyPack.kData[1].num]);
+		modifyPack.firstFace=
+				modifyPack.what_face(1,chap[2],modifyPack.kData[1].flower[
+				       (modifyPack.nghb(1,chap[2])+1)%modifyPack.getNum(1)]);
 /*		GraphLink dG=DualGraph.buildDualGraph(myPackData,myPackData.firstFace,eL);
 		dG=DualGraph.drawSpanner(myPackData,dG,myPackData.firstFace);
 		DualGraph.tree2Order(myPackData,dG);
@@ -886,7 +888,7 @@ public class ChapBranchPt extends GenBranchPt {
 		int []futil=new int[modifyPack.faceCount+1];
 		for (int v=1;v<=modifyPack.nodeCount;v++) {
 			if (modifyPack.isBdry(v)) {
-				for (int j=0;j<modifyPack.kData[v].num;j++)
+				for (int j=0;j<modifyPack.getNum(v);j++)
 					futil[modifyPack.kData[v].faceFlower[j]]=1;
 			}
 		}
@@ -927,7 +929,7 @@ public class ChapBranchPt extends GenBranchPt {
 		else 
 			modifyPack.firstFace=modifyPack.kData[modifyPack.bdryStarts[1]].faceFlower[0];
 		modifyPack.poisonEdges=new EdgeLink(modifyPack,"b");
-		for (int j=1;j<modifyPack.kData[newBrSpot].num;j++) {
+		for (int j=1;j<modifyPack.getNum(newBrSpot);j++) {
 			int vj=modifyPack.kData[newBrSpot].flower[j];
 			int wj=modifyPack.kData[newBrSpot].flower[j+1];
 			modifyPack.poisonEdges.add(new EdgeSimple(vj,wj));
@@ -1092,7 +1094,7 @@ public class ChapBranchPt extends GenBranchPt {
 		if (packData.isBdry(myIndex))
 			throw new ParserException("'myIndex' should be interior");
 		int []flower=packData.kData[myIndex].flower;
-		int num=packData.kData[myIndex].num;
+		int num=packData.getNum(myIndex);
 		elink.add(new EdgeSimple(myIndex,flower[(jumpIndx[1]-1+num)%num]));
 		elink.add(new EdgeSimple(myIndex,flower[jumpIndx[2]]));
 		int diff=(jumpIndx[2]-jumpIndx[1]+1+num)%num;

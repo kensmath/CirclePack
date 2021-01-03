@@ -503,8 +503,8 @@ public class NodeLink extends LinkedList<Integer> {
 					v=edge.v;
 					w=edge.w;
 					// v, w must be interior and hex and form an edge 
-					if (packData.getBdryFlag(v)==1 || packData.kData[v].num!=6
-							|| packData.getBdryFlag(w)==1 || packData.kData[w].num!=6
+					if (packData.getBdryFlag(v)==1 || packData.getNum(v)!=6
+							|| packData.getBdryFlag(w)==1 || packData.getNum(w)!=6
 							|| (indx=packData.hex_extend(v,w,1))<0) break; // no hex edges to w
 					EdgeLink hex_loop=packData.hex_extrapolate(v,indx,v,1025);
 					if (hex_loop==null || hex_loop.size()==0) break;
@@ -629,7 +629,7 @@ public class NodeLink extends LinkedList<Integer> {
 				    int v,vert;
 				    while (vlist.hasNext()) {
 					v=(Integer)vlist.next();
-					int num=packData.kData[v].num;
+					int num=packData.getNum(v);
 					for (int j=0;j<(num+packData.getBdryFlag(v));j++) {
 					    vert=packData.kData[v].flower[j];
 					    if (hits[vert]==0) {
@@ -820,7 +820,7 @@ public class NodeLink extends LinkedList<Integer> {
 						if (packData.getBdryFlag(v)!=0) {
 							int w=packData.kData[v].flower[0];
 							if (!nxt)
-								w=packData.kData[v].flower[packData.kData[v].num];
+								w=packData.kData[v].flower[packData.getNum(v)];
 							add(w);
 							count++;
 						}                        
@@ -838,7 +838,7 @@ public class NodeLink extends LinkedList<Integer> {
 							Iterator<Integer> vsi=vs.iterator();
 							while (vsi.hasNext()) {
 								int v=vsi.next();
-								if (jdex<=packData.kData[v].num) {
+								if (jdex<=packData.getNum(v)) {
 									add(packData.kData[v].flower[jdex]);
 									count++;
 								}

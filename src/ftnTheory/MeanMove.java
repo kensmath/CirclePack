@@ -232,7 +232,7 @@ public class MeanMove extends PackExtender {
 	 * @return null on error 
 	 */
 	static double []kissingCurv(PackData p,int v,double r) {
-		if (p.kData[v].bdryFlag==0 || p.hes!=0)
+		if (!p.isBdry(v) || p.hes!=0)
 			return null;
 		double t2=p.getCurv(v)/2.0;
 		double tant2=Math.tan(t2);
@@ -243,7 +243,7 @@ public class MeanMove extends PackExtender {
 		double dtdr=0.0;
 		
 		// compute the derivative of theta w.r.t. r
-		for (int j=0;j<p.kData[v].num;j++) {
+		for (int j=0;j<p.getNum(v);j++) {
 			int k=p.kData[v].flower[j];
 			double y=p.getRadius(k);
 			double z=p.getRadius(k);

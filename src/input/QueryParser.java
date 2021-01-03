@@ -494,7 +494,7 @@ public class QueryParser {
 					while(elist.hasNext() && ((!forMsg || count<12) || count<1000)) {
 						edge=(EdgeSimple)elist.next();
 						if ((j=p.nghb((v1=edge.v),(v3=edge.w)))>=0 
-								&& (k=p.nghb(v3,v1))>=0 && j!=p.kData[v1].num && k!=p.kData[v3].num) {
+								&& (k=p.nghb(v3,v1))>=0 && j!=p.getNum(v1) && k!=p.getNum(v1)) {
 
 							// TODO: what about case of inv distances/overlaps?
 							
@@ -538,7 +538,7 @@ public class QueryParser {
 						throw new ParserException("");
 					}
 					words.append(" v"+vv); // show which vert
-					int n=p.kData[vv].num;
+					int n=p.getNum(vv);
 					if (forMsg && n>12) {
 						n=12;
 		  	      		suffix=" ... ";
@@ -841,7 +841,7 @@ public class QueryParser {
 					if (vv!=0) {
 						try {
 							double accum=0.0;
-							for (int j=0;j<p.kData[vv].num;j++)
+							for (int j=0;j<p.getNum(vv);j++)
 								accum += p.kData[vv].schwarzian[j];
 							ans.append(String.format("%.6f",accum));
 						} catch (Exception ex) {
@@ -889,8 +889,8 @@ public class QueryParser {
 		  	      				", center=("+p.getCenter(v).x+","+p.getCenter(v).y+")"+
 		  	      				", ang sum="+p.getCurv(v)/Math.PI+
 		  	      				" Pi, aim="+p.getAim(v)/Math.PI+
-		  	      				" Pi, boundaryFlag="+p.kData[v].bdryFlag+
-		  	      				", star="+p.kData[v].num+
+		  	      				" Pi, boundaryFlag="+p.getBdryFlag(v)+
+		  	      				", star="+p.getNum(v)+
 		  	      				", mark="+p.kData[v].mark+
 		  	      				", plotFlag="+p.kData[v].plotFlag+
 		  	      				", color="+CPScreen.col_to_table(p.kData[v].color));

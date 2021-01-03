@@ -558,7 +558,7 @@ public class SassStuff extends PackExtender {
 				double s = p.getRadius(v)+g+p.getRadius(w)+t;
 				Complex S = z2.times(s/L12).add(z1.times(1.0-(s/L12)));
 				
-				for (int j=0;j<p.kData[w].num;j++){
+				for (int j=0;j<p.getNum(w);j++){
 					int fc=p.kData[w].faceFlower[j];
 					int W=asp[fc].vertIndex(w);
 					asp[fc].setCenter(S,W);
@@ -586,7 +586,7 @@ public class SassStuff extends PackExtender {
 				double s = (count*L12)/N;
 				Complex S = z2.times(s/L12).add(z1.times(1.0-(s/L12)));
 				
-				for (int j=0;j<p.kData[w].num;j++){
+				for (int j=0;j<p.getNum(w);j++){
 					
 					int fc=p.kData[w].faceFlower[j];
 					int W=asp[fc].vertIndex(w);
@@ -682,7 +682,7 @@ public class SassStuff extends PackExtender {
 				double s = p.getRadius(v)+g+p.getRadius(w)+t;
 				Complex S = z4.times(s/L34).add(z3.times(1.0-(s/L34)));
 				
-				for (int j=0;j<p.kData[w].num;j++){
+				for (int j=0;j<p.getNum(w);j++){
 					int fc=p.kData[w].faceFlower[j];
 					int W=asp[fc].vertIndex(w);
 					asp[fc].setCenter(S,W);
@@ -710,7 +710,7 @@ public class SassStuff extends PackExtender {
 				double s = (count*L34)/N;
 				Complex S = z4.times(s/L34).add(z3.times(1.0-(s/L34)));
 				
-				for (int j=0;j<p.kData[w].num;j++){
+				for (int j=0;j<p.getNum(w);j++){
 					
 					int fc=p.kData[w].faceFlower[j];
 					int W=asp[fc].vertIndex(w);
@@ -806,7 +806,7 @@ public class SassStuff extends PackExtender {
 				double s = p.getRadius(v)+g+p.getRadius(w)+t;
 				Complex S = z3.times(s/L23).add(z2.times(1.0-(s/L23)));
 				
-				for (int j=0;j<p.kData[w].num;j++){
+				for (int j=0;j<p.getNum(w);j++){
 					int fc=p.kData[w].faceFlower[j];
 					int W=asp[fc].vertIndex(w);
 					asp[fc].setCenter(S,W);
@@ -834,7 +834,7 @@ public class SassStuff extends PackExtender {
 				double s = (count*L23)/N;
 				Complex S = z3.times(s/L23).add(z2.times(1.0-(s/L23)));
 				
-				for (int j=0;j<p.kData[w].num;j++){
+				for (int j=0;j<p.getNum(w);j++){
 					
 					int fc=p.kData[w].faceFlower[j];
 					int W=asp[fc].vertIndex(w);
@@ -930,7 +930,7 @@ public class SassStuff extends PackExtender {
 				double s = p.getRadius(v)+g+p.getRadius(w)+t;
 				Complex S = z1.times(s/L41).add(z4.times(1.0-(s/L41)));
 				
-				for (int j=0;j<p.kData[w].num;j++){
+				for (int j=0;j<p.getNum(w);j++){
 					int fc=p.kData[w].faceFlower[j];
 					int W=asp[fc].vertIndex(w);
 					asp[fc].setCenter(S,W);
@@ -958,7 +958,7 @@ public class SassStuff extends PackExtender {
 				double s = (count*L41)/N;
 				Complex S = z1.times(s/L41).add(z4.times(1.0-(s/L41)));
 				
-				for (int j=0;j<p.kData[w].num;j++){
+				for (int j=0;j<p.getNum(w);j++){
 					
 					int fc=p.kData[w].faceFlower[j];
 					int W=asp[fc].vertIndex(w);
@@ -1061,7 +1061,7 @@ public class SassStuff extends PackExtender {
 			double s = t+((L12/EL12)*(p.getRadius(v)+p.getRadius(w)));
 			Complex S = z2.times(s/L12).add(z1.times(1.0-(s/L12)));
 			
-			for (int j=0;j<p.kData[w].num;j++){
+			for (int j=0;j<p.getNum(w);j++){
 				int fc=p.kData[w].faceFlower[j];
 				int W=asp[fc].vertIndex(w);
 				asp[fc].setCenter(S,W);
@@ -1144,7 +1144,7 @@ public class SassStuff extends PackExtender {
 			double s = t+((L34/EL34)*(p.getRadius(v)+p.getRadius(w)));
 			Complex S = z4.times(s/L34).add(z3.times(1.0-(s/L34)));
 			
-			for (int j=0;j<p.kData[w].num;j++){
+			for (int j=0;j<p.getNum(w);j++){
 				int fc=p.kData[w].faceFlower[j];
 				int W=asp[fc].vertIndex(w);
 				asp[fc].setCenter(S,W);
@@ -1227,7 +1227,7 @@ public class SassStuff extends PackExtender {
 			double s = t+((L23/EL23)*(p.getRadius(v)+p.getRadius(w)));
 			Complex S = z3.times(s/L23).add(z2.times(1.0-(s/L23)));
 			
-			for (int j=0;j<p.kData[w].num;j++){
+			for (int j=0;j<p.getNum(w);j++){
 				int fc=p.kData[w].faceFlower[j];
 				int W=asp[fc].vertIndex(w);
 				asp[fc].setCenter(S,W);
@@ -1310,7 +1310,7 @@ public class SassStuff extends PackExtender {
 			double s = t+((L41/EL41)*(p.getRadius(v)+p.getRadius(w)));
 			Complex S = z1.times(s/L41).add(z4.times(1.0-(s/L41)));
 			
-			for (int j=0;j<p.kData[w].num;j++){
+			for (int j=0;j<p.getNum(w);j++){
 				int fc=p.kData[w].faceFlower[j];
 				int W=asp[fc].vertIndex(w);
 				asp[fc].setCenter(S,W);
@@ -1340,14 +1340,14 @@ public class SassStuff extends PackExtender {
 		int w1=0;
 		int w2=0;
 		CircleSimple sc=new CircleSimple();
-		double x[] = new double[p.kData[v].num];
-		double y[] = new double[p.kData[v].num];
+		double x[] = new double[p.getNum(v)];
+		double y[] = new double[p.getNum(v)];
 		double nx=0.0;
 		double ny=0.0;
 		Complex z;
 		Complex nz;
 		
-		for (int j=0;j<p.kData[v].num;j++){
+		for (int j=0;j<p.getNum(v);j++){
 			
 			int f=p.kData[v].faceFlower[j];
 			w0=p.faces[f].vert[0];
@@ -1360,15 +1360,15 @@ public class SassStuff extends PackExtender {
 			
 		}
 		
-		for (int j=0;j<p.kData[v].num;j++){
+		for (int j=0;j<p.getNum(v);j++){
 			
 			nx+=x[j];
 			ny+=y[j];
 			
 		}
 		
-		nx=nx/p.kData[v].num;
-		ny=ny/p.kData[v].num;
+		nx=nx/p.getNum(v);
+		ny=ny/p.getNum(v);
 		nz=new Complex(nx,ny);
 		
 		return nz;
@@ -1392,8 +1392,8 @@ public class SassStuff extends PackExtender {
 		
 		// count interior vertices
 		
-		for (int j=1;j<=p.nodeCount;j++){
-			if (p.kData[j].bdryFlag==0){
+		for (int j=1;j<=p.nodeCount;j++) {
+			if (!p.isBdry(j)) {
 				count++;
 			}
 		}
@@ -1402,8 +1402,8 @@ public class SassStuff extends PackExtender {
 		
 		int vert[] = new int [count];
 		
-		for (int j=1;j<=p.nodeCount;j++){
-			if (p.kData[j].bdryFlag==0){
+		for (int j=1;j<=p.nodeCount;j++) {
+			if (!p.isBdry(j)) {
 				vert[N]=j;
 				N++;
 			}
@@ -1412,7 +1412,7 @@ public class SassStuff extends PackExtender {
 		// compute initial error E
 		
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.kData[v].num;j++) {
+			for (int j=0;j<p.getNum(v);j++) {
 				int w=p.kData[v].flower[j];
 				if (w>v) {
 					double prd=Math.log(Math.abs(edgeRatioError(p,new EdgeSimple(v,w),asp)));
@@ -1433,7 +1433,7 @@ public class SassStuff extends PackExtender {
 			
 			p.setCenter(r,NewCenter(p,asp,r));
 			
-			for (int j=0;j<p.kData[r].num;j++){
+			for (int j=0;j<p.getNum(r);j++){
 				int f=p.kData[r].faceFlower[j];
 				int w=asp[f].vertIndex(r);
 				asp[f].setCenter(NewCenter(p,asp,r),w);
@@ -1442,7 +1442,7 @@ public class SassStuff extends PackExtender {
 			}
 			
 			for (int v=1;v<=p.nodeCount;v++) {
-				for (int j=0;j<p.kData[v].num;j++) {
+				for (int j=0;j<p.getNum(v);j++) {
 					int w=p.kData[v].flower[j];
 					if (w>v) {
 						double prd=Math.log(Math.abs(edgeRatioError(p,new EdgeSimple(v,w),asp)));
@@ -1480,18 +1480,18 @@ public class SassStuff extends PackExtender {
 		
 		for (int v=1;v<=p.nodeCount;v++){
 			
-			if (p.kData[v].bdryFlag==0){
+			if (!p.isBdry(v)){
 				
-				n=p.kData[v].num;
+				n=p.getNum(v);
 				
-				for (int j=0;j<p.kData[v].num;j++) {
+				for (int j=0;j<p.getNum(v);j++) {
 					
 					int f=p.kData[v].faceFlower[j];
 					int k=asp[f].vertIndex(v);
 					int w1=p.faces[f].vert[(k+1)%3];
 					int w2=p.faces[f].vert[(k+2)%3];
 					
-					for (int l=0;l<p.kData[w1].num;l++){
+					for (int l=0;l<p.getNum(w1);l++){
 						int f1=p.kData[w1].faceFlower[l];
 						int k1=asp[f1].vertIndex(w1);
 						ratio=asp[f].labels[k]/asp[f1].labels[k1];
@@ -1507,7 +1507,7 @@ public class SassStuff extends PackExtender {
 						}
 					}
 					
-					for (int l=0;l<p.kData[w2].num;l++){
+					for (int l=0;l<p.getNum(w1);l++){
 						int f2=p.kData[w2].faceFlower[l];
 						int k2=asp[f2].vertIndex(w2);
 						ratio=asp[f].labels[k]/asp[f2].labels[k2];
@@ -1571,9 +1571,9 @@ public class SassStuff extends PackExtender {
 			for (int j=0; j<3; j++){
 				
 				w=p.faces[f].vert[j];
-				k=p.kData[w].num;
+				k=p.getNum(w);
 				
-				if (p.kData[w].bdryFlag==0){
+				if (!p.isBdry(w)){
 					
 					ratio=asp[f].labels[j]/asp[f].labels[(j+1)%3];
 					RL=a*Math.pow(b,(double)k)+c*Math.pow(d,(double)k)-1;
@@ -1641,9 +1641,9 @@ public class SassStuff extends PackExtender {
 		
 		// count interior edges
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.kData[v].num;j++) {
+			for (int j=0;j<p.getNum(v);j++) {
 				int w=p.kData[v].flower[j];
-				if ((p.kData[v].bdryFlag==0 || p.kData[w].bdryFlag==0) && w>v){
+				if ((!p.isBdry(v) || !p.isBdry(w)) && w>v){
 					num++;
 				}
 			}
@@ -1655,9 +1655,9 @@ public class SassStuff extends PackExtender {
 		int C=1;
 		
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.kData[v].num;j++) {
+			for (int j=0;j<p.getNum(v);j++) {
 				int w=p.kData[v].flower[j];
-				if ((p.kData[v].bdryFlag==0 || p.kData[w].bdryFlag==0) && w>v){
+				if ((!p.isBdry(v) || !p.isBdry(w)) && w>v){
 					e[C]=v;
 					ee[C]=w;
 					C++;
@@ -1733,7 +1733,7 @@ public class SassStuff extends PackExtender {
 		
 		// compute initial SC error
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.kData[v].num;j++) {
+			for (int j=0;j<p.getNum(v);j++) {
 				int w=p.kData[v].flower[j];
 				if (w>v) {
 					double prd=Math.log(Math.abs(edgeRatioError(p,new EdgeSimple(v,w),aspts)));
@@ -1744,9 +1744,9 @@ public class SassStuff extends PackExtender {
 		
 		//set cutoff value
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.kData[v].num;j++) {
+			for (int j=0;j<p.getNum(v);j++) {
 				int w=p.kData[v].flower[j];
-				if ((p.kData[v].bdryFlag==0 || p.kData[w].bdryFlag==0) && w>v){
+				if ((!p.isBdry(v) || !p.isBdry(w)) && w>v){
 					num++;
 				}
 			}
@@ -1762,11 +1762,11 @@ public class SassStuff extends PackExtender {
 		int r = (int)(Math.floor(1+n*rand.nextDouble()));
 		
 		// choose random edge
-		int m = p.kData[r].num;
+		int m = p.getNum(r);
 		int s = (int)(Math.floor(m*rand.nextDouble()));
 		
 		int w=p.kData[r].flower[s];
-		if (p.kData[r].bdryFlag==0 || p.kData[w].bdryFlag==0){
+		if (!p.isBdry(r) || !p.isBdry(w)){
 			double f=Math.log(Math.abs(edgeRatioError(p,new EdgeSimple(r,w),aspts)));
 			if ((f*f)>cut){
 				double eps=(f*f)/cut-1.0;
@@ -1847,7 +1847,7 @@ public class SassStuff extends PackExtender {
   	public static double []sideBounds(PackData p,int v,TriAspect []asps) {
   		double lower=0.0;
   		double upper=100000000;
-		for (int j=0;j<p.kData[v].num;j++) {
+		for (int j=0;j<p.getNum(v);j++) {
 			int f=p.kData[v].faceFlower[j];
 			int k=asps[f].vertIndex(v);
 			double rSide=asps[f].sides[k];
@@ -1877,7 +1877,7 @@ public class SassStuff extends PackExtender {
 	 */
 	public static double angSumSide(PackData p,int v,double factor,TriAspect []asps) {
 		double angsum=0.0;
-		for (int j=0;j<p.kData[v].num;j++) {
+		for (int j=0;j<p.getNum(v);j++) {
 			int f=p.kData[v].faceFlower[j];
 			int k=asps[f].vertIndex(v);
 			double s0=factor*asps[f].sides[k];
@@ -1898,7 +1898,7 @@ public class SassStuff extends PackExtender {
 	 * @return 
 	 */
 	public static int adjustSides(PackData p,int v,double factor,TriAspect []asp) {
-		for (int j=0;j<p.kData[v].num;j++) {
+		for (int j=0;j<p.getNum(v);j++) {
 			int f=p.kData[v].faceFlower[j];
 			int k=asp[f].vertIndex(v);
 			asp[f].sides[k] *=factor;
@@ -1998,8 +1998,8 @@ public class SassStuff extends PackExtender {
 		int w2v=p.nghb(w,v);
 		
 		// return if <v,w> is not an interior edge
-		if (v2w==0 && p.kData[v].bdryFlag==1 ||
-				w2v==0 && p.kData[w].bdryFlag==1)
+		if (v2w==0 && p.isBdry(v) ||
+				w2v==0 && p.isBdry(w))
 			return 0;
 				
 		// find two faces: f_right to right of <v,w>, f_left to left
@@ -2011,18 +2011,18 @@ public class SassStuff extends PackExtender {
 		// find opposite faces
 		int oppF1, oppF2; // index of faces across opposite sides
 		int k=w2v+1;
-		if (k<=p.kData[w].num-1)
+		if (k<=p.getNum(v)-1)
 			oppF1=p.kData[w].faceFlower[k];
 		else {
-			if (p.kData[w].bdryFlag==1)
+			if (p.isBdry(w))
 				oppF1=-1;
 			else oppF1=p.kData[w].faceFlower[0];
 		}
 		k=v2w+1;
-		if (k<=p.kData[v].num-1)
+		if (k<=p.getNum(v)-1)
 			oppF2=p.kData[v].faceFlower[k];
 		else {
-			if (p.kData[v].bdryFlag==1)
+			if (p.isBdry(v))
 				oppF2=-1;
 			else oppF2=p.kData[v].faceFlower[0];
 		}
@@ -2032,20 +2032,20 @@ public class SassStuff extends PackExtender {
 		if (v2w>1)
 			nearF1=p.kData[v].faceFlower[v2w-2];
 		else {
-			if (p.kData[v].bdryFlag==1)
+			if (p.isBdry(v))
 				nearF1=-1;
 			else {
-				int num=p.kData[v].num;
+				int num=p.getNum(v);
 				nearF1=p.kData[v].faceFlower[(v2w+num-2)%num];
 			}
 		}
 		if (w2v>1)
 			nearF2=p.kData[w].faceFlower[w2v-2];
 		else {
-			if (p.kData[w].bdryFlag==1)
+			if (p.isBdry(w))
 				nearF2=-1;
 			else {
-				int num=p.kData[w].num;
+				int num=p.getNum(w);
 				nearF2=p.kData[w].faceFlower[(w2v+num-2)%num];
 			}
 		}
@@ -2232,8 +2232,8 @@ public class SassStuff extends PackExtender {
 		int w2v=p.nghb(w,v);
 		
 		// return if <v,w> is not an interior edge
-		if (v2w==0 && p.kData[v].bdryFlag==1 ||
-				w2v==0 && p.kData[w].bdryFlag==1)
+		if (v2w==0 && p.isBdry(v) ||
+				w2v==0 && p.isBdry(w))
 			return 0;
 				
 		// find two faces: f1 to right of <v,w>, f2 to left
@@ -2250,18 +2250,18 @@ public class SassStuff extends PackExtender {
 		// find opposite faces
 		int oppF1, oppF2; // index of faces across opposite sides
 		int k=w2v+1;
-		if (k<=p.kData[w].num-1)
+		if (k<=p.getNum(w)-1)
 			oppF1=p.kData[w].faceFlower[k];
 		else {
-			if (p.kData[w].bdryFlag==1)
+			if (p.isBdry(w))
 				oppF1=-1;
 			else oppF1=p.kData[w].faceFlower[0];
 		}
 		k=v2w+1;
-		if (k<=p.kData[v].num-1)
+		if (k<=p.getNum(v)-1)
 			oppF2=p.kData[v].faceFlower[k];
 		else {
-			if (p.kData[v].bdryFlag==1)
+			if (p.isBdry(v))
 				oppF2=-1;
 			else oppF2=p.kData[v].faceFlower[0];
 		}
@@ -2271,20 +2271,20 @@ public class SassStuff extends PackExtender {
 		if (v2w>1)
 			nearF1=p.kData[v].faceFlower[v2w-2];
 		else {
-			if (p.kData[v].bdryFlag==1)
+			if (p.isBdry(v))
 				nearF1=-1;
 			else {
-				int num=p.kData[v].num;
+				int num=p.getNum(v);
 				nearF1=p.kData[v].faceFlower[(v2w+num-2)%num];
 			}
 		}
 		if (w2v>1)
 			nearF2=p.kData[w].faceFlower[w2v-2];
 		else {
-			if (p.kData[w].bdryFlag==1)
+			if (p.isBdry(w))
 				nearF2=-1;
 			else {
-				int num=p.kData[w].num;
+				int num=p.getNum(w);
 				nearF2=p.kData[w].faceFlower[(w2v+num-2)%num];
 			}
 		}
@@ -2392,8 +2392,7 @@ public class SassStuff extends PackExtender {
 	 * @return 1.0 if not interior edge.
 	 */
 	public static double edgeRatioError(PackData p,EdgeSimple edge,TriAspect []asp) {
-		if (p.kData[edge.v].bdryFlag!=0 && 
-				p.kData[edge.w].bdryFlag!=0) // bdry edge 
+		if (p.isBdry(edge.v) &&	p.isBdry(edge.w)) // bdry edge 
 			return 1.0;
 		int []lf=p.left_face(edge.v,edge.w);
 		int lface=lf[0];
@@ -2418,10 +2417,10 @@ public class SassStuff extends PackExtender {
 	 * @return 1.0 if v not interior.
 	 */  
 	public static double weakConError(PackData p,int v,TriAspect []asp) {
-		if (p.kData[v].bdryFlag!=0)
+		if (p.isBdry(v))
 			return 1.0;
 		double rtio=1.0;
-		for (int j=0;j<p.kData[v].num;j++) {
+		for (int j=0;j<p.getNum(v);j++) {
 			int ff=p.kData[v].faceFlower[j];
 			int k=asp[ff].vertIndex(v);
 			rtio *= asp[ff].sides[(k+2)%3]; // left sidelength
@@ -2441,9 +2440,9 @@ public class SassStuff extends PackExtender {
 		double maxwe=0.0;
 		EdgeSimple maxES=null;
 		for (int v=1;v<=packData.nodeCount;v++) {
-			for (int j=0;j<=packData.kData[v].num;j++) {
+			for (int j=0;j<=packData.getNum(v);j++) {
 				int w=packData.kData[v].flower[j];
-				if ((packData.kData[v].bdryFlag==0 || packData.kData[w].bdryFlag==0) && w>v) {
+				if ((!packData.isBdry(v) || !packData.isBdry(w)) && w>v) {
 					double ere=Math.abs(Math.log(edgeRatioError(packData,new EdgeSimple(v,w),aspects)));
 					if (ere>maxwe) {
 						maxwe=ere;
@@ -3405,7 +3404,7 @@ public class SassStuff extends PackExtender {
 				}
 				
 				// find sum[|Log(t.t')|]^2 for interior edges
-				for (int j=0;j<packData.kData[v].num;j++) {
+				for (int j=0;j<packData.getNum(v);j++) {
 					int w=packData.kData[v].flower[j];
 					// if w>v and edge is interior
 					if (w>v) {
@@ -3612,11 +3611,11 @@ public class SassStuff extends PackExtender {
 			// store data for qualifying edges in vector
 			Vector<Double> edata=new Vector<Double>();
 			for (int v=1;v<=packData.nodeCount;v++) {
-				int num=packData.kData[v].num+packData.kData[v].bdryFlag;
+				int num=packData.getNum(v)+packData.getBdryFlag(v);
 				for (int j=0;j<num;j++) {
 					int w=packData.kData[v].flower[j];
 					if (w>v) {
-						if (packData.kData[v].bdryFlag==0 || packData.kData[w].bdryFlag==0)
+						if (!packData.isBdry(v) || !packData.isBdry(w))
 							edata.add(ProjStruct.logEdgeTs(packData,new EdgeSimple(v,w),aspects));
 					}
 				}
@@ -3627,11 +3626,11 @@ public class SassStuff extends PackExtender {
 			// draw (same order)
 			int spot=0;
 			for (int v=1;v<=packData.nodeCount;v++) {
-				int num=packData.kData[v].num+packData.kData[v].bdryFlag;
+				int num=packData.getNum(v)+packData.getBdryFlag(v);
 				for (int j=0;j<num;j++) {
 					int w=packData.kData[v].flower[j];
 					if (w>v) {
-						if (packData.kData[v].bdryFlag!=0 && packData.kData[w].bdryFlag!=0)
+						if (packData.isBdry(v) && packData.isBdry(w))
 							cpCommand("disp -e "+v+" "+w);
 						else {
 							cpCommand("disp -ec"+(int)ccodes.get(spot)+" "+v+" "+w);
@@ -3918,7 +3917,7 @@ public class SassStuff extends PackExtender {
 			
 			packData.setCenter(v,NewCenter(packData,aspects,v));
 			
-			for (int j=0;j<packData.kData[v].num;j++){
+			for (int j=0;j<packData.getNum(v);j++){
 				
 				int f=packData.kData[v].faceFlower[j];
 				w=aspects[f].vertIndex(v);
@@ -3939,7 +3938,7 @@ public class SassStuff extends PackExtender {
 			while (N<1){
 				int n = packData.nodeCount;
 				int r = (int)(Math.floor(1+n*rand.nextDouble()));
-				if (packData.kData[r].bdryFlag==0){
+				if (!packData.isBdry(r)){
 					N=1;
 					v=r;
 				}
@@ -3947,7 +3946,7 @@ public class SassStuff extends PackExtender {
 			
 			packData.setCenter(v,NewCenter(packData,aspects,v));
 			
-			for (int j=0;j<packData.kData[v].num;j++){
+			for (int j=0;j<packData.getNum(v);j++){
 				
 				int f=packData.kData[v].faceFlower[j];
 				w=aspects[f].vertIndex(v);

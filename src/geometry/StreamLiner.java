@@ -216,10 +216,10 @@ public class StreamLiner {
 			int v=basePack.faces[inpt.face].vert[ins-1];
 			
 			// if boundary vertex, stop
-			if (basePack.kData[v].bdryFlag==1)
+			if (basePack.isBdry(v))
 				return null;
 			
-			int num=basePack.kData[v].num;
+			int num=basePack.getNum(v);
 			int []flower=basePack.kData[v].flower;
 			Complex []edgevec=new Complex[num+1];
 			for (int j=0;j<num;j++) {
@@ -301,12 +301,12 @@ public class StreamLiner {
 			}
 			
 			// stop if this is boundary edge
-			if (basePack.kData[v].bdryFlag==1 && basePack.kData[w].bdryFlag==1)
+			if (basePack.isBdry(v) && basePack.isBdry(w))
 				return null;
 
 			// inpt.face is on the left of vw_edge
 			int vw_indx=basePack.nghb(v, w);
-			int num=basePack.kData[v].num;
+			int num=basePack.getNum(v);
 			int face_l=inpt.face;
 			int face_r=basePack.kData[v].faceFlower[(vw_indx-1+num)%num];
 			Complex vw_edge=basePack.getCenter(w).minus(basePack.getCenter(v));

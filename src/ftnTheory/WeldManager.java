@@ -173,10 +173,8 @@ public class WeldManager extends PackExtender {
 			Oops("findWeldMap: packings must be "
 					+ " topological discs in hyperbolic geometry");
 		}
-		if (V < 1 || V > p.nodeCount || 
-				p.kData[V].bdryFlag == 0 || 
-				W < 1 || W > q.nodeCount || 
-				q.kData[W].bdryFlag == 0) {
+		if (V < 1 || V > p.nodeCount ||	!p.isBdry(V) || 
+				W < 1 || W > q.nodeCount ||	!q.isBdry(W)) {
 			Oops("findWeldMap: given vertices are improper");
 		}
 
@@ -432,11 +430,11 @@ public class WeldManager extends PackExtender {
 			if (ind1 < 0 || ind2 < 0 || ind1 == ind2)
 				return null;
 			if (ind2 < ind1)
-				ind2 = ind2 + p.kData[v].num;
+				ind2 = ind2 + p.getNum(v);
 			if (ind2 > ind1 + 1)
 				for (int j = ind1 + 1; j <= ind2; j++)
 					if (targ[(k = p.kData[v].flower[j
-							% p.kData[v].num])] == 0) {
+							% p.getNum(v)])] == 0) {
 						targ[k] = 1;
 						ctrace = ctrace.next = new VertList(k);
 					}
@@ -451,9 +449,9 @@ public class WeldManager extends PackExtender {
 			curlist = ctrace = new VertList();
 			otrace = oldlist;
 			while (otrace != null) {
-				for (int j = 0; j <= (p.kData[(v = otrace.v)].num + p.kData[otrace.v].bdryFlag); j++)
+				for (int j = 0; j <= (p.getNum((v = otrace.v)) + p.getBdryFlag(otrace.v)); j++)
 					if (targ[(k = p.kData[v].flower[j
-							% p.kData[v].num])] == 0) {
+							% p.getNum(v)])] == 0) {
 						targ[k] = 1;
 						ctrace = ctrace.next = new VertList(k);
 					}
@@ -551,13 +549,13 @@ public class WeldManager extends PackExtender {
 				throw new CombException();
 			}
 			if (ind2 < ind1)
-				ind2 = ind2 + p.kData[v].num;
+				ind2 = ind2 + p.getNum(v);
 			vv = targ[v];
 			q.kData[vv].num = num = ind2 - ind1;
-			q.kData[vv].bdryFlag = 1;
+			q.setBdryFlag(vv,1);
 			newflower = new int[num + 1];
 			for (int j = ind1; j <= ind2; j++) {
-				k = p.kData[v].flower[j % p.kData[v].num];
+				k = p.kData[v].flower[j % p.getNum(v)];
 				newflower[j - ind1] = targ[k];
 			}
 			q.kData[vv].flower = newflower;
@@ -573,17 +571,17 @@ public class WeldManager extends PackExtender {
 		for (int n = 1; n <= p.nodeCount; n++)
 			if ((vert = targ[n]) != 0 && q.kData[vert].utilFlag == 0) {
 				// this is one of the marked vertices but not on edge-list
-				if (p.kData[n].bdryFlag != 0) { // should be interior
+				if (p.isBdry(n)) { // should be interior
 					throw new CombException();
 				}
-				newflower = new int[(num = p.kData[n].num) + 1];
+				newflower = new int[(num = p.getNum(n)) + 1];
 				for (int j = 0; j <= num; j++) {
 					k = targ[p.kData[n].flower[j]];
 					newflower[j] = k;
 				}
 				q.kData[vert].flower = newflower;
-				q.kData[vert].bdryFlag = 0;
-				q.kData[vert].num = p.kData[n].num;
+				q.setBdryFlag(vert,0);
+				q.kData[vert].num = p.getNum(n);
 			} // end of if and for
 
 		/* -------------------------------------------------- */
@@ -610,7 +608,7 @@ public class WeldManager extends PackExtender {
 			}
 		edge = (EdgeSimple) elist.get(0);
 		v = targ[edge.v];
-		if (q.kData[v].flower[0] == q.kData[v].flower[q.kData[v].num]
+		if (q.kData[v].flower[0] == q.kData[v].flower[q.getNum(v)]
 				|| q.swap_nodes(v, 2) == 0) {
 			CirclePack.cpb.myErrorMsg("unweld: some error with bdry vert "
 					+ v + " or 2.");
@@ -671,8 +669,7 @@ public class WeldManager extends PackExtender {
 		tolr = 0.1;
 
 		// TODO: should do more error checking
-		if ((p.kData[p_start_vert].bdryFlag == 0)
-				|| (q.kData[q_start_vert].bdryFlag == 0))
+		if (!p.isBdry(p_start_vert) || !q.isBdry(q_start_vert))
 			Oops("start vertices must be on the boundary");
 
 		// open temporary file for weld list
@@ -696,11 +693,11 @@ public class WeldManager extends PackExtender {
 			// find boundary counts
 			int p_hits = 0;
 			for (int vv = 1; vv <= p.nodeCount; vv++)
-				if (p.kData[vv].bdryFlag == 1)
+				if (p.isBdry(vv))
 					p_hits++;
 			int q_hits = 0;
 			for (int vv = 1; vv <= q.nodeCount; vv++)
-				if (q.kData[vv].bdryFlag == 1)
+				if (q.isBdry(vv))
 					q_hits++;
 
 			// create space
@@ -722,7 +719,7 @@ public class WeldManager extends PackExtender {
 			q_vert[0] = last = q_start_vert;
 			for (n = 1; n <= q_count; n++)
 				// Recall: q list must be clockwise.
-				q_vert[n] = last = q.kData[last].flower[q.kData[last].num];
+				q_vert[n] = last = q.kData[last].flower[q.getNum(last)];
 
 			// Use opt_flag here (TODO: expect more options eventually).
 			
@@ -1014,8 +1011,7 @@ public class WeldManager extends PackExtender {
 		int w_orig = w;
 
 		if (!p.status || !q.status || (v > p.nodeCount) || (w > q.nodeCount)
-				|| v < 1 || w < 1 || p.kData[v].bdryFlag == 0
-				|| q.kData[w].bdryFlag == 0) {
+				|| v < 1 || w < 1 || !p.isBdry(v) || !q.isBdry(w)) {
 			Oops("weld: improper data; e.g., verts " + v + " and " + w
 					+ " cannot be used");
 		}
@@ -1034,7 +1030,7 @@ public class WeldManager extends PackExtender {
 				Oops("weld list: first line must be 'Vv'.");
 			}
 			v_next = p.kData[v].flower[0];
-			w_next = q.kData[w].flower[q.kData[w].num];
+			w_next = q.kData[w].flower[q.getNum(w)];
 			while ((line = StringUtil.ourNextLine(fpr)) != null) {
 				count = count + 1;
 
@@ -1053,11 +1049,11 @@ public class WeldManager extends PackExtender {
 
 				if (line.contains("v")) {
 					w = w_next;
-					w_next = q.kData[w].flower[q.kData[w].num];
+					w_next = q.kData[w].flower[q.getNum(w)];
 				} else if (line.contains("n")) {
 					if (add_between(q, w_next, w) == 0)
 						return -1;
-					w = q.kData[w].flower[q.kData[w].num];
+					w = q.kData[w].flower[q.getNum(w)];
 					// w = newly added new vertex
 				} else { /* extraneous stuff? */
 					Oops("weld: weld file format problem, lower case");
@@ -1074,12 +1070,12 @@ public class WeldManager extends PackExtender {
 		if (v == p.kData[v_orig].flower[0]) {
 			buf = new String("b");
 		} else {
-			v = p.kData[v].flower[p.kData[v].num];
+			v = p.kData[v].flower[p.getNum(v)];
 			buf = new String("b(" + v_orig + " " + v + ")");
 		}
 		p.vlist = new NodeLink(p, buf);
 		p.elist = new EdgeLink(p, buf);
-		if (w == q.kData[w_orig].flower[q.kData[w_orig].num]) {
+		if (w == q.kData[w_orig].flower[q.getNum(w_orig)]) {
 			buf = new String("b");
 		} else {
 			w = q.kData[w].flower[0];
@@ -1126,7 +1122,7 @@ public class WeldManager extends PackExtender {
 		int[] newflower = null;
 
 		// Basic checks
-		if (p.kData[v].bdryFlag == 0 || p.kData[v_next].bdryFlag == 0)
+		if (!p.isBdry(v) || !p.isBdry(v_next))
 			return 0;
 
 		/*
@@ -1136,9 +1132,9 @@ public class WeldManager extends PackExtender {
 		 * 
 		 * y ++ + ++ b ++++++ X ++++++ a ++ + ++ w
 		 */
-		if (p.kData[v].num == 1 || p.kData[v_next].num == 1) { // special: one
+		if (p.getNum(v) == 1 || p.getNum(v_next) == 1) { // special: one
 																// face
-			if (p.kData[v].num == 1) {
+			if (p.getNum(v) == 1) {
 				a = p.kData[v].flower[1];
 				b = v_next;
 				y = v;
@@ -1147,7 +1143,7 @@ public class WeldManager extends PackExtender {
 				b = p.kData[v_next].flower[0];
 				y = v_next;
 			}
-			if (p.kData[a].num <= 2 || p.kData[b].num <= 2)
+			if (p.getNum(a) <= 2 || p.getNum(b) <= 2)
 				return 0;
 			w = p.kData[a].flower[2];
 
@@ -1159,7 +1155,7 @@ public class WeldManager extends PackExtender {
 			p.kData[a].flower[1] = new_v;
 
 			// fix b
-			p.kData[b].flower[p.kData[b].num - 1] = new_v;
+			p.kData[b].flower[p.getNum(b) - 1] = new_v;
 
 			// fix y (v or v_next)
 			newflower = new int[4];
@@ -1177,7 +1173,7 @@ public class WeldManager extends PackExtender {
 			newflower[2] = b;
 			newflower[3] = w;
 			p.kData[new_v].num = 4;
-			p.kData[new_v].bdryFlag = 0;
+			p.setBdryFlag(new_v,0);
 			p.kData[new_v].flower = newflower;
 			p.kData[new_v].plotFlag = 1;
 			p.kData[new_v].color=CPScreen.getFGColor();
@@ -1186,10 +1182,10 @@ public class WeldManager extends PackExtender {
 			// fix w
 			if ((indx = p.nghb(w, a)) < 0)
 				return 0;
-			newflower = new int[p.kData[w].num + 2];
+			newflower = new int[p.getNum(w) + 2];
 			for (j = 0; j <= indx; j++)
 				newflower[j] = p.kData[w].flower[j];
-			for (j = indx + 1; j <= p.kData[w].num; j++)
+			for (j = indx + 1; j <= p.getNum(w); j++)
 				newflower[j + 1] = p.kData[w].flower[j];
 			newflower[indx + 1] = new_v;
 			p.kData[w].flower = newflower;
@@ -1208,7 +1204,7 @@ public class WeldManager extends PackExtender {
 		// fix v and v_next
 
 		p.kData[v].flower[0] = p.nodeCount;
-		p.kData[v_next].flower[p.kData[v_next].num] = p.nodeCount;
+		p.kData[v_next].flower[p.getNum(v_next)] = p.nodeCount;
 
 		// fix new node flower
 		i = p.nodeCount;
@@ -1218,15 +1214,15 @@ public class WeldManager extends PackExtender {
 		p.kData[i].flower[1] = u;
 		p.kData[i].flower[2] = v;
 		p.kData[i].num = 2;
-		p.kData[i].bdryFlag = 1;
+		p.setBdryFlag(i,1);
 		p.kData[i].color=CPScreen.getFGColor();
 		p.setRadius(i,p.getRadius(v));
 		p.setCenter(i,new Complex(0.0));
 
 		// fix u
 
-		newflower = new int[p.kData[u].num + 2];
-		num = p.kData[u].num;
+		newflower = new int[p.getNum(u) + 2];
+		num = p.getNum(u);
 		p.kData[u].num++;
 		indx = p.nghb(u, v);
 		for (k = 0; k <= indx; k++)

@@ -1152,8 +1152,8 @@ public class SchwarzMap extends PackExtender {
 					for (int j=0;j<3;j++) {
 						int v=ftri.vert[j];
 						int w=ftri.vert[(j+1)%3];
-						if (v<w && (packData.kData[v].bdryFlag==0 || 
-								packData.kData[w].bdryFlag==0)) { 
+						if (v<w && (!packData.isBdry(v) || 
+								!packData.isBdry(w))) { 
 							fp.write(v+" "+w+"  "+String.format("%.8f",
 									ftri.schwarzian[j])+"\n");
 						}
@@ -1202,8 +1202,8 @@ public class SchwarzMap extends PackExtender {
 					for (int j=0;j<3;j++) {
 						int v=domainTri[f].vert[j];
 						int w=domainTri[f].vert[(j+1)%3];
-						if (v<w && (packData.kData[v].bdryFlag==0 || 
-								packData.kData[w].bdryFlag==0)) {
+						if (v<w && (!packData.isBdry(v) || 
+								!packData.isBdry(w))) {
 							Mobius mob=domainTri[f].MobDeriv[j];
 							fp.write(v+" "+w+"  "+String.format("%.6f",domainTri[f].tanPts[j].x)+
 									" "+String.format("%.6f",domainTri[f].tanPts[j].y)+

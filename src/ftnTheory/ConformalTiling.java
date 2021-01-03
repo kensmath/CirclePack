@@ -603,7 +603,7 @@ public class ConformalTiling extends PackExtender {
 				Iterator<VertAim> va=newVAs.iterator();
 				while (va.hasNext()) {
 					VertAim vertaim=va.next();
-					if (packData.kData[vertaim.vert].bdryFlag!=0) // is it in bdry?
+					if (packData.isBdry(vertaim.vert)) // is it in bdry?
 						feedbackVec.add(vertaim);
 				}
 			}	
@@ -704,7 +704,7 @@ public class ConformalTiling extends PackExtender {
 					int cwv=tile.augVert[(hit-1+tile.augVertCount)%tile.augVertCount];
 					int ccwv=tile.augVert[(hit+1)%tile.augVertCount];
 					
-					int num=packData.kData[v].num;
+					int num=packData.getNum(v);
 					double vrad=packData.getRadius(v);
 					double rad1=packData.getRadius(ccwv);
 					double rad2=rad1;
@@ -1402,7 +1402,7 @@ public class ConformalTiling extends PackExtender {
 						// else get flower as a string (both corner and edge barycenters)
 						else {
 							int []flowr=canonicalPack.kData[tile.baryVert].flower;
-							for (int j=0;j<=canonicalPack.kData[tile.baryVert].num;j++)
+							for (int j=0;j<=canonicalPack.getNum(tile.baryVert);j++)
 								flwr.append(flowr[j]+" ");
 						}
 						
@@ -1846,7 +1846,7 @@ public class ConformalTiling extends PackExtender {
 				nt.tileIndex=tcount;
 				int b=tile.baryVert;
 				int v=tile.vert[j];
-				int num=triPD.kData[b].num;
+				int num=triPD.getNum(b);
 				int indx_bv=triPD.nghb(b,v);
 				if (righttwist) {
 					int w=triPD.kData[b].flower[(indx_bv-2+num)%num];
@@ -1923,7 +1923,7 @@ public class ConformalTiling extends PackExtender {
 				nt.tileIndex=tcount;
 				int b=tile.baryVert;
 				int v=tile.vert[j];
-				int num=newPD.kData[b].num;
+				int num=newPD.getNum(b);
 				int indx_bv=newPD.nghb(b,v);
 				int u=newPD.kData[b].flower[(indx_bv-1+num)%num];
 				int w=newPD.kData[b].flower[(indx_bv+1)%num];
@@ -1971,7 +1971,7 @@ public class ConformalTiling extends PackExtender {
 		for (int t=1;t<=td.tileCount;t++) {
 			Tile tile=td.myTiles[t];
 			int b=tile.baryVert;
-			int num=newPD.kData[b].num;
+			int num=newPD.getNum(b);
 			for (int j=0;j<tile.vertCount;j++) {
 				int v=tile.vert[j];
 				int indx_bv=newPD.nghb(b,v);
@@ -2032,7 +2032,7 @@ public class ConformalTiling extends PackExtender {
 		for (int t=1;t<=newPD.tileData.tileCount;t++) {
 			Tile tile=newPD.tileData.myTiles[t];
 			int v=tile.baryVert;
-			int num=newPD.kData[v].num;
+			int num=newPD.getNum(v);
 			
 			// new central tile; 
 			Tile nct=newTiles[++tcount]=new Tile(newPD.tileData,tile.vertCount);
@@ -2145,7 +2145,7 @@ public class ConformalTiling extends PackExtender {
 			newTiles[++tcount]=new Tile(newPD.tileData,tile.vertCount);
 			newTiles[tcount].tileIndex=tcount;
 			int idx=newPD.nghb(b,v);
-			int num=newPD.kData[b].num;
+			int num=newPD.getNum(b);
 			for (int j=0;j<tile.vertCount;j++)
 				newTiles[tcount].vert[j]=newPD.kData[b].flower[(1+2*j)%num];
 			
@@ -2185,7 +2185,7 @@ public class ConformalTiling extends PackExtender {
 		int cwv=tile.augVert[(av-1+tile.augVertCount)%tile.augVertCount];
 		int ccwv=tile.augVert[(av+1)%tile.augVertCount];
 		
-		int num=packData.kData[v].num;
+		int num=packData.getNum(v);
 		double vrad=packData.getRadius(v);
 		double rad1=packData.getRadius(ccwv);
 		double rad2=rad1;

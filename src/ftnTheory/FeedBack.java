@@ -60,7 +60,7 @@ public class FeedBack extends PackExtender {
 		// count boundary vertices
 		bdryCount=0;
 		for (int v=1;v<=packData.nodeCount;v++)
-			if (packData.kData[v].bdryFlag>0)
+			if (packData.isBdry(v))
 				bdryCount++;
 		if (bdryCount==0) {
 			errorMsg("FeedBack: packing has no boundary");

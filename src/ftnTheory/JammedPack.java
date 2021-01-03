@@ -92,11 +92,11 @@ public class JammedPack extends PackExtender {
 			if (homePack.kData[v].mark==1) {
 				homePack.kData[v].mark=-1; // mark=-1 for original vertex
 			}
-			else if (homePack.kData[v].num>3) {   // only degree > 3
+			else if (homePack.getNum(v)>3) {   // only degree > 3
 				istices[++tick]=v;
 				homePack.kData[v].mark=tick; // index of interstice
-				iFlowers[tick]=new int[homePack.kData[v].num+1];
-				for (int j=0;j<=homePack.kData[v].num;j++)
+				iFlowers[tick]=new int[homePack.getNum(v)+1];
+				for (int j=0;j<=homePack.getNum(v);j++)
 					iFlowers[tick][j]=homePack.kData[v].flower[j];
 			}
 		}
@@ -121,7 +121,7 @@ public class JammedPack extends PackExtender {
 				while(elst.hasNext()) {
 					EdgeSimple edge=elst.next();
 					// neither should be degree 3
-					if (packData.kData[edge.v].num==3 || packData.kData[edge.w].num==3)
+					if (packData.getNum(edge.v)==3 || packData.getNum(edge.w)==3)
 						return count;
 					// both can't be original
 					if ((edge.v<=homePack.nodeCount && homePack.kData[edge.v].mark<0) &&
@@ -268,7 +268,7 @@ public class JammedPack extends PackExtender {
 			// v and w must share one (and only one) paver
 			int bary=0;
 			int []vflower=homePack.kData[v].flower;
-			for (int j=0;j<homePack.kData[v].num;j++) {
+			for (int j=0;j<homePack.getNum(v);j++) {
 				if (homePack.kData[vflower[j]].mark>=0) { //
 					int b=vflower[j];
 					if (homePack.nghb(w,b)>=0) {
@@ -331,7 +331,7 @@ public class JammedPack extends PackExtender {
 					return 0;
 				}
 				int vw_indx=packData.nghb(v,w);
-				if (vw_indx<0 || (vw_indx==0 && packData.kData[v].bdryFlag==1)) {
+				if (vw_indx<0 || (vw_indx==0 && packData.isBdry(v))) {
 					errorMsg("vertices "+v+", "+w+" not neighbors or this is bdry edge");
 					break;
 				}
@@ -339,13 +339,13 @@ public class JammedPack extends PackExtender {
 				// we want every network node to have at least three network edges
 				int vmark=0;
 				int []flower=packData.kData[v].flower;
-				int num=packData.kData[v].num;
+				int num=packData.getNum(v);
 				for (int j=0;j<num;j++)
 					if (homePack.kData[flower[j]].mark<0)
 							vmark++;
 				int wmark=0;
 				flower=packData.kData[w].flower;
-				num=packData.kData[w].num;
+				num=packData.getNum(w);
 				for (int j=0;j<num;j++)
 					if (homePack.kData[flower[j]].mark<0) // original vert?
 							wmark++;
@@ -444,10 +444,11 @@ public class JammedPack extends PackExtender {
 		}
 
 		// proceed to fix things up: 'bary' first
-		KData []kData=packData.kData; // update
+//		KData []kData=packData.kData; // update
+		PackData p=packData; // to save typing
 
 		// some petals for 'bary' will come from those of 'M'
-		int numM=kData[M].num;
+		int numM=p.getNum(M);
 		int M2v=packData.nghb(M,v);
 		int M2w=packData.nghb(M,w);
 		int Mcount=(M2w-M2v+numM)%numM;
@@ -455,10 +456,10 @@ public class JammedPack extends PackExtender {
 		
 		// list cclw portion of 'M's flower, [v,w)
 		for (int j=0;j<Mcount;j++)
-			Mhalf[j]=kData[M].flower[(M2v+j)%numM];
+			Mhalf[j]=p.kData[M].flower[(M2v+j)%numM];
 
 		// rest from flower of 'bary', cclw [w, v) 
-		int numbary=kData[bary].num;
+		int numbary=p.getNum(bary);
 		int b2v=packData.nghb(bary,v);
 		int b2w=packData.nghb(bary,w);
 		int bcount=(b2v-b2w+numbary)%numbary;
@@ -467,23 +468,23 @@ public class JammedPack extends PackExtender {
 		for (int j=0;j<Mcount;j++)
 			newbflower[j]=Mhalf[j];
 		for (int j=0;j<bcount;j++)
-			newbflower[j+Mcount]=kData[bary].flower[(b2w+j+numbary)%numbary];
+			newbflower[j+Mcount]=p.kData[bary].flower[(b2w+j+numbary)%numbary];
 		newbflower[petalcount]=newbflower[0]; // close up
-		kData[bary].flower=newbflower;
-		kData[bary].num=petalcount;
+		p.kData[bary].flower=newbflower;
+		p.kData[bary].num=petalcount;
 
 		// replace 'M' by 'bary' in petal flowers of petals (v,w)
 		for (int j=1;j<Mcount;j++) {
 			int ptl=Mhalf[j];
-			int ptlnum=kData[ptl].num;
+			int ptlnum=p.getNum(ptl);
 			for (int pj=0;pj<=ptlnum;pj++) 
-				if (kData[ptl].flower[pj]==M)
-					kData[ptl].flower[pj]=bary;
+				if (p.kData[ptl].flower[pj]==M)
+					p.kData[ptl].flower[pj]=bary;
 		}
 		
 		// fix v flower; remove 'M' and 'w'
-		int numv=kData[v].num;
-		int []vflower=kData[v].flower;
+		int numv=p.getNum(v);
+		int []vflower=p.kData[v].flower;
 		NodeLink newflower=new NodeLink(packData);
 		for (int j=0;j<numv;j++) {
 			int u=vflower[j];
@@ -500,8 +501,8 @@ public class JammedPack extends PackExtender {
 		packData.kData[v].num=tick;
 		
 		// fix w flower; remove 'M' and 'v'
-		int numw=kData[w].num;
-		int []wflower=kData[w].flower;
+		int numw=p.getNum(w);
+		int []wflower=p.kData[w].flower;
 		newflower=new NodeLink(packData);
 		for (int j=0;j<numw;j++) {
 			int u=wflower[j];
@@ -514,8 +515,8 @@ public class JammedPack extends PackExtender {
 		while(nit.hasNext())
 			wflower[tick++]=(int)nit.next();
 		wflower[tick]=wflower[0]; // close up
-		kData[w].flower=wflower;
-		kData[w].num=tick;			
+		p.kData[w].flower=wflower;
+		p.kData[w].num=tick;			
 
 		// remove 'M'
 		packData.nodeCount--;
@@ -533,16 +534,15 @@ public class JammedPack extends PackExtender {
 	 * @return M on success, 0 on error
 	 */
 	public int addEdge(int v,int w,int b) {
-		KData []kData=packData.kData;
 		if (v==w || homePack.kData[v].mark>=0 || homePack.kData[w].mark>=0 || 
-				homePack.kData[b].mark<0 || kData[b].bdryFlag!=0)
+				homePack.kData[b].mark<0 || packData.isBdry(b))
 			return 0;
 		int b2v=-1;
 		int b2w=-1;
 		if ((b2v=packData.nghb(b, v))<0 || (b2w=packData.nghb(b, w))<0)
 			return 0;
-		int num=kData[b].num;
-		int []bflower=kData[b].flower;
+		int num=packData.getNum(b);
+		int []bflower=packData.kData[b].flower;
 		
 		// make sure there is space for new vertex
 		int M=packData.nodeCount+1;
@@ -561,61 +561,61 @@ public class JammedPack extends PackExtender {
 			new_kData.flower[j]=bflower[(b2v+j)%numM];
 		new_kData.flower[numM]=new_kData.flower[0]; // close up
 		packData.nodeCount=M;
-		kData[M]=new_kData;
+		packData.kData[M]=new_kData;
 		packData.rData[M]=packData.rData[b].clone();
 		
 		// fix petals now next to 'M'
 		int vwdiff=(b2w-b2v-1+num)%num;
 		for (int j=0;j<vwdiff;j++) {
 			int u=bflower[(b2v+j+1)%num];
-			int numu=kData[u].num;
+			int numu=packData.getNum(u);
 			for (int jj=0;jj<=numu;jj++)
-				if (kData[u].flower[jj]==b)
-					kData[u].flower[jj]=M;
+				if (packData.kData[u].flower[jj]==b)
+					packData.kData[u].flower[jj]=M;
 		}
 		
 		// fix 'v'; add 'M' and 'w'
-		int numv=kData[v].num;
+		int numv=packData.getNum(v);
 		int v2b=packData.nghb(v,b);
 		int []vflower=new int[numv+2+1];
 		if (v2b==0) { // insert at end; 'v' must be interior
 			for (int jj=0;jj<numv;jj++)
-				vflower[jj]=kData[v].flower[jj];
+				vflower[jj]=packData.kData[v].flower[jj];
 			vflower[numv]=M;
 			vflower[numv+1]=w;
 			vflower[numv+2]=b; // close up again
 		}
 		else {
 			for (int jj=0;jj<v2b;jj++) 
-				vflower[jj]=kData[v].flower[jj];
+				vflower[jj]=packData.kData[v].flower[jj];
 			vflower[v2b]=M;
 			vflower[v2b+1]=b;
 			for (int jj=v2b;jj<=numv;jj++)
-				vflower[jj+2]=kData[v].flower[jj];
+				vflower[jj+2]=packData.kData[v].flower[jj];
 		}
-		kData[v].flower=vflower;
-		kData[v].num=numv+2;
+		packData.kData[v].flower=vflower;
+		packData.kData[v].num=numv+2;
 
 		// fix 'w'; add 'M' and 'v'
-		int numw=kData[w].num;
+		int numw=packData.getNum(w);
 		int w2b=packData.nghb(w,b);
 		int []wflower=new int[numw+2+1];
 		for (int jj=0;jj<=w2b;jj++)
-			wflower[jj]=kData[w].flower[jj];
+			wflower[jj]=packData.kData[w].flower[jj];
 		wflower[w2b+1]=v;
 		wflower[w2b+2]=M;
 		for (int jj=w2b+1;jj<=numw;jj++)
-			wflower[jj+2]=kData[w].flower[jj];
-		kData[w].flower=wflower;
-		kData[w].num=numw+2;
+			wflower[jj+2]=packData.kData[w].flower[jj];
+		packData.kData[w].flower=wflower;
+		packData.kData[w].num=numw+2;
 	
 		// fix data for 'b'
 		int numb=(b2v-b2w+num)%num+1;
-		kData[b].num=numb;
-		kData[b].flower=new int[numb+1];
+		packData.kData[b].num=numb;
+		packData.kData[b].flower=new int[numb+1];
 		for (int j=0;j<numb;j++)
-			kData[b].flower[j]=bflower[(b2w+j)%num];
-		kData[b].flower[numb]=kData[b].flower[0]; // close up
+			packData.kData[b].flower[j]=bflower[(b2w+j)%num];
+		packData.kData[b].flower[numb]=packData.kData[b].flower[0]; // close up
 		
 		return M;
 	}

@@ -843,7 +843,7 @@ public class MicroGrid extends PackExtender {
 					if (nlist!=null && nlist.size()>0 && (qv=nlist.get(0))>0) {
 						// find average radius of qv and nghbs
 						value=qackData.getRadius(qv);
-						int nbr=qackData.kData[qv].num+qackData.kData[qv].bdryFlag;
+						int nbr=qackData.getNum(qv)+qackData.getBdryFlag(qv);
 						for (int j=0;j<nbr;j++) 
 							value += qackData.getRadius(qackData.kData[qv].flower[j]);
 						value =(double)(nbr+1)/value;
@@ -1978,7 +1978,7 @@ public class MicroGrid extends PackExtender {
 		NodeLink vhits=new NodeLink(gridPack);
 		for (int v=1;v<=gridPack.nodeCount;v++) { 
 			if (gridPack.kData[v].utilFlag==(level+1)) { // some nghb face was hit
-				int num=gridPack.kData[v].num;
+				int num=gridPack.getNum(v);
 				boolean notAll=false;
 				for (int j=0;(j<num && !notAll);j++) {
 					int g=gridPack.kData[v].faceFlower[j];
@@ -2374,7 +2374,7 @@ public class MicroGrid extends PackExtender {
 			    	q.set_single_invDist(newval,q.kData[newval].flower[2],1.0);
 			    	q.set_single_invDist(newval,q.kData[newval].flower[0],1.0);
 			    }
-			    q.kData[newval].bdryFlag=0;
+			    q.setBdryFlag(newval,0);
 			    q.kData[newval].mark=++count;
 			    q.kData[newval].color=CPScreen.getFGColor();
 			    q.setRadius(newval,brad);

@@ -220,11 +220,11 @@ public class BeltramiFlips extends PackExtender {
 		while (count<N) {
 			// random vert, random petal
 			v=rand.nextInt(node)+1;
-			num=packData.kData[v].num;
+			num=packData.getNum(v);
 			// degree must be >3 for interior, >2 for bdry
-			if ((num+packData.kData[v].bdryFlag)>3) {
+			if ((num+packData.getBdryFlag(v))>3) {
 				// random petal
-				if (packData.kData[v].bdryFlag!=0) // boundary v   
+				if (packData.isBdry(v)) // boundary v   
 					j=rand.nextInt(num-1)+1;
 				else  
 					j=rand.nextInt(num);
@@ -285,14 +285,14 @@ public class BeltramiFlips extends PackExtender {
 	 * @return double[4]: v, r, w, l angles
 	 */
 	public double []getQuadAngles(int v,int w) {
-		if ((packData.kData[v].bdryFlag==1 && packData.kData[w].bdryFlag==1) ||
+		if ((packData.isBdry(v) && packData.isBdry(w)) ||
 				packData.nghb(v,w)<0)
 			return null;
 		int []corn_vert=new int[4];
 
 		// set up the four vertices about this edge 
 		int vw=packData.nghb(v,w);
-		int num=packData.kData[v].num;
+		int num=packData.getNum(v);
 		int j=(vw-1+num)%num;
 		int k=(vw+1)%num;
 		
@@ -327,7 +327,7 @@ public class BeltramiFlips extends PackExtender {
 	 * @return 0 if bdry edge, failed to flip, or flip not warranted
 	 */
 	public int flip2Legal(int v,int w) {
-		if ((packData.kData[v].bdryFlag==1 && packData.kData[w].bdryFlag==1) ||
+		if ((packData.isBdry(v) && packData.isBdry(w)) ||
 				packData.nghb(v,w)<0)
 			return 0;
 		double x=getLegality(v,w);

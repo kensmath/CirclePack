@@ -451,7 +451,7 @@ public class DisplayParser {
 						if (dispFlags.label)
 							dispFlags.setLabel(Integer.toString(v));
 						
-						if (p.kData[v].bdryFlag==0) // interior
+						if (!p.isBdry(v)) // interior
 							cpScreen.drawClosedPoly(num,fanCenters,dispFlags);
 						else
 							cpScreen.drawOpenPoly(num,fanCenters,dispFlags);

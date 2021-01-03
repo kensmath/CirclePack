@@ -982,7 +982,7 @@ public class GenBranching extends PackExtender {
 		if (firstFace<=0 || packData.firstFace>packData.faceCount) {
 			int farV=packData.alpha;
 			// try to use some face containing 'alpha'
-			for (int kk=0;(kk<packData.kData[farV].num && firstFace<0);kk++) {
+			for (int kk=0;(kk<packData.getNum(farV) && firstFace<0);kk++) {
 				int f=packData.kData[farV].faceFlower[kk];
 				if (faceOK(f))
 					firstFace=f;
@@ -993,7 +993,7 @@ public class GenBranching extends PackExtender {
 				NodeLink sa=new NodeLink(packData,"P b");
 				farV=packData.gen_mark(sa,-1,false);
 				if (farV>0) {
-					for (int kk=0;(kk<packData.kData[farV].num && firstFace<0);kk++) {
+					for (int kk=0;(kk<packData.getNum(farV) && firstFace<0);kk++) {
 						int f=packData.kData[farV].faceFlower[kk];
 						if (faceOK(f))
 							firstFace=f;
@@ -1034,7 +1034,7 @@ public class GenBranching extends PackExtender {
 	public boolean faceOK(int f) {
 		for (int i=0;i<3;i++) {
 			int v=packData.faces[f].vert[i];
-			if (packData.kData[v].bdryFlag!=0 || packData.poisonVerts.containsV(v)>=0)
+			if (packData.isBdry(v) || packData.poisonVerts.containsV(v)>=0)
 				return false;
 		}
 		return true;
@@ -1491,13 +1491,13 @@ public class GenBranching extends PackExtender {
 		}
 
 		// OK, now we are in a circle. 
-		if (refPack.kData[v].bdryFlag>0) { // can't yet branch at boundary circle
+		if (refPack.isBdry(v)) { // can't yet branch at boundary circle
 			CirclePack.cpb.errMsg("Can't yet branch at boundary vertex v="+v);
 			throw new DataException(v+" is a bdry vertex");
 		}
 
 		// Key variables are R, r, and shadow.
-		int num=refPack.kData[v].num;
+		int num=refPack.getNum(v);
 		double R=refPack.getRadius(v);
 		Complex cent=refPack.getCenter(v);
 		Complex cent2pt=pt.minus(cent);
@@ -1701,10 +1701,10 @@ public class GenBranching extends PackExtender {
 		}
 
 		// okay, we're in a circle
-		int num=refPack.kData[v].num;
+		int num=refPack.getNum(v);
 		
 		// can't yet branch a boundary circle 
-		if (refPack.kData[v].bdryFlag>0) {
+		if (refPack.isBdry(v)) {
 			CirclePack.cpb.errMsg("Can't yet branch at boundary vertex v="+v);
 			throw new DataException(v+" is a bdry vertex");
 		}
@@ -1833,7 +1833,7 @@ public class GenBranching extends PackExtender {
 			throw new ParserException("jump1<0, vertex may not be interior");
 		
 		// reset to zero if at last petal of closed flower
-		if (refPack.kData[v].bdryFlag==0)
+		if (!refPack.isBdry(v))
 			jump1=jump1%num;
 		
 		// how deep is dvec in this sector? The deeper in, the smaller overlap 1

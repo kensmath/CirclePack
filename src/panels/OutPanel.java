@@ -454,7 +454,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		  }
 		  if (code==dataCode.VERT_FLOWER) {
 			  StringBuilder strbld=new StringBuilder("");
-			  for (int j=0;j<=p.kData[v].num+p.kData[v].bdryFlag;j++)
+			  for (int j=0;j<=(p.getNum(v)+p.getBdryFlag(v));j++)
 				  strbld.append(p.kData[v].flower[j]+" ");
 			  fp.write(strbld.toString());
 			  return 1;
@@ -473,7 +473,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		    return 1;
 		  }
 		  if (code==dataCode.VERT_DEG) {
-			  fp.write(Integer.toString((p.kData[v].num+p.kData[v].bdryFlag))+" ");
+			  fp.write(Integer.toString((p.getNum(v)+p.getBdryFlag(v)))+" ");
 			  return 1;
 		  }
 		  if (code==dataCode.VERT_COLOR) {

@@ -273,7 +273,7 @@ public class Percolation extends PackExtender {
 			simpleWalk=false;
 			completed=0;
 			for (int v=1;v<=packData.nodeCount;v++) {
-				if (packData.kData[v].bdryFlag==0)
+				if (!packData.isBdry(v))
 					packData.kData[v].color=CPScreen.getFGColor();
 			}
 			
@@ -478,7 +478,7 @@ public class Percolation extends PackExtender {
 		while (count<N && !stop) {
 			completed=0;
 			for (int v=1;v<=packData.nodeCount;v++) {
-				if (packData.kData[v].bdryFlag==0) 
+				if (!packData.isBdry(v)) 
 					packData.kData[v].color=CPScreen.getFGColor();
 			}
 			openVerts=new Vector<Integer>(intV.size());
@@ -559,7 +559,7 @@ public class Percolation extends PackExtender {
 
 			// look to see if vert can be infected by a petal
 			int infectedPetal = 0;
-			for (int j = 0; (j < packData.kData[nextv].num && infectedPetal == 0); j++) {
+			for (int j = 0; (j < packData.getNum(nextv) && infectedPetal == 0); j++) {
 				int k = packData.kData[nextv].flower[j];
 				int m = CPScreen.col_to_table(packData.kData[k].color);
 				// is this petal infected by same color
@@ -595,7 +595,7 @@ public class Percolation extends PackExtender {
 		else if (m>100 && m<200)
 			lookfor=243;
 
-		for (int j=0;(j<packData.kData[v].num && completed==0);j++) {
+		for (int j=0;(j<packData.getNum(v) && completed==0);j++) {
 			int k=packData.kData[v].flower[j];
 			if (packData.kData[k].color==CPScreen.coLor(lookfor)) {
 				packData.kData[k].color=CPScreen.coLor(m);
@@ -619,7 +619,7 @@ public class Percolation extends PackExtender {
 		case 198: {opposite=199;break;}
 		case 199: {opposite=198;break;}
 		}
-		for (int j=0;j<packData.kData[v].num;j++) {
+		for (int j=0;j<packData.getNum(v);j++) {
 			int k=packData.kData[v].flower[j];
 			if (CPScreen.col_to_table(packData.kData[k].color)==opposite) {
 				completed=mark;
@@ -658,7 +658,7 @@ public class Percolation extends PackExtender {
 		bdryArcs.add(new NodeLink(packData,"b("+corners[0]+","+corners[1]+")"));
 		bdryArcs.add(new NodeLink(packData,"b("+corners[1]+","+corners[2]+")"));
 		bdryArcs.add(new NodeLink(packData,"b("+corners[2]+","+corners[3]+")"));
-		int v=packData.kData[corners[0]].flower[packData.kData[corners[0]].num];
+		int v=packData.kData[corners[0]].flower[packData.getNum(corners[0])];
 		bdryArcs.add(new NodeLink(packData,"b("+corners[3]+","+v+")"));
 		
 		// mark the points on the various boundary arcs.
@@ -750,7 +750,7 @@ public class Percolation extends PackExtender {
 	 */
 	public void setPetalTrans() {
 		for (int v=1;v<=packData.nodeCount;v++) {
-			int num=packData.kData[v].num+packData.kData[v].bdryFlag-1;
+			int num=packData.getNum(v)+packData.getBdryFlag(v)-1;
 //System.out.println(" vert "+v+" num "+num);			
 			petalTrans[v]=new PetalTrans(num);
 

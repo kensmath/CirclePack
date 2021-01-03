@@ -97,7 +97,7 @@ public class RedChainer {
 	  for (int i=1;i<=p.nodeCount;i++) {
 	      if (p.kData[i].utilFlag==-1) {
 		  k=0;
-		  for (int j=0;j<=p.kData[i].num;j++) 
+		  for (int j=0;j<=p.getNum(i);j++) 
 		    k+= p.kData[p.kData[i].flower[j]].utilFlag;
 		  if (k==0) {
 		      p.kData[i].utilFlag=0;
@@ -128,9 +128,9 @@ public class RedChainer {
 
 	  if (p.bdryCompCount>0) { // top disc 
 	      for (int i=1;i<=p.nodeCount;i++) // flag bdry verts 
-		if (p.kData[i].bdryFlag!=0) p.kData[i].utilFlag=1;
+		if (p.isBdry(i)) p.kData[i].utilFlag=1;
 	      v=red_share_vert(p,redlist);
-	      if (p.kData[v].bdryFlag!=0) {
+	      if (p.isBdry(v)) {
 		  keep_vert=v;
 		  keep_ptr=redlist;
 	      }
@@ -138,7 +138,7 @@ public class RedChainer {
 		  rtrace=redlist.next;
 		  while (rtrace!=redlist) {
 		      v=red_share_vert(p,rtrace);
-		      if (p.kData[v].bdryFlag!=0) {
+		      if (p.isBdry(v)) {
 			  keep_vert=v;
 			  keep_ptr=rtrace;
 			}
@@ -194,7 +194,7 @@ public class RedChainer {
 	      cgen=gen_numbers[cvert];
 	      lifeline = new EdgeLink(p);
 	      do {
-		  num=p.kData[cvert].num;
+		  num=p.getNum(cvert);
 		  for (int j=0;j<=num;j++) {
 		      k=p.kData[cvert].flower[j];
 		      if (gen_numbers[k]<cgen) {
@@ -366,8 +366,8 @@ public class RedChainer {
 		      if (EdgeLink.ck_in_elist(lifeline,new_vert,up_new_vert)
 		    		  || EdgeLink.ck_in_elist(lifeline,focus_vert,down_vert))
 		    	  throw new skip_to_end(); // first or last face crosses lifeline 
-		      num=p.kData[focus_vert].num;
-		      if (p.kData[focus_vert].bdryFlag!=0) { // bdry case 
+		      num=p.getNum(focus_vert);
+		      if (p.isBdry(focus_vert)) { // bdry case 
 			  if (new_vert==focus_vert && ((dum=p.nghb(focus_vert,up_new_vert))<0 
 					  || dum>down_indx))
 		    	  throw new skip_to_end();
@@ -413,7 +413,7 @@ public class RedChainer {
 		    	  up_vert=p.kData[focus_vert].flower[up_indx]; 
 		    	  if(upstream_red(up_vert,up_red)==rtrace) 
 			    	  throw new skip_to_end();
-		    	  num=p.kData[focus_vert].num;
+		    	  num=p.getNum(focus_vert);
 		    	  int []ans=new int[2];
 		    	  fan=build_fan(focus_vert,indx,down_indx,ans);
 		    	  bflag=ans[0];
@@ -697,8 +697,8 @@ public class RedChainer {
 	  int num;
 	  
 	  ans[0]=ans[1]=0;
-	  num=p.kData[vert].num;
-	  if (p.kData[vert].bdryFlag!=0 && indx1>indx2) { // bdry, wrong order 
+	  num=p.getNum(vert);
+	  if (p.isBdry(vert) && indx1>indx2) { // bdry, wrong order 
 	      ans[0]=1;
 	      return null;
 	    }
@@ -706,7 +706,7 @@ public class RedChainer {
 	  if (indx2<indx1) indx2 += num;
 	  int j=indx1+1;
 	  while (j<=indx2) {
-	      if (p.kData[p.kData[vert].flower[j%num]].bdryFlag!=0)
+	      if (p.isBdry(p.kData[vert].flower[j%num]))
 	    	  ans[0]=1;
 	      ans[1]++;
 	      j++;
@@ -888,7 +888,7 @@ public class RedChainer {
 	      backfan=btrace=new RedList(p);
 	      btrace.face=f2;
 	      btrace.center=new Complex(0.0);
-	      num=p.kData[common].num;
+	      num=p.getNum(common);
 	      while (u!=u1) {
 	        k=(p.nghb(common,u)+1)%num;
 	        nu=p.kData[common].flower[k];
@@ -1366,7 +1366,7 @@ public class RedChainer {
 		   * red chain as a closed list. Also, 'rwbFlag' > 0 should count 
 		   * times a face is in the red chain, while < 0 means "white", 
 		   * i.e., inside the red chain. */
-		  num=p.kData[seed].num;
+		  num=p.getNum(seed);
 		  f=p.kData[seed].faceFlower[0];
 		  red_chain=new RedList(p,f); // start fresh
 		  p.faces[f].rwbFlag=1;
@@ -1385,7 +1385,7 @@ public class RedChainer {
 		  }
 		  
 		  // If 'seed' is boundary, backtrack to get its full flower
-		  if (p.kData[seed].bdryFlag!=0)  
+		  if (p.isBdry(seed))  
 		      for (int i=num-2;i>0;i--) {
 				  red_chain=new RedList(red_chain,f);
 			      red_chain.done=isDone(p,red_chain);
@@ -1574,7 +1574,7 @@ public class RedChainer {
 		      /* Note: 'vert' is vertex that cface does NOT share
 		       * with its (downstream and upstream) redchain neighbor  
 		       */
-		      if ((num=p.kData[vert].num) > 1) { // any more faces?
+		      if ((num=p.getNum(vert)) > 1) { // any more faces?
 		    	  // findex = flower index of first vertex in cface 
 		    	  findex=0;
 		    	  while (p.kData[vert].faceFlower[findex]!=cface 
@@ -1583,7 +1583,7 @@ public class RedChainer {
 		    	  eindex=bindex=findex; // all these are the same in this case
 		 
 		    	  // if vert interior, see if we can loop red chain around it
-		    	  if (p.kData[vert].bdryFlag==0) {
+		    	  if (!p.isBdry(vert)) {
 		    		  i=bindex+1;
 		    		  laso_flag=true;
 		    		  while ((j=(i % num))!=eindex && laso_flag) {
@@ -1632,10 +1632,10 @@ public class RedChainer {
 		    	   * it, we try to add at least one face clockwise around
 		    	   * 'vert' from 'cface' (it will be blue to start).
 			       */
-		    	  if (mode && (p.kData[vert].bdryFlag!=0 || !laso_flag)) {
+		    	  if (mode && (p.isBdry(vert) || !laso_flag)) {
 		    		  j=(eindex-1+num) % num; 
-		    		  if ( ((p.kData[vert].bdryFlag!=0 && (eindex > 0)) 
-		    				  || p.kData[vert].bdryFlag==0)
+		    		  if ( ((p.isBdry(vert) && (eindex > 0)) 
+		    				  || !p.isBdry(vert))
 		    				  && p.faces[p.kData[vert].faceFlower[j]].rwbFlag==0) {
 		    			  f=p.kData[vert].faceFlower[j];
 		    			  int k=p.face_nghb(cface,f);
@@ -1672,7 +1672,7 @@ public class RedChainer {
 		  if ((n=p.face_nghb(red_chain.next.face,cface))<0) 
 		      throw new RedListException();
 		  vert=p.faces[cface].vert[n];
-		  num=p.kData[vert].num;
+		  num=p.getNum(vert);
 		  findex=0;
 		  while (p.kData[vert].faceFlower[findex]!=cface && findex<(num-1)) 
 			  findex++;
@@ -1720,7 +1720,7 @@ public class RedChainer {
 		   * whole fan is already red, don't need to revisit this face, 
 		   * so set done=true.
 		   */
-		  if (p.kData[vert].bdryFlag!=0 && eindex==0 && bindex==(num-1) 
+		  if (p.isBdry(vert) && eindex==0 && bindex==(num-1) 
 				  && red_chain.prev.face!=red_chain.next.face) {
 			  red_chain.done=true;
 			  red_chain=red_chain.next;
@@ -1734,7 +1734,7 @@ public class RedChainer {
 		   * preceeding fan (clockwise) is free, we add it as blue face. 
 		   */
 		  laso_flag=true;
-		  if (p.kData[vert].bdryFlag==0) { // vert is interior
+		  if (!p.isBdry(vert)) { // vert is interior
 	    	  new_end=bzip;
 		      i=bindex+1;
 		      while ( (j=(i % num))!=eindex && laso_flag) {
@@ -1782,13 +1782,13 @@ public class RedChainer {
 		  
 		  /* otherwise, if possible, add blue face preceeding fan (i.e., 
 		   * clockwise from first face of fan (which is eindex). */ 
-		  if (mode && (p.kData[vert].bdryFlag!=0 || !laso_flag)) {
+		  if (mode && (p.isBdry(vert) || !laso_flag)) {
 		      cface=p.kData[vert].faceFlower[eindex];
 		      j=(eindex-1+num) % num;
 		      f=p.kData[vert].faceFlower[j]; // ??? was (j+1) % num];
 		      // is there a blue face to add?
-		      if (((p.kData[vert].bdryFlag!=0 && (eindex > 0)) 
-			    || p.kData[vert].bdryFlag==0) && p.faces[f].rwbFlag==0) {
+		      if (((p.isBdry(vert) && (eindex > 0)) 
+			    || !p.isBdry(vert)) && p.faces[f].rwbFlag==0) {
 		    	  int k=p.face_nghb(cface,f);
 		    	  if (!poisonFlag || !p.edge_isPoison(vert,p.faces[f].vert[k])) {
 		    		  fDo_tmp=add_face_order(fDo_tmp,f,red_chain.face);
@@ -1824,7 +1824,7 @@ public class RedChainer {
 			
 			if (rl.next.face==rl.prev.face) { // blue?
 				int v=p.faces[rl.face].vert[rl.vIndex]; // non-shared vert
-				if (p.kData[v].num==1) return true;
+				if (p.getNum(v)==1) return true;
 			}
 			
 			if (vd==vu) return true; // rl.face is inside a fan of faces
@@ -1832,7 +1832,7 @@ public class RedChainer {
 					p.edge_isPoison(vd,vu))) 
 				return true;
 			int j=p.nghb(vd,vu);
-			if (p.kData[vd].bdryFlag!=0 && p.kData[vd].num==j)
+			if (p.isBdry(vd) && p.getNum(vd)==j)
 				return true;
 			return false;
 		}

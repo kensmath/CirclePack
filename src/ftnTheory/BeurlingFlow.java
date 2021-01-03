@@ -179,7 +179,7 @@ public class BeurlingFlow extends PackExtender {
 
 		// cycle through bdry pr 
 		for (int v=1;v<=packData.nodeCount;v++) {
-			if (packData.kData[v].bdryFlag!=0) {
+			if (packData.isBdry(v)) {
 				z=packData.getCenter(v);
 				e_rad=domainData.getRadius(v);
 				CPhz=evaluate_h(z);

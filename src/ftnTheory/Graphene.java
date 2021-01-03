@@ -136,7 +136,7 @@ public class Graphene extends PackExtender {
 		if (cmd.startsWith("mv")) {
 			int w;
 			w=NodeLink.grab_one_vert(packData,flagSegs);
-			if (w<=0 || w>packData.nodeCount || packData.kData[w].bdryFlag!=1
+			if (w<=0 || w>packData.nodeCount || !packData.isBdry(w)
 					|| stitchVerts.size()<3 || w==northpole || w==southpole ||
 					packData.nghb(w,stitchVerts.get(stitchVerts.size()-2))<0)
 				return 0;
@@ -399,7 +399,7 @@ public class Graphene extends PackExtender {
 				double gradNorm=0.0;
 				for (int v=1;v<=packData.nodeCount;v++) {
 					gradNorm += grad[v]*grad[v];
-					if (packData.kData[v].bdryFlag!=1) { // leave bdry unchanged
+					if (!packData.isBdry(v)) { // leave bdry unchanged
 						double newrad=packData.getRadius(v)-eps*grad[v];
 						if (newrad<=0)
 							newrad=packData.getRadius(v)/2.0;
@@ -652,7 +652,7 @@ public class Graphene extends PackExtender {
 		for (int v = 1; v <= packData.nodeCount; v++) {
 			double newE = ringEnergy(v);
 			double newASE=0.0;
-			if (packData.kData[v].bdryFlag==0) {
+			if (!packData.isBdry(v)) {
 				packData.e_anglesum_overlap(v,packData.getRadius(v),uPkt);
 				double term=2.0*Math.PI-uPkt.value;
 				newASE=planarParam*term*term;
@@ -661,7 +661,7 @@ public class Graphene extends PackExtender {
 				topRingE = newE;
 				topRingV = v;
 			}
-			if (packData.kData[v].bdryFlag==0 && (newASE>topAngSumE)) {
+			if (!packData.isBdry(v) && (newASE>topAngSumE)) {
 				topAngSumE=newASE;
 				topAngSumV=v;
 			}
@@ -716,9 +716,9 @@ public class Graphene extends PackExtender {
 		int []fflower=packData.kData[v].faceFlower;
 		double bondE=0.0;
 		double angE=0.0;
-		for (int j=0;j<packData.kData[v].num;j++) {
+		for (int j=0;j<packData.getNum(v);j++) {
 			CarbonEnergy cE=carbonEnergies.get(fflower[j]);
-			if (j>0 || packData.kData[v].bdryFlag==0) {// skip first for bdry
+			if (j>0 || !packData.isBdry(v)) {// skip first for bdry
 				bondE+=cE.getBondEnergy(v)/2.0;
 			}
 			angE += cE.getAngleEnergy(v);
@@ -726,7 +726,7 @@ public class Graphene extends PackExtender {
 		if (!packData.e_anglesum_overlap(v,packData.getRadius(v),uPkt))
 			Oops("Error in computing angle sum");
 		double planarE=0.0;
-		if (packData.kData[v].bdryFlag==0) { // interior?
+		if (!packData.isBdry(v)) { // interior?
 			double angleErr=Math.PI*2-uPkt.value;
 			planarE=planarParam*(angleErr*angleErr);
 		}
@@ -884,9 +884,9 @@ public class Graphene extends PackExtender {
 	public double []energyGrad() {
 		double []grad=new double[packData.nodeCount+1];
 		for (int vert=1;vert<=packData.nodeCount;vert++) {
-			int num=packData.kData[vert].num;
+			int num=packData.getNum(vert);
 			double r=packData.getRadius(vert);
-			boolean bdryvert=packData.kData[vert].bdryFlag==1;
+			boolean bdryvert=packData.isBdry(vert);
 			
 			// each contribution due to anglesums = ASfactor*partial.
 			packData.e_anglesum_overlap(vert,r,uPkt);
@@ -929,7 +929,7 @@ public class Graphene extends PackExtender {
 				}
 				
 				// anglesum contributions if vert interior
-				if (packData.kData[vert].bdryFlag==0) {
+				if (!packData.isBdry(vert)) {
 					grad[vert]+=ASfactor*dphidr(r,t,u);
 					grad[tv]+=ASfactor*dphidt(r,t,u);
 					grad[uv]+=ASfactor*dphidu(r,t,u);
@@ -980,7 +980,7 @@ public class Graphene extends PackExtender {
 		}
 		case 2: // close flower with edge, choose right as pole
 		{
-			int u=packData.kData[v].flower[packData.kData[v].num];
+			int u=packData.kData[v].flower[packData.getNum(v)];
 			cpCommand("enclose 0 "+v);
 			newIndx=u;
 			break;
@@ -988,7 +988,7 @@ public class Graphene extends PackExtender {
 		case 3: // enclose with 1 new circle
 		{
 			int lft=packData.kData[v].flower[0];
-			int rght=packData.kData[v].flower[packData.kData[v].num];
+			int rght=packData.kData[v].flower[packData.getNum(v)];
 			cpCommand("enclose 1 "+v);
 			cpCommand("enclose 0 "+lft);
 			cpCommand("enclose 0 "+rght);
@@ -1037,9 +1037,9 @@ public class Graphene extends PackExtender {
 			// need better control on the edges of the slits
 			count += cpCommand("set_aim 1.75 "+southpole+" "+northpole);
 			int su=packData.kData[southpole].flower[0];
-			int sd=packData.kData[southpole].flower[packData.kData[southpole].num];
+			int sd=packData.kData[southpole].flower[packData.getNum(southpole)];
 			int nu=packData.kData[northpole].flower[0];
-			int nd=packData.kData[northpole].flower[packData.kData[northpole].num];
+			int nd=packData.kData[northpole].flower[packData.getNum(northpole)];
 			count += cpCommand("set_aim 1.0 "+su+" "+sd+" "+nu+" "+nd);
 			
 			// repack, layout, color by degree
@@ -1130,10 +1130,10 @@ public class Graphene extends PackExtender {
 
   	  	// now attach along 2 edges, <v, alpha, w> to <rw, alpha,rv>,
   	  	int v=leftPack.kData[1].flower[0];
-  	  	int w=leftPack.kData[1].flower[leftPack.kData[1].num];
+  	  	int w=leftPack.kData[1].flower[leftPack.getNum(1)];
   	  	
   	  	// may need this in future
-  	  	int rw=rightPack.kData[1].flower[rightPack.kData[1].num];
+  	  	int rw=rightPack.kData[1].flower[rightPack.getNum(1)];
   	  	
   	  	stitchBase=leftPack.copyPackTo();
   	  	
@@ -1274,7 +1274,7 @@ public class Graphene extends PackExtender {
 		for (int v=1;v<=newPack.nodeCount;v++) {
 			if (newPack.kData[v].mark<=2)
 				newPack.poisonVerts.add(v);
-			if (newAlp<0 && newPack.kData[v].bdryFlag==0 && newPack.kData[v].mark==3)
+			if (newAlp<0 && !newPack.isBdry(v) && newPack.kData[v].mark==3)
 				newAlp=v;
 		}
 

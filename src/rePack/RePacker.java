@@ -196,7 +196,7 @@ public abstract class RePacker {
 			// check for non-default aims
 			boolean hit=false;
 			for (int i=1;(!hit && i<=p.nodeCount);i++) {
-				if (p.kData[i].bdryFlag>0) {
+				if (p.isBdry(i)) {
 					if (p.getAim(i)>0.0)	
 						hit=true;
 				}
@@ -290,7 +290,7 @@ public abstract class RePacker {
 				kdata[i]=new TmpData();
 				rdata[i].aim=p.getAim(i);
 				rdata[i].rad=p.rData[i].rad;
-				kdata[i].num=num=p.kData[i].num;
+				kdata[i].num=num=p.getNum(i);
 				kdata[i].flower=new int[kdata[i].num+1];
 				for (int j=0;j<=num;j++) kdata[i].flower[j]=p.kData[i].flower[j];
 				if (p.overlapStatus) {

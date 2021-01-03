@@ -406,7 +406,7 @@ public class PathBaryUtil {
     		w=face.vert[2];
     		v=face.vert[1];
     	}
-    	if (p.kData[v].bdryFlag==1 && w==p.kData[v].flower[0])
+    	if (p.isBdry(v) && w==p.kData[v].flower[0])
     		return -1; 
     	return p.kData[w].faceFlower[p.nghb(w,v)]; // to left of {w,v}
     	} catch(Exception ex) {
@@ -424,7 +424,7 @@ public class PathBaryUtil {
 	 * @return
 	 */
 	public static int faceFromZ(PackData p,int v,Complex p2) {
-		int num=p.kData[v].num;
+		int num=p.getNum(v);
 		Complex me=p.getCenter(v);
 		Complex vp2=p2.minus(me);
 		double arg1;

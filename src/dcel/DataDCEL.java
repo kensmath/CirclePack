@@ -88,9 +88,9 @@ public class DataDCEL {
 			Vertex vtx=pdcel.vertices[v];
 			int[] flower=vtx.getFlower();
 			int num=flower.length-1;
-			p.kData[v].bdryFlag=0;
+			p.setBdryFlag(v,0);
 			if (vtx instanceof RedVertex)
-				p.kData[v].bdryFlag=((RedVertex)vtx).bdryFlag;
+				p.setBdryFlag(v,((RedVertex)vtx).bdryFlag);
 			p.kData[v].flower=flower;
 			p.kData[v].num=num;
 			p.rData[v]=new RData(); // duplicated data below

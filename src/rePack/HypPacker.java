@@ -59,7 +59,7 @@ public class HypPacker extends RePacker {
 		aimnum = 0;
 		index = new int[p.nodeCount + 1];
 		for (int i = 1; i <= p.nodeCount; i++) {
-			if (p.kData[i].bdryFlag != 0 && rdata[i].aim >= 0
+			if (p.isBdry(i) && rdata[i].aim >= 0
 					&& rdata[i].aim < AIM_THRESHOLD)
 				rdata[i].rad = (-.2); // treat interior as horocycle (e.g.,
 										// 'cusp')

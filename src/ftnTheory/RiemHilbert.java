@@ -265,7 +265,7 @@ public class RiemHilbert extends PackExtender {
 			restCurves=new Vector<RH_curve>(50);
 			restCurves.add(defaultCurve);
 		}
-		if (v<0 || v>packData.nodeCount || packData.kData[v].bdryFlag==0) {
+		if (v<0 || v>packData.nodeCount || !packData.isBdry(v)) {
 			v=packData.bdryStarts[1];
 		}
 
@@ -364,7 +364,7 @@ public class RiemHilbert extends PackExtender {
 			DispFlags dflags=new DispFlags("fc");
 			while (vlist.hasNext()) {
 				v = (Integer) vlist.next();
-				if (packData.kData[v].bdryFlag == 0)
+				if (!packData.isBdry(v))
 					break;
 				sdist = circleDistance(v);
 				rad = packData.getRadius(v);
@@ -436,7 +436,7 @@ public class RiemHilbert extends PackExtender {
 			int v;
 			try {
 				v=NodeLink.grab_one_vert(packData,flagSegs);
-				if (v!=0 && packData.kData[v].bdryFlag!=0)
+				if (v!=0 && packData.isBdry(v))
 					return linkPackCurves(v);
 			} catch (Exception ex) {}
 			return linkPackCurves(packData.bdryStarts[1]);

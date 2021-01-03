@@ -209,7 +209,7 @@ public class PackLite {
 			int v=iV.next();
 			util[v]=-v; // negative if in 'intV'
 			// mark nghbs of 'intV'
-			for (int j=0;j<(packData.kData[v].num+packData.kData[v].bdryFlag);j++) {
+			for (int j=0;j<(packData.getNum(v)+packData.getBdryFlag(v));j++) {
 				int k=packData.kData[v].flower[j];
 				if (util[k]==0)
 					util[k]=k; // positive (at least temporarily)
@@ -278,10 +278,10 @@ public class PackLite {
   			for (int ii=1;ii<=p.nodeCount;ii++)
   				new2old[ii]=ii; // need this later
   	  		if (newGam<=0 || newGam>p.nodeCount ||
-  	  				p.kData[newGam].bdryFlag==0)
+  	  				!p.isBdry(newGam))
   	  			newGam=p.bdryStarts[1];
   	  		if (newAlp<=0 || newAlp>p.nodeCount ||
-  	  				p.kData[newAlp].bdryFlag!=0) {
+  	  				p.isBdry(newAlp)) {
   	  			p.chooseAlpha();
   	  			newAlp=p.alpha;
   	  		}
@@ -328,7 +328,7 @@ public class PackLite {
 		int []newIndices=new int[p.nodeCount+1];
 		util=new int[p.nodeCount+1];
 		for (int v=1;v<=p.nodeCount;v++) {
-			if (p.kData[v].bdryFlag==0)
+			if (!p.isBdry(v))
 				util[v]=-v; // negative at interior
 			else
 				util[v]=v;
@@ -402,7 +402,7 @@ public class PackLite {
 		else { 
 			for (int b=1;b<=p.bdryCompCount;b++) {
 				int w=p.bdryStarts[b];
-				int stopw=p.kData[w].flower[p.kData[w].num]; // upstream nghb
+				int stopw=p.kData[w].flower[p.getNum(w)]; // upstream nghb
 				if (util[w]>0) {
 					newIndices[w]=newIndx;
 					p_Indices[newIndx++]=w;
@@ -431,7 +431,7 @@ public class PackLite {
 		double aim=-1.0;
 		for (int n=1;n<=vertCount;n++) {
 			int v=p_Indices[n];
-			flowerCount += p.kData[v].num+3;
+			flowerCount += p.getNum(v)+3;
 			
 			// is this a variable vertex
 			if ((aim=p.getAim(v))>=0.0) {
@@ -440,13 +440,13 @@ public class PackLite {
 				vCount++;
 				
 				// is aim also non-default? (non-default 'aims' indexed from 0)
-				if (p.kData[v].bdryFlag==1 || Math.abs(aim-2.0*Math.PI)>.0000001) 
+				if (p.isBdry(v) || Math.abs(aim-2.0*Math.PI)>.0000001) 
 					aimCount++;
 			}
 
 			// does it have new inversive distances? (only pairs (v,w) with w>v) 
 			if (p.overlapStatus && p.kData[v].invDist!=null) {
-				for (int jj=0;jj<(p.kData[v].num+p.kData[v].bdryFlag);jj++) {
+				for (int jj=0;jj<(p.getNum(v)+p.getBdryFlag(v));jj++) {
 					int w=p.kData[v].flower[jj];
 					if (w>v && p.getInvDist(v,p.kData[v].flower[jj])!=1.0)
 						invDistCount++;
@@ -473,13 +473,13 @@ public class PackLite {
 				varIndices[vtick++]=n;
 				
 				// is aim also non-default? (non-default 'aims' indexed from 0)
-				if (aimCount>0 && (p.kData[v].bdryFlag==1 || Math.abs(aim-2.0*Math.PI)>.0000001)) 
+				if (aimCount>0 && (p.isBdry(v) || Math.abs(aim-2.0*Math.PI)>.0000001)) 
 					aims[aimtick++]=aim;
 			}
 
 			// does it have new inversive distances? (only pairs (v,w) with w>v) 
 			if (invDistCount>0 && p.overlapStatus && p.kData[v].invDist!=null) {
-				for (int jj=0;jj<(p.kData[v].num+p.kData[v].bdryFlag);jj++) {
+				for (int jj=0;jj<(p.getNum(v)+p.getBdryFlag(v));jj++) {
 					int w=p.kData[v].flower[jj];
 					if (w>v && p.getInvDist(v,p.kData[v].flower[jj])!=1.0) {
 						invDistLink.add(new EdgeSimple(v,w));
@@ -496,11 +496,11 @@ public class PackLite {
 		vNum=new int[vertCount+1];
 		for (int n=1;n<=vertCount;n++) {
 			int v=p_Indices[n];
-			vNum[n]=p.kData[v].num;
+			vNum[n]=p.getNum(v);
 			flowers[n]=new int[vNum[n]+1];
 			flowerHeads[tick++]=n;
 			flowerHeads[tick++]=vNum[n];
-			for (int j=0;j<=p.kData[v].num;j++) {
+			for (int j=0;j<=p.getNum(v);j++) {
 				flowers[n][j]=flowerHeads[tick++]=newIndices[p.kData[v].flower[j]];
 			}
 		}

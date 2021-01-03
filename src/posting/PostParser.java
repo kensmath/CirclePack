@@ -470,9 +470,9 @@ public class PostParser {
 						v = (Integer) vlist.next();
 						if (!dispFlags.colorIsSet)
 							dispFlags.setColor(p.kData[v].color);
-						int num = p.kData[v].num;
+						int num = p.getNum(v);
 						Complex[] fanCenters = new Complex[num
-								+ p.kData[v].bdryFlag];
+								+ p.getBdryFlag(v)];
 						for (int j = 0; j < num; j++) {
 							int ff = p.kData[v].faceFlower[j];
 							z = new Complex(p.faceIncircle(ff,amb).center);
@@ -481,7 +481,7 @@ public class PostParser {
 							fanCenters[j] = z;
 						}
 						// for bdry v, add v to list
-						if (p.kData[v].bdryFlag == 1) {
+						if (p.isBdry(v)) {
 							z = p.getCenter(v);
 							if (p.hes > 0)
 								z = cpScreen.sphView.toApparentSph(z);
@@ -489,7 +489,7 @@ public class PostParser {
 						}
 
 						if (!dispFlags.fill) {
-							if (p.kData[v].bdryFlag == 0) {
+							if (!p.isBdry(v)) {
 								if (!dispFlags.colorIsSet)
 									pF.postPoly(p.hes, num, fanCenters, tx);
 								else
@@ -511,11 +511,11 @@ public class PostParser {
 						} else { // filled
 							if (!dispFlags.colBorder)
 								pF.postFilledPoly(p.hes, num
-										+ p.kData[v].bdryFlag, fanCenters,
+										+ p.getBdryFlag(v), fanCenters,
 										dispFlags.getFillColor(), tx);
 							else
 								pF.postFilledColorPoly(p.hes, num
-										+ p.kData[v].bdryFlag, fanCenters,
+										+ p.getBdryFlag(v), fanCenters,
 										dispFlags.getFillColor(),dispFlags.getColor(), tx);
 						}
 

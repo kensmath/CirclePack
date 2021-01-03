@@ -98,10 +98,10 @@ public class ComplexAnalysis extends PackExtender {
 		for (int v=1;v<=packData.nodeCount;v++) {
 			
 			double tot=0.0;
-			for (int j=0;j<packData.kData[v].num+packData.kData[v].bdryFlag;j++) 
+			for (int j=0;j<packData.getNum(v)+packData.getBdryFlag(v);j++) 
 				tot += conductance[v][j];
 			double avg=0.0;
-			for (int j=0;j<packData.kData[v].num+packData.kData[v].bdryFlag;j++) 
+			for (int j=0;j<packData.getNum(v)+packData.getBdryFlag(v);j++) 
 				avg += values[packData.kData[v].flower[j]]*conductance[v][j]/tot;
 			lp[v]=avg-values[v];
 		}
@@ -576,7 +576,7 @@ public class ComplexAnalysis extends PackExtender {
 		Complex f1=null;
 		Complex f2=null;
 		for (int v=1;v<=domData.nodeCount;v++) {
-			int num=domData.kData[v].num;
+			int num=domData.getNum(v);
 			Complex z=domData.getCenter(v);
 			spokes=new double[num+1];
 			inCenters=new Complex[num];
@@ -598,7 +598,7 @@ public class ComplexAnalysis extends PackExtender {
 			// store conductances
 			
 			// for bdry, use ratio of inRad/length for first and last edges
-			if (domData.kData[v].bdryFlag!=0) {
+			if (domData.isBdry(v)) {
 				f1=domData.getCenter(domData.kData[v].flower[0]);
 				f2=domData.getCenter(domData.kData[v].flower[1]);
 				double inRad=EuclMath.eucl_tri_inradius(spokes[0],spokes[1],f1.minus(f2).abs());
@@ -647,14 +647,14 @@ public class ComplexAnalysis extends PackExtender {
 		for (int v=1;v<=dData.nodeCount;v++) {
 			
 			// data at v
-			int num=dData.kData[v].num;
+			int num=dData.getNum(v);
 			z=dData.getCenter(v);
 			w=rData.getCenter(v);
 
 			// check if packings match here
-			if (num!=rData.kData[v].num || num!=dData.kData[v].num  
-					|| dData.kData[v].bdryFlag!=rData.kData[v].bdryFlag
-					|| dData.kData[v].bdryFlag!=rData.kData[v].bdryFlag)
+			if (num!=rData.getNum(v) || num!=dData.getNum(v)
+					|| dData.getBdryFlag(v)!=rData.getBdryFlag(v)
+					|| dData.getBdryFlag(v)!=rData.getBdryFlag(v))
 				throw new DataException("combinatorics of packings do not agree");
 			// for the data
 			domSpokes=new Complex[num+1];
@@ -663,14 +663,14 @@ public class ComplexAnalysis extends PackExtender {
 			double totalWeight=0.0;
 
 			// store complex edge vectors
-			for (int j=0;j<dData.kData[v].num+dData.kData[v].bdryFlag;j++) {
+			for (int j=0;j<dData.getNum(v)+dData.getBdryFlag(v);j++) {
 				domSpokes[j]=z.minus(dData.getCenter(dData.kData[v].flower[j]));
 				ranSpokes[j]=w.minus(rData.getCenter(rData.kData[v].flower[j]));
 				totalWeight+=conductance[v][j];
 			}
 
 			deriv=new Complex(0.0);
-			for (int j=0;j<num+dData.kData[v].bdryFlag;j++) 
+			for (int j=0;j<num+dData.getBdryFlag(v);j++) 
 				deriv=deriv.add(ranSpokes[j].divide(domSpokes[j]).times(conductance[v][j]));
 			outputData.setCenter(v,deriv.divide(totalWeight));
 		}
@@ -693,14 +693,14 @@ public class ComplexAnalysis extends PackExtender {
 			double totalWeight=0.0;
 			
 			// data at v
-			int num=packData.kData[v].num;
+			int num=packData.getNum(v);
 			double rad=packData.getRadius(v);
 			Complex z=packData.getCenter(v);
 			Complex w=rangeData.getCenter(v);
 
 			// check if packings match here
-			if (num!=rangeData.kData[v].num 
-					|| packData.kData[v].bdryFlag!=rangeData.kData[v].bdryFlag)
+			if (num!=rangeData.getNum(v)
+					|| packData.getBdryFlag(v)!=rangeData.getBdryFlag(v))
 				throw new DataException("combinatorics of packings are not the same");
 			// for the data
 			double []weights=new double[num+1];
@@ -722,7 +722,7 @@ public class ComplexAnalysis extends PackExtender {
 			
 			// compute for remaining edges
 			// Note: for interior v, weight = weights[0]+weights[num]
-			for (int j=1;j<packData.kData[v].num;j++) {
+			for (int j=1;j<packData.getNum(v);j++) {
 				rad1=rad2;
 				rad2=packData.getRadius(packData.kData[v].flower[j+1]);
 				inRad=EuclMath.eucl_tri_inradius(rad+rad1,rad+rad2,rad1+rad2);

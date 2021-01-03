@@ -106,7 +106,7 @@ public class SphericalMath{
   public static double sph_rad_max(PackData p,int vert) {
 		if (vert<1 || vert>p.nodeCount) return 0.0; // error
 		double mx=0.0;
-		int num=p.kData[vert].num;
+		int num=p.getNum(vert);
 		for (int j=0;j<num;j++) {
 			double sum =p.getRadius(p.kData[vert].flower[j])
 				+p.getRadius(p.kData[vert].flower[j+1]);

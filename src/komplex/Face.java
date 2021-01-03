@@ -66,7 +66,7 @@ public class Face{
      public boolean isBdryFace(PackData p) {
     	 if (p==null) return false;
     	 for (int j=0;j<vertCount;j++)
-    		 if (p.kData[vert[j]].bdryFlag==1)
+    		 if (p.isBdry(vert[j]))
     			 return true;
     	 return false;
      }

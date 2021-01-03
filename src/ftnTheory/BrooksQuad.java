@@ -133,7 +133,7 @@ public class BrooksQuad extends PackExtender {
 		  brooks_insert(packData,P,N,B,1);
 		  
 		  // fix flower of R 
-		  for (int i=0;i<=packData.kData[R].num;i++)
+		  for (int i=0;i<=packData.getNum(R);i++)
 		    if (packData.kData[R].flower[i]==N) 
 			packData.kData[R].flower[i]=P;
 		  
@@ -148,7 +148,7 @@ public class BrooksQuad extends PackExtender {
 		  // add flower of new temporary 'plug' vert 
 		  packData.kData[P].flower=new int[5];
 		  packData.kData[P].num=4;
-		  packData.kData[P].bdryFlag=0;
+		  packData.setBdryFlag(P,0);
 		  packData.setRadius(P,2.0*Math.PI);	  
 		  packData.kData[P].flower[0]=N;
 		  packData.kData[P].flower[1]=B;
@@ -194,7 +194,7 @@ public class BrooksQuad extends PackExtender {
 		  brooks_insert(packData,P,N,L,1);
 		  
 		  // fix flower of 3 
-		  for (int i=0;i<=packData.kData[B].num;i++)
+		  for (int i=0;i<=packData.getNum(B);i++)
 		    if (packData.kData[B].flower[i]==N) 
 			packData.kData[B].flower[i]=P;
 		  
@@ -209,7 +209,7 @@ public class BrooksQuad extends PackExtender {
 		  // add flower of new P vert 
 		  packData.kData[P].flower=new int[5];
 		  packData.kData[P].num=4;
-		  packData.kData[P].bdryFlag=0;
+		  packData.setBdryFlag(P,0);
 		  packData.setRadius(P,2.0*Math.PI);	  
 		  packData.kData[P].flower[0]=N;
 		  packData.kData[P].flower[1]=L;
@@ -234,7 +234,7 @@ public class BrooksQuad extends PackExtender {
 	  int []newflower;
 	  boolean done=false;
 
-	  num=packData.kData[v].num;
+	  num=packData.getNum(v);
 	  newflower=new int[num+2];
 	  for (int i=0;i<=num;i++)
 	    newflower[i]=packData.kData[v].flower[i];

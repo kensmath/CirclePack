@@ -627,8 +627,8 @@ public class EuclMath{
 		
 		// if bdry edge return null
 		int indxvw=p.nghb(verts[0],verts[2]);
-		int num=p.kData[verts[2]].num;
-		if (p.kData[verts[2]].bdryFlag==1 && (indxvw==0 || indxvw==num))
+		int num=p.getNum(verts[2]);
+		if (p.isBdry(verts[2]) && (indxvw==0 || indxvw==num))
 				return null;
 		
 		// next is v
@@ -835,7 +835,7 @@ public class EuclMath{
 
 			double thsum = 0.0;
 			double asum = 0.0;
-			for (int j=0;j<p.kData[v].num;j++) {
+			for (int j=0;j<p.getNum(v);j++) {
 				Complex spoke0 = z.minus(p.getCenter(p.kData[v].flower[j]));
 				Complex spoke1 = z.minus(p.getCenter(p.kData[v].flower[j+1]));
 				Complex farside = (p.getCenter(p.kData[v].flower[j])).

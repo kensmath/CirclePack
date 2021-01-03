@@ -30,7 +30,7 @@ public class Exponential {
 		double r0,r1,r2,scale,Maxx,minx,Maxy,miny,x,y,r,factor;
 
 		for (int i=1;i<=p.nodeCount;i++) {
-			if (p.kData[i].bdryFlag==0 && p.kData[i].num!=6) flag=true;
+			if (!p.isBdry(i) && p.getNum(i)!=6) flag=true;
 			p.kData[i].utilFlag=0; 
 		}
 		if (flag) {
@@ -69,13 +69,13 @@ public class Exponential {
 						k2=p.kData[j].flower[k+1];
 						if (p.kData[k1].utilFlag!=0 && p.kData[k2].utilFlag!=0) {
 							m=0;
-							while (m<=p.kData[k2].num 
+							while (m<=p.getNum(k2)
 									&& p.kData[k2].flower[m]!=j) m++;
-							if (m==(p.kData[k2].num -1)
-									&& p.kData[k2].bdryFlag==0
+							if (m==(p.getNum(k2) -1)
+									&& !p.isBdry(k2)
 									&& p.kData[p.kData[k2].flower[0]].utilFlag!=0)
 							{k0=p.kData[k2].flower[1];flag=true;}
-							else if (m<(p.kData[k2].num -1)
+							else if (m<(p.getNum(k2) -1)
 									&& p.kData[p.kData[k2].flower[m+2]].utilFlag!=0)
 							{k0=p.kData[k2].flower[m+2];flag=true;}
 							if (flag) {
@@ -93,7 +93,7 @@ public class Exponential {
 						} // end of if 
 						else k++;
 					} // end of do loop 
-					while (!flag && k<=(p.kData[j].num-1) );
+					while (!flag && k<=(p.getNum(j)-1) );
 				} // end of if 
 			} while (!flag); // end of do 
 			count++;

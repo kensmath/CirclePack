@@ -321,7 +321,7 @@ class CraneFace {
 		
 		// are all vertices of the face interior?
 		for (int j=0;j<3;j++) { 
-			if (packData.kData[packData.faces[f].vert[j]].bdryFlag!=0)
+			if (packData.isBdry(packData.faces[f].vert[j]))
 				hit=true;
 		}
 		if (hit) {

@@ -52,7 +52,7 @@ public class FlipBot {
 	public FlipBot(PackData pd,String name) {
 		p=pd;
 		myName=new String(name);
-		bdryFlag=p.kData[homeVert].bdryFlag;
+		bdryFlag=p.getBdryFlag(homeVert);
 		previousHome=0; // no history at start
 		lastFlipped=null;
 		flipStrategy="default";
@@ -102,7 +102,7 @@ public class FlipBot {
 			return new EdgeSimple(homeVert,V);
 		}
 		if (flipStrategy.toLowerCase().startsWith("hhl")) {
-			int num=p.kData[homeVert].num;
+			int num=p.getNum(homeVert);
 			if (num<7) { // just move
 				return null;
 			}
@@ -177,8 +177,8 @@ public class FlipBot {
 			if (newEdge!=null) {
 				
 				// find end's degrees (former left and right neighbors', resp.)
-				int deg_left=p.kData[newEdge.v].num+p.kData[newEdge.v].bdryFlag;
-				int deg_right=p.kData[newEdge.w].num+p.kData[newEdge.w].bdryFlag;
+				int deg_left=p.getNum(newEdge.v)+p.getBdryFlag(newEdge.v);
+				int deg_right=p.getNum(newEdge.w)+p.getBdryFlag(newEdge.w);
 				
 				// if we move, which way is best?
 				int best=newEdge.v;
@@ -188,7 +188,7 @@ public class FlipBot {
 					best=newEdge.w;
 
 				// don't move unless degree is higher than homeDegree
-				if (homeDegree>=p.kData[best].num+p.kData[best].bdryFlag)
+				if (homeDegree>=(p.getNum(best)+p.getBdryFlag(best)))
 					return 0;
 				
 				// okay, this is the way to move
@@ -208,7 +208,7 @@ public class FlipBot {
 		}
 		
 		if (moveStrategy.toLowerCase().startsWith("hhl")) {
-			int num=p.kData[home].num;
+			int num=p.getNum(home);
 			int pre=p.nghb(home, previous);
 			if (pre>=0)
 				return p.kData[homeVert].flower[(pre-3+num)%num];
@@ -229,7 +229,7 @@ public class FlipBot {
 				n=new Random().nextInt(cand.size());
 				return cand.get(n);
 			}
-			n=new Random().nextInt(p.kData[homeVert].num);
+			n=new Random().nextInt(p.getNum(homeVert));
 			return p.kData[homeVert].flower[n];
 		}
 			
@@ -268,14 +268,14 @@ public class FlipBot {
 			int big=0;
 			for (int j=0;j<=homeDegree;j++) {
 				int k=p.kData[homeVert].flower[j];
-				int nb=p.kData[k].num+p.kData[k].bdryFlag;
+				int nb=p.getNum(k)+p.getBdryFlag(k);
 				big=(nb>big) ? nb : big; 
 			}
 			
 			Vector<Integer> bigpets=new Vector<Integer>(0);
 			for (int j=0;j<=homeDegree;j++) {
 				int k=p.kData[homeVert].flower[j];
-				int nb=p.kData[k].num+p.kData[k].bdryFlag;
+				int nb=p.getNum(k)+p.getBdryFlag(k);
 				if (nb==big)
 					bigpets.add(p.kData[homeVert].flower[j]);
 			}
@@ -377,22 +377,22 @@ public class FlipBot {
 	public int update() {
 		
 		// am I on the boundary? This is 0 (no) or 1 (yes)
-		bdryFlag=p.kData[homeVert].bdryFlag;
+		bdryFlag=p.getBdryFlag(homeVert);
 
 		// my degree? ('num' faces; add 1 if a bdry vertex)
-		homeDegree=p.kData[homeVert].num+bdryFlag;
+		homeDegree=p.getNum(homeVert)+bdryFlag;
 		
 		// my petals' degrees? 
-		petalDegrees=new int[p.kData[homeVert].num+1];
-		for (int j=0;j<=p.kData[homeVert].num;j++) {
+		petalDegrees=new int[p.getNum(homeVert)+1];
+		for (int j=0;j<=p.getNum(homeVert);j++) {
 			int k=p.kData[homeVert].flower[j];
-			petalDegrees[j]=p.kData[k].num+p.kData[k].bdryFlag;
+			petalDegrees[j]=p.getNum(k)+p.getBdryFlag(k);
 		}
 
 		// petal 'energies'? (interior edges only) 
-		edgeEnergies=new int[p.kData[homeVert].num+1];
+		edgeEnergies=new int[p.getNum(homeVert)+1];
 		edgeEnergies[0]=edgeEnergies[homeDegree]=0;
-		for (int j=1;j<p.kData[homeVert].num;j++) {
+		for (int j=1;j<p.getNum(homeVert);j++) {
 			edgeEnergies[j]=
 				homeDegree+petalDegrees[j]-(petalDegrees[j-1]+petalDegrees[j+1]);
 		}
@@ -429,7 +429,7 @@ public class FlipBot {
 	 * @return int, vertex index
 	 */
 	public int moveRandom() {
-		return p.kData[homeVert].flower[new Random().nextInt(p.kData[homeVert].num)+1];
+		return p.kData[homeVert].flower[new Random().nextInt(p.getNum(homeVert))+1];
 	}
 	
 	/**

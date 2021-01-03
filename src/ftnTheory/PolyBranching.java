@@ -217,7 +217,7 @@ public class PolyBranching extends PackExtender {
 		branchVerts=new Vector<Integer>(5);
 		for (int v=1;v<=packData.nodeCount;v++) {
 			int i=1;
-			while (packData.kData[v].bdryFlag==0 && 
+			while (!packData.isBdry(v) && 
 					packData.getAim(v)>(2*i+1)*Math.PI) {
 				branchVerts.add(v);
 				i++;

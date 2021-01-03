@@ -448,9 +448,9 @@ public class FracBranching extends PackExtender {
 			}
 			i++;
 		}
-		if (packData.kData[branchVert[0][0]].bdryFlag!=0 ||
-				packData.kData[branchVert[0][1]].bdryFlag!=0 ||
-				packData.kData[branchVert[0][2]].bdryFlag!=0) {
+		if (packData.isBdry(branchVert[0][0]) ||
+				packData.isBdry(branchVert[0][1]) ||
+				packData.isBdry(branchVert[0][2])) {
 			fbState=0;
 			throw new ParserException("branch vertices must be interior");
 		}
@@ -477,9 +477,9 @@ public class FracBranching extends PackExtender {
 				fbState=0;
 				throw new ParserException("failed to get 3 branch vertices");
 			}
-			if (packData.kData[branchVert[0][0]].bdryFlag!=0 ||
-					packData.kData[branchVert[0][1]].bdryFlag!=0 ||
-					packData.kData[branchVert[0][2]].bdryFlag!=0) {
+			if (packData.isBdry(branchVert[0][0]) ||
+					packData.isBdry(branchVert[0][1]) ||
+					packData.isBdry(branchVert[0][2])) {
 				msg("NOTE: one branch vertex is not interior");
 			}
 		}
@@ -584,7 +584,7 @@ public class FracBranching extends PackExtender {
 				errorMsg("To check holonomy error, h must be followed by a border vertex");
 			}
 			int b =Integer.parseInt((String)items.get(1));
-			if (packData.kData[b].bdryFlag==0) {
+			if (!packData.isBdry(b)) {
 				Oops(""+b+" is not a border vertex.");
 			}
 			FaceLink faces1=new FaceLink(packData,findBorderChain(b));
@@ -1197,8 +1197,8 @@ public class FracBranching extends PackExtender {
 					"P=petal, or v=vertex");
 		}
 		if (P==0) P=packData.kData[v].flower[0]; 
-		if (v<1 || v>packData.nodeCount+1 || packData.kData[v].bdryFlag!=0 
-				|| packData.kData[v].num<3 || s<-1 || s>1 
+		if (v<1 || v>packData.nodeCount+1 || packData.isBdry(v)
+				|| packData.getNum(v)<3 || s<-1 || s>1 
 				|| packData.nghb(v, P)==-1) {
 			Oops("spt usage:  v <1, v>nodecount, or v is on boundary");
 			return 0;
@@ -1369,18 +1369,18 @@ public class FracBranching extends PackExtender {
 	 * @return face list as a String
 	 */
 	public String findBorderChain(int b) {
-		if (packData.kData[b].bdryFlag==0 || b<0) Oops("b must be a boundary circle");
+		if (!packData.isBdry(b) || b<0) Oops("b must be a boundary circle");
 		int first_b =b;
 		int stop=0;
 		String Flist ="";
 		int skip_first =0;
 		while (stop ==0) {
 			int count=0;
-			while (count+skip_first<packData.kData[b].num) {
+			while (count+skip_first<packData.getNum(b)) {
 				Flist =Flist+""+packData.kData[b].faceFlower[count+skip_first]+" ";
 				count++;
 			}
-			b =packData.kData[b].flower[packData.kData[b].num]; //next bdry vertex
+			b =packData.kData[b].flower[packData.getNum(b)]; //next bdry vertex
 			skip_first =1; //avoids repetitive faces in Flist
 			if (b ==first_b) stop=1;
 		}
@@ -1396,22 +1396,22 @@ public class FracBranching extends PackExtender {
 	 * @return
 	 */
 	public int getNextBdry(PackData p,int b1) {
-		if (p.kData[b1].bdryFlag==0) {
+		if (!p.isBdry(b1)) {
 			Oops("b1 must be a boundary vertex"); 
 		}
 		int i=0; //counter vertex
 		int next=0;
-		while (i<p.kData[b1].num) {
-			if (i==p.kData[b1].num) {
+		while (i<p.getNum(b1)) {
+			if (i==p.getNum(b1)) {
 				Oops("b1's border element in not connected");
 			}
 			
-			if (p.kData[p.kData[b1].flower[i]].bdryFlag==1) {
+			if (p.isBdry(p.kData[b1].flower[i])) {
 				next=p.kData[b1].flower[i]; //next vertex in border element
-				i=p.kData[b1].num+1; //ends while
+				i=p.getNum(b1)+1; //ends while
 			}
 			
-			else if (p.kData[p.kData[b1].flower[i]].bdryFlag==0) {
+			else if (!p.isBdry(p.kData[b1].flower[i])) {
 				i++; //moves to next vertex in b1's flower
 			}
 		}
@@ -1422,7 +1422,7 @@ public class FracBranching extends PackExtender {
 			double x, int new_or_old) {
 		//finds border vertex
 		int bd =0; for (int num=1;num<=packData.nodeCount;num++) { //finds a border vertex
-			if (packData.kData[num].bdryFlag==1) {
+			if (packData.isBdry(num)) {
 				bd=num;num=1+packData.nodeCount;
 			}
 		}
@@ -1450,7 +1450,7 @@ public class FracBranching extends PackExtender {
 		int b1=bd;
 		while (err>TOLER && counter<n) {
 			int next_b =packData.kData[b1].flower[packData.kData[b1].nextVert];
-			if (packData.kData[next_b].bdryFlag==0) {
+			if (!packData.isBdry(next_b)) {
 				Oops(""+next_b+" is not a border circle");//TODO delete check?
 			}
 			cpCommand(packData,"norm_scale -c "+bd+" 1.0");
@@ -1491,7 +1491,7 @@ public class FracBranching extends PackExtender {
 		if (pd.hes!=0) {
 			Oops("Packing must be Euclidean");
 		}
-		if (pd.kData[b1].bdryFlag==0) {
+		if (!pd.isBdry(b1)) {
 			Oops("b1 must be a border circle");
 		}
 		int counter=0;
@@ -1566,7 +1566,7 @@ public class FracBranching extends PackExtender {
 			int new_or_old, double x) {
 		//Error checks
 		if (packData.hes!=0) Oops("Packing must be Euclidean");
-		if (packData.kData[b1].bdryFlag==0) Oops("b1 must be a border circle");
+		if (!packData.isBdry(b1)) Oops("b1 must be a border circle");
 		if (new_or_old!=1 & new_or_old!=0) Oops("bol must be 1 or 0");
 		//Done with error checks
 		if (new_or_old==0) {
@@ -1645,7 +1645,7 @@ public class FracBranching extends PackExtender {
 			int new_or_old, double x) {
 		//Error checks
 		if (packData.hes!=0) Oops("Packing must be Euclidean");
-		if (packData.kData[b1].bdryFlag==0) Oops("b1 must be a border circle");
+		if (!packData.isBdry(b1)) Oops("b1 must be a border circle");
 		if (new_or_old!=1 & new_or_old!=0) Oops("bol must be 1 or 0");
 		//Done with error checks
 		if (new_or_old==0) {
@@ -1827,7 +1827,7 @@ public class FracBranching extends PackExtender {
 		if (!packData.overlapStatus) { //alocates space for overlaps
 			packData.alloc_overlaps();
 		}
-		int np =packData.kData[v].num;
+		int np =packData.getNum(v);
 		p =0; //petal counter
 		while (p<=np) {
 			int w=packData.kData[v].flower[p];
@@ -1885,7 +1885,7 @@ public class FracBranching extends PackExtender {
 
 	public double DWFerror(String FL1,String FL2,int type,int n) {
 		int bd =0; for (int num=1;num<=packData.nodeCount;num++) { //finds a border vertex
-			if (packData.kData[num].bdryFlag==1) {
+			if (packData.isBdry(num)) {
 				bd=num;num=1+packData.nodeCount;
 			}
 		}
@@ -1896,7 +1896,7 @@ public class FracBranching extends PackExtender {
 	}
 	public double DWFerror(String FL1,String FL2,int type) {
 		int bd =0; for (int num=1;num<=packData.nodeCount;num++) { //finds a border vertex
-			if (packData.kData[num].bdryFlag==1) {
+			if (packData.isBdry(num)) {
 				bd=num;num=1+packData.nodeCount;
 			}
 		}
@@ -2002,7 +2002,7 @@ public class FracBranching extends PackExtender {
 		Random generator = new Random();
 		@SuppressWarnings("unused")
 		int bd=-1;
-		if (packData.kData[v0].bdryFlag==1 || packData.kData[u0].bdryFlag==1) {
+		if (packData.isBdry(v0) || packData.isBdry(u0)) {
 			Oops(""+v0+" and "+u0+" must be interior vertices");
 		}
 		double lowest_err =-1.0, best_invV =-2.0, best_invU =-2.0;
@@ -2012,20 +2012,20 @@ public class FracBranching extends PackExtender {
 		//finds a border vertex
 		cpCommand(packData,"infile_read test.p");
 		for (int num=1;num<=packData.nodeCount;num++) { 
-			if (packData.kData[num].bdryFlag==1) {
+			if (packData.isBdry(num)) {
 				bd=num;num=1+packData.nodeCount;
 			}
 		}
 		
 		int total =0; //total iterartions
-		for(int i=0;i<packData.kData[v0].num;i++) {
+		for(int i=0;i<packData.getNum(v0);i++) {
 			int v1 =branchVert[V][1] =packData.kData[v0].flower[i];
 			int v2 =branchVert[V][2] =packData.kData[v0].flower[i+1];
-			if (packData.kData[v1].bdryFlag==0 || packData.kData[v2].bdryFlag==0) {
-				for(int j=0;j<packData.kData[u0].num;j++) {
+			if (!packData.isBdry(v1) || !packData.isBdry(v2)) {
+				for(int j=0;j<packData.getNum(u0);j++) {
 					int u1 =branchVert[U][1] =packData.kData[u0].flower[j];
 					int u2 =branchVert[U][2] =packData.kData[u0].flower[j+1];
-					if (packData.kData[u1].bdryFlag==0 || packData.kData[u2].bdryFlag==0) {						
+					if (!packData.isBdry(u1) || !packData.isBdry(u2)) {						
 						for(int count=0;count<n;count++) {
 							cpCommand(packData,"infile_read test.p");
 							if (!packData.overlapStatus) packData.alloc_overlaps(); //Allocate space for overlaps in packData
@@ -2052,13 +2052,13 @@ public class FracBranching extends PackExtender {
 							if ((err<=lowest_err || lowest_err <0.0) && java.lang.Double.isNaN(err)==false ) {
 								lowest_err =err;best_v1=v1;best_v2=v2;best_u1=u1;best_u2=u2;
 								best_invV =invV;best_invU =invU;
-								msg(""+total+" of "+packData.kData[v0].num*packData.kData[u0].num*n+
+								msg(""+total+" of "+packData.getNum(v0)*packData.getNum(u0)*n+
 										": new lowest Error = "+lowest_err);
 								msg("["+v0+" "+best_v1+" "+best_v2+"] inv dist "+best_invV+" "+v0+" "+best_v2);
 								msg("["+u0+" "+best_u1+" "+best_u2+"] inv dist "+best_invU+" "+u0+" "+best_u2);
 							}
 							if (count%5==0) {
-								msg(""+(count+1)+": on "+total+" of "+packData.kData[v0].num*packData.kData[u0].num*n);
+								msg(""+(count+1)+": on "+total+" of "+packData.getNum(v0)*packData.getNum(u0)*n);
 							}
 						}//end for count
 					}//end bdry check
@@ -2117,7 +2117,7 @@ public class FracBranching extends PackExtender {
 	 */
 	public int expDAFfracInvFind( int v0, int u0, int n, int type) {
 		Random generator = new Random();
-		if (packData.kData[v0].bdryFlag==1 || packData.kData[u0].bdryFlag==1) {
+		if (packData.isBdry(v0) || packData.isBdry(u0)) {
 			Oops(""+v0+" and "+u0+" must be interior vertices");				
 		}
 		double lowest_err =-1.0, best_invV =-2.0, best_invU =-2.0; 
@@ -2125,14 +2125,14 @@ public class FracBranching extends PackExtender {
 		branchVert=new int[2][3];
 		branchVert[V][0]=v0;branchVert[U][0]=u0;
 		int total =0;
-		for(int i=0;i<packData.kData[v0].num;i++) {
+		for(int i=0;i<packData.getNum(v0);i++) {
 			int v1 =branchVert[V][1] =packData.kData[v0].flower[i];
 			int v2 =branchVert[V][2] =packData.kData[v0].flower[i+1];
-			if (packData.kData[v1].bdryFlag==0 && packData.kData[v2].bdryFlag==0) {
-				for(int j=0;j<packData.kData[u0].num;j++) {
+			if (!packData.isBdry(v1) && !packData.isBdry(v2)) {
+				for(int j=0;j<packData.getNum(u0);j++) {
 					int u1 =branchVert[U][1] =packData.kData[u0].flower[j];
 					int u2 =branchVert[U][2] =packData.kData[u0].flower[j+1];
-					if (packData.kData[u1].bdryFlag==0 && packData.kData[u2].bdryFlag==0) {
+					if (!packData.isBdry(u1) && !packData.isBdry(u2)) {
 						for(int count=0;count<n;count++) {
 							cpCommand(packData,"infile_read test.p");
 							if (!packData.overlapStatus) packData.alloc_overlaps(); //Allocate space for overlaps in packData
@@ -2286,9 +2286,9 @@ public class FracBranching extends PackExtender {
 		double lowest_err =-1.0;
 		for (int i=1;i<=num;i++) { //first vertex i
 			int count=1;
-			if (packData.kData[i].bdryFlag==0) {
+			if (!packData.isBdry(i)) {
 				for (int j=1;j<=num;j++) {
-					if (packData.kData[j].bdryFlag==0 && i!=j && packData.nghb(i, j)==-1 && j!=i) {
+					if (!packData.isBdry(j) && i!=j && packData.nghb(i, j)==-1 && j!=i) {
 						cpCommand(packData,"infile_read test.p");
 						cpCommand(packData,"set_aim 4.0 "+i+" "+j);
 						cpCommand(packData,"repack");
@@ -2317,9 +2317,9 @@ public class FracBranching extends PackExtender {
 		double lowest_err =-1.0;
 		for (int B1=1;B1<=num;B1++) { //first vertex i
 			int count=1;
-			if (packData.kData[B1].bdryFlag==0) {
+			if (!packData.isBdry(B1)) {
 				for (int B2=1;B2<=num;B2++) {
-					if (packData.kData[B2].bdryFlag==0 && B1!=B2 && packData.nghb(B1, B2)==-1 && B2!=B1) {
+					if (!packData.isBdry(B2) && B1!=B2 && packData.nghb(B1, B2)==-1 && B2!=B1) {
 						Complex z1=new Complex(0,0),z2=new Complex(0,0);double r1=0,r2=0;
 						if (packData.hes==-1) {
 							CircleSimple sC1=HyperbolicMath.h_to_e_data(packData.getCenter(B1),
@@ -2358,17 +2358,17 @@ public class FracBranching extends PackExtender {
 		double lowest_err =-1.0;
 		cpCommand(packData,"infile_read test.p");
 		for (int count=1;count<=num;count++) { //finds a border vertex
-			if (packData.kData[count].bdryFlag==1) {
+			if (packData.isBdry(count)) {
 				bd=count;count=1+num;
 			}
 		}//end find border vertex
 		int count=1;
 		for (int i=1;i<=num;i++) { //first vertex i
-			if (packData.kData[i].bdryFlag==0) {
+			if (!packData.isBdry(i)) {
 				for (int j=2;j<=num;j++) {//second vertex j 
-					if (packData.kData[j].bdryFlag==0 && i!=j && packData.nghb(i, j)==-1) {
+					if (!packData.isBdry(j) && i!=j && packData.nghb(i, j)==-1) {
 						for (int k=2;k<=num;k++) {//third vertex k //TODO back to k=2
-							if (packData.kData[k].bdryFlag==0 && k!=j && k!=i &&
+							if (!packData.isBdry(k) && k!=j && k!=i &&
 									packData.nghb(k, j)==-1 && packData.nghb(i, k)==-1) {
 								cpCommand(packData,"cleanse");
 								cpCommand(packData,"infile_read test.p");
@@ -2926,7 +2926,7 @@ public class FracBranching extends PackExtender {
 		int bd=-1;
 		cpCommand(packData,"infile_read test.p");
 		for (int num=1;num<=packData.nodeCount;num++) { //finds a border vertex
-			if (packData.kData[num].bdryFlag==1) {
+			if (packData.isBdry(num)) {
 				bd=num;num=1+packData.nodeCount;
 			}
 		}
@@ -3046,7 +3046,7 @@ public class FracBranching extends PackExtender {
 	}
 
 	public double overlapFlowerInRandom(int n,int v,FaceLink faces1) {
-		int n_p = packData.kData[v].num;
+		int n_p = packData.getNum(v);
 		double err =DAFerror(0);
 		double newerr =0.0;
 		int counter=0;
@@ -3084,7 +3084,7 @@ public class FracBranching extends PackExtender {
 
 	public double overlapFlowerOutRandom(int n,int v,int b1,
 			int b2,FaceLink faces1,FaceLink faces2) {//!!this is broken
-		int n_p = packData.kData[v].num;
+		int n_p = packData.getNum(v);
 		// TODO: what was this to be?
 		double err =.000000001; // expDAFerror(1000,faces1);
 		double newerr =0.0;
@@ -3135,7 +3135,7 @@ public class FracBranching extends PackExtender {
 	 * @return error
 	 */
 	public double overlapBorderOutRandom(PackData pd,int v1,int v2,int b1,int n) {
-		if (pd.kData[b1].bdryFlag==0) {
+		if (!pd.isBdry(b1)) {
 			Oops("b1 must be a border circle");
 		}
 		cpCommand(pd,"repack");
@@ -3159,21 +3159,21 @@ public class FracBranching extends PackExtender {
 		double err =Math.sqrt(err1*err1+err2*err2);
 		double newerr =0.0;
 		int counter=0;
-		while (err>TOLER && counter<n && pd.kData[b1].bdryFlag==1) {
+		while (err>TOLER && counter<n && pd.isBdry(b1)) {
 			next =pd.kData[b1].flower[pd.kData[b1].nextVert];//next vertex in border element
 			int next_f =pd.nghb(b1, next);
 			Random generator = new Random();
 			double newInv = generator.nextDouble(); //includes deep overlaps
 			double oldInv = pd.getInvDist(b1,next);
 			pd.set_single_invDist(b1,next,newInv);
-			if (next_f==0 & pd.kData[b1].flower[0]==pd.kData[b1].flower[pd.kData[b1].num]) {
-				pd.set_single_invDist(b1,pd.kData[b1].flower[pd.kData[b1].num],newInv);
+			if (next_f==0 & pd.kData[b1].flower[0]==pd.kData[b1].flower[pd.getNum(b1)]) {
+				pd.set_single_invDist(b1,pd.kData[b1].flower[pd.getNum(b1)],newInv);
 					//matches first and last overlap in flower index
 			}
 			pd.set_single_invDist(next,b1,newInv);
 			if (pd.nghb(next,b1)==0 
-					& pd.kData[next].flower[0]==pd.kData[next].flower[pd.kData[next].num]) {
-				pd.set_single_invDist(next,pd.kData[next].flower[pd.kData[next].num],newInv); 
+					& pd.kData[next].flower[0]==pd.kData[next].flower[pd.getNum(next)]) {
+				pd.set_single_invDist(next,pd.kData[next].flower[pd.getNum(next)],newInv); 
 					//matches first and last overlap in flower index
 			}
 			cpCommand(pd,"repack -o");
@@ -3190,14 +3190,14 @@ public class FracBranching extends PackExtender {
 			newerr =Math.sqrt(newerr1*newerr1+newerr2*newerr2);
 			if (newerr>=err) {
 				pd.set_single_invDist(b1,pd.kData[b1].flower[next_f],oldInv);
-				if (next_f==0 & pd.kData[b1].flower[0]==pd.kData[b1].flower[pd.kData[b1].num]) {
-					pd.set_single_invDist(b1,pd.kData[b1].flower[pd.kData[b1].num],oldInv);
+				if (next_f==0 & pd.kData[b1].flower[0]==pd.kData[b1].flower[pd.getNum(b1)]) {
+					pd.set_single_invDist(b1,pd.kData[b1].flower[pd.getNum(b1)],oldInv);
 						//matches first and last overlap in flower index
 				}
 				pd.set_single_invDist(next,b1,oldInv); //matches first and last overlap in flower index
 				if (pd.nghb(next,b1)==0 
-						& pd.kData[next].flower[0]==pd.kData[next].flower[pd.kData[next].num]) {
-					pd.set_single_invDist(next,pd.kData[next].flower[pd.kData[next].num],oldInv);
+						& pd.kData[next].flower[0]==pd.kData[next].flower[pd.getNum(next)]) {
+					pd.set_single_invDist(next,pd.kData[next].flower[pd.getNum(next)],oldInv);
 				}
 //				pd.repack_call(1000);
 				cpCommand(pd,"repack -o");
@@ -3240,7 +3240,7 @@ public class FracBranching extends PackExtender {
 	
 	public double overlapFlowerInShuffle(PackData pd,int n,int v,FaceLink faces1) {
 //		pd.overlapStatus=true;
-		int n_p = pd.kData[v].num;
+		int n_p = pd.getNum(v);
 		int i = 0; //counter for v's petals
 		double err =DAFerror(0);
 		int counter=0;
@@ -3263,7 +3263,7 @@ public class FracBranching extends PackExtender {
 
 	public double overlapFlowerOutShuffle(PackData pd,int n,int v,FaceLink faces1) {
 //		pd.overlapStatus=true;
-		int n_p = pd.kData[v].num;
+		int n_p = pd.getNum(v);
 		int i = 0; //counter for v's petals
 		double err =DAFerror(0);
 		int counter=0;
@@ -3350,7 +3350,7 @@ public class FracBranching extends PackExtender {
 	public double overlapEdgeShuffle(PackData pd, int n, int v, int i,FaceLink faces1) {
 		double err =DAFerror(0);
 		int w=pd.kData[v].flower[i];
-		int n_p = pd.kData[v].num;
+		int n_p = pd.getNum(v);
 		int u=pd.kData[v].flower[n_p];
 		double inc=pd.getInvDist(v,w)/10;
 		int counter =0;
@@ -3363,8 +3363,8 @@ public class FracBranching extends PackExtender {
 			}
 			int vi =pd.kData[v].flower[i]; //vertex of i
 			pd.set_single_invDist(vi,v,newInv); //matched overlap in vi's flower
-			if (pd.nghb(vi,v)==0 & pd.kData[vi].flower[0]==pd.kData[vi].flower[pd.kData[vi].num]) {
-				pd.set_single_invDist(vi,pd.kData[vi].flower[pd.kData[vi].num],newInv); 
+			if (pd.nghb(vi,v)==0 & pd.kData[vi].flower[0]==pd.kData[vi].flower[pd.getNum(vi)]) {
+				pd.set_single_invDist(vi,pd.kData[vi].flower[pd.getNum(vi)],newInv); 
 				//matches first and last overlap in flower index
 			}
 			double newerr =DAFerror(0);
@@ -3375,8 +3375,8 @@ public class FracBranching extends PackExtender {
 				}
 				vi =pd.kData[v].flower[i]; //vertex of i
 				pd.set_single_invDist(vi,v,oldInv); //matched overlap in vi's flower
-				if (pd.nghb(vi,v)==0 & pd.kData[vi].flower[0]==pd.kData[vi].flower[pd.kData[vi].num]) {
-					pd.set_single_invDist(vi,pd.kData[vi].flower[pd.kData[vi].num],oldInv); 
+				if (pd.nghb(vi,v)==0 & pd.kData[vi].flower[0]==pd.kData[vi].flower[pd.getNum(vi)]) {
+					pd.set_single_invDist(vi,pd.kData[vi].flower[pd.getNum(vi)],oldInv); 
 						//matches first and last overlap in flower index
 				}
 				pd.repack_call(1000);
@@ -3433,7 +3433,7 @@ public class FracBranching extends PackExtender {
         int i=1; //counter for vertices as flower centers
         double sumErr = 0.0;
         while (i<n+1) {
-        	int j = packData.kData[i].num; //number of petals at i
+        	int j = packData.getNum(i); //number of petals at i
         	int k = 0; //counter for petals at i
         	while (k<j+1) {
         		int p =packData.kData[i].flower[k]; //vertex of petal on center i
@@ -3491,9 +3491,9 @@ public class FracBranching extends PackExtender {
 		  int v_int=0; //vertex of first circle placed
 		  while (i<3 & j!=1) {
 			  v_int = packData.faces[face1].vert[i]; 
-			  j = packData.kData[v_int].bdryFlag;
+			  j = packData.getBdryFlag(v_int);
 			  i = i+1;
-			  	if (i==2 & packData.kData[2].bdryFlag==0) {
+			  	if (i==2 & !packData.isBdry(2)) {
 			  		throw new ParserException("face"+face1+" is not a boundary face");
 			  	}
 		  }
@@ -3603,7 +3603,7 @@ public class FracBranching extends PackExtender {
 	 * @return last face (usually also the first face) in the chain
 	 */
 	public int shiftLayoutFacelist(PackData pd, int b) {
-//		if (vertStatus[b]>0 || pd.kData[b].bdryFlag==0) {
+//		if (vertStatus[b]>0 || !pd.isBdry(b)) {
 //			Oops("Error: incoming vertex must be a border circle " +
 //					"NOT neigboring a shiftpoint");
 //		}
@@ -3686,12 +3686,12 @@ public class FracBranching extends PackExtender {
 		   */
 		  int face1=(Integer)facelist.get(0);
 		  int fIndex =1;
-		  if (packData.kData[packData.faces[face1].vert[1]].bdryFlag==1) fIndex =2; //avoid using two boundry circles
+		  if (packData.isBdry(packData.faces[face1].vert[1])) fIndex =2; //avoid using two boundry circles
 		  if (packData.hes<0) {
 			  int vM =packData.faces[face1].vert[fIndex];
-			  if (packData.kData[vM].bdryFlag==1) vM =packData.faces[face1].vert[0];
+			  if (packData.isBdry(vM)) vM =packData.faces[face1].vert[0];
 			  //avoids normalizing boundary vertex
-			  if (packData.kData[vM].bdryFlag==1) {
+			  if (packData.isBdry(vM)) {
 				  Oops(""+vM+" is a boundray circle. Need to debug holonomy_mob");
 			  }
 			  cpCommand(packData,"center_vert "+vM);
@@ -3738,7 +3738,7 @@ public class FracBranching extends PackExtender {
 			cpCommand(p, "geom_to_e");
 		}
 		int s = n; //starting vertex
-		if (p.kData[n].bdryFlag<1) {
+		if (!p.isBdry(n)) {
 			return -1;
 		}
 		else {
@@ -3746,7 +3746,7 @@ public class FracBranching extends PackExtender {
 			sum = Math.PI-p.getCurv(s); //first turning angle
 			int i = 0;
 			int v = p.kData[s].flower[i];
-			while (p.kData[v].bdryFlag<1 & i<p.nodeCount+1) { //finds next border vertex
+			while (!p.isBdry(v) & i<p.nodeCount+1) { //finds next border vertex
 				i=i+1;
 				v=p.kData[s].flower[i];
 			}
@@ -3756,7 +3756,7 @@ public class FracBranching extends PackExtender {
 				sum += Math.PI-p.getCurv(n);
 				i = 0;
 				v = p.kData[n].flower[i];
-				while (p.kData[v].bdryFlag<1 & v!=n & i<p.nodeCount+1) {
+				while (!p.isBdry(v) & v!=n & i<p.nodeCount+1) {
 					i=i+1; 
 					v=p.kData[n].flower[i];
 				}
@@ -3841,7 +3841,7 @@ public class FracBranching extends PackExtender {
 			// rotate so petal 0 is centered on positive x-axis
 			int alphaX=packData.nghb(spt.vert, spt.alpha);//alpha spt flower index
 			Complex rot=spt.petalZ[alphaX].divide(spt.petalZ[alphaX].abs()); 
-			int num =packData.kData[v].num+packData.kData[v].bdryFlag;
+			int num =packData.getNum(v)+packData.getBdryFlag(v);
 			for (int j=0;j<num;j++) {
 				int k=packData.kData[v].flower[(alphaX+j)%num];
 				packData.setCenter(k,spt.petalZ[(alphaX+j)%num].divide(rot));
@@ -3855,14 +3855,14 @@ public class FracBranching extends PackExtender {
 		//seems to fix layout issue when shiftpoint is neighbor to the first vertex placed.  
 		if (vertStatus[v]==1) { 
 			//find which neighbor is the shiftpoint
-			for (int i=0;i<(packData.kData[v].num);i++) {
+			for (int i=0;i<(packData.getNum(v));i++) {
 				if ((spt=isSP(packData.kData[v].flower[i]))!=null) {
 					SPuF(spt,2);
 					spt.center=new Complex(0,0);
 					packData.setCenter(spt.vert,spt.center);
 					Complex z=spt.petalZ[0];
 					Complex rot=z.divide(z.abs()); 
-					for (int j=0;j<(packData.kData[spt.vert].num+packData.kData[spt.vert].bdryFlag);j++) {
+					for (int j=0;j<(packData.getNum(spt.vert)+packData.getBdryFlag(spt.vert));j++) {
 						int k=packData.kData[spt.vert].flower[j];
 						packData.setCenter(k,spt.petalZ[j].divide(rot));
 						packData.kData[k].plotFlag=1;
@@ -3934,7 +3934,7 @@ public class FracBranching extends PackExtender {
 
 			packData.setCenter(v,mob.apply(new Complex(0.0,0.0)));
 			packData.kData[v].plotFlag=1;
-			for (int j=0;j<(packData.kData[v].num+packData.kData[v].bdryFlag);j++) {
+			for (int j=0;j<(packData.getNum(v)+packData.getBdryFlag(v));j++) {
 				int k=packData.kData[v].flower[j];
 				packData.setCenter(k,mob.apply(spt.petalZ[j]));
 				packData.kData[k].plotFlag=1;
@@ -3997,12 +3997,12 @@ public class FracBranching extends PackExtender {
 
 		double baseAng = spt.theta;
 		double accum = baseAng;
-		int num = spt.pd.kData[v].num;
+		int num = spt.pd.getNum(v);
 		int j = 0;
 		int vv = spt.pd.kData[v].flower[0];
 		spt.petalZ[0]=HES_to_Ecent(radius+spt.pd.getRadius(vv),baseAng);
 		
-		while (accum < Math.PI && j <= spt.pd.kData[v].num) {
+		while (accum < Math.PI && j <= spt.pd.getNum(v)) {
 			if (!genCosOverlap(radius,
 					spt.pd.getRadius(spt.pd.kData[v].flower[j]),
 					spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]), utpk))
@@ -4020,7 +4020,7 @@ public class FracBranching extends PackExtender {
 			
 		}// end of pi while
 
-		if (j != packData.kData[v].num) {
+		if (j != packData.getNum(v)) {
 			accum = Math.PI
 					+ jasheRoutine(radius, radius * spt.shiftratio, accum,
 							spt.pd.getRadius(spt.pd.kData[v].flower[j]),
@@ -4036,7 +4036,7 @@ public class FracBranching extends PackExtender {
 			} else spt.petalZ[j]=(new Complex(radius*spt.shiftratio+spt.pd.getRadius(vv),0))
 				.times((new Complex(0,accum)).exp()).add(c1);
 			
-			while ((accum) < 3.0 * Math.PI && j <= spt.pd.kData[v].num) {
+			while ((accum) < 3.0 * Math.PI && j <= spt.pd.getNum(v)) {
 				if (!genCosOverlap(radius * spt.shiftratio,
 						spt.pd.getRadius(spt.pd.kData[v].flower[j]),
 						spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]), utpk))
@@ -4060,7 +4060,7 @@ public class FracBranching extends PackExtender {
 					.times((new Complex(0,accum)).exp()).add(c1);
 			} //end of 3pi while
 
-			if (j != spt.pd.kData[v].num) {
+			if (j != spt.pd.getNum(v)) {
 				accum = 3.0* Math.PI
 						+ jasheRoutine(spt.shiftratio * radius, radius, accum
 								- 2.0 * Math.PI,
@@ -4070,7 +4070,7 @@ public class FracBranching extends PackExtender {
 				vv = spt.pd.kData[v].flower[j];
 				spt.petalZ[j]=HES_to_Ecent(radius+spt.pd.getRadius(vv),accum);
 				
-				while (j <= spt.pd.kData[v].num) {
+				while (j <= spt.pd.getNum(v)) {
 					if (!genCosOverlap(radius,
 							spt.pd.getRadius(spt.pd.kData[v].flower[j]),
 							spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]),
@@ -4126,7 +4126,7 @@ public class FracBranching extends PackExtender {
 		packData.setCenter(k,(new Complex(radius+packData.getRadius(a),0))
 			.times((new Complex(0,baseAng)).exp()));
 		
-		while(accum<Math.PI && j<=packData.kData[k].num) {
+		while(accum<Math.PI && j<=packData.getNum(k)) {
 			if (!genCosOverlap(radius,
 					packData.getRadius(packData.kData[k].flower[j]),
 					packData.getRadius(packData.kData[k].flower[j+1]),
@@ -4146,7 +4146,7 @@ public class FracBranching extends PackExtender {
 				.times((new Complex(0,accum)).exp()));
 		}
 
-		if (j!=packData.kData[k].num) {
+		if (j!=packData.getNum(k)) {
 			accum = Math.PI+jasheRoutine(radius,radius*spt.shiftratio,accum,
 					packData.getRadius(packData.kData[k].flower[j]),
 					packData.getRadius(packData.kData[k].flower[j+1]));
@@ -4156,7 +4156,7 @@ public class FracBranching extends PackExtender {
 				.times((new Complex(0,accum)).exp()).add(c1));
 		
 			
-			while((accum)<3.0*Math.PI && j<packData.kData[k].num) {
+			while((accum)<3.0*Math.PI && j<packData.getNum(k)) {
 				if (!genCosOverlap(radius*spt.shiftratio,
 					packData.getRadius(packData.kData[k].flower[j]),
 					packData.getRadius(packData.kData[k].flower[j+1]),
@@ -4176,7 +4176,7 @@ public class FracBranching extends PackExtender {
 				.times((new Complex(0,accum)).exp()).add(c1));
 		}
 		
-		if (j!=packData.kData[k].num) {
+		if (j!=packData.getNum(k)) {
 			accum = 3.0*Math.PI+jasheRoutine(spt.shiftratio*radius,radius,accum-2.0*Math.PI,
 					packData.getRadius(packData.kData[k].flower[j]),
 					packData.getRadius(packData.kData[k].flower[j+1]));
@@ -4185,7 +4185,7 @@ public class FracBranching extends PackExtender {
 			packData.setCenter(a,(new Complex(radius+packData.getRadius(a),0))
 				.times((new Complex(0,accum)).exp()));
 
-			while (j<packData.kData[k].num) {
+			while (j<packData.getNum(k)) {
 				if (!genCosOverlap(radius,
 						packData.getRadius(packData.kData[k].flower[j]),
 						packData.getRadius(packData.kData[k].flower[j+1]),
@@ -4214,7 +4214,7 @@ public class FracBranching extends PackExtender {
 	 * @return
 	 */
     public boolean shiftNghbSum(int v, double radius, UtilPacket uP) {
-    	int N = packData.kData[v].num+packData.kData[v].bdryFlag;
+    	int N = packData.getNum(v)+packData.getBdryFlag(v);
     	//for boundary vertices kData[v].num is number of neighbors-1
     	double []rad=new double[N+1]; 
     	double []oldrad=new double[N+1]; 
@@ -4231,7 +4231,7 @@ public class FracBranching extends PackExtender {
     			
     			// check first and last j to see if they have just one face
     			if (j==0) {
-    				if (packData.kData[v].bdryFlag==1) {
+    				if (packData.isBdry(v)) {
     					rl=-1;
     					rr=-1;
     				}
@@ -4241,7 +4241,7 @@ public class FracBranching extends PackExtender {
     				}
     			}
     			else if (j==N) {
-    				if (packData.kData[v].bdryFlag==1) {
+    				if (packData.isBdry(v)) {
     					rl=-1;
     					rr=-1;
     				}
@@ -4305,7 +4305,7 @@ public class FracBranching extends PackExtender {
      * @return
      */
     public boolean nghbRadCalc(int v,double radius,double aim,int its,UtilPacket uP) {
-    	int N = packData.kData[v].num+packData.kData[v].bdryFlag;
+    	int N = packData.getNum(v)+packData.getBdryFlag(v);
     	double []rad=new double[N];
     	double []oldrad=new double[N];
     	// go through the petals of v
@@ -4321,7 +4321,7 @@ public class FracBranching extends PackExtender {
     			
     			// bdry case: check first and last j to see if they have just one face
     			if (j==0) {
-    				if (packData.kData[v].bdryFlag==1) {
+    				if (packData.isBdry(v)) {
     					rl=-1;
     					rr=-1;
     				}
@@ -4332,7 +4332,7 @@ public class FracBranching extends PackExtender {
     			}
     			
     			else if (j==N) {
-    				if (packData.kData[v].bdryFlag==1) {
+    				if (packData.isBdry(v)) {
     					rl=-1;
     					rr=-1;
     				}
@@ -4400,7 +4400,7 @@ public class FracBranching extends PackExtender {
 		double accum=baseAng;
 		int j=0;
 		double ang;
-		while(accum<Math.PI && j<=packData.kData[v0].num) {
+		while(accum<Math.PI && j<=packData.getNum(v0)) {
 			if (!genCosOverlap(radius,
 					packData.getRadius(packData.kData[v0].flower[j]),
 					packData.getRadius(packData.kData[v0].flower[j+1]),
@@ -4417,13 +4417,13 @@ public class FracBranching extends PackExtender {
 			j++;
 		}
 		
-		if (j!=packData.kData[v0].num) {
+		if (j!=packData.getNum(v0)) {
 		accum = Math.PI+jasheRoutine(radius,radius*sPt.shiftratio,accum,
 				packData.getRadius(packData.kData[v0].flower[j]),
 				packData.getRadius(packData.kData[v0].flower[j+1]));
 		j++;
 		
-		while((accum)<3.0*Math.PI && j<packData.kData[v0].num) {
+		while((accum)<3.0*Math.PI && j<packData.getNum(v0)) {
 			if (!genCosOverlap(radius*sPt.shiftratio,
 					packData.getRadius(packData.kData[v0].flower[j]),
 					packData.getRadius(packData.kData[v0].flower[j+1]),
@@ -4440,13 +4440,13 @@ public class FracBranching extends PackExtender {
 			j++;
 		}
 		
-		if (j!=packData.kData[v0].num) {
+		if (j!=packData.getNum(v0)) {
 			accum = 3.0*Math.PI+jasheRoutine(sPt.shiftratio*radius,radius,accum-2.0*Math.PI,
 					packData.getRadius(packData.kData[v0].flower[j]),
 					packData.getRadius(packData.kData[v0].flower[j+1]));
 			j++;
 
-			while (j<packData.kData[v0].num) {
+			while (j<packData.getNum(v0)) {
 				if (!genCosOverlap(radius,
 						packData.getRadius(packData.kData[v0].flower[j]),
 						packData.getRadius(packData.kData[v0].flower[j+1]),
@@ -4934,7 +4934,7 @@ public class FracBranching extends PackExtender {
 		}
 		for(int v=1;v<=packData.nodeCount; v++) {
 			if (vertStatus[v]==0) {
-				for (int j=0;j<packData.kData[v].num+packData.kData[v].bdryFlag;j++ ) {
+				for (int j=0;j<packData.getNum(v)+packData.getBdryFlag(v);j++ ) {
 					int k=packData.kData[v].flower[j];
 					if (vertStatus[k]>=2)
 						vertStatus[v]=1;
@@ -4992,7 +4992,7 @@ public class FracBranching extends PackExtender {
 		double accum = spt.theta;
 		int j = 0;
 		double ang = 0;
-		int num =packData.kData[v].num;
+		int num =packData.getNum(v);
 		double jumpAng = spt.jumpAng;//argument of jump-point. Old value was PI.
 		// F=1: find shift-neighbors vertex coords
 		Complex[] cents = new Complex[num];
@@ -5080,7 +5080,7 @@ public class FracBranching extends PackExtender {
 							,packData.getRadius(packData.kData[v].flower[mod(j+P,num)])); //TODO Inv
 			} // end of 3pi while
 			// F=0
-			if (j != packData.kData[v].num) {
+			if (j != packData.getNum(v)) {
 				accum = 2.0*Math.PI+jumpAng
 						+ jumpAngle(r,R, accum-jumpAng,
 								packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
@@ -5093,7 +5093,7 @@ public class FracBranching extends PackExtender {
 				spt.petalI[mod(j+P,num)] =findInv(littleCent,spt.petalZ[mod(j+P,num)],r
 						,packData.getRadius(packData.kData[v].flower[mod(j+P,num)])); //TODO Inv
 				// F=0
-				while (j < packData.kData[v].num) {
+				while (j < packData.getNum(v)) {
 					if (!genCosOverlap(
 							R,
 							packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
@@ -5147,7 +5147,7 @@ public class FracBranching extends PackExtender {
 		while (offBy>LOC_TOLER && count<n) {
 			for (int i=0;i<branchVert.length;i++) { //TODO: correct length?
 				for (int j=0;j<3;j++) {
-					if (packData.kData[branchVert[i][j]].bdryFlag==0) {
+					if (!packData.isBdry(branchVert[i][j])) {
 						//skip boundary circles
 						ang =triAngle(i,j);
 						packData.setAim(branchVert[i][j],pi2+2.0*ang);
@@ -5229,7 +5229,7 @@ public class FracBranching extends PackExtender {
 		double diff;
 		for (int i=0;i<branchVert.length;i++) {
 			for (int j=0;j<3;j++) {
-				if (packData.kData[branchVert[i][j]].bdryFlag==0) {
+				if (!packData.isBdry(branchVert[i][j])) {
 					w=packData.getAim(branchVert[i][j])-pi2;
 					diff=2.0*triAngle(i, j)-w;
 					accum += diff*diff;

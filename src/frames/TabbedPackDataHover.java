@@ -624,11 +624,11 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			centerField.setValue(new Complex(p.rData[v].center));
 			aimField.setValue(p.getAim(v)/Math.PI);
 			angleSumField.setValue(p.getCurv(v)/Math.PI);
-			degreeField.setValue(p.kData[v].num);
+			degreeField.setValue(p.getNum(v));
 			vertexColorField.setValue(CPScreen.col_to_table(p.kData[v].color));
 			vertMarkField.setValue(p.kData[v].mark);
 
-			if (p.kData[v].bdryFlag > 0) boundaryCheckBox.setSelected(true);
+			if (p.isBdry(v)) boundaryCheckBox.setSelected(true);
 			else boundaryCheckBox.setSelected(false);
 
 			StringBuilder flowerBuilder = new StringBuilder();
@@ -716,7 +716,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 				edgeChoiceField.setText(edge.v + " " + edge.w);
 				invDistanceField.setValue(invDist);
 				if (packData.kData[edge.v].schwarzian!=null) {
-					if (flowerIndexWFromV<packData.kData[edge.v].num)
+					if (flowerIndexWFromV<packData.getNum(edge.v))
 						schwarzianField.setValue(packData.kData[edge.v].schwarzian[flowerIndexWFromV]);
 				}
 				else schwarzianField.setEmpty();
@@ -919,7 +919,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 				return;
 			if (!p.haveSchwarzians()) { // allocate space,
 				for (int v=1;v<=p.nodeCount;v++) {
-					p.kData[v].schwarzian=new double[p.kData[v].num+1];
+					p.kData[v].schwarzian=new double[p.getNum(v)+1];
 				}
 			}
 			String sch=schwarzianField.getText().trim();

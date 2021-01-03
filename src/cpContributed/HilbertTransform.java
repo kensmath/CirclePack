@@ -51,7 +51,7 @@ public class HilbertTransform extends PackExtender
 		sz_bndry = 0;
 		for(int k = 1; k <= packData.nodeCount; k++)
 		{
-			if (packData.kData[k].bdryFlag >= 1)
+			if (packData.isBdry(k))
 			{
 				temp_bndry[sz_bndry] = k; 
 				temp_cz[sz_bndry] = packData.getCenter(k);
@@ -318,7 +318,7 @@ public class HilbertTransform extends PackExtender
 		int count = 0;
 		
 		flwr = packData.kData[vert].flower;
-		if (packData.kData[vert].bdryFlag >= 1)
+		if (packData.isBdry(vert))
 			// vert is a boundary vertex
 			sz_flwr = flwr.length;
 		else
@@ -326,7 +326,7 @@ public class HilbertTransform extends PackExtender
 		
 		for(int k = 0; k < sz_flwr; k++)
 		{
-			if (packData.kData[flwr[k]].bdryFlag >= 1)
+			if (packData.isBdry(flwr[k]))
 			{
 				nb[count] = flwr[k];
 				count++;

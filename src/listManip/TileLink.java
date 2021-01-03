@@ -259,7 +259,7 @@ public class TileLink extends LinkedList<Integer> {
 					Tile tile=myTD.myTiles[t];			
 					int hit=0;
 					for (int j=0;(j<tile.vertCount && hit==0);j++)
-						if (myTD.packData.kData[tile.vert[j]].bdryFlag!=0) {
+						if (myTD.packData.isBdry(tile.vert[j])) {
 							add(t);
 							count++;
 							hit=1;
@@ -342,7 +342,7 @@ public class TileLink extends LinkedList<Integer> {
 					Tile tile=myTD.myTiles[t];			
 					int hit=0;
 					for (int j=0;(j<=tile.vertCount && hit==0);j++)
-						if (myTD.packData.kData[tile.vert[j]].bdryFlag!=0) {
+						if (myTD.packData.isBdry(tile.vert[j])) {
 							hit=1;
 						}
 					if (hit==0) {

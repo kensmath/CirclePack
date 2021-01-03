@@ -97,18 +97,18 @@ public class HexPaths {
 			indx=p.nghb(w,v);
 			
 			// next edge would encounter boundary?
-			if (p.kData[w].bdryFlag!=0 && (indx<3 || (indx==3 && (stopCon & 8)==8)))
+			if (p.isBdry(w) && (indx<3 || (indx==3 && (stopCon & 8)==8)))
 				return epath;
 			
 			// doubling back at degree 3 (self intersection)
-			if (p.kData[w].num==3 && (stopCon & 2)==2)
+			if (p.getNum(w)==3 && (stopCon & 2)==2)
 				return epath;
 			
 			// find the next edge end vert
-			if (p.kData[w].bdryFlag!=0)
+			if (p.isBdry(w))
 				nextv=p.kData[w].flower[indx-3];
 			else 
-				nextv=p.kData[w].flower[(indx-3+p.kData[w].num)%p.kData[w].num];
+				nextv=p.kData[w].flower[(indx-3+p.getNum(w))%p.getNum(w)];
 			
 			// if nextv is already on the path
 			if (p.kData[nextv].utilFlag!=0) {
@@ -123,8 +123,8 @@ public class HexPaths {
 					indx=p.nghb(firstv,w);
 					nidx=p.nghb(firstv,firstw);
 					boolean lineup=false;
-					if (p.kData[firstv].bdryFlag==0) { // interior
-						if ((nidx+3)%p.kData[firstv].num==indx)
+					if (!p.isBdry(firstv)) { // interior
+						if ((nidx+3)%p.getNum(firstv)==indx)
 							lineup=true;
 					}
 					else { // bdry

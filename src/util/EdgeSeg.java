@@ -61,7 +61,7 @@ public class EdgeSeg {
 	public int validate(PackData p) {
 		int initlength=length;
 		if (startV<1 || startV>p.nodeCount || endV<1 || endV>p.nodeCount
-				|| p.kData[startV].bdryFlag==0 || p.kData[endV].bdryFlag==0) {
+				|| !p.isBdry(startV) || !p.isBdry(endV)) {
 			return 0;
 		}
 		int count=1;

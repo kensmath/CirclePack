@@ -73,7 +73,7 @@ public class Schwarzian {
 		// allocate space
 		if (!p.haveSchwarzians()) {
 			for (int v=1;v<=p.nodeCount;v++) 
-				p.kData[v].schwarzian=new double[p.kData[v].num+1];
+				p.kData[v].schwarzian=new double[p.getNum(v)+1];
 		}
 
 		// easy case (e.g. simply connected) or error, use stored data
@@ -84,7 +84,7 @@ public class Schwarzian {
 				int v = edge.v;
 				int w = edge.w;
 				// In hyp case, may swap v,w if v not interior
-				if (p.hes < 0 && p.kData[v].bdryFlag != 0) {
+				if (p.hes < 0 && p.isBdry(v)) {
 					int hv = v;
 					v = w;
 					w = hv;
@@ -657,7 +657,7 @@ public class Schwarzian {
 				Vector<Double> c_sch=new Vector<Double>();
 				for (int v=1;v<=p.nodeCount;v++) {
 					double accum=0.0;
-					for (int j=0;j<p.kData[v].num;j++)
+					for (int j=0;j<p.getNum(v);j++)
 						accum+=p.kData[v].schwarzian[j];
 					c_sch.add(accum);
 				}
@@ -691,7 +691,7 @@ public class Schwarzian {
 			case 'e': { // color edges for schwarzian: blue < 0, red > 0
 				Vector<Double> e_sch=new Vector<Double>(); 
 				for (int v=1;v<=p.nodeCount;v++) {
-					for (int j=0;j<p.kData[v].num+p.kData[v].bdryFlag;j++) {
+					for (int j=0;j<(p.getNum(v)+p.getBdryFlag(v));j++) {
 						int w=p.kData[v].flower[j];
 						if (w>v) 
 							e_sch.add(p.kData[v].schwarzian[j]);
@@ -702,7 +702,7 @@ public class Schwarzian {
 				if (elink==null || elink.size()==0)
 					elink=new EdgeLink(p,"a"); // default to all
 				for (int v=1;v<=p.nodeCount;v++) {
-					for (int j=0;j<p.kData[v].num+p.kData[v].bdryFlag;j++) {
+					for (int j=0;j<(p.getNum(v)+p.getBdryFlag(v));j++) {
 						int w=p.kData[v].flower[j];
 						if (w>v) {
 							if (EdgeLink.ck_in_elist(elink, v, w)) {

@@ -74,7 +74,7 @@ public class DualGraph {
 			Iterator<Integer> cl=currNodes.iterator();
 			while (cl.hasNext()) {
 				int v=cl.next();
-				for (int j=0;j<p.kData[v].num+p.kData[v].bdryFlag;j++) {
+				for (int j=0;j<(p.getNum(v)+p.getBdryFlag(v));j++) {
 					int w=p.kData[v].flower[j];
 					if (gen[w]==0) {
 						gen[w]=tick;
@@ -148,7 +148,7 @@ public class DualGraph {
 				System.err.println(" use face "+p.firstFace+" for vert "+v);
 
 			// mark each face to indicate one of its vertices is in place
-			int num = p.kData[v].num;
+			int num = p.getNum(v);
 			for (int jj = 0; jj < num; jj++) {
 				int f = p.kData[v].faceFlower[jj];
 				fck[f] += 1;
@@ -182,7 +182,7 @@ public class DualGraph {
 					cck[v] = ctick++;
 
 					// update star(v) faces
-					int num = p.kData[v].num;
+					int num = p.getNum(v);
 					for (int jj = 0; jj < num; jj++) {
 						int f = p.kData[v].faceFlower[jj];
 						fck[f] += 1;
@@ -254,7 +254,7 @@ public class DualGraph {
 				// could boost count to more than 3 for some face,
 				// but these will be redChain faces, so they're handled
 				// w/o regard to this count.
-				num = p.kData[v].num;
+				num = p.getNum(v);
 				for (int jj = 0; jj < num; jj++) {
 					int f = p.kData[v].faceFlower[jj];
 					fck[f] += 1;
@@ -281,7 +281,7 @@ public class DualGraph {
 						System.err.println(" along red face " + nextred.face
 								+ " for vert " + v);
 					cck[v] = ctick++;
-					num = p.kData[v].num;
+					num = p.getNum(v);
 					for (int jj = 0; jj < num; jj++) {
 						int f = p.kData[v].faceFlower[jj];
 						if (fck[f] >= 0)
@@ -321,7 +321,7 @@ public class DualGraph {
 					cck[v] = ctick++;
 
 					// update info for star(v) faces
-					num = p.kData[v].num;
+					num = p.getNum(v);
 					for (int jj = 0; jj < num; jj++) {
 						int f = p.kData[v].faceFlower[jj];
 						if (fck[f] >= 0)
@@ -968,7 +968,7 @@ System.err.println("  place nghb "+nghb+" point to vert "+vert);
 		//   during processing.
 		Spokes []spokes=new Spokes[p.nodeCount+1];
 		for (int v=1;v<=p.nodeCount;v++) { 
-			spokes[v]=new Spokes(v,p.kData[v].num,p.kData[v].bdryFlag);
+			spokes[v]=new Spokes(v,p.getNum(v),p.getBdryFlag(v));
 			spokes[v].gen=vertgens[v];
 		}
 		
@@ -1050,7 +1050,7 @@ System.err.println("  place nghb "+nghb+" point to vert "+vert);
 		for (int v=1;v<=p.nodeCount;v++) {
 			int fg=0;
 			if (redV[v]==1 ) {
-				for (int j=0;j<p.kData[v].num;j++) {
+				for (int j=0;j<p.getNum(v);j++) {
 					int f=p.kData[v].faceFlower[j];
 					fg=facegens[f];
 					if (fg>0 && fg<minfgen) {
@@ -1088,13 +1088,13 @@ System.err.println("  place nghb "+nghb+" point to vert "+vert);
 			currV=acrs;
 		}
 		else { // sweep counterclockwise until open edge
-			if (p.kData[currV].bdryFlag==1) { // if bdry vert, sweep
+			if (p.isBdry(currV)) { // if bdry vert, sweep
 				while (spokes[currV].flower[currIndx+1]!=0)
 					currIndx++;
 			}
 			else {
-				while (spokes[currV].flower[(currIndx+1)%p.kData[currV].num]!=0)
-					currIndx=(currIndx+1)%p.kData[currV].num;
+				while (spokes[currV].flower[(currIndx+1)%p.getNum(currV)]!=0)
+					currIndx=(currIndx+1)%p.getNum(currV);
 			}
 			redJ=currIndx+1;  
 		}
@@ -1107,7 +1107,7 @@ System.err.println("  place nghb "+nghb+" point to vert "+vert);
 			
 		// this give our first redchain face
 		if (redJ==0) { // currV must be interior
-			currF=p.kData[currV].faceFlower[p.kData[currV].num-1];
+			currF=p.kData[currV].faceFlower[p.getNum(currV)-1];
 		}
 		else 
 			currF=p.kData[currV].faceFlower[redJ-1];
@@ -1132,7 +1132,7 @@ System.err.println("  place nghb "+nghb+" point to vert "+vert);
 		while((currF!=stopface || currV!=stopvert || wflag) && safety>0) {
 			wflag=false;
 			safety--;
-			num=p.kData[currV].num;
+			num=p.getNum(currV);
 			flower=spokes[currV].flower;
 			int []faceFlower=p.kData[currV].faceFlower;
 			int nextface=0;
@@ -1237,7 +1237,7 @@ System.err.println("  place nghb "+nghb+" point to vert "+vert);
 		//   during processing.
 		Spokes []spokes=new Spokes[p.nodeCount+1];
 		for (int v=1;v<=p.nodeCount;v++) { 
-			spokes[v]=new Spokes(v,p.kData[v].num,p.kData[v].bdryFlag);
+			spokes[v]=new Spokes(v,p.getNum(v),p.getBdryFlag(v));
 			spokes[v].gen=vertgens[v];
 		}
 		
@@ -1317,7 +1317,7 @@ System.err.println("  place nghb "+nghb+" point to vert "+vert);
 		for (int v=1;v<=p.nodeCount;v++) {
 			int fg=0;
 			if (redV[v]==1 ) {
-				for (int j=0;j<p.kData[v].num;j++) {
+				for (int j=0;j<p.getNum(v);j++) {
 					int f=p.kData[v].faceFlower[j];
 					fg=facegens[f];
 					if (fg>0 && fg<minfgen) {
@@ -1355,13 +1355,13 @@ System.err.println("  place nghb "+nghb+" point to vert "+vert);
 			currV=acrs;
 		}
 		else { // sweep counterclockwise until open edge
-			if (p.kData[currV].bdryFlag==1) { // if bdry vert, sweep
+			if (p.isBdry(currV)) { // if bdry vert, sweep
 				while (spokes[currV].flower[currIndx+1]!=0)
 					currIndx++;
 			}
 			else {
-				while (spokes[currV].flower[(currIndx+1)%p.kData[currV].num]!=0)
-					currIndx=(currIndx+1)%p.kData[currV].num;
+				while (spokes[currV].flower[(currIndx+1)%p.getNum(currV)]!=0)
+					currIndx=(currIndx+1)%p.getNum(currV);
 			}
 			redJ=currIndx+1;  
 		}
@@ -1374,7 +1374,7 @@ System.err.println("  place nghb "+nghb+" point to vert "+vert);
 			
 		// this give our first redchain face
 		if (redJ==0) { // currV must be interior
-			currF=p.kData[currV].faceFlower[p.kData[currV].num-1];
+			currF=p.kData[currV].faceFlower[p.getNum(currV)-1];
 		}
 		else 
 			currF=p.kData[currV].faceFlower[redJ-1];
@@ -1399,7 +1399,7 @@ System.err.println("  place nghb "+nghb+" point to vert "+vert);
 		while((currF!=stopface || currV!=stopvert || wflag) && safety>0) {
 			wflag=false;
 			safety--;
-			num=p.kData[currV].num;
+			num=p.getNum(currV);
 			flower=spokes[currV].flower;
 			int []faceFlower=p.kData[currV].faceFlower;
 			int nextface=0;

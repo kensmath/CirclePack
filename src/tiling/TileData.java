@@ -348,8 +348,9 @@ public class TileData {
 				for (int k=0;k<=numt;k++)
 					thePack.kData[v].flower[k]=flow.get(k);
 				if (thePack.kData[v].flower[0]==thePack.kData[v].flower[numt])
-					thePack.kData[v].bdryFlag=0;
-				else thePack.kData[v].bdryFlag=1;
+					thePack.setBdryFlag(v,0);
+				else 
+					thePack.setBdryFlag(v,1);
 				thePack.rData[v]=new RData();
 				thePack.rData[v].rad=.5;
 			}
@@ -395,7 +396,7 @@ public class TileData {
 			thePack.kData[nextgap]=new KData();
 			thePack.kData[nextgap].num=tile.vertCount;
 			thePack.kData[nextgap].flower=tmpflower;
-			thePack.kData[nextgap].bdryFlag=0;
+			thePack.setBdryFlag(nextgap,0);
 			thePack.kData[nextgap].mark=nextgap; // marked with vert index
 			thePack.rData[nextgap]=new RData();
 			thePack.setCenter(nextgap,cent.divide((double)(tile.vertCount)));
@@ -432,7 +433,7 @@ public class TileData {
 			
 			// fix vertex flowers
 			for (int v=1;v<=thePack.nodeCount;v++) {
-				for (int j=0;j<=thePack.kData[v].num;j++) {
+				for (int j=0;j<=thePack.getNum(v);j++) {
 					int k=thePack.kData[v].flower[j];
 					thePack.kData[v].flower[j]=newIndx[k];
 				}
@@ -481,8 +482,8 @@ public class TileData {
 				int w=tile.vert[(k+1)%tile.vertCount];
 				int idx=thePack.nghb(v,w);
 				int dirx=idx-1;
-				if (dirx<0 && thePack.kData[v].flower[0]==thePack.kData[v].flower[thePack.kData[v].num])
-					dirx=thePack.kData[v].num-1;
+				if (dirx<0 && thePack.kData[v].flower[0]==thePack.kData[v].flower[thePack.getNum(v)])
+					dirx=thePack.getNum(v)-1;
 				if (dirx>=0) {
 					int s=indmap.findV(thePack.kData[v].flower[dirx]);
 					
@@ -612,8 +613,8 @@ public class TileData {
 		for (int t=1;t<=workingTD.tileCount;t++) {
 			Tile tile=workingTD.myTiles[t];
 //			tile.wgTiles=new Tile[2*tile.vertCount];
-			int num=newPD.kData[tile.baryVert].num;
-			if (newPD.kData[tile.baryVert].bdryFlag!=0 || num!=(2*tile.vertCount)) {
+			int num=newPD.getNum(tile.baryVert);
+			if (newPD.isBdry(tile.baryVert) || num!=(2*tile.vertCount)) {
 				CirclePack.cpb.errMsg("Tile "+t+" (center "+tile.baryVert+") "+
 						"flower has problem");
 				break; // out of 'for' loop
@@ -672,25 +673,25 @@ public class TileData {
 				// dual tile for each original corner vertex
 				if (newPD.kData[v].mark==2) {
 					int []vert=null;
-					if (newPD.kData[v].bdryFlag>0) { // this is bdry tile
+					if (newPD.isBdry(v)) { // this is bdry tile
 						
 						// vert list starts with v, then bary center of 
 						//    bdry edge from v, around through tiles to
 						//    end with bary center of last bdry edge from v
-						int num=newPD.kData[v].num/2;
+						int num=newPD.getNum(v)/2;
 						vert=new int[num+3];
 						vert[0]=v;
 						vert[1]=newPD.kData[v].flower[0];
 						for (int j=0;j<num;j++) 
 							vert[2+j]=newPD.kData[v].flower[1+2*j];
-						vert[num+2]=newPD.kData[v].flower[newPD.kData[v].num];
+						vert[num+2]=newPD.kData[v].flower[newPD.getNum(v)];
 						workingTD.dualTileData.myTiles[dcount]=new Tile(workingTD.dualTileData,num+3);
 					}
 					else {
-						int num=newPD.kData[v].num/2;
+						int num=newPD.getNum(v)/2;
 						vert=new int[num];
 						int tick=0;
-						for (int j=0;j<newPD.kData[v].num;j++) {
+						for (int j=0;j<newPD.getNum(v);j++) {
 							int k=newPD.kData[v].flower[j];
 							if (newPD.kData[k].mark==1)
 								vert[tick++]=k;
@@ -708,7 +709,7 @@ public class TileData {
 					
 					int []vert=new int[4];
 						
-					if (newPD.kData[v].bdryFlag>0) { // bdry? num=2
+					if (newPD.isBdry(v)) { // bdry? num=2
 						vert[0]=v;
 						for (int j=0;j<=2;j++)
 							vert[j+1]=newPD.kData[v].flower[j];
@@ -734,20 +735,20 @@ public class TileData {
 				int v=tile.baryVert;
 				
 				// create the wgtiles
-				tile.wgTiles=new Tile[newPD.kData[v].num]; // number of wgTiles
-				for (int j=0;j<newPD.kData[v].num;j++) {
+				tile.wgTiles=new Tile[newPD.getNum(v)]; // number of wgTiles
+				for (int j=0;j<newPD.getNum(v);j++) {
 					tile.wgTiles[j]=new Tile(3);
 					tile.wgTiles[j].type=2;
 				}
 				
 				// alternate grey/white, start with grey, correct with offset
 				int offset=1;
-				if (newPD.kData[v].bdryFlag==0) {
+				if (!newPD.isBdry(v)) {
 					if (newPD.kData[newPD.kData[v].flower[0]].mark==1)
 						offset=-1; // to get started with grey
 				}
 				// define 2 at a time, grey/white
-				for (int j=0;j<(newPD.kData[v].num/2);j++) {
+				for (int j=0;j<(newPD.getNum(v)/2);j++) {
 					tile.wgTiles[2*j].vert[0]=v;
 					tile.wgTiles[2*j].vert[1]=newPD.kData[v].flower[2*j];
 					tile.wgTiles[2*j].vert[2]=newPD.kData[v].flower[2*j+1];
@@ -765,20 +766,20 @@ public class TileData {
 				int v=tile.baryVert;
 				
 				// create the wgtiles
-				tile.wgTiles=new Tile[newPD.kData[v].num]; // should be 2 or 4 wgTiles
-				for (int j=0;j<newPD.kData[v].num;j++) {
+				tile.wgTiles=new Tile[newPD.getNum(v)]; // should be 2 or 4 wgTiles
+				for (int j=0;j<newPD.getNum(v);j++) {
 					tile.wgTiles[j]=new Tile(3);
 					tile.wgTiles[j].type=3;
 				}
 				
 				// alternate grey/white, start with grey, correct with offset
 				int offset=1;
-				if (newPD.kData[v].bdryFlag==0) {
+				if (!newPD.isBdry(v)) {
 					if (newPD.kData[newPD.kData[v].flower[0]].mark==1)
 						offset=-1; // to get started with grey
 				}
 				// define 2 at a time, grey/white
-				for (int j=0;j<(newPD.kData[v].num/2);j++) {
+				for (int j=0;j<(newPD.getNum(v)/2);j++) {
 					tile.wgTiles[2*j].vert[0]=v;
 					tile.wgTiles[2*j].vert[1]=newPD.kData[v].flower[2*j];
 					tile.wgTiles[2*j].vert[2]=newPD.kData[v].flower[2*j+1];
@@ -942,10 +943,10 @@ public class TileData {
 		for (int t=1;t<=workingTD.tileCount;t++) {
 			Tile tile=workingTD.myTiles[t];
 			tile.wgIndices=new int[2*tile.vertCount];
-			int num=newPD.kData[tile.baryVert].num;
+			int num=newPD.getNum(tile.baryVert);
 			
 			// check consistency
-			if (newPD.kData[tile.baryVert].bdryFlag!=0 || num!=(4*tile.vertCount)) {
+			if (newPD.isBdry(tile.baryVert) || num!=(4*tile.vertCount)) {
 				CirclePack.cpb.errMsg("Tile "+t+" (center "+tile.baryVert+") "+
 						"flower has problem");
 				break; // out of 'for' loop
@@ -960,7 +961,7 @@ public class TileData {
 			int []myflower=newPD.kData[tile.baryVert].flower;
 			for (int k=0;(k<newPD.kData[tile.baryVert].num && offset<0);k++) {
 				int m=myflower[k];
-				if (newPD.kData[m].num==4 && newPD.nghb(m, tile.vert[0])>=0)
+				if (newPD.getNum(m)==4 && newPD.nghb(m, tile.vert[0])>=0)
 						offset=k;
 			}
 			if (offset<0) {
@@ -1031,11 +1032,11 @@ public class TileData {
 
 				// dual tile for each original corner vertex
 				if (newPD.kData[v].mark==2) {
-					int num=newPD.kData[v].num;
+					int num=newPD.getNum(v);
 					int []flower=newPD.kData[v].flower;
 					
 					// bdry tile?
-					if (newPD.kData[v].bdryFlag>0) { // this is bdry tile
+					if (newPD.isBdry(v)) { // this is bdry tile
 						
 						// create the dual tile
 						Tile dtile=workingTD.dualTileData.myTiles[dcount]= 
@@ -1152,7 +1153,7 @@ public class TileData {
 					int []vert=new int[4];
 					int []augvert=new int[8];
 
-					if (newPD.kData[v].bdryFlag>0) { // bdry? 
+					if (newPD.isBdry(v)) { // bdry? 
 						qtile.wgIndices=new int[2];
 
 						// first is grey face
@@ -1184,7 +1185,7 @@ public class TileData {
 					
 					else { // interior? num=4
 						qtile.wgIndices=new int[4];
-						int num=newPD.kData[v].num;
+						int num=newPD.getNum(v);
 
 						// find a grey tile barycenter to start
 						int gdir=-1;
@@ -1275,7 +1276,7 @@ public class TileData {
 
 			// create flowers, etc.
 			p.kData[1].num=4;
-			p.kData[1].bdryFlag=0;
+			p.setBdryFlag(1,0);
 			p.kData[1].flower=new int[5];
 			for (int i=0;i<4;i++) p.kData[1].flower[i]=i+2;
 			p.kData[1].flower[4]=2;
@@ -1289,7 +1290,7 @@ public class TileData {
 			p.kData[2].flower[2]=6;
 			p.kData[2].flower[3]=3;
 			p.kData[2].flower[4]=1;
-			p.kData[2].bdryFlag=0;
+			p.setBdryFlag(2,0);
 			p.kData[2].utilFlag=p.kData[2].mark=0;
 			p.rData[2].rad=2.5/(double)4;
 			
@@ -1302,7 +1303,7 @@ public class TileData {
 			p.kData[3].flower[4]=8;
 			p.kData[3].flower[5]=4;
 			p.kData[3].flower[6]=1;
-			p.kData[3].bdryFlag=0;
+			p.setBdryFlag(3,0);
 			p.kData[3].utilFlag=p.kData[3].mark=0;
 			p.rData[3].rad=2.5/(double)6;
 			
@@ -1313,7 +1314,7 @@ public class TileData {
 			p.kData[4].flower[2]=8;
 			p.kData[4].flower[3]=5;
 			p.kData[4].flower[4]=1;
-			p.kData[4].bdryFlag=0;
+			p.setBdryFlag(4,0);
 			p.kData[4].utilFlag=p.kData[4].mark=0;
 			p.rData[4].rad=2.5/(double)4;
 			
@@ -1326,7 +1327,7 @@ public class TileData {
 			p.kData[5].flower[4]=6;
 			p.kData[5].flower[5]=2;
 			p.kData[5].flower[6]=1;
-			p.kData[5].bdryFlag=0;
+			p.setBdryFlag(5,0);
 			p.kData[5].utilFlag=p.kData[5].mark=0;
 			p.rData[5].rad=2.5/(double)6;
 			
@@ -1338,7 +1339,7 @@ public class TileData {
 			p.kData[5].flower[2]=2;
 			p.kData[5].flower[3]=5;
 			p.kData[5].flower[4]=9;
-			p.kData[5].bdryFlag=1;
+			p.setBdryFlag(5,1);
 			p.kData[5].utilFlag=p.kData[5].mark=0;
 			p.rData[5].rad=2.5/(double)4;
 
@@ -1347,7 +1348,7 @@ public class TileData {
 			p.kData[7].flower[0]=8;
 			p.kData[7].flower[1]=3;
 			p.kData[7].flower[2]=6;
-			p.kData[7].bdryFlag=1;
+			p.setBdryFlag(7,1);
 			p.kData[7].utilFlag=p.kData[7].mark=0;
 			p.rData[7].rad=2.5/(double)4;
 
@@ -1358,7 +1359,7 @@ public class TileData {
 			p.kData[8].flower[2]=4;
 			p.kData[8].flower[3]=3;
 			p.kData[8].flower[4]=7;
-			p.kData[8].bdryFlag=1;
+			p.setBdryFlag(8,1);
 			p.kData[8].utilFlag=p.kData[8].mark=0;
 			p.rData[8].rad=2.5/(double)4;
 
@@ -1367,7 +1368,7 @@ public class TileData {
 			p.kData[9].flower[0]=6;
 			p.kData[9].flower[1]=5;
 			p.kData[9].flower[2]=8;
-			p.kData[9].bdryFlag=1;
+			p.setBdryFlag(9,1);
 			p.kData[9].utilFlag=p.kData[9].mark=0;
 			p.rData[9].rad=2.5/(double)4;
 				
@@ -1486,7 +1487,7 @@ public class TileData {
 		
 		// paralleling 'flower': keeps track of hits
 		for (int vv=1;vv<=packData.nodeCount;vv++)
-			tflower[vv]=new int[packData.kData[vv].num+1];
+			tflower[vv]=new int[packData.getNum(vv)+1];
 		
 		// cycle between two lists
 		NodeLink curr=new NodeLink(packData);
@@ -1502,7 +1503,7 @@ public class TileData {
 			// process this vertex
 			while (crt.hasNext()) {
 				int v=crt.next();
-				int num=packData.kData[v].num;
+				int num=packData.getNum(v);
 				if (vtrack[v]!=num) { // not done with this vert
 					for (int j=0;j<num;j++) {
 						
@@ -1519,7 +1520,7 @@ public class TileData {
 								safety--;
 								tileVerts.add(u);
 								int indx_uw=packData.nghb(u,w);
-								int nm=packData.kData[u].num;
+								int nm=packData.getNum(u);
 								tflower[u][indx_uw] += 1;
 								tflower[w][packData.nghb(w,u)] += 1;
 								
@@ -1575,7 +1576,7 @@ public class TileData {
 	 * @return new TileData (its packData is null)
 	 */
 	public static TileData paveMe(PackData p,int V) {
-		if (p==null || V<1 || V>p.nodeCount || p.kData[V].bdryFlag!=0)
+		if (p==null || V<1 || V>p.nodeCount || p.isBdry(V))
 			return null;
 		
 		// keep track flowers we use, note the petals 
@@ -1594,19 +1595,19 @@ public class TileData {
 			while (cl.hasNext() && safety>0) {
 				safety--;
 				int v=cl.next();
-				if (util[v]<=0 && p.kData[v].bdryFlag==0) {
+				if (util[v]<=0 && !p.isBdry(v)) {
 					// want this v
 					finalList.add(v);
 					util[v]=1;
 					
 					// find vertices across its flower edges
-					int num=p.kData[v].num;
+					int num=p.getNum(v);
 					for (int j=0;j<num;j++) {
 						int w=p.kData[v].flower[j];
 						int u=p.kData[v].flower[j+1];
 						util[w]=util[u]=1;
 						int a=p.cross_edge_vert(v,j);
-						if (a>0 && util[a]==0 && p.kData[a].bdryFlag==0) {
+						if (a>0 && util[a]==0 && !p.isBdry(a)) {
 							next.add(a);
 							util[a]=-1;
 						}
@@ -1731,11 +1732,11 @@ public class TileData {
 		int tcount=0;
 		while (vlt.hasNext() && stop==0) {
 			int v=vlt.next();
-			if (util[v]!=0 || p.kData[v].bdryFlag!=0) {
+			if (util[v]!=0 || p.isBdry(v)) {
 				stop=v;
 				break;
 			}
-			int num=p.kData[v].num;
+			int num=p.getNum(v);
 			Tile tile=td.myTiles[++tcount]=new Tile(td,num);
 			tile.tileIndex=tcount;
 			tile.baryVert=v;

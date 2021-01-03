@@ -191,7 +191,7 @@ public class FaceDataPanel extends javax.swing.JPanel {
 		
 		// is it bdry?
 		bdryCkBox.setSelected(false);
-		if (p.kData[verts[0]].bdryFlag>0 || p.kData[verts[1]].bdryFlag>0 || p.kData[verts[2]].bdryFlag>0)
+		if (p.isBdry(verts[0]) || p.isBdry(verts[1]) || p.isBdry(verts[2]))
 			bdryCkBox.setSelected(true);
 		
 		// color?

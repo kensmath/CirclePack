@@ -234,7 +234,7 @@ public class SingBranchPt extends GenBranchPt {
 		// set face drawing order: poison edges allow one face to get to 'newBranchSpot' 
 		myPack.firstFace=borderLink.get(0);
 		myPack.poisonEdges=new EdgeLink(myPack);
-		for (int j=1;j<myPack.kData[newBrSpot].num;j++) {
+		for (int j=1;j<myPack.getNum(newBrSpot);j++) {
 			int vj=myPack.kData[newBrSpot].flower[j];
 			int wj=myPack.kData[newBrSpot].flower[j+1];
 			myPack.poisonEdges.add(new EdgeSimple(vj,wj));
@@ -252,7 +252,7 @@ public class SingBranchPt extends GenBranchPt {
 		transData=new int[matchCount+1];
 		for (int i=1;i<=matchCount;i++) { // bdry are +, rest minus
 			int ww=vertexMap.findW(i);
-			if (myPack.kData[i].bdryFlag!=0) 
+			if (myPack.isBdry(i))
 				transData[i]=ww; // positive: parent sends this to local
 			else {
 				transData[i]=-ww; // negative: local sends this to parent
@@ -272,7 +272,7 @@ public class SingBranchPt extends GenBranchPt {
 		// reset parent aims to default
 		for (int i=1;i<=matchCount;i++) { // bdry are +, rest minus
 			int ww=vertexMap.findW(i);
-			if (packData.kData[ww].bdryFlag!=0)
+			if (packData.isBdry(ww))
 				packData.setAim(ww,-1.0);
 			else {
 				packData.setAim(ww,2.0*Math.PI);

@@ -270,28 +270,28 @@ public class FaceLink extends LinkedList<Integer> {
 					while (ntv.hasNext()) {
 						int v=ntv.next();
 						int j=-1;
-						for (int k=0;(k<packData.kData[v].num && j<0);k++) { 
+						for (int k=0;(k<packData.getNum(v) && j<0);k++) { 
 							if (hitfaces[packData.kData[v].faceFlower[k]]>0)
 								j=k;
 						}
 						if (j>=0) {
 							if (((int)(j/2))*2==j) { // j is even
-								for (int k=0;k<packData.kData[v].num;k=k+2) {
+								for (int k=0;k<packData.getNum(v);k=k+2) {
 									int f=packData.kData[v].faceFlower[k];
 									hitfaces[f]=1;
 								}
-								for (int k=1;k<packData.kData[v].num;k=k+2) {
+								for (int k=1;k<packData.getNum(v);k=k+2) {
 									int f=packData.kData[v].faceFlower[k];
 									if (hitfaces[f]>0)
 										throw new CombException(); // conflict
 								}
 							}
 							else {
-								for (int k=1;k<packData.kData[v].num;k=k+2) {
+								for (int k=1;k<packData.getNum(v);k=k+2) {
 									int f=packData.kData[v].faceFlower[k];
 									hitfaces[f]=1;
 								}
-								for (int k=0;k<packData.kData[v].num;k=k+2) {
+								for (int k=0;k<packData.getNum(v);k=k+2) {
 									int f=packData.kData[v].faceFlower[k];
 									if (hitfaces[f]>0)
 										throw new CombException(); // conflict
@@ -299,7 +299,7 @@ public class FaceLink extends LinkedList<Integer> {
 							}
 						
 							// add flower to nextv for future processing
-							for (int k=0;k<packData.kData[v].num+packData.kData[v].bdryFlag;k++) {
+							for (int k=0;k<(packData.getNum(v)+packData.getBdryFlag(v));k++) {
 								int w=packData.kData[v].flower[k];
 								if (hitverts[w]==0) {
 									nextv.add(w);
@@ -488,7 +488,7 @@ public class FaceLink extends LinkedList<Integer> {
 					int v,f;
 					while (vlist.hasNext()) {
 						v=(Integer)vlist.next();
-						for (int j=0;j<packData.kData[v].num;j++) {
+						for (int j=0;j<packData.getNum(v);j++) {
 							f=packData.kData[v].faceFlower[j];
 							if (hits[f]==0) {
 								add(f);
@@ -513,7 +513,7 @@ public class FaceLink extends LinkedList<Integer> {
 							v=face.vert[j];
 							w=face.vert[(j+1)%3];
 							k=packData.nghb(w,v);
-							if (k<packData.kData[w].num) {
+							if (k<packData.getNum(w)) {
 								f=packData.kData[w].faceFlower[k];
 								if (hits[f]==0) {
 									add(f);
@@ -538,7 +538,7 @@ public class FaceLink extends LinkedList<Integer> {
 						v=edge.v;
 						w=edge.w;
 						k=packData.nghb(v, w);
-						if (k<packData.kData[v].num) {
+						if (k<packData.getNum(v)) {
 							f=packData.kData[v].faceFlower[k];
 							if (hits[f]==0) {
 								add(f);
@@ -547,7 +547,7 @@ public class FaceLink extends LinkedList<Integer> {
 							}
 						}
 						k=packData.nghb(w,v);
-						if (k<packData.kData[w].num) {
+						if (k<packData.getNum(w)) {
 							f=packData.kData[w].faceFlower[k];
 							if (hits[f]==0) {
 								add(f);
@@ -942,7 +942,7 @@ public class FaceLink extends LinkedList<Integer> {
 					CirclePack.cpb.errMsg("error in starting face list");
 					return null;
 				}
-				int num=p.kData[v].num;
+				int num=p.getNum(v);
 				int js=-1;
 				int jn=-1;
 				for (int j=0;j<num;j++) {
@@ -954,7 +954,7 @@ public class FaceLink extends LinkedList<Integer> {
 				
 				nextFP=startFP;
 				FaceParam holdFP=startFP.next;
-				if (p.kData[v].bdryFlag==1) { // boundary case
+				if (p.isBdry(v)) { // boundary case
 					if (js<jn) {
 						for (int j=js+1;j<jn;j++) {
 							nextFP=nextFP.next=new FaceParam();
@@ -1105,24 +1105,24 @@ public class FaceLink extends LinkedList<Integer> {
 			
 			// should have at least one bdry vert in 'pastFace'.
 			int []vert=p.faces[pastFace].vert;
-			if ((p.kData[vert[0]].bdryFlag==0) && (p.kData[vert[1]].bdryFlag==0) &&
-					        (p.kData[vert[2]].bdryFlag)==0) {
+			if (!p.isBdry(vert[0]) && !p.isBdry(vert[1]) &&
+					        !p.isBdry(vert[2])) {
 				CirclePack.cpb.errMsg("Did not seem to reach the bdry");
 				return null; // hum?? 'pastFace' not on bdry.
 			}
 
 			int cnt=0;
 			for (int j=0;j<3;j++)
-				if (p.kData[vert[j]].bdryFlag==1) cnt ++;
+				if (p.isBdry(vert[j])) cnt ++;
 			if (cnt>=2) return null; // 'pastFace' is bdry face? okay, done
  			
 			// else find a vert from 'pastFace' on the bdry
 			int indx=-1;
 			for (int j=0;j<3;j++)
-				if (p.kData[vert[j]].bdryFlag==1) indx=j;
+				if (p.isBdry(vert[j])) indx=j;
 			int bvert=vert[indx];
 			indx=-1;
-			for (int j=0;j<p.kData[bvert].num;j++)
+			for (int j=0;j<p.getNum(bvert);j++)
 				if (p.kData[bvert].faceFlower[j]==pastFace)
 					indx=j;
 			// add clockwise chain to reach face containing a bdry edge
@@ -1206,7 +1206,7 @@ public class FaceLink extends LinkedList<Integer> {
 
 		int indx1=-1;
 		int indx2=-1;
-		for (int j=0;j<p.kData[vert].num;j++) {
+		for (int j=0;j<p.getNum(vert);j++) {
 			if (p.kData[vert].faceFlower[j]==face)
 				indx1=j;
 			else if (p.kData[vert].faceFlower[j]==nface)
@@ -1217,7 +1217,7 @@ public class FaceLink extends LinkedList<Integer> {
 		FaceParam nextFP=initFP;
 		
 		// boundary case
-		if (p.kData[vert].bdryFlag==1) { 
+		if (p.isBdry(vert)) { 
 			if (indx1<indx2) { // counterclockwise
 				for (int j=indx1+1;j<indx2;j++) {
 					FaceParam holdFP=nextFP.next;
@@ -1244,7 +1244,7 @@ public class FaceLink extends LinkedList<Integer> {
 		
 		// interior case
 		else { 
-			int num=p.kData[vert].num;
+			int num=p.getNum(vert);
 			// Take shortest fan, bias towards CLOCKWISE (because when used 
 			//      to get edge path, we use the left side edgepath.
 			if ((indx2+num-indx1)%num<(int)(num/2)) { // go counterclockwise

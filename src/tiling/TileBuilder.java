@@ -271,7 +271,7 @@ public class TileBuilder {
 			int ecount=tile.vertCount;
 			for (int j=0;(j<ecount && !hit);j++) {
 				int eb=tile.augVert[j*4+2];
-				if (tile.tileFlower[j][0]>0 && masterPack.kData[eb].bdryFlag>0)
+				if (tile.tileFlower[j][0]>0 && masterPack.isBdry(eb))
 					hit=true; // here's one that's not yet pasted
 			}
 		}
@@ -307,7 +307,7 @@ public class TileBuilder {
 				for (int j = 0; (j < ecount && myedge<0); j++) {
 					int eb = tile.augVert[j * 4 + 2];
 					if (tile.tileFlower[j][0] > 0
-							&& masterPack.kData[eb].bdryFlag > 0) {
+							&& masterPack.isBdry(eb)) {
 						nghbindex = tile.tileFlower[j][0];
 						myedge = j;
 					}
@@ -429,7 +429,7 @@ public class TileBuilder {
 		for (int t=1;t<=p.tileData.tileCount;t++) {
 			Tile tile=p.tileData.myTiles[t];
 			int bv=tile.baryVert;
-			int num=p.kData[bv].num;
+			int num=p.getNum(bv);
 
 			// processing requries adjusting flower of baryVert so flower[0] 
 			// is in direction of vert[0]
@@ -441,7 +441,7 @@ public class TileBuilder {
 			int []myflower=p.kData[bv].flower;
 			for (int k=0;(k<num && offset<0);k++) {
 			int m=myflower[k];
-			if (p.kData[m].num==4 && p.nghb(m, tile.vert[0])>=0)
+			if (p.getNum(m)==4 && p.nghb(m, tile.vert[0])>=0)
 					offset=k;
 			}
 			if (offset<0) {
@@ -507,11 +507,11 @@ public class TileBuilder {
 
 				// dual tile for each original corner vertex
 				if (p.kData[v].mark==2) {
-					int num=p.kData[v].num;
+					int num=p.getNum(v);
 					int []flower=p.kData[v].flower;
 					
 					// bdry tile?
-					if (p.kData[v].bdryFlag>0) { // this is bdry tile
+					if (p.isBdry(v)) { // this is bdry tile
 						
 						// create the dual tile
 						Tile dtile=p.tileData.dualTileData.myTiles[dcount]= 
@@ -633,7 +633,7 @@ public class TileBuilder {
 					int []vert=new int[4];
 					int []augvert=new int[8];
 
-					if (p.kData[v].bdryFlag>0) { // bdry? 
+					if (p.isBdry(v)) { // bdry? 
 						qtile.wgIndices=new int[2];
 
 						// first is grey face
@@ -665,7 +665,7 @@ public class TileBuilder {
 					
 					else { // interior? num=4
 						qtile.wgIndices=new int[4];
-						int num=p.kData[v].num;
+						int num=p.getNum(v);
 
 						// find a grey tile barycenter to start
 						int gdir=-1;
@@ -779,7 +779,7 @@ public class TileBuilder {
 					// 	skip if edge is not on bdry of tPack (check v and its nghb vv)
 					int vv=tile.augVert[4*e+1];
 
-					if (masterPack.kData[v].bdryFlag == 0 || masterPack.kData[vv].bdryFlag == 0) 
+					if (!masterPack.isBdry(v) || !masterPack.isBdry(vv)) 
 						continue;
 
 					int nec = origTD.myTiles[nghb].vertCount;
@@ -829,7 +829,7 @@ public class TileBuilder {
 
 					// skip if edge barycenter vert is not on bdry of tPack
 					int eb = tile.augVert[4*e+2];
-					if (masterPack.kData[eb].bdryFlag != 0) 
+					if (masterPack.isBdry(eb)) 
 						continue;
 
 					// nghb invalid or already incorporated?

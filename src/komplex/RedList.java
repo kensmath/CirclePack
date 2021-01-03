@@ -176,7 +176,7 @@ public class RedList {
 
 		// so, some other face is responsible
 		int targetVert=p.faces[redface.face].vert[indx];
-		int safety=p.kData[targetVert].num;
+		int safety=p.getNum(targetVert);
 		RedList rtrace=redface.prev;
 		int tick=0;
 

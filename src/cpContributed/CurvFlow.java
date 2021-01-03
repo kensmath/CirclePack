@@ -323,14 +323,14 @@ public class CurvFlow extends PackExtender {
 			@SuppressWarnings("unused")
 			double radsum=0.0;
 			for (int v=1;v<=packData.nodeCount;v++) {
-				if (packData.kData[v].bdryFlag>0) {
+				if (packData.isBdry(v)) {
 					radsum += packData.getRadius(v);
 				}
 			}
 
 			// adjust each by proportion that that radius forms of radsum
 			for (int v=1;v<=packData.nodeCount;v++) {
-				if (packData.kData[v].bdryFlag>0) {
+				if (packData.isBdry(v)) {
 					double factor=.1;
 					double prad=packData.getRadius(v);
 					packData.setRadius(v,prad+ (-1.0)*factor*(bdryCurv[v]/total)*prad);
@@ -660,7 +660,7 @@ public class CurvFlow extends PackExtender {
 		
 		// collect info
 		for (int v=1;v<=p.nodeCount;v++) {
-			if (p.kData[v].bdryFlag>0) {
+			if (p.isBdry(v)) {
 				bdryCurv[v]=Math.PI-p.getCurv(v);
 				accum += Math.abs(bdryCurv[v]);
 			}

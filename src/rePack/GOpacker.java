@@ -1236,8 +1236,8 @@ public class GOpacker extends RePacker {
      * @return double, stretch required in edge <w,u>
      */
     public double triSet(int v,int u,int w,double v_ang) {
-    	if (p.kData[v].bdryFlag==0 || p.kData[u].bdryFlag==0 || 
-    			p.kData[w].bdryFlag==0 || v_ang<.01 || (v_ang-Math.PI)<.1)
+    	if (!p.isBdry(v) || !p.isBdry(u) ||	!p.isBdry(w) || 
+    			v_ang<.01 || (v_ang-Math.PI)<.1)
     		throw new DataException("corner or angle problem in 'triSet'");
     	
     	// get length of edges <v w>

@@ -115,7 +115,7 @@ public class CookieMonster {
 			double oangle;
 			int ocount=0;
 			for (int v = 1; v <= monsterPackData.nodeCount; v++)
-				for (int j=0;j<(monsterPackData.kData[v].num + monsterPackData.kData[v].bdryFlag);j++)
+				for (int j=0;j<(monsterPackData.getNum(v) + monsterPackData.getBdryFlag(v));j++)
 					if (v < monsterPackData.kData[v].flower[j]
 							&& (oangle=monsterPackData.getInvDist(v,monsterPackData.kData[v].flower[j]))!=1.0) { // non-default?
 						overlaps.add(new EdgeMore(v,monsterPackData.kData[v].flower[j], oangle));
@@ -241,14 +241,14 @@ public class CookieMonster {
 				edgeM = (EdgeMore) nlap.next();
 				indx = monsterPackData.nghb(edgeM.v, edgeM.w);
 				monsterPackData.set_single_invDist(edgeM.v,edgeM.w,edgeM.overlap);
-				if (monsterPackData.kData[edgeM.v].bdryFlag == 0 && indx == 0)
+				if (!monsterPackData.isBdry(edgeM.v) && indx == 0)
 					monsterPackData.set_single_invDist(edgeM.v,
-							monsterPackData.kData[edgeM.v].flower[monsterPackData.kData[edgeM.v].num],edgeM.overlap);
+							monsterPackData.kData[edgeM.v].flower[monsterPackData.getNum(edgeM.v)],edgeM.overlap);
 				indx = monsterPackData.nghb(edgeM.w, edgeM.v);
 				monsterPackData.set_single_invDist(edgeM.w,edgeM.w,edgeM.overlap);
-				if (monsterPackData.kData[edgeM.w].bdryFlag == 0 && indx == 0)
+				if (!monsterPackData.isBdry(edgeM.w) && indx == 0)
 					monsterPackData.set_single_invDist(edgeM.w,
-							monsterPackData.kData[edgeM.w].flower[monsterPackData.kData[edgeM.w].num],edgeM.overlap);
+							monsterPackData.kData[edgeM.w].flower[monsterPackData.getNum(edgeM.w)],edgeM.overlap);
 			}
 		} 
 		
@@ -343,7 +343,7 @@ public class CookieMonster {
 			//   poisons do get included in cutout packing, we just don't loop around
 			//    them. Set cmPoison to +1
 			for (int v=1;v<=monsterPackData.nodeCount;v++) {
-				for (int j=0;(j<=monsterPackData.kData[v].num && cmPoison[v]==0);j++) 
+				for (int j=0;(j<=monsterPackData.getNum(v) && cmPoison[v]==0);j++) 
 					if (cmPoison[monsterPackData.kData[v].flower[j]]==-1) cmPoison[v]=1;
 			}
 		}
@@ -358,7 +358,7 @@ public class CookieMonster {
 		for (int i=1;i<=monsterPackData.nodeCount;i++) {
 			if (cmPoison[i]!=0)  {
 				int k=0;
-				for (int j=0;j<=monsterPackData.kData[i].num;j++) 
+				for (int j=0;j<=monsterPackData.getNum(i);j++) 
 					if (cmPoison[monsterPackData.kData[i].flower[j]]!=0) k++;
 				if (k==0) // no poison neighbors 
 					cmPoison[i]=0;
@@ -380,7 +380,7 @@ public class CookieMonster {
 		for (int v=1;v<=monsterPackData.nodeCount;v++) {
 			if (cmPoison[v]!=0) {
 				int k=0;
-				for (int j=0;(j<=monsterPackData.kData[v].num && k==0);j++) 
+				for (int j=0;(j<=monsterPackData.getNum(v) && k==0);j++) 
 					if (cmPoison[monsterPackData.kData[v].flower[j]]==0) k++;
 				if (k!=0) // v has non-poison neighbors 
 					monsterPackData.poisonVerts.add(v);
@@ -423,7 +423,7 @@ public class CookieMonster {
 			while (currit.hasNext()) {
 				int v=currit.next();
 				util[v]=1;
-				for (int j=0;j<(p.kData[v].num+p.kData[v].bdryFlag);j++) {
+				for (int j=0;j<(p.getNum(v)+p.getBdryFlag(v));j++) {
 					int k=p.kData[v].flower[j];
 					if (util[k]==0) {
 						next.add(k);
@@ -457,17 +457,17 @@ public class CookieMonster {
 		int newIndx=1;
 		for (int v=1;v<=p.nodeCount;v++) {
 			if (util[v]>0) {
-				int num=p.kData[v].num;
+				int num=p.getNum(v);
 
 				Vector<Integer> jumps=new Vector<Integer>(1);
-				for (int j=0;j<p.kData[v].num;j++) {
+				for (int j=0;j<p.getNum(v);j++) {
 					int k=p.kData[v].flower[j];
 					int kk=p.kData[v].flower[j+1];
 					if (util[k]!=util[kk]) {
 						if (util[k]==1) // jump to negative at j
 							jumps.add(-j); 
 						else { // jump to positive at j+1
-							if ((j+1)==num && p.kData[v].bdryFlag==0)
+							if ((j+1)==num && !p.isBdry(v))
 								jumps.add(0);
 							else 
 								jumps.add(j+1);
@@ -479,7 +479,7 @@ public class CookieMonster {
 				if (jumps.size()>2) // ambiguity: would have to clone 
 					util[v]=-1;
 				
-				else if (p.kData[v].bdryFlag==0) { // interior
+				else if (!p.isBdry(v)) { // interior
 					if (jumps.size()==1)
 						throw new CombException("hum? too few jumps?");
 					
@@ -490,10 +490,10 @@ public class CookieMonster {
 						nvd.newIndx=newIndx++;
 						old2new[nvd.origIndx]=nvd.newIndx;
 						debugV.add(nvd.origIndx); // debug
-						nvd.petals=new int[p.kData[v].num+1];
-						for (int jj=0;jj<=p.kData[v].num;jj++)
+						nvd.petals=new int[p.getNum(v)+1];
+						for (int jj=0;jj<=p.getNum(v);jj++)
 							nvd.petals[jj]=p.kData[v].flower[jj];
-						nvd.num=p.kData[v].num;
+						nvd.num=p.getNum(v);
 						newFlowers.add(nvd);
 					}
 					else { // one fan, starts with J 
@@ -507,7 +507,7 @@ public class CookieMonster {
 						nvd.newIndx=newIndx++;
 						old2new[nvd.origIndx]=nvd.newIndx;
 						debugV.add(nvd.origIndx); // debug
-						nvd.petals=new int[p.kData[v].num+1];
+						nvd.petals=new int[p.getNum(v)+1];
 						int noc=0;
 						int flag=util[p.kData[v].flower[(J+num)%num]];
 						while (flag>0 && noc<num) {
@@ -538,7 +538,7 @@ public class CookieMonster {
 					  nvd.newIndx=newIndx++;
 					  old2new[nvd.origIndx]=nvd.newIndx;
 					  debugV.add(nvd.origIndx); // debug
-					  nvd.petals=new int[p.kData[v].num+1];
+					  nvd.petals=new int[p.getNum(v)+1];
 					  int noc=0;
 					  int flag=util[p.kData[v].flower[(J+num)%num]];
 					  while (flag>0 && noc<num) {
@@ -567,10 +567,10 @@ public class CookieMonster {
 			int v=nvd.newIndx;
 			newP.kData[v].num=nvd.num;
 			newP.kData[v].flower=nvd.petals;
-			if (newP.kData[v].flower[0]==newP.kData[v].flower[newP.kData[v].num])
-				newP.kData[v].bdryFlag=0;
+			if (newP.kData[v].flower[0]==newP.kData[v].flower[newP.getNum(v)])
+				newP.setBdryFlag(v,0);
 			else 
-				newP.kData[v].bdryFlag=1;
+				newP.setBdryFlag(v,1);
 			Color col=p.kData[V].color;
 			newP.kData[v].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
 			newP.kData[v].mark=p.kData[V].mark;
@@ -582,7 +582,7 @@ public class CookieMonster {
 		// convert flowers to new indices
 		for (int w=1;w<=newP.nodeCount;w++) {
 			try {
-				for (int jw=0;jw<=newP.kData[w].num;jw++) {
+				for (int jw=0;jw<=newP.getNum(w);jw++) {
 					int k=newP.kData[w].flower[jw];
 					newP.kData[w].flower[jw]=old2new[k];
 				}
@@ -773,7 +773,7 @@ public class CookieMonster {
 					new_faces[f].vert[j] = temp.newIndex;
 				} else
 					for (int iii = 0; iii < temp.num; iii++) {
-						int ii = (temp.index1 + iii) % monsterPackData.kData[vert].num;
+						int ii = (temp.index1 + iii) % monsterPackData.getNum(vert);
 						int f = monsterPackData.kData[vert].faceFlower[ii];
 						int j = monsterPackData.face_index(f, vert);
 						new_faces[f].vert[j] = temp.newIndex;
@@ -837,7 +837,7 @@ public class CookieMonster {
 			int i = 0;
 			while (i < trace.num) {
 				f = monsterPackData.kData[vert].faceFlower[(trace.index1 + i)
-						% (monsterPackData.kData[vert].num)];
+						% (monsterPackData.getNum(vert))];
 				int jj = (monsterPackData.face_index(f, vert) + 2) % 3;
 				nK_ptr[trace.newIndex].flower[i + 1] = new_faces[f].vert[jj];
 				/* old vert number; need to adjust its flower */
@@ -859,7 +859,7 @@ public class CookieMonster {
 					} else {
 						nK_ptr[v].flower[k] = trace.newIndex;
 						if (k == 0 && nK_ptr[v].bdryFlag == 0)
-							nK_ptr[v].flower[monsterPackData.kData[v].num] = trace.newIndex;
+							nK_ptr[v].flower[monsterPackData.getNum(v)] = trace.newIndex;
 					}
 				}
 				i++;
@@ -920,7 +920,7 @@ public class CookieMonster {
 
 		// update indices in original flowers
 		for (int i = 1; i <= monsterPackData.nodeCount; i++)
-			for (int j = 0; j <= monsterPackData.kData[i].num; j++)
+			for (int j = 0; j <= monsterPackData.getNum(i); j++)
 				monsterPackData.kData[i].flower[j] = old2new[monsterPackData.kData[i].flower[j]];
 
 		// TODO: save inv dist data when possible
@@ -981,13 +981,14 @@ public class CookieMonster {
 			temp.nextObj = temp.prevObj = temp; // default: points to self
 			temp.v = v = monsterPackData.faces[redlist.face].vert[redlist.vIndex];
 			temp.boundaryFlag = 0;
-			if (monsterPackData.kData[v].flower[0] != monsterPackData.kData[v].flower[monsterPackData.kData[v].num])
+			if (monsterPackData.kData[v].flower[0] != 
+					monsterPackData.kData[v].flower[monsterPackData.getNum(v)])
 				temp.boundaryFlag = 1;
 			temp.poisonFlag = 0;
 			if (cmPoison[v] == -1)
 				temp.poisonFlag = 1;
 			// set indices of faces
-			int num = monsterPackData.kData[v].num;
+			int num = monsterPackData.getNum(v);
 			temp.index2 = num - 1;
 			while (monsterPackData.kData[v].faceFlower[temp.index2] != redlist.face
 					&& temp.index2 > 0)
@@ -1024,13 +1025,14 @@ public class CookieMonster {
 				temp.nextObj = temp.prevObj = temp; // default: points to self
 				temp.v = v = monsterPackData.faces[redlist.face].vert[(redlist.vIndex + 1) % 3];
 				temp.boundaryFlag = 0;
-				if (monsterPackData.kData[v].flower[0] != monsterPackData.kData[v].flower[monsterPackData.kData[v].num])
+				if (monsterPackData.kData[v].flower[0] != 
+						monsterPackData.kData[v].flower[monsterPackData.getNum(v)])
 					temp.boundaryFlag = 1;
 				temp.poisonFlag = 0;
 				if (cmPoison[v] == -1)
 					temp.poisonFlag = 1;
 				// set indices of faces
-				num = monsterPackData.kData[v].num;
+				num = monsterPackData.getNum(v);
 				temp.index2 = num - 1;
 				while (monsterPackData.kData[v].faceFlower[temp.index2] != redlist.face
 						&& temp.index2 > 0)
@@ -1076,7 +1078,7 @@ public class CookieMonster {
 			if (safety++>2*monsterPackData.nodeCount) 
 				throw new CombException("Error processing boundary in forming complex");
 			// if this vertex has a complete fan, we can remove it from the list
-			if (trace.num == monsterPackData.kData[trace.v].num) {
+			if (trace.num == monsterPackData.getNum(trace.v)) {
 				
 				// remove trace, but does list collapse? (I think this is what is intended)
 				BoundaryData tmpbd=drop_bd(trace,bdrydata);
@@ -1112,7 +1114,7 @@ public class CookieMonster {
 												 */
 						temp = temp.next;
 					} // end of while
-					if (trace.poisonFlag == 0 && n == monsterPackData.kData[vert].num) {
+					if (trace.poisonFlag == 0 && n == monsterPackData.getNum(vert)) {
 						/*
 						 * vert's not poison and the various fans account for
 						 * all its faces. Drop this whole sublist of entries
@@ -1215,11 +1217,11 @@ public class CookieMonster {
 					 * orig at the end, have to allow possibility that it may
 					 * get hooked up with the last fan.)
 					 */
-					if ((monsterPackData.kData[vert].bdryFlag != 0 &&
-							hold.index2 < monsterPackData.kData[vert].num - 1 && 
+					if ((monsterPackData.isBdry(vert) &&
+							hold.index2 < monsterPackData.getNum(vert) - 1 && 
 							temp.index1 == hold.index2 + 1) ||
-							(monsterPackData.kData[vert].bdryFlag == 0 && 
-								temp.index1 == ((hold.index2 + 1) % monsterPackData.kData[vert].num))) {
+							(!monsterPackData.isBdry(vert) && 
+								temp.index1 == ((hold.index2 + 1) % monsterPackData.getNum(vert)))) {
 						int f1 = monsterPackData.kData[vert].faceFlower[hold.index2];
 						int f2 = monsterPackData.kData[vert].faceFlower[temp.index1];
 						int w = monsterPackData.faces[f1].vert[monsterPackData.face_nghb(f2, f1)];

@@ -125,7 +125,7 @@ public class iGame extends PackExtender {
 		while (safety>0) {
 			int v=(int)(1+Math.random()*packData.nodeCount+.4);
 			if (v>packData.nodeCount) v=packData.nodeCount;
-			if (packData.kData[v].bdryFlag==0 && 
+			if (!packData.isBdry(v) && 
 					(playerNum<0 || v!=player[playerNum])) 
 				return v;
 			safety--;
@@ -169,14 +169,14 @@ public class iGame extends PackExtender {
 	}
 	
 	/**
-	 * Modify the complex so edge <v,w> is collapsed.
-	 * @param v
-	 * @param w
-	 * @return
+	 * Modify the complex so edge <v,u> is collapsed.
+	 * @param v int
+	 * @param u int
+	 * @return int
 	 */
 	public int crunchEdge(int v,int u) {
 		if (packData.nghb(v,u)<0 || 
-			(packData.kData[v].bdryFlag==1 && packData.kData[v].bdryFlag==1))
+			(packData.isBdry(v) && packData.isBdry(u)))
 			return 0;
 		EdgeLink edgelist=new EdgeLink(packData,new String(v+" "+u));
 		return packData.collapse_edge(edgelist);
@@ -260,13 +260,13 @@ public class iGame extends PackExtender {
 			int v=0;
 			try {
 				v=NodeLink.grab_one_vert(packData,flagSegs);
-				if (v==0 || packData.kData[v].bdryFlag==1 || packData.kData[v].mark>=0)
+				if (v==0 || packData.isBdry(v) || packData.kData[v].mark>=0)
 					throw new ParserException("vertex is one of designated");
 			} catch (Exception ex) {
 				Oops("not valid for removal: "+ex.getMessage());
 			}
-			if (v<=0 || v>packData.nodeCount || packData.kData[v].bdryFlag==0 ||
-					packData.kData[v].num!=3)
+			if (v<=0 || v>packData.nodeCount || !packData.isBdry(v) ||
+					packData.getNum(v)!=3)
 				Oops("invalid choice");
 			cpCommand("rm_cir "+v);
 			return 1;
@@ -291,7 +291,7 @@ public class iGame extends PackExtender {
 			} catch (Exception ex) {
 				Oops("need index of bdry vert next to a corner");
 			}
-			if (v<=0 || v>packData.nodeCount || packData.kData[v].bdryFlag==0)
+			if (v<=0 || v>packData.nodeCount || !packData.isBdry(v))
 				Oops("invalid choice");
 			boolean gotit=false;
 			for (int j=0;(!gotit && j<4);j++) {
@@ -380,7 +380,7 @@ public class iGame extends PackExtender {
 					playerCOlor[j]=ColorUtil.spreadColor(j%16);
 					targets[j]=randNonPlayer(player[j]);
 					if (player[j]<=0 || player[j]>=packData.nodeCount || 
-							packData.kData[player[j]].bdryFlag!=0) {
+							packData.isBdry(player[j])) {
 						player=null;
 						playerCOlor=null;
 						targets=null;

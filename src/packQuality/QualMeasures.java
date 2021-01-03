@@ -143,7 +143,7 @@ public class QualMeasures {
 	  for (int i=0;i<3;i++) {
 	      qual[i]=0;
 	      int v=p.faces[face].vert[0];
-	      int num=p.kData[v].num+p.kData[v].bdryFlag;
+	      int num=p.getNum(v)+p.getBdryFlag(v);
 	      for (int j=0;j<num;j++) {
 	    	  int w=p.kData[v].flower[j];
 	    	  try {
@@ -353,7 +353,7 @@ public class QualMeasures {
 	 */
 	public static double vert_ErrMax(PackData p,int v) {
 		double worstviserr=0.0;
-		for (int j=0;j<p.kData[v].num+p.kData[v].bdryFlag;j++) {
+		for (int j=0;j<(p.getNum(v)+p.getBdryFlag(v));j++) {
 			EdgeSimple edge=new EdgeSimple(v,p.kData[v].flower[j]);
 			double verr=edge_vis_error(p,edge);
 			if (verr>worstviserr) {

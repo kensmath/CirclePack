@@ -64,7 +64,7 @@ public class ShiftBranchPt extends GenBranchPt {
 		myType=GenBranchPt.SHIFTED;
 		myIndex=v;
 		singPetal=w;
-		if (packData.kData[myIndex].bdryFlag!=0)
+		if (packData.isBdry(myIndex))
 			throw new CombException("singular vert must be interior");
 		
 		// is singPetal actually a petal of singVert? default to index 0.
@@ -81,7 +81,7 @@ public class ShiftBranchPt extends GenBranchPt {
 		PackData myPack=null;
 		
 		NodeLink petals=new NodeLink(packData);
-		for (int j=0;j<packData.kData[myIndex].num;j++)
+		for (int j=0;j<packData.getNum(myIndex);j++)
 			petals.add(packData.kData[myIndex].flower[j]);
 		
 		bdryLink=PackData.islandSurround(packData,petals);
@@ -167,7 +167,7 @@ public class ShiftBranchPt extends GenBranchPt {
 		
 		// 'singVert' and its petals are packed here; set aim < 0 in parent
 		packData.setAim(myIndex,-1.0);
-		for (int j=0;j<packData.kData[myIndex].num+packData.kData[myIndex].num;j++)
+		for (int j=0;j<packData.getNum(myIndex)+packData.getBdryFlag(myIndex);j++)
 			packData.setAim(vertexMap.findW(packData.kData[myIndex].flower[j]),-1.0);
 
 		setPoisonEdges();
@@ -177,11 +177,11 @@ public class ShiftBranchPt extends GenBranchPt {
 	public void delete() {
 		
 		// reset aims in parent
-		if (packData.kData[myIndex].bdryFlag==0)
+		if (!packData.isBdry(myIndex))
 			packData.setAim(myIndex,2.0*Math.PI);
-		for (int j=0;j<packData.kData[myIndex].num+packData.kData[myIndex].num;j++) {
+		for (int j=0;j<(packData.getNum(myIndex)+packData.getBdryFlag(myIndex));j++) {
 			int k=vertexMap.findW(packData.kData[myIndex].flower[j]);
-			if (packData.kData[k].bdryFlag==0)
+			if (!packData.isBdry(k))
 				packData.setAim(k,2.0*Math.PI);
 		}
 		
@@ -624,7 +624,7 @@ public class ShiftBranchPt extends GenBranchPt {
 	public int setPoisonEdges() {
 		EdgeLink elink=new EdgeLink(packData);
 		int v=myPackData.kData[1].flower[0];
-		for (int j=1;j<=myPackData.kData[1].num;j++) {
+		for (int j=1;j<=myPackData.getNum(1);j++) {
 			int k=myPackData.kData[1].flower[j];
 			elink.add(new EdgeSimple(vertexMap.findW(v),vertexMap.findW(k)));
 			elink.add(new EdgeSimple(myIndex,vertexMap.findW(k)));

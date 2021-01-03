@@ -105,7 +105,7 @@ public class TileColoring extends PackExtender {
 	                }
 	                
 	                // set type
-	                newTile.type=packData.kData[newTile.vert].num-2;
+	                newTile.type=packData.getNum(newTile.vert)-2;
 	                
 	                String lineage=tok.nextToken();
 	                depth=lineage.length();
@@ -194,8 +194,8 @@ public class TileColoring extends PackExtender {
 				for (int i=0;i<tiles.size();i++) {
 					TileInfo td=tiles.get(i);
 					int v=td.vert;
-					int num=packData.kData[v].num;
-					int N=num+2*packData.kData[v].bdryFlag;
+					int num=packData.getNum(v);
+					int N=num+2*packData.getBdryFlag(v);
 					double []crnr=new double[2*N];
 					for (int j=0;j<num;j++) {
 						Complex Z=packData.getCenter(packData.kData[v].flower[j]);
@@ -204,7 +204,7 @@ public class TileColoring extends PackExtender {
 						crnr[2*j]=Z.x;
 						crnr[2*j+1]=Z.y;
 					}
-					if (packData.kData[v].bdryFlag>0) { // need extra points
+					if (packData.isBdry(v)) { // need extra points
 						Complex Z=packData.getCenter(packData.kData[v].flower[num]);
 						if (packData.hes>0)
 							Z=cpScreen.sphView.toApparentSph(Z);
@@ -239,12 +239,12 @@ public class TileColoring extends PackExtender {
 				for (int i=0;i<tiles.size();i++) {
 					TileInfo td=tiles.get(i);
 					int v=td.vert;
-					int num=packData.kData[v].num;
-					int N=num+2*packData.kData[v].bdryFlag;
+					int num=packData.getNum(v);
+					int N=num+2*packData.getBdryFlag(v);
 					Complex []Z=new Complex[N];
 					for (int j=0;j<num;j++)
 						Z[j]=packData.getCenter(packData.kData[v].flower[j]);
-					if (packData.kData[v].bdryFlag>0) { // need extra points
+					if (packData.isBdry(v)) { // need extra points
 						Z[num]=packData.getCenter(packData.kData[v].flower[num]);
 						Z[num+1]=packData.getCenter(v); // bdry edge 
 					}

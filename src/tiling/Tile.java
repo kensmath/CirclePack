@@ -187,7 +187,7 @@ public class Tile extends Face {
 
 			// create flowers, etc.
 			p.kData[1].num=4;
-			p.kData[1].bdryFlag=0;
+			p.setBdryFlag(1,0);
 			p.kData[1].flower=new int[5];
 			p.kData[1].flower[0]=6;
 			p.kData[1].flower[1]=7;
@@ -204,7 +204,7 @@ public class Tile extends Face {
 			p.kData[6].flower[2]=2;
 			p.kData[6].flower[3]=7;
 			p.kData[6].flower[4]=1;
-			p.kData[6].bdryFlag=0;
+			p.setBdryFlag(6,0);
 			p.kData[6].utilFlag=p.kData[6].mark=0;
 			p.rData[6].rad=2.5/(double)4;
 			
@@ -217,7 +217,7 @@ public class Tile extends Face {
 			p.kData[7].flower[4]=4;
 			p.kData[7].flower[5]=8;
 			p.kData[7].flower[6]=1;
-			p.kData[7].bdryFlag=0;
+			p.setBdryFlag(7,0);
 			p.kData[7].utilFlag=p.kData[7].mark=0;
 			p.rData[7].rad=2.5/(double)6;
 			
@@ -228,7 +228,7 @@ public class Tile extends Face {
 			p.kData[8].flower[2]=4;
 			p.kData[8].flower[3]=9;
 			p.kData[8].flower[4]=1;
-			p.kData[8].bdryFlag=0;
+			p.setBdryFlag(8,0);
 			p.kData[8].utilFlag=p.kData[8].mark=0;
 			p.rData[8].rad=2.5/(double)4;
 			
@@ -241,7 +241,7 @@ public class Tile extends Face {
 			p.kData[9].flower[4]=2;
 			p.kData[9].flower[5]=6;
 			p.kData[9].flower[6]=1;
-			p.kData[9].bdryFlag=0;
+			p.setBdryFlag(9,0);
 			p.kData[9].utilFlag=p.kData[9].mark=0;
 			p.rData[9].rad=2.5/(double)6;
 			
@@ -253,7 +253,7 @@ public class Tile extends Face {
 			p.kData[2].flower[2]=6;
 			p.kData[2].flower[3]=9;
 			p.kData[2].flower[4]=5;
-			p.kData[2].bdryFlag=1;
+			p.setBdryFlag(2,1);
 			p.kData[2].utilFlag=p.kData[5].mark=0;
 			p.rData[2].rad=2.5/(double)4;
 
@@ -262,7 +262,7 @@ public class Tile extends Face {
 			p.kData[3].flower[0]=4;
 			p.kData[3].flower[1]=7;
 			p.kData[3].flower[2]=2;
-			p.kData[3].bdryFlag=1;
+			p.setBdryFlag(3,1);
 			p.kData[3].utilFlag=p.kData[3].mark=0;
 			p.rData[3].rad=2.5/(double)4;
 
@@ -273,7 +273,7 @@ public class Tile extends Face {
 			p.kData[4].flower[2]=8;
 			p.kData[4].flower[3]=7;
 			p.kData[4].flower[4]=3;
-			p.kData[4].bdryFlag=1;
+			p.setBdryFlag(4,1);
 			p.kData[4].utilFlag=p.kData[4].mark=0;
 			p.rData[4].rad=2.5/(double)4;
 
@@ -282,7 +282,7 @@ public class Tile extends Face {
 			p.kData[5].flower[0]=2;
 			p.kData[5].flower[1]=9;
 			p.kData[5].flower[2]=4;
-			p.kData[5].bdryFlag=1;
+			p.setBdryFlag(5,1);
 			p.kData[5].utilFlag=p.kData[5].mark=0;
 			p.rData[5].rad=2.5/(double)4;
 				

@@ -133,7 +133,7 @@ public class DataTree extends JPanel {
 		int mx=1;
 		double avgdeg=0.0;
 		for (int j=1;j<=p.nodeCount;j++) {
-			int dg=p.kData[j].num+p.kData[j].bdryFlag;
+			int dg=p.getNum(j)+p.getBdryFlag(j);
 			avgdeg +=dg;
 			mn=(dg<mn) ? dg : mn;
 			mx=(dg>mx) ? dg : mx;
@@ -141,7 +141,7 @@ public class DataTree extends JPanel {
 		avgdeg /=(double)p.nodeCount;
 		double std_dev=0.0;
 		for (int j=1;j<=p.nodeCount;j++) {
-			int dg=p.kData[j].num+p.kData[j].bdryFlag;
+			int dg=p.getNum(j)+p.getBdryFlag(j);
 			double dev=(double)dg-avgdeg;
 			dev *=dev;
 			std_dev += dev;

@@ -818,14 +818,13 @@ public class CommandStrParser {
 	    		  NodeLink nl=new NodeLink(packData,str);
 	    		  int vv1=(Integer)nl.get(0);
 	    		  int w=(Integer)nl.get(1);
-	    		  if (vv1!=v1 || packData.kData[v1].bdryFlag==0
-	    				  || packData.kData[w].bdryFlag==0) 
+	    		  if (vv1!=v1 || !packData.isBdry(vv1) || !packData.isBdry(v1))
 	    			  throw new ParserException("vertices not on same boundary component");
 	    		  int tick=1;
 	    		  int safty=packData.nodeCount;
-	    		  int ne=packData.kData[v1].flower[packData.kData[v1].num];
+	    		  int ne=packData.kData[v1].flower[packData.getNum(v1)];
 	    		  while (ne != v1 && safty>0) {
-	    			  ne=packData.kData[ne].flower[packData.kData[ne].num];
+	    			  ne=packData.kData[ne].flower[packData.getNum(ne)];
 	    			  tick++;
 	    			  safty--;
 	    		  }
@@ -849,7 +848,7 @@ public class CommandStrParser {
 	    		  overlaps=new Overlap();
 	    		  trace=overlaps;
 	    		  for (int v=1;v<=packData.nodeCount;v++) {
-	    			  for (int j=0;j<(packData.kData[v].num+packData.kData[v].bdryFlag);j++) {
+	    			  for (int j=0;j<(packData.getNum(v)+packData.getBdryFlag(v));j++) {
 	    				  // only store for petals with larger indices
 	    				  if (v<packData.kData[v].flower[j]
 	    				     && (angle=packData.getInvDist(v,packData.kData[v].flower[j]))!=1.0 ) {
@@ -924,8 +923,8 @@ public class CommandStrParser {
 				    // new overlaps from p2? 
 				      for(int v=1;v<=qackData.nodeCount;v++) {
 				    	  int vv=packData.vertexMap.findW(v);
-				    	  for(int j=0;j<qackData.kData[v].num+
-				    	  	qackData.kData[v].bdryFlag;j++)
+				    	  for(int j=0;j<qackData.getNum(v)+
+				    	  	qackData.getBdryFlag(v);j++)
 				    		  if (v<qackData.kData[v].flower[j]) {
 				    			  int ww=packData.vertexMap.findW(qackData.kData[v].flower[j]);
 				    			  if ((angle=qackData.getInvDist(v,qackData.kData[v].flower[j]))!=1.0)
@@ -2960,7 +2959,7 @@ public class CommandStrParser {
 	    	  try {
 	    		  Iterator<Integer> clk=clink.iterator();
 	    		  while (clk.hasNext()) {
-	    			  if (packData.kData[clk.next()].bdryFlag==0)
+	    			  if (!packData.isBdry(clk.next()))
 	    				  throw new DataException();
 	    			  ccount++;
 	    		  }
@@ -4465,15 +4464,15 @@ public class CommandStrParser {
 				  throw new CombException("no boundary verts at gencount = "+gencount);
 			  int []alt=new int[2];
 			  int w=packData.bdryStarts[1];
-			  int stopv=packData.kData[w].flower[packData.kData[w].num];
+			  int stopv=packData.kData[w].flower[packData.getNum(w)];
 			  int next=packData.kData[w].flower[0];
 			  boolean wflag=false;
 			  while (!wflag && count<10000) {
 //				  System.err.println("gencount="+gencount+", working on w="+w+
 //						  "; w's mark="+packData.kData[w].mark);
 				  if (w==stopv) wflag=true;
-				  int prev=packData.kData[w].flower[packData.kData[w].num];
-				  int n=degs[packData.kData[w].mark]-packData.kData[w].num-1;
+				  int prev=packData.kData[w].flower[packData.getNum(w)];
+				  int n=degs[packData.kData[w].mark]-packData.getNum(w)-1;
 				  if (n<-1)
 					  throw new CombException("violated degree at vert "+w);
 
@@ -4598,8 +4597,8 @@ public class CommandStrParser {
 				  Iterator<Integer> nlk=nlink.iterator();
 				  while (nlk.hasNext()) {
 					  int v=nlk.next();
-					  if (packData.kData[v].bdryFlag==0) {
-						  for (int j=0;j<packData.kData[v].num;j++) {
+					  if (!packData.isBdry(v)) {
+						  for (int j=0;j<packData.getNum(v);j++) {
 							  int w=packData.kData[v].flower[j];
 							  if (vhits[w]==0) { // new edge?
 								  elink.add(new EdgeSimple(v,w));
@@ -4973,7 +4972,7 @@ public class CommandStrParser {
 	    	  Iterator<Integer> vlst=vertlist.iterator();
 	    	  while (vlst.hasNext()) {
 	    		  int v=vlst.next();
-	    		  if (packData.kData[v].bdryFlag!=0) {
+	    		  if (packData.isBdry(v)) {
 	    			  int ans=packData.add_ideal_face(v);
 	    			  if (ans>0)
 	    				  packData.setCombinatorics();
@@ -5030,7 +5029,7 @@ public class CommandStrParser {
 	   			  }
 
 	   			  else {
-	   				  if (packData.kData[v].bdryFlag==0 || packData.kData[w].bdryFlag==0) {
+	   				  if (!packData.isBdry(v) || !packData.isBdry(w)) {
 	   					  CirclePack.cpb.errMsg("usage: add_edge v w, vertices must be on boundary");
 	   					  return count;
 	   				  }
@@ -6274,7 +6273,7 @@ public class CommandStrParser {
 	    	  Iterator<Integer> vlist=vertlist.iterator();
     		  while (vlist.hasNext()) {
     			  int vert=(Integer)vlist.next();
-    			  if (packData.kData[vert].bdryFlag!=0) {
+    			  if (packData.isBdry(vert)) {
     				  int n=N;
     				  
     				  // reset n to get total degree N
@@ -6283,7 +6282,7 @@ public class CommandStrParser {
     						  throw new ParserException("max degree limit "+
     								  PackData.MAX_PETALS);
     					  }
-    					  n=N-(packData.kData[vert].num+1);
+    					  n=N-(packData.getNum(vert)+1);
     					  if (n<0) {
     						  overCount++;
     						  n=0;
@@ -6292,7 +6291,7 @@ public class CommandStrParser {
     				  
     				  // else adding n circles (up to limit)
     				  else {
-    					  int m=PackData.MAX_PETALS-packData.kData[vert].num-1;
+    					  int m=PackData.MAX_PETALS-packData.getNum(vert)-1;
 	    				  n=(n<m)? n:m;
     				  }
 
@@ -6302,7 +6301,7 @@ public class CommandStrParser {
     				  Complex z=packData.getCenter(packData.kData[vert].
     				                           flower[0]);
     				  Complex w=packData.getCenter(packData.kData[vert].
-    				                           flower[packData.kData[vert].num-1]);
+    				                           flower[packData.getNum(vert)-1]);
     				  cpS.drawEdge(z,w,new DispFlags(null));
     				  count++;
     			  }
@@ -6369,7 +6368,7 @@ public class CommandStrParser {
 		   		  while (elist.hasNext()) {
 		   			  EdgeSimple edge=(EdgeSimple)elist.next();
 		   			  int indx=packData.nghb(edge.v,edge.w);
-		   			  if (indx>=0 && indx<packData.kData[edge.v].num) { // flip counterclockwise edge
+		   			  if (indx>=0 && indx<packData.getNum(edge.v)) { // flip counterclockwise edge
 		   				  int w=packData.kData[edge.v].flower[indx+1];
 		   				  int ans=packData.flip_edge(edge.v,w,2);
 		   				  count+=ans;
@@ -6392,13 +6391,13 @@ public class CommandStrParser {
 		   			  int w=edge.w;
 		   			  int indx=packData.nghb(v,w);
 		   			  // situations:
-		   			  if (indx==0 && packData.kData[v].bdryFlag==1) {
+		   			  if (indx==0 && packData.isBdry(v)) {
 	   					  CirclePack.cpb.errMsg("edge <"+v+","+w+"> is in oriented "+
 	   							  "bdry, has no clockwise edge.");
 	   					  while(elist.hasNext()) elist.next(); // eat rest of list
 	   				  }
 		   			  if (indx==0) { // must be interior
-		   				  w=packData.kData[v].flower[packData.kData[v].num-1];
+		   				  w=packData.kData[v].flower[packData.getNum(v)-1];
 		   			  }
 		   			  else w=packData.kData[v].flower[indx-1];
 		   			  int ans=packData.flip_edge(v,w,2);
@@ -6422,7 +6421,7 @@ public class CommandStrParser {
 		   		  int v=edge.w;
 		   		  int w=edge.v;
 		   		  int indxvb=packData.nghb(v, w);
-		   		  if (packData.kData[v].bdryFlag==1) { // bdry?
+		   		  if (packData.isBdry(v)) { // bdry?
 		   			  if (indxvb<3)  // can't advance to new edge; kill 'baseEdge'
 		   				  return 0;
 		   			  edge=new EdgeSimple(v,packData.kData[v].flower[indxvb-3]);
@@ -6437,7 +6436,7 @@ public class CommandStrParser {
 	   				  return 1;
 		   		  }
 		   		  // interior?
-		   		  int num=packData.kData[v].num;
+		   		  int num=packData.getNum(v);
    				  packData.elist=new EdgeLink(packData);
 		   		  if (num==3) { // interior of degree 3? just reverse edge to go other way
 	   				  packData.elist.add(new EdgeSimple(v,w));
@@ -6462,14 +6461,14 @@ public class CommandStrParser {
 	        	  boolean didflip=false;
 	        	  while (safety>0 && !didflip) {
 	        		  int v=Math.abs((rand.nextInt())%(packData.nodeCount))+1;
-	        		  if (packData.kData[v].bdryFlag!=0) { // if boundary, try more indices
+	        		  if (packData.isBdry(v)) { // if boundary, try more indices
 	        			  int j=1;
 	        			  while (j<=packData.nodeCount  
-	   						  && packData.kData[(v=(v+j)%(packData.nodeCount)+1)].bdryFlag!=0)
+	   						  && packData.isBdry((v=(v+j)%(packData.nodeCount)+1)))
 	        				  j++;
-	        			  if (packData.kData[v].bdryFlag!=0) return 0; // didn't find interior vert
+	        			  if (packData.isBdry(v)) return 0; // didn't find interior vert
 	        		  }
-	        		  int w=packData.kData[v].flower[Math.abs((rand.nextInt())%(packData.kData[v].num))];
+	        		  int w=packData.kData[v].flower[Math.abs((rand.nextInt())%(packData.getNum(v)))];
 	        		  if (packData.flip_edge(v,w,2)!=0) {
 	        			  packData.setCombinatorics();
 	        			  packData.fillcurves();
@@ -7902,7 +7901,7 @@ public class CommandStrParser {
 	    			  case 'E':
 	    			  {
 	    				  E=NodeLink.grab_one_vert(packData,(String)items.get(1));
-	    				  if (E<1 || E==packData.alpha || packData.kData[E].bdryFlag!=0)
+	    				  if (E<1 || E==packData.alpha || packData.isBdry(E))
 	    					  E=0;
 	    				  if (E==0) {
 	    					  throw new CombException("invalid vertex");
@@ -7914,7 +7913,7 @@ public class CommandStrParser {
 	    			  {
 	    				  if (E<3) { // 'E flag takes precedence
 	    		    			for (int j=1;j<=packData.nodeCount;j++){
-	    		      			  if (packData.kData[j].bdryFlag!=0) 
+	    		      			  if (packData.isBdry(j)) 
 	    		      				  packData.kData[j].utilFlag=1;
 	    		      			  else packData.kData[j].utilFlag=0;
 	    		      			}
@@ -7922,7 +7921,7 @@ public class CommandStrParser {
 	    		      			UtilPacket uP=new UtilPacket();
 //	    		      			int []list=packData.label_generations(-1,uP);
 	    		      			if ((E=uP.rtnFlag)>0 && E!=packData.alpha &&
-	    		      					packData.kData[E].bdryFlag==0) { // okay choice
+	    		      					!packData.isBdry(E)) { // okay choice
 	    		      				ratio=0.0;
 	    		      			}
 	    		      			else {
@@ -8806,7 +8805,7 @@ public class CommandStrParser {
 	          throw new ParserException("packing must be euclidean");
 	        }
 	        for (int i=1;i<=packData.nodeCount;i++)
-	            if (packData.kData[i].bdryFlag!=0) {
+	            if (packData.isBdry(i)) {
 	      	  x=Math.abs(packData.getCenter(i).x)+packData.getRadius(i);
 	      	  y=Math.abs(packData.getCenter(i).y)+packData.getRadius(i);
 	      	  maxdist = (x>maxdist) ? x : maxdist;
@@ -8985,7 +8984,7 @@ public class CommandStrParser {
     				  // allocate if needed
     				  if (!packData.haveSchwarzians()) {
     					  for (int vv=1;vv<=packData.nodeCount;vv++)
-    						  packData.kData[vv].schwarzian=new double[packData.kData[vv].num+1];
+    						  packData.kData[vv].schwarzian=new double[packData.getNum(vv)+1];
     				  }
     				  
     				  Iterator<EdgeSimple> elk=elink.iterator();
@@ -9546,8 +9545,8 @@ public class CommandStrParser {
 	        		  NodeLink vertlist=new NodeLink(packData,items);
 	        		  if (vertlist.size()>0) {
 	        			  Iterator<Integer> vl=vertlist.iterator();
-	        			  KData []kdata=packData.kData;
-	        			  RData []rdata=packData.rData;
+//	        			  KData []kdata=packData.kData;
+//	        			  RData []rdata=packData.rData;
 	        			  
 	        			  while (vl.hasNext()) {
 	        				  int v=(Integer)vl.next();
@@ -9555,30 +9554,30 @@ public class CommandStrParser {
 	        					  packData.set_aim_default(vertlist);
 	        					  count++;
 	        				  }
-	        				  else if (mode==2) { rdata[v].aim=rdata[v].curv;count++;} // current
-	        				  else if (mode==3) { rdata[v].aim=rdata[v].aim+inc*Math.PI;count++;} // TODO: not right adjustment
+	        				  else if (mode==2) { packData.rData[v].aim=packData.rData[v].curv;count++;} // current
+	        				  else if (mode==3) { packData.rData[v].aim=packData.rData[v].aim+inc*Math.PI;count++;} // TODO: not right adjustment
 	        				  else if (mode==0) {
-	        					  if (aim!=0.0 || ((packData.hes < 0) && kdata[v].bdryFlag!=0)) {
-	        						  rdata[v].aim=aim*Math.PI;
+	        					  if (aim!=0.0 || ((packData.hes < 0) && packData.isBdry(v))) {
+	        						  packData.rData[v].aim=aim*Math.PI;
 	        					  	  count++;
 	        					  }
 	        					  else count--;
 	        				  }
 	        				  else if (mode==4) { // based on 'xyzpoint' data
 	        						double angsum=0.0;
-	        						for (int j=0;j<kdata[v].num;j++) {
-	        							int n=kdata[v].flower[j];
-	        							int m=kdata[v].flower[j+1];
+	        						for (int j=0;j<packData.getNum(v);j++) {
+	        							int n=packData.kData[v].flower[j];
+	        							int m=packData.kData[v].flower[j+1];
 	        							angsum += Math.acos(EuclMath.e_cos_3D(
 	        									packData.xyzpoint[v],packData.xyzpoint[n],
 	        									packData.xyzpoint[m]));
 	        						}
-	        						rdata[v].aim=angsum;
+	        						packData.setAim(v,angsum);
 	  	        				  count++;
 	        				  }
-	        				  else if (mode==5 && kdata[v].bdryFlag==0) { // towards flat by increment
-	        					  double curv=2.0*Math.PI-rdata[v].aim;
-	        					  rdata[v].aim += inc*curv;
+	        				  else if (mode==5 && !packData.isBdry(v)) { // towards flat by increment
+	        					  double curv=2.0*Math.PI-packData.getAim(v);
+	        					  packData.setAim(v, packData.getAim(v)+inc*curv);
 		        				  count++;
 	        				  }
 	        			  }
@@ -10089,15 +10088,15 @@ public class CommandStrParser {
 					  throw new CombException("no boundary verts at gencount = "+gencount);
 				  int []alt=new int[2];
 				  int w=packData.bdryStarts[1];
-				  int stopv=packData.kData[w].flower[packData.kData[w].num];
+				  int stopv=packData.kData[w].flower[packData.getNum(w);
 				  int next=packData.kData[w].flower[0];
 				  boolean wflag=false;
 				  while (!wflag && count<10000) {
 //					  System.err.println("gencount="+gencount+", working on w="+w+
 //							  "; w's mark="+packData.kData[w].mark);
 					  if (w==stopv) wflag=true;
-					  int prev=packData.kData[w].flower[packData.kData[w].num];
-					  int n=degs[packData.kData[w].mark]-packData.kData[w].num-1;
+					  int prev=packData.kData[w].flower[packData.getNum(w)];
+					  int n=degs[packData.kData[w].mark]-packData.getNum(w)-1;
 					  if (n<-1)
 						  throw new CombException("violated degree at vert "+w);
 
@@ -10523,7 +10522,7 @@ public class CommandStrParser {
 	          items=(Vector<String>)flagSegs.get(0);
 	          String str=(String)items.get(0);
 	          int v=NodeLink.grab_one_vert(packData,str);
-	          if (packData.kData[v].bdryFlag==0) {
+	          if (!packData.isBdry(v)) {
 	        	  throw new CombException("fialed: "+v+" is not on the boundary");
 	          }
 	          try {
@@ -10640,7 +10639,7 @@ public static CallPacket valueExecute(PackData packData,String cmd,Vector<Vector
 		    		  i++;
 		    	  }
 		    	  for (i=0;i<4;i++) 
-		    		  if (packData.kData[cnrs[i]].bdryFlag==0) {
+		    		  if (!packData.isBdry(cnrs[i])) {
 		    			  throw new DataException("corners must be boundary vertices.");
 		    		  }
 		    	  double aspect=packData.rect_ratio(cnrs[0],cnrs[1],cnrs[2],cnrs[3]);
@@ -10940,7 +10939,7 @@ public static CallPacket valueExecute(PackData packData,String cmd,Vector<Vector
 	    				EdgeLink newelt=new EdgeLink(packData);
 	    				while (els.hasNext()) { 
 	    					EdgeSimple edge=els.next();
-	    					if (packData.kData[edge.v].bdryFlag==0 && packData.kData[edge.w].bdryFlag==0)
+	    					if (!packData.isBdry(edge.v) &&	!packData.isBdry(edge.w))
 	    						newelt.add(edge);
 	    				}
 	    				elt=newelt;

@@ -209,13 +209,13 @@ public class Smoother {
 		Complex F=new Complex(0.0);
 		double radF=0.0;
 		int N=0;
-		int num=p.kData[v].num+p.kData[v].bdryFlag;
+		int num=p.getNum(v)+p.getBdryFlag(v);
 		int[] flower=p.kData[v].flower;
 		for (int j=0;j<num;j++) {
 			int w=flower[j];
 			double inv_d=EuclMath.inv_dist(newCenters[v],newCenters[w],
 					newRadii[v],newRadii[w]);
-			if ((p.kData[v].bdryFlag==1 && bdryMode>0) || inv_d<min_inv_dist || inv_d>max_inv_dist) {
+			if ((p.isBdry(v) && bdryMode>0) || inv_d<min_inv_dist || inv_d>max_inv_dist) {
 				double x=TARGET_INV_DIST-inv_d; // currently working with tangency
 				double k=1.0; // ?? for future use?
 				Complex uvec=newCenters[w].minus(newCenters[w]);
@@ -226,7 +226,7 @@ public class Smoother {
 			}
 		}
 
-		if (p.kData[v].bdryFlag==1 && bdryMode>0) { 
+		if (p.isBdry(v) && bdryMode>0) { 
 			Complex bdryPt=PathUtil.getClosestPoint(newCenters[v],myPolygon);
 			Complex vec=bdryPt.minus(newCenters[v]);
 			F.add(vec);

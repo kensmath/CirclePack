@@ -154,11 +154,11 @@ public class Necklace extends PackExtender {
 			int bottomOrigin=bottomPack.gamma;
 			
 			// check util_A, util_B
-			if (topPack.kData[topPack.util_A].bdryFlag==0 ||
-					topPack.kData[topPack.util_A].bdryFlag==0)
+			if (!topPack.isBdry(topPack.util_A) ||
+					!topPack.isBdry(topPack.util_A))
 				Oops("Problem with 'topPack.util_A' or 'util_B'");
-			if (bottomPack.kData[bottomPack.util_A].bdryFlag==0 ||
-					bottomPack.kData[bottomPack.util_A].bdryFlag==0)
+			if (!bottomPack.isBdry(bottomPack.util_A) ||
+					!bottomPack.isBdry(bottomPack.util_A))
 				Oops("Problem with 'bottomPack.util_A' or 'util_B'");
 			
 			// get NodeLinks for topBlue, topRed, bottomBlue, bottomRed
@@ -234,7 +234,7 @@ public class Necklace extends PackExtender {
 	 		packData.elist=new EdgeLink(packData);
 	 		for (int v=1;v<=packData.nodeCount;v++) {
 	 			if (packData.kData[v].mark!=1)
-	 				for (int j=0;j<packData.kData[v].num+packData.kData[v].bdryFlag;j++) {
+	 				for (int j=0;j<packData.getNum(v)+packData.getBdryFlag(v);j++) {
 	 					int k=packData.kData[v].flower[j];
 	 					if (k>v && packData.kData[k].mark!=1)
 	 						packData.elist.add(new EdgeSimple(v,k));

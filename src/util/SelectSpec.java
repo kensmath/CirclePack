@@ -122,13 +122,13 @@ public class SelectSpec {
 			// unary specifications 'b', 'i'
 			case 'b': // boundary circle or face
 			{
-				uP.value = (double) (packData.kData[node].bdryFlag);
+				uP.value = (double) (packData.getBdryFlag(node));
 				uP.rtnFlag = 1;
 				return uP;
 			}
 			case 'i': // interior circle or face?
 			{
-				uP.value = (double) (1 - packData.kData[node].bdryFlag);
+				uP.value = (double) (1 - packData.getBdryFlag(node));
 				uP.rtnFlag = 1;
 				return uP;
 			}
@@ -148,7 +148,7 @@ public class SelectSpec {
 			}
 			case 'd': // degree for circle; edge count for tile
 			{
-				uP.value = (double) (packData.kData[node].num + packData.kData[node].bdryFlag);
+				uP.value = (double) (packData.getNum(node) + packData.getBdryFlag(node));
 				uP.rtnFlag = 1;
 				return uP;
 			}
@@ -299,9 +299,9 @@ public class SelectSpec {
 			// unary specifications 'b', 'i'
 			case 'b': // boundary face (some bdry vertex)
 			{
-				if (packData.kData[packData.faces[node].vert[0]].bdryFlag != 0
-					|| packData.kData[packData.faces[node].vert[1]].bdryFlag != 0
-					|| packData.kData[packData.faces[node].vert[2]].bdryFlag != 0)
+				if (packData.isBdry(packData.faces[node].vert[0])
+					|| packData.isBdry(packData.faces[node].vert[1])
+					|| packData.isBdry(packData.faces[node].vert[2]))
 					uP.value = 1;
 				else
 					uP.value=0;
@@ -311,9 +311,9 @@ public class SelectSpec {
 			case 'i': // interior face?
 			{
 
-				if (packData.kData[packData.faces[node].vert[0]].bdryFlag == 0
-						&& packData.kData[packData.faces[node].vert[1]].bdryFlag == 0
-						&& packData.kData[packData.faces[node].vert[2]].bdryFlag == 0)
+				if (!packData.isBdry(packData.faces[node].vert[0])
+						&& !packData.isBdry(packData.faces[node].vert[1])
+						&& !packData.isBdry(packData.faces[node].vert[2]))
 					uP.value = 1;
 				else
 					uP.value = 0;
@@ -366,7 +366,7 @@ public class SelectSpec {
 				int []verts=packData.tileData.myTiles[node].vert;
 				boolean hit=false;
 				for (int j=0;(j<verts.length && !hit);j++) {
-					if (packData.kData[verts[j]].bdryFlag != 0)
+					if (packData.isBdry(verts[j]))
 						hit=true;
 				}
 				if (hit)
@@ -381,7 +381,7 @@ public class SelectSpec {
 				int []verts=packData.tileData.myTiles[node].vert;
 				boolean hit=false;
 				for (int j=0;(j<verts.length && !hit);j++) {
-					if (packData.kData[verts[j]].bdryFlag != 0)
+					if (packData.isBdry(verts[j]))
 						hit=true;
 				}
 				if (hit)
