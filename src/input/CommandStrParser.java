@@ -39,12 +39,12 @@ import dcel.PackDCEL;
 import deBugging.DCELdebug;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
+import exceptions.DCELException;
 import exceptions.DataException;
 import exceptions.InOutException;
 import exceptions.JNIException;
 import exceptions.LayoutException;
 import exceptions.MobException;
-import exceptions.PackingException;
 import exceptions.ParserException;
 import exceptions.VarException;
 import ftnTheory.AffinePack;
@@ -95,7 +95,6 @@ import komplex.EdgeSimple;
 import komplex.Embedder;
 import komplex.Face;
 import komplex.HexPaths;
-import komplex.KData;
 import komplex.RedList;
 import komplex.Triangulation;
 import listManip.BaryCoordLink;
@@ -130,7 +129,6 @@ import rePack.EuclPacker;
 import rePack.GOpacker;
 import rePack.HypPacker;
 import rePack.SphPacker;
-import rePack.d_EuclPacker;
 import script.ScriptBundle;
 import tiling.TileData;
 import util.BuildPacket;
@@ -5817,19 +5815,6 @@ public class CommandStrParser {
 					return 1;
 				}
 				
-				else if (str.contains("repack")) {
-					d_EuclPacker e_packer=new d_EuclPacker(packData,1000);
-					int ans=e_packer.d_oldReliable(1000); // TODO: specify in call
-					if (ans>0) {
-						e_packer.reapResults();
-						CirclePack.cpb.msg("Did DCEL eucl repack, count="+ans);
-						return ans;
-					}
-					else if (ans<0)
-						throw new PackingException("dcel repack failure");
-					return 1;
-				}
-				
 				else if (str.contains("reorie")) {
 					int qnum= StringUtil.qFlagParse(items.remove(0));
 
@@ -5840,10 +5825,6 @@ public class CommandStrParser {
 					CPBase.pack[qnum].swapPackData(p,false);
 					pdcel.D_CompCenters();
 					return 1;
-				}
-				
-				else if (str.contains("layout")) {
-					return packData.packDCEL.D_CompCenters();
 				}
 				
 				// keep redchain, reprocess the interior with/w.o. blueshift option
@@ -6968,6 +6949,8 @@ public class CommandStrParser {
 	    	  // most typical call
 	    	  if (flagSegs.size()==0) { 
 	    		  try {    // dflag=true; to spit out debugging file
+	    			  if (packData.packDCEL!=null) 
+	    				  return jexecute(packData,"DCEL layout");
 	    			  packData.fillcurves(); // TODO: is this necessary here?
 	    			  packData.comp_pack_centers(errflag,dflag,opt,crit);
 	    			  count++;
@@ -6975,6 +6958,12 @@ public class CommandStrParser {
 	    		  } catch(Exception ex) {
 	    			  throw new CombException("layout: "+ex.toString());
 	    		  }
+	    	  }
+
+	    	  // TODO: implement other options appropriate to DCEL case
+	    	  if (packData.packDCEL!=null) {
+	    		  throw new DCELException("usage: flags for 'layout' calls not "+
+	    				  "yet implemented for DCEL setting");
 	    	  }
 	    	  
 	    	  Iterator<Vector<String>> its=flagSegs.iterator();

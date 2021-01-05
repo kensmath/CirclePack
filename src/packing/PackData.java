@@ -81,6 +81,8 @@ import rePack.EuclPacker;
 import rePack.HypPacker;
 import rePack.RePacker;
 import rePack.SphPacker;
+import rePack.d_EuclPacker;
+import rePack.d_HypPacker;
 import tiling.Tile;
 import tiling.TileData;
 import util.BuildPacket;
@@ -317,7 +319,7 @@ public class PackData{
    			if (oldv<=nodeCount) {
    				
    				// copy 'aim' when appropriate
-   				vData[v].aim=getAim(oldv);
+   				vData[v].aim=oldVData[oldv].aim;
    				if (vData[v].getBdryFlag()!=oldVData[oldv].getBdryFlag()) {
    					if (vData[v].getBdryFlag()==1)
    						vData[v].aim=-1.0;
@@ -2486,7 +2488,7 @@ public class PackData{
 			while (z.y>Math.PI) z.y = Math.PI; // truncate at Pi
 		}
 		if (packDCEL!=null)
-			packDCEL.setVertCenter(packDCEL.vertices[v].halfedge,z);
+			packDCEL.setCent4Edge(packDCEL.vertices[v].halfedge,z);
 		else
 			rData[v].center=new Complex(z);
 	}
@@ -2570,7 +2572,8 @@ public class PackData{
 	 * Store radius with 'r' given in its internal form; the only
 	 * issue is hyp case, so then 'r' should already be in
 	 * x_radius form. If it needs to be converted, call
-	 * 'setRadiusActual'. 
+	 * 'setRadiusActual'. (This set radius of v in all locations,
+	 * e.g., in 'RedHEdge's.)
 	 * @param v int
 	 * @param r double
 	 */
@@ -2584,7 +2587,7 @@ public class PackData{
 			rad=OKERR;
 		rData[v].rad=rad;
 		if (packDCEL!=null) 
-			packDCEL.setVertRadius(packDCEL.vertices[v].halfedge,rad);
+			packDCEL.setVertRadii(v,rad);
 	}
 
 	/**
@@ -6068,11 +6071,15 @@ public class PackData{
 	  double bestcurv,lower=0.5,upper=0.5,upcurv,lowcurv,factor=0.5;
 	  UtilPacket curveUp=new UtilPacket();
 
-	  if (!h_anglesum_overlap(v,r,curveUp)) return false;
+	  if (!h_anglesum_overlap(v,r,curveUp)) 
+		  return false;
 	  bestcurv=lowcurv=upcurv=curveUp.value;
+	  
+	  // may hit upper/lower bounds on radius change
 	  if (bestcurv>(aim+OKERR)) {
-	      lower=1.0-factor+r*factor;
-	      if (!h_anglesum_overlap(v,lower,curveUp)) return false;
+	      lower=1.0-factor+r*factor; // interpolate
+	      if (!h_anglesum_overlap(v,lower,curveUp)) 
+	    	  return false;
 	      lowcurv=curveUp.value;
 	      if (lowcurv>aim) {
 		  uP.value=lower;
@@ -6081,7 +6088,8 @@ public class PackData{
 	  }
 	  else if (bestcurv<(aim-OKERR)) {
 	      upper=r*factor;
-	      if (!h_anglesum_overlap(v,upper,curveUp)) return false;
+	      if (!h_anglesum_overlap(v,upper,curveUp)) 
+	    	  return false;
 	      upcurv=curveUp.value;
 	      if (upcurv<aim) {
 		  uP.value=upper;
@@ -6100,15 +6108,16 @@ public class PackData{
 		  r -= (bestcurv-aim)*(lower-r)/(lowcurv-bestcurv);
 	      }
 	      else if (bestcurv<(aim-OKERR)) {
-		  lower=r;
-		  lowcurv=bestcurv;
-		  r += (aim-bestcurv)*(upper-r)/(upcurv-bestcurv);
-		}
-	      else {
-		  uP.value= r;
-		  return true;
+	    	  lower=r;
+	    	  lowcurv=bestcurv;
+	    	  r += (aim-bestcurv)*(upper-r)/(upcurv-bestcurv);
 	      }
-	      if (!h_anglesum_overlap(v,r,curveUp)) return false;
+	      else {
+	    	  uP.value= r;
+	    	  return true;
+	      }
+	      if (!h_anglesum_overlap(v,r,curveUp)) 
+	    	  return false;
 	      bestcurv=curveUp.value;
 	    }
 	  uP.value=r;
@@ -7108,7 +7117,41 @@ public class PackData{
 	 */
 	public int repack_call(int passes, boolean oldRel, boolean useC) {
 		int count = 0;
+
 		try {
+
+			// introduce DCEL packing (still using "old reliable", 1/2021)
+			// TODO: have to adjust 'passes' to reflect old reliable version
+			if (packDCEL!=null) {
+				if (hes < 0) { // hyp
+					d_HypPacker h_packer=new d_HypPacker(this,1000);
+					int ans=h_packer.d_oldReliable(1000); 
+					if (ans>0) {
+						h_packer.reapResults();
+						return ans;
+					}
+					else if (ans<0)
+						throw new PackingException("dcel hyp repack failure");
+				}
+				else if (hes>0) { // sph
+					CirclePack.cpb.errMsg("DCEL packing routines don't (yet) handle sph geom.");
+					return 0;
+				}
+				else  { // eucl
+					d_EuclPacker e_packer=new d_EuclPacker(this,1000);
+					int ans=e_packer.d_oldReliable(1000); // TODO: specify in call
+					if (ans>0) {
+						e_packer.reapResults();
+						CirclePack.cpb.msg("Did DCEL eucl repack, count="+ans);
+						return ans;
+					}
+					else if (ans<0)
+						throw new PackingException("dcel eucl repack failure");
+					return 1;
+				}
+			}
+			
+			// else, traditional call
 			if (hes < 0) { // hyp
 				if (!oldRel) {
 					HypPacker hyppack = new HypPacker(this, useC);

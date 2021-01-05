@@ -453,20 +453,20 @@ public class PackDCEL {
 	public CircleSimple placeFirstFace(HalfEdge edge) {
 		double r0=getVertRadius(edge);
 		double r1=getVertRadius(edge.next);
-		setVertCenter(edge,new Complex(0.0));
+		setCent4Edge(edge,new Complex(0.0));
 		double invd=getInvDist(edge);
 		double dist=CommonMath.inv_dist_edge_length(r0,r1,invd,p.hes);
 		if (p.hes>0)
-			setVertCenter(edge.next,new Complex(0.0,dist));
+			setCent4Edge(edge.next,new Complex(0.0,dist));
 		else {
 			if (p.hes<0) {
 				double expdist=Math.exp(dist);
 				dist=(expdist-1.0)/(expdist+1.0);
 			}
-			setVertCenter(edge.next,new Complex(dist,0.0));
+			setCent4Edge(edge.next,new Complex(dist,0.0));
 		}
 		CircleSimple cS=d_compOppCenter(edge);
-		setVertCenter(edge.next.next,cS.center);
+		setCent4Edge(edge.next.next,cS.center);
 		return cS;
 	}
 	
@@ -540,7 +540,7 @@ public class PackDCEL {
 			EdgeSimple es=esit.next();
 			HalfEdge he=faces[es.w].edge;
 			CircleSimple cs=d_compOppCenter(he);
-			setVertCenter(he.next.next,cs.center);
+			setCent4Edge(he.next.next,cs.center);
 			count++;
 			
 			if (debug) { // debug=true; 
@@ -591,12 +591,9 @@ public class PackDCEL {
 	 * Compute circle centers based on GraphLink of faces. 
 	 * The first is the 'alpha' edge 'origin' vertex at the 
 	 * origin, its other end on the positive real axis. Taking 
-	 * faces in turn the next face should have two of its 
-	 * vertices in place and we compute and store the third. 
+	 * faces in turn, the next face should have two of its 
+	 * vertices in place so we can compute/store the third. 
 	 * Note: radii are already computed.
-	 * 
-	 * TODO: only euclidean, ignore overlaps, etc.
-	 * 
 	 * @param faceorder GraphLink
 	 * @return int, count (may exceed 'vertCount' as some vertices
 	 * are placed multiple times).
@@ -608,37 +605,47 @@ public class PackDCEL {
 		int f=edge.v;
 		if (f==0) { // this is a root (as expected)
 			f=edge.w;
-			git.next(); // donw with this first face
+//			git.next(); // donw with this first face
 		}
 		
-		// lay out the first face
+		// lay out the first face, it's 'origin' at z=0;
 		Face face=faces[f];
-		
-		// face edge starts at origin
 	    double rv=getVertRadius(face.edge);
-	    setVertCenter(face.edge,new Complex(0.0));
+	    setCent4Edge(face.edge,new Complex(0.0));
 	    
 	    // other end on x-axis
-	    double ru=getVertRadius(face.edge.twin);
-	    double ovlp=1.0; // default overlap (tangency)
-	    setVertCenter(face.edge.twin,new Complex(Math.sqrt(rv*rv+ru*ru+2*rv*ru*ovlp)));
-	    int count=1;
+	    Complex w=new Complex(0.0);
+	    double ru=getVertRadius(face.edge.next);
+	    if (p.hes<0) { // hyp
+	    	double dist=HyperbolicMath.h_invdist_length(rv,ru,face.edge.invDist);
+	    	double exph=Math.exp(dist); // exp(h)
+	    	double edist=(exph-1.0)/(exph+1.0);
+	    	w=new Complex(edist);
+	    }
+	    else if (p.hes>0) { // sph, (theta,phi) form
+	    	w=new Complex(0.0,SphericalMath.s_invdist_length(
+	    			rv,ru,face.edge.invDist));
+	    }
+	    else { // hyp
+	    	w=new Complex(EuclMath.e_invdist_length(
+	    			rv,rv,face.edge.invDist));
+	    }
 	    
-	    // find center for w
-	    CircleSimple sc=EuclMath.e_compcenter(getVertCenter(face.edge),getVertCenter(face.edge.twin),
-	    		rv,ru,getVertRadius(face.edge.next.twin));
-	    setVertCenter(face.edge.next.twin, sc.center);
+	    setCent4Edge(face.edge.next,w);
+	    int count=1;
 	    
 	    // now layout by face-by-face
 	    while (git.hasNext()) {
 	    	face=faces[git.next().w];
-		    rv=getVertRadius(face.edge);
-		    ru=getVertRadius(face.edge.twin);
-		    
-		    // find location for w
-		    sc=EuclMath.e_compcenter(getVertCenter(face.edge),getVertCenter(face.edge.twin),
-		    		rv,ru,getVertRadius(face.edge.next.twin));
-		    setVertCenter(face.edge.next.twin, sc.center);
+		    double rw=getVertRadius(face.edge.next.next);
+		    CircleSimple sc=CommonMath.comp_any_center(
+		    		getVertCenter(face.edge),
+		    		getVertCenter(face.edge.next),
+		    		getVertRadius(face.edge),getVertRadius(face.edge.next),
+		    		getVertRadius(face.edge.next.next),
+		    		face.edge.invDist,face.edge.next.invDist,
+		    		face.edge.next.next.invDist,p.hes);
+		    setCent4Edge(face.edge.next.next, sc.center);
 		    count++;
 	    }
 	    return count;
@@ -1443,13 +1450,37 @@ public class PackDCEL {
 	}
 	
 	/**
+	 * Set vert's center in all locations; that is, in 
+	 * 'vData', 'rData' (for backup), and in any associated 
+	 * 'RedHEdges' for this v. (Compare with 'setRad4Edge' which 
+	 * only set's the value associated with one edge.)
+	 * @param v int
+	 * @param z Complex
+	 */
+	public void setVertCenter(int v, Complex z) {
+		Vertex vert=vertices[v];
+		if (this==p.packDCEL) {
+			p.vData[v].center=new Complex(z);
+			p.rData[v].center=new Complex(z);
+		}
+		HalfEdge he=vert.halfedge;
+		do {
+			if (he.myRedEdge!=null)
+				he.myRedEdge.center=new Complex(z);
+			he=he.prev.twin;
+		} while (he!=vert.halfedge);
+	}
+	
+	/**
 	 * Set the center for 'origin' and in the appropriate
-	 * 'RedHEdge' if 'origin' is a 'RedVertex'.
+	 * 'RedHEdge' if 'origin' is a 'RedVertex'. The center
+	 * may be different in other 'RedHEdge's. (see 'setVertCenter',
+	 * to set center in all locations.)
 	 * Note: I no longer set rData[].center.
 	 * @param edge HalfEdge
 	 * @param z Complex
 	 */
-	public void setVertCenter(HalfEdge edge,Complex z) {
+	public void setCent4Edge(HalfEdge edge,Complex z) {
 		Vertex vert=edge.origin;
 		p.vData[vert.vertIndx].center=new Complex(z);
 
@@ -1468,11 +1499,36 @@ public class PackDCEL {
 	}
 
 	/**
-	 * Set the radius in its internal form (i.e., x-rad for hyp case)
+	 * Set vert's radius (in its internal form) in all locations;
+	 * that is, in 'vData', 'rData' (for backup), and in
+	 * any associated 'RedHEdges' for this v. (Compare with
+	 * 'setRad4Edge' which only set's the value associated
+	 * with one edge.)
+	 * @param v int
+	 * @param rad double
+	 */
+	public void setVertRadii(int v,double rad) {
+		Vertex vert=vertices[v];
+		if (p.packDCEL==this) {
+			p.vData[v].rad=rad;
+			p.rData[v].rad=rad;
+		}
+		HalfEdge he=vert.halfedge;
+		do {
+			if (he.myRedEdge!=null)
+				he.myRedEdge.rad=rad;
+			he=he.prev.twin;
+		} while (he!=vert.halfedge);
+	}
+	
+	/**
+	 * Set the radius in its internal form (i.e., x-rad for hyp case);
+	 * (Compare with 'setVertRadii' which sets this radius in all
+	 * occurrences of its origin vertex.)
 	 * @param edge HalfEdge
 	 * @param rad double
 	 */
-	public void setVertRadius(HalfEdge edge,double rad) {
+	public void setRad4Edge(HalfEdge edge,double rad) {
 		Vertex vert=edge.origin;
 		p.vData[vert.vertIndx].rad=rad;
 		
@@ -1491,13 +1547,15 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * set center and radius (in its internal form)
+	 * set center and radius (in its internal form);
+	 * this sets data only for the given edge, so for a 'RedVertex'
+	 * it sill store in the appropriate 'RedHEdge'.
 	 * @param edge HalfEdge
 	 * @param cS CircleSimple
 	 */
 	public void setVertData(HalfEdge edge,CircleSimple cS) {
-		setVertCenter(edge,cS.center);
-		setVertRadius(edge,cS.rad);
+		setCent4Edge(edge,cS.center);
+		setRad4Edge(edge,cS.rad);
 	}
 
 	public double getInvDist(HalfEdge edge) {
@@ -1604,6 +1662,8 @@ public class PackDCEL {
 	 * Recompute, draw, and/or post circles and/or faces along a 
 	 * specified GraphLink tree. NOTE: must be a tree, so starts with
 	 * {0,f} root. 
+	 * (Compare to 'dcelCompCenters' that only uses faces needed to
+	 * compute all centers.)
 	 * @param pF PostFactory
 	 * @param faceTree GraphLink
 	 * @param faceFlags DispFlags, may be null
@@ -1664,6 +1724,7 @@ public class PackDCEL {
 			}
 			else if (fix) { // assume 'he' ends are in place
 				CircleSimple cS=d_compOppCenter(he);
+				setVertData(he.next.next,cS);
 			}
 			
 			myCenters[0]=getVertCenter(he);
@@ -1681,7 +1742,7 @@ public class PackDCEL {
 					faceFlags.setLabel(Integer.toString(rootface));
 				p.cpScreen.drawFace(myCenters[0],myCenters[1],myCenters[2],
 						myRadii[0],myRadii[1],myRadii[2],faceFlags);
-				if (debug) p.cpScreen.rePaintAll(); 
+				if (debug) p.cpScreen.rePaintAll(); // debug=true;
 			}  
 			
 			if (circDo && pF==null) { // also draw the circles

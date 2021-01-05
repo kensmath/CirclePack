@@ -130,33 +130,42 @@ public class DataDCEL {
 		}
 
 		// TODO: temporary: transfer cent/rad data from pdcel.p,
-		//       if it exists
+		//       if it exists. Note that sphere will have no 'newOld'
 		if (pdcel.p!=null) {
-			if (pdcel.newOld==null) {
-				throw new CombException("'newOld' VertexMap is missing from DCEL");
+			if (pdcel.newOld!=null) {
+				Iterator<EdgeSimple> noit=pdcel.newOld.iterator();
+				while (noit.hasNext()) {
+					es=noit.next();
+					int newindx=es.v;
+					int oldindx=es.w;
+					// put in 'Vertex'
+					p.setCenter(newindx,pdcel.p.getCenter(oldindx));
+					p.setRadius(newindx,pdcel.p.getRadius(oldindx));
+					p.setAim(newindx,pdcel.p.getAim(oldindx));
+					p.setCurv(newindx,pdcel.p.getCurv(oldindx));
+				}
 			}
-			Iterator<EdgeSimple> noit=pdcel.newOld.iterator();
-			while (noit.hasNext()) {
-				es=noit.next();
-				int newindx=es.v;
-				int oldindx=es.w;
-				// put in 'Vertex'
-				p.setCenter(newindx,pdcel.p.getCenter(oldindx));
-				p.setRadius(newindx,pdcel.p.getRadius(oldindx));
-				p.setAim(newindx,pdcel.p.getAim(oldindx));
-				p.setCurv(newindx,pdcel.p.getCurv(oldindx));
+			else {
+				for (int v=1;v<=pdcel.vertCount;v++) {
+					p.setCenter(v,pdcel.p.getCenter(v));
+					p.setRadius(v,pdcel.p.getRadius(v));
+					p.setAim(v,pdcel.p.getAim(v));
+					p.setCurv(v,pdcel.p.getCurv(v));
+				}
 			}
 		}
 		
-		// set initial data in 'RedHEdge's
-		RedHEdge rtrace=pdcel.redChain;
-		do {
-			HalfEdge edge=rtrace.myEdge;
-			int v=edge.origin.vertIndx;
-			rtrace.setCenter(p.getCenter(v));
-			rtrace.setRadius(p.getRadius(v));
-			rtrace=rtrace.nextRed;
-		} while (rtrace!=pdcel.redChain);
+		// set initial data in 'RedHEdge's if not a sphere
+		if (pdcel.redChain!=null) {
+			RedHEdge rtrace=pdcel.redChain;
+			do {
+				HalfEdge edge=rtrace.myEdge;
+				int v=edge.origin.vertIndx;
+				rtrace.setCenter(p.getCenter(v));
+				rtrace.setRadius(p.getRadius(v));
+				rtrace=rtrace.nextRed;
+			} while (rtrace!=pdcel.redChain);
+		}
 
 		// misc data to arrange
 		p.euler=pdcel.euler;

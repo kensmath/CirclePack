@@ -73,10 +73,15 @@ public class TriData {
 		}
 	}
 	
+	/**
+	 * Upload all radii to the packing. Note: record only for the edges
+	 * associated with 'face', since the same vertex may get different 
+	 * radii for other faces (e.g.,as recorded in appropriate 'RedHEdge's) 
+	 */
 	public void uploadRadii() {
 		HalfEdge he=pdcel.faces[face].edge;
 		for (int j=0;j<3;j++) {
-			pdcel.setVertRadius(he, radii[j]);
+			pdcel.setRad4Edge(he, radii[j]);
 			he=he.next;
 		}
 	}

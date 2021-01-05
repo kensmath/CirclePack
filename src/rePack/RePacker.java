@@ -389,6 +389,47 @@ public abstract class RePacker {
 	public void setPassLimit(int pl) {
 		if (pl>0) passLimit=pl;
 	}
+	
+	// ========= routines used with 'TriData' structure ============
+
+	/**
+     * Compute the angle sum at 'v' using radius 'rad' at v.
+     * @param v int
+     * @param rad double
+     * @return double
+     */
+    public double compVertCurv(int v,double rad) {
+    	int[] findices=p.vData[v].findices;
+    	double curv=0;
+    	for (int j=0;j<findices.length;j++) {
+    		int k=p.vData[v].myIndices[j];
+    		curv += pdcel.triData[findices[j]].compOneAngle(k,rad);
+    	}
+    	return curv;
+    }
+    
+    /**
+     * Get radius from first 'triData' containing 'v'
+     * @param v
+     * @return double
+     */
+    public double getRadius(int v) {
+    	return pdcel.triData[p.vData[v].findices[0]].radii[p.vData[v].myIndices[0]];
+    }
+    
+    /**
+     * Put radius 'rad' into 'triData' spots for vertex v.
+     * @param v int
+     * @param rad double
+     */
+    public void setRadius(int v,double rad) {
+    	int[] findices=p.vData[v].findices;
+    	for (int j=0;j<findices.length;j++) {
+    		pdcel.triData[findices[j]].radii[p.vData[v].myIndices[j]]=rad;
+    	}
+    }
+    
+
 }
 
 /**

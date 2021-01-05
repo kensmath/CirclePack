@@ -1036,50 +1036,52 @@ public class CombDCEL {
 			} // end of while on 'currv'
 		} // end of while on 'nxtv'
 		
-		// next we have go around redChain for stragglers
-		RedHEdge startred=pdcel.redChain;
-		
-		// don't want to start with unplotted "blue" face
-		while (startred.myEdge.util==0 && (startred.myEdge.next==startred.nextRed.myEdge
-				|| startred.myEdge.prev==startred.prevRed.myEdge))
-			startred=startred.nextRed;
-		
-		rtrace=startred;
-		do {
+		// If no a sphere, go around redChain for stragglers
+		if (pdcel.redChain!=null) {
+			RedHEdge startred=pdcel.redChain;
 			
-			// if associated face already plotted, continue
-			if (rtrace.myEdge.util==1) {
-				rtrace=rtrace.nextRed;
-				continue;
-			}
-
-			// otherwise, search cclw for edge with util==0, twin.util==1
-			HalfEdge stopedge=rtrace.prevRed.myEdge.next;
-			HalfEdge he=rtrace.myEdge;
-			while (he!=stopedge && he.util==0)
-				he=he.prev.twin;
-			if (he.util==0)
-				throw new DCELException("seems that no edge from red vertex "+he.origin.vertIndx+
-						" has been laid out");
-			HalfEdge bhe=he.twin;
+			// don't want to start with unplotted "blue" face
+			while (startred.myEdge.util==0 && (startred.myEdge.next==startred.nextRed.myEdge
+					|| startred.myEdge.prev==startred.prevRed.myEdge))
+				startred=startred.nextRed;
 			
-			// then rotate clw adding faces
+			rtrace=startred;
 			do {
-				orderEdges.add(bhe);
-				ordertick++;
 				
-				if (debug) // debug=true;
-					DCELdebug.drawEdgeFace(pdcel,bhe);
-					
-				HalfEdge bt=bhe;
+				// if associated face already plotted, continue
+				if (rtrace.myEdge.util==1) {
+					rtrace=rtrace.nextRed;
+					continue;
+				}
+
+				// otherwise, search cclw for edge with util==0, twin.util==1
+				HalfEdge stopedge=rtrace.prevRed.myEdge.next;
+				HalfEdge he=rtrace.myEdge;
+				while (he!=stopedge && he.util==0)
+					he=he.prev.twin;
+				if (he.util==0)
+					throw new DCELException("seems that no edge from red vertex "+he.origin.vertIndx+
+							" has been laid out");
+				HalfEdge bhe=he.twin;
+				
+				// then rotate clw adding faces
 				do {
-					bt.util=1;
-					bt=bt.next;
-				} while (bt!=bhe); 
-				bhe=bhe.next.twin; // next clw spoke
-			} while (bhe.twin!=rtrace.myEdge);
-			rtrace=rtrace.nextRed;
-		} while (rtrace!=startred);	
+					orderEdges.add(bhe);
+					ordertick++;
+					
+					if (debug) // debug=true;
+						DCELdebug.drawEdgeFace(pdcel,bhe);
+						
+					HalfEdge bt=bhe;
+					do {
+						bt.util=1;
+						bt=bt.next;
+					} while (bt!=bhe); 
+					bhe=bhe.next.twin; // next clw spoke
+				} while (bhe.twin!=rtrace.myEdge);
+				rtrace=rtrace.nextRed;
+			} while (rtrace!=startred);	
+		}
 		
 		if (debug) 
 			System.out.println("ordertick = "+ordertick);
@@ -1632,11 +1634,17 @@ public class CombDCEL {
 		ArrayList<HalfEdge> tmpEdges=new ArrayList<HalfEdge>();
 		ArrayList<Face> tmpFaces=new ArrayList<Face>();
 
+		// half all occurrences of radii (radius may depend on edge)
 		int origCount=pdcel.vertCount;
-		for (int v=1;v<=origCount;v++) { // half all radii
-			HalfEdge he=pdcel.vertices[v].halfedge;
-			double rad=pdcel.getVertRadius(he);
-			pdcel.setVertRadius(he,rad/2.0);
+		for (int v=1;v<=origCount;v++) { // in normal storage 
+			pdcel.p.vData[v].rad=pdcel.p.vData[v].rad/2.0;
+		}
+		RedHEdge rtrace=pdcel.redChain; 
+		if (rtrace!=null) { // also, in any 'RedHEdge's
+			do {
+				rtrace.rad=rtrace.rad/2.0;
+				rtrace=rtrace.nextRed;
+			} while (rtrace!=pdcel.redChain);
 		}
 
 		// add vertices to 'tmpVerts'

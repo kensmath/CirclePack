@@ -1,7 +1,6 @@
 package rePack;
 
 import JNI.JNIinit;
-import allMains.CPBase;
 import allMains.CirclePack;
 import exceptions.DataException;
 import exceptions.PackingException;
@@ -15,8 +14,8 @@ import util.UtilPacket;
 
 /**
  * First attempt to modify methods to accommodate DCEL data. Begin
- * with oldReliable.
- * @author kstephe2 12/2020
+ * with oldReliable. Other routines remain here but are not used (1/2021)
+ * @author kstephe2 1/2021
  *
  */
 public class d_EuclPacker extends RePacker {
@@ -464,7 +463,7 @@ public class d_EuclPacker extends RePacker {
     		  r=getRadius(v);
     		  
     		  if (Math.abs(compVertCurv(v,r)-p.getAim(v))>cut) {
-    			  rr=d_euclRadCalc(v,r,p.getAim(v),N);
+    			  rr=e_RadCalc(v,r,p.getAim(v),N);
     			  setRadius(v,rr);
     		  }
           }
@@ -482,6 +481,66 @@ public class d_EuclPacker extends RePacker {
           count++;
       } /* end of while */
       return count;
+    }
+    
+    
+    /**
+     * Copied from '*_radcalc'. This uses data in
+     * 'TriData' structure, so it knows the geometry.
+     * @param v int
+     * @param r double
+     * @param aim double
+     * @param N int
+     * @return double (radius)
+     */
+    public double e_RadCalc(int v,double r, double aim,int N) {
+    	double lower=0.5;
+  	  	double upper=0.5;
+  	  	double factor=0.5;
+  	  	double upcurv;
+  	  	double lowcurv;
+  	  	
+  	  	// compute initial curvature
+  	  	double curv=compVertCurv(v,r); 
+  	    double bestcurv=lowcurv=upcurv=curv;
+  	    
+  	    // may hit upper/lower bounds on radius
+  	    if (bestcurv>(aim+RP_OKERR)) {
+  	    	upper=r/factor;
+    	    upcurv=compVertCurv(v,upper);
+    	    if (upcurv>aim) { // return max possible
+    	    	return upper;
+    	    }
+    	}
+    	else if (bestcurv<(aim-RP_OKERR)) {
+    		lower=r*factor;
+    	    lowcurv=compVertCurv(v,lower);
+  	      	if (lowcurv<aim) { // return min possible
+  	      		return lower;
+  	      	}
+    	}
+  	    else 
+  	    	return r;
+  	    
+  	    // iterative secand method
+  	    for (int n=1;n<=N;n++) {
+  	    	if (bestcurv>(aim+RP_OKERR)) {
+  	    		lower=r;
+  	    		lowcurv=bestcurv;
+  	    		r += (aim-bestcurv)*(upper-r)/(upcurv-bestcurv);
+  	    	}
+  	    	else if (bestcurv<(aim-RP_OKERR)) {
+  	    		upper=r;
+  	    		upcurv=bestcurv;
+  	    		r -= (bestcurv-aim)*(lower-r)/(lowcurv-bestcurv);
+  	    	}
+  	    	else 
+	    	  return r;
+  	    	
+  	    	bestcurv=compVertCurv(v,r);
+	    }
+  	    
+  	    return r;
     }
     
     /**
@@ -529,7 +588,6 @@ public class d_EuclPacker extends RePacker {
   	  	
   	  	CommandStrParser.jexecute(p,strbld.toString());
   	  	return CommandStrParser.jexecute(p,"GOpack -c 30");
-  	  	
     }
   	  	
     /**
@@ -803,102 +861,7 @@ public class d_EuclPacker extends RePacker {
     	results[3]=sqError;
     	return results;
     }
-      
-    /**
-     * Compute the angle sum at 'v' using radius 'rad' at v.
-     * @param v int
-     * @param rad double
-     * @return double
-     */
-    public double compVertCurv(int v,double rad) {
-    	int[] findices=p.vData[v].findices;
-    	double curv=0;
-    	for (int j=0;j<findices.length;j++) {
-    		int k=p.vData[v].myIndices[j];
-    		curv += pdcel.triData[findices[j]].compOneAngle(k,rad);
-    	}
-    	return curv;
-    }
-    
-    /**
-     * Get radius from first 'triData' containing 'v'
-     * @param v
-     * @return double
-     */
-    public double getRadius(int v) {
-    	return pdcel.triData[p.vData[v].findices[0]].radii[p.vData[v].myIndices[0]];
-    }
-    
-    /**
-     * Put radius 'rad' into 'triData' spots for vertex v.
-     * @param v int
-     * @param rad double
-     */
-    public void setRadius(int v,double rad) {
-    	int[] findices=p.vData[v].findices;
-    	for (int j=0;j<findices.length;j++) {
-    		pdcel.triData[findices[j]].radii[p.vData[v].myIndices[j]]=rad;
-    	}
-    }
-    
-    /**
-     * Copied from 'e_radcalc'. 
-     * @param v int
-     * @param r double
-     * @param aim double
-     * @param N int
-     * @return double
-     */
-    public double d_euclRadCalc(int v,double r, double aim,int N) {
-    	double lower=0.5;
-  	  	double upper=0.5;
-  	  	double factor=0.5;
-  	  	double upcurv;
-  	  	double lowcurv;
-  	  	
-  	  	// compute initial curvature
-  	  	double curv=compVertCurv(v,r); 
-  	    double bestcurv=lowcurv=upcurv=curv;
-  	    
-  	    // may hit upper/lower bounds on radius
-  	    if (bestcurv>(aim+RP_OKERR)) {
-  	    	upper=r/factor;
-    	    upcurv=compVertCurv(v,upper);
-    	    if (upcurv>aim) { // return max possible
-    	    	return upper;
-    	    }
-    	}
-    	else if (bestcurv<(aim-RP_OKERR)) {
-    		lower=r*factor;
-    	    lowcurv=compVertCurv(v,lower);
-  	      	if (lowcurv<aim) { // return min possible
-  	      		return lower;
-  	      	}
-    	}
-  	    else 
-  	    	return r;
-  	    
-  	    // iterative secand method
-  	    for (int n=1;n<=N;n++) {
-  	    	if (bestcurv>(aim+RP_OKERR)) {
-  	    		lower=r;
-  	    		lowcurv=bestcurv;
-  	    		r += (aim-bestcurv)*(upper-r)/(upcurv-bestcurv);
-  	    	}
-  	    	else if (bestcurv<(aim-RP_OKERR)) {
-  	    		upper=r;
-  	    		upcurv=bestcurv;
-  	    		r -= (bestcurv-aim)*(lower-r)/(lowcurv-bestcurv);
-  	    	}
-  	    	else 
-	    	  return r;
-  	    	
-  	    	bestcurv=compVertCurv(v,r);
-	    }
-  	    
-  	    return r;
-    }
-    
+  
 	public void setSparseC(boolean useC) {
 		useSparseC=false;
 		if (useC) { // requested to use GOpacker routines if possible
