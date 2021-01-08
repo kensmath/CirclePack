@@ -162,7 +162,7 @@ public class iGame extends PackExtender {
 			for (int i=0;i<4;i++)
 				if (corner[i]>oldV) corner[i]--;
 			Color col=playerCOlor[playerNum];
-			packData.kData[player[playerNum]].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
+			packData.setCircleColor(player[playerNum],new Color(col.getRed(),col.getGreen(),col.getBlue()));
 			return fused;
 		}
 		return -1;
@@ -344,7 +344,7 @@ public class iGame extends PackExtender {
 			else if (edge.w==player[currentPlayer])
 				player[currentPlayer]=edge.v;
 			Color col=playerCOlor[currentPlayer];
-			packData.kData[player[currentPlayer]].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
+			packData.setCircleColor(player[currentPlayer],new Color(col.getRed(),col.getGreen(),col.getBlue()));
 			return 1;
 		}
 		

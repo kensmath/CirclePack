@@ -20,6 +20,7 @@ import listManip.VertexMap;
 import math.Point3D;
 import packing.PackData;
 import panels.CPScreen;
+import util.ColorUtil;
 import util.StringUtil;
 
 /**
@@ -130,7 +131,7 @@ public class Triangulation {
 		}
 		if (Tri.vertColors!=null) {
 			for (int i=1;i<=p.nodeCount;i++) {
-				p.kData[i].color=Tri.vertColors[p.kData[i].mark];
+				p.setCircleColor(i,ColorUtil.cloneMe(Tri.vertColors[p.kData[i].mark]));
 			}
 		}
 		

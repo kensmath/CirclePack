@@ -77,7 +77,6 @@ public class PackDCEL {
 	public int faceCount;
 	public int intFaceCount;	// number of interior faces (larger face indices are ideal faces)
 	public int idealFaceCount;  // indexes are the largest and set to negative
-	public int euler;           // euler characteristic of surface
 	
 	public Vertex[] vertices; // indexed from 1; some being 'RedVertex's.
 	public HalfEdge[] edges;  // indexed from 1; some have pointers to 'RedHEdge's
@@ -115,7 +114,6 @@ public class PackDCEL {
 		newOld=null;
 		redChain=null;
 		debug=false;
-		euler=3; // impossible euler char 
 	}
 	
 	/**
@@ -133,6 +131,7 @@ public class PackDCEL {
 	
 	public void updateTriDataRadii() {
 		for (int f=1;f<=faceCount;f++) { 
+			triData[f].hes=p.hes;
 			ArrayList<HalfEdge> eflower=faces[f].getEdges();
 			if (eflower.size()!=3)
 				throw new DataException();
@@ -585,6 +584,14 @@ public class PackDCEL {
 */
 		
 		return count;
+	}
+	
+	/**
+	 * Compute centers in DCEL case using 'computeOrder'
+	 * @return
+	 */
+	public int dcelCompCenters() {
+		return dcelCompCenters(computeOrder); 
 	}
 		
 	/**
@@ -1356,7 +1363,7 @@ public class PackDCEL {
 		HalfEdge he=vert.halfedge;
 		do {
 			if (he.face.faceIndx>0)
-				angsum=getEdgeAngle(he,rad);
+				angsum+=getEdgeAngle(he,rad);
 			he=he.prev.twin;
 		} while (he!=vert.halfedge);
 		return angsum;
@@ -1499,7 +1506,7 @@ public class PackDCEL {
 	}
 
 	/**
-	 * Set vert's radius (in its internal form) in all locations;
+	 * Set vert's radius (hyp: in its internal form) in all locations;
 	 * that is, in 'vData', 'rData' (for backup), and in
 	 * any associated 'RedHEdges' for this v. (Compare with
 	 * 'setRad4Edge' which only set's the value associated
@@ -1737,7 +1744,7 @@ public class PackDCEL {
 			if (faceDo && pF==null) { // draw the faces
 				if (!faceFlags.colorIsSet && 
 						(faceFlags.fill || faceFlags.colBorder)) 
-					faceFlags.setColor(faces[rootface].color);
+					faceFlags.setColor(p.getFaceColor(rootface));
 				if (faceFlags.label)
 					faceFlags.setLabel(Integer.toString(rootface));
 				p.cpScreen.drawFace(myCenters[0],myCenters[1],myCenters[2],
@@ -1748,7 +1755,7 @@ public class PackDCEL {
 			if (circDo && pF==null) { // also draw the circles
 				if (!circFlags.colorIsSet && 
 						(circFlags.fill || circFlags.colBorder)) 
-					circFlags.setColor(p.vData[he.next.next.origin.vertIndx].color);
+					circFlags.setColor(p.getCircleColor(he.next.next.origin.vertIndx));
 				if (circFlags.label)
 					circFlags.setLabel(Integer.toString(he.origin.vertIndx));
 				p.cpScreen.drawCircle(myCenters[0],myRadii[0],circFlags);
@@ -1802,7 +1809,7 @@ public class PackDCEL {
 				if (faceDo && pF==null) { // draw the faces
 					if (!faceFlags.colorIsSet && 
 							(faceFlags.fill || faceFlags.colBorder)) 
-						faceFlags.setColor(faces[next_face].color);
+						faceFlags.setColor(p.getFaceColor(next_face));
 					if (faceFlags.label)
 						faceFlags.setLabel(Integer.toString(next_face));
 					p.cpScreen.drawFace(myCenters[0],myCenters[1],myCenters[2],
@@ -1813,7 +1820,7 @@ public class PackDCEL {
 				if (circDo && pF==null) { // also draw the circles
 					if (!circFlags.colorIsSet && 
 							(circFlags.fill || circFlags.colBorder)) 
-						circFlags.setColor(p.vData[he.next.next.origin.vertIndx].color);
+						circFlags.setColor(p.getCircleColor(he.next.next.origin.vertIndx));
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(he.next.next.origin.vertIndx));
 					p.cpScreen.drawCircle(myCenters[2],myRadii[2],circFlags);
@@ -1834,13 +1841,13 @@ public class PackDCEL {
 					Color bcolor=null;
 					if (faceFlags.fill) {  
 						if (!faceFlags.colorIsSet) 
-							fcolor=faces[next_face].color;
+							fcolor=p.getFaceColor(next_face);
 						if (faceFlags.colBorder)
 							bcolor=fcolor;
 					}
 					if (faceFlags.draw) {
 						if (faceFlags.colBorder)
-							bcolor=faces[next_face].color;
+							bcolor=p.getFaceColor(next_face);
 						else 
 							bcolor=CPScreen.getFGColor();
 					}
@@ -1862,14 +1869,14 @@ public class PackDCEL {
 					if (!circFlags.fill) { // not filled
 						if (circFlags.colBorder)
 							pF.postColorCircle(p.hes,myCenters[2],myRadii[2],
-									p.vData[he.next.next.origin.vertIndx].color,tx);
+									p.getCircleColor(he.next.next.origin.vertIndx),tx);
 						else 
 							pF.postCircle(p.hes,myCenters[2],myRadii[2],tx);
 					} 
 					else {
 						Color ccOl=CPScreen.getFGColor();
 						if (!circFlags.colorIsSet)
-							ccOl = p.vData[he.next.next.origin.vertIndx].color;
+							ccOl = p.getCircleColor(he.next.next.origin.vertIndx);
 						if (circFlags.colBorder) {
 							pF.postFilledColorCircle(p.hes,myCenters[2],
 									myRadii[2],ccOl,ccOl,tx);

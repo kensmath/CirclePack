@@ -893,7 +893,7 @@ public class QueryParser {
 		  	      				", star="+p.getNum(v)+
 		  	      				", mark="+p.kData[v].mark+
 		  	      				", plotFlag="+p.kData[v].plotFlag+
-		  	      				", color="+CPScreen.col_to_table(p.kData[v].color));
+		  	      				", color="+CPScreen.col_to_table(p.getCircleColor(v)));
 		  	      		count++;
 		  	      	}
 		  	      	if (count<N) {

@@ -4,6 +4,7 @@ import java.awt.Color;
 import complex.Complex;
 import exceptions.CombException;
 import panels.CPScreen;
+import util.ColorUtil;
 
 
 /**
@@ -50,13 +51,32 @@ public class VData{
 		}
 		Vout.curv=curv;
 		Vout.aim=aim;
-		Vout.color=new Color(color.getRed(),color.getGreen(),color.getBlue(),color.getAlpha());
+		Vout.color=new Color(0,0,0);
 		Vout.bdryFlag=bdryFlag;
 		return Vout;
 	}
 	
 	public int getBdryFlag() {
 		return bdryFlag;
+	}
+	
+	/**
+	 * set clone of 'col'
+	 * @param col Color
+	 */
+	public void setColor(Color col) {
+		if (col==null)
+			color=null;
+		else
+			color=ColorUtil.cloneMe(col);
+	}
+	
+	/**
+	 * get clone of color
+	 * @return new Color
+	 */
+	public Color getColor() {
+		return ColorUtil.cloneMe(color);
 	}
 	
 	public void setBdryFlag(int bf) {

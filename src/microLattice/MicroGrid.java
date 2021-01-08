@@ -678,7 +678,7 @@ public class MicroGrid extends PackExtender {
 				int l=1;
 				while (l<levelCount && ity<stepIntensity[l])
 					l++;
-				packData.kData[v].color=ColorUtil.spreadColor(l);
+				packData.setCircleColor(v,ColorUtil.spreadColor(l));
 			}
 		}
 		
@@ -1850,7 +1850,7 @@ public class MicroGrid extends PackExtender {
 //							System.out.println(" lev "+level+"     "+v);
 						processed[v]=level; // this vert is a center at this level
 						packData.kData[v].mark=level; 
-						packData.kData[v].color=CPScreen.cloneColor(node.color);
+						packData.setCircleColor(v,ColorUtil.cloneMe(node.color));
 						count++;
 						numChosen[level]++;
 
@@ -1995,7 +1995,7 @@ public class MicroGrid extends PackExtender {
 		Iterator<Integer> vits=vhits.iterator();
 		while(vits.hasNext()) {
 			int vgP=vits.next(); // vert in superlattice
-			gridPack.kData[vgP].color=ColorUtil.spreadColor(1); // color
+			gridPack.setCircleColor(vgP,ColorUtil.spreadColor(1)); // color
 			int vmg=gridPack.vertexMap.findW(vgP); // vert in microGrid
 			barrier.add(new EdgeSimple(v2micro[vmg][0],v2micro[vmg][1]));
 		}
@@ -2245,7 +2245,7 @@ public class MicroGrid extends PackExtender {
 //						System.out.println("    lev "+level+"    "+v);					
 					processed[v]=level; // this vert is a center at this level
 					packData.kData[v].mark=level;
-					packData.kData[v].color=CPScreen.cloneColor(nextnde.color);
+					packData.setCircleColor(v,ColorUtil.cloneMe(nextnde.color));
 					count++;
 					numChosen[level]++;
 
@@ -2376,7 +2376,7 @@ public class MicroGrid extends PackExtender {
 			    }
 			    q.setBdryFlag(newval,0);
 			    q.kData[newval].mark=++count;
-			    q.kData[newval].color=CPScreen.getFGColor();
+			    q.setCircleColor(newval,CPScreen.getFGColor());
 			    q.setRadius(newval,brad);
 			    q.setCenter(newval,new Complex(bcent));
 			    q.setAim(newval,2.0*Math.PI);

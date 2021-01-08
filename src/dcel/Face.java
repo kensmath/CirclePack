@@ -6,6 +6,7 @@ import java.util.Iterator;
 
 import exceptions.CombException;
 import panels.CPScreen;
+import util.ColorUtil;
 
 /**
  * DCEL face. Careful, the 'edge' and 'faceIndx' are not
@@ -153,12 +154,25 @@ public class Face {
 		return count;
 	}
 	
+	/**
+	 * Return color, null if null
+	 * @return new Color
+	 */
 	public Color getColor() {
-		return new Color(color.getRed(),color.getGreen(),color.getBlue(),color.getAlpha());
+		if (color==null)
+			return null;
+		return ColorUtil.cloneMe(color);
 	}
 	
+	/**
+	 * set clone of 'col'
+	 * @param col Color
+	 */
 	public void setColor(Color col) {
-		color=new Color(col.getRed(),col.getGreen(),col.getBlue(),col.getAlpha());
+		if (col==null)
+			color=null;
+		else 
+			color=ColorUtil.cloneMe(col);
 	}
 	
 	/**

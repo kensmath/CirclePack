@@ -664,7 +664,7 @@ public class Schwarzian {
 				Vector<Color> c_color=util.ColorUtil.blue_red_diff_ramp_Color(c_sch);
 				Iterator<Color> clst=c_color.iterator();
 				for (int v=1;v<=p.nodeCount;v++) {
-					p.kData[v].color=clst.next(); // store the color
+					p.setCircleColor(v,ColorUtil.cloneMe(clst.next())); // store the color
 					count++;
 				}
 				
@@ -677,7 +677,7 @@ public class Schwarzian {
 					while(vlst.hasNext()) {
 						int v=vlst.next();
 						if (dflags.draw || dflags.fill) 
-							dflags.setColor(p.kData[v].color);
+							dflags.setColor(p.getCircleColor(v));
 						if (dflags.label)
 							dflags.setLabel(Integer.toString(v));
 						p.cpScreen.drawCircle(p.getCenter(v),p.getRadius(v),dflags);

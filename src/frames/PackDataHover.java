@@ -22,13 +22,11 @@ import circlePack.PackControl;
 import complex.Complex;
 import komplex.EdgeSimple;
 import komplex.Face;
-import komplex.KData;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.NodeLink;
 import packQuality.QualMeasures;
 import packing.PackData;
-import packing.RData;
 import panels.CPScreen;
 import panels.DataTree;
 import util.intNumField;
@@ -400,37 +398,34 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 			return;
 		vertChoice.setText(Integer.toString(v));
 		
-		KData kdata=p.kData[v];
-		RData rdata=p.rData[v];
-		
 		// set radius
 		radField.setValue(p.getActualRadius(v));
 		
 		// set center
-		centerField.setValue(new Complex(rdata.center.x,rdata.center.y));
+		centerField.setValue(new Complex(p.getCenter(v)));
 		
 		// set aim
-		aimField.setValue(rdata.aim/Math.PI);
+		aimField.setValue(p.getAim(v)/Math.PI);
 		
 		// set angle sum
-		angleSumField.setValue(rdata.curv/Math.PI);
+		angleSumField.setValue(p.getCurv(v)/Math.PI);
 		
 		// bdry?
 		bdryCkBoxV.setSelected(false);
-		if (kdata.bdryFlag>0) bdryCkBoxV.setSelected(true);
+		if (p.kData[v].bdryFlag>0) bdryCkBoxV.setSelected(true);
 		
 		// degree
-		degreeField.setField(kdata.num);
+		degreeField.setField(p.getNum(v));
 		
 		// flower
 		StringBuilder flower=new StringBuilder();
-		for (int j=0;j<=kdata.num;j++)
-			flower.append(Integer.toString(kdata.flower[j])+" ");
+		for (int j=0;j<=p.kData[v].num;j++)
+			flower.append(Integer.toString(p.kData[v].flower[j])+" ");
 		flowerField.setText(flower.toString());
 		
 		// color
 		// TODO: color_conversion task, need new GUI method
-		colorFieldV.setField(CPScreen.col_to_table(kdata.color));
+		colorFieldV.setField(CPScreen.col_to_table(p.getCircleColor(v)));
 	}
 	
 	public void update_face(PackData p) {

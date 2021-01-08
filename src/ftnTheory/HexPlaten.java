@@ -1350,7 +1350,7 @@ public class HexPlaten extends PackExtender {
 							
 						// store radius and color in 'packData'
 						packData.kData[v].mark=level; 
-						packData.kData[v].color=CPScreen.cloneColor(node.color);
+						packData.setCircleColor(v,CPScreen.cloneColor(node.color));
 //						packData.rData[v].rad=0.5*microScaling*(double)stepDiam[level];
 
 						// mark footprint about <u,w> as covered

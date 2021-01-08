@@ -308,7 +308,7 @@ public class ComplexAnalysis extends PackExtender {
 				
 				// actually draw the triangles
 				if (!dflags.colorIsSet)
-					dflags.setColor(domainData.faces[f].color);
+					dflags.setColor(domainData.getFaceColor(f));
 				if (dflags.label)
 					dflags.setLabel(Integer.toString(f));
 				cpScreen.drawFace(tps[0],tps[1],tps[2],null,null,null,dflags);
@@ -413,7 +413,7 @@ public class ComplexAnalysis extends PackExtender {
 			
 			// record in 'rData' of 'packData'
 			for (int v=1;v<=packData.nodeCount;v++)
-				packData.kData[v].color=CPScreen.coLor((int)colors.get(v-1));
+				packData.setFaceColor(v,CPScreen.coLor((int)colors.get(v-1)));
 			
 			double miN=0.0;
 			double maX=0.0;

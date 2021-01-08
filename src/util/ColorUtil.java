@@ -69,6 +69,13 @@ public class ColorUtil {
 		}
 	}
 	
+	/**
+	 * There's a standard color wheel for the complex argument
+	 * (used, eg., by Elias Wegert). This code returns that color
+	 * with alpha set to 1.0.
+	 * @param tha double, argument in radians
+	 * @return new Color object
+	 */
 	public static Color ArgWheel(double tha) {
 		return ArgWheel(tha,1.0);
 	}
@@ -91,7 +98,7 @@ public class ColorUtil {
 	 * as a spread. Return new 'Color' object for one of colors 
 	 * indexed in [232,248).
 	 * @param i int
-	 * @return Color
+	 * @return new Color
 	 */
 	public static Color spreadColor(int i) {
 		int j=232+(i%16);
@@ -299,35 +306,59 @@ public class ColorUtil {
 	 * or number of sides of tile, etc.)
 	 * TODO: should extend the range beyond 12
 	 * @param n int
-	 * @return Color
+	 * @return new Color
 	 */
 	public static Color colorByDegree(int n) {
 		  switch(n) {
 		  case 2:
-		  {return CPScreen.coLor(230);}
+		  {return ColorUtil.cloneMe(CPScreen.coLor(230));}
 		  case 3:
-		  {return CPScreen.coLor(245);}
+		  {return ColorUtil.cloneMe(CPScreen.coLor(245));}
 		  case 4:
-		  {return CPScreen.coLor(242);}
+		  {return ColorUtil.cloneMe(CPScreen.coLor(242));}
 		  case 5:
-		  {return CPScreen.coLor(20);}
+		  {return ColorUtil.cloneMe(CPScreen.coLor(20));}
 		  case 6:
-		  { return CPScreen.coLor(100);}
+		  {return ColorUtil.cloneMe(CPScreen.coLor(100));}
 		  case 7:
-		  {return CPScreen.coLor(180);}
+		  {return ColorUtil.cloneMe(CPScreen.coLor(180));}
 		  case 8:
-		  {return CPScreen.coLor(209);}
+		  {return ColorUtil.cloneMe(CPScreen.coLor(209));}
 		  case 9:
-		  {return CPScreen.coLor(241);}
+		  {return ColorUtil.cloneMe(CPScreen.coLor(241));}
 		  case 10:
-		  {return CPScreen.coLor(227);}
+		  {return ColorUtil.cloneMe(CPScreen.coLor(227));}
 		  case 11:
-		  {return CPScreen.coLor(229);}
+		  {return ColorUtil.cloneMe(CPScreen.coLor(229));}
 		  case 12:
-		  {return CPScreen.coLor(240);}
+		  {return ColorUtil.cloneMe(CPScreen.coLor(240));}
 		  default:
-		  {return CPScreen.coLor(248);}
+		  {return ColorUtil.cloneMe(CPScreen.coLor(248));}
 		  } // end of switch
+	}
+	
+	/**
+	 * Compare rgb compoenents of two 'Color's.
+	 * 'alpha' is ignored.
+	 * @param c1 Color
+	 * @param c2 Color
+	 * @return true if rgb all equal.
+	 */
+	public static boolean equalColors(Color c1,Color c2) {
+		if (c1.getRed()!=c2.getRed() || c1.getGreen()!=c2.getGreen() || c1.getBlue()!=c2.getBlue())
+			return false;
+		return true;
+	}
+	
+	/**
+	 * Clone; return null if 'c' is null.
+	 * @param c Color
+	 * @return nrw Color
+	 */
+	public static Color cloneMe(Color c) {
+		if (c==null)
+			return null;
+		return new Color(c.getRed(),c.getGreen(),c.getBlue(),c.getAlpha());
 	}
 	
 } 

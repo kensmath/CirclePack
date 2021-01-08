@@ -17,6 +17,7 @@ import packing.PackData;
 import packing.PackExtender;
 import panels.CPScreen;
 import util.CmdStruct;
+import util.ColorUtil;
 import allMains.CPBase;
 import allMains.CirclePack;
 import exceptions.DataException;
@@ -152,8 +153,7 @@ public class SphereLayout extends PackExtender {
 			// record color in packData
 			// TODO: should be able to clone color more easily
 			for (int v=1;v<=packData.nodeCount;v++) {
-				packData.kData[v].color=new Color(vertGPS[v].color.getRed(),
-						vertGPS[v].color.getGreen(),vertGPS[v].color.getBlue());
+				packData.setCircleColor(v,ColorUtil.cloneMe(vertGPS[v].color));
 			}
 		}
 		

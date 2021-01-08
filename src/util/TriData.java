@@ -11,8 +11,8 @@ import geometry.CommonMath;
  * Utility class holding fundamental geometric data needed for
  * repacking computations, localized to (triangular only) face 
  * of some parent complex. Typically, this is temporary storage
- * during repack computations. started 12/2020 to accommodate 
- * DCEL structures.
+ * during repack computations and is NOT routinely maintained; 
+ * started 12/2020 to accommodate repacking for DCEL structures.
  * 
  * The derived class 'TriAspects' has been used in many other
  * situtaions.e.g., with projective and affine structures and 

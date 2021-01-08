@@ -264,13 +264,29 @@ public class PackData{
     public int attachDCEL(PackDCEL pdcel) {
     	packDCEL=pdcel;
     	pdcel.p=this;
+    	int origNodeCount=nodeCount;
     	
+    	// set some counts
+		nodeCount=pdcel.vertCount;
+		faceCount=pdcel.faceCount;
+		bdryCompCount=pdcel.idealFaceCount;
+    	euler=nodeCount-pdcel.edgeCount+faceCount;
+		genus=(2-euler-bdryCompCount)/2;
+		intrinsicGeom=-1;
+		if (pdcel.idealFaceCount==0) {
+			if (genus==0)
+				intrinsicGeom=1;
+			else if (genus==1) 
+				intrinsicGeom=0;
+		}
+    	fileName=StringUtil.dc2name(fileName);
+
     	// no existing dcel structure? get data from 'rData'
     	if (vData==null) {
-    		vData=new VData[pdcel.vertCount+1];
-    		for (int v=1;v<=pdcel.vertCount;v++) 
+    		vData=new VData[nodeCount+1];
+    		for (int v=1;v<=nodeCount;v++) 
     			vData[v]=new VData();
-    		for (int v=1;v<=pdcel.vertCount;v++) {
+    		for (int v=1;v<=nodeCount;v++) {
     			vData[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
     			int oldv=v;
     			int w=0;
@@ -278,7 +294,7 @@ public class PackData{
     				oldv=w;
     			setRadius(v,rData[oldv].rad);
     			setCenter(v,rData[oldv].center);
-    			vData[v].color=kData[oldv].color;
+    			vData[v].color=ColorUtil.cloneMe(getCircleColor(oldv));
     			// save aims where possible
     			vData[v].aim=getAim(oldv);
     			if (vData[v].getBdryFlag()!=kData[oldv].bdryFlag) {
@@ -289,25 +305,22 @@ public class PackData{
     			}
     			pdcel.fillIndices(v);
     		}
-    		nodeCount=pdcel.vertCount;
-    		faceCount=pdcel.faceCount;
-        	fileName=StringUtil.dc2name(fileName);
         	fillcurves(); // compute all curvatures
-    		return pdcel.vertCount;
+    		return nodeCount;
     	}
 
     	// else, hold old data
-    	VData[] oldVData=new VData[nodeCount+1];
-		for (int ov=1;ov<=nodeCount;ov++) 
+    	VData[] oldVData=new VData[origNodeCount+1];
+		for (int ov=1;ov<=origNodeCount;ov++) 
 			oldVData[ov]=vData[ov];
 		
 		// allocate new 'vData'
-		vData=new VData[pdcel.vertCount+1];
-		for (int v=1;v<=pdcel.vertCount;v++) 
+		vData=new VData[nodeCount+1];
+		for (int v=1;v<=nodeCount;v++) 
 			vData[v]=new VData();
 		
-		// note: vertCount may be larger than nodeCount
-		for (int v=1;v<=pdcel.vertCount;v++) {
+		// note: 'nodeCount' may be larger than 'origNodeCount'
+		for (int v=1;v<=nodeCount;v++) {
 			Vertex vert=pdcel.vertices[v];
 			vData[v].setBdryFlag(vert.bdryFlag);
 			HalfEdge he=vert.halfedge;
@@ -316,7 +329,7 @@ public class PackData{
    			if (pdcel.newOld!=null && (w=pdcel.newOld.findW(v))>0) 
    				oldv=w;
    			// if there is existing data, copy it
-   			if (oldv<=nodeCount) {
+   			if (oldv<=origNodeCount) {
    				
    				// copy 'aim' when appropriate
    				vData[v].aim=oldVData[oldv].aim;
@@ -352,9 +365,6 @@ public class PackData{
    			}
 			pdcel.fillIndices(v);
     	}
-		nodeCount=pdcel.vertCount;
-		faceCount=pdcel.faceCount;
-    	fileName=StringUtil.dc2name(fileName);
     	fillcurves();
     	return pdcel.vertCount;
     }
@@ -1263,7 +1273,7 @@ public class PackData{
                     else if(mainTok.equals("C_COLORS:")){ // note: replaces CIRCLE_COLORS that used old indices
                         state = PackState.C_COLORS;
                         if (newPacking) for (int i=1;i<=nodeCount;i++) 
-                        	kData[i].color=CPScreen.getFGColor();
+                        	setCircleColor(i,CPScreen.getFGColor());
                 		while (state==PackState.C_COLORS 
                 				&& (line=StringUtil.ourNextLine(fp))!=null) {
                 			StringTokenizer loctok = new StringTokenizer(line);
@@ -1273,7 +1283,7 @@ public class PackData{
                 				int rd=(int)Math.floor(Double.parseDouble((String)loctok.nextToken()));
                 				int gn=(int)Math.floor(Double.parseDouble((String)loctok.nextToken()));
                 				int bl=(int)Math.floor(Double.parseDouble((String)loctok.nextToken()));
-                        	    kData[v].color=new Color(rd,gn,bl);
+                        	    setCircleColor(v,new Color(rd,gn,bl));
                 			} catch(Exception ex) {state=PackState.INITIAL;}
                 		}
                   	  	flags |= 0400;
@@ -1281,7 +1291,7 @@ public class PackData{
                     }
                     else if(mainTok.equals("CIRCLE_COLORS:")){ // OBE: use 'Color' objects now (see C_COLORS)
                         state = PackState.CIRCLE_COLORS;
-                        if (newPacking) for (int i=1;i<=nodeCount;i++) kData[i].color=CPScreen.getFGColor();
+                        if (newPacking) for (int i=1;i<=nodeCount;i++) setCircleColor(i,CPScreen.getFGColor());
                 		while (state==PackState.CIRCLE_COLORS 
                 				&& (line=StringUtil.ourNextLine(fp))!=null) {
                 			StringTokenizer loctok = new StringTokenizer(line);
@@ -1289,7 +1299,7 @@ public class PackData{
                 				String str=(String)loctok.nextToken();
                 				int v=Integer.parseInt(str);
                 				int col=Integer.parseInt((String)loctok.nextToken());
-                        	    kData[v].color=CPScreen.coLor(col);
+                        	    setCircleColor(v,ColorUtil.cloneMe(CPScreen.coLor(col)));
                 			} catch(Exception ex) {state=PackState.INITIAL;}
                 		}
                   	  	flags |= 0400;
@@ -1354,7 +1364,7 @@ public class PackData{
                     }
                     else if(mainTok.equals("TRI_COLORS:")){ // OBE: uses color indices (see T_COLORS)
                         state = PackState.TRI_COLORS;
-                        if (newPacking) for (int i=1;i<=faceCount;i++) faces[i].color=CPScreen.getFGColor();
+                        if (newPacking) for (int i=1;i<=faceCount;i++) setFaceColor(i,CPScreen.getFGColor());
                    		while (state==PackState.TRI_COLORS 
                 				&& (line=StringUtil.ourNextLine(fp))!=null) {
                 			StringTokenizer loctok = new StringTokenizer(line);
@@ -1369,7 +1379,7 @@ public class PackData{
                 					int ind;
                 					if ( ((ind=check_face(k,v,v1)) >= 0 && faces[k].vert[(ind+2)%3]==v2)
                          				 || ((ind=check_face(k,v1,v)) >= 0 && faces[k].vert[(ind+2)%3]==v2) ) {
-                						faces[k].color=CPScreen.coLor(colindx);
+                						setFaceColor(k,ColorUtil.cloneMe(CPScreen.coLor(colindx)));
                 						j=getNum(v); // to stop loop 
                 					}
                 				}
@@ -1876,12 +1886,12 @@ public class PackData{
 
         if (!col_c_flag) {
         	for (int i=1;i<=nodeCount;i++)
-        		kData[i].color=CPScreen.getFGColor();
+        		setCircleColor(i,CPScreen.getFGColor());
         }
 
         if (!col_f_flag) {
         	for (int i=1;i<=faceCount;i++)
-        		faces[i].color=CPScreen.getFGColor();
+        		setFaceColor(i,CPScreen.getFGColor());
         }
                 
         // TODO: set pack name and put it on label?
@@ -2155,10 +2165,14 @@ public class PackData{
     */
     
     /** 
-     * Allocate space for circle overlaps/inversive distances. Former
-     * values are lost, set to default 1.0 (tangency).
+     * Allocate space for circle overlaps/inversive distances. 
+     * With new DCEL structure, space is already allocated in
+     * 'HalfEdge's, so this call is OBE. 
+     * Otherwise, former values are lost, set to default 1.0 (tangency).
     */
     public int alloc_overlaps() {
+    	if (packDCEL!=null)
+    		return 1;
         overlapStatus=true;
         for (int v=1;v<=nodeCount;v++) {
         	kData[v].invDist=new double[getNum(v)+1];
@@ -2435,6 +2449,20 @@ public class PackData{
 	}
 	
 	/**
+	 * Get array of vertices for face 'f'
+	 */
+	public int[] getFaceVerts(int f) {
+		int[] ans;
+		if (packDCEL!=null) {
+			ans=packDCEL.faces[f].getVerts();
+		}
+		else {
+			ans=faces[f].vert;
+		}
+		return ans;
+	}
+	
+	/**
 	 * Get array of nghb'ing vertices, closed if interior
 	 * @param v int
 	 * @return int[]
@@ -2504,6 +2532,56 @@ public class PackData{
 			z=packDCEL.getVertCenter(packDCEL.vertices[v].halfedge);
 		}
 		return z;
+	}
+	
+	/**
+	 * Get clone of face color
+	 * @param f int
+	 * @return new Color
+	 */
+	public Color getFaceColor(int f) {
+		if (packDCEL!=null) {
+			return packDCEL.faces[f].getColor();
+		}
+		return ColorUtil.cloneMe(faces[f].color);
+	}
+	
+	/**
+	 * set color to clone of 'color'
+	 * @param f int
+	 * @param color Color
+	 */
+	public void setFaceColor(int f,Color color) {
+		if (packDCEL!=null) {
+			packDCEL.faces[f].setColor(color);
+		}
+		else
+			faces[f].color=ColorUtil.cloneMe(color);
+	}
+	
+	/**
+	 * get clone of circle color
+	 * @param v int
+	 * @return new Color
+	 */
+	public Color getCircleColor(int v) {
+		if (packDCEL!=null) {
+			return vData[v].getColor();
+		}
+		return ColorUtil.cloneMe(kData[v].color);
+	}
+	
+	/**
+	 * set circle color to clone of 'color'
+	 * @param v int 
+	 * @param color Color 
+	 */
+	public void setCircleColor(int v,Color color) {
+		if (packDCEL!=null) {
+			vData[v].setColor(color);
+		}
+		else
+			kData[v].color=ColorUtil.cloneMe(color);
 	}
 	
 	/** 
@@ -3035,7 +3113,7 @@ public class PackData{
 	 * @return Complex[]
 	 */
 	public Complex []corners_face(int f,AmbiguousZ []ambigZs) {
-		int []vert=faces[f].vert;
+		int []vert=getFaceVerts(f);
 		int baseindx=-1;
 		Complex []pts=new Complex[3];
 		boolean easycase= (ambigZs==null) || (hes>0);
@@ -4027,7 +4105,7 @@ public class PackData{
 
 		if (defaultColor) 
 			for (int i=1;i<=nodeCount;i++)
-				kData[i].color=CPScreen.getFGColor();
+				setCircleColor(i,CPScreen.getFGColor());
 		
 		// set 'bdryFlag's, 'bdryCompCount' and 'bdryStarts'
 		// combinatorial errors often occur here
@@ -4129,7 +4207,7 @@ public class PackData{
 							faces[count].vert[2]=m;
 						}
 					}
-					faces[count].color=CPScreen.getFGColor();
+					setFaceColor(count,CPScreen.getFGColor());
 					faces[count].plotFlag=1;
 					count++;
 				}
@@ -5422,6 +5500,12 @@ public class PackData{
 	 */
 	public int comp_pack_centers(boolean errflag,boolean dflag,int opt,double crit) 
 	throws CombException,MobException,RedListException,IOException {
+		
+		// TODO: ignore parameters for now in DCEL case
+		if (packDCEL!=null) {
+			return packDCEL.dcelCompCenters();
+		}
+		
 	  int nf,n0,n1,n,vert,count,v,indx,lastface;
 	  int v_ind;
 	  boolean keepon=true;
@@ -5928,7 +6012,6 @@ public class PackData{
 	 * Fill in curvatures of the packing. 
 	 * @return int 1
 	*/
-	@SuppressWarnings("unused")
 	public int fillcurves() {
 		int v;
 		UtilPacket uP=new UtilPacket();
@@ -6689,14 +6772,14 @@ public class PackData{
 			int colorflag = 0;
 			Color vcol;
 			for (int i = 1; i <= nodeCount && colorflag == 0; i++) {
-				vcol=kData[i].color;
+				vcol=getCircleColor(i);
 				if (vcol.getRed()!=0 || vcol.getGreen()!=0 || vcol.getBlue()!=0)  
 					colorflag++;
 			}
 			if (colorflag > 0) { // found some non-default circle colors
 				file.write("C_COLORS:\n");
 				for (int i = 1; i <= nodeCount; i++) { // one vertex per line
-					vcol=faces[i].color;
+					vcol=getFaceColor(i);
 					if (vcol.getRed()!=0 || vcol.getGreen()!=0 || vcol.getBlue()!=0) { 
 						file.write(" " + i + " " + vcol.getRed() + " "
 								+ vcol.getGreen() + " "
@@ -6709,14 +6792,14 @@ public class PackData{
 			// check face colors
 			colorflag = 0;
 			for (int i = 1; i <= faceCount && colorflag == 0; i++) {
-				vcol=faces[i].color;
+				vcol=getFaceColor(i);
 				if (vcol.getRed()!=0 || vcol.getGreen()!=0 || vcol.getBlue()!=0)  
 					colorflag++;
 			}
 			if (colorflag > 0) { // found some non-default colors
 				file.write("T_COLORS:\n"); // T_COLORS are for faces; superceded TRI_COLORS
 				for (int i = 1; i <= faceCount; i++) { // one face per line
-					vcol=faces[i].color;
+					vcol=getFaceColor(i);
 					if (vcol.getRed()!=0 || vcol.getGreen()!=0 || vcol.getBlue()!=0) { 
 						file.write(" " + faces[i].vert[0] + " "
 								+ faces[i].vert[1] + " " + faces[i].vert[2]+"   "+
@@ -7120,14 +7203,14 @@ public class PackData{
 
 		try {
 
-			// introduce DCEL packing (still using "old reliable", 1/2021)
-			// TODO: have to adjust 'passes' to reflect old reliable version
+			// introduce DCEL packing.
 			if (packDCEL!=null) {
 				if (hes < 0) { // hyp
 					d_HypPacker h_packer=new d_HypPacker(this,1000);
 					int ans=h_packer.d_oldReliable(1000); 
 					if (ans>0) {
 						h_packer.reapResults();
+						fillcurves();
 						return ans;
 					}
 					else if (ans<0)
@@ -7139,10 +7222,13 @@ public class PackData{
 				}
 				else  { // eucl
 					d_EuclPacker e_packer=new d_EuclPacker(this,1000);
+					if (!oldRel) {
+						return e_packer.genericRePack(1000);
+					}
 					int ans=e_packer.d_oldReliable(1000); // TODO: specify in call
 					if (ans>0) {
 						e_packer.reapResults();
-						CirclePack.cpb.msg("Did DCEL eucl repack, count="+ans);
+//						CirclePack.cpb.msg("Did DCEL eucl repack, count="+ans);
 						return ans;
 					}
 					else if (ans<0)
@@ -7427,7 +7513,7 @@ public class PackData{
 		setBdryFlag(node,1);
 		kData[node].plotFlag = 1;
 		kData[node].mark = 0;
-		kData[node].color = CPScreen.getFGColor();
+		setCircleColor(node,CPScreen.getFGColor());
 		rData[node] = new RData();
 		setRadius(node,getRadius(v));
 		CircleSimple sc = CommonMath.comp_any_center(getCenter(v),
@@ -7841,11 +7927,10 @@ public class PackData{
 		if (ans == 0)
 			return 0;
 		if ((keepFlags & 0001) == 0001) { // swap 'color'
-			Color holdcolor = kData[v].color;
-			Color col = kData[w].color;
-			kData[v].color = new Color(col.getRed(), col.getGreen(),
-					col.getBlue());
-			kData[w].color = holdcolor;
+			Color holdcolor = getCircleColor(v);
+			Color col = getCircleColor(w);
+			setCircleColor(v,ColorUtil.cloneMe(col));
+			setCircleColor(w,ColorUtil.cloneMe(holdcolor));
 		}
 		if ((keepFlags & 0002) == 0002) { // swap 'mark'
 			int holdmark = kData[v].mark;
@@ -9292,7 +9377,7 @@ public class PackData{
 			}
 			setBdryFlag(newV,1);
 			kData[newV].mark = 0;
-			kData[newV].color=CPScreen.getFGColor();
+			setCircleColor(newV,CPScreen.getFGColor());
 			setRadius(newV,getRadius(v));
 			setAim(newV,-0.1);
 		} 
@@ -9312,7 +9397,7 @@ public class PackData{
 				set_single_invDist(newV,kData[newV].flower[3],1.0);
 			}
 			kData[newV].mark = 0;
-			kData[newV].color=CPScreen.getFGColor();
+			setCircleColor(newV,CPScreen.getFGColor());
 			setRadius(newV,.5 * getRadius(v));
 			setAim(newV,2.0 * Math.PI);
 			// compute packed radius
@@ -9438,7 +9523,7 @@ public class PackData{
 	    }
 	    setBdryFlag(newval,0);
 	    kData[newval].mark=mark;
-	    kData[newval].color=CPScreen.getFGColor();
+	    setCircleColor(newval,CPScreen.getFGColor());
 	    setRadius(newval,getRadius(faces[f].vert[0]));
 	    setAim(newval,2.0*Math.PI);
 	    // compute packed radius
@@ -9500,7 +9585,7 @@ public class PackData{
 	    	}
 	    	setBdryFlag(newV[i],0);
 	    	kData[newV[i]].mark=0;
-	    	kData[newV[i]].color=CPScreen.getFGColor();
+	    	setCircleColor(newV[i],CPScreen.getFGColor());
 	    	setRadius(newV[i],getRadius(faces[f].vert[i]));
 	    	setAim(newV[i],2.0*Math.PI);
 	    }
@@ -10019,7 +10104,7 @@ public class PackData{
 	    
 	    kData[newnode].plotFlag=1;
 	    kData[newnode].mark=0;
-	    kData[newnode].color=CPScreen.getFGColor();
+	    setCircleColor(newnode,CPScreen.getFGColor());
 	    if (overlapStatus) {
 		      kData[newnode].invDist=new double[count+1];
 		      for (int j=0;j<=count;j++) 
@@ -10252,17 +10337,17 @@ public class PackData{
 	    }
 	    if (b<0) b=0.0;
 	    if (t<=0 || Math.abs(t-b)/t<.005) { // problem of small variation
-	        for (int v=1;v<=nodeCount;v++) kData[v].color=CPScreen.coLor(mid);
+	        for (int v=1;v<=nodeCount;v++) setCircleColor(v,ColorUtil.cloneMe(CPScreen.coLor(mid)));
 	        return 1;
 	    }
 	    if (hes<0) {
 	        for (int v=1;v<=nodeCount;v++) {
-	        	kData[v].color=CPScreen.coLor(1+(int)((mid-2)*(getRadius(v)-b)/(t-b)));
+	        	setCircleColor(v,ColorUtil.cloneMe(CPScreen.coLor(1+(int)((mid-2)*(getRadius(v)-b)/(t-b)))));
 	        }
 	    }
 	    else if (hes>=0) {
 	        for (int v=1;v<=nodeCount;v++) {
-	  	  kData[v].color=CPScreen.coLor(1+(int)((mid-2)*(getRadius(v)-t)/(b-t)));
+	        	setCircleColor(v,ColorUtil.cloneMe(CPScreen.coLor(1+(int)((mid-2)*(getRadius(v)-t)/(b-t)))));
 	        }
 	    }
 	    return 1;
@@ -10322,7 +10407,7 @@ public class PackData{
 	    	return 0;
 	    for (int i=0;i<indx.size();i++) {
 	    	int v=indx.get(i);
-	    	kData[v].color=CPScreen.coLor(codes.get(i));
+	    	setCircleColor(v,ColorUtil.cloneMe(CPScreen.coLor(codes.get(i))));
 	    }
 	    return indx.size();
 	  } 
@@ -10405,8 +10490,8 @@ public class PackData{
 			  while(vlist.hasNext()) {
 				  int v=(Integer)vlist.next();
 				  if (v<=qackData.nodeCount);
-				  Color col=qackData.kData[v].color;
-				  kData[v].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
+				  Color col=qackData.getCircleColor(v);
+				  setCircleColor(v,ColorUtil.cloneMe(col));
 			  }
 			  return 1;
 		  }
@@ -10432,9 +10517,9 @@ public class PackData{
 			  while(vlist.hasNext()) {
 				  int v=(Integer)vlist.next();
 				  if (allc) 
-					  kData[v].color=new Color(cLr.getRed(),cLr.getGreen(),cLr.getBlue());
+					  setCircleColor(v,ColorUtil.cloneMe(cLr));
 				  else 
-					  kData[v].color=ColorUtil.spreadColor(count%16);
+					  setCircleColor(v,ColorUtil.spreadColor(count%16));
 				  count++;
 			  }
 			  colorIndx=count; // save for next visit
@@ -10446,7 +10531,7 @@ public class PackData{
 			  while(vlist.hasNext()) {
 				  int v=(int)vlist.next();
 				  int deg=getNum(v);
-				  kData[v].color=ColorUtil.colorByDegree(deg);
+				  setCircleColor(v,ColorUtil.colorByDegree(deg));
 				  count++;
 			  }
 			  return count;
@@ -10457,7 +10542,7 @@ public class PackData{
 			  while(vlist.hasNext()) {
 				  int v=(int)vlist.next();
 				  theta=getCenter(v).arg();
-				  kData[v].color=ColorUtil.ArgWheel(theta);
+				  setCircleColor(v,ColorUtil.ArgWheel(theta));
 				  count++;
 			  }
 			  return count;
@@ -10483,7 +10568,7 @@ public class PackData{
 		  Iterator<Integer> vlist=vertlist.iterator();
 		  while(vlist.hasNext()) {
 			  int v=(Integer)vlist.next();
-			  kData[v].color=CPScreen.coLor(coLor);
+			  setCircleColor(v,ColorUtil.cloneMe(CPScreen.coLor(coLor)));
 		  }
 		  return 1;
 	  }
@@ -10531,7 +10616,7 @@ public class PackData{
 					  sc=EuclMath.eucl_tri_incircle(z0,z1,z2);
 					  arg=sc.center.arg();
 				  }
-				  faces[f].color=ColorUtil.ArgWheel(arg);
+				  setFaceColor(f,ColorUtil.ArgWheel(arg));
 				  count++;
 			  }
 			  return count;
@@ -10594,8 +10679,8 @@ public class PackData{
 				  while(flist.hasNext()) {
 					  int f=(Integer)flist.next();
 					  if (f<=qackData.faceCount);
-					  Color col=qackData.faces[f].color;
-					  faces[f].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
+					  Color col=qackData.getFaceColor(f);
+					  setFaceColor(f,ColorUtil.cloneMe(col));
 					  count++;
 				  }
 				  return count;
@@ -10619,9 +10704,9 @@ public class PackData{
 			  while(flist.hasNext()) {
 				  f=(Integer)flist.next();
 				  if (c=='S') 
-					  faces[f].color=new Color(cLr.getRed(),cLr.getGreen(),cLr.getBlue()); // all use the same color
+					  setFaceColor(f,ColorUtil.cloneMe(cLr));
 				  else 
-					  faces[f].color=ColorUtil.spreadColor(count%16);
+					  setFaceColor(f,ColorUtil.spreadColor(count%16));
 				  count++;
 			  }
 			  colorIndx=count;
@@ -10640,7 +10725,7 @@ public class PackData{
 			  Iterator<Integer> flist=facelist.iterator();
 			  while(flist.hasNext()) {
 				  int f=flist.next();
-				  faces[f].color=outvec.remove(0);
+				  setFaceColor(f,ColorUtil.cloneMe(outvec.remove(0)));
 				  count++;
 			  }
 			  return count;
@@ -10668,7 +10753,7 @@ public class PackData{
 		  Iterator<Integer> flist=facelist.iterator();
 		  while(flist.hasNext()) {
 			  int f=(Integer)flist.next();
-			  faces[f].color=CPScreen.coLor(coLor);
+			  setFaceColor(f,ColorUtil.cloneMe(CPScreen.coLor(coLor)));
 			  count++;
 		  }
 		  return count;
@@ -10717,7 +10802,7 @@ public class PackData{
 			  while (tlist.hasNext()) {
 				  t=tlist.next();
 				  Tile tile=myTileData.myTiles[t];
-				  Color color=kData[tile.baryVert].color;
+				  Color color=getCircleColor(tile.baryVert);
 				  myTileData.myTiles[t].color=new Color(color.getRed(),color.getGreen(),color.getBlue());
 				  count++;
 			  }
@@ -10932,9 +11017,9 @@ public class PackData{
 				  accum+=values[vts[j]];
 			  accum /=num;
 			  if (accum>=min)
-				  faces[f].color=CPScreen.coLor(mid+1+(int)((mid-2)*(accum-min)/max));
+				  setFaceColor(f,ColorUtil.cloneMe(CPScreen.coLor(mid+1+(int)((mid-2)*(accum-min)/max))));
 			  else
-				  faces[f].color=CPScreen.getBGColor();
+				  setFaceColor(f,CPScreen.getBGColor());
 			  count++;
 		  }
 		  return count;
@@ -10971,11 +11056,11 @@ public class PackData{
 	      if (kmax<1.0001) kmax=1.0001; // allow for roundoff, eg, so identity gets pale colors 
 	      for (int f=1;f<=faceCount;f++) {
 	    	  if (dil[f]>0 && dil[f]<=maxdil)
-	    		  faces[f].color=CPScreen.coLor(mid+1+(int)((mid-2)*(dil[f]-1.0)/(maxdil-1.0)));
+	    		  setFaceColor(f,ColorUtil.cloneMe(CPScreen.coLor(mid+1+(int)((mid-2)*(dil[f]-1.0)/(maxdil-1.0)))));
 	    	  else if (dil[f]>0)
-	    		  faces[f].color=CPScreen.coLor(2); // over ceiling? dark blue.
+	    		  setFaceColor(f,ColorUtil.cloneMe(CPScreen.coLor(2))); // over ceiling? dark blue.
 	    	  else
-	    		  faces[f].color=CPScreen.coLor(1); // couldn't compute? black 
+	    		  setFaceColor(f,ColorUtil.cloneMe(CPScreen.coLor(1))); // couldn't compute? black 
 	      }
 	      return kmax;
 	  } 
@@ -11075,11 +11160,11 @@ public class PackData{
 	    	  realMax = (dil[ii]>realMax) ? dil[ii] : realMax;
 	      for (int f=1;f<=faceCount;f++) {
 	    	  if (dil[f]>0 && dil[f]<=maxdil)
-	    		  faces[f].color=CPScreen.coLor(mid+1+(int)((mid-2)*(dil[f]-1.0)/(maxdil-1.0)));
+	    		  setFaceColor(f,ColorUtil.cloneMe(CPScreen.coLor(mid+1+(int)((mid-2)*(dil[f]-1.0)/(maxdil-1.0)))));
 	    	  else if (dil[f]>0)
-	    		  faces[f].color=CPScreen.coLor(2); // over ceiling? dark blue.
+	    		  setFaceColor(f,ColorUtil.cloneMe(CPScreen.coLor(2))); // over ceiling? dark blue.
 	    	  else
-	    		  faces[f].color=CPScreen.coLor(1); // couldn't compute? black 
+	    		  setFaceColor(f,ColorUtil.cloneMe(CPScreen.coLor(1))); // couldn't compute? black 
 	      }
 	      return realMax;
 	  } 
@@ -11879,12 +11964,50 @@ public class PackData{
 
 	  public int hex_refine() {
 		  if (packDCEL!=null) {
+			  int origVertCount=packDCEL.vertCount;
 			  PackDCEL pdcel=CombDCEL.hexRefine(packDCEL);
 			  CombDCEL.d_FillInside(pdcel);
+			  attachDCEL(pdcel);
 			  
-			  // TODO: try to salvage and interpolate rad/cent data
+			  // try to salvage and interpolate rad/cent data
+			  for (int v=1;v<=pdcel.vertCount;v++) {
+				  pdcel.vertices[v].util=0;
+			  }
+			  // each new vertex between two originals
+			  for (int v=origVertCount+1;v<=pdcel.vertCount;v++) {
+				  
+				  // find first end
+				  int v1=0;
+				  Vertex vert=pdcel.vertices[v];
+				  HalfEdge he=vert.halfedge;
+				  do {
+					  int w=he.twin.origin.vertIndx;
+					  if (w<=origVertCount)
+						  v1=w;
+					  he=he.prev.twin;
+				  } while (v1==0 && he!=vert.halfedge);
+				  if (v1==0) // failed to find first end
+					  return 1;
+				  
+				  // find second
+				  int v2=0;
+				  he = vert.halfedge.prev.twin;
+				  do {
+					  int w=he.twin.origin.vertIndx;
+					  if (w<=origVertCount && w!=v1)
+						  v2=w;
+					  he=he.prev.twin;
+				  } while (v2==0 && he!=vert.halfedge.prev.twin);
+				  
+				  // success? interpolate TODO: does not account for
+				  //    different radii for the same vertex.
+				  if (v1!=0 && v2!=0) {
+					  setRadius(v,(getRadius(v1)+getRadius(v2))/2.0);
+					  setCenter(v,getCenter(v1).add(getCenter(v2)).divide(2.0));
+				  }
+			  }
 			  
-			  return attachDCEL(pdcel);
+			  return 1; 
 		  }
 		  
 		// else, old style
@@ -14965,7 +15088,7 @@ public class PackData{
 				if (faceDo && pF==null) { // draw the faces
 					if (!faceFlags.colorIsSet && 
 							(faceFlags.fill || faceFlags.colBorder)) 
-						faceFlags.setColor(faces[next_face].color);
+						faceFlags.setColor(getFaceColor(next_face));
 					if (faceFlags.label)
 						faceFlags.setLabel(Integer.toString(next_face));
 					cpScreen.drawFace(myCenters[0],myCenters[1],myCenters[2],
@@ -14974,7 +15097,7 @@ public class PackData{
 				if (circDo && pF==null) { // also draw the circles
 					if (!circFlags.colorIsSet && 
 							(circFlags.fill || circFlags.colBorder)) 
-						circFlags.setColor(kData[myVerts[2]].color);
+						circFlags.setColor(getCircleColor(myVerts[2]));
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(myVerts[2]));
 					cpScreen.drawCircle(myCenters[2],
@@ -14994,13 +15117,13 @@ public class PackData{
 					Color bcolor=null;
 					if (faceFlags.fill) {  
 						if (!faceFlags.colorIsSet) 
-							fcolor=faces[next_face].color;
+							fcolor=getFaceColor(next_face);
 						if (faceFlags.colBorder)
 							bcolor=fcolor;
 					}
 					if (faceFlags.draw) {
 						if (faceFlags.colBorder)
-							bcolor=faces[next_face].color;
+							bcolor=getFaceColor(next_face);
 						else 
 							bcolor=CPScreen.getFGColor();
 					}
@@ -15022,14 +15145,14 @@ public class PackData{
 					if (!circFlags.fill) { // not filled
 						if (circFlags.colBorder)
 							pF.postColorCircle(hes,myCenters[2],
-									getRadius(myVerts[2]),kData[myVerts[2]].color,tx);
+									getRadius(myVerts[2]),getCircleColor(myVerts[2]),tx);
 						else 
 							pF.postCircle(hes,myCenters[2],getRadius(myVerts[2]),tx);
 					} 
 					else {
 						Color ccOl=CPScreen.getFGColor();
 						if (!circFlags.colorIsSet)
-							ccOl = kData[myVerts[2]].color;
+							ccOl = getCircleColor(myVerts[2]);
 						if (circFlags.colBorder) {
 							pF.postFilledColorCircle(hes,myCenters[2],getRadius(myVerts[2]),ccOl,ccOl,tx);
 						}
@@ -15314,7 +15437,7 @@ public class PackData{
 				if (faceDo && pF==null) { // draw the faces
 					if (!faceFlags.colorIsSet && 
 							(faceFlags.fill || faceFlags.colBorder)) 
-						faceFlags.setColor(faces[next_face].color);
+						faceFlags.setColor(getFaceColor(next_face));
 					if (faceFlags.label)
 						faceFlags.setLabel(Integer.toString(next_face));
 					cpScreen.drawFace(myCenters[0],myCenters[1],myCenters[2],
@@ -15324,7 +15447,7 @@ public class PackData{
 				if (circDo && pF==null) { // also draw the circles
 					if (!circFlags.colorIsSet && 
 							(circFlags.fill || circFlags.colBorder)) 
-						circFlags.setColor(kData[myVerts[2]].color);
+						circFlags.setColor(getCircleColor(myVerts[2]));
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(myVerts[2]));
 					cpScreen.drawCircle(myCenters[2],
@@ -15345,13 +15468,13 @@ public class PackData{
 					Color bcolor=null;
 					if (faceFlags.fill) {  
 						if (!faceFlags.colorIsSet) 
-							fcolor=faces[next_face].color;
+							fcolor=getFaceColor(next_face);
 						if (faceFlags.colBorder)
 							bcolor=fcolor;
 					}
 					if (faceFlags.draw) {
 						if (faceFlags.colBorder)
-							bcolor=faces[next_face].color;
+							bcolor=getFaceColor(next_face);
 						else 
 							bcolor=CPScreen.getFGColor();
 					}
@@ -15373,14 +15496,14 @@ public class PackData{
 					if (!circFlags.fill) { // not filled
 						if (circFlags.colBorder)
 							pF.postColorCircle(hes,myCenters[2],getRadius(myVerts[2]),
-									kData[myVerts[2]].color,tx);
+									getCircleColor(myVerts[2]),tx);
 						else 
 							pF.postCircle(hes,myCenters[2],getRadius(myVerts[2]),tx);
 					} 
 					else {
 						Color ccOl=CPScreen.getFGColor();
 						if (!circFlags.colorIsSet)
-							ccOl = kData[myVerts[2]].color;
+							ccOl = getCircleColor(myVerts[2]);
 						if (circFlags.colBorder) {
 							pF.postFilledColorCircle(hes,myCenters[2],
 									getRadius(myVerts[2]),ccOl,ccOl,tx);
@@ -15583,8 +15706,8 @@ public class PackData{
 				try {
 					if ((nf=Translators.face_translate(this,vertexMap,f,q,putget).get(0))>0) {
 						if (face_colors) {
-							Color col=source_p.faces[f].color;
-							target_p.faces[nf].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
+							Color col=source_p.getFaceColor(f);
+							target_p.setFaceColor(nf,ColorUtil.cloneMe(col));
 						}
 						if (face_marks) target_p.faces[nf].mark=source_p.faces[f].mark;
 						count++;
@@ -15649,8 +15772,8 @@ public class PackData{
 					if (marks) {target_p.kData[tgt_v].mark=source_p.kData[src_v].mark;count++;}
 					if (centers) {target_p.setCenter(tgt_v,new Complex(source_p.getCenter(src_v)));count++;}
 					if (cir_colors) {
-						Color col=source_p.kData[src_v].color;
-						target_p.kData[tgt_v].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
+						Color col=source_p.getCircleColor(src_v);
+						target_p.setCircleColor(tgt_v,ColorUtil.cloneMe(col));
 					}
 					if (schwarzian) {
 						try {
@@ -16646,13 +16769,13 @@ public class PackData{
 			Complex c1=getCenter(faces[face].vert[1]);
 			Complex c2=getCenter(faces[face].vert[2]);
 			DispFlags dflags=new DispFlags("f");
-			dflags.setColor(faces[face].color);
+			dflags.setColor(getFaceColor(face));
 			cpScreen.drawFace(c0,c1,c2,null,null,null,dflags);   
 			// draw other packing
 		    c0=q.getCenter(q.faces[nface].vert[0]);
 		    c1=q.getCenter(q.faces[nface].vert[1]);
 		    c2=q.getCenter(q.faces[nface].vert[2]);
-			dflags.setColor(q.faces[nface].color);
+			dflags.setColor(q.getFaceColor(nface));
 		    q.cpScreen.drawFace(c0,c1,c2,null,null,null,dflags);
 		}
 		return 1;
@@ -16690,13 +16813,13 @@ public class PackData{
 				int nv=(Integer)nli.next();
 				if (nv>0 && nv<=q.nodeCount) {
 					if (!donep) { // draw once for this packing
-						dispFlags.setColor(kData[v].color);
+						dispFlags.setColor(getCircleColor(v));
 						cpScreen.drawCircle(getCenter(v),getRadius(v),dispFlags);
 					}
 					donep=true;
 				}
 				if (nv<=q.nodeCount) { // draw all the translates 
-					dispFlags.setColor(q.kData[nv].color);
+					dispFlags.setColor(q.getCircleColor(nv));
 					q.cpScreen.drawCircle(q.getCenter(nv),q.getRadius(nv),dispFlags);
 					count++;
 				}

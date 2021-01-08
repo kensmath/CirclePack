@@ -143,8 +143,8 @@ public class ShiftBranchPt extends GenBranchPt {
   	  	packData.poisonVerts=holdPoison;
   	  	
 		// default colors 
-		myPack.kData[1].color=new Color(200,0,0); // red
-		myPack.kData[2].color=new Color(0,200,0); // green
+		myPack.setCircleColor(1,new Color(200,0,0)); // red
+		myPack.setCircleColor(2,new Color(0,200,0)); // green
 		
 		// need to convert 'bdryLink' to local face numbers
 		borderLink=new FaceLink(myPack);

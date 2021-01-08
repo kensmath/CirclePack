@@ -847,11 +847,11 @@ public class ChapBranchPt extends GenBranchPt {
 		modifyPack.setCombinatorics();
 		
 		// set colors
-		modifyPack.kData[1].color=new Color(125,0,0); // light red
-		modifyPack.kData[sister2].color=new Color(255,0,0); // dark red
-		modifyPack.kData[chap[1]].color=new Color(0,200,0); // green
-		modifyPack.kData[chap[2]].color=new Color(0,0,200); // blue
-		modifyPack.kData[newBrSpot].color=new Color(205,205,205); // grey
+		modifyPack.setCircleColor(1,new Color(125,0,0)); // light red
+		modifyPack.setCircleColor(sister2,new Color(255,0,0)); // dark red
+		modifyPack.setCircleColor(chap[1],new Color(0,200,0)); // green
+		modifyPack.setCircleColor(chap[2],new Color(0,0,200)); // blue
+		modifyPack.setCircleColor(newBrSpot,new Color(205,205,205)); // grey
 				
 		// set overlaps
 		modifyPack.alloc_overlaps();

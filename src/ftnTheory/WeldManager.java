@@ -1,7 +1,5 @@
 package ftnTheory;
 
-import input.CPFileManager;
-
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Path2D;
 import java.awt.geom.PathIterator;
@@ -12,6 +10,15 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Vector;
 
+import allMains.CPBase;
+import allMains.CirclePack;
+import circlePack.PackControl;
+import complex.Complex;
+import exceptions.CombException;
+import exceptions.DataException;
+import exceptions.InOutException;
+import exceptions.ParserException;
+import input.CPFileManager;
 import komplex.EdgeSimple;
 import komplex.Triangulation;
 import listManip.EdgeLink;
@@ -26,16 +33,6 @@ import random.RandomTriangulation;
 import util.CmdStruct;
 import util.RandPaths;
 import util.StringUtil;
-import allMains.CPBase;
-import allMains.CirclePack;
-import circlePack.PackControl;
-
-import complex.Complex;
-
-import exceptions.CombException;
-import exceptions.DataException;
-import exceptions.InOutException;
-import exceptions.ParserException;
 
 /** 
  * Extender for managing "conformal welding" manipulations.
@@ -1176,7 +1173,7 @@ public class WeldManager extends PackExtender {
 			p.setBdryFlag(new_v,0);
 			p.kData[new_v].flower = newflower;
 			p.kData[new_v].plotFlag = 1;
-			p.kData[new_v].color=CPScreen.getFGColor();
+			p.setCircleColor(new_v,CPScreen.getFGColor());
 			p.setRadius(new_v,p.getRadius(v));
 
 			// fix w
@@ -1215,7 +1212,7 @@ public class WeldManager extends PackExtender {
 		p.kData[i].flower[2] = v;
 		p.kData[i].num = 2;
 		p.setBdryFlag(i,1);
-		p.kData[i].color=CPScreen.getFGColor();
+		p.setCircleColor(i,CPScreen.getFGColor());
 		p.setRadius(i,p.getRadius(v));
 		p.setCenter(i,new Complex(0.0));
 

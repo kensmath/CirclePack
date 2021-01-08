@@ -2516,7 +2516,8 @@ public class AffinePack extends PackExtender {
 
 			for (int v=1;v<=packData.nodeCount;v++) {
 				Color coLor=colIndices.get(v);
-				packData.kData[v].color=new Color(coLor.getRed(),coLor.getGreen(),coLor.getBlue());
+				packData.setCircleColor(v,new Color(
+						coLor.getRed(),coLor.getGreen(),coLor.getBlue()));
 			}
 			return 1;
 		}
@@ -3246,7 +3247,7 @@ public class AffinePack extends PackExtender {
 								z = tasp.getCenter(j);
 								rad = tasp.labels[j];
 								if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
-									dispFlags.setColor(packData.kData[v].color);
+									dispFlags.setColor(packData.getCircleColor(v));
 								if (dispFlags.label)
 									dispFlags.setLabel(Integer.toString(v));
 								packData.cpScreen.drawCircle(z, rad,dispFlags);
@@ -3264,7 +3265,7 @@ public class AffinePack extends PackExtender {
 								z = tasp.getCenter(j);
 								rad = tasp.labels[j];
 								if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
-									dispFlags.setColor(packData.kData[v].color);
+									dispFlags.setColor(packData.getCircleColor(v));
 								if (dispFlags.label)
 									dispFlags.setLabel(Integer.toString(v));
 								packData.cpScreen.drawCircle(z, rad,dispFlags);
@@ -3285,7 +3286,7 @@ public class AffinePack extends PackExtender {
 							int fnum = flst.next();
 							TriAspect tasp = aspects[fnum];
 							if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
-								dispFlags.setColor(packData.faces[fnum].color);
+								dispFlags.setColor(packData.getFaceColor(fnum));
 							if (dispFlags.label)
 								dispFlags.setLabel(Integer.toString(fnum));
 							packData.cpScreen.drawFace(tasp.getCenter(0),tasp.getCenter(1),tasp.getCenter(2),

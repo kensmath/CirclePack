@@ -1410,8 +1410,8 @@ public class ConformalTiling extends PackExtender {
 						if ((df.fill || df.colBorder) && df.getColor()==null) {
 							if (tile.color!=null)
 								df.setColor(CPScreen.cloneColor(tile.color));
-							else if (canonicalPack.kData[tile.baryVert].color!=null)
-								df.setColor(CPScreen.cloneColor(canonicalPack.kData[tile.baryVert].color));
+							else if (canonicalPack.getCircleColor(tile.baryVert)!=null)
+								df.setColor(CPScreen.cloneColor(canonicalPack.getCircleColor(tile.baryVert)));
 							count += cpCommand(packData,"disp -s"+df.reconstitute()+" "+flwr.toString());
 							df.setColor(null);
 						}

@@ -278,11 +278,11 @@ public class RiemHilbert extends PackExtender {
 		int num=restCurves.size();
 		while (blist.hasNext()) {
 			w=(Integer)blist.next();
-			packData.kData[w].color=ColorUtil.spreadColor(count%16);
+			packData.setCircleColor(w,ColorUtil.spreadColor(count%16));
 			if (count>=num) // need to clone to get new 'RH_curve's
 				restCurves.add(restCurves.get(count%num).clone());
 			vertCurve.add(new EdgeSimple(w,count));
-			Color col=packData.kData[w].color;
+			Color col=packData.getCircleColor(w);
 			restCurves.get(count).color=new Color(col.getRed(),col.getGreen(),col.getBlue());
 			count++;
 		}
@@ -387,7 +387,7 @@ public class RiemHilbert extends PackExtender {
 						packData.getRadius(v), dflags);
 				
 				// change color for the bdry
-				dflags.setColor(packData.kData[v].color);
+				dflags.setColor(packData.getCircleColor(v));
 				dflags.fill=false;
 				dflags.draw=true;
 				dflags.colBorder=true;

@@ -187,8 +187,7 @@ public class CombDCEL {
 		while (eit.hasNext()) {
 			pdcel.edges[++tick]=eit.next();
 		}
-		pdcel.euler = 0;
-			
+
 		return pdcel;
 	}
 	
@@ -1582,7 +1581,6 @@ public class CombDCEL {
 		//                  should be done!!
 		// ==================================================================
 		pdcel.faceCount=ftick;
-		pdcel.euler=pdcel.vertCount -etick/2 + ftick;
 		if (newRedChain!=null)
 			pdcel.redChain=newRedChain;
 	}

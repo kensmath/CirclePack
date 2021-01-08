@@ -324,7 +324,7 @@ public class DisplayParser {
 						
 						// set up color (there's only one)
 						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.kData[v].color);
+							dispFlags.setColor(p.getCircleColor(v));
 
 						// label?
 						if (dispFlags.label) 
@@ -377,7 +377,7 @@ public class DisplayParser {
 
 					// color? label?
 					if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
-						dispFlags.setColor(p.kData[v].color);
+						dispFlags.setColor(p.getCircleColor(v));
 					if (dispFlags.label)
 						dispFlags.setLabel(Integer.toString(v));
 
@@ -419,7 +419,7 @@ public class DisplayParser {
 						CircleSimple sC=CommonMath.tri_incircle(pts[0],pts[1],pts[2],p.hes);
 
 						if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
-							dispFlags.setColor(p.faces[f].color);
+							dispFlags.setColor(p.getFaceColor(f));
 						if (dispFlags.label)
 							dispFlags.setLabel(Integer.toString(f));
 						cpScreen.drawCircle(sC.center,sC.rad, dispFlags);
@@ -447,7 +447,7 @@ public class DisplayParser {
 						}
 						
 						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.kData[v].color);
+							dispFlags.setColor(p.getCircleColor(v));
 						if (dispFlags.label)
 							dispFlags.setLabel(Integer.toString(v));
 						
@@ -553,7 +553,7 @@ public class DisplayParser {
 						if (edge.v!=0 && p.layByFaces(edge.v,(g=edge.w))) {
 							int []verts=p.faces[g].vert;
 							if (!dispFlags.colorIsSet)
-								dispFlags.setColor(p.faces[g].color);
+								dispFlags.setColor(p.getFaceColor(g));
 							if (dispFlags.label)
 								dispFlags.setLabel(Integer.toString(g));
 							cpScreen.drawFace(p.getCenter(verts[0]),p.getCenter(verts[1]),p.getCenter(verts[2]),
@@ -578,7 +578,7 @@ public class DisplayParser {
 								p.getCenter(vts[0]), p.getCenter(vts[1]),
 								p.getCenter(vts[2]));
 						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.faces[f].color);
+							dispFlags.setColor(p.getFaceColor(f));
 						if (dispFlags.label)
 							dispFlags.setLabel(Integer.toString(f));
 						cpScreen.drawFace(dtri.TangPts[0],dtri.TangPts[1], dtri.TangPts[2],
@@ -618,7 +618,7 @@ public class DisplayParser {
 						CircleSimple sc=CommonMath.tri_incircle(pts[0],pts[1],pts[2],p.hes);
 						
 						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.faces[f].color);
+							dispFlags.setColor(p.getFaceColor(f));
 						cpScreen.drawTrinket(trinket,sc.center,dispFlags);
 						count++;
 					}
@@ -680,14 +680,20 @@ public class DisplayParser {
 					f = (Integer) flist.next();
 					Complex []pts=p.corners_face(f, amb);
 					if (!dispFlags.colorIsSet)
-						dispFlags.setColor(p.faces[f].color);
+						dispFlags.setColor(p.getFaceColor(f));
 					if (dispFlags.label)
 						dispFlags.setLabel(Integer.toString(f));
 					cpScreen.drawFace(pts[0],pts[1], pts[2], null, null, null, dispFlags);
 					if (circleToo) { // also, color circle this face is responsible for
-						int cirIndx=p.faces[f].vert[(p.faces[f].indexFlag+2)%3];
+						int cirIndx;
+						if (p.packDCEL!=null) {
+							dcel.Face face=p.packDCEL.faces[f];
+							cirIndx=face.edge.next.next.origin.vertIndx;
+						}
+						else
+							cirIndx=p.faces[f].vert[(p.faces[f].indexFlag+2)%3];
 						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.kData[cirIndx].color);
+							dispFlags.setColor(p.getCircleColor(cirIndx));
 						// suppress label
 						dispFlags.setLabel(null);
 						
@@ -714,7 +720,7 @@ public class DisplayParser {
 
 					// some set up
 					if (!dispFlags.colorIsSet)
-						dispFlags.setColor(p.kData[v].color);
+						dispFlags.setColor(p.getCircleColor(v));
 					if (dispFlags.label)
 						dispFlags.setLabel(Integer.toString(v));
 
@@ -898,7 +904,7 @@ public class DisplayParser {
 					v = (Integer) vit.next();
 					z = p.getCenter(v);
 					if (!dispFlags.colorIsSet)
-						dispFlags.setColor(p.kData[v].color);
+						dispFlags.setColor(p.getCircleColor(v));
 					cpScreen.drawTrinket(trinket, z,dispFlags);
 					count++;
 				}

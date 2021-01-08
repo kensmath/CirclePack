@@ -4,13 +4,11 @@ import JNI.JNIinit;
 import allMains.CirclePack;
 import exceptions.DataException;
 import exceptions.PackingException;
-import geometry.EuclMath;
 import input.CommandStrParser;
 import komplex.KData;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.RData;
-import util.UtilPacket;
 
 /**
  * First attempt to modify methods to accommodate DCEL data. Begin
@@ -31,6 +29,10 @@ public class d_EuclPacker extends RePacker {
 		status=load(); 
 		if (status!=LOADED) 
 			throw new PackingException("'d_EuclPacker' failed to load");
+		totalPasses=0;
+		localPasses=0;
+		R1=new double[p.nodeCount+1];
+		R2=new double[p.nodeCount+1];
     }
   
     /**
@@ -60,7 +62,8 @@ public class d_EuclPacker extends RePacker {
     }
     
     /**
-     * Store any newly computed radii; get from a 'triData'
+     * Store any newly computed radii (from 'triData') and
+     * recompute curvatures.
      */
     public void reapResults() {
     	for (int i=0;i<aimnum;i++) {
@@ -69,6 +72,7 @@ public class d_EuclPacker extends RePacker {
     		int vindx=p.vData[v].myIndices[0];
     		p.setRadius(v,pdcel.triData[findx].radii[vindx]);
     	}
+    	p.fillcurves();
     }
         
     public int reStartRiffle(int passes) {    // continue the packing computation
@@ -113,8 +117,6 @@ public class d_EuclPacker extends RePacker {
        bad steps. Anglesum calculations are in-line. */
     
     public int startRiffle() throws PackingException { // initiate packing computation
-
-	UtilPacket utilPacket=new UtilPacket();
 	
 	if (status!=LOADED) throw new PackingException();
 	
@@ -130,53 +132,32 @@ public class d_EuclPacker extends RePacker {
 	sct = 1;                              // Type 1 count 
 	fct = 2;                              // Type 2 minimum count 
 	
+	R0=new double[p.nodeCount+1];
+    for (int i=1;i<=p.nodeCount;i++) 
+    	R0[i] = getRadius(i);
+	
 	// do one iteration to get started 
 	accumErr2 = 0;                           
 	try {
 		double m1;
 	    for (int j=0;j<aimnum;j++) {
 	    	int v = index[j];
-	    	double faim = p.getAim(v);         // get target sum 
-	    	double r = rdata[v].rad;            // get present label
+	    	double faim = p.vData[v].aim;         // get target sum 
+	    	double r = getRadius(v);            // get present label
+
 	    	// compute anglesum inline (using local data)
-	    	double fbest=0.0;
-	    	int j2=kdata[v].flower[0];
-	    	double r2=rdata[j2].rad;
-	    	if (!p.overlapStatus) {
-	    		double m2 = r2/(r+r2);
-	    		for (int n=1;n<=kdata[v].num;n++) {
-	    			m1 = m2;
-	    			r2 = rdata[kdata[v].flower[n]].rad;
-	    			m2 = r2/(r+r2);
-	    			fbest += Math.acos(1-2*m1*m2);
-	    		}
-	    	}
-	    	else  {
-	    		double o2=kdata[v].overlaps[0];
-			    for (int n=1;n<=kdata[v].num;n++) {
-			    	int j1=j2;
-			    	double r1=r2;
-			    	double o1=o2;
-			    	j2=kdata[v].flower[n];
-			    	r2=rdata[j2].rad;
-			    	o2=kdata[v].overlaps[n];
-			    	double ovlp=kdata[j1].overlaps[p.nghb(j1,j2)];
-			    	// note: we don't check for errors in utilPacket
-			    	EuclMath.e_cos_overlap(r,r1,r2,ovlp,o2,o1,utilPacket);
-			    	fbest += Math.acos(utilPacket.value);
-			    }
-	    	}
+	    	double fbest=compVertCurv(v,r);
 
 	    	// use the model to predict the next value 
-	    	int N = 2*kdata[v].num;
+	    	int N = 2*p.vData[v].num;
 	    	double del = Math.sin(faim/N);
 	    	double bet = Math.sin(fbest/N);
-	    	r2 = r*bet*(1-del)/(del*(1-bet));
+	    	double r2 = r*bet*(1-del)/(del*(1-bet));
 	    	// store as new radius label 
 	    	if (r2<0) 
 	    		throw new PackingException();
-	    	rdata[v].rad = r2;
-	    	rdata[v].curv = fbest;  // store new angle sum
+	    	setRadius(v,r2);
+	    	p.vData[v].curv = fbest;  // store new angle sum
 	    	fbest -= faim;
 	    	accumErr2 += fbest*fbest;   // accum abs error 
 	    }
@@ -199,8 +180,6 @@ public class d_EuclPacker extends RePacker {
 	double fbest;
 	double faim;
 	double c1;
-
-	UtilPacket utilPacket=new UtilPacket();
 	
 	if (status!=RIFFLE) throw new PackingException();
 	localPasses=0;
@@ -210,7 +189,7 @@ public class d_EuclPacker extends RePacker {
 	while ((accumErr2 >ttoler && localPasses<passLimit)) {
 	    
 	    for (int i=1;i<=p.nodeCount;i++) 
-	    	R1[i] = rdata[i].rad;
+	    	R1[i] = getRadius(i);
 	    
 	    int numBadCuts = 0;
 	    double factor=0.0;
@@ -219,48 +198,22 @@ public class d_EuclPacker extends RePacker {
 	    	for (int j=0;j<aimnum;j++) {
 	  		  
 	            int v = index[j];   // point to active node
-	            faim = p.getAim(v); // get target sum 
-	            double ra = rdata[v].rad;    // get present label
+	            faim = p.vData[v].aim; // get target sum 
+	            double ra = getRadius(v);    // get present label
 	            
 		    	// compute anglesum inline (using local data)
-		    	fbest=0.0;
-		    	int j2=kdata[v].flower[0];
-		    	double r2=rdata[j2].rad;
-		    	if (!p.overlapStatus) {
-		    		double m2 = r2/(ra+r2);
-		    		for (int n=1;n<=kdata[v].num;n++) {
-		    			double m1 = m2;
-		    			r2 = rdata[kdata[v].flower[n]].rad;
-		    			m2 = r2/(ra+r2);
-		    			fbest += Math.acos(1-2*m1*m2);
-		    		}
-		    	}
-		    	else  {
-		    		double o2=kdata[v].overlaps[0];
-				    for (int n=1;n<=kdata[v].num;n++) {
-				    	int j1=j2;
-				    	double r1=r2;
-				    	double o1=o2;
-				    	j2=kdata[v].flower[n];
-				    	r2=rdata[j2].rad;
-				    	o2=kdata[v].overlaps[n];
-				    	double ovlp=kdata[j1].overlaps[p.nghb(j1,j2)];
-				    	// note: we don't check for errors in utilPacket
-				    	EuclMath.e_cos_overlap(ra,r1,r2,ovlp,o2,o1,utilPacket);
-				    	fbest += Math.acos(utilPacket.value);
-				    }
-		    	}
+		    	fbest=compVertCurv(v,ra);
 	            
 	            // use the model to predict the next value 
-	            int N = 2*kdata[v].num;
+	            int N = 2*p.vData[v].num;
 	            double del = Math.sin(faim/N);
 	            double bet = Math.sin(fbest/N);
-	            r2 = ra*bet*(1-del)/(del*(1-bet));
+	            double r2 = ra*bet*(1-del)/(del*(1-bet));
 	            // store as new radius label 
 	            if (r2<0) 
 	            	throw new PackingException();
-	            rdata[v].rad = r2;
-	            rdata[v].curv = fbest;       // store new angle sum
+	            setRadius(v,r2);
+	            p.vData[v].curv = fbest;       // store new angle sum
 	            fbest -= faim;
 	            c1 += fbest*fbest;   // accum abs error 
 	    	}
@@ -291,20 +244,19 @@ public class d_EuclPacker extends RePacker {
 	    
 	    // ================= superstep calculation ==================== 
 	    
-	    // save values 
+	    // new values 
 	    for (int i=1;i<=p.nodeCount;i++) 
-	    	R2[i] = rdata[i].rad;
+	    	R2[i] = getRadius(i);
 	    
 	    // find maximum step one can safely take
 	    double lmax = 10000;
 	    double fact0=0.0;
 	    for (int j=0;j<aimnum;j++) {       // find max step 
 		int v = index[j];
-		double rb = rdata[v].rad;
-		double rat = rb - R1[v];
+		double rat = R2[v] - R1[v];
 		double tr=0.0;
 		if (rat < 0)
-		    lmax = (lmax < (tr= (-rb/rat))) ? lmax : tr; // to keep R>0
+		    lmax = (lmax < (tr= (-R2[v]/rat))) ? lmax : tr; // to keep R>0
 	    }
 	    lmax = lmax/2;
 	    
@@ -331,9 +283,10 @@ public class d_EuclPacker extends RePacker {
 	    // interpolate new labels
 	    for (int j=0;j<aimnum;j++) {
 	    	int v = index[j];
-	    	rdata[v].rad += lambda*(rdata[v].rad-R1[v]);
-	    	if(rdata[v].rad<0)
+	    	double nwr=R2[v]+lambda*(R2[v]-R1[v]);
+	    	if(nwr<0)
 	    		throw new PackingException("negative rad at "+v);
+	    	setRadius(v,nwr);
 	    }
 	    sct++;
 	    fact0 = factor;
@@ -343,53 +296,27 @@ public class d_EuclPacker extends RePacker {
 	    // do step/check superstep 
 	    accumErr2 = 0;                             
 	    for (int j=0;j<aimnum;j++) {
-			fbest = 0.0;
 			int v = index[j];
 
-	        faim = p.getAim(v); // get target sum 
-	        double rc = rdata[v].rad;    // get present label
+	        faim = p.vData[v].aim; // get target sum 
+	        double rc = getRadius(v);    // get present label
 	        
 	    	// compute anglesum inline (using local data)
-	    	int j2=kdata[v].flower[0];
-	    	double r2=rdata[j2].rad;
-	    	if (!p.overlapStatus) {
-	    		double m2 = r2/(rc+r2);
-	    		for (int n=1;n<=kdata[v].num;n++) {
-	    			double m1 = m2;
-	    			r2 = rdata[kdata[v].flower[n]].rad;
-	    			m2 = r2/(rc+r2);
-	    			fbest += Math.acos(1-2*m1*m2);
-	    		}
-	    	}
-	    	else  {
-	    		double o2=kdata[v].overlaps[0];
-			    for (int n=1;n<=kdata[v].num;n++) {
-			    	int j1=j2;
-			    	double r1=r2;
-			    	double o1=o2;
-			    	j2=kdata[v].flower[n];
-			    	r2=rdata[j2].rad;
-			    	o2=kdata[v].overlaps[n];
-			    	double ovlp=kdata[j1].overlaps[p.nghb(j1,j2)];
-			    	// note: we don't check for errors in utilPacket
-			    	EuclMath.e_cos_overlap(rc,r1,r2,ovlp,o2,o1,utilPacket);
-			    	fbest += Math.acos(utilPacket.value);
-			    }
-	    	}
-	        
+	        fbest=compVertCurv(v,rc);
+
 	        // use the model to predict the next value
-	        int N = 2*kdata[v].num;
+	        int N = 2*p.vData[v].num;
 			// set up for model 
 
 			double del = Math.sin(faim/N);
 			double bet = Math.sin(fbest/N);
 			
-	        r2 = rc*bet*(1-del)/(del*(1-bet));
+	        double r2 = rc*bet*(1-del)/(del*(1-bet));
 	        // store as new radius label 
 	        if (r2<0) 
 	        	throw new PackingException();
-	        rdata[v].rad = r2;
-	        rdata[v].curv = fbest;       /* store new angle sum */
+	        setRadius(v,r2);
+	        p.vData[v].curv = fbest;       /* store new angle sum */
 	        fbest -= faim;
 	        accumErr2 += fbest*fbest;   /* accum abs error */
 	    }
@@ -409,7 +336,7 @@ public class d_EuclPacker extends RePacker {
 	    	m = 1;
 	    	sct =0;
 	    	for (int i=1;i<=p.nodeCount;i++) 
-	    		rdata[i].rad  = R2[i];
+	    		setRadius(i,R2[i]);
 	    	accumErr2 = c1;
 	    	if (key==2) key = 1;
 	    }
@@ -519,8 +446,6 @@ public class d_EuclPacker extends RePacker {
   	      		return lower;
   	      	}
     	}
-  	    else 
-  	    	return r;
   	    
   	    // iterative secand method
   	    for (int n=1;n<=N;n++) {

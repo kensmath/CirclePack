@@ -13,6 +13,7 @@ import packing.PackData;
 import packing.PackExtender;
 import panels.CPScreen;
 import util.CmdStruct;
+import util.ColorUtil;
 import util.StringUtil;
 
 import complex.Complex;
@@ -102,7 +103,7 @@ public class Percolation extends PackExtender {
 
 		// initialize colors
 		for (int v=1;v<=packData.nodeCount;v++) {
-			packData.kData[v].color=CPScreen.getFGColor();
+			packData.setCircleColor(v,ColorUtil.cloneMe(CPScreen.getFGColor()));
 		}
 		
 		bdryArcs=null;
@@ -274,7 +275,7 @@ public class Percolation extends PackExtender {
 			completed=0;
 			for (int v=1;v<=packData.nodeCount;v++) {
 				if (!packData.isBdry(v))
-					packData.kData[v].color=CPScreen.getFGColor();
+					packData.setCircleColor(v,CPScreen.getFGColor());
 			}
 			
 			// see if corners are specified
@@ -479,7 +480,7 @@ public class Percolation extends PackExtender {
 			completed=0;
 			for (int v=1;v<=packData.nodeCount;v++) {
 				if (!packData.isBdry(v)) 
-					packData.kData[v].color=CPScreen.getFGColor();
+					packData.setCircleColor(v,CPScreen.getFGColor());
 			}
 			openVerts=new Vector<Integer>(intV.size());
 			Iterator<Integer> iV=intV.iterator();
@@ -555,13 +556,13 @@ public class Percolation extends PackExtender {
 			}
 			
 			int myColor = ans;
-			packData.kData[nextv].color=CPScreen.coLor(ans);
+			packData.setCircleColor(nextv,CPScreen.coLor(ans));
 
 			// look to see if vert can be infected by a petal
 			int infectedPetal = 0;
 			for (int j = 0; (j < packData.getNum(nextv) && infectedPetal == 0); j++) {
 				int k = packData.kData[nextv].flower[j];
-				int m = CPScreen.col_to_table(packData.kData[k].color);
+				int m = CPScreen.col_to_table(packData.getCircleColor(k));
 				// is this petal infected by same color
 				if ((myColor == 244 && m > 0 && m < 100)
 						|| (myColor == 243 && m > 100 && m < 200))
@@ -588,7 +589,7 @@ public class Percolation extends PackExtender {
 		if (areWeDone(v)!=0)
 			return completed;
 		int count=0;
-		int m=CPScreen.col_to_table(packData.kData[v].color);
+		int m=CPScreen.col_to_table(packData.getCircleColor(v));
 		int lookfor=0;
 		if (m>0 && m <100)
 			lookfor=244;
@@ -597,8 +598,8 @@ public class Percolation extends PackExtender {
 
 		for (int j=0;(j<packData.getNum(v) && completed==0);j++) {
 			int k=packData.kData[v].flower[j];
-			if (packData.kData[k].color==CPScreen.coLor(lookfor)) {
-				packData.kData[k].color=CPScreen.coLor(m);
+			if (ColorUtil.equalColors(packData.getCircleColor(k),CPScreen.coLor(lookfor))) { 
+				packData.setCircleColor(k,CPScreen.coLor(m));
 				count +=spreadInfection(k);
 			}
 		}
@@ -611,7 +612,7 @@ public class Percolation extends PackExtender {
 	 * @return 'completed' if yes; 0 if no.
 	 */
 	public int areWeDone(int v) {
-		int mark=CPScreen.col_to_table(packData.kData[v].color);
+		int mark=CPScreen.col_to_table(packData.getCircleColor(v));
 		int opposite=0;
 		switch (mark) {
 		case 1: {opposite=2;break;}
@@ -621,7 +622,7 @@ public class Percolation extends PackExtender {
 		}
 		for (int j=0;j<packData.getNum(v);j++) {
 			int k=packData.kData[v].flower[j];
-			if (CPScreen.col_to_table(packData.kData[k].color)==opposite) {
+			if (CPScreen.col_to_table(packData.getCircleColor(k))==opposite) {
 				completed=mark;
 				return completed;
 			}
@@ -665,22 +666,22 @@ public class Percolation extends PackExtender {
 		Iterator<Integer> arc=bdryArcs.get(0).iterator();
 		while (arc.hasNext()) {
 			int w=arc.next();
-			packData.kData[w].color=CPScreen.coLor(1);
+			packData.setCircleColor(w,CPScreen.coLor(1));
 		}
 		arc=bdryArcs.get(1).iterator();
 		while (arc.hasNext()) {
 			int w=arc.next();
-			packData.kData[w].color=CPScreen.coLor(199);
+			packData.setCircleColor(w,CPScreen.coLor(199));
 		}
 		arc=bdryArcs.get(2).iterator();
 		while (arc.hasNext()) {
 			int w=arc.next();
-			packData.kData[w].color=CPScreen.coLor(2);
+			packData.setCircleColor(w,CPScreen.coLor(2));
 		}
 		arc=bdryArcs.get(3).iterator();
 		while (arc.hasNext()) {
 			int w=arc.next();
-			packData.kData[w].color=CPScreen.coLor(198);
+			packData.setCircleColor(w,CPScreen.coLor(198));
 		}
 		
 		// set packing 'vlist'
@@ -699,19 +700,19 @@ public class Percolation extends PackExtender {
 		int mySpot=v;
 
 		// is initial vertex already pinned?
-		if (packData.kData[mySpot].color!=CPScreen.FG_Color)
+		if (!ColorUtil.equalColors(packData.getCircleColor(mySpot),CPScreen.FG_Color))
 			return 0;
 		
 		// run the walk; inherit the mark of first hit
-		while (packData.kData[mySpot].color==CPScreen.FG_Color) {
+		while (ColorUtil.equalColors(packData.getCircleColor(mySpot),CPScreen.FG_Color)) {
 			double x=rand.nextDouble();
 			mySpot=packData.kData[mySpot].flower[petalTrans[mySpot].whichPetal(x)];
 		}
-		int	hitColor=CPScreen.col_to_table(packData.kData[mySpot].color);
+		int	hitColor=CPScreen.col_to_table(packData.getCircleColor(mySpot));
 		
 		// hit fresh vert? use same color
 		if (hitColor>200) { 
-			packData.kData[v].color=CPScreen.coLor(hitColor);
+			packData.setCircleColor(v,CPScreen.coLor(hitColor));
 			return hitColor;
 		}
 			
@@ -736,7 +737,7 @@ public class Percolation extends PackExtender {
 		}
 		} // end of switch
 
-		packData.kData[v].color=CPScreen.coLor(myColor);
+		packData.setCircleColor(v,ColorUtil.cloneMe(CPScreen.coLor(myColor)));
 		return myColor;
 	}
 	

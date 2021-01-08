@@ -27,6 +27,7 @@ import packing.PackData;
 import packing.RData;
 import panels.PathManager;
 import util.BuildPacket;
+import util.ColorUtil;
 import util.StringUtil;
 
 /**
@@ -571,8 +572,8 @@ public class CookieMonster {
 				newP.setBdryFlag(v,0);
 			else 
 				newP.setBdryFlag(v,1);
-			Color col=p.kData[V].color;
-			newP.kData[v].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
+			Color col=p.getCircleColor(V);
+			newP.setCircleColor(v,ColorUtil.cloneMe(col));
 			newP.kData[v].mark=p.kData[V].mark;
 			newP.kData[v].invDist=null;
 			
@@ -761,7 +762,7 @@ public class CookieMonster {
 				nK_ptr[indx].flower = new int[nK_ptr[indx].num + 1];
 				if (monsterPackData.overlapStatus)
 					nK_ptr[indx].invDist = new double[nK_ptr[indx].num + 1];
-				Color col=monsterPackData.kData[vert].color;
+				Color col=monsterPackData.getCircleColor(vert);
 				nK_ptr[indx].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
 				nR_ptr[indx].rad = monsterPackData.getRadius(vert);
 				nR_ptr[indx].center = new Complex(monsterPackData.getCenter(vert));

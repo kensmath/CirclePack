@@ -778,10 +778,18 @@ public class CPScreen extends JPanel implements	MouseListener {
 		return fillOpacity;
 	}
 	
+	/**
+	 * foreground color
+	 * @return new Color
+	 */
 	public static Color getFGColor() {
 		return new Color(FG_Color.getRed(),FG_Color.getGreen(),FG_Color.getBlue());
 	}
 
+	/**
+	 * background color
+	 * @return new Color
+	 */
 	public static Color getBGColor() {
 		return new Color(BG_Color.getRed(),BG_Color.getGreen(),BG_Color.getBlue());
 	}

@@ -477,7 +477,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 			  return 1;
 		  }
 		  if (code==dataCode.VERT_COLOR) {
-			  Color col=p.kData[v].color;
+			  Color col=p.getCircleColor(v);
 			  fp.write(col.getRed()+" "+col.getGreen()+" "+col.getBlue()+" ");
 			  return 1;
 		  }
@@ -563,7 +563,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 			  return 1;
 		  }
 		  if (code==dataCode.FACE_COLOR) { // color 
-			  Color col=p.faces[f].color;
+			  Color col=p.getFaceColor(f);
 			  fp.write(col.getRed()+" "+col.getGreen()+" "+col.getBlue()+" ");
 			  return 1;
 		  }

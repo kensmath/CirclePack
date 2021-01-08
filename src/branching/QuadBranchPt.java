@@ -151,10 +151,10 @@ public class QuadBranchPt extends GenBranchPt {
   	  	cosOver=1.0;
 		
 		// default colors: right side face ('singFace_g') is red/green/blue 
-		myPack.kData[1].color=new Color(200,0,0); // red
-		myPack.kData[2].color=new Color(0,0,240); // blue
-		myPack.kData[3].color=new Color(0,200,0); // green
-		myPack.kData[4].color=new Color(180,180,240); // purple
+		myPack.setCircleColor(1,new Color(200,0,0)); // red
+		myPack.setCircleColor(2,new Color(0,0,240)); // blue
+		myPack.setCircleColor(3,new Color(0,200,0)); // green
+		myPack.setCircleColor(4,new Color(180,180,240)); // purple
 				
 		// need to convert 'bdryLink' to local face numbers
 		borderLink=new FaceLink(myPack);

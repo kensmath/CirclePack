@@ -517,7 +517,7 @@ public class d_HypPacker extends RePacker {
 	}
 	
 	/**
-     * Original repack algorithm implemented in Java. Used, e.g., with 
+     * Original repack algorithm. Used, e.g., with 
      * overlap packings, where the more sophisticated Java routines and
      * C methods of Orick may fail.
      * This manipulates radii in 'pdcel.triData' structure, so user must 

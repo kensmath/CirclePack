@@ -19,6 +19,7 @@ import listManip.EdgeLink;
 import listManip.NodeLink;
 import panels.CPScreen;
 import tiling.TileData;
+import util.ColorUtil;
 
 /**
  * For creation of packings from scratch, such as seeds, Cayley graphs
@@ -905,9 +906,9 @@ public class PackCreation {
 			int i = util[p.faces[j].vert[0]];
 			int k = util[p.faces[j].vert[1]];
 			if ((i == 1 && k == 2) || (i == 2 && k == 3) || (i == 3 && k == 1))
-				p.faces[j].color=CPScreen.getFGColor();
+				p.setFaceColor(j,CPScreen.getFGColor());
 			else
-				p.faces[j].color=CPScreen.getBGColor();
+				p.setFaceColor(j,CPScreen.getBGColor());
 		}
 
 		return p;
@@ -1377,13 +1378,13 @@ public class PackCreation {
 		myPacking.kData[2].mark=2;
 		myPacking.kData[4].mark=2;
 		myPacking.kData[6].mark=2;
-		myPacking.kData[1].color=CPScreen.coLor(190);
-		myPacking.kData[2].color=CPScreen.coLor(10);
-		myPacking.kData[4].color=CPScreen.coLor(10);
-		myPacking.kData[6].color=CPScreen.coLor(10);
-		myPacking.kData[3].color=CPScreen.coLor(100);
-		myPacking.kData[5].color=CPScreen.coLor(100);
-		myPacking.kData[7].color=CPScreen.coLor(100);
+		myPacking.setCircleColor(1,ColorUtil.cloneMe(CPScreen.coLor(190)));
+		myPacking.setCircleColor(2,ColorUtil.cloneMe(CPScreen.coLor(10)));
+		myPacking.setCircleColor(4,ColorUtil.cloneMe(CPScreen.coLor(10)));
+		myPacking.setCircleColor(6,ColorUtil.cloneMe(CPScreen.coLor(10)));
+		myPacking.setCircleColor(3,ColorUtil.cloneMe(CPScreen.coLor(100)));
+		myPacking.setCircleColor(5,ColorUtil.cloneMe(CPScreen.coLor(100)));
+		myPacking.setCircleColor(7,ColorUtil.cloneMe(CPScreen.coLor(100)));
 		
 		// new faces added by adjoining this hex face
 		PackData hexFace=PackCreation.seed(6,-1);
@@ -1477,17 +1478,17 @@ public class PackCreation {
 			
 			// mark center 1, red; nodes 2, blue
 			myPacking.kData[myPacking.vertexMap.findW(1)].mark=1;
-			myPacking.kData[myPacking.vertexMap.findW(1)].color=CPScreen.coLor(190); // red
+			myPacking.setCircleColor(myPacking.vertexMap.findW(1),ColorUtil.cloneMe(CPScreen.coLor(190))); // red
 			myPacking.kData[myPacking.vertexMap.findW(2)].mark=2;
-			myPacking.kData[myPacking.vertexMap.findW(2)].color=CPScreen.coLor(10); // blue
+			myPacking.setCircleColor(myPacking.vertexMap.findW(2),ColorUtil.cloneMe(CPScreen.coLor(10))); // blue
 			myPacking.kData[myPacking.vertexMap.findW(4)].mark=2;
-			myPacking.kData[myPacking.vertexMap.findW(4)].color=CPScreen.coLor(10); // blue
+			myPacking.setCircleColor(myPacking.vertexMap.findW(4),ColorUtil.cloneMe(CPScreen.coLor(10))); // blue
 			myPacking.kData[myPacking.vertexMap.findW(6)].mark=2;
-			myPacking.kData[myPacking.vertexMap.findW(6)].color=CPScreen.coLor(10); // blue
+			myPacking.setCircleColor(myPacking.vertexMap.findW(6),ColorUtil.cloneMe(CPScreen.coLor(10))); // blue
 			// others white
-			myPacking.kData[myPacking.vertexMap.findW(3)].color=CPScreen.coLor(100); 
-			myPacking.kData[myPacking.vertexMap.findW(5)].color=CPScreen.coLor(100); 
-			myPacking.kData[myPacking.vertexMap.findW(7)].color=CPScreen.coLor(100); 
+			myPacking.setCircleColor(myPacking.vertexMap.findW(3),ColorUtil.cloneMe(CPScreen.coLor(100))); 
+			myPacking.setCircleColor(myPacking.vertexMap.findW(5),ColorUtil.cloneMe(CPScreen.coLor(100))); 
+			myPacking.setCircleColor(myPacking.vertexMap.findW(7),ColorUtil.cloneMe(CPScreen.coLor(100))); 
 
 		} // end of 'for'
 

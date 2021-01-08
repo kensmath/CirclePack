@@ -148,9 +148,9 @@ public class FracBranchPt extends GenBranchPt {
 		cos_overs[0]=cos_overs[1]=cos_overs[2]=1.0;
 		
 		// default colors 
-		myPack.kData[1].color=new Color(200,0,0); // red
-		myPack.kData[2].color=new Color(0,200,0); // green
-		myPack.kData[3].color=new Color(0,0,200); // blue
+		myPack.setCircleColor(1,new Color(200,0,0)); // red
+		myPack.setCircleColor(2,new Color(0,200,0)); // green
+		myPack.setCircleColor(3,new Color(0,0,200)); // blue
 		
 		// default aims
 		myPack.set_aim_default();

@@ -6,6 +6,7 @@ import exceptions.DataException;
 import geometry.HyperbolicMath;
 import math.Point3D;
 import panels.CPScreen;
+import util.ColorUtil;
 
 /**
  * Static methods for various colorizing actions --- wanted to move these
@@ -37,9 +38,9 @@ public class ColorCoding {
 	    if (b==0.0) flag=0;
 	    if (t==0 || Math.abs(t-b)/t<.005)
 	      for (int i=1;i<=p.faceCount;i++) 
-	    	  p.faces[i].color=CPScreen.coLor(mid);
+	    	  p.setFaceColor(i,ColorUtil.cloneMe(CPScreen.coLor(mid)));
 	    else for (int i=1;i<=p.faceCount;i++) 
-	        p.faces[i].color=CPScreen.coLor(1+(int)((mid-2)*(areas[i]-t)/(b-t)));
+	        p.setFaceColor(i,ColorUtil.cloneMe(CPScreen.coLor(1+(int)((mid-2)*(areas[i]-t)/(b-t)))));
 	    return (flag);
 	  }
 	
@@ -71,13 +72,13 @@ public class ColorCoding {
 	    else {
 	        for (int v=1;v<=node;v++) {
 	  	  if ((ratio=areas_p[v]/areas_q[v])>1.0)
-	  	    p.faces[v].color=CPScreen.coLor((int)(mid+(mid-1)*(ratio-1.0)/(b-1.0)));
+	  	    p.setFaceColor(v,ColorUtil.cloneMe(CPScreen.coLor((int)(mid+(mid-1)*(ratio-1.0)/(b-1.0)))));
 	  	  else 
-	  	    p.faces[v].color=CPScreen.coLor(1+(int)((mid-2)*(1.0-(1.0/ratio-1.0)/(b-1.0))));
+	  	    p.setFaceColor(v,ColorUtil.cloneMe(CPScreen.coLor(1+(int)((mid-2)*(1.0-(1.0/ratio-1.0)/(b-1.0))))));
 	  	}
 	      }
 	    if (node<p.faceCount) for (int v=node+1;v<=p.faceCount;v++)
-	      p.faces[v].color=CPScreen.coLor(mid);
+	      p.setFaceColor(v,ColorUtil.cloneMe(CPScreen.coLor(mid)));
 	    return (flag);
 	} 
 
@@ -110,21 +111,22 @@ public class ColorCoding {
 	        if ((1.0/ratio)>b) b=1.0/ratio;
 	    }
 	    if (Math.abs(b-1)<PackData.OKERR) { 
-	        for (int v=1;v<=p.faceCount;v++) p.faces[v].color=CPScreen.coLor(mid);
+	        for (int v=1;v<=p.faceCount;v++) 
+	        	p.setFaceColor(v,ColorUtil.cloneMe(CPScreen.coLor(mid)));
 	    }
 	    else {
 	        for (int v=1;v<=node;v++) {
 	  	  if ((ratio=areas_p[v]/areas_q[v])>1.0) {
-	  		  p.faces[v].color=CPScreen.coLor((int)(mid+(mid-1)*(ratio-1.0)/(b-1.0)));
+	  		  p.setFaceColor(v,ColorUtil.cloneMe(CPScreen.coLor((int)(mid+(mid-1)*(ratio-1.0)/(b-1.0)))));
 	  	  }
 	  	  else {
-	  	    p.faces[v].color=CPScreen.coLor(1+(int)((mid-2)*(1.0-(1.0/ratio-1.0)/(b-1.0))));
+	  	    p.setFaceColor(v,ColorUtil.cloneMe(CPScreen.coLor(1+(int)((mid-2)*(1.0-(1.0/ratio-1.0)/(b-1.0))))));
 	  	  }
 	        }
 	    }
 	    if (node<p.faceCount) 
 	    	for (int v=node+1;v<=p.faceCount;v++)
-	    		p.faces[v].color=CPScreen.coLor(mid);
+	    		p.setFaceColor(v,ColorUtil.cloneMe(CPScreen.coLor(mid)));
 	    return 1;
 	  } 
 	  

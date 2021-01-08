@@ -5,7 +5,6 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import exceptions.CombException;
-import listManip.NodeLink;
 import math.Mobius;
 import packing.PackCreation;
 import packing.PackData;
@@ -89,9 +88,9 @@ public class BrooksQuad extends PackExtender {
 		packData=cps.getPackData();
 		packData.swap_nodes(1,5);
 		for (int v=1;v<=4;v++) {
-			packData.kData[v].color=CPScreen.coLor(208); // line green
+			packData.setCircleColor(v,CPScreen.coLor(208)); // line green
 		}
-		packData.kData[5].color=CPScreen.getBGColor();
+		packData.setCircleColor(5,CPScreen.getBGColor());
 		packData.alpha=5;
 		packData.gamma=1;
 		packData.setCombinatorics();
@@ -143,7 +142,7 @@ public class BrooksQuad extends PackExtender {
 		  packData.kData[N].flower[2]=B;
 		  packData.kData[N].flower[3]=P;
 		  packData.kData[N].flower[4]=T;
-		  packData.kData[N].color=new Color(cLrCode.getRed(),cLrCode.getGreen(),cLrCode.getBlue()); // red 149 or 151 
+		  packData.setCircleColor(N,new Color(cLrCode.getRed(),cLrCode.getGreen(),cLrCode.getBlue())); // red 149 or 151 
 		  
 		  // add flower of new temporary 'plug' vert 
 		  packData.kData[P].flower=new int[5];
@@ -155,7 +154,7 @@ public class BrooksQuad extends PackExtender {
 		  packData.kData[P].flower[2]=R;
 		  packData.kData[P].flower[3]=T;
 		  packData.kData[P].flower[4]=N;
-		  packData.kData[P].color=CPScreen.getBGColor();
+		  packData.setCircleColor(P,CPScreen.getBGColor());
 		  
 		  L=N; // N is the new 'left' of interstice
 		  N=P;
@@ -204,7 +203,7 @@ public class BrooksQuad extends PackExtender {
 		  packData.kData[N].flower[2]=P;
 		  packData.kData[N].flower[3]=R;
 		  packData.kData[N].flower[4]=T;
-		  packData.kData[N].color=new Color(cLrCode.getRed(),cLrCode.getGreen(),cLrCode.getBlue()); // blue, 49 or 51 
+		  packData.setCircleColor(N,new Color(cLrCode.getRed(),cLrCode.getGreen(),cLrCode.getBlue())); // blue, 49 or 51 
 
 		  // add flower of new P vert 
 		  packData.kData[P].flower=new int[5];
@@ -216,7 +215,7 @@ public class BrooksQuad extends PackExtender {
 		  packData.kData[P].flower[2]=B;
 		  packData.kData[P].flower[3]=R;
 		  packData.kData[P].flower[4]=N;
-		  packData.kData[P].color=CPScreen.getBGColor();
+		  packData.setCircleColor(P,CPScreen.getBGColor());
 		  
 		  T=N; // N is the new 'top' of interstice
 		  N=P;

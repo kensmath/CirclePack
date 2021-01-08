@@ -191,12 +191,12 @@ public class SingBranchPt extends GenBranchPt {
 		// flower around 'newBrSpot' should be {1,chap[3],2,chap[2],3,chap[3],1}
 		
 		// default colors 
-		myPack.kData[1].color=new Color(200,0,0); // red
-		myPack.kData[chap[1]].color=new Color(255,0,0); // light red
-		myPack.kData[2].color=new Color(0,200,0); // green
-		myPack.kData[chap[2]].color=new Color(0,255,0); // light green
-		myPack.kData[3].color=new Color(0,0,200); // blue
-		myPack.kData[chap[3]].color=new Color(0,0,255); // light blue
+		myPack.setCircleColor(1,new Color(200,0,0)); // red
+		myPack.setCircleColor(chap[1],new Color(255,0,0)); // light red
+		myPack.setCircleColor(2,new Color(0,200,0)); // green
+		myPack.setCircleColor(chap[2],new Color(0,255,0)); // light green
+		myPack.setCircleColor(3,new Color(0,0,200)); // blue
+		myPack.setCircleColor(chap[3],new Color(0,0,255)); // light blue
 		// set aims 
 		myPack.set_aim_default();
 		myPack.setAim(newBrSpot,myAim); // 4*pi is only real possibility

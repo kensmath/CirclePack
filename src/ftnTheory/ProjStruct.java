@@ -1173,7 +1173,7 @@ public class ProjStruct extends PackExtender {
 			Complex c2=asp.getCenter(asp.vertIndex(v2));
 			if (faceDo) { // draw the faces
 				if (!faceFlags.colorIsSet && (faceFlags.fill || faceFlags.colBorder))
-					faceFlags.setColor(p.faces[asp.face].color);
+					faceFlags.setColor(p.getFaceColor(asp.face));
 				if (faceFlags.label)
 					faceFlags.setLabel(Integer.toString(asp.face));
 				p.cpScreen.drawFace(c0, c1, c2,null,null,null,faceFlags);
@@ -1181,19 +1181,19 @@ public class ProjStruct extends PackExtender {
 			}
 			if (circDo) { // also draw the circles
 				if (!circFlags.colorIsSet && (circFlags.fill || circFlags.colBorder))
-					circFlags.setColor(p.kData[v2].color);
+					circFlags.setColor(p.getCircleColor(v2));
 				if (circFlags.label)
 					circFlags.setLabel(Integer.toString(v2));
 				p.cpScreen.drawCircle(c2,asp.labels[asp.vertIndex(v2)],circFlags);
 				count++;
 				if (drawfirst && firstasp) { // draw all circles of first face
 					if (!circFlags.colorIsSet && (circFlags.fill || circFlags.colBorder))
-						circFlags.setColor(p.kData[v0].color);
+						circFlags.setColor(p.getCircleColor(v0));
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(v0));
 					p.cpScreen.drawCircle(c0,asp.labels[asp.vertIndex(v0)],circFlags);
 					if (!circFlags.colorIsSet && (circFlags.fill || circFlags.colBorder))
-						circFlags.setColor(p.kData[v1].color);
+						circFlags.setColor(p.getCircleColor(v1));
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(v1));
 					p.cpScreen.drawCircle(c1,asp.labels[asp.vertIndex(v1)],circFlags);
@@ -1701,7 +1701,7 @@ public class ProjStruct extends PackExtender {
 										int v = tasp.vert[kk];
 							
 										if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
-											dispFlags.setColor(packData.kData[v].color);
+											dispFlags.setColor(packData.getCircleColor(v));
 										if (dispFlags.label)
 											dispFlags.setLabel(Integer.toString(v));
 										packData.cpScreen.drawCircle(z, rad,dispFlags);
@@ -1710,7 +1710,7 @@ public class ProjStruct extends PackExtender {
 								}
 								if (facs) {
 									if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
-										dispFlags.setColor(packData.faces[fnum].color);
+										dispFlags.setColor(packData.getFaceColor(fnum));
 									if (dispFlags.label)
 										dispFlags.setLabel(Integer.toString(fnum));
 									packData.cpScreen.drawFace(tasp.getCenter(0),tasp.getCenter(1),tasp.getCenter(2),

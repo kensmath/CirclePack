@@ -25,14 +25,12 @@ import complex.Complex;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
 import komplex.Face;
-import komplex.KData;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.NodeLink;
 import listManip.TileLink;
 import packQuality.QualMeasures;
 import packing.PackData;
-import packing.RData;
 import panels.CPScreen;
 import panels.DataTree;
 import panels.SliderControlPanel;
@@ -625,7 +623,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			aimField.setValue(p.getAim(v)/Math.PI);
 			angleSumField.setValue(p.getCurv(v)/Math.PI);
 			degreeField.setValue(p.getNum(v));
-			vertexColorField.setValue(CPScreen.col_to_table(p.kData[v].color));
+			vertexColorField.setValue(CPScreen.col_to_table(p.getCircleColor(v)));
 			vertMarkField.setValue(p.kData[v].mark);
 
 			if (p.isBdry(v)) boundaryCheckBox.setSelected(true);
@@ -799,8 +797,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		public void putVertColor(PackData p) {
 			int vert = NodeLink.grab_one_vert(p, vertexChoiceField.getText());
 			if (vert==0) return;
-			p.kData[vert].color=CPScreen.coLor(vertexColorField.getValue());
-			vertexColorField.setValue(CPScreen.col_to_table(p.kData[vert].color));
+			p.setCircleColor(vert,CPScreen.coLor(vertexColorField.getValue()));
+			vertexColorField.setValue(CPScreen.col_to_table(p.getCircleColor(vert)));
 		}
 		
 		public void putVertMark(PackData p) {
@@ -813,8 +811,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		public void putFaceColor(PackData p) {
 			int face = NodeLink.grab_one_vert(p, faceChoiceField.getText());
 			if (face==0) return;
-			p.faces[face].color=CPScreen.coLor(faceColorField.getValue());
-			faceColorField.setValue(CPScreen.col_to_table(p.faces[face].color));
+			p.setFaceColor(face,CPScreen.coLor(faceColorField.getValue()));
+			faceColorField.setValue(CPScreen.col_to_table(p.getFaceColor(face)));
 		}
 		
 		public void putFaceMark(PackData p) {

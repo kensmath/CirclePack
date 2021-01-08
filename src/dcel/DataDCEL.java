@@ -168,8 +168,15 @@ public class DataDCEL {
 		}
 
 		// misc data to arrange
-		p.euler=pdcel.euler;
+		p.euler=pdcel.vertCount-pdcel.edgeCount+pdcel.faceCount;
 		p.genus=(2-p.euler-p.bdryCompCount)/2;
+		p.intrinsicGeom=-1;
+		if (p.bdryCompCount==0) {
+			if (p.genus==0)
+				p.intrinsicGeom=1;
+			else if (p.genus==1)
+				p.intrinsicGeom=0;
+		}
 		p.bdryStarts=new int[p.bdryCompCount+1];
 		for (int j=1;j<=p.bdryCompCount;j++) {
 			Face iface=pdcel.idealFaces[j];

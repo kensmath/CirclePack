@@ -224,8 +224,8 @@ public class Necklace extends PackExtender {
 			// transfer colors, marks
 			for (int v=1;v<=bottomPack.nodeCount;v++) {
 				int newv=packData.vertexMap.findW(v);
-				Color col=bottomPack.kData[v].color;
-				packData.kData[newv].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
+				Color col=bottomPack.getCircleColor(v);
+				packData.setCircleColor(newv,new Color(col.getRed(),col.getGreen(),col.getBlue()));
 				packData.kData[newv].mark=bottomPack.kData[v].mark;
 			}
 
@@ -367,13 +367,13 @@ System.err.println("starting bottomHemi:");
 		myPacking.kData[3].mark=-2;
 		myPacking.kData[5].mark=-2;
 		myPacking.kData[7].mark=-2;
-		myPacking.kData[1].color=CPScreen.coLor(190);
-		myPacking.kData[2].color=CPScreen.coLor(10);
-		myPacking.kData[4].color=CPScreen.coLor(10);
-		myPacking.kData[6].color=CPScreen.coLor(10);
-		myPacking.kData[3].color=CPScreen.coLor(100);
-		myPacking.kData[5].color=CPScreen.coLor(100);
-		myPacking.kData[7].color=CPScreen.coLor(100);
+		myPacking.setCircleColor(1,CPScreen.coLor(190));
+		myPacking.setCircleColor(2,CPScreen.coLor(10));
+		myPacking.setCircleColor(4,CPScreen.coLor(10));
+		myPacking.setCircleColor(6,CPScreen.coLor(10));
+		myPacking.setCircleColor(3,CPScreen.coLor(100));
+		myPacking.setCircleColor(5,CPScreen.coLor(100));
+		myPacking.setCircleColor(7,CPScreen.coLor(100));
 
 		if (n==3) {
 			// start single face

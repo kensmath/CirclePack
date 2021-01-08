@@ -472,7 +472,7 @@ public class Graphene extends PackExtender {
 			}
 			msg("Total Energy: "+String.format("%.8e", totalEnergy()));
 			for (int v=1;v<=packData.nodeCount;v++)
-				packData.kData[v].color=CPScreen.coLor(colorVec.get(v));
+				packData.setCircleColor(v,CPScreen.coLor(colorVec.get(v)));
 			return 1;
 		}
 		
@@ -551,7 +551,7 @@ public class Graphene extends PackExtender {
 		for (int f=1;f<=packData.faceCount;f++) {
 			Color colf=carbColors.get(f);
 			carbonEnergies.get(f).carbonColor=colf;
-			packData.faces[f].color=new Color(colf.getRed(),colf.getGreen(),colf.getBlue());
+			packData.setFaceColor(f,new Color(colf.getRed(),colf.getGreen(),colf.getBlue()));
 		}
 		
 		// edges, but stored in 'carbonEnergies' --- interior edges
@@ -583,7 +583,7 @@ public class Graphene extends PackExtender {
 		Vector<Color> vertColors=ColorUtil.richter_red_ramp(ringEnergies); // first spot also unused
 		for (int v=1;v<=packData.nodeCount;v++) {
 			Color col=vertColors.get(v);
-			packData.kData[v].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
+			packData.setCircleColor(v,new Color(col.getRed(),col.getGreen(),col.getBlue()));
 		}
 	}
 

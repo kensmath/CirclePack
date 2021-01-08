@@ -7,6 +7,7 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import complex.Complex;
+import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.ParserException;
 import komplex.DualGraph;
@@ -232,6 +233,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	 * @return int count
 	 */	
 	public int addEdgeLinks(String datastr,boolean xtd) {
+		if (packData==null) return -1;
 		Vector<String> items=StringUtil.string2vec(datastr,true);
 		return addEdgeLinks(items,xtd);
 	}
@@ -243,14 +245,27 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	 * @return int count
 	 */
 	public int addEdgeLinks(Vector<String> items,boolean xtd) {
-		int count=0;
-		int nodeCount;
-
 		if (packData==null) return -1;
-		nodeCount=packData.nodeCount;
-
-		Iterator<String> its=items.iterator();
+		int count=0;
+		int nodeCount=packData.nodeCount;
 		
+		// In DCEL case, if a single vertex is given, pick it's 'halfedge' 
+		if (packData.packDCEL!=null && items.size()==1) {
+			try {
+				int v=Integer.parseInt(items.get(0));
+				if (v>0 && v<=packData.nodeCount) {
+					Vertex vert=packData.packDCEL.vertices[v];
+					int w=vert.halfedge.next.origin.vertIndx;
+					add(new EdgeSimple(v,w));
+					return 1;
+				}
+				else return -1;
+			} catch(NumberFormatException ex) {
+				// non integer? continue processing
+			}
+		}
+		
+		Iterator<String> its=items.iterator();
 		while (its!=null && its.hasNext()) {
 
 			/* =============== here's the work ==================

@@ -45,6 +45,7 @@ import exceptions.InOutException;
 import exceptions.JNIException;
 import exceptions.LayoutException;
 import exceptions.MobException;
+import exceptions.PackingException;
 import exceptions.ParserException;
 import exceptions.VarException;
 import ftnTheory.AffinePack;
@@ -129,6 +130,7 @@ import rePack.EuclPacker;
 import rePack.GOpacker;
 import rePack.HypPacker;
 import rePack.SphPacker;
+import rePack.d_HypPacker;
 import script.ScriptBundle;
 import tiling.TileData;
 import util.BuildPacket;
@@ -6993,7 +6995,8 @@ public class CommandStrParser {
 	    				  }
 	    			  }
 	    			  try { 
-	    				  count+=packData.comp_pack_centers(errflag,dflag,opt,crit);
+	    				  packData.comp_pack_centers(errflag,dflag,opt,crit);
+	    				  count++;
 	    			  } catch (Exception ex) {
 	    				  CirclePack.cpb.myErrorMsg("layout: error in computing pack centers.");
 	    				  return count;
@@ -7423,6 +7426,8 @@ public class CommandStrParser {
 	    		  
 	    	  try {
 	    		  items=(Vector<String>)flagSegs.elementAt(0);
+	    		  
+	    		  // first entry a flags?
 	    		  if (StringUtil.isFlag(items.elementAt(0))) {
 	    			  if (packData.hes>0 && items.elementAt(0).equals("-r")) {
 		    			  puncture_v=NodeLink.grab_one_vert(packData,(String)items.get(1));
@@ -7435,6 +7440,7 @@ public class CommandStrParser {
 	    				  CirclePack.cpb.errMsg("'-r' flag ignored; "+
 	    				  	"applies to spherical case only");
 	    		  }
+	    		  
 	    		  if (items.size()==1 || items.size()==3) { // last entry is [k]
 	    			  int k=Integer.parseInt(items.lastElement());
 	    			  if (k<1) cycles=1;
@@ -7452,8 +7458,22 @@ public class CommandStrParser {
 	    		  try { // e.g., there may be no boundary vertices
 	    			  jexecute(packData,"set_rad 5.0 b");
 	    		  } catch (Exception ex) { } 
-	    		  HypPacker hypPacker=new HypPacker(packData); // will use Orick's code, if available
-	    		  count=hypPacker.maxPack(cycles);
+	    		  
+	    		  if (packData.packDCEL!=null) {
+						d_HypPacker h_packer=new d_HypPacker(packData,1000);
+						count=h_packer.d_oldReliable(1000); 
+						if (count>0) {
+							h_packer.reapResults();
+							packData.fillcurves();
+							packData.packDCEL.dcelCompCenters(packData.packDCEL.computeOrder);
+						}
+						else if (count<0)
+							throw new PackingException("dcel hyp repack failure");
+	    		  }
+	    		  else {
+	    			  HypPacker hypPacker=new HypPacker(packData); // will use Orick's code, if available
+	    			  count=hypPacker.maxPack(cycles);
+	    		  }
 	    	  }
 	    	  else if (packData.intrinsicGeom == 0) { // must be 1-torus 
 	    		  if (packData.hes !=0) {
@@ -7472,7 +7492,6 @@ public class CommandStrParser {
 	    		  packData.set_aim_default();
 				  SphPacker sphpack=new SphPacker(packData);
  				  count=sphpack.maxPack(puncture_v,cycles);
-// 				  jexecute(packData,"NSpole"); // normalize (TODO: is this always already done?)
 	    	  }
 	    	  else return 0;
 	    	  if (CirclePack.cpb!=null)
@@ -8334,7 +8353,7 @@ public class CommandStrParser {
 	    	  } // end of while
 	    	  count=packData.repack_call(cycles,oldReliable,use_C);
 
-			  if (count<=0) {
+			  if (count==0) {
 				  // TODO: what about errors? do they give exceptions?
 				  CirclePack.cpb.msg("repack: no repacking was needed");
 				  return 1;

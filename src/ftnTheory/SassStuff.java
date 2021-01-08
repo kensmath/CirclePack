@@ -3504,7 +3504,7 @@ public class SassStuff extends PackExtender {
 										double rad = tasp.labels[kk];
 										int v = tasp.vert[kk];
 										if (!dflags.colorIsSet && (dflags.fill || dflags.colBorder))
-											dflags.setColor(packData.kData[v].color);
+											dflags.setColor(packData.getCircleColor(v));
 										if (dflags.label)
 											dflags.setLabel(Integer.toString(v));
 										packData.cpScreen.drawCircle(z, rad, dflags);
@@ -3513,7 +3513,7 @@ public class SassStuff extends PackExtender {
 								}
 								if (facs) {
 									if (!dflags.colorIsSet && (dflags.fill || dflags.colBorder))
-										dflags.setColor(packData.faces[fnum].color);
+										dflags.setColor(packData.getFaceColor(fnum));
 									if (dflags.label)
 										dflags.setLabel(Integer.toString(fnum));
 									cpScreen.drawFace(tasp.getCenter(0), tasp.getCenter(1),

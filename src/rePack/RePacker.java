@@ -85,6 +85,7 @@ public abstract class RePacker {
 	public double m;
 	public double accumErr2;
 	public double ttoler;
+	public double []R0;
 	public double []R1;
 	public double []R2;
 	public UtilPacket utilPacket;
@@ -230,7 +231,7 @@ public abstract class RePacker {
 	 * 'oldReliable' is used, e.g., with inversive distances.
 	 * 
 	 * @param pass_limit
-	 * @return
+	 * @return int, 0 on error
 	 * @throws PackingException
 	 */
 	public int genericRePack(int pass_limit) throws PackingException {
