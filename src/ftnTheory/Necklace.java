@@ -18,6 +18,7 @@ import packing.PackData;
 import packing.PackExtender;
 import panels.CPScreen;
 import util.CmdStruct;
+import util.ColorUtil;
 import util.StringUtil;
 
 /**
@@ -367,13 +368,13 @@ System.err.println("starting bottomHemi:");
 		myPacking.kData[3].mark=-2;
 		myPacking.kData[5].mark=-2;
 		myPacking.kData[7].mark=-2;
-		myPacking.setCircleColor(1,CPScreen.coLor(190));
-		myPacking.setCircleColor(2,CPScreen.coLor(10));
-		myPacking.setCircleColor(4,CPScreen.coLor(10));
-		myPacking.setCircleColor(6,CPScreen.coLor(10));
-		myPacking.setCircleColor(3,CPScreen.coLor(100));
-		myPacking.setCircleColor(5,CPScreen.coLor(100));
-		myPacking.setCircleColor(7,CPScreen.coLor(100));
+		myPacking.setCircleColor(1,ColorUtil.coLor(190));
+		myPacking.setCircleColor(2,ColorUtil.coLor(10));
+		myPacking.setCircleColor(4,ColorUtil.coLor(10));
+		myPacking.setCircleColor(6,ColorUtil.coLor(10));
+		myPacking.setCircleColor(3,ColorUtil.coLor(100));
+		myPacking.setCircleColor(5,ColorUtil.coLor(100));
+		myPacking.setCircleColor(7,ColorUtil.coLor(100));
 
 		if (n==3) {
 			// start single face

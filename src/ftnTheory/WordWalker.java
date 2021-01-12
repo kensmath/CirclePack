@@ -7,7 +7,7 @@ import complex.Complex;
 import listManip.FaceLink;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
+import util.ColorUtil;
 import util.DispFlags;
 
 /**
@@ -93,11 +93,11 @@ public class WordWalker extends PackExtender {
 		Complex cc=packData.face_center(face);
 		
 		DispFlags dflags=new DispFlags("f");
-		dflags.setColor(CPScreen.coLor(232));
+		dflags.setColor(ColorUtil.coLor(232));
 		packData.cpScreen.drawFace(c0,c1,cc,null,null,null,dflags);
-		dflags.setColor(CPScreen.coLor(218));
+		dflags.setColor(ColorUtil.coLor(218));
 		packData.cpScreen.drawFace(c1,c2,cc,null,null,null,dflags);
-		dflags.setColor(CPScreen.coLor(1));
+		dflags.setColor(ColorUtil.coLor(1));
 		packData.cpScreen.drawFace(c2,c0,cc,null,null,null,dflags);
 	}
 	

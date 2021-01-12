@@ -3441,11 +3441,11 @@ public class FracBranching extends PackExtender {
         				packData.getCenter(p));
         		double cor_dist=0.0;
         		if (packData.overlapStatus==true) {
-        			cor_dist = genOverlapDist(packData.getRadius(i),
+        			cor_dist = genInvDist(packData.getRadius(i),
         					packData.getRadius(p),
         					packData.getInvDist(i,p));
         		} else {
-        			cor_dist = genOverlapDist(packData.getRadius(i),
+        			cor_dist = genInvDist(packData.getRadius(i),
         					packData.getRadius(p),1);
         		}
         		double err = Math.sqrt(Math.pow(act_dist-cor_dist,2));
@@ -3462,22 +3462,20 @@ public class FracBranching extends PackExtender {
 	
 	/**
 	 * Returns length of edge between circles of radius r1, r2, and 
-	 * invDist 't'. Only makes sense for hyp and eucl packings.
+	 * invDist 'ivd'. Only makes sense for hyp and eucl packings.
+	 * @param r1 double
+	 * @param r2 double
+	 * @param ivd double 
 	 * @return double, -1 on error, 
 	 */
-    public double genOverlapDist(double r1,double r2,double t) {
-		int G = packData.hes;// geometry, 0=E -1=H 1=S
-		switch (G) {
-		case -1: { //Hyperbolic case
-			return HyperbolicMath.h_invdist_length(r1, r2, t);
-		}
-		case 1: { //Spherical case: not well-defined
+    public double genInvDist(double r1,double r2,double ivd) {
+		if (packData.hes<0) // hyp, x-radii
+			return HyperbolicMath.acosh(HyperbolicMath.h_invdist_cosh(r1, r2, ivd));
+		else if (packData.hes>0) { // sph; ambiguous
+			CirclePack.cpb.errMsg("Inversive distance on the sphere is ambiguous");
 			return -1.0;
 		}
-		default: { //Euclidean case
-			return EuclMath.e_invdist_length(r1, r2, t); 
-		}
-		}
+		return EuclMath.e_invdist_length(r1, r2, ivd); 
 	}
     
 	public double holonomyBorder(FaceLink facelist) {
@@ -3884,9 +3882,9 @@ public class FracBranching extends PackExtender {
 			
 			// compute third point
 			int w=packData.faces[ff].vert[(indx+2)%3];
-			genCosOverlap(packData.getRadius(v),packData.getRadius(w),
-					packData.getRadius(u),uPff);
-			double ang = Math.acos(uPff.value);
+
+			double ang = Math.acos(genCosOverlap(packData.getRadius(v),packData.getRadius(w),
+					packData.getRadius(u),1.0,1.0,1.0));
 			packData.setCenter(w,HES_Norm(xRadToH(packData.getRadius(v))
 					+xRadToH(packData.getRadius(w)), ang));
 			packData.kData[w].plotFlag=1;
@@ -3907,7 +3905,6 @@ public class FracBranching extends PackExtender {
 		int count=0;
 		// face is <w,u,v>. w and u should already have
 		//   centers, we are placing v.
-		UtilPacket uPnf = new UtilPacket();
 		int w=packData.faces[face].vert[indx]; 
 		int u=packData.faces[face].vert[(indx+1)%3]; 
 		int v=packData.faces[face].vert[(indx+2)%3]; // circle to be place
@@ -3952,7 +3949,7 @@ public class FracBranching extends PackExtender {
 		Complex Cw = packData.getCenter(w);
 		Complex Cu = packData.getCenter(u);
 		double dist = genPtDist(Cu,Cw); //nsote the small difference
-		genCosOverlap(rw,ru,rv,uPnf);
+		// ???? not used genCosOverlap(rw,ru,rv);
 		double ang =genAngleSides(dist,xRadToH(rv)+xRadToH(ru),xRadToH(rw)+xRadToH(rv));
 		
 		//alternative prev
@@ -4003,10 +4000,12 @@ public class FracBranching extends PackExtender {
 		spt.petalZ[0]=HES_to_Ecent(radius+spt.pd.getRadius(vv),baseAng);
 		
 		while (accum < Math.PI && j <= spt.pd.getNum(v)) {
-			if (!genCosOverlap(radius,
-					spt.pd.getRadius(spt.pd.kData[v].flower[j]),
-					spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]), utpk))
+			try {
+				genCosOverlap(radius,spt.pd.getRadius(spt.pd.kData[v].flower[j]),
+					spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]),1.0,1.0,1.0);
+			} catch (Exception ex) {
 				Oops("error computing cos");
+			}
 			double ang = genAngleRad(radius,
 					spt.pd.getRadius(spt.pd.kData[v].flower[j]),
 					spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]));
@@ -4037,10 +4036,12 @@ public class FracBranching extends PackExtender {
 				.times((new Complex(0,accum)).exp()).add(c1);
 			
 			while ((accum) < 3.0 * Math.PI && j <= spt.pd.getNum(v)) {
-				if (!genCosOverlap(radius * spt.shiftratio,
-						spt.pd.getRadius(spt.pd.kData[v].flower[j]),
-						spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]), utpk))
+				try {
+					genCosOverlap(radius * spt.shiftratio,spt.pd.getRadius(spt.pd.kData[v].flower[j]),
+						spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]),1.0,1.0,1.0);
+				} catch (Exception ex) {
 					Oops("error computing cos");
+				}
 				double ang = genAngleRad(radius * spt.shiftratio,
 						spt.pd.getRadius(spt.pd.kData[v].flower[j]),
 						spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]));
@@ -4071,11 +4072,12 @@ public class FracBranching extends PackExtender {
 				spt.petalZ[j]=HES_to_Ecent(radius+spt.pd.getRadius(vv),accum);
 				
 				while (j <= spt.pd.getNum(v)) {
-					if (!genCosOverlap(radius,
-							spt.pd.getRadius(spt.pd.kData[v].flower[j]),
-							spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]),
-							utpk))
+					try {
+						genCosOverlap(radius,spt.pd.getRadius(spt.pd.kData[v].flower[j]),
+							spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]),1.0,1.0,1.0);
+					} catch (Exception ex) {
 						Oops("error computing cos");
+					}
 					accum += genAngleSides(radius,
 							spt.pd.getRadius(spt.pd.kData[v].flower[j]),
 							spt.pd.getRadius(spt.pd.kData[v].flower[(j + 1)%num]));
@@ -4127,11 +4129,12 @@ public class FracBranching extends PackExtender {
 			.times((new Complex(0,baseAng)).exp()));
 		
 		while(accum<Math.PI && j<=packData.getNum(k)) {
-			if (!genCosOverlap(radius,
-					packData.getRadius(packData.kData[k].flower[j]),
-					packData.getRadius(packData.kData[k].flower[j+1]),
-					utpk))
+			try {
+				genCosOverlap(radius,packData.getRadius(packData.kData[k].flower[j]),
+					packData.getRadius(packData.kData[k].flower[j+1]),1.0,1.0,1.0);
+			} catch (Exception ex) {
 				Oops("error computing cos");
+			}
 			//prev double ang=Math.acos(utpk.value);
 			double ang = genAngleRad(radius,
 					packData.getRadius(packData.kData[k].flower[j]),
@@ -4157,11 +4160,12 @@ public class FracBranching extends PackExtender {
 		
 			
 			while((accum)<3.0*Math.PI && j<packData.getNum(k)) {
-				if (!genCosOverlap(radius*spt.shiftratio,
-					packData.getRadius(packData.kData[k].flower[j]),
-					packData.getRadius(packData.kData[k].flower[j+1]),
-					utpk))
+				try {
+					genCosOverlap(radius*spt.shiftratio,packData.getRadius(packData.kData[k].flower[j]),
+					packData.getRadius(packData.kData[k].flower[j+1]),1.0,1.0,1.0);
+				} catch (Exception ex) {
 					Oops("error computing cos");
+				}
 			//prev double ang=Math.acos(utpk.value);
 			double ang = genAngleRad(radius*spt.shiftratio,
 					packData.getRadius(packData.kData[k].flower[j]),
@@ -4186,11 +4190,12 @@ public class FracBranching extends PackExtender {
 				.times((new Complex(0,accum)).exp()));
 
 			while (j<packData.getNum(k)) {
-				if (!genCosOverlap(radius,
-						packData.getRadius(packData.kData[k].flower[j]),
-						packData.getRadius(packData.kData[k].flower[j+1]),
-						utpk))
+				try {
+					genCosOverlap(radius,packData.getRadius(packData.kData[k].flower[j]),
+						packData.getRadius(packData.kData[k].flower[j+1]),1.0,1.0,1.0);
+				} catch (Exception ex) {
 					Oops("error computing cos");
+				}
 				//prev accum +=Math.acos(utpk.value);
 				accum += genAngleRad(radius,
 						packData.getRadius(packData.kData[k].flower[j]),
@@ -4394,18 +4399,18 @@ public class FracBranching extends PackExtender {
 	 * @return 0 on error
 	 */
 	public boolean shiftAngleSum(CranePoint sPt,double radius,UtilPacket uP) {
-		UtilPacket utpk=new UtilPacket();
 		int v0=sPt.vert;
 		double baseAng=sPt.theta;
 		double accum=baseAng;
 		int j=0;
 		double ang;
 		while(accum<Math.PI && j<=packData.getNum(v0)) {
-			if (!genCosOverlap(radius,
-					packData.getRadius(packData.kData[v0].flower[j]),
-					packData.getRadius(packData.kData[v0].flower[j+1]),
-					utpk))
+			try {
+				genCosOverlap(radius,packData.getRadius(packData.kData[v0].flower[j]),
+					packData.getRadius(packData.kData[v0].flower[j+1]),1.0,1.0,1.0);
+			} catch (Exception ex) {
 					return false;
+			}
 			//prev ang=Math.acos(utpk.value);
 			ang = genAngleRad(radius,
 					packData.getRadius(packData.kData[v0].flower[j]),
@@ -4424,11 +4429,12 @@ public class FracBranching extends PackExtender {
 		j++;
 		
 		while((accum)<3.0*Math.PI && j<packData.getNum(v0)) {
-			if (!genCosOverlap(radius*sPt.shiftratio,
-					packData.getRadius(packData.kData[v0].flower[j]),
-					packData.getRadius(packData.kData[v0].flower[j+1]),
-					utpk))
-					return false;
+			try {
+				genCosOverlap(radius*sPt.shiftratio,packData.getRadius(packData.kData[v0].flower[j]),
+					packData.getRadius(packData.kData[v0].flower[j+1]),1.0,1.0,1.0);
+			} catch (Exception ex) {
+				return false;
+			}
 			//prev ang=Math.acos(utpk.value);
 			ang = genAngleRad(radius*sPt.shiftratio,
 					packData.getRadius(packData.kData[v0].flower[j]),
@@ -4447,11 +4453,12 @@ public class FracBranching extends PackExtender {
 			j++;
 
 			while (j<packData.getNum(v0)) {
-				if (!genCosOverlap(radius,
-						packData.getRadius(packData.kData[v0].flower[j]),
-						packData.getRadius(packData.kData[v0].flower[j+1]),
-						utpk))
+				try {
+					genCosOverlap(radius,packData.getRadius(packData.kData[v0].flower[j]),
+						packData.getRadius(packData.kData[v0].flower[j+1]),1.0,1.0,1.0);
+				} catch (Exception ex) {
 					return false;
+				}
 				//prev accum+=Math.acos(utpk.value);
 				accum+=genAngleRad(radius,
 						packData.getRadius(packData.kData[v0].flower[j]),
@@ -4910,14 +4917,11 @@ public class FracBranching extends PackExtender {
     public double quadfind(double Rv, double rl, double rr, double gr) {
     	double angl=0.0;
     	double angr=0.0;
-    	UtilPacket uPq = new UtilPacket();
     	if (rl>0.0) {
-    		genCosOverlap(Rv, rl, gr, uPq);
-    		angl=Math.acos(uPq.value);
+    		angl=Math.acos(genCosOverlap(Rv, rl, gr,1.0,1.0,1.0));
     	}
     	if (rr>0.0) {
-    		genCosOverlap(Rv,rr,gr,uPq);
-    		angr=Math.acos(uPq.value);
+    		angr=Math.acos(genCosOverlap(Rv,rr,gr,1.0,1.0,1.0));
     	}
     	return angl+angr;
     }
@@ -5005,10 +5009,12 @@ public class FracBranching extends PackExtender {
 				,packData.getRadius(packData.kData[v].flower[0])); 
 		// F=0: measure shiftangle
 		while (accum < jumpAng && j < num) {
-			if (!genCosOverlap(R,
-					packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
-					packData.getRadius(packData.kData[v].flower[mod(j+1+P,num)]), inUp))
+			try {
+				genCosOverlap(R,packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
+					packData.getRadius(packData.kData[v].flower[mod(j+1+P,num)]),1.0,1.0,1.0);
+			} catch(Exception ex) {
 				return false;
+			}
 			ang = Math.acos(inUp.value);
 			if ((accum + ang) > jumpAng)
 				break;
@@ -5049,11 +5055,12 @@ public class FracBranching extends PackExtender {
 						,packData.getRadius(packData.kData[v].flower[mod(j+P,num)])); //TODO remove this repeats spt.petalI above
 			// F=0
 			while ((accum) < 2.0*Math.PI+jumpAng && j < num) {
-				if (!genCosOverlap(r,
-						packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
-						packData.getRadius(packData.kData[v].flower[mod(j+P+1,num)]),
-						inUp))
+				try {
+					genCosOverlap(r,packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
+						packData.getRadius(packData.kData[v].flower[mod(j+P+1,num)]),1.0,1.0,1.0);
+				} catch(Exception ex) {
 					return false;
+				}
 				ang = Math.acos(inUp.value);
 
 				if ((accum + ang) > 2.0*Math.PI+jumpAng)
@@ -5094,12 +5101,12 @@ public class FracBranching extends PackExtender {
 						,packData.getRadius(packData.kData[v].flower[mod(j+P,num)])); //TODO Inv
 				// F=0
 				while (j < packData.getNum(v)) {
-					if (!genCosOverlap(
-							R,
-							packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
-							packData.getRadius(packData.kData[v].flower[mod(j+P+1,num)]),
-							inUp))
+					try {
+						genCosOverlap(R,packData.getRadius(packData.kData[v].flower[mod(j+P,num)]),
+							packData.getRadius(packData.kData[v].flower[mod(j+P+1,num)]),1.0,1.0,1.0);
+					} catch(Exception ex) {
 						return false;
+					}
 					ang = Math.acos(inUp.value);
 					accum += ang;
 					j++;
@@ -5191,18 +5198,17 @@ public class FracBranching extends PackExtender {
 		while (err>LOC_TOLER && count<n) {
 			//branchVert[1] and [3]
 			for (int j=1;j<4;j=j+2) {
-				genCosOverlap(packData.getRadius(branchVert[0][j]),
+				ang =Math.acos(
+						genCosOverlap(packData.getRadius(branchVert[0][j]),
 						packData.getRadius(branchVert[0][(j-1)%4]),//TODO inv rotates!!
-						packData.getRadius(branchVert[0][(j+1)%4]),1.0,1.0,inv,uP);
-				ang =Math.acos(uP.value);
+						packData.getRadius(branchVert[0][(j+1)%4]),1.0,1.0,inv));
 				packData.setAim(branchVert[0][j],pi2+2.0*ang);
 			}
 			//branchVert[0] and [2]
 			for (int j=0;j<4;j=j+2) {
-				genCosOverlap(packData.getRadius(branchVert[0][j]),
+				ang =Math.acos(genCosOverlap(packData.getRadius(branchVert[0][j]),
 						packData.getRadius(branchVert[0][(j+2)%4]),
-						packData.getRadius(branchVert[0][(j*2+3)%4]),inv,1.0,1.0,uP);
-				ang =Math.acos(uP.value);
+						packData.getRadius(branchVert[0][(j*2+3)%4]),inv,1.0,1.0));
 				packData.setAim(branchVert[0][j],pi2+2.0*ang);
 			}
 			try {
@@ -5248,9 +5254,8 @@ public class FracBranching extends PackExtender {
 		UtilPacket uP =new UtilPacket();
 		int R=branchVert[i][j];int r=branchVert[i][(j+1)%3];int l=branchVert[i][(j+2)%3];
 		if (!packData.overlapStatus) {
-			genCosOverlap(packData.getRadius(R), packData.getRadius(1),packData.getRadius(r),
-					1,1,1, uP);
-			return Math.acos(uP.value);
+			return Math.acos(genCosOverlap(packData.getRadius(R), packData.getRadius(1),packData.getRadius(r),
+					1,1,1));
 		} 
 		else return genAngleSides(genDistInv(R,r),genDistInv(R,l),genDistInv(r,l));
 //			genCosOverlap(packData.rData[R].rad, packData.rData[l].rad, packData.rData[r].rad
@@ -5441,53 +5446,22 @@ public class FracBranching extends PackExtender {
 			}
 		}
 				
-	    /**
+		/**
 	     * Directs cos overlap checks according to geometry
-	     * @param R, radius at vertex
-	     * @param rp, positively oriented petal
-	     * @param rn, negatively oriented petal
-	     * @param up, utilpacket
-	     * @return 
+	     * @param R double, radius at vertex
+	     * @param rp double, positively oriented petal
+	     * @param rn double, negatively oriented petal
+	     * @return return cos(angle)
 	     */
-	    public boolean genCosOverlap(double R, double rn, double rp, UtilPacket uP) {
-	    	int G = packData.hes; //geometry, 0=Euc -1=Hyp 1=Sphr
-	    	switch(G) {
-	    		case -1: {
-	    			//uP.value = ((Math.cosh(R+rn)*Math.cosh(R+rp)-Math.cosh(rn+rp))
-						//	/(Math.sinh(R+rn)*Math.sinh(R+rp)));
-	    			//return true;
- 	    			return HyperbolicMath.h_cos_s_overlap(R, rn, rp, 1.0, 1.0, 1.0, uP);
- 	    			//ask about x radii;
-	    			}
-	    		case 1: {
-	    			Oops("cannot compute spherical case; need to insert spherical case.");
-	    			return false;
-	    		}
-	    		default: {
-	    			return EuclMath.e_cos_overlap(R, rn, rp, uP);
-	    		}
+	    public double genCosOverlap(double R, double rn, double rp, double ivd1, double ivdRr, 
+	    		double ivdlr) {
+	    	if (packData.hes<0) { // hyp, x-radii
+	    		return HyperbolicMath.h_comp_cos(R, rn, rp, ivd1, ivdRr, ivdlr);
 	    	}
-	    }
-	    
-	    public boolean genCosOverlap(double R, double l, double r, double invRl, double invRr, 
-	    		double invlr, UtilPacket uP) {
-	    	int G = packData.hes; //geometry, 0=Euc -1=Hyp 1=Sphr
-	    	switch(G) {
-	    		case -1: {
-	    			//uP.value = ((Math.cosh(R+rn)*Math.cosh(R+rp)-Math.cosh(rn+rp))
-						//	/(Math.sinh(R+rn)*Math.sinh(R+rp)));
-	    			//return true;
- 	    			return HyperbolicMath.h_cos_s_overlap(R, l, r, invRl, invRr, invlr, uP);
- 	    			//ask about x radii;
-	    			}
-	    		case 1: {
-	    			Oops("cannot compute spherical case; need to insert spherical case.");
-	    			return false;
-	    		}
-	    		default: {
-	    			return EuclMath.e_cos_overlap(R, l, r, invRl, invRr, invlr, uP);
-	    		}
+	    	if (packData.hes>1) { // sph  
+	   			throw new DataException("cannot compute spherical case; need to insert spherical case.");
 	    	}
+	 		return EuclMath.e_cos_overlap(R, rn, rp, ivd1, ivdRr, ivdlr);
 	    }
 	    	
 	/**
@@ -5504,7 +5478,7 @@ public class FracBranching extends PackExtender {
 				return packData.h_anglesum_overlap(v,r,uP);
 			}
 			case 1: { //Spherical case
-				return packData.s_anglesum(v,r,uP); //no ovrlap case yet
+				return packData.s_anglesum(v,r,uP); // no inv dist case yet
 			}
 			default: { //Euclidean case
 				return packData.e_anglesum_overlap(v,r,uP);

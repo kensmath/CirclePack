@@ -14,6 +14,7 @@ import allMains.CirclePack;
 import komplex.Face;
 import listManip.FaceLink;
 import packing.PackData;
+import util.ColorUtil;
 
 public class FaceDataPanel extends javax.swing.JPanel {
 
@@ -195,7 +196,7 @@ public class FaceDataPanel extends javax.swing.JPanel {
 			bdryCkBox.setSelected(true);
 		
 		// color?
-		faceColorField.setText(Integer.toString(CPScreen.col_to_table(face.color)));
+		faceColorField.setText(Integer.toString(ColorUtil.col_to_table(face.color)));
 		
 		// next face?
 		nextField.setText(Integer.toString(face.nextFace));

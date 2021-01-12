@@ -10,7 +10,6 @@ import komplex.RedList;
 import math.Mobius;
 import math.Point3D;
 import packing.PackData;
-import util.UtilPacket;
 
 /**
  * Static methods for mathematical operations in hyperbolic geometry.
@@ -18,13 +17,36 @@ import util.UtilPacket;
  * Our model of the hyperbolic plane is the unit disc with the Poincare
  * metric; namely ds=2|dz|/(1-z^2), so curvature is -1.
  * 
- * Note on radii: h is hyperbolic radius, value the user sets/sees,
- * but internal storage is using x-radius x=1-exp(-2h) and on occasion
- * s-radius s=exp(-h).
+ * Note on radii: h is "hyperbolic" radius, value the user sets/sees,
+ * but internal storage is using "x-radius" and on occasion, "s-radius".
+ * Infinite h corresponds with s=0 and x=1.
  * 
- * Note: circle at origin of eucl radius r has hyperbolic radius h 
- * where h=log((1+r)/(1-r)), r=(exp(h)-1)/(exp(h)+1)).
+ * Some formulae:
  * 
+ * * relations among the h-, x-, and s-radii:
+ * 		s=exp(-h),   x = 1-s*s,   s=sqrt(1-x),  h = log(1/s)
+ * 
+ * * point with eucl distance r and hyp distance h from origin, then:
+ * 	    h=log((1+r)/(1-r)),  r=(exp(h)-1)/(exp(h)+1),  s=(r-1)/(r+1) 
+ *   and cosh(h)=(1+r*r)/(1-r*r)
+ *   
+ * * for a circle at the origin this means:
+ * 		s = (r-1)/(r+1),  r = (s+1)/(s-1),  x = 4r/(r+1)^2, and
+ * 		r=(2-x + 2sqrt(1-x)) / x
+ * 
+ * * Hyperbolic law of cosines: Given hyp side lengths l1, l2, l3, the
+ *   angle a1 opposite side l1 is
+ * 		a1 = acos( (cosh(l2)*cosh(l3) - cosh(l1)) / (sinh(l2)*sinh(l3)) )
+ *   For infinite lengths, this is ambiguous, but can be resolved from
+ *   radii if triangle is formed by circles. See 'h_cos_s_overlap' and
+ *   'h_comp_x_cos'.
+ *   
+ *   
+ * * hyp distance l between circles of radii h1, h2, and inv distance ivd: 
+ *      cosh(l) = cosh(h1)*cosh(h2)+sinh(h1)*sinh(h2)*ivd
+ *   length l infinite iff at least one of h1/h2 is infinite. 
+ *   See 'h_invdist_length' and 'h_dist'
+ *        
  * In addition to the disc, hyperbolic geometry has the "hyperboloid" 
  * model. Namely, consider the sheet S with t>0 of the hyperboloid t^2-(x1^2+x2^2)=1, 
  * or t=sqrt(1+(x1^2+x2^2)). (Note, this is restriction to z=0 of the model
@@ -62,7 +84,7 @@ public class HyperbolicMath{
       return new CircleSimple(e_center, e_rad,1);
     }
     else
-      s_rad = Math.sqrt(1 - x_rad); // convert to x-rad; x=1-s^2
+      s_rad = Math.sqrt(1 - x_rad); // convert to s-rad; x=1-s^2
 
     double ahc = h_center.abs();
     if(ahc > 0.999999999999)
@@ -186,7 +208,6 @@ public class HyperbolicMath{
     		warning_flag=-1;
     		e_rad=1.0-OKERR;
     	}
-    	Complex cent_vec=new Complex(1.0);
     	double habs=h_center.abs();
     	if (habs>OKERR)
     		e_center=h_center.divide(habs).times(1-e_rad);
@@ -282,7 +303,7 @@ public class HyperbolicMath{
     	dist=1.0;
     	flag=0;
     }
-    if ((.999999999999)<dist) { // horocycle 
+    if (dist > 0.999999999999) { // horocycle 
         x_rad=(-e_rad);
         h_center=e_center.times(1/aec);
         return new CircleSimple(h_center,x_rad,flag);
@@ -314,86 +335,162 @@ public class HyperbolicMath{
   	return (1-r*r)/(2.0+2*r*ovlp);
   }
 
+
+  /** 
+   * Given ordered triple of x-radii, compute cosine(angle)
+   * at first circle in triangle formed by mutually tangent 
+   * circles. (If there are inv distances, see 'h_comp_cos'.)
+   * @param x1 double
+   * @param x2 double
+   * @param x3 double
+   * @return double, cos of angle
+  */
+  public static double h_comp_x_cos(double x1,double x2,double x3) {
+	  if (x1<=0) 
+		  return (1.0);
+	  if ((x2<=0) && (x3<=0)) 
+		  return (2.0*x1-1);
+	  if (x2<=0) {
+		  double tmp = x3-x1*x3;
+		  return ((x1-tmp)/(x1+tmp));
+	  }
+	  if (x3<=0) {
+		  double tmp = x2-x1*x2;
+		  return ((x1-tmp)/(x1+tmp));
+	  }
+	  double ans=x1 * (x1+(1.0-x1)*(x2+x3-x2*x3)) / ((x1+x3-x1*x3)*(x1+x2-x1*x2));
+	  ans=2.0*ans-1.0;
+	  if (ans>1.0) return 0.9999999999999;
+	  if (ans<-1.0) return -0.9999999999999;
+	  return (ans);
+  }
+
 	/**
-	 * Given three x-radii and cos's of opposite overlap angles, compute
-	 * up.value=cos(angle at e1). Return true if seems okay; else return false
-	 * and set up.errval=|sqrlen| for an incompatibility, and up.rtnFlag=+1 or
-	 * -1 corresponging to up.value 0 or Pi, resp. Note: inv_dist tj <= 1 for
-	 * overlap, tj > 1 for separation, ==1 is default (tangency)
+	 * Given three x-radii and inv distances for opposite sides, compute
+	 * up.value=cos(angle at e1). 
+	 * @param x1 double
+	 * @param x2  double
+	 * @param x3  double
+	 * @return double cos(angle)
+	 */
+	public static double h_comp_cos(double x1, double x2, double x3) {
+		return h_comp_cos(x1,x2,x3,1.0,1.0,1.0);
+	}
+
+	/**
+	 * Given three x-radii and inv distances for opposite sides, compute
+	 * up.value=cos(angle at e1). 
 	 * @param x1 double
 	 * @param x2  double
 	 * @param x3  double
 	 * @param t1  double
 	 * @param t2  double
 	 * @param t3  double
-	 * @param uP  @see UtilPacket, holding cos of angle
-	 * @return boolean, true if seems OK
+	 * @return double cos(angle)
 	 */
-	public static boolean h_cos_s_overlap(double x1, double x2, double x3,
-			double t1, double t2, double t3, UtilPacket uP) {
-		double e2, e3, L, len;
-
-		if ((t1 == 1) & (t2 == 1) & (t3 == 1)) {
-			uP.value = h_comp_x_cos(x1, x2, x3);
-			uP.rtnFlag = 1;
-			return true;
+	public static double h_comp_cos(double x1, double x2, double x3,
+			double t1, double t2, double t3) {
+		
+		// all tangencies? call other routine
+		if ((t1 == 1) && (t2 == 1) && (t3 == 1)) {
+			return h_comp_x_cos(x1, x2, x3);
 		}
+		
+		// all radii finite? find edge lengths, use cosine law
+		if (x1>0 && x2>0 && x3>0) {
+			double ch=h_invdist_cosh(x2,x3,t1); // cosh's of edge lengths
+			double ch3=h_invdist_cosh(x1,x3,t2);
+			double ch2=h_invdist_cosh(x1,x2,t3);
+			// use law of cosines: recall sinh^2=cosh^2-1
+			return (ch3*ch2 - ch) / Math.sqrt((ch3*ch3-1.0)*(ch2*ch2-1.0));
+		}
+
+		// horocycle at vertex 1? angle is zero.
 		if (x1 <= 0) {
-			uP.value = 1.0;
-			uP.rtnFlag = 1;
-			return true;
+			return 1.0;
 		}
 
+		// recall x=1-s*s
 		double s1 = x_to_s_rad(x1);
 		double s2 = x_to_s_rad(x2);
 		double s3 = x_to_s_rad(x3);
-		double e1 = x1 / ((1.0 + s1) * (1 + s1));
-		double ch1 = (s1 + 1 / s1) / 2;
-		double sh1 = x1 / s1 / 2;
-		if (s2 <= 0) {
-			if (t3 == 1) {
-				e2 = (1 - e1) / 2;
-			} else {
-				e2 = (1 - e1 * e1) / (e1 * t3 + 1) / 2;
+		
+		// Remaining cases must involve horocycle(s) and inv distance(s).
+		// We compute using euclidean data; wolog, center first at origin.
+		double e1 = (1.0-s1)/(1.0+s1); // eucl radius, center at origin
+		double e2;
+		double e3;
+
+		// Now find the petal radii. Wolog, center petal circle on x axis.
+		//   Consider outer point p where petal circle intersects 
+		//   the x axis. We can find the eucl distance E and hyp
+		//   distance H from p to origin and use these to solve for 
+		//   e2 (or e3). 
+
+
+		// find radius e2 for second circle
+		double ivd=t3;
+		if (s2 <= 0) { 	// horocycle? So E=1
+			if (ivd == 1) { // tangency: e1+2*e2=1
+				e2 = 0.5*(1.0-e1);
 			}
-		} else {
-			if (t3 == 1) {
-				e2 = x2 * s1 / ((1 + s1) * (1 + s2 * s2 * s1));
-			} else {
-				double ch2 = (s2 + 1 / s2) / 2;
-				double sh2 = x2 / s2 / 2;
-				double h2 = (-1.0) * Math.log(s2);
-				len = Math.exp(-h2
-						- MathComplex.aCosh(ch1 * ch2 + sh1 * sh2 * t3));
-				L = (1.0 - len) / (1.0 + len);
-				e2 = (L * L - e1 * e1) / (e1 * t3 + L) / 2;
+			// else we compute eucl dist d between centers, 
+			//   then use d+e2=1 to find e2.
+			else { 
+				e2 = (1.0-e1*e1)/2*(e1*ivd+1.0);
+			}
+		} 
+		else { // else regular circle; compare eucl/hyp dist to M
+			if (ivd == 1) { // tangency
+				// E=e1+2*e2 <==> H=h1+2*h2, so E=(1-exp(-H))/(1+exp(-H))
+				//   and exp(-H)=s1*(s2^2)
+				double s122=s1*s2*s2;
+				e2 = 0.5*((1-s122)/(1+s122)-e1);
+			} 
+			else {
+				// E=sqrt(e1^2+e2^2+2*e1*e2*inv)+e2 and H=h_dist+h2
+				// E=(1-exp(-H))/(1+exp(-H))
+				double ch2=h_invdist_cosh(x1,x2,ivd);
+				double lch2=ch2+Math.sqrt(ch2*ch2-1.0);
+				double E=(lch2-s2)/(lch2+s2);
+				e2=(E*E-e1*e1)/(2.0*(e1*ivd+E));
 			}
 		}
 
-		if (s3 <= 0) {
-			if (t2 == 1) {
-				e3 = (1 - e1) / 2;
-			} else {
-				e3 = (1 - e1 * e1) / (e1 * t2 + 1) / 2;
+		// Similar for second petal
+		ivd=t2;
+		if (s3 <= 0) { 	// horocycle? So E=1
+			if (ivd == 1) { // tangency: e1+2*e2=1
+				e3 = 0.5*(1.0-e1);
 			}
-		} else {
-			if (t2 == 1) {
-				e3 = x3 * s1 / ((1 + s1) * (1 + s3 * s3 * s1));
-			} else {
-				double ch3 = (s3 + 1 / s3) / 2;
-				double sh3 = x3 / s3 / 2;
-				double h3 = (-1.0) * Math.log(s3);
-				len = Math.exp(-h3
-						- MathComplex.aCosh(ch1 * ch3 + sh1 * sh3 * t2));
-				L = (1.0 - len) / (1.0 + len);
-				e3 = (L * L - e1 * e1) / (e1 * t2 + L) / 2;
+			// else we compute eucl dist d between centers, 
+			//   then use d+e2=1 to find e2.
+			else { 
+				e3 = (1.0-e1*e1)/2*(e1*ivd+1.0);
+			}
+		} 
+		else { // else regular circle; compare eucl/hyp dist to M
+			if (ivd == 1) { // tangency
+				// E=e1+2*e3 <==> H=h1+2*h3, so E=(1-exp(-H))/(1+exp(-H))
+				//   and exp(-H)=s1*(s3^2)
+				double s133=s1*s3*s3;
+				e3 = 0.5*((1-s133)/(1+s133)-e1);
+			} 
+			else {
+				// E=sqrt(e1^2+e2^2+2*e1*e2*inv)+e2 and H=h_dist+h2
+				// E=(1-exp(-H))/(1+exp(-H))
+				double ch3=h_invdist_cosh(x1,x3,ivd);
+				double lch3=ch3+Math.sqrt(ch3*ch3-1.0);
+				double E=(lch3-s2)/(lch3+s2);
+				e3=(E*E-e1*e1)/(2.0*(e1*ivd+E));
 			}
 		}
-		// have euclidean radii now
-		return EuclMath.e_cos_overlap(e1, e2, e3, t1, t2, t3, uP);
+
+		// Now compute with the euclidean radii
+		return EuclMath.e_cos_overlap(e1, e2, e3, t1, t2, t3);
 	}
 
-  /** 
+	/** 
    * TODO: some confusion on what this does and whether there's an error.
    * All three circles are horocycles, so centers z1, z2 should be on 
    * unit circle. Idea is to compute data for third circle. Third center
@@ -413,8 +510,8 @@ public class HyperbolicMath{
 	  double o1,double o2,double o3) throws MobException {
 
 	  // Is one of z1 or z2 too far from unit circle to be accurate?
-      if ((z1.x*z1.x+z1.y*z1.y)<(.999999999999) 
-    		  || (z2.x*z2.x+z2.y*z2.y)<(.999999999999)) {
+      if ((z1.x*z1.x+z1.y*z1.y)<(0.999999999999) 
+    		  || (z2.x*z2.x+z2.y*z2.y)<(0.999999999999)) {
     	  return (new CircleSimple(false)); 
       }
       
@@ -511,33 +608,6 @@ used to be passed in here as an argument).
 */      
   }
   
-  /** 
-   * Given ordered triple of x-radii, compute the cosine of the
-   * angle at first circle in triangle formed by mutually tangent 
-   * circles. 
-   * @param x1 double
-   * @param x2 double
-   * @param x3 double
-   * @return double
-  */
-  public static double h_comp_x_cos(double x1,double x2,double x3) {
-	  if (x1<=0) return (1.0);
-	  if ((x2<=0) && (x3<=0)) return (2*x1-1);
-	  if (x2<=0) {
-		  x2 = x3-x1*x3;
-		  return ((x1-x2)/(x2+x1));
-	  }
-	  if (x3<=0) {
-		  x3 = x2-x1*x2;
-		  return ((x1-x3)/(x3+x1));
-	  }
-	  double ans=x1*(x1+(1.0-x1)*(x2+x3-x2*x3))/((x1+x3-x1*x3)*(x1+x2-x1*x2));
-	  ans=2.0*ans-1.0;
-	  if (ans>1.0) return 1.0;
-	  if (ans<-1.0) return -1.0;
-	  return (ans);
-  }
-
   /** 
    * Compute area of the hyperbolic triangle formed by a mutually tangent triple
    * of circles with x-radii given by x1, x2, x3. (TODO: need formulae for
@@ -687,14 +757,14 @@ used to be passed in here as an argument).
    * @param x2 double 
    * @param x3 double
    * @param o1_flag boolean (OBE, can remove)
-   * @param o1 double
-   * @param o2 double
-   * @param o3 double
+   * @param ivd1 double
+   * @param ivd2 double
+   * @param ivd3 double
    * @return CircleSimple
    *  
   */
 public static CircleSimple h_compcenter(Complex z1, Complex z2,
- 		 double x1,double x2,double x3, double o1,double o2,double o3) {
+ 		 double x1,double x2,double x3, double ivd1,double ivd2,double ivd3) {
     double sgn=1;
     CircleSimple sici;
 
@@ -711,58 +781,51 @@ public static CircleSimple h_compcenter(Complex z1, Complex z2,
     if ((s1<=0) && (s2>0)) { // second circle finite, first not? 
       // then interchange order 
       a=z2; b=z1; double s=s1; s1=s2; s2=s; s=x1; x1=x2; x2 = s;
-      s=o1; o1=o2; o2=s; sgn=(-1.0); 
+      s=ivd1; ivd1=ivd2; ivd2=s; sgn=(-1.0); 
     }
     if (s1>0) { // first is now finite
-    	double cc;
-        if (o1!=1.0 || o2!=1.0 || o3!=1.0) { // this is tougher computation
-        	UtilPacket uP=new UtilPacket();
-        	h_cos_s_overlap(x1,x2,x3,o1,o2,o3,uP);
-        	cc=uP.value;
-        }
-        else
-        	cc=h_comp_x_cos(x1,x2,x3);
+    	double cc=h_comp_cos(x1,x2,x3,ivd1,ivd2,ivd3);
 
         // if third circle is finite 
         if (s3>0) {
-        double x13 = x1*(x3);
-        double x1p3 = x1+(x3);
-        double s13=s1*s3;
-        double acstuff=(x1p3-x13)/(s13*(1+s13))-(2*x1p3-(1+o2)*x13)/(4*s13);
-        if (acstuff<0.0) // error
+        	double x13 = x1*(x3);
+        	double x1p3 = x1+(x3);
+        	double s13=s1*s3;
+        	double acstuff=(x1p3-x13)/(s13*(1+s13))-(2*x1p3-(1+ivd2)*x13)/(4*s13);
+        	if (acstuff<0.0) // error
+        		return new CircleSimple(false);
+        	double side_p1= acstuff + Math.sqrt(acstuff*(acstuff+2));
+        
+        	double ahc=side_p1/(side_p1+2); // abs value of hyp center
+        	// center as if z1 at origin
+        	Complex z3=new Complex(cc*ahc,sgn*Math.sqrt(1-cc*cc)*ahc);  
+        
+        	if (a.x==b.x && a.y==b.y) z3.x *= ahc;
+
+        	z3=Mobius.mobDiscInvValue(z3,a,b); // move to right place
+        	return new CircleSimple(z3,x3,1);
+        }
+
+        // else third circle is a horocycle 
+
+        double r=(1-s1)/(1+s1);
+        double sc=(r*r+1+2*r*ivd2)/(2*(1+r*ivd2)); // abs value of eucl center
+        Complex c=new Complex();
+        c.x=sc*cc;
+        double cc2;
+        if ((cc2=cc*cc)>1.0) // error
         	return new CircleSimple(false);
-        double side_p1= acstuff + Math.sqrt(acstuff*(acstuff+2));
-        
-        double ahc=side_p1/(side_p1+2); // abs value of hyp center
-        // center as if z1 at origin
-        Complex z3=new Complex(cc*ahc,sgn*Math.sqrt(1-cc*cc)*ahc);  
-        
-        if (a.x==b.x && a.y==b.y) z3.x *= ahc;
-
-        z3=Mobius.mobDiscInvValue(z3,a,b); // move to right place
-        return new CircleSimple(z3,x3,1);
-      }
-
-      // else third circle is a horocycle 
-
-      double r=(1-s1)/(1+s1);
-      double sc=(r*r+1+2*r*o2)/(2*(1+r*o2)); // abs value of eucl center
-      Complex c=new Complex();
-      c.x=sc*cc;
-      double cc2;
-      if ((cc2=cc*cc)>1.0) // error
-    	  return new CircleSimple(false);
-      c.y=sc*sgn*Math.sqrt(1-cc2);
-      double rad=1-sc; // Now have c and its radius
-      Complex w1=new Complex(c.x-rad,c.y);
-      Complex w2=new Complex(c.x+rad,c.y);
-      Complex w3=new Complex(c.x,c.y+rad); // three points on the circle 
-      w1=Mobius.mobDiscInvValue(w1,a,b);
-      w2=Mobius.mobDiscInvValue(w2,a,b);
-      w3=Mobius.mobDiscInvValue(w3,a,b);       // 3 pts on new circle
-      sici=EuclMath.circle_3(w1,w2,w3);
-      sici.rad *= -1.0; // store neg of eucl radius as x_rad
-      sici.center=sici.center.times(1.0/(sici.center.abs())); // get hyp center on unit circle
+        c.y=sc*sgn*Math.sqrt(1-cc2);
+        double rad=1-sc; // Now have c and its radius
+        Complex w1=new Complex(c.x-rad,c.y);
+        Complex w2=new Complex(c.x+rad,c.y);
+        Complex w3=new Complex(c.x,c.y+rad); // three points on the circle 
+        w1=Mobius.mobDiscInvValue(w1,a,b);
+        w2=Mobius.mobDiscInvValue(w2,a,b);
+        w3=Mobius.mobDiscInvValue(w3,a,b);       // 3 pts on new circle
+        sici=EuclMath.circle_3(w1,w2,w3);
+        sici.rad *= -1.0; // store neg of eucl radius as x_rad
+        sici.center=sici.center.times(1.0/(sici.center.abs())); // get hyp center on unit circle
     }
     
     // first two horocycles, third finite (Note: generally prefer to avoid this situation)
@@ -772,11 +835,11 @@ public static CircleSimple h_compcenter(Complex z1, Complex z2,
     	//       see where circle 3 ends up
     	double erad=(1.0-s3)/(1.0+s3); // eucl radius of circle 3 if centered at origin
     	// Compute eucl radii of horocycles with correct inv dist to circle 3 (at origin)
-    	double hororad1=(1.0-erad*erad)/(2.0*(1+erad*o2));  // o2 = inv dist, circles 1 and 3
-    	double hororad2=(1.0-erad*erad)/(2.0*(1+erad*o1));  // o1 = inv dist, circles 2 and 3
+    	double hororad1=(1.0-erad*erad)/(2.0*(1+erad*ivd2));  // o2 = inv dist, circles 1 and 3
+    	double hororad2=(1.0-erad*erad)/(2.0*(1+erad*ivd1));  // o1 = inv dist, circles 2 and 3
     	
     	// Assume circle 1 tangent at z=1, compute tangency point of circle 2.
-    	double dist12=EuclMath.e_invdist_length(hororad1,hororad2,o3);
+    	double dist12=EuclMath.e_invdist_length(hororad1,hororad2,ivd3);
     	double d1=1.0-hororad1;
     	double d2=1.0-hororad2;
     	double theta=Math.acos((d1*d1+d2*d2-dist12*dist12)/(2.0*d1*d2));
@@ -815,7 +878,7 @@ public static CircleSimple h_compcenter(Complex z1, Complex z2,
     //      s-rad of target circle.
     else {
         try {
-        	sici=h_horo_center(z1,z2,-s2,o1,o2,o3);
+        	sici=h_horo_center(z1,z2,-s2,ivd1,ivd2,ivd3);
         } catch(MobException mex) {
         	throw new MobException("error computing horocycle center");
         }
@@ -862,29 +925,31 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
   }
   
   /**  
-   * Return hyp length of edge with x-radii x1, x2, and inv dist 'ovlap'. 
-   * Return -1 if one or more radius is negative (horocycle, so 
-   * distance is infinite). 
-   * TODO: seems to be an error in this.
+   * Return cosh(len), 'len' = hyp length of edge between 
+   * centers of circles with x-radii x1, x2, and inv distance 
+   * 'ivd'. Return -1 if one or both radii negative (horocycle, 
+   * so distance is infinite).
+   * 
+   * Original formula for hyperbolic radii h1, h2 is:
+   *   cosh(l) = cosh(h1)*cosh(h2)+sinh(h1)*sinh(h2)*ivd
+   * 
+   * Note: l = h1+h2 if ivd==1.0.
    * @param x1 double
    * @param x2 double
-   * @param inv_dist double
-   * @return double
+   * @param ivd double
+   * @return double, cosh(length), -1 if infinite
   */
-  public static double h_invdist_length(double x1,double x2,double inv_dist) {
-      if (x1<0 || x2<0) return -1.0;
-      double s1=x_to_s_rad(x1);
-      double s2=x_to_s_rad(x2);
-      double ss1=s1*s1;
-      double ss2=s2*s2;
-      return acosh( (1.0/(4.0*s1*s2)) * ( (1+ss1)*(1+ss2) + (1-ss1)*(1-ss2)*inv_dist) );
+  public static double h_invdist_cosh(double x1,double x2,double ivd) {
+      if (x1<0 || x2<0) 
+    	  return -1.0;
+      return ((2.0-x1)*(2.0-x2)+x1*x2*ivd)/(4.0*Math.sqrt((1-x1)*(1-x2)));
   }
   
   /**
-   * This version of acosh takes x >= 1 and returns the branch of acosh(x)
-   * satisfying acosh(x) >= 0.
+   * This version of 'acosh' (arccosh) takes x >= 1 and returns the 
+   * branch with acosh(x)>=0
    * @param x double
-   * @return double
+   * @return double arccosh
    */
   public static double acosh(double x) {
       return Math.log(x+Math.sqrt(x*x-1));

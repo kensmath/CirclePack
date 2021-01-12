@@ -27,8 +27,8 @@ import listManip.FaceLink;
 import listManip.NodeLink;
 import packQuality.QualMeasures;
 import packing.PackData;
-import panels.CPScreen;
 import panels.DataTree;
+import util.ColorUtil;
 import util.intNumField;
 import util.xNumField;
 import util.zNumField;
@@ -425,7 +425,7 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 		
 		// color
 		// TODO: color_conversion task, need new GUI method
-		colorFieldV.setField(CPScreen.col_to_table(p.getCircleColor(v)));
+		colorFieldV.setField(ColorUtil.col_to_table(p.getCircleColor(v)));
 	}
 	
 	public void update_face(PackData p) {
@@ -444,7 +444,7 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 		vertsField.setText(verts[0]+" "+verts[1]+" "+verts[2]);
 		
 		// color?
-		colorFieldF.setField(CPScreen.col_to_table(face.color));
+		colorFieldF.setField(ColorUtil.col_to_table(face.color));
 		
 		// next face?
 		nextField.setField(face.nextFace);

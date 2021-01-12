@@ -6,7 +6,7 @@ import java.util.Iterator;
 import complex.Complex;
 import math.Mobius;
 import packing.PackData;
-import panels.CPScreen;
+import util.ColorUtil;
 
 /**
  * A "side" of a complex is a segment of faces in 'redChain'. 
@@ -54,7 +54,7 @@ public class D_SideData{
     	spIndex=-1;
     	mateIndex=-1;
     	label=null;
-    	color=CPScreen.getFGColor();
+    	color=ColorUtil.getFGColor();
     }
     
     /**

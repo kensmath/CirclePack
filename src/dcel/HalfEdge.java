@@ -3,7 +3,7 @@ package dcel;
 import java.awt.Color;
 
 import komplex.EdgeSimple;
-import panels.CPScreen;
+import util.ColorUtil;
 
 /** 
  * DCEL HalfEdge. Its 'face' is on its left. As we transition to a DCEL
@@ -39,7 +39,7 @@ public class HalfEdge {
 		face=null;
 		next=null;
 		prev=null;
-		color=CPScreen.getFGColor();
+		color=ColorUtil.getFGColor();
 		edgeIndx=-1; // indicates index is not set
 		myRedEdge=null;
 		invDist=1.0;

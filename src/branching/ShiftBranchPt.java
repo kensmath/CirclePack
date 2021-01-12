@@ -4,6 +4,14 @@ import java.awt.Color;
 import java.util.Iterator;
 import java.util.Vector;
 
+import allMains.CirclePack;
+import complex.Complex;
+import deBugging.DebugHelp;
+import exceptions.CombException;
+import exceptions.DataException;
+import exceptions.ParserException;
+import geometry.EuclMath;
+import geometry.HyperbolicMath;
 import komplex.CookieMonster;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
@@ -13,15 +21,6 @@ import listManip.VertexMap;
 import math.Mobius;
 import packing.PackData;
 import util.UtilPacket;
-import allMains.CirclePack;
-
-import complex.Complex;
-
-import deBugging.DebugHelp;
-import exceptions.CombException;
-import exceptions.ParserException;
-import geometry.EuclMath;
-import geometry.HyperbolicMath;
 
 /**
  * A @see GenBranchPt of "shifted" type developed by Ed Crane; related to "shepherd" type.
@@ -471,14 +470,11 @@ public class ShiftBranchPt extends GenBranchPt {
     public double quadfind(double Rv, double rl, double rr, double gr) {
     	double angl=0.0;
     	double angr=0.0;
-    	UtilPacket uPq = new UtilPacket();
     	if (rl>0.0) {
-    		genCosOverlap(Rv, rl, gr, uPq);
-    		angl=Math.acos(uPq.value);
+    		angl=Math.acos(genCosOverlap(Rv, rl, gr));
     	}
     	if (rr>0.0) {
-    		genCosOverlap(Rv,rr,gr,uPq);
-    		angr=Math.acos(uPq.value);
+    		angr=Math.acos(genCosOverlap(Rv,rr,gr));
     	}
     	return angl+angr;
     }
@@ -561,30 +557,19 @@ public class ShiftBranchPt extends GenBranchPt {
 	
     /**
      * Directs cos overlap checks according to geometry
-     * @param R, radius at vertex
-     * @param rp, positively oriented petal
-     * @param rn, negatively oriented petal
-     * @param up, utilpacket
-     * @return 
+     * @param R double, radius at vertex
+     * @param rp double, positively oriented petal
+     * @param rn double, negatively oriented petal
+     * @return return cos(angle)
      */
-    public boolean genCosOverlap(double R, double rn, double rp, UtilPacket uP) {
-    	int G = packData.hes; //geometry, 0=Euc -1=Hyp 1=Sphr
-    	switch(G) {
-    		case -1: {
-    			//uP.value = ((Math.cosh(R+rn)*Math.cosh(R+rp)-Math.cosh(rn+rp))
-					//	/(Math.sinh(R+rn)*Math.sinh(R+rp)));
-    			//return true;
-	    			return HyperbolicMath.h_cos_s_overlap(R, rn, rp, 1.0, 1.0, 1.0, uP);
-	    			//ask about x radii;
-    			}
-    		case 1: {
-    			CirclePack.cpb.errMsg("cannot compute spherical case; need to insert spherical case.");
-    			return false;
-    		}
-    		default: {
-    			return EuclMath.e_cos_overlap(R, rn, rp, uP);
-    		}
+    public double genCosOverlap(double R, double rn, double rp) {
+    	if (packData.hes<0) { // hyp, x-radii
+    		return HyperbolicMath.h_comp_cos(R, rn, rp, 1.0, 1.0, 1.0);
     	}
+    	if (packData.hes>1) { // sph  
+   			throw new DataException("cannot compute spherical case; need to insert spherical case.");
+    	}
+ 		return EuclMath.e_cos_overlap(R, rn, rp);
     }
     
     /**

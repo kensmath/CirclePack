@@ -532,7 +532,7 @@ class VertGPS {
 		vert=v;
 		coord=new double[4];
 		colIntensity=new double[3];
-		color=CPScreen.getFGColor();
+		color=ColorUtil.getFGColor();
 	}
 	
 	public double getGPS(int j) {

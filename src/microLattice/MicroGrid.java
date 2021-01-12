@@ -2376,7 +2376,7 @@ public class MicroGrid extends PackExtender {
 			    }
 			    q.setBdryFlag(newval,0);
 			    q.kData[newval].mark=++count;
-			    q.setCircleColor(newval,CPScreen.getFGColor());
+			    q.setCircleColor(newval,ColorUtil.getFGColor());
 			    q.setRadius(newval,brad);
 			    q.setCenter(newval,new Complex(bcent));
 			    q.setAim(newval,2.0*Math.PI);

@@ -31,6 +31,7 @@ import panels.CPScreen;
 import panels.PathManager;
 import random.RandomTriangulation;
 import util.CmdStruct;
+import util.ColorUtil;
 import util.RandPaths;
 import util.StringUtil;
 
@@ -1173,7 +1174,7 @@ public class WeldManager extends PackExtender {
 			p.setBdryFlag(new_v,0);
 			p.kData[new_v].flower = newflower;
 			p.kData[new_v].plotFlag = 1;
-			p.setCircleColor(new_v,CPScreen.getFGColor());
+			p.setCircleColor(new_v,ColorUtil.getFGColor());
 			p.setRadius(new_v,p.getRadius(v));
 
 			// fix w
@@ -1212,7 +1213,7 @@ public class WeldManager extends PackExtender {
 		p.kData[i].flower[2] = v;
 		p.kData[i].num = 2;
 		p.setBdryFlag(i,1);
-		p.setCircleColor(i,CPScreen.getFGColor());
+		p.setCircleColor(i,ColorUtil.getFGColor());
 		p.setRadius(i,p.getRadius(v));
 		p.setCenter(i,new Complex(0.0));
 

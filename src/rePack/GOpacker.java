@@ -21,7 +21,6 @@ import geometry.SphericalMath;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.PackLite;
-import util.UtilPacket;
 
 /**
  * This is intended to provide an implementation through java of 
@@ -510,7 +509,6 @@ public class GOpacker extends RePacker {
 		
 		// update 
     	sectorTans=new double[myPLite.intVertCount+1][];
-    	UtilPacket up=new UtilPacket();
     	for (int v=1;v<=myPLite.intVertCount;v++) {
 //    		double ckangsum=0.0; // for debugging
     	    int []flower=myPLite.flowers[v];
@@ -518,8 +516,7 @@ public class GOpacker extends RePacker {
     	    for (int j=0;j<myPLite.vNum[v];j++) {
     	        int w=flower[j];
     	        int u=flower[j+1];
-    	        EuclMath.e_cos_overlap(myPLite.radii[v],myPLite.radii[w],myPLite.radii[u],up);
-    	        double cang=up.value;
+    	        double cang=EuclMath.e_cos_overlap(myPLite.radii[v],myPLite.radii[w],myPLite.radii[u]);
 //    	        ckangsum +=Math.acos(cang); // debugging: check angle sum
     	        data[j]=Math.sqrt((1.0-cang)/(1.0+cang)); // half angle formula
     	    }
@@ -760,16 +757,14 @@ public class GOpacker extends RePacker {
     public double []packQuality(double crit) {
     	double []ans=new double[2];
     	double sas=0.0;
-    	UtilPacket uP=new UtilPacket();
     	for (int k=1;k<=myPLite.intVertCount;k++) {
     		double r=myPLite.radii[k];
     		int num=myPLite.vNum[k];
 			int []flower=myPLite.flowers[k];
     		sas=-myPLite.aims[k];
     		for (int j=0;j<num;j++) {
-				EuclMath.e_cos_overlap(r,
-						myPLite.radii[flower[j]],myPLite.radii[flower[j+1]],uP);
-				sas += Math.acos(uP.value);
+    			sas += Math.acos(EuclMath.e_cos_overlap(r,
+						myPLite.radii[flower[j]],myPLite.radii[flower[j+1]]));
 			}
     		sas=Math.abs(sas);
     		if (sas>ans[0]) ans[0]=sas;

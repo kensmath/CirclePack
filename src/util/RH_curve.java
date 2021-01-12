@@ -31,7 +31,7 @@ public class RH_curve {
 		center=new Complex(z);
 		rad=rd;
 		restCurve=null;
-		color=CPScreen.getFGColor();
+		color=ColorUtil.getFGColor();
 	}
 	
 	public RH_curve(Vector<Complex> path) {
@@ -51,7 +51,7 @@ public class RH_curve {
 			}
 			restCurve.closePath();
 		}
-		color=CPScreen.getFGColor();
+		color=ColorUtil.getFGColor();
 	}
 	
 	public RH_curve(Path2D.Double gpath) {
@@ -59,7 +59,7 @@ public class RH_curve {
 		center=null;
 		rad=0.0;
 		restCurve=new Path2D.Double(gpath);
-		color=CPScreen.getFGColor();
+		color=ColorUtil.getFGColor();
 	}
 	
 	/**

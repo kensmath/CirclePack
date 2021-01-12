@@ -1,12 +1,10 @@
 package util;
 
-import geometry.HyperbolicMath;
-import geometry.CircleSimple;
-import packing.PackData;
-import panels.CPScreen;
 import circlePack.PackControl;
-
 import complex.Complex;
+import geometry.CircleSimple;
+import geometry.HyperbolicMath;
+import packing.PackData;
 
 /** 
  * For use with 'SetBuilderParser' for holding selection descriptions.
@@ -142,7 +140,7 @@ public class SelectSpec {
 			}
 			case 'c': // color code
 			{
-				uP.value = CPScreen.col_to_table(packData.kData[node].color);
+				uP.value = ColorUtil.col_to_table(packData.kData[node].color);
 				uP.rtnFlag = 1;
 				return uP;
 			}
@@ -322,7 +320,7 @@ public class SelectSpec {
 			}
 			case 'c': // color code
 			{
-				uP.value = CPScreen.col_to_table(packData.faces[node].color);
+				uP.value = ColorUtil.col_to_table(packData.faces[node].color);
 				uP.rtnFlag = 1;
 				return uP;
 			}
@@ -393,7 +391,7 @@ public class SelectSpec {
 			}
 			case 'c': // color code
 			{
-				uP.value = CPScreen.col_to_table(packData.tileData.myTiles[node].color);
+				uP.value = ColorUtil.col_to_table(packData.tileData.myTiles[node].color);
 				uP.rtnFlag = 1;
 				return uP;
 			}

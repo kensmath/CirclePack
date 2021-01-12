@@ -194,8 +194,8 @@ public class QualMeasures {
 			if (p.getRadius(v) <= 0 || p.getRadius(w) <= 0)
 				return -1;
 			if (p.overlapStatus && (indx = p.nghb(v, w)) >= 0)
-				return (HyperbolicMath.h_invdist_length(p.getRadius(v),
-						p.getRadius(w), p.getInvDist(v,p.kData[v].flower[indx])));
+				return (HyperbolicMath.acosh(HyperbolicMath.h_invdist_cosh(p.getRadius(v),
+						p.getRadius(w), p.getInvDist(v,p.kData[v].flower[indx]))));
 			else
 				return (p.getActualRadius(v) + p.getActualRadius(w));
 		}

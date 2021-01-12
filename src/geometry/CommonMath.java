@@ -206,21 +206,25 @@ public class CommonMath {
 	}
 	
 	/**
-	 * Compute the length an edge should have between circles of radii r1 and r2
-	 * if inversive distance is given.
+	 * Compute the length between circles given radii r1 and r2 and inv 
+	 * distance 'ivd'.
 	 * @param r1 double
 	 * @param r2 double
-	 * @param inv_dist double
+	 * @param ivd double
 	 * @param hes geometry
-	 * @return double
+	 * @return double, -1 for infinite in hyp case
 	 */
-	public static double inv_dist_edge_length(double r1,double r2, double inv_dist,int hes) {
-		if (hes<0)
-			return HyperbolicMath.h_invdist_length(r1, r2, inv_dist);
+	public static double inv_dist_edge_length(double r1,double r2, double ivd,int hes) {
+		if (hes<0) {
+			double hdist=HyperbolicMath.h_invdist_cosh(r1, r2, ivd);
+			if (hdist<0)
+				return -1;
+			return HyperbolicMath.acosh(hdist);
+		}
 		else if (hes>0)
-			return SphericalMath.s_invdist_length(r1, r2, inv_dist);
+			return SphericalMath.s_invdist_length(r1, r2, ivd);
 		else 
-			return EuclMath.e_invdist_length(r1, r2, inv_dist);
+			return EuclMath.e_invdist_length(r1, r2, ivd);
 	}
 
 	/**
@@ -338,17 +342,13 @@ public class CommonMath {
 	public static double get_face_angle(double rad0,double rad1,double rad2,int hes)
 			throws DataException {
 		double theCos=0.0;
-		if (hes<0) // hyp 
+		if (hes<0) // hyp with x-radii
 			theCos=HyperbolicMath.h_comp_x_cos(rad0,rad1,rad2);
 		else if (hes>0) { // sph
 			theCos=SphericalMath.s_comp_cos(rad0, rad1, rad2);
 		}
 		else { // eucl
-			UtilPacket up=new UtilPacket();
-			if (EuclMath.e_cos_overlap(rad0, rad1, rad2, up))
-				theCos=up.value;
-			else
-				throw new DataException("euclidean incompatibility.");
+			theCos=EuclMath.e_cos_overlap(rad0, rad1, rad2);
 		}
 		if (Math.abs(theCos)>1.0)
 			throw new DataException("error calculating angle");
@@ -371,21 +371,14 @@ public class CommonMath {
 	public static double get_face_angle(double r0,double r1,double r2,
 			double o0,double o1,double o2,int hes) throws DataException {
 		double theCos=0.0;
-		UtilPacket uP=new UtilPacket();
 		if (hes<0) { // hyp 
-			if (HyperbolicMath.h_cos_s_overlap(r0,r1,r2,o0,o1,o2,uP))
-				theCos=uP.value;
-			else
-				throw new DataException("hyperbolic incompatibility computing angle.");
+			theCos=HyperbolicMath.h_comp_cos(r0,r1,r2,o0,o1,o2);
 		}
 		else if (hes>0) { // sph
 			theCos=SphericalMath.s_comp_cos(r0, r1, r2);
 		}
 		else { // eucl
-			if (EuclMath.e_cos_overlap(r0, r1, r2, o0,o1,o2,uP))
-				theCos=uP.value;
-			else
-				throw new DataException("euclidean incompatibility computing angle.");
+			theCos=EuclMath.e_cos_overlap(r0, r1, r2, o0,o1,o2);
 		}
 		if (Math.abs(theCos)>1.0)
 			throw new DataException("error calculating angle");

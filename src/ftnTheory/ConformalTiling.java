@@ -34,6 +34,7 @@ import tiling.TileBuilder;
 import tiling.TileData;
 import tiling.TileRule;
 import util.CmdStruct;
+import util.ColorUtil;
 import util.DispFlags;
 import util.StringUtil;
 import util.UtilPacket;
@@ -717,16 +718,14 @@ public class ConformalTiling extends PackExtender {
 						rad2=packData.getRadius(packData.kData[v].flower[(ccwv_indx+k)%num]);
 						UtilPacket uP=new UtilPacket();
 						if (hes<0) { // hyp
-							HyperbolicMath.h_cos_s_overlap(vrad,rad1,rad2,1.0,1.0,1.0,uP);
-							angsum+=Math.acos(uP.value);
+							angsum+=HyperbolicMath.h_comp_cos(vrad,rad1,rad2,1.0,1.0,1.0);
 						}
 						else if (hes>0) { // sph
 							angsum+=Math.acos(SphericalMath.s_comp_cos(vrad,rad1,rad2));
 							
 						}
 						else { // eucl
-							EuclMath.e_cos_overlap(vrad,rad1,rad2,uP);
-							angsum+=Math.acos(uP.value);
+							angsum+=Math.acos(EuclMath.e_cos_overlap(vrad,rad1,rad2));
 						}
 					}
 					
@@ -1371,7 +1370,7 @@ public class ConformalTiling extends PackExtender {
 							for (int wg=0;wg<2;wg++) {
 								if (wg==0) {
 									df.fill=true;
-									df.setColor(CPScreen.coLor(230)); // light grey (may use or not)
+									df.setColor(ColorUtil.coLor(230)); // light grey (may use or not)
 								}
 								else {
 									df.fill=false;
@@ -1409,9 +1408,9 @@ public class ConformalTiling extends PackExtender {
 						// draw: if 
 						if ((df.fill || df.colBorder) && df.getColor()==null) {
 							if (tile.color!=null)
-								df.setColor(CPScreen.cloneColor(tile.color));
+								df.setColor(ColorUtil.cloneMe(tile.color));
 							else if (canonicalPack.getCircleColor(tile.baryVert)!=null)
-								df.setColor(CPScreen.cloneColor(canonicalPack.getCircleColor(tile.baryVert)));
+								df.setColor(ColorUtil.cloneMe(canonicalPack.getCircleColor(tile.baryVert)));
 							count += cpCommand(packData,"disp -s"+df.reconstitute()+" "+flwr.toString());
 							df.setColor(null);
 						}
@@ -2198,16 +2197,14 @@ public class ConformalTiling extends PackExtender {
 			rad2=packData.getRadius(packData.kData[v].flower[(ccwv_indx+k)%num]);
 			UtilPacket uP=new UtilPacket();
 			if (hes<0) { // hyp
-				HyperbolicMath.h_cos_s_overlap(vrad,rad1,rad2,1.0,1.0,1.0,uP);
-				angsum+=Math.acos(uP.value);
+				angsum+=HyperbolicMath.h_comp_cos(vrad,rad1,rad2,1.0,1.0,1.0);
 			}
 			else if (hes>0) { // sph
 				angsum+=Math.acos(SphericalMath.s_comp_cos(vrad,rad1,rad2));
 				
 			}
 			else { // eucl
-				EuclMath.e_cos_overlap(vrad,rad1,rad2,uP);
-				angsum+=Math.acos(uP.value);
+				angsum+=Math.acos(EuclMath.e_cos_overlap(vrad,rad1,rad2));
 			}
 		}
 		return angsum/Math.PI;

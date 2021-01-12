@@ -41,6 +41,11 @@ public abstract class RePacker {
 	public static final int LOADED=1;         // ready to initiate riffling
 	public static final int RIFFLE=2;         // ready to resume riffling
 	public static final int IN_THREAD=3;      // packing underway in some thread (e.g., native code)
+    
+	// aim less than this, treat as horocycle
+	public static final double AIM_THRESHOLD=.0001;  
+	// for smaller packs, default to Java
+	public static final int GOPACK_THRESHOLD=501; 
 
 	public static int MAX_ALLOWABLE_BAD_CUTS=300;
 	public static double RP_TOLER=.00000000001;
@@ -399,7 +404,7 @@ public abstract class RePacker {
      * @param rad double
      * @return double
      */
-    public double compVertCurv(int v,double rad) {
+    public double compTriCurv(int v,double rad) {
     	int[] findices=p.vData[v].findices;
     	double curv=0;
     	for (int j=0;j<findices.length;j++) {
@@ -414,7 +419,7 @@ public abstract class RePacker {
      * @param v
      * @return double
      */
-    public double getRadius(int v) {
+    public double getTriRadius(int v) {
     	return pdcel.triData[p.vData[v].findices[0]].radii[p.vData[v].myIndices[0]];
     }
     
@@ -423,7 +428,7 @@ public abstract class RePacker {
      * @param v int
      * @param rad double
      */
-    public void setRadius(int v,double rad) {
+    public void setTriRadius(int v,double rad) {
     	int[] findices=p.vData[v].findices;
     	for (int j=0;j<findices.length;j++) {
     		pdcel.triData[findices[j]].radii[p.vData[v].myIndices[j]]=rad;

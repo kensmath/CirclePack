@@ -3,7 +3,6 @@ package util;
 import java.awt.Color;
 
 import allMains.CPBase;
-import panels.CPScreen;
 
 /**
  * Commands for displaying objects in CirclePack canvasses: encode
@@ -82,13 +81,13 @@ public class DispFlags {
 
 			// foreground fill?
 			if ((k = strbuf.indexOf("fg")) >= 0) {
-				color = CPScreen.getFGColor();
+				color = ColorUtil.getFGColor();
 				colorIsSet = true;
 				strbuf.delete(k, k + 2);
 			}
 			// else background fill?
 			else if ((k = strbuf.indexOf("bg")) >= 0) {
-				color = CPScreen.getBGColor();
+				color = ColorUtil.getBGColor();
 				colorIsSet = true;
 				strbuf.delete(k, k + 2);
 			}
@@ -126,7 +125,7 @@ public class DispFlags {
 			int K = 0;
 			if (digits != null) {
 				K = digits.length();
-				color = CPScreen.coLor(Integer.parseInt(digits));
+				color = ColorUtil.coLor(Integer.parseInt(digits));
 				colorIsSet = true;
 				strbuf.delete(k, k + K + 1);
 			}
@@ -164,7 +163,7 @@ public class DispFlags {
 	 * @return Color
 	 */
 	public Color getColor() {
-		return CPScreen.cloneColor(color);
+		return ColorUtil.cloneMe(color);
 	}
 	
 	/** 
@@ -179,7 +178,7 @@ public class DispFlags {
 	 * @param col Color
 	 */
 	public void setColor(Color col) {
-		color=CPScreen.cloneColor(col);
+		color=ColorUtil.cloneMe(col);
 	}
 	
 	/**
@@ -218,9 +217,9 @@ public class DispFlags {
 		StringBuilder stb=new StringBuilder("");
 		boolean bg_set=false;
 		boolean fg_set=false;
-		if (color!=null && color==CPScreen.getBGColor())
+		if (color!=null && color==ColorUtil.getBGColor())
 			bg_set=true;
-		else if (color!=null && color==CPScreen.getFGColor())
+		else if (color!=null && color==ColorUtil.getFGColor())
 			fg_set=true;
 		
 		// special case: draw thing itself in background color
@@ -242,7 +241,7 @@ public class DispFlags {
 					stb.append('c');
 			}
 			if (color!=null) 
-				stb.append("c"+CPScreen.col_to_table(color));
+				stb.append("c"+ColorUtil.col_to_table(color));
 		}
 		if (label)
 			stb.append('n');
@@ -264,7 +263,7 @@ public class DispFlags {
 		rslt.fill=this.fill;
 		rslt.label=this.label;
 		rslt.colBorder=this.colBorder;
-		rslt.color=CPScreen.cloneColor(this.color);
+		rslt.color=ColorUtil.cloneMe(this.color);
 		rslt.colorIsSet=this.colorIsSet;
 		rslt.thickness=this.thickness;
 		rslt.depth=this.depth;

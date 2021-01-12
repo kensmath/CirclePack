@@ -13,9 +13,9 @@ import geometry.CircleSimple;
 import geometry.SphericalMath;
 import komplex.AmbiguousZ;
 import komplex.DualTri;
-import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.Face;
+import komplex.SideDescription;
 import listManip.BaryCoordLink;
 import listManip.EdgeLink;
 import listManip.FaceLink;
@@ -25,9 +25,10 @@ import listManip.TileLink;
 import packing.PackData;
 import panels.CPScreen;
 import tiling.Tile;
+import util.ColorUtil;
 import util.DispFlags;
-import util.PathUtil;
 import util.PathBaryUtil;
+import util.PathUtil;
 import util.SphView;
 import util.StringUtil;
 
@@ -136,7 +137,7 @@ public class PostParser {
 
 			// --------- now, watch for 'compactDispFlag' ---------------
 			// typical display flags involve optional color/thickness/fill
-			Color col = CPScreen.getFGColor();
+			Color col = ColorUtil.getFGColor();
 			Complex z = null;
 			double tx = -1.0; // thickness factor
 			char dualChar = 'e';
@@ -212,7 +213,7 @@ public class PostParser {
 				if (tx < 0.0)
 					tx = 2.0; // default is thicker
 				if (!dispFlags.colorIsSet)
-					col = CPScreen.coLor(1); // default to deep blue
+					col = ColorUtil.coLor(1); // default to deep blue
 				pF.postPath(paths, col, tx, true);
 				count++;
 				break;
@@ -234,7 +235,7 @@ public class PostParser {
 						path = PathBaryUtil.baryLink2path(p, myLines.get(j));
 						if (path != null) {
 							paths = PathUtil.gpPolygon(path);
-							pF.postPath(paths, CPScreen.coLor(1), tx, true);
+							pF.postPath(paths, ColorUtil.coLor(1), tx, true);
 							count++;
 						}
 					}
@@ -567,7 +568,7 @@ public class PostParser {
 							if (dispFlags.colBorder)
 								bcolor=dispFlags.getColor();
 							else 
-								bcolor=CPScreen.getFGColor();
+								bcolor=ColorUtil.getFGColor();
 						}
 						pF.post_Poly(p.hes, Z, fcolor, bcolor, tx);
 
@@ -649,7 +650,7 @@ public class PostParser {
 						if (dispFlags.colBorder)
 							bcolor=dispFlags.getColor();
 						else 
-							bcolor=CPScreen.getFGColor();
+							bcolor=ColorUtil.getFGColor();
 					}
 					pF.post_Poly(p.hes, Z, fcolor, bcolor, tx);
 					count++;
@@ -804,7 +805,7 @@ public class PostParser {
 								if (dispFlags.colBorder)
 									bcolor=dispFlags.getColor();
 								else 
-									bcolor=CPScreen.getFGColor();
+									bcolor=ColorUtil.getFGColor();
 							}
 							
 							Complex []Z=new Complex[tedgelist.size()];

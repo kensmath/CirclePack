@@ -4,17 +4,17 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.Vector;
 
+import exceptions.CombException;
+import exceptions.DataException;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
+import util.ColorUtil;
 import util.FlipBot;
 import util.StringUtil;
-import exceptions.CombException;
-import exceptions.DataException;
 
 /**
  * Developing edge flip strategies in various settings.
@@ -210,12 +210,12 @@ public class FlipStrategy extends PackExtender {
 						break;
 					}
 					case 'd': { // draw current edge (previousHome,homeVert)
-						int colindx=CPScreen.col_to_table(flipBot.getColor());
+						int colindx=ColorUtil.col_to_table(flipBot.getColor());
 						cpCommand(packData,"disp -ec"+colindx+"t8 "+flipBot.getPrevious()+" "+flipBot.getHomeVert()+" -cc"+colindx+"t8 "+flipBot.getHomeVert());
 						break;
 					}
 					case 'l': { // draw the last edge flipped
-						int colindx=CPScreen.col_to_table(flipBot.getColor());
+						int colindx=ColorUtil.col_to_table(flipBot.getColor());
 						EdgeSimple edge=flipBot.getLastFlipped();
 						if (edge!=null)
 							cpCommand(packData,"disp -ec"+colindx+"t4 "+edge.v+" "+edge.w);

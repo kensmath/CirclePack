@@ -3,12 +3,11 @@ package komplex;
 import java.awt.Color;
 import java.util.Iterator;
 
+import complex.Complex;
 import listManip.PairLink;
 import math.Mobius;
 import packing.PackData;
-import panels.CPScreen;
-
-import complex.Complex;
+import util.ColorUtil;
 
 /**
  * A "side" of a complex is a segment of faces in 'redChain'. 
@@ -57,7 +56,7 @@ public class SideDescription{
     	spIndex=-1;
     	mateIndex=-1;
     	label=null;
-    	color=CPScreen.getFGColor();
+    	color=ColorUtil.getFGColor();
     }
     
     /**

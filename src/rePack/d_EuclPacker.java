@@ -18,8 +18,6 @@ import packing.RData;
  */
 public class d_EuclPacker extends RePacker {
 	
-    public static final double AIM_THRESHOLD=.0001;  // aim less than this, treat as horocycle
-    public static final int EUCL_GOPACK_THRESHOLD=501;  // for smaller packs, default to Java
 
     // Constructors
     public d_EuclPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
@@ -132,21 +130,16 @@ public class d_EuclPacker extends RePacker {
 	sct = 1;                              // Type 1 count 
 	fct = 2;                              // Type 2 minimum count 
 	
-	R0=new double[p.nodeCount+1];
-    for (int i=1;i<=p.nodeCount;i++) 
-    	R0[i] = getRadius(i);
-	
 	// do one iteration to get started 
 	accumErr2 = 0;                           
 	try {
-		double m1;
 	    for (int j=0;j<aimnum;j++) {
 	    	int v = index[j];
 	    	double faim = p.vData[v].aim;         // get target sum 
-	    	double r = getRadius(v);            // get present label
+	    	double r = getTriRadius(v);            // get present label
 
-	    	// compute anglesum inline (using local data)
-	    	double fbest=compVertCurv(v,r);
+	    	// compute anglesum (using local data)
+	    	double fbest=compTriCurv(v,r);
 
 	    	// use the model to predict the next value 
 	    	int N = 2*p.vData[v].num;
@@ -156,7 +149,7 @@ public class d_EuclPacker extends RePacker {
 	    	// store as new radius label 
 	    	if (r2<0) 
 	    		throw new PackingException();
-	    	setRadius(v,r2);
+	    	setTriRadius(v,r2);
 	    	p.vData[v].curv = fbest;  // store new angle sum
 	    	fbest -= faim;
 	    	accumErr2 += fbest*fbest;   // accum abs error 
@@ -189,7 +182,7 @@ public class d_EuclPacker extends RePacker {
 	while ((accumErr2 >ttoler && localPasses<passLimit)) {
 	    
 	    for (int i=1;i<=p.nodeCount;i++) 
-	    	R1[i] = getRadius(i);
+	    	R1[i] = getTriRadius(i);
 	    
 	    int numBadCuts = 0;
 	    double factor=0.0;
@@ -199,10 +192,10 @@ public class d_EuclPacker extends RePacker {
 	  		  
 	            int v = index[j];   // point to active node
 	            faim = p.vData[v].aim; // get target sum 
-	            double ra = getRadius(v);    // get present label
+	            double ra = getTriRadius(v);    // get present label
 	            
 		    	// compute anglesum inline (using local data)
-		    	fbest=compVertCurv(v,ra);
+		    	fbest=compTriCurv(v,ra);
 	            
 	            // use the model to predict the next value 
 	            int N = 2*p.vData[v].num;
@@ -212,7 +205,7 @@ public class d_EuclPacker extends RePacker {
 	            // store as new radius label 
 	            if (r2<0) 
 	            	throw new PackingException();
-	            setRadius(v,r2);
+	            setTriRadius(v,r2);
 	            p.vData[v].curv = fbest;       // store new angle sum
 	            fbest -= faim;
 	            c1 += fbest*fbest;   // accum abs error 
@@ -246,7 +239,7 @@ public class d_EuclPacker extends RePacker {
 	    
 	    // new values 
 	    for (int i=1;i<=p.nodeCount;i++) 
-	    	R2[i] = getRadius(i);
+	    	R2[i] = getTriRadius(i);
 	    
 	    // find maximum step one can safely take
 	    double lmax = 10000;
@@ -286,7 +279,7 @@ public class d_EuclPacker extends RePacker {
 	    	double nwr=R2[v]+lambda*(R2[v]-R1[v]);
 	    	if(nwr<0)
 	    		throw new PackingException("negative rad at "+v);
-	    	setRadius(v,nwr);
+	    	setTriRadius(v,nwr);
 	    }
 	    sct++;
 	    fact0 = factor;
@@ -299,10 +292,10 @@ public class d_EuclPacker extends RePacker {
 			int v = index[j];
 
 	        faim = p.vData[v].aim; // get target sum 
-	        double rc = getRadius(v);    // get present label
+	        double rc = getTriRadius(v);    // get present label
 	        
 	    	// compute anglesum inline (using local data)
-	        fbest=compVertCurv(v,rc);
+	        fbest=compTriCurv(v,rc);
 
 	        // use the model to predict the next value
 	        int N = 2*p.vData[v].num;
@@ -315,7 +308,7 @@ public class d_EuclPacker extends RePacker {
 	        // store as new radius label 
 	        if (r2<0) 
 	        	throw new PackingException();
-	        setRadius(v,r2);
+	        setTriRadius(v,r2);
 	        p.vData[v].curv = fbest;       /* store new angle sum */
 	        fbest -= faim;
 	        accumErr2 += fbest*fbest;   /* accum abs error */
@@ -336,7 +329,7 @@ public class d_EuclPacker extends RePacker {
 	    	m = 1;
 	    	sct =0;
 	    	for (int i=1;i<=p.nodeCount;i++) 
-	    		setRadius(i,R2[i]);
+	    		setTriRadius(i,R2[i]);
 	    	accumErr2 = c1;
 	    	if (key==2) key = 1;
 	    }
@@ -372,7 +365,7 @@ public class d_EuclPacker extends RePacker {
       for (int v=1;v<=p.nodeCount;v++) {
     	  if (p.getAim(v)>0) { //   p.getAim(j)>0) {
     		  inDex[aimnum++]=v;
-        	  double curv=compVertCurv(v,getRadius(v));
+        	  double curv=compTriCurv(v,getTriRadius(v));
         	  double err=curv-p.getAim(v);
     		  accum += (err<0) ? (-err) : err;
     	  }
@@ -387,17 +380,17 @@ public class d_EuclPacker extends RePacker {
     	  double rr=.5;
     	  for (int j=0;j<aimnum;j++) {
     		  int v=inDex[j];
-    		  r=getRadius(v);
+    		  r=getTriRadius(v);
     		  
-    		  if (Math.abs(compVertCurv(v,r)-p.getAim(v))>cut) {
+    		  if (Math.abs(compTriCurv(v,r)-p.getAim(v))>cut) {
     			  rr=e_RadCalc(v,r,p.getAim(v),N);
-    			  setRadius(v,rr);
+    			  setTriRadius(v,rr);
     		  }
           }
           accum=0;
           for (int j=0;j<aimnum;j++) {
         	  int v=inDex[j];
-        	  double err=compVertCurv(v,getRadius(v))-p.getAim(v);
+        	  double err=compTriCurv(v,getTriRadius(v))-p.getAim(v);
         	  accum += (err<0) ? (-err) : err;
           }
           cut=accum*recip;
@@ -428,20 +421,20 @@ public class d_EuclPacker extends RePacker {
   	  	double lowcurv;
   	  	
   	  	// compute initial curvature
-  	  	double curv=compVertCurv(v,r); 
+  	  	double curv=compTriCurv(v,r); 
   	    double bestcurv=lowcurv=upcurv=curv;
   	    
   	    // may hit upper/lower bounds on radius
   	    if (bestcurv>(aim+RP_OKERR)) {
   	    	upper=r/factor;
-    	    upcurv=compVertCurv(v,upper);
+    	    upcurv=compTriCurv(v,upper);
     	    if (upcurv>aim) { // return max possible
     	    	return upper;
     	    }
     	}
     	else if (bestcurv<(aim-RP_OKERR)) {
     		lower=r*factor;
-    	    lowcurv=compVertCurv(v,lower);
+    	    lowcurv=compTriCurv(v,lower);
   	      	if (lowcurv<aim) { // return min possible
   	      		return lower;
   	      	}
@@ -462,7 +455,7 @@ public class d_EuclPacker extends RePacker {
   	    	else 
 	    	  return r;
   	    	
-  	    	bestcurv=compVertCurv(v,r);
+  	    	bestcurv=compTriCurv(v,r);
 	    }
   	    
   	    return r;
@@ -489,7 +482,7 @@ public class d_EuclPacker extends RePacker {
   	  	p.set_aim_default();
   	  	
   	  	// use traditional java packing routine
-  	  	if (!okayC || p.nodeCount<EUCL_GOPACK_THRESHOLD || !JNIinit.SparseStatus()) {
+  	  	if (!okayC || p.nodeCount<GOPACK_THRESHOLD || !JNIinit.SparseStatus()) {
   	  		
   	  		// set the aims
   	  	  	CommandStrParser.jexecute(p,"set_aim 1.0 b");
@@ -790,7 +783,7 @@ public class d_EuclPacker extends RePacker {
 	public void setSparseC(boolean useC) {
 		useSparseC=false;
 		if (useC) { // requested to use GOpacker routines if possible
-			if (p.nodeCount<EUCL_GOPACK_THRESHOLD) { // for smaller packing, use Java
+			if (p.nodeCount<GOPACK_THRESHOLD) { // for smaller packing, use Java
 				useSparseC=false;
 				return;
 			}

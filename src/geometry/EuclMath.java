@@ -47,73 +47,45 @@ public class EuclMath{
     
   /**
 	 * Given three eucl radii and inv distances of opposite edges, compute
-	 * up.value=cos(angle at e1). Recall: inv_dist tj in (-1,1) for overlap,
-	 * =1 for tangency (default), >1 for separation.
+	 * up.value=cos(angle at e1). 
 	 * @param e1 double, eucl radii, etc
 	 * @param e2 double
 	 * @param e3, double
-	 * @param id1 double, inv distance of edge opposite radius e1, etc
-	 * @param id2 double
-	 * @param id3 double
-	 * @param up UtilPacket, instantiated by calling routine
-	 * @return boolean, true if seems okay, else set up.errval=|up.value|
-	 * for an incompatibility and up.rtnFlag=+-1 corresponding to up.value
-	 * 0 or PI, resp.
+	 * @param ivd1 double, inv distance of edge opposite radius e1, etc
+	 * @param ivd2 double
+	 * @param ivd3 double
 	 */
-	public static boolean e_cos_overlap(double e1, double e2, double e3,
-			double id1, double id2, double id3,UtilPacket up) {
+	public static double e_cos_overlap(double e1, double e2, double e3,
+			double ivd1, double ivd2, double ivd3) {
 
+		if ((ivd1==1) && (ivd2==1) && (ivd3==1))
+			return e_cos_overlap(e1,e2,e3);
 		double e12 = e1 * e1;
 		double e22 = e2 * e2;
 		double e32 = e3 * e3;
-		double x3 = e1 * e2 * id3;
-		double x2 = e1 * e3 * id2;
-		double x1 = e2 * e3 * id1;
+		double x3 = e1 * e2 * ivd3;
+		double x2 = e1 * e3 * ivd2;
+		double x1 = e2 * e3 * ivd1;
 		double l3 = e12 + e22 + 2 * x3;
 		double l2 = e12 + e32 + 2 * x2;
-		double sqrlen = up.value = (e12 + x2 + x3 - x1) / Math.sqrt(l2 * l3);
-		up.errval = 0.0;
-		up.rtnFlag=0;
-		if (up.value < -1.0) { // error?
-			if ((1.0-up.value)<OKERR) {
-				up.value=-1.0;
-				return true;
-			}
-			up.value = -1.0;
-			up.rtnFlag=-1;
-			up.errval = Math.abs(sqrlen);
-			return false;
+		double sqrlen=(e12 + x2 + x3 - x1) / Math.sqrt(l2 * l3);
+		if (sqrlen < -1.0 || sqrlen>1.0) { // error?
+			throw new DataException("error in computing eucl angle cosine");
 		}
-		if (up.value > 1.0) { // error?
-			// extreme radius may give slightly larger value
-			if ((up.value-1.0)<OKERR) {
-				up.value=1.0;
-				return true;
-			}
-			
-			up.value = 1.0;
-			up.rtnFlag = 1;
-			up.errval = sqrlen;
-			return false;
-		}
-		return true;
+		return sqrlen;
 	}
 	
 	/**
-	 * Using law of cosines, compute up.value=cos(angle at e1) in
+	 * Using law of cosines, compute cos(angle at e1) in
 	 * tangent triple with eucl radii e1,e2,e3 (i.e., inv distances = 1.0);
-	 * @param e1 double, eucl radii, etc
+	 * @param e1 double
 	 * @param e2 double
 	 * @param e3 double
-	 * @param up UtilPacket, instantiated by calling routine
-	 * @return boolean, true if seems okay, else set up.errval=|up.value|
-	 * for an incompatibility and up.rtnFlag=+-1 corresponding to up.value
-	 * 0 or PI, resp.
+	 * @return double, cos(angle)
 	 */
-	public static boolean e_cos_overlap(double e1, double e2, double e3,UtilPacket up) {
+	public static double e_cos_overlap(double e1, double e2, double e3) {
 		double c=e2*e3;
-		up.value=1-2*c/(e1*e1+e1*(e2+e3)+c);
-		return true;
+		return 1-2*c/(e1*e1+e1*(e2+e3)+c);
 	}
 	
 	/**
@@ -705,14 +677,15 @@ public class EuclMath{
 	}
 
 	/** 
-	 * Return eucl length of edge with eucl radii r1, r2, and inv dist 'ovlap'.
+	 * Return eucl length l of edge with eucl radii r1, r2, and inv dist
+	 * 'ivd'. Then l*l=r1*r1+r2*r2+2*r1*r2*ivd;
 	 * @param r1 double
 	 * @param r2 double
-	 * @param inv_dist double
+	 * @param ivd double
 	 * @return double
 	*/
-	public static double e_invdist_length(double r1,double r2,double inv_dist) {
-		return (Math.sqrt(r1*r1+r2*r2+2.0*r1*r2*inv_dist));
+	public static double e_invdist_length(double r1,double r2,double ivd) {
+		return (Math.sqrt(r1*r1+r2*r2+2.0*r1*r2*ivd));
 	}
 	
 	/** 

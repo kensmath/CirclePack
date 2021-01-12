@@ -31,8 +31,6 @@ import packing.PackData;
  */
 public class SphPacker extends RePacker {
 	
-    public static final int SPH_GOPACK_THRESHOLD=501;  // for smaller packs, default to Java
-
 	// Constructors
 	public SphPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
 		super(pd,pass_limit,false);
@@ -59,7 +57,7 @@ public class SphPacker extends RePacker {
 	public void setSparseC(boolean useC) {
 		useSparseC=false;
 		if (useC) { // requested to use GOpacker routines if possible
-			if (p.nodeCount<SPH_GOPACK_THRESHOLD) { // for smaller packing, use Java
+			if (p.nodeCount<GOPACK_THRESHOLD) { // for smaller packing, use Java
 				useSparseC=false;
 				return;
 			}

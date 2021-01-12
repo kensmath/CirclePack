@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CirclePack;
+import exceptions.DataException;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import listManip.FaceLink;
@@ -206,15 +207,17 @@ public class ShepherdCircles extends PackExtender {
 			cpCommand(packData,"repack -o");
 		
 			// get 'excess', how much each angle of triangle exceeds 2pi divided by 2
-			UtilPacket uP=new UtilPacket();
+			double value=-1.0;
 			for (int j=0;j<3;j++) {
-				if (!genCosOverlap(packData.getRadius(verts[j]),
+				try {
+					value=genCosOverlap(packData.getRadius(verts[j]),
 						packData.getRadius(verts[(j+1)%3]),
 						packData.getRadius(verts[(j+2)%3]),
-						cF.overlps[j],cF.overlps[(j+1)%3],cF.overlps[(j+2)%3],uP)) {
+						cF.overlps[j],cF.overlps[(j+1)%3],cF.overlps[(j+2)%3]);
+				} catch (Exception ex) {
 					Oops("some problem in getting cos of overlaps");
 				}
-				excess[j]=Math.acos(uP.value); // twice the excess angle
+				excess[j]=Math.acos(value); // twice the excess angle
 			}
 			
 			// how far off?
@@ -246,23 +249,19 @@ public class ShepherdCircles extends PackExtender {
      * @param overR, opposite to R
      * @param over1, opposite to r1
      * @param over2, opposite to r2
-     * @param uP, UtilPacket for passing results, must be created by calling routine
-     * @return true if it seemed to work.
+     * @return double, cos(angle)
      */
-	public boolean genCosOverlap(double R,double r1,double r2,double overR,double over1,double over2,UtilPacket uP) {
-		switch(packData.hes) {
-		case -1: {
- 			return HyperbolicMath.h_cos_s_overlap(R, r1, r2, overR,over1,over2,uP);
+	public double genCosOverlap(double R,double r1,double r2,double overR,double over1,double over2) {
+		double value;
+		if (packData.hes<0) { // hyp
+			return HyperbolicMath.h_comp_cos(R, r1, r2, overR,over1,over2);
 		}
-		case 1: {
-			Oops("cannot compute spherical case; need to insert spherical case.");
-			return false;
+		if (packData.hes>0) { // sph
+			throw new DataException("cannot compute cos in spherical case; need to insert spherical case.");
 		}
-		default: {
-			return EuclMath.e_cos_overlap(R, r1, r2, overR,over1,over2,uP);
-		}
+		return EuclMath.e_cos_overlap(R, r1, r2, overR,over1,over2);
 	}
-}
+
     /**
      * If f is a Crane face, this returns its 'CraneFace' class.
      * @param f

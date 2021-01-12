@@ -1,17 +1,17 @@
 package rePack;
 
-import input.CommandStrParser;
-import komplex.KData;
-import listManip.NodeLink;
-import packing.PackData;
-import packing.RData;
-import util.UtilPacket;
 import JNI.JNIinit;
 import allMains.CPBase;
 import allMains.CirclePack;
 import exceptions.DataException;
 import exceptions.PackingException;
 import geometry.EuclMath;
+import input.CommandStrParser;
+import komplex.KData;
+import listManip.NodeLink;
+import packing.PackData;
+import packing.RData;
+import util.UtilPacket;
 
 public class EuclPacker extends RePacker {
 	
@@ -121,8 +121,6 @@ public class EuclPacker extends RePacker {
     
     public int startRiffle() throws PackingException { // initiate packing computation
 
-	UtilPacket utilPacket=new UtilPacket();
-	
 	if (status!=LOADED) throw new PackingException();
 	
 	maxBadCuts = 0;
@@ -168,9 +166,7 @@ public class EuclPacker extends RePacker {
 			    	r2=rdata[j2].rad;
 			    	o2=kdata[v].overlaps[n];
 			    	double ovlp=kdata[j1].overlaps[p.nghb(j1,j2)];
-			    	// note: we don't check for errors in utilPacket
-			    	EuclMath.e_cos_overlap(r,r1,r2,ovlp,o2,o1,utilPacket);
-			    	fbest += Math.acos(utilPacket.value);
+			    	fbest += Math.acos(EuclMath.e_cos_overlap(r,r1,r2,ovlp,o2,o1));
 			    }
 	    	}
 
@@ -253,8 +249,7 @@ public class EuclPacker extends RePacker {
 				    	o2=kdata[v].overlaps[n];
 				    	double ovlp=kdata[j1].overlaps[p.nghb(j1,j2)];
 				    	// note: we don't check for errors in utilPacket
-				    	EuclMath.e_cos_overlap(ra,r1,r2,ovlp,o2,o1,utilPacket);
-				    	fbest += Math.acos(utilPacket.value);
+				    	fbest += Math.acos(EuclMath.e_cos_overlap(ra,r1,r2,ovlp,o2,o1));
 				    }
 		    	}
 	            
@@ -378,9 +373,7 @@ public class EuclPacker extends RePacker {
 			    	r2=rdata[j2].rad;
 			    	o2=kdata[v].overlaps[n];
 			    	double ovlp=kdata[j1].overlaps[p.nghb(j1,j2)];
-			    	// note: we don't check for errors in utilPacket
-			    	EuclMath.e_cos_overlap(rc,r1,r2,ovlp,o2,o1,utilPacket);
-			    	fbest += Math.acos(utilPacket.value);
+			    	fbest += Math.acos(EuclMath.e_cos_overlap(rc,r1,r2,ovlp,o2,o1));
 			    }
 	    	}
 	        

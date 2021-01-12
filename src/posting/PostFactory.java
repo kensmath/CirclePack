@@ -1,14 +1,5 @@
 package posting;
 
-import exceptions.DrawingException;
-import exceptions.InOutException;
-import geometry.HypGeodesic;
-import geometry.HyperbolicMath;
-import geometry.CircleSimple;
-import geometry.SphGeodesic;
-import geometry.SphericalMath;
-import graphObjects.CPEdge;
-
 import java.awt.Color;
 import java.awt.Shape;
 import java.awt.geom.Arc2D;
@@ -18,15 +9,23 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Vector;
 
+import circlePack.PackControl;
+import complex.Complex;
+import complex.MathComplex;
+import exceptions.DrawingException;
+import exceptions.InOutException;
+import geometry.CircleSimple;
+import geometry.HypGeodesic;
+import geometry.HyperbolicMath;
+import geometry.SphGeodesic;
+import geometry.SphericalMath;
+import graphObjects.CPEdge;
 import math.Point3D;
 import panels.CPScreen;
 import tiling.SubdivisionRules;
 import tiling.TileRule;
+import util.ColorUtil;
 import util.DispFlags;
-import circlePack.PackControl;
-
-import complex.Complex;
-import complex.MathComplex;
 	
 /**
  * This contains methods for adding circle/faces/edges/etc to postscript
@@ -241,7 +240,7 @@ public class PostFactory {
 	 * @return
 	 */
 	public int postEdge(int hes,Complex p1,Complex p2) {
-		return postColorEdge(hes,p1,p2,CPScreen.FG_Color,-1.0);
+		return postColorEdge(hes,p1,p2,ColorUtil.FG_Color,-1.0);
 	}
 	
 	/**
@@ -253,7 +252,7 @@ public class PostFactory {
 	 * @return
 	 */
 	public int postEdge(int hes,Complex p1,Complex p2,double tx) {
-		return postColorEdge(hes,p1,p2,CPScreen.FG_Color,tx);
+		return postColorEdge(hes,p1,p2,ColorUtil.FG_Color,tx);
 	}
 	
 	/**
@@ -279,7 +278,7 @@ public class PostFactory {
 					fp.write(a.x+" "+a.y+" m "); // move to first end
 					String pathstr=sphEdgePath(sg);
 					fp.write(pathstr);
-					if (col!=CPScreen.FG_Color) 
+					if (col!=ColorUtil.FG_Color) 
 						fp.write(" "+postRGBsrgb(col));
 				}
 			}
@@ -879,7 +878,7 @@ public class PostFactory {
 	 * @param diam, double, typically 5/cpScreen.pixFactor. 
 	 */
 	public void postTrinket(Complex z,double diam) {
-		postColorTrinket(z,diam,CPScreen.BG_Color);
+		postColorTrinket(z,diam,ColorUtil.BG_Color);
 	}
 	
 	/**

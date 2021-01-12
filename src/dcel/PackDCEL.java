@@ -27,8 +27,8 @@ import listManip.GraphLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
-import panels.CPScreen;
 import posting.PostFactory;
+import util.ColorUtil;
 import util.DispFlags;
 import util.TriData;
 
@@ -455,15 +455,26 @@ public class PackDCEL {
 		setCent4Edge(edge,new Complex(0.0));
 		double invd=getInvDist(edge);
 		double dist=CommonMath.inv_dist_edge_length(r0,r1,invd,p.hes);
-		if (p.hes>0)
+		if (p.hes>0) // sph
 			setCent4Edge(edge.next,new Complex(0.0,dist));
-		else {
-			if (p.hes<0) {
+		else if (p.hes<0){ // hyp
+			if (dist<0) { // horocycle?
+				dist=1;
+
+				// must also store negative of eucl radius
+				double s_rad=Math.sqrt(1.0-r0);
+				double e_rad=(1.0-s_rad)/(1.0+s_rad);
+				e_rad=0.5*(1.0-e_rad);
+				setRad4Edge(edge.next,-e_rad); 
+			}
+			else {
 				double expdist=Math.exp(dist);
 				dist=(expdist-1.0)/(expdist+1.0);
 			}
 			setCent4Edge(edge.next,new Complex(dist,0.0));
 		}
+		else // eucl
+			setCent4Edge(edge.next,new Complex(dist,0.0));
 		CircleSimple cS=d_compOppCenter(edge);
 		setCent4Edge(edge.next.next,cS.center);
 		return cS;
@@ -612,33 +623,11 @@ public class PackDCEL {
 		int f=edge.v;
 		if (f==0) { // this is a root (as expected)
 			f=edge.w;
-//			git.next(); // donw with this first face
 		}
 		
 		// lay out the first face, it's 'origin' at z=0;
 		Face face=faces[f];
-	    double rv=getVertRadius(face.edge);
-	    setCent4Edge(face.edge,new Complex(0.0));
-	    
-	    // other end on x-axis
-	    Complex w=new Complex(0.0);
-	    double ru=getVertRadius(face.edge.next);
-	    if (p.hes<0) { // hyp
-	    	double dist=HyperbolicMath.h_invdist_length(rv,ru,face.edge.invDist);
-	    	double exph=Math.exp(dist); // exp(h)
-	    	double edist=(exph-1.0)/(exph+1.0);
-	    	w=new Complex(edist);
-	    }
-	    else if (p.hes>0) { // sph, (theta,phi) form
-	    	w=new Complex(0.0,SphericalMath.s_invdist_length(
-	    			rv,ru,face.edge.invDist));
-	    }
-	    else { // hyp
-	    	w=new Complex(EuclMath.e_invdist_length(
-	    			rv,rv,face.edge.invDist));
-	    }
-	    
-	    setCent4Edge(face.edge.next,w);
+		placeFirstFace(face.edge);
 	    int count=1;
 	    
 	    // now layout by face-by-face
@@ -653,6 +642,8 @@ public class PackDCEL {
 		    		face.edge.invDist,face.edge.next.invDist,
 		    		face.edge.next.next.invDist,p.hes);
 		    setCent4Edge(face.edge.next.next, sc.center);
+		    if (sc.rad<0) // horocycle?
+		    	setRad4Edge(face.edge.next.next,sc.rad);
 		    count++;
 	    }
 	    return count;
@@ -1849,7 +1840,7 @@ public class PackDCEL {
 						if (faceFlags.colBorder)
 							bcolor=p.getFaceColor(next_face);
 						else 
-							bcolor=CPScreen.getFGColor();
+							bcolor=ColorUtil.getFGColor();
 					}
 					pF.post_Poly(p.hes, myCenters, fcolor, bcolor, tx);
 
@@ -1874,7 +1865,7 @@ public class PackDCEL {
 							pF.postCircle(p.hes,myCenters[2],myRadii[2],tx);
 					} 
 					else {
-						Color ccOl=CPScreen.getFGColor();
+						Color ccOl=ColorUtil.getFGColor();
 						if (!circFlags.colorIsSet)
 							ccOl = p.getCircleColor(he.next.next.origin.vertIndx);
 						if (circFlags.colBorder) {

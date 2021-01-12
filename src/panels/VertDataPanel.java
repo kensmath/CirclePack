@@ -15,6 +15,9 @@ import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 
+import allMains.CirclePack;
+import circlePack.PackControl;
+import complex.Complex;
 import komplex.EdgeSimple;
 import komplex.Face;
 import komplex.KData;
@@ -23,13 +26,10 @@ import listManip.FaceLink;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.RData;
+import util.ColorUtil;
 import util.intNumField;
 import util.xNumField;
 import util.zNumField;
-import allMains.CirclePack;
-import circlePack.PackControl;
-
-import complex.Complex;
 
 public class VertDataPanel extends JPanel implements ActionListener {
 
@@ -268,13 +268,13 @@ public class VertDataPanel extends JPanel implements ActionListener {
 			int f=FaceLink.grab_one_face(p,faceChoice.getText());
 			int col=colorFieldF.getValue();
 			if (f>0 && f<=p.faceCount && col>=0 && col<=255)
-				p.faces[f].color=CPScreen.coLor(col);
+				p.faces[f].color=ColorUtil.coLor(col);
 		}
 		else if (cmd.equals("vert_color")) {
 			int v=NodeLink.grab_one_vert(p,vertChoice.getText());
 			int col=colorFieldV.getValue();
 			if (v>0 && v<=p.nodeCount && col>=0 && col<=255)
-				p.kData[v].color=CPScreen.coLor(col);
+				p.kData[v].color=ColorUtil.coLor(col);
 		}
 		else if (cmd.equals("vert_radius")) {
 			int v=NodeLink.grab_one_vert(p,vertChoice.getText());
@@ -353,7 +353,7 @@ public class VertDataPanel extends JPanel implements ActionListener {
 		flowerField.setText(flower.toString());
 		
 		// color
-		colorFieldV.setField(CPScreen.col_to_table(kdata.color));
+		colorFieldV.setField(ColorUtil.col_to_table(kdata.color));
 	}
 	
 	public void update_face(PackData p) {
@@ -372,7 +372,7 @@ public class VertDataPanel extends JPanel implements ActionListener {
 		vertsField.setText(verts[0]+" "+verts[1]+" "+verts[2]);
 		
 		// color?
-		colorFieldF.setField(CPScreen.col_to_table(face.color));
+		colorFieldF.setField(ColorUtil.col_to_table(face.color));
 		
 		// next face?
 		nextField.setField(face.nextFace);

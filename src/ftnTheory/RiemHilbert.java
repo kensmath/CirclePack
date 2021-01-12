@@ -20,7 +20,6 @@ import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.DispFlags;
@@ -372,13 +371,13 @@ public class RiemHilbert extends PackExtender {
 				if (sdist > 0) {
 					if (sdist > rad)
 						sdist = rad;
-					col = CPScreen.coLor((int) (1 + 99 * (1.0 - sdist / rad)));
+					col = ColorUtil.coLor((int) (1 + 99 * (1.0 - sdist / rad)));
 				}
 				// hits outside? shade of red, further=darker
 				else {
 					if (-sdist > rad)
 						sdist = -rad;
-					col = CPScreen.coLor((int) (100 + 99 * (-sdist / rad)));
+					col = ColorUtil.coLor((int) (100 + 99 * (-sdist / rad)));
 				}
 
 				// do the fill first

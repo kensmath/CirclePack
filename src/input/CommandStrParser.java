@@ -45,7 +45,6 @@ import exceptions.InOutException;
 import exceptions.JNIException;
 import exceptions.LayoutException;
 import exceptions.MobException;
-import exceptions.PackingException;
 import exceptions.ParserException;
 import exceptions.VarException;
 import ftnTheory.AffinePack;
@@ -7413,16 +7412,16 @@ public class CommandStrParser {
 	      
 	      // ============= max_pack ============
 	      else if (cmd.startsWith("max_pa")) {
+	    	  if (!packData.status || packData.nodeCount<=0) {
+	    		  CirclePack.cpb.errMsg("bad packing data");
+	    		  return 0;
+	    	  }
 	    	  int puncture_v=-1;
 	    	  int cycles=CPBase.RIFFLE_COUNT;
 	    	  // Note: there should be only one flag segment. Call forms:
 	    	  //	max_pack [k], for k cycles
 	    	  //	max_pack -r {v}, sphere only, puncture at v.
 	    	  //    max_pack -r {v} [k], both
-	    	  if (!packData.status || packData.nodeCount<=0) {
-	    		  CirclePack.cpb.errMsg("bad packing data");
-	    		  return 0;
-	    	  }
 	    		  
 	    	  try {
 	    		  items=(Vector<String>)flagSegs.elementAt(0);
@@ -7460,15 +7459,8 @@ public class CommandStrParser {
 	    		  } catch (Exception ex) { } 
 	    		  
 	    		  if (packData.packDCEL!=null) {
-						d_HypPacker h_packer=new d_HypPacker(packData,1000);
-						count=h_packer.d_oldReliable(1000); 
-						if (count>0) {
-							h_packer.reapResults();
-							packData.fillcurves();
-							packData.packDCEL.dcelCompCenters(packData.packDCEL.computeOrder);
-						}
-						else if (count<0)
-							throw new PackingException("dcel hyp repack failure");
+						d_HypPacker h_packer=new d_HypPacker(packData,-1);
+						count=h_packer.maxPack(cycles);
 	    		  }
 	    		  else {
 	    			  HypPacker hypPacker=new HypPacker(packData); // will use Orick's code, if available

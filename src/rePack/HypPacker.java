@@ -1,22 +1,18 @@
 package rePack;
 
+import JNI.JNIinit;
+import allMains.CPBase;
+import allMains.CirclePack;
+import exceptions.PackingException;
+import geometry.HyperbolicMath;
 import input.CommandStrParser;
 import komplex.KData;
 import packing.PackData;
 import packing.RData;
 import util.UtilPacket;
-import JNI.JNIinit;
-import allMains.CPBase;
-import allMains.CirclePack;
-import complex.Complex;
-import exceptions.PackingException;
-import geometry.HyperbolicMath;
 
 public class HypPacker extends RePacker {
 	
-    public static final double AIM_THRESHOLD=.0001;  // aim less than this, treat as horocycle
-    public static final int HYP_GOPACK_THRESHOLD=501;  // for smaller packs, default to Java
-
     // Constructors
     public HypPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
     	super(pd,pass_limit,false);
@@ -36,7 +32,7 @@ public class HypPacker extends RePacker {
 	public void setSparseC(boolean useC) {
 		useSparseC=false;
 		if (useC) { // request to use GOpacker routines if possible
-			if (p.nodeCount<HYP_GOPACK_THRESHOLD) { // for smaller packing, use Java
+			if (p.nodeCount<GOPACK_THRESHOLD) { // for smaller packing, use Java
 				useSparseC=false;
 				return;
 			}
@@ -59,17 +55,20 @@ public class HypPacker extends RePacker {
 		aimnum = 0;
 		index = new int[p.nodeCount + 1];
 		for (int i = 1; i <= p.nodeCount; i++) {
-			if (p.isBdry(i) && rdata[i].aim >= 0
-					&& rdata[i].aim < AIM_THRESHOLD)
-				rdata[i].rad = (-.2); // treat interior as horocycle (e.g.,
-										// 'cusp')
-			else if (rdata[i].aim > 0) {
-				if (rdata[i].rad <= 0 && rdata[i].aim > AIM_THRESHOLD)
-					rdata[i].rad = .01; // default starting value
+			
+			// special case: treat interior as horocycle (e.g., 'cusp')
+			if (p.isBdry(i) && p.getAim(i) >= 0
+					&& p.getAim(i) < AIM_THRESHOLD)
+				p.setRadius(i,-.2); 
+			
+			// typical
+			else if (p.getAim(i) > 0) {
+				if (p.getRadius(i) <= 0 && p.getAim(i) > AIM_THRESHOLD)
+					p.setRadius(i,.01); // default starting value
 				index[aimnum] = i;
 				aimnum++;
 			}
-			if (rdata[i].rad > 0) // convert all x-radius to (s-radius)^2
+			if (p.getRadius(i) > 0) // convert all x-radius to (s-radius)^2
 				rdata[i].rad = 1.0 - rdata[i].rad;
 		}
 		if (aimnum == 0)
@@ -133,12 +132,6 @@ public class HypPacker extends RePacker {
     
     // abstract method for initiating packing computation
 	public int startRiffle() throws PackingException { 
-		int i, j, k, j1, j2, N;
-		double r, r1, r2, r3, fbest, faim, del, bet;
-		double denom, twor;
-		double m2, m3, sr, t1, t2, t3, o1, o2, o3;
-		UtilPacket utilPacket = new UtilPacket();
-
 		if (status != LOADED)
 			throw new PackingException();
 
@@ -148,7 +141,6 @@ public class HypPacker extends RePacker {
 		cntBadCuts = 0;
 
 		// set up parameters
-
 		ttoler = 3 * aimnum * RP_TOLER; // adjust tolerance
 		key = 1; // initial superstep type
 		m = 1; // Type 1 multiplier
@@ -158,20 +150,21 @@ public class HypPacker extends RePacker {
 		// do one iteration to get started
 		accumErr2 = 0;
 		try {
-			for (j = 0; j < aimnum; j++) {
-				fbest = 0;
-				i = index[j];
-				if ((r = rdata[i].rad) < 0)
+			for (int j = 0; j < aimnum; j++) {
+				double fbest = 0;
+				int i = index[j];
+				double r=rdata[i].rad;
+				if (r < 0)
 					r = 0;
-				sr = Math.sqrt(r);
-				N = kdata[i].num;
+				double sr = Math.sqrt(r);
+				int N = kdata[i].num;
 				if (!p.overlapStatus) { // no overlaps
-					twor = 2 * r;
-					r2 = rdata[kdata[i].flower[0]].rad;
-					m2 = (r2 > 0) ? (1 - r2) / (1 - r * r2) : (double) 1;
-					for (k = 1; k <= N; k++) { // loop through petals
-						r3 = rdata[kdata[i].flower[k]].rad;
-						m3 = (r3 > 0) ? (1 - r3) / (1 - r * r3) : (double) 1;
+					double twor = 2 * r;
+					double r2 = rdata[kdata[i].flower[0]].rad;
+					double m2 = (r2 > 0) ? (1 - r2) / (1 - r * r2) : 1.0;
+					for (int k = 1; k <= N; k++) { // loop through petals
+						double r3 = rdata[kdata[i].flower[k]].rad;
+						double m3 = (r3 > 0) ? (1 - r3) / (1 - r * r3) : 1.0;
 						fbest += Math.acos(1 - twor * m2 * m3); // angle calc
 						m2 = m3;
 					}
@@ -179,38 +172,38 @@ public class HypPacker extends RePacker {
 
 				// with overlaps, use old routine
 				else {
-					j2 = kdata[i].flower[0];
-					if ((r2 = rdata[j2].rad) < 0)
-						r2 = (double) 0;
-					o2 = kdata[i].overlaps[0];
-					for (k = 1; k <= N; k++) {
-						r1 = r2;
-						o1 = o2;
-						j1 = j2;
+					int j2 = kdata[i].flower[0];
+					double r2=rdata[j2].rad;
+					if (r2 < 0.0)
+						r2 = 0.0;
+					double o2 = kdata[i].overlaps[0];
+					for (int k = 1; k <= N; k++) {
+						double r1 = r2;
+						double o1 = o2;
+						int j1 = j2;
 						j2 = kdata[i].flower[k];
 						if ((r2 = rdata[j2].rad) < 0)
 							r2 = 0.0;
 						o2 = kdata[i].overlaps[k];
-						o3 = kdata[j1].overlaps[p.nghb(j1, j2)];
-						HyperbolicMath.h_cos_s_overlap(1 - r, 1 - r1, 1 - r2,
-								o3, o2, o1, utilPacket);
-						fbest += Math.acos(utilPacket.value);
+						double o3 = kdata[j1].overlaps[p.nghb(j1, j2)];
+						fbest += Math.acos(HyperbolicMath.h_comp_cos(1 - r, 1 - r1, 1 - r2,
+								o3, o2, o1));
 						// TODO: these routines waste time converting back/forth
 						// between
 						// x-radii and s-radii.
 					}
 				}
 
-				faim = rdata[i].aim; // get target sum
+				double faim = rdata[i].aim; // get target sum
 				// set up for uniform neighbor model
-				denom = 1.0 / (2.0 * ((double) N));
-				del = Math.sin(faim * denom);
-				bet = Math.sin(fbest * denom);
-				r2 = (bet - sr) / (bet * r - sr); // reference radius
+				double denom = 1.0 / (2.0 * ((double) N));
+				double del = Math.sin(faim * denom);
+				double bet = Math.sin(fbest * denom);
+				double r2 = (bet - sr) / (bet * r - sr); // reference radius
 				if (r2 > 0) { // calc new label
-					t1 = 1 - r2;
-					t2 = 2 * del;
-					t3 = t2 / (Math.sqrt(t1 * t1 + t2 * t2 * r2) + t1);
+					double t1 = 1 - r2;
+					double t2 = 2 * del;
+					double t3 = t2 / (Math.sqrt(t1 * t1 + t2 * t2 * r2) + t1);
 					r2 = t3 * t3;
 				} else
 					r2 = del * del; // use lower limit
@@ -286,8 +279,8 @@ public class HypPacker extends RePacker {
 								r2 = (double) 0;
 							o2 = kdata[v].overlaps[k];
 							o3 = kdata[j1].overlaps[p.nghb(j1, j2)];
-							HyperbolicMath.h_cos_s_overlap(1 - r, 1 - r1,
-									1 - r2, o3, o2, o1, utilPacket);
+							utilPacket.value=HyperbolicMath.h_comp_cos(1 - r, 1 - r1,
+									1 - r2, o3, o2, o1);
 							fbest += Math.acos(utilPacket.value);
 						}
 					}
@@ -414,8 +407,8 @@ public class HypPacker extends RePacker {
 							r2 = 0.0;
 						o2 = kdata[v].overlaps[k];
 						o3 = kdata[j1].overlaps[p.nghb(j1, j2)];
-						HyperbolicMath.h_cos_s_overlap(1 - r, 1 - r1, 1 - r2,
-								o3, o2, o1, utilPacket);
+						utilPacket.value=HyperbolicMath.h_comp_cos(1 - r, 1 - r1, 1 - r2,
+								o3, o2, o1);
 						fbest += Math.acos(utilPacket.value);
 					}
 				}

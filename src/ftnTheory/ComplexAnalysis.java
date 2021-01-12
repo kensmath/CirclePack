@@ -413,7 +413,7 @@ public class ComplexAnalysis extends PackExtender {
 			
 			// record in 'rData' of 'packData'
 			for (int v=1;v<=packData.nodeCount;v++)
-				packData.setFaceColor(v,CPScreen.coLor((int)colors.get(v-1)));
+				packData.setFaceColor(v,ColorUtil.coLor((int)colors.get(v-1)));
 			
 			double miN=0.0;
 			double maX=0.0;

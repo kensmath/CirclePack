@@ -4,7 +4,7 @@ import java.awt.Color;
 
 import allMains.CirclePack;
 import dcel.RedVertex;
-import panels.CPScreen;
+import util.ColorUtil;
 
 
 /**
@@ -45,7 +45,7 @@ public class KData{
      
     // Constructor (needed only to set 'color')
     public KData() {
-    	 color=CPScreen.getFGColor();
+    	 color=ColorUtil.getFGColor();
     }
      
     public KData clone() {

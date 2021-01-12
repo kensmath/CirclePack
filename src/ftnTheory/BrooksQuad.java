@@ -11,6 +11,7 @@ import packing.PackData;
 import packing.PackExtender;
 import panels.CPScreen;
 import util.CmdStruct;
+import util.ColorUtil;
 import util.StringUtil;
 
 /** 
@@ -88,9 +89,9 @@ public class BrooksQuad extends PackExtender {
 		packData=cps.getPackData();
 		packData.swap_nodes(1,5);
 		for (int v=1;v<=4;v++) {
-			packData.setCircleColor(v,CPScreen.coLor(208)); // line green
+			packData.setCircleColor(v,ColorUtil.coLor(208)); // line green
 		}
-		packData.setCircleColor(5,CPScreen.getBGColor());
+		packData.setCircleColor(5,ColorUtil.getBGColor());
 		packData.alpha=5;
 		packData.gamma=1;
 		packData.setCombinatorics();
@@ -117,7 +118,7 @@ public class BrooksQuad extends PackExtender {
 			v_flips=0;
 		h_mode=0;
 		v_mode=1;
-		Color cLrCode=CPScreen.coLor(149);
+		Color cLrCode=ColorUtil.coLor(149);
 		  // Alternating mode, even number of h_flips, exchange T/B, L/R 
 		  if (!Brooks_mode && (h_flips%2)==0) { // alternating mode and even
 			/* Flip (exchange labels) each V (vertical). However, for first 
@@ -126,7 +127,7 @@ public class BrooksQuad extends PackExtender {
 		      dum=T;T=B;B=dum; // exchange T and B 
 		      dum=L;L=R;R=dum; // exchange L and R 
 		      v_flips++;
-		      cLrCode=CPScreen.coLor(151);
+		      cLrCode=ColorUtil.coLor(151);
 		  }
 		  brooks_insert(packData,P,N,T,-1);
 		  brooks_insert(packData,P,N,B,1);
@@ -154,7 +155,7 @@ public class BrooksQuad extends PackExtender {
 		  packData.kData[P].flower[2]=R;
 		  packData.kData[P].flower[3]=T;
 		  packData.kData[P].flower[4]=N;
-		  packData.setCircleColor(P,CPScreen.getBGColor());
+		  packData.setCircleColor(P,ColorUtil.getBGColor());
 		  
 		  L=N; // N is the new 'left' of interstice
 		  N=P;
@@ -175,7 +176,7 @@ public class BrooksQuad extends PackExtender {
 		P++;
 		if (P>packData.sizeLimit) packData.alloc_pack_space(P+1,true);
 		packData.nodeCount=P;
-		Color cLrCode=CPScreen.coLor(49);
+		Color cLrCode=ColorUtil.coLor(49);
 		
 		  if (h_mode==0) h_flips=0;
 		  if (!Brooks_mode && (v_flips%2)==0) {
@@ -185,7 +186,7 @@ public class BrooksQuad extends PackExtender {
 		      dum=T;T=B;B=dum; // exchange T and B 
 		      dum=L;L=R;R=dum; // exchange L and R 
 		      h_flips++;
-		      cLrCode=CPScreen.coLor(51);
+		      cLrCode=ColorUtil.coLor(51);
 		    }
 		  v_mode=0;
 		  h_mode=1;
@@ -215,7 +216,7 @@ public class BrooksQuad extends PackExtender {
 		  packData.kData[P].flower[2]=B;
 		  packData.kData[P].flower[3]=R;
 		  packData.kData[P].flower[4]=N;
-		  packData.setCircleColor(P,CPScreen.getBGColor());
+		  packData.setCircleColor(P,ColorUtil.getBGColor());
 		  
 		  T=N; // N is the new 'top' of interstice
 		  N=P;

@@ -1147,7 +1147,7 @@ public class RedChainer {
 			  SideDescription epair=new SideDescription(p);
 			  epair.startEdge=firstRedEdge;
 			  epair.endEdge=firstRedEdge.prevRed;
-			  epair.color=CPScreen.getFGColor();
+			  epair.color=ColorUtil.getFGColor();
 			  e_pairs.add(epair);
 			  bP=new BuildPacket();
 			  bP.firstRedEdge=firstRedEdge;

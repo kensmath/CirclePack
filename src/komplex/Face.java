@@ -3,7 +3,7 @@ package komplex;
 import java.awt.Color;
 
 import packing.PackData;
-import panels.CPScreen;
+import util.ColorUtil;
 
 /**
  * Structure for face information; this was designed for triangular faces,
@@ -42,7 +42,7 @@ public class Face{
     	 packData=p;
     	 vertCount=vCount;
     	 vert=new int[vCount];
-    	 color=CPScreen.getFGColor();
+    	 color=ColorUtil.getFGColor();
      }
      
      public Face(PackData p) {

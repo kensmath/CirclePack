@@ -312,7 +312,7 @@ public class FlattenTri extends PackExtender {
 		matchfaces[rootface].myCenters[2]=new Complex(0,2*d);
 		flatPack.setCenter(vert[2],matchfaces[rootface].myCenters[2]);
 		matchfaces[rootface].myCentroid=new Complex(0.0);
-		flatPack.setFaceColor(rootface,CPScreen.coLor(80));
+		flatPack.setFaceColor(rootface,ColorUtil.coLor(80));
 		matchfaces[rootface].mySpot=new EdgeSimple(0,0);
 		occupied.add(matchfaces[rootface].mySpot);
 		return rootface;
@@ -459,13 +459,13 @@ public class FlattenTri extends PackExtender {
 		}
 		
 		public void setColor(int j,int col) {
-			myColors[j]=CPScreen.coLor(col);
+			myColors[j]=ColorUtil.coLor(col);
 		}
 		
 		public Color getColor(int j) {
 			if (myColors[j]==null)
 				return null;
-			return CPScreen.cloneColor(myColors[j]);
+			return ColorUtil.cloneMe(myColors[j]);
 		}
 		
 		/**
@@ -491,7 +491,7 @@ public class FlattenTri extends PackExtender {
 			for (int j=0;j<3;j++) {
 				Color eCol=myColors[(baseindx+j)%3];
 				if (eCol!=null) {
-					DispFlags edflags=new DispFlags("t8c"+CPScreen.col_to_table(eCol));
+					DispFlags edflags=new DispFlags("t8c"+ColorUtil.col_to_table(eCol));
 					cpS.drawEdge(sZ[(baseindx+j)%3],sZ[(baseindx+j+1)%3],edflags);
 					CPBase.Elink.add(new EdgeSimple(verts[(baseindx+j)%3],verts[(baseindx+j+1)%3]));
 				}

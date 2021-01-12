@@ -213,21 +213,21 @@ public class FracBranchPt extends GenBranchPt {
 		double offBy=1.0;
 		while (offBy>RIFF_TOLER && uP.rtnFlag<cycles) {
 			double []rad=new double[3];
-			UtilPacket inuP=new UtilPacket();
+			double value;
 			for (int i=0;i<3;i++)
 				rad[i]=myPackData.getRadius(i+1);
 			
 			// set new aims based on current face angles
 			for (int i=0;i<3;i++) { 
 				if (myPackData.hes<0) {
-					HyperbolicMath.h_cos_s_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],
-							cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3],inuP);
+					value=HyperbolicMath.h_comp_cos(rad[i],rad[(i+1)%3],rad[(i+2)%3],
+							cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3]);
 				}
 				else {
-					EuclMath.e_cos_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],
-							cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3],inuP);
+					value=EuclMath.e_cos_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],
+							cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3]);
 				}
-				myPackData.setAim(i+1,pi2+2.0*Math.acos(inuP.value));
+				myPackData.setAim(i+1,pi2+2.0*Math.acos(value));
 			}
 			
 			// repack
@@ -246,14 +246,14 @@ public class FracBranchPt extends GenBranchPt {
 				rad[i]=myPackData.getRadius(i+1);
 			for (int i=0;i<3;i++) { 
 				if (myPackData.hes<0) {
-					HyperbolicMath.h_cos_s_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],
-							cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3],inuP);
+					value=HyperbolicMath.h_comp_cos(rad[i],rad[(i+1)%3],rad[(i+2)%3],
+							cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3]);
 				}
 				else {
-					EuclMath.e_cos_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],
-							cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3],inuP);
+					value=EuclMath.e_cos_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],
+							cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3]);
 				}
-				double diff=2.0*Math.acos(inuP.value)-(myPackData.getAim(i+1)-pi2);
+				double diff=2.0*Math.acos(value)-(myPackData.getAim(i+1)-pi2);
 				accum +=diff*diff;
 			}
 			offBy=Math.sqrt(accum);
@@ -313,20 +313,21 @@ public class FracBranchPt extends GenBranchPt {
 	public double currentError() {
 		double accum=0.0;
 		double []rad=new double[3];
-		UtilPacket inuP=new UtilPacket();
 		
 		for (int i=0;i<3;i++) 
 			rad[i]=myPackData.getRadius(i+1);
+		
+		double val;
 		for (int i=0;i<3;i++) { 
 			if (myPackData.hes<0) {
-				HyperbolicMath.h_cos_s_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],
-						cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3],inuP);
+				val=HyperbolicMath.h_comp_cos(rad[i],rad[(i+1)%3],rad[(i+2)%3],
+						cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3]);
 			}
 			else {
-				EuclMath.e_cos_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],
-						cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3],inuP);
+				val=EuclMath.e_cos_overlap(rad[i],rad[(i+1)%3],rad[(i+2)%3],
+						cos_overs[i],cos_overs[(i+1)%3],cos_overs[(i+2)%3]);
 			}
-			double diff=2.0*Math.acos(inuP.value)-(myPackData.getAim(i+1)-pi2);
+			double diff=2.0*Math.acos(val)-(myPackData.getAim(i+1)-pi2);
 			accum +=diff*diff;
 		}
 		return Math.sqrt(accum);

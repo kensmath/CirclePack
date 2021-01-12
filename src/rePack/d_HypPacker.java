@@ -5,11 +5,9 @@ import allMains.CirclePack;
 import exceptions.DataException;
 import exceptions.PackingException;
 import geometry.HyperbolicMath;
-import input.CommandStrParser;
 import komplex.KData;
 import packing.PackData;
 import packing.RData;
-import util.UtilPacket;
 
 /**
  * First attempt to modify methods to accommodate DCEL data. Begin
@@ -19,9 +17,6 @@ import util.UtilPacket;
  */
 public class d_HypPacker extends RePacker {
 	
-    public static final double AIM_THRESHOLD=.0001;  // aim less than this, treat as horocycle
-    public static final int HYP_GOPACK_THRESHOLD=501;  // for smaller packs, default to Java
-
     // Constructors
     public d_HypPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
     	p=pd;
@@ -30,6 +25,10 @@ public class d_HypPacker extends RePacker {
 		status=load(); 
 		if (status!=LOADED) 
 			throw new PackingException("'d_HypPacker' failed to load");
+		totalPasses=0;
+		localPasses=0;
+		R1=new double[p.nodeCount+1];
+		R2=new double[p.nodeCount+1];
     }
     
     /**
@@ -46,6 +45,8 @@ public class d_HypPacker extends RePacker {
     		if (p.getAim(i)>0) {
     			index[aimnum]=i;
     			aimnum++;
+    			if (p.getRadius(i)<=0)
+    				p.setRadius(i, 0.5);
     		}
     	}
     	if (aimnum==0) return FAILURE; // nothing to repack
@@ -84,7 +85,7 @@ public class d_HypPacker extends RePacker {
     }
     
     /**
-     * Store any newly computed radii; get from a 'triData'
+     * Store any newly computed radii; get from 'triData'
      */
     public void reapResults() {
     	for (int i=0;i<aimnum;i++) {
@@ -100,7 +101,8 @@ public class d_HypPacker extends RePacker {
     	return 1;
     }
     
-    /** Compute radii of packing to meet angle_sum targets, specified as
+    /** 
+    Compute radii of packing to meet angle_sum targets, specified as
 	"aims". A negative "aim" means that that circle should not have its
 	radius adjusted. aim of zero is possible only for boundary 
 	circles in hyp setting. 
@@ -134,14 +136,8 @@ public class d_HypPacker extends RePacker {
     
     // abstract method for initiating packing computation
 	public int startRiffle() throws PackingException { 
-		int i, j, k, j1, j2, N;
-		double r, r1, r2, r3, fbest, faim, del, bet;
-		double denom, twor;
-		double m2, m3, sr, t1, t2, t3, o1, o2, o3;
-		UtilPacket utilPacket = new UtilPacket();
 
-		if (status != LOADED)
-			throw new PackingException();
+		if (status != LOADED) throw new PackingException();
 
 		maxBadCuts = 0;
 		minBadCuts = 0;
@@ -149,79 +145,47 @@ public class d_HypPacker extends RePacker {
 		cntBadCuts = 0;
 
 		// set up parameters
-
 		ttoler = 3 * aimnum * RP_TOLER; // adjust tolerance
-		key = 1; // initial superstep type
-		m = 1; // Type 1 multiplier
-		sct = 1; // Type 1 count
-		fct = 2; // Type 2 minimum count
+		key = 1; 			// initial superstep type
+		m = 1; 				// Type 1 multiplier
+		sct = 1; 			// Type 1 count
+		fct = 2; 			// Type 2 minimum count
 
 		// do one iteration to get started
 		accumErr2 = 0;
 		try {
-			for (j = 0; j < aimnum; j++) {
-				fbest = 0;
-				i = index[j];
-				if ((r = rdata[i].rad) < 0)
+			for (int j = 0; j < aimnum; j++) {
+				int v = index[j];
+				double faim = p.vData[v].aim; // get target sum
+				double x_rad=getTriRadius(v);
+				double r = 1.0-x_rad; // NOTE: computations expect squared s-radii.
+				if (r>=1.0)  // infinite?
 					r = 0;
-				sr = Math.sqrt(r);
-				N = kdata[i].num;
-				if (!p.overlapStatus) { // no overlaps
-					twor = 2 * r;
-					r2 = rdata[kdata[i].flower[0]].rad;
-					m2 = (r2 > 0) ? (1 - r2) / (1 - r * r2) : (double) 1;
-					for (k = 1; k <= N; k++) { // loop through petals
-						r3 = rdata[kdata[i].flower[k]].rad;
-						m3 = (r3 > 0) ? (1 - r3) / (1 - r * r3) : (double) 1;
-						fbest += Math.acos(1 - twor * m2 * m3); // angle calc
-						m2 = m3;
-					}
-				}
+				double sr = Math.sqrt(r);
+			
+		    	// compute anglesum using 'TriData' (which has x-radii)
+				double fbest=compTriCurv(v,x_rad);
 
-				// with overlaps, use old routine
-				else {
-					j2 = kdata[i].flower[0];
-					if ((r2 = rdata[j2].rad) < 0)
-						r2 = (double) 0;
-					o2 = kdata[i].overlaps[0];
-					for (k = 1; k <= N; k++) {
-						r1 = r2;
-						o1 = o2;
-						j1 = j2;
-						j2 = kdata[i].flower[k];
-						if ((r2 = rdata[j2].rad) < 0)
-							r2 = 0.0;
-						o2 = kdata[i].overlaps[k];
-						o3 = kdata[j1].overlaps[p.nghb(j1, j2)];
-						HyperbolicMath.h_cos_s_overlap(1 - r, 1 - r1, 1 - r2,
-								o3, o2, o1, utilPacket);
-						fbest += Math.acos(utilPacket.value);
-						// TODO: these routines waste time converting back/forth
-						// between
-						// x-radii and s-radii.
-					}
-				}
-
-				faim = rdata[i].aim; // get target sum
-				// set up for uniform neighbor model
-				denom = 1.0 / (2.0 * ((double) N));
-				del = Math.sin(faim * denom);
-				bet = Math.sin(fbest * denom);
-				r2 = (bet - sr) / (bet * r - sr); // reference radius
+		    	// use the model to predict the next value 
+		    	int N = 2*p.vData[v].num;
+				double del = Math.sin(faim/N);
+				double bet = Math.sin(fbest/N);
+				double r2 = (bet-sr)/(bet*r-sr); // reference radius
 				if (r2 > 0) { // calc new label
-					t1 = 1 - r2;
-					t2 = 2 * del;
-					t3 = t2 / (Math.sqrt(t1 * t1 + t2 * t2 * r2) + t1);
+					double t1 = 1 - r2;
+					double t2 = 2 * del;
+					double t3 = t2 / (Math.sqrt(t1 * t1 + t2 * t2 * r2) + t1);
 					r2 = t3 * t3;
-				} else
+				} 
+				else
 					r2 = del * del; // use lower limit
-				rdata[i].rad = r2; // store new label
-				rdata[i].curv = fbest; // store new anglesum
-				fbest = fbest - faim;
+				setTriRadius(v,1-r2); // store new label as x-radius
+				p.vData[v].curv = fbest; // store new anglesum
+				fbest -= faim;
 				accumErr2 += fbest * fbest; // accumulate error
 			} // end of for loop
-
 			accumErr2 = Math.sqrt(accumErr2);
+			
 		} catch (Exception ex) {
 			status = FAILURE;
 			throw new PackingException();
@@ -233,81 +197,58 @@ public class d_HypPacker extends RePacker {
     
 	// continue riffle computation if status is RIFFLE
 	public int continueRiffle(int passL) throws PackingException {
-		int N, j1, j2, numBadCuts, v;
-		double c1, fbest, faim, m2, m3, twor;
-		double r, r1, r2, r3, o1, o2, o3, sr, t1, t2, t3;
-		double denom, del, bet, fact0 = 0.0, ftol = 0.0, pred, act;
-		double factor, lmax, rat, tr, lambda, mmax, mm;
+
+		double fact0 = 0.0;
+		double ftol = 0.0;  // not sure we need this
+		double c1;
+
 		if (status != RIFFLE)
 			throw new PackingException();
-		UtilPacket utilPacket = new UtilPacket();
 		localPasses = 0;
 		passLimit = passL;
 
 		// Begin Main Loop
 		while ((accumErr2 > ttoler && localPasses < passLimit)) {
 
-			for (int i = 1; i <= p.nodeCount; i++)
-				R1[i] = rdata[i].rad;
+			// routines use squared s-radii
+			for (int j = 0; j < aimnum; j++) {
+				int v=index[j];
+				R1[v] = 1.0-getTriRadius(v);
+			}
 
-			numBadCuts = 0;
+			int numBadCuts = 0;
+			double factor=0.0;
 			do { // Make sure factor < 1.0
 				c1 = 0.0;
-				for (int j = 0; j < aimnum; j++) { // anglesum is computed in
-													// line
-					fbest = 0;
-					v = index[j];
-					if ((r = rdata[v].rad) < 0)
+				for (int j=0;j<aimnum;j++) { 
+
+					int v = index[j];
+					double faim=p.vData[v].aim;
+					// Remember, computataions depend on using squared s-radius
+					double x_rad=getTriRadius(v);
+					double r=1.0-x_rad;
+					if (r>=1.0)
 						r = 0;
-					sr = Math.sqrt(r);
-					N = kdata[v].num;
-					if (!p.overlapStatus) { // no overlaps
-						twor = 2 * r;
-						r2 = rdata[kdata[v].flower[0]].rad;
-						m2 = (r2 > 0) ? (1 - r2) / (1 - r * r2) : (double) 1;
-						for (int k = 1; k <= N; k++) { // loop through petals
-							r3 = rdata[kdata[v].flower[k]].rad;
-							m3 = (r3 > 0) ? (1 - r3) / (1 - r * r3)
-									: (double) 1;
-							fbest += Math.acos(1 - twor * m2 * m3); // angle
-																	// calc
-							m2 = m3;
-						}
-					} else { // with overlaps, old routine
-						j2 = kdata[v].flower[0];
-						if ((r2 = rdata[j2].rad) < 0)
-							r2 = 0.0;
-						o2 = kdata[v].overlaps[0];
-						for (int k = 1; k <= N; k++) {
-							r1 = r2;
-							o1 = o2;
-							j1 = j2;
-							j2 = kdata[v].flower[k];
-							if ((r2 = rdata[j2].rad) < 0)
-								r2 = (double) 0;
-							o2 = kdata[v].overlaps[k];
-							o3 = kdata[j1].overlaps[p.nghb(j1, j2)];
-							HyperbolicMath.h_cos_s_overlap(1 - r, 1 - r1,
-									1 - r2, o3, o2, o1, utilPacket);
-							fbest += Math.acos(utilPacket.value);
-						}
-					}
-					faim = rdata[v].aim; // get target sum
+					double sr = Math.sqrt(r);
+
+					// compute anglesum: ????? 
+					double fbest=compTriCurv(v,x_rad);
+
 					// set up for model
-					denom = 1.0 / (2.0 * ((double) N));
-					del = Math.sin(faim * denom);
-					bet = Math.sin(fbest * denom);
-					r2 = (bet - sr) / (bet * r - sr); /* reference radius */
+					int N=2*p.vData[v].num;
+					double del = Math.sin(faim/N);
+					double bet = Math.sin(fbest/N);
+					double r2 = (bet - sr) / (bet * r - sr); // reference radius
 					if (r2 > 0) { // calc new label
-						t1 = 1 - r2;
-						t2 = 2 * del;
-						t3 = t2 / (Math.sqrt(t1 * t1 + t2 * t2 * r2) + t1);
+						double t1 = 1 - r2;
+						double t2 = 2 * del;
+						double t3 = t2 / (Math.sqrt(t1 * t1 + t2 * t2 * r2) + t1);
 						r2 = t3 * t3;
 					} else
 						r2 = del * del; // use lower limit
-					rdata[v].rad = r2; // store new label
-					rdata[v].curv = fbest; // store new anglesum
-					fbest = fbest - faim;
+					setTriRadius(v,1-r2); // store new x-radii
+					p.vData[v].curv = fbest; // store new anglesum
+					fbest -= faim;
 					c1 += fbest * fbest; // accumulate error
 				}
 				c1 = Math.sqrt(c1);
@@ -336,46 +277,49 @@ public class d_HypPacker extends RePacker {
 			}
 			cntBadCuts++;
 
-			// superstep calculation
+		    // ================= superstep calculation ==================== 
 
-			// save values
-			for (int i = 1; i <= p.nodeCount; i++)
-				R2[i] = rdata[i].rad;
+			// store squared s-radii
+			for (int j = 0; j < aimnum; j++) {
+				int v=index[j];
+				R2[v] = 1.0-getTriRadius(v);
+			}
 
 			// find maximum step one can safely take
-			lmax = 10000;
-			for (int j = 0; j < aimnum; j++) { // find max step
-				v = index[j];
-				r = rdata[v].rad;
-				rat = r - R1[v];
+			double lmax = 10000;
+			for (int j=0;j<aimnum;j++) { // find max step
+				int v = index[j];
+				double r = R2[v];
+				double rat = r - R1[v];
+				double tr;
 				if (rat > 0)
-					lmax = (lmax < (tr = ((1 - r) / rat))) ? lmax : tr; // to
-																		// keep
-																		// R<1
+					lmax=(lmax<(tr=((1 - r)/rat))) ? lmax:tr; // to keep R<1
 				else if (rat < 0)
-					lmax = (lmax < (tr = (-r / rat))) ? lmax : tr; // to keep
-																	// R>0
+					lmax=(lmax<(tr = (-r / rat))) ? lmax : tr; // to keep R>0
 			}
-			lmax = lmax / 2;
+			lmax = lmax / 2.0;
 
 			// do super step
+			double lambda=0.0;
 			if (key == 1) { // type 1 SS
-				lambda = m * factor;
-				mmax = 0.75 / (1 - factor); // upper limit on m
-				m = (mmax < (mm = (1 + 0.8 / (sct + 1)) * m)) ? mmax : mm;
+				lambda = m*factor;
+				double mmax=0.75/(1-factor);   // upper limit on m
+				double mm;
+				m = (mmax < (mm = (1+0.8/(sct+1))*m)) ? mmax : mm;
 			} else { // type 2 SS
-				if (sct > fct && Math.abs(factor - fact0) < ftol) { // try SS-2
+				if (sct>fct && Math.abs(factor-fact0)<ftol) { // try SS-2
 					lambda = factor / (1 - factor);
 					sct = -1;
 				} else
 					lambda = factor; // do something
 			}
-			lambda = (lambda > lmax) ? lmax : lambda;
+			lambda = (lambda>lmax) ? lmax : lambda;
 
 			// interpolate new labels
-			for (int j = 0; j < aimnum; j++) {
-				v = index[j];
-				rdata[v].rad += lambda * (rdata[v].rad - R1[v]);
+			for (int j=0;j<aimnum;j++) {
+				int v = index[j];
+				double nsr=R2[v]+lambda*(R2[v]-R1[v]); // new squared s-radius
+				setTriRadius(v,1-nsr); // store as x-radius
 			}
 			sct++;
 			fact0 = factor;
@@ -384,65 +328,40 @@ public class d_HypPacker extends RePacker {
 
 			// do step/check superstep
 			accumErr2 = 0;
-			for (int j = 0; j < aimnum; j++) {
-				fbest = 0;
-				v = index[j];
-				if ((r = rdata[v].rad) < 0)
+			for (int j=0;j<aimnum;j++) {
+				int v = index[j];
+
+				double faim = p.vData[v].aim; // get target sum
+				double x_rad=getTriRadius(v);
+				double r=1.0-x_rad;  // routines use squared s-radius
+				if (r >=1.0)
 					r = 0;
-				sr = Math.sqrt(r);
-				N = kdata[v].num;
-				if (!p.overlapStatus) { // no overlaps
-					twor = 2 * r;
-					r2 = rdata[kdata[v].flower[0]].rad;
-					m2 = (r2 > 0) ? (1 - r2) / (1 - r * r2) : 1.0;
-					for (int k = 1; k <= N; k++) { // loop through petals
-						r3 = rdata[kdata[v].flower[k]].rad;
-						m3 = (r3 > 0) ? (1 - r3) / (1 - r * r3) : 1.0;
-						fbest += Math.acos(1 - twor * m2 * m3); /* angle calc */
-						m2 = m3;
-					}
-				} else { // with overlaps, old routine
-					j2 = kdata[v].flower[0];
-					if ((r2 = rdata[j2].rad) < 0)
-						r2 = 0.0;
-					o2 = kdata[v].overlaps[0];
-					for (int k = 1; k <= N; k++) {
-						r1 = r2;
-						o1 = o2;
-						j1 = j2;
-						j2 = kdata[v].flower[k];
-						if ((r2 = rdata[j2].rad) < 0)
-							r2 = 0.0;
-						o2 = kdata[v].overlaps[k];
-						o3 = kdata[j1].overlaps[p.nghb(j1, j2)];
-						HyperbolicMath.h_cos_s_overlap(1 - r, 1 - r1, 1 - r2,
-								o3, o2, o1, utilPacket);
-						fbest += Math.acos(utilPacket.value);
-					}
-				}
-				faim = rdata[v].aim; // get target sum
+				double sr = Math.sqrt(r);
+				double fbest=compTriCurv(v,x_rad);
+				
+
 				// set up for model
-				denom = 1.0 / (2.0 * ((double) N));
-				del = Math.sin(faim * denom);
-				bet = Math.sin(fbest * denom);
-				r2 = (bet - sr) / (bet * r - sr); // reference radius
+		        int N = 2*p.vData[v].num;
+				double del = Math.sin(faim/N);
+				double bet = Math.sin(fbest/N);
+				double r2 = (bet - sr) / (bet * r - sr); // reference radius
 				if (r2 > 0) { // calc new label
-					t1 = 1 - r2;
-					t2 = 2 * del;
-					t3 = t2 / (Math.sqrt(t1 * t1 + t2 * t2 * r2) + t1);
+					double t1 = 1 - r2;
+					double t2 = 2 * del;
+					double t3 = t2 / (Math.sqrt(t1 * t1 + t2 * t2 * r2) + t1);
 					r2 = t3 * t3;
 				} else
 					r2 = del * del; // use lower limit
-				rdata[v].rad = r2; // store new label
-				rdata[v].curv = fbest; // store new anglesum
-				fbest = fbest - faim;
+				setTriRadius(v,1.0-r2); // store new x-radius
+				p.vData[v].curv = fbest; // store new anglesum
+				fbest -=faim;
 				accumErr2 += fbest * fbest; // accumulate error
 			}
 			accumErr2 = Math.sqrt(accumErr2);
 
 			// check results
-			pred = Math.exp(lambda * Math.log(factor)); // predicted improvement
-			act = accumErr2 / c1; // actual improvement
+			double pred = Math.exp(lambda * Math.log(factor)); // predicted improvement
+			double act = accumErr2 / c1; // actual improvement
 			if (act < 1) { // did some good
 				if (act > pred) { // not as good as expected: reset
 					m = 1;
@@ -453,8 +372,10 @@ public class d_HypPacker extends RePacker {
 			} else { // reset to before superstep
 				m = 1;
 				sct = 0;
-				for (int i = 1; i <= p.nodeCount; i++)
-					rdata[i].rad = R2[i];
+				for (int j = 0; j < aimnum; j++) {
+					int v=index[j];
+					setTriRadius(v,1.0-R2[v]);  // store as x-radius
+				}
 
 				accumErr2 = c1;
 				if (key == 2)
@@ -486,9 +407,9 @@ public class d_HypPacker extends RePacker {
 			try {
 				count=genericRePack(cycles);
 				p.fillcurves();
-				p.comp_pack_centers(false,false,2,CommandStrParser.LAYOUT_THRESHOLD);
+				p.packDCEL.dcelCompCenters();
 			} catch (Exception ex) {
-				throw new PackingException("error in Java repack computation"); 
+				throw new PackingException("error in Java DCEL repack computation"); 
 			}
 		}
 		else { // use GOpack
@@ -536,7 +457,7 @@ public class d_HypPacker extends RePacker {
       for (int v=1;v<=p.nodeCount;v++) {
     	  if (p.getAim(v)>0) { //   p.getAim(j)>0) {
     		  inDex[aimnum++]=v;
-        	  double curv=compVertCurv(v,getRadius(v));
+        	  double curv=compTriCurv(v,getTriRadius(v));
         	  double err=curv-p.getAim(v);
     		  accum += (err<0) ? (-err) : err;
     	  }
@@ -551,18 +472,18 @@ public class d_HypPacker extends RePacker {
     	  double rr=.5;
     	  for (int j=0;j<aimnum;j++) {
     		  int v=inDex[j];
-    		  r=getRadius(v);
+    		  r=getTriRadius(v);
     		  
-    		  if (Math.abs(compVertCurv(v,r)-p.getAim(v))>cut) {
+    		  if (Math.abs(compTriCurv(v,r)-p.getAim(v))>cut) {
     			  rr=h_RadCalc(v,r,p.getAim(v),N);
-    			  setRadius(v,rr);
+    			  setTriRadius(v,rr);
     		  }
           }
 
           accum=0;
           for (int j=0;j<aimnum;j++) {
         	  int v=inDex[j];
-        	  double err=compVertCurv(v,getRadius(v))-p.getAim(v);
+        	  double err=compTriCurv(v,getTriRadius(v))-p.getAim(v);
         	  accum += (err<0) ? (-err) : err;
           }
           cut=accum*recip;
@@ -593,20 +514,20 @@ public class d_HypPacker extends RePacker {
   	  	double lowcurv;
   	  	
   	  	// compute initial curvature
-  	  	double curv=compVertCurv(v,r); 
+  	  	double curv=compTriCurv(v,r); 
   	    double bestcurv=lowcurv=upcurv=curv;
   	    
   	    // may hit upper/lower bounds on radius change
   	    if (bestcurv>(aim+RP_OKERR)) {
   	    	lower=1.0-factor+r*factor; // interpolate 
-  	    	lowcurv=compVertCurv(v,lower);
+  	    	lowcurv=compTriCurv(v,lower);
     	    if (lowcurv>aim) { 
     	    	return lower;
     	    }
     	}
     	else if (bestcurv<(aim-RP_OKERR)) {
     		upper=r*factor;
-    	    upcurv=compVertCurv(v,upper);
+    	    upcurv=compTriCurv(v,upper);
   	      	if (upcurv<aim) { 
   	      		return upper;
   	      	}
@@ -629,7 +550,7 @@ public class d_HypPacker extends RePacker {
   	    	else 
 	    	  return r;
   	    	
-  	    	bestcurv=compVertCurv(v,r);
+  	    	bestcurv=compTriCurv(v,r);
 	    }
   	    
   	    return r;
@@ -956,7 +877,7 @@ public class d_HypPacker extends RePacker {
     public void setSparseC(boolean useC) {
 		useSparseC=false;
 		if (useC) { // requested to use GOpacker routines if possible
-			if (p.nodeCount<HYP_GOPACK_THRESHOLD) { // for smaller packing, use Java
+			if (p.nodeCount<GOPACK_THRESHOLD) { // for smaller packing, use Java
 				useSparseC=false;
 				return;
 			}

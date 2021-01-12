@@ -472,7 +472,7 @@ public class Graphene extends PackExtender {
 			}
 			msg("Total Energy: "+String.format("%.8e", totalEnergy()));
 			for (int v=1;v<=packData.nodeCount;v++)
-				packData.setCircleColor(v,CPScreen.coLor(colorVec.get(v)));
+				packData.setCircleColor(v,ColorUtil.coLor(colorVec.get(v)));
 			return 1;
 		}
 		
@@ -514,7 +514,7 @@ public class Graphene extends PackExtender {
 					int fa=dual.v;
 					CarbonEnergy carbon=carbonEnergies.get(fa);
 					int k=packData.faces[fa].vertIndx(v);
-					int colindx=CPScreen.col_to_table(carbon.bondColors[k]); // get index
+					int colindx=ColorUtil.col_to_table(carbon.bondColors[k]); // get index
 					cpCommand("disp -det4c"+colindx+" "+v+" "+w);
 					count++;
 				}
@@ -1409,7 +1409,7 @@ public class Graphene extends PackExtender {
 		public Color []bondColors;
 		public double []bondLengths;
 		public double []bondAngles;  // angle[j] associated with verts[j].
-		UtilPacket up=new UtilPacket();
+//		UtilPacket up=new UtilPacket();
 
 		// Constructor
 		public CarbonEnergy(int f) {
@@ -1419,10 +1419,10 @@ public class Graphene extends PackExtender {
 			}
 			bondColors=new Color[3];
 			for (int j=0;j<3;j++)
-				bondColors[j]=CPScreen.getBGColor();
+				bondColors[j]=ColorUtil.getBGColor();
 			bondLengths=new double[3]; // j bond is dual to edge opposite j vert
 			bondAngles=new double[3]; // j angle is complement of that at j vert
-			carbonColor =CPScreen.getBGColor();
+			carbonColor =ColorUtil.getBGColor();
 		}
 
 		/**
@@ -1453,8 +1453,7 @@ public class Graphene extends PackExtender {
 					double ovl=ov[j];
 					double ovlr=ov[(j+1)%3];
 					double ovll=ov[(j+2)%3];
-					EuclMath.e_cos_overlap(r,rr,rl,ovl,ovlr,ovll,up);
-					bondAngles[j]=Math.PI-Math.acos(up.value);
+					bondAngles[j]=Math.PI-Math.acos(EuclMath.e_cos_overlap(r,rr,rl,ovl,ovlr,ovll));
 			      }
 			} // done with bond angles 
 			

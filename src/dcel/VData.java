@@ -35,7 +35,7 @@ public class VData{
 	public VData() {
 		center=new Complex(0.0);
 		rad=.05;
-		color=CPScreen.getFGColor();
+		color=ColorUtil.getFGColor();
 	}
 	
 	public VData clone() {

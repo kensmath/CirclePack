@@ -7,7 +7,6 @@ import java.util.Vector;
 
 import komplex.EdgeSimple;
 import packing.PackData;
-import panels.CPScreen;
 import exceptions.CombException;
 import exceptions.ParserException;
 
@@ -564,7 +563,7 @@ public class FlipBot {
 	 * @param c
 	 */
 	public void setColor(int c) {
-		color=CPScreen.coLor(232+(c%16));
+		color=ColorUtil.coLor(232+(c%16));
 	}
 	
 	/**

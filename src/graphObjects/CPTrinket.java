@@ -10,6 +10,7 @@ import java.awt.image.BufferedImage;
 import java.util.Vector;
 
 import panels.CPScreen;
+import util.ColorUtil;
 
 /**
  * Class for "trinket" images (all euclidean) for canvases, colored 
@@ -167,7 +168,7 @@ public class CPTrinket {
 		BufferedImage bufImage=new BufferedImage(side+1,side+1,BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g2d=bufImage.createGraphics();
 		if (colr==null)
-			colr=CPScreen.getFGColor();
+			colr=ColorUtil.getFGColor();
 		g2d.setColor(colr);
 		if (trink<0) trink=1;
 		else if (trink>=trinkets.size()) 

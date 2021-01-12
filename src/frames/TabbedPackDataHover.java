@@ -31,11 +31,11 @@ import listManip.NodeLink;
 import listManip.TileLink;
 import packQuality.QualMeasures;
 import packing.PackData;
-import panels.CPScreen;
 import panels.DataTree;
 import panels.SliderControlPanel;
 import panels.VariableControlPanel;
 import tiling.Tile;
+import util.ColorUtil;
 import util.ComplexField;
 import util.IntegerField;
 import util.RealField;
@@ -623,7 +623,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			aimField.setValue(p.getAim(v)/Math.PI);
 			angleSumField.setValue(p.getCurv(v)/Math.PI);
 			degreeField.setValue(p.getNum(v));
-			vertexColorField.setValue(CPScreen.col_to_table(p.getCircleColor(v)));
+			vertexColorField.setValue(ColorUtil.col_to_table(p.getCircleColor(v)));
 			vertMarkField.setValue(p.kData[v].mark);
 
 			if (p.isBdry(v)) boundaryCheckBox.setSelected(true);
@@ -667,7 +667,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			// Update the UI elements.
 			faceChoiceField.setText(Integer.toString(currentFace));
 			verticesField.setText(vertices[0] + " " + vertices[1] + " " + vertices[2]); // Corner vertices.
-			faceColorField.setValue(CPScreen.col_to_table(face.color));
+			faceColorField.setValue(ColorUtil.col_to_table(face.color));
 			faceMarkField.setValue(face.mark);
 			nextField.setValue(face.nextFace);
 			if (face.rwbFlag > 0) {
@@ -756,7 +756,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 				// Update the UI elements.
 				tileChoiceField.setText(Integer.toString(currentTile));
 				tiledegreeField.setValue(tile.vertCount);
-				tileColorField.setValue(CPScreen.col_to_table(tile.color));
+				tileColorField.setValue(ColorUtil.col_to_table(tile.color));
 				tileMarkField.setValue(tile.mark);
 
 				StringBuilder tileflowerBuilder = new StringBuilder();
@@ -797,8 +797,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		public void putVertColor(PackData p) {
 			int vert = NodeLink.grab_one_vert(p, vertexChoiceField.getText());
 			if (vert==0) return;
-			p.setCircleColor(vert,CPScreen.coLor(vertexColorField.getValue()));
-			vertexColorField.setValue(CPScreen.col_to_table(p.getCircleColor(vert)));
+			p.setCircleColor(vert,ColorUtil.coLor(vertexColorField.getValue()));
+			vertexColorField.setValue(ColorUtil.col_to_table(p.getCircleColor(vert)));
 		}
 		
 		public void putVertMark(PackData p) {
@@ -811,8 +811,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		public void putFaceColor(PackData p) {
 			int face = NodeLink.grab_one_vert(p, faceChoiceField.getText());
 			if (face==0) return;
-			p.setFaceColor(face,CPScreen.coLor(faceColorField.getValue()));
-			faceColorField.setValue(CPScreen.col_to_table(p.getFaceColor(face)));
+			p.setFaceColor(face,ColorUtil.coLor(faceColorField.getValue()));
+			faceColorField.setValue(ColorUtil.col_to_table(p.getFaceColor(face)));
 		}
 		
 		public void putFaceMark(PackData p) {
@@ -825,8 +825,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		public void putTileColor(PackData p) {
 			int tindx = NodeLink.grab_one_vert(p, tileChoiceField.getText());
 			if (tindx==0) return;
-			p.tileData.myTiles[tindx].color=CPScreen.coLor(tileColorField.getValue());
-			tileColorField.setValue(CPScreen.col_to_table(p.tileData.myTiles[tindx].color));
+			p.tileData.myTiles[tindx].color=ColorUtil.coLor(tileColorField.getValue());
+			tileColorField.setValue(ColorUtil.col_to_table(p.tileData.myTiles[tindx].color));
 		}
 		
 		public void putTileMark(PackData p) {

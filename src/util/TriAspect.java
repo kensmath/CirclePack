@@ -461,15 +461,12 @@ public class TriAspect extends TriData {
 		int k=vertIndex(v);
 		if (k<0) 
 			return null;
-		UtilPacket up=new UtilPacket();
 		double r1=labels[k];
 		double r2=labels[(k+1)%3];
 		double r3=labels[(k+2)%3];
 		// TODO: adjust for inv distances
-		if (!EuclMath.e_cos_overlap(r1*t,r2,r3,up)) 
-			return null;
 		double []ans=new double[2];
-		ans[0]=Math.acos(up.value);
+		ans[0]=Math.acos(EuclMath.e_cos_overlap(r1*t,r2,r3));
 		ans[1]=EuclMath.Fx(r1*t,r2,r3)*r1;
 		return ans;
 	}

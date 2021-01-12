@@ -21,8 +21,8 @@ import listManip.TileLink;
 import math.Matrix3D;
 import math.Mobius;
 import packing.PackData;
-import panels.CPScreen;
 import util.CallPacket;
+import util.ColorUtil;
 import util.StringUtil;
 import util.ViewBox;
 
@@ -893,7 +893,7 @@ public class QueryParser {
 		  	      				", star="+p.getNum(v)+
 		  	      				", mark="+p.kData[v].mark+
 		  	      				", plotFlag="+p.kData[v].plotFlag+
-		  	      				", color="+CPScreen.col_to_table(p.getCircleColor(v)));
+		  	      				", color="+ColorUtil.col_to_table(p.getCircleColor(v)));
 		  	      		count++;
 		  	      	}
 		  	      	if (count<N) {

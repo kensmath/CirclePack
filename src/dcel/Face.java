@@ -29,7 +29,7 @@ public class Face {
 	public Face() {
 		edge=null;
 		faceIndx=0;
-		color=CPScreen.getFGColor();
+		color=ColorUtil.getFGColor();
 	}
 	
 	/**
