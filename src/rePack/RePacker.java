@@ -279,7 +279,6 @@ public abstract class RePacker {
 		else localPasses=0;
 		totalPasses += localPasses;
 		if (continueRiffle(pass_limit)!=0) {  // successful?
-			reapResults();
 			return totalPasses;
 		}
 		return 0;

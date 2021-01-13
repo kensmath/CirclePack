@@ -270,7 +270,7 @@ public class PackData{
 		nodeCount=pdcel.vertCount;
 		faceCount=pdcel.faceCount;
 		bdryCompCount=pdcel.idealFaceCount;
-    	euler=nodeCount-pdcel.edgeCount+faceCount;
+    	euler=nodeCount-(pdcel.edgeCount/2)+faceCount;
 		genus=(2-euler-bdryCompCount)/2;
 		intrinsicGeom=-1;
 		if (pdcel.idealFaceCount==0) {
@@ -4573,8 +4573,8 @@ public class PackData{
 		  else alpha=kData[alpha].flower[k]; // replace 'alpha' by its first non-poison petal
 	  }
 			
-	  /* Now compute red chain ('pflag' true, then watch for poison 
-	   * edges/verts) and the preliminary face order.*/
+	  /* If not a sphere, compute red chain ('pflag' true, then 
+	   * watch for poison edges/verts) and preliminary face order.*/
 	  BuildPacket bP=redChainer.build_redchain(alpha,pflag);
 
 	  if (!bP.success) {

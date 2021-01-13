@@ -130,6 +130,7 @@ import rePack.GOpacker;
 import rePack.HypPacker;
 import rePack.SphPacker;
 import rePack.d_HypPacker;
+import rePack.d_SphPacker;
 import script.ScriptBundle;
 import tiling.TileData;
 import util.BuildPacket;
@@ -7482,8 +7483,14 @@ public class CommandStrParser {
 	    		  packData.hes=1;
     			  packData.setGeometry(1);
 	    		  packData.set_aim_default();
-				  SphPacker sphpack=new SphPacker(packData);
- 				  count=sphpack.maxPack(puncture_v,cycles);
+	    		  if (packData.packDCEL!=null) {
+	    			  d_SphPacker d_sphpack=new d_SphPacker(packData,cycles);
+	    			  count=d_sphpack.maxPack(cycles);
+	    		  }
+	    		  else {
+	    			  SphPacker sphpack=new SphPacker(packData);
+	    			  count=sphpack.maxPack(puncture_v,cycles);
+	    		  }
 	    	  }
 	    	  else return 0;
 	    	  if (CirclePack.cpb!=null)
@@ -7830,7 +7837,11 @@ public class CommandStrParser {
 	    	  		pv=packData.nodeCount;
 	  				if (packData.puncture_vert(pv)==0) return 0;
 	  				packData.xyzpoint=null; // ditch any xyz data
-	    	  		packData.setCombinatorics();
+	    	  		if (packData.packDCEL==null) {
+	    	  			packData.setCombinatorics();
+		    	  		packData.chooseAlpha();
+		    	  		packData.chooseGamma();
+	    	  		}
 	    	  		return 1;
 	    	  	}
 	  			
@@ -8275,7 +8286,8 @@ public class CommandStrParser {
 	      // ========== repack ============= 
 	      else if (cmd.startsWith("repack")) {
 	    	  if (packData.hes>0) {
-	    		  CirclePack.cpb.msg("repack: no spherical algorithm yet exists; you can use 'max_pack'");
+	    		  CirclePack.cpb.msg("repack: no spherical algorithm yet "+
+	    				  "exists; you can use 'max_pack'");
 	    		  return 0;
 	    	  }
 	    	  

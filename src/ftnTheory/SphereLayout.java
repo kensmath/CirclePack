@@ -244,7 +244,8 @@ public class SphereLayout extends PackExtender {
 //					CirclePack.cpb.msg("starting GPS for vert " + bea[b]);
 					puncturedPack[b] = packData.copyPackTo();
 					puncturedPack[b].puncture_vert(bea[b]);
-					puncturedPack[b].complex_count(false);
+					if (puncturedPack[b].packDCEL==null)
+						puncturedPack[b].complex_count(false);
 					puncturedPack[b].geom_to_h();
 					puncturedPack[b].set_aim_default();
 					NodeLink blist = new NodeLink(puncturedPack[b], "b");

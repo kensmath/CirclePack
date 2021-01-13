@@ -229,7 +229,7 @@ public class CombDCEL {
 	 * @param poisonFlag boolean, if true, then augment 
 	 *    'nonKeepers' with their neighbors 
 	 * @param alphaIndx int
-	 * @return PackDCEL
+	 * @return PackDCEL (call to 'd_FillInide' is included)
 	 */
 	public static PackDCEL d_redChainBuilder(PackDCEL pdcel,
 			NodeLink nonKeepers,boolean poisonFlag,int alphaIndx) {
@@ -1581,6 +1581,7 @@ public class CombDCEL {
 		//                  should be done!!
 		// ==================================================================
 		pdcel.faceCount=ftick;
+		pdcel.edgeCount=etick;
 		if (newRedChain!=null)
 			pdcel.redChain=newRedChain;
 	}
@@ -2005,7 +2006,8 @@ public class CombDCEL {
 	    return(d_redChainBuilder(pdcel,nonks,true,0));
 	}
 
-	/** Remove one face. 
+	/** 
+	 * Remove one face. 
 	 * 
 	 * TODO: coordinate with "rm_face", adjust lists of verts/faces
 	 * 
