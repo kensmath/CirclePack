@@ -92,19 +92,22 @@ public class PackDCEL {
 	public RedHEdge redChain; // doubly-linked, cclw edges about a fundamental region
 	public ArrayList<RedHEdge> bdryStarts; // red edges at start of a free (unpasted) side
 	public ArrayList<RedHEdge> sideStarts; // red edges starting paired sides, will have 'mobIndx'
-	boolean debug;
 	public HalfEdge alpha; // origin normally placed at origin
 	public HalfEdge gamma; // origin normally on positive y-axis, default 'alpha.twin'
 	
 	public D_PairLink pairLink;  // linked list of 'D_SideData' on side-pairings
 	
-	public TriData[] triData;    // 'TriData' array for repacking work
+	public TriData[] triData;    // 'TriData'; typpically null, used for repacking
+	boolean debug;
 	
 	// Constructor(s)
 	public PackDCEL() {
 		p=null;
 		vertCount=0;
 		vertices=null;
+		edges=null;
+		faces=null;
+		idealFaces=null;
 		triData=null;
 		
 		// things to fill at end of dcel construction
@@ -880,19 +883,22 @@ public class PackDCEL {
 	 * of sync with parent 'p'.  
 	 * Note: calling routine must ensure there are no repeats in 'flippers'.
 	 * @param flippers ArrayList<HalfEdge>, edges to be flipped
-	 * @return int count
+	 * @return int count, -count if some redchain was disrupted
 	 */
 	public int flipEdges(ArrayList<HalfEdge> flippers) {
 		int count=0;
+		boolean redprob=false;
 		Iterator<HalfEdge> lst=flippers.iterator();
 		while (lst.hasNext()) {
 			HalfEdge he=lst.next();
 
-			if (edgeIsBdry(he)<0) {
+			if (edgeIsBdry(he)<0) { // if not bdry
+				if (he.myRedEdge!=null) // in redchain
+					redprob=true;
 				Face leftf=he.face;
 				Face rightf=he.twin.face;
-				Vertex leftv=he.next.twin.origin;
-				Vertex rightv=he.twin.next.twin.origin;
+				Vertex leftv=he.next.next.origin;
+				Vertex rightv=he.twin.next.next.origin;
 				
 				// save some info for later
 				HalfEdge hn=he.next;
@@ -902,9 +908,9 @@ public class PackDCEL {
 				
 				// have to make sure ends don't have old 'halfedge's
 				if (he.origin.halfedge==he)
-					he.origin.halfedge=he.twin.next;
+					he.origin.halfedge=he.prev.twin; // cclw spoke
 				if (he.twin.origin.halfedge==he.twin)
-					he.twin.origin.halfedge=he.next;
+					he.twin.origin.halfedge=he.twin.prev.twin; // cclw spoke
 				
 				// fix he and its twin
 				he.origin=rightv;
@@ -929,6 +935,8 @@ public class PackDCEL {
 			}
 		} // end of while
 
+		if (redprob)
+			return -count;
 		return count;
 	}
 	
@@ -2102,6 +2110,7 @@ public class PackDCEL {
 		gamma=vertex.halfedge;
         return 0;
     } 
+    
 	/**
 	 * Write this DCEL structure to a file.
 	 * TODO: This is an early format, 4/2017, and should

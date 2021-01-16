@@ -209,7 +209,8 @@ public class Vertex {
 	public Vertex clone() {
 		Vertex nv=new Vertex(vertIndx);
 		nv.halfedge=halfedge;
-		nv.vertIndx=vertIndx;
+		nv.bdryFlag=bdryFlag;
+		nv.util=util;
 		return nv;
 	}
 

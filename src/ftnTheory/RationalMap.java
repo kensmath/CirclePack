@@ -386,7 +386,7 @@ public class RationalMap extends PackExtender {
 			domainPack=slitPack.copyPackTo();
 			sheetCheck[baseSheet]=-1; // always indicated as 'attached'
 			for (int v=1;v<=domainPack.nodeCount;v++) // 'mark' holds the sheet number
-				domainPack.kData[v].mark=baseSheet;
+				domainPack.setVertMark(v,baseSheet);
 			
 			// initiate master list of edge segments
 			masterESlist=new LinkedList<EdgeSeg>();
@@ -664,7 +664,7 @@ public class RationalMap extends PackExtender {
 		
 		// set 'mark' of 'domainPack' to sheet number
 		for (int v=(holdCount+1);v<=domainPack.nodeCount;v++) {
-			domainPack.kData[v].mark=tSheet;
+			domainPack.setVertMark(v,tSheet);
 		}
 		
 		return 1;

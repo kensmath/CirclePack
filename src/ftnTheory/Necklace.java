@@ -227,17 +227,17 @@ public class Necklace extends PackExtender {
 				int newv=packData.vertexMap.findW(v);
 				Color col=bottomPack.getCircleColor(v);
 				packData.setCircleColor(newv,new Color(col.getRed(),col.getGreen(),col.getBlue()));
-				packData.kData[newv].mark=bottomPack.kData[v].mark;
+				packData.setVertMark(newv,bottomPack.getVertMark(v));
 			}
 
 			// create 'elist' to hold edges not connected to
 	 		//  face center vertices --- i.e. the graph edges
 	 		packData.elist=new EdgeLink(packData);
 	 		for (int v=1;v<=packData.nodeCount;v++) {
-	 			if (packData.kData[v].mark!=1)
+	 			if (packData.getVertMark(v)!=1)
 	 				for (int j=0;j<packData.getNum(v)+packData.getBdryFlag(v);j++) {
 	 					int k=packData.kData[v].flower[j];
-	 					if (k>v && packData.kData[k].mark!=1)
+	 					if (k>v && packData.getVertMark(k)!=1)
 	 						packData.elist.add(new EdgeSimple(v,k));
 	 			}
 	 		}			
@@ -364,10 +364,10 @@ System.err.println("starting bottomHemi:");
 		
 		// This is the packing we are growing.
 		PackData myPacking=PackCreation.seed(6,-1);
-		myPacking.kData[1].mark=-1;
-		myPacking.kData[3].mark=-2;
-		myPacking.kData[5].mark=-2;
-		myPacking.kData[7].mark=-2;
+		myPacking.setVertMark(1,-1);
+		myPacking.setVertMark(3,-2);
+		myPacking.setVertMark(5,-2);
+		myPacking.setVertMark(7,-2);
 		myPacking.setCircleColor(1,ColorUtil.coLor(190));
 		myPacking.setCircleColor(2,ColorUtil.coLor(10));
 		myPacking.setCircleColor(4,ColorUtil.coLor(10));

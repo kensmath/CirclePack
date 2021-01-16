@@ -5,7 +5,6 @@ import java.util.Iterator;
 
 import complex.Complex;
 import math.Mobius;
-import packing.PackData;
 import util.ColorUtil;
 
 /**
@@ -28,12 +27,11 @@ import util.ColorUtil;
  */
 public class D_SideData{
 	
-	public PackData packData;
+	public int hes;           // geometry from parent packing
 	public int spIndex;       // index in 'PairLink' linked list (indexed from 1)
 	public int mateIndex;     // index of paired side (-1 if no mate)
 	public RedHEdge startEdge; // the first 'RedEdge' of this "side"
 	public RedHEdge endEdge;   // the final 'RedEdge' of this "side"
-	public D_SideData pairedEdge;  // if side-paired, this is the mate (null if not paired)
 	public Mobius mob;        // Mobius transform when side is paired (TODO: for spherical) 
 	public double mobErr;     // error in the Mobius transform (mainly for hyp
                         	  //   case; mob is always an automorphism, but roundoff 
@@ -48,7 +46,6 @@ public class D_SideData{
     public D_SideData() {
     	startEdge=null;
     	endEdge=null;
-    	pairedEdge=null;
     	mob=new Mobius();
     	mobErr=0.0;
     	spIndex=-1;
@@ -64,7 +61,7 @@ public class D_SideData{
      * @return, 0 on error
      */
     public int set_sp_Mobius() {
-    	if (pairedEdge==null) return 0; // this is a "border" side
+    	if (mateIndex<0) return 0; // this is a "border" side
     	Complex A=startEdge.center;
     	Complex a=startEdge.twinRed.nextRed.center;
     	Complex B=endEdge.nextRed.center;
@@ -75,7 +72,7 @@ public class D_SideData{
 	  
     	/* Now have everything for mobius transformation. (The mobius
     	 * for 'pairedEdge' is set separately (should be inverse to this)). */
-    	if (packData.hes<0) { // hyp 
+    	if (hes<0) { // hyp 
     		if (a.abs()>=Mobius.MOD1 && b.abs()>=Mobius.MOD1 
     				&& A.abs()>=Mobius.MOD1 && B.abs()>=Mobius.MOD1) {
     			/* We have another real degree of freedom, so we go to a face
@@ -112,7 +109,7 @@ public class D_SideData{
     		else mob=Mobius.auto_abAB(a,b,A,B);
     		mobErr=mob.error;
     	}
-    	else if (packData.hes==0) { // eucl 
+    	else if (hes==0) { // eucl 
     		mob=Mobius.affine_mob(a,b,A,B);
     		mobErr=mob.error;
     	}
@@ -153,4 +150,22 @@ public class D_SideData{
     	return startEdge.myEdge.origin.vertIndx;
     }
 
+	/**
+	 * clone: CAUTION: pointers may be in conflict or outdated.
+	 * @return new D_SideData
+	 */
+    public D_SideData clone() {
+    	D_SideData sd=new D_SideData();
+    	sd.hes=hes;
+    	sd.startEdge=startEdge;
+    	sd.endEdge=endEdge;
+    	sd.label=label;
+    	sd.mateIndex=mateIndex;
+    	sd.spIndex=spIndex;
+    	sd.mob=mob.cloneMe();
+    	sd.mobErr=mobErr;
+    	sd.color=ColorUtil.cloneMe(color);
+    	return sd;
+    }
+    
 }

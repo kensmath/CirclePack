@@ -656,7 +656,7 @@ public class QueryParser {
 						{
 							v=FaceLink.grab_one_face(p,items.get(0));
 							if (v!=0) {
-								ans.append(p.faces[v].mark);
+								ans.append(p.getFaceMark(v));
 								if (forMsg) 
 									words.append(" f"+v);
 								gotone=true;
@@ -668,7 +668,7 @@ public class QueryParser {
 								break;
 							v=TileLink.grab_one_tile(p.tileData,items.get(0));
 							if (v!=0) {
-								ans.append(p.faces[v].mark);
+								ans.append(p.getFaceMark(v));
 								if (forMsg) 
 									words.append(" t"+v);
 								gotone=true;
@@ -678,7 +678,7 @@ public class QueryParser {
 						{
 							v=NodeLink.grab_one_vert(p,items.get(0));
 							if (v!=0) {
-								ans.append(p.kData[v].mark);
+								ans.append(p.getVertMark(v));
 								if (forMsg) 
 									words.append(" v"+v);
 								gotone=true;
@@ -891,7 +891,7 @@ public class QueryParser {
 		  	      				" Pi, aim="+p.getAim(v)/Math.PI+
 		  	      				" Pi, boundaryFlag="+p.getBdryFlag(v)+
 		  	      				", star="+p.getNum(v)+
-		  	      				", mark="+p.kData[v].mark+
+		  	      				", mark="+p.getVertMark(v)+
 		  	      				", plotFlag="+p.kData[v].plotFlag+
 		  	      				", color="+ColorUtil.col_to_table(p.getCircleColor(v)));
 		  	      		count++;

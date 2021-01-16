@@ -619,12 +619,12 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			// Update the UI elements.
 			vertexChoiceField.setText(Integer.toString(v));
 			radiusField.setValue(p.getActualRadius(v));
-			centerField.setValue(new Complex(p.rData[v].center));
+			centerField.setValue(new Complex(p.getCenter(v)));
 			aimField.setValue(p.getAim(v)/Math.PI);
 			angleSumField.setValue(p.getCurv(v)/Math.PI);
 			degreeField.setValue(p.getNum(v));
 			vertexColorField.setValue(ColorUtil.col_to_table(p.getCircleColor(v)));
-			vertMarkField.setValue(p.kData[v].mark);
+			vertMarkField.setValue(p.getVertMark(v));
 
 			if (p.isBdry(v)) boundaryCheckBox.setSelected(true);
 			else boundaryCheckBox.setSelected(false);
@@ -804,8 +804,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		public void putVertMark(PackData p) {
 			int vert = NodeLink.grab_one_vert(p, vertexChoiceField.getText());
 			if (vert==0) return;
-			p.kData[vert].mark=vertMarkField.getValue();
-			vertMarkField.setValue(p.kData[vert].mark);
+			p.setVertMark(vert,vertMarkField.getValue());
+			vertMarkField.setValue(p.getVertMark(vert));
 		}
 		
 		public void putFaceColor(PackData p) {
@@ -818,8 +818,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		public void putFaceMark(PackData p) {
 			int face = NodeLink.grab_one_vert(p, faceChoiceField.getText());
 			if (face==0) return;
-			p.faces[face].mark=faceMarkField.getValue();
-			faceMarkField.setValue(p.faces[face].mark);
+			p.setFaceMark(face,faceMarkField.getValue());
+			faceMarkField.setValue(p.getFaceMark(face));
 		}
 		
 		public void putTileColor(PackData p) {

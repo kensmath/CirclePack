@@ -350,8 +350,8 @@ public class FaceLink extends LinkedList<Integer> {
 				} catch(Exception ex) {}
 				for (int f=1;f<=facecount;f++)
 					if (f<=qackData.faceCount 
-							&& ((notmarked && qackData.faces[f].mark==0) || 
-									(!notmarked && qackData.faces[f].mark!=0))) {
+							&& ((notmarked && qackData.getFaceMark(f)==0) || 
+									(!notmarked && qackData.getFaceMark(f)!=0))) {
 						add(f);
 						count++;
 					}

@@ -161,7 +161,8 @@ public class PackCreation {
 		double sphrad=Math.asin(Math.sqrt(2.0/3.0));
 		for (int i=1;i<=4;i++) {
 			p.setBdryFlag(i,0);
-			p.kData[i].utilFlag=p.kData[i].mark=0;
+			p.kData[i].utilFlag=0;
+			p.setVertMark(i,0);
 			p.kData[i].schwarzian=null;
 			p.setRadius(i,sphrad);
 			p.setCurv(i,Math.PI);
@@ -211,9 +212,9 @@ public class PackCreation {
 		int gencount=1;
 
 		// mark vertices of first flower
-	   	p.kData[1].mark=0;
+	   	p.setVertMark(1,0);
 	   	for (int j=2;j<=p.nodeCount;j++) {
-	   		  p.kData[j].mark=(j)%2+1;
+	   		  p.setVertMark(j,(j)%2+1);
 	   	}
 
    		double []rad=new double[3];
@@ -233,7 +234,7 @@ public class PackCreation {
 	   		rad[1]=.2*(len[0]+len[2]-len[1])/2.0;
 	   		rad[2]=.2*(len[1]+len[0]-len[2])/2.0;
 	   		for (int k=1;k<=p.nodeCount;k++)
-	   			p.setRadius(k,rad[p.kData[k].mark]);
+	   			p.setRadius(k,rad[p.getVertMark(k)]);
 	   	}
 
 	   	while (gencount<=maxgen) {
@@ -265,14 +266,14 @@ public class PackCreation {
 	   		while (!wflag && count<10000) {
 	   			if (w==stopv) wflag=true;
 	   			int prev=p.kData[w].flower[p.getNum(w)];
-	   			int n=degs[p.kData[w].mark]-p.getNum(w)-1;
+	   			int n=degs[p.getVertMark(w)]-p.getNum(w)-1;
 	   			if (n<-1)
 	   				throw new CombException("violated degree at vert "+w);
 
 	   			// add the n circles; two marks alternate around w
 	   			int []alt=new int[2];
-	   			alt[0]=p.kData[prev].mark;
-	   			int vec=(alt[0]-p.kData[w].mark+3)%3;
+	   			alt[0]=p.getVertMark(prev);
+	   			int vec=(alt[0]-p.getVertMark(w)+3)%3;
 	   			alt[1]=(alt[0]+vec)%3;
 	   			for (int i=1;i<=n;i++) {
 	   				// for sph case, check added vert to see if it's last
@@ -296,7 +297,7 @@ public class PackCreation {
 	   					}
 	   				} // done with sphere check				   		
 	   				p.add_vert(w);
-	   				p.kData[p.nodeCount].mark=alt[i%2];
+	   				p.setVertMark(p.nodeCount,alt[i%2]);
 	   				p.setRadius(p.nodeCount,rad[alt[i%2]]);
 	   				// for sph, check whether to close up
 	   				if (hees>0) {
@@ -356,8 +357,8 @@ public class PackCreation {
 		while (blk.hasNext()) {
 			int w=blk.next();
 			int next=p.kData[w].flower[0];
-			int vec=(p.kData[w].mark-p.kData[next].mark+3)%3;
-			int nxmk=(p.kData[w].mark+vec)%3; // mark an added vert would have
+			int vec=(p.getVertMark(w)-p.getVertMark(next)+3)%3;
+			int nxmk=(p.getVertMark(w)+vec)%3; // mark an added vert would have
 			mx=(nxmk>mx) ? nxmk : mx;
 			mn=(nxmk<mn) ? nxmk : mn;
 		} 
@@ -407,7 +408,8 @@ public class PackCreation {
 			p.kData[i].flower[1]=1;
 			p.kData[i].flower[2]=i-1;
 			p.setBdryFlag(i,1);
-			p.kData[i].utilFlag=p.kData[i].mark=0;
+			p.kData[i].utilFlag=0;
+			p.setVertMark(i,0);
 			p.kData[i].schwarzian=null;
 			p.setRadius(i,2.5/(double)n);
 		}
@@ -1373,10 +1375,10 @@ public class PackCreation {
 		
 		// This is the packing we are growing.
 		PackData myPacking=PackCreation.seed(6,-1);
-		myPacking.kData[1].mark=1;
-		myPacking.kData[2].mark=2;
-		myPacking.kData[4].mark=2;
-		myPacking.kData[6].mark=2;
+		myPacking.setVertMark(1,1);
+		myPacking.setVertMark(2,2);
+		myPacking.setVertMark(4,2);
+		myPacking.setVertMark(6,2);
 		myPacking.setCircleColor(1,ColorUtil.cloneMe(ColorUtil.coLor(190)));
 		myPacking.setCircleColor(2,ColorUtil.cloneMe(ColorUtil.coLor(10)));
 		myPacking.setCircleColor(4,ColorUtil.cloneMe(ColorUtil.coLor(10)));
@@ -1476,13 +1478,13 @@ public class PackCreation {
 			}
 			
 			// mark center 1, red; nodes 2, blue
-			myPacking.kData[myPacking.vertexMap.findW(1)].mark=1;
+			myPacking.setVertMark(myPacking.vertexMap.findW(1),1);
 			myPacking.setCircleColor(myPacking.vertexMap.findW(1),ColorUtil.cloneMe(ColorUtil.coLor(190))); // red
-			myPacking.kData[myPacking.vertexMap.findW(2)].mark=2;
+			myPacking.setVertMark(myPacking.vertexMap.findW(2),2);
 			myPacking.setCircleColor(myPacking.vertexMap.findW(2),ColorUtil.cloneMe(ColorUtil.coLor(10))); // blue
-			myPacking.kData[myPacking.vertexMap.findW(4)].mark=2;
+			myPacking.setVertMark(myPacking.vertexMap.findW(4),2);
 			myPacking.setCircleColor(myPacking.vertexMap.findW(4),ColorUtil.cloneMe(ColorUtil.coLor(10))); // blue
-			myPacking.kData[myPacking.vertexMap.findW(6)].mark=2;
+			myPacking.setVertMark(myPacking.vertexMap.findW(6),2);
 			myPacking.setCircleColor(myPacking.vertexMap.findW(6),ColorUtil.cloneMe(ColorUtil.coLor(10))); // blue
 			// others white
 			myPacking.setCircleColor(myPacking.vertexMap.findW(3),ColorUtil.cloneMe(ColorUtil.coLor(100))); 
@@ -1503,10 +1505,10 @@ public class PackCreation {
  		//  face center vertices --- i.e. the graph edges
  		myPacking.elist=new EdgeLink(myPacking);
  		for (int v=1;v<=myPacking.nodeCount;v++) {
- 			if (myPacking.kData[v].mark!=1)
+ 			if (myPacking.getVertMark(v)!=1)
  				for (int j=0;j<(myPacking.getNum(v)+myPacking.getBdryFlag(v));j++) {
  					int k=myPacking.kData[v].flower[j];
- 					if (k>v && myPacking.kData[k].mark!=1)
+ 					if (k>v && myPacking.getVertMark(k)!=1)
  						myPacking.elist.add(new EdgeSimple(v,k));
  			}
  		}
@@ -1623,13 +1625,15 @@ public class PackCreation {
 		growWheel.elist=new EdgeLink(growWheel,"b");
 		
 		// mark the boundary
-		for (int vi=1;vi<growWheel.nodeCount;vi++)  
-			growWheel.kData[vi].mark++;
+		for (int vi=1;vi<growWheel.nodeCount;vi++) {
+			int om=growWheel.getVertMark(vi);
+			growWheel.setVertMark(vi,om+1);
+		}
 		
 		// want to mark the smallest level "core" (middle triangle)
 		//    with -1 and it's rotated neighbor with -2;
 		if (N==1) // at first level, just the core
-			growWheel.kData[growWheel.nodeCount].mark=-2;
+			growWheel.setVertMark(growWheel.nodeCount,-2);
 		
 		// keep track of number of edges in 'end', 'long', 'hypotenuse'
 		int endcount=e;
@@ -1639,7 +1643,7 @@ public class PackCreation {
 		while (generation < N) {
 			
 			if (N==1) // unmark the center on the first run
-				growWheel.kData[growWheel.nodeCount].mark=0;
+				growWheel.setVertMark(growWheel.nodeCount,0);
 			
 			// 5 copies of tempPack and tempReverse are adjoined
 			PackData tempPack=growWheel.copyPackTo();
@@ -1666,12 +1670,12 @@ public class PackCreation {
 			Iterator<EdgeSimple> vM=growWheel.vertexMap.iterator();
 			while (vM.hasNext()) {
 				EdgeSimple edge=vM.next();
-				growWheel.kData[edge.w].mark=tempReverse.kData[edge.v].mark;
+				growWheel.setVertMark(edge.w,tempReverse.getVertMark(edge.v));
 			}
 			
 			// this new part is the rotated core, mark its center vert with -2 (first pass only)
 			if (generation==1) 
-				growWheel.kData[growWheel.vertexMap.findW(tempReverse.nodeCount)].mark=-2;
+				growWheel.setVertMark(growWheel.vertexMap.findW(tempReverse.nodeCount),-2);
 
 			// for debugging edge lists: debug=false;
 			if (debug) {
@@ -1695,12 +1699,12 @@ public class PackCreation {
 			vM=growWheel.vertexMap.iterator();
 			while (vM.hasNext()) {
 				EdgeSimple edge=vM.next();
-				growWheel.kData[edge.w].mark=tempReverse.kData[edge.v].mark;
+				growWheel.setVertMark(edge.w,tempReverse.getVertMark(edge.v));
 			}
 			
 			// this new part is the core, mark its center with -1 (first pass only)
 			if (generation==1)
-				growWheel.kData[growWheel.vertexMap.findW(tempReverse.nodeCount)].mark=-1;
+				growWheel.setVertMark(growWheel.vertexMap.findW(tempReverse.nodeCount),-1);
 
 						
 			// adjoin D to C^ along long 
@@ -1713,7 +1717,7 @@ public class PackCreation {
 			vM=growWheel.vertexMap.iterator();
 			while (vM.hasNext()) {
 				EdgeSimple edge=vM.next();
-				growWheel.kData[edge.w].mark=tempPack.kData[edge.v].mark;
+				growWheel.setVertMark(edge.w,tempPack.getVertMark(edge.v));
 			}
 
 			// adjoin E ends of C^ and D, endcount each
@@ -1727,7 +1731,7 @@ public class PackCreation {
 			vM=growWheel.vertexMap.iterator();
 			while (vM.hasNext()) {
 				EdgeSimple edge=vM.next();
-				growWheel.kData[edge.w].mark=tempPack.kData[edge.v].mark;
+				growWheel.setVertMark(edge.w,tempPack.getVertMark(edge.v));
 			}
 			
 			
@@ -1747,8 +1751,10 @@ public class PackCreation {
 
 			// increment marks on boundary
 			for (int vi=1;vi<=growWheel.nodeCount;vi++)
-				if (growWheel.isBdry(vi))
-					growWheel.kData[vi].mark++;
+				if (growWheel.isBdry(vi)) {
+					int om=growWheel.getVertMark(vi);
+					growWheel.setVertMark(vi,om+1);
+				}
 			
 			generation++;
 
@@ -1962,10 +1968,10 @@ public class PackCreation {
 		fusionD.complex_count(false);
 
 		// keep track of tiles by marking barycenter vertex
-		fusionA.kData[1].mark=1;
-		fusionB.kData[1].mark=2;
-		fusionC.kData[1].mark=3;
-		fusionD.kData[1].mark=4;
+		fusionA.setVertMark(1,1);
+		fusionB.setVertMark(2,2);
+		fusionC.setVertMark(1,3);
+		fusionD.setVertMark(1,4);
 				
 		// Corners are 1,2,3,4 at every stage in every tile, upper left is 1
 		// reset the corner numbers, starting at '2' (first petal for seed)
@@ -1993,10 +1999,10 @@ public class PackCreation {
 				throw new CombException("failed [C A]");
 			// transfer non-zero marks
 			for (int v=1;v<=holdA.nodeCount;v++) {
-				if(holdA.kData[v].mark!=0) {
+				if(holdA.getVertMark(v)!=0) {
 					int w=fusionA.vertexMap.findW(v);
 					if (w>0)
-						fusionA.kData[w].mark=holdA.kData[v].mark;
+						fusionA.setVertMark(w,holdA.getVertMark(v));
 				}
 			}
 			// lower part, [D B], (X+W) x X
@@ -2006,10 +2012,10 @@ public class PackCreation {
 				throw new CombException("failed [D B]");
 			// transfer non-zero marks
 			for (int v=1;v<=holdB.nodeCount;v++) {
-				if(holdB.kData[v].mark!=0) {
+				if(holdB.getVertMark(v)!=0) {
 					int w=lower.vertexMap.findW(v);
 					if (w>0)
-						lower.kData[w].mark=holdB.kData[v].mark;
+						lower.setVertMark(w,holdB.getVertMark(v));
 				}
 			}
 			// adjoin them, (X+W) x (H+X)
@@ -2018,10 +2024,10 @@ public class PackCreation {
 				throw new CombException("failed [C A/D B]");
 			// transfer non-zero marks
 			for (int v=1;v<=lower.nodeCount;v++) {
-				if(lower.kData[v].mark!=0) {
+				if(lower.getVertMark(v)!=0) {
 					int w=fusionA.vertexMap.findW(v);
 					if (w>0)
-						fusionA.kData[w].mark=lower.kData[v].mark;
+						fusionA.setVertMark(w,lower.getVertMark(v));
 				}
 			}
 
@@ -2032,10 +2038,10 @@ public class PackCreation {
 				throw new CombException("failed [A C]");
 			// transfer non-zero marks
 			for (int v=1;v<=holdC.nodeCount;v++) {
-				if(holdC.kData[v].mark!=0) {
+				if(holdC.getVertMark(v)!=0) {
 					int w=fusionB.vertexMap.findW(v);
 					if (w>0)
-						fusionB.kData[w].mark=holdC.kData[v].mark;
+						fusionB.setVertMark(w,holdC.getVertMark(v));
 				}
 			}
 
@@ -2046,10 +2052,10 @@ public class PackCreation {
 				throw new CombException("failed [B/A]");
 			// transfer non-zero marks
 			for (int v=1;v<=holdA.nodeCount;v++) {
-				if(holdA.kData[v].mark!=0) {
+				if(holdA.getVertMark(v)!=0) {
 					int w=fusionC.vertexMap.findW(v);
 					if (w>0)
-						fusionC.kData[w].mark=holdA.kData[v].mark;
+						fusionC.setVertMark(w,holdA.getVertMark(v));
 				}
 			}
 
@@ -2057,7 +2063,7 @@ public class PackCreation {
 			//     reset the mark at barycenter vertex to 4
 			fusionD=holdA;
 			if (generation==2)
-				fusionD.kData[fusionD.alpha].mark=4;
+				fusionD.setVertMark(fusionD.alpha,4);
 				
 			// debug options to see specified piece, default to 'A'
 			char c='A'; // c='B'    c='C'    c='D'
@@ -2148,15 +2154,15 @@ public class PackCreation {
 		
 		int swp=blist.get(0);
 		p.swap_nodes(swp,1);
-		blist=blist.swap_indices(swp, 1);
+		blist=blist.swapVW(swp, 1);
 		
 		swp=blist.get(h);
 		p.swap_nodes(swp,2);
-		blist=blist.swap_indices(swp, 2);
+		blist=blist.swapVW(swp, 2);
 		
 		swp=blist.get(h+w);
 		p.swap_nodes(swp,3);
-		blist=blist.swap_indices(swp, 3);
+		blist=blist.swapVW(swp, 3);
 		
 		swp=blist.get(h+w+h);
 		p.swap_nodes(swp,4);

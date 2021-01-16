@@ -101,4 +101,11 @@ public class VertexMap extends EdgeLink {
 		return 0;
 	}
 	
+	/**
+	 * clone with same 'PackData'
+	 */
+	public VertexMap clone() {
+		return (VertexMap)super.clone();
+	}
+	
 }

@@ -1272,9 +1272,9 @@ public class Graphene extends PackExtender {
 		// add one more layer of poisonverts, find an alpha
 		int newAlp=-1;
 		for (int v=1;v<=newPack.nodeCount;v++) {
-			if (newPack.kData[v].mark<=2)
+			if (newPack.getVertMark(v)<=2)
 				newPack.poisonVerts.add(v);
-			if (newAlp<0 && !newPack.isBdry(v) && newPack.kData[v].mark==3)
+			if (newAlp<0 && !newPack.isBdry(v) && newPack.getVertMark(v)==3)
 				newAlp=v;
 		}
 

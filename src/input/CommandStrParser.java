@@ -468,7 +468,7 @@ public class CommandStrParser {
 			  
 			  try {
 				  for (int i=1;i<=origVCount;i++)
-					  newPack.kData[i].mark=1;
+					  newPack.setVertMark(i,1);
 			  } catch (Exception ex) {
 				  CirclePack.cpb.errMsg("error in marking network vertices");
 			  }
@@ -4452,9 +4452,9 @@ public class CommandStrParser {
 	   		  throw new ParserException(" "+ex.getMessage());
 	   	  }
 	   	  // mark vertices of first flower
-	   	  packData.kData[1].mark=0;
+	   	  packData.setVertMark(1,0);
 	   	  for (int j=2;j<=packData.nodeCount;j++) {
-	   		  packData.kData[j].mark=(j)%2+1;
+	   		  packData.setVertMark(j,(j)%2+1);
 	   	  }
 	   	  count++;
 	   	  
@@ -4469,22 +4469,22 @@ public class CommandStrParser {
 			  boolean wflag=false;
 			  while (!wflag && count<10000) {
 //				  System.err.println("gencount="+gencount+", working on w="+w+
-//						  "; w's mark="+packData.kData[w].mark);
+//						  "; w's mark="+packData.getVertMark(w));
 				  if (w==stopv) wflag=true;
 				  int prev=packData.kData[w].flower[packData.getNum(w)];
-				  int n=degs[packData.kData[w].mark]-packData.getNum(w)-1;
+				  int n=degs[packData.getVertMark(w)]-packData.getNum(w)-1;
 				  if (n<-1)
 					  throw new CombException("violated degree at vert "+w);
 
 				  // add the n circles; two marks alternate around w
-				  alt[0]=packData.kData[prev].mark;
-				  int vec=(alt[0]-packData.kData[w].mark+3)%3;
+				  alt[0]=packData.getVertMark(prev);
+				  int vec=(alt[0]-packData.getVertMark(w)+3)%3;
 				  alt[1]=(alt[0]+vec)%3;
-//				  System.out.println("w mark="+packData.kData[w].mark+
+//				  System.out.println("w mark="+packData.getVertMark(w)+
 //						  "; prev mark (alt[0])="+alt[0]+"; alt[1]="+alt[1]);
 				  for (int i=1;i<=n;i++) { 
 					  packData.add_vert(w);
-					  packData.kData[packData.nodeCount].mark=alt[i%2];
+					  packData.setVertMark(packData.nodeCount],alt[i%2]);
 				  }
 				  if (n==-1) { 
 					  int xv=packData.close_up(w); // vertex removed?
@@ -4506,7 +4506,7 @@ public class CommandStrParser {
 //			  System.out.println("bdry verts, marks");
 			  while (nlink.hasNext()) {
 				  int dw=nlink.next();
-//				  System.out.println("v "+dw+", "+packData.kData[dw].mark);
+//				  System.out.println("v "+dw+", "+packData.getVertMark(dw));
 			  }
 			  
 			  
@@ -5363,6 +5363,8 @@ public class CommandStrParser {
 	      if (cmd.startsWith("cookie")) {
 	    	  
 	    	  // catch '-Z' flag, if there, meaning "zigzag_cookie"
+	    	  // Note: this turned out to be useless, since it led
+	    	  //   to many bdry vertices w/o interior ngbhs.
 	    	  boolean zigzag=false;
 	    	  try {
 	    		  items=(Vector<String>)flagSegs.get(0);
@@ -5370,39 +5372,61 @@ public class CommandStrParser {
 	  	        	  zigzag=true;
 	    	  } catch(Exception ex) {}
 	    	  
-	    	  CookieMonster cM=null;
-	    	  try {
-	    		  cM=new CookieMonster(packData,flagSegs);
-	    	  } catch (Exception ex) {
-	    		  System.err.println(ex.getMessage());
+	    	  if (packData.packDCEL!=null) {
+	    		  
+	    		  // identify seed and vertices to cut out
+	    		  int[] fringe=CookieMonster.parseCookieData(packData, flagSegs);
+	    		  NodeLink cutlist=new NodeLink(packData);
+	    		  for (int v=1;v<=packData.nodeCount;v++) {
+	    			  if (fringe[v]!=0)
+	    				  cutlist.add(v);
+	    		  }	    				  
+	    		  
+	    		  // cookie out to form new DCEL structure
+	    		  PackDCEL cutDCEL=null;
+	    		  try {
+	    			  cutDCEL=CombDCEL.d_redChainBuilder(
+	    					  packData.packDCEL,cutlist,false,fringe[0]);
+	    		  } catch (Exception ex) {
+	    			  throw new ParserException("DCEL verion of 'cookie' failed");
+	    		  }
+	    		  
+	    		  if (cutDCEL!=null) {
+	    			  packData.attachDCEL(cutDCEL);
+	    			  return cutDCEL.vertCount;
+	    		  }
 	    		  return 0;
 	    	  }
+	    	  // else, traditional method
+	    	  else {
+	    		  CookieMonster cM=null;
+	    		  try {
+	    			  cM=new CookieMonster(packData,flagSegs);
+	    		  } catch (Exception ex) {
+	    			  System.err.println(ex.getMessage());
+	    			  return 0;
+	    		  }
 	    	  
-	    	  int outcome=-1;
-	    	  if (zigzag) {
-	    		  outcome=cM.zigzagCookie();
-	    		  if (outcome<0) {
-	    			  cM=null;
-	  	        		  throw new ParserException("zigzagCookie failed: packing should be okay");
-  	        	  }
-	    	  }
-	    	  else {  	
-	    		  outcome=cM.goCookie();
-		    	  if (outcome<0) {
-		    		  cM=null;
-		    		  throw new ParserException("cookie failed: packing should be okay");
-		    	  }
-	    	  }
+	    		  int outcome=-1;
+	    		  if (zigzag) {}
+	    		  else {  	
+	    			  outcome=cM.goCookie();
+	    			  if (outcome<0) {
+	    				  cM=null;
+	    				  throw new ParserException("cookie failed: packing should be okay");
+	    			  }
+	    		  }
 	    	  
-	    	  if (outcome>0) {
-	    		  cpS.swapPackData(cM.getPackData(),false);
-	    		  packData=cpS.getPackData();
+	    		  if (outcome>0) {
+	    			  cpS.swapPackData(cM.getPackData(),false);
+	    			  packData=cpS.getPackData();
+	    		  }
+	    		  CirclePack.cpb.msg("Cookie seems to have succeeded");
+	    		  packData.poisonEdges=null;
+	    		  packData.poisonVerts=null;
+	    		  cM=null;
+	    		  return 1;
 	    	  }
-	    	  CirclePack.cpb.msg("Cookie seems to have succeeded");
-	    	  packData.poisonEdges=null;
-	    	  packData.poisonVerts=null;
-	    	  cM=null;
-	    	  return 1;
 	      }
 		  
 	      //  =========== cir_invert ===============
@@ -5849,11 +5873,12 @@ public class CommandStrParser {
 				}
 
 				else if (str.contains("dcel")) {
-					PackDCEL raw=CombDCEL.getRawDCEL(packData.getBouquet());
-					packData.packDCEL = CombDCEL.d_redChainBuilder(raw,null,false,packData.alpha);
-					if (packData.packDCEL == null || packData.packDCEL.vertCount != packData.nodeCount)
-						throw new CombException("failed to create packDCEL");
-					return 1;
+					return packData.attachDCEL();
+//					PackDCEL raw=CombDCEL.getRawDCEL(packData.getBouquet());
+//					packData.packDCEL = CombDCEL.d_redChainBuilder(raw,null,false,packData.alpha);
+//					if (packData.packDCEL == null || packData.packDCEL.vertCount != packData.nodeCount)
+//						throw new CombException("failed to create packDCEL");
+//					return 1;
 				}
 				else if (str.contains("export")) {
 					if (packData.packDCEL==null)
@@ -6476,11 +6501,24 @@ public class CommandStrParser {
 	    	  }
 	    	  
 	    	  // should be done
+	    	  if (count==0)
+	    		  return 0;
 	    	  if (count>0) {
-	   			  packData.setCombinatorics();
-	   			  packData.fillcurves();
+	    		  if (packData.packDCEL==null) {
+	    			  packData.setCombinatorics();
+	    			  packData.fillcurves();
+	    			  return count;
+	    		  }
+	    		  CombDCEL.d_FillInside(packData.packDCEL);
+	    		  return count;
 	   		  }
-	   		  return count;
+	    	  
+	    	  if (packData.packDCEL!=null) {
+	    		  PackDCEL pdc=CombDCEL.d_redChainBuilder(packData.packDCEL, null, false, packData.alpha);
+	    		  packData.attachDCEL(pdc);
+	    		  return -count;
+	    	  }
+	   		  return -1; // error
 	      }
 	      
 	      // ============ flat_hex =========
@@ -7101,7 +7139,7 @@ public class CommandStrParser {
 	    			  }
 	    			    int tick=0;
 	    			    for (int i=1;i<=packData.nodeCount;i++) 
-	    			    	if(packData.kData[i].mark!=0) tick++;
+	    			    	if(packData.getVertMark(i)!=0) tick++;
 	    			    if (tick==0) {
 	    			    	CirclePack.cpb.myErrorMsg("layout -[tT]: no vertices have been marked?");
 	    			    }
@@ -7326,7 +7364,7 @@ public class CommandStrParser {
 	    			  Iterator<Integer> vl=vlist.iterator();
 	    			  while (vl.hasNext()) {
 	    				  int v=(Integer)vl.next();
-	    				  packData.kData[v].mark=1;
+	    				  packData.setVertMark(v,1);
 	    				  count++;
 	    			  }
 	    			  return count;
@@ -7337,8 +7375,8 @@ public class CommandStrParser {
 	    		  switch(str.charAt(1)) {
 	    		      case 'w': // wipe out all marks, faces/circles
 	    			  {
-	    				  for (int v=1;v<=packData.nodeCount;v++) packData.kData[v].mark=0;
-	    				  for (int f=1;f<=packData.faceCount;f++) packData.faces[f].mark=0;
+	    				  for (int v=1;v<=packData.nodeCount;v++) packData.setVertMark(v,0);
+	    				  for (int f=1;f<=packData.faceCount;f++) packData.setFaceMark(f,0);
 	    				  count++;
 	    				  break;
 	    			  }
@@ -7347,10 +7385,10 @@ public class CommandStrParser {
 	    				  if (str.length()>2 && str.charAt(2)=='o') { // mark by drawing order
 	    					  if (packData.vert_draw_order()>0) {
 	    						  int tick=1;
-	    						  packData.kData[packData.alpha].mark=tick++;
+	    						  packData.setVertMark(packData.alpha,tick++);
 	    						  int nv=packData.kData[packData.alpha].nextVert;
 	    						  while (nv>0 && nv!=packData.alpha) {
-	    							  packData.kData[nv].mark=tick++;
+	    							  packData.setVertMark(nv,tick++);
 	    							  nv=packData.kData[nv].nextVert;
 	    							  count++;
 	    						  }
@@ -7358,7 +7396,7 @@ public class CommandStrParser {
 	    					  break;
 	    				  }
 	    				  else if (str.length()>2 && str.charAt(2)=='w') { // wipe out first
-	        				  for (int v=1;v<=packData.nodeCount;v++) packData.kData[v].mark=0;
+	        				  for (int v=1;v<=packData.nodeCount;v++) packData.setVertMark(v,0);
 	        				  count++;
 	    				  }
 	    				  if (items.size()==0) break; // do not default to all here
@@ -7366,7 +7404,7 @@ public class CommandStrParser {
 	    				  if (vlist==null || vlist.size()==0) break;
 	    				  Iterator<Integer> vs=vlist.iterator();
 	    				  while (vs.hasNext()) {
-	    					  packData.kData[(Integer)vs.next()].mark=1;
+	    					  packData.setVertMark((Integer)vs.next(),1);
 	    					  count++;
 	    				  }
 	    				  break;
@@ -7374,7 +7412,7 @@ public class CommandStrParser {
 	    			  case 'f': // faces
 	    			  {
 	    				  if (str.length()>2 && str.charAt(2)=='w') { // wipe out first
-	        				  for (int f=1;f<=packData.faceCount;f++) packData.faces[f].mark=0;
+	        				  for (int f=1;f<=packData.faceCount;f++) packData.setFaceMark(f,0);
 	        				  count++;
 	    				  }
 	    				  if (items.size()==0) break; // do not default to all here
@@ -7382,7 +7420,7 @@ public class CommandStrParser {
 	    				  if (flist==null || flist.size()==0) break;
 	    				  Iterator<Integer> fs=flist.iterator();
 	    				  while (fs.hasNext()) {
-	    					  packData.faces[(Integer)fs.next()].mark=1;
+	    					  packData.setFaceMark((Integer)fs.next(),1);
 	    					  count++;
 	    				  }
 	    				  break;
@@ -7400,10 +7438,10 @@ public class CommandStrParser {
 	    				  UtilPacket uP=new UtilPacket();
 	    				  int []gens=packData.label_generations(-1,uP);
 	    				  for (int v=1;v<=packData.nodeCount;v++) {
-	    					  packData.kData[v].mark=gens[v];
+	    					  packData.setVertMark(v,gens[v]);
 	    					  count++;
 	    				  }
-	    				  packData.kData[V].mark=1;
+	    				  packData.setVertMark(V,1);
 	    				  break;
 	    			  }
 	    		  } // end of switch
@@ -8799,7 +8837,8 @@ public class CommandStrParser {
 		    	  if (keepFlag!=0)
 		    		  packData.swap_nodes(nL.get(0),nL.get(1),keepFlag);
 		    	  else packData.swap_nodes(nL.get(0),nL.get(1));
-		    	  packData.setCombinatorics();
+		    	  if (packData.packDCEL==null)
+		    		  packData.setCombinatorics();
 		      } catch(Exception ex) {
 		    	  throw new ParserException("usage: swap [-cma] v w");
 		      }
@@ -10088,9 +10127,9 @@ public class CommandStrParser {
 		   		  throw new ParserException(" "+ex.getMessage());
 		   	  }
 		   	  // mark vertices of first flower
-		   	  packData.kData[1].mark=0;
+		   	  packData.setVertMark(1,0);
 		   	  for (int j=2;j<=packData.nodeCount;j++) {
-		   		  packData.kData[j].mark=(j)%2+1;
+		   		  packData.setVertMark(j,(j)%2+1);
 		   	  }
 		   	  count++;
 		   	  
@@ -10105,22 +10144,22 @@ public class CommandStrParser {
 				  boolean wflag=false;
 				  while (!wflag && count<10000) {
 //					  System.err.println("gencount="+gencount+", working on w="+w+
-//							  "; w's mark="+packData.kData[w].mark);
+//							  "; w's mark="+packData.getVertMark(w));
 					  if (w==stopv) wflag=true;
 					  int prev=packData.kData[w].flower[packData.getNum(w)];
-					  int n=degs[packData.kData[w].mark]-packData.getNum(w)-1;
+					  int n=degs[packData.getVertMark(w)]-packData.getNum(w)-1;
 					  if (n<-1)
 						  throw new CombException("violated degree at vert "+w);
 
 					  // add the n circles; two marks alternate around w
-					  alt[0]=packData.kData[prev].mark;
-					  int vec=(alt[0]-packData.kData[w].mark+3)%3;
+					  alt[0]=packData.getVertMark(prev);
+					  int vec=(alt[0]-packData.getVertMark(w)+3)%3;
 					  alt[1]=(alt[0]+vec)%3;
-//					  System.out.println("w mark="+packData.kData[w].mark+
+//					  System.out.println("w mark="+packData.getVertMark(w)+
 //							  "; prev mark (alt[0])="+alt[0]+"; alt[1]="+alt[1]);
 					  for (int i=1;i<=n;i++) { 
 						  packData.add_vert(w);
-						  packData.kData[packData.nodeCount].mark=alt[i%2];
+						  packData.getVertMark(packData.nodeCount,alt[i%2]);
 					  }
 					  if (n==-1) { 
 						  int xv=packData.close_up(w); // vertex removed?
@@ -10142,7 +10181,7 @@ public class CommandStrParser {
 //				  System.out.println("bdry verts, marks");
 				  while (nlink.hasNext()) {
 					  int dw=nlink.next();
-//					  System.out.println("v "+dw+", "+packData.kData[dw].mark);
+//					  System.out.println("v "+dw+", "+packData.getVertMark(dw));
 				  }
 				  
 				  
@@ -10789,16 +10828,16 @@ public static CallPacket valueExecute(PackData packData,String cmd,Vector<Vector
 							|| last_vert > packData.nodeCount) {
 						throw new ParserException("usage: [fm] {v..}");
 					}
-					mx = packData.kData[last_vert].mark;
+					mx = packData.getVertMark(last_vert);
 					if (face_flag) {
 						int Gmax = 0, g0, g1, g2, gmax, gmin, last_face = 0;
 						for (int f = 1; f <= packData.faceCount; f++)
-							packData.faces[f].mark = 0;
+							packData.setFaceMark(f,0);
 						for (int f = 1; f <= packData.faceCount; f++) {
 							gmax = gmin = 0;
-							if ((g0 = packData.kData[packData.faces[f].vert[0]].mark) != 0
-									&& (g1 = packData.kData[packData.faces[f].vert[1]].mark) != 0
-									&& (g2 = packData.kData[packData.faces[f].vert[2]].mark) != 0) {
+							if ((g0 = packData.getVertMark(packData.faces[f].vert[0])) != 0
+									&& (g1 = packData.getVertMark(packData.faces[f].vert[1])) != 0
+									&& (g2 = packData.getVertMark(packData.faces[f].vert[2])) != 0) {
 								gmax = g0;
 								gmax = (g1 > gmax) ? g1 : gmax;
 								gmax = (g2 > gmax) ? g2 : gmax;
@@ -10807,11 +10846,11 @@ public static CallPacket valueExecute(PackData packData,String cmd,Vector<Vector
 								gmin = (g2 < gmin) ? g2 : gmin;
 							}
 							if (gmax > gmin)
-								packData.faces[f].mark = gmax - 1;
+								packData.setFaceMark(f,gmax - 1);
 							else if (gmax != 0)
-								packData.faces[f].mark = gmin; // gmax=gmin
-							if (packData.faces[f].mark > Gmax) {
-								Gmax = packData.faces[f].mark;
+								packData.setFaceMark(f,gmin); // gmax=gmin
+							if (packData.getFaceMark(f) > Gmax) {
+								Gmax = packData.getFaceMark(f);
 								last_face = f;
 							}
 						}

@@ -379,7 +379,7 @@ public class ConformalTiling extends PackExtender {
 			
 			// initial 'mark's = -1, recursively set to depth; all radii = .025
 			for (int v=1;v<=packData.nodeCount;v++) {
-				packData.kData[v].mark=-1;
+				packData.setVertMark(v,-1);
 				packData.setRadius(v,0.025);
 			}
 			
@@ -1087,11 +1087,11 @@ public class ConformalTiling extends PackExtender {
 				return 0;
 			for (int v=1;v<=packData.nodeCount;v++) {
 				if (v<=canonicalPack.nodeCount) {
-					packData.kData[v].mark=canonicalPack.kData[v].mark;
+					packData.setVertMark(v,canonicalPack.getVertMark(v));
 					count++;
 				}
 				else  
-					packData.kData[v].mark=0;
+					packData.setVertMark(v,0);
 			}
 			return count; 
 		}
@@ -1715,16 +1715,16 @@ public class ConformalTiling extends PackExtender {
 		
 		// clear 'mark's
 		for (int i=1;i<=newPD.nodeCount;i++)
-			newPD.kData[i].mark=0;
+			newPD.setVertMark(i,0);
 
 		// go through tiles, split edges, set marks
 		//    splitting edge should prevent it being split again
 		//    from the other side
 		for (int t=1;t<=newPD.tileData.tileCount;t++) {
 			Tile tile=newPD.tileData.myTiles[t];
-			newPD.kData[tile.baryVert].mark=1;
+			newPD.setVertMark(tile.baryVert,1);
 			int w=tile.vert[0];
-			newPD.kData[w].mark=2;
+			newPD.setVertMark(w,2);
 			int v=w;
 			for (int j=1;j<=tile.vertCount;j++) {
 				v=w;
@@ -1732,13 +1732,13 @@ public class ConformalTiling extends PackExtender {
 					w=tile.vert[0];
 				else 
 					w=tile.vert[j];
-				newPD.kData[w].mark=2;
+				newPD.setVertMark(w,2);
 				int v1=newPD.split_edge(v,w);
 				if (v1!=0) { // if you add one
-					newPD.kData[v1].mark=4;
+					newPD.setVertMark(v1,4);
 					int v2=newPD.split_edge(v,v1); // then add a second
 					if (v2!=0)
-						newPD.kData[v2].mark=3;
+						newPD.setVertMark(v2,3);
 				}
 			}
 		}
@@ -2268,8 +2268,8 @@ public class ConformalTiling extends PackExtender {
 		// first, locate your own vertices (just vertices, not augmented vertices)
 		for (int j=0;j<topRule.stdCorners.length;j++) {
 			p.setCenter(toptile.vert[j],new Complex(topRule.stdCorners[j].times(basedir).add(origin)));
-			if (p.kData[toptile.vert[j]].mark<0)
-				p.kData[toptile.vert[j]].mark=depth;
+			if (p.getVertMark(toptile.vert[j])<0)
+				p.setVertMark(toptile.vert[j],depth);
 		}
 
 		int count=1;

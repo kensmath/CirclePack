@@ -59,6 +59,10 @@ public class EdgeSimple {
 		return false;
 	}
 	
+	public EdgeSimple clone() {
+		return new EdgeSimple(v,w);
+	}
+	
 	public String toString() {
 		return new String("["+this.v+","+this.w+"]");
 	}

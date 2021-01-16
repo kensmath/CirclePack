@@ -71,7 +71,7 @@ public class JammedPack extends PackExtender {
 		// the packing should have 'original vertices' marked; if not, fail
 		int markCount=0;
 		for (int v=1;v<=packData.nodeCount;v++) 
-			if (packData.kData[v].mark==1) {
+			if (packData.getVertMark(v)==1) {
 				markCount++;
 			}
 		
@@ -89,12 +89,12 @@ public class JammedPack extends PackExtender {
 		
 		// mark the vertices, list interstices and their 'rim' flowers
 		for (int v=1;v<=homePack.nodeCount;v++) { 
-			if (homePack.kData[v].mark==1) {
-				homePack.kData[v].mark=-1; // mark=-1 for original vertex
+			if (homePack.getVertMark(v)==1) {
+				homePack.setVertMark(v,-1); // mark=-1 for original vertex
 			}
 			else if (homePack.getNum(v)>3) {   // only degree > 3
 				istices[++tick]=v;
-				homePack.kData[v].mark=tick; // index of interstice
+				homePack.setVertMark(v,tick); // index of interstice
 				iFlowers[tick]=new int[homePack.getNum(v)+1];
 				for (int j=0;j<=homePack.getNum(v);j++)
 					iFlowers[tick][j]=homePack.kData[v].flower[j];
@@ -124,8 +124,8 @@ public class JammedPack extends PackExtender {
 					if (packData.getNum(edge.v)==3 || packData.getNum(edge.w)==3)
 						return count;
 					// both can't be original
-					if ((edge.v<=homePack.nodeCount && homePack.kData[edge.v].mark<0) &&
-							(edge.w<=homePack.nodeCount && homePack.kData[edge.w].mark<0))
+					if ((edge.v<=homePack.nodeCount && homePack.getVertMark(edge.v)<0) &&
+							(edge.w<=homePack.nodeCount && homePack.getVertMark(edge.w)<0))
 						return count;
 					count += cpCommand(packData,"split_edge "+edge.v+" "+edge.w);
 				}
@@ -219,7 +219,7 @@ public class JammedPack extends PackExtender {
 			int v=-1;
 			if (flagSegs!=null && (items=flagSegs.get(0)).size()>0 &&
 					(v=NodeLink.grab_one_vert(packData,items.get(0)))>0 &&
-					homePack.kData[v].mark<0) {  // original vert?
+					homePack.getVertMark(v)<0) {  // original vert?
 				
 				// already have one end
 				if (crumb!=null) {
@@ -255,7 +255,7 @@ public class JammedPack extends PackExtender {
 			}
 				
 			// are both ends original vertices?
-			if (homePack.kData[v].mark>=0 || homePack.kData[w].mark>=0) {
+			if (homePack.getVertMark(v)>=0 || homePack.getVertMark(w)>=0) {
 				errorMsg("vertices "+v+" and "+w+" are not original vertices");
 				return 0;
 			}
@@ -269,7 +269,7 @@ public class JammedPack extends PackExtender {
 			int bary=0;
 			int []vflower=homePack.kData[v].flower;
 			for (int j=0;j<homePack.getNum(v);j++) {
-				if (homePack.kData[vflower[j]].mark>=0) { //
+				if (homePack.getVertMark(vflower[j])>=0) { //
 					int b=vflower[j];
 					if (homePack.nghb(w,b)>=0) {
 						if (bary!=0 && bary!=b) {
@@ -326,7 +326,7 @@ public class JammedPack extends PackExtender {
 				int v=edge.v;
 				int w=edge.w;
 				// are both ends original vertices? neighbors?
-				if (homePack.kData[v].mark>=0 || homePack.kData[w].mark>=0) {
+				if (homePack.getVertMark(v)>=0 || homePack.getVertMark(w)>=0) {
 					errorMsg("vertices "+v+" and "+w+" are not original vertices");
 					return 0;
 				}
@@ -341,13 +341,13 @@ public class JammedPack extends PackExtender {
 				int []flower=packData.kData[v].flower;
 				int num=packData.getNum(v);
 				for (int j=0;j<num;j++)
-					if (homePack.kData[flower[j]].mark<0)
+					if (homePack.getVertMark(flower[j])<0)
 							vmark++;
 				int wmark=0;
 				flower=packData.kData[w].flower;
 				num=packData.getNum(w);
 				for (int j=0;j<num;j++)
-					if (homePack.kData[flower[j]].mark<0) // original vert?
+					if (homePack.getVertMark(flower[j])<0) // original vert?
 							wmark++;
 				
 				if (vmark<3 || wmark<3) {
@@ -534,8 +534,8 @@ public class JammedPack extends PackExtender {
 	 * @return M on success, 0 on error
 	 */
 	public int addEdge(int v,int w,int b) {
-		if (v==w || homePack.kData[v].mark>=0 || homePack.kData[w].mark>=0 || 
-				homePack.kData[b].mark<0 || packData.isBdry(b))
+		if (v==w || homePack.getVertMark(v)>=0 || homePack.getVertMark(w)>=0 || 
+				homePack.getVertMark(b)<0 || packData.isBdry(b))
 			return 0;
 		int b2v=-1;
 		int b2w=-1;

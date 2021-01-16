@@ -89,7 +89,7 @@ public class CirMatrix extends Mobius {
 	 * @return CirMatrix
 	 */
 	public static CirMatrix applyTransform(Mobius M, CirMatrix C, boolean oriented) {
-		Mobius MM=M.copyMob();
+		Mobius MM=M.cloneMe();
 		if (!oriented) // want M^{-1}?
 			MM=(Mobius)MM.inverse();
 

@@ -133,11 +133,11 @@ public class Tile extends Face {
 			tile.augVert=new int[tile.augVertCount];
 			tile.baryVert=1;
 			p.vertexMap=new VertexMap();
-			p.kData[1].mark=1;
+			p.setVertMark(1,1);
 			for (int j=0;j<vertCount;j++) {
 				int m=2+j;
 				tile.vert[j]=tile.augVert[j]=m;
-				p.kData[m].mark=2;
+				p.setVertMark(m,2);
 				p.vertexMap.add(new EdgeSimple(j,m));
 			}
 			p.tileData.myTiles[1]=tile;
@@ -156,11 +156,11 @@ public class Tile extends Face {
 			tile.augVert=new int[tile.augVertCount];
 			tile.baryVert=1;
 			p.vertexMap=new VertexMap();
-			p.kData[1].mark=1;
+			p.setVertMark(1,1);
 			for (int j=0;j<vertCount;j++) {
 				int m=2+2*j;
-				p.kData[m].mark=2;
-				p.kData[m+1].mark=3;
+				p.setVertMark(m,2);
+				p.setVertMark(m+1,3);
 				p.vertexMap.add(new EdgeSimple(j,m));
 				tile.vert[j]=m;
 				tile.augVert[2*j]=m;
@@ -205,7 +205,8 @@ public class Tile extends Face {
 			p.kData[6].flower[3]=7;
 			p.kData[6].flower[4]=1;
 			p.setBdryFlag(6,0);
-			p.kData[6].utilFlag=p.kData[6].mark=0;
+			p.kData[6].utilFlag=0;
+			p.setVertMark(6,0);
 			p.rData[6].rad=2.5/(double)4;
 			
 			p.kData[7].flower=new int[7];
@@ -218,7 +219,8 @@ public class Tile extends Face {
 			p.kData[7].flower[5]=8;
 			p.kData[7].flower[6]=1;
 			p.setBdryFlag(7,0);
-			p.kData[7].utilFlag=p.kData[7].mark=0;
+			p.kData[7].utilFlag=0;
+			p.setVertMark(7,0);
 			p.rData[7].rad=2.5/(double)6;
 			
 			p.kData[8].flower=new int[5];
@@ -229,7 +231,8 @@ public class Tile extends Face {
 			p.kData[8].flower[3]=9;
 			p.kData[8].flower[4]=1;
 			p.setBdryFlag(8,0);
-			p.kData[8].utilFlag=p.kData[8].mark=0;
+			p.kData[8].utilFlag=0;
+			p.setVertMark(8,0);
 			p.rData[8].rad=2.5/(double)4;
 			
 			p.kData[9].flower=new int[7];
@@ -242,7 +245,8 @@ public class Tile extends Face {
 			p.kData[9].flower[5]=6;
 			p.kData[9].flower[6]=1;
 			p.setBdryFlag(9,0);
-			p.kData[9].utilFlag=p.kData[9].mark=0;
+			p.kData[9].utilFlag=0;
+			p.setVertMark(9,0);
 			p.rData[9].rad=2.5/(double)6;
 			
 			// fix boundary flowers
@@ -254,7 +258,8 @@ public class Tile extends Face {
 			p.kData[2].flower[3]=9;
 			p.kData[2].flower[4]=5;
 			p.setBdryFlag(2,1);
-			p.kData[2].utilFlag=p.kData[5].mark=0;
+			p.kData[2].utilFlag=0;
+			p.setVertMark(5,0);
 			p.rData[2].rad=2.5/(double)4;
 
 			p.kData[3].flower=new int[3];
@@ -263,7 +268,8 @@ public class Tile extends Face {
 			p.kData[3].flower[1]=7;
 			p.kData[3].flower[2]=2;
 			p.setBdryFlag(3,1);
-			p.kData[3].utilFlag=p.kData[3].mark=0;
+			p.kData[3].utilFlag=0;
+			p.setVertMark(3,0);
 			p.rData[3].rad=2.5/(double)4;
 
 			p.kData[4].flower=new int[5];
@@ -274,7 +280,8 @@ public class Tile extends Face {
 			p.kData[4].flower[3]=7;
 			p.kData[4].flower[4]=3;
 			p.setBdryFlag(4,1);
-			p.kData[4].utilFlag=p.kData[4].mark=0;
+			p.kData[4].utilFlag=0;
+			p.setVertMark(4,0);
 			p.rData[4].rad=2.5/(double)4;
 
 			p.kData[5].flower=new int[3];
@@ -283,7 +290,8 @@ public class Tile extends Face {
 			p.kData[5].flower[1]=9;
 			p.kData[5].flower[2]=4;
 			p.setBdryFlag(5,1);
-			p.kData[5].utilFlag=p.kData[5].mark=0;
+			p.kData[5].utilFlag=0;
+			p.setVertMark(5,0);
 			p.rData[5].rad=2.5/(double)4;
 				
 			// process the combinatorics 
@@ -292,9 +300,9 @@ public class Tile extends Face {
 			p.set_aim_default();
 
 			// mark vertices and store info
-			p.kData[1].mark=1;
-			p.kData[2].mark=2;
-			p.kData[4].mark=3;
+			p.setVertMark(1,1);
+			p.setVertMark(2,2);
+			p.setVertMark(4,3);
 			p.vertexMap=new VertexMap();
 			p.vertexMap.add(new EdgeSimple(0,2)); // vert[0] is represented by 2
 
@@ -319,13 +327,13 @@ public class Tile extends Face {
 		PackData p=PackCreation.seed(2*vertCount,0);
 		p.bary_refine(-1); // mark new barycenters with -1
 			
-		p.kData[1].mark=1;
+		p.setVertMark(1,1);
 		p.vertexMap=new VertexMap();
 		for (int j=0;j<vertCount;j++) {
 			int m=2+2*j;
 			p.vertexMap.add(new EdgeSimple(j,m));
-			p.kData[m].mark=2;
-			p.kData[m+1].mark=3;
+			p.setVertMark(m,2);
+			p.setVertMark(m+1,3);
 		}
 		p.tileData=new TileData(1,3);
 		Tile tile=new Tile(p.tileData,vertCount);

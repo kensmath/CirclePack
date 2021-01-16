@@ -145,7 +145,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	}
 	
 	/**
-	 * Remove occurances of 'edge', taking account or order
+	 * Remove occurances of 'edge' if in same order
 	 * @param edge EdgeSimple
 	 * @return int count
 	 */
@@ -162,7 +162,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	}
 	
 	/**
-	 * Remove all edges in the given list, taking account or order.
+	 * Remove all edges in the given list in the ame order
 	 * @param edgelist EdgeLink, can be null
 	 * @return int count
 	 */
@@ -211,7 +211,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	
 	/** 
 	 * Return VertexMap (i.e., same list without knowledge of 'packData'
-	 * or null if there are no entries.
+	 * or null if there are no entries.)
 	 * */
 	public VertexMap toVertexMap() {
 		Iterator<EdgeSimple> el=this.iterator();
@@ -249,7 +249,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 		int count=0;
 		int nodeCount=packData.nodeCount;
 		
-		// In DCEL case, if a single vertex is given, pick it's 'halfedge' 
+		// In DCEL case, if a single numerical vertex is given, then
+		//   add it's 'halfedge' 
 		if (packData.packDCEL!=null && items.size()==1) {
 			try {
 				int v=Integer.parseInt(items.get(0));
@@ -343,7 +344,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 					}
 				} // end of handling elist/Elist
 				
-				// elist or Elist
+				// glist or Glist
 				else if ((str.startsWith("g") && (glink=packData.glist)!=null
 						&& glink.size()>0) ||
 						(str.startsWith("G") && (glink=CPBase.Glink)!=null
@@ -556,11 +557,11 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				if (str.length()>1 && str.charAt(1)=='c') not_m=true;
 				int m,w;
 				for (int v=1;v<=packData.nodeCount;v++) {
-					m=packData.kData[v].mark;
+					m=packData.getVertMark(v);
 					if ((not_m && m==0) || (!not_m && m!=0)) { // this end is marked
 						for (int j=0;j<packData.getNum(v)+packData.getBdryFlag(v);j++) {
 							w=packData.kData[v].flower[j];
-							m=packData.kData[w].mark;
+							m=packData.getVertMark(w);
 							// add only if w>v
 							if (w>v && ((not_m && m==0) || (!not_m && m!=0))) {
 								add(new EdgeSimple(v,w));
@@ -1686,6 +1687,23 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 		 }
 		 return false;
 	 }
+	 
+	 public void swapVW(int v,int w) {
+		 if (v==w) 
+			 return;
+		Iterator<EdgeSimple> etrace = this.iterator();
+		while (etrace.hasNext()) {
+			EdgeSimple es = (EdgeSimple) etrace.next();
+			if (es.v == v)
+				es.v = w;
+			else if (es.v == w)
+				es.v = v;
+			if (es.w == v)
+				es.w = w;
+			else if (es.w == w)
+				es.w = v;
+		}
+	 }
 
 	 /**
 	  * Set 'packData' (which helps determine eligibility of entries)
@@ -1693,6 +1711,18 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	  */
 	 public void setPackData(PackData p) {
 		 packData=p;
+	 }
+	 
+	 /**
+	  * Clone with the same 'PackData'
+	  */
+	 public EdgeLink clone() {
+		 EdgeLink el=new EdgeLink();
+		 el.packData=packData;
+		 Iterator<EdgeSimple> tis=this.iterator();
+		 while (tis.hasNext()) 
+			 el.add(tis.next().clone());
+		 return el;
 	 }
 	 
 	/**

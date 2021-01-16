@@ -246,6 +246,16 @@ public class PackData{
     }
     
     /**
+     * Create a DCEL structure for 'this' packing and then attach it.
+     * @return int
+     */
+    public int attachDCEL() {
+    	PackDCEL raw=CombDCEL.getRawDCEL(this);
+       	PackDCEL pdc=CombDCEL.d_redChainBuilder(raw,null,false,this.alpha);
+       	return attachDCEL(pdc);
+    }
+    
+    /**
      * Attach a new or modified DCEL structure for this packing and 
      * sync the associated 'vData[]'. If this is an existing packing 
      * and the dcel structure is just created, then populate the new 
@@ -1830,7 +1840,7 @@ public class PackData{
     		while (vm.hasNext()) {
     			EdgeSimple edge=vm.next();
     			if (edge.v>0 && edge.v<=this.nodeCount)
-    				kData[edge.v].mark=edge.w;
+    				setVertMark(edge.v,edge.w);
     		}
     	}
 
@@ -2584,6 +2594,38 @@ public class PackData{
 			kData[v].color=ColorUtil.cloneMe(color);
 	}
 	
+	public int getVertMark(int v) {
+		if (packDCEL!=null) {
+			return vData[v].mark;
+		}
+		else 
+			return kData[v].mark;
+	}
+	
+	public void setVertMark(int v,int m) {
+		if (packDCEL!=null) {
+			vData[v].mark=m;
+		}
+		else 
+			kData[v].mark=m;
+	}
+	
+	public int getFaceMark(int f) {
+		if (packDCEL!=null) {
+			return packDCEL.faces[f].mark;
+		}
+		else 
+			return faces[f].mark;
+	}
+	
+	public void setFaceMark(int f,int m) {
+		if (packDCEL!=null) {
+			packDCEL.faces[f].mark=m;
+		}
+		else 
+			faces[f].mark=m;
+	}
+	
 	/** 
 	 * Return actual radius of a vertex, meaning in the hyp case the
 	 * "x-radius" is converted to the actual hyperbolic radius, which 
@@ -2751,7 +2793,7 @@ public class PackData{
 		}
 		else if (option_flag==2) { // avoid the vertices that are marked 
 			for (int i=1;i<=nodeCount;i++) {
-				if (kData[i].mark!=0)
+				if (getVertMark(i)!=0)
 					offlist[i]=true;
 			}
 		}
@@ -6535,8 +6577,9 @@ public class PackData{
 			file.write("FLOWERS: ");
 			for (int n = 1; n <= nodeCount; n++) {
 				file.write("\n" + n + " " + getNum(n) + "  ");
+				int[] gfl=getFlower(n);
 				for (int i = 0; i <= getNum(n); i++)
-					file.write(" "+kData[n].flower[i]);
+					file.write(" "+gfl[i]);
 			}
 			file.write("\n\n");
 		}
@@ -6546,15 +6589,18 @@ public class PackData{
 				int k;
 				flag=0;
 				for (int i = 1; i <= nodeCount; i++)
-					for (int j = 0; j < (getNum(i) + getBdryFlag(i)); j++)
-						if (i < (k = kData[i].flower[j])
-								&& Math.abs((angle = getInvDist(i,kData[i].flower[j])) - 1.0) > OKERR)
+					for (int j = 0; j < (getNum(i) + getBdryFlag(i)); j++) {
+						int[] gfl=getFlower(i);
+						if (i < (k = gfl[j])
+								&& Math.abs((angle = getInvDist(i,gfl[j])) - 1.0) > OKERR)
 							flag++;
+					}
 				if (flag>0) {
 					for (int i = 1; i <= nodeCount; i++)
 						for (int j = 0; j < (getNum(i) + getBdryFlag(i)); j++) {
-							if (i < (k = kData[i].flower[j])
-								&& Math.abs((angle = getInvDist(i,kData[i].flower[j])) - 1.0) > OKERR)
+							int[] gfl=getFlower(j);
+							if (i < (k = gfl[j])
+								&& Math.abs((angle = getInvDist(i,gfl[j])) - 1.0) > OKERR)
 								file.write("\n" + i + " " + k + "  "
 									+ String.format("%.6e", angle));
 						}
@@ -7508,7 +7554,7 @@ public class PackData{
 		}
 		setBdryFlag(node,1);
 		kData[node].plotFlag = 1;
-		kData[node].mark = 0;
+		setVertMark(node,0);
 		setCircleColor(node,ColorUtil.getFGColor());
 		rData[node] = new RData();
 		setRadius(node,getRadius(v));
@@ -7792,43 +7838,57 @@ public class PackData{
 	 * @return 1
 	 */
 	public int swap_nodes(int v, int w) {
-		int vdum = 0, pet;
-
-		RData holdR = rData[v];
-		KData holdK = kData[v];
-		rData[v] = rData[w];
-		kData[v] = kData[w];
-		rData[w] = holdR;
-		kData[w] = holdK;
-
-		// for petals in v's new flower, replace w's with vdum's
-		for (int i = 0; i < (getNum(v) + getBdryFlag(v)); i++) {
-			pet = kData[v].flower[i];
-			if (pet == v)
-				pet = w;
-			for (int j = 0; j <= getNum(pet); j++)
-				if (kData[pet].flower[j] == w)
-					kData[pet].flower[j] = vdum;
+		if (packDCEL!=null) {
+			Vertex holdv=packDCEL.vertices[v];
+			Vertex holdw=packDCEL.vertices[w];
+			VData datav=vData[v];
+			VData dataw=vData[w];
+			holdv.vertIndx=w;
+			holdw.vertIndx=v;
+			packDCEL.vertices[w]=holdv;
+			packDCEL.vertices[v]=holdw;
+			vData[v]=dataw;
+			vData[w]=datav;
 		}
+		else {
+			RData holdR = rData[v];
+			KData holdK = kData[v];
+			rData[v] = rData[w];
+			kData[v] = kData[w];
+			rData[w] = holdR;
+			kData[w] = holdK;
+			int vdum = 0;
 
-		// for petals in w's new flower, replace v's with w's
-		for (int i = 0; i < (getNum(w) + getBdryFlag(w)); i++) {
-			pet = kData[w].flower[i];
-			if (pet == vdum)
-				pet = v;
-			for (int j = 0; j <= getNum(pet); j++)
-				if (kData[pet].flower[j] == v)
-					kData[pet].flower[j] = w;
+			// for petals in v's new flower, replace w's with vdum's
+			for (int i = 0; i < (getNum(v) + getBdryFlag(v)); i++) {
+				int pet = kData[v].flower[i];
+				if (pet == v)
+					pet = w;
+				for (int j = 0; j <= getNum(pet); j++)
+					if (kData[pet].flower[j] == w)
+						kData[pet].flower[j] = vdum;
+			}
+
+			// for petals in w's new flower, replace v's with w's
+			for (int i = 0; i < (getNum(w) + getBdryFlag(w)); i++) {
+				int pet = kData[w].flower[i];
+				if (pet == vdum)
+					pet = v;
+				for (int j = 0; j <= getNum(pet); j++)
+					if (kData[pet].flower[j] == v)
+						kData[pet].flower[j] = w;
+			}
+
+			// for petals in v's new flower, replace vdum's with v
+			for (int i = 0; i <= getNum(v); i++) {
+				int pet = kData[v].flower[i];
+				for (int j = 0; j <= getNum(pet); j++)
+					if (kData[pet].flower[j] == vdum)
+						kData[pet].flower[j] = v;
+			}
+
 		}
-
-		// for petals in v's new flower, replace vdum's with v
-		for (int i = 0; i <= getNum(v); i++) {
-			pet = kData[v].flower[i];
-			for (int j = 0; j <= getNum(pet); j++)
-				if (kData[pet].flower[j] == vdum)
-					kData[pet].flower[j] = v;
-		}
-
+		
 		// other adjustments
 		if (activeNode == v)
 			activeNode = w;
@@ -7861,32 +7921,12 @@ public class PackData{
 		}
 
 		// fix up elist
-		if (elist != null) {
-			Iterator<EdgeSimple> etrace = elist.iterator();
-			while (etrace.hasNext()) {
-				EdgeSimple es = (EdgeSimple) etrace.next();
-				if (es.v == v)
-					es.v = w;
-				else if (es.v == w)
-					es.v = v;
-				if (es.w == v)
-					es.w = w;
-				else if (es.w == w)
-					es.w = v;
-			}
-		}
+		if (elist != null) 
+			elist.swapVW(v, w);;
 
 		// fix up vlist
-		if (vlist != null) {
-			Iterator<Integer> vtrace = vlist.iterator();
-			while (vtrace.hasNext()) {
-				Integer vi = (Integer) vtrace.next();
-				if (vi == v)
-					vi = Integer.valueOf(w);
-				else if (vi == w)
-					vi = Integer.valueOf(v);
-			}
-		}
+		if (vlist != null) 
+			vlist=vlist.swapVW(v, w);
 
 		// fix up if there is TileData
 		if (tileData != null && tileData.tileCount > 0) {
@@ -7906,7 +7946,6 @@ public class PackData{
 				}
 			}
 		}
-
 		return 1;
 	}
 
@@ -7929,9 +7968,9 @@ public class PackData{
 			setCircleColor(w,ColorUtil.cloneMe(holdcolor));
 		}
 		if ((keepFlags & 0002) == 0002) { // swap 'mark'
-			int holdmark = kData[v].mark;
-			kData[v].mark = kData[w].mark;
-			kData[w].mark = holdmark;
+			int holdmark = getVertMark(v);
+			setVertMark(v,getVertMark(w));
+			setVertMark(w,holdmark);
 		}
 		if ((keepFlags & 0004) == 0004) { // swap 'aim'
 			double holdaim = getAim(v);
@@ -9372,7 +9411,7 @@ public class PackData{
 				set_single_invDist(newV,kData[newV].flower[2],1.0);
 			}
 			setBdryFlag(newV,1);
-			kData[newV].mark = 0;
+			setVertMark(newV,0);
 			setCircleColor(newV,ColorUtil.getFGColor());
 			setRadius(newV,getRadius(v));
 			setAim(newV,-0.1);
@@ -9392,7 +9431,7 @@ public class PackData{
 				set_single_invDist(newV,kData[newV].flower[2],1.0);
 				set_single_invDist(newV,kData[newV].flower[3],1.0);
 			}
-			kData[newV].mark = 0;
+			setVertMark(newV,0);
 			setCircleColor(newV,ColorUtil.getFGColor());
 			setRadius(newV,.5 * getRadius(v));
 			setAim(newV,2.0 * Math.PI);
@@ -9518,7 +9557,7 @@ public class PackData{
 	        set_single_invDist(newval,kData[newval].flower[3],1.0);
 	    }
 	    setBdryFlag(newval,0);
-	    kData[newval].mark=mark;
+	    setVertMark(newval,mark);
 	    setCircleColor(newval,ColorUtil.getFGColor());
 	    setRadius(newval,getRadius(faces[f].vert[0]));
 	    setAim(newval,2.0*Math.PI);
@@ -9580,7 +9619,7 @@ public class PackData{
 	    		set_single_invDist(newV[i],kData[newV[i]].flower[4],1.0);
 	    	}
 	    	setBdryFlag(newV[i],0);
-	    	kData[newV[i]].mark=0;
+	    	setVertMark(newV[i],0);
 	    	setCircleColor(newV[i],ColorUtil.getFGColor());
 	    	setRadius(newV[i],getRadius(faces[f].vert[i]));
 	    	setAim(newV[i],2.0*Math.PI);
@@ -9691,7 +9730,7 @@ public class PackData{
 			return 0;
 		if (mark)
 			for (int i = 1; i <= nodeCount; i++)
-				kData[i].mark = list[i];
+				setVertMark(i,list[i]);
 		return (int) uP.rtnFlag; // holds last_vert
 	}
 
@@ -10099,7 +10138,7 @@ public class PackData{
 	    }
 	    
 	    kData[newnode].plotFlag=1;
-	    kData[newnode].mark=0;
+	    setVertMark(newnode,0);
 	    setCircleColor(newnode,ColorUtil.getFGColor());
 	    if (overlapStatus) {
 		      kData[newnode].invDist=new double[count+1];
@@ -11250,10 +11289,17 @@ public class PackData{
 		  p.activeNode=activeNode;
 		  p.packExtensions=new Vector<PackExtender>(2); // old are lost
 
-		  // copy pData and kData
+		  // copy rData and kData
 		  for (int v=1;v<=nodeCount;v++) {
 			  p.kData[v]=kData[v].clone();
 			  p.rData[v]=rData[v].clone();
+		  }
+		  
+		  if (packDCEL!=null) {
+			  p.packDCEL=CombDCEL.clone(p.packDCEL);
+			  p.vData=new VData[nodeCount+1];
+			  for (int v=1;v<=nodeCount;v++) 
+				  p.vData[v]=vData[v].clone();
 		  }
 		  
 		  // copy tile data, if it exists
@@ -11263,8 +11309,10 @@ public class PackData{
 		  }
 		  
 		  // set the combinatorics
-		  p.complex_count(false);
-		  p.facedraworder(false);
+		  if (packDCEL==null) {
+			  p.complex_count(false);
+			  p.facedraworder(false);
+		  }
 		  
 		  // TODO: Prefer to make copy of layout in case face order 
 		  //    red chain, etc. are specially tailored. Need to spend
@@ -15705,7 +15753,7 @@ public class PackData{
 							Color col=source_p.getFaceColor(f);
 							target_p.setFaceColor(nf,ColorUtil.cloneMe(col));
 						}
-						if (face_marks) target_p.faces[nf].mark=source_p.faces[f].mark;
+						if (face_marks) target_p.setFaceMark(nf,source_p.getFaceMark(f));
 						count++;
 					}
 				} catch (Exception ex) {}
@@ -15765,7 +15813,7 @@ public class PackData{
 				if (tgt_v>0 && tgt_v<=target_p.nodeCount) {
 					if (radii) {target_p.setRadius(tgt_v,source_p.getRadius(src_v));count++;}
 					if (aims) {target_p.setAim(tgt_v,source_p.getAim(src_v));count++;}
-					if (marks) {target_p.kData[tgt_v].mark=source_p.kData[src_v].mark;count++;}
+					if (marks) {target_p.setVertMark(tgt_v,source_p.getVertMark(src_v));count++;}
 					if (centers) {target_p.setCenter(tgt_v,new Complex(source_p.getCenter(src_v)));count++;}
 					if (cir_colors) {
 						Color col=source_p.getCircleColor(src_v);
@@ -16239,10 +16287,10 @@ public class PackData{
 	  v=kData[alpha].flower[0];
 	  w=kData[alpha].flower[1];
 	  int nbr=0;
-	  if (kData[v].mark!=0 || kData[w].mark!=0) {
+	  if (getVertMark(v)!=0 || getVertMark(w)!=0) {
 	      for (int i=0;((i<getNum(alpha)) && nbr==0);i++)
-		if (kData[(v=kData[alpha].flower[i])].mark==0
-		    && kData[(w=kData[alpha].flower[i+1])].mark==0)
+		if (getVertMark((v=kData[alpha].flower[i]))==0
+		    && getVertMark((w=kData[alpha].flower[i+1]))==0)
 		  nbr=i;
 	    }
 	  kData[alpha].plotFlag=kData[v].plotFlag=kData[w].plotFlag=1;
@@ -16302,7 +16350,7 @@ public class PackData{
 			  trace=priortrace.next;
 			}
 		    }
-		  else if (kData[vert].mark==0 || pickup) { // process this vert 
+		  else if (getVertMark(vert)==0 || pickup) { // process this vert 
 		      num=getNum(vert); // num of faces
 		      nnum=num+getBdryFlag(vert); // num of nghbs 
 		      // go through the faces 
@@ -16320,7 +16368,7 @@ public class PackData{
 				newfaces[face].plotFlag=1;
 			      else if (kData[v2].plotFlag<=0 
 				       && kData[v1].plotFlag>0
-				       && (pickup || kData[v1].mark==0)) {
+				       && (pickup || getVertMark(v1)==0)) {
 				  newfaces[lastface].nextFace=face;
 				  lastface=face;
 				  newfaces[face].indexFlag=indx;
@@ -16340,7 +16388,7 @@ public class PackData{
 			      }
 			      else if (kData[v1].plotFlag<=0 
 				       && kData[v2].plotFlag>0
-				       && (pickup || kData[v2].mark==0)) {
+				       && (pickup || getVertMark(v2)==0)) {
 				  newfaces[lastface].nextFace=face;
 				  lastface=face;
 				  newfaces[face].indexFlag=(indx+2)%3;
@@ -17268,12 +17316,12 @@ public class PackData{
 
 	    /* Mark the outside verts 'poison' and call cookie to finish up */
 
-	    for (int i=1;i<=nodeCount;i++) kData[i].mark=0;
+	    for (int i=1;i<=nodeCount;i++) setVertMark(i,0);
 	    RedList rtrace=redlist;
 	    boolean keepon=true;
 	    while (rtrace!=redlist || keepon) {
 	    	keepon=false;
-	    	kData[faces[rtrace.face].vert[face_nghb(rtrace.next.face,rtrace.face)]].mark=1;
+	    	setVertMark(faces[rtrace.face].vert[face_nghb(rtrace.next.face,rtrace.face)],1);
 	    	rtrace=rtrace.next;
 	    }
 	    
@@ -17489,11 +17537,11 @@ public class PackData{
 	  // what is actual number of generations overlap? (up to 'depth').
 	  int max_depth=q.nodeCount;
 	  for (int i=1;i<=q.nodeCount;i++) {
-	      q.kData[i].mark=0;
+	      q.setVertMark(i,0);
 	      if (genlist[i]>0 && genlist[i]<=max_depth && maplist[i]==0)
 		  // vert of q in this generation does have corresp. vert in p 
 		  max_depth=genlist[i]-1;
-	      else q.kData[i].mark=genlist[i]; // record gen in mark in case it's needed
+	      else q.setVertMark(i,genlist[i]); // record gen in mark in case it's needed
 	    }
 	  // bdry doesn't overlap?
 	  if (max_depth<1) return 0;
@@ -17531,7 +17579,7 @@ public class PackData{
 	  /* finally, for all the rest of the vertices of q, map their
 	     centers/radii over to p without change */
 	  for (int i=1;i<=q.nodeCount;i++) {
-	      if ((q.kData[i].mark>depth || q.kData[i].mark==0)
+	      if ((q.getVertMark(i)>depth || q.getVertMark(i)==0)
 		  && (tv=maplist[i])!=0 && tv<=nodeCount) {
 	    	  setCenter(tv,q.getCenter(i));
 	    	  setRadius(tv,q.getRadius(i));

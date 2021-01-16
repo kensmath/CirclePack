@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import exceptions.CombException;
-import panels.CPScreen;
 import util.ColorUtil;
 
 /**
@@ -24,6 +23,8 @@ public class Face {
 	public HalfEdge edge; // 'this' is on the left of its halfedge
 	public int faceIndx;  // utility index for this face
 	Color color;
+	public int mark;
+	public int util;
 	
 	// Constructor
 	public Face() {
@@ -205,6 +206,19 @@ public class Face {
 			nxtedge=nxtedge.next;
 		} while (nxtedge!=edge);
 		return rslt;
+	}
+	
+	/**
+	 * clone: CAUTION: pointers may be in conflict or outdated, 
+	 * @return new Face
+	 */
+	public Face clone() {
+		Face face=new Face();
+		face.color=ColorUtil.cloneMe(color);
+		face.edge=edge;
+		face.faceIndx=faceIndx;
+		face.mark=mark;
+		return face;
 	}
 	
 	public String toString() {

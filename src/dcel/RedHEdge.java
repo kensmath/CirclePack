@@ -19,16 +19,16 @@ import util.TriAspect;
  */
 public class RedHEdge {
 	public HalfEdge myEdge;  // hold original info on edge
-	public TriAspect myTri;  // hold real data.
 	public RedHEdge nextRed;
 	public RedHEdge prevRed;
 	public RedHEdge twinRed; // across a red edge
-	public int mobIndx;    // index into sidepair Mobius maps
+	public int mobIndx;      // index into sidepair Mobius maps
 	
 	// The 'origin' for this red edge may have several other red edges
 	//    with different cent/rad's
 	Complex center;
 	double rad;
+	int util;                // used, e.g., to block growth across edge
 	
 	public int redutil; // for temporary use only
 
@@ -41,6 +41,7 @@ public class RedHEdge {
 		mobIndx=0;
 		center=new Complex(0.0);
 		rad=.5;
+		
 	}
 
 	/**
@@ -81,4 +82,21 @@ public class RedHEdge {
 		rad=r;
 	}
 
+	/**
+	 * clone: CAUTION: pointers may be in conflict or outdated. 
+	 * @return new RedHEdge
+	 */
+	public RedHEdge clone() {
+		RedHEdge rhe=new RedHEdge(this.myEdge);
+		rhe.nextRed=nextRed;
+		rhe.prevRed=prevRed;
+		rhe.twinRed=twinRed;
+		rhe.mobIndx=mobIndx;
+		rhe.center=new Complex(center);
+		rhe.rad=rad;
+		rhe.redutil=redutil;
+		return rhe;
+	}
+
+	
 }

@@ -314,7 +314,7 @@ public class CombDCEL {
 				}
 		}
 			
-		// (5) Make bdry verties into nonKeepers
+		// (5) Make bdry verts into nonKeepers
 		boolean[] bdryNon=new boolean[vertcount+1];
 		for (int k=1;k<=vertcount;k++) { 
 			if (pdcel.vertices[k].bdryFlag==1 && keepV[k]==-1) {
@@ -1557,8 +1557,6 @@ public class CombDCEL {
 						D_SideData oppData=pdcel.pairLink.get(mate);
 						sdata.mateIndex=oppData.spIndex;
 						oppData.mateIndex=sdata.spIndex;
-						sdata.pairedEdge=oppData;
-						oppData.pairedEdge=sdata;
 						char c=(char)('a'+pairCount);
 						sdata.label=String.valueOf(c);
 						c=(char)('A'+pairCount);
@@ -1570,7 +1568,6 @@ public class CombDCEL {
 				}
 				else {
 					sdata.mateIndex=-1;
-					sdata.pairedEdge=null;
 					sdata.label=String.valueOf(freeCount);
 					freeCount++;
 				}
@@ -2029,5 +2026,111 @@ public class CombDCEL {
 		
 		return(d_redChainBuilder(pdcel,nonks,false,0));
 	}
-	      
+	  
+	/**
+     * Create an exact duplicate of this PackDCEL with all new objects,
+     * PackData set to null and 'triData' is not copied.
+     */
+    public static PackDCEL clone(PackDCEL pdc) {
+    	PackDCEL pdcel=new PackDCEL();
+    	pdcel.triData=null; // don't clone, as is generally temporary data
+    	pdcel.vertCount=pdc.vertCount;
+    	pdcel.edgeCount=pdc.edgeCount;
+    	pdcel.faceCount=pdc.faceCount;
+    	pdcel.intFaceCount=pdc.intFaceCount;
+    	pdcel.newOld=null;
+    	if (pdc.newOld!=null && pdc.newOld.size()>0) 
+    		pdcel.newOld=pdc.newOld.clone();
+    	
+    	// count/catalog redchain edges
+    	int redcount=0;
+    	RedHEdge[] redEdges=null;
+    	EdgeSimple[] redIndx=null; // <r,e> r=red index, e=myEdge index
+    	if (pdc.redChain!=null) {
+    		RedHEdge rtrace=pdc.redChain;
+    		do {
+    			redcount++;
+    			rtrace=rtrace.nextRed;
+    		} while(rtrace!=pdc.redChain);
+    	}
+    	if (redcount>0) {
+    		redEdges=new RedHEdge[redcount+1];
+    		int rtick=0;
+    		RedHEdge rtrace=pdc.redChain;
+    		do {
+    			redEdges[++rtick]=rtrace.clone();
+    			redEdges[rtick].redutil=rtrace.redutil=rtick;
+    			redIndx[rtick]=new EdgeSimple(rtick,rtrace.myEdge.edgeIndx);
+    			rtrace=rtrace.nextRed;
+    		} while(rtrace!=pdc.redChain);
+    	}
+    	
+    	// 
+    	pdcel.vertices=new Vertex[pdc.vertCount+1];
+    	for (int v=1;v<=pdc.vertCount;v++) {
+    		pdcel.vertices[v]=pdc.vertices[v].clone();
+    	}
+    	pdcel.edges=new HalfEdge[pdc.edgeCount+1];
+    	for (int e=1;e<=pdc.edgeCount;e++) {
+    		pdcel.edges[e]=pdc.edges[e].clone();
+    	}
+    	pdcel.faces=new Face[pdc.faceCount+1];
+    	for (int f=1;f<=pdc.faceCount;f++) {
+    		pdcel.faces[f]=pdc.faces[f].clone();
+    	}
+    	pdcel.idealFaces=new Face[pdc.intFaceCount+1];
+    	for (int f=1;f<=pdc.faceCount;f++) {
+    		pdcel.idealFaces[f]=pdc.idealFaces[f].clone();
+    	}
+    	
+    	// reset pointers
+    	for (int v=1;v<=pdcel.vertCount;v++) {
+    		Vertex vert=pdcel.vertices[v];
+    		vert.halfedge=pdcel.edges[vert.halfedge.edgeIndx];
+    	}
+    	for (int e=1;e<=pdcel.edgeCount;e++) {
+    		HalfEdge he=pdcel.edges[e];
+    		if (he.myRedEdge!=null) {
+    			he.myRedEdge=redEdges[he.myRedEdge.redutil];
+    			he.next=pdcel.edges[he.next.edgeIndx];
+    			he.prev=pdcel.edges[he.prev.edgeIndx];
+    			he.twin=pdcel.edges[he.twin.edgeIndx];
+    			he.origin=pdcel.vertices[pdc.edges[e].origin.vertIndx];
+    		}
+    	}
+    	for (int f=1;f<=pdcel.faceCount;f++) {
+    		Face face=pdcel.faces[f];
+    		face.edge=pdcel.edges[face.edge.edgeIndx];
+    	}
+    	if (pdc.redChain!=null) {
+    		pdcel.redChain=redEdges[pdcel.redChain.redutil];
+    		for (int j=1;j<=redcount;j++) {
+    			RedHEdge reg=redEdges[j];
+    			reg.myEdge=pdcel.edges[reg.myEdge.edgeIndx];
+    			reg.nextRed=redEdges[reg.nextRed.redutil];
+    			reg.prevRed=redEdges[reg.prevRed.redutil];
+    			reg.twinRed=redEdges[reg.twinRed.redutil];
+    		}
+    	}
+    	
+    	if (pdc.pairLink!=null && pdc.pairLink.size()>1) {
+    		pdcel.pairLink=new D_PairLink();
+    		Iterator<D_SideData> pis=pdc.pairLink.iterator();
+    		while (pis.hasNext()) {
+    			RedHEdge rhe=null;
+    			D_SideData sd=pis.next().clone();
+
+    			// fix pointers
+    			if ((rhe=sd.startEdge)!=null)
+    				sd.startEdge=redEdges[rhe.redutil];
+    			if ((rhe=sd.endEdge)!=null)
+    				sd.endEdge=redEdges[rhe.redutil];
+    				
+    			pdcel.pairLink.add(pis.next().clone());
+    		}
+    		
+    	}
+    	return pdcel;
+    }
+
 }

@@ -1330,4 +1330,17 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 	 public void setPackData(PackData p) {
 		 packData=p;
 	 }
+	 
+	 /**
+	  * Clone with the same 'PackData'
+	  */
+	 public GraphLink clone() {
+		 GraphLink gl=new GraphLink();
+		 gl.packData=packData;
+		 gl.maxIndex=maxIndex;
+		 Iterator<EdgeSimple> tis=this.iterator();
+		 while (tis.hasNext()) 
+			 gl.add(tis.next().clone());
+		 return gl;
+	 }
 }

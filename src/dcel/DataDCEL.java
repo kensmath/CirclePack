@@ -22,35 +22,6 @@ import util.TriAspect;
  *
  */
 public class DataDCEL {
-
-	/**
-	 * Create 'TriAspect's for each of the 'redChain'
-	 * @param pdcel
-	 * @return count, 0 is no redChain (should be sphere)
-	 */
-	public static int createTri(PackDCEL pdcel) {
-		if (pdcel.redChain==null)
-			return 0;
-		
-		// geometry, default to eucl
-		int hes=0;
-		if (pdcel.p!=null)
-			hes=pdcel.p.hes;
-
-		int count=0;
-		RedHEdge rtrace=pdcel.redChain;
-		do {
-			TriAspect tri=new TriAspect(hes);
-			tri=new TriAspect(hes);
-			tri.face=rtrace.myEdge.face.faceIndx;
-			tri.vert=setVerts(rtrace);
-			rtrace.myTri=tri;
-			rtrace=rtrace.nextRed;
-			count++;
-		} while(rtrace!=pdcel.redChain);
-		
-		return count;
-	}
 	
 	/**
 	 * Given a dcel structure, create a traditional packing.

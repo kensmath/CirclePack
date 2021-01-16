@@ -397,7 +397,7 @@ public class TileData {
 			thePack.kData[nextgap].num=tile.vertCount;
 			thePack.kData[nextgap].flower=tmpflower;
 			thePack.setBdryFlag(nextgap,0);
-			thePack.kData[nextgap].mark=nextgap; // marked with vert index
+			thePack.setVertMark(nextgap,nextgap); // marked with vert index
 			thePack.rData[nextgap]=new RData();
 			thePack.setCenter(nextgap,cent.divide((double)(tile.vertCount)));
 			thePack.setAim(nextgap,Math.PI*2.0);
@@ -583,16 +583,16 @@ public class TileData {
 
 		// clear 'mark's
 		for (int i=1;i<=newPD.nodeCount;i++)
-			newPD.kData[i].mark=0;
+			newPD.setVertMark(i,0);
 		
 		// go through tiles, split edges, set marks;
 		//    splitting edge should prevent it being selected
 		//    to be split again from the other side.
 		for (int t=1;t<=workingTD.tileCount;t++) {
 			Tile tile=workingTD.myTiles[t];
-			newPD.kData[tile.baryVert].mark=1;
+			newPD.setVertMark(tile.baryVert,1);
 			int w=tile.vert[0];
-			newPD.kData[w].mark=2;
+			newPD.setVertMark(w,2);
 			int v=w;
 			for (int j=1;j<=tile.vertCount;j++) {
 				v=w;
@@ -600,9 +600,9 @@ public class TileData {
 					w=tile.vert[0];
 				else 
 					w=tile.vert[j];
-				newPD.kData[w].mark=2;
+				newPD.setVertMark(w,2);
 				if (newPD.split_edge(v,w)>0)
-					newPD.kData[newPD.nodeCount].mark=3;
+					newPD.setVertMark(newPD.nodeCount,3);
 			}
 		}
 		
@@ -657,7 +657,7 @@ public class TileData {
 			int dcount=0;
 			int qcount=0;
 			for (int v=1;v<=newPD.nodeCount;v++) {
-				int k=newPD.kData[v].mark;
+				int k=newPD.getVertMark(v);
 				if (k==2) 
 					dcount++;
 				else if (k==3)
@@ -671,7 +671,7 @@ public class TileData {
 			for (int v=1;v<=newPD.nodeCount;v++) {
 				
 				// dual tile for each original corner vertex
-				if (newPD.kData[v].mark==2) {
+				if (newPD.getVertMark(v)==2) {
 					int []vert=null;
 					if (newPD.isBdry(v)) { // this is bdry tile
 						
@@ -693,7 +693,7 @@ public class TileData {
 						int tick=0;
 						for (int j=0;j<newPD.getNum(v);j++) {
 							int k=newPD.kData[v].flower[j];
-							if (newPD.kData[k].mark==1)
+							if (newPD.getVertMark(k)==1)
 								vert[tick++]=k;
 						}
 						workingTD.dualTileData.myTiles[dcount]=new Tile(workingTD.dualTileData,num);
@@ -705,7 +705,7 @@ public class TileData {
 				} 
 				
 				// quad tile for each edge
-				else if (newPD.kData[v].mark==3) {
+				else if (newPD.getVertMark(v)==3) {
 					
 					int []vert=new int[4];
 						
@@ -744,7 +744,7 @@ public class TileData {
 				// alternate grey/white, start with grey, correct with offset
 				int offset=1;
 				if (!newPD.isBdry(v)) {
-					if (newPD.kData[newPD.kData[v].flower[0]].mark==1)
+					if (newPD.getVertMark(newPD.kData[v].flower[0])==1)
 						offset=-1; // to get started with grey
 				}
 				// define 2 at a time, grey/white
@@ -775,7 +775,7 @@ public class TileData {
 				// alternate grey/white, start with grey, correct with offset
 				int offset=1;
 				if (!newPD.isBdry(v)) {
-					if (newPD.kData[newPD.kData[v].flower[0]].mark==1)
+					if (newPD.getVertMark(newPD.kData[v].flower[0])==1)
 						offset=-1; // to get started with grey
 				}
 				// define 2 at a time, grey/white
@@ -891,16 +891,16 @@ public class TileData {
 
 		// clear 'mark's
 		for (int i=1;i<=newPD.nodeCount;i++)
-			newPD.kData[i].mark=0;
+			newPD.setVertMark(i,0);
 		
 		// go through tiles, split edges, set marks;
 		//    splitting edge should prevent it being selected
 		//    to be split again from the other side.
 		for (int t=1;t<=workingTD.tileCount;t++) {
 			Tile tile=workingTD.myTiles[t];
-			newPD.kData[tile.baryVert].mark=1;
+			newPD.setVertMark(tile.baryVert,1);
 			int w=tile.vert[0];
-			newPD.kData[w].mark=2;
+			newPD.setVertMark(w,2);
 			int v=w;
 			for (int j=1;j<=tile.vertCount;j++) {
 				v=w;
@@ -908,9 +908,9 @@ public class TileData {
 					w=tile.vert[0];
 				else 
 					w=tile.vert[j];
-				newPD.kData[w].mark=2;
+				newPD.setVertMark(w,2);
 				if (newPD.split_edge(v,w)>0)
-					newPD.kData[newPD.nodeCount].mark=3;
+					newPD.setVertMark(newPD.nodeCount,3);
 			}
 		}
 		newPD.setCombinatorics();
@@ -919,7 +919,7 @@ public class TileData {
 		int dcount=0;
 		int qcount=0;
 		for (int v=1;v<=newPD.nodeCount;v++) {
-			int k=newPD.kData[v].mark;
+			int k=newPD.getVertMark(v);
 			if (k==2) 
 				dcount++;
 			else if (k==3)
@@ -1031,7 +1031,7 @@ public class TileData {
 			for (int v=1;v<=newPD.nodeCount;v++) {
 
 				// dual tile for each original corner vertex
-				if (newPD.kData[v].mark==2) {
+				if (newPD.getVertMark(v)==2) {
 					int num=newPD.getNum(v);
 					int []flower=newPD.kData[v].flower;
 					
@@ -1144,7 +1144,7 @@ public class TileData {
 			qcount=1;
 			for (int v=1;v<=newPD.nodeCount;v++) {
 
-				if (newPD.kData[v].mark==3) { // v is edge barycenter
+				if (newPD.getVertMark(v)==3) { // v is edge barycenter
 											
 					// create the dual tile
 					Tile qtile=workingTD.quadTileData.myTiles[qcount]= 
@@ -1291,7 +1291,8 @@ public class TileData {
 			p.kData[2].flower[3]=3;
 			p.kData[2].flower[4]=1;
 			p.setBdryFlag(2,0);
-			p.kData[2].utilFlag=p.kData[2].mark=0;
+			p.kData[2].utilFlag=0;
+			p.setVertMark(2,0);
 			p.rData[2].rad=2.5/(double)4;
 			
 			p.kData[3].flower=new int[7];
@@ -1304,7 +1305,8 @@ public class TileData {
 			p.kData[3].flower[5]=4;
 			p.kData[3].flower[6]=1;
 			p.setBdryFlag(3,0);
-			p.kData[3].utilFlag=p.kData[3].mark=0;
+			p.kData[3].utilFlag=0;
+			p.setVertMark(3,0);
 			p.rData[3].rad=2.5/(double)6;
 			
 			p.kData[4].flower=new int[5];
@@ -1315,7 +1317,8 @@ public class TileData {
 			p.kData[4].flower[3]=5;
 			p.kData[4].flower[4]=1;
 			p.setBdryFlag(4,0);
-			p.kData[4].utilFlag=p.kData[4].mark=0;
+			p.kData[4].utilFlag=0;
+			p.setVertMark(4,0);
 			p.rData[4].rad=2.5/(double)4;
 			
 			p.kData[5].flower=new int[7];
@@ -1328,7 +1331,8 @@ public class TileData {
 			p.kData[5].flower[5]=2;
 			p.kData[5].flower[6]=1;
 			p.setBdryFlag(5,0);
-			p.kData[5].utilFlag=p.kData[5].mark=0;
+			p.kData[5].utilFlag=0;
+			p.setVertMark(5,0);
 			p.rData[5].rad=2.5/(double)6;
 			
 			// fix boundary flower
@@ -1340,7 +1344,8 @@ public class TileData {
 			p.kData[5].flower[3]=5;
 			p.kData[5].flower[4]=9;
 			p.setBdryFlag(5,1);
-			p.kData[5].utilFlag=p.kData[5].mark=0;
+			p.kData[5].utilFlag=0;
+			p.setVertMark(5,0);
 			p.rData[5].rad=2.5/(double)4;
 
 			p.kData[7].flower=new int[3];
@@ -1349,7 +1354,8 @@ public class TileData {
 			p.kData[7].flower[1]=3;
 			p.kData[7].flower[2]=6;
 			p.setBdryFlag(7,1);
-			p.kData[7].utilFlag=p.kData[7].mark=0;
+			p.kData[7].utilFlag=0;
+			p.setVertMark(7,0);
 			p.rData[7].rad=2.5/(double)4;
 
 			p.kData[8].flower=new int[5];
@@ -1360,7 +1366,8 @@ public class TileData {
 			p.kData[8].flower[3]=3;
 			p.kData[8].flower[4]=7;
 			p.setBdryFlag(8,1);
-			p.kData[8].utilFlag=p.kData[8].mark=0;
+			p.kData[8].utilFlag=0;
+			p.setVertMark(8,0);
 			p.rData[8].rad=2.5/(double)4;
 
 			p.kData[9].flower=new int[3];
@@ -1369,7 +1376,8 @@ public class TileData {
 			p.kData[9].flower[1]=5;
 			p.kData[9].flower[2]=8;
 			p.setBdryFlag(9,1);
-			p.kData[9].utilFlag=p.kData[9].mark=0;
+			p.kData[9].utilFlag=0;
+			p.setVertMark(9,0);
 			p.rData[9].rad=2.5/(double)4;
 				
 			// process the combinatorics 
@@ -1378,9 +1386,9 @@ public class TileData {
 			p.set_aim_default();
 
 			// mark vertices and store info
-			p.kData[1].mark=1;
-			p.kData[6].mark=2;
-			p.kData[8].mark=3;
+			p.setVertMark(1,1);
+			p.setVertMark(6,2);
+			p.setVertMark(8,1);
 			p.vertexMap=new VertexMap();
 			p.vertexMap.add(new EdgeSimple(elist.get(0).v,6));
 
@@ -1407,9 +1415,11 @@ public class TileData {
 			p.vertexMap=new VertexMap();
 			p.vertexMap.add(new EdgeSimple(elist.get(0).v,2));
 			p.vertexMap.add(new EdgeSimple(elist.get(0).w,4)); // Note: could be same
-			p.kData[1].mark=1;
-			p.kData[2].mark=p.kData[4].mark=2;
-			p.kData[3].mark=p.kData[5].mark=3;
+			p.setVertMark(1,1);
+			p.setVertMark(2,2);
+			p.setVertMark(4,2);
+			p.setVertMark(3,3);
+			p.setVertMark(5,3);
 			
 			p.setCombinatorics();
 			return p;

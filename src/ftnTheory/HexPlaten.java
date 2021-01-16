@@ -28,7 +28,6 @@ import listManip.VertexMap;
 import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.DispFlags;
@@ -358,7 +357,7 @@ public class HexPlaten extends PackExtender {
 //			for (int w=0;w<=2*microN;w++) {
 //				int v=micro2v[u][w];
 //				if (util[v]==0) {
-//					packData.kData[v].mark=1;
+//					packData.setVertMark(v,1);
 //					ckcount++;
 //				}
 //			}
@@ -1221,11 +1220,11 @@ public class HexPlaten extends PackExtender {
 		if (level==1) { // First level: centers at highest intensity, smallest radii.
 			
 			for (int v=1;v<=packData.nodeCount;v++) {
-				packData.kData[v].mark=0;
+				packData.setVertMark(v,0);
 //				packData.setRadius(v,0.5*microScaling*(double)stepDiam[1]); // smallest radius
 			}
 			for (int f=1;f<=packData.faceCount;f++) {
-				packData.faces[f].mark=0;
+				packData.setFaceMark(f,0);
 			}
 			latestBdry=null;
 			processed=new int[packData.nodeCount+1]; 
@@ -1259,7 +1258,7 @@ public class HexPlaten extends PackExtender {
 							nde.chosen=true;
 							nde.mark=level;
 							processed[nv]=level;
-							packData.kData[nv].mark=level;
+							packData.setVertMark(nv,level);
 //							packData.rData[nv].rad=0.5*microScaling*(double)stepDiam[level]; 
 							count++;
 							
@@ -1273,7 +1272,7 @@ public class HexPlaten extends PackExtender {
 								int cvert=micro2v[ui][wj];
 								if (processed[cvert]==0 && isInMicro(uw.v,uw.w)) {
 									processed[cvert]=-level; // covered at this level
-									packData.kData[cvert].mark=-level;
+									packData.setVertMark(cvert,-level);
 								}
 							}
 						}
@@ -1301,7 +1300,7 @@ public class HexPlaten extends PackExtender {
 								nde.chosen = true;
 								nde.mark = level - 1;
 								processed[nv] = level - 1;
-								packData.kData[nv].mark = level - 1;
+								packData.setVertMark(nv, level - 1);
 //								packData.rData[nv].rad=0.5*microScaling*(double)stepDiam[level-1]; 
 								count++;
 								
@@ -1315,7 +1314,7 @@ public class HexPlaten extends PackExtender {
 									int cvert=micro2v[ui][wj];
 									if (processed[cvert]==0 && isInMicro(uw.v,uw.w)) {
 										processed[cvert]=-(level-1); // covered at this level
-										packData.kData[cvert].mark=-(level-1);
+										packData.setVertMark(cvert,-(level-1));
 									}
 								}
 
@@ -1349,7 +1348,7 @@ public class HexPlaten extends PackExtender {
 						processed[v]=level; // this vert is a center at this level
 							
 						// store radius and color in 'packData'
-						packData.kData[v].mark=level; 
+						packData.setVertMark(v,level); 
 						packData.setCircleColor(v,ColorUtil.cloneMe(node.color));
 //						packData.rData[v].rad=0.5*microScaling*(double)stepDiam[level];
 
@@ -1363,7 +1362,7 @@ public class HexPlaten extends PackExtender {
 							int cvert=micro2v[ui][wj];
 							if (processed[cvert]==0 && isInMicro(uw.v,uw.w)) {
 								processed[cvert]=-level; // covered at this level
-								packData.kData[cvert].mark=-level;
+								packData.setVertMark(cvert,-level);
 							}
 						}
 						count++;
@@ -1406,14 +1405,14 @@ public class HexPlaten extends PackExtender {
 			int mxlevel=1;
 			for (int j=0;j<num;j++) {
 				int v=verts[j];
-				int mk=Math.abs(packData.kData[v].mark);
+				int mk=Math.abs(packData.getVertMark(v));
 				if (mk==0)
 					mxlevel=0;
 			}
 
 			// mark face? mark vertices; those not hit are 0
 			if (mxlevel>0) {
-				packData.faces[f].mark=mxlevel;
+				packData.setFaceMark(f,mxlevel);
 				for (int j=0;j<num;j++) {
 					int v=verts[j];
 					if (logv[v]==0)
@@ -1430,7 +1429,7 @@ public class HexPlaten extends PackExtender {
 				boolean bdry=false;
 				int []fflower=packData.kData[v].faceFlower;
 				for (int j=0;(j<fflower.length && !bdry);j++)
-					if (packData.faces[fflower[j]].mark==0)
+					if (packData.getFaceMark(fflower[j])==0)
 						bdry=true;
 				if (bdry)
 					bdryVerts.add(v);

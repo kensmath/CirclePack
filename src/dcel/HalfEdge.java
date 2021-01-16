@@ -173,7 +173,7 @@ public class HalfEdge {
 	}
 	
 	/**
-	 * clone: caution, pointers may be conflict or be outdated, 
+	 * clone: caution, pointers may be in conflict or outdated, 
 	 * @return new HalfEdge
 	 */
 	public HalfEdge clone() {

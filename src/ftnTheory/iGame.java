@@ -260,7 +260,7 @@ public class iGame extends PackExtender {
 			int v=0;
 			try {
 				v=NodeLink.grab_one_vert(packData,flagSegs);
-				if (v==0 || packData.isBdry(v) || packData.kData[v].mark>=0)
+				if (v==0 || packData.isBdry(v) || packData.getVertMark(v)>=0)
 					throw new ParserException("vertex is one of designated");
 			} catch (Exception ex) {
 				Oops("not valid for removal: "+ex.getMessage());
@@ -367,7 +367,7 @@ public class iGame extends PackExtender {
 		// ======== players ========
 		if (cmd.startsWith("play")) {
 			for (int vv=1;vv<=packData.nodeCount;vv++)
-				packData.kData[vv].mark=-1;
+				packData.setVertMark(vv,-1);
 			try {
 				items=flagSegs.get(0);
 				playerCount=items.size();
@@ -386,7 +386,7 @@ public class iGame extends PackExtender {
 						targets=null;
 						Oops("improper player specified");
 					}
-					packData.kData[player[j]].mark=j;
+					packData.setVertMark(player[j],j);
 				}
 			} catch (Exception ex) {
 				player=null;

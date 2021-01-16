@@ -1638,7 +1638,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 * Create a new Mobius object which is identical to 'this'.
 	 * @return Mobius
 	 */
-	public Mobius copyMob() {
+	public Mobius cloneMe() {
 		Mobius mob = new Mobius();
 		mob.a = new Complex(a);
 		mob.b = new Complex(b);

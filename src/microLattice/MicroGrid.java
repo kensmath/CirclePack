@@ -36,7 +36,6 @@ import packing.PackData;
 import packing.PackExtender;
 import packing.PackMethods;
 import packing.RData;
-import panels.CPScreen;
 import panels.PathManager;
 import util.CmdStruct;
 import util.ColorUtil;
@@ -518,11 +517,11 @@ public class MicroGrid extends PackExtender {
 //			for (int w=0;w<=2*microN;w++) {
 //				int v=micro2v[u][w];
 //				if (v!=0 && packData.kData[v].utilFlag==-1) {
-//					packData.kData[v].mark=1;
+//					packData.setVertMark(v,1);
 //					ckcount++;
 //				}
 //				else if (v!=0)
-//					packData.kData[v].mark=0;
+//					packData.setVertMark(v,0);
 //			}
 //		int df=packData.nodeCount-ckcount;
 //		System.out.println("nodecount - ckcount = "+df);
@@ -745,7 +744,7 @@ public class MicroGrid extends PackExtender {
 					int v_micro=micro2v[d*i+shift][d*j+shift]; // vertex in microGrid
 // System.out.println("vertmap: v "+v_super+" to vm "+v_micro);					
 					newPack.vertexMap.add(new EdgeSimple(v_super,v_micro));
-					newPack.kData[v_super].mark=v_micro;
+					newPack.setVertMark(v_super,v_micro);
 					} catch(Exception ex) {
 						System.out.println(" hum..? what error?");
 					}
@@ -755,7 +754,7 @@ public class MicroGrid extends PackExtender {
 		// set radii/centers
 		double rad=1.0/(CPBase.sqrt3*N);
 		for (int v=1;v<=newPack.nodeCount;v++) {
-			int v_macro=newPack.kData[v].mark;
+			int v_macro=newPack.getVertMark(v);
 			newPack.setRadius(v,rad);
 			newPack.setCenter(v,new Complex(packData.getCenter(v_macro)));
 		}
@@ -1817,10 +1816,10 @@ public class MicroGrid extends PackExtender {
 		// Some initiation at first level, smallest radii (highest intensity)
 		if (level==1) { 
 			for (int v=1;v<=packData.nodeCount;v++) {
-				packData.kData[v].mark=0;
+				packData.setVertMark(v,0);
 			}
 			for (int f=1;f<=packData.faceCount;f++) {
-				packData.faces[f].mark=0;
+				packData.setFaceMark(f,0);
 			}
 			processed=new int[packData.nodeCount+1];
 			numChosen=new int[levelCount+1];
@@ -1849,7 +1848,7 @@ public class MicroGrid extends PackExtender {
 						if (debug)
 //							System.out.println(" lev "+level+"     "+v);
 						processed[v]=level; // this vert is a center at this level
-						packData.kData[v].mark=level; 
+						packData.setVertMark(v,level); 
 						packData.setCircleColor(v,ColorUtil.cloneMe(node.color));
 						count++;
 						numChosen[level]++;
@@ -1866,7 +1865,7 @@ public class MicroGrid extends PackExtender {
 									// not yet marked? exclude at level+1 size
 									if (processed[cvert]==0 || processed[cvert]>=-level) {
 										processed[cvert]=-(level+1);
-										packData.kData[cvert].mark=-(level+1);
+										packData.setVertMark(cvert,-(level+1));
 // System.out.println(" cvert "+cvert+" set to "+-(level+1));										
 									}
 								}
@@ -1928,7 +1927,7 @@ public class MicroGrid extends PackExtender {
 			boolean fhit=false;
 			for (int j=0;(j<3 && !fhit);j++) {
 				int k=verts[j];
-				abc[j]=gridPack.kData[k].mark;  // the microGrid vert
+				abc[j]=gridPack.getVertMark(k);  // the microGrid vert
 				if (processed[abc[j]]!=0) {
 					fhit=true;
 					if (processed[abc[j]]==-(level+1))
@@ -1954,7 +1953,7 @@ public class MicroGrid extends PackExtender {
 			//   excluded at '-(level+1)' (see above) or else to 'level+1' to
 			//   bring it to attention (see below).
 			if (fhit) {
-				gridPack.faces[f].mark=level+1;
+				gridPack.setFaceMark(f,level+1);
 				for (int j=0;j<3;j++) {
 					int k=gridPack.faces[f].vert[j];
 					if (gridPack.kData[k].utilFlag!=-(level+1))
@@ -1963,7 +1962,7 @@ public class MicroGrid extends PackExtender {
 				gotahit=true;
 			}
 			else
-				gridPack.faces[f].mark=0;
+				gridPack.setFaceMark(f,0);
 		}
 		
 		// there should be hits unless we're done with all the processing
@@ -1982,7 +1981,7 @@ public class MicroGrid extends PackExtender {
 				boolean notAll=false;
 				for (int j=0;(j<num && !notAll);j++) {
 					int g=gridPack.kData[v].faceFlower[j];
-					if (gridPack.faces[g].mark==0)
+					if (gridPack.getFaceMark(g)==0)
 						notAll=true;
 				}
 				if (notAll) // but not all faces, so include v
@@ -2053,7 +2052,7 @@ public class MicroGrid extends PackExtender {
 			if (processed[v]!=0)
 				throw new CombException(" error setting vert "+v+" to chosen for level "+(level+1));
 			processed[v]=level+1;
-			packData.kData[v].mark=level+1;
+			packData.setVertMark(v,level+1);
 			count++;
 			numChosen[level+1]++;
 		}
@@ -2102,7 +2101,7 @@ public class MicroGrid extends PackExtender {
 						// exclude if untouched
 						if (processed[cvert]==0 || processed[cvert]==-level+1) {
 							processed[cvert]=-level; // exclude current size
-							packData.kData[cvert].mark=-level;
+							packData.setVertMark(cvert,-level);
 						}
 					}
 				}
@@ -2131,7 +2130,7 @@ public class MicroGrid extends PackExtender {
 									// exclude at level if untouched or excluded 
 									if (processed[cvert]<=0) {
 										processed[cvert]=-level; // exclude current size
-										packData.kData[cvert].mark=-level;
+										packData.setVertMark(cvert,-level);
 									}
 								}
 							}
@@ -2151,7 +2150,7 @@ public class MicroGrid extends PackExtender {
 					// exclude if untouched
 					if (processed[cvert]==0 || processed[cvert]==-(level+1)) {
 						processed[cvert]=-level; // exclude current size
-						packData.kData[cvert].mark=-level;
+						packData.setVertMark(cvert,-level);
 					}
 				}
 			}
@@ -2179,7 +2178,7 @@ public class MicroGrid extends PackExtender {
 								// exclude at level if untouched or excluded 
 								if (processed[cvert]<=0) {
 									processed[cvert]=-level; // exclude current size
-									packData.kData[cvert].mark=-level;
+									packData.setVertMark(cvert,-level);
 								}
 							}
 						}
@@ -2244,7 +2243,7 @@ public class MicroGrid extends PackExtender {
 					if (debug)
 //						System.out.println("    lev "+level+"    "+v);					
 					processed[v]=level; // this vert is a center at this level
-					packData.kData[v].mark=level;
+					packData.setVertMark(v,level);
 					packData.setCircleColor(v,ColorUtil.cloneMe(nextnde.color));
 					count++;
 					numChosen[level]++;
@@ -2260,7 +2259,7 @@ public class MicroGrid extends PackExtender {
 							// exclude at level if untouched or excluded
 							if (processed[cvert]<=0) {
 								processed[cvert]=-level; // exclude current size
-								packData.kData[cvert].mark=-level;
+								packData.setVertMark(cvert,-level);
 							}
 						}
 					}
@@ -2308,7 +2307,7 @@ public class MicroGrid extends PackExtender {
 						// exclude at level+1 if untouched or excluded
 						if (processed[cvert]<=0) {
 							processed[cvert]=-(level+1); // exclude current size
-							packData.kData[cvert].mark=-(level+1);
+							packData.setVertMark(cvert,-(level+1));
 						}
 					}
 				}
@@ -2375,7 +2374,7 @@ public class MicroGrid extends PackExtender {
 			    	q.set_single_invDist(newval,q.kData[newval].flower[0],1.0);
 			    }
 			    q.setBdryFlag(newval,0);
-			    q.kData[newval].mark=++count;
+			    q.setVertMark(newval,++count);
 			    q.setCircleColor(newval,ColorUtil.getFGColor());
 			    q.setRadius(newval,brad);
 			    q.setCenter(newval,new Complex(bcent));
@@ -2414,14 +2413,14 @@ public class MicroGrid extends PackExtender {
 			int mxlevel=1;
 			for (int j=0;j<num;j++) {
 				int v=verts[j];
-				int mk=Math.abs(packData.kData[v].mark);
+				int mk=Math.abs(packData.getVertMark(v));
 				if (mk==0)
 					mxlevel=0;
 			}
 
 			// mark face? mark vertices; those not hit are 0
 			if (mxlevel>0) {
-				packData.faces[f].mark=mxlevel;
+				packData.setFaceMark(f,mxlevel);
 				for (int j=0;j<num;j++) {
 					int v=verts[j];
 					if (logv[v]==0)
@@ -2438,7 +2437,7 @@ public class MicroGrid extends PackExtender {
 				boolean bdry=false;
 				int []fflower=packData.kData[v].faceFlower;
 				for (int j=0;(j<fflower.length && !bdry);j++)
-					if (packData.faces[fflower[j]].mark==0)
+					if (packData.getFaceMark(fflower[j])==0)
 						bdry=true;
 				if (bdry)
 					bdryVerts.add(v);

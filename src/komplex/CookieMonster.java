@@ -51,8 +51,9 @@ public class CookieMonster {
 	public int[] new2old;  // for new index j, new2old[j] gives former index
 	public int[] old2new;  // for old index k, old2new[k] gives new index (or zero if k was cut)
 	OverlapLink overlaps;
-	int seed,hold_alpha;
-	int []cmPoison;
+	int seed;
+	int hold_alpha;
+	int[] cmPoison;
 	
 	int outcomeFlag;  // this can be tested for status of this class
 
@@ -80,7 +81,8 @@ public class CookieMonster {
 		
 		// Process the commands to set seed, poison verts/edges in cmUtil
 		try {
-			outcomeFlag=parseCookieData(flagSegs);
+			cmPoison=parseCookieData(monsterPackData,flagSegs);
+			seed=cmPoison[0];
 		} catch (Exception ex) {
 			outcomeFlag=-1;
 			throw new ParserException("error in seed/poison vertices: "+ex.getMessage());
@@ -259,7 +261,7 @@ public class CookieMonster {
 	}
 
 	/**
-	 * Process the incoming strings to set seed and poison vertices and edges:
+	 * Process the incoming strings to set seed and poison vertices:
 	 * 
 	 * If there is an input list of poison vertices, they should appear in 
 	 *   first vector of strings in 'flags' without a preceding flag (cancels 
@@ -272,130 +274,142 @@ public class CookieMonster {
 	 * If no verts are listed and poisonVerts was empty on entry, then the 
 	 *   points on the side of 'ClosedPath' (if there is one) opposite to 'seed' 
 	 *   are poison by default.
-	 * 
+	 *   
+	 * Note that 'p.PoisonVerts' and 'p.PoisonEdges' may be lost.
+	 * @param p PackData
 	 * @param flags Vector<Vector<String>>; may be null
-	 * @return int count of poisons
+	 * @return int[], poison vertices, 0-entry = seed
 	 */
-	int parseCookieData(Vector<Vector<String>> flags) {
+	public static int[] parseCookieData(PackData p,Vector<Vector<String>> flags) {
 
+		int[] myPoison=new int[p.nodeCount+1]; // Note: myPoison[0] is the seed
+		int mySeed=p.alpha;
+		
 		// read incoming data
 		while (flags!=null && flags.size()>0) { 
 			Vector<String> items=(Vector<String>)flags.remove(0);
 			if (!StringUtil.isFlag(items.get(0))) { // not flag? must be poison vertices
-				monsterPackData.poisonEdges=null;
-				monsterPackData.poisonVerts=new NodeLink(monsterPackData,items);
+				p.poisonEdges=null;
+				p.poisonVerts=new NodeLink(p,items);
 			}
 			else {
 				String str=(String)items.get(0);
 				if (str.equals("-v")) { // set seed
 					if (items.size()<2) 
-						throw new ParserException("cookie crumbed: error in -v flag");
-					seed=Integer.parseInt((String)items.get(1));
+						throw new ParserException("cookie crumbled: error in -v flag");
+					mySeed=Integer.parseInt((String)items.get(1));
 					items.remove(1);
 					items.remove(0);
 				}
 				else if (str.equals("-e")) { // get poison edges (kill any poison verts)
 					if (items.size()<2) 
-						throw new ParserException("cookie crumbed: error in -e flag");
+						throw new ParserException("cookie crumbled: error in -e flag");
 					items.remove(0);
-					monsterPackData.poisonVerts=null;
-					monsterPackData.poisonEdges=new EdgeLink(monsterPackData,items);
+					p.poisonVerts=null;
+					p.poisonEdges=new EdgeLink(p,items);
 				}
 			}
 		}
 		
 		// catalog the poison vertices
-		cmPoison=new int[monsterPackData.nodeCount+1];
 		boolean gotPoison=false;
 
 		// first, those specified in lists
-		if (monsterPackData.poisonVerts!=null && monsterPackData.poisonVerts.size()!=0) {
-			Iterator<Integer> nlt=monsterPackData.poisonVerts.iterator();
+		if (p.poisonVerts!=null && p.poisonVerts.size()!=0) {
+			Iterator<Integer> nlt=p.poisonVerts.iterator();
 			while (nlt.hasNext()) {
 				int pv=(int)nlt.next();
-				cmPoison[pv]=-1;
+				myPoison[pv]=-1;
 				gotPoison=true;
 			}
-			monsterPackData.poisonVerts=null;
+			p.poisonVerts=null;
 		}
-		if (monsterPackData.poisonEdges!=null && monsterPackData.poisonEdges.size()==0) {
-			Iterator<EdgeSimple> elst=monsterPackData.poisonEdges.iterator();
+		if (p.poisonEdges!=null && p.poisonEdges.size()==0) {
+			Iterator<EdgeSimple> elst=p.poisonEdges.iterator();
 			while (elst.hasNext()) {
 				EdgeSimple edge=elst.next();
-				cmPoison[edge.v]=-1;
-				cmPoison[edge.w]=-1;
+				myPoison[edge.v]=-1;
+				myPoison[edge.w]=-1;
 				gotPoison=true;
 			}
-			monsterPackData.poisonEdges=null;
+			p.poisonEdges=null;
 		}
 				
 		// If no poisons so far, then use stored 'ClosePath'
 		if (!gotPoison) {
 			if (CPBase.ClosedPath==null) 
 				throw new ParserException("cookie: No path defined.");
-			boolean seed_wrap=PathManager.path_wrap(monsterPackData.getCenter(seed)); // which side is seed on?
-			for (int v=1;v<=monsterPackData.nodeCount;v++) {
-				if (seed_wrap!=PathManager.path_wrap(monsterPackData.getCenter(v))) { 
-					cmPoison[v]=-1;
+			boolean seed_wrap=PathManager.path_wrap(p.getCenter(mySeed)); // which side is seed on?
+			for (int v=1;v<=p.nodeCount;v++) {
+				if (seed_wrap!=PathManager.path_wrap(p.getCenter(v))) { 
+					myPoison[v]=-1;
 					gotPoison=true;
 				}
 			}
 			// also want to make immediate nghbs of outside vertices poison; recall,
 			//   poisons do get included in cutout packing, we just don't loop around
-			//    them. Set cmPoison to +1
-			for (int v=1;v<=monsterPackData.nodeCount;v++) {
-				for (int j=0;(j<=monsterPackData.getNum(v) && cmPoison[v]==0);j++) 
-					if (cmPoison[monsterPackData.kData[v].flower[j]]==-1) cmPoison[v]=1;
+			//    them. Set myPoison to +1
+			for (int v=1;v<=p.nodeCount;v++) {
+				int[] flower=p.getFlower(v);
+				for (int j=0;(j<=p.getNum(v) && myPoison[v]==0);j++) 
+					if (myPoison[flower[j]]==-1) 
+						myPoison[v]=1;
 			}
 		}
 
 		// no poison?
 		if (!gotPoison) {
-			CirclePack.cpb.errMsg("cookie: crumbed because no verts are poison");
-			return 0;
+			CirclePack.cpb.errMsg("cookie: crumbled because no verts are poison");
+			return null;
 		}
 		
 		// Remove any isolated poisons 
-		for (int i=1;i<=monsterPackData.nodeCount;i++) {
-			if (cmPoison[i]!=0)  {
+		// TODO: maybe allow these?
+		for (int i=1;i<=p.nodeCount;i++) {
+			if (myPoison[i]!=0)  {
 				int k=0;
-				for (int j=0;j<=monsterPackData.getNum(i);j++) 
-					if (cmPoison[monsterPackData.kData[i].flower[j]]!=0) k++;
+				int[] flower=p.getFlower(i);
+				for (int j=0;j<=p.getNum(i);j++) 
+					if (myPoison[flower[j]]!=0) 
+						k++;
 				if (k==0) // no poison neighbors 
-					cmPoison[i]=0;
+					myPoison[i]=0;
 			}
 		}
 
 		// seed can't be poison
-		if (cmPoison[seed]<0) {
-			cmPoison=null;
-			CirclePack.cpb.errMsg("cookie: crumbed because seed is poison");
-			return 0;
+		if (mySeed!=0 && myPoison[mySeed]<0) {
+			myPoison=null;
+			CirclePack.cpb.errMsg("cookie: crumbled because seed is poison");
+			return null;
 //	    	throw new ParserException("cookie: crumbled because seed "+seed+" is poison");
 		}
 
 		// fill 'poisonVerts', but only with verts having at least one non-poison neighbor.
 		// Note: 'poisonVerts' is used in 'build_redchain', that's why we need poisonVerts,
 		//   but checking for poison verts is very slow.
-		monsterPackData.poisonVerts=new NodeLink(monsterPackData);
-		for (int v=1;v<=monsterPackData.nodeCount;v++) {
-			if (cmPoison[v]!=0) {
+		p.poisonVerts=new NodeLink(p);
+		for (int v=1;v<=p.nodeCount;v++) {
+			if (myPoison[v]!=0) {
 				int k=0;
-				for (int j=0;(j<=monsterPackData.getNum(v) && k==0);j++) 
-					if (cmPoison[monsterPackData.kData[v].flower[j]]==0) k++;
+				int[] flower=p.getFlower(v);
+				for (int j=0;(j<=p.getNum(v) && k==0);j++) 
+					if (myPoison[flower[j]]==0) 
+						k++;
 				if (k!=0) // v has non-poison neighbors 
-					monsterPackData.poisonVerts.add(v);
+					p.poisonVerts.add(v);
 			}
 		}
 		
-		int ticks=monsterPackData.poisonVerts.size();
-		if (ticks==0 || ticks==monsterPackData.nodeCount) {
-			monsterPackData.poisonVerts=null;
-			cmPoison=null;
-			throw new ParserException("cookie: crumbed because no verts or all vertices are poison");
+		int ticks=p.poisonVerts.size();
+		if (ticks==0 || ticks==p.nodeCount) {
+			p.poisonVerts=null;
+			myPoison=null;
+			throw new ParserException("cookie: crumbled because no verts or all vertices are poison");
 		}
 		
-		return ticks;
+		myPoison[0]=mySeed;
+		return myPoison;
 	}
 	
 	/**
@@ -574,7 +588,7 @@ public class CookieMonster {
 				newP.setBdryFlag(v,1);
 			Color col=p.getCircleColor(V);
 			newP.setCircleColor(v,ColorUtil.cloneMe(col));
-			newP.kData[v].mark=p.kData[V].mark;
+			newP.setVertMark(v,p.getVertMark(V));
 			newP.kData[v].invDist=null;
 			
 			newP.rData[v]=p.rData[V].clone();

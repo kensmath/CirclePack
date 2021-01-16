@@ -152,7 +152,7 @@ public class SelectSpec {
 			}
 			case 'm': // marked object?
 			{
-				uP.value = (double) packData.kData[node].mark;
+				uP.value = (double) packData.getVertMark(node);
 				uP.rtnFlag = 1;
 				return uP;
 			}

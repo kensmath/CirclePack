@@ -121,17 +121,17 @@ public class Triangulation {
 		//   if they exist (orig indices stored in 'mark').
 		if (Tri.nodes!=null) {
 			for (int i=1;i<=p.nodeCount;i++) {
-				int j=p.kData[i].mark;
+				int j=p.getVertMark(i);
 				if (hes<=0) {
 					p.setCenter(i,new Complex(Tri.nodes[j].x,Tri.nodes[j].y));
 				}
 				else 
-					p.setCenter(i,new Complex(Tri.nodes[p.kData[i].mark])); // (theta,phi) form
+					p.setCenter(i,new Complex(Tri.nodes[p.getVertMark(i)])); // (theta,phi) form
 			}
 		}
 		if (Tri.vertColors!=null) {
 			for (int i=1;i<=p.nodeCount;i++) {
-				p.setCircleColor(i,ColorUtil.cloneMe(Tri.vertColors[p.kData[i].mark]));
+				p.setCircleColor(i,ColorUtil.cloneMe(Tri.vertColors[p.getVertMark(i)]));
 			}
 		}
 		

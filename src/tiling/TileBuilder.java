@@ -216,7 +216,7 @@ public class TileBuilder {
 							
 							// transfer 'mark'
 							for (int k=1;k<=newp.nodeCount;k++) {
-								masterPack.kData[masterPack.vertexMap.findW(k)].mark=newp.kData[k].mark;
+								masterPack.setVertMark(masterPack.vertexMap.findW(k),newp.getVertMark(k));
 							}
 							
 							tileAdded[t] = 1;
@@ -412,7 +412,7 @@ public class TileBuilder {
 		int qcount=0;
 		
 		for (int v=1;v<=p.nodeCount;v++) {
-			int mark=p.kData[v].mark;
+			int mark=p.getVertMark(v);
 			if (mark==2)
 				dcount++;
 			else if (mark==3)
@@ -468,7 +468,7 @@ public class TileBuilder {
 				wgtile.mark=1; // positively oriented 
 				int baryV=p.kData[bv].flower[4*j+1]; // wgtile baryVert
 				wgtile.tileIndex=wgtick++;
-				p.kData[baryV].mark=-wgtile.tileIndex; // store neg of index in baryVert.mark
+				p.setVertMark(baryV,-wgtile.tileIndex); // store neg of index in baryVert.mark
 				tile.wgIndices[2*j]=wgtile.tileIndex; // point to wgTile index
 				p.tileData.wgTiles[wgtile.tileIndex]=wgtile; // put wgTile into master list
 				int []itsflower=p.kData[baryV].flower;
@@ -486,7 +486,7 @@ public class TileBuilder {
 				wgtile.mark=-1; // negatively oriented 
 				baryV=p.kData[bv].flower[4*j+3]; // its barycenter
 				wgtile.tileIndex=wgtick++;
-				p.kData[baryV].mark=-wgtile.tileIndex; // store neg of index in baryVert.mark
+				p.setVertMark(baryV,-wgtile.tileIndex); // store neg of index in baryVert.mark
 				tile.wgIndices[2*j+1]=wgtile.tileIndex; // point to wgTile index
 				p.tileData.wgTiles[wgtile.tileIndex]=wgtile; // put wgTile into master list
 				itsflower=p.kData[baryV].flower;
@@ -506,7 +506,7 @@ public class TileBuilder {
 			for (int v=1;v<=p.nodeCount;v++) {
 
 				// dual tile for each original corner vertex
-				if (p.kData[v].mark==2) {
+				if (p.getVertMark(v)==2) {
 					int num=p.getNum(v);
 					int []flower=p.kData[v].flower;
 					
@@ -533,7 +533,7 @@ public class TileBuilder {
 						int myindx=p.nghb(cv,v);
 						vert[tick]=augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6];
 						augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
-						dtile.wgIndices[tick++]= -p.kData[cv].mark; // index is temp stored in 'mark'
+						dtile.wgIndices[tick++]= -p.getVertMark(cv); // index is temp stored in 'mark'
 						
 						// then pairs of grey/white to get edges between tile barycenters
 						for (int i=1;i<(num/4);i++) {
@@ -541,12 +541,12 @@ public class TileBuilder {
 							myindx=p.nghb(cv,v);
 							augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6]; 
 							augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
-							dtile.wgIndices[tick++]= -p.kData[cv].mark;
+							dtile.wgIndices[tick++]= -p.getVertMark(cv);
 							cv=flower[4*i+1];
 							myindx=p.nghb(cv,v);
 							vert[tick/2]=augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6];
 							augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
-							dtile.wgIndices[tick++]= -p.kData[cv].mark;
+							dtile.wgIndices[tick++]= -p.getVertMark(cv);
 						}							
 						
 						// then finish
@@ -554,7 +554,7 @@ public class TileBuilder {
 						myindx=p.nghb(cv,v);
 						augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6]; 
 						augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
-						dtile.wgIndices[tick++]= -p.kData[cv].mark;
+						dtile.wgIndices[tick++]= -p.getVertMark(cv);
 						vert[tick/2]=augvert[2*tick]=p.kData[cv].flower[(myindx+4)%6]; // last vert is edge barycenter
 						
 						// finish with augmented boundary 
@@ -579,7 +579,7 @@ public class TileBuilder {
 						int gdir=-1;
 						for (int j=0;(j<num && gdir<0);j++) {
 							int cv=p.kData[v].flower[j];
-							int cmark=p.kData[cv].mark;
+							int cmark=p.getVertMark(cv);
 							if (cmark<0 && p.tileData.wgTiles[-cmark].mark==-1) // grey
 								gdir=j;
 						}
@@ -594,12 +594,12 @@ public class TileBuilder {
 							int myindx=p.nghb(cv,v);
 							vert[tick/2]=augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6];
 							augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
-							dtile.wgIndices[tick++]= -p.kData[cv].mark;
+							dtile.wgIndices[tick++]= -p.getVertMark(cv);
 							cv=flower[(ii+2)%num];
 							myindx=p.nghb(cv,v);
 							augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6];
 							augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
-							dtile.wgIndices[tick++]= -p.kData[cv].mark;
+							dtile.wgIndices[tick++]= -p.getVertMark(cv);
 						}							
 						p.tileData.dualTileData.myTiles[dcount].vert=vert;
 						p.tileData.dualTileData.myTiles[dcount].augVertCount=num;
@@ -621,7 +621,7 @@ public class TileBuilder {
 			qcount=1;
 			for (int v=1;v<=p.nodeCount;v++) {
 
-				if (p.kData[v].mark==3) { // v is edge barycenter
+				if (p.getVertMark(v)==3) { // v is edge barycenter
 
 					
 					// create the quad tile
@@ -647,7 +647,7 @@ public class TileBuilder {
 						vert[0]=augvert[0]=p.kData[cv].flower[(myindx+2)%6];
 						augvert[1]=p.kData[cv].flower[(myindx+3)%6];
 						vert[1]=augvert[2]=p.kData[cv].flower[(myindx+4)%6];
-						qtile.wgIndices[0]= -p.kData[cv].mark;
+						qtile.wgIndices[0]= -p.getVertMark(cv);
 						
 						// next is white
 						cv=flower[3];
@@ -655,7 +655,7 @@ public class TileBuilder {
 						augvert[3]=p.kData[cv].flower[(myindx+3)%6];
 						vert[2]=augvert[4]=p.kData[cv].flower[(myindx+4)%6];
 						augvert[5]=p.kData[cv].flower[(myindx+5)%6];
-						qtile.wgIndices[1]= -p.kData[cv].mark;
+						qtile.wgIndices[1]= -p.getVertMark(cv);
 						vert[3]=v;
 
 						p.tileData.quadTileData.myTiles[qcount].vert=vert;
@@ -671,7 +671,7 @@ public class TileBuilder {
 						int gdir=-1;
 						for (int j=0;(j<num && gdir<0);j++) {
 							int cv=p.kData[v].flower[j];
-							int mark=p.kData[cv].mark;
+							int mark=p.getVertMark(cv);
 							if (mark<0 && p.tileData.wgTiles[-mark].mark==-1) // grey
 								gdir=j;
 						}
@@ -683,7 +683,7 @@ public class TileBuilder {
 							int myindx=p.nghb(cv,v);
 							vert[j]=augvert[2*j]=p.kData[cv].flower[(myindx+2)%6];
 							augvert[2*j+1]=p.kData[cv].flower[(myindx+3)%6];
-							qtile.wgIndices[j]= -p.kData[cv].mark;
+							qtile.wgIndices[j]= -p.getVertMark(cv);
 						}
 						
 						p.tileData.quadTileData.myTiles[qcount].vert=vert;

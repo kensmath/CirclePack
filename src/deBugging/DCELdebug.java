@@ -237,7 +237,7 @@ System.out.println(" red edge "+rtrace.myEdge);
 					strbld.append("Side  spIndex "+sdata.spIndex+"; mateIndex "+
 						sdata.mateIndex+"; start/end Edge "+sdata.startEdge.myEdge+"/"+
 						sdata.endEdge.myEdge+"; pairedEdge indx "+
-						sdata.pairedEdge.spIndex+"; label "+sdata.label+"\n");
+						sdata.mateIndex+"; label "+sdata.label+"\n");
 					rtrace=sdata.startEdge.prevRed;
 					while (rtrace!=sdata.endEdge) {
 						rtrace=rtrace.nextRed;

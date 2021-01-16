@@ -3,7 +3,6 @@ import java.awt.Color;
 
 import complex.Complex;
 import exceptions.CombException;
-import panels.CPScreen;
 import util.ColorUtil;
 
 
@@ -30,6 +29,7 @@ public class VData{
 	public double aim;		// desired angle sum at this vertex (actual angle, not divided by Pi)
 	public Color color;
 	int bdryFlag;           // set in 'PackData.attachDCEL' according to 'Vertex.bdryFlag' 
+	public int mark;
 	
 	// Constructor (needed only to create 'center')
 	public VData() {
@@ -51,8 +51,9 @@ public class VData{
 		}
 		Vout.curv=curv;
 		Vout.aim=aim;
-		Vout.color=new Color(0,0,0);
+		Vout.color=ColorUtil.cloneMe(color);
 		Vout.bdryFlag=bdryFlag;
+		Vout.mark=mark;
 		return Vout;
 	}
 	

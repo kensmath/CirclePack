@@ -552,8 +552,8 @@ public class NodeLink extends LinkedList<Integer> {
 				} catch(Exception ex) {}
 				for (int v=1;v<=nodecount;v++)
 					if (v<=vCount 
-							&& ((notmarked && qackData.kData[v].mark==0) 
-									|| (!notmarked && qackData.kData[v].mark!=0))) {
+							&& ((notmarked && qackData.getVertMark(v)==0) 
+									|| (!notmarked && qackData.getVertMark(v)!=0))) {
 						add(v);
 						count++;
 					}
@@ -1369,7 +1369,7 @@ public class NodeLink extends LinkedList<Integer> {
 	 * @param nw int, new index
 	 * @return new NodeLink or 'this' if empty
 	 */
-	public NodeLink swap_indices(int od, int nw) {
+	public NodeLink swapVW(int od, int nw) {
 		int ncnt=this.size();
 		if (ncnt==0 || od==nw) 
 			return this;
