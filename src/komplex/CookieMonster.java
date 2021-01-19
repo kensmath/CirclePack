@@ -346,14 +346,16 @@ public class CookieMonster {
 					gotPoison=true;
 				}
 			}
-			// also want to make immediate nghbs of outside vertices poison; recall,
+			// Traditionally, also make immediate nghbs of outside vertices poison; recall,
 			//   poisons do get included in cutout packing, we just don't loop around
 			//    them. Set myPoison to +1
-			for (int v=1;v<=p.nodeCount;v++) {
-				int[] flower=p.getFlower(v);
-				for (int j=0;(j<=p.getNum(v) && myPoison[v]==0);j++) 
-					if (myPoison[flower[j]]==-1) 
-						myPoison[v]=1;
+			if (p.packDCEL==null) {
+				for (int v=1;v<=p.nodeCount;v++) {
+					int[] flower=p.getFlower(v);
+					for (int j=0;(j<=p.getNum(v) && myPoison[v]==0);j++) 
+						if (myPoison[flower[j]]==-1) 
+							myPoison[v]=1;
+				}
 			}
 		}
 
@@ -363,17 +365,19 @@ public class CookieMonster {
 			return null;
 		}
 		
-		// Remove any isolated poisons 
+		// Traditinally, remove any isolated poisons 
 		// TODO: maybe allow these?
-		for (int i=1;i<=p.nodeCount;i++) {
-			if (myPoison[i]!=0)  {
-				int k=0;
-				int[] flower=p.getFlower(i);
-				for (int j=0;j<=p.getNum(i);j++) 
-					if (myPoison[flower[j]]!=0) 
-						k++;
-				if (k==0) // no poison neighbors 
-					myPoison[i]=0;
+		if (p.packDCEL==null) {
+			for (int i=1;i<=p.nodeCount;i++) {
+				if (myPoison[i]!=0)  {
+					int k=0;
+					int[] flower=p.getFlower(i);
+					for (int j=0;j<=p.getNum(i);j++) 
+						if (myPoison[flower[j]]!=0) 
+							k++;
+					if (k==0) // no poison neighbors 
+						myPoison[i]=0;
+				}
 			}
 		}
 
@@ -1323,8 +1327,8 @@ public class CookieMonster {
 				bouquet[v][j]=kData[v].flower[j];
 		}
 		
-		PackDCEL myDCEL = CombDCEL.d_redChainBuilder(
-				CombDCEL.getRawDCEL(bouquet),null,false,0);
+		PackDCEL myDCEL=CombDCEL.processDCEL(
+					CombDCEL.getRawDCEL(bouquet),null,false,0);
 		int facecount = myDCEL.intFaceCount;
 
 		// find the centroids

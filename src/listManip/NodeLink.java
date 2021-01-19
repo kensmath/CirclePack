@@ -47,6 +47,11 @@ public class NodeLink extends LinkedList<Integer> {
 	int vCount=0;
 	
 	// Constructors
+	public NodeLink() { // empty, no packing
+		super();
+		packData=null;
+	}
+	
 	public NodeLink(PackData p,String datastr) {
 		super();
 		packData=p;
@@ -84,14 +89,6 @@ public class NodeLink extends LinkedList<Integer> {
 	}
 	
 	/**
-	 * empty list, no packing
-	 */
-	public NodeLink() {
-		super();
-		packData=null;
-	}
-	
-	/**
 	 * Initiate empty list
 	 * @param p
 	 */
@@ -101,7 +98,7 @@ public class NodeLink extends LinkedList<Integer> {
 	
 	public boolean add(int v) {
 		if ((packData!=null && v>0 && v<=vCount) || packData==null)
-			return super.add((Integer)v);
+			return add((Integer)v);
 		return false;
 	}
 	

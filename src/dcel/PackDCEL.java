@@ -101,7 +101,7 @@ public class PackDCEL {
 	boolean debug;
 	
 	// Constructor(s)
-	public PackDCEL() {
+	public PackDCEL() { // naked shell
 		p=null;
 		vertCount=0;
 		vertices=null;
@@ -206,9 +206,7 @@ public class PackDCEL {
 		for (int n=1;n<=vertCount;n++)
 			if (vhits[n]==1) 
 				arrayV.add(n);
-		
-		// TODO: have to adjust call for ones to eliminate.
-		return CombDCEL.d_redChainBuilder(this,arrayV,false,0);
+	    return CombDCEL.processDCEL(this,arrayV,false,0);
 	}
 	
 	/**
@@ -1620,6 +1618,12 @@ public class PackDCEL {
 		return null;
 	}
 
+	/**
+	 * Find the 'HalfEdge' for edge <v.w>
+	 * @param v int
+	 * @param v int
+	 * @return HalfEdge or null on failure
+	 */
 	public HalfEdge findHalfEdge(int v,int w) {
 		return findHalfEdge(new EdgeSimple(v,w));
 	}
@@ -2021,7 +2025,7 @@ public class PackDCEL {
 	 */
 	public PackDCEL reverseOrientation() {
 		int[][] bouq=CombDCEL.reverseOrientation(getBouquet()); 
-		return CombDCEL.d_redChainBuilder(CombDCEL.getRawDCEL(bouq),null,false,0);
+	    return CombDCEL.processDCEL(CombDCEL.getRawDCEL(bouq),null,false,0);
 	}
 	
 	/**

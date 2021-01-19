@@ -582,9 +582,16 @@ else first vert's color. (deprecated: '-v')</opt>
 
 	NOTE: various information is lost, including 'flist', perhaps some
 	overlap angles, etc.
+	
+	DCEL version: based on list of 'forbidden' halfedges. This does
+	not (yet) guarantee that every vertex has an interior neighbor.
+	 
 </description>
 <options>
 	<opt flag="-v {v}"> Use v instead of alpha as the 'seed' vertex.</opt>
+	<opt flag="-e {v u ...}"> (DCEL) - list of forbidden edges </opt>
+	<opt flag="-n {v ..}"> (DCEL) - 'non-keeper' vertices: edges with
+	          both ends non-keepers are added to forbidden halfedges. </opt>
 </options>
 <seealso>
 <see>set_poison</see>

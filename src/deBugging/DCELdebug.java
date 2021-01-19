@@ -18,6 +18,7 @@ import exceptions.DCELException;
 import input.CPFileManager;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
+import listManip.HalfLink;
 import listManip.VertexMap;
 import packing.PackData;
 import util.DispFlags;
@@ -133,6 +134,23 @@ public class DCELdebug {
 			}
 			CommandStrParser.jexecute(p,strbld.toString());
 		}
+	}
+	
+	/**
+	 * Display the edges in the given 'hlink'
+	 * @param p PackData
+	 * @param hlink HalfLink
+	 */
+	public static void drawHalfLink(PackData p,HalfLink hlink) {
+		Iterator<HalfEdge> his=hlink.iterator();
+		while (his.hasNext()) {
+			HalfEdge he=his.next();
+			Complex z=p.getCenter(he.origin.vertIndx);
+			Complex w=p.getCenter(he.next.origin.vertIndx);
+			DispFlags dflags=new DispFlags("c195t4");
+			p.cpScreen.drawEdge(z, w, dflags);
+		}
+		p.cpScreen.rePaintAll();
 	}
 
 	/**

@@ -251,7 +251,8 @@ public class PackData{
      */
     public int attachDCEL() {
     	PackDCEL raw=CombDCEL.getRawDCEL(this);
-       	PackDCEL pdc=CombDCEL.d_redChainBuilder(raw,null,false,this.alpha);
+    	raw.p=this;
+       	PackDCEL pdc=CombDCEL.processDCEL(raw,null,false,this.alpha);
        	return attachDCEL(pdc);
     }
     
@@ -3746,6 +3747,18 @@ public class PackData{
 	*/
 	public int check_face(int f,int v,int w) {
 		int m=0;
+		if (packDCEL!=null) {
+			HalfEdge he=packDCEL.findHalfEdge(v,w);
+			if (he==null || he.face.faceIndx!=f)
+				return -1;
+			
+			int[] edges=getFaceVerts(f);
+			for (int j=0;j<edges.length;j++) {
+				if (edges[j]==v)
+					return j;
+			}
+			return -1;
+		}
 		try {
 			while (m<3) {
 				if (faces[f].vert[m]==v && faces[f].vert[(m+1)%3]==w) return m; 
@@ -3783,9 +3796,17 @@ public class PackData{
 	 * @param edge EdgeSimple
 	 * @return int ans[2], with ans[0]=face to left and ans[1]=third vertex.
 	*/
-	public int []left_face(EdgeSimple edge) {
+	public int[] left_face(EdgeSimple edge) {
+		int[] ans=new int[2];
+		if (packDCEL!=null) {
+			HalfEdge he=packDCEL.findHalfEdge(edge);
+			if (he==null || he.face==null)
+				return ans;
+			ans[0]=he.face.faceIndx;
+			ans[1]=he.next.next.origin.vertIndx;
+			return ans;
+		}
 		if (edge==null) {
-			int []ans=new int[2];
 			ans[0]=0;
 			return ans;
 		}
@@ -4126,8 +4147,13 @@ public class PackData{
 	 * 'facedraworder(false)'. One can always call them separately.
 	 * @return 0 on problem
 	 */
-	public int setCombinatorics() {
+	public int setCombinatorics() throws DCELException {
 		int ans=1;
+		if (packDCEL!=null) {
+			PackDCEL ndcel=CombDCEL.processDCEL(packDCEL, null, false, alpha);
+			attachDCEL(ndcel);
+			return 1;
+		}
 		if (complex_count(false)==0 || facedraworder(false)==0) 
 			ans=0;
 		return ans;
@@ -6939,7 +6965,7 @@ public class PackData{
 		if (packDCEL==null || packDCEL.vertCount<=0) {
 			
 			// create the DCEL structure 
-			packDCEL=CombDCEL.d_redChainBuilder(
+			packDCEL=CombDCEL.processDCEL(
 					CombDCEL.getRawDCEL(this),null,false,alpha);
 		}
 		if (dual) {

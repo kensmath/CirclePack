@@ -10,7 +10,9 @@ import allMains.CPBase;
 import complex.Complex;
 import dcel.D_SideData;
 import dcel.HalfEdge;
+import dcel.PackDCEL;
 import dcel.RedHEdge;
+import dcel.Vertex;
 import exceptions.CombException;
 import komplex.EdgeSimple;
 import komplex.Face;
@@ -49,7 +51,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		super();
 		packData=p;
 		if (datastr!=null && datastr.length()>0) 
-			addEdgeLinks(datastr,xtd);
+			addHalfLink(datastr,xtd);
 	}
 	
 	/**
@@ -74,7 +76,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			items=new Vector<String>(1);
 			items.add("a");
 		}
-		addEdgeLinks(items,xtd);
+		addHalfLink(items,xtd);
 	}
 
 	/**
@@ -101,7 +103,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		super();
 		packData=null;
 	}
-	
+
 	/**
 	 * Initiate empty list
 	 * @param p
@@ -169,9 +171,9 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	 * @param xtd boolean, true==>allow 'extended' edges
 	 * @return int count
 	 */	
-	public int addEdgeLinks(String datastr,boolean xtd) {
+	public int addHalfLink(String datastr,boolean xtd) {
 		Vector<String> items=StringUtil.string2vec(datastr,true);
-		return addEdgeLinks(items,xtd);
+		return addHalfLink(items,xtd);
 	}
 	
 	/**
@@ -182,7 +184,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	 * @param xtd boolean, true==>allow 'extended' edges
 	 * @return int count
 	 */
-	public int addEdgeLinks(Vector<String> items,boolean xtd) {
+	public int addHalfLink(Vector<String> items,boolean xtd) {
 		int count=0;
 		if (packData==null) return -1;
 
@@ -203,7 +205,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			
 			// self call if str is a variable
 			if (str.startsWith("_")) {
-				count+=addEdgeLinks(CPBase.varControl.getValue(str),xtd);
+				count+=addHalfLink(CPBase.varControl.getValue(str),xtd);
 			}
 			
 			// check for '?list' first
@@ -439,6 +441,16 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			} // end of switch
 			} // end of else
 		} // end of main 'while'
+		return count;
+	}
+	
+	public int addSimpleEdges(PackDCEL pdcel,EdgeLink elink) {
+		int count=0;
+		Iterator<EdgeSimple> eis=elink.iterator();
+		while (eis.hasNext()) {
+			add(pdcel.findHalfEdge(eis.next()));
+			count++;
+		}
 		return count;
 	}
 	
@@ -797,6 +809,55 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			sb.append(" "+edge); // calls 'toString' method
 		}
 		return sb.toString();
+	}
+	
+	/**
+	 * Add 'HalfEdge's which separate 'nlink' vertices from 
+	 * 'alphaIndx'.
+	 * @param pdcel packDCEL
+	 * @param nlink noddeLink
+	 * @return int, count of edges, -1 on error
+	 */
+	public int separatingLinks(PackDCEL pdcel,NodeLink nlink,int alphaIndx) {
+		int count=0;
+		int[] vhits=new int[pdcel.vertCount+1];
+		
+		// mark the vertices to be excluded with -1
+		Iterator<Integer> vst=nlink.iterator();
+		while(vst.hasNext()) 
+			vhits[vst.next()]=-1;
+
+		// oscillate between two lists
+		NodeLink curr=new NodeLink();
+		NodeLink nxt=new NodeLink();
+		nxt.add(alphaIndx);
+		while (nxt.size()>0) {
+			curr=nxt;
+			nxt=new NodeLink();
+			
+			Iterator<Integer> cis=curr.iterator();
+			while (cis.hasNext()) {
+				int v=cis.next();
+				vhits[v]=1;
+				Vertex vert=pdcel.vertices[v];
+				HalfEdge[] spokes=vert.getSpokes();
+				int num=spokes.length;
+				for (int j=0;j<num;j++) {
+					HalfEdge he=spokes[j];
+					int w=he.next.origin.vertIndx;
+					if (vhits[w]<0) {
+						add(spokes[(j+num-1)%num]);
+						add(spokes[(j+1)%num]);
+						count +=2;
+					}
+					else if (vhits[w]==0){
+						nxt.add(w);
+					}
+				}
+			}
+		}
+			
+		return count;
 	}
 		
 }

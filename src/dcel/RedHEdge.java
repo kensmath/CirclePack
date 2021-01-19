@@ -28,7 +28,6 @@ public class RedHEdge {
 	//    with different cent/rad's
 	Complex center;
 	double rad;
-	int util;                // used, e.g., to block growth across edge
 	
 	public int redutil; // for temporary use only
 
@@ -41,6 +40,12 @@ public class RedHEdge {
 		mobIndx=0;
 		center=new Complex(0.0);
 		rad=.5;
+		redutil=0;
+		// set 'redutil' if ideal face across myEdge;
+		//    this is used in 'd_redChainBuilder'
+		if (he.twin!=null && he.twin.face!=null && 
+				he.twin.face.faceIndx<0)
+			redutil=1;
 		
 	}
 

@@ -24,13 +24,19 @@ public class Face {
 	public int faceIndx;  // utility index for this face
 	Color color;
 	public int mark;
+	public int plotFlag;
 	public int util;
 	
-	// Constructor
+	// Constructor(s)
 	public Face() {
 		edge=null;
 		faceIndx=0;
 		color=ColorUtil.getFGColor();
+	}
+	
+	public Face(int i) {
+		this();
+		faceIndx=i;
 	}
 	
 	/**

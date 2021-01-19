@@ -102,6 +102,7 @@ import listManip.BaryLink;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.PointLink;
 import listManip.TileLink;
@@ -5374,30 +5375,20 @@ public class CommandStrParser {
 	    	  
 	    	  if (packData.packDCEL!=null) {
 	    		  
-	    		  // identify seed and vertices to cut out
-	    		  int[] fringe=CookieMonster.parseCookieData(packData, flagSegs);
-	    		  NodeLink cutlist=new NodeLink(packData);
-	    		  for (int v=1;v<=packData.nodeCount;v++) {
-	    			  if (fringe[v]!=0)
-	    				  cutlist.add(v);
-	    		  }	    				  
+	    		  // identify forbidden edges (and possibly new alphs)
+	    		  HalfLink hlink=CombDCEL.d_CookieData(packData,flagSegs);
 	    		  
 	    		  // cookie out to form new DCEL structure
-	    		  PackDCEL cutDCEL=null;
-	    		  try {
-	    			  cutDCEL=CombDCEL.d_redChainBuilder(
-	    					  packData.packDCEL,cutlist,false,fringe[0]);
-	    		  } catch (Exception ex) {
-	    			  throw new ParserException("DCEL verion of 'cookie' failed");
-	    		  }
-	    		  
+	    		  PackDCEL cutDCEL=CombDCEL.redchain_by_edge(
+	    				  packData.packDCEL,hlink,packData.packDCEL.alpha);
+	    		  CombDCEL.d_FillInside(cutDCEL);
 	    		  if (cutDCEL!=null) {
 	    			  packData.attachDCEL(cutDCEL);
 	    			  return cutDCEL.vertCount;
 	    		  }
 	    		  return 0;
 	    	  }
-	    	  // else, traditional method
+	    	  // else, traditional cookie methods
 	    	  else {
 	    		  CookieMonster cM=null;
 	    		  try {
@@ -5825,12 +5816,12 @@ public class CommandStrParser {
 					raw.p=packData;
 					PackDCEL pdcel=null;
 					if (vlist!=null && vlist.size()>0)
-						pdcel=CombDCEL.d_redChainBuilder(raw,vlist,false,packData.alpha);
+						pdcel=CombDCEL.processDCEL(raw,vlist,false,packData.alpha);
 					else if (packData.poisonVerts!=null && packData.poisonVerts.size()>0)	
-						pdcel=CombDCEL.d_redChainBuilder(raw,
-								packData.poisonVerts,true,packData.alpha);
+						pdcel=CombDCEL.processDCEL(raw,
+							packData.poisonVerts,true,packData.alpha);
 					else
-						pdcel=CombDCEL.d_redChainBuilder(raw,null,false,packData.alpha);
+						pdcel=CombDCEL.processDCEL(raw,null,false,packData.alpha);
 					
 					pdcel.p=packData;
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
@@ -5845,7 +5836,7 @@ public class CommandStrParser {
 					int qnum= StringUtil.qFlagParse(items.remove(0));
 
 					int[][] newBouquet=CombDCEL.reverseOrientation(packData.getBouquet());
-					PackDCEL pdcel=CombDCEL.d_redChainBuilder(
+					PackDCEL pdcel=CombDCEL.processDCEL(
 							CombDCEL.getRawDCEL(newBouquet),null,false,0);
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
 					CPBase.pack[qnum].swapPackData(p,false);
@@ -6514,7 +6505,8 @@ public class CommandStrParser {
 	   		  }
 	    	  
 	    	  if (packData.packDCEL!=null) {
-	    		  PackDCEL pdc=CombDCEL.d_redChainBuilder(packData.packDCEL, null, false, packData.alpha);
+	    		  PackDCEL pdc=CombDCEL.processDCEL(packData.packDCEL, null, false, packData.alpha);
+	    			  CombDCEL.d_FillInside(pdc);
 	    		  packData.attachDCEL(pdc);
 	    		  return -count;
 	    	  }

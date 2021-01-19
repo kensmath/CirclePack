@@ -97,6 +97,21 @@ public class Vertex {
 		
 		return flower;
 	}
+	
+	/**
+	 * array of cclw halfedges out of this vertex.
+	 * @return
+	 */
+	public HalfEdge[] getSpokes() {
+		int num=getNum();
+		HalfEdge[] spokes=new HalfEdge[num];
+		HalfEdge he=halfedge;
+		for (int j=0;j<num;j++) {
+			spokes[j]=he;
+			he=he.prev.twin;
+		}
+		return spokes;
+	}
 		
 	/**
 	 * Get cclw ordered vector of 'HalfEdge's with this
