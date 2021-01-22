@@ -4924,7 +4924,8 @@ a negative value means this vertex is not adjusted during repacking</opt>
 <opt flag="?antip {v...}">    vertex with maximal minimum combinatorial distance 
 	     				  to point in {v...} </opt>
 <opt flag="?cent {v}">		  complex center of vertex v </opt>
-<opt flag="?count {..}">  count of vertices, faces, or edges (see 'count' commands)</opt>	     				  
+<opt flag="?count {..}">  count of vertices, faces, or edges (see 'count' commands)</opt>
+<opt flag="?dcel"> does this packing have its DCEL structure attached?</opt>	     				  
 <opt flag="?energy -[chlm]"> various measures of quality of point distributions
 	     					of centers </opt>
 <opt> -c (default) coulomb energy (L1 norm)

@@ -924,7 +924,8 @@ FocusListener {
 	 */
 	public static void switchActivePack(int packnum) {
 		int old_pack = activeFrame.getActivePackNum();
-		if (packnum<0 || packnum>2 || old_pack==packnum) return;
+		if (packnum<0 || packnum>2 || old_pack==packnum) 
+			return;
 		smallCanvasPanel.changeActive(packnum);
 		canvasRedrawer.changeActive(packnum);
 		screenCtrlFrame.displayPanel.update(old_pack,packnum);

@@ -22,9 +22,9 @@ import javax.swing.border.TitledBorder;
 import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.HalfEdge;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
-import komplex.Face;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.NodeLink;
@@ -347,13 +347,13 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		faceMarkField.setActionCommand("face_mark");
 		faceMarkField.addActionListener(this);
 		
-		nextField = new IntegerField("Next");
-		nextField.setEditable(false);
-		nextRedField = new IntegerField("Next Red");
-		nextRedField.setEditable(false);
-		redCheckBox = new JCheckBox();
-		redCheckBox.setFont(redCheckBox.getFont().deriveFont(Font.PLAIN, 10.0F));
-		redCheckBox.setText("Red");
+//		nextField = new IntegerField("Next");
+//		nextField.setEditable(false);
+//		nextRedField = new IntegerField("Next Red");
+//		nextRedField.setEditable(false);
+//		redCheckBox = new JCheckBox();
+//		redCheckBox.setFont(redCheckBox.getFont().deriveFont(Font.PLAIN, 10.0F));
+//		redCheckBox.setText("Red");
 
 		JPanel facePanelRowTwo = new JPanel();
 		facePanelRowTwo.setLayout(new BoxLayout(facePanelRowTwo, BoxLayout.LINE_AXIS));
@@ -362,11 +362,11 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		facePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		facePanelRowTwo.add(faceColorField);
 		facePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
-		facePanelRowTwo.add(nextField);
-		facePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
-		facePanelRowTwo.add(nextRedField);
-		facePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
-		facePanelRowTwo.add(redCheckBox);
+//		facePanelRowTwo.add(nextField);
+//		facePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
+//		facePanelRowTwo.add(nextRedField);
+//		facePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
+//		facePanelRowTwo.add(redCheckBox);
 		facePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		facePanelRowTwo.add(faceMarkField);
 
@@ -606,37 +606,33 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			// Update for the current active or chosen vertex, depending on the call signature.
 			int v;
 			try {
-			if (useActiveVertex) v = p.activeNode;
-			else v = NodeLink.grab_one_vert(p, vertexChoiceField.getText());
+				if (useActiveVertex) v = p.activeNode;
+				else v = NodeLink.grab_one_vert(p, vertexChoiceField.getText());
 
-			// If the current vertex is invalid, use the zero vertex.
-			if (v <= 0 || v > p.nodeCount) v = 1;
+				// If the current vertex is invalid, use the first vertex.
+				if (v <= 0 || v > p.nodeCount) v = 1;
 
-			// Get the corresponding KData and RData.
-//			KData kData = p.kData[v];
-//			RData rData = p.rData[v];
+				// Update the UI elements.
+				vertexChoiceField.setText(Integer.toString(v));
+				radiusField.setValue(p.getActualRadius(v));
+				centerField.setValue(new Complex(p.getCenter(v)));
+				aimField.setValue(p.getAim(v)/Math.PI);
+				angleSumField.setValue(p.getCurv(v)/Math.PI);
+				degreeField.setValue(p.getNum(v));
+				vertexColorField.setValue(ColorUtil.col_to_table(p.getCircleColor(v)));
+				vertMarkField.setValue(p.getVertMark(v));
 
-			// Update the UI elements.
-			vertexChoiceField.setText(Integer.toString(v));
-			radiusField.setValue(p.getActualRadius(v));
-			centerField.setValue(new Complex(p.getCenter(v)));
-			aimField.setValue(p.getAim(v)/Math.PI);
-			angleSumField.setValue(p.getCurv(v)/Math.PI);
-			degreeField.setValue(p.getNum(v));
-			vertexColorField.setValue(ColorUtil.col_to_table(p.getCircleColor(v)));
-			vertMarkField.setValue(p.getVertMark(v));
+				if (p.isBdry(v)) boundaryCheckBox.setSelected(true);
+				else boundaryCheckBox.setSelected(false);
 
-			if (p.isBdry(v)) boundaryCheckBox.setSelected(true);
-			else boundaryCheckBox.setSelected(false);
+				StringBuilder flowerBuilder = new StringBuilder();
+				int[] flwr=p.getFlower(v);
+				for (int i = 0; i < flwr.length; i++) {
+					flowerBuilder.append(Integer.toString(flwr[i]));
+					if (i < (flwr.length-1)) flowerBuilder.append(" ");
+				}
+				flowerField.setText(flowerBuilder.toString());
 
-			StringBuilder flowerBuilder = new StringBuilder();
-			int[] flwr=p.getFlower(v);
-			for (int i = 0; i < flwr.length; i++) {
-				flowerBuilder.append(Integer.toString(flwr[i]));
-				if (i < (flwr.length-1)) flowerBuilder.append(" ");
-			}
-			flowerField.setText(flowerBuilder.toString());
-			
 			} catch (Exception ex) {
 				CirclePack.cpb.errMsg("error processing vertex update");
 			}
@@ -655,28 +651,55 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			// If packData is null or empty just return.
 			if (packData == null || !packData.status) return;
 
+			Color fcolor;
+			int fmark;
+			int[] fverts;
+			
 			// Get the index of the chosen face or use first index
 			try {
-			int currentFace = FaceLink.grab_one_face(packData, faceChoiceField.getText());
-			if (currentFace <= 0) currentFace = 1;
+				int currentFace = FaceLink.grab_one_face(packData, faceChoiceField.getText());
+				if (currentFace==0) 
+					currentFace=1;
+				
+				// dcel case
+				if (packData.packDCEL!=null) {
+					if (currentFace<0) {
+						fverts=packData.packDCEL.idealFaces[-currentFace].getVerts();
+						fcolor=packData.packDCEL.idealFaces[-currentFace].getColor();
+						fmark=packData.packDCEL.idealFaces[-currentFace].mark;
+					}
+					else {
+						fverts=packData.packDCEL.faces[currentFace].getVerts();
+						fcolor=packData.packDCEL.faces[currentFace].getColor();
+						fmark=packData.packDCEL.faces[currentFace].mark;
+					}
+				}
+				
+				// traditional case
+				else {
+					if (currentFace <= 0) currentFace = 1;
+					komplex.Face kface=packData.faces[currentFace];
+					fverts=kface.vert;
+					fcolor=kface.color;
+					fmark=kface.mark;
+				}
 
-			// Get the face corresponding to the current index, and then its vertices.
-			Face face = packData.faces[currentFace];
-			int[] vertices = face.vert;
-
-			// Update the UI elements.
-			faceChoiceField.setText(Integer.toString(currentFace));
-			verticesField.setText(vertices[0] + " " + vertices[1] + " " + vertices[2]); // Corner vertices.
-			faceColorField.setValue(ColorUtil.col_to_table(face.color));
-			faceMarkField.setValue(face.mark);
-			nextField.setValue(face.nextFace);
-			if (face.rwbFlag > 0) {
-				redCheckBox.setSelected(true);
-				nextRedField.setValue(face.nextRed);
-			} else {
-				redCheckBox.setSelected(false);
-				nextRedField.clear();
-			}
+				// Update the UI elements.
+				faceChoiceField.setText(Integer.toString(currentFace));
+				if (fverts.length>3) // Corner vertices.
+					verticesField.setText(fverts[0] + " " + fverts[1] + " " + fverts[2]+"...");
+				else
+					verticesField.setText(fverts[0] + " " + fverts[1] + " " + fverts[2]);
+				faceColorField.setValue(ColorUtil.col_to_table(fcolor));
+				faceMarkField.setValue(fmark);
+//				nextField.setValue(face.nextFace);
+//				if (face.rwbFlag > 0) {
+//					redCheckBox.setSelected(true);
+//					nextRedField.setValue(face.nextRed);
+//				} else {
+//					redCheckBox.setSelected(false);
+//					nextRedField.clear();
+//				}
 			} catch (Exception ex) {
 				CirclePack.cpb.errMsg("error processing face update");
 			}
@@ -699,27 +722,46 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			try {
 				EdgeSimple edge = EdgeLink.grab_one_edge(packData, edgeChoiceField.getText());
 				if (edge == null) return;
+				int ev=edge.v;
+				int ew=edge.w;
+				double invDist=1.0;
+				double schwar=0.0;
+				
+				// DCEL version
+				if (packData.packDCEL!=null) {
+					HalfEdge he=packData.packDCEL.findHalfEdge(edge);
+					if (he==null)
+						return;
+					ev=he.origin.vertIndx;
+					ew=he.next.origin.vertIndx;
+					invDist=he.getInvDist();
+					schwar=he.getSchwarzain();
+				}
+				
+				// traditional
+				else {
+					// Get the flower index of w with respect to v and test it for validity.
+					int flowerIndexWFromV = packData.nghb(edge.v, edge.w);
+					if (flowerIndexWFromV < 0) return;
 
-				// Get the flower index of w with respect to v and test it for validity.
-				int flowerIndexWFromV = packData.nghb(edge.v, edge.w);
-				if (flowerIndexWFromV < 0) return;
-
-				double invDist = 1.0;
-				if (packData.overlapStatus) {
-					double actualInvDist = packData.getInvDist(edge.v,
+					if (packData.overlapStatus) {
+						double actualInvDist = packData.getInvDist(edge.v,
 							packData.kData[edge.v].flower[flowerIndexWFromV]);
-					if (Math.abs(1.0D - actualInvDist) > 0.0000001D) invDist = actualInvDist;
+						if (Math.abs(1.0D - actualInvDist) > 0.0000001D) invDist = actualInvDist;
+					}
+					if (packData.kData[edge.v].schwarzian!=null) {
+						if (flowerIndexWFromV<packData.getNum(edge.v))
+							schwarzianField.setValue(packData.kData[edge.v].
+									schwarzian[flowerIndexWFromV]);
+					}
 				}
-
-				edgeChoiceField.setText(edge.v + " " + edge.w);
+				
+				edgeChoiceField.setText(ev + " " + ew);
 				invDistanceField.setValue(invDist);
-				if (packData.kData[edge.v].schwarzian!=null) {
-					if (flowerIndexWFromV<packData.getNum(edge.v))
-						schwarzianField.setValue(packData.kData[edge.v].schwarzian[flowerIndexWFromV]);
-				}
-				else schwarzianField.setEmpty();
-				edgeLengthField.setValue(QualMeasures.edge_length(packData, edge.v, edge.w));
-				edgeIntendField.setValue(QualMeasures.desired_length(packData, edge.v, edge.w));
+				double edgelength=QualMeasures.edge_length(packData, ev, ew);
+				double intended=QualMeasures.desired_length(packData, ev, ew);
+				edgeLengthField.setValue(edgelength);
+				edgeIntendField.setValue(intended);
 
 			} catch (Exception ex) {
 				CirclePack.cpb.errMsg("error processing edge update");
@@ -791,12 +833,12 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		
 		/**
 		 * implement changes in Pack Data Tree made by user
-		 * @param p
-		 * @param col
+		 * @param p PackData
 		 */
 		public void putVertColor(PackData p) {
 			int vert = NodeLink.grab_one_vert(p, vertexChoiceField.getText());
-			if (vert==0) return;
+			if (vert==0) 
+				return;
 			p.setCircleColor(vert,ColorUtil.coLor(vertexColorField.getValue()));
 			vertexColorField.setValue(ColorUtil.col_to_table(p.getCircleColor(vert)));
 		}

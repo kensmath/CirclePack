@@ -17,7 +17,6 @@ import complex.Complex;
 import dcel.CombDCEL;
 import dcel.PackDCEL;
 import exceptions.CombException;
-import exceptions.DCELException;
 import exceptions.InOutException;
 import exceptions.ParserException;
 import input.CPFileManager;
@@ -1024,6 +1023,7 @@ public class MicroGrid extends PackExtender {
 		}
 
 		// ============== write dual dcel structure from p1 ======
+		// TODO: work to do here.
 		else if (cmd.startsWith("write_dual")) {
 			PackData qPack=CPBase.pack[1].getPackData();
 			if (!qPack.status || qPack.nodeCount<=3) 
@@ -1034,8 +1034,9 @@ public class MicroGrid extends PackExtender {
 				Oops("usage: write_dual <filename>");
 			
 			// create dcel
-			qPack.packDCEL = CombDCEL.processDCEL(
-					CombDCEL.getRawDCEL(qPack.getBouquet()),null,false,qPack.alpha);
+			qPack.packDCEL = CombDCEL.extractDCEL(
+					CombDCEL.getRawDCEL(qPack.getBouquet()),null,
+					CPBase.pack[1].getPackData().packDCEL.alpha);
 			PackDCEL qdcel=qPack.packDCEL.createDual(false);
 			BufferedWriter fp=null;
 			File file=null;

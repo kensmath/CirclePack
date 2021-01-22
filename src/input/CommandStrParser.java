@@ -4822,6 +4822,8 @@ public class CommandStrParser {
 	      // =========== alpha ============
 	      if (cmd.startsWith("alpha")) {
 	    	  int a=NodeLink.grab_one_vert(packData,flagSegs);
+	    	  if (packData.packDCEL!=null)
+	    		  return packData.packDCEL.setAlpha(a);
 	    	  return packData.setAlpha(a);
 	      }
 		  
@@ -5480,8 +5482,9 @@ public class CommandStrParser {
 	    		  cps.getPackData().setName(packData.fileName);
 //	    		  packData=cps.getPackData(); 
 	    		  return 1;
-	    	  } catch (Exception ex) {}
-	    	  return 0;
+	    	  } catch (Exception ex) {
+	    		  throw new ParserException("copy failed: "+ex.getMessage());
+	    	  }
 	      }
 	      
 	      // ========= color ============
@@ -5815,13 +5818,18 @@ public class CommandStrParser {
 					PackDCEL raw=CombDCEL.getRawDCEL(packData);
 					raw.p=packData;
 					PackDCEL pdcel=null;
-					if (vlist!=null && vlist.size()>0)
-						pdcel=CombDCEL.processDCEL(raw,vlist,false,packData.alpha);
-					else if (packData.poisonVerts!=null && packData.poisonVerts.size()>0)	
-						pdcel=CombDCEL.processDCEL(raw,
-							packData.poisonVerts,true,packData.alpha);
-					else
-						pdcel=CombDCEL.processDCEL(raw,null,false,packData.alpha);
+					HalfLink hlink=null;
+					if (vlist!=null && vlist.size()>0) {
+						CPBase.Vlink=vlist;
+						String nstr="-n Vlist";
+						hlink=CombDCEL.d_CookieData(packData,nstr);
+					}
+					else if (packData.poisonVerts!=null && packData.poisonVerts.size()>0) {
+						CPBase.Vlink=packData.poisonVerts;
+						String nstr="-n Vlist";
+						hlink=CombDCEL.d_CookieData(packData,nstr);
+					}
+					pdcel=CombDCEL.extractDCEL(raw,hlink,raw.alpha);
 					
 					pdcel.p=packData;
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
@@ -5836,8 +5844,8 @@ public class CommandStrParser {
 					int qnum= StringUtil.qFlagParse(items.remove(0));
 
 					int[][] newBouquet=CombDCEL.reverseOrientation(packData.getBouquet());
-					PackDCEL pdcel=CombDCEL.processDCEL(
-							CombDCEL.getRawDCEL(newBouquet),null,false,0);
+					PackDCEL pdc=CombDCEL.getRawDCEL(newBouquet);
+					PackDCEL pdcel=CombDCEL.extractDCEL(pdc,null,pdc.alpha);
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
 					CPBase.pack[qnum].swapPackData(p,false);
 					pdcel.D_CompCenters();
@@ -6505,7 +6513,8 @@ public class CommandStrParser {
 	   		  }
 	    	  
 	    	  if (packData.packDCEL!=null) {
-	    		  PackDCEL pdc=CombDCEL.processDCEL(packData.packDCEL, null, false, packData.alpha);
+	    		  PackDCEL pdc=CombDCEL.extractDCEL(packData.packDCEL,
+	    				  null,packData.packDCEL.alpha);
 	    			  CombDCEL.d_FillInside(pdc);
 	    		  packData.attachDCEL(pdc);
 	    		  return -count;

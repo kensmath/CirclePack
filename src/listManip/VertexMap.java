@@ -101,11 +101,16 @@ public class VertexMap extends EdgeLink {
 		return 0;
 	}
 	
-	/**
-	 * clone with same 'PackData'
-	 */
-	public VertexMap clone() {
-		return (VertexMap)super.clone();
-	}
+	 /**
+	  * Clone with the same 'PackData'
+	  */
+	 public VertexMap clone() {
+		 VertexMap vm=new VertexMap();
+		 vm.packData=packData;
+		 Iterator<EdgeSimple> tis=this.iterator();
+		 while (tis.hasNext()) 
+			 vm.add(tis.next().clone());
+		 return vm;
+	 }
 	
 }

@@ -9,7 +9,9 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.CombDCEL;
 import dcel.Face;
+import dcel.HalfEdge;
 import dcel.PackDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
@@ -18,7 +20,6 @@ import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import input.SetBuilderParser;
 import komplex.EdgeSimple;
-import komplex.KData;
 import komplex.RedEdge;
 import komplex.SideDescription;
 import packQuality.QualMeasures;
@@ -129,15 +130,15 @@ public class NodeLink extends LinkedList<Integer> {
 	 */	
 	public int addNodeLinks(Vector<String> items) {
 		int count=0;
-		KData []kdata;
 		int nodecount;
 	
-		if (packData==null) return -1;
-		kdata=packData.kData;
+		if (packData==null) 
+			return -1;
+		PackDCEL pdcel=packData.packDCEL;
+
 		nodecount=vCount;
 		
 		Iterator<String> its=items.iterator();
-		
 		while (its!=null && its.hasNext()) {
 
 			/* =============== here's the work ================== */
@@ -373,34 +374,43 @@ public class NodeLink extends LinkedList<Integer> {
 						first=a;
 					if ((b=NodeLink.grab_one_vert(packData,pair_str[1]))!=0) 
 						last=b;
+					
 					// check first/last: on bdry? on same component?
-					if (packData.getBdryFlag(first)==0 || packData.getBdryFlag(last)==0) 
-						bad=true;
-					else { // on same component?
-						next=kdata[first].flower[0];
-						int hit=0;
-						while (next!=first) {
-							if (next==last) hit++;
-							next=kdata[next].flower[0];
-						}
-						if (first==last || hit!=0) { // yes, go ahead
-							add(first);
-							count++;
-							next=kdata[first].flower[0];
-							while (next!=last) {
-								add(next);
-								count++;
-								next=kdata[next].flower[0];
+					if (pdcel!=null) { // DCEL case
+						NodeLink bdrycomp=CombDCEL.bdryCompVerts(packData,first);
+						if (bdrycomp==null || bdrycomp.size()==0 || bdrycomp.containsV(last)<0)
+							throw new CombException("vertices "+first+" and "+last+" are not "+
+									"on the same bdry component");
+						abutMore(bdrycomp);
+					}
+					else { // traditional
+						if (packData.getBdryFlag(first)==0 || packData.getBdryFlag(last)==0) 
+							bad=true;
+						else { // on same component?
+							next=packData.kData[first].flower[0];
+							int hit=0;
+							while (next!=first) {
+								if (next==last) hit++;
+								next=packData.kData[next].flower[0];
 							}
-							add(last);
-							count++;
+							if (first==last || hit!=0) { // yes, go ahead
+								add(first);
+								count++;
+								next=packData.kData[first].flower[0];
+								while (next!=last) {
+									add(next);
+									count++;
+									next=packData.kData[next].flower[0];
+								}
+								add(last);
+								count++;
+							}
+							else bad=true;
 						}
-						else bad=true;
 					}
 				}
 				if (pair_str==null || bad) { // whole boundary
-					PackDCEL pdcel=packData.packDCEL;
-					if (pdcel!=null) {
+					if (pdcel!=null) { // DCEL case
 						for (int f=1;f<=pdcel.idealFaceCount;f++) {
 							Face idealface=pdcel.idealFaces[f];
 							int[] vs=idealface.getVerts();
@@ -408,16 +418,16 @@ public class NodeLink extends LinkedList<Integer> {
 								add(vs[i]);
 						}
 					}
-					else {
+					else { // traditional
 						for (int i=1;i<=packData.bdryCompCount;i++) {
 							int strt=packData.bdryStarts[i];
 							add(strt);
 							count++;
-							next=kdata[strt].flower[0]; 
+							next=packData.kData[strt].flower[0]; 
 							while (next!=strt && count<10000) {
 								add(next);
 								count++;
-								next=kdata[next].flower[0];
+								next=packData.kData[next].flower[0];
 							}
 							if (count==10000) {
 								throw new CombException("looping in 'NodeLink' boundary call");
@@ -1452,6 +1462,38 @@ public class NodeLink extends LinkedList<Integer> {
 				not_reached=v;
 		
 		return not_reached;
+	 }
+	 
+	 /** 
+	  * find vertices incident to 'EdgeSimple's
+	  * @param elink EdgeLink
+	  * @return new NodeLink
+	  */
+	 public static NodeLink incident(EdgeLink elink) {
+		 NodeLink vlink=new NodeLink();
+		 Iterator<EdgeSimple> eis=elink.iterator();
+		 while (eis.hasNext()) {
+			 EdgeSimple edge=eis.next();
+			 vlink.add(edge.v);
+			 vlink.add(edge.w);
+		 }
+		 return vlink;
+	 }
+	 
+	 /** 
+	  * find vertices incident to 'HalfEdge's
+	  * @param hlink HalfLink
+	  * @return new NodeLink
+	  */
+	 public static NodeLink incident(HalfLink hlink) {
+		 NodeLink vlink=new NodeLink();
+		 Iterator<HalfEdge> his=hlink.iterator();
+		 while (his.hasNext()) {
+			 HalfEdge he=his.next();
+			 vlink.add(he.origin.vertIndx);
+			 vlink.add(he.next.origin.vertIndx);
+		 }
+		 return vlink;
 	 }
 	 
 	 /**

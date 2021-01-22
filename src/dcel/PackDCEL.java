@@ -6,6 +6,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
 import deBugging.DCELdebug;
@@ -24,6 +25,7 @@ import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
@@ -202,11 +204,13 @@ public class PackDCEL {
 			vhits[vit.next()]=1;
 		
 		// make up 'Vertex' array
-		NodeLink arrayV=new NodeLink();
+		CPBase.Vlink=new NodeLink();
 		for (int n=1;n<=vertCount;n++)
-			if (vhits[n]==1) 
-				arrayV.add(n);
-	    return CombDCEL.processDCEL(this,arrayV,false,0);
+			if (vhits[n]==0) 
+				CPBase.Vlink.add(n);
+		String str="-n Vlist"; // list of non-keepers
+		HalfLink hlink=CombDCEL.d_CookieData(p,str);
+	    return CombDCEL.extractDCEL(this,hlink,alpha);
 	}
 	
 	/**
@@ -2025,7 +2029,7 @@ public class PackDCEL {
 	 */
 	public PackDCEL reverseOrientation() {
 		int[][] bouq=CombDCEL.reverseOrientation(getBouquet()); 
-	    return CombDCEL.processDCEL(CombDCEL.getRawDCEL(bouq),null,false,0);
+	    return CombDCEL.extractDCEL(CombDCEL.getRawDCEL(bouq),null,alpha);
 	}
 	
 	/**
@@ -2081,20 +2085,98 @@ public class PackDCEL {
 	}
 
 	/**
-	 * Set 'alpha' edge; it's vertex generally set to origin.
+	 * Set alpha to 'av', avoiding forbidden 'nlink' verts.
+	 * If 'nlink' null, try to set alpha to 'av'. 
+	 * If 'av' is zero, only change alpha if needed to 
+	 * avoid forbidden. Else try to set alpha to 'av', but
+	 * choose another vert if 'av' is forbidden.
+	 * @param av int, may be 0
+	 * @param nlink NodeLink, may be null
+	 * @return int, current vert if no change, 0 on error
+	 */
+	public int setAlpha(int av,NodeLink nlink) {
+		if (nlink==null || nlink.size()==0)
+			return setAlpha(av);
+		int alph=alpha.origin.vertIndx;
+		if (av==0) { // no target
+			if (nlink.containsV(alph)==0)
+				return alph; // nothing to do: Note: may be bdry vert
+		}
+		else {
+			if (nlink.containsV(av)==0)
+				return setAlpha(av);
+		}
+		
+		// need to search for interior, non-forbidden
+		int[] vhits=new int[vertCount+1];
+		for (int v=1;v<=vertCount;v++) {
+			if (vertices[v].bdryFlag!=0)
+				vhits[v]=-1;
+		}
+		
+		Iterator<Integer> nis=nlink.iterator();
+		while (nis.hasNext()) {
+			int u=nis.next();
+			if (vhits[u]==0)
+				vhits[nis.next()]=-2;
+		}
+
+		// get default possibility if all else fails
+		int ahope=-1;
+		for (int v=1;(v<=vertCount && ahope<0);v++) {
+			if (vhits[v]==0)
+				ahope=v;
+		}
+		
+		// mark nghbs of 
+		int gotvert=-1;
+		for (int v=1;(v<=vertCount && gotvert<0);v++) {
+			if (vhits[v]==0) { // interior, not forbidden
+				int[] flower=vertices[v].getFlower();
+				boolean gothit=false;
+				for (int j=0;(j<flower.length && !gothit);j++) {
+					if (vhits[flower[j]]==-2) {
+						vhits[flower[j]]=-1;
+						gothit=true;
+					}
+				}
+				
+				// do we have a winner?
+				if (!gothit)
+					gotvert=v;
+			}
+		}
+		
+		if (gotvert<0) 
+			gotvert=ahope;
+		
+		if (gotvert>0) {
+			return setAlpha(gotvert);
+		}
+		return -1;
+	}
+			
+	/**
+	 * Set 'alpha' edge; this is the vert normally placed at origin.
 	 * @param v int
-	 * @return 0 on failure
+	 * @return 'v' or 0 on failure
 	 */
 	public int setAlpha(int v) {
 		if (v<=0 || v>vertCount)
 			return 0;
-		Vertex vertex =vertices[v];
-		if (vertex.bdryFlag!=0)
-			return 0;
-		alpha=vertex.halfedge;
+		int alph=alpha.origin.vertIndx;
+		if (v!=alph) {
+			Vertex vertex =vertices[v];
+			if (vertex.bdryFlag!=0)
+				return 0;
+			alpha=vertex.halfedge;
+			if (gamma==alpha)
+				gamma=alpha.twin;
+			CombDCEL.d_FillInside(this);
+			return v;
+		}
 		if (gamma==alpha)
 			gamma=alpha.twin;
-		CombDCEL.d_FillInside(this);
 		return v;
 	}
 	

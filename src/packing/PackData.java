@@ -252,7 +252,7 @@ public class PackData{
     public int attachDCEL() {
     	PackDCEL raw=CombDCEL.getRawDCEL(this);
     	raw.p=this;
-       	PackDCEL pdc=CombDCEL.processDCEL(raw,null,false,this.alpha);
+       	PackDCEL pdc=CombDCEL.extractDCEL(raw,null,raw.alpha);
        	return attachDCEL(pdc);
     }
     
@@ -4150,7 +4150,7 @@ public class PackData{
 	public int setCombinatorics() throws DCELException {
 		int ans=1;
 		if (packDCEL!=null) {
-			PackDCEL ndcel=CombDCEL.processDCEL(packDCEL, null, false, alpha);
+			PackDCEL ndcel=CombDCEL.extractDCEL(packDCEL, null,packDCEL.alpha);
 			attachDCEL(ndcel);
 			return 1;
 		}
@@ -6964,9 +6964,10 @@ public class PackData{
 			throw new IOException("BufferedWriter was not set");
 		if (packDCEL==null || packDCEL.vertCount<=0) {
 			
-			// create the DCEL structure 
-			packDCEL=CombDCEL.processDCEL(
-					CombDCEL.getRawDCEL(this),null,false,alpha);
+			// create the DCEL structure
+			PackDCEL pdc=CombDCEL.getRawDCEL(this);
+			packDCEL=CombDCEL.extractDCEL(pdc,null,pdc.alpha);
+
 		}
 		if (dual) {
 			PackDCEL dualdcel=packDCEL.createDual(false);
@@ -11322,7 +11323,8 @@ public class PackData{
 		  }
 		  
 		  if (packDCEL!=null) {
-			  p.packDCEL=CombDCEL.clone(p.packDCEL);
+			  p.packDCEL=CombDCEL.clone(packDCEL);
+			  p.packDCEL.p=p;
 			  p.vData=new VData[nodeCount+1];
 			  for (int v=1;v<=nodeCount;v++) 
 				  p.vData[v]=vData[v].clone();
@@ -13902,7 +13904,7 @@ public class PackData{
 	  
 	  /**
 	   * Return the inversive distance recorded for edge from
-	   * v to nghb w. 1.0 is default.
+	   * v to nghb w. 1.0 is default. 1.0 for default
 	   * @param v int
 	   * @param w int
 	   * @return double
@@ -13917,6 +13919,9 @@ public class PackData{
 		  
 		  // else look in kData
 		  if (!overlapStatus)
+			  return 1.0;
+		  int j=nghb(v,w);
+		  if (j<0) // not an edge
 			  return 1.0;
 		  return kData[v].invDist[nghb(v,w)];
 	  }

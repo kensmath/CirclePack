@@ -449,6 +449,19 @@ public class QueryParser {
 				break;
 			} //end of 'c'
 				
+			case 'd': 
+			case 'D': 
+			{
+				if (query.startsWith("dce") || query.startsWith("DCE")) {
+					if (p.packDCEL!=null)
+						words.append("yes, dcel exists");
+					else
+						words.append("no, dcel does not exist");
+					gotone=true;
+				}
+				break;
+			} // end of 'd', 'D'
+			
 			case 'e': { // --------------------------------------------------------
 				
 				// "energy"; items should be the only flag sequence

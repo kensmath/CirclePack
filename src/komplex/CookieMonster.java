@@ -1326,9 +1326,9 @@ public class CookieMonster {
 			for (int j=0;j<=num;j++)
 				bouquet[v][j]=kData[v].flower[j];
 		}
-		
-		PackDCEL myDCEL=CombDCEL.processDCEL(
-					CombDCEL.getRawDCEL(bouquet),null,false,0);
+
+		PackDCEL pdc=CombDCEL.getRawDCEL(bouquet);
+		PackDCEL myDCEL=CombDCEL.extractDCEL(pdc,null,pdc.alpha);
 		int facecount = myDCEL.intFaceCount;
 
 		// find the centroids
@@ -1342,7 +1342,8 @@ public class CookieMonster {
 				HalfEdge he = eit.next();
 				accum = accum.add(Z[he.origin.vertIndx]);
 			}
-			faceC[++tick] = new Complex(accum.times(1.0/(double)edges.size())); // average of vertex locations
+			// average of vertex locations
+			faceC[++tick] = new Complex(accum.times(1.0/(double)edges.size())); 
 		}
 
 		// determine which faces have centroids in Gamma; these are included

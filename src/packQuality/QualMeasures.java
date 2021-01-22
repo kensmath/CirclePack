@@ -164,47 +164,46 @@ public class QualMeasures {
 	/**
 	 * Return intended length of edge based on radii and overlaps or inversive
 	 * distances. Return -1 on error. 
-	 * @param p PackData
+	 * @param p PackData 
 	 * @param v int;
 	 * @param w int;
 	 * @return double, -1 in case of infinite hyp radius
 	 */
 	public static double desired_length(PackData p, int v, int w) {
-		int indx;
-
+		if (p.packDCEL==null) {
+			if (p.nghb(v, w)<0)
+				return -1;
+		}
+		else {
+			if (p.packDCEL.findHalfEdge(new EdgeSimple(v,w))!=null)
+				return -1;
+		}
 		// TODO: are these formulae right?
 		if (p.hes > 0) { 
 			double rv=p.getRadius(v);
 			double rw=p.getRadius(w);
-			if (p.overlapStatus && (indx = p.nghb(v, w)) >= 0)
-				// spherical cosine law: cos(c)=cos(a)*cos(b)+sin(a)*sin(b)*cos(theta) 
-				return Math.acos(Math.cos(rv)*Math.cos(rw)+Math.sin(rv)*Math.sin(rw)*p.getInvDist(v,p.kData[v].flower[indx]));
-			return (rv+rw);
+			return Math.acos(Math.cos(rv)*Math.cos(rw)+Math.sin(rv)*Math.sin(rw)*p.getInvDist(v,w));
 		} 
 		
 		else if (p.hes == 0) { // eucl
 			double rv=p.getRadius(v);
 			double rw=p.getRadius(w);
-			if (p.overlapStatus && (indx = p.nghb(v, w)) >= 0)
-				return Math.sqrt(rv*rv+rw*rw+2.0*rv*rw*p.getInvDist(v,p.kData[v].flower[indx]));
-			return (rv+rw);
+			return Math.sqrt(rv*rv+rw*rw+2.0*rv*rw*p.getInvDist(v,w));
 		} 
 		
 		else { // hyp
 			if (p.getRadius(v) <= 0 || p.getRadius(w) <= 0)
 				return -1;
-			if (p.overlapStatus && (indx = p.nghb(v, w)) >= 0)
-				return (HyperbolicMath.acosh(HyperbolicMath.h_invdist_cosh(p.getRadius(v),
-						p.getRadius(w), p.getInvDist(v,p.kData[v].flower[indx]))));
-			else
-				return (p.getActualRadius(v) + p.getActualRadius(w));
+			return (HyperbolicMath.acosh(HyperbolicMath.h_invdist_cosh(p.getRadius(v),
+						p.getRadius(w), p.getInvDist(v,w))));
 		}
 	} 
 
 	/**
 	 * Return distance between centers
-	 * @param v, w, vertices
-	 * @return, double: distance, or -1 on error, or negative eucl radius 
+	 * @param v int
+	 * @param w int, vertices
+	 * @return double: distance, or -1 on error, or negative eucl radius 
 	 *   for infinite distance in hyp case
 	 */
 	public static double edge_length(PackData p, int v, int w) {

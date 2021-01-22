@@ -28,20 +28,18 @@ import util.StringUtil;
 public class CombDCEL {
 
 	/**
-	 * Full processing from existing 'pdcel'. Calling routine must
-	 * 'attach' to PackData.
-	 * @param pdcel PackDCEL
-	 * @param nonKeepers NodeLink, vertices to cut out
-	 * @param poisonFlag boolean; true, nghbs of nonKeepers are nonKeepers
-	 * @param alphaIndx int; 0 if no preference for alpha vertex
-	 * @return
-	 * @throws DCELException
+	 * Starting with 'pdcel' structure, extract new DCEL avoiding the
+	 * forbidden edges in 'hlink'. Start based on 'alphaEdge', but if
+	 * this is null, use 'pdcel.alpha'.
+	 * @param pdcel packDCEL
+	 * @param hlink HalfLink
+	 * @param alphaEdge HalfEdge
+	 * @return PackDCEL
 	 */
-	public static PackDCEL processDCEL(PackDCEL pdcel,
-			NodeLink nonKeepers,boolean poisonFlag,int alphaIndx) throws DCELException {
+	public static PackDCEL extractDCEL(PackDCEL pdcel,HalfLink hlink,HalfEdge alphaEdge) {
 		PackDCEL ndcel=null;
 		try {
-			ndcel=CombDCEL.d_redChainBuilder(pdcel,nonKeepers,poisonFlag,alphaIndx);
+			ndcel=CombDCEL.redchain_by_edge(pdcel,hlink,alphaEdge);
 			CombDCEL.d_FillInside(ndcel);
 		} catch (Exception ex) {
 			throw new DCELException(ex.getMessage());
@@ -173,7 +171,7 @@ public class CombDCEL {
 		// Identify bdry edges by creating'face' with index -1. 
 		// Note that other 'face's entries are not set, since we 
 		//   do not catalog the faces, but we need to identify
-		//   bdry edges in 'd_redChainBuilder'.
+		//   bdry edges in 'redchain_by_edge'.
 		for (int v=1;v<=vertcount;v++) {
 			Vertex vert=vertices[v];
 			if (vert.bdryFlag==1) {
@@ -228,6 +226,7 @@ public class CombDCEL {
 		while (eit.hasNext()) {
 			pdcel.edges[++tick]=eit.next();
 		}
+		pdcel.edgeCount=tick;
 
 		return pdcel;
 	}
@@ -243,7 +242,7 @@ public class CombDCEL {
 	 * 
 	 * @param pdcel PackDCEL
 	 * @param hlink HalfLink
-	 * @param alphaEdge HalfEdge
+	 * @param alphaEdge HalfEdge (if null, revert to 'pdcel.alpha'
 	 * @return 
 	 */
 	public static PackDCEL redchain_by_edge(PackDCEL pdcel,HalfLink hlink,HalfEdge alphaEdge) {
@@ -275,29 +274,34 @@ public class CombDCEL {
 		for (int e=1;e<=pdcel.edgeCount;e++) {
 			HalfEdge edge=pdcel.edges[e];
 			edge.util=0;
+// System.out.println(" e = "+e);			
 			// set 'util' -1 for bdry edges
-			if (edge.face.faceIndx<0 || edge.twin.face.faceIndx<0)
+			if (edge.face!=null && (edge.face.faceIndx<0 || edge.twin.face.faceIndx<0))
 				edge.util=-1;
 		}
 		
 		// set edge 'util' to identify forbidden edges (include bdry edges above)
 		// set vert 'util' for vertices with at least one forbidden edge
-		Iterator<HalfEdge> his=hlink.iterator();
-		while (his.hasNext()) {
-			HalfEdge he=his.next();
-			he.util=-1;
-			he.twin.util=-1;
-			he.origin.util=-1;
-			he.twin.origin.util=-1;
+		if (hlink!=null) {
+			Iterator<HalfEdge> his=hlink.iterator();
+			while (his.hasNext()) {
+				HalfEdge he=his.next();
+				he.util=-1;
+				he.twin.util=-1;
+				he.origin.util=-1;
+				he.twin.origin.util=-1;
+			}
 		}
 
 		// TODO: do we need this
 //		if (alphaEdge.util!=0)
 //			throw new DCELException("alpha cannot have any forbidden edges");
 		
-		// ====================== start redchain ====================
-		// around 'alphaEdge's face
+		// ============== start redchain using chosen edge ================
 		
+		if (alphaEdge==null) {
+			alphaEdge=pdcel.alpha;
+		}
 		HalfEdge he=alphaEdge;
 		pdcel.redChain=new RedHEdge(he);
 		RedHEdge rtrace=pdcel.redChain;
@@ -766,11 +770,10 @@ public class CombDCEL {
 	 * @param nonKeepers NodeLink,
 	 * @param poisonFlag boolean, if true, then augment 
 	 *    'nonKeepers' with their neighbors 
-	 * @param alphaIndx int
 	 * @return PackDCEL (call to 'd_FillInide' is included)
 	 */
 	public static PackDCEL d_redChainBuilder(PackDCEL pdcel,
-			NodeLink nonKeepers,boolean poisonFlag,int alphaIndx) {
+			NodeLink nonKeepers,boolean poisonFlag) {
 		boolean debug=false; // debug=true;
 
 		int vertcount=pdcel.vertCount;
@@ -2546,15 +2549,26 @@ public class CombDCEL {
 	 * 
 	 * @param pdcel PackDCEL
 	 * @param v int
-	 * @return PackDCEL, null on failure
+	 * @return PackDCEL
 	 */
 	public static PackDCEL d_puncture_vert(PackDCEL pdcel,int v) {
-	    NodeLink nonks=new NodeLink();
-	    nonks.add(v);
-	    return CombDCEL.processDCEL(pdcel,nonks,true,0);
+		// if 'v' is 'alpha', need to modify 'alpha' in the new DCEL
+		StringBuilder strbld=new StringBuilder(Integer.toString(v)+" ");
+		HalfEdge baseEdge=pdcel.alpha;
+		if (v==pdcel.alpha.origin.vertIndx) {
+			baseEdge=pdcel.alpha.next;
+			// ask for this to be new seed
+			strbld.append(" -v "+Integer.toString(baseEdge.origin.vertIndx));
+		}
+		HalfLink hlink=d_CookieData(pdcel.p,strbld.toString());
+	    return CombDCEL.extractDCEL(pdcel,hlink,baseEdge);
 	}
 
-
+	public static HalfLink d_CookieData(PackData p,String str) {
+		Vector<Vector<String>> flagSegs=StringUtil.flagSeg(str);
+		return d_CookieData(p,flagSegs);
+	}
+	
 	/**
 	 * Process the incoming strings to set seed and forbidden 
 	 * edges for cookie'ing DCEL structures. Forbidden edges 
@@ -2678,17 +2692,12 @@ public class CombDCEL {
 	 */
 	public static PackDCEL d_puncture_face(PackDCEL pdcel,int f) {
 		Face face=pdcel.faces[f];
-		NodeLink nonks=new NodeLink();
+		HalfLink hlink=new HalfLink();
 		HalfEdge he=face.edge;
-		nonks.add(he.origin.vertIndx);
-		HalfEdge trace=he;
-		do {
-			nonks.add(trace.origin.vertIndx);
-			trace.face=null;
-			trace=trace.next;
-		} while (trace!=he);
-		
-		return processDCEL(pdcel,nonks,false,0);
+		hlink.add(he);
+		hlink.add(he.next);
+		hlink.add(he.next.next);
+		return extractDCEL(pdcel,hlink,pdcel.alpha);
 	}
 	  
 	/**
@@ -2702,14 +2711,17 @@ public class CombDCEL {
     	pdcel.edgeCount=pdc.edgeCount;
     	pdcel.faceCount=pdc.faceCount;
     	pdcel.intFaceCount=pdc.intFaceCount;
+    	pdcel.idealFaceCount=pdc.idealFaceCount;
     	pdcel.newOld=null;
     	if (pdc.newOld!=null && pdc.newOld.size()>0) 
     		pdcel.newOld=pdc.newOld.clone();
     	
-    	// count/catalog redchain edges
+    	// --------------- create the new objects -----------------
+    	// Caution: these replicate old pointers; reset later
+    	
+    	// count/catalog redchain edges: note that red edges aen't
+    	//   indexed, so 'redutil' will be tmp index (from 1)
     	int redcount=0;
-    	RedHEdge[] redEdges=null;
-    	EdgeSimple[] redIndx=null; // <r,e> r=red index, e=myEdge index
     	if (pdc.redChain!=null) {
     		RedHEdge rtrace=pdc.redChain;
     		do {
@@ -2717,19 +2729,22 @@ public class CombDCEL {
     			rtrace=rtrace.nextRed;
     		} while(rtrace!=pdc.redChain);
     	}
+    	RedHEdge[] newRedEdges=null;
+    	EdgeSimple[] red2edge=null; // <r,e> r=red index, e=myEdge index
     	if (redcount>0) {
-    		redEdges=new RedHEdge[redcount+1];
+    		newRedEdges=new RedHEdge[redcount+1];
+    		red2edge=new EdgeSimple[redcount+1];
     		int rtick=0;
-    		RedHEdge rtrace=pdc.redChain;
+    		RedHEdge oldrtrace=pdc.redChain;
     		do {
-    			redEdges[++rtick]=rtrace.clone();
-    			redEdges[rtick].redutil=rtrace.redutil=rtick;
-    			redIndx[rtick]=new EdgeSimple(rtick,rtrace.myEdge.edgeIndx);
-    			rtrace=rtrace.nextRed;
-    		} while(rtrace!=pdc.redChain);
+    			newRedEdges[++rtick]=oldrtrace.clone();
+    			// set index
+    			newRedEdges[rtick].redutil=oldrtrace.redutil=rtick;
+    			red2edge[rtick]=new EdgeSimple(rtick,oldrtrace.myEdge.edgeIndx);
+    			oldrtrace=oldrtrace.nextRed;
+    		} while(oldrtrace!=pdc.redChain);
     	}
-    	
-    	// 
+
     	pdcel.vertices=new Vertex[pdc.vertCount+1];
     	for (int v=1;v<=pdc.vertCount;v++) {
     		pdcel.vertices[v]=pdc.vertices[v].clone();
@@ -2743,58 +2758,110 @@ public class CombDCEL {
     		pdcel.faces[f]=pdc.faces[f].clone();
     	}
     	pdcel.idealFaces=new Face[pdc.intFaceCount+1];
-    	for (int f=1;f<=pdc.faceCount;f++) {
+    	for (int f=1;f<=pdc.idealFaceCount;f++) {
     		pdcel.idealFaces[f]=pdc.idealFaces[f].clone();
     	}
     	
-    	// reset pointers
+    	// ------------------ reset pointers ------------------
+    	
+    	// replace old pointers with parallel new objects, using
+    	//   indices to translate.
+    	
+    	// Vertex's: new vert gets new 'halfedge' attached
     	for (int v=1;v<=pdcel.vertCount;v++) {
-    		Vertex vert=pdcel.vertices[v];
-    		vert.halfedge=pdcel.edges[vert.halfedge.edgeIndx];
+    		pdcel.vertices[v].halfedge=
+    			pdcel.edges[pdc.vertices[v].halfedge.edgeIndx];
     	}
-    	for (int e=1;e<=pdcel.edgeCount;e++) {
-    		HalfEdge he=pdcel.edges[e];
-    		if (he.myRedEdge!=null) {
-    			he.myRedEdge=redEdges[he.myRedEdge.redutil];
-    			he.next=pdcel.edges[he.next.edgeIndx];
-    			he.prev=pdcel.edges[he.prev.edgeIndx];
-    			he.twin=pdcel.edges[he.twin.edgeIndx];
-    			he.origin=pdcel.vertices[pdc.edges[e].origin.vertIndx];
+    	
+    	// HalfEdge's: 
+    	for (int ee=1;ee<=pdcel.edgeCount;ee++) {
+    		HalfEdge newhe=pdcel.edges[ee];
+    		HalfEdge oldhe=pdc.edges[ee];
+    		if (newhe.myRedEdge!=null) {
+    			newhe.myRedEdge=newRedEdges[oldhe.myRedEdge.redutil];
+    			newhe.myRedEdge.myEdge=newhe;
     		}
+    		newhe.next=pdcel.edges[oldhe.next.edgeIndx];
+    		newhe.prev=pdcel.edges[oldhe.prev.edgeIndx];
+    		newhe.twin=pdcel.edges[oldhe.twin.edgeIndx];
+    		newhe.origin=pdcel.vertices[pdc.edges[ee].origin.vertIndx];
+    		int findx=oldhe.face.faceIndx;
+    		if (findx>0)
+    			newhe.face=pdcel.faces[findx];
+    		else
+    			newhe.face=pdcel.idealFaces[-findx];
     	}
     	for (int f=1;f<=pdcel.faceCount;f++) {
     		Face face=pdcel.faces[f];
-    		face.edge=pdcel.edges[face.edge.edgeIndx];
+    		face.edge=pdcel.edges[pdc.faces[f].edge.edgeIndx];
+    	}
+    	for (int f=1;f<=pdcel.idealFaceCount;f++) {
+    		Face face=pdcel.idealFaces[f];
+    		face.edge=pdcel.edges[pdc.idealFaces[f].edge.edgeIndx];
     	}
     	if (pdc.redChain!=null) {
-    		pdcel.redChain=redEdges[pdcel.redChain.redutil];
+    		pdcel.redChain=newRedEdges[pdc.redChain.redutil];
     		for (int j=1;j<=redcount;j++) {
-    			RedHEdge reg=redEdges[j];
-    			reg.myEdge=pdcel.edges[reg.myEdge.edgeIndx];
-    			reg.nextRed=redEdges[reg.nextRed.redutil];
-    			reg.prevRed=redEdges[reg.prevRed.redutil];
-    			reg.twinRed=redEdges[reg.twinRed.redutil];
+    			RedHEdge reg=newRedEdges[j];
+    			reg.nextRed=newRedEdges[reg.nextRed.redutil];
+    			reg.prevRed=newRedEdges[reg.prevRed.redutil];
+    			if (reg.twinRed!=null) 
+    				reg.twinRed=newRedEdges[reg.twinRed.redutil];
     		}
     	}
     	
     	if (pdc.pairLink!=null && pdc.pairLink.size()>1) {
     		pdcel.pairLink=new D_PairLink();
+    		pdcel.pairLink.add(null);
     		Iterator<D_SideData> pis=pdc.pairLink.iterator();
+    		pis.next(); // flush first null entry
     		while (pis.hasNext()) {
     			RedHEdge rhe=null;
     			D_SideData sd=pis.next().clone();
 
     			// fix pointers
     			if ((rhe=sd.startEdge)!=null)
-    				sd.startEdge=redEdges[rhe.redutil];
+    				sd.startEdge=newRedEdges[rhe.redutil];
     			if ((rhe=sd.endEdge)!=null)
-    				sd.endEdge=redEdges[rhe.redutil];
+    				sd.endEdge=newRedEdges[rhe.redutil];
     				
-    			pdcel.pairLink.add(pis.next().clone());
+    			pdcel.pairLink.add(sd.clone());
     		}
     		
     	}
     	return pdcel;
     }
+    
+    /**
+     * Return linked list of verts on the same bdry component
+     * as 'v' using DCEL structure. Null on error or 'v' not bdry. 
+     * @param p PackData
+     * @param v int
+     * @return new NodeLink, null on failure
+     */
+    public static NodeLink bdryCompVerts(PackData p,int v) {
+    	if (p.packDCEL==null)
+    		throw new DCELException("'bdryCompVerts' routines requires DCEL structure");
+    	if (!p.isBdry(v))
+    		return null;
+    	Vertex vert=p.packDCEL.vertices[v];
+    	Face idealf=vert.halfedge.twin.face;
+    	int[] fverts=idealf.getVerts();
+    	int len=fverts.length;
+    	int offset=-1;
+    	for (int j=0;(j<len && offset<0);j++) {
+    		if (fverts[j]==v)
+    			offset=j;
+    	}
+    	if (offset<0)
+    		throw new DCELException("v="+v+" was not found on bdry component");
+    	
+    	// put in list with v first
+    	NodeLink vlink=new NodeLink(p);
+    	for (int j=0;j<len;j++) {
+    		vlink.add(fverts[(j+offset)%len]);
+    	}
+    	return vlink;
+   	}
 
 }
