@@ -27,7 +27,6 @@ import complex.MathComplex;
 import dcel.CombDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RedVertex;
 import dcel.VData;
 import dcel.Vertex;
 import deBugging.DebugHelp;
@@ -64,6 +63,7 @@ import listManip.CentList;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.PairLink;
 import listManip.PointLink;
@@ -90,6 +90,7 @@ import util.ColorUtil;
 import util.DispFlags;
 import util.PathBaryUtil;
 import util.PathUtil;
+import util.RadIvdPacket;
 import util.SelectSpec;
 import util.SphView;
 import util.StringUtil;
@@ -166,6 +167,7 @@ public class PackData{
     public NodeLink vlist;    // pack utility vert list
     public FaceLink flist;    // pack utility face list
     public EdgeLink elist;    // pack utility edge list
+    public HalfLink hlist;    // pack utility halfedge list
     public TileLink tlist;    // pack utility tile list
     public GraphLink glist;   // pack utility dual graph link
     public PointLink zlist;   // pack utility complex point list
@@ -276,7 +278,7 @@ public class PackData{
     	packDCEL=pdcel;
     	pdcel.p=this;
     	int origNodeCount=nodeCount;
-    	
+		
     	// set some counts
 		nodeCount=pdcel.vertCount;
 		faceCount=pdcel.faceCount;
@@ -298,25 +300,36 @@ public class PackData{
     		for (int v=1;v<=nodeCount;v++) 
     			vData[v]=new VData();
     		for (int v=1;v<=nodeCount;v++) {
-    			vData[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
+    			Vertex vert=pdcel.vertices[v];
+    			if (vert.isBdry()) 
+    				vData[v].setBdryFlag(1);
     			int oldv=v;
     			int w=0;
     			if (pdcel.newOld!=null && (w=pdcel.newOld.findW(v))>0) 
     				oldv=w;
-    			setRadius(v,rData[oldv].rad);
-    			setCenter(v,rData[oldv].center);
-    			vData[v].color=ColorUtil.cloneMe(getCircleColor(oldv));
-    			// save aims where possible
-    			vData[v].aim=getAim(oldv);
-    			if (vData[v].getBdryFlag()!=kData[oldv].bdryFlag) {
-    				if (vData[v].getBdryFlag()==1) // new bdry vert?
-    					vData[v].aim=-1.0;
-    				else // new interior
+    			if (oldv<=origNodeCount) {
+    				pdcel.setVertRadii(v,rData[oldv].rad);
+    				pdcel.setVertCenter(v,new Complex(rData[oldv].center));
+    				vData[v].color=ColorUtil.cloneMe(kData[oldv].color);
+    				// save interior aims, but reset if this is new bdry
+    				vData[v].aim=rData[oldv].aim; 
+    				if (pdcel.vertices[v].isBdry() && kData[oldv].bdryFlag==0)
+    					vData[v].aim=-0.1;
+    			}
+    			else {
+    				if (vert.isBdry())
+    					vData[v].aim=-0.1;
+    				else
     					vData[v].aim=2.0*Math.PI;
     			}
-    			pdcel.fillIndices(v);
     		}
+
+        	// set up the arrays of indices
+    		for (int v=1;v<=nodeCount;v++)
+    			pdcel.fillIndices(v);
         	fillcurves(); // compute all curvatures
+        	if (pdcel.gamma==null)
+        		pdcel.gamma=pdcel.alpha.next;
     		return nodeCount;
     	}
 
@@ -344,18 +357,14 @@ public class PackData{
    				
    				// copy 'aim' when appropriate
    				vData[v].aim=oldVData[oldv].aim;
-   				if (vData[v].getBdryFlag()!=oldVData[oldv].getBdryFlag()) {
-   					if (vData[v].getBdryFlag()==1)
-   						vData[v].aim=-1.0;
-   					else
-   						vData[v].aim=2.0*Math.PI;
-   				}
+   				if (vert.isBdry() && oldVData[oldv].getBdryFlag()==0) 
+  					vData[v].aim=-1.0;
    				
    				Complex z=oldVData[oldv].center;
    				double rad=oldVData[oldv].rad;
    			
    				// need to store in any 'RedHEdge's from this vertex
-   				if (vert instanceof RedVertex) {
+   				if (vert.redFlag) {
    					HalfEdge trace=he.prev.twin;
    					do {
    						if(trace.myRedEdge!=null) {
@@ -369,14 +378,16 @@ public class PackData{
    			}
    			// for new vertices
    			else {
-   				if (vData[v].getBdryFlag()==1)
-   					setAim(v,-0.1);
+   				if (vert.isBdry())
+   					vData[v].aim=-0.1;
    				else
-   					setAim(v,2.0*Math.PI);
+   					vData[v].aim=2.0*Math.PI;
    			}
 			pdcel.fillIndices(v);
     	}
     	fillcurves();
+    	if (pdcel.gamma==null)
+    		pdcel.gamma=pdcel.alpha.next;
     	return pdcel.vertCount;
     }
 
@@ -3062,9 +3073,9 @@ public class PackData{
 		int v1 = -1;
 		Complex pt1 = null;
 		Complex pt2 = null;
-		double ovlp1 = 1.0;
-		double ovlp2 = 1.0;
-		double ovlp = 1.0;
+		double ivd1 = 1.0;
+		double ivd2 = 1.0;
+		double ivd = 1.0;
 
 		// First: find or create reliable first petal; several situations
 
@@ -3074,8 +3085,8 @@ public class PackData{
 			v2 = flower[offset];
 			pt2 = new Complex(getCenter(v2));
 			if (ambigZs[v2] != null) {
-				ovlp2=getInvDist(v,v2);
-				sC=ambigZs[v2].theOne(vcent, rad, ovlp2, hes);
+				ivd2=getInvDist(v,v2);
+				sC=ambigZs[v2].theOne(vcent, rad, ivd2, hes);
 				pt2=sC.center;
 			} 
 		}
@@ -3085,14 +3096,14 @@ public class PackData{
 			if (ambigZs[v] == null) {
 				if (offset >= 0) { // use this first non-ambiguous nghb
 					v2 = flower[offset];
-					ovlp2=getInvDist(v,v2);
+					ivd2=getInvDist(v,v2);
 					pt2 = new Complex(getCenter(v2));
 				} 
 				else { // no non-ambiguous petal, so position first petal
 					offset = 0;
 					v2 = flower[offset];
-					ovlp2=getInvDist(v,v2);
-					pt2 = ambigZs[v2].theOne(vcent, rad, ovlp2, hes).center;
+					ivd2=getInvDist(v,v2);
+					pt2 = ambigZs[v2].theOne(vcent, rad, ivd2, hes).center;
 				}
 			}
 			else { // v int/ambiguous; don't move v; 
@@ -3100,16 +3111,16 @@ public class PackData{
 				offset = -1;
 				for (int j = 0; j < num && offset < 0; j++) {
 					v2 = flower[j];
-					ovlp2=getInvDist(v,v2);
+					ivd2=getInvDist(v,v2);
 					pt2 = getCenter(v2);
 					double thislength=-1.0;
 					double actuallength=-1.0;
 					if (hes<0) {
-						thislength=HyperbolicMath.acosh(HyperbolicMath.h_invdist_cosh(rad, getRadius(v2), ovlp2));
+						thislength=HyperbolicMath.h_ivd_length(rad, getRadius(v2), ivd2);
 						actuallength=HyperbolicMath.h_dist(vcent,pt2);
 					}
 					else {
-						thislength= EuclMath.e_invdist_length(rad,getRadius(v2),ovlp2);
+						thislength= EuclMath.e_ivd_length(rad,getRadius(v2),ivd2);
 						actuallength=vcent.minus(pt2).abs();
 					}
 					if (Math.abs((thislength - actuallength) / rad) < .001)
@@ -3125,16 +3136,16 @@ public class PackData{
 		for (int j=1;j<=(num+getBdryFlag(v));j++) {
 			v1 = v2;
 			v2 = flower[(j + offset) % num];
-			ovlp1 = ovlp2;
-			ovlp2=getInvDist(v,v2);
+			ivd1 = ivd2;
+			ivd2=getInvDist(v,v2);
 			pt1 = pt2;
-			ovlp=getInvDist(v1,v2);
+			ivd=getInvDist(v1,v2);
 			if (hes<0) // hyp
 				sC = HyperbolicMath.h_compcenter(vcent, pt1, rad, getRadius(v1),
-						getRadius(v2), ovlp, ovlp2, ovlp1);
+						getRadius(v2), ivd, ivd2, ivd1);
 			else 
 				sC=EuclMath.e_compcenter(vcent, pt1, rad, getRadius(v1),
-						getRadius(v2), ovlp, ovlp2, ovlp1);
+						getRadius(v2), ivd, ivd2, ivd1);
 			pt2=sC.center;
 			if (hes<0) 
 				sC=HyperbolicMath.hyp_tang_incircle(vcent,pt1,pt2,rad,
@@ -3406,11 +3417,11 @@ public class PackData{
 					double thislength=-1.0;
 					double actuallength=-1.0;
 					if (hes<0) {
-						thislength=HyperbolicMath.acosh(HyperbolicMath.h_invdist_cosh(rad, getRadius(v2), ovlp2));
+						thislength=HyperbolicMath.h_ivd_length(rad, getRadius(v2), ovlp2);
 						actuallength=HyperbolicMath.h_dist(vcent,pt2);
 					}
 					else {
-						thislength= EuclMath.e_invdist_length(rad,getRadius(v2),ovlp2);
+						thislength= EuclMath.e_ivd_length(rad,getRadius(v2),ovlp2);
 						actuallength=vcent.minus(pt2).abs();
 					}
 					if (Math.abs((thislength - actuallength) / rad) < .001)
@@ -8095,9 +8106,9 @@ public class PackData{
 			  t=getInvDist(v,w);
 		  }
 		  if (hes<0) { // hyperbolic
-			  return HyperbolicMath.acosh(HyperbolicMath.h_invdist_cosh(rv,rw,t));
+			  return HyperbolicMath.h_ivd_length(rv,rw,t);
 		  }
-		  return EuclMath.e_invdist_length(rv,rw,t);
+		  return EuclMath.e_ivd_length(rv,rw,t);
 	  }
 
 	  /**
@@ -8137,11 +8148,11 @@ public class PackData{
 	  }
 	  
 	  /**
-	   * @return sum of areas of all faces, based on radii.
-	   * NOTE: Overlaps not yet accounted for in spherical case.
+	   * Compute the sum of areas of all faces, based on radii and
+	   * inversive distances.
 	   * @return double
 	   */
-	  public double complexArea() {
+	  public double carrierArea() {
 		  double accum=0.0;
 		  for (int f=1;f<=faceCount;f++) {
 			  accum+=faceArea(f);
@@ -8171,39 +8182,18 @@ public class PackData{
 	  
 	  /**
 	   * Compute face area based on radii and overlaps (except
-	   * overlaps not accounted for in spherical case).
+	   * overlaps not accounted for in spherical case). (Tacit
+	   * assumption is 'num'=3.)
 	   * @param f int
 	   * @return double
 	   */
 	  public double faceArea(int f) {
-		  int v0=faces[f].vert[0];
-		  int v1=faces[f].vert[1];
-		  int v2=faces[f].vert[2];
-		  double r0=getRadius(v0);
-		  double r1=getRadius(v1);
-		  double r2=getRadius(v2);
-		  double t0=1.0;
-		  double t1=1.0;
-		  double t2=1.0;
-		  if (overlapStatus) {
-			  t0=getInvDist(v1,v2);
-			  t1=getInvDist(v2,v0);
-			  t2=getInvDist(v1,v0);
-		  }
-
-		  if (hes<0) { // hyperbolic
-			  UtilPacket uP=new UtilPacket();
-			  
-			  double a0=HyperbolicMath.h_comp_cos(r0,r1,r2,t0,t1,t2);
-			  double a1=a0;
-			  double a2=a0;
-			  return (Math.PI-a0-a1-a2);
-		  }
-		  if (hes>0) { // spherical
-			  // TODO: not ready to use overlaps
-			  return SphericalMath.s_area(r0,r1,r2);
-		  }
-		  return EuclMath.eArea(r0,r1,r2,t0,t1,t2);
+		  RadIvdPacket rip=getRIpacket(f);
+		  if (hes<0)  // hyperbolic
+			  return HyperbolicMath.h_area(rip);
+		  if (hes>0) // spherical
+			  return SphericalMath.s_face_area(rip);
+		  return EuclMath.eArea(rip);
 	  }
 	  
 	  /**
@@ -11309,6 +11299,7 @@ public class PackData{
 		  p.nodeCount=nodeCount;
 		  p.faceCount=faceCount;
 		  p.hes=hes;
+		  p.intrinsicGeom=intrinsicGeom;
 		  p.locks=0;
 		  p.fileName=fileName;
 		  p.alpha=alpha;
@@ -11323,7 +11314,7 @@ public class PackData{
 		  }
 		  
 		  if (packDCEL!=null) {
-			  p.packDCEL=CombDCEL.clone(packDCEL);
+			  p.packDCEL=CombDCEL.cloneDCEL(packDCEL);
 			  p.packDCEL.p=p;
 			  p.vData=new VData[nodeCount+1];
 			  for (int v=1;v<=nodeCount;v++) 
@@ -13924,6 +13915,32 @@ public class PackData{
 		  if (j<0) // not an edge
 			  return 1.0;
 		  return kData[v].invDist[nghb(v,w)];
+	  }
+	  
+	  /** 
+	   * Fill a 'RadIvdPacket' with data for this face.
+	   * @param f int
+	   * @return new RadIvdPacket
+	   */
+	  public RadIvdPacket getRIpacket(int f) {
+		  RadIvdPacket rip=new RadIvdPacket();
+		  int[] fverts=getFaceVerts(f);
+		  if (packDCEL==null) {
+			  for (int j=0;j<3;j++) {
+				  rip.rad[j]=getRadius(fverts[(j)]);
+				  rip.oivd[j]=getInvDist(fverts[(j+1)%3],fverts[(j+2)%3]);
+			  }
+		  }
+		  else {
+			  HalfEdge he=packDCEL.faces[f].edge;
+			  int k=0;
+			  do {
+				  rip.rad[k]=getRadius(he.origin.vertIndx);
+				  rip.oivd[k]=he.next.getInvDist();
+				  k++;
+			  } while(k<3);
+		  }
+		  return rip;
 	  }
 	  
 	  /** 

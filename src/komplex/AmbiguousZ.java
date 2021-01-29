@@ -130,7 +130,7 @@ public class AmbiguousZ {
 			rad = (double)radii.get(j);
 			thislength=rad+r;
 			truedist=CommonMath.get_pt_dist(z, cent,hes);
-			thislength=CommonMath.inv_dist_edge_length(rad, r, invD, hes);
+			thislength=CommonMath.ivd_edge_length(rad, r, invD, hes);
 			newerr = Math.abs(truedist - thislength);
 			if (newerr < minerr) {
 				best = j;

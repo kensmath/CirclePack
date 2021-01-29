@@ -10,9 +10,7 @@ import dcel.D_SideData;
 import dcel.Face;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.PreRedVertex;
 import dcel.RedHEdge;
-import dcel.RedVertex;
 import dcel.Vertex;
 import exceptions.DCELException;
 import input.CPFileManager;
@@ -21,6 +19,7 @@ import komplex.EdgeSimple;
 import listManip.HalfLink;
 import listManip.VertexMap;
 import packing.PackData;
+import panels.CPScreen;
 import util.DispFlags;
 
 public class DCELdebug {
@@ -134,6 +133,15 @@ public class DCELdebug {
 			}
 			CommandStrParser.jexecute(p,strbld.toString());
 		}
+	}
+	
+	public static void drawEuclCircles(CPScreen cps,Complex[] Z,double[] R) {
+		cps.clearCanvas(true);
+		int len=Z.length-1;
+		for (int v=1;v<=len;v++) {
+			cps.drawCircle(Z[v],R[v],new DispFlags());
+		}
+		cps.rePaintAll();
 	}
 	
 	/**
@@ -272,18 +280,7 @@ System.out.println(" red edge "+rtrace.myEdge);
 				} catch (Exception ex) {}
 			}
 		}
-		
-		// bdryStarts.
-		if (pdcel.bdryStarts!=null && pdcel.bdryStarts.size()>0) {
-			try {
-				strbld.append("BdryStarts : ");
-				Iterator<RedHEdge> bsit=pdcel.bdryStarts.iterator();
-				while (bsit.hasNext()) {
-					strbld.append(""+bsit.next().myEdge+":  ");
-				}
-			} catch(Exception ex) {}
-		}
-		
+
 		System.out.println(strbld.toString());
 	}
 	
@@ -383,41 +380,6 @@ System.out.println(" red edge "+rtrace.myEdge);
 		} while (edge!=V.halfedge && safety>0);
 		System.out.println(sb.toString());
 		return 12-safety;
-	}
-	
-	/** 
-	 * list edges forming all the faces at 'redV'
-	 * @param redV RedVertex
-	 * @return int, count
-	 */
-	public static int redVertFaces(PreRedVertex redV) {
-		RedHEdge firstRE=redV.redSpoke[0];
-		if (firstRE==null) {
-			System.err.println("redV = "+redV.vertIndx+": problem with 'spokes' or 'redSpoke'");
-			return 0;
-		}
-		StringBuilder sb=new StringBuilder("RedVertex "+redV.vertIndx+" successive faces:\n");
-		int safety=12;
-		HalfEdge edge=firstRE.myEdge;
-		do {
-			sb.append("    next face: "+triVertString(edge)+"\n");
-			edge=edge.prev.twin;
-			safety--;
-		} while (edge!=firstRE.myEdge && safety>0);
-		System.out.println(sb.toString());
-		return 12-safety;
-	}
-		
-	public static int spokeFaces(RedVertex redV) {
-		if (redV.spokes==null)
-			return 0;
-		StringBuilder sb=new StringBuilder("RedVertex "+redV.vertIndx+":\n");
-		int n=redV.spokes.length;
-		for (int j=0;j<n;j++) {
-			sb.append("  spoke "+j+": "+triVertString(redV.spokes[j])+"\n");
-		}
-		System.out.println(sb.toString());
-		return n;
 	}
 	
 	public static void faceVerts(HalfEdge edge) {

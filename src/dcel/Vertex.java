@@ -1,6 +1,5 @@
 package dcel;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -8,13 +7,14 @@ import exceptions.CombException;
 import exceptions.DCELException;
 
 /** 
- * DCEL Vertex. The 'vertIndx' is typically the index of the
- * vertex in the associated 'PackData'; this is how we get 
- * concrete geometric info, e.g., circle centers. 
- * If this is a boundary vertex, then its halfedge should point 
- * to downstream (counterclockwise) 
- * bdry neighbor.
- * @author kstephe2, 2016
+ * DCEL Vertex only contains combinatorial data; center/rad data are
+ * elsewhere, in 'VData's and 'RedHEdge's. The 'vertIndx'  
+ * typically aligns with the index in 'PackData'. If this is a 
+ * boundary vertex, then its halfedge should be downstream 
+ * (counterclockwise) boundary edge. 'redFlag' indicates vertex
+ * is in the red chain; 'spokes' is only used during red chain 
+ * processing.
+ * @author kstephe2, starting in 2016
  *
  */
 public class Vertex {
@@ -22,12 +22,16 @@ public class Vertex {
 	public HalfEdge halfedge;	// a halfedge pointing away from this vert
 	public int vertIndx;		// index from associated 'PackData'
 	public int bdryFlag;		// 0 for interior, 1 for boundary
+	public boolean redFlag;		// is this a vertex along the red chain? 
 	
 	public int util;			// temporary data only
+	public HalfEdge[] spokes;	// outgoing spokes -- only during processing
 	
 	public Vertex() {
 		halfedge=null;
 		vertIndx=-0;
+		redFlag=false;
+		spokes=null;
 	}
 	
 	public Vertex(int v) {
@@ -218,13 +222,14 @@ public class Vertex {
 	}
 	
 	/**
-	 * Clone: caution, 'halfedge' pointer may be outdated.
+	 * Clone: caution, 'halfedge' and 'redFlag' may be outdated.
 	 * @return new Vertex
 	 */
 	public Vertex clone() {
 		Vertex nv=new Vertex(vertIndx);
 		nv.halfedge=halfedge;
 		nv.bdryFlag=bdryFlag;
+		nv.redFlag=redFlag;
 		nv.util=util;
 		return nv;
 	}

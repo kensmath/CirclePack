@@ -234,7 +234,7 @@ public class SphWidget extends JFrame implements ActionListener {
 		if (hit>0) areaField.setVisible(false);
 		else {
 			double targetArea=4*Math.PI+aimSum;
-			double curArea=packData.complexArea();
+			double curArea=packData.carrierArea();
 			areaField.setText(String.format("%.6e",(double)((curArea-targetArea)/Math.PI)));
 			areaField.setVisible(true);
 		}
@@ -276,7 +276,7 @@ public class SphWidget extends JFrame implements ActionListener {
 	}
 	
 	public void displayArea() {
-		double area=packData.complexArea();
+		double area=packData.carrierArea();
 		double aimSum=0.0;
 		for (int k=1;k<=packData.nodeCount;k++) {
 			aimSum+=packData.getAim(k)-2*Math.PI;

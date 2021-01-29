@@ -206,25 +206,21 @@ public class CommonMath {
 	}
 	
 	/**
-	 * Compute the length between circles given radii r1 and r2 and inv 
-	 * distance 'ivd'.
+	 * Compute the length between circles given radii r1 and r2 
+	 * and inversive distance 'ivd'.
 	 * @param r1 double
 	 * @param r2 double
 	 * @param ivd double
 	 * @param hes geometry
 	 * @return double, -1 for infinite in hyp case
 	 */
-	public static double inv_dist_edge_length(double r1,double r2, double ivd,int hes) {
-		if (hes<0) {
-			double hdist=HyperbolicMath.h_invdist_cosh(r1, r2, ivd);
-			if (hdist<0)
-				return -1;
-			return HyperbolicMath.acosh(hdist);
-		}
+	public static double ivd_edge_length(double r1,double r2, double ivd,int hes) {
+		if (hes<0) 
+			return HyperbolicMath.h_ivd_length(r1, r2, ivd);
 		else if (hes>0)
-			return SphericalMath.s_invdist_length(r1, r2, ivd);
+			return SphericalMath.s_ivd_length(r1, r2, ivd);
 		else 
-			return EuclMath.e_invdist_length(r1, r2, ivd);
+			return EuclMath.e_ivd_length(r1, r2, ivd);
 	}
 
 	/**

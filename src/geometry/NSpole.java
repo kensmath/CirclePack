@@ -72,7 +72,7 @@ public class NSpole {
 					for (int j=1;j<=N;j++)
 						pts[j]=SphericalMath.s_pt_to_plane(T[j]);
 
-					Mobius mob=sphNormalizer(pts,20,false);
+					Mobius mob=sphNormalizer(pts,20,false,false);
 					if (mob==null) {
 						CirclePack.cpb.errMsg("centroid with centers failed, revert to Orick's code");
 						return CPI_CP_PackingUtility.normalize(packData);
@@ -100,7 +100,7 @@ public class NSpole {
 				for (int j=1;j<=N;j++)
 					pts[j]=SphericalMath.s_pt_to_plane(T[j]);
 
-				Mob=sphNormalizer(pts,20,false);
+				Mob=sphNormalizer(pts,20,false,false);
 				if (Mob==null) {
 					CirclePack.cpb.errMsg("centroid normalization failed, revert to Orick's code");
 					return CPI_CP_PackingUtility.normalize(packData); 
@@ -144,7 +144,7 @@ public class NSpole {
 					pts[j]=SphericalMath.s_pt_to_plane(T[j]);
 
 				// 
-				Mob=sphNormalizer(pts,20,true);
+				Mob=sphNormalizer(pts,20,false,true);
 				if (Mob==null) {
 					CirclePack.cpb.errMsg("'sphNormalizer' seems to have failed");
 					return 0;
@@ -173,7 +173,7 @@ public class NSpole {
 					for (int j=1;j<=N;j++)
 						pts[j]=SphericalMath.s_pt_to_plane(T[j]);
 					
-					Mobius mob=sphNormalizer(pts,20,true);
+					Mobius mob=sphNormalizer(pts,20,false,true);
 					if (mob==null) {
 						System.out.println("centroid with centers failed");
 						return 0;
@@ -301,22 +301,30 @@ public class NSpole {
 	}
 
 	/**
-	 * Given vector of points in the plane, return the Mobius transformation that
+	 * Given vector of points in the plane, return a Mobius transformation that
 	 * puts the centroid of their stereo projections to the sphere close to the 
-	 * origin in 3-space. Return null on error. Note that the point at infinity
-	 * remains unmoved, i.e., returned Mobius is linear.
+	 * origin in 3-space. Return null on error. Note that the resulting Mobius
+	 * is linear (fixes infinity). If 'sPole' is true, then we include a point
+	 * located at infinity.
+	 * 		
+	 * TODO: eucl centers are not projections of spherical
+	 *   centers, so may improve by using points that better 
+	 *   approximate sph centers.
+	 *
 	 * @param pts Complex[], plane points
-	 * @param cycles int
+	 * @param cycles int, iterative cycles
+	 * @param sPole boolean: true->include a point at south pole (infinity)
 	 * @param debug boolean
 	 * @return Mobius, null on failure to converge
 	 */
-	public Mobius sphNormalizer(Complex []pts,int cycles,boolean debug) {
+	public static Mobius sphNormalizer(Complex[] pts,
+			int cycles,boolean sPole,boolean debug) {
 			
 		double N_TOLER=0.001;
 		double []p0 = new double[3];
 		double []accP = new double[3];
 		p0[0]=accP[0]=1.0;
-		double bestsq = SphericalMath.transCentroid(pts,p0).normSq();
+		double bestsq = SphericalMath.transCentroid(pts,p0,sPole).normSq();
 		if (debug)
 			System.out.println("starting 'bestsq' = "+String.format("%.6f",bestsq));
 
@@ -338,7 +346,7 @@ public class NSpole {
 				for (int i = 0; i < 3; i++) {
 					double holdp0 = p0[i];
 					p0[i] = p0[i] + delt;
-					double newnorm = SphericalMath.transCentroid(pts, p0).normSq();
+					double newnorm = SphericalMath.transCentroid(pts, p0,sPole).normSq();
 					p0[i] = holdp0; // reset for continued tries
 					if (newnorm < bestsq) { // improved
 						bestsq = newnorm;
@@ -346,7 +354,7 @@ public class NSpole {
 					} 
 					else {
 						p0[i] = p0[i] - delt;
-						newnorm = SphericalMath.transCentroid(pts, p0).normSq();
+						newnorm = SphericalMath.transCentroid(pts, p0,sPole).normSq();
 						p0[i] = holdp0;
 						if (newnorm < bestsq) {
 							bestsq = newnorm;

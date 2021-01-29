@@ -1,10 +1,11 @@
 package geometry;
-import math.Point3D;
-import packing.PackData;
-import util.UtilPacket;
 import allMains.CPBase;
 import baryStuff.BaryPoint;
 import complex.Complex;
+import math.Point3D;
+import packing.PackData;
+import util.RadIvdPacket;
+import util.UtilPacket;
 
 /** 
  * The unit (Riemann) sphere is x^2 + y^2 + z^2 = 1 in 3-space. 
@@ -19,8 +20,8 @@ import complex.Complex;
  * So for us, the origin is N and infinity is S, the SOUTH pole.
  * Under our stereographic projection, points (u,v) in the plane 
  * and (x,y,z) on the sphere are related by:
- *     u=x/(1+z); v=y/(1=z)
- *     z=(1-(u*u+v*v))/(1+(u*u=v*v)); x=u(1+z); y=v(1+z).
+ *     u=x/(1+z); v=y/(1+z)
+ *     z=(1-(u*u+v*v))/(1+(u*u+v*v)); x=u(1+z); y=v(1+z).
  *     
  * Inversive distance: if spherical circles c1 c2 are radius r1, r2, 
  * and their centers are spherical distance d apart, then 
@@ -50,17 +51,17 @@ public class SphericalMath{
   }
   
   /** 
-	 * Return sph length of edge with spherical radii r1, r2, and inv dist 'ovlap'.
-	 * For two circles, 'inv_dist'=(-cos(phi)+cos(r1)*cos(r2))/(sin(r1)*sin(r2)),
-	 * where phi is the angle between the unit vectors p1, p2 to the centers of the
-	 * two circles. That is, phi=dot(p1,p2).
+	 * Return sph length of edge with spherical radii r1, r2, and inv dist 'ivd'.
+	 * For two circles, 'ivd'=(-cos(phi)+cos(r1)*cos(r2))/(sin(r1)*sin(r2)),
+	 * where phi is the angle between the unit position vectors p1, p2 of the 
+	 * centers of the two circles. That is, cos(phi)=dot(p1,p2).
 	 * @param r1 double 
 	 * @param r2 double
-	 * @param inv_dict double
+	 * @param ivd double
 	 * @return double  
 	*/
-  public static double s_invdist_length(double r1,double r2,double inv_dist) {
-	  double cosphi=Math.cos(r1)*Math.cos(r2)-inv_dist*Math.sin(r1)*Math.sin(r2);
+  public static double s_ivd_length(double r1,double r2,double ivd) {
+	  double cosphi=Math.cos(r1)*Math.cos(r2)-ivd*Math.sin(r1)*Math.sin(r2);
 	  return Math.acos(cosphi);
   }
   
@@ -85,13 +86,60 @@ public class SphericalMath{
   } 
   
   /** 
-   * Return area of Spherical triangle formed by mutually tangent triples
-   * of circles of spherical radii r1, r2, and r3; from L'Huilier's Formula.
-   * (TODO: need formulae for triples with inversive distances.)
+   * Return area (spherical excess) of Spherical triangle with given 
+   * radii and inversive distances; from L'Huilier's Formula.
+   * @param r0 double
+   * @param r1 double
+   * @param r2 double
+   * @param ivd0 double
+   * @param ivd1 double
+   * @param ivd2 double
+   * @return double
    */
-  public static double s_area(double r1,double r2,double r3) {
-	  double s=(r1+r2+r3); // semi-perimeter
-	  double t=Math.sqrt(Math.tan(s/2.0)*Math.tan(r1/2.0)*Math.tan(r2/2.0)*Math.tan(r3/2.0));
+  public static double s_area(double r0,double r1,double r2,
+		  double ivd0,double ivd1,double ivd2) {
+	  double l0=s_ivd_length(r0,r1,ivd0);
+	  double l1=s_ivd_length(r1,r2,ivd1);
+	  double l2=s_ivd_length(r2,r0,ivd2);
+	  return s_face_area(l0,l1,l2);
+  }
+  
+  /**
+   * Return area (spherical excess) of Spherical triangle with given
+   * corners in (theta,phi) form; from L'Huilier's Formula.
+   * @param p1 Complex
+   * @param p2 Complex
+   * @param p3 Complex
+   * @return double
+   */
+  public static double s_tri_area(Complex p1,Complex p2,Complex p3) {
+	  double l1=s_dist(p1,p2);
+	  double l2=s_dist(p2,p3);
+	  double l3=s_dist(p3,p1);
+	  return s_face_area(l1,l2,l3);
+  }
+  
+  /**
+   * Return area (spherical excess) of Spherical triangle with given
+   * face 'RadIvdPacket' data.
+   * @param rip RadIvdPacket
+   * @return
+   */
+  public static double s_face_area(RadIvdPacket rip) {
+	  return s_area(rip.rad[0],rip.rad[1],rip.rad[2],rip.oivd[0],rip.oivd[1],rip.oivd[2]);
+  }
+  
+  /**
+   * Return area (spherical excess) of Spherical triangle with given
+   * edge lengths. From L'Huilier's Formula.
+   * @param l1 double
+   * @param l2 double
+   * @param l3 double
+   * @return double
+   */
+  public static double s_face_area(double l1,double l2,double l3) {
+	  double s=(l1+l2+l3)*0.5; // semi-perimeter
+	  double t=Math.sqrt(Math.tan(s*0.5)*Math.tan(0.5*(s-l1))*Math.tan(0.5*(s-l2))*Math.tan(0.5*(s-l3)));
 	  return 4.0*Math.atan(t);
   }
 	
@@ -889,15 +937,19 @@ public static double vec_norm(double X[]){
 	/**
 	 * Find centroid in 3-space of points in the plane stereo projected
 	 * to the sphere after application of a transformation z --> a*z+b+c*i.
+	 * If 'sPole' is true, then assume one more point located at infinity.
 	 * @param P Complex[], points in the plane (indexed from 1)
 	 * @param trans double[3], {a,b,c} coeff for transfomation
+	 * @param sPole boolean: true -> include point at south pole (infinity)
 	 * @return Point3D, centroid location
 	 */
-	public static Point3D transCentroid(Complex []P,double []trans) {
+	public static Point3D transCentroid(Complex []P,double []trans,boolean sPole) {
 		int N=P.length-1;
 		double X=0;
 		double Y=0;
 		double Z=0;
+		if (sPole)
+			Z=-1;
 		
 		for (int n=1;n<=N;n++) {
 			double u=trans[0]*P[n].x+trans[1];
@@ -910,6 +962,8 @@ public static double vec_norm(double X[]){
 		}
 
 		double dn=(double)N;
+		if (sPole)
+			dn+=1.0;
 		return new Point3D(X/dn,Y/dn,Z/dn);
 	}
 			

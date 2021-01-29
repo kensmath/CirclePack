@@ -3462,7 +3462,7 @@ public class FracBranching extends PackExtender {
 	
 	/**
 	 * Returns length of edge between circles of radius r1, r2, and 
-	 * invDist 'ivd'. Only makes sense for hyp and eucl packings.
+	 * invDist 'ivd'. Somewhat ambiguous in spherical geometry.
 	 * @param r1 double
 	 * @param r2 double
 	 * @param ivd double 
@@ -3470,12 +3470,12 @@ public class FracBranching extends PackExtender {
 	 */
     public double genInvDist(double r1,double r2,double ivd) {
 		if (packData.hes<0) // hyp, x-radii
-			return HyperbolicMath.acosh(HyperbolicMath.h_invdist_cosh(r1, r2, ivd));
+			return HyperbolicMath.h_ivd_length(r1, r2, ivd);
 		else if (packData.hes>0) { // sph; ambiguous
 			CirclePack.cpb.errMsg("Inversive distance on the sphere is ambiguous");
 			return -1.0;
 		}
-		return EuclMath.e_invdist_length(r1, r2, ivd); 
+		return EuclMath.e_ivd_length(r1, r2, ivd); 
 	}
     
 	public double holonomyBorder(FaceLink facelist) {

@@ -31,12 +31,9 @@ public class DispFlags {
 	public Integer depth;		// depth for subdivision tilings
 	public Integer fillOpacity; // may be null --- set from CPScreen for 'fill' operations  
 	
-	// Constructor
-	public DispFlags(String str) {
-		if (str!=null)
-			dispStr = new String(str);
-		else 
-			dispStr=new String("");
+	// Constructor(s)
+	public DispFlags() {
+		dispStr=new String("");
 		labelStr = null;
 		draw = true; // default to true
 		fill = false;
@@ -47,6 +44,12 @@ public class DispFlags {
 		thickness = Integer.valueOf(0);
 		depth = 0;
 		fillOpacity=Integer.valueOf(CPBase.DEFAULT_FILL_OPACITY);
+	}
+	
+	public DispFlags(String str) {
+		this();
+		if (str!=null)
+			dispStr = new String(str);
 		parseDispStr(str);
 	}
 	

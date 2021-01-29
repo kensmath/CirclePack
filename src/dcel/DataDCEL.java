@@ -3,11 +3,9 @@ package dcel;
 import java.util.Iterator;
 
 import deBugging.DCELdebug;
-import exceptions.CombException;
 import komplex.EdgeSimple;
 import packing.PackData;
 import packing.RData;
-import util.TriAspect;
 
 /**
  * Static routines related to the "data" for DCEL's. 
@@ -60,8 +58,8 @@ public class DataDCEL {
 			int[] flower=vtx.getFlower();
 			int num=flower.length-1;
 			p.setBdryFlag(v,0);
-			if (vtx instanceof RedVertex)
-				p.setBdryFlag(v,((RedVertex)vtx).bdryFlag);
+			if (vtx.redFlag)
+				p.setBdryFlag(v,vtx.bdryFlag);
 			p.kData[v].flower=flower;
 			p.kData[v].num=num;
 			p.rData[v]=new RData(); // duplicated data below

@@ -92,7 +92,6 @@ public class PackDCEL {
 	
 	public VertexMap newOld; // NEEDED FOR CIRCLEPACK
 	public RedHEdge redChain; // doubly-linked, cclw edges about a fundamental region
-	public ArrayList<RedHEdge> bdryStarts; // red edges at start of a free (unpasted) side
 	public ArrayList<RedHEdge> sideStarts; // red edges starting paired sides, will have 'mobIndx'
 	public HalfEdge alpha; // origin normally placed at origin
 	public HalfEdge gamma; // origin normally on positive y-axis, default 'alpha.twin'
@@ -157,6 +156,7 @@ public class PackDCEL {
 	 * @return int num
 	 */
 	public int fillIndices(int v) {
+// System.out.println(" fillIndices:"+v);		
 		if (p.vData==null || p.vData[v]==null)
 			throw new CombException("'vData' is not allocated");
 		Vertex vert=vertices[v];
@@ -459,7 +459,7 @@ public class PackDCEL {
 		double r1=getVertRadius(edge.next);
 		setCent4Edge(edge,new Complex(0.0));
 		double invd=getInvDist(edge);
-		double dist=CommonMath.inv_dist_edge_length(r0,r1,invd,p.hes);
+		double dist=CommonMath.ivd_edge_length(r0,r1,invd,p.hes);
 		if (p.hes>0) // sph
 			setCent4Edge(edge.next,new Complex(0.0,dist));
 		else if (p.hes<0){ // hyp
@@ -1384,7 +1384,7 @@ public class PackDCEL {
 		Vertex vert=edge.origin;
 		
 		// is a normal 'Vertex'?
-		if (!(vert instanceof RedVertex)) {
+		if (!vert.redFlag) {
 			int v=vert.vertIndx;
 			return new CircleSimple(p.vData[v].center,p.vData[v].rad);
 		}
@@ -1413,7 +1413,7 @@ public class PackDCEL {
 		Vertex vert=edge.origin;
 		
 		// is a normal 'Vertex'? set in 'PackData'
-		if (!(vert instanceof RedVertex)) {
+		if (!vert.redFlag) {
 			return p.vData[vert.vertIndx].rad;
 		}
 		
@@ -1442,7 +1442,7 @@ public class PackDCEL {
 		Vertex vert=edge.origin;
 		
 		// is a normal 'Vertex'? set in 'PackData.vData'
-		if (!(vert instanceof RedVertex)) {
+		if (!vert.redFlag) {
 			return new Complex(p.vData[vert.vertIndx].center);
 		}
 		
@@ -1493,7 +1493,7 @@ public class PackDCEL {
 		p.vData[vert.vertIndx].center=new Complex(z);
 
 		// a normal 'Vertex'? 
-		if (!(vert instanceof RedVertex)) {
+		if (!vert.redFlag) {
 			return;
 		}
 
@@ -1541,7 +1541,7 @@ public class PackDCEL {
 		p.vData[vert.vertIndx].rad=rad;
 		
 		// a normal 'Vertex'?
-		if (!(vert instanceof RedVertex)) {
+		if (!vert.redFlag) {
 			return;
 		}
 		
@@ -2103,7 +2103,7 @@ public class PackDCEL {
 				return alph; // nothing to do: Note: may be bdry vert
 		}
 		else {
-			if (nlink.containsV(av)==0)
+			if (nlink.containsV(av)<0)
 				return setAlpha(av);
 		}
 		

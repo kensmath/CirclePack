@@ -7,6 +7,7 @@ import complex.Complex;
 import dcel.HalfEdge;
 import exceptions.DataException;
 import geometry.CircleSimple;
+import geometry.CommonMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import komplex.EdgeSimple;
@@ -162,12 +163,12 @@ public class QualMeasures {
 	}
 	  
 	/**
-	 * Return intended length of edge based on radii and overlaps or inversive
-	 * distances. Return -1 on error. 
+	 * Return intended length of edge based on radii and inversive
+	 * distances. Return -1 on error or infinite hyp length 
 	 * @param p PackData 
 	 * @param v int;
 	 * @param w int;
-	 * @return double, -1 in case of infinite hyp radius
+	 * @return double, -1 in case of infinite hyp radius or error
 	 */
 	public static double desired_length(PackData p, int v, int w) {
 		if (p.packDCEL==null) {
@@ -175,28 +176,13 @@ public class QualMeasures {
 				return -1;
 		}
 		else {
-			if (p.packDCEL.findHalfEdge(new EdgeSimple(v,w))!=null)
+			if (p.packDCEL.findHalfEdge(new EdgeSimple(v,w))==null)
 				return -1;
 		}
-		// TODO: are these formulae right?
-		if (p.hes > 0) { 
-			double rv=p.getRadius(v);
-			double rw=p.getRadius(w);
-			return Math.acos(Math.cos(rv)*Math.cos(rw)+Math.sin(rv)*Math.sin(rw)*p.getInvDist(v,w));
-		} 
-		
-		else if (p.hes == 0) { // eucl
-			double rv=p.getRadius(v);
-			double rw=p.getRadius(w);
-			return Math.sqrt(rv*rv+rw*rw+2.0*rv*rw*p.getInvDist(v,w));
-		} 
-		
-		else { // hyp
-			if (p.getRadius(v) <= 0 || p.getRadius(w) <= 0)
-				return -1;
-			return (HyperbolicMath.acosh(HyperbolicMath.h_invdist_cosh(p.getRadius(v),
-						p.getRadius(w), p.getInvDist(v,w))));
-		}
+		double rv=p.getRadius(v);
+		double rw=p.getRadius(w);
+		double ivd=p.getInvDist(v,w);
+		return CommonMath.ivd_edge_length(rv, rw, ivd, p.hes);
 	} 
 
 	/**

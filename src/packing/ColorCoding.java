@@ -6,6 +6,7 @@ import exceptions.DataException;
 import geometry.HyperbolicMath;
 import math.Point3D;
 import util.ColorUtil;
+import util.RadIvdPacket;
 
 /**
  * Static methods for various colorizing actions --- wanted to move these
@@ -25,9 +26,10 @@ public class ColorCoding {
 
 	    int mid=(int)(ColorUtil.color_ramp_size/2);
 	    double t=0.0;
+	    double b=0.0;
 	    // ??? I don't recall the reason for this call, p need not be hyperbolic
-	    double b=HyperbolicMath.h_area(p.getRadius(p.faces[1].vert[0]),
-	    		p.getRadius(p.faces[1].vert[1]),p.getRadius(p.faces[1].vert[2]));
+//	    double b=HyperbolicMath.h_area(p.getRadius(p.faces[1].vert[0]),
+//	    		p.getRadius(p.faces[1].vert[1]),p.getRadius(p.faces[1].vert[2]));
 	    double []areas=new double[p.faceCount+1];
 	    for (int i=1;i<=p.faceCount;i++) {
 	  	  	areas[i]=p.faceArea(i);
@@ -98,14 +100,12 @@ public class ColorCoding {
 	    node=(p.faceCount>q.faceCount) ? q.faceCount : p.faceCount;
 	    double []areas_p=new double[node+1];
 	    double []areas_q=new double[node+1];
-	    for (int v=1;v<=node;v++) {
-	        areas_p[v]=HyperbolicMath.h_area(p.getRadius(p.faces[v].vert[0]),
-	  			p.getRadius(p.faces[v].vert[1]),
-	  			p.getRadius(p.faces[v].vert[2]));
-	        areas_q[v]=HyperbolicMath.h_area(q.getRadius(q.faces[v].vert[0]),
-	  			q.getRadius(q.faces[v].vert[1]),
-	  			q.getRadius(q.faces[v].vert[2]));
-	        ratio=areas_q[v]/areas_p[v];
+	    for (int f=1;f<=node;f++) {
+	    	RadIvdPacket rip=p.getRIpacket(f);
+	        areas_p[f]=HyperbolicMath.h_area(rip);
+	        rip=q.getRIpacket(f);
+	        areas_q[f]=HyperbolicMath.h_area(rip);
+	        ratio=areas_q[f]/areas_p[f];
 	        if (ratio>b) b=ratio;
 	        if ((1.0/ratio)>b) b=1.0/ratio;
 	    }

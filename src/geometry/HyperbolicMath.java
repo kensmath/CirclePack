@@ -10,6 +10,7 @@ import komplex.RedList;
 import math.Mobius;
 import math.Point3D;
 import packing.PackData;
+import util.RadIvdPacket;
 
 /**
  * Static methods for mathematical operations in hyperbolic geometry.
@@ -398,9 +399,9 @@ public class HyperbolicMath{
 		
 		// all radii finite? find edge lengths, use cosine law
 		if (x1>0 && x2>0 && x3>0) {
-			double ch=h_invdist_cosh(x2,x3,t1); // cosh's of edge lengths
-			double ch3=h_invdist_cosh(x1,x3,t2);
-			double ch2=h_invdist_cosh(x1,x2,t3);
+			double ch=h_ivd_cosh(x2,x3,t1); // cosh's of edge lengths
+			double ch3=h_ivd_cosh(x1,x3,t2);
+			double ch2=h_ivd_cosh(x1,x2,t3);
 			// use law of cosines: recall sinh^2=cosh^2-1
 			return (ch3*ch2 - ch) / Math.sqrt((ch3*ch3-1.0)*(ch2*ch2-1.0));
 		}
@@ -450,7 +451,7 @@ public class HyperbolicMath{
 			else {
 				// E=sqrt(e1^2+e2^2+2*e1*e2*inv)+e2 and H=h_dist+h2
 				// E=(1-exp(-H))/(1+exp(-H))
-				double ch2=h_invdist_cosh(x1,x2,ivd);
+				double ch2=h_ivd_cosh(x1,x2,ivd);
 				double lch2=ch2+Math.sqrt(ch2*ch2-1.0);
 				double E=(lch2-s2)/(lch2+s2);
 				e2=(E*E-e1*e1)/(2.0*(e1*ivd+E));
@@ -479,7 +480,7 @@ public class HyperbolicMath{
 			else {
 				// E=sqrt(e1^2+e2^2+2*e1*e2*inv)+e2 and H=h_dist+h2
 				// E=(1-exp(-H))/(1+exp(-H))
-				double ch3=h_invdist_cosh(x1,x3,ivd);
+				double ch3=h_ivd_cosh(x1,x3,ivd);
 				double lch3=ch3+Math.sqrt(ch3*ch3-1.0);
 				double E=(lch3-s2)/(lch3+s2);
 				e3=(E*E-e1*e1)/(2.0*(e1*ivd+E));
@@ -609,17 +610,19 @@ used to be passed in here as an argument).
   }
   
   /** 
-   * Compute area of the hyperbolic triangle formed by a mutually tangent triple
-   * of circles with x-radii given by x1, x2, x3. (TODO: need formulae for
-   * triples with inversive distances.)
-   * @param x1 double
-   * @param x2 double
-   * @param x3 double
+   * Compute area of the hyperbolic triangle formed by circles
+   * with given x-radii and inversive distances (for opposite size).
+   * @param riP RadIvdPacket
    * @return double
    */
-  public static double h_area(double x1,double x2,double x3) {
-	  return (Math.PI-Math.cos(h_comp_x_cos(x1,x2,x3))-Math.cos(h_comp_x_cos(x2,x1,x3))
-			  -Math.cos(h_comp_x_cos(x3,x1,x2)) );
+  public static double h_area(RadIvdPacket riP) {
+	  double[] ang=new double[3];
+	  double[] cosang=new double[3];
+	  for (int j=0;j<3;j++)
+		  cosang[j]=h_comp_cos(riP.rad[j],riP.rad[(j+1)%3],riP.rad[(j+2)%3],
+				  riP.oivd[j],riP.oivd[(j+1)%3],riP.oivd[(j+2)%3]);
+	  return (Math.PI-Math.acos(cosang[0])-
+			  Math.acos(cosang[1])-Math.acos(cosang[2]));
   }
   
   /**
@@ -839,7 +842,7 @@ public static CircleSimple h_compcenter(Complex z1, Complex z2,
     	double hororad2=(1.0-erad*erad)/(2.0*(1+erad*ivd1));  // o1 = inv dist, circles 2 and 3
     	
     	// Assume circle 1 tangent at z=1, compute tangency point of circle 2.
-    	double dist12=EuclMath.e_invdist_length(hororad1,hororad2,ivd3);
+    	double dist12=EuclMath.e_ivd_length(hororad1,hororad2,ivd3);
     	double d1=1.0-hororad1;
     	double d2=1.0-hororad2;
     	double theta=Math.acos((d1*d1+d2*d2-dist12*dist12)/(2.0*d1*d2));
@@ -939,10 +942,25 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
    * @param ivd double
    * @return double, cosh(length), -1 if infinite
   */
-  public static double h_invdist_cosh(double x1,double x2,double ivd) {
+  public static double h_ivd_cosh(double x1,double x2,double ivd) {
       if (x1<0 || x2<0) 
     	  return -1.0;
       return ((2.0-x1)*(2.0-x2)+x1*x2*ivd)/(4.0*Math.sqrt((1-x1)*(1-x2)));
+  }
+
+  /**
+   * Return length of edge between circles with x-radii x1, x2, and
+   * inversive distance 'ivd'. Return -1 if length is infinite.
+   * @param x1
+   * @param x2
+   * @param ivd
+   * @return double, -1 if length is infinite
+   */
+  public static double h_ivd_length(double x1,double x2,double ivd) {
+	  double csh=h_ivd_cosh(x1,x2,ivd);
+	  if (csh<0)
+		  return -1;
+	  return HyperbolicMath.acosh(csh);
   }
   
   /**

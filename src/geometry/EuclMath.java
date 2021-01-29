@@ -11,7 +11,7 @@ import komplex.RedEdge;
 import komplex.RedList;
 import math.Point3D;
 import packing.PackData;
-import util.UtilPacket;
+import util.RadIvdPacket;
 /**
  * Static methods for mathematical operations in euclidean geometry.
  */
@@ -121,6 +121,16 @@ public class EuclMath{
 		return (l2*l2+l3*l3-l23*l23)/denom;
 	}
 	
+	/**
+	 * Given face data in 'RadIvdPacket', return euclidean area
+	 * @param rip RadIvdPacket
+	 * @return double
+	 */
+	public static double eArea(RadIvdPacket rip) {
+		return eArea(rip.rad[0],rip.rad[1],rip.rad[1],
+				rip.oivd[0],rip.oivd[1],rip.oivd[1]);
+	}
+	
 	 /**
 	 * Given three eucl radii and cos's of opp overlap angles, compute
 	 * face area using Heron's Formula. 'tj' is overlap of edge opposite
@@ -135,9 +145,9 @@ public class EuclMath{
 	 */
 	public static double eArea(double r0,double r1,double r2,
 			double t0,double t1,double t2) {
-		double a=e_invdist_length(r0,r1,t2);
-		double b=e_invdist_length(r1,r2,t0);
-		double c=e_invdist_length(r2,r0,t1);
+		double a=e_ivd_length(r0,r1,t2);
+		double b=e_ivd_length(r1,r2,t0);
+		double c=e_ivd_length(r2,r0,t1);
 		return Math.sqrt((a+b+c)*(a+b-c)*(a+c-b)*(b+c-a))/4.0;
 	}
 	
@@ -684,7 +694,7 @@ public class EuclMath{
 	 * @param ivd double
 	 * @return double
 	*/
-	public static double e_invdist_length(double r1,double r2,double ivd) {
+	public static double e_ivd_length(double r1,double r2,double ivd) {
 		return (Math.sqrt(r1*r1+r2*r2+2.0*r1*r2*ivd));
 	}
 	

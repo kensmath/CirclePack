@@ -792,6 +792,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	
 	/**
 	 * Create Mobius representing rigid rotation of the sphere (in SU(2)).
+	 * Rigid motions mobius has form [a,b,-conj(b),conj(a)].
 	 * Described by ccw angle as viewed toward origin from direction of 
 	 * 'axis', given in (theta,phi) form. 
 	 * @param ang double, theta=ang/2 is the half-angle
@@ -806,6 +807,34 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		Complex z=new Complex(c,sphpt[0]*s);
 		Complex w=new Complex(sphpt[1]*s,sphpt[2]*s);
 		return new Mobius(z,w,w.conj().times(-1.0),z.conj());
+	}
+	
+	/**
+	 * Return a rigid motion of the sphere that maps 'alpha' to
+	 * the origin and 'gamma' (if not null) to the positive imaginary axis.
+	 * @param alpha Complex
+	 * @param gamma Complex, may be null
+	 * @return new Mobius
+	 */
+	public static Mobius rigidAlphaGamma(Complex alpha,Complex gamma) {
+		Mobius mob1=null;
+		if (alpha.abs()>100000) // essentially infinite: [0 1;1 0]
+			mob1=new Mobius(new Complex(0.0),new Complex(1.0),
+					new Complex(1.0),new Complex(0.0));
+		else 
+			mob1=new Mobius(new Complex(1.0),alpha.times(-1.0),alpha.conj(),new Complex(1.0));
+		
+		// mob1 should map alpha to the origin
+		if (gamma==null)
+			return mob1;
+		
+		// else apply subsequent rotation
+		Complex newGamma=mob1.apply(gamma);
+		Complex lambda=new Complex(0.0,Math.PI/2.0-newGamma.arg()).exp(); 
+		mob1.a=mob1.a.times(lambda);
+		mob1.b=mob1.b.times(lambda);
+		
+		return mob1;
 	}
 
 	/**

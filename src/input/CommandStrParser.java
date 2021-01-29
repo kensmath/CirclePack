@@ -36,6 +36,7 @@ import cpContributed.FracBranching;
 import dcel.CombDCEL;
 import dcel.DataDCEL;
 import dcel.PackDCEL;
+import dcel.RedHEdge;
 import deBugging.DCELdebug;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
@@ -5841,14 +5842,27 @@ public class CommandStrParser {
 				}
 				
 				else if (str.contains("reorie")) {
-					int qnum= StringUtil.qFlagParse(items.remove(0));
+					
+					// reorient packDCEL
+					CombDCEL.reorient(packData.packDCEL);
+					
+					// reflect all centers across imaginary axis
+					if (packData.hes<=0) {
+						for (int v=1;v<=packData.nodeCount;v++) 
+							packData.vData[v].center=packData.vData[v].center.times(-1.0).conj();
+					}
+					else {
+						for (int v=1;v<=packData.nodeCount;v++) 
+							packData.vData[v].center.x=packData.vData[v].center.x*(-1.0);
+					}
+					RedHEdge rtrace=packData.packDCEL.redChain;
+					do {
+						if (packData.hes<=0)
+							rtrace.setCenter(rtrace.getCenter().times(-1.0).conj());
+						else
+							rtrace.setCenter(rtrace.getCenter().times(-1.0));
+					} while (rtrace!=packData.packDCEL.redChain);
 
-					int[][] newBouquet=CombDCEL.reverseOrientation(packData.getBouquet());
-					PackDCEL pdc=CombDCEL.getRawDCEL(newBouquet);
-					PackDCEL pdcel=CombDCEL.extractDCEL(pdc,null,pdc.alpha);
-					PackData p=DataDCEL.dcel_to_packing(pdcel);
-					CPBase.pack[qnum].swapPackData(p,false);
-					pdcel.D_CompCenters();
 					return 1;
 				}
 				

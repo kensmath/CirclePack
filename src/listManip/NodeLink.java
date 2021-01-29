@@ -1486,6 +1486,8 @@ public class NodeLink extends LinkedList<Integer> {
 	  * @return new NodeLink
 	  */
 	 public static NodeLink incident(HalfLink hlink) {
+		 if (hlink==null)
+			 return null;
 		 NodeLink vlink=new NodeLink();
 		 Iterator<HalfEdge> his=hlink.iterator();
 		 while (his.hasNext()) {

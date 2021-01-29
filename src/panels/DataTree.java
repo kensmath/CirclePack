@@ -86,45 +86,82 @@ public class DataTree extends JPanel {
 		if (!p.status || p.nodeCount==0) return null;
 
 		Vector<String> v1 = new Vector<String>(4);
-		v1.add("Topology: " + setTopologyStr(p));
-		v1.add("Node/Face Count = " + p.nodeCount+" / "+p.faceCount);
-		v1.add("Genus/Euler = "+p.genus+" / "+p.euler);
-		v1.add("Alpha/Gamma Vertices = "+p.alpha+" / "+p.gamma);
 		double []curvErr=p.packCurvError();
-		v1.add("Total/Average angle error = "+
-				String.format("%.6e",curvErr[0])+" / "+
-				String.format("%.6e",curvErr[1]));
-		sub.put("Basic", v1);
+		if (p.packDCEL!=null) {
+			v1.add("Combinatorics: DCEL structure");
+			v1.add("Topology: " + setTopologyStr(p));
+			v1.add("Node/Face Count = " + p.nodeCount+" / "+p.faceCount);
+			v1.add("Genus/Euler = "+p.genus+" / "+p.euler);
+			v1.add("Alpha/Gamma vertices = "+p.packDCEL.alpha.origin.vertIndx+
+					" / "+p.packDCEL.gamma.origin.vertIndx);
+			v1.add("Total/Average angle error = "+
+					String.format("%.6e",curvErr[0])+" / "+
+					String.format("%.6e",curvErr[1]));
+			sub.put("Basic (with DCEL structure):", v1);
+		}
+		else {
+			v1.add("Topology: " + setTopologyStr(p));
+			v1.add("Node/Face Count = " + p.nodeCount+" / "+p.faceCount);
+			v1.add("Genus/Euler = "+p.genus+" / "+p.euler);
+			v1.add("Alpha/Gamma Vertices = "+p.alpha+" / "+p.gamma);
+			v1.add("Total/Average angle error = "+
+					String.format("%.6e",curvErr[0])+" / "+
+					String.format("%.6e",curvErr[1]));
+			sub.put("Basic", v1);
+		}
 
 		StringBuilder strbuf=null;
 		Vector<String> v2 = new Vector<String>(4);
 		// TODO: problem here that I haven't figured out.
 		try {
-			v2.add("Area = " + String.format("%.6e",p.complexArea()));
+			v2.add("Area = " + String.format("%.6e",p.carrierArea()));
 		} catch (Exception ex) {}
-
-		v2.add("First Face/BdryFace = " + p.firstFace+" / "+p.firstRedFace);
-		v2.add("Bdry Component Count = " + p.bdryCompCount);
-		if (p.bdryCompCount>0) {
-			strbuf=new StringBuilder(p.bdryStarts[1]);
-			for (int j=2;j<p.bdryCompCount;j++)
-				strbuf.append(" "+p.bdryStarts[j]);
-			v2.add("Bdry Start verts = " +strbuf.toString());
+		
+		if (p.packDCEL!=null) {
+			v2.add("First Face/BdryFace = " + 
+					p.packDCEL.faceOrder.get(0).w+" / "+
+					p.packDCEL.redChain.myEdge.face.faceIndx);
+			int bcount=p.packDCEL.idealFaceCount;
+			v2.add("Bdry Component Count = " + bcount);
+			if (bcount>0) {
+				strbuf=new StringBuilder(p.packDCEL.idealFaces[1].edge.origin.vertIndx);
+				for (int j=2;j<bcount;j++)
+					strbuf.append(" "+p.packDCEL.idealFaces[j].edge.origin.vertIndx);
+				v2.add("Bdry Start verts = " +strbuf.toString());
+			}
+			sub.put("Technical", v2);
 		}
-		sub.put("Technical", v2);
+		else {
+			v2.add("First Face/BdryFace = " + p.firstFace+" / "+p.firstRedFace);
+			v2.add("Bdry Component Count = " + p.bdryCompCount);
+			if (p.bdryCompCount>0) {
+				strbuf=new StringBuilder(p.bdryStarts[1]);
+				for (int j=2;j<p.bdryCompCount;j++)
+					strbuf.append(" "+p.bdryStarts[j]);
+				v2.add("Bdry Start verts = " +strbuf.toString());
+			}
+			sub.put("Technical", v2);
+		}
 
 		Vector<String> v3 = new Vector<String>(4);
 
 		// lists
 		strbuf=new StringBuilder("vlist/elist/flist = ");
 		int cnt=0;
-		if (p.vlist!=null) cnt=p.vlist.size();
+		if (p.vlist!=null) 
+			cnt=p.vlist.size();
 		strbuf.append(cnt);
+		
 		cnt=0;
-		if (p.elist!=null) cnt=p.elist.size();
+		if (p.elist!=null) 
+			cnt=p.elist.size();
+		if (p.packDCEL!=null && p.hlist!=null) // for future use
+			cnt=p.hlist.size();
 		strbuf.append(" / "+cnt);
+		
 		cnt=0;
-		if (p.flist!=null) cnt=p.flist.size();
+		if (p.flist!=null) 
+			cnt=p.flist.size();
 		strbuf.append(" / "+cnt);
 		v3.add("List Counts: "+strbuf.toString());
 

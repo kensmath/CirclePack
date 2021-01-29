@@ -10,8 +10,10 @@ import dcel.HalfEdge;
 import exceptions.PackingException;
 import geometry.CircleSimple;
 import geometry.EuclMath;
+import geometry.NSpole;
 import geometry.SphericalMath;
 import komplex.EdgeSimple;
+import math.Mobius;
 import packing.PackData;
 import util.TriData;
 
@@ -65,12 +67,17 @@ public class d_SphPacker extends RePacker {
 	}
 
 	/**
-	 * Work load 'TriData' with euclidean data    
-	 * @param cycles int, repack cycles
+	 * Load 'TriData' with euclidean data after choosing
+	 * a face to remove    
 	 * @return int, cycle count.
 	 */
 	public int load() {
-		// use last face in 'faceOrder' (so rest of it remains valid)
+		
+		// find face to remove: want one in 'faceOrder', else the
+		//    last face in 'faceOrder' (so rest of it remains valid).
+//		int[] fhits=new int[pdcel.faceCount+1];
+//		Iterator<Integer> fis=pdcel.faceO
+		
 		int lastface=pdcel.faceOrder.getLast().w;
 		Face outface=pdcel.faces[lastface];
 		int[] bdryVerts=outface.getVerts();
@@ -82,7 +89,7 @@ public class d_SphPacker extends RePacker {
 		}
 		for (int j=1;j<=pdcel.faceCount;j++) {
 			TriData td=pdcel.triData[j];
-			td.hes=1; // treat as euclidean
+			td.hes=0; // treat as euclidean
 			for (int k=0;k<3;k++) 
 				td.radii[k]=.05; // TODO: might choose better initialization
 		}
@@ -102,38 +109,44 @@ public class d_SphPacker extends RePacker {
 	}
 	
 	public void reapResults() {
+		boolean debug=false;
 		Complex[] z=new Complex[pdcel.vertCount+1];
 		double[] radii=new double[pdcel.vertCount+1];
 		
-		// gather the radii (which are held only in 'triDAta'
+		// gather radii (held only in 'triDAta')
 		for (int v=1;v<=pdcel.vertCount;v++) {
 			radii[v]=pdcel.triData[p.vData[v].findices[0]].radii[p.vData[v].myIndices[0]];
 		}
 		
-		Iterator<EdgeSimple> cis=pdcel.computeOrder.iterator();
 		// find and lay out first face
+		Iterator<EdgeSimple> cis=pdcel.computeOrder.iterator();
 		EdgeSimple edge=cis.next();
 		if (edge.v!=0) {
 			throw new PackingException("In sph packing; not root in 'computeOrder'");
 		}
 		Face firstface=pdcel.faces[edge.w];
 		HalfEdge he=firstface.edge;
-		int v0=he.origin.vertIndx;
+		int alph=he.origin.vertIndx;
 		int v1=he.next.origin.vertIndx;
 		int v2=he.next.next.origin.vertIndx;
-		z[v0]=new Complex(0.0);
-		double dist=EuclMath.e_invdist_length(radii[v0], radii[v1], he.getInvDist());
+		z[alph]=new Complex(0.0);
+		double dist=EuclMath.e_ivd_length(radii[alph], radii[v1], he.getInvDist());
 		z[v1]=new Complex(dist,0.0);
-		CircleSimple cS=EuclMath.e_compcenter(z[v0],z[v1],
-				radii[v0],radii[v1],radii[v2],
+		CircleSimple cS=EuclMath.e_compcenter(z[alph],z[v1],
+				radii[alph],radii[v1],radii[v2],
 				he.getInvDist(),he.next.getInvDist(),he.next.next.getInvDist());
 		z[v2]=cS.center;
 
-		// lay out the rest of the circles
+		// debug=true;
+		if (debug) { 
+			deBugging.DCELdebug.drawEuclCircles(CirclePack.cpb.pack[2], z, radii);
+		}
+
+		// lay out the rest of the eucl circles
 		while(cis.hasNext()) {
 			int w=cis.next().w;
 			he=pdcel.faces[w].edge;
-			v0=he.origin.vertIndx;
+			int v0=he.origin.vertIndx;
 			v1=he.next.origin.vertIndx;
 			v2=he.next.next.origin.vertIndx;
 			cS=EuclMath.e_compcenter(z[v0],z[v1],
@@ -142,9 +155,45 @@ public class d_SphPacker extends RePacker {
 			z[v2]=cS.center;
 		}
 		
+		// normalization: reaching here, the euclidean packing and
+		//    layout should be done. Use iterative routine to find 
+		//    Mobius putting centroid of spherical centers near the 
+		//    origin in 3D. 
+		
+		Complex[] pts=new Complex[p.nodeCount+1];
+		for (int v=1;v<=p.nodeCount;v++) 
+			pts[v]=new Complex(p.vData[v].center);
+
+		// compute and apply the mobius
+		Mobius mob=NSpole.sphNormalizer(pts,20,false,false);
+		if (mob==null) 
+			throw new PackingException("sph decel case: failed to get mobius");
+
+		// this is still euclidean (since mobius is linear)
+		double factor=mob.a.divide(mob.d).abs();
+		for (int v=1;v<=p.nodeCount;v++) {
+			radii[v] *=factor;
+			z[v]=mob.apply(z[v]);
+		}
+		
+		// debug=true;
+		if (debug) { 
+			deBugging.DCELdebug.drawEuclCircles(CirclePack.cpb.pack[2], z, radii);
+		}
+		
+		// find normalizing mobius
+		int gam=p.packDCEL.alpha.next.origin.vertIndx;
+		if (p.packDCEL.gamma!=null)
+			gam=p.packDCEL.gamma.origin.vertIndx;
+		Mobius rotMob=Mobius.rigidAlphaGamma(z[alph],z[gam]);
+
 		// convert to spherical and save
+		boolean oriented=true;
 		for (int v=1;v<=pdcel.vertCount;v++) {
+			// convert to sphere
 			cS=SphericalMath.e_to_s_data(z[v],radii[v]);
+			// apply normalizing
+		    Mobius.mobius_of_circle(rotMob,1,cS.center,cS.rad,cS,oriented);
 			p.vData[v].center=cS.center;
 			p.vData[v].rad=cS.rad;
 			p.vData[v].curv=MPI2;
