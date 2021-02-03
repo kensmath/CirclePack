@@ -280,6 +280,9 @@ public class PackData{
     	int origNodeCount=nodeCount;
 		
     	// set some counts
+    	if (pdcel.vertCount>nodeCount)
+    		alloc_pack_space(pdcel.vertCount,true);
+    	
 		nodeCount=pdcel.vertCount;
 		faceCount=pdcel.faceCount;
 		bdryCompCount=pdcel.idealFaceCount;
@@ -311,10 +314,6 @@ public class PackData{
     				pdcel.setVertRadii(v,rData[oldv].rad);
     				pdcel.setVertCenter(v,new Complex(rData[oldv].center));
     				vData[v].color=ColorUtil.cloneMe(kData[oldv].color);
-    				// save interior aims, but reset if this is new bdry
-    				vData[v].aim=rData[oldv].aim; 
-    				if (pdcel.vertices[v].isBdry() && kData[oldv].bdryFlag==0)
-    					vData[v].aim=-0.1;
     			}
     			else {
     				if (vert.isBdry())
@@ -326,14 +325,19 @@ public class PackData{
 
         	// set up the arrays of indices
     		for (int v=1;v<=nodeCount;v++)
-    			pdcel.fillIndices(v);
+    			pdcel.setVDataIndices(v);
+    		    		
         	fillcurves(); // compute all curvatures
+        	set_aim_default(); // too difficult to figure out old aims
+
         	if (pdcel.gamma==null)
         		pdcel.gamma=pdcel.alpha.next;
     		return nodeCount;
     	}
 
-    	// else, hold old data
+    	// Otherwise, we may have old data to use:
+    	//   Sometimes this is from 'rData', but in cases like
+    	//   "adjoin", may have built 'vData' to hold combined data.
     	VData[] oldVData=new VData[origNodeCount+1];
 		for (int ov=1;ov<=origNodeCount;ov++) 
 			oldVData[ov]=vData[ov];
@@ -346,7 +350,6 @@ public class PackData{
 		// note: 'nodeCount' may be larger than 'origNodeCount'
 		for (int v=1;v<=nodeCount;v++) {
 			Vertex vert=pdcel.vertices[v];
-			vData[v].setBdryFlag(vert.bdryFlag);
 			HalfEdge he=vert.halfedge;
    			int oldv=v;
    			int w=0;
@@ -356,9 +359,9 @@ public class PackData{
    			if (oldv<=origNodeCount) {
    				
    				// copy 'aim' when appropriate
-   				vData[v].aim=oldVData[oldv].aim;
-   				if (vert.isBdry() && oldVData[oldv].getBdryFlag()==0) 
-  					vData[v].aim=-1.0;
+//   				vData[v].aim=oldVData[oldv].aim;
+//   				if (vert.isBdry() && oldVData[oldv].getBdryFlag()==0) 
+//  					vData[v].aim=-1.0;
    				
    				Complex z=oldVData[oldv].center;
    				double rad=oldVData[oldv].rad;
@@ -376,15 +379,12 @@ public class PackData{
    				}
    				pdcel.setVertData(he, new CircleSimple(z,rad));
    			}
-   			// for new vertices
-   			else {
-   				if (vert.isBdry())
-   					vData[v].aim=-0.1;
-   				else
-   					vData[v].aim=2.0*Math.PI;
-   			}
-			pdcel.fillIndices(v);
+			pdcel.setVDataIndices(v);
     	}
+		
+    	fillcurves(); // compute all curvatures
+    	set_aim_default(); // too difficult to figure out old aims
+
     	fillcurves();
     	if (pdcel.gamma==null)
     		pdcel.gamma=pdcel.alpha.next;
@@ -2119,15 +2119,20 @@ public class PackData{
         sizeLimit=size; // to keep track of space already allocated
         KData []newK = new KData[sizeLimit+1];
         RData []newR = new RData[sizeLimit+1];
+        VData []newV = new VData[sizeLimit+1];
 
         if (keepit) { // transfer the old data, allocate expansion space
             for (int v=1;v<=nodeCount;v++) {
                 newK[v]=kData[v];
                 newR[v]=rData[v];
+                if (vData!=null)
+                	newV[v]=vData[v];
             }
             for (int v=nodeCount+1;v<sizeLimit+1;v++) {
                 newK[v] = new KData();
                 newR[v] = new RData();
+                if (vData!=null)
+                	newV[v]=new VData();
             }
         }
         else{ 
@@ -2135,6 +2140,8 @@ public class PackData{
             for(int v = 0; v < sizeLimit+1; v++) {
                 newK[v] = new KData();
                 newR[v] = new RData();
+                if (vData!=null)
+                	newV[v]=new VData();
             }
             faces=null;
             fUtil=null;
@@ -2151,6 +2158,8 @@ public class PackData{
 
         kData=newK;
         rData=newR;
+        if (vData!=null)
+        	vData=newV;
         
         return 1;
     } 
@@ -13477,7 +13486,7 @@ public class PackData{
 	    delete_vert(v);
 	    return v;
 	  } 
-	  
+
 	  /** 
 	   * Adjoin p2 to 'this': start with vert v2 of p2 to vert v1 
 	   * of 'this', proceed n additional verts CLOCKWISE (negative 

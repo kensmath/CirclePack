@@ -9,6 +9,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Random;
@@ -35,8 +36,11 @@ import cpContributed.CurvFlow;
 import cpContributed.FracBranching;
 import dcel.CombDCEL;
 import dcel.DataDCEL;
+import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RedHEdge;
+import dcel.VData;
+import dcel.Vertex;
 import deBugging.DCELdebug;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
@@ -810,6 +814,8 @@ public class CommandStrParser {
 	    	  
 	    	  int v1=NodeLink.grab_one_vert(packData,(String)items.get(2));
 	    	  int v2=NodeLink.grab_one_vert(qackData,(String)items.get(3));
+	    	  if (!packData.isBdry(v1) || !qackData.isBdry(v2))
+	    		  throw new DataException("illegal vertices");
 	    	  
 	    	  // last entry has two forms: n or (v1 w)
 	    	  int N;
@@ -820,22 +826,179 @@ public class CommandStrParser {
 	    		  NodeLink nl=new NodeLink(packData,str);
 	    		  int vv1=(Integer)nl.get(0);
 	    		  int w=(Integer)nl.get(1);
-	    		  if (vv1!=v1 || !packData.isBdry(vv1) || !packData.isBdry(v1))
-	    			  throw new ParserException("vertices not on same boundary component");
+	    		  if (w==vv1 || vv1!=v1 || !packData.isBdry(vv1) || !packData.isBdry(v1))
+	    			  throw new ParserException("vertices equal or not on same bdry component");
+	    		  
+	    		  // count edges clw about bdry until reaching 'w' 
 	    		  int tick=1;
-	    		  int safty=packData.nodeCount;
-	    		  int ne=packData.kData[v1].flower[packData.getNum(v1)];
-	    		  while (ne != v1 && safty>0) {
-	    			  ne=packData.kData[ne].flower[packData.getNum(ne)];
-	    			  tick++;
-	    			  safty--;
+	    		  if (packData.packDCEL!=null) {
+	    			  PackDCEL pdc=packData.packDCEL;
+	    			  HalfEdge he=pdc.vertices[v1].halfedge.twin.next;
+	    			  HalfEdge startedge=he;
+	    			  while (he.next.origin.vertIndx!=w && he!=startedge.prev) {
+	    				  tick++;
+	    				  he=he.next;
+	    			  } 
+	    			  N=tick;
 	    		  }
-	    		  if (safty<=0) 
-	    			  throw new ParserException("emergency exit");
-	    		  N=tick;
+	    		  else {
+	    			  int safty=packData.nodeCount;
+	    			  int ne=packData.kData[v1].flower[packData.getNum(v1)];
+	    			  while (ne != v1 && safty>0) {
+	    				  ne=packData.kData[ne].flower[packData.getNum(ne)];
+	    				  tick++;
+	    				  safty--;
+	    			  }
+	    			  if (safty<=0) 
+	    				  throw new ParserException("emergency exit");
+	    			  N=tick;
+	    		  }
 	    	  }
-	    	  else N=Integer.parseInt((String)items.get(4));
+	    	  else 
+	    		  N=Integer.parseInt((String)items.get(4));
 
+	    	  // use dcel version
+	    	  if (packData.packDCEL!=null) {
+	    		  PackDCEL pdc1=CombDCEL.cloneDCEL(packData.packDCEL);
+	    		  PackDCEL pdc2=qackData.packDCEL;
+	    		  if (qackData==packData)
+	    			  pdc2=pdc1;
+	    		  else if (pdc2==null)
+	    			  pdc2=CombDCEL.getRawDCEL(qackData);
+	    		  else 
+	    			  pdc2=CombDCEL.cloneDCEL(qackData.packDCEL);
+	    		  
+	    		  // do adjoin
+	    		  try {
+	    			  pdc1=CombDCEL.d_adjoin(pdc1, pdc2, v1, v2, N);
+	    		  } catch(CombException cex) {
+	    			  CirclePack.cpb.errMsg("DCEL adjoin failed: "+cex.getMessage());
+	    			  return 0;
+	    		  }
+	    		  
+	    		  // Catalog/count vertices and edges:
+	    		  // Set up 'VData' and 'newOld'
+	    		  
+	    		  // take care of edges first
+	    		  //   abandoned edges have 'edgeIndex' 
+	    		  int ecount=0;
+	    		  ArrayList<HalfEdge> newEdges=new ArrayList<HalfEdge>();
+	    		  for (int e=1;e<=pdc1.edgeCount;e++) {
+	    			  HalfEdge he=pdc1.edges[e];
+	    			  if (he.edgeIndx!=0) {
+	    				  he.edgeIndx=++ecount;
+	    				  newEdges.add(he);
+	    			  }
+	    		  }
+	    		  if (pdc2!=pdc1) {
+	    			  for (int e=1;e<=pdc2.edgeCount;e++) {
+	    				  HalfEdge he=pdc2.edges[e];
+	    				  if (he.edgeIndx!=0) {
+	    					  he.edgeIndx=++ecount;
+	    					  newEdges.add(he);
+	    				  }
+	    			  }
+	    		  }
+	    		  pdc1.edges=new HalfEdge[newEdges.size()+1];
+	    		  Iterator<HalfEdge> eit=newEdges.iterator();
+	    		  int etick=0;
+	    		  while (eit.hasNext()) 
+	    			  pdc1.edges[++etick]=eit.next();
+	    		  pdc1.edgeCount=etick;
+	    		  
+	    		  // build 'VData' structure combining packData and qackData
+	    		  //   information; put in packData before attaching the new 
+	    		  //   'PackDCEL' and using its 'newOld' to connect the
+	    		  //   vertices to their data.
+	    		  int maxVCount=packData.nodeCount;
+	    		  if (pdc2!=pdc1)
+	    			  maxVCount+=qackData.nodeCount;
+	    		  packData.alloc_pack_space(maxVCount,true);
+	    		  VData[] newV=new VData[maxVCount+1];
+	    		  
+	    		  // copy the old packData info
+	    		  for (int v=1;v<=packData.nodeCount;v++) 
+	    			  newV[v]=packData.vData[v].clone();
+	    		  if (pdc2!=pdc1)
+	    			  for (int v=1;v<=qackData.nodeCount;v++)
+	    				  newV[packData.nodeCount+v]=new VData();
+
+	    		  // vertices: count first
+	    		  int vcount=0;
+	    		  for (int v=1;v<=pdc1.vertCount;v++)
+	    			  if (pdc1.vertices[v].halfedge!=null)
+	    				  ++vcount;
+	    		  if (pdc2!=pdc1) {
+	    			  for (int v=1;v<=pdc2.vertCount;v++)
+	    				  if (pdc2.vertices[v].halfedge!=null)
+	    					  ++vcount;
+	    		  }
+
+	    		  // now identify, index, and build 'newOld'.
+	    		  //   Abandoned vertices have 'halfedge' null.
+	    		  //  
+	    		  VertexMap newOld=new VertexMap();
+	    		  Vertex[] newVertices=new Vertex[vcount+1];
+
+	    		  // index vertices
+	    		  vcount=0;
+	    		  for (int v=1;v<=pdc1.vertCount;v++) {
+	    			  Vertex vert=pdc1.vertices[v];
+	    			  if (vert.halfedge!=null) {
+	    				  vert.vertIndx=++vcount;
+	    				  newVertices[vcount]=vert;
+	    				  newOld.add(new EdgeSimple(vcount,v));
+	    			  }
+	    		  }
+	    		  // for pdc2, original indices stored in 'util'
+	    		  if (pdc2!=pdc1) {
+	    			  for (int v=1;v<=pdc2.vertCount;v++) {
+	    				  Vertex vert=pdc2.vertices[v];
+	    				  if (vert.halfedge!=null) {
+	    					  int nv=v+packData.nodeCount; // index vis-a-vis vData
+	    					  newV[nv].rad=qackData.getRadius(v);
+	    					  newV[nv].center=qackData.getCenter(v);
+	    					  newV[nv].aim=qackData.getAim(v);
+	    					  vert.vertIndx=++vcount;
+	    					  newVertices[vcount]=vert;
+	    					  newOld.add(new EdgeSimple(nv,vert.util));
+	    				  }
+	    			  }
+	    		  }
+	    		  pdc1.vertices=newVertices;
+	    		  pdc1.vertCount=vcount;
+
+	    		  // now organize combinatorics
+	    		  try {
+	    			  // make sure bdry edge's twins point to
+	    			  //    face with negative index. 
+	    			  if (pdc1.redChain!=null) {
+	    				  RedHEdge rhe=pdc1.redChain;
+	    				  do {
+	    					  if (rhe.twinRed==null)
+	    						  rhe.myEdge.twin.face=new dcel.Face(-1);
+	    					  rhe=rhe.nextRed;
+	    				  } while (rhe!=pdc1.redChain);
+	    			  }
+	    			  
+	    			  if (pdc1.redChain==null)
+	    				  pdc1=CombDCEL.redchain_by_edge(pdc1, null, pdc1.alpha);
+	    			  
+
+	    			  CombDCEL.d_FillInside(pdc1);
+	    		  } catch (Exception ex) {
+	    			  throw new DCELException("DCEL adjoin processing failed: "+ex.getMessage());
+	    		  }
+	    		  
+	    		  pdc1.newOld=newOld;
+	    		  packData.vData=newV;
+	    		  
+	    		  packData.attachDCEL(pdc1);
+	    		  
+	    		  return pdc1.vertCount;
+	    	  } 
+
+	    	  // else traditional method
 	    	  int offset=0;
 	    	  if (pnum1!=pnum2) offset=packData.nodeCount;
 	    	  boolean overlap_flag=false;

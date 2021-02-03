@@ -151,11 +151,11 @@ public class PackDCEL {
 	/**
 	 * Given vertex 'v', store its "indices" in 'p.Vdata[v]';
 	 * these point to the faces containing v and the indices
-	 * of v in those faces.
+	 * of v in those faces. Also set 'bdryFlag' and 'num'
 	 * @param v int
 	 * @return int num
 	 */
-	public int fillIndices(int v) {
+	public int setVDataIndices(int v) {
 // System.out.println(" fillIndices:"+v);		
 		if (p.vData==null || p.vData[v]==null)
 			throw new CombException("'vData' is not allocated");
@@ -183,6 +183,13 @@ public class PackDCEL {
 			p.vData[v].findices[j]=f_indices.get(j);
 			p.vData[v].myIndices[j]=v_indices.get(j);
 		}
+		
+		// set 'bdryFlag'
+		if (vert.isBdry())
+			vert.bdryFlag=1;
+		else vert.bdryFlag=0; 
+		p.vData[v].setBdryFlag(vert.bdryFlag);
+
 		return num;
 	}
 				;

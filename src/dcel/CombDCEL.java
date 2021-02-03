@@ -2496,6 +2496,326 @@ public class CombDCEL {
 		return redList;
 	}
 
+	/**
+	 * Modify 'pdcel' by zipping up the bdry edges from 'vert'.
+	 * This means the upstream vert on the boundary is consolidated
+	 * with the downstream vert and so a vertex may be lost; 
+	 * pointers are adjusted. The redchain should remain in
+	 * tact, though it will be discarded if result is a sphere.
+	 * 
+	 * May abandon one vertex; to indicate this, set its 
+	 * 'Vertex.halfedge' to null. The calling routine is responsible 
+	 * for keeping track of this and for completing updates of 'pdcel'.
+	 * 
+	 * @param pdcel PackDCEL
+	 * @param vert Vertex
+	 * @return 1 on success, 0 on failure
+	 */
+	public static int zipEdge(PackDCEL pdcel,Vertex vert) {
+		if (!vert.redFlag)
+			throw new CombException("Vertex "+vert.vertIndx+" is not on the red chain");
+
+		// edges to be kept; these become twins
+		HalfEdge outedge=vert.halfedge;
+		HalfEdge inedge=outedge.twin.next.twin;
+		
+		RedHEdge redout=outedge.myRedEdge;
+		RedHEdge redin=redout.prevRed;
+		
+		if (redout.nextRed.myEdge.twin.origin==redin.myEdge.origin)
+			throw new CombException("pasting would leave loop");
+		
+		// this bdry component is single slit: close up and adjust red chain 
+		if (redin.myEdge.origin==redout.nextRed.myEdge.origin) {
+			vert.redFlag=false;
+			redin.myEdge.origin.redFlag=false;
+			
+			// red chain just these two? then this will be a sphere.
+			if (redout.prevRed==redin && redout.nextRed==redin) {
+				// identify
+				outedge.twin=inedge;
+				inedge.twin=outedge;
+				outedge.edgeIndx=0;
+				inedge.edgeIndx=0;
+				// reset
+				outedge.myRedEdge=null;
+				inedge.myRedEdge=null;
+				pdcel.redChain=null; // toss the redchain
+				return 1;
+			}
+			
+			// else, the bdry component may be a bubble in the redchain
+			if (redout.prevRed!=redin && redout.nextRed!=redin) {
+				// identify
+				outedge.twin=inedge;
+				inedge.twin=outedge;
+				outedge.edgeIndx=0;
+				inedge.edgeIndx=0;
+				// reset
+				redin.twinRed=redout;
+				redout.twinRed=redin;
+				return 1;
+			}
+			
+			// else, red chain is shrunk in one or other direction
+			RedHEdge upred; // set in case of further red shrinkage
+			RedHEdge downred;
+			if (redout.prevRed!=redin) { // remove 'vert' from red chain
+				if (pdcel.redChain==redout || pdcel.redChain==redin)
+					pdcel.redChain=redout.nextRed;
+				// identify
+				outedge.twin=inedge;
+				inedge.twin=outedge;
+				outedge.edgeIndx=0;
+				inedge.edgeIndx=0;
+				// reset
+				outedge.myRedEdge=null;
+				inedge.myRedEdge=null;
+				upred=redin.prevRed;
+				downred=redout.nextRed;
+				upred.nextRed=downred;
+				downred.prevRed=upred;
+			}
+			else { // remove other end from red chain
+				if (pdcel.redChain==redout || pdcel.redChain==redin)
+					pdcel.redChain=redin.nextRed;
+				// identify
+				outedge.twin=inedge;
+				inedge.twin=outedge;
+				outedge.edgeIndx=0;
+				inedge.edgeIndx=0;
+				// reset
+				outedge.myRedEdge=null;
+				inedge.myRedEdge=null;
+				upred=redout.prevRed;
+				downred=redin.nextRed;
+				upred.nextRed=downred;
+				downred.prevRed=upred;
+			}
+				
+			// there may be more shrinkage of the redchain
+			while (upred.twinRed==downred) { // collapse an edge
+				downred.myEdge.origin.redFlag=false;
+				upred.myEdge.myRedEdge=null;
+				downred.myEdge.myRedEdge=null;
+				if (upred.prevRed==downred) { // reached end? must be sphere
+					upred.myEdge.origin.redFlag=false;
+					pdcel.redChain=null;
+					return 1;
+				}
+				upred=upred.prevRed;
+				downred=downred.nextRed;
+				upred.nextRed=downred;
+				downred.prevRed=upred;
+			}
+			return 1;
+		}
+		
+		// else zip up just first edge
+		Vertex savevert=redin.myEdge.origin;
+		HalfEdge downstream=redout.nextRed.myEdge.twin;
+		HalfEdge upstream=redin.prevRed.myEdge.twin;
+		downstream.next=upstream;
+		upstream.prev=downstream;
+		savevert.halfedge=downstream.twin;
+
+		// reset origin for spokes of vertex being abandoned
+		HalfEdge he=redout.nextRed.myEdge;
+		Vertex xvert=he.origin;
+		do {
+			he.origin=savevert;
+			he=he.prev.twin; // cclw
+		} while (he!=redout.nextRed.myEdge);
+		xvert.halfedge=null; // indicate abandon vertex
+
+		// identify
+		outedge.twin.edgeIndx=0;
+		inedge.twin.edgeIndx=0;
+		outedge.twin=inedge;
+		inedge.twin=outedge;
+
+		// we may shrink red chain
+		if (redout.prevRed==redin) {
+			if (pdcel.redChain==redout || pdcel.redChain==redin)
+				pdcel.redChain=redout.nextRed;
+			redin.prevRed.nextRed=redout.nextRed;
+			redout.nextRed.prevRed=redin.prevRed;
+			redin.myEdge.myRedEdge=null;
+			redout.myEdge.myRedEdge=null;
+			vert.redFlag=false;
+		}
+		
+		// else redout/in remain in redchain and become red twins
+		else {
+			redout.twinRed=redin;
+			redin.twinRed=redout;
+		}
+		
+		return 1;
+	}
+
+	  /** 
+	   * Adjoin a boundary segment of pdc2 to a boundary segment
+	   * of pdc1, starting with 'v2' in 'pdc2' to vert v1 in 'pdc1'
+	   * and proceeding n edges CLOCKWISE (negative direction) on
+	   * bdry of 'pdc1', counterclockwise on bdry of 'pdc2'. Note
+	   * that dcel's are clones, so error should leave origina data
+	   * in tact. Note: If n<0, identify full bdry components 
+	   * (they must be the same length).
+	   *  
+	   * If not self-adjoin, then some 'Vertex's of 'pdc2' will be
+	   * abandoned. Mark they by setting 'helfedge' to null. Some
+	   * edges will also be abandoned; set their 'edgeIndx' to 0.
+	   * @param pdc1 PackDCEL
+	   * @param pdc2 PackDCEL
+	   * @param v1 int
+	   * @param v2 int
+	   * @param n int, number of edges (or negative)
+	   * @return modified 'PackDCEL' or null or 'CombException' on error
+	   */
+	  public static PackDCEL d_adjoin(PackDCEL pdc1,PackDCEL pdc2,int v1,int v2, int n) {
+
+		  // 'he1/2' to be identified: clw from 'v1' cclw from 'v2'
+		  HalfEdge he1=pdc1.vertices[v1].halfedge.twin.next.twin;
+		  HalfEdge he2=pdc2.vertices[v2].halfedge;
+
+		  // their ideal faces
+		  dcel.Face f1=he1.twin.face; 
+		  dcel.Face f2=he2.twin.face;
+		  int n1=f1.getNum();
+		  int n2=f2.getNum();
+		  
+		  // proper data?
+		  if (n<=0) { // paste full bdrys
+			  if (n1!=n2) 
+				  throw new CombException("'n'<=0 but 'n1!=n2'");
+			  else if (pdc1==pdc2 && f1==f2)
+				  throw new CombException("'n'<=0 improper for self-pasting same bdry coomponent");
+			  else
+				  n=n1;
+		  }
+		  if (!((n1>n && n2>n) || (n1==n2 && n1<=n) ||
+				  (n1==n && n2>(n+1)) || (n2==n && n1>(n+1)))) {
+			  throw new CombException("edge count setting are improper");
+		  }
+		  
+		  // for debugging, reindex 'pdc2'; put old index in 'util'
+		  //    so we can connecct with data upon return 
+		  if (pdc2!=pdc1) {
+			  for (int v=1;v<=pdc2.vertCount;v++) {
+				  Vertex vert=pdc2.vertices[v];
+				  vert.util=vert.vertIndx;
+				  vert.vertIndx +=pdc1.vertCount;
+			  }
+		  }
+		  
+		  // ============ identify =====================
+		  
+		  // self identification: same packing, same bdry component
+		  if (pdc1==pdc2 && f1==f2) {
+			  try {
+					  
+				  // zip from common vertex?
+				  if (he1.twin.origin==he2.origin) {
+					  HalfEdge nxtedge=he1.twin;
+					  for (int j=1;j<=n;j++) {
+						  CombDCEL.zipEdge(pdc1,nxtedge.origin);
+						  nxtedge=nxtedge.next;
+					  }
+					  return pdc1;
+				  }
+					  
+				  // need to check suitability
+				  if (he2.twin.prev.prev==he1.twin)
+					  throw new CombException("self-adjoin: given vertices too close");
+				  HalfEdge[] fedges=new HalfEdge[n1];
+				  HalfEdge he=he1.twin;
+				  fedges[0]=he;
+				  int indx2=0;
+				  for (int j=1;(j<n1 && indx2==0);j++) {
+					  fedges[j]=he=he.next;
+					  if (he==he2.twin)
+						  indx2=j;
+				  }
+					  
+				  // not enough edges
+				  if ((indx2+1)<2*n || indx2==2*n)
+					  throw new CombException("self-adjoin: not enough edges");
+					  
+				  // can we zip the other direction from common vert?
+				  if ((indx2+1)==2*n) {
+					  HalfEdge nxtedge=fedges[n]; // start at other ennd
+					  for (int j=1;j<=n;j++) {
+						  CombDCEL.zipEdge(pdc1,nxtedge.origin);
+						  nxtedge=nxtedge.next;
+					  }
+					  return pdc1;
+				  }
+			  } catch (CombException cex) {
+				  throw new CombException("same component: "+cex.getMessage());
+			  }
+		  }
+
+		  // reaching here, we are ready to paste 'he1' to 'he2', whether 
+		  //    packings are the same or different. Then we can complete
+		  //    by repeating 'zipEdge'
+		  
+		  // must fix pointers to vertices first
+		  Vertex vert1=he1.next.origin;
+		  Vertex vert2=he1.origin;
+		  Vertex oldvert1=he2.origin;
+		  Vertex oldvert2=he2.twin.origin;
+		  HalfEdge he=he2;
+		  do {
+			  he.origin=vert1;
+			  he=he.prev.twin; // cclw
+		  } while (he!=he2);
+		  oldvert1.halfedge=null; // abandoned
+		  he=he2.twin;
+		  do {
+			  he.origin=vert2;
+			  he=he.twin.next; // clw
+		  } while(he!=he2.twin);
+		  oldvert2.halfedge=null; // abandoned
+		  vert2.halfedge=he2.twin.prev.twin;
+
+		  // fix pointers for pasted edges he1/2
+		  he1.twin.prev.next=he2.twin.next;
+		  he2.twin.next.prev=he1.twin.prev;
+		  he1.twin.edgeIndx=0;
+		  he2.twin.edgeIndx=0;
+		  he1.twin.next.prev=he2.twin.prev;
+		  he2.twin.prev.next=he1.twin.next;
+		
+		  // fix h1/2 as twins (abandon their previous twins)
+		  he2.twin=he1;
+		  he1.twin=he2;
+					  
+		  // fix red pointers
+		  RedHEdge red1=he1.myRedEdge;
+		  RedHEdge red2=he2.myRedEdge;
+		  if (pdc1.redChain==red1)
+			  pdc1.redChain=red1.nextRed;
+		  if (pdc1.redChain==red2) // in case of self-pasting
+			  pdc1.redChain=red2.nextRed;
+		  he1.myRedEdge=null;
+		  he2.myRedEdge=null;
+		  red1.nextRed.prevRed=red2.prevRed;
+		  red2.prevRed.nextRed=red1.nextRed;
+		  red1.prevRed.nextRed=red2.nextRed;
+		  red2.nextRed.prevRed=red1.prevRed;
+		  // red1 and red2 are now abandoned
+
+		  // now zip the rest
+		  HalfEdge nxtedge=red1.prevRed.myEdge.twin;
+		  for (int j=2;j<=n;j++) {
+			  CombDCEL.zipEdge(pdc1,nxtedge.origin);
+			  nxtedge=nxtedge.next;
+		  }
+		  
+		  return pdc1;
+	  }
+	  
 }
 
 /**
