@@ -10103,168 +10103,201 @@ public class PackData{
 	   * @return 1 on success 
 	   */
 	  public int ideal_bdry_node(int v) {
-		  return ideal_bdry_node(v,v);
+		  int loccount=0;
+		  if (packDCEL!=null) {
+			  try {
+				  loccount=CombDCEL.addIdeal(packDCEL, v, v);
+				  if (loccount==0) 
+					  throw new CombException("add failed");
+				  if (packDCEL.redChain==null)
+					  CombDCEL.redchain_by_edge(packDCEL, null,packDCEL.alpha);
+				  CombDCEL.d_FillInside(packDCEL);
+			  } catch(Exception ex) {
+				  throw new DCELException("addIdeal failed: "+ex.getMessage());
+			  }
+			  return loccount;
+		  }
+
+		  // traditional
+		  loccount=ideal_bdry_node(v,v);
+		  if (loccount!=0) {
+			  setCombinatorics();
+			  fillcurves();
+		  }
+		  return loccount;
 	  }
 
 	  /** 
 	   * If v and w are on the same bdry component, add a new
 	   * vertex connected to all nodes of that component from v 
 	   * to w. If v==w, or if w is upstream neighbor of v, then 
-	   * do the whole component, and in this case the new vertex
+	   * do the whole component, in which case the new vertex
 	   * becomes interior. Return 0 on error. Calling routine must
 	   * update combinatorics.
+	   * @param v int
+	   * @param w int
+	   * @return int, 0 on error, count on success
 	   */
 	  public int ideal_bdry_node(int v,int w) {
-	    int nextvert,newnode,numb;
-	    int []newflower;
-	    double []newoverlaps;
+		  
+		  if (!isBdry(v) || !isBdry(w))
+			  return 0;
+		  
+		  // dcel version
+		  if (packDCEL!=null) 
+			  return CombDCEL.addIdeal(packDCEL,v,w);
+		  
+		  // else traditional packing
+		  int nextvert,newnode,numb;
+		  int []newflower;
+		  double []newoverlaps;
 
-	    // check suitability
-	    if (!isBdry(v) || !isBdry(w)) 
-	    	throw new ParserException(v+" and "+w+" are not both boundary vertices.");
-	    if (kData[w].flower[0]==v) w=v; 
-	    int count=1;
-	  	if (w!=v) { // error if w not on same component
-	  		nextvert=v;
-	  		while ((nextvert=kData[nextvert].flower[0])!=w) {
-	  			if (nextvert==v) return 0; // didn't find w
-	  			count++;
+		  // check suitability
+		  if (!isBdry(v) || !isBdry(w)) 
+			  throw new ParserException(v+" and "+w+" are not both boundary vertices.");
+		  if (kData[w].flower[0]==v) w=v; 
+		  int count=1;
+		  if (w!=v) { // error if w not on same component
+			  nextvert=v;
+			  while ((nextvert=kData[nextvert].flower[0])!=w) {
+				  if (nextvert==v) return 0; // didn't find w
+				  count++;
+	  			}
 	  		}
-	  	}
-	  	else { // full component
-	  		nextvert=v;
-	  		while ((nextvert=kData[nextvert].flower[0])!=v) {
-	  			count++;
+	  		else { // full component
+	  			nextvert=v;
+	  			while ((nextvert=kData[nextvert].flower[0])!=v) {
+	  				count++;
+	  			}
+	  			if (count<3) throw new CombException("Boundary component is too short"); // too short
 	  		}
-	  		if (count<3) throw new CombException("Boundary component is too short"); // too short
-	  	}
 	  	
-	  	// may have to upsize the packing
-	    if ((nodeCount+1) > sizeLimit && alloc_pack_space(nodeCount+1,true)==0) {
-	        throw new CombException("Space allocation problem with adding vertex.");
-	    }
+		  // may have to upsize the packing
+		  if ((nodeCount+1) > sizeLimit && alloc_pack_space(nodeCount+1,true)==0) {
+			  throw new CombException("Space allocation problem with adding vertex.");
+		  }
 
-	    // create and fix data for 'newnode'; 'count' is its number of faces 
-	    newnode=nodeCount+1;
-	    kData[newnode].num=count;
-	    newflower=new int[count+1];
-	    newflower[0]=w;
-	    int pvert=w;
-	    int tick=1;
-	    while ((pvert=kData[pvert].flower[getNum(pvert)])!=v) {
-	    	newflower[tick++]=pvert;
-	    }
-	    newflower[tick]=v;
-	    kData[newnode].flower=newflower;
-	    setBdryFlag(newnode,1);
-	    setAim(newnode,-1.0);
-	    if (w==v) {
-	    	setBdryFlag(newnode,0);
-		    setAim(newnode,2.0*Math.PI);
-	    }
+		  // create and fix data for 'newnode'; 'count' is its number of faces 
+		  newnode=nodeCount+1;
+		  kData[newnode].num=count;
+		  newflower=new int[count+1];
+		  newflower[0]=w;
+		  int pvert=w;
+		  int tick=1;
+		  while ((pvert=kData[pvert].flower[getNum(pvert)])!=v) {
+			  newflower[tick++]=pvert;
+		  }
+		  newflower[tick]=v;
+		  kData[newnode].flower=newflower;
+		  setBdryFlag(newnode,1);
+		  setAim(newnode,-1.0);
+		  if (w==v) {
+			  setBdryFlag(newnode,0);
+			  setAim(newnode,2.0*Math.PI);
+		  }
 	    
-	    kData[newnode].plotFlag=1;
-	    setVertMark(newnode,0);
-	    setCircleColor(newnode,ColorUtil.getFGColor());
-	    if (overlapStatus) {
+		  kData[newnode].plotFlag=1;
+		  setVertMark(newnode,0);
+		  setCircleColor(newnode,ColorUtil.getFGColor());
+		  if (overlapStatus) {
 		      kData[newnode].invDist=new double[count+1];
 		      for (int j=0;j<=count;j++) 
 		    	  set_single_invDist(newnode,kData[newnode].flower[j],1.0);
-	    }
-	    setRadius(newnode,0.5);
-	    setCenter(newnode,0.0,0.0);
-	    setRadius(newnode,0.5);
-	    if (hes>0) { // sphere: newnode is southern hemisphere.
-	        setCenter(newnode,0.0,Math.PI);
-	        setRadius(newnode,Math.PI/2.0);
-	      }
+		  }
+		  setRadius(newnode,0.5);
+		  setCenter(newnode,0.0,0.0);
+		  setRadius(newnode,0.5);
+		  if (hes>0) { // sphere: newnode is southern hemisphere.
+			  setCenter(newnode,0.0,Math.PI);
+			  setRadius(newnode,Math.PI/2.0);
+		  }
 	    
-	    // have to capture next downstream vert
-	    nextvert=kData[v].flower[0];
+		  // have to capture next downstream vert
+		  nextvert=kData[v].flower[0];
 	    
-	    // fix v and w
-	    if (v==w) { // v becomes interior
-	    	numb=getNum(v)+2;
-	    	newflower=new int[numb+1];
-	    	for (int j=0;j<=(numb-2);j++)
-	    		newflower[j]=kData[v].flower[j];
-	    	newflower[numb-1]=newnode;
-	    	newflower[numb]=newflower[0];
-	    	kData[v].flower=newflower;
-		    if (overlapStatus) {
-			      newoverlaps=new double[numb+1];
-			      for (int j=0;j<=(numb-2);j++) 
-			    	  newoverlaps[j]=getInvDist(v,kData[v].flower[j]);
-			      newoverlaps[numb-1]=newoverlaps[numb]=1.0;
+		  // fix v and w
+		  if (v==w) { // v becomes interior
+			  numb=getNum(v)+2;
+			  newflower=new int[numb+1];
+			  for (int j=0;j<=(numb-2);j++)
+				  newflower[j]=kData[v].flower[j];
+			  newflower[numb-1]=newnode;
+			  newflower[numb]=newflower[0];
+			  kData[v].flower=newflower;
+			  if (overlapStatus) {
+				  newoverlaps=new double[numb+1];
+				  for (int j=0;j<=(numb-2);j++) 
+					  newoverlaps[j]=getInvDist(v,kData[v].flower[j]);
+				  newoverlaps[numb-1]=newoverlaps[numb]=1.0;
 			      kData[v].invDist=newoverlaps;
-		    }
-	    	kData[v].num=numb;
-	    	setBdryFlag(v,0);
-	    	setAim(v,2.0*Math.PI);
-	    }
-	    else { // v and w are bdry
+			  }
+			  kData[v].num=numb;
+			  setBdryFlag(v,0);
+			  setAim(v,2.0*Math.PI);
+		  }
+		  else { // v and w are bdry
 	    	
-	    	// fix v
-	    	numb=getNum(v)+1;
-	    	newflower=new int[numb+1];
-	    	for (int j=0;j<numb;j++) 
-	    		newflower[j+1]=kData[v].flower[j];
-	    	newflower[0]=newnode;
-	    	kData[v].flower=newflower;
-	    	kData[v].num=numb;
-		    if (overlapStatus) {
+			  // fix v
+			  numb=getNum(v)+1;
+			  newflower=new int[numb+1];
+			  for (int j=0;j<numb;j++) 
+				  newflower[j+1]=kData[v].flower[j];
+			  newflower[0]=newnode;
+			  kData[v].flower=newflower;
+			  kData[v].num=numb;
+			  if (overlapStatus) {
 			      newoverlaps=new double[numb+1];
 			      for (int j=0;j<=(numb-1);j++) 
 			    	  newoverlaps[j+1]=getInvDist(v,kData[v].flower[j]);
 			      newoverlaps[0]=1.0;
 			      kData[v].invDist=newoverlaps;
-		    }
+			  }
 	    	
-	    	// fix w
-	    	numb=getNum(w)+1;
-	    	newflower=new int[numb+1];
-	    	for (int j=0;j<numb;j++) 
-	    		newflower[j]=kData[w].flower[j];
-	    	newflower[numb]=newnode;
-	    	kData[w].flower=newflower;
-	    	kData[w].num=numb;
-		    if (overlapStatus) {
+			  // fix w
+			  numb=getNum(w)+1;
+			  newflower=new int[numb+1];
+			  for (int j=0;j<numb;j++) 
+				  newflower[j]=kData[w].flower[j];
+			  newflower[numb]=newnode;
+			  kData[w].flower=newflower;
+			  kData[w].num=numb;
+			  if (overlapStatus) {
 			      newoverlaps=new double[numb+1];
 			      for (int j=0;j<=(numb-1);j++) 
 			    	  newoverlaps[j]=getInvDist(w,kData[w].flower[j]);
 			      newoverlaps[numb]=1.0;
 			      kData[w].invDist=newoverlaps;
-		    }
-	    }
+			  }
+		  }
 
-	    // fix up bdry between v, w, ie., starting
-	    //   with 'nextvert'. There are interior 
+		  // fix up bdry between v, w, ie., starting
+		  //   with 'nextvert'. There are interior 
 
-	    while (nextvert!=w) {
-	    	int newnext=kData[nextvert].flower[0];
-	        numb=getNum(nextvert)+2;
-	        newflower=new int[numb+1];
-	        for (int i=0;i<=(numb-2);i++) 
-	        	newflower[i]=kData[nextvert].flower[i];
-	        newflower[numb-1]=newnode;
-	        newflower[numb]=newflower[0];
-	        kData[nextvert].flower=newflower;
-	        kData[nextvert].num=numb;
-	        setBdryFlag(nextvert,0);
-	        setAim(nextvert,2.0*Math.PI);
-	        if (overlapStatus) {
-	    	  	newoverlaps=new double[numb+1];
-	    	  	for (int j=0;j<=(numb-2);j++)
-	    	  		newoverlaps[j]=getInvDist(nextvert,kData[nextvert].flower[j]);
-	    	  	newoverlaps[numb-1]=1.0;
-	    	  	newoverlaps[numb]=newoverlaps[0];
-	    	  	kData[nextvert].invDist=newoverlaps;
-	        }
-	        nextvert=newnext;
-	    }
+		  while (nextvert!=w) {
+			  int newnext=kData[nextvert].flower[0];
+			  numb=getNum(nextvert)+2;
+			  newflower=new int[numb+1];
+			  for (int i=0;i<=(numb-2);i++) 
+				  newflower[i]=kData[nextvert].flower[i];
+			  newflower[numb-1]=newnode;
+			  newflower[numb]=newflower[0];
+			  kData[nextvert].flower=newflower;
+			  kData[nextvert].num=numb;
+			  setBdryFlag(nextvert,0);
+			  setAim(nextvert,2.0*Math.PI);
+			  if (overlapStatus) {
+				  newoverlaps=new double[numb+1];
+				  for (int j=0;j<=(numb-2);j++)
+					  newoverlaps[j]=getInvDist(nextvert,kData[nextvert].flower[j]);
+				  newoverlaps[numb-1]=1.0;
+				  newoverlaps[numb]=newoverlaps[0];
+				  kData[nextvert].invDist=newoverlaps;
+			  }
+			  nextvert=newnext;
+		  }
 
-	    nodeCount++;
-	    return 1;
+		  nodeCount++;
+		  return 1;
 	  }
 
 	  /**

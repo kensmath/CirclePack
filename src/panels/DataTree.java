@@ -88,7 +88,6 @@ public class DataTree extends JPanel {
 		Vector<String> v1 = new Vector<String>(4);
 		double []curvErr=p.packCurvError();
 		if (p.packDCEL!=null) {
-			v1.add("Combinatorics: DCEL structure");
 			v1.add("Topology: " + setTopologyStr(p));
 			v1.add("Node/Face Count = " + p.nodeCount+" / "+p.faceCount);
 			v1.add("Genus/Euler = "+p.genus+" / "+p.euler);
@@ -118,9 +117,13 @@ public class DataTree extends JPanel {
 		} catch (Exception ex) {}
 		
 		if (p.packDCEL!=null) {
-			v2.add("First Face/BdryFace = " + 
-					p.packDCEL.faceOrder.get(0).w+" / "+
-					p.packDCEL.redChain.myEdge.face.faceIndx);
+			if (p.packDCEL.redChain==null) {
+				v2.add("First Face = "+p.packDCEL.faceOrder.get(0).w);
+			}
+			else 
+				v2.add("First Face/BdryFace = " + 
+						p.packDCEL.faceOrder.get(0).w+" / "+
+						p.packDCEL.redChain.myEdge.face.faceIndx);
 			int bcount=p.packDCEL.idealFaceCount;
 			v2.add("Bdry Component Count = " + bcount);
 			if (bcount>0) {

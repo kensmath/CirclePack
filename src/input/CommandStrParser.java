@@ -815,7 +815,10 @@ public class CommandStrParser {
 	    	  int v1=NodeLink.grab_one_vert(packData,(String)items.get(2));
 	    	  int v2=NodeLink.grab_one_vert(qackData,(String)items.get(3));
 	    	  if (!packData.isBdry(v1) || !qackData.isBdry(v2))
-	    		  throw new DataException("illegal vertices");
+	    		  throw new DataException("one or both vertices are not on the boundary");
+	    	  
+	    	  if (pnum1==pnum2 && v1==v2 && packData.getNum(v1)<3)
+	    		  throw new DataException("zip up start vertex "+v1+" has too few neighbors");
 	    	  
 	    	  // last entry has two forms: n or (v1 w)
 	    	  int N;
@@ -981,11 +984,12 @@ public class CommandStrParser {
 	    				  } while (rhe!=pdc1.redChain);
 	    			  }
 	    			  
+	    			  // DCELdebug.printBouquet(pdc1);
 	    			  if (pdc1.redChain==null)
 	    				  pdc1=CombDCEL.redchain_by_edge(pdc1, null, pdc1.alpha);
-	    			  
 
 	    			  CombDCEL.d_FillInside(pdc1);
+	    			  
 	    		  } catch (Exception ex) {
 	    			  throw new DCELException("DCEL adjoin processing failed: "+ex.getMessage());
 	    		  }
@@ -5101,6 +5105,21 @@ public class CommandStrParser {
 	    						  Iterator<Integer> vlist=vertlist.iterator();
 	    						  v=(Integer)vlist.next();
 	    						  w=(Integer)vlist.next();
+	    						  if (packData.packDCEL!=null) {
+	    							  try {
+	    								  count=CombDCEL.addIdeal(packData.packDCEL, v, w);
+	    								  if (count==0) 
+	    									  throw new CombException("add failed");
+	    								  if (packData.packDCEL.redChain==null)
+	    									  CombDCEL.redchain_by_edge(packData.packDCEL, null,packData.packDCEL.alpha);
+	    								  CombDCEL.d_FillInside(packData.packDCEL);
+	    							  } catch(Exception ex) {
+	    								  throw new DCELException("addIdeal failed: "+ex.getMessage());
+	    							  }
+	    							  return count;
+	    						  }
+	    						  
+	    						  // traditional
 	    						  if (packData.ideal_bdry_node(v, w)!=0) {
 	    							  packData.chooseAlpha();
 	    							  packData.xyzpoint=null;

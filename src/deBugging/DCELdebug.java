@@ -88,6 +88,31 @@ public class DCELdebug {
 		return count;
 	}
 	
+	public static void printBouquet(PackDCEL pdcel) {
+		System.out.println("DCEL bouquet:");
+		StringBuilder strbld=null;
+		for (int v=1;v<=pdcel.vertCount;v++) {
+			Vertex vert=pdcel.vertices[v];
+			if (vert.halfedge!=null) {
+				strbld=new StringBuilder("  "+vert.vertIndx+":   ");
+				int safety=15;
+				HalfEdge he=vert.halfedge;
+				do {
+					strbld.append(" "+he.twin.origin.vertIndx);
+					he=he.prev.twin; // cclw
+					safety--;
+				} while(he!=vert.halfedge && safety>0);
+				if (safety==0) {
+					strbld.append("  oops, safetied out");
+				}
+				else
+					strbld.append("\n");
+				System.out.println(strbld.toString());
+			}
+		}
+		System.out.println("done");
+	}
+	
 	public static void edgeFlowerUtils(PackDCEL pdcel,Vertex vert) {
 		HalfEdge he=vert.halfedge;
 		do {

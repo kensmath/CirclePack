@@ -49,6 +49,8 @@ public class KData{
      
     public KData clone() {
     	KData Kout=new KData();
+    	if (num==0)
+    		return Kout;
     	Kout.num=num;
     	Kout.flower=new int[num+1];
     	for (int j=0;j<=num;j++) 

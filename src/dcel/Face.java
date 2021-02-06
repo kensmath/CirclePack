@@ -201,17 +201,30 @@ public class Face {
 	}
 
 	/**
-	 * Return ordered array of 'HalfEdge's around the face
-	 * @return ArrayList<HalfEdge>
+	 * Return ordered array of 'HalfEdge's around the face,
+	 * starting with 'he'; list is open, so first edge is not 
+	 * repeated at the end.
+	 * @return ArrayList<HalfEdge>, null if 'he' not an edge
 	 */
-	public ArrayList<HalfEdge> getEdges() {
+	public ArrayList<HalfEdge> getEdges(HalfEdge he) {
+		if (he.face!=this)
+			return null;
 		ArrayList<HalfEdge> rslt=new ArrayList<HalfEdge>();
-		HalfEdge nxtedge=edge;
+		HalfEdge nxtedge=he;
 		do {
 			rslt.add(nxtedge);
 			nxtedge=nxtedge.next;
 		} while (nxtedge!=edge);
 		return rslt;
+	}
+
+	/**
+	 * Return ordered array of 'HalfEdge's around the face;
+	 * list is open, so first edge is not repeated at the end.
+	 * @return ArrayList<HalfEdge>
+	 */
+	public ArrayList<HalfEdge> getEdges() {
+		return getEdges(edge);
 	}
 	
 	/**
