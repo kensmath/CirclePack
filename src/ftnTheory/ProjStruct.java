@@ -1481,7 +1481,7 @@ public class ProjStruct extends PackExtender {
 			// this routine is tailored for tori: specify side-pair
 			// scaling in an attempt to build general affine tori
 
-			if (packData.genus != 1 || packData.bdryCompCount > 0) {
+			if (packData.genus != 1 || packData.getBdryCompCount()>0) {
 				int count=0;
 				msg("Simply connected case: 'affine' defaults to all 'labels' 1");
 				for (int f=1;f<=packData.faceCount;f++) {
@@ -1961,7 +1961,7 @@ public class ProjStruct extends PackExtender {
 	public static GraphLink torus4layout(PackData p,int baseVert) {
 
 		// is this a torus?
-		if (p.bdryCompCount>0 || p.genus!=1) { 
+		if (p.getBdryCompCount()>0 || p.genus!=1) { 
 			return null;
 		}
 		

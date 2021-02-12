@@ -41,7 +41,7 @@ public class DataDCEL {
 			p.hes=pdcel.p.hes;
 		p.nodeCount=pdcel.vertCount;
 		p.faceCount=pdcel.intFaceCount;
-		p.bdryCompCount=pdcel.idealFaceCount;
+		p.setBdryCompCount(pdcel.idealFaceCount);
 		p.alloc_pack_space(p.nodeCount+10,true);
 		p.alpha=pdcel.alpha.origin.vertIndx; // <alpha,beta> is the initial edge
 		p.beta=pdcel.alpha.twin.origin.vertIndx;
@@ -138,16 +138,16 @@ public class DataDCEL {
 
 		// misc data to arrange
 		p.euler=pdcel.vertCount-pdcel.edgeCount+pdcel.faceCount;
-		p.genus=(2-p.euler-p.bdryCompCount)/2;
+		p.genus=(2-p.euler-p.getBdryCompCount())/2;
 		p.intrinsicGeom=-1;
-		if (p.bdryCompCount==0) {
+		if (p.getBdryCompCount()==0) {
 			if (p.genus==0)
 				p.intrinsicGeom=1;
 			else if (p.genus==1)
 				p.intrinsicGeom=0;
 		}
-		p.bdryStarts=new int[p.bdryCompCount+1];
-		for (int j=1;j<=p.bdryCompCount;j++) {
+		p.bdryStarts=new int[p.getBdryCompCount()+1];
+		for (int j=1;j<=p.getBdryCompCount();j++) {
 			Face iface=pdcel.idealFaces[j];
 			p.bdryStarts[j]=iface.edge.twin.origin.vertIndx;
 		}

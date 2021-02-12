@@ -136,10 +136,10 @@ public class DataTree extends JPanel {
 		}
 		else {
 			v2.add("First Face/BdryFace = " + p.firstFace+" / "+p.firstRedFace);
-			v2.add("Bdry Component Count = " + p.bdryCompCount);
-			if (p.bdryCompCount>0) {
+			v2.add("Bdry Component Count = " + p.getBdryCompCount());
+			if (p.getBdryCompCount()>0) {
 				strbuf=new StringBuilder(p.bdryStarts[1]);
-				for (int j=2;j<p.bdryCompCount;j++)
+				for (int j=2;j<p.getBdryCompCount();j++)
 					strbuf.append(" "+p.bdryStarts[j]);
 				v2.add("Bdry Start verts = " +strbuf.toString());
 			}
@@ -208,16 +208,16 @@ public class DataTree extends JPanel {
 	public static String setTopologyStr(PackData p) {
 		if (!p.status) return new String("pack is empty");
 		if (p.genus==0) { // genus zero 
-			if (p.bdryCompCount==0) // sphere 
+			if (p.getBdryCompCount()==0) // sphere 
 				return new String("sphere");
-			if (p.bdryCompCount==1) // disc 
+			if (p.getBdryCompCount()==1) // disc 
 				return new String("topological disc");
-			if (p.bdryCompCount==2) // annulus 
+			if (p.getBdryCompCount()==2) // annulus 
 				return new String("topological annulus");
 			else // n-connected, planar 
-				return new String("planar, "+p.bdryCompCount+"-connected");
+				return new String("planar, "+p.getBdryCompCount()+"-connected");
 		}
-		if (p.bdryCompCount==0) // n-torus 
+		if (p.getBdryCompCount()==0) // n-torus 
 			return new String("topological "+p.genus+"-torus");
 		else return new String("genus "+p.genus+", bordered");
 	}

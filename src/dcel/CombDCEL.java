@@ -831,12 +831,11 @@ public class CombDCEL {
 	}
 
 	/**
-	 * Given a DCEL structure with an already processed red chain 
-	 * and established 'alpha' edge, process the interior to create
-	 * the faces, layout order, etc. This can be used when we modify 
-	 * the structure inside but can keep the red chain, e.g., when
-	 * flipping an edge. The 'HalfEdge's already exist, but we find them
-	 * using 'pdcel.vertices' and create 'pdcel.edges' at the end.
+	 * Given a DCEL structure with an already processed red chain, 
+	 * an 'alpha' edge, and 'vertices' updated, we process to 
+	 * create 'faces', 'edges', layout order, etc. This can be 
+	 * used when we modify the structure inside but can keep the 
+	 * red chain, e.g., when flipping an edge, adding an edge, etc. 
 	 * @param pdcel
 	 * @return PackDCEL
 	 */
@@ -1360,6 +1359,7 @@ public class CombDCEL {
 		tmpFaceList=null;
 		
 		// (3) Ideal faces: --------------------------------------------------
+		pdcel.idealFaceCount=0;
 		if (bdryStarts!=null && bdryStarts.size()>0) {
 			ArrayList<Face> tmpIdealFaces=new ArrayList<Face>(0);
 			Iterator<RedHEdge> rit=bdryStarts.iterator();
@@ -2533,9 +2533,10 @@ public class CombDCEL {
 	 * pointers are adjusted. The redchain should remain in
 	 * tact, though it will be discarded if result is a sphere.
 	 * 
-	 * May abandon one vertex; to indicate this, set its 
-	 * 'Vertex.halfedge' to null. The calling routine is responsible 
-	 * for keeping track of this and for completing updates of 'pdcel'.
+	 * May abandon one vertex and two edges; for verts, set
+	 * 'Vertex.halfedge' to null, for edges set 'edgeIndx' to 0.
+	 * The calling routine is responsible for keeping track of this 
+	 * and for completing updates of 'pdcel'.
 	 * 
 	 * @param pdcel PackDCEL
 	 * @param vert Vertex
@@ -2694,7 +2695,7 @@ public class CombDCEL {
 	   * (they must be the same length).
 	   *  
 	   * If not self-adjoin, then some 'Vertex's of 'pdc2' will be
-	   * abandoned. Mark they by setting 'helfedge' to null. Some
+	   * abandoned. Mark they by setting 'halfedge' to null. Some
 	   * edges will also be abandoned; set their 'edgeIndx' to 0.
 	   * @param pdc1 PackDCEL
 	   * @param pdc2 PackDCEL
@@ -2758,7 +2759,7 @@ public class CombDCEL {
 						  CombDCEL.zipEdge(pdc1,nxtedge.origin);
 						  nxtedge=nxtedge.next;
 					  }
-					  return pdc1;
+					  return CombDCEL.wrapAdjoin(pdc1, pdc2);
 				  }
 					  
 				  // need to check suitability
@@ -2785,7 +2786,7 @@ public class CombDCEL {
 						  CombDCEL.zipEdge(pdc1,nxtedge.origin);
 						  nxtedge=nxtedge.next;
 					  }
-					  return pdc1;
+					  return CombDCEL.wrapAdjoin(pdc1, pdc2);
 				  }
 			  } catch (CombException cex) {
 				  throw new CombException("same component: "+cex.getMessage());
@@ -2838,7 +2839,7 @@ public class CombDCEL {
 			  nxtedge=nxtedge.next;
 		  }
 		  
-		  return pdc1;
+		  return CombDCEL.wrapAdjoin(pdc1, pdc2);
 	  }
 	  
 	  /**
@@ -2978,6 +2979,342 @@ public class CombDCEL {
 		  return count;
 	  }
 
+	  /**
+	   * Special helper routine to wrap up 'd_adjoin', only when 
+	   * ready to return results in 'pdc1'. This fixes 'vertices' 
+	   * and 'edges' arrays. In processing, orphaned vertices are 
+	   * indicated by 'halfedge'=null, orphaned edges by 'edgeIndx'=0. 
+	   * Here we fix the arrays, counts, and indices and we build
+	   * 'newOld' to connect new and old vertex indices. Note that
+	   * if pdc2!=pdc1, then no pdc1 vertices are orphaned, so
+	   * pdc2 vertices numbering automatically starts with index
+	   * pdc1.vertCount+1.
+	   * @param pdc1 PackDCEL
+	   * @param pdc2 PackDCEL, may be same as pdc1
+	   * @return same PackDCEL
+	   */
+	  public static PackDCEL wrapAdjoin(PackDCEL pdc1,PackDCEL pdc2) {
+
+		  // vertices first; 'util' still holds original index
+		  pdc1.newOld=new VertexMap();
+		  ArrayList<Vertex> v_array=new ArrayList<Vertex>();
+		  int vtick=0;
+		  for (int v=1;v<=pdc1.vertCount;v++) {
+			  Vertex vert=pdc1.vertices[v];
+			  if (vert.halfedge!=null) { 
+				  ++vtick;
+				  v_array.add(vert);
+				  // if pdc2==pdc1, should have vtick=v=vert.util
+				  pdc1.newOld.add(new EdgeSimple(vtick,vert.util));
+			  }
+		  }
+		  if (pdc2!=pdc1) {
+			  vtick=pdc1.vertCount; // start here
+			  for (int v=1;v<=pdc2.vertCount;v++) {
+				  Vertex vert=pdc2.vertices[v];
+				  if (vert.halfedge!=null) {
+					  ++vtick;
+					  v_array.add(vert);
+					  pdc1.newOld.add(new EdgeSimple(vtick,vert.util));
+				  }
+			  }
+		  }
+		  // put in new array with new 'vertIndx's
+		  pdc1.vertCount=v_array.size(); // this should equal 'vtick'
+		  pdc1.vertices=new Vertex[pdc1.vertCount+1];
+		  Iterator<Vertex> vis=v_array.iterator();
+		  vtick=0;
+		  while (vis.hasNext()) {
+			  Vertex vert=vis.next();
+			  vert.vertIndx=++vtick; // 'util' still has old index
+			  pdc1.vertices[vtick]=vert;
+		  }
+
+		  // now edges
+		  ArrayList<HalfEdge> e_array=new ArrayList<HalfEdge>();
+		  int ecount=pdc1.edges.length-1;
+		  for (int e=1;e<=ecount;e++) {
+			  HalfEdge he=pdc1.edges[e];
+			  if (he.edgeIndx!=0)
+				  e_array.add(he);
+		  }
+		  if (pdc2!=pdc1) {
+			  ecount=pdc2.edges.length-1;
+			  for (int e=1;e<=ecount;e++) {
+				  HalfEdge he=pdc2.edges[e];
+				  if (he.edgeIndx!=0)
+					  e_array.add(he);
+			  }
+		  }
+		  // put in array with new 'edgeIndx's
+		  pdc1.edgeCount=e_array.size();
+		  pdc1.edges=new HalfEdge[pdc1.edgeCount+1];
+		  Iterator<HalfEdge> eis=e_array.iterator();
+		  int etick=0;
+		  while (eis.hasNext()) {
+			  HalfEdge he=eis.next();
+			  he.edgeIndx=++etick; 
+			  pdc1.edges[etick]=he;
+		  }
+
+		  return pdc1;
+	  }
+	  
+	  /**
+	   * We modify an existing 'PackDCEL', adding a new 
+	   * vertex/fact to an existing bdry edge. We adjust only
+	   * as necessary for the new objects in case more vertices
+	   * are to be added in a subsequent call. We depend on 
+	   * 'v.halfedge.myRedHEdge' to confirm that 'v' is bdry; 
+	   * we increment 'vertCount'. The calling routine will 
+	   * call 'd_FillInside', 'attachDCEL', when appropriate.
+	   * @param pdcel PackDCEL
+	   * @param v Vertex
+	   * @return Vertex, new 'Vertex', or null on error
+	   */
+	  public static Vertex addVertex(PackDCEL pdcel,Vertex v) {
+		  
+			RedHEdge reddown = v.halfedge.myRedEdge; // downstream red
+			if (reddown == null)
+				return null;
+			RedHEdge thisred = reddown.prevRed;
+			if (pdcel.redChain == thisred)
+				pdcel.redChain = thisred.nextRed;
+			HalfEdge thishe = thisred.myEdge;
+			RedHEdge redup = reddown.prevRed.prevRed; // upstream red
+			Vertex w_vert = thishe.origin;
+			if (redup == reddown || redup.myEdge.origin == v)
+				throw new CombException("Bdry component of " + v + " is a slit; can't add vertex");
+
+			// new objects
+			Vertex newV = new Vertex(pdcel.vertCount + 1);
+			newV.redFlag=true;
+			newV.bdryFlag=1;
+			HalfEdge he_in = new HalfEdge();
+			HalfEdge he_out = new HalfEdge();
+			HalfEdge twin_in = new HalfEdge();
+			HalfEdge twin_out = new HalfEdge();
+			RedHEdge newred = thisred.clone(); // inheret rad/center
+
+			// create/adjust pointers
+			newV.halfedge = he_out;
+			he_out.origin = newV;
+			twin_in.origin = newV;
+			twin_out.origin = v;
+			w_vert.halfedge = he_in;
+			he_in.origin = w_vert;
+
+			twin_in.prev = twin_out;
+			twin_out.next = twin_in;
+			twin_in.next = thishe.twin.next;
+			thishe.twin.next.prev = twin_in;
+			twin_out.prev = thishe.twin.prev;
+			thishe.twin.prev.next = twin_out;
+			
+			he_out.prev = he_in;
+			he_in.next = he_out;
+			he_out.next = thishe.twin;
+			thishe.twin.prev = he_out;
+			he_in.prev = thishe.twin;
+			thishe.twin.next = he_in;
+
+			// the new twins
+			he_in.twin = twin_in;
+			twin_in.twin = he_in;
+			he_out.twin = twin_out;
+			twin_out.twin = he_out;
+
+			// attach red edges
+			he_out.myRedEdge = newred;
+			newred.myEdge=he_out;
+			he_in.myRedEdge = thisred;
+			thisred.myEdge = he_in;
+			thishe.twin.myRedEdge = null;
+			
+			// adjust red pointers
+			newred.nextRed = thisred.nextRed;
+			newred.prevRed = thisred;
+			thisred.nextRed = newred;
+
+			// fix faces
+			he_in.face = null;
+			he_out.face = null;
+			dcel.Face idealf = thishe.twin.face;
+			thishe.twin.face = null;
+			twin_in.face = twin_out.face = idealf;
+
+			// increment 'vertCount' in case we add another
+			pdcel.vertCount++;
+			return newV; // return the new vertex
+	  }
+	  
+	  /**
+	   * We modify an existing 'PackDCEL' with a new boundary
+	   * edge between v and w. Call routine insures that v and w
+	   * have common bdry neighbor u. Only possible anbiguity is
+	   * if bdry component has 4 vertices: we choose u so <v,u,w>
+	   * is cclw. Adjust only as necessary for the new objects 
+	   * and new red chain. The calling routine calls 'd_FillInside', 
+	   * 'attachDCEL', when appropriate.
+	   * @param pdcel PackDCEL
+	   * @param v int
+	   * @param w int
+	   * @return new HalfEdge, null on error
+	   */
+	  public static HalfEdge addEdge(PackDCEL pdcel,int v,int w) {
+		  Vertex v1=pdcel.vertices[v];
+		  HalfEdge edge1=v1.halfedge;
+		  
+		  Vertex v2=edge1.twin.next.next.twin.origin;
+		  Vertex u=edge1.twin.next.twin.origin;
+		  if (v2.vertIndx==w) { // check clw two steps
+			  if (edge1.next.next.origin.vertIndx==w) { // ambiguous: choose cclw
+				  v2=edge1.next.next.origin;
+				  u=edge1.next.origin;
+			  }
+			  else { // swap v and w
+				  v1=v2;
+				  v2=v1.halfedge.next.next.origin;
+			  }
+		  }
+		  else { // else go cclw
+			  v2=edge1.twin.prev.origin;
+			  if (v2.vertIndx!=w)
+				  throw new CombException("vertices "+v+" and "+w+" can't form a legal edge");
+			  u=edge1.next.origin;
+		  }
+		  
+		  // now v1, u, v2 should be cclw nghbs
+		  edge1=v1.halfedge;
+		  HalfEdge edge2=edge1.twin.prev.twin;
+		  RedHEdge red1=edge1.myRedEdge;
+		  RedHEdge red2=edge2.myRedEdge;
+		  if (red1==null || red2==null)
+			  throw new DCELException("edges are not red");
+		  
+		  // adjust redChain if needed
+		  if (pdcel.redChain==red1)
+			  pdcel.redChain=red1.nextRed;
+		  if (pdcel.redChain==red2)
+			  pdcel.redChain=red2.nextRed;
+		  
+		  // new objects
+		  HalfEdge newedge=new HalfEdge(v1);
+		  HalfEdge newtwin=newedge.twin=new HalfEdge(v2);
+		  newtwin.twin=newedge;
+		  RedHEdge newred=red1.clone();
+		  
+		  // fix red pointers
+		  newred.myEdge=newedge;
+		  newedge.myRedEdge=newred;
+		  newred.prevRed=red1.prevRed;
+		  red1.prevRed.nextRed=newred;
+		  // simplest case, red1 and red2 orphaned
+		  if (red1.nextRed==red2) { 
+			  newred.nextRed=red2.nextRed;
+			  red2.nextRed.prevRed=newred;
+			  edge1.myRedEdge=null;
+			  edge2.myRedEdge=null;
+		  }
+		  // else, reroute: red1 orphaned, red2 gets twin
+		  else {
+			  RedHEdge redTwin=new RedHEdge(edge2.twin);
+			  edge2.twin.myRedEdge=redTwin;
+			  redTwin.prevRed=newred;
+			  newred.nextRed=redTwin;
+			  redTwin.nextRed=red1.nextRed;
+			  red2.twinRed=redTwin;
+			  redTwin.twinRed=red2;
+		  }
+		  
+		  // fix edge pointers
+		  edge1.twin.next.prev=newtwin;
+		  newtwin.next=edge1.twin.next;
+		  edge2.twin.prev.next=newtwin;
+		  newtwin.prev=edge2.twin.prev;
+		  edge1.twin.next=newedge;
+		  newedge.prev=edge1.twin;
+		  edge2.twin.prev=newedge;
+		  newedge.next=edge2.twin;
+		  
+		  // fix face pointers
+		  edge1.twin.face=null;
+		  edge2.twin.face=null;
+		  newtwin.face=newtwin.next.face;
+		  
+		  edge2.origin.redFlag=false;
+		  edge2.origin.bdryFlag=0;
+		  v1.halfedge=newedge;
+		  
+		  return newedge;
+	  }
+	  
+	  /**
+	   * Flip an interior edge. In a triangulation, an interior edge is
+	   * shared by two faces. To "flip" the edge means to remove it and
+	   * replace it with the other diagonal in the union of those faces. The
+	   * number of faces, edges, and vertices is not changed, but the calling
+	   * routine must update combinatorics. 'redProblem' is instantiated by
+	   * the calling routine; if true on return, then the flipped edge was
+	   * in the red chain, requiring extra work in the update. Faces are
+	   * reused.
+	   * @param pdcel PackDCEL
+	   * @param hedge HalfEdge
+	   * @param redProblem Boolean, return true if red Chain is disrupted
+	   * @return int 1 on success
+	   */
+	  public static int flipEdge(PackDCEL pdcel,HalfEdge hedge,Boolean redProblem) {
+		  redProblem=false;
+		  
+		  // if 'hedge' is bdry or faces not triangles, error
+		  if (pdcel.isBdryEdge(hedge) || 
+				  hedge.next.next.next!=hedge ||
+				  hedge.twin.next.next.next!=hedge.twin)
+			  return 0;
+		  if (hedge.myRedEdge!=null || hedge.twin.myRedEdge!=null) { // in redchain
+			  redProblem=true;
+		  }
+		  Face leftf=hedge.face;
+		  leftf.edge=hedge;
+		  Face rightf=hedge.twin.face;
+		  rightf.edge=hedge.twin;
+		  Vertex leftv=hedge.next.next.origin;
+		  Vertex rightv=hedge.twin.next.next.origin;
+				
+		  // save some info for later
+		  HalfEdge hn=hedge.next;
+		  HalfEdge hp=hedge.prev;
+		  HalfEdge twn=hedge.twin.next;
+		  HalfEdge twp=hedge.twin.prev;
+				
+		  // have to make sure ends don't have old 'halfedge's
+		  if (hedge.origin.halfedge==hedge)
+					hedge.origin.halfedge=hedge.prev.twin; // cclw spoke
+		  if (hedge.twin.origin.halfedge==hedge.twin)
+					hedge.twin.origin.halfedge=hedge.twin.prev.twin; // cclw spoke
+				
+		  // fix he and its twin
+		  hedge.origin=rightv;
+		  hedge.twin.origin=leftv;
+		  hedge.next=hp;
+		  hedge.prev=twn;
+		  hedge.twin.next=twp;
+		  hedge.twin.prev=hn;
+				
+		  hn.next=hedge.twin;
+		  hn.prev=twp;
+		  hp.next=twn;
+		  hp.prev=hedge;
+		  twn.prev=hp;
+		  twn.next=hedge;
+		  twp.next=hn;
+		  twp.prev=hedge.twin;
+				
+		  hedge.next.next.face=hedge.next.face=leftf;
+		  hedge.twin.next.next.face=hedge.twin.next.face=rightf;
+
+		  return 1;
+	  }
 }
 
 /**

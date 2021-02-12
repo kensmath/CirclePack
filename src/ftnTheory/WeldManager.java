@@ -478,12 +478,12 @@ public class WeldManager extends PackExtender {
 			}
 
 			// to get disc from outside, have to add an ideal vertex
-			if (p.bdryCompCount > 1) {
+			if (p.getBdryCompCount()>1) {
 				CirclePack.cpb.myErrorMsg("unweld: in 'outside' case, p must be "
 								+ "combinatorial.sphere or disc.");
 				return null;
 			}
-			if (p.bdryCompCount == 1) {
+			if (p.getBdryCompCount()==1) {
 				NodeLink nl = new NodeLink(p, p.bdryStarts[1]);
 				if (p.add_ideal(nl) == 0) {
 					CirclePack.cpb.myErrorMsg("unweld: outside case, failed to "

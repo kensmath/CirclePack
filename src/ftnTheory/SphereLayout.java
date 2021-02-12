@@ -91,7 +91,7 @@ public class SphereLayout extends PackExtender {
 		if (packData.hes<=0) {
 			cpCommand("geom_to_s");
 		}
-		if (packData.bdryCompCount>0 || packData.genus>0 || packData.euler!=2) {
+		if (packData.getBdryCompCount()>0 || packData.genus>0 || packData.euler!=2) {
 			CirclePack.cpb.msg("SL Warning: this does not seem to be a topological sphere");
 		}
 		if (running) {

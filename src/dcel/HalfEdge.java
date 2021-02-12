@@ -122,6 +122,21 @@ public class HalfEdge {
 		return false;
 	}
 	
+	/**
+	 * determines if origin is neighbor with vertex of index 'w'.
+	 * @param w int
+	 * @return
+	 */
+	public boolean isNghb(int w) {
+		HalfEdge he=this;
+		do {
+			if (he.twin.origin.vertIndx==w)
+				return true;
+			he=he.prev.twin;
+		} while (he!=this);
+		return false;
+	}
+	
 	public RedHEdge getRedEdge() {
 		return myRedEdge;
 	}

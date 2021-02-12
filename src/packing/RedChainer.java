@@ -126,7 +126,7 @@ public class RedChainer {
 	  keep_vert=0;
 	  for (int i=1;i<=p.nodeCount;i++) p.kData[i].utilFlag=0;
 
-	  if (p.bdryCompCount>0) { // top disc 
+	  if (p.getBdryCompCount()>0) { // top disc 
 	      for (int i=1;i<=p.nodeCount;i++) // flag bdry verts 
 		if (p.isBdry(i)) p.kData[i].utilFlag=1;
 	      v=red_share_vert(p,redlist);

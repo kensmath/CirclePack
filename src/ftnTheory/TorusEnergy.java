@@ -29,7 +29,7 @@ public class TorusEnergy extends PackExtender {
 	public TorusEnergy(PackData p) {
 		super(p);
 		packData=p;
-		if (packData.bdryCompCount!=0 || packData.euler!=0 || packData.hes!=0) {
+		if (packData.getBdryCompCount()!=0 || packData.euler!=0 || packData.hes!=0) {
 			CirclePack.cpb.errMsg("Error starting 'TorusEnergy': packing must be a torus.");
 			return;
 		}

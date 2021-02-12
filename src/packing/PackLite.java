@@ -224,7 +224,7 @@ public class PackLite {
 			if (util[i]==0)
 				mustcookie=true;
 
-		if (mustcookie || p.bdryCompCount>=2) // create new packing
+		if (mustcookie || p.getBdryCompCount()>=2) // create new packing
 			p=packData.copyPackTo();
 		
 		// now work with p (which is typically just packData itself)
@@ -289,7 +289,7 @@ public class PackLite {
   		}
   	  	
   	  	// arrange for 'gam' to be in first bdry component
-  	  	if (p.bdryCompCount>0) {
+  	  	if (p.getBdryCompCount()>0) {
   	  		int gamBdry=1;
   	  		if (newGam<1 || newGam>p.nodeCount)
   	  			newGam=p.bdryStarts[1];
@@ -310,9 +310,9 @@ public class PackLite {
   	  	
   	  	// add ideal to all other bdy comps, if there are any
   	  	int idealVertCount=0;
-  	  	if (addIdeals && p.bdryCompCount>=2) {
+  	  	if (addIdeals && p.getBdryCompCount()>=2) {
   	  		NodeLink bl=new NodeLink(p);
-  	  		for (int b=2;b<=p.bdryCompCount;b++)
+  	  		for (int b=2;b<=p.getBdryCompCount();b++)
   	  			bl.add(p.bdryStarts[b]);
   	  		idealVertCount=p.add_ideal(bl);
   	  	}
@@ -354,7 +354,7 @@ public class PackLite {
 		//     one face in, clw order, as last three indices --- in Orick's approach, 
 		//      these may be treated as bdry.
 		if (intVertCount==p.nodeCount) {
-			p.bdryCompCount=0;
+			p.setBdryCompCount(0);
 			int b1=-1;
 			int b2=-1;
 			int b3=-1;
@@ -400,7 +400,7 @@ public class PackLite {
 		}
 		// now boundary component (should be just one) in cclw order
 		else { 
-			for (int b=1;b<=p.bdryCompCount;b++) {
+			for (int b=1;b<=p.getBdryCompCount();b++) {
 				int w=p.bdryStarts[b];
 				int stopw=p.kData[w].flower[p.getNum(w)]; // upstream nghb
 				if (util[w]>0) {

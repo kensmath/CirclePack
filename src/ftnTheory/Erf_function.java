@@ -28,7 +28,7 @@ public class Erf_function {
 
 	    if (p.hes!=0) 
 	    	throw new ParserException("packing must be euclidean");
-	    if (n<1 || n>3 || !p.status || p.bdryCompCount==0 || !p.isSimplyConnected()) {
+	    if (n<1 || n>3 || !p.status || p.getBdryCompCount()==0 || !p.isSimplyConnected()) {
 	    	throw new ParserException("packing must be simply connected, with bdry");
 	    }
     	PackData packData=p.copyPackTo(); // make p2 a copy of p1

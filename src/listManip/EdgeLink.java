@@ -470,7 +470,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 					}
 				}
 				else { // whole boundary; note 'starts' is indexed from 1
-					for (int i=1;i<=packData.bdryCompCount;i++) {
+					for (int i=1;i<=packData.getBdryCompCount();i++) {
 						int strt=packData.bdryStarts[i];
 						next=packData.kData[strt].flower[0];
 						add(new EdgeSimple(strt,next));

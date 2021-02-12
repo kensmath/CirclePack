@@ -859,31 +859,6 @@ public class PackDCEL {
 		return count;
 	}
 
-
-	/**
- 	 * NEEDED FOR CIRCLEPACK
-	 * Flip specified interior edges. In a triangulation, an interior edge
-	 * is shared by two faces, and to "flip" it means to remove it and
-	 * replace it with the other diagonal in the union of those faces. The
-	 * number of faces, edges, and vertices is not changed, but we are out
-	 * of sync with parent 'p'. 
-	 * Note: calling routine must ensure there are no repeats in 'flippers'.
-	 * @param flippers ArrayList<HalfEdge>, edges to be flipped
-	 * @return int count
-	 */
-	public int flipEdges(EdgeLink elist) {
-
-		ArrayList<HalfEdge> flipthese=new ArrayList<HalfEdge>();
-		Iterator<EdgeSimple> eit=elist.iterator();
-		while (eit.hasNext()) {
-			EdgeSimple edge=eit.next();
-			HalfEdge he=null;
-			if ((he=findHalfEdge(edge.v,edge.w))!=null)
-				flipthese.add(he);
-		}
-		return flipEdges(flipthese);
-	}
-	
 	/**
 	 * Flip the specified edges. In a triangulation, an interior edge is
 	 * shared by two faces. To "flip" the edge means to remove it and
@@ -901,7 +876,7 @@ public class PackDCEL {
 		while (lst.hasNext()) {
 			HalfEdge he=lst.next();
 
-			if (edgeIsBdry(he)<0) { // if not bdry
+			if (!isBdryEdge(he)) { // if not bdry
 				if (he.myRedEdge!=null) // in redchain
 					redprob=true;
 				Face leftf=he.face;
@@ -1033,7 +1008,7 @@ public class PackDCEL {
 		Iterator<HalfEdge> heit=arrayE.iterator();
 		while (heit.hasNext()) {
 			HalfEdge he=heit.next();
-			if (edgeIsBdry(he)>0) 
+			if (!isBdryEdge(he)) 
 				arrayBdry.add(he);
 			else 
 				arrayInt.add(he);
@@ -1073,158 +1048,6 @@ public class PackDCEL {
 		
 		return n;
 	}
-
-	/**
- 	 * NEEDED FOR CIRCLEPACK
-	 * Cookie out a subcomplex based on the list of 
-	 * vertices to be included.
-	 * @param vlist NodeLink
-	 * @return int count
-	 */
-	public int cookie(NodeLink vlist) {
-		
-		// to avoid redundant listing
-		int []vhits=new int[vertCount+1];
-		Iterator<Integer> vit=vlist.iterator();
-		while (vit.hasNext())
-			vhits[vit.next()]=1;
-		
-		// make up 'Vertex' array
-		ArrayList<Vertex> arrayV=new ArrayList<Vertex>();
-		for (int n=1;n<=vertCount;n++)
-			if (vhits[n]==1) 
-				arrayV.add(vertices[n]);
-		
-		return cookie(arrayV);
-	}
-
-	/**
-	 * Cookie out a subcomplex based on the list of 
-	 * vertices to be included.
-	 * @param vlist NodeLink
-	 * @return int count
-	 */
-	public int cookie(ArrayList<Vertex> arrayV) {
-		
-		CirclePack.cpb.errMsg("OBE: should use 'RedDCELBuilder'");
-		return 0;
-		
-/*		
-		// We will need to identify new boundary edges later.
-		//   We will do this via the bdry vertices; prepare by ensuring
-		//   that for each original bdry edge, its 'origin' points to 
-		//   its twin. As we detach edges later, their vertices will 
-		//   have 'halfedge' pointing to new bdry edge's twin.
-		ArrayList<HalfEdge> tmpbdry=getBdryEdges();
-		Iterator<HalfEdge> tit=tmpbdry.iterator();
-		while (tit.hasNext()) {
-			HalfEdge he=tit.next();
-			he.twin.origin.halfedge=he.twin;
-		}
-		
-		// form array with included vertices
-		int []vhits=new int[vertCount+1];
-		Iterator<Vertex> vit=arrayV.iterator();
-		while (vit.hasNext()) {
-			vhits[vit.next().vertIndx]=1; // included vertex
-		}
-		
-		// Make new edge list by going through 'edges' and
-		//   removing any edge with one or both ends excluded
-		//   and adding any resulting new bdry edges.
-		ArrayList<HalfEdge> newedges=new ArrayList<HalfEdge>();
-		Iterator<HalfEdge> eit=edges.iterator();
-		while (eit.hasNext()) {
-			HalfEdge he=eit.next();
-			
-			if (he.next!=null) { // this edge hasn't been detached
-				int v=he.origin.vertIndx;
-				int w=he.twin.origin.vertIndx;
-			
-
-				// at least one end excluded? 
-				if (vhits[v]==0 || vhits[w]==0) {
-					// first, included vertices lead to new bdry edges
-					if (vhits[v]==1)
-						tmpbdry.add(he.prev);
-					if (vhits[w]==1)
-						tmpbdry.add(he.twin.prev);
-					
-					// now 'detach', so nothing points to he
-					he.detach();
-				}
-				else  // this is a keeper
-					newedges.add(he);
-			}
-		} // end of while through 'edges'
-		
-		// prune any dangling edges; multiple passes may be needed
-		boolean ahit=true;
-		while (ahit) {
-			ahit=false;
-			eit=newedges.iterator();
-			while (eit.hasNext()) {
-				HalfEdge he=eit.next();
-				if (he.next==he.twin || he.twin.next==he) { // folds back on self?
-					he.detach();
-					ahit=true;
-					newedges.remove(he);
-					newedges.remove(he.twin);
-					break;
-				}
-			}
-		}
-		
-		// we now have the new 'edges'
-		edges=newedges;
-		
-		// define new 'vertices' and 'newOld' map
-		int newvertcount=0;
-		int []vkept=new int[vertCount+1];
-		newOld=new VertexMap();
-		ArrayList<Vertex> newvertices=new ArrayList<Vertex>();
-		Iterator<HalfEdge> nit=edges.iterator();
-		while (nit.hasNext()) {
-			HalfEdge he=nit.next();
-			Vertex vert=he.origin;
-			if (vkept[vert.vertIndx]==0) { // avoid repeats
-				newOld.add(new EdgeSimple(++newvertcount,vert.vertIndx));
-				vkept[vert.vertIndx]=newvertcount; //
-				newvertices.add(vert);
-			}
-		}
-		
-		// reset vertex indices and put in new array
-		Vertex []newv=new Vertex[newvertcount+1];
-		vit=newvertices.iterator();
-		while (vit.hasNext()) {
-			Vertex vert=vit.next();
-			vert.vertIndx=vkept[vert.vertIndx];
-			newv[vert.vertIndx]=vert;
-		}
-		
-		// we now have our new data
-		vertCount=newvertcount;
-		vertices=newv;
-		
-
-		// find new bdry by looking through origins of tmpbdry edges
-		ArrayList<HalfEdge> newbdry=new ArrayList<HalfEdge>();
-		tit=tmpbdry.iterator();
-		while (tit.hasNext()) {
-			HalfEdge he=tit.next();
-			Vertex vert=he.origin;
-			if (vkept[vert.vertIndx]>0) 
-				newbdry.add(vert.halfedge.twin);
-		}
-		
-		// establish new faces, face indices, new 'bdryFaces'
-		return indexFaces(edges,newbdry);
-	}
-*/
-
-	} // end of OBE 'cookie'
-
 
 	/**
 	 * Form bouquet of the combinatorial flowers, eg., for writing or
@@ -1601,16 +1424,17 @@ public class PackDCEL {
 	}
 		
 	/**
-	 * Is this a boundary edge?
+	 * boundary edge? Depends on face existing and
+	 * having negative index, indicating ideal face.
 	 * @param he HalfEdge
-	 * @return int, index or -1 if not bdry
+	 * @return boolean
 	 */
-	public int edgeIsBdry(HalfEdge he) {
-		for (int j=0;j<idealFaceCount;j++) {
-			if (idealFaces[j+1]==he.face)
-				return j+1;
+	public boolean isBdryEdge(HalfEdge he) {
+		if ((he.face!=null && he.face.faceIndx<0) ||
+				(he.twin.face!=null && he.twin.face.faceIndx<0)) {
+			return true;
 		}
-		return -1;
+		return false;
 	}
 
 	/**

@@ -72,7 +72,7 @@ public class AffinePack extends PackExtender {
 			errorMsg("AP: failed to convert to euclidean");
 			running=false;
 		}
-		if (packData.bdryCompCount>0 || packData.genus!=1) {
+		if (packData.getBdryCompCount()>0 || packData.genus!=1) {
 			errorMsg("AP: failed, packing is not a torus");
 			running=false;
 		}
@@ -2951,7 +2951,7 @@ public class AffinePack extends PackExtender {
 			// this routine is tailored for tori: specify side-pair
 			// scaling in an attempt to build general affine tori
 
-			if (packData.genus != 1 || packData.bdryCompCount > 0) {
+			if (packData.genus != 1 || packData.getBdryCompCount()>0) {
 				int count=0;
 				msg("Simply connected case: 'affine' defaults to all 'labels' 1");
 				for (int f=1;f<=packData.faceCount;f++) {

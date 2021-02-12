@@ -285,9 +285,9 @@ public class PackData{
     	
 		nodeCount=pdcel.vertCount;
 		faceCount=pdcel.faceCount;
-		bdryCompCount=pdcel.idealFaceCount;
+		setBdryCompCount(pdcel.idealFaceCount);
     	euler=nodeCount-(pdcel.edgeCount/2)+faceCount;
-		genus=(2-euler-bdryCompCount)/2;
+		genus=(2-euler-pdcel.idealFaceCount)/2;
 		intrinsicGeom=-1;
 		if (pdcel.idealFaceCount==0) {
 			if (genus==0)
@@ -357,27 +357,25 @@ public class PackData{
    				oldv=w;
    			// if there is existing data, copy it
    			if (oldv<=origNodeCount) {
-   				
-   				// copy 'aim' when appropriate
-//   				vData[v].aim=oldVData[oldv].aim;
-//   				if (vert.isBdry() && oldVData[oldv].getBdryFlag()==0) 
-//  					vData[v].aim=-1.0;
-   				
-   				Complex z=oldVData[oldv].center;
-   				double rad=oldVData[oldv].rad;
+   				Complex z=new Complex(0.0);
+   				double rad=0.05;
+   				try {
+   					z=oldVData[oldv].center;
+   					rad=oldVData[oldv].rad;
    			
-   				// need to store in any 'RedHEdge's from this vertex
-   				if (vert.redFlag) {
-   					HalfEdge trace=he.prev.twin;
-   					do {
-   						if(trace.myRedEdge!=null) {
-   							trace.myRedEdge.setCenter(z);
-   							trace.myRedEdge.setRadius(rad);
-   						}
-   						trace=trace.prev.twin;
-   					} while (trace!=he);
-   				}
-   				pdcel.setVertData(he, new CircleSimple(z,rad));
+   					// need to store in any 'RedHEdge's from this vertex
+   					if (vert.redFlag) {
+   						HalfEdge trace=he.prev.twin;
+   						do {
+   							if(trace.myRedEdge!=null) {
+   								trace.myRedEdge.setCenter(z);
+   								trace.myRedEdge.setRadius(rad);
+   							}
+   							trace=trace.prev.twin;
+   						} while (trace!=he);
+   					}
+   				} catch(Exception ex) {}
+				pdcel.setVertData(he, new CircleSimple(z,rad));
    			}
 			pdcel.setVDataIndices(v);
     	}
@@ -2351,7 +2349,7 @@ public class PackData{
 		temp += "Face count: " + faceCount + "\n";
 		temp += "Number of interior nodes: " + intNodeCount + "\n";
 		temp += "Number of boundary nodes: " + (nodeCount - intNodeCount) + "\n";
-		temp += "Number of boundary components: " + bdryCompCount + "\n";
+		temp += "Number of boundary components: " + getBdryCompCount() + "\n";
 		temp += "Number of interior components: " + intCompCount + "\n";
 		temp += "Geometry: " + intToGeometry(hes) + "\n";
 		temp += "Intrinsic geometry: " + intToGeometry(intrinsicGeom) + "\n";
@@ -2480,6 +2478,20 @@ public class PackData{
 	}
 	
 	/**
+	 * Do v and w share an edge?
+	 * @param v int
+	 * @param w int
+	 * @return boolean
+	 */
+	public boolean areNghbs(int v,int w) {
+		if (packDCEL!=null)
+			return packDCEL.vertices[v].halfedge.isNghb(w);
+		if (nghb(v,w)>=0)
+			return true;
+		return false;
+	}
+	
+	/**
 	 * Get array of vertices for face 'f'
 	 */
 	public int[] getFaceVerts(int f) {
@@ -2515,6 +2527,24 @@ public class PackData{
 			cpScreen.setGeometry(hes);
 	}
 	
+	/**
+	 * Get the count of bdry components
+	 * @return
+	 */
+	public int getBdryCompCount() {
+		if (packDCEL!=null)
+			return packDCEL.idealFaceCount;
+		return bdryCompCount;
+	}
+	
+	/**
+	 * This only sets the traditional count, not the
+	 * 'idealFaceCount' in DCEL strutures
+	 * @param k
+	 */
+	public void setBdryCompCount(int k) {
+		bdryCompCount=k;
+	}
 	
 	/**
 	 * Enter center (x,y) in rData
@@ -3722,7 +3752,7 @@ public class PackData{
 		if (w<1 || w>nodeCount || !isBdry(w))
 			return -1;
 		int hit=-1;
-		for (int i=1;(i<=bdryCompCount && hit<0);i++) {
+		for (int i=1;(i<=getBdryCompCount() && hit<0);i++) {
 			int ws=bdryStarts[i];
 			if (ws==w)
 				hit=i;
@@ -4260,7 +4290,7 @@ public class PackData{
 		faceCount=count/3;
 		int num_edges=(count + bcount)/2;
 		euler=nodeCount-num_edges+faceCount;
-		genus=(2-euler-bdryCompCount)/2;
+		genus=(2-euler-getBdryCompCount())/2;
 		// check if geom is appropriate 
 		if (bcount==0 && genus==0 && hes<=0) {
 			CirclePack.cpb.msg("NOTE: This complex is a topological sphere");
@@ -4440,7 +4470,7 @@ public class PackData{
 				else setBdryFlag(i,0);
 			}
 		}
-		bdryCompCount=bs;
+		setBdryCompCount(bs);
 		return bcount;
 	}
 	
@@ -4564,12 +4594,12 @@ public class PackData{
 		  // Now we create/process the redChain
 		  
 		  // Couple of checks first: Sphere? thus, no redChain needed
-	      if (bdryCompCount==0) {
+	      if (getBdryCompCount()==0) {
 	    	  redChain=null;
 	    	  return 1;
 	      }
-	      if (bdryCompCount>1) 
-	    	  throw new CombException("Claims simply-connected, but 'bdryCompCount'== "+bdryCompCount);
+	      if (getBdryCompCount()>1) 
+	    	  throw new CombException("Claims simply-connected, but 'bdryCompCount'== "+getBdryCompCount());
 	      
 		  // Need to start with bdry vert having at least two faces
 	      int bstart=bdryStarts[1]; 
@@ -7540,20 +7570,22 @@ public class PackData{
 	 * tangent to v and its clockwise bdry neighbor. Local data is
 	 * updated, but calling routine must update the packing. Return
 	 * @param v int
-	 * @return int, 0 on error.
+	 * @return int, nodecount, 0 on error.
 	 */
 	public int add_vert(int v) throws CombException {
-		int v2, node, n;
-		int[] newflower;
-		double[] newoverlaps;
 
 		if (v < 1 || v > nodeCount || !isBdry(v))
 			return 0;
-		v2 = kData[v].flower[getNum(v)];
+		int node=nodeCount+1;
 		if ((node = nodeCount + 1) > (sizeLimit)
-				&& alloc_pack_space(node, true) == 0) {
+				&& alloc_pack_space(node, true) == 0) 
 			throw new CombException("Pack space allocation failure");
-		}
+		
+		int v2,n;
+		int[] newflower;
+		double[] newoverlaps;
+
+		v2 = kData[v].flower[getNum(v)];
 		if (getRadius(v) <= 0) { // avoid infinite rad
 			setRadius(v,.1);
 		}
@@ -7970,7 +8002,7 @@ public class PackData{
 		// fix up elist
 		if (elist != null) 
 			elist.swapVW(v, w);;
-
+			
 		// fix up vlist
 		if (vlist != null) 
 			vlist=vlist.swapVW(v, w);
@@ -9012,6 +9044,46 @@ public class PackData{
    		  }
 
 		  return newNodeCount;
+	  }
+
+	  /**
+	   * Flip edges from a prepared list
+	   * @param fliplist EdgeLink
+	   * @return int, count
+	   */
+	  public int flipList(EdgeLink fliplist) {
+		  if (fliplist==null || fliplist.size()==0) {
+			  return 0;
+		  }
+		  int count=0;
+		  PackDCEL pdc=packDCEL;
+		  Iterator<EdgeSimple> fis=fliplist.iterator();
+		  if (pdc!=null) {
+	   		  Boolean redProblem=Boolean.valueOf(false); // for dcel version 
+			  while (fis.hasNext()) {
+    			  count += CombDCEL.flipEdge(pdc,pdc.findHalfEdge(fis.next()), redProblem);
+			  }
+   			  if (count>0) {
+   				  if (redProblem.booleanValue()) { // must build a new red cahin
+   					  pdc=CombDCEL.redchain_by_edge(pdc,null,pdc.alpha);
+   				  }
+   				  CombDCEL.d_FillInside(pdc);
+   				  return attachDCEL(pdc);
+   			  }
+   			  return 0;
+		  }
+		  
+		  // traditional
+		  while (fis.hasNext()) {
+			  EdgeSimple ege=fis.next();
+			  count += flip_edge(ege.v,ege.w,2);
+		  }
+		  if (count>0) {
+			  setCombinatorics();
+			  fillcurves();
+			  return count;
+		  }
+		  return 0;
 	  }
 	  
 	  /** 
@@ -11531,7 +11603,7 @@ public class PackData{
 			if (tlist != null && tlist.size() > 0)
 				face = (Integer) tlist.get(0);
 			else {
-				if (bdryCompCount == 0)
+				if (getBdryCompCount()==0)
 					return null; // no boundary
 
 				// first, find closest bdry circle
@@ -17162,7 +17234,7 @@ public class PackData{
 		RData[] newR_ptr = null;
 
 		// check suitability
-		if (bdryCompCount == 0) { // already compact
+		if (getBdryCompCount()==0) { // already compact
 			throw new CombException("this complex has no boundary vertices");
 		}
 		if (vertlist == null)
@@ -17713,9 +17785,9 @@ public class PackData{
 		    fp.write("T("+i+","+j+")=1/"+getNum(j)+";\n");
 	      }
 	    }
-	    if (bdryCompCount!=0) { // nonempty boundary? 
+	    if (getBdryCompCount()!=0) { // nonempty boundary? 
 	      fp.write("Bdry=[");
-	      for (int i=1;i<=bdryCompCount;i++) {
+	      for (int i=1;i<=getBdryCompCount();i++) {
 		  start=bdryStarts[i];
 		  fp.write(new String(start+" "));
 		  nv=start;
@@ -18228,7 +18300,7 @@ public class PackData{
 	 * @return PackData, vertexMap contains {orig,new} matchings.
 	 */
 	public static PackData sampledSubPack(PackData p,NodeLink chosen) {
-		  if (p.bdryCompCount!=1) {
+		  if (p.getBdryCompCount()!=1) {
 			  throw new ParserException(
 					  "packing must have one and only one bdry component");
 		  }

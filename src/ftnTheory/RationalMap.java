@@ -428,7 +428,7 @@ public class RationalMap extends PackExtender {
 			while (rmState<BUILT && pasteNext()>0) 
 				pcount++;
 			
-			if (domainPack.bdryCompCount!=0) {
+			if (domainPack.getBdryCompCount()!=0) {
 				errorMsg("RM: don't seem able to complete all pastings");
 				rmState=ERROR;
 			}
@@ -465,7 +465,7 @@ public class RationalMap extends PackExtender {
 		
 		// no remaining 'PasteCode'? ERROR or BUILT?
 		if (pc==null) {
-			if (domainPack.bdryCompCount>0) {
+			if (domainPack.getBdryCompCount()>0) {
 				msg("RM: all pastings done, but the boundary is non empty");
 				rmState=ERROR;
 				return -1;
@@ -537,7 +537,7 @@ public class RationalMap extends PackExtender {
 		}
 		
 		// are we done?
-		if (domainPack.bdryCompCount==0) { 
+		if (domainPack.getBdryCompCount()==0) { 
 			rmState=BUILT;
 			domainPack.status=true;
 			domainPack.hes=1;

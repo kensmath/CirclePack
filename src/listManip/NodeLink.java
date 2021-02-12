@@ -419,7 +419,7 @@ public class NodeLink extends LinkedList<Integer> {
 						}
 					}
 					else { // traditional
-						for (int i=1;i<=packData.bdryCompCount;i++) {
+						for (int i=1;i<=packData.getBdryCompCount();i++) {
 							int strt=packData.bdryStarts[i];
 							add(strt);
 							count++;
@@ -896,8 +896,8 @@ public class NodeLink extends LinkedList<Integer> {
 			case 'B': // boundary starts (i.e., one vertex on each 
 					// boundary component. 
 			{
-				if (packData.bdryCompCount>0) {
-					for (int i=1;i<=packData.bdryCompCount;i++) { // indexing starts at 1
+				if (packData.getBdryCompCount()>0) {
+					for (int i=1;i<=packData.getBdryCompCount();i++) { // indexing starts at 1
 						add(packData.bdryStarts[i]);
 						count++;
 					}

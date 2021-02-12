@@ -30,7 +30,7 @@ public class TorusModulus {
 	  
 	  // Determine if this is a torus. 
 	 
-	  if (p.bdryCompCount>0 || p.genus!=1) {
+	  if (p.getBdryCompCount()>0 || p.genus!=1) {
 	      ans[2]=-1.0;
 	      return ans;
 	  }

@@ -322,7 +322,7 @@ public class PackCreation {
 	   				if (xv>0 && xv<=next) // may have to reset next, too
 	   					next--;
 	   				p.complex_count(true);
-	   				if (p.bdryCompCount==0) // closed up?
+	   				if (p.getBdryCompCount()==0) // closed up?
 	   					return p;
 	   			}
 	   			else p.enfold(w);

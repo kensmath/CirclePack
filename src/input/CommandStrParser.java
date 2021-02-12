@@ -874,103 +874,33 @@ public class CommandStrParser {
 	    		  // do adjoin
 	    		  try {
 	    			  pdc1=CombDCEL.d_adjoin(pdc1, pdc2, v1, v2, N);
+		    		  packData.alloc_pack_space(pdc1.vertCount+10,true);
 	    		  } catch(CombException cex) {
 	    			  CirclePack.cpb.errMsg("DCEL adjoin failed: "+cex.getMessage());
 	    			  return 0;
 	    		  }
+
+	    		  // Set up 'VData' (at original size) 
+	    		  VData[] newV=new VData[packData.nodeCount+1];
 	    		  
-	    		  // Catalog/count vertices and edges:
-	    		  // Set up 'VData' and 'newOld'
-	    		  
-	    		  // take care of edges first
-	    		  //   abandoned edges have 'edgeIndex' 
-	    		  int ecount=0;
-	    		  ArrayList<HalfEdge> newEdges=new ArrayList<HalfEdge>();
-	    		  for (int e=1;e<=pdc1.edgeCount;e++) {
-	    			  HalfEdge he=pdc1.edges[e];
-	    			  if (he.edgeIndx!=0) {
-	    				  he.edgeIndx=++ecount;
-	    				  newEdges.add(he);
-	    			  }
-	    		  }
+	    		  // copy the 'packData' info?
+	    		  if (pdc2==pdc1) 
+	    			  for (int v=1;v<=pdc1.vertCount;v++)
+	    				  newV[v]=packData.vData[pdc1.vertices[v].util].clone();
 	    		  if (pdc2!=pdc1) {
-	    			  for (int e=1;e<=pdc2.edgeCount;e++) {
-	    				  HalfEdge he=pdc2.edges[e];
-	    				  if (he.edgeIndx!=0) {
-	    					  he.edgeIndx=++ecount;
-	    					  newEdges.add(he);
-	    				  }
+	    			  // all 'packData' vertices should still be there, same indices
+	    			  for (int v=1;v<=packData.nodeCount;v++)
+	    				  newV[v]=packData.vData[v].clone();
+	    			  // rest are from 'qackData'.
+	    			  for (int v=packData.nodeCount+1;v<=pdc1.vertCount;v++) {
+	    				  newV[v]=new VData();
+	    				  int oldv=pdc1.newOld.findW(v); // v is 'oldv' in 'qackData'
+	    				  newV[v].rad=qackData.getRadius(oldv);
+	    				  newV[v].center=qackData.getCenter(oldv);
+	    				  newV[v].aim=qackData.getAim(oldv);
 	    			  }
 	    		  }
-	    		  pdc1.edges=new HalfEdge[newEdges.size()+1];
-	    		  Iterator<HalfEdge> eit=newEdges.iterator();
-	    		  int etick=0;
-	    		  while (eit.hasNext()) 
-	    			  pdc1.edges[++etick]=eit.next();
-	    		  pdc1.edgeCount=etick;
 	    		  
-	    		  // build 'VData' structure combining packData and qackData
-	    		  //   information; put in packData before attaching the new 
-	    		  //   'PackDCEL' and using its 'newOld' to connect the
-	    		  //   vertices to their data.
-	    		  int maxVCount=packData.nodeCount;
-	    		  if (pdc2!=pdc1)
-	    			  maxVCount+=qackData.nodeCount;
-	    		  packData.alloc_pack_space(maxVCount,true);
-	    		  VData[] newV=new VData[maxVCount+1];
-	    		  
-	    		  // copy the old packData info
-	    		  for (int v=1;v<=packData.nodeCount;v++) 
-	    			  newV[v]=packData.vData[v].clone();
-	    		  if (pdc2!=pdc1)
-	    			  for (int v=1;v<=qackData.nodeCount;v++)
-	    				  newV[packData.nodeCount+v]=new VData();
-
-	    		  // vertices: count first
-	    		  int vcount=0;
-	    		  for (int v=1;v<=pdc1.vertCount;v++)
-	    			  if (pdc1.vertices[v].halfedge!=null)
-	    				  ++vcount;
-	    		  if (pdc2!=pdc1) {
-	    			  for (int v=1;v<=pdc2.vertCount;v++)
-	    				  if (pdc2.vertices[v].halfedge!=null)
-	    					  ++vcount;
-	    		  }
-
-	    		  // now identify, index, and build 'newOld'.
-	    		  //   Abandoned vertices have 'halfedge' null.
-	    		  //  
-	    		  VertexMap newOld=new VertexMap();
-	    		  Vertex[] newVertices=new Vertex[vcount+1];
-
-	    		  // index vertices
-	    		  vcount=0;
-	    		  for (int v=1;v<=pdc1.vertCount;v++) {
-	    			  Vertex vert=pdc1.vertices[v];
-	    			  if (vert.halfedge!=null) {
-	    				  vert.vertIndx=++vcount;
-	    				  newVertices[vcount]=vert;
-	    				  newOld.add(new EdgeSimple(vcount,v));
-	    			  }
-	    		  }
-	    		  // for pdc2, original indices stored in 'util'
-	    		  if (pdc2!=pdc1) {
-	    			  for (int v=1;v<=pdc2.vertCount;v++) {
-	    				  Vertex vert=pdc2.vertices[v];
-	    				  if (vert.halfedge!=null) {
-	    					  int nv=v+packData.nodeCount; // index vis-a-vis vData
-	    					  newV[nv].rad=qackData.getRadius(v);
-	    					  newV[nv].center=qackData.getCenter(v);
-	    					  newV[nv].aim=qackData.getAim(v);
-	    					  vert.vertIndx=++vcount;
-	    					  newVertices[vcount]=vert;
-	    					  newOld.add(new EdgeSimple(nv,vert.util));
-	    				  }
-	    			  }
-	    		  }
-	    		  pdc1.vertices=newVertices;
-	    		  pdc1.vertCount=vcount;
-
 	    		  // now organize combinatorics
 	    		  try {
 	    			  // make sure bdry edge's twins point to
@@ -994,7 +924,6 @@ public class CommandStrParser {
 	    			  throw new DCELException("DCEL adjoin processing failed: "+ex.getMessage());
 	    		  }
 	    		  
-	    		  pdc1.newOld=newOld;
 	    		  packData.vData=newV;
 	    		  
 	    		  packData.attachDCEL(pdc1);
@@ -5048,7 +4977,7 @@ public class CommandStrParser {
 	      else if (cmd.startsWith("add_ideal")) {
 	    	  
 	    	  // no boundary? return 0
-	    	  if (packData.bdryCompCount<=0) return 0;
+	    	  if (packData.getBdryCompCount()<=0) return 0;
 
 	    	  boolean addVert=true; // default
 	    	  NodeLink vertlist=null;
@@ -5178,15 +5107,54 @@ public class CommandStrParser {
 	    	  }
 	   		  NodeLink nodeLink=new NodeLink(packData,items);
 
+   			  if ((packData.nodeCount + nodeLink.size()) > (packData.sizeLimit)
+   					&& packData.alloc_pack_space(packData.nodeCount+1, true) == 0) 
+   				  throw new CombException("Pack space allocation failure");
+   			
 	   		  Iterator<Integer> vlist=nodeLink.iterator();
+   			  if (packData.packDCEL!=null) {
+   				  int oldvertCount=packData.packDCEL.vertCount;
+   				  ArrayList<Vertex> newVerts=new ArrayList<Vertex>();
+   		   		  while (vlist.hasNext()) {
+   		   			  Vertex vert=CombDCEL.addVertex(packData.packDCEL,
+   		   					  packData.packDCEL.vertices[vlist.next()]);
+   		   			  if (vert!=null) {
+   		   				  count++;
+   		   				  newVerts.add(vert);
+   		   			  }
+   		   		  }
+   		   		  if (count>0) {
+   		   			  int newnodes=newVerts.size();
+   		   			  
+   		   			  // add to 'vertices' before processing
+   		   			  Vertex[] vertices=new Vertex[packData.packDCEL.vertCount+1];
+   		   			  for (int j=1;j<=oldvertCount;j++) 
+   		   				  vertices[j]=packData.packDCEL.vertices[j];
+   		   			  for (int j=1;j<=newnodes;j++)
+   		   				  vertices[oldvertCount+j]=newVerts.get(j-1);
+   		   			  packData.packDCEL.vertices=vertices;
 
-	   		  while (vlist.hasNext()) {
+   		   			  // process 
+   		   		  	  CombDCEL.d_FillInside(packData.packDCEL);
+   		   		  	  packData.attachDCEL(packData.packDCEL); // reattach
+   		   		  }
+   		   		  return count;
+   			  }
+
+   			  // traditional
+   			  while (vlist.hasNext()) {
 	   			  v=(Integer)vlist.next();
 	   			  count += packData.add_vert(v);
 	   		  }
 	   		  if (count>0) {
 	   			  packData.xyzpoint=null;
-	   			  packData.setCombinatorics();
+	   			  if (packData.packDCEL!=null) {
+	   				  CombDCEL.d_FillInside(packData.packDCEL);
+	   				  packData.attachDCEL(packData.packDCEL);
+	   			  }
+	   			  else {
+	   				  packData.setCombinatorics();
+	   			  }
 	   			  packData.fillcurves();
 	   		  }
 	    	  return count;
@@ -5210,16 +5178,22 @@ public class CommandStrParser {
 	   			  int w=vlist.next();
 	   			  
 	   			  // is {v w} already an edge?
-	   			  if (packData.nghb(v,w)>=0) {
-   					  CirclePack.cpb.errMsg("{"+v+" "+w+"} is already an edge");
+	   			  if (packData.areNghbs(v,w)) {
+   					  CirclePack.cpb.errMsg("<"+v+" "+w+"> is already an edge");
+   					  return count;
 	   			  }
+   				  if (!packData.isBdry(v) || !packData.isBdry(w)) {
+   					  CirclePack.cpb.errMsg("usage: add_edge v w, vertices must be on boundary");
+   					  return count;
+   				  }
+   				  
+   				  if (packData.packDCEL!=null) {
+   					  if (CombDCEL.addEdge(packData.packDCEL, v, w)!=null)
+   						  count++;
+   				  }
 
-	   			  else {
-	   				  if (!packData.isBdry(v) || !packData.isBdry(w)) {
-	   					  CirclePack.cpb.errMsg("usage: add_edge v w, vertices must be on boundary");
-	   					  return count;
-	   				  }
-	   				  
+   				  // traditional packing
+   				  else {
 	   				  // reaching here, 2 boundary verts.	   				  
 	   				  int afterv=packData.kData[v].flower[0];
 	   				  int afterw=packData.kData[w].flower[0];
@@ -5259,7 +5233,12 @@ public class CommandStrParser {
 	   		  }
 	   		  if (count>0) {
 	   			  packData.xyzpoint=null;
-	   			  packData.setCombinatorics();
+	   			  if (packData.packDCEL!=null) {
+	   				  CombDCEL.d_FillInside(packData.packDCEL);
+	   				  packData.attachDCEL(packData.packDCEL);
+	   			  }
+	   			  else 
+	   				  packData.setCombinatorics();
 	   			  packData.fillcurves();
 	   		  }
 	   		  return count;
@@ -5329,7 +5308,7 @@ public class CommandStrParser {
 	    	  int mode=TENT;
 	    	  int degree=3,v1,v2;
 	    	  
-	    	  if (packData.bdryCompCount==0 || flagSegs.size()==0) {
+	    	  if (packData.getBdryCompCount()==0 || flagSegs.size()==0) {
 	    		  throw new ParserException("perhaps packing has no boundary?");
 	    	  }
 	    	  
@@ -5405,7 +5384,7 @@ public class CommandStrParser {
 	    	  NodeLink bdrylist=null;
 	    	  boolean b_flag=false;
 	    	  
-	    	  if (packData.bdryCompCount==0 || flagSegs.size()==0) {
+	    	  if (packData.getBdryCompCount()==0 || flagSegs.size()==0) {
 	    		  throw new CombException("packing has no boundary");
 	    	  }
 	    	  
@@ -6130,19 +6109,6 @@ public class CommandStrParser {
 					CPScreen cpScreen=CPBase.pack[qnum];
 					return cpScreen.swapPackData(tmppack,false);
 				}
-				else if (str.contains("cookie")) {
-					if (packData.packDCEL==null)
-						return 0;
-					if (items==null || items.size()==0) 
-						return 0;
-
-					// find desired vertices, default to all
-					NodeLink vlink=new NodeLink(packData,items);
-					if (vlink==null || vlink.size()==0)
-						vlink=new NodeLink(packData,"a");
-					
-					return packData.packDCEL.cookie(vlink);
-				}
 				else if (str.contains("layout")) {
 					if (packData.packDCEL==null)
 						return 0;
@@ -6152,13 +6118,6 @@ public class CommandStrParser {
 					if (packData.packDCEL==null)
 						return 0;
 					return packData.packDCEL.syncFaceData();
-				}
-				else if (str.contains("flip")) { // baryrefine given faces
-					EdgeLink elink=null;
-					if (items==null || items.size()==0) // default to 'all'
-						return 0;
-					elink=new EdgeLink(packData,items);
-					return packData.packDCEL.flipEdges(elink);
 				}
 				else if (str.contains("bary")) { // baryrefine given faces
 					FaceLink flink=null;
@@ -6558,71 +6517,82 @@ public class CommandStrParser {
 	  {
 	      // ========= flip ========
 	      if (cmd.startsWith("flip")) {
+			  PackDCEL pdc=packData.packDCEL;
 	    	  items=flagSegs.elementAt(0); // should be only one segment
-
-	    	  // -cc flag (deprecated -hh): for each edge, flip the next 
-	    	  //     counterclockwise edge. (E.g., 'half-hex' path flips, see 'hh_path')
-	    	  if (items.elementAt(0).startsWith("-hh") ||
-	    			  items.elementAt(0).startsWith("-cc")) { 
-	    		  items.remove(0);
-		   		  EdgeLink edgeLink=new EdgeLink(packData,items);
-		   		  if (edgeLink==null || edgeLink.size()<1) return 0;
-		   		  Iterator<EdgeSimple> elist=edgeLink.iterator();
-		   		  while (elist.hasNext()) {
-		   			  EdgeSimple edge=(EdgeSimple)elist.next();
-		   			  int indx=packData.nghb(edge.v,edge.w);
-		   			  if (indx>=0 && indx<packData.getNum(edge.v)) { // flip counterclockwise edge
-		   				  int w=packData.kData[edge.v].flower[indx+1];
-		   				  int ans=packData.flip_edge(edge.v,w,2);
-		   				  count+=ans;
-		   				  if (ans<=0) {
-		   					  CirclePack.cpb.errMsg("flip of "+edge.v+" "+w+" failed");
-		   					  while(elist.hasNext()) elist.next(); // eat rest of list
-		   				  }
-		   			  }
-		   		  }
-	    	  }	  
-	    	  // -cw flag: for each edge, flip the next clockwise edge.
-	    	  else if (items.elementAt(0).startsWith("-cw")) { 
-	    		  items.remove(0);
-		   		  EdgeLink edgeLink=new EdgeLink(packData,items);
-		   		  if (edgeLink==null || edgeLink.size()<1) return 0;
-		   		  Iterator<EdgeSimple> elist=edgeLink.iterator();
-		   		  while (elist.hasNext()) {
-		   			  EdgeSimple edge=(EdgeSimple)elist.next();
-		   			  int v=edge.v;
-		   			  int w=edge.w;
-		   			  int indx=packData.nghb(v,w);
-		   			  // situations:
-		   			  if (indx==0 && packData.isBdry(v)) {
-	   					  CirclePack.cpb.errMsg("edge <"+v+","+w+"> is in oriented "+
-	   							  "bdry, has no clockwise edge.");
-	   					  while(elist.hasNext()) elist.next(); // eat rest of list
-	   				  }
-		   			  if (indx==0) { // must be interior
-		   				  w=packData.kData[v].flower[packData.getNum(v)-1];
-		   			  }
-		   			  else w=packData.kData[v].flower[indx-1];
-		   			  int ans=packData.flip_edge(v,w,2);
-		   			  count+=ans;
-		   			  if (ans<=0) {
-	   					  CirclePack.cpb.errMsg("flip of "+v+" "+w+" failed");
-		   				  while(elist.hasNext()) elist.next(); // eat rest of list
-		   			  }
-		   		  }
-	    	  }	  
-
-	    	  // -h to project forward to next (half-hex) edge, then flip
-	    	  // clockwise edge from that. 
-	    	  else if (items.elementAt(0).startsWith("-h")) { // 
-	    		  items.remove(0);
+	    	  String fstr="v"; // default to listed vertices
+	    	  if (StringUtil.isFlag(items.get(0))) {
+	    		  fstr=items.remove(0).substring(1);
+	    	  }
+	    	  
+	    	  // Dispense first with 'h' flag, to project forward to 
+	    	  // next (half-hex) edge, then flip clockwise edge 
+	    	  // from that. The next edge itself is stored in 'elist'
+	    	  // in case this is called again.
+	    	  if (fstr.contentEquals("h")) {
+	    		  int rslt=0;
 		   		  EdgeSimple edge=EdgeLink.grab_one_edge(packData,flagSegs);
+		   		  if (edge==null)
+		   			  edge=EdgeLink.grab_one_edge(packData,"elist");
 		   		  if (edge==null || packData.nghb(edge.v, edge.w)<0) {
 		   			  CirclePack.cpb.errMsg(("usage: flip -h {v,w}"));
 		   			  return 0;
 		   		  }
 		   		  int v=edge.w;
 		   		  int w=edge.v;
+		   		  int num=packData.getNum(v);
+		   		  if (pdc!=null) {
+			   		  Boolean redProblem=Boolean.valueOf(false); // for dcel version 
+		   			  try {
+		   				  HalfEdge hedge=pdc.findHalfEdge(edge).twin;
+		   				  Vertex vert=hedge.origin;
+		   				  packData.elist=new EdgeLink(packData); // may store new edge in 'elist'
+		   				  if (vert.isBdry()) { // bdry considerations
+		   					  int tick=0;
+		   					  HalfEdge he=vert.halfedge.prev.twin;
+		   					  while(he.twin.origin.vertIndx!=w && he!=vert.halfedge) {
+		   						  tick++;
+		   						  he=he.prev.twin;
+		   					  }
+		   					  if (tick<2) // can't advance to new edge; kill 'baseEdge'
+		   						  return 0;
+		   					  if (tick==2) { // advanced but no flip
+		   						  packData.elist.add(new EdgeSimple(v,vert.halfedge.origin.vertIndx));
+		   						  return -1;
+		   					  }
+		   					  he=he.twin.next.twin.next.twin.next;
+		   					  packData.elist.add(new EdgeSimple(v,he.origin.vertIndx)); // next half-hex edge
+		   					  he=he.twin.next;
+		   					  if ((rslt=CombDCEL.flipEdge(pdc, he,redProblem))==0) // didn't flip 
+		   						  return -1;
+		   				  }
+		   				  else { // interior
+		   			   		  if (num==3) { // interior of degree 3? just reverse edge to go other way
+		   		   				  packData.elist.add(new EdgeSimple(v,w));
+		   		   				  return -1; // no flip
+		   			   		  }	  
+		   			   		  HalfEdge theedge=hedge.twin.next.twin.next.twin.next;
+		   			   		  packData.elist.add(new EdgeSimple(v,theedge.twin.origin.vertIndx));
+		   			   		  theedge=theedge.twin.next;
+		   			   		  rslt=CombDCEL.flipEdge(pdc,theedge,redProblem);
+		   			   		  if (rslt==0)
+		   						return -1; // advanced but didn't flip
+		   				  }
+		   				  
+		   			  } catch(Exception ex) {
+		   				  CirclePack.cpb.errMsg("flip failed on edge <"+v+" "+w+">");
+		   				  return 0;
+		   			  }
+		   			  
+		   			  if (rslt>0) {
+		   				  if (redProblem.booleanValue()) { // must build a new red cahin
+		   					  pdc=CombDCEL.redchain_by_edge(pdc,null,pdc.alpha);
+		   				  }
+		   				  CombDCEL.d_FillInside(pdc);
+		   				  return packData.attachDCEL(pdc);
+		   			  }
+		   		  } // done with DCEL case
+		   		  
+		   		  // traditional packing
 		   		  int indxvb=packData.nghb(v, w);
 		   		  if (packData.isBdry(v)) { // bdry?
 		   			  if (indxvb<3)  // can't advance to new edge; kill 'baseEdge'
@@ -6632,33 +6602,76 @@ public class CommandStrParser {
 	   				  packData.elist.add(edge);
 	   				  if (indxvb==3) // can't flip
 	   					  return -1; // advanced but no flip
-	   				  int rslt=packData.flip_edge(v,packData.kData[v].flower[indxvb-4],2);
+	   				  rslt=packData.flip_edge(v,packData.kData[v].flower[indxvb-4],2);
 	   				  if (rslt==0)
-	   					  return -1; // advanced but didn't flip
+	   					  return -1; // advanced but no flip
 	   				  packData.setCombinatorics();
-	   				  return 1;
+	   				  return 1; // advanced and flipped
 		   		  }
 		   		  // interior?
-		   		  int num=packData.getNum(v);
-   				  packData.elist=new EdgeLink(packData);
 		   		  if (num==3) { // interior of degree 3? just reverse edge to go other way
 	   				  packData.elist.add(new EdgeSimple(v,w));
-	   				  return -1; // no flip
+	   				  return -1; // reversed but no flip
 		   		  }
 		   		  int indxn=(indxvb-3+num)%num;
 		   		  w=packData.kData[v].flower[indxn];
 		   		  packData.elist.add(new EdgeSimple(v,w));
 		   		  int k=(indxn-1+num)%num;
-		   		  int rslt=packData.flip_edge(v,packData.kData[v].flower[k],2);
+		   		  rslt=packData.flip_edge(v,packData.kData[v].flower[k],2);
 		   		  if (rslt==0)
 					return -1; // advanced but didn't flip
 		   		  packData.setCombinatorics();
 		   		  // calling routine does repack, layout, etc.
 		   		  return 1; // advanced and flipped
-	    	  }
+	    	  } // done with 'h' flag case
 	    	  
-	    	  // -r for one 'random' interior edge flip
-	    	  else if (items.elementAt(0).startsWith("-r")) { // try up to 20 times 
+	    	  // For remaining cases, just build 'elink' of edges to flip, .
+	   		  EdgeLink elink=new EdgeLink();
+	   		  EdgeLink origLink=new EdgeLink(packData,items);
+	   		  if (origLink==null || origLink.size()==0)
+	   			  return 0;
+	   		  Iterator<EdgeSimple> elist=origLink.iterator();
+
+	    	  // -cc flag (deprecated -hh): for each edge, flip the next 
+	    	  //     counterclockwise edge. (E.g., 'half-hex' path flips, see 'hh_path')
+	    	  if (fstr.startsWith("cc") || fstr.startsWith("hh")) { 
+	    		  while (elist.hasNext()) {
+		   			  EdgeSimple edge=(EdgeSimple)elist.next();
+		   			  if (pdc!=null) {
+		   				  HalfEdge he=pdc.findHalfEdge(edge);
+		   				  elink.add(new EdgeSimple(he.prev.twin.origin.vertIndx,
+		   						  he.prev.origin.vertIndx)); // cclw edge
+		   			  }
+		   			  else {
+			   			  int indx=packData.nghb(edge.v,edge.w);
+			   			  if (indx>=0 && indx<packData.getNum(edge.v)) { // flip cclw edge
+			   				  int w=packData.kData[edge.v].flower[indx+1];
+			   				  elink.add(new EdgeSimple(edge.v,w));
+			   			  }
+		   			  }
+	    		  }
+	    	  }
+	    	  else if (fstr.startsWith("cw")) {
+	    		  int w;
+	    		  while (elist.hasNext()) {
+		   			  EdgeSimple edge=(EdgeSimple)elist.next();
+		   			  if (pdc!=null) {
+		   				  HalfEdge he=pdc.findHalfEdge(edge);
+		   				  elink.add(new EdgeSimple(he.twin.next.origin.vertIndx,
+		   						  he.twin.next.twin.origin.vertIndx)); // cclw edge
+		   			  }
+		   			  else {
+			   			  int indx=packData.nghb(edge.v,edge.w);
+			   			  if (indx==0) { // must be interior
+			   				  w=packData.kData[edge.v].flower[packData.getNum(edge.v)-1];
+			   			  }
+			   			  else 
+			   				  w=packData.kData[edge.v].flower[indx-1];
+		   				  elink.add(new EdgeSimple(edge.v,w));
+		   			  }
+	    		  }
+	    	  }
+	    	  else if (fstr.contentEquals("r")) { // one random, try up to 20 times 
 	        	  Random rand=new Random();
 	        	  int safety=20;
 	        	  boolean didflip=false;
@@ -6669,53 +6682,27 @@ public class CommandStrParser {
 	        			  while (j<=packData.nodeCount  
 	   						  && packData.isBdry((v=(v+j)%(packData.nodeCount)+1)))
 	        				  j++;
-	        			  if (packData.isBdry(v)) return 0; // didn't find interior vert
+	        			  if (packData.isBdry(v)) 
+	        				  return 0; // didn't find interior vert
 	        		  }
-	        		  int w=packData.kData[v].flower[Math.abs((rand.nextInt())%(packData.getNum(v)))];
-	        		  if (packData.flip_edge(v,w,2)!=0) {
-	        			  packData.setCombinatorics();
-	        			  packData.fillcurves();
-	        			  return 1;
-	        		  }
-	        		  safety--;
-	        	  } // end of while
-	        	  return 0;
-	   		  }
-	    	  
-	    	  // no flags, just flip edges
-	    	  else {
-	    		  EdgeLink edgeLink=new EdgeLink(packData,items);
-	    		  if (edgeLink==null || edgeLink.size()<1) 
+	        		  int[] flower=packData.getFlower(v);
+	        		  int num=packData.getNum(v);
+	        		  int w=flower[Math.abs((rand.nextInt())%(num))];
+	   				  elink.add(new EdgeSimple(v,w));
+	        	  }
+	    	  }
+	    	  else { // no flags, just flip edges
+	    		  if (origLink==null || origLink.size()<1) 
 	    			  return 0;
-	    		  Iterator<EdgeSimple> elist=edgeLink.iterator();
+	    		  elist=origLink.iterator();
 
 	    		  while (elist.hasNext()) {
-	    			  EdgeSimple edge=(EdgeSimple)elist.next();
-	    			  count += packData.flip_edge(edge.v,edge.w,2);
+    				  elink.add((EdgeSimple)elist.next());
 	    		  }
-	    	  }
-	    	  
-	    	  // should be done
-	    	  if (count==0)
-	    		  return 0;
-	    	  if (count>0) {
-	    		  if (packData.packDCEL==null) {
-	    			  packData.setCombinatorics();
-	    			  packData.fillcurves();
-	    			  return count;
-	    		  }
-	    		  CombDCEL.d_FillInside(packData.packDCEL);
-	    		  return count;
-	   		  }
-	    	  
-	    	  if (packData.packDCEL!=null) {
-	    		  PackDCEL pdc=CombDCEL.extractDCEL(packData.packDCEL,
-	    				  null,packData.packDCEL.alpha);
-	    			  CombDCEL.d_FillInside(pdc);
-	    		  packData.attachDCEL(pdc);
-	    		  return -count;
-	    	  }
-	   		  return -1; // error
+	    	  }  
+	    		
+	    	  // done building list, now to flip
+	    	  return packData.flipList(elink);
 	      }
 	      
 	      // ============ flat_hex =========
@@ -8130,7 +8117,7 @@ public class CommandStrParser {
 	    		          and place it at 1 on equator.
 	    		   -t x   dilation amount; sets ratio of spherical radii, alpha/S.
 	    		          default is "-t 1" (equal radii at N and S). */   	  
-	    	  if (packData.hes>=0 || packData.bdryCompCount!=1) {
+	    	  if (packData.hes>=0 || packData.getBdryCompCount()!=1) {
 	    		  throw new ParserException("invalid packing, check conditions");
 	    	  }
 
