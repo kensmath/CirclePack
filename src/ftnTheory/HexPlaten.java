@@ -324,8 +324,9 @@ public class HexPlaten extends PackExtender {
 	    		throw new ParserException("cookie crumbled");
 	    	}
 	    	if (outcome>0) {
-	    		packData.cpScreen.swapPackData(cM.getPackData(),true);
-    		    packData=packData.cpScreen.getPackData();
+	    		PackData cMpd=cM.getPackData();
+	    		CirclePack.cpb.swapPackData(cMpd,packData.packNum,true);
+    		    packData=cMpd;
 	    	}
     	} catch(Exception ex) {
     		Oops("cookie failed in HexPlaten");
@@ -806,7 +807,7 @@ public class HexPlaten extends PackExtender {
 			}
 			
 			// packing obtained from the triangulation
-			PackData qackData=CPBase.pack[qnum].getPackData();
+			PackData qackData=CPBase.cpScreens[qnum].getPackData();
 
 			// translate 'constraintBdry' to local indices
 			EdgeLink locCBdry=new EdgeLink(qackData);

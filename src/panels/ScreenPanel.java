@@ -72,7 +72,7 @@ public class ScreenPanel extends JPanel implements ChangeListener {
 					fillOpacitySlider.setMaximum(255);
 					fillOpacitySlider.setToolTipText("Fill opacity: larger = denser colors");
 					fillOpacitySlider.setValueIsAdjusting(true);
-					fillOpacitySlider.setValue(CPBase.pack[0].getFillOpacity());
+					fillOpacitySlider.setValue(CPBase.cpScreens[0].getFillOpacity());
 					fillOpacitySlider.setMajorTickSpacing(25);
 					fillOpacitySlider.setPaintTicks(true);
 					fillOpacitySlider.setSize(190, 32);
@@ -84,7 +84,7 @@ public class ScreenPanel extends JPanel implements ChangeListener {
 					sphOpacitySlider.setMaximum(255);
 					sphOpacitySlider.setToolTipText("Sphere opacity: smaller lets back show through");
 					sphOpacitySlider.setValueIsAdjusting(true);
-					sphOpacitySlider.setValue(CPBase.pack[0].getSphereOpacity());
+					sphOpacitySlider.setValue(CPBase.cpScreens[0].getSphereOpacity());
 					sphOpacitySlider.setMajorTickSpacing(25);
 					sphOpacitySlider.setPaintTicks(true);
 					sphOpacitySlider.setSize(190, 32);

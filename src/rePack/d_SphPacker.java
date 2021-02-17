@@ -139,7 +139,7 @@ public class d_SphPacker extends RePacker {
 
 		// debug=true;
 		if (debug) { 
-			deBugging.DCELdebug.drawEuclCircles(CirclePack.cpb.pack[2], z, radii);
+			deBugging.DCELdebug.drawEuclCircles(CirclePack.cpb.cpScreens[2], z, radii);
 		}
 
 		// lay out the rest of the eucl circles
@@ -178,7 +178,7 @@ public class d_SphPacker extends RePacker {
 		
 		// debug=true;
 		if (debug) { 
-			deBugging.DCELdebug.drawEuclCircles(CirclePack.cpb.pack[2], z, radii);
+			deBugging.DCELdebug.drawEuclCircles(CirclePack.cpb.cpScreens[2], z, radii);
 		}
 		
 		// find normalizing mobius

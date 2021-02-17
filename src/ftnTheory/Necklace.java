@@ -6,6 +6,7 @@ import java.util.Random;
 import java.util.Vector;
 
 import allMains.CPBase;
+import allMains.CirclePack;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -209,9 +210,9 @@ public class Necklace extends PackExtender {
 				Oops("problem with adjoin");
 			
 			// save the resulting packing as the parent packing
-			CPScreen cpS=packData.cpScreen;
-			cpS.swapPackData(topPack,false);
-			packData=cpS.getPackData();
+			int pnum=packData.packNum;
+			CirclePack.cpb.swapPackData(topPack,pnum,false);
+			packData=topPack;
 			
 			// do some fixup
 			packData.setCombinatorics();
@@ -252,13 +253,10 @@ public class Necklace extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					if (cmd.length()==4 || cmd.charAt(4)=='B' || cmd.charAt(4)=='b')
-						cpS.swapPackData(bottomPack,false);
-					else
-						cpS.swapPackData(topPack,false);
-				}
+				if (cmd.length()==4 || cmd.charAt(4)=='B' || cmd.charAt(4)=='b')
+					CirclePack.cpb.swapPackData(bottomPack,pnum,false);
+				else
+					CirclePack.cpb.swapPackData(topPack,pnum,false);
 			} catch (Exception ex) {
 				return 0;
 			}
@@ -280,17 +278,11 @@ public class Necklace extends PackExtender {
 		
 		// ========================= save ========================
 		else if (cmd.startsWith("save")) {
-			CPScreen cpS=packData.cpScreen;
-			if (cpS==null) 
-				Oops("problem saving");
-			if (cmd.charAt(4)=='B' || cmd.charAt(4)=='b') {
-				cpS.swapPackData(bottomPack,false);
-				packData=cpS.getPackData();
-			}
-			else {
-				cpS.swapPackData(topPack,false);
-				packData=cpS.getPackData();
-			}
+			int pnum=packData.packNum;
+			if (cmd.charAt(4)=='B' || cmd.charAt(4)=='b') 
+				CirclePack.cpb.swapPackData(bottomPack,pnum,false);
+			else 
+				CirclePack.cpb.swapPackData(topPack,pnum,false);
 			return 1;
 		}
 		
@@ -324,10 +316,9 @@ System.err.println("starting bottomHemi:");
 			cpCommand(topHemi,"max_pack");
 			
 			// save the resulting packing as the parent packing
-			CPScreen cpS=packData.cpScreen;
-			cpS.swapPackData(topHemi,false);
-			packData=cpS.getPackData();
-			
+			int pnum=packData.packNum;
+			CirclePack.cpb.swapPackData(topHemi,pnum,false);
+			packData=topHemi;
 			return packData.nodeCount;
 		}
 

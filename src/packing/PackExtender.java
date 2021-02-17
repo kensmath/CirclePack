@@ -86,10 +86,10 @@ public abstract class PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
+				CPScreen cpS=CPBase.cpScreens[pnum];
 				if (cpS!=null) {
 					PackData p=packData.copyPackTo();
-					return cpS.swapPackData(p,false);
+					return CirclePack.cpb.swapPackData(p, pnum, false);
 				}
 			} catch (Exception ex) {}
 			return 0;

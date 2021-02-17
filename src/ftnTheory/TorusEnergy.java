@@ -159,9 +159,9 @@ public class TorusEnergy extends PackExtender {
 				EdgeSimple edge=edgeList.get(rand.nextInt(edgeList.size()));
 				double compEnergy=compareEnergy(edge.v,edge.w);
 				if (tmpPack!=null && (compEnergy<energy || Math.exp(-(compEnergy-energy)/temp)>cutoff)) {
-					CPScreen cps=packData.cpScreen;
-					cps.swapPackData(tmpPack,true);
-					packData=cps.getPackData();
+					int pnum=packData.packNum;
+					CirclePack.cpb.swapPackData(tmpPack,pnum,true);
+					packData=tmpPack;
 					hits++;
 				}
 				tick++;

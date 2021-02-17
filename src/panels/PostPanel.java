@@ -554,7 +554,7 @@ public class PostPanel extends JPanel implements ActionListener {
 	 * Get postscript options from the active packing's postOptions 
 	 */
 	public void update(int old_pnum) {
-		PackControl.pack[old_pnum].postOptions.storeTailored(flagField.getText());
+		PackControl.cpScreens[old_pnum].postOptions.storeTailored(flagField.getText());
 		flagField.setText(PackControl.getActiveCPScreen().postOptions.tailored);
 		Boolean[] bools= PackControl.getActiveCPScreen().postOptions.getSavedStates();
 		cirBox.setSelected(bools[0].booleanValue());

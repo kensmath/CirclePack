@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.util.Vector;
 
 import allMains.CPBase;
+import allMains.CirclePack;
 import exceptions.CombException;
 import math.Mobius;
 import packing.PackCreation;
@@ -81,12 +82,11 @@ public class BrooksQuad extends PackExtender {
 	 * swap so the center is the largest index, it's the 'plug'.
 	 */
 	public void initQuad() {
-		CPScreen cps=packData.cpScreen;
 		PackData newData=PackCreation.seed(4,0);
 		if (newData==null)
 			Oops("Failed to build initial seed.");
-		cps.swapPackData(newData,true);
-		packData=cps.getPackData();
+		CirclePack.cpb.swapPackData(newData,packData.packNum,true);
+		packData=newData;
 		packData.swap_nodes(1,5);
 		for (int v=1;v<=4;v++) {
 			packData.setCircleColor(v,ColorUtil.coLor(208)); // line green

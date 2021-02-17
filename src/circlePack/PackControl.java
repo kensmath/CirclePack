@@ -279,21 +279,33 @@ FocusListener {
 						+ " this does not necessarily affect the use of 'CirclePack'");
 			}
 		}
+		
+		// Create the packing data memory storage areas
+		packings=new PackData[NUM_PACKS];
+		for (int i = 0; i < NUM_PACKS; i++) {
+			packings[i]=new PackData(i);
+		}
 
 		// Create the packing data memory storage areas
-		pack = new CPScreen[NUM_PACKS];
+		cpScreens = new CPScreen[NUM_PACKS];
 		for (int i = 0; i < NUM_PACKS; i++) {
-			pack[i] = new CPScreen(i);
-			pack[i].circle.setParent(pack[i]);
-			pack[i].face.setParent(pack[i]);
-			pack[i].edge.setParent(pack[i]);
-			pack[i].trinket.setParent(pack[i]);
-			pack[i].realBox.setParent(pack[i]);
-			pack[i].sphView.setParent(pack[i]);
+			CPScreen cpS=cpScreens[i] = new CPScreen(i);
+			
+			// crosslink 'PackData' and 'CPScreen'
+			cpS.packData=packings[i];
+			packings[i].cpScreen=cpS;
+			
+			// prepare display objects
+			cpS.circle.setParent(cpS);
+			cpS.face.setParent(cpS);
+			cpS.edge.setParent(cpS);
+			cpS.trinket.setParent(cpS);
+			cpS.realBox.setParent(cpS);
+			cpS.sphView.setParent(cpS);
 		}
 
 		// Create the screen thumbnail panel
-		smallCanvasPanel = new SmallCanvasPanel(pack);
+		smallCanvasPanel = new SmallCanvasPanel(cpScreens);
 
 		// Create the 'ShellManager' to handle history
 		shellManager = new ShellManager();
@@ -327,7 +339,7 @@ FocusListener {
 		basicMyTFile = CPFileManager.getMyTFile("basic.myt");
 
 		// Start the active canvas window (and listener for size changes?)
-		activeFrame = new MainFrame(pack[0], mainMyTFile, mainCursorFile);
+		activeFrame = new MainFrame(cpScreens[0], mainMyTFile, mainCursorFile);
 
 		// create the script stuff: manager, bar, frame, vertical bar
 		scriptManager = new ScriptManager();
@@ -931,7 +943,7 @@ FocusListener {
 		screenCtrlFrame.displayPanel.update(old_pack,packnum);
 		screenCtrlFrame.setTitle("CirclePack Screen Options, p"+packnum);
 		outputFrame.outPanel.update(old_pack);
-		activeFrame.setCPScreen(CPBase.pack[packnum]);
+		activeFrame.setCPScreen(CPBase.cpScreens[packnum]);
 		activeFrame.activeScreen.setDefaultMode();
 		activeFrame.updateTitle();
 		activeFrame.activeScreen.repaint();
@@ -1064,6 +1076,36 @@ FocusListener {
 		return activeFrame.getPackData();
 	}
 
+	/**
+	 * Replace 'packings[pnum]' with new packing; old packing
+	 * is generally orphaned. 
+	 * TODO: This replaced 'CPScreen.swapPackData' and there may
+	 * be problems in some cases when 'packData' didn't have a
+	 * 'packNum'.
+	 * @param p PackData
+	 * @param pnum int
+	 * @param keepX boolean, keep current extenders
+	 */
+	public int swapPackData(PackData p,int pnum,boolean keepX) {
+		if (p==null)
+			return -1;
+		
+		// before replacing
+		if (keepX) {
+			p.packExtensions=packings[pnum].packExtensions;
+			for (int x=0;x<p.packExtensions.size();x++)
+				p.packExtensions.get(x).packData=p;
+		}
+		CPBase.packings[pnum].cpScreen=null; // detach from cpScreen
+		
+		// install in 'packings' and handshake with 'cpScreens'
+		p.packNum=pnum;
+		CPBase.packings[pnum]=p; 
+		p.cpScreen=CPBase.cpScreens[pnum]; 
+		p.cpScreen.setPackData(p);
+		return p.nodeCount;
+	}
+	
 	// done with abstract methods
 	
 	/** 

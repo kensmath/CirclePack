@@ -22,7 +22,6 @@ import geometry.SphericalMath;
 import input.CPFileManager;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
-import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
 import listManip.HalfLink;
@@ -642,10 +641,9 @@ public class PackDCEL {
 		placeFirstFace(face.edge);
 	    int count=1;
 	    
-	    // now layout by face-by-face
+	    // now layout face-by-face
 	    while (git.hasNext()) {
 	    	face=faces[git.next().w];
-		    double rw=getVertRadius(face.edge.next.next);
 		    CircleSimple sc=CommonMath.comp_any_center(
 		    		getVertCenter(face.edge),
 		    		getVertCenter(face.edge.next),

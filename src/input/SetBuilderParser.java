@@ -138,13 +138,13 @@ public class SetBuilderParser {
 			try {
 				pnum=Integer.parseInt(left.substring(j+2,j+3)); // should be integer {p}
 				if (pnum<0 || pnum>=CPBase.NUM_PACKS 
-						|| !PackControl.pack[pnum].getPackData().status)
+						|| !PackControl.cpScreens[pnum].getPackData().status)
 					throw new ParserException();
 			} catch (Exception ex) {
 				errMsg=new String("Malformed '-p{p}' pack or pack is empty");
 				throw new ParserException();
 			}
-			packData=PackControl.pack[pnum].getPackData(); // change to this packing
+			packData=PackControl.cpScreens[pnum].getPackData(); // change to this packing
 		}
 		
 		// Done with left; now work on 'right' string

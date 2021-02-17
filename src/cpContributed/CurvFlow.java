@@ -222,7 +222,7 @@ public class CurvFlow extends PackExtender {
 					case 'q':
 					{ // compare to another packing
 						return setRadRatio(packData,
-								PackControl.pack[StringUtil.qFlagParse(items.get(0))].getPackData());
+								PackControl.packings[StringUtil.qFlagParse(items.get(0))]);
 					}
 					} // end of switch
 				}
@@ -306,12 +306,10 @@ public class CurvFlow extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					PackData p=domainData.copyPackTo();
-					return cpS.swapPackData(p,false);
-				}
+				PackData p=domainData.copyPackTo();
+				int ans=CirclePack.cpb.swapPackData(p,pnum,false);
 				msg("put 'domainPack' in pack p"+pnum);
+				return ans; 
 			} catch (Exception ex) {}
 			return 0;
 		}
@@ -543,7 +541,7 @@ public class CurvFlow extends PackExtender {
 					case 'q':
 					{ // compare to another packing
 						return setAngDiff(packData,
-								PackControl.pack[StringUtil.qFlagParse(items.get(0))].getPackData());
+								PackControl.packings[StringUtil.qFlagParse(items.get(0))]);
 					}
 					} // end of switch
 				}
@@ -581,7 +579,7 @@ public class CurvFlow extends PackExtender {
 					case 'q':
 					{ // compare to another packing
 						int ans=setAimDiff(packData,
-								PackControl.pack[StringUtil.qFlagParse(items.get(0))].getPackData());
+								PackControl.packings[StringUtil.qFlagParse(items.get(0))]);
 						return ans;
 					}
 					} // end of switch

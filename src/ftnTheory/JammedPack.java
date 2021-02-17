@@ -356,7 +356,7 @@ public class JammedPack extends PackExtender {
 				}
 					
 			    // prepare for restore
-				CPScreen cps=packData.cpScreen; 
+				int pnum=packData.packNum;
 				holdpack=packData.copyPackTo();
 				
 				// try to remove the edge
@@ -369,7 +369,7 @@ public class JammedPack extends PackExtender {
 					count += 1;
 				}
 				else { // restore 
-					cps.swapPackData(holdpack,true);
+					CirclePack.cpb.swapPackData(holdpack,pnum,true);
 				}
 			} // end of while through the list of edges
 
@@ -380,12 +380,13 @@ public class JammedPack extends PackExtender {
 		}
 		
 		// ============== undo =====================
+		// TODO: I hope these have pack numbers as usual.
 		else if (cmd.startsWith("undo")) {
 			if (flagSegs!=null && flagSegs.size()>0) { // call to use 'backpack'
 				if (backPack!=null) {
-					CPScreen cps=packData.cpScreen; 
-					cps.swapPackData(backPack,true);
-					packData=cps.getPackData();
+					int pnum=packData.packNum;
+					CirclePack.cpb.swapPackData(backPack,pnum,true);
+					packData=backPack;
 					addrmPack=null; // outdated
 					return packData.nodeCount;
 				}
@@ -394,16 +395,15 @@ public class JammedPack extends PackExtender {
 			else {
 				
 				// restore 'addrmPack' if available, else 'backpack' if available
+				int pnum=packData.packNum;
 				if (addrmPack!=null) { // leave 'backpack' in place
-					CPScreen cps=packData.cpScreen; 
-					cps.swapPackData(addrmPack,true);
-					packData=cps.getPackData();
+					CirclePack.cpb.swapPackData(addrmPack,pnum,true);
+					packData=addrmPack;
 					return packData.nodeCount;
 				}
 				if (backPack!=null) {
-					CPScreen cps=packData.cpScreen; 
-					cps.swapPackData(backPack,true);
-					packData=cps.getPackData();
+					CirclePack.cpb.swapPackData(backPack,pnum,true);
+					packData=backPack;
 					addrmPack=null; // outdated
 					return packData.nodeCount;
 				}

@@ -61,10 +61,12 @@ public abstract class CPBase {
 	public abstract void myDebugMsg(String str); // generic debug message
 	public abstract PackData getActivePackData(); // which PackData is active?
 	public abstract int getActivePackNum(); // which pack
+	public abstract int swapPackData(PackData p,int pnum,boolean keepX); // change packings[pnum]
 
-	// main pack data container, with 'PackData' but also backing 
-	// plane for images, even in non-GUI situations.
-	public static CPScreen []pack;
+	// main data container is 'packings', while 'cpScreens' hold 
+	// backing plane for images, even in non-GUI situations.
+	public static PackData []packings; // 'PackData' instances
+	public static CPScreen []cpScreens; 
 
 	public static int GUImode; // 0=standalone, else GUI
 	
@@ -147,7 +149,7 @@ public abstract class CPBase {
 	// For background surrounding disc and sphere
 	public static Color DEFAULT_SphDisc_BACKGROUND = new Color(230,230,230);
 	
-	// screen settings
+	// canvas settings
 	public static int DEFAULT_FILL_OPACITY = 125;
 	public static int DEFAULT_SPHERE_OPACITY = 255;
 	public static Font DEFAULT_INDEX_FONT = new Font("Sarif",Font.ITALIC,11);
@@ -207,7 +209,7 @@ public abstract class CPBase {
 	}
 
 	/**
-	 * Pass to subclass for generic message
+	 * Call the subclass for generic message
 	 */
 	public void msg(String str) {
 		myMsg(str);

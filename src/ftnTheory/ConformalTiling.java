@@ -26,7 +26,6 @@ import listManip.TileLink;
 import listManip.VertexMap;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import posting.PostFactory;
 import tiling.SubdivisionRules;
 import tiling.Tile;
@@ -229,11 +228,11 @@ public class ConformalTiling extends PackExtender {
 				tile.tileType=type;
 				newData=tile.singleCanonical(mode);
 			}
-			CPScreen cps=packData.cpScreen;
 			if (newData==null)
 				Oops("Failed to build initial seed.");
-			cps.swapPackData(newData,true);
-			packData=cps.getPackData();
+			int pnum=packData.packNum;
+			CirclePack.cpb.swapPackData(newData,pnum,true);
+			packData=newData; // this may be redundant after the swap
   		  	packData.tileData.myTiles[1].tileType=type;
   		  	
   		  	// now build subdivision tiling to depth, specified now in 'flgS'
@@ -1494,28 +1493,20 @@ public class ConformalTiling extends PackExtender {
 						TileData holdTD=canonicalPack.tileData.gradedTileData.get(depth).copyBareBones();
 						
 						int pnum=Integer.parseInt((String)items.get(0));
-						CPScreen cpS=CPBase.pack[pnum];
-						if (cpS!=null) {
-							TileData tmpTD=canonicalPack.tileData;
-							canonicalPack.tileData=null;
-							PackData p=canonicalPack.copyPackTo();
-							p.tileData=holdTD;
-							canonicalPack.tileData=tmpTD;
-							return cpS.swapPackData(p,false);
-						}
-						
-						break;
+						TileData tmpTD=canonicalPack.tileData;
+						canonicalPack.tileData=null;
+						PackData p=canonicalPack.copyPackTo();
+						p.tileData=holdTD;
+						canonicalPack.tileData=tmpTD;
+						return CirclePack.cpb.swapPackData(p,pnum,false);
 					}
 					} // end of switch
 				}
 				
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					PackData p=exportSrc.copyPackTo();
-					cpCommand(p,"max_pack");
-					return cpS.swapPackData(p,false);
-				}
+				PackData p=exportSrc.copyPackTo();
+				cpCommand(p,"max_pack");
+				return CirclePack.cpb.swapPackData(p,pnum,false);
 			} catch (Exception ex) {
 				Oops("'export' problems");
 			}

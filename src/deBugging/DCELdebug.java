@@ -214,7 +214,7 @@ public class DCELdebug {
 		RedHEdge rtrace=redge;
 		do {
 			drawRedEdge(p,rtrace);
-System.out.println(" red edge "+rtrace.myEdge);
+//System.out.println(" red edge "+rtrace.myEdge);
 			rtrace=rtrace.nextRed;
 		} while (rtrace!=redge);
 	}
@@ -237,12 +237,12 @@ System.out.println(" red edge "+rtrace.myEdge);
 		StringBuilder sbold=new StringBuilder("old indices:\n");
 		RedHEdge nxtre=redge;
 		do {
-			sb.append(" ("+nxtre.mobIndx+") -> "+nxtre.myEdge.origin.vertIndx);
+			sb.append(" -> "+nxtre.myEdge.origin.vertIndx);
 			if (vmap!=null)
 				sbold.append(" -> "+vmap.findW(nxtre.myEdge.origin.vertIndx));
 			nxtre=nxtre.nextRed;
 		} while (nxtre!=redge);
-		sb.append(" ("+nxtre.mobIndx+") -> "+nxtre.myEdge.origin.vertIndx);
+		sb.append(" -> "+nxtre.myEdge.origin.vertIndx);
 		if (vmap!=null)
 			sbold.append(" -> "+vmap.findW(nxtre.myEdge.origin.vertIndx));
 		System.out.println(sb.toString());

@@ -242,12 +242,12 @@ public class DispPanel extends javax.swing.JPanel implements ActionListener {
 	 */
 	public void update(int old_pnum,int new_pnum) {
 		// store current data for old_pnum
-		PackControl.pack[old_pnum].dispOptions.storeTailored(flagField.getText());
-		PackControl.pack[old_pnum].dispOptions.usetext=FlagBox.isSelected();
+		PackControl.cpScreens[old_pnum].dispOptions.storeTailored(flagField.getText());
+		PackControl.cpScreens[old_pnum].dispOptions.usetext=FlagBox.isSelected();
 		
 		// get/set new data
-		flagField.setText(PackControl.pack[new_pnum].dispOptions.tailored);
-		Boolean[] bools= PackControl.pack[new_pnum].dispOptions.getSavedStates();
+		flagField.setText(PackControl.cpScreens[new_pnum].dispOptions.tailored);
+		Boolean[] bools= PackControl.cpScreens[new_pnum].dispOptions.getSavedStates();
 		cirBox.setSelected(bools[0].booleanValue());
 		circcolorBox.setSelected(bools[1].booleanValue());
 		cirfillBox.setSelected(bools[2].booleanValue());

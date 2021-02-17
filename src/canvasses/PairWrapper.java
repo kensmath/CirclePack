@@ -29,7 +29,7 @@ public class PairWrapper extends ActiveWrapper {
 	// Constructor
 	public PairWrapper(File myToolFile,int cT) {
 		// cheap trick: 'callerType' used as packnum on startup
-		super(myToolFile,CPBase.pack[cT]); 
+		super(myToolFile,CPBase.cpScreens[cT]); 
 		callerType=cT;
 	}
 	

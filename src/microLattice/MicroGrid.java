@@ -889,7 +889,7 @@ public class MicroGrid extends PackExtender {
 			}
 				
 			// target packing not there 
-			smoothPack=CPBase.pack[qnum].getPackData();
+			smoothPack=CPBase.cpScreens[qnum].getPackData();
 			if (!smoothPack.status) {
 //				errorMsg("usage: smoother -q{"+qnum+"}; packing "+qnum+" is empty");
 				return 0;
@@ -961,7 +961,7 @@ public class MicroGrid extends PackExtender {
 			try {
 				items=flagSegs.get(0);
 				qnum=StringUtil.qFlagParse(items.get(0));
-				qdata=CPBase.pack[qnum].getPackData();
+				qdata=CPBase.cpScreens[qnum].getPackData();
 			} catch(Exception ex) {
 				throw new ParserException("must specify '-q{n}' for pack number");
 			}
@@ -973,7 +973,7 @@ public class MicroGrid extends PackExtender {
 		
 		// ============== clean delaunay (developing) ============
 		else if (cmd.startsWith("clean")) {
-			PackData qPack=CPBase.pack[1].getPackData();
+			PackData qPack=CPBase.cpScreens[1].getPackData();
 			if (!qPack.status || qPack.nodeCount<=3) 
 				Oops("write_dual: p1 does not seem to be ready");
 
@@ -1004,8 +1004,8 @@ public class MicroGrid extends PackExtender {
 		    	}
 		    	else if (outcome>0) {
 		    		if (!debug) { // debug=true;
-		    			qPack.cpScreen.swapPackData(cM.getPackData(),true);
-		    			qPack=qPack.cpScreen.getPackData();
+		    			CirclePack.cpb.swapPackData(cM.getPackData(),1,true);
+		    			qPack=cM.getPackData();
 		    		}
 		    	}
 //		    	else {
@@ -1025,7 +1025,7 @@ public class MicroGrid extends PackExtender {
 		// ============== write dual dcel structure from p1 ======
 		// TODO: work to do here.
 		else if (cmd.startsWith("write_dual")) {
-			PackData qPack=CPBase.pack[1].getPackData();
+			PackData qPack=CPBase.cpScreens[1].getPackData();
 			if (!qPack.status || qPack.nodeCount<=3) 
 				Oops("write_dual: p1 does not seem to be ready");
 			StringBuilder strbld=new StringBuilder();
@@ -1036,7 +1036,7 @@ public class MicroGrid extends PackExtender {
 			// create dcel
 			qPack.packDCEL = CombDCEL.extractDCEL(
 					CombDCEL.getRawDCEL(qPack.getBouquet()),null,
-					CPBase.pack[1].getPackData().packDCEL.alpha);
+					CPBase.cpScreens[1].getPackData().packDCEL.alpha);
 			PackDCEL qdcel=qPack.packDCEL.createDual(false);
 			BufferedWriter fp=null;
 			File file=null;
@@ -1091,7 +1091,7 @@ public class MicroGrid extends PackExtender {
 		
 		// ============== grid_length =====
 		else if (cmd.startsWith("grid_l")) {
-			PackData qpack=CPBase.pack[1].getPackData(); 
+			PackData qpack=CPBase.cpScreens[1].getPackData(); 
 			if (!qpack.status || qpack.nodeCount<10 || CPBase.ClosedPath==null)
 				Oops("The packing must be put in p1, must have a path");
 
@@ -1911,9 +1911,9 @@ public class MicroGrid extends PackExtender {
 			gridPack.set_aim_current(true);
 			gridPack.fillcurves();
 			CommandStrParser.jexecute(gridPack,"layout");
-			CommandStrParser.jexecute(CPBase.pack[2].getPackData(),"disp -w -c -e b");
+			CommandStrParser.jexecute(CPBase.cpScreens[2].getPackData(),"disp -w -c -e b");
 			gridPack.facedraworder(false);
-			CPBase.pack[2].swapPackData(gridPack,false);
+			CirclePack.cpb.swapPackData(gridPack, 2,false);
 		}
 		for (int v=1;v<=gridPack.nodeCount;v++) // need to use 'utilFlag's
 			gridPack.kData[v].utilFlag=0;

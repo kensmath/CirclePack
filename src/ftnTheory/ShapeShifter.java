@@ -61,10 +61,7 @@ public class ShapeShifter extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					cpS.swapPackData(baseData,false);
-				}
+				CirclePack.cpb.swapPackData(baseData,pnum,false);
 			} catch (Exception ex) {
 				return 0;
 			}
@@ -76,7 +73,7 @@ public class ShapeShifter extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
+				CPScreen cpS=CPBase.cpScreens[pnum];
 				if (cpS.getPackData().nodeCount!=baseData.nodeCount) {
 					errorMsg("getDom: range packing complex must match domain");
 					return 0;

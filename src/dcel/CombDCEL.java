@@ -264,7 +264,8 @@ public class CombDCEL {
 				edge.util=-1;
 		}
 
-		// set vert 'util' for vertices with at least one forbidden edge
+		// set edge 'util' -1 for forbidden edges; vert 'util' -1 for 
+		//     vertices with at least one forbidden edge.
 		if (hlink!=null) {
 			Iterator<HalfEdge> his=hlink.iterator();
 			while (his.hasNext()) {
@@ -291,7 +292,7 @@ public class CombDCEL {
 			pdcel.redChain.nextRed=new RedHEdge(he);
 			pdcel.redChain.nextRed.prevRed=pdcel.redChain;
 			pdcel.redChain=pdcel.redChain.nextRed;
-		} while(he.next!=alphaEdge);
+		} while(he.next!=pdcel.alpha);
 		// close up
 		pdcel.redChain.nextRed=rtrace;
 		rtrace.prevRed=pdcel.redChain;
@@ -340,10 +341,10 @@ public class CombDCEL {
 				// working on v; u,v,w successive verts cclw along redchain 
 				int v = currRed.myEdge.origin.vertIndx;
 				
-//				if (debug) { // debug=true;
-//					DCELdebug.drawTmpRedChain(pdcel.p,currRed);
-//					DCELdebug.printRedChain(pdcel.redChain);
-//				}
+				if (debug) { // debug=true;
+					DCELdebug.drawTmpRedChain(pdcel.p,currRed);
+					DCELdebug.printRedChain(pdcel.redChain);
+				}
 				
 				// process v if not done and if previous red edge not blocked
 				if (!doneV[v] && !(doneV[v]=isVertDone(currRed.myEdge))) {
@@ -442,6 +443,10 @@ public class CombDCEL {
 					}
 				} // done with this v;
 			} // done on this cycle through redchain
+			
+			if (debug) // debug=true;
+				DCELdebug.printRedChain(pdcel.redChain);
+			
 		} // end of main loop while, should be done creating red chain
 		
 		// though all are "doneV", may still be backtrack and
@@ -518,10 +523,10 @@ public class CombDCEL {
 		nxtre=pdcel.redChain;
 		do {
 			if (nxtre.twinRed==null) {
-				// is the opposite edge also red?
+				// does twin edge also red and not forbidden?
 				HalfEdge ctwin=nxtre.myEdge.twin;
 				RedHEdge crossRed=nxtre.myEdge.twin.getRedEdge();
-				if (crossRed!=null && ctwin.util<0) {
+				if (crossRed!=null && ctwin.util>0) {
 					nxtre.twinRed=crossRed;
 					crossRed.twinRed=nxtre;
 				}
@@ -581,7 +586,7 @@ public class CombDCEL {
 				}
 			}
 			
-//System.out.println("spokes for "+v+" and "+w);			
+// System.out.println("spokes for "+v+" and "+w);			
 			
 			rtrace=rtrace.nextRed;
 		} while (rtrace!=pdcel.redChain);
@@ -592,29 +597,31 @@ public class CombDCEL {
 		// =========== process to get 'RedVertex's =============
 		
 		// The 'redChain' of 'RedHEdge's has not changed, but some of
-		//   the 'RedVertex's it passes through will be new as we
+		//   the 'Vertex's it passes through will be new as we
 		//   process the 'PreRedVertex's.
 		// Pass through the redChain. When you encounter a 'PreRedVertex', 
 		//   then it is processed (after rotating, if necessary); 
-		//   this entry in 'pdcel.vertices' converts to a 'RedVertex' 
-		//   and new 'RedVertex's may be introduced elsewhere in the redChain.
+		//   this entry in 'pdcel.vertices' converts to a 'Vertex' with
+		//   redFlag set and new 'Vertex's may be introduced elsewhere 
+		//   in the redChain.
 		ArrayList<Vertex> addedVertices=new ArrayList<Vertex>(); // new vertices
 		rtrace=pdcel.redChain;
 		do {
 			int v=Math.abs(rtrace.myEdge.origin.vertIndx);
 			
-//System.out.println("handle vert "+v);
+// System.out.println("handle vert "+v);
 
 			// if not processed, then it's siblings are not created yet either
 			if (pdcel.vertices[v] instanceof PreRedVertex) { 
 				PreRedVertex rV=(PreRedVertex)pdcel.vertices[v];
 
-				// process, convert to 'RedVertex's, possibly create new ones
+				// process: convert to 'Vertex's with 'redFlag's set, and
+				//    possibly create new ones
 				ArrayList<Vertex> redAdded=process(rV);
 					
-//				System.out.println(" next red v = "+v);
+// System.out.println(" next red v = "+v);
 
-				// first of the new reds replaces the original
+				// first of the new vertex replaces the original
 				Vertex newV=redAdded.get(0);
 				pdcel.vertices[v]=newV;
 
@@ -634,8 +641,8 @@ public class CombDCEL {
 		rtrace=pdcel.redChain;
 		do {
 			Vertex rvert=rtrace.myEdge.origin;
-//System.out.println(rvert.vertIndx+"  --> ");			
-			if (rvert.bdryFlag==1) {
+// System.out.println(rvert.vertIndx+"  --> ");			
+			if (rvert.bdryFlag==1 && rvert.spokes!=null) {
 				try {
 					int num=rvert.spokes.length-1;
 					rvert.spokes[0].twin.next=rvert.spokes[num];
@@ -871,7 +878,7 @@ public class CombDCEL {
 		
 		// Build list of edges as we encounter new faces: convention is that
 		//   each 'HalfEdge' in 'orderEdges' is associated with its face 
-		//   (ie. the fac on its left, not yet created). 
+		//   (ie. the face on its left, not yet created). 
 		ArrayList<HalfEdge> orderEdges=new ArrayList<HalfEdge>(); 	
 		int ordertick=0;
 		
@@ -879,7 +886,6 @@ public class CombDCEL {
 		int[] vhits=new int[pdcel.vertCount+1];
 		ArrayList<Vertex> currv=new ArrayList<Vertex>(0);
 		ArrayList<Vertex> nxtv=new ArrayList<Vertex>(0);
-		nxtv.add(pdcel.alpha.origin);
 
 		// put alpha in first and mark its edges
 		orderEdges.add(pdcel.alpha);
@@ -891,9 +897,13 @@ public class CombDCEL {
 		HalfEdge tr=pdcel.alpha;
 		do { 
 			tr.util=1;
+			if (!tr.origin.redFlag)
+				nxtv.add(tr.origin);
 			tr=tr.next;
 		} while(tr!=pdcel.alpha);
 
+		// now keep two lists to progress through rest of
+		//   interior.
 		while (nxtv.size()>0) {
 			currv=nxtv;
 			nxtv=new ArrayList<Vertex>(0);
@@ -929,7 +939,7 @@ public class CombDCEL {
 							int oldv=pdcel.newOld.findW(he.origin.vertIndx);
 							int oldw=pdcel.newOld.findW(he.twin.origin.vertIndx);
 							System.out.println("  edge = ("+oldv+","+oldw+")");
-							DCELdebug.drawEdgeFace(pdcel,he);
+//							DCELdebug.drawEdgeFace(pdcel,he);
 						}
 						
 						// mark face edges
@@ -1915,13 +1925,41 @@ public class CombDCEL {
 	 * @return PackDCEL
 	 */
 	public static PackDCEL d_puncture_vert(PackDCEL pdcel,int v) {
-		// if 'v' is 'alpha', need to modify 'alpha' in the new DCEL
+		// set appropriate 'seed' if 'alpha' is a nghb of 'v'
+		int seed=-1;
+		int alp=pdcel.alpha.origin.vertIndx;
+		if (v==alp || pdcel.findHalfEdge(new EdgeSimple(alp,v))!=null) {
+			for (int k=1;k<=pdcel.vertCount;k++) {
+				Vertex vert=pdcel.vertices[k];
+				if (pdcel.vertIsBdry(vert)!=null)
+					vert.util=-1; // bdry not eligible 
+				else 
+					pdcel.vertices[k].util=0;
+			}
+			// v and nghbs not eligible
+			pdcel.vertices[v].util=-1;
+			HalfEdge he=pdcel.vertices[v].halfedge;
+			do {
+				pdcel.vertices[he.next.origin.vertIndx].util=-1;
+				he=he.prev.twin;
+			} while (he!=pdcel.vertices[v].halfedge);
+			
+			// now choose first vertex with 'util'=0
+			for (int k=1;(k<=pdcel.vertCount && seed<0);k++) { 
+				if (pdcel.vertices[k].util==0) {
+					seed=k;
+				}
+			}
+			if (seed<0) 
+				throw new CombException("puncture error: no interior 'seed' to avoid "+v);
+		}
+
+		// set prohibited edges in 'hlink', set baseEdge for extraction
 		StringBuilder strbld=new StringBuilder(Integer.toString(v)+" ");
 		HalfEdge baseEdge=pdcel.alpha;
-		if (v==pdcel.alpha.origin.vertIndx) {
-			baseEdge=pdcel.alpha.next;
-			// ask for this to be new seed
-			strbld.append(" -v "+Integer.toString(baseEdge.origin.vertIndx));
+		if (seed>0) { // have to change baseEdge?
+			baseEdge=pdcel.vertices[seed].halfedge;
+			strbld.append(" -v "+Integer.toString(seed));
 		}
 		HalfLink hlink=d_CookieData(pdcel.p,strbld.toString());
 	    return CombDCEL.extractDCEL(pdcel,hlink,baseEdge);
@@ -1935,7 +1973,8 @@ public class CombDCEL {
 	/**
 	 * Process the incoming strings to set seed and forbidden 
 	 * edges for cookie'ing DCEL structures. Forbidden edges 
-	 * one which are never crossed in building the red chain. 
+	 * are ones which are never crossed in building the red chain;
+	 * bdry edges are always included.
 	 * 
 	 * If there is an input list of vertices to be excised, 
 	 * they should appear in  first vector of strings in 
@@ -1943,15 +1982,15 @@ public class CombDCEL {
 	 * these will be included as forbidden.
 	 * 
 	 * Then check for flag segments:
-	 * * Flags: -v {v}, for identifying seed to replace 'p.alpha'.
+	 * * Flags: -v {v}, for identifying seed: 'p.alpha' is reset.
 	 * * Flag -e {u v...} is edge list, adds to any forbidden
 	 *   already included.
 	 * * flag -n {v}, non-keepers; any edges with both ends
 	 *   non-keepers will be added as forbidden edges.
 	 *   
-	 * Note the difference between vertices to be excised
-	 * and one that are non-keepers. The latter may remain
-	 * in the boundary of the resulting DCEL structure.
+	 * Note: difference between 'poison' (vertices to be excised)
+	 * and 'non-keepers': the latter may remain in the boundary of 
+	 * the excised DCEL structure.
      *
 	 * If no verts are listed and poisonVerts was empty on entry, then the 
 	 *   points on the side of 'ClosedPath' (if there is one) opposite to 'seed' 
@@ -1968,28 +2007,39 @@ public class CombDCEL {
 			return null;
 		NodeLink vlink=new NodeLink();
 		HalfLink hlink=new HalfLink();
+		int[] eutil=new int[pdcel.edgeCount+1]; // mark chosen edges
 		
 		// read incoming data
 		while (flags!=null && flags.size()>0) { 
 			Vector<String> items=(Vector<String>)flags.remove(0);
-			if (!StringUtil.isFlag(items.get(0))) { // not flag? must be poison vertices
+			if (!StringUtil.isFlag(items.get(0))) { // no flag? must be poison vertices
 				vlink=new NodeLink(p,items);
 			}
 			else {
 				String str=(String)items.get(0);
-				if (str.equals("-v")) { // set seed
+				if (str.equals("-v")) { // given seed, reset 'alpha' and continue
 					if (items.size()<2) 
 						throw new ParserException("cookie crumbled: error in -v flag");
 					pdcel.alpha=pdcel.vertices[Integer.parseInt((String)items.get(1))].halfedge;
 					items.remove(1);
 					items.remove(0);
 				}
-				else if (str.equals("-e")) { // get poison edges (kill any poison verts)
+				else if (str.equals("-e")) { // specified poison edges
 					if (items.size()<2) 
 						throw new ParserException("cookie crumbled: no edges with -e flag");
 					items.remove(0);
 					EdgeLink elink=new EdgeLink(p,items);
-					hlink.addSimpleEdges(pdcel, elink);
+					Iterator<EdgeSimple> eis=elink.iterator();
+					while (eis.hasNext()) {
+						HalfEdge he=pdcel.findHalfEdge(eis.next());
+						if (he!=null) {
+							if (eutil[he.edgeIndx]==0) {
+								hlink.add(he);
+								eutil[he.edgeIndx]=1;
+								eutil[he.twin.edgeIndx]=1;
+							}
+						}
+					}
 				}
 				else if (str.equals("-n")) { // non keepers
 					if (items.size()<1) 
@@ -2007,14 +2057,21 @@ public class CombDCEL {
 						pdcel.vertices[v].util=v;
 					}
 					
+					// include edges between non-keepers
 					int w;
 					for (int v=1;v<=pdcel.vertCount;v++) {
 						Vertex vert=pdcel.vertices[v];
 						if (vert.util!=0) {
 							int[] flower=vert.getFlower();
 							for (int j=0;j<flower.length;j++) {
-								if ((w=pdcel.vertices[j].util)>v)
-									hlink.add(pdcel.findHalfEdge(v,w));
+								if ((w=pdcel.vertices[j].util)>v) {
+									HalfEdge he=pdcel.findHalfEdge(v,w);
+									if (eutil[he.edgeIndx]==0) {
+										hlink.add(he);
+										eutil[he.edgeIndx]=1;
+										eutil[he.twin.edgeIndx]=1;
+									}
+								}
 							}
 						}
 					}
@@ -2035,9 +2092,19 @@ public class CombDCEL {
 			}
 		}
 		
-		if (vlink.size()==0)
-			return hlink;
-		hlink.separatingLinks(pdcel,vlink,pdcel.alpha.origin.vertIndx);
+		if (vlink.size()!=0) {
+			hlink.separatingLinks(pdcel,vlink,pdcel.alpha.origin.vertIndx);
+			// add any missing bdry edges
+			for (int f=1;f<=pdcel.idealFaceCount;f++) {
+				Face idealf=pdcel.idealFaces[f];
+				HalfEdge he=idealf.edge;
+				do {
+					if (eutil[he.edgeIndx]==0) 
+						hlink.add(he.twin);
+					he=he.next;
+				} while (he!=idealf.edge);
+			}
+		}
 		if (debug) { // debug=true;
 			deBugging.DCELdebug.drawHalfLink(p, hlink);
 		}
@@ -2408,10 +2475,10 @@ public class CombDCEL {
 	 * In 'process' we then find "fans" of contiguous vertices 
 	 * stretching cclw from a 'redSpoke' to 'inSpoke', possibly 
 	 * with intermediate twin'ed in/out red edges. We 
-	 * introduce a new 'RedVertex' in the 'redChain' for each 
+	 * introduce a new 'Vertex' to go in the 'redChain' for each 
 	 * such fan and also add new 'HalfEdge's to last 'inSpoke' 
 	 * of each fan. Note that the first of the returned 
-	 * 'RedVertex's will replace the original, the others 
+	 * 'Vertex's will replace the original, the others 
 	 * will have their 'vertIndx's adjusted when the calling 
 	 * routine catalogs vertices.
 	 * @return ArrayList<RedVertex> of new 'RedVertex's

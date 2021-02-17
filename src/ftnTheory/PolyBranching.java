@@ -53,10 +53,7 @@ public class PolyBranching extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					cpS.swapPackData(rangePack,false);
-				}
+				CirclePack.cpb.swapPackData(rangePack,pnum,false);
 			} catch (Exception ex) {
 				return 0;
 			}

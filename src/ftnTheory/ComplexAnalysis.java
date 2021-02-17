@@ -197,7 +197,7 @@ public class ComplexAnalysis extends PackExtender {
 						{
 							if ((qnum=StringUtil.qFlagParse(str))<0)
 								qnum=packData.packNum;
-							cpScreen=CPBase.pack[qnum];
+							cpScreen=CPBase.cpScreens[qnum];
 							break;
 						}
 						case 'n': // numerator: if Mob=[a b;c d], then use az+b
@@ -316,7 +316,7 @@ public class ComplexAnalysis extends PackExtender {
 			} // end of while
 
 			// repaint the canvas
-			CPBase.pack[qnum].repaint();
+			CPBase.cpScreens[qnum].repaint();
 			return count;
 		}
 		
@@ -354,11 +354,11 @@ public class ComplexAnalysis extends PackExtender {
 				Oops("perhaps 'set_div' first?");
 			
 			// what packing to apply to? default to active
-			PackData toPack=CPBase.pack[PackControl.activeFrame.getActivePackNum()].getPackData();
+			PackData toPack=CPBase.cpScreens[PackControl.activeFrame.getActivePackNum()].getPackData();
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
-				toPack=CPBase.pack[pnum].getPackData();
+				toPack=CPBase.cpScreens[pnum].getPackData();
 			} catch(Exception ex) {}
 
 			// set up complex ftn vector and interpolator
@@ -430,10 +430,7 @@ public class ComplexAnalysis extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					return cpS.swapPackData(outputData,false);
-				}
+				return CirclePack.cpb.swapPackData(outputData, pnum,false);
 			} catch (Exception ex) {
 				return 0;
 			}
@@ -444,7 +441,7 @@ public class ComplexAnalysis extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
+				CPScreen cpS=CPBase.cpScreens[pnum];
 				if (cpS.getPackData().nodeCount!=domainData.nodeCount) {
 					errorMsg("getDom: range packing complex must match domain");
 					return 0;
@@ -473,7 +470,7 @@ public class ComplexAnalysis extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
+				CPScreen cpS=CPBase.cpScreens[pnum];
 				if (cpS.getPackData().nodeCount!=domainData.nodeCount) {
 					errorMsg("getRan: range packing complex must match domain");
 					return 0;

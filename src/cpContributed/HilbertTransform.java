@@ -10,6 +10,8 @@ import complex.Complex;
 import java.util.Iterator;
 import java.util.Vector;
 
+import allMains.CirclePack;
+
 import java.awt.Color;
 import java.awt.Frame;
 import java.awt.Graphics;
@@ -141,7 +143,7 @@ public class HilbertTransform extends PackExtender
 			
 			// create a copy of the packing
 			PackData newPack = packData.copyPackTo();
-			PackControl.pack[1].swapPackData(newPack, false);
+			CirclePack.cpb.swapPackData(newPack, 1, false);
 			
 			// replace the variable t with z if necessary
 			String temp_fct = fct;

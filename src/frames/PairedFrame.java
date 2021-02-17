@@ -103,8 +103,8 @@ public class PairedFrame extends JFrame implements ActionListener {
 
 		addWindowListener(new WPAdapter());
 		setTitle("Mapping Window:  P"+dnum+"  P"+rnum);
-		domainCPS=CPBase.pack[dnum];
-		rangeCPS=CPBase.pack[rnum];
+		domainCPS=CPBase.cpScreens[dnum];
+		rangeCPS=CPBase.cpScreens[rnum];
 		PackControl.canvasRedrawer.changeDomain(dnum);
 		PackControl.canvasRedrawer.changeRange(rnum);
 		initGUI();
@@ -567,14 +567,14 @@ public class PairedFrame extends JFrame implements ActionListener {
 			JComboBox<?> cb = (JComboBox<?>)e.getSource();
 			int i=cb.getSelectedIndex();
 			if (cb==domainCB) {
-				domainCPS=CPBase.pack[i];
+				domainCPS=CPBase.cpScreens[i];
 				PackControl.canvasRedrawer.changeDomain(i);
 				colorBorders();
 				setTitle("Mapping Window:  P"+i+"  P"+getRangeNum());
 		  		domainScreen.repaint();
 			}
 			else if (cb==rangeCB) {
-				rangeCPS=CPBase.pack[i];
+				rangeCPS=CPBase.cpScreens[i];
 				PackControl.canvasRedrawer.changeRange(i);
 				colorBorders();
 				setTitle("Mapping Window:  P"+getDomainNum()+"  P"+i);

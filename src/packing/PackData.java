@@ -217,6 +217,11 @@ public class PackData{
     
     public Smoother smoother;    // 6/2020. add a smoother
     
+    public PackData(int packnum) {
+    	this(null);
+    	packNum=packnum;
+    }
+    
     // Constructor
     public PackData(CPScreen parentScreen){
         cpScreen = parentScreen;
@@ -10609,7 +10614,7 @@ public class PackData{
 				  }
 			  }
 			  if (qnum>=0 && qnum<CPBase.NUM_PACKS) 
-				  qackData=PackControl.pack[qnum].getPackData();
+				  qackData=PackControl.cpScreens[qnum].getPackData();
 			  else 
 				  throw new ParserException("Specified pack numbe, "+qnum+", is out of range");
 			  if (hes!=qackData.hes) {
@@ -10645,7 +10650,7 @@ public class PackData{
 				  }
 			  }
 			  if (pnum>=0 && pnum<CPBase.NUM_PACKS) 
-				  qackData=PackControl.pack[pnum].getPackData();
+				  qackData=PackControl.cpScreens[pnum].getPackData();
 			  else throw new ParserException("Pack number, "+pnum+", is out of range");
 			  
 			  if (items!=null && items.size()>0)
@@ -10811,7 +10816,7 @@ public class PackData{
 					  }
 				  }
 				  if (qnum>=0 && qnum<CPBase.NUM_PACKS) 
-					  qackData=PackControl.pack[qnum].getPackData();
+					  qackData=PackControl.cpScreens[qnum].getPackData();
 				  else throw new ParserException("Pack number, "+qnum+", out of range");
 				  if (hes!=qackData.hes) {
 					  throw new ParserException("set_color: area comparision only if  both hyp or both eucl.");
@@ -10837,7 +10842,7 @@ public class PackData{
 					  }
 				  }
 				  if (pnum>=0 && pnum<CPBase.NUM_PACKS) 
-					  qackData=PackControl.pack[pnum].getPackData();
+					  qackData=PackControl.cpScreens[pnum].getPackData();
 				  else throw new ParserException("Pack number, "+pnum+", out of range");
 
 				  facelist=new FaceLink(this,items);
@@ -11096,7 +11101,7 @@ public class PackData{
 					  }
 					  if (qnum<0 || qnum>=CPBase.NUM_PACKS)
 						  throw new ParserException();
-					  qackData=PackControl.pack[qnum].getPackData();
+					  qackData=PackControl.cpScreens[qnum].getPackData();
 					  break;
 				  }
 				  case 'm':

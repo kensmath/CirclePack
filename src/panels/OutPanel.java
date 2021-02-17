@@ -203,7 +203,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		if (old_pnum==PackControl.getActiveCPScreen().getPackNum()) 
 			return;
 		// save the old
-		PackControl.pack[old_pnum].dataFormater.update(
+		PackControl.cpScreens[old_pnum].dataFormater.update(
 			preField.getText(),dataField.getText(),objField.getText(),
 			suffField.getText());
 		// bring in new
@@ -791,8 +791,8 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 				try {
 					int pnum=Integer.parseInt(datastr.substring(2,3));
 					int qnum=Integer.parseInt(datastr.substring(3,4));
-					pData=PackControl.pack[pnum].getPackData();
-					qData=PackControl.pack[qnum].getPackData();
+					pData=PackControl.cpScreens[pnum].getPackData();
+					qData=PackControl.cpScreens[qnum].getPackData();
 				} catch (Exception ex) {
 					throw new ParserException("error: output: bad 'VS' perscription");
 				}

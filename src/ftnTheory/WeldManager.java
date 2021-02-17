@@ -1302,7 +1302,7 @@ public class WeldManager extends PackExtender {
 		  			case 'q': // get receiving pack
 		  			{
 		  				try {
-		  					p2=PackControl.pack[StringUtil.
+		  					p2=PackControl.cpScreens[StringUtil.
 		  					         qFlagParse(str)].getPackData();
 		  				} catch (Exception ex) {
 		  					throw new ParserException("Indicated weld partner "+
@@ -1398,7 +1398,7 @@ public class WeldManager extends PackExtender {
 		  			{
 		  				try {
 		  					qnum=StringUtil.qFlagParse(str);
-		  					p2=CPBase.pack[qnum].getPackData().copyPackTo();
+		  					p2=CPBase.cpScreens[qnum].getPackData().copyPackTo();
 		  				} catch (Exception ex) {
 		  					throw new ParserException("Indicated weld partner "+
 		  							"pack is not valid");
@@ -1485,9 +1485,8 @@ public class WeldManager extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null && packOut!=null && packOut.nodeCount>0) {
-					cpS.swapPackData(packOut,false);
+				if (packOut!=null && packOut.nodeCount>0) {
+					CirclePack.cpb.swapPackData(packOut,pnum,false);
 				}
 				else return 0;
 			} catch (Exception ex) {

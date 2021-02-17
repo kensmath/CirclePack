@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CPBase;
+import allMains.CirclePack;
 import complex.Complex;
 import exceptions.CombException;
 import exceptions.ParserException;
@@ -254,11 +255,8 @@ public class Graphene extends PackExtender {
 				
 				// pack number
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					PackData p=thePack.copyPackTo();
-					return cpS.swapPackData(p,false);
-				}
+				PackData p=thePack.copyPackTo();
+				return CirclePack.cpb.swapPackData(p,pnum,false);
 			} catch (Exception ex) {}
 			return 0;
 		}
@@ -1210,9 +1208,9 @@ public class Graphene extends PackExtender {
 			newPaste=true;
 			
 	  	  	// copy to packData
-			CPScreen cps=packData.cpScreen; 
-			cps.swapPackData(stitchBase,true);
-			packData=cps.getPackData();
+			int pnum=packData.packNum;
+			CirclePack.cpb.swapPackData(stitchBase,pnum,true);
+			packData=stitchBase;
 		}
 		
 		// no more?

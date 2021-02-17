@@ -94,17 +94,17 @@ public class ToolDropListener implements DropTargetListener {
 			// check command for variables '#..': Currently check only ' #XY'
 			if (mytool.getCommand().contains(" #XY") || mytool.getCommand().contains(" #xy")) {
 				Point pt=event.getLocation();
-				CPScreen cpS=CPBase.pack[thePackNum];
+				CPScreen cpS=CPBase.cpScreens[thePackNum];
 				Point2D.Double pot=cpS.pt2RealPt(pt, theCanvas.getWidth(),theCanvas.getHeight());
 				String subxy=new String(" "+pot.x+" "+pot.y+" ");
 				String newCmd=mytool.getCommand().replaceAll(" #XY",subxy).replaceAll(" #xy",subxy);
 //				System.err.println("got here: newCmd "+newCmd);
 				// NOTE: for spherical packing, parser must convert to real point 
 				CPBase.trafficCenter.parseWrapper(newCmd,
-						CPBase.pack[thePackNum].getPackData(),false,false,0,null);
+						CPBase.cpScreens[thePackNum].getPackData(),false,false,0,null);
 				return;
 			}
-			mytool.execute(CPBase.pack[thePackNum].getPackData());
+			mytool.execute(CPBase.cpScreens[thePackNum].getPackData());
 		}
 	}
 	

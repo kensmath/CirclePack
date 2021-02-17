@@ -344,8 +344,8 @@ public class FaceLink extends LinkedList<Integer> {
 				try {	// use those marked in another packing? pack[q]?
 					int qnum;
 					if (str.contains("q") && (qnum=Integer.parseInt(str.substring(str.length()-2)))>=0
-							&& qnum<3 && PackControl.pack[qnum].getPackData().status) {
-						qackData=PackControl.pack[qnum].getPackData();
+							&& qnum<3 && PackControl.cpScreens[qnum].getPackData().status) {
+						qackData=PackControl.cpScreens[qnum].getPackData();
 					}
 				} catch(Exception ex) {}
 				for (int f=1;f<=facecount;f++)

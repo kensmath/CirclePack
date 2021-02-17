@@ -8,7 +8,7 @@ import circlePack.PackControl;
  * The 'main' here is called by 'SplashMain' after it displays
  * the splash screen. This class processes any command line 
  * arguments. 'CirclePack' is initiated in a static call, but
- * then 'initCirclePack' gets things going.
+ * then 'startCirclePack' gets things going.
  */
 public class CP_after_Splash {
 	

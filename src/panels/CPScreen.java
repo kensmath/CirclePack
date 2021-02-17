@@ -38,7 +38,6 @@ import graphObjects.CPCircle;
 import graphObjects.CPEdge;
 import graphObjects.CPFace;
 import graphObjects.CPTrinket;
-import math.Mobius;
 import mytools.MyTool;
 import packing.PackData;
 import packing.PackExtender;
@@ -86,8 +85,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 	public static final String customGlobal="CP_custom.ps"; // global default file for PostScript
 	public String customPS; // default PostScript file chosen for this packing; may be null.
 
-	PackData packData;
-	int packNum; // (should be more general, say 'userNum')
+	public PackData packData;
+	int screenNum; // normally alligns with packData.packNum
 	
 	// instance variables
 	public DispOptions dispOptions;
@@ -132,7 +131,6 @@ public class CPScreen extends JPanel implements	MouseListener {
 	private int tmpthick;
 	
     static String []geomAbbrev={" (hyp)"," (eucl)"," (sph)"};  
-    public Mobius mobius;
     
 	// Constructors    
     public CPScreen() {
@@ -140,8 +138,10 @@ public class CPScreen extends JPanel implements	MouseListener {
     }
     
     // Constructor(s)
-	public CPScreen(int packnum) {
-		if (packnum<0 || packnum>=CPBase.NUM_PACKS) packnum=0;
+	public CPScreen(int screennum) {
+		if (screennum<0 || screennum>=CPBase.NUM_PACKS) 
+			screennum=0;
+		screenNum=screennum;
 		this.setFocusable(true);
 		this.setBorder(new LineBorder(Color.BLACK,2,false));
 		this.addMouseListener(this);
@@ -156,10 +156,6 @@ public class CPScreen extends JPanel implements	MouseListener {
 				BasicStroke.CAP_ROUND,BasicStroke.JOIN_ROUND);
 		stroke=new BasicStroke((float)(defaultthickness), // /pixFactor),
 				BasicStroke.CAP_ROUND,BasicStroke.JOIN_ROUND);
-	
-		// create the associated PackData
-		packNum = packnum;
-		packData=new PackData(this);
 		
 		// persistent graphing objects: change data and reuse
 		circle=new CPCircle(); 
@@ -171,7 +167,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 		dispOptions=new DispOptions(this);
 		postOptions=new PostOptions(this);
 		dataFormater=new DataFormater();
-		new DropTarget(this,new ToolDropListener(this,packnum,false));
+		new DropTarget(this,new ToolDropListener(this,screenNum,false));
 		
 		// create memory buffered image
 		packImage = resetCanvasSize(PackControl.getActiveCanvasSize(),
@@ -193,7 +189,6 @@ public class CPScreen extends JPanel implements	MouseListener {
 		setAntialiasing(true);
 		setAxisMode(false);
 		realBox.reset();
-		mobius=new Mobius(); // identity
 		sphView.defaultView();
 		
 		fillOpacity = CPBase.DEFAULT_FILL_OPACITY;
@@ -275,7 +270,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 	public void mouseReleased(MouseEvent e) {
 		if (e.getClickCount() >= 2) { // double click to change active packing
 			try {
-			  PackControl.switchActivePack(this.packNum);
+			  PackControl.switchActivePack(this.getPackNum());
 			} catch (Exception ex) {return;}
 		}
 		// TODO: this doesn't seem to work to bring the activeFrame to the top
@@ -904,7 +899,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 	 * @return int, nodeCount
 	 */
 	public int setPackData(PackData p) {
-		if (packData!=p) { // a different packing?
+		if (packData!=null && packData!=p) { // a different packing?
 			if (packData.radiiSliders!=null) {
 				packData.radiiSliders.dispose();
 				packData.radiiSliders=null;
@@ -919,7 +914,11 @@ public class CPScreen extends JPanel implements	MouseListener {
 			}
 			packData.smoother=null;
 		}
+		// handshake
 		packData=p;
+		p.cpScreen=this;
+		this.setGeometry(p.hes);
+		this.setPackName();
 		return packData.nodeCount;
 	}
 	
@@ -958,19 +957,20 @@ public class CPScreen extends JPanel implements	MouseListener {
 	 */
 	public void updateXtenders() {
 		// remove all Xtender tools
+		int pnum=getPackNum();
 		SmallCanvasPanel scp=PackControl.smallCanvasPanel;
-		while (scp.cpInfo[packNum].getComponentCount()>1)
-			scp.cpInfo[packNum].remove(1);
-		scp.cpInfo[packNum].revalidate();
+		while (scp.cpInfo[pnum].getComponentCount()>1)
+			scp.cpInfo[pnum].remove(1);
+		scp.cpInfo[pnum].revalidate();
 		// re-add those for this packing
 		Vector<PackExtender> Xvec=packData.packExtensions;
 		for (int i=0;i<Xvec.size();i++) {
 			PackExtender pX=Xvec.get(i);
 			MyTool Xtool=pX.XtenderTool;
-			if (Xtool!=null) scp.cpInfo[packNum].add(Xtool);
+			if (Xtool!=null) scp.cpInfo[pnum].add(Xtool);
 		}
-		scp.cpInfo[packNum].revalidate();
-		scp.cpInfo[packNum].repaint();
+		scp.cpInfo[pnum].revalidate();
+		scp.cpInfo[pnum].repaint();
 	}
 	
 	/**
@@ -979,8 +979,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 	public void setPackName() {
 		if (packData.fileName== null || packData.fileName.trim().length()==0) 
 			packData.setName("NoName");
-		PackControl.smallCanvasPanel.packName[packNum].
-				setText("P"+packNum+" "+packData.fileName+geomAbbrev[packData.hes+1]);
+		PackControl.smallCanvasPanel.packName[getPackNum()].
+				setText("P"+getPackNum()+" "+packData.fileName+geomAbbrev[packData.hes+1]);
 	}
 
 	/**
@@ -995,14 +995,18 @@ public class CPScreen extends JPanel implements	MouseListener {
 	}
 	
 	/** 
-	 * Return the index of this screen (and its PackData set).
-	 * @return
+	 * Return the 'packData' pack index, or -1 if not set
+	 * @return int
 	 */
 	public int getPackNum() {
-		return packNum;
+		if (packData==null)
+			return -1;
+		return packData.packNum;
 	}
 	
 	/**
+	 * Replaced by 'CirclePack.cpb.swapPackData'
+	 * 
 	 * Attach a new pNew to this screen (normally the previous packData is lost).
 	 * Also, clean up: attach this screen to new packing, transfer p.packNum and 
 	 * packname to new packing, optionally carry current 'PackExtensions' to pNew.
@@ -1012,28 +1016,24 @@ public class CPScreen extends JPanel implements	MouseListener {
 	 *  
 	 * @param pNew @see packData
 	 * @param keepX boolean: if true, replace 'PackExtenders' of pNew by those of original.
-	 * @return int, new nodeCount
+	 * @return int, new nodeCount, -1 is 'pNew' is faulty
 	 */
-	public int swapPackData(PackData pNew,boolean keepX) {
-		if (pNew==null || !pNew.status || pNew.nodeCount<3) {
-			return emptyPacking();
-		}
-		if (keepX) 
-			pNew.packExtensions=packData.packExtensions;
-		setPackData(pNew); // old pack info to garbage.
-		packData.cpScreen=this;
-		packData.packNum=packNum;
-		setGeometry(packData.hes);
-		setPackName();
-		return packData.nodeCount;
-	}
+//	public int swapPackData(PackData pNew,boolean keepX) {
+//		if (pNew==null || !pNew.status || pNew.nodeCount<3) {
+//			return -1;
+//		}
+//		if (keepX) 
+//			pNew.packExtensions=packData.packExtensions;
+//		setPackData(pNew); // old pack info to garbage.
+//		packData.cpScreen=this;
+//		packData.packNum=screenNum;
+//	}
 	
 	/**
-	 * Empty the packing (packing data is lost); clear/reset the screen
+	 * Call if new packing has been put in place; clear/reset the screen
 	 * and 'dispOptions'.
 	 */
 	public int emptyPacking() {
-		setPackData(new PackData(this));
 		reset();
 		sphView.defaultView();
 		clearCanvas(true);

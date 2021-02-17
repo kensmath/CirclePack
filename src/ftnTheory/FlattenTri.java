@@ -70,7 +70,7 @@ public class FlattenTri extends PackExtender {
 			
 			// move copy of packing to 'qnum'
 			cpCommand(packData,"copy "+qnum);
-			flatPack=CPBase.pack[qnum].getPackData();
+			flatPack=CPBase.cpScreens[qnum].getPackData();
 			cpCommand(flatPack,"geom_to_e");
 			cpS=flatPack.cpScreen;
 			reset();

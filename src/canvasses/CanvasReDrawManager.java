@@ -92,7 +92,7 @@ public class CanvasReDrawManager {
 				PackControl.mapPairFrame.rangeScreen.repaint();
 			}
 		}
-		PackControl.pack[pnum].repaint();
+		PackControl.cpScreens[pnum].repaint();
 	}
 	
 	/**

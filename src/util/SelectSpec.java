@@ -228,8 +228,8 @@ public class SelectSpec {
 				if (ccc >= '0' && cc <= '9')
 					pq = ccc - '0';
 				// caution: exception if pp or pq is out of range for packdata
-				PackData Pp = PackControl.pack[pp].getPackData();
-				PackData Pq = PackControl.pack[pq].getPackData();
+				PackData Pp = PackControl.cpScreens[pp].getPackData();
+				PackData Pq = PackControl.cpScreens[pq].getPackData();
 				if (node > Pp.nodeCount || node > Pq.nodeCount) {
 					uP.rtnFlag = 0;
 					return uP;

@@ -227,7 +227,7 @@ public class FileDialogs {
 			if (actStr==null) actionStr="Save the packing";
 			dbox.setCurrentDirectory(CPFileManager.PackingDirectory);
 			dbox.setSelectedFile(new File(CPFileManager.PackingDirectory+File.separator+
-					CPBase.pack[CirclePack.cpb.getActivePackNum()].getPackData().fileName));
+					CPBase.cpScreens[CirclePack.cpb.getActivePackNum()].getPackData().fileName));
 			dbox.setFileFilter(new PackingFilter());
 			result = dbox.showDialog(
 					(Component) PackControl.activeFrame,actionStr);

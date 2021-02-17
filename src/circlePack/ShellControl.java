@@ -17,11 +17,13 @@ import input.CPFileManager;
 import input.SocketSource;
 import packing.PackData;
 import panels.CPPreferences;
-import panels.CPScreen;
 import util.CPTimer;
 
 /**
  * Need a standalone version of CirclePack, to be run from a shell or remotely.
+ * Not sure yet whether there should be any image capability, e.g. for
+ * an output jpg. If yes, need to restructure current 'CPScreen' to
+ * separate backplane drawing from GUI stuff.
  * 
  * @author kens, May 2019
  *
@@ -49,7 +51,7 @@ public class ShellControl extends CPBase {
 	
 	/**
 	 * This actually starts ShellControl: initiate preferences,
-	 * start C libraries, create the pack[] vector of packings,
+	 * start C libraries, create the packings[] array,
 	 */
 	public void initShellControl() {
 		// look for preference directory/file in 'homeDirectory/myCirclePack';
@@ -120,17 +122,13 @@ public class ShellControl extends CPBase {
 		}
 
 		// Create the packing data memory storage areas
-		pack = new CPScreen[NUM_PACKS];
+		packings=new PackData[NUM_PACKS];
 		for (int i = 0; i < NUM_PACKS; i++) {
-			pack[i] = new CPScreen(i);
-			pack[i].circle.setParent(pack[i]);
-			pack[i].face.setParent(pack[i]);
-			pack[i].edge.setParent(pack[i]);
-			pack[i].trinket.setParent(pack[i]);
-			pack[i].realBox.setParent(pack[i]);
-			pack[i].sphView.setParent(pack[i]);
+			packings[i]=new PackData(i);
 		}
-		
+
+		// TODO: If we needed an image to use, we would instantiate it here
+
 		runSpinner=new ShellSpinner();
 	}
 	
@@ -176,6 +174,32 @@ public class ShellControl extends CPBase {
 	 */
 	public int getActivePackNum() {
 		return 0;
+	}
+	
+	/**
+	 * Replace 'packings[pnum]' with new packing; old packing
+	 * is generally orphaned.
+	 * @param p PackData
+	 * @param pnum int
+	 * @param keepX boolean, keep current extenders
+	 */
+	public int swapPackData(PackData p,int pnum,boolean keepX) {
+		if (p==null)
+			return -1;
+		
+		// before replacing, handle extension
+		if (keepX) { 
+			p.packExtensions=packings[pnum].packExtensions;
+			for (int x=0;x<p.packExtensions.size();x++)
+				p.packExtensions.get(x).packData=p;
+		}
+		
+//		CPBase.packings[pnum].cpScreen=null; // detach from cpScreen
+//		p.cpScreen=CPBase.cpScreens[pnum]; 
+//		p.cpScreen.setPackData(p);
+		
+		CPBase.packings[pnum]=p; 
+		return p.nodeCount;
 	}
 			
 	// done with abstract methods

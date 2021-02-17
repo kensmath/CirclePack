@@ -113,10 +113,7 @@ public class HypDensity extends PackExtender {
 				int pnum=Integer.parseInt((String)items.get(0));
 				if (pnum==packData.packNum)
 					return 0;
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					cpS.swapPackData(outputData,false);
-				}
+				CirclePack.cpb.swapPackData(outputData,pnum,false);
 			} catch (Exception ex) {
 				return 0;
 			}

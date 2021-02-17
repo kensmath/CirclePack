@@ -173,12 +173,12 @@ public class MainFrame extends JFrame {
 		add(activeScreen);
 
 		// need to adjust stored image areas?
-		int curwide=CPBase.pack[0].packImage.getWidth();
-		int curhigh=CPBase.pack[0].packImage.getHeight();
+		int curwide=CPBase.cpScreens[0].packImage.getWidth();
+		int curhigh=CPBase.cpScreens[0].packImage.getHeight();
 		if (cwide!=curwide || chigh!=curhigh) {
 			for (int i=0;i<CPBase.NUM_PACKS;i++) {
-				CPBase.pack[i].packImage=
-					CPBase.pack[i].resetCanvasSize(cwide,chigh);
+				CPBase.cpScreens[i].packImage=
+					CPBase.cpScreens[i].resetCanvasSize(cwide,chigh);
 			}
 		}
 
@@ -224,7 +224,7 @@ public class MainFrame extends JFrame {
 	public void updateTitle() {
 		int pnum=getActivePackNum();
 		setTitle("Active Packing p"+pnum+": "+
-				CPBase.pack[pnum].getPackData().fileName);
+				CPBase.packings[pnum].fileName);
 	}
 	
 	/**
@@ -317,7 +317,7 @@ public class MainFrame extends JFrame {
 	 * create the panel containing the canvas itself
 	 */
 	public void createActiveScreen() {
-		activeScreen = new ActiveWrapper(mainMytFile,CPBase.pack[0]);  
+		activeScreen = new ActiveWrapper(mainMytFile,CPBase.cpScreens[0]);  
 		activeScreen.setBorder(new LineBorder(Color.blue,2,false));
 		// Note: the canvas itself if drop target to get correct coords.
 		new DropTarget(activeScreen,

@@ -236,10 +236,16 @@ public class CommandStrParser {
 	  // "Cleanse" all packings
       if (cmd.startsWith("Clean")) { 
     	  for (int i=0;i<CPBase.NUM_PACKS;i++) {
-    		  CPScreen cps=CPBase.pack[i];
+    		  PackData pdata=CPBase.packings[i];
+    		  CPScreen cps=CPBase.cpScreens[i];
     		  // TODO: want to white out underlying canvas to avoid flashing
-    		  if (cps.getPackData().status) {
-    			  cps.getPackData().packExtensions=new Vector<PackExtender>(2);
+    		  if (pdata.status) {
+    			  pdata.packExtensions=new Vector<PackExtender>(2); // trash any extensions
+    			  // put new packing in place
+    			  PackData newP=CPBase.packings[i]=new PackData(i);
+    			  newP.cpScreen=CPBase.cpScreens[i];
+    			  newP.cpScreen.setPackData(newP);
+    			  newP.cpScreen.updateXtenders();
     			  cps.emptyPacking();
     			  cps.updateXtenders();
     			  count++;
@@ -467,9 +473,9 @@ public class CommandStrParser {
 		  PackData newPack=DataDCEL.dcel_to_packing(pDCEL);
 		  if (newPack!=null && newPack.status==true && newPack.nodeCount>3) {
 			  CirclePack.cpb.msg("Have replaced packing with new one derived from '"+filename+"'.");
-			  CPScreen cps=packData.cpScreen; 
-			  cps.swapPackData(newPack,false);
-			  packData=cps.getPackData();
+			  int pnum=packData.packNum;
+			  CirclePack.cpb.swapPackData(newPack,pnum,false);
+			  packData=newPack;
 			  count=packData.nodeCount;
 			  
 			  try {
@@ -496,8 +502,7 @@ public class CommandStrParser {
     				  newPack=TileData.tiles2simpleCP(packData.tileData);
         			  newPack.set_aim_default();
         			  if (newPack!=null && newPack.status) {
-        				  cps=CPBase.pack[simplepack];
-        				  cps.swapPackData(newPack,false);
+        				  CirclePack.cpb.swapPackData(newPack,simplepack,false);
         			  }
         			  else
             			  CirclePack.cpb.errMsg("failed to create simple packing for p"+simplepack+" in 'read_CT'");
@@ -723,9 +728,9 @@ public class CommandStrParser {
     	  // seems we got a triangulation
 		  PackData pdata=Triangulation.tri_to_Complex(tri,hes);
 		  if (pdata!=null) {
-			  CPScreen cpS=packData.cpScreen;
-			  cpS.swapPackData(pdata,false);
-			  packData=cpS.getPackData();
+			  int pnum=packData.packNum;
+			  CirclePack.cpb.swapPackData(pdata,pnum,false);
+			  packData=pdata;
 			  
 			  packData.chooseAlpha();
 			  packData.chooseGamma();
@@ -805,12 +810,12 @@ public class CommandStrParser {
 	    	  int pnum2=Integer.parseInt((String)items.get(1));
 
 	    	  if (pnum1<0 || pnum1>=CPBase.NUM_PACKS 
-	    			  || !CPBase.pack[pnum1].getPackData().status 
+	    			  || !CPBase.cpScreens[pnum1].getPackData().status 
 	    			  || pnum2<0 || pnum2>=CPBase.NUM_PACKS 
-	    			  || !CPBase.pack[pnum2].getPackData().status) 
+	    			  || !CPBase.cpScreens[pnum2].getPackData().status) 
 	    		  throw new ParserException("illegal or inactive packings specified");
-	    	  packData=CPBase.pack[pnum1].getPackData(); // this is where the final pack will go
-	    	  PackData qackData=CPBase.pack[pnum2].getPackData();
+	    	  packData=CPBase.cpScreens[pnum1].getPackData(); // this is where the final pack will go
+	    	  PackData qackData=CPBase.cpScreens[pnum2].getPackData();
 	    	  
 	    	  int v1=NodeLink.grab_one_vert(packData,(String)items.get(2));
 	    	  int v2=NodeLink.grab_one_vert(qackData,(String)items.get(3));
@@ -1096,8 +1101,16 @@ public class CommandStrParser {
 		  // =========== cleanse ==========
 	      if (cmd.startsWith("clean")) {
 			  packData.packExtensions=new Vector<PackExtender>(2); // trash any extensions
-			  cpScreen.emptyPacking();
-			  packData=cpScreen.getPackData();
+			  
+			  // put new packing in place
+			  int pnum=packData.packNum;
+			  PackData newP=new PackData(pnum);
+			  CPBase.packings[pnum]=newP;
+			  newP.cpScreen=CPBase.cpScreens[pnum];
+			  newP.cpScreen.setPackData(newP);
+			  
+			  // point local 'packData' to new one 
+			  packData=newP;
 			  cpScreen.updateXtenders();
 			  return 1;
 	      }
@@ -1402,9 +1415,9 @@ public class CommandStrParser {
 				  throw new ParserException("failed to create "+type+" packing");
 			  }
 			  
-			  CPScreen cps=packData.cpScreen; 
-			  cps.swapPackData(newPack,false);
-			  packData=cps.getPackData();
+			  int pnum=packData.packNum;
+			  CirclePack.cpb.swapPackData(newPack,pnum,false);
+			  packData=newPack;
 			  count=packData.nodeCount;
 
 			  return count;
@@ -1543,9 +1556,9 @@ public class CommandStrParser {
 //				  } 
 			  // put new packing in place
 			  randPack.fileName=new String("Delaunay"+N);
-			  CPScreen cpS=packData.cpScreen;
-			  cpS.swapPackData(randPack,false);
-			  packData=cpS.getPackData();
+			  int pnum=packData.packNum;
+			  CirclePack.cpb.swapPackData(randPack,pnum,false);
+			  packData=randPack;
 			  
 			  packData.chooseAlpha();
 			  packData.chooseGamma();
@@ -1623,10 +1636,11 @@ public class CommandStrParser {
 	    			  || n<1 || n>3) {
 	    		  throw new ParserException("improper call");
 	    	  }
-	    	  PackData p=Erf_function.erf_ftn(CPBase.pack[p1num].getPackData(),n);
-	    	  if (p==null) return 0;
-	    	  CPBase.pack[p2num].swapPackData(p,false); // install as new pack[p2num]
-	    	  return CPBase.pack[p2num].getPackData().nodeCount;
+	    	  PackData p=Erf_function.erf_ftn(CPBase.packings[p1num],n);
+	    	  if (p==null) 
+	    		  return 0;
+	    	  CirclePack.cpb.swapPackData(p,p2num,false); // install as new pack[p2num]
+	    	  return p.nodeCount;
 	      }
 	      
 	      // ============= extender ===========
@@ -1757,7 +1771,7 @@ public class CommandStrParser {
 	    			  int qnum=StringUtil.qFlagParse(srpt);
 	    			  
 	    			  MicroGrid px=new MicroGrid(packData,
-	    					  CPBase.pack[qnum].getPackData(),null,script_flag);
+	    					  CPBase.cpScreens[qnum].getPackData(),null,script_flag);
 	    			  if (px.running) {
 	    				  CirclePack.cpb.msg("Pack "+packData.packNum+
 	    						  ": started "+px.extensionAbbrev+" extender, mode 2");
@@ -2500,8 +2514,8 @@ public class CommandStrParser {
 	  {
 	      // =========== h_g_bar ===========
 	      if (cmd.startsWith("h_g_bar")) {
-	    	  PackData Hp=CPBase.pack[0].getPackData();
-	    	  PackData Gp=CPBase.pack[1].getPackData();
+	    	  PackData Hp=CPBase.cpScreens[0].getPackData();
+	    	  PackData Gp=CPBase.cpScreens[1].getPackData();
 	    	  
 	    	  // check: status? euclidean? same size? 
 	    	  if (HarmonicMap.ck_size(Hp,Gp)==0) {
@@ -2538,18 +2552,18 @@ public class CommandStrParser {
 	    	  // duplicate p0 in p2, then replace its RData by the new stuff
 	    	  int holdPNum=packData.packNum;
 	    	  PackData tmpPD=Hp.copyPackTo();
-			  CPBase.pack[2].swapPackData(tmpPD,false);
-			  if (holdPNum==2) packData=CPBase.pack[2].getPackData();
-			  CPBase.pack[2].getPackData().rData=newRdata;
-	    	  jexecute(CPBase.pack[2].getPackData(),"set_screen -a");
+	    	  CirclePack.cpb.swapPackData(tmpPD,2,false);
+			  if (holdPNum==2) packData=CPBase.cpScreens[2].getPackData();
+			  CPBase.packings[2].rData=newRdata;
+	    	  jexecute(CPBase.packings[2],"set_screen -a");
 	    	  CirclePack.cpb.msg("h_g_bar: p2 contains the data for h+conj(g)");
 	    	  return 1;
 	      }
 	      
 	      // =========== h_g_add ===========
 	      if (cmd.startsWith("h_g_add")) {
-	    	  PackData Hp=CPBase.pack[0].getPackData();
-	    	  PackData Gp=CPBase.pack[1].getPackData();
+	    	  PackData Hp=CPBase.cpScreens[0].getPackData();
+	    	  PackData Gp=CPBase.cpScreens[1].getPackData();
 	    	  
 	    	  // check: status? euclidean? same size? 
 	    	  if (HarmonicMap.ck_size(Hp,Gp)==0) {
@@ -2565,10 +2579,10 @@ public class CommandStrParser {
 	    	  // duplicate p0 in p2, then replace its RData by the new stuff
 	    	  int holdPNum=packData.packNum;
 	    	  PackData tmpPD=Hp.copyPackTo();
-			  CPBase.pack[2].swapPackData(tmpPD,false);
-			  if (holdPNum==2) packData=CPBase.pack[2].getPackData();
-			  CPBase.pack[2].getPackData().rData=newRdata;
-	    	  jexecute(CPBase.pack[2].getPackData(),"set_screen -a");
+	    	  CirclePack.cpb.swapPackData(tmpPD,2,false);
+			  if (holdPNum==2) packData=CPBase.packings[2];
+			  tmpPD.rData=newRdata;
+	    	  jexecute(CPBase.packings[2],"set_screen -a");
 	    	  CirclePack.cpb.msg("h_g_add: p2 contains the data for h+conj(g)");
 	    	  return 1;
 	      }
@@ -2593,12 +2607,12 @@ public class CommandStrParser {
 	    	    	      " 'maxsize' limits size: "+ex.getMessage());
 	    	  }
 	    	  try {
-	    		  CPScreen cps=packData.cpScreen;
+	    		  int pnum=packData.packNum;
 	    		  PackData newData=PackCreation.build_j_function(n0,n1,maxsize);
 	    		  if (newData==null) 
 	    			  throw new CombException("new packing failed");
-	    		  cps.swapPackData(newData,false);
-	    		  packData=cps.getPackData();
+	    		  CirclePack.cpb.swapPackData(newData,pnum,false);
+	    		  packData=newData;
 	    	  } catch(CombException cex) {
 	    		  throw new ParserException("build failed.");
 	    	  }
@@ -2681,8 +2695,8 @@ public class CommandStrParser {
 				  qnm=Integer.parseInt((String)items.remove(0));
 				  if (pnm<0 || pnm>=CPBase.NUM_PACKS || qnm<0 || qnm>=CPBase.NUM_PACKS)
 					  throw new ParserException();
-				  p=CPBase.pack[pnm].getPackData();
-				  q=CPBase.pack[qnm].getPackData();
+				  p=CPBase.cpScreens[pnm].getPackData();
+				  q=CPBase.cpScreens[qnm].getPackData();
 			  } catch (Exception ex) {
 				  throw new ParserException("usage: Map p q [options]");
 			  }
@@ -2773,9 +2787,9 @@ public class CommandStrParser {
 	    	  PackData pdata=PackCreation.randNecklace(n,2,(Integer)null);
 
 			  if (pdata!=null) {
-				  CPScreen cpS=packData.cpScreen;
-				  cpS.swapPackData(pdata,false);
-				  packData=cpS.getPackData();
+				  int pnum=packData.packNum;
+				  CirclePack.cpb.swapPackData(pdata,pnum,false);
+				  packData=pdata;
 				  return 1;
 			  }
 			  return 0;
@@ -2887,7 +2901,7 @@ public class CommandStrParser {
 				  else 
 					  items.remove(0);
 				  String st=(String)items.get(0);
-				  qackData=PackControl.pack[StringUtil.qFlagParse(st)].getPackData();
+				  qackData=PackControl.cpScreens[StringUtil.qFlagParse(st)].getPackData();
 				  qCPS=qackData.cpScreen;
 				  if (qackData==null || qCPS==null)
 					  throw new ParserException();
@@ -3140,9 +3154,9 @@ public class CommandStrParser {
 		  
 			  // put new packing in place
 			  randPack.fileName=new String(filename);
-			  CPScreen cps=packData.cpScreen;
-			  cps.swapPackData(randPack,false);
-			  packData=cps.getPackData();
+			  int pnum=packData.packNum;
+			  CirclePack.cpb.swapPackData(randPack,pnum,false);
+			  packData=randPack;
 
 			  packData.hes=heS;
 			  packData.chooseAlpha();
@@ -3332,9 +3346,9 @@ public class CommandStrParser {
 			  
 			  // put new packing in place
 			  randPack.fileName=new String("rand_pack");
-			  CPScreen cps=packData.cpScreen;
-			  cps.swapPackData(randPack,false);
-			  packData=cps.getPackData();
+			  int pnum=packData.packNum;
+			  CirclePack.cpb.swapPackData(randPack,pnum,false);
+			  packData=randPack;
 			  packData.hes=heS;
 			  
 			  // for rectangles, 1,2,3,4 are to be the corners
@@ -3403,9 +3417,9 @@ public class CommandStrParser {
 							  randPack.alpha=da;
 						  
 						  // put new packing in place
-						  CPScreen cps=packData.cpScreen;
-						  cps.swapPackData(randPack,false);
-						  packData=cps.getPackData();
+						  int pnum=packData.packNum;
+						  CirclePack.cpb.swapPackData(randPack,pnum,false);
+						  packData=randPack;
 						  jexecute(packData,"max_pack 2000");
 
 						  CirclePack.cpb.msg("Created a random packing in the disc with "+packData.nodeCount
@@ -3578,12 +3592,12 @@ public class CommandStrParser {
 	     	  } // end of while
 	   	  
 	     	  try{  // have to hold this; packData get's replaced
-	     		  CPScreen cps=packData.cpScreen; 
+	     		  int pnum=packData.packNum;
 	     		  PackData newData=PackCreation.seed(n,hes);
 	     		  if (newData==null) 
 	     			  throw new CombException("seed has failed");
-	     		  cps.swapPackData(newData,false);
-	     		  packData=cps.getPackData(); 
+	     		  CirclePack.cpb.swapPackData(newData,pnum,false);
+	     		  packData=newData;
 	     		  jexecute(packData,"disp -w -c");
 	     	  } catch(Exception ex) {
 	     		  throw new ParserException(" "+ex.getMessage());
@@ -3637,9 +3651,9 @@ public class CommandStrParser {
     	  multiplied by values from function specified in "Function" panel. */
     	  if (cmd.startsWith("ratio")) {
 //    		  items=(Vector<String>)flagSegs.get(0); // one segment
-    		  PackData p1=CPBase.pack[Integer.parseInt((String)items.get(0))].getPackData();
+    		  PackData p1=CPBase.cpScreens[Integer.parseInt((String)items.get(0))].getPackData();
     		  NodeLink blist=new NodeLink(p1,"b");
-    		  PackData p2=CPBase.pack[Integer.parseInt((String)items.get(1))].getPackData();
+    		  PackData p2=CPBase.cpScreens[Integer.parseInt((String)items.get(1))].getPackData();
     		  if (!p1.status || !p2.status || p1.hes>0 || p2.hes!=0
     				|| blist==null || blist.size()<=0) {
     			  throw new ParserException("need two appropriate packings.");
@@ -4522,8 +4536,9 @@ public class CommandStrParser {
 	   		  // have to hold this; packData get's replaced
 	   		  PackData newPack=PackCreation.triGroup(A,B,C,maxgen);
 	   		  if (newPack!=null) {
-	   			  cpScreen.swapPackData(newPack,false);
-	   			  packData=cpScreen.getPackData();
+	   			  int pnum=packData.packNum;
+	   			  CirclePack.cpb.swapPackData(newPack,pnum,false);
+	   			  packData=newPack;
 	   			  return packData.nodeCount;
 	   		  }
 	   		  CirclePack.cpb.errMsg("triGroup failed to create a packing");
@@ -4866,7 +4881,7 @@ public class CommandStrParser {
     	  String str=(String)items.get(0);
     	  int qnum=StringUtil.qFlagParse(str);
     	  PackData q=null;
-    	  if (qnum<0 || (q=CPBase.pack[qnum].getPackData())==null || 
+    	  if (qnum<0 || (q=CPBase.cpScreens[qnum].getPackData())==null || 
     			  !q.status) {
     		  throw new ParserException("usage: get_data must start with '-q{p}' indicating the "+
     				  "other packing");
@@ -5486,7 +5501,7 @@ public class CommandStrParser {
 	    	  PackData qackData=null;
 	    	  int v,n;
 	    	  try {
-	    		  qackData=CPBase.pack[qnum].getPackData();
+	    		  qackData=CPBase.cpScreens[qnum].getPackData();
 	    		  if (qackData==null) throw new ParserException();
 	    		  v=NodeLink.grab_one_vert(packData,(String)items.get(1));
 	    		  n=Integer.parseInt((String)items.get(2));
@@ -5517,9 +5532,10 @@ public class CommandStrParser {
 	    		  return 0;
 	    	  }
 	    	  PackData newp=cM.cookie_out();
+	    	  int pnum=packData.packNum;
 	    	  if (newp!=null) {
-	    		  cpS.swapPackData(newp,false);
-	    		  packData=cpS.getPackData();
+	    		  CirclePack.cpb.swapPackData(newp,pnum,false);
+	    		  packData=newp;
 	    	  }
 	    	  return packData.nodeCount;
 		  }
@@ -5539,7 +5555,7 @@ public class CommandStrParser {
 	    	  
 	    	  if (packData.packDCEL!=null) {
 	    		  
-	    		  // identify forbidden edges (and possibly new alphs)
+	    		  // identify forbidden edges (and possibly new 'alpha')
 	    		  HalfLink hlink=CombDCEL.d_CookieData(packData,flagSegs);
 	    		  
 	    		  // cookie out to form new DCEL structure
@@ -5573,8 +5589,9 @@ public class CommandStrParser {
 	    		  }
 	    	  
 	    		  if (outcome>0) {
-	    			  cpS.swapPackData(cM.getPackData(),false);
-	    			  packData=cpS.getPackData();
+	    			  int pnum=packData.packNum;
+	    			  CirclePack.cpb.swapPackData(cM.getPackData(),pnum,false);
+	    			  packData=cM.getPackData();
 	    		  }
 	    		  CirclePack.cpb.msg("Cookie seems to have succeeded");
 	    		  packData.poisonEdges=null;
@@ -5638,10 +5655,9 @@ public class CommandStrParser {
 	    	  try {
 	    		  int qnum=Integer.parseInt((String)items.get(0));
 	    		  if (qnum==packData.packNum) return 1; // same packing
-	    		  CPScreen cps=CPBase.pack[qnum];
 	    		  PackData tmpPD=packData.copyPackTo();
-	    		  cps.swapPackData(tmpPD,false);
-	    		  cps.getPackData().setName(packData.fileName);
+	    		  CirclePack.cpb.swapPackData(tmpPD,qnum,false);
+	    		  tmpPD.setName(packData.fileName);
 //	    		  packData=cps.getPackData(); 
 	    		  return 1;
 	    	  } catch (Exception ex) {
@@ -5995,7 +6011,7 @@ public class CommandStrParser {
 					
 					pdcel.p=packData;
 					PackData p=DataDCEL.dcel_to_packing(pdcel);
-					CPBase.pack[qnum].swapPackData(p,false);
+					CirclePack.cpb.swapPackData(p,qnum,false);
 					pdcel.D_CompCenters();
 					p.fillcurves();
 					p.set_aim_default();
@@ -6071,9 +6087,7 @@ public class CommandStrParser {
 					PackData pdata=DataDCEL.dcel_to_packing(packData.packDCEL);
 					pdata.setCombinatorics();
 					pdata.set_aim_default();
-					CPScreen cpScreen=CPBase.pack[qnum];
-					return cpScreen.swapPackData(pdata,false);
-					
+					return CirclePack.cpb.swapPackData(pdata,qnum,false);
 				}
 				else if (str.contains("redcook")) {
 					if (packData.packDCEL==null)
@@ -6106,8 +6120,7 @@ public class CommandStrParser {
 					}
 					tmppack.setCombinatorics();
 					tmppack.set_aim_default();
-					CPScreen cpScreen=CPBase.pack[qnum];
-					return cpScreen.swapPackData(tmppack,false);
+					return CirclePack.cpb.swapPackData(tmppack,qnum,false);
 				}
 				else if (str.contains("layout")) {
 					if (packData.packDCEL==null)
@@ -6355,7 +6368,7 @@ public class CommandStrParser {
 			  if (fs!=null && fs.startsWith("-q")) {
 				  int qnum=StringUtil.qFlagParse(fs);
 				  if (qnum>=0) {
-					  CPScreen qScreen=CPBase.pack[qnum];
+					  CPScreen qScreen=CPBase.cpScreens[qnum];
 					  if (qScreen.getPackData().status) {
 						  flagSegs.remove(0); // dump this -q segment
 						  count +=DisplayParser.dispParse(packData,qScreen,flagSegs);
@@ -6486,7 +6499,7 @@ public class CommandStrParser {
 	    	  // must start with other packing number
 	    	  PackData q=null;
 	    	  try {
-	    		  if ((q=CPBase.pack[StringUtil.qFlagParse(str)].
+	    		  if ((q=CPBase.cpScreens[StringUtil.qFlagParse(str)].
 	    				  getPackData())==packData) {
 	    			  throw new ParserException();
 	    		  }
@@ -6826,12 +6839,12 @@ public class CommandStrParser {
 	    		  CirclePack.cpb.msg("gen_cut: error or no vertices were cut");
 	    		  return 1;
 	    	  }
-	    	  CPScreen cps=packData.cpScreen;
-	    	  cps.swapPackData(pd,false);
-	    	  packData=cps.getPackData();
+	    	  int pnum=packData.packNum;
+	    	  CirclePack.cpb.swapPackData(pd,pnum,false);
+	    	  packData=pd;
 			  CirclePack.cpb.msg("gen_cut: the new packing has "+
-					  cps.getPackData().nodeCount+" vertices");
-	    	  return cps.getPackData().nodeCount;
+					  pd.nodeCount+" vertices");
+	    	  return pd.nodeCount;
 	      }
 	      
 	      // =========== gen_mark ==========
@@ -7448,7 +7461,7 @@ public class CommandStrParser {
 	          String str=(String)items.remove(0);
 	          PackData qackData=null;
 	          try {
-	        	  qackData=CPBase.pack[StringUtil.qFlagParse(str)].getPackData();
+	        	  qackData=CPBase.cpScreens[StringUtil.qFlagParse(str)].getPackData();
 	          } catch (Exception ex) {
         		  throw new ParserException("'q' packing is not active");
 	          }
@@ -7503,7 +7516,7 @@ public class CommandStrParser {
 	          NodeLink pverts=null;
 	          NodeLink qverts=null;
 	          try {
-	        	  qackData=CPBase.pack[StringUtil.qFlagParse(str)].getPackData();
+	        	  qackData=CPBase.cpScreens[StringUtil.qFlagParse(str)].getPackData();
 	        	  if (qackData==null) throw new ParserException("'q' packing is not active");
 
 	        	  // next two entries are verts from this packing
@@ -7824,13 +7837,13 @@ public class CommandStrParser {
 	    		  {
 	    			  int q=Integer.parseInt((String)items.remove(0));
 	    			  if (q<0 || q>=CPBase.NUM_PACKS 
-	    					  || !CPBase.pack[q].getPackData().status) 
+	    					  || !CPBase.cpScreens[q].getPackData().status) 
 	    				  throw new ParserException("pack q not valid");
 	    			  NodeLink vertlist=new NodeLink(packData,items);
 	    			  int v=(Integer)vertlist.get(0);
 	    			  double rad=packData.getRadius(v);
 	    			  int w=(Integer)vertlist.get(1);
-	    			  PackData qackData=CPBase.pack[q].getPackData();
+	    			  PackData qackData=CPBase.cpScreens[q].getPackData();
 	    			  if (w>qackData.nodeCount || rad<PackData.OKERR) 
 	    				  throw new ParserException("problem with 'w'");
 	    			  double factor=qackData.getRadius(w)/rad;
@@ -8099,7 +8112,10 @@ public class CommandStrParser {
 	    	  			count+=pf;
 	    	  			if (packData.puncture_face(pf)==0) return 0;
 	    	  		}
-	    	  	} catch (Exception ex) {}
+	    	  	} catch (Exception ex) {
+	    	  		CirclePack.cpb.errMsg("attemp to puncture at "+pv+" went wrong.");
+	    	  		return 0;
+	    	  	}
     	  	
 	    	  	if (packData.packDCEL==null) {
 	    	  		packData.chooseAlpha();
@@ -8399,7 +8415,7 @@ public class CommandStrParser {
 	    	  PackData q=null;
 	    	  // must start with other packing number
 	    	  try {
-	    		  if ((q=CPBase.pack[StringUtil.qFlagParse(str)].getPackData())==packData) {
+	    		  if ((q=CPBase.cpScreens[StringUtil.qFlagParse(str)].getPackData())==packData) {
 	    			  throw new ParserException();
 	    		  }
 	    	  } catch (Exception ex) {
@@ -8961,7 +8977,7 @@ public class CommandStrParser {
 				  throw new ParserException("given factor x is negative");
 			  }
 			  NodeLink vertlist=new NodeLink(packData,items);
-			  return packData.scale_rad(CPBase.pack[qnum].getPackData(),factor,vertlist);
+			  return packData.scale_rad(CPBase.cpScreens[qnum].getPackData(),factor,vertlist);
 		  }
 		    	      
 	      // =========== sq_grid_overlaps ===========
@@ -9513,7 +9529,7 @@ public class CommandStrParser {
 	    				  if (qnum<0) {
 	    					  throw new ParserException("-q{p} option failed");
 	    				  }
-	    				  qackData=CPBase.pack[qnum].getPackData();
+	    				  qackData=CPBase.cpScreens[qnum].getPackData();
 	    				  
 	    				  // there must be additional flags
 	    				  try {
@@ -10281,10 +10297,11 @@ public class CommandStrParser {
 			  
 		   	  try{
 		   		  // have to hold this; packData get's replaced
+		   		  int pnum=packData.packNum;
 		   		  PackData newPack=PackCreation.triGroup(A,B,C,maxgen);
 		   		  if (newPack!=null) {
-		   			  cpS.swapPackData(newPack,false);
-		   			  packData=cpS.getPackData();
+		   			  CirclePack.cpb.swapPackData(newPack,pnum,false);
+		   			  packData=newPack;
 		   			  return packData.nodeCount;
 		   		  }
 		   		  CirclePack.cpb.errMsg("triGroup failed to create a packing");
@@ -10824,7 +10841,7 @@ public static CallPacket valueExecute(PackData packData,String cmdstr) {
 		StringBuilder sb=new StringBuilder(allitems.remove(0));
 		int pnum=StringUtil.extractPackNum(sb);
 		if (pnum>=0)
-			p=CPBase.pack[pnum].getPackData();
+			p=CPBase.cpScreens[pnum].getPackData();
 	}
 	
 	/* NOTE: Vector 'flagSegs' will hold only the flag strings 

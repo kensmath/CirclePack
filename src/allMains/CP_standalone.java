@@ -6,7 +6,7 @@ import java.awt.EventQueue;
  * This version of CirclePack is to be run from a shell. There is
  * no GUI, but the intention is that one can still draw to an
  * image and save that image. 'CirclePack' is initiated in a 
- * static call, but then 'initCirclePack' gets things going.
+ * static call, but then 'startCirclePack' gets things going.
  */
 public class CP_standalone {
 	

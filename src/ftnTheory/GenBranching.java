@@ -274,13 +274,10 @@ public class GenBranching extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
 				PackData newCopy=refPack.copyPackTo();
 				for (int v=1;v<=newCopy.nodeCount;v++)
 					newCopy.kData[v].plotFlag=1;
-				if (cpS!=null) {
-					return cpS.swapPackData(newCopy,false);
-				}
+				return CirclePack.cpb.swapPackData(newCopy,pnum,false);
 			} catch (Exception ex) {
 				return 0;
 			}
@@ -332,10 +329,9 @@ public class GenBranching extends PackExtender {
 					else {
 						int pk=StringUtil.qFlagParse(str);
 						if (pk>=0 && pk!=packData.packNum) {
-							CPScreen cpS=CPBase.pack[pk];
-							if (cpS!=null && cmdBranchPt.getMyPackData().status) {
+							if (cmdBranchPt.getMyPackData().status) {
 								PackData qdata=cmdBranchPt.getMyPackData().copyPackTo();
-								return cpS.swapPackData(qdata,false);
+								return CirclePack.cpb.swapPackData(qdata,pk,false);
 							}
 						}
 					}
