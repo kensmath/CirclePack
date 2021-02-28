@@ -1428,7 +1428,7 @@ public class HexPlaten extends PackExtender {
 		for (int v=1;v<=packData.nodeCount;v++) {
 			if (logv[v]!=0) {
 				boolean bdry=false;
-				int []fflower=packData.kData[v].faceFlower;
+				int []fflower=packData.getFaceFlower(v);
 				for (int j=0;(j<fflower.length && !bdry);j++)
 					if (packData.getFaceMark(fflower[j])==0)
 						bdry=true;

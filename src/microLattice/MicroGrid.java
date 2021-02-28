@@ -1980,9 +1980,10 @@ public class MicroGrid extends PackExtender {
 		for (int v=1;v<=gridPack.nodeCount;v++) { 
 			if (gridPack.kData[v].utilFlag==(level+1)) { // some nghb face was hit
 				int num=gridPack.getNum(v);
+				int[] faceFlower=gridPack.getFaceFlower(v);
 				boolean notAll=false;
 				for (int j=0;(j<num && !notAll);j++) {
-					int g=gridPack.kData[v].faceFlower[j];
+					int g=faceFlower[j];
 					if (gridPack.getFaceMark(g)==0)
 						notAll=true;
 				}
@@ -2437,7 +2438,7 @@ public class MicroGrid extends PackExtender {
 		for (int v=1;v<=packData.nodeCount;v++) {
 			if (logv[v]!=0) {
 				boolean bdry=false;
-				int []fflower=packData.kData[v].faceFlower;
+				int []fflower=packData.getFaceFlower(v);
 				for (int j=0;(j<fflower.length && !bdry);j++)
 					if (packData.getFaceMark(fflower[j])==0)
 						bdry=true;

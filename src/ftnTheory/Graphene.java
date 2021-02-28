@@ -711,7 +711,7 @@ public class Graphene extends PackExtender {
 	 * @return double energy
 	 */
 	public double ringEnergy(int v) {
-		int []fflower=packData.kData[v].faceFlower;
+		int[] fflower=packData.getFaceFlower(v);
 		double bondE=0.0;
 		double angE=0.0;
 		for (int j=0;j<packData.getNum(v);j++) {

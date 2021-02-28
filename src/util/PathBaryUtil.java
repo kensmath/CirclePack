@@ -222,7 +222,7 @@ public class PathBaryUtil {
 						currFaceIndx=faceFromZ(p,holdEdge.w,nextz);
 						start=p.getCenter(holdEdge.w);
 					} 
-					else currFaceIndx=p.kData[holdEdge.v].faceFlower[0]; // face
+					else currFaceIndx=p.getFaceFlower(holdEdge.v,0); // face
 					gothit=true;
 				}
 				else { // toss segment, try next
@@ -408,7 +408,7 @@ public class PathBaryUtil {
     	}
     	if (p.isBdry(v) && w==p.kData[v].flower[0])
     		return -1; 
-    	return p.kData[w].faceFlower[p.nghb(w,v)]; // to left of {w,v}
+    	return p.getFaceFlower(w,p.nghb(w,v)); // to left of {w,v}
     	} catch(Exception ex) {
 //    		System.out.println("w,v = "+w+" "+v);
     		throw new CombException("hum??? bad code?");
@@ -433,10 +433,10 @@ public class PathBaryUtil {
 			arg1=arg2;
 			arg2=p.getCenter(p.kData[v].flower[j]).minus(me).divide(vp2).arg();
 			if (arg1<=0 && arg2>0)
-				return p.kData[v].faceFlower[j-1];
+				return p.getFaceFlower(v,j-1);
 		}
 		if (Math.abs(arg2)<EuclMath.OKERR)
-			return p.kData[v].faceFlower[num-1];
+			return p.getFaceFlower(v,num-1);
 		return -1;
 	}
 	

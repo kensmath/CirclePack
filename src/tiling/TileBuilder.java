@@ -508,7 +508,7 @@ public class TileBuilder {
 				// dual tile for each original corner vertex
 				if (p.getVertMark(v)==2) {
 					int num=p.getNum(v);
-					int []flower=p.kData[v].flower;
+					int[] flower=p.getFlower(v);
 					
 					// bdry tile?
 					if (p.isBdry(v)) { // this is bdry tile
@@ -629,7 +629,7 @@ public class TileBuilder {
 					//   on the bdry, edge barycenter is both corner and baryVert
 					Tile qtile=p.tileData.quadTileData.myTiles[qcount]= 
 							new Tile(p.tileData.quadTileData,4);
-					int []flower=p.kData[v].flower;
+					int[] flower=p.getFlower(v);
 					int []vert=new int[4];
 					int []augvert=new int[8];
 

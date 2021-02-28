@@ -276,7 +276,7 @@ public class NSpole {
 		for (int v=1;v<=packData.nodeCount;v++) {
 			Complex z=packData.getCenter(v);
 			double rz=packData.getRadius(v);
-			int []flower=packData.kData[v].flower;
+			int[] flower=packData.getFlower(v);
 			for (int j=0;j<(packData.getNum(v)+packData.getBdryFlag(v));j++) {
 				int k=flower[j];
 				if (k>v) {
@@ -440,7 +440,7 @@ public class NSpole {
 	public int setEdgeCount() {
 		int eCount=0;
 		for (int v=1;v<=packData.nodeCount;v++) {
-			int []flower=packData.kData[v].flower;
+			int[] flower=packData.getFaceVerts(v);
 			for (int j=0;j<(packData.getNum(v)+packData.getBdryFlag(v));j++) {
 				int k=flower[j];
 				if (k>v)

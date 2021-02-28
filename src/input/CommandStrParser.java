@@ -76,7 +76,6 @@ import ftnTheory.PolyBranching;
 import ftnTheory.ProjStruct;
 import ftnTheory.RationalMap;
 import ftnTheory.RiemHilbert;
-import ftnTheory.SassStuff;
 import ftnTheory.SchwarzMap;
 import ftnTheory.ShapeShifter;
 import ftnTheory.ShepherdCircles;
@@ -1415,6 +1414,7 @@ public class CommandStrParser {
 				  throw new ParserException("failed to create "+type+" packing");
 			  }
 			  
+			  newPack.status=true;
 			  int pnum=packData.packNum;
 			  CirclePack.cpb.swapPackData(newPack,pnum,false);
 			  packData=newPack;
@@ -1931,17 +1931,7 @@ public class CommandStrParser {
 	    			  returnVal=1;
 		    	  }
 	    	  }
-	    	  else if (str.equalsIgnoreCase("ss")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
-	    		  SassStuff px=new SassStuff(packData);
-	    		  if (px.running) {
-		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
-		    				  ": started "+px.extensionAbbrev+" extender");
-	    			  px.StartUpMsg();
-	    			  returnVal=1;
-		    	  }
-	    	  }
-	    	  else if (str.equalsIgnoreCase("ap")) {
+	    	  else if (str.equalsIgnoreCase("ap") || str.equalsIgnoreCase("ss")) {
 	    		  if (!packData.status || packData.nodeCount==0) return 0;
 	    		  AffinePack px=new AffinePack(packData);
 	    		  if (px.running) {

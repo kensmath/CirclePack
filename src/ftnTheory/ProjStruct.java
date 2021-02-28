@@ -410,8 +410,9 @@ public class ProjStruct extends PackExtender {
 	 */
 	public static double angSumSide(PackData p,int v,double factor,TriAspect []asps) {
 		double angsum=0.0;
+		int[] faceFlower=p.getFaceFlower(v);
 		for (int j=0;j<p.getNum(v);j++) {
-			int f=p.kData[v].faceFlower[j];
+			int f=faceFlower[j];
 			int k=asps[f].vertIndex(v);
 			double s0=factor*asps[f].sides[k];
 			double s1=asps[f].sides[(k+1)%3];
@@ -430,8 +431,9 @@ public class ProjStruct extends PackExtender {
 	 * @return 1
 	 */
 	public static int adjustSides(PackData p,int v,double factor,TriAspect []asp) {
+		int[] faceFlower=p.getFaceFlower(v);
 		for (int j=0;j<p.getNum(v);j++) {
-			int f=p.kData[v].faceFlower[j];
+			int f=faceFlower[j];
 			int k=asp[f].vertIndex(v);
 			asp[f].sides[k] *=factor;
 			asp[f].sides[(k+2)%3] *=factor;
@@ -519,8 +521,9 @@ public class ProjStruct extends PackExtender {
   	public static double []sideBounds(PackData p,int v,TriAspect []asps) {
   		double lower=0.0;
   		double upper=100000000;
+  		int[] faceFlower=p.getFaceFlower(v);
 		for (int j=0;j<p.getNum(v);j++) {
-			int f=p.kData[v].faceFlower[j];
+			int f=faceFlower[j];
 			int k=asps[f].vertIndex(v);
 			double rSide=asps[f].sides[k];
 			double lSide=asps[f].sides[(k+2)%3];
@@ -550,8 +553,9 @@ public class ProjStruct extends PackExtender {
 	 */
 	public static double []angSumTri(PackData p, int v, double t,TriAspect[] asps) {
 		double []ans=new double[2];
+		int[] faceFlower=p.getFaceFlower(v);
 		for (int j = 0; j < p.getNum(v); j++) {
-			int f = p.kData[v].faceFlower[j];
+			int f = faceFlower[j];
 			double []sd= asps[f].angleV(v,t);
 			ans[0] += sd[0];
 			ans[1] += sd[1];
@@ -571,8 +575,9 @@ public class ProjStruct extends PackExtender {
 	 */
 	public static double []skewTri(PackData p, int v,double t, TriAspect[] asps) {
 		double []ans = new double[2];
+		int[] faceFlower=p.getFaceFlower(v);
 		for (int j = 0; j < p.getNum(v); j++) {
-			int f = p.kData[v].faceFlower[j];
+			int f = faceFlower[j];
 			double []sd= asps[f].skew(v,t);
 			ans[0] += sd[0];
 			ans[1] += sd[1];
@@ -591,8 +596,9 @@ public class ProjStruct extends PackExtender {
 	 */
 	public static int adjustRadii(PackData p,int v,double factor,TriAspect []asp) {
 		p.setRadius(v,factor*p.getRadius(v));
+		int[] faceFlower=p.getFaceFlower(v);
 		for (int j=0;j<p.getNum(v);j++) {
-			int f=p.kData[v].faceFlower[j];
+			int f=faceFlower[j];
 			int k=asp[f].vertIndex(v);
 			asp[f].labels[k] *=factor;
 		}
@@ -766,7 +772,7 @@ public class ProjStruct extends PackExtender {
 				if (fanInfo[0]<0)
 					throw new CombException("error setting red radii");
 				for (int j=0;j<fanInfo[1];j++) {
-					int fc=p.kData[vi].faceFlower[(fanInfo[0]+j)%p.getNum(vi)];
+					int fc=p.getFaceFlower(vi,(fanInfo[0]+j)%p.getNum(vi));
 					Face face=p.faces[fc];
 					asps[fc].labels[face.vertIndx(vi)]=redRad[h];
 				}
@@ -1285,8 +1291,9 @@ public class ProjStruct extends PackExtender {
 						int num=p.getNum(v);
 						double areaSum=0.0;
 						double angSum=0.0;
+						int[] faceFlower=p.getFaceFlower(v);
 						for (int vj=0;vj<num;vj++) { // iterate over faces
-							int fv=p.kData[v].faceFlower[vj];
+							int fv=faceFlower[vj];
 							areaSum += asp[fv].sectorAreaZ(v);
 							angSum +=asp[fv].angleV(v,1.0)[0];
 						}
@@ -1352,8 +1359,9 @@ public class ProjStruct extends PackExtender {
 		if (p.isBdry(v))
 			return 1.0;
 		double rtio=1.0;
+		int[] faceFlower=p.getFaceFlower(v);
 		for (int j=0;j<p.getNum(v);j++) {
-			int ff=p.kData[v].faceFlower[j];
+			int ff=faceFlower[j];
 			int k=aspects[ff].vertIndex(v);
 			rtio *= aspects[ff].sides[(k+2)%3]; // left sidelength
 			rtio /= aspects[ff].sides[k]; // right sidelength
@@ -1889,7 +1897,7 @@ public class ProjStruct extends PackExtender {
 			} catch (Exception ex) {}
 			
 			// riffle to get side lengths
-			int its=SassStuff.sideRiffle(packData,aspects,2000,vlink);
+			int its=sideRiffle(packData,aspects,2000,vlink);
 			msg("'sideRif' iterations: "+its);
 			
 			// reset 'labels' vector from 'sides'
@@ -2030,7 +2038,7 @@ public class ProjStruct extends PackExtender {
 			p.alpha=uP.rtnFlag; // one of largest generation
 		
 		// firstFace is one containing 'alpha'
-		p.firstFace=p.kData[p.alpha].faceFlower[0];
+		p.firstFace=p.getFaceFlower(p.alpha,0);
 		
 		// build list 'cutDuals' of dual edges
 		EdgeLink cutDuals=new EdgeLink();

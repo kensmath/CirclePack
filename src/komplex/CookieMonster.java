@@ -787,13 +787,13 @@ public class CookieMonster {
 				nR_ptr[indx].aim = -.1;
 				int i = temp.index1;
 				if (temp.index1 == temp.index2) { // just one face
-					int f = monsterPackData.kData[vert].faceFlower[i];
+					int f = monsterPackData.getFaceFlower(vert,i);
 					int j = monsterPackData.face_index(f, vert);
 					new_faces[f].vert[j] = temp.newIndex;
 				} else
 					for (int iii = 0; iii < temp.num; iii++) {
 						int ii = (temp.index1 + iii) % monsterPackData.getNum(vert);
-						int f = monsterPackData.kData[vert].faceFlower[ii];
+						int f = monsterPackData.getFaceFlower(vert,ii);
 						int j = monsterPackData.face_index(f, vert);
 						new_faces[f].vert[j] = temp.newIndex;
 					}
@@ -818,7 +818,7 @@ public class CookieMonster {
 			trace.dutyFlag = 1;
 			vert = trace.v;
 			// nghb vert of first face
-			int f = monsterPackData.kData[vert].faceFlower[trace.index1];
+			int f = monsterPackData.getFaceFlower(vert,trace.index1);
 			int j = monsterPackData.face_index(f, vert); // distinguished vert index
 			nK_ptr[trace.newIndex].flower[0] = v = new_faces[f].vert[(j + 1) % 3];
 			int num;
@@ -855,8 +855,8 @@ public class CookieMonster {
 			// next verts of rest of faces
 			int i = 0;
 			while (i < trace.num) {
-				f = monsterPackData.kData[vert].faceFlower[(trace.index1 + i)
-						% (monsterPackData.getNum(vert))];
+				f = monsterPackData.getFaceFlower(vert,(trace.index1 + i)
+						% (monsterPackData.getNum(vert)));
 				int jj = (monsterPackData.face_index(f, vert) + 2) % 3;
 				nK_ptr[trace.newIndex].flower[i + 1] = new_faces[f].vert[jj];
 				/* old vert number; need to adjust its flower */
@@ -1009,13 +1009,13 @@ public class CookieMonster {
 			// set indices of faces
 			int num = monsterPackData.getNum(v);
 			temp.index2 = num - 1;
-			while (monsterPackData.kData[v].faceFlower[temp.index2] != redlist.face
+			while (monsterPackData.getFaceFlower(v,temp.index2) != redlist.face
 					&& temp.index2 > 0)
 				temp.index2--;
 			rtrace = redlist;
 			int i = temp.index2;
-			while (rtrace.next.face == monsterPackData.kData[v].faceFlower[(i + num - 1)
-					% num]
+			while (rtrace.next.face == monsterPackData.getFaceFlower(v,(i + num - 1)
+					% num)
 					&& rtrace.next.face != redlist.face) {
 				rtrace = rtrace.next;
 				i--;
@@ -1053,14 +1053,14 @@ public class CookieMonster {
 				// set indices of faces
 				num = monsterPackData.getNum(v);
 				temp.index2 = num - 1;
-				while (monsterPackData.kData[v].faceFlower[temp.index2] != redlist.face
+				while (monsterPackData.getFaceFlower(v,temp.index2) != redlist.face
 						&& temp.index2 > 0)
 					temp.index2--;
 				rtrace = redlist;
 				i = temp.index2;
-				while (rtrace.next.face == monsterPackData.kData[v].faceFlower[(i
+				while (rtrace.next.face == monsterPackData.getFaceFlower(v,(i
 						+ num - 1)
-						% num]
+						% num)
 						&& rtrace.next.face != redlist.face) {
 					rtrace = rtrace.next;
 					i--;
@@ -1241,8 +1241,8 @@ public class CookieMonster {
 							temp.index1 == hold.index2 + 1) ||
 							(!monsterPackData.isBdry(vert) && 
 								temp.index1 == ((hold.index2 + 1) % monsterPackData.getNum(vert)))) {
-						int f1 = monsterPackData.kData[vert].faceFlower[hold.index2];
-						int f2 = monsterPackData.kData[vert].faceFlower[temp.index1];
+						int f1 = monsterPackData.getFaceFlower(vert,hold.index2);
+						int f2 = monsterPackData.getFaceFlower(vert,temp.index1);
 						int w = monsterPackData.faces[f1].vert[monsterPackData.face_nghb(f2, f1)];
 						/*
 						 * the edge between the contig faces is <vert,w>; either

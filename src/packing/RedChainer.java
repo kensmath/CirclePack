@@ -10,14 +10,13 @@ import deBugging.LayoutBugs;
 import exceptions.CombException;
 import exceptions.LayoutException;
 import exceptions.RedListException;
-import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.RedEdge;
 import komplex.RedList;
+import komplex.SideDescription;
 import listManip.EdgeLink;
 import listManip.PairLink;
 import listManip.VertList;
-import panels.CPScreen;
 import util.BuildPacket;
 import util.ColorUtil;
 import util.UtilPacket;
@@ -714,14 +713,15 @@ public class RedChainer {
 	  
 	  // create fan as closed linked list 
 	  RedList fan=new RedList(p);
-	  fan.face=p.kData[vert].faceFlower[(indx2+num-1)%num];
+	  int[] faceFlower=p.getFaceFlower(vert);
+	  fan.face=faceFlower[(indx2+num-1)%num];
 	  fan.center=new Complex(0.0);
 	  RedList rtrace=fan;
 	  for (int jj=indx2-1;jj>indx1;jj--) {
 	      rtrace.next=new RedList(p);
 	      rtrace.next.prev=rtrace;
 	      rtrace=rtrace.next;
-	      rtrace.face=p.kData[vert].faceFlower[(jj+num-1)%num];
+	      rtrace.face=faceFlower[(jj+num-1)%num];
 		  rtrace.center=new Complex(0.0);
 	    }
 	  fan.prev=rtrace;
@@ -1367,15 +1367,16 @@ public class RedChainer {
 		   * times a face is in the red chain, while < 0 means "white", 
 		   * i.e., inside the red chain. */
 		  num=p.getNum(seed);
-		  f=p.kData[seed].faceFlower[0];
+		  f=p.getFaceFlower(seed,0);
 		  red_chain=new RedList(p,f); // start fresh
 		  p.faces[f].rwbFlag=1;
 		  p.faces[f].indexFlag=red_chain.vIndex=p.face_index(f,seed);
 		  
 		  VertList faceOrder=new VertList(f);
 		  fDo_tmp=faceOrder; // global pointer to faceOrder 
+		  int[] faceFlower=p.getFaceFlower(seed);
 		  for (int i=1;i<num;i++) {
-		      f=p.kData[seed].faceFlower[i];
+		      f=faceFlower[i];
 		      fDo_tmp=new VertList(fDo_tmp,f);
 		      red_chain=new RedList(red_chain,f);
 		      red_chain.done=isDone(p,red_chain);
@@ -1389,7 +1390,7 @@ public class RedChainer {
 		      for (int i=num-2;i>0;i--) {
 				  red_chain=new RedList(red_chain,f);
 			      red_chain.done=isDone(p,red_chain);
-				  f=p.kData[seed].faceFlower[i];
+				  f=faceFlower[i];
 				  w=p.kData[seed].flower[i];
 				  red_chain.vIndex=p.face_index(f,w);
 		      }
@@ -1577,7 +1578,8 @@ public class RedChainer {
 		      if ((num=p.getNum(vert)) > 1) { // any more faces?
 		    	  // findex = flower index of first vertex in cface 
 		    	  findex=0;
-		    	  while (p.kData[vert].faceFlower[findex]!=cface 
+		    	  int[] faceFlower=p.getFaceFlower(vert);
+		    	  while (faceFlower[findex]!=cface 
 		    			  && findex<(num-1)) 
 		    		  findex++;
 		    	  eindex=bindex=findex; // all these are the same in this case
@@ -1587,7 +1589,7 @@ public class RedChainer {
 		    		  i=bindex+1;
 		    		  laso_flag=true;
 		    		  while ((j=(i % num))!=eindex && laso_flag) {
-		    			  if (p.faces[p.kData[vert].faceFlower[j]].rwbFlag>0) 
+		    			  if (p.faces[faceFlower[j]].rwbFlag>0) 
 		    				  laso_flag=false;
 		    			  i++;
 		    		  }
@@ -1600,7 +1602,7 @@ public class RedChainer {
 		    			  // start new segment (and add to 'fDo_tmp')
 		    			  i=(findex+1) % num;
 		    			  int of=new_end.face;
-		    			  int nf=p.kData[vert].faceFlower[i];
+		    			  int nf=faceFlower[i];
 		    			  fDo_tmp=add_face_order(fDo_tmp,nf,of);
 		    			  new_end=new RedList(new_end,nf);
 		    			  new_end.done=isDone(p,new_end);
@@ -1611,7 +1613,7 @@ public class RedChainer {
 		    			  i=(i+1) % num;
 		    			  while ( i!=((findex+1) % num)) {
 		    				  of=new_end.face; 
-		    				  nf=p.kData[vert].faceFlower[i];
+		    				  nf=faceFlower[i];
 		    				  fDo_tmp=add_face_order(fDo_tmp,nf,of);
 		    				  new_end=new RedList(new_end,nf);
 			    			  new_end.done=isDone(p,new_end);
@@ -1636,8 +1638,8 @@ public class RedChainer {
 		    		  j=(eindex-1+num) % num; 
 		    		  if ( ((p.isBdry(vert) && (eindex > 0)) 
 		    				  || !p.isBdry(vert))
-		    				  && p.faces[p.kData[vert].faceFlower[j]].rwbFlag==0) {
-		    			  f=p.kData[vert].faceFlower[j];
+		    				  && p.faces[faceFlower[j]].rwbFlag==0) {
+		    			  f=faceFlower[j];
 		    			  int k=p.face_nghb(cface,f);
 		    			  if (!poisonFlag || !p.edge_isPoison(vert,p.faces[f].vert[k])) {
 		    				  fDo_tmp=add_face_order(fDo_tmp,f,red_chain.face);
@@ -1674,7 +1676,8 @@ public class RedChainer {
 		  vert=p.faces[cface].vert[n];
 		  num=p.getNum(vert);
 		  findex=0;
-		  while (p.kData[vert].faceFlower[findex]!=cface && findex<(num-1)) 
+		  int[] faceFlower=p.getFaceFlower(vert);
+		  while (faceFlower[findex]!=cface && findex<(num-1)) 
 			  findex++;
 
 		  /* Now we find the maximal "fan" (subchain) of red_chain 
@@ -1709,7 +1712,7 @@ public class RedChainer {
 		   * orginal red_chain (i.e., original bzip).
 		   */
 		  i=findex;
-		  while(bzip.prev.face==p.kData[vert].faceFlower[(i+1) % num]
+		  while(bzip.prev.face==faceFlower[(i+1) % num]
 			  && bzip.prev.face!=cface ) {
 		      bzip=bzip.prev;
 		      i++;
@@ -1738,7 +1741,7 @@ public class RedChainer {
 	    	  new_end=bzip;
 		      i=bindex+1;
 		      while ( (j=(i % num))!=eindex && laso_flag) {
-		    	  if (p.faces[p.kData[vert].faceFlower[j]].rwbFlag!=0) 
+		    	  if (p.faces[faceFlower[j]].rwbFlag!=0) 
 		    		  laso_flag=false;
 		    	  i++;
 		      }
@@ -1748,7 +1751,7 @@ public class RedChainer {
 	    		  got_one=true;
 		    	  if ( (i=(bindex+1) % num)!=eindex ) { // new redfaces
 		    		  int of=new_end.face;
-		    		  int nf=p.kData[vert].faceFlower[i];
+		    		  int nf=faceFlower[i];
 		    		  fDo_tmp=add_face_order(fDo_tmp,nf,of);
 		    		  new_end=new RedList(new_end,nf);
 		    		  new_end.done=isDone(p,new_end);
@@ -1756,7 +1759,7 @@ public class RedChainer {
 		    		  i++;
 		    		  while ( (j=i % num)!=eindex) {
 		    			  of=new_end.face; 
-		    			  nf=p.kData[vert].faceFlower[j];
+		    			  nf=faceFlower[j];
 		    			  fDo_tmp=add_face_order(fDo_tmp,nf,of);
 		    			  new_end=new RedList(new_end,nf);
 			    		  new_end.done=isDone(p,new_end);
@@ -1772,9 +1775,9 @@ public class RedChainer {
 		    	  // reset 'rwbFlag' for bypassed red faces
 		    	  i=(eindex+1)%num;
 		    	  while (i!=bindex) {
-		    		  p.faces[p.kData[vert].faceFlower[i]].rwbFlag--;
-		    		  if (p.faces[p.kData[vert].faceFlower[i]].rwbFlag==0)
-		    			  p.faces[p.kData[vert].faceFlower[i]].rwbFlag=-1;
+		    		  p.faces[faceFlower[i]].rwbFlag--;
+		    		  if (p.faces[faceFlower[i]].rwbFlag==0)
+		    			  p.faces[faceFlower[i]].rwbFlag=-1;
 		    		  i=(i+1)%num;
 		    	  }
 		      }
@@ -1783,9 +1786,9 @@ public class RedChainer {
 		  /* otherwise, if possible, add blue face preceeding fan (i.e., 
 		   * clockwise from first face of fan (which is eindex). */ 
 		  if (mode && (p.isBdry(vert) || !laso_flag)) {
-		      cface=p.kData[vert].faceFlower[eindex];
+		      cface=faceFlower[eindex];
 		      j=(eindex-1+num) % num;
-		      f=p.kData[vert].faceFlower[j]; // ??? was (j+1) % num];
+		      f=faceFlower[j]; // ??? was (j+1) % num];
 		      // is there a blue face to add?
 		      if (((p.isBdry(vert) && (eindex > 0)) 
 			    || !p.isBdry(vert)) && p.faces[f].rwbFlag==0) {

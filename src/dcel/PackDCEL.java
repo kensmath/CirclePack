@@ -1794,7 +1794,7 @@ public class PackDCEL {
 		if (v<1 || v> vcount) {
 			return null;
 		}
-		int []flower=bouquet[v];
+		int[] flower=bouquet[v];
 		int indx_vw=CombDCEL.nghb(bouquet,v,w);
 		if (indx_vw<0)
 			return null;

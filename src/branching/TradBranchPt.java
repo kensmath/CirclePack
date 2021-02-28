@@ -58,11 +58,12 @@ public class TradBranchPt extends GenBranchPt {
 		vertexMap=new VertexMap();
 		bdryLink=new FaceLink(packData);
 		transData=new int[matchCount+1];
+		int[] faceFlower=packData.getFaceFlower(myIndex);
 		for (int j=0;j<packData.getNum(myIndex);j++) {
 			int vv=packData.kData[myIndex].flower[j];
 			vertexMap.add(new EdgeSimple(j+2,vv));
 			transData[j+2]=vv;
-			bdryLink.add(packData.kData[myIndex].faceFlower[j]);
+			bdryLink.add(faceFlower[j]);
 		}
 		vertexMap.add(new EdgeSimple(1,myIndex)); // add center
 		transData[1]=-myIndex;

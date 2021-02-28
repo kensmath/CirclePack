@@ -1193,8 +1193,9 @@ public class PackData{
                 				int v1=Integer.parseInt((String)loctok.nextToken());
                 				int v2=Integer.parseInt((String)loctok.nextToken());
                 				int flg=Integer.parseInt((String)loctok.nextToken());
+                				int[] faceFlower=getFaceFlower(v);
                 				for (int j=0;j<getNum(v);j++) {
-                					int k=kData[v].faceFlower[j];
+                					int k=faceFlower[j];
                 					int ind;
                 					if ( ((ind=check_face(k,v,v1)) >= 0 && faces[k].vert[(ind+2)%3]==v2)
                          				 || ((ind=check_face(k,v1,v)) >= 0 && faces[k].vert[(ind+2)%3]==v2) ) {
@@ -1399,8 +1400,9 @@ public class PackData{
                 				int v1=Integer.parseInt((String)loctok.nextToken());
                 				int v2=Integer.parseInt((String)loctok.nextToken());
                 				int colindx=Integer.parseInt((String)loctok.nextToken());
+                				int[] faceFlower=getFaceFlower(v);
                 				for (int j=0;j<getNum(v);j++) {
-                					int k=kData[v].faceFlower[j];
+                					int k=faceFlower[j];
                 					int ind;
                 					if ( ((ind=check_face(k,v,v1)) >= 0 && faces[k].vert[(ind+2)%3]==v2)
                          				 || ((ind=check_face(k,v1,v)) >= 0 && faces[k].vert[(ind+2)%3]==v2) ) {
@@ -2408,6 +2410,7 @@ public class PackData{
 		}
 	}
 	
+	// get number of faces at 'v'
 	public int getNum(int v) {
 		if (packDCEL!=null)
 			return vData[v].num;
@@ -2520,6 +2523,52 @@ public class PackData{
 			return packDCEL.vertices[v].getFlower();
 		}
 		return kData[v].flower;
+	}
+	
+	/**
+	 * Get array of cclw nghb'ing face indices, closed if
+	 * interior, omitting any ideal faces (there should be
+	 * at most 1).
+	 */
+	public int[] getFaceFlower(int v) {
+		int[] flower;
+		if (packDCEL!=null) {
+			Vertex vert=packDCEL.vertices[v];
+			int n=vert.getNum();
+			flower=new int[n];
+			if (!vert.isBdry()) // close up
+				flower=new int[n+1];
+			int ftick=0;
+			HalfEdge he=vert.halfedge;
+			do {
+				flower[ftick]=he.face.faceIndx;
+				ftick++;
+				he=he.prev.twin;
+			} while (ftick<n);
+			if (!vert.isBdry())
+				flower[n]=flower[0];
+			return flower;
+		}
+		int n=getFaceFlower(v).length;
+		flower=new int[n];
+		for (int j=0;j<n;j++)
+			flower[j]=getFaceFlower(v,j);
+			
+		return flower;
+	}
+	
+	/**
+	 * Get 'j'th entry in face flower of 'v'
+	 * @param v
+	 * @param j
+	 * @return
+	 */
+	public int getFaceFlower(int v,int j) {
+		int[] fflower=getFaceFlower(v);
+		if (j<0 || j> fflower.length) 
+			throw new CombException("face flower for "+v+
+					" doesn't have index "+j);
+		return fflower[j];
 	}
 	
 	/**
@@ -2899,7 +2948,7 @@ public class PackData{
 		mainLink.add(alpha);
 		mainLink.add(v);
 		mainLink.add(w);
-		first_face=lastface=kData[alpha].faceFlower[nbr];
+		first_face=lastface=getFaceFlower(alpha,nbr);
 		beta=kData[alpha].flower[nbr]; // <alpha,beta> is base edge
 		newfaces[lastface].indexFlag=face_index(lastface,alpha);
 		fflag[lastface]=true;
@@ -2952,7 +3001,7 @@ public class PackData{
 						keepon = false;
 						for (int f = 0; (f < num && kData[vert].utilFlag != nnum); f++) {
 							try {
-								face = kData[vert].faceFlower[f];
+								face = getFaceFlower(vert,f);
 							} catch (Exception ex) {
 								// TODO: should put something to prevent looping on error
 								System.err.println("face " + face);
@@ -3064,8 +3113,8 @@ public class PackData{
 	 */
 	public Complex []corners_dual_face(int v,AmbiguousZ []ambigZs) {
 		int num = getNum(v);
-		int []flower=kData[v].flower;
-		int []faceflower=kData[v].faceFlower;
+		int[] flower=getFlower(v);
+		int []faceflower=getFaceFlower(v);
 		Complex []pts=new Complex[num];
 		boolean easycase= (ambigZs==null) || (hes>0); // 
 		CircleSimple sC=null;
@@ -3379,7 +3428,7 @@ public class PackData{
 	 */
 	public Complex []corners_paver(int v,AmbiguousZ []ambigZs) {
 		int num=getNum(v);
-		int []flower=kData[v].flower;
+		int[] flower=getFlower(v);
 		int offset=-1;
 		Complex []pts=new Complex[num+2*getBdryFlag(v)];
 		boolean easycase= (ambigZs==null) || (hes>0);
@@ -4619,7 +4668,7 @@ public class PackData{
 		  // redChain is all bdry faces; start with last face 
 		  //    at v (which won't be blue)
 	      w=stop_vert=kData[v].flower[0];
-		  redChain=trace=new RedList(this,kData[w].faceFlower[getNum(w)-1]);
+		  redChain=trace=new RedList(this,getFaceFlower(w,getNum(w)-1));
 		  trace.center=getCenter(w);
 		  trace.vIndex=face_index(trace.face,w);
 		  
@@ -4632,7 +4681,7 @@ public class PackData{
 		  while (keepon || w!=stop_vert) {
 		      keepon=false;
 		      for (int i=getNum(w)-2;i>=0;i--) {
-		    	  trace=trace.next=new RedList(trace,kData[w].faceFlower[i]);
+		    	  trace=trace.next=new RedList(trace,getFaceFlower(w,i));
 		      }
 		      w=kData[w].flower[0];
 		  }
@@ -4739,7 +4788,7 @@ public class PackData{
 	    	  for (int i=1;i<=nodeCount;i++) 
 	    		  kData[i].utilFlag=0;
 	    	  kData[alpha].utilFlag=1;
-	    	  f=kData[alpha].faceFlower[0];
+	    	  f=getFaceFlower(alpha,0);
 	    	  for (int i=0;i<3;i++) 
 	    		  kData[faces[f].vert[i]].utilFlag=1;
 	    	  fDo=faceOrder; // now, fall through 
@@ -5286,8 +5335,8 @@ public class PackData{
 		  && kData[w].utilFlag > 0 && !isBdry(w)) {
 		  num=getNum(w);
 		  m=0;
-		  while (kData[w].faceFlower[m]!=f && m<(num-2)) m++;
-		  g=kData[w].faceFlower[(m+1) % num];
+		  while (getFaceFlower(w,m)!=f && m<(num-2)) m++;
+		  g=getFaceFlower(w,(m+1) % num);
  		  // if face is "white", use it
 		  if (faces[g].rwbFlag<0) 
  			  return ((index+i)%3);
@@ -5299,8 +5348,8 @@ public class PackData{
 	      if (kData[v].utilFlag > 0 && kData[w].utilFlag!=0) {
 		  num=getNum(w);
 		  m=0;
-		  while (kData[w].faceFlower[m]!=f && m<(num-2)) m++;
-		  g=kData[w].faceFlower[(m+1) % num];
+		  while (getFaceFlower(w,m)!=f && m<(num-2)) m++;
+		  g=getFaceFlower(w,(m+1) % num);
 		  // if face is "white", suggest it
 		  if (faces[g].rwbFlag<0) 
 			  return ((index+i)%3);
@@ -6616,8 +6665,9 @@ public class PackData{
 			for (int v=1;v<=nodeCount;v++) {
 				int num=getNum(v)+getBdryFlag(v);
 				file.write("\n"+v+" "+num+" "+"   ");
+				int[] faceFlower=getFaceFlower(v);
 				for (int j = 0; j < getNum(v); j++) 
-					file.write(" "+kData[v].faceFlower[j]);
+					file.write(" "+faceFlower[j]);
 				// convention for bdry half-tile: include new index for v itself
 				if (isBdry(v)) 
 					file.write(" "+tick++);
@@ -8880,8 +8930,9 @@ public class PackData{
 		  while (vlst.hasNext()) {
 			  int v=vlst.next();
 			  if (getNum(v)>1) { // ignore v having single face
+				  int[] faceFlower=getFaceFlower(v);
 				  for (int k=0;k<getNum(v);k++)
-					  f4b[kData[v].faceFlower[k]]=1;
+					  f4b[faceFlower[k]]=1;
 			  }
 		  }
 		  FaceLink flink=new FaceLink(this);
@@ -14201,8 +14252,8 @@ public class PackData{
 	   	
 	   	/* At end will identify ww with w to become new branch point. "Half" 
 	   	 * of v starting at w will become new vert w; other half, vert ww.*/
-    	int []flower_w=new int[halfv+1];
-	  	int []flower_ww=new int[halfv+1];
+    	int[] flower_w=new int[halfv+1];
+	  	int[] flower_ww=new int[halfv+1];
 	  	
 	  	flower_w[0]=flower_w[halfv]=v; 
 	  	for (int i=1;i<halfv;i++) {
@@ -14214,7 +14265,7 @@ public class PackData{
 	  	}
 	  	
 	  	// At end, new v is combination of old w and old ww 
-	  	int []flower_v=new int[2*num_w+1];
+	  	int[] flower_v=new int[2*num_w+1];
 	  	flower_v[0]=flower_v[2*num_w]=w;
 	  	dex=nghb(ww,v);
 	  	for (int i=1;i<num_w;i++) {
@@ -16473,7 +16524,7 @@ public class PackData{
 	  endmain.v=v;
 	  endmain=endmain.next=new VertList();
 	  endmain.v=w;
-	  util_A=lastface=kData[alpha].faceFlower[nbr];// **** *(face_org[alpha]+nbr+1);
+	  util_A=lastface=getFaceFlower(alpha,nbr);// **** *(face_org[alpha]+nbr+1);
 	  newfaces[lastface].indexFlag=face_index(lastface,alpha);
 	  newfaces[lastface].plotFlag=1;
 	  for (int i=1;i<=faceCount;i++) newfaces[i].nextFace=lastface;
@@ -16526,7 +16577,7 @@ public class PackData{
 			  fstop=false;
 			  for (int f=0;(f<num && kData[vert].utilFlag!=nnum);f++) 
 			      // **** replaced a face_org here. okay??
-			      if (newfaces[(face=kData[vert].faceFlower[f])].plotFlag<=0) {
+			      if (newfaces[(face=getFaceFlower(vert,f))].plotFlag<=0) {
 			      indx=face_index(face,vert);
 			      v1=newfaces[face].vert[(indx+1)%3];
 			      v2=newfaces[face].vert[(indx+2)%3];
@@ -18435,8 +18486,9 @@ public class PackData{
 				// interior? 
 				if (!p.isBdry(curr)) {
 					del=(del+num)%num;
+					int[] faceFlower=p.getFaceFlower(curr);
 					for (int v=offset;v<del;v++) {
-						flist.add(p.kData[curr].faceFlower[(indx_cp+v)%num]);
+						flist.add(faceFlower[(indx_cp+v)%num]);
 					}
 				}
 			}
@@ -18452,12 +18504,13 @@ public class PackData{
 				indx_cn=p.nghb(curr,next);
 				int num=p.getNum(curr);
 				int del=indx_cn-indx_cp;
+				int[] faceFlower=p.getFaceFlower(curr);
 
 				// interior? 
 				if (!p.isBdry(curr)) {
 					del=(del+num)%num;
 					for (int v=0;v<del;v++) {
-						flist.add(p.kData[curr].faceFlower[(indx_cp+v)%num]);
+						flist.add(faceFlower[(indx_cp+v)%num]);
 					}
 				}
 			
@@ -18465,11 +18518,11 @@ public class PackData{
 				else {
 					if (indx_cp<(num-1) && i!=0) {
 						for (int ii=indx_cp;ii<num;ii++)
-							flist.add(p.kData[curr].faceFlower[ii]);
+							flist.add(faceFlower[ii]);
 					}
 					if (indx_cn>0 && i!=bs) {
 						for (int ii=0;ii<indx_cn;ii++)
-							flist.add(p.kData[curr].faceFlower[ii]);
+							flist.add(faceFlower[ii]);
 					}
 				}
 			}

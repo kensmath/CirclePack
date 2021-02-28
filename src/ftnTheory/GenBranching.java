@@ -979,7 +979,7 @@ public class GenBranching extends PackExtender {
 			int farV=packData.alpha;
 			// try to use some face containing 'alpha'
 			for (int kk=0;(kk<packData.getNum(farV) && firstFace<0);kk++) {
-				int f=packData.kData[farV].faceFlower[kk];
+				int f=packData.getFaceFlower(farV,kk);
 				if (faceOK(f))
 					firstFace=f;
 			}
@@ -990,7 +990,7 @@ public class GenBranching extends PackExtender {
 				farV=packData.gen_mark(sa,-1,false);
 				if (farV>0) {
 					for (int kk=0;(kk<packData.getNum(farV) && firstFace<0);kk++) {
-						int f=packData.kData[farV].faceFlower[kk];
+						int f=packData.getFaceFlower(farV,kk);
 						if (faceOK(f))
 							firstFace=f;
 					}

@@ -46,7 +46,7 @@ public class TorusEnergy extends PackExtender {
 		// create oriented edge list (will get shuffled)
 		edgeList=new EdgeLink(packData);
 		for (int v=1;v<=packData.nodeCount;v++) {
-			int []flower=packData.kData[v].flower;
+			int[] flower=packData.getFlower(v);
 			for (int j=1;j<=packData.getNum(v);j++)
 				if (flower[j]>v)
 					edgeList.add(new EdgeSimple(v,flower[j]));

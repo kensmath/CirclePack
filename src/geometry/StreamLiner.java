@@ -220,7 +220,7 @@ public class StreamLiner {
 				return null;
 			
 			int num=basePack.getNum(v);
-			int []flower=basePack.kData[v].flower;
+			int[] flower=basePack.getFlower(v);
 			Complex []edgevec=new Complex[num+1];
 			for (int j=0;j<num;j++) {
 				edgevec[j]=basePack.getCenter(flower[j]).minus(basePack.getCenter(v));
@@ -230,7 +230,7 @@ public class StreamLiner {
 			// what is the largest gradient that goes into its face?
 			int bestindx=-1;
 			double bestgrad=-1.0;
-			int []faceFlower=basePack.kData[v].faceFlower;
+			int []faceFlower=basePack.getFaceFlower(v);
 			for (int j=0;j<num;j++) {
 				Complex grad=new Complex(-normals[faceFlower[j]].x,-normals[faceFlower[j]].y);
 				if (!uphill)
@@ -308,7 +308,7 @@ public class StreamLiner {
 			int vw_indx=basePack.nghb(v, w);
 			int num=basePack.getNum(v);
 			int face_l=inpt.face;
-			int face_r=basePack.kData[v].faceFlower[(vw_indx-1+num)%num];
+			int face_r=basePack.getFaceFlower(v,(vw_indx-1+num)%num);
 			Complex vw_edge=basePack.getCenter(w).minus(basePack.getCenter(v));
 			
 			// have to decide if going left (this same face) or going right (neighboring

@@ -889,7 +889,7 @@ public class ChapBranchPt extends GenBranchPt {
 		for (int v=1;v<=modifyPack.nodeCount;v++) {
 			if (modifyPack.isBdry(v)) {
 				for (int j=0;j<modifyPack.getNum(v);j++)
-					futil[modifyPack.kData[v].faceFlower[j]]=1;
+					futil[modifyPack.getFaceFlower(v,j)]=1;
 			}
 		}
 		
@@ -927,7 +927,7 @@ public class ChapBranchPt extends GenBranchPt {
 		if (borderLink!=null && borderLink.size()>0)
 			modifyPack.firstFace=borderLink.get(0);
 		else 
-			modifyPack.firstFace=modifyPack.kData[modifyPack.bdryStarts[1]].faceFlower[0];
+			modifyPack.firstFace=modifyPack.getFaceFlower(modifyPack.bdryStarts[1],0);
 		modifyPack.poisonEdges=new EdgeLink(modifyPack,"b");
 		for (int j=1;j<modifyPack.getNum(newBrSpot);j++) {
 			int vj=modifyPack.kData[newBrSpot].flower[j];
@@ -1093,7 +1093,7 @@ public class ChapBranchPt extends GenBranchPt {
 		EdgeLink elink=new EdgeLink(packData);
 		if (packData.isBdry(myIndex))
 			throw new ParserException("'myIndex' should be interior");
-		int []flower=packData.kData[myIndex].flower;
+		int[] flower=packData.getFlower(myIndex);
 		int num=packData.getNum(myIndex);
 		elink.add(new EdgeSimple(myIndex,flower[(jumpIndx[1]-1+num)%num]));
 		elink.add(new EdgeSimple(myIndex,flower[jumpIndx[2]]));

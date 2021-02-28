@@ -7,6 +7,9 @@ import java.util.Random;
 import allMains.CirclePack;
 import complex.Complex;
 import complex.MathComplex;
+import dcel.CombDCEL;
+import dcel.DataDCEL;
+import dcel.PackDCEL;
 import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.ParserException;
@@ -115,60 +118,29 @@ public class PackCreation {
 	 */
 	public static PackData tetrahedron() {
 		PackData p=new PackData(null);
-		p.nodeCount=4;
-		p.alpha=1;
-		p.gamma=2;
-		p.status=true;
-		p.locks=0;
-		p.activeNode=1;
+		int[][] bouquet= {
+				{0,0,0,0},
+				{2,4,3,2},
+				{1,3,4,1},
+				{1,4,2,1},
+				{1,2,3,1}
+		};
+
+		PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet);
+		pdcel.redChain=null;
+		CombDCEL.d_FillInside(pdcel);
+		p.attachDCEL(pdcel);
 		p.hes=1;
-		for (int j=1;j<=4;j++) {
-			p.kData[j]=new KData();
-			p.rData[j]=new RData();
-		}
 
-		// create flowers, etc.
-		p.kData[1].num=3;
-		p.kData[1].flower=new int[4];
-		p.kData[1].flower[0]=2;
-		p.kData[1].flower[1]=3;
-		p.kData[1].flower[2]=4;
-		p.kData[1].flower[3]=2;
-
-		p.kData[2].num=3;
-		p.kData[2].flower=new int[4];
-		p.kData[2].flower[0]=1;
-		p.kData[2].flower[1]=4;
-		p.kData[2].flower[2]=3;
-		p.kData[2].flower[3]=1;
-
-		p.kData[3].num=3;
-		p.kData[3].flower=new int[4];
-		p.kData[3].flower[0]=1;
-		p.kData[3].flower[1]=2;
-		p.kData[3].flower[2]=4;
-		p.kData[3].flower[3]=1;
-
-		p.kData[4].num=3;
-		p.kData[4].flower=new int[4];
-		p.kData[4].flower[0]=1;
-		p.kData[4].flower[1]=3;
-		p.kData[4].flower[2]=2;
-		p.kData[4].flower[3]=1;
-		
 		// When all radii are equal, every face is equilateral with angles 2pi/3.
 		// Using spherical half-side formula, we get radii=arcsin(sqrt(2/3)).
 		double sphrad=Math.asin(Math.sqrt(2.0/3.0));
 		for (int i=1;i<=4;i++) {
-			p.setBdryFlag(i,0);
-			p.kData[i].utilFlag=0;
 			p.setVertMark(i,0);
-			p.kData[i].schwarzian=null;
 			p.setRadius(i,sphrad);
-			p.setCurv(i,Math.PI);
-			p.setAim(i,Math.PI);
+			p.setCurv(i,2.0*Math.PI);
+			p.setAim(i,2.0*Math.PI);
 		}
-		
 		// set centers, 1 at origin
 		sphrad *=2.0; // edge length
 		p.setCenter(1,new Complex(0.0));
@@ -176,10 +148,6 @@ public class PackCreation {
 		p.setCenter(3,new Complex(Math.PI*(7.0/6.0),sphrad));
 		p.setCenter(4,new Complex(Math.PI*(11.0/6.0),sphrad));
 			
-		// process the combinatorics 
-		p.complex_count(true);
-		p.facedraworder(false);
-		p.set_plotFlags();
 		p.setName("Tetrahedron");
 		return p;
 	}

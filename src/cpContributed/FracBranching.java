@@ -1376,8 +1376,9 @@ public class FracBranching extends PackExtender {
 		int skip_first =0;
 		while (stop ==0) {
 			int count=0;
+			int[] faceFlower=packData.getFaceFlower(b);
 			while (count+skip_first<packData.getNum(b)) {
-				Flist =Flist+""+packData.kData[b].faceFlower[count+skip_first]+" ";
+				Flist =Flist+""+faceFlower[count+skip_first]+" ";
 				count++;
 			}
 			b =packData.kData[b].flower[packData.getNum(b)]; //next bdry vertex

@@ -338,13 +338,13 @@ public class JammedPack extends PackExtender {
 			
 				// we want every network node to have at least three network edges
 				int vmark=0;
-				int []flower=packData.kData[v].flower;
+				int[] flower=packData.getFlower(v);
 				int num=packData.getNum(v);
 				for (int j=0;j<num;j++)
 					if (homePack.getVertMark(flower[j])<0)
 							vmark++;
 				int wmark=0;
-				flower=packData.kData[w].flower;
+				flower=packData.getFlower(w);
 				num=packData.getNum(w);
 				for (int j=0;j<num;j++)
 					if (homePack.getVertMark(flower[j])<0) // original vert?

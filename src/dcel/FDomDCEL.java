@@ -147,7 +147,7 @@ public class FDomDCEL {
 //		if (v<1 || v> vcount) {
 //			return null;
 //		}
-//		int []flower=bouquet[v];
+//		int[] flower=bouquet[v];
 		
 //		int indx_vw=nghb(v,w,bouquet);
 //		if (indx_vw<0)

@@ -472,10 +472,11 @@ public class PostParser {
 						if (!dispFlags.colorIsSet)
 							dispFlags.setColor(p.kData[v].color);
 						int num = p.getNum(v);
+						int[] faceFlower=p.getFaceFlower(v);
 						Complex[] fanCenters = new Complex[num
 								+ p.getBdryFlag(v)];
 						for (int j = 0; j < num; j++) {
-							int ff = p.kData[v].faceFlower[j];
+							int ff = faceFlower[j];
 							z = new Complex(p.faceIncircle(ff,amb).center);
 							if (p.hes > 0)
 								z = cpScreen.sphView.toApparentSph(z);

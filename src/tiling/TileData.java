@@ -1033,7 +1033,7 @@ public class TileData {
 				// dual tile for each original corner vertex
 				if (newPD.getVertMark(v)==2) {
 					int num=newPD.getNum(v);
-					int []flower=newPD.kData[v].flower;
+					int[] flower=newPD.getFlower(v);
 					
 					// bdry tile?
 					if (newPD.isBdry(v)) { // this is bdry tile
@@ -1149,7 +1149,7 @@ public class TileData {
 					// create the dual tile
 					Tile qtile=workingTD.quadTileData.myTiles[qcount]= 
 							new Tile(workingTD.quadTileData,4);
-					int []flower=newPD.kData[v].flower;
+					int[] flower=newPD.getFlower(v);
 					int []vert=new int[4];
 					int []augvert=new int[8];
 
