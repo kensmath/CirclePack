@@ -2,11 +2,11 @@ package ftnTheory;
 
 import java.util.Iterator;
 
+import complex.Complex;
+import dcel.D_SideData;
 import komplex.SideDescription;
 import math.Mobius;
 import packing.PackData;
-
-import complex.Complex;
 
 public class TorusModulus {
 
@@ -29,22 +29,36 @@ public class TorusModulus {
 	  Mobius mob;
 	  
 	  // Determine if this is a torus. 
-	 
 	  if (p.getBdryCompCount()>0 || p.genus!=1) {
 	      ans[2]=-1.0;
 	      return ans;
 	  }
 
 	  // Compute array of values mob.a/mob.b for the side-pairings.
-	  Iterator<SideDescription> pl=p.getSidePairs().iterator();
-	  SideDescription epair=null;
-	  j=1;
-	  while(pl.hasNext()) {
-		  epair=pl.next();
-	      mob=epair.mob;
-	      W[j]=mob.b.divide(mob.a);
-	      j++;
-	   }
+	  if (p.packDCEL!=null) {
+		  Iterator<D_SideData> pdpl=p.packDCEL.pairLink.iterator();
+		  D_SideData epair=null;
+		  j=1;
+		  while(pdpl.hasNext()) {
+			  epair=pdpl.next();
+		      mob=epair.mob;
+		      W[j]=mob.b.divide(mob.a);
+		      j++;
+		   }
+	  }
+	  
+	  // traditional packing
+	  else {
+		  Iterator<SideDescription> pl=p.getSidePairs().iterator();
+		  SideDescription epair=null;
+		  j=1;
+		  while(pl.hasNext()) {
+			  epair=pl.next();
+			  mob=epair.mob;
+			  W[j]=mob.b.divide(mob.a);
+			  j++;
+		  }
+	  }
 	   if (j!=5 && j!=7) {
 	      ans[2]=-2.0;
 	      return ans;

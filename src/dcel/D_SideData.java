@@ -15,8 +15,8 @@ import util.ColorUtil;
  * identified in the complex. In the non-simply connected case 
  * there may also be "border" segments (maximal unpaired segments).
  * 
- * A linked list 'sidePairs' of 'SideDescription's encodes the side-pairing 
- * information. 
+ * A linked list 'PackDCEL.pairLink' of 'D_SideData's encodes the 
+ * side-pairing information. 
  * 
  * Caution: 'mob' element can easily be out of date. Likewise, the 
  * 'center' information on the circles along the red chain are kept
@@ -25,11 +25,11 @@ import util.ColorUtil;
  * the 'RedList.center' information.
  * @author kens
  */
-public class D_SideData{
+public class D_SideData {
 	
 	public int hes;           // geometry from parent packing
 	public int spIndex;       // index in 'PairLink' linked list (indexed from 1)
-	public int mateIndex;     // index of paired side (-1 if no mate)
+	public int mateIndex;     // 'spIndex' of paired side (-1 if no mate)
 	public RedHEdge startEdge; // the first 'RedEdge' of this "side"
 	public RedHEdge endEdge;   // the final 'RedEdge' of this "side"
 	public Mobius mob;        // Mobius transform when side is paired (TODO: for spherical) 
@@ -55,13 +55,29 @@ public class D_SideData{
     }
     
     /**
+     * Count of edges along this side.
+     * @return int
+     */
+    public int sideCount() {
+    	int count=1;
+    	RedHEdge rtrace=startEdge;
+    	do {
+    		count++;
+    		rtrace=rtrace.nextRed;
+    	} while (rtrace!=endEdge);
+    	return count;
+    }
+    
+    /**
      * Update side-pair 'mob' based on latest 'center' data in relevant 
      * 'RedList' faces. Return 0 on error, check 'mobErr' for accuracy
-     * TODO: not much error checking. (I think this is old 'pair_mobius' code.)
+     * TODO: not much error checking. (I think this is old 
+     * 'pair_mobius' code.)
      * @return, 0 on error
      */
     public int set_sp_Mobius() {
-    	if (mateIndex<0) return 0; // this is a "border" side
+    	if (mateIndex<0) 
+    		return 0; // this is a "border" side
     	Complex A=startEdge.center;
     	Complex a=startEdge.twinRed.nextRed.center;
     	Complex B=endEdge.nextRed.center;
@@ -119,12 +135,12 @@ public class D_SideData{
     }
     
     /**
-     * Search 'pairLink' to find the 'SideDescription' for the 
+     * Search 'D_PairLink' to find the 'D_SideData' for the 
      * "side" of the complex which contains 'RedList' redface;
      * return null on failure. 
      * @param pairLink PairLink
      * @param redface RedList (or may be 'RedEdge')
-     * @return 'SideDescription' of containing side or null on failure
+     * @return 'D_SideData' of containing side or null on failure
      */
     public static D_SideData which_side(D_PairLink pairLink,RedHEdge redge) {
     	if (pairLink==null || pairLink.size()==0) return null;

@@ -1151,8 +1151,8 @@ public class PackDCEL {
 	}
 
 	/**
-	 * Get angle in 'edge.face' at 'edge.origin' using current origin
-	 * radius.
+	 * Get angle in 'edge.face' at 'edge.origin' using current
+	 * radii.
 	 * @param edge HalfEdge
 	 * @return double, 0.0 if bdry edge
 	 */
@@ -1185,7 +1185,7 @@ public class PackDCEL {
 	 * Get the angle sum at 'vert' using radius 'rad'
 	 * @param vert Vertex
 	 * @param rad double
-	 * @return
+	 * @return double
 	 */
 	public double getVertAngSum(Vertex vert,double rad) {
 		double angsum=0.0;
@@ -1193,6 +1193,23 @@ public class PackDCEL {
 		do {
 			if (he.face.faceIndx>0)
 				angsum+=getEdgeAngle(he,rad);
+			he=he.prev.twin;
+		} while (he!=vert.halfedge);
+		return angsum;
+	}
+	
+	/**
+	 * Get the angle sum at 'vert' using current radii 
+	 * stored for edges, face-by-face.
+	 * @param vert Vertex
+	 * @return double
+	 */
+	public double getVertAngSum(Vertex vert) {
+		double angsum=0.0;
+		HalfEdge he=vert.halfedge;
+		do {
+			if (he.face.faceIndx>0)
+				angsum+=getEdgeAngle(he);
 			he=he.prev.twin;
 		} while (he!=vert.halfedge);
 		return angsum;
@@ -1335,8 +1352,8 @@ public class PackDCEL {
 	}
 
 	/**
-	 * Set vert's radius (hyp: in its internal form) in all locations;
-	 * that is, in 'vData', 'rData' (for backup), and in
+	 * Set vert's radius (hyp: in its internal form) in all 
+	 * locations; i.e., in 'vData', 'rData' (for backup), and in
 	 * any associated 'RedHEdges' for this v. (Compare with
 	 * 'setRad4Edge' which only set's the value associated
 	 * with one edge.)
@@ -1358,7 +1375,7 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Set the radius in its internal form (i.e., x-rad for hyp case);
+	 * Set the radius (in its internal form x-rad for hyp case);
 	 * (Compare with 'setVertRadii' which sets this radius in all
 	 * occurrences of its origin vertex.)
 	 * @param edge HalfEdge
@@ -1380,6 +1397,22 @@ public class PackDCEL {
 		}
 		he.myRedEdge.setRadius(rad);
 		return;
+	}
+	
+	/**
+	 * Multiply all radii stored for 'v' by the given 
+	 * positive factor. Initially, intended for eucl 
+	 * geom only as part of affine packing. (3/2021)
+	 * @param v int
+	 * @param factor double
+	 */
+	public void setRadii_by_factor(int v,double factor) {
+		Vertex vert=vertices[v];
+		if (!vert.redFlag) { // only one storage location
+			double rad=p.getRadius(v);
+			p.setRadius(v, rad*factor);
+			return;
+		}
 	}
 	
 	/**

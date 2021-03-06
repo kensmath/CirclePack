@@ -151,7 +151,7 @@ public class PackData{
     public int hes;           // curvature of ambient geometry,-1=hyp,0=eucl,1=sph 
     public boolean status;    // false when pack is empty
 	public String fileName;   // filename when file was read/written
-    public int intrinsicGeom; // intrinsic geometry (due to combinatorics)
+    public int intrinsicGeom; // intrinsic geometry (due to combinatorics only)
     public int sizeLimit;     // current max number of nodes without reallocating
     public int alpha;         // index of alpha node (origin)
     public int beta;          // nghb of alpha, <alpha,beta> is base edge
@@ -293,13 +293,7 @@ public class PackData{
 		setBdryCompCount(pdcel.idealFaceCount);
     	euler=nodeCount-(pdcel.edgeCount/2)+faceCount;
 		genus=(2-euler-pdcel.idealFaceCount)/2;
-		intrinsicGeom=-1;
-		if (pdcel.idealFaceCount==0) {
-			if (genus==0)
-				intrinsicGeom=1;
-			else if (genus==1) 
-				intrinsicGeom=0;
-		}
+		intrinsicGeom=PackData.getIntrinsicGeom(this);
     	fileName=StringUtil.dc2name(fileName);
 
     	// no existing dcel structure? get data from 'rData'
@@ -2794,10 +2788,10 @@ public class PackData{
 	}
 	
 	/** 
-	 * Store radius with 'r' given in its internal form; the only
-	 * issue is hyp case, so then 'r' should already be in
-	 * x_radius form. If it needs to be converted, call
-	 * 'setRadiusActual'. (This set radius of v in all locations,
+	 * Store radius for 'v' (in all its locations). ('r' is in 
+	 * internal form; i.e., in hyp case, 'r' should already 
+	 * be in x_radius form. If it needs to be converted, call
+	 * 'setRadiusActual'.)
 	 * e.g., in 'RedHEdge's.)
 	 * @param v int
 	 * @param r double
@@ -4281,16 +4275,15 @@ public class PackData{
 		
 		// set 'bdryFlag's, 'bdryCompCount' and 'bdryStarts'
 		// combinatorial errors often occur here
-		int bcount=0;
 		try {
-			bcount=setBdryFlags(); // 0=interior, 1=bdry
+			setBdryFlags(); // 0=interior, 1=bdry
 		} catch (Exception ex) {
 			throw new CombException("'complex_count': error in bdry: "+ex.getMessage());
 		}
 
 		// identify interior components and pointers to them 
 		intStarts=new int[2*MAX_COMPONENTS];
-		intNodeCount=nodeCount-bcount; // number of interior vertices
+		intNodeCount=nodeCount-bdryCompCount; // number of interior vertices
 		int icount=0;
 		for (int i=1;i<=nodeCount;i++) {
 			if (isBdry(i))
@@ -4342,11 +4335,11 @@ public class PackData{
 		int count=0;
 		for (k=1;k<=nodeCount;k++) count += getNum(k);
 		faceCount=count/3;
-		int num_edges=(count + bcount)/2;
+		int num_edges=(count + bdryCompCount)/2;
 		euler=nodeCount-num_edges+faceCount;
 		genus=(2-euler-getBdryCompCount())/2;
 		// check if geom is appropriate 
-		if (bcount==0 && genus==0 && hes<=0) {
+		if (bdryCompCount==0 && genus==0 && hes<=0) {
 			CirclePack.cpb.msg("NOTE: This complex is a topological sphere");
 		}
 		
@@ -4427,14 +4420,9 @@ public class PackData{
 				kData[v].faceFlower[n]=f;
 			}
 			
-		// determine intrinsic geometry (but let user set 'hes') 
-		if (bcount==0) {
-			if (genus==0) intrinsicGeom=1;
-			else if (genus==1) intrinsicGeom=0;
-			else intrinsicGeom=-1;
-		}
-		else intrinsicGeom=-1;
-		
+		// determine intrinsic geometry (but let user set 'hes')
+		intrinsicGeom=PackData.getIntrinsicGeom(this);
+
 		if (tmp_debug) { // set during debugging
 			  File file = new File(System.getProperty("java.io.tmpdir")+
 					  File.separator+"CompCount.dblog");
@@ -4468,7 +4456,7 @@ public class PackData{
 	}
 	
 	/**
-	 * This set 'bdryFlag's, 'bdryCompCount', and 'bdryStarts[]'.
+	 * This sets 'bdryFlag's, 'bdryCompCount', and 'bdryStarts[]'.
 	 * (Formerly done in comlex_count; separated to use during constructions.)
 	 * @return int, boundary count
 	 */
@@ -7462,7 +7450,7 @@ public class PackData{
 				setCenter(v,sc.center);
 				setRadius(v,sc.rad);
 			}
-			if ((trace = redChain) != null) {
+			if (packDCEL==null && (trace = redChain) != null) {
 				try {
 					keepon = true;
 					while (trace != redChain || keepon) {
@@ -7482,7 +7470,7 @@ public class PackData{
 				setCenter(v,sc.center);
 				setRadius(v,Math.abs(sc.rad));
 			}
-			if ((trace = redChain) != null) {
+			if (packDCEL==null && (trace = redChain) != null) {
 				try {
 					keepon = true;
 					while (trace != redChain || keepon) {
@@ -7536,7 +7524,7 @@ public class PackData{
 				setCenter(v,sc.center);
 				setRadius(v,sc.rad);
 			}
-			if ((trace = redChain) != null) { // adjust redface data too.
+			if (packDCEL==null && (trace = redChain) != null) { // adjust redface data too.
 				try {
 					keepon = true;
 					while (trace != redChain || keepon) {
@@ -7551,9 +7539,9 @@ public class PackData{
 					}
 				} catch (Exception ex) {
 				}
-				;
 			}
-		} else if (hes > 0) { // pass sph through eucl
+		} 
+		else if (hes > 0) { // pass sph through eucl
 			geom_to_e();
 			geom_to_h();
 		}
@@ -7581,7 +7569,7 @@ public class PackData{
 				setCenter(v,sc.center);
 				setRadius(v,sc.rad);
 			}
-			if ((trace = redChain) != null) {
+			if (packDCEL==null && (trace = redChain) != null) {
 				try {
 					keepon = true;
 					while (trace != redChain || keepon) {
@@ -7602,7 +7590,7 @@ public class PackData{
 				setCenter(v,new Complex(sc.center));
 				setRadius(v,sc.rad);
 			}
-			if ((trace = redChain) != null) {
+			if (packDCEL==null && (trace = redChain) != null) {
 				try {
 					keepon = true;
 					while (trace != redChain || keepon) {
@@ -18060,9 +18048,10 @@ public class PackData{
 	}
 	
 	/**
-	 * Given a designated closed ordered chain 'cutNodes' of vertices, return
-	 * the shortest closed ordered path from 'base' through a single vertex on
-	 * 'cutNodes'. Null on error. Result should pass from right to left across
+	 * Given a designated closed ordered chain 'cutNodes' of 
+	 * vertices, return the shortest closed ordered path 
+	 * from 'base' through a single vertex on 'cutNodes'. 
+	 * Null on error. Result should pass from right to left across
 	 * 'cutNodes'.
 	 * @param base vertex
 	 * @param cutNodes
@@ -18824,6 +18813,71 @@ public class PackData{
 			}
 		}
 		return true;
+	}
+	
+	/**
+	 * Get the 'intrinsicGeom', -1, 0, 1, based on
+	 * combinatorics, i.e., number of bdry 
+	 * components and genus. 
+	 * @param p PackData
+	 * @return int -1, 0, 1, default -1
+	 */
+	public static int getIntrinsicGeom(PackData p) {
+		int iG=-1;
+		if (p.getBdryCompCount()==0) {
+			if (p.genus==0) // sphere
+				iG=1;
+			else if (p.genus==1) // torus
+				iG=0;
+		}
+		else if (p.genus==0) // 
+			iG=0;
+		return iG;
+	}
+	
+	/**
+	 * The "conformal geometry", -1,0,1, has to do 
+	 * both with 'intrinsicGeom' and with interior 
+	 * branching; assume 'genus' is set.
+	 * Depend on Riemann-Hurwitz formula.
+	 *   mapping pi:S'->S, br=branch count, N=sheeet count,
+	 *    then: chi(S')=N*chi(S)-br
+	 *    
+	 * E.g., torus, 4 simple branch points, has
+	 * spherical geometry, i.e., via Weierstrass 
+	 * functions (though we can't yet compute it 
+	 * in general). A higher genus closed S' 
+	 * might be mapped to a torus or the sphere 
+	 * (perhaps as an orbifold versus normal 
+	 * covering, as with a sphere having one 
+	 * branch point mapping to a sphere). 
+	 * Note: we only count integral branching based on
+	 * 'aim's; throw excption for non-integral branching.
+	 * @param p PackData
+	 * @return int -1, 0, 1, default -1
+	 * @throws ParserException
+	 */
+	public static int getConfGeometry(PackData p) 
+		throws ParserException {
+		int iG=getIntrinsicGeom(p);
+		int brN=0; // branching: only count integral
+		for (int v=1;v<=p.nodeCount;v++) {
+			double aim=p.getAim(v);
+			if (!p.isBdry(v) && aim>0.0) { // interior, not cusp
+				int tick=0;
+				while ((aim-(tick+1)*Math.PI*2.0)>.001)
+					tick++;
+				if (Math.abs(aim-(tick+1)*Math.PI*2.0)>.001)
+					throw new ParserException("there is non-integer branching at "+v);
+				brN += tick;
+			}
+		}
+		int NX=2-2*p.genus+brN;
+		if (NX==0)
+			return 0; // should support eucl geom
+		else if (2*(NX/2)==NX) // even? NX/2= sheet count
+			return 1; // should support spherical geom
+		return iG; // just its own geom
 	}
 		
 }

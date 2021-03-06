@@ -1041,6 +1041,31 @@ public class CommandStrParser {
 			  packData.set_aim_default();
 			  return 1;
 	      } // end of 'adjoin'
+	      
+	      // =========== affpack ===========
+	      else if(cmd.startsWith("affp")) {
+	    	  // up to 2 doubles as side-pairing factors
+    		  ArrayList<Double> ftrs=new ArrayList<Double>();
+	    	  if (flagSegs!=null && flagSegs.size()>0) {
+	    		  items=(Vector<String>)flagSegs.get(0);
+	    		  try {
+	    			  while (items.size()>0) {
+	    				  ftrs.add(Double.parseDouble(items.remove(0)));
+	    			  }
+	    		  } catch(Exception ex) {
+	    			  throw new ParserException("Usage: affpack [a [b]]");
+	    		  }
+	    	  }
+	    	  int n=ftrs.size();
+	    	  if (n>2) // get at most 2 doubles
+	    		  n=2;
+	    	  double[] factors=new double[2];
+	    	  for (int i=0;i<n;i++) 
+	    		  factors[i]=ftrs.get(i);
+	      	
+	    	  // now try the affine packing
+	    	  return ProjStruct.affinePack(packData,factors,0);
+	      }
 		  break;
 	  } // end of 'a'
 	  case 'b':

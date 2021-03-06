@@ -554,7 +554,40 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			i++;
 		}
 		return nlink;
-	}	
+	}
+
+	/**
+	 * Reverse each element, but keep list in same
+	 * order (see 'reverseLink' to reverse list order)
+	 * @param hlink HalfLink
+	 * @return HalfLink, possibly null
+	 */
+
+	public static HalfLink reverseElements(HalfLink hlink) {
+		HalfLink newLink=new HalfLink();
+		if (hlink==null || hlink.size()==0)
+			return newLink;
+		Iterator<HalfEdge> his=hlink.iterator();
+		while (his.hasNext()) 
+			newLink.add(his.next().twin);
+		return newLink;
+	}
+	
+	/**
+	 * Reverse list order (but elements not 
+	 * individually reversed; see 'reverseElements')
+	 * @param hlink HalfLink
+	 * @return HalfLink, possibly null
+	 */
+	public static HalfLink reverseLink(HalfLink hlink) {
+		HalfLink newLink=new HalfLink();
+		if (hlink==null || hlink.size()==0)
+			return newLink;
+		Iterator<HalfEdge> his=hlink.iterator();
+		while (his.hasNext()) 
+			newLink.add(0,his.next());
+		return newLink;
+	}
 
 	/** 
      * Check if edge {v,w} (or {w,v}) is in given edge list.
@@ -563,7 +596,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
      * @param w int
      * @return boolean
     */
-    public static boolean ck_in_elist(HalfLink halflist,int v,int w) {
+    public static boolean ck_in_hlist(HalfLink halflist,int v,int w) {
     	if (halflist==null || halflist.size()==0) 
     		return false;
     	Iterator<HalfEdge> elist=halflist.iterator();

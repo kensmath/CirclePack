@@ -41,6 +41,10 @@ import util.TriAspect;
  * surfaces. @see ProjStruct contains many static routines for
  * computations.
  * 
+ * Now in 2021, I am moving to dcel structures, so see
+ * command 'affinepack'.
+ * 
+ * 
  * (Note: This code was developed originally as part of 
  * Chris Sass's 2011 PhD thesis at Tennessee: formerly in
  * 'SassStuff.java'.) 

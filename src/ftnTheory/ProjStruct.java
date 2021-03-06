@@ -11,21 +11,24 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.D_SideData;
+import dcel.PackDCEL;
+import dcel.RedHEdge;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
 import exceptions.LayoutException;
 import exceptions.ParserException;
-import geometry.EuclMath;
 import geometry.CircleSimple;
+import geometry.EuclMath;
 import input.CPFileManager;
 import komplex.DualGraph;
-import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.Face;
 import komplex.RedEdge;
 import komplex.RedList;
+import komplex.SideDescription;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
@@ -34,6 +37,8 @@ import math.Mobius;
 import packing.PackData;
 import packing.PackExtender;
 import packing.RedChainer;
+import rePack.RePacker;
+import rePack.d_EuclPacker;
 import util.BuildPacket;
 import util.CmdStruct;
 import util.ColorUtil;
@@ -47,8 +52,20 @@ import util.TriAspect;
  * This class is used to develop and test manipulations, and
  * provides static functionality for use by other classes.
  * 
- * The idea is to replace radii as the parameters, using 
- * localized geometry. In particular, to each face is attached
+ * First setting was tori, thanks to Chris Sass. Those methods
+ * are affine, however, so they don't extend to higher genus.
+ * Since then I've introduced two things: starting in 2018 I
+ * began studying discrete Schwarzians, generalizing ideas due
+ * to Gerald Orick. In 2019, I began a major conversion in
+ * combinatorics: dcel structures.
+ * 
+ * Now in 2021, I will start converting the code here in hopes
+ * of advancing the use of Schwarzians, the first goal being
+ * to replicate what this code did for tori. I will have a
+ * 'dcel' mode here.
+ * 
+ * The original approach replaced radii as the parameters, using 
+ * localized geometry. In particular, to each face we attached
  * 'labels' r1:r2:r3 of radii (in eucl case, the radii are not
  * important, only their ratios). The angle sum at a vertex v is
  * obtained face-by-face. 
@@ -63,12 +80,7 @@ import util.TriAspect;
  * determined by the process (so, 2 real parameters result in 2 complex
  * parameters).
  * 
- * As of summer 2020, I'm trying to generalize whatever I can to
- * accommodate surfaces other than tori, geometries other than euclidean,
- * and possibly branch points. I also hope to introduce schwarzians, 
- * though how to create and manipulate them are still open issues.
- *
- * kens
+ * Ken Stephenson
  */
 
 public class ProjStruct extends PackExtender {
@@ -77,7 +89,8 @@ public class ProjStruct extends PackExtender {
 	public static double TOLER=.00000001;
 	public static double OKERR=.0000000001; 
 	public static int PASSES=10000;
-	public boolean debug=true;
+	public boolean debug;
+	boolean dcelMode;
 	
 	/* 8/2019. Plan to implement construction of portions of
 	 * universal cover for a surface in attempt to compute 
@@ -86,8 +99,6 @@ public class ProjStruct extends PackExtender {
 	 * on triangle group. However, I hope to set up dcel structure
 	 * for more general cases.
 	 */
-	
-	public dcel.Face FDcell=null; // this is the fundamental domain 
 		
 	// Constructor
 	public ProjStruct(PackData p) {
@@ -98,15 +109,20 @@ public class ProjStruct extends PackExtender {
 		toolTip="'ProjStruct' is for handling discrete projective structures, "+
 			"that is, projective structures associated with circle packings.";
 		registerXType();
+		dcelMode=false;
+		if (packData.packDCEL!=null)
+			dcelMode=true;
 		if (running) {
 			dTree= DualGraph.easySpanner(packData,false);
-			setupAspects();
+			if (!dcelMode)
+				setupAspects();
 			packData.packExtensions.add(this);
 		}
+		debug=false;
 	}
 	
 	/**
-	 * create the 'aspects' array
+	 * If no dcel structure, create the 'aspects' array
 	 */
 	public void setupAspects() {
 		for (int v=1;v<=packData.nodeCount;v++)
@@ -158,9 +174,9 @@ public class ProjStruct extends PackExtender {
 	}
 	
 	/** 
-	 * Euclidean iterative adjustment routines patterned after 'oldReliable' 
-	 * euclidean riffle routines, but now computation are done to local
-	 * labels face-by-face. For each vertex, a factor t>0 is computed and
+	 * Eucl iterative routines copied from 'oldReliable', but
+	 * now applied to local labels face-by-face. For each vertex, 
+	 * a factor t>0 is computed and
 	 * the local label at 'v' is multiplied by t in every face containing v.
 	 * There are two goals with this same process, differing only in the
 	 * objective functions we want to minimize.
@@ -311,7 +327,7 @@ public class ProjStruct extends PackExtender {
 	} 
 
 	/** 
-	 * Euclidean riffle of side lengths to get aims: for each vertex v, find 
+	 * Eucl riffle of side lengths to get aims: for each vertex v, find 
 	 * factor f>0 so that multiplying all 'sides' from v by f 
 	 * in all faces containing v gives the 'aim' anglesum at v. 
 	 * Currently, do all vertices with aim>0, whether bdry or interior.
@@ -2179,7 +2195,123 @@ public class ProjStruct extends PackExtender {
 		
 		return ans;
 	}
+	
+	/**
+	 * 
+	 * @param p PackData
+	 * @param factors
+	 * @param passes
+	 * @return int, repack count, -1 on error
+	 */
+	public static int affinePack(PackData p,double[] factors,int passes) {
+  	  if (p.packDCEL==null) 
+		  throw new ParserException("'affpack' requires a dcel structure");
+  	  PackDCEL pdcel=p.packDCEL;
+  	  if (pdcel.pairLink==null || pdcel.pairLink.size()==1)
+		  throw new ParserException("'affpack' requires side-pairings to exit");
+  	  int geom=PackData.getConfGeometry(p);
+  	  if (geom!=0)
+  		  throw new DataException("'affpack': data doesn't support affine structure");
+  	  if (p.hes!=0)
+  		  p.geom_to_e();
+  	  
+  	  // Figure out the situation: 
+  	  // are scalar factors specified?
+  	  if (factors!=null) {
+  		  // find first paired edge
+  		  int np=pdcel.pairLink.size();
+  		  int tick=0;
+  		  EdgeSimple aSide=null;
+  		  D_SideData sdata=null;
+  		  while (aSide==null && tick<(np-1)) {
+  			  sdata=pdcel.pairLink.get(++tick);
+  			  if (sdata.mateIndex>0)
+  				  aSide=new EdgeSimple(tick,sdata.mateIndex);
+  		  }
+  		  if (aSide==null) {
+  			  throw new CombException("didn't find expected paired sides");
+  		  }
+  		  
+  		  // multiply paired vertices with factor[0]
+  		  int hit=aSide.v; // side already hit
+  		  RedHEdge rtrace=sdata.startEdge;
+  		  do {
+  			  double rad=rtrace.getRadius();
+  			  rtrace.twinRed.nextRed.setRadius(rad*factors[0]);
+  			  rtrace=rtrace.nextRed;
+  		  } while (rtrace!=sdata.startEdge);
+  		  
+  		  // find a second paired edge?
+		  if (factors.length==2) {
+			  aSide=null;
+			  while (aSide==null && tick<(np-1)) {
+				  sdata=pdcel.pairLink.get(++tick);
+				  if (sdata.mateIndex>hit) // avoid first paired edges
+					  aSide=new EdgeSimple(tick,sdata.mateIndex);
+			  }
+		  }
+  		  if (aSide==null) {
+  			  throw new CombException("didn't find expected paired sides");
+  		  }
+  		  
+  		  // multiply paired vertices with factor[1]
+  		  rtrace=sdata.startEdge;
+  		  do {
+  			  double rad=rtrace.getRadius();
+  			  rtrace.twinRed.nextRed.setRadius(rad*factors[1]);
+  			  rtrace=rtrace.nextRed;
+  		  } while (rtrace!=sdata.startEdge);
+  		  
+  	  }
+  	  
+      int count = 0;
+      double accum=0.0;
+      if (passes<=0)
+    	  passes=1000;
 
+      // find vertices to work on and set cutoff value
+      int []inDex =new int[p.nodeCount+1];
+      int aimnum=0;
+      for (int v=1;v<=p.nodeCount;v++) {
+    	  if (p.getAim(v)>0) { //   p.getAim(j)>0) {
+    		  inDex[aimnum++]=v;
+        	  double curv=pdcel.getVertAngSum(pdcel.vertices[v]);
+        	  double err=curv-p.getAim(v);
+    		  accum += (err<0) ? (-err) : err;
+    	  }
+      }
+      if (aimnum==0) return 0; // nothing to repack
+      
+      double recip=.333333/aimnum;
+      double cut=accum*recip;
+
+      while ((cut > RePacker.RP_TOLER && count<passes)) {
+    	  for (int j=0;j<aimnum;j++) {
+    		  int v=inDex[j];
+        	  double asum=pdcel.getVertAngSum(pdcel.vertices[v]);
+        	  double aim=pdcel.p.getAim(v);
+        	  int num=p.getNum(v);
+        	  double factor=d_EuclPacker.uniFactor(num, asum, aim);
+        	  pdcel.setRadii_by_factor(v,factor);
+    	  }
+
+          accum=0;
+          for (int j=0;j<aimnum;j++) {
+        	  int v=inDex[j];
+        	  double curv=pdcel.getVertAngSum(pdcel.vertices[v]);
+        	  double err=curv-p.getAim(v);
+        	  accum += (err<0) ? (-err) : err;
+          }
+          cut=accum*recip;
+        
+          // show activity 
+//          if ((count % 10)==0) repack_activity_msg();
+                
+          count++;
+      } /* end of while */
+      return count;
+    }
+    
 	/** 
 	 * Override method for cataloging command structures
 	 */

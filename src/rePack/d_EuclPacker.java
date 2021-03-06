@@ -792,5 +792,31 @@ public class d_EuclPacker extends RePacker {
 		}
 		return;
 	}
+	
+	/**
+	 * The 'uniform' model (developed by Collins and Stephenson)
+	 * computes the radius to get angle sum 'aim' under the
+	 * assumption that all neighbors have same radius. In eucl
+	 * case, given angle sum 'asum' and number of faces 'num', 
+	 * one can instead find the factor by which to multiply the 
+	 * current radius. This fits with a face-by-face computation,
+	 * as in affine packing cases, where radii are attached to
+	 * faces and same vertex may have several associated radii.
+	 * (coded 3/2021)
+	 * @param num int
+	 * @param asum double
+	 * @param aim double
+	 * @return double
+	 */
+	public static double uniFactor(int num,double asum,double aim) {
+			int N = 2*num;
+			// assume all petals have radius 1.0
+			double del = Math.sin(aim/N);
+			double bet = Math.sin(asum/N);
+			// current radius is r=(1/bet)-1.0
+			// desired radius is R=(1/del)-1.0
+			// return R/r
+			return ((1.0/del)-1.0)/((1.0/bet)-1.0);
+	}
 
 }

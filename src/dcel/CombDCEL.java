@@ -3382,6 +3382,181 @@ public class CombDCEL {
 
 		  return 1;
 	  }
+	  
+	  /**
+	   * Return the shortest closed edge path starting and 
+	   * ending at a vertex of the input 'path' and otherwise
+	   * not intersecting 'path'. If 'path' separates the 
+	   * complex, then throw an exception. So 'path' is
+	   * normally closed or has endpoints on the boundary.
+	   * We work by counting generations on the left and
+	   * on the right of 'path' --- in particular, edges
+	   * in 'path' must be interior. Keep track using 
+	   * 'util' and watch for first collision.
+	   * @param pdcel PackDCEL
+	   * @param path HalfLink
+	   * @return PackDCEL or null on error
+	   */
+	  public static HalfLink shortCut(PackDCEL pdcel,
+			  HalfLink path) {
+		  int bound=pdcel.vertCount;
+		  
+		  Iterator<HalfEdge> pis=path.iterator();
+		  while (pis.hasNext()) {
+			  HalfEdge he=pis.next();
+			  if (pdcel.isBdryEdge(he))
+				  throw new DCELException("'ShortCut' error: edge "+he+" is a bdry edge");
+			  he.origin.util=0;
+			  he.twin.origin.util=0;
+		  }
+		  
+		  // 1. find 'shortest' cut, by counting generations
+		  //    + from the left and - from the right; probably
+		  //    this isn't closed, i.e., different ends.
+		  // 2. minor adjustments may make this closed; at
+		  //    least adjust to shorten distance between
+		  //    the two ends. This gives max of min length.
+		  // 3. Else, cycle through vertices v of 'path',
+		  //    counting generations from v, get shortest
+		  //    starting/ending at v.
+		  // 4. Use best cut among those.
+		  
+		  HalfLink firstLink=new HalfLink();
+		  
+		  // =========== 1 =================
+		  // set all util to bound+1 = "untouched"
+		  for (int v=1;v<=pdcel.vertCount;v++) {
+			  pdcel.vertices[v].util=bound+1;
+		  }
+		  
+		  // two-list method to count generations (+/-)
+		  NodeLink currv=new NodeLink();
+		  NodeLink nextv=new NodeLink();
+
+		  // set util 0 on 'path'
+		  pis=path.iterator();
+		  while (pis.hasNext()) {
+			  HalfEdge he=pis.next();
+			  if (he.origin.util!=0) {
+				  he.origin.util=0;
+				  nextv.add(he.origin.vertIndx);
+			  }
+			  if (he.twin.origin.util!=0) {
+				  he.twin.origin.util=0;
+				  nextv.add(he.twin.origin.vertIndx);
+			  }
+		  }
+		  
+		  int safety=2*bound;
+		  int hitvert=0; // first hit (has both + and - nghb)
+		  while (nextv.size()>0 && hitvert==0 && safety>0) {
+			  currv=nextv;
+			  nextv=new NodeLink();
+			  Iterator<Integer> cis=currv.iterator();
+			  while (cis.hasNext() && hitvert==0) {
+				  Vertex vert=pdcel.vertices[cis.next()];
+				  int vutil=vert.util;
+				  int[] flower=vert.getFlower();
+				  for (int j=0;j<flower.length;j++) {
+					  Vertex wert=pdcel.vertices[flower[j]];
+					  int hit=0;
+					  if (wert.util>=bound) {
+						  if (vutil<0) { // right side hit
+							  hit=1;
+							  wert.util=vutil-1;
+							  nextv.add(wert.vertIndx);
+						  }
+						  else if (vutil>0) { // left side hit
+							  if (hit==1) { // simultaneous hit
+								  hitvert=vert.vertIndx;
+								  nextv=null;
+							  }
+							  else {
+								  wert.util=vutil+1;
+								  nextv.add(wert.vertIndx);
+							  }
+						  }
+					  }
+				  }
+			  } // done with while on currv
+			  safety--;
+		  } // done with while on nextv
+		  
+		  if (safety<=0 || hitvert==0) {
+			  throw new DCELException("hum...? no collision "+
+					  "or overran safety in 'ShortCut'");
+		  }
+		  
+		  // +/- generations first collide at 'hitvert'
+		  // for 'HalfLink' from left side to right side 
+		  if (hitvert!=0) {
+			  
+			  // find +/- petals
+			  Vertex hitVert=pdcel.vertices[hitvert];
+			  int vneg=0;
+			  int vpos=0;
+			  int[] flower=hitVert.getFlower();
+			  for (int j=0;(j<flower.length && (vneg==0 || vpos==0));j++) {
+				  int val=pdcel.vertices[flower[j]].util;
+				  if (vneg==0 && val<0) 
+					  vneg=flower[j];
+				  if (vpos==0 && val>0 && val<bound)
+					  vpos=flower[j];
+			  }
+			  if (vneg==0 || vpos==0) {
+				  throw new DCELException("not collision at "+hitvert+"??");
+			  }
+		  
+			  // walk back through increasingly smaller + generations
+			  firstLink=new HalfLink();
+			  firstLink.add(pdcel.findHalfEdge(new EdgeSimple(hitvert,vpos));
+			  while (pdcel.vertices[vpos].util!=0) {
+				  ArrayList<HalfEdge> eflower=pdcel.vertices[vpos].getEdgeFlower();
+				  int myindx=pdcel.vertices[vpos].util;
+				  HalfEdge hhedge=null;
+				  Iterator<HalfEdge> eis=eflower.iterator();
+				  while (eis.hasNext() && hhedge==null) {
+					  HalfEdge he=eis.next();
+					  if (he.twin.origin.util==myindx-1)
+						  hhedge=he;
+				  }
+				  if (hhedge==null) {
+					  throw new DCELException("lost + generational link");
+				  }
+				  firstLink.add(hhedge);
+				  vpos=hhedge.twin.origin.vertIndx;
+			  }
+			  firstLink=HalfLink.reverseElements(firstLink);
+			  firstLink=HalfLink.reverseLink(firstLink);
+			  
+			  // now walk through increasingly less - generations
+			  while (pdcel.vertices[vneg].util!=0) {
+				  ArrayList<HalfEdge> eflower=pdcel.vertices[vneg].getEdgeFlower();
+				  int myindx=pdcel.vertices[vneg].util;
+				  HalfEdge hhedge=null;
+				  Iterator<HalfEdge> eis=eflower.iterator();
+				  while (eis.hasNext() && hhedge==null) {
+					  HalfEdge he=eis.next();
+					  if (he.twin.origin.util==(myindx+1))
+						  hhedge=he;
+				  }
+				  if (hhedge==null) {
+					  throw new DCELException("lost - generational link");
+				  }
+				  firstLink.add(hhedge);
+				  vneg=hhedge.twin.origin.vertIndx;
+			  }
+		  }
+
+		  // ============== 2 ========================
+		  int v=firstLink.get(0).origin.vertIndx;
+		  int w=firstLink.getLast().origin.vertIndx;
+		  if (v==w)
+			  return firstLink;
+		  
+		  
+		  
+	  }
 }
 
 /**

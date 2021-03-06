@@ -139,13 +139,7 @@ public class DataDCEL {
 		// misc data to arrange
 		p.euler=pdcel.vertCount-pdcel.edgeCount+pdcel.faceCount;
 		p.genus=(2-p.euler-p.getBdryCompCount())/2;
-		p.intrinsicGeom=-1;
-		if (p.getBdryCompCount()==0) {
-			if (p.genus==0)
-				p.intrinsicGeom=1;
-			else if (p.genus==1)
-				p.intrinsicGeom=0;
-		}
+		p.intrinsicGeom=PackData.getIntrinsicGeom(p);
 		p.bdryStarts=new int[p.getBdryCompCount()+1];
 		for (int j=1;j<=p.getBdryCompCount();j++) {
 			Face iface=pdcel.idealFaces[j];
