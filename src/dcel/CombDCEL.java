@@ -233,7 +233,7 @@ public class CombDCEL {
 	}
 	
 	/**
-	 * Form redchain in 'pdcel'based on given 'alphaEdge' and not
+	 * Form redchain in 'pdcel' based on given 'alphaEdge' and not
 	 * crossing any edge in 'hlink'. Calling routine should call
 	 * 'd_FillInside' to complete process of 'pdcel'.
 	 * @param pdcel PackDCEL
@@ -3384,15 +3384,122 @@ public class CombDCEL {
 	  }
 	  
 	  /**
+	   * Input 'pdcel' must be a topological torus with
+	   * an initial 'redChain'. Typically, the red chain
+	   * has 3 side pairings; this routine finds a new 
+	   * red chain with just two side pairings. The calling 
+	   * routine must do 'd_FillInside', repack, layout, etc. 
+	   * (see former 'ProjStruct.torus4layout')
+	   * @param pdcel PackDCEL
+	   * @return RedHEdge
+	   * @throws CombException
+	   */
+		public static RedHEdge torus4Sides(PackDCEL pdcel) {
+
+			// put red chain in 'HalfLink'
+			HalfLink redpath = new HalfLink();
+			RedHEdge rtrace = pdcel.redChain;
+			do {
+				redpath.add(rtrace.myEdge);
+				rtrace = rtrace.nextRed;
+			} while (rtrace != pdcel.redChain);
+
+			RedHEdge newChain = null;
+			try {
+				// get first generator based on red chain
+				HalfLink generator1 = CombDCEL.shortCut(pdcel, redpath);
+
+				HalfLink generator2 = CombDCEL.shortCut(pdcel, generator1);
+
+				// create all the red edges, link along generators
+				Iterator<HalfEdge> g1 = generator1.iterator();
+				while (g1.hasNext()) {
+					HalfEdge he = g1.next();
+					he.myRedEdge = new RedHEdge(he);
+					he.twin.myRedEdge = new RedHEdge(he.twin);
+					he.myRedEdge.twinRed = he.twin.myRedEdge;
+					he.twin.myRedEdge.twinRed = he.myRedEdge;
+				}
+				int g1size = generator1.size();
+				for (int j = 1; j < g1size - 1; j++) {
+					HalfEdge he1 = generator1.get(j - 1);
+					HalfEdge he2 = generator1.get(j);
+					HalfEdge he3 = generator1.get(j + 1);
+					he2.myRedEdge.prevRed = he1.myRedEdge;
+					he1.myRedEdge.nextRed = he2.myRedEdge;
+					he3.myRedEdge.prevRed = he2.myRedEdge;
+					he2.myRedEdge.nextRed = he3.myRedEdge;
+				}
+
+				Iterator<HalfEdge> g2 = generator2.iterator();
+				while (g2.hasNext()) {
+					HalfEdge he = g2.next();
+					he.myRedEdge = new RedHEdge(he);
+					he.twin.myRedEdge = new RedHEdge(he.twin);
+					he.myRedEdge.twinRed = he.twin.myRedEdge;
+					he.twin.myRedEdge.twinRed = he.myRedEdge;
+				}
+				int g2size = generator2.size();
+				for (int j = 1; j < g2size - 1; j++) {
+					HalfEdge he1 = generator2.get(j - 1);
+					HalfEdge he2 = generator2.get(j);
+					HalfEdge he3 = generator2.get(j + 1);
+					he2.myRedEdge.prevRed = he1.myRedEdge;
+					he1.myRedEdge.nextRed = he2.myRedEdge;
+					he3.myRedEdge.prevRed = he2.myRedEdge;
+					he2.myRedEdge.nextRed = he3.myRedEdge;
+				}
+
+				// figure out linkage: start with 'generator2'
+				int corner = newChain.myEdge.origin.vertIndx;
+
+				// rotate 'generator1' to start at 'corner'
+				int safety = generator1.size();
+				while (generator1.get(0).origin.vertIndx != corner && safety > 0) {
+					HalfEdge he = generator1.remove(0);
+					generator1.add(he);
+					safety--;
+				}
+				if (safety == 0)
+					throw new CombException("'generator1' doesn't " + "contain vertex " + corner);
+
+				// now link ends: order is
+				// g2 --> g1 --> -g2 --> -g1 --> g2
+				HalfEdge g2b = generator2.get(0);
+				HalfEdge g2e = generator2.getLast();
+				HalfEdge g1b = generator1.get(0);
+				HalfEdge g1e = generator1.getLast();
+
+				newChain = g2b.myRedEdge;
+
+				g2b.myRedEdge.prevRed = g1b.twin.myRedEdge;
+				g1b.twin.myRedEdge.nextRed = g2b.myRedEdge;
+
+				g2e.myRedEdge.nextRed = g1b.myRedEdge;
+				g1b.myRedEdge.prevRed = g2e.myRedEdge;
+
+				g1e.myRedEdge.nextRed = g2e.twin.myRedEdge;
+				g2e.twin.myRedEdge.prevRed = g1e.myRedEdge;
+
+				g2b.twin.myRedEdge.nextRed = g1e.twin.myRedEdge;
+				g1e.twin.myRedEdge.prevRed = g2b.twin.myRedEdge;
+
+			} catch (Exception ex) {
+				throw new CombException("'torus4Sides' went wrong; " + ex.getMessage());
+			}
+
+			return newChain;
+		}
+	  
+	  /**
 	   * Return the shortest closed edge path starting and 
 	   * ending at a vertex of the input 'path' and otherwise
 	   * not intersecting 'path'. If 'path' separates the 
-	   * complex, then throw an exception. So 'path' is
-	   * normally closed or has endpoints on the boundary.
+	   * complex, then throw an exception. Normally 'path' 
+	   * either closed or has endpoints on the boundary.
 	   * We work by counting generations on the left and
 	   * on the right of 'path' --- in particular, edges
-	   * in 'path' must be interior. Keep track using 
-	   * 'util' and watch for first collision.
+	   * in 'path' must be interior. 
 	   * @param pdcel PackDCEL
 	   * @param path HalfLink
 	   * @return PackDCEL or null on error
@@ -3400,7 +3507,8 @@ public class CombDCEL {
 	  public static HalfLink shortCut(PackDCEL pdcel,
 			  HalfLink path) {
 		  int bound=pdcel.vertCount;
-		  
+
+		  // no bdry edges allowed
 		  Iterator<HalfEdge> pis=path.iterator();
 		  while (pis.hasNext()) {
 			  HalfEdge he=pis.next();
@@ -3411,22 +3519,59 @@ public class CombDCEL {
 		  }
 		  
 		  // 1. find 'shortest' cut, by counting generations
-		  //    + from the left and - from the right; probably
-		  //    this isn't closed, i.e., different ends.
-		  // 2. minor adjustments may make this closed; at
-		  //    least adjust to shorten distance between
-		  //    the two ends. This gives max of min length.
-		  // 3. Else, cycle through vertices v of 'path',
+		  //    + from the left and - from the right for whole
+		  //    path; probably not closed.
+		  // 2. Else, cycle through vertices v of 'path',
 		  //    counting generations from v, get shortest
 		  //    starting/ending at v.
 		  // 4. Use best cut among those.
 		  
-		  HalfLink firstLink=new HalfLink();
-		  
 		  // =========== 1 =================
+		  HalfLink firstLink=getShortPath(pdcel,path,path);
+		  
+		  // closed?
+		  if (firstLink.get(0).origin.vertIndx==
+				  firstLink.getLast().twin.origin.vertIndx)
+			  return firstLink;
+
+		  // =============== 2 ====================
+		  HalfLink bestpath=null; // shortest closed
+		  int bestlength=0;
+		  HalfLink nexttry=null;
+		  pis=path.iterator();
+		  while (pis.hasNext()) {
+			  HalfLink seed=new HalfLink();
+			  seed.add(pis.next());
+			  nexttry=getShortPath(pdcel,path,seed);
+			  if (nexttry.get(0).origin.vertIndx!=
+					  nexttry.getLast().twin.origin.vertIndx)
+				  throw new DCELException("this path should always be closed");
+			  if (bestlength>0 && nexttry.size()<bestlength) {
+				  bestpath=nexttry;
+				  bestlength=bestpath.size();
+			  }
+		  }
+		  return bestpath;
+	  }
+	  
+	  /**
+	   * Return 'HalfLink' path which is among the shortest 
+	   * combinatorially which starts and ends at one of 
+	   * vertices in 'seed'. Make a small shift of ends
+	   * if it will close the path without lengthening it.
+	   * @param pdcel PackDCEL
+	   * @param path HalfLink
+	   * @param seed HalfLink
+	   * @return HalfLink
+	   */
+	  public static HalfLink getShortPath(PackDCEL pdcel,
+			  HalfLink path,HalfLink seed) {
+		  HalfLink link1=new HalfLink();
+		  int bound=pdcel.vertCount+1;
+		  
 		  // set all util to bound+1 = "untouched"
 		  for (int v=1;v<=pdcel.vertCount;v++) {
-			  pdcel.vertices[v].util=bound+1;
+			  pdcel.vertices[v].util=bound;
 		  }
 		  
 		  // two-list method to count generations (+/-)
@@ -3434,17 +3579,34 @@ public class CombDCEL {
 		  NodeLink nextv=new NodeLink();
 
 		  // set util 0 on 'path'
-		  pis=path.iterator();
+		  Iterator<HalfEdge> pis=path.iterator();
 		  while (pis.hasNext()) {
 			  HalfEdge he=pis.next();
-			  if (he.origin.util!=0) {
-				  he.origin.util=0;
-				  nextv.add(he.origin.vertIndx);
+			  he.origin.util=0;
+			  he.twin.origin.util=0;
+		  }
+		  
+		  // set util +/- on left/right of 'seed'
+		  boolean lhit=false;
+		  boolean rhit=false;
+		  Iterator<HalfEdge> sis=seed.iterator();
+		  while (sis.hasNext()) {
+			  HalfEdge he=sis.next();
+			  int vl=he.next.next.origin.vertIndx;
+			  int vr=he.twin.next.next.origin.vertIndx;
+			  if (pdcel.vertices[vl].vertIndx==0) {
+				  pdcel.vertices[vl].util=1;
+				  nextv.add(vl);
+				  lhit=true;
 			  }
-			  if (he.twin.origin.util!=0) {
-				  he.twin.origin.util=0;
-				  nextv.add(he.twin.origin.vertIndx);
+			  if (pdcel.vertices[vr].vertIndx==0) {
+				  pdcel.vertices[vr].util=-1;
+				  nextv.add(vr);
+				  rhit=true;
 			  }
+		  }
+		  if (!lhit || !rhit) {
+			  throw new CombException("failed to get started with + or - vertices");
 		  }
 		  
 		  int safety=2*bound;
@@ -3456,6 +3618,8 @@ public class CombDCEL {
 			  while (cis.hasNext() && hitvert==0) {
 				  Vertex vert=pdcel.vertices[cis.next()];
 				  int vutil=vert.util;
+//				  if (vutil!=0) // not needed?
+//					  continue;
 				  int[] flower=vert.getFlower();
 				  for (int j=0;j<flower.length;j++) {
 					  Vertex wert=pdcel.vertices[flower[j]];
@@ -3508,8 +3672,7 @@ public class CombDCEL {
 			  }
 		  
 			  // walk back through increasingly smaller + generations
-			  firstLink=new HalfLink();
-			  firstLink.add(pdcel.findHalfEdge(new EdgeSimple(hitvert,vpos));
+			  link1.add(pdcel.findHalfEdge(new EdgeSimple(hitvert,vpos)));
 			  while (pdcel.vertices[vpos].util!=0) {
 				  ArrayList<HalfEdge> eflower=pdcel.vertices[vpos].getEdgeFlower();
 				  int myindx=pdcel.vertices[vpos].util;
@@ -3523,11 +3686,11 @@ public class CombDCEL {
 				  if (hhedge==null) {
 					  throw new DCELException("lost + generational link");
 				  }
-				  firstLink.add(hhedge);
+				  link1.add(hhedge);
 				  vpos=hhedge.twin.origin.vertIndx;
 			  }
-			  firstLink=HalfLink.reverseElements(firstLink);
-			  firstLink=HalfLink.reverseLink(firstLink);
+			  link1=HalfLink.reverseElements(link1);
+			  link1=HalfLink.reverseLink(link1);
 			  
 			  // now walk through increasingly less - generations
 			  while (pdcel.vertices[vneg].util!=0) {
@@ -3543,19 +3706,39 @@ public class CombDCEL {
 				  if (hhedge==null) {
 					  throw new DCELException("lost - generational link");
 				  }
-				  firstLink.add(hhedge);
+				  link1.add(hhedge);
 				  vneg=hhedge.twin.origin.vertIndx;
 			  }
 		  }
-
-		  // ============== 2 ========================
-		  int v=firstLink.get(0).origin.vertIndx;
-		  int w=firstLink.getLast().origin.vertIndx;
+		  
+		  // closed already?
+		  HalfEdge edgefirst=link1.get(0);
+		  HalfEdge edgelast=link1.getLast();
+		  int v=edgefirst.origin.vertIndx;
+		  int w=edgelast.twin.origin.vertIndx;
 		  if (v==w)
-			  return firstLink;
+			  return link1;
 		  
-		  
-		  
+		  // simple adjustment?
+		  if (edgefirst.next.next.origin.vertIndx==w) {
+			  link1.add(0,edgefirst.next.twin);
+			  return link1;
+		  }
+		  if (edgelast.prev.origin.vertIndx==w) {
+			  link1.add(0,edgefirst.next.next);
+			  return link1;
+		  }
+		  int lastIndx=link1.size()-1;
+		  if (edgelast.twin.prev.origin.vertIndx==v) {
+			  link1.add(lastIndx,edgelast.twin.next);
+			  return link1;
+		  }
+		  if (edgelast.next.origin.vertIndx==v) {
+			  link1.add(lastIndx,edgelast.twin.prev.twin);
+			  return link1;
+		  }
+
+		  return link1;
 	  }
 }
 

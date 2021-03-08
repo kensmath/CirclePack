@@ -611,21 +611,21 @@ public class HalfLink extends LinkedList<HalfEdge> {
     }
     
     /**
-     * Find index of <v,w> or <w,v> in the list
-     * @param edgelist EdgeLink
+     * Find index of edge <v,w> or <w,v> in the list
+     * @param hlist HalfLink
      * @param v int
      * @param w int
      * @return -1 on error
      */
-    public static int getVW(EdgeLink edgelist,int v,int w) {
+    public static int getVW(HalfLink hlist,int v,int w) {
     	if (v>w) {
     		int hold=w;
     		w=v;
     		v=hold;
     	}
-    	for (int i=0;i<edgelist.size();i++) {
-    		EdgeSimple edge=edgelist.get(i);
-    		if (edge.v==v && edge.w==w)
+    	for (int i=0;i<hlist.size();i++) {
+    		HalfEdge he=hlist.get(i);
+    		if (he.origin.vertIndx==v && he.twin.origin.vertIndx==w)
     			return i;
     	}
     	return -1;
