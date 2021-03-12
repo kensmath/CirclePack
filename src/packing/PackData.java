@@ -12192,7 +12192,7 @@ public class PackData{
 			  
 			  // try to salvage and interpolate rad/cent data
 			  for (int v=1;v<=pdcel.vertCount;v++) {
-				  pdcel.vertices[v].util=0;
+				  pdcel.vertices[v].vutil=0;
 			  }
 			  // each new vertex between two originals
 			  for (int v=origVertCount+1;v<=pdcel.vertCount;v++) {

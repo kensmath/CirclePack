@@ -24,7 +24,7 @@ public class Vertex {
 	public int bdryFlag;		// 0 for interior, 1 for boundary
 	public boolean redFlag;		// is this a vertex along the red chain? 
 	
-	public int util;			// temporary data only
+	public int vutil;			// temporary data only
 	public HalfEdge[] spokes;	// outgoing spokes -- only during processing
 	
 	public Vertex() {
@@ -230,7 +230,7 @@ public class Vertex {
 		nv.halfedge=halfedge;
 		nv.bdryFlag=bdryFlag;
 		nv.redFlag=redFlag;
-		nv.util=util;
+		nv.vutil=vutil;
 		return nv;
 	}
 

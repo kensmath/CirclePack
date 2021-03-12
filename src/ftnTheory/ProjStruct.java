@@ -11,6 +11,7 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.CombDCEL;
 import dcel.D_SideData;
 import dcel.PackDCEL;
 import dcel.RedHEdge;
@@ -2207,60 +2208,54 @@ public class ProjStruct extends PackExtender {
   	  if (p.packDCEL==null) 
 		  throw new ParserException("'affpack' requires a dcel structure");
   	  PackDCEL pdcel=p.packDCEL;
-  	  if (pdcel.pairLink==null || pdcel.pairLink.size()==1)
+  	  if (pdcel.pairLink==null || pdcel.pairLink.countPairs()<1)
 		  throw new ParserException("'affpack' requires side-pairings to exit");
   	  int geom=PackData.getConfGeometry(p);
   	  if (geom!=0)
   		  throw new DataException("'affpack': data doesn't support affine structure");
   	  if (p.hes!=0)
   		  p.geom_to_e();
-  	  
+  	  int pairCount=pdcel.pairLink.countPairs();
+
+  	  // is this a torus? adjust layout to have 2 side-pairings
+  	  if (factors!=null && p.getBdryCompCount()==0 && p.genus==1) { 
+		  if (pdcel.pairLink.countPairs()!=2) 
+			  CombDCEL.torus4Sides(pdcel);
+  	  }
+
   	  // Figure out the situation: 
   	  // are scalar factors specified?
   	  if (factors!=null) {
   		  // find first paired edge
-  		  int np=pdcel.pairLink.size();
-  		  int tick=0;
-  		  EdgeSimple aSide=null;
-  		  D_SideData sdata=null;
-  		  while (aSide==null && tick<(np-1)) {
-  			  sdata=pdcel.pairLink.get(++tick);
-  			  if (sdata.mateIndex>0)
-  				  aSide=new EdgeSimple(tick,sdata.mateIndex);
-  		  }
+
+  		  D_SideData aSide=pdcel.pairLink.getPair(1);
   		  if (aSide==null) {
   			  throw new CombException("didn't find expected paired sides");
   		  }
   		  
   		  // multiply paired vertices with factor[0]
-  		  int hit=aSide.v; // side already hit
-  		  RedHEdge rtrace=sdata.startEdge;
+  		  RedHEdge rtrace=aSide.startEdge;
   		  do {
   			  double rad=rtrace.getRadius();
   			  rtrace.twinRed.nextRed.setRadius(rad*factors[0]);
   			  rtrace=rtrace.nextRed;
-  		  } while (rtrace!=sdata.startEdge);
+  		  } while (rtrace!=aSide.startEdge);
   		  
   		  // find a second paired edge?
 		  if (factors.length==2) {
-			  aSide=null;
-			  while (aSide==null && tick<(np-1)) {
-				  sdata=pdcel.pairLink.get(++tick);
-				  if (sdata.mateIndex>hit) // avoid first paired edges
-					  aSide=new EdgeSimple(tick,sdata.mateIndex);
-			  }
+			  aSide=pdcel.pairLink.getPair(2);
 		  }
   		  if (aSide==null) {
   			  throw new CombException("didn't find expected paired sides");
   		  }
   		  
   		  // multiply paired vertices with factor[1]
-  		  rtrace=sdata.startEdge;
+  		  rtrace=aSide.startEdge;
   		  do {
   			  double rad=rtrace.getRadius();
   			  rtrace.twinRed.nextRed.setRadius(rad*factors[1]);
   			  rtrace=rtrace.nextRed;
-  		  } while (rtrace!=sdata.startEdge);
+  		  } while (rtrace!=aSide.startEdge);
   		  
   	  }
   	  

@@ -3,6 +3,7 @@ package dcel;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import exceptions.CombException;
 import packing.PackData;
 
 /**
@@ -58,6 +59,46 @@ public class D_PairLink extends LinkedList<D_SideData> {
 			edge=(D_SideData)sides.next();
 			if (edge.label.equals(labelStr)) return edge;
 		}
+		return null;
+	}
+	
+	/**
+	 * How many side-pairings are there?
+	 * @return int
+	 */
+	public int countPairs() {
+		int count=0;
+		Iterator<D_SideData> sides=iterator();
+		D_SideData edge=null;
+		while (sides.hasNext()) {
+			edge=(D_SideData)sides.next();
+			if (edge.mateIndex>0)
+				count++;
+		}
+		int ans=count/2;
+		if (ans*2!=count)
+			throw new CombException("the number of paired sides is not even");
+		return ans;
+	}
+	
+	/**
+	 * Get the nth side-pairing.
+	 * @param n int
+	 * @return D_SideData, null if doesn't exist
+	 */
+	public D_SideData getPair(int n) {
+		if (n<=0)
+			return null;
+		int tick=0;
+		Iterator<D_SideData> sides=iterator();
+		D_SideData edge=null;
+		while (sides.hasNext() && tick<n) {
+			edge=sides.next();
+			if (edge.mateIndex>0 && edge.mateIndex>edge.spIndex)
+				tick++;
+		}
+		if (tick==n)
+			return edge;
 		return null;
 	}
 	

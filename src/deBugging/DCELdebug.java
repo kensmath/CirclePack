@@ -116,7 +116,7 @@ public class DCELdebug {
 	public static void edgeFlowerUtils(PackDCEL pdcel,Vertex vert) {
 		HalfEdge he=vert.halfedge;
 		do {
-			System.out.println(" spoke ("+he+"), util = "+he.util);
+			System.out.println(" spoke ("+he+"), util = "+he.eutil);
 			he=he.prev.twin;
 		} while (he!=vert.halfedge);
 	}

@@ -890,7 +890,7 @@ public class CommandStrParser {
 	    		  // copy the 'packData' info?
 	    		  if (pdc2==pdc1) 
 	    			  for (int v=1;v<=pdc1.vertCount;v++)
-	    				  newV[v]=packData.vData[pdc1.vertices[v].util].clone();
+	    				  newV[v]=packData.vData[pdc1.vertices[v].vutil].clone();
 	    		  if (pdc2!=pdc1) {
 	    			  // all 'packData' vertices should still be there, same indices
 	    			  for (int v=1;v<=packData.nodeCount;v++)
@@ -1044,7 +1044,7 @@ public class CommandStrParser {
 	      
 	      // =========== affpack ===========
 	      else if(cmd.startsWith("affp")) {
-	    	  // up to 2 doubles as side-pairing factors
+	    	  // 1 or 2 doubles as side-pairing factors
     		  ArrayList<Double> ftrs=new ArrayList<Double>();
 	    	  if (flagSegs!=null && flagSegs.size()>0) {
 	    		  items=(Vector<String>)flagSegs.get(0);
@@ -1062,7 +1062,7 @@ public class CommandStrParser {
 	    	  double[] factors=new double[2];
 	    	  for (int i=0;i<n;i++) 
 	    		  factors[i]=ftrs.get(i);
-	      	
+	    	  
 	    	  // now try the affine packing
 	    	  return ProjStruct.affinePack(packData,factors,0);
 	      }

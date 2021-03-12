@@ -30,7 +30,7 @@ public class HalfEdge {
 	double schwarzian; // see 'Schwarzian.java'
 	Color color; 
 	
-	public int util;  // for temporary use only
+	public int eutil;  // for temporary use only
 
 	// constructor(s)
 	public HalfEdge() {
@@ -44,7 +44,7 @@ public class HalfEdge {
 		myRedEdge=null;
 		invDist=1.0;
 		schwarzian=0.0;
-		util=0;
+		eutil=0;
 	}
 	
 	public HalfEdge(Vertex v) {
@@ -62,7 +62,7 @@ public class HalfEdge {
 		myRedEdge=null;
 		invDist=he.invDist;
 		schwarzian=he.schwarzian;
-		util=0;
+		eutil=0;
 	}
 	
 	/**

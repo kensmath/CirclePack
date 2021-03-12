@@ -862,7 +862,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		
 		// keep track with edge 'util'
 		for (int e=1;e<=pdcel.edgeCount;e++) {
-			pdcel.edges[e].util=0;
+			pdcel.edges[e].eutil=0;
 		}
 
 		// oscillate between two lists
@@ -885,15 +885,15 @@ public class HalfLink extends LinkedList<HalfEdge> {
 					int w=he.next.origin.vertIndx;
 					if (vhits[w]<0) {
 						HalfEdge sp=spokes[(j+num-1)%num];
-						if (sp.util==0) {
+						if (sp.eutil==0) {
 							add(sp);
-							sp.util=1;
+							sp.eutil=1;
 							count++;
 						}
 						sp=spokes[(j+1)%num];
-						if (sp.util==0) {
+						if (sp.eutil==0) {
 							add(sp);
-							sp.util=1;
+							sp.eutil=1;
 							count++;
 						}
 					}
