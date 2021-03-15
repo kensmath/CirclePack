@@ -5560,7 +5560,7 @@ public class CommandStrParser {
 	    	  
 	    	  // catch '-Z' flag, if there, meaning "zigzag_cookie"
 	    	  // Note: this turned out to be useless, since it led
-	    	  //   to many bdry vertices w/o interior ngbhs.
+	    	  //   too many bdry vertices w/o interior ngbhs.
 	    	  boolean zigzag=false;
 	    	  try {
 	    		  items=(Vector<String>)flagSegs.get(0);
@@ -7699,7 +7699,8 @@ public class CommandStrParser {
 	    		  }
 	    	  } catch(Exception ex) {}
 
-	    	  if (packData.intrinsicGeom < 0) { // hyperbolic case 
+	    	  if ((packData.intrinsicGeom==0 && packData.bdryCompCount>0) || 
+	    			  packData.intrinsicGeom < 0) { // hyperbolic case 
 	    		  if (packData.hes >=0) {
 	    			  packData.geom_to_h();
 	    			  packData.setGeometry(-1);

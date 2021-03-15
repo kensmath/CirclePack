@@ -1961,7 +1961,7 @@ public class PackDCEL {
 			return setAlpha(av);
 		int alph=alpha.origin.vertIndx;
 		if (av==0) { // no target
-			if (nlink.containsV(alph)==0)
+			if (nlink.containsV(alph)<0)
 				return alph; // nothing to do: Note: may be bdry vert
 		}
 		else {
@@ -1972,7 +1972,7 @@ public class PackDCEL {
 		// need to search for interior, non-forbidden
 		int[] vhits=new int[vertCount+1];
 		for (int v=1;v<=vertCount;v++) {
-			if (vertices[v].bdryFlag!=0)
+			if (vertices[v].bdryFlag!=0) // bdry vertices
 				vhits[v]=-1;
 		}
 		
@@ -1980,7 +1980,7 @@ public class PackDCEL {
 		while (nis.hasNext()) {
 			int u=nis.next();
 			if (vhits[u]==0)
-				vhits[nis.next()]=-2;
+				vhits[u]=-2; // interior forbidden
 		}
 
 		// get default possibility if all else fails
@@ -1995,16 +1995,16 @@ public class PackDCEL {
 		for (int v=1;(v<=vertCount && gotvert<0);v++) {
 			if (vhits[v]==0) { // interior, not forbidden
 				int[] flower=vertices[v].getFlower();
-				boolean gothit=false;
-				for (int j=0;(j<flower.length && !gothit);j++) {
+				boolean nogood=false;
+				for (int j=0;(j<flower.length && !nogood);j++) {
 					if (vhits[flower[j]]==-2) {
 						vhits[flower[j]]=-1;
-						gothit=true;
+						nogood=true;
 					}
 				}
 				
 				// do we have a winner?
-				if (!gothit)
+				if (!nogood)
 					gotvert=v;
 			}
 		}

@@ -591,7 +591,7 @@ else first vert's color. (deprecated: '-v')</opt>
 	<opt flag="-v {v}"> Use v instead of alpha as the 'seed' vertex.</opt>
 	<opt flag="-e {v u ...}"> (DCEL) - list of forbidden edges </opt>
 	<opt flag="-n {v ..}"> (DCEL) - 'non-keeper' vertices: edges with
-	          both ends non-keepers are added to forbidden halfedges. </opt>
+	          both ends non-keepers are added to forbidden edges. </opt>
 </options>
 <seealso>
 <see>set_poison</see>

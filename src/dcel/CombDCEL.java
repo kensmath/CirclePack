@@ -241,10 +241,16 @@ public class CombDCEL {
 	 * @param alphaEdge HalfEdge (if null, revert to 'pdcel.alpha')
 	 * @return 
 	 */
-	public static PackDCEL redchain_by_edge(PackDCEL pdcel,HalfLink hlink,HalfEdge alphaEdge) {
+	public static PackDCEL redchain_by_edge(PackDCEL pdcel,
+			HalfLink hlink,HalfEdge alphaEdge) {
 		boolean debug=false; // debug=true;
 		int vertcount=pdcel.vertCount;
-		
+
+		// reset 'alpha' to given edge, bu avoid 'hlink'
+		if (alphaEdge==null)
+			alphaEdge=pdcel.alpha;
+		pdcel.setAlpha(alphaEdge.origin.vertIndx,NodeLink.incident(hlink));
+
 		// undo 'redFlag's, null 'redChain'
 		for (int k=1;k<=vertcount;k++) {
 			Vertex vtx=pdcel.vertices[k];
@@ -253,18 +259,17 @@ public class CombDCEL {
 		}
 		pdcel.redChain=null;
 
-		// reset edge 'util' to identify forbidden edges (include bdry edges) 
+		// reset 'eutil's to identify forbidden edges (include bdry edges) 
 		for (int e=1;e<=pdcel.edgeCount;e++) {
 			HalfEdge edge=pdcel.edges[e];
 			edge.myRedEdge=null; // toss old red edge pointers
 			edge.eutil=0;
-// System.out.println(" e = "+e);			
-			// set 'util' -1 for bdry edges
+			// set 'eutil' -1 for bdry edges
 			if (edge.face!=null && (edge.face.faceIndx<0 || edge.twin.face.faceIndx<0))
 				edge.eutil=-1;
 		}
 
-		// set edge 'util' -1 for forbidden edges; vert 'util' -1 for 
+		// set 'eutil' -1 for forbidden edges; 'vutil' -1 for 
 		//     vertices with at least one forbidden edge.
 		if (hlink!=null) {
 			Iterator<HalfEdge> his=hlink.iterator();
@@ -277,13 +282,7 @@ public class CombDCEL {
 			}
 		}
 		
-		// ============== start redchain using chosen edge ================
-
-		// reset 'alpha' to avoid 'hlink', if necessary
-		if (alphaEdge==null)
-			alphaEdge=pdcel.alpha;
-		pdcel.setAlpha(alphaEdge.origin.vertIndx,NodeLink.incident(hlink));
-
+		// ============== start redchain using alpha ================
 		HalfEdge he=pdcel.alpha;
 		pdcel.redChain=new RedHEdge(he);
 		RedHEdge rtrace=pdcel.redChain;
@@ -338,7 +337,8 @@ public class CombDCEL {
 				// ****************** main work *****************
 
 				// processing the current red edge. 
-				// working on v; u,v,w successive verts cclw along redchain 
+				// working on v; u,v,w successive verts cclw 
+				// along redchain 
 				int v = currRed.myEdge.origin.vertIndx;
 				
 				if (debug) { // debug=true;
@@ -346,9 +346,18 @@ public class CombDCEL {
 					DCELdebug.printRedChain(pdcel.redChain);
 				}
 				
-				// process v if not done and if previous red edge not blocked
+				// process v if not done and previous red edge not blocked
 				if (!doneV[v] && !(doneV[v]=isVertDone(currRed.myEdge))) {
 					// not done? query faces outside this segment of red chain
+					if (pdcel.vertices[v].vutil==0) { // interior
+						pdcel.vertices[v].vutil=1; // enclosable 
+						int[] flower=pdcel.vertices[v].getFlower();
+						for (int j=0;j<flower.length;j++) {
+							// mark those next to interior
+							if (pdcel.vertices[flower[j]].vutil==-1)
+								pdcel.vertices[flower[j]].vutil=1; 
+						}
+					}
 					HalfEdge upspoke = currRed.prevRed.myEdge.twin;
 					HalfEdge downspoke = currRed.myEdge;
 					
@@ -373,20 +382,21 @@ public class CombDCEL {
 					}
 					
 					// Remaining cases break into cases:
-					// If vert 'util' is zero, see if we can enclose it. Check 
-					//    fan of edge outside current segment to see is any are
-					//    red. If not, can close up.
+					// If 'vutil'>=0, see if we can enclose it. Check 
+					//    fan of edge outside current segment to see is 
+					//    any are red or forbidden. If not, can close up.
 					// Otherwise, following code tries to add one cclw face.
 					boolean canclose=false;
 					RedHEdge redge=null;
 					HalfEdge spktrace=upspoke;
-					if (pdcel.vertices[v].vutil==0) {
+					if (pdcel.vertices[v].vutil>=0) {
 						redge=isMyEdge(pdcel.redChain,spktrace);
-						while (spktrace!=downspoke && redge==null) {
+						while (spktrace!=downspoke && redge==null && spktrace.eutil>=0) {
+							spktrace=spktrace.prev.twin;
 							redge=isMyEdge(
-									pdcel.redChain,(spktrace=spktrace.prev.twin));
+									pdcel.redChain,spktrace);
 						}
-						if (redge==currRed) // yes, we can close up around v 
+						if (redge==currRed && redge.myEdge.eutil>=0) // yes, we can close up around v 
 							canclose=true;
 					}
 						
@@ -421,9 +431,11 @@ public class CombDCEL {
 						doneV[v]=true;
 					}
 					
-					// else, if 'upspoke' is not red, add one cclw face about v.
+					// else, if 'upspoke' is not red, and one or the other
+					//    end has 'vutil'>0, add one cclw face about v.
 					else if (isMyEdge(pdcel.redChain,upspoke)==null &&
-								isMyEdge(pdcel.redChain,upspoke.next)==null) {
+								isMyEdge(pdcel.redChain,upspoke.next)==null &&
+								(upspoke.origin.vutil>0  || upspoke.twin.origin.vutil>0)) {
 						cclw.nextRed=new RedHEdge(upspoke.next);
 						if (debug) {
 							EdgeSimple es=new EdgeSimple(upspoke.origin.vertIndx,
@@ -465,7 +477,8 @@ public class CombDCEL {
 			do {
 				redN--;
 				// if backtrack with nextRed
-				if (rtrace.myEdge==rtrace.nextRed.myEdge.twin) {
+				if (rtrace.myEdge.eutil>=0 &&
+						rtrace.myEdge==rtrace.nextRed.myEdge.twin) {
 					
 					// do we have to keep 'redChain' alive?
 					if (rtrace==pdcel.redChain || rtrace.nextRed==pdcel.redChain) {
@@ -854,7 +867,7 @@ public class CombDCEL {
 		
 		pdcel.triData=null;  // filled when needed for repacking
 		
-		// use 'HalfEdge.util' to keep track of edges hit; this
+		// use 'HalfEdge.eutil' to keep track of edges hit; this
 		//   should be used in initializing interior edges.
 		for (int v=1;v<=pdcel.vertCount;v++) {
 			pdcel.vertices[v].vutil=0;
@@ -917,7 +930,7 @@ public class CombDCEL {
 				
 				// DCELdebug.edgeFlowerUtils(pdcel,pdcel.vertices[17]);
 
-				// rotate cclw to find util==1; should always exist
+				// rotate cclw to find eutil==1; should always exist
 				HalfEdge startedge=vert.halfedge;
 				HalfEdge he=startedge;
 				while(he.eutil==0) {
@@ -947,7 +960,7 @@ public class CombDCEL {
 						do { 
 							tr.eutil=1;
 							if (debug) {
-								System.out.println(" set util of "+tr);
+								System.out.println(" set 'eutil' of "+tr);
 							}
 							tr=tr.next;
 						} while(tr!=he);
@@ -976,7 +989,7 @@ public class CombDCEL {
 					continue;
 				}
 
-				// otherwise, search cclw for edge with util==0, twin.util==1
+				// otherwise, search cclw for edge with eutil==0, twin.eutil==1
 				HalfEdge stopedge=rtrace.prevRed.myEdge.next;
 				HalfEdge he=rtrace.myEdge;
 				while (he!=stopedge && he.eutil==0)
@@ -1540,7 +1553,7 @@ public class CombDCEL {
 		ndcel.idealFaceCount=pdcel.idealFaceCount;
 		int eCount=pdcel.edges.length-1;
 		
-		// 'util' < 0 will mark bdry edges
+		// 'eutil' < 0 will mark bdry edges
 		for (int e=1;e<=eCount;e++) {
 			HalfEdge he=pdcel.edges[e];
 			if (he.isBdry())
@@ -1866,7 +1879,7 @@ public class CombDCEL {
 	}
 
 	/**
-	 * For edges of this face, set 'util' to 1 if it is zero.
+	 * For edges of this face, set 'eutil' to 1 if it is zero.
 	 * @param edge HalfEdge
 	 */
 	public static void markFaceUtils(HalfEdge edge) {
@@ -1899,9 +1912,9 @@ public class CombDCEL {
 
 	/**
 	 * check if all all edges from 'edge' origin vertex
-	 * have non-zero 'util', i.e. are forbidden, bdry, or already touched
+	 * have non-zero 'eutil', i.e. are forbidden, bdry, or already touched
 	 * @param edge
-	 * @return boolean, false if some 'util' is zero
+	 * @return boolean, false if some 'eutil' is zero
 	 */
 	public static boolean isVertDone(HalfEdge edge) {
 		HalfEdge he=edge;
@@ -1944,7 +1957,7 @@ public class CombDCEL {
 				he=he.prev.twin;
 			} while (he!=pdcel.vertices[v].halfedge);
 			
-			// now choose first vertex with 'util'=0
+			// now choose first vertex with 'vutil'=0
 			for (int k=1;(k<=pdcel.vertCount && seed<0);k++) { 
 				if (pdcel.vertices[k].vutil==0) {
 					seed=k;
@@ -2047,7 +2060,7 @@ public class CombDCEL {
 					items.remove(0);
 					NodeLink nonvs=new NodeLink(p,items);
 					
-					// set 'util' to zero
+					// set 'vutil' to zero
 					for (int v=1;v<=pdcel.vertCount;v++) 
 						pdcel.vertices[v].vutil=0;
 
@@ -2064,7 +2077,7 @@ public class CombDCEL {
 						if (vert.vutil!=0) {
 							int[] flower=vert.getFlower();
 							for (int j=0;j<flower.length;j++) {
-								if ((w=pdcel.vertices[j].vutil)>v) {
+								if ((w=pdcel.vertices[flower[j]].vutil)>v) {
 									HalfEdge he=pdcel.findHalfEdge(v,w);
 									if (eutil[he.edgeIndx]==0) {
 										hlink.add(he);
@@ -2773,7 +2786,7 @@ public class CombDCEL {
 	   */
 	  public static PackDCEL d_adjoin(PackDCEL pdc1,PackDCEL pdc2,int v1,int v2, int n) {
 		  
-		  // store original vert indices in 'util'
+		  // store original vert indices in 'vutil'
 		  for (int v=1;v<=pdc1.vertCount;v++) 
 			  pdc1.vertices[v].vutil=v;
 		  if (pdc2!=pdc1)
@@ -2804,7 +2817,7 @@ public class CombDCEL {
 			  throw new CombException("edge count setting are improper");
 		  }
 		  
-		  // for debugging, reindex 'pdc2' can use old index in 'util'
+		  // for debugging, reindex 'pdc2' can use old index in 'vutil'
 		  //    so we can connecct with data upon return 
 		  if (pdc2!=pdc1) {
 			  for (int v=1;v<=pdc2.vertCount;v++) {
@@ -3062,7 +3075,7 @@ public class CombDCEL {
 	   */
 	  public static PackDCEL wrapAdjoin(PackDCEL pdc1,PackDCEL pdc2) {
 
-		  // vertices first; 'util' still holds original index
+		  // vertices first; 'vutil' still holds original index
 		  pdc1.newOld=new VertexMap();
 		  ArrayList<Vertex> v_array=new ArrayList<Vertex>();
 		  int vtick=0;
@@ -3093,7 +3106,7 @@ public class CombDCEL {
 		  vtick=0;
 		  while (vis.hasNext()) {
 			  Vertex vert=vis.next();
-			  vert.vertIndx=++vtick; // 'util' still has old index
+			  vert.vertIndx=++vtick; // 'vutil' still has old index
 			  pdc1.vertices[vtick]=vert;
 		  }
 
@@ -3569,7 +3582,7 @@ public class CombDCEL {
 		  HalfLink link1=new HalfLink();
 		  int bound=pdcel.vertCount+1;
 		  
-		  // set all util to bound+1 = "untouched"
+		  // set all 'vutil' to bound+1 = "untouched"
 		  for (int v=1;v<=pdcel.vertCount;v++) {
 			  pdcel.vertices[v].vutil=bound;
 		  }
@@ -3578,7 +3591,7 @@ public class CombDCEL {
 		  NodeLink currv=new NodeLink();
 		  NodeLink nextv=new NodeLink();
 
-		  // set util 0 on 'path'
+		  // set 'vutil' 0 on 'path'
 		  Iterator<HalfEdge> pis=path.iterator();
 		  while (pis.hasNext()) {
 			  HalfEdge he=pis.next();
@@ -3586,7 +3599,7 @@ public class CombDCEL {
 			  he.twin.origin.vutil=0;
 		  }
 		  
-		  // set util +/- on left/right of 'seed'
+		  // set 'vutil' +/- on left/right of 'seed'
 		  boolean lhit=false;
 		  boolean rhit=false;
 		  Iterator<HalfEdge> sis=seed.iterator();

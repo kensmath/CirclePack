@@ -2543,11 +2543,10 @@ public class PackData{
 				flower[n]=flower[0];
 			return flower;
 		}
-		int n=getFaceFlower(v).length;
+		int n=kData[v].faceFlower.length;
 		flower=new int[n];
 		for (int j=0;j<n;j++)
-			flower[j]=getFaceFlower(v,j);
-			
+			flower[j]=kData[v].faceFlower[j];
 		return flower;
 	}
 	
@@ -4275,15 +4274,16 @@ public class PackData{
 		
 		// set 'bdryFlag's, 'bdryCompCount' and 'bdryStarts'
 		// combinatorial errors often occur here
+		int bcount=0;
 		try {
-			setBdryFlags(); // 0=interior, 1=bdry
+			bcount=setBdryFlags(); // 0=interior, 1=bdry
 		} catch (Exception ex) {
 			throw new CombException("'complex_count': error in bdry: "+ex.getMessage());
 		}
 
 		// identify interior components and pointers to them 
 		intStarts=new int[2*MAX_COMPONENTS];
-		intNodeCount=nodeCount-bdryCompCount; // number of interior vertices
+		intNodeCount=nodeCount-bcount; // number of interior vertices
 		int icount=0;
 		for (int i=1;i<=nodeCount;i++) {
 			if (isBdry(i))
@@ -4335,7 +4335,7 @@ public class PackData{
 		int count=0;
 		for (k=1;k<=nodeCount;k++) count += getNum(k);
 		faceCount=count/3;
-		int num_edges=(count + bdryCompCount)/2;
+		int num_edges=(count + bcount)/2;
 		euler=nodeCount-num_edges+faceCount;
 		genus=(2-euler-getBdryCompCount())/2;
 		// check if geom is appropriate 
@@ -4458,7 +4458,7 @@ public class PackData{
 	/**
 	 * This sets 'bdryFlag's, 'bdryCompCount', and 'bdryStarts[]'.
 	 * (Formerly done in comlex_count; separated to use during constructions.)
-	 * @return int, boundary count
+	 * @return int, count of bdry edges
 	 */
 	public int setBdryFlags() {
 		bdryStarts=new int[MAX_COMPONENTS];
