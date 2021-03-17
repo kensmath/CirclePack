@@ -2103,7 +2103,8 @@ public class PackData{
     
     /**
      * Enlarge (or reduce) pack data space, increments of 1000.
-     * Free old space, allocate space for KData and RData.
+     * Free old space, allocate space for KData, RData, VData
+     * (and possibly 'packDCEL.vertices'.
      * Size is stored in 'sizeLimit'.
      * @param new_size int
      * @param keepit boolean: true, adjust size of current pack,
@@ -2119,7 +2120,8 @@ public class PackData{
         KData []newK = new KData[sizeLimit+1];
         RData []newR = new RData[sizeLimit+1];
         VData []newV = new VData[sizeLimit+1];
-
+        	
+        
         if (keepit) { // transfer the old data, allocate expansion space
             for (int v=1;v<=nodeCount;v++) {
                 newK[v]=kData[v];
@@ -2132,6 +2134,11 @@ public class PackData{
                 newR[v] = new RData();
                 if (vData!=null)
                 	newV[v]=new VData();
+            }
+            if (packDCEL!=null) {
+            	Vertex[] new_vertices=new Vertex[sizeLimit+1];
+            	for (int v=1;v<=packDCEL.vertCount;v++)
+            		new_vertices[v]=packDCEL.vertices[v];
             }
         }
         else{ 
@@ -2153,6 +2160,8 @@ public class PackData{
             locks=0;
             fileName = "";
             tileData=null;
+            if (packDCEL!=null)
+            	packDCEL.vertices=new Vertex[sizeLimit+1];
         }
 
         kData=newK;
@@ -2518,6 +2527,36 @@ public class PackData{
 		}
 		return kData[v].flower;
 	}
+	
+	/** for bdry vert 'v', get the last cclw petal.
+	 * @param v int
+	 * @return int, -1 if not bdry
+	 */
+	public int getLastPetal(int v) {
+		if (!isBdry(v))
+			return -1;
+		if (packDCEL!=null) {
+			Vertex vert=packDCEL.vertices[v];
+			return vert.halfedge.twin.next.twin.origin.vertIndx;
+		}
+		// traditional packing
+		return kData[v].flower[getNum(v)];
+	}
+	
+	/** the first cclw petal. If not bdry, this is
+	 * rather ambiguous.
+	 * @param v int
+	 * @return int
+	 */
+	public int getFirstPetal(int v) {
+		if (packDCEL!=null) {
+			Vertex vert=packDCEL.vertices[v];
+			return vert.halfedge.twin.origin.vertIndx;
+		}
+		// traditional packing
+		return kData[v].flower[0];
+	}
+
 	
 	/**
 	 * Get array of cclw nghb'ing face indices, closed if
@@ -3947,10 +3986,25 @@ public class PackData{
 		if (!status || v1<1 || v1>nodeCount || v2<1 || v2>nodeCount
 			|| !isBdry(v1) || !isBdry(v2))
 			return 0;
+		if (packDCEL!=null) {
+			HalfEdge he=packDCEL.vertices[v2].halfedge.twin.next;
+			if (v1==v2)
+				return he.face.getNum();
+			int safety=he.face.getNum()+1;
+			do {
+				count++;
+				he=he.next;
+				safety--;
+			} while (he.origin.vertIndx!=v1 && safety>0);
+			if (safety==0) // not on same bdry segment
+				return 0;
+			return count;
+		}
+		
+		// traditional packing
 		if (v1==v2) { // reset to upstream vert
 			v2=kData[v1].flower[getNum(v1)];
 		}
-		
 		int vert=v1;
 	    int nextvert=kData[vert].flower[0];
 	    while (vert!=v2 && isBdry(vert)) {
@@ -7609,76 +7663,83 @@ public class PackData{
 	}
 
 	/** 
-	 * Checks that v is boundary vertex, then adds circle connected
-	 * tangent to v and its clockwise bdry neighbor. Local data is
+	 * Checks that v is boundary vertex, then adds circle
+	 * nghb'ing v and its clockwise bdry neighbor. Local data is
 	 * updated, but calling routine must update the packing. Return
 	 * @param v int
-	 * @return int, nodecount, 0 on error.
+	 * @return int, 0 on error.
 	 */
 	public int add_vert(int v) throws CombException {
-
 		if (v < 1 || v > nodeCount || !isBdry(v))
 			return 0;
 		int node=nodeCount+1;
 		if ((node = nodeCount + 1) > (sizeLimit)
 				&& alloc_pack_space(node, true) == 0) 
 			throw new CombException("Pack space allocation failure");
-		
-		int v2,n;
-		int[] newflower;
-		double[] newoverlaps;
-
-		v2 = kData[v].flower[getNum(v)];
 		if (getRadius(v) <= 0) { // avoid infinite rad
 			setRadius(v,.1);
 		}
-		// add to flower of v
-		n = getNum(v);
-		newflower = new int[n + 2];
-		for (int i = 0; i <= n; i++)
-			newflower[i] = kData[v].flower[i];
-		newflower[n + 1] = node;
-		kData[v].flower = newflower;
-		if (kData[v].invDist != null) {
-			newoverlaps = new double[n + 2];
+		int v2 = getLastPetal(v); // upstream nghb
+		
+		if (packDCEL!=null) {
+			if (CombDCEL.add_vert(packDCEL,v)<0)
+				throw new CombException("failed 'add_vert'");
+		}
+		 
+		else {
+			int n;
+			int[] newflower;
+			double[] newoverlaps;
+
+			// add to flower of v
+			n = getNum(v);
+			newflower = new int[n + 2];
 			for (int i = 0; i <= n; i++)
-				newoverlaps[i] = getInvDist(v,kData[v].flower[i]);
-			newoverlaps[n + 1] = 1.0;
-			kData[v].invDist = newoverlaps;
-		}
-		kData[v].num = n + 1;
-		// add to flower of v2
-		n = getNum(v2);
-		newflower = new int[n + 2];
-		for (int i = 1; i <= n + 1; i++)
-			newflower[i] = kData[v2].flower[i - 1];
-		newflower[0] = node;
-		kData[v2].flower = newflower;
-		if (kData[v2].invDist != null) {
-			newoverlaps = new double[n + 2];
+				newflower[i] = kData[v].flower[i];
+			newflower[n + 1] = node;
+			kData[v].flower = newflower;
+			if (kData[v].invDist != null) {
+				newoverlaps = new double[n + 2];
+				for (int i = 0; i <= n; i++)
+					newoverlaps[i] = getInvDist(v, kData[v].flower[i]);
+				newoverlaps[n + 1] = 1.0;
+				kData[v].invDist = newoverlaps;
+			}
+			kData[v].num = n + 1;
+			// add to flower of v2
+			n = getNum(v2);
+			newflower = new int[n + 2];
 			for (int i = 1; i <= n + 1; i++)
-				newoverlaps[i] = getInvDist(v2,kData[v2].flower[i - 1]);
-			newoverlaps[0] = 1.0;
-			kData[v2].invDist = newoverlaps;
+				newflower[i] = kData[v2].flower[i - 1];
+			newflower[0] = node;
+			kData[v2].flower = newflower;
+			if (kData[v2].invDist != null) {
+				newoverlaps = new double[n + 2];
+				for (int i = 1; i <= n + 1; i++)
+					newoverlaps[i] = getInvDist(v2, kData[v2].flower[i - 1]);
+				newoverlaps[0] = 1.0;
+				kData[v2].invDist = newoverlaps;
+			}
+			kData[v2].num = n + 1;
+			// add new node
+			nodeCount++;
+			kData[node] = new KData();
+			kData[node].num = 1;
+			kData[node].flower = new int[2];
+			kData[node].flower[0] = v;
+			kData[node].flower[1] = v2;
+			if (overlapStatus) {
+				kData[node].invDist = new double[2];
+				set_single_invDist(node, kData[node].flower[0], 1.0);
+				set_single_invDist(node, kData[node].flower[1], 1.0);
+			}
+			setBdryFlag(node, 1);
+			kData[node].plotFlag = 1;
+			setVertMark(node, 0);
+			rData[node] = new RData();
 		}
-		kData[v2].num = n + 1;
-		// add new node
-		nodeCount++;
-		kData[node] = new KData();
-		kData[node].num = 1;
-		kData[node].flower = new int[2];
-		kData[node].flower[0] = v;
-		kData[node].flower[1] = v2;
-		if (overlapStatus) {
-			kData[node].invDist = new double[2];
-			set_single_invDist(node,kData[node].flower[0],1.0);
-			set_single_invDist(node,kData[node].flower[1],1.0);
-		}
-		setBdryFlag(node,1);
-		kData[node].plotFlag = 1;
-		setVertMark(node,0);
+		
 		setCircleColor(node,ColorUtil.getFGColor());
-		rData[node] = new RData();
 		setRadius(node,getRadius(v));
 		CircleSimple sc = CommonMath.comp_any_center(getCenter(v),
 				getCenter(v2), getRadius(v),getRadius(v2), getRadius(node),
@@ -7717,28 +7778,38 @@ public class PackData{
 	}
 
 	/**
-	 * v1 must be boundary vertex; enfold links nghbs v2 (counterclockwise) 
-	 * to v3 (clockwise), making v1 interior. Local data is reset, but calling 
-	 * routine must update the packing.
+	 * v1 must be boundary vertex; enfold links nghbs v2 
+	 * (cclw) to v3 (clw), making v1 interior. Local data 
+	 * is reset, but calling routine must update the packing.
 	 * @param v1 int
 	 * @return 1, 0 on error
 	 */
 	public int enfold(int v1) {
+		if (!isBdry(v1))
+			return 0;
+		
+		if (packDCEL!=null) {
+			int ans=CombDCEL.enfold(packDCEL,v1);
+			if (ans>0)
+				setAim(v1,2.0*Math.PI);
+			return ans;
+		}
+
+		// traditional packing
 		int n, v2, v3;
 		int[] newflower;
 		double[] newoverlaps;
 
-		if (!isBdry(v1))
-			return 0;
 
 		n = getNum(v1);
-		v2 = kData[v1].flower[0]; // first,0,, neighbor
-		v3 = kData[v1].flower[n]; // second neighbor
+		v2 = getFirstPetal(v1); // first,0,, neighbor
+		v3 = getLastPetal(v1);  // second neighbor
 
 		// adjust flower of v1
 		newflower = new int[n + 2];
+		int[] flower=getFlower(v1);
 		for (int i = 0; i <= n; i++)
-			newflower[i] = kData[v1].flower[i];
+			newflower[i] = flower[i];
 		newflower[n + 1] = v2;
 		kData[v1].flower = newflower;
 		if (kData[v1].invDist != null) {
@@ -7758,8 +7829,9 @@ public class PackData{
 		// add to flower of v2
 		n = getNum(v2);
 		newflower = new int[n + 2];
+		flower=getFlower(v2);
 		for (int i = 0; i <= n; i++)
-			newflower[i] = kData[v2].flower[i];
+			newflower[i] = flower[i];
 		newflower[n + 1] = v3;
 		kData[v2].flower = newflower;
 		kData[v2].num++;
@@ -7813,7 +7885,7 @@ public class PackData{
 	 * Add a layer of nodes to bdry segment from one vertex v1 to v2.
 	 * Three modes:
 	 *   flag -t ==> mode=0 (default): tenting over each edge
-	 *   <d> ==> mode=1: make the circles of degree d
+	 *   <d> ==> mode=1: make former verts to be degree d
 	 *   flag -d ==> mode=2: duplicate circles but with ball bearing fillers.
 	 * 
 	 * mode=0 or 2: unless v1=v2, only add between v1, v2 (so v1, v2 remain
@@ -7842,14 +7914,14 @@ public class PackData{
 
 		if (mode == TENT) {
 			// first new circle
-			vert = kData[v1].flower[0];
+			vert = getFirstPetal(v1);
 			count += add_vert(vert);
 
 			// cycle until reaching v2
 			while (vert != v2 && isBdry(vert)) {
 				count += add_vert(vert);
 				enfold(vert);
-				vert = kData[vert].flower[0];
+				vert = getFirstPetal(vert);
 			}
 			if (vert != v2) { //
 				throw new CombException(
@@ -7868,10 +7940,15 @@ public class PackData{
 		else if (mode == DEGREE) {
 			int need;
 			if (v2 == v1)
-				v2 = kData[v2].flower[getNum(v2)];
+				v2 = getLastPetal(v2);
 			vert = v1;
-			nextvert = kData[vert].flower[0];
-			count += add_vert(vert); // new circle shared with upstream nghb.
+			nextvert = getFirstPetal(vert);
+			// new circle shared with upstream nghb.
+			if (packDCEL!=null)
+				count += CombDCEL.add_vert(packDCEL,vert);
+			else {
+				count += add_vert(vert); 
+			}
 
 			// go until you get to v2
 			while (vert != v2) {

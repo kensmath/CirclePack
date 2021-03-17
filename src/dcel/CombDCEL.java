@@ -3397,6 +3397,182 @@ public class CombDCEL {
 	  }
 	  
 	  /**
+	   * Add vertex nghb'ing bdry vertex w and clw bdry nghb.
+	   * Should anticipate doing this several times before
+	   * the calling routine must handle combinatorics. 
+	   * So the edges and red chain, 'vertices', 'vertCount',
+	   * should remain intact, but 'faces', 'edges', etc. are
+	   * outdated. User must be sure 'sizeLimit' is okay.
+	   * @param pdcel PackDCEL
+	   * @param w int
+	   * @return int v
+	   */
+	  public static int add_vert(PackDCEL pdcel,int w) {
+		  HalfEdge uphe=pdcel.vertIsBdry(pdcel.vertices[w]);
+		  if (uphe==null)
+			  throw new CombException(w+" is not a bdry vertex");
+		  Vertex w_vert=uphe.origin;
+		  HalfEdge old_edge=uphe.twin.next.twin; // tent over this
+		  RedHEdge old_red=old_edge.myRedEdge; // from v to w
+		  Vertex v_vert=old_edge.origin;
+		  
+		  // make sure we have space
+		  int newcount=pdcel.vertCount+1;
+		  if (newcount > (pdcel.p.sizeLimit)
+				  && pdcel.p.alloc_pack_space(newcount+1, true) == 0) 
+			  throw new CombException("Pack space allocation failure");
+		  if (pdcel.vertices.length==pdcel.vertCount+1) {
+			  Vertex[] new_vertices=new Vertex[pdcel.p.sizeLimit+1];
+			  for (int j=1;j<=pdcel.vertCount;j++)
+				  new_vertices[j]=pdcel.vertices[j];
+			  pdcel.vertices=new_vertices;
+		  }
+		  
+		  // create new bdry 'Vertex'
+		  pdcel.vertCount++;
+		  int v=pdcel.vertCount;
+		  Vertex new_vert=new Vertex(v);
+		  new_vert.bdryFlag=1;
+		  pdcel.vertices[pdcel.vertCount]=new_vert;
+		  
+		  // 2 new edges and twins
+		  HalfEdge e1=new HalfEdge(v_vert);
+		  HalfEdge t1=new HalfEdge(new_vert);
+		  HalfEdge e2=new HalfEdge(new_vert);
+		  HalfEdge t2=new HalfEdge(w_vert);
+		  e1.twin=t1;
+		  t1.twin=e1;
+		  e2.twin=t2;
+		  t2.twin=e2;
+		  e1.face=null; // don't create new face
+		  e2.face=null;
+		  t1.face=new Face(-1); // mark as ideal
+		  t2.face=new Face(-1); 
+		  Face old_ideal=old_edge.face;
+		  if (old_ideal!=null && old_ideal.faceIndx<0) {
+			  t1.face=old_edge.face;
+			  t2.face=old_edge.face;
+			  if (old_ideal.edge==old_edge.twin)
+				  old_ideal.edge=t1;
+		  }
+		  old_edge.twin.face=null; // we don't create a new face
+		  
+		  // 2 new red edges
+		  RedHEdge red1=new RedHEdge(e1);
+		  e1.myRedEdge=red1;
+		  red1.center=old_red.center;
+		  red1.rad=old_red.rad;
+		  RedHEdge red2=new RedHEdge(e2);
+		  e2.myRedEdge=red2;
+		  red2.center=old_red.center.add(old_red.nextRed.center).divide(2.0);
+		  red2.rad=(old_red.rad+old_red.nextRed.rad)/2.0;
+
+		  // relink everything
+		  old_edge.twin.next=e1;
+		  e1.prev=old_edge.twin;
+		  e1.next=e2;
+		  e2.prev=e1;
+		  e2.next=old_edge.twin;
+		  uphe.twin.next=t2;
+		  t2.prev=uphe.twin;
+		  t2.next=t1;
+		  t1.prev=t2;
+		  t1.next=old_edge.myRedEdge.prevRed.myEdge.twin;
+		  old_edge.myRedEdge.prevRed.myEdge.twin.prev=t1;
+		  if (pdcel.redChain==old_red)
+			  pdcel.redChain=old_red.nextRed;
+		  red1.prevRed=old_red.prevRed;
+		  old_red.prevRed.nextRed=red1;
+		  red1.nextRed=red2;
+		  red2.prevRed=red1;
+		  red2.nextRed=old_red.nextRed;
+		  old_red.nextRed.prevRed=red2;
+		  
+		  e1.origin.halfedge=e1;
+		  e2.origin.halfedge=e2;
+		  
+		  return v;
+	  }
+	  
+	  /**
+	   * v1 must be boundary vertex; enfold links nghbs v2 
+	   * (cclw) to v3 (clw), making v1 interior. Red chain 
+	   * is adjusted, but calling routine updates combinatorics.
+	   * Note: fails if v has just two nghb's.
+	   * @param pdcel PackDCEL
+	   * @param v int
+	   * @return int degree of v or 0 on error
+	   */
+	  public static int enfold(PackDCEL pdcel,int v) {
+		  if (!pdcel.vertices[v].isBdry() || pdcel.vertices[v].getNum()==1)
+			  return 0;
+		  Vertex vert=pdcel.vertices[v];
+		  HalfEdge he=vert.halfedge;
+		  HalfEdge prehe=he.twin.prev.twin;
+		  
+		  // new edge and twin
+		  HalfEdge new_edge=new HalfEdge(prehe.origin);
+		  HalfEdge new_twin=new HalfEdge(he.twin.origin);
+		  new_edge.face=null; // don't create new face
+		  Face ideal=he.twin.face;
+		  new_twin.face=ideal;
+		  if (ideal.edge==he.twin || ideal.edge==prehe.twin)
+			  ideal.edge=new_twin;
+		  
+		  // new red 
+		  RedHEdge new_red=new RedHEdge(new_edge);
+		  new_edge.myRedEdge=new_red;
+		  new_red.center=prehe.myRedEdge.center;
+		  new_red.rad=prehe.myRedEdge.rad;
+		  
+		  // relink things
+		  prehe.twin.next=new_edge;
+		  new_edge.prev=prehe.twin;
+		  new_edge.next=he.twin;
+		  he.twin.prev=new_edge;
+		  new_twin.next=prehe.next;
+		  prehe.next.prev=new_twin;
+		  new_twin.prev=he.twin.prev;
+		  he.twin.prev.next=new_twin;
+		  if (pdcel.redChain==he.myRedEdge || pdcel.redChain==prehe.myRedEdge)
+			  pdcel.redChain=he.myRedEdge.nextRed;
+		  
+		  // simple red chain case
+		  if (prehe.myRedEdge.nextRed==he.myRedEdge) {
+			  new_red.prevRed=prehe.myRedEdge.prevRed;
+			  prehe.myRedEdge.prevRed.nextRed=new_red;
+			  new_red.nextRed=he.myRedEdge.nextRed;
+			  he.myRedEdge.nextRed.prevRed=new_red;
+			  he.myRedEdge=null;
+			  prehe.myRedEdge=null;
+		  }
+		  // otherwise there are one or more intervening red chains
+		  else {
+			  RedHEdge red=new RedHEdge(he.twin);
+			  
+			  // not clear there's a better way to set these
+			  red.center=prehe.myRedEdge.nextRed.center;
+			  red.rad=he.myRedEdge.nextRed.rad;
+			  
+			  new_red.prevRed=prehe.myRedEdge.prevRed;
+			  prehe.myRedEdge.prevRed.nextRed=new_red;
+			  new_red.nextRed=red;
+			  red.prevRed=new_red;
+			  red.nextRed=prehe.myRedEdge.nextRed;
+			  prehe.myRedEdge.nextRed.prevRed=red;
+			  red.twinRed=he.myRedEdge;
+			  he.myRedEdge.twinRed=red;
+			  prehe.myRedEdge=null;
+		  }
+		  
+		  vert.bdryFlag=0;
+		  new_edge.origin.halfedge=new_edge;
+		  
+		  return vert.getNum();
+		  
+	  }
+	  
+	  /**
 	   * Given 'pdcel' must be a topological torus with
 	   * an initial 'redChain'. Typically, the red chain
 	   * has 3 side pairings; this routine finds a new 
@@ -3407,7 +3583,7 @@ public class CombDCEL {
 	   * @return RedHEdge
 	   * @throws CombException
 	   */
-		public static RedHEdge torus4Sides(PackDCEL pdcel) {
+	  public static RedHEdge torus4Sides(PackDCEL pdcel) {
 
 			// put red chain in 'HalfLink'
 			HalfLink redpath = new HalfLink();

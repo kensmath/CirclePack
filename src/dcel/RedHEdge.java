@@ -41,7 +41,7 @@ public class RedHEdge {
 		center=new Complex(0.0);
 		rad=.5;
 		redutil=0;
-		// set 'redutil' if ideal face across myEdge;
+		// set 'redutil' if ideal face is across myEdge;
 		//    this is used in 'd_redChainBuilder'
 		if (he.twin!=null && he.twin.face!=null && 
 				he.twin.face.faceIndx<0)
