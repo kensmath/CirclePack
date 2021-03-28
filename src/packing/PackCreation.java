@@ -62,7 +62,7 @@ public class PackCreation {
 		// Add mn-2 layers from bottom cclw to top
 		int sz=2; // start with 2x2 already built
 		while (sz<mn) {
-			int w=workPack.kData[top].flower[workPack.getNum(top)];
+			int w=workPack.kData[top].flower[workPack.countFaces(top)];
 			int v=workPack.kData[bottom].flower[0];
 			workPack.add_layer(1,6,v,w);
 			
@@ -78,10 +78,10 @@ public class PackCreation {
 		// now, add mx-mn additional layers along the right edge
 		int tick=0;
 		while (tick<(mx-mn)) {
-			int th=workPack.kData[top].flower[workPack.getNum(top)];
+			int th=workPack.kData[top].flower[workPack.countFaces(top)];
 			int w=th;
 			for (int j=2;j<mn;j++) {
-				w=workPack.kData[w].flower[workPack.getNum(w)];
+				w=workPack.kData[w].flower[workPack.countFaces(w)];
 			}
 			workPack.add_layer(1,6,w,th);
 			workPack.add_vert(top); // new pointy top
@@ -95,7 +95,7 @@ public class PackCreation {
 		//   indices after the first 'adjoin'
 		int topleft=bottom;
 		for (int j=1;j<=mn;j++) {
-			topleft=workPack.kData[topleft].flower[workPack.getNum(topleft)];
+			topleft=workPack.kData[topleft].flower[workPack.countFaces(topleft)];
 		}
 
 		// adjoin right edge to left edge for annulus 
@@ -221,20 +221,20 @@ public class PackCreation {
 	   				CirclePack.cpb.msg("triG: closed as sphere:");
 	   				if (bdryinfo[0]<bdryinfo[2] || bdryinfo[1]!=bdryinfo[2])
 	   					CirclePack.cpb.errMsg(" final degree, "+
-	   							p.getNum(p.nodeCount)+" is inconsistent");
-	   				else CirclePack.cpb.msg("last degree "+p.getNum(p.nodeCount));
+	   							p.countFaces(p.nodeCount)+" is inconsistent");
+	   				else CirclePack.cpb.msg("last degree "+p.countFaces(p.nodeCount));
 	   				return p;
 	   			}
 	   		}
 	   		int w=p.bdryStarts[1];
-	   		int stopv=p.kData[w].flower[p.getNum(w)];
+	   		int stopv=p.kData[w].flower[p.countFaces(w)];
 	   		int next=p.kData[w].flower[0];
 	   		boolean wflag=false; // stop signaler
 	   		int count=1;
 	   		while (!wflag && count<10000) {
 	   			if (w==stopv) wflag=true;
-	   			int prev=p.kData[w].flower[p.getNum(w)];
-	   			int n=degs[p.getVertMark(w)]-p.getNum(w)-1;
+	   			int prev=p.kData[w].flower[p.countFaces(w)];
+	   			int n=degs[p.getVertMark(w)]-p.countFaces(w)-1;
 	   			if (n<-1)
 	   				throw new CombException("violated degree at vert "+w);
 
@@ -259,7 +259,7 @@ public class PackCreation {
 	   						CirclePack.cpb.msg("triG: closed as sphere:");
 	   						if (bdryinfo[0]<bdryinfo[1])
 	   							CirclePack.cpb.errMsg(" final degree of "+
-	   									p.getNum(w)+" is too small");
+	   									p.countFaces(w)+" is too small");
 	   						else CirclePack.cpb.msg(" final degree is correct, "+bdryinfo[1]);
 	   						return p;
 	   					}
@@ -277,8 +277,8 @@ public class PackCreation {
 	   		   				CirclePack.cpb.msg("triG: closed as sphere:");
 	   		   				if (bdryinfo[0]<bdryinfo[2] || bdryinfo[1]!=bdryinfo[2])
 	   		   					CirclePack.cpb.errMsg(" final degree, "+
-	   		   							p.getNum(p.nodeCount)+" is inconsistent");
-	   		   				else CirclePack.cpb.msg("last degree "+p.getNum(p.nodeCount));
+	   		   							p.countFaces(p.nodeCount)+" is inconsistent");
+	   		   				else CirclePack.cpb.msg("last degree "+p.countFaces(p.nodeCount));
 	   		   				return p;
 	   		   			}
 	   				}
@@ -728,13 +728,13 @@ public class PackCreation {
 			else
 				N = n1 + 1; // 1-type vert
 			fore_bdry = p.kData[cur_bdry].flower[0];
-			aft_bdry = p.kData[cur_bdry].flower[p.getNum(cur_bdry)];
+			aft_bdry = p.kData[cur_bdry].flower[p.countFaces(cur_bdry)];
 
 			// break into cases depending on face count at cur_bdry */
 
-			if (p.getNum(cur_bdry) > 2 * N) /* too many faces already */
+			if (p.countFaces(cur_bdry) > 2 * N) /* too many faces already */
 				throw new CombException();
-			if (p.getNum(cur_bdry) == 2 * N) { /*
+			if (p.countFaces(cur_bdry) == 2 * N) { /*
 												 * have all the necessary faces,
 												 * just close up and check
 												 * neighbors
@@ -753,16 +753,16 @@ public class PackCreation {
 				p.kData[cur_bdry].bdryFlag = 0;
 
 				// too many faces at the consolidated neighbor
-				if ((p.kData[alive].utilFlag == 1 && p.getNum(alive) > 2 * (n0 + 1))
-						|| (p.kData[alive].utilFlag == 2 && p.getNum(alive) > 2 * (n1 + 1)))
+				if ((p.kData[alive].utilFlag == 1 && p.countFaces(alive) > 2 * (n0 + 1))
+						|| (p.kData[alive].utilFlag == 2 && p.countFaces(alive) > 2 * (n1 + 1)))
 					throw new CombException();
 				break; // goto BACK_TO_WHILE;
 			}
-			if (p.getNum(cur_bdry) == 2 * N - 1) { // only identify existing
+			if (p.countFaces(cur_bdry) == 2 * N - 1) { // only identify existing
 													// nghbs
 				// create new flower space for cur_bdry
 				new_flower = new int[2 * N + 1];
-				for (int i = 0; i <= p.getNum(cur_bdry); i++)
+				for (int i = 0; i <= p.countFaces(cur_bdry); i++)
 					new_flower[i] = p.kData[cur_bdry].flower[i];
 				new_flower[2 * N] = new_flower[0];
 				p.kData[cur_bdry].flower = new_flower;
@@ -770,26 +770,26 @@ public class PackCreation {
 				p.kData[cur_bdry].bdryFlag = 0;
 
 				// fix fore_bdry
-				fore_flower = new int[p.getNum(fore_bdry) + 2];
-				for (int j = 0; j <= p.getNum(fore_bdry); j++)
+				fore_flower = new int[p.countFaces(fore_bdry) + 2];
+				for (int j = 0; j <= p.countFaces(fore_bdry); j++)
 					fore_flower[j] = p.kData[fore_bdry].flower[j];
-				fore_flower[p.getNum(fore_bdry) + 1] = aft_bdry;
+				fore_flower[p.countFaces(fore_bdry) + 1] = aft_bdry;
 				p.kData[fore_bdry].flower = fore_flower;
 				p.kData[fore_bdry].num++;
 
 				/* fix aft_bdry */
-				aft_flower = new int[p.getNum(aft_bdry) + 2];
-				for (int j = 0; j <= p.getNum(aft_bdry); j++)
+				aft_flower = new int[p.countFaces(aft_bdry) + 2];
+				for (int j = 0; j <= p.countFaces(aft_bdry); j++)
 					aft_flower[j + 1] = p.kData[aft_bdry].flower[j];
 				aft_flower[0] = fore_bdry;
 				p.kData[aft_bdry].flower = aft_flower;
 				p.kData[aft_bdry].num++;
 
 				// too many faces at neighbors?
-				if ((p.kData[fore_bdry].utilFlag == 1 && p.getNum(fore_bdry) > 2 * (n0 + 1))
-						|| (p.kData[fore_bdry].utilFlag == 2 && p.getNum(fore_bdry) > 2 * (n1 + 1))
-						|| (p.kData[aft_bdry].utilFlag == 1 && p.getNum(aft_bdry) > 2 * (n0 + 1))
-						|| (p.kData[aft_bdry].utilFlag == 2 && p.getNum(aft_bdry) > 2 * (n1 + 1)))
+				if ((p.kData[fore_bdry].utilFlag == 1 && p.countFaces(fore_bdry) > 2 * (n0 + 1))
+						|| (p.kData[fore_bdry].utilFlag == 2 && p.countFaces(fore_bdry) > 2 * (n1 + 1))
+						|| (p.kData[aft_bdry].utilFlag == 1 && p.countFaces(aft_bdry) > 2 * (n0 + 1))
+						|| (p.kData[aft_bdry].utilFlag == 2 && p.countFaces(aft_bdry) > 2 * (n1 + 1)))
 					throw new CombException();
 				break; // goto BACK_TO_WHILE;
 			} else { // have to add one face and check aft_bdry
@@ -804,9 +804,9 @@ public class PackCreation {
 
 				// fix cur_bdry flower
 				new_flower = new int[2 * N + 1];
-				for (int i = 0; i <= p.getNum(cur_bdry); i++)
+				for (int i = 0; i <= p.countFaces(cur_bdry); i++)
 					new_flower[i] = p.kData[cur_bdry].flower[i];
-				new_flower[p.getNum(cur_bdry) + 1] = vert;
+				new_flower[p.countFaces(cur_bdry) + 1] = vert;
 				p.kData[cur_bdry].flower = new_flower;
 				p.kData[cur_bdry].num++;
 
@@ -831,7 +831,7 @@ public class PackCreation {
 					p.kData[vert].utilFlag = 2;
 
 				// fix up aft_bdry
-				num = p.getNum(aft_bdry);
+				num = p.countFaces(aft_bdry);
 				aft_flower = new int[num + 2];
 				for (int i = 0; i <= num; i++)
 					aft_flower[i + 1] = p.kData[aft_bdry].flower[i];
@@ -840,8 +840,8 @@ public class PackCreation {
 				p.kData[aft_bdry].num++;
 
 				// too many faces at the consolidated neighbor
-				if ((p.kData[aft_bdry].utilFlag == 1 && p.getNum(aft_bdry) > 2 * (n0 + 1))
-						|| (p.kData[aft_bdry].utilFlag == 2 && p.getNum(aft_bdry) > 2 * (n1 + 1)))
+				if ((p.kData[aft_bdry].utilFlag == 1 && p.countFaces(aft_bdry) > 2 * (n0 + 1))
+						|| (p.kData[aft_bdry].utilFlag == 2 && p.countFaces(aft_bdry) > 2 * (n1 + 1)))
 					throw new CombException();
 
 			}
@@ -897,29 +897,29 @@ public class PackCreation {
 
 		int[] ans = new int[3];
 		if (v < 1 || v > p.nodeCount || !p.isBdry(v)
-				|| p.getNum(v) < 3) {
+				|| p.countFaces(v) < 3) {
 			ans[0] = 0;
 			return ans;
 		}
 		alive = fore_vert = p.kData[v].flower[0];
-		dead = aft_vert = p.kData[v].flower[p.getNum(v)];
+		dead = aft_vert = p.kData[v].flower[p.countFaces(v)];
 
 		// make new flower for fore_vert
-		fore_num = p.getNum(fore_vert) + p.getNum(aft_vert);
+		fore_num = p.countFaces(fore_vert) + p.countFaces(aft_vert);
 		new_flower = new int[fore_num + 1];
-		for (int i = 0; i <= p.getNum(fore_vert); i++)
+		for (int i = 0; i <= p.countFaces(fore_vert); i++)
 			new_flower[i] = p.kData[fore_vert].flower[i];
-		for (int i = p.getNum(fore_vert) + 1; i <= fore_num; i++)
-			new_flower[i] = p.kData[aft_vert].flower[i - p.getNum(fore_vert)];
+		for (int i = p.countFaces(fore_vert) + 1; i <= fore_num; i++)
+			new_flower[i] = p.kData[aft_vert].flower[i - p.countFaces(fore_vert)];
 
 		// fix flower of v
-		p.kData[v].flower[p.getNum(v)] = fore_vert;
+		p.kData[v].flower[p.countFaces(v)] = fore_vert;
 		p.setBdryFlag(v,0);
 
 		// go to flowers of nghbs of aft_vert, replace aft_vert by fore_vert
-		for (int j = 0; j <= p.getNum(aft_vert); j++) {
+		for (int j = 0; j <= p.countFaces(aft_vert); j++) {
 			int k = p.kData[aft_vert].flower[j];
-			for (int i = 0; i <= p.getNum(k); i++)
+			for (int i = 0; i <= p.countFaces(k); i++)
 				if (p.kData[k].flower[i] == aft_vert)
 					p.kData[k].flower[i] = fore_vert;
 		}
@@ -931,7 +931,7 @@ public class PackCreation {
 		// all references to aft_vert should be gone now; just have
 		// to shift all the node indices to fill the hole
 		for (int i = 1; i < p.nodeCount; i++)
-			for (int j = 0; j <= p.getNum(j); j++)
+			for (int j = 0; j <= p.countFaces(j); j++)
 				if (p.kData[i].flower[j] > aft_vert)
 					p.kData[i].flower[j]--;
 		p.nodeCount--;
@@ -1218,7 +1218,7 @@ public class PackCreation {
 			p.setBdryFlag(4,1);
 
 			// fix up 6 
-			num = p.getNum(6);
+			num = p.countFaces(6);
 			newflower = new int[num + 2];
 			newflower[num + 1] = rvert;
 			for (int j = 0; j <= num; j++)
@@ -1474,7 +1474,7 @@ public class PackCreation {
  		myPacking.elist=new EdgeLink(myPacking);
  		for (int v=1;v<=myPacking.nodeCount;v++) {
  			if (myPacking.getVertMark(v)!=1)
- 				for (int j=0;j<(myPacking.getNum(v)+myPacking.getBdryFlag(v));j++) {
+ 				for (int j=0;j<(myPacking.countFaces(v)+myPacking.getBdryFlag(v));j++) {
  					int k=myPacking.kData[v].flower[j];
  					if (k>v && myPacking.getVertMark(k)!=1)
  						myPacking.elist.add(new EdgeSimple(v,k));

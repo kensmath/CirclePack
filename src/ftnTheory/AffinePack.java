@@ -477,7 +477,7 @@ public class AffinePack extends PackExtender {
 				double s = p.getRadius(v)+g+p.getRadius(w)+t;
 				Complex S = z2.times(s/L12).add(z1.times(1.0-(s/L12)));
 				int[] faceFlower=p.getFaceFlower(w);
-				for (int j=0;j<p.getNum(w);j++){
+				for (int j=0;j<p.countFaces(w);j++){
 					int fc=faceFlower[j];
 					int W=asp[fc].vertIndex(w);
 					asp[fc].setCenter(S,W);
@@ -503,7 +503,7 @@ public class AffinePack extends PackExtender {
 				double s = (count*L12)/N;
 				Complex S = z2.times(s/L12).add(z1.times(1.0-(s/L12)));
 				int[] faceFlower=p.getFaceFlower(w);
-				for (int j=0;j<p.getNum(w);j++){
+				for (int j=0;j<p.countFaces(w);j++){
 					int fc=faceFlower[j];
 					int W=asp[fc].vertIndex(w);
 					asp[fc].setCenter(S,W);
@@ -597,7 +597,7 @@ public class AffinePack extends PackExtender {
 				double s = p.getRadius(v)+g+p.getRadius(w)+t;
 				Complex S = z4.times(s/L34).add(z3.times(1.0-(s/L34)));
 				int[] faceFlower=p.getFaceFlower(w);
-				for (int j=0;j<p.getNum(w);j++){
+				for (int j=0;j<p.countFaces(w);j++){
 					int fc=faceFlower[j];
 					int W=asp[fc].vertIndex(w);
 					asp[fc].setCenter(S,W);
@@ -625,7 +625,7 @@ public class AffinePack extends PackExtender {
 				double s = (count*L34)/N;
 				Complex S = z4.times(s/L34).add(z3.times(1.0-(s/L34)));
 				int[] faceFlower=p.getFaceFlower(w);
-				for (int j=0;j<p.getNum(w);j++){
+				for (int j=0;j<p.countFaces(w);j++){
 					int fc=faceFlower[j];
 					int W=asp[fc].vertIndex(w);
 					asp[fc].setCenter(S,W);
@@ -719,7 +719,7 @@ public class AffinePack extends PackExtender {
 				double s = p.getRadius(v)+g+p.getRadius(w)+t;
 				Complex S = z3.times(s/L23).add(z2.times(1.0-(s/L23)));
 				int[] faceFlower=p.getFaceFlower(w);
-				for (int j=0;j<p.getNum(w);j++){
+				for (int j=0;j<p.countFaces(w);j++){
 					int fc=faceFlower[j];
 					int W=asp[fc].vertIndex(w);
 					asp[fc].setCenter(S,W);
@@ -747,7 +747,7 @@ public class AffinePack extends PackExtender {
 				double s = (count*L23)/N;
 				Complex S = z3.times(s/L23).add(z2.times(1.0-(s/L23)));
 				int[] faceFlower=p.getFaceFlower(w);
-				for (int j=0;j<p.getNum(w);j++){
+				for (int j=0;j<p.countFaces(w);j++){
 					int fc=faceFlower[j];
 					int W=asp[fc].vertIndex(w);
 					asp[fc].setCenter(S,W);
@@ -841,7 +841,7 @@ public class AffinePack extends PackExtender {
 				double s = p.getRadius(v)+g+p.getRadius(w)+t;
 				Complex S = z1.times(s/L41).add(z4.times(1.0-(s/L41)));
 				int[] faceFlower=p.getFaceFlower(w);
-				for (int j=0;j<p.getNum(w);j++){
+				for (int j=0;j<p.countFaces(w);j++){
 					int fc=faceFlower[j];
 					int W=asp[fc].vertIndex(w);
 					asp[fc].setCenter(S,W);
@@ -869,7 +869,7 @@ public class AffinePack extends PackExtender {
 				double s = (count*L41)/N;
 				Complex S = z1.times(s/L41).add(z4.times(1.0-(s/L41)));
 				int[] faceFlower=p.getFaceFlower(w);
-				for (int j=0;j<p.getNum(w);j++){
+				for (int j=0;j<p.countFaces(w);j++){
 					int fc=faceFlower[j];
 					int W=asp[fc].vertIndex(w);
 					asp[fc].setCenter(S,W);
@@ -970,7 +970,7 @@ public class AffinePack extends PackExtender {
 			double s = t+((L12/EL12)*(p.getRadius(v)+p.getRadius(w)));
 			Complex S = z2.times(s/L12).add(z1.times(1.0-(s/L12)));
 			int[] faceFlower=p.getFaceFlower(w);
-			for (int j=0;j<p.getNum(w);j++){
+			for (int j=0;j<p.countFaces(w);j++){
 				int fc=faceFlower[j];
 				int W=asp[fc].vertIndex(w);
 				asp[fc].setCenter(S,W);
@@ -1053,7 +1053,7 @@ public class AffinePack extends PackExtender {
 			double s = t+((L34/EL34)*(p.getRadius(v)+p.getRadius(w)));
 			Complex S = z4.times(s/L34).add(z3.times(1.0-(s/L34)));
 			int[] faceFlower=p.getFaceFlower(w);
-			for (int j=0;j<p.getNum(w);j++){
+			for (int j=0;j<p.countFaces(w);j++){
 				int fc=faceFlower[j];
 				int W=asp[fc].vertIndex(w);
 				asp[fc].setCenter(S,W);
@@ -1136,7 +1136,7 @@ public class AffinePack extends PackExtender {
 			double s = t+((L23/EL23)*(p.getRadius(v)+p.getRadius(w)));
 			Complex S = z3.times(s/L23).add(z2.times(1.0-(s/L23)));
 			int[] faceFlower=p.getFaceFlower(w);
-			for (int j=0;j<p.getNum(w);j++){
+			for (int j=0;j<p.countFaces(w);j++){
 				int fc=faceFlower[j];
 				int W=asp[fc].vertIndex(w);
 				asp[fc].setCenter(S,W);
@@ -1219,7 +1219,7 @@ public class AffinePack extends PackExtender {
 			double s = t+((L41/EL41)*(p.getRadius(v)+p.getRadius(w)));
 			Complex S = z1.times(s/L41).add(z4.times(1.0-(s/L41)));
 			int[] faceFlower=p.getFaceFlower(w);
-			for (int j=0;j<p.getNum(w);j++){
+			for (int j=0;j<p.countFaces(w);j++){
 				int fc=faceFlower[j];
 				int W=asp[fc].vertIndex(w);
 				asp[fc].setCenter(S,W);
@@ -1248,15 +1248,15 @@ public class AffinePack extends PackExtender {
 		int w1=0;
 		int w2=0;
 		CircleSimple sc=new CircleSimple();
-		double x[] = new double[p.getNum(v)];
-		double y[] = new double[p.getNum(v)];
+		double x[] = new double[p.countFaces(v)];
+		double y[] = new double[p.countFaces(v)];
 		double nx=0.0;
 		double ny=0.0;
 		Complex z;
 		Complex nz;
 		
 		int[] faceFlower=p.getFaceFlower(v);
-		for (int j=0;j<p.getNum(v);j++){
+		for (int j=0;j<p.countFaces(v);j++){
 			int f=faceFlower[j];
 			w0=p.faces[f].vert[0];
 			w1=p.faces[f].vert[1];
@@ -1268,15 +1268,15 @@ public class AffinePack extends PackExtender {
 			
 		}
 		
-		for (int j=0;j<p.getNum(v);j++){
+		for (int j=0;j<p.countFaces(v);j++){
 			
 			nx+=x[j];
 			ny+=y[j];
 			
 		}
 		
-		nx=nx/p.getNum(v);
-		ny=ny/p.getNum(v);
+		nx=nx/p.countFaces(v);
+		ny=ny/p.countFaces(v);
 		nz=new Complex(nx,ny);
 		
 		return nz;
@@ -1320,7 +1320,7 @@ public class AffinePack extends PackExtender {
 		// compute initial error E
 		
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.getNum(v);j++) {
+			for (int j=0;j<p.countFaces(v);j++) {
 				int w=p.kData[v].flower[j];
 				if (w>v) {
 					double prd=Math.log(Math.abs(edgeRatioError(p,new EdgeSimple(v,w),asp)));
@@ -1341,7 +1341,7 @@ public class AffinePack extends PackExtender {
 			
 			p.setCenter(r,NewCenter(p,asp,r));
 			int[] faceFlower=p.getFaceFlower(r);
-			for (int j=0;j<p.getNum(r);j++){
+			for (int j=0;j<p.countFaces(r);j++){
 				int f=faceFlower[j];
 				int w=asp[f].vertIndex(r);
 				asp[f].setCenter(NewCenter(p,asp,r),w);
@@ -1351,7 +1351,7 @@ public class AffinePack extends PackExtender {
 			
 			for (int v=1;v<=p.nodeCount;v++) {
 				int[] flower=p.getFlower(v);
-				for (int j=0;j<p.getNum(v);j++) {
+				for (int j=0;j<p.countFaces(v);j++) {
 					int w=flower[j];
 					if (w>v) {
 						double prd=Math.log(Math.abs(edgeRatioError(p,new EdgeSimple(v,w),asp)));
@@ -1391,10 +1391,10 @@ public class AffinePack extends PackExtender {
 			
 			if (!p.isBdry(v)){
 				
-				n=p.getNum(v);
+				n=p.countFaces(v);
 				
 				int[] faceFlower=p.getFaceFlower(v);
-				for (int j=0;j<p.getNum(v);j++) {
+				for (int j=0;j<p.countFaces(v);j++) {
 					int f=faceFlower[j];
 					int k=asp[f].vertIndex(v);
 					int w1=p.faces[f].vert[(k+1)%3];
@@ -1402,7 +1402,7 @@ public class AffinePack extends PackExtender {
 					int[] faceFlower1=p.getFaceFlower(w1);
 					int[] faceFlower2=p.getFaceFlower(w2);
 					
-					for (int l=0;l<p.getNum(w1);l++){
+					for (int l=0;l<p.countFaces(w1);l++){
 						int f1=faceFlower1[l];
 						int k1=asp[f1].vertIndex(w1);
 						ratio=asp[f].labels[k]/asp[f1].labels[k1];
@@ -1418,7 +1418,7 @@ public class AffinePack extends PackExtender {
 						}
 					}
 					
-					for (int l=0;l<p.getNum(w2);l++){
+					for (int l=0;l<p.countFaces(w2);l++){
 						int f2=faceFlower2[l];
 						int k2=asp[f2].vertIndex(w2);
 						ratio=asp[f].labels[k]/asp[f2].labels[k2];
@@ -1476,7 +1476,7 @@ public class AffinePack extends PackExtender {
 			for (int j=0; j<3; j++){
 				
 				w=p.faces[f].vert[j];
-				k=p.getNum(w);
+				k=p.countFaces(w);
 				
 				if (!p.isBdry(w)){
 					
@@ -1546,7 +1546,7 @@ public class AffinePack extends PackExtender {
 		
 		// count interior edges
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.getNum(v);j++) {
+			for (int j=0;j<p.countFaces(v);j++) {
 				int w=p.kData[v].flower[j];
 				if ((!p.isBdry(v) || !p.isBdry(w)) && w>v){
 					num++;
@@ -1560,7 +1560,7 @@ public class AffinePack extends PackExtender {
 		int C=1;
 		
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.getNum(v);j++) {
+			for (int j=0;j<p.countFaces(v);j++) {
 				int w=p.kData[v].flower[j];
 				if ((!p.isBdry(v) || !p.isBdry(w)) && w>v){
 					e[C]=v;
@@ -1638,7 +1638,7 @@ public class AffinePack extends PackExtender {
 		
 		// compute initial SC error
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.getNum(v);j++) {
+			for (int j=0;j<p.countFaces(v);j++) {
 				int w=p.kData[v].flower[j];
 				if (w>v) {
 					double prd=Math.log(Math.abs(edgeRatioError(p,new EdgeSimple(v,w),aspts)));
@@ -1649,7 +1649,7 @@ public class AffinePack extends PackExtender {
 		
 		//set cutoff value
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.getNum(v);j++) {
+			for (int j=0;j<p.countFaces(v);j++) {
 				int w=p.kData[v].flower[j];
 				if ((!p.isBdry(v) || !p.isBdry(w)) && w>v){
 					num++;
@@ -1667,7 +1667,7 @@ public class AffinePack extends PackExtender {
 		int r = (int)(Math.floor(1+n*rand.nextDouble()));
 		
 		// choose random edge
-		int m = p.getNum(r);
+		int m = p.countFaces(r);
 		int s = (int)(Math.floor(m*rand.nextDouble()));
 		
 		int w=p.kData[r].flower[s];
@@ -1780,7 +1780,7 @@ public class AffinePack extends PackExtender {
 		// find opposite faces
 		int oppF1, oppF2; // index of faces across opposite sides
 		int k=w2v+1;
-		if (k<=p.getNum(w)-1)
+		if (k<=p.countFaces(w)-1)
 			oppF1=p.getFaceFlower(w,k);
 		else {
 			if (p.isBdry(w))
@@ -1788,7 +1788,7 @@ public class AffinePack extends PackExtender {
 			else oppF1=p.getFaceFlower(w,0);
 		}
 		k=v2w+1;
-		if (k<=p.getNum(v)-1)
+		if (k<=p.countFaces(v)-1)
 			oppF2=p.getFaceFlower(v,k);
 		else {
 			if (p.isBdry(v))
@@ -1804,7 +1804,7 @@ public class AffinePack extends PackExtender {
 			if (p.isBdry(v))
 				nearF1=-1;
 			else {
-				int num=p.getNum(v);
+				int num=p.countFaces(v);
 				nearF1=p.getFaceFlower(v,(v2w+num-2)%num);
 			}
 		}
@@ -1814,7 +1814,7 @@ public class AffinePack extends PackExtender {
 			if (p.isBdry(w))
 				nearF2=-1;
 			else {
-				int num=p.getNum(w);
+				int num=p.countFaces(w);
 				nearF2=p.getFaceFlower(w,(w2v+num-2)%num);
 			}
 		}
@@ -2190,7 +2190,7 @@ public class AffinePack extends PackExtender {
 			return 1.0;
 		double rtio=1.0;
 		int[] faceFlower=p.getFaceFlower(v);
-		for (int j=0;j<p.getNum(v);j++) {
+		for (int j=0;j<p.countFaces(v);j++) {
 			int ff=faceFlower[j];
 			int k=asp[ff].vertIndex(v);
 			rtio *= asp[ff].sides[(k+2)%3]; // left sidelength
@@ -2210,7 +2210,7 @@ public class AffinePack extends PackExtender {
 		double maxwe=0.0;
 		EdgeSimple maxES=null;
 		for (int v=1;v<=packData.nodeCount;v++) {
-			for (int j=0;j<=packData.getNum(v);j++) {
+			for (int j=0;j<=packData.countFaces(v);j++) {
 				int w=packData.kData[v].flower[j];
 				if ((!packData.isBdry(v) || !packData.isBdry(w)) && w>v) {
 					double ere=Math.abs(Math.log(edgeRatioError(packData,new EdgeSimple(v,w),aspects)));
@@ -3156,7 +3156,7 @@ public class AffinePack extends PackExtender {
 				}
 				
 				// find sum[|Log(t.t')|]^2 for interior edges
-				for (int j=0;j<packData.getNum(v);j++) {
+				for (int j=0;j<packData.countFaces(v);j++) {
 					int w=packData.kData[v].flower[j];
 					// if w>v and edge is interior
 					if (w>v) {
@@ -3419,7 +3419,7 @@ public class AffinePack extends PackExtender {
 			// store data for qualifying edges in vector
 			Vector<Double> edata=new Vector<Double>();
 			for (int v=1;v<=packData.nodeCount;v++) {
-				int num=packData.getNum(v)+packData.getBdryFlag(v);
+				int num=packData.countFaces(v)+packData.getBdryFlag(v);
 				for (int j=0;j<num;j++) {
 					int w=packData.kData[v].flower[j];
 					if (w>v) {
@@ -3434,7 +3434,7 @@ public class AffinePack extends PackExtender {
 			// draw (same order)
 			int spot=0;
 			for (int v=1;v<=packData.nodeCount;v++) {
-				int num=packData.getNum(v)+packData.getBdryFlag(v);
+				int num=packData.countFaces(v)+packData.getBdryFlag(v);
 				for (int j=0;j<num;j++) {
 					int w=packData.kData[v].flower[j];
 					if (w>v) {
@@ -3658,7 +3658,7 @@ public class AffinePack extends PackExtender {
 			
 			packData.setCenter(v,NewCenter(packData,aspects,v));
 			int[] faceFlower=packData.getFaceFlower(v);
-			for (int j=0;j<packData.getNum(v);j++){
+			for (int j=0;j<packData.countFaces(v);j++){
 				int f=faceFlower[j];
 				w=aspects[f].vertIndex(v);
 				aspects[f].setCenter(NewCenter(packData,aspects,v),w);
@@ -3685,7 +3685,7 @@ public class AffinePack extends PackExtender {
 			
 			packData.setCenter(v,NewCenter(packData,aspects,v));
 			int[] faceFlower=packData.getFaceFlower(v);
-			for (int j=0;j<packData.getNum(v);j++){
+			for (int j=0;j<packData.countFaces(v);j++){
 				int f=faceFlower[j];
 				w=aspects[f].vertIndex(v);
 				aspects[f].setCenter(NewCenter(packData,aspects,v),w);

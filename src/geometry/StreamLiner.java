@@ -219,7 +219,7 @@ public class StreamLiner {
 			if (basePack.isBdry(v))
 				return null;
 			
-			int num=basePack.getNum(v);
+			int num=basePack.countFaces(v);
 			int[] flower=basePack.getFlower(v);
 			Complex []edgevec=new Complex[num+1];
 			for (int j=0;j<num;j++) {
@@ -306,7 +306,7 @@ public class StreamLiner {
 
 			// inpt.face is on the left of vw_edge
 			int vw_indx=basePack.nghb(v, w);
-			int num=basePack.getNum(v);
+			int num=basePack.countFaces(v);
 			int face_l=inpt.face;
 			int face_r=basePack.getFaceFlower(v,(vw_indx-1+num)%num);
 			Complex vw_edge=basePack.getCenter(w).minus(basePack.getCenter(v));

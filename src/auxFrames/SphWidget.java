@@ -267,7 +267,7 @@ public class SphWidget extends JFrame implements ActionListener {
 		double accum=0.0;
 		if (packData.getBdryFlag(vert)==0) 
 			accum=packData.getCurv(vert)-packData.getAim(vert);
-		for (int j=0;j<packData.getNum(vert);j++) {
+		for (int j=0;j<packData.countFaces(vert);j++) {
 			int k=packData.kData[vert].flower[j];
 			if (!packData.isBdry(k))
 				accum += Math.abs(packData.getCurv(k)-packData.getAim(k));
@@ -304,7 +304,7 @@ public class SphWidget extends JFrame implements ActionListener {
 		displayRad(vertnum);
 		displayAngSum(vertnum);
 		
-		for (int j=0;j<=packData.getNum(vertnum);j++) {
+		for (int j=0;j<=packData.countFaces(vertnum);j++) {
 			int v=packData.kData[vertnum].flower[j];
 			radBars[v].setBarGreen();
 			angsumBars[v].setBarGreen();
@@ -331,7 +331,7 @@ public class SphWidget extends JFrame implements ActionListener {
 				angsumBars[vert].setBarHeight(angsum);
 				radBars[vert].placePointer(SphericalMath.sph_rad_max(packData,vert));
 			}
-			int num=packData.getNum(vert);
+			int num=packData.countFaces(vert);
 			// update petals
 			for (int k=0;k<=num;k++) {
 				int v=packData.kData[vert].flower[k];

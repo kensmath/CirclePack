@@ -101,14 +101,14 @@ public class HexPaths {
 				return epath;
 			
 			// doubling back at degree 3 (self intersection)
-			if (p.getNum(w)==3 && (stopCon & 2)==2)
+			if (p.countFaces(w)==3 && (stopCon & 2)==2)
 				return epath;
 			
 			// find the next edge end vert
 			if (p.isBdry(w))
 				nextv=p.kData[w].flower[indx-3];
 			else 
-				nextv=p.kData[w].flower[(indx-3+p.getNum(w))%p.getNum(w)];
+				nextv=p.kData[w].flower[(indx-3+p.countFaces(w))%p.countFaces(w)];
 			
 			// if nextv is already on the path
 			if (p.kData[nextv].utilFlag!=0) {
@@ -124,7 +124,7 @@ public class HexPaths {
 					nidx=p.nghb(firstv,firstw);
 					boolean lineup=false;
 					if (!p.isBdry(firstv)) { // interior
-						if ((nidx+3)%p.getNum(firstv)==indx)
+						if ((nidx+3)%p.countFaces(firstv)==indx)
 							lineup=true;
 					}
 					else { // bdry

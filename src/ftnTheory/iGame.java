@@ -266,7 +266,7 @@ public class iGame extends PackExtender {
 				Oops("not valid for removal: "+ex.getMessage());
 			}
 			if (v<=0 || v>packData.nodeCount || !packData.isBdry(v) ||
-					packData.getNum(v)!=3)
+					packData.countFaces(v)!=3)
 				Oops("invalid choice");
 			cpCommand("rm_cir "+v);
 			return 1;

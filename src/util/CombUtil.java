@@ -20,7 +20,7 @@ public class CombUtil {
 	public int nghb(PackData p,int v,int w) {
 		if (v<1 || v>p.nodeCount || w<1 || w>p.nodeCount) 
 			return -1;
-		for (int j=0;j<=p.getNum(v);j++)
+		for (int j=0;j<=p.countFaces(v);j++)
 			if (p.kData[v].flower[j]==w) return j;
 		return -1;
 	}

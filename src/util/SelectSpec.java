@@ -146,7 +146,7 @@ public class SelectSpec {
 			}
 			case 'd': // degree for circle; edge count for tile
 			{
-				uP.value = (double) (packData.getNum(node) + packData.getBdryFlag(node));
+				uP.value = (double) (packData.countFaces(node) + packData.getBdryFlag(node));
 				uP.rtnFlag = 1;
 				return uP;
 			}

@@ -978,7 +978,7 @@ public class GenBranching extends PackExtender {
 		if (firstFace<=0 || packData.firstFace>packData.faceCount) {
 			int farV=packData.alpha;
 			// try to use some face containing 'alpha'
-			for (int kk=0;(kk<packData.getNum(farV) && firstFace<0);kk++) {
+			for (int kk=0;(kk<packData.countFaces(farV) && firstFace<0);kk++) {
 				int f=packData.getFaceFlower(farV,kk);
 				if (faceOK(f))
 					firstFace=f;
@@ -989,7 +989,7 @@ public class GenBranching extends PackExtender {
 				NodeLink sa=new NodeLink(packData,"P b");
 				farV=packData.gen_mark(sa,-1,false);
 				if (farV>0) {
-					for (int kk=0;(kk<packData.getNum(farV) && firstFace<0);kk++) {
+					for (int kk=0;(kk<packData.countFaces(farV) && firstFace<0);kk++) {
 						int f=packData.getFaceFlower(farV,kk);
 						if (faceOK(f))
 							firstFace=f;
@@ -1493,7 +1493,7 @@ public class GenBranching extends PackExtender {
 		}
 
 		// Key variables are R, r, and shadow.
-		int num=refPack.getNum(v);
+		int num=refPack.countFaces(v);
 		double R=refPack.getRadius(v);
 		Complex cent=refPack.getCenter(v);
 		Complex cent2pt=pt.minus(cent);
@@ -1697,7 +1697,7 @@ public class GenBranching extends PackExtender {
 		}
 
 		// okay, we're in a circle
-		int num=refPack.getNum(v);
+		int num=refPack.countFaces(v);
 		
 		// can't yet branch a boundary circle 
 		if (refPack.isBdry(v)) {

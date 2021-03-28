@@ -714,7 +714,7 @@ public class Graphene extends PackExtender {
 		int[] fflower=packData.getFaceFlower(v);
 		double bondE=0.0;
 		double angE=0.0;
-		for (int j=0;j<packData.getNum(v);j++) {
+		for (int j=0;j<packData.countFaces(v);j++) {
 			CarbonEnergy cE=carbonEnergies.get(fflower[j]);
 			if (j>0 || !packData.isBdry(v)) {// skip first for bdry
 				bondE+=cE.getBondEnergy(v)/2.0;
@@ -882,7 +882,7 @@ public class Graphene extends PackExtender {
 	public double []energyGrad() {
 		double []grad=new double[packData.nodeCount+1];
 		for (int vert=1;vert<=packData.nodeCount;vert++) {
-			int num=packData.getNum(vert);
+			int num=packData.countFaces(vert);
 			double r=packData.getRadius(vert);
 			boolean bdryvert=packData.isBdry(vert);
 			
@@ -978,7 +978,7 @@ public class Graphene extends PackExtender {
 		}
 		case 2: // close flower with edge, choose right as pole
 		{
-			int u=packData.kData[v].flower[packData.getNum(v)];
+			int u=packData.kData[v].flower[packData.countFaces(v)];
 			cpCommand("enclose 0 "+v);
 			newIndx=u;
 			break;
@@ -986,7 +986,7 @@ public class Graphene extends PackExtender {
 		case 3: // enclose with 1 new circle
 		{
 			int lft=packData.kData[v].flower[0];
-			int rght=packData.kData[v].flower[packData.getNum(v)];
+			int rght=packData.kData[v].flower[packData.countFaces(v)];
 			cpCommand("enclose 1 "+v);
 			cpCommand("enclose 0 "+lft);
 			cpCommand("enclose 0 "+rght);
@@ -1035,9 +1035,9 @@ public class Graphene extends PackExtender {
 			// need better control on the edges of the slits
 			count += cpCommand("set_aim 1.75 "+southpole+" "+northpole);
 			int su=packData.kData[southpole].flower[0];
-			int sd=packData.kData[southpole].flower[packData.getNum(southpole)];
+			int sd=packData.kData[southpole].flower[packData.countFaces(southpole)];
 			int nu=packData.kData[northpole].flower[0];
-			int nd=packData.kData[northpole].flower[packData.getNum(northpole)];
+			int nd=packData.kData[northpole].flower[packData.countFaces(northpole)];
 			count += cpCommand("set_aim 1.0 "+su+" "+sd+" "+nu+" "+nd);
 			
 			// repack, layout, color by degree
@@ -1128,10 +1128,10 @@ public class Graphene extends PackExtender {
 
   	  	// now attach along 2 edges, <v, alpha, w> to <rw, alpha,rv>,
   	  	int v=leftPack.kData[1].flower[0];
-  	  	int w=leftPack.kData[1].flower[leftPack.getNum(1)];
+  	  	int w=leftPack.kData[1].flower[leftPack.countFaces(1)];
   	  	
   	  	// may need this in future
-  	  	int rw=rightPack.kData[1].flower[rightPack.getNum(1)];
+  	  	int rw=rightPack.kData[1].flower[rightPack.countFaces(1)];
   	  	
   	  	stitchBase=leftPack.copyPackTo();
   	  	

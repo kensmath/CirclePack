@@ -209,7 +209,7 @@ public class PackLite {
 			int v=iV.next();
 			util[v]=-v; // negative if in 'intV'
 			// mark nghbs of 'intV'
-			for (int j=0;j<(packData.getNum(v)+packData.getBdryFlag(v));j++) {
+			for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) {
 				int k=packData.kData[v].flower[j];
 				if (util[k]==0)
 					util[k]=k; // positive (at least temporarily)
@@ -402,7 +402,7 @@ public class PackLite {
 		else { 
 			for (int b=1;b<=p.getBdryCompCount();b++) {
 				int w=p.bdryStarts[b];
-				int stopw=p.kData[w].flower[p.getNum(w)]; // upstream nghb
+				int stopw=p.kData[w].flower[p.countFaces(w)]; // upstream nghb
 				if (util[w]>0) {
 					newIndices[w]=newIndx;
 					p_Indices[newIndx++]=w;
@@ -431,7 +431,7 @@ public class PackLite {
 		double aim=-1.0;
 		for (int n=1;n<=vertCount;n++) {
 			int v=p_Indices[n];
-			flowerCount += p.getNum(v)+3;
+			flowerCount += p.countFaces(v)+3;
 			
 			// is this a variable vertex
 			if ((aim=p.getAim(v))>=0.0) {
@@ -446,7 +446,7 @@ public class PackLite {
 
 			// does it have new inversive distances? (only pairs (v,w) with w>v) 
 			if (p.overlapStatus && p.kData[v].invDist!=null) {
-				for (int jj=0;jj<(p.getNum(v)+p.getBdryFlag(v));jj++) {
+				for (int jj=0;jj<(p.countFaces(v)+p.getBdryFlag(v));jj++) {
 					int w=p.kData[v].flower[jj];
 					if (w>v && p.getInvDist(v,p.kData[v].flower[jj])!=1.0)
 						invDistCount++;
@@ -479,7 +479,7 @@ public class PackLite {
 
 			// does it have new inversive distances? (only pairs (v,w) with w>v) 
 			if (invDistCount>0 && p.overlapStatus && p.kData[v].invDist!=null) {
-				for (int jj=0;jj<(p.getNum(v)+p.getBdryFlag(v));jj++) {
+				for (int jj=0;jj<(p.countFaces(v)+p.getBdryFlag(v));jj++) {
 					int w=p.kData[v].flower[jj];
 					if (w>v && p.getInvDist(v,p.kData[v].flower[jj])!=1.0) {
 						invDistLink.add(new EdgeSimple(v,w));
@@ -496,11 +496,11 @@ public class PackLite {
 		vNum=new int[vertCount+1];
 		for (int n=1;n<=vertCount;n++) {
 			int v=p_Indices[n];
-			vNum[n]=p.getNum(v);
+			vNum[n]=p.countFaces(v);
 			flowers[n]=new int[vNum[n]+1];
 			flowerHeads[tick++]=n;
 			flowerHeads[tick++]=vNum[n];
-			for (int j=0;j<=p.getNum(v);j++) {
+			for (int j=0;j<=p.countFaces(v);j++) {
 				flowers[n][j]=flowerHeads[tick++]=newIndices[p.kData[v].flower[j]];
 			}
 		}

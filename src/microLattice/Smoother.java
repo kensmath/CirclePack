@@ -209,7 +209,7 @@ public class Smoother {
 		Complex F=new Complex(0.0);
 		double radF=0.0;
 		int N=0;
-		int num=p.getNum(v)+p.getBdryFlag(v);
+		int num=p.countFaces(v)+p.getBdryFlag(v);
 		int[] flower=p.kData[v].flower;
 		for (int j=0;j<num;j++) {
 			int w=flower[j];

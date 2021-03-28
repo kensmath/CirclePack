@@ -105,7 +105,7 @@ public class TileColoring extends PackExtender {
 	                }
 	                
 	                // set type
-	                newTile.type=packData.getNum(newTile.vert)-2;
+	                newTile.type=packData.countFaces(newTile.vert)-2;
 	                
 	                String lineage=tok.nextToken();
 	                depth=lineage.length();
@@ -194,7 +194,7 @@ public class TileColoring extends PackExtender {
 				for (int i=0;i<tiles.size();i++) {
 					TileInfo td=tiles.get(i);
 					int v=td.vert;
-					int num=packData.getNum(v);
+					int num=packData.countFaces(v);
 					int N=num+2*packData.getBdryFlag(v);
 					double []crnr=new double[2*N];
 					for (int j=0;j<num;j++) {
@@ -239,7 +239,7 @@ public class TileColoring extends PackExtender {
 				for (int i=0;i<tiles.size();i++) {
 					TileInfo td=tiles.get(i);
 					int v=td.vert;
-					int num=packData.getNum(v);
+					int num=packData.countFaces(v);
 					int N=num+2*packData.getBdryFlag(v);
 					Complex []Z=new Complex[N];
 					for (int j=0;j<num;j++)

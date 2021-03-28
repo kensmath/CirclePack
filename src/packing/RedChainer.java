@@ -96,7 +96,7 @@ public class RedChainer {
 	  for (int i=1;i<=p.nodeCount;i++) {
 	      if (p.kData[i].utilFlag==-1) {
 		  k=0;
-		  for (int j=0;j<=p.getNum(i);j++) 
+		  for (int j=0;j<=p.countFaces(i);j++) 
 		    k+= p.kData[p.kData[i].flower[j]].utilFlag;
 		  if (k==0) {
 		      p.kData[i].utilFlag=0;
@@ -193,7 +193,7 @@ public class RedChainer {
 	      cgen=gen_numbers[cvert];
 	      lifeline = new EdgeLink(p);
 	      do {
-		  num=p.getNum(cvert);
+		  num=p.countFaces(cvert);
 		  for (int j=0;j<=num;j++) {
 		      k=p.kData[cvert].flower[j];
 		      if (gen_numbers[k]<cgen) {
@@ -365,7 +365,7 @@ public class RedChainer {
 		      if (EdgeLink.ck_in_elist(lifeline,new_vert,up_new_vert)
 		    		  || EdgeLink.ck_in_elist(lifeline,focus_vert,down_vert))
 		    	  throw new skip_to_end(); // first or last face crosses lifeline 
-		      num=p.getNum(focus_vert);
+		      num=p.countFaces(focus_vert);
 		      if (p.isBdry(focus_vert)) { // bdry case 
 			  if (new_vert==focus_vert && ((dum=p.nghb(focus_vert,up_new_vert))<0 
 					  || dum>down_indx))
@@ -412,7 +412,7 @@ public class RedChainer {
 		    	  up_vert=p.kData[focus_vert].flower[up_indx]; 
 		    	  if(upstream_red(up_vert,up_red)==rtrace) 
 			    	  throw new skip_to_end();
-		    	  num=p.getNum(focus_vert);
+		    	  num=p.countFaces(focus_vert);
 		    	  int []ans=new int[2];
 		    	  fan=build_fan(focus_vert,indx,down_indx,ans);
 		    	  bflag=ans[0];
@@ -696,7 +696,7 @@ public class RedChainer {
 	  int num;
 	  
 	  ans[0]=ans[1]=0;
-	  num=p.getNum(vert);
+	  num=p.countFaces(vert);
 	  if (p.isBdry(vert) && indx1>indx2) { // bdry, wrong order 
 	      ans[0]=1;
 	      return null;
@@ -888,7 +888,7 @@ public class RedChainer {
 	      backfan=btrace=new RedList(p);
 	      btrace.face=f2;
 	      btrace.center=new Complex(0.0);
-	      num=p.getNum(common);
+	      num=p.countFaces(common);
 	      while (u!=u1) {
 	        k=(p.nghb(common,u)+1)%num;
 	        nu=p.kData[common].flower[k];
@@ -1366,7 +1366,7 @@ public class RedChainer {
 		   * red chain as a closed list. Also, 'rwbFlag' > 0 should count 
 		   * times a face is in the red chain, while < 0 means "white", 
 		   * i.e., inside the red chain. */
-		  num=p.getNum(seed);
+		  num=p.countFaces(seed);
 		  f=p.getFaceFlower(seed,0);
 		  red_chain=new RedList(p,f); // start fresh
 		  p.faces[f].rwbFlag=1;
@@ -1575,7 +1575,7 @@ public class RedChainer {
 		      /* Note: 'vert' is vertex that cface does NOT share
 		       * with its (downstream and upstream) redchain neighbor  
 		       */
-		      if ((num=p.getNum(vert)) > 1) { // any more faces?
+		      if ((num=p.countFaces(vert)) > 1) { // any more faces?
 		    	  // findex = flower index of first vertex in cface 
 		    	  findex=0;
 		    	  int[] faceFlower=p.getFaceFlower(vert);
@@ -1674,7 +1674,7 @@ public class RedChainer {
 		  if ((n=p.face_nghb(red_chain.next.face,cface))<0) 
 		      throw new RedListException();
 		  vert=p.faces[cface].vert[n];
-		  num=p.getNum(vert);
+		  num=p.countFaces(vert);
 		  findex=0;
 		  int[] faceFlower=p.getFaceFlower(vert);
 		  while (faceFlower[findex]!=cface && findex<(num-1)) 
@@ -1827,7 +1827,7 @@ public class RedChainer {
 			
 			if (rl.next.face==rl.prev.face) { // blue?
 				int v=p.faces[rl.face].vert[rl.vIndex]; // non-shared vert
-				if (p.getNum(v)==1) return true;
+				if (p.countFaces(v)==1) return true;
 			}
 			
 			if (vd==vu) return true; // rl.face is inside a fan of faces
@@ -1835,7 +1835,7 @@ public class RedChainer {
 					p.edge_isPoison(vd,vu))) 
 				return true;
 			int j=p.nghb(vd,vu);
-			if (p.isBdry(vd) && p.getNum(vd)==j)
+			if (p.isBdry(vd) && p.countFaces(vd)==j)
 				return true;
 			return false;
 		}

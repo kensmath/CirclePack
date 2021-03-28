@@ -50,16 +50,16 @@ public class TradBranchPt extends GenBranchPt {
 	public PackData createMyPack() {
 		
 		// build from a seed
-		PackData myPack=PackCreation.seed(packData.getNum(myIndex), packData.hes);
+		PackData myPack=PackCreation.seed(packData.countFaces(myIndex), packData.hes);
 		myPack.setAim(1,myAim);
 	
 		// set up vertexMap, 'bdryLink', transData, etc.
-		matchCount=packData.getNum(myIndex)+1; // petals plus center
+		matchCount=packData.countFaces(myIndex)+1; // petals plus center
 		vertexMap=new VertexMap();
 		bdryLink=new FaceLink(packData);
 		transData=new int[matchCount+1];
 		int[] faceFlower=packData.getFaceFlower(myIndex);
-		for (int j=0;j<packData.getNum(myIndex);j++) {
+		for (int j=0;j<packData.countFaces(myIndex);j++) {
 			int vv=packData.kData[myIndex].flower[j];
 			vertexMap.add(new EdgeSimple(j+2,vv));
 			transData[j+2]=vv;
@@ -208,7 +208,7 @@ public class TradBranchPt extends GenBranchPt {
 			myPackData.setCenter(i,new Complex(packData.getCenter(transData[i])));
 		for (int v=2;v<=matchCount;v++)
 			myPackData.kData[v].plotFlag=1;
-		int ans=myPackData.fancy_comp_center(1,0,0,myPackData.getNum(1),2,false,false,0.000001);
+		int ans=myPackData.fancy_comp_center(1,0,0,myPackData.countFaces(1),2,false,false,0.000001);
 		myPackData.kData[1].plotFlag=ans;
 		packData.setCenter(myIndex,new Complex(myPackData.getCenter(1)));
 		return ans;
@@ -223,7 +223,7 @@ public class TradBranchPt extends GenBranchPt {
 	public int setPoisonEdges() {
 		EdgeLink elink=new EdgeLink(packData);
 		int w=packData.kData[myIndex].flower[0];
-		for (int j=1;j<=packData.getNum(myIndex);j++) {
+		for (int j=1;j<=packData.countFaces(myIndex);j++) {
 			int k=packData.kData[myIndex].flower[j];
 			elink.add(new EdgeSimple(w,k));
 			elink.add(new EdgeSimple(myIndex,k));

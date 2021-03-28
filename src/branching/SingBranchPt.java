@@ -234,7 +234,7 @@ public class SingBranchPt extends GenBranchPt {
 		// set face drawing order: poison edges allow one face to get to 'newBranchSpot' 
 		myPack.firstFace=borderLink.get(0);
 		myPack.poisonEdges=new EdgeLink(myPack);
-		for (int j=1;j<myPack.getNum(newBrSpot);j++) {
+		for (int j=1;j<myPack.countFaces(newBrSpot);j++) {
 			int vj=myPack.kData[newBrSpot].flower[j];
 			int wj=myPack.kData[newBrSpot].flower[j+1];
 			myPack.poisonEdges.add(new EdgeSimple(vj,wj));

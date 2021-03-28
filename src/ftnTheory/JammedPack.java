@@ -92,11 +92,11 @@ public class JammedPack extends PackExtender {
 			if (homePack.getVertMark(v)==1) {
 				homePack.setVertMark(v,-1); // mark=-1 for original vertex
 			}
-			else if (homePack.getNum(v)>3) {   // only degree > 3
+			else if (homePack.countFaces(v)>3) {   // only degree > 3
 				istices[++tick]=v;
 				homePack.setVertMark(v,tick); // index of interstice
-				iFlowers[tick]=new int[homePack.getNum(v)+1];
-				for (int j=0;j<=homePack.getNum(v);j++)
+				iFlowers[tick]=new int[homePack.countFaces(v)+1];
+				for (int j=0;j<=homePack.countFaces(v);j++)
 					iFlowers[tick][j]=homePack.kData[v].flower[j];
 			}
 		}
@@ -121,7 +121,7 @@ public class JammedPack extends PackExtender {
 				while(elst.hasNext()) {
 					EdgeSimple edge=elst.next();
 					// neither should be degree 3
-					if (packData.getNum(edge.v)==3 || packData.getNum(edge.w)==3)
+					if (packData.countFaces(edge.v)==3 || packData.countFaces(edge.w)==3)
 						return count;
 					// both can't be original
 					if ((edge.v<=homePack.nodeCount && homePack.getVertMark(edge.v)<0) &&
@@ -268,7 +268,7 @@ public class JammedPack extends PackExtender {
 			// v and w must share one (and only one) paver
 			int bary=0;
 			int []vflower=homePack.kData[v].flower;
-			for (int j=0;j<homePack.getNum(v);j++) {
+			for (int j=0;j<homePack.countFaces(v);j++) {
 				if (homePack.getVertMark(vflower[j])>=0) { //
 					int b=vflower[j];
 					if (homePack.nghb(w,b)>=0) {
@@ -339,13 +339,13 @@ public class JammedPack extends PackExtender {
 				// we want every network node to have at least three network edges
 				int vmark=0;
 				int[] flower=packData.getFlower(v);
-				int num=packData.getNum(v);
+				int num=packData.countFaces(v);
 				for (int j=0;j<num;j++)
 					if (homePack.getVertMark(flower[j])<0)
 							vmark++;
 				int wmark=0;
 				flower=packData.getFlower(w);
-				num=packData.getNum(w);
+				num=packData.countFaces(w);
 				for (int j=0;j<num;j++)
 					if (homePack.getVertMark(flower[j])<0) // original vert?
 							wmark++;
@@ -448,7 +448,7 @@ public class JammedPack extends PackExtender {
 		PackData p=packData; // to save typing
 
 		// some petals for 'bary' will come from those of 'M'
-		int numM=p.getNum(M);
+		int numM=p.countFaces(M);
 		int M2v=packData.nghb(M,v);
 		int M2w=packData.nghb(M,w);
 		int Mcount=(M2w-M2v+numM)%numM;
@@ -459,7 +459,7 @@ public class JammedPack extends PackExtender {
 			Mhalf[j]=p.kData[M].flower[(M2v+j)%numM];
 
 		// rest from flower of 'bary', cclw [w, v) 
-		int numbary=p.getNum(bary);
+		int numbary=p.countFaces(bary);
 		int b2v=packData.nghb(bary,v);
 		int b2w=packData.nghb(bary,w);
 		int bcount=(b2v-b2w+numbary)%numbary;
@@ -476,14 +476,14 @@ public class JammedPack extends PackExtender {
 		// replace 'M' by 'bary' in petal flowers of petals (v,w)
 		for (int j=1;j<Mcount;j++) {
 			int ptl=Mhalf[j];
-			int ptlnum=p.getNum(ptl);
+			int ptlnum=p.countFaces(ptl);
 			for (int pj=0;pj<=ptlnum;pj++) 
 				if (p.kData[ptl].flower[pj]==M)
 					p.kData[ptl].flower[pj]=bary;
 		}
 		
 		// fix v flower; remove 'M' and 'w'
-		int numv=p.getNum(v);
+		int numv=p.countFaces(v);
 		int []vflower=p.kData[v].flower;
 		NodeLink newflower=new NodeLink(packData);
 		for (int j=0;j<numv;j++) {
@@ -501,7 +501,7 @@ public class JammedPack extends PackExtender {
 		packData.kData[v].num=tick;
 		
 		// fix w flower; remove 'M' and 'v'
-		int numw=p.getNum(w);
+		int numw=p.countFaces(w);
 		int []wflower=p.kData[w].flower;
 		newflower=new NodeLink(packData);
 		for (int j=0;j<numw;j++) {
@@ -541,7 +541,7 @@ public class JammedPack extends PackExtender {
 		int b2w=-1;
 		if ((b2v=packData.nghb(b, v))<0 || (b2w=packData.nghb(b, w))<0)
 			return 0;
-		int num=packData.getNum(b);
+		int num=packData.countFaces(b);
 		int []bflower=packData.kData[b].flower;
 		
 		// make sure there is space for new vertex
@@ -568,14 +568,14 @@ public class JammedPack extends PackExtender {
 		int vwdiff=(b2w-b2v-1+num)%num;
 		for (int j=0;j<vwdiff;j++) {
 			int u=bflower[(b2v+j+1)%num];
-			int numu=packData.getNum(u);
+			int numu=packData.countFaces(u);
 			for (int jj=0;jj<=numu;jj++)
 				if (packData.kData[u].flower[jj]==b)
 					packData.kData[u].flower[jj]=M;
 		}
 		
 		// fix 'v'; add 'M' and 'w'
-		int numv=packData.getNum(v);
+		int numv=packData.countFaces(v);
 		int v2b=packData.nghb(v,b);
 		int []vflower=new int[numv+2+1];
 		if (v2b==0) { // insert at end; 'v' must be interior
@@ -597,7 +597,7 @@ public class JammedPack extends PackExtender {
 		packData.kData[v].num=numv+2;
 
 		// fix 'w'; add 'M' and 'v'
-		int numw=packData.getNum(w);
+		int numw=packData.countFaces(w);
 		int w2b=packData.nghb(w,b);
 		int []wflower=new int[numw+2+1];
 		for (int jj=0;jj<=w2b;jj++)

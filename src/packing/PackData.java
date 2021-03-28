@@ -27,6 +27,7 @@ import complex.MathComplex;
 import dcel.CombDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
+import dcel.RedHEdge;
 import dcel.VData;
 import dcel.Vertex;
 import deBugging.DebugHelp;
@@ -280,14 +281,14 @@ public class PackData{
      * @return int, vertCount on success, 0 on failure
      */
     public int attachDCEL(PackDCEL pdcel) {
+    	if (pdcel.vertCount>nodeCount)
+    		alloc_pack_space(pdcel.vertCount+10,true);
+    	
     	packDCEL=pdcel;
     	pdcel.p=this;
     	int origNodeCount=nodeCount;
 		
     	// set some counts
-    	if (pdcel.vertCount>nodeCount)
-    		alloc_pack_space(pdcel.vertCount,true);
-    	
 		nodeCount=pdcel.vertCount;
 		faceCount=pdcel.faceCount;
 		setBdryCompCount(pdcel.idealFaceCount);
@@ -295,10 +296,18 @@ public class PackData{
 		genus=(2-euler-pdcel.idealFaceCount)/2;
 		intrinsicGeom=PackData.getIntrinsicGeom(this);
     	fileName=StringUtil.dc2name(fileName);
+    	
+		// may need to expand 'vertices' to sizeLimit
+		if (pdcel.vertices.length<sizeLimit+1) {
+			Vertex[] new_vs=new Vertex[sizeLimit+1];
+			for (int v=1;v<=pdcel.vertCount;v++)
+				new_vs[v]=pdcel.vertices[v];
+			pdcel.vertices=new_vs;
+		}
 
     	// no existing dcel structure? get data from 'rData'
     	if (vData==null) {
-    		vData=new VData[nodeCount+1];
+    		vData=new VData[sizeLimit+1];
     		for (int v=1;v<=nodeCount;v++) 
     			vData[v]=new VData();
     		for (int v=1;v<=nodeCount;v++) {
@@ -322,7 +331,7 @@ public class PackData{
     			}
     		}
 
-        	// set up the arrays of indices
+        	// preassign arrays of indices
     		for (int v=1;v<=nodeCount;v++)
     			pdcel.setVDataIndices(v);
     		    		
@@ -342,7 +351,7 @@ public class PackData{
 			oldVData[ov]=vData[ov];
 		
 		// allocate new 'vData'
-		vData=new VData[nodeCount+1];
+		vData=new VData[sizeLimit+1];
 		for (int v=1;v<=nodeCount;v++) 
 			vData[v]=new VData();
 		
@@ -375,6 +384,14 @@ public class PackData{
    					}
    				} catch(Exception ex) {}
 				pdcel.setVertData(he, new CircleSimple(z,rad));
+   			}
+   			// else, for bdry get red edge data
+   			else {
+   				RedHEdge redege=vert.halfedge.myRedEdge;
+   				if (redege!=null) {
+   					vData[oldv].center=redege.getCenter();
+   					vData[oldv].rad=redege.getRadius();
+   				}
    			}
 			pdcel.setVDataIndices(v);
     	}
@@ -1188,13 +1205,13 @@ public class PackData{
                 				int v2=Integer.parseInt((String)loctok.nextToken());
                 				int flg=Integer.parseInt((String)loctok.nextToken());
                 				int[] faceFlower=getFaceFlower(v);
-                				for (int j=0;j<getNum(v);j++) {
+                				for (int j=0;j<countFaces(v);j++) {
                 					int k=faceFlower[j];
                 					int ind;
                 					if ( ((ind=check_face(k,v,v1)) >= 0 && faces[k].vert[(ind+2)%3]==v2)
                          				 || ((ind=check_face(k,v1,v)) >= 0 && faces[k].vert[(ind+2)%3]==v2) ) {
                 						faces[k].plotFlag=flg;
-                						j=getNum(v); // to stop loop 
+                						j=countFaces(v); // to stop loop 
                 					}
                 				}
                 				} catch(Exception ex) {state=PackState.INITIAL;}
@@ -1276,7 +1293,7 @@ public class PackData{
                 			while (state==PackState.SCHWARZIAN 
                 					&& loctok.hasMoreTokens() && v<=nodeCount) {
                 				try {
-                					int num=getNum(v);
+                					int num=countFaces(v);
                 					kData[v].schwarzian=new double[num+1];
                 					if (loctok.countTokens()!=num+1)
                 						throw new InOutException("");
@@ -1395,13 +1412,13 @@ public class PackData{
                 				int v2=Integer.parseInt((String)loctok.nextToken());
                 				int colindx=Integer.parseInt((String)loctok.nextToken());
                 				int[] faceFlower=getFaceFlower(v);
-                				for (int j=0;j<getNum(v);j++) {
+                				for (int j=0;j<countFaces(v);j++) {
                 					int k=faceFlower[j];
                 					int ind;
                 					if ( ((ind=check_face(k,v,v1)) >= 0 && faces[k].vert[(ind+2)%3]==v2)
                          				 || ((ind=check_face(k,v1,v)) >= 0 && faces[k].vert[(ind+2)%3]==v2) ) {
                 						setFaceColor(k,ColorUtil.cloneMe(ColorUtil.coLor(colindx)));
-                						j=getNum(v); // to stop loop 
+                						j=countFaces(v); // to stop loop 
                 					}
                 				}
                 				} catch(Exception ex) {state=PackState.INITIAL;}
@@ -2104,23 +2121,28 @@ public class PackData{
     /**
      * Enlarge (or reduce) pack data space, increments of 1000.
      * Free old space, allocate space for KData, RData, VData
-     * (and possibly 'packDCEL.vertices'.
+     * (and possibly expand 'packDCEL.vertices')
      * Size is stored in 'sizeLimit'.
-     * @param new_size int
+     * @param new_size int (often currend 'sizeLimit')
      * @param keepit boolean: true, adjust size of current pack,
      *   else a new pack.
      * @return 1
      */
     public int alloc_pack_space(int new_size,boolean keepit) {
         int size=((int)((new_size-1)/1000))*1000+1000;
-        if (keepit && size==sizeLimit) { /* no action needed */
+        if (keepit && size==sizeLimit) { // almost no action needed 
+        	if (packDCEL!=null && packDCEL.vertices.length<sizeLimit+1) {
+        		Vertex[] new_vs=new Vertex[sizeLimit+1];
+        		for (int j=1;j<=packDCEL.vertCount;j++) 
+        			new_vs[j]=packDCEL.vertices[j];
+        		packDCEL.vertices=new_vs;
+        	}
             return 1; 
         }
         sizeLimit=size; // to keep track of space already allocated
         KData []newK = new KData[sizeLimit+1];
         RData []newR = new RData[sizeLimit+1];
         VData []newV = new VData[sizeLimit+1];
-        	
         
         if (keepit) { // transfer the old data, allocate expansion space
             for (int v=1;v<=nodeCount;v++) {
@@ -2214,10 +2236,10 @@ public class PackData{
     		return 1;
         overlapStatus=true;
         for (int v=1;v<=nodeCount;v++) {
-        	kData[v].invDist=new double[getNum(v)+1];
+        	kData[v].invDist=new double[countFaces(v)+1];
         }
         for (int v=1;v<=nodeCount;v++) {
-        	for (int i=0;i<=getNum(v);i++)
+        	for (int i=0;i<=countFaces(v);i++)
         		set_single_invDist(v,kData[v].flower[i],1.0);
         }
         return 1;
@@ -2230,7 +2252,7 @@ public class PackData{
     public void chooseAlpha(){
         // is the current alpha okay?
         if (alpha>0 && alpha<= nodeCount 
-        		&& kData[alpha].flower[0]==kData[alpha].flower[getNum(alpha)]) {
+        		&& kData[alpha].flower[0]==kData[alpha].flower[countFaces(alpha)]) {
             if (alpha==gamma){
                 gamma=kData[alpha].flower[0];
             }
@@ -2241,7 +2263,7 @@ public class PackData{
         int i=0;
         do{
             i++;
-            if (kData[i].flower[0]==kData[i].flower[getNum(i)]){
+            if (kData[i].flower[0]==kData[i].flower[countFaces(i)]){
                 flag=1;
             }
         } while (i<nodeCount && flag==0);
@@ -2413,11 +2435,26 @@ public class PackData{
 		}
 	}
 	
-	// get number of faces at 'v'
-	public int getNum(int v) {
+	/**
+	 * get number of faces at 'v'
+	 * @param v int
+	 * @return int (usual meaning of 'num')
+	 */
+	public int countFaces(int v) {
 		if (packDCEL!=null)
 			return vData[v].num;
 		return kData[v].num;
+	}
+	
+	/**
+	 * get number of petals at 'v'
+	 * @param v int
+	 * @return int (same as 'countFaces' for interior 'v')
+	 */
+	public int countPetals(int v) {
+		if (packDCEL!=null)
+			return packDCEL.countPetals(v);
+		return kData[v].num+kData[v].bdryFlag;
 	}
 	
 	/**
@@ -2540,7 +2577,7 @@ public class PackData{
 			return vert.halfedge.twin.next.twin.origin.vertIndx;
 		}
 		// traditional packing
-		return kData[v].flower[getNum(v)];
+		return kData[v].flower[countFaces(v)];
 	}
 	
 	/** the first cclw petal. If not bdry, this is
@@ -2725,7 +2762,9 @@ public class PackData{
 	 */
 	public void setCircleColor(int v,Color color) {
 		if (packDCEL!=null) {
-			vData[v].setColor(color);
+			try {
+				vData[v].setColor(color);
+			} catch(Exception ex) {}
 		}
 		else
 			kData[v].color=ColorUtil.cloneMe(color);
@@ -2835,16 +2874,18 @@ public class PackData{
 	 * @param r double
 	 */
 	public void setRadius(int v,double r) {
+		if (hes>0 && r>=Math.PI) 
+			r=Math.PI-OKERR;
+		
+		if (packDCEL!=null) { 
+			packDCEL.setVertRadii(v,r);
+			return;
+		}
+		
+		// traditional packing
 		if (v<1 || v>nodeCount) 
 			return;
-		double rad=r;
-		if (hes>0 && r>=Math.PI) 
-			rad=Math.PI-OKERR;
-		if (hes>=0 && r<=0.0) 
-			rad=OKERR;
-		rData[v].rad=rad;
-		if (packDCEL!=null) 
-			packDCEL.setVertRadii(v,rad);
+		rData[v].rad=r;
 	}
 
 	/**
@@ -2924,7 +2965,7 @@ public class PackData{
 		if (option_flag==0) { /* default: avoid interior verts of degree < 5 or
 								 bdry verts without interior nghb. */
 			for (int i=1;i<=nodeCount;i++) {
-				if ((getNum(i)<5 && !isBdry(i)) || getNum(i)==1)
+				if ((countFaces(i)<5 && !isBdry(i)) || countFaces(i)==1)
 					offlist[i]=true;
 			}
 		}
@@ -2958,7 +2999,7 @@ public class PackData{
 		w=kData[alpha].flower[1];
 		int nbr=0;
 		if (offlist[v] || offlist[w]) {
-			for (int i=1;((i<getNum(alpha)) && nbr==0);i++) {
+			for (int i=1;((i<countFaces(alpha)) && nbr==0);i++) {
 				if (!offlist[(v=kData[alpha].flower[i])] 
 				             && !offlist[(w=kData[alpha].flower[i+1])])
 					nbr=i;
@@ -2970,11 +3011,11 @@ public class PackData{
 		}
 
 		vflag[alpha]=vflag[v]=vflag[w]=true;
-		for (int i=0;i<(getNum(alpha)+getBdryFlag(alpha));i++)
+		for (int i=0;i<(countFaces(alpha)+getBdryFlag(alpha));i++)
 			kData[kData[alpha].flower[i]].utilFlag++;
-		for (int i=0;i<(getNum(v)+getBdryFlag(v));i++)
+		for (int i=0;i<(countFaces(v)+getBdryFlag(v));i++)
 			kData[kData[v].flower[i]].utilFlag++;
-		for (int i=0;i<(getNum(w)+getBdryFlag(w));i++)
+		for (int i=0;i<(countFaces(w)+getBdryFlag(w));i++)
 			kData[kData[w].flower[i]].utilFlag++;
 		int vertcount=3;
 		mainLink.add(alpha);
@@ -3021,11 +3062,11 @@ public class PackData{
 				vert = (Integer) ml.next();
 				
 				// already hit all neighbors of this vert? remove it.
-				if (kData[vert].utilFlag == (getNum(vert) + getBdryFlag(vert))) {
+				if (kData[vert].utilFlag == (countFaces(vert) + getBdryFlag(vert))) {
 					ml.remove();
 				} 
 				else if (!offlist[vert] || pickup) { // process this vert
-					num = getNum(vert); // num of faces
+					num = countFaces(vert); // num of faces
 					int nnum = num + getBdryFlag(vert); // num of nghbs
 					// go through the faces of 'vert'
 					keepon = true;
@@ -3053,13 +3094,13 @@ public class PackData{
 									lastface = face;
 									newfaces[face].indexFlag = indx;
 									fflag[face] = vflag[v2] = true;
-									way = getNum(v2) + getBdryFlag(v2);
+									way = countFaces(v2) + getBdryFlag(v2);
 									for (int i = 0; i < way; i++)
 										kData[kData[v2].flower[i]].utilFlag++;
 									hits = true;
 									keepon = true;
 									vertcount++;
-									if (kData[v2].utilFlag < (getNum(v2) + getBdryFlag(v2))) {
+									if (kData[v2].utilFlag < (countFaces(v2) + getBdryFlag(v2))) {
 										holdLink.add(v2);
 									}
 								}
@@ -3070,13 +3111,13 @@ public class PackData{
 									lastface = face;
 									newfaces[face].indexFlag = (indx + 2) % 3;
 									fflag[face] = vflag[v1] = true;
-									way = getNum(v) + getBdryFlag(v);
+									way = countFaces(v) + getBdryFlag(v);
 									for (int i = 0; i < way; i++)
 										kData[kData[v1].flower[i]].utilFlag++;
 									hits = true;
 									keepon = true;
 									vertcount++;
-									if (kData[v1].utilFlag < (getNum(v1) + getBdryFlag(v))) {
+									if (kData[v1].utilFlag < (countFaces(v1) + getBdryFlag(v))) {
 										holdLink.add(v1);
 									}
 								}
@@ -3127,7 +3168,7 @@ public class PackData{
 	 */
 	public int nghb(int v,int w) {
 		if (v<1 || v>nodeCount || w<1 || w>nodeCount) return -1;
-		for (int j=0;j<=getNum(v);j++)
+		for (int j=0;j<=countFaces(v);j++)
 			if (kData[v].flower[j]==w) return j;
 		return -1;
 	}
@@ -3144,7 +3185,7 @@ public class PackData{
 	 * @return Complex[]
 	 */
 	public Complex []corners_dual_face(int v,AmbiguousZ []ambigZs) {
-		int num = getNum(v);
+		int num = countFaces(v);
 		int[] flower=getFlower(v);
 		int []faceflower=getFaceFlower(v);
 		Complex []pts=new Complex[num];
@@ -3459,7 +3500,7 @@ public class PackData{
 	 * @return Complex[], non-close array 
 	 */
 	public Complex []corners_paver(int v,AmbiguousZ []ambigZs) {
-		int num=getNum(v);
+		int num=countFaces(v);
 		int[] flower=getFlower(v);
 		int offset=-1;
 		Complex []pts=new Complex[num+2*getBdryFlag(v)];
@@ -3736,7 +3777,7 @@ public class PackData{
 	public int []flowerFan(int v,int j1,int j2) {
 		int []fan=null;
 		try {
-			int num=getNum(v);
+			int num=countFaces(v);
 			if (isBdry(v)) { // bdry case
 				if (j1>=j2)
 					return null;
@@ -3914,7 +3955,7 @@ public class PackData{
 	public int cross_edge_vert(int v,int k) {
 	  int N,ind,w;
 
-	  if (v<1 || v>nodeCount || k<0 || k>(N=getNum(v))
+	  if (v<1 || v>nodeCount || k<0 || k>(N=countFaces(v))
 	      || (k==N && isBdry(v)) ) return 0;
 	  w=kData[v].flower[k];
 	  ind=nghb(w,v);
@@ -3923,7 +3964,7 @@ public class PackData{
 	      if (ind<2) return 0;
 	      else return (kData[w].flower[ind-2]);
 	    }
-	  return (kData[w].flower[(ind+getNum(w)-2)%(getNum(w))]);
+	  return (kData[w].flower[(ind+countFaces(w)-2)%(countFaces(w))]);
 	} 
 
 	/**
@@ -4003,7 +4044,7 @@ public class PackData{
 		
 		// traditional packing
 		if (v1==v2) { // reset to upstream vert
-			v2=kData[v1].flower[getNum(v1)];
+			v2=kData[v1].flower[countFaces(v1)];
 		}
 		int vert=v1;
 	    int nextvert=kData[vert].flower[0];
@@ -4051,8 +4092,8 @@ public class PackData{
 	*/
 	public int hex_proj(int v,int w) {
 
-	  if (v==w || (isBdry(v) && getNum(v)!=3)
-	      || (!isBdry(v) && getNum(v)!=6))
+	  if (v==w || (isBdry(v) && countFaces(v)!=3)
+	      || (!isBdry(v) && countFaces(v)!=6))
 	    return 0;
 	  if (isBdry(v)) {
 	      if (kData[v].flower[0]==w) 
@@ -4079,16 +4120,16 @@ public class PackData{
 		// v on bdry? return bdry most opposite
 		if (isBdry(v)) {
 			int indx=nghb(v,w);
-			if (indx<(int)(getNum(v)/2.0))
-				return kData[v].flower[getNum(v)];
+			if (indx<(int)(countFaces(v)/2.0))
+				return kData[v].flower[countFaces(v)];
 			else
 				return kData[v].flower[0];
 		}
 		
-		int half=getNum(v)/2;
-		if (2*half!=getNum(v)) // not even degree
+		int half=countFaces(v)/2;
+		if (2*half!=countFaces(v)) // not even degree
 			return 0;
-		return kData[v].flower[(nghb(v,w)+half)% getNum(v)];
+		return kData[v].flower[(nghb(v,w)+half)% countFaces(v)];
 	}
 	
 	/** 
@@ -4099,9 +4140,9 @@ public class PackData{
 	*/
 	public int find_common_left_nghb(int v,int w) {
 		int i=nghb(v,w);
-	    if (i<0 || i==getNum(v))
+	    if (i<0 || i==countFaces(v))
 	    	return -1;
-	    if (i==(getNum(v)-1) && !isBdry(v))
+	    if (i==(countFaces(v)-1) && !isBdry(v))
 	    	return 0;
 	    return i+1;
 	}
@@ -4153,7 +4194,7 @@ public class PackData{
 	  int i,dir,next,current,last;
 
 	  if (v==w || lgth<1) return -1;
-	  int pets=getNum(v)+getBdryFlag(v);
+	  int pets=countFaces(v)+getBdryFlag(v);
 	  int []dists=new int[pets];
 	  for (dir=0;dir<pets;dir++) {
 	      last=v;
@@ -4194,7 +4235,7 @@ public class PackData{
 	  int i,dir,next,current,last;
 
 	  if (v==w || lgth<1) return -1;
-	  int pets=getNum(v)+getBdryFlag(v);
+	  int pets=countFaces(v)+getBdryFlag(v);
 	  int []dists=new int[pets];
 	  for (dir=0;dir<pets;dir++) {
 	      last=v;
@@ -4301,9 +4342,7 @@ public class PackData{
 	public int setCombinatorics() throws DCELException {
 		int ans=1;
 		if (packDCEL!=null) {
-			PackDCEL ndcel=CombDCEL.extractDCEL(packDCEL, null,packDCEL.alpha);
-			attachDCEL(ndcel);
-			return 1;
+			throw new DCELException("DCEL combinatorics are required.");
 		}
 		if (complex_count(false)==0 || facedraworder(false)==0) 
 			ans=0;
@@ -4372,7 +4411,7 @@ public class PackData{
 				Iterator<Integer> vlist=lL.iterator();
 				while (vlist.hasNext()) {
 					v=(int)vlist.next();
-					for (int j=0;j<(getNum(v)+getBdryFlag(v));j++) {
+					for (int j=0;j<(countFaces(v)+getBdryFlag(v));j++) {
 						k=kData[v].flower[j];
 						if (kData[k].utilFlag==0) {
 							nL.add(k);
@@ -4387,7 +4426,7 @@ public class PackData{
 		
 		// find Euler characteristic and genus 
 		int count=0;
-		for (k=1;k<=nodeCount;k++) count += getNum(k);
+		for (k=1;k<=nodeCount;k++) count += countFaces(k);
 		faceCount=count/3;
 		int num_edges=(count + bcount)/2;
 		euler=nodeCount-num_edges+faceCount;
@@ -4405,7 +4444,7 @@ public class PackData{
 		count=1;
 		int hit=1;
 		while (count<=faceCount && hit<=nodeCount) {
-			for (int j=0;j<getNum(hit);j++) {
+			for (int j=0;j<countFaces(hit);j++) {
 				m=kData[hit].flower[j];
 				n=kData[hit].flower[j+1];
 				if (m>hit && n>hit) {
@@ -4439,7 +4478,7 @@ public class PackData{
 			CirclePack.cpb.errMsg("Combinatoric error in facecount.");
 			count=0;
 			for (int i=1;i<=nodeCount && count < 25;i++)
-				for (int j=0;j<(getNum(i)+getBdryFlag(i));j++)
+				for (int j=0;j<(countFaces(i)+getBdryFlag(i));j++)
 					if (nghb((v=kData[i].flower[j]),i) < 0) {
 						if (count ==0 ) {
 							detailError("  Here are some vertices which " +
@@ -4456,7 +4495,7 @@ public class PackData{
 		}
 		
 		// Catalog the faces in 'faceFlower' arrays
-		for (int j=1;j<=nodeCount;j++) kData[j].faceFlower=new int[getNum(j)];
+		for (int j=1;j<=nodeCount;j++) kData[j].faceFlower=new int[countFaces(j)];
 		for (int f=1;f<=faceCount;f++)
 			for (int j=0;j<3;j++) {
 				v=faces[f].vert[j];
@@ -4526,7 +4565,7 @@ public class PackData{
 		if (debug) {
 			for (int i=1;i<=nodeCount;i++) {
 				System.err.print("vert "+i+": flower: ");
-				for (int j=0;j<=getNum(i);j++) System.err.print(" "+kData[i].flower[j]);
+				for (int j=0;j<=countFaces(i);j++) System.err.print(" "+kData[i].flower[j]);
 				System.err.print("\n");
 			}
 		}
@@ -4538,7 +4577,7 @@ public class PackData{
 			if (debug) System.err.println("index i: "+i);
 			
 			if (kData[i].utilFlag==0) {
-				if (kData[i].flower[0]!=kData[i].flower[getNum(i)]) {
+				if (kData[i].flower[0]!=kData[i].flower[countFaces(i)]) {
 					bcount++;
 					bs++; // bdryStart counter
 					if (bs>=MAX_COMPONENTS) {
@@ -4552,7 +4591,7 @@ public class PackData{
 					do {
 						// TODO: I've disabled the exception because corner verts can have 
 						//       just two neighbors; this may cause other problems
-						if (kData[j].utilFlag!=0 || kData[j].flower[0]==kData[j].flower[getNum(j)])
+						if (kData[j].utilFlag!=0 || kData[j].flower[0]==kData[j].flower[countFaces(j)])
 							CirclePack.cpb.errMsg("Caution: bdry vert "+j+" has only 2 neighbors");
 //							throw new CombException("error tracing bdry for "+i);
 						setBdryFlag(j,1);
@@ -4701,16 +4740,16 @@ public class PackData{
 	      int bstart=bdryStarts[1]; 
 	      int v=bstart;
 		  int safety=nodeCount;
-		  while (getNum(v)<2 && (v=kData[v].flower[0])!=bstart && safety>0) {
+		  while (countFaces(v)<2 && (v=kData[v].flower[0])!=bstart && safety>0) {
 			  safety--;
 		  }
-		  if (getNum(v)<2 || safety==0) 
+		  if (countFaces(v)<2 || safety==0) 
 			  throw new CombException("No bdry vertices with interior neighbor");
 		  
 		  // redChain is all bdry faces; start with last face 
 		  //    at v (which won't be blue)
 	      w=stop_vert=kData[v].flower[0];
-		  redChain=trace=new RedList(this,getFaceFlower(w,getNum(w)-1));
+		  redChain=trace=new RedList(this,getFaceFlower(w,countFaces(w)-1));
 		  trace.center=getCenter(w);
 		  trace.vIndex=face_index(trace.face,w);
 		  
@@ -4722,7 +4761,7 @@ public class PackData{
 		  boolean keepon=true;
 		  while (keepon || w!=stop_vert) {
 		      keepon=false;
-		      for (int i=getNum(w)-2;i>=0;i--) {
+		      for (int i=countFaces(w)-2;i>=0;i--) {
 		    	  trace=trace.next=new RedList(trace,getFaceFlower(w,i));
 		      }
 		      w=kData[w].flower[0];
@@ -4773,8 +4812,8 @@ public class PackData{
 	  if (pflag && kData[alpha].utilFlag==-1) {
 		  k=0;
 		  while (kData[kData[alpha].flower[k]].utilFlag==-1
-				  && k<=getNum(alpha)) k++;
-		  if (k>getNum(alpha)) {
+				  && k<=countFaces(alpha)) k++;
+		  if (k>countFaces(alpha)) {
 			  k=1;
 			  while (k<=nodeCount && (isBdry(k) || (kData[k].utilFlag==-1)))
 				  k++;
@@ -5375,7 +5414,7 @@ public class PackData{
 	      w=faces[f].vert[(index+i+1)%3];
 	      if (kData[v].utilFlag > 0 && !isBdry(v)
 		  && kData[w].utilFlag > 0 && !isBdry(w)) {
-		  num=getNum(w);
+		  num=countFaces(w);
 		  m=0;
 		  while (getFaceFlower(w,m)!=f && m<(num-2)) m++;
 		  g=getFaceFlower(w,(m+1) % num);
@@ -5388,7 +5427,7 @@ public class PackData{
 	      v=faces[f].vert[(index+i)%3];
 	      w=faces[f].vert[(index+i+1)%3];
 	      if (kData[v].utilFlag > 0 && kData[w].utilFlag!=0) {
-		  num=getNum(w);
+		  num=countFaces(w);
 		  m=0;
 		  while (getFaceFlower(w,m)!=f && m<(num-2)) m++;
 		  g=getFaceFlower(w,(m+1) % num);
@@ -5464,7 +5503,7 @@ public class PackData{
 			return count;
 		for (int v=1;v<=nodeCount;v++) {
 			double angsum=0.0;
-			for (int j=0;j<getNum(v);j++) {
+			for (int j=0;j<countFaces(v);j++) {
 				int n=kData[v].flower[j];
 				int m=kData[v].flower[j+1];
 				angsum +=Math.acos(EuclMath.e_cos_3D(xyzpoint[v],xyzpoint[n],xyzpoint[m]));
@@ -5636,7 +5675,7 @@ public class PackData{
 			      int opt,boolean npf,boolean crit_flag,double crit) {
 	  int count=0;
 
-	  int num=getNum(vert)+getBdryFlag(vert);
+	  int num=countFaces(vert)+getBdryFlag(vert);
 	  if (opt==1) {n1=n0; n=1;}
 	  /*  use original center already computed??
 	      if (kData[vert].plot_flag>0) z=rData[vert].center;*/
@@ -5781,7 +5820,7 @@ public class PackData{
 	      vert=faces[nf].vert[(indx=(faces[nf].indexFlag +2) % 3)];
 	      n0=nghb(vert,faces[nf].vert[(indx+1)%3]);
 	      if (kData[vert].plotFlag<=0 && (kData[vert].plotFlag=
-	    	  fancy_comp_center(vert,n0,0,getNum(vert),opt,false,errflag,crit))!=0)
+	    	  fancy_comp_center(vert,n0,0,countFaces(vert),opt,false,errflag,crit))!=0)
 	    	  count++;
 	      else if (kData[vert].plotFlag<=0 && dflag)
 	    	  logwriter.write("\t"+count+"\t"+vert+"\t"+nf+"\n");
@@ -5844,7 +5883,7 @@ public class PackData{
 	    		}
 	    		else {
 	    			n1=0;
-	    			n=getNum(vert);
+	    			n=countFaces(vert);
 	    		}
 	    		if (kData[vert].plotFlag<=0 && (kData[vert].plotFlag=
 	    			fancy_comp_center(vert,n0,n1,n,opt,false,errflag,crit))!=0) {
@@ -5895,7 +5934,7 @@ public class PackData{
 	    				}
 	    				else {
 	    					n1=0;
-	    					n=getNum(vert);
+	    					n=countFaces(vert);
 	    				}
 	    				if ((kData[vert].plotFlag=
 	    					fancy_comp_center(vert,n0,n1,n,1,false,false,crit))!=0) {
@@ -5969,7 +6008,7 @@ public class PackData{
 	    	vert=faces[nf].vert[(indx=(faces[nf].indexFlag +2) % 3)];
 	    	n0=nghb(vert,faces[nf].vert[(indx+1)%3]);
 	    	if (kData[vert].plotFlag<=0 && (kData[vert].plotFlag=
-	    		fancy_comp_center(vert,n0,0,getNum(vert),opt,false,errflag,crit))!=0)
+	    		fancy_comp_center(vert,n0,0,countFaces(vert),opt,false,errflag,crit))!=0)
 	    		count++;
 	    	else if (dflag && kData[vert].plotFlag<=0)
 	    		logwriter.write("\t"+count+"\t"+vert+"\t"+nf+"\n");
@@ -6005,7 +6044,7 @@ public class PackData{
 	    		  if (kData[vert].plotFlag<=0) {
 	    			  n0=nghb(vert,faces[nf].vert[(indx+1)%3]);
 	    			  if ((kData[vert].plotFlag=
-	    				  fancy_comp_center(vert,n0,0,getNum(vert),opt,false,errflag,crit))!=0) {
+	    				  fancy_comp_center(vert,n0,0,countFaces(vert),opt,false,errflag,crit))!=0) {
 	    				  count++;
 	    				  keepon=true;
 	    			  }
@@ -6032,13 +6071,13 @@ public class PackData{
 	    			z=new Complex(0.0);
 	    			n=0;
 	    			// first use plotted neighbors
-	    			for (int j=0;j<(getNum(vert)+getBdryFlag(vert));j++) 
+	    			for (int j=0;j<(countFaces(vert)+getBdryFlag(vert));j++) 
 	    				if (kData[(v=kData[vert].flower[j])].plotFlag!=0) {
 	    					z=z.add(getCenter(v));
 	    					n++;
 	    				}
 	    			if (n==0) { // none? try qualFlag neighbors
-	    				for (int j=0;j<(getNum(vert)+getBdryFlag(vert));j++) 
+	    				for (int j=0;j<(countFaces(vert)+getBdryFlag(vert));j++) 
 	    					if (kData[(v=kData[vert].flower[j])].qualFlag!=0) {
 	    						z=z.add(getCenter(v));
 	    						n++;
@@ -6254,7 +6293,7 @@ public class PackData{
 		  uP.value=0.0;
 		  if (!overlapStatus) {
 		      double m2 = r2/(r+r2);
-		      for (int n=1;n<=getNum(v);n++) {
+		      for (int n=1;n<=countFaces(v);n++) {
 		    	  double m1 = m2;
 		    	  r2 = getRadius(kData[v].flower[n]);
 		    	  m2 = r2/(r+r2);
@@ -6263,7 +6302,7 @@ public class PackData{
 		  }
 		  else  {
 		      double o2=getInvDist(v,kData[v].flower[0]);
-		      for (int n=1;n<=getNum(v);n++) {
+		      for (int n=1;n<=countFaces(v);n++) {
 		    	  int j1=j2;
 		    	  double r1=r2;
 		    	  double o1=o2;
@@ -6294,7 +6333,7 @@ public class PackData{
 	  if (r<=0) return false;
 	  j2=kData[v].flower[0];
 	  r2=getRadius(j2);
-	  for (k=1;k<=getNum(v);k++) {
+	  for (k=1;k<=countFaces(v);k++) {
 	      r1=r2;
 	      r2=getRadius(kData[v].flower[k]);
 	      uP.value += Math.acos(SphericalMath.s_comp_cos(r,r1,r2));
@@ -6321,7 +6360,7 @@ public class PackData{
 	    int j2=kData[v].flower[0];
 	    double x2=getRadius(j2);
 	    if (!overlapStatus) {
-	        for (int k=1;k<=getNum(v);k++) {
+	        for (int k=1;k<=countFaces(v);k++) {
 	        	x1=x2;
 	        	x2=getRadius(kData[v].flower[k]);
 	        	uP.value += Math.acos(HyperbolicMath.h_comp_x_cos(x,x1,x2));
@@ -6329,7 +6368,7 @@ public class PackData{
 	    }
 	    else {
 	        double o2=getInvDist(v,kData[v].flower[0]);
-	        for (int k=1;k<=getNum(v);k++) {
+	        for (int k=1;k<=countFaces(v);k++) {
 	        	x1=x2;
 	        	double o1=o2;
 	        	int j1=j2;
@@ -6705,10 +6744,10 @@ public class PackData{
 			file.write("TILES: "+nodeCount+"\n\n");
 			int tick=faceCount+1;
 			for (int v=1;v<=nodeCount;v++) {
-				int num=getNum(v)+getBdryFlag(v);
+				int num=countFaces(v)+getBdryFlag(v);
 				file.write("\n"+v+" "+num+" "+"   ");
 				int[] faceFlower=getFaceFlower(v);
-				for (int j = 0; j < getNum(v); j++) 
+				for (int j = 0; j < countFaces(v); j++) 
 					file.write(" "+faceFlower[j]);
 				// convention for bdry half-tile: include new index for v itself
 				if (isBdry(v)) 
@@ -6749,9 +6788,9 @@ public class PackData{
 				file.write("PACKNAME: " + fileName + "\n");
 			file.write("FLOWERS: ");
 			for (int n = 1; n <= nodeCount; n++) {
-				file.write("\n" + n + " " + getNum(n) + "  ");
+				file.write("\n" + n + " " + countFaces(n) + "  ");
 				int[] gfl=getFlower(n);
-				for (int i = 0; i <= getNum(n); i++)
+				for (int i = 0; i <= countFaces(n); i++)
 					file.write(" "+gfl[i]);
 			}
 			file.write("\n\n");
@@ -6762,7 +6801,7 @@ public class PackData{
 				int k;
 				flag=0;
 				for (int i = 1; i <= nodeCount; i++)
-					for (int j = 0; j < (getNum(i) + getBdryFlag(i)); j++) {
+					for (int j = 0; j < (countFaces(i) + getBdryFlag(i)); j++) {
 						int[] gfl=getFlower(i);
 						if (i < (k = gfl[j])
 								&& Math.abs((angle = getInvDist(i,gfl[j])) - 1.0) > OKERR)
@@ -6770,7 +6809,7 @@ public class PackData{
 					}
 				if (flag>0) {
 					for (int i = 1; i <= nodeCount; i++)
-						for (int j = 0; j < (getNum(i) + getBdryFlag(i)); j++) {
+						for (int j = 0; j < (countFaces(i) + getBdryFlag(i)); j++) {
 							int[] gfl=getFlower(j);
 							if (i < (k = gfl[j])
 								&& Math.abs((angle = getInvDist(i,gfl[j])) - 1.0) > OKERR)
@@ -6958,7 +6997,7 @@ public class PackData{
 				file.write("SCHWARZIANS:\n");
 				for (int v=1;v<=nodeCount;v++) {
 					file.write(v+"    "); // indicate vertex
-					for (int j=0;j<=getNum(v);j++) { // then list schwarzian for each edge 
+					for (int j=0;j<=countFaces(v);j++) { // then list schwarzian for each edge 
 						file.write(String.format("%.12e",kData[v].schwarzian[j])+" ");
 					}
 					file.write("\n");
@@ -7665,15 +7704,18 @@ public class PackData{
 	/** 
 	 * Checks that v is boundary vertex, then adds circle
 	 * nghb'ing v and its clockwise bdry neighbor. Local data is
-	 * updated, but calling routine must update the packing. Return
+	 * updated, but calling routine must update for colors,
+	 * radii, centers, etc.
 	 * @param v int
 	 * @return int, 0 on error.
 	 */
 	public int add_vert(int v) throws CombException {
 		if (v < 1 || v > nodeCount || !isBdry(v))
 			return 0;
-		int node=nodeCount+1;
-		if ((node = nodeCount + 1) > (sizeLimit)
+		int node=nodeCount+1; // new index
+		if (packDCEL!=null)
+			node=packDCEL.vertCount+1;
+		if (node > (sizeLimit)
 				&& alloc_pack_space(node, true) == 0) 
 			throw new CombException("Pack space allocation failure");
 		if (getRadius(v) <= 0) { // avoid infinite rad
@@ -7682,17 +7724,26 @@ public class PackData{
 		int v2 = getLastPetal(v); // upstream nghb
 		
 		if (packDCEL!=null) {
-			if (CombDCEL.add_vert(packDCEL,v)<0)
+			Vertex new_vert=CombDCEL.addVert_raw(packDCEL,v);
+			if (new_vert==null)
 				throw new CombException("failed 'add_vert'");
+			packDCEL.vertCount++;
+			node=new_vert.vertIndx;
+			packDCEL.vertices[node]=new_vert;
+			CombDCEL.d_FillInside(packDCEL);
+			attachDCEL(packDCEL);
+			vData[node].center=new Complex(vData[v].center);
+			vData[node].rad=vData[v].rad;
 		}
 		 
+		// traditional packing
 		else {
 			int n;
 			int[] newflower;
 			double[] newoverlaps;
 
 			// add to flower of v
-			n = getNum(v);
+			n = countFaces(v);
 			newflower = new int[n + 2];
 			for (int i = 0; i <= n; i++)
 				newflower[i] = kData[v].flower[i];
@@ -7707,7 +7758,7 @@ public class PackData{
 			}
 			kData[v].num = n + 1;
 			// add to flower of v2
-			n = getNum(v2);
+			n = countFaces(v2);
 			newflower = new int[n + 2];
 			for (int i = 1; i <= n + 1; i++)
 				newflower[i] = kData[v2].flower[i - 1];
@@ -7748,28 +7799,13 @@ public class PackData{
 
 		// fix affected curvatures
 		UtilPacket utilp = new UtilPacket();
-		if (hes < 0) {
-			h_anglesum_overlap(node, getRadius(node), utilp);
-			setCurv(node,utilp.value);
-			h_anglesum_overlap(v, getRadius(v), utilp);
-			setCurv(v,utilp.value);
-			h_anglesum_overlap(v2, getRadius(v2), utilp);
-			setCurv(v2,utilp.value);
-		} else if (hes == 0) {
-			e_anglesum_overlap(node, getRadius(node), utilp);
-			setCurv(node,utilp.value);
-			e_anglesum_overlap(v, getRadius(v), utilp);
-			setCurv(v,utilp.value);
-			e_anglesum_overlap(v2,getRadius(v2), utilp);
-			setCurv(v2,utilp.value);
-		} else if (hes > 0) {
-			s_anglesum(node, getRadius(node), utilp);
-			setCurv(node,utilp.value);
-			s_anglesum(v, getRadius(v), utilp);
-			setCurv(v,utilp.value);
-			s_anglesum(v2, getRadius(v2), utilp);
-			setCurv(v2,utilp.value);
-		}
+		CommonMath.get_anglesum(this,node, getRadius(node), utilp);
+		setCurv(node,utilp.value);
+		CommonMath.get_anglesum(this,v, getRadius(v), utilp);
+		setCurv(v,utilp.value);
+		CommonMath.get_anglesum(this,v2, getRadius(v2), utilp);
+		setCurv(v2,utilp.value);
+
 		// set defualt aims
 		setAim(node,-1.0);
 		setAim(v,-1.0);
@@ -7790,110 +7826,114 @@ public class PackData{
 		
 		if (packDCEL!=null) {
 			int ans=CombDCEL.enfold(packDCEL,v1);
-			if (ans>0)
-				setAim(v1,2.0*Math.PI);
-			return ans;
+			if (ans<=0)
+				throw new CombException("dcel enfold failed in 'enfold'");
+			if (getRadius(v1) <= 0) // avoid infinity hyp rad
+				setRadius(v1, 0.1);
+			setAim(v1, 2.0 * Math.PI);
+			return 1;
 		}
 
 		// traditional packing
-		int n, v2, v3;
-		int[] newflower;
-		double[] newoverlaps;
+			int n, v2, v3;
+			int[] newflower;
+			double[] newoverlaps;
 
+			n = countFaces(v1);
+			v2 = getFirstPetal(v1); // cclw nghb
+			v3 = getLastPetal(v1); // clw nghb
 
-		n = getNum(v1);
-		v2 = getFirstPetal(v1); // first,0,, neighbor
-		v3 = getLastPetal(v1);  // second neighbor
-
-		// adjust flower of v1
-		newflower = new int[n + 2];
-		int[] flower=getFlower(v1);
-		for (int i = 0; i <= n; i++)
-			newflower[i] = flower[i];
-		newflower[n + 1] = v2;
-		kData[v1].flower = newflower;
-		if (kData[v1].invDist != null) {
-			newoverlaps = new double[n + 2];
+			// adjust flower of v1
+			newflower = new int[n + 2];
+			int[] flower = getFlower(v1);
 			for (int i = 0; i <= n; i++)
-				newoverlaps[i] = getInvDist(v1,kData[v1].flower[i]);
-			newoverlaps[n + 1] = getInvDist(v1,kData[v1].flower[0]);
-			kData[v1].invDist = newoverlaps;
-		}
-		setBdryFlag(v1,0);
-		setAim(v1,2.0 * Math.PI);
-		kData[v1].num++;
-		if (getRadius(v1) <= 0) { // avoid infinity rad
-			setRadius(v2,0.1);
-		}
-
-		// add to flower of v2
-		n = getNum(v2);
-		newflower = new int[n + 2];
-		flower=getFlower(v2);
-		for (int i = 0; i <= n; i++)
-			newflower[i] = flower[i];
-		newflower[n + 1] = v3;
-		kData[v2].flower = newflower;
-		kData[v2].num++;
-		if (kData[v2].invDist != null) {
-			newoverlaps = new double[n + 2];
-			for (int i = 0; i <= n; i++)
-				newoverlaps[i] = getInvDist(v2,kData[v2].flower[i]);
-			newoverlaps[n + 1] = 1.0;
-			kData[v2].invDist = newoverlaps;
-		}
-		if (kData[v2].flower[0] == v3) {
-			setBdryFlag(v2,0);
-			if (getRadius(v2) <= 0) { // avoid infinity
-				setRadius(v2,0.1);
+				newflower[i] = flower[i];
+			newflower[n + 1] = v2;
+			kData[v1].flower = newflower;
+			if (kData[v1].invDist != null) {
+				newoverlaps = new double[n + 2];
+				for (int i = 0; i <= n; i++)
+					newoverlaps[i] = getInvDist(v1, kData[v1].flower[i]);
+				newoverlaps[n + 1] = getInvDist(v1, kData[v1].flower[0]);
+				kData[v1].invDist = newoverlaps;
 			}
-			if (kData[v2].invDist != null)
-				set_single_invDist(v2,kData[v2].flower[n + 1],getInvDist(v2,kData[v2].flower[0]));
-			setAim(v2,2.0 * Math.PI);
-		}
+			setBdryFlag(v1, 0);
+			setAim(v1, 2.0 * Math.PI);
+			kData[v1].num++;
+			if (getRadius(v1) <= 0) { // avoid infinity rad
+				setRadius(v1, 0.1);
+			}
 
-		// add to flower of v3
-		n = getNum(v3);
-		newflower = new int[n + 2];
-		for (int i = 1; i <= n + 1; i++)
-			newflower[i] = kData[v3].flower[i - 1];
-		newflower[0] = v2;
-		kData[v3].flower = newflower;
-		if (kData[v3].invDist != null) {
-			newoverlaps = new double[n + 2];
+			// add to flower of v2
+			n = countFaces(v2);
+			newflower = new int[n + 2];
+			flower = getFlower(v2);
+			for (int i = 0; i <= n; i++)
+				newflower[i] = flower[i];
+			newflower[n + 1] = v3;
+			kData[v2].flower = newflower;
+			kData[v2].num++;
+			if (kData[v2].invDist != null) {
+				newoverlaps = new double[n + 2];
+				for (int i = 0; i <= n; i++)
+					newoverlaps[i] = getInvDist(v2, kData[v2].flower[i]);
+				newoverlaps[n + 1] = 1.0;
+				kData[v2].invDist = newoverlaps;
+			}
+			if (kData[v2].flower[0] == v3) {
+				setBdryFlag(v2, 0);
+				if (getRadius(v2) <= 0) { // avoid infinity
+					setRadius(v2, 0.1);
+				}
+				if (kData[v2].invDist != null)
+					set_single_invDist(v2, kData[v2].flower[n + 1], getInvDist(v2, kData[v2].flower[0]));
+				setAim(v2, 2.0 * Math.PI);
+			}
+
+			// add to flower of v3
+			n = countFaces(v3);
+			newflower = new int[n + 2];
 			for (int i = 1; i <= n + 1; i++)
-				newoverlaps[i] = getInvDist(v3,kData[v3].flower[i - 1]);
-			newoverlaps[0] = 1.0;
-			kData[v3].invDist = newoverlaps;
-		}
-		kData[v3].num++;
-		if (kData[v3].flower[getNum(v3)] == v2) {
-			setBdryFlag(v3,0);
-			if (getRadius(v1) <= 0) { // avoid infinity
-				setRadius(v3,0.1);
+				newflower[i] = kData[v3].flower[i - 1];
+			newflower[0] = v2;
+			kData[v3].flower = newflower;
+			if (kData[v3].invDist != null) {
+				newoverlaps = new double[n + 2];
+				for (int i = 1; i <= n + 1; i++)
+					newoverlaps[i] = getInvDist(v3, kData[v3].flower[i - 1]);
+				newoverlaps[0] = 1.0;
+				kData[v3].invDist = newoverlaps;
 			}
-			if (kData[v3].invDist != null)
-				set_single_invDist(v3,kData[v3].flower[0],getInvDist(v3,kData[v3].flower[n + 1]));
-			setAim(v2,2.0 * Math.PI);
-		}
+			kData[v3].num++;
+			if (kData[v3].flower[countFaces(v3)] == v2) {
+				setBdryFlag(v3, 0);
+				if (getRadius(v3) <= 0) { // avoid infinity
+					setRadius(v3, 0.1);
+				}
+				if (kData[v3].invDist != null)
+					set_single_invDist(v3, kData[v3].flower[0], getInvDist(v3, kData[v3].flower[n + 1]));
+				setAim(v2, 2.0 * Math.PI);
+			}
 
 		// calling routine should update pack after returning
 		return 1;
 	}
 
 	/** 
-	 * Add a layer of nodes to bdry segment from one vertex v1 to v2.
+	 * Add a layer of nodes to bdry segment from vertex v1 to v2.
 	 * Three modes:
-	 *   flag -t ==> mode=0 (default): tenting over each edge
-	 *   <d> ==> mode=1: make former verts to be degree d
-	 *   flag -d ==> mode=2: duplicate circles but with ball bearing fillers.
 	 * 
-	 * mode=0 or 2: unless v1=v2, only add between v1, v2 (so v1, v2 remain
-	 * on boundary)
-	 * mode=1: none of original verts should end up on boundary; no new edges
-	 * should be added between existing boundary verts. If v1=v2 or v2 is 
-	 * neighbor of v1, then do whole boundary component.
-	 * Calling routine handles 'setCombinatorics'.
+	 *   mode=0: add layer, a new bdry vert for each edge
+	 *   between v1 and v2. Unless v1==v2, v1 and v2 remain as
+	 *   bdry vertices.
+	 *   mode=1: add nghb's to make vertices from v1 to v2,
+	 *   inclusive, interior with degree d. However, no edge
+	 *   should connect existing bdry vertices. If v1==v2 or
+	 *   v1 is nghb of v2, do whole bdry component.
+	 *   mode=2: attach "square" face with bary center to each 
+	 *   edge between v1 and v2. Unless v1==v2, v1 and v2 
+	 *   remain on bdry.
+	 * Calling routine updates combinatorics.
 	 * @param mode int, how to add: 0=TENT, 1=DEGREE, 2=DUPLICATE
 	 * @param degree int
 	 * @param v1 int, start bdry vert
@@ -7901,12 +7941,16 @@ public class PackData{
 	 * @return int, count of added vertices 
 	 */
 	public int add_layer(int mode, int degree, int v1, int v2) {
-		int count = 0, vert, nextvert, bearing;
+		int count = 0;
+
+		// modes
 		int TENT = 0;
 		int DEGREE = 1;
 		int DUPLICATE = 2;
+		
+		int edge_count=verts_share_bdry(v1, v2);
 		if (v1 < 1 || v1 > nodeCount || v2 < 1 || v2 > nodeCount
-				|| !isBdry(v1) || verts_share_bdry(v1, v2) == 0) {
+				|| !isBdry(v1) || edge_count==0) {
 			CirclePack.cpb
 					.errMsg("add_layer: vertices must be on same boundary component");
 			return 0;
@@ -7914,7 +7958,7 @@ public class PackData{
 
 		if (mode == TENT) {
 			// first new circle
-			vert = getFirstPetal(v1);
+			int vert = getFirstPetal(v1);
 			count += add_vert(vert);
 
 			// cycle until reaching v2
@@ -7929,6 +7973,15 @@ public class PackData{
 			}
 			if (vert == v1)
 				enfold(vert); // full bdry
+			if (packDCEL==null) {
+				try {
+					setBdryFlags();
+				} catch (Exception ex) {
+					CirclePack.cpb.errMsg("Some problem with add_layer.");
+					return 0;
+				}
+			}
+			return count;
 		}
 
 		// add to get degree d; every circle, v1 to v2 inclusive,
@@ -7938,55 +7991,69 @@ public class PackData{
 		// a previous step.) TODO: with more work, can probably choose
 		// starting point to avoid overage.
 		else if (mode == DEGREE) {
-			int need;
 			if (v2 == v1)
 				v2 = getLastPetal(v2);
-			vert = v1;
-			nextvert = getFirstPetal(vert);
-			// new circle shared with upstream nghb.
-			if (packDCEL!=null)
-				count += CombDCEL.add_vert(packDCEL,vert);
-			else {
-				count += add_vert(vert); 
-			}
+			int vert = v1;
+			int nextvert = getFirstPetal(vert);
 
+			// new circle shared with upstream nghb.
+			count += add_vert(vert); 
 			// go until you get to v2
 			while (vert != v2) {
-				if (degree >= (getNum(vert) + 1)
-						&& (need = degree - getNum(vert) - 1) > 0) {
-					for (int i = 1; i <= need; i++)
-						count += add_vert(vert);
-				}
+				int need=degree-countPetals(vert);
+				for (int i = 1; i <= need; i++)
+					count += add_vert(vert);
 				enfold(vert);
 				vert = nextvert;
-				nextvert = kData[vert].flower[0];
+				nextvert = getFirstPetal(vert);
 				if (vert == v1)
 					throw new CombException("Error in tracing the boundary: "
-							+ "hit " + v1 + " before " + v2);
+						+ "hit " + v1 + " before " + v2);
 			}
 
 			// now do v2 itself
 			if (vert == v2) {
-				if (degree >= (getNum(vert) + 1)
-						&& (need = degree - getNum(vert) - 1) > 0) {
-					for (int i = 1; i <= need; i++)
-						count += add_vert(vert);
-				}
+				int need=degree-countPetals(vert);
+				for (int i = 1; i <= need; i++)
+					count += add_vert(vert);
 				enfold(vert);
 			}
+			if (packDCEL==null) {
+				try {
+					setBdryFlags();
+				} catch (Exception ex) {
+					CirclePack.cpb.errMsg("Problem setting bdry flags in 'add_layer'.");
+					return 0;
+				}
+			}
+			return count;
 		}
 
 		else if (mode == DUPLICATE) {
+
+			if (packDCEL!=null) {
+				int origcount=packDCEL.vertCount;
+				// generate combinatoric
+				int ans= CombDCEL.baryBox_raw(packDCEL,v1,v2);
+				if (ans==0)
+					return 0;
+				// TODO: too difficult to set radii
+				CombDCEL.d_FillInside(packDCEL);
+				return attachDCEL(packDCEL);
+			}
+			
+			// traditional packing
 			// get started with first edge
 			// first circle is a bearing
-			vert = kData[v1].flower[0];
+			int vert = getFirstPetal(v1);
 			count += add_vert(vert);
-			bearing = nodeCount;
+			int bearing = nodeCount;
 			add_vert(bearing); // add two circles to start
 			count += add_vert(bearing);
 			enfold(bearing);
 
 			// cycle until next point is v2
+			int nextvert=0;
 			if (vert != v2) {
 				while ((nextvert = kData[vert].flower[0]) != v2) {
 					// add bearing first
@@ -8010,19 +8077,21 @@ public class PackData{
 					// bearing ends up as interior; we want the circle of max
 					// index
 					// to be on the boundary, so we swap indices.
-					int w = kData[bearing].flower[getNum(bearing)];
+					int w = kData[bearing].flower[countFaces(bearing)];
 					swap_nodes(w, nodeCount);
 				}
 			}
+
+			try {
+				setBdryFlags();
+			} catch (Exception ex) {
+				CirclePack.cpb.errMsg("Some problem with add_layer.");
+				return 0;
+			}
+
+			return count;
 		}
 
-		// seem to have succeeded; set the bdry info
-		try {
-			setBdryFlags();
-		} catch (Exception ex) {
-			CirclePack.cpb.errMsg("Some problem with add_layer.");
-			return 0;
-		}
 		return count;
 	}
 
@@ -8059,29 +8128,29 @@ public class PackData{
 			int vdum = 0;
 
 			// for petals in v's new flower, replace w's with vdum's
-			for (int i = 0; i < (getNum(v) + getBdryFlag(v)); i++) {
+			for (int i = 0; i < (countFaces(v) + getBdryFlag(v)); i++) {
 				int pet = kData[v].flower[i];
 				if (pet == v)
 					pet = w;
-				for (int j = 0; j <= getNum(pet); j++)
+				for (int j = 0; j <= countFaces(pet); j++)
 					if (kData[pet].flower[j] == w)
 						kData[pet].flower[j] = vdum;
 			}
 
 			// for petals in w's new flower, replace v's with w's
-			for (int i = 0; i < (getNum(w) + getBdryFlag(w)); i++) {
+			for (int i = 0; i < (countFaces(w) + getBdryFlag(w)); i++) {
 				int pet = kData[w].flower[i];
 				if (pet == vdum)
 					pet = v;
-				for (int j = 0; j <= getNum(pet); j++)
+				for (int j = 0; j <= countFaces(pet); j++)
 					if (kData[pet].flower[j] == v)
 						kData[pet].flower[j] = w;
 			}
 
 			// for petals in v's new flower, replace vdum's with v
-			for (int i = 0; i <= getNum(v); i++) {
+			for (int i = 0; i <= countFaces(v); i++) {
 				int pet = kData[v].flower[i];
-				for (int j = 0; j <= getNum(pet); j++)
+				for (int j = 0; j <= countFaces(pet); j++)
 					if (kData[pet].flower[j] == vdum)
 						kData[pet].flower[j] = v;
 			}
@@ -8364,7 +8433,7 @@ public class PackData{
 	  public int[][] getBouquet() {
 		  int bouq[][]=new int[nodeCount+1][];
 		  for (int v=1;v<=nodeCount;v++) {
-			  int num=getNum(v);
+			  int num=countFaces(v);
 			  bouq[v]=new int[num+1];
 			  for (int j=0;j<=num;j++)
 				  bouq[v][j]=kData[v].flower[j];
@@ -8391,7 +8460,7 @@ public class PackData{
 	        return edgeLink;
 	    }
 	    // search in various directions, see if you find v2
-	    for (dir=0;dir<(getNum(v1)+getBdryFlag(v1));dir++) {
+	    for (dir=0;dir<(countFaces(v1)+getBdryFlag(v1));dir++) {
 	        edgeLink=new EdgeLink(this);
 	        int v=v1;
 	        int w=kData[v1].flower[dir];
@@ -8432,7 +8501,7 @@ public class PackData{
 	   * @return EdgeLink or null on error
 	   */
 	  public EdgeLink hex_extrapolate(int v,int indx,int w,int lgth) {
-		  if (v==w && (isBdry(v) || getNum(v)!=6)) {
+		  if (v==w && (isBdry(v) || countFaces(v)!=6)) {
 	    	  flashError("hex_extrapolate: v=w must be interior and hex");
 	    	  return null;
 	      }
@@ -8491,7 +8560,7 @@ public class PackData{
 	   * @return EdgeLink or null on error
 	   */
 	  public EdgeLink axis_extrapolate(int v,int indx,int w,int lgth) {
-		  if (v==w && (isBdry(v) || 2*(getNum(v)/2)!=getNum(v))) {
+		  if (v==w && (isBdry(v) || 2*(countFaces(v)/2)!=countFaces(v))) {
 	    	  flashError("axis_extrapolate: v=w must be interior and even degree");
 	    	  return null;
 	      }
@@ -8518,9 +8587,9 @@ public class PackData{
 			  EdgeSimple edge=(EdgeSimple)edgelist.getFirst();
 			  next=edge.w;
 			  int j=nghb(v,last);
-			  int half=getNum(v)/2;
+			  int half=countFaces(v)/2;
 			  indx=nghb(v,next);
-			  if (j==(indx+half)%getNum(v)) // is a hex axis through v 
+			  if (j==(indx+half)%countFaces(v)) // is a hex axis through v 
 				  return edgelist; 
 	      
 			  // closed, but not an axis? so try again
@@ -8554,14 +8623,14 @@ public class PackData{
 			  	last_edge=(EdgeSimple)hexChain.getLast();
 			  	first_edge=(EdgeSimple)hexChain.getFirst();
 			  	int v=first_edge.v;
-			  	if (last_edge.w!=v || getNum(v)!=6 || isBdry(v) ||
+			  	if (last_edge.w!=v || countFaces(v)!=6 || isBdry(v) ||
 			  			(nghb(v,last_edge.v)+3)%6 !=nghb(v,first_edge.w) ) {
 			  		throw new ParserException("hex_slide: problems with the given edge chain");
 			  	}
 			  	Iterator<EdgeSimple> hc=hexChain.iterator();
 			  	while (hc.hasNext()) {
 			  		edge=(EdgeSimple)hc.next();
-			  		if (edge.v!=v || getNum(edge.w)!=6 || isBdry(edge.w)) 
+			  		if (edge.v!=v || countFaces(edge.w)!=6 || isBdry(edge.w)) 
 			  			throw new ParserException("Error in hex chain");
 			  		v=edge.w;
 			  	}
@@ -8588,14 +8657,14 @@ public class PackData{
 	      int p_v=edge.v;
 
 	      // along the parallel, pp_w -> p_w -> w -> n_w
-	      num=getNum(n_v); // should be 6
+	      num=countFaces(n_v); // should be 6
 	      k=nghb(n_v,v);
 	      int w=kData[n_v].flower[(k+1)%num];
-	      num=getNum(p_v); // should be 6
+	      num=countFaces(p_v); // should be 6
 	      k=nghb(p_v,v);
 	      int p_w=kData[p_v].flower[(k-1+num)%num];
 	      int pp_w=kData[p_v].flower[(k-2+num)%num];
-	      num=getNum(w);
+	      num=countFaces(w);
 	      k=nghb(w,n_v);
 	      n_w=kData[w].flower[(k-1+num)%num];
 	      while (hc.hasNext()) {
@@ -8611,7 +8680,7 @@ public class PackData{
 	    	  p_w=w;
 	    	  w=n_w;
 		      // next along parallel
-		      num=getNum(w);
+		      num=countFaces(w);
 		      k=nghb(w,n_v);
 		      n_w=kData[w].flower[(k-1+num)%num];
 	    	  
@@ -8638,7 +8707,7 @@ public class PackData{
 		      index_ptr++;
 		      
 		      // new flower for 'v'
-		      num=getNum(v); // should be 6
+		      num=countFaces(v); // should be 6
 		      m=nghb(v,p_w);
 		      Nflowers[index_ptr]=new int[num+1];
 		      Nindices[index_ptr]=v;
@@ -8693,32 +8762,32 @@ public class PackData{
 		  
 		  // if v is interior
 		  if (!isBdry(v)) {
-			  kData[newV].num=(ind_vw-ind_vu+getNum(v))%getNum(v)+2;
-			  kData[newV].flower=new int[getNum(newV)+1];
+			  kData[newV].num=(ind_vw-ind_vu+countFaces(v))%countFaces(v)+2;
+			  kData[newV].flower=new int[countFaces(newV)+1];
 			  
 			  // newV's flower starts/ends with v
-			  kData[newV].flower[0]=kData[newV].flower[getNum(newV)]=v;
+			  kData[newV].flower[0]=kData[newV].flower[countFaces(newV)]=v;
 			  // rest of petals are thos omitted from v's flower
-			  for (int j=0;j<(getNum(newV)-1);j++) {
-				  kData[newV].flower[j+1]=kData[v].flower[(ind_vu+j)%getNum(v)];
+			  for (int j=0;j<(countFaces(newV)-1);j++) {
+				  kData[newV].flower[j+1]=kData[v].flower[(ind_vu+j)%countFaces(v)];
 			  }
 			  setBdryFlag(newV,0); // newV is interior
 			  setRadius(newV,getRadius(v));
 			  setAim(newV,2.0*Math.PI); // default aim
 			  
 			  // v's flower; let it start and end with newV;
-			  int num=getNum(v);
-			  int k=(ind_vu-ind_vw+getNum(v))%getNum(v);
+			  int num=countFaces(v);
+			  int k=(ind_vu-ind_vw+countFaces(v))%countFaces(v);
 			  kData[v].num=k+2;
-			  newFlower=new int[getNum(v)+1];
-			  newFlower[0]=newFlower[getNum(v)]=newV;
+			  newFlower=new int[countFaces(v)+1];
+			  newFlower[0]=newFlower[countFaces(v)]=newV;
 			  for (int j=0;j<=k;j++) {
 				  newFlower[j+1]=kData[v].flower[(ind_vw+j)%num];
 			  }
 			  kData[v].flower=newFlower;
 			  
 			  // fix w; add newV after v in flower
-			  num=getNum(w);
+			  num=countFaces(w);
 			  newFlower=new int[num+2];
 			  for (int j=0;j<=ind_wv;j++) 
 				  newFlower[j]=kData[w].flower[j];
@@ -8731,36 +8800,36 @@ public class PackData{
 			  kData[w].num++;
 
 			  // fix u; add newV before v in flower
-			  newFlower=new int[getNum(u)+2];
+			  newFlower=new int[countFaces(u)+2];
 			  for (int j=0;j<ind_uv;j++)
 				  newFlower[j]=kData[u].flower[j];
 			  newFlower[ind_uv]=newV;
-			  for (int j=ind_uv;j<=getNum(u);j++)
+			  for (int j=ind_uv;j<=countFaces(u);j++)
 				  newFlower[j+1]=kData[u].flower[j];
 			  kData[u].num++;
 			  if (ind_uv==0 && !isBdry(u))
-				  newFlower[getNum(u)]=newV;
+				  newFlower[countFaces(u)]=newV;
 			  kData[u].flower=newFlower;
 			  
 			  // fix up verts that used to be nghb v
-			  for (int j=2;j<(getNum(newV)-1);j++) {
+			  for (int j=2;j<(countFaces(newV)-1);j++) {
 				  int vv=kData[newV].flower[j];
 				  int ind_vvv=nghb(vv,v);
 				  kData[vv].flower[ind_vvv]=newV;
 				  if (ind_vvv==0 && !isBdry(vv))
-					  kData[vv].flower[getNum(vv)]=newV;
+					  kData[vv].flower[countFaces(vv)]=newV;
 			  }
 		  }
 		  else { // v is boundary vert
 			  if (ind_vw>ind_vu) { // newV will be interior
 				  
 				  kData[newV].num=ind_vw-ind_vu+2;
-				  kData[newV].flower=new int[getNum(newV)+1];
+				  kData[newV].flower=new int[countFaces(newV)+1];
 				  
 				  // newV's flower starts/ends with v
-				  kData[newV].flower[0]=kData[newV].flower[getNum(newV)]=v;
+				  kData[newV].flower[0]=kData[newV].flower[countFaces(newV)]=v;
 				  // rest of petals are those omitted from v's flower
-				  for (int j=0;j<(getNum(newV)-1);j++) {
+				  for (int j=0;j<(countFaces(newV)-1);j++) {
 					  kData[newV].flower[j+1]=kData[v].flower[(ind_vu+j)];
 				  }
 				  setBdryFlag(newV,0);
@@ -8768,10 +8837,10 @@ public class PackData{
 				  setAim(newV,2.0*Math.PI);
 				  
 				  // v's flower; find up to u and after w
-				  int num=getNum(v);
+				  int num=countFaces(v);
 				  int k=(ind_vu+num-ind_vw);
 				  kData[v].num=k+2;
-				  newFlower=new int[getNum(v)+1];
+				  newFlower=new int[countFaces(v)+1];
 				  
 				  // up to, including, u
 				  for (int j=0;j<=ind_vu;j++) {
@@ -8786,44 +8855,44 @@ public class PackData{
 				  kData[v].flower=newFlower;
 				  
 				  // fix w; add newV after v in flower
-				  newFlower=new int[getNum(w)+2];
+				  newFlower=new int[countFaces(w)+2];
 				  for (int j=0;j<=ind_wv;j++) 
 					  newFlower[j]=kData[w].flower[j];
 				  newFlower[ind_wv+1]=newV;
-				  for (int j=ind_wv+1;j<=getNum(w);j++)
+				  for (int j=ind_wv+1;j<=countFaces(w);j++)
 					  newFlower[j+1]=kData[w].flower[j];
 				  kData[w].num++;
 				  if (ind_wv==0 && !isBdry(w))
-					  newFlower[getNum(w)]=v;
+					  newFlower[countFaces(w)]=v;
 				  kData[w].flower=newFlower;
 				  
 				  // fix u; add newV before v in flower
-				  newFlower=new int[getNum(u)+2];
+				  newFlower=new int[countFaces(u)+2];
 				  for (int j=0;j<ind_uv;j++)
 					  newFlower[j]=kData[u].flower[j];
 				  newFlower[ind_uv]=newV;
-				  for (int j=ind_uv;j<=getNum(u);j++)
+				  for (int j=ind_uv;j<=countFaces(u);j++)
 					  newFlower[j+1]=kData[u].flower[j];
 				  kData[u].num++;
 				  if (ind_uv==0 && !isBdry(u))
-					  newFlower[getNum(u)]=newV;
+					  newFlower[countFaces(u)]=newV;
 				  kData[u].flower=newFlower;
 				  
 				  // fix up verts that used to nghb v
-				  for (int j=2;j<(getNum(newV)-1);j++) {
+				  for (int j=2;j<(countFaces(newV)-1);j++) {
 					  int vv=kData[newV].flower[j];
 					  int ind_vvv=nghb(vv,v);
 					  kData[vv].flower[ind_vvv]=newV;
 					  if (ind_vvv==0 && !isBdry(vv))
-						  kData[vv].flower[getNum(vv)]=newV;
+						  kData[vv].flower[countFaces(vv)]=newV;
 				  }
 				  
 			  }
 			  else { // newV will be a boundary vert, inhereting some ngbhs of v
 
-				  int num=getNum(v);
+				  int num=countFaces(v);
 				  kData[newV].num=ind_vw+num-ind_vu+2;
-				  kData[newV].flower=new int[getNum(newV)+1];
+				  kData[newV].flower=new int[countFaces(newV)+1];
 				  
 				  // nghbs of v up to w
 				  for (int j=0;j<=ind_vw;j++)
@@ -8842,44 +8911,44 @@ public class PackData{
 				  // v's flower, starts/ends with newV
 				  k=ind_vu-ind_vw;
 				  kData[v].num=k+2;
-				  newFlower=new int[getNum(v)+1];
-				  newFlower[0]=newFlower[getNum(v)]=newV;
+				  newFlower=new int[countFaces(v)+1];
+				  newFlower[0]=newFlower[countFaces(v)]=newV;
 				  for (int j=0;j<=k;j++)
 					  newFlower[j+1]=kData[v].flower[ind_vw+j];
 				  kData[v].flower=newFlower;
 				  setAim(v,2.0*Math.PI);
 
 				  // fix w; add newV after v in flower
-				  newFlower=new int[getNum(w)+2];
+				  newFlower=new int[countFaces(w)+2];
 				  for (int j=0;j<=ind_wv;j++) 
 					  newFlower[j]=kData[w].flower[j];
 				  newFlower[ind_wv+1]=newV;
-				  for (int j=ind_wv+1;j<=getNum(w);j++)
+				  for (int j=ind_wv+1;j<=countFaces(w);j++)
 					  newFlower[j+1]=kData[w].flower[j];
 				  kData[w].num++;
 				  if (ind_wv==0 && !isBdry(w))
-					  newFlower[getNum(w)]=v;
+					  newFlower[countFaces(w)]=v;
 				  kData[w].flower=newFlower;
 				  
 				  // fix u; add newV before v in flower
-				  newFlower=new int[getNum(u)+2];
+				  newFlower=new int[countFaces(u)+2];
 				  for (int j=0;j<ind_uv;j++)
 					  newFlower[j]=kData[u].flower[j];
 				  newFlower[ind_uv]=newV;
-				  for (int j=ind_uv;j<=getNum(u);j++)
+				  for (int j=ind_uv;j<=countFaces(u);j++)
 					  newFlower[j+1]=kData[u].flower[j];
 				  kData[u].num++;
 				  if (ind_uv==0 && !isBdry(u))
-					  newFlower[getNum(u)]=newV;
+					  newFlower[countFaces(u)]=newV;
 				  kData[u].flower=newFlower;
 				  
 				  // fix up verts that use to nghb v
-				  for (int j=2;j<(getNum(newV)-1);j++) {
+				  for (int j=2;j<(countFaces(newV)-1);j++) {
 					  int vv=kData[newV].flower[j];
 					  int ind_vvv=nghb(vv,v);
 					  kData[vv].flower[ind_vvv]=newV;
 					  if (ind_vvv==0 && !isBdry(vv))
-						  kData[vv].flower[getNum(vv)]=newV;
+						  kData[vv].flower[countFaces(vv)]=newV;
 				  }
 			  }
 		  }
@@ -8908,12 +8977,12 @@ public class PackData{
 		  int ind_Mv=nghb(M,v);
 		  
 		  // Is one of M or v a barycenter?
-		  if (!isBdry(M) && getNum(M)==3)
+		  if (!isBdry(M) && countFaces(M)==3)
 			  return v;
-		  if (!isBdry(v) && getNum(v)==3) {
+		  if (!isBdry(v) && countFaces(v)==3) {
 			  // swap v and M
 			  int []holdflower=kData[v].flower;
-			  int holdnum=getNum(M);
+			  int holdnum=countFaces(M);
 			  kData[v].flower=kData[M].flower;
 			  kData[v].num=holdnum;
 			  setBdryFlag(v,getBdryFlag(M));
@@ -8924,19 +8993,19 @@ public class PackData{
 			  // swap v and M as petals of one another
 			  kData[v].flower[ind_Mv]=M;
 			  if (ind_Mv==0 && !isBdry(v))
-				  kData[v].flower[getNum(v)]=M;
+				  kData[v].flower[countFaces(v)]=M;
 			  kData[M].flower[ind_vM]=v;
 			  if (ind_vM==0)
-				  kData[M].flower[getNum(M)]=v;
+				  kData[M].flower[countFaces(M)]=v;
 			  
 			  // fix neighbors of new v
-			  for (int j=0;j<(getNum(v)+getBdryFlag(v));j++) {
+			  for (int j=0;j<(countFaces(v)+getBdryFlag(v));j++) {
 				  int u=kData[v].flower[j];
 				  int ind_uv=nghb(u,M);
 				  if (ind_uv>=0)
 					  kData[u].flower[ind_uv]=v;
 				  if (ind_uv==0 && !isBdry(u))
-					  kData[u].flower[getNum(u)]=v;
+					  kData[u].flower[countFaces(u)]=v;
 			  }
 			  // fix neighbors of new M
 			  for (int j=0;j<3;j++) {
@@ -8945,7 +9014,7 @@ public class PackData{
 				  if (ind_uM>=0)
 					  kData[u].flower[ind_uM]=M;
 				  if (ind_uM==0 && !isBdry(u))
-					  kData[u].flower[getNum(u)]=M;
+					  kData[u].flower[countFaces(u)]=M;
 			  }
 			  this.flist=null;
 			  this.xyzpoint=null;
@@ -8978,7 +9047,7 @@ public class PackData{
 		  int fcount=1; // how many new barycenters?
 		  Iterator<Integer> vlst=verts.iterator();
 		  while (vlst.hasNext()) {
-			  fcount+=getNum(vlst.next());
+			  fcount+=countFaces(vlst.next());
 		  }
 		  
 		  KData []newK=new KData[nodeCount+fcount];
@@ -8994,9 +9063,9 @@ public class PackData{
 		  vlst=verts.iterator();
 		  while (vlst.hasNext()) {
 			  int v=vlst.next();
-			  if (getNum(v)>1) { // ignore v having single face
+			  if (countFaces(v)>1) { // ignore v having single face
 				  int[] faceFlower=getFaceFlower(v);
-				  for (int k=0;k<getNum(v);k++)
+				  for (int k=0;k<countFaces(v);k++)
 					  f4b[faceFlower[k]]=1;
 			  }
 		  }
@@ -9016,7 +9085,7 @@ public class PackData{
 			  int nextv=nodeCount+vcount;
 //			  if (nextv>sizeLimit)
 //		    	alloc_pack_space(newval+10,true);
-//		    nodeCount++;
+//	 	      nodeCount++;
 			  newK[nextv]=new KData();
 			  newK[nextv].num=3;
 			  newK[nextv].flower=new int[4];
@@ -9238,67 +9307,67 @@ public class PackData{
 	    int rv=kData[w].flower[(ind_w=nghb(w,v))+1];
 	        
 	    // adjust flower of v 
-	    int []newflower=new int[getNum(v)];
+	    int []newflower=new int[countFaces(v)];
 	    for (int j=0;j<ind_v;j++) newflower[j]=kData[v].flower[j];
-	    for (int j=ind_v+1;j<=getNum(v);j++)
+	    for (int j=ind_v+1;j<=countFaces(v);j++)
 	  	newflower[j-1]=kData[v].flower[j];
 	    kData[v].flower=newflower;
 	    if (overlapStatus) {
-	    	newol=new double[getNum(v)];
+	    	newol=new double[countFaces(v)];
 	    	for (int j=0;j<ind_v;j++) newol[j]=getInvDist(v,kData[v].flower[j]);
-	    	for (int j=ind_v+1;j<=getNum(v);j++)
+	    	for (int j=ind_v+1;j<=countFaces(v);j++)
 	    		newol[j-1]=getInvDist(v,kData[v].flower[j]);
 	    	kData[v].invDist=newol;
 	    }
 	    kData[v].num--;
 	    if (ind_v==0 && !isBdry(v)) 
-	    	kData[v].flower[getNum(v)]=kData[v].flower[0];
+	    	kData[v].flower[countFaces(v)]=kData[v].flower[0];
 	    
 	    // adjust flower of w 
-	    newflower=new int[getNum(w)];
+	    newflower=new int[countFaces(w)];
 	    for (int j=0;j<ind_w;j++) newflower[j]=kData[w].flower[j];
-	    for (int j=ind_w+1;j<=getNum(w);j++)
+	    for (int j=ind_w+1;j<=countFaces(w);j++)
 	    	newflower[j-1]=kData[w].flower[j];
 	    kData[w].flower=newflower;
 	    if (overlapStatus) {
-	    	newol=new double[getNum(w)];
+	    	newol=new double[countFaces(w)];
 	    	for (int j=0;j<ind_w;j++) newol[j]=getInvDist(w,kData[w].flower[j]);
-	    	for (int j=ind_w+1;j<=getNum(w);j++)
+	    	for (int j=ind_w+1;j<=countFaces(w);j++)
 	    		newol[j-1]=getInvDist(w,kData[w].flower[j]);
 	  	  	kData[w].invDist=newol;
 	    }
 	    kData[w].num--;
 	    if (ind_w==0 && !isBdry(w)) 
-	    	kData[w].flower[getNum(w)]=kData[w].flower[0];
+	    	kData[w].flower[countFaces(w)]=kData[w].flower[0];
 
 	    // adjust nghb flowers 
 	    ind_v=nghb(lv,v);
-	    newflower=new int[getNum(lv)+2];
+	    newflower=new int[countFaces(lv)+2];
 	    for (int j=0;j<=ind_v;j++) newflower[j]=kData[lv].flower[j];
-	    for (int j=getNum(lv);j>ind_v;j--)
+	    for (int j=countFaces(lv);j>ind_v;j--)
 	    	newflower[j+1]=kData[lv].flower[j];
 	    newflower[ind_v+1]=rv;
 	    kData[lv].flower=newflower;
 	    if (overlapStatus) {
-	    	newol=new double[getNum(lv)+2];
+	    	newol=new double[countFaces(lv)+2];
 	    	for (int j=0;j<=ind_v;j++) newol[j]=getInvDist(lv,kData[lv].flower[j]);
-	    	for (int j=getNum(v);j>ind_v;j--)
+	    	for (int j=countFaces(v);j>ind_v;j--)
 	    		newol[j+1]=getInvDist(lv,kData[lv].flower[j]);
 	  	  	newol[ind_v+1]=1.0;
 	  	  	kData[lv].invDist=newol;
 	    }
 	    kData[lv].num++;
 	    ind_w=nghb(rv,w);
-	    newflower=new int[getNum(rv)+2];
+	    newflower=new int[countFaces(rv)+2];
 	    for (int j=0;j<=ind_w;j++) newflower[j]=kData[rv].flower[j];
-	    for (int j=getNum(rv);j>ind_w;j--)
+	    for (int j=countFaces(rv);j>ind_w;j--)
 	    	newflower[j+1]=kData[rv].flower[j];
 	    newflower[ind_w+1]=lv;
 	    kData[rv].flower=newflower;
 	    if (overlapStatus) {
-	    	newol=new double[getNum(rv)+2];
+	    	newol=new double[countFaces(rv)+2];
 	    	for (int j=0;j<=ind_w;j++) newol[j]=getInvDist(rv,kData[rv].flower[j]);
-	    	for (int j=getNum(rv);j>ind_w;j--)
+	    	for (int j=countFaces(rv);j>ind_w;j--)
 	    		newol[j+1]=getInvDist(rv,kData[rv].flower[j]);
 	    	newol[ind_w+1]=1.0;
 	    	kData[rv].invDist=newol;
@@ -9324,10 +9393,10 @@ public class PackData{
 		  try {
 			  if (v<1 || w<1 || v>nodeCount || w>nodeCount 
 					  || (ind_v=nghb(v,w))<0 || (ind_w=nghb(w,v))<0 
-				  || (isBdry(v) && (kData[v].flower[0]==w || getNum(v)<=2))
-				  || (isBdry(w) && (kData[w].flower[0]==v || getNum(w)<=2))
-				  || (!isBdry(v) && getNum(v)<=3) 
-				  || (!isBdry(w) && getNum(w)<=3)) {
+				  || (isBdry(v) && (kData[v].flower[0]==w || countFaces(v)<=2))
+				  || (isBdry(w) && (kData[w].flower[0]==v || countFaces(w)<=2))
+				  || (!isBdry(v) && countFaces(v)<=3) 
+				  || (!isBdry(w) && countFaces(w)<=3)) {
 				  throw new DataException("deg <= 3 or bdry edge");
 			  }
 			  lv=kData[v].flower[ind_v+1];
@@ -9349,11 +9418,11 @@ public class PackData{
 	   */
 	  public int ring_vert(int centV) {
 		  int origCount=nodeCount;
-		  this.alloc_pack_space(origCount+getNum(centV)+2,true);
+		  this.alloc_pack_space(origCount+countFaces(centV)+2,true);
 		  if (!isBdry(centV)) { // interior
 			  
 			  // build new flower around centV, create new vertices
-			  int centNum=getNum(centV);
+			  int centNum=countFaces(centV);
 			  int []newCentFlower=new int[centNum+1];
 			  newCentFlower[0]=newCentFlower[centNum]=++nodeCount;
 			  for (int j=1;j<centNum;j++)
@@ -9373,8 +9442,8 @@ public class PackData{
 				  kData[newV].num=5;
 				  kData[newV].flower=newflower;
 				  if (overlapStatus) { // default
-					  kData[newV].invDist=new double[getNum(newV)+1];
-					  for (int k=0;k<=getNum(newV);k++)
+					  kData[newV].invDist=new double[countFaces(newV)+1];
+					  for (int k=0;k<=countFaces(newV);k++)
 						  set_single_invDist(newV,kData[newV].flower[k],1.0);
 				  }
 				  rData[newV]=new RData();
@@ -9393,22 +9462,22 @@ public class PackData{
 				  if (overlapStatus)
 					  set_single_invDist(v,kData[v].flower[indx],1.0);
 				  if (indx==0 && !isBdry(v)) {
-					  kData[v].flower[getNum(v)]=lastNew;
+					  kData[v].flower[countFaces(v)]=lastNew;
 					  if (overlapStatus)
-						  set_single_invDist(v,kData[v].flower[getNum(v)],1.0);
+						  set_single_invDist(v,kData[v].flower[countFaces(v)],1.0);
 				  }
 				  insert_petal(v,indx,nextNew);
 			  }
 			  
 			  kData[centV].flower=newCentFlower;
 			  if (overlapStatus) { // any overlaps are lost
-				  kData[centV].invDist=new double[getNum(centV)+1];
-				  for (int k=0;k<=getNum(centV);k++)
+				  kData[centV].invDist=new double[countFaces(centV)+1];
+				  for (int k=0;k<=countFaces(centV);k++)
 					  set_single_invDist(centV,kData[centV].flower[k],1.0);
 			  }
 		  }
 		  else { // centV is on the boundary
-			  int centNum=getNum(centV);
+			  int centNum=countFaces(centV);
 			  int downB=kData[centV].flower[0];
 			  int upB=kData[centV].flower[centNum];
 			  int newDown=++nodeCount;
@@ -9490,7 +9559,7 @@ public class PackData{
 			  kData[newV].flower=new int[6];
 			  kData[newV].flower[0]=kData[newV].flower[5]=centV;
 			  kData[newV].flower[1]=nodeCount-1;
-			  kData[newV].flower[2]=kData[centV].flower[getNum(centV)-1];
+			  kData[newV].flower[2]=kData[centV].flower[countFaces(centV)-1];
 			  kData[newV].flower[3]=upB;
 			  kData[newV].flower[4]=newUp;
 			  if (overlapStatus) { 
@@ -9528,10 +9597,10 @@ public class PackData{
 			  }
 
 			  // fix up downB
-			  kData[downB].flower[getNum(downB)]=newDown;
+			  kData[downB].flower[countFaces(downB)]=newDown;
 			  if (overlapStatus)
-				  set_single_invDist(downB,kData[downB].flower[getNum(downB)],1.0);
-			  insert_petal(downB,getNum(downB),origCount+3);
+				  set_single_invDist(downB,kData[downB].flower[countFaces(downB)],1.0);
+			  insert_petal(downB,countFaces(downB),origCount+3);
 			  
 			  // fix up upB
 			  kData[upB].flower[0]=newUp;
@@ -9551,9 +9620,9 @@ public class PackData{
 				  if (overlapStatus)
 					  set_single_invDist(v,kData[v].flower[indx],1.0);
 				  if (indx==0 && !isBdry(v)) {
-					  kData[v].flower[getNum(v)]=lastNew;
+					  kData[v].flower[countFaces(v)]=lastNew;
 					  if (overlapStatus)
-						  set_single_invDist(v,kData[v].flower[getNum(v)],1.0);
+						  set_single_invDist(v,kData[v].flower[countFaces(v)],1.0);
 				  }
 				  insert_petal(v,indx,nextNew);
 			  }
@@ -9563,8 +9632,8 @@ public class PackData{
 			  kData[centV].num++;
 			  
 			  if (overlapStatus) { // any overlaps are lost
-				  kData[centV].invDist=new double[getNum(centV)+1];
-				  for (int k=0;k<=getNum(centV);k++)
+				  kData[centV].invDist=new double[countFaces(centV)+1];
+				  for (int k=0;k<=countFaces(centV);k++)
 					  set_single_invDist(centV,kData[centV].flower[k],1.0);
 			  }
 		  }
@@ -9675,18 +9744,18 @@ public class PackData{
 		
 		// adjust lv
 		int ind_vl = nghb(lv, v);
-		int []newflower = new int[getNum(lv) + 2];
+		int []newflower = new int[countFaces(lv) + 2];
 		for (int j = 0; j <= ind_vl; j++)
 			newflower[j] = kData[lv].flower[j];
-		for (int j = getNum(lv); j > ind_vl; j--)
+		for (int j = countFaces(lv); j > ind_vl; j--)
 			newflower[j + 1] = kData[lv].flower[j];
 		newflower[ind_vl + 1] = newV;
 		kData[lv].flower = newflower;
 		if (overlapStatus) {
-			newol = new double[getNum(lv) + 2];
+			newol = new double[countFaces(lv) + 2];
 			for (int j = 0; j <= ind_vl; j++)
 				newol[j] = getInvDist(lv,kData[lv].flower[j]);
-			for (int j = getNum(lv); j > ind_vl; j--)
+			for (int j = countFaces(lv); j > ind_vl; j--)
 				newol[j + 1] = getInvDist(lv,kData[lv].flower[j]);
 			newol[ind_vl + 1] = 1.0;
 			kData[lv].invDist = newol;
@@ -9696,18 +9765,18 @@ public class PackData{
 		// fix right, if there is one
 		if (bflag == 0) {
 			int ind_rw = nghb(rv, w);
-			newflower = new int[getNum(rv) + 2];
+			newflower = new int[countFaces(rv) + 2];
 			for (int j = 0; j <= ind_rw; j++)
 				newflower[j] = kData[rv].flower[j];
-			for (int j = getNum(rv); j > ind_rw; j--)
+			for (int j = countFaces(rv); j > ind_rw; j--)
 				newflower[j + 1] = kData[rv].flower[j];
 			newflower[ind_rw + 1] = newV;
 			kData[rv].flower = newflower;
 			if (overlapStatus) {
-				newol = new double[getNum(rv) + 2];
+				newol = new double[countFaces(rv) + 2];
 				for (int j = 0; j <= ind_rw; j++)
 					newol[j] = getInvDist(rv,kData[rv].flower[j]);
-				for (int j = getNum(rv); j > ind_rw; j--)
+				for (int j = countFaces(rv); j > ind_rw; j--)
 					newol[j + 1] = getInvDist(rv,kData[rv].flower[j]);
 				newol[ind_rw + 1] = 1.0;
 				kData[rv].invDist = newol;
@@ -9721,13 +9790,13 @@ public class PackData{
 		if (overlapStatus)
 			set_single_invDist(v,kData[v].flower[ind_vw],1.0);
 		if (ind_vw == 0 && !isBdry(v))
-			kData[v].flower[getNum(v)] = newV;
+			kData[v].flower[countFaces(v)] = newV;
 		ind_wv = nghb(w, v);
 		kData[w].flower[ind_wv] = newV;
 		if (overlapStatus)
 			set_single_invDist(w,kData[w].flower[ind_wv],1.0);
 		if (ind_wv == 0 && !isBdry(w))
-			kData[w].flower[getNum(w)] = newV;
+			kData[w].flower[countFaces(w)] = newV;
 		
 		this.flist=null;
 		this.xyzpoint=null;
@@ -9848,17 +9917,17 @@ public class PackData{
 	    	int v=faces[f].vert[ii];
 	    	int w=faces[f].vert[(ii+1)%3];
 	    	int indx=nghb(v,w);
-	    	int []newflower=new int[getNum(v)+3];
+	    	int []newflower=new int[countFaces(v)+3];
 	    	for (int j=0;j<=indx;j++) newflower[j]=kData[v].flower[j];
-	    	for (int j=getNum(v);j>indx;j--)
+	    	for (int j=countFaces(v);j>indx;j--)
 	    		newflower[j+2]=kData[v].flower[j];
 	    	newflower[indx+1]=newV[ii];
 	    	newflower[indx+2]=newV[(ii+2)%3];
 	    	kData[v].flower=newflower;
 	    	if (overlapStatus) {
-	    		double []newol=new double[getNum(v)+3];
+	    		double []newol=new double[countFaces(v)+3];
 	    		for (int j=0;j<=indx;j++) newol[j]=getInvDist(v,kData[v].flower[j]);
-	    		for (int j=getNum(v);j>indx;j--)
+	    		for (int j=countFaces(v);j>indx;j--)
 	    			newol[j+2]=getInvDist(v,kData[v].flower[j]);
 	    		newol[indx+1]=1.0;
 	    		newol[indx+2]=1.0;
@@ -10052,7 +10121,7 @@ public class PackData{
 			genlist = new NodeLink(this); // start new list
 			do {
 				int v = vertlist.remove(0);
-				for (int i = 0; i <= getNum(v); i++)
+				for (int i = 0; i <= countFaces(v); i++)
 					if (final_list[(j = kData[v].flower[i])] == 0) {
 						final_list[j] = gen_count;
 						count++;
@@ -10129,7 +10198,7 @@ public class PackData{
 			do {
 				int v = vertlist.v;
 				int j;
-				for (int i = 0; i <= getNum(v); i++)
+				for (int i = 0; i <= countFaces(v); i++)
 					if (final_list[(j = kData[v].flower[i])] == 0
 							&& kData[j].utilFlag == 0) {
 						final_list[j] = gen_count;
@@ -10377,7 +10446,7 @@ public class PackData{
 		  newflower[0]=w;
 		  int pvert=w;
 		  int tick=1;
-		  while ((pvert=kData[pvert].flower[getNum(pvert)])!=v) {
+		  while ((pvert=kData[pvert].flower[countFaces(pvert)])!=v) {
 			  newflower[tick++]=pvert;
 		  }
 		  newflower[tick]=v;
@@ -10410,7 +10479,7 @@ public class PackData{
 	    
 		  // fix v and w
 		  if (v==w) { // v becomes interior
-			  numb=getNum(v)+2;
+			  numb=countFaces(v)+2;
 			  newflower=new int[numb+1];
 			  for (int j=0;j<=(numb-2);j++)
 				  newflower[j]=kData[v].flower[j];
@@ -10431,7 +10500,7 @@ public class PackData{
 		  else { // v and w are bdry
 	    	
 			  // fix v
-			  numb=getNum(v)+1;
+			  numb=countFaces(v)+1;
 			  newflower=new int[numb+1];
 			  for (int j=0;j<numb;j++) 
 				  newflower[j+1]=kData[v].flower[j];
@@ -10447,7 +10516,7 @@ public class PackData{
 			  }
 	    	
 			  // fix w
-			  numb=getNum(w)+1;
+			  numb=countFaces(w)+1;
 			  newflower=new int[numb+1];
 			  for (int j=0;j<numb;j++) 
 				  newflower[j]=kData[w].flower[j];
@@ -10468,7 +10537,7 @@ public class PackData{
 
 		  while (nextvert!=w) {
 			  int newnext=kData[nextvert].flower[0];
-			  numb=getNum(nextvert)+2;
+			  numb=countFaces(nextvert)+2;
 			  newflower=new int[numb+1];
 			  for (int i=0;i<=(numb-2);i++) 
 				  newflower[i]=kData[nextvert].flower[i];
@@ -10536,10 +10605,10 @@ public class PackData{
 		  // fix all the flowers
 		  for (int j=0;j<3;j++) {
 			  kData[vert[j]].num++;
-			  int []newflower=new int[getNum(vert[j])+1];
-			  for (int k=0;k<getNum(vert[j]);k++)
+			  int []newflower=new int[countFaces(vert[j])+1];
+			  for (int k=0;k<countFaces(vert[j]);k++)
 				  newflower[k]=kData[vert[j]].flower[k];
-			  newflower[getNum(vert[j])]=newflower[0];
+			  newflower[countFaces(vert[j])]=newflower[0];
 			  kData[vert[j]].flower=newflower;
 			  setBdryFlag(vert[j],0);
 		  }
@@ -10817,7 +10886,7 @@ public class PackData{
 			  Iterator<Integer> vlist=vertlist.iterator();
 			  while(vlist.hasNext()) {
 				  int v=(int)vlist.next();
-				  int deg=getNum(v);
+				  int deg=countFaces(v);
 				  setCircleColor(v,ColorUtil.colorByDegree(deg));
 				  count++;
 			  }
@@ -11742,7 +11811,7 @@ public class PackData{
 				}
 
 				// Find closer of two neighbors (in eucl distance in hyp/eucl).
-				int jup = kData[bestj].flower[getNum(bestj)];
+				int jup = kData[bestj].flower[countFaces(bestj)];
 				int jdown = kData[bestj].flower[0];
 				goit = new EdgeLink(this);
 				best = geom_dist(z, jup);
@@ -11893,7 +11962,7 @@ public class PackData{
 
 		// load vector of complex arguments of directions to petals
 		Complex fz;
-		int num = getNum(circle);
+		int num = countFaces(circle);
 		double[] args = new double[num + 1];
 		for (int k = 0; k < (num + getBdryFlag(circle)); k++) {
 			int j = kData[circle].flower[k];
@@ -12074,7 +12143,7 @@ public class PackData{
 	public int delete_vert(int v) {
 		for (int i=1;i<=nodeCount;i++)
 			if (i!=v) 
-				for (int k=0;k<=getNum(i);k++)
+				for (int k=0;k<=countFaces(i);k++)
 					if (kData[i].flower[k]>v) kData[i].flower[k]--;
 		kData[v].flower=null;
 	    kData[v].invDist=null;
@@ -12162,28 +12231,28 @@ public class PackData{
 		  
 		  // else non-DCEL case
 		  int w;
-		  for (int j=0;j<getNum(v);j++) { // check suitability
+		  for (int j=0;j<countFaces(v);j++) { // check suitability
 	    	  // TODO: why was this needed?
 //	    	  if (getNum(w=kData[v].flower[j])<4) return 0;
 	    	  w=kData[v].flower[j];
-	    	  for (int k=0;k<=getNum(w);k++) {
+	    	  for (int k=0;k<=countFaces(w);k++) {
 	    		  int n=kData[w].flower[k];
-	    		  if (kData[n].flower[0]!=kData[n].flower[getNum(n)]) // bdry? 
+	    		  if (kData[n].flower[0]!=kData[n].flower[countFaces(n)]) // bdry? 
 	    			  return 0;
 	    	  }
 	      }
 	    
 	      // adjust neighbors' flowers and overlaps 
-	      for (int j=0;j<getNum(v);j++) {
+	      for (int j=0;j<countFaces(v);j++) {
 	    	  double []newoverlaps=null;
 	    	  w=kData[v].flower[j];
 	    	  int start;
 	    	  if ((start=nghb(w,v))<0) return 0; // data will be screwy 
-	    	  int []newflower=new int[getNum(w)-1];
+	    	  int []newflower=new int[countFaces(w)-1];
 	    	  if (kData[w].invDist!=null) 
-	    		  newoverlaps=new double[getNum(w)-1];
-	    	  for (int k=0;k<getNum(w)-1;k++) {
-	    		  int indx=(start+1+k) % (getNum(w));
+	    		  newoverlaps=new double[countFaces(w)-1];
+	    	  for (int k=0;k<countFaces(w)-1;k++) {
+	    		  int indx=(start+1+k) % (countFaces(w));
 	    		  newflower[k]=kData[w].flower[indx];
 	    		  if (newoverlaps!=null)
 	    			  newoverlaps[k]=getInvDist(w,kData[w].flower[indx]);
@@ -12240,7 +12309,7 @@ public class PackData{
 		  for (int j=0;j<3;j++) {
 			  int v=face.vert[j];
 			  int indx=nghb(v,face.vert[(j+2)%3]);
-			  int num=getNum(v);
+			  int num=countFaces(v);
 			  int []newflower=new int[num+1];
 			  for (int kk=0;kk<num;kk++)
 				  newflower[kk]=kData[v].flower[(kk+indx)%num];
@@ -12333,14 +12402,14 @@ public class PackData{
 	    new_verts=new EdgeSimple[Num+2];
 	    for (int v=1;v<nodeCount;v++) {
 	    	int w;
-	    	for (int k=0;k<(getNum(v)+getBdryFlag(v));k++)
+	    	for (int k=0;k<(countFaces(v)+getBdryFlag(v));k++)
 	    		if ((w=kData[v].flower[k])>v)
 	    			new_verts[++count]=new EdgeSimple(v,w);
 	    }
 	    if (count!=Num) throw new CombException();
 
 	    for (int v=1;v<=nodeCount;v++)
-	    	tempK[v].flower=new int[getNum(v)+1];
+	    	tempK[v].flower=new int[countFaces(v)+1];
 	    
 	    // adjust flowers for the original vertices
 	    for (int n=1;n<=Num;n++) {
@@ -12370,14 +12439,14 @@ public class PackData{
 	    		}
 	    		if (kData[e.v].flower[0]==e.w) {
 	    			tempK[Nn].flower[0]=e.w;
-	    			tempK[Nn].flower[1]=tempK[e.w].flower[getNum(e.w)-1];
+	    			tempK[Nn].flower[1]=tempK[e.w].flower[countFaces(e.w)-1];
 	    			tempK[Nn].flower[2]=tempK[e.v].flower[1];
 	    			tempK[Nn].flower[3]=e.v;
 		    		setRadius(Nn,getRadius(e.v));
 	    		}
 	    		else {
 	    			tempK[Nn].flower[0]=e.v;
-	    			tempK[Nn].flower[1]=tempK[e.v].flower[getNum(e.v)-1];
+	    			tempK[Nn].flower[1]=tempK[e.v].flower[countFaces(e.v)-1];
 	    			tempK[Nn].flower[2]=tempK[e.w].flower[1];
 	    			tempK[Nn].flower[3]=e.w;
 		    		setRadius(Nn,getRadius(e.w));
@@ -12400,7 +12469,7 @@ public class PackData{
 	    				kData[e.v].invDist[nghb(e.v,e.w)];
 	    		}
 	    		// petals 1 and 5 are obtained from e.w
-	    		int num_w=getNum(e.w);
+	    		int num_w=countFaces(e.w);
 	    		int dir_wv=nghb(e.w,e.v);
 	    		tempK[Nn].flower[5]=tempK[e.w].flower[dir_wv+1];
 	    		if (isBdry(e.w))  // dir_wv is >0 and < num
@@ -12408,7 +12477,7 @@ public class PackData{
 	    		else // have to do modular shift
 	    			tempK[Nn].flower[1]=tempK[e.w].flower[(dir_wv-1+num_w)%num_w];
 	    		// petals 2 and 4 from e.v
-	    		int num_v=getNum(e.v);
+	    		int num_v=countFaces(e.v);
 	    		int dir_vw=nghb(e.v,e.w);
 	    		tempK[Nn].flower[2]=tempK[e.v].flower[dir_vw+1];
 	    		if (isBdry(e.v)) // dir_vw is >0 and < num
@@ -12442,14 +12511,14 @@ public class PackData{
 	  */
 	  public int vert_for_edge(int v,int j) {
 		int k,w;
-	    if (j<0 || j>getNum(v)) 
+	    if (j<0 || j>countFaces(v)) 
 	    	return -1;
-	    if (!isBdry(v) && j==getNum(v)) j=0; // only stored with first edge
+	    if (!isBdry(v) && j==countFaces(v)) j=0; // only stored with first edge
 	    w=kData[v].flower[j];
-	    if (v<w) return kData[v].flower[getNum(v)+1+j];
+	    if (v<w) return kData[v].flower[countFaces(v)+1+j];
 	    if ((k=nghb(w,v))<0) 
 	    	return -1;
-	    return kData[w].flower[getNum(w)+1+k];
+	    return kData[w].flower[countFaces(w)+1+k];
 	  } 
 
 	  /**
@@ -12510,7 +12579,7 @@ public class PackData{
 
 			// compute maX/miN distances
 			for (int i = 1; i <= nodeCount; i++)
-				for (int j = 0; j < (getNum(i) + getBdryFlag(i)); j++)
+				for (int j = 0; j < (countFaces(i) + getBdryFlag(i)); j++)
 					if ((k = kData[i].flower[j]) > i && i <= count
 							&& k <= count) {
 						dist = EuclMath.xyz_dist(xyz_list[i], xyz_list[k]);
@@ -12522,7 +12591,7 @@ public class PackData{
 			rad = miN / 2.0;
 			// compute and store overlaps
 			for (int i = 1; i <= nodeCount; i++)
-				for (int j = 0; j < (getNum(i) + getBdryFlag(i)); j++)
+				for (int j = 0; j < (countFaces(i) + getBdryFlag(i)); j++)
 					if ((k = kData[i].flower[j]) > i && i <= count
 							&& k <= count) {
 						ovlp = xyz_inv_dist(xyz_list[i], xyz_list[k], rad, rad);
@@ -12545,7 +12614,7 @@ public class PackData{
 			tmprads = new double[nodeCount + 2];
 			for (int i = 1; i <= nodeCount; i++) {
 				miN = 100000000;
-				for (int j = 0; j < (getNum(i) + getBdryFlag(i)); j++) {
+				for (int j = 0; j < (countFaces(i) + getBdryFlag(i)); j++) {
 					if ((k = kData[i].flower[j]) != 0 && i <= count
 							&& k <= count) {
 						dist = Math.sqrt((xyz_list[i].x - xyz_list[k].x)
@@ -12561,7 +12630,7 @@ public class PackData{
 			}
 			// compute and store overlaps
 			for (int i = 1; i <= nodeCount; i++) {
-				for (int j = 0; j < (getNum(i) + getBdryFlag(i)); j++) {
+				for (int j = 0; j < (countFaces(i) + getBdryFlag(i)); j++) {
 					if ((k = kData[i].flower[j]) > i && i <= count
 							&& k <= count) {
 						ovlp = xyz_inv_dist(xyz_list[i], xyz_list[k],
@@ -12596,24 +12665,24 @@ public class PackData{
 	    double []newoverlaps=null;
 
 	    // fix flowers of neighbors 
-	    for (int i=0;i<=getNum(v);i++) {
+	    for (int i=0;i<=countFaces(v);i++) {
 	        w=kData[v].flower[i];
-	        num=getNum(w);
+	        num=countFaces(w);
 	        if (isBdry(w)) {
-	  	  newflower=new int[getNum(w)];
+	  	  newflower=new int[countFaces(w)];
 	  	  if (kData[w].flower[0]==v) 
-	  	    for (int j=0;j<getNum(w);j++) 
+	  	    for (int j=0;j<countFaces(w);j++) 
 	  	      newflower[j]=kData[w].flower[j+1];
-	  	  else if (kData[w].flower[getNum(w)]==v)
-	  	    for (int j=0;j<getNum(w);j++)
+	  	  else if (kData[w].flower[countFaces(w)]==v)
+	  	    for (int j=0;j<countFaces(w);j++)
 	  	      newflower[j]=kData[w].flower[j];
 	  	  if (kData[w].invDist!=null) {
-	  	      newoverlaps=new double[getNum(w)];
+	  	      newoverlaps=new double[countFaces(w)];
 	  	      if (kData[w].flower[0]==v) 
-	  		for (int j=0;j<getNum(w);j++) 
+	  		for (int j=0;j<countFaces(w);j++) 
 	  		  newoverlaps[j]=getInvDist(w,kData[w].flower[j+1]);
-	  	      else if (kData[w].flower[getNum(w)]==v)
-	  		for (int j=0;j<getNum(w);j++)
+	  	      else if (kData[w].flower[countFaces(w)]==v)
+	  		for (int j=0;j<countFaces(w);j++)
 	  		  newoverlaps[j]=getInvDist(w,kData[w].flower[j]);
 	  	      kData[w].invDist=newoverlaps;
 	  	    }
@@ -12622,15 +12691,15 @@ public class PackData{
 	  	}
 	        else {
 	  	  indx=nghb(w,v);
-	  	  newflower=new int[getNum(w)-1];
-	  	  start=(indx+1)%getNum(w);
-	  	  for (int j=0;j<getNum(w)-1;j++) newflower[j]=
-	  	    kData[w].flower[(start+j)%getNum(w)];
+	  	  newflower=new int[countFaces(w)-1];
+	  	  start=(indx+1)%countFaces(w);
+	  	  for (int j=0;j<countFaces(w)-1;j++) newflower[j]=
+	  	    kData[w].flower[(start+j)%countFaces(w)];
 	  	  if (kData[w].invDist!=null) {
-	  	      newoverlaps=new double[getNum(w)-1];
-	  	      start=(indx+1)%getNum(w);
-	  	      for (int j=0;j<getNum(w)-1;j++) 
-	  	    	  newoverlaps[j]=getInvDist(w,kData[w].flower[(start+j)%getNum(w)]);
+	  	      newoverlaps=new double[countFaces(w)-1];
+	  	      start=(indx+1)%countFaces(w);
+	  	      for (int j=0;j<countFaces(w)-1;j++) 
+	  	    	  newoverlaps[j]=getInvDist(w,kData[w].flower[(start+j)%countFaces(w)]);
 	  	      kData[w].invDist=newoverlaps;
 	  	  }
 	  	  kData[w].flower=newflower;
@@ -12659,27 +12728,27 @@ public class PackData{
 	    for (int k=0;k<3;k++) {
 	        w=kData[v].flower[k];
 	        indx=nghb(w,v);
-	        newflower=new int[getNum(w)];
+	        newflower=new int[countFaces(w)];
 	        for (int j=0;j<indx;j++) newflower[j]=kData[w].flower[j];
-	        for (int j=indx;j<getNum(w);j++) {
+	        for (int j=indx;j<countFaces(w);j++) {
 	  	  newflower[j]=kData[w].flower[j+1];
 	        }
 	        kData[w].flower=newflower;
 	        if (kData[w].invDist!=null) {
-	  	  newoverlaps=new double[getNum(w)];
+	  	  newoverlaps=new double[countFaces(w)];
 	  	  for (int j=0;j<indx;j++) 
 	  	    newoverlaps[j]=getInvDist(w,kData[w].flower[j]);
-	  	  for (int j=indx;j<getNum(w);j++) {
+	  	  for (int j=indx;j<countFaces(w);j++) {
 	  	      newoverlaps[j]=getInvDist(w,kData[w].flower[j+1]);
 	  	  }
 	  	  kData[w].invDist=newoverlaps;
 	        }
 	        kData[w].num--;
 	        if (indx==0 && !isBdry(w)) {
-	  	  kData[w].flower[getNum(w)]=
+	  	  kData[w].flower[countFaces(w)]=
 	  	    kData[w].flower[0];
 	  	  if (kData[w].invDist!=null)
-	  	    set_single_invDist(w,kData[w].flower[getNum(w)],getInvDist(w,kData[w].flower[0]));
+	  	    set_single_invDist(w,kData[w].flower[countFaces(w)],getInvDist(w,kData[w].flower[0]));
 	        }
 	      }
 	    delete_vert(v);
@@ -12699,15 +12768,15 @@ public class PackData{
 	    int []newflower=null;
 	    double []newol=null;
 
-	    if (isBdry(v) || getNum(v)!=4
+	    if (isBdry(v) || countFaces(v)!=4
 	        || (indx=nghb(w,v))<0) return 0;
-	    z=kData[v].flower[(nghb(v,w)+2)%getNum(v)]; 
+	    z=kData[v].flower[(nghb(v,w)+2)%countFaces(v)]; 
 	    // fix data for w and z
 	    if (indx==0) {
-	        kData[w].flower[0]=kData[w].flower[getNum(w)]=z;
+	        kData[w].flower[0]=kData[w].flower[countFaces(w)]=z;
 	        if (overlapStatus) {
 	        	set_single_invDist(w,kData[w].flower[0],1.0);
-	        	set_single_invDist(w,kData[w].flower[getNum(w)],1.0);
+	        	set_single_invDist(w,kData[w].flower[countFaces(w)],1.0);
 	        }
 	    }
 	    else {
@@ -12716,10 +12785,10 @@ public class PackData{
 	        	set_single_invDist(w,kData[w].flower[indx],1.0);
 	    }
 	    if ((indx=nghb(z,v))==0) {
-	        kData[z].flower[0]=kData[z].flower[getNum(z)]=w;
+	        kData[z].flower[0]=kData[z].flower[countFaces(z)]=w;
 	        if (overlapStatus) {
 	        	set_single_invDist(z,kData[z].flower[0],1.0);
-	        	set_single_invDist(z,kData[z].flower[getNum(z)],1.0);
+	        	set_single_invDist(z,kData[z].flower[countFaces(z)],1.0);
 	        }
 	    }
 	    else {
@@ -12728,34 +12797,34 @@ public class PackData{
 	        	set_single_invDist(z,kData[z].flower[indx],1.0);
 	    }
 	    // remove v from others 
-	    x=kData[v].flower[(nghb(v,w)+1)%getNum(v)];
+	    x=kData[v].flower[(nghb(v,w)+1)%countFaces(v)];
 	    indx=nghb(x,v);
-	    newflower=new int[getNum(x)];
+	    newflower=new int[countFaces(x)];
 	    for (int j=0;j<indx;j++) newflower[j]=kData[x].flower[j];
-	    for (int j=indx;j<getNum(x);j++)
+	    for (int j=indx;j<countFaces(x);j++)
 	      newflower[j]=kData[x].flower[j+1];
 	    kData[x].flower=newflower;
 	    if (overlapStatus) {
-	        newol=new double[getNum(x)];
+	        newol=new double[countFaces(x)];
 	        for (int j=0;j<indx;j++) 
 	        	newol[j]=getInvDist(x,kData[x].flower[j]);
-	        for (int j=indx;j<getNum(x);j++)
+	        for (int j=indx;j<countFaces(x);j++)
 	        	newol[j]=getInvDist(x,kData[x].flower[j+1]);
 	        kData[x].invDist=newol;
 	    }
 	    kData[x].num--;
-	    x=kData[v].flower[(nghb(v,z)+1)%getNum(v)];
+	    x=kData[v].flower[(nghb(v,z)+1)%countFaces(v)];
 	    indx=nghb(x,v);
-	    newflower=new int[getNum(x)];
+	    newflower=new int[countFaces(x)];
 	    for (int j=0;j<indx;j++) newflower[j]=kData[x].flower[j];
-	    for (int j=indx;j<getNum(x);j++)
+	    for (int j=indx;j<countFaces(x);j++)
 	      newflower[j]=kData[x].flower[j+1];
 	    kData[x].flower=newflower;
 	    if (overlapStatus) {
-	        newol=new double[getNum(x)];
+	        newol=new double[countFaces(x)];
 	        for (int j=0;j<indx;j++) 
 	        	newol[j]=getInvDist(x,kData[x].flower[j]);
-	        for (int j=indx;j<getNum(x);j++)
+	        for (int j=indx;j<countFaces(x);j++)
 	        	newol[j]=getInvDist(x,kData[x].flower[j+1]);
 	        kData[x].invDist=newol;
 	    }
@@ -12774,7 +12843,7 @@ public class PackData{
 	   * @return int 'num', 0 on error (should be unharmed)
 	   */
 	  public int insert_petal(int v,int indx,int newV) {
-		  int num=getNum(v);
+		  int num=countFaces(v);
 		  if (indx<0 || indx>(num+1))
 			  return 0;
 		  int []newflower=new int[num+2];
@@ -12878,25 +12947,25 @@ public class PackData{
 	  	// Note: if v==0, then it has already been removed, so skip
 	  	if (v>0) {
 	  	    if (!isBdry(v)) {
-	  		if (getNum(v)!=3) flag++;
+	  		if (countFaces(v)!=3) flag++;
 	  		else for (int i=0;i<3;i++) {
 	  		    w=kData[v].flower[i];
-	  		    if ((!isBdry(w) && getNum(w)<=3)
-	  			|| (isBdry(w) && getNum(w)<2))
+	  		    if ((!isBdry(w) && countFaces(w)<=3)
+	  			|| (isBdry(w) && countFaces(w)<2))
 	  			flag++;
 	  		}
 	  	    }
 	  	    else if (isBdry(v)) {
-	  		if (getNum(kData[v].flower[0])<2
-	  		    || getNum(kData[v].flower[getNum(v)])<2)
+	  		if (countFaces(kData[v].flower[0])<2
+	  		    || countFaces(kData[v].flower[countFaces(v)])<2)
 	  		    flag++;
-	  		for (int i=1;i<getNum(v);i++) 
+	  		for (int i=1;i<countFaces(v);i++) 
 	  		    if (isBdry(kData[v].flower[i])) flag++;
 	  	    }
 	  	    if (flag==0) { // yes, vertex qualifies
 	  	    	boolean didit=false;
 	  	    	if (isBdry(v)) {
-	  	    		for (int i=0;i<=getNum(v);i++) 
+	  	    		for (int i=0;i<=countFaces(v);i++) 
 	  	    			setAim(kData[v].flower[i],-0.1);
 	  	    		if (remove_bdry_vert(v)!=0) didit=true;
 	  	    	}
@@ -12946,11 +13015,11 @@ public class PackData{
 	      while (vlst.hasNext()) {
 	    	  int v=vlst.next();
 	    	  
-	    	  if (!isBdry(v) && getNum(v)==3) {
+	    	  if (!isBdry(v) && countFaces(v)==3) {
 	    		  int strike=0;
-	    		  for (int j=0;(strike==0 && j<=getNum(v));j++) {
+	    		  for (int j=0;(strike==0 && j<=countFaces(v));j++) {
 	    			  int k=kData[v].flower[j];
-	    			  if (getNum(k)<3 || (!isBdry(k) && getNum(k)==3))
+	    			  if (countFaces(k)<3 || (!isBdry(k) && countFaces(k)==3))
 	    				  strike++;
 	    		  }
 	    		  if (strike==0) {
@@ -12969,7 +13038,7 @@ public class PackData{
 	      for (int v=1;v<=nodeCount;v++) {
 	    	  if (kData[v].utilFlag>=0) {
 	    		  int good=0;
-	    		  for (int j=0;j<(getNum(v)+getBdryFlag(v));j++) {
+	    		  for (int j=0;j<(countFaces(v)+getBdryFlag(v));j++) {
 	    			  int k=kData[v].flower[j];
 	    			  if (isBdry(k) || kData[k].utilFlag>=0)
 	    				  good++;
@@ -12994,7 +13063,7 @@ public class PackData{
 	    		  
 	    		  // count petals who will be kept (so far)
 	    		  int ncount=0;
-	    		  for (int j=0;j<(getNum(v)+getBdryFlag(v));j++) {
+	    		  for (int j=0;j<(countFaces(v)+getBdryFlag(v));j++) {
 	    			  int k=kData[v].flower[j];
 	    			  
 	    			  // look at petal k
@@ -13004,7 +13073,7 @@ public class PackData{
 	    				  ncount++;
 	    			  else { // here have to see if petal has already lost too many
 	    	    		  int good=0;
-	    	    		  for (int jj=0;jj<(getNum(k)+getBdryFlag(k));jj++) {
+	    	    		  for (int jj=0;jj<(countFaces(k)+getBdryFlag(k));jj++) {
 	    	    			  int kk=kData[k].flower[jj];
 	    	    			  // if petal 'k's petal is bdry, not slated, or larger and
 	    	    			  //    hence not yet removed
@@ -13048,7 +13117,7 @@ public class PackData{
 	    		  // create kData and fix flower
 	    		  newKData[vertmap[k]]=kData[k].clone();
 	    		  int num=0;
-	    		  for (int j=0;j<(getNum(k)+getBdryFlag(k));j++)
+	    		  for (int j=0;j<(countFaces(k)+getBdryFlag(k));j++)
 	    			  if (vertmap[kData[k].flower[j]]>0)
 	    				  num++;
 	    		  
@@ -13061,7 +13130,7 @@ public class PackData{
 	    		  // handle closed flowers whose first petal is now gone
 	    		  if (!isBdry(k) && vertmap[kData[k].flower[0]]==0) {
 	    			  int tick=0;
-	    			  for (int jj=0;jj<getNum(k);jj++)
+	    			  for (int jj=0;jj<countFaces(k);jj++)
 	    				  if (vertmap[kData[k].flower[jj]]>0) {
 	    					  flower[tick]=vertmap[kData[k].flower[jj]];
 	    					  tick++;
@@ -13073,7 +13142,7 @@ public class PackData{
 	    		  
 	    		  else {
 	    			  int tick=0;
-	    			  for (int jj=0;jj<=getNum(k);jj++)
+	    			  for (int jj=0;jj<=countFaces(k);jj++)
 	    				  if (vertmap[kData[k].flower[jj]]>0) {
 	    					  flower[tick]=vertmap[kData[k].flower[jj]];
 	    					  tick++;
@@ -13125,7 +13194,7 @@ public class PackData{
 	        //   interior.
 	        boolean failed=false;
 	        if (!isBdry(v1) || !isBdry(v2)
-	  	  || getNum(v1)==1 || getNum(v2)==1
+	  	  || countFaces(v1)==1 || countFaces(v2)==1
 	  	  || (v2!=kData[v1].flower[0] && v1!=kData[v2].flower[0]) ) {
 	  	  failed=true;
 	        }
@@ -13139,7 +13208,7 @@ public class PackData{
 	  	  if (isBdry(w)) failed=true;
 	  	  if (!failed) {
 	  	      int hits=0;
-	  	      for (int j=0;j<getNum(w);j++) {
+	  	      for (int j=0;j<countFaces(w);j++) {
 	  		  m=kData[w].flower[j];
 	  		  int mm=kData[w].flower[j+1];
 	  		  if ((!isBdry(m) && isBdry(mm))
@@ -13160,10 +13229,10 @@ public class PackData{
 	        }
 
 	        // fix up v1
-	        newflower=new int[getNum(v1)+1];
+	        newflower=new int[countFaces(v1)+1];
 	        if (overlapStatus)
-	        	newoverlaps=new double[getNum(v1)+1];
-	        for (int i=1;i<=getNum(v1);i++) {
+	        	newoverlaps=new double[countFaces(v1)+1];
+	        for (int i=1;i<=countFaces(v1);i++) {
 	        	newflower[i-1]=kData[v1].flower[i];
 	        	if (overlapStatus)
 	        		newoverlaps[i-1]=getInvDist(v1,kData[v1].flower[i]);
@@ -13177,10 +13246,10 @@ public class PackData{
 	        setAim(v1,-1.0);
 
 	        // fix up v2 
-	        newflower=new int[getNum(v2)+1];
+	        newflower=new int[countFaces(v2)+1];
 	        if (overlapStatus)
-	        	newoverlaps=new double[getNum(v2)+1];
-	        for (int i=0;i<getNum(v2);i++) {
+	        	newoverlaps=new double[countFaces(v2)+1];
+	        for (int i=0;i<countFaces(v2);i++) {
 	        	newflower[i]=kData[v2].flower[i];
 	        	if (overlapStatus)
 	        		newoverlaps[i]=getInvDist(v2,kData[v2].flower[i]);
@@ -13194,11 +13263,11 @@ public class PackData{
 
 	        // fix up common neighbor v 
 	        v=kData[v1].flower[0];
-	        newflower=new int[getNum(v)+1];
+	        newflower=new int[countFaces(v)+1];
 	        if (overlapStatus)
-	        	newoverlaps=new double[getNum(v)+1];
+	        	newoverlaps=new double[countFaces(v)+1];
 	        n=nghb(v,v2);
-	        m=getNum(v);
+	        m=countFaces(v);
 	        for (int i=n;i<=m;i++) {
 	        	newflower[i-n]=kData[v].flower[i];
 	        	if (overlapStatus)
@@ -13251,8 +13320,8 @@ public class PackData{
 			  if ((k12=nghb(v1,v2))<0 || (k21=nghb(v2,v1))<0)
 				  throw new CombException("non-neighbors");
 
-			  int num1=getNum(v1);
-			  int num2=getNum(v2);
+			  int num1=countFaces(v1);
+			  int num2=countFaces(v2);
 			  int newNum;
 			  int newBdryFlag=1;
 			  int lv=0;
@@ -13351,13 +13420,13 @@ public class PackData{
 			  
 			  // failure if a common neighbor has too few faces
 			  if (lv>0) {
-				  if ((isBdry(lv) && getNum(lv)==1) ||
-						  (!isBdry(lv) && getNum(lv)<=3))
+				  if ((isBdry(lv) && countFaces(lv)==1) ||
+						  (!isBdry(lv) && countFaces(lv)<=3))
 					  throw new CombException("common vertex has too few faces");
 			  }
 			  if (rv>0) {
-				  if ((isBdry(rv) && getNum(rv)==1) ||
-						  (!isBdry(rv) && getNum(rv)<=3))
+				  if ((isBdry(rv) && countFaces(rv)==1) ||
+						  (!isBdry(rv) && countFaces(rv)<=3))
 					  throw new CombException("common vertex has too few faces");
 			  }
 			  
@@ -13369,7 +13438,7 @@ public class PackData{
 			  
 			  // fix lv
 			  if (lv>0) {
-				  int nm=getNum(lv);
+				  int nm=countFaces(lv);
 				  int kl1=nghb(lv,v1);
 				  for (int j=kl1+1;j<nm;j++)
 					  kData[lv].flower[j]=kData[lv].flower[j+1];
@@ -13383,7 +13452,7 @@ public class PackData{
 			  
 			  // fix rv
 			  if (rv>0) {
-				  int nm=getNum(rv);
+				  int nm=countFaces(rv);
 				  int kl2=nghb(rv,v2);
 				  for (int j=kl2+1;j<nm;j++)
 					  kData[rv].flower[j]=kData[rv].flower[j+1];
@@ -13403,7 +13472,7 @@ public class PackData{
 			  for (int j=0;j<newNum+newBdryFlag;j++) {
 				  int v=newflower[j];
 				  if (v!=rv && v!=lv) {
-					  for (int jj=0;jj<(getNum(v)+getBdryFlag(v));jj++) {
+					  for (int jj=0;jj<(countFaces(v)+getBdryFlag(v));jj++) {
 						  if (kData[v].flower[jj]==v2) kData[v].flower[jj]=v1;
 					  }
 				  }
@@ -13427,7 +13496,7 @@ public class PackData{
 			  
 			  // fix numbering in flowers due to deletion of index v2
 			  for (int v=1;v<=nodeCount;v++) {
-				  for (int j=0;j<=getNum(v);j++) {
+				  for (int j=0;j<=countFaces(v);j++) {
 					  if (kData[v].flower[j]>v2)
 						  kData[v].flower[j]--;
 				  }
@@ -13603,9 +13672,9 @@ public class PackData{
 	    int []newflower;
 
 	    // fix up 'next', vertex after vert 
-	    if (getNum(vert)<3) return -1; // too few faces 
+	    if (countFaces(vert)<3) return -1; // too few faces 
 	    v=kData[vert].flower[0];
-	    next=kData[vert].flower[getNum(vert)];
+	    next=kData[vert].flower[countFaces(vert)];
 	    // if next==v, then vert and next should be interior; nothing more to do 
 	    if (next==v) {
 	        setBdryFlag(vert,0);
@@ -13620,9 +13689,9 @@ public class PackData{
 	    setAim(vert,2.0*Math.PI);
 	    if (overlapStatus) { // average the overlaps with v and next 
 	        vert_next_angle=(0.5)*(getInvDist(vert,kData[vert].flower[0])+
-	  			     getInvDist(vert,kData[vert].flower[getNum(vert)]));
+	  			     getInvDist(vert,kData[vert].flower[countFaces(vert)]));
 	        set_single_invDist(vert,kData[vert].flower[0],vert_next_angle);
-	        set_single_invDist(vert,kData[vert].flower[getNum(vert)],vert_next_angle);
+	        set_single_invDist(vert,kData[vert].flower[countFaces(vert)],vert_next_angle);
 	    }
 
 	    /* if next and v share common neighbors: either {v,vert,next} or
@@ -13630,30 +13699,30 @@ public class PackData{
 	       to put in latter case (one face disappears). */
 
 	    else if ((kData[v].flower[0]==
-	  	       (w=kData[next].flower[getNum(next)]))
+	  	       (w=kData[next].flower[countFaces(next)]))
 	  	   || kData[v].flower[0]==next) {
 	        if (kData[v].flower[0]==next) {
 	  	  EdgeLink elink=new EdgeLink(this);
 	  	  elink.add(new EdgeSimple(v,next));
 	  	  remove_edge(elink);
-	  	  w=kData[next].flower[getNum(next)];
+	  	  w=kData[next].flower[countFaces(next)];
 	        }
-	        newnum=getNum(v)+getNum(next);
+	        newnum=countFaces(v)+countFaces(next);
 	        newflower=new int[newnum+1];
 	        if (overlapStatus) {
 	  	  newoverlaps=new double[newnum+1];
 	  	  next_w_angle=(0.5)*
 	  	    (getInvDist(w,kData[w].flower[0])+
-	  	     getInvDist(w,kData[w].flower[getNum(w)]));
+	  	     getInvDist(w,kData[w].flower[countFaces(w)]));
 	        }
-	        hold=getNum(next);
-	        for (int i=0;i<=getNum(next);i++) {
+	        hold=countFaces(next);
+	        for (int i=0;i<=countFaces(next);i++) {
 	  	  newflower[i]=kData[next].flower[i];
 	  	  if (overlapStatus) newoverlaps[i]=getInvDist(next,kData[next].flower[i]);
 	        }
-	        for (int i=1;i<=getNum(v);i++) {
-	  	  newflower[i+getNum(next)]=kData[v].flower[i];
-	  	  if (overlapStatus) newoverlaps[i+getNum(next)]=
+	        for (int i=1;i<=countFaces(v);i++) {
+	  	  newflower[i+countFaces(next)]=kData[v].flower[i];
+	  	  if (overlapStatus) newoverlaps[i+countFaces(next)]=
 	  				   getInvDist(next,kData[next].flower[i]);
 	        }
 	        kData[next].flower=newflower;
@@ -13665,10 +13734,10 @@ public class PackData{
 	  	  set_single_invDist(next,kData[next].flower[hold],next_w_angle);	
 	        }
 	        // fix up w 
-	        kData[w].flower[getNum(w)]=next;
+	        kData[w].flower[countFaces(w)]=next;
 	        if (overlapStatus)
 	        	set_single_invDist(w,kData[w].flower[0],vert_next_angle);
-	        	set_single_invDist(w,kData[w].flower[getNum(w)],vert_next_angle);
+	        	set_single_invDist(w,kData[w].flower[countFaces(w)],vert_next_angle);
 	        setBdryFlag(next,0);
 	        setBdryFlag(w,0);
 	        setAim(next,2.0*Math.PI);
@@ -13677,22 +13746,22 @@ public class PackData{
 
 	    // otherwise, next remains boundary vertex 
 	    else {
-	        newnum=getNum(v)+getNum(next);
+	        newnum=countFaces(v)+countFaces(next);
 	        newflower=new int[newnum+1];
 	        if (overlapStatus) 
 	  	newoverlaps=new double[newnum+1];
-	        for (int i=0;i<=getNum(v);i++) {
+	        for (int i=0;i<=countFaces(v);i++) {
 	  	  newflower[i]=kData[v].flower[i];
 	  	  if (overlapStatus)
 	  	    newoverlaps[i]=getInvDist(v,kData[v].flower[i]);
 	        }
-	        for (int i=1;i<=getNum(next);i++) {
-	        	newflower[i+getNum(v)]=kData[next].flower[i];
+	        for (int i=1;i<=countFaces(next);i++) {
+	        	newflower[i+countFaces(v)]=kData[next].flower[i];
 	        	if (overlapStatus)
-	        		newoverlaps[i+getNum(v)]=getInvDist(v,kData[v].flower[i]);
+	        		newoverlaps[i+countFaces(v)]=getInvDist(v,kData[v].flower[i]);
 	        }
 	        if (overlapStatus)
-	        	newflower[getNum(v)]=(int) vert_next_angle;
+	        	newflower[countFaces(v)]=(int) vert_next_angle;
 	        kData[next].flower=newflower;
 	        kData[next].num=newnum;
 	        if (overlapStatus) {
@@ -13702,9 +13771,9 @@ public class PackData{
 	    }
 
 	    // fix up things with v in their flowers (v will be removed) 
-	    for (int i=0;i<=getNum(v);i++) {
+	    for (int i=0;i<=countFaces(v);i++) {
 	        int ii=kData[v].flower[i];
-	        for (int j=0;j<=getNum(ii);j++) {
+	        for (int j=0;j<=countFaces(ii);j++) {
 	        	int jj=kData[ii].flower[j];
 	        	if (jj==v) kData[ii].flower[j]=next;
 	        }
@@ -13778,7 +13847,7 @@ public class PackData{
 	        for (int i=1;i<=n;i++) {
 	        	oldnewflag[newnode]=1; // this data will reside where 'old2new' points
 	        	old2new[newnode]=node;
-	        	node=kData[node].flower[getNum(node)];
+	        	node=kData[node].flower[countFaces(node)];
 	        	newnode=p2.kData[newnode].flower[0];
 	        }
 	        endvertex=newnode; 	// last p2 vertex 
@@ -13811,8 +13880,8 @@ public class PackData{
 
 	        	if (i==endvertex) { // special measures for last vertex 
 	        		if ((b1 > n) && (b2 > n)) { // flower begins with petals from p2 
-	        			ll=p2.getNum(i);
-	        			m=getNum(j);
+	        			ll=p2.countFaces(i);
+	        			m=countFaces(j);
 	        			newflower=new int[ll+m+1];
 	        			for (int k=1;k<=m;k++) 
 	        				newflower[ll+m-k+1]=
@@ -13826,18 +13895,18 @@ public class PackData{
 	        		else if ((b1==n) && (b2>n)) {
 	        			/* identify endnode and v1 in this; use parts of three flowers;
 	  				   endnode to be deleted later. */
-	        			for (int ii=0;ii<=getNum(endnode);ii++) {
+	        			for (int ii=0;ii<=countFaces(endnode);ii++) {
 	        				// remove references to endnode in this
 	        				w=kData[endnode].flower[ii];
 	        				indx=nghb(w,node);
 	        				if (indx==0 && !isBdry(w))
 	        					kData[w].flower[0]=
-	        						kData[w].flower[getNum(w)]=v1;
+	        						kData[w].flower[countFaces(w)]=v1;
 	        				else if (indx>=0) kData[w].flower[indx]=v1;
 	        			}
-	        			ll=p2.getNum(endvertex);
-	        			mm=getNum(v1);
-	        			nn=p2.getNum(v2);
+	        			ll=p2.countFaces(endvertex);
+	        			mm=countFaces(v1);
+	        			nn=p2.countFaces(v2);
 	        			newflower=new int[ll+mm+nn+1];
 	        			for (int k=0;k<ll;k++)
 	        				newflower[k]=old2new[p2.kData[endvertex].flower[k]];
@@ -13850,8 +13919,8 @@ public class PackData{
 	        		}
 	        		else if (b1==n && b2==n) {
 	        			/* whole bdrys; all become interior */
-	        			ll=p2.getNum(v2);
-	        			mm=getNum(v1);
+	        			ll=p2.countFaces(v2);
+	        			mm=countFaces(v1);
 	        			newflower=new int[ll+mm+1];
 	        			for (int k=0;k<ll;k++)
 	        				newflower[k]=old2new[p2.kData[v2].flower[k]];
@@ -13865,8 +13934,8 @@ public class PackData{
 	        	// rest of flowers are more routine 
 
 	        	else if (oldnewflag[i]!=0) { // this is one of identified vertices
-	        		ll=p2.getNum(i);
-	        		mm=getNum(j);
+	        		ll=p2.countFaces(i);
+	        		mm=countFaces(j);
 	        		newflower=new int[ll+mm+1];
 	        		for (int k=0;k<=mm;k++)
 	        			newflower[k]=kData[j].flower[k];
@@ -13878,9 +13947,9 @@ public class PackData{
 	        	else {
 	        		setCenter(j,new Complex(p2.getCenter(i)));
 	        		setRadius(j,p2.getRadius(i));
-	        		kData[j].num=p2.getNum(i);
-	        		newflower=new int[p2.getNum(i)+1];
-	        		for (int k=0;k<=p2.getNum(i);k++)
+	        		kData[j].num=p2.countFaces(i);
+	        		newflower=new int[p2.countFaces(i)+1];
+	        		for (int k=0;k<=p2.countFaces(i);k++)
 	        			newflower[k]= old2new[p2.kData[i].flower[k]];
 	        		kData[j].flower=newflower;
 	        	}
@@ -13943,11 +14012,11 @@ public class PackData{
 	        // now handle various possibilities 
 	        old2new=new int[oldNodeCount+2];
 	        for (int kk=1;kk<=oldNodeCount;kk++) old2new[kk]=kk;
-	        next=kData[v1].flower[getNum(v1)];
+	        next=kData[v1].flower[countFaces(v1)];
 	        v=kData[v2].flower[0];
 	        if (next==v && v1!=v2) { // verts v2, next, v1 along edge 
 	  	  old_vert=kData[next].flower[0]; // v1 
-	  	  new_vert=kData[next].flower[getNum(next)]; // v2 
+	  	  new_vert=kData[next].flower[countFaces(next)]; // v2 
 	  	  if (close_up(next)<0) return 0;
 	  	  for (int kk=1;kk<=oldNodeCount;kk++) {
 	  	      if (old2new[kk]==old_vert) old2new[kk]=new_vert;
@@ -13958,7 +14027,7 @@ public class PackData{
 	  	  next=v1;
 	  	  for (int j=1;j<=n;j++) {
 	  	      old_vert=kData[next].flower[0];
-	  	      new_vert=kData[next].flower[getNum(next)];
+	  	      new_vert=kData[next].flower[countFaces(next)];
 	  	      if (old_vert!=new_vert) {
 
 	  		  if (close_up(next)<0) return 0;
@@ -13975,8 +14044,8 @@ public class PackData{
 	    else {
 	        // attach first edge 
 	        // fix up v1 (will remove v2) 
-	  	  ll=getNum(v1);
-	  	  mm=getNum(v2);
+	  	  ll=countFaces(v1);
+	  	  mm=countFaces(v2);
 	  	  newflower=new int[ll+mm+1];
 	  	  for (int i=0;i<=ll;i++) newflower[i]=kData[v1].flower[i];
 	  	  for (int i=(ll+1);i<=(ll+mm);i++) 
@@ -13985,8 +14054,8 @@ public class PackData{
 	  	  kData[v1].num = ll+mm;
 	  	  /* fix up 'next', clockwise from v1 (will remove ctrclk'w 
 	  	     nghb v of v2) */
-	  	  ll=getNum(v);
-	  	  mm=getNum(next);
+	  	  ll=countFaces(v);
+	  	  mm=countFaces(next);
 	  	  newflower=new int[ll+mm+1];
 	  	  for (int i=0;i<=ll;i++) newflower[i]=kData[v].flower[i];
 	  	  for (int i=ll+1;i<=(ll+mm);i++) 
@@ -13994,17 +14063,17 @@ public class PackData{
 	  	  kData[next].flower=newflower;
 	  	  kData[next].num = ll+mm;
 	  	  // fix up things pointed to v (which is to be removed) 
-	  	  for (int i=0;i<=getNum(v);i++) {
+	  	  for (int i=0;i<=countFaces(v);i++) {
 	  	      int ii=kData[v].flower[i];
-	  	      for (int j=0;j<=getNum(ii);j++) {
+	  	      for (int j=0;j<=countFaces(ii);j++) {
 	  		  int jj=kData[ii].flower[j];
 	  		  if (jj==v) kData[ii].flower[j]=next;
 	  	      }
 	  	  }
 	  	  // fix up things pointed to v2 (which is to be removed )
-	  	  for (int i=0;i<=getNum(v2);i++) {
+	  	  for (int i=0;i<=countFaces(v2);i++) {
 	  	      int ii=kData[v2].flower[i];
-	  	      for (int j=0;j<=getNum(ii);j++) {
+	  	      for (int j=0;j<=countFaces(ii);j++) {
 	  		  int jj=kData[ii].flower[j];
 	  		  if (jj==v2) kData[ii].flower[j]=v1;
 	  		}
@@ -14028,7 +14097,7 @@ public class PackData{
 	  	  // now zip up chain of edges for rest of attachments 
 	  	  if (n>1) for (int j=1;j<=n-1;j++) {
 	  	      old_vert=kData[next].flower[0];
-	  	      new_vert=kData[next].flower[getNum(next)];
+	  	      new_vert=kData[next].flower[countFaces(next)];
 	  	      if (old_vert!=new_vert) {
 	  		  if (close_up(next)<0) return 0;
 	  		  for (int kk=1;kk<=oldNodeCount;kk++) {
@@ -14045,7 +14114,7 @@ public class PackData{
 
 //	   finish up 
 	  for (int i=1;i<=nodeCount;i++) { // set bdry and plot flags
-		  if (kData[i].flower[0]==kData[i].flower[getNum(i)]) {
+		  if (kData[i].flower[0]==kData[i].flower[countFaces(i)]) {
 			  setBdryFlag(i,0);
 			  if (getRadius(i)<=0) setRadius(i,0.7);
 			  // so ones now in interior don't have infinite radius
@@ -14208,11 +14277,11 @@ public class PackData{
 	    // else, store in kData
 	    kData[v].invDist[indx]=invDist;
 	    if (indx==0 && !isBdry(v))
-	    	kData[v].invDist[getNum(v)]=invDist;
+	    	kData[v].invDist[countFaces(v)]=invDist;
 	    indx=nghb(w,v);
 	    kData[w].invDist[indx]=invDist;
 	    if (indx==0 && !isBdry(w))
-	    	kData[w].invDist[getNum(w)]=invDist;
+	    	kData[w].invDist[countFaces(w)]=invDist;
 	    return 1;
 	  }
 	  
@@ -14255,7 +14324,7 @@ public class PackData{
 	        cur_vert=v2;
 	        while (vlist.hasNext()) {
 	        	inc=(Integer)vlist.next();
-	        	deg=getNum(cur_vert);
+	        	deg=countFaces(cur_vert);
 	        	int ndir=dir+inc; // intended new direction
 
 	        	// at bdry? there are limits on ndir
@@ -14263,7 +14332,7 @@ public class PackData{
 	        		if (count>0) return nlist;
 	        		return null;
 	        	}
-	  	  ndir=ndir % getNum(cur_vert);
+	  	  ndir=ndir % countFaces(cur_vert);
 	  	  int nvert=kData[cur_vert].flower[ndir];
 	  	  if ((dir=nghb(nvert,cur_vert))<0) // comb error
 	  	      throw new CombException();
@@ -14307,13 +14376,13 @@ public class PackData{
 	   		|| isBdry(v) || isBdry(w)) {
 	  	    return 0;
 	  	}
-	   	int num_v=getNum(v);
+	   	int num_v=countFaces(v);
 	   	int halfv=(int)(num_v/2);
 	   	int ind_w=nghb(v,w);
 	   	if (ind_w<0 || num_v<6 || halfv*2!=num_v) return 0;
-	   	int num_w=getNum(w);
+	   	int num_w=countFaces(w);
 	   	ww=kData[v].flower[(ind_w+halfv)%num_v];
-	   	if (isBdry(ww) || num_w!=getNum(ww)) return 0;
+	   	if (isBdry(ww) || num_w!=countFaces(ww)) return 0;
 	   	
 	   	/* At end will identify ww with w to become new branch point. "Half" 
 	   	 * of v starting at w will become new vert w; other half, vert ww.*/
@@ -14348,13 +14417,13 @@ public class PackData{
 	  		if (u!=w && u!=ww && (dex=nghb(u,v))>=0) {
 	  			kData[u].flower[dex]=node+w;
 	  			if (dex==0 && !isBdry(u))
-	  			kData[u].flower[getNum(u)]=node+w;
+	  			kData[u].flower[countFaces(u)]=node+w;
 	  		}
 	  		u=kData[v].flower[(ind_w+halfv+i)%num_v];
 	  		if (u!=w && u!=ww && (dex=nghb(u,v))>=0) {
 	  			kData[u].flower[dex]=node+ww;
 	  	  		if (dex==0 && !isBdry(u))
-	  		    	kData[u].flower[getNum(u)]=node+ww;
+	  		    	kData[u].flower[countFaces(u)]=node+ww;
 	  		}
 	  	}
 	  	// fix nghbs of original w 
@@ -14364,7 +14433,7 @@ public class PackData{
 	  		jdex=nghb(u,w);
 	  		kData[u].flower[jdex]=v;
 	  		if (jdex==0 && !isBdry(u)) 
-	  			kData[u].flower[getNum(u)]=v;
+	  			kData[u].flower[countFaces(u)]=v;
 	  	}
 	  	// fix nghbs of original ww 
 	  	dex=nghb(ww,v);
@@ -14373,13 +14442,13 @@ public class PackData{
 	  		jdex=nghb(u,ww);
 	  		kData[u].flower[jdex]=v;
 	  		if (jdex==0 && !isBdry(u)) 
-	  			kData[u].flower[getNum(u)]=v;
+	  			kData[u].flower[countFaces(u)]=v;
 	      }
 
 	  	// now replace the fake indices of original v 
 	  	for (int i=0;i<num_v;i++) {
 	  		u=kData[v].flower[i];
-	  		for (int j=0;j<=getNum(u);j++) {
+	  		for (int j=0;j<=countFaces(u);j++) {
 	  			if (kData[u].flower[j]==node+w) 
 	  				kData[u].flower[j]=w;
 	  			else if (kData[u].flower[j]==node+ww) 
@@ -14597,7 +14666,7 @@ public class PackData{
 		Iterator<Integer> vlist = vertlist.iterator();
 		while (vlist.hasNext()) {
 			v = (Integer) vlist.next();
-			if (isBdry(v) && getNum(v) == 2) {
+			if (isBdry(v) && countFaces(v) == 2) {
 				if (!overlapStatus && alloc_overlaps() == 0)
 					return 0;
 				set_single_invDist(v, kData[v].flower[1], -0.5); // overlap 2*pi/3 
@@ -14626,7 +14695,7 @@ public class PackData{
 	     setflag=1;
 	   }
 	   for (int v=1;v<=nodeCount;v++) {
-	     if (!isBdry(v) && getNum(v)==4) {
+	     if (!isBdry(v) && countFaces(v)==4) {
 	       for (int j=0;j<4;j++) 
 	 	  if (set_single_invDist(v,kData[v].flower[j],Math.cos(Math.PI/2.0))!=0) count++;
 	     }
@@ -14761,9 +14830,9 @@ public class PackData{
 	       // fix v 
 	       v=currV;
 	       ind=nghb(v,w);
-	       newflower=new int[getNum(v)+1];
-	       for (int k=1;k<=getNum(v);k++)
-	    	   newflower[k]=kData[v].flower[(k+ind) % getNum(v)];
+	       newflower=new int[countFaces(v)+1];
+	       for (int k=1;k<=countFaces(v);k++)
+	    	   newflower[k]=kData[v].flower[(k+ind) % countFaces(v)];
 	       kData[v].flower=newflower;
 	       kData[v].flower[0]=newval;
 	       setBdryFlag(v,1);
@@ -14771,9 +14840,9 @@ public class PackData{
 	       back=nghb(w,v);
 	       next=nextV;
 	       forward=nghb(w,next);
-	       num=(forward+getNum(w)-back) % (wnum=getNum(w));
-	       oldflower=new int[getNum(w)+1];
-	       for (int k=0;k<=getNum(w);k++)
+	       num=(forward+countFaces(w)-back) % (wnum=countFaces(w));
+	       oldflower=new int[countFaces(w)+1];
+	       for (int k=0;k<=countFaces(w);k++)
 	    	   oldflower[k]=kData[w].flower[k];
 	       newflower=new int[num+1];
 	       for (int k=0;k<=num;k++)
@@ -14783,11 +14852,11 @@ public class PackData{
 	       setBdryFlag(w,1);
 	       // fix next 
 	       ind=nghb(next,w);
-	       newflower=new int[getNum(next)+1];
-	       for (int k=0;k<getNum(next);k++)
-	    	   newflower[k]=kData[next].flower[(k+ind) %getNum(next)];
+	       newflower=new int[countFaces(next)+1];
+	       for (int k=0;k<countFaces(next);k++)
+	    	   newflower[k]=kData[next].flower[(k+ind) %countFaces(next)];
 	       kData[next].flower=newflower;
-	       kData[next].flower[getNum(next)]=newval;
+	       kData[next].flower[countFaces(next)]=newval;
 	       setBdryFlag(next,1);
 	       // fix newval 
 	       num=(back+wnum-forward) % wnum;
@@ -14801,8 +14870,8 @@ public class PackData{
 	       for (int k=1;k<num;k++) {
 	    	   back=nghb((u=kData[newval].flower[k]),w);
 	    	   kData[u].flower[back]=newval;
-	    	   if (back==0 && kData[u].flower[getNum(u)]==w)
-	    		   kData[u].flower[getNum(u)]=newval;
+	    	   if (back==0 && kData[u].flower[countFaces(u)]==w)
+	    		   kData[u].flower[countFaces(u)]=newval;
 	       }
 	       setRadius(newval,getRadius(w));
 	       setCenter(newval,getCenter(w));
@@ -14875,13 +14944,13 @@ public class PackData{
 		int new_V = ans[0]=nodeCount+1;
 		alloc_pack_space(new_V, true);
 		nodeCount=new_V; // now can change nodecount;
-		kData[new_V].num = getNum(v) - ind;
-		kData[new_V].flower = new int[getNum(new_V) + 1];
-		for (int k = 0; k <= getNum(new_V); k++)
+		kData[new_V].num = countFaces(v) - ind;
+		kData[new_V].flower = new int[countFaces(new_V) + 1];
+		for (int k = 0; k <= countFaces(new_V); k++)
 			kData[new_V].flower[k] = kData[v].flower[k + ind];
 		if (overlapStatus) {
-			kData[new_V].invDist = new double[getNum(new_V) + 1];
-			for (int k = 0; k <= getNum(new_V); k++)
+			kData[new_V].invDist = new double[countFaces(new_V) + 1];
+			for (int k = 0; k <= countFaces(new_V); k++)
 				set_single_invDist(new_V,kData[new_V].flower[k],getInvDist(v,kData[v].flower[k + ind]));
 		} else
 			kData[new_V].invDist = null;
@@ -14891,12 +14960,12 @@ public class PackData{
 		setCenter(new_V,new Complex(getCenter(v)));
 		
 		// fix ngb's pointing to new_V (except for w, handled later)
-		for (int k = 1; k <= getNum(new_V); k++) {
+		for (int k = 1; k <= countFaces(new_V); k++) {
 			int u;
 			int back = nghb((u = kData[v].flower[k + ind]), v);
 			kData[u].flower[back] = new_V;
 			if (back == 0 && !isBdry(u))
-				kData[u].flower[getNum(u)] = new_V;
+				kData[u].flower[countFaces(u)] = new_V;
 		}
 		
 		// fix v's flower
@@ -14919,12 +14988,12 @@ public class PackData{
 			alloc_pack_space(new_W, true);
 			kData[new_W].num = indwv;
 			kData[new_W].flower = new int[indwv + 1];
-			for (int k = 0; k < getNum(new_W); k++)
+			for (int k = 0; k < countFaces(new_W); k++)
 				kData[new_W].flower[k] = kData[w].flower[k];
-			kData[new_W].flower[getNum(new_W)]=new_V;  // points to v's clone
+			kData[new_W].flower[countFaces(new_W)]=new_V;  // points to v's clone
 			if (overlapStatus) {
-				kData[new_W].invDist = new double[getNum(new_W) + 1];
-				for (int k = 0; k <= getNum(new_W); k++)
+				kData[new_W].invDist = new double[countFaces(new_W) + 1];
+				for (int k = 0; k <= countFaces(new_W); k++)
 					set_single_invDist(new_W,kData[new_W].flower[k],getInvDist(w,kData[w].flower[k]));
 			} else
 				kData[new_W].invDist = null;
@@ -14935,34 +15004,34 @@ public class PackData{
 			
 			// fix ngb's pointing to neww
 			kData[new_V].flower[0]=new_W;
-			for (int k = 1; k <= getNum(new_W); k++) {
+			for (int k = 1; k <= countFaces(new_W); k++) {
 				int u;
 				int back = nghb((u = kData[w].flower[k]), w);
 				kData[u].flower[back] = new_W;
 				if (back == 0 && !isBdry(u))
-					kData[u].flower[getNum(u)] = new_W;
+					kData[u].flower[countFaces(u)] = new_W;
 			}
 
 			// fix w
-			int num=getNum(w);
+			int num=countFaces(w);
 			kData[w].num=num-indwv;
 			newflower=new int[num-indwv+1];
 			newflower[0]=v;
-			for (int k=1;k<=getNum(w);k++)
+			for (int k=1;k<=countFaces(w);k++)
 				newflower[k]=kData[w].flower[k+indwv];
 			kData[w].flower=newflower;
 		}
 		else { // w was interior
-			newflower = new int[getNum(w) + 1];
-			for (int k = 0; k < getNum(w); k++)
-				newflower[k] = kData[w].flower[(k + indwv) % getNum(w)];
-			newflower[getNum(w)] = new_V;
+			newflower = new int[countFaces(w) + 1];
+			for (int k = 0; k < countFaces(w); k++)
+				newflower[k] = kData[w].flower[(k + indwv) % countFaces(w)];
+			newflower[countFaces(w)] = new_V;
 			kData[w].flower = newflower;
 			if (kData[w].invDist != null) {
-				newoverlaps = new double[getNum(w) + 1];
-				for (int k = 0; k < getNum(w); k++)
-					newoverlaps[k] = getInvDist(w,kData[w].flower[(k + indwv) % getNum(w)]);
-				newoverlaps[getNum(w)] = getInvDist(w,kData[w].flower[indwv]);
+				newoverlaps = new double[countFaces(w) + 1];
+				for (int k = 0; k < countFaces(w); k++)
+					newoverlaps[k] = getInvDist(w,kData[w].flower[(k + indwv) % countFaces(w)]);
+				newoverlaps[countFaces(w)] = getInvDist(w,kData[w].flower[indwv]);
 				kData[w].invDist = newoverlaps;
 			}
 			setBdryFlag(w,1);
@@ -14997,7 +15066,7 @@ public class PackData{
 	   if (!status || !p2.status 
 	       || (indv=nghb(a,b))<0 || (indV=p2.nghb(A,B))<0 
 	       || isBdry(a) || isBdry(A)
-	       || getNum(a)!=p2.getNum(A))
+	       || countFaces(a)!=p2.countFaces(A))
 	      return null;
 
 	   int []vstat=new int[nodeCount+1];
@@ -15015,7 +15084,7 @@ public class PackData{
 	 	  v=(Integer)bigtr.next();
 	 	  V=vstat[v];
 	 	  if (!isBdry(v) && !isBdry(V)
-	 	      && (num=getNum(v))==p2.getNum(V)) {
+	 	      && (num=countFaces(v))==p2.countFaces(V)) {
 	 	      i=0;
 	 	      while (i<num && (U=vstat[(u=kData[v].flower[i])])==0) i++;
 	 	      if (i==num) return null;
@@ -16205,7 +16274,7 @@ public class PackData{
 	  /* go through adding to end of list and knocking off from
 	     front until all connected verts are marked as poison */
 	  while (genlist!=null) {
-	      for (int j=0;j<(getNum((v=genlist.v))+getBdryFlag(v));j++)
+	      for (int j=0;j<(countFaces((v=genlist.v))+getBdryFlag(v));j++)
 		  if (kData[(k=kData[v].flower[j])].utilFlag==1) {
 		    kData[k].utilFlag=-1;
 		    gtrace=gtrace.next=new VertList();
@@ -16217,7 +16286,7 @@ public class PackData{
 	     edge of poison patch. */
 	  for (int i=1;i<=nodeCount;i++)
 	    if (!isBdry(i) && kData[i].utilFlag>=0)
-	      for (int j=0;j<getNum(i);j++)
+	      for (int j=0;j<countFaces(i);j++)
 		if (kData[kData[i].flower[j]].utilFlag==-1)
 		  return i;
 	  return 0; // didn't find appropriate bdry vert 
@@ -16393,7 +16462,7 @@ public class PackData{
 	    vertlist.add(w);
 	     // first side 
 	     for (int i=2;i<=n;i++) {
-	          num=getNum(w);
+	          num=countFaces(w);
 		  next_w=kData[w].flower[(nghb(w,v)+num-3) % num];
 	          vertlist.add(next_w);
 	          v=w;
@@ -16401,13 +16470,13 @@ public class PackData{
 	      }
 	     // sharp left turn 
 	     corners[1]=w;
-	     num=getNum(w);
+	     num=countFaces(w);
 	     next_w=kData[w].flower[(nghb(w,v)+num-1) % num];
 	     v=w;
 	     w=next_w;
 	     // second side
 	     for (int i=2;i<=n;i++) {
-	          num=getNum(w);
+	          num=countFaces(w);
 		  next_w=kData[w].flower[(nghb(w,v)+num-3) % num];
 	          vertlist.add(next_w);
 	          v=w;
@@ -16415,26 +16484,26 @@ public class PackData{
 	      }
 	     // left turn 
 	     corners[2]=w;
-	     num=getNum(w);
+	     num=countFaces(w);
 	     next_w=kData[w].flower[(nghb(w,v)+num-2) % num];
 	     v=w;
 	     w=next_w;
 	     // third side
 	     for (int i=2;i<=n;i++) {
-	          num=getNum(w);
+	          num=countFaces(w);
 		  next_w=kData[w].flower[(nghb(w,v)+num-3) % num];
 	          vertlist.add(next_w);
 	          v=w;
 	          w=next_w;
 	      }
 	     corners[3]=w;
-	     num=getNum(w);
+	     num=countFaces(w);
 	     next_w=kData[w].flower[(nghb(w,v)+num-2) % num];
 	     v=w;
 	     w=next_w;
 	     // fourth side
 	     for (int i=2;i<=n;i++) {
-	          num=getNum(w);
+	          num=countFaces(w);
 		  next_w=kData[w].flower[(nghb(w,v)+num-3) % num];
 	          vertlist.add(next_w);
 	          v=w;
@@ -16473,7 +16542,7 @@ public class PackData{
 			step=1;
 			while (step<n) {
 				k=nghb(v2,v1);
-				num=getNum(v2);
+				num=countFaces(v2);
 				if (isBdry(v2)) {
 					if (k<3) return count;
 					k=k-3;
@@ -16491,7 +16560,7 @@ public class PackData{
 			
 			// move around corner
 			k=nghb(v2,v1);
-			num=getNum(v2);
+			num=countFaces(v2);
 			if (isBdry(v2)) {
 				if (k<2) return count;
 				k=k-2;
@@ -16571,17 +16640,17 @@ public class PackData{
 	  w=kData[alpha].flower[1];
 	  int nbr=0;
 	  if (getVertMark(v)!=0 || getVertMark(w)!=0) {
-	      for (int i=0;((i<getNum(alpha)) && nbr==0);i++)
+	      for (int i=0;((i<countFaces(alpha)) && nbr==0);i++)
 		if (getVertMark((v=kData[alpha].flower[i]))==0
 		    && getVertMark((w=kData[alpha].flower[i+1]))==0)
 		  nbr=i;
 	    }
 	  kData[alpha].plotFlag=kData[v].plotFlag=kData[w].plotFlag=1;
-	  for (int i=0;i<=getNum(alpha);i++)
+	  for (int i=0;i<=countFaces(alpha);i++)
 	    kData[kData[alpha].flower[i]].utilFlag++;
-	  for (int i=0;i<=getNum(v);i++)
+	  for (int i=0;i<=countFaces(v);i++)
 	    kData[kData[v].flower[i]].utilFlag++;
-	  for (int i=0;i<=getNum(w);i++)
+	  for (int i=0;i<=countFaces(w);i++)
 	    kData[kData[w].flower[i]].utilFlag++;
 	  vertcount=3;
 	  endmain.v=alpha;
@@ -16619,7 +16688,7 @@ public class PackData{
 		  vert=trace.v;
 		  // already hit all neighbors of this vert? 
 		  if (kData[vert].utilFlag
-		      ==(getNum(vert)+getBdryFlag(vert))) {
+		      ==(countFaces(vert)+getBdryFlag(vert))) {
 		      if (trace==mainlist) { // at beginning of list 
 			  priortrace=trace=mainlist.next;
 			  mainlist=trace;
@@ -16634,7 +16703,7 @@ public class PackData{
 			}
 		    }
 		  else if (getVertMark(vert)==0 || pickup) { // process this vert 
-		      num=getNum(vert); // num of faces
+		      num=countFaces(vert); // num of faces
 		      nnum=num+getBdryFlag(vert); // num of nghbs 
 		      // go through the faces 
 		      fstop=true;
@@ -16657,14 +16726,14 @@ public class PackData{
 				  newfaces[face].indexFlag=indx;
 				  newfaces[face].plotFlag=1;
 				  kData[v2].plotFlag=1;
-				  way=getNum(v2)+getBdryFlag(v2);
+				  way=countFaces(v2)+getBdryFlag(v2);
 				  for (int i=0;i<way;i++)
 				    kData[kData[v2].flower[i]].utilFlag++;
 				  hits=true;
 				  fstop=true;
 				  vertcount++;
 				  if (kData[v2].utilFlag<
-				      (getNum(v2)+getBdryFlag(v2))) {
+				      (countFaces(v2)+getBdryFlag(v2))) {
 				      endnew=endnew.next=new VertList();
 				      endnew.v=v2;
 				  }
@@ -16677,14 +16746,14 @@ public class PackData{
 				  newfaces[face].indexFlag=(indx+2)%3;
 				  newfaces[face].plotFlag=1;
 				  kData[v1].plotFlag=1;
-				  way=getNum(v1)+getBdryFlag(v1);
+				  way=countFaces(v1)+getBdryFlag(v1);
 				  for (int i=0;i<way;i++)
 				    kData[kData[v1].flower[i]].utilFlag++;
 				  hits=true;
 				  fstop=true;
 				  vertcount++;
 				  if (kData[v1].utilFlag<
-				      (getNum(v1)+getBdryFlag(v1))) {
+				      (countFaces(v1)+getBdryFlag(v1))) {
 				      endnew=endnew.next=new VertList();
 				      endnew.v=v1;
 				    }
@@ -17373,16 +17442,16 @@ public class PackData{
 			int v = (Integer) vlist.next();
 			if (isBdry(v) && kData[v].utilFlag == 0) {
 				int vert = v;
-				for (int j = 1; j < getNum(v); j++)
-					if (getNum(v) < 2
+				for (int j = 1; j < countFaces(v); j++)
+					if (countFaces(v) < 2
 							|| kData[kData[v].flower[j]].utilFlag != 0) {
 						throw new CombException("combinatoric problem at v="+v);
 					}
 				kData[v].utilFlag = 1;
 				v = kData[vert].flower[0];
 				while (v != vert) {
-					for (int j = 1; j < getNum(v); j++)
-						if (getNum(v) < 2
+					for (int j = 1; j < countFaces(v); j++)
+						if (countFaces(v) < 2
 								|| kData[kData[v].flower[j]].utilFlag != 0) {
 							throw new CombException("combinatoric problem at v="+v);
 						}
@@ -17445,7 +17514,7 @@ public class PackData{
 					if (hes < 0 && getRadius(v) <= 0)
 						setRadius(v,0.5);
 					// fix flower
-					num = getNum(v);
+					num = countFaces(v);
 					newK_ptr[v].num = 2 * num;
 					newK_ptr[v].bdryFlag = 0;
 					newR_ptr[v].aim = 2.0 * Math.PI;
@@ -17470,7 +17539,7 @@ public class PackData{
 						newK_ptr[v].invDist[2 * num] = newK_ptr[v].invDist[0];
 					}
 					/* remove refs to old nums; flowers get only (temporarily) good numbers */
-					for (int j = 0; j <= getNum(v); j++) {
+					for (int j = 0; j <= countFaces(v); j++) {
 						int jj = newK_ptr[v + node].flower[j];
 						for (int k = 0; k <= newK_ptr[jj].num; k++) {
 							int vert=newK_ptr[jj].flower[k];
@@ -17903,7 +17972,7 @@ public class PackData{
 	      else {
 		for (int i=1;i<=nodes;i++)
 		  if (nghb(i,j)>=0) 
-		    fp.write("T("+i+","+j+")=1/"+getNum(j)+";\n");
+		    fp.write("T("+i+","+j+")=1/"+countFaces(j)+";\n");
 	      }
 	    }
 	    if (getBdryCompCount()!=0) { // nonempty boundary? 
@@ -18142,7 +18211,7 @@ public class PackData{
 			base=alpha;
 		if (cutNodes.containsV(base)>=0) {
 			int nb=base;
-			for (int j=0;(j<getNum(base) && nb==base);j++) {
+			for (int j=0;(j<countFaces(base) && nb==base);j++) {
 				int p=kData[base].flower[j];
 				if (cutNodes.containsV(p)<0)
 					nb=p;
@@ -18171,7 +18240,7 @@ public class PackData{
 //System.err.println("prev="+prev+"; vert="+vert+"; next="+next);			
 			
 			// find petal on right of curve of lowest generation
-			int num=getNum(vert);
+			int num=countFaces(vert);
 			int preindx=(nghb(vert,prev)+1)%num;
 			int nextindx=nghb(vert,next);
 			int infgen=nodeCount;
@@ -18233,7 +18302,7 @@ public class PackData{
 		while (vgen[next]>1) {
 			int bestpetal=kData[next].flower[0];
 			int min=vgen[bestpetal];
-			for (int j=1;j<(getNum(next)+getBdryFlag(next));j++) {
+			for (int j=1;j<(countFaces(next)+getBdryFlag(next));j++) {
 				int k=kData[next].flower[j];
 				int pgen=vgen[k];
 				if (pgen>0 && (min<=0 || pgen<min)) {
@@ -18260,7 +18329,7 @@ public class PackData{
 		while (gotHit<0 && vgen[next]>1) {
 			int bestpetal=kData[next].flower[0];
 			int min=vgen[bestpetal];
-			for (int j=1;j<(getNum(next)+getBdryFlag(next));j++) {
+			for (int j=1;j<(countFaces(next)+getBdryFlag(next));j++) {
 				int k=kData[next].flower[j];
 				int pgen=vgen[k];
 				if (pgen>0 && (min<=0 || pgen<min)) {
@@ -18300,7 +18369,7 @@ public class PackData{
 		int k=0;
 		for (int v=1;v<=nodeCount;v++) {
 			if (exclude!=null && exclude.containsV(v)<0) 
-				for (int j=0;j<(getNum(v)+getBdryFlag(v));j++) {
+				for (int j=0;j<(countFaces(v)+getBdryFlag(v));j++) {
 					if ((k=kData[v].flower[j])>v && exclude!=null && exclude.containsV(k)<0)
 						ans.add(new EdgeSimple(v,k));
 				}
@@ -18541,7 +18610,7 @@ public class PackData{
 				next=beach.get((b_ind+1)%bs);
 				indx_cp=p.nghb(curr,prev);
 				indx_cn=p.nghb(curr,next);
-				int num=p.getNum(curr);
+				int num=p.countFaces(curr);
 				int del=indx_cn-indx_cp;
 				
 				// for first face only, have to add face shared with prev
@@ -18568,7 +18637,7 @@ public class PackData{
 				next=beach.get((b_ind+1)%bs);
 				indx_cp=p.nghb(curr,prev);
 				indx_cn=p.nghb(curr,next);
-				int num=p.getNum(curr);
+				int num=p.countFaces(curr);
 				int del=indx_cn-indx_cp;
 				int[] faceFlower=p.getFaceFlower(curr);
 
@@ -18668,7 +18737,7 @@ public class PackData{
 			Iterator<Integer> cl=currl.iterator();
 			while (cl.hasNext()) {
 				int w=cl.next();
-				for (int j=0;j<=(getNum(w)+getBdryFlag(w));j++) { 
+				for (int j=0;j<=(countFaces(w)+getBdryFlag(w));j++) { 
 					int k=kData[w].flower[j];
 					if (kData[k].utilFlag<0 && util[k]==0) { // new one in 'intV'?
 						util[k]=-k;
@@ -18697,7 +18766,7 @@ public class PackData{
 				
 			// sweep clw to find int nghb and subsequent bdry nghb
 			boolean done=false;
-			int num=getNum(w);
+			int num=countFaces(w);
 			int bhit=-1;
 			int ihit=-1;
 			for (int j=(num+getBdryFlag(w));(j>0 && bhit<0);j--) {
@@ -18768,7 +18837,7 @@ public class PackData{
 							}
 						}
 						else { // w is interior vert
-							int numw=getNum(w);
+							int numw=countFaces(w);
 							if (util[(backindx-1+numw)%numw]>=0)
 								throw new CombException("surroundVlist: clw should be interior");
 							for (int j=2;(j<=numw && nhit<0);j++) { 
@@ -18803,7 +18872,7 @@ public class PackData{
 					nxtW=kData[w].flower[bhit];
 					while (bhit>=0) {
 						int uphit=-1;
-						int numw=getNum(w);
+						int numw=countFaces(w);
 						
 						// w is bdry
 						if (isBdry(w)) {
@@ -18881,8 +18950,8 @@ public class PackData{
 	public boolean haveSchwarzians() {
 		for (int v=1;v<=nodeCount;v++) {
 			try {
-				for (int j=0;j<=getNum(v);j++) { 
-					if (kData[v].schwarzian==null || kData[v].schwarzian.length<(getNum(v)+1))
+				for (int j=0;j<=countFaces(v);j++) { 
+					if (kData[v].schwarzian==null || kData[v].schwarzian.length<(countFaces(v)+1))
 						return false;
 				}
 			} catch (Exception ex) {

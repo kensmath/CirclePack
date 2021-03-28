@@ -220,7 +220,7 @@ public class BeltramiFlips extends PackExtender {
 		while (count<N) {
 			// random vert, random petal
 			v=rand.nextInt(node)+1;
-			num=packData.getNum(v);
+			num=packData.countFaces(v);
 			// degree must be >3 for interior, >2 for bdry
 			if ((num+packData.getBdryFlag(v))>3) {
 				// random petal
@@ -292,7 +292,7 @@ public class BeltramiFlips extends PackExtender {
 
 		// set up the four vertices about this edge 
 		int vw=packData.nghb(v,w);
-		int num=packData.getNum(v);
+		int num=packData.countFaces(v);
 		int j=(vw-1+num)%num;
 		int k=(vw+1)%num;
 		

@@ -424,7 +424,7 @@ public class PathBaryUtil {
 	 * @return
 	 */
 	public static int faceFromZ(PackData p,int v,Complex p2) {
-		int num=p.getNum(v);
+		int num=p.countFaces(v);
 		Complex me=p.getCenter(v);
 		Complex vp2=p2.minus(me);
 		double arg1;

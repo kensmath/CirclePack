@@ -415,7 +415,7 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 		if (p.kData[v].bdryFlag>0) bdryCkBoxV.setSelected(true);
 		
 		// degree
-		degreeField.setField(p.getNum(v));
+		degreeField.setField(p.countFaces(v));
 		
 		// flower
 		StringBuilder flower=new StringBuilder();

@@ -429,7 +429,7 @@ public class TileBuilder {
 		for (int t=1;t<=p.tileData.tileCount;t++) {
 			Tile tile=p.tileData.myTiles[t];
 			int bv=tile.baryVert;
-			int num=p.getNum(bv);
+			int num=p.countFaces(bv);
 
 			// processing requries adjusting flower of baryVert so flower[0] 
 			// is in direction of vert[0]
@@ -441,7 +441,7 @@ public class TileBuilder {
 			int []myflower=p.kData[bv].flower;
 			for (int k=0;(k<num && offset<0);k++) {
 			int m=myflower[k];
-			if (p.getNum(m)==4 && p.nghb(m, tile.vert[0])>=0)
+			if (p.countFaces(m)==4 && p.nghb(m, tile.vert[0])>=0)
 					offset=k;
 			}
 			if (offset<0) {
@@ -507,7 +507,7 @@ public class TileBuilder {
 
 				// dual tile for each original corner vertex
 				if (p.getVertMark(v)==2) {
-					int num=p.getNum(v);
+					int num=p.countFaces(v);
 					int[] flower=p.getFlower(v);
 					
 					// bdry tile?
@@ -665,7 +665,7 @@ public class TileBuilder {
 					
 					else { // interior? num=4
 						qtile.wgIndices=new int[4];
-						int num=p.getNum(v);
+						int num=p.countFaces(v);
 
 						// find a grey tile barycenter to start
 						int gdir=-1;

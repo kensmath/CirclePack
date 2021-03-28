@@ -507,7 +507,7 @@ public class QueryParser {
 					while(elist.hasNext() && ((!forMsg || count<12) || count<1000)) {
 						edge=(EdgeSimple)elist.next();
 						if ((j=p.nghb((v1=edge.v),(v3=edge.w)))>=0 
-								&& (k=p.nghb(v3,v1))>=0 && j!=p.getNum(v1) && k!=p.getNum(v1)) {
+								&& (k=p.nghb(v3,v1))>=0 && j!=p.countFaces(v1) && k!=p.countFaces(v1)) {
 
 							// TODO: what about case of inv distances/overlaps?
 							
@@ -551,7 +551,7 @@ public class QueryParser {
 						throw new ParserException("");
 					}
 					words.append(" v"+vv); // show which vert
-					int n=p.getNum(vv);
+					int n=p.countFaces(vv);
 					if (forMsg && n>12) {
 						n=12;
 		  	      		suffix=" ... ";
@@ -854,7 +854,7 @@ public class QueryParser {
 					if (vv!=0) {
 						try {
 							double accum=0.0;
-							for (int j=0;j<p.getNum(vv);j++)
+							for (int j=0;j<p.countFaces(vv);j++)
 								accum += p.kData[vv].schwarzian[j];
 							ans.append(String.format("%.6f",accum));
 						} catch (Exception ex) {
@@ -903,7 +903,7 @@ public class QueryParser {
 		  	      				", ang sum="+p.getCurv(v)/Math.PI+
 		  	      				" Pi, aim="+p.getAim(v)/Math.PI+
 		  	      				" Pi, boundaryFlag="+p.getBdryFlag(v)+
-		  	      				", star="+p.getNum(v)+
+		  	      				", star="+p.countFaces(v)+
 		  	      				", mark="+p.getVertMark(v)+
 		  	      				", plotFlag="+p.kData[v].plotFlag+
 		  	      				", color="+ColorUtil.col_to_table(p.getCircleColor(v)));

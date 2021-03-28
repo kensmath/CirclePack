@@ -243,7 +243,7 @@ public class MeanMove extends PackExtender {
 		double dtdr=0.0;
 		
 		// compute the derivative of theta w.r.t. r
-		for (int j=0;j<p.getNum(v);j++) {
+		for (int j=0;j<p.countFaces(v);j++) {
 			int k=p.kData[v].flower[j];
 			double y=p.getRadius(k);
 			double z=p.getRadius(k);

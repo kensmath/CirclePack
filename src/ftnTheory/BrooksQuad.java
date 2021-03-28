@@ -133,7 +133,7 @@ public class BrooksQuad extends PackExtender {
 		  brooks_insert(packData,P,N,B,1);
 		  
 		  // fix flower of R 
-		  for (int i=0;i<=packData.getNum(R);i++)
+		  for (int i=0;i<=packData.countFaces(R);i++)
 		    if (packData.kData[R].flower[i]==N) 
 			packData.kData[R].flower[i]=P;
 		  
@@ -194,7 +194,7 @@ public class BrooksQuad extends PackExtender {
 		  brooks_insert(packData,P,N,L,1);
 		  
 		  // fix flower of 3 
-		  for (int i=0;i<=packData.getNum(B);i++)
+		  for (int i=0;i<=packData.countFaces(B);i++)
 		    if (packData.kData[B].flower[i]==N) 
 			packData.kData[B].flower[i]=P;
 		  
@@ -234,7 +234,7 @@ public class BrooksQuad extends PackExtender {
 	  int []newflower;
 	  boolean done=false;
 
-	  num=packData.getNum(v);
+	  num=packData.countFaces(v);
 	  newflower=new int[num+2];
 	  for (int i=0;i<=num;i++)
 	    newflower[i]=packData.kData[v].flower[i];

@@ -556,7 +556,7 @@ public class Percolation extends PackExtender {
 
 			// look to see if vert can be infected by a petal
 			int infectedPetal = 0;
-			for (int j = 0; (j < packData.getNum(nextv) && infectedPetal == 0); j++) {
+			for (int j = 0; (j < packData.countFaces(nextv) && infectedPetal == 0); j++) {
 				int k = packData.kData[nextv].flower[j];
 				int m = ColorUtil.col_to_table(packData.getCircleColor(k));
 				// is this petal infected by same color
@@ -592,7 +592,7 @@ public class Percolation extends PackExtender {
 		else if (m>100 && m<200)
 			lookfor=243;
 
-		for (int j=0;(j<packData.getNum(v) && completed==0);j++) {
+		for (int j=0;(j<packData.countFaces(v) && completed==0);j++) {
 			int k=packData.kData[v].flower[j];
 			if (ColorUtil.equalColors(packData.getCircleColor(k),ColorUtil.coLor(lookfor))) { 
 				packData.setCircleColor(k,ColorUtil.coLor(m));
@@ -616,7 +616,7 @@ public class Percolation extends PackExtender {
 		case 198: {opposite=199;break;}
 		case 199: {opposite=198;break;}
 		}
-		for (int j=0;j<packData.getNum(v);j++) {
+		for (int j=0;j<packData.countFaces(v);j++) {
 			int k=packData.kData[v].flower[j];
 			if (ColorUtil.col_to_table(packData.getCircleColor(k))==opposite) {
 				completed=mark;
@@ -655,7 +655,7 @@ public class Percolation extends PackExtender {
 		bdryArcs.add(new NodeLink(packData,"b("+corners[0]+","+corners[1]+")"));
 		bdryArcs.add(new NodeLink(packData,"b("+corners[1]+","+corners[2]+")"));
 		bdryArcs.add(new NodeLink(packData,"b("+corners[2]+","+corners[3]+")"));
-		int v=packData.kData[corners[0]].flower[packData.getNum(corners[0])];
+		int v=packData.kData[corners[0]].flower[packData.countFaces(corners[0])];
 		bdryArcs.add(new NodeLink(packData,"b("+corners[3]+","+v+")"));
 		
 		// mark the points on the various boundary arcs.
@@ -747,7 +747,7 @@ public class Percolation extends PackExtender {
 	 */
 	public void setPetalTrans() {
 		for (int v=1;v<=packData.nodeCount;v++) {
-			int num=packData.getNum(v)+packData.getBdryFlag(v)-1;
+			int num=packData.countFaces(v)+packData.getBdryFlag(v)-1;
 //System.out.println(" vert "+v+" num "+num);			
 			petalTrans[v]=new PetalTrans(num);
 

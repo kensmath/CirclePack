@@ -63,8 +63,8 @@ public class CircleSimple{
   }
 
   /**
-   * Store radius, center, and plotflag in 'p.rData[v]'
-   * @param p @see PackData
+   * Store radius, center for 'v'
+   * @param p PackData
    * @param v int, vertex
    * @return int CircleSimple.flag
    */
@@ -73,7 +73,7 @@ public class CircleSimple{
 	  if (flag>=0) { // seems to be good data
 		  p.setCenter(v,new Complex(center));
 		  p.setRadius(v,rad);
-		  p.kData[v].plotFlag=flag;
+//		  p.kData[v].plotFlag=flag;
 	  }
 	  return flag; 
   }

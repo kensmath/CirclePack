@@ -471,7 +471,7 @@ public class PostParser {
 						v = (Integer) vlist.next();
 						if (!dispFlags.colorIsSet)
 							dispFlags.setColor(p.kData[v].color);
-						int num = p.getNum(v);
+						int num = p.countFaces(v);
 						int[] faceFlower=p.getFaceFlower(v);
 						Complex[] fanCenters = new Complex[num
 								+ p.getBdryFlag(v)];

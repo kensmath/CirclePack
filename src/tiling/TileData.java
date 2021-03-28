@@ -433,7 +433,7 @@ public class TileData {
 			
 			// fix vertex flowers
 			for (int v=1;v<=thePack.nodeCount;v++) {
-				for (int j=0;j<=thePack.getNum(v);j++) {
+				for (int j=0;j<=thePack.countFaces(v);j++) {
 					int k=thePack.kData[v].flower[j];
 					thePack.kData[v].flower[j]=newIndx[k];
 				}
@@ -482,8 +482,8 @@ public class TileData {
 				int w=tile.vert[(k+1)%tile.vertCount];
 				int idx=thePack.nghb(v,w);
 				int dirx=idx-1;
-				if (dirx<0 && thePack.kData[v].flower[0]==thePack.kData[v].flower[thePack.getNum(v)])
-					dirx=thePack.getNum(v)-1;
+				if (dirx<0 && thePack.kData[v].flower[0]==thePack.kData[v].flower[thePack.countFaces(v)])
+					dirx=thePack.countFaces(v)-1;
 				if (dirx>=0) {
 					int s=indmap.findV(thePack.kData[v].flower[dirx]);
 					
@@ -678,20 +678,20 @@ public class TileData {
 						// vert list starts with v, then bary center of 
 						//    bdry edge from v, around through tiles to
 						//    end with bary center of last bdry edge from v
-						int num=newPD.getNum(v)/2;
+						int num=newPD.countFaces(v)/2;
 						vert=new int[num+3];
 						vert[0]=v;
 						vert[1]=newPD.kData[v].flower[0];
 						for (int j=0;j<num;j++) 
 							vert[2+j]=newPD.kData[v].flower[1+2*j];
-						vert[num+2]=newPD.kData[v].flower[newPD.getNum(v)];
+						vert[num+2]=newPD.kData[v].flower[newPD.countFaces(v)];
 						workingTD.dualTileData.myTiles[dcount]=new Tile(workingTD.dualTileData,num+3);
 					}
 					else {
-						int num=newPD.getNum(v)/2;
+						int num=newPD.countFaces(v)/2;
 						vert=new int[num];
 						int tick=0;
-						for (int j=0;j<newPD.getNum(v);j++) {
+						for (int j=0;j<newPD.countFaces(v);j++) {
 							int k=newPD.kData[v].flower[j];
 							if (newPD.getVertMark(k)==1)
 								vert[tick++]=k;
@@ -943,7 +943,7 @@ public class TileData {
 		for (int t=1;t<=workingTD.tileCount;t++) {
 			Tile tile=workingTD.myTiles[t];
 			tile.wgIndices=new int[2*tile.vertCount];
-			int num=newPD.getNum(tile.baryVert);
+			int num=newPD.countFaces(tile.baryVert);
 			
 			// check consistency
 			if (newPD.isBdry(tile.baryVert) || num!=(4*tile.vertCount)) {
@@ -961,7 +961,7 @@ public class TileData {
 			int []myflower=newPD.kData[tile.baryVert].flower;
 			for (int k=0;(k<newPD.kData[tile.baryVert].num && offset<0);k++) {
 				int m=myflower[k];
-				if (newPD.getNum(m)==4 && newPD.nghb(m, tile.vert[0])>=0)
+				if (newPD.countFaces(m)==4 && newPD.nghb(m, tile.vert[0])>=0)
 						offset=k;
 			}
 			if (offset<0) {
@@ -1032,7 +1032,7 @@ public class TileData {
 
 				// dual tile for each original corner vertex
 				if (newPD.getVertMark(v)==2) {
-					int num=newPD.getNum(v);
+					int num=newPD.countFaces(v);
 					int[] flower=newPD.getFlower(v);
 					
 					// bdry tile?
@@ -1185,7 +1185,7 @@ public class TileData {
 					
 					else { // interior? num=4
 						qtile.wgIndices=new int[4];
-						int num=newPD.getNum(v);
+						int num=newPD.countFaces(v);
 
 						// find a grey tile barycenter to start
 						int gdir=-1;
@@ -1497,7 +1497,7 @@ public class TileData {
 		
 		// paralleling 'flower': keeps track of hits
 		for (int vv=1;vv<=packData.nodeCount;vv++)
-			tflower[vv]=new int[packData.getNum(vv)+1];
+			tflower[vv]=new int[packData.countFaces(vv)+1];
 		
 		// cycle between two lists
 		NodeLink curr=new NodeLink(packData);
@@ -1513,7 +1513,7 @@ public class TileData {
 			// process this vertex
 			while (crt.hasNext()) {
 				int v=crt.next();
-				int num=packData.getNum(v);
+				int num=packData.countFaces(v);
 				if (vtrack[v]!=num) { // not done with this vert
 					for (int j=0;j<num;j++) {
 						
@@ -1530,7 +1530,7 @@ public class TileData {
 								safety--;
 								tileVerts.add(u);
 								int indx_uw=packData.nghb(u,w);
-								int nm=packData.getNum(u);
+								int nm=packData.countFaces(u);
 								tflower[u][indx_uw] += 1;
 								tflower[w][packData.nghb(w,u)] += 1;
 								
@@ -1611,7 +1611,7 @@ public class TileData {
 					util[v]=1;
 					
 					// find vertices across its flower edges
-					int num=p.getNum(v);
+					int num=p.countFaces(v);
 					for (int j=0;j<num;j++) {
 						int w=p.kData[v].flower[j];
 						int u=p.kData[v].flower[j+1];
@@ -1746,7 +1746,7 @@ public class TileData {
 				stop=v;
 				break;
 			}
-			int num=p.getNum(v);
+			int num=p.countFaces(v);
 			Tile tile=td.myTiles[++tcount]=new Tile(td,num);
 			tile.tileIndex=tcount;
 			tile.baryVert=v;

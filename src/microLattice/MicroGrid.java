@@ -842,7 +842,7 @@ public class MicroGrid extends PackExtender {
 					if (nlist!=null && nlist.size()>0 && (qv=nlist.get(0))>0) {
 						// find average radius of qv and nghbs
 						value=qackData.getRadius(qv);
-						int nbr=qackData.getNum(qv)+qackData.getBdryFlag(qv);
+						int nbr=qackData.countFaces(qv)+qackData.getBdryFlag(qv);
 						for (int j=0;j<nbr;j++) 
 							value += qackData.getRadius(qackData.kData[qv].flower[j]);
 						value =(double)(nbr+1)/value;
@@ -1979,7 +1979,7 @@ public class MicroGrid extends PackExtender {
 		NodeLink vhits=new NodeLink(gridPack);
 		for (int v=1;v<=gridPack.nodeCount;v++) { 
 			if (gridPack.kData[v].utilFlag==(level+1)) { // some nghb face was hit
-				int num=gridPack.getNum(v);
+				int num=gridPack.countFaces(v);
 				int[] faceFlower=gridPack.getFaceFlower(v);
 				boolean notAll=false;
 				for (int j=0;(j<num && !notAll);j++) {

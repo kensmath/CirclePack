@@ -295,7 +295,7 @@ public abstract class RePacker {
 				kdata[i]=new TmpData();
 				rdata[i].aim=p.getAim(i);
 				rdata[i].rad=p.rData[i].rad;
-				kdata[i].num=num=p.getNum(i);
+				kdata[i].num=num=p.countFaces(i);
 				kdata[i].flower=new int[kdata[i].num+1];
 				for (int j=0;j<=num;j++) kdata[i].flower[j]=p.kData[i].flower[j];
 				if (p.overlapStatus) {

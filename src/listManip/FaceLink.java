@@ -270,29 +270,29 @@ public class FaceLink extends LinkedList<Integer> {
 					while (ntv.hasNext()) {
 						int v=ntv.next();
 						int j=-1;
-						for (int k=0;(k<packData.getNum(v) && j<0);k++) { 
+						for (int k=0;(k<packData.countFaces(v) && j<0);k++) { 
 							if (hitfaces[packData.getFaceFlower(v,k)]>0)
 								j=k;
 						}
 						if (j>=0) {
 							int[] faceFlower=packData.getFaceFlower(v);
 							if (((int)(j/2))*2==j) { // j is even
-								for (int k=0;k<packData.getNum(v);k=k+2) {
+								for (int k=0;k<packData.countFaces(v);k=k+2) {
 									int f=faceFlower[k];
 									hitfaces[f]=1;
 								}
-								for (int k=1;k<packData.getNum(v);k=k+2) {
+								for (int k=1;k<packData.countFaces(v);k=k+2) {
 									int f=faceFlower[k];
 									if (hitfaces[f]>0)
 										throw new CombException(); // conflict
 								}
 							}
 							else {
-								for (int k=1;k<packData.getNum(v);k=k+2) {
+								for (int k=1;k<packData.countFaces(v);k=k+2) {
 									int f=faceFlower[k];
 									hitfaces[f]=1;
 								}
-								for (int k=0;k<packData.getNum(v);k=k+2) {
+								for (int k=0;k<packData.countFaces(v);k=k+2) {
 									int f=faceFlower[k];
 									if (hitfaces[f]>0)
 										throw new CombException(); // conflict
@@ -300,7 +300,7 @@ public class FaceLink extends LinkedList<Integer> {
 							}
 						
 							// add flower to nextv for future processing
-							for (int k=0;k<(packData.getNum(v)+packData.getBdryFlag(v));k++) {
+							for (int k=0;k<(packData.countFaces(v)+packData.getBdryFlag(v));k++) {
 								int w=packData.kData[v].flower[k];
 								if (hitverts[w]==0) {
 									nextv.add(w);
@@ -490,7 +490,7 @@ public class FaceLink extends LinkedList<Integer> {
 					while (vlist.hasNext()) {
 						v=(Integer)vlist.next();
 						int[] faceFlower=packData.getFaceFlower(v);
-						for (int j=0;j<packData.getNum(v);j++) {
+						for (int j=0;j<packData.countFaces(v);j++) {
 							f=faceFlower[j];
 							if (hits[f]==0) {
 								add(f);
@@ -516,7 +516,7 @@ public class FaceLink extends LinkedList<Integer> {
 							w=face.vert[(j+1)%3];
 							k=packData.nghb(w,v);
 							int[] faceFlower=packData.getFaceFlower(w);
-							if (k<packData.getNum(w)) {
+							if (k<packData.countFaces(w)) {
 								f=faceFlower[k];
 								if (hits[f]==0) {
 									add(f);
@@ -542,7 +542,7 @@ public class FaceLink extends LinkedList<Integer> {
 						w=edge.w;
 						k=packData.nghb(v, w);
 						int[] faceFlower=packData.getFaceFlower(v);
-						if (k<packData.getNum(v)) {
+						if (k<packData.countFaces(v)) {
 							f=faceFlower[k];
 							if (hits[f]==0) {
 								add(f);
@@ -552,7 +552,7 @@ public class FaceLink extends LinkedList<Integer> {
 						}
 						k=packData.nghb(w,v);
 						faceFlower=packData.getFaceFlower(w);
-						if (k<packData.getNum(w)) {
+						if (k<packData.countFaces(w)) {
 							f=faceFlower[k];
 							if (hits[f]==0) {
 								add(f);
@@ -947,7 +947,7 @@ public class FaceLink extends LinkedList<Integer> {
 					CirclePack.cpb.errMsg("error in starting face list");
 					return null;
 				}
-				int num=p.getNum(v);
+				int num=p.countFaces(v);
 				int js=-1;
 				int jn=-1;
 				for (int j=0;j<num;j++) {
@@ -1128,7 +1128,7 @@ public class FaceLink extends LinkedList<Integer> {
 				if (p.isBdry(vert[j])) indx=j;
 			int bvert=vert[indx];
 			indx=-1;
-			for (int j=0;j<p.getNum(bvert);j++)
+			for (int j=0;j<p.countFaces(bvert);j++)
 				if (p.getFaceFlower(bvert,j)==pastFace)
 					indx=j;
 			// add clockwise chain to reach face containing a bdry edge
@@ -1212,7 +1212,7 @@ public class FaceLink extends LinkedList<Integer> {
 
 		int indx1=-1;
 		int indx2=-1;
-		for (int j=0;j<p.getNum(vert);j++) {
+		for (int j=0;j<p.countFaces(vert);j++) {
 			if (p.getFaceFlower(vert,j)==face)
 				indx1=j;
 			else if (p.getFaceFlower(vert,j)==nface)
@@ -1251,7 +1251,7 @@ public class FaceLink extends LinkedList<Integer> {
 		
 		// interior case
 		else { 
-			int num=p.getNum(vert);
+			int num=p.countFaces(vert);
 			int[] faceFlower=p.getFaceFlower(vert);
 			// Take shortest fan, bias towards CLOCKWISE (because when used 
 			//      to get edge path, we use the left side edgepath.

@@ -428,7 +428,7 @@ public class ProjStruct extends PackExtender {
 	public static double angSumSide(PackData p,int v,double factor,TriAspect []asps) {
 		double angsum=0.0;
 		int[] faceFlower=p.getFaceFlower(v);
-		for (int j=0;j<p.getNum(v);j++) {
+		for (int j=0;j<p.countFaces(v);j++) {
 			int f=faceFlower[j];
 			int k=asps[f].vertIndex(v);
 			double s0=factor*asps[f].sides[k];
@@ -449,7 +449,7 @@ public class ProjStruct extends PackExtender {
 	 */
 	public static int adjustSides(PackData p,int v,double factor,TriAspect []asp) {
 		int[] faceFlower=p.getFaceFlower(v);
-		for (int j=0;j<p.getNum(v);j++) {
+		for (int j=0;j<p.countFaces(v);j++) {
 			int f=faceFlower[j];
 			int k=asp[f].vertIndex(v);
 			asp[f].sides[k] *=factor;
@@ -539,7 +539,7 @@ public class ProjStruct extends PackExtender {
   		double lower=0.0;
   		double upper=100000000;
   		int[] faceFlower=p.getFaceFlower(v);
-		for (int j=0;j<p.getNum(v);j++) {
+		for (int j=0;j<p.countFaces(v);j++) {
 			int f=faceFlower[j];
 			int k=asps[f].vertIndex(v);
 			double rSide=asps[f].sides[k];
@@ -571,7 +571,7 @@ public class ProjStruct extends PackExtender {
 	public static double []angSumTri(PackData p, int v, double t,TriAspect[] asps) {
 		double []ans=new double[2];
 		int[] faceFlower=p.getFaceFlower(v);
-		for (int j = 0; j < p.getNum(v); j++) {
+		for (int j = 0; j < p.countFaces(v); j++) {
 			int f = faceFlower[j];
 			double []sd= asps[f].angleV(v,t);
 			ans[0] += sd[0];
@@ -593,7 +593,7 @@ public class ProjStruct extends PackExtender {
 	public static double []skewTri(PackData p, int v,double t, TriAspect[] asps) {
 		double []ans = new double[2];
 		int[] faceFlower=p.getFaceFlower(v);
-		for (int j = 0; j < p.getNum(v); j++) {
+		for (int j = 0; j < p.countFaces(v); j++) {
 			int f = faceFlower[j];
 			double []sd= asps[f].skew(v,t);
 			ans[0] += sd[0];
@@ -614,7 +614,7 @@ public class ProjStruct extends PackExtender {
 	public static int adjustRadii(PackData p,int v,double factor,TriAspect []asp) {
 		p.setRadius(v,factor*p.getRadius(v));
 		int[] faceFlower=p.getFaceFlower(v);
-		for (int j=0;j<p.getNum(v);j++) {
+		for (int j=0;j<p.countFaces(v);j++) {
 			int f=faceFlower[j];
 			int k=asp[f].vertIndex(v);
 			asp[f].labels[k] *=factor;
@@ -789,7 +789,7 @@ public class ProjStruct extends PackExtender {
 				if (fanInfo[0]<0)
 					throw new CombException("error setting red radii");
 				for (int j=0;j<fanInfo[1];j++) {
-					int fc=p.getFaceFlower(vi,(fanInfo[0]+j)%p.getNum(vi));
+					int fc=p.getFaceFlower(vi,(fanInfo[0]+j)%p.countFaces(vi));
 					Face face=p.faces[fc];
 					asps[fc].labels[face.vertIndx(vi)]=redRad[h];
 				}
@@ -1305,7 +1305,7 @@ public class ProjStruct extends PackExtender {
 				for (int j=0;j<3;j++) {
 					int v=asp[f].vert[j];
 					if (cck[v]==0) { // have to process this vertex
-						int num=p.getNum(v);
+						int num=p.countFaces(v);
 						double areaSum=0.0;
 						double angSum=0.0;
 						int[] faceFlower=p.getFaceFlower(v);
@@ -1377,7 +1377,7 @@ public class ProjStruct extends PackExtender {
 			return 1.0;
 		double rtio=1.0;
 		int[] faceFlower=p.getFaceFlower(v);
-		for (int j=0;j<p.getNum(v);j++) {
+		for (int j=0;j<p.countFaces(v);j++) {
 			int ff=faceFlower[j];
 			int k=aspects[ff].vertIndex(v);
 			rtio *= aspects[ff].sides[(k+2)%3]; // left sidelength
@@ -1852,7 +1852,7 @@ public class ProjStruct extends PackExtender {
 			// store data for qualifying edges in vector
 			Vector<Double> edata=new Vector<Double>();
 			for (int v=1;v<=packData.nodeCount;v++) {
-				int num=packData.getNum(v)+packData.getBdryFlag(v);
+				int num=packData.countFaces(v)+packData.getBdryFlag(v);
 				for (int j=0;j<num;j++) {
 					int w=packData.kData[v].flower[j];
 					if (w>v) {
@@ -1867,7 +1867,7 @@ public class ProjStruct extends PackExtender {
 			// draw (same order)
 			int spot=0;
 			for (int v=1;v<=packData.nodeCount;v++) {
-				int num=packData.getNum(v)+packData.getBdryFlag(v);
+				int num=packData.countFaces(v)+packData.getBdryFlag(v);
 				for (int j=0;j<num;j++) {
 					int w=packData.kData[v].flower[j];
 					if (w>v) {
@@ -1993,11 +1993,11 @@ public class ProjStruct extends PackExtender {
 		// set baseVert: use given or choose largest degree vert
 		if (baseVert<1) {  
 			baseVert=p.alpha;
-			int fs=p.getNum(baseVert);
+			int fs=p.countFaces(baseVert);
 			for (int v=1;v<=p.nodeCount;v++) {
-				if (!p.isBdry(v) ||	p.getNum(v)>fs) {
+				if (!p.isBdry(v) ||	p.countFaces(v)>fs) {
 					baseVert=v;
-					fs=p.getNum(baseVert);
+					fs=p.countFaces(baseVert);
 				}
 			}
 		}
@@ -2167,7 +2167,7 @@ public class ProjStruct extends PackExtender {
 
 		for (int v=1;v<=p.nodeCount;v++) {
 			// Strong: find sum[|Log(t.t')|]^2 for interior edges
-			for (int j=0;j<p.getNum(v);j++) {
+			for (int j=0;j<p.countFaces(v);j++) {
 				int w=p.kData[v].flower[j];
 				// if w>v and edge is interior
 				if (w>v) {
@@ -2285,7 +2285,7 @@ public class ProjStruct extends PackExtender {
     		  int v=inDex[j];
         	  double asum=pdcel.getVertAngSum(pdcel.vertices[v]);
         	  double aim=pdcel.p.getAim(v);
-        	  int num=p.getNum(v);
+        	  int num=p.countFaces(v);
         	  double factor=d_EuclPacker.uniFactor(num, asum, aim);
         	  pdcel.setRadii_by_factor(v,factor);
     	  }

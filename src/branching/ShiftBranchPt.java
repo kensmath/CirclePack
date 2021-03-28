@@ -80,7 +80,7 @@ public class ShiftBranchPt extends GenBranchPt {
 		PackData myPack=null;
 		
 		NodeLink petals=new NodeLink(packData);
-		for (int j=0;j<packData.getNum(myIndex);j++)
+		for (int j=0;j<packData.countFaces(myIndex);j++)
 			petals.add(packData.kData[myIndex].flower[j]);
 		
 		bdryLink=PackData.islandSurround(packData,petals);
@@ -166,7 +166,7 @@ public class ShiftBranchPt extends GenBranchPt {
 		
 		// 'singVert' and its petals are packed here; set aim < 0 in parent
 		packData.setAim(myIndex,-1.0);
-		for (int j=0;j<packData.getNum(myIndex)+packData.getBdryFlag(myIndex);j++)
+		for (int j=0;j<packData.countFaces(myIndex)+packData.getBdryFlag(myIndex);j++)
 			packData.setAim(vertexMap.findW(packData.kData[myIndex].flower[j]),-1.0);
 
 		setPoisonEdges();
@@ -178,7 +178,7 @@ public class ShiftBranchPt extends GenBranchPt {
 		// reset aims in parent
 		if (!packData.isBdry(myIndex))
 			packData.setAim(myIndex,2.0*Math.PI);
-		for (int j=0;j<(packData.getNum(myIndex)+packData.getBdryFlag(myIndex));j++) {
+		for (int j=0;j<(packData.countFaces(myIndex)+packData.getBdryFlag(myIndex));j++) {
 			int k=vertexMap.findW(packData.kData[myIndex].flower[j]);
 			if (!packData.isBdry(k))
 				packData.setAim(k,2.0*Math.PI);
@@ -609,7 +609,7 @@ public class ShiftBranchPt extends GenBranchPt {
 	public int setPoisonEdges() {
 		EdgeLink elink=new EdgeLink(packData);
 		int v=myPackData.kData[1].flower[0];
-		for (int j=1;j<=myPackData.getNum(1);j++) {
+		for (int j=1;j<=myPackData.countFaces(1);j++) {
 			int k=myPackData.kData[1].flower[j];
 			elink.add(new EdgeSimple(vertexMap.findW(v),vertexMap.findW(k)));
 			elink.add(new EdgeSimple(myIndex,vertexMap.findW(k)));

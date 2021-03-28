@@ -462,7 +462,7 @@ public class CommandStrParser {
 		  
 		  PackDCEL pDCEL = CombDCEL.getRawDCEL(bouquet);
 		  int origVCount=pDCEL.vertCount;
-		  if (pDCEL==null || pDCEL.addBaryCenters((FaceLink)null)==0) {
+		  if (pDCEL==null || pDCEL.addBaryCents_raw((FaceLink)null)==0) {
 			  CirclePack.cpb.myErrorMsg("Failed to get initial DCEL, or failed to add barycenters to faces");
 			  return 0;
 		  }
@@ -821,7 +821,7 @@ public class CommandStrParser {
 	    	  if (!packData.isBdry(v1) || !qackData.isBdry(v2))
 	    		  throw new DataException("one or both vertices are not on the boundary");
 	    	  
-	    	  if (pnum1==pnum2 && v1==v2 && packData.getNum(v1)<3)
+	    	  if (pnum1==pnum2 && v1==v2 && packData.countFaces(v1)<3)
 	    		  throw new DataException("zip up start vertex "+v1+" has too few neighbors");
 	    	  
 	    	  // last entry has two forms: n or (v1 w)
@@ -850,9 +850,9 @@ public class CommandStrParser {
 	    		  }
 	    		  else {
 	    			  int safty=packData.nodeCount;
-	    			  int ne=packData.kData[v1].flower[packData.getNum(v1)];
+	    			  int ne=packData.kData[v1].flower[packData.countFaces(v1)];
 	    			  while (ne != v1 && safty>0) {
-	    				  ne=packData.kData[ne].flower[packData.getNum(ne)];
+	    				  ne=packData.kData[ne].flower[packData.countFaces(ne)];
 	    				  tick++;
 	    				  safty--;
 	    			  }
@@ -950,7 +950,7 @@ public class CommandStrParser {
 	    		  overlaps=new Overlap();
 	    		  trace=overlaps;
 	    		  for (int v=1;v<=packData.nodeCount;v++) {
-	    			  for (int j=0;j<(packData.getNum(v)+packData.getBdryFlag(v));j++) {
+	    			  for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) {
 	    				  // only store for petals with larger indices
 	    				  if (v<packData.kData[v].flower[j]
 	    				     && (angle=packData.getInvDist(v,packData.kData[v].flower[j]))!=1.0 ) {
@@ -1025,7 +1025,7 @@ public class CommandStrParser {
 				    // new overlaps from p2? 
 				      for(int v=1;v<=qackData.nodeCount;v++) {
 				    	  int vv=packData.vertexMap.findW(v);
-				    	  for(int j=0;j<qackData.getNum(v)+
+				    	  for(int j=0;j<qackData.countFaces(v)+
 				    	  	qackData.getBdryFlag(v);j++)
 				    		  if (v<qackData.kData[v].flower[j]) {
 				    			  int ww=packData.vertexMap.findW(qackData.kData[v].flower[j]);
@@ -4726,7 +4726,7 @@ public class CommandStrParser {
 				  while (nlk.hasNext()) {
 					  int v=nlk.next();
 					  if (!packData.isBdry(v)) {
-						  for (int j=0;j<packData.getNum(v);j++) {
+						  for (int j=0;j<packData.countFaces(v);j++) {
 							  int w=packData.kData[v].flower[j];
 							  if (vhits[w]==0) { // new edge?
 								  elink.add(new EdgeSimple(v,w));
@@ -5143,28 +5143,15 @@ public class CommandStrParser {
    			
 	   		  Iterator<Integer> vlist=nodeLink.iterator();
    			  if (packData.packDCEL!=null) {
-   				  int oldvertCount=packData.packDCEL.vertCount;
-   				  ArrayList<Vertex> newVerts=new ArrayList<Vertex>();
    		   		  while (vlist.hasNext()) {
-   		   			  Vertex vert=CombDCEL.addVertex(packData.packDCEL,
-   		   					  packData.packDCEL.vertices[vlist.next()]);
+   		   			  int w=vlist.next();
+   		   			  Vertex vert=CombDCEL.addVert_raw(packData.packDCEL,w);
    		   			  if (vert!=null) {
    		   				  count++;
-   		   				  newVerts.add(vert);
    		   			  }
    		   		  }
+	   			  // process 
    		   		  if (count>0) {
-   		   			  int newnodes=newVerts.size();
-   		   			  
-   		   			  // add to 'vertices' before processing
-   		   			  Vertex[] vertices=new Vertex[packData.packDCEL.vertCount+1];
-   		   			  for (int j=1;j<=oldvertCount;j++) 
-   		   				  vertices[j]=packData.packDCEL.vertices[j];
-   		   			  for (int j=1;j<=newnodes;j++)
-   		   				  vertices[oldvertCount+j]=newVerts.get(j-1);
-   		   			  packData.packDCEL.vertices=vertices;
-
-   		   			  // process 
    		   		  	  CombDCEL.d_FillInside(packData.packDCEL);
    		   		  	  packData.attachDCEL(packData.packDCEL); // reattach
    		   		  }
@@ -5482,7 +5469,10 @@ public class CommandStrParser {
 			  try {
 				  if (!b_flag) { // just one boundary component
 					  for (int n=1;n<=numGens;n++) {
-						  v1=v2=packData.bdryStarts[1];
+						  if (packData.packDCEL!=null)
+							  v1=v2=packData.packDCEL.idealFaces[1].edge.origin.vertIndx;
+						  else
+							  v1=v2=packData.bdryStarts[1];
 						  count+= packData.add_layer(mode,degree,v1,v2);
 					  }
 				  }
@@ -5490,17 +5480,25 @@ public class CommandStrParser {
 					  Iterator<Integer> Bverts=bdrylist.iterator();
 					  while (Bverts.hasNext()) {
 						  int b=(Integer)Bverts.next();
-						  v1=v2=packData.bdryStarts[b];
+						  if (packData.packDCEL!=null)
+							  v1=v2=packData.packDCEL.idealFaces[b].edge.origin.vertIndx;
+						  else
+							  v1=v2=packData.bdryStarts[b];
 						  for (int n=1;n<=numGens;n++) {
 							  count += packData.add_layer(mode,degree,v1,v2);
-							  v1=v2=packData.nodeCount;
+							  v1=v2=packData.nodeCount; // new bdry verts
 						  }
 					  }
 				  }
 			  } catch (NumberFormatException nfe) {
 				  throw new DataException("bad data.");
 			  }
-			  packData.setCombinatorics();
+			  if (packData.packDCEL!=null) {
+				  CombDCEL.d_FillInside(packData.packDCEL);
+				  packData.attachDCEL(packData.packDCEL);
+			  }
+			  else 
+				  packData.setCombinatorics();
 	    	  return count;
 	      }
 		  break;
@@ -6153,7 +6151,7 @@ public class CommandStrParser {
 						flink=new FaceLink(packData,"a");
 					else
 						flink=new FaceLink(packData,items);
-					return packData.packDCEL.addBaryCenters(flink);
+					return packData.packDCEL.addBaryCents_raw(flink);
 				}
 				else if (str.contains("frac")) { // do local refinement at given vertices
 					NodeLink vlist=null;
@@ -6472,7 +6470,7 @@ public class CommandStrParser {
     						  throw new ParserException("max degree limit "+
     								  PackData.MAX_PETALS);
     					  }
-    					  n=N-(packData.getNum(vert)+1);
+    					  n=N-(packData.countFaces(vert)+1);
     					  if (n<0) {
     						  overCount++;
     						  n=0;
@@ -6481,7 +6479,7 @@ public class CommandStrParser {
     				  
     				  // else adding n circles (up to limit)
     				  else {
-    					  int m=PackData.MAX_PETALS-packData.getNum(vert)-1;
+    					  int m=PackData.MAX_PETALS-packData.countFaces(vert)-1;
 	    				  n=(n<m)? n:m;
     				  }
 
@@ -6491,7 +6489,7 @@ public class CommandStrParser {
     				  Complex z=packData.getCenter(packData.kData[vert].
     				                           flower[0]);
     				  Complex w=packData.getCenter(packData.kData[vert].
-    				                           flower[packData.getNum(vert)-1]);
+    				                           flower[packData.countFaces(vert)-1]);
     				  cpS.drawEdge(z,w,new DispFlags(null));
     				  count++;
     			  }
@@ -6567,7 +6565,7 @@ public class CommandStrParser {
 		   		  }
 		   		  int v=edge.w;
 		   		  int w=edge.v;
-		   		  int num=packData.getNum(v);
+		   		  int num=packData.countFaces(v);
 		   		  if (pdc!=null) {
 			   		  Boolean redProblem=Boolean.valueOf(false); // for dcel version 
 		   			  try {
@@ -6672,7 +6670,7 @@ public class CommandStrParser {
 		   			  }
 		   			  else {
 			   			  int indx=packData.nghb(edge.v,edge.w);
-			   			  if (indx>=0 && indx<packData.getNum(edge.v)) { // flip cclw edge
+			   			  if (indx>=0 && indx<packData.countFaces(edge.v)) { // flip cclw edge
 			   				  int w=packData.kData[edge.v].flower[indx+1];
 			   				  elink.add(new EdgeSimple(edge.v,w));
 			   			  }
@@ -6691,7 +6689,7 @@ public class CommandStrParser {
 		   			  else {
 			   			  int indx=packData.nghb(edge.v,edge.w);
 			   			  if (indx==0) { // must be interior
-			   				  w=packData.kData[edge.v].flower[packData.getNum(edge.v)-1];
+			   				  w=packData.kData[edge.v].flower[packData.countFaces(edge.v)-1];
 			   			  }
 			   			  else 
 			   				  w=packData.kData[edge.v].flower[indx-1];
@@ -6714,7 +6712,7 @@ public class CommandStrParser {
 	        				  return 0; // didn't find interior vert
 	        		  }
 	        		  int[] flower=packData.getFlower(v);
-	        		  int num=packData.getNum(v);
+	        		  int num=packData.countFaces(v);
 	        		  int w=flower[Math.abs((rand.nextInt())%(num))];
 	   				  elink.add(new EdgeSimple(v,w));
 	        	  }
@@ -9251,7 +9249,7 @@ public class CommandStrParser {
     				  // allocate if needed
     				  if (!packData.haveSchwarzians()) {
     					  for (int vv=1;vv<=packData.nodeCount;vv++)
-    						  packData.kData[vv].schwarzian=new double[packData.getNum(vv)+1];
+    						  packData.kData[vv].schwarzian=new double[packData.countFaces(vv)+1];
     				  }
     				  
     				  Iterator<EdgeSimple> elk=elink.iterator();
@@ -9832,7 +9830,7 @@ public class CommandStrParser {
 	        				  }
 	        				  else if (mode==4) { // based on 'xyzpoint' data
 	        						double angsum=0.0;
-	        						for (int j=0;j<packData.getNum(v);j++) {
+	        						for (int j=0;j<packData.countFaces(v);j++) {
 	        							int n=packData.kData[v].flower[j];
 	        							int m=packData.kData[v].flower[j+1];
 	        							angsum += Math.acos(EuclMath.e_cos_3D(

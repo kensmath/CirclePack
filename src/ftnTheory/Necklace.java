@@ -236,7 +236,7 @@ public class Necklace extends PackExtender {
 	 		packData.elist=new EdgeLink(packData);
 	 		for (int v=1;v<=packData.nodeCount;v++) {
 	 			if (packData.getVertMark(v)!=1)
-	 				for (int j=0;j<packData.getNum(v)+packData.getBdryFlag(v);j++) {
+	 				for (int j=0;j<packData.countFaces(v)+packData.getBdryFlag(v);j++) {
 	 					int k=packData.kData[v].flower[j];
 	 					if (k>v && packData.getVertMark(k)!=1)
 	 						packData.elist.add(new EdgeSimple(v,k));

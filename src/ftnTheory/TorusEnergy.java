@@ -47,7 +47,7 @@ public class TorusEnergy extends PackExtender {
 		edgeList=new EdgeLink(packData);
 		for (int v=1;v<=packData.nodeCount;v++) {
 			int[] flower=packData.getFlower(v);
-			for (int j=1;j<=packData.getNum(v);j++)
+			for (int j=1;j<=packData.countFaces(v);j++)
 				if (flower[j]>v)
 					edgeList.add(new EdgeSimple(v,flower[j]));
 		}
@@ -69,7 +69,7 @@ public class TorusEnergy extends PackExtender {
 			int top=0;
 			int []bin=new int[packData.nodeCount+1];
 			for (int v=1;v<=packData.nodeCount;v++) {
-				int num=packData.getNum(v);
+				int num=packData.countFaces(v);
 				bin[num]=bin[num]+1;
 				top=(num>top)?num:top;
 			}
@@ -234,7 +234,7 @@ public class TorusEnergy extends PackExtender {
 //		double [][]conductance=ComplexAnalysis.setConductances(p);
 		double groundLength=2.0*(TorusEnergy.mycon/Math.sqrt(p.faceCount));
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.getNum(v);j++)
+			for (int j=0;j<p.countFaces(v);j++)
 				if (j>v) {
 					double len=groundLength-(p.getRadius(v)+p.getRadius(p.kData[v].flower[j]));
 					erg += len*len;

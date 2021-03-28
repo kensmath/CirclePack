@@ -46,7 +46,7 @@ public class CranePoint {
 			shiftratio = -1/s;
 		}
 		alpha=P;
-		num=pd.getNum(vert);
+		num=pd.countFaces(vert);
 		petalAng=new double[num];//num+1
 		petalR=new double[num];//num+1
 		petalZ=new Complex[num];//num+1
@@ -108,8 +108,8 @@ public class CranePoint {
 	 * @return double []
 	 */
 	public double []getAngs() {
-		double []ans=new double[pd.getNum(vert)+1];
-		for (int j=0;j<=pd.getNum(vert);j++)
+		double []ans=new double[pd.countFaces(vert)+1];
+		for (int j=0;j<=pd.countFaces(vert);j++)
 			ans[j]=petalAng[j];
 		return ans;
 	}

@@ -618,7 +618,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 				centerField.setValue(new Complex(p.getCenter(v)));
 				aimField.setValue(p.getAim(v)/Math.PI);
 				angleSumField.setValue(p.getCurv(v)/Math.PI);
-				degreeField.setValue(p.getNum(v));
+				degreeField.setValue(p.countFaces(v));
 				vertexColorField.setValue(ColorUtil.col_to_table(p.getCircleColor(v)));
 				vertMarkField.setValue(p.getVertMark(v));
 
@@ -750,7 +750,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 						if (Math.abs(1.0D - actualInvDist) > 0.0000001D) invDist = actualInvDist;
 					}
 					if (packData.kData[edge.v].schwarzian!=null) {
-						if (flowerIndexWFromV<packData.getNum(edge.v))
+						if (flowerIndexWFromV<packData.countFaces(edge.v))
 							schwarzianField.setValue(packData.kData[edge.v].
 									schwarzian[flowerIndexWFromV]);
 					}
@@ -959,7 +959,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 				return;
 			if (!p.haveSchwarzians()) { // allocate space,
 				for (int v=1;v<=p.nodeCount;v++) {
-					p.kData[v].schwarzian=new double[p.getNum(v)+1];
+					p.kData[v].schwarzian=new double[p.countFaces(v)+1];
 				}
 			}
 			String sch=schwarzianField.getText().trim();

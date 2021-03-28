@@ -723,19 +723,14 @@ public class PackDCEL {
 		return 1;
 	}
 	
-	
 	/**
- 	 * NEEDED FOR CIRCLEPACK
-	 * Add barycenters faces, listed by indices. A barycenter is a
-	 * new vertex inside the face which is connected to all the 
-	 * bdry vertices of the face. 
-	 * NOTE: added vertices and edges put data out of sync with 
-	 * parent packing 'p'. For testing purposes, we can write combinatorics
-	 * to a file and read it back into a packing to get things back into sync.
-	 * @param facelink FaceLink; if null, do all faces (but not ideal faces)
+	 * Add barycenters to given list of faces. 
+	 * A barycenter is a new vertex interior to the 
+	 * face and connected to its bdry vertices.
+	 * @param facelink FaceLink
 	 * @return int count, 0 on error
 	 */
-	public int addBaryCenters(FaceLink facelink) {
+	public int addBaryCents_raw(FaceLink facelink) {
 		ArrayList<Face> arrayf=new ArrayList<Face>();
 		if (facelink==null) {
 			for (int j=1;j<=intFaceCount;j++)
@@ -747,113 +742,40 @@ public class PackDCEL {
 				arrayf.add(faces[flst.next()]); // get face of that index
 			}
 		}
-		return addBaryCenters(arrayf);
+		return addBaryCents_raw(arrayf);
 	}
 	
 	/**
-	 * Add barycenters to faces. A barycenter is a new vertex 
-	 * interior to the face which is connected to all the 
-	 * bdry vertices of the face. 
-	 * NOTE: added vertices and edges put data out of sync with 
-	 * parent packing 'p'. For testing purposes, we can write combinatorics
-	 * to a file and read it back into a packing to get things back into sync.
+	 * Add barycenters to given list of faces. 
+	 * A barycenter is a new vertex interior to the 
+	 * face and connected to its bdry vertices.
 	 * @param arrayf ArrayList<Face>
 	 * @return int count, 0 on error
 	 */
-	public int addBaryCenters(ArrayList<Face> arrayf) {
+	public int addBaryCents_raw(ArrayList<Face> arrayf) {
 		int count=0;
-		int oldVertCount=vertCount;
-		
-		// create array of existing edges so we can add to it
-		ArrayList<HalfEdge> tmpedges=new ArrayList<HalfEdge>();
-		tmpedges.add(null);
-		for (int e=1;e<=edgeCount;e++) {
-			tmpedges.add(edges[e]);
-		}
-		
-		Iterator<Face> flst=arrayf.iterator();
-		ArrayList<Vertex> newVertices=new ArrayList<Vertex>();
-		while (flst.hasNext()) {
-			Face face=flst.next(); 
-			int n=0;
-			ArrayList<HalfEdge> polyE=null;
-			
-			// note: after processing 'face', set 'face.edge=null' so we don't process 
-			//   it again due to repeat in 'arrayf'
-			if (face.edge!=null && (polyE=face.getEdges())!=null && 
-					(n=polyE.size())>2) { 
-				
-				Vertex newV=new Vertex(); // this is the barycenter
-				ArrayList<HalfEdge> edgeflower=new ArrayList<HalfEdge>();
-				Iterator<HalfEdge> pE=polyE.iterator();
-				while (pE.hasNext()) {
-					HalfEdge nextHE=pE.next();
 
-					// new spoke from 'newV'
-					HalfEdge he=new HalfEdge(newV);
-					he.edgeIndx=++edgeCount;
-					edgeflower.add(he);
-					he.twin=new HalfEdge(nextHE.origin);
-					he.twin.edgeIndx=++edgeCount;
-					he.twin.twin=he;
-					tmpedges.add(he); // add both to parent array
-					tmpedges.add(he.twin);
-				}	
-				
-				// set 'edge' null to avoid reuse
-				face.edge=null;
-				
-				// if boundary face, remove
-				if (face.faceIndx<0) {
-					for (int j=1;j<=idealFaceCount;j++) {
-						if (idealFaces[j]==face) {
-							for (int k=j;k<idealFaceCount;k++) 
-								idealFaces[k]=idealFaces[k+1];
-						}
+		Iterator<Face> flst=arrayf.iterator();
+		while (flst.hasNext()) {
+			Face face=flst.next();
+			Vertex newV=CombDCEL.addBary_raw(this, face);
+			count++;
+			newV.vertIndx=++vertCount;
+			vertices[vertCount]=newV;
+			
+			// face was ideal? readjust indexing.
+			if (face.faceIndx<0) {
+				for (int j=1;j<=idealFaceCount;j++) {
+					if (idealFaces[j]==face) {
+						for (int k=j;k<idealFaceCount;k++) 
+							idealFaces[k]=idealFaces[k+1];
 					}
 				}
-				
-				// fix up 'newV'
-				count++;
-				newV.vertIndx=++vertCount;
-				newV.halfedge=edgeflower.get(0);
-				newVertices.add(newV);
-				
-				// fix up halfedges and new faces in order around 'newV'
-				for (int j=0;j<n;j++) {
-					HalfEdge polye=polyE.get(j);
-					HalfEdge spoke=edgeflower.get(j);
-					HalfEdge nxt_spoke=edgeflower.get((j+1)%n);
-					
-					// fix polye
-					polye.prev=spoke;
-					polye.next=nxt_spoke.twin;
-					
-					// fix spoke
-					spoke.next=polye;
-					spoke.prev=nxt_spoke.twin;
-					
-					// fix nxt_spoke.twin
-					nxt_spoke.twin.prev=polye;
-					nxt_spoke.twin.next=spoke;
-					
-				}
 			}
+			face.edge=null; // to avoid repeat in facelist
+
 		} // end of while through facelist
-		
-		// re-establish 'vertices'
-		Vertex []newarray=new Vertex[vertCount+1];
-		for (int v=1;v<=oldVertCount;v++)
-			newarray[v]=vertices[v];
-		int tick=oldVertCount;
-		Iterator<Vertex> vit=newVertices.iterator();
-		while (vit.hasNext()) 
-			newarray[++tick]=vit.next();
-		vertices=newarray;
-		vertCount=tick;
-		
-		// reindex all the faces
-		indexFaces(tmpedges,getBdryEdges());
+
 		return count;
 	}
 
@@ -994,7 +916,7 @@ public class PackDCEL {
 		}
 		
 		// add barycenters to faces  
-		int n=addBaryCenters(arrayF);
+		int n=addBaryCents_raw(arrayF);
 		if (n<=0) {
 			CirclePack.cpb.errMsg("didn't add barycenters");
 			return 0;
@@ -1065,6 +987,22 @@ public class PackDCEL {
 			}
 		}
 		return bouq;
+	}
+	
+	/**
+	 * Directly count the petals. (Useful when processing
+	 * has not updated 'vData'.)
+	 * @param v int
+	 * @return
+	 */
+	public int countPetals(int v) {
+		int num=0;
+		HalfEdge he=vertices[v].halfedge;
+		do {
+			he=he.prev.twin;
+			num++;
+		} while (he!=vertices[v].halfedge);
+		return num;
 	}
 	
 	/**

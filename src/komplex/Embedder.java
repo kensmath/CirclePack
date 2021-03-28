@@ -70,8 +70,8 @@ public class Embedder {
 					// finalize this match
 					vstat[v]=V;
 					Vstat[V]=v;
-					num=p1.getNum(v);
-					Num=p2.getNum(V);
+					num=p1.countFaces(v);
+					Num=p2.countFaces(V);
 					jspot=result[0];
 					Jspot=result[1];
 						
@@ -79,7 +79,7 @@ public class Embedder {
 					
 					// v/V both interior (hence num=Num)
 					if (!p1.isBdry(v) && !p2.isBdry(V)) { 
-						for (int j=1;j<p1.getNum(v);j++) {
+						for (int j=1;j<p1.countFaces(v);j++) {
 							k=p1.kData[v].flower[(jspot+j)%num];
 							K=p2.kData[V].flower[(Jspot+j)%Num];
 							if (vstat[k]==0) { // not yet matched
@@ -176,8 +176,8 @@ public class Embedder {
 	public static boolean embedable(PackData q1,PackData q2,int v,int j,int V,int J) {
 		if (v<1 || v>q1.nodeCount || V<1 || V>q2.nodeCount) // improper vertices 
 			return false;
-		int num=q1.getNum(v);
-		int Num=q2.getNum(V);
+		int num=q1.countFaces(v);
+		int Num=q2.countFaces(V);
 		if (j<0 || j>num || J<0 || J>Num) // improper indices
 			return false;
 		if ((!q1.isBdry(v) && !q2.isBdry(V) && num!=Num)
@@ -201,8 +201,8 @@ public class Embedder {
 	 */
 	public static int []consistent(PackData q1,PackData q2,int v,int V,int hint) 
 	throws DataException {
-		int num=q1.getNum(v);
-		int Num=q2.getNum(V);
+		int num=q1.countFaces(v);
+		int Num=q2.countFaces(V);
 		int jspot=-1; 
 		int Jspot=-1;
 		int k,K;
@@ -242,7 +242,7 @@ public class Embedder {
 		int W,w;
 		// v/V both interior (hence same petal count)
 		if (!q1.isBdry(v) && !q2.isBdry(V)) { 
-			for (int j=1;j<q1.getNum(v);j++) {
+			for (int j=1;j<q1.countFaces(v);j++) {
 				k=q1.kData[v].flower[(jspot+j)%num];
 				K=q2.kData[V].flower[(Jspot+j)%Num];
 				W=Math.abs(vstat[k]);
