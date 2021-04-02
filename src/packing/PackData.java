@@ -27,7 +27,6 @@ import complex.MathComplex;
 import dcel.CombDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RedHEdge;
 import dcel.VData;
 import dcel.Vertex;
 import deBugging.DebugHelp;
@@ -308,7 +307,7 @@ public class PackData{
     	// no existing dcel structure? get data from 'rData'
     	if (vData==null) {
     		vData=new VData[sizeLimit+1];
-    		for (int v=1;v<=nodeCount;v++) 
+    		for (int v=1;v<=sizeLimit;v++) 
     			vData[v]=new VData();
     		for (int v=1;v<=nodeCount;v++) {
     			Vertex vert=pdcel.vertices[v];
@@ -352,7 +351,7 @@ public class PackData{
 		
 		// allocate new 'vData'
 		vData=new VData[sizeLimit+1];
-		for (int v=1;v<=nodeCount;v++) 
+		for (int v=1;v<=sizeLimit;v++) 
 			vData[v]=new VData();
 		
 		// note: 'nodeCount' may be larger than 'origNodeCount'
@@ -385,13 +384,23 @@ public class PackData{
    				} catch(Exception ex) {}
 				pdcel.setVertData(he, new CircleSimple(z,rad));
    			}
-   			// else, for bdry get red edge data
    			else {
-   				RedHEdge redege=vert.halfedge.myRedEdge;
-   				if (redege!=null) {
-   					vData[oldv].center=redege.getCenter();
-   					vData[oldv].rad=redege.getRadius();
-   				}
+    			if (vert.isBdry()) { 
+    				vData[v].setBdryFlag(1);
+    				vData[v].aim=-0.1;
+    			}
+    			else
+					vData[v].aim=2.0*Math.PI;
+    				
+    			// 'vutil' may point to vert to copy
+    			oldv=v;
+    			if (vert.vutil>0 && vert.vutil<=origNodeCount)
+    				oldv=vert.vutil;
+    			if (oldv<=origNodeCount) {
+    				pdcel.setVertRadii(v,vData[oldv].rad);
+    				pdcel.setVertCenter(v,new Complex(vData[oldv].center));
+    				vData[v].color=ColorUtil.cloneMe(vData[oldv].color);
+    			}
    			}
 			pdcel.setVDataIndices(v);
     	}
@@ -7718,22 +7727,17 @@ public class PackData{
 		if (node > (sizeLimit)
 				&& alloc_pack_space(node, true) == 0) 
 			throw new CombException("Pack space allocation failure");
-		if (getRadius(v) <= 0) { // avoid infinite rad
+		if (getRadius(v) <= 0) { // avoid infinite hyp rad
 			setRadius(v,.1);
 		}
 		int v2 = getLastPetal(v); // upstream nghb
 		
 		if (packDCEL!=null) {
-			Vertex new_vert=CombDCEL.addVert_raw(packDCEL,v);
-			if (new_vert==null)
+			Vertex vert=CombDCEL.addVert_raw(packDCEL,v);
+			if (vert==null)
 				throw new CombException("failed 'add_vert'");
-			packDCEL.vertCount++;
-			node=new_vert.vertIndx;
-			packDCEL.vertices[node]=new_vert;
-			CombDCEL.d_FillInside(packDCEL);
-			attachDCEL(packDCEL);
-			vData[node].center=new Complex(vData[v].center);
-			vData[node].rad=vData[v].rad;
+			setRadius(vert.vertIndx,getRadius(vert.vutil));
+			packDCEL.fixDCEL_raw(this);
 		}
 		 
 		// traditional packing
@@ -7825,12 +7829,12 @@ public class PackData{
 			return 0;
 		
 		if (packDCEL!=null) {
-			int ans=CombDCEL.enfold(packDCEL,v1);
-			if (ans<=0)
-				throw new CombException("dcel enfold failed in 'enfold'");
 			if (getRadius(v1) <= 0) // avoid infinity hyp rad
 				setRadius(v1, 0.1);
-			setAim(v1, 2.0 * Math.PI);
+			int ans=CombDCEL.enfold_raw(packDCEL,v1);
+			if (ans<=0)
+				throw new CombException("dcel enfold failed in 'enfold'");
+			packDCEL.fixDCEL_raw(this);
 			return 1;
 		}
 
@@ -7923,16 +7927,19 @@ public class PackData{
 	 * Add a layer of nodes to bdry segment from vertex v1 to v2.
 	 * Three modes:
 	 * 
-	 *   mode=0: add layer, a new bdry vert for each edge
-	 *   between v1 and v2. Unless v1==v2, v1 and v2 remain as
-	 *   bdry vertices.
-	 *   mode=1: add nghb's to make vertices from v1 to v2,
+	 * TENT: add one-on-one layer, a new bdry vert for 
+	 *   each edge between v1 and v2. Unless v1==v2, 
+	 *   v1 and v2 remain as bdry vertices.
+	 *   
+	 * DEGREE: add nghb's to make vertices from v1 to v2,
 	 *   inclusive, interior with degree d. However, no edge
 	 *   should connect existing bdry vertices. If v1==v2 or
 	 *   v1 is nghb of v2, do whole bdry component.
-	 *   mode=2: attach "square" face with bary center to each 
-	 *   edge between v1 and v2. Unless v1==v2, v1 and v2 
-	 *   remain on bdry.
+	 *   
+	 * DUPLICATE: attach "square" face with bary center 
+	 *   to each edge between v1 and v2. Unless v1==v2, 
+	 *   v1 and v2 remain on bdry.
+	 *   
 	 * Calling routine updates combinatorics.
 	 * @param mode int, how to add: 0=TENT, 1=DEGREE, 2=DUPLICATE
 	 * @param degree int

@@ -120,6 +120,38 @@ public class PackDCEL {
 	}
 	
 	/**
+	 * Cleanup routine: '*_raw' routines modify dcel 
+	 * structure w/o complete update: 'vertCount', 
+	 * 'vertices', edge connectivity should be in 
+	 * tact and often 'redChain' is in tact. The
+	 * calling routine should already have done 
+	 * things, like cents/radii. If the red chain
+	 * was broken, the calling routine should set
+	 * 'redChain' null and 'redchain_by_edge' is
+	 * called. Faces may be outdated or
+	 * non-existent, 'edges', 'faces', counts, etc. 
+	 * need updating, so 'd_FillInside' is called. 
+	 * Also, need to 'attach' to a packing (usually 
+	 * the current parent).
+	 * @param p PackData
+	 */
+	public void fixDCEL_raw(PackData p) {
+		if (p==null)
+			p=this.p;
+		try {
+		  // may need new red chain
+		  if (redChain==null) {
+			  CombDCEL.redchain_by_edge(this, null, this.alpha);
+		  }
+
+		  CombDCEL.d_FillInside(this);
+		  p.attachDCEL(this);
+	  } catch (Exception ex) {
+		  throw new DCELException("Problem with 'fix_raw'. "+ex.getMessage());
+	  }
+	}
+	
+	/**
 	 * Create and populate 'triData[]'. This loads 'radii', 'invDist's, 'aim',
 	 * and computes 'angles'.
 	 * @return int faceCount
@@ -758,20 +790,12 @@ public class PackDCEL {
 		Iterator<Face> flst=arrayf.iterator();
 		while (flst.hasNext()) {
 			Face face=flst.next();
-			Vertex newV=CombDCEL.addBary_raw(this, face);
-			count++;
-			newV.vertIndx=++vertCount;
-			vertices[vertCount]=newV;
+			count += CombDCEL.addBary_raw(this, face,false);
 			
-			// face was ideal? readjust indexing.
-			if (face.faceIndx<0) {
-				for (int j=1;j<=idealFaceCount;j++) {
-					if (idealFaces[j]==face) {
-						for (int k=j;k<idealFaceCount;k++) 
-							idealFaces[k]=idealFaces[k+1];
-					}
-				}
-			}
+			// face was ideal? toss 'redChain'
+			if (face.faceIndx<0) 
+				redChain=null;
+
 			face.edge=null; // to avoid repeat in facelist
 
 		} // end of while through facelist

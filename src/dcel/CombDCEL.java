@@ -25,12 +25,12 @@ import util.StringUtil;
 /**
  * Static combinatorial routines for working with DCEL structures.
  * 
- * The "*_raw" methods typically work just with combinatorics (no
- * radii/centers, little or no dependence on PackData parent).
+ * The "*_raw" methods typically work just with combinatorics
+ * (no rad/cents, little or no dependence on PackData parent).
  * The calling routines do further processing, generally calling
  * 'd_FillInside' and then 'attachDCEL' to the packing. If red 
  * chain cannot be modified, then 'redChain' is set to null and
- * calling routine would run 'redchain_by_edge'.
+ * calling routine would run 'redchain_by_edge'. See 'fixDCEL_raw'.
  * 
  * TODO: Routines are gathered from earlier work, so all needs careful 
  * debugging. 
@@ -1495,15 +1495,18 @@ public class CombDCEL {
 //	}
 	
 	/**
-	 * Generate a minimal DCEL (vertices, edges only) by subdividing 
-	 * each edge into 2 edges, and each n-sided (non-ideal) face of 
-	 * 'pdcel' into n+1 faces. 'pdcel' data is modified, but we preserve 
-	 * much of the original structure: orig vert indices unchanged; 
-	 * orig vert halfedge's unchanged; 'pdcel.redChain' subdivided to
-	 * get new red chain. All new edges and red edges come from new 
-	 * vertices and red vertices.
+	 * Generate a minimal DCEL (vertices, edges only) by 
+	 * subdividing each edge into 2 edges, and each n-sided 
+	 * (non-ideal) face of 'pdcel' into n+1 faces. 'pdcel' 
+	 * data is modified, but we preserve much of the 
+	 * original structure: orig vert indices unchanged; 
+	 * orig vert halfedge's unchanged; 'pdcel.redChain' is
+	 * subdivided to get new red chain. All new edges 
+	 * and red edges come from new vertices and red vertices.
 	 * Calling routine should run 'd_redChainBuilder' next.
-	 * @param pdcel PackDCEL, complete with faces,edges,vertices 
+	 * NOTE: incoming 'pdcel' must be complete with faces,
+	 * edges, vertices. 
+	 * @param pdcel PackDCEL, 
 	 * @return new PackDCEL
 	 */
 	public static PackDCEL hexRefine(PackDCEL pdcel) {
@@ -1584,17 +1587,20 @@ public class CombDCEL {
 				// fix twins
 				edge.twin=newTwin;
 				newTwin.twin=edge;
+				
 				newEdge.twin=tedge;
 				tedge.twin=newEdge;
 				
 				// fix 
 				newEdge.next=edge.next;
 				newEdge.next.prev=newEdge;
+				
 				edge.next=newEdge;
 				newEdge.prev=edge;
 
 				newTwin.next=tedge.next;
 				newTwin.next.prev=newTwin;
+				
 				newTwin.prev=tedge;
 				tedge.next=newTwin;
 
@@ -3099,107 +3105,18 @@ public class CombDCEL {
 	  }
 	  
 	  /**
-	   * We modify an existing 'PackDCEL', adding a new 
-	   * vertex/fact to an existing bdry edge. We adjust only
-	   * as necessary for the new objects in case more vertices
-	   * are to be added in a subsequent call. We depend on 
-	   * 'v.halfedge.myRedHEdge' to confirm that 'v' is bdry; 
-	   * we increment 'vertCount'. The calling routine will 
-	   * call 'd_FillInside', 'attachDCEL', when appropriate.
-	   * @param pdcel PackDCEL
-	   * @param v Vertex
-	   * @return Vertex, new 'Vertex', or null on error
-	   */
-	  public static Vertex addVertex(PackDCEL pdcel,Vertex v) {
-		  
-			RedHEdge reddown = v.halfedge.myRedEdge; // downstream red
-			if (reddown == null)
-				return null;
-			RedHEdge thisred = reddown.prevRed;
-			if (pdcel.redChain == thisred)
-				pdcel.redChain = reddown;
-			HalfEdge thishe = thisred.myEdge;
-			RedHEdge redup = reddown.prevRed.prevRed; // upstream red
-			Vertex w_vert = thishe.origin;
-			if (redup == reddown || redup.myEdge.origin == v)
-				throw new CombException("Bdry component of " + v + " is a slit; can't add vertex");
-
-			// new objects
-			Vertex newV = new Vertex(pdcel.vertCount + 1);
-			newV.redFlag=true;
-			newV.bdryFlag=1;
-			HalfEdge he_in = new HalfEdge();
-			HalfEdge he_out = new HalfEdge();
-			HalfEdge twin_in = new HalfEdge();
-			HalfEdge twin_out = new HalfEdge();
-			RedHEdge newred = thisred.clone(); // inherit rad/center
-
-			// create/adjust pointers
-			newV.halfedge = he_out;
-			he_out.origin = newV;
-			twin_in.origin = newV;
-			twin_out.origin = v;
-			w_vert.halfedge = he_in;
-			he_in.origin = w_vert;
-
-			twin_in.prev = twin_out;
-			twin_out.next = twin_in;
-			twin_in.next = thishe.twin.next;
-			thishe.twin.next.prev = twin_in;
-			twin_out.prev = thishe.twin.prev;
-			thishe.twin.prev.next = twin_out;
-			
-			he_out.prev = he_in;
-			he_in.next = he_out;
-			he_out.next = thishe.twin;
-			thishe.twin.prev = he_out;
-			he_in.prev = thishe.twin;
-			thishe.twin.next = he_in;
-
-			// the new twins
-			he_in.twin = twin_in;
-			twin_in.twin = he_in;
-			he_out.twin = twin_out;
-			twin_out.twin = he_out;
-
-			// attach red edges
-			he_out.myRedEdge = newred;
-			newred.myEdge=he_out;
-			he_in.myRedEdge = thisred;
-			thisred.myEdge = he_in;
-			thishe.twin.myRedEdge = null;
-			
-			// adjust red pointers
-			newred.nextRed = thisred.nextRed;
-			newred.prevRed = thisred;
-			thisred.nextRed = newred;
-
-			// fix faces
-			he_in.face = null;
-			he_out.face = null;
-			dcel.Face idealf = thishe.twin.face;
-			thishe.twin.face = null;
-			twin_in.face = twin_out.face = idealf;
-
-			// increment 'vertCount' in case we add another
-			pdcel.vertCount++;
-			return newV; // return the new vertex
-	  }
-	  
-	  /**
 	   * We modify an existing 'PackDCEL' with a new boundary
 	   * edge between v and w. Call routine insures that v and w
 	   * have common bdry neighbor u. Only possible anbiguity is
 	   * if bdry component has 4 vertices: we choose u so <v,u,w>
-	   * is cclw. Adjust only as necessary for the new objects 
-	   * and new red chain. The calling routine calls 'd_FillInside', 
-	   * 'attachDCEL', when appropriate.
+	   * is cclw. Adjust edge links, adjust red chain; may be
+	   * called several times before parent completes combinatorics.
 	   * @param pdcel PackDCEL
 	   * @param v int
 	   * @param w int
 	   * @return new HalfEdge, null on error
 	   */
-	  public static HalfEdge addEdge(PackDCEL pdcel,int v,int w) {
+	  public static HalfEdge addEdge_raw(PackDCEL pdcel,int v,int w) {
 		  Vertex v1=pdcel.vertices[v];
 		  HalfEdge edge1=v1.halfedge;
 		  
@@ -3225,34 +3142,35 @@ public class CombDCEL {
 		  // now v1, u, v2 should be cclw nghbs
 		  edge1=v1.halfedge;
 		  HalfEdge edge2=edge1.twin.prev.twin;
-		  RedHEdge red1=edge1.myRedEdge;
-		  RedHEdge red2=edge2.myRedEdge;
-		  if (red1==null || red2==null)
-			  throw new DCELException("edges are not red");
+		  RedHEdge red_in=edge1.myRedEdge;
+		  RedHEdge red_out=edge2.myRedEdge;
+		  if (red_in==null || red_out==null)
+			  throw new DCELException("add_edge usage: edges are not red");
 		  
 		  // adjust redChain if needed
-		  if (pdcel.redChain==red1)
-			  pdcel.redChain=red1.nextRed;
-		  if (pdcel.redChain==red2)
-			  pdcel.redChain=red2.nextRed;
+		  if (pdcel.redChain==red_in)
+			  pdcel.redChain=red_in.nextRed;
+		  if (pdcel.redChain==red_out)
+			  pdcel.redChain=red_out.nextRed;
 		  
 		  // new objects
 		  HalfEdge newedge=new HalfEdge(v1);
 		  HalfEdge newtwin=newedge.twin=new HalfEdge(v2);
 		  newtwin.twin=newedge;
-		  RedHEdge newred=red1.clone();
+		  RedHEdge newred=red_in.clone(); // inherit cent/rad
 		  
 		  // fix red pointers
 		  newred.myEdge=newedge;
 		  newedge.myRedEdge=newred;
-		  newred.prevRed=red1.prevRed;
-		  red1.prevRed.nextRed=newred;
+		  newred.prevRed=red_in.prevRed;
+		  red_in.prevRed.nextRed=newred;
 		  // simplest case, red1 and red2 orphaned
-		  if (red1.nextRed==red2) { 
-			  newred.nextRed=red2.nextRed;
-			  red2.nextRed.prevRed=newred;
+		  if (red_in.nextRed==red_out) { 
+			  newred.nextRed=red_out.nextRed;
+			  red_out.nextRed.prevRed=newred;
 			  edge1.myRedEdge=null;
 			  edge2.myRedEdge=null;
+			  edge2.origin.redFlag=false;
 		  }
 		  // else, reroute: red1 orphaned, red2 gets twin
 		  else {
@@ -3260,9 +3178,10 @@ public class CombDCEL {
 			  edge2.twin.myRedEdge=redTwin;
 			  redTwin.prevRed=newred;
 			  newred.nextRed=redTwin;
-			  redTwin.nextRed=red1.nextRed;
-			  red2.twinRed=redTwin;
-			  redTwin.twinRed=red2;
+			  redTwin.nextRed=red_in.nextRed;
+			  redTwin.nextRed.prevRed=redTwin;
+			  red_out.twinRed=redTwin;
+			  redTwin.twinRed=red_out;
 		  }
 		  
 		  // fix edge pointers
@@ -3280,7 +3199,6 @@ public class CombDCEL {
 		  edge2.twin.face=null;
 		  newtwin.face=newtwin.next.face;
 		  
-		  edge2.origin.redFlag=false;
 		  edge2.origin.bdryFlag=0;
 		  v1.halfedge=newedge;
 		  
@@ -3354,12 +3272,99 @@ public class CombDCEL {
 		  return 1;
 	  }
 	  
+	  /** 
+	   * Add a layer of nodes to bdry segment from vertex v1 to v2.
+	   * Three modes:
+	   * 
+	   * TENT: add one-on-one layer, a new bdry vert for 
+	   *   each edge between v1 and v2. Unless v1==v2, 
+	   *   v1 and v2 remain as bdry vertices.	
+	   *   
+	   * DEGREE: add nghb's to make vertices from v1 to v2,
+	   *   inclusive, interior with degree d. However, no edge
+	   *   should connect existing bdry vertices. If v1==v2 or
+	   *   v1 is nghb of v2, do whole bdry component.
+	   *   
+	   * DUPLICATE: attach "square" face with bary center 
+	   *   to each edge between v1 and v2. Unless v1==v2, 
+	   *   v1 and v2 remain on bdry.
+	   *   
+	   * Calling routine updates combinatorics.
+	   * @param pdcel PackDCEL
+	   * @param mode int, how to add: 0=TENT, 1=DEGREE, 2=DUPLICATE
+	   * @param degree int
+	   * @param v1 int, start bdry vert
+	   * @param v2 int, end bdry vert
+	   * @return int, count of added vertices 
+	   */
+	  public static int addlayer_raw(PackDCEL pdcel,int mode,
+			  int deg,int v1,int v2) {
+		  int count=0;
+		  
+    	  // modes
+    	  int TENT=0;
+    	  int DEGREE=1;
+    	  int DUPLICATE=2;
+    	  
+		  if (mode == DEGREE) {
+			  Vertex vert=pdcel.vertices[v1];
+			  if (v2 == v1)
+				  v2 = vert.halfedge.twin.next.twin.origin.vertIndx;
+			  int v = v1;
+			  int nextv = v;
+
+			  // handle v first; must add new circle shared with upstream nghb.
+			  addVert_raw(pdcel,v);
+			  count++;
+
+			  // go until you finish v2
+			  do {
+				  v=nextv; // get 'v' and downstream bdry nghb 'nextv'
+				  nextv=pdcel.vertices[v].halfedge.twin.origin.vertIndx;
+				  int need=deg-pdcel.countPetals(v);
+				  for (int i = 1; i <= need; i++) {
+					  addVert_raw(pdcel,v);
+					  count++;
+				  }
+				  enfold_raw(pdcel,v);
+			  } while (v!=v2);
+
+			  return count;
+		  }
+		  if (mode==TENT) {
+//			  int lastv=pdcel.vertices[v2].halfedge.twin.next.twin.origin.vertIndx;
+			  HalfEdge edge=pdcel.vertices[v1].halfedge;
+			  int w=edge.origin.vertIndx;
+			  int v=edge.twin.origin.vertIndx;
+			  int nextv=edge.twin.prev.origin.vertIndx;
+			  addVert_raw(pdcel,v);
+			  while (v!=v2) {
+				  w=v;
+				  v=nextv;
+				  edge=pdcel.vertices[v].halfedge;
+				  nextv=edge.twin.origin.vertIndx;
+				  addVert_raw(pdcel,v);
+				  enfold_raw(pdcel,w);
+				  count++;
+			  }
+			  if (v1==v2) {
+				  enfold_raw(pdcel,v1);
+				  count++;
+			  }
+			  return count;
+		  }
+		  if (mode==DUPLICATE) {
+			  count+=CombDCEL.baryBox_raw(pdcel, v1, v2);
+		  }
+		  return count;
+	  }
+	  
 	  /**
 	   * Add vertex nghb'ing bdry vertex w and clw bdry nghb.
 	   * Set 'vutil' to 'w'.
 	   * @param pdcel PackDCEL
 	   * @param w int
-	   * @return Vertex
+	   * @return new Vertex
 	   */
 	  public static Vertex addVert_raw(PackDCEL pdcel,int w) {
 		  HalfEdge out_edge=pdcel.vertIsBdry(pdcel.vertices[w]);
@@ -3385,11 +3390,7 @@ public class CombDCEL {
 		  base_edge.myRedEdge=null;
 
 		  // create new bdry 'Vertex'
-		  Vertex new_vert=new Vertex(++pdcel.vertCount);
-		  pdcel.vertices[node]=new_vert;
-		  new_vert.bdryFlag=1;
-		  new_vert.redFlag=true;
-		  new_vert.vutil=w;
+		  Vertex new_vert=new Vertex(node);
 		  
 		  // 2 new edges and twins
 		  HalfEdge e1=new HalfEdge(v_vert);
@@ -3458,7 +3459,14 @@ public class CombDCEL {
 		  
 		  e1.origin.halfedge=e1;
 		  e2.origin.halfedge=e2;
-		  
+
+		  // fix vert
+		  pdcel.vertices[node]=new_vert;
+		  new_vert.bdryFlag=1;
+		  new_vert.redFlag=true;
+		  new_vert.vutil=w;
+		  pdcel.vertCount++;
+
 		  return new_vert;
 	  }
 	  
@@ -3470,12 +3478,11 @@ public class CombDCEL {
 	   * making them interior and adjusting or tossing 
 	   * the red chain.
 	   * Note: fails if v has just two nghb's.
-	   * 
 	   * @param pdcel PackDCEL
 	   * @param v int
 	   * @return int degree of v
 	   */
-	  public static int enfold(PackDCEL pdcel,int v) {
+	  public static int enfold_raw(PackDCEL pdcel,int v) {
 		  if (!pdcel.vertices[v].isBdry() || pdcel.countPetals(v)<=2)
 			  throw new CombException("dcel: can't enfold with just 2 nghbs");
 		  
@@ -3623,6 +3630,7 @@ public class CombDCEL {
 			// create single new vertex: prep for iteration.
 			Vertex v_right = new Vertex(++vtick);
 			pdcel.vertices[vtick] = v_right;
+			pdcel.vertCount=vtick;
 			v_right.vutil=v2; // reference vertex
 			v_right.bdryFlag = 1;
 			v_right.redFlag=true;
@@ -3677,6 +3685,7 @@ public class CombDCEL {
 				// new vert edges at 'nextV'
 				up_right = new HalfEdge(nextV);
 				v_right = new Vertex(vtick); // new vertex
+				pdcel.vertCount=vtick;
 				v_right.vutil=nextV.vertIndx;
 				v_right.bdryFlag = 1;
 				v_right.redFlag=true;
@@ -3838,73 +3847,79 @@ public class CombDCEL {
 	  }
 	  
 	  /**
-	   * Create a barycenter and new edges for face 'f'.
-	   * Vertex 'vutil' gives index of reference vertex
-	   * for setting radius. Calling routine has to 
-	   * store new vertex and new edges, fix face if it
-	   * is ideal.
+	   * Create a barycenter for face 'f'; 'vutil' 
+	   * gives reference vert. Calling routine should
+	   * throw out 'redChain' if 'f' is ideal face.
 	   * @param pdcel PackDCEL
 	   * @param f Face
-	   * @return new Vertex, null on error
+	   * @return int new index
 	   */
-	  public static Vertex addBary_raw(PackDCEL pdcel, Face f) {
+	  public static int addBary_raw(PackDCEL pdcel,
+			  Face f,boolean multi_bary) {
 		  
 		  // make room
-		  int node=pdcel.vertCount+1; // new index
+		  int node=pdcel.vertCount+1; // new index 
 		  if (node>=pdcel.p.sizeLimit)
 			  pdcel.p.alloc_pack_space(node+10,true);
 			
 		  ArrayList<HalfEdge> polyE=null;
 		  int n=0;
-		  int edgeCount=pdcel.edgeCount;
-		  
 		  if (f.edge==null || (polyE=f.getEdges())==null || 
 				  (n=polyE.size())<=2) 
-			  return null;
+			  return 0;
 		  
-		  Vertex newV=new Vertex(); // this is the barycenter
-		  ArrayList<HalfEdge> edgeflower=
-			  new ArrayList<HalfEdge>();
+		  Vertex newV=new Vertex(node); // this is the barycenter
+		  newV.redFlag=false;
 		  
 		  // create new spokes
-		  Iterator<HalfEdge> pE=polyE.iterator();
-		  while (pE.hasNext()) {
-			  HalfEdge nextHE=pE.next();
+		  HalfEdge last_spoke=new HalfEdge(newV);
+		  HalfEdge hold_spoke=last_spoke;
+		  HalfEdge base;
+		  HalfEdge next_in;
+		  for (int j=0;j<(n-1);j++) {
+			  base=polyE.get(j);
+			  next_in=new HalfEdge(base.twin.origin);
 
-			  // new spoke from 'newV'
-			  HalfEdge he=new HalfEdge(newV);
-			  he.twin=new HalfEdge(nextHE.origin);
-			  he.twin.twin=he;
-			  edgeflower.add(he);
-			  he.edgeIndx=++edgeCount;
-			  he.twin.edgeIndx=++edgeCount;
-		  }	
-				
-		  // fix up 'newV'
-		  newV.vertIndx=node;
-		  newV.halfedge=edgeflower.get(0);
-		  newV.vutil=newV.halfedge.origin.vertIndx;
-				
-		  // fix up halfedges and new faces in order around 'newV'
-		  for (int j=0;j<n;j++) {
-			  HalfEdge polye=polyE.get(j);
-			  HalfEdge spoke=edgeflower.get(j);
-			  HalfEdge nxt_spoke=edgeflower.get((j+1)%n);
-					
-			  // fix polye
-			  polye.prev=spoke;
-			  polye.next=nxt_spoke.twin;
-					
-			  // fix spoke
-			  spoke.next=polye;
-			  spoke.prev=nxt_spoke.twin;
-					
-			  // fix nxt_spoke.twin
-			  nxt_spoke.twin.prev=polye;
-			  nxt_spoke.twin.next=spoke;
+			  // link around the face
+			  base.next=next_in;
+			  next_in.prev=base;
+			  
+			  next_in.next=last_spoke;
+			  last_spoke.prev=next_in;
+			  
+			  last_spoke.next=base;
+			  base.prev=last_spoke;
+			  
+			  last_spoke=new HalfEdge(newV);
+			  last_spoke.twin=next_in;
+			  next_in.twin=last_spoke;
 		  }
+		  
+		  // last face
+		  base=polyE.get(n-1);
+		  next_in=new HalfEdge(base.twin.origin);
+		  
+		  base.next=next_in;
+		  next_in.prev=base;
 
-		  return newV;
+		  next_in.next=last_spoke;
+		  last_spoke.prev=next_in;
+		  
+		  last_spoke.next=base;
+		  base.prev=last_spoke;
+		  
+		  next_in.twin=hold_spoke;
+		  hold_spoke.twin=next_in;
+		  
+		  base=polyE.get(0);
+
+		  // fix up 'newV'
+		  newV.halfedge=hold_spoke;
+		  newV.vutil=newV.halfedge.twin.origin.vertIndx;
+		  pdcel.vertices[node]=newV;
+		  pdcel.vertCount=node;
+				
+		  return node;
 	  }
 	  
 	  /**

@@ -5143,17 +5143,18 @@ public class CommandStrParser {
    			
 	   		  Iterator<Integer> vlist=nodeLink.iterator();
    			  if (packData.packDCEL!=null) {
+   				  int origVCount=packData.packDCEL.vertCount;
    		   		  while (vlist.hasNext()) {
    		   			  int w=vlist.next();
    		   			  Vertex vert=CombDCEL.addVert_raw(packData.packDCEL,w);
    		   			  if (vert!=null) {
    		   				  count++;
+   		   				  packData.setRadius(vert.vertIndx,packData.getRadius(vert.vutil));
    		   			  }
-   		   		  }
+  		   		  }
 	   			  // process 
    		   		  if (count>0) {
-   		   		  	  CombDCEL.d_FillInside(packData.packDCEL);
-   		   		  	  packData.attachDCEL(packData.packDCEL); // reattach
+   		   		  	  packData.packDCEL.fixDCEL_raw(packData);
    		   		  }
    		   		  return count;
    			  }
@@ -5164,14 +5165,7 @@ public class CommandStrParser {
 	   			  count += packData.add_vert(v);
 	   		  }
 	   		  if (count>0) {
-	   			  packData.xyzpoint=null;
-	   			  if (packData.packDCEL!=null) {
-	   				  CombDCEL.d_FillInside(packData.packDCEL);
-	   				  packData.attachDCEL(packData.packDCEL);
-	   			  }
-	   			  else {
-	   				  packData.setCombinatorics();
-	   			  }
+   				  packData.setCombinatorics();
 	   			  packData.fillcurves();
 	   		  }
 	    	  return count;
@@ -5197,20 +5191,24 @@ public class CommandStrParser {
 	   			  // is {v w} already an edge?
 	   			  if (packData.areNghbs(v,w)) {
    					  CirclePack.cpb.errMsg("<"+v+" "+w+"> is already an edge");
-   					  return count;
+   					  break;
 	   			  }
-   				  if (!packData.isBdry(v) || !packData.isBdry(w)) {
-   					  CirclePack.cpb.errMsg("usage: add_edge v w, vertices must be on boundary");
-   					  return count;
-   				  }
-   				  
+	   			  if (!packData.isBdry(v) || !packData.isBdry(w)) {
+	   				  CirclePack.cpb.errMsg("usage: add_edge v w, vertices must be on boundary");
+	   				  break;
+	   			  }
+
+	   			  // dcel case
    				  if (packData.packDCEL!=null) {
-   					  if (CombDCEL.addEdge(packData.packDCEL, v, w)!=null)
+   					  if (CombDCEL.addEdge_raw(packData.packDCEL, v, w)!=null)
    						  count++;
+   					  else
+   						  break;
    				  }
 
    				  // traditional packing
    				  else {
+   	   				  
 	   				  // reaching here, 2 boundary verts.	   				  
 	   				  int afterv=packData.kData[v].flower[0];
 	   				  int afterw=packData.kData[w].flower[0];
@@ -5251,8 +5249,7 @@ public class CommandStrParser {
 	   		  if (count>0) {
 	   			  packData.xyzpoint=null;
 	   			  if (packData.packDCEL!=null) {
-	   				  CombDCEL.d_FillInside(packData.packDCEL);
-	   				  packData.attachDCEL(packData.packDCEL);
+	   				  packData.packDCEL.fixDCEL_raw(packData);
 	   			  }
 	   			  else 
 	   				  packData.setCombinatorics();
@@ -5274,6 +5271,34 @@ public class CommandStrParser {
 	      		  
 	   		  Iterator<Integer> flist=faceLink.iterator();
 	   		  int []xdup=new int[packData.faceCount+1]; // to avoid duplication
+	   		  
+	   		  if (packData.packDCEL!=null) {
+	   			  if (!baryOpt) 
+   					  throw new ParserException("'face_triple' not yet available for dcel case.");
+
+		   		  while (flist.hasNext()) {
+		   			  f=(Integer)flist.next();
+		   			  dcel.Face face=packData.packDCEL.faces[f];
+		   			  if (xdup[f]==0) {
+		   				  int ans;
+	   					  ans=CombDCEL.addBary_raw(packData.packDCEL,face,false);
+	   					  xdup[f]=1;
+		   				  if (ans!=0 && face.faceIndx<0)
+		   					  packData.packDCEL.redChain=null; // must redo
+		   				  count += ans;
+		   			  }
+		   		  }
+		   		  
+		   		  if (count==0)
+		   			  return 0;
+		   		  if (packData.packDCEL.redChain==null)
+		   			  CombDCEL.redchain_by_edge(packData.packDCEL,null,null);
+		   		  CombDCEL.d_FillInside(packData.packDCEL);
+		   		  packData.attachDCEL(packData.packDCEL);
+		   		  return count;
+	   		  }
+	   		  
+	   		  // traditional packing
 	   		  while (flist.hasNext()) {
 	   			  f=(Integer)flist.next();
 		   		  if ((node=packData.nodeCount+faceLink.size()+10) > (packData.sizeLimit)
@@ -5287,9 +5312,6 @@ public class CommandStrParser {
 	   					  ans=packData.add_barycenter(f);
 	   				  else 
 	   					  ans=packData.add_face_triple(f);
-	   				  if (ans!=0) 
-	   					  xdup[f]=1;
-	   				  count += ans;
 	   			  }
 	   	      }
 	   		  if (count>0) {
@@ -5322,8 +5344,10 @@ public class CommandStrParser {
 	    	  int TENT=0;
 	    	  int DEGREE=1;
 	    	  int DUPLICATE=2;
-	    	  int mode=TENT;
-	    	  int degree=3,v1,v2;
+	    	  
+	    	  int mode=TENT; // default
+	    	  int degree=3; // default
+	    	  int v1,v2;
 	    	  
 	    	  if (packData.getBdryCompCount()==0 || flagSegs.size()==0) {
 	    		  throw new ParserException("perhaps packing has no boundary?");
@@ -5374,19 +5398,44 @@ public class CommandStrParser {
 	   			 }
 	   		  }
 	   		  
-	   		  // Should have two vertices, v1, v2 (let add_layer check validity)
+	   		  // Should get two vertices, v1, v2 
+	   		  //     (let add_layer check validity)
 	   		  try {
 	   			  NodeLink vertlist=new NodeLink(packData,items);
 	   			  v1=(Integer)vertlist.get(0);
 	   			  v2=(Integer)vertlist.get(1);
-	   			  int ans = packData.add_layer(mode,degree,v1,v2);
-	   			  packData.setCombinatorics();
-	   			  return ans;
 	   		  } catch (NumberFormatException nfe) {
-					  throw new DataException("bad data.");
-			  } catch (CombException cex) {
-				  throw new CombException(cex.getMessage());
-			  }
+				  throw new DataException("bad data.");
+	   		  } catch (CombException cex) {
+	   			  throw new CombException(cex.getMessage());
+	   		  }
+
+   			  if (!packData.isBdry(v1) || !packData.isBdry(v2))
+   				  throw new ParserException("One of "+v1+" or "+v2+" is not a boundary vertex");
+
+	   		  // dcel case
+   			  int ans;
+	   		  if (packData.packDCEL!=null) {
+	   			  int origVCount=packData.packDCEL.vertCount;
+	   			  ans= CombDCEL.addlayer_raw(packData.packDCEL,
+	   					  mode,degree,v1,v2);
+	   			  if (ans<=0)
+	   				  return 0;
+	   			  
+	   			  // set radii
+	   			  for (int j=origVCount+1;j<=packData.packDCEL.vertCount;j++) {
+	   				  Vertex vert=packData.packDCEL.vertices[j];
+	   				  if (vert.vutil>0)
+	   					  packData.setRadius(vert.vertIndx,packData.getRadius(vert.vutil));
+	   			  }
+	   			  packData.packDCEL.fixDCEL_raw(packData);
+	   			  return ans;
+	   		  }
+	   		  
+	   		  // traditional
+	   		  ans = packData.add_layer(mode,degree,v1,v2);
+	   		  packData.setCombinatorics();
+	   		  return ans;
 	      }
 	      
 	      // =============== add_gen
@@ -5395,9 +5444,10 @@ public class CommandStrParser {
 	    	  int TENT=0;
 	    	  int DEGREE=1;
 	    	  int DUPLICATE=2;
-	    	  int mode=DEGREE;
+	    	  
+	    	  int mode=TENT; // default
 	    	  int degree=6;
-	    	  int numGens=1;
+	    	  int numGens=1; // default
 	    	  NodeLink bdrylist=null;
 	    	  boolean b_flag=false;
 	    	  
@@ -5439,11 +5489,6 @@ public class CommandStrParser {
 	    			  switch(c) {
 	   			  
 	    			  // Two flags; process rest in following
-	    			  case 't':  
-	    			  {
-	    				  mode=TENT;
-	    				  break;
-	    			  }
 	    			  case 'd':  
 	    			  {
 	    				  mode=DUPLICATE;
@@ -5455,7 +5500,7 @@ public class CommandStrParser {
 	    			  }
 	    			  default:
 	    			  {
-	    				  throw new ParserException();
+	    				  mode=TENT;
 	    			  }
 	    			  } // end of flag switch
 	    		  }
@@ -5463,17 +5508,21 @@ public class CommandStrParser {
 	    	  } catch  (Exception ex) {
 	    		  throw new ParserException("usage: add_gen {n} [{d}] [-dt] [-b {v..}]");
 	    	  }
-
+	    	  int origVCount=packData.nodeCount;
+	    	  
 	    	  // Finally, calls to add_layer for each boundary component
 			  int v1,v2;
 			  try {
 				  if (!b_flag) { // just one boundary component
 					  for (int n=1;n<=numGens;n++) {
-						  if (packData.packDCEL!=null)
+						  if (packData.packDCEL!=null) {
 							  v1=v2=packData.packDCEL.idealFaces[1].edge.origin.vertIndx;
-						  else
+							  count += CombDCEL.addlayer_raw(packData.packDCEL, mode, degree, v1, v2);
+						  }
+						  else {
 							  v1=v2=packData.bdryStarts[1];
-						  count+= packData.add_layer(mode,degree,v1,v2);
+							  count+= packData.add_layer(mode,degree,v1,v2);
+						  }
 					  }
 				  }
 				  else if (bdrylist.size()>0) { // Note: have to adjust v1, v2 each time because there'a a new start
@@ -5494,8 +5543,12 @@ public class CommandStrParser {
 				  throw new DataException("bad data.");
 			  }
 			  if (packData.packDCEL!=null) {
-				  CombDCEL.d_FillInside(packData.packDCEL);
-				  packData.attachDCEL(packData.packDCEL);
+				  for (int j=origVCount+1;j<=packData.packDCEL.vertCount;j++) {
+	   				  Vertex vert=packData.packDCEL.vertices[j];
+	   				  if (vert.vutil>0)
+	   					  packData.setRadius(vert.vertIndx,packData.getRadius(vert.vutil));
+	   			  }
+				  packData.packDCEL.fixDCEL_raw(packData);
 			  }
 			  else 
 				  packData.setCombinatorics();
