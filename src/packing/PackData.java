@@ -27,6 +27,7 @@ import complex.MathComplex;
 import dcel.CombDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
+import dcel.RawDCEL;
 import dcel.VData;
 import dcel.Vertex;
 import deBugging.DebugHelp;
@@ -310,6 +311,7 @@ public class PackData{
     		for (int v=1;v<=sizeLimit;v++) 
     			vData[v]=new VData();
     		for (int v=1;v<=nodeCount;v++) {
+//System.out.println("vdata vert v = "+v);    			
     			Vertex vert=pdcel.vertices[v];
     			if (vert.isBdry()) 
     				vData[v].setBdryFlag(1);
@@ -391,23 +393,11 @@ public class PackData{
     			}
     			else
 					vData[v].aim=2.0*Math.PI;
-    				
-    			// 'vutil' may point to vert to copy
-    			oldv=v;
-    			if (vert.vutil>0 && vert.vutil<=origNodeCount)
-    				oldv=vert.vutil;
-    			if (oldv<=origNodeCount) {
-    				pdcel.setVertRadii(v,vData[oldv].rad);
-    				pdcel.setVertCenter(v,new Complex(vData[oldv].center));
-    				vData[v].color=ColorUtil.cloneMe(vData[oldv].color);
-    			}
    			}
 			pdcel.setVDataIndices(v);
     	}
 		
-    	fillcurves(); // compute all curvatures
     	set_aim_default(); // too difficult to figure out old aims
-
     	fillcurves();
     	if (pdcel.gamma==null)
     		pdcel.gamma=pdcel.alpha.next;
@@ -7733,7 +7723,7 @@ public class PackData{
 		int v2 = getLastPetal(v); // upstream nghb
 		
 		if (packDCEL!=null) {
-			Vertex vert=CombDCEL.addVert_raw(packDCEL,v);
+			Vertex vert=RawDCEL.addVert_raw(packDCEL,v);
 			if (vert==null)
 				throw new CombException("failed 'add_vert'");
 			setRadius(vert.vertIndx,getRadius(vert.vutil));
@@ -7831,7 +7821,7 @@ public class PackData{
 		if (packDCEL!=null) {
 			if (getRadius(v1) <= 0) // avoid infinity hyp rad
 				setRadius(v1, 0.1);
-			int ans=CombDCEL.enfold_raw(packDCEL,v1);
+			int ans=RawDCEL.enfold_raw(packDCEL,v1);
 			if (ans<=0)
 				throw new CombException("dcel enfold failed in 'enfold'");
 			packDCEL.fixDCEL_raw(this);
@@ -8041,7 +8031,7 @@ public class PackData{
 			if (packDCEL!=null) {
 				int origcount=packDCEL.vertCount;
 				// generate combinatoric
-				int ans= CombDCEL.baryBox_raw(packDCEL,v1,v2);
+				int ans= RawDCEL.baryBox_raw(packDCEL,v1,v2);
 				if (ans==0)
 					return 0;
 				// TODO: too difficult to set radii

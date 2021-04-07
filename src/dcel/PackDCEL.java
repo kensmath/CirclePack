@@ -426,7 +426,7 @@ public class PackDCEL {
 				// process this 'v'?
 				if (vhits[v]==-1) {
 					HalfEdge myedge=vedges[v];
-					ArrayList<HalfEdge> fflower=myedge.origin.getEdgeFlower(); 
+					HalfLink fflower=myedge.origin.getEdgeFlower(); 
 					int n=fflower.size();
 					int k=fflower.indexOf(myedge);
 					
@@ -790,7 +790,7 @@ public class PackDCEL {
 		Iterator<Face> flst=arrayf.iterator();
 		while (flst.hasNext()) {
 			Face face=flst.next();
-			count += CombDCEL.addBary_raw(this, face,false);
+			count += RawDCEL.addBary_raw(this, face,false);
 			
 			// face was ideal? toss 'redChain'
 			if (face.faceIndx<0) 
@@ -928,12 +928,12 @@ public class PackDCEL {
 					if (face.faceIndx>0) // omit ideal faces
 						arrayF.add(face);
 				}
-				ArrayList<HalfEdge> eflower=vert.getEdgeFlower();
+				HalfLink eflower=vert.getEdgeFlower();
 				Iterator<HalfEdge> eit=eflower.iterator();
 				while (eit.hasNext()) {
 					HalfEdge he=eit.next();
 					int w=he.twin.origin.vertIndx;
-					if (v<w || vhits[w]==0) // this avoid repeats
+					if (v<w || vhits[w]==0) // this avoids repeats
 						arrayE.add(he);
 				}
 			}
@@ -1978,6 +1978,69 @@ public class PackDCEL {
 			return setAlpha(gotvert);
 		}
 		return -1;
+	}
+	
+	/**
+	 * Reset all 'vutil' to zero. Some 'RawDCEL' routines,
+	 * e.g., use 'vutil' to feed back reference indices. 
+	 */
+	public void zeroVUtil() {
+		for (int v=1;v<=vertCount;v++) 
+			vertices[v].vutil=0;
+	}
+	
+	/**
+	 * Reset all 'eutil' to zero. 
+	 */
+	public void zeroEUtil() {
+		for (int v=1;v<=vertCount;v++) {
+			HalfLink flwr=vertices[v].getEdgeFlower();
+			Iterator<HalfEdge> fis=flwr.iterator();
+			while(fis.hasNext())
+				fis.next().eutil=0;
+		}
+	}
+	
+	/**
+	 * Look through 'Vertex.vutil' entries to find references
+	 * to other vertex indices, retrun 'VertexMap' with
+	 * <new, old>.
+	 * @return VertexMap, null on nothing found
+	 */
+	public VertexMap reapVUtil() {
+		VertexMap vmap=new VertexMap();
+		for (int v=1;v<=vertCount;v++) { 
+			Vertex vert=vertices[v];
+			if (vert.vutil>0)
+				vmap.add(new EdgeSimple(v,vert.vutil));
+		}
+		if (vmap.size()==0)
+			return null;
+		return vmap;
+	}
+	
+	/**
+	 * The given 'VertexMap' has <new,old> indices; 
+	 * copy rad/center from 'old' vertex to 'new'.
+	 * @param vmap VertexMap
+	 * @return count
+	 */
+	public int modRadCents(VertexMap vmap) {
+		int count=0;
+		Iterator<EdgeSimple> vis=vmap.iterator();
+		while(vis.hasNext()) {
+			EdgeSimple nwod=vis.next();
+			if (nwod.v>0 && nwod.w>0) {
+				try {
+					p.setRadius(nwod.v,p.getRadius(nwod.w));
+					p.setCenter(nwod.v,p.getCenter(nwod.w));
+					count++;
+				} catch(Exception ex) {
+					throw new CombException("'modRadCents' usage error");
+				}
+			}
+		}
+		return count;
 	}
 			
 	/**

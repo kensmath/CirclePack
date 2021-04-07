@@ -38,6 +38,7 @@ import dcel.CombDCEL;
 import dcel.DataDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
+import dcel.RawDCEL;
 import dcel.RedHEdge;
 import dcel.VData;
 import dcel.Vertex;
@@ -5146,7 +5147,7 @@ public class CommandStrParser {
    				  int origVCount=packData.packDCEL.vertCount;
    		   		  while (vlist.hasNext()) {
    		   			  int w=vlist.next();
-   		   			  Vertex vert=CombDCEL.addVert_raw(packData.packDCEL,w);
+   		   			  Vertex vert=RawDCEL.addVert_raw(packData.packDCEL,w);
    		   			  if (vert!=null) {
    		   				  count++;
    		   				  packData.setRadius(vert.vertIndx,packData.getRadius(vert.vutil));
@@ -5200,7 +5201,7 @@ public class CommandStrParser {
 
 	   			  // dcel case
    				  if (packData.packDCEL!=null) {
-   					  if (CombDCEL.addEdge_raw(packData.packDCEL, v, w)!=null)
+   					  if (RawDCEL.addEdge_raw(packData.packDCEL, v, w)!=null)
    						  count++;
    					  else
    						  break;
@@ -5281,7 +5282,7 @@ public class CommandStrParser {
 		   			  dcel.Face face=packData.packDCEL.faces[f];
 		   			  if (xdup[f]==0) {
 		   				  int ans;
-	   					  ans=CombDCEL.addBary_raw(packData.packDCEL,face,false);
+	   					  ans=RawDCEL.addBary_raw(packData.packDCEL,face,false);
 	   					  xdup[f]=1;
 		   				  if (ans!=0 && face.faceIndx<0)
 		   					  packData.packDCEL.redChain=null; // must redo
@@ -5416,19 +5417,14 @@ public class CommandStrParser {
 	   		  // dcel case
    			  int ans;
 	   		  if (packData.packDCEL!=null) {
-	   			  int origVCount=packData.packDCEL.vertCount;
-	   			  ans= CombDCEL.addlayer_raw(packData.packDCEL,
-	   					  mode,degree,v1,v2);
+	   			  PackDCEL pdcel=packData.packDCEL;
+	   			  pdcel.zeroVUtil();
+	   			  ans= RawDCEL.addlayer_raw(pdcel,mode,degree,v1,v2);
 	   			  if (ans<=0)
 	   				  return 0;
-	   			  
-	   			  // set radii
-	   			  for (int j=origVCount+1;j<=packData.packDCEL.vertCount;j++) {
-	   				  Vertex vert=packData.packDCEL.vertices[j];
-	   				  if (vert.vutil>0)
-	   					  packData.setRadius(vert.vertIndx,packData.getRadius(vert.vutil));
-	   			  }
-	   			  packData.packDCEL.fixDCEL_raw(packData);
+	   			  VertexMap vmap=pdcel.reapVUtil();
+	   			  pdcel.fixDCEL_raw(packData);
+	   			  pdcel.modRadCents(vmap);
 	   			  return ans;
 	   		  }
 	   		  
@@ -5512,46 +5508,57 @@ public class CommandStrParser {
 	    	  
 	    	  // Finally, calls to add_layer for each boundary component
 			  int v1,v2;
-			  try {
+			  if (packData.packDCEL!=null) {
+				  PackDCEL pdcel=packData.packDCEL;
 				  if (!b_flag) { // just one boundary component
 					  for (int n=1;n<=numGens;n++) {
-						  if (packData.packDCEL!=null) {
-							  v1=v2=packData.packDCEL.idealFaces[1].edge.origin.vertIndx;
-							  count += CombDCEL.addlayer_raw(packData.packDCEL, mode, degree, v1, v2);
-						  }
-						  else {
-							  v1=v2=packData.bdryStarts[1];
-							  count+= packData.add_layer(mode,degree,v1,v2);
-						  }
+						  pdcel.zeroVUtil();
+						  v1=v2=pdcel.idealFaces[1].edge.origin.vertIndx;
+						  count += RawDCEL.addlayer_raw(pdcel, mode, degree, v1, v2);
+						  VertexMap vmap=pdcel.reapVUtil();
+						  pdcel.fixDCEL_raw(packData);
+						  pdcel.modRadCents(vmap);
 					  }
 				  }
 				  else if (bdrylist.size()>0) { // Note: have to adjust v1, v2 each time because there'a a new start
 					  Iterator<Integer> Bverts=bdrylist.iterator();
 					  while (Bverts.hasNext()) {
 						  int b=(Integer)Bverts.next();
-						  if (packData.packDCEL!=null)
-							  v1=v2=packData.packDCEL.idealFaces[b].edge.origin.vertIndx;
-						  else
-							  v1=v2=packData.bdryStarts[b];
 						  for (int n=1;n<=numGens;n++) {
+							  pdcel.zeroVUtil();
+							  v1=v2=pdcel.idealFaces[b].edge.origin.vertIndx;
+							  count += RawDCEL.addlayer_raw(pdcel, mode, degree, v1, v2);
+							  VertexMap vmap=pdcel.reapVUtil();
+							  pdcel.fixDCEL_raw(packData);
+							  pdcel.modRadCents(vmap);
+						  }
+					  }
+				  }
+				  return count;
+			  }
+
+			  // traditional
+			  try {
+				  if (!b_flag) { // just one boundary component
+					  for (int n=1;n<=numGens;n++) {
+						  v1=v2=packData.bdryStarts[1];
+						  count+= packData.add_layer(mode,degree,v1,v2);
+					  }
+				  }
+				  else if (bdrylist.size()>0) { // Note: have to adjust v1, v2 each time because there'a a new start
+					  Iterator<Integer> Bverts=bdrylist.iterator();
+					  while (Bverts.hasNext()) {
+						  int b=(Integer)Bverts.next();
+						  for (int n=1;n<=numGens;n++) {
+							  v1=v2=packData.bdryStarts[b];
 							  count += packData.add_layer(mode,degree,v1,v2);
-							  v1=v2=packData.nodeCount; // new bdry verts
 						  }
 					  }
 				  }
 			  } catch (NumberFormatException nfe) {
 				  throw new DataException("bad data.");
 			  }
-			  if (packData.packDCEL!=null) {
-				  for (int j=origVCount+1;j<=packData.packDCEL.vertCount;j++) {
-	   				  Vertex vert=packData.packDCEL.vertices[j];
-	   				  if (vert.vutil>0)
-	   					  packData.setRadius(vert.vertIndx,packData.getRadius(vert.vutil));
-	   			  }
-				  packData.packDCEL.fixDCEL_raw(packData);
-			  }
-			  else 
-				  packData.setCombinatorics();
+			  packData.setCombinatorics();
 	    	  return count;
 	      }
 		  break;

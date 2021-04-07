@@ -1,6 +1,5 @@
 package listManip;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Random;
@@ -347,7 +346,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 					vlist=vertlist.iterator();
 					while (vlist.hasNext()) {
 						v=(Integer)vlist.next();
-						ArrayList<HalfEdge> arylst=packData.packDCEL.vertices[v].getEdgeFlower();
+						HalfLink arylst=packData.packDCEL.vertices[v].getEdgeFlower();
 						Iterator<HalfEdge> ait=arylst.iterator();
 						while (ait.hasNext()) {
 							HalfEdge he=ait.next();

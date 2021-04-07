@@ -5,6 +5,7 @@ import java.util.Iterator;
 
 import exceptions.CombException;
 import exceptions.DCELException;
+import listManip.HalfLink;
 
 /** 
  * DCEL Vertex only contains combinatorial data; center/rad data are
@@ -59,7 +60,7 @@ public class Vertex {
 	 * @return boolean
 	 */
 	public boolean isBdry() {
-		ArrayList<HalfEdge> flower=getEdgeFlower();
+		HalfLink flower=getEdgeFlower();
 		Iterator<HalfEdge> fit=flower.iterator();
 		while (fit.hasNext()) {
 			HalfEdge he=fit.next();
@@ -124,7 +125,7 @@ public class Vertex {
 	 * ideal 'twin.face' and last will have ideal 'face'.
 	 * @return ArrayList<HalfEdge> or null on error
 	 */
-	public ArrayList<HalfEdge> getEdgeFlower() {
+	public HalfLink getEdgeFlower() {
 		if (halfedge==null)
 			throw new CombException("Vertex has no 'halfedge'");
 		return getEdgeFlower(halfedge,null);
@@ -138,7 +139,7 @@ public class Vertex {
 	 * @param stop HalfEdge, if null, set 'stop' = 'start'
 	 * @return ArrayList<HalfEdge> or null on error
 	 */
-	public ArrayList<HalfEdge> getEdgeFlower(HalfEdge start,HalfEdge stop) {
+	public HalfLink getEdgeFlower(HalfEdge start,HalfEdge stop) {
 		if (start==null) {
 			return getEdgeFlower(); // full flower, start at its 'halfedge'
 		}
@@ -148,7 +149,7 @@ public class Vertex {
 			stop=start;
 		
 		// add spokes including 'start', up to, not including 'stop'
-		ArrayList<HalfEdge> eflower=new ArrayList<HalfEdge>();
+		HalfLink eflower=new HalfLink();
 		HalfEdge nxtedge=start;
 		int safety=1000;
 		do {
@@ -169,13 +170,13 @@ public class Vertex {
 	 * @param stop HalfEdge with this as origin
 	 * @return ArrayList<HalfEdge>, null if start==stop
 	 */
-	public ArrayList<HalfEdge> getOuterEdges(HalfEdge start, HalfEdge stop) {
+	public HalfLink getOuterEdges(HalfEdge start, HalfEdge stop) {
 		if (start==null || stop==null)
 			throw new CombException("bad start/stop data");
 		if (start==stop) // no edges --- legitimate in some situations
 			return null;
-		ArrayList<HalfEdge> eflower=getEdgeFlower(start,null);
-		ArrayList<HalfEdge> outer=new ArrayList<HalfEdge>();
+		HalfLink eflower=getEdgeFlower(start,null);
+		HalfLink outer=new HalfLink();
 		Iterator<HalfEdge> eit=eflower.iterator();
 		int safety=100*eflower.size();
 		HalfEdge he=null;
