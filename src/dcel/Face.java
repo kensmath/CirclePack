@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import exceptions.CombException;
+import listManip.HalfLink;
 import util.ColorUtil;
 
 /**
@@ -107,7 +108,7 @@ public class Face {
 	 * @return 'HalfEdge', first shared, or null if none shared
 	 */
 	public HalfEdge isRed() {
-		ArrayList<HalfEdge> bdryedges=getEdges();
+		HalfLink bdryedges=getEdges();
 		Iterator<HalfEdge> bit=bdryedges.iterator();
 		while (bit.hasNext()) {
 			HalfEdge he=bit.next();
@@ -206,15 +207,15 @@ public class Face {
 	 * repeated at the end.
 	 * @return ArrayList<HalfEdge>, null if 'he' not an edge
 	 */
-	public ArrayList<HalfEdge> getEdges(HalfEdge he) {
+	public HalfLink getEdges(HalfEdge he) {
 		if (he.face!=this)
 			return null;
-		ArrayList<HalfEdge> rslt=new ArrayList<HalfEdge>();
+		HalfLink rslt=new HalfLink();
 		HalfEdge nxtedge=he;
 		do {
 			rslt.add(nxtedge);
 			nxtedge=nxtedge.next;
-		} while (nxtedge!=edge);
+		} while (nxtedge!=he);
 		return rslt;
 	}
 
@@ -223,7 +224,7 @@ public class Face {
 	 * list is open, so first edge is not repeated at the end.
 	 * @return ArrayList<HalfEdge>
 	 */
-	public ArrayList<HalfEdge> getEdges() {
+	public HalfLink getEdges() {
 		return getEdges(edge);
 	}
 	

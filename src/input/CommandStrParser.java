@@ -6648,8 +6648,10 @@ public class CommandStrParser {
 		   					  he=he.twin.next.twin.next.twin.next;
 		   					  packData.elist.add(new EdgeSimple(v,he.origin.vertIndx)); // next half-hex edge
 		   					  he=he.twin.next;
-		   					  if ((rslt=CombDCEL.flipEdge(pdc, he,redProblem))==0) // didn't flip 
+		   					  rslt=RawDCEL.flipEdge_raw(pdc, he);
+		   					  if (rslt==0)// didn't flip 
 		   						  return -1;
+		   					  pdc.fixDCEL_raw(packData);
 		   				  }
 		   				  else { // interior
 		   			   		  if (num==3) { // interior of degree 3? just reverse edge to go other way
@@ -6659,23 +6661,17 @@ public class CommandStrParser {
 		   			   		  HalfEdge theedge=hedge.twin.next.twin.next.twin.next;
 		   			   		  packData.elist.add(new EdgeSimple(v,theedge.twin.origin.vertIndx));
 		   			   		  theedge=theedge.twin.next;
-		   			   		  rslt=CombDCEL.flipEdge(pdc,theedge,redProblem);
+		   			   		  rslt=RawDCEL.flipEdge_raw(pdc,theedge);
 		   			   		  if (rslt==0)
 		   						return -1; // advanced but didn't flip
+		   					  pdc.fixDCEL_raw(packData);
 		   				  }
 		   				  
 		   			  } catch(Exception ex) {
 		   				  CirclePack.cpb.errMsg("flip failed on edge <"+v+" "+w+">");
 		   				  return 0;
 		   			  }
-		   			  
-		   			  if (rslt>0) {
-		   				  if (redProblem.booleanValue()) { // must build a new red cahin
-		   					  pdc=CombDCEL.redchain_by_edge(pdc,null,pdc.alpha);
-		   				  }
-		   				  CombDCEL.d_FillInside(pdc);
-		   				  return packData.attachDCEL(pdc);
-		   			  }
+		   			  return 1;
 		   		  } // done with DCEL case
 		   		  
 		   		  // traditional packing
@@ -7013,7 +7009,13 @@ public class CommandStrParser {
 		  
 	      // =========== hex_refine =========
 		  if (cmd.startsWith("hex_ref")) {
-	    	  return packData.hex_refine();
+			  int N=1;
+	    	  try {
+	    		  N=Integer.parseInt(flagSegs.get(0).get(0).trim());
+	    	  } catch (Exception ex) {
+	    		  
+	    	  }
+	    	  return packData.hex_refine(N);
 	      }
 
 	      // =========== hex_slide ==========

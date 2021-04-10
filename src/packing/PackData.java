@@ -12320,57 +12320,27 @@ public class PackData{
 	  
 	  /**
 	   * We are operating on this packing. Each edge gets new vertex, 
-	   * each face broken into 4 faces. Try to salvage old centers/radii. 
-	   * Propogate original overlaps to new edges, so new edge gets overlap 
-	   * of its parent original edge. (Note: orig verts end up with same 
-	   * vector of overlaps they started with.) Return 0 on failure.
+	   * each face broken into 4 faces. Try to propagate old centers/radii,
+	   * overlaps, schwarzians to new edges. Return 0 on failure.
+	   * Can be iterated before fixing in dcel case.
+	   * @param N int
 	  */
-
-	  public int hex_refine() {
+	  public int hex_refine(int N) {
 		  if (packDCEL!=null) {
-			  int origVertCount=packDCEL.vertCount;
-			  PackDCEL pdcel=CombDCEL.hexRefine(packDCEL);
-			  CombDCEL.d_FillInside(pdcel);
-			  attachDCEL(pdcel);
-			  
-			  // try to salvage and interpolate rad/cent data
-			  for (int v=1;v<=pdcel.vertCount;v++) {
-				  pdcel.vertices[v].vutil=0;
-			  }
-			  // each new vertex between two originals
-			  for (int v=origVertCount+1;v<=pdcel.vertCount;v++) {
-				  
-				  // find first end
-				  int v1=0;
-				  Vertex vert=pdcel.vertices[v];
-				  HalfEdge he=vert.halfedge;
-				  do {
-					  int w=he.twin.origin.vertIndx;
-					  if (w<=origVertCount)
-						  v1=w;
-					  he=he.prev.twin;
-				  } while (v1==0 && he!=vert.halfedge);
-				  if (v1==0) // failed to find first end
-					  return 1;
-				  
-				  // find second
-				  int v2=0;
-				  he = vert.halfedge.prev.twin;
-				  do {
-					  int w=he.twin.origin.vertIndx;
-					  if (w<=origVertCount && w!=v1)
-						  v2=w;
-					  he=he.prev.twin;
-				  } while (v2==0 && he!=vert.halfedge.prev.twin);
-				  
-				  // success? interpolate TODO: does not account for
-				  //    different radii for the same vertex.
-				  if (v1!=0 && v2!=0) {
-					  setRadius(v,(getRadius(v1)+getRadius(v2))/2.0);
-					  setCenter(v,getCenter(v1).add(getCenter(v2)).divide(2.0));
+			  if (N<1 || N>5) // at least 1, at most 5
+				  N=1;
+			  RawDCEL.hexRefine_raw(packDCEL,N);
+			  VertexMap vrads=packDCEL.reapVUtil();
+			  packDCEL.fixDCEL_raw(this);
+
+			  Iterator<EdgeSimple> vis=vrads.iterator();
+			  while (vis.hasNext()) {
+				  EdgeSimple edge=vis.next();
+				  if (edge.v!=0 && edge.v!=edge.w) { 
+					  setRadius(edge.v,getRadius(edge.w));
+					  setCenter(edge.v,getCenter(edge.w));
 				  }
 			  }
-			  
 			  return 1; 
 		  }
 		  
@@ -13617,7 +13587,7 @@ public class PackData{
 		      return 1;
 		  }
 	      for (int i=1;i<=nodeCount;i++)
-	    	  setCenter(i,mob.apply(rData[i].center));
+	    	  setCenter(i,mob.apply(getCenter(i)));
 	      return 1;
 	  } 
 
@@ -14598,10 +14568,12 @@ public class PackData{
 	  }
 	  
 	  /** 
-	   * Generate new combinatorics in pack p which are the barycentric
-	   * subdivision of the original faces. I.e., each edge gets new vertex, 
-	   * each face gets a hex barycenter. The original vertices and degrees
-	   * are unchanged, the top vertex indices are those for face barycenters.
+	   * Generate new combinatorics in pack p which are 
+	   * the barycentric subdivision of the original 
+	   * faces. I.e., each edge gets new vertex, each 
+	   * face gets a hex barycenter. The original 
+	   * vertices and degrees are unchanged, the 
+	   * top vertex indices are those for face barycenters.
 	   * Idea: (1) hex refine (2) add barycenters to the new 'middle' faces
 	   *  (3) "flip" each of the 3 edges around each new barycenter.
 
@@ -14615,7 +14587,8 @@ public class PackData{
 	  */
 	  public int bary_refine(int mark) {
 	    int orig_count=nodeCount;
-	    if (hex_refine()==0) return 0;
+	    if (hex_refine(1)==0) 
+	    	return 0;
 	    int min_new=orig_count+1;
 	    int max_new=nodeCount;
 	    boolean debug=false;
@@ -14631,7 +14604,8 @@ public class PackData{
 	    	  count +=add_barycenter(f,mark);
 	      }
 
-	    if (count==0) return 0;
+	    if (count==0) 
+	    	return 0;
 
 	    // Note: the barycenters have the higher vertex indices 
 	    int j0,j1,j2;
@@ -14640,9 +14614,9 @@ public class PackData{
 	      j1=kData[v].flower[1];
 	      j2=kData[v].flower[2];
 	      if (flip_edge(j0,j1,2)==0
-	  	|| flip_edge(j1,j2,2)==0
-	  	|| flip_edge(j2,j0,2)==0)
-	  	return 0;
+	    		  || flip_edge(j1,j2,2)==0
+	    		  || flip_edge(j2,j0,2)==0)
+	    	  return 0;
 	    }
 
 	    setCombinatorics();

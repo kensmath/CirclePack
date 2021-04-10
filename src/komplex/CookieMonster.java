@@ -3,7 +3,6 @@ package komplex;
 import java.awt.Color;
 import java.awt.geom.Path2D;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
@@ -18,6 +17,7 @@ import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
 import listManip.EdgeLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.OverlapLink;
 import listManip.VertList;
@@ -1335,7 +1335,7 @@ public class CookieMonster {
 		Complex[] faceC = new Complex[facecount+1]; // centroids
 		int tick = 0;
 		for (int f=1;f<=myDCEL.faceCount;f++) {
-			ArrayList<HalfEdge> edges=myDCEL.faces[f].getEdges();
+			HalfLink edges=myDCEL.faces[f].getEdges();
 			Iterator<HalfEdge> eit=edges.iterator();
 			Complex accum=new Complex(0.0);
 			while (eit.hasNext()) {
@@ -1370,7 +1370,7 @@ public class CookieMonster {
 		Vector<HalfEdge> putbdry = new Vector<HalfEdge>(0);
 		for (int f = 1; f <= Tri.faceCount; f++) {
 			if (facestat[f] > 0) {
-				ArrayList<HalfEdge> edges=myDCEL.faces[f].getEdges();
+				HalfLink edges=myDCEL.faces[f].getEdges();
 				Iterator<HalfEdge> eit=edges.iterator();
 				while (eit.hasNext()) {
 					HalfEdge he=eit.next();
@@ -1497,7 +1497,7 @@ public class CookieMonster {
 			nextF=new Vector<dcel.Face>();
 			while (currF.size()>0) {
 				dcel.Face currface=currF.remove(0);
-				ArrayList<HalfEdge> edges=currface.getEdges();
+				HalfLink edges=currface.getEdges();
 				Iterator<HalfEdge> eit=edges.iterator();
 				while (eit.hasNext()) {
 					HalfEdge he=eit.next();

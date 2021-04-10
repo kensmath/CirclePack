@@ -167,7 +167,7 @@ public class PackDCEL {
 	public void updateTriDataRadii() {
 		for (int f=1;f<=faceCount;f++) { 
 			triData[f].hes=p.hes;
-			ArrayList<HalfEdge> eflower=faces[f].getEdges();
+			HalfLink eflower=faces[f].getEdges();
 			if (eflower.size()!=3)
 				throw new DataException();
 			for (int j=0;j<3;j++) {
@@ -1097,7 +1097,7 @@ public class PackDCEL {
 			if (fdx<0 && !ideal)
 				continue;
 			fdx=Math.abs(faces[f].faceIndx);
-			ArrayList<HalfEdge> edgs=faces[f].getEdges();
+			HalfLink edgs=faces[f].getEdges();
 			Iterator<HalfEdge> eit=edgs.iterator();
 			while (eit.hasNext()) {
 				HalfEdge he=eit.next();
@@ -2003,9 +2003,8 @@ public class PackDCEL {
 	
 	/**
 	 * Look through 'Vertex.vutil' entries to find references
-	 * to other vertex indices, retrun 'VertexMap' with
-	 * <new, old>.
-	 * @return VertexMap, null on nothing found
+	 * to other vertex indices, return 'VertexMap', (new, old).
+	 * @return VertexMap (new,old), null on nothing found
 	 */
 	public VertexMap reapVUtil() {
 		VertexMap vmap=new VertexMap();

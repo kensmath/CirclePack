@@ -824,7 +824,7 @@ public class CombDCEL {
 					//    1. move first edge cclw
 					//    2. move second edge clw
 					// check feasibility and quality
-					RedHEdge upedge=rtrace.prevRed;
+//					RedHEdge upedge=rtrace.prevRed;
 
 					// TODO: put off for now: 10/3/2020
 
@@ -1517,264 +1517,6 @@ public class CombDCEL {
 			
 //		}
 //	}
-	
-	/**
-	 * Generate a minimal DCEL (vertices, edges only) by 
-	 * subdividing each edge into 2 edges, and each n-sided 
-	 * (non-ideal) face of 'pdcel' into n+1 faces. 'pdcel' 
-	 * data is modified, but we preserve much of the 
-	 * original structure: orig vert indices unchanged; 
-	 * orig vert halfedge's unchanged; 'pdcel.redChain' is
-	 * subdivided to get new red chain. All new edges 
-	 * and red edges come from new vertices and red vertices.
-	 * Calling routine should run 'd_redChainBuilder' next.
-	 * NOTE: incoming 'pdcel' must be complete with faces,
-	 * edges, vertices. 
-	 * @param pdcel PackDCEL, 
-	 * @return new PackDCEL
-	 */
-	public static PackDCEL hexRefine(PackDCEL pdcel) {
-		PackDCEL ndcel=new PackDCEL();
-		ndcel.idealFaceCount=pdcel.idealFaceCount;
-		int eCount=pdcel.edges.length-1;
-		
-		// 'eutil' < 0 will mark bdry edges
-		for (int e=1;e<=eCount;e++) {
-			HalfEdge he=pdcel.edges[e];
-			if (he.isBdry())
-				he.eutil=-1;
-			else
-				he.eutil=0;
-		}
-		
-		// tmp lists for vertices/edges, starting with originals
-		ArrayList<Vertex> tmpVerts=new ArrayList<Vertex>();
-		ArrayList<HalfEdge> tmpEdges=new ArrayList<HalfEdge>();
-		ArrayList<Face> tmpFaces=new ArrayList<Face>();
-
-		// half all occurrences of radii (radius may depend on edge)
-		int origCount=pdcel.vertCount;
-		for (int v=1;v<=origCount;v++) { // in normal storage 
-			pdcel.p.vData[v].rad=pdcel.p.vData[v].rad/2.0;
-		}
-		RedHEdge rtrace=pdcel.redChain; 
-		if (rtrace!=null) { // also, in any 'RedHEdge's
-			do {
-				rtrace.rad=rtrace.rad/2.0;
-				rtrace=rtrace.nextRed;
-			} while (rtrace!=pdcel.redChain);
-		}
-
-		// add vertices to 'tmpVerts'
-		for (int v=1;v<=origCount;v++) 
-			tmpVerts.add(pdcel.vertices[v]);
-
-		// add edges to 'tmpEdges'
-		for (int e=1;e<=eCount;e++) {
-			tmpEdges.add(pdcel.edges[e]);
-		}
-		
-		// keep track of counts/indices
-		int etick=eCount;
-		int vtick=pdcel.vertCount;
-		
-		// first loop to subdivide original edges 
-		for (int e=1;e<=eCount;e++) {
-			HalfEdge edge=pdcel.edges[e];
-			
-			// if not already handled
-			if (edge.eutil<=0) {
-				boolean bdry=(edge.eutil==-1);
-				HalfEdge tedge=edge.twin;
-				
-				// make > 0 so we don't revisit
-				edge.eutil=etick;
-				tedge.eutil=etick;
-				
-				RedHEdge redge=edge.myRedEdge;
-				RedHEdge tredge=tedge.myRedEdge;
-				
-				// two new edges
-				HalfEdge newEdge=new HalfEdge();
-				newEdge.eutil=++etick;
-				newEdge.edgeIndx=etick;
-				newEdge.invDist=edge.invDist;
-				newEdge.schwarzian=edge.schwarzian;
-				HalfEdge newTwin=new HalfEdge();
-				newTwin.eutil=++etick;
-				newTwin.edgeIndx=etick;
-				newTwin.invDist=edge.invDist;
-				newTwin.schwarzian=edge.schwarzian;
-				tmpEdges.add(newEdge);
-				tmpEdges.add(newTwin);
-				
-				// fix twins
-				edge.twin=newTwin;
-				newTwin.twin=edge;
-				
-				newEdge.twin=tedge;
-				tedge.twin=newEdge;
-				
-				// fix 
-				newEdge.next=edge.next;
-				newEdge.next.prev=newEdge;
-				
-				edge.next=newEdge;
-				newEdge.prev=edge;
-
-				newTwin.next=tedge.next;
-				newTwin.next.prev=newTwin;
-				
-				newTwin.prev=tedge;
-				tedge.next=newTwin;
-
-				// if this is a red edge
-				if (redge!=null || tredge!=null) {
-					Vertex midRedvert=new Vertex(++vtick);
-					midRedvert.redFlag=true;
-					tmpVerts.add(midRedvert);
-					newEdge.origin=midRedvert;
-					newTwin.origin=midRedvert;
-					midRedvert.halfedge=newEdge;
-
-					// does 'edge' have red edge?
-					if (redge!=null) {
-						RedHEdge newRedge=new RedHEdge(newEdge);
-						newEdge.myRedEdge=newRedge;
-						newRedge.nextRed=redge.nextRed;
-						newRedge.prevRed=redge;
-						redge.nextRed.prevRed=newRedge;
-						redge.nextRed=newRedge;
-					}
-					// does 'tedge' have red edge?
-					if (tredge!=null) {
-						RedHEdge newRedge=new RedHEdge(newTwin);
-						newTwin.myRedEdge=newRedge;
-						newRedge.nextRed=tredge.nextRed;
-						newRedge.prevRed=tredge;
-						tredge.nextRed.prevRed=newRedge;
-						tredge.nextRed=newRedge;
-					}
-					// if both, then set up red twinning
-					if (redge!=null && tredge!=null) {
-						redge.twinRed=newTwin.myRedEdge;
-						newTwin.myRedEdge.twinRed=redge;
-						tredge.twinRed=newEdge.myRedEdge;
-						newEdge.myRedEdge.twinRed=tredge;
-					}
-				}
-				// else a normal vertex
-				else {
-					Vertex midvert=new Vertex(++vtick);
-					tmpVerts.add(midvert);
-					newEdge.origin=midvert;
-					newTwin.origin=midvert;
-					midvert.halfedge=newEdge;
-				}
-				
-				// original 'edge' bdry? Same for new vert 
-				if (bdry) {
-					edge.twin.origin.bdryFlag=1;
-				}
-			}				
-		} // done with look through edges
-		
-		// loop on faces, create new edges -- one pair for each vert
-		int ftick=0;
-		for (int f=1;f<=pdcel.intFaceCount;f++) {
-			Face face=pdcel.faces[f];
-			ArrayList<HalfEdge> edges=face.getEdges();
-			Iterator<HalfEdge> eits=edges.iterator();
-			while (eits.hasNext()) {
-				HalfEdge edgeout=eits.next();
-				edgeout.face=null;
-				if (edgeout.origin.vertIndx>origCount)
-					continue;
-				
-				// starting edges
-				HalfEdge edgeout2=edgeout.next;
-				HalfEdge edgein=edgeout.prev;
-				HalfEdge edgein2=edgein.prev;
-				
-				// new twins
-				HalfEdge newedge=new HalfEdge(edgeout.twin.origin);
-				newedge.edgeIndx=++etick;
-				tmpEdges.add(newedge);
-				HalfEdge newtwin=new HalfEdge(edgein.origin);
-				newtwin.edgeIndx=++etick;
-				tmpEdges.add(newtwin);
-				
-				newedge.twin=newtwin;
-				newtwin.twin=newedge;
-				
-				// fix newedge
-				newedge.next=edgein;
-				edgein.prev=newedge;
-				
-				edgeout.next=newedge;
-				newedge.prev=edgeout;
-				
-				// fix newtwin
-				newtwin.next=edgeout2;
-				edgeout2.prev=newtwin;
-				
-				edgein2.next=newtwin;
-				newtwin.prev=edgein2;
-				
-				// create/store faces
-				Face newface=new Face();
-				newface.faceIndx=++ftick;
-				newface.edge=edgeout;
-				tmpFaces.add(newface);
-				HalfEdge he=edgeout;
-				do {
-					he.face=newface;
-					he=he.next;
-				} while (he!=edgeout);
-				
-			} // end of while through face edges
-		} // done with faces
-
-		// count/store vertices, 
-		ndcel.vertCount=tmpVerts.size();
-		ndcel.vertices=new Vertex[ndcel.vertCount+1];
-		Iterator<Vertex> tvit=tmpVerts.iterator();
-		vtick=0;
-		while(tvit.hasNext()) {
-			ndcel.vertices[++vtick]=tvit.next();
-		}
-		
-		// count/store edges
-		ndcel.edgeCount=tmpEdges.size();
-		ndcel.edges=new HalfEdge[ndcel.edgeCount+1];
-		if (etick!=ndcel.edgeCount) {
-			throw new CombException("'ndcel' edge counts don't match: etick="+etick
-					+" and edgeCount="+ndcel.edgeCount);
-		}
-		Iterator<HalfEdge> tis=tmpEdges.iterator();
-		etick=0;
-		while (tis.hasNext()) {
-			ndcel.edges[++etick]=tis.next();
-		}
-
-/*		
-		// count/store faces
-		ndcel.intFaceCount=ftick;
-		ndcel.faces=new Face[ftick+1];
-		Iterator<Face> tfit=tmpFaces.iterator();
-		ftick=0;
-		while(tfit.hasNext()) {
-			Face face=tfit.next();
-			ndcel.faces[face.faceIndx]=face;
-		}
-*/
-		
-		// final settings
-		ndcel.redChain=pdcel.redChain;
-		ndcel.alpha=pdcel.alpha;
-		ndcel.gamma=pdcel.gamma;
-		return ndcel;
-	}
 	
 	/**
 	 * Given a 'HalfEdge', check if origin is 'RedVertex'. If so,
@@ -2949,11 +2691,10 @@ public class CombDCEL {
 
 		  // create new vertex
 		  Vertex newv=new Vertex(pdcel.vertCount+1);
-		  ArrayList<HalfEdge> fedges=idealf.getEdges(firstedge);
+		  HalfLink fedges=idealf.getEdges(firstedge);
 		  Iterator<HalfEdge> fis=fedges.iterator();
 		  
 		  // get started
-		  int etick=pdcel.edgeCount;
 		  HalfEdge he=fis.next();
 		  HalfEdge newin=new HalfEdge(he.origin);
 		  HalfEdge newout=newin.twin=new HalfEdge(newv);
@@ -3263,7 +3004,7 @@ public class CombDCEL {
 				}
 
 				// figure out linkage: start with 'generator2'
-				int corner = newChain.myEdge.origin.vertIndx;
+				int corner = generator2.get(0).origin.vertIndx;
 
 				// rotate 'generator1' to start at 'corner'
 				int safety = generator1.size();

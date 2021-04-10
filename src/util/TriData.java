@@ -1,11 +1,10 @@
 package util;
 
-import java.util.ArrayList;
-
 import dcel.HalfEdge;
 import dcel.PackDCEL;
 import exceptions.DataException;
 import geometry.CommonMath;
+import listManip.HalfLink;
 
 /**
  * Utility class holding fundamental geometric data needed for
@@ -58,7 +57,7 @@ public class TriData {
 		try {
 			face=f;
 			hes=pdcel.p.hes;
-			ArrayList<HalfEdge> eflower=pdcel.faces[f].getEdges();
+			HalfLink eflower=pdcel.faces[f].getEdges();
 			if (eflower.size()!=3)
 				throw new DataException();
 			for (int j=0;j<3;j++) {
