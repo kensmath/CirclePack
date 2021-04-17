@@ -8705,6 +8705,8 @@ public class CommandStrParser {
 	    		  count=packData.remove_circle(vertlist);
 	    		  if (count>0) { 
 	    			  CirclePack.cpb.msg("rm_cir: removed "+count+" circles from p"+packData.packNum);
+	    			  if (packData.packDCEL!=null)
+	    				  return count;
 	    		  }
 	    		  else return 1;
 	    	  }
@@ -9790,14 +9792,14 @@ public class CommandStrParser {
 	        			  switch(c) {
 	    			  
 	        			  // Here's the specific parsing of flag itself    			 
-	        			  case 'c': // mode = set to current angle sums 
-	        			  {
-	        				  mode=2;
-	        				  break;
-	        			  }
 	        			  case 'd': // mode = set to default angle sums
 	        			  {
 	        				  mode=1;
+	        				  break;
+	        			  }
+	        			  case 'c': // mode = set to current angle sums 
+	        			  {
+	        				  mode=2;
 	        				  break;
 	        			  }
 	        			  case '%': // mode = modify current aims by multiplicative factor
@@ -9816,6 +9818,13 @@ public class CommandStrParser {
 	        				  }
 	        				  break;
 	        			  }
+	        			  case 'x': // use 3D 'xyz' data, if available
+	        			  {
+	        				  mode=4;
+	        				  if (packData.xyzpoint==null)
+	        					  return 0;
+	        				  break;
+	        			  }
 	        			  case 't': // give factor by which to move toward 2pi for interior
 	        			  {
 	        				  mode=5; 
@@ -9831,11 +9840,16 @@ public class CommandStrParser {
 	        				  }
 	        				  break;
 	        			  }
-	        			  case 'x': // use 3D 'xyz' data, if available
+	        			  case 'a': // add given amount to aim, may be +,-
 	        			  {
-	        				  if (packData.xyzpoint==null)
-	        					  return 0;
-	        				  mode=4;
+	        				  mode=6; 
+	        				  try {
+	         					 inc=Double.parseDouble(items.get(0));
+	        					 items.remove(0);
+	        				  } catch (NumberFormatException nfe) {
+	        					  CirclePack.cpb.myErrorMsg("set_aim: usage: -t x where x>0 is factor.");
+	        					  return count;
+	        				  }
 	        				  break;
 	        			  }
 	        			  } // end of flag switch
@@ -9851,7 +9865,7 @@ public class CommandStrParser {
 	        		  }
 	        		  
 	        		  if (items.size()==0) { // no list
-	        			  if (mode==0 || mode==3) return 0;
+	        			  if (mode==0 || mode==3 || mode==6) return 0;
 	        			  if (mode==1) { // default
 	        				  packData.set_aim_default();
 	        				  return (packData.nodeCount);
@@ -9907,7 +9921,11 @@ public class CommandStrParser {
 	        					  packData.setAim(v, packData.getAim(v)+inc*curv);
 		        				  count++;
 	        				  }
-	        			  }
+	        				  else if (mode==6) { // additive amount x in [-0.1,0.1].
+	        					  packData.setAim(v, packData.getAim(v)+inc);
+		        				  count++;
+	        				  }
+ 	        			  }
 	        			  return count;
 	        		  }
 	        		  return 0;

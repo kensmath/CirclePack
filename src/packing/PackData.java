@@ -7,6 +7,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Random;
@@ -12133,8 +12134,9 @@ public class PackData{
 	} 
 		
 	/** 
-	 * Routine to remove vertex from pack: This routine assuming flowers 
-	 * pointing to v have already been adjusted. It fixes indices and
+	 * Routine to remove vertex from pack: This routine 
+	 * assuming flowers pointing to v have already been 
+	 * adjusted. It fixes indices and
 	 * various lists. Calling routine will have to do 'complex_count', etc.
 	*/
 	public int delete_vert(int v) {
@@ -12618,12 +12620,13 @@ public class PackData{
 	}
 
 	  /** 
-	   * Remove boundary vert v from pack p; have verified v is bdry,
-	   * and that removal doesn't disconnect or leave a nghb w/o any
-	   * faces. On success, indices larger than v will be reduced by 1 and,
-	   * flowers and lists, etc., will be adjusted. 
-	   * CAUTION: user must be sure that successive removals take account 
-	   * of these dynamic indices, e.g., in 'remove_circle', 'remove_tri_vert',
+	   * Remove boundary vert v from pack p; have verified 
+	   * v is bdry, and removal doesn't disconnect or leave 
+	   * a nghb w/o any faces. On success, indices larger 
+	   * than v will be reduced by 1 and, flowers and lists, 
+	   * etc., will be adjusted. 
+	   * CAUTION: user must be sure that successive removals 
+	   * take account of these dynamic indices, e.g., in 'remove_circle', 'remove_tri_vert',
 	   * etc.
 	  */
 	  public int remove_bdry_vert(int v) {
@@ -12890,12 +12893,13 @@ public class PackData{
 	  }
 	  	
 	  /** 
-	   * Remove list of bdry and/or trivalent interior vertices. Note
-	   * That vertex indices are adjusted, lists are corrected, etc.
-	   * dynamically. Therefore, keep track of changes in array 'newIndex':
-	   * E.g., to start, newIndeweldmapDomain[v] equals v; if vert v is deleted,
-	   * then newIndeweldmapDomain[v] is set to 0 and all 'newIndex' entries above
-	   * it are lowered by one. 
+	   * Remove list of bdry and/or trivalent interior verts.
+	   * Note: vertex indices are adjusted, lists are corrected, 
+	   * etc. dynamically. Therefore, keep track of changes 
+	   * in array 'newIndex': E.g., to start, 
+	   * newIndeweldmapDomain[v] equals v; if vert v is deleted,
+	   * then newIndeweldmapDomain[v] is set to 0 and all 
+	   * 'newIndex' entries above it are lowered by one. 
 	   * Also note that only at the end should 'complex_count', 'faces', 
 	   * etc. be reset.
 	   */
@@ -12903,53 +12907,83 @@ public class PackData{
 	      int v,w,flag=0,count=0;
 	      int orig_nodeCount=nodeCount;
 
-	      if (vertlist==null || vertlist.size()==0) return 0;
+	      if (vertlist==null || vertlist.size()==0) 
+	    	  return 0;
 	      int []newIndex=new int[orig_nodeCount+1];
-	      for (int j=1;j<=nodeCount;j++) newIndex[j]=j;
+	      for (int j=1;j<=nodeCount;j++) 
+	    	  newIndex[j]=j;
 	      Iterator<Integer> vlist=vertlist.iterator();
 	      while (vlist.hasNext()) {
-	  	// start with orig index from list, find current index
-	  	int tv=(Integer)vlist.next(); 
-	  	v=newIndex[tv];
-	  	// Note: if v==0, then it has already been removed, so skip
-	  	if (v>0) {
-	  	    if (!isBdry(v)) {
-	  		if (countFaces(v)!=3) flag++;
-	  		else for (int i=0;i<3;i++) {
-	  		    w=kData[v].flower[i];
-	  		    if ((!isBdry(w) && countFaces(w)<=3)
-	  			|| (isBdry(w) && countFaces(w)<2))
-	  			flag++;
-	  		}
-	  	    }
-	  	    else if (isBdry(v)) {
-	  		if (countFaces(kData[v].flower[0])<2
-	  		    || countFaces(kData[v].flower[countFaces(v)])<2)
-	  		    flag++;
-	  		for (int i=1;i<countFaces(v);i++) 
-	  		    if (isBdry(kData[v].flower[i])) flag++;
-	  	    }
-	  	    if (flag==0) { // yes, vertex qualifies
-	  	    	boolean didit=false;
-	  	    	if (isBdry(v)) {
-	  	    		for (int i=0;i<=countFaces(v);i++) 
-	  	    			setAim(kData[v].flower[i],-0.1);
-	  	    		if (remove_bdry_vert(v)!=0) didit=true;
-	  	    	}
-	  	    	else if (remove_tri_vert(v)!=0) didit=true;
-
-	  	    	if (didit) { // yes, removed vert v
-	  	    		count++;
-	  	    		newIndex[v]=0;
-	  	    		for (int j=1;j<=orig_nodeCount;j++)
-	  	    			if (newIndex[j]>v) newIndex[j]--;
-	  	    	}
-	  	    }
-	  	}
-	      } // end of while
+	    	  // start with orig index, find current index
+	    	  int tv=(Integer)vlist.next(); 
+	    	  v=newIndex[tv];
+	    	  // Note: if v==0, already removed, so skip
+	    	  if (v>0) {
+	    		  int[] flower=this.getFlower(v);
+	    		  if (!isBdry(v)) {
+	    			  if (countFaces(v)!=3) 
+	    				  flag++;
+	    			  else for (int i=0;i<3;i++) {
+	    				  w=flower[i];
+	    				  if ((!isBdry(w) && countFaces(w)<=3)
+	    						  || (isBdry(w) && countFaces(w)<2))
+	    					  flag++;
+	    			  }
+	    		  }
+	    		  else if (isBdry(v)) {
+	    			  if (countFaces(flower[0])<2
+	    					  || countFaces(getLastPetal(v))<2)
+	    				  flag++;
+	    			  for (int i=1;i<countFaces(v);i++) 
+	    				  if (isBdry(flower[i])) flag++;
+	    		  }
+	  	    
+	    		  // if vertex qualifies
+	    		  if (flag==0) { 
+    				  boolean didit=false;
+	    			  if (packDCEL!=null) {
+	    				  ArrayList<Vertex> blist=RawDCEL.rmVert_raw(packDCEL, tv);
+    					  Iterator<Vertex> bis=blist.iterator();
+	    				  if (isBdry(v)) { // bdry
+	    					  while (bis.hasNext()) {
+	    						  Vertex vert=bis.next();
+	    						  vert.bdryFlag=1;
+	    					  }
+	    				  }
+	    				  didit=true;
+	    			  }
+	    			  else {
+	    				  if (isBdry(v)) {
+	    					  for (int i=0;i<=countFaces(v);i++) 
+	    						  setAim(flower[i],-0.1);
+	    					  if (remove_bdry_vert(v)!=0) 
+	    						  didit=true;
+	    				  }
+	    				  else if (remove_tri_vert(v)!=0) 
+	    					  didit=true;
+	    			  }
+	    			  if (didit) { // yes, removed vert v
+	    				  count++;
+	    				  newIndex[v]=0;
+	    				  for (int j=1;j<=orig_nodeCount;j++)
+	    					  if (newIndex[j]>v) newIndex[j]--;
+	    			  }
+	    		  }
+	    	  } // end of while
+	      }
 	      if (count==0) { 
-	        flashError("No vertices qualified for deletion");
-	        return 0;
+	    	  flashError("No vertices qualified for deletion");
+	    	  return 0;
+	      }
+	      if (packDCEL!=null) {
+	    	  for (int k=1;k<=orig_nodeCount;k++) {
+	    		  int nw=newIndex[k];
+	    		  if (nw!=0 && nw!=k) {
+	    			  vData[nw]=vData[k];
+	    			  vData[nw].setBdryFlag(packDCEL.vertices[nw].bdryFlag);;
+	    		  }
+	    	  }
+	    	  packDCEL.fixDCEL_raw(this);
 	      }
 	      return count;
 	  }

@@ -506,7 +506,7 @@ is no verification and all packing data is lost.
 </seealso>
 </command>
 
-<command cmd="color" flags="[options]">
+<command cmd="color" flags="-[cf] [options]">
 <description>Color specifications affect the display of filled circles "-c", 
 	faces "-f", or tiles only -- "-T" "-D" "-Q" for tiles, dual tiles, quad tiles.
 </description>
@@ -555,7 +555,7 @@ else first vert's color. (deprecated: '-v')</opt>
 		center or incenter.</opt>
 </options>
 <examples>
-<instance text="color -f qc -q1 -m 1.5 a">color by quasiconformal dilatation, compared to p1</instance>
+<instance text="color -f qc q1 -m 1.5 a">color by quasiconformal dilatation, compared to p1</instance>
 <instance text="color -D d a">color dual tiles based on number of edges (if dual tiling exists).</instance> 
 </examples>
 </command>
@@ -3198,6 +3198,7 @@ a filled circle</instance>
 	values depending on 3D locations associated with the vertices.
 </description>
 <options> (one of)
+	<opt flag="-a {v..}"> adjust by adding given amount, x in [-0.1,0.1]</opt>
 	<opt flag="-d {v..}"> set to default: 2(*PI),interior; -1, bdry</opt>
 	<opt flag="-c {v..}"> set aims to current angle sums</opt>
 	<opt flag="-% a {v..}"> add real number a(*PI) to currently set aim </opt>

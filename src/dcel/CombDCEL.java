@@ -257,7 +257,10 @@ public class CombDCEL {
 		// reset 'alpha' to given edge, but avoid 'hlink'
 		if (alphaEdge==null)
 			alphaEdge=pdcel.alpha;
-		pdcel.setAlpha(alphaEdge.origin.vertIndx,NodeLink.incident(hlink));
+		if (alphaEdge==null)
+			pdcel.setAlpha(1,NodeLink.incident(hlink));			
+		else
+			pdcel.setAlpha(alphaEdge.origin.vertIndx,NodeLink.incident(hlink));
 
 		// ============= mark verts/edges ==============
 		

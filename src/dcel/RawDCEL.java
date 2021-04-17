@@ -1,6 +1,10 @@
 package dcel;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+
 import complex.Complex;
+import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
 import listManip.HalfLink;
@@ -26,20 +30,68 @@ import listManip.HalfLink;
  *
  */
 public class RawDCEL {
+	
+	/**
+	 * Remove a vertex; 'vertices' are adjusted and reindexed,
+	 * with old index in 'vutil'. Calling routine must have
+	 * checked for legality, e.g., whether it leaves an interior 
+	 * neighbor with only 2 neighbors, etc. 'redChain' is lost;
+	 * return 'vlist' of nghb'ing vertices for updating (e.g.
+	 * they may become bdry verticess). Calling routine 
+	 * shifts the 'vData' entries.
+	 * @param pdcel PackDCEL
+	 * @param v int
+	 * @return ArrayList<Vertex> neighbors
+	 */
+	public static ArrayList<Vertex> rmVert_raw(PackDCEL pdcel,int v) {
+		if (pdcel.alpha.origin.vertIndx==v || 
+				pdcel.alpha.twin.origin.vertIndx==v)
+			pdcel.alpha=null;
+		Vertex vert=pdcel.vertices[v];
+		HalfLink spokes=vert.getEdgeFlower();
+		ArrayList<Vertex> vlist=new ArrayList<Vertex>();
+		
+		// save list of nghb'ing vertices
+		Iterator<HalfEdge> sis=spokes.iterator();
+		while (sis.hasNext()) 
+			vlist.add(sis.next().twin.origin);
+		
+		// remove the spokes
+		sis=spokes.iterator();
+		while (sis.hasNext()) {
+			HalfEdge he=sis.next();
+			he.twin.origin.halfedge=he.twin.prev.twin;
+			he.twin.origin.bdryFlag=1;
+			he.twin.prev.next=he.next;
+			he.next.prev=he.twin.prev;
+		}
+		for (int w=v;w<pdcel.vertCount;w++) {
+			pdcel.vertices[w]=pdcel.vertices[w+1];
+			pdcel.vertices[w].vertIndx=w;
+			pdcel.vertices[w].vutil=w+1;
+		}
+		pdcel.vertCount--;
+		// give up on red chain
+		pdcel.redChain=null; 
+		
+		// debug: DCELdebug.log_edges_by_vert(pdcel);
+		
+		return vlist;
+	}
 
 	/**
-	   * v must be boundary vertex; link cclw and clw nghbs,
-	   * making v interior. Red chain is adjusted, but 
-	   * calling routine updates combinatorics. If v and its
-	   * 2 nghbs form an ideal face, make it interior by
-	   * making them interior and adjusting or tossing 
-	   * the red chain.
-	   * Note: fails if v has just two nghb's.
-	   * @param pdcel PackDCEL
-	   * @param v int
-	   * @return int degree of v
-	   */
-	  public static int enfold_raw(PackDCEL pdcel,int v) {
+	 * v must be boundary vertex; link cclw and clw nghbs,
+	 * making v interior. Red chain is adjusted, but 
+	 * calling routine updates combinatorics. If v and its
+	 * 2 nghbs form an ideal face, make it interior by
+	 * making them interior and adjusting or tossing 
+	 * the red chain.
+	 * Note: fails if v has just two nghb's.
+	 * @param pdcel PackDCEL
+	 * @param v int
+	 * @return int degree of v
+	 */
+	public static int enfold_raw(PackDCEL pdcel,int v) {
 		  if (!pdcel.vertices[v].isBdry() || pdcel.countPetals(v)<=2)
 			  throw new CombException("dcel: can't enfold with just 2 nghbs");
 		  
@@ -129,7 +181,7 @@ public class RawDCEL {
 		  vert.bdryFlag=0;
 		  new_edge.origin.halfedge=new_edge;
 		  return pdcel.countPetals(vert.vertIndx);
-	  }
+	}
 
 	/**
 	   * Create a barycenter for face 'f'; 'vutil' 
@@ -206,8 +258,8 @@ public class RawDCEL {
 				
 		  return node;
 	  }
-
-	/**
+	  
+	  /**
 	   * We modify an existing 'PackDCEL' with a new boundary
 	   * edge between v and w. Call routine insures that v and w
 	   * have common bdry neighbor u. Only possible anbiguity is
@@ -224,11 +276,9 @@ public class RawDCEL {
 		  HalfEdge edge1=v1.halfedge;
 		  
 		  Vertex v2=edge1.twin.next.next.twin.origin;
-		  Vertex u=edge1.twin.next.twin.origin;
 		  if (v2.vertIndx==w) { // check clw two steps
 			  if (edge1.next.next.origin.vertIndx==w) { // ambiguous: choose cclw
 				  v2=edge1.next.next.origin;
-				  u=edge1.next.origin;
 			  }
 			  else { // swap v and w
 				  v1=v2;
@@ -239,7 +289,6 @@ public class RawDCEL {
 			  v2=edge1.twin.prev.origin;
 			  if (v2.vertIndx!=w)
 				  throw new CombException("vertices "+v+" and "+w+" can't form a legal edge");
-			  u=edge1.next.origin;
 		  }
 		  
 		  // now v1, u, v2 should be cclw nghbs

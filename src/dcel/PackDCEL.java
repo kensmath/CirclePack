@@ -1909,8 +1909,8 @@ public class PackDCEL {
 	}
 
 	/**
-	 * Set alpha to 'av', avoiding forbidden 'nlink' verts.
-	 * If 'nlink' null, try to set alpha to 'av'. 
+	 * Set alpha to 'av', avoiding forbidden 'nlink' 
+	 * verts. If 'nlink' null, try to set alpha to 'av'. 
 	 * If 'av' is zero, only change alpha if needed to 
 	 * avoid forbidden. Else try to set alpha to 'av', but
 	 * choose another vert if 'av' is forbidden.
@@ -1919,19 +1919,20 @@ public class PackDCEL {
 	 * @return int, current vert if no change, 0 on error
 	 */
 	public int setAlpha(int av,NodeLink nlink) {
-		if (nlink==null || nlink.size()==0)
+		if (nlink==null)
 			return setAlpha(av);
-		int alph=alpha.origin.vertIndx;
-		if (av==0) { // no target
-			if (nlink.containsV(alph)<0)
-				return alph; // nothing to do: Note: may be bdry vert
-		}
-		else {
-			if (nlink.containsV(av)<0)
-				return setAlpha(av);
-		}
 		
-		// need to search for interior, non-forbidden
+		// successive choices
+		int vpref=av;
+		if (vpref==0 && alpha!=null)
+			vpref=alpha.origin.vertIndx;
+		if (vpref!=0 && nlink.containsV(vpref)>=0) 
+			vpref=0;
+
+		if (vpref!=0) 
+			return setAlpha(vpref);
+
+		// reaching here, search for interior, non-forbidden
 		int[] vhits=new int[vertCount+1];
 		for (int v=1;v<=vertCount;v++) {
 			if (vertices[v].bdryFlag!=0) // bdry vertices
@@ -1952,9 +1953,9 @@ public class PackDCEL {
 				ahope=v;
 		}
 		
-		// mark nghbs of 
-		int gotvert=-1;
-		for (int v=1;(v<=vertCount && gotvert<0);v++) {
+		// mark nghbs 
+		vpref=-1;
+		for (int v=1;(v<=vertCount && vpref<0);v++) {
 			if (vhits[v]==0) { // interior, not forbidden
 				int[] flower=vertices[v].getFlower();
 				boolean nogood=false;
@@ -1967,17 +1968,14 @@ public class PackDCEL {
 				
 				// do we have a winner?
 				if (!nogood)
-					gotvert=v;
+					vpref=v;
 			}
 		}
 		
-		if (gotvert<0) 
-			gotvert=ahope;
-		
-		if (gotvert>0) {
-			return setAlpha(gotvert);
-		}
-		return -1;
+		if (vpref<0) 
+			vpref=ahope;
+
+		return setAlpha(vpref);
 	}
 	
 	/**
@@ -2041,20 +2039,24 @@ public class PackDCEL {
 		}
 		return count;
 	}
-			
+	
 	/**
-	 * Set 'alpha' edge; this is the vert normally placed at origin.
+	 * Set 'alpha' edge; its vert normally placed at origin.
+	 * If we change 'alpha', we may also change 'gamma' to
+	 * avoid collision, and we call 'd_FillInside' to adjust
+	 * combinatorics. (If some desparate situation, 'v' may 
+	 * <=0; just choose v=1.)
 	 * @param v int
-	 * @return 'v' or 0 on failure
+	 * @return 'v' 
 	 */
 	public int setAlpha(int v) {
 		if (v<=0 || v>vertCount)
-			return 0;
-		int alph=alpha.origin.vertIndx;
+			v=1;
+		int alph=-1;
+		if (alpha!=null)
+			alph=alpha.origin.vertIndx;
 		if (v!=alph) {
 			Vertex vertex =vertices[v];
-			if (vertex.bdryFlag!=0)
-				return 0;
 			alpha=vertex.halfedge;
 			if (gamma==alpha)
 				gamma=alpha.twin;

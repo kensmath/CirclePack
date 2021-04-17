@@ -27,6 +27,48 @@ public class DCELdebug {
 	static File tmpdir=new File(System.getProperty("java.io.tmpdir"));
 	static int rankStamp=1; // progressive number to distinguish file instances
 	
+	/**
+	 * List spokes of each vertex and for each spoke
+	 * its 'next', 'prev', and 'twin'.	
+	 * @param pdcel
+	 * @return int
+	 */
+	public static int log_edges_by_vert(PackDCEL pdcel) {
+		String filename=new String("DCEL_edges_by_vert"+(rankStamp++)+"_log.txt");
+		BufferedWriter dbw=CPFileManager.openWriteFP(tmpdir,filename,false);
+		int count=0;
+		try {
+			
+			System.out.println("'DCEL' info logged to: "+
+					  tmpdir.toString()+File.separator+filename);
+			
+			// Vertices
+			dbw.write("\nVertices: ==================== \n\n");
+			for (int v=1;(v<=pdcel.vertCount && count<100);v++) {
+				Vertex vert=pdcel.vertices[v];
+				dbw.write("Vertex "+vert+"\n");
+				HalfLink hlink=vert.getEdgeFlower();
+				Iterator<HalfEdge> his=hlink.iterator();
+				while (his.hasNext()) {
+					dbw.write(thisSpoke(his.next()).toString()+"\n");
+				}
+				count++;
+				dbw.write("\n");
+			}
+		  
+			dbw.write("\n================================== end\n");
+			dbw.flush();
+			dbw.close();
+		} catch(Exception ex) {
+			System.err.print(ex.toString());
+		    try {
+		    	dbw.flush();
+				dbw.close();
+		    } catch (Exception exe) {}
+		}			
+		return count;
+	}
+	
 	public static int log_full(PackDCEL pdcel) {
 		String filename=new String("DCEL_VEF_"+(rankStamp++)+"_log.txt");
 		BufferedWriter dbw=CPFileManager.openWriteFP(tmpdir,filename,false);
@@ -45,6 +87,7 @@ public class DCELdebug {
 			}
 			count=0;
 			
+			try {
 			// Edges
 			dbw.write("\nEdges: ==================== \n\n");
 			for (int e=1;e<=pdcel.edgeCount;e++) {
@@ -60,6 +103,9 @@ public class DCELdebug {
 				count++;
 			}
 			count=0;
+			} catch (Exception ex) {
+				dbw.write("\nSome exception in reading edges or faces");
+			}
 			
 			// RedChain
 			dbw.write("\nRedChain: =========================== \n\n");
@@ -465,6 +511,10 @@ public class DCELdebug {
 				"\n    check: halfedge origin ("+vert.halfedge.origin.hashCode()+")="+
 				vert.halfedge.origin.vertIndx+"\n");
 	}
+	
+	public static StringBuilder thisSpoke(HalfEdge edge) {
+		return new StringBuilder("  Spoke: "+edge+": next="+edge.next+", prev="+edge.prev+", twin="+edge.twin);
+	}		
 	
 	public static StringBuilder thisEdge(HalfEdge edge) {
 		return new StringBuilder("HalfEdge, index "+edge.edgeIndx+": <"+edge.origin.vertIndx+","+edge.twin.origin.vertIndx+">, "+
