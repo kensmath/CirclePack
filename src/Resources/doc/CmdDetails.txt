@@ -2961,11 +2961,13 @@ script and append it to 'ClosedPath'.</instance>
 <description>
     Given a list of interior vertices (default to all), remove 
     those which are interior and degree 3 from the packing. The
-    outcome can depend on order: some may not be elligible for
+    outcome can depend on order: some may not be eligible for
     removal, e.g., they have a neighbor of degree 3, or some may
-    appear elligible at first, but not after some neighbors are
+    appear eligible at first, but not after some neighbors are
     removed. So the outcome can depend on the order of the vertex 
-    list.
+    list. (We stick to the original list of vertices --- that is,
+    we do not add vertices for removal if they become 
+    eligible only because others have been removed.)
 </description>
 <seealso>
 <see>rm_edge</see>
@@ -2974,13 +2976,11 @@ script and append it to 'ClosedPath'.</instance>
 </seealso>
 </command>
 
-<command cmd="rm_cir" flags="{v..} [-x x y]">
+<command cmd="rm_cir" flags="{v}">
 <description>
-	Given a list of vertices (or -x flag with xy-coords), this 
-	removes any which quality, adjusting the combinatorics 
-	appropriately. Qualifying vertices are boundary and trivalent 
-	interiors; other conditions are checked so that the remaining 
-	complex is legal.
+	Given a qualifying boundary or interior trivalent 
+	circle; other conditions are checked so that the 
+	remaining complex is legal.
 </description>
 <seealso>
 <see>rm_bary</see>

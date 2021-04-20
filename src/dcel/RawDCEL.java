@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import complex.Complex;
-import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
 import listManip.HalfLink;
+import listManip.NodeLink;
 
 /**
  * This file is for static methods applied to dcel structures.
@@ -15,8 +15,9 @@ import listManip.HalfLink;
  * (no rad/cents, little or no dependence on PackData parent).
  * 
  * Typical process: 
- *   (1) call 'zeroVUtil' to zero out 'vutil' entries.
+ *   (1) call 'zeroVUtil'/'zeroEUtil' to zero 'vutil'/'eutil' entries.
  *   (2) call the '*_raw' method to modify the dcel structure,
+ *       ensuring 'vertices' is updated.
  *   (3) call 'reapVUtil' to create a 'VertexMap' of "new_to_old"
  *       references (i.e. "the new vert v takes radius from 
  *       old vert w").
@@ -24,7 +25,8 @@ import listManip.HalfLink;
  *   	 * If red chain could not be safely modified in the 
  *   	   '*_raw', set 'redChain' null and call 'redchain_by_edge'
  *       * call 'd_FillInside' and 'attachDCEL'. 
- *   (5) call 'modRadCents' with 'VertexMap' to modify rad and/or cents.
+ *   (5) call 'modRadCents' with 'VertexMap' to modify rad and/or 
+ *       centers (though generally centers aren't worth keeping).
  * 
  * @author kens
  *
@@ -32,12 +34,102 @@ import listManip.HalfLink;
 public class RawDCEL {
 	
 	/**
+	 * General "generational" marking routine.
+	 * 'seedstop' entries >0 for "seed" set, <0 for
+	 * "stop" set, 0 for neutral. Seeds are first
+	 * generation, with successive generations
+	 * connected to them; stop are ones that don't
+	 * propagate further. The return entry for 'v' is:
+	 *  * n>0 ==> nth generation from some seed
+	 *  * -m if stop at mth generation
+	 *  * 0 if not reached.
+	 *  * ans[0] contains count of positive entries.
+	 * If there is no "seed", then use alpha (if it's
+	 * not a stop vertex), else a neighbor of alpha,
+	 * else first neutral located.
+	 *  
+     * Examples: count generations from alpha, no stop;
+     * Find interior component containing alpha with stops; 
+     * etc.
+     * 
+	 * @param pdcel PackDCEL
+	 * @param seedstop int[], entry for each vertex
+	 * @return int[]
+	 */
+	public static int[] markGenerations(PackDCEL pdcel,int[] seedstop) {
+		int gen[] = new int[pdcel.vertCount+1];
+		NodeLink v_curr=new NodeLink();
+		NodeLink v_next=new NodeLink();
+		
+		// list/mark generation 1
+		for (int v=1;v<=pdcel.vertCount;v++) {
+			if (seedstop[v]>0) {
+				v_next.add(v);
+				gen[v]=1;
+				gen[0]++;
+			}
+		}
+		
+		// no seeds given, find a first seed
+		if (v_next.size()==0) {
+			int base=0;
+			if (pdcel.alpha!=null) {
+				int alp=pdcel.alpha.origin.vertIndx;
+				if (seedstop[alp]<0) { // try for a nghb 
+					int[] flower=pdcel.alpha.origin.getFlower();
+					for (int j=0;j<flower.length;j++) {
+						if (seedstop[flower[j]]==0)
+							base=flower[j];
+					}
+				}
+				if (seedstop[alp]==0)
+					base=alp;
+			}
+			if (base==0) { // else get any non-stop vertex
+				for (int v=1;(v<=pdcel.vertCount && base==0);v++)
+					if (seedstop[v]==0)
+						base=v;
+			}
+			if (base==0) 
+				throw new CombException("no vertex to act as seed");
+			
+			// list/mark this seed
+			v_next.add(base);
+			gen[base]=1;
+			gen[0]++;
+		}
+
+		int gcount=1;
+		while (v_next.size()>0) {
+			v_curr=v_next;
+			v_next=new NodeLink();
+			gcount++; // keep track of generation in 'gen'
+			Iterator<Integer> vis=v_curr.iterator();
+			while (vis.hasNext()) {
+				int v=vis.next();
+				int[] flower=pdcel.vertices[v].getFlower();
+				for (int j=0;j<flower.length;j++) {
+					int w=flower[j];
+					if (seedstop[w]<0)
+						gen[w]=-gcount;
+					else if (seedstop[w]==0 && gen[w]==0) {
+						gen[w]=gcount;
+						gen[0]++;
+						v_next.add(w);
+					}
+				}
+			}
+		}
+		return gen;
+	}
+	
+	/**
 	 * Remove a vertex; 'vertices' are adjusted and reindexed,
 	 * with old index in 'vutil'. Calling routine must have
 	 * checked for legality, e.g., whether it leaves an interior 
 	 * neighbor with only 2 neighbors, etc. 'redChain' is lost;
 	 * return 'vlist' of nghb'ing vertices for updating (e.g.
-	 * they may become bdry verticess). Calling routine 
+	 * they may become bdry vertices). Calling routine 
 	 * shifts the 'vData' entries.
 	 * @param pdcel PackDCEL
 	 * @param v int
@@ -48,6 +140,12 @@ public class RawDCEL {
 				pdcel.alpha.twin.origin.vertIndx==v)
 			pdcel.alpha=null;
 		Vertex vert=pdcel.vertices[v];
+		
+		// need emerging face; use ideal if v bdry
+		Face face=vert.halfedge.twin.face;
+		if (face.faceIndx>0) 
+			face=new Face(-1);
+		
 		HalfLink spokes=vert.getEdgeFlower();
 		ArrayList<Vertex> vlist=new ArrayList<Vertex>();
 		
@@ -60,10 +158,13 @@ public class RawDCEL {
 		sis=spokes.iterator();
 		while (sis.hasNext()) {
 			HalfEdge he=sis.next();
-			he.twin.origin.halfedge=he.twin.prev.twin;
+			HalfEdge infoot=he.twin.prev;
+			he.twin.origin.halfedge=infoot.twin;
+			HalfEdge outfoot=he.next;
 			he.twin.origin.bdryFlag=1;
-			he.twin.prev.next=he.next;
-			he.next.prev=he.twin.prev;
+			infoot.next=outfoot;
+			outfoot.prev=infoot;
+			infoot.face=outfoot.face=face;
 		}
 		for (int w=v;w<pdcel.vertCount;w++) {
 			pdcel.vertices[w]=pdcel.vertices[w+1];
@@ -939,8 +1040,6 @@ public class RawDCEL {
 			  return 0;
 		  if (edge.myRedEdge != null) // in redchain
 			  pdcel.redChain = null;
-		  Face leftf = edge.face;
-		  Face rightf = edge.twin.face;
 		  Vertex leftv = edge.next.next.origin;
 		  Vertex rightv = edge.twin.next.next.origin;
 
@@ -1024,7 +1123,7 @@ public class RawDCEL {
 				//   then adding its new interior edges
 				int origVertCount=pdcel.vertCount;
 				
-				HalfEdge base,base_tw,newEdge,newTwin;
+				HalfEdge newEdge;
 				HalfEdge n_base,n_newEdge,n_newTwin;
 				HalfEdge n_base_tw=null;
 				Vertex midVert,n_midVert;
@@ -1159,10 +1258,7 @@ public class RawDCEL {
 						for (int k=0;k<n;k++) {
 							
 							// shift of previous edge
-							base=n_base;
 							newEdge=n_newEdge;
-							newTwin=n_newTwin;
-							base_tw=n_base_tw;
 							midVert=n_midVert;
 							
 							// load/divide next side about this face

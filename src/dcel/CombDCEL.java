@@ -1625,6 +1625,40 @@ public class CombDCEL {
 	}
 	
 	/**
+	 * Find the component of interiors containing the given
+	 * 'seed' and avoiding forbidden vertices from 'hlink'.
+	 * Set up for call to 'markGenerations', so if 'seed' 
+	 * is 0, try in order alpha, or nghb of alpha, or first 
+	 * non-forbidden interior. ans[v] >0 if v is in the 
+	 * connected component of 'seed'. ans[0] is count of
+	 * verts in the component.
+	 *   
+	 * @param pdcel PackDCEL
+	 * @param seed int, may be 0
+	 * @param hlink HalfLink, may be null
+	 * @return int[]
+	 */
+	public static int[] findComponent(PackDCEL pdcel,int seed,HalfLink hlink ) {
+		int[] seedstop=new int[pdcel.vertCount+1];
+		
+		// mark bdry verts
+		for (int v=1;v<=pdcel.vertCount;v++) 
+			if (pdcel.vertices[v].isBdry())
+				seedstop[v]=-1;
+		
+		// mark ends of hlink edges
+		if (hlink!=null) {
+			Iterator<HalfEdge> his=hlink.iterator();
+			while (his.hasNext()) {
+				HalfEdge he=his.next();
+				seedstop[he.origin.vertIndx]=-1;
+				seedstop[he.twin.origin.vertIndx]=-1;
+			}
+		}
+		return RawDCEL.markGenerations(pdcel, seedstop);
+	}
+	
+	/**
 	 * Given a bouquet, return a bouquet with reverse orientation.
 	 * @param bouq int[][]
 	 * @return new bouquet[][]
@@ -3062,7 +3096,6 @@ public class CombDCEL {
 	   */
 	  public static HalfLink shortCut(PackDCEL pdcel,
 			  HalfLink path) {
-		  int bound=pdcel.vertCount;
 
 		  // no bdry edges allowed
 		  Iterator<HalfEdge> pis=path.iterator();

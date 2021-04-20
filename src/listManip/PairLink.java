@@ -3,6 +3,8 @@ package listManip;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import dcel.D_SideData;
+import exceptions.CombException;
 import komplex.SideDescription;
 import packing.PackData;
 
@@ -61,6 +63,26 @@ public class PairLink extends LinkedList<SideDescription> {
 			if (edge.label.equals(labelStr)) return edge;
 		}
 		return null;
+	}
+	
+	
+	/**
+	 * How many side-pairings are there?
+	 * @return int
+	 */
+	public int countPairs() {
+		int count=0;
+		Iterator<SideDescription> sides=iterator();
+		SideDescription edge=null;
+		while (sides.hasNext()) {
+			edge=(SideDescription)sides.next();
+			if (edge.mateIndex>0)
+				count++;
+		}
+		int ans=count/2;
+		if (ans*2!=count)
+			throw new CombException("the number of paired sides is not even");
+		return ans;
 	}
 	
 }

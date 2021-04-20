@@ -28,7 +28,7 @@ import util.ColorUtil;
 public class D_SideData {
 	
 	public int hes;           // geometry from parent packing
-	public int spIndex;       // index in 'PairLink' linked list (indexed from 1)
+	public int spIndex;       // index in 'D_PairLink' linked list (indexed from 1)
 	public int mateIndex;     // 'spIndex' of paired side (-1 if no mate)
 	public RedHEdge startEdge; // the first 'RedEdge' of this "side"
 	public RedHEdge endEdge;   // the final 'RedEdge' of this "side"

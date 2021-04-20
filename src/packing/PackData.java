@@ -26,6 +26,7 @@ import circlePack.PackControl;
 import complex.Complex;
 import complex.MathComplex;
 import dcel.CombDCEL;
+import dcel.D_SideData;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RawDCEL;
@@ -6795,53 +6796,107 @@ public class PackData{
 			}
 			file.write("\n\n");
 		}
-		if ((act & 0004) == 0004) {// inv_dist? aims? (non-default only)
-			if (overlapStatus) {
-				file.write("INV_DISTANCES:\n");
-				int k;
-				flag=0;
-				for (int i = 1; i <= nodeCount; i++)
-					for (int j = 0; j < (countFaces(i) + getBdryFlag(i)); j++) {
-						int[] gfl=getFlower(i);
-						if (i < (k = gfl[j])
-								&& Math.abs((angle = getInvDist(i,gfl[j])) - 1.0) > OKERR)
-							flag++;
+
+		else if (act == 020000000) { // real schwarzians
+			String hitstr=new String("SCHWARZIANS:\n");
+			boolean hitflag=false;
+			double schw;
+			int k;
+			if (packDCEL!=null) {
+				for (int v = 1; v <= packDCEL.vertCount; v++) {
+					HalfLink spokes=packDCEL.vertices[v].getEdgeFlower();
+					Iterator<HalfEdge> sis=spokes.iterator();
+					while (sis.hasNext()) {
+						HalfEdge he=sis.next();
+						int kk=he.twin.origin.vertIndx;
+						schw=he.getSchwarzain();
+						if (schw!=1.0 && v < kk) {
+							if (!hitflag) {
+								hitflag=true;
+								file.write(hitstr);
+							}
+							file.write("\n" + v + " " + kk + "  "
+									+ String.format("%.10e",schw));
+						}
 					}
-				if (flag>0) {
-					for (int i = 1; i <= nodeCount; i++)
-						for (int j = 0; j < (countFaces(i) + getBdryFlag(i)); j++) {
-							int[] gfl=getFlower(j);
-							if (i < (k = gfl[j])
-								&& Math.abs((angle = getInvDist(i,gfl[j])) - 1.0) > OKERR)
-								file.write("\n" + i + " " + k + "  "
-									+ String.format("%.6e", angle));
+				}
+				file.write("\n");
+			}
+			
+			else {
+				// first check if data is all available
+				boolean okay=haveSchwarzians();
+				if (okay) {
+					file.write("SCHWARZIANS:\n");
+					for (int v=1;v<=nodeCount;v++) {
+						file.write(v+"    "); // indicate vertex
+						for (int j=0;j<=countFaces(v);j++) { // then list schwarzian for each edge 
+							file.write(String.format("%.12e",kData[v].schwarzian[j])+" ");
 						}
-					file.write("\n  (done)\n\n");
+						file.write("\n");
+					}
+				}
+				file.write("\n");
+			}
+		}
+
+		if ((act & 0004) == 0004) {// inv_dist? aims? (non-default only)
+			String hitstr=new String("INV_DISTANCES:\n");
+			boolean hitflag=false;
+			double ang;
+			int k;
+			if (packDCEL!=null) {
+				for (int i = 1; i <= packDCEL.vertCount; i++) {
+					int[] gfl=getFlower(i);
+					for (int j = 0; j < gfl.length; j++) {
+						if (i < (k = gfl[j])
+								&& Math.abs((ang = getInvDist(i,gfl[j])) - 1.0) > OKERR) {
+							if (!hitflag) {
+								hitflag=true;
+								file.write(hitstr);
+							}
+							file.write("\n" + i + " " + k + "  "
+									+ String.format("%.6e", ang));
+						}
+					}
 				}
 			}
-			flag = 0;
-			for (int i = 1; (i <= nodeCount && flag==0); i++) {
-				if (isBdry(i) && getAim(i) >= 0.0)
-					flag++;
-				else if (!isBdry(i)	&& Math.abs(getAim(i)-2.0*Math.PI) > (10.0) * TOLER)
-					flag++;
-			}
-			if (flag > 0) { // at least one interior aim out of tolerance
-				int jj = 0;
-				for (int i = 1; i <= nodeCount && jj == 0; i++) {
-					if ((isBdry(i) && getAim(i) >= 0)
-							|| (!isBdry(i) && (getAim(i) < (2.0 * Math.PI + OKERR) || getAim(i) > (2.0 * Math.PI - OKERR))))
-						jj++;
-				}
-				if (jj > 0) { // at least one non-default aim
-					file.write("ANGLE_AIMS:\n");
-					for (int i = 1; i <= nodeCount; i++)
-						if ((isBdry(i) && getAim(i) >= 0)
-								|| (!isBdry(i) && (getAim(i) < (2.0 * Math.PI - OKERR) || getAim(i) > (2.0 * Math.PI + OKERR)))) {
-							file.write(" " + i + "  "
-									+ String.format("%.6e\n",getAim(i)));
+			else if (overlapStatus) {
+				for (int i = 1; i <= nodeCount; i++) {
+					int[] gfl=getFlower(i);
+					for (int j = 0; j < gfl.length; j++) {
+						if (i < (k = gfl[j])
+								&& Math.abs((ang = getInvDist(i,gfl[j])) - 1.0) > OKERR) {
+							if (!hitflag) {
+								hitflag=true;
+								file.write(hitstr);
+							}
+							file.write("\n" + i + " " + k + "  "
+									+ String.format("%.6e", ang));
 						}
+					}
 				}
+			}
+			if (hitflag) {
+				file.write("\n  (done)\n\n");
+			}
+			
+			// also, non-default aims
+			hitflag=false;
+			for (int i = 1; i <= nodeCount; i++) {
+				double aim=getAim(i);
+				if ((isBdry(i) && aim >= 0.0)
+						|| (!isBdry(i) && (aim < (2.0 * Math.PI - OKERR) || 
+								aim > (2.0 * Math.PI + OKERR)))) {
+					if (!hitflag) {
+						hitflag=true;
+						file.write("ANGLE_AIMS:\n");
+					}
+					file.write(" " + i + "  "
+							+ String.format("%.6e\n",aim));
+				}
+			}
+			if (hitflag) {
 				file.write("\n  (done)\n\n");
 			}
 		}
@@ -6864,8 +6919,9 @@ public class PackData{
 		if ((act & 0020) == 0020) { // centers? (often easier to recompute)
 			file.write("CENTERS:\n");
 			for (int i = 1; i <= nodeCount; i++) {
-				file.write(String.format("%.10e", getCenter(i).x) + " "
-						+ String.format("%.10e", getCenter(i).y) + "  ");
+				Complex ztr=getCenter(i);
+				file.write(String.format("%.10e", ztr.x) + " "
+						+ String.format("%.10e", ztr.y) + "  ");
 				if ((i % 2) == 0)
 					file.write("\n");
 			}
@@ -6890,12 +6946,12 @@ public class PackData{
 				Tile tile=tileData.myTiles[j];
 				file.write("\n"+j+" "+tile.vertCount+"   ");
 				if (augmntd) {
-					for (int k=0;k<tile.augVertCount;k++)
-						file.write(" "+tile.augVert[k]);
+					for (int kk=0;kk<tile.augVertCount;kk++)
+						file.write(" "+tile.augVert[kk]);
 				}
 				else {
-					for (int k=0;k<tile.vertCount;k++)
-						file.write(" "+tile.vert[k]);
+					for (int kk=0;kk<tile.vertCount;kk++)
+						file.write(" "+tile.vert[kk]);
 				}
 			}
 			file.write("\n\n");
@@ -6912,8 +6968,11 @@ public class PackData{
 		if ((act & 010000) == 010000) { // triangles (triples of verts)
 			file.write("FACE_TRIPLES: \n");
 			for (int i = 1; i <= faceCount; i++) {
-				file.write(" " + faces[i].vert[0] + "  " + faces[i].vert[1]
-						+ "  " + faces[i].vert[2] + "\n");
+				int[] fverts=getFaceVerts(i);
+				file.write(" ");
+				for (int j=0;j<fverts.length;j++)
+					file.write(fverts[0] + "  ");
+				file.write("\n");
 			}
 			file.write("(done)\n\n");
 		}
@@ -6989,36 +7048,18 @@ public class PackData{
 			file.write("\n");
 		}
 
-		// real schwarzians
-		else if (act == 020000000) {
-			// first check if data is all available
-			boolean okay=haveSchwarzians();
-			if (okay) {
-				file.write("SCHWARZIANS:\n");
-				for (int v=1;v<=nodeCount;v++) {
-					file.write(v+"    "); // indicate vertex
-					for (int j=0;j<=countFaces(v);j++) { // then list schwarzian for each edge 
-						file.write(String.format("%.12e",kData[v].schwarzian[j])+" ");
-					}
-					file.write("\n");
+		if ((act & 04000) == 04000) { // edge-pairing Mobius
+			NodeLink pairIndices=getPairIndices();
+			if (pairIndices!=null) {
+				Iterator<Integer> pis=pairIndices.iterator();
+				while (pis.hasNext()) {
+					int e=pis.next();
+					file.write("EDGE_PAIRING MOBIUS: "+e+"\n\n");
+					file.write(getSideMob(e).mob2String().toString()+"\n");
 				}
-				file.write("\n");
 			}
 		}
 
-		if ((act & 04000) == 04000 && sidePairs != null) { // edge-pairing
-															// Mobius
-			Iterator<SideDescription> epM = sidePairs.iterator();
-			// TODO: make sure we start with correct one
-			while (epM.hasNext()) {
-				SideDescription pL = (SideDescription) epM.next();
-				if (pL.pairedEdge != null) {
-					Mobius mB = pL.mob;
-					file.write("EDGE_PAIRING MOBIUS: \n\n");
-					file.write(mB.mob2String().toString());
-				}
-			}
-		}
 		if ((act & 0400) == 0400) { // any non default colors?
 			
 			// check vertex colors
@@ -12893,64 +12934,81 @@ public class PackData{
 	  }
 	  	
 	  /** 
-	   * Remove list of bdry and/or trivalent interior verts.
-	   * Note: vertex indices are adjusted, lists are corrected, 
-	   * etc. dynamically. Therefore, keep track of changes 
-	   * in array 'newIndex': E.g., to start, 
-	   * newIndeweldmapDomain[v] equals v; if vert v is deleted,
-	   * then newIndeweldmapDomain[v] is set to 0 and all 
-	   * 'newIndex' entries above it are lowered by one. 
-	   * Also note that only at the end should 'complex_count', 'faces', 
-	   * etc. be reset.
+	   * Remove listed vertices: remove qualifying bdry 
+	   * vertex and/or a list of trivalent interior 
+	   * verts. In the bdry case, we make sure there is
+	   * an interior remaining --- later processing
+	   * may remove additional vertices. In the trivalent
+	   * case, do not idenfity vertices around v as bdry.
+	   * (Use a "puncture" for interior vertices if you
+	   * want the nghb's to become bdry.)
+	   * 
+	   * Note: vertex indices are adjusted: keep track 
+	   * of changes in array 'newIndex': to start, 
+	   * newIndex[v]=v, then if vert v is deleted
+	   * newIndex[v]=0 and entries greater than v are 
+	   * lowered by one.
+	   * @param vertlist NodeLink
+	   * @return int count
 	   */
 	  public int remove_circle(NodeLink vertlist) {
-	      int v,w,flag=0,count=0;
-	      int orig_nodeCount=nodeCount;
-
 	      if (vertlist==null || vertlist.size()==0) 
 	    	  return 0;
+	      
+	      int count=0;
+	      int flag=0;
+	      int orig_nodeCount=nodeCount;
 	      int []newIndex=new int[orig_nodeCount+1];
 	      for (int j=1;j<=nodeCount;j++) 
 	    	  newIndex[j]=j;
 	      Iterator<Integer> vlist=vertlist.iterator();
 	      while (vlist.hasNext()) {
+	    	  boolean nogo=false;
 	    	  // start with orig index, find current index
 	    	  int tv=(Integer)vlist.next(); 
-	    	  v=newIndex[tv];
-	    	  // Note: if v==0, already removed, so skip
+	    	  int v=newIndex[tv];
+	    	  // Note: skip if v==0, already removed
 	    	  if (v>0) {
 	    		  int[] flower=this.getFlower(v);
 	    		  if (!isBdry(v)) {
 	    			  if (countFaces(v)!=3) 
-	    				  flag++;
+	    				  nogo=true;
 	    			  else for (int i=0;i<3;i++) {
-	    				  w=flower[i];
+	    				  int w=flower[i];
 	    				  if ((!isBdry(w) && countFaces(w)<=3)
 	    						  || (isBdry(w) && countFaces(w)<2))
-	    					  flag++;
+	    					  nogo=true;
 	    			  }
 	    		  }
 	    		  else if (isBdry(v)) {
 	    			  if (countFaces(flower[0])<2
 	    					  || countFaces(getLastPetal(v))<2)
-	    				  flag++;
+	    				  nogo=true;
 	    			  for (int i=1;i<countFaces(v);i++) 
-	    				  if (isBdry(flower[i])) flag++;
+	    				  if (isBdry(flower[i])) 
+	    					  nogo=true;
 	    		  }
 	  	    
 	    		  // if vertex qualifies
-	    		  if (flag==0) { 
+	    		  if (!nogo) { 
     				  boolean didit=false;
 	    			  if (packDCEL!=null) {
-	    				  ArrayList<Vertex> blist=RawDCEL.rmVert_raw(packDCEL, tv);
-    					  Iterator<Vertex> bis=blist.iterator();
-	    				  if (isBdry(v)) { // bdry
-	    					  while (bis.hasNext()) {
-	    						  Vertex vert=bis.next();
-	    						  vert.bdryFlag=1;
+	    				  Vertex vert=packDCEL.vertices[tv];
+	    				  HalfLink hlink=vert.getOuterEdges();
+	    				  int[] intverts=CombDCEL.findComponent(packDCEL,0, hlink);
+	    				  
+	    				  // will there be an interior remaining?
+	    				  if (intverts[0]>0) {
+	    					  ArrayList<Vertex> blist=RawDCEL.rmVert_raw(packDCEL, tv);
+	    					  Iterator<Vertex> bis=blist.iterator();
+	    					  if (isBdry(v)) { // bdry
+	    						  while (bis.hasNext()) {
+	    							  vert=bis.next();
+	    							  vert.bdryFlag=1;
+	    						  }
 	    					  }
+	    					  didit=true;
 	    				  }
-	    				  didit=true;
 	    			  }
 	    			  else {
 	    				  if (isBdry(v)) {
@@ -18946,6 +19004,54 @@ public class PackData{
 	
 	public PairLink getSidePairs() {
 		return sidePairs;
+	}
+	
+	/**
+	 * Get the indices of the first sides in all side pairs
+	 * @return int[], null if no paired sides
+	 */
+	public NodeLink getPairIndices() {
+		NodeLink indices=new NodeLink();
+		if (packDCEL!=null) {
+			if (packDCEL.pairLink!=null || packDCEL.pairLink.countPairs()==0)
+				return null;
+			for (int j=0;j<packDCEL.pairLink.size()-1;j++) {
+				D_SideData sidd=packDCEL.pairLink.get(j);
+				if (sidd.mateIndex>sidd.spIndex)
+					indices.add(sidd.spIndex);
+			}
+			return indices;
+		}
+		else {
+			if (sidePairs!=null || sidePairs.countPairs()==0)
+				return null;
+			for (int j=0;j<sidePairs.size()-1;j++) {
+				SideDescription sdd=sidePairs.get(j);
+				if (sdd.mateIndex>sdd.spIndex)
+					indices.add(sdd.spIndex);
+			}
+			return indices;
+		}
+	}
+
+	/**
+	 * Return the Mobius with the given side-pair index
+	 * @param e int
+	 * @return Mobius
+	 */
+	public Mobius getSideMob(int e) {
+		if (packDCEL!=null) {
+			try {
+				return packDCEL.pairLink.get(e).mob;
+			} catch(Exception ex) {
+				throw new CombException("failed to get side pair "+e);
+			}
+		}
+		try {
+			return sidePairs.get(e).mob;
+		} catch(Exception ex) {
+			throw new CombException("failed to get side pair "+e);
+		}
 	}
 	
 	/**

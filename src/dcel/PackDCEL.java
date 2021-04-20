@@ -97,7 +97,7 @@ public class PackDCEL {
 	
 	public D_PairLink pairLink;  // linked list of 'D_SideData' on side-pairings
 	
-	public TriData[] triData;    // 'TriData'; typpically null, used for repacking
+	public TriData[] triData;    // 'TriData'; typically null, used for repacking
 	boolean debug;
 	
 	// Constructor(s)

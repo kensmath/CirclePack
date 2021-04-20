@@ -163,30 +163,28 @@ public class Vertex {
 	}
 	
 	/**
-	 * Get list of 'HalfEdge's surrounding the union of
-	 * faces incident to this 'Vertex', counterclockwise.
-	 * Note this includes any ideal faces. 
-	 * @param start HalfEdge with this as origin
-	 * @param stop HalfEdge with this as origin
+	 * Get cclw list of 'HalfEdge's surrounding the union of
+	 * faces incident to this 'Vertex', including edges 
+	 * surrounding any incident ideal face. List is open.
+	 * @param start HalfEdge, with this 
+	 * @param stop HalfEdge, with this
 	 * @return ArrayList<HalfEdge>, null if start==stop
 	 */
-	public HalfLink getOuterEdges(HalfEdge start, HalfEdge stop) {
-		if (start==null || stop==null)
-			throw new CombException("bad start/stop data");
-		if (start==stop) // no edges --- legitimate in some situations
-			return null;
-		HalfLink eflower=getEdgeFlower(start,null);
+	public HalfLink getOuterEdges() {
+		HalfLink eflower=getEdgeFlower();
 		HalfLink outer=new HalfLink();
 		Iterator<HalfEdge> eit=eflower.iterator();
 		int safety=100*eflower.size();
-		HalfEdge he=null;
-		while (eit.hasNext() && (he=eit.next())!=stop && safety>0) {
-			HalfEdge nxtedge=halfedge.next;
+		while (eit.hasNext() && safety>0) {
+			HalfEdge spoke=eit.next();
+			HalfEdge he=spoke.next;
 			do {
-				outer.add(nxtedge);
-				nxtedge=nxtedge.next;
+				if (he.twin.origin==this)
+					break;
+				outer.add(he);
+				he=he.next;
 				safety--;
-			} while (nxtedge!=he.prev);
+			} while (he!=spoke.next);
 		}
 		if (safety==0)
 			throw new CombException("looped in 'getOuterEdges'");
