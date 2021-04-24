@@ -4951,7 +4951,7 @@ public class CommandStrParser {
 	      if (cmd.startsWith("alpha")) {
 	    	  int a=NodeLink.grab_one_vert(packData,flagSegs);
 	    	  if (packData.packDCEL!=null)
-	    		  return packData.packDCEL.setAlpha(a);
+	    		  return packData.packDCEL.setAlpha(a,null);
 	    	  return packData.setAlpha(a);
 	      }
 		  

@@ -112,12 +112,15 @@ public class HalfEdge {
 	}
 
 	/** 
-	 * If 'face' or twin face is null or ideal (faceIndx<0), then 
+	 * CAUTION: faces are not always non-null. But ideal
+	 * faces should be non-null and have index < 0. 
+	 * If 'face' or twin face is ideal (faceIndx<0), then 
 	 * this and its twin are "boundary" edges.
 	 * @return boolean
 	 */
 	public boolean isBdry() {
-		if (face==null || face.faceIndx<0 || twin.face==null || twin.face.faceIndx<0)
+		if ((face!=null && face.faceIndx<0) || 
+				(twin.face!=null && twin.face.faceIndx<0))
 			return true;
 		return false;
 	}

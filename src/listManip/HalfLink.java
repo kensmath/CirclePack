@@ -32,15 +32,18 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	serialVersionUID = 1L;
 	
 	PackData packData;
+	PackDCEL pdc;
+	
 	static final int XTD_LINKS=16; // how many links to look for in 'extended' edges.
 
 	// Constructors
 	public HalfLink(PackData p,HalfEdge edge) {
 		super();
 		packData=p;
+		pdc=packData.packDCEL;
 		add(edge);
 	}
-	
+
 	/**
 	 * @param p @see PackData
 	 * @param datastr String
@@ -49,6 +52,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	public HalfLink(PackData p,String datastr,boolean xtd) {
 		super();
 		packData=p;
+		pdc=packData.packDCEL;
 		if (datastr!=null && datastr.length()>0) 
 			addHalfLink(datastr,xtd);
 	}
@@ -71,6 +75,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	public HalfLink(PackData p,Vector<String> items,boolean xtd) {
 		super();
 		packData=p;
+		pdc=p.packDCEL;
 		if (items==null || items.size()==0) { // default to 'a' (all edges)
 			items=new Vector<String>(1);
 			items.add("a");
@@ -101,6 +106,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	public HalfLink() {
 		super();
 		packData=null;
+		pdc=null;
 	}
 
 	/**
@@ -118,9 +124,12 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	 * @return boolean, true if added
 	 */
 	public boolean add(HalfEdge edge) {
-		if (packData==null)
+		if (packData==null ||
+				(edge.origin.vertIndx<=packData.nodeCount &&
+				edge.twin.origin.vertIndx<=packData.nodeCount))
 			return super.add(edge);
-		else return false;
+		else 
+			return false;
 	}
 	
 	/**
@@ -218,7 +227,38 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			// bdry; check for braces (a,b)
 			case 'b':
 			{
-				// TODO: see 'EdgeLink'
+				HalfEdge firsthe=null;
+				HalfEdge lasthe=null;
+				String []pair_str=StringUtil.parens_parse(str); // get two strings
+				if (pair_str!=null) { // got two strings
+					int a,b;
+					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))==0
+							|| (b=NodeLink.grab_one_vert(packData,pair_str[1]))==0
+							|| !packData.isBdry(a) || !packData.isBdry(b))
+						return count;
+					firsthe=pdc.vertices[a].halfedge;
+					lasthe=pdc.vertices[b].halfedge.twin.next.twin;
+					
+					// check if first/last are on same boundary component
+					if (firsthe.twin.face!=lasthe.twin.face)
+						return count;
+					HalfEdge nexthe=firsthe;
+					do {
+						add(nexthe);
+						count++;
+						nexthe=nexthe.twin.prev.twin;
+					} while (nexthe!=lasthe.twin.prev.twin);
+				}
+				else { 
+					for (int i=1;i<=packData.getBdryCompCount();i++) {
+						dcel.Face iface=pdc.idealFaces[i];
+						HalfLink hlink=iface.getEdges();
+						if (hlink!=null) {
+							count+=hlink.size();
+							this.abutMore(hlink);
+						}
+					}
+				}
 				break;
 			}
 			case 'g': // combinatorial geodesic path from v to w

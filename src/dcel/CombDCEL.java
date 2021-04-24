@@ -252,15 +252,19 @@ public class CombDCEL {
 	public static PackDCEL redchain_by_edge(PackDCEL pdcel,
 			HalfLink hlink,HalfEdge alphaEdge) {
 		boolean debug=false; // debug=true;
+		boolean click=false; // help debug
 		int vertcount=pdcel.vertCount;
 
 		// reset 'alpha' to given edge, but avoid 'hlink'
 		if (alphaEdge==null)
 			alphaEdge=pdcel.alpha;
 		if (alphaEdge==null)
-			pdcel.setAlpha(1,NodeLink.incident(hlink));			
-		else
-			pdcel.setAlpha(alphaEdge.origin.vertIndx,NodeLink.incident(hlink));
+			pdcel.setAlpha(1,NodeLink.incident(hlink));
+		// if 'alphaEdge' is not null, check forbidden
+		else {
+			int alp=alphaEdge.origin.vertIndx;
+			pdcel.setAlpha(alp,NodeLink.incident(hlink));
+		}
 
 		// ============= mark verts/edges ==============
 		
@@ -385,16 +389,26 @@ public class CombDCEL {
 				// along redchain 
 				int v = currRed.myEdge.origin.vertIndx;
 				
-				if (debug) { // debug=true;
-					DCELdebug.drawTmpRedChain(pdcel.p,currRed);
+				if (debug && click) { // debug=true;
+//					DCELdebug.drawTmpRedChain(pdcel.p,currRed);
 					DCELdebug.printRedChain(pdcel.redChain);
 				}
 				
+				// backtrack?
+				HalfEdge upspoke = currRed.prevRed.myEdge.twin;
+				HalfEdge downspoke = currRed.myEdge;
+				if (upspoke==downspoke && vutil[v]==1) {
+					currRed.prevRed.prevRed.nextRed=currRed.nextRed;
+					currRed.nextRed.prevRed=currRed.prevRed.prevRed;
+					upspoke.myRedEdge=null;
+					downspoke.myRedEdge=null;
+					doneV[v]=true;
+				}
+				
 				// process v if not done and previous red edge not blocked
+				click=false;
 				if (!doneV[v] && !(doneV[v]=isVertDone(currRed.myEdge))) {
-					HalfEdge upspoke = currRed.prevRed.myEdge.twin;
-					HalfEdge downspoke = currRed.myEdge;
-					
+					click=true;
 					// if 'upspoke' is forbidden, we go on
 					if (upspoke.eutil<0) { 
 						continue;
@@ -424,7 +438,7 @@ public class CombDCEL {
 					boolean canclose=false;
 					RedHEdge redge=null;
 					HalfEdge spktrace=upspoke;
-					if (pdcel.vertices[v].vutil==1) {
+					if (vutil[v]==1) {
 						redge=isMyEdge(pdcel.redChain,spktrace);
 						while (spktrace!=downspoke && redge==null && spktrace.eutil>=0) {
 							spktrace=spktrace.prev.twin;
@@ -445,12 +459,13 @@ public class CombDCEL {
 							markFaceUtils(spktrace);			
 							hit=true;
 								
-							if (debug) {
+/*							if (debug) {
 								EdgeSimple es=new EdgeSimple(spktrace.origin.vertIndx,
 										spktrace.twin.origin.vertIndx);
 								DCELdebug.drawEdgeFace(pdcel.p, es);
 								DCELdebug.drawTmpRedChain(pdcel.p,pdcel.redChain);
 							}
+*/							
 								
 							spktrace=spktrace.prev.twin;
 							cclw=cclw.nextRed;
@@ -474,11 +489,12 @@ public class CombDCEL {
 								(vutil[upspoke.origin.vertIndx]>=1  || 
 								vutil[upspoke.twin.origin.vertIndx]>=1)) {
 						cclw.nextRed=new RedHEdge(upspoke.next);
-						if (debug) {
+/*						if (debug) {
 							EdgeSimple es=new EdgeSimple(upspoke.origin.vertIndx,
 								upspoke.twin.origin.vertIndx);
 							DCELdebug.drawEdgeFace(pdcel.p, es);
 						}
+*/						
 							
 						cclw.nextRed.prevRed=cclw;
 						cclw=cclw.nextRed;
@@ -717,8 +733,9 @@ public class CombDCEL {
 		}
 		
 		// ============= last job: clean up 'pdcel.vertices' =====
-		// Want to reindex, with interiors first, then redchain. There
-		// may be some original vertices that have been cut out.
+		// If number of vertices changes, then reindex with 
+		// interiors first, then redchain. There may be some 
+		// original vertices that have been cut out.
 		ArrayList<Vertex> newVertices=new ArrayList<Vertex>(0);
 		VertexMap newold=new VertexMap();
 		int vcount=0;
@@ -730,11 +747,10 @@ public class CombDCEL {
 
 		// start with 'alpha'
 		int vv=pdcel.alpha.origin.vertIndx;
-		pdcel.alpha.origin.vertIndx=++vcount;
 		nxv.add(vv);
 		newVertices.add(pdcel.alpha.origin);
-		newold.add(new EdgeSimple(vcount,vv));
-		vhit[vv]=1;
+		newold.add(new EdgeSimple(++vcount,vv));
+		vhit[vv]=vcount;
 
 		while (nxv.size()>0) {
 			curv=nxv;
@@ -750,11 +766,10 @@ public class CombDCEL {
 					// other end of this spoke
 					int w=wtx.vertIndx;
 					if (vhit[w]==0 && vutil[w]==1) { // interior in comp of alpha
-						wtx.vertIndx=++vcount;
 						nxv.add(wtx.vertIndx);
 						newVertices.add(wtx);
-						newold.add(new EdgeSimple(vcount,w));
-						vhit[w]=1;
+						newold.add(new EdgeSimple(++vcount,w));
+						vhit[w]=vcount;
 					}
 				} // end of while through spokes
 			} // end of while through 'currv'
@@ -764,10 +779,9 @@ public class CombDCEL {
 		for (int v=1;v<=vertcount;v++) {
 			Vertex vt=pdcel.vertices[v];
 			if (vutil[v]==2 && vt.redFlag && vt.bdryFlag==0) {
-				vt.vertIndx=++vcount;
 				newVertices.add(vt);
-				newold.add(new EdgeSimple(vcount,v));
-				vhit[v]=1;
+				newold.add(new EdgeSimple(++vcount,v));
+				vhit[v]=vcount;
 			}
 		}
 		
@@ -775,30 +789,41 @@ public class CombDCEL {
 		for (int v=1;v<=vertcount;v++) {
 			Vertex vt=pdcel.vertices[v];
 			if (vhit[v]==0 && vt.redFlag) {
-				vt.vertIndx=++vcount;
 				newVertices.add(vt);
-				newold.add(new EdgeSimple(vcount,v));
-				vhit[v]=1;
+				newold.add(new EdgeSimple(++vcount,v));
+				vhit[v]=vcount;
 			}
 		}
+
+		// decide: use the renumbering only if needed
+		if (vcount!=vertcount || 
+				(addedVertices!=null && addedVertices.size()>0)) {
+			for (int v=1;v<=vertcount;v++) {
+				if (vhit[v]!=0)
+					pdcel.vertices[v].vertIndx=vhit[v];
+			}
+
+			// pick up vertices added during 'PreRedVertex.process()'.
+			Iterator<Vertex> adit=addedVertices.iterator();
+			while (adit.hasNext()) {
+				Vertex vt=adit.next();
+				int oldIndx=vt.vertIndx;
+				vt.vertIndx=++vcount; // directly set new index
+				newVertices.add(vt);
+				newold.add(new EdgeSimple(++vcount,oldIndx));
+			}
 		
-		// pick up vertices added during 'PreRedVertex.process()'.
-		Iterator<Vertex> adit=addedVertices.iterator();
-		while (adit.hasNext()) {
-			Vertex vt=adit.next();
-			int oldIndx=vt.vertIndx;
-			vt.vertIndx=++vcount;
-			newVertices.add(vt);
-			newold.add(new EdgeSimple(vcount,oldIndx));
+			pdcel.vertCount=vcount;
+			pdcel.vertices=new Vertex[vcount+1];
+			Iterator<Vertex> vit=newVertices.iterator();
+			while (vit.hasNext()) {
+				Vertex vt=vit.next();
+				pdcel.vertices[vt.vertIndx]=vt;
+			}
+			pdcel.newOld=newold;
 		}
-		pdcel.vertCount=vcount;
-		pdcel.vertices=new Vertex[vcount+1];
-		Iterator<Vertex> vit=newVertices.iterator();
-		while (vit.hasNext()) {
-			Vertex vt=vit.next();
-			pdcel.vertices[vt.vertIndx]=vt;
-		}
-		pdcel.newOld=newold;
+		else
+			pdcel.newOld=null;
 		
 		blueCleanup(pdcel); // try to eliminate blue faces in the 'redChain'
 		

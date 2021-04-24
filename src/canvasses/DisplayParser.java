@@ -11,6 +11,7 @@ import baryStuff.BaryPoint;
 import circlePack.PackControl;
 import complex.Complex;
 import dcel.D_SideData;
+import dcel.HalfEdge;
 import dcel.PackDCEL;
 import deBugging.LayoutBugs;
 import exceptions.ParserException;
@@ -30,6 +31,7 @@ import listManip.BaryLink;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.PointLink;
 import listManip.TileLink;
@@ -631,25 +633,52 @@ public class DisplayParser {
 			} // end of 'd' dual options
 			case 'e': // edges
 			{
-				EdgeLink edgelist = new EdgeLink(p);
-				// axis extended edges? 
-				if (sub_cmd.length() > 0 && sub_cmd.charAt(0) == 'e'
-						&& items.size() > 0) {
-					edgelist.addEdgeLinks(items, true);
-				} 
-				// else if description empty, default to all
-				else { 
-					edgelist.addEdgeLinks(items, false);
+				if (p.packDCEL!=null) {
+					HalfLink helist=new HalfLink(p);
+					// axis extended edges? 
+					if (sub_cmd.length() > 0 && sub_cmd.charAt(0) == 'e'
+							&& items.size() > 0) {
+						helist.addHalfLink(items, true);
+					} 
+					// else if description empty, default to all
+					else { 
+						helist.addHalfLink(items, false);
+					}
+					if (helist != null && helist.size() > 0) {
+						Iterator<HalfEdge> his = helist.iterator();
+						HalfEdge edge = null;
+						while (his.hasNext()) {
+							edge = (HalfEdge) his.next();
+							Complex []pts=new Complex[2];
+							pts[0]=p.getCenter(edge.origin.vertIndx);
+							pts[1]=p.getCenter(edge.twin.origin.vertIndx);
+							cpScreen.drawEdge(pts[0],pts[1],dispFlags);
+							count++;
+						}
+					}
 				}
-				if (edgelist != null && edgelist.size() > 0) {
-					AmbiguousZ []amb=AmbiguousZ.getAmbiguousZs(p);
-					Iterator<EdgeSimple> elist = edgelist.iterator();
-					EdgeSimple edge = null;
-					while (elist.hasNext()) {
-						edge = (EdgeSimple) elist.next();
-						Complex []pts=p.ends_edge(edge, amb);
-						cpScreen.drawEdge(pts[0],pts[1],dispFlags);
-						count++;
+				
+				else {
+					EdgeLink edgelist = new EdgeLink(p);
+					// axis extended edges? 
+					if (sub_cmd.length() > 0 && sub_cmd.charAt(0) == 'e'
+							&& items.size() > 0) {
+						edgelist.addEdgeLinks(items, true);
+					} 
+					// else if description empty, default to all
+					else { 	
+						edgelist.addEdgeLinks(items, false);
+					}
+					if (edgelist != null && edgelist.size() > 0) {
+						AmbiguousZ []amb=AmbiguousZ.getAmbiguousZs(p);
+						Iterator<EdgeSimple> elist = edgelist.iterator();
+						EdgeSimple edge = null;
+						while (elist.hasNext()) {
+							edge = (EdgeSimple) elist.next();
+							Complex []pts=p.ends_edge(edge, amb);
+							cpScreen.drawEdge(pts[0],pts[1],dispFlags);
+							count++;
+						}
 					}
 				}
 				break;

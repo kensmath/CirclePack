@@ -7,6 +7,7 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import complex.Complex;
+import dcel.PackDCEL;
 import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.ParserException;
@@ -39,7 +40,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	
 	PackData packData;
 	static final int XTD_LINKS=16; // how many links to look for in 'extended' edges.
-
+	PackDCEL pdc; // utility pointer
+	
 	// Constructors
 	public EdgeLink(PackData p,EdgeSimple edge) {
 		super();

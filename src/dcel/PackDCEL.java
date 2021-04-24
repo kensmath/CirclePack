@@ -1909,76 +1909,6 @@ public class PackDCEL {
 	}
 
 	/**
-	 * Set alpha to 'av', avoiding forbidden 'nlink' 
-	 * verts. If 'nlink' null, try to set alpha to 'av'. 
-	 * If 'av' is zero, only change alpha if needed to 
-	 * avoid forbidden. Else try to set alpha to 'av', but
-	 * choose another vert if 'av' is forbidden.
-	 * @param av int, may be 0
-	 * @param nlink NodeLink, may be null
-	 * @return int, current vert if no change, 0 on error
-	 */
-	public int setAlpha(int av,NodeLink nlink) {
-		if (nlink==null)
-			return setAlpha(av);
-		
-		// successive choices
-		int vpref=av;
-		if (vpref==0 && alpha!=null)
-			vpref=alpha.origin.vertIndx;
-		if (vpref!=0 && nlink.containsV(vpref)>=0) 
-			vpref=0;
-
-		if (vpref!=0) 
-			return setAlpha(vpref);
-
-		// reaching here, search for interior, non-forbidden
-		int[] vhits=new int[vertCount+1];
-		for (int v=1;v<=vertCount;v++) {
-			if (vertices[v].bdryFlag!=0) // bdry vertices
-				vhits[v]=-1;
-		}
-		
-		Iterator<Integer> nis=nlink.iterator();
-		while (nis.hasNext()) {
-			int u=nis.next();
-			if (vhits[u]==0)
-				vhits[u]=-2; // interior forbidden
-		}
-
-		// get default possibility if all else fails
-		int ahope=-1;
-		for (int v=1;(v<=vertCount && ahope<0);v++) {
-			if (vhits[v]==0)
-				ahope=v;
-		}
-		
-		// mark nghbs 
-		vpref=-1;
-		for (int v=1;(v<=vertCount && vpref<0);v++) {
-			if (vhits[v]==0) { // interior, not forbidden
-				int[] flower=vertices[v].getFlower();
-				boolean nogood=false;
-				for (int j=0;(j<flower.length && !nogood);j++) {
-					if (vhits[flower[j]]==-2) {
-						vhits[flower[j]]=-1;
-						nogood=true;
-					}
-				}
-				
-				// do we have a winner?
-				if (!nogood)
-					vpref=v;
-			}
-		}
-		
-		if (vpref<0) 
-			vpref=ahope;
-
-		return setAlpha(vpref);
-	}
-	
-	/**
 	 * Reset all 'vutil' to zero. Some 'RawDCEL' routines,
 	 * e.g., use 'vutil' to feed back reference indices. 
 	 */
@@ -2041,48 +1971,106 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Set 'alpha' edge; its vert normally placed at origin.
+	 * Set 'alpha' edge; its vert normally placed at origin,
+	 * should be interior. 'v'>0 indicates preference;
+	 * if 'v'<=0 or 'v' not interior, try current 'alpha' if
+	 * it's interior. Else look for first interior; nothing
+	 * works, use current 'alpha' or choose 1.
 	 * If we change 'alpha', we may also change 'gamma' to
 	 * avoid collision, and we call 'd_FillInside' to adjust
-	 * combinatorics. (If some desparate situation, 'v' may 
-	 * <=0; just choose v=1.)
+	 * combinatorics. (Also, set 'p.alpha'.)
 	 * @param v int
 	 * @return 'v' 
 	 */
-	public int setAlpha(int v) {
-		if (v<=0 || v>vertCount)
-			v=1;
-		int alph=-1;
-		if (alpha!=null)
-			alph=alpha.origin.vertIndx;
-		if (v!=alph) {
-			Vertex vertex =vertices[v];
-			alpha=vertex.halfedge;
-			if (gamma==alpha)
-				gamma=alpha.twin;
-			CombDCEL.d_FillInside(this);
-			return v;
+	public int setAlpha(int v,NodeLink nlink) {
+		HalfEdge myTry=null; // current best option
+		int alpIndex=0;
+		if (alpha!=null) {
+			alpIndex=alpha.origin.vertIndx;
+			if (nlink!=null && nlink.containsV(alpIndex)>=0)
+				alpha=null;
 		}
+		
+		// if 'alpha' interior, not forbidden
+		if (alpha!=null && !alpha.origin.isBdry())
+			myTry=alpha;
+
+		if (v>0 && v<=vertCount) {
+			
+			// if it's interior, not forbidden, use it
+			if (!vertices[v].isBdry() && (nlink!=null && nlink.containsV(v)<0))
+				myTry=vertices[v].halfedge;
+			
+			// else, use alpha or get first non-forbidden interior
+			if (myTry==null)
+				for (int j=0;j<=vertCount;j++)
+					if (!vertices[j].isBdry() && 
+							(nlink!=null && nlink.containsV(j)<0))
+						myTry=vertices[j].halfedge;
+		}
+		
+		// else, no preference: use alpha or first non-forbidden interior
+		else {
+			if (myTry!=null) { // myTry should be 'alpha'
+				if (gamma==myTry)
+					gamma=myTry.twin;
+				if (p!=null)
+					p.alpha=alpha.origin.vertIndx;
+				return myTry.origin.vertIndx;
+			}
+			for (int j=0;j<=vertCount;j++) // get first interior
+				if (!vertices[j].isBdry() && 
+						(nlink!=null && nlink.containsV(j)<0))
+					myTry=vertices[j].halfedge;
+		}
+
+		// still no option?
+		if (myTry==null) {
+			
+			// stick with current alpha
+			if (alpha!=null)
+				myTry=alpha;
+			// desperation: just use vert 1
+			else 
+				myTry=vertices[1].halfedge;
+		}
+		
+		// wrap up
+		if (myTry!=alpha) {
+			alpha=myTry;
+			if (p!=null)
+				p.alpha=alpha.origin.vertIndx;
+			CombDCEL.d_FillInside(this);
+		}
+		
 		if (gamma==alpha)
 			gamma=alpha.twin;
-		return v;
+		return myTry.origin.vertIndx;
 	}
 	
     /**
-     * Set packing 'gamma' index; it's vertex generally placed on y+ axis.
-     * @param i int, can't be 'alpha'
+     * Set packing 'gamma' index; it's vertex generally 
+     * placed on y+ axis. Can't be 'alpha'.
+     * @param v int, preference or 0
      * @return 1 on success, 0 on failure
      */
     public int setGamma(int v) {
-        if (v<=0 || v>vertCount)
-        	return 0;
+    	
+    	// make sure 'alpha' is set
+    	if (alpha==null)
+    		setAlpha(0,null);
+        if (v<=0 || v>vertCount) {
+        	if (gamma==null)
+        		gamma=alpha.twin;
+        	return 1;
+        }
 		Vertex vertex =vertices[v];
 		if (vertex==alpha.origin) { 
 			CirclePack.cpb.errMsg("'gamma' cannot be set to the 'alpha' edge origin");
 			return 0;
 		}
 		gamma=vertex.halfedge;
-        return 0;
+        return 1;
     } 
     
 	/**

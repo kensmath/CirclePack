@@ -220,6 +220,8 @@ public class PackData{
     
     public Smoother smoother;    // 6/2020. add a smoother
     
+    int[] readOldNew;     // used in 'readpack' for DCEL translation
+    
     public PackData(int packnum) {
     	this(null);
     	packNum=packnum;
@@ -409,10 +411,11 @@ public class PackData{
     /**
      * Read new circle packing (or data for existing packing) 
      * into this packing from an open file. Return 0 on error. 
-     * Key "NODECOUNT:" indicates new packing, in which case 
-     * basic combinatorics are read; "CHECKCOUNT:" indicates 
-     * data for current packing; "TILECOUNT:" indicates tiling
-     * information (tiles and their surrounding vertex indices).
+     * Key "NODECOUNT:" and "TRIANTULATION:" indicates new 
+     * packings, in which case basic combinatorics are read; 
+     * "CHECKCOUNT:" indicates data for current packing; 
+     * "TILECOUNT:" indicates tiling information (tiles and 
+     * their surrounding vertex indices).
      * "TRIANGULATION:" indicates triples forming faces.
      * New packing in 'Lite' form starts with magic number 1234321.
 
@@ -463,16 +466,24 @@ public class PackData{
        
        NEUTRAL is for data that doesn't depend on nodecount match.
        
+       4/2021: distinguishing dcel ("BOUQUET:" vs. "FLOWERS:"): 
+       Processing dcel structure changes vertex indices, so we
+       use 'readOldNew[]' and call 'rON' to read data
+       based on old indices into appropriate new indices. 
+       
 	* @param fp BufferedReader (open)
 	* @param filename String
 	* @return int 'flags' encodes what was read, -1 or 0 on error
     */
     public int readpack(BufferedReader fp,String filename) {
+    	readOldNew=null;
     	try {
     		fp.mark(1000); // mark, only needed for Lite form
     	} catch(Exception ex) {} // proceed anyway
     	getDispOptions=null; 
-        int flags = 0; // 
+    	int newAlpha=0;
+    	int newGamma=-1;
+        int flags = 0; 
         int vert = 0;
         double x,y;
         double f;
@@ -481,6 +492,7 @@ public class PackData{
         boolean col_c_flag = false;
         boolean col_f_flag = false;
         EdgeLink vertMarks=null; // holds optional marks 
+        boolean dcelread=false; // true, dcel data, triggered by key "BOUQUET:"
         
         PackState state = PackState.INITIAL;
         String line;
@@ -672,52 +684,83 @@ public class PackData{
                     }
                     else if(mainTok.equals("ALPHA/BETA/GAMMA:")) {
                     	try {
-                    		alpha = Integer.parseInt(tok.nextToken());
+                    		newAlpha = Integer.parseInt(tok.nextToken());
                     		beta = Integer.parseInt(tok.nextToken());
-                    		gamma = Integer.parseInt(tok.nextToken());
+                    		newGamma = Integer.parseInt(tok.nextToken());
                     	} catch(Exception ex){continue;}
                     }
-                    else if ((state==PackState.NODECOUNT && mainTok.equals("FLOWERS:")) ||
+                    else if ((state==PackState.NODECOUNT && 
+                    		(mainTok.equals("FLOWERS:") || mainTok.equals("BOUQUET:"))) ||
                     		(state==PackState.TILECOUNT && (mainTok.equals("TILES:") || 
                     				mainTok.equals("TILEFLOWERS:")))) {
                 		
                     	// read all or until error. 
+                    	if (mainTok.equals("BOUQUET:"))
+                    		dcelread=true;
                         gotFlowers = true;
                     	int num;
                     	
                     	// normal packing
                     	if (state==PackState.NODECOUNT) { 
                     		try {
+                    			int[][] bouquet=new int[nodeCount+1][];
+                    			// data: contiguous index order, starting at v=1.
                     			// must have v  n v_0 .... v_n is all on one line
                     			while (vert<nodeCount && (line=StringUtil.ourNextLine(fp))!=null) {
                     				StringTokenizer loctok = new StringTokenizer(line);
                     				vert=Integer.valueOf(loctok.nextToken());
-                    				kData[vert].num=num=Integer.valueOf(loctok.nextToken());
-                    				if (num<=0) throw(new Exception()); // bomb out
-                    				kData[vert].flower=new int[num+1];
+                    				num=Integer.valueOf(loctok.nextToken());
+                    				if (num<=0) 
+                    					throw(new Exception()); // bomb out
+                    				bouquet[vert]=new int[num+1];
                     			
                     				for (int i=0;i<=num;i++) {
-                    					kData[vert].flower[i]=Integer.valueOf(loctok.nextToken());
+                    					bouquet[vert][i]=Integer.valueOf(loctok.nextToken());
                     				}
                     				setBdryFlag(vert,0);
-//                    				if (kData[vert].flower[0]==kData[vert].flower[num])
-//                        			setBdryFlag(vert,1);
                     			} // end of while
                     			if (vert<nodeCount) {
                     				flashError("Read failed while getting flowers");
                     				return -1;
                     			}
-                    			try {
-                    				if (complex_count(true)<=0) {
-                    					flashError("Failed to set packing combinatorics (may be tiling data)");
+                    			// this is dcel data
+                    			if (dcelread) {
+                    				PackDCEL pdc;
+                    				if (newAlpha==0)
+                    					newAlpha=alpha;
+                    				if ((pdc=CombDCEL.getRawDCEL(bouquet,newAlpha))==null) {
+                    					flashError("Problem reading DCEL data");
+                    					return -1;
                     				}
-                    			} catch (Exception ex) {
-                    				flashError("Exception setting packing combinatorics (may be tiling data)");
+                    				pdc.redChain=null;
+                    				pdc.fixDCEL_raw(this);
+                    				if (pdc.newOld!=null) {
+                						readOldNew=new int[pdc.vertCount+1];
+                    					Iterator<EdgeSimple> vmp=pdc.newOld.iterator();
+                    					while (vmp.hasNext()) {
+                    						EdgeSimple edge=vmp.next();
+                    						readOldNew[edge.w]=edge.v;
+                    					}
+                    				}
+                    			}
+                    			// traditional packing
+                    			else {
+                    				try {
+                    					if (complex_count(true)<=0) {
+                    						flashError("Failed to set packing combinatorics (may be tiling data)");
+                    					}
+                    				} catch (Exception ex) {
+                    					flashError("Exception setting packing combinatorics (may be tiling data)");
 //                        			status=false;
 //                        			return -1;
+                    				}
+                    				for (int i=1;i<=nodeCount;i++) {
+                    					kData[i].num=bouquet[i].length-1;
+                    					kData[i].flower=bouquet[i];
+                    					kData[i].plotFlag=1;
+                    				}
+                    				for (int i=1;i<=faceCount;i++) faces[i].plotFlag=1;
                     			}
-                    			for (int i=1;i<=nodeCount;i++) kData[i].plotFlag=1;
-                    			for (int i=1;i<=faceCount;i++) faces[i].plotFlag=1;
                     		} catch(Exception ex){ // try to reset to previous line and proceed
                     			try {fp.reset();} catch(IOException ioe) {
                     				flashError("IOException: "+ioe.getMessage());
@@ -862,7 +905,7 @@ public class PackData{
                     	poisonEdges=null;
                         poisonVerts=null;  
                         locks=0;
-                    } // done with "FLOWERS" or "TILES"
+                    } // done with "FLOWERS", "BOUQUET", or "TILES"
                     else if (state==PackState.TRIANGULATION && !gotFlowers) {
                     	Triangulation tri=new Triangulation();
                 		Vector<Face> theFaces=new Vector<Face>(50);
@@ -997,8 +1040,9 @@ public class PackData{
         		while(tok.hasMoreTokens()) {
                     String mainTok = tok.nextToken();
                 	
-                    if (mainTok.equals("FLOWERS:")) { // should have already been read if newPacking
-                        flashError("FLOWERS not allowed w/o NODECOUNT/TILECOUNT; disregard them");
+                    // should have already been read if newPacking
+                    if (mainTok.equals("FLOWERS:") || mainTok.equals("BOUQUET:")) { 
+                        flashError("FLOWERS/BOUQUET not allowed w/o NODECOUNT/TILECOUNT; disregard them");
                     	continue; 
                     }
                     else if(mainTok.equals("PACKNAME:")) {
@@ -1016,9 +1060,9 @@ public class PackData{
                     }
                     else if(mainTok.equals("ALPHA/BETA/GAMMA:")) {
                     	try {
-                    		alpha = Integer.parseInt(tok.nextToken());
+                    		newAlpha = Integer.parseInt(tok.nextToken());
                     		beta = Integer.parseInt(tok.nextToken());
-                    		gamma = Integer.parseInt(tok.nextToken());
+                    		newGamma = Integer.parseInt(tok.nextToken());
                     	}catch(Exception ex){continue;}
                     }
                     else if(mainTok.equals("RADII:")){
@@ -1028,11 +1072,11 @@ public class PackData{
                     		while (vert<=nodeCount && (line=StringUtil.ourNextLine(fp))!=null) {
                     			StringTokenizer loctok = new StringTokenizer(line);
                     			f=Double.parseDouble(loctok.nextToken());
-                    			setRadiusActual(vert,f);
+                    			setRadiusActual(rON(vert),f);
                     			vert++;
                     			while (vert<=nodeCount && loctok.hasMoreElements()) {
                     				f=Double.parseDouble(loctok.nextToken());
-                    				setRadiusActual(vert,f);
+                    				setRadiusActual(rON(vert),f);
                     				vert++;
                     			}
                     		}
@@ -1042,7 +1086,7 @@ public class PackData{
                             	double rad=0.5;
                             	if (hes<0) rad=1.0-Math.exp(-1.0);
                         		for (int i=vert;i<=nodeCount;i++) 
-                            		setRadius(i,rad);
+                            		setRadius(rON(i),rad);
                         	}
                     		try {fp.reset();} catch(IOException ioe) {
                     			flashError("IOException: "+ioe.getMessage());
@@ -1055,7 +1099,7 @@ public class PackData{
                         	double rad=0.5;
                         	if (hes<0) rad=1.0-Math.exp(-1.0);
                     		for (int i=vert;i<=nodeCount;i++) 
-                        		setRadius(i,rad);
+                        		setRadius(rON(i),rad);
                     	}
                     	else flags |= 0010;
                     }
@@ -1067,12 +1111,12 @@ public class PackData{
                     			StringTokenizer loctok = new StringTokenizer(line);
                     			x=Double.parseDouble(loctok.nextToken());
                     			y=Double.parseDouble(loctok.nextToken());
-                    			setCenter(vert,x,y);
+                    			setCenter(rON(vert),x,y);
                     			vert++;
                     			while (vert<=nodeCount && loctok.hasMoreElements()) {
                     				x=Double.parseDouble(loctok.nextToken());
                     				y=Double.parseDouble(loctok.nextToken());
-                    				setCenter(vert,x,y);
+                    				setCenter(rON(vert),x,y);
                     				vert++;
                     			}
                     		}
@@ -1081,7 +1125,7 @@ public class PackData{
                         		flashError("Shortage in number of centers; remainder set to zero");
                             	Complex z=new Complex(0.0,0.0);
                         		for (int i=vert;i<=nodeCount;i++) 
-                            		setCenter(i,z);
+                            		setCenter(rON(i),z);
                         	}
                     		try {fp.reset();} catch(IOException ioe) {
                     			flashError("IOException: "+ioe.getMessage());
@@ -1092,7 +1136,7 @@ public class PackData{
                     		flashError("Shortage in number of centers; remainder set to zero");
                         	Complex z=new Complex(0.0,0.0);
                     		for (int i=vert;i<=nodeCount;i++) 
-                        		setCenter(i,z);
+                        		setCenter(rON(i),z);
                     	}
                     	else flags |= 0020;
                     	state=PackState.INITIAL; 
@@ -1174,6 +1218,8 @@ public class PackData{
                     	if (getDispOptions.length()==0)
                     		getDispOptions=null;
                     }
+                    
+                    // OBE; don't use this 
                     else if(mainTok.equals("CIRCLE_PLOT_FLAGS:") && !newPacking){
                         state = PackState.CIRCLE_PLOT_FLAGS;
                 		while (state==PackState.CIRCLE_PLOT_FLAGS 
@@ -1188,12 +1234,12 @@ public class PackData{
                 		}
                 		flags |= 01000;
                     }
-
 // TODO: problem with reading TILES in an existing packing is that we don't
 //       have 'newOrig' vertex translation info.                    
 //                  else if (mainTok.equals("TILES:")) { 
 //           		}
                     
+                    // OBE; don't use this 
                     else if(mainTok.equals("FACE_PLOT_FLAGS:") && !newPacking){
                         state = PackState.FACE_PLOT_FLAGS;
                   		while (state==PackState.FACE_PLOT_FLAGS 
@@ -1227,7 +1273,7 @@ public class PackData{
                 			StringTokenizer loctok = new StringTokenizer(line);
                 			try {
                 				String str=(String)loctok.nextToken();
-                				int v=Integer.parseInt(str);
+                				int v=rON(Integer.parseInt(str));
                 				double rad=Double.parseDouble((String)loctok.nextToken());
                 				setRadiusActual(v,rad);
                 			} catch(Exception ex) {state=PackState.INITIAL;}
@@ -1243,7 +1289,7 @@ public class PackData{
                 			StringTokenizer loctok = new StringTokenizer(line);
                 			try {
                 				String str=(String)loctok.nextToken();
-                				int v=Integer.parseInt(str);
+                				int v=rON(Integer.parseInt(str));
                 				double aim=Double.parseDouble((String)loctok.nextToken());
                 				setAim(v,aim);
                 			} catch(Exception ex) {state=PackState.INITIAL;}
@@ -1258,8 +1304,8 @@ public class PackData{
                 			StringTokenizer loctok = new StringTokenizer(line);
                 			try {
                 				String str=(String)loctok.nextToken();
-                				int v=Integer.parseInt(str);
-                				int w=Integer.parseInt((String)loctok.nextToken());
+                				int v=rON(Integer.parseInt(str));
+                				int w=rON(Integer.parseInt((String)loctok.nextToken()));
                 				double invDist=Double.parseDouble((String)loctok.nextToken());
                 				this.set_single_invDist(v,w,invDist);
                 			} catch(Exception ex) {state=PackState.INITIAL;}
@@ -1277,7 +1323,7 @@ public class PackData{
                 				try {
                 					String str=(String)loctok.nextToken();
                 					double anglesums=Double.parseDouble(str);
-                					setCurv(v,anglesums);
+                					setCurv(rON(v),anglesums);
                 					v++;
                 				} catch(Exception ex) {state=PackState.INITIAL;}
                 			}
@@ -1285,6 +1331,7 @@ public class PackData{
                 		flags |= 0040;
                     }
                     // 'real' Schwarzian for edges, see 'Schwarzian.java'
+                    // TODO: Have to adjust for dcel structures.
                     else if (mainTok.equals("SCHWARZIANS:")) { 
                     	state=PackState.SCHWARZIAN;
                     	int v=1;
@@ -1311,13 +1358,13 @@ public class PackData{
                     else if(mainTok.equals("C_COLORS:")){ // note: replaces CIRCLE_COLORS that used old indices
                         state = PackState.C_COLORS;
                         if (newPacking) for (int i=1;i<=nodeCount;i++) 
-                        	setCircleColor(i,ColorUtil.getFGColor());
+                        	setCircleColor(rON(i),ColorUtil.getFGColor());
                 		while (state==PackState.C_COLORS 
                 				&& (line=StringUtil.ourNextLine(fp))!=null) {
                 			StringTokenizer loctok = new StringTokenizer(line);
                 			try {
                 				String str=(String)loctok.nextToken();
-                				int v=Integer.parseInt(str);
+                				int v=rON(Integer.parseInt(str));
                 				int rd=(int)Math.floor(Double.parseDouble((String)loctok.nextToken()));
                 				int gn=(int)Math.floor(Double.parseDouble((String)loctok.nextToken()));
                 				int bl=(int)Math.floor(Double.parseDouble((String)loctok.nextToken()));
@@ -1335,7 +1382,7 @@ public class PackData{
                 			StringTokenizer loctok = new StringTokenizer(line);
                 			try {
                 				String str=(String)loctok.nextToken();
-                				int v=Integer.parseInt(str);
+                				int v=rON(Integer.parseInt(str));
                 				int col=Integer.parseInt((String)loctok.nextToken());
                         	    setCircleColor(v,ColorUtil.cloneMe(ColorUtil.coLor(col)));
                 			} catch(Exception ex) {state=PackState.INITIAL;}
@@ -1351,7 +1398,7 @@ public class PackData{
                 			StringTokenizer loctok = new StringTokenizer(line);
                 			try {
                 				String str=(String)loctok.nextToken();
-                				int v=Integer.parseInt(str);
+                				int v=rON(Integer.parseInt(str));
                 				int V=Integer.parseInt((String)loctok.nextToken());
                         	    vertMap.add(new EdgeSimple(v,V));
                 			} catch(Exception ex) {
@@ -1371,7 +1418,7 @@ public class PackData{
                 			StringTokenizer loctok = new StringTokenizer(line);
                 			try {
                 				String str=(String)loctok.nextToken();
-                				int v=Integer.parseInt(str);
+                				int v=rON(Integer.parseInt(str));
                 				int m=Integer.parseInt((String)loctok.nextToken());
                         	    vertMarks.add(new EdgeSimple(v,m));
                 			} catch(Exception ex) {state=PackState.INITIAL;}
@@ -1400,6 +1447,7 @@ public class PackData{
                 			} catch(Exception ex) {state=PackState.INITIAL;}
                 		} // end of while
                     }
+                    // TODO: have to fix this for dcel structures
                     else if(mainTok.equals("TRI_COLORS:")){ // OBE: uses color indices (see T_COLORS)
                         state = PackState.TRI_COLORS;
                         if (newPacking) for (int i=1;i<=faceCount;i++) setFaceColor(i,ColorUtil.getFGColor());
@@ -1408,9 +1456,9 @@ public class PackData{
                 			StringTokenizer loctok = new StringTokenizer(line);
                 			try {
                 				String str=(String)loctok.nextToken();
-                				int v=Integer.parseInt(str);
-                				int v1=Integer.parseInt((String)loctok.nextToken());
-                				int v2=Integer.parseInt((String)loctok.nextToken());
+                				int v=rON(Integer.parseInt(str));
+                				int v1=rON(Integer.parseInt((String)loctok.nextToken()));
+                				int v2=rON(Integer.parseInt((String)loctok.nextToken()));
                 				int colindx=Integer.parseInt((String)loctok.nextToken());
                 				int[] faceFlower=getFaceFlower(v);
                 				for (int j=0;j<countFaces(v);j++) {
@@ -1437,7 +1485,7 @@ public class PackData{
                   			while (state==PackState.VERT_LIST && loctok.hasMoreTokens()) {
                   				try {
                   					str=(String)loctok.nextToken();
-                					int v=Integer.parseInt(str);
+                					int v=rON(Integer.parseInt(str));
                 					vlist.add(v);
                   				} catch(Exception ex) {state=PackState.INITIAL;}
                   			}
@@ -1453,13 +1501,14 @@ public class PackData{
                 			StringTokenizer loctok = new StringTokenizer(line);
                 			try {
                 				String str=(String)loctok.nextToken();
-                				int v=Integer.parseInt(str);
+                				int v=rON(Integer.parseInt(str));
                 				CPBase.Vlink.add(v);
                 			} catch(Exception ex) {state=PackState.INITIAL;}
                 		}
                   		if (CPBase.Vlink.size()==0) CPBase.Vlink=null;
                   		else flags |= 020000;                       
                     }
+                    // TODO: fix this for dcel structure
                     else if(mainTok.equals("FACE_TRIPLES:")){
                     	state = PackState.FACE_TRIPLES;
                         flist=new FaceLink(this);
@@ -1468,9 +1517,9 @@ public class PackData{
                 			StringTokenizer loctok = new StringTokenizer(line);
                 			try {
                 				String str=(String)loctok.nextToken();
-                   				int v=Integer.parseInt(str);
-                				int v1=Integer.parseInt((String)loctok.nextToken());
-                				int v2=Integer.parseInt((String)loctok.nextToken());
+                   				int v=rON(Integer.parseInt(str));
+                				int v1=rON(Integer.parseInt((String)loctok.nextToken()));
+                				int v2=rON(Integer.parseInt((String)loctok.nextToken()));
                 				int k=what_face(v,v1,v2);
                 				if (k>=1) flist.add(k);
                 			} catch(Exception ex) {state=PackState.INITIAL;}
@@ -1501,8 +1550,8 @@ public class PackData{
                 			StringTokenizer loctok = new StringTokenizer(line);
                 			try {
                 				String str=(String)loctok.nextToken();
-                   				int v=Integer.parseInt(str);
-                				int w=Integer.parseInt((String)loctok.nextToken());
+                   				int v=rON(Integer.parseInt(str));
+                				int w=rON(Integer.parseInt((String)loctok.nextToken()));
                 				elist.add(new EdgeSimple(v,w));
                 			} catch(Exception ex) {state=PackState.INITIAL;}
                 		}
@@ -1518,8 +1567,8 @@ public class PackData{
                 			StringTokenizer loctok = new StringTokenizer(line);
                 			try {
                 				String str=(String)loctok.nextToken();
-                   				int v=Integer.parseInt(str);
-                				int w=Integer.parseInt((String)loctok.nextToken());
+                   				int v=rON(Integer.parseInt(str));
+                				int w=rON(Integer.parseInt((String)loctok.nextToken()));
                 				CPBase.Elink.add(new EdgeSimple(v,w));
                 			} catch(Exception ex) {state=PackState.INITIAL;}
                 		}
@@ -1589,7 +1638,7 @@ public class PackData{
                     					Z=0.0;
                     				}
                     				
-                    				xyzpoint[v]=new Point3D(X,Y,Z);
+                    				xyzpoint[rON(v)]=new Point3D(X,Y,Z);
                     				v++;
                     			} catch(Exception ex) {state=PackState.INITIAL;}
                     		}
@@ -1681,21 +1730,27 @@ public class PackData{
                          multiply rad(j) by (rad(i)/rad(j))^f. */
                         double []newrad=new double[nodeCount+1];
                         int count=0;
-                        for (int i=1;i<=nodeCount;i++) newrad[i]=getRadius(i);
+                        for (int i=1;i<=nodeCount;i++) {
+                        	int ij=rON(i);
+                        	newrad[ij]=getRadius(ij);
+                        }
                         while(state==PackState.RADII_INTERACTIONS 
                         		&& (line=StringUtil.ourNextLine(fp))!=null) {
                         	StringTokenizer loctok = new StringTokenizer(line);
                         	try {
                         		String str=(String)loctok.nextToken();
-                        		int v=Integer.parseInt(str);
-                        		int w=Integer.parseInt((String)loctok.nextToken());
+                        		int v=rON(Integer.parseInt(str));
+                        		int w=rON(Integer.parseInt((String)loctok.nextToken()));
                         		double fac=Double.parseDouble((String)loctok.nextToken());
                         		newrad[v] *= Math.pow(getRadius(w)/getRadius(v),fac);
                         		count++;
                         	} catch(Exception ex) {state=PackState.INITIAL;}
                         }
                         if (count>0)
-                        	for (int i=1;i<=nodeCount;i++) setRadius(i,newrad[i]);
+                        	for (int i=1;i<=nodeCount;i++) {
+                        		int ij=rON(i);
+                        		setRadius(ij,newrad[ij]);
+                        	}
                         flags |= 0400000; // 040000;
                     }
                     
@@ -1716,9 +1771,9 @@ public class PackData{
                         	
               				// get three vertices defining the face
                         	loctok=new StringTokenizer(line);
-                        	int v0=Integer.parseInt((String)loctok.nextToken());
-                        	int v1=Integer.parseInt((String)loctok.nextToken());
-                        	int v2=Integer.parseInt((String)loctok.nextToken());
+                        	int v0=rON(Integer.parseInt((String)loctok.nextToken()));
+                        	int v1=rON(Integer.parseInt((String)loctok.nextToken()));
+                        	int v2=rON(Integer.parseInt((String)loctok.nextToken()));
                         	// get 2 doubles
                         	double b0=Double.parseDouble((String)loctok.nextToken());
                         	double b1=Double.parseDouble((String)loctok.nextToken());
@@ -1759,6 +1814,7 @@ public class PackData{
                         }
                         state=PackState.INITIAL;
                     } // done with 'BARY_VECTOR'
+                    // TODO: fix for dcel structures
                     else if (mainTok.equals("BARY_VECTOR:") && !newPacking)
                     {
                         state = PackState.BARY_VECTOR;
@@ -1786,9 +1842,9 @@ public class PackData{
                         				
                         				// get three vertices defining the face
                         				loctok=new StringTokenizer(line);
-                        				int v0=Integer.parseInt((String)loctok.nextToken());
-                        				int v1=Integer.parseInt((String)loctok.nextToken());
-                        				int v2=Integer.parseInt((String)loctok.nextToken());
+                        				int v0=rON(Integer.parseInt((String)loctok.nextToken()));
+                        				int v1=rON(Integer.parseInt((String)loctok.nextToken()));
+                        				int v2=rON(Integer.parseInt((String)loctok.nextToken()));
                         				int face=what_face(v0,v1,v2);
                         				if (face==0) {
                         					state=PackState.INITIAL;
@@ -1869,7 +1925,7 @@ public class PackData{
     		while (vm.hasNext()) {
     			EdgeSimple edge=vm.next();
     			if (edge.v>0 && edge.v<=this.nodeCount)
-    				setVertMark(edge.v,edge.w);
+    				setVertMark(rON(edge.v),rON(edge.w));
     		}
     	}
 
@@ -1894,18 +1950,24 @@ public class PackData{
         	double rad=0.025;
         	if (hes<0) rad=1.0-Math.exp(-1.0);
         	for (int i=1;i<=nodeCount;i++)
-        		setRadius(i,rad);
+        		setRadius(rON(i),rad);
         }
         
         if ((flags & 0020)!=0020) { // set centers
         	for (int i=1;i<=nodeCount;i++)
-        		setCenter(i,new Complex(0.0,0.0));
+        		setCenter(rON(i),new Complex(0.0,0.0));
         }
         
-        chooseAlpha();
-        activeNode = alpha;
-        chooseGamma();
-        facedraworder(false);
+        if (newAlpha!=0)
+        	chooseAlpha();
+        if (packDCEL!=null)
+        	activeNode = packDCEL.alpha.origin.vertIndx;
+        else 
+        	activeNode=alpha;
+        if (newGamma!=0)
+        	chooseGamma();
+        if (packDCEL==null)
+        	facedraworder(false);
         if ((flags & 0010)!= 0 && (flags & 0020)==0) { // new radii, no centers
         	try {
         		comp_pack_centers(false,false,2,OKERR);
@@ -1925,7 +1987,7 @@ public class PackData{
 
         if (!col_c_flag) {
         	for (int i=1;i<=nodeCount;i++)
-        		setCircleColor(i,ColorUtil.getFGColor());
+        		setCircleColor(rON(i),ColorUtil.getFGColor());
         }
 
         if (!col_f_flag) {
@@ -1948,8 +2010,21 @@ public class PackData{
         	}
         }
         setGeometry(hes);
-        set_plotFlags();
+        if (packDCEL==null)
+        	set_plotFlags();
         return flags;
+    }
+    
+    /**
+     * translation needed when dcel reading, "BOUQUET". 
+     * @param old_v int
+     * @return int
+     */
+    public int rON(int old_v) {
+    	if (readOldNew!=null && readOldNew[old_v]>0) {
+    		return readOldNew[old_v];    		
+    	}
+    	return old_v;
     }
     
     /**
@@ -2247,10 +2322,17 @@ public class PackData{
     }
 
     /** 
-     * Choose the packing's 'alpha' vertex; acts as root vertex.
-     * Should be interior if possible. Keep current value if it is legal. 
+     * Choose 'alpha' vertex or 'alpha' halfedge; 
+     * acts as root vertex. Should be interior if 
+     * possible. Keep current value if it is legal.
+     * Drawing order recomputed if needed. 
      */
     public void chooseAlpha(){
+    	if (packDCEL!=null) {
+    		packDCEL.setAlpha(0,null);
+    		return;
+    	}
+    	
         // is the current alpha okay?
         if (alpha>0 && alpha<= nodeCount 
         		&& kData[alpha].flower[0]==kData[alpha].flower[countFaces(alpha)]) {
@@ -2268,8 +2350,10 @@ public class PackData{
                 flag=1;
             }
         } while (i<nodeCount && flag==0);
-        if (flag != 0) alpha=i;
-        else alpha=1;
+        if (flag != 0) 
+        	alpha=i;
+        else 
+        	alpha=1;
         if (gamma==alpha) {
             gamma=kData[alpha].flower[0];
         }
@@ -2277,11 +2361,17 @@ public class PackData{
     } 
     
     /**
-     * Choose packing's 'gamma' vertex, which is placed on positive
-     * y-axis in typical layout. Must be distinct from 'alpha'.
-     * Keep current value, if legal.
+     * Choose packing's 'gamma' vertex or 'gamma' halfedge, 
+     * normally placed on positive y-axis. Must be distinct 
+     * from 'alpha'. Keep current value, if legal.
      */
-    public void chooseGamma() { // avoid alpha 
+    public void chooseGamma() { // avoid alpha
+    	if (packDCEL!=null) {
+    		packDCEL.setGamma(0);
+    		return;
+    	}
+    	
+    	// traditional packing
         int i=gamma;
         if (i>0 && i<= nodeCount && i!= alpha){
             return; // this choice is okay 
@@ -2294,12 +2384,12 @@ public class PackData{
     /**
      * Set prescribed 'alpha' vertex; must be interior. Move 'gamma' 
      * if necessary. Face drawing order is automatically recomputed.
-     * @param v int
+     * @param v int, preferred or 0
      * @return 1, 0 on failure
      */
     public int setAlpha(int v) {
     	if (packDCEL!=null) {
-    		return packDCEL.setAlpha(v);
+    		return packDCEL.setAlpha(v,null);
         }
     	if (!status || v<=0 || v>nodeCount)
     		return 0;
@@ -6272,7 +6362,7 @@ public class PackData{
 
 		uP.value=0.0;
 		for (v=1;v<=nodeCount;v++) {
-			if (!CommonMath.get_anglesum(this, v,getRadius(v), uP)) 
+			if (!CommonMath.get_anglesum(this,v,getRadius(v),uP)) 
 				throw new DataException("failed to compute angle sum for "+v);
 			setCurv(v,uP.value);
 	    }
@@ -6787,7 +6877,10 @@ public class PackData{
 					+ "\n");
 			if (fileName.length() > 0)
 				file.write("PACKNAME: " + fileName + "\n");
-			file.write("FLOWERS: ");
+			if (packDCEL==null)
+				file.write("FLOWERS: ");
+			else
+				file.write("BOUQUET: ");
 			for (int n = 1; n <= nodeCount; n++) {
 				file.write("\n" + n + " " + countFaces(n) + "  ");
 				int[] gfl=getFlower(n);
