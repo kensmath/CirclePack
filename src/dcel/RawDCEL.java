@@ -129,8 +129,12 @@ public class RawDCEL {
 	 * checked for legality, e.g., whether it leaves an interior 
 	 * neighbor with only 2 neighbors, etc. 'redChain' is lost;
 	 * return 'vlist' of nghb'ing vertices for updating (e.g.
-	 * they may become bdry vertices). Calling routine 
-	 * shifts the 'vData' entries.
+	 * they may become bdry vertices); these vertices become
+	 * bdry with 'halfedge's set to first bdry edge, but the
+	 * calling routine can use return 'vlist' to adjust as
+	 * necessary (e.g., as in 'rm_cir', where 'v' is degree 
+	 * 3 and we don't want to create new bdry). 
+	 * Calling routine also shifts the 'vData' entries.
 	 * @param pdcel PackDCEL
 	 * @param v int
 	 * @return ArrayList<Vertex> neighbors
@@ -141,15 +145,23 @@ public class RawDCEL {
 			pdcel.alpha=null;
 		Vertex vert=pdcel.vertices[v];
 		
-		// need emerging face; use ideal if v bdry
-		Face face=vert.halfedge.twin.face;
-		if (face.faceIndx>0) 
-			face=new Face(-1);
-		
+		// determine new face
+		Face nface=null;
+		if (vert.bdryFlag==1) {
+			nface=vert.halfedge.twin.face;
+			if (nface.edge==vert.halfedge.twin) {
+				nface.edge=vert.halfedge.twin.prev;
+			}
+		}
+		else
+			nface=new Face(-1);
+
 		HalfLink spokes=vert.getEdgeFlower();
 		ArrayList<Vertex> vlist=new ArrayList<Vertex>();
 		
-		// save list of nghb'ing vertices
+		// save list of nghbs: calling routine has to
+		//   reset 'bdryFlag' if necessary and set
+		//   ideal face indications.
 		Iterator<HalfEdge> sis=spokes.iterator();
 		while (sis.hasNext()) 
 			vlist.add(sis.next().twin.origin);
@@ -161,10 +173,10 @@ public class RawDCEL {
 			HalfEdge infoot=he.twin.prev;
 			he.twin.origin.halfedge=infoot.twin;
 			HalfEdge outfoot=he.next;
-			he.twin.origin.bdryFlag=1;
+			he.origin.bdryFlag=1;
 			infoot.next=outfoot;
 			outfoot.prev=infoot;
-			infoot.face=outfoot.face=face;
+			infoot.face=outfoot.face=nface;
 		}
 		for (int w=v;w<pdcel.vertCount;w++) {
 			pdcel.vertices[w]=pdcel.vertices[w+1];
@@ -288,8 +300,11 @@ public class RawDCEL {
 	   * Create a barycenter for face 'f'; 'vutil' 
 	   * gives reference vert. Calling routine should
 	   * throw out 'redChain' if 'f' is ideal face.
+	   * TODO: 'multi-bary' true, then add three vertices
+	   * to the face.
 	   * @param pdcel PackDCEL
 	   * @param f Face
+	   * @param mutli_bary boolean, 
 	   * @return int new index
 	   */
 	  public static int addBary_raw(PackDCEL pdcel,
@@ -316,6 +331,10 @@ public class RawDCEL {
 		  HalfEdge next_in;
 		  for (int j=0;j<(n-1);j++) {
 			  base=polyE.get(j);
+			  base.face=null;
+			  base.twin.myRedEdge=null;
+			  base.twin.origin.bdryFlag=0;
+			  base.twin.origin.redFlag=false;
 			  next_in=new HalfEdge(base.twin.origin);
 	
 			  // link around the face
@@ -335,6 +354,10 @@ public class RawDCEL {
 		  
 		  // last face
 		  base=polyE.get(n-1);
+		  base.face=null;
+		  base.twin.myRedEdge=null;
+		  base.twin.origin.bdryFlag=0;
+		  base.twin.origin.redFlag=false;
 		  next_in=new HalfEdge(base.twin.origin);
 		  
 		  base.next=next_in;

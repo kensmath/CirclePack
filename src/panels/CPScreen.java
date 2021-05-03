@@ -74,7 +74,6 @@ public class CPScreen extends JPanel implements	MouseListener {
 	private static final long 
 	serialVersionUID = 1L;
 
-
     // screen setting defaults
     public static final int defaultthickness=CPBase.DEFAULT_LINETHICKNESS;
     public int linethickness;

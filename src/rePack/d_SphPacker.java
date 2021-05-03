@@ -162,7 +162,7 @@ public class d_SphPacker extends RePacker {
 		
 		Complex[] pts=new Complex[p.nodeCount+1];
 		for (int v=1;v<=p.nodeCount;v++) 
-			pts[v]=new Complex(p.vData[v].center);
+			pts[v]=new Complex(z[v]); 
 
 		// compute and apply the mobius
 		Mobius mob=NSpole.sphNormalizer(pts,20,false,false);
@@ -272,8 +272,9 @@ public class d_SphPacker extends RePacker {
 	}
 		    
 	/**
-	 * Continue riffling if status is RIFFLE; reset the passLimit.
+	 * Continue riffling if status is RIFFLE; reset 'passLimit'.
 	 * (We don't change 'totalPasses'.)
+	 * @param passL int
 	 */
 	public int continueRiffle(int passL) throws PackingException {
 		double fbest;

@@ -8,7 +8,6 @@ import allMains.CirclePack;
 import complex.Complex;
 import complex.MathComplex;
 import dcel.CombDCEL;
-import dcel.DataDCEL;
 import dcel.PackDCEL;
 import deBugging.DebugHelp;
 import exceptions.CombException;
@@ -17,7 +16,6 @@ import ftnTheory.GenBranching;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
 import komplex.KData;
-import komplex.RedList;
 import listManip.EdgeLink;
 import listManip.NodeLink;
 import tiling.TileData;
@@ -128,8 +126,7 @@ public class PackCreation {
 
 		PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet);
 		pdcel.redChain=null;
-		CombDCEL.d_FillInside(pdcel);
-		p.attachDCEL(pdcel);
+		pdcel.fixDCEL_raw(p);
 		p.hes=1;
 
 		// When all radii are equal, every face is equilateral with angles 2pi/3.
@@ -344,77 +341,24 @@ public class PackCreation {
 	 * @return @see PackData or null on error
 	 */
 	public static PackData seed(int n,int heS) {
+		PackDCEL pdcel=CombDCEL.seed_raw(n);
+		pdcel=CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha);
+		CombDCEL.d_FillInside(pdcel);
+		pdcel.gamma=pdcel.alpha.twin;
 		PackData p=new PackData(null);
-		p.nodeCount=n+1;
-		p.alpha=1;
-		p.gamma=2;
+		p.attachDCEL(pdcel);
 		p.status=true;
-		p.locks=0;
-		p.activeNode=1;
-		p.hes=0;
-		if (n<3) return null;
-		if (n>=1000) { // 1000 was the usual limit
-			p.kData = new KData[n+2];
-			p.rData = new RData[n+2];
-		}
-		for (int j=1;j<=n+1;j++) {
-			p.kData[j]=new KData();
-			p.rData[j]=new RData();
-		}
-
-		// create flowers, etc.
-		p.kData[1].num=n;
-		p.setBdryFlag(1,0);
-		p.kData[1].flower=new int[n+1];
-		for (int i=0;i<n;i++) p.kData[1].flower[i]=i+2;
-		p.kData[1].flower[n]=2;
-		p.setRadius(1,0.5);
-		for (int i=2;i<=(n+1);i++) {
-			p.kData[i].flower=new int[3];
-			p.kData[i].num=2;
-			p.kData[i].flower[0]=i+1;
-			p.kData[i].flower[1]=1;
-			p.kData[i].flower[2]=i-1;
-			p.setBdryFlag(i,1);
-			p.kData[i].utilFlag=0;
-			p.setVertMark(i,0);
-			p.kData[i].schwarzian=null;
-			p.setRadius(i,2.5/(double)n);
-		}
-		p.kData[2].flower[2]=n+1;
-		p.kData[n+1].flower[0]=2;
-			
-		// process the combinatorics 
-		p.complex_count(true);
-		p.facedraworder(false);
+		p.activeNode=pdcel.alpha.origin.vertIndx;
 		p.set_aim_default();
-		p.repack_call(50);
-		try {
-			p.comp_pack_centers(false,false,2,.00001);
-		} catch(Exception ex) {}
-			
-		// scale the packing to lie in the unit disc
-		double sc=.75/(p.getCenter(2).abs()+p.getRadius(2));
-		for (int v=1;v<=p.nodeCount;v++) {
-			p.setCenter(v,p.getCenter(v).times(sc));
-			p.setRadius(v,p.getRadius(v)*sc);
-		}
-		RedList trace=null;
-		if ((trace=p.redChain)!=null) { // scale red faces also.
-			boolean keepon=true;
-			while (trace!=p.redChain || keepon) {
-				keepon=false;
-				trace.center=trace.center.times(sc);
-				trace.rad *=sc;
-				trace=trace.next;
-			}
-		}
-			
-		if (heS>0) p.geom_to_s();
-		if (heS<0) p.geom_to_h();
-			
-		p.setCurv(1,2*Math.PI);
-		p.set_plotFlags();
+		
+		// start out hyperbolic
+		p.hes=-1;
+		CommandStrParser.jexecute(p,"max_pack");
+		
+		if (heS>0) 
+			p.geom_to_s();
+		if (heS==0)
+			p.geom_to_e();
 		p.setName("Seed "+n);
 
 		return p;

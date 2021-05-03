@@ -285,8 +285,8 @@ public class CombDCEL {
 				he.myRedEdge=null; // toss old red edge pointers
 				he.eutil=0;
 				// set 'eutil' -1 for bdry edges
-				if (he.face!=null && 
-						(he.face.faceIndx<0 || he.twin.face.faceIndx<0)) {
+				if ((he.face!=null && he.face.faceIndx<0) || 
+						(he.twin.face!=null && he.twin.face.faceIndx<0)) {
 					he.eutil=-1;
 					vutil[he.origin.vertIndx]=-1;
 					vutil[he.twin.origin.vertIndx]=-1;
@@ -1238,6 +1238,7 @@ public class CombDCEL {
 		// DCELdebug.printRedChain(pdcel.redChain,pdcel.newOld); 
 		
 		pdcel.sideStarts=null;
+		pdcel.pairLink=null;
 		ArrayList<RedHEdge> bdryStarts=null;
 		
 		// not a sphere?
@@ -3354,6 +3355,29 @@ public class CombDCEL {
 
 		  return link1;
 	  }
+	  
+	  /**
+	   * Create a new PackDCEL seed with n petals
+	   * @param n int
+	   * @return PackDCEL
+	   */
+	  public static PackDCEL seed_raw(int n) {
+		  if (n<3 || n>1000) 
+			  throw new ParserException("'seed' is limited to degree between 3 and 1000");
+		  int[][] bouquet=new int[n+2][];
+		  bouquet[1]=new int[n+1];
+		  for (int j=0;j<n;j++)
+			  bouquet[1][j]=j+2;
+		  bouquet[1][n]=bouquet[1][0]; // close up
+		  for (int k=0;k<n;k++) {
+			  bouquet[k+2]=new int [3];
+			  bouquet[k+2][0]=(k+1)%n+2;
+			  bouquet[k+2][1]=1;
+			  bouquet[k+2][2]=((k+n)-1)%n+2;
+		  }
+		  return getRawDCEL(bouquet,1);
+	  }
+	  
 }
 
 /**

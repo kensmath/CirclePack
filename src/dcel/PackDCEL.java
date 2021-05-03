@@ -125,7 +125,7 @@ public class PackDCEL {
 	 * 'vertices', edge connectivity should be in 
 	 * tact and often 'redChain' is in tact. The
 	 * calling routine should already have done 
-	 * things, like cents/radii. If the red chain
+	 * things like cents/radii. If the red chain
 	 * was broken, the calling routine should set
 	 * 'redChain' null and 'redchain_by_edge' is
 	 * called. Faces may be outdated or
@@ -1998,7 +1998,7 @@ public class PackDCEL {
 		if (v>0 && v<=vertCount) {
 			
 			// if it's interior, not forbidden, use it
-			if (!vertices[v].isBdry() && (nlink!=null && nlink.containsV(v)<0))
+			if (!vertices[v].isBdry() && (nlink==null || nlink.containsV(v)<0))
 				myTry=vertices[v].halfedge;
 			
 			// else, use alpha or get first non-forbidden interior

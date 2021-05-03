@@ -440,8 +440,9 @@ public class NSpole {
 	public int setEdgeCount() {
 		int eCount=0;
 		for (int v=1;v<=packData.nodeCount;v++) {
-			int[] flower=packData.getFaceVerts(v);
-			for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) {
+			int[] flower=packData.getFlower(v);
+			for (int j=0;j<(packData.countFaces(v)+
+					packData.getBdryFlag(v));j++) {
 				int k=flower[j];
 				if (k>v)
 					eCount++;

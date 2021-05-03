@@ -291,6 +291,10 @@ public class PackData{
     	packDCEL=pdcel;
     	pdcel.p=this;
     	int origNodeCount=nodeCount;
+    	if (pdcel.alpha!=null)
+    		alpha=pdcel.alpha.origin.vertIndx;
+    	else
+    		alpha=1;
 		
     	// set some counts
 		nodeCount=pdcel.vertCount;
@@ -745,21 +749,21 @@ public class PackData{
                     			}
                     			// traditional packing
                     			else {
-                    				try {
-                    					if (complex_count(true)<=0) {
-                    						flashError("Failed to set packing combinatorics (may be tiling data)");
-                    					}
-                    				} catch (Exception ex) {
-                    					flashError("Exception setting packing combinatorics (may be tiling data)");
-//                        			status=false;
-//                        			return -1;
-                    				}
                     				for (int i=1;i<=nodeCount;i++) {
                     					kData[i].num=bouquet[i].length-1;
                     					kData[i].flower=bouquet[i];
                     					kData[i].plotFlag=1;
                     				}
+                    				try {
+                    					if (complex_count(true)<=0)
+                    						flashError("Failed to set packing combinatorics (may be tiling data)");
+                    				} catch (Exception ex) {
+                    					flashError("Exception setting packing combinatorics (may be tiling data)");
+                    				}
+//                        			status=false;
+//                        			return -1;
                     				for (int i=1;i<=faceCount;i++) faces[i].plotFlag=1;
+                    				
                     			}
                     		} catch(Exception ex){ // try to reset to previous line and proceed
                     			try {fp.reset();} catch(IOException ioe) {
@@ -2010,8 +2014,11 @@ public class PackData{
         	}
         }
         setGeometry(hes);
-        if (packDCEL==null)
+        if (packDCEL==null) {
         	set_plotFlags();
+        	CirclePack.cpb.msg("Note: traditional packing in p"+this.packNum+
+        			". Call 'DCEL dcel' to attach DCEL structure.");
+        }
         return flags;
     }
     
@@ -4653,7 +4660,7 @@ public class PackData{
 		boolean debug=false;
 		
 		// debugging
-		if (debug) {
+		if (debug) { // debug=true;
 			for (int i=1;i<=nodeCount;i++) {
 				System.err.print("vert "+i+": flower: ");
 				for (int j=0;j<=countFaces(i);j++) System.err.print(" "+kData[i].flower[j]);
@@ -7577,10 +7584,12 @@ public class PackData{
 	}
 
 	/**
-	 * Call for appropriate 'repacking' procedure. This creates tmp 'RePacker'
-	 * and applies methods depending on geometry, topology, bdry/overlap
-	 * conditions, C library availability, and so forth. Can disallow Orick's
-	 * methods in GOpacker. Catches 'PackingException's.
+	 * Call for appropriate 'repacking' procedure. 
+	 * This creates tmp 'RePacker' and applies 
+	 * methods depending on geometry, topology, 
+	 * bdry/overlap conditions, C library availability, 
+	 * and so forth. Can disallow Orick's methods 
+	 * in GOpacker. Catches 'PackingException's.
 	 * @param passes int, max repack cycles
 	 * @param oldRel boolean; true, use old reliable method
 	 * @param useC boolean; true, OK to use Orick's method.
@@ -7777,8 +7786,9 @@ public class PackData{
 	}
 
 	/** 
-	 * Converts packing to spherical, with alpha vertex at north pole.
-	 * (Note: our stereographic projection puts 0 at the NORTH pole.)
+	 * Converts packing to spherical, with alpha 
+	 * vertex at north pole. (Note: our stereographic 
+	 * projection puts 0 at the NORTH pole.)
 	 * Note: does NOT adjust 'CPScreen' geometry.
 	 * @return 1 
 	 */
@@ -10704,16 +10714,23 @@ public class PackData{
 	  public int add_ideal(NodeLink vertlist) {
 	    int count=0,v;
 
-	    if (vertlist==null || vertlist.size()==0) return 0; // no vertices given
+	    if (vertlist==null || vertlist.size()==0) 
+	    	return 0;
 
 	    Iterator<Integer> vlist=vertlist.iterator();
 
 	    while(vlist.hasNext() && isBdry((v=(Integer)vlist.next()))) {
 	        count += ideal_bdry_node(v);
 	    }
-	    if (count==0) return 0;
+	    if (count==0) 
+	    	return 0;
 	    xyzpoint=null;
-	    setCombinatorics();
+	    if (packDCEL!=null) {
+	    	packDCEL.redChain=null;
+	    	packDCEL.fixDCEL_raw(this);
+	    }
+	    else 
+	    	setCombinatorics();
 	    return count;
 	  }
 	  
@@ -10792,9 +10809,20 @@ public class PackData{
 	    }
 	    geom_to_s(); // project to sphere 
   	  	setGeometry(1);
-  	  	Integer b=Integer.valueOf(bdryStarts[1]);
-	    NodeLink vlist=new NodeLink(this,b.toString());
-	    add_ideal(vlist);
+  	  	if (packDCEL!=null) {
+  	  		try { 
+  	  			RawDCEL.addBary_raw(packDCEL,packDCEL.idealFaces[1],false);
+  	  		} catch(Exception ex) {
+  	  			throw new CombException("'proj' dcel error");
+  	  		}
+  	  		packDCEL.redChain=null;
+  	  		packDCEL.fixDCEL_raw(this);
+  	  	}
+  	  	else {
+  	  		Integer b=Integer.valueOf(bdryStarts[1]);
+  	  		NodeLink vlist=new NodeLink(this,b.toString());
+  	  		add_ideal(vlist);
+  	  	}
 	    setCenter(nodeCount,new Complex(0.0,Math.PI));
 	    setRadius(nodeCount,Math.asin(2.0*lam/(1.0+lam*lam)));
 	    if (ratio>0.0 && Math.abs(ratio-1.0)>Mobius.MOB_TOLER) {
@@ -11823,8 +11851,8 @@ public class PackData{
 		  NodeLink vlist=new NodeLink(this);
 		  if (hes>0) { 
 			    for (int i=1;i<=nodeCount;i++) {
-				      if ( (SphericalMath.s_dist(z,getCenter(i))<getRadius(i)) 
-							   && kData[i].plotFlag>0) 
+				      if ( (SphericalMath.s_dist(z,getCenter(i))<getRadius(i))) 
+//							   && kData[i].plotFlag>0) 
 							  vlist.add(i);
 			    }
 		  }
@@ -11856,7 +11884,8 @@ public class PackData{
 			if (hes>0) {
 				for (int i=1;i<=nodeCount;i++) {
 					mydist=SphericalMath.s_dist(z,getCenter(i));
-					if (mydist<getRadius(i) && kData[i].plotFlag>0) 
+					if (mydist<getRadius(i))
+//						&& kData[i].plotFlag>0) 
 						vlist.add(i);
 					if (mydist<dist) {
 						dist = mydist;
@@ -11878,7 +11907,8 @@ public class PackData{
 						rad=getRadius(i);
 					}
 					mydist=z.minus(ectr).abs();
-					if (mydist<rad && kData[i].plotFlag>0) 
+					if (mydist<rad)
+//						&& kData[i].plotFlag>0) 
 						vlist.add(i);
 					if (mydist<dist) {
 						dist = mydist;
@@ -13092,12 +13122,14 @@ public class PackData{
 	    				  
 	    				  // will there be an interior remaining?
 	    				  if (intverts[0]>0) {
+	    					  boolean isbdry=isBdry(tv);
 	    					  ArrayList<Vertex> blist=RawDCEL.rmVert_raw(packDCEL, tv);
 	    					  Iterator<Vertex> bis=blist.iterator();
-	    					  if (isBdry(v)) { // bdry
+	    					  if (!isbdry) { // bdry
 	    						  while (bis.hasNext()) {
 	    							  vert=bis.next();
-	    							  vert.bdryFlag=1;
+	    							  vert.bdryFlag=0;
+	    							  vert.halfedge.twin.face=null;
 	    						  }
 	    					  }
 	    					  didit=true;
