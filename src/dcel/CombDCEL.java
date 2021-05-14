@@ -1734,6 +1734,34 @@ public class CombDCEL {
 	}
 	
 	/** 
+	 * Are v/w bdry and on same bdry component?
+	 * @param v int
+	 * @param w int
+	 * @return boolean
+	 */
+	public static boolean onSameBdryComp(PackDCEL pdcel,int v,int w) {
+		try {
+			Vertex vert=pdcel.vertices[v];
+			Vertex wert=pdcel.vertices[w];
+			if (vert.bdryFlag==0 || wert.bdryFlag==0)
+				return false;
+			if (v==w)
+				return true;
+			HalfEdge vtwin=vert.halfedge.twin;
+			HalfEdge wtwin=wert.halfedge.twin;
+			HalfEdge he=vtwin;
+			do {
+				if (he==wtwin)
+					return true;
+				he=he.next;
+			} while (he!=vtwin);
+			  return false;
+		  } catch(Exception ex) {
+			  throw new CombException("Some comb. error with "+v+" or "+w);
+		  }
+	}
+	
+	/** 
 	 * Remove one vertex. This is called a "puncture" if 'v' has 2 
 	 * generations of interior neighbors. Otherwise, may result in
 	 * bdry vertices with no interior neighbors. 
@@ -2454,12 +2482,7 @@ public class CombDCEL {
 		  // check: pdc1==pdc2 and v1/v2 on same bdry component?
 		  boolean samecomp=false;
 		  if (pdc1==pdc2) {
-			  HalfEdge he=he1.twin;
-			  do {
-				  if (he==he2.twin)
-					  samecomp=true;
-				  he=he.next;
-			  } while (he!=he1.twin && !samecomp);
+			  samecomp=CombDCEL.onSameBdryComp(pdc1,v1,v2);
 		  }
 		  
 		  // proper data?

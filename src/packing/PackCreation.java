@@ -60,15 +60,6 @@ public class PackCreation {
 		int top=pdcel.vertCount;
 		int bottom=pdcel.vertCount-1;
 		
-/*		workPack.add_vert(5);
-		workPack.add_vert(2);
-		workPack.setCombinatorics();
-		// Note: "pointy" verts: 
-		//    top right = nodeCount, bottom left = nodeCount-1. 
-		int top=workPack.nodeCount;
-		int bottom=workPack.nodeCount-1;
-*/
-		
 		// Add mn-2 layers from bottom cclw to top
 		int sz=2; // start with the 2x2 already built
 		while (sz<mn) {
@@ -111,17 +102,9 @@ public class PackCreation {
 			pdcel=CombDCEL.d_adjoin(pdcel, pdcel, top, topleft, mn);
 			top=pdcel.newOld.findV(top);
 			bottom=pdcel.newOld.findV(bottom);
-//			CombDCEL.d_FillInside(pdcel);
 		}
 		
 		if (!debug) { // debug=true;
-//			top=pdcel.newOld.findV(top);
-//			bottom=pdcel.newOld.findV(bottom);
-			
-			// TODO: side-pair problem when top=9 and bottom=6
-			top=9;
-			bottom=6;
-			
 			// adjoin top and bottom edges
 			pdcel=CombDCEL.d_adjoin(pdcel,pdcel,top,bottom,mx);
 		}

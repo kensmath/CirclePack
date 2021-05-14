@@ -425,8 +425,9 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			{
 				int w;
 				for (int v=1;v<=nodeCount;v++) {
+					int[] flower=packData.getFlower(v);
 					for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) 
-						if ((w=packData.kData[v].flower[j])>v) {
+						if ((w=flower[j])>v) {
 							add(new EdgeSimple(v,w));
 							count++;
 						}
@@ -450,23 +451,16 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 					first=a;
 					last=b;
 					
-					// check if first/last are on same boundary component
-					if (first!=last) {
-						next=packData.kData[first].flower[0];
-						boolean hit=false;
-						while (!hit && next!=first) {
-							if (next==last) hit=true;
-							next=packData.kData[next].flower[0];
-						}
-						if (!hit) return count; // not on same bdry component
-					}							
-					// yes, they are, so we take all edges from first, ending at last
-					next=packData.kData[first].flower[0];
+					if (!packData.onSameBdryComp(first, last))
+						return count;
+							
+					// on same component, so take all edges from first, ending at last
+					next=packData.getFirstPetal(first);
 					add(new EdgeSimple(first,next));
 					count++;
 					while (next!=last) {
 						int oldnext=next;
-						next=packData.kData[next].flower[0];
+						next=packData.getFirstPetal(next);
 						add(new EdgeSimple(oldnext,next));
 						count++;
 					}
@@ -474,12 +468,12 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				else { // whole boundary; note 'starts' is indexed from 1
 					for (int i=1;i<=packData.getBdryCompCount();i++) {
 						int strt=packData.bdryStarts[i];
-						next=packData.kData[strt].flower[0];
+						next=packData.getFirstPetal(strt);
 						add(new EdgeSimple(strt,next));
 						count++;
 						while (next!=strt) {
 							int oldnext=next;
-							next=packData.kData[next].flower[0];
+							next=packData.getFirstPetal(next);
 							add(new EdgeSimple(oldnext,next));
 							count++;
 						}
@@ -561,8 +555,9 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				for (int v=1;v<=packData.nodeCount;v++) {
 					m=packData.getVertMark(v);
 					if ((not_m && m==0) || (!not_m && m!=0)) { // this end is marked
+						int[] flower=packData.getFlower(v);
 						for (int j=0;j<packData.countFaces(v)+packData.getBdryFlag(v);j++) {
-							w=packData.kData[v].flower[j];
+							w=flower[j];
 							m=packData.getVertMark(w);
 							// add only if w>v
 							if (w>v && ((not_m && m==0) || (!not_m && m!=0))) {
@@ -579,10 +574,11 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				if (!packData.overlapStatus) break; 
 				int w;
 				for (int v=1;v<=packData.nodeCount;v++) {
+					int[] flower=packData.getFlower(v);
 					for (int j=0;j<packData.countFaces(v)+packData.getBdryFlag(v);j++) {
-						w=packData.kData[v].flower[j];
+						w=flower[j];
 						// add only if w>v
-						if (w>v && Math.abs(packData.getInvDist(v,packData.kData[v].flower[j])-1.0)>PackData.TOLER) {
+						if (w>v && Math.abs(packData.getInvDist(v,flower[j])-1.0)>PackData.TOLER) {
 							add(new EdgeSimple(v,w));
 							count++;
 						}
@@ -694,9 +690,10 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				Iterator<Integer> vlst=vlist.iterator();
 				while (vlst.hasNext()) {
 					int v=vlst.next();
+					int[] flower=packData.getFlower(v);
 					for (int j=0;j<
 						(packData.countFaces(v)+packData.getBdryFlag(v));j++) {
-						int w=packData.kData[v].flower[j];
+						int w=flower[j];
 						int wdeg=packData.countFaces(v)+packData.getBdryFlag(w);
 						boolean incld=false;
 						if (crit[1]<0)
@@ -739,13 +736,15 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 						int s=-1;
 						int t=-1;
 						int k=packData.nghb(v,w);
-						if (!packData.isBdry(v) ||
-								k<packData.countFaces(v))
-							s=packData.kData[v].flower[(k+1)%packData.countFaces(v)];
+						if (!packData.isBdry(v) || k<packData.countFaces(v)) {
+							int[] vflower=packData.getFlower(v);
+							s=vflower[(k+1)%packData.countFaces(v)];
+						}
 						k=packData.nghb(w,v);
-						if (!packData.isBdry(w) ||
-								k<packData.countFaces(w))
-							t=packData.kData[w].flower[(k+1)%packData.countFaces(w)];
+						if (!packData.isBdry(w) || k<packData.countFaces(w)) {
+							int[] wflower=packData.getFlower(w);
+							t=wflower[(k+1)%packData.countFaces(w)];
+						}
 						if (s==-1 && t==-1) 
 							throw new CombException("no common verts to edge "+v+" "+w);
 						int sdeg,tdeg;
@@ -849,8 +848,9 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 					vlist=vertlist.iterator();
 					while (vlist.hasNext()) {
 						v=(Integer)vlist.next();
+						int[] flower=packData.getFlower(v);
 						for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) {
-							int w=packData.kData[v].flower[j];
+							int w=flower[j];
 							if (!bothvw || (v<w && vs[w]==1)) {
 								add(new EdgeSimple(v,w));
 								count++;
@@ -886,14 +886,16 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 					while (elist.hasNext()) {
 						edge=(EdgeSimple)elist.next();
 						v=edge.v;
+						int[] flower=packData.getFlower(v);
 						for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) {
-							w=packData.kData[v].flower[j];
+							w=flower[j];
 							if (w!=edge.w) add(new EdgeSimple(v,w));
 							count++;
 						}
 						w=edge.w;
+						flower=packData.getFlower(w);
 						for (int j=0;j<(packData.countFaces(w)+packData.getBdryFlag(w));j++) {
-							v=packData.kData[w].flower[j];
+							v=flower[j];
 							if (v!=edge.v) add(new EdgeSimple(w,v));
 							count++;
 						}
@@ -1270,7 +1272,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	 * Return a combinatorial geodesic between two sets of
 	 * vertices. This can fail in various ways, so exceptions
 	 * must be caught. There may be multiple shortest paths,
-	 * even with same endpoint; this returns the first encountered.
+	 * even with same endpoints; this returns the first encountered.
 	 * 
 	 * TODO: might look for the shortest with certain preference,
 	 * for example, with most symmetry, closest to hex, etc.
@@ -1284,11 +1286,11 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	 */
 	public static EdgeLink getCombGeo(PackData p,
 			NodeLink seeds,NodeLink targets,NodeLink nonos) 
-	 throws CombException {
+					throws CombException {
 		int []book=new int[p.nodeCount+1];
 		if (seeds==null || seeds.size()==0 
 				|| targets==null || targets.size()==0) 
-			throw new CombException("no 'seeds' or no 'targets'");
+			throw new CombException("no 'seeds' and/or no 'targets'");
 		int maxdist=p.nodeCount;
 		
 		// mark the 'nonos' as -1, targets as -2
@@ -1329,8 +1331,9 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			Iterator<Integer> prevG=prevGen.iterator();
 			while (prevG.hasNext() && safty>0) {
 				int v=prevG.next();
+				int[] flower=p.getFlower(v);
 				for (int j=0;j<(p.countFaces(v)+p.getBdryFlag(v));j++) {
-					int k=p.kData[v].flower[j];
+					int k=flower[j];
 					
 					// new vertex
 					if (book[k]==0) {
@@ -1365,8 +1368,9 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 		int gen=book[theOne]-1;
 		while (gen>0) {
 			int ed=-1;
+			int[] flower=p.getFlower(start);
 			for (int j=0;j<(p.countFaces(start)+p.getBdryFlag(start));j++) {
-				int k=p.kData[start].flower[j];
+				int k=flower[j];
 				if (book[k]==gen) {
 					ed=k;
 					j=p.nodeCount+1; // kick out

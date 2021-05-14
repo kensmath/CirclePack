@@ -2601,7 +2601,7 @@ public class PackData{
 	
 	/**
 	 * Return the bdryFlag of vertex v; often used for its
-	 * value '1' in for loops.
+	 * value '1' to be used in 'for' loops.
 	 * @param v int
 	 * @return int (should be 0 or 1)
 	 */
@@ -2619,7 +2619,8 @@ public class PackData{
 	}
 	
 	/**
-	 * Is this a boundary vertex?
+	 * Is this a boundary vertex? Depends on bdry edges
+	 * being identified with 'faceIndx'<0.
 	 * @param v int
 	 * @return boolean
 	 */
@@ -2646,6 +2647,31 @@ public class PackData{
 			return packDCEL.vertices[v].halfedge.isNghb(w);
 		if (nghb(v,w)>=0)
 			return true;
+		return false;
+	}
+	
+	/**
+	 * Are v, w bdry and on same bdry component?
+	 * @param v int
+	 * @param w int
+	 * @return boolean
+	 */
+	public boolean onSameBdryComp(int v,int w) {
+		if (!isBdry(v) || !isBdry(w))
+			return false;
+		if (v==w)
+			return true;
+		if (packDCEL!=null) {
+			return CombDCEL.onSameBdryComp(packDCEL,v,w);
+		}
+		
+		// traditional packing
+		int nxt=kData[v].flower[0];
+		while (nxt!=v) {
+			if (nxt==w) 
+				return true;
+			nxt=kData[nxt].flower[0];
+		}
 		return false;
 	}
 	
@@ -3279,9 +3305,11 @@ public class PackData{
 	 * @return int index, -1 on problem
 	 */
 	public int nghb(int v,int w) {
-		if (v<1 || v>nodeCount || w<1 || w>nodeCount) return -1;
+		if (v<1 || v>nodeCount || w<1 || w>nodeCount) 
+			return -1;
+		int[] flower=getFlower(v);
 		for (int j=0;j<=countFaces(v);j++)
-			if (kData[v].flower[j]==w) return j;
+			if (flower[j]==w) return j;
 		return -1;
 	}
 	
@@ -4381,7 +4409,17 @@ public class PackData{
 	 * @return EdgeSimple
 	 */
 	public EdgeSimple getEdge(int v,int w) {
-		if (nghb(v,w)>=0) return new EdgeSimple(v,w);
+		EdgeSimple edge=new EdgeSimple(v,w);
+		HalfEdge he=null;
+		if (packDCEL!=null) {
+			if ((he=packDCEL.findHalfEdge(edge))!=null) 
+				return edge;
+			return null;
+		}
+		
+		// traditional packing
+		if (nghb(v,w)>=0) 
+			return new EdgeSimple(v,w);
 		return (EdgeSimple)null;
 	}
 	
