@@ -317,11 +317,20 @@ public class DisplayParser {
 				//   of the first face separately here; the third is handled 
 				//   in layout_facelist call.
 				if (c == 'C' || c == 'B') {
-					int indx = p.faces[first_face].indexFlag;
-
-					Face face = p.faces[first_face];
-					for (int i = 0; i < 2; i++) {
-						v = face.vert[(indx + i) % 3];
+					int[] trip=new int[2];
+					if (p.packDCEL!=null) {
+						HalfEdge strt=p.packDCEL.faces[first_face].edge;
+						trip[0]=strt.origin.vertIndx;
+						trip[1]=strt.next.origin.vertIndx;
+					}
+					else {
+						int indx = p.faces[first_face].indexFlag;
+						Face face = p.faces[first_face];
+						trip[0]=face.vert[indx];
+						trip[1]=face.vert[(indx+1)%3];
+					}
+					for (int i=0;i<2;i++) {
+						v=trip[i];
 						z = p.getCenter(v);
 						
 						// set up color (there's only one)

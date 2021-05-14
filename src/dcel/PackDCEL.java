@@ -1409,7 +1409,7 @@ public class PackDCEL {
 	public HalfEdge vertIsBdry(Vertex v) {
 		HalfEdge nxtedge=v.halfedge;
 		do {
-			if (idealFaceCount>0 && nxtedge.twin.face.faceIndx<0) // ideal face?
+			if (nxtedge.twin.face.faceIndx<0) // ideal face?
 				return nxtedge;
 			nxtedge=nxtedge.prev.twin;
 		} while(nxtedge!=v.halfedge);

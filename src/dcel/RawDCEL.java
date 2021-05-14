@@ -485,20 +485,20 @@ public class RawDCEL {
 		   * Add a layer of nodes to bdry segment from vertex v1 to v2.
 		   * Three modes:
 		   * 
-		   * TENT: add one-on-one layer, a new bdry vert for 
+		   * TENT=0: add one-on-one layer, a new bdry vert for 
 		   *   each edge between v1 and v2. Unless v1==v2, 
 		   *   v1 and v2 remain as bdry vertices.	
 		   *   
-		   * DEGREE: add nghb's to make vertices from v1 to v2,
+		   * DEGREE=1: add nghb's to make vertices from v1 to v2,
 		   *   inclusive, interior with degree d. However, no edge
 		   *   should connect existing bdry vertices. If v1==v2 or
 		   *   v1 is nghb of v2, do whole bdry component.
 		   *   
-		   * DUPLICATE: attach "square" face with bary center 
+		   * DUPLICATE=2: attach "square" face with bary center 
 		   *   to each edge between v1 and v2. Unless v1==v2, 
 		   *   v1 and v2 remain on bdry.
 		   *   
-		   * Calling routine updates combinatorics.
+		   * Calling routine checks v1,v2 and updates combinatorics.
 		   * @param pdcel PackDCEL
 		   * @param mode int, how to add: 0=TENT, 1=DEGREE, 2=DUPLICATE
 		   * @param degree int
@@ -570,7 +570,7 @@ public class RawDCEL {
 
 	/**
 	   * Add vertex nghb'ing bdry vertex w and clw bdry nghb.
-	   * Set 'vutil' to 'w'.
+	   * Set 'vutil' to 'w'. Requires red chain and adjusts it.
 	   * @param pdcel PackDCEL
 	   * @param w int
 	   * @return new Vertex
@@ -670,11 +670,15 @@ public class RawDCEL {
 		  e2.origin.halfedge=e2;
 	
 		  // fix vert
-		  pdcel.vertices[node]=new_vert;
+		  pdcel.vertCount++;
+		  Vertex[] newvertices=new Vertex[pdcel.vertCount+1];
+		  for (int j=1;j<pdcel.vertCount;j++)
+			  newvertices[j]=pdcel.vertices[j];
+		  newvertices[node]=new_vert;
+		  pdcel.vertices=newvertices;
 		  new_vert.bdryFlag=1;
 		  new_vert.redFlag=true;
 		  new_vert.vutil=w;
-		  pdcel.vertCount++;
 	
 		  return new_vert;
 	  }

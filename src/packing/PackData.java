@@ -2534,14 +2534,25 @@ public class PackData{
 	}
 	
 	/**
-	 * get number of faces at 'v'
+	 * get number of non-ideal faces at 'v'; should work with raw
+	 * structure.
 	 * @param v int
 	 * @return int (usual meaning of 'num')
 	 */
 	public int countFaces(int v) {
-		if (packDCEL!=null)
-			return vData[v].num;
-		return kData[v].num;
+		if (packDCEL==null)
+			return kData[v].num;
+		Vertex vert=packDCEL.vertices[v];
+		HalfEdge he=vert.halfedge;
+		int count=0;
+		if (he.face!=null && he.twin.face.faceIndx<0)
+			count--;
+		do {
+			he=he.prev.twin;
+			count++;
+		} while (he!=vert.halfedge && 
+				(he.twin.face==null || he.twin.face.faceIndx>=0));
+		return count;
 	}
 	
 	/**
@@ -2614,7 +2625,8 @@ public class PackData{
 	 */
 	public boolean isBdry(int v) {
 		if (packDCEL!=null) {
-			if (vData[v].getBdryFlag()!=0)
+			HalfEdge he=packDCEL.vertices[v].halfedge;
+			if (he.twin.face!=null && he.twin.face.faceIndx<0)
 				return true;
 			return false;
 		}
@@ -2809,10 +2821,12 @@ public class PackData{
 	 * @return new Complex
 	 */
 	public Complex getCenter(int v) {
-		Complex z= new Complex(rData[v].center);
+		Complex z=null; 
 		if (packDCEL!=null) {
 			z=packDCEL.getVertCenter(packDCEL.vertices[v].halfedge);
 		}
+		else
+			z=new Complex(rData[v].center);
 		return z;
 	}
 	

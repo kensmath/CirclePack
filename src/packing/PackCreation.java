@@ -9,6 +9,7 @@ import complex.Complex;
 import complex.MathComplex;
 import dcel.CombDCEL;
 import dcel.PackDCEL;
+import dcel.RawDCEL;
 import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.ParserException;
@@ -40,6 +41,8 @@ public class PackCreation {
 	 */
 	public static PackData hexTorus(int H,int W) {
 
+		boolean debug=false;
+		
 		int mx=H;
 		int mn=W;
 		if (W>H) {
@@ -49,42 +52,49 @@ public class PackCreation {
 		
 		// start with usual hex flower, make base 3x3 parallelogram
 		PackData workPack=PackCreation.seed(6, 0);
-		workPack.add_vert(5);
+		PackDCEL pdcel=workPack.packDCEL;
+		RawDCEL.addVert_raw(pdcel,5);
+		RawDCEL.addVert_raw(pdcel,2);
+		// Note: "pointy" verts: 
+		//    top right = nodeCount, bottom left = nodeCount-1. 
+		int top=pdcel.vertCount;
+		int bottom=pdcel.vertCount-1;
+		
+/*		workPack.add_vert(5);
 		workPack.add_vert(2);
 		workPack.setCombinatorics();
 		// Note: "pointy" verts: 
 		//    top right = nodeCount, bottom left = nodeCount-1. 
 		int top=workPack.nodeCount;
 		int bottom=workPack.nodeCount-1;
-
+*/
+		
 		// Add mn-2 layers from bottom cclw to top
-		int sz=2; // start with 2x2 already built
+		int sz=2; // start with the 2x2 already built
 		while (sz<mn) {
-			int w=workPack.kData[top].flower[workPack.countFaces(top)];
-			int v=workPack.kData[bottom].flower[0];
+			int w=workPack.getLastPetal(top);
+			int v=workPack.getFirstPetal(bottom);
 			workPack.add_layer(1,6,v,w);
 			
 			// add the new pointy ends
-			workPack.add_vert(top+1); // new bottom
-			bottom=workPack.nodeCount;
-			workPack.add_vert(top); // new top
-			workPack.setCombinatorics();
-			top=workPack.nodeCount;
+			RawDCEL.addVert_raw(pdcel,top+1); // new bottom
+			bottom=pdcel.vertCount;
+			RawDCEL.addVert_raw(pdcel,top); // new top
+			top=pdcel.vertCount;
 			sz++;
 		}
 		
 		// now, add mx-mn additional layers along the right edge
 		int tick=0;
 		while (tick<(mx-mn)) {
-			int th=workPack.kData[top].flower[workPack.countFaces(top)];
+			int th=workPack.getLastPetal(top);
 			int w=th;
 			for (int j=2;j<mn;j++) {
-				w=workPack.kData[w].flower[workPack.countFaces(w)];
+				w=workPack.getLastPetal(w);
 			}
 			workPack.add_layer(1,6,w,th);
-			workPack.add_vert(top); // new pointy top
-			workPack.setCombinatorics();
-			top=workPack.nodeCount;
+			RawDCEL.addVert_raw(pdcel,top); // new pointy top
+			top=pdcel.vertCount;
 			tick++;
 		}
 		
@@ -93,18 +103,30 @@ public class PackCreation {
 		//   indices after the first 'adjoin'
 		int topleft=bottom;
 		for (int j=1;j<=mn;j++) {
-			topleft=workPack.kData[topleft].flower[workPack.countFaces(topleft)];
+			topleft=workPack.getLastPetal(topleft);
 		}
 
-		// adjoin right edge to left edge for annulus 
-		workPack.adjoin(workPack,top, topleft, mn);
-		workPack.setCombinatorics();
+		if (!debug) { // debug=true;
+			// adjoin right edge to left edge for annulus
+			pdcel=CombDCEL.d_adjoin(pdcel, pdcel, top, topleft, mn);
+			top=pdcel.newOld.findV(top);
+			bottom=pdcel.newOld.findV(bottom);
+//			CombDCEL.d_FillInside(pdcel);
+		}
 		
-		top=workPack.vertexMap.findW(top);
-		bottom=workPack.vertexMap.findW(bottom);
-		// adjoin top and bottom edges
-		workPack.adjoin(workPack,top,bottom, mx);
-		workPack.setCombinatorics();
+		if (!debug) { // debug=true;
+//			top=pdcel.newOld.findV(top);
+//			bottom=pdcel.newOld.findV(bottom);
+			
+			// TODO: side-pair problem when top=9 and bottom=6
+			top=9;
+			bottom=6;
+			
+			// adjoin top and bottom edges
+			pdcel=CombDCEL.d_adjoin(pdcel,pdcel,top,bottom,mx);
+		}
+		
+		pdcel.fixDCEL_raw(workPack);
 		return workPack;
 
 	}
@@ -370,6 +392,22 @@ public class PackCreation {
 	 * @return @see PackData
 	 */
 	public static PackData hexBuild(int n) {
+		PackDCEL pdcel=CombDCEL.seed_raw(6);
+		PackData p=new PackData(null);
+		pdcel.p=p;
+		pdcel=CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha);
+		for (int k=2;k<=n;k++) {
+			int m=pdcel.vertCount;
+			int ans=RawDCEL.addlayer_raw(pdcel,1,6,m,m);
+//			pdcel=CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha);
+			if (ans<=0)
+				return null;
+		}
+		pdcel.fixDCEL_raw(p);
+		return p;
+	}
+			
+/*		}
 		PackData newPack=PackCreation.seed(6,0);
 		for (int j=1;j<n;j++) {
 			int v=newPack.bdryStarts[1];
@@ -388,6 +426,7 @@ public class PackCreation {
 		
 		return newPack;
 	}
+*/
 	
 	/**
 	 * TODO: this code isn't called yet, should replace 'hexbuild' sometimes.

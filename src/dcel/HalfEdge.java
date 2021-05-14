@@ -2,6 +2,7 @@ package dcel;
 
 import java.awt.Color;
 
+import exceptions.CombException;
 import komplex.EdgeSimple;
 import util.ColorUtil;
 
@@ -109,6 +110,25 @@ public class HalfEdge {
 		if (!hits) 
 			return null;
 		return maroon;
+	}
+	
+	/**
+	 * This halfedge should be in a closed cycle of
+	 * halfedges; return the count.
+	 * @return int
+	 */
+	public int getCycleCount() {
+		int count=0;
+		HalfEdge he=this;
+		int safety=1000;
+		do {
+			count++;
+			safety--;
+			he=he.next;
+		} while (he!=this && safety>0);
+		if (safety==0)
+			throw new CombException("edge "+this+" cycle does not close up");
+		return count;
 	}
 
 	/** 
