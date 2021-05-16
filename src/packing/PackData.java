@@ -2701,7 +2701,23 @@ public class PackData{
 		return kData[v].flower;
 	}
 	
-	/** for bdry vert 'v', get the last cclw petal.
+	/** 
+	 * the first cclw petal. If not bdry, this is
+	 * rather ambiguous.
+	 * @param v int
+	 * @return int
+	 */
+	public int getFirstPetal(int v) {
+		if (packDCEL!=null) {
+			Vertex vert=packDCEL.vertices[v];
+			return vert.halfedge.twin.origin.vertIndx;
+		}
+		// traditional packing
+		return kData[v].flower[0];
+	}
+
+	/** 
+	 * for bdry vert 'v', get the last cclw petal.
 	 * @param v int
 	 * @return int, -1 if not bdry
 	 */
@@ -2716,20 +2732,18 @@ public class PackData{
 		return kData[v].flower[countFaces(v)];
 	}
 	
-	/** the first cclw petal. If not bdry, this is
-	 * rather ambiguous.
+	/**
+	 * get the jth petal for vertex v.
 	 * @param v int
+	 * @param j int
 	 * @return int
 	 */
-	public int getFirstPetal(int v) {
-		if (packDCEL!=null) {
-			Vertex vert=packDCEL.vertices[v];
-			return vert.halfedge.twin.origin.vertIndx;
-		}
-		// traditional packing
-		return kData[v].flower[0];
+	public int getPetal(int v, int j) {
+		int[] flower=getFlower(v);
+		if (j<0 || j>=flower.length)
+			throw new CombException("flower for "+v+" does not have petal index "+j);
+		return flower[j];
 	}
-
 	
 	/**
 	 * Get array of cclw nghb'ing face indices, closed if
@@ -2899,43 +2913,92 @@ public class PackData{
 	 * @param color Color 
 	 */
 	public void setCircleColor(int v,Color color) {
-		if (packDCEL!=null) {
-			try {
+		try {
+		if (packDCEL!=null) 
 				vData[v].setColor(color);
-			} catch(Exception ex) {}
-		}
 		else
 			kData[v].color=ColorUtil.cloneMe(color);
+		} catch(Exception ex) {}
 	}
 	
+	public int getVertUtil(int v) {
+		if (packDCEL!=null)
+			return packDCEL.vertices[v].vutil;
+		else
+			return kData[v].utilFlag;
+	}
+	
+	public void setVertUtil(int v,int m) {
+		if (packDCEL!=null)
+			packDCEL.vertices[v].vutil=m;
+		else
+			kData[v].utilFlag=m;
+	}
+
 	public int getVertMark(int v) {
-		if (packDCEL!=null) {
+		if (packDCEL!=null)
 			return vData[v].mark;
-		}
 		else 
 			return kData[v].mark;
 	}
 	
 	public void setVertMark(int v,int m) {
-		if (packDCEL!=null) {
+		if (packDCEL!=null) 
 			vData[v].mark=m;
-		}
 		else 
 			kData[v].mark=m;
 	}
 	
+	public int getPlotFlag(int v) {
+		if (packDCEL!=null) 
+			return vData[v].plotFlag;
+		return kData[v].plotFlag;
+	}
+	
+	public void setQualFlag(int v,int m) {
+		if (packDCEL!=null) 
+			vData[v].qualFlag=m;
+		else 
+			kData[v].qualFlag=m;
+	}
+	
+	public int getFacePlotFlag(int f) {
+		if (packDCEL!=null)
+			return packDCEL.faces[f].plotFlag;
+		else
+			return faces[f].plotFlag;
+	}
+	
+	public void setFacePlotFlag(int f,int m) {
+		if (packDCEL!=null)
+			packDCEL.faces[f].plotFlag=m;
+		else
+			faces[f].plotFlag=m;
+	}
+	
+	public int getQualFlag(int v) {
+		if (packDCEL!=null) 
+			return vData[v].qualFlag;
+		return kData[v].qualFlag;
+	}
+	
+	public void setPlotFlag(int v,int m) {
+		if (packDCEL!=null) 
+			vData[v].plotFlag=m;
+		else 
+			kData[v].plotFlag=m;
+	}
+	
 	public int getFaceMark(int f) {
-		if (packDCEL!=null) {
+		if (packDCEL!=null) 
 			return packDCEL.faces[f].mark;
-		}
 		else 
 			return faces[f].mark;
 	}
 	
 	public void setFaceMark(int f,int m) {
-		if (packDCEL!=null) {
+		if (packDCEL!=null) 
 			packDCEL.faces[f].mark=m;
-		}
 		else 
 			faces[f].mark=m;
 	}
@@ -3860,7 +3923,8 @@ public class PackData{
 	}
 	
 	/**
-	 * Return two ends of dual edge, possibly complicated for non-simply connected
+	 * Return two ends of dual edge, possibly complicated for 
+	 * non-simply connected
 	 * @param edge EdgeSimple
 	 * @param ambigZs Ambiguous[]
 	 * @return Complex[2]
@@ -4034,8 +4098,10 @@ public class PackData{
 	}
 	
 	/** 
-	 * Check if faces f2 and f1 share an edge e. Return index of begin vertex of e in 
-	 * 'vert' data of face f1 or return -1 if face f1 doesn't share edge e with face f2.
+	 * Check if faces f2 and f1 share an edge e. Return index 
+	 * of begin vertex of e (relative to f1) in 'vert' data 
+	 * of face f1 or return -1 if face f1 doesn't share edge 
+	 * e with face f2.
 	 * @param f2 int
 	 * @param f1 int, (NOTE the order of arguments!)
 	 * @return -1 if f1 doesn't share edge with f2 or if f1==f2.
@@ -4045,15 +4111,14 @@ public class PackData{
 
 	  if (f2<1 || f2 > faceCount || f1<1 || f1 > faceCount || f2==f1) 
 	    return -1;
-	  for (nj=0;nj<=2;nj++)
-	    {
+	  for (nj=0;nj<=2;nj++) {
 	      v1=faces[f1].vert[nj];
 	      v2=faces[f1].vert[(nj+1)%3];
 	      for (mj=0;mj<=2;mj++)
-		if ( (v1==faces[f2].vert[mj]) && 
-		     (v2==faces[f2].vert[(mj+2)%3]) )
-		  return nj;
-	    }
+	    	  if ( (v1==faces[f2].vert[mj]) && 
+	    			  (v2==faces[f2].vert[(mj+2)%3]) )
+	    		  return nj;
+	  }
 	  return -1;
 	}
 
@@ -4272,11 +4337,41 @@ public class PackData{
 		return kData[v].flower[(nghb(v,w)+half)% countFaces(v)];
 	}
 	
+	/**
+	 * Find an common edge opposite to both v and w.
+	 * v will be to its left, w to its right.
+	 * CAUTION: edge may not be unique.
+	 * @param v int
+	 * @param w int
+	 * @return EdgeSimple, null on failure
+	 */
+	public EdgeSimple getCommonEdge(int v, int w) {
+		if (packDCEL!=null) {
+			HalfEdge he=RawDCEL.getCommonEdge(packDCEL, v, w);
+			return HalfEdge.getEdgeSimple(he);
+		}
+		
+		// traditional
+		int[] faceflower=kData[v].faceFlower;
+		int num=kData[v].num;
+		for (int j=0;j<num;j++) {
+			int f=faceflower[j];
+			Face face=faces[f];
+			int g=this.face_opposite(face, v);
+			int indx=face_nghb(f,g);
+			int[] gverts=getFaceVerts(g);
+			if (gverts[(indx+1)%3]==w)
+				return new EdgeSimple(gverts[indx],gverts[(indx+2)%3]);
+		}
+		return null;
+	}
+		
 	/** 
-	 * Find common nghb x to v and w which is on left of directed edge (v,w).
+	 * Find index of common nghb u to v and w which 
+	 * is on left of directed edge (v,w).
 	 * @param int v, beginning vert
 	 * @param int w, ending vert
-	 * @return int, indx of x in flower of v, -1 if none exists
+	 * @return int, indx of u in flower of v, -1 if none exists
 	*/
 	public int find_common_left_nghb(int v,int w) {
 		int i=nghb(v,w);
@@ -4294,10 +4389,12 @@ public class PackData{
 	 * @return boolean
 	 */
 	public boolean faces_incident(int f1,int f2) {
-		int []vert=faces[f1].vert;
+		int[] vert1=getFaceVerts(f1);
+		int[] vert2=getFaceVerts(f2);
 		for (int j=0;j<3;j++) {
-			int v=faces[f2].vert[j];
-			if (v==vert[0] || v==vert[1] || v==vert[2]) return true;
+			int v=vert2[j];
+			if (v==vert1[0] || v==vert1[1] || v==vert1[2]) 
+				return true;
 		}
 		return false;
 	}
@@ -4410,9 +4507,8 @@ public class PackData{
 	 */
 	public EdgeSimple getEdge(int v,int w) {
 		EdgeSimple edge=new EdgeSimple(v,w);
-		HalfEdge he=null;
 		if (packDCEL!=null) {
-			if ((he=packDCEL.findHalfEdge(edge))!=null) 
+			if (packDCEL.findHalfEdge(edge)!=null) 
 				return edge;
 			return null;
 		}
@@ -5727,8 +5823,8 @@ public class PackData{
 	 * Reset 'plotFlags' to 1 (true)
 	 */
 	public void set_plotFlags() {
-		for (int i=1;i<=nodeCount;i++)
-			kData[i].plotFlag=1;
+		for (int i=1;i<=nodeCount;i++) 
+			setPlotFlag(i,1);
 	}
 	
 	/** 
@@ -5826,15 +5922,16 @@ public class PackData{
 	  int count=0;
 
 	  int num=countFaces(vert)+getBdryFlag(vert);
+	  int[] flower=getFlower(vert);
 	  if (opt==1) {n1=n0; n=1;}
 	  /*  use original center already computed??
 	      if (kData[vert].plot_flag>0) z=rData[vert].center;*/
 	  Complex z=new Complex(0.0,0.0);
 	  for (int i=n1;i<(n1+n);i++) {
 		  CircleSimple sc;
-	    int j=kData[vert].flower[i % num];
-	    int k=kData[vert].flower[(i+1) % num];
-	    if (npf || (kData[j].plotFlag > 0 && kData[k].plotFlag > 0)) {
+	    int j=flower[i % num];
+	    int k=flower[(i+1) % num];
+	    if (npf || (getPlotFlag(j) > 0 && getPlotFlag(k) > 0)) {
 	    	
 				if (overlapStatus) {
 					double o1 = getInvDist(k,vert);
@@ -5923,9 +6020,14 @@ public class PackData{
 	  
 	  if (debug) LayoutBugs.print_drawingorder(this,true);
 
-	  if ((euler==1 || euler==2) && genus==0) simp_conn_flag=true;
-	  for (int j=1;j<=nodeCount;j++) kData[j].plotFlag=kData[j].qualFlag=0;
-	  for (int j=1;j<=faceCount;j++) faces[j].plotFlag=1;
+	  if ((euler==1 || euler==2) && genus==0) 
+		  simp_conn_flag=true;
+	  for (int j=1;j<=nodeCount;j++) { 
+		  setPlotFlag(j,0);
+		  setQualFlag(j,0);
+	  }
+	  for (int j=1;j<=faceCount;j++) 
+		  setFacePlotFlag(j,1);
 	  nf=firstFace;
 	  File file=null;
 	  
@@ -9433,7 +9535,7 @@ public class PackData{
 	  /**
 	   * Flip edges from a prepared list
 	   * @param fliplist EdgeLink
-	   * @return int, count
+	   * @return int, count, 0 on error
 	   */
 	  public int flipList(EdgeLink fliplist) {
 		  if (fliplist==null || fliplist.size()==0) {
@@ -9488,8 +9590,9 @@ public class PackData{
 	    double []newol;
 
 	    if (flag==3) { // must find common neighbor to get edge to flip 
-	        if ((ind_c=find_common_left_nghb(v,w))<0) return 0;
-	        else return (flip_edge(kData[v].flower[ind_c],kData[v].flower[ind_c+1],2));
+	        EdgeLink elink=new EdgeLink();
+	        elink.add(getCommonEdge(v,w));
+	        return flipList(elink);
 	    }
 	    
 	    if (!flipable(v,w)) {
@@ -9497,14 +9600,15 @@ public class PackData{
 	    	return 0;
 	    }
 	    
-	    int lv=kData[v].flower[(ind_v=nghb(v,w))+1];
-	    int rv=kData[w].flower[(ind_w=nghb(w,v))+1];
+	    int lv=getPetal(v,(ind_v=nghb(v,w))+1);
+	    int rv=getPetal(w,(ind_w=nghb(w,v))+1);
 	        
 	    // adjust flower of v 
 	    int []newflower=new int[countFaces(v)];
-	    for (int j=0;j<ind_v;j++) newflower[j]=kData[v].flower[j];
+	    for (int j=0;j<ind_v;j++) 
+	    	newflower[j]=getPetal(v,j);
 	    for (int j=ind_v+1;j<=countFaces(v);j++)
-	  	newflower[j-1]=kData[v].flower[j];
+	    	newflower[j-1]=getPetal(v,j);
 	    kData[v].flower=newflower;
 	    if (overlapStatus) {
 	    	newol=new double[countFaces(v)];
@@ -10278,8 +10382,8 @@ public class PackData{
 
 	  /** 
 	   * Return an int array with the generations of verts, 
-	   * generation "1" being those v with 'kData[v].utilFlag' non-zero. 
-	   * 'utilFlag' does not get changed during this method. Additional
+	   * generation "1" being those v with 'util' non-zero. 
+	   * 'util' does not get changed during this method. Additional
 	   * info is returned in 'uP'.  
 	   * @param max int, if max>0, then stop at last vert with generation = max.
 	   * @param uP UtilPacket; instantiated by calling routine: returns last 
@@ -10288,16 +10392,16 @@ public class PackData{
 	   * @return int[], int[u]=generation of u; return null on error
 	   */
 	public int[] label_generations(int max, UtilPacket uP) {
-		int last_vert = nodeCount, j, gen_count = 2;
-		int[] final_list;
+		int last_vert = nodeCount;
+		int gen_count = 2;
 		int count = 0;
 
-		final_list = new int[nodeCount + 1];
+		int[] final_list = new int[nodeCount + 1];
 		NodeLink genlist = new NodeLink(this);
 
 		// first generation identified by nonzero utilFlag's
 		for (int i = 1; i <= nodeCount; i++)
-			if (kData[i].utilFlag != 0) {
+			if (getVertUtil(i) != 0) {
 				final_list[i] = 1;
 				count++;
 				genlist.add(i);
@@ -10309,14 +10413,16 @@ public class PackData{
 			return null;
 
 		boolean hits = true;
+		int j=0;
 		while (hits && genlist.size() > 0 && (max <= 0 || gen_count <= max)) {
 			hits = false;
 			NodeLink vertlist = genlist; // process old list
 			genlist = new NodeLink(this); // start new list
 			do {
 				int v = vertlist.remove(0);
+				int[] flower=getFlower(v);
 				for (int i = 0; i <= countFaces(v); i++)
-					if (final_list[(j = kData[v].flower[i])] == 0) {
+					if (final_list[(j = flower[i])] == 0) {
 						final_list[j] = gen_count;
 						count++;
 						last_vert = j;
@@ -11823,18 +11929,21 @@ public class PackData{
 		  p.activeNode=activeNode;
 		  p.packExtensions=new Vector<PackExtender>(2); // old are lost
 
-		  // copy rData and kData
-		  for (int v=1;v<=nodeCount;v++) {
-			  p.kData[v]=kData[v].clone();
-			  p.rData[v]=rData[v].clone();
-		  }
-		  
 		  if (packDCEL!=null) {
-			  p.packDCEL=CombDCEL.cloneDCEL(packDCEL);
+			  PackDCEL pdcel=CombDCEL.cloneDCEL(packDCEL);
+			  p.attachDCEL(pdcel);
 			  p.packDCEL.p=p;
 			  p.vData=new VData[nodeCount+1];
 			  for (int v=1;v<=nodeCount;v++) 
 				  p.vData[v]=vData[v].clone();
+		  }
+		  
+		  // traditional: copy rData and kData
+		  else {
+			  for (int v=1;v<=nodeCount;v++) {
+				  p.kData[v]=kData[v].clone();
+				  p.rData[v]=rData[v].clone();
+			  }
 		  }
 		  
 		  // copy tile data, if it exists
@@ -11856,7 +11965,8 @@ public class PackData{
 		  // copy xyz data 
 		  if (xyzpoint!=null) {
 			  p.xyzpoint=new Point3D[nodeCount+1];
-			  for (int i=1;i<=nodeCount;i++) p.xyzpoint[i]=xyzpoint[i];
+			  for (int i=1;i<=nodeCount;i++) 
+				  p.xyzpoint[i]=xyzpoint[i];
 		  }
 		  p.status=true;
 		  return p;
@@ -11915,7 +12025,8 @@ public class PackData{
 			      }
 			  }
 		  }
-		  if (vlist.size()==0) return (NodeLink)null;
+		  if (vlist.size()==0) 
+			  return (NodeLink)null;
 		  return vlist;
 		} 
 		
@@ -12178,8 +12289,9 @@ public class PackData{
 		Complex fz;
 		int num = countFaces(circle);
 		double[] args = new double[num + 1];
+		int[] flower=getFlower(circle);
 		for (int k = 0; k < (num + getBdryFlag(circle)); k++) {
-			int j = kData[circle].flower[k];
+			int j = flower[k];
 			fz = getCenter(j);
 			if (hes < 0) {
 				sc = HyperbolicMath.h_to_e_data(fz, getRadius(j));
@@ -12208,7 +12320,7 @@ public class PackData{
 
 		// done
 		goit = new EdgeLink(this);
-		goit.add(new EdgeSimple(circle, kData[circle].flower[petal]));
+		goit.add(new EdgeSimple(circle,flower[petal]));
 		return goit;
 	}
 
@@ -12230,6 +12342,9 @@ public class PackData{
 
 	/** 
 	 * Is z in circle n (eucl/hyp only)? 
+	 * @param n int
+	 * @param z Complex
+	 * @return int, 0 on failure
 	*/
 	public int pt_in_cir(int n,Complex z) {
 		double rad=.5;
@@ -12237,7 +12352,8 @@ public class PackData{
 		Complex ectr=null;
 	  
 		if (hes>0) {
-			if (SphericalMath.s_dist(z,getCenter(n))<getRadius(n)) return 1;
+			if (SphericalMath.s_dist(z,getCenter(n))<getRadius(n)) 
+				return 1;
 			return 0;
 		}
 		if (hes<0) {
@@ -12250,8 +12366,9 @@ public class PackData{
 		    ectr=getCenter(n);
 		}
 		w=z.minus(ectr);
-		if (w.abs()<rad) return 1;
-			return 0;
+		if (w.abs()<rad) 
+			return 1;
+		return 0;
 	}
 	/** 
 	 * Search for plotted triangles under canvas pt z.
@@ -12279,10 +12396,11 @@ public class PackData{
 	*/
 	public int pt_in_tri(int f, Complex z) {
 		Complex[] ctr = new Complex[3];
+		int[] fverts=getFaceVerts(f);
 
-		ctr[0]=getCenter(faces[f].vert[0]);
-		ctr[1]=getCenter(faces[f].vert[1]);
-		ctr[2]=getCenter(faces[f].vert[2]);
+		ctr[0]=getCenter(fverts[0]);
+		ctr[1]=getCenter(fverts[1]);
+		ctr[2]=getCenter(fverts[2]);
 		if (hes > 0) {
 			if (SphericalMath.pt_in_sph_tri(z,ctr[0],ctr[1],ctr[2]))
 				return 1;
@@ -12293,11 +12411,11 @@ public class PackData{
 		for (int k = 0; k <= 2; k++) {
 			if (hes < 0) { // hypebolic case: use euclidean data
 				CircleSimple sc = HyperbolicMath.h_to_e_data(
-					ctr[k],getRadius(faces[f].vert[k]));
+					ctr[k],getRadius(fverts[k]));
 				ctr[k] = new Complex(sc.center);
 			} 
 			else
-				ctr[k] = getCenter(faces[f].vert[k]);
+				ctr[k] = getCenter(fverts[k]);
 		}
 		if (EuclMath.pt_in_eucl_tri(z,ctr[0],ctr[1],ctr[2]))
 			return 1;
@@ -12314,7 +12432,7 @@ public class PackData{
 	 * are drawn when the packing is laid out. (Eg. want to be able to mark
 	 * the first 500 verts which will be drawn.) 
 	 * Caution: I don't do much maintenance or error checking on the 
-	 * 'nextObjert' info, so it should be updated immediately before use.
+	 * 'nextObject' info, so it should be updated immediately before use.
 	 * @return int, generally, 'nodeCount' 
 	*/
 	public int vert_draw_order() {

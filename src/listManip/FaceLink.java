@@ -300,8 +300,9 @@ public class FaceLink extends LinkedList<Integer> {
 							}
 						
 							// add flower to nextv for future processing
+							int[] flower=packData.getFlower(v);
 							for (int k=0;k<(packData.countFaces(v)+packData.getBdryFlag(v));k++) {
-								int w=packData.kData[v].flower[k];
+								int w=flower[k];
 								if (hitverts[w]==0) {
 									nextv.add(w);
 									hitverts[w]=1; // have touched this
@@ -362,7 +363,7 @@ public class FaceLink extends LinkedList<Integer> {
 			{
 				if (packData.hes>0) break;
 				for (int f=1;f<=packData.faceCount;f++) {
-					int []vert=packData.faces[f].vert;
+					int []vert=packData.getFaceVerts(f);
 					if (!EuclMath.ccWise(packData.getCenter(vert[0]),
 							packData.getCenter(vert[1]),packData.getCenter(vert[2]))) {
 						add(f);
@@ -375,9 +376,10 @@ public class FaceLink extends LinkedList<Integer> {
 			{
 				boolean hit;
 				for (int f=1;f<=facecount;f++) {
+					int[] fverts=packData.getFaceVerts(f);
 					for (int j=0;j<3;j++) {
 						hit=false;
-						int v=packData.faces[f].vert[j];
+						int v=fverts[j];
 						if (Double.isNaN(packData.getRadius(v))
 							|| Double.isNaN(packData.getCenter(v).x)
 							|| Double.isNaN(packData.getCenter(v).y)
@@ -507,14 +509,13 @@ public class FaceLink extends LinkedList<Integer> {
 					its=null; // eat rest of items
 					if (facelist==null || facelist.size()==0) break;
 					Iterator<Integer> flist=facelist.iterator();
-					Face face=null;
-					int v,w,k,f;
+					int f;
 					while (flist.hasNext()) {
-						face=(Face)packData.faces[(Integer)flist.next()];
+						int[] fverts=packData.getFaceVerts((Integer)flist.next());
 						for (int j=0;j<3;j++) {
-							v=face.vert[j];
-							w=face.vert[(j+1)%3];
-							k=packData.nghb(w,v);
+							int v=fverts[j];
+							int w=fverts[(j+1)%3];
+							int k=packData.nghb(w,v);
 							int[] faceFlower=packData.getFaceFlower(w);
 							if (k<packData.countFaces(w)) {
 								f=faceFlower[k];
@@ -1110,7 +1111,7 @@ public class FaceLink extends LinkedList<Integer> {
 			}
 			
 			// should have at least one bdry vert in 'pastFace'.
-			int []vert=p.faces[pastFace].vert;
+			int []vert=p.getFaceVerts(pastFace);
 			if (!p.isBdry(vert[0]) && !p.isBdry(vert[1]) &&
 					        !p.isBdry(vert[2])) {
 				CirclePack.cpb.errMsg("Did not seem to reach the bdry");
@@ -1307,19 +1308,22 @@ public class FaceLink extends LinkedList<Integer> {
 		
 		// find min of radii of f and contiguous faces
 		int initFace=f;
-		Face face=p.faces[initFace];
-		double step=p.getRadius(face.vert[0]);
-		double rad=p.getRadius(face.vert[1]);
+		int[] fverts=p.getFaceVerts(f);
+		double step=p.getRadius(fverts[0]);
+		double rad=p.getRadius(fverts[1]);
 		if (rad<step) step=rad;
-		rad=p.getRadius(face.vert[2]);
+		rad=p.getRadius(fverts[2]);
 		if (rad<step) step=rad;
 		
-		int v=p.find_common_left_nghb(face.vert[1],face.vert[0]);
-		if (v>0 && (rad=p.getRadius(v))<step) step=rad;
-		v=p.find_common_left_nghb(face.vert[2],face.vert[1]);
-		if (v>0 && (rad=p.getRadius(v))<step) step=rad;
-		v=p.find_common_left_nghb(face.vert[0],face.vert[2]);
-		if (v>0 && (rad=p.getRadius(v))<step) step=rad;
+		int v=p.find_common_left_nghb(fverts[1],fverts[0]);
+		if (v>0 && (rad=p.getRadius(v))<step) 
+			step=rad;
+		v=p.find_common_left_nghb(fverts[2],fverts[1]);
+		if (v>0 && (rad=p.getRadius(v))<step) 
+			step=rad;
+		v=p.find_common_left_nghb(fverts[0],fverts[2]);
+		if (v>0 && (rad=p.getRadius(v))<step) 
+			step=rad;
 		
 		if (step<=0)
 			throw new DataException("problem with radii of face or neighbors");

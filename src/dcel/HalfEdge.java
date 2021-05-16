@@ -235,9 +235,11 @@ public class HalfEdge {
 	/**
 	 * Give oriented 'EdgeSimple' <v,w> of endpoints
 	 * @param he HalfEdge
-	 * @return EdgeSimple
+	 * @return EdgeSimple, null on error
 	 */
 	public static EdgeSimple getEdgeSimple(HalfEdge he) {
+		if (he==null)
+			return null;
 		return new EdgeSimple(he.origin.vertIndx,he.twin.origin.vertIndx);
 	}
 

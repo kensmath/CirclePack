@@ -1003,8 +1003,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 								count++;
 							}
 						}
-						else if ((edge=packData.getEdge(v,w))!=null) {
-							add(edge);
+						else {
+							add(new EdgeSimple(v,w));
 							count++;
 						}
 					}

@@ -851,9 +851,9 @@ public class CommandStrParser {
 	    		  }
 	    		  else {
 	    			  int safty=packData.nodeCount;
-	    			  int ne=packData.kData[v1].flower[packData.countFaces(v1)];
+	    			  int ne=packData.getLastPetal(v1);
 	    			  while (ne != v1 && safty>0) {
-	    				  ne=packData.kData[ne].flower[packData.countFaces(ne)];
+	    				  ne=packData.getLastPetal(ne);
 	    				  tick++;
 	    				  safty--;
 	    			  }
@@ -951,12 +951,13 @@ public class CommandStrParser {
 	    		  overlaps=new Overlap();
 	    		  trace=overlaps;
 	    		  for (int v=1;v<=packData.nodeCount;v++) {
+	    			  int[] flower=packData.getFlower(v);
 	    			  for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) {
 	    				  // only store for petals with larger indices
-	    				  if (v<packData.kData[v].flower[j]
-	    				     && (angle=packData.getInvDist(v,packData.kData[v].flower[j]))!=1.0 ) {
+	    				  if (v<flower[j]
+	    				     && (angle=packData.getInvDist(v,flower[j]))!=1.0 ) {
 	    					  trace.v=v;
-	    					  trace.w=packData.kData[v].flower[j];
+	    					  trace.w=flower[j];
 	    					  trace.angle=angle;
 	    					  trace=trace.next=new Overlap();
 	    				  }
@@ -1025,12 +1026,13 @@ public class CommandStrParser {
 				  if ( offset!=0 && qackData.overlapStatus ) {
 				    // new overlaps from p2? 
 				      for(int v=1;v<=qackData.nodeCount;v++) {
+				    	  int[] flower=qackData.getFlower(v);
 				    	  int vv=packData.vertexMap.findW(v);
 				    	  for(int j=0;j<qackData.countFaces(v)+
 				    	  	qackData.getBdryFlag(v);j++)
-				    		  if (v<qackData.kData[v].flower[j]) {
-				    			  int ww=packData.vertexMap.findW(qackData.kData[v].flower[j]);
-				    			  if ((angle=qackData.getInvDist(v,qackData.kData[v].flower[j]))!=1.0)
+				    		  if (v<flower[j]) {
+				    			  int ww=packData.vertexMap.findW(flower[j]);
+				    			  if ((angle=qackData.getInvDist(v,flower[j]))!=1.0)
 				    				  packData.set_single_invDist(vv,ww,angle);
 				    		  }
 				      }
@@ -1591,7 +1593,8 @@ public class CommandStrParser {
 			  packData.setCombinatorics();
 			  packData.set_aim_default();
 			  packData.set_rad_default();
-			  for (int v=1;v<=packData.nodeCount;v++) packData.kData[v].plotFlag=1;
+			  for (int v=1;v<=packData.nodeCount;v++) 
+				  packData.kData[v].plotFlag=1;
 			  return N;
 		  } // end of 'delaunay'
 		  
@@ -3133,7 +3136,8 @@ public class CommandStrParser {
 			  BufferedReader fp=
 				  CPFileManager.openReadFP(dir,filename,false);
 			  if (fp==null) { 
-				  throw new InOutException("failed to open "+filename+", directory "+dir.toString());
+				  throw new InOutException("failed to open "+filename+
+						  ", directory "+dir.toString());
 			  }
 			  UtilPacket uP=new UtilPacket();
 			  RandomTriangulation.readPoints(fp,uP);
@@ -3156,7 +3160,8 @@ public class CommandStrParser {
 				  dData=new DelaunayData(hes,uP.z_vec);
 				  dData=new DelaunayBuilder().apply(dData);
 			  } catch (Exception ex) {
-				  CirclePack.cpb.errMsg("randomHypTriangulation failed: "+ex.getMessage());
+				  CirclePack.cpb.errMsg("randomHypTriangulation failed: "
+						  +ex.getMessage());
 				  return 0;
 			  }
 			  
@@ -3181,7 +3186,9 @@ public class CommandStrParser {
 			  packData.set_aim_default();
 			  packData.set_rad_default();
 
-			  for (int v=1;v<=packData.nodeCount;v++) packData.kData[v].plotFlag=1;
+// OBE???
+//			  for (int v=1;v<=packData.nodeCount;v++) 
+//				  packData.kData[v].plotFlag=1;
 			  return packData.nodeCount;
 		  }
 		  
@@ -4727,8 +4734,9 @@ public class CommandStrParser {
 				  while (nlk.hasNext()) {
 					  int v=nlk.next();
 					  if (!packData.isBdry(v)) {
+						  int[] flower=packData.getFlower(v);
 						  for (int j=0;j<packData.countFaces(v);j++) {
-							  int w=packData.kData[v].flower[j];
+							  int w=flower[j];
 							  if (vhits[w]==0) { // new edge?
 								  elink.add(new EdgeSimple(v,w));
 							  }
@@ -5211,8 +5219,8 @@ public class CommandStrParser {
    				  else {
    	   				  
 	   				  // reaching here, 2 boundary verts.	   				  
-	   				  int afterv=packData.kData[v].flower[0];
-	   				  int afterw=packData.kData[w].flower[0];
+	   				  int afterv=packData.getFirstPetal(v);
+	   				  int afterw=packData.getFirstPetal(w);
 		   			  
 	   				  // Special case: bdry component is {v,afterv,w,afterw,v}
 	   				  if (packData.nghb(afterv,w)>=0 && packData.nghb(afterw,v)>=0) {
@@ -5966,8 +5974,7 @@ public class CommandStrParser {
 					int[] verts=new int[3];
 					verts[0] = packData.faces[f].vert[j];
 					verts[1] = packData.faces[f].vert[(j + 1) % 3];
-					int k = packData.nghb(verts[0],verts[1]);
-					double s = packData.kData[verts[0]].schwarzian[k];
+					double s=packData.getSchwarzian(new EdgeSimple(verts[0],verts[1]));
 
 					int m = packData.face_nghb(f, g);
 					int target = packData.faces[g].vert[(m + 2) % 3];
@@ -6546,10 +6553,9 @@ public class CommandStrParser {
     				  // add the n circles and close up
     				  for (int i=1;i<=n;i++) packData.add_vert(vert);
     				  packData.enfold(vert);
-    				  Complex z=packData.getCenter(packData.kData[vert].
-    				                           flower[0]);
-    				  Complex w=packData.getCenter(packData.kData[vert].
-    				                           flower[packData.countFaces(vert)-1]);
+    				  int[] flower=packData.getFlower(vert);
+    				  Complex z=packData.getCenter(flower[0]);
+    				  Complex w=packData.getCenter(flower[packData.countFaces(vert)-1]);
     				  cpS.drawEdge(z,w,new DispFlags(null));
     				  count++;
     			  }
@@ -6727,7 +6733,7 @@ public class CommandStrParser {
 		   			  else {
 			   			  int indx=packData.nghb(edge.v,edge.w);
 			   			  if (indx>=0 && indx<packData.countFaces(edge.v)) { // flip cclw edge
-			   				  int w=packData.kData[edge.v].flower[indx+1];
+			   				  int w=packData.getPetal(edge.v,indx+1);
 			   				  elink.add(new EdgeSimple(edge.v,w));
 			   			  }
 		   			  }
@@ -6745,10 +6751,10 @@ public class CommandStrParser {
 		   			  else {
 			   			  int indx=packData.nghb(edge.v,edge.w);
 			   			  if (indx==0) { // must be interior
-			   				  w=packData.kData[edge.v].flower[packData.countFaces(edge.v)-1];
+			   				  w=packData.getPetal(edge.v,packData.countFaces(edge.v)-1);
 			   			  }
 			   			  else 
-			   				  w=packData.kData[edge.v].flower[indx-1];
+			   				  w=packData.getPetal(edge.v,indx-1);
 		   				  elink.add(new EdgeSimple(edge.v,w));
 		   			  }
 	    		  }
@@ -7647,8 +7653,10 @@ public class CommandStrParser {
 	    		  switch(str.charAt(1)) {
 	    		      case 'w': // wipe out all marks, faces/circles
 	    			  {
-	    				  for (int v=1;v<=packData.nodeCount;v++) packData.setVertMark(v,0);
-	    				  for (int f=1;f<=packData.faceCount;f++) packData.setFaceMark(f,0);
+	    				  for (int v=1;v<=packData.nodeCount;v++) 
+	    					  packData.setVertMark(v,0);
+	    				  for (int f=1;f<=packData.faceCount;f++) 
+	    					  packData.setFaceMark(f,0);
 	    				  count++;
 	    				  break;
 	    			  }
@@ -7668,7 +7676,8 @@ public class CommandStrParser {
 	    					  break;
 	    				  }
 	    				  else if (str.length()>2 && str.charAt(2)=='w') { // wipe out first
-	        				  for (int v=1;v<=packData.nodeCount;v++) packData.setVertMark(v,0);
+	        				  for (int v=1;v<=packData.nodeCount;v++) 
+	        					  packData.setVertMark(v,0);
 	        				  count++;
 	    				  }
 	    				  if (items.size()==0) break; // do not default to all here
@@ -7684,7 +7693,8 @@ public class CommandStrParser {
 	    			  case 'f': // faces
 	    			  {
 	    				  if (str.length()>2 && str.charAt(2)=='w') { // wipe out first
-	        				  for (int f=1;f<=packData.faceCount;f++) packData.setFaceMark(f,0);
+	        				  for (int f=1;f<=packData.faceCount;f++) 
+	        					  packData.setFaceMark(f,0);
 	        				  count++;
 	    				  }
 	    				  if (items.size()==0) break; // do not default to all here
@@ -7705,8 +7715,9 @@ public class CommandStrParser {
 	    				  } catch(Exception ex) {
 	    					  V=packData.alpha;
 	    				  }
-	    				  for (int v=1;v<=packData.nodeCount;v++) packData.kData[v].utilFlag=0;
-	    				  packData.kData[V].utilFlag=1;
+	    				  for (int v=1;v<=packData.nodeCount;v++) 
+	    					  packData.setVertUtil(v,0);
+	    				  packData.setVertUtil(V,1);
 	    				  UtilPacket uP=new UtilPacket();
 	    				  int []gens=packData.label_generations(-1,uP);
 	    				  for (int v=1;v<=packData.nodeCount;v++) {
@@ -10301,14 +10312,16 @@ public class CommandStrParser {
 		    	  
 	    	  if (inc_flag) {
 	    		  int al=packData.alpha;
-	    	  double rad=packData.getRadius(al);
+	    		  double rad=packData.getRadius(al);
 //		    	  if (rad<=packData.OKERR) { // this shouldn't happen 
 //		    		  throw new DataException();
 //		    	  }
-	    	  int j=packData.kData[al].flower[0];
-	    	  a=a*packData.getRadius(j)/rad;
-	    	  j=packData.kData[al].flower[1];
-	    	  b=b*packData.getRadius(j)/rad;
+	    	  
+	    		  int[] flower=packData.getFlower(al);
+	    		  int j=flower[0];
+	    		  a=a*packData.getRadius(j)/rad;
+	    		  j=flower[1];
+	    		  b=b*packData.getRadius(j)/rad;
 	    	  }
 	    	  return Exponential.spiral(packData,a,b);
 	      }
@@ -10501,8 +10514,13 @@ public class CommandStrParser {
 	   			  count += packData.flip_edge(edge.v,edge.w,3);
 	   	      }
 	   		  if (count>0) {
-	   			  packData.complex_count(false);
-	   			  packData.facedraworder(false);
+	   			  if (packData.packDCEL!=null) {
+	   				  packData.packDCEL.fixDCEL_raw(packData);
+	   			  }
+	   			  else {
+	   				  packData.complex_count(false);
+	   				  packData.facedraworder(false);
+	   			  }
 	   			  packData.fillcurves();
 	   		  }
 	   		  return count;

@@ -32,8 +32,11 @@ public class VData{
 	public int[] findices;  // indices of nghb'ing (non-ideal) faces
 	public int[] myIndices; // my index in corresponding face (aligned with 'findices') 
 	public double curv;	    // angle sum at this vertex. 
+	public int plotFlag;	// often OBE
+	public int qualFlag;    // often OBE
+
 	int bdryFlag;           // set in 'PackData.attachDCEL' according to 'Vertex.bdryFlag' 
-	
+
 	// Constructor (needed only to create 'center')
 	public VData() {
 		center=new Complex(0.0);
@@ -58,6 +61,8 @@ public class VData{
 		}
 		Vout.curv=curv;
 		Vout.bdryFlag=bdryFlag;
+		Vout.plotFlag=plotFlag;
+		Vout.qualFlag=qualFlag;
 		return Vout;
 	}
 	

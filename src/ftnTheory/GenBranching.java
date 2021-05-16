@@ -1104,15 +1104,18 @@ public class GenBranching extends PackExtender {
 	}
 	
 	/**
-	 * Specialized version of 'DualGraph.drawSpanner' which scoops up branch
-	 * points as it encounters them. Basic idea is to pick up faces in generational 
-	 * order, but when we encounter any branch point for first time, pick up 
-	 * max connected subtree of dual edges in its 'bdryLink'.
-	 * Calling routine may want to choose 'startface' --- if not valid, search for one.
-	 * @param p @see PackData
-	 * @param graph @see GraphLink
+	 * Specialized version of 'DualGraph.drawSpanner' which 
+	 * scoops up branch points as it encounters them. Basic 
+	 * idea is to pick up faces in generational order, but 
+	 * when we encounter any branch point for first time, 
+	 * pick up max connected subtree of dual edges in its 
+	 * 'bdryLink'.
+	 * Calling routine may want to choose 'startface' --- if 
+	 * not valid, search for one.
+	 * @param p PackData
+	 * @param graph GraphLink
 	 * @param startface int, first face to use.
-	 * @return
+	 * @return GraphLink
 	 */
 	public GraphLink branchSpanner(GraphLink graph,int startface) {
 		
@@ -1169,9 +1172,10 @@ public class GenBranching extends PackExtender {
 		//  store generation of faces (lowest generation of vertices) 
 		int []futil=new int[packData.faceCount+1];
 		for (int f=1;f<=packData.faceCount;f++) {
-			futil[f]=vgens[packData.faces[f].vert[0]];
+			int[] fverts=packData.getFaceVerts(f);
+			futil[f]=vgens[fverts[0]];
 			for (int j=1;j<3;j++) {
-				int k=packData.faces[f].vert[j];
+				int k=fverts[j];
 				if (vgens[k]<futil[f])
 					futil[f]=vgens[k];
 			}

@@ -637,8 +637,9 @@ public class NodeLink extends LinkedList<Integer> {
 				    while (vlist.hasNext()) {
 					v=(Integer)vlist.next();
 					int num=packData.countFaces(v);
+					int[] flower=packData.getFlower(v);
 					for (int j=0;j<(num+packData.getBdryFlag(v));j++) {
-					    vert=packData.kData[v].flower[j];
+					    vert=flower[j];
 					    if (hits[vert]==0) {
 						add(vert);
 						count++;
@@ -824,10 +825,11 @@ public class NodeLink extends LinkedList<Integer> {
 					Iterator<Integer> vsi=vs.iterator();
 					while (vsi.hasNext()) {
 						int v=vsi.next();
+						int[] flower=packData.getFlower(v);
 						if (packData.getBdryFlag(v)!=0) {
-							int w=packData.kData[v].flower[0];
+							int w=flower[0];
 							if (!nxt)
-								w=packData.kData[v].flower[packData.countFaces(v)];
+								w=flower[packData.countFaces(v)];
 							add(w);
 							count++;
 						}                        
@@ -845,8 +847,9 @@ public class NodeLink extends LinkedList<Integer> {
 							Iterator<Integer> vsi=vs.iterator();
 							while (vsi.hasNext()) {
 								int v=vsi.next();
+								int[] flower=packData.getFlower(v);
 								if (jdex<=packData.countFaces(v)) {
-									add(packData.kData[v].flower[jdex]);
+									add(flower[jdex]);
 									count++;
 								}
 							}

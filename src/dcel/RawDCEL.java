@@ -6,6 +6,7 @@ import java.util.Iterator;
 import complex.Complex;
 import exceptions.CombException;
 import exceptions.DCELException;
+import komplex.EdgeSimple;
 import listManip.HalfLink;
 import listManip.NodeLink;
 
@@ -1411,6 +1412,24 @@ public class RawDCEL {
 			} // done with 'Ntimes' passes
 	
 			return Ntimes;
+		}
+
+		/**
+		 * Find an common edge opposite to both v and w.
+		 * v will be to its left, w to its right.
+		 * @param v int
+		 * @param w int
+		 * @return EdgeSimple, null on failure
+		 */
+		public static HalfEdge getCommonEdge(PackDCEL pdcel, int v, int w) {
+			HalfEdge he=pdcel.vertices[v].halfedge; // spoke
+			do {
+				if (he.next.twin.next.twin.origin.vertIndx==w) {
+					return he.next;
+				}
+				he=he.prev.twin; // cclw spoke
+			} while (he!=pdcel.vertices[v].halfedge);
+			return null;
 		}
 
 }

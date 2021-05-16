@@ -39,8 +39,6 @@ public class KData{
     // Note: ephemeral, non-local, depends on face indexing.
     public int []faceFlower;   // indices of num faces containing this vertex; 
      							// faceFlower[i] has vertices {v,flower[i],flower[i+1]}
-     							// History: originally in large 'face_org' array, then
-     							// moved to 'faces' vector with indexing starting at 1
      
     // Constructor (needed only to set 'color')
     public KData() {
