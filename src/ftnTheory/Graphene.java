@@ -892,13 +892,13 @@ public class Graphene extends PackExtender {
 			
 			// get data for faces {r,s,t}, {r,t,u}, and {r,u,v}
 			for (int j=0;j<num;j++) {
-				int sv=packData.kData[vert].flower[(j-1+num)%num];
+				int sv=packData.getPetal(vert,(j-1+num)%num);
 				double s=packData.getRadius(sv);
-				int tv=packData.kData[vert].flower[j];
+				int tv=packData.getPetal(vert,j);
 				double t=packData.getRadius(tv);
-				int uv=packData.kData[vert].flower[(j+1)%num];
+				int uv=packData.getPetal(vert,(j+1)%num);
 				double u=packData.getRadius(uv);
-				int vv=packData.kData[vert].flower[(j+2)%num];
+				int vv=packData.getPetal(vert,(j+2)%num);
 				double v=packData.getRadius(vv);
 
 				if (j==0 && bdryvert) { 
@@ -962,8 +962,8 @@ public class Graphene extends PackExtender {
 		switch (stitch.getMode()) {
 		case 0: // close flower by identifying
 		{
-			int origv=packData.kData[v].flower[0];
-			packData.adjoin(packData, v, v, 1);
+			int origv=packData.getFirstPetal(v);
+			PackData.adjoin(packData,packData, v, v, 1);
 			
 			// fix up numbering
 			newIndx=packData.vertexMap.findW(origv);
@@ -971,22 +971,22 @@ public class Graphene extends PackExtender {
 		}	
 		case 1: // close flower with edge, choose left as pole
 		{
-			int w=packData.kData[v].flower[0];
+			int w=packData.getFirstPetal(v);
 			cpCommand("enclose 0 "+v);
 			newIndx=w;
 			break;
 		}
 		case 2: // close flower with edge, choose right as pole
 		{
-			int u=packData.kData[v].flower[packData.countFaces(v)];
+			int u=packData.getLastPetal(v);
 			cpCommand("enclose 0 "+v);
 			newIndx=u;
 			break;
 		}
 		case 3: // enclose with 1 new circle
 		{
-			int lft=packData.kData[v].flower[0];
-			int rght=packData.kData[v].flower[packData.countFaces(v)];
+			int lft=packData.getFirstPetal(v);
+			int rght=packData.getLastPetal(v);
 			cpCommand("enclose 1 "+v);
 			cpCommand("enclose 0 "+lft);
 			cpCommand("enclose 0 "+rght);
@@ -1034,10 +1034,10 @@ public class Graphene extends PackExtender {
 			
 			// need better control on the edges of the slits
 			count += cpCommand("set_aim 1.75 "+southpole+" "+northpole);
-			int su=packData.kData[southpole].flower[0];
-			int sd=packData.kData[southpole].flower[packData.countFaces(southpole)];
-			int nu=packData.kData[northpole].flower[0];
-			int nd=packData.kData[northpole].flower[packData.countFaces(northpole)];
+			int su=packData.getFirstPetal(southpole);
+			int sd=packData.getLastPetal(southpole);
+			int nu=packData.getFirstPetal(northpole);
+			int nd=packData.getFirstPetal(northpole);
 			count += cpCommand("set_aim 1.0 "+su+" "+sd+" "+nu+" "+nd);
 			
 			// repack, layout, color by degree
@@ -1127,11 +1127,11 @@ public class Graphene extends PackExtender {
   	  	msg("cookie for 'rightPack' seems to have succeeded");
 
   	  	// now attach along 2 edges, <v, alpha, w> to <rw, alpha,rv>,
-  	  	int v=leftPack.kData[1].flower[0];
-  	  	int w=leftPack.kData[1].flower[leftPack.countFaces(1)];
+  	  	int v=leftPack.getFirstPetal(1);
+  	  	int w=leftPack.getLastPetal(1);
   	  	
   	  	// may need this in future
-  	  	int rw=rightPack.kData[1].flower[rightPack.countFaces(1)];
+  	  	int rw=rightPack.getLastPetal(1);
   	  	
   	  	stitchBase=leftPack.copyPackTo();
   	  	
@@ -1142,7 +1142,7 @@ public class Graphene extends PackExtender {
   	  	default: // (currently the only)
   	  	{
   	  	  	// adjoin at alpha's and one vert either side
-  	  	  	stitchBase.adjoin(rightPack, v, rw, 2);
+  	  	  	PackData.adjoin(stitchBase,rightPack, v, rw, 2);
   	  	  	stitchBase.complex_count(false);
   	  	  	
   	  	  	// these shouldn't have changed indices

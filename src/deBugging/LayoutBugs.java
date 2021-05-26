@@ -257,8 +257,9 @@ public class LayoutBugs {
 	}
 
 	/**
-	 * log order pairs from a 'GraphLink', typically a face tree, in 'graphLink_xx_log.txt'
-	 * See 'DualGraph.printGraph(dlink)', which may be more convenient.
+	 * log order pairs from a 'GraphLink', typically a face tree, 
+	 * in 'graphLink_xx_log.txt'. See 'DualGraph.printGraph(dlink)', 
+	 * which may be more convenient.
 	 * @param p PackData
 	 * @param dlink GraphLink
 	 * @return count, 0 on exception

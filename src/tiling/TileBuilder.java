@@ -211,7 +211,7 @@ public class TileBuilder {
 							
 							PackData newp = otile.singleCanonical(3);
 							int w=newp.tileData.myTiles[1].vert[j];
-							if (masterPack.adjoin(newp, v,w,4) != 1)
+							if (PackData.adjoin(masterPack,newp, v,w,4) != 1)
 								throw new ParserException("didn't adjoin 'newp' correctly");
 							
 							// transfer 'mark'
@@ -327,7 +327,7 @@ public class TileBuilder {
 						v = w;
 					if (debugPass>=0)
 						System.out.println("Adjoin v = "+v+" to "+w);
-					if (masterPack.adjoin(masterPack, v, w, 4) != 1)
+					if (PackData.adjoin(masterPack,masterPack, v, w, 4) != 1)
 						throw new ParserException(
 								"didn't adjoin 'masterPack' to itself for unpasted edge");
 					masterPack.complex_count(true);
@@ -790,7 +790,7 @@ public class TileBuilder {
 // debug
 //System.out.println(" attach slit: (tile,edge)=("+otile.tileFlower[e][0]+" "+otile.tileFlower[e][1]+")");
 
-						int rslt = masterPack.adjoin(masterPack, v, v, 4);
+						int rslt =PackData.adjoin(masterPack,masterPack, v, v, 4);
 						if (rslt != 1)
 							throw new ParserException("didn't sew slit correctly, tile "+ tile.tileIndex);
 						masterPack.complex_count(false);
@@ -846,7 +846,7 @@ public class TileBuilder {
 						// 'adjoin' is complicated. If ends already match in 'tile'
 						//   then just usual adjoin
 						if (tile.vert[e]==v) {
-							if (masterPack.adjoin(newp, v,w,4) != 1)
+							if (PackData.adjoin(masterPack,newp, v,w,4) != 1)
 								throw new ParserException("didn't adjoin filled loop correctly");
 							// fix the new tile data
 							updateTileVerts(newp.tileData,masterPack.vertexMap);
@@ -860,7 +860,7 @@ public class TileBuilder {
 							//   (1) adjoin along 3 edges only: update tile verts, add to growTD, transfer flowers, etc.
 							//   (2) then zip last edge: update growTD
 							int tip=newp.tileData.myTiles[1].augVert[3]; // will become tip of final slit
-							if (masterPack.adjoin(newp, v,w,3) != 1)
+							if (PackData.adjoin(masterPack,newp, v,w,3) != 1)
 								throw new ParserException("didn't adjoin a loop correctly");
 							tip=masterPack.vertexMap.findW(tip);
 
@@ -872,7 +872,7 @@ public class TileBuilder {
 							growTD.myTiles[t].tileIndex = 1;
 							tileAdded[t] = 1;
 							
-							if (masterPack.adjoin(masterPack,tip,tip,1)!=1)
+							if (PackData.adjoin(masterPack,masterPack,tip,tip,1)!=1)
 								throw new ParserException("didn't get last edge of adjoin on loop");
 							updateTileVerts(growTD,masterPack.vertexMap);
 						}

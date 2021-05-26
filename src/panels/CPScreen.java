@@ -80,9 +80,11 @@ public class CPScreen extends JPanel implements	MouseListener {
 	public int fillOpacity;
 	public int sphereOpacity;
 	public int textSize; // for packing canvasses
-    
-	public static final String customGlobal="CP_custom.ps"; // global default file for PostScript
-	public String customPS; // default PostScript file chosen for this packing; may be null.
+
+	// global default file for PostScript
+	public static final String customGlobal="CP_custom.ps";
+	// default PostScript file chosen for this packing; may be null.
+	public String customPS; 
 
 	public PackData packData;
 	int screenNum; // normally alligns with packData.packNum
@@ -105,7 +107,7 @@ public class CPScreen extends JPanel implements	MouseListener {
     public int pixHeight=PackControl.getActiveCanvasSize();
     public Stroke defaultStroke; // for axis, unit sph/disc, etc.
     public Stroke stroke;
-    public Rectangle2D.Double canvasRect; // used for drawing screen background
+    public Rectangle2D.Double canvasRect; // for drawing screen background
     public ViewBox realBox; // for canvas info
     public SphView sphView; // for spherical info
 	public Font indexFont;
@@ -181,7 +183,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 	
 	/**
 	 * Reset defaults for CirclePack; e.g., when new packing is loaded.
-	 * Note: may prefer different behavior, eg., when copying another packing.
+	 * Note: may prefer different behavior, eg., when copying another 
+	 * packing.
 	 * @param startup, boolean: true only when first instantiating 'CPScreen'.
 	 */
 	public void reset(boolean startup) {
@@ -220,7 +223,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 		BufferedImage bI=new BufferedImage(wide,high,BufferedImage.TYPE_INT_RGB);	
 		
 		if (packImage!=null) // copy in old image
-			bI.createGraphics().drawImage(packImage.getScaledInstance(wide,high,
+			bI.createGraphics().
+				drawImage(packImage.getScaledInstance(wide,high,
 				Image.SCALE_SMOOTH),new AffineTransform(),null);
 		else 
 			bI.createGraphics().fillRect(0,0,wide,high);
@@ -272,8 +276,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 			  PackControl.switchActivePack(this.getPackNum());
 			} catch (Exception ex) {return;}
 		}
-		// TODO: this doesn't seem to work to bring the activeFrame to the top
-//		else if (e.getClickCount()>=1) { // single click brings active screen to top
+		// TODO: doesn't seem to work to bring activeFrame to the top
+//		else if (e.getClickCount()>=1) { // click active screen to top
 //			PackControl.activeFrame.toFront();
 //		}
 	}
@@ -324,7 +328,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 	 * visual plane, and checks if it's on front.
 	 * @param z Complex: real-world Complex location
 	 * @param n int, index to display
-	 * @param msg_flag boolean, bit 1=in canvas, 2=in scratch, 3=both (default)
+	 * @param msg_flag boolean, bit 1=in canvas,2=in scratch,3=both (default)
 	 */
 	public void drawIndex(Complex z, int n, int msg_flag) {
 		Integer N = Integer.valueOf(n);
@@ -349,8 +353,9 @@ public class CPScreen extends JPanel implements	MouseListener {
 	}
 	
 	/**
-	 * Draws string, up to length 12, in blue at given Complex z. In sph case,
-	 * this routine takes care to move z to apparent sphere, then to
+	 * Draws string, up to length 12, in blue at given 
+	 * Complex z. In sph case, this routine takes care 
+	 * to move z to apparent sphere, then to
 	 * visual plane, and checks if it's on front.
 	 * @param z Complex
 	 * @param str String
@@ -401,7 +406,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 	 * @param extent double
 	 * @param dflags DispFlags
 	 */
-	public void drawArc(Complex z,double rad,double ang1,double extent,DispFlags dflags) {
+	public void drawArc(Complex z,double rad,double ang1,
+			double extent,DispFlags dflags) {
 		if (packData.hes!=0)
 			return;
 		try {
@@ -469,7 +475,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 						z = SphView.s_pt_to_visual_plane(z);
 					tmpcolor = imageContextReal.getColor();
 					imageContextReal.setColor(Color.BLUE);
-					imageContextReal.drawString(dflags.getLabel(), real_to_pix_x(z.x), real_to_pix_y(z.y));
+					imageContextReal.drawString(dflags.getLabel(),
+							real_to_pix_x(z.x), real_to_pix_y(z.y));
 					imageContextReal.setColor(tmpcolor);
 				}
 			}
@@ -542,7 +549,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 						z = SphView.s_pt_to_visual_plane(z);
 					tmpcolor = imageContextReal.getColor();
 					imageContextReal.setColor(Color.BLUE);
-					imageContextReal.drawString(dflags.getLabel(), real_to_pix_x(z.x), real_to_pix_y(z.y));
+					imageContextReal.drawString(dflags.getLabel(), 
+							real_to_pix_x(z.x), real_to_pix_y(z.y));
 					imageContextReal.setColor(tmpcolor);
 				}
 			}
@@ -565,7 +573,9 @@ public class CPScreen extends JPanel implements	MouseListener {
 			face.setData(N, corners);
 			if (packData.hes > 0) {
 				for (int j = 0; j < N; j++) {
-					Complex z = sphView.toApparentSph(new Complex(corners[j * 2], corners[j * 2 + 1]));
+					Complex z = sphView.
+							toApparentSph(new Complex(corners[j * 2],
+									corners[j * 2 + 1]));
 					face.corners[j * 2] = z.x;
 					face.corners[j * 2 + 1] = z.y;
 				}
@@ -700,26 +710,28 @@ public class CPScreen extends JPanel implements	MouseListener {
     }
     
 	/**
-	 * Recursively draw euclidean tile shapes for subdivision rule to given depth; 
-	 *   tile rules must have optional position data from *.r rules file.
+	 * Recursively draw euclidean tile shapes for subdivision 
+	 * rule to given depth; tile rules must have optional 
+	 * position data from *.r rules file.
 	 * @param sRules SubdivisionRules, (with optional position data)
 	 * @param tiletype int, type of this tile
 	 * @param base Complex[2], base of this tile
 	 * @param depth int, recursive depth
 	 * @return int
 	 */
-	public int drawTileRecurs(SubdivisionRules sRules,int tiletype,Complex []base,
-			int depth,DispFlags dflags) {
+	public int drawTileRecurs(SubdivisionRules sRules,
+			int tiletype,Complex []base,int depth,DispFlags dflags) {
 		TileRule topRule=sRules.tileRules.get(tiletype-4);
 
 		// for transformations
 		Complex origin=base[0];
 		Complex basedir=base[1].minus(base[0]);
 		
-		// first, draw yourself, then position and recursively draw any children
+		// first draw yourself, then position, recursively draw children
 		double []stdC=new double[2*topRule.stdCorners.length];
 		for (int j=0;j<topRule.stdCorners.length;j++) {
-			Complex z=new Complex(topRule.stdCorners[j].times(basedir).add(origin));
+			Complex z=new Complex(topRule.stdCorners[j].
+					times(basedir).add(origin));
 			stdC[2*j]=z.x;
 			stdC[2*j+1]=z.y;
 		}
@@ -734,9 +746,12 @@ public class CPScreen extends JPanel implements	MouseListener {
 		if (depth > 0) {
 			for (int n = 1; n <= topRule.childCount; n++) {
 				Complex []subtileBase=new Complex[2];
-				subtileBase[0] = new Complex(topRule.tileBase[n][0].times(basedir).add(origin));
-				subtileBase[1] = new Complex(topRule.tileBase[n][1].times(basedir).add(origin));
-				int rslt = drawTileRecurs(sRules, topRule.childType[n], subtileBase, depth - 1,dflags);
+				subtileBase[0] = new Complex(topRule.tileBase[n][0].
+						times(basedir).add(origin));
+				subtileBase[1] = new Complex(topRule.tileBase[n][1].
+						times(basedir).add(origin));
+				int rslt = drawTileRecurs(sRules, topRule.childType[n],
+						subtileBase, depth - 1,dflags);
 				if (rslt <= 0)
 					return 0;
 				count += rslt;
@@ -745,53 +760,6 @@ public class CPScreen extends JPanel implements	MouseListener {
 		return count;
 	}
      
-	public int getFillOpacity() {
-		return fillOpacity;
-	}
-
-	/** 
-	 * 'fill opacity' controls the brilliance of colors for filled
-	 * faces, circles. Less means lighter colors.
-	 * TODO: need to update 'screen' tab slider
-	 * @param t in [0,256)
-	 */
-	public void setFillOpacity(int t) {
-		if (t >= 0 && t <= 255)
-			fillOpacity = t;
-		else fillOpacity=CPBase.DEFAULT_FILL_OPACITY;
-	}
-
-	public int getSphereOpacity() {
-		return sphereOpacity;
-	}
-	
-	/**
-	 * 'sphere opacity' controls how much the back of the sphere shows
-	 * through.
-	 * @param t in [0,256)
-	 */
-	public void setSphereOpacity(int t) {
-		if (t >= 0 && t <= 255)
-			sphereOpacity = t;
-		else sphereOpacity=CPBase.DEFAULT_SPHERE_OPACITY;
-	}
-	
-	public Font getIndexFont() {
-		return indexFont;
-	}
-	
-	/** 
-	 * Set font appearing for indices on canvas of this packing.
-	 * @param t
-	 */
-	public void setIndexFont(int t) {
-		if (t>=0 && t<= 30) {
-			textSize=t;
-			indexFont=new Font("Sarif",Font.ITALIC,t);
-			imageContextReal.setFont(indexFont);
-		}
-		else indexFont=CPBase.DEFAULT_INDEX_FONT;
-	}
 
 	
 	/**
@@ -921,6 +889,27 @@ public class CPScreen extends JPanel implements	MouseListener {
 		return packData.nodeCount;
 	}
 	
+	/**
+	 * Update displayed Xtender tools (if any) for this packing
+	 */
+	public void updateXtenders() {
+		// remove all Xtender tools
+		int pnum=getPackNum();
+		SmallCanvasPanel scp=PackControl.smallCanvasPanel;
+		while (scp.cpInfo[pnum].getComponentCount()>1)
+			scp.cpInfo[pnum].remove(1);
+		scp.cpInfo[pnum].revalidate();
+		// re-add those for this packing
+		Vector<PackExtender> Xvec=packData.packExtensions;
+		for (int i=0;i<Xvec.size();i++) {
+			PackExtender pX=Xvec.get(i);
+			MyTool Xtool=pX.XtenderTool;
+			if (Xtool!=null) scp.cpInfo[pnum].add(Xtool);
+		}
+		scp.cpInfo[pnum].revalidate();
+		scp.cpInfo[pnum].repaint();
+	}
+	
 	public Image getThumbnailImage(){
 	    if(packImage != null)
 	      return packImage.getScaledInstance(
@@ -951,27 +940,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 		return packData.hes;
 	}
 	
-	/**
-	 * Update displayed Xtender tools (if any) for this packing
-	 */
-	public void updateXtenders() {
-		// remove all Xtender tools
-		int pnum=getPackNum();
-		SmallCanvasPanel scp=PackControl.smallCanvasPanel;
-		while (scp.cpInfo[pnum].getComponentCount()>1)
-			scp.cpInfo[pnum].remove(1);
-		scp.cpInfo[pnum].revalidate();
-		// re-add those for this packing
-		Vector<PackExtender> Xvec=packData.packExtensions;
-		for (int i=0;i<Xvec.size();i++) {
-			PackExtender pX=Xvec.get(i);
-			MyTool Xtool=pX.XtenderTool;
-			if (Xtool!=null) scp.cpInfo[pnum].add(Xtool);
-		}
-		scp.cpInfo[pnum].revalidate();
-		scp.cpInfo[pnum].repaint();
-	}
-	
+
 	/**
 	 * Update small canvas pack label using 'packData.fileName'.
 	 */
@@ -979,7 +948,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 		if (packData.fileName== null || packData.fileName.trim().length()==0) 
 			packData.setName("NoName");
 		PackControl.smallCanvasPanel.packName[getPackNum()].
-				setText("P"+getPackNum()+" "+packData.fileName+geomAbbrev[packData.hes+1]);
+				setText("P"+getPackNum()+" "+
+						packData.fileName+geomAbbrev[packData.hes+1]);
 	}
 
 	/**
@@ -1004,41 +974,20 @@ public class CPScreen extends JPanel implements	MouseListener {
 	}
 	
 	/**
-	 * Replaced by 'CirclePack.cpb.swapPackData'
-	 * 
-	 * Attach a new pNew to this screen (normally the previous packData is lost).
-	 * Also, clean up: attach this screen to new packing, transfer p.packNum and 
-	 * packname to new packing, optionally carry current 'PackExtensions' to pNew.
-	 * 
-	 * Caution: calling routine's local 'PackData' may have disappeared, so it
-	 * should be replaced by 'this.packData' on return.
-	 *  
-	 * @param pNew @see packData
-	 * @param keepX boolean: if true, replace 'PackExtenders' of pNew by those of original.
-	 * @return int, new nodeCount, -1 is 'pNew' is faulty
-	 */
-//	public int swapPackData(PackData pNew,boolean keepX) {
-//		if (pNew==null || !pNew.status || pNew.nodeCount<3) {
-//			return -1;
-//		}
-//		if (keepX) 
-//			pNew.packExtensions=packData.packExtensions;
-//		setPackData(pNew); // old pack info to garbage.
-//		packData.cpScreen=this;
-//		packData.packNum=screenNum;
-//	}
-	
-	/**
 	 * Call if new packing has been put in place; clear/reset the screen
 	 * and 'dispOptions'.
 	 */
-	public int emptyPacking() {
+	public int emptyScreen() {
 		reset();
 		sphView.defaultView();
 		clearCanvas(true);
 		return 1;
 	}
-	
+	 
+	public int getLineThickness() {
+		return linethickness;
+	}
+
 	/**
 	 * Sets the linethickness and adjusts the current and default strokes.
 	 * (Note: default needs resetting in case 'pixFactor' changes)
@@ -1053,10 +1002,54 @@ public class CPScreen extends JPanel implements	MouseListener {
 		}	
 	}
  
-	public int getLineThickness() {
-		return linethickness;
+	public int getFillOpacity() {
+		return fillOpacity;
 	}
- 
+
+	/** 
+	 * 'fill opacity' controls the brilliance of colors for filled
+	 * faces, circles. Less means lighter colors.
+	 * TODO: need to update 'screen' tab slider
+	 * @param t in [0,256)
+	 */
+	public void setFillOpacity(int t) {
+		if (t >= 0 && t <= 255)
+			fillOpacity = t;
+		else fillOpacity=CPBase.DEFAULT_FILL_OPACITY;
+	}
+
+	public int getSphereOpacity() {
+		return sphereOpacity;
+	}
+	
+	/**
+	 * 'sphere opacity' controls how much the back of the sphere shows
+	 * through.
+	 * @param t in [0,256)
+	 */
+	public void setSphereOpacity(int t) {
+		if (t >= 0 && t <= 255)
+			sphereOpacity = t;
+		else sphereOpacity=CPBase.DEFAULT_SPHERE_OPACITY;
+	}
+	
+	public Font getIndexFont() {
+		return indexFont;
+	}
+	
+	/** 
+	 * Set font appearing for indices on canvas of this packing.
+	 * @param t
+	 */
+	public void setIndexFont(int t) {
+		if (t>=0 && t<= 30) {
+			textSize=t;
+			indexFont=new Font("Sarif",Font.ITALIC,t);
+			imageContextReal.setFont(indexFont);
+		}
+		else indexFont=CPBase.DEFAULT_INDEX_FONT;
+	}
+
 	/**
 	 * converts real world double x to pixel int x
 	 * @param x
@@ -1088,7 +1081,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 	 * @return int
 	 */
 	public  int real_to_pix_y(double y) {
-		return (int)(.5+(y-(YMin+YHeight))*-pixFactor);  // - because of y flip
+		return (int)(.5+(y-(YMin+YHeight))*-pixFactor);  // - due to y flip
 	}
 
 	/**

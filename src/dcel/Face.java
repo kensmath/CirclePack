@@ -127,14 +127,14 @@ public class Face {
 	public int[] getVerts() {
 		ArrayList<Integer> vertlist=new ArrayList<Integer>();
 		HalfEdge nxtedge=edge;
-		int safety=100;
+		int safety=10000;
 		do {
 			vertlist.add(nxtedge.origin.vertIndx);
 			nxtedge=nxtedge.next;
 			safety--;
 		} while (nxtedge!=edge && safety>0);
 		if (safety==0) 
-			System.out.println("Break out with face "+faceIndx);
+			System.out.println("Break out: >10000 edges, face "+faceIndx);
 		int []ans=new int[vertlist.size()];
 		Iterator<Integer> vlst=vertlist.iterator();
 		int tick=0;

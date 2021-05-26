@@ -2723,7 +2723,7 @@ public class ConformalTiling extends PackExtender {
 						int v=tedge.get(n);
 						int w=nghbedge.get(0);
 						
-						int adrslt=p.adjoin(tilePack,v,w,n); // DebugHelp.debugPackWrite(p,"tilestage");
+						int adrslt=PackData.adjoin(p,tilePack,v,w,n); // DebugHelp.debugPackWrite(p,"tilestage");
 						if (adrslt!=1) {
 							return null;
 						}

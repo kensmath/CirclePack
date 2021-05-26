@@ -246,7 +246,7 @@ public class CommandStrParser {
     			  newP.cpScreen=CPBase.cpScreens[i];
     			  newP.cpScreen.setPackData(newP);
     			  newP.cpScreen.updateXtenders();
-    			  cps.emptyPacking();
+    			  cps.emptyScreen();
     			  cps.updateXtenders();
     			  count++;
     		  }
@@ -808,6 +808,7 @@ public class CommandStrParser {
 	    	  // one seg: p1 p2 v1 v2 n or p1 p2 v1 v2 (v1 w)
 	    	  int pnum1=Integer.parseInt((String)items.get(0));
 	    	  int pnum2=Integer.parseInt((String)items.get(1));
+	    	  int offset=0;
 
 	    	  if (pnum1<0 || pnum1>=CPBase.NUM_PACKS 
 	    			  || !CPBase.cpScreens[pnum1].getPackData().status 
@@ -849,6 +850,8 @@ public class CommandStrParser {
 	    			  } 
 	    			  N=tick;
 	    		  }
+	    		  
+	    		  // traditional
 	    		  else {
 	    			  int safty=packData.nodeCount;
 	    			  int ne=packData.getLastPetal(v1);
@@ -862,186 +865,51 @@ public class CommandStrParser {
 	    			  N=tick;
 	    		  }
 	    	  }
-	    	  else 
+	    	  else // n is given
 	    		  N=Integer.parseInt((String)items.get(4));
-
-	    	  // use dcel version
-	    	  if (packData.packDCEL!=null) {
-	    		  PackDCEL pdc1=CombDCEL.cloneDCEL(packData.packDCEL);
-	    		  PackDCEL pdc2=qackData.packDCEL;
-	    		  if (qackData==packData)
-	    			  pdc2=pdc1;
-	    		  else if (pdc2==null)
-	    			  pdc2=CombDCEL.getRawDCEL(qackData);
-	    		  else 
-	    			  pdc2=CombDCEL.cloneDCEL(qackData.packDCEL);
+	    	  
+	    	  // traditional: save overlaps
+	    	  if (packData.packDCEL==null) {
+		    	  if (pnum1!=pnum2) 
+		    		  offset=packData.nodeCount;
+		    	  boolean overlap_flag=false;
+		    	  if (packData.overlapStatus || qackData.overlapStatus)
+		    		  overlap_flag=true;
+		  	  
+		    	  // save pnum1 overlaps
+		    	  Overlap overlaps=null;
+		    	  Overlap trace=null;
+				  double angle;
+		    	  if (packData.overlapStatus) {
+		    		  overlaps=new Overlap();
+		    		  trace=overlaps;
+		    		  for (int v=1;v<=packData.nodeCount;v++) {
+		    			  int[] flower=packData.getFlower(v);
+		    			  for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) {
+		    				  // only store for petals with larger indices
+		    				  if (v<flower[j]
+		    				     && (angle=packData.getInvDist(v,flower[j]))!=1.0 ) {
+		    					  trace.v=v;
+		    					  trace.w=flower[j];
+		    					  trace.angle=angle;
+		    					  trace=trace.next=new Overlap();
+		    				  }
+		    			  }
+		    		  }
+		    	  }
 	    		  
-	    		  // do adjoin
-	    		  try {
-	    			  pdc1=CombDCEL.d_adjoin(pdc1, pdc2, v1, v2, N);
-		    		  packData.alloc_pack_space(pdc1.vertCount+10,true);
-	    		  } catch(CombException cex) {
-	    			  CirclePack.cpb.errMsg("DCEL adjoin failed: "+cex.getMessage());
-	    			  return 0;
-	    		  }
-
-	    		  // Set up 'VData' (at original size) 
-	    		  VData[] newV=new VData[packData.nodeCount+1];
-	    		  
-	    		  // copy the 'packData' info?
-	    		  if (pdc2==pdc1) 
-	    			  for (int v=1;v<=pdc1.vertCount;v++)
-	    				  newV[v]=packData.vData[pdc1.vertices[v].vutil].clone();
-	    		  if (pdc2!=pdc1) {
-	    			  // all 'packData' vertices should still be there, same indices
-	    			  for (int v=1;v<=packData.nodeCount;v++)
-	    				  newV[v]=packData.vData[v].clone();
-	    			  // rest are from 'qackData'.
-	    			  for (int v=packData.nodeCount+1;v<=pdc1.vertCount;v++) {
-	    				  newV[v]=new VData();
-	    				  int oldv=pdc1.newOld.findW(v); // v is 'oldv' in 'qackData'
-	    				  newV[v].rad=qackData.getRadius(oldv);
-	    				  newV[v].center=qackData.getCenter(oldv);
-	    				  newV[v].aim=qackData.getAim(oldv);
-	    			  }
-	    		  }
-	    		  
-	    		  // now organize combinatorics
-	    		  try {
-	    			  // make sure bdry edge's twins point to
-	    			  //    face with negative index. 
-	    			  if (pdc1.redChain!=null) {
-	    				  RedHEdge rhe=pdc1.redChain;
-	    				  do {
-	    					  if (rhe.twinRed==null)
-	    						  rhe.myEdge.twin.face=new dcel.Face(-1);
-	    					  rhe=rhe.nextRed;
-	    				  } while (rhe!=pdc1.redChain);
-	    			  }
-	    			  
-	    			  // DCELdebug.printBouquet(pdc1);
-	    			  if (pdc1.redChain==null)
-	    				  pdc1=CombDCEL.redchain_by_edge(pdc1, null, pdc1.alpha);
-
-	    			  CombDCEL.d_FillInside(pdc1);
-	    			  
-	    		  } catch (Exception ex) {
-	    			  throw new DCELException("DCEL adjoin processing failed: "+ex.getMessage());
-	    		  }
-	    		  
-	    		  packData.vData=newV;
-	    		  
-	    		  packData.attachDCEL(pdc1);
-	    		  
-	    		  return pdc1.vertCount;
-	    	  } 
-
-	    	  // else traditional method
-	    	  int offset=0;
-	    	  if (pnum1!=pnum2) offset=packData.nodeCount;
-	    	  boolean overlap_flag=false;
-	    	  if (packData.overlapStatus || qackData.overlapStatus )
-	    		    overlap_flag=true;
-	  	  
-	    	  // save pnum1 overlaps
-	    	  Overlap overlaps=null;
-	    	  Overlap trace=null;
-			  double angle;
-	    	  if (packData.overlapStatus) {
-	    		  overlaps=new Overlap();
-	    		  trace=overlaps;
-	    		  for (int v=1;v<=packData.nodeCount;v++) {
-	    			  int[] flower=packData.getFlower(v);
-	    			  for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) {
-	    				  // only store for petals with larger indices
-	    				  if (v<flower[j]
-	    				     && (angle=packData.getInvDist(v,flower[j]))!=1.0 ) {
-	    					  trace.v=v;
-	    					  trace.w=flower[j];
-	    					  trace.angle=angle;
-	    					  trace=trace.next=new Overlap();
-	    				  }
-	    			  }
-	    		  }
 	    	  }
 	    	  
-	    	  // finally 'adjoin'; on return 'vertexMap' contains <orig,new> matching
-	    	  try {
-	    		  if (packData.adjoin(qackData,v1,v2,N)==0) 
-	    			  throw new ParserException();
-	    	  } catch (ParserException pex) {
-	    		  throw new ParserException("failed: "+pnum1+" "+pnum2+" "+v1+" "+v2+" "+N);
+	    	  // call to adjoin
+	    	  PackData newPack=PackData.adjoinCall(packData, qackData, v1, v2, N);
+	    	  
+	    	  if (newPack==null) {
+    			  CirclePack.cpb.errMsg("'adjoin' failed: ");
+    			  return 0;
 	    	  }
+	    	  
+	    	  int ans=CirclePack.cpb.swapPackData(newPack,pnum1,false);
 
-			  // fix packing 
-			  packData.complex_count(true);
-			  packData.facedraworder(false);
-			  packData.xyzpoint=null;
-
-			  // fix up vlist with new numbers
-			  if (pnum1==pnum2 && packData.vlist!=null 
-					  && packData.vertexMap!=null && packData.vertexMap.size()>0) {
-				  Iterator<Integer> vlst=packData.vlist.iterator();
-				  int v;
-				  NodeLink newvlist=new NodeLink(packData);
-				  while (vlst.hasNext()) {
-					  v=(Integer)vlst.next(); 
-					  newvlist.add(packData.vertexMap.findW(v));
-				  }
-				  packData.vlist=newvlist;
-			  }
-			  // fix up elist
-			  if (pnum1==pnum2 && packData.elist!=null 
-					  && packData.vertexMap!=null && packData.vertexMap.size()>0) {
-				  Iterator<EdgeSimple> elst=packData.elist.iterator();
-				  EdgeSimple edge;
-				  while (elst.hasNext()) {
-					  edge=(EdgeSimple)elst.next(); 
-					  edge.v=packData.vertexMap.findW(edge.v);
-					  edge.w=packData.vertexMap.findW(edge.w);
-				  }
-			  }
-			  // throw out glist
-			  packData.glist=null;
-			  
-			  // restablish saved overlaps 
-		      try {
-			  if(overlap_flag && packData.alloc_overlaps()!=0) {
-				  if (offset==0 && overlaps!=null) { // self-adjoin, use new indices 
-					  trace=overlaps;
-				      while (trace!=null && trace.next!=null) {
-				    	  int vv=packData.vertexMap.findW(trace.v);
-				    	  int ww=packData.vertexMap.findW(trace.w);
-				    	  packData.set_single_invDist(vv,ww,trace.angle);
-				    	  trace=trace.next;
-				      }
-				  }
-				  else if (overlaps!=null) { // reestablish pnum1 overlaps 
-				      trace=overlaps;
-				      while (trace!=null && trace.next!=null) {
-				    	  packData.set_single_invDist(trace.v,trace.w,trace.angle);
-				    	  trace=trace.next;
-				      }
-				  }
-				  if ( offset!=0 && qackData.overlapStatus ) {
-				    // new overlaps from p2? 
-				      for(int v=1;v<=qackData.nodeCount;v++) {
-				    	  int[] flower=qackData.getFlower(v);
-				    	  int vv=packData.vertexMap.findW(v);
-				    	  for(int j=0;j<qackData.countFaces(v)+
-				    	  	qackData.getBdryFlag(v);j++)
-				    		  if (v<flower[j]) {
-				    			  int ww=packData.vertexMap.findW(flower[j]);
-				    			  if ((angle=qackData.getInvDist(v,flower[j]))!=1.0)
-				    				  packData.set_single_invDist(vv,ww,angle);
-				    		  }
-				      }
-				  }
-			  }
-		      } catch (Exception ex) {}
-
-		      packData.fillcurves();
-			  packData.set_aim_default();
 			  return 1;
 	      } // end of 'adjoin'
 	      
@@ -1135,10 +1003,11 @@ public class CommandStrParser {
 			  CPBase.packings[pnum]=newP;
 			  newP.cpScreen=CPBase.cpScreens[pnum];
 			  newP.cpScreen.setPackData(newP);
+			  newP.cpScreen.emptyScreen();
+			  newP.cpScreen.updateXtenders();
 			  
 			  // point local 'packData' to new one 
 			  packData=newP;
-			  cpScreen.updateXtenders();
 			  return 1;
 	      }
 	      
@@ -5016,7 +4885,8 @@ public class CommandStrParser {
 	      else if (cmd.startsWith("add_ideal")) {
 	    	  
 	    	  // no boundary? return 0
-	    	  if (packData.getBdryCompCount()<=0) return 0;
+	    	  if (packData.getBdryCompCount()<=0) 
+	    		  return 0;
 
 	    	  boolean addVert=true; // default
 	    	  NodeLink vertlist=null;
@@ -5066,24 +4936,26 @@ public class CommandStrParser {
 	    						  break;
 	    					  }
 	    					  case 's': // given pair v,w, on same bdry, 
-	    						  //   new vert attaches to vertices 
+	    						  // new vert attaches to vertices 
 	    						  //   from v to w
 	    					  {
 	    						  vertlist=new NodeLink(packData,items);
 	    						  Iterator<Integer> vlist=vertlist.iterator();
 	    						  v=(Integer)vlist.next();
 	    						  w=(Integer)vlist.next();
+	    						  if (!packData.onSameBdryComp(v,w)) 
+	    							  throw new CombException(v+" and "+
+	    									  w+" aren't on the same bdry component");
 	    						  if (packData.packDCEL!=null) {
 	    							  try {
-	    								  count=CombDCEL.addIdeal(packData.packDCEL, v, w);
+	    								  count=RawDCEL.addIdeal_raw(packData.packDCEL, v, w);
 	    								  if (count==0) 
 	    									  throw new CombException("add failed");
-	    								  if (packData.packDCEL.redChain==null)
-	    									  CombDCEL.redchain_by_edge(packData.packDCEL, null,packData.packDCEL.alpha);
-	    								  CombDCEL.d_FillInside(packData.packDCEL);
+	    								  packData.packDCEL.fixDCEL_raw(packData);
 	    							  } catch(Exception ex) {
 	    								  throw new DCELException("addIdeal failed: "+ex.getMessage());
 	    							  }
+	    							  packData.xyzpoint=null;
 	    							  return count;
 	    						  }
 	    						  
@@ -5104,7 +4976,7 @@ public class CommandStrParser {
 	    				  } 
 	    				  else { // no flag, just use vertices
 	    					  vertlist=new NodeLink(packData,items);
-	    					  count += packData.add_ideal(vertlist);
+	    					  count += packData.add_ideal(vertlist); // DCELdebug.redConsistency(packData.packDCEL);
 	    					  return count;
 	    				  }
 	    			  } // end of while
@@ -6062,6 +5934,15 @@ public class CommandStrParser {
 					if (flagSegs.size()>0)
 						items=flagSegs.get(0);
 				}
+				
+				// debug
+				if (str.contains("compOrder")) {
+					packData.glist=new GraphLink(packData,"s");
+					DualGraph.printGraph(packData.glist);
+					DCELdebug.visualDualEdges(packData.packDCEL,
+							packData.packNum,packData.glist);
+					return 1;
+				}
 			
 				// Create
 				if (str.contains("clone")) {
@@ -6551,7 +6432,8 @@ public class CommandStrParser {
     				  }
 
     				  // add the n circles and close up
-    				  for (int i=1;i<=n;i++) packData.add_vert(vert);
+    				  for (int i=1;i<=n;i++) 
+    					  packData.add_vert(vert);
     				  packData.enfold(vert);
     				  int[] flower=packData.getFlower(vert);
     				  Complex z=packData.getCenter(flower[0]);
@@ -6562,7 +6444,10 @@ public class CommandStrParser {
     		  } // end of while
 	    	  
 	    	  if (count>0) {
-	    		  packData.setCombinatorics();
+	    		  if (packData.packDCEL!=null)
+	    			  packData.packDCEL.fixDCEL_raw(packData);
+	    		  else
+	    			  packData.setCombinatorics();
 	    		  packData.fillcurves();
 	    	  }
     		  if (overCount>0) {
@@ -7870,7 +7755,7 @@ public class CommandStrParser {
 	    		  {
 	    			  int v=NodeLink.grab_one_vert(packData,(String)items.get(0));
 	    			  double ctr=packData.getCenter(v).abs();
-	    			  if (ctr < PackData.OKERR) return 1; // don't bother, close enough
+	    			  if (Math.abs(ctr-1.0) < PackData.OKERR) return 1; // don't bother, close enough
 	    			  double factor=1.0/ctr;
 	    			  return packData.eucl_scale(factor);
 	    		  }
@@ -9910,7 +9795,7 @@ public class CommandStrParser {
 	        				  else if (mode==3) { packData.rData[v].aim=packData.rData[v].aim+inc*Math.PI;count++;} // TODO: not right adjustment
 	        				  else if (mode==0) {
 	        					  if (aim!=0.0 || ((packData.hes < 0) && packData.isBdry(v))) {
-	        						  packData.rData[v].aim=aim*Math.PI;
+	        						  packData.setAim(v,aim*Math.PI);
 	        					  	  count++;
 	        					  }
 	        					  else count--;
@@ -9918,8 +9803,8 @@ public class CommandStrParser {
 	        				  else if (mode==4) { // based on 'xyzpoint' data
 	        						double angsum=0.0;
 	        						for (int j=0;j<packData.countFaces(v);j++) {
-	        							int n=packData.kData[v].flower[j];
-	        							int m=packData.kData[v].flower[j+1];
+	        							int n=packData.getPetal(v,j);
+	        							int m=packData.getPetal(v,j+1);
 	        							angsum += Math.acos(EuclMath.e_cos_3D(
 	        									packData.xyzpoint[v],packData.xyzpoint[n],
 	        									packData.xyzpoint[m]));
@@ -10896,7 +10781,7 @@ public class CommandStrParser {
 	          int m=b/2;
 	          if (b!=2*m) m=(b-1)/2;
 	          if (n<0 || n>=m) n=m; // full bdry
-	          if (packData.adjoin(packData,v,v,n)>0) {
+	          if (PackData.adjoin(packData,packData,v,v,n)>0) {
 	        	  packData.setCombinatorics();
 	        	  return 1;
 	          }

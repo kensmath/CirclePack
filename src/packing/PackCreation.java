@@ -1484,7 +1484,7 @@ public class PackCreation {
 		}
 		
 		int v1=blink.get(i);
-		int rslt=p1.adjoin(p2,v1,v2,n);
+		int rslt=PackData.adjoin(p1,p2,v1,v2,n);
 		if (rslt<=0) 
 			return 0;
 		
@@ -1596,7 +1596,7 @@ public class PackCreation {
 			// adjoin B^ to A along end 
 			//        2 on A to 2 on B^, endcount edges
 			//        don't need to mark any vertices
-			growWheel.adjoin(tempReverse,2,2,endcount);
+			PackData.adjoin(growWheel,tempReverse,2,2,endcount);
 			updateLists(growWheel,tempReverse.vlist,tempReverse.elist,growWheel.vertexMap);
 			growWheel.complex_count(false);
 			
@@ -1626,7 +1626,7 @@ public class PackCreation {
 			//		  2 on A+B^ to 3 on C^, hypcount edges
 			//        don't need to mark any vertices
 			//        identify 'alpha' of 'growWheel' as alpha of C
-			growWheel.adjoin(tempReverse,2,3,hypcount);
+			PackData.adjoin(growWheel,tempReverse,2,3,hypcount);
 			updateLists(growWheel,tempReverse.vlist,tempReverse.elist,growWheel.vertexMap);
 			growWheel.alpha=growWheel.vertexMap.findW(tempReverse.alpha);
 			growWheel.complex_count(false);
@@ -1644,7 +1644,7 @@ public class PackCreation {
 			// adjoin D to C^ along long 
 			//        2 on A+B^+C^ to 3 on D, longcount edges
 			//        X keeps track of old 2.
-			growWheel.adjoin(tempPack,2,3,longcount);
+			PackData.adjoin(growWheel,tempPack,2,3,longcount);
 			updateLists(growWheel,tempPack.vlist,tempPack.elist,growWheel.vertexMap);
 			int X=growWheel.vertexMap.findW(2);
 			growWheel.complex_count(false);
@@ -1657,7 +1657,7 @@ public class PackCreation {
 			// adjoin E ends of C^ and D, endcount each
 			//        X on A+B^+C^+D to 3 on E
 			//        Y keeps track of old 2.
-			growWheel.adjoin(tempPack,X,3,longcount);
+			PackData.adjoin(growWheel,tempPack,X,3,longcount);
 			growWheel.complex_count(false);
 			updateLists(growWheel,tempPack.vlist,tempPack.elist,growWheel.vertexMap);
 			int Y=growWheel.vertexMap.findW(2);
@@ -1763,7 +1763,7 @@ public class PackCreation {
 			tempPack.elist=new EdgeLink(tempPack,"b");
 
 			// add the chair above left
-			growChair.adjoin(tempPack, 4,8,2*edgeNumber);
+			PackData.adjoin(growChair,tempPack, 4,8,2*edgeNumber);
 			updateLists(growChair,tempPack.vlist,tempPack.elist,growChair.vertexMap);
 			int new3=growChair.vertexMap.findW(3);
 			int new5=growChair.vertexMap.findW(5);
@@ -1784,7 +1784,7 @@ public class PackCreation {
 			}
 			
 			// add the chair below right
-			growChair.adjoin(tempPack, 8,8,2*edgeNumber);
+			PackData.adjoin(growChair,tempPack, 8,8,2*edgeNumber);
 			updateLists(growChair,tempPack.vlist,tempPack.elist,growChair.vertexMap);
 			new3=growChair.vertexMap.findW(3);
 			new5=growChair.vertexMap.findW(5);
@@ -1805,7 +1805,7 @@ public class PackCreation {
 	  		
 
 			// add the chair between --- lower left
-			growChair.adjoin(tempPack,6,7,4*edgeNumber);
+			PackData.adjoin(growChair,tempPack,6,7,4*edgeNumber);
 			updateLists(growChair,tempPack.vlist,tempPack.elist,growChair.vertexMap);
 			new5=growChair.vertexMap.findW(5);
 			growChair.swap_nodes(new5,5);
@@ -1928,7 +1928,7 @@ public class PackCreation {
 			// new level of A = [C A/D B], (X+W) x (H+X)
 			// top part, [C A] first, (X+W) x H
 			fusionA=holdC.copyPackTo();
-			if (fusionA.adjoin(holdA,4,1,currentHeight)!=1 ||
+			if (PackData.adjoin(fusionA,holdA,4,1,currentHeight)!=1 ||
 					!reNumBdry(fusionA,1,baseWidth+currentWidth,currentHeight))
 				throw new CombException("failed [C A]");
 			// transfer non-zero marks
@@ -1941,7 +1941,7 @@ public class PackCreation {
 			}
 			// lower part, [D B], (X+W) x X
 			PackData lower=holdD.copyPackTo();
-			if (lower.adjoin(holdB,4,1,baseHeight)!=1 ||
+			if (PackData.adjoin(lower,holdB,4,1,baseHeight)!=1 ||
 					!reNumBdry(lower,1,baseWidth+currentWidth,baseHeight))
 				throw new CombException("failed [D B]");
 			// transfer non-zero marks
@@ -1953,7 +1953,7 @@ public class PackCreation {
 				}
 			}
 			// adjoin them, (X+W) x (H+X)
-			if (fusionA.adjoin(lower,3,4,baseWidth+currentWidth)!=1 ||
+			if (PackData.adjoin(fusionA,lower,3,4,baseWidth+currentWidth)!=1 ||
 					!reNumBdry(fusionA,1,baseWidth+currentWidth,baseHeight+currentHeight))
 				throw new CombException("failed [C A/D B]");
 			// transfer non-zero marks
@@ -1967,7 +1967,7 @@ public class PackCreation {
 
 			// new level of B = [A C], (W+X) x H
 			fusionB=holdA.copyPackTo();
-			if (fusionB.adjoin(holdC, 4, 1,currentHeight)!=1 ||
+			if (PackData.adjoin(fusionB,holdC, 4, 1,currentHeight)!=1 ||
 					!reNumBdry(fusionB,1,currentWidth +baseWidth,currentHeight))
 				throw new CombException("failed [A C]");
 			// transfer non-zero marks
@@ -1981,7 +1981,7 @@ public class PackCreation {
 
 			// new level of C = [B/A], W x (X+H)
 			fusionC=holdB.copyPackTo();
-			if (fusionC.adjoin(holdA,3,4,currentWidth)!=1 ||
+			if (PackData.adjoin(fusionC,holdA,3,4,currentWidth)!=1 ||
 					!reNumBdry(fusionC,1,currentWidth,baseHeight+currentHeight))
 				throw new CombException("failed [B/A]");
 			// transfer non-zero marks
@@ -2129,18 +2129,18 @@ public class PackCreation {
 			PackData tempPack=sgPack.copyPackTo();
 
 			// add the square above
-			sgPack.adjoin(tempPack, 2,3,edgeNumber);
+			PackData.adjoin(sgPack,tempPack, 2,3,edgeNumber);
 			int new1=sgPack.vertexMap.findW(1);
 			sgPack.swap_nodes(new1,1);
 			
 			// add square upper left
-			sgPack.adjoin(tempPack,2,4,edgeNumber);
+			PackData.adjoin(sgPack,tempPack,2,4,edgeNumber);
 			int new2=sgPack.vertexMap.findW(2);
 			sgPack.swap_nodes(new2,2);
 			int newAlpha=new2; // this will be set later
 
 			// add square to left
-			sgPack.adjoin(tempPack,3,4,2*edgeNumber);
+			PackData.adjoin(sgPack,tempPack,3,4,2*edgeNumber);
 			int new3=sgPack.vertexMap.findW(3);
 			sgPack.swap_nodes(new3,3);
 			
@@ -2287,7 +2287,7 @@ public class PackCreation {
 			heap=doublePent(heap,generation);
 			//	DebugHelp.debugPackWrite(heap,"doubleheap.p");
 			
-			heap.adjoin(pentBase,4,5,2);
+			PackData.adjoin(heap,pentBase,4,5,2);
 			
 			int new4=heap.vertexMap.findW(4);
 			int new3=heap.vertexMap.findW(3);
@@ -2447,7 +2447,7 @@ public class PackCreation {
 		PackData triPent=p.copyPackTo();
 
 		// adjoin 2
-		triPent.adjoin(p,1,1,sidelength);
+		PackData.adjoin(triPent,p,1,1,sidelength);
 		int newv=triPent.vertexMap.findW(3);
 		triPent.swap_nodes(newv,7);
 		newv=triPent.vertexMap.findW(4);
@@ -2457,7 +2457,7 @@ public class PackCreation {
 		triPent.setBdryFlags();
 		
 		// adjoin 3
-		triPent.adjoin(p,7,1,2*sidelength);
+		PackData.adjoin(triPent,p,7,1,2*sidelength);
 		int new5=triPent.vertexMap.findW(4);
 		int new6=triPent.vertexMap.findW(5);
 		triPent.swap_nodes(new5,5);
@@ -2482,7 +2482,7 @@ public class PackCreation {
 		PackData triPent=p.copyPackTo();
 
 		// adjoin 2
-		triPent.adjoin(p,5,1,sidelength);
+		PackData.adjoin(triPent,p,5,1,sidelength);
 		
 		boolean debug=false; // debug=true;
 		if (debug) {
@@ -2499,7 +2499,7 @@ public class PackCreation {
 		triPent.setBdryFlags();
 		
 		// adjoin 3
-		triPent.adjoin(p,newCorner,1,sidelength);
+		PackData.adjoin(triPent,p,newCorner,1,sidelength);
 		if (debug) {
 			Iterator<EdgeSimple> tPit=triPent.vertexMap.iterator();
 			System.err.println("vertexMap after 3: ");
@@ -2514,7 +2514,7 @@ public class PackCreation {
 		triPent.setBdryFlags();
 
 		// adjoin 4
-		triPent.adjoin(p,newGamma,1,2*sidelength);
+		PackData.adjoin(triPent,p,newGamma,1,2*sidelength);
 		if (debug) {
 			Iterator<EdgeSimple> tPit=triPent.vertexMap.iterator();
 			System.err.println("vertexMap after 4: ");
@@ -2558,13 +2558,13 @@ public class PackCreation {
 		temp.complex_count(false);
 		
 		// adjoin 2
-		base.adjoin(temp,3,5,sidelength);
+		PackData.adjoin(base,temp,3,5,sidelength);
 		int newv=base.vertexMap.findW(2);
 		base.swap_nodes(newv,2);
 		base.setBdryFlags();
 		
 		// adjoin 3
-		base.adjoin(temp,4,1,2*sidelength);
+		PackData.adjoin(base,temp,4,1,2*sidelength);
 		newv=base.vertexMap.findW(6);
 		base.swap_nodes(newv,6); // new center
 		newv=base.vertexMap.findW(4);
@@ -2572,7 +2572,7 @@ public class PackCreation {
 		base.setBdryFlags();
 
 		// adjoin 4
-		base.adjoin(temp,5,1,2*sidelength);
+		PackData.adjoin(base,temp,5,1,2*sidelength);
 		newv=base.vertexMap.findW(5);
 		base.swap_nodes(newv,5);
 		newv=base.vertexMap.findW(4);
@@ -2580,13 +2580,13 @@ public class PackCreation {
 		base.setBdryFlags();
 
 		// adjoin 5
-		base.adjoin(temp,7,5,2*sidelength);
+		PackData.adjoin(base,temp,7,5,2*sidelength);
 		newv=base.vertexMap.findW(3);
 		base.swap_nodes(newv,3);
 		base.setBdryFlags();
 		
 		// adjoin 6
-		base.adjoin(temp,8,5,3*sidelength);
+		PackData.adjoin(base,temp,8,5,3*sidelength);
 		newv=base.vertexMap.findW(4);
 		base.swap_nodes(newv,4);
 		
@@ -2610,7 +2610,7 @@ public class PackCreation {
 		int sidelength=N+1;
 		
 		// adjoin on left
-		newPack.adjoin(temp,5,2,sidelength); //	DebugHelp.debugPackWrite(temp,"dyadicLeft.p");
+		PackData.adjoin(newPack,temp,5,2,sidelength); //	DebugHelp.debugPackWrite(temp,"dyadicLeft.p");
 
 		int new5=newPack.vertexMap.findW(5);
 		int new4=newPack.vertexMap.findW(4);

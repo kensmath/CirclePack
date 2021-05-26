@@ -1120,7 +1120,11 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 				}
 				
 				// default: spanning tree based on face drawing order
-				count += abutMore(DualGraph.easySpanner(packData,false));
+				if (packData.packDCEL!=null) {
+					count+=abutMore(packData.packDCEL.computeOrder);
+				}
+				else
+					count += abutMore(DualGraph.easySpanner(packData,false));
 				break;
 			}
 			

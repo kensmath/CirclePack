@@ -102,6 +102,10 @@ public class RedHEdge {
 		rhe.redutil=redutil;
 		return rhe;
 	}
+	
+	public String toString() {
+		return myEdge.toString();
+	}
 
 	
 }

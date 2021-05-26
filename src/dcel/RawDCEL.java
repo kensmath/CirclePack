@@ -4,9 +4,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import complex.Complex;
+import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
-import komplex.EdgeSimple;
+import exceptions.ParserException;
 import listManip.HalfLink;
 import listManip.NodeLink;
 
@@ -400,24 +401,20 @@ public class RawDCEL {
 		  Vertex v1=pdcel.vertices[v];
 		  HalfEdge edge1=v1.halfedge;
 		  
-		  Vertex v2=edge1.twin.next.next.twin.origin;
-		  if (v2.vertIndx==w) { // check clw two steps
-			  if (edge1.next.next.origin.vertIndx==w) { // ambiguous: choose cclw
-				  v2=edge1.next.next.origin;
-			  }
-			  else { // swap v and w
-				  v1=v2;
-				  v2=v1.halfedge.next.next.origin;
-			  }
-		  }
-		  else { // else go cclw
+		  // two step cclw may be w
+		  Vertex v2=edge1.twin.prev.origin;
+		  if (v2.vertIndx!=w) { 
+			  v1=pdcel.vertices[w];
+			  edge1=v1.halfedge;
 			  v2=edge1.twin.prev.origin;
 			  if (v2.vertIndx!=w)
 				  throw new CombException("vertices "+v+" and "+w+" can't form a legal edge");
+			  int hld=w;
+			  w=v;
+			  v=hld;
 		  }
-		  
-		  // now v1, u, v2 should be cclw nghbs
-		  edge1=v1.halfedge;
+
+		  // v1, u, v2 should be cclw nghbs, edge1=[v1,u], edge2=[u,v2] 
 		  HalfEdge edge2=edge1.twin.prev.twin;
 		  RedHEdge red_in=edge1.myRedEdge;
 		  RedHEdge red_out=edge2.myRedEdge;
@@ -459,6 +456,7 @@ public class RawDCEL {
 			  redTwin.nextRed.prevRed=redTwin;
 			  red_out.twinRed=redTwin;
 			  redTwin.twinRed=red_out;
+			  edge1.myRedEdge=null;
 		  }
 		  
 		  // fix edge pointers
@@ -1051,6 +1049,66 @@ public class RawDCEL {
 			}
 			return count;
 	  }
+	  
+	  /**
+	   * If 'rededge' backtracks, we can shrink red chain 
+	   * (moving 'redChain' as necessary). No action? return
+	   * 'rededge'. If red chain is just two edges, 
+	   * this becomes a sphere, return null. Else return next
+	   * downstream red after backtrack.
+	   * @param rededge RedHEdge
+	   * @return RedHEdge, possibly null
+	   */
+	  public static RedHEdge contractRed_raw(PackDCEL pdcel,RedHEdge rededge) {
+		  HalfEdge he=rededge.myEdge;
+		  if (rededge.twinRed==null)
+			  return rededge;
+		  HalfEdge twinhe=rededge.twinRed.myEdge;
+		  
+		  // Only 2 red edges? make a sphere
+		  if (rededge.nextRed.nextRed==rededge) { 
+			  pdcel.redChain=null;
+			  he.origin.redFlag=false;
+			  he.origin.bdryFlag=0;
+			  he.myRedEdge=null;
+			  twinhe.origin.redFlag=false;
+			  twinhe.origin.bdryFlag=0;
+			  twinhe.myRedEdge=null;
+			  return null;
+		  }
+		  
+		  if (rededge.prevRed==rededge.twinRed) {
+			  if (rededge==pdcel.redChain || rededge.prevRed==pdcel.redChain)
+				  pdcel.redChain=rededge.nextRed;
+			  
+			  rededge.nextRed.prevRed=rededge.prevRed.prevRed;
+			  rededge.prevRed.prevRed.nextRed=rededge.nextRed;
+			  
+			  he.myRedEdge=null;
+			  twinhe.myRedEdge=null;
+			  he.origin.redFlag=false;
+			  he.origin.bdryFlag=0;
+			  
+			  return rededge.nextRed;
+		  }
+		  
+		  if (rededge.nextRed==rededge.twinRed) {
+			  if (rededge==pdcel.redChain || rededge.nextRed==pdcel.redChain)
+				  pdcel.redChain=rededge.twinRed.nextRed;
+			  
+			  rededge.prevRed.nextRed=rededge.nextRed.nextRed;
+			  rededge.nextRed.nextRed.prevRed=rededge.prevRed;
+			  
+			  he.myRedEdge=null;
+			  twinhe.myRedEdge=null;
+			  twinhe.origin.redFlag=false;
+			  twinhe.origin.bdryFlag=0;
+			  
+			  return rededge.nextRed.nextRed;
+		  }
+		  
+		  return rededge; // return 'rededge' to indicate no action
+	  }
 
 	  /**
 	   * Flip an edge in a triangulation; 'edge' must be shared by two non-ideal
@@ -1110,325 +1168,542 @@ public class RawDCEL {
 		  return 1;
 	  }
 
-	/**
-		 * Modify the DCEL by dividing each edge in half 
-		 * and each n-sided (non-ideal) face of 'pdcel' 
-		 * into n+1 faces. 'pdcel.redChain' is subdivided 
-		 * to get new red chain. All original vertices have
-		 * their original spoke halfedges, and we process
-		 * by cycling through the vertices. At the end, 
-		 * 'vertices' is up to date, 'faces' and 'edges'
-		 * are outdated, but ideal faces and their indices 
-		 * remain. So we can call repeat 'Ntimes' times before
-		 * calling routine processes combinatorics. Each
-		 * new vertex 'vutil' should give index of reference
-		 * vert from original packing so we can set preliminary
-		 * radii.
-		 * @param pdcel PackDCEL
-		 * @param Ntimes int 
-		 * @return int number of repeats
-		 */
-		public static int hexRefine_raw(PackDCEL pdcel,int Ntimes) {
-	
+	  /**
+	   * Modify the DCEL by dividing each edge in half and each n-sided (non-ideal)
+	   * face of 'pdcel' into n+1 faces. 'pdcel.redChain' is subdivided to get new red
+	   * chain. All original vertices have their original spoke halfedges, and we
+	   * process by cycling through the vertices. At the end, 'vertices' is up to
+	   * date, 'faces' and 'edges' are outdated, but ideal faces and their indices
+	   * remain. So we can call repeat 'Ntimes' times before calling routine processes
+	   * combinatorics. Each new vertex 'vutil' should give index of reference vert
+	   * from original packing so we can set preliminary radii.
+	   * @param pdcel  PackDCEL
+	   * @param Ntimes int
+	   * @return int number of repeats
+	   */
+		public static int hexRefine_raw(PackDCEL pdcel, int Ntimes) {
+
 			// inherited 'vutil' refers back to original vertex
 			// NOTE: probably not useful when Ntimes>1.
-			for (int v=1;v<=pdcel.vertCount;v++)
-				pdcel.vertices[v].vutil=v;
-			
-			int tick=0;
-			while (tick<Ntimes) {
+			for (int v = 1; v <= pdcel.vertCount; v++)
+				pdcel.vertices[v].vutil = v;
+
+			int tick = 0;
+			while (tick < Ntimes) {
 				tick++;
-	
-				// 'eutil' flags: 
-				//   0 means untouched yet
-				//   1 means this edge has been subdivided
-				//   2 means this edge's face has been subdivided.
+
+				// 'eutil' flags:
+				// 0 means untouched yet
+				// 1 means this edge has been subdivided
+				// 2 means this edge's face has been subdivided.
 				pdcel.zeroEUtil();
-	
+
 				// we loop through the original vertices, and
-				//   for each vert loop through its faces, 
-				//   splitting its edges (and also their twins), 
-				//   then adding its new interior edges
-				int origVertCount=pdcel.vertCount;
-				
+				// for each vert loop through its faces,
+				// splitting its edges (and also their twins),
+				// then adding its new interior edges
+				int origVertCount = pdcel.vertCount;
+
 				HalfEdge newEdge;
-				HalfEdge n_base,n_newEdge,n_newTwin;
-				HalfEdge n_base_tw=null;
-				Vertex midVert,n_midVert;
-			
-				for (int v=1;v<=origVertCount;v++) {
-					HalfLink fflower=pdcel.vertices[v].getEdgeFlower();
-					int sz=fflower.size();
+				HalfEdge n_base, n_newEdge, n_newTwin;
+				HalfEdge n_base_tw = null;
+				Vertex midVert, n_midVert;
+
+				for (int v = 1; v <= origVertCount; v++) {
+					HalfLink fflower = pdcel.vertices[v].getEdgeFlower();
+					int sz = fflower.size();
 					fflower.add(fflower.get(0));
-					for (int j=0;j<sz;j++) {
-						HalfEdge spoke=fflower.get(j);
-							
+					for (int j = 0; j < sz; j++) {
+						HalfEdge spoke = fflower.get(j);
+
 						// if not yet processed and not an edge of
-						//   an ideal face, we create a face so we
-						//   can call some face methods.
-	
+						// an ideal face, we create a face so we
+						// can call some face methods.
+
 						// 'spoke' is done or is edge of ideal face
-						if (spoke.eutil==2 || (spoke.myRedEdge==null && 
-								spoke.twin.myRedEdge!=null)) {
-									continue;
+						if (spoke.eutil == 2 || (spoke.myRedEdge == null && spoke.twin.myRedEdge != null)) {
+							continue;
 						}
-						
+
 						// else, will process this edge and its face
-						spoke.face=new Face(1);
-						HalfLink fedges=spoke.face.getEdges(spoke);
-						
+						spoke.face = new Face(1);
+						HalfLink fedges = spoke.face.getEdges(spoke);
+
 						// only want edges starting at original vertices
-						int n=fedges.size();
-						for (int i=n-1;i>=0;i--) {
-							if (fedges.get(i).origin.vertIndx>origVertCount)
+						int n = fedges.size();
+						for (int i = n - 1; i >= 0; i--) {
+							if (fedges.get(i).origin.vertIndx > origVertCount)
 								fedges.remove(i);
 						}
-						
+
 						// now count and close up
-						n=fedges.size();
+						n = fedges.size();
 						fedges.add(fedges.getFirst());
-						
+
 						// need some info to build center face later
-						HalfEdge[] centedges=new HalfEdge[n+1];
-						
+						HalfEdge[] centedges = new HalfEdge[n + 1];
+
 						// get first divided edge
-						n_base=spoke;
-						
+						n_base = spoke;
+
 						// 'base' already divided; copy needed elements
-						if (n_base.eutil==1) {
-							n_newEdge=n_base.next;
-							n_newTwin=n_base.twin;
-							n_midVert=n_newEdge.origin;
-							n_midVert.halfedge=n_newEdge;
-							n_base.eutil=2;
+						if (n_base.eutil == 1) {
+							n_newEdge = n_base.next;
+							n_newTwin = n_base.twin;
+							n_midVert = n_newEdge.origin;
+							n_midVert.halfedge = n_newEdge;
+							n_base.eutil = 2;
 						}
-						
+
 						// else, divide this base
 						else {
-							n_base.eutil=2;
-							n_base_tw=n_base.twin;
-							n_base_tw.eutil=1;
-	
-							RedHEdge redge=n_base.myRedEdge;
-							RedHEdge tredge=n_base.twin.myRedEdge;
-							
+							n_base.eutil = 2;
+							n_base_tw = n_base.twin;
+							n_base_tw.eutil = 1;
+
+							RedHEdge redge = n_base.myRedEdge;
+							RedHEdge tredge = n_base.twin.myRedEdge;
+
 							// two new edges
-							n_newEdge=new HalfEdge();
-							n_newEdge.eutil=1;
-							n_newEdge.invDist=n_base.invDist;
-							n_newEdge.schwarzian=n_base.schwarzian;
-							n_newTwin=new HalfEdge();
-							n_newTwin.eutil=1;
-							n_newTwin.invDist=n_base.invDist;
-							n_newTwin.schwarzian=n_base.schwarzian;
-	
+							n_newEdge = new HalfEdge();
+							n_newEdge.eutil = 1;
+							n_newEdge.invDist = n_base.invDist;
+							n_newEdge.schwarzian = n_base.schwarzian;
+							n_newTwin = new HalfEdge();
+							n_newTwin.eutil = 1;
+							n_newTwin.invDist = n_base.invDist;
+							n_newTwin.schwarzian = n_base.schwarzian;
+
 							// new vertex
-							n_midVert=new Vertex(++pdcel.vertCount);
-							pdcel.vertices[pdcel.vertCount]=n_midVert;
-							n_midVert.halfedge=n_newEdge;
-							n_midVert.vutil=n_base.origin.vutil;
-							n_newEdge.origin=n_midVert;
-							n_newTwin.origin=n_midVert;
-							
+							n_midVert = new Vertex(++pdcel.vertCount);
+							pdcel.vertices[pdcel.vertCount] = n_midVert;
+							n_midVert.halfedge = n_newEdge;
+							n_midVert.vutil = n_base.origin.vutil;
+							n_newEdge.origin = n_midVert;
+							n_newTwin.origin = n_midVert;
+
 							// fix twins
-							n_base.twin=n_newTwin;
-							n_newTwin.twin=n_base;
-							
-							n_newEdge.twin=n_base_tw;
-							n_base_tw.twin=n_newEdge;
-							
-							// fix 
-							n_newEdge.next=n_base.next;
-							n_newEdge.next.prev=n_newEdge;
-							
-							n_base.next=n_newEdge;
-							n_newEdge.prev=n_base;
-	
-							n_newTwin.next=n_base_tw.next;
-							n_newTwin.next.prev=n_newTwin;
-							
-							n_newTwin.prev=n_base_tw;
-							n_base_tw.next=n_newTwin;
-	
+							n_base.twin = n_newTwin;
+							n_newTwin.twin = n_base;
+
+							n_newEdge.twin = n_base_tw;
+							n_base_tw.twin = n_newEdge;
+
+							// fix
+							n_newEdge.next = n_base.next;
+							n_newEdge.next.prev = n_newEdge;
+
+							n_base.next = n_newEdge;
+							n_newEdge.prev = n_base;
+
+							n_newTwin.next = n_base_tw.next;
+							n_newTwin.next.prev = n_newTwin;
+
+							n_newTwin.prev = n_base_tw;
+							n_base_tw.next = n_newTwin;
+
 							// if this is a red edge
-							if (redge!=null || tredge!=null) {
-								n_midVert.redFlag=true;
-	
+							if (redge != null || tredge != null) {
+								n_midVert.redFlag = true;
+
 								// does 'edge' have red edge?
-								if (redge!=null) {
-									RedHEdge newRedge=new RedHEdge(n_newEdge);
-									n_newEdge.myRedEdge=newRedge;
-									newRedge.nextRed=redge.nextRed;
-									newRedge.prevRed=redge;
-									redge.nextRed.prevRed=newRedge;
-									redge.nextRed=newRedge;
+								if (redge != null) {
+									RedHEdge newRedge = new RedHEdge(n_newEdge);
+									n_newEdge.myRedEdge = newRedge;
+									newRedge.nextRed = redge.nextRed;
+									newRedge.prevRed = redge;
+									redge.nextRed.prevRed = newRedge;
+									redge.nextRed = newRedge;
 								}
 								// does 'tedge' have red edge?
-								if (tredge!=null) {
-									RedHEdge newRedge=new RedHEdge(n_newTwin);
-									n_newTwin.myRedEdge=newRedge;
-									newRedge.nextRed=tredge.nextRed;
-									newRedge.prevRed=tredge;
-									tredge.nextRed.prevRed=newRedge;
-									tredge.nextRed=newRedge;
+								if (tredge != null) {
+									RedHEdge newRedge = new RedHEdge(n_newTwin);
+									n_newTwin.myRedEdge = newRedge;
+									newRedge.nextRed = tredge.nextRed;
+									newRedge.prevRed = tredge;
+									tredge.nextRed.prevRed = newRedge;
+									tredge.nextRed = newRedge;
 								}
 								// if both, then set up red twinning
-								if (redge!=null && tredge!=null) {
-									redge.twinRed=n_newTwin.myRedEdge;
-									n_newTwin.myRedEdge.twinRed=redge;
-									tredge.twinRed=n_newEdge.myRedEdge;
-									n_newEdge.myRedEdge.twinRed=tredge;
+								if (redge != null && tredge != null) {
+									redge.twinRed = n_newTwin.myRedEdge;
+									n_newTwin.myRedEdge.twinRed = redge;
+									tredge.twinRed = n_newEdge.myRedEdge;
+									n_newEdge.myRedEdge.twinRed = tredge;
 								}
 							}
 						}
-						
+
 						// now do rest of edges, divide the face
-						for (int k=0;k<n;k++) {
-							
+						for (int k = 0; k < n; k++) {
+
 							// shift of previous edge
-							newEdge=n_newEdge;
-							midVert=n_midVert;
-							
+							newEdge = n_newEdge;
+							midVert = n_midVert;
+
 							// load/divide next side about this face
-							n_base=fedges.get(k+1);
-	//						if (n_base.eutil==2)
-	//							throw new CombException("edge "+n_base+ " should not have been handled.");
-							
+							n_base = fedges.get(k + 1);
+							// if (n_base.eutil==2)
+							// throw new CombException("edge "+n_base+ " should not have been handled.");
+
 							// 'base' already divided; copy needed elements
-							if (n_base.eutil>=1) {
-								n_newEdge=n_base.next;
-								n_newTwin=n_base.twin;
-								n_midVert=n_newEdge.origin;
-								n_midVert.halfedge=n_newEdge;
-								n_base.eutil=2;
+							if (n_base.eutil >= 1) {
+								n_newEdge = n_base.next;
+								n_newTwin = n_base.twin;
+								n_midVert = n_newEdge.origin;
+								n_midVert.halfedge = n_newEdge;
+								n_base.eutil = 2;
 							}
-							
+
 							// else, divide this side
 							else {
-								n_base.eutil=2;
-								n_base_tw=n_base.twin;
-								n_base_tw.eutil=1;
-	
-								RedHEdge redge=n_base.myRedEdge;
-								RedHEdge tredge=n_base.twin.myRedEdge;
-								
+								n_base.eutil = 2;
+								n_base_tw = n_base.twin;
+								n_base_tw.eutil = 1;
+
+								RedHEdge redge = n_base.myRedEdge;
+								RedHEdge tredge = n_base.twin.myRedEdge;
+
 								// two new edges
-								n_newEdge=new HalfEdge();
-								n_newEdge.eutil=1;
-								n_newEdge.invDist=n_base.invDist;
-								n_newEdge.schwarzian=n_base.schwarzian;
-								n_newTwin=new HalfEdge();
-								n_newTwin.eutil=1;
-								n_newTwin.invDist=n_base.invDist;
-								n_newTwin.schwarzian=n_base.schwarzian;
-	
+								n_newEdge = new HalfEdge();
+								n_newEdge.eutil = 1;
+								n_newEdge.invDist = n_base.invDist;
+								n_newEdge.schwarzian = n_base.schwarzian;
+								n_newTwin = new HalfEdge();
+								n_newTwin.eutil = 1;
+								n_newTwin.invDist = n_base.invDist;
+								n_newTwin.schwarzian = n_base.schwarzian;
+
 								// new vertex
-								n_midVert=new Vertex(++pdcel.vertCount);
-								pdcel.vertices[pdcel.vertCount]=n_midVert;
-								n_midVert.halfedge=n_newEdge;
-								n_midVert.vutil=n_base.origin.vutil;
-								n_newEdge.origin=n_midVert;
-								n_newTwin.origin=n_midVert;
-								
+								n_midVert = new Vertex(++pdcel.vertCount);
+								pdcel.vertices[pdcel.vertCount] = n_midVert;
+								n_midVert.halfedge = n_newEdge;
+								n_midVert.vutil = n_base.origin.vutil;
+								n_newEdge.origin = n_midVert;
+								n_newTwin.origin = n_midVert;
+
 								// fix twins
-								n_base.twin=n_newTwin;
-								n_newTwin.twin=n_base;
-								
-								n_newEdge.twin=n_base_tw;
-								n_base_tw.twin=n_newEdge;
-								
-								// fix 
-								n_newEdge.next=n_base.next;
-								n_newEdge.next.prev=n_newEdge;
-								
-								n_base.next=n_newEdge;
-								n_newEdge.prev=n_base;
-	
-								n_newTwin.next=n_base_tw.next;
-								n_newTwin.next.prev=n_newTwin;
-								
-								n_newTwin.prev=n_base_tw;
-								n_base_tw.next=n_newTwin;
-	
+								n_base.twin = n_newTwin;
+								n_newTwin.twin = n_base;
+
+								n_newEdge.twin = n_base_tw;
+								n_base_tw.twin = n_newEdge;
+
+								// fix
+								n_newEdge.next = n_base.next;
+								n_newEdge.next.prev = n_newEdge;
+
+								n_base.next = n_newEdge;
+								n_newEdge.prev = n_base;
+
+								n_newTwin.next = n_base_tw.next;
+								n_newTwin.next.prev = n_newTwin;
+
+								n_newTwin.prev = n_base_tw;
+								n_base_tw.next = n_newTwin;
+
 								// if this is a red edge
-								if (redge!=null || tredge!=null) {
-									n_midVert.redFlag=true;
-									n_newEdge.origin=n_midVert;
-									n_newTwin.origin=n_midVert;
-	
+								if (redge != null || tredge != null) {
+									n_midVert.redFlag = true;
+									n_newEdge.origin = n_midVert;
+									n_newTwin.origin = n_midVert;
+
 									// does 'edge' have red edge?
-									if (redge!=null) {
-										RedHEdge newRedge=new RedHEdge(n_newEdge);
-										n_newEdge.myRedEdge=newRedge;
-										newRedge.nextRed=redge.nextRed;
-										newRedge.prevRed=redge;
-										redge.nextRed.prevRed=newRedge;
-										redge.nextRed=newRedge;
+									if (redge != null) {
+										RedHEdge newRedge = new RedHEdge(n_newEdge);
+										n_newEdge.myRedEdge = newRedge;
+										newRedge.nextRed = redge.nextRed;
+										newRedge.prevRed = redge;
+										redge.nextRed.prevRed = newRedge;
+										redge.nextRed = newRedge;
 									}
 									// does 'tedge' have red edge?
-									if (tredge!=null) {
-										RedHEdge newRedge=new RedHEdge(n_newTwin);
-										n_newTwin.myRedEdge=newRedge;
-										newRedge.nextRed=tredge.nextRed;
-										newRedge.prevRed=tredge;
-										tredge.nextRed.prevRed=newRedge;
-										tredge.nextRed=newRedge;
+									if (tredge != null) {
+										RedHEdge newRedge = new RedHEdge(n_newTwin);
+										n_newTwin.myRedEdge = newRedge;
+										newRedge.nextRed = tredge.nextRed;
+										newRedge.prevRed = tredge;
+										tredge.nextRed.prevRed = newRedge;
+										tredge.nextRed = newRedge;
 									}
 									// if both, then set up red twinning
-									if (redge!=null && tredge!=null) {
-										redge.twinRed=n_newTwin.myRedEdge;
-										n_newTwin.myRedEdge.twinRed=redge;
-										tredge.twinRed=newEdge.myRedEdge;
-										n_newEdge.myRedEdge.twinRed=tredge;
+									if (redge != null && tredge != null) {
+										redge.twinRed = n_newTwin.myRedEdge;
+										n_newTwin.myRedEdge.twinRed = redge;
+										tredge.twinRed = newEdge.myRedEdge;
+										n_newEdge.myRedEdge.twinRed = tredge;
 									}
 								}
 							}
-							
+
 							// form face at corner of side and next side
-							HalfEdge opp=new HalfEdge(n_midVert);
-							HalfEdge opp_tw=new HalfEdge(midVert);
-							opp.twin=opp_tw;
-							opp_tw.twin=opp;
-							
-							centedges[k]=opp_tw;
-							
+							HalfEdge opp = new HalfEdge(n_midVert);
+							HalfEdge opp_tw = new HalfEdge(midVert);
+							opp.twin = opp_tw;
+							opp_tw.twin = opp;
+
+							centedges[k] = opp_tw;
+
 							// link around this
-							n_base.next=opp;
-							opp.prev=n_base;
-							
-							opp.next=newEdge;
-							newEdge.prev=opp;
-							
+							n_base.next = opp;
+							opp.prev = n_base;
+
+							opp.next = newEdge;
+							newEdge.prev = opp;
+
 						} // finish loop through sides
-						
-						centedges[n]=centedges[0];
-						for (int k=0;k<n;k++) {
-							centedges[k].next=centedges[k+1];
-							centedges[k+1].prev=centedges[k];
+
+						centedges[n] = centedges[0];
+						for (int k = 0; k < n; k++) {
+							centedges[k].next = centedges[k + 1];
+							centedges[k + 1].prev = centedges[k];
 						}
-						
+
 					} // done with spokes of v
 				} // done with all vertices
 			} // done with 'Ntimes' passes
-	
+
 			return Ntimes;
 		}
+		  
+		  
+		/**
+		 * Add a new vertex to some or all vertices bounding 
+		 * an ideal face, start with 'v' and go cclw about the 
+		 * boundary component (clw about the ideal face) until 
+		 * getting to 'w'. Calling must check that v, w on same 
+		 * bdry comp, and handles combinatorics. New vert should 
+		 * have the largest index. 
+		 * Exception if bdry comp has just two edges.
+		 * @param pdcel PackDCEL
+		 * @param v int
+		 * @param w int
+		 * @return int, count of edgepairs added, 0 on error
+		 */
+		public static int addIdeal_raw(PackDCEL pdcel,int v,int w) {
+			
+			boolean debug=false;
+		  
+			HalfEdge vedge=pdcel.vertices[v].halfedge;
+			HalfEdge nextedge=vedge.twin.prev.twin;
+			HalfEdge prevedge=vedge.twin.next.twin;
+			  
+			// tent 'vedge'; 'vertCount', 'vertices' should be updated
+			Vertex newv=RawDCEL.addVert_raw(pdcel,nextedge.origin.vertIndx);
+			int newVindx=pdcel.vertCount;
+			  
+			int count=2;
+			  
+			// now proceed along the bdry edge adding new edges
+			while (nextedge!=prevedge && nextedge.origin.vertIndx!=w) {
+				nextedge=nextedge.twin.prev.twin;
+				RawDCEL.addEdge_raw(pdcel,newVindx,nextedge.origin.vertIndx);
+				count++;
+				if (debug) 
+					DCELdebug.redConsistency(pdcel);
+			  } 
+			  
+			  // finish if we reach w (which thus cannot be v)
+			  if (nextedge.origin.vertIndx==w) 
+				  return count;
+			  
+			  // otherwise, left with bdry having 3 edges?
+			  Face triface=new Face(-1);
+			  triface.edge=prevedge.twin;
+			  prevedge.twin.face=triface;
+			  RawDCEL.addIdealFace_raw(pdcel,prevedge.twin.face);
+			  if (debug) { 
+//				  v=4;DCELdebug.vertConsistency(pdcel,v);
+				  DCELdebug.redConsistency(pdcel);
+			  }
+			  return count;
+		}
+			  
+		/**
+		 * If ideal face 'f' has precisely three edges, then 
+		 * make it into a normal face. Check for sphere and
+		 * adjust red chain as necessary.
+		 * @param pdcel
+		 * @param f dcel.face
+		 * @return int 1 on success
+		 */
+		public static int addIdealFace_raw(PackDCEL pdcel,Face f) {
+			if (f.faceIndx>=0)
+				throw new ParserException("Face "+f.faceIndx+
+						" appears not to be ideal");
+			
+			// get edges around this face
+			HalfLink hlink=f.getEdges();
+			hlink=HalfLink.reverseLink(hlink);
+			if (hlink.size()!=3) 
+				throw new ParserException("face "+f.faceIndx+
+					  " must have precisely three vertices");
+			
+			
+
+			  
+			// Get the three red edges.
+			RedHEdge[] reds=new RedHEdge[3];
+			for (int j=0;j<3;j++) {
+				reds[j]=hlink.get(j).twin.myRedEdge;
+				if (reds[j]==null)
+					throw new ParserException("Face "+f.faceIndx+" missing red edges");
+			}
+			
+			// Count twinned red edges; if twinned reds impinge
+			//   at the end of reds[j], then hits[j] is set to 1.
+			int[] hits=new int[3];
+			int rcount=0;
+			for (int j=0;j<3;j++) {
+				if (reds[j].nextRed!=reds[(j+1)%3]) {
+					hits[j]=1;
+					rcount++;
+				}
+			}
+
+			// rcount 0 means this is a sphere; just 1, means red chain 
+			//   should contract; if two or more, check for some collapse.
+			if (rcount==0) { // a sphere 
+				pdcel.redChain=null;
+				for (int j=0;j<3;j++) {
+					Vertex vert=hlink.get(j).origin;
+					vert.redFlag=false;
+					vert.bdryFlag=0;
+				}
+				return 1;
+			}
+
+			// Find offset to point to reference corner
+			int offset=0;
+			if (rcount==1) {
+				for (int j=0;j<3;j++)
+					if (hits[j]==1)
+						offset=(j+1)%3;
+				
+				// get red edge ending at reference corner 
+				RedHEdge rhe=reds[(offset+2)%3]; 
+				RedHEdge prevred=reds[(offset+1)%3];
+				RedHEdge nxtred=reds[offset];
+				
+				prevred.myEdge.myRedEdge=null;
+				prevred=new RedHEdge(nxtred.myEdge.twin);
+				prevred.myEdge.myRedEdge=prevred;
+				
+				nxtred.twinRed=prevred;
+				prevred.twinRed=nxtred;
+				
+				prevred.nextRed=rhe.nextRed;
+				rhe.nextRed.prevRed=prevred;
+				
+				prevred.prevRed=nxtred;
+				nxtred.nextRed=prevred;
+
+				prevred.myEdge.origin.halfedge=prevred.myEdge;
+				rhe.myEdge.origin.redFlag=false;
+				rhe.prevRed=null; // old 'prevred' should be orphaned
+				rhe.myEdge.myRedEdge=null; // rhe should now be orphaned
+				
+				// recursively contract the red chain
+				RedHEdge shiftred=null;
+				while (nxtred!=shiftred) {
+					shiftred=nxtred; // DCELdebug.redConsistency(pdcel); 
+					nxtred=RawDCEL.contractRed_raw(pdcel,shiftred);
+				}
+			}
+			else if (rcount==2) {
+				for (int j=0;j<3;j++) 
+					if (hits[j]==0)
+						offset=(j+2)%3;
+
+				// get red edge ending at reference corner 
+				RedHEdge rhe=reds[(offset+2)%3]; 
+				RedHEdge prevred=reds[(offset+1)%3];
+				RedHEdge nxtred=reds[offset];
+				
+				prevred.myEdge.myRedEdge=null;
+				prevred=new RedHEdge(nxtred.myEdge.twin);
+				prevred.myEdge.myRedEdge=prevred;
+				
+				nxtred.twinRed=prevred;
+				prevred.twinRed=nxtred;
+				
+				prevred.nextRed=rhe.nextRed;
+				rhe.nextRed.prevRed=prevred;
+				
+				prevred.prevRed=nxtred.nextRed.twinRed;
+				nxtred.nextRed.twinRed.nextRed=prevred;
+
+				prevred.myEdge.origin.halfedge=prevred.myEdge;
+				rhe.myEdge.origin.redFlag=false;
+				rhe.myEdge.myRedEdge=null; // rhe should now be orphaned
+			}
+			
+			// else all corners have twinned reds coming in:
+			//   red chain gets a triple point at one of the
+			//   corners: choose the one with highest degree.
+			else {
+				int[] degs=new int[3];
+				for (int j=0;j<3;j++)
+					degs[j]=reds[j].myEdge.origin.getNum();
+				int bestj=0;
+				if (degs[1]>degs[0])
+					bestj=1;
+				if (degs[2]>degs[bestj])
+					bestj=2;
+			
+				// collapse the opposite red edge
+				int spot=(bestj+1)%3;
+				RedHEdge redgo=reds[spot];
+				RedHEdge rightred=reds[(spot+2)%3];
+				RedHEdge leftred=reds[(spot+1)%3];
+				
+				rightred.twinRed=new RedHEdge(rightred.myEdge.twin);
+				rightred.twinRed.twinRed=rightred;
+				rightred.myEdge.myRedEdge=rightred;
+				
+				leftred.twinRed=new RedHEdge(leftred.myEdge.twin);
+				leftred.twinRed.twinRed=leftred;
+				leftred.myEdge.myRedEdge=leftred;
+			
+				rightred.nextRed=leftred;
+				leftred.prevRed=rightred;
+				leftred.nextRed=redgo.nextRed;
+				redgo.nextRed.prevRed=leftred;
+				rightred.prevRed=redgo.prevRed;
+				redgo.prevRed.nextRed=rightred;
+				redgo.myEdge.myRedEdge=null; // redgo now orphaned
+			}
+			
+			// DCELdebug.printRedChain(pdcel.redChain,null);
+			
+			// create standin new interior face
+			Face newface=new Face(pdcel.faceCount+1);
+			newface.edge=hlink.get(0);
+			for (int j=0;j<3;j++) {
+				HalfEdge he=hlink.get(j);
+				he.face=newface;
+				he.origin.bdryFlag=0; // these become interior
+			}
+			return 1;
+		}
+		  	  
 
 		/**
-		 * Find an common edge opposite to both v and w.
-		 * v will be to its left, w to its right.
+		 * Find an common edge opposite to both v and w. v will be to its left, w to its
+		 * right.
+		 * 
 		 * @param v int
 		 * @param w int
 		 * @return EdgeSimple, null on failure
 		 */
 		public static HalfEdge getCommonEdge(PackDCEL pdcel, int v, int w) {
-			HalfEdge he=pdcel.vertices[v].halfedge; // spoke
+			HalfEdge he = pdcel.vertices[v].halfedge; // spoke
 			do {
-				if (he.next.twin.next.twin.origin.vertIndx==w) {
+				if (he.next.twin.next.twin.origin.vertIndx == w) {
 					return he.next;
 				}
-				he=he.prev.twin; // cclw spoke
-			} while (he!=pdcel.vertices[v].halfedge);
+				he = he.prev.twin; // cclw spoke
+			} while (he != pdcel.vertices[v].halfedge);
 			return null;
 		}
 

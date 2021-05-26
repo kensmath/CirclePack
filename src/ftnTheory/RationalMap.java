@@ -1,7 +1,5 @@
 package ftnTheory;
 
-import input.CPFileManager;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.util.Iterator;
@@ -9,25 +7,23 @@ import java.util.LinkedList;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
+import allMains.CPBase;
+import allMains.CirclePack;
+import complex.Complex;
+import exceptions.CombException;
+import exceptions.DataException;
+import exceptions.InOutException;
+import exceptions.ParserException;
+import input.CPFileManager;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.EdgeSeg;
 import util.StringUtil;
-import allMains.CPBase;
-import allMains.CirclePack;
-
-import complex.Complex;
-
-import exceptions.CombException;
-import exceptions.DataException;
-import exceptions.InOutException;
-import exceptions.ParserException;
 
 /**
  * 'RationalMap' is used to construct discrete meromorphic mappings
@@ -561,7 +557,7 @@ public class RationalMap extends PackExtender {
 			safety--;
 		}
 		if (safety<=0 || next==es1.endV) return 0;
-		if (domainPack.adjoin(domainPack, es1.startV,es2.endV,length)<=0)
+		if (PackData.adjoin(domainPack,domainPack, es1.startV,es2.endV,length)<=0)
 			throw new CombException("adjoin has failed for v = "+es1.startV+
 					" and w = "+es2.endV);
 		
@@ -628,7 +624,7 @@ public class RationalMap extends PackExtender {
 		}
 		
 		// do the 'adjoin'
-		if (domainPack.adjoin(slitPack, es.startV,tES.endV,length)<=0)
+		if (PackData.adjoin(domainPack,slitPack, es.startV,tES.endV,length)<=0)
 			throw new CombException("adjoin has failed for v = "+es.startV+
 					" and w = "+tES.endV);
 

@@ -136,6 +136,7 @@ public class PackDCEL {
 	 * @param p PackData
 	 */
 	public void fixDCEL_raw(PackData p) {
+		boolean debug=false; // debug=true;
 		if (p==null)
 			p=this.p;
 		try {
@@ -143,6 +144,10 @@ public class PackDCEL {
 		  if (redChain==null) {
 			  CombDCEL.redchain_by_edge(this, null, this.alpha);
 		  }
+		  
+		  // to check some consistency of redchain/bdry.
+		  if (debug)
+			  DCELdebug.redConsistency(this);
 
 		  CombDCEL.d_FillInside(this);
 		  p.attachDCEL(this);
@@ -690,7 +695,6 @@ public class PackDCEL {
 	    }
 	    return count;
 	}
-	
 	
 	/** 
 	 * Draw an edge-pairing boundary segment.

@@ -1197,13 +1197,15 @@ System.err.println("  place nghb "+nghb+" point to vert "+vert);
 	 */
 	public static void printGraph(GraphLink graph) {
 		Iterator<EdgeSimple> gl=graph.iterator();
-		System.out.println("Graph listing:");
+		StringBuilder strbld=new StringBuilder("Graph listing:  ");
 		while (gl.hasNext()) {
 			EdgeSimple edge=gl.next();
-			System.out.println(" ["+edge.v+" "+edge.w+"]");
+			strbld.append(" ["+edge.v+" "+edge.w+"] ->");
 		}
-		System.out.println(" ");
+		strbld.append("  done\n");
+		System.out.println(strbld.toString());
 	}
+	
 	/**
 	 * Given a subgraph of the dual graph of packing 'p', return
 	 * the associated packing. Not sure what pathologies could be

@@ -5,6 +5,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import allMains.CirclePack;
 import complex.Complex;
 import dcel.D_SideData;
 import dcel.Face;
@@ -16,7 +17,9 @@ import exceptions.DCELException;
 import input.CPFileManager;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
+import listManip.GraphLink;
 import listManip.HalfLink;
+import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
 import panels.CPScreen;
@@ -26,6 +29,178 @@ public class DCELdebug {
 	
 	static File tmpdir=new File(System.getProperty("java.io.tmpdir"));
 	static int rankStamp=1; // progressive number to distinguish file instances
+	
+	/**
+	 * Display colored face/edge pairs from 'glink' in screen
+	 * for packing 'pnum' or pdcel.p if 'pnum'<0.
+	 * @param pdcel PackDCEL
+	 * @param pnum int
+	 * @param glink GraphLink
+	 */
+	public static void visualDualEdges(PackDCEL pdcel,int pnum,GraphLink glink) {
+		PackData p=null;
+		if (pnum<0)
+			p=pdcel.p;
+		else 
+			p=CirclePack.cpb.packings[pnum];
+		Iterator<EdgeSimple> git=glink.iterator();
+		while (git.hasNext()) {
+			int f=git.next().w;
+			HalfEdge hfe=pdcel.faces[f].edge;
+			EdgeSimple es=new EdgeSimple(hfe.origin.vertIndx,hfe.twin.origin.vertIndx);
+			drawEdgeFace(p,es);
+		}
+	}
+	
+	public static StringBuilder edgeConsistency(PackDCEL pdcel,HalfEdge he) {
+		StringBuilder strbld=new StringBuilder(" ["+he+"]: ");
+		boolean okay=true;
+		StringBuilder sb=new StringBuilder(" error(s): ");
+		if (he.next.prev!=he || he.next.prev!=he) {
+			sb.append(" bad links; ");
+			okay=false;
+		}
+		if (he.twin.twin!=he) {
+			sb.append(" bad twinning; ");
+			okay=false;
+		}
+		if (he.myRedEdge!=null) {
+			strbld.append(" (is red) ");
+			if (he.myRedEdge.myEdge!=he) {
+				sb.append(" bad red link; ");
+				okay=false;
+			}
+			if (!he.origin.redFlag || !he.twin.origin.redFlag) {
+				sb.append(" missing redFlags; ");
+				okay=false;
+			}
+		}
+		if (okay) {
+			strbld.append(" looks OK.");
+		}
+		else
+			strbld.append(sb.toString());
+		return strbld;
+	}
+	
+	public static int edgeConsistency(PackDCEL pdcel,HalfLink hlink) {
+		int tick=50; // limit of 50 edges
+		int count=0;
+		if (hlink==null || hlink.size()==0)
+			return 0;
+		Iterator<HalfEdge> hits=hlink.iterator();
+		while (hits.hasNext() && tick>0) {
+			tick--;
+			HalfEdge he=hits.next();
+			StringBuilder sb=edgeConsistency(pdcel,he);
+			System.out.println(sb.toString());
+			count++;
+		}
+		System.out.println("done: count="+count);
+		return count;
+	}
+	
+	public static StringBuilder vertConsistency(PackDCEL pdcel,int v) {
+		Vertex vert=pdcel.vertices[v];
+		int num=vert.getNum()+1;
+		StringBuilder strbld=new StringBuilder();
+		strbld.append(" v="+vert.vertIndx+" num="+
+				vert.getNum()+" bdryFlag="+
+				vert.bdryFlag+"\n");
+		HalfEdge he=vert.halfedge;
+		do {
+			strbld.append(" s="+he);
+			if (he.myRedEdge!=null)
+				strbld.append(" (r)");
+			strbld.append(" t="+he.twin+" ");
+			if (he.twin.myRedEdge!=null)
+				strbld.append(" (r); ");
+			else strbld.append("; ");
+			he=he.prev.twin;
+			num--;
+		} while (he!=vert.halfedge && num>=0);
+		strbld.append("\n");
+		if (he!=vert.halfedge) {
+			strbld.append("error in spoke count: num="+num+"\n");
+		}
+		return strbld;
+	}
+
+	public static int vertConsistency(PackDCEL pdcel,NodeLink vlist) {
+		if (vlist==null || vlist.size()==0)
+			vlist=new NodeLink(null,"a(1 100)");
+		int count=0;
+		Iterator<Integer> vit=vlist.iterator();
+		System.out.println("Vert Consistency:");
+		while (vit.hasNext()) {
+			int v=vit.next();
+			StringBuilder sb=vertConsistency(pdcel,v);
+			System.out.println(sb.toString());
+			count++;
+		}
+		System.out.println("done: count="+count);
+		return count;
+	}
+	
+	
+	public static int redConsistency(PackDCEL pdcel) {
+		int count=0;
+		RedHEdge rhe=pdcel.redChain;
+		if (rhe==null) {
+			System.err.println(" redConsistency failed: no 'redChain'");
+			return 0;
+		}
+		
+		System.out.println("redConsistency check: first edge "+rhe.myEdge);
+		int safety=3*pdcel.vertCount;
+		do {
+			safety--;
+			if (rhe.twinRed!=null) {
+				RedHEdge rtwin=rhe.twinRed;
+				if (rtwin.twinRed!=rhe) {
+					System.err.println("   twinRed's don't point to one another, edge "+rhe.myEdge);
+					count++;
+				}
+				if (rhe.myEdge.twin!=rtwin.myEdge) {
+					System.err.println("   twin inconsistency, edge "+rhe.myEdge);
+					count++;
+				}
+				if (rhe.nextRed.prevRed!=rhe || rhe.prevRed.nextRed!=rhe) {
+					System.err.println("   nextRed/prevRed inconsistency, edge "+rhe.myEdge);
+					count++;
+				}
+			}
+			else {
+				HalfEdge he=rhe.myEdge;
+				if (he.myRedEdge!=rhe) {
+					System.err.println("   inconsistency with 'myRedEdge' for edge "+he);
+					count++;
+				}
+				if (he.next.prev!=he || he.prev.next!=he) {
+					System.err.println("   next/prev inconsistency, edge "+he);
+					count++;
+				}
+				if (he.twin.face==null || he.twin.face.faceIndx>0) {
+					System.err.println("   missing ideal face for edge "+he);
+					count++;
+				}
+				if (!he.origin.redFlag || he.origin.bdryFlag==0) {
+					System.err.println("   'redFlag' or 'bdryFlag' is not right, edge "+he);
+					count++;
+				}
+				if (he.twin.myRedEdge!=null) {
+					System.err.println("   twin should not have 'myRedEdge', edge "+he);
+					count++;
+				}
+
+			}
+			rhe=rhe.nextRed;
+		} while (rhe!=pdcel.redChain && safety>0);
+		if (safety==0)
+			System.err.println("Exited due to safety overrun.");
+		System.out.println("Done: error count = "+count);
+		return count;
+	}
 	
 	/**
 	 * List spokes of each vertex and for each spoke
@@ -196,14 +371,15 @@ public class DCELdebug {
 	 * @param edge EdgeSimple 
 	 */
 	public static void drawEdgeFace(PackData p,EdgeSimple edge) {
-		if (p!=null) {
-			StringBuilder strbld=new StringBuilder("disp -et5c5 "+edge.v+" "+edge.w+" ");
-			int[] ans=p.left_face(edge);
-			if (ans[0]!=0) {
-				strbld.append(" -ffc120 "+ans[0]);
-			}
-			CommandStrParser.jexecute(p,strbld.toString());
+		if (p==null)
+			return;
+		StringBuilder strbld=new StringBuilder("disp -et5c5 "+edge.v+" "+edge.w+" ");
+		int[] ans=p.left_face(edge);
+		if (ans[0]!=0) {
+			strbld.append(" -ffc120 "+ans[0]);
 		}
+		CommandStrParser.jexecute(p,strbld.toString());
+		p.cpScreen.rePaintAll();
 	}
 	
 	public static void drawEuclCircles(CPScreen cps,Complex[] Z,double[] R) {
@@ -238,6 +414,8 @@ public class DCELdebug {
 	 * @param redge
 	 */
 	public static void drawTmpRedChain(PackData p,RedHEdge redge) {
+		if (p==null)
+			return;
 		RedHEdge rtrace=redge;
 		do {
 			Complex z0=p.getCenter(rtrace.myEdge.origin.vertIndx);

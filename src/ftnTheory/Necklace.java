@@ -17,7 +17,6 @@ import listManip.VertexMap;
 import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.StringUtil;
@@ -205,7 +204,7 @@ public class Necklace extends PackExtender {
 			CPBase.Elink=new EdgeLink(topPack,"b("+topleftend+" "+vtop+")");
 
 			// ------------------ now, do the adjoin 
-			int rslt=topPack.adjoin(bottomPack,vtop,vbottom,length);
+			int rslt=PackData.adjoin(topPack,bottomPack,vtop,vbottom,length);
 			if (rslt<=0)
 				Oops("problem with adjoin");
 			
@@ -311,7 +310,7 @@ System.err.println("starting bottomHemi:");
 			for (int j=0;j<k;j++)
 				b=bottomHemi.kData[b].flower[0];
 			
-			topHemi.adjoin(bottomHemi,2,b,N*2);
+			PackData.adjoin(topHemi,bottomHemi,2,b,N*2);
 			topHemi.setCombinatorics();
 			cpCommand(topHemi,"max_pack");
 			
@@ -436,7 +435,7 @@ System.err.println("starting bottomHemi:");
 					rightIndx=bn;
 			}
 System.err.println("adjoining right");			
-			myPacking.adjoin(rightPack,2,rightIndx,2);
+			PackData.adjoin(myPacking,rightPack,2,rightIndx,2);
 			
 			// save original index info
 			Iterator<EdgeSimple> vM=rightPack.vertexMap.iterator();
@@ -462,7 +461,7 @@ System.err.println("adjoining right");
 			}
 			System.err.println("adjoining left");			
 
-			myPacking.adjoin(leftPack,6,leftIndx,2);
+			PackData.adjoin(myPacking,leftPack,6,leftIndx,2);
 
 			// save original index infor
 			Iterator<EdgeSimple> vM=leftPack.vertexMap.iterator();

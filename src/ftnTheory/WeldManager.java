@@ -27,7 +27,6 @@ import listManip.VertList;
 import listManip.VertexMap;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import panels.PathManager;
 import random.RandomTriangulation;
 import util.CmdStruct;
@@ -1086,7 +1085,7 @@ public class WeldManager extends PackExtender {
 		if (opt_flag>0) { 
 			q.bdryStarts[1] = w_orig;
 
-			if ((ans = p.adjoin(q, v_orig, w_orig, count)) != 0) {
+			if ((ans = PackData.adjoin(p,q, v_orig, w_orig, count)) != 0) {
 				// TODO: note that 'adjoin' pastes p clockwise, q
 				//   counterclockwise; no problem for full bdry, but 
 				//   with partial bdry's, have to do something else.

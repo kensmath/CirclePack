@@ -1248,16 +1248,17 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	}
 
 	/**
-	 * Given 'VertexMap' with <old, new>, translate this 
-	 * 'EdgeLink' from old to the new indices.
+	 * Given 'VertexMap' with <old, new>, translate 'elink' 
+	 * from old to the new indices.
 	 * @param oldnew VertexMap
 	 * @return new EdgeLink (with null PackData)
 	 */
-	public EdgeLink translateMe(VertexMap oldnew) {
+	public static EdgeLink translate(EdgeLink elink,VertexMap oldnew) {
 	    EdgeLink qtmp=new EdgeLink();
-	    if (this.size()==0) return qtmp;
+	    if (elink.size()==0) 
+	    	return qtmp;
 	    EdgeSimple edge=null;
-	    Iterator<EdgeSimple> it=this.iterator();
+	    Iterator<EdgeSimple> it=elink.iterator();
 	    while (it.hasNext()) {
 	    	edge=(EdgeSimple)it.next();
 	    	int v=oldnew.findW(edge.v);
