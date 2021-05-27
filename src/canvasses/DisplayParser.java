@@ -662,7 +662,7 @@ public class DisplayParser {
 							pts[0]=p.getCenter(edge.origin.vertIndx);
 							pts[1]=p.getCenter(edge.twin.origin.vertIndx);
 							cpScreen.drawEdge(pts[0],pts[1],dispFlags);
-							count++;
+							count++; // cpScreen.rePaintAll();
 						}
 					}
 				}
