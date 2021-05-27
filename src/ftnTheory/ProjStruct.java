@@ -1992,7 +1992,7 @@ public class ProjStruct extends PackExtender {
 		
 		// set baseVert: use given or choose largest degree vert
 		if (baseVert<1) {  
-			baseVert=p.alpha;
+			baseVert=p.getAlpha();
 			int fs=p.countFaces(baseVert);
 			for (int v=1;v<=p.nodeCount;v++) {
 				if (!p.isBdry(v) ||	p.countFaces(v)>fs) {
@@ -2003,7 +2003,7 @@ public class ProjStruct extends PackExtender {
 		}
 		
 		// set alpha and set usual redChain via 'facedraworder'
-		if (p.alpha!=baseVert)
+		if (p.getAlpha()!=baseVert)
 			p.setAlpha(baseVert);
 		// LayoutBugs.print_drawingorder(p);
 		// get closed, ordered 'NodeLink' of vertices on outside red chain
@@ -2011,7 +2011,7 @@ public class ProjStruct extends PackExtender {
 		outverts.add(outverts.get(0)); // repeat to close
 		
 		// get closed paths and create EdgeLink 
-		NodeLink firstPath=p.findShortPath(p.alpha,outverts);
+		NodeLink firstPath=p.findShortPath(p.getAlpha(),outverts);
 		
 		// Want to get seed far from the first path
 		for (int v=1;v<=p.nodeCount;v++)
@@ -2023,7 +2023,7 @@ public class ProjStruct extends PackExtender {
 		int []fp_gens=p.label_generations(-1, uP);
 		if (fp_gens!=null && uP.rtnFlag>0)
 			baseVert=uP.rtnFlag;
-		else baseVert=p.alpha;
+		else baseVert=p.getAlpha();
 		
 		// now find second closed path
 		NodeLink secondPath=p.findShortPath(baseVert,firstPath);
@@ -2052,10 +2052,10 @@ public class ProjStruct extends PackExtender {
 		uP=new util.UtilPacket();
 		fp_gens=p.label_generations(-1, uP);
 		if (fp_gens!=null && uP.rtnFlag>0)
-			p.alpha=uP.rtnFlag; // one of largest generation
+			p.setAlpha(uP.rtnFlag); // one of largest generation
 		
 		// firstFace is one containing 'alpha'
-		p.firstFace=p.getFaceFlower(p.alpha,0);
+		p.firstFace=p.getFaceFlower(p.getAlpha(),0);
 		
 		// build list 'cutDuals' of dual edges
 		EdgeLink cutDuals=new EdgeLink();

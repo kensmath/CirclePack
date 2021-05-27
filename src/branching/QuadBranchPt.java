@@ -135,7 +135,7 @@ public class QuadBranchPt extends GenBranchPt {
   	  		myPack.swap_nodes(v2, 3);
   	  		myPack.swap_nodes(v2, 4);
   	  		vertexMap=myPack.vertexMap.makeCopy();
-  	  		myPack.alpha=1;
+  	  		myPack.setAlpha(1);
   	  		myPack.gamma=2;
   	  		myPack.setCombinatorics();
   	  		boolean debug=false;

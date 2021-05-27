@@ -158,7 +158,7 @@ public class PackData{
 	public String fileName;   // filename when file was read/written
     public int intrinsicGeom; // intrinsic geometry (due to combinatorics only)
     public int sizeLimit;     // current max number of nodes without reallocating
-    public int alpha;         // index of alpha node (origin)
+    int alpha;         // index of alpha node (origin)
     public int beta;          // nghb of alpha, <alpha,beta> is base edge
     public int gamma;         // index of node to be plotted on positive y-axis
     public int euler;   	  // Euler characteristic
@@ -281,8 +281,11 @@ public class PackData{
      * the existing 'vData' to populate the new 'vData', using
      * 'pdcel.newOld'.
      *  
-     * TODO: may need to save additional info when swapping in new dcel:
-     * e.g., 'invDist's, 'schwarzian's, face colors, etc.
+     * TODO: may need to save additional info when 
+     * swapping in new dcel: e.g., 'invDist's, 
+     * 'schwarzian's, face colors, etc. And may need
+     * to adjust vlist, elist, hlist, etc. based on
+     * 'newOld'.
      * 
      * @param pdcel PackDCEL
      * @return int, vertCount on success, 0 on failure
@@ -407,6 +410,9 @@ public class PackData{
    			}
 			pdcel.setVDataIndices(v);
     	}
+		
+		// TODO: convert lists before killing 'newOld'??  
+		pdcel.newOld=null;
 		
     	set_aim_default(); // too difficult to figure out old aims
     	fillcurves();
@@ -2391,6 +2397,16 @@ public class PackData{
         else gamma=1;
         return;
     } 
+    
+    /**
+     * Only used to avoid 'setAlpha' calls which loop
+     * between 'PackData' and 'PackDCEL'. Sometimes used
+     * if no 'PackDCEL' is involved.
+     * @param v int
+     */
+    public void directAlpha(int v) {
+    	alpha=v;
+    }
 
     /**
      * Set prescribed 'alpha' vertex; must be interior. Move 'gamma' 
@@ -2399,13 +2415,21 @@ public class PackData{
      * @return 1, 0 on failure
      */
     public int setAlpha(int v) {
+    	if (!status) 
+    		return 0;
+		int alp=getAlpha(); // backup
     	if (packDCEL!=null) {
     		return packDCEL.setAlpha(v,null);
         }
-    	if (!status || v<=0 || v>nodeCount)
-    		return 0;
+    	if (v<=0 || v>nodeCount) {
+    		if (alp>0 && alp<=nodeCount)
+    			this.alpha=alp;
+    		else this.alpha=1; // default to 1
+    		return 1;
+    	}
+    	
         alpha=v;
-        if (v==gamma) gamma=kData[v].flower[0];
+        if (v==gamma) gamma=getFirstPetal(v);
         facedraworder(false);
         return 1;
     } 
@@ -2451,6 +2475,20 @@ public class PackData{
 	 */
 	public String getName() {
 		return new String(fileName);
+	}
+
+	/** 
+	 * I make 'alpha' private for debugging
+	 * @return int
+	 */
+	public int getAlpha() {
+		if (packDCEL!=null && packDCEL.alpha!=null) {
+			int alp=packDCEL.alpha.origin.vertIndx;
+			if (alp>0 && alp<packDCEL.vertCount)
+				directAlpha(alp); // update this.alpha 
+			return alp;
+		}
+		return this.alpha;
 	}
 	
 	/**
@@ -10884,7 +10922,7 @@ public class PackData{
 	    	return 0;
 	    xyzpoint=null;
 	    if (packDCEL!=null) {
-	    	packDCEL.fixDCEL_raw(this); 
+	    	packDCEL.fixDCEL_raw(this); // packDCEL.p.getCenter(300);
 	    }
 	    else 
 	    	setCombinatorics();

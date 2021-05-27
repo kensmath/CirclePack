@@ -1,13 +1,27 @@
 package ftnTheory;
 
-import geometry.HyperbolicMath;
-import geometry.CircleSimple;
-import input.CPFileManager;
-
 import java.io.BufferedWriter;
 import java.util.Iterator;
 import java.util.Vector;
 
+import allMains.CPBase;
+import allMains.CirclePack;
+import baryStuff.BaryPoint;
+import branching.ChapBranchPt;
+import branching.FracBranchPt;
+import branching.GenBranchPt;
+import branching.QuadBranchPt;
+import branching.ShiftBranchPt;
+import branching.SingBranchPt;
+import branching.TradBranchPt;
+import complex.Complex;
+import exceptions.CombException;
+import exceptions.DataException;
+import exceptions.InOutException;
+import exceptions.ParserException;
+import geometry.CircleSimple;
+import geometry.HyperbolicMath;
+import input.CPFileManager;
 import komplex.AmbiguousZ;
 import komplex.DualGraph;
 import komplex.EdgeSimple;
@@ -20,27 +34,9 @@ import listManip.PointLink;
 import math.Mobius;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.StringUtil;
 import util.UtilPacket;
-import allMains.CPBase;
-import allMains.CirclePack;
-import baryStuff.BaryPoint;
-import branching.ChapBranchPt;
-import branching.FracBranchPt;
-import branching.GenBranchPt;
-import branching.QuadBranchPt;
-import branching.ShiftBranchPt;
-import branching.SingBranchPt;
-import branching.TradBranchPt;
-
-import complex.Complex;
-
-import exceptions.CombException;
-import exceptions.DataException;
-import exceptions.InOutException;
-import exceptions.ParserException;
 
 /**
  * Generalized branch points are small subregions of circle packing
@@ -976,7 +972,7 @@ public class GenBranching extends PackExtender {
 		if (faceOK(packData.firstFace))
 			firstFace=packData.firstFace;
 		if (firstFace<=0 || packData.firstFace>packData.faceCount) {
-			int farV=packData.alpha;
+			int farV=packData.getAlpha();
 			// try to use some face containing 'alpha'
 			for (int kk=0;(kk<packData.countFaces(farV) && firstFace<0);kk++) {
 				int f=packData.getFaceFlower(farV,kk);
@@ -1079,7 +1075,7 @@ public class GenBranching extends PackExtender {
 		}
 		
 		// normalize
-		Complex az=packData.getCenter(packData.alpha);
+		Complex az=packData.getCenter(packData.getAlpha());
 		Complex gz=packData.getCenter(packData.gamma);
 		double agdist=az.minus(gz).abs();
 		Mobius mob=null;

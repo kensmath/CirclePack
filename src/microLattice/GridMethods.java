@@ -219,7 +219,7 @@ public class GridMethods {
 		newPack.kData=kdata;
 		newPack.rData=rdata;
 		newPack.nodeCount=nodecount;
-		newPack.alpha=m2v[n][n];
+		newPack.setAlpha(m2v[n][n]);
 		int n2n=(int)(n/2);
 		newPack.gamma=m2v[n-n2n][n+n2n];
 //		newPack.gamma=m2v[(int)(n*3/2)][(int)(n*3/2)];

@@ -18,7 +18,6 @@ import listManip.NodeLink;
 import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.StringUtil;
@@ -1277,7 +1276,7 @@ public class Graphene extends PackExtender {
 		}
 
   	  	CookieMonster cM=null;
-  	  	int origAlpha=newPack.alpha; // expect this to be 1
+  	  	int origAlpha=newPack.getAlpha(); // expect this to be 1
   	  	int outcome=0;
   	  	try {
   	  		cM=new CookieMonster(newPack,"-v "+newAlp);

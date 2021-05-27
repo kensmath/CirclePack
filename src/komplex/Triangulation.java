@@ -136,7 +136,7 @@ public class Triangulation {
 		}
 		
 		if (n0>0 && n0<=p.nodeCount && !p.isBdry(n0)) 
-			p.alpha=n0;
+			p.setAlpha(n0);
 		p.fileName=new String("randKomplex");
 		return p;
 	}

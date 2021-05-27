@@ -569,7 +569,7 @@ public class NodeLink extends LinkedList<Integer> {
 			case 'g': // same side of global 'ClosedPath' as 'alpha'?
 			{
 				if (CPBase.ClosedPath==null) break;
-				boolean alpha_side=PathManager.path_wrap(packData.getCenter(packData.alpha));
+				boolean alpha_side=PathManager.path_wrap(packData.getCenter(packData.getAlpha()));
 				for (int v=1;v<=nodecount;v++) {
 					if (PathManager.path_wrap(packData.getCenter(v))==alpha_side) {
 						add(v);
@@ -892,7 +892,7 @@ public class NodeLink extends LinkedList<Integer> {
 //			case 'w': // inside edge-path. TODO: is this worthwhile????
 			case 'A': // alpha vertex
 			{
-				add(packData.alpha);
+				add(packData.getAlpha());
 				count++;
 				break;
 			}

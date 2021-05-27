@@ -83,6 +83,8 @@ public class Translators {
 	    	return new FaceLink(p,Integer.valueOf(f_out).toString());
 	    }
 	}
+	
+	// TODO: need method for 'HalfEdge' links.
 
 	/**
 	 * See description of face_translate

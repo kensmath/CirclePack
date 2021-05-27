@@ -72,7 +72,7 @@ public class CookieMonster {
 		xyz_data=null;
 		overlaps = null;
 		cmPoison=null;
-		seed=hold_alpha=p.alpha;
+		seed=hold_alpha=p.getAlpha();
 
 		// save [vfe]list, vertexMap, etc.
 		saveData();
@@ -165,7 +165,7 @@ public class CookieMonster {
 		// finish restoring and processing the new complex
 		if (outcomeFlag>0) {
 			restoreData();
-			if ((monsterPackData.alpha=old2new[seed])==0) monsterPackData.chooseAlpha();
+			if ((monsterPackData.setAlpha(old2new[seed]))==0) monsterPackData.chooseAlpha();
 			if ((monsterPackData.gamma=old2new[monsterPackData.gamma])==0) monsterPackData.chooseGamma();
 
 			monsterPackData.setCombinatorics();
@@ -283,7 +283,7 @@ public class CookieMonster {
 	public static int[] parseCookieData(PackData p,Vector<Vector<String>> flags) {
 
 		int[] myPoison=new int[p.nodeCount+1]; // Note: myPoison[0] is the seed
-		int mySeed=p.alpha;
+		int mySeed=p.getAlpha();
 		
 		// read incoming data
 		while (flags!=null && flags.size()>0) { 
@@ -634,7 +634,7 @@ public class CookieMonster {
 	     if (monsterPackData.locks!=0) 
 	    	 return 0;
 	     new2old=new int[monsterPackData.nodeCount+1];
-	     monsterPackData.alpha=seed;
+	     monsterPackData.setAlpha(seed);
 	     
 	     /* call build_redchain to define core of the new complex 
 	      * from seed, stopping at poison verts; need to process 
@@ -675,7 +675,7 @@ public class CookieMonster {
 	  * @return @see RedList
 	  */
 	 public RedList pre_cookie() {
-	     monsterPackData.alpha=seed;
+	     monsterPackData.setAlpha(seed);
 	     
 	     /* call build_redchain to define core of the new complex from seed,
 	        stopping at poison verts; need to process the red chain, etc.*/

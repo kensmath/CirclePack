@@ -77,7 +77,7 @@ public class CombDCEL {
 	 * @return PackDCEL
 	 */
 	public static PackDCEL getRawDCEL(PackData p) {
-		return getRawDCEL(p.getBouquet(),p.alpha);
+		return getRawDCEL(p.getBouquet(),p.getAlpha());
 	}
 	
 	/**

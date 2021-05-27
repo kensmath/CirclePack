@@ -249,7 +249,7 @@ public class ChapBranchPt extends GenBranchPt {
   	  	myPack.swap_nodes(vertexMap.findV(myIndex), 1);
   	  	myPack.swap_nodes(vertexMap.findV(firstpetal), 2);
   	  	vertexMap=myPack.vertexMap.makeCopy(); // reset to get the swaps
-  	  	myPack.alpha=1;
+  	  	myPack.directAlpha(1);
   	  	myPack.gamma=2;
   	  	myPack.setCombinatorics();
   	  	boolean debug=false;

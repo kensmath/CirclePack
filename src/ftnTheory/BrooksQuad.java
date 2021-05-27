@@ -10,7 +10,6 @@ import math.Mobius;
 import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.StringUtil;
@@ -92,7 +91,7 @@ public class BrooksQuad extends PackExtender {
 			packData.setCircleColor(v,ColorUtil.coLor(208)); // line green
 		}
 		packData.setCircleColor(5,ColorUtil.getBGColor());
-		packData.alpha=5;
+		packData.setAlpha(5);
 		packData.gamma=1;
 		packData.set_aim_default();
 		normalize();

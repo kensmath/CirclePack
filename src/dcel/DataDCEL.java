@@ -43,9 +43,9 @@ public class DataDCEL {
 		p.faceCount=pdcel.intFaceCount;
 		p.setBdryCompCount(pdcel.idealFaceCount);
 		p.alloc_pack_space(p.nodeCount+10,true);
-		p.alpha=pdcel.alpha.origin.vertIndx; // <alpha,beta> is the initial edge
+		p.directAlpha(pdcel.alpha.origin.vertIndx); // <alpha,beta> is the initial edge
 		p.beta=pdcel.alpha.twin.origin.vertIndx;
-		p.activeNode=p.alpha;
+		p.activeNode=p.getAlpha();
 		p.firstFace=1;
 		
 		if (debug) 
@@ -152,7 +152,7 @@ public class DataDCEL {
 		if (pdcel.p!=null)
 			pdcel.p.packDCEL=null;
 		pdcel.p=p;
-		p.alpha=pdcel.alpha.origin.vertIndx;
+		p.directAlpha(pdcel.alpha.origin.vertIndx);
 		p.beta=pdcel.alpha.twin.origin.vertIndx;
 		
 		// attach this dcel

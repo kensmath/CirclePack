@@ -131,7 +131,7 @@ public class FracBranchPt extends GenBranchPt {
   	  		myPack.swap_nodes(v1, 2);
   	  		myPack.swap_nodes(v2, 3);
   	  		vertexMap=myPack.vertexMap.makeCopy(); // reset to get the swaps
-  	  		myPack.alpha=1;
+  	  		myPack.setAlpha(1);
   	  		myPack.gamma=2;
   	  		myPack.setCombinatorics();
   	  		boolean debug=false;

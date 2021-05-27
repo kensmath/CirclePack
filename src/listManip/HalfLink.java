@@ -945,5 +945,50 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			
 		return count;
 	}
-		
+	
+	 /**
+	  * Return fresh EdgeLink with entries translated 
+	  * from 'hlink' using 'vmap'. So, entry <v,w> in 
+	  * 'hlink' and entries <v,V> and <w,W> in 'vmap' 
+	  * leads to EdgeSimple <V,W> entry. If 'vmap' has 
+	  * no translation for v or w, use the original.
+	  * Note: calling routine with access to parent DCEL
+	  * may want to reinterpret EdgeLink as HalfLink.
+	  * @param hlink HalfLink
+	  * @param vmap VertexMap (giving pairs <v,V> for translation)
+	  * @return EdgeLink, new, null if hlink is null.
+	  */
+	 public static EdgeLink translate(HalfLink hlink,VertexMap vmap) {
+		 if (hlink==null)
+			 return null;
+		 EdgeLink out=new EdgeLink(hlink.packData);
+		 
+		 // if no 'vmap', return new copy of nlink
+		 if (vmap==null || vmap.size()==0) {
+			 Iterator<HalfEdge> hl=hlink.iterator();
+			 while (hl.hasNext()) { 
+				 out.add(HalfEdge.getEdgeSimple(hl.next()));
+			 }
+			 return out;
+		 }
+			 
+		 Iterator<HalfEdge> hl=hlink.iterator();
+		 while (hl.hasNext()) {
+			 HalfEdge he=hl.next();
+			 int v=he.origin.vertIndx;
+			 int w=he.twin.origin.vertIndx;
+			 if (v<=0 || w<=0)
+				 continue;
+			 int V=vmap.findW(v);
+			 int W=vmap.findW(w);
+			 if (V==0)
+				 V=v;
+			 if (W==0)
+				 W=w;
+			 
+			 out.add(new EdgeSimple(v,w));
+		 }
+		 return out;
+	 }
+	 
 }

@@ -38,7 +38,7 @@ public class Exponential {
 			throw new CombException();
 		}
 		CircleSimple sc;
-		alpha=p.alpha;
+		alpha=p.getAlpha();
 		p.setCenter(alpha, new Complex(0.0));
 		p.setRadius(alpha,1.0);
 		p.kData[alpha].utilFlag=1;

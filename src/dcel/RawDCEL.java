@@ -436,20 +436,28 @@ public class RawDCEL {
 		  // fix red pointers
 		  newred.myEdge=newedge;
 		  newedge.myRedEdge=newred;
+		  
 		  newred.prevRed=red_in.prevRed;
 		  red_in.prevRed.nextRed=newred;
+		  
 		  // simplest case, red1 and red2 orphaned
 		  if (red_in.nextRed==red_out) { 
+			  
 			  newred.nextRed=red_out.nextRed;
 			  red_out.nextRed.prevRed=newred;
 			  edge1.myRedEdge=null;
 			  edge2.myRedEdge=null;
 			  edge2.origin.redFlag=false;
+
+			  // orphan red_in/red_out
+			  red_in.nextRed=null;
+			  red_out.prevRed=null;
 		  }
 		  // else, reroute: red1 orphaned, red2 gets twin
 		  else {
 			  RedHEdge redTwin=new RedHEdge(edge2.twin);
 			  edge2.twin.myRedEdge=redTwin;
+			  
 			  redTwin.prevRed=newred;
 			  newred.nextRed=redTwin;
 			  redTwin.nextRed=red_in.nextRed;
@@ -462,17 +470,20 @@ public class RawDCEL {
 		  // fix edge pointers
 		  edge1.twin.next.prev=newtwin;
 		  newtwin.next=edge1.twin.next;
+		  
 		  edge2.twin.prev.next=newtwin;
 		  newtwin.prev=edge2.twin.prev;
+		  
 		  edge1.twin.next=newedge;
 		  newedge.prev=edge1.twin;
+		  
 		  edge2.twin.prev=newedge;
 		  newedge.next=edge2.twin;
 		  
 		  // fix face pointers
 		  edge1.twin.face=null;
 		  edge2.twin.face=null;
-		  newtwin.face=newtwin.next.face;
+		  newtwin.face=newtwin.next.face; // should be ideal face
 		  
 		  edge2.origin.bdryFlag=0;
 		  v1.halfedge=newedge;
@@ -1483,7 +1494,7 @@ public class RawDCEL {
 		public static int addIdeal_raw(PackDCEL pdcel,int v,int w) {
 			
 			boolean debug=false;
-		  
+			
 			HalfEdge vedge=pdcel.vertices[v].halfedge;
 			HalfEdge nextedge=vedge.twin.prev.twin;
 			HalfEdge prevedge=vedge.twin.next.twin;
@@ -1499,7 +1510,7 @@ public class RawDCEL {
 				nextedge=nextedge.twin.prev.twin;
 				RawDCEL.addEdge_raw(pdcel,newVindx,nextedge.origin.vertIndx);
 				count++;
-				if (debug) 
+				if (debug) // pdcel.p.getCenter(300);
 					DCELdebug.redConsistency(pdcel);
 			  } 
 			  
@@ -1534,14 +1545,11 @@ public class RawDCEL {
 			
 			// get edges around this face
 			HalfLink hlink=f.getEdges();
-			hlink=HalfLink.reverseLink(hlink);
+			hlink=HalfLink.reverseLink(hlink); // order clw
 			if (hlink.size()!=3) 
 				throw new ParserException("face "+f.faceIndx+
 					  " must have precisely three vertices");
-			
-			
 
-			  
 			// Get the three red edges.
 			RedHEdge[] reds=new RedHEdge[3];
 			for (int j=0;j<3;j++) {
@@ -1564,12 +1572,16 @@ public class RawDCEL {
 			// rcount 0 means this is a sphere; just 1, means red chain 
 			//   should contract; if two or more, check for some collapse.
 			if (rcount==0) { // a sphere 
-				pdcel.redChain=null;
 				for (int j=0;j<3;j++) {
 					Vertex vert=hlink.get(j).origin;
 					vert.redFlag=false;
 					vert.bdryFlag=0;
+					
+					// orphan red edges
+					reds[j].myEdge.myRedEdge=null;
+					reds[j].nextRed=reds[j].prevRed=null;
 				}
+				pdcel.redChain=null;
 				return 1;
 			}
 
@@ -1579,69 +1591,16 @@ public class RawDCEL {
 				for (int j=0;j<3;j++)
 					if (hits[j]==1)
 						offset=(j+1)%3;
-				
-				// get red edge ending at reference corner 
-				RedHEdge rhe=reds[(offset+2)%3]; 
-				RedHEdge prevred=reds[(offset+1)%3];
-				RedHEdge nxtred=reds[offset];
-				
-				prevred.myEdge.myRedEdge=null;
-				prevred=new RedHEdge(nxtred.myEdge.twin);
-				prevred.myEdge.myRedEdge=prevred;
-				
-				nxtred.twinRed=prevred;
-				prevred.twinRed=nxtred;
-				
-				prevred.nextRed=rhe.nextRed;
-				rhe.nextRed.prevRed=prevred;
-				
-				prevred.prevRed=nxtred;
-				nxtred.nextRed=prevred;
-
-				prevred.myEdge.origin.halfedge=prevred.myEdge;
-				rhe.myEdge.origin.redFlag=false;
-				rhe.prevRed=null; // old 'prevred' should be orphaned
-				rhe.myEdge.myRedEdge=null; // rhe should now be orphaned
-				
-				// recursively contract the red chain
-				RedHEdge shiftred=null;
-				while (nxtred!=shiftred) {
-					shiftred=nxtred; // DCELdebug.redConsistency(pdcel); 
-					nxtred=RawDCEL.contractRed_raw(pdcel,shiftred);
-				}
 			}
 			else if (rcount==2) {
 				for (int j=0;j<3;j++) 
 					if (hits[j]==0)
 						offset=(j+2)%3;
-
-				// get red edge ending at reference corner 
-				RedHEdge rhe=reds[(offset+2)%3]; 
-				RedHEdge prevred=reds[(offset+1)%3];
-				RedHEdge nxtred=reds[offset];
-				
-				prevred.myEdge.myRedEdge=null;
-				prevred=new RedHEdge(nxtred.myEdge.twin);
-				prevred.myEdge.myRedEdge=prevred;
-				
-				nxtred.twinRed=prevred;
-				prevred.twinRed=nxtred;
-				
-				prevred.nextRed=rhe.nextRed;
-				rhe.nextRed.prevRed=prevred;
-				
-				prevred.prevRed=nxtred.nextRed.twinRed;
-				nxtred.nextRed.twinRed.nextRed=prevred;
-
-				prevred.myEdge.origin.halfedge=prevred.myEdge;
-				rhe.myEdge.origin.redFlag=false;
-				rhe.myEdge.myRedEdge=null; // rhe should now be orphaned
 			}
-			
 			// else all corners have twinned reds coming in:
 			//   red chain gets a triple point at one of the
 			//   corners: choose the one with highest degree.
-			else {
+			else { 
 				int[] degs=new int[3];
 				for (int j=0;j<3;j++)
 					degs[j]=reds[j].myEdge.origin.getNum();
@@ -1650,28 +1609,46 @@ public class RawDCEL {
 					bestj=1;
 				if (degs[2]>degs[bestj])
 					bestj=2;
+				offset=(bestj+1)%3;
+			}
 			
-				// collapse the opposite red edge
-				int spot=(bestj+1)%3;
-				RedHEdge redgo=reds[spot];
-				RedHEdge rightred=reds[(spot+2)%3];
-				RedHEdge leftred=reds[(spot+1)%3];
-				
-				rightred.twinRed=new RedHEdge(rightred.myEdge.twin);
-				rightred.twinRed.twinRed=rightred;
-				rightred.myEdge.myRedEdge=rightred;
-				
-				leftred.twinRed=new RedHEdge(leftred.myEdge.twin);
-				leftred.twinRed.twinRed=leftred;
-				leftred.myEdge.myRedEdge=leftred;
+			// Now we get red edge 'rhe' ending at reference corner;
+			//   remove rhe as a red edge, create red twins for
+			//   prevred and nxtred. 
+			RedHEdge rhe=reds[(offset+2)%3]; 
+			RedHEdge prevred=reds[(offset+1)%3];
+			RedHEdge nxtred=reds[offset];
 			
-				rightred.nextRed=leftred;
-				leftred.prevRed=rightred;
-				leftred.nextRed=redgo.nextRed;
-				redgo.nextRed.prevRed=leftred;
-				rightred.prevRed=redgo.prevRed;
-				redgo.prevRed.nextRed=rightred;
-				redgo.myEdge.myRedEdge=null; // redgo now orphaned
+			// new twins
+			RedHEdge prev_twin=new RedHEdge(prevred.myEdge.twin);
+			prev_twin.myEdge.myRedEdge=prev_twin;
+			RedHEdge nxt_twin=new RedHEdge(nxtred.myEdge.twin);
+			nxt_twin.myEdge.myRedEdge=nxt_twin;
+			
+			// link in
+			prev_twin.prevRed=rhe.prevRed;
+			rhe.prevRed.nextRed=prev_twin;
+			prev_twin.twinRed=prevred;
+			prevred.twinRed=prev_twin;
+			
+			prev_twin.nextRed=nxt_twin;
+			nxt_twin.prevRed=prev_twin;
+			
+			nxt_twin.nextRed=rhe.nextRed;
+			rhe.nextRed.prevRed=nxt_twin;
+			nxt_twin.twinRed=nxtred;
+			nxtred.twinRed=nxt_twin;
+			
+			// orphan rhe
+			rhe.myEdge.myRedEdge=null;
+			
+			// recursively contract red chain? No contraction if
+			//    rcount==3, 1 edge if rcount==2, and many if rcount==1.
+			RedHEdge nextedge=prev_twin;
+			RedHEdge shiftred=null;
+			while (nextedge!=shiftred) {
+				shiftred=nextedge; // DCELdebug.redConsistency(pdcel); 
+				nextedge=RawDCEL.contractRed_raw(pdcel,shiftred);
 			}
 			
 			// DCELdebug.printRedChain(pdcel.redChain,null);
@@ -1682,7 +1659,7 @@ public class RawDCEL {
 			for (int j=0;j<3;j++) {
 				HalfEdge he=hlink.get(j);
 				he.face=newface;
-				he.origin.bdryFlag=0; // these become interior
+				he.origin.bdryFlag=0; // all become interior
 			}
 			return 1;
 		}

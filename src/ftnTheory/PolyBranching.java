@@ -3,18 +3,16 @@ package ftnTheory;
 import java.io.BufferedWriter;
 import java.util.Vector;
 
-import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
 import exceptions.DataException;
 import exceptions.ParserException;
-import geometry.HyperbolicMath;
 import geometry.CircleSimple;
+import geometry.HyperbolicMath;
 import listManip.FaceLink;
 import math.Mobius;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.DispFlags;
 
 public class PolyBranching extends PackExtender {
@@ -88,13 +86,13 @@ public class PolyBranching extends PackExtender {
 
 			// accumulate the data
 			CircleSimple sc =HyperbolicMath.h_to_e_data(
-					rangePack.getCenter(rangePack.alpha),
-					rangePack.getRadius(rangePack.alpha));
+					rangePack.getCenter(rangePack.getAlpha()),
+					rangePack.getRadius(rangePack.getAlpha()));
 			double imageScale=sc.rad;
 				
 			sc =HyperbolicMath.h_to_e_data(
-					packData.getCenter(packData.alpha),
-					packData.getRadius(packData.alpha));
+					packData.getCenter(packData.getAlpha()),
+					packData.getRadius(packData.getAlpha()));
 			double domainScale=sc.rad;
 				
 			Vector<Double> objectives=new Vector<Double>(branchVerts.size());

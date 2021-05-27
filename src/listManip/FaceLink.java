@@ -29,6 +29,10 @@ import util.StringUtil;
 
 /**
  * Linked list of faces for circle packings.
+ * 
+ * TODO: Because numbering is ephemeral and access is
+ * needed to DCEL structures, we don't yet have a 
+ * 'translate' method for faces.
  * @author kens
  */
 public class FaceLink extends LinkedList<Integer> {

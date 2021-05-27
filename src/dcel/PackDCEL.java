@@ -127,12 +127,12 @@ public class PackDCEL {
 	 * calling routine should already have done 
 	 * things like cents/radii. If the red chain
 	 * was broken, the calling routine should set
-	 * 'redChain' null and 'redchain_by_edge' is
+	 * 'redChain'=null so that 'redchain_by_edge' is
 	 * called. Faces may be outdated or
 	 * non-existent, 'edges', 'faces', counts, etc. 
 	 * need updating, so 'd_FillInside' is called. 
 	 * Also, need to 'attach' to a packing (usually 
-	 * the current parent).
+	 * the current parent) or not if packing is null.
 	 * @param p PackData
 	 */
 	public void fixDCEL_raw(PackData p) {
@@ -149,8 +149,9 @@ public class PackDCEL {
 		  if (debug)
 			  DCELdebug.redConsistency(this);
 
-		  CombDCEL.d_FillInside(this);
-		  p.attachDCEL(this);
+		  CombDCEL.d_FillInside(this); // p.getCenter(300);
+		  if (p!=null)
+			  p.attachDCEL(this);
 	  } catch (Exception ex) {
 		  throw new DCELException("Problem with 'fix_raw'. "+ex.getMessage());
 	  }
@@ -1983,6 +1984,8 @@ public class PackDCEL {
 	 * If we change 'alpha', we may also change 'gamma' to
 	 * avoid collision, and we call 'd_FillInside' to adjust
 	 * combinatorics. (Also, set 'p.alpha'.)
+	 * NOTE: we also call 'PackData.directAlpha(v)'
+	 * to set 'PackData.alpha' as backup.
 	 * @param v int
 	 * @return 'v' 
 	 */
@@ -2019,7 +2022,7 @@ public class PackDCEL {
 				if (gamma==myTry)
 					gamma=myTry.twin;
 				if (p!=null)
-					p.alpha=alpha.origin.vertIndx;
+					p.directAlpha(alpha.origin.vertIndx);
 				return myTry.origin.vertIndx;
 			}
 			for (int j=0;j<=vertCount;j++) // get first interior
@@ -2043,8 +2046,8 @@ public class PackDCEL {
 		if (myTry!=alpha) {
 			alpha=myTry;
 			if (p!=null)
-				p.alpha=alpha.origin.vertIndx;
-			CombDCEL.d_FillInside(this);
+				p.directAlpha(alpha.origin.vertIndx);
+			this.fixDCEL_raw(p);
 		}
 		
 		if (gamma==alpha)

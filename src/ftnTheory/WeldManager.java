@@ -512,7 +512,7 @@ public class WeldManager extends PackExtender {
 		if (!isInside)
 			new_alp = targ[p.nodeCount];
 		else
-			new_alp = targ[p.alpha];
+			new_alp = targ[p.getAlpha()];
 
 		q.alloc_pack_space(p.nodeCount, false);
 
@@ -614,7 +614,7 @@ public class WeldManager extends PackExtender {
 		if (new_alp == 2)
 			q.chooseAlpha();
 		else {
-			q.alpha = new_alp;
+			q.setAlpha(new_alp);
 			q.chooseAlpha();
 		}
 		q.complex_count(true);
@@ -1097,7 +1097,7 @@ public class WeldManager extends PackExtender {
 		else {
 			msg("weld: two packs appear ready to adjoint:\n"
 					+ " designated bdry vertices are " + v + " and " + w
-					+ ", resp.," + " alpha vertex of outer pack is " + q.alpha);
+					+ ", resp.," + " alpha vertex of outer pack is " + q.getAlpha());
 		}
 		return ans;
 	} 

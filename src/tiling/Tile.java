@@ -178,7 +178,7 @@ public class Tile extends Face {
 		if (vertCount==1) {
 			PackData p=new PackData(null);
 			p.nodeCount=9;
-			p.alpha=1;
+			p.directAlpha(1);
 			p.gamma=2;
 			p.status=true;
 			p.locks=0;

@@ -506,7 +506,7 @@ public class TileData {
 
 		// wrap up and return
 		thePack.status=true;
-		thePack.alpha=td.myTiles[1].baryVert;
+		thePack.setAlpha(td.myTiles[1].baryVert);
 		thePack.gamma=td.myTiles[1].vert[0];
 		thePack.chooseAlpha();
 		thePack.chooseGamma();
@@ -1267,7 +1267,7 @@ public class TileData {
 		if (elist.size()==1) {
 			PackData p=new PackData(null);
 			p.nodeCount=9;
-			p.alpha=1;
+			p.directAlpha(1);
 			p.gamma=2;
 			p.status=true;
 			p.locks=0;

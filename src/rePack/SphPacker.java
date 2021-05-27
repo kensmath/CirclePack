@@ -92,7 +92,7 @@ public class SphPacker extends RePacker {
 	 */
 	public int maxPackJ_Sph(int puncture_v,int cycles) {
 		p.hes=1;
-		if (puncture_v<=0) puncture_v=p.antipodal_vert(p.alpha);
+		if (puncture_v<=0) puncture_v=p.antipodal_vert(p.getAlpha());
 		if (puncture_v<=0) 
 			throw new CombException("improper puncturing vertex");
 		  

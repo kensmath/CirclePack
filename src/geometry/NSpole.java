@@ -35,7 +35,7 @@ public class NSpole {
 	// Constructor
 	public NSpole(PackData p) {
 		packData=p;
-		N_pole = packData.alpha;
+		N_pole = packData.getAlpha();
 		S_pole = packData.nodeCount;
 		E_pole = 0;
 		factor = 1.0;

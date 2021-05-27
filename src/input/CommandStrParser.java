@@ -40,7 +40,6 @@ import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RawDCEL;
 import dcel.RedHEdge;
-import dcel.VData;
 import dcel.Vertex;
 import deBugging.DCELdebug;
 import deBugging.LayoutBugs;
@@ -737,7 +736,7 @@ public class CommandStrParser {
 			  packData.setCombinatorics();
 			  packData.set_aim_default();
 			  packData.set_rad_default();
-			  packData.activeNode = packData.alpha;
+			  packData.activeNode = packData.getAlpha();
 			  packData.setGeometry(hes);
       		
 			  // set/reset stuff
@@ -2842,7 +2841,7 @@ public class CommandStrParser {
 	    		  V=packData.activeNode;
 	    	  }
     		  if (V<1 || V>packData.nodeCount)
-    			  V=packData.alpha;
+    			  V=packData.getAlpha();
     		  
     		  TileData td=TileData.paveMe(packData,V);
     		  if (td==null)
@@ -3306,7 +3305,7 @@ public class CommandStrParser {
 						  // choose alpha far from boundary
 						  int da=randPack.gen_mark(new NodeLink(randPack,"b"),-1,false);
 						  if (da>0)
-							  randPack.alpha=da;
+							  randPack.setAlpha(da);
 						  
 						  // put new packing in place
 						  int pnum=packData.packNum;
@@ -5506,7 +5505,7 @@ public class CommandStrParser {
 	  	        	  zigzag=true;
 	    	  } catch(Exception ex) {}
 	    	  
-	    	  if (packData.packDCEL!=null) {
+	    	  if (packData.packDCEL!=null) { // packData.packDCEL.newOld;
 	    		  
 	    		  // identify forbidden edges (and possibly new 'alpha')
 	    		  HalfLink hlink=CombDCEL.d_CookieData(packData,flagSegs);
@@ -6026,7 +6025,7 @@ public class CommandStrParser {
 				else if (str.contains("dcel")) {
 					return packData.attachDCEL();
 //					PackDCEL raw=CombDCEL.getRawDCEL(packData.getBouquet());
-//					packData.packDCEL = CombDCEL.d_redChainBuilder(raw,null,false,packData.alpha);
+//					packData.packDCEL = CombDCEL.d_redChainBuilder(raw,null,false,packData.getAlpha());
 //					if (packData.packDCEL == null || packData.packDCEL.vertCount != packData.nodeCount)
 //						throw new CombException("failed to create packDCEL");
 //					return 1;
@@ -7550,9 +7549,9 @@ public class CommandStrParser {
 	    				  if (str.length()>2 && str.charAt(2)=='o') { // mark by drawing order
 	    					  if (packData.vert_draw_order()>0) {
 	    						  int tick=1;
-	    						  packData.setVertMark(packData.alpha,tick++);
-	    						  int nv=packData.kData[packData.alpha].nextVert;
-	    						  while (nv>0 && nv!=packData.alpha) {
+	    						  packData.setVertMark(packData.getAlpha(),tick++);
+	    						  int nv=packData.kData[packData.getAlpha()].nextVert;
+	    						  while (nv>0 && nv!=packData.getAlpha()) {
 	    							  packData.setVertMark(nv,tick++);
 	    							  nv=packData.kData[nv].nextVert;
 	    							  count++;
@@ -7598,7 +7597,7 @@ public class CommandStrParser {
 	    				  try {
 	    					  V=NodeLink.grab_one_vert(packData,(String)items.get(0));
 	    				  } catch(Exception ex) {
-	    					  V=packData.alpha;
+	    					  V=packData.getAlpha();
 	    				  }
 	    				  for (int v=1;v<=packData.nodeCount;v++) 
 	    					  packData.setVertUtil(v,0);
@@ -7992,7 +7991,7 @@ public class CommandStrParser {
 	    	  }
 	    	
 	    	  // normalize the copy
-	    	  StringBuilder strbld=new StringBuilder("NSPole "+holdPack.alpha+" "+antip);
+	    	  StringBuilder strbld=new StringBuilder("NSPole "+holdPack.getAlpha()+" "+antip);
 	    	  if (CommandStrParser.jexecute(holdPack,strbld.toString())==0) {
 	    		  CirclePack.cpb.errMsg("hum.. ran into normalizing problem with 'perp_pack'");
 	    		  return 0;
@@ -8122,7 +8121,7 @@ public class CommandStrParser {
 	    			  case 'E':
 	    			  {
 	    				  E=NodeLink.grab_one_vert(packData,(String)items.get(1));
-	    				  if (E<1 || E==packData.alpha || packData.isBdry(E))
+	    				  if (E<1 || E==packData.getAlpha() || packData.isBdry(E))
 	    					  E=0;
 	    				  if (E==0) {
 	    					  throw new CombException("invalid vertex");
@@ -8138,10 +8137,10 @@ public class CommandStrParser {
 	    		      				  packData.kData[j].utilFlag=1;
 	    		      			  else packData.kData[j].utilFlag=0;
 	    		      			}
-	    		      			packData.kData[packData.alpha].utilFlag=1;
+	    		      			packData.kData[packData.getAlpha()].utilFlag=1;
 	    		      			UtilPacket uP=new UtilPacket();
 //	    		      			int []list=packData.label_generations(-1,uP);
-	    		      			if ((E=uP.rtnFlag)>0 && E!=packData.alpha &&
+	    		      			if ((E=uP.rtnFlag)>0 && E!=packData.getAlpha() &&
 	    		      					!packData.isBdry(E)) { // okay choice
 	    		      				ratio=0.0;
 	    		      			}
@@ -10196,7 +10195,7 @@ public class CommandStrParser {
 	    	  double b=Double.parseDouble((String)items.get(1));
 		    	  
 	    	  if (inc_flag) {
-	    		  int al=packData.alpha;
+	    		  int al=packData.getAlpha();
 	    		  double rad=packData.getRadius(al);
 //		    	  if (rad<=packData.OKERR) { // this shouldn't happen 
 //		    		  throw new DataException();
@@ -10534,7 +10533,7 @@ public class CommandStrParser {
 
      		  // default settings
      		  if (alp==-1)
-     			  alp=packData.alpha;
+     			  alp=packData.getAlpha();
      		  if (gam==-1)
      			  gam=packData.gamma;
      		  if (intV==null || intV.size()==0)
@@ -11019,7 +11018,7 @@ public static CallPacket valueExecute(PackData packData,String cmd,Vector<Vector
 
 					if (seedlist == null) {
 						seedlist = new NodeLink(packData);
-						seedlist.add(packData.alpha);
+						seedlist.add(packData.getAlpha());
 					}
 
 					if ((last_vert = packData.gen_mark(seedlist, mx, true)) <= 0
