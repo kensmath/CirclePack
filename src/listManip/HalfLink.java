@@ -224,6 +224,31 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			else {
 			switch(str.charAt(0)) {
 			
+			// "all" includes all red edges (whether twinned or not)
+			//    and one of each pair of twinned edges, namely, that
+			//    with smaller 'edgeIndx'.
+			case 'a': 
+			{
+				// organize via vertices -- more rational order?
+				for (int v=1;v<=pdc.vertCount;v++) {
+					Vertex vert=pdc.vertices[v];
+					HalfLink hlink=vert.getSpokes(null);
+					Iterator<HalfEdge> hits=hlink.iterator();
+					while (hits.hasNext()) {
+						HalfEdge he=hits.next();
+						if (he.myRedEdge!=null) {
+							add(he);
+							count++;
+						}
+						if (he.edgeIndx<he.twin.edgeIndx) {
+							add(he);
+							count++;
+						}
+					}
+				}
+				break;
+			}
+			
 			// bdry; check for braces (a,b)
 			case 'b':
 			{
@@ -917,19 +942,19 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				int v=cis.next();
 				vhits[v]=1;
 				Vertex vert=pdcel.vertices[v];
-				HalfEdge[] spokes=vert.getSpokes();
-				int num=spokes.length;
+				HalfLink slink=vert.getSpokes(null);
+				int num=slink.size();
 				for (int j=0;j<num;j++) {
-					HalfEdge he=spokes[j];
+					HalfEdge he=slink.get(j);
 					int w=he.next.origin.vertIndx;
 					if (vhits[w]<0) {
-						HalfEdge sp=spokes[(j+num-1)%num];
+						HalfEdge sp=slink.get((j+num-1)%num);
 						if (sp.eutil==0) {
 							add(sp);
 							sp.eutil=1;
 							count++;
 						}
-						sp=spokes[(j+1)%num];
+						sp=slink.get((j+1)%num);
 						if (sp.eutil==0) {
 							add(sp);
 							sp.eutil=1;

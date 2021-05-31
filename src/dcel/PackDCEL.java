@@ -22,7 +22,6 @@ import geometry.SphericalMath;
 import input.CPFileManager;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
-import listManip.FaceLink;
 import listManip.GraphLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
@@ -759,54 +758,6 @@ public class PackDCEL {
 		p.cpScreen.setLineThickness(old_thickness);
 		return 1;
 	}
-	
-	/**
-	 * Add barycenters to given list of faces. 
-	 * A barycenter is a new vertex interior to the 
-	 * face and connected to its bdry vertices.
-	 * @param facelink FaceLink
-	 * @return int count, 0 on error
-	 */
-	public int addBaryCents_raw(FaceLink facelink) {
-		ArrayList<Face> arrayf=new ArrayList<Face>();
-		if (facelink==null) {
-			for (int j=1;j<=intFaceCount;j++)
-				arrayf.add(faces[j]); // get face
-		}
-		else {
-			Iterator<Integer> flst=facelink.iterator();
-			while (flst.hasNext()) {
-				arrayf.add(faces[flst.next()]); // get face of that index
-			}
-		}
-		return addBaryCents_raw(arrayf);
-	}
-	
-	/**
-	 * Add barycenters to given list of faces. 
-	 * A barycenter is a new vertex interior to the 
-	 * face and connected to its bdry vertices.
-	 * @param arrayf ArrayList<Face>
-	 * @return int count, 0 on error
-	 */
-	public int addBaryCents_raw(ArrayList<Face> arrayf) {
-		int count=0;
-
-		Iterator<Face> flst=arrayf.iterator();
-		while (flst.hasNext()) {
-			Face face=flst.next();
-			count += RawDCEL.addBary_raw(this, face,false);
-			
-			// face was ideal? toss 'redChain'
-			if (face.faceIndx<0) 
-				redChain=null;
-
-			face.edge=null; // to avoid repeat in facelist
-
-		} // end of while through facelist
-
-		return count;
-	}
 
 	/**
 	 * Flip the specified edges. In a triangulation, an interior edge is
@@ -945,7 +896,7 @@ public class PackDCEL {
 		}
 		
 		// add barycenters to faces  
-		int n=addBaryCents_raw(arrayF);
+		int n=RawDCEL.addBaryCents_raw(this,arrayF);
 		if (n<=0) {
 			CirclePack.cpb.errMsg("didn't add barycenters");
 			return 0;
@@ -1085,6 +1036,54 @@ public class PackDCEL {
 	public EdgeSimple edge_to_dualEdge(EdgeSimple dedge) {
 		HalfEdge edge=findHalfEdge(dedge);
 		return new EdgeSimple(edge.face.faceIndx,edge.twin.face.faceIndx);
+	}
+	
+	/**
+	 * Given HalfEdge he=<v,w>, return ends of dual edge <f,g>.
+	 * CAUTION: f is to left of <v,w>, g to right.
+	 * Return null if f an ideal face. If <v,w> is a bdry 
+	 * (red w/o 'twinRed') then go from point on edge <v,w> to 
+	 * center of f. Else if <v,w> is red
+	 * with 'twinRed', then compute location g would have if it
+	 * shared edge <v,w> with f. 
+	 * @param he HalfEdge
+	 * @return Complex[2] or null
+	 */
+	public Complex[] getDualEdgeEnds(HalfEdge he) {
+		Complex[] pts=new Complex[2];
+		Face f=he.face;
+		Face g=he.twin.face;
+		if (f.faceIndx<0) 
+			return null;
+		
+		pts[1]=getFaceCenter(f);
+		
+		// he is normal interior edge
+		if (he.myRedEdge==null) {
+			pts[0]=getFaceCenter(g);
+			return pts;
+		}
+
+		Complex z1=getVertCenter(he);
+		double r1=getVertRadius(he);
+		Complex z2=getVertCenter(he.twin);
+		double r2=getVertRadius(he.twin);
+
+		// he is bdry edge
+		if (he.myRedEdge.twinRed==null) {
+			pts[0]=CommonMath.get_tang_pt(z1, z2, r1, r2, p.hes);
+			return pts;
+		}
+		
+		// he is twinned red edge; recompute opp center of g
+		//   using centers radii of shared edge.
+		double r3=getVertRadius(he.twin.next.next);
+		CircleSimple cs=CommonMath.comp_any_center(z2,z1,r2,r1,r3,
+				he.twin.schwarzian,he.twin.next.schwarzian,
+				he.twin.next.next.schwarzian,p.hes);
+		pts[0]=CommonMath.tripleIncircle(z2, z1, cs.center,p.hes);
+		
+		return pts;
 	}
 
 	/**
@@ -1745,11 +1744,13 @@ public class PackDCEL {
 	 * @return Complex, null on error
 	 */
 	public Complex getFaceCenter(Face face) {
-		CircleSimple sc = null;
+		if (face.faceIndx<0)
+			return null;
 		HalfEdge he=face.edge;
 		Complex p0 = getVertCenter(he);
 		Complex p1 = getVertCenter(he.next);
 		Complex p2 = getVertCenter(he.next.next);
+		CircleSimple sc = null;
 		if (p.hes < 0)
 			sc = HyperbolicMath.hyp_tang_incircle(p0, p1, p2,
 					getVertRadius(he),
@@ -1760,6 +1761,48 @@ public class PackDCEL {
 		else
 			sc = EuclMath.eucl_tri_incircle(p0, p1, p2);
 		return sc.center;
+	}
+
+	/**
+	 * Return open list of centers of corners of this face.
+	 * (Generally will have 3 corners).
+	 * @param face Face
+	 * @return Complex[]
+	 */
+	public Complex[] getFaceCorners(Face face) {
+		HalfLink hlink=face.getEdges();
+		Complex[] corners=new Complex[hlink.size()];
+		Iterator<HalfEdge> hits=hlink.iterator();
+		int tick=0;
+		while (hits.hasNext()) {
+			HalfEdge he=hits.next();
+			corners[tick++]=getVertCenter(he);
+		}
+		return corners;
+	}
+	
+	/**
+	 * Get open cclw list of face centers for the 
+	 * interior faces around 'vert'.
+	 * 
+	 * TODO: Should lay this out to avoid ambiguity
+	 * in multiply connected situation. 
+	 * 
+	 * @param vert Vertex
+	 * @return Complex[]
+	 */
+	public Complex[] getDualFaceCorners(Vertex vert) {
+		ArrayList<Face> farray=vert.getFaceFlower();
+		int num=farray.size();
+		Complex[] corners=new Complex[num];
+		Iterator<Face> fits=farray.iterator();
+		int tick=0;
+		while (fits.hasNext()) {
+			Face face=fits.next();
+			if (face.faceIndx>=0)
+				corners[tick++]=getFaceCenter(face);
+		}
+		return corners;
 	}
 
 	/**
@@ -1843,7 +1886,7 @@ public class PackDCEL {
 			Complex p0=p.getCenter(verts[0]);
 			Complex p1=p.getCenter(verts[1]);
 			Complex p2=p.getCenter(verts[2]);
-			return PackData.face_center(p.hes,p0,p1,p2);
+			return CommonMath.tripleIncircle(p0,p1,p2,p.hes);
 		}
 		Complex accum=p.getCenter(verts[0]);
 		for (int j=1;j<verts.length;j++)

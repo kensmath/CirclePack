@@ -1,9 +1,17 @@
 package geometry;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.HalfEdge;
+import dcel.PackDCEL;
+import dcel.Vertex;
 import exceptions.DataException;
+import listManip.HalfLink;
 import math.CirMatrix;
+import math.Mobius;
 import packing.PackData;
 import util.UtilPacket;
 
@@ -167,6 +175,22 @@ public class CommonMath {
 		return EuclMath.eucl_tri_incircle(z1, z2, z3);
 	}
 	
+	/**
+	 * Give indication of relative error between centers/rad 
+	 * of two circles in same geometry. Result is error as
+	 * fraction of average of the two radii. 
+	 * @param cs1 CircleSimple
+	 * @param cs2 CircleSimple
+	 * @param hes int
+	 * @return double
+	 */
+	public static double circleCompError(CircleSimple cs1,CircleSimple cs2,int hes) {
+		double avgRad=(0.5)*(cs1.rad+cs2.rad);
+		double diff_radii=Math.abs(cs1.rad-cs2.rad);
+		double diff_centers=get_pt_dist(cs1.center,cs2.center,hes);
+		return (diff_radii+diff_centers)/avgRad;
+	}
+	
 	/** 
 	 * Compute the distance between two points. Note that in the spherical
 	 * case, centers are expected to be (theta,phi) form.
@@ -224,9 +248,9 @@ public class CommonMath {
 	}
 
 	/**
-	 * Given 2 circles, find tangency point. Actually, returns point
-	 * between with position weighted by the two radii (depending on
-	 * the geometry).
+	 * Given 2 circles, find generalized tangency point. 
+	 * Actually, this is intermediate point with position 
+	 * weighted by the two radii (depending on geometry).
 	 * @param z1 Complex
 	 * @param z2 Complex
 	 * @param r1 double
@@ -234,7 +258,8 @@ public class CommonMath {
 	 * @param hes int
 	 * @return new Complex
 	 */
-	public static Complex get_tang_pt(Complex z1,Complex z2,double r1,double r2,int hes) {
+	public static Complex get_tang_pt(Complex z1,Complex z2,
+			double r1,double r2,int hes) {
 		if (hes==0)
 			return EuclMath.eucl_tangency(z1,z2,r1,r2);
 		else if (hes>0)
@@ -406,6 +431,139 @@ public class CommonMath {
 		else // eucl
 			return p.e_anglesum_overlap(v,rad,uP);
 	}
-	
 
+	/**
+	 *  Return center of incircle of triangle formed by
+	 *  given points in given geometry. (For hyperbolic, we
+	 *  use the euclidean incircle, not very satisfactory.)
+	 *  @param p0 Complex
+	 *  @param p1 Complex
+	 *  @param p2 Complex
+	 *  @param hes int
+	 *  @return Complex
+	 */
+	public static Complex tripleIncircle(Complex p0,
+			Complex p1,Complex p2,int hes) {
+		CircleSimple sc=null;
+		if (hes<=0) // in hyp case, use eucl incircle
+	// TODO: need incenter of generic hyperbolic triangle.
+    //			need radii to use 'HyperbolicMath.hyp_tang_incircle'
+		sc=EuclMath.eucl_tri_incircle(p0,p1,p2);
+		else 
+			sc=SphericalMath.sph_tri_incircle(p0,p1,p2);
+		return sc.center;
+	}
+	
+	/**
+	 * Build array of corners for the dual face of 'hedge.origin'.
+	 * In non-red case, build from successive dual edges. If
+	 * 'redFlag', layout first face and its center, then when
+	 * necessary, successively recompute the next faces. Class
+	 * 'TripFaceData' helps maintain the data.
+	 * A couple details: Edges crossing a bdry edge end 
+	 * at a point of the edge; for bdry 'vert', include 
+	 * its center as the first and last of face "corners".
+	 * @param pdcel
+	 * @param hedge HalfEdge
+	 * @param hes int
+	 * @return ArrayList<Complex> non-closed list of corners
+	 */
+	public static ArrayList<Complex> buildDualFace(PackDCEL pdcel,
+			HalfEdge hedge,int hes) {
+		Vertex vert=hedge.origin;
+		
+		// get spokes
+		HalfLink spokes=vert.getSpokes(hedge);
+		CircleSimple csVert=pdcel.getVertData(hedge); // should remain
+		Complex[] dualends=new Complex[2];
+		ArrayList<Complex> carray=new ArrayList<Complex>();
+		
+		// non-red vertex, most common
+		if (!vert.redFlag) {
+			Iterator<HalfEdge> sis=spokes.iterator();
+			while (sis.hasNext()) {
+				dualends=pdcel.getDualEdgeEnds(sis.next());
+				carray.add(dualends[1]);
+			}
+			return carray;
+		}
+		
+		// red vertices treated differently 
+		if (vert.bdryFlag!=0) // is bdry? start with center
+			carray.add(pdcel.getVertCenter(hedge));
+			
+		Iterator<HalfEdge> sis=spokes.iterator();
+			
+		// first edge
+		HalfEdge nxtspoke=sis.next();
+		dualends=pdcel.getDualEdgeEnds(nxtspoke);
+		carray.add(dualends[0]); // if bdry vert, this is pt on bdry edge
+		carray.add(dualends[1]);
+		boolean recomp=false; // once recomputing starts, it continues
+		CircleSimple csV=pdcel.getVertData(nxtspoke);
+		CircleSimple csW=pdcel.getVertData(nxtspoke.next);
+		CircleSimple csLastW=pdcel.getVertData(nxtspoke.next.next);
+			
+		while (sis.hasNext()) {
+			nxtspoke=sis.next();
+			csV=pdcel.getVertData(nxtspoke);
+			csW=pdcel.getVertData(nxtspoke.next);
+			
+			// decide whether to recompute next tip or use
+			//   saved values: remember, positions of spoke
+			//   ends can depend on HalfEdge.
+			if (recomp || circleCompError(csVert,csV,hes)>.001 ||
+					circleCompError(csLastW,csW,hes)>.001) {
+				recomp=true;
+				Mobius mob=Mobius.mob_MatchCircles(csV,csW,
+						csVert,csLastW,hes,hes);
+				
+				// apply mob to faceZ and record as next corner
+				Complex faceZ=pdcel.getFaceCenter(nxtspoke.face);
+				carray.add(mob.apply(faceZ));
+				
+				// also find the new location for the spoke end.
+				csLastW=pdcel.getVertData(nxtspoke.next.next);
+				CircleSimple csOut=new CircleSimple();
+				Mobius.mobius_of_circle(mob, hes, csLastW, csOut, true);
+				csLastW=csOut;
+			} 
+		
+			// just compute new dual edge end
+			else {
+				if (nxtspoke.face.faceIndx<=0) {
+					nxtspoke=nxtspoke.twin;
+					dualends=pdcel.getDualEdgeEnds(nxtspoke);
+					carray.add(dualends[0]);
+				}
+				else {
+					dualends=pdcel.getDualEdgeEnds(nxtspoke);
+					carray.add(dualends[1]);
+				}
+				csLastW=pdcel.getVertData(nxtspoke.next.next);
+			}
+		} // end of while through spokes
+		return carray;
+	}
+	
+} // end of class
+
+/** 
+ * For holding data on a face. Calling routine must know the
+ * order of the data, the geometry, etc.
+ * @author kstephe2
+ *
+ */
+class TmpFaceData {
+	public Complex[] center;
+	public double[] rad;
+	public double[] invDist;
+	
+	public TmpFaceData(Complex[] pts,double[] r,double[] id) {
+		for (int j=0;j<3;j++) {
+			center[j]=pts[j];
+			rad[j]=r[j];
+			invDist[j]=id[j];
+		}
+	}
 }

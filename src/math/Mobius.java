@@ -503,13 +503,13 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 	
 	/**
-	 * Create Mobius mapping given pair of circles to given pair
-	 * of circles. Project to eucl data if in other geometries. 
-	 * Idea is to match 3 points: circle 1 and 2 centers,
-	 * and point on boundary of circle 1 in direction opposite to circle 2.
+	 * Create Mobius mapping first pair of circles to second 
+	 * pair. Project to eucl data if in other geometries. 
+	 * Idea is to match 3 points: circle 1 and 2 centers, and
+	 * point on boundary of circle 1 in direction opposite 
+	 * to circle 2 center (making it unique in all geometries).
 	 * 
-	 * TODO: Perhaps not very robust for spherical circles around or 
-	 * containing infinity.
+	 * TODO: Migrate to version using CircleSimple's
 	 *  
 	 * @param cent1 Complex // first pair
 	 * @param rad1 double
@@ -523,17 +523,43 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 * @param hes2 int
 	 * @return Mobius, identity on error
 	 */
-	public static Mobius mob_tang_circles(Complex cent1,double rad1,
+	public static Mobius mob_MatchCircles(Complex cent1,double rad1,
 			Complex cent2,double rad2,Complex Cent1,double Rad1,
 			Complex Cent2,double Rad2,int hes1,int hes2) {
-		Complex z1=new Complex(cent1);
-		Complex z2=new Complex(cent2);
-		double r1=rad1;
-		double r2=rad2;
-		Complex Z1=new Complex(Cent1);
-		Complex Z2=new Complex(Cent2);
-		double R1=Rad1;
-		double R2=Rad2;
+		return mob_MatchCircles(new CircleSimple(cent1,rad1),
+				new CircleSimple(cent2,rad2),new CircleSimple(Cent1,Rad1),
+				new CircleSimple(Cent2,Rad2),hes1,hes2);
+	}
+	
+	/**
+	 * Create Mobius mapping first pair of circles to second 
+	 * pair. Project to eucl data if in other geometries. 
+	 * Idea is to match 3 points: circle 1 and 2 centers, and
+	 * point on boundary of circle 1 in direction opposite 
+	 * to circle 2 center (making it unique in all geometries).
+	 * 
+	 * TODO: Perhaps not very robust for spherical circles around or 
+	 * containing infinity.
+	 *  
+	 * @param cs1 CircleSimple
+	 * @param cs2 CircleSimple
+	 * @param CS1 CircleSimple
+	 * @param CS2 CircleSimple
+	 * @param hes1 int
+	 * @param hes2 int
+	 * @return Mobius, identity on error
+	 */
+	public static Mobius mob_MatchCircles(CircleSimple cs1,
+			CircleSimple cs2,CircleSimple CS1,CircleSimple CS2,
+			int hes1,int hes2) {
+		Complex z1=new Complex(cs1.center);
+		Complex z2=new Complex(cs2.center);
+		double r1=cs1.rad;
+		double r2=cs2.rad;
+		Complex Z1=new Complex(CS1.center);
+		Complex Z2=new Complex(CS2.center);
+		double R1=CS1.rad;
+		double R2=CS2.rad;
 		Mobius mob=new Mobius();
 		CircleSimple sC=new CircleSimple();
 		
@@ -1124,29 +1150,55 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/* ----------------- applying Mobius to single circles ------- */
-
+	
 	/**
-	 * Apply mobius (flag false) or inverse (flag true) to a single circle
-	 * in specified geometry. Note that in eucl case, negative newr 
-	 * means use outside of circle; user will have to handle this in 
-	 * calling routine. Center/radius in specified geometry returned 
-	 * in 'CircleSimple'.
+	 * Apply mobius ('oriented' true) or inverse ('oriented' false) 
+	 * to a single circle in specified geometry. Note that in 
+	 * eucl case, negative newr means use outside of circle; calling 
+	 * routine will handle this. Center/radius in specified 
+	 * geometry returned in 'CircleSimple'.
 	 * @param Mob Mobius
 	 * @param hes int, geometry
 	 * @param z Complex, circle center
 	 * @param r double, circle radius
-	 * @param sC CircleSimple, use this to return results
+	 * @param csOut CircleSimple; return results (instantiated by caller)
+	 * @param oriented boolean, if false, use Mob^{-1}
+	 * @return int, 0 on error, results in 'sC' in specified geometry
+	 * 
+	 * TODO: update calls to use 'csIn' version
+	 */
+	public static int mobius_of_circle(Mobius Mob, int hes, Complex z,
+			double r, CircleSimple csOut, boolean oriented) {
+		return mobius_of_circle(Mob,hes,new CircleSimple(z,r),csOut,oriented);
+	}
+	
+	/**
+	 */
+
+	/**
+	 * Apply mobius ('oriented' true) or inverse ('oriented' false) 
+	 * to a single circle in specified geometry. Note that in 
+	 * eucl case, negative newr means use outside of circle; calling 
+	 * routine will handle this. Center/radius in specified 
+	 * geometry returned in 'CircleSimple'.
+	 * @param Mob Mobius
+	 * @param hes int, geometry
+	 * @param z Complex, circle center
+	 * @param r double, circle radius
+	 * @param csOut CircleSimple; return results (instantiated by caller)
 	 * @param oriented boolean, if false, use Mob^{-1}
 	 * @return int, 0 on error, results in 'sC' in specified geometry
 	 */
-	public static int mobius_of_circle(Mobius Mob, int hes, Complex z,
-			double r, CircleSimple sC, boolean oriented) {
+	public static int mobius_of_circle(Mobius Mob, int hes, 
+			CircleSimple csIn,CircleSimple csOut, boolean oriented) {
+		Complex z=csIn.center;
+		double r=csIn.rad;
 		double tmpr;
 		Complex tmpz;
 		CircleSimple sc;
 
 		if (hes < 0) { // hyperbolic
-			sc = HyperbolicMath.h_to_e_data(z, r);
+			sc = HyperbolicMath.h_to_e_data(z,r);
 			tmpz = new Complex(sc.center);
 			tmpr = sc.rad;
 			
@@ -1158,8 +1210,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 				return 0;
 			
 			sc = HyperbolicMath.e_to_h_data(sc.center, sc.rad);
-			sC.center = new Complex(sc.center);
-			sC.rad = sc.rad;
+			csOut.center = new Complex(sc.center);
+			csOut.rad = sc.rad;
 			return 1;
 		}
 		if (hes > 0) { // spherical
@@ -1169,16 +1221,16 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			// for NaN problem with r, just move center
 			if (Double.isNaN(r)) { // just move center (without adjusting as
 									// usual)
-				sC.center = Mob.apply_2_s_pt(z);
+				csOut.center = Mob.apply_2_s_pt(z);
 				/* fixup: for Nan problem, should get better estimate of r 
 				 * using, e.g., derivative of Mob.*/
-				sC.rad = r;
+				csOut.rad = r;
 				return 1;
 			}
 			CirMatrix C =CirMatrix.sph2CirMatrix(z, r);
 			CirMatrix CC = CirMatrix.applyTransform(Mob, C, oriented);
 			sc=CirMatrix.cirMatrix2sph(CC);
-			if (Double.isNaN(sC.center.x) || Double.isNaN(sC.center.y)) {
+			if (Double.isNaN(csOut.center.x) || Double.isNaN(csOut.center.y)) {
 				sc.center = Mob.apply(z);
 				/* fixup: see above */
 				/*
@@ -1187,16 +1239,16 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 				 */
 				sc.rad = r;
 			}
-			sC.center=new Complex(sc.center);
-			sC.rad=sc.rad;
+			csOut.center=new Complex(sc.center);
+			csOut.rad=sc.rad;
 			return 1;
 		} else { // euclidean
 			CirMatrix C=new CirMatrix(z,r);
 			CirMatrix CC=CirMatrix.applyTransform(Mob,C,oriented);
 
 			CircleSimple scl=CirMatrix.cirMatrix2eucl(CC);
-			sC.center=new Complex(scl.center);
-			sC.rad=scl.rad;
+			csOut.center=new Complex(scl.center);
+			csOut.rad=scl.rad;
 			return 1;
 		}
 	}

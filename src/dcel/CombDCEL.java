@@ -1056,7 +1056,7 @@ public class CombDCEL {
 				if (he.eutil==0)
 					throw new DCELException("seems that no edge from red vertex "+he.origin.vertIndx+
 							" has been laid out");
-				HalfEdge bhe=he.twin;
+				HalfEdge bhe=he.twin; // DCELdebug.edgeConsistency(pdcel,pdcel.alpha);
 				
 				// then rotate clw adding faces
 				do {
@@ -2675,13 +2675,13 @@ public class CombDCEL {
 			  if (vert.halfedge!=null) { 
 				  ++vtick;
 				  v_array.add(vert);
-				  // if pdc2==pdc1, should have vtick=v=vert.vutil
+				  // if pdc2!=pdc1, should have vtick=v=vert.vutil
 				  pdc1.newOld.add(new EdgeSimple(vtick,vert.vutil));
 //System.out.println(" add "+new EdgeSimple(vtick,vert.vutil));					  
 			  }
 		  }
 			 
-		  // new indices for any orphaned verts
+		  // new indices for any orphaned pdc1 verts
 		  for (int v=1;v<=pdc1.vertCount;v++) {
 			  Vertex vert=pdc1.vertices[v];
 			  if (vert.halfedge==null) { // 'vutil', replacement index
@@ -2704,12 +2704,12 @@ public class CombDCEL {
 				  }
 			  }
 			  
-			  // new indices for any orphaned verts
+			  // newOld for orphaned verts: 
+			  //  old is the original shifted by pdc1.vertCount
 			  for (int v=1;v<=pdc2.vertCount;v++) {
 				  Vertex vert=pdc2.vertices[v];
-				  if (vert.halfedge==null) { // 'vutil', replacement index
-					  int rep_indx=pdc2.vertices[vert.vutil].vertIndx;
-					  int newindx=pdc2.vertices[rep_indx].vutil;
+				  if (vert.halfedge==null) { 
+					  int newindx=vert.vutil; // pdc1 vertex identified with
 					  pdc1.newOld.add(new EdgeSimple(newindx,vert.vertIndx));
 				  }
 			  }

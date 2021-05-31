@@ -2,6 +2,7 @@ package canvasses;
 
 import java.awt.Color;
 import java.awt.geom.Path2D;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
@@ -406,7 +407,168 @@ public class DisplayParser {
 			}
 			case 'd': { // dual objects: 
 				// 'de' (default), 'dc', 'df', 'dg', 'dt', 'dw', or 'dp'
-				AmbiguousZ []ambigZs=AmbiguousZ.getAmbiguousZs(p);
+				PackDCEL pdcel=p.packDCEL;
+				if (pdcel!=null) {
+					
+					// TODO: add as needed
+
+					// now the parsing by 'dualChar'
+					switch (dualChar) {
+					case 'c': // dual 'circles' indexed by faces
+					{
+						FaceLink faceLink = new FaceLink(p, items);
+						if (faceLink != null && faceLink.size() <= 0) // nothing in list
+							break;
+						Iterator<Integer> flist = faceLink.iterator();
+						int f;
+						while (flist.hasNext()) {
+							f = flist.next();
+							Complex []pts=pdcel.getFaceCorners(pdcel.faces[f]);
+							CircleSimple sC=CommonMath.tri_incircle(pts[0],pts[1],pts[2],p.hes);
+
+							if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
+								dispFlags.setColor(p.getFaceColor(f));
+							if (dispFlags.label)
+								dispFlags.setLabel(Integer.toString(f));
+							cpScreen.drawCircle(sC.center,sC.rad, dispFlags);
+							count++;
+						}
+						break;
+					}
+					case 'f': // dual 'faces' are indexed by packing vertices
+					{
+						NodeLink nodeLink = new NodeLink(p, items);
+						if (nodeLink.size() <= 0)
+							break; // nothing in list
+						Iterator<Integer> vlist = nodeLink.iterator();
+						while (vlist.hasNext()) {
+							v = (Integer) vlist.next();
+//System.out.println(" v="+v);							
+							ArrayList<Complex> zarray=
+									CommonMath.buildDualFace(pdcel,
+											pdcel.vertices[v].halfedge,p.hes);
+							int num = zarray.size();
+							double[] fanCenters = new double[2 * num];
+							Iterator<Complex> zit=zarray.iterator();
+							int tick=0;
+							while (zit.hasNext()) {
+								Complex zz=zit.next();
+								fanCenters[tick*2]=zz.x;
+								fanCenters[tick++*2+1]=zz.y;
+							}
+							
+							if (!dispFlags.colorIsSet)
+								dispFlags.setColor(p.getCircleColor(v));
+							if (dispFlags.label)
+								dispFlags.setLabel(Integer.toString(v));
+							
+//							if (!p.isBdry(v)) // interior
+								cpScreen.drawClosedPoly(num,fanCenters,dispFlags);
+//							else
+//								cpScreen.drawOpenPoly(num,fanCenters,dispFlags);
+								
+							count++;
+						}
+						break;
+					}
+					case 'e': // dual edges for edges of 'EdgeList'
+					{
+						EdgeLink elist = new EdgeLink(p, items);
+						Iterator<EdgeSimple> eits=elist.iterator();
+						while (eits.hasNext()) {
+							HalfEdge he=pdcel.findHalfEdge(eits.next());
+							Complex[] pts=pdcel.getDualEdgeEnds(he);
+							if (pts!=null) {
+								cpScreen.drawEdge(pts[0],pts[1],dispFlags);
+								count++;
+							}
+						}
+						break;
+					}
+					case 'G': // fall through with Glink
+					case 'g': // dual edges from list of face pairs <f,g>; 
+					{
+						HalfLink hlink=new HalfLink(p);
+						GraphLink dualedges=null;
+						
+						if (c=='G') { // treat Glink as dual edges
+							Iterator<EdgeSimple> dedges = CPBase.Glink.iterator();
+							while (dedges.hasNext()) {
+								EdgeSimple es = (EdgeSimple) dedges.next();
+								es=pdcel.edge_to_dualEdge(es);
+								hlink.add(pdcel.findHalfEdge(es));
+							}
+						}
+						else {
+							if (items!=null && items.size()>0) {
+								dualedges=new GraphLink(p,items);
+								if (dualedges!=null && dualedges.size()>0) {
+									hlink=new HalfLink(p);
+									Iterator<EdgeSimple> gits=dualedges.iterator();
+									while (gits.hasNext()) {
+										EdgeSimple es=gits.next();
+										es=pdcel.edge_to_dualEdge(es);
+										hlink.add(pdcel.findHalfEdge(es));
+									}
+								}
+							}
+							
+							// no selection yet? get all edges
+							if (hlink==null || hlink.size()==0) {
+								hlink=new HalfLink(p,"a"); // skip duals, just get edges
+							}
+						}
+							
+						// now draw
+						Iterator<HalfEdge> his=hlink.iterator();
+						while (his.hasNext()) {
+							HalfEdge he=his.next();
+							Complex[] pts=pdcel.getDualEdgeEnds(he);
+							cpScreen.drawEdge(pts[0],pts[1],dispFlags);
+							count++;
+						}
+						break;
+					}
+					case 'p': // trinket at tangency points, indexed by edge
+					{
+						EdgeLink elist = new EdgeLink(p, items);
+						if (elist != null && elist.size() > 0) {
+							EdgeSimple edge = null;
+							Iterator<EdgeSimple> edges = elist.iterator();
+							while (edges.hasNext()) {
+								edge = (EdgeSimple) edges.next();
+								Complex ctr=p.tangencyPoint(edge);
+								if (ctr==null)
+									break;
+								cpScreen.drawTrinket(trinket,ctr, dispFlags);
+
+								count++;
+							}
+						}
+						break;
+					}
+					case 't': // trinket at dual centers, indexed by faces
+					{
+						FaceLink faceLink = new FaceLink(p, items);
+						if (faceLink != null && faceLink.size() <= 0) 
+							break;
+						Iterator<Integer> flist = faceLink.iterator();
+						int f;
+						while (flist.hasNext()) {
+							f = flist.next();
+							Complex fz=p.getFaceCenter(f);
+							if (!dispFlags.colorIsSet)
+								dispFlags.setColor(p.getFaceColor(f));
+							cpScreen.drawTrinket(trinket,fz,dispFlags);
+							count++;
+						}
+					}
+					} // end of cases (for now)
+				}
+				
+				// traditional
+				else {
+				AmbiguousZ[] ambigZs=AmbiguousZ.getAmbiguousZs(p);
 				EdgeLink redEs=null;
 				
 				// if not simply connected, assume usual layout using red chain 
@@ -633,10 +795,10 @@ public class DisplayParser {
 						cpScreen.drawTrinket(trinket,sc.center,dispFlags);
 						count++;
 					}
-					break;						
 				}
 				
 				} // end of switch for dual faces/edges/circles/triangles
+				}
 
 				break;
 			} // end of 'd' dual options

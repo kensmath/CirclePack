@@ -4851,7 +4851,7 @@ of the tiles are the larger indices.
 </description>
 </command>
 
-<command cmd="zip" flags="v n">
+<command cmd="zip" flags="n v">
 <description>
 	Zip together (like a zipper) n pairs of boundary edges starting 
 	from the vertex v (must be bdry vert) to form a new complex.
@@ -4860,6 +4860,10 @@ of the tiles are the larger indices.
 	component, then they all get pasted and there's no bdry left;
 	if odd, then a boundary component of three edges remains.
 </description>
+<seealso>
+<see>adjoin</see>
+<see>enclose</see>
+</seealso></seealso>
 </command>
 
 <command cmd=":=" flags="[[SLIDER..]'] {x}">

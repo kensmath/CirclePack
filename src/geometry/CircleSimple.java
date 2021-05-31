@@ -5,8 +5,9 @@ import packing.PackData;
 import complex.Complex;
 
 /**
- * Basic, simple circle, mainly for transferring data from methods. 'flag' passes
- * some code for interpreting output/input. 
+ * Basic, simple circle, mainly for transferring data 
+ * in/out of methods. Note: geometry is NOT specified. 
+ * May us 'flag' to codes for interpreting output/input. 
  * Normally, 
  *     flag=-1 on error, flag=1 on success, flag=0 neutral. 
  * Other options may be agreed in particular calls.

@@ -261,7 +261,7 @@ public class TriAspect extends TriData {
 		int windx=across.vertIndex(w);
 		
 		// mobius identifying circles
-		Mobius mob=Mobius.mob_tang_circles(center[indx], radii[indx],
+		Mobius mob=Mobius.mob_MatchCircles(center[indx], radii[indx],
 				center[(indx+1)%3], radii[(indx+1)%3],
 				across.center[(windx+1)%3],across.radii[(windx+1)%3],
 				across.center[windx],across.radii[windx],

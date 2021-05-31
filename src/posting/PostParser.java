@@ -10,6 +10,7 @@ import allMains.CirclePack;
 import complex.Complex;
 import exceptions.ParserException;
 import geometry.CircleSimple;
+import geometry.CommonMath;
 import geometry.SphericalMath;
 import komplex.AmbiguousZ;
 import komplex.DualTri;
@@ -575,9 +576,9 @@ public class PostParser {
 
 						// may still want to display indices
 						if (dispFlags.label) {
-							Complex cent = PackData.face_center(p.hes,
+							Complex cent = CommonMath.tripleIncircle(
 									dtri.TangPts[0], dtri.TangPts[1],
-									dtri.TangPts[2]);
+									dtri.TangPts[2],p.hes);
 							if (p.hes > 0)
 								cent = cpScreen.sphView.toApparentSph(cent);
 							pF.postIndex(cent, f);

@@ -462,8 +462,13 @@ public class CommandStrParser {
 		  
 		  PackDCEL pDCEL = CombDCEL.getRawDCEL(bouquet);
 		  int origVCount=pDCEL.vertCount;
-		  if (pDCEL==null || pDCEL.addBaryCents_raw((FaceLink)null)==0) {
-			  CirclePack.cpb.myErrorMsg("Failed to get initial DCEL, or failed to add barycenters to faces");
+		  FaceLink allfaces=new FaceLink();
+		  ArrayList<dcel.Face> farray=new ArrayList<dcel.Face>(); 
+		  for (int f=1;f<=pDCEL.intFaceCount;f++) 
+			  farray.add(pDCEL.faces[f]);
+		  if (pDCEL==null || RawDCEL.addBaryCents_raw(pDCEL,farray)==0) {
+			  CirclePack.cpb.myErrorMsg("Failed to get initial DCEL, "+
+					  "or failed to add barycenters to faces");
 			  return 0;
 		  }
 
@@ -471,7 +476,8 @@ public class CommandStrParser {
 
 		  PackData newPack=DataDCEL.dcel_to_packing(pDCEL);
 		  if (newPack!=null && newPack.status==true && newPack.nodeCount>3) {
-			  CirclePack.cpb.msg("Have replaced packing with new one derived from '"+filename+"'.");
+			  CirclePack.cpb.msg("Have replaced packing with new "+
+					  "one derived from '"+filename+"'.");
 			  int pnum=packData.packNum;
 			  CirclePack.cpb.swapPackData(newPack,pnum,false);
 			  packData=newPack;
@@ -910,7 +916,7 @@ public class CommandStrParser {
 	    	  int ans=CirclePack.cpb.swapPackData(newPack,pnum1,false);
 
 			  return 1;
-	      } // end of 'adjoin'
+	      } // e)nd of 'adjoin'
 	      
 	      // =========== affpack ===========
 	      else if(cmd.startsWith("affp")) {
@@ -6098,7 +6104,12 @@ public class CommandStrParser {
 						flink=new FaceLink(packData,"a");
 					else
 						flink=new FaceLink(packData,items);
-					return packData.packDCEL.addBaryCents_raw(flink);
+					ArrayList<dcel.Face> farray=new ArrayList<dcel.Face>();
+					Iterator<Integer> fits=flink.iterator();
+					while (fits.hasNext()) {
+						farray.add(packData.packDCEL.faces[fits.next()]);
+					}
+					return RawDCEL.addBaryCents_raw(packData.packDCEL,farray);
 				}
 				else if (str.contains("frac")) { // do local refinement at given vertices
 					NodeLink vlist=null;
@@ -10768,23 +10779,26 @@ public class CommandStrParser {
 	      */
 	          int n;
 	          items=(Vector<String>)flagSegs.get(0);
-	          String str=(String)items.get(0);
-	          int v=NodeLink.grab_one_vert(packData,str);
-	          if (!packData.isBdry(v)) {
-	        	  throw new CombException("fialed: "+v+" is not on the boundary");
-	          }
+	          if (items.size()<2)
+	        	  throw new ParserException("usage: zip n v");
 	          try {
-	        	  n=Integer.parseInt((String)items.get(1));
-	          } catch(Exception ex) {n=-1;}  // default: do whole bdry component
-	          int b=packData.bdry_comp_count(v);
-	          int m=b/2;
-	          if (b!=2*m) m=(b-1)/2;
-	          if (n<0 || n>=m) n=m; // full bdry
-	          if (PackData.adjoin(packData,packData,v,v,n)>0) {
-	        	  packData.setCombinatorics();
-	        	  return 1;
-	          }
-	          return 0;
+	        	  n=Integer.parseInt((String)items.remove(0));
+	          } catch(Exception ex) {n=-1;}  // default: do whole bdry comp
+	          
+	          // do only one vertex
+	          int v=NodeLink.grab_one_vert(packData,items.get(0));
+        	  if (!packData.isBdry(v)) {
+        		  CirclePack.cpb.errMsg("'zip' usage: n v, 'v' must be boundary");
+        		  return 0;
+        	  }
+        	  int b=packData.bdry_comp_count(v);
+        	  int m=b/2;
+        	  if (b!=2*m) m=(b-1)/2;
+        	  if (n<0 || n>=m) n=m; // full bdry
+        	  StringBuilder strbld=new StringBuilder("adjoin "+
+        			  packData.packNum+" "+packData.packNum+" "+
+        			  v+" "+v+" "+n);
+        	  return CommandStrParser.jexecute(packData,strbld.toString());
 	      } 		  
 		  break;
 	  } // end of 'z'

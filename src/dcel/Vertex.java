@@ -104,18 +104,24 @@ public class Vertex {
 	}
 	
 	/**
-	 * array of cclw halfedges out of this vertex.
-	 * @return
+	 * Get cclw 'HalfEdge's, "spokes", out of this vertex
+	 * starting with 'start' ('halfedge' by default).
+	 * @param start HalfEdge (could be null)
+	 * @return HalfLink
 	 */
-	public HalfEdge[] getSpokes() {
-		int num=getNum();
-		HalfEdge[] spokes=new HalfEdge[num];
+	public HalfLink getSpokes(HalfEdge start) {
 		HalfEdge he=halfedge;
+		if (start!=null && start.origin==this)
+			he=start;
+		int num=getNum();
+		if (he.origin.bdryFlag>0) // bdry?
+			num++;
+		HalfLink ans=new HalfLink();
 		for (int j=0;j<num;j++) {
-			spokes[j]=he;
+			ans.add(he);
 			he=he.prev.twin;
 		}
-		return spokes;
+		return ans;
 	}
 		
 	/**
@@ -192,7 +198,7 @@ public class Vertex {
 	}
 	
 	/**
-	 * Get cclw ordered vector of neighboring faces; this
+	 * Get cclw ordered open vector of neighboring faces; this
 	 * will include an ideal face if bdry vertex. Normally
 	 * if vertex is bdry, last (and only last) face in list 
 	 * might be an ideal face, but only calling routine will

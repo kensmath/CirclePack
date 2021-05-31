@@ -7,6 +7,7 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import complex.Complex;
+import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.Vertex;
 import exceptions.CombException;
@@ -40,12 +41,14 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	
 	PackData packData;
 	static final int XTD_LINKS=16; // how many links to look for in 'extended' edges.
-	PackDCEL pdc; // utility pointer
+	PackDCEL pdc; // utility pointer, may be null
 	
 	// Constructors
 	public EdgeLink(PackData p,EdgeSimple edge) {
 		super();
 		packData=p;
+		if (p!=null)
+			pdc=p.packDCEL; 
 		add(edge);
 	}
 	
@@ -57,6 +60,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	public EdgeLink(PackData p,String datastr,boolean xtd) {
 		super();
 		packData=p;
+		if (p!=null)
+			pdc=p.packDCEL; 
 		if (datastr!=null && datastr.length()>0) 
 			addEdgeLinks(datastr,xtd);
 	}
@@ -79,6 +84,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	public EdgeLink(PackData p,Vector<String> items,boolean xtd) {
 		super();
 		packData=p;
+		if (p!=null)
+			pdc=p.packDCEL; 
 		if (items==null || items.size()==0) { // default to 'a' (all edges)
 			items=new Vector<String>(1);
 			items.add("a");
@@ -423,14 +430,41 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			// all (undirected, so if v < w, then (v,w) is included but not (w,v))
 			case 'a':
 			{
-				int w;
-				for (int v=1;v<=nodeCount;v++) {
-					int[] flower=packData.getFlower(v);
-					for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) 
-						if ((w=flower[j])>v) {
-							add(new EdgeSimple(v,w));
-							count++;
+				if (pdc!=null) { // organize via vertices -- more rational order?
+					for (int v=1;v<=pdc.vertCount;v++) {
+						Vertex vert=pdc.vertices[v];
+						HalfLink hlink=vert.getSpokes(null);
+						Iterator<HalfEdge> hits=hlink.iterator();
+						while (hits.hasNext()) {
+							HalfEdge he=hits.next();
+							if (he.myRedEdge!=null) {
+								add(new EdgeSimple(he.origin.vertIndx,
+										he.twin.origin.vertIndx));
+								count++;
+							}
+							else {
+								int ev=he.origin.vertIndx;
+								int ew=he.twin.origin.vertIndx;
+								if (ev<ew) {
+									add(new EdgeSimple(ev,ew));
+									count++;
+								}
+							}
 						}
+					}
+				}
+				
+				// traditional
+				else {
+					for (int v=1;v<=nodeCount;v++) {
+						int w;
+						int[] flower=packData.getFlower(v);
+						for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) 
+							if ((w=flower[j])>v) {
+								add(new EdgeSimple(v,w));
+								count++;
+							}
+					}
 				}
 				break;
 			}

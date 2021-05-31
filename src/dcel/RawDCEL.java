@@ -8,6 +8,7 @@ import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.ParserException;
+import listManip.FaceLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
 
@@ -384,7 +385,31 @@ public class RawDCEL {
 				
 		  return node;
 	  }
-	  
+		
+	  /**
+	   * Add barycenters to given list of faces. 
+	   * A barycenter is a new vertex interior to the 
+	   * face and connected to its bdry vertices.
+	   * @param farray ArrayList<dcel.Face>
+	   * @return int count, 0 on error
+	   */
+	  public static int addBaryCents_raw(PackDCEL pdcel,
+			  ArrayList<Face> farray) {
+		  int count=0;
+
+		  Iterator<Face> flst=farray.iterator();
+		  while (flst.hasNext()) {
+			  Face face=flst.next();
+			  count += RawDCEL.addBary_raw(pdcel,face,false);
+				
+			  // face was ideal? toss 'redChain'
+			  if (face.faceIndx<0) 
+				  pdcel.redChain=null;
+			  face.edge=null; // to avoid repeat in facelist
+		  } // end of while through facelist
+		  return count;
+	  }
+
 	  /**
 	   * We modify an existing 'PackDCEL' with a new boundary
 	   * edge between v and w. Call routine insures that v and w

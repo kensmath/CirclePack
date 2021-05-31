@@ -1018,7 +1018,7 @@ public class SchwarzMap extends PackExtender {
 							
 							// misaligned? (compare centers, don't worry about radii)
 							if ((fvz.minus(gvz).abs()+fwz.minus(gwz).abs()>0.001*domainTri[f].getRadius(jf))) {
-								domainalign=Mobius.mob_tang_circles(gvz, domainTri[g].getRadius(jg1), 
+								domainalign=Mobius.mob_MatchCircles(gvz, domainTri[g].getRadius(jg1), 
 										gwz, domainTri[g].getRadius(jg),
 										fvz,domainTri[f].getRadius(jf), 
 										fwz, domainTri[f].getRadius(jf1),
@@ -1039,7 +1039,7 @@ public class SchwarzMap extends PackExtender {
 							
 							// misaligned? (compare centers, don't worry about radii)
 							if ((fvz.minus(gvz).abs()+fwz.minus(gwz).abs()>0.001*rangeTri[f].getRadius(jf))) {
-								domainalign=Mobius.mob_tang_circles(gvz, rangeTri[g].getRadius(jg1), 
+								domainalign=Mobius.mob_MatchCircles(gvz, rangeTri[g].getRadius(jg1), 
 										gwz, rangeTri[g].getRadius(jg),
 										fvz,rangeTri[f].getRadius(jf), 
 										fwz, rangeTri[f].getRadius(jf1),

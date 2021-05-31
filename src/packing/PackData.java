@@ -2721,14 +2721,10 @@ public class PackData{
 	 * Get array of vertices for face 'f'
 	 */
 	public int[] getFaceVerts(int f) {
-		int[] ans;
 		if (packDCEL!=null) {
-			ans=packDCEL.faces[f].getVerts();
+			return packDCEL.faces[f].getVerts();
 		}
-		else {
-			ans=faces[f].vert;
-		}
-		return ans;
+		return faces[f].vert;
 	}
 	
 	/**
@@ -2811,6 +2807,20 @@ public class PackData{
 		for (int j=0;j<n;j++)
 			flower[j]=kData[v].faceFlower[j];
 		return flower;
+	}
+
+	/**
+	 * Get the center of the incircle for face index 'f'.
+	 * @param f int
+	 * @return Complex
+	 */
+	public Complex getFaceCenter(int f) {
+		if (packDCEL!=null) {
+			return packDCEL.getFaceCenter(packDCEL.faces[f]);
+		}
+		Complex []pts = corners_face(f, null);
+		CircleSimple sc=CommonMath.tri_incircle(pts[0],pts[1],pts[2],hes);
+		return sc.center;
 	}
 	
 	/**
@@ -4447,7 +4457,7 @@ public class PackData{
 	  if (!isBdry(v)) return 0;
 	  maxcount=nodeCount-intNodeCount;
 	  next=v;
-	  while ((next=kData[next].flower[0])!=v 
+	  while ((next=getFirstPetal(next))!=v 
 		 && count<= maxcount) count++;
 	  if (count>maxcount) return 0;
 	  return count;
@@ -4535,7 +4545,7 @@ public class PackData{
 	  }
 	  return theDir; 
 	}
-
+	
 	/**
 	 * Return edge for v,w, null if they're not neighbors
 	 * @param v int
@@ -8605,52 +8615,28 @@ public class PackData{
 
 	/**
 	 * Return center of incircle of face with given index.
-	 * @param face int
+	 * @param f int
 	 * @return Complex, null on error
 	 */
-	public Complex face_center(int face) {
-		if (face < 1 || face > faceCount)
+	public Complex face_center(int f) {
+		if (f < 1 || f > faceCount)
 			return null;
+		int[] fverts=getFaceVerts(f);
 		CircleSimple sc = null;
-		Complex p0 = getCenter(faces[face].vert[0]);
-		Complex p1 = getCenter(faces[face].vert[1]);
-		Complex p2 = getCenter(faces[face].vert[2]);
+		Complex p0 = getCenter(fverts[0]);
+		Complex p1 = getCenter(fverts[1]);
+		Complex p2 = getCenter(fverts[2]);
 		if (hes < 0)
 			sc = HyperbolicMath.hyp_tang_incircle(p0, p1, p2,
-					getRadius(faces[face].vert[0]),
-					getRadius(faces[face].vert[1]),
-					getRadius(faces[face].vert[2]));
+					getRadius(fverts[0]),
+					getRadius(fverts[1]),
+					getRadius(fverts[2]));
 		else if (hes > 0)
 			sc = SphericalMath.sph_tri_incircle(p0, p1, p2);
 		else
 			sc = EuclMath.eucl_tri_incircle(p0, p1, p2);
 		return sc.center;
 	}
-
-	  /**
-	   *  Return center of incircle of triangle formed by
-	   *  given points in given geometry. (For hyperbolic, we
-	   *  use the euclidean incircle.)
-	   *  @param hes int
-	   *  @param p0 Complex
-	   *  @param p1 Complex
-	   *  @param p2 Complex
-	   *  @return Complex
-	   */
-	  public static Complex face_center(int hes,
-			  Complex p0,Complex p1,Complex p2) {
-		  CircleSimple sc=null;
-		  if (hes<=0) // in hyp case, use eucl incircle
-// TODO: need incenter of generic hyperbolic triangle			  
-//			  sc=HyperbolicMath.hyp_tri_incircle(p0,p1,p2,
-//					  rData[faces[face].vert[0]].rad,
-//					  rData[faces[face].vert[1]].rad,
-//					  rData[faces[face].vert[2]].rad);
-			  sc=EuclMath.eucl_tri_incircle(p0,p1,p2);
-		  else 
-			  sc=SphericalMath.sph_tri_incircle(p0,p1,p2);
-		  return sc.center;
-	  }
 
 	  /**
 	   * Intended (not actual) edge length from v to w, using invDist
@@ -14249,20 +14235,26 @@ public class PackData{
 				  else
 					  pdc2=CombDCEL.cloneDCEL(p2.packDCEL);
 			  }
+			  else
+				  pdc2=pdc1;
+			  
+			  // here's the main call.
 			  PackDCEL newDCEL=CombDCEL.d_adjoin(pdc1, pdc2, v1, v2, n);
 			  newPack=new PackData(null);
 			  newPack.attachDCEL(newDCEL);
 			  PackDCEL pdcel=newPack.packDCEL;
 			  newPack.vertexMap=pdcel.newOld;
 			  pdcel.newOld=null;
+			  pdcel.redChain=null;
 			  
     		  // Set up 'VData' (at original size) 
     		  VData[] newV=new VData[p1.sizeLimit+1];
     		  
     		  // copy the 'p1' info?
     		  if (selfadjoin) 
-    			  for (int v=1;v<=p1.nodeCount;v++)
+    			  for (int v=1;v<=pdcel.vertCount;v++) {
     				  newV[v]=p1.vData[pdcel.vertices[v].vutil].clone();
+    			  }
     		  else {
     			  // all 'p1' vertices should still be there, same indices
     			  for (int v=1;v<=p1.nodeCount;v++)
@@ -14270,17 +14262,18 @@ public class PackData{
     			  // rest are from 'p2'.
     			  for (int v=p1.nodeCount+1;v<=pdcel.vertCount;v++) {
     				  newV[v]=new VData();
-    				  int oldv=newPack.vertexMap.findW(v); // v is 'oldv' in 'qackData'
+    				  // v is 'oldv' in 'qackData'
+    				  int oldv=newPack.vertexMap.findW(v-p1.nodeCount); 
+//System.out.println("<v,oldv>="+v+","+oldv);    				  
     				  newV[v].rad=p2.getRadius(oldv);
     				  newV[v].center=p2.getCenter(oldv);
     				  newV[v].aim=p2.getAim(oldv);
     			  }
     		  }
-    		  
-    		  // now organize combinatorics
+    		  newPack.vData=newV;
+
+			  // ensure bdry twins have face with negative index. 
     		  try {
-    			  // make sure bdry edge twins point to
-    			  //    face with negative index. 
     			  if (pdcel.redChain!=null) {
     				  RedHEdge rhe=pdcel.redChain;
     				  do {
@@ -14289,7 +14282,6 @@ public class PackData{
     					  rhe=rhe.nextRed;
     				  } while (rhe!=pdcel.redChain);
     			  }
-    			  
     			  pdcel.fixDCEL_raw(newPack);
     		  } catch(Exception ex) {
     			  throw new CombException("'adjoinCall' error: "+ex.getMessage());
@@ -14397,6 +14389,7 @@ public class PackData{
 		  // update
 		  newPack.set_aim_default();
 		  newPack.fillcurves();
+		  newPack.status=true;
 		  return newPack;
 	  }
 
