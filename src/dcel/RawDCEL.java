@@ -127,6 +127,135 @@ public class RawDCEL {
 	}
 	
 	/**
+	 * Add a new vertex which splits this edge. Red chain
+	 * should stay in tact.
+	 * @param pdcel PackDCEL
+	 * @param edge HalfEdge
+	 * @return int, new vertex index
+	 */
+	public static int splitEdge_raw(PackDCEL pdcel,HalfEdge edge) {
+		// make room
+		int node=pdcel.vertCount+1; // new index 
+		if (node>=pdcel.p.sizeLimit)
+			pdcel.p.alloc_pack_space(node+10,true);
+	
+		// switch to twin?
+		HalfEdge he=edge;
+		if (he.face.faceIndx<=0)
+			he=edge.twin;
+		boolean twinIdeal=he.twin.face.faceIndx<=0; 
+				
+		// hold some edges
+		HalfEdge he_next=he.next;
+		HalfEdge he_prev=he.prev;
+		HalfEdge he_twin=he.twin;
+		HalfEdge het_next=he.twin.next;
+		HalfEdge het_prev=he.twin.prev;
+		RedHEdge redge = he.myRedEdge;
+		RedHEdge tredge = he.twin.myRedEdge;
+
+		// create new edges to split 'edge'
+		HalfEdge newEdge = new HalfEdge();
+		newEdge.invDist = he.invDist;
+		newEdge.schwarzian = he.schwarzian;
+		HalfEdge newTwin = new HalfEdge();
+		newTwin.invDist = he.invDist;
+		newTwin.schwarzian = he.schwarzian;
+
+		// new vertex
+		Vertex midVert = new Vertex(++pdcel.vertCount);
+		pdcel.vertices[pdcel.vertCount] = midVert;
+		midVert.halfedge = newEdge;
+		newEdge.origin = midVert;
+		newTwin.origin = midVert;
+
+		// fix twins
+		he.twin = newTwin;
+		newTwin.twin = he;
+
+		newEdge.twin = he_twin;
+		he_twin.twin = newEdge;
+
+		// fix links at ends of original 'edge'
+		newEdge.next=he_next;
+		he_next.prev=newEdge;
+		newTwin.next=het_next;
+		het_next.prev=newTwin;
+		
+		// add new edge to left of 'edge'
+		Vertex oppV=he.next.next.origin;
+		HalfEdge leftedge=new HalfEdge(midVert);
+		leftedge.twin=new HalfEdge(oppV);
+		leftedge.twin.twin=leftedge;
+		
+		// link in 
+		he.next=leftedge;
+		leftedge.prev=he;
+		
+		leftedge.next=he_prev;
+		he_prev.prev=leftedge;
+		
+		leftedge.twin.prev=he_next;
+		he_next.next=leftedge.twin;
+		
+		leftedge.twin.next=newEdge;
+		newEdge.prev=leftedge.twin;
+
+		if (redge!=null) {
+			midVert.redFlag=true;
+			RedHEdge new_redge=new RedHEdge(newEdge);
+			newEdge.myRedEdge=new_redge;
+			
+			new_redge.nextRed=redge.nextRed;
+			redge.nextRed.prevRed=new_redge;
+			
+			redge.nextRed=new_redge;
+			new_redge.prevRed=redge;
+		}
+		
+		// handle right side
+		if (!twinIdeal) {
+			midVert.bdryFlag=1;
+			oppV=he_twin.next.next.origin;
+			HalfEdge rightedge=new HalfEdge(midVert);
+			rightedge.twin=new HalfEdge(oppV);
+			rightedge.twin.twin=rightedge;
+			
+			// link in 
+			rightedge.next=het_prev;
+			het_prev.prev=rightedge;
+			
+			rightedge.prev=he_twin;
+			he_twin.next=rightedge;
+			
+			rightedge.twin.next=newTwin;
+			newTwin.prev=rightedge.twin;
+			
+			rightedge.twin.prev=het_next;
+			het_next.next=rightedge.twin;
+			
+			if (tredge!=null) {
+				RedHEdge new_redge=new RedHEdge(newTwin);
+				newTwin.myRedEdge=new_redge;
+				
+				new_redge.nextRed=tredge.nextRed;
+				tredge.nextRed.prevRed=new_redge;
+				
+				tredge.nextRed=new_redge;
+				new_redge.prevRed=tredge;
+			}
+		}
+		
+		else {
+			he_twin.next=newTwin;
+			newTwin.prev=he_twin;
+			midVert.bdryFlag=1;
+		}
+		
+		return midVert.vertIndx;
+	}
+	
+	/**
 	 * Remove a vertex; 'vertices' are adjusted and reindexed,
 	 * with old index in 'vutil'. Calling routine must have
 	 * checked for legality, e.g., whether it leaves an interior 

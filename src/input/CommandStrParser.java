@@ -4243,20 +4243,34 @@ public class CommandStrParser {
    		  if (edgeLink==null || edgeLink.size()==0) return 0;
    		  if ((node=packData.nodeCount+edgeLink.size()+1) > (packData.sizeLimit)
    				  && packData.alloc_pack_space(node,true)==0 ) {
-	   		      throw new DataException("Space allocation problem with adding vertices to edges.");
-	   		      }
+   			  throw new DataException("Space allocation problem with adding vertices to edges.");
+   		  }
 
    		  Iterator<EdgeSimple> elst=edgeLink.iterator();
    		  while (elst.hasNext()) {
    			  EdgeSimple edge=elst.next();
-   			  if (packData.nghb(edge.v,edge.w)<0) { // not neighbors?
-   				  CirclePack.cpb.errMsg("{"+edge.v+" "+edge.w+"} is not an edge");
+   			  if (packData.packDCEL!=null) {
+   				  HalfEdge he=packData.packDCEL.findHalfEdge(edge);
+   				  if (he==null)
+					  CirclePack.cpb.errMsg("{"+edge.v+" "+edge.w+"} is not an edge");
+   				  else {
+   					  int vindx=RawDCEL.splitEdge_raw(packData.packDCEL,he);
+   					  if (vindx>0) {
+   						  packData.packDCEL.fixDCEL_raw(packData);
+   						  count++;
+   					  }
+   				  }
    			  }
    			  else {
-   				  int returnVal=packData.split_edge(edge.v, edge.w);
-   				  if (returnVal>0) {
-   					  packData.setCombinatorics();
-   					  count++;
+   				  if (packData.nghb(edge.v,edge.w)<0) { // not neighbors?
+   					  CirclePack.cpb.errMsg("{"+edge.v+" "+edge.w+"} is not an edge");
+   				  }
+   				  else {
+   					  int returnVal=packData.split_edge(edge.v, edge.w);
+   					  if (returnVal>0) {
+   						  packData.setCombinatorics();
+   						  count++;
+   					  }
    				  }
    			  }
    		  }
