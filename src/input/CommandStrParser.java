@@ -4289,23 +4289,60 @@ public class CommandStrParser {
 				  if (flg.equals("-m"))
 					  merge=true;
 			  }
+			  
+			  // should have 2 or 3 integers
 			  v=Integer.parseInt(items.get(0));
 			  w=Integer.parseInt(items.get(1));
-			  if (!merge)
+			  try {
 				  u=Integer.parseInt(items.get(2));
+				  if (u==w || u==v || w==v)
+					  throw new ParserException();
+			  } catch (Exception ex) {}; // u remains 0
 		  } catch(Exception ex) {
-			  throw new ParserException("usage: v u w or -m v w");
+			  throw new ParserException("usage: v w [u] or -m v w");
+		  } 
+		  
+		  if (!merge) {
+			  if (packData.packDCEL!=null) {
+				  HalfEdge newEdge;
+				  HalfEdge wedge=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
+				  // bdry case
+				  if (packData.isBdry(v)) {
+					  if (wedge==null || packData.isBdry(w))
+						  throw new ParserException("usage: v w when v bdry, w interior");
+					  newEdge=RawDCEL.splitFlower_raw(packData.packDCEL, wedge,null);
+				  }
+				  // interior case
+				  else {
+					  HalfEdge uedge=packData.packDCEL.findHalfEdge(new EdgeSimple(v,u));
+					  if (wedge==null || uedge==null) 
+						  throw new ParserException("usage: v w u; w & u must be nghbs of v");
+					  newEdge=RawDCEL.splitFlower_raw(packData.packDCEL, wedge,uedge);
+				  }
+				  if (newEdge==null) 
+					  return 0;
+				  packData.packDCEL.fixDCEL_raw(packData);
+				  int newindx=newEdge.origin.vertIndx;
+				  // a,b are ref vertices; for debug, center new vert between a,b.
+				  int a=newEdge.twin.origin.vertIndx;
+				  int b=newEdge.next.twin.origin.vertIndx;
+				  Complex za=packData.getCenter(a);
+				  Complex zb=packData.getCenter(b);
+				  packData.setCenter(newindx,za.plus(zb).divide(2.0));
+				  packData.setRadius(newindx,packData.getRadius(a));
+				  return newindx;
+			  }
+
+			  // else traditional case
+			  int returnVal=packData.split_flower(v,w,u);
+			  packData.setCombinatorics();
+			  return returnVal;
 		  }
 		  
-		  int returnVal=0;
-		  if (!merge) {
-			  returnVal=packData.split_flower(v,w,u);
-		  }
+// TODO: merge, both DCEL and traditional need work
 //		  else
 //		  	  returnVal=packData.merge_vert(v,w);
-		  
-		  packData.setCombinatorics();
-		  return returnVal;
+
 	  }
    	  break;
   } // end of 's'
@@ -4797,6 +4834,9 @@ public class CommandStrParser {
     			  !q.status) {
     		  throw new ParserException("usage: get_data must start with '-q{p}' indicating the "+
     				  "other packing");
+    	  }
+    	  if (flagSegs.size()==0) {
+    		  throw new ParserException("usage: get_data; check formating of data to pass");
     	  }
     	  items=(Vector<String>)flagSegs.get(0);
     	  str=(String)items.get(0);
@@ -5324,6 +5364,7 @@ public class CommandStrParser {
 	   			  VertexMap vmap=pdcel.reapVUtil();
 	   			  pdcel.fixDCEL_raw(packData);
 	   			  pdcel.modRadCents(vmap);
+	   			  // TODO: should compute new center based on its base edge.
 	   			  return ans;
 	   		  }
 	   		  
@@ -9034,7 +9075,8 @@ public class CommandStrParser {
 		    	  NodeLink nL=new NodeLink(packData,items);
 		    	  if (keepFlag!=0)
 		    		  packData.swap_nodes(nL.get(0),nL.get(1),keepFlag);
-		    	  else packData.swap_nodes(nL.get(0),nL.get(1));
+		    	  else 
+		    		  packData.swap_nodes(nL.get(0),nL.get(1));
 		    	  if (packData.packDCEL==null)
 		    		  packData.setCombinatorics();
 		      } catch(Exception ex) {

@@ -5,7 +5,10 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
-import exceptions.CombException;
+import dcel.HalfEdge;
+import dcel.RawDCEL;
+import dcel.Vertex;
+import komplex.EdgeSimple;
 import math.Mobius;
 import packing.PackCreation;
 import packing.PackData;
@@ -38,7 +41,7 @@ import util.StringUtil;
 public class BrooksQuad extends PackExtender {
 	public static final int  MAX_LIST=4000; 
 	public boolean Brooks_mode; // if true: Brooks mode, false: alternating mode
-	public int T,L,B,R; // top, left, bottom, right
+	public int T,L,B,R; // indices for top, left, bottom, right
 	public int P;       // 'plug'; filler circle for interstice, not actually part of Brooks pattern
 	public int N;       // Former plug, now the last new vertex
 	public int v_flips; // number of 'vertical' flips
@@ -103,63 +106,62 @@ public class BrooksQuad extends PackExtender {
 	/**
 	 * A new 'vertical' circle is one which is tangent to T and B (and L or R, 
 	 * depending). We do various interchanges of T/B and L/R depending on the
-	 * mode and on the sequence of preceeding additions.
+	 * mode and on the sequence of preceding additions.
 	 * Vertical circles are colored red, but code is 149 if added on the
 	 * left, 151 if in alternating mode and added on the right.
 	 */
 	public void addVertical() {
+
+//System.out.println("add vertical: T="+T+", L="+L+", B="+
+//		B+", R="+R+". Plug is "+P);
+
 		int dum;
-		P++;
-		if (P>packData.sizeLimit) packData.alloc_pack_space(P+1,true);
-		packData.nodeCount=P;
-		if (v_mode==0) // beginning vertical flips 
+		if (P+1>packData.sizeLimit) packData.alloc_pack_space(P+1,true);
+		if (v_mode==0) // beginning sequence of vertical flips? 
 			v_flips=0;
-		h_mode=0;
-		v_mode=1;
 		Color cLrCode=ColorUtil.coLor(149);
-		  // Alternating mode, even number of h_flips, exchange T/B, L/R 
-		  if (!Brooks_mode && (h_flips%2)==0) { // alternating mode and even
-			/* Flip (exchange labels) each V (vertical). However, for first 
+		// Alternating mode, even number of h_flips, exchange T/B, L/R 
+		if (!Brooks_mode && (h_flips%2)==0) { // alternating mode and even
+		/* Flip (exchange labels) each V (vertical). However, for first 
 			   V step, may have to compensate for flips done while in previous 
 			   sequence of horizontal steps. */
-		      dum=T;T=B;B=dum; // exchange T and B 
-		      dum=L;L=R;R=dum; // exchange L and R 
-		      v_flips++;
-		      cLrCode=ColorUtil.coLor(151);
-		  }
-		  brooks_insert(packData,P,N,T,-1);
-		  brooks_insert(packData,P,N,B,1);
-		  
-		  // fix flower of R 
-		  for (int i=0;i<=packData.countFaces(R);i++)
-		    if (packData.kData[R].flower[i]==N) 
-			packData.kData[R].flower[i]=P;
-		  
-		  // fix flower of N 
-		  packData.kData[N].flower[0]=T;
-		  packData.kData[N].flower[1]=L;
-		  packData.kData[N].flower[2]=B;
-		  packData.kData[N].flower[3]=P;
-		  packData.kData[N].flower[4]=T;
-		  packData.setCircleColor(N,new Color(cLrCode.getRed(),cLrCode.getGreen(),cLrCode.getBlue())); // red 149 or 151 
-		  
-		  // add flower of new temporary 'plug' vert 
-		  packData.kData[P].flower=new int[5];
-		  packData.kData[P].num=4;
-		  packData.setBdryFlag(P,0);
-		  packData.setRadius(P,2.0*Math.PI);	  
-		  packData.kData[P].flower[0]=N;
-		  packData.kData[P].flower[1]=B;
-		  packData.kData[P].flower[2]=R;
-		  packData.kData[P].flower[3]=T;
-		  packData.kData[P].flower[4]=N;
-		  packData.setCircleColor(P,ColorUtil.getBGColor());
-		  
-		  L=N; // N is the new 'left' of interstice
-		  N=P;
-		  packData.setCombinatorics();
-		  packData.set_aim_default();
-		  hvList.append("v");
+			dum=T;T=B;B=dum; // exchange T and B 
+			dum=L;L=R;R=dum; // exchange L and R 
+			v_flips++;
+			cLrCode=ColorUtil.coLor(151);
+		}
+		h_mode=0;
+		v_mode=1;
+
+		HalfEdge PL=packData.packDCEL.findHalfEdge(new EdgeSimple(P,L));
+		
+		// split the edge from P (plug) to L (left) and fix
+		RawDCEL.splitEdge_raw(packData.packDCEL, PL);
+				
+		// switch new vertex with old plug
+		int pnc=packData.packDCEL.vertCount;
+		Vertex newv=packData.packDCEL.vertices[pnc]; 
+		Vertex oldP=packData.packDCEL.vertices[pnc-1];
+		newv.vertIndx=pnc-1;
+		oldP.vertIndx=pnc;
+		packData.packDCEL.vertices[pnc]=oldP;
+		packData.packDCEL.vertices[pnc-1]=newv;
+
+		// process and attach 
+		packData.packDCEL.fixDCEL_raw(packData);
+
+		// set the colors
+		packData.setCircleColor(packData.nodeCount-1,
+				new Color(cLrCode.getRed(),cLrCode.getGreen(),
+						cLrCode.getBlue())); // red 149 or 151 
+		packData.setCircleColor(packData.nodeCount,ColorUtil.getBGColor());
+		hvList.append("v");
+
+		L=pnc-1; // N is the new 'left' of interstice
+		P=pnc; // new plug index
+
+		packData.set_aim_default();
+		hvList.append("v");
 	}
 	
 	/**
@@ -170,102 +172,55 @@ public class BrooksQuad extends PackExtender {
 	 * top, 51 if in alternating mode and added on the bottom.
 	 */
 	public void addHorizontal() {
+		
+//		System.out.println("add horizonatal: T="+T+", L="+L+", B="+
+//				B+", R="+R+". Plug is "+P);
+
 		int dum;
-		P++;
-		if (P>packData.sizeLimit) packData.alloc_pack_space(P+1,true);
-		packData.nodeCount=P;
+		if (P+1>packData.sizeLimit) packData.alloc_pack_space(P+1,true);
 		Color cLrCode=ColorUtil.coLor(49);
 		
-		  if (h_mode==0) h_flips=0;
-		  if (!Brooks_mode && (v_flips%2)==0) {
+		if (h_mode==0) // beginning sequence of horizontal flips?
+			h_flips=0;
+		if (!Brooks_mode && (v_flips%2)==0) {
 			/* Flip (exchange labels) each H. However, for first 
 			   H step, may have to compensate for flips done in sequence
 			   of previous vertical steps. */
-		      dum=T;T=B;B=dum; // exchange T and B 
-		      dum=L;L=R;R=dum; // exchange L and R 
-		      h_flips++;
-		      cLrCode=ColorUtil.coLor(51);
-		    }
-		  v_mode=0;
-		  h_mode=1;
-		  brooks_insert(packData,P,N,R,-1);
-		  brooks_insert(packData,P,N,L,1);
+			dum=T;T=B;B=dum; // exchange T and B 
+			dum=L;L=R;R=dum; // exchange L and R 
+			h_flips++;
+		    cLrCode=ColorUtil.coLor(51);
+		}
+		v_mode=0;
+		h_mode=1;
 		  
-		  // fix flower of 3 
-		  for (int i=0;i<=packData.countFaces(B);i++)
-		    if (packData.kData[B].flower[i]==N) 
-			packData.kData[B].flower[i]=P;
-		  
-		  // fix flower of N 
-		  packData.kData[N].flower[0]=T;
-		  packData.kData[N].flower[1]=L;
-		  packData.kData[N].flower[2]=P;
-		  packData.kData[N].flower[3]=R;
-		  packData.kData[N].flower[4]=T;
-		  packData.setCircleColor(N,new Color(cLrCode.getRed(),cLrCode.getGreen(),cLrCode.getBlue())); // blue, 49 or 51 
+		HalfEdge PT=packData.packDCEL.findHalfEdge(new EdgeSimple(P,T));
+		
+		// split the edge from P (plug) to T (top) and fix
+		RawDCEL.splitEdge_raw(packData.packDCEL, PT);
+			
+		// switch new vertex with old plug
+		int pnc=packData.packDCEL.vertCount;
+		Vertex newv=packData.packDCEL.vertices[pnc]; 
+		Vertex oldP=packData.packDCEL.vertices[pnc-1];
+		newv.vertIndx=pnc-1;
+		oldP.vertIndx=pnc;
+		packData.packDCEL.vertices[pnc]=oldP;
+		packData.packDCEL.vertices[pnc-1]=newv;
 
-		  // add flower of new P vert 
-		  packData.kData[P].flower=new int[5];
-		  packData.kData[P].num=4;
-		  packData.setBdryFlag(P,0);
-		  packData.setRadius(P,2.0*Math.PI);	  
-		  packData.kData[P].flower[0]=N;
-		  packData.kData[P].flower[1]=L;
-		  packData.kData[P].flower[2]=B;
-		  packData.kData[P].flower[3]=R;
-		  packData.kData[P].flower[4]=N;
-		  packData.setCircleColor(P,ColorUtil.getBGColor());
-		  
-		  T=N; // N is the new 'top' of interstice
-		  N=P;
-		  packData.setCombinatorics();
-		  packData.set_aim_default();
-		  hvList.append("h");
+		packData.packDCEL.fixDCEL_raw(packData);
+
+		// set the colors
+		packData.setCircleColor(packData.nodeCount-1,
+				new Color(cLrCode.getRed(),cLrCode.getGreen(),
+						cLrCode.getBlue())); // blue 49 or 51
+		packData.setCircleColor(packData.nodeCount,ColorUtil.getBGColor());
+
+		T=pnc-1;
+		P=pnc; // new plug index
+		packData.set_aim_default();
+		hvList.append("h");
 	}
-
-	/** 
-	 * Insert new vertex P in flower of v before (flag=1) or after 
-	 * (flag=-1) N 
-	 */
-	public int brooks_insert(PackData p,int P,int N,int v,int flag) {
-	  int num;
-	  int []newflower;
-	  boolean done=false;
-
-	  num=packData.countFaces(v);
-	  newflower=new int[num+2];
-	  for (int i=0;i<=num;i++)
-	    newflower[i]=packData.kData[v].flower[i];
-	  if (flag==1) { // insert P before N 
-	      for (int i=0;(i<=num) && !done;i++) {
-		  if (packData.kData[v].flower[i]==N) {
-		      for (int j=i;j<=num;j++)
-			newflower[j+1]=packData.kData[v].flower[j];
-		      newflower[i]=P;
-		      done=true;
-		    }
-		}
-	      if (!done) {
-		  throw new CombException(); // error: should have found M 
-	      }
-	  }
-	  else { // insert P after N 
-	      for (int i=0;(i<=num) && !done;i++) {
-		  if (packData.kData[v].flower[i]==N) {
-		      for (int j=i+1;j<=num;j++)
-			newflower[j+1]=packData.kData[v].flower[j];
-		      newflower[i+1]=P;
-		      done=true;
-		    }
-		}
-	      if (!done) {
-		  throw new CombException(); // error: should have found M 
-	      }
-	  }
-	  packData.kData[v].num++;
-	  packData.kData[v].flower=newflower;
-	  return 1;
-	} 
 
 	public int cmdParser(String cmd,Vector<Vector<String>> flagSegs) {
 		Vector<String> items=null;

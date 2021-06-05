@@ -723,10 +723,30 @@ public class DCELdebug {
 	}
 
 	/**
+	 * Given HalfEdge, find up to 10 succesive 'next' edges
+	 * (and their twins).
+	 * @param edge HalfEdge
+	 */
+	public static void edge2face(HalfEdge edge) {
+		if (edge==null) 
+			return;
+		StringBuilder strbld=new StringBuilder("edge-to-face: "+edge+
+				"\n   successive edges(twins) are: ");
+		HalfEdge he=edge;
+		int tick=0;
+		do {
+			he=he.next;
+			strbld.append(" --> "+he+" ("+he.twin+")");
+			tick++;
+		} while (he!=edge && tick<10);
+		System.err.println(strbld.toString());
+	}
+
+	/**
 	 * for a HalfEdge, show the 5 next edges and 5 previous edges
 	 * @param edge
 	 */
-	public static void show5edges(HalfEdge edge) {
+	public static void show4edges(HalfEdge edge) {
 		if (edge==null) 
 			return;
 		StringBuilder strbld=new StringBuilder("Data on edge: "+edge+"\n   next's are: ");

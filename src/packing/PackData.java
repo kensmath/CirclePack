@@ -399,6 +399,9 @@ public class PackData{
    					}
    				} catch(Exception ex) {}
 				pdcel.setVertData(he, new CircleSimple(z,rad));
+				vData[v].color=oldVData[oldv].color;
+				vData[v].mark=oldVData[oldv].mark;
+				vData[v].aim=oldVData[oldv].aim;
    			}
    			else {
     			if (vert.isBdry()) { 
@@ -8461,6 +8464,7 @@ public class PackData{
 			packDCEL.vertices[v]=holdw;
 			vData[v]=dataw;
 			vData[w]=datav;
+			packDCEL.fixDCEL_raw(this);
 		}
 		else {
 			RData holdR = rData[v];
@@ -8563,10 +8567,10 @@ public class PackData{
 
 	/**
 	 * Swap node numbers, but with bit options for info that will 
-	 * follow with the numbers: 
+	 * be kept (meaning, it is swapped along with the numbers): 
 	 * @param v int
 	 * @param w int
-	 * @param keepFlags int: bits: 1=color, 2=mark,4=aim
+	 * @param keepFlags int: bits: 1=color,2=mark,4=aim
 	 * @return int
 	 */
 	public int swap_nodes(int v, int w, int keepFlags) {
@@ -9049,17 +9053,15 @@ public class PackData{
 	  }     
 	  
 	  /**
-	   * This splits a vertex v into two neighboring vertices. The
-	   * calling routine must call 'complex_count'.
+	   * This splits a vertex v into 2 nghb'ing verts, v, v'.
 	   * Split occurs in combinatoric direction determined by edges 
 	   * {v,w}, {v,u}: namely, {v,w}, {v,u}, {v',w}, {v',u} are all 
 	   * edges and {v',w,v} and {v',v,u} are oriented faces of new 
 	   * complex. Only flowers of v,w,u, new v', and nghbs switched
 	   * from v to v' are affected. v can be bdry: new edge direction 
-	   * determined by orientation of w and u vis-a-vis v.
-	   * 
-	   * Note: 'flist' is invalidated.
-	   * Note: overlaps are lost
+	   * determined by orientation of w and u vis-a-vis v. The
+	   * calling routine must call 'complex_count'.
+	   * Note: 'flist' is invalidated, all overlaps are lost
 	   * 
 	   * @param v int, vert to be split to give edge {v,v'}
 	   * @param w int, vert on 'left' of new edge {v,v'}

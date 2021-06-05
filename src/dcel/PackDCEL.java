@@ -1291,9 +1291,9 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Set the center for 'origin' and in the appropriate
-	 * 'RedHEdge' if 'origin' is a 'RedVertex'. The center
-	 * may be different in other 'RedHEdge's. (see 'setVertCenter',
+	 * Set the center for 'origin' in 'vData' and 
+	 * appropriate 'RedHEdge's if a 'RedVertex'. Center
+	 * may differ in 'RedHEdge's. (see 'setVertCenter',
 	 * to set center in all locations.)
 	 * Note: I no longer set rData[].center.
 	 * @param edge HalfEdge

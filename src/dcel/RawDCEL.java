@@ -8,7 +8,7 @@ import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.ParserException;
-import listManip.FaceLink;
+import komplex.EdgeSimple;
 import listManip.HalfLink;
 import listManip.NodeLink;
 
@@ -134,10 +134,10 @@ public class RawDCEL {
 	 * @return int, new vertex index
 	 */
 	public static int splitEdge_raw(PackDCEL pdcel,HalfEdge edge) {
+		
 		// make room
-		int node=pdcel.vertCount+1; // new index 
-		if (node>=pdcel.p.sizeLimit)
-			pdcel.p.alloc_pack_space(node+10,true);
+		if (pdcel.vertCount+1>=pdcel.p.sizeLimit)
+			pdcel.p.alloc_pack_space(pdcel.vertCount+11,true);
 	
 		// switch to twin?
 		HalfEdge he=edge;
@@ -159,6 +159,7 @@ public class RawDCEL {
 		newEdge.invDist = he.invDist;
 		newEdge.schwarzian = he.schwarzian;
 		HalfEdge newTwin = new HalfEdge();
+		newTwin.face=he_twin.face; // in case this face is ideal
 		newTwin.invDist = he.invDist;
 		newTwin.schwarzian = he.schwarzian;
 
@@ -254,6 +255,304 @@ public class RawDCEL {
 		
 		return midVert.vertIndx;
 	}
+	
+	/**
+	 * Split 'V' flower into two cclw flowers, 
+	 * depending on situation.  
+	 * (1) 'wedge', 'uedge' both non-null, then V must be
+	 * interior: first flower is w --> u about V,
+	 * while second is u --> w about 'newV'. 
+	 * Thus <v',V,u>, <v',w,V> are new oriented faces.
+	 * Return new edge <v',v> 
+	 * (2) If 'uedge' is null, then V
+	 * must be a bdry; split the flower at 'wedge' 
+	 * (which must be interior edge): first flower 
+	 * downstream bdry to 'wedge' about V, second 
+	 * from 'wedge' to upstream bdry about new upstream 
+	 * bdry vertex 'newV'. Return new bdry edge <newV,V> 
+	 * Red chain is adjusted.
+	 * @param pdcel PackDCEL
+	 * @param wedge HalfEdge
+	 * @param uedge HalfEdge
+	 * @return HalfEdge, new edge
+	 */
+	public static HalfEdge splitFlower_raw(PackDCEL pdcel,HalfEdge wedge,
+			HalfEdge uedge) {
+		boolean debug=false; // debug=true;
+
+		if (pdcel.isBdryEdge(wedge))
+			throw new ParserException("Given 'wedge' should be interior");
+
+		// make room
+		if (pdcel.vertCount+1>=pdcel.p.sizeLimit)
+			pdcel.p.alloc_pack_space(pdcel.vertCount+11,true);
+
+		Vertex V=wedge.origin;
+		HalfLink spks=null;
+
+		// first case: boundary
+		if (uedge==null) {
+			
+			// hold some info
+			spks=V.getSpokes(V.halfedge);
+			HalfEdge upspoke=V.halfedge.twin.next; // upstream spoke
+			HalfEdge wedge_twin=wedge.twin;
+			HalfEdge next_spoke=wedge.prev.twin;
+			
+			// scope out the red chain situation
+			RedHEdge red_out=V.halfedge.myRedEdge;
+			RedHEdge red_in=red_out.prevRed;
+			// if 'wedge' happens to be red, must be twinned
+			boolean tricky=false;
+			if (wedge.myRedEdge!=null) {
+				red_out=wedge.myRedEdge;
+				red_in=wedge.myRedEdge.prevRed;
+				tricky=true;
+			}
+				
+			// create new vertex
+			Vertex newV=new Vertex(++pdcel.vertCount);
+			pdcel.vertices[pdcel.vertCount]=newV;
+			newV.bdryFlag=1;
+			newV.redFlag=true;
+			// fix origin for its spoke
+			if (next_spoke!=upspoke) {
+				HalfEdge he=next_spoke;
+				do {
+					he.origin=newV;
+					he=he.prev.twin;
+				} while (he!=upspoke);
+			}
+			upspoke.origin=newV;
+			
+			// new bdry edge
+			HalfEdge newbdry=new HalfEdge(newV);
+			newV.halfedge=newbdry;
+			newbdry.twin=new HalfEdge(V);
+			newbdry.twin.twin=newbdry;
+			newbdry.twin.face=V.halfedge.twin.face; // should be ideal
+			// link outside of bdry
+			newbdry.twin.next=upspoke;
+			upspoke.prev=newbdry.twin;
+			
+			V.halfedge.twin.next=newbdry.twin;
+			newbdry.twin.prev=V.halfedge.twin;
+			
+			// newedge, <newV, w> 
+			HalfEdge newedge=new HalfEdge(newV);
+			
+			wedge_twin.twin=newedge;
+			newedge.twin=wedge_twin;
+
+			newedge.prev=next_spoke.twin;
+			next_spoke.twin.next=newedge;
+			
+			newedge.next=wedge.next;
+			wedge.next.prev=newedge;
+
+			// newtwin, <w,v> 
+			HalfEdge newtwin=new HalfEdge(wedge.twin.origin);
+
+			newtwin.next=wedge_twin.next;
+			wedge_twin.next.prev=newtwin;
+			
+			newtwin.prev=wedge_twin.prev;
+			wedge_twin.prev.next=newtwin;
+			
+			wedge.twin=newtwin;
+			newtwin.twin=wedge;
+
+			// link new face
+			newbdry.next=wedge;
+			wedge.prev=newbdry;
+			wedge.next=wedge_twin;
+			wedge_twin.prev=wedge;
+			wedge_twin.next=newbdry;
+			newbdry.prev=wedge_twin;
+			
+			// now fix the red chain
+			RedHEdge newred=new RedHEdge(newbdry);
+			newbdry.myRedEdge=newred;
+			
+			newred.prevRed=red_in;
+			red_in.nextRed=newred;
+			
+			newred.nextRed=red_out;
+			red_out.prevRed=newred;
+			
+			if (tricky) {
+				wedge.twin.myRedEdge=wedge_twin.myRedEdge;
+				wedge.twin.myRedEdge.myEdge=wedge.twin;
+				wedge_twin.myRedEdge=null;
+			}
+			
+			if (debug) { // debug=true;
+				 DCELdebug.vertConsistency(pdcel,newV.vertIndx);
+				 DCELdebug.printRedChain(pdcel.redChain,null);
+			}
+			
+			return newbdry;  
+		}
+		
+		// second, more typical, 
+		if (wedge.origin!=uedge.origin)
+			throw new DCELException("edges' origins don't match");
+		if (V.bdryFlag!=0)
+			throw new ParserException("given edge is supposed to be interior");
+		
+		// hold some info
+		spks=V.getSpokes(wedge);
+		HalfEdge w_twin=wedge.twin;
+		HalfEdge u_twin=uedge.twin;
+		
+		// create newV and fix spokes
+		Vertex newV=new Vertex(++pdcel.vertCount);
+		pdcel.vertices[pdcel.vertCount]=newV;
+		if (uedge.prev.twin!=wedge) {
+			HalfEdge he=uedge.prev.twin;
+			do {
+				he.origin=newV;
+				he=he.prev.twin; // clw
+			} while (he!=wedge);
+		}
+		V.halfedge=wedge;
+		
+		// create edge from newV to v
+		HalfEdge new_mid=new HalfEdge(newV);
+		newV.halfedge=new_mid;
+		new_mid.twin=new HalfEdge(V);
+		new_mid.twin.twin=new_mid;
+
+		// new 'uedge'
+		HalfEdge new_uedge=new HalfEdge(newV);
+		new_uedge.next=uedge.next;
+		uedge.next.prev=new_uedge;
+		new_uedge.prev=uedge.prev;
+		uedge.prev.next=new_uedge;
+		new_uedge.twin=u_twin;
+		u_twin.twin=new_uedge; // DCELdebug.edge2face(new_wedge.twin);
+		
+		//new 'uedge.twin'
+		HalfEdge new_uedge_twin=new HalfEdge(uedge.twin.origin);
+		new_uedge_twin.next=u_twin.next;
+		u_twin.next.prev=new_uedge_twin;
+		new_uedge_twin.prev=u_twin.prev;
+		u_twin.prev.next=new_uedge_twin;
+		new_uedge_twin.twin=uedge;
+		uedge.twin=new_uedge_twin;
+		
+		u_twin.prev=uedge;
+		uedge.next=u_twin;
+		u_twin.next=new_mid;
+		new_mid.prev=u_twin;
+		new_mid.next=uedge;
+		uedge.prev=new_mid;
+		
+		// now the w side of things
+		HalfEdge new_wedge_twin=new HalfEdge(wedge.twin.origin);
+		new_wedge_twin.twin=wedge;
+		wedge.twin=new_wedge_twin;
+		new_wedge_twin.next=new_mid.twin;
+		new_mid.twin.prev=new_wedge_twin; // DCELdebug.edge2face(uedge);
+		
+		HalfEdge new_wedge=new HalfEdge(newV);
+		new_wedge.twin=w_twin;
+		w_twin.twin=new_wedge;
+		new_wedge.prev=new_mid.twin;
+		new_mid.twin.next=new_wedge;
+		new_wedge.next=new_wedge_twin;
+		new_wedge_twin.prev=new_wedge;
+
+		// most typical:
+		if (!V.redFlag)
+			return new_mid;
+		
+		// Red chain could need adjustments
+		
+		// if needed, shift red twins of wedge and/or uedge
+		RedHEdge rtrace=null;
+		if ((rtrace=w_twin.myRedEdge)!=null) {
+			wedge.twin.myRedEdge=rtrace; // wedge.twin is its new twin
+			rtrace.myEdge=wedge.twin;
+			w_twin.myRedEdge=null;
+		}
+		if ((rtrace=u_twin.myRedEdge)!=null) {
+			uedge.twin.myRedEdge=rtrace; // wedge.twin is its new twin
+			rtrace.myEdge=uedge.twin;
+			u_twin.myRedEdge=null;
+		}
+		
+		// now all spokes and twins have the proper red edge, but
+		//   the red prev/next may need bridging over 'new_mid'
+
+		int num=spks.size();
+		HalfEdge[] spokes=new HalfEdge[num];
+		ArrayList<EdgeSimple> in_out_pairs=new ArrayList<EdgeSimple>();
+		int spot_u=-1;
+		for (int k=0;k<num;k++) {
+			HalfEdge he=spks.get(k);
+			spokes[k]=he;
+			he.eutil=k;
+			he.twin.eutil=-k;
+			if (he==uedge)
+				spot_u=k;
+		}
+		
+		for (int k=0;k<num;k++) {
+			HalfEdge he=spokes[k];
+			if (he.myRedEdge!=null) { // red spoke? outgoing 
+				if (he.twin.myRedEdge==null)
+					throw new CombException("must be red twinned");
+				rtrace=he.myRedEdge.prevRed; // its twin red, incoming
+				for (int j=0;j<num;j++) // find incoming index
+					if (rtrace.myEdge.twin==spokes[j])
+						in_out_pairs.add(new EdgeSimple(j,k));
+			}
+		}
+		
+		// handle in/out pairs; most are fine; exactly zero or two
+		// can bridge between flowers; may need to adjust for new 
+		// wedge, uedge twins. (note: wedge index should be 0,
+		// uedge should be spot_u.)
+		RedHEdge f1tof2=null;
+		RedHEdge f2tof1=null;
+		Iterator<EdgeSimple> iot=in_out_pairs.iterator();
+		while (iot.hasNext()) {
+			EdgeSimple es=iot.next();
+			int a=es.v; // index of incoming red edge
+			int b=es.w; // following outgoing
+			
+			// do we cross?
+			if (a<=spot_u && b>spot_u) { // crossing: flower 1 to 2
+				f1tof2=new RedHEdge(new_mid.twin);
+				new_mid.twin.myRedEdge=f1tof2;
+				newV.redFlag=true;
+				
+				spokes[a].twin.myRedEdge.nextRed=f1tof2;
+				f1tof2.prevRed=spokes[a].twin.myRedEdge;
+				
+				spokes[b].myRedEdge.prevRed=f1tof2;
+				f1tof2.nextRed=spokes[b].myRedEdge;
+			}
+			else if (a>spot_u && b<=spot_u) { // crossing: flower 2 to 1
+				f2tof1=new RedHEdge(new_mid);
+				new_mid.myRedEdge=f2tof1;
+				
+				spokes[a].twin.myRedEdge.nextRed=f2tof1;
+				f2tof1.prevRed=spokes[a].twin.myRedEdge;
+				
+				spokes[b].myRedEdge.prevRed=f2tof1;
+				f2tof1.nextRed=spokes[b].myRedEdge;
+			}
+		}
+		if ((f1tof2==null && f2tof1!=null) || (f1tof2!=null && f2tof1==null))
+			throw new DCELException("crossing red chains don't match");
+		f1tof2.twinRed=f2tof1;
+		f2tof1.twinRed=f1tof2;
+
+		return new_mid;
+	}
+	
 	
 	/**
 	 * Remove a vertex; 'vertices' are adjusted and reindexed,
@@ -1654,7 +1953,7 @@ public class RawDCEL {
 			HalfEdge prevedge=vedge.twin.next.twin;
 			  
 			// tent 'vedge'; 'vertCount', 'vertices' should be updated
-			Vertex newv=RawDCEL.addVert_raw(pdcel,nextedge.origin.vertIndx);
+			RawDCEL.addVert_raw(pdcel,nextedge.origin.vertIndx);
 			int newVindx=pdcel.vertCount;
 			  
 			int count=2;

@@ -4313,14 +4313,17 @@ of circles with that particular edge displayed.</instance>
 </seealso>
 </command>
 
-<command cmd="split_flower" flags="v w u">
+<command cmd="split_flower" flags="v w [u]">
 <description>
 	This changes the combinatorics of the active packing by splitting
-	vertex v in two, giving a new vertex v'. Neighbors w and u determine 
-	the direction of the new edge {v,v'}: namely, the oriented cycle
-	{v,u,v',w} bounds the two faces sharing edge {v,v'}. The new vertex
-	v' is given the maximal index in the packing. Any stored data in 
-	'flist' and 'xyzpoint' is lost.
+	vertex v in two, giving a new vertex v'. There are two situations:
+	(A) if v is bdry, then w must be an interior neighbor and ends up as
+	the common petal of the flowers of v and of v'.
+	(B) if v is interior, then w and u must be distinct petals which
+	determine the direction of the new edge {v',v}: namely, the 
+	oriented cycle {v,u,v',w} bounds the two faces sharing edge 
+	{v',v}. The new vertex v' is given the maximal index in the 
+	packing. Any stored data in 'flist' and 'xyzpoint' is lost.
 </description>
 <seealso>
 <see>split_edge</see>
