@@ -2065,16 +2065,40 @@ public class CombDCEL {
 			}			
 		
 			// first adjoins two, the rest are self-adjoins 
-			Iterator<Integer> bis=blist.iterator();
-			int v=bis.next();
+			int v=blist.remove(0); 
+			int shift=pdc1.vertCount; // will be added to indices of pdc2 
 			PackDCEL pdcel=CombDCEL.d_adjoin(pdc1, pdc2, v, v, -1);
+			
+			// Establish 'EdgeLink' for new indices after first adjoin
+			EdgeLink indxlink=new EdgeLink();
+			Iterator<Integer> bis=blist.iterator();
 			while (bis.hasNext()) {
-				v=pdcel.newOld.findV(bis.next());
-				pdcel=CombDCEL.d_adjoin(pdcel,pdcel,v,v,-1);
+				v=bis.next();
+				int dv=pdcel.newOld.findV(v+shift); // new index after first adjoin
+				if (dv==0) 
+					dv=v+shift;
+				indxlink.add(new EdgeSimple(v,dv)); 
 			}
-		
-			pdcel.redChain=null; // pdcel.vertices[5].getFlower();
-			pdcel.triData=null;
+			
+			// The rest are self-adjoins
+			while (indxlink.size()>0) {
+				
+				// next adjoin
+				EdgeSimple nextid=indxlink.remove(0); 	
+				pdcel=CombDCEL.d_adjoin(pdcel,pdcel,nextid.v,nextid.w,-1);
+				
+				// readjust remaining indices
+				Iterator<EdgeSimple> eis=indxlink.iterator();
+				while (eis.hasNext()) {
+					EdgeSimple es=eis.next();
+					es.w=pdcel.newOld.findV(es.w);
+					if (es.w==0) {
+						CirclePack.cpb.errMsg("failed to adjoin component for "+v);
+						return pdcel;
+					}
+				}
+			}
+
 			return pdcel;
 
 		} catch (Exception ex) {
@@ -2706,7 +2730,7 @@ public class CombDCEL {
 			  he=he.prev.twin; // cclw
 		  } while (he!=he2);
 		  oldvert1.halfedge=null; // abandoned
-		  oldvert1.vutil=vert1.vertIndx;
+		  oldvert1.vutil=vert1.vertIndx; // vutil hold new index
 		  he=he2.twin;
 		  do {
 			  he.origin=vert2;
@@ -2810,6 +2834,8 @@ public class CombDCEL {
 			  Vertex vert=pdc1.vertices[v];
 			  if (vert.halfedge==null) { // 'vutil', replacement index
 				  int new_indx=pdc1.newOld.findV(vert.vutil);
+				  if (new_indx==0)
+					  new_indx=vert.vutil;
 				  if (new_indx!=vert.vertIndx)
 					  pdc1.newOld.add(new EdgeSimple(new_indx,vert.vertIndx));
 //System.out.println(" add for orphaned "+new EdgeSimple(new_indx,vert.vertIndx));					  			  }
@@ -2831,13 +2857,12 @@ public class CombDCEL {
 			  }
 			  
 			  // newOld for orphaned verts: 
-			  //  old is the original shifted by pdc1.vertCount
+			  //  NOTE: "old" is the original pdc2 index shifted by pdc1.vertCount
 			  for (int v=1;v<=pdc2.vertCount;v++) {
 				  Vertex vert=pdc2.vertices[v];
 				  if (vert.halfedge==null) { 
-					  int newindx=vert.vutil; // pdc1 vertex identified with
-					  if (newindx!=vert.vertIndx)
-						  pdc1.newOld.add(new EdgeSimple(newindx,vert.vertIndx));
+					  int newindx=vert.vutil; // pdc1 vert this was identified with
+					  pdc1.newOld.add(new EdgeSimple(newindx,vert.vertIndx));
 				  }
 			  }
 		  }
