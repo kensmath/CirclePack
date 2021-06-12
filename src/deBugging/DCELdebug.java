@@ -723,7 +723,7 @@ public class DCELdebug {
 	}
 
 	/**
-	 * Given HalfEdge, find up to 10 succesive 'next' edges
+	 * Given HalfEdge, find up to 10 successive 'next' edges
 	 * (and their twins).
 	 * @param edge HalfEdge
 	 */

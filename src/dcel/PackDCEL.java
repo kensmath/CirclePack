@@ -1332,12 +1332,14 @@ public class PackDCEL {
 			p.vData[v].rad=rad;
 			p.rData[v].rad=rad;
 		}
-		HalfEdge he=vert.halfedge;
-		do {
-			if (he.myRedEdge!=null)
-				he.myRedEdge.rad=rad;
-			he=he.prev.twin;
-		} while (he!=vert.halfedge);
+		if (vert.redFlag) {
+			HalfEdge he=vert.halfedge;
+			do {
+				if (he.myRedEdge!=null)
+					he.myRedEdge.rad=rad;
+				he=he.prev.twin;
+			} while (he!=vert.halfedge);
+		}
 	}
 	
 	/**

@@ -381,7 +381,19 @@ public class NodeLink extends LinkedList<Integer> {
 						if (bdrycomp==null || bdrycomp.size()==0 || bdrycomp.containsV(last)<0)
 							throw new CombException("vertices "+first+" and "+last+" are not "+
 									"on the same bdry component");
-						abutMore(bdrycomp);
+						Iterator<Integer> bdst=bdrycomp.iterator();
+						int w=first;
+						while (bdst.hasNext()) {
+							w=bdst.next();
+							if (w==last)
+								break;
+							add(w);
+							count++;
+						}
+						if (w==last) {
+							add(w);
+							count++;
+						}
 					}
 					else { // traditional
 						if (packData.getBdryFlag(first)==0 || packData.getBdryFlag(last)==0) 
@@ -901,7 +913,12 @@ public class NodeLink extends LinkedList<Integer> {
 			{
 				if (packData.getBdryCompCount()>0) {
 					for (int i=1;i<=packData.getBdryCompCount();i++) { // indexing starts at 1
-						add(packData.bdryStarts[i]);
+						if (packData.packDCEL!=null) {
+							Face idf=packData.packDCEL.idealFaces[i];
+							add(idf.edge.origin.vertIndx);
+						}
+						else 
+							add(packData.bdryStarts[i]);
 						count++;
 					}
 				}
@@ -912,7 +929,7 @@ public class NodeLink extends LinkedList<Integer> {
 				boolean notset=false;
 				if (str.substring(1).contains("c")) notset=true;
 				for (int v=1;v<=nodecount;v++) {
-					int pf=packData.kData[v].plotFlag;
+					int pf=packData.getPlotFlag(v);
 					if ((notset && pf==0) || (!notset && pf!=0)) {
 						add(v);
 						count++;

@@ -465,7 +465,15 @@ public class CombDCEL {
 						while (spktrace!=downspoke) { // add a new link
 							cclw.nextRed=new RedHEdge(spktrace.next);
 							cclw.nextRed.prevRed=cclw;
-							markFaceUtils(spktrace);			
+							
+/* debugging							
+ DCELdebug.edge2face(spktrace);
+ DCELdebug.edgeConsistency(pdcel,spktrace).toString();
+ System.out.println(DCELdebug.vertConsistency(pdcel,115).toString());
+*/ 
+							
+							markFaceUtils(spktrace);	
+							
 							hit=true;
 								
 							if (debug) {
@@ -901,7 +909,7 @@ public class CombDCEL {
 	 * an 'alpha' edge, and 'vertices' updated, we process to 
 	 * create 'faces', 'edges', layout order, etc. This can be 
 	 * used when we modify the structure inside but can keep or
-	 * modifty the red chain, e.g., when flipping an edge, 
+	 * modify the red chain, e.g., when flipping an edge, 
 	 * adding an edge, etc. 
 	 * @param pdcel
 	 * @return PackDCEL
@@ -931,7 +939,7 @@ public class CombDCEL {
 		// zero out 'RedHEdge.redutil'
 		RedHEdge rtrace=pdcel.redChain;
 		if (rtrace!=null) { // not spherical case
-			int safety=pdcel.edgeCount;
+			int safety=2*pdcel.vertCount+100;
 			do {
 				safety--;
 				rtrace.redutil=0;
@@ -1699,11 +1707,16 @@ public class CombDCEL {
 	 */
 	public static void markFaceUtils(HalfEdge edge) {
 		HalfEdge he=edge;
+		int safety=2000;
 		do {
+			safety--;
 			if (he.eutil==0)
 				he.eutil=1;
 			he=he.next;
-		} while(he!=edge);
+		} while(he!=edge && safety>0);
+		if (safety==0) {
+			throw new CombException("error in 'markFaceUtils' for edge "+edge);
+		}
 	}
 	
 	/**
@@ -2021,7 +2034,56 @@ public class CombDCEL {
 	}
 	
 	/**
-	 * Given 'pdc' (sometimes a clone of original dcel), reverse
+	 * Double this packing across one or more full 
+	 * bdry components, or if 'segment' is true, 
+	 * double across a segment of one bdry component. 
+	 * Return the index of the reflection of alpha.
+	 * Using clones, so origin should be unchanged.
+	 * 'newOld' can be used to find reflection of alpha.
+	 * @param pdcel PackDCEL
+	 * @param blist NodeLink
+	 * @param segment boolean
+	 * @return PackDCEL
+	 */
+	public static PackDCEL d_double(PackDCEL pdc,NodeLink blist,boolean segment) {
+	
+		try {
+			// clone two copies
+			PackDCEL pdc1=CombDCEL.cloneDCEL(pdc);
+			PackDCEL pdc2=CombDCEL.cloneDCEL(pdc);
+			CombDCEL.reorient(pdc2);
+
+/* debugging			
+ DCELdebug.edge2face(pdc1.vertices[116].halfedge.twin);
+ DCELdebug.edge2face(pdc2.vertices[106].halfedge.twin);
+ */
+
+			if (segment) {
+				int n=blist.size()-1; // number of edges
+				int v=blist.getLast(); // choose last to be clw
+				return CombDCEL.d_adjoin(pdc1, pdc2,v,v,n);
+			}			
+		
+			// first adjoins two, the rest are self-adjoins 
+			Iterator<Integer> bis=blist.iterator();
+			int v=bis.next();
+			PackDCEL pdcel=CombDCEL.d_adjoin(pdc1, pdc2, v, v, -1);
+			while (bis.hasNext()) {
+				v=pdcel.newOld.findV(bis.next());
+				pdcel=CombDCEL.d_adjoin(pdcel,pdcel,v,v,-1);
+			}
+		
+			pdcel.redChain=null; // pdcel.vertices[5].getFlower();
+			pdcel.triData=null;
+			return pdcel;
+
+		} catch (Exception ex) {
+			throw new ParserException("'double' error: "+ex.getMessage());
+		}
+	}
+	
+	/**
+	 * Given 'pdc' (sometimes a clone of original DCEL), reverse
 	 * its orientation in place. We clone all the edges, establish 
 	 * prev, next, twins, redchain, halfedges, etc., based on 
 	 * edge indices. We keep faces and vertices, reverse the red 
@@ -2032,63 +2094,89 @@ public class CombDCEL {
 	public static void reorient(PackDCEL pdc) {
 		HalfEdge[] edges=new HalfEdge[pdc.edgeCount+1];
 		
-		// create new edges
+		// create new edges, same origins
 		for (int e=1;e<=pdc.edgeCount;e++) {
-			edges[e]=pdc.edges[e].clone();
-			edges[e].myRedEdge=null;
+			pdc.edges[e].edgeIndx=e; // make sure indices are aligned
+			edges[e]=new HalfEdge(pdc.edges[e].origin);
+			pdc.edges[e].origin=null;  // to mark as defunct
+			edges[e].edgeIndx=e;
 		}
-		// reset edge pointers
+		
+		// set vertex 'halfedge's; same edge for interior, but
+		//    need downstream edge for bdry.
+		for (int v=1;v<=pdc.vertCount;v++) {
+			Vertex vert=pdc.vertices[v];
+			if (vert.bdryFlag>0) {
+				vert.halfedge=edges[vert.halfedge.twin.next.edgeIndx];
+			}
+			else 
+				vert.halfedge=edges[vert.halfedge.edgeIndx];
+		}
+		
+		// set edge pointers
 		for (int e=1;e<=pdc.edgeCount;e++) {
 			HalfEdge he=edges[e];
 			HalfEdge orighe=pdc.edges[e];
 			he.twin=edges[orighe.twin.edgeIndx];
 			he.next=edges[orighe.twin.prev.twin.edgeIndx];
 			he.prev=edges[orighe.twin.next.twin.edgeIndx];
-			he.face=orighe.twin.face;
+			if (orighe.twin.face.faceIndx<=0) // outer bdry edge?
+				he.face=new Face(-1);
 		}
-		// reset face edge
-		for (int f=1;f<=pdc.faceCount;f++)
-			pdc.faces[f].edge=edges[pdc.faces[f].edge.edgeIndx];
-		if (pdc.idealFaceCount>0)
-			for (int j=1;j<=pdc.idealFaceCount;j++)
-				pdc.idealFaces[j].edge=edges[pdc.idealFaces[j].edge.edgeIndx];
-		// reset vert halfedges
-		for (int v=1;v<=pdc.vertCount;v++) {
-			Vertex vert=pdc.vertices[v];
-			vert.halfedge=edges[vert.halfedge.edgeIndx];
-		}
+
 		// reset 'alpha' 'gamma'
-		pdc.alpha=edges[pdc.alpha.prev.twin.edgeIndx];
-		if (pdc.gamma!=null)
-			pdc.gamma=edges[pdc.gamma.prev.twin.edgeIndx];
+		try {
+			pdc.alpha=edges[pdc.alpha.edgeIndx];
+			pdc.gamma=edges[pdc.gamma.edgeIndx];
+		} catch(Exception ex) {}
+		
 		// reverse redchain
 		if (pdc.redChain!=null) {
+			// first we index (from 0) using 'redutil'
 			int rCount=0;
-			// first index using 'redutil'
 			RedHEdge rtrace=pdc.redChain;
 			do {
-				rtrace.redutil=++rCount;
+				rtrace.redutil=rCount++;
 				rtrace=rtrace.nextRed;
 			} while (rtrace!=pdc.redChain);
-			RedHEdge[] rededges=new RedHEdge[rCount+1];
+			
+			// store array of red and their 'myEdge's
+			RedHEdge[] rededges=new RedHEdge[rCount];
+			int[] myedges=new int[rCount];
 			rtrace=pdc.redChain;
 			do {
 				rededges[rtrace.redutil]=rtrace.clone();
+				myedges[rtrace.redutil]=rtrace.myEdge.edgeIndx;
 				rtrace=rtrace.nextRed;
 			} while(rtrace!=pdc.redChain);
 		
-			// build reverse redchain
-			RedHEdge newRedChain=rededges[1];
-			for (int r=1;r<=rCount;r++) {
-				rtrace=rededges[r];
-				rtrace.nextRed=rededges[rtrace.prevRed.redutil];
-				rtrace.prevRed=rededges[rtrace.nextRed.redutil];
-				if (rtrace.twinRed!=null)
-					rtrace.twinRed=rededges[rtrace.twinRed.redutil];
-				rtrace.myEdge=edges[rtrace.myEdge.twin.edgeIndx];
-				rtrace.myEdge.myRedEdge=rtrace;
+			// build reverse redchain, 'twinRed's set later
+			RedHEdge newRedChain=rededges[rCount-1];
+			RedHEdge res;
+			for (int r=0;r<rCount;r++) {
+				res=rededges[r];
+				res.nextRed=rededges[(r-1+rCount)%rCount];
+				res.prevRed=rededges[(r+1)%rCount];
+				HalfEdge new_myedge=edges[myedges[(r-1+rCount)%rCount]].twin;
+				res.myEdge=new_myedge;
+				new_myedge.myRedEdge=res;
+				// outdated stuff
+				res.mobIndx=0;
+				res.twinRed=null; 
 			}
-			pdc.redChain=newRedChain;
+			pdc.redChain=newRedChain; // DCELdebug.printRedChain(newRedChain);
+			
+			// look for twinning
+			rtrace=pdc.redChain;
+			RedHEdge rt;
+			do {
+				if (rtrace.twinRed==null &&
+						(rt=rtrace.myEdge.twin.myRedEdge)!=null) {
+					rtrace.twinRed=rt;
+					rt.twinRed=rtrace;
+				}
+				rtrace=rtrace.nextRed;
+			} while (rtrace!=pdc.redChain);
 		}
 	
 		// wrap up
@@ -2268,8 +2356,9 @@ public class CombDCEL {
     }
     
     /**
-     * Return linked list of verts on the same bdry component
-     * as 'v' using DCEL structure. Null on error or 'v' not bdry. 
+     * Return cclw linked open list of verts on the same bdry
+     * component as 'v' using DCEL structure. Null on error or if
+     * 'v' not bdry. 
      * @param p PackData
      * @param v int
      * @return new NodeLink, null on failure
@@ -2279,24 +2368,18 @@ public class CombDCEL {
     		throw new DCELException("'bdryCompVerts' routines requires DCEL structure");
     	if (!p.isBdry(v))
     		return null;
-    	Vertex vert=p.packDCEL.vertices[v];
-    	Face idealf=vert.halfedge.twin.face;
-    	int[] fverts=idealf.getVerts();
-    	int len=fverts.length;
-    	int offset=-1;
-    	for (int j=0;(j<len && offset<0);j++) {
-    		if (fverts[j]==v)
-    			offset=j;
-    	}
-    	if (offset<0)
-    		throw new DCELException("v="+v+" was not found on bdry component");
-    	
-    	// put in list with v first
-    	NodeLink vlink=new NodeLink(p);
-    	for (int j=0;j<len;j++) {
-    		vlink.add(fverts[(j+offset)%len]);
-    	}
-    	return vlink;
+    	NodeLink list=new NodeLink(p);
+    	HalfEdge firsttwin=p.packDCEL.vertices[v].halfedge.twin.next;
+    	HalfEdge he=firsttwin;
+    	int safety=p.nodeCount;
+    	do {
+    		safety--;
+    		list.add(he.origin.vertIndx);
+    		he=he.prev;
+    	} while (he!=firsttwin && safety>0);
+    	if (safety==0)
+    		throw new CombException("bdry component doesn't seem to close up");
+    	return list;
    	}
 
 	/**
@@ -2487,13 +2570,16 @@ public class CombDCEL {
 	   * Adjoin a boundary segment of pdc2 to a boundary segment
 	   * of pdc1, starting with 'v2' in 'pdc2' to vert v1 in 'pdc1'
 	   * and proceeding n edges CLOCKWISE (negative direction) on
-	   * bdry of 'pdc1', counterclockwise on bdry of 'pdc2'. Note
-	   * that dcel's are clones, so error should leave original data
-	   * in tact. Note: If n<0, identify full bdry components 
+	   * bdry of 'pdc1', counterclockwise on bdry of 'pdc2'. 
+	   * Note: Both pdc1/2 should have intact red chains.
+	   * 
+	   * Note: given DCEL's are clones, so error should leave original data
+	   * in tact. Note: If n<0, identify the full bdry components 
 	   * (they must be the same length).
 	   *  
 	   * If not self-adjoin, then some 'Vertex's of 'pdc2' will be
-	   * abandoned. Mark them by setting 'halfedge' to null.
+	   * abandoned. Mark them by setting 'halfedge' to null and
+	   * put new index in 'vutil'.
 	   * 
 	   * Call 'wrapAdjoin' to wrap up before returning; calling 
 	   * routine only needs to 'attachDCEL', but may have some 
@@ -2508,6 +2594,17 @@ public class CombDCEL {
 	   */
 	  public static PackDCEL d_adjoin(PackDCEL pdc1,PackDCEL pdc2,int v1,int v2, int n) {
 		  
+		  // 'he1/2' to be identified: clw from 'v1' cclw from 'v2'
+		  HalfEdge he1=pdc1.vertices[v1].halfedge.twin.next.twin;
+		  HalfEdge he2=pdc2.vertices[v2].halfedge;
+
+		  // save some red edge
+		  RedHEdge red1=he1.myRedEdge;
+		  RedHEdge red2=he2.myRedEdge;
+		  
+		  if (red1==null || red2==null)
+			  throw new CombException("edges should hare red edges");
+
 		  // store original vert indices in 'vutil'
 		  for (int v=1;v<=pdc1.vertCount;v++) 
 			  pdc1.vertices[v].vutil=v;
@@ -2515,13 +2612,9 @@ public class CombDCEL {
 			  for (int v=1;v<=pdc2.vertCount;v++) 
 				  pdc2.vertices[v].vutil=v;
 		  
-		  // 'he1/2' to be identified: clw from 'v1' cclw from 'v2'
-		  HalfEdge he1=pdc1.vertices[v1].halfedge.twin.next.twin;
-		  HalfEdge he2=pdc2.vertices[v2].halfedge;
-
 		  // get edge counts
 		  int n1=he1.twin.getCycleCount();
-		  int n2=he2.twin.getCycleCount();
+		  int n2=he2.twin.getCycleCount(); // DCELdebug.printRedChain(pdc2.redChain);
 
 		  // check: pdc1==pdc2 and v1/v2 on same bdry component?
 		  boolean samecomp=false;
@@ -2623,29 +2716,58 @@ public class CombDCEL {
 		  oldvert2.vutil=vert2.vertIndx;
 		  vert2.halfedge=he2.twin.prev.twin;
 
-		  // fix pointers for orphaned he1.twin, he2.twin 
+		  // fix things pointing to orphaned he1.twin, he2.twin
 		  he1.twin.prev.next=he2.twin.next;
 		  he2.twin.next.prev=he1.twin.prev;
+		  
 		  he1.twin.next.prev=he2.twin.prev;
 		  he2.twin.prev.next=he1.twin.next;
 		
 		  // fix h1/2 as twins
 		  he2.twin=he1;
 		  he1.twin=he2;
-		  RedHEdge red1=he1.myRedEdge;
-		  RedHEdge red2=he2.myRedEdge;
-		  red1.twinRed=red2;
-		  red2.twinRed=red1;
+		  he1.myRedEdge=null;
+		  he2.myRedEdge=null;
+		  
+		  // meld the red chains; red1/2 become orphans
+		  if (red1==pdc1.redChain)
+			  pdc1.redChain=red1.nextRed;
+		  red1.prevRed.nextRed=red2.nextRed;
+		  red2.nextRed.prevRed=red1.prevRed;
+		  
+		  red1.nextRed.prevRed=red2.prevRed;
+		  red2.prevRed.nextRed=red1.nextRed;
+		  
+		  red1.twinRed=null;
+		  red2.twinRed=null;
+		  
+/* debugging
+	System.out.println(DCELdebug.vertConsistency(pdc1,115);
+	System.out.println("is 115,75 an edge? "+(pdc1.findHalfEdge(115,75)!=null));
+ */
 
-		  // now zip the rest   // pdc1.vertices[37].getFlower();
-		  HalfEdge nxtedge=red1.prevRed.myEdge.twin;
+		  // now zip the rest   // pdc1.vertices[4].getFlower();
+		  HalfEdge nxtedge=vert2.halfedge;
 		  for (int j=2;j<=n;j++) {
-			  HalfEdge hold=nxtedge.next;
+
+/* debugging			  
+  System.out.println("j="+j+": nxtedge="+nxtedge+
+		"; origin.bdryflag="+nxtedge.origin.bdryFlag+
+		"; 111 halfedge="+pdc1.vertices[111].halfedge);
+*/
+	  
+			  HalfEdge hold=nxtedge.twin.prev.twin;
 			  CombDCEL.zipEdge(pdc1,nxtedge.origin);
+			  
+			  if (pdc1.vertices[116].halfedge==null)
+				  throw new DCELException("j="+j+": 116 didn't get 'halfedge'");
+			  
 			  nxtedge=hold;
 		  }
 		  
-		  return CombDCEL.wrapAdjoin(pdc1, pdc2);
+		  PackDCEL ansDCEL=CombDCEL.wrapAdjoin(pdc1, pdc2);
+//System.out.println("is 115,75 an edge? "+(ansDCEL.findHalfEdge(115,75)!=null));
+		  return ansDCEL;
 	  }
 	  
 	  /**
@@ -2655,11 +2777,12 @@ public class CombDCEL {
 	   * new 'vertices'. In processing, orphaned 
 	   * vertices are indicated by 'halfedge'=null. 
 	   * Build 'newOld' to connect new and old vertex 
-	   * indices. Note that if pdc2!=pdc1, then no pdc1 
+	   * indices (make entry only if different. 
+	   * Note that if pdc2!=pdc1, then no pdc1 
 	   * vertices are orphaned, so pdc2 vertices 
 	   * numbering have been adjusted to start with 
-	   * pdc1.vertCount+1. 'vutil' still holds the
-	   * original index for both pdc1 and pdc2.
+	   * pdc1.vertCount+1. In both pdc1 and pdc2,
+	   * 'vutil' still holds the original index.
 	   * @param pdc1 PackDCEL
 	   * @param pdc2 PackDCEL, may be same as pdc1
 	   * @return same PackDCEL
@@ -2676,7 +2799,8 @@ public class CombDCEL {
 				  ++vtick;
 				  v_array.add(vert);
 				  // if pdc2!=pdc1, should have vtick=v=vert.vutil
-				  pdc1.newOld.add(new EdgeSimple(vtick,vert.vutil));
+				  if (vtick!=vert.vutil)
+					  pdc1.newOld.add(new EdgeSimple(vtick,vert.vutil));
 //System.out.println(" add "+new EdgeSimple(vtick,vert.vutil));					  
 			  }
 		  }
@@ -2686,7 +2810,8 @@ public class CombDCEL {
 			  Vertex vert=pdc1.vertices[v];
 			  if (vert.halfedge==null) { // 'vutil', replacement index
 				  int new_indx=pdc1.newOld.findV(vert.vutil);
-				  pdc1.newOld.add(new EdgeSimple(new_indx,vert.vertIndx));
+				  if (new_indx!=vert.vertIndx)
+					  pdc1.newOld.add(new EdgeSimple(new_indx,vert.vertIndx));
 //System.out.println(" add for orphaned "+new EdgeSimple(new_indx,vert.vertIndx));					  			  }
 			  }
 		  }
@@ -2698,8 +2823,9 @@ public class CombDCEL {
 				  Vertex vert=pdc2.vertices[v];
 				  if (vert.halfedge!=null) {
 					  ++vtick;
+					  if (vtick!=vert.vutil)
+						  pdc1.newOld.add(new EdgeSimple(vtick,vert.vutil));
 					  vert.vutil=vtick;
-					  pdc1.newOld.add(new EdgeSimple(vtick,vert.vutil));
 					  v_array.add(vert);
 				  }
 			  }
@@ -2710,7 +2836,8 @@ public class CombDCEL {
 				  Vertex vert=pdc2.vertices[v];
 				  if (vert.halfedge==null) { 
 					  int newindx=vert.vutil; // pdc1 vertex identified with
-					  pdc1.newOld.add(new EdgeSimple(newindx,vert.vertIndx));
+					  if (newindx!=vert.vertIndx)
+						  pdc1.newOld.add(new EdgeSimple(newindx,vert.vertIndx));
 				  }
 			  }
 		  }
@@ -3177,8 +3304,8 @@ public class CombDCEL {
 
 	/**
 	 * Modify 'pdcel' by zipping up the bdry edges from 'vert'.
-	 * This means the upstream vert on the boundary is consolidated
-	 * with the downstream vert and so a vertex may be lost.
+	 * This means the downstream vert on the bdry is consolidated
+	 * with the upstream vert, and so a vertex may be lost.
 	 * The redchain should remain in tact, though it will be 
 	 * discarded if result is a sphere.
 	 * 
@@ -3200,6 +3327,11 @@ public class CombDCEL {
 		// edges to be kept; these become twins
 		HalfEdge outedge=vert.halfedge;
 		HalfEdge inedge=outedge.twin.next.twin;
+		
+// debugging 
+ System.out.println("outedge= "+outedge+" and inedge= "+inedge);
+ DCELdebug.edge2face(inedge.twin);
+
 		
 		RedHEdge redout=outedge.myRedEdge;
 		RedHEdge redin=inedge.myRedEdge;
@@ -3292,19 +3424,19 @@ public class CombDCEL {
 			Vertex leftVert=outedge.twin.origin;
 			Vertex rightVert=inedge.origin;
 			
-			// orphan 'rightVert'
-			HalfEdge firstspoke=rightVert.halfedge;
+			// orphan 'leftVert'
+			HalfEdge firstspoke=outedge.twin;
 			HalfEdge he=firstspoke;
 			do {
-				he.origin=leftVert;
+				he.origin=rightVert;
 				he=he.prev.twin; // cclw
-			} while (he!=rightVert.halfedge);
-			rightVert.halfedge=null;
-			rightVert.vutil=leftVert.vertIndx;
+			} while (he!=firstspoke);
+			leftVert.halfedge=null;
+			leftVert.vutil=rightVert.vertIndx;
 			
 			// vertices are interior
 			vert.bdryFlag=0;
-			leftVert.bdryFlag=0;
+			rightVert.bdryFlag=0;
 			oppVert.bdryFlag=0;
 			
 			// twin things
@@ -3328,8 +3460,8 @@ public class CombDCEL {
 				return 1;
 			}
 			
-			// check for red shrinkage at 'vert' and/or 'oppVert'
-			//   and subsequent possible shrinkage
+			// check for red contraction at 'vert' and/or 'oppVert'
+			//   and subsequent possible contraction
 			RedHEdge upred=redout.prevRed; 
 			RedHEdge downred=redin.nextRed;
 			if (redout.prevRed==redin) { // remove 'vert' from red chain
@@ -3357,8 +3489,8 @@ public class CombDCEL {
 				oppVert.redFlag=false;
 			}
 				
-			// if shrinkage at both 'vert' and 'oppVert',
-			//   then there may be more shrinkage
+			// if contraction at both 'vert' and 'oppVert',
+			//   then there may be more contraction
 			if (!oppVert.redFlag && !vert.redFlag) {
 				while (upred.twinRed==downred) { // collapse an edge
 					downred.myEdge.origin.redFlag=false;
@@ -3380,11 +3512,11 @@ public class CombDCEL {
 		
 		// else zip up just first edge
 		Vertex savevert=redin.myEdge.origin;
-		HalfEdge downstream=redout.nextRed.myEdge.twin;
-		HalfEdge upstream=redin.prevRed.myEdge.twin;
-		downstream.next=upstream;
-		upstream.prev=downstream;
-		savevert.halfedge=downstream.twin;
+		HalfEdge downstream=redout.myEdge.twin.prev.twin;
+		HalfEdge upstream=redin.myEdge.twin.next.twin;
+		downstream.twin.next=upstream.twin;
+		upstream.twin.prev=downstream.twin;
+		savevert.halfedge=downstream;
 	
 		// reset origin for spokes of vertex being abandoned
 		HalfEdge he=redout.nextRed.myEdge;
@@ -3398,11 +3530,14 @@ public class CombDCEL {
 		xvert.halfedge=null; 
 		xvert.vutil=savevert.vertIndx;
 	
+		// zip base becomes interior
+		vert.bdryFlag=0;
+		
 		// identify
 		outedge.twin=inedge;
 		inedge.twin=outedge;
 	
-		// we may shrink red chain
+		// we may contract red chain
 		if (redout.prevRed==redin) {
 			if (pdcel.redChain==redout || pdcel.redChain==redin)
 				pdcel.redChain=redout.nextRed;

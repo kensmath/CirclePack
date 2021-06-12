@@ -4767,10 +4767,17 @@ faces. Puts out face centers and pairs of indices forming edges</opt>
 </description>
 </command>
 
-<command cmd="write_path" flags="{file}">
+<command cmd="write_path" flags="-[s] {file}">
 <description>
 	Writes current path (if there is one) to file as a closed contour.
 </description>
+<options>
+	<opt flag="-s"> Save to 'Filse' section of current script </opt>
+</options>
+<seealso>
+<see>infile_path</see>
+<see>Write_path</see>
+</seealso>	
 </command>
 
 <command cmd="Write_path" flags="{file}">
@@ -4779,6 +4786,9 @@ faces. Puts out face centers and pairs of indices forming edges</opt>
 	to the filename, so an explicit directory path (possibly starting '~/')
 	is allowed.
 </description>
+<seealso>
+<see> write_path</see>
+</seealso>
 </command>
 
 <command cmd="write_select_radii" flags="{file} {v..}">

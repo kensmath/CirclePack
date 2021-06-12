@@ -1,0 +1,14 @@
+NODECOUNT:  7
+GEOMETRY: euclidean
+ALPHA/BETA/GAMMA:  6 0 1
+PACKNAME: Seed 4-dc
+BOUQUET: 
+1 2   2 5 4
+2 4   3 7 6 5 1
+3 2   4 7 2
+4 4   1 5 6 7 3
+5 4   1 2 6 4 1
+6 4   5 2 7 4 5
+7 4   2 3 4 6 2
+
+END

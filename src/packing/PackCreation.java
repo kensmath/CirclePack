@@ -10,6 +10,7 @@ import complex.MathComplex;
 import dcel.CombDCEL;
 import dcel.PackDCEL;
 import dcel.RawDCEL;
+import deBugging.DCELdebug;
 import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.ParserException;
@@ -370,7 +371,8 @@ public class PackCreation {
 	}
 	
 	/**
-	 * Create a packing of hex generations
+	 * Create a packing of hex generations. Calling routine
+	 * to set radii/centers.
 	 * @param n int, number of generations (seed is 1 generation)
 	 * @return @see PackData
 	 */
@@ -386,30 +388,14 @@ public class PackCreation {
 			if (ans<=0)
 				return null;
 		}
-		pdcel.fixDCEL_raw(p);
+		
+		boolean debug=false; // debug=true;
+		if (debug)
+			DCELdebug.printRedChain(pdcel.redChain);
+		
+		pdcel.fixDCEL_raw(p); 
 		return p;
 	}
-			
-/*		}
-		PackData newPack=PackCreation.seed(6,0);
-		for (int j=1;j<n;j++) {
-			int v=newPack.bdryStarts[1];
-			newPack.add_layer(1,6,v,v);
-			newPack.setBdryFlags();
-		}
-		newPack.setCombinatorics();
-		
-		// I prefer that the real line be a hex axis, so choose 'gamma'
-		if (newPack.nodeCount>50)
-			newPack.gamma=43;
-		else if (newPack.nodeCount>10)
-			newPack.gamma=10;
-		
-		CommandStrParser.jexecute(newPack,"layout");
-		
-		return newPack;
-	}
-*/
 	
 	/**
 	 * TODO: this code isn't called yet, should replace 'hexbuild' sometimes.

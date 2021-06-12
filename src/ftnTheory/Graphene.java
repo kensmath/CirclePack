@@ -1114,10 +1114,11 @@ public class Graphene extends PackExtender {
 
 		// build hex to cut half planes from
 		PackData basePack=PackCreation.hexBuild(n);
-		cpCommand(basePack,"repack");
-		cpCommand(basePack,"layout");
-		cpCommand("norm_scale -u M");
-		cpCommand("scale 2.0");
+		basePack.set_rad_default();
+		basePack.packDCEL.dcelCompCenters(basePack.packDCEL.computeOrder);
+		double ctr=basePack.getCenter(basePack.nodeCount).abs();
+		double factor=2.0/ctr;
+		basePack.eucl_scale(factor); 
 		
 		// create leftPack/rightPack: poison determined by phi1/phi2
 		leftPack=cut4halfplane(basePack, phi1);

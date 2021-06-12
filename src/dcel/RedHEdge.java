@@ -88,7 +88,7 @@ public class RedHEdge {
 	}
 
 	/**
-	 * clone: CAUTION: pointers may be in conflict or outdated. 
+	 * clone: CAUTION: pointers may be in conflict or outdated.
 	 * @return new RedHEdge
 	 */
 	public RedHEdge clone() {
@@ -97,6 +97,7 @@ public class RedHEdge {
 		rhe.prevRed=prevRed;
 		rhe.twinRed=twinRed;
 		rhe.mobIndx=mobIndx;
+		rhe.myEdge=myEdge;
 		rhe.center=new Complex(center);
 		rhe.rad=rad;
 		rhe.redutil=redutil;

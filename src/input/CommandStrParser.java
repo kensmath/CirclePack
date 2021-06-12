@@ -1186,6 +1186,11 @@ public class CommandStrParser {
 					  throw new DataException("Use 'Hex' (cap 'H') for more than 100 generations");
 				  }
 				  newPack=PackCreation.hexBuild(param);
+				  newPack.set_rad_default();
+				  newPack.packDCEL.dcelCompCenters(newPack.packDCEL.computeOrder);
+    			  double ctr=newPack.getCenter(newPack.nodeCount).abs();
+    			  double factor=1.0/ctr;
+    			  newPack.eucl_scale(factor); // bdry centers on unit circle
 				  break;
 			  }
 			  case 3: // square grid
@@ -6043,7 +6048,8 @@ public class CommandStrParser {
 					
 					// reorient packDCEL
 					CombDCEL.reorient(packData.packDCEL);
-					
+//					packData.attachDCEL(packData.packDCEL);
+/*					
 					// reflect all centers across imaginary axis
 					if (packData.hes<=0) {
 						for (int v=1;v<=packData.nodeCount;v++) 
@@ -6059,8 +6065,10 @@ public class CommandStrParser {
 							rtrace.setCenter(rtrace.getCenter().times(-1.0).conj());
 						else
 							rtrace.setCenter(rtrace.getCenter().times(-1.0));
+						rtrace=rtrace.nextRed;
 					} while (rtrace!=packData.packDCEL.redChain);
-
+*/
+					
 					return 1;
 				}
 				
@@ -6318,24 +6326,46 @@ public class CommandStrParser {
 
 	      // ============== double =============
 	      else if (cmd.startsWith("double")) {
-	    	  int alp_sym=0;
+	    	  
+	    	  boolean segment=false;
 	    	  NodeLink vertlist=null;
-	    	  if (flagSegs==null || flagSegs.size()==0) { // nothing, do all
+    		  int alp_sym=0; // new index of double of 'alpha'
+
+	    	  // first, get data: either list of verts, one for each
+	    	  //   bdry comp (default to all), or one bdry component
+	    	  //   segment of form "b(v,w)".
+	    	  if (flagSegs==null || flagSegs.size()==0) { // no flag? do all
 	    		  vertlist=new NodeLink(packData,"B");
-	    		  alp_sym=packData.double_K(vertlist);
 	    	  }
 	    	  else {
 	    		  items=(Vector<String>)flagSegs.get(0);
 	    		  String str=(String)items.get(0);
-	    		  if (str.contains("b") && str.contains("(")) { // should be form b(u v)
+	    		  if (str.contains("b(")) { // should be form b(u v)
 	    			  vertlist=new NodeLink(packData,str);
-	    			  alp_sym=packData.double_on_edge(vertlist);
-	    			  if (alp_sym>0) packData.setCombinatorics();
+	    			  segment=true;
 	    		  }
-	    		  else {
+	    		  else
 	    			  vertlist=new NodeLink(packData,items);
+	    	  }
+	    	  if (vertlist==null || vertlist.size()==0) 
+	    		  throw new ParserException("usage: double v1 v2 [b(v,w)]");
+
+	    	  // DCEL version; return
+	    	  if (packData.packDCEL!=null) {
+	    		  PackDCEL pdans=CombDCEL.d_double(packData.packDCEL,vertlist,segment);
+	    		  alp_sym=pdans.newOld.findV(packData.getAlpha());
+	    		  pdans.redChain=null;
+	    		  pdans.fixDCEL_raw(packData);
+	    	  }
+
+	    	  // traditional
+	    	  else {
+	    		  if (!segment)
 	    			  alp_sym=packData.double_K(vertlist);
-	    		  }
+	    		  else 
+	    			  alp_sym=packData.double_on_edge(vertlist);
+	    		  if (alp_sym>0) 
+	    			  packData.setCombinatorics();
 	    	  }
 	    	  if (alp_sym!=0) {
 	    		  CirclePack.cpb.msg("double: vert symmetric to 'alpha' is "+alp_sym);
@@ -7820,7 +7850,12 @@ public class CommandStrParser {
 	    		  {
 	    			  int v=NodeLink.grab_one_vert(packData,(String)items.get(0));
 	    			  double ctr=packData.getCenter(v).abs();
-	    			  if (Math.abs(ctr-1.0) < PackData.OKERR) return 1; // don't bother, close enough
+	    			  // if already good, don't bother, close enough
+	    			  if (Math.abs(ctr-1.0) < PackData.OKERR) 
+	    				  return 1;
+	    			  // if ctr is to close to zero, abort
+	    			  if (ctr<.001)
+	    				  return 0;
 	    			  double factor=1.0/ctr;
 	    			  return packData.eucl_scale(factor);
 	    		  }
