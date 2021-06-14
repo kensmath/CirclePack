@@ -2682,6 +2682,22 @@ public class PackData{
 	}
 	
 	/**
+	 * A face is 'boundary' if one or more of its vertices
+     * is boundary.
+	 * @param f int
+	 * @return boolean
+	 */
+	public boolean isBdryFace(int f) {
+		if (f<1 || f>faceCount)
+			return false;
+		int[] fverts=getFaceVerts(f);
+		for (int j=0;j<fverts.length;j++)
+			if (isBdry(fverts[j]))
+				return true;
+		return false;
+	}
+	
+	/**
 	 * Do v and w share an edge?
 	 * @param v int
 	 * @param w int
@@ -3412,7 +3428,9 @@ public class PackData{
 /* ================== combinatoric utilies for complexes ================ */	
 	
 	/**
-	 * If w is neighbor of v, return its index in the flower of v; else return -1.
+	 * If w is neighbor of v, return its index in the flower of v; 
+	 * else return -1. Note this works for DCEL structures, but
+	 * answer is no so useful if not -1.
 	 * @param v
 	 * @param w
 	 * @return int index, -1 on problem
@@ -4364,27 +4382,38 @@ public class PackData{
 	 * If v is interior and even degree, w is petal, return petal u 
 	 * opposite w. If v bdry, return boundary most opposite to w. 
 	 * If v==w, or v interior and odd degree, return 0.
+	 * 
+	 * TODO: replace with DCEL version; until then, use this
 	 * @param v int
 	 * @param w int 
 	 * @return petal u, 0 on failure. 
 	*/
 	public int axis_proj(int v,int w) {
-		if (v==w || (isBdry(v) && !isBdry(w)))
+		if (v==w || (isBdry(v) && !isBdry(w))) // ?? don't understand this
 			return 0;
 		
-		// v on bdry? return bdry most opposite
+		if (packDCEL!=null) {
+			HalfEdge spoke=packDCEL.findHalfEdge(new EdgeSimple(v,w));
+			if (spoke==null)
+				return 0;
+			HalfEdge oppspoke=spoke.origin.oppSpoke(spoke);
+			return oppspoke.twin.origin.vertIndx;
+		}
+		
+		// traditional
+		int[] flower=getFlower(v);
 		if (isBdry(v)) {
 			int indx=nghb(v,w);
 			if (indx<(int)(countFaces(v)/2.0))
-				return kData[v].flower[countFaces(v)];
+				return flower[countFaces(v)];
 			else
-				return kData[v].flower[0];
+				return flower[0];
 		}
 		
 		int half=countFaces(v)/2;
 		if (2*half!=countFaces(v)) // not even degree
 			return 0;
-		return kData[v].flower[(nghb(v,w)+half)% countFaces(v)];
+		return flower[(nghb(v,w)+half)% countFaces(v)];
 	}
 	
 	/**
@@ -4441,10 +4470,11 @@ public class PackData{
 	public boolean faces_incident(int f1,int f2) {
 		int[] vert1=getFaceVerts(f1);
 		int[] vert2=getFaceVerts(f2);
-		for (int j=0;j<3;j++) {
+		for (int j=0;j<vert2.length;j++) {
 			int v=vert2[j];
-			if (v==vert1[0] || v==vert1[1] || v==vert1[2]) 
-				return true;
+			for (int k=0;k<vert1.length;k++)
+				if (vert1[k]==v)
+					return true;
 		}
 		return false;
 	}
@@ -4524,9 +4554,10 @@ public class PackData{
 	  if (v==w || lgth<1) return -1;
 	  int pets=countFaces(v)+getBdryFlag(v);
 	  int []dists=new int[pets];
+	  int[] flower=getFlower(v);
 	  for (dir=0;dir<pets;dir++) {
 	      last=v;
-	      current=kData[v].flower[dir];
+	      current=flower[dir];
 	      i=1;
 	      while (current!=w && i<lgth && (next=axis_proj(current,last))!=0) {
 	    	  last=current;
@@ -8885,7 +8916,7 @@ public class PackData{
 	   */
 	  public EdgeLink axis_extrapolate(int v,int indx,int w,int lgth) {
 		  if (v==w && (isBdry(v) || 2*(countFaces(v)/2)!=countFaces(v))) {
-	    	  flashError("axis_extrapolate: v=w must be interior and even degree");
+	    	  flashError("axis_extrapolate: if v=w, must be interior, even degree");
 	    	  return null;
 	      }
 		  EdgeLink edgelist=new EdgeLink(this);
@@ -12194,9 +12225,7 @@ public class PackData{
 
 			// Reaching here, have containing face; find closest (eucl) edge.
 			// return null if z is too close to a vertex.
-			int[] vert = new int[3];
-			for (int j = 0; j < 3; j++)
-				vert[j] = faces[face].vert[j];
+			int[] vert = this.getFaceVerts(face);
 			double[] edgelen = new double[3];
 			double dist;
 

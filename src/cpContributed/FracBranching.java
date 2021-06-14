@@ -2172,7 +2172,7 @@ public class FracBranching extends PackExtender {
 
 	public int expDAFfracInv( int f1, int f2, int n, int type) {
 		Random generator = new Random();
-		if (packData.faces[f2].isBdryFace(packData)==true || packData.faces[f1].isBdryFace(packData)==true) {
+		if (packData.isBdryFace(f2) || packData.isBdryFace(f1)) {
 			Oops("both "+f2+" and "+f1+" must be interior faces");
 		}
 		branchVert=new int[2][3];
@@ -2233,9 +2233,9 @@ public class FracBranching extends PackExtender {
 		branchVert=new int[2][3];
 		for (int i=1;i<=num;i++) { //first vertex i
 			int count=1;
-			if (packData.faces[i].isBdryFace(packData)==false) {
+			if (!packData.isBdryFace(i)) {
 				for (int j=1;j<=num;j++) {
-					if (packData.faces_incident(i, j)==false && packData.faces[j].isBdryFace(packData)==false) {
+					if (packData.faces_incident(i, j)==false && !packData.isBdryFace(j)) {
 						cpCommand(packData,"cleanse");
 						cpCommand(packData,"infile_read test.p");
 						branchVert[0][0]=packData.faces[i].vert[0];

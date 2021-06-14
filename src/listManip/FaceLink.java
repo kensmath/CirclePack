@@ -334,7 +334,7 @@ public class FaceLink extends LinkedList<Integer> {
 			case 'b':
 			{
 				for (int i=1;i<=facecount;i++) { 
-					if (faces[i].isBdryFace(packData)) {
+					if (packData.isBdryFace(i)) {
 						add(i);
 						count++;
 					}

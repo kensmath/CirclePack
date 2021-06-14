@@ -804,6 +804,7 @@ public class DisplayParser {
 			} // end of 'd' dual options
 			case 'e': // edges
 			{
+				
 				if (p.packDCEL!=null) {
 					HalfLink helist=new HalfLink(p);
 					// axis extended edges? 

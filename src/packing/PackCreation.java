@@ -10,9 +10,11 @@ import complex.MathComplex;
 import dcel.CombDCEL;
 import dcel.PackDCEL;
 import dcel.RawDCEL;
+import dcel.RedHEdge;
 import deBugging.DCELdebug;
 import deBugging.DebugHelp;
 import exceptions.CombException;
+import exceptions.DCELException;
 import exceptions.ParserException;
 import ftnTheory.GenBranching;
 import input.CommandStrParser;
@@ -175,10 +177,12 @@ public class PackCreation {
 			=2.0/(double)(degs[0])+2.0/(double)(degs[1])+2.0/(double)(degs[2]);
 		if (Math.abs(recipsum-1)<.0001)
 			hees=0; // eucl
-		else if (recipsum>1.0) hees=1; // sph
+		else if (recipsum>1.0) 
+			hees=1; // sph
 		  
 		PackData p=PackCreation.seed(A,hees);
-		if (p==null) return null;
+		if (p==null) 
+			return null;
 		
 		int gencount=1;
 
@@ -2424,7 +2428,7 @@ public class PackCreation {
 	
 	/**
 	 * adjoin three pentagons. 
-	 * @param p
+	 * @param p PackData, existing seed 5 with 1 on bdry
 	 * @param sidelength
 	 * @return
 	 */
@@ -2578,6 +2582,76 @@ public class PackCreation {
 		
 		base.setCombinatorics();
 		return base;
+	}
+	
+	/**
+	 * DCEL version of specialized routine to create a 
+	 * 'gens' generations of a pentagonal tiling in a
+	 * DCEL having equally spaced vertices 1 2 3 4 5 
+	 * on its bdry and 6 at its center. Calling routine
+	 * only needs to attachDCEL, set aims, bdry radii,
+	 * repack, etc.
+	 * @param gens int, number of generations.
+	 * @return PackDCEL
+	 */
+	public static PackDCEL pentagonal_dcel(int gens) {
+		PackDCEL base=CombDCEL.seed_raw(5);
+		RawDCEL.swapNodes_raw(base,1,6);
+		CombDCEL.redchain_by_edge(base, null,null);
+		CombDCEL.d_FillInside(base);
+		PackDCEL pdcel=CombDCEL.cloneDCEL(base); 
+		// DCELdebug.printRedChain(btrfly.redChain);
+		
+		// This is iterative, each from new 'base'
+		double sidesize=0.5;
+		for (int g=1;g<=gens;g++) {
+			sidesize=2*sidesize;
+			int sidelength=(int)sidesize;
+
+			// attach first copy; note where old1 ended up
+			PackDCEL temp=CombDCEL.cloneDCEL(base);
+			pdcel=CombDCEL.d_adjoin(pdcel,temp,1,3,sidelength);
+			int new5=pdcel.newOld.findV(5); // new index
+			CombDCEL.d_FillInside(pdcel); 
+//			new5=pdcel.newOld.findV(new5); // changed yet again
+
+			// DCELdebug.redindx(btrfly);
+		
+			// these two form a butterfly
+			PackDCEL btrfly=CombDCEL.cloneDCEL(pdcel);
+			PackDCEL btrfly2=CombDCEL.cloneDCEL(pdcel);
+//			CombDCEL.d_FillInside(btrfly); 
+			pdcel=CombDCEL.d_adjoin(pdcel,btrfly,3,4,3*sidelength);
+//			CombDCEL.d_FillInside(pdcel);
+			
+			// adjoin this for two more faces
+			pdcel=CombDCEL.d_adjoin(pdcel,btrfly2,new5,3,4*sidelength);
+			CombDCEL.d_FillInside(pdcel);
+		
+			// find 5 cclw bdry vertices with degree 3.
+			NodeLink corners=new NodeLink();
+			RedHEdge rtrace=pdcel.redChain;
+			
+			do {
+				int num=rtrace.myEdge.origin.getNum();
+				if (num==2)
+					corners.add(rtrace.myEdge.origin.vertIndx);
+				rtrace=rtrace.nextRed;
+			} while(rtrace!=pdcel.redChain);
+			// DCELdebug.printRedChain(pdcel.redChain);
+			
+			if (corners==null || corners.size()!=5)
+				throw new DCELException("failed to find 5 corners");
+			
+			for (int v=1;v<=5;v++) {
+				int oldv=corners.get(v-1);
+				RawDCEL.swapNodes_raw(pdcel,v,oldv);
+			}
+			
+			base=pdcel;
+		} // done with construction
+
+		return pdcel;
 	}
 	
 	/**

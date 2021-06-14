@@ -39,7 +39,6 @@ import dcel.DataDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RawDCEL;
-import dcel.RedHEdge;
 import dcel.Vertex;
 import deBugging.DCELdebug;
 import deBugging.LayoutBugs;
@@ -1248,17 +1247,61 @@ public class CommandStrParser {
 			  }
 			  case 6: // pentagonal tiling, with 'TileData'
 			  {
-				  newPack=PackCreation.pentTiling(param);
+				  if (param<1)
+					  param=1;
+				  PackDCEL pdcel=PackCreation.pentagonal_dcel(param);
+				  newPack=new PackData(null); // DCELdebug.printRedChain(pdcel.redChain);
+				  newPack.attachDCEL(pdcel);
+				  newPack.set_rad_default();
+				  newPack.set_aim_default();
+				  
+				  for (int v=1;v<=newPack.nodeCount;v++) {
+						if (newPack.isBdry(v))
+							newPack.setAim(v,Math.PI);
+				  }
+				  for (int v=1;v<=5;v++)
+					  newPack.setAim(v,3.0*Math.PI/5.0);
+
+				  newPack.repack_call(1000);
+				  newPack.status=true;
+				  CommandStrParser.jexecute(newPack,"layout");
+				  CommandStrParser.jexecute(newPack,"norm_scale -u 1");
+				  CommandStrParser.jexecute(newPack,"norm_scale -h 3 4");
+				  
+				  // TODO: call pave
+				  
 				  break;
 			  }
 			  case 7: // pentagonal triple point, with 'TileData'
-			  {
-				  newPack=PackCreation.pent3Expander(param);
-				  break;
-			  }
 			  case 8: // pentagonal quadruple point, with 'TileData'
 			  {
-				  newPack=PackCreation.pent4Expander(param);
+				  if (param<1)
+					  param=1;
+				  int N=mode-4; // number at center
+				  
+				  // get pentagonal packing, right number of generations
+				  PackDCEL pent=PackCreation.pentagonal_dcel(param);
+				  int sidelength=(int)Math.pow(2.0,param-1);
+				  PackDCEL pdcel=RawDCEL.polyCluster(pent,1,sidelength,N);
+				  
+				  // attach and set
+				  newPack=new PackData(null);
+				  newPack.attachDCEL(pdcel);
+				  newPack.set_rad_default();
+				  newPack.set_aim_default();
+				  double ang=((double)N-1.0)/((double)N)*Math.PI;
+				  for (int v=1;v<=newPack.nodeCount;v++) {
+						if (newPack.isBdry(v)) {
+							newPack.setAim(v,Math.PI);
+							if (newPack.packDCEL.vertices[v].getNum()==2)
+								  newPack.setAim(v,ang);
+						}
+				  }
+				  newPack.repack_call(1000);
+				  newPack.status=true;
+				  CommandStrParser.jexecute(newPack,"layout");
+				  CommandStrParser.jexecute(newPack,"norm_scale -u 1");
+				  CommandStrParser.jexecute(newPack,"norm_scale -h 3 4");
 				  break;
 			  }
 			  case 9: // dyadic (hyp penrose), with 'TileData'
@@ -6329,8 +6372,11 @@ public class CommandStrParser {
 	    	  
 	    	  boolean segment=false;
 	    	  NodeLink vertlist=null;
-    		  int alp_sym=0; // new index of double of 'alpha'
-
+	    	  
+	    	  // tmp: to find symmetric alpha in the doubled result
+    		  int sym_alp_tmp=packData.getAlpha()+packData.nodeCount; 
+    		  int alp_sym=0;
+    		  
 	    	  // first, get data: either list of verts, one for each
 	    	  //   bdry comp (default to all), or one bdry component
 	    	  //   segment of form "b(v,w)".
@@ -6353,7 +6399,9 @@ public class CommandStrParser {
 	    	  // DCEL version; return
 	    	  if (packData.packDCEL!=null) {
 	    		  PackDCEL pdans=CombDCEL.d_double(packData.packDCEL,vertlist,segment);
-	    		  alp_sym=pdans.newOld.findV(packData.getAlpha());
+	    		  alp_sym=pdans.newOld.findV(sym_alp_tmp);
+	    		  if (alp_sym==0)
+	    			  alp_sym=sym_alp_tmp;
 	    		  pdans.redChain=null;
 	    		  pdans.fixDCEL_raw(packData);
 	    	  }
@@ -10154,12 +10202,16 @@ public class CommandStrParser {
 	    				  double hhgt=vbox.getHeight()/2.0;
 	    			      
 	    			      // get start at vert 1
-	    			      double maxw = Math.abs(rdata[1].center.x)+rdata[1].rad;
-	    			      double maxh = Math.abs(rdata[1].center.y)+rdata[1].rad;
+	    				  Complex z=packData.getCenter(1);
+	    				  double rad=packData.getRadius(1);
+	    			      double maxw = Math.abs(z.x)+rad;
+	    			      double maxh = Math.abs(z.y)+rad;
 	    			      for (int i=2;i<=packData.nodeCount;i++) {
-	    			    	  dist=Math.abs(rdata[i].center.x)+rdata[i].rad;
+	    			    	  z=packData.getCenter(i);
+	    			    	  rad=packData.getRadius(i);
+	    			    	  dist=Math.abs(z.x)+rad;
 	    			    	  if (dist>maxw) maxw=dist;
-	    			    	  dist=Math.abs(rdata[i].center.y)+rdata[i].rad;
+	    			    	  dist=Math.abs(z.y)+rad;
 	    			    	  if (dist>maxh) maxh=dist;
 	    			      }
 	    			      if (maxw>hwid || maxh>hhgt) { // need to scale vbox up

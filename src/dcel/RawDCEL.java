@@ -1983,158 +1983,205 @@ public class RawDCEL {
 			  return count;
 		}
 			  
-		/**
-		 * If ideal face 'f' has precisely three edges, then 
-		 * make it into a normal face. Check for sphere and
-		 * adjust red chain as necessary.
-		 * @param pdcel
-		 * @param f dcel.face
-		 * @return int 1 on success
-		 */
-		public static int addIdealFace_raw(PackDCEL pdcel,Face f) {
-			if (f.faceIndx>=0)
-				throw new ParserException("Face "+f.faceIndx+
-						" appears not to be ideal");
+	/**
+	 * If ideal face 'f' has precisely three edges, then 
+	 * make it into a normal face. Check for sphere and
+	 * adjust red chain as necessary.
+	 * @param pdcel
+	 * @param f dcel.face
+	 * @return int 1 on success
+	 */
+	public static int addIdealFace_raw(PackDCEL pdcel,Face f) {
+		if (f.faceIndx>=0)
+			throw new ParserException("Face "+f.faceIndx+
+					" appears not to be ideal");
 			
-			// get edges around this face
-			HalfLink hlink=f.getEdges();
-			hlink=HalfLink.reverseLink(hlink); // order clw
-			if (hlink.size()!=3) 
-				throw new ParserException("face "+f.faceIndx+
-					  " must have precisely three vertices");
+		// get edges around this face
+		HalfLink hlink=f.getEdges();
+		hlink=HalfLink.reverseLink(hlink); // order clw
+		if (hlink.size()!=3) 
+			throw new ParserException("face "+f.faceIndx+
+				  " must have precisely three vertices");
 
-			// Get the three red edges.
-			RedHEdge[] reds=new RedHEdge[3];
-			for (int j=0;j<3;j++) {
-				reds[j]=hlink.get(j).twin.myRedEdge;
-				if (reds[j]==null)
-					throw new ParserException("Face "+f.faceIndx+" missing red edges");
-			}
+		// Get the three red edges.
+		RedHEdge[] reds=new RedHEdge[3];
+		for (int j=0;j<3;j++) {
+			reds[j]=hlink.get(j).twin.myRedEdge;
+			if (reds[j]==null)
+				throw new ParserException("Face "+f.faceIndx+" missing red edges");
+		}
 			
-			// Count twinned red edges; if twinned reds impinge
-			//   at the end of reds[j], then hits[j] is set to 1.
-			int[] hits=new int[3];
-			int rcount=0;
-			for (int j=0;j<3;j++) {
-				if (reds[j].nextRed!=reds[(j+1)%3]) {
-					hits[j]=1;
-					rcount++;
-				}
+		// Count twinned red edges; if twinned reds impinge
+		//   at the end of reds[j], then hits[j] is set to 1.
+		int[] hits=new int[3];
+		int rcount=0;
+		for (int j=0;j<3;j++) {
+			if (reds[j].nextRed!=reds[(j+1)%3]) {
+				hits[j]=1;
+				rcount++;
 			}
+		}
 
-			// rcount 0 means this is a sphere; just 1, means red chain 
-			//   should contract; if two or more, check for some collapse.
-			if (rcount==0) { // a sphere 
-				for (int j=0;j<3;j++) {
-					Vertex vert=hlink.get(j).origin;
-					vert.redFlag=false;
-					vert.bdryFlag=0;
-					
-					// orphan red edges
-					reds[j].myEdge.myRedEdge=null;
-					reds[j].nextRed=reds[j].prevRed=null;
-				}
-				pdcel.redChain=null;
+		// rcount 0 means this is a sphere; just 1, means red chain 
+		//   should contract; if two or more, check for some collapse.
+		if (rcount==0) { // a sphere 
+			for (int j=0;j<3;j++) {
+				Vertex vert=hlink.get(j).origin;
+				vert.redFlag=false;
+				vert.bdryFlag=0;
+				
+				// orphan red edges
+				reds[j].myEdge.myRedEdge=null;
+				reds[j].nextRed=reds[j].prevRed=null;
+			}
+			pdcel.redChain=null;
 				return 1;
-			}
-
-			// Find offset to point to reference corner
-			int offset=0;
-			if (rcount==1) {
-				for (int j=0;j<3;j++)
-					if (hits[j]==1)
-						offset=(j+1)%3;
-			}
-			else if (rcount==2) {
-				for (int j=0;j<3;j++) 
-					if (hits[j]==0)
-						offset=(j+2)%3;
-			}
-			// else all corners have twinned reds coming in:
-			//   red chain gets a triple point at one of the
-			//   corners: choose the one with highest degree.
-			else { 
-				int[] degs=new int[3];
-				for (int j=0;j<3;j++)
-					degs[j]=reds[j].myEdge.origin.getNum();
-				int bestj=0;
-				if (degs[1]>degs[0])
-					bestj=1;
-				if (degs[2]>degs[bestj])
-					bestj=2;
-				offset=(bestj+1)%3;
-			}
-			
-			// Now we get red edge 'rhe' ending at reference corner;
-			//   remove rhe as a red edge, create red twins for
-			//   prevred and nxtred. 
-			RedHEdge rhe=reds[(offset+2)%3]; 
-			RedHEdge prevred=reds[(offset+1)%3];
-			RedHEdge nxtred=reds[offset];
-			
-			// new twins
-			RedHEdge prev_twin=new RedHEdge(prevred.myEdge.twin);
-			prev_twin.myEdge.myRedEdge=prev_twin;
-			RedHEdge nxt_twin=new RedHEdge(nxtred.myEdge.twin);
-			nxt_twin.myEdge.myRedEdge=nxt_twin;
-			
-			// link in
-			prev_twin.prevRed=rhe.prevRed;
-			rhe.prevRed.nextRed=prev_twin;
-			prev_twin.twinRed=prevred;
-			prevred.twinRed=prev_twin;
-			
-			prev_twin.nextRed=nxt_twin;
-			nxt_twin.prevRed=prev_twin;
-			
-			nxt_twin.nextRed=rhe.nextRed;
-			rhe.nextRed.prevRed=nxt_twin;
-			nxt_twin.twinRed=nxtred;
-			nxtred.twinRed=nxt_twin;
-			
-			// orphan rhe
-			rhe.myEdge.myRedEdge=null;
-			
-			// recursively contract red chain? No contraction if
-			//    rcount==3, 1 edge if rcount==2, and many if rcount==1.
-			RedHEdge nextedge=prev_twin;
-			RedHEdge shiftred=null;
-			while (nextedge!=shiftred) {
-				shiftred=nextedge; // DCELdebug.redConsistency(pdcel); 
-				nextedge=RawDCEL.contractRed_raw(pdcel,shiftred);
-			}
-			
-			// DCELdebug.printRedChain(pdcel.redChain,null);
-			
-			// create standin new interior face
-			Face newface=new Face(pdcel.faceCount+1);
-			newface.edge=hlink.get(0);
-			for (int j=0;j<3;j++) {
-				HalfEdge he=hlink.get(j);
-				he.face=newface;
-				he.origin.bdryFlag=0; // all become interior
-			}
-			return 1;
 		}
+
+		// Find offset to point to reference corner
+		int offset=0;
+		if (rcount==1) {
+			for (int j=0;j<3;j++)
+				if (hits[j]==1)
+					offset=(j+1)%3;
+		}
+		else if (rcount==2) {
+			for (int j=0;j<3;j++) 
+				if (hits[j]==0)
+					offset=(j+2)%3;
+		}
+		// else all corners have twinned reds coming in:
+		//   red chain gets a triple point at one of the
+		//   corners: choose the one with highest degree.
+		else { 
+			int[] degs=new int[3];
+			for (int j=0;j<3;j++)
+				degs[j]=reds[j].myEdge.origin.getNum();
+			int bestj=0;
+			if (degs[1]>degs[0])
+				bestj=1;
+			if (degs[2]>degs[bestj])
+				bestj=2;
+			offset=(bestj+1)%3;
+		}
+			
+		// Now we get red edge 'rhe' ending at reference corner;
+		//   remove rhe as a red edge, create red twins for
+		//   prevred and nxtred. 
+		RedHEdge rhe=reds[(offset+2)%3]; 
+		RedHEdge prevred=reds[(offset+1)%3];
+		RedHEdge nxtred=reds[offset];
+			
+		// new twins
+		RedHEdge prev_twin=new RedHEdge(prevred.myEdge.twin);
+		prev_twin.myEdge.myRedEdge=prev_twin;
+		RedHEdge nxt_twin=new RedHEdge(nxtred.myEdge.twin);
+		nxt_twin.myEdge.myRedEdge=nxt_twin;
+			
+		// link in
+		prev_twin.prevRed=rhe.prevRed;
+		rhe.prevRed.nextRed=prev_twin;
+		prev_twin.twinRed=prevred;
+		prevred.twinRed=prev_twin;
+			
+		prev_twin.nextRed=nxt_twin;
+		nxt_twin.prevRed=prev_twin;
+		
+		nxt_twin.nextRed=rhe.nextRed;
+		rhe.nextRed.prevRed=nxt_twin;
+		nxt_twin.twinRed=nxtred;
+		nxtred.twinRed=nxt_twin;
+			
+		// orphan rhe
+		rhe.myEdge.myRedEdge=null;
+			
+		// recursively contract red chain? No contraction if
+		//    rcount==3, 1 edge if rcount==2, and many if rcount==1.
+		RedHEdge nextedge=prev_twin;
+		RedHEdge shiftred=null;
+		while (nextedge!=shiftred) {
+			shiftred=nextedge; // DCELdebug.redConsistency(pdcel); 
+			nextedge=RawDCEL.contractRed_raw(pdcel,shiftred);
+		}
+			
+		// DCELdebug.printRedChain(pdcel.redChain,null);
+			
+		// create standin new interior face
+		Face newface=new Face(pdcel.faceCount+1);
+		newface.edge=hlink.get(0);
+		for (int j=0;j<3;j++) {
+			HalfEdge he=hlink.get(j);
+			he.face=newface;
+			he.origin.bdryFlag=0; // all become interior
+		}
+		return 1;
+	}
 		  	  
+	/**
+	 * Find an common edge opposite to both v and w. v will be to its left, w to its
+	 * right.
+	 * 
+	 * @param v int
+	 * @param w int
+	 * @return EdgeSimple, null on failure
+	 */
+	public static HalfEdge getCommonEdge(PackDCEL pdcel, int v, int w) {
+		HalfEdge he = pdcel.vertices[v].halfedge; // spoke
+		do {
+			if (he.next.twin.next.twin.origin.vertIndx == w) {
+				return he.next;
+			}
+			he = he.prev.twin; // cclw spoke
+		} while (he != pdcel.vertices[v].halfedge);
+		return null;
+	}
 
-		/**
-		 * Find an common edge opposite to both v and w. v will be to its left, w to its
-		 * right.
-		 * 
-		 * @param v int
-		 * @param w int
-		 * @return EdgeSimple, null on failure
-		 */
-		public static HalfEdge getCommonEdge(PackDCEL pdcel, int v, int w) {
-			HalfEdge he = pdcel.vertices[v].halfedge; // spoke
-			do {
-				if (he.next.twin.next.twin.origin.vertIndx == w) {
-					return he.next;
-				}
-				he = he.prev.twin; // cclw spoke
-			} while (he != pdcel.vertices[v].halfedge);
-			return null;
+	/**
+	 * Build a raw PackDCEL consisting of n>=3 copies of 'base'
+	 * attached about its bdry vertex 'v', each pasting involving
+	 * 'sides'>=1 bdry edges from 'v'.
+	 * @param base PackDCEL
+	 * @param v int
+	 * @param sides int
+	 * @param n int
+	 * @return PackDCEL, null on error
+	 */
+	public static PackDCEL polyCluster(PackDCEL base,int v,int sides,int n) {
+		if (sides<1 || n<3 || v<0 || v>base.vertCount)
+			throw new ParserException("'polyCluster: bad data");
+		Vertex vert=base.vertices[v];
+		if (vert.bdryFlag==0)
+			throw new ParserException("'polyCluster': "+v+" is not on the bdry");
+		
+		PackDCEL pdcel=CombDCEL.cloneDCEL(base);
+		
+		for (int j=2;j<=n;j++) {
+			PackDCEL next=CombDCEL.cloneDCEL(base);
+			pdcel=CombDCEL.d_adjoin(next,pdcel,v,v,sides);
 		}
+		CombDCEL.d_adjoin(pdcel,pdcel,v,v,sides);
+		
+		return pdcel;
+	}
 
+	/**
+	 * Simply swap vertices v and w in a raw PackDCEL
+	 * @param pdcel PackDCEL
+	 * @param v int
+	 * @param w int
+	 * @return 0 on error
+	 */
+	public static int swapNodes_raw(PackDCEL pdcel,int v,int w) {
+		if (v<1 || v>pdcel.vertCount || w<1 || w>pdcel.vertCount)
+			return 0;
+		if (v==w) // nothing to do
+			return 1;
+		Vertex hold=pdcel.vertices[v];
+		pdcel.vertices[v]=pdcel.vertices[w];
+		pdcel.vertices[w]=hold;
+		pdcel.vertices[w].vertIndx=w;
+		pdcel.vertices[v].vertIndx=v;
+		return 1;
+	}
+	
 }

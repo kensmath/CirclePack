@@ -58,20 +58,6 @@ public class Face{
      }
 
      /**
-      * A face is 'boundary' if one or more of its vertices
-      * is boundary.
-      * @param p PackData
-      * @return boolean, false if p==null 
-      */
-     public boolean isBdryFace(PackData p) {
-    	 if (p==null) return false;
-    	 for (int j=0;j<vertCount;j++)
-    		 if (p.isBdry(vert[j]))
-    			 return true;
-    	 return false;
-     }
-  
-     /**
       * Find index of v in 'vert'.
       * @param v int
       * @return index or -1 if v is not a vertex.

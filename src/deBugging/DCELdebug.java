@@ -31,6 +31,31 @@ public class DCELdebug {
 	static int rankStamp=1; // progressive number to distinguish file instances
 	
 	/**
+	 * Compare 'myEdge' to 'edges' entry with same index.
+	 * @param pdcel PackDCEL
+	 */
+	public static void redindx(PackDCEL pdcel) {
+		int safety=1000;
+		boolean bug=false;
+		RedHEdge rtrace=pdcel.redChain;
+		System.err.println("start 'redindx' check.");
+		do {
+			safety--;
+			int myEdge_index=rtrace.myEdge.edgeIndx;
+			if (rtrace.myEdge!=pdcel.edges[myEdge_index]) {
+				System.err.println("MyEdge index inconsistency: "+rtrace);
+				bug=true;
+			}
+			rtrace=rtrace.nextRed;
+		} while (rtrace!=pdcel.redChain && safety>0);
+		if (safety==0)
+			System.err.println("'redindx' code bombed out following red chain");
+		if (!bug)
+			System.err.println("Red indices all match");
+		
+	}
+	
+	/**
 	 * Display colored face/edge pairs from 'glink' in screen
 	 * for packing 'pnum' or pdcel.p if 'pnum'<0.
 	 * @param pdcel PackDCEL
@@ -460,12 +485,16 @@ public class DCELdebug {
 		StringBuilder sb=new StringBuilder("vertices are:\n");
 		StringBuilder sbold=new StringBuilder("old indices:\n");
 		RedHEdge nxtre=redge;
+		int safety=1000;
 		do {
+			safety--;
 			sb.append(" -> "+nxtre.myEdge.origin.vertIndx);
 			if (vmap!=null)
 				sbold.append(" -> "+vmap.findW(nxtre.myEdge.origin.vertIndx));
 			nxtre=nxtre.nextRed;
-		} while (nxtre!=redge);
+		} while (nxtre!=redge && safety>0);
+		if (safety==0) 
+			System.err.println("debug routine 'printRedChain' safetied out");
 		sb.append(" -> "+nxtre.myEdge.origin.vertIndx);
 		if (vmap!=null)
 			sbold.append(" -> "+vmap.findW(nxtre.myEdge.origin.vertIndx));

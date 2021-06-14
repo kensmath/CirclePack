@@ -427,7 +427,7 @@ public class SingBranchPt extends GenBranchPt {
 	 * with the three edges of 'singFace'. This is similar to 'fractured'
 	 * branch points, but since the overlap angles must sum to Pi, we 
 	 * specify overlaps for 1,2 and for 2,3, then compute that for 3,1. 
-	 * Vertices 1,2,3 are packData.face[myIndx].vert[0],[1],[2], resp.
+	 * Vertices 1,2,3 are packData.getFaceVerts(myIndx)[0],[1],[2], resp.
 	 * so overlap [j] is for circles forming edge opposite vert [j+1]. 
 	 * @param Vector<Vector<String>> flagSegs, overlaps
 	 * @return int, 3 for success

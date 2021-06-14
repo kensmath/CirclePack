@@ -53,6 +53,54 @@ public class Vertex {
 		} while (he!=halfedge);
 		return tick-bdryFlag; // subtract 1 for bdry vertex
 	}
+	
+	/**
+	 * If 'spoke.origin' is interior, has an even number
+	 * of spokes, this returns the opposite spoke. If bdry,
+	 * this returns the "most-opposite" bdry spoke, bias
+	 * to downstream bdry edge in case of a tie.
+	 * (see 'axis_proj').
+	 * @param spoke HalfEdge
+	 * @return HalfEdge or null on failure
+	 */
+	public static HalfEdge oppSpoke(HalfEdge spoke) {
+		Vertex vert=spoke.origin;
+		int safety=2000;
+		HalfEdge cclw=spoke;
+		HalfEdge clw=spoke;
+		
+		// interior case
+		if (vert.bdryFlag==0) {
+			do {
+				safety--;
+				cclw=cclw.prev.twin;
+				clw=clw.twin.next;
+				if (cclw==clw)
+					return cclw;
+			} while (cclw!=spoke && clw!=spoke && safety>0);
+			if (safety==0)
+				throw new CombException("inconsistency looking for oppSpoke");
+			return null;
+		}
+		
+		// else 'vert' is bdry: first check if 'spoke' is bdry
+		if (spoke==vert.halfedge) // is downstream bdry edge
+			return spoke.twin.next.twin;
+		if (spoke.twin.origin.bdryFlag>0) // must be upstream bdry edge
+			return spoke;
+		do {
+			safety--;
+			cclw=cclw.prev.twin;
+			clw=clw.twin.next;
+			if (cclw.origin.bdryFlag>0)
+				return vert.halfedge;
+			else if (clw.origin.bdryFlag>0)
+				return vert.halfedge.twin.next.twin;
+		} while (safety>0);
+		if (safety==0)
+			throw new CombException("inconsistency looking for bdry oppSpoke");
+		return null;
+	}
 
 	/**
 	 * A 'Vertex' is considered a boundary vertex if one of its
