@@ -3586,16 +3586,15 @@ public class CombDCEL {
 		int v=arrow.origin.vertIndx;
 		HalfLink link=new HalfLink();
 		link.add(arrow);
+		if (arrow.twin.origin.vertIndx==w)
+			return link;
 		if (lgth==1) { // 'lgth' 1 means 'arrow' must point to w
-			if (arrow.twin.origin.vertIndx==w)
-				return link;
-			else
-				return null;
+			return null;
 		}
 		HalfEdge nxtarrow=arrow;
 		int tick=1;
 		while (tick<lgth) {
-			nxtarrow=Vertex.oppSpoke(nxtarrow.twin);
+			nxtarrow=Vertex.oppSpoke(nxtarrow.twin,hexflag);
 			if (nxtarrow==null) // e.g., no axis
 				return null;
 			Vertex stv=nxtarrow.twin.origin;
@@ -3613,7 +3612,7 @@ public class CombDCEL {
 						link.add(nxtarrow);
 						return link;
 					}
-					if (Vertex.oppSpoke(nxtarrow)==arrow) {
+					if (Vertex.oppSpoke(nxtarrow,hexflag)==arrow) {
 						if (hexflag && arrow.origin.getNum()!=6)
 							return null;
 						link.add(nxtarrow);
@@ -3621,12 +3620,14 @@ public class CombDCEL {
 					}
 				}
 			}
-			else if (stv.bdryFlag>0) // reached bdry before w
-				return null;
-			if (hexflag && stv.getNum()!=6) // reached interior non-hex
-				return null;
+
+			int num=stv.getNum();
+			if (hexflag) {  // reached interior non-hex or bdry non-halfhex
+				if ((stv.bdryFlag==0 && num!=6) || (stv.bdryFlag>0 && num!=3))
+					return null;
+			}
 			
-			// add and continue
+			// not eliminated, so add and continue
 			link.add(nxtarrow);
 			tick++;
 		}

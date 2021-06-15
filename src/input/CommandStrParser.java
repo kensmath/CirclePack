@@ -1113,7 +1113,7 @@ public class CommandStrParser {
 		  // ============== create ==============
 		  else if (cmd.startsWith("create")) {
 			  int mode=1;
-			  int param=1;
+			  int param=0;
 			  int []pinParam=new int[2];
 			  String type = null;
 			  try {
@@ -1121,7 +1121,7 @@ public class CommandStrParser {
 				  try {
 					  param=Integer.parseInt(items.remove(0)); // get number first
 				  } catch (Exception ex) {
-					  param=1;
+					  param=0;
 				  }
 				  if (type.startsWith("seed"))
 					  mode=1;
@@ -1169,8 +1169,8 @@ public class CommandStrParser {
 				  throw new ParserException("usage: create "+type+" {n}");
 			  }
 
-			  if (param<1)
-				  throw new ParserException("usage: create "+type+" {n}, n must be at least 1");
+			  if (param<0)
+				  throw new ParserException("usage: create "+type+" [{n}], n must be non-negative");
 			  
 			  PackData newPack=null;
 			  switch (mode) {
@@ -1247,8 +1247,8 @@ public class CommandStrParser {
 			  }
 			  case 6: // pentagonal tiling, with 'TileData'
 			  {
-				  if (param<1)
-					  param=1;
+				  if (param<0)
+					  param=0;
 				  PackDCEL pdcel=PackCreation.pentagonal_dcel(param);
 				  newPack=new PackData(null); // DCELdebug.printRedChain(pdcel.redChain);
 				  newPack.attachDCEL(pdcel);
@@ -1264,9 +1264,11 @@ public class CommandStrParser {
 
 				  newPack.repack_call(1000);
 				  newPack.status=true;
+				  newPack.setAlpha(1);
 				  CommandStrParser.jexecute(newPack,"layout");
-				  CommandStrParser.jexecute(newPack,"norm_scale -u 1");
-				  CommandStrParser.jexecute(newPack,"norm_scale -h 3 4");
+				  CommandStrParser.jexecute(newPack,"norm_scale -u 3");
+				  CommandStrParser.jexecute(newPack,"norm_scale -h 1 5");
+				  CommandStrParser.jexecute(newPack,"pave 6");
 				  
 				  // TODO: call pave
 				  
@@ -1275,14 +1277,15 @@ public class CommandStrParser {
 			  case 7: // pentagonal triple point, with 'TileData'
 			  case 8: // pentagonal quadruple point, with 'TileData'
 			  {
-				  if (param<1)
-					  param=1;
-				  int N=mode-4; // number at center
+				  if (param<0)
+					  param=0;
+				  int N=mode-4; // number to cluster at center
 				  
 				  // get pentagonal packing, right number of generations
 				  PackDCEL pent=PackCreation.pentagonal_dcel(param);
-				  int sidelength=(int)Math.pow(2.0,param-1);
+				  int sidelength=(int)Math.pow(2.0,param);
 				  PackDCEL pdcel=RawDCEL.polyCluster(pent,1,sidelength,N);
+				  CombDCEL.d_FillInside(pdcel);
 				  
 				  // attach and set
 				  newPack=new PackData(null);
@@ -1294,14 +1297,17 @@ public class CommandStrParser {
 						if (newPack.isBdry(v)) {
 							newPack.setAim(v,Math.PI);
 							if (newPack.packDCEL.vertices[v].getNum()==2)
-								  newPack.setAim(v,ang);
+								  newPack.setAim(v,ang); // reset at pent corners
 						}
 				  }
 				  newPack.repack_call(1000);
 				  newPack.status=true;
+				  newPack.setAlpha(1);
 				  CommandStrParser.jexecute(newPack,"layout");
-				  CommandStrParser.jexecute(newPack,"norm_scale -u 1");
-				  CommandStrParser.jexecute(newPack,"norm_scale -h 3 4");
+				  CommandStrParser.jexecute(newPack,"norm_scale -u 3");
+				  CommandStrParser.jexecute(newPack,"norm_scale -h 1 5");
+				  CommandStrParser.jexecute(newPack,"pave 6");
+				  
 				  break;
 			  }
 			  case 9: // dyadic (hyp penrose), with 'TileData'

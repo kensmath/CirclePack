@@ -2092,7 +2092,7 @@ public class PackDCEL {
 			alpha=myTry;
 			if (p!=null)
 				p.directAlpha(alpha.origin.vertIndx);
-			this.fixDCEL_raw(p);
+			CombDCEL.d_FillInside(p.packDCEL);
 		}
 		
 		if (gamma==alpha)

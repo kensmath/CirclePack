@@ -1589,7 +1589,7 @@ public class TileData {
 		if (p==null || V<1 || V>p.nodeCount || p.isBdry(V))
 			return null;
 		
-		// keep track flowers we use, note the petals 
+		// track flowers we use, note the petals 
 		NodeLink finalList=new NodeLink(p);
 		int []util=new int[p.nodeCount+1]; // 0=open, 1=used, -1=in next
 		
@@ -1612,11 +1612,12 @@ public class TileData {
 					
 					// find vertices across its flower edges
 					int num=p.countFaces(v);
+					int[] flower=p.getFlower(v);
 					for (int j=0;j<num;j++) {
-						int w=p.kData[v].flower[j];
-						int u=p.kData[v].flower[j+1];
+						int w=flower[j];
+						int u=flower[j+1];
 						util[w]=util[u]=1;
-						int a=p.cross_edge_vert(v,j);
+						int a=p.getOppVert(v,w);
 						if (a>0 && util[a]==0 && !p.isBdry(a)) {
 							next.add(a);
 							util[a]=-1;
@@ -1751,8 +1752,9 @@ public class TileData {
 			tile.tileIndex=tcount;
 			tile.baryVert=v;
 			util[v]=-tcount;
+			int[] flower=p.getFlower(v);
 			for (int j=0;j<num;j++) {
-				int k=p.kData[v].flower[j];
+				int k=flower[j];
 				tile.vert[j]=k;
 				util[k]=1;
 			}
@@ -1768,8 +1770,7 @@ public class TileData {
 			tile.tileFlower=new int[tile.vertCount][2];
 			for (int j=0;j<tile.vertCount;j++) {
 				int ww=tile.vert[j];
-				int jj=p.nghb(tile.baryVert,ww);
-				int ov=p.cross_edge_vert(tile.baryVert,jj);
+				int ov=p.getOppVert(tile.baryVert,ww);
 				if (util[ov]<0)
 					tile.tileFlower[j][0]=-util[ov];
 				else

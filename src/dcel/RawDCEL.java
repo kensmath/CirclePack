@@ -2153,13 +2153,22 @@ public class RawDCEL {
 		if (vert.bdryFlag==0)
 			throw new ParserException("'polyCluster': "+v+" is not on the bdry");
 		
-		PackDCEL pdcel=CombDCEL.cloneDCEL(base);
-		
-		for (int j=2;j<=n;j++) {
-			PackDCEL next=CombDCEL.cloneDCEL(base);
-			pdcel=CombDCEL.d_adjoin(next,pdcel,v,v,sides);
+		// for last pasting, need vertex 'w' which is 'sides' 
+		//   edges cclw from 'v'
+		Vertex wert=base.vertices[v];
+		for (int j=0;j<sides;j++) {
+			wert=wert.halfedge.twin.origin;
 		}
-		CombDCEL.d_adjoin(pdcel,pdcel,v,v,sides);
+		int w=wert.vertIndx;
+		
+		PackDCEL pdcel=CombDCEL.cloneDCEL(base);
+		PackDCEL pdcel2=CombDCEL.cloneDCEL(base); // n=2;
+		
+		for (int j=2;j<n;j++) {
+			PackDCEL next=CombDCEL.cloneDCEL(base);
+			pdcel=CombDCEL.d_adjoin(pdcel,next,v,v,sides);
+		}
+		CombDCEL.d_adjoin(pdcel,pdcel2,w,v,2*sides);
 		
 		return pdcel;
 	}

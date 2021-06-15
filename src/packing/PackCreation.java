@@ -351,6 +351,8 @@ public class PackCreation {
 	 * @return @see PackData or null on error
 	 */
 	public static PackData seed(int n,int heS) {
+		if (n<3)
+			throw new ParserException("'seed' usage: n must be at least 3");
 		PackDCEL pdcel=CombDCEL.seed_raw(n);
 		pdcel=CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha);
 		CombDCEL.d_FillInside(pdcel);
@@ -381,6 +383,8 @@ public class PackCreation {
 	 * @return @see PackData
 	 */
 	public static PackData hexBuild(int n) {
+		if (n==0)
+			n=1;
 		PackDCEL pdcel=CombDCEL.seed_raw(6);
 		PackData p=new PackData(null);
 		pdcel.p=p;
@@ -1556,8 +1560,10 @@ public class PackCreation {
 		
 		// want to mark the smallest level "core" (middle triangle)
 		//    with -1 and it's rotated neighbor with -2;
-		if (N==1) // at first level, just the core
+		if (N<=1) { // at first level, just the core
 			growWheel.setVertMark(growWheel.nodeCount,-2);
+			N=1;
+		}
 		
 		// keep track of number of edges in 'end', 'long', 'hypotenuse'
 		int endcount=e;
@@ -2600,6 +2606,8 @@ public class PackCreation {
 		CombDCEL.redchain_by_edge(base, null,null);
 		CombDCEL.d_FillInside(base);
 		PackDCEL pdcel=CombDCEL.cloneDCEL(base); 
+		if (gens==0) // single pentagon?
+			return pdcel;
 		// DCELdebug.printRedChain(btrfly.redChain);
 		
 		// This is iterative, each from new 'base'
@@ -2613,16 +2621,13 @@ public class PackCreation {
 			pdcel=CombDCEL.d_adjoin(pdcel,temp,1,3,sidelength);
 			int new5=pdcel.newOld.findV(5); // new index
 			CombDCEL.d_FillInside(pdcel); 
-//			new5=pdcel.newOld.findV(new5); // changed yet again
 
 			// DCELdebug.redindx(btrfly);
 		
 			// these two form a butterfly
 			PackDCEL btrfly=CombDCEL.cloneDCEL(pdcel);
-			PackDCEL btrfly2=CombDCEL.cloneDCEL(pdcel);
-//			CombDCEL.d_FillInside(btrfly); 
+			PackDCEL btrfly2=CombDCEL.cloneDCEL(pdcel); // copy for next step
 			pdcel=CombDCEL.d_adjoin(pdcel,btrfly,3,4,3*sidelength);
-//			CombDCEL.d_FillInside(pdcel);
 			
 			// adjoin this for two more faces
 			pdcel=CombDCEL.d_adjoin(pdcel,btrfly2,new5,3,4*sidelength);

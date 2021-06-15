@@ -55,39 +55,53 @@ public class Vertex {
 	}
 	
 	/**
-	 * If 'spoke.origin' is interior, has an even number
-	 * of spokes, this returns the opposite spoke. If bdry,
+	 * If 'spoke.origin' v is interior, has an even number
+	 * of spokes, this returns the opposite spoke. If v bdry,
 	 * this returns the "most-opposite" bdry spoke, bias
-	 * to downstream bdry edge in case of a tie.
+	 * to downstream bdry edge in case of a tie. 
+	 * 
+	 * If 'hexflag', then interior v must have 6 spokes
+	 * and if v is bdry, then if it has 3 faces and 
+	 * 'spoke' itself is bdry, return the other bdry spoke.
+	 * 
 	 * (see 'axis_proj').
 	 * @param spoke HalfEdge
-	 * @return HalfEdge or null on failure
+	 * @param hexflag boolean
+	 * @return HalfEdge or null on failure 
 	 */
-	public static HalfEdge oppSpoke(HalfEdge spoke) {
+	public static HalfEdge oppSpoke(HalfEdge spoke,boolean hexflag) {
 		Vertex vert=spoke.origin;
 		int safety=2000;
 		HalfEdge cclw=spoke;
 		HalfEdge clw=spoke;
+		int N=vert.getNum();
 		
 		// interior case
 		if (vert.bdryFlag==0) {
+			if (hexflag && N!=6)
+				return null;
 			do {
 				safety--;
 				cclw=cclw.prev.twin;
 				clw=clw.twin.next;
-				if (cclw==clw)
+				if (cclw==clw && cclw!=spoke)
 					return cclw;
 			} while (cclw!=spoke && clw!=spoke && safety>0);
 			if (safety==0)
-				throw new CombException("inconsistency looking for oppSpoke");
+				throw new CombException("safety value blew in looking for opposite to "+spoke);
 			return null;
 		}
 		
+		if (hexflag && (N!=3 || !spoke.isBdry())) 
+				return null;
+
 		// else 'vert' is bdry: first check if 'spoke' is bdry
-		if (spoke==vert.halfedge) // is downstream bdry edge
-			return spoke.twin.next.twin;
-		if (spoke.twin.origin.bdryFlag>0) // must be upstream bdry edge
-			return spoke;
+		if (spoke==vert.halfedge) // downstream bdry edge?
+			return spoke.twin.next.twin; // upstream bdry
+		if (spoke.twin.isBdry()) // upstream bdry edge?
+			return vert.halfedge; // downstream bdry
+
+		// else spoke points to interior
 		do {
 			safety--;
 			cclw=cclw.prev.twin;

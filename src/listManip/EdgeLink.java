@@ -1511,19 +1511,29 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			if (nextv!=endv) {
 				if (hexflag) { // look for/use axis-extended edges
 					if (p.packDCEL!=null) {
-						Vertex basevert=p.packDCEL.vertices[nextv];
-						HalfLink hlink=CombDCEL.shootExtended(basevert, endv,16,hexflag);
-						if (hlink!=null && hlink.size()>0) 
-							ans.abutHalfLink(hlink);
+						HalfEdge petal=p.packDCEL.findHalfEdge(endv,nextv);
+						if (petal!=null)
+							ans.add(HalfEdge.getEdgeSimple(petal));
+						else {
+							Vertex basevert=p.packDCEL.vertices[endv];
+							HalfLink hlink=
+								CombDCEL.shootExtended(basevert,nextv,16,hexflag);
+							if (hlink!=null && hlink.size()>0) 
+								ans.abutHalfLink(hlink);
+						}
 					}
 					
 					// traditional
 					else {
-						int dir=0;
-						if ((dir=p.axis_extend(endv,nextv,16))>=0) {
-							EdgeLink newedges=p.axis_extrapolate(endv, dir,nextv,16);
-							if (newedges!=null && newedges.size()>0)  
-								ans.addAll(newedges);
+						if (p.nghb(nextv,endv)>=0)
+							ans.add(new EdgeSimple(nextv,endv));
+						else {
+							int dir=0;
+							if ((dir=p.axis_extend(endv,nextv,16))>=0) {
+								EdgeLink newedges=p.axis_extrapolate(endv, dir,nextv,16);
+								if (newedges!=null && newedges.size()>0)  
+									ans.addAll(newedges);
+							}
 						}
 					}
 				}

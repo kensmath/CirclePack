@@ -4218,28 +4218,40 @@ public class PackData{
 		return -1;
 	}
 	
-	/** 
-	 * Return vert across edge from v. Edge is that from flower[k] 
-	 * to flower[k+1]. Return 0 on failure. 
-	 * @param v int, vertex
-	 * @param k int, index to flower of v
-	 * @return int index of vert, 0 on error
-	*/
-	public int cross_edge_vert(int v,int k) {
-	  int N,ind,w;
-
-	  if (v<1 || v>nodeCount || k<0 || k>(N=countFaces(v))
-	      || (k==N && isBdry(v)) ) return 0;
-	  w=kData[v].flower[k];
-	  ind=nghb(w,v);
-	  if (isBdry(w))
-	    {
-	      if (ind<2) return 0;
-	      else return (kData[w].flower[ind-2]);
-	    }
-	  return (kData[w].flower[(ind+countFaces(w)-2)%(countFaces(w))]);
-	} 
-
+	/**
+	 * Return vert across designated edge from 'v'. 
+	 * Edge is that from 'w' to next cclw petal of 'v'.
+	 * Return 0 on failure, e.g., invalid data or
+	 * bdry edge. 
+	 * @param v int
+	 * @param w int, petal
+	 * @return vert index, 0 on failure
+	 */
+	public int getOppVert(int v,int w) {
+		if (v<1 || v>nodeCount || w<1 || w>nodeCount)
+			return 0;
+		if (packDCEL!=null) {
+			HalfEdge vw=packDCEL.findHalfEdge(v,w);
+			HalfEdge desig=vw.next;
+			if (vw==null || packDCEL.isBdryEdge(desig)) 
+				return 0;
+			return desig.twin.next.twin.origin.vertIndx;
+		}
+		
+		// traditional adapted from old 'cross_edge_vert'
+		int N=countFaces(v);
+		int k=nghb(v,w);
+		if (k<0 || k>N || (k==N && isBdry(v)))
+			return 0;
+		int ind_wv=nghb(w,v);
+		if (isBdry(w)) {
+			if (ind_wv<2) return 0;
+		    else return (getFlower(w)[ind_wv-2]);
+		}
+		int M=countFaces(w);
+		return (getFlower(w)[(ind_wv+M-2)%(M)]);
+	}
+	
 	/**
 	 * Return face to left of edge v w. On failure, return ans[0]=0.
 	 * Also return u, the third vert of face. 
@@ -4396,7 +4408,7 @@ public class PackData{
 			HalfEdge spoke=packDCEL.findHalfEdge(new EdgeSimple(v,w));
 			if (spoke==null)
 				return 0;
-			HalfEdge oppspoke=spoke.origin.oppSpoke(spoke);
+			HalfEdge oppspoke=spoke.origin.oppSpoke(spoke,false);
 			return oppspoke.twin.origin.vertIndx;
 		}
 		
