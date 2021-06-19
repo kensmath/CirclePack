@@ -961,7 +961,7 @@ public class PackDCEL {
 		
 		for (int v=1;v<=vertCount;v++) {
 			try{
-				bouq[v]=vertices[v].getFlower();
+				bouq[v]=vertices[v].getFlower(true);
 			} catch (Exception ex) {
 				System.err.println("getFlower fails for "+v);
 			}
@@ -2055,7 +2055,7 @@ public class PackDCEL {
 			
 			// else, use alpha or get first non-forbidden interior
 			if (myTry==null)
-				for (int j=0;j<=vertCount;j++)
+				for (int j=1;j<=vertCount;j++)
 					if (!vertices[j].isBdry() && 
 							(nlink!=null && nlink.containsV(j)<0))
 						myTry=vertices[j].halfedge;

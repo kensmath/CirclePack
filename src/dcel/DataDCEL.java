@@ -55,7 +55,7 @@ public class DataDCEL {
 		for (int v=1;v<=pdcel.vertCount;v++) {
 //			System.out.println("k/rData got to v "+v);
 			Vertex vtx=pdcel.vertices[v];
-			int[] flower=vtx.getFlower();
+			int[] flower=vtx.getFlower(true); // traditional flower
 			int num=flower.length-1;
 			p.setBdryFlag(v,0);
 			if (vtx.redFlag)

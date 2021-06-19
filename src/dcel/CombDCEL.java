@@ -313,7 +313,7 @@ public class CombDCEL {
 			}
 		}
 		
-		// 'vstat' =1 if interior connected comp with alpha 
+		// 'vstat' = 1 if interior connected comp with alpha 
 		NodeLink nxv=new NodeLink();
 		nxv.add(pdcel.alpha.origin.vertIndx);
 		vstat[pdcel.alpha.origin.vertIndx]=1;
@@ -324,14 +324,14 @@ public class CombDCEL {
 			Iterator<Integer> cis=curv.iterator();
 			while (cis.hasNext()) {
 				int v=cis.next();
-				int[] flower=pdcel.vertices[v].getFlower();
-				for (int j=0;j<flower.length;j++) {
-					if (vstat[flower[j]]==0) {
-						vstat[flower[j]]=1;
-						nxv.add(flower[j]);
+				int[] petals=pdcel.vertices[v].getPetals(); // open list
+				for (int j=0;j<petals.length;j++) {
+					if (vstat[petals[j]]==0) {
+						vstat[petals[j]]=1;
+						nxv.add(petals[j]);
 					}
-					else if (vstat[flower[j]]==-1)
-						vstat[flower[j]]=2;
+					else if (vstat[petals[j]]==-1)
+						vstat[petals[j]]=2;
 				}
 			}
 		}
@@ -665,17 +665,17 @@ public class CombDCEL {
 			PreRedVertex rV=(PreRedVertex)pdcel.vertices[v];
 			PreRedVertex rW=(PreRedVertex)pdcel.vertices[w];
 			int j=-1;
-			int[] flower=pdcel.vertices[v].getFlower();
+			int[] petals=pdcel.vertices[v].getPetals(); // open flower
 			for (int k=0;(k<=rV.num && j<0);k++) { 
-				if (flower[k]==w) {
+				if (petals[k]==w) {
 					j=k;
 					rV.redSpoke[j]=rtrace;
 				}
 			}
 			j=-1;
-			flower=pdcel.vertices[w].getFlower();
+			petals=pdcel.vertices[w].getPetals();
 			for (int k=0;(k<=rW.num && j<0);k++) {
-				if (flower[k]==v) {
+				if (petals[k]==v) {
 					j=k;
 					rW.inSpoke[j]=rtrace;
 				}
@@ -1612,6 +1612,100 @@ public class CombDCEL {
 //	}
 	
 	/**
+	 * 'pdcel' should be complete with red chain
+	 * established. Goal is to renumber the vertices,
+	 * starting with alpha and working through the
+	 * interior first, then adding the red vertices
+	 * last. We first clone 'pdcel', holding 'pdcel.p'
+	 * to see if there are any errors; if all seemed
+	 * to go well, we also rejigger p.vData to the
+	 * new numbering so we can save its data (assuming
+	 * p is not null). If all goes well, we 'attachDCEL'
+	 * the new DCEL. If vData shifting goes bad, we
+	 * adversely affect p.
+	 * @param pdc PackDCEL
+	 * @return int, vertcount on success, -oldv for error
+	 * with DCEL renumbering or error with vData
+	 * shifting.
+	 */
+	public static int d_reNumber(PackDCEL pdc) {
+	
+		PackDCEL pdcel=CombDCEL.cloneDCEL(pdc);
+		
+		PackData hold_pd=pdc.p; // hold_pd.getFlower(1132);
+		
+		int vertcount=pdcel.vertCount;
+		pdcel.setAlpha(0, null);
+
+		// ============= mark verts/edges ==============
+
+		// 'vindx'[v] = new index for v
+		int[] vindx=new int[vertcount+1];
+		int vtick=1;
+		
+		// use two lists for interior component
+		NodeLink nxv=new NodeLink();
+		nxv.add(pdcel.alpha.origin.vertIndx);
+		vindx[pdcel.alpha.origin.vertIndx]=vtick;
+		NodeLink curv=new NodeLink();
+		while (nxv.size()>0) {
+			curv=nxv;
+			nxv=new NodeLink();
+			Iterator<Integer> cis=curv.iterator();
+			while (cis.hasNext()) {
+				int v=cis.next();
+				int[] petals=pdcel.vertices[v].getPetals();
+				for (int j=0;j<petals.length;j++) {
+					if (vindx[petals[j]]==0 && 
+							pdcel.vertices[petals[j]].bdryFlag==0) {
+						vindx[petals[j]]=++vtick;
+						nxv.add(petals[j]);
+					}
+				}
+			} 
+		}
+		
+		// travel red chain to find the rest
+		if (pdcel.redChain!=null) {
+			RedHEdge rtrace=pdcel.redChain;
+			do {
+				Vertex vert=rtrace.myEdge.origin;
+				int oldv=vert.vertIndx;
+				if (vindx[oldv]!=0) {
+					CirclePack.cpb.errMsg("'d_reNumber' error in red chain vert "+oldv);
+					return -oldv;
+				}
+				vindx[oldv]=++vtick;
+				rtrace=rtrace.nextRed;
+			} while (rtrace!=pdcel.redChain);
+		}
+		
+		if (vtick!=vertcount) {
+			CirclePack.cpb.errMsg("'d_reNumber': didn't get expected count, "+
+					"vertCount="+vertcount+", but vtick="+vtick);
+			return -vtick;
+		}
+		
+		// gather new 'vertices' for 'pdcel':
+		Vertex[] newverts=new Vertex[vertcount+1];
+		pdcel.newOld=new VertexMap();
+		for (int v=1;v<=vertcount;v++) {
+			newverts[vindx[v]]=pdcel.vertices[v];
+			newverts[vindx[v]].vertIndx=vindx[v];
+			if (v!=vindx[v])
+				pdcel.newOld.add(new EdgeSimple(vindx[v],v));
+		}
+		pdcel.vertices=newverts;
+		
+		if (newverts[0]!=null)
+			throw new CombException("'d_reNumber' failed to get at least one vertex");
+
+		int rslt=hold_pd.attachDCEL(pdcel); // this reshuffles 'vData' entries
+		hold_pd.vertexMap=pdcel.newOld;
+		return rslt;
+	}
+		
+	/**
 	 * Given a 'HalfEdge', check if origin is 'RedVertex'. If so,
 	 * return the next clw 'RedHEdge' (possibly itself). If not,
 	 * return null;
@@ -1905,7 +1999,7 @@ public class CombDCEL {
 	 */
 	public static HalfLink d_CookieData(PackData p,Vector<Vector<String>> flags) {
 		boolean debug=false;
-		PackDCEL pdcel=p.packDCEL;
+		PackDCEL pdcel=p.packDCEL; // p.getFlower(1132);
 		if (pdcel==null) 
 			return null;
 		NodeLink vlink=new NodeLink();
@@ -1965,9 +2059,9 @@ public class CombDCEL {
 					for (int v=1;v<=pdcel.vertCount;v++) {
 						Vertex vert=pdcel.vertices[v];
 						if (vert.vutil!=0) {
-							int[] flower=vert.getFlower();
-							for (int j=0;j<flower.length;j++) {
-								if ((w=pdcel.vertices[flower[j]].vutil)>v) {
+							int[] petals=vert.getPetals(); // open flower
+							for (int j=0;j<petals.length;j++) {
+								if ((w=pdcel.vertices[petals[j]].vutil)>v) {
 									HalfEdge he=pdcel.findHalfEdge(v,w);
 									if (eutil[he.edgeIndx]==0) {
 										hlink.add(he);
@@ -1991,12 +2085,19 @@ public class CombDCEL {
 			for (int v=1;v<=p.nodeCount;v++) {
 				if (seed_wrap!=PathManager.path_wrap(p.getCenter(v))) { 
 					vlink.add(v);
+// debugging 6/15
+					p.setVertMark(v,-7);
 				}
 			}
+			
+			if (debug) // debug=true; 
+				CPBase.Vlink=vlink;
+			
 		}
 		
 		if (vlink.size()!=0) {
 			hlink.separatingLinks(pdcel,vlink,pdcel.alpha.origin.vertIndx);
+			// pdcel.p.getFlower(1132);
 			// add any missing bdry edges
 			for (int f=1;f<=pdcel.idealFaceCount;f++) {
 				Face idealf=pdcel.idealFaces[f];
@@ -2008,10 +2109,16 @@ public class CombDCEL {
 				} while (he!=idealf.edge);
 			}
 		}
+		
+		// want to see what's marked
 		if (debug) { // debug=true;
 			deBugging.DCELdebug.drawHalfLink(p, hlink);
+			CPBase.Elink=new EdgeLink();
+			CPBase.Elink.abutHalfLink(hlink);
+			CPBase.Vlink=vlink;
+			CPBase.HLink=hlink;
 		}
-		return hlink;
+		return hlink; // hlink.size();
 	}
 	
 	/** 
@@ -3167,9 +3274,9 @@ public class CombDCEL {
 				  int vutil=vert.vutil;
 //				  if (vutil!=0) // not needed?
 //					  continue;
-				  int[] flower=vert.getFlower();
-				  for (int j=0;j<flower.length;j++) {
-					  Vertex wert=pdcel.vertices[flower[j]];
+				  int[] petals=vert.getPetals();
+				  for (int j=0;j<petals.length;j++) {
+					  Vertex wert=pdcel.vertices[petals[j]];
 					  int hit=0;
 					  if (wert.vutil>=bound) {
 						  if (vutil<0) { // right side hit
@@ -3206,13 +3313,13 @@ public class CombDCEL {
 			  Vertex hitVert=pdcel.vertices[hitvert];
 			  int vneg=0;
 			  int vpos=0;
-			  int[] flower=hitVert.getFlower();
-			  for (int j=0;(j<flower.length && (vneg==0 || vpos==0));j++) {
-				  int val=pdcel.vertices[flower[j]].vutil;
+			  int[] petals=hitVert.getPetals(); // open flower
+			  for (int j=0;(j<petals.length && (vneg==0 || vpos==0));j++) {
+				  int val=pdcel.vertices[petals[j]].vutil;
 				  if (vneg==0 && val<0) 
-					  vneg=flower[j];
+					  vneg=petals[j];
 				  if (vpos==0 && val>0 && val<bound)
-					  vpos=flower[j];
+					  vpos=petals[j];
 			  }
 			  if (vneg==0 || vpos==0) {
 				  throw new DCELException("not collision at "+hitvert+"??");

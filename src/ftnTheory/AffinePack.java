@@ -1350,9 +1350,9 @@ public class AffinePack extends PackExtender {
 			}
 			
 			for (int v=1;v<=p.nodeCount;v++) {
-				int[] flower=p.getFlower(v);
-				for (int j=0;j<p.countFaces(v);j++) {
-					int w=flower[j];
+				int[] petals=p.getPetals(v);
+				for (int j=0;j<petals.length;j++) {
+					int w=petals[j];
 					if (w>v) {
 						double prd=Math.log(Math.abs(edgeRatioError(p,new EdgeSimple(v,w),asp)));
 						err += prd*prd;

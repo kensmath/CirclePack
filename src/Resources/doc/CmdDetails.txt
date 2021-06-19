@@ -2745,8 +2745,6 @@ vertices</instance>
 	and possibly color data) can be read in. Default radii are set 
 	and x,y,z data are stored in 'xyzpoints'.
 	
-	
-	
 	CAUTION:  No confirmation is requested for command-line arguments,
 	so the current data in the active pack will be lost.
 	
@@ -2876,13 +2874,21 @@ vertices</instance>
 script and append it to 'ClosedPath'.</instance>
 </examples>
 </command>
-		
 
 <command cmd="Read_path" flags="{filename}">
 <description>
 	Same as "read_path", except default directory is not prepended 
 	to the filename, so an explicit path (possibly starting '~/')
 	is allowed.
+</description>
+</command>
+
+<command cmd="renumber">
+<description> If the active packing has a DCEL structure, this
+	carries our a renumbering. Namely, vertices will be indexed
+	moving outward from alpha=1, picking up all interior vertices,
+	and wrapping up with vertices around the red chain. Data
+	should be maintained, though lists are lost.
 </description>
 </command>
 

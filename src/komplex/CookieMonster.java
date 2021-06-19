@@ -352,7 +352,8 @@ public class CookieMonster {
 			if (p.packDCEL==null) {
 				for (int v=1;v<=p.nodeCount;v++) {
 					int[] flower=p.getFlower(v);
-					for (int j=0;(j<=p.countFaces(v) && myPoison[v]==0);j++) 
+					int cFv=p.countFaces(v);
+					for (int j=0;(j<=cFv && myPoison[v]==0);j++) 
 						if (myPoison[flower[j]]==-1) 
 							myPoison[v]=1;
 				}

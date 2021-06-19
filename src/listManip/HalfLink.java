@@ -1085,23 +1085,26 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	}
 	
 	/**
-	 * Add 'HalfEdge's which separate 'nlink' vertices from 
+	 * Add 'HalfEdge's which separate 'vlist' vertices from 
 	 * 'alphaIndx'.
 	 * @param pdcel packDCEL
-	 * @param nlink noddeLink
+	 * @param vlist nodeLink
 	 * @return int, count of edges, -1 on error
 	 */
-	public int separatingLinks(PackDCEL pdcel,NodeLink nlink,int alphaIndx) {
+	public int separatingLinks(PackDCEL pdcel,NodeLink vlist,int alphaIndx) {
 		int count=0;
-		int[] vhits=new int[pdcel.vertCount+1];
+		int[] vhits=new int[pdcel.vertCount+1];  // pdcel.p.getFlower(1132);
 		
-		// mark the vertices to be excluded with -1
-		Iterator<Integer> vst=nlink.iterator();
+		// mark vertices: -1=excluded, 1=added to nxt, 2=handled
+		Iterator<Integer> vst=vlist.iterator();
 		while(vst.hasNext()) 
 			vhits[vst.next()]=-1;
-		
-		// keep track with edge 'util'
+
+		// set 'eutil' for edges that get chosen
 		for (int e=1;e<=pdcel.edgeCount;e++) {
+			// debug: are indices right?
+//			if (pdcel.edges[e].edgeIndx!=e)
+//				System.err.println("edge "+e+" doesn't have correct 'edgeIndx'");
 			pdcel.edges[e].eutil=0;
 		}
 
@@ -1116,10 +1119,51 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			Iterator<Integer> cis=curr.iterator();
 			while (cis.hasNext()) {
 				int v=cis.next();
-				vhits[v]=1;
-				Vertex vert=pdcel.vertices[v];
+				vhits[v]=2;
+				
+// debugging
+				pdcel.p.setVertMark(v, -2);
+				// pdcel.p.getFlower(1132);
+				// pdcel.p.getFlower(17987);
+				// pdcel.p.getFlower(17988);
+
+				Vertex vert=pdcel.vertices[v]; 
 				HalfLink slink=vert.getSpokes(null);
 				int num=slink.size();
+				
+				// catalog the situation with spokes
+				int[] edx=new int[num];
+				for (int j=0;j<num;j++) {
+					HalfEdge spoke=slink.get(j);
+					int w=spoke.twin.origin.vertIndx; // other end
+					if (vhits[w]==-1)
+						edx[j]=-spoke.edgeIndx; // set negative
+					else
+						edx[j]=spoke.edgeIndx; // set positive
+				}
+				
+				// include if edx is +, but one of ngbhs is -
+				for (int j=0;j<num;j++) {
+					if (edx[j]>0) {
+						HalfEdge he=pdcel.edges[edx[j]].twin;
+						if (he.eutil==0 && he.twin.eutil==0 && 
+							(edx[(j+1)%num]<0 || edx[(j+num-1)%num]<0)) {
+							add(pdcel.edges[edx[j]]);
+							he.eutil=he.twin.eutil=1;
+							count++;
+						}
+						if (vhits[he.origin.vertIndx]==0) {
+							vhits[he.origin.vertIndx]=1;
+							
+// debugging							
+							pdcel.p.setVertMark(he.origin.vertIndx,-1);
+							
+							nxt.add(he.origin.vertIndx);
+						}
+					}
+				}
+				
+/*
 				for (int j=0;j<num;j++) {
 					HalfEdge he=slink.get(j);
 					int w=he.next.origin.vertIndx;
@@ -1141,8 +1185,10 @@ public class HalfLink extends LinkedList<HalfEdge> {
 						nxt.add(w);
 					}
 				}
-			}
-		}
+*/				
+				
+			} // while for current list
+		} // while for next list
 			
 		return count;
 	}

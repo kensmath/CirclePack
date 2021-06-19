@@ -131,6 +131,15 @@ public class Vertex {
 		}
 		return false;
 	}
+
+	/**
+	 * Return tradional cclw flower of petals, closed if
+	 * interior. 
+	 * @return int[]
+	 */
+	public int[] getPetals() {
+		return getFlower(false);
+	}
 	
 	/**
 	 * Return normal cclw flower of nghb indices, closed if interior.
@@ -139,9 +148,11 @@ public class Vertex {
 	 * If this is a 'RedVertex', call 'getRedFlower'; it may be interior
 	 * or boundary. If not a 'RedVertex', it should be interior and we
 	 * get the flower in the usual way, starting with 'halfedge'.
+	 * @param closeInt boolean, if true and vert is interior, then
+	 * close up.
 	 * @return int[]
 	 */
-	public int[] getFlower() {
+	public int[] getFlower(boolean closeInt) {
 		ArrayList<Integer> vlist=new ArrayList<Integer>();
 		HalfEdge he=halfedge;
 		int safety=1000;
@@ -152,8 +163,10 @@ public class Vertex {
 		} while (he!=halfedge && safety>0);
 		if (safety==0) 
 			throw new DCELException("triggered safety exit.");
-		if (bdryFlag==0)
-			vlist.add(halfedge.twin.origin.vertIndx); // close up
+		
+		// close up interior flowers?
+		if (closeInt && bdryFlag==0)
+			vlist.add(halfedge.twin.origin.vertIndx); 
 
 		int[] flower=new int[vlist.size()];
 		Iterator<Integer> vit=vlist.iterator();

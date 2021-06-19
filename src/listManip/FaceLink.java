@@ -304,9 +304,9 @@ public class FaceLink extends LinkedList<Integer> {
 							}
 						
 							// add flower to nextv for future processing
-							int[] flower=packData.getFlower(v);
-							for (int k=0;k<(packData.countFaces(v)+packData.getBdryFlag(v));k++) {
-								int w=flower[k];
+							int[] petals=packData.getPetals(v);
+							for (int k=0;k<petals.length;k++) {
+								int w=petals[k];
 								if (hitverts[w]==0) {
 									nextv.add(w);
 									hitverts[w]=1; // have touched this

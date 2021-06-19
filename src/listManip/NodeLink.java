@@ -648,10 +648,9 @@ public class NodeLink extends LinkedList<Integer> {
 				    int v,vert;
 				    while (vlist.hasNext()) {
 					v=(Integer)vlist.next();
-					int num=packData.countFaces(v);
-					int[] flower=packData.getFlower(v);
-					for (int j=0;j<(num+packData.getBdryFlag(v));j++) {
-					    vert=flower[j];
+					int[] petals=packData.getPetals(v);
+					for (int j=0;j<petals.length;j++) {
+					    vert=petals[j];
 					    if (hits[vert]==0) {
 						add(vert);
 						count++;

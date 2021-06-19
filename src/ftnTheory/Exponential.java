@@ -4,9 +4,9 @@ import allMains.CirclePack;
 import complex.Complex;
 import exceptions.CombException;
 import exceptions.DataException;
+import geometry.CircleSimple;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
-import geometry.CircleSimple;
 import packing.PackData;
 
 public class Exponential {
@@ -24,70 +24,81 @@ public class Exponential {
 	 * @return 1
 	 */
 	public static int spiral(PackData p,double a,double b) {
-		int j,m,k0=0,k1,k2,count,k,alpha,l;
-		boolean flag=false;
-		Complex z1,z2,cent=null;
-		double r0,r1,r2,scale,Maxx,minx,Maxy,miny,x,y,r,factor;
+//		int j,m,k0=0,k1,k2,k,alpha,l;
+//		Complex z1,z2,cent=null;
+//		double r0,r1,r2,scale,Maxx,minx,Maxy,miny,x,y,r,factor;
 
-		for (int i=1;i<=p.nodeCount;i++) {
-			if (!p.isBdry(i) && p.countFaces(i)!=6) flag=true;
-			p.kData[i].utilFlag=0; 
-		}
-		if (flag) {
-			CirclePack.cpb.myErrorMsg("usage: in 'spiral', packing must be hexagonal");
-			throw new CombException();
-		}
+		for (int i=1;i<=p.nodeCount;i++) 
+			if (!p.isBdry(i) && p.countFaces(i)!=6) { 
+				CirclePack.cpb.myErrorMsg("usage: in 'spiral', packing must be hexagonal");
+				throw new CombException();
+			}
+		int[] util=new int[p.nodeCount+1];
+
 		CircleSimple sc;
-		alpha=p.getAlpha();
+		int alpha=p.getAlpha();
+		int[] flower=p.getFlower(alpha); // just need first two
+		
+		// alpha the unit circle
 		p.setCenter(alpha, new Complex(0.0));
 		p.setRadius(alpha,1.0);
-		p.kData[alpha].utilFlag=1;
-		k=p.kData[alpha].flower[0];
-		l=p.kData[alpha].flower[1];
-		p.setCenter(k,1.0+a,0.0);
-		p.setRadius(k,a);
-		p.kData[k].utilFlag=1;
-		z1=p.getCenter(alpha);
-		z2=p.getCenter(k);
+		util[alpha]=1;
+		
+		// tangent nghbs
+		p.setCenter(flower[0],1.0+a,0.0);
+		p.setRadius(flower[0],a);
+		util[flower[0]]=1;
+		Complex z1=p.getCenter(alpha);
+		Complex z2=p.getCenter(flower[0]);
 		sc=EuclMath.e_compcenter(z1,z2,1.0,a,b);
-		p.setCenter(l,new Complex(sc.center));
-		p.setRadius(l,sc.rad);
-		p.kData[l].utilFlag=1;
+		p.setCenter(flower[1],new Complex(sc.center));
+		p.setRadius(flower[1],sc.rad);
+		util[flower[1]]=1;
 
-		count=3;
-		j=0;
+		int count=3;
+		int j=0;
+		boolean flag=false;
 		while (count<p.nodeCount) {
 			flag=false;
 			do {
 				j++;
 				if (j>p.nodeCount) j=1;
-				if (p.kData[j].utilFlag==0) { /* if not plotted, see if
+				if (util[j]==0) { /* if not plotted, see if
 					       there are appropriate neighbors */
-					k=0;
+					int k=0;
+					int k0=0;
+					flower=p.getFlower(j);
 					do {
-						k1=p.kData[j].flower[k];
-						k2=p.kData[j].flower[k+1];
-						if (p.kData[k1].utilFlag!=0 && p.kData[k2].utilFlag!=0) {
-							m=0;
-							while (m<=p.countFaces(k2)
-									&& p.kData[k2].flower[m]!=j) m++;
-							if (m==(p.countFaces(k2) -1)
+						int k1=flower[k];
+						int k2=flower[k+1];
+						if (util[k1]!=0 && util[k2]!=0) {
+							int m=0;
+							int cF2=p.countFaces(k2);
+							int[] flower2=p.getFlower(k2);
+							while (m<=cF2 && flower2[m]!=j) 
+								m++;
+							if (m==(cF2-1)
 									&& !p.isBdry(k2)
-									&& p.kData[p.kData[k2].flower[0]].utilFlag!=0)
-							{k0=p.kData[k2].flower[1];flag=true;}
-							else if (m<(p.countFaces(k2) -1)
-									&& p.kData[p.kData[k2].flower[m+2]].utilFlag!=0)
-							{k0=p.kData[k2].flower[m+2];flag=true;}
+									&& util[flower2[0]]!=0) {
+								k0=flower2[1];
+								flag=true;
+							}
+							else if (m<(cF2 -1)
+									&& util[flower2[m+2]]!=0) {
+							
+								k0=flower2[m+2];
+								flag=true;
+							}
 							if (flag) {
 								z1=p.getCenter(k1);
-								r1=p.getRadius(k1);
+								double r1=p.getRadius(k1);
 								z2=p.getCenter(k2);
-								r2=p.getRadius(k2);
-								r0=p.getRadius(k0);
+								double r2=p.getRadius(k2);
+								double r0=p.getRadius(k0);
 								sc=EuclMath.e_compcenter(z1,z2,r1,r2,(r1*r2/r0));
 								p.setCenter(j,new Complex(sc.center));
 								p.setRadius(j,sc.rad);
-								p.kData[j].utilFlag=1;
+								util[j]=1;
 							}
 							else k++;
 						} // end of if 
@@ -101,14 +112,14 @@ public class Exponential {
 		// should have all centers and radii now 
 
 		if (p.hes < 0) {
-			Maxx = 1;
-			minx = -1;
-			Maxy = 1;
-			miny = -1;
+			double Maxx = 1;
+			double minx = -1;
+			double Maxy = 1;
+			double miny = -1;
 			for (int i = 1; i <= p.nodeCount; i++) {
-				x = p.getCenter(i).x;
-				y = p.getCenter(i).y;
-				r = p.getRadius(i);
+				double x = p.getCenter(i).x;
+				double y = p.getCenter(i).y;
+				double r = p.getRadius(i);
 				Maxx = (x + r > Maxx) ? x + r : Maxx;
 				minx = (x - r < minx) ? x - r : minx;
 				Maxy = (y + r > Maxy) ? y + r : Maxy;
@@ -116,17 +127,16 @@ public class Exponential {
 			}
 			z1.x = (Maxx + minx) * 0.5;
 			z1.y = (Maxy + miny) * 0.5;
-			scale = ((Maxx - minx > Maxy - miny) ? Maxx - minx : Maxy - miny) * 0.5;
-			factor = (0.9) / (scale * 1.4142136);
+			double scale = ((Maxx - minx > Maxy - miny) ? Maxx - minx : Maxy - miny) * 0.5;
+			double factor = (0.9) / (scale * 1.4142136);
 			for (int i = 1; i <= p.nodeCount; i++) {
-				cent = p.getCenter(i).minus(z1).times(factor);
-				r = p.getRadius(i) * factor;
+				Complex cent = p.getCenter(i).minus(z1).times(factor);
+				double r = p.getRadius(i) * factor;
 				sc = HyperbolicMath.e_to_h_data(cent, r);
 				p.setCenter(i,new Complex(sc.center));
 				p.setRadius(i,sc.rad);
 			}
 		}
-		p.free_overlaps(); // outdated.
 		CirclePack.cpb.msg("Created spiral with parameters a="+a+" and b="+b);
 		return 1;
 	}

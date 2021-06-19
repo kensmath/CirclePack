@@ -276,9 +276,9 @@ public class NSpole {
 		for (int v=1;v<=packData.nodeCount;v++) {
 			Complex z=packData.getCenter(v);
 			double rz=packData.getRadius(v);
-			int[] flower=packData.getFlower(v);
-			for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) {
-				int k=flower[j];
+			int[] petals=packData.getPetals(v);
+			for (int j=0;j<petals.length;j++) {
+				int k=petals[j];
 				if (k>v) {
 					ans[++tick]=SphericalMath.sph_tangency(z,packData.getCenter(k),rz,packData.getRadius(k));
 				}
@@ -440,10 +440,9 @@ public class NSpole {
 	public int setEdgeCount() {
 		int eCount=0;
 		for (int v=1;v<=packData.nodeCount;v++) {
-			int[] flower=packData.getFlower(v);
-			for (int j=0;j<(packData.countFaces(v)+
-					packData.getBdryFlag(v));j++) {
-				int k=flower[j];
+			int[] petals=packData.getPetals(v);
+			for (int j=0;j<petals.length;j++) {
+				int k=petals[j];
 				if (k>v)
 					eCount++;
 			}

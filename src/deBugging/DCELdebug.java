@@ -31,6 +31,31 @@ public class DCELdebug {
 	static int rankStamp=1; // progressive number to distinguish file instances
 	
 	/**
+	 * check if all array indexes agree with their recorded "*Indx". 
+	 * @param pdcel PackDCEL
+	 */
+	public static void indexConsistency(PackDCEL pdcel) {
+		int vhits=0;
+		int fhits=0;
+		int ehits=0;
+		for (int j=1;j<=pdcel.vertCount;j++)
+			if (pdcel.vertices[j].vertIndx!=j)
+				vhits++;
+		for (int j=1;j<=pdcel.edgeCount;j++)
+			if (pdcel.edges[j].edgeIndx!=j)
+				ehits++;
+		for (int j=1;j<=pdcel.faceCount;j++)
+			if (pdcel.faces[j].faceIndx!=j)
+				fhits++;
+		if (vhits==0 && fhits==0 && ehits==0)
+			System.out.println("Index consistency check: all good.");
+		else
+			System.err.println("Index consistency problemss: vhits="+vhits+
+					"; ehits="+ehits+"; fhits="+fhits);
+	}
+	
+	
+	/**
 	 * Compare 'myEdge' to 'edges' entry with same index.
 	 * @param pdcel PackDCEL
 	 */

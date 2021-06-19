@@ -291,6 +291,11 @@ public class PackData{
      * @return int, vertCount on success, 0 on failure
      */
     public int attachDCEL(PackDCEL pdcel) {
+    	
+// debugging
+//    	if (vData!=null && vData[11]!=null)
+//    		System.out.println("opening vData[11].rad ="+vData[11].rad);
+    	
     	if (pdcel.vertCount>nodeCount)
     		alloc_pack_space(pdcel.vertCount+10,true);
     	
@@ -321,17 +326,30 @@ public class PackData{
 
     	// no existing dcel structure? get data from 'rData'
     	if (vData==null) {
+    		
+    		// instantiate 'vData' space
     		vData=new VData[sizeLimit+1];
     		for (int v=1;v<=sizeLimit;v++) 
     			vData[v]=new VData();
+    		
+    		// translation? make more efficient
+    		int[] nOld=null;
+    		if (pdcel.newOld!=null) {
+    			nOld=new int[nodeCount+1];
+        		Iterator<EdgeSimple> nost=pdcel.newOld.iterator();
+        		while (nost.hasNext()) {
+        			EdgeSimple es=nost.next();
+        			nOld[es.v]=es.w;
+        		}
+    		}
+    		 
     		for (int v=1;v<=nodeCount;v++) {
-//System.out.println("vdata vert v = "+v);    			
     			Vertex vert=pdcel.vertices[v];
     			if (vert.isBdry()) 
     				vData[v].setBdryFlag(1);
     			int oldv=v;
     			int w=0;
-    			if (pdcel.newOld!=null && (w=pdcel.newOld.findW(v))>0) 
+    			if (nOld!=null && (w=nOld[v])>0) 
     				oldv=w;
     			if (oldv<=origNodeCount) {
     				pdcel.setVertRadii(v,rData[oldv].rad);
@@ -365,18 +383,32 @@ public class PackData{
 		for (int ov=1;ov<=origNodeCount;ov++) 
 			oldVData[ov]=vData[ov];
 		
+// debugging
+//		System.out.println("oldVDat[11].rad ="+oldVData[11].rad);
+		
 		// allocate new 'vData'
 		vData=new VData[sizeLimit+1];
 		for (int v=1;v<=sizeLimit;v++) 
 			vData[v]=new VData();
 		
+		// translation? make more efficient
+		int[] nOld=null;
+		if (pdcel.newOld!=null) {
+			nOld=new int[nodeCount+1];
+    		Iterator<EdgeSimple> nost=pdcel.newOld.iterator();
+    		while (nost.hasNext()) {
+    			EdgeSimple es=nost.next();
+    			nOld[es.v]=es.w;
+    		}
+		}
+
 		// note: 'nodeCount' may be larger than 'origNodeCount'
 		for (int v=1;v<=nodeCount;v++) {
 			Vertex vert=pdcel.vertices[v];
 			HalfEdge he=vert.halfedge;
    			int oldv=v;
    			int w=0;
-   			if (pdcel.newOld!=null && (w=pdcel.newOld.findW(v))>0) 
+   			if (nOld!=null && (w=nOld[v])>0) 
    				oldv=w;
    			// if there is existing data, copy it
    			if (oldv<=origNodeCount) {
@@ -413,7 +445,10 @@ public class PackData{
    			}
 			pdcel.setVDataIndices(v);
     	}
-		
+
+// debugging
+//		System.out.println("now, vData[11].rad ="+vData[11].rad);
+
 		// TODO: convert lists before killing 'newOld'??  
 		pdcel.newOld=null;
 		
@@ -2027,12 +2062,12 @@ public class PackData{
         	}
         }
         setGeometry(hes);
+    	set_plotFlags();
         if (packDCEL==null) {
-        	set_plotFlags();
         	CirclePack.cpb.msg("Note: traditional packing in p"+this.packNum+
         			". Call 'DCEL dcel' to attach DCEL structure.");
         }
-        return flags;
+        return flags; // this.getFlower(1132);
     }
     
     /**
@@ -2747,13 +2782,31 @@ public class PackData{
 	}
 	
 	/**
-	 * Get array of nghb'ing vertices, closed if interior
+	 * Get flower petals, but don't close up for interior
+	 * @param v int
+	 * @return int[]
+	 */
+	public int[] getPetals(int v) {
+		if (packDCEL!=null)
+			return packDCEL.vertices[v].getPetals();
+		
+		// traditional
+		int n=kData[v].num+kData[v].bdryFlag;
+		int[] petals=new int[n];
+		for (int j=0;j<n;j++)
+			petals[j]=kData[v].flower[j];
+		return petals;
+	}
+	
+	/**
+	 * Get the traditional array of nghb'ing vertices;
+	 * meaning first repeats at end if 'v' is interior.
 	 * @param v int
 	 * @return int[]
 	 */
 	public int[] getFlower(int v) {
-		if (packDCEL!=null) {
-			return packDCEL.vertices[v].getFlower();
+		if (packDCEL!=null) { 
+			return packDCEL.vertices[v].getFlower(true);
 		}
 		return kData[v].flower;
 	}
@@ -3440,7 +3493,8 @@ public class PackData{
 			return -1;
 		int[] flower=getFlower(v);
 		for (int j=0;j<=countFaces(v);j++)
-			if (flower[j]==w) return j;
+			if (flower[j]==w) 
+				return j;
 		return -1;
 	}
 	
@@ -4564,12 +4618,12 @@ public class PackData{
 	  int i,dir,next,current,last;
 
 	  if (v==w || lgth<1) return -1;
-	  int pets=countFaces(v)+getBdryFlag(v);
-	  int []dists=new int[pets];
-	  int[] flower=getFlower(v);
-	  for (dir=0;dir<pets;dir++) {
+//	  int pets=countFaces(v)+getBdryFlag(v);
+	  int[] petals=getPetals(v);
+	  int []dists=new int[petals.length];
+	  for (dir=0;dir<petals.length;dir++) {
 	      last=v;
-	      current=flower[dir];
+	      current=petals[dir];
 	      i=1;
 	      while (current!=w && i<lgth && (next=axis_proj(current,last))!=0) {
 	    	  last=current;
@@ -4583,7 +4637,7 @@ public class PackData{
 	  // look for direction reaching 'w' in smallest number of steps
 	  int theDir=-1;
 	  int theDist=lgth+1;
-	  for (int j=0;j<pets;j++) {
+	  for (int j=0;j<petals.length;j++) {
 		  if (dists[j]>0 && dists[j]<theDist) {
 			  theDir=j;
 			  theDist=dists[j];
@@ -10372,12 +10426,12 @@ public class PackData{
 		int[] list;
 
 		for (int i = 1; i <= nodeCount; i++)
-			kData[i].utilFlag = 0;
+			setVertUtil(i,0);
 
 		Iterator<Integer> slist = seedlist.iterator();
 		while (slist.hasNext()) {
 			int v = (Integer) slist.next();
-			kData[v].utilFlag = 1;
+			setVertUtil(v,1);
 		}
 
 		UtilPacket uP = new UtilPacket();
@@ -10490,7 +10544,8 @@ public class PackData{
 			do {
 				int v = vertlist.remove(0);
 				int[] flower=getFlower(v);
-				for (int i = 0; i <= countFaces(v); i++)
+				int num=countFaces(v);
+				for (int i = 0; i <= num; i++)
 					if (final_list[(j = flower[i])] == 0) {
 						final_list[j] = gen_count;
 						count++;
@@ -12009,21 +12064,25 @@ public class PackData{
 		  p.packExtensions=new Vector<PackExtender>(2); // old are lost
 
 		  if (packDCEL!=null) {
+			  RedHEdge oldred=packDCEL.redChain;
 			  PackDCEL pdcel=CombDCEL.cloneDCEL(packDCEL);
-			  p.attachDCEL(pdcel);
-			  p.packDCEL.p=p;
+			  pdcel.fixDCEL_raw(p);
 			  p.vData=new VData[sizeLimit+1];
 			  for (int v=1;v<=nodeCount;v++) 
 				  p.vData[v]=vData[v].clone(); // this.getCenter(v);
-			  RedHEdge oldred=packDCEL.redChain;
-			  RedHEdge newred=pdcel.redChain;
-			  RedHEdge rhe=newred;
-			  do {
-				  rhe.setCenter(oldred.getCenter());
-				  rhe.setRadius(oldred.getRadius());
-				  rhe=rhe.nextRed;
-				  oldred=oldred.nextRed;
-			  } while (rhe!=newred);
+			  
+			  // typically, if not a sphere, will have redChain
+			  if (oldred!=null) {
+				  RedHEdge newred=pdcel.redChain;
+				  RedHEdge rhe=newred;
+				  do {
+					  rhe.setCenter(oldred.getCenter());
+					  rhe.setRadius(oldred.getRadius());
+					  rhe=rhe.nextRed;
+					  oldred=oldred.nextRed;
+				  } while (rhe!=newred);
+			  }
+
 		  }
 		  
 		  // traditional: copy rData and kData
@@ -12375,9 +12434,9 @@ public class PackData{
 		Complex fz;
 		int num = countFaces(circle);
 		double[] args = new double[num + 1];
-		int[] flower=getFlower(circle);
-		for (int k = 0; k < (num + getBdryFlag(circle)); k++) {
-			int j = flower[k];
+		int[] petals=getPetals(circle);
+		for (int k = 0; k < petals.length; k++) {
+			int j = petals[k];
 			fz = getCenter(j);
 			if (hes < 0) {
 				sc = HyperbolicMath.h_to_e_data(fz, getRadius(j));
@@ -12389,24 +12448,24 @@ public class PackData{
 		double argz = ccent.minus(z).arg();// arg from center to z
 
 		// find point with closest argument
-		int petal = 0;
+		int thepetal = 0;
 		mindist = Math.abs(argz - args[0]);
 		double pi2 = 2.0 * Math.PI;
 		if (mindist >= pi2)
 			mindist -= pi2;
-		for (int k = 1; k < (num + getBdryFlag(circle)); k++) {
+		for (int k = 1; k < petals.length; k++) {
 			dist = Math.abs(argz - args[k]);
 			if (dist >= pi2)
 				dist -= pi2;
 			if (dist < mindist) {
 				mindist = dist;
-				petal = k;
+				thepetal = k;
 			}
 		}
 
 		// done
 		goit = new EdgeLink(this);
-		goit.add(new EdgeSimple(circle,flower[petal]));
+		goit.add(new EdgeSimple(circle,petals[thepetal]));
 		return goit;
 	}
 
@@ -14351,13 +14410,13 @@ public class PackData{
 	    			  overlaps=new Overlap();
 	    			  trace=overlaps;
 	    			  for (int v=1;v<=p1.nodeCount;v++) {
-	    				  int[] flower=p1.getFlower(v);
-	    				  for (int j=0;j<(p1.countFaces(v)+p1.getBdryFlag(v));j++) {
+	    				  int[] petals=p1.getPetals(v);
+	    				  for (int j=0;j<petals.length;j++) {
 	    					  // only store for petals with larger indices
-	    					  if (v<flower[j]
-	    							  && (angle=p1.getInvDist(v,flower[j]))!=1.0 ) {
+	    					  if (v<petals[j]
+	    							  && (angle=p1.getInvDist(v,petals[j]))!=1.0 ) {
 	    						  trace.v=v;
-	    						  trace.w=flower[j];
+	    						  trace.w=petals[j];
 	    						  trace.angle=angle;
 	    						  trace=trace.next=new Overlap();
 	    					  }
@@ -14397,13 +14456,12 @@ public class PackData{
 
 				      for(int v=1;v<=p2.nodeCount;v++) {
 				    	  double angle;
-				    	  int[] flower=p2.getFlower(v);
+				    	  int[] petals=p2.getPetals(v);
 				    	  int vv=newPack.vertexMap.findW(v);
-				    	  for(int j=0;j<p2.countFaces(v)+
-				    	  	p2.getBdryFlag(v);j++)
-				    		  if (v<flower[j]) {
-				    			  int ww=newPack.vertexMap.findW(flower[j]);
-				    			  if ((angle=p2.getInvDist(v,flower[j]))!=1.0)
+				    	  for(int j=0;j<petals.length;j++)
+				    		  if (v<petals[j]) {
+				    			  int ww=newPack.vertexMap.findW(petals[j]);
+				    			  if ((angle=p2.getInvDist(v,petals[j]))!=1.0)
 				    				  newPack.set_single_invDist(vv,ww,angle);
 				    		  }
 				      }

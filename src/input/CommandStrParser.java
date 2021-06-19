@@ -888,13 +888,13 @@ public class CommandStrParser {
 		    		  overlaps=new Overlap();
 		    		  trace=overlaps;
 		    		  for (int v=1;v<=packData.nodeCount;v++) {
-		    			  int[] flower=packData.getFlower(v);
-		    			  for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) {
+		    			  int[] petals=packData.getPetals(v);
+		    			  for (int j=0;j<petals.length;j++) {
 		    				  // only store for petals with larger indices
-		    				  if (v<flower[j]
-		    				     && (angle=packData.getInvDist(v,flower[j]))!=1.0 ) {
+		    				  if (v<petals[j]
+		    				     && (angle=packData.getInvDist(v,petals[j]))!=1.0 ) {
 		    					  trace.v=v;
-		    					  trace.w=flower[j];
+		    					  trace.w=petals[j];
 		    					  trace.angle=angle;
 		    					  trace=trace.next=new Overlap();
 		    				  }
@@ -5620,11 +5620,26 @@ public class CommandStrParser {
 	  	        	  zigzag=true;
 	    	  } catch(Exception ex) {}
 	    	  
-	    	  if (packData.packDCEL!=null) { // packData.packDCEL.newOld;
+	    	  if (packData.packDCEL!=null) { // hlink.size();
 	    		  
 	    		  // identify forbidden edges (and possibly new 'alpha')
 	    		  HalfLink hlink=CombDCEL.d_CookieData(packData,flagSegs);
 	    		  
+// debugging
+	    		  boolean hdebug=false; // hdebug=true;
+	    		  if (hdebug) {
+//	    			  DCELdebug.indexConsistency(packData.packDCEL);
+	    			  Iterator<HalfEdge> hist=hlink.iterator();
+//	    			  while (hist.hasNext()) {
+//	    				  HalfEdge he=hist.next();
+//	    				  packData.setVertMark(he.origin.vertIndx,-5);
+//	    			  }
+	    			  CPBase.Elink=new EdgeLink();
+	    			  CPBase.Elink.abutHalfLink(hlink);
+	    			  CommandStrParser.jexecute(packData,"disp -et3cb Elink");
+	    			  return 1;
+	    		  }
+
 	    		  // cookie out to form new DCEL structure
 	    		  PackDCEL cutDCEL=CombDCEL.redchain_by_edge(
 	    				  packData.packDCEL,hlink,packData.packDCEL.alpha);
@@ -6584,9 +6599,8 @@ public class CommandStrParser {
     				  for (int i=1;i<=n;i++) 
     					  packData.add_vert(vert);
     				  packData.enfold(vert);
-    				  int[] flower=packData.getFlower(vert);
-    				  Complex z=packData.getCenter(flower[0]);
-    				  Complex w=packData.getCenter(flower[packData.countFaces(vert)-1]);
+    				  Complex z=packData.getCenter(packData.getFirstPetal(vert));
+    				  Complex w=packData.getCenter(packData.getLastPetal(vert));
     				  cpS.drawEdge(z,w,new DispFlags(null));
     				  count++;
     			  }
@@ -8641,8 +8655,23 @@ public class CommandStrParser {
 	  case 'r': // fall through
 	  case 'R':
 	  {
+		  
+		  // =========== renumber =========
+		  if (cmd.startsWith("renum")) {
+			  if (packData.packDCEL==null) 
+				  throw new ParserException("usage: 'renumber' only for packings "+
+						  "with DCEL structures");
+			  int rslt=CombDCEL.d_reNumber(packData.packDCEL); // packData.getFlower(1132);
+			  if (rslt>0) {
+				  CirclePack.cpb.msg("Renumbering seemed to work");
+				  return rslt;
+			  }
+
+			  return 0;
+		  }
+		  
 	      // =========== rotate ===========
-	      if (cmd.startsWith("rotate")) {
+		  else if (cmd.startsWith("rotate")) {
 	    	  double x=StringUtil.getOneDouble(flagSegs);
 	    	  return packData.rotate(x*Math.PI);
 	      }

@@ -79,10 +79,10 @@ public class RawDCEL {
 			if (pdcel.alpha!=null) {
 				int alp=pdcel.alpha.origin.vertIndx;
 				if (seedstop[alp]<0) { // try for a nghb 
-					int[] flower=pdcel.alpha.origin.getFlower();
-					for (int j=0;j<flower.length;j++) {
-						if (seedstop[flower[j]]==0)
-							base=flower[j];
+					int[] petals=pdcel.alpha.origin.getPetals();
+					for (int j=0;j<petals.length;j++) {
+						if (seedstop[petals[j]]==0)
+							base=petals[j];
 					}
 				}
 				if (seedstop[alp]==0)
@@ -110,9 +110,9 @@ public class RawDCEL {
 			Iterator<Integer> vis=v_curr.iterator();
 			while (vis.hasNext()) {
 				int v=vis.next();
-				int[] flower=pdcel.vertices[v].getFlower();
-				for (int j=0;j<flower.length;j++) {
-					int w=flower[j];
+				int[] petals=pdcel.vertices[v].getPetals();
+				for (int j=0;j<petals.length;j++) {
+					int w=petals[j];
 					if (seedstop[w]<0)
 						gen[w]=-gcount;
 					else if (seedstop[w]==0 && gen[w]==0) {
