@@ -48,8 +48,8 @@ public class CombDCEL {
 	public static PackDCEL extractDCEL(PackDCEL pdcel,HalfLink hlink,HalfEdge alphaEdge) {
 		PackDCEL ndcel=null;
 		try {
-			ndcel=CombDCEL.redchain_by_edge(pdcel,hlink,alphaEdge);
-			CombDCEL.d_FillInside(ndcel);
+			CombDCEL.redchain_by_edge(pdcel,hlink,alphaEdge,false);
+			CombDCEL.d_FillInside(pdcel);
 		} catch (Exception ex) {
 			throw new DCELException(ex.getMessage());
 		}
@@ -242,17 +242,22 @@ public class CombDCEL {
 	}
 	
 	/**
-	 * Form red chain in 'pdcel' based on given 'alphaEdge' and not
-	 * crossing any edge in 'hlink'. I've tried to keep indexing of
-	 * vertices as much as possible. Calling routine should call
-	 * 'd_FillInside' to complete processing of 'pdcel'.
+	 * Modify given 'pdcel' based on red chain formed about 
+	 * given 'alphaEdge' and not crossing any edge in 'hlink'. 
+	 * Vertex count typically changes, but I've tried to 
+	 * save indexing as much as possible. Face and edge indexing
+	 * are not longer reliable. Calling routine should call
+	 * 'd_FillInside' to complete processing. The
+	 * 'prune' flag true means every bdry vertex must have an 
+	 * interior neighbor; this enters just one spot in the code.
 	 * @param pdcel PackDCEL
 	 * @param hlink HalfLink
 	 * @param alphaEdge HalfEdge (if null, revert to 'pdcel.alpha')
-	 * @return 
+	 * @param prune boolean, true, bdry with interor nghbs
+	 * @return int, vertCount
 	 */
-	public static PackDCEL redchain_by_edge(PackDCEL pdcel,
-			HalfLink hlink,HalfEdge alphaEdge) {
+	public static int redchain_by_edge(PackDCEL pdcel,
+			HalfLink hlink,HalfEdge alphaEdge,boolean prune) {
 		
 		// debug? Try to draw things on existing packing
 		//    debug=true;debugPack=CPBase.packings[0];
@@ -388,7 +393,7 @@ public class CombDCEL {
 				// check for degeneracy: triangulation of sphere
 				if (pdcel.redChain.nextRed.nextRed==pdcel.redChain) {
 					pdcel.redChain = null;
-					return pdcel;
+					return pdcel.vertCount;
 				}
 
 				// ****************** main work *****************
@@ -498,13 +503,17 @@ public class CombDCEL {
 						doneV[v]=true;
 					}
 					
-					// else, if 'upspoke' is not red, and one or the other
-					//    end has 'vstat'>=1 (is or touches interior component
-					//    of alpha), add one cclw face about v.
+					// else, if 'upspoke' is not red, and 
+					//   * 'prune' and one or the other end is interior or
+					//   * not 'prune' and one or the other is or touches 
+					//     interior
+					// then add one cclw face about v.
 					else if (isMyEdge(pdcel.redChain,upspoke)==null &&
 								isMyEdge(pdcel.redChain,upspoke.next)==null &&
-								(vstat[upspoke.origin.vertIndx]>=1  || 
-								vstat[upspoke.twin.origin.vertIndx]>=1)) {
+								((prune && (vstat[upspoke.origin.vertIndx]==1 || 
+								vstat[upspoke.twin.origin.vertIndx]==1)) ||
+								(!prune && (vstat[upspoke.origin.vertIndx]>=1 || 
+								vstat[upspoke.twin.origin.vertIndx]>=1)))) {
 						cclw.nextRed=new RedHEdge(upspoke.next);
 						
 						if (debug) {
@@ -560,7 +569,7 @@ public class CombDCEL {
 							if (rtrace.myEdge==rtrace.nextRed.myEdge.twin) {
 								pdcel.redChain=null;
 							}
-							return pdcel;
+							return pdcel.vertCount;
 						}
 						
 						pdcel.redChain=rtrace.prevRed;
@@ -870,7 +879,7 @@ public class CombDCEL {
 //		blueCleanup(pdcel); // try to eliminate blue faces in the 'redChain'
 		
 		// DCELdebug.drawRedChain(pdcel.p,pdcel.redChain);
-		return pdcel;
+		return pdcel.vertCount;
 	}
 		 
 	/** 
@@ -1129,7 +1138,7 @@ public class CombDCEL {
 			
 			// get the other edges of this face (typically 2 others)
 			HalfEdge nxe=hfe.next;
-			int safety=200;
+			int safety=2000;
 			do {
 				nxe.edgeIndx=++etick;
 				tmpEdges.add(nxe);
@@ -2085,8 +2094,6 @@ public class CombDCEL {
 			for (int v=1;v<=p.nodeCount;v++) {
 				if (seed_wrap!=PathManager.path_wrap(p.getCenter(v))) { 
 					vlink.add(v);
-// debugging 6/15
-					p.setVertMark(v,-7);
 				}
 			}
 			
@@ -2118,9 +2125,42 @@ public class CombDCEL {
 			CPBase.Vlink=vlink;
 			CPBase.HLink=hlink;
 		}
+		
 		return hlink; // hlink.size();
 	}
 	
+	/**
+	 * Given 'pdcel' with redchain, we want to "prune" so 
+	 * that every bdry vertex has an interior neighbor. 
+	 * We simply cookie with halfLink as the current 
+	 * red chain and 'prune'=true and then call 'd_FillInside'.
+	 * @param pdcel PackDCEL
+	 * @return int, count of adjustments made (may be zero)
+	 */
+	public static int pruneDCEL(PackDCEL pdcel) {
+		int vcount=pdcel.vertCount;
+		if (pdcel.redChain==null)
+			throw new CombException("usage: 'prune' requires a red chain");
+		HalfLink hlink=new HalfLink();
+		RedHEdge rtrace=pdcel.redChain;
+		do {
+			if (pdcel.isBdryEdge(rtrace.myEdge))
+				hlink.add(rtrace.myEdge);
+			rtrace=rtrace.nextRed;
+		} while (rtrace!=pdcel.redChain);
+		
+		// cookie with 'prune' true
+		CombDCEL.redchain_by_edge(pdcel, hlink, null, true);
+		
+		// see if anything was pruned
+		int diff=vcount-pdcel.vertCount;
+		
+		if (diff>0)
+			CombDCEL.d_FillInside(pdcel);
+		
+		return diff;
+	}
+		
 	/** 
 	 * Remove one face. 
 	 * 

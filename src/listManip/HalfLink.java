@@ -1086,7 +1086,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	
 	/**
 	 * Add 'HalfEdge's which separate 'vlist' vertices from 
-	 * 'alphaIndx'.
+	 * 'alphaIndx'. In the connected component of 'alphaIndx'
 	 * @param pdcel packDCEL
 	 * @param vlist nodeLink
 	 * @return int, count of edges, -1 on error
@@ -1120,13 +1120,6 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			while (cis.hasNext()) {
 				int v=cis.next();
 				vhits[v]=2;
-				
-// debugging
-				pdcel.p.setVertMark(v, -2);
-				// pdcel.p.getFlower(1132);
-				// pdcel.p.getFlower(17987);
-				// pdcel.p.getFlower(17988);
-
 				Vertex vert=pdcel.vertices[v]; 
 				HalfLink slink=vert.getSpokes(null);
 				int num=slink.size();
@@ -1154,39 +1147,10 @@ public class HalfLink extends LinkedList<HalfEdge> {
 						}
 						if (vhits[he.origin.vertIndx]==0) {
 							vhits[he.origin.vertIndx]=1;
-							
-// debugging							
-							pdcel.p.setVertMark(he.origin.vertIndx,-1);
-							
 							nxt.add(he.origin.vertIndx);
 						}
 					}
 				}
-				
-/*
-				for (int j=0;j<num;j++) {
-					HalfEdge he=slink.get(j);
-					int w=he.next.origin.vertIndx;
-					if (vhits[w]<0) {
-						HalfEdge sp=slink.get((j+num-1)%num);
-						if (sp.eutil==0) {
-							add(sp);
-							sp.eutil=1;
-							count++;
-						}
-						sp=slink.get((j+1)%num);
-						if (sp.eutil==0) {
-							add(sp);
-							sp.eutil=1;
-							count++;
-						}
-					}
-					else if (vhits[w]==0){
-						nxt.add(w);
-					}
-				}
-*/				
-				
 			} // while for current list
 		} // while for next list
 			

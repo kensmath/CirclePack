@@ -2577,6 +2577,13 @@ bottom of postscript file.</opt>
 </command>
 
 
+<command cmd="prune">
+<description>If the active packing has a DCEL structure,
+	then this command will prune any boundary vertices
+	which do not have an interior neighbor.
+</description>
+</command>
+	
 <command cmd="puncture" flags="[{v}] [-f {f}]">
 <description>Remove one vertex v or one face f from the packing's 
     complex; default is vertex. The vertex/face must be at

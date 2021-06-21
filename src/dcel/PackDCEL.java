@@ -119,6 +119,14 @@ public class PackDCEL {
 	}
 	
 	/**
+	 * Just call 'fixDCEL_raw' with 'prune' false. 
+	 * @param p PackData
+	 */
+	public void fixDCEL_raw(PackData p) {
+		fixDCEL_raw(p,false);
+	}
+	
+	/**
 	 * Cleanup routine: '*_raw' routines modify dcel 
 	 * structure w/o complete update: 'vertCount', 
 	 * 'vertices', edge connectivity should be in 
@@ -133,15 +141,16 @@ public class PackDCEL {
 	 * Also, need to 'attach' to a packing (usually 
 	 * the current parent) or not if packing is null.
 	 * @param p PackData
+	 * @param prune boolean
 	 */
-	public void fixDCEL_raw(PackData p) {
-		boolean debug=false; // debug=true;
+	public void fixDCEL_raw(PackData p,boolean prune) {
+		boolean debug=false; // debug=true; // prune=false;
 		if (p==null)
 			p=this.p;
 		try {
 		  // may need new red chain
 		  if (redChain==null) {
-			  CombDCEL.redchain_by_edge(this, null, this.alpha);
+			  CombDCEL.redchain_by_edge(this, null, this.alpha,prune);
 		  }
 		  
 		  // to check some consistency of redchain/bdry.
@@ -202,6 +211,12 @@ public class PackDCEL {
 		Iterator<Face> fist=facelist.iterator();
 		while (fist.hasNext()) {
 			Face face=fist.next();
+			
+// debugging
+			if (face==null) {
+				System.err.println("null face at vert "+vert);
+			}
+			
 			int f=face.faceIndx;
 			if (f>0) {
 				f_indices.add(f);

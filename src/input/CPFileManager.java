@@ -58,7 +58,6 @@ public class CPFileManager {
 	
 	// Constructor
 	public CPFileManager() {
-		// debugging
 //		System.out.println("'HomeDirectory' is "+HomeDirectory+";  "+
 //				"'UserDirectory' is "+UserDirectory);
 		if (HomeDirectory==null)

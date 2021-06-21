@@ -291,11 +291,7 @@ public class PackData{
      * @return int, vertCount on success, 0 on failure
      */
     public int attachDCEL(PackDCEL pdcel) {
-    	
-// debugging
-//    	if (vData!=null && vData[11]!=null)
-//    		System.out.println("opening vData[11].rad ="+vData[11].rad);
-    	
+
     	if (pdcel.vertCount>nodeCount)
     		alloc_pack_space(pdcel.vertCount+10,true);
     	
@@ -383,9 +379,6 @@ public class PackData{
 		for (int ov=1;ov<=origNodeCount;ov++) 
 			oldVData[ov]=vData[ov];
 		
-// debugging
-//		System.out.println("oldVDat[11].rad ="+oldVData[11].rad);
-		
 		// allocate new 'vData'
 		vData=new VData[sizeLimit+1];
 		for (int v=1;v<=sizeLimit;v++) 
@@ -445,9 +438,6 @@ public class PackData{
    			}
 			pdcel.setVDataIndices(v);
     	}
-
-// debugging
-//		System.out.println("now, vData[11].rad ="+vData[11].rad);
 
 		// TODO: convert lists before killing 'newOld'??  
 		pdcel.newOld=null;
@@ -9674,7 +9664,7 @@ public class PackData{
 			  }
    			  if (count>0) {
    				  if (redProblem.booleanValue()) { // must build a new red cahin
-   					  pdc=CombDCEL.redchain_by_edge(pdc,null,pdc.alpha);
+   					  CombDCEL.redchain_by_edge(pdc,null,pdc.alpha,false);
    				  }
    				  CombDCEL.d_FillInside(pdc);
    				  return attachDCEL(pdc);

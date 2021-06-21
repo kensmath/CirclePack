@@ -39,6 +39,7 @@ import dcel.DataDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RawDCEL;
+import dcel.RedHEdge;
 import dcel.Vertex;
 import deBugging.DCELdebug;
 import deBugging.LayoutBugs;
@@ -5135,6 +5136,7 @@ public class CommandStrParser {
    					&& packData.alloc_pack_space(packData.nodeCount+1, true) == 0) 
    				  throw new CombException("Pack space allocation failure");
    			
+   			  EdgeLink newV=new EdgeLink();
 	   		  Iterator<Integer> vlist=nodeLink.iterator();
    			  if (packData.packDCEL!=null) {
    				  int origVCount=packData.packDCEL.vertCount;
@@ -5143,12 +5145,17 @@ public class CommandStrParser {
    		   			  Vertex vert=RawDCEL.addVert_raw(packData.packDCEL,w);
    		   			  if (vert!=null) {
    		   				  count++;
-   		   				  packData.setRadius(vert.vertIndx,packData.getRadius(vert.vutil));
+   		   				  newV.add(new EdgeSimple(vert.vertIndx,w));
    		   			  }
   		   		  }
 	   			  // process 
    		   		  if (count>0) {
    		   		  	  packData.packDCEL.fixDCEL_raw(packData);
+   		   			  Iterator<EdgeSimple> eit=newV.iterator();
+   		   			  while (eit.hasNext()) {
+   		   				  EdgeSimple es=eit.next();
+		   				  packData.setRadius(es.v,packData.getRadius(es.w));
+   		   			  }
    		   		  }
    		   		  return count;
    			  }
@@ -5278,7 +5285,7 @@ public class CommandStrParser {
 	   					  ans=RawDCEL.addBary_raw(packData.packDCEL,face,false);
 	   					  xdup[f]=1;
 		   				  if (ans!=0 && face.faceIndx<0)
-		   					  packData.packDCEL.redChain=null; // must redo
+		   					  packData.packDCEL.redChain=null; // redo red
 		   				  count += ans;
 		   			  }
 		   		  }
@@ -5286,7 +5293,7 @@ public class CommandStrParser {
 		   		  if (count==0)
 		   			  return 0;
 		   		  if (packData.packDCEL.redChain==null)
-		   			  CombDCEL.redchain_by_edge(packData.packDCEL,null,null);
+		   			  CombDCEL.redchain_by_edge(packData.packDCEL,null,null,false);
 		   		  CombDCEL.d_FillInside(packData.packDCEL);
 		   		  packData.attachDCEL(packData.packDCEL);
 		   		  return count;
@@ -5625,28 +5632,14 @@ public class CommandStrParser {
 	    		  // identify forbidden edges (and possibly new 'alpha')
 	    		  HalfLink hlink=CombDCEL.d_CookieData(packData,flagSegs);
 	    		  
-// debugging
-	    		  boolean hdebug=false; // hdebug=true;
-	    		  if (hdebug) {
-//	    			  DCELdebug.indexConsistency(packData.packDCEL);
-	    			  Iterator<HalfEdge> hist=hlink.iterator();
-//	    			  while (hist.hasNext()) {
-//	    				  HalfEdge he=hist.next();
-//	    				  packData.setVertMark(he.origin.vertIndx,-5);
-//	    			  }
-	    			  CPBase.Elink=new EdgeLink();
-	    			  CPBase.Elink.abutHalfLink(hlink);
-	    			  CommandStrParser.jexecute(packData,"disp -et3cb Elink");
-	    			  return 1;
-	    		  }
-
 	    		  // cookie out to form new DCEL structure
-	    		  PackDCEL cutDCEL=CombDCEL.redchain_by_edge(
-	    				  packData.packDCEL,hlink,packData.packDCEL.alpha);
-	    		  CombDCEL.d_FillInside(cutDCEL);
-	    		  if (cutDCEL!=null) {
-	    			  packData.attachDCEL(cutDCEL);
-	    			  return cutDCEL.vertCount;
+	    		  CombDCEL.redchain_by_edge(
+	    				  packData.packDCEL,hlink,packData.packDCEL.alpha,true);
+	    		  
+	    		  CombDCEL.d_FillInside(packData.packDCEL);
+	    		  if (packData.packDCEL!=null) {
+	    			  packData.attachDCEL(packData.packDCEL);
+	    			  return packData.packDCEL.vertCount;
 	    		  }
 	    		  return 0;
 	    	  }
@@ -8198,6 +8191,19 @@ public class CommandStrParser {
 	    		  return 0;
 	    	  }
 	    	  CirclePack.cpb.msg("pre_cookie: 'flist' contains the red chain");
+	    	  return 1;
+	      }
+	      
+	      // =========== prune ============
+	      else if (cmd.startsWith("prun")) {
+	    	  if (packData.packDCEL==null) {
+	    		  throw new ParserException("usage: 'prune' requires a DCEL structure");
+	    	  }
+	    	  int rslt=CombDCEL.pruneDCEL(packData.packDCEL);
+	    	  if (rslt>0) {
+	    		  packData.attachDCEL(packData.packDCEL);
+	    		  return rslt;
+	    	  }
 	    	  return 1;
 	      }
 

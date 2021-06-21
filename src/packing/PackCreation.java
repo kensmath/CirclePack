@@ -354,7 +354,7 @@ public class PackCreation {
 		if (n<3)
 			throw new ParserException("'seed' usage: n must be at least 3");
 		PackDCEL pdcel=CombDCEL.seed_raw(n);
-		pdcel=CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha);
+		CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha,false);
 		CombDCEL.d_FillInside(pdcel);
 		pdcel.gamma=pdcel.alpha.twin;
 		PackData p=new PackData(null);
@@ -388,7 +388,7 @@ public class PackCreation {
 		PackDCEL pdcel=CombDCEL.seed_raw(6);
 		PackData p=new PackData(null);
 		pdcel.p=p;
-		pdcel=CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha);
+		CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha,false);
 		for (int k=2;k<=n;k++) {
 			int m=pdcel.vertCount;
 			int ans=RawDCEL.addlayer_raw(pdcel,1,6,m,m);
@@ -2603,7 +2603,7 @@ public class PackCreation {
 	public static PackDCEL pentagonal_dcel(int gens) {
 		PackDCEL base=CombDCEL.seed_raw(5);
 		RawDCEL.swapNodes_raw(base,1,6);
-		CombDCEL.redchain_by_edge(base, null,null);
+		CombDCEL.redchain_by_edge(base, null,null,false);
 		CombDCEL.d_FillInside(base);
 		PackDCEL pdcel=CombDCEL.cloneDCEL(base); 
 		if (gens==0) // single pentagon?

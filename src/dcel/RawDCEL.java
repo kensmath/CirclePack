@@ -728,11 +728,17 @@ public class RawDCEL {
 	}
 
 	/**
-	   * Create a barycenter for face 'f'; 'vutil' 
-	   * gives reference vert. Calling routine should
-	   * throw out 'redChain' if 'f' is ideal face.
+	   * Create a barycenter for face 'f', a new interior
+	   * vertex; 'vutil' gives reference vert. Red chain,
+	   * 'redFlag's, and 'bdryFlag's should normally remain 
+	   * undisturbed. 
+	   * 
+	   * Note: calling routine should throw out 
+	   * 'redChain' if 'f' is ideal face.
+	   * 
 	   * TODO: 'multi-bary' true, then add three vertices
-	   * to the face.
+	   * to the face instead of just one (if the face
+	   * has 3 edges?)
 	   * @param pdcel PackDCEL
 	   * @param f Face
 	   * @param mutli_bary boolean, 
@@ -763,9 +769,6 @@ public class RawDCEL {
 		  for (int j=0;j<(n-1);j++) {
 			  base=polyE.get(j);
 			  base.face=null;
-			  base.twin.myRedEdge=null;
-			  base.twin.origin.bdryFlag=0;
-			  base.twin.origin.redFlag=false;
 			  next_in=new HalfEdge(base.twin.origin);
 	
 			  // link around the face
@@ -786,9 +789,6 @@ public class RawDCEL {
 		  // last face
 		  base=polyE.get(n-1);
 		  base.face=null;
-		  base.twin.myRedEdge=null;
-		  base.twin.origin.bdryFlag=0;
-		  base.twin.origin.redFlag=false;
 		  next_in=new HalfEdge(base.twin.origin);
 		  
 		  base.next=next_in;
@@ -807,6 +807,7 @@ public class RawDCEL {
 	
 		  // fix up 'newV'
 		  newV.halfedge=hold_spoke;
+		  newV.bdryFlag=0;
 		  newV.vutil=newV.halfedge.twin.origin.vertIndx;
 		  pdcel.vertices[node]=newV;
 		  pdcel.vertCount=node;
@@ -1025,7 +1026,7 @@ public class RawDCEL {
 				  }
 				  return count;
 			  }
-			  if (mode==DUPLICATE) {
+			  if (mode==DUPLICATE) { // DCELdebug.redConsistency(pdcel);
 				  count+=RawDCEL.baryBox_raw(pdcel, v1, v2);
 			  }
 			  return count;
@@ -1192,7 +1193,7 @@ public class RawDCEL {
 			RedHEdge base_red = base_twin.twin.myRedEdge;
 			RedHEdge next_red=base_red.nextRed; 
 			RedHEdge prev_red=base_red.prevRed;
-			base_twin.myRedEdge=null;
+			base_twin.twin.myRedEdge=null;
 	
 			// create first square face: prep for iteration.
 			

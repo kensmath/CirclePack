@@ -418,6 +418,7 @@ public class CookieMonster {
 	}
 	
 	/**
+	 * traditional packing:
 	 * Redo the cookie routine: just build new flowers, renumber
 	 * @return PackData, null on error
 	 */
@@ -1388,36 +1389,13 @@ public class CookieMonster {
 
 		Path2D.Double outerPath = null;
 		
-		// debug
-//		PackData tmppd=PackControl.getActivePackData();
-		
 		while (outerPath == null && putbdry.size() > 0) {
-
-			// debugging
-/*			tmppd.elist=new EdgeLink(tmppd);
-			tmppd.flist=new FaceLink(tmppd);
-			tmppd.zlist=new PointLink(tmppd);
-			for (int jj=1;jj<=facecount;jj++) {
-				if (facestat[jj]>0) {
-					tmppd.flist.add(jj);
-					tmppd.zlist.add(new Complex(faceC[jj]));
-				}
-			}
-*/			
 			// debug: 'disp -ffc120 flist -tfc195t2 z zlist;'
 			
 			// start a new closed edge path
 			Vector<HalfEdge> bpath = new Vector<HalfEdge>(0);
 			HalfEdge start = putbdry.remove(0);
 			bpath.add(start);
-			
-			// debug
-/*			
-			EdgeSimple edge=new EdgeSimple(start.origin.vertIndx,start.twin.origin.vertIndx);
-			tmppd.elist.add(edge);
-			String dstr=new String("disp -et3 "+edge.v+" "+edge.w+";");
-			System.err.println(dstr);
-*/
 			
 			HalfEdge nextedge = start.twin.prev.twin;
 			while (!putbdry.contains(nextedge) && nextedge != start) {
@@ -1430,14 +1408,6 @@ public class CookieMonster {
 				curredge = nextedge;
 				putbdry.remove(curredge);
 				bpath.add(curredge);
-				
-				// debug
-/*				
-				edge=new EdgeSimple(curredge.origin.vertIndx,curredge.twin.origin.vertIndx);
-				tmppd.elist.add(edge);
-				dstr=new String("disp -et3 "+edge.v+" "+edge.w+";");
-				System.err.println(dstr);
-*/
 				
 				nextedge = curredge.twin.prev.twin;
 				while (!putbdry.contains(nextedge) && nextedge!=start && nextedge != curredge) {

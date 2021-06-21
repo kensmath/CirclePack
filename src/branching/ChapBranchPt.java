@@ -343,6 +343,7 @@ public class ChapBranchPt extends GenBranchPt {
 	}
 	
 	/**
+	 * traditional packing:
 	 * Normalized position has sister 1 centered at the origin and
 	 * sister 2 centered on the positive real axis, hence usually
 	 * internally tangent at z=1. (Note that it may be that sister2

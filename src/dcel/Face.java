@@ -134,7 +134,7 @@ public class Face {
 			safety--;
 		} while (nxtedge!=edge && safety>0);
 		if (safety==0) 
-			System.out.println("Break out: >10000 edges, face "+faceIndx);
+			throw new CombException("Break out: face "+faceIndx);
 		int []ans=new int[vertlist.size()];
 		Iterator<Integer> vlst=vertlist.iterator();
 		int tick=0;
