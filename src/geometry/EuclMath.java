@@ -215,7 +215,7 @@ public class EuclMath{
 		double c=z1.y-z3.y;
 		double d=z2.y-z3.y;
 		double det=a*d-b*c;
-		if (det<CPBase.GENERIC_TOLER) { // points colinear
+		if (Math.abs(det)<CPBase.GENERIC_TOLER) { // points colinear
 			// TODO: can find two non-zero corners, use them and origin
 			return null;
 		}

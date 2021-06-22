@@ -189,32 +189,11 @@ public class Complex {
 		return x * x + y * y;
 	}
 
-	/** Returns the "argument" of the complex number in -pi to pi.
-	 * Note: changed from code below, 9/07 */
+	/** Returns the "argument" of the complex number in -pi to pi.*/
 	public double arg() {
 		  return Math.atan2(y,x);
 	}
 	
-/* old version
- 	    if (x > 0 && y >= 0)
-			return Math.atan(y / x);
-		if (x < 0 && y >= 0)
-			return Math.atan(y / x) + Math.PI;
-		if (x < 0 && y <= 0)
-			return Math.atan(y / x) + Math.PI;
-		if (x > 0 && y <= 0)
-			return Math.atan(y / x) + 2d * Math.PI;
-		else {
-			if (y > 0)
-				return Math.PI / 2d;
-			if (y < 0)
-				return -Math.PI / 2d;
-			else
-				return 0;
-		}
-	}
-*/
-
 	/** Returns new Complex sum of complex argument and this complex number. */
 	public Complex plus(Complex t) {
 		return new Complex(x + t.x, y + t.y);

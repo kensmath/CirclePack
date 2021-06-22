@@ -19,6 +19,7 @@ import listManip.FaceLink;
 import packing.PackData;
 
 import complex.Complex;
+import dcel.HalfEdge;
 
 /**
  * Static methods to aid in working with euclidean paths,
@@ -259,10 +260,11 @@ public class PathBaryUtil {
 				currFaceIndx=flst.next();
 			
 				// check if segment [start,nextz] actually enters the face
-				currface=p.faces[currFaceIndx];
-				z[0]=p.getCenter(currface.vert[0]);
-				z[1]=p.getCenter(currface.vert[1]);
-				z[2]=p.getCenter(currface.vert[2]);
+				int[] fverts=p.getFaceVerts(currFaceIndx);
+//				currface=p.faces[currFaceIndx];
+				z[0]=p.getCenter(fverts[0]);
+				z[1]=p.getCenter(fverts[1]);
+				z[2]=p.getCenter(fverts[2]);
 				currfbp=new BaryPacket(p,currFaceIndx);
 				currfbp.setStart(EuclMath.e_pt_to_bary(start, z[0],z[1],z[2]));
 				BaryPoint baryNext=EuclMath.e_pt_to_bary(nextz, z[0],z[1],z[2]);
@@ -341,10 +343,10 @@ public class PathBaryUtil {
 					}
 					
 					// else have our new face to try with same 'nextz'
-					currface=p.faces[currFaceIndx];
-					z[0]=p.getCenter(currface.vert[0]);
-					z[1]=p.getCenter(currface.vert[1]);
-					z[2]=p.getCenter(currface.vert[2]);
+					int[] fverts=p.getFaceVerts(currFaceIndx);
+					z[0]=p.getCenter(fverts[0]);
+					z[1]=p.getCenter(fverts[1]);
+					z[2]=p.getCenter(fverts[2]);
 					currfbp=new BaryPacket(p,currFaceIndx);
 					currfbp.setStart(EuclMath.e_pt_to_bary(start,z[0],z[1],z[2]));
 					baryNext=EuclMath.e_pt_to_bary(nextz,z[0],z[1],z[2]);
@@ -378,46 +380,50 @@ public class PathBaryUtil {
 		
     /**
      * 
-     * @param f, current face index
-     * @param code, where previous pt situated
+     * @param f int, current face index
+     * @param code int, where previous pt situated
      * code = 0,1,2 (at vert 0, 1, or 2)
      *      = 12, 31, 23 (edge)
      * @param nextz (only needed if at vertex)
      * @return next face index
      */
     public static int getNextFace(PackData p,int f,int code,Complex p2) {
-    	Face face=p.faces[f];
+    	int[] fverts=p.getFaceVerts(f);
     	int v=0;
     	int w=0;
     	try {
     	if (code<10) { // at corner
-    		v=face.vert[code];
+    		v=fverts[code];
     		return faceFromZ(p,v,p2);
     	}
     	if (code==12) {
-    		w=face.vert[1];
-    		v=face.vert[0];
+    		w=fverts[1];
+    		v=fverts[0];
     	}
     	if (code==31) {
-    		w=face.vert[0];
-    		v=face.vert[2];
+    		w=fverts[0];
+    		v=fverts[2];
     	}
     	if (code==23) {
-    		w=face.vert[2];
-    		v=face.vert[1];
+    		w=fverts[2];
+    		v=fverts[1];
     	}
-    	if (p.isBdry(v) && w==p.kData[v].flower[0])
+    	if (p.isBdry(v) && w==p.getFirstPetal(v))
     		return -1; 
+    	if (p.packDCEL!=null) {
+    		HalfEdge wv=p.packDCEL.findHalfEdge(new EdgeSimple(w,v));
+    		return wv.face.faceIndx;
+    	}
     	return p.getFaceFlower(w,p.nghb(w,v)); // to left of {w,v}
     	} catch(Exception ex) {
 //    		System.out.println("w,v = "+w+" "+v);
-    		throw new CombException("hum??? bad code?");
+    		throw new CombException("hum??? bad code? "+code);
     	}
     }
 	
 	/**
-	 * Return index of face in flower of v which the line from center 
-	 * to p2 enters. If none, return -1 (e.g., out of carrier)
+	 * Return index of face in flower of 'v' which the line from 
+	 * its center to p2 enters. If none, return -1 (e.g., out of carrier)
 	 * @param p
 	 * @param v
 	 * @param p2
@@ -427,15 +433,16 @@ public class PathBaryUtil {
 		int num=p.countFaces(v);
 		Complex me=p.getCenter(v);
 		Complex vp2=p2.minus(me);
+		int[] flower=p.getFlower(v);
 		double arg1;
-		double arg2=p.getCenter(p.kData[v].flower[0]).minus(me).divide(vp2).arg();
+		double arg2=p.getCenter(flower[0]).minus(me).divide(vp2).arg();
 		for (int j=1;j<=num;j++) {
 			arg1=arg2;
-			arg2=p.getCenter(p.kData[v].flower[j]).minus(me).divide(vp2).arg();
+			arg2=p.getCenter(flower[j]).minus(me).divide(vp2).arg();
 			if (arg1<=0 && arg2>0)
 				return p.getFaceFlower(v,j-1);
 		}
-		if (Math.abs(arg2)<EuclMath.OKERR)
+		if (Math.abs(arg2)<EuclMath.OKERR) // ?? not sure what this does
 			return p.getFaceFlower(v,num-1);
 		return -1;
 	}

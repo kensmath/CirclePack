@@ -502,7 +502,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				}
 				else { // whole boundary; note 'starts' is indexed from 1
 					for (int i=1;i<=packData.getBdryCompCount();i++) {
-						int strt=packData.bdryStarts[i];
+						int strt=packData.getBdryStart(i);
 						next=packData.getFirstPetal(strt);
 						add(new EdgeSimple(strt,next));
 						count++;

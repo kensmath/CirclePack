@@ -2841,6 +2841,20 @@ public class PackData{
 	}
 	
 	/**
+	 * Get 'j'th entry in face flower of 'v'
+	 * @param v
+	 * @param j
+	 * @return
+	 */
+	public int getFaceFlower(int v,int j) {
+		int[] fflower=getFaceFlower(v);
+		if (j<0 || j> fflower.length) 
+			throw new CombException("face flower for "+v+
+					" doesn't have index "+j);
+		return fflower[j];
+	}
+
+	/**
 	 * Get array of cclw nghb'ing face indices, closed if
 	 * interior, omitting any ideal faces (there should be
 	 * at most 1).
@@ -2885,20 +2899,7 @@ public class PackData{
 		return sc.center;
 	}
 	
-	/**
-	 * Get 'j'th entry in face flower of 'v'
-	 * @param v
-	 * @param j
-	 * @return
-	 */
-	public int getFaceFlower(int v,int j) {
-		int[] fflower=getFaceFlower(v);
-		if (j<0 || j> fflower.length) 
-			throw new CombException("face flower for "+v+
-					" doesn't have index "+j);
-		return fflower[j];
-	}
-	
+		
 	/**
 	 * Reset the geometry for the cpScreen graphic objects;
 	 * if 'cpScreen' is null, just return;
@@ -2917,6 +2918,18 @@ public class PackData{
 		if (packDCEL!=null)
 			return packDCEL.idealFaceCount;
 		return bdryCompCount;
+	}
+	
+	/**
+	 * Return a vertex on the j_th bdry component;
+	 * indexing starts at 1.
+	 * @param j int
+	 * @return int, bdry vert index
+	 */
+	public int getBdryStart(int j) {
+		if (packDCEL!=null)
+			return packDCEL.idealFaces[j].edge.origin.vertIndx;
+		return bdryStarts[j];
 	}
 	
 	/**
@@ -11986,9 +11999,10 @@ public class PackData{
 
 		  // eucl lengths from 'this'
 		  double A,B,C;
-		  Complex z0 = getCenter(faces[face].vert[0]);
-		  Complex z1 = getCenter(faces[face].vert[1]);
-		  Complex z2 = getCenter(faces[face].vert[2]);
+		  int[] fverts=getFaceVerts(face);
+		  Complex z0 = getCenter(fverts[0]);
+		  Complex z1 = getCenter(fverts[1]);
+		  Complex z2 = getCenter(fverts[2]);
 		  if (hes<=0) { // hyp or eucl
 			  A=z0.minus(z1).abs();
 			  B=z1.minus(z2).abs();
@@ -12002,9 +12016,9 @@ public class PackData{
 		  
 		  // eucl lengths from 'this'
 		  double a,b,c;
-		  z0 = q.getCenter(faces[face].vert[0]);
-		  z1 = q.getCenter(faces[face].vert[1]);
-		  z2 = q.getCenter(faces[face].vert[2]);
+		  z0 = q.getCenter(fverts[0]);
+		  z1 = q.getCenter(fverts[1]);
+		  z2 = q.getCenter(fverts[2]);
 		  if (q.hes<=0) { // hyp or eucl
 			  a=z0.minus(z1).abs();
 			  b=z1.minus(z2).abs();
