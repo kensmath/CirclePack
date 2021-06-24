@@ -1187,7 +1187,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 * @param r double, circle radius
 	 * @param csOut CircleSimple; return results (instantiated by caller)
 	 * @param oriented boolean, if false, use Mob^{-1}
-	 * @return int, 0 on error, results in 'sC' in specified geometry
+	 * @return int, 0 on error; results in hes geom are in 'sC'
 	 */
 	public static int mobius_of_circle(Mobius Mob, int hes, 
 			CircleSimple csIn,CircleSimple csOut, boolean oriented) {

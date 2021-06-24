@@ -3,6 +3,7 @@ import java.awt.Color;
 
 import complex.Complex;
 import exceptions.CombException;
+import geometry.CircleSimple;
 import util.ColorUtil;
 
 
@@ -93,6 +94,14 @@ public class VData{
 		if (bf!=0 && bf!=1)
 			throw new CombException("error setting 'bdryFlag'");
 		bdryFlag=bf;
+	}
+	
+	/**
+	 * Get circle data
+	 * @return CircleSimple
+	 */
+	public CircleSimple getCircleSimple() {
+		return new CircleSimple(center,rad);
 	}
 
 }

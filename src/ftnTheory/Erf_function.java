@@ -32,7 +32,7 @@ public class Erf_function {
 	    	throw new ParserException("packing must be simply connected, with bdry");
 	    }
     	PackData packData=p.copyPackTo(); // make p2 a copy of p1
-	    v=endv=p.bdryStarts[1];
+	    v=endv=p.getBdryStart(1);
 	    boolean keepon=true;
 	    while (v!=endv || keepon) {
 	    	keepon=false;
@@ -45,7 +45,7 @@ public class Erf_function {
 	    	}
 	    	// modulus of derivative is |e^{w^n}| = e^{Re(w)}.
 	    	packData.setRadius(v,C*Math.exp(-w.x)*p.getRadius(v));
-	    	v=p.kData[v].flower[0];
+	    	v=p.getFirstPetal(v);
 	    }
 	    return packData;
 	}

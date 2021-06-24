@@ -768,6 +768,7 @@ public class RawDCEL {
 		  HalfEdge next_in;
 		  for (int j=0;j<(n-1);j++) {
 			  base=polyE.get(j);
+			  base.origin.bdryFlag=0; // becomes interior
 			  base.face=null;
 			  next_in=new HalfEdge(base.twin.origin);
 	
@@ -789,6 +790,7 @@ public class RawDCEL {
 		  // last face
 		  base=polyE.get(n-1);
 		  base.face=null;
+		  base.origin.bdryFlag=0;
 		  next_in=new HalfEdge(base.twin.origin);
 		  
 		  base.next=next_in;
@@ -803,8 +805,6 @@ public class RawDCEL {
 		  next_in.twin=hold_spoke;
 		  hold_spoke.twin=next_in;
 		  
-		  base=polyE.get(0);
-	
 		  // fix up 'newV'
 		  newV.halfedge=hold_spoke;
 		  newV.bdryFlag=0;
@@ -2192,6 +2192,38 @@ public class RawDCEL {
 		pdcel.vertices[w].vertIndx=w;
 		pdcel.vertices[v].vertIndx=v;
 		return 1;
+	}
+	
+	/**
+	 * Wipe out the linked 'RedHEdge's starting with 'redChain': 
+	 * null 'myEdge' references to 'myRedEdge', null 'redChain', 
+	 * orphan all 'RedHEdges' so they can be garbaged. 
+	 * Return 0 if there seems to be a problem -- e.g., the 
+	 * redChain isn't closed.
+	 * @param pdcel PackDCEL
+	 * @param redchain RedHEdge
+	 * @return int count if seems successfull, -count if problem
+	 */
+	public static int wipeRedChain(PackDCEL pdcel,RedHEdge redchain) {
+		int count=0;
+		RedHEdge start=redchain; // so 'redchain' doesn't get garbaged
+		RedHEdge rtrace=redchain;
+		RedHEdge hold=null;
+		int safety=5000;
+		do {
+			safety--;
+			rtrace.myEdge.myRedEdge=null;
+			rtrace.prevRed=null;
+			hold=rtrace.nextRed;
+			rtrace.nextRed=null; // here 'rtrace' should be orphaned
+			count++;
+			rtrace=hold;
+		} while (hold!=redchain && safety>0);
+		pdcel.redChain=null;
+
+		if (safety==0) // didn't close up
+			return -count;
+		return count;
 	}
 	
 }

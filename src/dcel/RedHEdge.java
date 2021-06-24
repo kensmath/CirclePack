@@ -88,6 +88,14 @@ public class RedHEdge {
 	}
 
 	/**
+	 * Return center/rad data
+	 * @return CircleSimple
+	 */
+	public CircleSimple getCircleSimple() {
+		return new CircleSimple(center,rad);
+	}
+	
+	/**
 	 * clone: CAUTION: pointers may be in conflict or outdated.
 	 * @return new RedHEdge
 	 */

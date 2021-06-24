@@ -8,12 +8,14 @@ import math.Mobius;
 import util.ColorUtil;
 
 /**
+ * This is for DCEL structures; compare to 'SideDescription'.
  * A "side" of a complex is a segment of faces in 'redChain'. 
  * A "side-pairing" occurs only when a complex is not simply 
- * connected and then it refers to a pair of segments which are
- * maximal with the property that their lists of red edges are 
- * identified in the complex. In the non-simply connected case 
- * there may also be "border" segments (maximal unpaired segments).
+ * connected and then it refers to a pair of connected edge
+ * segments, each maximal with the property that their lists 
+ * of red edges are identified in the complex. In the 
+ * non-simply connected case there may also be "border" 
+ * segments (maximal connected but unpaired segments).
  * 
  * A linked list 'PackDCEL.pairLink' of 'D_SideData's encodes the 
  * side-pairing information. 

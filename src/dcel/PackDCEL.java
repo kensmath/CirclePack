@@ -674,6 +674,7 @@ public class PackDCEL {
 	 * origin, its other end on the positive real axis. Taking 
 	 * faces in turn, the next face should have two of its 
 	 * vertices in place so we can compute/store the third. 
+	 * After layout, rotate so 'gamma' is on positive y-axis.
 	 * Note: radii are already computed.
 	 * @param faceorder GraphLink
 	 * @return int, count (may exceed 'vertCount' as some vertices
@@ -708,6 +709,9 @@ public class PackDCEL {
 		    	setRad4Edge(face.edge.next.next,sc.rad);
 		    count++;
 	    }
+
+	    double ang=-getVertCenter(gamma).arg()+Math.PI/2.0;
+	    p.rotate(ang);
 	    return count;
 	}
 	

@@ -1,25 +1,22 @@
 package util;
 
-import exceptions.CombException;
-import exceptions.DataException;
-import exceptions.ParserException;
-import geometry.EuclMath;
-
 import java.awt.geom.Path2D;
 import java.util.Iterator;
 import java.util.Vector;
 
 import baryStuff.BaryPacket;
 import baryStuff.BaryPoint;
+import complex.Complex;
+import dcel.HalfEdge;
+import exceptions.CombException;
+import exceptions.DataException;
+import exceptions.ParserException;
+import geometry.EuclMath;
 import komplex.EdgeSimple;
-import komplex.Face;
 import listManip.BaryCoordLink;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import packing.PackData;
-
-import complex.Complex;
-import dcel.HalfEdge;
 
 /**
  * Static methods to aid in working with euclidean paths,
@@ -171,7 +168,6 @@ public class PathBaryUtil {
 		Complex nextz=null;
 		Complex []z=new Complex[3];
 		int currFaceIndx=0;
-		Face currface;
 		int hitResult=0;
 		boolean gothit=false; // true only entering carrier and bdry edge is hit
 		boolean healthy=true;
@@ -261,7 +257,6 @@ public class PathBaryUtil {
 			
 				// check if segment [start,nextz] actually enters the face
 				int[] fverts=p.getFaceVerts(currFaceIndx);
-//				currface=p.faces[currFaceIndx];
 				z[0]=p.getCenter(fverts[0]);
 				z[1]=p.getCenter(fverts[1]);
 				z[2]=p.getCenter(fverts[2]);

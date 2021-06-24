@@ -6554,12 +6554,24 @@ public class PackData{
 	 * @return 0 if 'redChain' 'firstRedEdge' or 'sidePairs' is null
 	 */
 	public int update_pair_mob() throws RedListException, MobException {
-	  if (redChain==null || firstRedEdge==null || sidePairs==null) return 0;
-	  for (int j=0;j<sidePairs.size();j++) {
-		  SideDescription ep=(SideDescription)sidePairs.get(j);
-		  ep.set_sp_Mobius();
-	  }
-	  return 1;
+		if (packDCEL!=null) {
+			if (packDCEL.redChain==null || packDCEL.pairLink==null) {
+				Iterator<D_SideData> dsis=packDCEL.pairLink.iterator();
+				while (dsis.hasNext()) {
+					D_SideData dsdata=dsis.next();
+					dsdata.set_sp_Mobius();
+				}
+			}
+			return 1;
+		}
+		
+		// traditional
+		if (redChain==null || firstRedEdge==null || sidePairs==null) return 0;
+		for (int j=0;j<sidePairs.size();j++) {
+			SideDescription ep=(SideDescription)sidePairs.get(j);
+			ep.set_sp_Mobius();
+		}
+		return 1;
 	} 
 
 	/** 
@@ -10690,12 +10702,14 @@ public class PackData{
 	  
 	  /** 
 	   * Apply Mobius Mob (oriented), or inverse (!oriented) to
-	   * specified list of circles. May have to consider redchain and
-	   * side-pairing adjustments, also. If 'red_flag' is true (default),
-	   * then adjust redchain circle centers; if sp_flag is true (default), 
-	   * also recompute the side-pairing maps. (Note, if Mob is one of the
-	   * side-pairing maps, then application will simply permute the others, 
-	   * so sp_flag is turned off, eg., when applying covering maps.)
+	   * specified list of circles. If 'red_flag' (default),
+	   * adjust selected redchain circle centers; if sp_flag is 
+	   * true (default), also recompute the side-pairing maps.
+	   * For hyperbolic ideal circles, also adjust the negative
+	   * radius (which reflects euclidean radius of horocycle). 
+	   * (Note, if Mob is one of the side-pairing maps, then 
+	   * application will simply permute the others, so sp_flag 
+	   * is turned off, eg., when applying covering maps.)
 	   * @param Mob Mobius
 	   * @param vertlist NodeLink
 	   * @param oriented boolean, false, use Mob^{-1}
@@ -10706,15 +10720,55 @@ public class PackData{
 	  public int apply_Mobius(Mobius Mob,NodeLink vertlist,
 	  			boolean oriented,boolean red_flag,boolean sp_flag) {
 	    int count=0;
-
 	    Iterator<Integer> vlist=vertlist.iterator();
-
 	    CircleSimple sc=new CircleSimple(true);
+
+	    if (packDCEL!=null) {
+	    	// record 'vertlist' in 'vutil'
+	    	for (int v=1;v<=nodeCount;v++) 
+	    		packDCEL.vertices[v].vutil=0;
+		    while (vlist.hasNext()) {
+		    	packDCEL.vertices[vlist.next()].vutil=1;
+		    }
+		    
+		    // apply to 'vData'
+	    	for (int v=1;v<=nodeCount;v++) {
+	    		if (packDCEL.vertices[v].vutil==1) {
+	    			CircleSimple circle=vData[v].getCircleSimple();
+	    			count += Mobius.mobius_of_circle(Mob,hes,circle,
+		 	  	       sc,oriented);
+	    			vData[v].center=sc.center;
+	    			vData[v].rad=sc.rad;
+	    		}
+	    	}
+	    	
+	    	// apply to selected vertices in red chain
+	    	if (packDCEL.redChain!=null && red_flag) {
+	    		RedHEdge rtrace=packDCEL.redChain;
+	    		do {
+	    			if (rtrace.myEdge.origin.vutil==1) {
+		    			CircleSimple circle=rtrace.getCircleSimple();
+		    			count += Mobius.mobius_of_circle(Mob,hes,circle,
+			 	  	       sc,oriented);
+	    				rtrace.setCenter(sc.center);
+	    				rtrace.setRadius(sc.rad);
+	    			}
+    				rtrace=rtrace.nextRed;
+	    		} while (rtrace!=packDCEL.redChain);
+
+	    		// update the side-pairing (not for spherical)
+	    		if (hes<=0 && sp_flag)
+	    			update_pair_mob();
+	    	}
+	    	return count;
+	    }
+
+	    // traditional packing
 	    while (vlist.hasNext()) {
 	        int v=(Integer)vlist.next();
 	        
 	        count += Mobius.mobius_of_circle(Mob,hes,getCenter(v),getRadius(v),
-	  	       sc,oriented);
+	 	  	       sc,oriented);
 	        Complex Z=new Complex(sc.center);
 	        double R=sc.rad;
 	        if (hes==0 && R<0) R=Math.abs(R);
@@ -11104,11 +11158,11 @@ public class PackData{
   	  	setGeometry(1);
   	  	if (packDCEL!=null) {
   	  		try { 
+  	  			RawDCEL.wipeRedChain(packDCEL,packDCEL.redChain);
   	  			RawDCEL.addBary_raw(packDCEL,packDCEL.idealFaces[1],false);
   	  		} catch(Exception ex) {
   	  			throw new CombException("'proj' dcel error");
   	  		}
-  	  		packDCEL.redChain=null;
   	  		packDCEL.fixDCEL_raw(this);
   	  	}
   	  	else {
@@ -14109,22 +14163,57 @@ public class PackData{
 	}
 
 	  /**
-		 * Rotate pack p by given angle.
+		 * Rotate pack p by given angle. Note that radii
+		 * don't change.
 		 * @param ang double, in radians
 		 * @return 1
 		 */
 	  public int rotate(double ang) {
 		  Mobius mob=Mobius.rotation(ang/Math.PI);
-		  if (hes>0) {
-		      for (int i=1;i<=nodeCount;i++) {
-		    	  Complex z=getCenter(i);
-		    	  setCenter(i,z.x+ang,z.y);
-		      }
-		      return 1;
+		  if (packDCEL!=null) {
+			  if (hes>0) { // sphere
+				  for (int v=1;v<=nodeCount;v++) {
+					  Complex z=vData[v].center;
+					  vData[v].center=new Complex(z.x+ang,z.y);
+				  }
+				  if (packDCEL.redChain!=null) {
+					  RedHEdge rtrace=packDCEL.redChain;
+					  do {
+						  Complex z=rtrace.getCenter();
+						  if (z!=null)
+							  rtrace.setCenter(new Complex(z.x+ang,z.y));
+						  rtrace=rtrace.nextRed;
+					  } while(rtrace!=packDCEL.redChain);
+				  }
+				  return 1;
+			  }
+			  
+			  // hyp/eucl
+			  for (int v=1;v<=nodeCount;v++) 
+				  vData[v].center=mob.apply(vData[v].center);
+			  if (packDCEL.redChain!=null) {
+				  RedHEdge rtrace=packDCEL.redChain;
+				  do {
+					  Complex z=rtrace.getCenter();
+					  if (z!=null)
+						  rtrace.setCenter(mob.apply(z));
+					  rtrace=rtrace.nextRed;
+				  } while(rtrace!=packDCEL.redChain);
+			  }
+			  return 1;
 		  }
-	      for (int i=1;i<=nodeCount;i++)
-	    	  setCenter(i,mob.apply(getCenter(i)));
-	      return 1;
+	      
+	      // traditional
+		  if (hes>0) {
+			  for (int i=1;i<=nodeCount;i++) {
+				  Complex z=getCenter(i);
+				  setCenter(i,z.x+ang,z.y);
+			  }
+			  return 1;
+		  }
+		  for (int i=1;i<=nodeCount;i++)
+			  setCenter(i,mob.apply(getCenter(i)));
+		  return 1;
 	  } 
 
 	  /**
@@ -15837,9 +15926,9 @@ public class PackData{
 	 } 
 	   
 	 /**
-		 * If hyperbolic, apply a Mobius trans of disc putting ctr at origin. If
-		 * euclidean, translate. If sphere, rigid Mobius moves ctr to north pole.
-		 */
+	  * If hyperbolic, apply a Mobius trans of disc putting ctr at origin. If
+	  * euclidean, translate. If sphere, rigid Mobius moves ctr to north pole.
+	  */
 	public int center_point(Complex ctr) {
 		Complex z1, z2;
 		Complex z3 = new Complex(0.0);

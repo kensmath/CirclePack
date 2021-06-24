@@ -128,31 +128,7 @@ public class SideDescription{
     	return 1;
     }
     
-    /**
-     * Search 'pairLink' to find the 'SideDescription' for the 
-     * "side" of the complex which contains 'RedList' redface;
-     * return null on failure. 
-     * @param pairLink PairLink
-     * @param redface RedList (or may be 'RedEdge')
-     * @return 'SideDescription' of containing side or null on failure
-     */
-    public static SideDescription which_side(PairLink pairLink,RedList redface) {
-    	if (pairLink==null || pairLink.size()==0) return null;
-    	Iterator<SideDescription> pl=pairLink.iterator();
-    	SideDescription ep=null;
-    	while (pl.hasNext()) {
-    		ep=(SideDescription)pl.next();
-    		RedEdge rdl=ep.startEdge;
-    		if (rdl==null) return null;
-    		do {
-    			if (redface==(RedList)rdl) return ep;
-    			rdl=rdl.nextRed;
-    		} while (rdl!=ep.endEdge);
-    	}
-    	return null; // didn't find it
-    }
-
-    /**
+     /**
      * Return the vertex that starts this side
      * @return
      */

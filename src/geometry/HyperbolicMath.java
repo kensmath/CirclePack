@@ -201,7 +201,7 @@ public class HyperbolicMath{
     double e_rad;
     Complex e_center=new Complex(0.0);
     
-    // horocycle?
+    // horocycle? (x_rad is negative of eucl radius)
     if (x_rad<0.0) {
     	int warning_flag=1;
     	e_rad=-x_rad;
@@ -222,7 +222,7 @@ public class HyperbolicMath{
 
     // TODO: fixup: temp conversion 
     double s_rad=x_to_s_rad(x_rad);
-    if (s_rad<=0) { // inf hyp radius (usually is negative of eucl radius)
+    if (s_rad<=0) { // means x_rad<0, horocycle (usually is minus eucl rad)
         e_center=h_center.times(1.0+s_rad);
         e_rad=(-s_rad); // assumes -s_rad is meaningful
         return new CircleSimple(e_center,e_rad,1);
