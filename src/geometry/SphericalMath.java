@@ -653,68 +653,78 @@ public static double vec_norm(double X[]){
   }
   
   /** 
-   * Projects circles from sphere to plane, when possible. Note
-   * that our 'stereographic projection' is from the south pole.
-   * Circles properly enclosing infinity (south pole) gets an 
-   * antipital point of z as its fake center and -(Math.PI-rad) as
-   * its fake radius, indicating that the outside of the resulting 
-   * eucl circle is actually our disc -- generally, calling routine
-   * needs to change this negative sign. Note: we don't permanently store the
-   * negative radius, so we loose track that eucl radii and center
-   * are fake; the user must be sure to use this info when it's
-   * available or make provisions to save it somehow. Also, a circle 
-   * essentially passing through infinity will be given a small expansion
-   * in radius to get euclidean data, but of course it's fake. 
-   * return an error CircleSimple if setting negative radius. 
-   * @param z Complex (theta,phi) center
-   * @param r double spherical radius
+   * Project circles from sph to plane. (Recall, our 
+   * 'stereographic projection' is from south pole.)
+   * Circles properly enclosing infinity (south pole) 
+   * gets fake eucl data: start with antipodal point 
+   * of z as fake sph center and (Math.PI-rad) as fake 
+   * sph radius, then convert to eucl. 'flipflag==-1'
+   * means the outside of resulting circle is actually 
+   * the intended disc; the user must use the flipflag
+   * info when available or make provisions to save it.
+   * Also, a circle essentially passing through infinity will 
+   * be given a small expansion to get fake eucl data.
+   * (Often, calling routine expects negative radii,
+   * but now the calling routine must change sign if
+   * 'flipflag==-1'.)
+   * @param z Complex, (theta,phi) center
+   * @param r double, sph radius
    * @return CircleSimple
   */
   public static CircleSimple s_to_e_data(Complex z,double r) {
-    int flipflag=1;
+    int flipflag=1; // set to -1 if south pole enclosed
     double er; // new radius
-    double []V;
-    double m,RR,rr,up,down;
     Complex e; // new center
 
-    V=s_pt_to_vec(z);
-    if (Math.abs(z.y+r-Math.PI)<S_TOLER) /* essentially hit's infinity: 
-  					   increment r slightly and proceed. */
-      r += 2.0*S_TOLER; 
-    if ((z.y+r)>=(Math.PI+S_TOLER)) { // encloses infinity 
-        r=Math.PI-r;
+    double[] V=s_pt_to_vec(z); // unit 3-vector
+    
+    // essentially passes through infinity? 
+    if (Math.abs(z.y+r-Math.PI)<S_TOLER) // increment r slightly, proceed
+    	r += 2.5*S_TOLER;
+    
+    // encloses infinity?
+    if ((z.y+r)>=(Math.PI+S_TOLER)) {
+        r=Math.PI-r; // fake radius
         V[0] *= (-1.0);
         V[1] *= (-1.0);
         V[2] *= (-1.0);
-        z=proj_vec_to_sph(V[0],V[1],V[2]);
+        z=proj_vec_to_sph(V[0],V[1],V[2]); // fake center
         flipflag=-1;
-      }
-    up=z.y+r;
-    down=z.y-r;
-    if (Math.abs(z.y)<S_TOLER) { // essentially centered at np 
+    }
+    
+    // z-coords of bdry points below/above center
+    double up=z.y+r; // below
+    double down=z.y-r; // above
+    
+    // essentially centered at np 
+    if (Math.abs(z.y)<S_TOLER) {
         er=Math.sin(up)/(1.0+Math.cos(up));
         e=new Complex(0.0);
-        if (flipflag<0) er *= -1.0;
         return new CircleSimple(e,er,flipflag);
     }
-    if (Math.abs(z.y-Math.PI)< S_TOLER) {
-      /* essentially centered at sp, radius must be small since
-         the circle wasn't flipped, so give it huge negative radius. */
-        er=-100000;
+    
+    // essentially centered at sp, but not flipped.
+    if (Math.abs(z.y-Math.PI)< S_TOLER && flipflag!=-1) {
+    	// radius must be extremely small, treat as though
+    	// it encloses sp, so fake center and huge fake radius.
+        er=100000;
         e=new Complex(0.0);
-        return new CircleSimple(e,er,-1);
-      }
+        flipflag=-1;
+        return new CircleSimple(e,er,flipflag);
+    }
+    
+    // essentially passes through infinity, so decrease 'up'.
     if (Math.abs(up-Math.PI)< .00001) {
-      /* circle essentially passes through infinity, so decrease up
-         slightly */
-        up -= .00001;
-      }
-    RR=Math.sin(up)/(1.0+Math.cos(up));
-    rr=Math.sin(down)/(1.0+Math.cos(down));
+        up -= .000015;
+    }
+    
+    // proceed
+    double RR=Math.sin(up)/(1.0+Math.cos(up));
+    double rr=Math.sin(down)/(1.0+Math.cos(down));
     er=Math.abs(RR-rr)/2.0;
-    if (flipflag<0) er *= -1.0;
-    m=(RR+rr)/2.0;
+    double m=(RR+rr)/2.0;
     e=new Complex(V[0]*m/Math.sin(z.y),V[1]*m/Math.sin(z.y));
+    
     return new CircleSimple(e,er,flipflag);
   }
   		

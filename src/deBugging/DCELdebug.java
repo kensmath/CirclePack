@@ -494,6 +494,16 @@ public class DCELdebug {
 	}
 	
 	/**
+	 * print rad/center
+	 * @param p
+	 * @param v
+	 */
+	public static void printRadCenter(PackDCEL pdcel,int v) {
+		System.out.println("Rad/Center for v="+v+": rad="+
+				pdcel.p.getRadius(v)+" / "+pdcel.p.getCenter(v));
+	}
+	
+	/**
 	 * Given a red edge, draw it in red on packing p's screen
 	 * @param p PackData
 	 * @param redge RedHEdge

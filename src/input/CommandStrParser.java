@@ -39,7 +39,6 @@ import dcel.DataDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RawDCEL;
-import dcel.RedHEdge;
 import dcel.Vertex;
 import deBugging.DCELdebug;
 import deBugging.LayoutBugs;
@@ -49,6 +48,7 @@ import exceptions.DataException;
 import exceptions.InOutException;
 import exceptions.JNIException;
 import exceptions.LayoutException;
+import exceptions.MiscException;
 import exceptions.MobException;
 import exceptions.ParserException;
 import exceptions.VarException;
@@ -5685,7 +5685,8 @@ public class CommandStrParser {
 	        items=(Vector<String>)flagSegs.get(0);
 	        String str=(String)items.get(0);
 	        if (StringUtil.isFlag(str)) {
-	            if (!str.startsWith("-u")) throw new ParserException("usage: must start with -u");
+	            if (!str.startsWith("-u")) 
+	            	throw new ParserException("usage: must start with -u");
 	            ctr2=new Complex(0.0);
 	            CPrad2=1.0;
 	            u_flag=true;
@@ -5693,13 +5694,17 @@ public class CommandStrParser {
 	        }
 	        NodeLink vertlist=new NodeLink(packData,items);
 	        int v1=(Integer)vertlist.get(0);
-	        if (packData.hes<0) packData.geom_to_e(); 
+	        if (packData.hes<0) 
+	        	packData.geom_to_e(); 
 	        Complex ctr1=packData.getCenter(v1);
 	        double CPrad1=packData.getRadius(v1);
 	        if (packData.hes>0) {
 	      	CircleSimple sc=SphericalMath.s_to_e_data(ctr1,CPrad1);
 	      	ctr1=new Complex(sc.center);
 	      	CPrad1=sc.rad;
+	      	if (sc.flag==-1) {
+	      		CPrad1 *=-1.0;
+	      	}
 	        }
 	        if (!u_flag) { // use v2
 	            int v2=(Integer)vertlist.get(1); // not -u, so get w
@@ -5709,6 +5714,9 @@ public class CommandStrParser {
 	            	CircleSimple sc=SphericalMath.s_to_e_data(ctr2,CPrad2);
 	            	ctr2=new Complex(sc.center);
 	            	CPrad2=sc.rad;
+	    	      	if (sc.flag==-1) {
+	    	      		CPrad2 *=-1.0; // disc is outside of circle
+	    	      	}
 	            }
 	        }
 	        Mobius mob=Mobius.cir_invert(ctr1,CPrad1,ctr2,CPrad2);
@@ -8021,7 +8029,8 @@ public class CommandStrParser {
 					return 1;
 				}
 				NSpole nsPoler=new NSpole(packData);  // routines are here
-				return nsPoler.parseNSpole(flagSegs);
+				int rslt=nsPoler.parseNSpole(flagSegs);
+				return rslt; 
 	      }
 	      break;
 	  } // end of 'n' and 'N'

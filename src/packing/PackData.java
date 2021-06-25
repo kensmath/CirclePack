@@ -7987,7 +7987,9 @@ public class PackData{
 	}
 	  
 	/** 
-	 * Convert this packing centers/radii to eucl, set geometry to euclidean.
+	 * Convert this packing centers/radii to eucl, set geometry
+	 * to euclidean. In spherical case, some discs may be outside
+	 * their circles.
 	 * Note: does NOT adjust 'CPScreen' geometry.
 	 */ 
 	public int geom_to_e() {
@@ -8018,10 +8020,13 @@ public class PackData{
 				}
 			}
 		} else if (hes > 0) { // sph
+			// Note: sc.flag==-1 means disc is outside of circle
 			for (int v = 1; v <= nodeCount; v++) {
 				sc = SphericalMath.s_to_e_data(getCenter(v), getRadius(v));
 				setCenter(v,sc.center);
-				setRadius(v,Math.abs(sc.rad));
+				if (sc.flag==-1) 
+					sc.rad *=-1.0; // this may not signal what we want
+				setRadius(v,sc.rad);
 			}
 			if (packDCEL==null && (trace = redChain) != null) {
 				try {
@@ -8030,7 +8035,9 @@ public class PackData{
 						keepon = false;
 						sc = SphericalMath.s_to_e_data(trace.center, trace.rad);
 						trace.center = sc.center;
-						trace.rad = Math.abs(sc.rad);
+						trace.rad = sc.rad;
+						if (sc.flag==-1)
+							trace.rad *=-1.0; // this may not signal what we want
 						trace = trace.next;
 					}
 				} catch (Exception ex) {

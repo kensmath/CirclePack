@@ -212,9 +212,8 @@ public class PackDCEL {
 		while (fist.hasNext()) {
 			Face face=fist.next();
 			
-// debugging
 			if (face==null) {
-				System.err.println("null face at vert "+vert);
+				throw new DCELException("There is a null face for vert "+vert);
 			}
 			
 			int f=face.faceIndx;

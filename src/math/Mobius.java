@@ -580,21 +580,30 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			Z2=sC.center;
 			R2=sC.rad;
 		}
-		if (hes1>0) {
+		if (hes1>0) { // note: disc may be outside circle
 			sC=SphericalMath.s_to_e_data(z1, r1);
 			z1=sC.center;
 			r1=sC.rad;
+			if (sC.flag==-1)
+				r1 *=-1.0;
 			sC=SphericalMath.s_to_e_data(z2, r2);
 			z2=sC.center;
 			r2=sC.rad;
+			if (sC.flag==-1)
+				r2 *=-1.0;
 		}		
-		if (hes2>0) {
+		if (hes2>0) { // note: disc may be outside circle
 			sC=SphericalMath.s_to_e_data(Z1, R1);
 			Z1=sC.center;
 			R1=sC.rad;
+			if (sC.flag==-1)
+				R1 *=-1.0;
 			sC=SphericalMath.s_to_e_data(Z2, R2);
 			Z2=sC.center;
 			R2=sC.rad;
+			if (sC.flag==-1)
+				R2 *=-1.0;
+			
 		}
 		
 		Complex vec=z2.minus(z1);

@@ -1,6 +1,7 @@
 package math;
 
 import complex.Complex;
+import exceptions.MiscException;
 import geometry.CircleSimple;
 import geometry.SphericalMath;
 
@@ -58,7 +59,7 @@ public class CirMatrix extends Mobius {
 	
 	// for eucl data
 	public CirMatrix(Complex z,double r) { // for interior eucl circle
-		super();
+		super(); // a already set to 1.0
 		this.b=z.conj().times(-1.0);
 		this.c=z.times(-1.0);
 		this.d=new Complex((double)z.absSq()-r*r);
@@ -118,25 +119,30 @@ public class CirMatrix extends Mobius {
 		// basic normalization
 		if (outC.a.abs()<CM_TOLER) // straight (within tolerance)?
 			outC.a=new Complex(0.0);
-		else { // regular circle, set a to 1
+		
+		 // this is a regular circle with a = +1
+		else {
 			Complex scalar=outC.a.reciprocal();
 			outC.a=new Complex(1.0);
 			outC.b=outC.b.times(scalar);
 			outC.c=outC.c.times(scalar);
 			outC.d=outC.d.times(scalar);
-		}
+		} 
 		
-		// Is input C a regular circle? See if center is inside outC
+		// See if center of input circle C is inside outC.
+		//   Note: -(C.c)*(C.a.x)=z0 is the center of eucl circle C
+		//   (whether C.a=+-1). 
 		if (C.a.abs()>CM_TOLER) {
-			double cent_inside=pt_inside(outC,MM.apply(C.c.times(-1.0)));
+			double cent_inside=pt_inside(outC,MM.apply(C.c.times(-1.0*C.a.x)));
 			if (cent_inside*C.a.x<0.0) { // put on same side if both are circles
 				outC.a=outC.a.times(-1.0);
-				outC.b=outC.b.times(-1.0);
+				outC.b=outC.b.times(-1.0); // cent_inside=1.0;
 				outC.c=outC.c.times(-1.0);
 				outC.d=outC.d.times(-1.0);
 			}
 			return outC;
 		}
+		
 		// else C is a line
 		
 		// is outC a regular circle? reverse procedure above
@@ -206,6 +212,8 @@ public class CirMatrix extends Mobius {
 		CircleSimple sc = SphericalMath.s_to_e_data(center, rad);
 		Complex ez = sc.center;
 		double R = sc.rad;
+		if (sc.flag==-1)
+			R *=-1.0; // set negative
 			
 		// this represents the circle
 		C.a=new Complex(1.0);
@@ -234,12 +242,15 @@ public class CirMatrix extends Mobius {
 		
 		if (Double.isNaN(pt.x) || Double.isNaN(pt.y))
 			pt.x=pt.y=1000000000.0;
+		
+		if (Math.abs(C.a.abs()-1.0)>.000000000001) 
+			throw new MiscException("'C' does not seem to be normalized.");
 
 		double ans=1.0;
 		
 		// regular circle? C.a=+-1
 		if (C.a.abs()>CM_TOLER) {
-			double rad=Math.sqrt(C.b.absSq()-C.d.x);
+			double rad=Math.sqrt(C.a.x*(C.b.absSq()-C.d.x));
 			if (pt.abs()>100000000.0)
 				ans=-1.0;
 			else {

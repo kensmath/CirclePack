@@ -472,7 +472,7 @@ public class CookieMonster {
 		// temporary storage for new vertices and their flowers
 		Vector<NewVertData> newFlowers=new Vector<NewVertData>(10);
 		int []old2new=new int[p.nodeCount+1];
-		NodeLink debugV=new NodeLink(); // debugging help
+		NodeLink debugV=new NodeLink(); // debug help
 		
 		// build NewVertData 'petals'
 		int newIndx=1;

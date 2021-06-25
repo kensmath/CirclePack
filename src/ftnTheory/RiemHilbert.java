@@ -33,9 +33,10 @@ public class RiemHilbert extends PackExtender {
 	
 	public static final int THICKNESS=3;
 	public int bdryCount;
-	public Vector<RH_curve> restCurves;     // vector of curves 
-	public VertexMap vertCurve;             // 'edge' {v,j} simply associates curve j with vertex v
-	public static RH_curve defaultCurve=new RH_curve(new Complex(0.0),1.0); // default is unit circle
+	public Vector<RH_curve> restCurves; // vector of curves 
+	public VertexMap vertCurve;        // 'edge' {v,j}, associate curve j with 'v'
+	public static RH_curve defaultCurve= // default is unit circle
+			new RH_curve(new Complex(0.0),1.0); 
 	
 	// Constructor
 	public RiemHilbert(PackData p) {
@@ -184,7 +185,10 @@ public class RiemHilbert extends PackExtender {
 	}
 	
 	/**
-	 * Signed distance from center to curve: >=0 if bdry vert 'v' has center inside/on 
+	 * TODO: Not used; would need work, esp. in sph case
+	 * 
+	 * Signed distance from center of 'v' to curve:
+	 * >=0 if bdry vert 'v' has center inside/on 
 	 * its restriction curve; else < 0.
 	 * @param v bdry vertex
 	 * @return double signed distance
@@ -195,6 +199,7 @@ public class RiemHilbert extends PackExtender {
 		if (packData.hes<0) {
 			CircleSimple sc =HyperbolicMath.h_to_e_data(
 					packData.getCenter(v),packData.getRadius(v));
+			// what if sc.flag==-1? outside as disc
 			cent=sc.center;
 		}
 		else if (packData.hes>0) {
@@ -214,7 +219,7 @@ public class RiemHilbert extends PackExtender {
 	/**
 	 * Signed distance from circle to its curve. Plus: lies inside curve,
 	 * minimum distance. Negative: negative of (roughly) max distance to
-	 * @param v
+	 * @param v int
 	 * @return signed distance
 	 */
 	public double circleDistance(int v) {
@@ -228,6 +233,7 @@ public class RiemHilbert extends PackExtender {
 		else if (packData.hes>0) {
 			CircleSimple sc =SphericalMath.s_to_e_data(
 					packData.getCenter(v),packData.getRadius(v));
+			// what if sc.flag==-1? outside as disc
 			cent=sc.center;
 		}
 		else cent=packData.getCenter(v);
@@ -348,6 +354,7 @@ public class RiemHilbert extends PackExtender {
 	 * outside of the curve, blue that it lies fully inside. The
 	 * darker the shading, the further out/in (using radius as a
 	 * reference). Circle bdry color is that of its curve.
+	 * TODO: not dependable in spherical geometry.
 	 * @param vertlist
 	 * @return
 	 */

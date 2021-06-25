@@ -11,6 +11,7 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
 import exceptions.DataException;
+import exceptions.MiscException;
 import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.HyperbolicMath;
@@ -671,8 +672,14 @@ public class SchwarzMap extends PackExtender {
 					for (int j=0;j<3;j++) {
 						int v=mytri.vert[j];
 						sC = SphericalMath.s_to_e_data(packData.getCenter(v), packData.getRadius(v));
-						mytri.setCenter(sC.center,j);
-						mytri.setRadius(sC.rad,j);
+						if (sC.flag!=-1) { // normal case
+							mytri.setCenter(sC.center,j);
+							mytri.setRadius(sC.rad,j);
+						}
+						else { // encircles infinity?
+							mytri.setCenter(sC.center,j);
+							mytri.setRadius(-sC.rad,j);
+						}
 					}
 				}
 				hitfaces[baseface]=1;
@@ -1069,12 +1076,15 @@ public class SchwarzMap extends PackExtender {
 							Complex ctr1=domainTri[f].getCenter(jf1);
 							Complex ctr=domainTri[f].getCenter(jf);
 							if (packData.hes>0) { // sph
-								CircleSimple sC=SphericalMath.s_to_e_data(ctr1,domainTri[f].getRadius(jf1));
-								ctr1=sC.center;
-								sC=SphericalMath.s_to_e_data(ctr,domainTri[f].getRadius(jf));
-								ctr=sC.center;
+								CircleSimple sC1=SphericalMath.s_to_e_data(ctr1,domainTri[f].getRadius(jf1));
+								ctr1=sC1.center;
+								CircleSimple sC2=SphericalMath.s_to_e_data(ctr,domainTri[f].getRadius(jf));
+								ctr=sC2.center;
+								if (sC1.flag==-1 || sC2.flag==-1)
+									throw new MiscException("A disc contains infinity: "+
+											"Schwarz not ready for this.");
 							}
-							if (packData.hes<0) {
+							if (packData.hes<0) { // hyp
 								CircleSimple sC=HyperbolicMath.h_to_e_data(ctr1,domainTri[f].getRadius(jf1));
 								ctr1=sC.center;
 								sC=HyperbolicMath.h_to_e_data(ctr,domainTri[f].getRadius(jf));
