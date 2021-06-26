@@ -23,6 +23,8 @@ public class VertexMap extends EdgeLink {
 	}
 
 	public boolean add(EdgeSimple edge) {
+		if (edge==null)
+			return false;
 		return super.add(edge);
 	}
 	

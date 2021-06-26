@@ -104,6 +104,8 @@ public class NodeLink extends LinkedList<Integer> {
 	}
 	
 	public boolean add(Integer v) {
+		if (v==null) 
+			return false;
 		if ((packData!=null && v.intValue()>0 && v.intValue()<=vCount) || packData==null)
 			return super.add(v);
 		return false;

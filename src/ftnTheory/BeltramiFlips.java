@@ -6,19 +6,19 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.Vector;
 
+import allMains.CirclePack;
+import circlePack.PackControl;
+import complex.Complex;
+import dcel.HalfEdge;
+import dcel.RawDCEL;
+import exceptions.DataException;
+import exceptions.ParserException;
+import geometry.EuclMath;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
-import allMains.CirclePack;
-import circlePack.PackControl;
-
-import complex.Complex;
-
-import exceptions.DataException;
-import exceptions.ParserException;
-import geometry.EuclMath;
 
 /**
  * Suppose that it is shown that the maps associated with
@@ -278,29 +278,44 @@ public class BeltramiFlips extends PackExtender {
 	/**
 	 * Get the 4 angles for the quad determined by edge {v,w} 
 	 * after locations are adjusted by affine map associated 
-	 * to Beltrami coeff. NOTE: use coeff for the centroid of 
-	 * the four vertices.
+	 * to Beltrami coeff. NOTE: use coeff attached to the 
+	 * centroid of the four vertices. 
 	 * @param v
 	 * @param w
-	 * @return double[4]: v, r, w, l angles
+	 * @return double[4]: v, r, w, l angles, null on error
 	 */
-	public double []getQuadAngles(int v,int w) {
+	public double[] getQuadAngles(int v,int w) {
 		if ((packData.isBdry(v) && packData.isBdry(w)) ||
 				packData.nghb(v,w)<0)
 			return null;
 		int []corn_vert=new int[4];
-
-		// set up the four vertices about this edge 
-		int vw=packData.nghb(v,w);
-		int num=packData.countFaces(v);
-		int j=(vw-1+num)%num;
-		int k=(vw+1)%num;
 		
-		corn_vert[0]=v;
-		corn_vert[1]=packData.kData[v].flower[j];
-		corn_vert[2]=w;
-		corn_vert[3]=packData.kData[v].flower[k];
+		if (packData.packDCEL!=null) {
+			HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
+			if (he==null || packData.packDCEL.isBdryEdge(he))
+				return null;
+			corn_vert[0]=v;
+			corn_vert[1]=he.twin.next.twin.origin.vertIndx; // clw edge
+			corn_vert[2]=w;
+			corn_vert[3]=he.prev.origin.vertIndx; // cclw edge
+		}
 
+		// traditional
+		else {
+			int vw=packData.nghb(v,w);
+			if (vw<0) 
+				return null;
+			int num=packData.countFaces(v);
+			int[] flower=packData.getFlower(v);
+			int j=(vw-1+num)%num;
+			int k=(vw+1)%num;
+		
+			corn_vert[0]=v;
+			corn_vert[1]=flower[j];
+			corn_vert[2]=w;
+			corn_vert[3]=flower[k];
+		}
+		
 		// affine map based on Beltrami coeff at centroid of these 4 verts  
 		Complex midZ=packData.getCenter(v).add(packData.getCenter(corn_vert[1])).
 		add(packData.getCenter(w)).add(packData.getCenter(corn_vert[3]));
@@ -332,13 +347,24 @@ public class BeltramiFlips extends PackExtender {
 			return 0;
 		double x=getLegality(v,w);
 		if (x>0) {
+			if (packData.packDCEL!=null) {
+				HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
+				if (he==null)
+					return 0;
+				HalfEdge newhe=RawDCEL.flipEdge_raw(packData.packDCEL, null);
+				if (newhe==null)
+					return 0;
+				packData.packDCEL.fixDCEL_raw(packData);
+				return 1;
+			}
+			
+			// traditional
 			if (packData.flip_edge(v,w,2)!=0) {
 				// fix up combinatorics
 				packData.complex_count(false);
 				return 1;
 			}
-			else 
-				return 0;
+			return 0;
 		} 
 		return 0;
 	}

@@ -160,6 +160,62 @@ public class HalfEdge {
 		return false;
 	}
 	
+	/**
+	 * Return the next half-hex 'HalfEdge'. That
+	 * is, pass two intervening spokes on the left.
+	 * If this edge is <v,w>, then find edge <w,u> which is
+	 * 3 interior edges clw around w from <w,v>. Return
+	 * null on failure. Note that return might be
+	 * <w,v> if degree of w is three, or null if
+	 * a bdry edge is encountered. 
+	 * @return HalfEdge, null on failure
+	 */
+	public HalfEdge HHleft() {
+		HalfEdge spoke=this.twin;
+		int tick=3;
+		do {
+			tick--;
+			// reached a bdry edge?
+			if (spoke.twin.face!=null && spoke.twin.face.faceIndx<0) {
+//				if (tick==0)
+//					return spoke;
+				return null;
+			}
+			spoke=spoke.twin.next; // rotate clw
+		} while (tick>0);
+		if (tick==0)
+			return spoke;
+		return null;
+	}
+	
+	/**
+	 * Return the next half-hex 'HalfEdge'. That
+	 * is, pass two intervening spokes on the right.
+	 * If this edge is <v,w>, then find edge <w,u> which is
+	 * 3 interior edges cclw around w from <w,v>. Return
+	 * null on failure. Note that return might be
+	 * <w,v> if degree of w is three, or null if
+	 * a bdry edge is encountered. 
+	 * @return HalfEdge, null on failure
+	 */
+	public HalfEdge HHright() {
+		HalfEdge spoke=this.twin;
+		int tick=3;
+		do {
+			tick--;
+			// reached a bdry edge?
+			if (spoke.face!=null && spoke.face.faceIndx<0) {
+				if (tick==0)
+					return spoke;
+				return null;
+			}
+			spoke=spoke.prev.twin; // rotate cclw
+		} while (tick>0);
+		if (tick==0)
+			return spoke;
+		return null;
+	}
+	
 	public RedHEdge getRedEdge() {
 		return myRedEdge;
 	}

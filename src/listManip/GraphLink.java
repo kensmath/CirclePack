@@ -857,8 +857,9 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 	 * Note: allow edges <0,f> as roots.
 	 */
 	public boolean add(EdgeSimple edge) {
-		if (edge.v<0 || edge.w<0 || edge.v==edge.w || (packData!=null &&
-				(edge.v>packData.faceCount || edge.w>packData.faceCount))) 
+		if (edge==null || edge.v<0 || edge.w<0 || edge.v==edge.w || 
+				(packData!=null && (edge.v>packData.faceCount || 
+						edge.w>packData.faceCount))) 
 			return false;
 		if ((edge.v>0 || edge.w>0)) {
 			maxIndex= (edge.v>maxIndex) ? edge.v : maxIndex;

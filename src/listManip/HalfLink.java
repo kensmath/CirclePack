@@ -126,6 +126,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	 * @return boolean, true if added
 	 */
 	public boolean add(HalfEdge edge) {
+		if (edge==null)
+			return false;
 		if (packData==null ||
 				(edge.origin.vertIndx<=packData.nodeCount &&
 				edge.twin.origin.vertIndx<=packData.nodeCount))
@@ -271,7 +273,9 @@ public class HalfLink extends LinkedList<HalfEdge> {
 						while (elst.hasNext()) {
 							edge=(EdgeSimple)elst.next();
 							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
-								add(packData.packDCEL.findHalfEdge(edge));
+								HalfEdge ehe=packData.packDCEL.findHalfEdge(edge);
+								if (ehe!=null)
+									add(ehe);
 								count++;
 							}
 						}
@@ -373,10 +377,14 @@ public class HalfLink extends LinkedList<HalfEdge> {
 						}
 					}	
 				}
-			}
+				
+				// list empty?
+				else 
+					return 0;
+			} // end of "?list" search
 			
 			// sort by first character 
-			
+			 
 			else {
 			switch(str.charAt(0)) {
 			
@@ -1156,6 +1164,33 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			
 		return count;
 	}
+	
+	/**
+	 * Pick first edge off a string. Return null on failure.
+	 * @param p PackData
+	 * @param str String
+	 * @return HalfEdge, null if none found
+	 */
+	public static HalfEdge grab_one_edge(PackData p,String str) {
+		HalfLink hlist=new HalfLink(p,str);
+		if (hlist.size()>0) {
+			HalfEdge he=(HalfEdge)hlist.get(0);
+			return he;
+		}
+		return null;
+	}
+		
+	/**
+	 * Pick first edge off a string. Return null on failure.
+	 * @param p PackData
+	 * @param flagsegs Vector<Vector<String>>
+	 * @return EdgeSimple, null if none found
+	 */
+	public static HalfEdge grab_one_edge(PackData p,Vector<Vector<String>> flagsegs) {
+		String str=StringUtil.reconstitute(flagsegs);
+		return grab_one_edge(p,str);
+	}
+	
 	
 	 /**
 	  * Return fresh EdgeLink with entries translated 

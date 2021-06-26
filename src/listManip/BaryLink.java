@@ -60,6 +60,8 @@ public class BaryLink extends LinkedList<BaryPoint> {
 	}
 	
 	public boolean add(BaryPoint bp) {
+		if (bp==null)
+			return false;
 		return super.add(bp);
 	}
 	

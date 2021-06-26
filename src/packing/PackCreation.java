@@ -385,6 +385,7 @@ public class PackCreation {
 	public static PackData hexBuild(int n) {
 		if (n==0)
 			n=1;
+		double rad=Math.pow(2.0,n-2);
 		PackDCEL pdcel=CombDCEL.seed_raw(6);
 		PackData p=new PackData(null);
 		pdcel.p=p;
@@ -401,7 +402,9 @@ public class PackCreation {
 		if (debug)
 			DCELdebug.printRedChain(pdcel.redChain);
 		
-		pdcel.fixDCEL_raw(p); 
+		pdcel.fixDCEL_raw(p);
+		for (int v=1;v<=p.nodeCount;v++)
+			p.setRadius(v,rad);
 		return p;
 	}
 	

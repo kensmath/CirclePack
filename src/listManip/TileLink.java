@@ -78,6 +78,8 @@ public class TileLink extends LinkedList<Integer> {
 	}
 	
 	public boolean add(Integer v) {
+		if (v==null)
+			return false;
 		return add(v.intValue());
 	}
 	

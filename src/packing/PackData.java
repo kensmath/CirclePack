@@ -9692,7 +9692,8 @@ public class PackData{
 		  if (pdc!=null) {
 	   		  Boolean redProblem=Boolean.valueOf(false); // for dcel version 
 			  while (fis.hasNext()) {
-    			  count += CombDCEL.flipEdge(pdc,pdc.findHalfEdge(fis.next()), redProblem);
+    			  count += CombDCEL.flipEdge(pdc,pdc.findHalfEdge(fis.next()),
+    					  redProblem);
 			  }
    			  if (count>0) {
    				  if (redProblem.booleanValue()) { // must build a new red cahin
@@ -9718,6 +9719,8 @@ public class PackData{
 	  }
 	  
 	  /** 
+	   * traditional only: see 'RawDCEL.flipEdge_raw'.
+	   * 
 	   * Careful, calling routine has to do cleanup; generally call
 	   * from 'split_flips' and from 'bary_refine'; if flag==2 and
 	   * edge {v,w} is shared by two faces, do Whitehead move -- remove
@@ -9832,18 +9835,27 @@ public class PackData{
 	   * @return boolean
 	   */
 	  public boolean flipable(int v,int w) {
+		  if (packDCEL!=null) {
+			  HalfEdge he=RawDCEL.getCommonEdge(packDCEL, v, w);
+			  if (he!=null)
+				  return true;
+			  return false;
+		  }
+		  
+		  // traditional
 		  int ind_v,ind_w,lv,rv;
 		  try {
 			  if (v<1 || w<1 || v>nodeCount || w>nodeCount 
 					  || (ind_v=nghb(v,w))<0 || (ind_w=nghb(w,v))<0 
-				  || (isBdry(v) && (kData[v].flower[0]==w || countFaces(v)<=2))
-				  || (isBdry(w) && (kData[w].flower[0]==v || countFaces(w)<=2))
+				  || (isBdry(v) && (getFirstPetal(v)==w || countFaces(v)<=2))
+				  || (isBdry(w) && (getFirstPetal(w)==v || countFaces(w)<=2))
 				  || (!isBdry(v) && countFaces(v)<=3) 
 				  || (!isBdry(w) && countFaces(w)<=3)) {
 				  throw new DataException("deg <= 3 or bdry edge");
 			  }
-			  lv=kData[v].flower[ind_v+1];
-			  rv=kData[w].flower[ind_w+1];
+			  int[] flower=getFlower(v);
+			  lv=flower[ind_v+1];
+			  rv=flower[ind_w+1];
 	          if ((isBdry(lv) && isBdry(rv)) || nghb(lv,rv)>=0)
 	        	  throw new DataException("new edge is repeat or would connect bdry");
 	        } catch (DataException dex) {
@@ -11165,7 +11177,7 @@ public class PackData{
   	  	setGeometry(1);
   	  	if (packDCEL!=null) {
   	  		try { 
-  	  			RawDCEL.wipeRedChain(packDCEL,packDCEL.redChain);
+  	  			packDCEL.redChain=null;
   	  			RawDCEL.addBary_raw(packDCEL,packDCEL.idealFaces[1],false);
   	  		} catch(Exception ex) {
   	  			throw new CombException("'proj' dcel error");

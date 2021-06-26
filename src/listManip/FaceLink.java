@@ -15,10 +15,10 @@ import exceptions.DataException;
 import exceptions.ParserException;
 import geometry.EuclMath;
 import input.SetBuilderParser;
-import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.Face;
 import komplex.RedList;
+import komplex.SideDescription;
 import packing.PackData;
 import util.FaceParam;
 import util.MathUtil;
@@ -89,7 +89,10 @@ public class FaceLink extends LinkedList<Integer> {
 	}
 	
 	public boolean add(Integer v) {
-		if ((packData!=null && v.intValue()>0 && v.intValue()<=packData.faceCount) || packData==null)
+		if (v==null)
+			return false;
+		if ((packData!=null && v.intValue()>0 && 
+				v.intValue()<=packData.faceCount) || packData==null)
 			return super.add(v);
 		return false;
 	}

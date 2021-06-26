@@ -1,5 +1,7 @@
 package komplex;
 
+import dcel.HalfEdge;
+
 /**
  * Simply an ordered pair (v,w) of vertices for use in, eg, EdgeLink.java.
  * Added (12/2010) 'util' element for optional additional info. See
@@ -22,6 +24,14 @@ public class EdgeSimple {
 	
 	public EdgeSimple(EdgeSimple es) {
 		this(es.v,es.w);
+	}
+	
+	public EdgeSimple(HalfEdge he) {
+		this(0,0);
+		if (he!=null) {
+			v=he.origin.vertIndx;
+			w=he.twin.origin.vertIndx;
+		}
 	}
 	
 	public EdgeSimple() {

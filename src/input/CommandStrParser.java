@@ -48,7 +48,6 @@ import exceptions.DataException;
 import exceptions.InOutException;
 import exceptions.JNIException;
 import exceptions.LayoutException;
-import exceptions.MiscException;
 import exceptions.MobException;
 import exceptions.ParserException;
 import exceptions.VarException;
@@ -5587,7 +5586,31 @@ public class CommandStrParser {
 	      
 	      // =========== bary_refine =======
 	      else if (cmd.startsWith("bary_refine")) {
-	    	  if (packData.bary_refine()==0) return 0;
+	    	  if (packData.packDCEL!=null) {
+	    		  int origCount=packData.nodeCount;
+	    		  int rslt=RawDCEL.baryRefine_raw(packData.packDCEL,1);
+	    		  if (rslt==0)
+	    			  return 0;
+	    		  VertexMap newold=packData.packDCEL.reapVUtil();
+	    		  packData.packDCEL.fixDCEL_raw(packData);
+	    		  
+	    		  // set new verts radii based on 'vutil' reference vert.
+
+	    		  for (int v=origCount+1;v<=packData.nodeCount;v++) {
+	    			  int w=newold.findW(v);
+//	    			  System.out.println("debug, v="+v+" and w="+w);
+	    			  if (w!=0 && w<=packData.nodeCount && w!=v) { 
+	    				  packData.setRadius(v,packData.getRadius(w));
+	    			  }
+	    		  }
+		    	  CirclePack.cpb.msg("Packing p"+packData.packNum+" has "+
+		    			  "been barycentrically refined");
+	    		  return 1;
+	    	  }
+	    	  
+	    	  // traditional
+	    	  if (packData.bary_refine()==0) 
+	    		  return 0;
 	    	  CirclePack.cpb.msg("Packing p"+packData.packNum+" has "+
 	    			  "been barycentrically refined");
 	    	  return 1;
@@ -6664,13 +6687,64 @@ public class CommandStrParser {
 	    	  if (StringUtil.isFlag(items.get(0))) {
 	    		  fstr=items.remove(0).substring(1);
 	    	  }
+	    	  int rslt=0;
 	    	  
-	    	  // Dispense first with 'h' flag, to project forward to 
+	    	  // Check for 'h' flag first, to project forward to 
 	    	  // next (half-hex) edge, then flip clockwise edge 
 	    	  // from that. The next edge itself is stored in 'elist'
 	    	  // in case this is called again.
+	    	  
+	    	  boolean hhflag=false; // is this half-hex projection?
 	    	  if (fstr.contentEquals("h")) {
-	    		  int rslt=0;
+	    		  hhflag=true;
+	    	  }
+	    	  
+	    	  if (pdc!=null) { // packData.elist;
+	    		  if (flagSegs==null || flagSegs.size()==0) 
+	    			  return 0;
+	    		  HalfLink hlink=new HalfLink(packData,flagSegs.get(0));
+    			  HalfEdge flipped=null;
+	    		  if (hhflag) {
+	    			  HalfEdge he=hlink.get(0); // only one edge
+	    			  HalfEdge[] fls=null;
+	    			  if (he!=null) { 
+	    				  fls=RawDCEL.flipAdvance_raw(pdc,he);
+	    				  if (fls==null) { 
+	    					  CirclePack.cpb.errMsg(("usage: flip -h {v,w}"));
+	    					  return 0;
+	    				  }
+	    				  
+	    				  // should have new edge; add it to 'elist'
+	    				  if (packData.elist==null)
+	    					  packData.elist=new EdgeLink(packData);
+    					  packData.elist.add(new EdgeSimple(fls[0]));
+    					  
+    					  // flipped edge as well?
+	    				  if (fls!=null && (flipped=fls[1])!=null) { 
+	    	    			  pdc.fixDCEL_raw(packData);
+	    	    			  return 1;
+	    	    		  }
+	    				  else // only moved, no flip
+	    					  return -1;
+	    			  }
+	    			  else {
+			   			  CirclePack.cpb.errMsg(("usage: flip -h {v,w}"));
+			   			  return 0;
+	    			  }
+	    		  }
+	    		  
+	    		  // just a list of flips
+	    		  else {
+	    			  rslt=CombDCEL.flipEdgeList(pdc,hlink);
+	    			  if (rslt>0)
+	    				  pdc.fixDCEL_raw(packData);
+	    			  return rslt;
+	    		  }
+	    	  }
+	    				  
+	    	  // traditional
+	    	  if (fstr.contentEquals("h")) {
+	    		  rslt=0;
 		   		  EdgeSimple edge=EdgeLink.grab_one_edge(packData,flagSegs);
 		   		  if (edge==null)
 		   			  edge=EdgeLink.grab_one_edge(packData,"elist");
@@ -6681,55 +6755,6 @@ public class CommandStrParser {
 		   		  int v=edge.w;
 		   		  int w=edge.v;
 		   		  int num=packData.countFaces(v);
-		   		  if (pdc!=null) {
-			   		  Boolean redProblem=Boolean.valueOf(false); // for dcel version 
-		   			  try {
-		   				  HalfEdge hedge=pdc.findHalfEdge(edge).twin;
-		   				  Vertex vert=hedge.origin;
-		   				  packData.elist=new EdgeLink(packData); // may store new edge in 'elist'
-		   				  if (vert.isBdry()) { // bdry considerations
-		   					  int tick=0;
-		   					  HalfEdge he=vert.halfedge.prev.twin;
-		   					  while(he.twin.origin.vertIndx!=w && he!=vert.halfedge) {
-		   						  tick++;
-		   						  he=he.prev.twin;
-		   					  }
-		   					  if (tick<2) // can't advance to new edge; kill 'baseEdge'
-		   						  return 0;
-		   					  if (tick==2) { // advanced but no flip
-		   						  packData.elist.add(new EdgeSimple(v,vert.halfedge.origin.vertIndx));
-		   						  return -1;
-		   					  }
-		   					  he=he.twin.next.twin.next.twin.next;
-		   					  packData.elist.add(new EdgeSimple(v,he.origin.vertIndx)); // next half-hex edge
-		   					  he=he.twin.next;
-		   					  rslt=RawDCEL.flipEdge_raw(pdc, he);
-		   					  if (rslt==0)// didn't flip 
-		   						  return -1;
-		   					  pdc.fixDCEL_raw(packData);
-		   				  }
-		   				  else { // interior
-		   			   		  if (num==3) { // interior of degree 3? just reverse edge to go other way
-		   		   				  packData.elist.add(new EdgeSimple(v,w));
-		   		   				  return -1; // no flip
-		   			   		  }	  
-		   			   		  HalfEdge theedge=hedge.twin.next.twin.next.twin.next;
-		   			   		  packData.elist.add(new EdgeSimple(v,theedge.twin.origin.vertIndx));
-		   			   		  theedge=theedge.twin.next;
-		   			   		  rslt=RawDCEL.flipEdge_raw(pdc,theedge);
-		   			   		  if (rslt==0)
-		   						return -1; // advanced but didn't flip
-		   					  pdc.fixDCEL_raw(packData);
-		   				  }
-		   				  
-		   			  } catch(Exception ex) {
-		   				  CirclePack.cpb.errMsg("flip failed on edge <"+v+" "+w+">");
-		   				  return 0;
-		   			  }
-		   			  return 1;
-		   		  } // done with DCEL case
-		   		  
-		   		  // traditional packing
 		   		  int indxvb=packData.nghb(v, w);
 		   		  if (packData.isBdry(v)) { // bdry?
 		   			  if (indxvb<3)  // can't advance to new edge; kill 'baseEdge'
@@ -6774,17 +6799,10 @@ public class CommandStrParser {
 	    	  if (fstr.startsWith("cc") || fstr.startsWith("hh")) { 
 	    		  while (elist.hasNext()) {
 		   			  EdgeSimple edge=(EdgeSimple)elist.next();
-		   			  if (pdc!=null) {
-		   				  HalfEdge he=pdc.findHalfEdge(edge);
-		   				  elink.add(new EdgeSimple(he.prev.twin.origin.vertIndx,
-		   						  he.prev.origin.vertIndx)); // cclw edge
-		   			  }
-		   			  else {
-			   			  int indx=packData.nghb(edge.v,edge.w);
-			   			  if (indx>=0 && indx<packData.countFaces(edge.v)) { // flip cclw edge
-			   				  int w=packData.getPetal(edge.v,indx+1);
-			   				  elink.add(new EdgeSimple(edge.v,w));
-			   			  }
+		   			  int indx=packData.nghb(edge.v,edge.w);
+		   			  if (indx>=0 && indx<packData.countFaces(edge.v)) { // flip cclw edge
+		   				  int w=packData.getPetal(edge.v,indx+1);
+		   				  elink.add(new EdgeSimple(edge.v,w));
 		   			  }
 	    		  }
 	    	  }
@@ -6792,20 +6810,13 @@ public class CommandStrParser {
 	    		  int w;
 	    		  while (elist.hasNext()) {
 		   			  EdgeSimple edge=(EdgeSimple)elist.next();
-		   			  if (pdc!=null) {
-		   				  HalfEdge he=pdc.findHalfEdge(edge);
-		   				  elink.add(new EdgeSimple(he.twin.next.origin.vertIndx,
-		   						  he.twin.next.twin.origin.vertIndx)); // cclw edge
+		   			  int indx=packData.nghb(edge.v,edge.w);
+		   			  if (indx==0) { // must be interior
+		   				  w=packData.getPetal(edge.v,packData.countFaces(edge.v)-1);
 		   			  }
-		   			  else {
-			   			  int indx=packData.nghb(edge.v,edge.w);
-			   			  if (indx==0) { // must be interior
-			   				  w=packData.getPetal(edge.v,packData.countFaces(edge.v)-1);
-			   			  }
-			   			  else 
-			   				  w=packData.getPetal(edge.v,indx-1);
-		   				  elink.add(new EdgeSimple(edge.v,w));
-		   			  }
+		   			  else 
+		   				  w=packData.getPetal(edge.v,indx-1);
+	   				  elink.add(new EdgeSimple(edge.v,w));
 	    		  }
 	    	  }
 	    	  else if (fstr.contentEquals("r")) { // one random, try up to 20 times 
@@ -10594,23 +10605,39 @@ public class CommandStrParser {
 	      if (cmd.startsWith("unflip")) {
 	    	  items=flagSegs.elementAt(0); // should be only one segment
 	   		  EdgeLink edgeLink=new EdgeLink(packData,items);
-	   		  if (edgeLink==null || edgeLink.size()<1) return 0;
+	   		  if (edgeLink==null || edgeLink.size()<1) 
+	   			  return 0;
 	   		  Iterator<EdgeSimple> elist=edgeLink.iterator();
-
+	   		  
+	   		  // with DCEL structure
+	    	  if (packData.packDCEL!=null) {
+		   		  HalfLink hlink=new HalfLink(packData);
+		   		  while (elist.hasNext()) {
+		   			  EdgeSimple edge=elist.next();
+		   			  HalfEdge he=RawDCEL.getCommonEdge(packData.packDCEL,edge.v,edge.w);
+		   			  hlink.add(he); // might be null
+		   		  }
+	    		  if (hlink==null || hlink.size()==0)
+	    			  return 0;
+	    		  Iterator<HalfEdge> his=hlink.iterator();
+	    		  while (his.hasNext()) {
+	    			  HalfEdge he=his.next();
+	    			  HalfEdge newhe=RawDCEL.flipEdge_raw(packData.packDCEL,he);
+	    			  if (newhe!=null)
+	    				  count++;
+	    		  }
+	    		  if (count>0)
+	   				  packData.packDCEL.fixDCEL_raw(packData);
+	   			  packData.fillcurves();
+	    		  return count;
+	    	  }
+	    	  
+	    	  // traditional
 	   		  while (elist.hasNext()) {
 	   			  EdgeSimple edge=(EdgeSimple)elist.next();
 	   			  count += packData.flip_edge(edge.v,edge.w,3);
 	   	      }
-	   		  if (count>0) {
-	   			  if (packData.packDCEL!=null) {
-	   				  packData.packDCEL.fixDCEL_raw(packData);
-	   			  }
-	   			  else {
-	   				  packData.complex_count(false);
-	   				  packData.facedraworder(false);
-	   			  }
-	   			  packData.fillcurves();
-	   		  }
+   			  packData.fillcurves();
 	   		  return count;
 	      }
     	  break;

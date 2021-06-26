@@ -134,6 +134,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	 * @return boolean, true if added
 	 */
 	public boolean add(EdgeSimple edge) {
+		if (edge==null)
+			return false;
 		if (packData==null)
 			return super.add(edge);
 		if ((edge.v>0 && edge.w>0) && edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) 

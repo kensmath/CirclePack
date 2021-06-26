@@ -3106,6 +3106,32 @@ public class CombDCEL {
 		  
 		  return pdc1;
 	  }
+	  
+	  /**
+	   * Given 'HalfLink' list of edges, flip as many as possible.
+	   * Each time we get a new 'HalfEdge', remove it from list.
+	   * Calling routine must complete combinatorics  
+	   * @param pdcel PackDCEL
+	   * @param hlink HalfLink
+	   * @return count (even if ultimately fails)
+	   */
+	  public static int flipEdgeList(PackDCEL pdcel,HalfLink hlink) {
+		  if (hlink==null || hlink.size()==0)
+			  return 0;
+		  int count=0;
+		  while (hlink.size()>0) {
+			  HalfEdge he=hlink.remove(0);
+			  HalfEdge new_edge=RawDCEL.flipEdge_raw(pdcel,he);
+			  
+			  // success?
+			  if (new_edge==null) {
+				  CirclePack.cpb.errMsg("flipping edges failed with edge "+he);
+				  break;
+			  }
+			  count++;
+		  }
+		  return count;
+	  }
 
 	  /**
 	   * Flip an interior edge. In a triangulation, an interior edge is

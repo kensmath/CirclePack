@@ -4,10 +4,13 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.Vector;
 
+import dcel.HalfEdge;
+import dcel.RawDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.PackExtender;
@@ -34,7 +37,7 @@ public class FlipStrategy extends PackExtender {
 	int southPole;
 	int NStoggle;
 	Random rand;
-	EdgeSimple baseEdge;
+	HalfEdge baseEdge;
 	
 	// Constructor
 	public FlipStrategy(PackData p) {
@@ -94,54 +97,33 @@ public class FlipStrategy extends PackExtender {
 		
 		// ===================== setedge ================
 		if (cmd.startsWith("setedg")) {
-			EdgeSimple baseedge=EdgeLink.grab_one_edge(packData, flagSegs);
-			if (baseedge==null || packData.nghb(baseedge.v, baseedge.w)<0)
+			HalfEdge baseedge=HalfLink.grab_one_edge(packData, flagSegs);
+			if (baseedge==null)
 				return 0;
 			baseEdge=baseedge;
 			return 1;
 		}
 		
 		// ===================== aflip =================
-		// Given oriented edge <v.w>, to two things: (1) advance in half-hex
+		// Given HalfEdge <v.w>, do two things: (1) advance in half-hex
 		// direction (pass two edges on left) for new 'baseEdge' and 
 		// (2) flip the next clockwise edge, if possible. return value is
 		// 0 if neither is possible, -1 if only advance is possible, and 1 if
 		// both are possible.
 		else if (cmd.startsWith("aflip")) {
-			if (baseEdge==null || packData.nghb(baseEdge.v, baseEdge.w)<0)
+			if (baseEdge==null)
 				return 0;
-			int v=baseEdge.w;
-			int w=baseEdge.v;
-			int indxvb=packData.nghb(v, w);
-			if (packData.isBdry(v)) { // bdry?
-				if (indxvb<3) { // can't advance to new edge; kill 'baseEdge'
-					baseEdge=null;
-					return 0;
-				}
-				baseEdge=new EdgeSimple(v,packData.kData[v].flower[indxvb-3]);
-				if (indxvb==3) { // can advance, but no flip
-					return -1; // advanced but no flip
-				}
-				int rslt=packData.flip_edge(v,packData.kData[v].flower[indxvb-4],2);
-				if (rslt==0)
-					return -1; // advanced but didn't flip
-				packData.setCombinatorics();
+			
+			HalfEdge[] ans=RawDCEL.flipAdvance_raw(packData.packDCEL,baseEdge);
+			if (ans==null)
+				return 0;
+			baseEdge=ans[0]; // the new hedge
+			if (ans[1]!=null) { // there was a flip
+				packData.packDCEL.fixDCEL_raw(packData);
 				return 1;
 			}
-			int num=packData.countFaces(v);
-			if (num==3) { // interior of degree 3? just reverse edge to go other way
-				baseEdge=new EdgeSimple(v,w);
-				return -1; // no flip
-			}
-			int indxn=(indxvb-3+num)%num;
-			w=packData.kData[v].flower[indxn];
-			baseEdge=new EdgeSimple(v,w);
-			int k=(indxn-1)%num;
-			int rslt=packData.flip_edge(v,packData.kData[v].flower[k],2);
-			if (rslt==0)
-				return -1; // advanced but didn't flip
-			packData.setCombinatorics();
-			return 1; // advanced and flipped
+			else // only advanced
+				return -1;
 		}
 		
 		// ======================= bot ==================
