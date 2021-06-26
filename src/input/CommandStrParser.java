@@ -5588,17 +5588,15 @@ public class CommandStrParser {
 	      else if (cmd.startsWith("bary_refine")) {
 	    	  if (packData.packDCEL!=null) {
 	    		  int origCount=packData.nodeCount;
-	    		  int rslt=RawDCEL.baryRefine_raw(packData.packDCEL,1);
+	    		  int rslt=RawDCEL.hexBaryRefine_raw(packData.packDCEL,1,true);
 	    		  if (rslt==0)
 	    			  return 0;
 	    		  VertexMap newold=packData.packDCEL.reapVUtil();
 	    		  packData.packDCEL.fixDCEL_raw(packData);
 	    		  
 	    		  // set new verts radii based on 'vutil' reference vert.
-
 	    		  for (int v=origCount+1;v<=packData.nodeCount;v++) {
 	    			  int w=newold.findW(v);
-//	    			  System.out.println("debug, v="+v+" and w="+w);
 	    			  if (w!=0 && w<=packData.nodeCount && w!=v) { 
 	    				  packData.setRadius(v,packData.getRadius(w));
 	    			  }

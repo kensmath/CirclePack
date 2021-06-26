@@ -179,8 +179,7 @@ public class FlipStrategy extends PackExtender {
 						// do we need to set 'previousHome'?
 						int pre=flipBot.getPrevious();
 						if (pre<=0 || packData.nghb(flipBot.getHomeVert(),pre)<0) {
-							int j=rand.nextInt(packData.countFaces(v)+packData.getBdryFlag(v));
-							flipBot.setPrevious(packData.kData[v].flower[j]);
+							flipBot.setPrevious(packData.getLastPetal(v));
 						}
 						
 						break;
@@ -214,8 +213,11 @@ public class FlipStrategy extends PackExtender {
 						if (edge!=null) {
 							flipBot.setOtherEnd(edge.w);
 							int rslt=0; 
-							int lv=packData.kData[edge.v].flower[packData.nghb(edge.v,edge.w)+1];
-							int rv=packData.kData[edge.w].flower[packData.nghb(edge.w,edge.v)+1];
+							// TODO: should be more efficient way
+							int[] flower=packData.getFlower(edge.v);
+							int lv=flower[packData.nghb(edge.v,edge.w)+1];
+							flower=packData.getFlower(edge.w);
+							int rv=flower[packData.nghb(edge.w,edge.v)+1];
 							outEdge=new EdgeSimple(lv,rv);
 							rslt=cpCommand("flip "+edge.v+" "+edge.w);
 							if (rslt!=0) { //
@@ -298,16 +300,18 @@ public class FlipStrategy extends PackExtender {
 			
 			int Ndegs=0;
 			int Nfours=0;
-			for (int j=0;j<packData.countFaces(northPole);j++) {
-				int k=packData.kData[northPole].flower[j];
+			int[] petals=packData.getPetals(northPole);
+			for (int j=0;j<petals.length;j++) {
+				int k=petals[j];
 				int knum=packData.countFaces(k);
 				Ndegs+=knum;
 				if (knum==4) Nfours++;
 			}
 			int Sdegs=0;
 			int Sfours=0;
+			petals=packData.getPetals(southPole);
 			for (int j=0;j<packData.countFaces(southPole);j++) {
-				int k=packData.kData[southPole].flower[j];
+				int k=petals[j];
 				int knum=packData.countFaces(k);
 				Sdegs+=knum;
 				if (knum==4) Sfours++;
@@ -391,8 +395,8 @@ public class FlipStrategy extends PackExtender {
 				//   degree 4's tangent to unpole
 				int v=0;
 				int jjnum=0;
-				while (count>0 && ((jjnum=packData.countFaces((v=packData.kData[pole].
-						flower[j])))<4 ||
+				int[] flower=packData.getFlower(pole);
+				while (count>0 && ((jjnum=packData.countFaces((v=flower[j])))<4 ||
 						(jjnum==4 && packData.nghb(v,unpole)>=0))) {
 					j=(j+1)%num;
 					count--;
@@ -401,22 +405,23 @@ public class FlipStrategy extends PackExtender {
 				// found one? 
 				v=0;
 				if (count!=0) {
-					v=packData.kData[pole].flower[j];
+					v=flower[j];
 					System.out.println("v = "+v);
 				}
 				
 				// process while we can keep flipping about v (interior)
 				boolean outerflip=true;
 				int vnum;
+				flower=packData.getFlower(v);
 				while (outerflip && v!=0 && 
 						(vnum=packData.countFaces(v))>4 &&
 						!packData.isBdry(v)) {
 					msg("target petal: v="+v+", pole="+pole);
 					outerflip=false;
 					int k=(packData.nghb(v,pole)-1+vnum)%vnum;
-					int w=packData.kData[v].flower[k];
+					int w=flower[k];
 					int m=(k-1+vnum)%vnum;
-					int nextw=packData.kData[v].flower[m];
+					int nextw=flower[m];
 					// try flipping first edge, if it doesn't connect poles
 					if (nextw!=unpole && cpCommand("flip "+v+" "+w)!=0) {
 						msg("  first flip succeeded: <"+v+" "+w+">");
@@ -429,11 +434,11 @@ public class FlipStrategy extends PackExtender {
 					int tick=vnum+1;
 					while (!outerflip && tick>0) {
 						k=(k-1+vnum)%vnum;
-						w=packData.kData[v].flower[k];
-						int cnl=packData.kData[v].flower[(k+1)%vnum];
-						int cnr=packData.kData[v].flower[(k-1+vnum)%vnum];
+						w=flower[k];
+						int cnl=flower[(k+1)%vnum];
+						int cnr=flower[(k-1+vnum)%vnum];
 //						m=(k-1+vnum)%vnum;
-//						nextw=packData.kData[v].flower[m];
+//						nextw=flower[m];
 						if (w!=unpole && packData.nghb(w,pole)>=0 &&
 								(cnl!=pole || cnl!=unpole || cnr!=pole || cnr!=unpole) && 
 								(packData.nghb(cnl,pole)<0 || packData.nghb(cnr,pole)<0) &&

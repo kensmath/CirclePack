@@ -12887,7 +12887,7 @@ public class PackData{
 		  if (packDCEL!=null) {
 			  if (N<1 || N>5) // at least 1, at most 5
 				  N=1;
-			  RawDCEL.hexRefine_raw(packDCEL,N);
+			  RawDCEL.hexBaryRefine_raw(packDCEL,N,false);
 			  VertexMap vrads=packDCEL.reapVUtil();
 			  packDCEL.fixDCEL_raw(this);
 
