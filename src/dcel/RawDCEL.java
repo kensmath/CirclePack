@@ -2133,6 +2133,12 @@ public class RawDCEL {
 		if (hlink.size()!=3) 
 			throw new ParserException("face "+f.faceIndx+
 				  " must have precisely three vertices");
+		
+		// set edge 'face's to null
+		Iterator<HalfEdge> his=hlink.iterator();
+		while (his.hasNext()) {
+			his.next().face=null;
+		}
 
 		// Get the three red edges.
 		RedHEdge[] reds=new RedHEdge[3];

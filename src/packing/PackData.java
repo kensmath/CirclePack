@@ -33,7 +33,6 @@ import dcel.RawDCEL;
 import dcel.RedHEdge;
 import dcel.VData;
 import dcel.Vertex;
-import deBugging.DCELdebug;
 import deBugging.DebugHelp;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
@@ -11151,33 +11150,46 @@ public class PackData{
 
 	    Iterator<Integer> vlist=vertlist.iterator();
 
-	    while(vlist.hasNext() && isBdry((v=(Integer)vlist.next()))) {
-	    	if (packDCEL!=null) {
+    	if (packDCEL!=null) {
+    		int origCount=nodeCount;
+    		while(vlist.hasNext() && isBdry((v=(Integer)vlist.next()))) {
 	    		int loccount=RawDCEL.addIdeal_raw(packDCEL, v, v);
 	    		if (loccount==0) 
 	    			throw new CombException("add failed");
 	    		count++;
+	    	} // end of while
+	    	
+    		if (count==0)
+    			return 0;
+    		
+    		// fix combinatorics
+	    	packDCEL.fixDCEL_raw(this);
+	    	
+	    	// if a sphere, set cent/rad of new vertices
+	    	if (hes>0) {
+	    		for (int j=origCount+1;j<=nodeCount;j++) {
+	    			setRadius(j,Math.PI/2.0);
+	    			setCenter(j,new Complex(0,Math.PI));
+	    		}
 	    	}
-	    	else
-	    		count += ideal_bdry_node(v);
-	    }
+	    	xyzpoint=null;
+	    	set_aim_default();
+	    	fillcurves();
+	    	return count;
+    	}
+	    
+    	// traditional
+    	while (vlist.hasNext()) {
+    		v=vlist.next();
+    		count += ideal_bdry_node(v);
+    	}
+
 	    if (count==0) 
 	    	return 0;
 	    xyzpoint=null;
-	    if (packDCEL!=null) {
-	    	packDCEL.fixDCEL_raw(this); // packDCEL.p.getCenter(300);
-	    }
-	    else 
-	    	setCombinatorics();
+    	setCombinatorics();
 	    set_aim_default();
 	    fillcurves();
-	    
-
-    	if (1==2) {
-        	DualGraph.printGraph(packDCEL.computeOrder);
-    		DCELdebug.visualDualEdges(packDCEL,-1,packDCEL.computeOrder);
-    	}
-	    
 	    return count;
 	  }
 	  
