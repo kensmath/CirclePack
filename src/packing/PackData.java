@@ -159,8 +159,8 @@ public class PackData{
     public int intrinsicGeom; // intrinsic geometry (due to combinatorics only)
     public int sizeLimit;     // current max number of nodes without reallocating
     int alpha;         // index of alpha node (origin)
-    public int beta;          // nghb of alpha, <alpha,beta> is base edge
-    public int gamma;         // index of node to be plotted on positive y-axis
+    public int beta;          // OBE, not used now
+    int gamma;         // index of node to be plotted on positive y-axis
     public int euler;   	  // Euler characteristic
     public int genus;         // genus of complex. Euler+#bdry=2-2g, g=(2-Euler-#bdy)/2 
     public int activeNode;    // currently active_node 
@@ -298,10 +298,11 @@ public class PackData{
     	packDCEL=pdcel;
     	pdcel.p=this;
     	int origNodeCount=nodeCount;
-    	if (pdcel.alpha!=null)
-    		alpha=pdcel.alpha.origin.vertIndx;
-    	else
-    		alpha=1;
+    	if (pdcel.alpha==null)
+    		pdcel.setAlpha(0,null);
+   		alpha=pdcel.alpha.origin.vertIndx;
+    	if (pdcel.gamma==null)
+   		gamma=pdcel.setGamma(0);
 		
     	// set some counts
 		nodeCount=pdcel.vertCount;
@@ -367,8 +368,6 @@ public class PackData{
         	fillcurves(); // compute all curvatures
         	set_aim_default(); // too difficult to figure out old aims
 
-        	if (pdcel.gamma==null)
-        		pdcel.gamma=pdcel.alpha.next;
     		return nodeCount;
     	}
 
@@ -522,7 +521,7 @@ public class PackData{
     		fp.mark(1000); // mark, only needed for Lite form
     	} catch(Exception ex) {} // proceed anyway
     	getDispOptions=null; 
-    	int newAlpha=0;
+    	int newAlpha=-1;
     	int newGamma=-1;
         int flags = 0; 
         int vert = 0;
@@ -767,9 +766,10 @@ public class PackData{
                     			// this is dcel data
                     			if (dcelread) {
                     				PackDCEL pdc;
-                    				if (newAlpha==0)
-                    					newAlpha=alpha;
-                    				if ((pdc=CombDCEL.getRawDCEL(bouquet,newAlpha))==null) {
+                    				int tmpAlpha=newAlpha;
+                    				if (tmpAlpha==-1)
+                    					tmpAlpha=alpha;
+                    				if ((pdc=CombDCEL.getRawDCEL(bouquet,tmpAlpha))==null) {
                     					flashError("Problem reading DCEL data");
                     					return -1;
                     				}
@@ -2000,20 +2000,35 @@ public class PackData{
         		setCenter(rON(i),new Complex(0.0,0.0));
         }
         
-        if (newAlpha!=0)
+        // make sure alpha/gamma are set
+        if (newAlpha>0) { 
+        	setAlpha(newAlpha);
+        }
+        else
         	chooseAlpha();
+        if (newGamma>0)
+        	setGamma(newGamma);
+        else if (getGamma()<=0)
+        	chooseGamma();
+        
         if (packDCEL!=null)
         	activeNode = packDCEL.alpha.origin.vertIndx;
         else 
         	activeNode=alpha;
-        if (newGamma!=0)
-        	chooseGamma();
+        
         if (packDCEL==null)
         	facedraworder(false);
         if ((flags & 0010)!= 0 && (flags & 0020)==0) { // new radii, no centers
         	try {
+
+        		if (packDCEL!=null)
+        			packDCEL.dcelCompCenters();
+        		
+        		// traditional
         		comp_pack_centers(false,false,2,OKERR);
-        	} catch(Exception ex) {}
+        	} catch(Exception ex) {
+        		CirclePack.cpb.errMsg("'readpack': exception in drawing order");
+        	}
         }
         if ((flags & 0040)==0) { // no angle sums were read
         	fillcurves();
@@ -2378,29 +2393,27 @@ public class PackData{
     		return;
     	}
     	
-        // is the current alpha okay?
+        // traditional: is the current alpha okay?
         if (alpha>0 && alpha<= nodeCount 
-        		&& kData[alpha].flower[0]==kData[alpha].flower[countFaces(alpha)]) {
+        		&& getFirstPetal(alpha)==getLastPetal(alpha)) {
             if (alpha==gamma){
-                gamma=kData[alpha].flower[0];
+                gamma=getFirstPetal(alpha);
             }
             return;
         }
-
-        int flag=0;
-        int i=0;
-        do{
-            i++;
-            if (kData[i].flower[0]==kData[i].flower[countFaces(i)]){
-                flag=1;
+        
+        // choose first interior
+        alpha=0;
+        for (int v=1;v<=nodeCount;v++) 
+            if (getFirstPetal(v)==getLastPetal(v)) {
+                alpha=v;
+                break;
             }
-        } while (i<nodeCount && flag==0);
-        if (flag != 0) 
-        	alpha=i;
-        else 
+
+        if (alpha==0)
         	alpha=1;
         if (gamma==alpha) {
-            gamma=kData[alpha].flower[0];
+            gamma=getFirstPetal(alpha);
         }
         return;
     } 
@@ -2421,7 +2434,8 @@ public class PackData{
         if (i>0 && i<= nodeCount && i!= alpha){
             return; // this choice is okay 
         }
-        if (alpha==1) gamma=kData[1].flower[0];
+        if (alpha==1) 
+        	gamma=getFirstPetal(1);
         else gamma=1;
         return;
     } 
@@ -2435,6 +2449,16 @@ public class PackData{
     public void directAlpha(int v) {
     	alpha=v;
     }
+    
+    /**
+     * Only used to avoid 'setGamma' calls which loop
+     * between 'PackData' and 'PackDCEL'. Sometimes used
+     * if no 'PackDCEL' is involved.
+     * @param w int
+     */
+    public void directGamma(int w) {
+    	gamma=w;
+    }
 
     /**
      * Set prescribed 'alpha' vertex; must be interior. Move 'gamma' 
@@ -2445,10 +2469,14 @@ public class PackData{
     public int setAlpha(int v) {
     	if (!status) 
     		return 0;
+    	
 		int alp=getAlpha(); // backup
+		
     	if (packDCEL!=null) {
     		return packDCEL.setAlpha(v,null);
         }
+    	
+    	// traditional
     	if (v<=0 || v>nodeCount) {
     		if (alp>0 && alp<=nodeCount)
     			this.alpha=alp;
@@ -2469,7 +2497,10 @@ public class PackData{
      */
     public int setGamma(int i) {
         if (status && i>0 && i<= nodeCount && i != alpha){
-            gamma=i;
+        	
+           	if (packDCEL!=null) {
+        		return packDCEL.setGamma(i);
+            }
             return 1;
         }
         return 0;
@@ -2512,11 +2543,25 @@ public class PackData{
 	public int getAlpha() {
 		if (packDCEL!=null && packDCEL.alpha!=null) {
 			int alp=packDCEL.alpha.origin.vertIndx;
-			if (alp>0 && alp<packDCEL.vertCount)
-				directAlpha(alp); // update this.alpha 
+			if (alp>0 && alp<=packDCEL.vertCount)
+				directAlpha(alp); // update 'this.alpha' 
 			return alp;
 		}
 		return this.alpha;
+	}
+	
+	/** 
+	 * I make 'gamma' private for debugging
+	 * @return int
+	 */
+	public int getGamma() {
+		if (packDCEL!=null && packDCEL.gamma!=null) {
+			int gam=packDCEL.gamma.origin.vertIndx;
+			if (gam>0 && gam<=packDCEL.vertCount)
+				directGamma(gam); // update 'this.gamma' 
+			return gam;
+		}
+		return this.gamma;
 	}
 	
 	/**
@@ -3499,6 +3544,26 @@ public class PackData{
 			if (flower[j]==w) 
 				return j;
 		return -1;
+	}
+	
+	/**
+	 * If {v,w} is an edge, find the clw edge, if it
+	 * exists.
+	 * @param v int
+	 * @param w int
+	 * @return EdgeSimple, null on failure
+	 */
+	public EdgeSimple clwEdge(int v,int w) {
+		int u;
+		int indvw=nghb(v,w);
+		if (indvw<0 || (indvw==0 && isBdry(v)))
+			return null;
+		int[] flower=getFlower(v); 
+		if (indvw==0) { // must be interior
+			u=flower[this.countFaces(v)-1];
+			return new EdgeSimple(v,u);
+		}
+		return new EdgeSimple(v,flower[indvw-1]);
 	}
 	
 	/**
@@ -9690,19 +9755,15 @@ public class PackData{
 		  PackDCEL pdc=packDCEL;
 		  Iterator<EdgeSimple> fis=fliplist.iterator();
 		  if (pdc!=null) {
-	   		  Boolean redProblem=Boolean.valueOf(false); // for dcel version 
 			  while (fis.hasNext()) {
-    			  count += CombDCEL.flipEdge(pdc,pdc.findHalfEdge(fis.next()),
-    					  redProblem);
+				  HalfEdge he=pdc.findHalfEdge(fis.next());
+				  HalfEdge newhe=RawDCEL.flipEdge_raw(pdc,he);
+				  if (newhe!=null)
+					  count ++;
 			  }
-   			  if (count>0) {
-   				  if (redProblem.booleanValue()) { // must build a new red cahin
-   					  CombDCEL.redchain_by_edge(pdc,null,pdc.alpha,false);
-   				  }
-   				  CombDCEL.d_FillInside(pdc);
-   				  return attachDCEL(pdc);
-   			  }
-   			  return 0;
+   			  if (count>0) 
+   				  pdc.fixDCEL_raw(this);
+   			  return count;
 		  }
 		  
 		  // traditional
@@ -9822,6 +9883,19 @@ public class PackData{
 	    return 1;
 	  }
 	  
+	  /**
+	   * Check flipability of edge clw from <v,w>
+	   * @param v int
+	   * @param w int
+	   * @return boolean
+	   */
+	  public boolean clwFlipable(int v,int w) {
+		  EdgeSimple clwedge=clwEdge(v,w);
+		  if (clwedge==null)
+			  return false;
+		  return flipable(clwedge.v,clwedge.w);
+	  }
+	  
 	  /** 
 	   * Determine if edge {v,w} is "flipable" (as in Whitehead move).
 	   * Situations that fail: 
@@ -9835,33 +9909,40 @@ public class PackData{
 	   * @return boolean
 	   */
 	  public boolean flipable(int v,int w) {
-		  if (packDCEL!=null) {
-			  HalfEdge he=RawDCEL.getCommonEdge(packDCEL, v, w);
-			  if (he!=null)
-				  return true;
-			  return false;
-		  }
-		  
-		  // traditional
-		  int ind_v,ind_w,lv,rv;
+		  int ind_v,ind_w;
 		  try {
 			  if (v<1 || w<1 || v>nodeCount || w>nodeCount 
 					  || (ind_v=nghb(v,w))<0 || (ind_w=nghb(w,v))<0 
 				  || (isBdry(v) && (getFirstPetal(v)==w || countFaces(v)<=2))
 				  || (isBdry(w) && (getFirstPetal(w)==v || countFaces(w)<=2))
 				  || (!isBdry(v) && countFaces(v)<=3) 
-				  || (!isBdry(w) && countFaces(w)<=3)) {
+				  || (!isBdry(w) && countFaces(w)<=3)) 
 				  throw new DataException("deg <= 3 or bdry edge");
-			  }
-			  int[] flower=getFlower(v);
-			  lv=flower[ind_v+1];
-			  rv=flower[ind_w+1];
-	          if ((isBdry(lv) && isBdry(rv)) || nghb(lv,rv)>=0)
+		  } catch(Exception dex) {
+			  CirclePack.cpb.errMsg(dex.getMessage());
+			  return false;
+		  }
+
+		  if (packDCEL!=null) {
+			  HalfEdge he=packDCEL.findHalfEdge(new EdgeSimple(v, w));
+			  if (he!=null)
+				  return true;
+			  return false;
+		  }
+		  
+		  // traditional
+		  int[] flower=getFlower(v);
+		  int lv=flower[ind_v+1];
+		  int rv=flower[ind_w+1];
+		  try {
+			  if ((isBdry(lv) && isBdry(rv)) || nghb(lv,rv)>=0)
 	        	  throw new DataException("new edge is repeat or would connect bdry");
-	        } catch (DataException dex) {
-	        	return false;
-	        }
-	        return true;
+		  } catch (Exception dex) {
+			  CirclePack.cpb.errMsg(dex.getMessage());
+	    	  return false;
+		  }
+		  
+		  return true;
 	  }
 	  
 	  /**

@@ -610,7 +610,7 @@ public class WeldManager extends PackExtender {
 			CirclePack.cpb.myErrorMsg("unweld: some error with bdry vert "
 					+ v + " or 2.");
 		}
-		q.gamma = 2;
+		q.directGamma(2);
 		if (new_alp == 2)
 			q.chooseAlpha();
 		else {
@@ -1267,8 +1267,8 @@ public class WeldManager extends PackExtender {
 			q.fillcurves();
 			p.set_aim_default();
 			q.set_aim_default();
-			p.activeNode = p.gamma;
-			q.activeNode = q.gamma;
+			p.activeNode = p.getGamma();
+			q.activeNode = q.getGamma();
 			if (weldmapfile == null || weldmapfile.trim().length() < 2)
 				msg("weld_with_map: verts " + p_start_vert + " " + q_start_vert
 						+ " weldmap=identity map;");

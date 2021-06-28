@@ -6680,29 +6680,22 @@ public class CommandStrParser {
 	      // ========= flip ========
 	      if (cmd.startsWith("flip")) {
 			  PackDCEL pdc=packData.packDCEL;
-	    	  items=flagSegs.elementAt(0); // should be only one segment
+			  if (flagSegs==null || flagSegs.size()==0) 
+				  return 0;
+	    	  items=flagSegs.elementAt(0); // should be one segment
 	    	  String fstr="v"; // default to listed vertices
-	    	  if (StringUtil.isFlag(items.get(0))) {
+	    	  if (StringUtil.isFlag(items.get(0))) 
 	    		  fstr=items.remove(0).substring(1);
-	    	  }
-	    	  int rslt=0;
 	    	  
 	    	  // Check for 'h' flag first, to project forward to 
 	    	  // next (half-hex) edge, then flip clockwise edge 
 	    	  // from that. The next edge itself is stored in 'elist'
 	    	  // in case this is called again.
-	    	  
-	    	  boolean hhflag=false; // is this half-hex projection?
+
 	    	  if (fstr.contentEquals("h")) {
-	    		  hhflag=true;
-	    	  }
-	    	  
-	    	  if (pdc!=null) { // packData.elist;
-	    		  if (flagSegs==null || flagSegs.size()==0) 
-	    			  return 0;
-	    		  HalfLink hlink=new HalfLink(packData,flagSegs.get(0));
-    			  HalfEdge flipped=null;
-	    		  if (hhflag) {
+	    		  if (pdc!=null) { // packData.elist;
+	    			  HalfLink hlink=new HalfLink(packData,flagSegs.get(0));
+	    			  HalfEdge flipped=null;
 	    			  HalfEdge he=hlink.get(0); // only one edge
 	    			  HalfEdge[] fls=null;
 	    			  if (he!=null) { 
@@ -6729,20 +6722,9 @@ public class CommandStrParser {
 			   			  CirclePack.cpb.errMsg(("usage: flip -h {v,w}"));
 			   			  return 0;
 	    			  }
-	    		  }
+	    		  } // end of 'h' flag case for DCEL
 	    		  
-	    		  // just a list of flips
-	    		  else {
-	    			  rslt=CombDCEL.flipEdgeList(pdc,hlink);
-	    			  if (rslt>0)
-	    				  pdc.fixDCEL_raw(packData);
-	    			  return rslt;
-	    		  }
-	    	  }
-	    				  
-	    	  // traditional
-	    	  if (fstr.contentEquals("h")) {
-	    		  rslt=0;
+	    		  // traditional with -h flag
 		   		  EdgeSimple edge=EdgeLink.grab_one_edge(packData,flagSegs);
 		   		  if (edge==null)
 		   			  edge=EdgeLink.grab_one_edge(packData,"elist");
@@ -6762,7 +6744,7 @@ public class CommandStrParser {
 	   				  packData.elist.add(edge);
 	   				  if (indxvb==3) // can't flip
 	   					  return -1; // advanced but no flip
-	   				  rslt=packData.flip_edge(v,packData.kData[v].flower[indxvb-4],2);
+	   				  int rslt=packData.flip_edge(v,packData.kData[v].flower[indxvb-4],2);
 	   				  if (rslt==0)
 	   					  return -1; // advanced but no flip
 	   				  packData.setCombinatorics();
@@ -6777,14 +6759,26 @@ public class CommandStrParser {
 		   		  w=packData.kData[v].flower[indxn];
 		   		  packData.elist.add(new EdgeSimple(v,w));
 		   		  int k=(indxn-1+num)%num;
-		   		  rslt=packData.flip_edge(v,packData.kData[v].flower[k],2);
+		   		  int rslt=packData.flip_edge(v,packData.kData[v].flower[k],2);
 		   		  if (rslt==0)
 					return -1; // advanced but didn't flip
 		   		  packData.setCombinatorics();
 		   		  // calling routine does repack, layout, etc.
 		   		  return 1; // advanced and flipped
-	    	  } // done with 'h' flag case
+	    	  } // end of 'h' flag case
+
+	    	  // for the non-'h' cases, first collect the flips
 	    	  
+	    	  
+/*	    		  // just a list of flips
+	    		  else {
+	    			  rslt=CombDCEL.flipEdgeList(pdc,hlink);
+	    			  if (rslt>0)
+	    				  pdc.fixDCEL_raw(packData);
+	    			  return rslt;
+	    		  }
+*/	    		  
+
 	    	  // For remaining cases, just build 'elink' of edges to flip, .
 	   		  EdgeLink elink=new EdgeLink();
 	   		  EdgeLink origLink=new EdgeLink(packData,items);
@@ -6793,7 +6787,8 @@ public class CommandStrParser {
 	   		  Iterator<EdgeSimple> elist=origLink.iterator();
 
 	    	  // -cc flag (deprecated -hh): for each edge, flip the next 
-	    	  //     counterclockwise edge. (E.g., 'half-hex' path flips, see 'hh_path')
+	    	  //     counterclockwise edge. 
+	   		  // (E.g., 'half-hex' path flips, see 'hh_path')
 	    	  if (fstr.startsWith("cc") || fstr.startsWith("hh")) { 
 	    		  while (elist.hasNext()) {
 		   			  EdgeSimple edge=(EdgeSimple)elist.next();
@@ -6804,7 +6799,8 @@ public class CommandStrParser {
 		   			  }
 	    		  }
 	    	  }
-	    	  else if (fstr.startsWith("cw")) {
+	    	  // flip the clockwise edge (as we do along half-hex paths)
+	    	  else if (fstr.startsWith("cw")) { 
 	    		  int w;
 	    		  while (elist.hasNext()) {
 		   			  EdgeSimple edge=(EdgeSimple)elist.next();
@@ -6817,7 +6813,8 @@ public class CommandStrParser {
 	   				  elink.add(new EdgeSimple(edge.v,w));
 	    		  }
 	    	  }
-	    	  else if (fstr.contentEquals("r")) { // one random, try up to 20 times 
+	    	  // one random, try up to 20 times 
+	    	  else if (fstr.contentEquals("r")) { 
 	        	  Random rand=new Random();
 	        	  int safety=20;
 	        	  boolean didflip=false;
@@ -6837,7 +6834,9 @@ public class CommandStrParser {
 	   				  elink.add(new EdgeSimple(v,w));
 	        	  }
 	    	  }
-	    	  else { // no flags, just flip edges
+	    	  
+	    	  // reaching here, just flip edges in the list
+	    	  else { 
 	    		  if (origLink==null || origLink.size()<1) 
 	    			  return 0;
 	    		  elist=origLink.iterator();
@@ -6847,7 +6846,7 @@ public class CommandStrParser {
 	    		  }
 	    	  }  
 	    		
-	    	  // done building list, now to flip
+	    	  // done building list, so flip (DCEL or traditional)
 	    	  return packData.flipList(elink);
 	      }
 	      
@@ -7149,7 +7148,8 @@ public class CommandStrParser {
 	    				  }
 	    				  if (N<1) throw new ParserException("hh_path: usage -N {n}, n>0");
 	    			  }
-	    			  if (!its.hasNext()) { // flag seq is last --- should have edgelist
+	    			  // flag seq is last --- should have edgelist
+	    			  if (!its.hasNext()) { 
 		    			  edgelist=new EdgeLink(packData,items);
 	    			  }
 	    		  }
@@ -10764,7 +10764,7 @@ public class CommandStrParser {
      		  if (alp==-1)
      			  alp=packData.getAlpha();
      		  if (gam==-1)
-     			  gam=packData.gamma;
+     			  gam=packData.getGamma();
      		  if (intV==null || intV.size()==0)
      			  intV=new NodeLink(packData,"i");
 	     		  

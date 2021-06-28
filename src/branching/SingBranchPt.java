@@ -154,7 +154,7 @@ public class SingBranchPt extends GenBranchPt {
   	  		myPack.swap_nodes(v2, 3);
   	  		vertexMap=myPack.vertexMap.makeCopy(); // reset to get the swaps
   	  		myPack.setAlpha(1);
-  	  		myPack.gamma=2;
+  	  		myPack.setGamma(2);
   	  		myPack.setCombinatorics();
   	  		
  	  		// set the local 'connect' vertices

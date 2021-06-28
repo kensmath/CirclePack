@@ -165,8 +165,10 @@ public class CookieMonster {
 		// finish restoring and processing the new complex
 		if (outcomeFlag>0) {
 			restoreData();
-			if ((monsterPackData.setAlpha(old2new[seed]))==0) monsterPackData.chooseAlpha();
-			if ((monsterPackData.gamma=old2new[monsterPackData.gamma])==0) monsterPackData.chooseGamma();
+			if ((monsterPackData.setAlpha(old2new[seed]))==0) 
+				monsterPackData.chooseAlpha();
+			if ((monsterPackData.setGamma(old2new[monsterPackData.getGamma()]))==0) 
+				monsterPackData.chooseGamma();
 
 			monsterPackData.setCombinatorics();
 			monsterPackData.fillcurves();

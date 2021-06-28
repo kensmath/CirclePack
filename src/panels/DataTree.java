@@ -102,7 +102,7 @@ public class DataTree extends JPanel {
 			v1.add("Topology: " + setTopologyStr(p));
 			v1.add("Node/Face Count = " + p.nodeCount+" / "+p.faceCount);
 			v1.add("Genus/Euler = "+p.genus+" / "+p.euler);
-			v1.add("Alpha/Gamma Vertices = "+p.getAlpha()+" / "+p.gamma);
+			v1.add("Alpha/Gamma Vertices = "+p.getAlpha()+" / "+p.getGamma());
 			v1.add("Total/Average angle error = "+
 					String.format("%.6e",curvErr[0])+" / "+
 					String.format("%.6e",curvErr[1]));

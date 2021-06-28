@@ -151,8 +151,8 @@ public class Necklace extends PackExtender {
 				Oops("'topPack' or 'bottomPack' is null");
 			
 			// center vert of face #1 edge in axis (3 or 5)
-			int topOrigin=topPack.gamma;
-			int bottomOrigin=bottomPack.gamma;
+			int topOrigin=topPack.getGamma();
+			int bottomOrigin=bottomPack.getGamma();
 			
 			// check util_A, util_B
 			if (!topPack.isBdry(topPack.util_A) ||

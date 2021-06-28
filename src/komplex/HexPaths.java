@@ -18,11 +18,11 @@ public class HexPaths {
 	 * A 'half-hex' path is a directed edgepath with 2 edges incident on the 
 	 * left at every interior vertex. It is determined by an initial edge,
 	 * certain necessary start/stop conditions, and possibly optional "stop"
-	 * conditions. Return the number of edges in the path or 0 on error.
+	 * conditions. Return 'EdgeLink' or null on error.
 	 * 
 	 * Typically, intention is to "flip" edges along this path, so we apply
 	 * 'flipable' criteria: namely, for each intended 'edge' (including given
-	 * edge1), the counterclockwise edge 'e' (ie., around initial end of 'edge')
+	 * edge1), the clockwise edge 'e' (ie., around initial end of 'edge')
 	 * must be "flipable".
 	 * 
 	 * Stop conditions, bitwise: (Default is 2 | 4 | 8 = 14)
@@ -30,8 +30,8 @@ public class HexPaths {
 	 *  2 bit: when next edge would end at vertex already on existing path
 	 *    (e.g., prevents "doubling back" at degree 3 vertex)
 	 *  4 bit: allow edge ending at very first vert if next edge would = edge1
-	 *    (a "closed" helf-hex path: doing all the flips will "slide" left forward
-	 *    along right. See 'hex_slide'.)
+	 *    (a "closed" helf-hex path: doing all the flips will "slide" right
+	 *    backward along the left right. See 'hex_slide'.)
 	 *    (If 4 and 2 are set, then stop if you hit existing vertex other than
 	 *    lining up with first.)
 	 *  8 bit: when next edge would be a bdry edge
@@ -47,7 +47,7 @@ public class HexPaths {
 	 *  are too many conditions to check and they change as flips are made. One 
 	 *  can only be sure by doing the successive flips.
 	 * 
-	 * @param pd
+	 * @param pd PackData
 	 * @param edge1 EdgeSimple
 	 * @param stopCon bit-encoded "stop" condition 
 	 * @param int N, stop with at most N edges if N>0
@@ -57,19 +57,22 @@ public class HexPaths {
 		p=pd;
 		
 		// get first edge
-		if (edgelist==null || edgelist.size()==0) return null;
+		if (edgelist==null || edgelist.size()==0) 
+			return null;
 		Iterator<EdgeSimple> elist=edgelist.iterator();
 		EdgeSimple cur_edge=(EdgeSimple)elist.next();
-		if (!p.flipable(cur_edge.v,cur_edge.w)) return null;
+		if (!p.clwFlipable(cur_edge.v,cur_edge.w)) 
+			return null;
 		
 		EdgeLink epath=new EdgeLink(p,cur_edge); // first edge goes in
 		int firstv=cur_edge.v; // save for later comparison
 		int firstw=cur_edge.w;
 		
 		// use 'utilFlag' to mark vertices along the edge path
-		for (int i=1;i<=p.nodeCount;i++) p.kData[i].utilFlag=0;
-		p.kData[cur_edge.v].utilFlag=1;
-		p.kData[cur_edge.w].utilFlag=1;
+		for (int i=1;i<=p.nodeCount;i++) 
+			p.setVertUtil(i,0);
+		p.setVertUtil(cur_edge.v,1);
+		p.setVertUtil(cur_edge.w,1);
 		
 		int count=1;
 		if ((stopCon & 1)==1) { // ignore stop options
@@ -80,21 +83,22 @@ public class HexPaths {
 			// check flipability, etc
 			while (elist.hasNext()) {
 				cur_edge=(EdgeSimple)elist.next();
-				if (!p.flipable(cur_edge.v,cur_edge.w)) 
+				if (!p.clwFlipable(cur_edge.v,cur_edge.w)) 
 					return null;
 				epath.add(cur_edge);
-				p.kData[cur_edge.v].utilFlag=1;
-				p.kData[cur_edge.w].utilFlag=1;
+				p.setVertUtil(cur_edge.v,1);
+				p.setVertUtil(cur_edge.w,1);
 				count++;
 			}
 		}
-
 
 		int v,w,nextv,indx,nidx;
 		while (N<=0 || count<N) {
 			v=cur_edge.v;
 			w=cur_edge.w;
 			indx=p.nghb(w,v);
+			
+			int[] flower=p.getFlower(w);
 			
 			// next edge would encounter boundary?
 			if (p.isBdry(w) && (indx<3 || (indx==3 && (stopCon & 8)==8)))
@@ -106,12 +110,12 @@ public class HexPaths {
 			
 			// find the next edge end vert
 			if (p.isBdry(w))
-				nextv=p.kData[w].flower[indx-3];
+				nextv=flower[indx-3];
 			else 
-				nextv=p.kData[w].flower[(indx-3+p.countFaces(w))%p.countFaces(w)];
+				nextv=flower[(indx-3+p.countFaces(w))%p.countFaces(w)];
 			
 			// if nextv is already on the path
-			if (p.kData[nextv].utilFlag!=0) {
+			if (p.getVertUtil(nextv)!=0) {
 				if (nextv!=firstv && (stopCon & 2)==2) // stop, don't add this edge
 					return epath;
 				if (nextv==firstv) { // if it hits firstv
@@ -147,7 +151,7 @@ public class HexPaths {
 
 			cur_edge=new EdgeSimple(w,nextv);
 			epath.add(w,nextv);
-			p.kData[nextv].utilFlag=1;
+			p.setVertUtil(nextv,1);
 			count++;
 		} // end of while
 		return epath;

@@ -2044,11 +2044,9 @@ public class PackDCEL {
 	 * if 'v'<=0 or 'v' not interior, try current 'alpha' if
 	 * it's interior. Else look for first interior; nothing
 	 * works, use current 'alpha' or choose 1.
-	 * If we change 'alpha', we may also change 'gamma' to
-	 * avoid collision, and we call 'd_FillInside' to adjust
-	 * combinatorics. (Also, set 'p.alpha'.)
-	 * NOTE: we also call 'PackData.directAlpha(v)'
-	 * to set 'PackData.alpha' as backup.
+	 * If we change 'alpha', call 'd_FillInside' to adjust
+	 * combinatorics. Also, may need to change 'gamma'.
+	 * (Also, set 'p.alpha', 'p.gamma'.)
 	 * @param v int
 	 * @return 'v' 
 	 */
@@ -2084,8 +2082,10 @@ public class PackDCEL {
 			if (myTry!=null) { // myTry should be 'alpha'
 				if (gamma==myTry)
 					gamma=myTry.twin;
-				if (p!=null)
+				if (p!=null) {
 					p.directAlpha(alpha.origin.vertIndx);
+					p.directGamma(gamma.origin.vertIndx);
+				}
 				return myTry.origin.vertIndx;
 			}
 			for (int j=0;j<=vertCount;j++) // get first interior
@@ -2110,11 +2110,14 @@ public class PackDCEL {
 			alpha=myTry;
 			if (p!=null)
 				p.directAlpha(alpha.origin.vertIndx);
-			CombDCEL.d_FillInside(p.packDCEL);
+			CombDCEL.d_FillInside(p.packDCEL); // adjust combinatorics
 		}
 		
-		if (gamma==alpha)
+		if (gamma==alpha) {
 			gamma=alpha.twin;
+			if (p!=null)
+				p.directGamma(gamma.origin.vertIndx);
+		}
 		return myTry.origin.vertIndx;
 	}
 	
@@ -2130,17 +2133,23 @@ public class PackDCEL {
     	if (alpha==null)
     		setAlpha(0,null);
         if (v<=0 || v>vertCount) {
-        	if (gamma==null)
+        	if (gamma==null) {
         		gamma=alpha.twin;
+        		if (p!=null)
+        			p.directGamma(gamma.origin.vertIndx);
+        	}
         	return 1;
         }
 		Vertex vertex =vertices[v];
 		if (vertex==alpha.origin) { 
-			CirclePack.cpb.errMsg("'gamma' cannot be set to the 'alpha' edge origin");
+			CirclePack.cpb.errMsg("'gamma' cannot be "+
+					"set to have the 'alpha' edge origin");
 			return 0;
 		}
 		gamma=vertex.halfedge;
-        return 1;
+		if (p!=null)
+			p.directGamma(gamma.origin.vertIndx);
+        return gamma.origin.vertIndx;
     } 
     
 	/**

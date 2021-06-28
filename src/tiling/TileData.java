@@ -507,7 +507,7 @@ public class TileData {
 		// wrap up and return
 		thePack.status=true;
 		thePack.setAlpha(td.myTiles[1].baryVert);
-		thePack.gamma=td.myTiles[1].vert[0];
+		thePack.setGamma(td.myTiles[1].vert[0]);
 		thePack.chooseAlpha();
 		thePack.chooseGamma();
 		thePack.setCombinatorics();
@@ -1267,8 +1267,8 @@ public class TileData {
 		if (elist.size()==1) {
 			PackData p=new PackData(null);
 			p.nodeCount=9;
-			p.directAlpha(1);
-			p.gamma=2;
+			p.setAlpha(1);
+			p.setGamma(2);
 			p.status=true;
 			p.locks=0;
 			p.activeNode=1;

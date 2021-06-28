@@ -1076,7 +1076,7 @@ public class GenBranching extends PackExtender {
 		
 		// normalize
 		Complex az=packData.getCenter(packData.getAlpha());
-		Complex gz=packData.getCenter(packData.gamma);
+		Complex gz=packData.getCenter(packData.getGamma());
 		double agdist=az.minus(gz).abs();
 		Mobius mob=null;
 		if (agdist>=0.00001) {

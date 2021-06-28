@@ -86,7 +86,7 @@ public class CombDCEL {
 	 * indexed contiguously from 1, bdry/interior flower 
 	 * open/closed, resp. 'alpha' helpedge should start at interior  
 	 * @param bouquet int[][]
-	 * @param alphaIndx int, suggested 'alpha' vertex, may be 0
+	 * @param alphaIndx int, suggested 'alpha' vertex, may be <=0
 	 * @return packDCEL
 	 */
 	public static PackDCEL getRawDCEL(int[][] bouquet,int alphaIndx) {
@@ -177,7 +177,7 @@ public class CombDCEL {
 			}
 		}
 		
-		// Identify bdry edges by creating'face' with index -1. 
+		// Designate bdry edges by creating 'face' with index -1. 
 		// Note that other 'face's entries are not set, since we 
 		//   do not catalog the faces, but we need to identify
 		//   bdry edges in 'redchain_by_edge'.
@@ -192,7 +192,7 @@ public class CombDCEL {
 		
 		// designate 'alpha' halfedge; use suggested 'alphaIndx', if interior
 		HalfEdge alpha=null;
-		if (alphaIndx==0 || bdryverts[alphaIndx]!=0)
+		if (alphaIndx<=0 || (alphaIndx<=vertcount && bdryverts[alphaIndx]!=0))
 			alphaIndx=firstInterior;
 		if (alphaIndx>0 && alphaIndx<=vertcount && bdryverts[alphaIndx]==0) {
 			int k=heArrays[alphaIndx].length;

@@ -1606,14 +1606,14 @@ public class RawDCEL {
 			  return ans;
 		  }
 
-		  // can we flip? get next clw spoke
+		  // can we flip? get next clw spoke about v
 		  HalfEdge fledge=null;
 		  if (edge.twin.face==null || edge.twin.face.faceIndx>=0) {
 			  HalfEdge tryedge=edge.twin.next;
 			  fledge=RawDCEL.flipEdge_raw(pdcel, tryedge);
 		  }
 		  ans[0]=adedge;
-		  ans[1]=fledge;
+		  ans[1]=fledge; // could be null if flip is illegal
 		  return ans;
 	  }
 

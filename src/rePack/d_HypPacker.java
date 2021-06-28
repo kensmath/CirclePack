@@ -416,7 +416,7 @@ public class d_HypPacker extends RePacker {
 			count=maxPackC();
 			// normalize to put alpha at the origin, gamma on imaginary axis.
 			p.center_point(p.getCenter(p.getAlpha()));
-			p.rotate((-1.0)*p.getCenter(p.gamma).arg()+Math.PI/2.0);
+			p.rotate((-1.0)*p.getCenter(p.getGamma()).arg()+Math.PI/2.0);
 		}
 		return count;
 	}

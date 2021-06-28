@@ -161,13 +161,13 @@ public class HalfEdge {
 	}
 	
 	/**
-	 * Return the next half-hex 'HalfEdge'. That
-	 * is, pass two intervening spokes on the left.
-	 * If this edge is <v,w>, then find edge <w,u> which is
-	 * 3 interior edges clw around w from <w,v>. Return
-	 * null on failure. Note that return might be
-	 * <w,v> if degree of w is three, or null if
-	 * a bdry edge is encountered. 
+	 * Return the next half-hex 'HalfEdge'; that,
+	 * if this edge is <v,w>, the pass by two 
+	 * intervening spokes to find <w,u>,  3 clw 
+	 * around w from <w,v>. Return null on failure. 
+	 * Note that return might be <w,v> if degree 
+	 * of w is three, or null if a bdry edge is 
+	 * encountered. 
 	 * @return HalfEdge, null on failure
 	 */
 	public HalfEdge HHleft() {
