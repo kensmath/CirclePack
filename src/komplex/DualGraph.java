@@ -191,7 +191,7 @@ public class DualGraph {
 					}
 
 					// try to put nextface in tree first
-					int fopp = p.face_opposite(nxtFace, v);
+					int fopp = p.face_opposite(curFace.nextFace, v);
 					if (fopp > 0 && fck[fopp] < 0) {
 						dlink.add(fopp, nextface);
 						fck[nextface] = -ftick;
@@ -217,7 +217,7 @@ public class DualGraph {
 							// just want faces with verts already in place
 							Face Ff = p.faces[f];
 							for (int k = 0; (k < 3 && fck[f] == 3); k++) {
-								int ff = p.face_opposite(Ff, Ff.vert[k]);
+								int ff = p.face_opposite(f, Ff.vert[k]);
 								if (ff > 0 && fck[ff] < 0) {
 									dlink.add(ff, f);
 									fck[f] = -ftick;
@@ -264,7 +264,7 @@ public class DualGraph {
 					fck[f] += 1;
 				}
 
-				int fopp = p.face_opposite(nxtFace, v);
+				int fopp = p.face_opposite(curFace.nextFace, v);
 				if (fopp > 0 && fck[fopp] >= 0)
 					throw new CombException("can't put redface in tree");
 				dlink.add(fopp, nextface);
@@ -335,7 +335,7 @@ public class DualGraph {
 					}
 
 					// try to put nextface in tree first
-					int fopp = p.face_opposite(nxtFace, v);
+					int fopp = p.face_opposite(curFace.nextFace, v);
 					if (fopp > 0 && fck[fopp] < 0) {
 						dlink.add(fopp, nextface);
 						fck[nextface] = -ftick;
@@ -364,7 +364,7 @@ public class DualGraph {
 							Face Ff = p.faces[f];
 							// while f is not placed
 							for (int k = 0; (k < 3 && fck[f] == 3); k++) {
-								int ff = p.face_opposite(Ff, Ff.vert[k]);
+								int ff = p.face_opposite(f, Ff.vert[k]);
 								if (ff > 0 && fck[ff] < 0) {
 									dlink.add(ff, f);
 									fck[f] = -ftick;
@@ -434,7 +434,7 @@ public class DualGraph {
 					int thef = -1;
 					int bsf = -p.faceCount;
 					for (int j = 0; j < 3; j++) {
-						int f = p.face_opposite(p.faces[nextf],
+						int f = p.face_opposite(nextf,
 								p.faces[nextf].vert[j]);
 						// is it in tree and earlier than others?
 						if (f > 0 && fck[f] < 0 && (fck[f] > bsf)) {

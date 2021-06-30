@@ -185,6 +185,15 @@ public class HyperbolicMath{
 	  return x;
   }
   
+  /**
+   * Note, 'cs.rad' should be 'x-rad' (internal value).
+   * @param cs CircleSimple
+   * @return
+   */
+  public static CircleSimple h_to_e_data(CircleSimple cs) {
+	  return h_to_e_data(cs.center,cs.rad);
+  }
+  
   /** 
    * Converts circle data from hyp to eucl. Note: if h_center is
    * the origin, then 
@@ -281,6 +290,10 @@ public class HyperbolicMath{
         e_center->im=b*h_center.y;
       } */
   } 
+  
+  public static CircleSimple e_to_h_data(CircleSimple cs) {
+	  return e_to_h_data(cs.center,cs.rad);
+  }
 
   /** 
    * Converts circle data from eucl to hyp, with x-radius.
@@ -725,7 +738,7 @@ used to be passed in here as an argument).
 		if (rslt==0)
 			throw new LayoutException("failed getting incircle for ideal triangle");
 		// convert back to hyp geometry
-		sC=e_to_h_data(sC.center,sC.rad);
+		sC=e_to_h_data(sC);
 		return sC;
 	}
 	

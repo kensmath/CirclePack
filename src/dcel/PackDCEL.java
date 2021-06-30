@@ -1057,13 +1057,14 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Given HalfEdge he=<v,w>, return ends of dual edge <f,g>.
-	 * CAUTION: f is to left of <v,w>, g to right.
-	 * Return null if f an ideal face. If <v,w> is a bdry 
-	 * (red w/o 'twinRed') then go from point on edge <v,w> to 
-	 * center of f. Else if <v,w> is red
+	 * Given HalfEdge he=<v,w>, return ordered ends, g then f,
+	 * of dual edge <f,g>. CAUTION: f is to left of <v,w>, g 
+	 * to right, so result goes from right to left across <v,w>.
+	 * Return null if f an ideal face. If <v,w> is a oriented 
+	 * bdry edge (red w/o 'twinRed') then go from point on 
+	 * edge <v,w> to center of f. Else if <v,w> is red
 	 * with 'twinRed', then compute location g would have if it
-	 * shared edge <v,w> with f. 
+	 * shared edge <v,w> with f and go from g to f. 
 	 * @param he HalfEdge
 	 * @return Complex[2] or null
 	 */
@@ -1082,24 +1083,21 @@ public class PackDCEL {
 			return pts;
 		}
 
-		Complex z1=getVertCenter(he);
-		double r1=getVertRadius(he);
-		Complex z2=getVertCenter(he.twin);
-		double r2=getVertRadius(he.twin);
-
-		// he is bdry edge
-		if (he.myRedEdge.twinRed==null) {
-			pts[0]=CommonMath.get_tang_pt(z1, z2, r1, r2, p.hes);
+		// for red edge, may be bdry or twinned
+		CircleSimple cs1=getCircleSimple(he);
+		CircleSimple cs2=getCircleSimple(he.next);
+		if (he.myRedEdge.twinRed==null) { // bdry edge
+			pts[0]=CommonMath.genTangPoint(cs1, cs2,p.hes);
 			return pts;
 		}
 		
 		// he is twinned red edge; recompute opp center of g
 		//   using centers radii of shared edge.
 		double r3=getVertRadius(he.twin.next.next);
-		CircleSimple cs=CommonMath.comp_any_center(z2,z1,r2,r1,r3,
+		CircleSimple cs3=CommonMath.comp_any_center(cs1,cs2,r3,
 				he.twin.schwarzian,he.twin.next.schwarzian,
 				he.twin.next.next.schwarzian,p.hes);
-		pts[0]=CommonMath.tripleIncircle(z2, z1, cs.center,p.hes);
+		pts[0]=CommonMath.circle3Incircle(cs1, cs2, cs3,p.hes).center;
 		
 		return pts;
 	}
@@ -1286,15 +1284,24 @@ public class PackDCEL {
 		throw new DCELException("didn't find any 'RedHEdge' for this 'Vertex'");
 	}
 	
+	public CircleSimple getCircleSimple(HalfEdge he) {
+		return new CircleSimple(getVertCenter(he),getVertRadius(he));
+	}
+	
 	/**
 	 * Set vert's center in all locations; that is, in 
 	 * 'vData', 'rData' (for backup), and in any associated 
-	 * 'RedHEdges' for this v. (Compare with 'setRad4Edge' which 
+	 * 'RedHEdges' for this v. (Compare with 'setCent4Edge' which 
 	 * only set's the value associated with one edge.)
 	 * @param v int
 	 * @param z Complex
 	 */
 	public void setVertCenter(int v, Complex z) {
+		if (p.hes<0) { // check is appropriate for disc
+			double absz=z.abs();
+			if (absz>1.000000001) // outside disc?
+				z=z.divide(absz+.00000001); // pull in
+		}
 		Vertex vert=vertices[v];
 		if (this==p.packDCEL) {
 			p.vData[v].center=new Complex(z);
@@ -1318,6 +1325,12 @@ public class PackDCEL {
 	 * @param z Complex
 	 */
 	public void setCent4Edge(HalfEdge edge,Complex z) {
+		if (p.hes<0) { // check is appropriate for disc
+			double absz=z.abs();
+			if (absz>1.000000001) // outside disc?
+				z=z.divide(absz+.00000001); // pull in
+		}
+
 		Vertex vert=edge.origin;
 		p.vData[vert.vertIndx].center=new Complex(z);
 
@@ -1336,7 +1349,7 @@ public class PackDCEL {
 	}
 
 	/**
-	 * Set vert's radius (hyp: in its internal form) in all 
+	 * Set vert's radius (hyp: in its internal x-rad form) in all 
 	 * locations; i.e., in 'vData', 'rData' (for backup), and in
 	 * any associated 'RedHEdges' for this v. (Compare with
 	 * 'setRad4Edge' which only set's the value associated
@@ -1757,6 +1770,40 @@ public class PackDCEL {
 		} // end of while through trees
 		return count;
 	}
+	
+	/**
+	 * Find the incircle for the given face. For eucl
+	 * and sph cases, just use 3 centers; for hyp case,
+	 * use 3 generalized tangency points.
+	 * @param face Face
+	 * @return CircleSimple
+	 */
+	public CircleSimple getFaceIncircle(Face face) {
+		Complex[] pts=new Complex[3];
+		HalfEdge he=face.edge;
+		for (int j=0;j<3;j++) { 
+			pts[j]=p.packDCEL.getVertCenter(he);
+			he=he.next;
+		}
+		if (p.hes>=0) {
+			if (p.hes>0) 
+				return SphericalMath.sph_tri_incircle(pts[0],pts[1],pts[2]);
+			else
+				return EuclMath.eucl_tri_incircle(pts[0],pts[1],pts[2]);
+		}
+		
+		// hyp case
+		CircleSimple[] cS=new CircleSimple[3];
+		he=face.edge;
+		for (int j=0;j<3;j++) {
+			cS[j]=new CircleSimple(pts[j],p.packDCEL.getVertRadius(he));
+			he=he.next;
+		}
+		for (int j=0;j<3;j++) {
+			pts[j]=CommonMath.genTangPoint(cS[j],cS[(j+1)%3],p.hes);
+		}
+		return HyperbolicMath.e_to_h_data(EuclMath.circle_3(pts[0], pts[1], pts[2]));
+	}
 
 	/**
 	 * Return center of incircle of face with given index.
@@ -1767,20 +1814,59 @@ public class PackDCEL {
 		if (face.faceIndx<0)
 			return null;
 		HalfEdge he=face.edge;
+		
+		if (p.hes < 0) { // hyperbolic
+			CircleSimple[] cS=new CircleSimple[3];
+			for (int j=0;j<3;j++) {
+				cS[j]=new CircleSimple(p.packDCEL.getVertCenter(he),
+						p.packDCEL.getVertRadius(he));
+				he=he.next;
+			}
+			Complex[] pts=new Complex[3];
+			for (int j=0;j<3;j++) {
+				pts[j]=CommonMath.genTangPoint(cS[j],cS[(j+1)%3],p.hes);
+			}
+			CircleSimple theCircle=EuclMath.circle_3(pts[0], pts[1], pts[2]);
+			theCircle=HyperbolicMath.e_to_h_data(theCircle);
+			return theCircle.center;
+		}
+		
 		Complex p0 = getVertCenter(he);
 		Complex p1 = getVertCenter(he.next);
 		Complex p2 = getVertCenter(he.next.next);
-		CircleSimple sc = null;
-		if (p.hes < 0)
-			sc = HyperbolicMath.hyp_tang_incircle(p0, p1, p2,
-					getVertRadius(he),
-					getVertRadius(he.next),
-					getVertRadius(he.next.next));
-		else if (p.hes > 0)
+		CircleSimple sc;
+		if (p.hes > 0)
 			sc = SphericalMath.sph_tri_incircle(p0, p1, p2);
 		else
 			sc = EuclMath.eucl_tri_incircle(p0, p1, p2);
 		return sc.center;
+	}
+	
+	/**
+	 * Return Face consisting of vertices {a,b,c} or 
+	 * {a,c,b}, null on failure, eg. if 'this' face 
+	 * is ideal.
+	 * @param a int
+	 * @param b int
+	 * @param c int
+	 * @return Face, null on failure
+	 */
+	public Face whatFace(int a,int b,int c) {
+		Vertex vert=vertices[a];
+		HalfLink spokes=vert.getEdgeFlower();
+		Iterator<HalfEdge> his=spokes.iterator();
+		while (his.hasNext()) {
+			HalfEdge he=his.next();
+			Face face=he.face;
+			// not an ideal face?
+			if (face!=null && face.faceIndx>0) { 
+				int w=he.next.origin.vertIndx;
+				int u=he.next.next.origin.vertIndx;
+				if ((w==b && u==c) || (u==b && w==c))
+					return face;
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -2044,13 +2130,15 @@ public class PackDCEL {
 	 * if 'v'<=0 or 'v' not interior, try current 'alpha' if
 	 * it's interior. Else look for first interior; nothing
 	 * works, use current 'alpha' or choose 1.
-	 * If we change 'alpha', call 'd_FillInside' to adjust
-	 * combinatorics. Also, may need to change 'gamma'.
-	 * (Also, set 'p.alpha', 'p.gamma'.)
+	 * 'recomb' true means if we change 'alpha', call 
+	 * 'd_FillInside' to adjust combinatorics. 
+	 * Also, may need to change 'gamma'. (This also, 
+	 * set 'p.alpha', 'p.gamma' if 'p' is not null.)
 	 * @param v int
+	 * @param recomb boolean
 	 * @return 'v' 
 	 */
-	public int setAlpha(int v,NodeLink nlink) {
+	public int setAlpha(int v,NodeLink nlink,boolean recomb) {
 		HalfEdge myTry=null; // current best option
 		int alpIndex=0;
 		if (alpha!=null) {
@@ -2105,12 +2193,14 @@ public class PackDCEL {
 				myTry=vertices[1].halfedge;
 		}
 		
-		// wrap up
+		// wrap up: did we change 'alpha'?
 		if (myTry!=alpha) {
 			alpha=myTry;
-			if (p!=null)
+			if (p!=null) {
 				p.directAlpha(alpha.origin.vertIndx);
-			CombDCEL.d_FillInside(p.packDCEL); // adjust combinatorics
+				if (recomb)  // adjust combinatorics
+					CombDCEL.d_FillInside(p.packDCEL);
+			}
 		}
 		
 		if (gamma==alpha) {
@@ -2124,6 +2214,7 @@ public class PackDCEL {
     /**
      * Set packing 'gamma' index; it's vertex generally 
      * placed on y+ axis. Can't be 'alpha'.
+     * Note: we don't call 'd_FillInside'.
      * @param v int, preference or 0
      * @return 1 on success, 0 on failure
      */
@@ -2131,7 +2222,7 @@ public class PackDCEL {
     	
     	// make sure 'alpha' is set
     	if (alpha==null)
-    		setAlpha(0,null);
+    		setAlpha(0,null,false); // don't call 'd_FillInside'
         if (v<=0 || v>vertCount) {
         	if (gamma==null) {
         		gamma=alpha.twin;

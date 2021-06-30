@@ -298,10 +298,10 @@ public class PackData{
     	pdcel.p=this;
     	int origNodeCount=nodeCount;
     	if (pdcel.alpha==null)
-    		pdcel.setAlpha(0,null);
+    		pdcel.setAlpha(0,null,true);
    		alpha=pdcel.alpha.origin.vertIndx;
     	if (pdcel.gamma==null)
-   		gamma=pdcel.setGamma(0);
+    		gamma=pdcel.setGamma(0);
 		
     	// set some counts
 		nodeCount=pdcel.vertCount;
@@ -2388,7 +2388,7 @@ public class PackData{
      */
     public void chooseAlpha(){
     	if (packDCEL!=null) {
-    		packDCEL.setAlpha(0,null);
+    		packDCEL.setAlpha(0,null,true);
     		return;
     	}
     	
@@ -2471,8 +2471,8 @@ public class PackData{
     	
 		int alp=getAlpha(); // backup
 		
-    	if (packDCEL!=null) {
-    		return packDCEL.setAlpha(v,null);
+    	if (packDCEL!=null) { // most are traditional calls
+    		return packDCEL.setAlpha(v,null,false);
         }
     	
     	// traditional
@@ -3004,6 +3004,14 @@ public class PackData{
 	 */
 	public void setCenter(int v,Complex z) {
 		if (v<1 || v>nodeCount) return;
+		
+		// TODO: somewhere, have to do checks in hyp/sph
+		//    cases. Problem we might be in the midst of 
+		//    changing geometry.
+		if (packDCEL!=null)
+			packDCEL.setCent4Edge(packDCEL.vertices[v].halfedge,z);
+		
+		// traditional
 		if(hes < 0) { // hyperbolic: must be in unit disc
 			double abval=z.absSq();
 			if (abval>1.0) { // error; scale until it's in the unit disc
@@ -3015,8 +3023,6 @@ public class PackData{
 			while (z.y<0.0) z.y += Math.PI;
 			while (z.y>Math.PI) z.y = Math.PI; // truncate at Pi
 		}
-		if (packDCEL!=null)
-			packDCEL.setCent4Edge(packDCEL.vertices[v].halfedge,z);
 		else
 			rData[v].center=new Complex(z);
 	}
@@ -3546,8 +3552,7 @@ public class PackData{
 	}
 	
 	/**
-	 * If {v,w} is an edge, find the clw edge, if it
-	 * exists.
+	 * If {v,w} is edge, find the clw edge about 'v', if it exists.
 	 * @param v int
 	 * @param w int
 	 * @return EdgeSimple, null on failure
@@ -4112,11 +4117,11 @@ public class PackData{
 	}
 	
 	/**
-	 * Return two ends of dual edge, possibly complicated for 
-	 * non-simply connected
+	 * Return complex locations of ends of dual edge, 
+	 * possibly complicated for non-simply connected
 	 * @param edge EdgeSimple
 	 * @param ambigZs Ambiguous[]
-	 * @return Complex[2]
+	 * @return Complex[2], null on failure
 	 */
 	public Complex []ends_dual_edge(EdgeSimple edge,AmbiguousZ []ambigZs) {
 		int f=edge.v;
@@ -4169,6 +4174,7 @@ public class PackData{
 	 */
 	public int []flowerFan(int v,int j1,int j2) {
 		int []fan=null;
+		int[] flower=getFlower(v);
 		try {
 			int num=countFaces(v);
 			if (isBdry(v)) { // bdry case
@@ -4176,11 +4182,11 @@ public class PackData{
 					return null;
 				fan=new int[j2-j1+1];
 				for (int i=j1;i<=j2;i++)
-					fan[i-j1]=kData[v].flower[i];
+					fan[i-j1]=flower[i];
 				return fan;
 			}
 			
-			// int case
+			// interior case
 			j1=j1%num;
 			j2=j2%num;
 			int tick=(j2+num-j1)%num+1;
@@ -4188,7 +4194,7 @@ public class PackData{
 				tick=num+1;
 			fan=new int[tick];
 			for (int i=0;i<tick;i++) 
-				fan[i]=kData[v].flower[(j1+i)%num];
+				fan[i]=flower[(j1+i)%num];
 			
 		} catch(Exception ex) {
 			return null;
@@ -4204,9 +4210,15 @@ public class PackData{
 	 * @return index or -1 if v not a vert of face f
 	 */
 	public int face_index(int f,int v) {
+		if (packDCEL!=null) {
+			return packDCEL.faces[f].getVertIndx(v);
+		}
+		
+		// traditional
 		int m=0;
+		int[] fverts=getFaceVerts(f);
 		while (m<3) { 
-			if (faces[f].vert[m]==v) 
+			if (fverts[m]==v) 
 				return m;
 			m++;
 		}
@@ -4220,27 +4232,43 @@ public class PackData{
 	 * @return int index f or -1 if there is no such face 
 	 */
 	public int face_right_of_edge(int v,int w) {
-	  int indx,u,f;
+		if (packDCEL!=null) {
+			HalfEdge he=packDCEL.findHalfEdge(new EdgeSimple(v,w));
+			if (he==null)
+				return -1;
+			return he.twin.face.faceIndx;
+		}
+		
+		// traditional
+		int indx,f;
 
-	  if ((indx=nghb(w,v))<0 
-	      || (isBdry(v) && w==kData[v].flower[0]))
-	    return -1; // {w,v} not an edge or {v,w} is in bdry 
-	  u=kData[w].flower[indx+1];
-	  if ((f=what_face(w,v,u))==0) return -1;
-	  return f;
+		if ((indx=nghb(w,v))<0 
+				|| (isBdry(v) && w==kData[v].flower[0]))
+			return -1; // {w,v} not an edge or {v,w} is in bdry 
+		int u=kData[w].flower[indx+1];
+		if ((f=what_face(w,v,u))==0) 
+			return -1;
+		return f;
 	}
 
 	/**
-	 * Given 'Face' f, vert v, find index of ngbh face g 
-	 * opposite to v. 
-	 * @param f, Face
-	 * @param v, vert index
-	 * @return face index or -1 on error
+	 * Given face with index 'f' has 'v' as a vertex, 
+	 * find index of ngbh face 'g' opposite to 'v'. 
+	 * @param f int, face index
+	 * @param v int, vert index
+	 * @return int, face index or -1 on error
 	 */
-	public int face_opposite(Face f,int v) {
+	public int face_opposite(int f,int v) {
+		if (packDCEL!=null) {
+			dcel.Face face =packDCEL.faces[f];
+			return face.faceOpposite(v).faceIndx;
+		}
+		
+		// traditional
+		int[] fverts=getFaceVerts(f);
 		for (int j=0;j<3;j++) {
-			if (v==f.vert[j])
-				return face_right_of_edge(f.vert[(j+1)%3],f.vert[(j+2)%3]);
+			if (v==fverts[j])
+				return face_right_of_edge(fverts[(j+1)%3],fverts[(j+2)%3]);
 		}
 		return -1;
 	}
@@ -4253,14 +4281,24 @@ public class PackData{
 	 * @return int f, else return 0. 
 	 */
 	public int what_face(int a,int b,int c) {
-	  if (!status || a<1 || b<1 || c<1 
+		if (packDCEL!=null) {
+			dcel.Face fce=packDCEL.whatFace(a, b, c);
+			if (fce==null)
+				return 0;
+			return fce.faceIndx;
+		}
+		
+		// traditional
+		if (!status || a<1 || b<1 || c<1 
 	      || a>nodeCount || a>nodeCount || c>nodeCount) return 0;
-	  for (int f=1;f<=faceCount;f++)
-	    for (int j=0;j<3;j++)
-	      if (faces[f].vert[j]==a && ((faces[f].vert[(j+1)%3]==b && faces[f].vert[(j+2)%3]==c)
-	    		  || (faces[f].vert[(j+1)%3]==c && faces[f].vert[(j+2)%3]==b)))
-		return f;
-	  return 0;
+		for (int f=1;f<=faceCount;f++)
+			for (int j=0;j<3;j++) {
+				int[] fverts=getFaceVerts(f);
+				if (fverts[j]==a && ((fverts[(j+1)%3]==b && fverts[(j+2)%3]==c)
+						|| (fverts[(j+1)%3]==c && fverts[(j+2)%3]==b)))
+					return f;
+			}
+		return 0;
 	}
 	
 	/**
@@ -4291,6 +4329,11 @@ public class PackData{
 	 * of begin vertex of e (relative to f1) in 'vert' data 
 	 * of face f1 or return -1 if face f1 doesn't share edge 
 	 * e with face f2.
+	 * 
+	 * TODO: need better DCEL version, but also need to see 
+	 * how the index return value is used; those calls may
+	 * need adjustment as well.
+	 * 
 	 * @param f2 int
 	 * @param f1 int, (NOTE the order of arguments!)
 	 * @return -1 if f1 doesn't share edge with f2 or if f1==f2.
@@ -4300,12 +4343,14 @@ public class PackData{
 
 	  if (f2<1 || f2 > faceCount || f1<1 || f1 > faceCount || f2==f1) 
 	    return -1;
+	  int[] fverts1=getFaceVerts(f1);
 	  for (nj=0;nj<=2;nj++) {
-	      v1=faces[f1].vert[nj];
-	      v2=faces[f1].vert[(nj+1)%3];
+	      v1=fverts1[nj];
+	      v2=fverts1[(nj+1)%3];
+		  int[] fverts2=getFaceVerts(f2);
 	      for (mj=0;mj<=2;mj++)
-	    	  if ( (v1==faces[f2].vert[mj]) && 
-	    			  (v2==faces[f2].vert[(mj+2)%3]) )
+	    	  if ( (v1==fverts2[mj]) && 
+	    			  (v2==fverts2[(mj+2)%3]) )
 	    		  return nj;
 	  }
 	  return -1;
@@ -4569,7 +4614,7 @@ public class PackData{
 		for (int j=0;j<num;j++) {
 			int f=faceflower[j];
 			Face face=faces[f];
-			int g=this.face_opposite(face, v);
+			int g=this.face_opposite(f, v);
 			int indx=face_nghb(f,g);
 			int[] gverts=getFaceVerts(g);
 			if (gverts[(indx+1)%3]==w)
@@ -4629,7 +4674,9 @@ public class PackData{
 	  return count;
 	}
 
-	/** 
+	/**
+	 * traditional: for dcel see 'shootExtended'
+ 
 	 * TODO: 'axis-extend' more general. Perhaps that's enough?
      * Check for a "hex-extended" edge from v to w of length no more
 	 * than 'lgth'. Return index in flower of 'v' of direction in which
@@ -4672,6 +4719,8 @@ public class PackData{
 	}
 
 	/** 
+	 * traditional: for dcel see 'shootExtended'
+	 * 
 	 * Check for an "axis-extended" edge from v to w of length no more
 	 * than 'lgth'. Return index in flower of 'v' of direction in which
 	 * 'w' can be reached in the fewest steps, or -1 on failure. 
@@ -5011,7 +5060,8 @@ public class PackData{
 	
 	/**
 	 * This sets 'bdryFlag's, 'bdryCompCount', and 'bdryStarts[]'.
-	 * (Formerly done in comlex_count; separated to use during constructions.)
+	 * (Formerly done in complex_count; separated to use 
+	 * during constructions.)
 	 * @return int, count of bdry edges
 	 */
 	public int setBdryFlags() {
@@ -5019,14 +5069,16 @@ public class PackData{
 		int bcount=0;
 		int bs=0;
 		for (int i=1;i<=nodeCount;i++) 
-			kData[i].utilFlag=0;
+			setVertUtil(i,0);
 		boolean debug=false;
 		
 		// debugging
 		if (debug) { // debug=true;
 			for (int i=1;i<=nodeCount;i++) {
+				int[] flower=getFlower(i);
 				System.err.print("vert "+i+": flower: ");
-				for (int j=0;j<=countFaces(i);j++) System.err.print(" "+kData[i].flower[j]);
+				for (int j=0;j<=countFaces(i);j++) 
+					System.err.print(" "+flower[j]);
 				System.err.print("\n");
 			}
 		}
@@ -5037,8 +5089,8 @@ public class PackData{
 			// debug
 			if (debug) System.err.println("index i: "+i);
 			
-			if (kData[i].utilFlag==0) {
-				if (kData[i].flower[0]!=kData[i].flower[countFaces(i)]) {
+			if (getVertUtil(i)==0) {
+				if (getFirstPetal(i)==getLastPetal(i)) {
 					bcount++;
 					bs++; // bdryStart counter
 					if (bs>=MAX_COMPONENTS) {
@@ -5047,18 +5099,18 @@ public class PackData{
 					}
 					bdryStarts[bs]=i; // note: indexing starts with 1
 					setBdryFlag(i,1);
-					kData[i].utilFlag=i;
-					int j=kData[i].flower[0];
+					setVertUtil(i,i);
+					int j=getFirstPetal(i);
 					do {
 						// TODO: I've disabled the exception because corner verts can have 
 						//       just two neighbors; this may cause other problems
-						if (kData[j].utilFlag!=0 || kData[j].flower[0]==kData[j].flower[countFaces(j)])
+						if (getVertUtil(j)!=0 || getFirstPetal(j)==getLastPetal(j))
 							CirclePack.cpb.errMsg("Caution: bdry vert "+j+" has only 2 neighbors");
 //							throw new CombException("error tracing bdry for "+i);
 						setBdryFlag(j,1);
-						kData[j].utilFlag=i;
+						setVertUtil(j,i);
 						bcount++;
-						j=kData[j].flower[0];
+						j=getFirstPetal(j);
 					} while (j!=i && bcount<nodeCount);
 					if (bcount>=nodeCount)
 						CirclePack.cpb.errMsg("error tracing bdry with "+i);
@@ -5071,6 +5123,8 @@ public class PackData{
 	}
 	
 	/**
+	 * traditional (testing?)
+	 * 
 	 * Just trying out this new drawing order, 5/12: Not working yet.
 	 * TODO: switch uses with original 'facedraworder' by changing names.
 	 * @param poison boolean, if true, take account of poison vertices
@@ -5145,6 +5199,8 @@ public class PackData{
 	   slow when working with large packings */
 
 	/** 
+	 * traditional
+	 * 
 	 * Find and store order for computing all circle centers. Uses faces
 	 * starting with one containing alpha. Every subsequent face f has two
 	 * of its circles in place and is responsible for placing a new circle. 
@@ -5991,6 +6047,20 @@ public class PackData{
 	}
 
 	/**
+	 * Set default invDistances to 1.0.
+	 */
+	public void set_invD_default() {
+		if (packDCEL!=null) {
+			for (int e=1;e<=packDCEL.edgeCount;e++) 
+				packDCEL.edges[e].setInvDist(1.0);
+			return;
+		}
+		
+		// traditional: free up space
+		free_overlaps();
+	}
+	
+	/**
 	 * Set aims at 2pi for all interior and -1 for all bdry vertices
 	*/
 	public void set_aim_default() {
@@ -6657,10 +6727,10 @@ public class PackData{
 
 	/** 
 	 * Return inversive distance between circles for v and w,
-	 * not necessarily neighbors. Inv dist goes from -1 to infinity. 
+	 * not necessarily neighbors. InvDist rho goes from -1 to infinity. 
 	 * rho is in [-1,1] for overlap situation, then rho=cos(overlap angle); 
 	 * rho=0 for orthogonal circles; rho=1 for tangency; rho>1 for
-	 * separated circles, where invdist is cosh of the hyperbolic distance
+	 * separated circles, where invDist is cosh of the hyperbolic distance
 	 * between the circles (bubbled into hyperbolic upper half space).
 	 * 
 	 * NOTE: I often use "overlap" to include both overlap and separated.
@@ -6671,7 +6741,7 @@ public class PackData{
 	 *  
 	 * @param v int
 	 * @param w int
-	 * @return double, 1.0 (tangency) on error or problem
+	 * @return double, 1.0 (default tangency) on error/problem
 	 */
 	public double comp_inv_dist(int v,int w)
 	{
@@ -6679,7 +6749,8 @@ public class PackData{
 	  Complex ectr1,ectr2;
 	  CircleSimple sc;
 
-	  if (v<1 || w<1 || v>nodeCount || w>nodeCount) return 1.0; 
+	  if (v<1 || w<1 || v>nodeCount || w>nodeCount) 
+		  return 1.0; 
 	  // note: tangency is default 
 	  if (hes>0) { // spherical
 		  double []xyz_v=SphericalMath.s_pt_to_vec(getCenter(v));
@@ -6690,21 +6761,21 @@ public class PackData{
 		  	(Math.sin(getRadius(v))*Math.sin(getRadius(w)));
 		  return I;
 	  }
-	  if (hes<0) { // hyperbolic: use euclidean dat 
+	  if (hes<0) { // hyperbolic: use euclidean data 
 	      sc=HyperbolicMath.h_to_e_data(getCenter(v),getRadius(v));
 	      ectr1=new Complex(sc.center);
 	      erad1=sc.rad;
 	      sc =HyperbolicMath.h_to_e_data(getCenter(w),getRadius(w));
 	      ectr2=new Complex(sc.center);
 	      erad2=sc.rad;
-	    }
+	  }
 	  else
-	    {
+	  {
 	      ectr1=getCenter(v);
 	      erad1=getRadius(v);
 	      ectr2=getCenter(w);
 	      erad2=getRadius(w);
-	    }
+	  }
 	  return (EuclMath.inv_dist(ectr1,ectr2,Math.abs(erad1),Math.abs(erad2)));
 	}
 	
@@ -8057,13 +8128,16 @@ public class PackData{
 	 * Note: does NOT adjust 'CPScreen' geometry.
 	 */ 
 	public int geom_to_e() {
+		if (hes == 0)
+			return 1; // eucl already
+		int oldhes=hes;
+		hes = 0; // change so new data is checked in approp geometry 
+
 		RedList trace;
 		boolean keepon = true;
 		CircleSimple sc;
 
-		if (hes == 0)
-			return 1; // eucl already
-		else if (hes < 0) { // hyp
+		if (oldhes < 0) { // hyp
 			for (int v = 1; v <= nodeCount; v++) {
 				sc = HyperbolicMath.h_to_e_data(getCenter(v), getRadius(v));
 				setCenter(v,sc.center);
@@ -8081,9 +8155,10 @@ public class PackData{
 						trace = trace.next;
 					}
 				} catch (Exception ex) {
+					throw new DataException(" problem in 'geom_to_e', hes="+oldhes);
 				}
 			}
-		} else if (hes > 0) { // sph
+		} else { // sph
 			// Note: sc.flag==-1 means disc is outside of circle
 			for (int v = 1; v <= nodeCount; v++) {
 				sc = SphericalMath.s_to_e_data(getCenter(v), getRadius(v));
@@ -8105,10 +8180,11 @@ public class PackData{
 						trace = trace.next;
 					}
 				} catch (Exception ex) {
+					throw new DataException(" problem in 'geom_to_e', hes="+oldhes);
 				}
 			}
 		}
-		hes = 0;
+
 		return 1;
 	}
 
@@ -8120,13 +8196,15 @@ public class PackData{
 	 * @return 1 on success (or if already hyp).
 	 */
 	public int geom_to_h() {
+		if (hes<0)
+			return 1; // hyp already
+		int oldhes=hes;
+		hes=-1;
 		RedList trace;
 		boolean keepon;
 		CircleSimple sc;
 
-		if (hes < 0)
-			return 1; // hyp already
-		else if (hes == 0) { // eucl
+		if (oldhes == 0) { // eucl
 			double mx = getCenter(alpha).abs() + getRadius(alpha);
 			for (int v = 1; v <= nodeCount; v++) { // translate, set scale
 													// factor
@@ -8162,14 +8240,14 @@ public class PackData{
 						trace = trace.next;
 					}
 				} catch (Exception ex) {
+					throw new DataException(" problem in 'geom_to_h', hes="+oldhes);
 				}
 			}
 		} 
-		else if (hes > 0) { // pass sph through eucl
+		else { // pass sph through eucl first
 			geom_to_e();
-			geom_to_h();
+			return geom_to_h();
 		}
-		hes = -1;
 		return 1;
 	}
 
@@ -8181,13 +8259,16 @@ public class PackData{
 	 * @return 1 
 	 */
 	public int geom_to_s() {
+		if (hes > 0)
+			return 1; // sph already
+		int oldhes=hes;
+		hes=1;
+		
 		boolean keepon;
 		RedList trace;
 		CircleSimple sc;
 
-		if (hes > 0)
-			return 1; // sph already
-		if (hes < 0) { // from hyp
+		if (oldhes < 0) { // from hyp
 			for (int v = 1; v <= nodeCount; v++) {
 				sc = HyperbolicMath.h_to_e_data(getCenter(v),getRadius(v));
 				sc = SphericalMath.e_to_s_data(sc.center, sc.rad);
@@ -8207,9 +8288,11 @@ public class PackData{
 						trace = trace.next;
 					}
 				} catch (Exception ex) {
+					throw new DataException(" problem in 'geom_to_s', hes="+oldhes);
 				}
 			}
-		} else { // from eucl
+		} 
+		else { // from eucl
 			for (int v = 1; v <= nodeCount; v++) {
 				sc = SphericalMath.e_to_s_data(getCenter(v),getRadius(v));
 				setCenter(v,new Complex(sc.center));
@@ -8226,10 +8309,10 @@ public class PackData{
 						trace = trace.next;
 					}
 				} catch (Exception ex) {
+					throw new DataException(" problem in 'geom_to_s', hes="+oldhes);
 				}
 			}
 		}
-		hes = 1;
 		return 1;
 	}
 
@@ -13170,53 +13253,65 @@ public class PackData{
 	  }
 	  
 	  /**
-		 * Use xyz data to set overlaps of pack p. Allocate space if necessary.
-		 * This command is still evolving. Eventually, e.g., datastr may contain
-		 * list of overlaps to set; for now, all are set.
+		 * Use xyz data to set invDist, allocating space 
+		 * if necessary. This command is still evolving. 
+		 * Eventually, may want to specify which ones to set;
+		 * for now, set all.
 		 * 
-		 * flag=1: find max/min edge lengths in xyz data, set overlaps as though
-		 * circle radii were all min/2.
+		 * flag=1: find max/min edge lengths in xyz data, set 
+		 * inv distances as though circle radii were all min/2.
 		 * 
-		 * flag=2: for each vertex v find min edgelength, set as though radius
-		 * of v was half that.
+		 * flag=2: for each vertex v find min edgelength, 
+		 * set inv distance as though radius of v was half that.
 		 * 
-		 * Radii are NOT actually changed --- only setting overlaps. Return
-		 * count of overlaps set, 0 on error.
+		 * Radii are NOT changed --- only used to set
+		 * invDistances. Return count, 0 on error.
+		 * @param xyz_list Point3D[]
+		 * @param int flag,
+		 * @return int count, 0 on error
 		 */
-	public int set_xyz_overlaps(Point3D[] xyz_list, int count, int flag) {
+	public int set_xyz_overlaps(Point3D[] xyz_list,int flag) {
+		
+		// right size list?
+		if (!status || xyz_list==null || xyz_list.length!=nodeCount)
+			return 0;
+		
 		int k;
 		double[] tmprads;
 		double miN = 1000000000.0, maX = 0.0;
 		double ovlp, dist, rad, ovlpmax = OKERR, ovlpmin = 1000;
 
-		if (!status || count <= 0 || xyz_list == null)
-			return 0;
+
 		alloc_overlaps();
 
 		if (flag == 1) { // treat as though all radii were miN/2.
 
 			// compute maX/miN distances
-			for (int i = 1; i <= nodeCount; i++)
-				for (int j = 0; j < (countFaces(i) + getBdryFlag(i)); j++)
-					if ((k = kData[i].flower[j]) > i && i <= count
-							&& k <= count) {
+			for (int i = 1; i <= nodeCount; i++) {
+				int[] petals=getPetals(i);
+				for (int j = 0; j < petals.length; j++)
+					if ((k = petals[j]) > i && i <= nodeCount
+							&& k <= nodeCount) {
 						dist = EuclMath.xyz_dist(xyz_list[i], xyz_list[k]);
 						miN = (dist < miN) ? dist : miN;
 						maX = (dist > maX) ? dist : maX;
 					}
+			}
 			if (miN == 1000000000.0 || maX == 0.0 || (miN < OKERR))
 				return 0; // ??
 			rad = miN / 2.0;
 			// compute and store overlaps
-			for (int i = 1; i <= nodeCount; i++)
-				for (int j = 0; j < (countFaces(i) + getBdryFlag(i)); j++)
-					if ((k = kData[i].flower[j]) > i && i <= count
-							&& k <= count) {
+			for (int i = 1; i <= nodeCount; i++) {
+				int[] petals=getPetals(i);
+				for (int j = 0; j < petals.length; j++)
+					if ((k = petals[j]) > i && i <= nodeCount
+							&& k <= nodeCount) {
 						ovlp = xyz_inv_dist(xyz_list[i], xyz_list[k], rad, rad);
 						set_single_invDist(i, k, ovlp);
 						ovlpmax = (ovlp > ovlpmax) ? ovlp : ovlpmax;
 						ovlpmin = (ovlp < ovlpmin) ? ovlp : ovlpmin;
 					}
+			}
 			CirclePack.cpb.msg("Set overlaps using "
 					+ "euclidean 3-space distances.\n"
 					+ "  side lengths: max = " + maX + ", max/min = "
@@ -13232,9 +13327,10 @@ public class PackData{
 			tmprads = new double[nodeCount + 2];
 			for (int i = 1; i <= nodeCount; i++) {
 				miN = 100000000;
-				for (int j = 0; j < (countFaces(i) + getBdryFlag(i)); j++) {
-					if ((k = kData[i].flower[j]) != 0 && i <= count
-							&& k <= count) {
+				int[] petals=getPetals(i);
+				for (int j = 0; j < petals.length; j++) {
+					if ((k = petals[j]) != 0 && i <= nodeCount
+							&& k <= nodeCount) {
 						dist = Math.sqrt((xyz_list[i].x - xyz_list[k].x)
 								* (xyz_list[i].x - xyz_list[k].x)
 								+ (xyz_list[i].y - xyz_list[k].y)
@@ -13248,9 +13344,10 @@ public class PackData{
 			}
 			// compute and store overlaps
 			for (int i = 1; i <= nodeCount; i++) {
-				for (int j = 0; j < (countFaces(i) + getBdryFlag(i)); j++) {
-					if ((k = kData[i].flower[j]) > i && i <= count
-							&& k <= count) {
+				int[] petals=getPetals(i);
+				for (int j = 0; j < petals.length; j++) {
+					if ((k = petals[j]) > i && i <= nodeCount
+							&& k <= nodeCount) {
 						ovlp = xyz_inv_dist(xyz_list[i], xyz_list[k],
 								tmprads[i], tmprads[k]);
 						set_single_invDist(i, k, ovlp);
@@ -15168,41 +15265,49 @@ public class PackData{
 	  }
 	  
 	  /** 
-	   * Store one legal inversive distance value in all approp places. Storage for
-	   * inv distances must be allocated.
-	   * Note: 'invDist' values: deep overlap in (-1,0); normal overlap in [0,1]; 
-	   * separated circles in (1,infty); tangency is 1. 
-	   * Note: if 'invDist' lies in [-1,1] then intersecting circles overlap 
-	   * angle acos(invDist). If separated, 'invDist' lies in [1,infty). 
-	   * @param v int, first vert of edge
-	   * @param j int, (IMPORTANT) index of other end in flower of v
+	   * Store one legal inversive distance value in all approp 
+	   * places. (For traditional packings, storage must be allocated
+	   * and 'overlapStatus' set.)
+	   * Note: 'invDist' values: deep overlap in (-1,0); 
+	   * normal overlap in [0,1]; separated circles in (1,infty); 
+	   * tangency is 1.
+	   * Note: if 'invDist' lies in [-1,1] then intersecting 
+	   * circles overlap with angle acos(invDist). If separated, 
+	   * 'invDist' lies in [1,infty). 
+	   * @param v int 
+	   * @param w int 
 	   * @param invDist double, lies in [-1,infty)
 	   * @return int, 1 on success
 	   * @exception ParserException if space has not been allocated. 
 	   */
 	  public int set_single_invDist(int v,int w,double invDist) {
-	    if (!overlapStatus) throw new ParserException("set_overlaps: space not allocated");
-	    int indx=nghb(v,w);
-	    if (indx<0)
+		  
+		  if (packDCEL==null && !overlapStatus) 
+			  throw new ParserException("set_invdist: space not allocated");
+		  
+		  int indx=nghb(v,w);
+		  if (indx<0)
 	    	throw new ParserException("set_single_overlap error: "+w+" is not a petal of "+v);
-	    if (packDCEL!=null) {
-	    	HalfEdge he=packDCEL.findHalfEdge(v,w);
-	    	if (he==null)
-		    	throw new ParserException("set_single_overlap error: "+w+" is not a petal of "+v);
-	    	he.setInvDist(invDist);
-	    	he.twin.setInvDist(invDist);
-	    	return 1;
-	    }
 	    
-	    // else, store in kData
-	    kData[v].invDist[indx]=invDist;
-	    if (indx==0 && !isBdry(v))
-	    	kData[v].invDist[countFaces(v)]=invDist;
-	    indx=nghb(w,v);
-	    kData[w].invDist[indx]=invDist;
-	    if (indx==0 && !isBdry(w))
-	    	kData[w].invDist[countFaces(w)]=invDist;
-	    return 1;
+		  if (packDCEL!=null) {
+			  HalfEdge he=packDCEL.findHalfEdge(v,w);
+			  if (he==null)
+				  throw new ParserException("set_single_overlap error: "+w+
+						  " is not a petal of "+v);
+			  he.setInvDist(invDist);
+			  he.twin.setInvDist(invDist);
+			  return 1;
+		  }
+	    
+		  // traditional: store in kData
+		  kData[v].invDist[indx]=invDist;
+		  if (indx==0 && !isBdry(v))
+			  kData[v].invDist[countFaces(v)]=invDist;
+		  indx=nghb(w,v);
+		  kData[w].invDist[indx]=invDist;
+		  if (indx==0 && !isBdry(w))
+			  kData[w].invDist[countFaces(w)]=invDist;
+		  return 1;
 	  }
 	  
 	  /** 

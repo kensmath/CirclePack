@@ -97,8 +97,8 @@ public class CommonMath {
 	  }
 	  else if (hes>0) { // sphere case 
 	    // next out pos x-axis 
-	    // TODO: need to incorporate overlaps
-	    sC1.center = new Complex(0.0,sC0.rad+sC1.rad);
+		  double sdist=SphericalMath.s_ivd_length(sC0.rad,sC1.rad,id0);
+	    sC1.center = new Complex(0.0,sdist);
 	  }
 	  else { // eucl case 
 	    // next on x-axis
@@ -112,6 +112,12 @@ public class CommonMath {
 				sC2.rad, id0, id1,id2,hes);
 	  sC2.center=sC.center;
 	  return sC.flag;  // in case there's an error
+	}
+	
+	public static CircleSimple comp_any_center(CircleSimple cs1,
+			CircleSimple cs2,double r3,double o1,double o2,double o3,int hes) {
+		return comp_any_center(cs1.center,cs2.center,cs1.rad,cs2.rad,
+				r3,o1,o2,o3,hes);
 	}
 	
 	/**
@@ -247,27 +253,6 @@ public class CommonMath {
 			return EuclMath.e_ivd_length(r1, r2, ivd);
 	}
 
-	/**
-	 * Given 2 circles, find generalized tangency point. 
-	 * Actually, this is intermediate point with position 
-	 * weighted by the two radii (depending on geometry).
-	 * @param z1 Complex
-	 * @param z2 Complex
-	 * @param r1 double
-	 * @param r2 double
-	 * @param hes int
-	 * @return new Complex
-	 */
-	public static Complex get_tang_pt(Complex z1,Complex z2,
-			double r1,double r2,int hes) {
-		if (hes==0)
-			return EuclMath.eucl_tangency(z1,z2,r1,r2);
-		else if (hes>0)
-			return SphericalMath.sph_tangency(z1,z2,r1,r2);
-		else
-			return HyperbolicMath.hyp_tangency(z1,z2,r1,r2);
-	}
-	
 	/**
 	 * Convert 'CirMatrix' to 'CircleSimple' in requested geometry. 
 	 * @param cM CirMatrix, 2x2 representation of a circle
@@ -545,6 +530,152 @@ public class CommonMath {
 		} // end of while through spokes
 		return carray;
 	}
+	
+	/**
+	 * Given three circles, find the incircle of the triangular
+	 * face they form. 
+	 * @param cs1 CircleSimple
+	 * @param cs2 CircleSimple
+	 * @param cs3 CircleSimple
+	 * @param hes int
+	 * @return
+	 */
+	public static CircleSimple circle3Incircle(CircleSimple cs0,
+			CircleSimple cs1,CircleSimple cs2,int hes) {
+		CircleSimple[] cS= {cs0,cs1,cs2};
+		Complex[] pts=new Complex[3];
+		for (int j=0;j<3;j++) {
+			pts[j]=CommonMath.genTangPoint(cS[j],cS[(j+1)%3],hes);
+			if (hes>0)
+				pts[j]=SphericalMath.s_pt_to_plane(pts[j]);
+		}
+		CircleSimple theCircle=EuclMath.circle_3(pts[0], pts[1], pts[2]);
+		if (hes<0)
+			theCircle=HyperbolicMath.e_to_h_data(theCircle);
+		if (hes>0)
+			theCircle=SphericalMath.e_to_s_data(theCircle);
+		return theCircle;
+	}
+
+	// TODO: improve notion of "generalized tangency" to
+	//       get conformal invariant definition and
+	//       tangency in (essentially) tangent case.
+	// Note: sph case can go wrong if one or both circles
+	//       contain infinity.
+	/* As of 6/2021:
+	 * Work with eucl circles c1=(z1,r1), c2=(z2,r2). 
+	 * The GT point will be located on the ray L from
+	 * z1 through z2, so we work with real number 
+	 * distances on L. 
+	 * 
+	 * First get inversive distance between c1/c2.
+	 *    invD=(|z1-z2|^2-(r1^2+r2^2))/(2*r1*r2).
+	 * (this may or may not correspond with "intended" 
+	 * inversive distance). 
+	 * 
+	 * We identify the c1/c2 configuration with a 
+	 * normalized configuration C-/C+ that is a
+	 * mobius image: namely, based on inD alone, 
+	 * can compute radius R and center circles 
+	 * C-, C+ of radius R on the negative/positive 
+	 * real axis (resp.) the left edge of C- hits -1 
+	 * and the right edge of C+ hits +1.
+	 * 
+	 * Here's R: 
+	 *    R=(-2+sqrt(2+2*invD))/(invD-1)
+	 *    
+	 * Triples of points to be identified are {A,B,C}
+	 * on L and {a,b,c} in the normalized situation.
+	 * 
+	 * For {A,B,C}, let x = |z1-z2|. Then A = x-r2, 
+	 * B=r1, C=x+r2. (These are points along L)
+	 * A is the distance along L from z1 to the first
+	 * intersection point of L and c2, B is intersection
+	 * point of L and c1, and C is the further intersection
+	 * point of L and c2. (Note that B and C are positive, 
+	 * but A may be negative in case of deep overlap.)
+	 * 
+	 * The corresponding points {a,b,c} of the real line
+	 * are: a is the left edge of C+, b is the right edge
+	 * of C-, and c is +1. Thus, a = 1-2R, b = -1+2R, and
+	 * c = 1.
+	 * 
+	 * If T is the Mobius map: T{a,b,c} --> {A,B,C}, then
+	 * by obvious symmetry about the y-axis in the 
+	 * normalized situation, T(0) is what we are after. 
+	 * Return the point along L which is distance T(0) 
+	 * from z1 in the direction of z2.
+	 *
+	 * @param cs1 CircleSimple
+	 * @param cs2 CircleSimple
+	 * @param hes int
+	 * @return new Complex 
+	 */
+	public static Complex genTangPoint(CircleSimple cs1,
+			CircleSimple cs2,int hes) {
+
+		// convert to eucl circles
+		if (hes<0) {
+			cs1=HyperbolicMath.h_to_e_data(cs1);
+			cs2=HyperbolicMath.h_to_e_data(cs2);
+		}
+		else if (hes>0) {
+			cs1=SphericalMath.s_to_e_data(cs1);
+			cs2=SphericalMath.s_to_e_data(cs2);
+		}
+		
+		double x=cs1.center.minus(cs2.center).abs();
+		double t=cs1.rad; // prepare for tangency
+
+		double invD=(x*x-(cs1.rad*cs1.rad+cs2.rad*cs2.rad))/(2*cs1.rad*cs2.rad);
+		
+		// if not essentially tangent, find real value t
+		if (Math.abs(invD-1.0)>.001) {
+			
+			// points on L
+			Complex A=new Complex(x-cs2.rad);
+			Complex B=new Complex(cs1.rad);
+			Complex C=new Complex(x+cs2.rad);
+			
+			// radius and points for normalized config
+			double R=(-2.0+Math.sqrt(2.0+2.0*invD))/(invD-1.0);
+			Complex a=new Complex(1.0-2.0*R);
+			Complex b=new Complex(-1+2.0*R);
+			Complex c=new Complex(1.0);
+			
+			Mobius mob=Mobius.mob_xyzXYZ(a,b,c,A,B,C,0,0);
+			t=mob.apply(new Complex(0.0)).x;
+		}
+		
+		// have t, find point distance t along L from cs1.center
+		Complex pt=cs2.center.minus(cs1.center).times(t/x).add(cs1.center);
+		if (hes>0) 
+			return SphericalMath.proj_pt_to_sph(pt);
+		return pt;
+	}
+	
+	/**
+	 * Given 2 circles, find generalized tangency point. 
+	 * Actually, this is intermediate point with position 
+	 * weighted by the two radii (depending on geometry).
+	 * @param z1 Complex
+	 * @param z2 Complex
+	 * @param r1 double
+	 * @param r2 double
+	 * @param hes int
+	 * @return new Complex
+	 */
+	public static Complex get_tang_pt(Complex z1,Complex z2,
+			double r1,double r2,int hes) {
+		if (hes==0)
+			return EuclMath.eucl_tangency(z1,z2,r1,r2);
+		else if (hes>0)
+			return SphericalMath.sph_tangency(z1,z2,r1,r2);
+		else
+			return HyperbolicMath.hyp_tangency(z1,z2,r1,r2);
+	}
+	
+
 	
 } // end of class
 

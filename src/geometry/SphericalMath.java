@@ -165,10 +165,9 @@ public class SphericalMath{
 	
   /**
    * Find "incircle", sph center/radius of circle inscribed in 
-   * trianglular face with given corners.
-   * ASSUME the three are mutually tangent. Find the 3D eucl circle
-   * through the points of tangency. For center may have to consider
-   * orientation for large face cases.
+   * trianglular face with given cclw oriented corners. Build 
+   * faux circles to find the 3D eucl circle through the points 
+   * of tangency. 
    * @param z1,z2,z3, Complex, sph centers
    * @return CircleSimple
    */
@@ -651,6 +650,14 @@ public static double vec_norm(double X[]){
 	  double y=r*Math.sin(z.x);
 	  return new Complex(x,y);
   }
+
+  /**
+   * @param cS CircleSimple
+   * @return CircleSimple
+   */
+  public static CircleSimple s_to_e_data(CircleSimple cs) {
+	  return s_to_e_data(cs.center,cs.rad);
+  }
   
   /** 
    * Project circles from sph to plane. (Recall, our 
@@ -723,9 +730,14 @@ public static double vec_norm(double X[]){
     double rr=Math.sin(down)/(1.0+Math.cos(down));
     er=Math.abs(RR-rr)/2.0;
     double m=(RR+rr)/2.0;
-    e=new Complex(V[0]*m/Math.sin(z.y),V[1]*m/Math.sin(z.y));
+    double sny=Math.sin(z.y);
+    e=new Complex(V[0]*m/sny,V[1]*m/sny);
     
     return new CircleSimple(e,er,flipflag);
+  }
+  
+  public static CircleSimple e_to_s_data(CircleSimple cs) {
+	  return e_to_s_data(cs.center,cs.rad);
   }
   		
   /** 
@@ -792,8 +804,8 @@ public static double vec_norm(double X[]){
   }
   
   /** 
-   * True if sph_pt (i.e., (theta,phi)) lies in triangle with given
-   * spherical points as corners for a CONVEX triangle. 
+   * True if sph_pt (i.e., (theta,phi)) lies in triangle with 
+   * given spherical points as corners for a CONVEX triangle. 
    * TODO: handle non-convex triangles
    * @param sph_pt (theta,phi)
    * @param z1 (theta,phi)

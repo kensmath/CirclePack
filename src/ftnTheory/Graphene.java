@@ -631,7 +631,7 @@ public class Graphene extends PackExtender {
 			for (int j = 0; (j < 3 && k < 0); j++) {
 				int myf = cE.face;
 				int vj = packData.faces[myf].vert[j];
-				int oppf = packData.face_opposite(packData.faces[myf], vj);
+				int oppf = packData.face_opposite(myf, vj);
 				if (oppf >= 0) { // ignore phantom bonds
 					double L = cE.bondLengths[j];
 					L = L * L;
@@ -1458,7 +1458,7 @@ public class Graphene extends PackExtender {
 			// store bond lengths: j length is for bond opposite j vert
 			for (int j=0;j<3;j++) {
 				bondLengths[j]=inRad(packData,face);
-				int opface=packData.face_opposite(packData.faces[face],verts[j]);
+				int opface=packData.face_opposite(face,verts[j]);
 				if (opface<0) // bdry edge
 					bondLengths[j] *= 2.0;
 				else

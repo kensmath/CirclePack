@@ -270,11 +270,11 @@ public class CombDCEL {
 		if (alphaEdge==null)
 			alphaEdge=pdcel.alpha;
 		if (alphaEdge==null)
-			pdcel.setAlpha(1,NodeLink.incident(hlink));
+			pdcel.setAlpha(1,NodeLink.incident(hlink),false);
 		// if 'alphaEdge' is not null, check forbidden
 		else {
 			int alp=alphaEdge.origin.vertIndx;
-			pdcel.setAlpha(alp,NodeLink.incident(hlink));
+			pdcel.setAlpha(alp,NodeLink.incident(hlink),false);
 		}
 
 		// ============= mark verts/edges ==============
@@ -1730,7 +1730,7 @@ public class CombDCEL {
 		PackData hold_pd=pdc.p; // hold_pd.getFlower(1132);
 		
 		int vertcount=pdcel.vertCount;
-		pdcel.setAlpha(0, null);
+		pdcel.setAlpha(0, null,true);
 
 		// ============= mark verts/edges ==============
 

@@ -41,6 +41,31 @@ public class Face {
 	}
 	
 	/**
+	 * Return the face across the side opposite
+	 * to 'v'. We assume this face has 3 vertices.
+	 * Null on error: e.g., v is not a 
+	 * vertex of this face or if the expected face 
+	 * was not instantiated.
+	 * @param v int
+	 * @return Face, null on error
+	 */
+	public Face faceOpposite(int v) {
+		HalfEdge he=edge;
+		int safety=4;
+		do {
+			safety--;
+			if (he.origin.vertIndx==v) {
+				return he.next.twin.face;
+			}
+			he=he.next;
+		} while (he!=edge && safety>0);
+		if (safety==0)
+			throw new CombException("face "+this.faceIndx+" doesn't "+
+					"have face opposite to "+v);
+		return null;
+	}
+	
+	/**
 	 * Return cclw ordered array of neighboring face indices.
 	 * Close up by repeating first entry if there are no ideal
 	 * faces as neighbors. If there is a neighboring ideal face

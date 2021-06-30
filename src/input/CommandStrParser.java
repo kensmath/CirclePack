@@ -4941,7 +4941,7 @@ public class CommandStrParser {
 	      if (cmd.startsWith("alpha")) {
 	    	  int a=NodeLink.grab_one_vert(packData,flagSegs);
 	    	  if (packData.packDCEL!=null)
-	    		  return packData.packDCEL.setAlpha(a,null);
+	    		  return packData.packDCEL.setAlpha(a,null,true);
 	    	  return packData.setAlpha(a);
 	      }
 		  
@@ -9456,86 +9456,147 @@ public class CommandStrParser {
 	    	  }
 
 	    	  // ========= set_invdist  ========
-	    	  if (cmd.startsWith("invdist")) { 
-	    		  Iterator<Vector<String>> its=flagSegs.iterator();
-	    		  items=(Vector<String>)its.next();
+	    	  if (cmd.startsWith("invdist")) {
+	    		  
+	    		  // if not segments, then reset to default
+	    		  if (flagSegs==null || flagSegs.size()==0) { 
+	    			  packData.set_invD_default();
+	    			  return 1;
+	    		  }
+
+	    		  items=flagSegs.get(0);
 	    		  String str=(String)items.remove(0);
-	    		  EdgeLink edgelist=null;
-				  EdgeSimple edge=null;
-	    		  if (str.startsWith("-d")) { // default: i.e. tangency
-	    			  if (items.size()>0) { // a list of edges given
-	    				  if (!packData.overlapStatus) return 1; // already at default
-	    				  edgelist=new EdgeLink(packData,items);
-	    				  Iterator<EdgeSimple> elist=edgelist.iterator();
-	    				  while(elist.hasNext()) {
-	    					  edge=(EdgeSimple)elist.next();
+
+	    		  // do we need to look for a file of xyz values?
+	    		  // form -x <filename>
+	    		  if (str.startsWith("-x")) {
+	    			  StringBuilder strbld=new StringBuilder();
+	    			  int rwflag=CPFileManager.trailingFile(flagSegs,strbld);
+	    			  if (rwflag==0 || (rwflag & 01)== 01) // error or no filename, use 'packData.xyzpoint'
+	    				  return packData.set_xyz_overlaps(packData.xyzpoint,1);
+	    			  boolean in_script=false;
+	    			  if ((rwflag & 04)==04) // bit 3 
+	    				  in_script=true;
+    				  String dataname=strbld.toString();
+    				  
+    				  // try to read the data into 'packData.xyzpoint'.
+	    			  if (CPFileManager.readDataFile(packData,dataname,in_script,1)==0) {
+	    				  CirclePack.cpb.errMsg("Failed to load file "+dataname);
+	    				  return 0;
+	    			  }
+	    			  return packData.set_xyz_overlaps(packData.xyzpoint,1);
+	    		  }
+	    		  
+	    		  // look for a flag
+				  EdgeLink edgelist=new EdgeLink(packData,items);
+    			  Iterator<EdgeSimple> eis=edgelist.iterator();
+	    		  EdgeSimple edge=null;
+				  
+				  // to default (tangency)
+	    		  if (str.startsWith("-d")) {
+	    			  
+	    			  // empty list, do all
+		    		  if (edgelist.size()==0) { // default to all
+		    			  packData.set_invD_default();
+		    			  packData.fillcurves();
+		    			  CirclePack.cpb.msg("set_invdist: set all inversive "+
+		    					  "distances to default (1.0, tangency)");
+						  return 1;
+		    		  }
+		    		  
+					  if (packData.packDCEL!=null) {
+						  while (eis.hasNext()) {
+							  HalfEdge he=packData.packDCEL.findHalfEdge(eis.next());
+							  he.setInvDist(1.0);
+							  count++;
+						  }
+		    			  packData.fillcurves();
+		    			  CirclePack.cpb.msg("set_over: set "+count+
+		    					  " overlaps to default");
+		    			  return count;
+					  }
+						  
+					  // traditional
+    				  if (!packData.overlapStatus) 
+    					  return 1; // already at default
+    				  while(eis.hasNext()) {
+    					  edge=(EdgeSimple)eis.next();
 	    					  count+=packData.set_single_invDist(edge.v,edge.w,1.0);
-	    				  }
-	    			  }
-	    			  else {
-	    				  packData.free_overlaps();
-	    				  count=packData.nodeCount;
-	    			  }
+    				  }
 	    			  packData.fillcurves();
 	    			  CirclePack.cpb.msg("set_over: set "+count+
 	    					  " overlaps to default");
-	    			  return count;
+					  return count;
 	    		  }
-	    		  if (str.startsWith("-c")) { // set to current
-	    			  if (items.size()>0) { // a list of edges given
-	    				  edgelist=new EdgeLink(packData,items);
+	    		  
+	    		  else if (str.startsWith("-c")) { // set to current
+	    			  
+	    			  if (packData.packDCEL!=null) {
+	    				  while (eis.hasNext()) {
+	    					  HalfEdge he=packData.packDCEL.findHalfEdge(eis.next());
+	    					  he.setInvDist(packData.comp_inv_dist(edge.v,edge.w));
+	    					  count++;
+	    				  }
+		    			  packData.fillcurves();
+		    			  CirclePack.cpb.msg("set_invdist: set "+count+
+		    					  " inversive distances to their current values");
+	    				  return count;
 	    			  }
-	    			  else edgelist=new EdgeLink(packData,"a");
-	    			  if (!packData.overlapStatus) packData.alloc_overlaps();
-	    			  Iterator<EdgeSimple> elist=edgelist.iterator();
-	    			  while(elist.hasNext()) {
-	    				  edge=(EdgeSimple)elist.next();
+	    			  
+	    			  // traditional
+	    			  if (!packData.overlapStatus) 
+	    				  packData.alloc_overlaps();
+	    			  while(eis.hasNext()) {
+	    				  edge=(EdgeSimple)eis.next();
 	    				  count+=packData.set_single_invDist(
 	    						  edge.v,edge.w,packData.comp_inv_dist(edge.v,edge.w));
 	    				  // note: inv_dist routine not very robust 
 	    			  }
 	    			  packData.fillcurves();
-	    			  CirclePack.cpb.msg("set_over: set "+count+
-	    					  " overlaps to default");
+	    			  CirclePack.cpb.msg("set_invdist: set "+count+
+	    					  " inversive distances to their current values");
 	    			  return count;
 	    		  }
-	    		  if (str.startsWith("-t")) { // truncate at given value
-	    		      if (!packData.overlapStatus) return 1;
+	    		  
+	    		  // truncate to given upper limit
+	    		  else if (str.startsWith("-t")) {
 	    			  double uplim=Double.parseDouble((String)items.get(0));
 	    		      if (uplim<=1.0) {
 	    		    	  throw new DataException("usage: truncation value x must be >=1");
 	    		      }
-	   				  edgelist=new EdgeLink(packData,items);
-					  Iterator<EdgeSimple> elist=edgelist.iterator();
-					  while(elist.hasNext()) {
-						  edge=(EdgeSimple)elist.next();
+	    			  
+	    			  if (packData.packDCEL!=null) {
+	    				  while(eis.hasNext()) {
+	    					  HalfEdge he=packData.packDCEL.findHalfEdge(eis.next());
+	    					  if (he.getInvDist()>uplim) {
+	    						  he.setInvDist(uplim);
+	    						  count++;
+	    					  }
+	    				  }
+		    			  packData.fillcurves();
+		    			  CirclePack.cpb.msg("Cut "+count+
+		    					   " inversive distances down to max of "+uplim);
+		    		      return count;
+	    			  }
+	    			  
+	    			  // traditional
+	    		      if (!packData.overlapStatus) 
+	    		    	  return 1;
+					  while(eis.hasNext()) {
+						  edge=(EdgeSimple)eis.next();
 						  int nb=packData.nghb(edge.v,edge.w);
 						  if (packData.getInvDist(edge.v,packData.kData[edge.v].flower[nb])>uplim)
 						  count+=packData.set_single_invDist(edge.v,edge.w,uplim);
 					  }
 	    			  packData.fillcurves();
-	    			  CirclePack.cpb.msg("Cut "+(int)count/2+
+	    			  CirclePack.cpb.msg("Cut "+count+
 	    					   " inversive distances down to max of "+uplim);
 	    		      return count;
 	    		  }
-	    		  if (str.startsWith("-x")) { // use xyz-data: set all based on max/min distances
-	    			  if (flagSegs.size()==0) { // no filename, use 'packData.xyzpoint'
-	    				  return packData.set_xyz_overlaps(packData.xyzpoint,packData.nodeCount,1);
-	    			  }
-	    			  items=(Vector<String>)flagSegs.get(1);
-	    			  String dataname=StringUtil.reconItem(items);
-	    			  boolean in_script=false;
-	    			  if (dataname.startsWith("-s")) { // get from script
-	    				  in_script=true;
-	    				  dataname=(String)items.get(1);
-	    			  }
-	    			  if (CPFileManager.readDataFile(packData,dataname,in_script,1)==0)
-	    				  return 0;
-	    			  return packData.set_xyz_overlaps(packData.xyzpoint,packData.nodeCount,1);
-	    		  }
-	    		  if (str.startsWith("-h")) { // use packData.xyzpoint, 
+	    		  
+	    		  else if (str.startsWith("-h")) { // use packData.xyzpoint, 
 	    			  // but set based on local edge lengths
-	    			  return packData.set_xyz_overlaps(packData.xyzpoint,packData.nodeCount,2);
+	    			  return packData.set_xyz_overlaps(packData.xyzpoint,2);
 	    		  }
 	    		  
 	    		  // no flag? 'inv dist' followed by edge list (default to all)
@@ -9543,149 +9604,70 @@ public class CommandStrParser {
 	    		  //    [-1,0) deep overlap (cos(t), where t is in (Pi/2, Pi]
 	    		  //    [0,1) overlap (cos(t), where t is in (0,Pi/2]
 	    		  //    1 tangency
-	    		  //    (1, infty) separated (cosh(t), where t is hyp distance of circles
-	    		  double invDist=Double.parseDouble(str);
-     			  if (invDist<-1.0) throw new ParserException("'invDist' < -1.0");
+	    		  //    (1, infty) separated (cosh(t), where t is hyp 
+	    		  //    distance of circles
+	    		  
+	    		  double invDist=1.0;
+	    		  try {
+	    			  invDist=Double.parseDouble(str);
+	    		  } catch (Exception ex) {
+	    			  throw new ParserException("usage: invdist <x> {v w ...}"+ex.getMessage());
+	    		  }
+     			  
+	    		  if (invDist<-1.0) 
+     				  throw new ParserException(" tried to set 'invDist' < -1.0");
 	     		  
+	    		  // essentially the default value
+     			  if (Math.abs(invDist-1.0)<=.0000001) {  
+     				  packData.set_invD_default();
+     				  return 1;
+     			  }
+     			  
 	     		  // Is space allocated?
-	     		  if (!packData.overlapStatus) {
-	     			  // 'invDist' essentially default and nothing to reset? 
-	     			  if (Math.abs(invDist-1.0)<=.0000001)  
-	     				  return 0;
+	     		  if (packData.packDCEL==null && !packData.overlapStatus) 
 	     			  packData.alloc_overlaps();
-	     		  }
 	     		  
-	     		  edgelist=new EdgeLink(packData,items); // default to all
-	     		  Iterator<EdgeSimple> elist=edgelist.iterator();
-	     		  while (elist.hasNext()) {
-	     			  edge=(EdgeSimple)elist.next();
+	     		  while (eis.hasNext()) {
+	     			  edge=(EdgeSimple)eis.next();
 	     			  count+=packData.set_single_invDist(edge.v,edge.w,invDist);
 	     		  }
 				  packData.fillcurves();
 				  CirclePack.cpb.msg("Set "+count+
 						   " inversive distances to "+invDist);
 			      return count;	  
-
 	    	  }
 	    	  
 	    	  // ========= set_overlaps ========
+	    	  // OBE. use 'set_invdist' after adjusting 'invDist', if given
 	    	  if (cmd.startsWith("ove")) { 
-	    		  Iterator<Vector<String>> its=flagSegs.iterator();
-	    		  items=(Vector<String>)its.next();
-	    		  String str=(String)items.remove(0);
-	    		  EdgeLink edgelist=null;
-				  EdgeSimple edge=null;
 	    		  
-	    		  if (str.startsWith("-d")) { // default: i.e. tangency
-	    			  if (items.size()>0) { // a list of edges given
-	    				  if (!packData.overlapStatus) return 1; // already at default
-	    				  edgelist=new EdgeLink(packData,items);
-	    				  Iterator<EdgeSimple> elist=edgelist.iterator();
-	    				  while(elist.hasNext()) {
-	    					  edge=(EdgeSimple)elist.next();
-	    					  count+=packData.set_single_invDist(edge.v,edge.w,1.0);
-	    				  }
-	    			  }
-	    			  else {
-	    				  packData.free_overlaps();
-	    				  count=packData.nodeCount;
-	    			  }
-	    			  packData.fillcurves();
-	    			  CirclePack.cpb.msg("set_over: set "+count+
-	    					  " overlaps to default");
-	    			  return count;
-	    		  }
-	    		  if (str.startsWith("-c")) { // set to current
-	    			  if (items.size()>0) { // a list of edges given
-	    				  edgelist=new EdgeLink(packData,items);
-	    			  }
-	    			  else edgelist=new EdgeLink(packData,"a");
-	    			  if (!packData.overlapStatus) packData.alloc_overlaps();
-	    			  Iterator<EdgeSimple> elist=edgelist.iterator();
-	    			  while(elist.hasNext()) {
-	    				  edge=(EdgeSimple)elist.next();
-	    				  count+=packData.set_single_invDist(
-	    						  edge.v,edge.w,packData.comp_inv_dist(edge.v,edge.w));
-	    				  // note: inv_dist routine not very robust 
-	    			  }
-	    			  packData.fillcurves();
-	    			  CirclePack.cpb.msg("set_over: set "+count+
-	    					  " overlaps to default");
-	    			  return count;
-	    		  }
-	    		  if (str.startsWith("-t")) { // truncate at given value
-	    		      if (!packData.overlapStatus) return 1;
-	    			  double uplim=Double.parseDouble((String)items.get(0));
-	    		      if (uplim<=1.0) {
-	    		    	  throw new DataException("usage: truncation value x must be >=1");
-	    		      }
-	   				  edgelist=new EdgeLink(packData,items);
-					  Iterator<EdgeSimple> elist=edgelist.iterator();
-					  while(elist.hasNext()) {
-						  edge=(EdgeSimple)elist.next();
-						  int nb=packData.nghb(edge.v,edge.w);
-						  if (packData.getInvDist(edge.v,packData.kData[edge.v].flower[nb])>uplim)
-						  count+=packData.set_single_invDist(edge.v,edge.w,uplim);
-					  }
-	    			  packData.fillcurves();
-	    			  CirclePack.cpb.msg("Cut "+(int)count/2+
-	    					   " inversive distances down to max of "+uplim);
-	    		      return count;
-	    		  }
-	    		  if (str.startsWith("-x")) { // use xyz-data: set all based on max/min distances
-	    			  if (flagSegs.size()==0) { // no filename, use 'packData.xyzpoint'
-	    				  return packData.set_xyz_overlaps(packData.xyzpoint,packData.nodeCount,1);
-	    			  }
-	    			  items=(Vector<String>)flagSegs.get(1);
-	    			  String dataname=StringUtil.reconItem(items);
-	    			  boolean in_script=false;
-	    			  if (dataname.startsWith("-s")) { // get from script
-	    				  in_script=true;
-	    				  dataname=(String)items.get(1);
-	    			  }
-	    			  if (CPFileManager.readDataFile(packData,dataname,in_script,1)==0)
-	    				  return 0;
-	    			  return packData.set_xyz_overlaps(packData.xyzpoint,packData.nodeCount,1);
-	    		  }
-	    		  if (str.startsWith("-h")) { // use packData.xyzpoint, 
-	    			  // but set based on local edge lengths
-	    			  return packData.set_xyz_overlaps(packData.xyzpoint,packData.nodeCount,2);
+	    		  // if no segments, then reset to default
+	    		  if (flagSegs==null || flagSegs.size()==0) { 
+	    			  packData.set_invD_default();
+	    			  return 1;
 	    		  }
 	    		  
-	    		  // no flag? <a> = *inv_dist or <a> = overlap, followed by edge list (default all)
-	    		  double invDist=1.0;  // NOTE: may be overlap or inversive distance
+	    		  items=flagSegs.get(0);
+	    		  
+	    		  // if a flag, just pass to 'set_invdist'
+	    		  if (StringUtil.isFlag(items.get(0)))
+    				  return CommandStrParser.jexecute(packData,
+    						  StringUtil.reconstitute(flagSegs));
+	    		  
+	    		  // otherwise look for <x> or <*x> format
+	    		  String str=items.get(0);
+	    		  double invDist=1.0; 
 	     		  if (str.charAt(0)=='*') { // indicates inv_dist in (1, infty)
-	     			  str=str.substring(1,str.length());
-	     			  invDist=Double.parseDouble(str);
-	     			  if (invDist<0.0) throw new ParserException("'invDist' negative");
+	     			  String newstr=str.substring(1,str.length()); // remove '*'
+	     			  items.insertElementAt(newstr,0);
+	     			  items.remove(1);
+    				  return CommandStrParser.jexecute(packData,
+    						  StringUtil.reconstitute(flagSegs));
 	     		  }
-	     		  else {
-	     			  invDist=Double.parseDouble(str);
-	     			  if (invDist<0.0 || invDist>1.0) 
-	     				  throw new ParserException("Use '*' for 'inversive distance' parameter");
-	     			  invDist=Math.cos(invDist*Math.PI);
-	     		  }
-	     		  
-	     		  // Is space allocated?
-	     		  if (!packData.overlapStatus) {
-	     			  // 'invDist' essentially default and nothing to reset? 
-	     			  if (Math.abs(invDist-1.0)<=.0000001)  
-	     				  return 0;
-	     			  packData.alloc_overlaps();
-	     		  }
-	     		  
-	     		  edgelist=new EdgeLink(packData,items); // default to all
-	     		  Iterator<EdgeSimple> elist=edgelist.iterator();
-	     		  while (elist.hasNext()) {
-	     			  edge=(EdgeSimple)elist.next();
-	     			  count+=packData.set_single_invDist(edge.v,edge.w,invDist);
-	     		  }
-				  packData.fillcurves();
-				  CirclePack.cpb.msg("Set "+count+
-						   " inversive distances to "+invDist);
-			      return count;
+				  return CommandStrParser.jexecute(packData,
+						  StringUtil.reconstitute(flagSegs));
 	    	  }
-	    	  
+
 	    	  // ========= set_xyz =============
 	    	  if (cmd.startsWith("xyz")) {
 	    		  if (flagSegs==null || flagSegs.size()==0) 

@@ -407,6 +407,7 @@ public class DisplayParser {
 			}
 			case 'd': { // dual objects: 
 				// 'de' (default), 'dc', 'df', 'dg', 'dt', 'dw', or 'dp'
+				
 				PackDCEL pdcel=p.packDCEL;
 				if (pdcel!=null) {
 					
@@ -420,17 +421,14 @@ public class DisplayParser {
 						if (faceLink != null && faceLink.size() <= 0) // nothing in list
 							break;
 						Iterator<Integer> flist = faceLink.iterator();
-						int f;
 						while (flist.hasNext()) {
-							f = flist.next();
-							Complex []pts=pdcel.getFaceCorners(pdcel.faces[f]);
-							CircleSimple sC=CommonMath.tri_incircle(pts[0],pts[1],pts[2],p.hes);
-
+							int f=flist.next();
+							CircleSimple theCircle=p.packDCEL.getFaceIncircle(p.packDCEL.faces[f]);
 							if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
 								dispFlags.setColor(p.getFaceColor(f));
 							if (dispFlags.label)
 								dispFlags.setLabel(Integer.toString(f));
-							cpScreen.drawCircle(sC.center,sC.rad, dispFlags);
+							cpScreen.drawCircle(theCircle.center,theCircle.rad, dispFlags);
 							count++;
 						}
 						break;
@@ -564,7 +562,7 @@ public class DisplayParser {
 						}
 					}
 					} // end of cases (for now)
-				}
+				} // end of DCEL dual cases
 				
 				// traditional
 				else {
@@ -586,9 +584,12 @@ public class DisplayParser {
 						break;
 					Iterator<Integer> flist = faceLink.iterator();
 					int f;
+					
+					// TODO: 
+					Complex[] pts=new Complex[3];
 					while (flist.hasNext()) {
 						f = flist.next();
-						Complex []pts=p.corners_face(f, ambigZs);
+						pts=p.corners_face(f, ambigZs);
 						CircleSimple sC=CommonMath.tri_incircle(pts[0],pts[1],pts[2],p.hes);
 
 						if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))

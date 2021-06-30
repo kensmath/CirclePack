@@ -166,7 +166,7 @@ public abstract class GenBranchPt {
 	/**
 	 * Set 'attachFace' with info on how this branch point is aligned
 	 * with the parent. This is a packData face.  
-	 * @param edge @see EdgeSimple: if improper, then clear current values
+	 * @param edge EdgeSimple: if improper, then clear current values
 	 * @return int, index of layoutA, -1 on reset
 	 */
 	public void setAttachFace(EdgeSimple edge) {

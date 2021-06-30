@@ -22,6 +22,8 @@ public class EuclMath{
 
 	/**
 	 * Find eucl center/rad for circle thru 3 points in eucl plane.
+	 * Find intersection of perp bisector of two sides for 'cent',
+	 * then compute radius.
 	 * @param z1 Complex
 	 * @param z2 Complex
 	 * @param z3 Complex
@@ -32,13 +34,13 @@ public class EuclMath{
 		double a2 = z3.x-z2.x;
 		double b1 = z2.y-z1.y;
 		double b2 = z3.y-z2.y;
-		double det = 2.0 * (a1 * b2 - b1 * a2);
+		double det = (a1 * b2 - b1 * a2);
 		if (Math.abs(det) < 0.0000000000001) // return with radius 0.0
 			return new CircleSimple(false);
 
-		double dum = z2.absSq();
-		double c1 = dum-z1.absSq();
-		double c2 = z3.absSq()-dum;
+		double dum = z2.absSq()/2.0;
+		double c1 = dum-z1.absSq()/2.0;
+		double c2 = z3.absSq()/2.0-dum;
 
 		Complex cent=new Complex((b2*c1-b1*c2)/det,(a1*c2-a2*c1)/det);
 		double c_rad=cent.minus(z1).abs();

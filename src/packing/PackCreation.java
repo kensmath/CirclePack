@@ -347,7 +347,7 @@ public class PackCreation {
 	 * NOTE: 'PackData.seed' call does the same, but within existing
 	 * PackData object.
 	 * @param n int, number of petals
-	 * @param heS int, geometry
+	 * @param heS int, final geometry
 	 * @return @see PackData or null on error
 	 */
 	public static PackData seed(int n,int heS) {

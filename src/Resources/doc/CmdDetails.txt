@@ -3566,21 +3566,28 @@ face drawing order.</opt>
 
 <command cmd="set_invdist" flags="[option] {{x} (v w)..}">
 <description>
-	"Inversive distance" is a conformally invariant real value d in [-1, infty) 
-	that is associated with a pair of circles C1 and C2. If C1 and C2 are tangent,
-	then d = 1. If C1 and C2 intersect with exterior overlap angle t, 
-	then d = cos(t), so d is in [-1,1). We call it a "deep" overlap if the angle
-	is in (Pi/2,Pi], in which case d lies in [-1,0). In particular, d=-1 means
-	C1 and C2 are internally tangent. Value d > 1 means that C1 and C2 are
-	"separated" circles, so they don't intersect and are not nested (they have 
-	mutually disjoint interiors). NOTE 1: "distance" as used in "inversive distance"
-	is not true distance in	the metric sense; for example, the triangle inequality
-	fails.
-	NOTE 2: inversive distances and overlap angles are independent of the 
-	geometry used for the pack. 
-	NOTE 3: inversive distances x in [-1,0) (deep overlaps) or in [1,infty) 
-	(separation) can lead to layout	incompatibilities; circle packing theory is 
-	most complete when inversive distances are limited to values in [0,1].
+	"Inversive distance" is a conformal invariant. It is a 
+	real value d in [-1, infty)	associated with a pair of 
+	circles C1 and C2. If C1 and C2 are tangent, then d = 1. 
+	If C1 and C2 intersect with exterior overlap angle t, 
+	then d = cos(t), so d is in [-1,1). We call it a "deep" 
+	overlap if the angle is in (Pi/2,Pi], in which case d 
+	lies in [-1,0). In particular, d=-1 means C1 and C2 are 
+	internally tangent. Value d > 1 means that C1 and C2 are
+	"separated" circles; they don't intersect and are not 
+	nested (mutually disjoint interiors). NOTE 1: "distance" 
+	as used in "inversive distance"	is not true distance in	
+	the metric sense; for example, the triangle inequality
+	fails. NOTE 2: inversive distances and overlap angles 
+	are independent of the geometry used for the packing. 
+	NOTE 3: inversive distances x in [-1,0) (deep overlaps) 
+	or in [1,infty)	(separation) can lead to layout	
+	incompatibilities; circle packing theory is	most complete 
+	when inversive distances are limited to values in [0,1].
+	NOTE 4: "conformal invariance" means that d is preserved
+	under conformal maps: so if M maps C1 to c1 and C2 to c2,
+	then the inversive distance (C1,C2) is the same as the
+	inversive distance (c1,c2).
 </description>
 <options>
 	<opt flag="-d"> set to default, 1 (tangency).</opt>
@@ -3594,14 +3601,12 @@ face drawing order.</opt>
 	<opt flag="deprecated: -f  {v..}"> set for edges from v; use incidence 'Iv' to get edges</opt>
 </options>
 <examples>
+	<instance test="set_invdist"> Set all to default</instance>
 	<instance text="set_invdist 0.5 7 10"> If {7 10} is an edge, then its overlap 
 	angle is set to acos(0.5) = Pi/3</instance>
-	<instance text="set_invdist 1.25 i"> The inversive distance for all interior 
+	<instance text="set_invdist 1.25 i"> The inversive distances for all interior 
 	edges are set to 1.25</instance>
 </examples>
-<seealso>
-<see>set_over</see>
-</seealso>
 </command>
 
 
@@ -3628,35 +3633,8 @@ face drawing order.</opt>
  
 <command cmd="set_over" flags="[option] {{x} (v w)..}">
 <description>
-	An "overlap angle" t between neighboring circles is the prescribed
-	exterior angle they are intended to make where they intersect and
-	is limited to [0, Pi/2], 0 corresponding to tangency. Note that the 
-	specified parameter 'x' is multiplied by Pi to get the overlap angle 't'.
-	Also note that the value d = cos(t) is called the "inversive distance" 
-	between the circles. See "set_invdist" for setting general inversive
-	distances, which lie in [-1, infty). (Deprecated: if 'x' is preceeded
-	'*', then the value is to be takes as an inversive distance instead of
-	as an angle/Pi. Now one should use "set_invdist" instead.) 
+	This is OBE, deprecated: see "set_invdist" instead.
 </description>
-<options>
-	<opt flag="-d"> set to default, 0 (tangent condition).</opt>
-	<opt flag="-c"> set to current values.</opt>
-	<opt flag="-t  {x}"> truncate inv_distances at upper value x (x>1.0)</opt>
-	<opt flag="-x"> use xyz data, setting based on min of all edgelengths, as though each radius was 1/2 the length of shortest edge.</opt>
-	<opt flag="-x {name}"> read in xyz data from this file, then use it </opt> 
-	<opt flag="-x -s {name}"> from this file in the current script</opt>
-	<opt flag="-h"> use xyz data, setting each overlap based on local edgelengths as though each radius was 1/2 the length of 
-			the shortest edge from that vertex.</opt>
-	<opt flag="deprecated: -f  {v..}"> set for edges from v; use incidence 'Iv' to get edges</opt>
-</options>
-<examples>
-	<instance text="set_over .3333 5 10"> If {5 10} is an edge, then its overlap 
-	angle is set to Pi/3</instance>
-	<instance text="set_over *.3333 a"> (deprecated: use 'set_invdist') The inversive 
-		distances for all edges are set to acos(.3333)</instance>
-	<instance text="set_over *1.25 i"> (deprecated: use 'set_invdist') The inversive distance for all interior 
-	edges are set to 1.25</instance>
-</examples>
 <seealso>
 <see>set_invdist</see>
 </seealso>

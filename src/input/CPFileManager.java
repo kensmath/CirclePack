@@ -148,17 +148,17 @@ public class CPFileManager {
 	  }
 	  
 	  /**
-	   * (See 'ckTrailingFileName' also)
+	   * (See 'StringUtil.ckTrailingFileName' also)
 	   * Convention on files names at end of command options should
 	   * be '-f' for file, '-a' append (for writing only), and/or 's'
 	   * for script, plus '<filename>' (possibly with directory). 
 	   * 
 	   * If filename contains bracketed '[<string>]' then it tries to 
-	   * interpret <string> as a double and converts to an integer, else takes it 
-	   * as a literal. E.g. "pack[_n].p" will try to interpret the string
-	   * for variable 'n' as an integer; so if n:=3.0, then would get
-	   * "pack3.p". On the other hand, "pack[bob].p" would yield the
-	   * name "packbob.p".
+	   * interpret <string> as a double and converts to an integer, 
+	   * else takes it as a literal. E.g. "pack[_n].p" will try to 
+	   * interpret the string for variable 'n' as an integer; so if 
+	   * n:=3.0, then would get "pack3.p". On the other hand, 
+	   * "pack[bob].p" would yield the name "packbob.p".
 	   * 
 	   * Older syntax conventions (e.g., without flags) are still in use.
 	   * This method checks if last segment is -[fas] flag; if so,
@@ -166,18 +166,23 @@ public class CPFileManager {
 	   * from 'fseg'. Replaces leading '~' by home directory.
 	   * Can have just '-s', in which case filename "" is returned.
 	   * 
-	   * If the last segment has no flag or some other inappropriate flag,
-	   * then the string of characters after the flag is taken as the filename; 
-	   * if there's an inappropriate flag, it is left as a segment on its own.
-	   * This could be a problem if there is in fact no file name.
+	   * If the last segment has no flag or an inappropriate flag, 
+	   * then everything (after the flag, if there is one) is 
+	   * consumed and taken as a filename; if there's an 
+	   * inappropriate flag, it is left as a segment on its own. 
+	   * (There can be a problem if there is in fact no file name, 
+	   * as the last string is consumed.)
+	   * segment is 
 	   * 
 	   * Throw exceptions in case of error.
 	   * 
 	   * @param fseg Vector<Vector<String>>
-	   * @param strbld StringBuilder: instance = "" (created in parent) to hold the
-	   *        file name (may or may not have a directory).
+	   * @param strbld StringBuilder: instance = "" (created 
+	   *        in parent) to hold the file name (may or may not have 
+	   *        a directory).
 	   * @return int: 1-bit=read/overwrite; 2-bit=append (writing only); 
-	   *        3-bit=from/to script. remove the final flag segment, 0 on error
+	   *        3-bit=from/to script. remove the final trailing string.
+	   *        0 on error
 	   */
 	  public static int trailingFile(Vector<Vector<String>> fseg,StringBuilder strbld) {
 		  if (strbld==null || strbld.length()>0 || fseg==null || fseg.size()==0) 
@@ -349,11 +354,11 @@ public class CPFileManager {
 
 	/**
 	 * Read various types of data from files or the script. Currently
-	 * only 'xyz' data reading is implemented.
+	 * only 'xyz' data reading into 'p.xyzpoint' is implemented.
 	 * @param p, packing
 	 * @param filename; assume 'PackingDirectory' or tmp directory (for script files)
 	 * @param script_flag, true implies try to read from script first
-	 * @param mode, type of data: 1==> 'xyz' data.
+	 * @param mode, type of data: 1 ==> 'xyz' data.
 	 * @return int count of successes
 	 */
 	public static int readDataFile(PackData p,String filename,boolean script_flag,int mode) {
@@ -383,7 +388,8 @@ public class CPFileManager {
 			  }
 			  
 			  // reaching here, must be ready to read N xy[z] locations for
-			  if (p.xyzpoint==null) p.xyzpoint=new Point3D[p.nodeCount+1];
+			  if (p.xyzpoint==null) 
+				  p.xyzpoint=new Point3D[p.nodeCount+1];
 			  int count=0;
 			  try{
 				  while((line=StringUtil.ourNextLine(fp))!=null && count<N) {

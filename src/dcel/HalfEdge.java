@@ -2,6 +2,7 @@ package dcel;
 
 import java.awt.Color;
 
+import complex.Complex;
 import exceptions.CombException;
 import komplex.EdgeSimple;
 import util.ColorUtil;
@@ -31,7 +32,9 @@ public class HalfEdge {
 	double schwarzian; // see 'Schwarzian.java'
 	Color color; 
 	
-	public int eutil;  // for temporary use only
+	// for temporary use only
+	public int eutil; 
+	Complex genTang;  // "general tangency" point; not maintained
 
 	// constructor(s)
 	public HalfEdge() {
