@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.Vector;
 
+import allMains.CPBase;
 import dcel.HalfEdge;
 import dcel.RawDCEL;
 import exceptions.CombException;
@@ -416,7 +417,7 @@ public class FlipStrategy extends PackExtender {
 				while (outerflip && v!=0 && 
 						(vnum=packData.countFaces(v))>4 &&
 						!packData.isBdry(v)) {
-					msg("target petal: v="+v+", pole="+pole);
+//					msg("target petal: v="+v+", pole="+pole);
 					outerflip=false;
 					int k=(packData.nghb(v,pole)-1+vnum)%vnum;
 					int w=flower[k];
@@ -424,9 +425,18 @@ public class FlipStrategy extends PackExtender {
 					int nextw=flower[m];
 					// try flipping first edge, if it doesn't connect poles
 					if (nextw!=unpole && cpCommand("flip "+v+" "+w)!=0) {
-						msg("  first flip succeeded: <"+v+" "+w+">");
+
+// debugging
+if (CPBase.Elink==null) 
+	CPBase.Elink=new EdgeLink();
+CPBase.Elink.add(new EdgeSimple(v,w));
+
+						System.out.println("flipped <"+v+" "+w+">");
+
+//						msg("  first flip succeeded: <"+v+" "+w+">");
 						outerflip=true;
 					}
+
 					
 					// else, search clockwise around v for flippable
 					//   edge whose other end is petal of pole and

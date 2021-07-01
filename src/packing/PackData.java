@@ -3229,7 +3229,7 @@ public class PackData{
 			if(r > 0.0) {
 				if(r > 0.0001) 
 					rad=1-Math.exp(-2.0*r);
-				else 
+				else // for small values, use polynomial approximation
 					rad=2.0*r*(1.0 - r*(1.0-2.0*r/3.0));
 			}
 			// can be negative (useful as storage of eucl radius for horocycles)
@@ -19094,14 +19094,25 @@ public class PackData{
 	 * @return 0 on error
 	 */
 	public int adjust_rad(int v,double factor) {
-		if (v<1 || v>nodeCount || factor<=0.0) return 0;
+		if (factor==1.0)
+			return 1;
+		if (v<1 || v>nodeCount || factor<=0.0) 
+			return 0;
 		double newrad;
 		int count=0;
 		double rad=getRadius(v);
 		if (hes<0) { // hyperbolic
-			if (rad<0) { // infinite radius becomes large, finite
-				newrad=.9995;
+			if (rad<0) { // infinite radius?
+				if (factor>0.99999) 
+					newrad=rad; // don't change
+				else // becomes large but finite
+					newrad=.9995;
 				count++;
+			}
+			else if (rad>.99999 && factor>1.0) {
+				setRadiusActual(v,5.0); // essentially infinite
+				count++;
+				return count;
 			}
 			else { // replace x by x=1-exp(factor*(log(1-x)))
 				newrad=1.0-Math.exp(factor*Math.log(1.0-rad));

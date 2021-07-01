@@ -323,7 +323,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 									count++;
 							}
 						}
-						if (brst.startsWith("l")) { // last
+						else if (brst.startsWith("l")) { // last
 							edge=(EdgeSimple)elink.getLast();
 							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
 								add(edge);
@@ -340,7 +340,9 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 										count++;
 									}
 								}
-							} catch (NumberFormatException nfe) {}
+							} catch (NumberFormatException nfe) {
+								
+							}
 						}
 					}
 					// else just adjoin the lists

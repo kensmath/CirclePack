@@ -1618,25 +1618,64 @@ public class RawDCEL {
 	  }
 
 	  /**
-	   * Flip an edge in a triangulation; 'edge' must be shared 
-	   * by two non-ideal faces. To "flip" means to replace the 
-	   * edge by the other diagonal in the union of its two faces. 
+	   * Flip an edge in a triangulation, subject to combinatoric
+	   * conditions on 'edge':
+	   * + must be shared by two non-ideal faces. 
+	   * + must not have an edge of degree 3.
+	   * + if end of degree 4, it cannot have nghb of degree 3.
+	   * + new edge ends cannot already be neighbors.
+	   * To "flip" means to replace 'edge' by the other 
+	   * diagonal in the union of its two faces. The 
+	   * numbers of faces, edges, and verts is unchanged.
 	   * If 'edge' is in red chain, then set 'redChain' null. 
-	   * The number of faces, edges, and vertices is not changed; 
-	   * calling routine handles processing.
+	   * Calling routine handles processing.
 	   * 
 	   * @param pdcel PackDCEL
 	   * @param edge  HalfEdge
 	   * @return HalfEdge, null failure
 	   */
 	  public static HalfEdge flipEdge_raw(PackDCEL pdcel, HalfEdge edge) {
-		  if (pdcel.isBdryEdge(edge)) // bdry?
+		  
+		  if (pdcel.isBdryEdge(edge))
 			  return null;
+		  // check conditions
+		  int v=edge.origin.vertIndx;
+		  int w=edge.twin.origin.vertIndx;
+		  int n;
+		  if ((n=pdcel.countPetals(v))<=4) {
+			  if (n<=3)
+				  return null;
+			  if (n==4) {
+				  HalfEdge he=pdcel.vertices[v].halfedge;
+				  do {
+					  if (pdcel.countPetals(he.twin.origin.vertIndx)<=3)
+						  return null;
+					  he=he.prev.twin; // cclw
+				  } while (he!=pdcel.vertices[v].halfedge);
+			  }
+		  }
+		  if ((n=pdcel.countPetals(w))<=4) {
+			  if (n<=3)
+				  return null;
+			  if (n==4) {
+				  HalfEdge he=pdcel.vertices[w].halfedge;
+				  do {
+					  if (pdcel.countPetals(he.twin.origin.vertIndx)<=3)
+						  return null;
+					  he=he.prev.twin; // cclw
+				  } while (he!=pdcel.vertices[w].halfedge);
+			  }
+		  }
+
 		  if (edge.myRedEdge != null) // in redchain
 			  pdcel.redChain = null;
 		  Vertex leftv = edge.next.next.origin;
 		  Vertex rightv = edge.twin.next.next.origin;
-
+		  
+		  // are leftv/rightv already nghbs?
+		  if (pdcel.findHalfEdge(new EdgeSimple(leftv.vertIndx,rightv.vertIndx))!=null)
+			  return null;
+		  
 		  HalfEdge new_edge = new HalfEdge(leftv);
 		  HalfEdge new_twin = new HalfEdge(rightv);
 
