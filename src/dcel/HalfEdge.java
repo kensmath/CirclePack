@@ -34,7 +34,7 @@ public class HalfEdge {
 	
 	// for temporary use only
 	public int eutil; 
-	Complex genTang;  // "general tangency" point; not maintained
+	Complex genTang;  // "general tangency" point; not yet used/maintained
 
 	// constructor(s)
 	public HalfEdge() {

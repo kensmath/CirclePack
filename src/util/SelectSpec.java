@@ -1,7 +1,9 @@
 package util;
 
+import allMains.CPBase;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.HalfEdge;
 import geometry.CircleSimple;
 import geometry.HyperbolicMath;
 import packing.PackData;
@@ -17,22 +19,24 @@ import packing.PackData;
 public class SelectSpec {
 	public String left_str;       // left side of 'condition'
 	public Double left_value;     // null unless double value is specified
-	public String right_str;      // right side of 'condition' (or null in unary case)
+	public String right_str;      // right side of 'condition' 
+								  // (or null in unary case)
 	public Double right_value;    // null unless double value is specified
-	Condition condition;          // encoded conditions: <=, >=, >, <, ==, !=, (new: le, ge, gt, lt, eq, ne)
-	public boolean unary;       // unary condition, place in 'target' (eg. 'b')
+	Condition condition;          // encoded conditions: <=, >=, >, <, ==, !=, 
+								  //    (new: le, ge, gt, lt, eq, ne)
+	public boolean unary;         // unary condition, place in 'target' (eg. 'b')
 	public boolean negation;      // negation of a unary condition
 	public boolean isConnective;  // is this a connective (&&, ||)? see 'isAnd'
 	public boolean isAnd;         // true, connective is &&, else ||
-	public int object;        // bit encoded for intended object:
-	// bits: 1 for circles, 2 for faces, 4 for tiles (8 for edges?)
+	public char object;           // intended object:
+	// 'c' circles, 'f' faces, 't' tiles, 'e' edges
 	
 	enum  Condition {LT,LE,GT,GE,EQ,NE,NULL};
 	
 	static final double TOLER=.0000000001;
 
 	// Constructor
-	public SelectSpec(int objt) {
+	public SelectSpec(char objt) {
 		left_str=null;
 		left_value=null;
 		condition=Condition.NULL;
@@ -71,14 +75,16 @@ public class SelectSpec {
 	 * uP.rtnflag=0 for error or if we're after a righthand side
 	 * but 'value_str' is empty
 	 * 
-	 * Target quantities: rad=r, degree=d, bdry=b, int=i, angle sum=s, aim=a,
-	 * marked=m, ratio(p,q)=cpq, ratio(p,q)=epq (but converted to eucl), modulus
-	 * of (eucl) center=z (or ze), tile type=t,plot_flag false=x. 
-	 * X(resp. Y,Z)-coord in xyz data=X(resp. Y,Z).
+	 * Target quantities: rad=r, degree=d, bdry=b, int=i, 
+	 * angle sum=s, aim=a, marked=m, ratio(p,q)=cpq, 
+	 * ratio(p,q)=epq (but converted to eucl), modulus
+	 * of (eucl) center=z (or ze), tile type=t,plot_flag false=x, 
+	 * X(resp. Y,Z)-coord in xyz data=X(resp. Y,Z),
+	 * *list (e.g., vlist, flist, etc.)
 	 * 
 	 * @param packData PackData
 	 * @param node int, vertex or face index
-	 * @param leftright int, 0 if getting value for lefthand side, 1 for right
+	 * @param leftright int, 0/1 if getting value for left/right side
 	 * @return UtilPacket, rtnflag=0 on error (results shouldn't be used)
 	 */
 	public UtilPacket node_to_value(PackData packData, int node,int leftright)
@@ -112,12 +118,18 @@ public class SelectSpec {
 			return uP;
 		
 		char c = myStr.charAt(0);
+		if (myStr.contains("list")) {
+			if (c=='v' || c=='f' || c=='t') // '*list'
+				c='l'; 
+			if (c=='V' || c=='F' || c=='T') // global '*list'
+				c='L';
+		}
 		
 		// circles
-		if ((object & 01)==01) {   
+		if (object=='c') {   
 			switch (c) {
 
-			// unary specifications 'b', 'i'
+			// unary specifications 'b','i','l','L' (for "vlist" or "Vlist"),
 			case 'b': // boundary circle or face
 			{
 				uP.value = (double) (packData.getBdryFlag(node));
@@ -130,6 +142,22 @@ public class SelectSpec {
 				uP.rtnFlag = 1;
 				return uP;
 			}
+			case 'l': // vlist
+			{
+				if (packData.vlist!=null && 
+						(packData.vlist.containsV(node)>=0))
+					uP.value=1;
+				uP.rtnFlag=1;
+				return uP;
+			}
+			case 'L': // Vlist
+			{
+				if (CPBase.Vlink!=null && (CPBase.Vlink.containsV(node)>=0))
+					uP.value=1;
+				uP.rtnFlag=1;
+				return uP;
+			}
+
 
 			// specifications requiring double 'value' to compare to
 			case 'a': // aim?
@@ -140,13 +168,14 @@ public class SelectSpec {
 			}
 			case 'c': // color code
 			{
-				uP.value = ColorUtil.col_to_table(packData.kData[node].color);
+				uP.value = ColorUtil.col_to_table(packData.getCircleColor(node));
 				uP.rtnFlag = 1;
 				return uP;
 			}
 			case 'd': // degree for circle; edge count for tile
 			{
-				uP.value = (double) (packData.countFaces(node) + packData.getBdryFlag(node));
+				uP.value = (double) (packData.countFaces(node) + 
+						packData.getBdryFlag(node));
 				uP.rtnFlag = 1;
 				return uP;
 			}
@@ -175,9 +204,9 @@ public class SelectSpec {
 			case 'r': // rad?
 			{
 				if (packData.hes < 0) // hyp
-					uP.value = (-Math.log(packData.rData[node].rad));
+					uP.value = (-Math.log(packData.getRadius(node)));
 				else
-					uP.value = packData.rData[node].rad;
+					uP.value = packData.getRadius(node);
 				uP.rtnFlag = 1;
 				return uP;
 			}
@@ -189,13 +218,13 @@ public class SelectSpec {
 			}
 			case 'u': // utilFlag?
 			{
-				uP.value = (double) packData.kData[node].utilFlag;
+				uP.value = (double) packData.getVertUtil(node);
 				uP.rtnFlag = 1;
 				return uP;
 			}
 			case 'x': // !plot_flag?
 			{
-				uP.value = (double) packData.kData[node].plotFlag;
+				uP.value = (double) packData.getPlotFlag(node);
 				uP.rtnFlag = 1;
 				return uP;
 			}
@@ -209,7 +238,7 @@ public class SelectSpec {
 				Complex ctrp = packData.getCenter(node);
 				if (packData.hes < 0 && myStr.charAt(1) == 'e') { // eucl cent
 					CircleSimple sc = HyperbolicMath.h_to_e_data(ctrp,
-							packData.rData[node].rad);
+							packData.getRadius(node));
 					ctrp = new Complex(sc.center);
 				}
 				uP.value = ctrp.abs();
@@ -234,8 +263,8 @@ public class SelectSpec {
 					uP.rtnFlag = 0;
 					return uP;
 				}
-				double rq = Pq.rData[node].rad;
-				double rp = Pp.rData[node].rad;
+				double rq = Pq.getRadius(node);
+				double rp = Pp.getRadius(node);
 				if (c == 'e') { // compare in eucl geom
 					if (Pp.hes < 0) {
 						CircleSimple sc = HyperbolicMath.h_to_e_data(
@@ -292,14 +321,15 @@ public class SelectSpec {
 		} // end of circle case
 		
 		// face case
-		else if ((object & 02)==02) {
+		else if (object=='f') {
 			switch(c) {
-			// unary specifications 'b', 'i'
+			// unary specifications 'b','i','f','F' ("flist" or "Flist")
 			case 'b': // boundary face (some bdry vertex)
 			{
-				if (packData.isBdry(packData.faces[node].vert[0])
-					|| packData.isBdry(packData.faces[node].vert[1])
-					|| packData.isBdry(packData.faces[node].vert[2]))
+				int[] fverts=packData.getFaceVerts(node);
+				if (packData.isBdry(fverts[0])
+					|| packData.isBdry(fverts[1])
+					|| packData.isBdry(fverts[2]))
 					uP.value = 1;
 				else
 					uP.value=0;
@@ -308,25 +338,39 @@ public class SelectSpec {
 			}
 			case 'i': // interior face?
 			{
-
-				if (!packData.isBdry(packData.faces[node].vert[0])
-						&& !packData.isBdry(packData.faces[node].vert[1])
-						&& !packData.isBdry(packData.faces[node].vert[2]))
+				int[] fverts=packData.getFaceVerts(node);
+				if (!packData.isBdry(fverts[0])
+						&& !packData.isBdry(fverts[1])
+						&& !packData.isBdry(fverts[2]))
 					uP.value = 1;
 				else
 					uP.value = 0;
 				uP.rtnFlag = 1;
 				return uP;
 			}
+			case 'l': // in flist?
+			{
+				if (packData.flist!=null && (packData.flist.containsV(node)>=0))
+					uP.value=1;
+				uP.rtnFlag=1;
+				return uP;
+			}
+			case 'L': // in Flist?
+			{
+				if (CPBase.Flink!=null && (CPBase.Flink.containsV(node)>=0))
+					uP.value=1;
+				uP.rtnFlag=1;
+				return uP;
+			}
 			case 'c': // color code
 			{
-				uP.value = ColorUtil.col_to_table(packData.faces[node].color);
+				uP.value = ColorUtil.col_to_table(packData.getFaceColor(node));
 				uP.rtnFlag = 1;
 				return uP;
 			}
 			case 'm': // marked face
 			{
-				uP.value = (double) packData.faces[node].mark;
+				uP.value = (double) packData.getFaceMark(node);
 				uP.rtnFlag = 1;
 				return uP;
 			}
@@ -345,7 +389,7 @@ public class SelectSpec {
 			}
 			case 'x': // !plot_flag?
 			{
-				uP.value = (double) packData.faces[node].plotFlag;
+				uP.value = (double) packData.getPlotFlag(node);
 				uP.rtnFlag = 1;
 				return uP;
 			}
@@ -355,10 +399,10 @@ public class SelectSpec {
 		} // end of face case
 
 		// tile case
-		else if ((object & 04)==04 ) {
+		else if (object=='t') {
 
 			switch(c) {
-			// 	unary specifications 'b', 'i'
+			// 	unary specifications 'b','i','t','T' ('tlist' or 'Tlist')
 			case 'b': // boundary tile (at least one bdry vert)
 			{
 				int []verts=packData.tileData.myTiles[node].vert;
@@ -389,9 +433,24 @@ public class SelectSpec {
 				uP.rtnFlag=1;
 				return uP;
 			}
+			case 'l': // in tlist?
+			{
+				if (packData.tlist!=null && (packData.tlist.containsV(node)>=0))
+					uP.value=1;
+				uP.rtnFlag=1;
+				return uP;
+			}
+			case 'L': // in Tlist?
+			{
+				if (CPBase.Tlink!=null && (CPBase.Tlink.containsV(node)>=0))
+					uP.value=1;
+				uP.rtnFlag=1;
+				return uP;
+			}
 			case 'c': // color code
 			{
-				uP.value = ColorUtil.col_to_table(packData.tileData.myTiles[node].color);
+				uP.value = ColorUtil.col_to_table(
+						packData.tileData.myTiles[node].color);
 				uP.rtnFlag = 1;
 				return uP;
 			}
@@ -431,7 +490,7 @@ public class SelectSpec {
 				Complex ctrp = packData.getCenter(v);
 				if (packData.hes < 0 && myStr.charAt(1) == 'e') { // eucl cent
 					CircleSimple sc = HyperbolicMath.h_to_e_data(ctrp,
-							packData.rData[node].rad);
+							packData.getRadius(node));
 					ctrp = new Complex(sc.center);
 				}
 				uP.value = ctrp.abs();
@@ -439,8 +498,39 @@ public class SelectSpec {
 				return uP;
 			}
 			} // end of switch 
-			
+
 			return uP; // no valid symbol
+		}
+		
+		// 'HalfEdge's (this is new)
+		else if (object=='e') {
+			
+			if (packData.packDCEL==null) {
+				return null;
+			}
+			HalfEdge he=packData.packDCEL.edges[node];
+			
+			switch(c) {
+			
+			// TODO; add as we needed
+			case 'l': // in hlist?
+			{
+				if (packData.hlist!=null && packData.hlist.containsVW(he))
+					uP.value=1;
+				uP.rtnFlag=1;
+				return uP;
+			}
+			case 'L': // in Hlist?
+			{
+				if (CPBase.HLink!=null && CPBase.HLink.containsVW(he))
+					uP.value=1;
+				uP.rtnFlag=1;
+				return uP;
+			}
+			
+			} // end of switch
+			
+			return uP;
 		}
 		
 		// no valid symbol 
@@ -455,53 +545,67 @@ public class SelectSpec {
 	 * @return boolean
 	 */
 	public boolean comparison(double x,double y) {
-		if (unary) { // for unary conditions (eg., 'b'), x>1 means true.
+		if (unary) { // for unary (eg., 'b'), x>0 means true.
 			if (x > 0.0) {
-				if (negation) return false;
+				if (negation) 
+					return false;
 				return true;
 			}
-			if (negation) return true;
+			if (negation) 
+				return true;
 			return false;
 		}
 		if (condition == Condition.NULL)
 			return false;
 		else if (condition == Condition.EQ) {
 			if (Math.abs(x - y) > TOLER) {
-				if (negation) return true;
+				if (negation) 
+					return true;
 				return false;
 			}
-			if (negation) return false;
+			if (negation) 
+				return false;
 			return true;
 		} else if (condition == Condition.NE) {
 			if (Math.abs(x - y) < TOLER) {
-				if (negation) return true;
+				if (negation) 
+					return true;
 				return false;
 			}
-			if (negation) return false;
+			if (negation) 
+				return false;
 		} else if (condition == Condition.GT) {
 			if (x <= y) {
-				if (negation) return true;
+				if (negation) 
+					return true;
 				return false;
 			}
-			if (negation) return false;
+			if (negation) 
+				return false;
 		} else if (condition == Condition.GE) {
 			if (x < y) {
-				if (negation) return true;
+				if (negation) 
+					return true;
 				return false;
 			}
-			if (negation) return false;
+			if (negation) 
+				return false;
 		} else if (condition == Condition.LT) {
 			if (x >= y) {
-				if (negation) return true;
+				if (negation) 
+					return true;
 				return false;
 			}
-			if (negation) return false;
+			if (negation) 
+				return false;
 		} else if (condition == Condition.LE) {
 			if (x > y) {
-				if (negation) return true;
+				if (negation) 
+					return true;
 				return false;
 			}
-			if (negation) return false;
+			if (negation) 
+				return false;
 		}
 		return true;
 	}

@@ -12,6 +12,7 @@ import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.Vertex;
 import exceptions.CombException;
+import exceptions.DCELException;
 import exceptions.ParserException;
 import komplex.DualGraph;
 import komplex.EdgeSimple;
@@ -23,8 +24,10 @@ import packing.PackData;
 import util.FaceParam;
 import util.MathUtil;
 import util.PathInterpolator;
+import util.SelectSpec;
 import util.SphView;
 import util.StringUtil;
+import util.UtilPacket;
 
 /* fixup: might want an abstract parent class because of common methods:
  * However, I don't know how to do this with and still set the 'type' of elements.
@@ -1839,6 +1842,93 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			sb.append(" "+edge.v+" "+edge.w);
 		}
 		return sb.toString();
+	}
+		
+	 
+	/**
+	 * Make up list by looking through SetBuilder specs 
+	 * (from {..} set-builder notation). Use 'tmpUtil' to 
+	 * collect information before creating the HalfLink for 
+	 * return. (Have not yet implemented edge selections)
+	 * @param p PackData (with DCEL structure)
+	 * @param specs Vector<SelectSpec>
+	 * @return HalfLink list of specified edges
+	 */
+	public static HalfLink edgeSpecs(PackData p,Vector<SelectSpec> specs) {
+		if (p.packDCEL==null) {
+			throw new DCELException("'edgeSpecs' require a DCEL structure");
+		}
+		if (specs==null || specs.size()==0) 
+			return null;
+		SelectSpec sp=null;
+		int count=0;
+			// will store results in 'eutil'
+		
+		int[] tmpUtil=new int[p.packDCEL.edgeCount+1];
+		// loop through all the specifications: these should alternate
+		//   between 'specifications' and 'connectives', starting 
+		//   with the former, although typically there will be just 
+		//   one specification in the vector and no connective.
+		UtilPacket uPx=null;
+		UtilPacket uPy=null;
+		boolean isAnd=false; // true for '&&' connective, false for '||'.
+		for (int j=0;j<specs.size();j++) {
+			sp=(SelectSpec)specs.get(j);
+			if (sp.object!='e') 
+				throw new ParserException(); // spec must be edges/halfedges
+			try {
+				for (int e=1;e<=p.packDCEL.edgeCount;e++) {
+					
+					// success?
+					boolean outcome=false;
+					uPx=sp.node_to_value(p,e,0);
+					if (sp.unary) {
+						if (uPx.rtnFlag!=0)
+							outcome=sp.comparison(uPx.value,0);
+					}
+					else {
+						uPy=sp.node_to_value(p,e,1);
+						if (uPy.rtnFlag!=0)
+							outcome=sp.comparison(uPx.value, uPy.value);
+					}
+					if (outcome) { // yes, this value satisfies condition
+						if (!isAnd && tmpUtil[e]==0) { // 'or' situation
+							tmpUtil[e]=1;
+							count++;
+						}
+					}
+					else { // no, fails this condition
+						if (isAnd && tmpUtil[e]!=0) { // 'and' situation
+							tmpUtil[e]=0;
+							count--;
+						}
+					}
+				}
+			} catch (Exception ex) {
+				throw new ParserException();
+			}
+			
+			// if specs has 2 or more additional specifications, the next must
+			//    be a connective. Else, finish loop.
+			if ((j+2)<specs.size()) {
+				sp=(SelectSpec)specs.get(j+1);
+				if (!sp.isConnective) 
+					throw new ParserException();
+				isAnd=sp.isAnd; 
+				j++;
+			}
+			else j=specs.size(); // kick out of loop
+		}
+	
+		if (count>0) {
+			HalfLink hl=new HalfLink(p);
+			for (int e=1;e<=p.packDCEL.edgeCount;e++)
+				if (tmpUtil[e]!=0) 
+					hl.add(p.packDCEL.edges[e]);
+			return hl;
+		}
+		else 
+			return null;
 	}
 		
 }

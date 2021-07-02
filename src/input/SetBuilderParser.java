@@ -11,28 +11,34 @@ import util.SelectSpec;
 import util.StringUtil;
 
 /**
- * This is a parser for set-builder type expressions describing sets of objects 
- * (circles, faces, tiles, or edges (??)) in CirclePack: e.g. {c:d.eq.5} lists 
- * verts of degree 5. 
- * This class is created when a {..} string occurs among the flags in a command
- * (note that commands can also be enclosed with braces if we want a return value).
- * This parser builds a vector of 'SelectSpec'. Calling routine must check 'status' 
+ * This is a parser for set-builder type expressions describing 
+ * sets of objects (circles, faces, tiles, or edges (??)) in 
+ * CirclePack: e.g. {c:d.eq.5} lists verts of degree 5. 
+ * This class is created when a {..} string occurs among the 
+ * flags in a command (note that commands can also be enclosed 
+ * with braces if we want a return value). This parser builds a 
+ * vector of 'SelectSpec's. Calling routine must check 'status' 
  * and 'packData' before using the results.
  * 
  * Form is very rigid; here are six main portions: 
-     1. Outer curly brackets (this is how we identify the initial string)
-     2. Target object: v (or c) circles, f faces, t tiles (TODO: might add edges, etc.) 
-     3. Target packing -p* (optional; subscript for 'pack_data' ptr) (with 'c' or 'f')	
+     1. Outer curly brackets (this is how we identify the 
+     	initial string)
+     2. Target object: v (or c) circles, f faces, t tiles 
+     	(TODO: might add edges, etc.) 
+     3. Target packing -p* (optional; subscript for 
+     	'packData' ptr) (with 'c' or 'f')	
      4. ':' separator 
-     5. One or more 'specifications': these may be unary or have left and
-        right side target quantities separated by some comparison symbols; 
-        left or right might be explicit double value.
+     5. One or more 'specifications': these may be unary or 
+     	have 'left' and 'right' side target quantities separated 
+     	by some comparison symbols; left or right might be 
+     	explicit double value.
      
      	a. Target quantities: 
      	
      	   Unary: 
      	     bdry=b 
      	     int=i
+     	     in list=?list (appropriate to target object type, eg 'vlist')
      	     
      	   Binary:
      	   	 aim=a
@@ -56,14 +62,16 @@ import util.StringUtil;
 	
 	(Note: multiple specifications are taken first-to-last in order, 
 	without any logical grouping -- not syntactically general.)
+	
+	See 'util.SelectSpec.note_to_value' for retreiving values in
+	processing specifications.
  *	
  *	@author kens
  */
 public class SetBuilderParser {
-	public PackData packData; // normally need this only because there may be '-p{p}' flag
+	public PackData packData; // normally need only for '-p{p}' flag
 	
-	public int object;        // bit encoded for intended object:
-								// bits: 1 for circles, 2 for faces, 4 for tiles (8 for edges?)
+	public char object;        // 'c' circle, 'f' face, 't' tile, 'e' edge
 	public boolean status;    // ready to go with non-empty string.
 	public String errMsg;     // store indication of errors here. 
 	public Vector<SelectSpec> specs; // vector of 'SelectSpec' results
@@ -71,8 +79,11 @@ public class SetBuilderParser {
 	boolean specHit;   // yes if we have found a specification
 	
 	// Constructor
-	public SetBuilderParser(PackData p,String datastr,int objt) {
-		packData=p;  // this is normally the calling, but it can be changed (or set) by datastr; check it on return.
+	public SetBuilderParser(PackData p,String datastr,char objt) {
+		packData=p; // default packing, but can be changed/set 
+					// by datastr; check it on return. 
+					// (TODO: what's this mean? I think calling
+					// routine has to check if packing is right.)
 		object=objt;
 		status=true;
 		specHit=false;
@@ -84,11 +95,13 @@ public class SetBuilderParser {
 				hauptProcess();
 			} catch (ParserException pex) {
 				if (errMsg==null) {
-					errMsg=new String("Unexplained ParserExpression in hauptProcess");
+					errMsg=new String("Unexplained ParserExpression "+
+							"in hauptProcess");
 				}
 				CirclePack.cpb.myErrorMsg("SetBuilder error: "+errMsg);
 				if (specs.size()==0) {
-					CirclePack.cpb.myErrorMsg("No specifications were obtained.");
+					CirclePack.cpb.myErrorMsg("No specifications "+
+							"were obtained.");
 					status=false;
 				}
 				else status=true;
@@ -110,24 +123,24 @@ public class SetBuilderParser {
 		try {
 			left=fullDeal.substring(0,(j=fullDeal.indexOf(':'))).trim();
 			right=fullDeal.substring(j+1,fullDeal.length()).trim();
-			if (right.length()==0) { // only need 'v' or 'c' on left if we have '-p' flag
+			if (right.length()==0) { // only need 'v'/'c' on left if '-p' flag
 				throw new ParserException();
 			}
 		} catch (Exception ex) {
-			errMsg=new String("No separator ':' or else left or right segment is missing");
+			errMsg=new String("No separator ':' or 'left'/'right' missing");
 			throw new ParserException();
 		}
 	
 		// circles? faces? tiles? 
 		if (left.length()>0) {
 			if (left.startsWith("f")) {
-				object=object | 02;
+				object='f';
 			}
 			else if (left.startsWith("c") || left.startsWith("v")) {
-				object=object | 01;
+				object='c';
 			}
 			else if (left.startsWith("t")) {
-				object=object | 04;
+				object='t';
 			}
 			// TODO: edges?
 		}
@@ -136,7 +149,8 @@ public class SetBuilderParser {
 		if (left.length()>0 && (j=left.indexOf("-p"))>0) {
 			int pnum=-1;
 			try {
-				pnum=Integer.parseInt(left.substring(j+2,j+3)); // should be integer {p}
+				// expect integer
+				pnum=Integer.parseInt(left.substring(j+2,j+3));
 				if (pnum<0 || pnum>=CPBase.NUM_PACKS 
 						|| !PackControl.cpScreens[pnum].getPackData().status)
 					throw new ParserException();
@@ -144,13 +158,15 @@ public class SetBuilderParser {
 				errMsg=new String("Malformed '-p{p}' pack or pack is empty");
 				throw new ParserException();
 			}
-			packData=PackControl.cpScreens[pnum].getPackData(); // change to this packing
+			// change to this packing
+			packData=PackControl.cpScreens[pnum].getPackData(); 
 		}
 		
 		// Done with left; now work on 'right' string
 		
-		/* ------ find/replace new-format conditions by traditional ones:
-	      .eq.,.ne.,.lt.,.le.,.gt.,.ge.,.and.,.or. --> =,==,!=,<,<=,>,>=,&&,|| (resp.) */
+		/* ---- find/replace new-format conditions by traditional ones:
+	      .eq.,.ne.,.lt.,.le.,.gt.,.ge.,.and.,.or. --> =,==,!=,
+	      <,<=,>,>=,&&,|| (resp.) */
 		right=right.replace(".eq."," == ");
 		right=right.replace(".ne."," != ");
 		right=right.replace(".neq."," != "); // alternate
@@ -175,23 +191,28 @@ public class SetBuilderParser {
 			String nextseg=(String)segments.get(k).trim();
 			// process this segment, adding specifications to 'specs' vector
 			if (parseSeg(nextseg)==0) { 
-				throw new ParserException("Failed processing set builder specification '"+fullDeal+"'");
+				throw new ParserException("Failed processing set builder "+
+						"specification '"+fullDeal+"'");
 			}
 		} 
 	}
 
 	/**
-	 * A "segment" is a string starting (possibly) with a connective '&&' or '||',
-	 * then (possibly) a '!' indicating negation, then there must be a "specification",
-	 * possibly delimited by parens, possibly "unary". The processed results are added 
-	 * to the 'specs' vector. Return 0 on error, 1 on success. 
+	 * A "segment" is a string starting (possibly) with a 
+	 * connective '&&' or '||', then (possibly) a '!' indicating 
+	 * negation, then there must be a "specification", possibly 
+	 * delimited by parens, possibly "unary". The processed 
+	 * results are added to the 'specs' vector. 
+	 * Return 0 on error, 1 on success. 
 	 * 
-	 * If there is a connective, the previous 'spec' entry must be a specification
-	 * (versus a connective). If there is a '!', that sets 'negation' true for
-	 * the specification. Typically, specification will be "lstr [condition] rstr",
-	 * but may also we unary (no condition). Process 'lstr' and 'rstr' for 
-	 * 'target_str' and 'value_str'; in latter case, set 'value', if appropriate.
-	 * @param str
+	 * If there is a connective, the previous 'spec' entry must be a 
+	 * specification (versus a connective). If there is a '!', that 
+	 * sets 'negation' true for the specification. Typically, 
+	 * specification will be "lstr [condition] rstr", but may also 
+	 * be unary (no condition). Process 'lstr' and 'rstr' for 
+	 * 'target_str' and 'value_str'; in latter case, set 'value', 
+	 * if appropriate.
+	 * @param str String
 	 * @return 0 on error
 	 */
 	public int parseSeg(String str) {
@@ -231,10 +252,13 @@ public class SetBuilderParser {
 			if (str.length()==0) return 0; // nothing left
 		}
 
-		// should have specification only now; search for typical situations first
+		// should have specification only now, look for 
+		//    typcial situations first
 		j=k=-1;
-		if ((j=str.indexOf("=="))>=0 || (j=str.indexOf(">="))>=0 
-			    || (j=str.indexOf("<="))>=0 || (j=str.indexOf("!="))>=0) { // 2-character condition?
+		if ((j=str.indexOf("=="))>=0 || 
+				(j=str.indexOf(">="))>=0 || 
+				(j=str.indexOf("<="))>=0 || 
+				(j=str.indexOf("!="))>=0) { // 2-character condition?
 			k=j+2;
 			ent.setCondition(str.substring(j,k));
 		}
@@ -253,7 +277,7 @@ public class SetBuilderParser {
 		
 		// if not unary, should have j and k; 
 		if (j>=0 && k>=0) {
-			if (k>=str.length()-1 || j<=0) return 0; // error, no lstr or now rstr
+			if (k>=str.length()-1 || j<=0) return 0; // error: lstr/rstr missing
 			lstr=str.substring(0,j).trim();
 			rstr=str.substring(k).trim();
 			
@@ -292,9 +316,10 @@ public class SetBuilderParser {
 		return ss;
 	}
 	
-	/** Return the vector of (seemingly good) specifications. Calling routine needs to
-	 * check its 'status' and its 'packData' (which may have changed).
-	 * @return
+	/** Return the vector of (seemingly good) specifications. 
+	 * Calling routine needs to check its 'status' and its 
+	 * 'packData' (which may have changed).
+	 * @return Vector<SelectSpec>
 	 */ 
 	public Vector<SelectSpec> getSpecVector() {
 		if (specs==null || specs.size()==0) return null;

@@ -26,6 +26,7 @@ import util.PathInterpolator;
 import util.SelectSpec;
 import util.SphView;
 import util.StringUtil;
+import util.UtilPacket;
 
 /**
  * Linked list of faces for circle packings.
@@ -635,11 +636,12 @@ public class FaceLink extends LinkedList<Integer> {
 			}
 			case '{': // set-builder notation; reap results
 			{
-				SetBuilderParser sbp=new SetBuilderParser(packData,str,02);
-				if (!sbp.isOkay()) return 0;
+				SetBuilderParser sbp=new SetBuilderParser(packData,str,'f');
+				if (!sbp.isOkay()) 
+					return 0;
 				Vector<SelectSpec> specs=sbp.getSpecVector();
 				PackData qackData=sbp.packData;
-				FaceLink nl=qackData.facesSpecs(specs);
+				FaceLink nl=facesSpecs(qackData,specs);
 				if (nl!=null && nl.size()>0)
 					this.addAll(nl);
 				if (nl!=null)
@@ -1391,6 +1393,89 @@ public class FaceLink extends LinkedList<Integer> {
     	int n=new Random().nextInt(facelist.size());
     	return facelist.get(n);
     }
+    
 
+	/**
+	 * Make up list by looking through SetBuilder specs 
+	 * (from {..} set-builder notation). Use 'tmpUtil' 
+	 * to collect information before creating the NodeLink 
+	 * for return.
+	 * @param p PackData
+	 * @param specs Vector<SelectSpec>
+	 * @return NodeLink list of specified faces.
+	 */
+	public static FaceLink facesSpecs(PackData p,Vector<SelectSpec> specs) {
+		if (specs==null || specs.size()==0) 
+			return null;
+		SelectSpec sp=null;
+		int count=0;
+
+		// will store results in 'tmpUtil'
+		int []tmpUtil=new int[p.faceCount+1];
+		for (int f=1;f<=p.faceCount;f++) {
+			tmpUtil[f]=0;
+		}
+		// loop through all the specifications: should alternate
+		//   between 'specifications' and 'connectives', starting 
+		//   with the former, although typically there will be 
+		//   just one specification in the vector.
+		UtilPacket uPx=null;
+		UtilPacket uPy=null;
+		boolean isAnd=false; // true for '&&' connective, false for '||'.
+		for (int j=0;j<specs.size();j++) {
+			sp=(SelectSpec)specs.get(j);
+			if (sp.object!='f') 
+				throw new ParserException(); // spec must be for faces
+			try {
+				for (int f=1;f<=p.faceCount;f++) {
+
+					// success?
+					boolean outcome=false;
+					uPx=sp.node_to_value(p,f,0);
+					if (sp.unary) {
+						if (uPx.rtnFlag!=0)
+							outcome=sp.comparison(uPx.value,0);
+					}
+					else {
+						uPy=sp.node_to_value(p,f,1);
+						if (uPy.rtnFlag!=0)
+							outcome=sp.comparison(uPx.value, uPy.value);
+					}
+					if (outcome) { // yes, this value satisfies condition
+						if (!isAnd && tmpUtil[f]==0) { // 'or' situation
+							tmpUtil[f]=1;
+							count++;
+						}
+					}
+					else { // no, fails this condition
+						if (isAnd && tmpUtil[f]!=0) { // 'and' situation
+							tmpUtil[f]=0;
+							count--;
+						}
+					}			
+				}
+			} catch (Exception ex) {
+				throw new ParserException();
+			}
+			
+			// if specs has 2 or more additional specifications, the next must
+			//    be a connective. Else, finish loop.
+			if ((j+2)<specs.size()) {
+				sp=(SelectSpec)specs.get(j+1);
+				if (!sp.isConnective) throw new ParserException();
+				isAnd=sp.isAnd; 
+			}
+			else j=specs.size(); // kick out of loop
+		}
+		
+		if (count>0) {
+			FaceLink nl=new FaceLink(p);
+			for (int f=1;f<=p.faceCount;f++)
+				if (tmpUtil[f]!=0) nl.add(f);
+			return nl;
+		}
+		else return null;
+	}		
+	
 }
 

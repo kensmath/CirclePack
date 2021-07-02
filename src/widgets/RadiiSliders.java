@@ -49,7 +49,8 @@ public class RadiiSliders extends SliderFrame {
 				+ "string will be executed when the mouse changes a slider or "
 				+ "enters slider label, respectively.\n\n"
 				+ "Implement with, e.g.\n\n"
-				+ "sliders -R -c ''rld'' -m ''disp -wr -c_Obj'' -o ''dual_layout'' {v...}.\n\n"
+				+ "sliders -R -c ''rld'' -m ''disp -wr -c_Obj'' "
+				+ "-o ''dual_layout'' {v...}.\n\n"
 				+ "The variable 'Obj' is set to an object when the commands are"
 				+ "executed."));
 		mySliders=new ActiveSlider[sliderCount];
@@ -66,7 +67,8 @@ public class RadiiSliders extends SliderFrame {
 		int tick=0;
 		while (vlst.hasNext()) {
 			int v=vlst.next();
-			mySliders[tick]=new ActiveSlider(this,tick,Integer.toString(v),packData.rData[v].rad,true);
+			mySliders[tick]=new ActiveSlider(this,tick,Integer.toString(v),
+					packData.rData[v].rad,true);
 			sliderPanel.add(mySliders[tick]);
 			tick++;
 		}
@@ -87,7 +89,8 @@ public class RadiiSliders extends SliderFrame {
 				continue;
 			String str=Integer.toString(v);
 			double rad=packData.rData[v].rad;
-			tmpSliders[sliderCount+hit]=new ActiveSlider(this,sliderCount+hit,str,rad,true);
+			tmpSliders[sliderCount+hit]=
+					new ActiveSlider(this,sliderCount+hit,str,rad,true);
 			sliderPanel.add(tmpSliders[sliderCount+hit]);
 			verts.add(v);
 			hit++;

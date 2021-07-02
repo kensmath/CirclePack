@@ -720,7 +720,7 @@ public class SubdivisionRules {
 								int next_edge = einfo[1];
 
 								// touch this tile for future processing
-								if (next_tile > 0 && next.containsV(next_tile) < 0)
+								if (next_tile>0 && next.containsV(next_tile)<0)
 									next.add(next_tile);
 
 								// proceed until reaching bdry edge or returning to base_tile across edge j
@@ -751,7 +751,7 @@ public class SubdivisionRules {
 									next_edge = einfo[1];
 
 									// touch this tile for future processing
-									if (next_tile > 0 && next.containsV(next_tile) < 0)
+									if (next_tile>0 && next.containsV(next_tile)<0)
 										next.add(next_tile);
 
 								} // done with while
@@ -768,7 +768,7 @@ public class SubdivisionRules {
 									next_edge = einfo[1];
 
 									// touch this tile for future processing
-									if (next_tile > 0 && next.containsV(next_tile) < 0)
+									if (next_tile>0 && next.containsV(next_tile)<0)
 										next.add(next_tile);
 
 									while (next_tile > 0) {
@@ -803,7 +803,7 @@ public class SubdivisionRules {
 										next_edge = einfo[1];
 
 										// touch this tile for future processing
-										if (next_tile > 0 && next.containsV(next_tile) < 0)
+										if (next_tile>0 && next.containsV(next_tile)<0)
 											next.add(next_tile);
 
 									} // done with while

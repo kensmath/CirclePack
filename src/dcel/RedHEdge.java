@@ -88,11 +88,21 @@ public class RedHEdge {
 	}
 
 	/**
-	 * Return center/rad data
+	 * Return center/rad data specific to the red edge.
+	 * Note: see 'PackData.getCircleSimple' for data from 'vData'. 
 	 * @return CircleSimple
 	 */
 	public CircleSimple getCircleSimple() {
 		return new CircleSimple(center,rad);
+	}
+	
+	/**
+	 * Set center and radius
+	 * @param cS CircleSimple
+	 */
+	public void setCircleSimple(CircleSimple cS) {
+		center=cS.center;
+		rad=cS.rad;
 	}
 	
 	/**

@@ -1021,11 +1021,12 @@ public class GenBranching extends PackExtender {
 	/** 
 	 * Check if face f is free of boundary or poison vertices
 	 * @param f int
-	 * @return boolean
+	 * @return boolean, true if is free of these
 	 */
 	public boolean faceOK(int f) {
+		int[] fverts=packData.getFaceVerts(f);
 		for (int i=0;i<3;i++) {
-			int v=packData.faces[f].vert[i];
+			int v=fverts[i];
 			if (packData.isBdry(v) || packData.poisonVerts.containsV(v)>=0)
 				return false;
 		}
@@ -1389,9 +1390,9 @@ public class GenBranching extends PackExtender {
 			return ans;
 		for (int j=1;j<branchPts.size();j++) {
 			GenBranchPt gbp=branchPts.get(j);
-			if ((gbp.myType==GenBranchPt.FRACTURED && flink.containsV(gbp.myIndex)!=-1) ||
-					(gbp.myType==GenBranchPt.QUADFACE && flink.containsV(gbp.myIndex)!=-1) ||
-					(gbp.myType==GenBranchPt.SINGULAR && flink.containsV(gbp.myIndex)!=-1))
+			if ((gbp.myType==GenBranchPt.FRACTURED && flink.containsV(gbp.myIndex)>=0) ||
+					(gbp.myType==GenBranchPt.QUADFACE && flink.containsV(gbp.myIndex)>=0) ||
+					(gbp.myType==GenBranchPt.SINGULAR && flink.containsV(gbp.myIndex)>=0))
 				ans.add(gbp.branchID);
 		}
 		return ans;

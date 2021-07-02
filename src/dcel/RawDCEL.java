@@ -1667,15 +1667,14 @@ public class RawDCEL {
 			  }
 		  }
 
-		  if (edge.myRedEdge != null) // in redchain
-			  pdcel.redChain = null;
+		  // are leftv/rightv already nghbs?
 		  Vertex leftv = edge.next.next.origin;
 		  Vertex rightv = edge.twin.next.next.origin;
-		  
-		  // are leftv/rightv already nghbs?
 		  if (pdcel.findHalfEdge(new EdgeSimple(leftv.vertIndx,rightv.vertIndx))!=null)
 			  return null;
 		  
+		  if (edge.myRedEdge != null) // in redchain
+			  pdcel.redChain = null;
 		  HalfEdge new_edge = new HalfEdge(leftv);
 		  HalfEdge new_twin = new HalfEdge(rightv);
 

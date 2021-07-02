@@ -2011,6 +2011,40 @@ public class PackDCEL {
 	}
 	
 	/**
+	 * Swap vertices for 'v' and 'w'. This has minimal impact on the DCEL
+	 * structure, eg., drawing order, etc., but calling routing may
+	 * adjust Note that all the 'VData' info
+	 * goes along, 'aim', 'rad', etc., so if you didn't want to swap
+	 * this, the calling routine has to swap it back.
+	 * @param v int
+	 * @param w int
+	 * @return 1, 0 on failure
+	 */
+	public int swapNodes(int v,int w) {
+		if (v==w)
+			return 0;
+		Vertex holdv=vertices[v];
+		Vertex holdw=vertices[w];
+		holdv.vertIndx=w;
+		holdw.vertIndx=v;
+		vertices[w]=holdv;
+		vertices[v]=holdw;
+		
+		// swap 'VData' and all data with it, aims, rad, centers, etc.
+		if (p!=null) {
+			VData datav=null;
+			VData dataw=null;
+			if ((datav=p.vData[v])!=null && (dataw=p.vData[w])!=null) {
+				p.vData[v]=dataw;
+				p.vData[w]=datav;
+			}
+			p.directAlpha(alpha.origin.vertIndx);
+			p.directGamma(gamma.origin.vertIndx);
+		}
+		return 1;
+	}
+	
+	/**
 	 * Create the dual DCEL structure. 
 	 * 
 	 * If 'full' is false, don't include dual edges to ideal 

@@ -365,6 +365,8 @@ public class PackData{
     			pdcel.setVDataIndices(v);
     		    		
         	fillcurves(); // compute all curvatures
+        	
+        	// TODO: when should we do this?
         	set_aim_default(); // too difficult to figure out old aims
 
     		return nodeCount;
@@ -2986,6 +2988,27 @@ public class PackData{
 	}
 	
 	/**
+	 * Get center/radius from 'vData' in 'CircleSimple' form.
+	 * Note: see 'RedHEdge.getCircleSimple' to get the data
+	 * from a red edge.
+	 * @param v int
+	 * @return CircleSimple
+	 */
+	public CircleSimple getCircleSimple(int v) {
+		return new CircleSimple(vData[v].center,vData[v].rad);
+	}
+	
+	/** 
+	 * Set data only in 'vData'. See 'RedHEdge.setCircleSimple'
+	 * to set data in a red edge. 
+	 * @param cS CircleSimple
+	 */
+	public void setCircleSimple(int v,CircleSimple cS) {
+		vData[v].center=cS.center;
+		vData[v].rad=cS.rad;
+	}
+	
+	/**
 	 * Enter center (x,y) in rData
 	 * @param v int
 	 * @param x double
@@ -3105,6 +3128,18 @@ public class PackData{
 			packDCEL.vertices[v].vutil=m;
 		else
 			kData[v].utilFlag=m;
+	}
+
+	public int getEdgeUtil(int e) {
+		if (packDCEL!=null)
+			return packDCEL.edges[e].eutil;
+		else
+			return 0;
+	}
+	
+	public void setEdgeUtil(int e,int m) {
+		if (packDCEL!=null)
+			packDCEL.edges[e].eutil=m;
 	}
 
 	public int getVertMark(int v) {
@@ -3364,7 +3399,7 @@ public class PackData{
 		NodeLink mainLink=new NodeLink(this);
 		NodeLink holdLink=new NodeLink(this);
 		for (int i=1;i<=nodeCount;i++) // zero out utilFlag 
-			kData[i].utilFlag=0;
+			setVertUtil(i,0);
 
 		/* start with alpha (regardless of its situation) and two contiguous
 	       neighbors (unmarked, if possible). */
@@ -8709,7 +8744,8 @@ public class PackData{
 	}
 
 	/** 
-	 * Interchange two legal vertex numbers; other indices remain unchanged.
+	 * Interchange two legal vertex numbers; in the DCEL case, all
+	 * information goes along, other indices remain unchanged.
 	 * vlist, elist, vertexMap, tiling info are adjusted, flist is lost. 
 	 * If there's an error, the packing data will likely be compromised. 
 	 * Caution: v w are switched in vertexMap (first entries only)
@@ -8719,19 +8755,13 @@ public class PackData{
 	 * @return 1
 	 */
 	public int swap_nodes(int v, int w) {
+		int rslt=0;
 		if (packDCEL!=null) {
-			Vertex holdv=packDCEL.vertices[v];
-			Vertex holdw=packDCEL.vertices[w];
-			VData datav=vData[v];
-			VData dataw=vData[w];
-			holdv.vertIndx=w;
-			holdw.vertIndx=v;
-			packDCEL.vertices[w]=holdv;
-			packDCEL.vertices[v]=holdw;
-			vData[v]=dataw;
-			vData[w]=datav;
-			packDCEL.fixDCEL_raw(this);
+			rslt=packDCEL.swapNodes(v, w);
+			if (rslt==0)
+				return 0;
 		}
+
 		else {
 			RData holdR = rData[v];
 			KData holdK = kData[v];
@@ -8769,6 +8799,15 @@ public class PackData{
 						kData[pet].flower[j] = v;
 			}
 
+			if (alpha == v)
+				alpha = w;
+			else if (alpha == w)
+				alpha = v;
+			if (gamma == v)
+				gamma = w;
+			else if (gamma == w)
+				gamma = v;
+
 		}
 		
 		// other adjustments
@@ -8776,17 +8815,8 @@ public class PackData{
 			activeNode = w;
 		else if (activeNode == w)
 			activeNode = v;
-		if (alpha == v)
-			alpha = w;
-		else if (alpha == w)
-			alpha = v;
-		if (gamma == v)
-			gamma = w;
-		else if (gamma == w)
-			gamma = v;
 
-		// fix up various lists: flist, glist will be invalidated by
-		// complex_count
+		// fix up various lists: flist, glist invalidated
 		flist = null;
 		glist = null;
 
@@ -8840,9 +8870,14 @@ public class PackData{
 	 * @return int
 	 */
 	public int swap_nodes(int v, int w, int keepFlags) {
+
+		// do the combinatorics of swap
 		int ans = swap_nodes(v, w);
 		if (ans == 0)
 			return 0;
+		
+		// Note: for DCEL,color/aim/mark are automatically swapped,
+		//    so 'keepFlags' actions will actually swap them back.
 		if ((keepFlags & 0001) == 0001) { // swap 'color'
 			Color holdcolor = getCircleColor(v);
 			Color col = getCircleColor(w);
@@ -8856,7 +8891,7 @@ public class PackData{
 		}
 		if ((keepFlags & 0004) == 0004) { // swap 'aim'
 			double holdaim = getAim(v);
-			setAim(v,getAim(v));
+			setAim(v,getAim(w));
 			setAim(w,holdaim);
 		}
 		return ans;
@@ -10906,42 +10941,35 @@ public class PackData{
 	    CircleSimple sc=new CircleSimple(true);
 
 	    if (packDCEL!=null) {
-	    	// record 'vertlist' in 'vutil'
-	    	for (int v=1;v<=nodeCount;v++) 
-	    		packDCEL.vertices[v].vutil=0;
-		    while (vlist.hasNext()) {
-		    	packDCEL.vertices[vlist.next()].vutil=1;
-		    }
-		    
-		    // apply to 'vData'
-	    	for (int v=1;v<=nodeCount;v++) {
-	    		if (packDCEL.vertices[v].vutil==1) {
-	    			CircleSimple circle=vData[v].getCircleSimple();
-	    			count += Mobius.mobius_of_circle(Mob,hes,circle,
-		 	  	       sc,oriented);
-	    			vData[v].center=sc.center;
-	    			vData[v].rad=sc.rad;
+	    	Iterator<Integer> vis=vertlist.iterator();
+	    	while (vis.hasNext()) {
+	    		Vertex vert=packDCEL.vertices[vis.next()];
+	    		if (vert.redFlag) {
+	    			HalfEdge he=vert.halfedge;
+	    			// just handle red edges from 'vert'
+	    			do {
+	    				if (he.myRedEdge!=null) {
+	    	    			CircleSimple circle=he.myRedEdge.getCircleSimple();
+	    	    			count += Mobius.mobius_of_circle(Mob,hes,circle,
+	 	    		 	  	       sc,oriented);
+	     					he.myRedEdge.setCircleSimple(sc);
+	    				}
+	    				he=he.prev.twin; // cclw
+	    			} while (he!=vert.halfedge);
 	    		}
+
+	    		// set in 'vData'
+    			CircleSimple circle=getCircleSimple(vert.vertIndx);
+    			count += Mobius.mobius_of_circle(Mob,hes,circle,
+    		 	  	       sc,oriented);
+ 				setCircleSimple(vert.vertIndx,sc);
+    			count++;
 	    	}
 	    	
-	    	// apply to selected vertices in red chain
-	    	if (packDCEL.redChain!=null && red_flag) {
-	    		RedHEdge rtrace=packDCEL.redChain;
-	    		do {
-	    			if (rtrace.myEdge.origin.vutil==1) {
-		    			CircleSimple circle=rtrace.getCircleSimple();
-		    			count += Mobius.mobius_of_circle(Mob,hes,circle,
-			 	  	       sc,oriented);
-	    				rtrace.setCenter(sc.center);
-	    				rtrace.setRadius(sc.rad);
-	    			}
-    				rtrace=rtrace.nextRed;
-	    		} while (rtrace!=packDCEL.redChain);
+	   		// update the side-pairing (not for spherical)
+	   		if (hes<=0 && sp_flag)
+	   			update_pair_mob();
 
-	    		// update the side-pairing (not for spherical)
-	    		if (hes<=0 && sp_flag)
-	    			update_pair_mob();
-	    	}
 	    	return count;
 	    }
 
@@ -11065,7 +11093,7 @@ public class PackData{
 		  if (packDCEL!=null) 
 			  return RawDCEL.addIdeal_raw(packDCEL,v,w);
 		  
-		  // else traditional packing
+		  // traditional
 		  int nextvert,newnode,numb;
 		  int []newflower;
 		  double []newoverlaps;
@@ -11077,14 +11105,14 @@ public class PackData{
 		  int count=1;
 		  if (w!=v) { // error if w not on same component
 			  nextvert=v;
-			  while ((nextvert=kData[nextvert].flower[0])!=w) {
+			  while ((nextvert=getFirstPetal(nextvert))!=w) {
 				  if (nextvert==v) return 0; // didn't find w
 				  count++;
 	  			}
 	  		}
 	  		else { // full component
 	  			nextvert=v;
-	  			while ((nextvert=kData[nextvert].flower[0])!=v) {
+	  			while ((nextvert=getFirstPetal(nextvert))!=v) {
 	  				count++;
 	  			}
 	  			if (count<3) throw new CombException("Boundary component is too short"); // too short
@@ -11102,7 +11130,7 @@ public class PackData{
 		  newflower[0]=w;
 		  int pvert=w;
 		  int tick=1;
-		  while ((pvert=kData[pvert].flower[countFaces(pvert)])!=v) {
+		  while ((pvert=getLastPetal(pvert))!=v) {
 			  newflower[tick++]=pvert;
 		  }
 		  newflower[tick]=v;
@@ -11277,6 +11305,7 @@ public class PackData{
 	  }
 	  
 	  /**
+	   * traditional
 	   * Given a bdry vert v, attach ideal face if the boundary component
 	   * containing v has 3 edges. This is opposite of puncture_face.
 	   * Calling routine updates combiinatorics.
@@ -11339,7 +11368,7 @@ public class PackData{
 	        ratio=0.0;
 	    }
 	    else if (ratio>0.0 && ratio<=1.0){ // have ratio instead
-	        lam=1.0/Math.sqrt(rData[alpha].rad);
+	        lam=1.0/Math.sqrt(getRadius(alpha));
 	        factor=new Complex(lam,0);
 	        E=0;
 	    }
@@ -11360,6 +11389,8 @@ public class PackData{
   	  		}
   	  		packDCEL.fixDCEL_raw(this);
   	  	}
+  	  	
+  	  	// traditional
   	  	else {
   	  		Integer b=Integer.valueOf(bdryStarts[1]);
   	  		NodeLink vlist=new NodeLink(this,b.toString());
@@ -11656,14 +11687,15 @@ public class PackData{
 			  while(flist.hasNext()) {
 				  int f=flist.next();
 				  double arg=0.0;
-				  Complex z0=getCenter(faces[f].vert[0]);
-				  Complex z1=getCenter(faces[f].vert[1]);
-				  Complex z2=getCenter(faces[f].vert[2]);
+				  int[] fverts=getFaceVerts(f);
+				  Complex z0=getCenter(fverts[0]);
+				  Complex z1=getCenter(fverts[1]);
+				  Complex z2=getCenter(fverts[2]);
 				  CircleSimple sc=null;
 				  if (hes<0) { 
 					  sc=HyperbolicMath.hyp_tang_incircle(z0,z1,z2,
-							  getRadius(faces[f].vert[0]),getRadius(faces[f].vert[1]),
-							  getRadius(faces[f].vert[2]));
+							  getRadius(fverts[0]),getRadius(fverts[1]),
+							  getRadius(fverts[2]));
 					  arg=sc.center.arg();
 				  }
 				  else if (hes>0) {
@@ -11695,8 +11727,8 @@ public class PackData{
 					  qnum=Integer.parseInt(str.substring(2));
 					  items.remove(0);
 				  } catch (Exception ex) {
-					  try { // pack number after space/
-						  qnum=Integer.parseInt(items.elementAt(0)); // might be a space
+					  try { // pack number? there might be a space
+						  qnum=Integer.parseInt(items.elementAt(0)); 
 						  items.remove(0);
 					  } catch (Exception ex1) {
 						  return 0;
@@ -11704,9 +11736,12 @@ public class PackData{
 				  }
 				  if (qnum>=0 && qnum<CPBase.NUM_PACKS) 
 					  qackData=PackControl.cpScreens[qnum].getPackData();
-				  else throw new ParserException("Pack number, "+qnum+", out of range");
+				  else throw new ParserException("Pack number, "+qnum+
+						  ", out of range");
 				  if (hes!=qackData.hes) {
-					  throw new ParserException("set_color: area comparision only if  both hyp or both eucl.");
+					  throw new ParserException("set_color: "+
+							  "area comparision only if  both hyp "+
+							  "or both eucl.");
 				  }
 				  if (hes<0) return ColorCoding.h_compare_area(this,qackData);
 				  return ColorCoding.e_compare_area(this,qackData);
@@ -13029,7 +13064,7 @@ public class PackData{
 		  NodeLink nlink=new NodeLink(this,"-If flist");
 		  for (int k=0;k<3;k++) {
 			  int v=face.vert[k];
-			  if (isBdry(v) || nlink.containsV(v)>0) {
+			  if (isBdry(v) || nlink.containsV(v)>=0) {
 				  CirclePack.cpb.errMsg("face is too close to the bdry to puncture");
 				  return 0;
 			  }
@@ -13938,6 +13973,7 @@ public class PackData{
 	  }
 
 	  /** 
+	   * traditional
 	   * Remove specified bdry edges; appropriate edges should be
 	   *.(u,v) where u and v are bdry neighbors. 
 	   * @param edgelist EdgeLink
@@ -14326,7 +14362,7 @@ public class PackData{
 		 * could be forced outside unit disc, in which case they're pushed back
 		 * in as horocycles. In the spherical case, apply z->t*z.
 		 */
-	public int eucl_scale(double factor) {
+	  public int eucl_scale(double factor) {
 		CircleSimple sc = null;
 		boolean hyp_out = false;
 
@@ -14334,7 +14370,7 @@ public class PackData{
 			double e_rad;
 			Complex e_center;
 			for (int i = 1; i <= nodeCount; i++) {
-				sc = HyperbolicMath.h_to_e_data(getCenter(i), getRadius(i));
+				sc = HyperbolicMath.h_to_e_data(getCircleSimple(i));
 				e_center = sc.center.times(factor);
 				e_rad = sc.rad * factor;
 				sc = HyperbolicMath.e_to_h_data(e_center, e_rad);
@@ -17940,236 +17976,6 @@ public class PackData{
 	}
 
 	/**
-	 * Make up list by looking through SetBuilder specs (from {..} set-builder notation).
-	 * Use 'utilFlag' to collect information before creating the NodeLink for return.
-	 * @param specs Vector<SelectSpec>
-	 * @return NodeLink list of specified circles.
-	 */
-	public NodeLink circleSpecs(Vector<SelectSpec> specs) {
-		if (specs==null || specs.size()==0) return null;
-		SelectSpec sp=null;
-		int count=0;
-
-		// will store results in 'utilFlag'
-		for (int v=1;v<=nodeCount;v++) {
-			kData[v].utilFlag=0;
-		}
-		// loop through all the specifications: these should alternate
-		//   between 'specifications' and 'connectives', starting with the former,
-		//   although typically there will be just one specification in the vector
-		//   and no connective.
-		UtilPacket uPx=null;
-		UtilPacket uPy=null;
-		boolean isAnd=false; // true for '&&' connective, false for '||'.
-		for (int j=0;j<specs.size();j++) {
-			sp=(SelectSpec)specs.get(j);
-			if ((sp.object & 01)!=01) throw new ParserException(); // specification must be for circles
-			try {
-				for (int v=1;v<=nodeCount;v++) {
-					
-					// success?
-					boolean outcome=false;
-					uPx=sp.node_to_value(this,v,0);
-					if (sp.unary) {
-						if (uPx.rtnFlag!=0)
-							outcome=sp.comparison(uPx.value,0);
-					}
-					else {
-						uPy=sp.node_to_value(this,v,1);
-						if (uPy.rtnFlag!=0)
-							outcome=sp.comparison(uPx.value, uPy.value);
-					}
-					if (outcome) { // yes, this value satisfies condition
-						if (!isAnd && kData[v].utilFlag==0) { // 'or' situation
-							kData[v].utilFlag=1;
-							count++;
-						}
-					}
-					else { // no, fails this condition
-						if (isAnd && kData[v].utilFlag!=0) { // 'and' situation
-							kData[v].utilFlag=0;
-							count--;
-						}
-					}
-				}
-			} catch (Exception ex) {
-				throw new ParserException();
-			}
-			
-			// if specs has 2 or more additional specifications, the next must
-			//    be a connective. Else, finish loop.
-			if ((j+2)<specs.size()) {
-				sp=(SelectSpec)specs.get(j+1);
-				if (!sp.isConnective) throw new ParserException();
-				isAnd=sp.isAnd; 
-				j++;
-			}
-			else j=specs.size(); // kick out of loop
-		}
-		
-		if (count>0) {
-			NodeLink nl=new NodeLink(this);
-			for (int v=1;v<=nodeCount;v++)
-				if (kData[v].utilFlag!=0) nl.add(v);
-			return nl;
-		}
-		else return null;
-	}
-	
-	/**
-	 * Make up list by looking through SetBuilder specs (from {..} set-builder notation).
-	 * Use 'utilFlag' to collect information before creating the NodeLink for return.
-	 * @param specs Vector<SelectSpec>
-	 * @return NodeLink list of specified faces.
-	 */
-	public FaceLink facesSpecs(Vector<SelectSpec> specs) {
-		if (specs==null || specs.size()==0) return null;
-		SelectSpec sp=null;
-		int count=0;
-
-		// will store results in 'tmpUtil'
-		int []tmpUtil=new int[faceCount+1];
-		for (int f=1;f<=faceCount;f++) {
-			tmpUtil[f]=0;
-		}
-		// loop through all the specifications: these should alternate
-		//   between 'specifications' and 'connectives', starting with the former,
-		//   although typically there will be just one specification in the vector.
-		UtilPacket uPx=null;
-		UtilPacket uPy=null;
-		boolean isAnd=false; // true for '&&' connective, false for '||'.
-		for (int j=0;j<specs.size();j++) {
-			sp=(SelectSpec)specs.get(j);
-			if ((sp.object & 02)!=02) throw new ParserException(); // specification must be for faces
-			try {
-				for (int f=1;f<=faceCount;f++) {
-
-					// success?
-					boolean outcome=false;
-					uPx=sp.node_to_value(this,f,0);
-					if (sp.unary) {
-						if (uPx.rtnFlag!=0)
-							outcome=sp.comparison(uPx.value,0);
-					}
-					else {
-						uPy=sp.node_to_value(this,f,1);
-						if (uPy.rtnFlag!=0)
-							outcome=sp.comparison(uPx.value, uPy.value);
-					}
-					if (outcome) { // yes, this value satisfies condition
-						if (!isAnd && tmpUtil[f]==0) { // 'or' situation
-							tmpUtil[f]=1;
-							count++;
-						}
-					}
-					else { // no, fails this condition
-						if (isAnd && tmpUtil[f]!=0) { // 'and' situation
-							tmpUtil[f]=0;
-							count--;
-						}
-					}			
-				}
-			} catch (Exception ex) {
-				throw new ParserException();
-			}
-			
-			// if specs has 2 or more additional specifications, the next must
-			//    be a connective. Else, finish loop.
-			if ((j+2)<specs.size()) {
-				sp=(SelectSpec)specs.get(j+1);
-				if (!sp.isConnective) throw new ParserException();
-				isAnd=sp.isAnd; 
-			}
-			else j=specs.size(); // kick out of loop
-		}
-		
-		if (count>0) {
-			FaceLink nl=new FaceLink(this);
-			for (int f=1;f<=faceCount;f++)
-				if (tmpUtil[f]!=0) nl.add(f);
-			return nl;
-		}
-		else return null;
-	}		
-	
-	/**
-	 * Make up list by looking through SetBuilder specs (from {..} set-builder notation).
-	 * Use 'utilFlag' to collect information before creating the TileLink for return.
-	 * @param specs Vector<SelectSpec>
-	 * @return NodeLink list of specified tiles.
-	 */
-	public TileLink tileSpecs(Vector<SelectSpec> specs) {
-		if (specs==null || specs.size()==0 || tileData==null) return null;
-		SelectSpec sp=null;
-		int count=0;
-
-		// will store results in 'utilFlag'
-		for (int t=1;t<=tileData.tileCount;t++) {
-			tileData.myTiles[t].utilFlag=0;
-		}
-		// loop through all the specifications: these should alternate
-		//   between 'specifications' and 'connectives', starting with the former,
-		//   although typically there will be just one specification in the vector
-		//   and no connective.
-		UtilPacket uPx=null;
-		UtilPacket uPy=null;
-		boolean isAnd=false; // true for '&&' connective, false for '||'.
-		for (int j=0;j<specs.size();j++) {
-			sp=(SelectSpec)specs.get(j);
-			if ((sp.object & 04)!=04) throw new ParserException(); // spec must be for tiles
-			try {
-				for (int t=1;t<=tileData.tileCount;t++) {
-					
-					// success?
-					boolean outcome=false;
-					uPx=sp.node_to_value(this,t,0);
-					if (sp.unary) {
-						if (uPx.rtnFlag!=0)
-							outcome=sp.comparison(uPx.value,0);
-					}
-					else {
-						uPy=sp.node_to_value(this,t,1);
-						if (uPy.rtnFlag!=0)
-							outcome=sp.comparison(uPx.value, uPy.value);
-					}
-					if (outcome) { // yes, this value satisfies condition
-						if (!isAnd && tileData.myTiles[t].utilFlag==0) { // 'or' situation
-							tileData.myTiles[t].utilFlag=1;
-							count++;
-						}
-					}
-					else { // no, fails this condition
-						if (isAnd && tileData.myTiles[t].utilFlag!=0) { // 'and' situation
-							tileData.myTiles[t].utilFlag=0;
-							count--;
-						}
-					}
-				}
-			} catch (Exception ex) {
-				throw new ParserException();
-			}
-			
-			// if specs has 2 or more additional specifications, the next must
-			//    be a connective. Else, finish loop.
-			if ((j+2)<specs.size()) {
-				sp=(SelectSpec)specs.get(j+1);
-				if (!sp.isConnective) throw new ParserException();
-				isAnd=sp.isAnd; 
-				j++;
-			}
-			else j=specs.size(); // kick out of loop
-		}
-		
-		if (count>0) {
-			TileLink nl=new TileLink(tileData);
-			for (int t=1;t<=tileData.tileCount;t++)
-				if (tileData.myTiles[t].utilFlag!=0) nl.add(t);
-			return nl;
-		}
-		else return null;
-	}
-	
-	/**
 	 * When clicking on face in this packing, display it for this canvas 
 	 * and also display the associated face in the q canvas. Translate
 	 * directly if 'this.nodeCount' and 'q.nodeCount' are equal or if 
@@ -18340,14 +18146,20 @@ public class PackData{
 	  
 	  if (sidePairs==null || n<0 || n>=sidePairs.size() 
 			  || (epair=(SideDescription)sidePairs.get(n))==null
-			  || (trace=epair.startEdge)==null)  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
+			  || (trace=epair.startEdge)==null) 
+		  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
 		  return 0;
 	  int old_thickness=cpScreen.getLineThickness();
-//	  LayoutBugs.log_Red_Hash(this,this.redChain,null);LayoutBugs.log_RedCenters(this);
-//      int v_indx=trace.vert(trace.startIndex);    // deBugging.LayoutBugs.log_RedCenters(this);
-	  RedList wyd_w=RedList.whos_your_daddy(trace,trace.startIndex); // wyd_w.center; wyd_w.hashCode();
+//	  LayoutBugs.log_Red_Hash(this,this.redChain,null);
+//	  LayoutBugs.log_RedCenters(this);
+//    int v_indx=trace.vert(trace.startIndex);
+// deBugging.LayoutBugs.log_RedCenters(this);
+	  RedList wyd_w=RedList.whos_your_daddy(trace,trace.startIndex); 
+	  // wyd_w.center; wyd_w.hashCode();
 	  Complex w_cent=new Complex(wyd_w.center);
-      DispFlags dflags=new DispFlags(""); // System.out.println("v_indx="+v_indx+", wyd_w center.x "+wyd_w.center.x+" and hash "+wyd_w.hashCode());
+      DispFlags dflags=new DispFlags(""); 
+      // System.out.println("v_indx="+v_indx+", 
+      //  wyd_w center.x "+wyd_w.center.x+" and hash "+wyd_w.hashCode());
 	  if (do_circle) { // handle draw/label for first circle
 	      int w_indx=trace.vert(trace.startIndex);
 	      if (do_label) { 
@@ -18360,10 +18172,10 @@ public class PackData{
       cpScreen.setLineThickness(thickness);
 	  do {
 	      Complex v_cent=w_cent;
-	      int w_indx=goon.vert((goon.startIndex+1)%3);    // deBugging.LayoutBugs.log_RedCenters(this);
+	      int w_indx=goon.vert((goon.startIndex+1)%3); 
 		  RedList wyd_v=RedList.whos_your_daddy(goon,(goon.startIndex+1)%3); // wyd_v.center; wyd_v.hashCode();
 	      w_cent=new Complex(wyd_v.center);
-	      DispFlags df=new DispFlags(null); // System.out.println("w_indx="+w_indx+", wyd_v center.x "+wyd_v.center.x+" and hash "+wyd_v.hashCode());
+	      DispFlags df=new DispFlags(null); 
 	      df.setColor(ecol);
 	      cpScreen.drawEdge(v_cent,w_cent,df);
 	      if (do_circle) { 
@@ -18461,7 +18273,7 @@ public class PackData{
 			vertlist = new NodeLink(this, "B"); // all bdry components
 		int node = nodeCount;
 		for (int i = 1; i <= node; i++)
-			kData[i].utilFlag = 0;
+			setVertUtil(i,0);
 		/*
 		 * mark all bdry verts to be identified. Illegal to have v hanging or to
 		 * have v and one of its 'middle' petals (ie. not first or last) marked;
@@ -18470,23 +18282,25 @@ public class PackData{
 		Iterator<Integer> vlist = vertlist.iterator();
 		while (vlist.hasNext()) {
 			int v = (Integer) vlist.next();
-			if (isBdry(v) && kData[v].utilFlag == 0) {
+			if (isBdry(v) && getVertUtil(v)== 0) {
 				int vert = v;
-				for (int j = 1; j < countFaces(v); j++)
-					if (countFaces(v) < 2
-							|| kData[kData[v].flower[j]].utilFlag != 0) {
+				int[] petals=getPetals(v);
+				for (int j = 1; j < petals.length; j++)
+					if (petals.length < 2
+							|| getVertUtil(petals[j]) != 0) {
 						throw new CombException("combinatoric problem at v="+v);
 					}
-				kData[v].utilFlag = 1;
-				v = kData[vert].flower[0];
+				setVertUtil(v,1);
+				v = petals[0];
 				while (v != vert) {
-					for (int j = 1; j < countFaces(v); j++)
-						if (countFaces(v) < 2
-								|| kData[kData[v].flower[j]].utilFlag != 0) {
+					petals=getPetals(v);
+					for (int j = 1; j < petals.length; j++)
+						if (petals.length < 2
+								|| getVertUtil(petals[j]) != 0) {
 							throw new CombException("combinatoric problem at v="+v);
 						}
-					kData[v].utilFlag = 1;
-					v = kData[v].flower[0];
+					setVertUtil(v,1);
+					v = petals[0];
 				}
 			}
 		}
@@ -19411,7 +19225,8 @@ public class PackData{
 		for (int v=1;v<=nodeCount;v++) {
 			if (exclude!=null && exclude.containsV(v)<0) 
 				for (int j=0;j<(countFaces(v)+getBdryFlag(v));j++) {
-					if ((k=kData[v].flower[j])>v && exclude!=null && exclude.containsV(k)<0)
+					if ((k=kData[v].flower[j])>v && 
+							exclude!=null && exclude.containsV(k)<0)
 						ans.add(new EdgeSimple(v,k));
 				}
 		}
@@ -19753,14 +19568,14 @@ public class PackData{
 		
 		// start by marking intV verts with -v in 'utilFlag'
 		for (int v=1;v<=nodeCount;v++)
-			kData[v].utilFlag=0;
+			setVertUtil(v,0);
 		Iterator<Integer> vl=intV.iterator();
 		while (vl.hasNext()) {
 			int v=vl.next();
-			kData[v].utilFlag=-v;
+			setVertUtil(v,-v);
 		}
 		
-		if (kData[alp].utilFlag>=0) // alp must be in 'intV'
+		if (getVertUtil(alp)>=0) // alp must be in 'intV'
 			alp=intV.get(0);
 
 		// gather info in 'util': 
@@ -19779,9 +19594,10 @@ public class PackData{
 			Iterator<Integer> cl=currl.iterator();
 			while (cl.hasNext()) {
 				int w=cl.next();
+				int[] flower=getFlower(w);
 				for (int j=0;j<=(countFaces(w)+getBdryFlag(w));j++) { 
-					int k=kData[w].flower[j];
-					if (kData[k].utilFlag<0 && util[k]==0) { // new one in 'intV'?
+					int k=flower[j];
+					if (getVertUtil(k)<0 && util[k]==0) { // new one in 'intV'?
 						util[k]=-k;
 						if (isBdry(k)) {
 							util[k]=k; // is bdry of packing
@@ -20026,6 +19842,8 @@ public class PackData{
 				throw new CombException("failed to get side pair "+e);
 			}
 		}
+		
+		// traditional
 		try {
 			return sidePairs.get(e).mob;
 		} catch(Exception ex) {
@@ -20034,6 +19852,7 @@ public class PackData{
 	}
 	
 	/**
+	 * traditional only
 	 * check if 'schwarzian's are allocated in 'kData'
 	 * @return boolean
 	 */
