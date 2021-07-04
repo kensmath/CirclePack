@@ -15784,8 +15784,8 @@ public class PackData{
 	  * Replace 'vertexMap' with list {new,orig} of new (i.e., cloned) 
 	  * verts with their orig indices.
 	  *  
-	  * CAUTION: Not very solid -- bad path may screw up complex. For interior cut,
-	  * need at least two edges. Lose overlap data.
+	  * CAUTION: Not very solid -- bad path may screw up complex. 
+	  * For interior cut, need at least two edges. Lose overlap data.
 	  * 
 	  * @param vertlist @see NodeLink of vertices defining edges to slit
 	  * @return int[4], [cloneV,end,start,count]: cloneV (=0 means
@@ -15995,19 +15995,20 @@ public class PackData{
 	  * @param w neighbor along an interior edge
 	  * @return int[2], indices new_V and new_W (or 0); null on error
 	 */
-	public int []open_edge(int v, int w) {
+	public int[] open_edge(int v, int w) {
 		int ind;
+		if (v < 0 || v > nodeCount || !isBdry(v)
+				|| (ind = nghb(v, w)) < 0 )
+			return null;
+		alloc_pack_space(nodeCount+10, true);
+
 		int[] newflower = null;
 		double[] newoverlaps;
 		int []ans=new int[2]; // may return 2 cloned indices
 
-		if (v < 0 || v > nodeCount || !isBdry(v)
-				|| (ind = nghb(v, w)) < 0 )
-			return null;
 		int indwv=nghb(w,v);
 		// new vert
 		int new_V = ans[0]=nodeCount+1;
-		alloc_pack_space(new_V, true);
 		nodeCount=new_V; // now can change nodecount;
 		kData[new_V].num = countFaces(v) - ind;
 		kData[new_V].flower = new int[countFaces(new_V) + 1];

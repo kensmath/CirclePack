@@ -99,6 +99,32 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	}
 	
 	/**
+	 * Chain of successive 'HalfEdge's extracted from 'NodeLink'.
+	 * Check if successive entries form halfedge's; stop when 
+	 * there is a break.
+	 * @param pdcel PackDCEL
+	 * @param vlist NodeLink
+	 * @return HalfLink, may be empty
+	 */
+	public static HalfLink getChain(PackDCEL pdcel,NodeLink vlist) {
+		HalfLink hlink=new HalfLink();
+		if (vlist==null || pdcel==null) 
+			return hlink;
+		Iterator<Integer> vst=vlist.iterator();
+		int v=vst.next();
+		int w=v;
+		while (vst.hasNext()) {
+			v=w;
+			w=vst.next();
+			HalfEdge he=pdcel.findHalfEdge(new EdgeSimple(v,w));
+			if (he==null)
+				return hlink;
+			hlink.add(he);
+		} // end of while
+		return hlink;
+	}
+	
+	/**
 	 * Not associated with any PackData
 	 * @param datastr
 	 */

@@ -44,7 +44,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	serialVersionUID = 1L;
 	
 	PackData packData;
-	static final int XTD_LINKS=16; // how many links to look for in 'extended' edges.
+	static final int XTD_LINKS=16; // how many to look for in 'extended' edges.
 	PackDCEL pdc; // utility pointer, may be null
 	
 	// Constructors
@@ -177,7 +177,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	}
 	
 	/**
-	 * Remove all edges in the given list in the ame order
+	 * Remove redundant edges in the given list (with the 
+	 * same order).
 	 * @param edgelist EdgeLink, can be null
 	 * @return int count
 	 */

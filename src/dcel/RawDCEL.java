@@ -3,14 +3,17 @@ package dcel;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import allMains.CirclePack;
 import complex.Complex;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
+import exceptions.DataException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
 import listManip.HalfLink;
 import listManip.NodeLink;
+import listManip.VertexMap;
 
 /**
  * This file is for static methods applied to dcel structures.
@@ -1719,6 +1722,160 @@ public class RawDCEL {
 		  new_edge.prev = hn;
 
 		  return new_edge;
+	  }
+	  
+	  /**
+	   * Slit open on given 'HalfEdge' <v,w> if one or both
+	   * of v and w is bdry. A clone is made for v (and/or w)
+	   * if it is a boundary vertex, which may disconnect the
+	   * interior, so in 'redchain_by_edge', just the portion
+	   * containing 'alpha' would survive. Typically, however,
+	   * just one is a boundary. In this case, the final cclw order is 
+	   * {clone_of_b, a, b} in order and we try to salvage 
+	   * the red chain. Return the clone index (or indices), so
+	   * the calling routine can set data.
+	   * @param pdcel PackDCEL
+	   * @param edge HalfEdge
+	   * @return int[2] with one or two new indices
+	   */
+	  public static int[] slitVW(PackDCEL pdcel,HalfEdge edge) {
+		  
+		  if (edge.twin.face!=null && edge.twin.face.faceIndx<0)
+			  throw new DataException("usage: slit, <v,w> can't be a bdry edge");
+		  boolean swap_vw=false;
+		  if (edge.twin.origin.bdryFlag>0) {
+			  if (edge.origin.bdryFlag==0) {
+				  swap_vw=true;
+				  edge=edge.twin;
+			  }
+		  }
+		  else if (edge.origin.bdryFlag==0)
+			  throw new DataException("usage: slit v w; at least one must be bdry");
+		  
+		  // move 'alpha', if necessary
+		  NodeLink vlink=new NodeLink();
+		  vlink.add(edge.origin.vertIndx);
+		  vlink.add(edge.twin.origin.vertIndx);
+		  pdcel.setAlpha(0,vlink,false); // don't redo combinatorics
+
+		  // hold some data
+		  HalfEdge origtwin=edge.twin;
+		  Vertex edgeOrigin=edge.origin;
+		  Vertex edgeTwinOrigin=edge.twin.origin;
+		  HalfEdge outedge_v=edge.origin.halfedge;
+		  HalfEdge inedge_v=outedge_v.twin.next.twin;
+		  
+		  // create and install a clone for 'v' as origin of 'edge'
+		  Vertex newV=new Vertex(++pdcel.vertCount);
+		  pdcel.vertices[newV.vertIndx]=newV;
+		  newV.bdryFlag=1;
+		  newV.halfedge=edge;
+		  edge.origin=newV;
+		  HalfEdge he=edge;
+		  while (he.face==null || he.face.faceIndx>=0) {
+			  he=he.prev.twin; // cclw
+			  he.origin=newV;
+		  }
+
+		  // new twin for 'edge', fix up this side of slit
+		  HalfEdge oldtwin=edge.twin;
+		  HalfEdge wv=new HalfEdge(edge.twin.origin);
+		  wv.twin=edge;
+		  edge.twin=wv;
+
+		  wv.next=inedge_v.twin;
+		  inedge_v.twin.prev=wv;
+		  wv.face=inedge_v.twin.face;
+
+		  // new version of edge, fix up other side of slit
+		  HalfEdge newvw=new HalfEdge(edgeOrigin);
+		  newvw.twin=origtwin;
+		  origtwin.twin=newvw;
+		  newvw.face=outedge_v.twin.face;
+		  
+		  newvw.prev=outedge_v.twin;
+		  outedge_v.twin.next=newvw;
+
+		  // if both are bdry: build new vert/twin for w, too
+		  if (edge.twin.origin.bdryFlag>0) {
+			  
+			  pdcel.redChain=null; // may disconnect interior
+			  
+			  HalfEdge outedge_w=edge.twin.origin.halfedge;
+			  HalfEdge inedge_w=outedge_w.twin.next.twin;
+			  
+			  wv.prev=outedge_w.twin;
+			  outedge_w.twin.next=wv;
+			  
+			  newvw.next=inedge_w.twin;
+			  inedge_w.twin.prev=newvw;
+
+			  Vertex newW=new Vertex(++pdcel.vertCount);
+			  pdcel.vertices[newW.vertIndx]=newW;
+			  newW.bdryFlag=1;
+			  he=origtwin;
+			  while (he.face==null || he.face.faceIndx>=0) {
+				  he.origin=newW;
+				  he=he.prev.twin; // cclw
+			  }
+			  
+			  int[] ans=new int[2];
+			  ans[0]=newV.vertIndx;
+			  ans[1]=newW.vertIndx;
+			  
+			  return ans;
+		  }
+
+		  // reaching here, w must be interior
+		  wv.prev=newvw;
+		  newvw.next=wv;
+		  edgeTwinOrigin.bdryFlag=1;
+		  edgeTwinOrigin.halfedge=origtwin;
+		  
+		  // fix red chain; typically, 'edge' is not red // DCELdebug.printRedChain(pdcel.redChain);
+		  if (edge.myRedEdge!=null) {
+			  RedHEdge redtwin=edge.myRedEdge.twinRed;
+			  if (redtwin==null) {
+				  CirclePack.cpb.errMsg("slit: problems with red chain");
+				  pdcel.redChain=null;
+			  }
+
+			  // just separate the twins
+			  edge.myRedEdge.twinRed=null;
+			  redtwin.twinRed=null;
+			  edgeTwinOrigin.redFlag=true;
+		  }
+		  else {
+			  RedHEdge next_v_red=inedge_v.myRedEdge.nextRed;
+			  RedHEdge edge_red=new RedHEdge(edge);
+			  edge.myRedEdge=edge_red;
+			  edge_red.center=new Complex(next_v_red.center);
+			  edge_red.rad=next_v_red.rad;
+			  
+			  RedHEdge twin_red=new RedHEdge(origtwin);
+			  origtwin.myRedEdge=twin_red;
+			  // set center/rad on return
+			  
+			  edge_red.prevRed=inedge_v.myRedEdge;
+			  inedge_v.myRedEdge.nextRed=edge_red;
+			  
+			  edge_red.nextRed=twin_red;
+			  twin_red.prevRed=edge_red;
+			  
+			  twin_red.nextRed=outedge_v.myRedEdge;
+			  outedge_v.myRedEdge.prevRed=twin_red;
+
+			  newV.redFlag=true;
+			  edgeTwinOrigin.redFlag=true;
+		  }
+		  
+		  int[] ans=new int[2];
+		  if (swap_vw)
+			  ans[1]=newV.vertIndx;
+		  else
+			  ans[0]=newV.vertIndx;
+		  
+		  return ans;
 	  }
 
 	  /**

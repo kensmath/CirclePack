@@ -6,9 +6,11 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import complex.Complex;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
+import exceptions.DataException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
@@ -246,8 +248,9 @@ public class CombDCEL {
 	 * Vertex count typically changes, but I've tried to 
 	 * save indexing as much as possible. Face and edge indexing
 	 * are not longer reliable. Calling routine should call
-	 * 'd_FillInside' to complete processing. The
-	 * 'prune' flag true means every bdry vertex must have an 
+	 * 'd_FillInside' to complete processing. 'pdcel.newOld'
+	 * contains index conversion info. 
+	 * The 'prune' flag true means every bdry vertex must have an 
 	 * interior neighbor; this enters just one spot in the code.
 	 * @param pdcel PackDCEL
 	 * @param hlink HalfLink
@@ -3948,6 +3951,140 @@ public class CombDCEL {
 		}
 		return bestlink;
 	}
+	  
+	/**
+	 * Slit open along given edges: edges must form a
+	 * chain. Start and/or end may be boundary, rest 
+	 * must be interior. If start and end are interior,
+	 * use 'cookie' method. 
+	 * User can find new bdry segment, namely oriented
+	 * bdry from returned {firstEnd,lastEnd}.
+	 * 'pdcel.newOld' contains {new,old} index pairs.
+	 * Errors may damage pdcel.
+	 * @param pdcel PackDCEL
+	 * @param hlink HalfLink
+	 * @return int[2], int[0]={first,last} indices.
+	 */
+	public static int[] slitComplex(PackDCEL pdcel,HalfLink hlink) {
+		  if (hlink==null || hlink.size()==0 || pdcel.p==null)
+			  return null;
+		  
+		  // check linkage and conditions
+		  Iterator<HalfEdge> his=hlink.iterator();
+		  HalfEdge he=his.next();
+		  NodeLink verts=new NodeLink();
+		  Vertex startV=he.origin;
+		  verts.add(startV.vertIndx);
+		  Vertex endV=he.next.origin;
+		  while(his.hasNext()) {
+			  he=his.next();
+			  startV=he.origin;
+			  verts.add(startV.vertIndx);
+			  if (startV.bdryFlag>0)
+				  throw new DataException("usage: slit; intermediate "+
+						  "vertices must be interior");
+			  if (he.origin!=endV) 
+				  throw new DataException("usage: slit; HalfLink must "+
+						  " contiguous chain");
+			  endV=he.next.origin;
+		  }
+		  verts.add(endV.vertIndx);
+
+		  int firstEnd=-1;
+		  int lastEnd=-1;
+		  
+		  // for clones, 'vutil' will show original vert
+		  for (int v=1;v<=pdcel.vertCount;v++)
+			  pdcel.vertices[v].vutil=v;
+
+		  // move 'alpha' if necessary
+		  pdcel.setAlpha(0,verts, false);
+
+		  // proceed via "cookie" approach?
+		  startV=hlink.get(0).origin;
+		  firstEnd=startV.vertIndx;
+		  lastEnd=hlink.getLast().twin.origin.vertIndx;
+		  if (startV.bdryFlag==0 && endV.bdryFlag==0) {
+			  redchain_by_edge(pdcel,hlink,pdcel.alpha,false);
+			  VertexMap vmap=pdcel.reapVUtil();
+			  d_FillInside(pdcel);
+			  pdcel.newOld=vmap;
+			  int[] ans=new int[2];
+			  ans[0]=firstEnd;
+			  ans[1]=lastEnd;
+			  return ans;
+		  }
+		  
+		  // if start is interior, end bdry, then reverse chain
+		  if (startV.bdryFlag==0 && endV.bdryFlag!=0) {
+			  hlink=HalfLink.reverseLink(hlink);
+			  hlink=HalfLink.reverseElements(hlink);
+		  }
+		  
+		  // open up edge-by-edge
+		  VertexMap vmap=new VertexMap();
+		  HalfEdge lastEdge=hlink.getLast(); // to know when to stop
+		  his=hlink.iterator();
+		  int count=0;
+		  firstEnd=pdcel.vertCount+1; // new number when 
+		  boolean done=false;
+		  while (his.hasNext() && !done) {
+			  he=his.next();
+			  int v=he.origin.vertIndx;
+			  int w=he.next.origin.vertIndx;
+			  if (he.next.origin.bdryFlag>0 && he!=lastEdge) {
+				  if (count==0)
+					  throw new DataException("slit: don't allow single edge "+
+						  "with both ends in bdry");
+				  else {
+					  CirclePack.cpb.errMsg("'slit' finishing early "+
+							  "stopped due to reaching bdry");
+					  done=true;
+				  }
+			  }
+			  
+			  // do the next slit
+			  int[] VW=RawDCEL.slitVW(pdcel, he);
+			  if (VW==null)
+				  throw new CombException("Something wrong during 'slit' of "+
+						  "edge "+he);
+			  count++;
+			  lastEnd=w;
+			  
+			  // there's a clone of 'v'
+			  pdcel.vertices[VW[0]].vutil=v;
+			  vmap.add(new EdgeSimple(VW[0],v));
+			  pdcel.p.vData[VW[0]].center=new Complex(pdcel.p.vData[v].center);
+			  pdcel.p.vData[VW[0]].rad=pdcel.p.vData[v].rad;
+			  pdcel.p.vData[VW[0]].aim=-1.0;
+			  pdcel.p.vData[VW[0]].color=ColorUtil.cloneMe(pdcel.p.vData[v].color);
+			  
+			  // there may be a clone of 'w', but only for 'lastEdge'
+			  if (he==lastEdge && VW[1]!=0) {
+				  pdcel.vertices[VW[1]].vutil=w;
+				  vmap.add(new EdgeSimple(VW[1],w));
+				  pdcel.p.vData[VW[1]].center=new Complex(pdcel.p.vData[w].center);
+				  pdcel.p.vData[VW[1]].rad=pdcel.p.vData[w].rad;
+				  pdcel.p.vData[VW[1]].aim=-1.0;
+				  pdcel.p.vData[VW[1]].color=ColorUtil.cloneMe(pdcel.p.vData[w].color);
+				  
+			  }
+			  
+			  // if 'w' is not cloned, need to set its red center/rad
+			  else {
+				  RedHEdge w_red=pdcel.vertices[w].halfedge.myRedEdge;
+				  w_red.center=new Complex(pdcel.p.vData[w].center);
+				  w_red.rad=pdcel.p.vData[w].rad;
+			  }
+		  }
+		  
+		  // wrap up the process
+		  pdcel.fixDCEL_raw(pdcel.p);
+		  int[] ans=new int[2];
+		  ans[0]=firstEnd; // should be index of first new cloned vert
+		  ans[1]=lastEnd;
+		  return ans;
+	  }
 	  
 } // end of 'CombDCEL'
 

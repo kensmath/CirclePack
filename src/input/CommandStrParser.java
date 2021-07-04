@@ -10408,6 +10408,21 @@ public class CommandStrParser {
 	      // ========= slit ========
 	      if (cmd.startsWith("slit")) {
 	    	  NodeLink vertlist=new NodeLink(packData,(Vector<String>)flagSegs.get(0));
+	    	  if (vertlist==null || vertlist.size()==0)
+	    		  return 0;
+	    	  if (packData.packDCEL!=null) {
+	    		  HalfLink hlink=HalfLink.getChain(packData.packDCEL, vertlist);
+	    		  if (hlink!=null) {
+	    			  int[] rslt=CombDCEL.slitComplex(packData.packDCEL, hlink);
+	    			  if (rslt==null)
+	    				  throw new CombException("something wrong in 'slit' attempt");
+	    			  CirclePack.cpb.msg("'slit' gave new bdry edges from "+
+	    				  rslt[0]+" to "+rslt[1]);
+	    		  }
+	    		  return 1;
+	    	  }
+	    	  
+	    	  // traditional
 	    	  int []ans=packData.slit_complex(vertlist);
 	    	  if (ans==null) return 0;
 	    	  return ans[3]; // return count of edges slit

@@ -2159,7 +2159,7 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Set 'alpha' edge; its vert normally placed at origin,
+	 * Set 'alpha' edge; its vert is normally placed at origin,
 	 * should be interior. 'v'>0 indicates preference;
 	 * if 'v'<=0 or 'v' not interior, try current 'alpha' if
 	 * it's interior. Else look for first interior; nothing
@@ -2169,6 +2169,7 @@ public class PackDCEL {
 	 * Also, may need to change 'gamma'. (This also, 
 	 * set 'p.alpha', 'p.gamma' if 'p' is not null.)
 	 * @param v int
+	 * @param nlink NodeLink, forbidden vertices
 	 * @param recomb boolean
 	 * @return 'v' 
 	 */
@@ -2210,10 +2211,22 @@ public class PackDCEL {
 				}
 				return myTry.origin.vertIndx;
 			}
-			for (int j=0;j<=vertCount;j++) // get first interior
-				if (!vertices[j].isBdry() && 
-						(nlink!=null && nlink.containsV(j)<0))
+			if (nlink==null) { // 'myTry' first edge with int ends
+				for (int j=1;(j<=vertCount && myTry==null);j++) {
+					HalfEdge ahe=vertices[j].halfedge;
+					if (!vertices[j].isBdry() && 
+							!vertices[ahe.next.origin.vertIndx].isBdry())
+						myTry=ahe;
+				}
+			}
+			else { // get first interior with both ends not in 'nlink'
+				for (int j=1;(j<=vertCount && myTry==null);j++) { 
+				HalfEdge ahe=vertices[j].halfedge;
+				if (!vertices[j].isBdry() && nlink.containsV(j)<0 &&
+						nlink.containsV(ahe.next.origin.vertIndx)<0)
 					myTry=vertices[j].halfedge;
+				}
+			}
 		}
 
 		// still no option?
