@@ -831,6 +831,7 @@ public class DisplayParser {
 					}
 				}
 				
+				// traditional
 				else {
 					EdgeLink edgelist = new EdgeLink(p);
 					// axis extended edges? 
@@ -872,38 +873,61 @@ public class DisplayParser {
 						circleToo=true;
 				}
 				FaceLink faceLink = new FaceLink(p, items);
-				if (faceLink.size() <= 0)
+				if (faceLink==null || faceLink.size() == 0)
 					break; // nothing in list
 
-				AmbiguousZ []amb=AmbiguousZ.getAmbiguousZs(p);
-
-				Iterator<Integer> flist = faceLink.iterator();
-				while (flist.hasNext()) {
-					f = (Integer) flist.next();
-					Complex []pts=p.corners_face(f, amb);
-					if (!dispFlags.colorIsSet)
-						dispFlags.setColor(p.getFaceColor(f));
-					if (dispFlags.label)
-						dispFlags.setLabel(Integer.toString(f));
-					cpScreen.drawFace(pts[0],pts[1], pts[2], null, null, null, dispFlags);
-					if (circleToo) { // also, color circle this face is responsible for
-						int cirIndx;
-						if (p.packDCEL!=null) {
-							dcel.Face face=p.packDCEL.faces[f];
-							cirIndx=face.edge.next.next.origin.vertIndx;
-						}
-						else
-							cirIndx=p.faces[f].vert[(p.faces[f].indexFlag+2)%3];
+				if (p.packDCEL!=null) {
+					Iterator<Integer> flist = faceLink.iterator();
+					while (flist.hasNext()) {
+						f = (Integer) flist.next();
+						dcel.Face face=p.packDCEL.faces[f];
+						Complex []pts=p.packDCEL.getFaceCorners(face);
 						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.getCircleColor(cirIndx));
-						// suppress label
-						dispFlags.setLabel(null);
+							dispFlags.setColor(p.getFaceColor(f));
+						if (dispFlags.label)
+							dispFlags.setLabel(Integer.toString(f));
+						cpScreen.drawFace(pts[0],pts[1], pts[2], null, null, null, dispFlags);
+						if (circleToo) { // also, color circle this face is responsible for
+							int cirIndx=face.edge.next.next.origin.vertIndx;
+							if (!dispFlags.colorIsSet)
+								dispFlags.setColor(p.getCircleColor(cirIndx));
+							// suppress label
+							dispFlags.setLabel(null);
 						
-						cpScreen.drawCircle(pts[cirIndx],p.getRadius(cirIndx),
-								dispFlags);
+							cpScreen.drawCircle(pts[2],
+									p.packDCEL.getVertRadius(face.edge.next.next),
+									dispFlags);
+						}
+						count++;
 					}
-// debug			System.out.println("count = "+count);
-					count++;
+				}
+				
+				// traditional
+				else {
+					AmbiguousZ []amb=AmbiguousZ.getAmbiguousZs(p);
+
+					Iterator<Integer> flist = faceLink.iterator();
+					while (flist.hasNext()) {
+						f = (Integer) flist.next();
+						Complex []pts=p.corners_face(f, amb);
+						if (!dispFlags.colorIsSet)
+							dispFlags.setColor(p.getFaceColor(f));
+						if (dispFlags.label)
+							dispFlags.setLabel(Integer.toString(f));
+						cpScreen.drawFace(pts[0],pts[1], pts[2], null, null, null, dispFlags);
+						if (circleToo) { // also, color circle this face is responsible for
+							int cirIndx;
+							cirIndx=p.faces[f].vert[(p.faces[f].indexFlag+2)%3];
+							if (!dispFlags.colorIsSet)
+								dispFlags.setColor(p.getCircleColor(cirIndx));
+							// suppress label
+							dispFlags.setLabel(null);
+						
+							cpScreen.drawCircle(pts[cirIndx],p.getRadius(cirIndx),
+									dispFlags);
+						}
+						count++;
+					}
 				}
 				break;
 			} // done with faces

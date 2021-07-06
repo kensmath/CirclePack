@@ -99,14 +99,14 @@ public class DataDCEL {
 		}
 
 		// TODO: temporary: transfer cent/rad data from pdcel.p,
-		//       if it exists. Note that sphere will have no 'newOld'
+		//       if it exists. Note that sphere will have no 'oldNew'
 		if (pdcel.p!=null) {
-			if (pdcel.newOld!=null) {
-				Iterator<EdgeSimple> noit=pdcel.newOld.iterator();
+			if (pdcel.oldNew!=null) {
+				Iterator<EdgeSimple> noit=pdcel.oldNew.iterator();
 				while (noit.hasNext()) {
 					es=noit.next();
-					int newindx=es.v;
-					int oldindx=es.w;
+					int newindx=es.w;
+					int oldindx=es.v;
 					// put in 'Vertex'
 					p.setCenter(newindx,pdcel.p.getCenter(oldindx));
 					p.setRadius(newindx,pdcel.p.getRadius(oldindx));
@@ -145,7 +145,7 @@ public class DataDCEL {
 			Face iface=pdcel.idealFaces[j];
 			p.bdryStarts[j]=iface.edge.twin.origin.vertIndx;
 		}
-		p.vertexMap=pdcel.newOld;
+		p.vertexMap=pdcel.oldNew;
 		p.chooseGamma();
 		p.fileName=new String("clone");
 		p.status=true;
@@ -156,7 +156,7 @@ public class DataDCEL {
 		p.beta=pdcel.alpha.twin.origin.vertIndx;
 		
 		// attach this dcel
-		pdcel.newOld=null;
+		pdcel.oldNew=null;
 		p.attachDCEL(pdcel);
 		return p;
 	}

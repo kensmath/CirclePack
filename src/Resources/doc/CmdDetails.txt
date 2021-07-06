@@ -4867,7 +4867,7 @@ of the tiles are the larger indices.
 	from the vertex v (must be bdry vert) to form a new complex.
 	If n is negative or too large, then as many edges as possible are
 	identified. If there is an even number of edges in this bdry
-	component, then they all get pasted and there's no bdry left;
+	component, then they all get pasted and all become interior;
 	if odd, then a boundary component of three edges remains.
 </description>
 <seealso>

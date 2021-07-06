@@ -103,8 +103,8 @@ public class PackCreation {
 		if (!debug) { // debug=true;
 			// adjoin right edge to left edge for annulus
 			pdcel=CombDCEL.d_adjoin(pdcel, pdcel, top, topleft, mn);
-			top=pdcel.newOld.findV(top);
-			bottom=pdcel.newOld.findV(bottom);
+			top=pdcel.oldNew.findW(top);
+			bottom=pdcel.oldNew.findW(bottom);
 		}
 		
 		if (!debug) { // debug=true;
@@ -2622,7 +2622,7 @@ public class PackCreation {
 			// attach first copy; note where old1 ended up
 			PackDCEL temp=CombDCEL.cloneDCEL(base);
 			pdcel=CombDCEL.d_adjoin(pdcel,temp,1,3,sidelength);
-			int new5=pdcel.newOld.findV(5); // new index
+			int new5=pdcel.oldNew.findW(5); // new index
 			CombDCEL.d_FillInside(pdcel); 
 
 			// DCELdebug.redindx(btrfly);

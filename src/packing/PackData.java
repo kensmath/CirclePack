@@ -274,17 +274,16 @@ public class PackData{
      * Attach a new or modified DCEL structure for this packing and 
      * sync the associated 'vData[]'. If this is an existing packing 
      * and the dcel structure is just created, then populate the new 
-     * 'vData' using existing 'rData', with 'pdcel.newOld' to 
+     * 'vData' using existing 'rData', with 'pdcel.oldNew' to 
      * translate indices. If this is a modified dcel (for example,
      * if a new structure was cookied from the original), then go to
      * the existing 'vData' to populate the new 'vData', using
-     * 'pdcel.newOld'.
+     * 'pdcel.oldNew'.
      *  
      * TODO: may need to save additional info when 
      * swapping in new dcel: e.g., 'invDist's, 
      * 'schwarzian's, face colors, etc. And may need
-     * to adjust vlist, elist, hlist, etc. based on
-     * 'newOld'.
+     * to adjust vlist, elist, hlist, etc. based on 'oldNew'.
      * 
      * @param pdcel PackDCEL
      * @return int, vertCount on success, 0 on failure
@@ -329,13 +328,13 @@ public class PackData{
     			vData[v]=new VData();
     		
     		// translation? make more efficient
-    		int[] nOld=null;
-    		if (pdcel.newOld!=null) {
-    			nOld=new int[nodeCount+1];
-        		Iterator<EdgeSimple> nost=pdcel.newOld.iterator();
+    		int[] new2old=null; // new2old[v] is old index for new vert v 
+    		if (pdcel.oldNew!=null) {
+    			new2old=new int[nodeCount+1];
+        		Iterator<EdgeSimple> nost=pdcel.oldNew.iterator();
         		while (nost.hasNext()) {
         			EdgeSimple es=nost.next();
-        			nOld[es.v]=es.w;
+        			new2old[es.w]=es.v;
         		}
     		}
     		 
@@ -345,7 +344,7 @@ public class PackData{
     				vData[v].setBdryFlag(1);
     			int oldv=v;
     			int w=0;
-    			if (nOld!=null && (w=nOld[v])>0) 
+    			if (new2old!=null && (w=new2old[v])>0) 
     				oldv=w;
     			if (oldv<=origNodeCount) {
     				pdcel.setVertRadii(v,rData[oldv].rad);
@@ -385,23 +384,23 @@ public class PackData{
 			vData[v]=new VData();
 		
 		// translation? make more efficient
-		int[] nOld=null;
-		if (pdcel.newOld!=null) {
-			nOld=new int[nodeCount+1];
-    		Iterator<EdgeSimple> nost=pdcel.newOld.iterator();
+		int[] oNew=null;
+		if (pdcel.oldNew!=null) {
+			oNew=new int[nodeCount+1];
+    		Iterator<EdgeSimple> nost=pdcel.oldNew.iterator();
     		while (nost.hasNext()) {
     			EdgeSimple es=nost.next();
-    			nOld[es.v]=es.w;
+    			oNew[es.w]=es.v;
     		}
 		}
 
 		// note: 'nodeCount' may be larger than 'origNodeCount'
-		for (int v=1;v<=nodeCount;v++) {
+		for (int v=1;v<=nodeCount;v++) { // 'v' is "new" index
 			Vertex vert=pdcel.vertices[v];
 			HalfEdge he=vert.halfedge;
    			int oldv=v;
    			int w=0;
-   			if (nOld!=null && (w=nOld[v])>0) 
+   			if (oNew!=null && (w=oNew[v])>0) 
    				oldv=w;
    			// if there is existing data, copy it
    			if (oldv<=origNodeCount) {
@@ -439,8 +438,8 @@ public class PackData{
 			pdcel.setVDataIndices(v);
     	}
 
-		// TODO: convert lists before killing 'newOld'??  
-		pdcel.newOld=null;
+		// TODO: convert lists before killing 'oldNew'??  
+		pdcel.oldNew=null;
 		
     	set_aim_default(); // too difficult to figure out old aims
     	fillcurves();
@@ -776,12 +775,12 @@ public class PackData{
                     				}
                     				pdc.redChain=null;
                     				pdc.fixDCEL_raw(this);
-                    				if (pdc.newOld!=null) {
+                    				if (pdc.oldNew!=null) {
                 						readOldNew=new int[pdc.vertCount+1];
-                    					Iterator<EdgeSimple> vmp=pdc.newOld.iterator();
+                    					Iterator<EdgeSimple> vmp=pdc.oldNew.iterator();
                     					while (vmp.hasNext()) {
                     						EdgeSimple edge=vmp.next();
-                    						readOldNew[edge.w]=edge.v;
+                    						readOldNew[edge.v]=edge.w;
                     					}
                     				}
                     			}
@@ -9108,6 +9107,8 @@ public class PackData{
 	  } 
 	  
 	  /**
+	   * traditional: see 'CombDCEL.shootExtended' for DCEL version
+	   *  
 	   * TODO: 'axis-extrapolate' more general. Perhaps that's enough?
 	   * From vertex v, look out edge in direction 'indx' and see if 
 	   * vertex w is encountered within 'lgth' edges along a hex axis. 
@@ -12991,7 +12992,7 @@ public class PackData{
 				  throw new DCELException("DCEL puncture for "+v+" failed");
 			  }
 			  attachDCEL(newDCEL);
-			  packDCEL.newOld=null;
+			  packDCEL.oldNew=null;
 			  return 1;
 		  }
 		  
@@ -13053,7 +13054,7 @@ public class PackData{
 				  throw new DCELException("DCEL puncturing face "+f+" failed");
 			  }
 			  attachDCEL(newDCEL);
-			  packDCEL.newOld=null;
+			  packDCEL.oldNew=null;
 			  return 1;
 		  }
 		  
@@ -14683,8 +14684,8 @@ public class PackData{
 			  newPack=new PackData(null);
 			  newPack.attachDCEL(newDCEL);
 			  PackDCEL pdcel=newPack.packDCEL;
-			  newPack.vertexMap=pdcel.newOld;
-			  pdcel.newOld=null;
+			  newPack.vertexMap=pdcel.oldNew;
+			  pdcel.oldNew=null;
 			  pdcel.redChain=null;
 			  
     		  // Set up 'VData' (at original size) 
@@ -14703,7 +14704,7 @@ public class PackData{
     			  for (int v=p1.nodeCount+1;v<=pdcel.vertCount;v++) {
     				  newV[v]=new VData();
     				  // v is 'oldv' in 'qackData'
-    				  int oldv=newPack.vertexMap.findW(v-p1.nodeCount); 
+    				  int oldv=newPack.vertexMap.findV(v); 
 //System.out.println("<v,oldv>="+v+","+oldv);    				  
     				  newV[v].rad=p2.getRadius(oldv);
     				  newV[v].center=p2.getCenter(oldv);

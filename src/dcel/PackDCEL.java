@@ -88,7 +88,7 @@ public class PackDCEL {
 	public GraphLink faceOrder; // order for laying out all 
 	public GraphLink computeOrder;  // sub order for computing centers/radii
 	
-	public VertexMap newOld; // NEEDED FOR CIRCLEPACK
+	public VertexMap oldNew; // NEEDED FOR CIRCLEPACK {old,new}
 	public RedHEdge redChain; // doubly-linked, cclw edges about a fundamental region
 	public ArrayList<RedHEdge> sideStarts; // red edges starting paired sides, will have 'mobIndx'
 	public HalfEdge alpha; // origin normally placed at origin
@@ -113,7 +113,7 @@ public class PackDCEL {
 		faceOrder=null;
 		computeOrder=null;
 
-		newOld=null;
+		oldNew=null;
 		redChain=null;
 		debug=false;
 	}
@@ -151,17 +151,25 @@ public class PackDCEL {
 		  // may need new red chain
 		  if (redChain==null) {
 			  CombDCEL.redchain_by_edge(this, null, this.alpha,prune);
-		  }
+		  } // DCELdebug.printRedChain(redChain);
 		  
-		  // to check some consistency of redchain/bdry.
-		  if (debug)
-			  DCELdebug.redConsistency(this);
+		  // redChain should now exist, but can be in error, so take two trys
+		  try {
+			  CombDCEL.d_FillInside(this); // p.getCenter(300);
+		  }
+		  catch (Exception ex) { // assume redChain problem, try again
+			  CirclePack.cpb.errMsg("Had to try new 'redChain' "+
+					  "in 'fixDCE_raw' call");
+			  redChain=null;
+			  CombDCEL.redchain_by_edge(this, null, this.alpha,prune);
+			  CombDCEL.d_FillInside(this); // p.getCenter(300);
+		  }
 
-		  CombDCEL.d_FillInside(this); // p.getCenter(300);
 		  if (p!=null)
 			  p.attachDCEL(this);
 	  } catch (Exception ex) {
-		  throw new DCELException("Problem with 'fix_raw'. "+ex.getMessage());
+		  throw new DCELException("Problem with 'fix_raw' or 'attachDCEL'. "
+				  +ex.getMessage());
 	  }
 	}
 	
@@ -1227,7 +1235,9 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Get the radius in its internal form (i.e., x-rad for hyp case)
+	 * Get the radius of 'edge.origin' appropriate to this 'edge';
+	 * e.g., it may be stored with a red edge. Get its internal 
+	 * form (i.e., x-rad for hyp case).
 	 * @param edge
 	 * @return
 	 */
@@ -1871,7 +1881,8 @@ public class PackDCEL {
 
 	/**
 	 * Return open list of centers of corners of this face.
-	 * (Generally will have 3 corners).
+	 * (Generally will have 3 corners). The first corner
+	 * is for the origin of 'face.edge'.
 	 * @param face Face
 	 * @return Complex[]
 	 */

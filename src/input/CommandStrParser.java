@@ -5591,14 +5591,14 @@ public class CommandStrParser {
 	    		  int rslt=RawDCEL.hexBaryRefine_raw(packData.packDCEL,1,true);
 	    		  if (rslt==0)
 	    			  return 0;
-	    		  VertexMap newold=packData.packDCEL.reapVUtil();
+	    		  VertexMap oldnew=packData.packDCEL.reapVUtil();
 	    		  packData.packDCEL.fixDCEL_raw(packData);
 	    		  
 	    		  // set new verts radii based on 'vutil' reference vert.
-	    		  for (int v=origCount+1;v<=packData.nodeCount;v++) {
-	    			  int w=newold.findW(v);
-	    			  if (w!=0 && w<=packData.nodeCount && w!=v) { 
-	    				  packData.setRadius(v,packData.getRadius(w));
+	    		  for (int w=origCount+1;w<=packData.nodeCount;w++) {
+	    			  int v=oldnew.findV(w);
+	    			  if (v!=0 && v<=packData.nodeCount && w!=v) { 
+	    				  packData.setRadius(w,packData.getRadius(v));
 	    			  }
 	    		  }
 		    	  CirclePack.cpb.msg("Packing p"+packData.packNum+" has "+
@@ -6441,12 +6441,24 @@ public class CommandStrParser {
 
 	    	  // DCEL version; return
 	    	  if (packData.packDCEL!=null) {
+	    		  int origVC=packData.packDCEL.vertCount;
 	    		  PackDCEL pdans=CombDCEL.d_double(packData.packDCEL,vertlist,segment);
-	    		  alp_sym=pdans.newOld.findV(sym_alp_tmp);
+	    		  alp_sym=pdans.oldNew.findW(packData.getAlpha());
 	    		  if (alp_sym==0)
 	    			  alp_sym=sym_alp_tmp;
 	    		  pdans.redChain=null;
+	    		  VertexMap vmap=pdans.oldNew;
 	    		  pdans.fixDCEL_raw(packData);
+	    		  packData.vertexMap=vmap;
+	    		  
+	    		  // duplicate radii (from 'vData' only, ignore centers);
+	    		  if (packData.vertexMap!=null) {
+	    			  for (int v=origVC+1;v<=packData.packDCEL.vertCount;v++) {
+	    				  int orig_v=packData.vertexMap.findV(v);
+	    				  if (orig_v>0)
+	    					  packData.setRadius(v,packData.getRadius(orig_v));
+	    			  }
+	    		  }
 	    	  }
 
 	    	  // traditional
@@ -8858,14 +8870,16 @@ public class CommandStrParser {
 	      
 	      // ========= reorient =======
 	      else if (cmd.startsWith("reorie")) {
+	    	  
+	    	  if (packData.packDCEL!=null) {
+	    		  PackDCEL pdcel=packData.packDCEL.reverseOrientation();
+	    		  return packData.attachDCEL(pdcel);
+	    	  }
+	    	  
+	    	  // traditional
 	    	  int ans=packData.reverse_orient();
 	    	  if (ans>0) {
 	    		  packData.setCombinatorics();
-		    	  if (packData.packDCEL!=null) {
-		    		  PackDCEL pdcel=packData.packDCEL.reverseOrientation();
-		    		  pdcel.p=packData;
-		    		  packData.packDCEL=pdcel;
-		    	  }
 	    	  }
 	    	  return ans;
 	      }
@@ -10416,6 +10430,7 @@ public class CommandStrParser {
 	    			  int[] rslt=CombDCEL.slitComplex(packData.packDCEL, hlink);
 	    			  if (rslt==null)
 	    				  throw new CombException("something wrong in 'slit' attempt");
+	    			  packData.attachDCEL(packData.packDCEL);
 	    			  CirclePack.cpb.msg("'slit' gave new bdry edges from "+
 	    				  rslt[0]+" to "+rslt[1]);
 	    		  }
@@ -10996,16 +11011,18 @@ public class CommandStrParser {
 	          items=(Vector<String>)flagSegs.get(0);
 	          if (items.size()<2)
 	        	  throw new ParserException("usage: zip n v");
-	          try {
-	        	  n=Integer.parseInt((String)items.remove(0));
-	          } catch(Exception ex) {n=-1;}  // default: do whole bdry comp
 	          
-	          // do only one vertex
-	          int v=NodeLink.grab_one_vert(packData,items.get(0));
+	          // vertex index (one only) comes first
+	          int v=NodeLink.grab_one_vert(packData,items.remove(0));
         	  if (!packData.isBdry(v)) {
         		  CirclePack.cpb.errMsg("'zip' usage: n v, 'v' must be boundary");
         		  return 0;
         	  }
+	          
+	          try {
+	        	  n=Integer.parseInt((String)items.remove(0));
+	          } catch(Exception ex) {n=-1;}  // default: do whole bdry comp
+	          
         	  int b=packData.bdry_comp_count(v);
         	  int m=b/2;
         	  if (b!=2*m) m=(b-1)/2;

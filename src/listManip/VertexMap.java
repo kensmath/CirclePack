@@ -7,6 +7,10 @@ import packing.PackData;
 
 
 /**
+ * Convention is that entries are {old,new}, that is, pairing
+ * an old index with its new index; for mapping, {domain,range},
+ * so index in range identified with index in domain.
+ * 
  * This is like EdgeLink, but it doesn't check whether edge.v 
  * and edge.w are legal indices for any particular packing.
  * @author kens
@@ -47,7 +51,8 @@ public class VertexMap extends EdgeLink {
 	}
 	
 	/** interchange entries of each 'EdgeSimple'. 
-	 * Used, e.g., to convert 'newOld' to 'oldNew'. 
+	 * Used, e.g., to convert 'oldnew' to 'newold'
+	 * or vice-verse. 
 	 */
 	public VertexMap flipEachEntry() {
 		EdgeLink el=(EdgeLink)this;

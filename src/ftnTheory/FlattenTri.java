@@ -336,7 +336,8 @@ public class FlattenTri extends PackExtender {
 			int oldf=dedge.v;
 			int newf=dedge.w;
 			if (matchfaces[newf]==null)
-				throw new CombException("Error: 'MatchFace' should exist for face "+newf);
+				throw new CombException("Error: 'MatchFace' should "+
+						"exist for face "+newf);
 			dcount+=matchfaces[newf].drawMe(dflags);
 			
 			// draw the dual edge between newf and oldf as blue

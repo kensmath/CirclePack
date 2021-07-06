@@ -247,6 +247,7 @@ public class Face {
 	/**
 	 * Return ordered array of 'HalfEdge's around the face;
 	 * list is open, so first edge is not repeated at the end.
+	 * The first entry is the 'edge' for this face.
 	 * @return ArrayList<HalfEdge>
 	 */
 	public HalfLink getEdges() {

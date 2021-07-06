@@ -236,6 +236,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 
 			/* =============== here's the work ==================
 	 		parse the various options based on first character */
+			
+/* most of these stolen from traditional, but not all yet converted. */			
 
 			String str=(String)its.next(); 
 			// it's easy to use '-' flags by mistake
@@ -559,8 +561,36 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				 * 'ee' form means to look for 'hex extended' edges, 'eh' means to 
 				 * use 'hex_extrapolate' and get hex loop of edges. */
 			{
-
-				// TODO: see 'EdgeLink'
+				if (str.length()>=2 && str.charAt(1)=='h') { // hex extrapolated (as in 'NodeLink')
+					// need just first edge to get started
+					HalfLink hlist=new HalfLink(packData,items);
+					its=null; // eat rest of items
+					if (hlist==null || hlist.size()==0) 
+						break;
+					HalfEdge edge=hlist.get(0);
+					int v=edge.origin.vertIndx;
+					int w=edge.next.origin.vertIndx;
+					int indx=-1;
+					// v, w must be interior and hex and form an edge
+					if (packData.isBdry(v) || packData.countFaces(v)!=6
+							|| packData.isBdry(w) || packData.countFaces(w)!=6)
+						break;
+					HalfLink hex_loop=CombDCEL.shootExtended(edge.origin,v,1025,true);
+					if (hex_loop==null || hex_loop.size()==0) 
+						break;
+					count+=hex_loop.size();
+					abutMore(hex_loop);
+				}
+				else {
+					boolean extended=false;
+					if (str.length()>=2 && str.charAt(1)=='e') 
+						extended=true;
+					NodeLink vertlist=new NodeLink(packData,items);
+					if (vertlist==null || vertlist.size()==0) break;
+					its=null; // eat rest of 'items'
+					count+=abutMore(CombDCEL.verts2Edges(
+							packData.packDCEL,vertlist,extended));
+				}
 				break;
 			}
 			case 'd': // degrees of edge's quad vertices; eat rest of flagSeg's

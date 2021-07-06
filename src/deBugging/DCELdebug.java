@@ -397,9 +397,9 @@ public class DCELdebug {
 		while (fit.hasNext()) {
 			Face f=fit.next();
 			EdgeSimple es=new EdgeSimple(f.edge.origin.vertIndx,f.edge.twin.origin.vertIndx);
-			if (pdcel.newOld!=null) {
-				es.v=pdcel.newOld.findW(es.v);
-				es.w=pdcel.newOld.findW(es.w);
+			if (pdcel.oldNew!=null) {
+				es.v=pdcel.oldNew.findV(es.v);
+				es.w=pdcel.oldNew.findV(es.w);
 			}
 			drawEdgeFace(pdcel.p,es);
 			System.out.println("edge "+es+" and faceIndx "+f.faceIndx);
@@ -408,9 +408,9 @@ public class DCELdebug {
 
 	public static void drawEdgeFace(PackDCEL pdcel,HalfEdge hfe) {
 		EdgeSimple es=new EdgeSimple(hfe.origin.vertIndx,hfe.twin.origin.vertIndx);
-		if (pdcel.newOld!=null) {
-			es.v=pdcel.newOld.findW(es.v);
-			es.w=pdcel.newOld.findW(es.w);
+		if (pdcel.oldNew!=null) {
+			es.v=pdcel.oldNew.findV(es.v);
+			es.w=pdcel.oldNew.findV(es.w);
 		}
 		drawEdgeFace(pdcel.p,es);
 	}

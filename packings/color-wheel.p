@@ -4,7 +4,7 @@ ALPHA/BETA/GAMMA:   257  226  2
 
 GEOMETRY:   euclidean
 
-FLOWERS: 
+BOUQUET: 
 
 1 3   226 225 224 256 
 2 5   3 257 33 34 35 3 

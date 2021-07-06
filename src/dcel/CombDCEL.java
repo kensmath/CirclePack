@@ -248,7 +248,7 @@ public class CombDCEL {
 	 * Vertex count typically changes, but I've tried to 
 	 * save indexing as much as possible. Face and edge indexing
 	 * are not longer reliable. Calling routine should call
-	 * 'd_FillInside' to complete processing. 'pdcel.newOld'
+	 * 'd_FillInside' to complete processing. 'pdcel.oldNew'
 	 * contains index conversion info. 
 	 * The 'prune' flag true means every bdry vertex must have an 
 	 * interior neighbor; this enters just one spot in the code.
@@ -636,6 +636,10 @@ public class CombDCEL {
 					nxtre.twinRed=crossRed;
 					crossRed.twinRed=nxtre;
 				}
+				if (nxtre.twinRed==null) { // must be bdry
+					nxtre.myEdge.twin.face=new Face(-1);
+					nxtre.myEdge.twin.face.edge=nxtre.myEdge;
+				}
 			}
 			doneV[nxtre.myEdge.origin.vertIndx]=true;
 			nxtre=nxtre.nextRed;
@@ -650,7 +654,7 @@ public class CombDCEL {
 			int v=rtrace.myEdge.origin.vertIndx;
 			// check if already converted
 			if (!(pdcel.vertices[v] instanceof PreRedVertex)) {
-				PreRedVertex redV=new PreRedVertex(v);
+				PreRedVertex redV=new PreRedVertex(v); // use parent's index
 				redV.halfedge=pdcel.vertices[v].halfedge;
 				redV.num=pdcel.vertices[v].getNum();
 				redV.bdryFlag=pdcel.vertices[v].bdryFlag;
@@ -737,7 +741,7 @@ public class CombDCEL {
 				if (sz>1) 
 					for (int j=1;j<sz;j++) { 
 						Vertex nv=redAdded.get(j);
-						nv.vertIndx=-nv.vertIndx;  // indicate with negative
+						nv.vertIndx=-nv.vertIndx;  // Note: minus parent's index
 						addedVertices.add(redAdded.get(j));
 					}
 			}
@@ -801,88 +805,85 @@ public class CombDCEL {
 		}
 		int totalCount=0; // total (original and added) 
 		// vertices picked up during processing.
-		for (int k=1;k<=vertcount;k++) {
+		for (int k=1;k<=vertcount;k++) { // original
 			if (vstat[k]>0)
 				totalCount++;
 		}
-		if (addedVertices!=null)
+		if (addedVertices!=null) // new
 			totalCount+=addedVertices.size();
 
 		// accounting: 
-		int[] vindices=new int[maxCount+1]; // hold final indices
-		boolean[] openslots=new boolean[maxCount+1]; // true=open slot
+		int[] vindices=new int[vertcount+1]; // new indices for originals
+		Vertex[] allSlots=new Vertex[maxCount+1]; // filled if non-zero
 
-		// make new array of vertices
-		ArrayList<Vertex> newVertices=new ArrayList<Vertex>(0);
-		// keep indices of existing vertices up to 'vertcount'
+		// store existing vertices that survived in their own slots
 		for (int v=1;v<=vertcount;v++) {
 			if (vstat[v]>0) {
-				newVertices.add(pdcel.vertices[v]);
+				allSlots[v]=pdcel.vertices[v];
 				vindices[v]=v;
 			}
 		}
-		// make remaining open slots
-		for (int j=1;j<=maxCount;j++) {
-			if (vindices[j]==0)
-				openslots[j]=true;
-		}
 		
-		// added vertices go into successive slots
-		int slotptr=0;
-		if (addedVertices!=null && addedVertices.size()>0) {
-			Iterator<Vertex> vit=addedVertices.iterator();
-			while (vit.hasNext() && slotptr<=totalCount) {
-				Vertex newV=vit.next();
-				while (!openslots[slotptr])
-					slotptr++;
-				if (slotptr>totalCount)
-					throw new CombException("outran valid slots, totalCount = "+
-							totalCount);
-				newV.vertIndx=slotptr;
-				newVertices.add(newV);
-				openslots[slotptr]=false;
-				vindices[slotptr]=-slotptr; // store as negative
+		// Put added vertices into successive emtpy slots
+		int slotptr=1;
+		Iterator<Vertex> avis=addedVertices.iterator();
+		while (avis.hasNext()) {
+			Vertex vert=avis.next();
+			while (allSlots[slotptr]!=null && slotptr<maxCount)
 				slotptr++;
-			}
+			allSlots[slotptr]=vert; 
 		}
-		while (slotptr<=totalCount && !openslots[slotptr])
-			slotptr++;
-		if (slotptr>(totalCount+1))
-			throw new CombException("overran total slots");
 		
-		// still-open slots: decrease later indices to keep contiguity
-		while (slotptr<maxCount) {
+		// 'allSlots' now has all vertices (original and new), but may have
+		// some empty slots (intermingled with slots of original vertices only).
+		// For contiguity, repeatedly look successive still-open slots: shift 
+		// following slots down to fill in. 'vindices' keeps track of new 
+		// indices for original verts.
+		slotptr=1;
+		while (slotptr<maxCount && allSlots[slotptr]!=null)
+			slotptr++; // slotptr should point to first open slot
+		
+		boolean shift=true;
+		while (slotptr<maxCount && shift) {
+			shift=false;
 			for (int j=slotptr+1;j<=maxCount;j++) {
-				if (vindices[j]!=0)
-					vindices[j]--;
+				Vertex svert=allSlots[j];
+				if (svert!=null) { // 'vertIndx's should be positive
+					vindices[svert.vertIndx]--;
+					shift=true;
+				}
+				allSlots[j-1]=allSlots[j];
 			}
-			slotptr++;
-			while (slotptr<maxCount && !openslots[slotptr])
-				slotptr++;
+			while (shift && slotptr<maxCount && allSlots[slotptr]!=null)
+				slotptr++; // next open slot
+		} 
+		// Note: at this point, all non-empty slots are contiguous, 
+		//   holes filled in as much as possible, empty slots filled in.
+
+		Vertex[] newVertices=new Vertex[totalCount+1];
+		for (int j=1;j<=totalCount;j++) { 
+			newVertices[j]=allSlots[j];
 		}
 		
-		// Now set the new indices
-		VertexMap newold=new VertexMap();
-		Iterator<Vertex> nit=newVertices.iterator();
-		Vertex[] newarray=new Vertex[totalCount+1];
-		while (nit.hasNext()) {
-			Vertex vert=nit.next();
-			int oldindx=vert.vertIndx;
-			int k=vindices[oldindx]; // negative for added vert
-			vert.vertIndx=Math.abs(k);
-			newarray[vert.vertIndx]=vert;
-			// record in newold only when different and old was original
-			if (k>0 && k!=oldindx)
-				newold.add(new EdgeSimple(k,oldindx));
+		// Now we must give the new indices in 'newVertices', but
+		//   want to take care of 'oldNew'.
+		// Do added vertices first before changing the orig vert indices
+		VertexMap oldnew=new VertexMap();
+		for (int j=1;j<=totalCount;j++) {
+			Vertex vert=newVertices[j];
+			int oldIndx = Math.abs(vert.vertIndx); // +/- original parent index
+			if (oldIndx!=j)
+				oldnew.add(new EdgeSimple(oldIndx,j));
+			vert.vertIndx=j;
 		}
 
 		pdcel.vertCount=totalCount;
-		pdcel.vertices=newarray;
-		pdcel.newOld=newold;
-		
-// debuggine		
+		pdcel.vertices=newVertices;
+		pdcel.oldNew=oldnew; // Note: old is original; original may still
+							 // exist, but may have new index.		
+// debugging: // stopblue=true;		
 		boolean stopblue=false; 
-		if (!stopblue) { // stopblue=true;
+		if (!stopblue) { 
 			blueCleanup(pdcel); // minimize blue faces
 		}
 
@@ -1014,7 +1015,7 @@ public class CombDCEL {
 		boolean debug=false; // debug=true;
 		// NOTE about debugging: Many debug routines depend on
 		//      original vertex indices, which might be found in
-		//      pdcel.newold.
+		//      pdcel.oldNew.
 		
 		pdcel.triData=null;  // filled when needed for repacking
 		
@@ -1112,8 +1113,8 @@ public class CombDCEL {
 							nxtv.add(oppV);
 						
 						if (debug) { // debug=true;
-							int oldv=pdcel.newOld.findW(he.origin.vertIndx);
-							int oldw=pdcel.newOld.findW(he.twin.origin.vertIndx);
+							int oldv=pdcel.oldNew.findV(he.origin.vertIndx);
+							int oldw=pdcel.oldNew.findV(he.twin.origin.vertIndx);
 							System.out.println("  edge = ("+oldv+","+oldw+")");
 //							DCELdebug.drawEdgeFace(pdcel,he);
 						}
@@ -1243,9 +1244,9 @@ public class CombDCEL {
 				int hfev=hfe.origin.vertIndx;
 				int hfew=hfe.twin.origin.vertIndx;
 				EdgeSimple es=new EdgeSimple(hfev,hfew);
-				if (pdcel.newOld!=null) {
-					es.v=pdcel.newOld.findW(es.v);
-					es.w=pdcel.newOld.findW(es.w);
+				if (pdcel.oldNew!=null) {
+					es.v=pdcel.oldNew.findV(es.v);
+					es.w=pdcel.oldNew.findV(es.w);
 				}
 				DCELdebug.drawEdgeFace(pdcel.p,es);
 				System.out.println("["+hfe.origin.vertIndx+","+hfe.twin.origin.vertIndx+
@@ -1389,7 +1390,7 @@ public class CombDCEL {
 		pdcel.intFaceCount=ftick;
 
 		debug=false;
-		// DCELdebug.printRedChain(pdcel.redChain,pdcel.newOld); 
+		// DCELdebug.printRedChain(pdcel.redChain,pdcel.oldNew); 
 		
 		pdcel.sideStarts=null;
 		pdcel.pairLink=null;
@@ -1527,9 +1528,9 @@ public class CombDCEL {
 			while (oeit.hasNext()) {
 				HalfEdge hee=oeit.next();
 				EdgeSimple es=new EdgeSimple(hee.origin.vertIndx,hee.twin.origin.vertIndx);
-				if (pdcel.newOld!=null) {
-					es.v=pdcel.newOld.findW(es.v);
-					es.w=pdcel.newOld.findW(es.w);
+				if (pdcel.oldNew!=null) {
+					es.v=pdcel.oldNew.findV(es.v);
+					es.w=pdcel.oldNew.findV(es.w);
 				}
 				DCELdebug.drawEdgeFace(pdcel.p,es);
 			}
@@ -1786,12 +1787,12 @@ public class CombDCEL {
 		
 		// gather new 'vertices' for 'pdcel':
 		Vertex[] newverts=new Vertex[vertcount+1];
-		pdcel.newOld=new VertexMap();
+		pdcel.oldNew=new VertexMap();
 		for (int v=1;v<=vertcount;v++) {
 			newverts[vindx[v]]=pdcel.vertices[v];
 			newverts[vindx[v]].vertIndx=vindx[v];
 			if (v!=vindx[v])
-				pdcel.newOld.add(new EdgeSimple(vindx[v],v));
+				pdcel.oldNew.add(new EdgeSimple(v,vindx[v]));
 		}
 		pdcel.vertices=newverts;
 		
@@ -1799,7 +1800,7 @@ public class CombDCEL {
 			throw new CombException("'d_reNumber' failed to get at least one vertex");
 
 		int rslt=hold_pd.attachDCEL(pdcel); // this reshuffles 'vData' entries
-		hold_pd.vertexMap=pdcel.newOld;
+		hold_pd.vertexMap=pdcel.oldNew;
 		return rslt;
 	}
 		
@@ -2279,13 +2280,14 @@ public class CombDCEL {
 	 * double across a segment of one bdry component. 
 	 * Return the index of the reflection of alpha.
 	 * Using clones, so origin should be unchanged.
-	 * 'newOld' can be used to find reflection of alpha.
+	 * 'oldNew' can be used to find reflection of alpha.
 	 * @param pdcel PackDCEL
 	 * @param blist NodeLink
 	 * @param segment boolean
 	 * @return PackDCEL
 	 */
-	public static PackDCEL d_double(PackDCEL pdc,NodeLink blist,boolean segment) {
+	public static PackDCEL d_double(PackDCEL pdc,NodeLink blist,
+			boolean segment) {
 	
 		try {
 			// clone two copies
@@ -2309,7 +2311,7 @@ public class CombDCEL {
 			Iterator<Integer> bis=blist.iterator();
 			while (bis.hasNext()) {
 				v=bis.next();
-				int dv=pdcel.newOld.findV(v+shift); // new index after first adjoin
+				int dv=pdcel.oldNew.findW(v+shift); // new index after first adjoin
 				if (dv==0) 
 					dv=v+shift;
 				indxlink.add(new EdgeSimple(v,dv)); 
@@ -2326,7 +2328,7 @@ public class CombDCEL {
 				Iterator<EdgeSimple> eis=indxlink.iterator();
 				while (eis.hasNext()) {
 					EdgeSimple es=eis.next();
-					es.w=pdcel.newOld.findV(es.w);
+					es.w=pdcel.oldNew.findW(es.w);
 					if (es.w==0) {
 						CirclePack.cpb.errMsg("failed to adjoin component for "+v);
 						return pdcel;
@@ -2575,9 +2577,9 @@ public class CombDCEL {
     		}
     	}
     	
-    	pdcel.newOld=null;
-    	if (pdc.newOld!=null && pdc.newOld.size()>0) 
-    		pdcel.newOld=pdc.newOld.clone();
+    	pdcel.oldNew=null;
+    	if (pdc.oldNew!=null && pdc.oldNew.size()>0) 
+    		pdcel.oldNew=pdc.oldNew.clone();
     	
     	if (pdc.alpha!=null && pdc.alpha.edgeIndx>0)
     		pdcel.alpha=pdcel.edges[pdc.alpha.edgeIndx];
@@ -2719,7 +2721,7 @@ public class CombDCEL {
 		//   about index wrapping around; finish if it's interior 
 		//   (i.e. all red edges are paired and pasted) 
 		if (prV.closed && CombDCEL.rotateMe(prV)==0) { 
-			Vertex newV = new Vertex(prV.vertIndx);
+			Vertex newV = new Vertex(prV.vertIndx); // this is parent's index
 			newV.redFlag=true;
 			newV.bdryFlag=0;
 			newV.halfedge=prV.redSpoke[0].myEdge;
@@ -3029,8 +3031,8 @@ public class CombDCEL {
 	   * 'pdc1'. This re-indexes 'vertices' and forms
 	   * new 'vertices'. In processing, orphaned 
 	   * vertices are indicated by 'halfedge'=null. 
-	   * Build 'newOld' to connect new and old vertex 
-	   * indices (make entry only if different. 
+	   * Build 'oldNew' to connect old and new vertex 
+	   * indices (make entry only if different). 
 	   * Note that if pdc2!=pdc1, then no pdc1 
 	   * vertices are orphaned, so pdc2 vertices 
 	   * numbering have been adjusted to start with 
@@ -3041,7 +3043,7 @@ public class CombDCEL {
 	   * @return same PackDCEL
 	   */
 	  public static PackDCEL wrapAdjoin(PackDCEL pdc1,PackDCEL pdc2) {
-		  pdc1.newOld=new VertexMap();
+		  pdc1.oldNew=new VertexMap();
 		  ArrayList<Vertex> v_array=new ArrayList<Vertex>();
 		  int vtick=0;
 		  
@@ -3053,7 +3055,7 @@ public class CombDCEL {
 				  v_array.add(vert);
 				  // if pdc2!=pdc1, should have vtick=v=vert.vutil
 				  if (vtick!=vert.vutil)
-					  pdc1.newOld.add(new EdgeSimple(vtick,vert.vutil));
+					  pdc1.oldNew.add(new EdgeSimple(vert.vutil,vtick));
 //System.out.println(" add "+new EdgeSimple(vtick,vert.vutil));					  
 			  }
 		  }
@@ -3061,17 +3063,18 @@ public class CombDCEL {
 		  // new indices for any orphaned pdc1 verts
 		  for (int v=1;v<=pdc1.vertCount;v++) {
 			  Vertex vert=pdc1.vertices[v];
-			  if (vert.halfedge==null) { // 'vutil', replacement index
-				  int new_indx=pdc1.newOld.findV(vert.vutil);
+			  if (vert.halfedge==null) { 
+				  // 'vutil' is orig new index, but may have changed
+				  int new_indx=pdc1.oldNew.findW(vert.vutil); 
 				  if (new_indx==0)
 					  new_indx=vert.vutil;
 				  if (new_indx!=vert.vertIndx)
-					  pdc1.newOld.add(new EdgeSimple(new_indx,vert.vertIndx));
+					  pdc1.oldNew.add(new EdgeSimple(vert.vertIndx,new_indx));
 //System.out.println(" add for orphaned "+new EdgeSimple(new_indx,vert.vertIndx));
 			  }
 		  }
 
-		  // not self-adjoin? index surviving pdc2 verts
+		  // not self-adjoin? index the surviving pdc2 verts
 		  if (pdc2!=pdc1) {
 			  vtick=pdc1.vertCount; // start here
 			  for (int v=1;v<=pdc2.vertCount;v++) {
@@ -3079,19 +3082,19 @@ public class CombDCEL {
 				  if (vert.halfedge!=null) {
 					  ++vtick;
 					  if (vtick!=vert.vutil)
-						  pdc1.newOld.add(new EdgeSimple(vtick,vert.vutil));
+						  pdc1.oldNew.add(new EdgeSimple(vert.vutil,vtick));
 					  vert.vutil=vtick;
 					  v_array.add(vert);
 				  }
 			  } // DCELdebug.printRedChain(pdc2.redChain);
 			  
-			  // newOld for orphaned verts: 
-			  //  NOTE: "old" is the original pdc2 index shifted by pdc1.vertCount
+			  // oldNew for orphaned verts: 
+			  //  NOTE: "old" is the original pdc2 index + pdc1.vertCount
 			  for (int v=1;v<=pdc2.vertCount;v++) {
 				  Vertex vert=pdc2.vertices[v];
 				  if (vert.halfedge==null) { 
 					  int newindx=vert.vutil; // pdc1 vert this was identified with
-					  pdc1.newOld.add(new EdgeSimple(newindx,vert.vertIndx));
+					  pdc1.oldNew.add(new EdgeSimple(vert.vertIndx,newindx));
 				  }
 			  }
 		  }
@@ -3847,16 +3850,17 @@ public class CombDCEL {
 	 * Check for an "axis-extended" 'HalfLink' from v to w 
 	 * starting with spoke 'arrow' at v and with length no
 	 * more than 'lgth'. Exclude paths through bdry verts 
-	 * (aside for first/last). "axis-extended" means 
-	 * vertices are even degree and edges extend through
-	 * axis. Return null on failure.
-	 * Note: could have start index v of 'arrow' equal 
-	 * to w, but we reach w successfully in length 'lgth'
-	 * only if we come in on axis shared with outgoing 'arrow'.
+	 * (aside for first/last). "axis-extended" means vertices 
+	 * are even degree and edges extend through axis (the
+	 * same number of edges on each side of the path). 
+	 * Return null on failure.
+	 * Note: could have 'w' equal start index v of 'arrow', 
+	 * but we reach 'w' successfully by length 'lgth' only 
+	 * if we come in on axis shared with outgoing 'arrow'.
 	 * @param arrow HalfEdge
 	 * @param w int
 	 * @param lgth int
-	 * @param hexflag boolean, true; int verts along path must be hex
+	 * @param hexflag boolean, true; only deg 6 verts along path
 	 * @return HalfLink, null on failure
 	*/
 	public static HalfLink axisExtended(HalfEdge arrow,int w,
@@ -3873,7 +3877,7 @@ public class CombDCEL {
 		int tick=1;
 		while (tick<lgth) {
 			nxtarrow=Vertex.oppSpoke(nxtarrow.twin,hexflag);
-			if (nxtarrow==null) // e.g., no axis
+			if (nxtarrow==null) // e.g., no "axis"
 				return null;
 			Vertex stv=nxtarrow.twin.origin;
 			
@@ -3915,7 +3919,7 @@ public class CombDCEL {
 	/**
 	 * Find shortest axis_extended HalfLink from 'basevert' ending
 	 * at 'w' through interior vertices (except for first/last)
-	 * and no longer thatn 'lgth'. If 'hexflag', then intermediate
+	 * and no longer than 'lgth'. If 'hexflag', then intermediate
 	 * verts must be hex.
 	 * Note: 'basevert' may have index v,
 	 * @param basevert Vertex
@@ -3951,6 +3955,59 @@ public class CombDCEL {
 		}
 		return bestlink;
 	}
+	
+	/**
+	 * Convert 'NodeLink' list of vertices into a 'HalfLink' 
+	 * chain of connected edges. (If 'hexFlag' is true, 
+	 * then "hex-extended" edges, meaning string of verts 
+	 * between v and w are interior and degree 6. First
+	 * and last vertices need not be of degree 6.)
+	 * @param pdcel PackDCEL
+	 * @param vertlist NodeLink
+	 * @param hexFlag boolean, true, then want "hex-extended" edges
+	 * @return
+	 */
+	public static HalfLink verts2Edges(PackDCEL pdcel,NodeLink vertlist,
+			boolean hexFlag) {
+		HalfLink ans=new HalfLink(pdcel.p);
+		if (vertlist==null || vertlist.size()==0) 
+			return ans;
+		Iterator<Integer> vlist=vertlist.iterator();
+		int endv=(Integer)vlist.next();
+		while (vlist.hasNext()) {
+			int nextv=(Integer)vlist.next();
+			
+			// eat any duplicates of 'endv' if 'hexFlag' false
+			while (vlist.hasNext() && (!hexFlag && nextv==endv)) {
+				nextv=(Integer)vlist.next();
+			}
+			
+			HalfEdge petal=pdcel.findHalfEdge(endv,nextv);
+			if (hexFlag) { // look for/use axis-extended edges
+				if (petal!=null)
+					ans.add(petal);
+				else {
+					Vertex basevert=pdcel.vertices[endv];
+					HalfLink hlink=
+						CombDCEL.shootExtended(basevert,nextv,32,hexFlag);
+					if (hlink!=null && hlink.size()>0) 
+						ans.abutMore(hlink);
+				}
+			}
+			else if (petal!=null) {
+				ans.add(petal);
+			}
+
+			// TODO: don't default to geodesic; and don't yet have DCEL version
+//			else { 
+//				ans.abutMore(EdgeLink.getCombGeo(p,
+//					new NodeLink(p,endv),new NodeLink(p,nextv),null));
+//			}
+				
+			endv=nextv;
+		} // end of while
+		return ans;
+	}
 	  
 	/**
 	 * Slit open along given edges: edges must form a
@@ -3959,7 +4016,7 @@ public class CombDCEL {
 	 * use 'cookie' method. 
 	 * User can find new bdry segment, namely oriented
 	 * bdry from returned {firstEnd,lastEnd}.
-	 * 'pdcel.newOld' contains {new,old} index pairs.
+	 * 'pdcel.oldNew' contains {old,new} index pairs.
 	 * Errors may damage pdcel.
 	 * @param pdcel PackDCEL
 	 * @param hlink HalfLink
@@ -3969,9 +4026,17 @@ public class CombDCEL {
 		  if (hlink==null || hlink.size()==0 || pdcel.p==null)
 			  return null;
 		  
-		  // check linkage and conditions
+		  // check conditions and linkage
+		  HalfEdge he;
+		  if (hlink.size()==1) {
+			  he=hlink.get(0);
+			  if (he.origin.bdryFlag>0 && he.twin.origin.bdryFlag>0) {
+				  throw new CombException("usage: 'slit' cannot be done "+
+						  "for a single edge with both ends on the bdry.");
+			  }
+		  }
 		  Iterator<HalfEdge> his=hlink.iterator();
-		  HalfEdge he=his.next();
+		  he=his.next();
 		  NodeLink verts=new NodeLink();
 		  Vertex startV=he.origin;
 		  verts.add(startV.vertIndx);
@@ -3985,7 +4050,7 @@ public class CombDCEL {
 						  "vertices must be interior");
 			  if (he.origin!=endV) 
 				  throw new DataException("usage: slit; HalfLink must "+
-						  " contiguous chain");
+						  " form a contiguous chain");
 			  endV=he.next.origin;
 		  }
 		  verts.add(endV.vertIndx);
@@ -3997,30 +4062,31 @@ public class CombDCEL {
 		  for (int v=1;v<=pdcel.vertCount;v++)
 			  pdcel.vertices[v].vutil=v;
 
-		  // move 'alpha' if necessary
-		  pdcel.setAlpha(0,verts, false);
-
-		  // proceed via "cookie" approach?
-		  startV=hlink.get(0).origin;
-		  firstEnd=startV.vertIndx;
-		  lastEnd=hlink.getLast().twin.origin.vertIndx;
-		  if (startV.bdryFlag==0 && endV.bdryFlag==0) {
-			  redchain_by_edge(pdcel,hlink,pdcel.alpha,false);
-			  VertexMap vmap=pdcel.reapVUtil();
-			  d_FillInside(pdcel);
-			  pdcel.newOld=vmap;
-			  int[] ans=new int[2];
-			  ans[0]=firstEnd;
-			  ans[1]=lastEnd;
-			  return ans;
-		  }
-		  
 		  // if start is interior, end bdry, then reverse chain
 		  if (startV.bdryFlag==0 && endV.bdryFlag!=0) {
 			  hlink=HalfLink.reverseLink(hlink);
 			  hlink=HalfLink.reverseElements(hlink);
 		  }
 		  
+		  // move 'alpha' if necessary
+//		  pdcel.setAlpha(0,verts, false); 
+//		               DCELdebug.printRedChain(pdcel.redChain);
+
+		  // proceed via "cookie" approach?
+		  startV=hlink.get(0).origin;
+		  firstEnd=startV.vertIndx;
+		  if (startV.bdryFlag>0)
+			  firstEnd=pdcel.vertCount+1; // this will be the clone's index
+		  lastEnd=hlink.getLast().twin.origin.vertIndx;
+//		  if (startV.bdryFlag==0 && endV.bdryFlag==0) {
+			  redchain_by_edge(pdcel,hlink,pdcel.alpha,false);
+			  d_FillInside(pdcel);
+			  int[] ans=new int[2];
+			  ans[0]=firstEnd;
+			  ans[1]=lastEnd;
+			  return ans;
+//		  }
+/*		  
 		  // open up edge-by-edge
 		  VertexMap vmap=new VertexMap();
 		  HalfEdge lastEdge=hlink.getLast(); // to know when to stop
@@ -4033,14 +4099,9 @@ public class CombDCEL {
 			  int v=he.origin.vertIndx;
 			  int w=he.next.origin.vertIndx;
 			  if (he.next.origin.bdryFlag>0 && he!=lastEdge) {
-				  if (count==0)
-					  throw new DataException("slit: don't allow single edge "+
-						  "with both ends in bdry");
-				  else {
-					  CirclePack.cpb.errMsg("'slit' finishing early "+
-							  "stopped due to reaching bdry");
-					  done=true;
-				  }
+				  CirclePack.cpb.errMsg("'slit' finishing early "+
+						  "stopped due to reaching bdry");
+				  done=true; // stop after processing this edge
 			  }
 			  
 			  // do the next slit
@@ -4053,6 +4114,7 @@ public class CombDCEL {
 			  
 			  // there's a clone of 'v'
 			  pdcel.vertices[VW[0]].vutil=v;
+// System.out.println("VW[0]="+VW[0]+" and v="+v);			  
 			  vmap.add(new EdgeSimple(VW[0],v));
 			  pdcel.p.vData[VW[0]].center=new Complex(pdcel.p.vData[v].center);
 			  pdcel.p.vData[VW[0]].rad=pdcel.p.vData[v].rad;
@@ -4061,6 +4123,7 @@ public class CombDCEL {
 			  
 			  // there may be a clone of 'w', but only for 'lastEdge'
 			  if (he==lastEdge && VW[1]!=0) {
+				  pdcel.redChain=null; // must have reached bdry
 				  pdcel.vertices[VW[1]].vutil=w;
 				  vmap.add(new EdgeSimple(VW[1],w));
 				  pdcel.p.vData[VW[1]].center=new Complex(pdcel.p.vData[w].center);
@@ -4070,20 +4133,23 @@ public class CombDCEL {
 				  
 			  }
 			  
-			  // if 'w' is not cloned, need to set its red center/rad
-			  else {
+			  // if 'w' is not cloned, need to set approp center/rad
+			  else if (VW[1]==0) {
 				  RedHEdge w_red=pdcel.vertices[w].halfedge.myRedEdge;
 				  w_red.center=new Complex(pdcel.p.vData[w].center);
 				  w_red.rad=pdcel.p.vData[w].rad;
 			  }
 		  }
 		  
-		  // wrap up the process
+		  // wrap up combinatorics
 		  pdcel.fixDCEL_raw(pdcel.p);
+
+		  // return ends of new bdry segment
 		  int[] ans=new int[2];
 		  ans[0]=firstEnd; // should be index of first new cloned vert
 		  ans[1]=lastEnd;
 		  return ans;
+*/
 	  }
 	  
 } // end of 'CombDCEL'

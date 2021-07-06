@@ -1546,9 +1546,14 @@ public class NodeLink extends LinkedList<Integer> {
 	 
 	 /**
 	  * Return fresh NodeLink with entries translated from 'nlink'
-	  * using 'vmap'. So, entry v in 'nlink' and entry <v,V> in
-	  * 'vmap' leads to new entry V. If there's no translation
-	  * for a given v, add it to output link.
+	  * using 'vmap'.
+	  *  
+	  * CAREFUL: convention is that 'vmap' is {new,old} for
+	  * translation, so old entry v in 'nlink' and entry 
+	  * <v,V> in 'vmap' leads to new entry V. 
+	  *  
+	  * If there's no translation for a given v, add 'v' itself
+	  * to output link.
 	  * @param nlink NodeLink
 	  * @param vmap VertexMap (giving pairs <v,V> for translation)
 	  * @return NodeLink, new, null if nlink is null.

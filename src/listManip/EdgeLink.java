@@ -261,7 +261,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	 * @return int count
 	 */
 	public int addEdgeLinks(Vector<String> items,boolean xtd) {
-		if (packData==null) return -1;
+		if (packData==null) 
+			return -1;
 		int count=0;
 		int nodeCount=packData.nodeCount;
 		
@@ -1324,6 +1325,11 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	/**
 	 * Given 'VertexMap' with <old, new>, translate 'elink' 
 	 * from old to the new indices.
+
+	 * CAREFUL: convention is that 'vmap' is {new,old} for
+	 * translation, so old entry v in 'nlink' and entry 
+	 * <v,V> in 'vmap' leads to new entry V. 
+	 *  
 	 * @param oldnew VertexMap
 	 * @return new EdgeLink (with null PackData)
 	 */
@@ -1494,10 +1500,11 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	}
 	
 	/**
-	 * Given a vertex list, convert it (to the extent possible) to an edge list.
-	 * If 'extended' flag true, do "hex-extended" edges, which pass through
-	 * interior vertices so same number of edges are on each side. See 
-	 * 'axis_extend' call. Else, convert to edge geodesic.
+	 * Given a vertex list, convert it (to the extent possible) to 
+	 * an edge list. If 'extended' flag true, do "hex-extended" 
+	 * edges, which pass through interior vertices so same number 
+	 * of edges are on each side. See 'axis_extend' call. 
+	 * Else, convert to edge geodesic.
 	 * @param p PackData
 	 * @param vlist NodeLink
 	 * @param hexflag boolean, true, hex extend
