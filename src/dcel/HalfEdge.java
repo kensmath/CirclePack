@@ -223,6 +223,10 @@ public class HalfEdge {
 		return myRedEdge;
 	}
 	
+	/**
+	 * set the 'myRedEdge' pointer 
+	 * @param redE
+	 */
 	public void setRedEdge(RedHEdge redE) {
 		myRedEdge=redE;
 	}

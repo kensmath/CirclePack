@@ -30,6 +30,53 @@ public class DCELdebug {
 	static File tmpdir=new File(System.getProperty("java.io.tmpdir"));
 	static int rankStamp=1; // progressive number to distinguish file instances
 	
+	public static void listRedThings(PackDCEL pdcel) {
+		int safety=1000;
+		
+		System.out.println("'listRedThings: redChain is "+pdcel.redChain+"; red edges are: \n");
+		
+		// find all 'HalfEdges' with 'myRedEdge' non-null
+		int count=0;
+		StringBuilder strbld=new StringBuilder("edges with 'myRedEdge':  ");
+		for (int e=1;e<=pdcel.edgeCount;e++) {
+			HalfEdge he=pdcel.edges[e];
+			if (he.myRedEdge!=null) {
+				strbld.append("("+he+")  ");
+				count++;
+				safety--;
+				if ((count%8)==0) {
+					System.out.println(strbld.toString());
+					strbld=new StringBuilder();
+				}
+			}
+			if (safety<=0) {
+				System.out.println("Safety'ed out on edges.");
+				return;
+			}
+		}
+		System.out.println(strbld.toString()+"\ndone with edges.");
+				
+		// find all vertices with 'redFlag'
+		strbld=new StringBuilder("red vertices are:  ");
+		for (int v=1;v<=pdcel.vertCount;v++) {
+			Vertex vert=pdcel.vertices[v];
+			if (vert.redFlag) {
+				strbld.append(" "+vert+",  ");
+				count++;
+				safety--;
+				if ((count%10)==0) {
+					System.out.println(strbld.toString());
+					strbld=new StringBuilder();
+				}
+			}
+			if (safety<=0) {
+				System.out.println(strbld.toString()+"\nSafety'ed out on vertices.");
+				return;
+			}
+		}
+		System.out.println(strbld.toString()+"\ndone with edges.");
+	}
+	
 	/**
 	 * check if all array indexes agree with their recorded "*Indx". 
 	 * @param pdcel PackDCEL
@@ -193,16 +240,16 @@ public class DCELdebug {
 	}
 	
 	
-	public static int redConsistency(PackDCEL pdcel) {
+	public static int redConsistency(RedHEdge redchain) {
 		int count=0;
-		RedHEdge rhe=pdcel.redChain;
-		if (rhe==null) {
-			System.err.println(" redConsistency failed: no 'redChain'");
+		if (redchain==null) {
+			System.err.println(" redConsistency failed: no 'redchain' given");
 			return 0;
 		}
 		
+		RedHEdge rhe=redchain;
 		System.out.println("redConsistency check: first edge "+rhe.myEdge);
-		int safety=3*pdcel.vertCount;
+		int safety=3000;
 		do {
 			safety--;
 			if (rhe.twinRed!=null) {
@@ -245,7 +292,7 @@ public class DCELdebug {
 
 			}
 			rhe=rhe.nextRed;
-		} while (rhe!=pdcel.redChain && safety>0);
+		} while (rhe!=redchain && safety>0);
 		if (safety==0)
 			System.err.println("Exited due to safety overrun.");
 		System.out.println("Done: error count = "+count);
@@ -568,6 +615,7 @@ public class DCELdebug {
 		if (pdcel.pairLink!=null && pdcel.pairLink.size()>0) {
 			strbld.append("Side pairs:\n");
 			Iterator<D_SideData> sit=pdcel.pairLink.iterator();
+			sit.next(); // first is null
 			while (sit.hasNext()) {
 				D_SideData sdata=sit.next();
 				if (sdata==null)

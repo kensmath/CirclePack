@@ -868,7 +868,7 @@ public class ChapBranchPt extends GenBranchPt {
 			modifyPack.set_aim_default();
 			modifyPack.fillcurves();
 			modifyPack.repack_call(100);
-			modifyPack.comp_pack_centers(false,false,opt,crit);
+			modifyPack.CompPackLayout(); // comp_pack_centers(false,false,opt,crit);
 		} catch(Exception ex) {
 			throw new CombException("layout: "+ex.toString());
 		}

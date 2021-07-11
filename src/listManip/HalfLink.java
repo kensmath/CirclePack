@@ -490,7 +490,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			{
 			  int numSides=-1;
 			  String itstr=null;
-			  if (packData.packDCEL.pairLink==null || (numSides=packData.packDCEL.pairLink.size())==0) {
+			  if (packData.packDCEL.pairLink==null || 
+					  (numSides=packData.packDCEL.pairLink.size())==0) {
 				  while (its.hasNext()) itstr=(String)its.next(); // toss rest of items
 				  break;
 			  }
@@ -513,7 +514,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 
 			  // now to traverse the 'RedEdge's in chosen segments
 			  Iterator<D_SideData> sp=packData.packDCEL.pairLink.iterator();
-			  D_SideData ep=null;
+			  D_SideData ep=sp.next(); // first is null
 			  RedHEdge rlst=null;
 			  int tick=0;
 			  while (sp.hasNext()) {
@@ -777,7 +778,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	}
 	
 	/**
-	 * Abut an 'EdgeLink' to the end of this one.
+	 * Abut another 'HalfLink' to the end of this one.
 	 * @param moreEL
 	 * @return count of new edges (some may be improper, some redundant)
 	 */
@@ -789,7 +790,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		HalfEdge edge=null;
 		while (mit.hasNext()) {
 			edge=mit.next();
-			add(new HalfEdge(edge));
+			add(edge);
 			ticks++;
 		}
 		return ticks;
@@ -857,7 +858,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			i++;
 		}
 		i=0;
-		while (i<=indx) {
+		while (i<indx) {
 			nlink.add(link.get(i));
 			i++;
 		}

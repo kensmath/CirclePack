@@ -121,7 +121,7 @@ public class CommonMath {
 	}
 	
 	/**
-	 * Compute third circle give two centers, radii, and overlaps
+	 * Compute third circle given two centers, radii, and overlaps
 	 * @param z1 Complex
 	 * @param z2 Complex
 	 * @param r1 double

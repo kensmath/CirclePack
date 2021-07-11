@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.util.Iterator;
 
 import complex.Complex;
+import listManip.HalfLink;
 import math.Mobius;
 import util.ColorUtil;
 
@@ -138,7 +139,7 @@ public class D_SideData {
     
     /**
      * Search 'D_PairLink' to find the 'D_SideData' for the 
-     * "side" of the complex which contains 'RedList' redface;
+     * "side" of the complex which contains 'RedHEdge' redge
      * return null on failure. 
      * @param pairLink PairLink
      * @param redface RedList (or may be 'RedEdge')
@@ -166,6 +167,24 @@ public class D_SideData {
      */
     public int sideFirstVert() {
     	return startEdge.myEdge.origin.vertIndx;
+    }
+    
+    /**
+     * Return 'HalfLink' with the cclw 'myEdge's 
+     * from 'this' side.
+     * @return HalfLink, null on failure
+     */
+    public HalfLink sideLink() {
+    	if (startEdge==null || endEdge==null)
+    		return null;
+    	HalfLink hlink=new HalfLink();
+    	RedHEdge rtrace=startEdge;
+    	do {
+    		hlink.add(rtrace.myEdge);
+    		rtrace=rtrace.nextRed;
+    	} while(rtrace!=endEdge);
+    	hlink.add(rtrace.myEdge);
+    	return hlink;
     }
 
 	/**

@@ -49,6 +49,7 @@ import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
+import input.CommandStrParser;
 import komplex.AmbiguousZ;
 import komplex.CookieMonster;
 import komplex.DualGraph;
@@ -2020,12 +2021,7 @@ public class PackData{
         	facedraworder(false);
         if ((flags & 0010)!= 0 && (flags & 0020)==0) { // new radii, no centers
         	try {
-
-        		if (packDCEL!=null)
-        			packDCEL.dcelCompCenters();
-        		
-        		// traditional
-        		comp_pack_centers(false,false,2,OKERR);
+        		CompPackLayout();
         	} catch(Exception ex) {
         		CirclePack.cpb.errMsg("'readpack': exception in drawing order");
         	}
@@ -2649,25 +2645,15 @@ public class PackData{
 	}
 	
 	/**
-	 * get number of non-ideal faces at 'v'; should work with raw
-	 * structure.
+	 * get number of non-ideal faces at 'v'; this is usual
+	 * meaning of 'num' for traditional vertices.
 	 * @param v int
-	 * @return int (usual meaning of 'num')
+	 * @return int
 	 */
 	public int countFaces(int v) {
-		if (packDCEL==null)
-			return kData[v].num;
-		Vertex vert=packDCEL.vertices[v];
-		HalfEdge he=vert.halfedge;
-		int count=0;
-		if (he.face!=null && he.twin.face.faceIndx<0)
-			count--;
-		do {
-			he=he.prev.twin;
-			count++;
-		} while (he!=vert.halfedge && 
-				(he.twin.face==null || he.twin.face.faceIndx>=0));
-		return count;
+		if (packDCEL!=null)
+			return packDCEL.countFaces(packDCEL.vertices[v]);
+		return kData[v].num;
 	}
 	
 	/**
@@ -4359,14 +4345,14 @@ public class PackData{
 	}
 	
 	/** 
+	 * TODO: works for DCEL, but see 'Face.faceNghb' for
+	 * new version. Need to see how the index return value 
+	 * is used to see if there are other adjustment as well.
+	 * 
 	 * Check if faces f2 and f1 share an edge e. Return index 
 	 * of begin vertex of e (relative to f1) in 'vert' data 
 	 * of face f1 or return -1 if face f1 doesn't share edge 
 	 * e with face f2.
-	 * 
-	 * TODO: need better DCEL version, but also need to see 
-	 * how the index return value is used; those calls may
-	 * need adjustment as well.
 	 * 
 	 * @param f2 int
 	 * @param f1 int, (NOTE the order of arguments!)
@@ -6146,6 +6132,26 @@ public class PackData{
 			setPlotFlag(i,1);
 	}
 	
+	
+	/**
+	 * TODO: convenience for DCEL or traditional
+	 * @return int
+	 */
+	public int CompPackLayout() {
+		int ans=0;
+		if (packDCEL!=null) {
+			return packDCEL.dcelCompCenters();
+		}
+		
+		// traditional
+		try {
+			return comp_pack_centers(false,false,2,
+					CommandStrParser.LAYOUT_THRESHOLD);
+		} catch(Exception ex) {
+			throw new CombException("layout error (traditional). "+ex.getMessage());
+		}
+	}
+	
 	/** 
 	 * Compute centers of face: 'indx' circle at origin, indx+1
 	 * in standard orientation (namely, in eucl, on positive x-axis),
@@ -6717,18 +6723,20 @@ public class PackData{
 	/**
 	 * Update the mobius transformations associated with side pairings in
 	 * multiply connected cases. 
-	 * TODO: need error-checking; particularly arithmatic errors 
+	 * TODO: need error-checking; particularly arithmetic errors 
 	 * in routines of Mobius.java.
 	 * @return 0 if 'redChain' 'firstRedEdge' or 'sidePairs' is null
 	 */
 	public int update_pair_mob() throws RedListException, MobException {
 		if (packDCEL!=null) {
-			if (packDCEL.redChain==null || packDCEL.pairLink==null) {
-				Iterator<D_SideData> dsis=packDCEL.pairLink.iterator();
-				while (dsis.hasNext()) {
-					D_SideData dsdata=dsis.next();
-					dsdata.set_sp_Mobius();
-				}
+			if (packDCEL.redChain==null || packDCEL.pairLink==null) 
+				return 0;
+				
+			Iterator<D_SideData> dsis=packDCEL.pairLink.iterator();
+			dsis.next(); // first is null
+			while (dsis.hasNext()) {
+				D_SideData dsdata=dsis.next();
+				dsdata.set_sp_Mobius();
 			}
 			return 1;
 		}
@@ -16181,8 +16189,9 @@ public class PackData{
 	 } 
 	   
 	 /**
-	  * If hyperbolic, apply a Mobius trans of disc putting ctr at origin. If
-	  * euclidean, translate. If sphere, rigid Mobius moves ctr to north pole.
+	  * If hyperbolic, apply a Mobius trans of disc putting ctr 
+	  * at origin. If euclidean, translate. If sphere, rigid 
+	  * Mobius moves ctr to north pole.
 	  */
 	public int center_point(Complex ctr) {
 		Complex z1, z2;
@@ -16285,6 +16294,8 @@ public class PackData{
 	}
 	
 	/**
+	 * traditional. see 'PackDCEL.layoutFaceList'
+	 * 
 	 * Layout faces along a given facelist, recomputing as you go
 	 * @param facelist
 	 * @param last_face, if non-zero, try to place first face of
@@ -19812,13 +19823,15 @@ public class PackData{
 		if (packDCEL!=null) {
 			if (packDCEL.pairLink!=null || packDCEL.pairLink.countPairs()==0)
 				return null;
-			for (int j=0;j<packDCEL.pairLink.size()-1;j++) {
+			for (int j=1;j<packDCEL.pairLink.size();j++) {
 				D_SideData sidd=packDCEL.pairLink.get(j);
 				if (sidd.mateIndex>sidd.spIndex)
 					indices.add(sidd.spIndex);
 			}
 			return indices;
 		}
+		
+		// traditional
 		else {
 			if (sidePairs!=null || sidePairs.countPairs()==0)
 				return null;
@@ -19833,7 +19846,7 @@ public class PackData{
 
 	/**
 	 * Return the Mobius with the given side-pair index
-	 * @param e int
+	 * @param e int, for DCEL, starts with 1
 	 * @return Mobius
 	 */
 	public Mobius getSideMob(int e) {

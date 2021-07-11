@@ -568,7 +568,7 @@ else first vert's color. (deprecated: '-v')</opt>
 	new packing must have connected interior and each of its
 	boundary vertices must have an interior neighbor.
 	
-	The 'vertexMap' of the new packing contains pairs {n,m},
+	The 'vertexMap' of the new packing contains pairs {m,n},
 	where n is the new index for the circle having original
 	index m.
 
@@ -2132,6 +2132,57 @@ these packings and the corresponding object is displayed in both.
 </description>
 </command>
 
+<command cmd="newRed" flags="[-t, {v..}]">
+<description>
+	Every complex (except those triangulating a sphere) will 
+	have a "red chain", which is a linked list of edges
+	surrounding a fundamental domain, including bdry edges.
+	For a simply connected complex, it is simply the oriented
+	list of boundary edges, but it is essential for multiply
+	connected situations. It is generated automatically.
+	This command gives two options for redoing the red chain.
+	The -t option is only for topogical tori and recomputes
+	the red chain so it has only two side-pairing (rather
+	than the generic three). The second option is to provide
+	a vertex list defining the red chain. This is difficult:
+	the edges in the chain must be contiguous, closed, and
+	contain all bdry edges. It can have unanticipated effects,
+	such as cutting out some vertices. One use is to make
+	small modifications to an existing red chain (display 
+	this using the '-R' option). On failure, this command
+	should not hurt the packing.
+</description>
+<options>
+<opt flag="-t"> For torus only, creates domain with only 
+two side-pairings</opt>
+<opt flag="{v...}"> List of vertices defining a new red chain</opt>
+</options>
+<seealso>
+<see> set_vlist -R</see>
+</seealso>
+</command> 
+
+
+<command cmd="norm_scale" flags="[options]">
+<description>
+	Normalize a packing (euclidean only) according to various options.
+</description>
+<options>
+<opt flag="-a x"> scale so total euclidean area is x</opt>
+<opt flag="-c v r"> scale so vert v gets radius r</opt>
+<opt flag="-e q v w">  scale so vert v has radius of vert w in pack q</opt>
+<opt flag="-u v"> scale so eucl center of vert v is on unit circle </opt>
+<opt flag="-U"> scale (down only) to fit eucl packing into the unit disc </opt>
+<opt flag="-h v w"> rotate so vector v to w is horizontal (left to right)</opt>
+<opt flag="-i v"> scale/rotate to put vertex v at z=i (asuming v is
+		not centered at the origin)</opt>
+<opt flag="-t v1 v2 z1 z2"> linear transformation putting vi at zi</opt>		
+</options>
+<seealso>
+<see>rotate</see>
+</seealso>
+</command>
+
 <command cmd="NSpole" flags="[{N S {E} [t]} (or -a N {E} [t])]">
 <description>Spherical geometry only: for normalization. With no
 	arguments, default to "centroid" normalization: apply 
@@ -2156,27 +2207,6 @@ these packings and the corresponding object is displayed in both.
 	<opt flag="-a N"> Use N as north and find the antipodal point 
 	as south</opt>
 </options>
-</command>
-
-
-<command cmd="norm_scale" flags="[options]">
-<description>
-	Normalize a packing (euclidean only) according to various options.
-</description>
-<options>
-<opt flag="-a x"> scale so total euclidean area is x</opt>
-<opt flag="-c v r"> scale so vert v gets radius r</opt>
-<opt flag="-e q v w">  scale so vert v has radius of vert w in pack q</opt>
-<opt flag="-u v"> scale so eucl center of vert v is on unit circle </opt>
-<opt flag="-U"> scale (down only) to fit eucl packing into the unit disc </opt>
-<opt flag="-h v w"> rotate so vector v to w is horizontal (left to right)</opt>
-<opt flag="-i v"> scale/rotate to put vertex v at z=i (asuming v is
-		not centered at the origin)</opt>
-<opt flag="-t v1 v2 z1 z2"> linear transformation putting vi at zi</opt>		
-</options>
-<seealso>
-<see>rotate</see>
-</seealso>
 </command>
 
 <command cmd="open" flags="[window list]">

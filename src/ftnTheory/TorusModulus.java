@@ -38,6 +38,7 @@ public class TorusModulus {
 	  if (p.packDCEL!=null) {
 		  Iterator<D_SideData> pdpl=p.packDCEL.pairLink.iterator();
 		  D_SideData epair=null;
+		  epair=pdpl.next(); // first slot is empty
 		  j=1;
 		  while(pdpl.hasNext()) {
 			  epair=pdpl.next();
@@ -106,7 +107,7 @@ public class TorusModulus {
 	/** Given a complex 'teigh' Teichmuller parameter in the
 	 * upper half plane, return its representative point 'tau'
 	 * in moduli space (the set z, Im(z)>0 so that Re(z) in 
-	 * (-1/2,1/2) and |z| \ge 1.
+	 * (-1/2,1/2) and |z| \ge 1, z.y>0
 	 * Use modular group actions PSL2Z.
 	 * @param teich; should have Im(teich)>0
 	 * @return tau, null on error

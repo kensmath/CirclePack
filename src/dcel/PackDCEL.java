@@ -22,6 +22,7 @@ import geometry.SphericalMath;
 import input.CPFileManager;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
+import listManip.FaceLink;
 import listManip.GraphLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
@@ -174,8 +175,8 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Create and populate 'triData[]'. This loads 'radii', 'invDist's, 'aim',
-	 * and computes 'angles'.
+	 * Create and populate 'triData[]'. This loads 'radii', 
+	 * 'invDist's, 'aim', and computes 'angles'.
 	 * @return int faceCount
 	 */
 	public int allocTriData() {
@@ -668,11 +669,14 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Compute centers in DCEL case using 'computeOrder'
-	 * @return
+	 * Compute centers in DCEL case using 'computeOrder'.
+	 * This also updates the side-pairing maps.
+	 * @return int
 	 */
 	public int dcelCompCenters() {
-		return dcelCompCenters(computeOrder); 
+		int ans=dcelCompCenters(computeOrder);
+		updatePairMob();
+		return ans;
 	}
 		
 	/**
@@ -705,12 +709,10 @@ public class PackDCEL {
 	    while (git.hasNext()) {
 	    	face=faces[git.next().w];
 		    CircleSimple sc=CommonMath.comp_any_center(
-		    		getVertCenter(face.edge),
-		    		getVertCenter(face.edge.next),
-		    		getVertRadius(face.edge),getVertRadius(face.edge.next),
+		    		getCircleSimple(face.edge),getCircleSimple(face.edge.next),
 		    		getVertRadius(face.edge.next.next),
-		    		face.edge.invDist,face.edge.next.invDist,
-		    		face.edge.next.next.invDist,p.hes);
+		    		face.edge.next.invDist,face.edge.next.next.invDist,
+		    		face.edge.invDist,p.hes);
 		    setCent4Edge(face.edge.next.next, sc.center);
 		    if (sc.rad<0) // horocycle?
 		    	setRad4Edge(face.edge.next.next,sc.rad);
@@ -720,6 +722,52 @@ public class PackDCEL {
 	    double ang=-getVertCenter(gamma).arg()+Math.PI/2.0;
 	    p.rotate(ang);
 	    return count;
+	}
+	
+	/**
+	 * Lay out faces continugously. 
+	 * @param facelist FaceLink
+	 * @param last_indx face to start at
+	 * @return
+	 */
+	public int layoutFaceList(FaceLink facelist,int last_indx) {
+		if (facelist==null || facelist.size()==0)
+			return 0;
+		int count=0;
+		if (last_indx==0)
+			facelist.remove(0); // use first in list
+		int f=last_indx;
+		Face last_face=faces[f];
+		placeFirstFace(last_face.edge);
+		Iterator<Integer> fis=facelist.iterator();
+		while (fis.hasNext()) {
+			int g=fis.next(); // next face
+			Face next_face=faces[g];
+			HalfEdge he=last_face.faceNghb(next_face).twin;
+			
+			// shuck non-neighbors
+			while (he==null && fis.hasNext()) {
+				next_face=faces[fis.next()];
+				he=last_face.faceNghb(next_face);
+			}
+			
+			// note order: we use centers for 'he' based 
+			//    as an edge of 'last_face', so 'he.twin'
+			//    is the base in the next face.
+			if (he!=null) {
+				CircleSimple sc=CommonMath.comp_any_center(
+		    		getCircleSimple(he.next),getCircleSimple(he),
+		    		getVertRadius(he.twin.next.next),
+		    		he.twin.next.invDist,he.twin.next.next.invDist,
+		    		he.twin.invDist,p.hes);
+				setCent4Edge(he.twin.next.next, sc.center);
+				if (sc.rad<0) // horocycle?
+					setRad4Edge(he.twin.next.next,sc.rad);
+				count++;
+			}
+		} // end of while
+
+		return count;
 	}
 	
 	/** 
@@ -736,7 +784,7 @@ public class PackDCEL {
 		D_SideData epair=null;
 		boolean debug=false;
 	  
-		if (pairLink==null || n<0 || n>=pairLink.size() 
+		if (pairLink==null || n<1 || n>pairLink.size() 
 				|| (epair=(D_SideData)pairLink.get(n))==null
 				|| epair.startEdge==null)  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
 			return 0;
@@ -1009,6 +1057,24 @@ public class PackDCEL {
 			num++;
 		} while (he!=vertices[v].halfedge);
 		return num;
+	}
+
+	/**
+	 * Count the number of non-ideal faces at 'vert'
+	 * @param vert Vertex
+	 * @return int
+	 */
+	public int countFaces(Vertex vert) {
+		HalfEdge he=vert.halfedge;
+		int count=0;
+		if (he.face!=null && he.twin.face.faceIndx<0)
+			count--;
+		do {
+			he=he.prev.twin;
+			count++;
+		} while (he!=vert.halfedge && 
+				(he.twin.face==null || he.twin.face.faceIndx>=0));
+		return count;
 	}
 	
 	/**
@@ -1456,7 +1522,7 @@ public class PackDCEL {
 	public HalfEdge vertIsBdry(Vertex v) {
 		HalfEdge nxtedge=v.halfedge;
 		do {
-			if (nxtedge.twin.face.faceIndx<0) // ideal face?
+			if (nxtedge.twin.face!=null && nxtedge.twin.face.faceIndx<0) // ideal face?
 				return nxtedge;
 			nxtedge=nxtedge.prev.twin;
 		} while(nxtedge!=v.halfedge);
@@ -2146,7 +2212,7 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * The given 'VertexMap' has <new,old> indices; 
+	 * The given 'VertexMap' has <old,new> indices; 
 	 * copy rad/center from 'old' vertex to 'new'.
 	 * @param vmap VertexMap
 	 * @return count
@@ -2167,6 +2233,23 @@ public class PackDCEL {
 			}
 		}
 		return count;
+	}
+	
+	/**
+	 * Update the side-pairing maps.
+	 * @return 0 if 'redChain' or 'pairLink' doesn't exist
+	 */
+	public int updatePairMob() {
+		if (redChain==null || pairLink==null) 
+			return 1;
+			
+		Iterator<D_SideData> dsis=pairLink.iterator();
+		dsis.next(); // first is null
+		while (dsis.hasNext()) {
+			D_SideData dsdata=dsis.next();
+			dsdata.set_sp_Mobius();
+		}
+		return 1;
 	}
 	
 	/**

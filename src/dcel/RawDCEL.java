@@ -13,7 +13,6 @@ import exceptions.ParserException;
 import komplex.EdgeSimple;
 import listManip.HalfLink;
 import listManip.NodeLink;
-import listManip.VertexMap;
 
 /**
  * This file is for static methods applied to dcel structures.
@@ -2290,7 +2289,7 @@ public class RawDCEL {
 				RawDCEL.addEdge_raw(pdcel,newVindx,nextedge.origin.vertIndx);
 				count++;
 				if (debug) // pdcel.p.getCenter(300);
-					DCELdebug.redConsistency(pdcel);
+					DCELdebug.redConsistency(pdcel.redChain);
 			  } 
 			  
 			  // finish if we reach w (which thus cannot be v)
@@ -2304,7 +2303,7 @@ public class RawDCEL {
 			  RawDCEL.addIdealFace_raw(pdcel,prevedge.twin.face);
 			  if (debug) { 
 //				  v=4;DCELdebug.vertConsistency(pdcel,v);
-				  DCELdebug.redConsistency(pdcel);
+				  DCELdebug.redConsistency(pdcel.redChain);
 			  }
 			  return count;
 		}
@@ -2527,6 +2526,51 @@ public class RawDCEL {
 	}
 	
 	/**
+	 * Use 'NodeLink' to create a closed chain of new
+	 * red edges. The links must be contiguous and must close up.
+	 * We set 'myEdge's for the 'RedHEdge's but do not set
+	 * their 'myRedEdge' or 'Vertex.redFlag's.
+	 * @param pdcel PackDCEL
+	 * @param vlink NodeLink
+	 * @return null on error, disconnected or not closed
+	 */
+	public static RedHEdge vlink2red(PackDCEL pdcel,NodeLink vlink) {
+		if (vlink==null || vlink.size()<2)
+			return null;
+		int v=vlink.remove(0);
+		int w=vlink.remove(1);
+		HalfEdge startedge=pdcel.findHalfEdge(v,w);
+		RedHEdge newChain=new RedHEdge(startedge);
+		RedHEdge lastedge=newChain;
+		int lastvert=w;
+		int nextvert=w;
+		Iterator<Integer> vis=vlink.iterator();
+		while (vis.hasNext()) {
+			lastvert=nextvert;
+			nextvert=vis.next();
+			HalfEdge he=pdcel.findHalfEdge(lastvert,nextvert);
+			if (he!=null) {
+				lastedge.nextRed=new RedHEdge(he);
+				lastedge.nextRed.prevRed=lastedge;
+				lastedge=lastedge.nextRed;
+			}
+			else 
+				throw new CombException("usage: 'vlink2red', "+lastvert+
+						" and "+nextvert+" are not connected");
+		}
+		
+		// close up?
+		HalfEdge he=pdcel.findHalfEdge(nextvert,startedge.origin.vertIndx);
+		if (he==null)
+			throw new CombException("usage: 'vlink2red', can't close, "+
+					nextvert+" and "+startedge.origin.vertIndx+
+					" are not  not connected");
+		lastedge.nextRed=newChain;
+		newChain.prevRed=lastedge;
+		return newChain;
+	}
+	
+	/**
 	 * Wipe out the linked 'RedHEdge's starting with 'redChain': 
 	 * null 'myEdge' references to 'myRedEdge', null 'redChain', 
 	 * orphan all 'RedHEdges' so they can be garbaged. 
@@ -2548,6 +2592,7 @@ public class RawDCEL {
 		int safety=5000;
 		do {
 			safety--;
+			rtrace.myEdge.origin.redFlag=false;
 			rtrace.myEdge.myRedEdge=null;
 			rtrace.prevRed=null;
 			hold=rtrace.nextRed;

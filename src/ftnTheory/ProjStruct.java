@@ -1972,6 +1972,8 @@ public class ProjStruct extends PackExtender {
 	}
 	
 	/** 
+	 * traditional
+	 * 
 	 * Given torus, change the drawing order to get a 2-side-pairing 
 	 * layout. Idea: start with spanning tree and its redchain; find 
 	 * one short closed edgepath (use vert with large degree as alpha); 
@@ -2208,7 +2210,7 @@ public class ProjStruct extends PackExtender {
   	  if (p.packDCEL==null) 
 		  throw new ParserException("'affpack' requires a dcel structure");
   	  PackDCEL pdcel=p.packDCEL;
-  	  if (pdcel.pairLink==null || pdcel.pairLink.countPairs()<1)
+  	  if (pdcel.pairLink==null || pdcel.pairLink.countPairs()<2)
 		  throw new ParserException("'affpack' requires side-pairings to exit");
   	  int geom=PackData.getConfGeometry(p);
   	  if (geom!=0)

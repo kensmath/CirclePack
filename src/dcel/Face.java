@@ -144,6 +144,23 @@ public class Face {
 	}
 	
 	/**
+	 * Return edge of 'this' if it is shared with 'face';
+	 * else return null. Should work whether normal or
+	 * ideal faces involved.
+	 * @param gface Face
+	 * @return HalfEdge, null if no shared edge
+	 */
+	public HalfEdge faceNghb(Face gface) {
+		HalfEdge he=edge;
+		do {
+			if (he.twin.face==gface)
+				return he;
+			he=he.next;
+		} while (he!=edge);
+		return null;
+	}
+	
+	/**
 	 * Return counterclockwise (non-closed) array of vertex indices 
 	 * defining this (possibly ideal) face.
 	 * TODO: may want to start with particular vertex.

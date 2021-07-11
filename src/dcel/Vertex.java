@@ -133,7 +133,7 @@ public class Vertex {
 	}
 
 	/**
-	 * Return tradional cclw flower of petals, closed if
+	 * Return traditional cclw flower of petals, closed if
 	 * interior. 
 	 * @return int[]
 	 */

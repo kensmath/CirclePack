@@ -184,7 +184,7 @@ public class TradBranchPt extends GenBranchPt {
 		boolean dflag=false;   // debugging help 
 		myPackData.fillcurves();
 		try {
-			myPackData.comp_pack_centers(errflag,dflag,opt,CommandStrParser.LAYOUT_THRESHOLD);
+			myPackData.CompPackLayout(); // comp_pack_centers(errflag,dflag,opt,CommandStrParser.LAYOUT_THRESHOLD);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

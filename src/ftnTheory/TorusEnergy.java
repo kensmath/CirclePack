@@ -209,7 +209,7 @@ public class TorusEnergy extends PackExtender {
 		if (flag) {
 			packData.fillcurves(); 
 			try {
-				packData.comp_pack_centers(false,false,2,.0000001);
+				packData.CompPackLayout(); // comp_pack_centers(false,false,2,.0000001);
 			} catch(Exception ex) {}
 			cpCommand("set_screen -a");
 			cpCommand("disp -wr");

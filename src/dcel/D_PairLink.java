@@ -68,8 +68,10 @@ public class D_PairLink extends LinkedList<D_SideData> {
 	 */
 	public int countPairs() {
 		int count=0;
+		if (this.size()<2)
+			return 0;
 		Iterator<D_SideData> sides=iterator();
-		D_SideData edge=null;
+		D_SideData edge=sides.next(); // first is null
 		while (sides.hasNext()) {
 			edge=(D_SideData)sides.next();
 			if (edge.mateIndex>0)

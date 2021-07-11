@@ -1711,7 +1711,7 @@ public class PackCreation {
 		growWheel.fillcurves();
 		growWheel.repack_call(1000);
 		try {
-			growWheel.comp_pack_centers(false,false,opt,crit);
+			growWheel.CompPackLayout(); // comp_pack_centers(false,false,opt,crit);
 		} catch (Exception ex) {
 			throw new CombException("'pinWheel' creation failed");
 		}
@@ -1845,7 +1845,7 @@ public class PackCreation {
 		growChair.fillcurves();
 		growChair.repack_call(1000);
 		try {
-			growChair.comp_pack_centers(false,false,opt,crit);
+			growChair.CompPackLayout(); // comp_centers(false,false,opt,crit);
 		} catch (Exception ex) {
 			throw new CombException("'chair' creation failed");
 		}
@@ -2049,7 +2049,7 @@ public class PackCreation {
 		fusionA.fillcurves();
 		fusionA.repack_call(1000);
 		try {
-			fusionA.comp_pack_centers(false,false,opt,crit);
+			fusionA.CompPackLayout(); // comp_pack_centers(false,false,opt,crit);
 		} catch (Exception ex) {
 			throw new CombException("'fib2D' creation failed");
 		}
@@ -2178,7 +2178,7 @@ public class PackCreation {
 		sgPack.fillcurves();
 		sgPack.repack_call(1000);
 		try {
-			sgPack.comp_pack_centers(false,false,opt,crit);
+			sgPack.CompPackLayout(); // comp_pack_centers(false,false,opt,crit);
 		} catch (Exception ex) {
 			throw new CombException("'chair' creation failed");
 		}
@@ -2254,7 +2254,7 @@ public class PackCreation {
 		pent.repack_call(1000);
 
 		try {
-			pent.comp_pack_centers(false,false,2,.00001);
+			pent.CompPackLayout(); // comp_pack_centers(false,false,2,.00001);
 		} catch(Exception ex) {}
 		
 		double mod=pent.getCenter(2).abs();
@@ -2310,7 +2310,7 @@ public class PackCreation {
 		heap.repack_call(1000);
 
 		try {
-			heap.comp_pack_centers(false,false,2,.00001);
+			heap.CompPackLayout(); // comp_pack_centers(false,false,2,.00001);
 		} catch(Exception ex) {}
 		
 		double mod=heap.getCenter(3).abs();
@@ -2373,7 +2373,7 @@ public class PackCreation {
 		triPent.repack_call(1000);
 
 		try {
-			triPent.comp_pack_centers(false,false,2,.00001);
+			triPent.CompPackLayout();   // comp_pack_centers(false,false,2,.00001);
 		} catch(Exception ex) {}
 		
 		double mod=triPent.getCenter(2).abs();
@@ -2423,7 +2423,7 @@ public class PackCreation {
 		quadPent.repack_call(1000);
 
 		try {
-			quadPent.comp_pack_centers(false,false,2,.00001);
+			quadPent.CompPackLayout(); // comp_pack_centers(false,false,2,.00001);
 		} catch(Exception ex) {}
 		
 		double mod=quadPent.getCenter(2).abs();
