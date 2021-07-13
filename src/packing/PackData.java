@@ -13100,7 +13100,7 @@ public class PackData{
 	   * We are operating on this packing. Each edge gets new vertex, 
 	   * each face broken into 4 faces. Try to propagate old centers/radii,
 	   * overlaps, schwarzians to new edges. Return 0 on failure.
-	   * Can be iterated before fixing in dcel case.
+	   * Can be iterated before fixing in DCEL case.
 	   * @param N int
 	  */
 	  public int hex_refine(int N) {
@@ -13122,7 +13122,7 @@ public class PackData{
 			  return 1; 
 		  }
 		  
-		// else, old style
+		// traditional
 	    int count=0;
 	    EdgeSimple []new_verts=null;
 

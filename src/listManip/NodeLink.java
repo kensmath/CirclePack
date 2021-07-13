@@ -10,9 +10,11 @@ import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
 import dcel.CombDCEL;
+import dcel.D_SideData;
 import dcel.Face;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
+import dcel.RedHEdge;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -734,10 +736,78 @@ public class NodeLink extends LinkedList<Integer> {
 			case 'R': // red circles, outer edge of "sides" of red chain; 
 			      // absorb rest of 'items'
 			{
-				RedEdge rtrace,hold;
-				rtrace=hold=packData.firstRedEdge;
+				if (packData.packDCEL!=null) {
+					PackDCEL pdc=packData.packDCEL;
+					int numsides=pdc.pairLink.size()-1;
+					if ((str.length()>1 && str.charAt(1)=='a') ||
+							numsides<=0) {
+						RedHEdge rtrace=pdc.redChain;
+						do {
+							add(rtrace.myEdge.origin.vertIndx);
+							rtrace=rtrace.nextRed;
+							count++;
+						} while (rtrace!=pdc.redChain);
+						add(pdc.redChain.myEdge.origin.vertIndx); // close up
+						
+						// eat the rest of the stings
+						String itstr=null;
+						while (its.hasNext()) itstr=(String)its.next();
+						break;
+					}
+					
+					boolean []tag=new boolean[numsides+1];
+					for (int i=1;i<=numsides;i++) 
+						tag[i]=false;
+					if (!its.hasNext()) // default to 'all'
+						for (int i=1;i<=numsides;i++) 
+							tag[i]=true;
+					else {
+						do {
+							String itstr=(String)its.next();
+							if (itstr.startsWith("a"))
+								for (int i=1;i<=numsides;i++) 
+									tag[i]=true;
+							else {
+								try {
+									int n=Integer.parseInt(itstr);
+									if (n>=0 && n<numsides) 
+										tag[n]=true;
+								} catch (NumberFormatException nfx) {
+									while (its.hasNext()) 
+										itstr=(String)its.next(); // toss rest
+									break;
+								}
+							}
+						} while (its.hasNext());
+					}
+					
+					// now traverse the chosen sides
+					for (int i=1;i<=numsides;i++) {
+						if (tag[i]) {
+							D_SideData dsd=pdc.pairLink.get(i);
+							RedHEdge rtrace=dsd.startEdge;
+							do {
+								add(rtrace.myEdge.origin.vertIndx);
+								rtrace=rtrace.nextRed;
+								count++;
+							} while (rtrace!=dsd.endEdge);
+							add(dsd.endEdge.myEdge.origin.vertIndx);
+							
+							// should we add end vertex?
+							if ((i<numsides && !tag[i+1]) || 
+									(i==numsides))
+								add(dsd.endEdge.myEdge.twin.origin.vertIndx);
+							count+=2;
+						}
+					}
+					break;
+				}
+					
+				// traditional
+				RedEdge hold=packData.firstRedEdge;
 				if (hold==null) break; // no/defective redchain
-			
+
+				RedEdge rtrace=packData.firstRedEdge;
 				// 'Ra', want closed list of circles on outer edge of full redchain
 				if (str.length()>1 && str.charAt(1)=='a') {
 					// get first vertex (which should be hit again at the end)

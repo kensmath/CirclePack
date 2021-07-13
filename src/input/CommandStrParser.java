@@ -7375,12 +7375,6 @@ public class CommandStrParser {
 	    		  return ans;
 	    	  }
 
-	    	  // TODO: implement other options appropriate to DCEL case
-	    	  if (packData.packDCEL!=null) {
-	    		  throw new DCELException("usage: flags for 'layout' calls not "+
-	    				  "yet implemented for DCEL setting");
-	    	  }
-	    	  
 	    	  // catch various flags (DCEL versions not yet ready for some
 	    	  Iterator<Vector<String>> its=flagSegs.iterator();
 	    	  String str=null;
@@ -7395,7 +7389,7 @@ public class CommandStrParser {
 	    		  case 's': // recompute angle sums
 	    		  {packData.fillcurves();count++;break;}
 	    		  case 'c': // compute center:
-	    			  // for traditiona, have compute centers (with options) 
+	    			  // for traditional, have compute centers (with options) 
 	    		  {
 	    			  
 	    			  // TODO: haven't yet implemented sub-options in DCEL case
@@ -7425,7 +7419,7 @@ public class CommandStrParser {
 	    			  }
 	    			  break;
 	    		  }
-	    		  case 'F': // redo everything
+	    		  case 'F': // redo combinatorics, reset aims/curv
 	    		  {
 	    			  if (pdc!=null) {
 	    				  pdc.redChain=null;
@@ -8127,7 +8121,7 @@ public class CommandStrParser {
 	      }
 	      
 	      // =========== newRed ==========
-	      else if (cmd.startsWith("newRed")) {
+	      else if (cmd.startsWith("newRe")) {
 	    	  if (flagSegs==null || flagSegs.size()==0)
 	    		  return 0;
 	    	  items=flagSegs.get(0);

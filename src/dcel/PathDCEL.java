@@ -1,5 +1,6 @@
 package dcel;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 
 import exceptions.CombException;
@@ -148,9 +149,9 @@ public class PathDCEL {
 	  /**
 	   * Return the shortest closed interior edge path which
 	   * misses 'path' except for starting/ending at the origin
-	   * of 'seededge' (which lies in path). 'path' may have
-	   * more than one connected component; if 'path' separates 
-	   * the complex, then throw an exception. 
+	   * of 'seededge' (which must lie in 'path'). Note: 'path' 
+	   * may have multiple connected components, but it 'path' 
+	   * separates the complex, we get an exception. 
 	   * Normally 'path' either closed or with bdry endpoints;
 	   * its edges must be interior. We work by counting 
 	   * generations of interiors from 'seededge' on the left 
@@ -167,29 +168,22 @@ public class PathDCEL {
 			  return null;
 
 		  // set all 'vutil' to bound = "untouched"
-		  HalfLink link1=new HalfLink();
 		  int bound=pdcel.vertCount+1;
 		  for (int v=1;v<=pdcel.vertCount;v++) {
 			  pdcel.vertices[v].vutil=bound;
 		  }
 		  
-		  // 'seededge' on 'path', but no bdry edges
+		  // zero 'vutil' on 'path', check for bdry edges
 		  Iterator<HalfEdge> pis=path.iterator();
-		  int seedOrigin=0; // hold index of 'seededge' origin
 		  while (pis.hasNext()) {
 			  HalfEdge he=pis.next();
 			  if (pdcel.isBdryEdge(he))
 				  throw new DCELException("'getCutPath' error: edge "+
 						  he+" is a bdry edge");
 			  he.origin.vutil=0;
-			  if (he==seededge)
-				  seedOrigin=he.origin.vertIndx;
-		  }
-		  if (seedOrigin==0) {
-			  throw new ParserException("'seededge' must be oriented edge in 'path'");
 		  }
 		  
-		  // set bdry 'vutil' 0
+		  // zero out bdry 'vutil' so we don't try to cross bdry
 		  for (int i=1;i<=pdcel.idealFaceCount;i++) {
 			  HalfEdge stpe=pdcel.idealFaces[i].edge;
 			  HalfEdge he=stpe;
@@ -199,14 +193,30 @@ public class PathDCEL {
 			  } while (he!=stpe);
 		  }
 
-		  // generation 1: 'vutil' +/- 1 on left/right of 'seededge'
-		  int vl=seededge.next.next.origin.vertIndx; // plus side
-		  int vr=seededge.twin.next.next.origin.vertIndx; // minus side
-		  if (pdcel.vertices[vl].vutil!=bound || 
-				  pdcel.vertices[vr].vutil!=bound)
-			  throw new ParserException("can't move to one of 'seededge' nghbs");
+		  // find 'left/rightfan's of 'seededge'; used to get
+		  //   'vl' and 'vr'; also needed at to consider shortening
+		  ArrayList<Integer> leftfan=new ArrayList<Integer>(0);
+		  ArrayList<Integer> rightfan=new ArrayList<Integer>(0);
+		  HalfEdge he=seededge.prev.twin;
+		  while (he.twin.origin.vutil>0) {
+			  leftfan.add(he.twin.origin.vertIndx);
+			  he=he.prev.twin; // cclw
+		  }
+		  he=seededge.twin.next;
+		  while (he.twin.origin.vutil>0) {
+			  rightfan.add(he.twin.origin.vertIndx);
+			  he=he.twin.next; // clw
+		  }
+		  
+		  if (leftfan.size()==0 || rightfan.size()==0)
+			  throw new CombException("blue edge?? can't move to nghb on "+
+					  		"one side or other");
+		  int vl=leftfan.get(0); // left = plus side
+		  int vr=rightfan.get(0); // right = minus side
+		  int seedOrigin=seededge.origin.vertIndx;
 
-		  // two-list method to count generations (+/-)
+		  // generation 1: 'vutil' +/- 1 on left/right of 'seededge'
+		  // two-list method to count successive generations (+/-)
 		  NodeLink currv=new NodeLink();
 		  NodeLink nextv=new NodeLink();
 		  boolean lhit=false;
@@ -237,7 +247,7 @@ public class PathDCEL {
 				  int[] petals=vert.getPetals();
 				  for (int j=0;(j<petals.length && hitvert==0);j++) {
 					  Vertex wert=pdcel.vertices[petals[j]];
-					  if (wert.vutil>=bound && wert.vutil!=0) { // first touch?
+					  if (wert.vutil>=bound) { // first touch?
 						  if (myUtil<0) // right side hit
 							  wert.vutil=myUtil-1;
 						  else { // left side hit
@@ -285,7 +295,7 @@ public class PathDCEL {
 			  plus1=vert.vertIndx;
 			  int[] petals=vert.getPetals();
 			  for (int j=0;(j<petals.length && minus1==0);j++) {
-				  if (pdcel.vertices[petals[j]].vutil>0) {
+				  if (pdcel.vertices[petals[j]].vutil<0) {
 					  minus1=petals[j];
 					  break;
 				  }
@@ -347,23 +357,23 @@ public class PathDCEL {
 		  
 		  cutPath.abutMore(minushalf);
 		  
-		  // May be able to shorten at beginning
+		  // May be able to shorten at beginning (plus side)
 		  int ed=cutPath.get(1).twin.origin.vertIndx;
-		  HalfEdge shc=pdcel.findHalfEdge(seedOrigin,ed);
-		  if (shc!=null) { // yes, can shortcut
+		  if (leftfan.contains(ed)) { // yes, can shortcut
 			  cutPath.remove(1); // remove first two
 			  cutPath.remove(0); 
-			  cutPath.add(0,shc); // replace first step by <seedOrigin,ed>
+			  // replace first two steps by <seedOrigin,ed>
+			  cutPath.add(0,pdcel.findHalfEdge(seedOrigin,ed)); 
 		  }
 		  
 		  // and/or at end
 		  int sz=cutPath.size();
 		  ed = cutPath.get(sz-2).origin.vertIndx;
-		  shc=pdcel.findHalfEdge(ed,seedOrigin);
-		  if (shc!=null) { // yes, can shortcut
+		  if (rightfan.contains(ed)) { // yes, can shortcut
+			  cutPath.removeLast(); // remove last two
 			  cutPath.removeLast();
-			  cutPath.removeLast();
-			  cutPath.add(shc);
+			  // replace last two steps by <ed,seedOrigin>
+			  cutPath.add(pdcel.findHalfEdge(ed,seedOrigin));
 		  }
 		  
 		  // 'cutPath should start/stop at 'seedOrigin'

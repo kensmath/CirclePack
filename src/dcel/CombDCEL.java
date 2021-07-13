@@ -3577,14 +3577,14 @@ public class CombDCEL {
 	  }
 	  
 	  /**
-	   * Given 'pdcel' must be a topological torus with an 
-	   * initial 'redChain'. Typically, the red chain has 
-	   * 3 side pairings; this routine finds a new red chain 
-	   * with just two side pairings. This returns the linked
-	   * list: CAUTION: 'myEdges' are set, but not 'myRedEdge's,
-	   * so old data can be cleared out on return. The calling 
-	   * routine must also do 'd_FillInside', repack, layout, etc. 
-	   * (see former 'ProjStruct.torus4layout')
+	   * Given 'pdcel' must be a topological torus with a 
+	   * 'redChain'. Typically, the red chain has 3 side 
+	   * pairings; this routine finds a new red chain with 
+	   * just two side pairings and returns the linked list: 
+	   * CAUTION: 'myEdges' are set, but not 'myRedEdge's,
+	   * in order that old data can be cleared out on return. 
+	   * The calling routine must also call 'd_FillInside', 
+	   * repack, layout, etc. (see former 'ProjStruct.torus4layout')
 	   * @param pdcel PackDCEL
 	   * @return RedHEdge, linked list
 	   */
@@ -3630,11 +3630,11 @@ public class CombDCEL {
 		  
 		  if (seededge==null) 
 			  throw new CombException("couldn't find qualifying 'seededge'");
-		  
+
 		  // rotate 'path' to start with 'seededge'
 		  int se=path.indexOf(seededge);
 		  path=HalfLink.rotateMe(path,se);
-		  
+
 		  // get 'cutPath' starting and ending at 'seededge.origin'
 		  //   and otherwise disjoint from 'path'.
 		  HalfLink cutPath=PathDCEL.getCutPath(pdcel,path,seededge);
