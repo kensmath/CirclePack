@@ -49,9 +49,10 @@ import util.RadIvdPacket;
  *   See 'h_invdist_length' and 'h_dist'
  *        
  * In addition to the disc, hyperbolic geometry has the "hyperboloid" 
- * model. Namely, consider the sheet S with t>0 of the hyperboloid t^2-(x1^2+x2^2)=1, 
- * or t=sqrt(1+(x1^2+x2^2)). (Note, this is restriction to z=0 of the model
- * for hyperbolic 3-space. See 'SphereLayout.java'.)
+ * model. Namely, consider the sheet S with t>0 of the hyperboloid 
+ * t^2-(x1^2+x2^2)=1, or t=sqrt(1+(x1^2+x2^2)). (Note, this is 
+ * restriction to z=0 of the model for hyperbolic 3-space. 
+ * See 'SphereLayout.java'.)
  * 
  * Point (t,x1,x2) of S is associated with point (u1,u2,0) of unit disc in the
  * plane lying on the line from (t,x1,x2) to (-1,0,0). 
@@ -61,7 +62,12 @@ import util.RadIvdPacket;
  *    t=sqrt(1+(x1^2+x2^2))
  *    xj=2uj/(1-(u1^2+u2^2))=2uj/(1-||u||^2), j=1,2
  *    t=(1+||u||^2)/(1-||u||^2) with ||u||^2=u1^2+u2^2
- *    
+ * 
+ * There is also the "Klein" or "Beltrami-Klein" model, also in the
+ * unit disc. In this model, hyperbolic geodesics are euclidean 
+ * straight lines, useful, eg., in 'pt_in_hyp_tri'. Given z in the
+ * disc in Poicare model and w in the disc in Klein model, then
+ *    w = (2*z)/(1+|z|^2), and z = w/(1+sqrt(1-|w|^2)).
  */
 public class HyperbolicMath{
 	
@@ -1075,27 +1081,23 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
 	}
 
 	/**
-	 * Is point z in counterclockwise oriented hyp triangle? Apply mobius 
-	 * moving z to origin and check third component of cross products of 
-	 * vectors 0 to p_j and 0 to p_(j+1); one or more negative iff z is 
-	 * outside the (oriented) triangle.
+	 * Find is point z is in the hyp triangle with corners
+	 * p0,p1,p2. Convert to Klein model so we can use eucl 
+	 * computation. Data is given in usual hyp form 
+	 * (i.e., Poincare model).
 	 * @param z Complex
-	 * @param p1 
-	 * @param p2
-	 * @param p3
+	 * @param p1 Complex
+	 * @param p2 Complex
+	 * @param p3 Complex
 	 * @return boolean
 	 */
-	public static boolean pt_in_hyp_tri(Complex z,Complex p1,Complex p2,Complex p3) {
-		
-		// Move to origin and see if in euclidean triangle 
-		// (p-z)/(1-conj(z)*p)
-		if ((p3.x*p1.y-p3.y*p1.x)<0)
-			return false;
-		if ((p1.x*p2.y-p1.y*p2.x)<0)
-			return false;
-		if ((p2.x*p3.y-p2.y*p3.x)<0)
-			return false;
-		return true;
+	public static boolean pt_in_hyp_tri(Complex z,
+			Complex p0,Complex p1,Complex p2) {
+		Complex kz=z.divide(1.0+z.absSq());
+		Complex k0=p0.divide(1.0+p0.absSq());
+		Complex k1=p1.divide(1.0+p1.absSq());
+		Complex k2=p2.divide(1.0+p2.absSq());
+		return EuclMath.pt_in_eucl_tri(kz,k0,k1,k2);
 	}
 	
 	/**

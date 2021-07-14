@@ -80,7 +80,7 @@ public class PostParser {
 						int f;
 						while (fl.hasNext()) {
 							f = (Integer) fl.next();
-							Complex tri_cent = p.face_center(f);
+							Complex tri_cent = p.getFaceCenter(f);
 							if (p.hes <= 0) {
 								pF.postIndex(tri_cent, f);
 							} else {
@@ -375,8 +375,8 @@ public class PostParser {
 						Iterator<EdgeSimple> dedges = dualedges.iterator();
 						while (dedges.hasNext()) {
 							edge = (EdgeSimple) dedges.next();
-							z = p.face_center(edge.v);
-							Complex w = p.face_center(edge.w);
+							z = p.getFaceCenter(edge.v);
+							Complex w = p.getFaceCenter(edge.w);
 							if (p.hes > 0) {
 								z = cpScreen.sphView.toApparentSph(z);
 								w = cpScreen.sphView.toApparentSph(w);
@@ -663,7 +663,7 @@ public class PostParser {
 					flist = faceLink.iterator();
 					while (flist.hasNext()) {
 						f = (Integer) flist.next();
-						Complex tri_cent = p.face_center(f);
+						Complex tri_cent = p.getFaceCenter(f);
 						if (p.hes <= 0) {
 							pF.postIndex(tri_cent, f);
 						} else {

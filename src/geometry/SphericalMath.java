@@ -813,7 +813,8 @@ public static double vec_norm(double X[]){
    * @param z3 (theta,phi)
    * @return boolean
    */
-  public static boolean pt_in_sph_tri(Complex sph_pt,Complex z1,Complex z2,Complex z3) {
+  public static boolean pt_in_sph_tri(Complex sph_pt,
+		  Complex z1,Complex z2,Complex z3) {
   	    double []X;
 	    double []Y;
 	    double []Z;
@@ -841,20 +842,17 @@ public static double vec_norm(double X[]){
 	    // wrong direction? can't be in triangle
 	    if (dot_prod(C,XP)<0.0)
 	    	return false;
-	    
-	    double []YZ=new double[3];
-	    YZ[0]=Z[0]-Y[0];
-	    YZ[1]=Z[1]-Y[1];
-	    YZ[2]=Z[2]-Y[2];
-	    
-	    // is 
-	    
+
+	    // on wrong side of one of planes through origin?
 	    C=crossProduct(Y,X);
-	    if (dot_prod(P,C)>0) return false;
+	    if (dot_prod(P,C)>0) 
+	    	return false;
 	    C=crossProduct(Z,Y);
-	    if (dot_prod(P,C)>0) return false;
+	    if (dot_prod(P,C)>0) 
+	    	return false;
 	    C=crossProduct(X,Z);
-	    if (dot_prod(P,C)>0) return false;
+	    if (dot_prod(P,C)>0) 
+	    	return false;
 	    return true;
 	    
   }

@@ -4778,7 +4778,7 @@ public class CommandStrParser {
 				  fp.append("Nodes: \n");
 				  Iterator<Integer> fdex=findx.iterator();
 				  while (fdex.hasNext()) {
-					  Complex fcent=packData.face_center(fdex.next());
+					  Complex fcent=packData.getFaceCenter(fdex.next());
 					  fp.append(String.format("%.6f",fcent.x)+"  "+String.format("%.6f",fcent.y)+"\n");
 				  }
 				
@@ -8222,7 +8222,16 @@ public class CommandStrParser {
 	  {
 	      // ============ pair_mob ===============
 	      if (cmd.startsWith("pair_mob")) {
-	    	  if (packData.redChain==null || packData.firstRedEdge==null 
+	    	  if (packData.packDCEL!=null) {
+	    		  if (packData.packDCEL.pairLink==null || 
+	    				  packData.packDCEL.pairLink.size()<2) {
+		    		  CirclePack.cpb.errMsg("Packing has no side-pairings");
+		    		  return 0;
+	    		  }
+	    	  }
+	    	  
+	    	  // traditional
+	    	  else if (packData.redChain==null || packData.firstRedEdge==null 
 	    			  || packData.getSidePairs()==null 
 	    			  || packData.getSidePairs().size()==0) {
 	    		  CirclePack.cpb.errMsg("Packing has no side-pairings");

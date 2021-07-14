@@ -96,7 +96,6 @@ import util.DispFlags;
 import util.PathBaryUtil;
 import util.PathUtil;
 import util.RadIvdPacket;
-import util.SelectSpec;
 import util.SphView;
 import util.StringUtil;
 import util.TriAspect;
@@ -2802,6 +2801,29 @@ public class PackData{
 		return faces[f].vert;
 	}
 	
+	public Complex[] getFaceCorners(int f) {
+		if (f<=0)
+			return null;
+		Complex[] corners=new Complex[3];
+		if (packDCEL!=null) {
+			dcel.Face dface=packDCEL.faces[f];
+			HalfEdge he=dface.edge;
+			for (int j=0;j<3;j++) {
+				corners[j]=packDCEL.getVertCenter(he);
+				he=he.next;
+			}
+			return corners;
+		}
+		
+		// traditional
+		int[] fverts=getFaceVerts(f);
+		corners[0]=getCenter(fverts[0]);
+		corners[1]=getCenter(fverts[1]);
+		corners[2]=getCenter(fverts[2]);
+		return corners;
+		
+	}
+	
 	/**
 	 * Get flower petals, but don't close up for interior
 	 * @param v int
@@ -2925,6 +2947,8 @@ public class PackData{
 		if (packDCEL!=null) {
 			return packDCEL.getFaceCenter(packDCEL.faces[f]);
 		}
+		
+		// traditional
 		Complex []pts = corners_face(f, null);
 		CircleSimple sc=CommonMath.tri_incircle(pts[0],pts[1],pts[2],hes);
 		return sc.center;
@@ -8033,21 +8057,15 @@ public class PackData{
 	
 	/**
 	 * Return side pairing mobius with given label (should be
-	 * just one letter)
+	 * just one letter, caps converted to two lower case.
 	 * @param moniker String
-	 * @return Mobius
+	 * @return Mobius, null on error
 	 */
 	public Mobius namedSidePair(String moniker) {
-		if (sidePairs==null || sidePairs.size()==0)
-			return null;
-		
 		// side pairings indicated with just one letter
 		String label= moniker.trim();
-		if (label.length()!=1)
-			return null;
-        
-		Iterator<SideDescription> sides=sidePairs.iterator();
-		SideDescription ep=null;
+		if (label.length()!=1) 
+			throw new ParserException("side-pair monikers just one character");
 		String tmpLabel=new String(label);
 		// Upper case (e.g. 'A') must be changed to double lower ('aa').
 		char h=tmpLabel.charAt(0);
@@ -8055,11 +8073,34 @@ public class PackData{
 			h=(char)('a'+h-'A');
 			tmpLabel=new String(String.valueOf(h)+String.valueOf(h));
 		}
-		while (sides.hasNext()) {
-			ep=(SideDescription)sides.next();
-			if (ep.label.equals(tmpLabel) && ep.mob!=null)
-				return ep.mob;
+		
+		if (packDCEL!=null) {
+			if (packDCEL.pairLink==null || packDCEL.pairLink.size()<2)
+				return null;
+			Iterator<D_SideData> sides=packDCEL.pairLink.iterator();
+			sides.next(); // first is null
+			D_SideData ep=null;
+			while (sides.hasNext()) {
+				ep=sides.next();
+				if (ep.label.equals(tmpLabel) && ep.mob!=null)
+					return ep.mob;
+			}
 		}
+		
+		// traditional
+		else {
+			if (sidePairs==null || sidePairs.size()==0)
+				return null;
+
+			Iterator<SideDescription> sides=sidePairs.iterator();
+			SideDescription ep=null;
+			while (sides.hasNext()) {
+				ep=(SideDescription)sides.next();
+				if (ep.label.equals(tmpLabel) && ep.mob!=null)
+					return ep.mob;
+			}
+		}
+		
 		return null;
 	}
 	
@@ -8912,8 +8953,8 @@ public class PackData{
 	 * @return int, index or -1
 	 */
 	public int face_vert_share(int f1, int f2) {
-		int[] v1 = faces[f1].vert;
-		int[] v2 = faces[f2].vert;
+		int[] v1 = getFaceVerts(f1); 
+		int[] v2 = getFaceVerts(f2);
 		for (int j = 0; j < 3; j++) {
 			if (v1[j] == v2[0])
 				return v2[0];
@@ -8923,31 +8964,6 @@ public class PackData{
 				return v2[2];
 		}
 		return -1;
-	}
-
-	/**
-	 * Return center of incircle of face with given index.
-	 * @param f int
-	 * @return Complex, null on error
-	 */
-	public Complex face_center(int f) {
-		if (f < 1 || f > faceCount)
-			return null;
-		int[] fverts=getFaceVerts(f);
-		CircleSimple sc = null;
-		Complex p0 = getCenter(fverts[0]);
-		Complex p1 = getCenter(fverts[1]);
-		Complex p2 = getCenter(fverts[2]);
-		if (hes < 0)
-			sc = HyperbolicMath.hyp_tang_incircle(p0, p1, p2,
-					getRadius(fverts[0]),
-					getRadius(fverts[1]),
-					getRadius(fverts[2]));
-		else if (hes > 0)
-			sc = SphericalMath.sph_tri_incircle(p0, p1, p2);
-		else
-			sc = EuclMath.eucl_tri_incircle(p0, p1, p2);
-		return sc.center;
 	}
 
 	  /**
@@ -12438,7 +12454,7 @@ public class PackData{
 		    }
 		    while (list.hasNext()) {
 		    	n=(Integer)list.next();
-			    cpScreen.drawIndex(face_center(n),n,msg_flag);
+			    cpScreen.drawIndex(getFaceCenter(n),n,msg_flag);
 			    count++;
 			}
 		    // last_index_global=v; ???
@@ -12814,7 +12830,8 @@ public class PackData{
 	}
 	/** 
 	 * Search for plotted triangles under canvas pt z.
-	 * For sphere, z is already a real (not apparent) point in spherical coords. 
+	 * For sphere, z is already a real (not apparent) point in 
+	 * spherical coords. 
 	 * TODO: should develop hyperbolic formulae - maybe use
 	 * paraboloid model and work in 3D. 
 	 * @param z Complex
@@ -12831,38 +12848,17 @@ public class PackData{
 	}
 
 	/** 
-	 * Is complex number z in any triangles (any geometry)?
+	 * Is complex number z in triangular face f?
 	 * @param f int, face index
 	 * @param z Complex, complex pt
 	 * @return 1 on true, 0 on false.
 	*/
 	public int pt_in_tri(int f, Complex z) {
-		Complex[] ctr = new Complex[3];
-		int[] fverts=getFaceVerts(f);
-
-		ctr[0]=getCenter(fverts[0]);
-		ctr[1]=getCenter(fverts[1]);
-		ctr[2]=getCenter(fverts[2]);
-		if (hes > 0) {
-			if (SphericalMath.pt_in_sph_tri(z,ctr[0],ctr[1],ctr[2]))
-				return 1;
-			else
-				return 0;
-		}
-	
-		for (int k = 0; k <= 2; k++) {
-			if (hes < 0) { // hypebolic case: use euclidean data
-				CircleSimple sc = HyperbolicMath.h_to_e_data(
-					ctr[k],getRadius(fverts[k]));
-				ctr[k] = new Complex(sc.center);
-			} 
-			else
-				ctr[k] = getCenter(fverts[k]);
-		}
-		if (EuclMath.pt_in_eucl_tri(z,ctr[0],ctr[1],ctr[2]))
+		Complex[] ctr = getFaceCorners(f);
+		if (CommonMath.pt_in_triangle(z, ctr[0],ctr[1],ctr[2],hes))
 			return 1;
 		return 0;
-	} 
+	}
 
 	public static double row_col(double x,double y,double xa,double xb,
 			double ya,double yb) {
@@ -15595,8 +15591,8 @@ public class PackData{
 		  Complex w=null;
 		  while (eit.hasNext()) {
 			  EdgeSimple dedge=eit.next();
-			  z=face_center(dedge.v);
-			  w=face_center(dedge.w);
+			  z=getFaceCenter(dedge.v);
+			  w=getFaceCenter(dedge.w);
 			  if (hes>0) {
 				  totlen += SphericalMath.s_dist(z,w);
 			  }
@@ -16605,7 +16601,7 @@ public class PackData{
 					pF.post_Poly(hes, myCenters, fcolor, bcolor, tx);
 
 					if (faceFlags.label) { // label the face
-						Complex z=face_center(next_face);
+						Complex z=getFaceCenter(next_face);
 						if (hes>0) {
 							z=cpScreen.sphView.toApparentSph(z);
 							if(Math.cos(z.x)>=0.0) {
@@ -16956,7 +16952,7 @@ public class PackData{
 					pF.post_Poly(hes, myCenters, fcolor, bcolor, tx);
 
 					if (faceFlags.label) { // label the face
-						Complex z=face_center(next_face);
+						Complex z=getFaceCenter(next_face);
 						if (hes>0) {
 							z=cpScreen.sphView.toApparentSph(z);
 							if(Math.cos(z.x)>=0.0) {

@@ -9,8 +9,10 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.HalfEdge;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
+import exceptions.DCELException;
 import exceptions.DataException;
 import exceptions.ParserException;
 import geometry.EuclMath;
@@ -239,8 +241,10 @@ public class FaceLink extends LinkedList<Integer> {
 				String []pair_str=StringUtil.parens_parse(str); // get two strings
 				if (pair_str!=null) { // must have 2 strings
 					int a,b;
-					if ((a=FaceLink.grab_one_face(packData,pair_str[0]))!=0) first=a;
-					if ((b=FaceLink.grab_one_face(packData,pair_str[1]))!=0) last=b;
+					if ((a=FaceLink.grab_one_face(packData,pair_str[0]))!=0) 
+						first=a;
+					if ((b=FaceLink.grab_one_face(packData,pair_str[1]))!=0) 
+						last=b;
 				}
 				for (int i=first;i<=last;i++) {
 					add(i);
@@ -371,9 +375,23 @@ public class FaceLink extends LinkedList<Integer> {
 			{
 				if (packData.hes>0) break;
 				for (int f=1;f<=packData.faceCount;f++) {
-					int []vert=packData.getFaceVerts(f);
-					if (!EuclMath.ccWise(packData.getCenter(vert[0]),
-							packData.getCenter(vert[1]),packData.getCenter(vert[2]))) {
+					Complex[] z=new Complex[3];
+					if (packData.packDCEL!=null) {
+						HalfEdge he=packData.packDCEL.faces[f].edge;
+						for (int j=0;j<3;j++) {
+							z[j]=packData.packDCEL.getVertCenter(he);
+							he=he.next;
+						}
+					}
+					else {
+						int []vert=packData.getFaceVerts(f);
+						for (int j=0;j<3;j++) {
+							z[j]=packData.getCenter(vert[j]);
+						}
+					}
+					
+					// TODO: what about sph case? "oriented" can be ambiguous
+					if (!EuclMath.ccWise(z[0],z[1],z[2])) {
 						add(f);
 						count++;
 					}
@@ -384,24 +402,37 @@ public class FaceLink extends LinkedList<Integer> {
 			{
 				boolean hit;
 				for (int f=1;f<=facecount;f++) {
-					int[] fverts=packData.getFaceVerts(f);
-					for (int j=0;j<3;j++) {
-						hit=false;
-						int v=fverts[j];
-						if (Double.isNaN(packData.getRadius(v))
-							|| Double.isNaN(packData.getCenter(v).x)
-							|| Double.isNaN(packData.getCenter(v).y)
-							|| (packData.hes>0 && packData.getRadius(v)-Math.PI<
-									PackData.TOLER)) {
-							j=3;
-							hit=true;
-						}
-						if (hit) {
-							add(v);
-							count++;
+					int []vert=packData.getFaceVerts(f);
+					Complex[] z=new Complex[3];
+					if (packData.packDCEL!=null) {
+						HalfEdge he=packData.packDCEL.faces[f].edge;
+						for (int j=0;j<3;j++) {
+							z[j]=packData.packDCEL.getVertCenter(he);
+							he=he.next;
 						}
 					}
-				}
+					else {
+						for (int j=0;j<3;j++) {
+							z[j]=packData.getCenter(vert[j]);
+						}
+					}
+					
+					// any of the data bad?
+					if (Double.isNaN(packData.getRadius(vert[0])) ||
+							Double.isNaN(packData.getRadius(vert[1])) ||
+							Double.isNaN(packData.getRadius(vert[2])) ||
+							Complex.isNaN(z[0]) || Complex.isNaN(z[1]) ||
+							Complex.isNaN(z[2]) ||
+							(packData.hes>0 && packData.getRadius(vert[0])-Math.PI<
+									PackData.TOLER) ||
+							(packData.hes>0 && packData.getRadius(vert[1])-Math.PI<
+									PackData.TOLER) ||
+							(packData.hes>0 && packData.getRadius(vert[2])-Math.PI<
+									PackData.TOLER)) {
+						add(f);
+						count++;
+					}
+				} // done with for loop
 				break;
 			}
 			case 'p': // plotFlag set (or 'pc', not set);
@@ -409,7 +440,7 @@ public class FaceLink extends LinkedList<Integer> {
 				boolean notset=false;
 				if (str.substring(1).contains("c")) notset=true;
 				for (int f=1;f<=facecount;f++) {
-					int pf=packData.faces[f].plotFlag;
+					int pf=packData.getFacePlotFlag(f);
 					if ((notset && pf==0) || (!notset && pf!=0)) {
 						add(f);
 						count++;
@@ -419,7 +450,14 @@ public class FaceLink extends LinkedList<Integer> {
 			}
 			case 'R': // faces from red chain,
 			{
-				if (packData.redChain==null) break;
+				if (packData.packDCEL!=null) {
+					throw new DCELException("DCEL version of faces "+
+							"with 'R' flag not yet implemented");
+				}
+				
+				// traditional
+				if (packData.redChain==null) 
+					break;
 				
 				// 'Ra', want full redchain, so it closes up
 				if (str.length()>1 && str.charAt(1)=='a') { 
@@ -494,13 +532,14 @@ public class FaceLink extends LinkedList<Integer> {
 				{
 					NodeLink vertlist=new NodeLink(packData,items);
 					its=null; // eat rest of items
-					if (vertlist==null || vertlist.size()==0) break;
+					if (vertlist==null || vertlist.size()==0) 
+						break;
 					Iterator<Integer> vlist=vertlist.iterator();
 					int v,f;
 					while (vlist.hasNext()) {
 						v=(Integer)vlist.next();
 						int[] faceFlower=packData.getFaceFlower(v);
-						for (int j=0;j<packData.countFaces(v);j++) {
+						for (int j=0;j<faceFlower.length;j++) {
 							f=faceFlower[j];
 							if (hits[f]==0) {
 								add(f);
@@ -511,64 +550,110 @@ public class FaceLink extends LinkedList<Integer> {
 					}
 					break;
 				}
-				case 'f': // faces sharing a full edge
+				case 'f': // non-ideal faces sharing a full edge 
+					//  with some face in the given list
 				{
 					FaceLink facelist=new FaceLink(packData,items);
 					its=null; // eat rest of items
-					if (facelist==null || facelist.size()==0) break;
+					if (facelist==null || facelist.size()==0) 
+						break;
 					Iterator<Integer> flist=facelist.iterator();
-					int f;
 					while (flist.hasNext()) {
-						int[] fverts=packData.getFaceVerts((Integer)flist.next());
-						for (int j=0;j<3;j++) {
-							int v=fverts[j];
-							int w=fverts[(j+1)%3];
-							int k=packData.nghb(w,v);
-							int[] faceFlower=packData.getFaceFlower(w);
-							if (k<packData.countFaces(w)) {
-								f=faceFlower[k];
-								if (hits[f]==0) {
-									add(f);
-									count++;
-									hits[f]=1;
+						int f=flist.next();
+						if (packData.packDCEL!=null) {
+							HalfLink outer=packData.packDCEL.faces[f].getEdges();
+							Iterator<HalfEdge> ois=outer.iterator();
+							while (ois.hasNext()) {
+								HalfEdge he=ois.next();
+								if (he.twin.face!=null && he.twin.face.faceIndx>0) {
+									int g=he.twin.face.faceIndx;
+									if (hits[g]==0) {
+										hits[g]=1;
+										add(g);
+										count++;
+									}
 								}
 							}
 						}
-					}
+						
+						// traditional
+						else {
+							int[] fverts=packData.getFaceVerts((Integer)flist.next());
+							for (int j=0;j<3;j++) {
+								int v=fverts[j];
+								int w=fverts[(j+1)%3];
+								int k=packData.nghb(w,v);
+								int[] faceFlower=packData.getFaceFlower(w);
+								if (k<packData.countFaces(w)) {
+									f=faceFlower[k];
+									if (hits[f]==0) {
+										add(f);
+										count++;
+										hits[f]=1;
+									}
+								}
+							}
+						}
+					} // end of while
 					break;
 				}
-				case 'e': // faces containing the given edges
+				case 'e': // interior faces containing the given edges
 				{
 					EdgeLink edgelist=new EdgeLink(packData,items);
 					its=null; // eat rest of items
-					if (edgelist==null || edgelist.size()==0) break;
+					if (edgelist==null || edgelist.size()==0) 
+						break;
 					Iterator<EdgeSimple> elist=edgelist.iterator();
 					EdgeSimple edge=null;
-					int v,w,k,f;
-					while (elist.hasNext()) {
-						edge=(EdgeSimple)elist.next();
-						v=edge.v;
-						w=edge.w;
-						k=packData.nghb(v, w);
-						int[] faceFlower=packData.getFaceFlower(v);
-						if (k<packData.countFaces(v)) {
-							f=faceFlower[k];
-							if (hits[f]==0) {
-								add(f);
-								hits[f]=1;
-								count++;
+					if (packData.packDCEL!=null) {
+						while (elist.hasNext()) {
+							HalfEdge he=packData.packDCEL.findHalfEdge(elist.next());
+							if (he!=null && he.face!=null) {
+								int f=he.face.faceIndx;
+								if (f>0 && hits[f]==0) {
+									add(f);
+									hits[f]=1;
+									count++;
+								}
 							}
-						}
-						k=packData.nghb(w,v);
-						faceFlower=packData.getFaceFlower(w);
-						if (k<packData.countFaces(w)) {
-							f=faceFlower[k];
-							if (hits[f]==0) {
-								add(f);
-								hits[f]=1;
-								count++;
+							if (he.twin.face!=null) {
+								int f=he.twin.face.faceIndx;
+								if (f>0 && hits[f]==0) {
+									add(f);
+									hits[f]=1;
+									count++;
+								}
 							}
-						}
+						} // end of while
+					}
+					
+					// traditional
+					else {
+						while (elist.hasNext()) {
+							edge=(EdgeSimple)elist.next();
+							int v=edge.v;
+							int w=edge.w;
+							int k=packData.nghb(v, w);
+							int[] faceFlower=packData.getFaceFlower(v);
+							if (k<packData.countFaces(v)) {
+								int f=faceFlower[k];
+								if (hits[f]==0) {
+									add(f);
+									hits[f]=1;
+									count++;
+								}
+							}
+							k=packData.nghb(w,v);
+							faceFlower=packData.getFaceFlower(w);
+							if (k<packData.countFaces(w)) {
+								int f=faceFlower[k];
+								if (hits[f]==0) {
+									add(f);
+									hits[f]=1;
+									count++;
+								}
+							}
+						} // end of while
 					}
 					break;
 				}
@@ -580,8 +665,24 @@ public class FaceLink extends LinkedList<Integer> {
 				//    * not all faces are used in the drawing order.
 				//    * faces in list not necessarily contiguous
 			{
+
+				if (packData.packDCEL!=null) {
+					GraphLink glink=packData.packDCEL.computeOrder;
+					if (str.length()>1 && str.charAt(1)=='s') 
+						glink=packData.packDCEL.faceOrder; 
+					Iterator<EdgeSimple> gis=glink.iterator();
+					while (gis.hasNext()) {
+						EdgeSimple edge=gis.next();
+						add(edge.w);
+						count++;
+					}
+					break;
+				}
+					
+				// traditional
 				boolean debg=false; // degb=true;
-				if (debg) LayoutBugs.log_faceOrder(packData);
+				if (debg) 
+					LayoutBugs.log_faceOrder(packData);
 
 				int nf=packData.firstFace;
 				int []futil=new int[packData.faceCount+1];
@@ -741,10 +842,6 @@ public class FaceLink extends LinkedList<Integer> {
 	 * @return
 	 */
 	public static int grab_one_face(PackData p,String str) {
-//		int idx=str.trim().indexOf(' ');
-//		if (idx>0) {
-//			str=str.substring(0,idx+1);
-//		}
 		FaceLink flist=new FaceLink(p,str);
 		if (flist.size()>0) return flist.get(0);
 		return 0;
@@ -870,7 +967,7 @@ public class FaceLink extends LinkedList<Integer> {
 		
 		if (pInt.length<=0.0) {
 			if (startFace>1 && startFace<=p.faceCount) { // adjust pInt
-				pInt.pathZ.insertElementAt(p.face_center(startFace),0);
+				pInt.pathZ.insertElementAt(p.getFaceCenter(startFace),0);
 				pInt.domain.add(pInt.pathZ.get(0).minus(pInt.pathZ.get(1)).abs());
 				pInt.length=pInt.domain.lastElement();
 				pInt.N=2;
@@ -914,7 +1011,7 @@ public class FaceLink extends LinkedList<Integer> {
 					startFP=new FaceParam();
 					startFP.face=startFace;
 					startFP.param=0.0;
-					startFP.Z=p.face_center(startFace);
+					startFP.Z=p.getFaceCenter(startFace);
 					startFP.firm=true;
 					startFP.next=nextFP=new FaceParam();
 					nextFP.face=nghb_face;
@@ -976,7 +1073,7 @@ public class FaceLink extends LinkedList<Integer> {
 							nextFP=nextFP.next=new FaceParam();
 							nextFP.face=faceFlower[j];
 							nextFP.param=.000001;  // fake
-							nextFP.Z=p.face_center(nextFP.face); // fake 
+							nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
 						}
 					}
 					else {
@@ -984,7 +1081,7 @@ public class FaceLink extends LinkedList<Integer> {
 							nextFP=nextFP.next=new FaceParam();
 							nextFP.face=faceFlower[j];
 							nextFP.param=.000001;  // fake
-							nextFP.Z=p.face_center(nextFP.face); // fake 
+							nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
 						}
 					}
 					nextFP=nextFP.next=holdFP; // reattach the known end one
@@ -996,7 +1093,7 @@ public class FaceLink extends LinkedList<Integer> {
 							nextFP=nextFP.next=new FaceParam();
 							nextFP.face=faceFlower[jj];
 							nextFP.param=.000001;  // fake
-							nextFP.Z=p.face_center(nextFP.face); // fake 
+							nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
 							jj=(jj+1)%num;
 						}
 					}
@@ -1006,7 +1103,7 @@ public class FaceLink extends LinkedList<Integer> {
 							nextFP=nextFP.next=new FaceParam();
 							nextFP.face=faceFlower[jj];
 							nextFP.param=.000001;  // fake
-							nextFP.Z=p.face_center(nextFP.face); // fake 
+							nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
 							jj=(jj-1+num)%num;
 						}
 					}
@@ -1149,7 +1246,7 @@ public class FaceLink extends LinkedList<Integer> {
 				nextFP.face=p.getFaceFlower(bvert,j);
 				nextFP.next=null;
 				nextFP.param=param+.0001; // fake
-				nextFP.Z=p.face_center(nextFP.face); // fake
+				nextFP.Z=p.getFaceCenter(nextFP.face); // fake
 			}
 			return null; 
 		}
@@ -1243,7 +1340,7 @@ public class FaceLink extends LinkedList<Integer> {
 					nextFP.next=holdFP;
 					nextFP.face=faceFlower[j];
 					nextFP.param=(holdparam+nextFP.next.param)/2.0;  // fake
-					nextFP.Z=p.face_center(nextFP.face); // fake 
+					nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
 				}
 			}
 			else { // clockwise
@@ -1254,7 +1351,7 @@ public class FaceLink extends LinkedList<Integer> {
 					nextFP.next=holdFP;
 					nextFP.face=faceFlower[j];
 					nextFP.param=(holdparam+nextFP.next.param)/2.0;  // fake
-					nextFP.Z=p.face_center(nextFP.face); // fake 
+					nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
 				}
 			}
 		}
@@ -1274,7 +1371,7 @@ public class FaceLink extends LinkedList<Integer> {
 					nextFP.next=holdFP;
 					nextFP.face=faceFlower[jj];
 					nextFP.param=(holdparam+nextFP.next.param)/2.0;  // fake
-					nextFP.Z=p.face_center(nextFP.face); // fake 
+					nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
 					jj=(jj+1)%num;
 				}
 			}
@@ -1287,7 +1384,7 @@ public class FaceLink extends LinkedList<Integer> {
 					nextFP.next=holdFP;
 					nextFP.face=faceFlower[jj];
 					nextFP.param=(holdparam+nextFP.next.param)/2.0;  // fake
-					nextFP.Z=p.face_center(nextFP.face); // fake 
+					nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
 					jj=(jj-1+num)%num;
 				}
 			}

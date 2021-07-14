@@ -683,8 +683,8 @@ public class DisplayParser {
 							edge = (EdgeSimple) dedges.next();
 							if (edge.v!=0) {  // skip root
 								int f=edge.v;
-								z = p.face_center(f); 
-								Complex w = p.face_center(edge.w);
+								z = p.getFaceCenter(f); 
+								Complex w = p.getFaceCenter(edge.w);
 								cpScreen.drawEdge(z, w,dispFlags);
 								count++;
 							}
@@ -702,8 +702,8 @@ public class DisplayParser {
 							edge = (EdgeSimple) dedges.next();
 							if (edge.v!=0) {  // skip root
 								int f=edge.v;
-								z = p.face_center(f); 
-								Complex w = p.face_center(edge.w);
+								z = p.getFaceCenter(f); 
+								Complex w = p.getFaceCenter(edge.w);
 								if (z!=null && w!=null) {
 									cpScreen.drawEdge(z, w,dispFlags);
 									count++;

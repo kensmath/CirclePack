@@ -182,6 +182,26 @@ public class CommonMath {
 	}
 	
 	/**
+	 * Given three points forming a cclw triangle, is
+	 * given 'pt' on or inside the triangle? Spherical
+	 * points in (theta,phi) form.
+	 * @param pt Complex
+	 * @param z0 Complex
+	 * @param z1 Complex
+	 * @param z2 Complex
+	 * @param hes int, geometry
+	 * @return boolean
+	 */
+	public static boolean pt_in_triangle(Complex pt,
+			Complex z0,Complex z1,Complex z2,int hes) {
+		if (hes<0)
+			return HyperbolicMath.pt_in_hyp_tri(pt,z0,z1,z2);
+		if (hes>0) // points in (theta,phi) form
+			return SphericalMath.pt_in_sph_tri(pt,z0,z1,z2);
+		return EuclMath.pt_in_eucl_tri(pt,z0,z1,z2);
+	}
+	
+	/**
 	 * Give indication of relative error between centers/rad 
 	 * of two circles in same geometry. Result is error as
 	 * fraction of average of the two radii. 

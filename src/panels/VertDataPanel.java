@@ -364,8 +364,10 @@ public class VertDataPanel extends JPanel implements ActionListener {
 		// set index field
 		faceChoice.setText(Integer.toString(f));
 
+		// TODO: need to move to DCEL faces
+		
 		Face face=p.faces[f];
-		int []verts=face.vert;
+		int []verts=p.getFaceVerts(f);
 		
 
 		// list corner vertices

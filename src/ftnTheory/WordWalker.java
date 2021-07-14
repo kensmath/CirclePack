@@ -83,22 +83,31 @@ public class WordWalker extends PackExtender {
 	/**
 	 * Draw a face with special coloring: red, green, blue on the
 	 * 0-1, 1-2, 2-0 sectors, respectively.
-	 * @param face
+	 * @param f int
 	 */
-	public void imprintFace(int face) {
-		int []vert=packData.faces[face].vert;
-		Complex c0=packData.getCenter(vert[0]);
-		Complex c1=packData.getCenter(vert[1]);
-		Complex c2=packData.getCenter(vert[2]);
-		Complex cc=packData.face_center(face);
+	public void imprintFace(int f) {
+		Complex[] c=new Complex[3];
+		if (packData.packDCEL!=null) {
+			c=packData.packDCEL.getFaceCorners(packData.packDCEL.faces[f]);
+		}
+		
+		// traditional
+		else {
+			int []vert=packData.faces[f].vert;
+			c[0]=packData.getCenter(vert[0]);
+			c[1]=packData.getCenter(vert[1]);
+			c[2]=packData.getCenter(vert[2]);
+		}
+		
+		Complex cc=packData.getFaceCenter(f);
 		
 		DispFlags dflags=new DispFlags("f");
 		dflags.setColor(ColorUtil.coLor(232));
-		packData.cpScreen.drawFace(c0,c1,cc,null,null,null,dflags);
+		packData.cpScreen.drawFace(c[0],c[1],cc,null,null,null,dflags);
 		dflags.setColor(ColorUtil.coLor(218));
-		packData.cpScreen.drawFace(c1,c2,cc,null,null,null,dflags);
+		packData.cpScreen.drawFace(c[1],c[2],cc,null,null,null,dflags);
 		dflags.setColor(ColorUtil.coLor(1));
-		packData.cpScreen.drawFace(c2,c0,cc,null,null,null,dflags);
+		packData.cpScreen.drawFace(c[2],c[0],cc,null,null,null,dflags);
 	}
 	
 	public void helpInfo() {

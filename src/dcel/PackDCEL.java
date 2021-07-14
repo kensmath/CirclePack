@@ -35,10 +35,11 @@ import util.TriData;
 
 /** 
  * The "DCEL" is a common way that computer scientists 
- * encode graphs; it's also called a 'HalfEdge' structure.
- * At the suggestion of John Bowers, I may incorporate this 
- * in CirclePack; it is only concerned with the combinatorics.
- * The triangulation is assumed to be 3-connected.
+ * encode graphs; it's also called a 'half-edge' structure.
+ * At the suggestion of John Bowers, I am converting all of
+ * CirclePack to use DCEL structures as the central 
+ * mechanism for combinatorics. Our triangulations are 
+ * assumed to be 3-connected.
  * 
  * This preliminary class is for testing DCEL methods. 
  * In particular, things are not sync'ed well with the 

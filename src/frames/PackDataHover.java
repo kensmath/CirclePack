@@ -431,14 +431,14 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 	public void update_face(PackData p) {
 		if (p==null || !p.status) return;
 		int f=FaceLink.grab_one_face(p,faceChoice.getText());
-		if (f<=0) f=1;
+		if (f<=0) 
+			f=1;
 		
 		// set index field
 		faceChoice.setText(Integer.toString(f));
 
 		Face face=p.faces[f];
-		int []verts=face.vert;
-		
+		int []verts=p.getFaceVerts(f);
 
 		// list corner vertices
 		vertsField.setText(verts[0]+" "+verts[1]+" "+verts[2]);
