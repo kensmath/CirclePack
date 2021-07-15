@@ -2022,7 +2022,7 @@ public class ProjStruct extends PackExtender {
 		while (fplst.hasNext()) 
 			p.kData[fplst.next()].utilFlag=1;
 		util.UtilPacket uP=new util.UtilPacket();
-		int []fp_gens=p.label_generations(-1, uP);
+		int[] fp_gens=p.label_generations(-1, uP);
 		if (fp_gens!=null && uP.rtnFlag>0)
 			baseVert=uP.rtnFlag;
 		else baseVert=p.getAlpha();

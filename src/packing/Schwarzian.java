@@ -687,12 +687,14 @@ public class Schwarzian {
 				}
 				break;
 			}
-			// color all edges so color ramp valid, then draw requested (default all) 
+			// color all edges so color ramp is valid; 
+			//    then draw requested (default all) 
 			case 'e': { // color edges for schwarzian: blue < 0, red > 0
 				Vector<Double> e_sch=new Vector<Double>(); 
 				for (int v=1;v<=p.nodeCount;v++) {
-					for (int j=0;j<(p.countFaces(v)+p.getBdryFlag(v));j++) {
-						int w=p.kData[v].flower[j];
+					int[] flower=p.getFlower(v);
+					for (int j=0;j<flower.length;j++) {
+						int w=flower[j];
 						if (w>v) 
 							e_sch.add(p.kData[v].schwarzian[j]);
 					}
@@ -702,8 +704,9 @@ public class Schwarzian {
 				if (elink==null || elink.size()==0)
 					elink=new EdgeLink(p,"a"); // default to all
 				for (int v=1;v<=p.nodeCount;v++) {
-					for (int j=0;j<(p.countFaces(v)+p.getBdryFlag(v));j++) {
-						int w=p.kData[v].flower[j];
+					int[] flower=p.getFlower(v);
+					for (int j=0;j<flower.length;j++) {
+						int w=flower[j];
 						if (w>v) {
 							if (EdgeLink.ck_in_elist(elink, v, w)) {
 								dflags.setColor(e_color.remove(0));
@@ -736,11 +739,12 @@ public class Schwarzian {
 	 */
 	public static Mobius faceBaseMob(PackData p,int f) {
 		Complex []Z=new Complex[3];
+		int[] fverts=p.getFaceVerts(f);
 		for (int j=0;j<3;j++) 
-			Z[j]=p.getCenter(p.faces[f].vert[j]);
+			Z[j]=p.getCenter(fverts[j]);
 		if (p.hes > 0) { // sph? check for circles containing infinity
 			for (int j=0;j<3;j++) {
-				if ((Z[j].y+p.getRadius(p.faces[f].vert[j]))>Math.PI)
+				if ((Z[j].y+p.getRadius(fverts[j]))>Math.PI)
 					Z[j]=SphericalMath.getAntipodal(Z[j]);
 			}
 		}
@@ -748,14 +752,15 @@ public class Schwarzian {
 		// find tangency points
 		Complex []tpts=new Complex[3];
 		for (int j=0;j<3;j++) {
-			Complex z1=p.getCenter(p.faces[f].vert[j]);
-			Complex z2=p.getCenter(p.faces[f].vert[(j+1)%3]);
-			double r1=p.getRadius(p.faces[f].vert[j]);
-			double r2=p.getRadius(p.faces[f].vert[(j+1)%3]);
+			Complex z1=p.getCenter(fverts[j]);
+			Complex z2=p.getCenter(fverts[(j+1)%3]);
+			double r1=p.getRadius(fverts[j]);
+			double r2=p.getRadius(fverts[(j+1)%3]);
 			tpts[j]=CommonMath.get_tang_pt(z1, z2, r1, r2, p.hes);
 		}
 
-		Mobius tmpMob=Mobius.mob_xyzXYZ(CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
+		Mobius tmpMob=Mobius.mob_xyzXYZ(CPBase.omega3[0],
+				CPBase.omega3[1],CPBase.omega3[2],
 				tpts[0],tpts[1],tpts[2],0,p.hes);
 		
 		boolean debug=false; // debug=true;

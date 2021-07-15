@@ -950,7 +950,7 @@ public class CombDCEL {
 				nextv.add(v);
 			}
 			rtrace=rtrace.nextRed;
-		} while (rtrace!=redchain);
+		} while (rtrace!=redchain); // DCELdebug.printRedChain(redchain);
 
 		// use two-list procedure to mark all interiors as 1.
 		//   watch for boundary verts, which would indicate error

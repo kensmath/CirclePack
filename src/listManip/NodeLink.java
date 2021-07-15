@@ -607,15 +607,16 @@ public class NodeLink extends LinkedList<Integer> {
 					its=null; // eat rest of items
 					if (facelist==null || facelist.size()==0) break;
 				    Iterator<Integer> flist=facelist.iterator();
-				    int f,vert;
+				    int v;
 				    while (flist.hasNext()) {
-					f=(Integer)flist.next();
+					int f=flist.next();
+					int[] fverts=packData.getFaceVerts(f);
 					for (int j=0;j<3;j++) {
-					    vert=packData.faces[f].vert[j];
-					    if (hits[vert]==0) {
-						add(vert);
+					    v=fverts[j];
+					    if (hits[v]==0) {
+						add(v);
 						count++;
-						hits[vert]=1;
+						hits[v]=1;
 					    }
 					}
 				    }
@@ -751,7 +752,8 @@ public class NodeLink extends LinkedList<Integer> {
 						
 						// eat the rest of the stings
 						String itstr=null;
-						while (its.hasNext()) itstr=(String)its.next();
+						while (its.hasNext()) 
+							itstr=(String)its.next();
 						break;
 					}
 					

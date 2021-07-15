@@ -150,7 +150,7 @@ public class RedChainer {
 	      UtilPacket uP=new UtilPacket();
 	      gen_numbers=p.label_generations(0,uP);
 	      out_vert=uP.rtnFlag;
-	      p.kData[out_vert].utilFlag=1; // flag out_vert 
+	      p.setVertUtil(out_vert,1); // flag out_vert 
 	      if ((v=red_share_vert(p,redlist))==out_vert) {
 		  keep_vert=v;
 		  keep_ptr=redlist;
@@ -202,7 +202,7 @@ public class RedChainer {
 			  j=num+1;
 		      }
 		  }
-		} while (p.kData[cvert].utilFlag==0);
+		} while (p.getVertUtil(cvert)==0);
 	  }
 
 	  /* set redlist to start at persistent entry, then process red 

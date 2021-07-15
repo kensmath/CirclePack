@@ -1,11 +1,12 @@
 package baryStuff;
 
+import allMains.CPBase;
+import complex.Complex;
+import exceptions.DCELException;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import math.Point3D;
 import packing.PackData;
-import allMains.CPBase;
-import complex.Complex;
 
 /**
  * A BaryPoint is a triple of barycentric coords describing a
@@ -215,8 +216,13 @@ public class BaryPoint {
 	}
 	
 	public void printDebug(PackData p,String lead) {
-		System.out.println(lead+": face="+this.face+" verts="+p.faces[this.face].vert[0]+" "+p.faces[this.face].vert[1]+" "+
-				p.faces[this.face].vert[2]+" barys: "+this.b0+" "+this.b1+" "+this.b2);
+		if (p.packDCEL!=null) {
+			throw new DCELException("'printDebug' not DCEL ready");
+		}
+		System.out.println(lead+": face="+this.face+" verts="+
+				p.faces[this.face].vert[0]+" "+p.faces[this.face].vert[1]+" "+
+				p.faces[this.face].vert[2]+" barys: "+
+	this.b0+" "+this.b1+" "+this.b2);
 	}
 	
 	/**

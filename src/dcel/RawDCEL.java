@@ -2556,8 +2556,11 @@ public class RawDCEL {
 		if (vlink==null || vlink.size()<2)
 			return null;
 		int v=vlink.remove(0);
-		int w=vlink.remove(1);
+		int w=vlink.remove(0);
 		HalfEdge startedge=pdcel.findHalfEdge(v,w);
+		if (startedge==null)
+			throw new CombException("usage: 'vlink2red', initial vertices "
+					+v+" and "+w+" do not form an edge");
 		RedHEdge newChain=new RedHEdge(startedge);
 		RedHEdge lastedge=newChain;
 		int lastvert=w;
@@ -2585,6 +2588,9 @@ public class RawDCEL {
 			throw new CombException("usage: 'vlink2red', can't close, "+
 					nextvert+" and "+startedge.origin.vertIndx+
 					" are not  not connected");
+		lastedge.nextRed=new RedHEdge(he);
+		lastedge.nextRed.prevRed=lastedge;
+		lastedge=lastedge.nextRed;
 		lastedge.nextRed=newChain;
 		newChain.prevRed=lastedge;
 		return newChain;

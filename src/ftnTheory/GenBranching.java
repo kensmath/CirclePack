@@ -1176,7 +1176,7 @@ public class GenBranching extends PackExtender {
 				if (vgens[k]<futil[f])
 					futil[f]=vgens[k];
 			}
-			packData.faces[f].plotFlag=0;
+			packData.setFacePlotFlag(f,0);
 		}
 
 		// rotating lists of current/next faces being processed
@@ -1193,13 +1193,13 @@ public class GenBranching extends PackExtender {
 			dtree=bdrySubLink(gbp,startface);
 			for (int i=0;i<gbp.bdryLink.size();i++) {
 				int ff=gbp.bdryLink.get(i);
-				packData.faces[ff].plotFlag=++count;
+				packData.setFacePlotFlag(ff,++count);
 				nextFaces.add(ff);
 			}				
 		}
 		else {
 			nextFaces.add(startface);
-			packData.faces[startface].plotFlag=++count;
+			packData.setFacePlotFlag(startface,++count);
 		}		
 		int currFaceGen=0;
 		int safety=packData.faceCount;
@@ -1223,7 +1223,7 @@ public class GenBranching extends PackExtender {
 				Iterator<Integer> ptns=partners.iterator();
 				while (ptns.hasNext()) {
 					int nghb=ptns.next();
-					if (packData.faces[nghb].plotFlag==0) {
+					if (packData.getFacePlotFlag(nghb)==0) {
 						
 						// add the dual edge
 						dtree.add(new EdgeSimple(face,nghb));
@@ -1234,7 +1234,7 @@ public class GenBranching extends PackExtender {
 							dtree.abutMore(bdrySubLink(gbp,nghb));
 							for (int i=0;i<gbp.bdryLink.size();i++) {
 								int ff=gbp.bdryLink.get(i);
-								packData.faces[ff].plotFlag=++count;
+								packData.setFacePlotFlag(ff,++count);
 								// add ff to one of the lists
 								if (futil[ff]<=currFaceGen)
 									currFaces.add(ff);
@@ -1243,7 +1243,7 @@ public class GenBranching extends PackExtender {
 							}				
 						}
 						else {
-							packData.faces[nghb].plotFlag=++count;
+							packData.setFacePlotFlag(nghb,++count);
 							// add nghb to one of the lists
 							if (futil[nghb]<=currFaceGen)
 								currFaces.add(nghb);

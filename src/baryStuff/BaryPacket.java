@@ -32,9 +32,6 @@ public class BaryPacket {
 	
 	public BaryPacket(PackData p,int face) {
 		vert=p.getFaceVerts(face);
-//		vert[0]=p.faces[face].vert[0];
-//		vert[1]=p.faces[face].vert[1];
-//		vert[2]=p.faces[face].vert[2];
 		faceIndx=face;
 	}
 	

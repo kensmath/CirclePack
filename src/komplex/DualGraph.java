@@ -700,13 +700,13 @@ public class DualGraph {
 		
 		// store generations of verts, those of startface are 1.
 		for (int v=1;v<=p.nodeCount;v++) {
-			p.kData[v].utilFlag=0;
-			p.kData[v].plotFlag=0;
+			p.setVertUtil(v,0);
+			p.setPlotFlag(v,0);
 		}
 		for (int j=0;j<3;j++) {
 			int k=p.faces[startface].vert[j];
-			p.kData[k].utilFlag=1;
-			p.kData[k].plotFlag=1;
+			p.setVertUtil(k,1);
+			p.setPlotFlag(k,1);
 		}
 		util.UtilPacket uP=new util.UtilPacket();
 		int []vgens=p.label_generations(-1,uP);
@@ -721,7 +721,7 @@ public class DualGraph {
 					futil[f]=vgens[k];
 			}
 			p.faces[f].nextFace=startface;
-			p.faces[f].plotFlag=0;
+			p.setPlotFlag(f,0);
 		}
 
 		// rotating lists of current/next faces to being processed
@@ -729,7 +729,7 @@ public class DualGraph {
 		FaceLink nextFaces=new FaceLink(p);
 		
 		nextFaces.add(startface);
-		p.faces[startface].plotFlag=++count;
+		p.setPlotFlag(startface,++count);
 		
 		// keep track of:
 		//  * vgens[]: generations of circles, 1 = in startface

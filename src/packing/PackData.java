@@ -2830,12 +2830,25 @@ public class PackData{
 	 * @return int[]
 	 */
 	public int[] getPetals(int v) {
-		if (packDCEL!=null)
-			return packDCEL.vertices[v].getPetals();
+
+		int[] petals;
+		if (packDCEL!=null) {
+			ArrayList<Integer> al=new ArrayList<Integer>(0);
+			HalfEdge he=packDCEL.vertices[v].halfedge;
+			do {
+				al.add(he.twin.origin.vertIndx);
+				he=he.prev.twin; // cclw
+			} while (he!=packDCEL.vertices[v].halfedge);
+			int n=al.size();
+			petals=new int[n];
+			for (int j=0;j<n;j++)
+				petals[j]=al.get(j);
+			return petals;
+		}
 		
 		// traditional
 		int n=kData[v].num+kData[v].bdryFlag;
-		int[] petals=new int[n];
+		petals=new int[n];
 		for (int j=0;j<n;j++)
 			petals[j]=kData[v].flower[j];
 		return petals;
@@ -10671,12 +10684,12 @@ public class PackData{
 	  
 	  /** 
 	   * Determine generation of vertices starting from given seeds.
-	   * If 'mark' is true, store in 'kData[].mark', else just return
-	   * the index of the last vertex. 'utilFlag' is used to pass
-	   * seed info to 'label_generations'.
+	   * If 'mark' is true, store in 'kData[].mark' or 'vData[].mark', 
+	   * else just return the index of the last vertex. 'utilFlag' 
+	   * is used to pass seed info to 'label_generations'.
 	   * @param mx int, if mx>0, stop at generation mx.
-	   * @param seedlist @see NodeLink, list defined as first generation (1)
-	   * @param mark boolean, if true, store generation as 'mark in 'KData'.
+	   * @param seedlist NodeLink, list defined as first generation (1)
+	   * @param mark boolean, if true, store as 'mark in 'kData' or 'vData'
 	   * @return int, index of last_vert (first encountered in max generation), 0 on error
 	   */
 	public int gen_mark(NodeLink seedlist, int mx, boolean mark) {
@@ -10714,11 +10727,12 @@ public class PackData{
 	  }
 
 	  /**
-	   * Return n "antipodal" vertices, starting with given list.
+	   * Return N "antipodal" vertices, starting with given list.
 	   * That is, given {v1, v2, ...} as first, inductively choose 
 	   * some vj which is furthest comb distance from all previous
-	   * (namely, last encountered with max distance) until we have n.
-	   * @param ants NodeLink; may be empty, then start with max vert index.
+	   * (namely, last encountered with max distance) until 
+	   * we have N.
+	   * @param ants NodeLink; if empty, start with max vert index.
 	   * @param N int, number we want, (including ants)
 	   * @return NodeLink, v1,...,vn; null on error.
 	   * NOTE: if ants has N elements, return these.
@@ -10738,14 +10752,14 @@ public class PackData{
 		  }
 
 		  for (int j=1;j<=nodeCount;j++) {
-			  kData[j].utilFlag=0;
+			  setVertUtil(j,0);
 		  }
 
 		  // start with what we were given
 		  for (int j=0;j<ants.size();j++) {
 			  int w=ants.get(j);
 			  antipods.add(w);
-			  kData[w].utilFlag=1;
+			  setVertUtil(w,1);
 		  }
 		  
 		  UtilPacket uP=new UtilPacket();
@@ -10755,20 +10769,21 @@ public class PackData{
 				  throw new CombException("ran out of vertices");
 			  }
 			  antipods.add(uP.rtnFlag);
-			  kData[uP.rtnFlag].utilFlag=1;
+			  setVertUtil(uP.rtnFlag,1);
 		  }
 		  return antipods;
 	  }
 
 	  /** 
 	   * Return an int array with the generations of verts, 
-	   * generation "1" being those v with 'util' non-zero. 
-	   * 'util' does not get changed during this method. Additional
-	   * info is returned in 'uP'.  
-	   * @param max int, if max>0, then stop at last vert with generation = max.
-	   * @param uP UtilPacket; instantiated by calling routine: returns last 
-	   *      vertex as 'uP.rtnFlag' and
-	   *      the count of vertices having non-zero generation as 'uP.value'.
+	   * generation "1" being those v with 'utilFlag' non-zero. 
+	   * The utility flage here is either 'KData[].utilFlag' 
+	   * or 'VData[].vutil'; it does not get changed during 
+	   * this method. Additional info is returned via 'uP'.  
+	   * @param max int, if max>0, stop at last with gen = max.
+	   * @param uP UtilPacket; instantiated by calling routine: 
+	   *    returns last vertex as 'uP.rtnFlag' and
+	   *    count of vertices as 'uP.value'.
 	   * @return int[], int[u]=generation of u; return null on error
 	   */
 	public int[] label_generations(int max, UtilPacket uP) {
@@ -10800,10 +10815,9 @@ public class PackData{
 			genlist = new NodeLink(this); // start new list
 			do {
 				int v = vertlist.remove(0);
-				int[] flower=getFlower(v);
-				int num=countFaces(v);
-				for (int i = 0; i <= num; i++)
-					if (final_list[(j = flower[i])] == 0) {
+				int[] petals=getPetals(v);
+				for (int i=0; i<petals.length; i++)
+					if (final_list[(j = petals[i])] == 0) {
 						final_list[j] = gen_count;
 						count++;
 						last_vert = j;

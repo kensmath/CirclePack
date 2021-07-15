@@ -196,24 +196,43 @@ public class DisplayParser {
 				FaceLink faceLink = new FaceLink(p, items);
 				Iterator<Integer> flist = faceLink.iterator();
 				while (flist.hasNext()) {
-					f = (Integer) flist.next();
+					f= flist.next();
+					Complex[] cents=new Complex[3];
 					Complex[] sides = new Complex[3];
 					double[] lgths = new double[3];
-					for (int j = 0; j < 3; j++) {
-						sides[j] = p.getCenter(p.faces[f].vert[(j + 1) % 3])
-								.minus(p.getCenter(p.faces[f].vert[j]));
-						lgths[j] = sides[j].abs();
+					if (p.packDCEL!=null) {
+						HalfEdge he=p.packDCEL.faces[f].edge;
+						for (int j=0;j<3;j++) {
+							Complex ww=p.packDCEL.getVertCenter(he.next);
+							cents[j]=p.packDCEL.getVertCenter(he);
+							sides[j]=ww.minus(cents[j]);
+							lgths[j]=sides[j].abs();
+							he=he.next;
+						}
 					}
+					
+					// traditional
+					else {
+						int[] fverts=p.getFaceVerts(f);
+						for (int j = 0; j < 3; j++) {
+							cents[j]=p.getCenter(fverts[j]);
+							sides[j] = p.getCenter(fverts[(j + 1) % 3])
+									.minus(cents[j]);
+							lgths[j] = sides[j].abs();
+						}
+					}
+					
 					for (int j = 0; j < 3; j++) {
-						Complex cent = p.getCenter(p.faces[f].vert[j]);
+						Complex cent = cents[j];
 						double arg1 = sides[j].arg()*r2deg;
 						double extent = sides[(j + 2) % 3].times(-1.0)
 								.divide(sides[j]).arg()*r2deg;
-						double rad = 0.5 * (lgths[j] - lgths[(j + 1) % 3] + lgths[(j + 2) % 3]);
+						double rad = 0.5 * (lgths[j] - 
+								lgths[(j + 1) % 3] + lgths[(j + 2) % 3]);
 						cpScreen.drawArc(cent,rad,arg1,extent,dispFlags);
 						count++;
 					}
-				}
+				} // end of while
 				break;
 			}
 			
@@ -224,14 +243,16 @@ public class DisplayParser {
 				
 				// default to gridlines
 				Vector<BaryCoordLink> myLines=CPBase.gridLines;
-				if (sub_cmd!=null && sub_cmd.length()>0 && sub_cmd.charAt(0)=='s') // streamLines?
+				if (sub_cmd!=null && sub_cmd.length()>0 && 
+						sub_cmd.charAt(0)=='s') // streamLines?
 					myLines=CPBase.streamLines;
 				
 				if (myLines == null || myLines.size() == 0)
 					break;
 				PackData localPD=p;
 				if (p.hes > 0) {
-					CirclePack.cpb.errMsg("'grid' can not yet be used with spherical packings");
+					CirclePack.cpb.errMsg("'grid' can not yet be "+
+							"used with spherical packings");
 					break;
 				}
 				if (p.hes<0) {
@@ -289,8 +310,8 @@ public class DisplayParser {
 				if (sub_cmd.length()>0 && sub_cmd.startsWith("F"))
 					useRed=true;
 				
-				if (debug) // debug=true;
-					LayoutBugs.log_faceOrder(p);
+//				if (debug) // debug=true;
+//					LayoutBugs.log_faceOrder(p);
 				
 				GraphLink graphlist=null;
 				int first_face = 0;
@@ -324,12 +345,15 @@ public class DisplayParser {
 						trip[0]=strt.origin.vertIndx;
 						trip[1]=strt.next.origin.vertIndx;
 					}
+					
+					// traditional
 					else {
 						int indx = p.faces[first_face].indexFlag;
 						Face face = p.faces[first_face];
 						trip[0]=face.vert[indx];
 						trip[1]=face.vert[(indx+1)%3];
 					}
+					
 					for (int i=0;i<2;i++) {
 						v=trip[i];
 						z = p.getCenter(v);
@@ -354,6 +378,8 @@ public class DisplayParser {
 					if (p.packDCEL!=null) 
 						count += p.packDCEL.layoutTree(null, graphlist, dispFlags,null,
 								true, false,-1.0);
+					
+					// traditional
 					else 
 						count += p.layoutTree(null, graphlist, dispFlags,null,
 								true, useRed,-1.0);
@@ -362,6 +388,8 @@ public class DisplayParser {
 					if (p.packDCEL!=null) 
 						count += p.packDCEL.layoutTree(null, graphlist, null,dispFlags,
 								true, false,-1.0);
+					
+					// traditional
 					else
 						count += p.layoutTree(null, graphlist, null,dispFlags,
 								true,useRed,-1.0);
@@ -370,6 +398,8 @@ public class DisplayParser {
 					if (p.packDCEL!=null) 
 						count += p.packDCEL.layoutTree(null, graphlist,dispFlags,dispFlags,
 								true, false,-1.0);
+					
+					// traditional
 					else
 						count += p.layoutTree(null, graphlist, dispFlags,dispFlags,
 								true, useRed,-1.0);
@@ -400,7 +430,7 @@ public class DisplayParser {
 			}
 			case 'D': { // dual faces, recomp'd by drawing order
 				
-				// TODO:
+				// TODO: 
 				
 				
 				break;
@@ -441,7 +471,6 @@ public class DisplayParser {
 						Iterator<Integer> vlist = nodeLink.iterator();
 						while (vlist.hasNext()) {
 							v = (Integer) vlist.next();
-//System.out.println(" v="+v);							
 							ArrayList<Complex> zarray=
 									CommonMath.buildDualFace(pdcel,
 											pdcel.vertices[v].halfedge,p.hes);
@@ -459,12 +488,7 @@ public class DisplayParser {
 								dispFlags.setColor(p.getCircleColor(v));
 							if (dispFlags.label)
 								dispFlags.setLabel(Integer.toString(v));
-							
-//							if (!p.isBdry(v)) // interior
-								cpScreen.drawClosedPoly(num,fanCenters,dispFlags);
-//							else
-//								cpScreen.drawOpenPoly(num,fanCenters,dispFlags);
-								
+							cpScreen.drawClosedPoly(num,fanCenters,dispFlags);
 							count++;
 						}
 						break;
