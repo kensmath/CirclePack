@@ -113,8 +113,10 @@ public class FlattenTri extends PackExtender {
 			File file=new File(filename);
 			int cnt=0;
 			try {
-				BufferedWriter fp=CPFileManager.openWriteFP((File)CPFileManager.PackingDirectory,false,
-						file.getName(),scriptflag);
+				BufferedWriter fp=
+						CPFileManager.openWriteFP(
+								(File)CPFileManager.PackingDirectory,false,
+								file.getName(),scriptflag);
 				fp.write("CHECKCOUNT: "+flatPack.nodeCount+"\n");
 				fp.write("PACKNAME: " + filename + "\n");
 				fp.write("GLOBAL_DUAL_EDGE_LIST:\n");

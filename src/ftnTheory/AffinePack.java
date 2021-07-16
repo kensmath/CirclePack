@@ -2653,7 +2653,8 @@ public class AffinePack extends PackExtender {
 			try {
 				fp.append(strBuild.toString());
 				fp.close();
-				CirclePack.cpb.msg("Wrote '"+file.getName()+"' to "+CPFileManager.PackingDirectory);
+				CirclePack.cpb.msg("Wrote '"+file.getName()+"' to "+
+						CPFileManager.PackingDirectory);
 			} catch (Exception iox) {
 				Oops("Something went wrong with saving 'RUN' results");
 				return 0;

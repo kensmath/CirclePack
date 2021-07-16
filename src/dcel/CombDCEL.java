@@ -61,7 +61,8 @@ public class CombDCEL {
 	 * DCEL structure with 'vertices' and 'edges' only.
 	 * Bouquet satisfies usual conventions: counterclockwise order, 
 	 * indexed contiguously from 1, bdry/interior flower 
-	 * open/closed, resp.
+	 * open/closed, resp. Calling routine builds red chain, does
+	 * 'd_FillInside' and 'attachDCEL'.
 	 * @param bouquet int[][]
 	 * @return PackDCEL
 	 */
@@ -967,8 +968,9 @@ public class CombDCEL {
 						int w=he.next.origin.vertIndx;
 						// error if this is bdry vertex
 						if (vstat[w]==0 && pdcel.vertIsBdry(he.next.origin)!=null)
-							throw new CombException("'finishRedChain' encountered "+
-									"a bdry vertex not in the red chain.");
+							throw new CombException(
+								"'finishRedChain' encountered a bdry vertex "+
+									"not in the red chain.");
 
 						if (vstat[w]==0) {
 							nextv.add(w);

@@ -2106,96 +2106,170 @@ public class PackCreation {
 	}
 	
 	/**
-	 * Create square grid packing with 2^N vertices on each edge
-	 * @param N int, number of generations; N=1 is basic
+	 * Create square grid packing with N vertices on each edge.
+	 * We proceed by building the bouquet.
+	 * @param N int
 	 * @return new @see PackData
 	 */
 	public static PackData squareGrid(int N) {
 
-		int generation=1; // number of generations in current build
-		int edgeNumber=1; // count of vertices along each edge
+		if (N<2)
+			N=2;
+		
+		// Grid points in N-by-N array, barycenters in
+		//   (N-1)-by-(N-1) shifted array. Positions
+		//   given by (i,j) as with a matrix. Corners
+		//   are A=(1,1), upper left, B=(N,1) lower
+		//   left, C=(N,N), and D=(1,N). Similar with
+		//   the barycenter grid. 
+		// Have 10 types of nodes: 
+		//   * cclw corners A-D,
+		//   * cclw edge relative interiors, L, B, R, T,
+		//   * interior grid
+		//   * interior barycenters
+		// Based on (i,j) locations, we can assign index
+		//   and find flowers.
+		int Nsq=N*N;
+		int vertcount=2*(Nsq-N)+1; // total 
+		
+		// build bouquet according to the 10 types
+		int[][] bouquet=new int[vertcount+1][];
+		
+		// 4 corner flowers: A=1,B=N,C=Nsq,D=Nsq-N+1
+		int[] cnr=new int[3]; // upper left
+		cnr[0]=2;cnr[1]=Nsq+1;cnr[2]=N+1;
+		bouquet[1]=cnr;
+		
+		cnr=new int[3]; // lower left
+		cnr[0]=2*N;cnr[1]=Nsq+N-1;cnr[2]=N-1;
+		bouquet[N]=cnr;
+		 
+		cnr=new int[3]; // lower right
+		cnr[0]=Nsq-1;cnr[1]=Nsq+(N-1)*(N-1);cnr[2]=Nsq-N;
+		bouquet[Nsq]=cnr;
+		
+		cnr=new int[3]; // upper right
+		cnr[0]=N*(N-2)+1;cnr[1]=Nsq+(N-1)*(N-2)+1;cnr[2]=Nsq-N+2;
+		bouquet[Nsq-N+1]=cnr;
+		
+		// L and R edges, 2 <= i <= N-1
+		for (int i=2;i<N;i++) {
+			int[] fan=new int[5];
 
-		// start as 4-seed, but 1 is swapped to boundary
-		PackData sgPack = PackCreation.seed(4, 0);
-		sgPack.swap_nodes(5, 1);
-		sgPack.complex_count(false);
-
-		boolean debug=false; // for debugging edge lists
-
-		while (generation < N) {
-
-			// tempPack is unit, we adjoin 3 copies
-			PackData tempPack=sgPack.copyPackTo();
-
-			// add the square above
-			PackData.adjoin(sgPack,tempPack, 2,3,edgeNumber);
-			int new1=sgPack.vertexMap.findW(1);
-			sgPack.swap_nodes(new1,1);
+			// left edge
+			int spot=i;
+			fan[0]=spot+1;
+			fan[1]=Nsq+i;
+			fan[2]=spot+N;
+			fan[3]=fan[1]-1;
+			fan[4]=spot-1;
+			bouquet[spot]=fan;
 			
-			// add square upper left
-			PackData.adjoin(sgPack,tempPack,2,4,edgeNumber);
-			int new2=sgPack.vertexMap.findW(2);
-			sgPack.swap_nodes(new2,2);
-			int newAlpha=new2; // this will be set later
+			// right edge
+			fan=new int[5];
+			spot=Nsq-N+i;
+			fan[0]=spot-1;
+			fan[1]=2*Nsq-3*N+i+1;
+			fan[2]=spot-N;
+			fan[3]=fan[1]+1;
+			fan[4]=spot+1;
+			bouquet[spot]=fan;
+			
+		} 
+		
+		// B and T edges, 2 <= j <= N-1
+		for (int j=2;j<N;j++) {
+			int[] fan=new int[5];
 
-			// add square to left
-			PackData.adjoin(sgPack,tempPack,3,4,2*edgeNumber);
-			int new3=sgPack.vertexMap.findW(3);
-			sgPack.swap_nodes(new3,3);
+			// bottom edge
+			int spot=N*j;
+			fan[0]=spot+N;
+			fan[1]=Nsq+(N-1)*j;
+			fan[2]=spot-1;
+			fan[3]=fan[1]-N+1;
+			fan[4]=spot-N;
+			bouquet[spot]=fan;
 			
-			sgPack.alpha=newAlpha;
-			sgPack.setCombinatorics();
-			
-			if (debug) {
-				Iterator<EdgeSimple> es=sgPack.elist.iterator();
-				System.err.println("\n add upper left");
-				while (es.hasNext()) {
-					EdgeSimple edge=es.next();
-					System.err.println("("+edge.v+" "+edge.w+")");
-				}
-				DebugHelp.debugPackWrite(sgPack,"sgPack1.p");
+			// top edge
+			fan=new int[5];
+			spot=N*(j-1)+1;
+			fan[0]=spot-N;
+			fan[1]=Nsq+(N-1)*(j-2)+1;
+			fan[2]=spot+1;
+			fan[3]=fan[1]+N-1;
+			fan[4]=spot+N;
+			bouquet[spot]=fan;
+		}
+		
+		// the generic grid location (i,j), 2 <= i,j <= N-1
+		for (int i=2;i<N;i++) {
+			for (int j=2;j<N;j++) {
+				int[] petals=new int[9];
+				int spot=N*(j-1)+i;
+				int bspot=Nsq+(N-1)*(j-2)+i-1; // upper left of spot
+				petals[0]=spot-1;
+				petals[1]=bspot;
+				petals[2]=spot-N;
+				petals[3]=bspot+1;
+				petals[4]=spot+1;
+				petals[5]=bspot+N;
+				petals[6]=spot+N;
+				petals[7]=bspot+N-1;
+				petals[8]=petals[0];
+				bouquet[spot]=petals;
 			}
-		
-			generation++;
-			edgeNumber= 2*edgeNumber;
-			
-		} // end of while
-		
-		sgPack.facedraworder(false);
-		
-		// set the aims
-		sgPack.set_aim_default();
-		for (int v=1;v<=sgPack.nodeCount;v++) {
-			if (sgPack.isBdry(v))
-				sgPack.setAim(v,1.0*Math.PI);
-		}
-		for (int j=1;j<=4;j++)
-			sgPack.setAim(j,0.5*Math.PI);
-
-		// repack, layout
-		double crit=GenBranching.LAYOUT_THRESHOLD;
-		int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
-		sgPack.fillcurves();
-		sgPack.repack_call(1000);
-		try {
-			sgPack.CompPackLayout(); // comp_pack_centers(false,false,opt,crit);
-		} catch (Exception ex) {
-			throw new CombException("'chair' creation failed");
 		}
 		
-		// normalize: 1 on unit circle, 3 4 horizontal
-		double ctr=sgPack.getCenter(1).abs();
-		double factor=1.0/ctr;
-		sgPack.eucl_scale(factor);
-		Complex z=sgPack.getCenter(4).minus(sgPack.getCenter(3));
-		double ang=(-1.0)*(MathComplex.Arg(z));
-		sgPack.rotate(ang);
+		// barycenter locations (u,v), 1 <= u <= N-1
+		for (int u=1;u<N;u++) {
+			for (int v=1;v<N;v++) {
+				int[] flower=new int[5];
+				int bspot=Nsq+(N-1)*(v-1)+u;
+				int spot=N*(v-1)+u;
+				flower[0]=spot;
+				flower[1]=spot+1;
+				flower[2]=spot+N+1;
+				flower[3]=spot+N;
+				flower[4]=flower[0];
+				bouquet[bspot]=flower;
+			}
+		}
 		
-		return sgPack;
+		// identify alpha, gamma
+		int alp,gam;
+		if (N!=2*(int)(N/2.0)) { // N is odd, use grid point
+			int hlf=(N+1)/2;
+			alp=N*(hlf-1)+hlf; // index of center
+			gam=alp-hlf+1;   // middle of top
+		}
+		else { // use central barycenter
+			int hlf=(int)(N/2);
+			alp=Nsq+(N-1)*(hlf-1)+hlf;
+			gam=alp-hlf+1;
+		}
+		
+		PackDCEL newDCEL=CombDCEL.getRawDCEL(bouquet,alp);
+		PackData p=new PackData(null);
+		newDCEL.fixDCEL_raw(p);
+		p.set_aim_default();
+		p.setAlpha(alp);
+		p.setGamma(gam);
+		
+		// preset radii for 2x2 square carrier
+		double R=1.0/((double)N-1.0);
+		double r=R*(Math.sqrt(2.0)-1.0);
+		for (int v=1;v<=Nsq;v++)
+			p.setRadius(v, R);
+		for (int v=(Nsq+1);v<=p.nodeCount;v++)
+			p.setRadius(v, r);
+		p.fillcurves();
+		p.packDCEL.dcelCompCenters();
+		
+		return p;
 	}
-	
+		
 	/**
-	 * Given @see PackData, add to its 'vlist' and 'elist' from
+	 * Given PackData, add to its 'vlist' and 'elist' from
 	 * the lists 'nl' and 'el', resp., but using the @see EdgeLink 
 	 * of {old,new} pairs to translate the indices.
 	 * @param p @see PackData; we'll change the lists here

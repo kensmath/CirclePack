@@ -368,6 +368,7 @@ public class PackData{
         	// TODO: when should we do this?
         	set_aim_default(); // too difficult to figure out old aims
 
+        	status=true;
     		return nodeCount;
     	}
 
@@ -9088,16 +9089,17 @@ public class PackData{
 	  }
 	  
 	  /**
-	   * Get normal bouquet of vertices.
+	   * Get normal bouquet of petal vertices, closed
+	   * for interior vertex.
 	   * @return
 	   */
 	  public int[][] getBouquet() {
 		  int bouq[][]=new int[nodeCount+1][];
 		  for (int v=1;v<=nodeCount;v++) {
-			  int num=countFaces(v);
-			  bouq[v]=new int[num+1];
-			  for (int j=0;j<=num;j++)
-				  bouq[v][j]=kData[v].flower[j];
+			  int[] flower=getFlower(v);
+			  bouq[v]=new int[flower.length];
+			  for (int j=0;j<flower.length;j++)
+				  bouq[v][j]=flower[j];
 		  }
 		  return bouq;
 	  }

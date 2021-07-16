@@ -302,7 +302,8 @@ public class MainFrame extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				Component cpt=(Component)e.getSource();
 //				if (cursorMenu==null) { // create and show
-					cursorMenu=CursorCtrl.cursorMenu((ACTIVEListener)(mainToolHandler.toolListener));
+					cursorMenu=CursorCtrl.cursorMenu(
+							(ACTIVEListener)(mainToolHandler.toolListener));
 					cursorMenu.show(cpt,40,30);
 //				}
 //				else if (cursorMenu.isVisible()) // if showing, remove

@@ -472,9 +472,10 @@ public class CPFileManager {
 	}
 
 	/**
-	 * Open a BufferedWriter for a named file; if it exists, it will be overwritten.
-	 * If script_flag is true, then it is written to the script (if it's open), 
-	 * else to the given directory or to CurrentDirectory.
+	 * Open a BufferedWriter for a named file; if it exists, 
+	 * it will be overwritten. If script_flag is true, then 
+	 * it is written to the script (if it's open), else to 
+	 * the given directory or to CurrentDirectory.
 	 * Return null on error.
 	 * @param File dir (specified directory)
 	 * @param filename String

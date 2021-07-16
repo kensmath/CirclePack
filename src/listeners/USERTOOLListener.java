@@ -39,6 +39,11 @@ public class USERTOOLListener extends MyToolListener {
 		menuItem.addActionListener(this);
 		bMenu.add(menuItem);
 		
+		menuItem = new JMenuItem("Empty Tools");
+		menuItem.setActionCommand("Empty MyTools");
+		menuItem.addActionListener(this);
+		bMenu.add(menuItem);
+				
 		return bMenu;
 	}
 	public MyPopupMenu createToolMenu() { // menu for the tools on the JPanel
@@ -85,6 +90,9 @@ public class USERTOOLListener extends MyToolListener {
   		}
   		else if (cmd.equals("Save MyTools")) {
   			parentHandler.displaySaveDialog();
+  		}
+  		else if (cmd.equals("Empty MyTools")) {
+  			parentHandler.wipeoutTools();
   		}
   		else if (cmd.equals("Append MyTools")) {
   			parentHandler.displayLoadDialog();

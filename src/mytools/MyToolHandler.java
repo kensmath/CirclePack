@@ -212,6 +212,7 @@ public abstract class MyToolHandler implements MouseListener {
 			writer.write("</CP_ToolBox>\n");
 		  	writer.flush();
 		  	writer.close();
+		  	CirclePack.cpb.msg("Saved MyTools to "+file.toString());
 		} catch(IOException ioe) {
 			String errmsg=new String("Couldn't open '"+toolFile.toString()+"'");
 			PackControl.consoleCmd.dispConsoleMsg(errmsg);
