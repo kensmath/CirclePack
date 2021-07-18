@@ -1048,9 +1048,9 @@ public class RawDCEL {
 	
 		  // make sure we have space
 		  int node=pdcel.vertCount+1;
-		  if (node > (pdcel.p.sizeLimit)
-				  && pdcel.p.alloc_pack_space(node+10, true) == 0) 
-			  throw new CombException("Pack space allocation failure");
+		  if (node >= pdcel.vertices.length
+				  && pdcel.alloc_vert_space(node+10, true) == 0) 
+			  throw new CombException("'vertices' space allocation failure");
 		  
 		  // key players; tent over 'base_edge'
 		  HalfEdge base_edge=out_edge.twin.next.twin; 
@@ -1089,7 +1089,7 @@ public class RawDCEL {
 			  if (outFace.edge==base_twin)
 				  outFace.edge=t1;
 		  }
-		  else {
+		  else { // else create face
 			  t1.face=new Face(-1);
 			  t2.face=t1.face;
 		  }
@@ -1137,11 +1137,7 @@ public class RawDCEL {
 	
 		  // fix vert
 		  pdcel.vertCount++;
-		  Vertex[] newvertices=new Vertex[pdcel.vertCount+1];
-		  for (int j=1;j<pdcel.vertCount;j++)
-			  newvertices[j]=pdcel.vertices[j];
-		  newvertices[node]=new_vert;
-		  pdcel.vertices=newvertices;
+		  pdcel.vertices[node]=new_vert;
 		  new_vert.bdryFlag=1;
 		  new_vert.redFlag=true;
 		  new_vert.vutil=w;
@@ -1162,21 +1158,25 @@ public class RawDCEL {
 	   */
 	  public static int baryBox_raw(PackDCEL pdcel,int v1,int v2) {
 		  
-			// make space
-			int e_count = pdcel.p.verts_share_bdry(v1, v2);
-			if (e_count == 0)
-				throw new CombException("verts " + v1 + " and " + v2 + " are not " + "on the same component");
-			int nodes = pdcel.vertCount + 2 * e_count;
-			if (nodes > pdcel.p.sizeLimit)
-				pdcel.p.alloc_pack_space(nodes + 10, true);
+		  // check legality and count edges
+		  if (pdcel.p==null)
+			  throw new ParserException("'baryBox_raw' requires 'PackData' parent");
+		  
+		  int e_count = pdcel.p.verts_share_bdry(v1, v2);
+		  if (e_count == 0)
+			  throw new CombException("verts " + v1 + " and " + 
+					  v2 + " are not " + "on the same component");
+		  int nodes = pdcel.vertCount + 2 * e_count;
+		  if (nodes > pdcel.p.sizeLimit)
+			  pdcel.p.alloc_pack_space(nodes + 10, true);
 	
-			// place a "square" 'Face' next to each bdry
-			// if we close up, shift v1 cclw as stop signal
-			boolean closeup = false;
-			if (v1 == v2) {
-				closeup = true;
-				v1 = pdcel.p.getFirstPetal(v1);
-			}
+		  // place a "square" 'Face' next to each bdry
+		  // if we close up, shift v1 cclw as stop signal
+		  boolean closeup = false;
+		  if (v1 == v2) {
+			  closeup = true;
+			  v1 = pdcel.p.getFirstPetal(v1);
+		  }
 	
 			int count=0;
 	
@@ -1878,103 +1878,208 @@ public class RawDCEL {
 	  }
 
 	  /**
-	   * Either hex or bary refinie the given DCEL. Start either
+	   * Either hex or bary refine the given DCEL. Start either
 	   * process by first dividing each edge in half and either 
 	   * adding edges between the new edge vertices (hex refining)
 	   * or adding a bary center and new edges (bary refining).
 	   * The 'pdcel.redChain' should remain in tact, but is subdivided 
 	   * to get the new red chain. All original vertices have their 
 	   * original 'halfedge's, 'vutil' holds index of reference 
-	   * verts (see 'reapVUtils')
+	   * verts (see 'reapVUtils').
 	   * Process involves cycling original spokes of original 
-	   * vertices. At the end, 'vertices' is up to date, 'faces' and 'edges' 
-	   * are outdated, but ideal faces and their indices should
-	   * remain. Should be able to repeat 'Ntimes' times before 
-	   * calling routine processes combinatorics.
+	   * vertices. At the end, 'vertices' is up to date, 'faces' 
+	   * and 'edges' are outdated, but ideal faces and their 
+	   * indices should remain.
+	   * CAUTION: Here 'pdcel.vertices' will be extended
+	   * as necessary; in 'attachDCEL', pack 'sizeLimit' should
+	   * get adjusted to accommodate.
 	   * 
 	   * (Nominally works for non-triangular faces, but that has
 	   * not been tested. Also can be repeated 'Ntimes', but that
 	   * also has not been thoroughly tested.)
 	   *  
 	   * @param pdcel  PackDCEL
-	   * @param Ntimes int
 	   * @param baryFlag boolean; true, then do bary refine, else hex
 	   * @return int number of repeats
 	   */
-		public static int hexBaryRefine_raw(PackDCEL pdcel, int Ntimes,
-				boolean baryFlag) {
+		public static int hexBaryRefine_raw(PackDCEL pdcel, boolean baryFlag) {
 
 			boolean debug=false; // debug=true;
 			// DCELdebug.printRedChain(pdcel.redChain);
+			
+			// need to make 'vertices' bigger?
+			int newsz=pdcel.vertCount+pdcel.edgeCount;
+			if (baryFlag)
+				newsz += pdcel.faceCount;
+			if (newsz>pdcel.vertices.length) {
+		        int size=((int)((newsz-1)/1000))*1000+1000;
+
+        		// copy 'vertices' and expand its size
+        		Vertex[] new_vs=new Vertex[size+1];
+        		for (int j=1;j<=pdcel.vertCount;j++) 
+        			new_vs[j]=pdcel.vertices[j];
+        		pdcel.vertices=new_vs;
+			}
 			
 			// inherited 'vutil' refers back to original vertex
 			// NOTE: probably not useful when Ntimes>1.
 			for (int v = 1; v <= pdcel.vertCount; v++)
 				pdcel.vertices[v].vutil = v;
 
-			int tick = 0;
-			while (tick < Ntimes) {
-				tick++;
+			// 'eutil' flags:
+			// 0 means untouched yet
+			// 1 means this edge has been subdivided
+			// 2 means this edge's face has been subdivided.
+			pdcel.zeroEUtil();
 
-				// 'eutil' flags:
-				// 0 means untouched yet
-				// 1 means this edge has been subdivided
-				// 2 means this edge's face has been subdivided.
-				pdcel.zeroEUtil();
+			// we loop through the original vertices, and
+			// for each vert loop through its faces,
+			// splitting its edges (and also their twins),
+			// then adding its new interior, depending on
+			// hex or bary process
+			int origVertCount = pdcel.vertCount;
+			HalfEdge newEdge;
+			HalfEdge n_base, n_newEdge, n_newTwin;
+			HalfEdge n_base_tw = null;
+			Vertex midVert, n_midVert;
 
-				// we loop through the original vertices, and
-				// for each vert loop through its faces,
-				// splitting its edges (and also their twins),
-				// then adding its new interior, depending on
-				// hex or bary process
-				int origVertCount = pdcel.vertCount;
+			for (int v = 1; v <= origVertCount; v++) {
+				HalfLink fflower = pdcel.vertices[v].getEdgeFlower();
+				int sz = fflower.size();
+				fflower.add(fflower.get(0));
+				for (int j = 0; j < sz; j++) {
+					HalfEdge spoke = fflower.get(j);
+					// if not yet processed and not an edge of
+					// an ideal face, we create a face so we
+					// can call some face methods.
 
-				HalfEdge newEdge;
-				HalfEdge n_base, n_newEdge, n_newTwin;
-				HalfEdge n_base_tw = null;
-				Vertex midVert, n_midVert;
+					// 'spoke' is done or is edge of ideal face
+					if (spoke.eutil == 2 || 
+							(spoke.face!=null && spoke.face.faceIndx<0))
+						continue;
+					// else, will process this edge and its face
+					spoke.face = new Face(1);
+					HalfLink fedges = spoke.face.getEdges(spoke);
 
-				for (int v = 1; v <= origVertCount; v++) {
-					HalfLink fflower = pdcel.vertices[v].getEdgeFlower();
-					int sz = fflower.size();
-					fflower.add(fflower.get(0));
-					for (int j = 0; j < sz; j++) {
-						HalfEdge spoke = fflower.get(j);
+					// only want edges starting at original vertices
+					int n = fedges.size();
+					for (int i = n - 1; i >= 0; i--) {
+						if (fedges.get(i).origin.vertIndx > origVertCount)
+							fedges.remove(i);
+					}
 
-						// if not yet processed and not an edge of
-						// an ideal face, we create a face so we
-						// can call some face methods.
+					// now count and close up
+					n = fedges.size();
+					fedges.add(fedges.getFirst());
 
-						// 'spoke' is done or is edge of ideal face
-						if (spoke.eutil == 2 || 
-								(spoke.face!=null && spoke.face.faceIndx<0))
-							continue;
+					// need some info to build center face later
+					HalfEdge[] centedges = new HalfEdge[n + 1];
+					RedHEdge redge=null;
+					RedHEdge tredge=null;
 
-						// else, will process this edge and its face
-						spoke.face = new Face(1);
-						HalfLink fedges = spoke.face.getEdges(spoke);
+					// get first divided edge
+					n_base = spoke;
 
-						// only want edges starting at original vertices
-						int n = fedges.size();
-						for (int i = n - 1; i >= 0; i--) {
-							if (fedges.get(i).origin.vertIndx > origVertCount)
-								fedges.remove(i);
+					// 'base' already divided; copy needed elements
+					if (n_base.eutil == 1) {
+						n_newEdge = n_base.next;
+						n_newTwin = n_base.twin;
+						n_midVert = n_newEdge.origin;
+						n_midVert.halfedge = n_newEdge;
+						n_base.eutil = 2;
+					}
+
+					// else, divide this base
+					else {
+						n_base.eutil = 2;
+						n_base_tw = n_base.twin;
+						n_base_tw.eutil = 1;
+
+						redge = n_base.myRedEdge;
+						tredge = n_base.twin.myRedEdge;
+							
+						if (debug && (redge!=null || tredge!=null)) // debug=true;
+							System.out.println("     base: redge: "+redge+"; tredge: "+tredge);
+							
+						// two new edges
+						n_newEdge = new HalfEdge();
+						n_newEdge.eutil = 1;
+						n_newEdge.invDist = n_base.invDist;
+						n_newEdge.schwarzian = n_base.schwarzian;
+						n_newTwin = new HalfEdge();
+						n_newTwin.eutil = 1;
+						n_newTwin.invDist = n_base.invDist;
+						n_newTwin.schwarzian = n_base.schwarzian;
+
+						// new vertex
+						n_midVert = new Vertex(++pdcel.vertCount);
+						pdcel.vertices[pdcel.vertCount] = n_midVert;
+						n_midVert.halfedge = n_newEdge;
+						n_midVert.vutil = n_base.origin.vutil;
+						n_newEdge.origin = n_midVert;
+						n_newTwin.origin = n_midVert;
+						if (redge!=null || tredge!=null)
+							n_midVert.redFlag=true;
+
+						// fix twins
+						n_base.twin = n_newTwin;
+						n_newTwin.twin = n_base;
+
+						n_newEdge.twin = n_base_tw;
+						n_base_tw.twin = n_newEdge;
+
+						// fix
+						n_newEdge.next = n_base.next;
+						n_newEdge.next.prev = n_newEdge;
+
+						n_base.next = n_newEdge;
+						n_newEdge.prev = n_base;
+
+						n_newTwin.next = n_base_tw.next;
+						n_newTwin.next.prev = n_newTwin;
+
+						n_newTwin.prev = n_base_tw;
+						n_base_tw.next = n_newTwin;
+
+						// does 'edge' have red edge?
+						if (redge != null) {
+							RedHEdge newRedge = new RedHEdge(n_newEdge);
+							n_newEdge.myRedEdge = newRedge;
+							newRedge.nextRed = redge.nextRed;
+							redge.nextRed.prevRed = newRedge;
+							newRedge.prevRed = redge;
+							redge.nextRed = newRedge;
 						}
+						// does 'tedge' have red edge?
+						if (tredge != null) {
+							RedHEdge newRedge = new RedHEdge(n_newTwin);
+							n_newTwin.myRedEdge = newRedge;
+							newRedge.nextRed = tredge.nextRed;
+							tredge.nextRed.prevRed = newRedge;
+							newRedge.prevRed = tredge;
+							tredge.nextRed = newRedge;
+						}
+						// if both, then set up red twinning
+						if (redge != null && tredge != null) {
+							redge.twinRed = n_newTwin.myRedEdge;
+							n_newTwin.myRedEdge.twinRed = redge;
+							tredge.twinRed = n_newEdge.myRedEdge;
+							n_newEdge.myRedEdge.twinRed = tredge;
+						}
+					}
 
-						// now count and close up
-						n = fedges.size();
-						fedges.add(fedges.getFirst());
+					// now do rest of edges, build corner faces
+					for (int k = 0; k < n; k++) {
 
-						// need some info to build center face later
-						HalfEdge[] centedges = new HalfEdge[n + 1];
-						RedHEdge redge=null;
-						RedHEdge tredge=null;
+						// shift of previous edge
+						newEdge = n_newEdge;
+						midVert = n_midVert;
 
-						// get first divided edge
-						n_base = spoke;
+						// load/divide next side about this face
+						n_base = fedges.get(k + 1);
 
 						// 'base' already divided; copy needed elements
-						if (n_base.eutil == 1) {
+						if (n_base.eutil >= 1) {
 							n_newEdge = n_base.next;
 							n_newTwin = n_base.twin;
 							n_midVert = n_newEdge.origin;
@@ -1982,18 +2087,17 @@ public class RawDCEL {
 							n_base.eutil = 2;
 						}
 
-						// else, divide this base
+						// else, divide this side
 						else {
 							n_base.eutil = 2;
 							n_base_tw = n_base.twin;
 							n_base_tw.eutil = 1;
-
 							redge = n_base.myRedEdge;
 							tredge = n_base.twin.myRedEdge;
-							
+
 							if (debug && (redge!=null || tredge!=null)) // debug=true;
-								System.out.println("     base: redge: "+redge+"; tredge: "+tredge);
-							
+								System.out.println("      other red: redge: "+redge+"; tredge: "+tredge);
+
 							// two new edges
 							n_newEdge = new HalfEdge();
 							n_newEdge.eutil = 1;
@@ -2061,217 +2165,118 @@ public class RawDCEL {
 							}
 						}
 
-						// now do rest of edges, build corner faces
-						for (int k = 0; k < n; k++) {
+						// hex refining is incremental as we split the sides.
+						if (!baryFlag) { 
+							// form face at corner of side and next side
+							HalfEdge opp = new HalfEdge(n_midVert);
+							HalfEdge opp_tw = new HalfEdge(midVert);
+							opp.twin = opp_tw;
+							opp_tw.twin = opp;
 
-							// shift of previous edge
-							newEdge = n_newEdge;
-							midVert = n_midVert;
+							centedges[k] = opp_tw;
 
-							// load/divide next side about this face
-							n_base = fedges.get(k + 1);
+							// link around this
+							n_base.next = opp;
+							opp.prev = n_base;
 
-							// 'base' already divided; copy needed elements
-							if (n_base.eutil >= 1) {
-								n_newEdge = n_base.next;
-								n_newTwin = n_base.twin;
-								n_midVert = n_newEdge.origin;
-								n_midVert.halfedge = n_newEdge;
-								n_base.eutil = 2;
-							}
-
-							// else, divide this side
-							else {
-								n_base.eutil = 2;
-								n_base_tw = n_base.twin;
-								n_base_tw.eutil = 1;
-
-								redge = n_base.myRedEdge;
-								tredge = n_base.twin.myRedEdge;
-
-								if (debug && (redge!=null || tredge!=null)) // debug=true;
-									System.out.println("      other red: redge: "+redge+"; tredge: "+tredge);
-
-								// two new edges
-								n_newEdge = new HalfEdge();
-								n_newEdge.eutil = 1;
-								n_newEdge.invDist = n_base.invDist;
-								n_newEdge.schwarzian = n_base.schwarzian;
-								n_newTwin = new HalfEdge();
-								n_newTwin.eutil = 1;
-								n_newTwin.invDist = n_base.invDist;
-								n_newTwin.schwarzian = n_base.schwarzian;
-
-								// new vertex
-								n_midVert = new Vertex(++pdcel.vertCount);
-								pdcel.vertices[pdcel.vertCount] = n_midVert;
-								n_midVert.halfedge = n_newEdge;
-								n_midVert.vutil = n_base.origin.vutil;
-								n_newEdge.origin = n_midVert;
-								n_newTwin.origin = n_midVert;
-								if (redge!=null || tredge!=null)
-									n_midVert.redFlag=true;
-
-								// fix twins
-								n_base.twin = n_newTwin;
-								n_newTwin.twin = n_base;
-
-								n_newEdge.twin = n_base_tw;
-								n_base_tw.twin = n_newEdge;
-
-								// fix
-								n_newEdge.next = n_base.next;
-								n_newEdge.next.prev = n_newEdge;
-
-								n_base.next = n_newEdge;
-								n_newEdge.prev = n_base;
-
-								n_newTwin.next = n_base_tw.next;
-								n_newTwin.next.prev = n_newTwin;
-
-								n_newTwin.prev = n_base_tw;
-								n_base_tw.next = n_newTwin;
-
-								// does 'edge' have red edge?
-								if (redge != null) {
-									RedHEdge newRedge = new RedHEdge(n_newEdge);
-									n_newEdge.myRedEdge = newRedge;
-									newRedge.nextRed = redge.nextRed;
-									redge.nextRed.prevRed = newRedge;
-									newRedge.prevRed = redge;
-									redge.nextRed = newRedge;
-								}
-								// does 'tedge' have red edge?
-								if (tredge != null) {
-									RedHEdge newRedge = new RedHEdge(n_newTwin);
-									n_newTwin.myRedEdge = newRedge;
-									newRedge.nextRed = tredge.nextRed;
-									tredge.nextRed.prevRed = newRedge;
-									newRedge.prevRed = tredge;
-									tredge.nextRed = newRedge;
-								}
-								// if both, then set up red twinning
-								if (redge != null && tredge != null) {
-									redge.twinRed = n_newTwin.myRedEdge;
-									n_newTwin.myRedEdge.twinRed = redge;
-									tredge.twinRed = n_newEdge.myRedEdge;
-									n_newEdge.myRedEdge.twinRed = tredge;
-								}
-							}
-
-							// hex refining is incremental as we split the sides.
-							if (!baryFlag) { 
-								// form face at corner of side and next side
-								HalfEdge opp = new HalfEdge(n_midVert);
-								HalfEdge opp_tw = new HalfEdge(midVert);
-								opp.twin = opp_tw;
-								opp_tw.twin = opp;
-
-								centedges[k] = opp_tw;
-
-								// link around this
-								n_base.next = opp;
-								opp.prev = n_base;
-
-								opp.next = newEdge;
-								newEdge.prev = opp;
-							}
-							
-						} // finish loop through all sides of this face
-
-						if (!baryFlag) {
-							centedges[n] = centedges[0];
-							for (int k = 0; k < n; k++) {
-								centedges[k].next = centedges[k + 1];
-								centedges[k + 1].prev = centedges[k];
-							}
-							
-							if (debug) { // debug=true;
-								StringBuilder strbld=new StringBuilder(
-										"new mid-face: <"+
-												centedges[0]+","+
-												centedges[0].next+","+
-												centedges[0].next.next+">\n");
-								for (int k=0;k<n;k++) {
-									HalfEdge he=centedges[k].twin;
-									strbld.append(" ===  <"+he+","+he.next+","+
-											he.next.next+"> ; ");
-								}
-								System.out.println(strbld.toString());
-							}
+							opp.next = newEdge;
+							newEdge.prev = opp;
 						}
+							
+					} // finish loop through all sides of this face
+
+					if (!baryFlag) {
+						centedges[n] = centedges[0];
+						for (int k = 0; k < n; k++) {
+							centedges[k].next = centedges[k + 1];
+							centedges[k + 1].prev = centedges[k];
+						}
+							
+						if (debug) { // debug=true;
+							StringBuilder strbld=new StringBuilder(
+									"new mid-face: <"+
+											centedges[0]+","+
+											centedges[0].next+","+
+											centedges[0].next.next+">\n");
+							for (int k=0;k<n;k++) {
+								HalfEdge he=centedges[k].twin;
+								strbld.append(" ===  <"+he+","+he.next+","+
+										he.next.next+"> ; ");
+							}
+							System.out.println(strbld.toString());
+						}
+					}
 						
-						// bary refining is done after all sides are split
-						else { 
+					// bary refining is done after all sides are split
+					else { 
 							
-							// new vertex
-							Vertex baryCent=new Vertex(++pdcel.vertCount);
-							pdcel.vertices[pdcel.vertCount]=baryCent;
-							baryCent.vutil=spoke.origin.vertIndx;
+						// new vertex
+						Vertex baryCent=new Vertex(++pdcel.vertCount);
+						pdcel.vertices[pdcel.vertCount]=baryCent;
+						baryCent.vutil=spoke.origin.vertIndx;
 							
-							// create first new edges
-							HalfEdge new_in=new HalfEdge(spoke.origin);
-							HalfEdge new_out=new HalfEdge(baryCent);
-							baryCent.halfedge=new_out;
-							HalfEdge hold_first_in=new_in; // needed for last face
+						// create first new edges
+						HalfEdge new_in=new HalfEdge(spoke.origin);
+						HalfEdge new_out=new HalfEdge(baryCent);
+						baryCent.halfedge=new_out;
+						HalfEdge hold_first_in=new_in; // needed for last face
 							
+						new_in.twin=new_out;
+						new_out.twin=new_in;
+							
+						// now proceed about the outer edges
+						HalfEdge outer=spoke;
+						HalfEdge stopper;
+						HalfEdge old_out;
+						do {
+							stopper=outer.next; // to stop the loop
+								
+							old_out=new_out;
+								
+							new_in=new HalfEdge(outer.twin.origin);
+							new_out=new HalfEdge(baryCent);
+								
 							new_in.twin=new_out;
 							new_out.twin=new_in;
+								
+							// link around to form new face
+							outer.next=new_in;
+							new_in.prev=outer;
+							new_in.next=old_out;
+							old_out.prev=new_in;
+							old_out.next=outer;
+							outer.prev=old_out;
+								
+							// mark these edges as done
+							new_in.eutil=2;
+							old_out.eutil=2;
+							outer.eutil=2; 
+								
+							outer=stopper; // next outer edge to process
+							stopper=outer.next;
+						} while (stopper!=spoke);
 							
-							// now proceed about the outer edges
-							HalfEdge outer=spoke;
-							HalfEdge stopper;
-							HalfEdge old_out;
-							do {
-								stopper=outer.next; // to stop the loop
-								
-								old_out=new_out;
-								
-								new_in=new HalfEdge(outer.twin.origin);
-								new_out=new HalfEdge(baryCent);
-								
-								new_in.twin=new_out;
-								new_out.twin=new_in;
-								
-								// link around to form new face
-								outer.next=new_in;
-								new_in.prev=outer;
-								new_in.next=old_out;
-								old_out.prev=new_in;
-								old_out.next=outer;
-								outer.prev=old_out;
-								
-								// mark these edges as done
-								new_in.eutil=2;
-								old_out.eutil=2;
-								outer.eutil=2; 
-								
-								outer=stopper; // next outer edge to process
-								stopper=outer.next;
-							} while (stopper!=spoke);
+						// complete the last face
+						outer.next=hold_first_in;
+						hold_first_in.prev=outer;
+						hold_first_in.next=new_out;
+						new_out.prev=hold_first_in;
+						new_out.next=outer;
+						outer.prev=new_out;
 							
-							// complete the last face
-							outer.next=hold_first_in;
-							hold_first_in.prev=outer;
-							hold_first_in.next=new_out;
-							new_out.prev=hold_first_in;
-							new_out.next=outer;
-							outer.prev=new_out;
-							
-							// mark as done
-							outer.eutil=2;
-							hold_first_in.eutil=2;
-							new_out.eutil=2;
-						}
+						// mark as done
+						outer.eutil=2;
+						hold_first_in.eutil=2;
+						new_out.eutil=2;
+					}
 
-					} // done with spokes of v
-				} // done with all vertices
-			} // done with 'Ntimes' passes
+				} // done with spokes of v
+			} // done with all vertices
 
 			if (debug)
 				DCELdebug.printRedChain(pdcel.redChain);
 			
-			return Ntimes;
+			return 1;
 		}
 		  
 		/**
@@ -2324,6 +2329,29 @@ public class RawDCEL {
 				  DCELdebug.redConsistency(pdcel.redChain);
 			  }
 			  return count;
+		}
+		
+		/**
+		 * Search 'redChain' for first bdry edge, then add ideal
+		 * vertex to that whole bdry component. This is generally
+		 * called when there is just one bdry component.
+		 * @param pdcel PackDCEL
+		 * @return int, count of edgepairs added, 0 on error 
+		 * 	(e.g., no 'redChain' or bdry)
+		 */
+		public static int addIdeal_raw(PackDCEL pdcel) {
+			if (pdcel.redChain==null)
+				return 0;
+			RedHEdge rtrace=pdcel.redChain;
+			HalfEdge he=rtrace.myEdge;
+			do {
+				int v=he.origin.vertIndx;
+				if (he.twin.face!=null && he.twin.face.faceIndx<0)
+					return addIdeal_raw(pdcel,v,v);
+				rtrace=rtrace.nextRed;
+			} while (rtrace!=pdcel.redChain);
+			
+			return 0;	
 		}
 			  
 	/**

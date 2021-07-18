@@ -8,16 +8,15 @@ import allMains.CirclePack;
 import complex.Complex;
 import complex.MathComplex;
 import dcel.CombDCEL;
+import dcel.DcelCreation;
 import dcel.PackDCEL;
 import dcel.RawDCEL;
 import dcel.RedHEdge;
-import deBugging.DCELdebug;
 import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.ParserException;
 import ftnTheory.GenBranching;
-import input.CommandStrParser;
 import komplex.EdgeSimple;
 import komplex.KData;
 import listManip.EdgeLink;
@@ -36,378 +35,6 @@ import util.ColorUtil;
  */
 public class PackCreation {
 
-	/**
-	 * Create a HxW hex torus, 
-	 * @param H int, height
-	 * @param W int, width
-	 * @return PackData
-	 */
-	public static PackData hexTorus(int H,int W) {
-
-		boolean debug=false;
-		
-		int mx=H;
-		int mn=W;
-		if (W>H) {
-			mx=W;
-			mn=H;
-		}
-		
-		// start with usual hex flower, make base 3x3 parallelogram
-		PackData workPack=PackCreation.seed(6, 0);
-		PackDCEL pdcel=workPack.packDCEL;
-		RawDCEL.addVert_raw(pdcel,5);
-		RawDCEL.addVert_raw(pdcel,2);
-		// Note: "pointy" verts: 
-		//    top right = nodeCount, bottom left = nodeCount-1. 
-		int top=pdcel.vertCount;
-		int bottom=pdcel.vertCount-1;
-		
-		// Add mn-2 layers from bottom cclw to top
-		int sz=2; // start with the 2x2 already built
-		while (sz<mn) {
-			int w=workPack.getLastPetal(top);
-			int v=workPack.getFirstPetal(bottom);
-			workPack.add_layer(1,6,v,w);
-			
-			// add the new pointy ends
-			RawDCEL.addVert_raw(pdcel,top+1); // new bottom
-			bottom=pdcel.vertCount;
-			RawDCEL.addVert_raw(pdcel,top); // new top
-			top=pdcel.vertCount;
-			sz++;
-		}
-		
-		// now, add mx-mn additional layers along the right edge
-		int tick=0;
-		while (tick<(mx-mn)) {
-			int th=workPack.getLastPetal(top);
-			int w=th;
-			for (int j=2;j<mn;j++) {
-				w=workPack.getLastPetal(w);
-			}
-			workPack.add_layer(1,6,w,th);
-			RawDCEL.addVert_raw(pdcel,top); // new pointy top
-			top=pdcel.vertCount;
-			tick++;
-		}
-		
-		// count off from bottom to find top left corner:
-		//   'bottom' and 'topleft' should maintain their
-		//   indices after the first 'adjoin'
-		int topleft=bottom;
-		for (int j=1;j<=mn;j++) {
-			topleft=workPack.getLastPetal(topleft);
-		}
-
-		if (!debug) { // debug=true;
-			// adjoin right edge to left edge for annulus
-			pdcel=CombDCEL.d_adjoin(pdcel, pdcel, top, topleft, mn);
-			top=pdcel.oldNew.findW(top);
-			bottom=pdcel.oldNew.findW(bottom);
-		}
-		
-		if (!debug) { // debug=true;
-			// adjoin top and bottom edges
-			pdcel=CombDCEL.d_adjoin(pdcel,pdcel,top,bottom,mx);
-		}
-		
-		pdcel.fixDCEL_raw(workPack);
-		return workPack;
-
-	}
-	
-	/**
-	 * Create a symmetric tetrahedron on the sphere,
-	 * all radii arcsin(sqrt(2/3)).
-	 * @return PackData
-	 */
-	public static PackData tetrahedron() {
-		PackData p=new PackData(null);
-		int[][] bouquet= {
-				{0,0,0,0},
-				{2,4,3,2},
-				{1,3,4,1},
-				{1,4,2,1},
-				{1,2,3,1}
-		};
-
-		PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet);
-		pdcel.redChain=null;
-		pdcel.fixDCEL_raw(p);
-		p.hes=1;
-
-		// When all radii are equal, every face is equilateral with angles 2pi/3.
-		// Using spherical half-side formula, we get radii=arcsin(sqrt(2/3)).
-		double sphrad=Math.asin(Math.sqrt(2.0/3.0));
-		for (int i=1;i<=4;i++) {
-			p.setVertMark(i,0);
-			p.setRadius(i,sphrad);
-			p.setCurv(i,2.0*Math.PI);
-			p.setAim(i,2.0*Math.PI);
-		}
-		// set centers, 1 at origin
-		sphrad *=2.0; // edge length
-		p.setCenter(1,new Complex(0.0));
-		p.setCenter(2,new Complex(Math.PI/2.0,sphrad));
-		p.setCenter(3,new Complex(Math.PI*(7.0/6.0),sphrad));
-		p.setCenter(4,new Complex(Math.PI*(11.0/6.0),sphrad));
-			
-		p.setName("Tetrahedron");
-		return p;
-	}
-
-	/**
-	 * Create the Cayley graph of a triangle group; A, B, C are
-	 * the degrees of the vertices. 
-	 * @param A
-	 * @param B
-	 * @param C
-	 * @param maxgen
-	 * @return
-	 */
-	public static PackData triGroup(int A, int B, int C, int maxgen) {
-		int []degs=new int[3];
-		degs[0]=A;
-		degs[1]=B;
-		degs[2]=C;
-		// geometry
-		int hees=-1; // default: hyp
-		double recipsum
-			=2.0/(double)(degs[0])+2.0/(double)(degs[1])+2.0/(double)(degs[2]);
-		if (Math.abs(recipsum-1)<.0001)
-			hees=0; // eucl
-		else if (recipsum>1.0) 
-			hees=1; // sph
-		  
-		PackData p=PackCreation.seed(A,hees);
-		if (p==null) 
-			return null;
-		
-		int gencount=1;
-
-		// mark vertices of first flower
-	   	p.setVertMark(1,0);
-	   	for (int j=2;j<=p.nodeCount;j++) {
-	   		  p.setVertMark(j,(j)%2+1);
-	   	}
-
-   		double []rad=new double[3];
-   		rad[0]=rad[1]=rad[2]=.2; // default
-
-   		// eucl cases, can compute radii
-	   	if (hees==0) {
-	   		// law of sines for opposite lengths 
-	   		double []len=new double[3];
-	   		double m2pi=Math.PI*2.0;
-	   		len[0]=1.0;
-	   		double sina=Math.sin(m2pi/(double)degs[0]);
-	   		len[1]=Math.sin(m2pi/(double)degs[1])/sina;
-	   		len[2]=Math.sin(m2pi/(double)degs[2])/sina;
-	   		// get radii and scale by .2
-	   		rad[0]=.2*(len[1]+len[2]-len[0])/2.0;
-	   		rad[1]=.2*(len[0]+len[2]-len[1])/2.0;
-	   		rad[2]=.2*(len[1]+len[0]-len[2])/2.0;
-	   		for (int k=1;k<=p.nodeCount;k++)
-	   			p.setRadius(k,rad[p.getVertMark(k)]);
-	   	}
-
-	   	while (gencount<=maxgen) {
-	   		NodeLink blink=new NodeLink(p,"b");
-	   		if (blink==null || blink.size()==0)
-	   			throw new CombException("no boundary verts at gencount = "+
-	   					gencount);
-	   		// sph? need to check to close bdry 
-	   		if (hees>0) {
-	   			int []bdryinfo=ck_bdry(p);
-	   			
-	   			// one more vert needed; shortage of bdry vertices, so close up 
-	   			if (bdryinfo[1]==bdryinfo[2] && bdryinfo[2]>=bdryinfo[0]) {
-	   				p.add_ideal(new NodeLink(p,"b"));
-	   				p.setCombinatorics();
-	   				CirclePack.cpb.msg("triG: closed as sphere:");
-	   				if (bdryinfo[0]<bdryinfo[2] || bdryinfo[1]!=bdryinfo[2])
-	   					CirclePack.cpb.errMsg(" final degree, "+
-	   							p.countFaces(p.nodeCount)+" is inconsistent");
-	   				else CirclePack.cpb.msg("last degree "+p.countFaces(p.nodeCount));
-	   				return p;
-	   			}
-	   		}
-	   		int w=p.bdryStarts[1];
-	   		int stopv=p.kData[w].flower[p.countFaces(w)];
-	   		int next=p.kData[w].flower[0];
-	   		boolean wflag=false; // stop signaler
-	   		int count=1;
-	   		while (!wflag && count<10000) {
-	   			if (w==stopv) wflag=true;
-	   			int prev=p.kData[w].flower[p.countFaces(w)];
-	   			int n=degs[p.getVertMark(w)]-p.countFaces(w)-1;
-	   			if (n<-1)
-	   				throw new CombException("violated degree at vert "+w);
-
-	   			// add the n circles; two marks alternate around w
-	   			int []alt=new int[2];
-	   			alt[0]=p.getVertMark(prev);
-	   			int vec=(alt[0]-p.getVertMark(w)+3)%3;
-	   			alt[1]=(alt[0]+vec)%3;
-	   			for (int i=1;i<=n;i++) {
-	   				// for sph case, check added vert to see if it's last
-	   				if (hees>0) {
-	   					p.complex_count(true);
-	   		   			int []bdryinfo=ck_bdry(p);
-	   					if (bdryinfo[0]==0) {
-	   						p.setCombinatorics();
-	   						CirclePack.cpb.errMsg("triG, improper wrapup");
-	   						return p;
-	   					}
-	   					if (bdryinfo[1]==bdryinfo[2] && bdryinfo[2]>=bdryinfo[0]) {
-	   						p.add_ideal(new NodeLink(p,"b"));
-	   						p.setCombinatorics();
-	   						CirclePack.cpb.msg("triG: closed as sphere:");
-	   						if (bdryinfo[0]<bdryinfo[1])
-	   							CirclePack.cpb.errMsg(" final degree of "+
-	   									p.countFaces(w)+" is too small");
-	   						else CirclePack.cpb.msg(" final degree is correct, "+bdryinfo[1]);
-	   						return p;
-	   					}
-	   				} // done with sphere check				   		
-	   				p.add_vert(w);
-	   				p.setVertMark(p.nodeCount,alt[i%2]);
-	   				p.setRadius(p.nodeCount,rad[alt[i%2]]);
-	   				// for sph, check whether to close up
-	   				if (hees>0) {
-	   					p.complex_count(false);
-	   		   			int []bdryinfo=ck_bdry(p);
-	   		   			if (bdryinfo[1]==bdryinfo[2]&& bdryinfo[2]>=bdryinfo[0]) {
-	   		   				p.add_ideal(new NodeLink(p,"b"));
-	   		   				p.setCombinatorics();
-	   		   				CirclePack.cpb.msg("triG: closed as sphere:");
-	   		   				if (bdryinfo[0]<bdryinfo[2] || bdryinfo[1]!=bdryinfo[2])
-	   		   					CirclePack.cpb.errMsg(" final degree, "+
-	   		   							p.countFaces(p.nodeCount)+" is inconsistent");
-	   		   				else CirclePack.cpb.msg("last degree "+p.countFaces(p.nodeCount));
-	   		   				return p;
-	   		   			}
-	   				}
-	   			}
-	   			if (n==-1) { // identify edges from w
-	   				int xv=p.close_up(w); // if >0, a vertex was removed
-	   				if (xv>0 && xv<=stopv) // then, reset stopv
-	   					stopv--;
-	   				if (xv>0 && xv<=next) // may have to reset next, too
-	   					next--;
-	   				p.complex_count(true);
-	   				if (p.getBdryCompCount()==0) // closed up?
-	   					return p;
-	   			}
-	   			else p.enfold(w);
-	   			p.complex_count(true);
-	   			w=next;
-	   			next=p.kData[w].flower[0];
-	   			count++;
-	   		} // end of while
-	   		gencount++;
-		  } 
-		  p.setCombinatorics();
-		  return p;
-	}
-
-	/**
-	 * Utility for bdry inspection. Find count and min/max 
-	 * of intended degrees of circles that would be added.
-	 * @param p
-	 * @return ans[3]: 0=bdry count, 1=min deg, 2=max deg
-	 */
-	public static int []ck_bdry(PackData p) {
-		int []ans=new int[3];
-		NodeLink blink=new NodeLink(p,"b");
-		if (blink==null || blink.size()==0)
-			return ans;
-		ans[0]=blink.size();
-		ans[1]=100000; // minimum new mark
-		ans[2]=0; // maximum new mark
-		int mx=0;
-		int mn=100000;
-		Iterator<Integer> blk=blink.iterator();
-		while (blk.hasNext()) {
-			int w=blk.next();
-			int next=p.kData[w].flower[0];
-			int vec=(p.getVertMark(w)-p.getVertMark(next)+3)%3;
-			int nxmk=(p.getVertMark(w)+vec)%3; // mark an added vert would have
-			mx=(nxmk>mx) ? nxmk : mx;
-			mn=(nxmk<mn) ? nxmk : mn;
-		} 
-		ans[1]=mn;
-		ans[2]=mx;
-		return ans;
-	}
-	
-	/** 
-	 * Create a 'seed' packing from scratch (with CPScreen=null)
-	 * NOTE: 'PackData.seed' call does the same, but within existing
-	 * PackData object.
-	 * @param n int, number of petals
-	 * @param heS int, final geometry
-	 * @return @see PackData or null on error
-	 */
-	public static PackData seed(int n,int heS) {
-		if (n<3)
-			throw new ParserException("'seed' usage: n must be at least 3");
-		PackDCEL pdcel=CombDCEL.seed_raw(n);
-		CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha,false);
-		CombDCEL.d_FillInside(pdcel);
-		pdcel.gamma=pdcel.alpha.twin;
-		PackData p=new PackData(null);
-		p.attachDCEL(pdcel);
-		p.status=true;
-		p.activeNode=pdcel.alpha.origin.vertIndx;
-		p.set_aim_default();
-		
-		// start out hyperbolic
-		p.hes=-1;
-		CommandStrParser.jexecute(p,"max_pack");
-		
-		if (heS>0) 
-			p.geom_to_s();
-		if (heS==0)
-			p.geom_to_e();
-		p.setName("Seed "+n);
-
-		return p;
-	}
-	
-	/**
-	 * Create a packing of hex generations. Calling routine
-	 * to set radii/centers.
-	 * @param n int, number of generations (seed is 1 generation)
-	 * @return @see PackData
-	 */
-	public static PackData hexBuild(int n) {
-		if (n==0)
-			n=1;
-		double rad=Math.pow(2.0,n-2);
-		PackDCEL pdcel=CombDCEL.seed_raw(6);
-		PackData p=new PackData(null);
-		pdcel.p=p;
-		CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha,false);
-		for (int k=2;k<=n;k++) {
-			int m=pdcel.vertCount;
-			int ans=RawDCEL.addlayer_raw(pdcel,1,6,m,m);
-//			pdcel=CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha);
-			if (ans<=0)
-				return null;
-		}
-		
-		boolean debug=false; // debug=true;
-		if (debug)
-			DCELdebug.printRedChain(pdcel.redChain);
-		
-		pdcel.fixDCEL_raw(p);
-		for (int v=1;v<=p.nodeCount;v++)
-			p.setRadius(v,rad);
-		return p;
-	}
-	
 	/**
 	 * TODO: this code isn't called yet, should replace 'hexbuild' sometimes.
 	 * Create hex packing as in 'hexBuild', but by direct build
@@ -633,7 +260,7 @@ public class PackCreation {
 		int[] aft_flower = null;
 		int[] fore_flower = null;
 
-		PackData p = seed(2 * (n1 + 1), -1);
+		PackData p = DcelCreation.seed(2 * (n1 + 1), -1);
 		// expand pack to hold maxsize
 		if (maxsize < 10 || n0 < 1 || n1 < 1
 				|| p.alloc_pack_space(maxsize + 10 * (n0 + 1) * (n1 + 1),
@@ -918,7 +545,7 @@ public class PackCreation {
 	 * @return PackData or null on error
 	 */
 	public static PackData doyle_annulus(int pp, int qq, int n) {
-		PackData p = seed(6, 0); // create euclidean hex flower
+		PackData p = DcelCreation.seed(6, 0); // create euclidean hex flower
 		int nvert, lvert, rvert, v, w, num;
 		int[] newflower;
 
@@ -1305,7 +932,7 @@ public class PackCreation {
 			mode=2;
 		
 		// This is the packing we are growing.
-		PackData myPacking=PackCreation.seed(6,-1);
+		PackData myPacking=DcelCreation.seed(6,-1);
 		myPacking.setVertMark(1,1);
 		myPacking.setVertMark(2,2);
 		myPacking.setVertMark(4,2);
@@ -1319,7 +946,7 @@ public class PackCreation {
 		myPacking.setCircleColor(7,ColorUtil.cloneMe(ColorUtil.coLor(100)));
 		
 		// new faces added by adjoining this hex face
-		PackData hexFace=PackCreation.seed(6,-1);
+		PackData hexFace=DcelCreation.seed(6,-1);
 		
 		// The oriented boundary of myPacking is held here:
 		//    the first element is always the 'S' element
@@ -1543,7 +1170,7 @@ public class PackCreation {
 		//     Distance from 1 to 2 is e, from 2 to 3 is h, 
 		//     hence from 3 to 1 is 2*e. Long leg is always twice the end leg
 		
-		PackData growWheel = PackCreation.seed(3*e+h, 0);
+		PackData growWheel = DcelCreation.seed(3*e+h, 0);
 		growWheel.swap_nodes(3*e+h+1, 1);
 		growWheel.alpha=3*e+h+1;
 		growWheel.complex_count(false);
@@ -1745,7 +1372,7 @@ public class PackCreation {
 		int edgeNumber=1; // count of vertices along each edge
 
 		// chair starts as 8-seed, but 1 is put back on the boundary
-		PackData growChair = PackCreation.seed(8, 0);
+		PackData growChair = DcelCreation.seed(8, 0);
 		growChair.swap_nodes(9, 1);
 		growChair.complex_count(false);
 		growChair.vlist=new NodeLink();
@@ -1870,7 +1497,7 @@ public class PackCreation {
 	 * Create N generations of a 2D fusion tiling related
 	 * to Fibonnacci numbers. I learned this from Natalie Frank.
 	 * There are four tile types, A, B, C, D, each has next
-	 * fusion stage make from a certain combination. Here is
+	 * fusion stage made from a certain combination. Here is
 	 * the pattern ('/' means horizontally below):
 	 * A -> [C A / D B]; B -> [A C]; C -> [B/A]; D -> [A]
 	 * H, W, X are integer height/width parameters, >= 1.
@@ -1891,10 +1518,10 @@ public class PackCreation {
 		int baseHeight=X;
 
 		// We start with base tile of each type:
-		PackData fusionA = PackCreation.seed(2*W+2*H,0); // A is W x H
-		PackData fusionB = PackCreation.seed(2*W+2*X,0); // B is W x X
-		PackData fusionC = PackCreation.seed(2*H+2*X,0); // C is X x H
-		PackData fusionD = PackCreation.seed(4*X,0);     // D is X x X
+		PackData fusionA = DcelCreation.seed(2*W+2*H,0); // A is W x H
+		PackData fusionB = DcelCreation.seed(2*W+2*X,0); // B is W x X
+		PackData fusionC = DcelCreation.seed(2*H+2*X,0); // C is X x H
+		PackData fusionD = DcelCreation.seed(4*X,0);     // D is X x X
 		fusionA.complex_count(false);
 		fusionB.complex_count(false);
 		fusionC.complex_count(false);
@@ -2106,176 +1733,13 @@ public class PackCreation {
 	}
 	
 	/**
-	 * Create square grid packing with N vertices on each edge.
-	 * We proceed by building the bouquet.
-	 * @param N int
-	 * @return new @see PackData
-	 */
-	public static PackData squareGrid(int N) {
-
-		if (N<2)
-			N=2;
-		
-		// Grid points in N-by-N array, barycenters in
-		//   (N-1)-by-(N-1) shifted array. Positions
-		//   given by (i,j) as with a matrix. Corners
-		//   are A=(1,1), upper left, B=(N,1) lower
-		//   left, C=(N,N), and D=(1,N). Similar with
-		//   the barycenter grid. 
-		// Have 10 types of nodes: 
-		//   * cclw corners A-D,
-		//   * cclw edge relative interiors, L, B, R, T,
-		//   * interior grid
-		//   * interior barycenters
-		// Based on (i,j) locations, we can assign index
-		//   and find flowers.
-		int Nsq=N*N;
-		int vertcount=2*(Nsq-N)+1; // total 
-		
-		// build bouquet according to the 10 types
-		int[][] bouquet=new int[vertcount+1][];
-		
-		// 4 corner flowers: A=1,B=N,C=Nsq,D=Nsq-N+1
-		int[] cnr=new int[3]; // upper left
-		cnr[0]=2;cnr[1]=Nsq+1;cnr[2]=N+1;
-		bouquet[1]=cnr;
-		
-		cnr=new int[3]; // lower left
-		cnr[0]=2*N;cnr[1]=Nsq+N-1;cnr[2]=N-1;
-		bouquet[N]=cnr;
-		 
-		cnr=new int[3]; // lower right
-		cnr[0]=Nsq-1;cnr[1]=Nsq+(N-1)*(N-1);cnr[2]=Nsq-N;
-		bouquet[Nsq]=cnr;
-		
-		cnr=new int[3]; // upper right
-		cnr[0]=N*(N-2)+1;cnr[1]=Nsq+(N-1)*(N-2)+1;cnr[2]=Nsq-N+2;
-		bouquet[Nsq-N+1]=cnr;
-		
-		// L and R edges, 2 <= i <= N-1
-		for (int i=2;i<N;i++) {
-			int[] fan=new int[5];
-
-			// left edge
-			int spot=i;
-			fan[0]=spot+1;
-			fan[1]=Nsq+i;
-			fan[2]=spot+N;
-			fan[3]=fan[1]-1;
-			fan[4]=spot-1;
-			bouquet[spot]=fan;
-			
-			// right edge
-			fan=new int[5];
-			spot=Nsq-N+i;
-			fan[0]=spot-1;
-			fan[1]=2*Nsq-3*N+i+1;
-			fan[2]=spot-N;
-			fan[3]=fan[1]+1;
-			fan[4]=spot+1;
-			bouquet[spot]=fan;
-			
-		} 
-		
-		// B and T edges, 2 <= j <= N-1
-		for (int j=2;j<N;j++) {
-			int[] fan=new int[5];
-
-			// bottom edge
-			int spot=N*j;
-			fan[0]=spot+N;
-			fan[1]=Nsq+(N-1)*j;
-			fan[2]=spot-1;
-			fan[3]=fan[1]-N+1;
-			fan[4]=spot-N;
-			bouquet[spot]=fan;
-			
-			// top edge
-			fan=new int[5];
-			spot=N*(j-1)+1;
-			fan[0]=spot-N;
-			fan[1]=Nsq+(N-1)*(j-2)+1;
-			fan[2]=spot+1;
-			fan[3]=fan[1]+N-1;
-			fan[4]=spot+N;
-			bouquet[spot]=fan;
-		}
-		
-		// the generic grid location (i,j), 2 <= i,j <= N-1
-		for (int i=2;i<N;i++) {
-			for (int j=2;j<N;j++) {
-				int[] petals=new int[9];
-				int spot=N*(j-1)+i;
-				int bspot=Nsq+(N-1)*(j-2)+i-1; // upper left of spot
-				petals[0]=spot-1;
-				petals[1]=bspot;
-				petals[2]=spot-N;
-				petals[3]=bspot+1;
-				petals[4]=spot+1;
-				petals[5]=bspot+N;
-				petals[6]=spot+N;
-				petals[7]=bspot+N-1;
-				petals[8]=petals[0];
-				bouquet[spot]=petals;
-			}
-		}
-		
-		// barycenter locations (u,v), 1 <= u <= N-1
-		for (int u=1;u<N;u++) {
-			for (int v=1;v<N;v++) {
-				int[] flower=new int[5];
-				int bspot=Nsq+(N-1)*(v-1)+u;
-				int spot=N*(v-1)+u;
-				flower[0]=spot;
-				flower[1]=spot+1;
-				flower[2]=spot+N+1;
-				flower[3]=spot+N;
-				flower[4]=flower[0];
-				bouquet[bspot]=flower;
-			}
-		}
-		
-		// identify alpha, gamma
-		int alp,gam;
-		if (N!=2*(int)(N/2.0)) { // N is odd, use grid point
-			int hlf=(N+1)/2;
-			alp=N*(hlf-1)+hlf; // index of center
-			gam=alp-hlf+1;   // middle of top
-		}
-		else { // use central barycenter
-			int hlf=(int)(N/2);
-			alp=Nsq+(N-1)*(hlf-1)+hlf;
-			gam=alp-hlf+1;
-		}
-		
-		PackDCEL newDCEL=CombDCEL.getRawDCEL(bouquet,alp);
-		PackData p=new PackData(null);
-		newDCEL.fixDCEL_raw(p);
-		p.set_aim_default();
-		p.setAlpha(alp);
-		p.setGamma(gam);
-		
-		// preset radii for 2x2 square carrier
-		double R=1.0/((double)N-1.0);
-		double r=R*(Math.sqrt(2.0)-1.0);
-		for (int v=1;v<=Nsq;v++)
-			p.setRadius(v, R);
-		for (int v=(Nsq+1);v<=p.nodeCount;v++)
-			p.setRadius(v, r);
-		p.fillcurves();
-		p.packDCEL.dcelCompCenters();
-		
-		return p;
-	}
-		
-	/**
 	 * Given PackData, add to its 'vlist' and 'elist' from
-	 * the lists 'nl' and 'el', resp., but using the @see EdgeLink 
+	 * the lists 'nl' and 'el', resp., but using the EdgeLink 
 	 * of {old,new} pairs to translate the indices.
-	 * @param p @see PackData; we'll change the lists here
-	 * @param nl @see NodeLink, new vertices ('nl' remains unchanged)
-	 * @param el @see EdgeLink, new edges ('el' remains unchanged)
-	 * @param vertMap @see EdgeLink (should remain unchanged)
+	 * @param p PackData; we'll change the lists here
+	 * @param nl NodeLink, new vertices ('nl' remains unchanged)
+	 * @param el EdgeLink, new edges ('el' remains unchanged)
+	 * @param vertMap EdgeLink, (should remain unchanged)
 	 */
 	public static void updateLists(PackData p,NodeLink nl,EdgeLink el,EdgeLink vertMap) {
 		if (nl!=null && nl.size()>0) {
@@ -2302,7 +1766,7 @@ public class PackCreation {
 	}
 	
 	public static PackData pentTiling(int N) {
-		PackData pent=seed(5,0);
+		PackData pent=DcelCreation.seed(5,0);
 		pent.swap_nodes(1,6);
 		
 		int sidelength=1;
@@ -2347,7 +1811,7 @@ public class PackCreation {
 	}
 
 	public static PackData pentHypTiling(int N) {
-		PackData pentBase=seed(5,0);
+		PackData pentBase=DcelCreation.seed(5,0);
 		pentBase.swap_nodes(1,6);
 		
 		PackData heap=pentBase.copyPackTo();
@@ -2412,7 +1876,7 @@ public class PackCreation {
 	 * @return
 	 */
 	public static PackData pent3Expander(int N) {
-		PackData pent=seed(5,0);
+		PackData pent=DcelCreation.seed(5,0);
 		pent.swap_nodes(1,6);
 		int sidelength=1;
 		PackData triPent=adjoin3(pent,sidelength);
@@ -2469,7 +1933,7 @@ public class PackCreation {
 	 * @return
 	 */
 	public static PackData pent4Expander(int N) {
-		PackData pent=seed(5,0);
+		PackData pent=DcelCreation.seed(5,0);
 		pent.swap_nodes(1,6);
 		int sidelength=1;
 		PackData quadPent=adjoin4(pent,sidelength);

@@ -36,6 +36,7 @@ import cpContributed.CurvFlow;
 import cpContributed.FracBranching;
 import dcel.CombDCEL;
 import dcel.DataDCEL;
+import dcel.DcelCreation;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RawDCEL;
@@ -1177,7 +1178,7 @@ public class CommandStrParser {
 			  switch (mode) {
 			  case 1: // seed
 			  {
-				  newPack=PackCreation.seed(param,0);
+				  newPack=DcelCreation.seed(param,0);
 				  break;
 			  }
 			  case 2: // hex/Hex
@@ -1185,7 +1186,7 @@ public class CommandStrParser {
 				  if (type.charAt(0)=='h' && param>100) {
 					  throw new DataException("Use 'Hex' (cap 'H') for more than 100 generations");
 				  }
-				  newPack=PackCreation.hexBuild(param);
+				  newPack=DcelCreation.hexBuild(param);
 				  newPack.set_rad_default();
 				  newPack.packDCEL.dcelCompCenters(newPack.packDCEL.computeOrder);
     			  double ctr=newPack.getCenter(newPack.nodeCount).abs();
@@ -1198,7 +1199,7 @@ public class CommandStrParser {
 				  if (type.charAt(0)=='s' && param>8) {
 					  throw new DataException("Use 'Sq_grid' (cap 'S') for more than 8 generations");
 				  }
-				  newPack=PackCreation.squareGrid(param);
+				  newPack=DcelCreation.squareGrid(param);
 				  break;
 			  }
 			  case 4: // chair, with 'TileData'
@@ -1226,14 +1227,17 @@ public class CommandStrParser {
 				  if (Math.abs(2.0*a-(int)(2.0*a))>.0001 ||
 						  Math.abs(2.0*b-(int)(2.0*b))>.0001 ||
 						  Math.abs(2.0*c-(int)(2.0*c))>.0001)
-					  throw new DataException("usage: create tri_group: paremeters must be form n/2");
+					  throw new DataException(
+							  "usage: tri_group: paremeters must be form n/2");
 				  if (Math.abs(2.0*((int)a)-2.0*a)>.1) {
 					  if (((int)b-(int)c)>0.1) 
-						  throw new DataException("usage: create tri_group: 'a' is half-integer, but b, c not equal");
+						  throw new DataException(
+							  "usage: tri_group: 'a' half-int, then b, c must be equal");
 				  }
 				  else if (Math.abs(2.0*((int)b)-2.0*b)>.1) {
 					  if (((int)a-(int)c)>0.1) 
-						  throw new DataException("usage: create tri_group: 'b' is half-integer, but a, c not equal");
+						  throw new DataException(
+								  "usage: tri_group: 'b' is half-integer, but a, c not equal");
 				  }
 				  if (Math.abs(2.0*((int)c)-2.0*c)>.1) {
 					  if (((int)b-(int)a)>0.1) 
@@ -1243,7 +1247,7 @@ public class CommandStrParser {
 				  int B=(int)(2.01*b);
 				  int C=(int)(2.01*c);
 
-				  newPack=PackCreation.triGroup(A,B,C,param);
+				  newPack=DcelCreation.triGroup(A,B,C,param);
 				  break;
 			  }
 			  case 6: // pentagonal tiling, with 'TileData'
@@ -1355,14 +1359,14 @@ public class CommandStrParser {
 	        		  CirclePack.cpb.errMsg("Usage: hex_torus <h> <w>: "+
 	        			  "default to "+H+" and "+W);
 	        	  }
-	        	  newPack=PackCreation.hexTorus(H,W);
+	        	  newPack=DcelCreation.hexTorus(H,W);
 	        	  jexecute(newPack,"layout");
 	        	  
 	        	  break;
 			  }
 			  case 13: // regular tetrahedron on the sphere
 			  {
-				  newPack=PackCreation.tetrahedron();
+				  newPack=DcelCreation.tetrahedron();
 				  break;
 			  }
 			  } // end of switch
@@ -3572,7 +3576,7 @@ public class CommandStrParser {
 	   	  
 	     	  try{  // have to hold this; packData get's replaced
 	     		  int pnum=packData.packNum;
-	     		  PackData newData=PackCreation.seed(n,hes);
+	     		  PackData newData=DcelCreation.seed(n,hes);
 	     		  if (newData==null) 
 	     			  throw new CombException("seed has failed");
 	     		  CirclePack.cpb.swapPackData(newData,pnum,false);
@@ -4557,14 +4561,13 @@ public class CommandStrParser {
 			  if (((int)b-(int)a)>0.1) 
 				  throw new DataException("'c' is half-integer, but a, b not equal");
 		  }
-//		  int []degs=new int[3]; 
 		  int A=(int)(2.01*a);
 		  int B=(int)(2.01*b);
 		  int C=(int)(2.01*c);
 		  
 	   	  try{
 	   		  // have to hold this; packData get's replaced
-	   		  PackData newPack=PackCreation.triGroup(A,B,C,maxgen);
+	   		  PackData newPack=DcelCreation.triGroup(A,B,C,maxgen);
 	   		  if (newPack!=null) {
 	   			  int pnum=packData.packNum;
 	   			  CirclePack.cpb.swapPackData(newPack,pnum,false);
@@ -4576,121 +4579,7 @@ public class CommandStrParser {
 	   	  } catch(Exception ex) {
 	   		  throw new ParserException(" "+ex.getMessage());
 	   	  }
-	   	  
-		  // geometry
-/*			  int hees=-1; // default: hyp
-		  double recipsum=1.0/a+1.0/b+1.0/c;
-		  if (Math.abs(recipsum-1)<.0001)
-			  hees=0; // eucl
-		  else if (recipsum>1.0) hees=1; // sph
-		  
-		  int gencount=1;
-		  // start seed
-	   	  try{
-	   		  // have to hold this; packData get's replaced
-	   		  CPScreen cps=packData.cpScreen;  
-	   		  count += cps.seed(degs[0],hees);
-	   		  packData=cps.packData; 
-	   	  } catch(Exception ex) {
-	   		  throw new ParserException(" "+ex.getMessage());
-	   	  }
-	   	  // mark vertices of first flower
-	   	  packData.setVertMark(1,0);
-	   	  for (int j=2;j<=packData.nodeCount;j++) {
-	   		  packData.setVertMark(j,(j)%2+1);
-	   	  }
-	   	  count++;
-	   	  
-	   	  // hyperbolic cases
-		  while (hees<0 && gencount<=maxgen) { 
-			  if (packData.bdryCompCount==0)
-				  throw new CombException("no boundary verts at gencount = "+gencount);
-			  int []alt=new int[2];
-			  int w=packData.bdryStarts[1];
-			  int stopv=packData.kData[w].flower[packData.getNum(w)];
-			  int next=packData.kData[w].flower[0];
-			  boolean wflag=false;
-			  while (!wflag && count<10000) {
-//				  System.err.println("gencount="+gencount+", working on w="+w+
-//						  "; w's mark="+packData.getVertMark(w));
-				  if (w==stopv) wflag=true;
-				  int prev=packData.kData[w].flower[packData.getNum(w)];
-				  int n=degs[packData.getVertMark(w)]-packData.getNum(w)-1;
-				  if (n<-1)
-					  throw new CombException("violated degree at vert "+w);
-
-				  // add the n circles; two marks alternate around w
-				  alt[0]=packData.getVertMark(prev);
-				  int vec=(alt[0]-packData.getVertMark(w)+3)%3;
-				  alt[1]=(alt[0]+vec)%3;
-//				  System.out.println("w mark="+packData.getVertMark(w)+
-//						  "; prev mark (alt[0])="+alt[0]+"; alt[1]="+alt[1]);
-				  for (int i=1;i<=n;i++) { 
-					  packData.add_vert(w);
-					  packData.setVertMark(packData.nodeCount],alt[i%2]);
-				  }
-				  if (n==-1) { 
-					  int xv=packData.close_up(w); // vertex removed?
-					  if (xv>0 && xv<=stopv) // if yes, reset stopv
-						  stopv--;
-					  if (xv>0 && xv<=next) // may have to reset next, too
-						  next--;
-				  }
-				  else packData.enfold(w);
-				  packData.complex_count(true);
-				  w=next;
-				  next=packData.kData[w].flower[0];
-				  count++;
-			  } // end of while
-			  
-			  // debug
-			  NodeLink nodelink=new NodeLink(packData,"b");
-			  Iterator<Integer> nlink=nodelink.iterator();
-//			  System.out.println("bdry verts, marks");
-			  while (nlink.hasNext()) {
-				  int dw=nlink.next();
-//				  System.out.println("v "+dw+", "+packData.getVertMark(dw));
-			  }
-			  
-			  
-			  gencount++;
-		  }
-		  packData.setCombinatorics();
-		  return count; */
 	  }
-	  // ========= toggle ========
-/*	  if (cmd.startsWith("togg")) {
-		  String window=null;
-		  try {
-			  items=flagSegs.get(0);
-			  window=items.get(0);
-		  } catch(Exception ex) {
-			  window=new String("cp"); // default to 'PackContol' window
-		  }
-		  if (window.toLowerCase().contains("cp")) {
-			  if (CPBase.frame.isVisible())
-				  CPBase.frame.setVisible(false);
-			  else
-				  CPBase.frame.setVisible(true);
-			  return 1;
-		  }
-		  else if (window.toLowerCase().contains("sc")) {
-			  if (PackControl.scriptHover.isLocked()) {
-				  PackControl.scriptHover.loadHover();
-				  PackControl.scriptHover.lockedFrame.setVisible(false);
-			  }
-			  else { 
-				  PackControl.scriptHover.lockframe();
-			  }
-			  return 1;
-		  }
-		  else if (window.toLowerCase().contains("msg")) {
-			  // TODO: toggle the message window
-			  return 1;
-		  }
-	  }
-*/
-	  
 	  break;
   } // end of 't'
   case 'w': // fall through
@@ -5686,7 +5575,7 @@ public class CommandStrParser {
 	    	  if (packData.packDCEL!=null) {
 	    		  int origCount=packData.nodeCount;
 	    		  int rslt=RawDCEL.hexBaryRefine_raw(
-	    				  packData.packDCEL,1,true);
+	    				  packData.packDCEL,true);
 	    		  if (rslt==0)
 	    			  return 0;
 	    		  VertexMap oldnew=packData.packDCEL.reapVUtil();
@@ -7258,13 +7147,7 @@ public class CommandStrParser {
 		  
 	      // =========== hex_refine =========
 		  if (cmd.startsWith("hex_ref")) {
-			  int N=1;
-	    	  try {
-	    		  N=Integer.parseInt(flagSegs.get(0).get(0).trim());
-	    	  } catch (Exception ex) {
-	    		  
-	    	  }
-	    	  return packData.hex_refine(N);
+	    	  return packData.hex_refine();
 	      }
 
 	      // =========== hex_slide ==========
@@ -10870,7 +10753,7 @@ public class CommandStrParser {
 		   	  try{
 		   		  // have to hold this; packData get's replaced
 		   		  int pnum=packData.packNum;
-		   		  PackData newPack=PackCreation.triGroup(A,B,C,maxgen);
+		   		  PackData newPack=DcelCreation.triGroup(A,B,C,maxgen);
 		   		  if (newPack!=null) {
 		   			  CirclePack.cpb.swapPackData(newPack,pnum,false);
 		   			  packData=newPack;

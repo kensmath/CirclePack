@@ -94,7 +94,8 @@ public class CombDCEL {
 	public static PackDCEL getRawDCEL(int[][] bouquet,int alphaIndx) {
 		PackDCEL pdcel=new PackDCEL();
 		int vertcount = bouquet.length - 1; // 0th entry is empty
-		Vertex[] vertices = new Vertex[vertcount + 1];
+		int size=((int)((vertcount-1)/1000))*1000+1000;
+		Vertex[] vertices = new Vertex[size + 1]; // extra space
 		int[] bdryverts=new int[vertcount+1];  // flag bdry vertices
 		int firstInterior=0; 
 		int edgecount=0;
@@ -1224,8 +1225,10 @@ public class CombDCEL {
 		} 
 		// Note: at this point, all non-empty slots are contiguous, 
 		//   holes filled in as much as possible, empty slots filled in.
-
-		Vertex[] newVertices=new Vertex[totalCount+1];
+        int size=((int)((totalCount-1)/1000))*1000+1000;
+        if (size<pdcel.vertices.length)
+        	size=pdcel.vertices.length;
+		Vertex[] newVertices=new Vertex[size+1];
 		for (int j=1;j<=totalCount;j++) { 
 			newVertices[j]=allSlots[j];
 		}
@@ -3404,7 +3407,7 @@ public class CombDCEL {
 	   * new 'vertices'. In processing, orphaned 
 	   * vertices are indicated by 'halfedge'=null. 
 	   * Build 'oldNew' to connect old and new vertex 
-	   * indices (make entry only if different). 
+	   * indices (entry only when old/new differ). 
 	   * Note that if pdc2!=pdc1, then no pdc1 
 	   * vertices are orphaned, so pdc2 vertices 
 	   * numbering have been adjusted to start with 
@@ -3426,7 +3429,7 @@ public class CombDCEL {
 				  ++vtick;
 				  v_array.add(vert);
 				  // if pdc2!=pdc1, should have vtick=v=vert.vutil
-				  if (vtick!=vert.vutil)
+				  if (vtick!=vert.vutil && vert.vutil!=0)
 					  pdc1.oldNew.add(new EdgeSimple(vert.vutil,vtick));
 //System.out.println(" add "+new EdgeSimple(vtick,vert.vutil));					  
 			  }
@@ -3473,7 +3476,8 @@ public class CombDCEL {
 		  
 		  // create new 'vertices' with new 'vertIndx's
 		  pdc1.vertCount=v_array.size(); // this should equal 'vtick'
-		  pdc1.vertices=new Vertex[pdc1.vertCount+1];
+		  if (pdc1.vertCount>=pdc1.vertices.length-1)
+			  pdc1.alloc_vert_space(pdc1.vertCount+10,false);
 		  Iterator<Vertex> vis=v_array.iterator();
 		  vtick=0;
 		  while (vis.hasNext()) {
@@ -3723,19 +3727,25 @@ public class CombDCEL {
 
 	/**
 	 * Modify 'pdcel' by zipping together the two bdry edges 
-	 * from 'vert'. This means the downstream vert on the bdry 
-	 * is consolidated with the upstream vert, and so a vertex 
-	 * may be lost. The redchain should remain in tact, 
-	 * though it will be discarded if result is a sphere.
+	 * from 'vert'. This means the downstream edge is twinned
+	 * with the upstream edge, and so a vertex may be orphaned.
+	 * The redchain should remain in tact, though it will be 
+	 * discarded if result is a sphere (e.g., in 2-edge or
+	 * 4-edge bdry cases).
 	 * 
-	 * May abandon one vertex and two edges; for verts, set
-	 * 'Vertex.halfedge' to null and 'vutil' to new vertIndx.
+	 * Typically orphan downstream vertex, unless in the
+	 * special 2-edge bdry case. Set 'halfedge' to null for
+	 * the orphaned vertex and show new vertIndx in its 'vutil'.
 	 * Calling routine is responsible for keeping track of 
-	 * this and for completing updates of 'pdcel'.
+	 * this (see, e.g., 'wrapAdjoin') and for completing updates 
+	 * of 'pdcel'.
 	 * 
 	 * @param pdcel PackDCEL
 	 * @param vert Vertex
-	 * @return 1 on success, 0 on failure
+	 * @return int, -1, or 0: if positive, then this is the 
+	 * 	  one orphaned vertex; -1 means no orphaned vertex 
+	 *    (i.e., 2-edge bdry that gets closed up), 
+	 *    and 0 for error.
 	 */
 	public static int zipEdge(PackDCEL pdcel,Vertex vert) {
 		if (vert.bdryFlag==0) // nothing to zip
@@ -3781,12 +3791,12 @@ public class CombDCEL {
 				vert.redFlag=false;
 				redin.myEdge.origin.redFlag=false;
 				pdcel.redChain=null; // toss the redchain
-				return 1;
+				return -1;
 			}
 			
 			// else, the bdry component may be a bubble in red chain
 			if (redout.prevRed!=redin && redout.nextRed!=redin) {
-				return 1;
+				return -1;
 			}
 			
 			// else, red chain is shrunk in one or other direction
@@ -3825,14 +3835,14 @@ public class CombDCEL {
 				if (upred.prevRed==downred) { // reached end? must be sphere
 					upred.myEdge.origin.redFlag=false;
 					pdcel.redChain=null;
-					return 1;
+					return -1;
 				}
 				upred=upred.prevRed;
 				downred=downred.nextRed;
 				upred.nextRed=downred;
 				downred.prevRed=upred;
 			}
-			return 1;
+			return -1; // no orphaned vertex
 		}
 		
 		// 4-edge bdry component?
@@ -3850,7 +3860,7 @@ public class CombDCEL {
 			HalfEdge he=firstspoke;
 			do {
 				he.origin=rightVert;
-				he=he.prev.twin; // cclw
+				he=he.twin.next; // clw
 			} while (he!=firstspoke);
 			leftVert.halfedge=null;
 			leftVert.vutil=rightVert.vertIndx;
@@ -3878,7 +3888,7 @@ public class CombDCEL {
 				pre_edge.myRedEdge=null;
 				post_edge.myRedEdge=null;
 				pdcel.redChain=null;
-				return 1;
+				return leftVert.vertIndx; // orphaned vertex
 			}
 			
 			// check for red contraction at 'vert' and/or 'oppVert'
@@ -3920,7 +3930,7 @@ public class CombDCEL {
 					if (upred.prevRed==downred) { // end? must be sphere
 						upred.myEdge.origin.redFlag=false;
 						pdcel.redChain=null;
-						return 1;
+						return leftVert.vertIndx;
 					}
 					upred=upred.prevRed;
 					downred=downred.nextRed;
@@ -3928,7 +3938,7 @@ public class CombDCEL {
 					downred.prevRed=upred;
 				}
 			}
-			return 1;
+			return leftVert.vertIndx;
 		}
 		
 		// else zip up just first edge
@@ -3939,7 +3949,7 @@ public class CombDCEL {
 		upstream.twin.prev=downstream.twin;
 		savevert.halfedge=downstream;
 	
-		// reset origin for spokes of vertex being abandoned
+		// reset origin for spokes of vertex being orphaned
 		HalfEdge he=redout.nextRed.myEdge;
 		Vertex xvert=he.origin;
 		do {
@@ -3947,7 +3957,7 @@ public class CombDCEL {
 			he=he.prev.twin; // cclw
 		} while (he!=redout.nextRed.myEdge);
 		
-		// abandon vertex 'xvert'
+		// orphan vertex 'xvert'
 		xvert.halfedge=null; 
 		xvert.vutil=savevert.vertIndx;
 	
@@ -3975,7 +3985,7 @@ public class CombDCEL {
 			redin.twinRed=redout;
 		}
 		
-		return 1;
+		return xvert.vertIndx; // this vertex orphaned
 	}
 	
 	/** 

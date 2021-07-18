@@ -3,13 +3,13 @@ package tiling;
 import java.awt.Color;
 import java.util.Vector;
 
+import dcel.DcelCreation;
 import exceptions.CombException;
 import exceptions.DataException;
 import komplex.EdgeSimple;
 import komplex.Face;
 import listManip.NodeLink;
 import listManip.VertexMap;
-import packing.PackCreation;
 import packing.PackData;
 
 /**
@@ -125,7 +125,7 @@ public class Tile extends Face {
 		if (mode==1) { // simple tiling
 			if(vertCount<3)
 				throw new DataException("unigons and digons are not allowed in 'simple' mode");
-			PackData p=packing.PackCreation.seed(vertCount,0);
+			PackData p=dcel.DcelCreation.seed(vertCount,0);
 			p.tileData=new TileData(1,1);
 			Tile tile=new Tile(p.tileData,vertCount);
 			tile.tileType=tileType;
@@ -148,7 +148,7 @@ public class Tile extends Face {
 		if (mode==2) { // edge barycenters added
 			if(vertCount<2)
 				throw new DataException("unigons are not allowed in tile mode 2");
-			PackData p=packing.PackCreation.seed(2*vertCount,0);
+			PackData p=dcel.DcelCreation.seed(2*vertCount,0);
 			p.tileData=new TileData(1,2);
 			Tile tile=new Tile(p.tileData,vertCount);
 			tile.tileType=tileType;
@@ -324,7 +324,7 @@ public class Tile extends Face {
 		}
 		
 		// general n-gon case, n>=2
-		PackData p=PackCreation.seed(2*vertCount,0);
+		PackData p=DcelCreation.seed(2*vertCount,0);
 		p.bary_refine(-1); // mark new barycenters with -1
 			
 		p.setVertMark(1,1);

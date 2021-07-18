@@ -2255,19 +2255,18 @@ public class PackData{
      * Free old space, allocate space for KData, RData, VData
      * (and possibly expand 'packDCEL.vertices')
      * Size is stored in 'sizeLimit'.
-     * @param new_size int (often currend 'sizeLimit')
+     * @param new_size int (often current 'sizeLimit')
      * @param keepit boolean: true, adjust size of current pack,
      *   else a new pack.
      * @return 1
      */
     public int alloc_pack_space(int new_size,boolean keepit) {
         int size=((int)((new_size-1)/1000))*1000+1000;
-        if (keepit && size==sizeLimit) { // almost no action needed 
+        
+        // almost no action needed? 'vertices' may be too small
+        if (keepit && size==sizeLimit) { 
         	if (packDCEL!=null && packDCEL.vertices.length<sizeLimit+1) {
-        		Vertex[] new_vs=new Vertex[sizeLimit+1];
-        		for (int j=1;j<=packDCEL.vertCount;j++) 
-        			new_vs[j]=packDCEL.vertices[j];
-        		packDCEL.vertices=new_vs;
+        		packDCEL.alloc_vert_space(sizeLimit,keepit);
         	}
             return 1; 
         }
@@ -8172,7 +8171,7 @@ public class PackData{
 					if (!oldRel) {
 						return e_packer.genericRePack(passes);
 					}
-					int ans=e_packer.d_oldReliable(1000); // TODO: specify in call
+					int ans=e_packer.d_oldReliable(passes); // TODO: specify in call
 					if (ans>0) {
 						e_packer.reapResults();
 //						CirclePack.cpb.msg("Did DCEL eucl repack, count="+ans);
@@ -10637,6 +10636,13 @@ public class PackData{
 	 * @return 1
 	 */
 	public int reverse_orient() {
+		if (packDCEL!=null) {
+			PackDCEL pdcel=packDCEL.reverseOrientation();
+			pdcel.fixDCEL_raw(this);
+			return 1;
+		}
+		
+		// traditional
 		int num;
 		KData newKData = null;
 		for (int i = 1; i <= nodeCount; i++) {
@@ -10657,10 +10663,11 @@ public class PackData{
 	}
 	  
 	  /**
-	   * Report the log of ratio width/height of a eucl packing, given the four
-	   * corner vertices in counterclockwise order, upper-left first. Throw
-	   * DataExceptin on error or if off from rectangular by more than 5%. 
-	   * The result is left-right length divided by top-bottom height.
+	   * Report the log of ratio width/height of a eucl packing, 
+	   * given the four corner vertices in counterclockwise order, 
+	   * upper-left first. Throw DataExceptin on error or if off 
+	   * from rectangular by more than 5%. The result is 
+	   * left-right length divided by top-bottom height.
 	   * @param ul int
 	   * @param ll int
 	   * @param lr int
@@ -13112,16 +13119,12 @@ public class PackData{
 	   * We are operating on this packing. Each edge gets new vertex, 
 	   * each face broken into 4 faces. Try to propagate old centers/radii,
 	   * overlaps, schwarzians to new edges. Return 0 on failure.
-	   * Can be iterated before fixing in DCEL case.
-	   * @param N int
 	  */
-	  public int hex_refine(int N) {
+	  public int hex_refine() {
 		  if (packDCEL!=null) {
-			  if (N<1 || N>5) // at least 1, at most 5
-				  N=1;
-			  RawDCEL.hexBaryRefine_raw(packDCEL,N,false);
+			  RawDCEL.hexBaryRefine_raw(packDCEL,false);
 			  VertexMap vrads=packDCEL.reapVUtil();
-			  packDCEL.fixDCEL_raw(this);
+			  packDCEL.fixDCEL_raw(this); 
 
 			  Iterator<EdgeSimple> vis=vrads.iterator();
 			  while (vis.hasNext()) {
@@ -14516,6 +14519,8 @@ public class PackData{
 	  }
 	  
 	  /** 
+	   * traditional. 
+	   * 
 	   * Identify edges/vert on opposite sides of given bdry vertex.
 	   * Adjust the local structure, but calling routine must handle
 	   * update of the packing.
@@ -15702,7 +15707,7 @@ public class PackData{
 	  */
 	  public int bary_refine(int mark) {
 	    int orig_count=nodeCount;
-	    if (hex_refine(1)==0) 
+	    if (hex_refine()==0) 
 	    	return 0;
 	    int min_new=orig_count+1;
 	    int max_new=nodeCount;

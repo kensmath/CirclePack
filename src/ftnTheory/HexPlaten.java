@@ -13,6 +13,7 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.DcelCreation;
 import exceptions.InOutException;
 import exceptions.ParserException;
 import geometry.EuclMath;
@@ -25,7 +26,6 @@ import listManip.FaceLink;
 import listManip.NodeLink;
 import listManip.PathLink;
 import listManip.VertexMap;
-import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
@@ -179,7 +179,7 @@ public class HexPlaten extends PackExtender {
 		microScaling=2.0*platenP.minR/denom;
 		
 		// create the circle packing and cut it down to 'Omega]
-		PackData newPack=PackCreation.hexBuild(microN);
+		PackData newPack=DcelCreation.hexBuild(microN);
 		swapPackData(newPack);
 
 		// normalize: alpha at origin, 10 on +real axis

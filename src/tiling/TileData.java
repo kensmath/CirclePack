@@ -5,13 +5,13 @@ import java.util.Vector;
 
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.DcelCreation;
 import exceptions.CombException;
 import komplex.EdgeSimple;
 import komplex.KData;
 import listManip.EdgeLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
-import packing.PackCreation;
 import packing.PackData;
 import packing.RData;
 
@@ -1409,7 +1409,7 @@ public class TileData {
 		// is this a bi-gon?
 		if (elist.size()==2) {
 			
-			PackData p=PackCreation.seed(4,0);
+			PackData p=DcelCreation.seed(4,0);
 			p.bary_refine();
 			
 			p.vertexMap=new VertexMap();

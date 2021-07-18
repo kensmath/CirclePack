@@ -624,18 +624,21 @@ does not eliminate redundancies, as other counts do.)
     construction like "chair" and "sq_grid", or the number of
     petals for "seed", or the number of generations, as with "hex"
     or "tri_group". Depending on the type, there may be special numbering 
-    or marking of vertices and/or edges, as with the 'tiles' in the "chair" construction.
+    or marking of vertices and/or edges, as with the 'tiles' in 
+    the "chair" construction.
     
     The "hex_torus" construction builds a regular parallelogram-like
     hex torus with given w/h for width/height.
     
-	The "tri_group" construction involves parameters (a b c) for triangle angles
-	pi/a, pi/b, pi/c; a, b, c can be (at worst) half integers, and if one is a half
-	integer, then the other two must be equal to make combinatoric sense. The
-	geometry for the packing is chosen based on the angles. 
+	The "tri_group" construction involves parameters (a b c) for 
+	triangle angles	pi/a, pi/b, pi/c; a, b, c can be (at worst) half 
+	integers, and if one is a half integer, then the other two must be 
+	equal to make combinatoric sense. The geometry for the packing is 
+	chosen based on the angles. 
 	
-	The Fibonacci tilings are "fusion" type of Frank and Sadun. Parameters W H X
-	determine combinatorial edge lengths, defaulting to 1 1 1.
+	The Fibonacci tilings are "fusion" type of Frank and Sadun.
+	Parameters W H X determine combinatorial edge lengths, 
+	defaulting to 1 1 1.
 	
 	A regular "tetrahedron" on there sphere; 4 circles, each of radius
 	arcsin(sqrt(2/3)).

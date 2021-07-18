@@ -9,13 +9,13 @@ import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.VertexMap;
 import math.Mobius;
-import packing.PackCreation;
 import packing.PackData;
 import util.UtilPacket;
 import canvasses.DisplayParser;
 import circlePack.PackControl;
 
 import complex.Complex;
+import dcel.DcelCreation;
 
 /**
  * This is a traditional branch point, extra angle assigned to an interior circle.
@@ -50,7 +50,7 @@ public class TradBranchPt extends GenBranchPt {
 	public PackData createMyPack() {
 		
 		// build from a seed
-		PackData myPack=PackCreation.seed(packData.countFaces(myIndex), packData.hes);
+		PackData myPack=DcelCreation.seed(packData.countFaces(myIndex), packData.hes);
 		myPack.setAim(1,myAim);
 	
 		// set up vertexMap, 'bdryLink', transData, etc.

@@ -176,6 +176,21 @@ public class PackDCEL {
 	}
 	
 	/**
+	 * Reallocate space for 'vertices' in increments of 1000.
+	 * @param new_size int
+	 * @param keepit boolean, true, then copy existing
+	 * @return int size
+	 */
+	public int alloc_vert_space(int new_size,boolean keepit) {
+        int size=((int)((new_size-1)/1000))*1000+1000;
+		Vertex[] new_vs=new Vertex[size+1];
+		if (keepit)
+			for (int j=1;j<=vertCount;j++) 
+				new_vs[j]=vertices[j];
+		vertices=new_vs;
+		return size;
+	}
+	/**
 	 * Create and populate 'triData[]'. This loads 'radii', 
 	 * 'invDist's, 'aim', and computes 'angles'.
 	 * @return int faceCount

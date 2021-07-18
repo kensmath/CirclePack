@@ -5,12 +5,12 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import dcel.DcelCreation;
 import dcel.HalfEdge;
 import dcel.RawDCEL;
 import dcel.Vertex;
 import komplex.EdgeSimple;
 import math.Mobius;
-import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
@@ -84,7 +84,7 @@ public class BrooksQuad extends PackExtender {
 	 * swap so the center is the largest index, it's the 'plug'.
 	 */
 	public void initQuad() {
-		PackData newData=PackCreation.seed(4,0);
+		PackData newData=DcelCreation.seed(4,0);
 		if (newData==null)
 			Oops("Failed to build initial seed.");
 		CirclePack.cpb.swapPackData(newData,packData.packNum,true);

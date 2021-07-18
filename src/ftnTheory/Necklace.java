@@ -7,6 +7,7 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import dcel.DcelCreation;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -353,7 +354,7 @@ System.err.println("starting bottomHemi:");
 			mylist[k]=list[k];
 		
 		// This is the packing we are growing.
-		PackData myPacking=PackCreation.seed(6,-1);
+		PackData myPacking=DcelCreation.seed(6,-1);
 		myPacking.setVertMark(1,-1);
 		myPacking.setVertMark(3,-2);
 		myPacking.setVertMark(5,-2);

@@ -7,6 +7,7 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.DcelCreation;
 import exceptions.CombException;
 import exceptions.ParserException;
 import geometry.EuclMath;
@@ -15,7 +16,6 @@ import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.NodeLink;
-import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
@@ -1113,7 +1113,7 @@ public class Graphene extends PackExtender {
 	public int stitchStart(int n,double phi1,double phi2,int startMode) {
 
 		// build hex to cut half planes from
-		PackData basePack=PackCreation.hexBuild(n);
+		PackData basePack=DcelCreation.hexBuild(n);
 		basePack.set_rad_default();
 		basePack.packDCEL.dcelCompCenters(basePack.packDCEL.computeOrder);
 		double ctr=basePack.getCenter(basePack.nodeCount).abs();
