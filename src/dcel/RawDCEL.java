@@ -669,6 +669,8 @@ public class RawDCEL {
 		  new_twin.face=ideal;
 		  if (ideal.edge==out_edge.twin || ideal.edge==in_edge.twin)
 			  ideal.edge=new_twin;
+		  out_edge.twin.face=null;
+		  in_edge.twin.face=null;
 		  
 		  // new red 
 		  RedHEdge new_red=new RedHEdge(new_edge);

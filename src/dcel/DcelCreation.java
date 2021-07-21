@@ -412,7 +412,6 @@ public class DcelCreation {
 	   	}
 	
 	   	while (gencount<=maxgen) { // DCELdebug.printRedChain(pdcel.redChain);
-	   		CombDCEL.d_FillInside(pdcel);
    			int []bdryinfo=ck_redchain(pdcel); 
 	   		if (bdryinfo==null)
 	   			throw new CombException("no 'redChain' exists at gencount = "+
@@ -434,6 +433,26 @@ public class DcelCreation {
 	   					CirclePack.cpb.msg("last degree "+
 	   							pdata.countFaces(pdata.nodeCount));
 	   				return pdata;
+	   			}
+	   			if (bdryinfo[0]==3) { // just need single last face?
+	   				RedHEdge rtrace=pdcel.redChain;
+	   				int[] uhits=new int[3];
+	   				do {
+	   					int k = pdcel.vertices[rtrace.myEdge.origin.vertIndx].vutil;
+	   					uhits[k]=1;
+	   					rtrace=rtrace.nextRed;
+	   				} while (rtrace!=pdcel.redChain);
+	   				// vertices, one mark for each of A, B, C
+	   				if (uhits[0]==1 && uhits[1]==1 && uhits[2]==1) {
+	   					int rslt=RawDCEL.addIdealFace_raw(pdcel,
+	   							pdcel.redChain.myEdge.twin.face);
+	   					if (rslt!=1)
+	   						throw new CombException(
+	   								"Failed with final triangular ideal face");
+		   				pdcel.fixDCEL_raw(pdata);
+		   				CirclePack.cpb.msg("triG: closed as sphere:");
+		   				return pdata;
+	   				}
 	   			}
 	   		}
 	   		
@@ -506,7 +525,11 @@ public class DcelCreation {
 	   		   			}
 	   				}
 	   			}
-	   			if (n==-1) { 
+	   			if (n==-1) {
+	   				
+// debugging
+//	   				System.out.println("next zip is "+w);
+	   				
 	   				int rslt=CombDCEL.zipEdge(pdcel,pdcel.vertices[w]);
 	   				if (rslt==0) {
 	   					pdcel.fixDCEL_raw(pdata);
@@ -533,7 +556,7 @@ public class DcelCreation {
 	   					}
 	   					pdcel.vertCount=vtick;
 	   				}
-
+		   			
 	   				if (pdcel.redChain==null) { // closed up?
 	   					pdcel.fixDCEL_raw(pdata);
 	   					CirclePack.cpb.errMsg("With 'zip' at vert "+w+
@@ -585,10 +608,11 @@ public class DcelCreation {
 	/**
 	 * Utility for bdry inspection. Find count and min/max 
 	 * of intended degrees of circles that would be added
-	 * to the boundary in 'triGroup' construction. Return
-	 * null if there is not 'redChain'.
+	 * to the boundary in 'triGroup' construction. 'vutil'
+	 * is 0, 1, 2, for degree designation A, B, C in 'triGroup' 
+	 * Return null if there is no 'redChain'.
 	 * @param pdc PackDCEL
-	 * @return ans[3]: 0=bdry count, 1=min deg, 2=max deg
+	 * @return ans[3]: 0=bdry count, 1=min deg desig, 2=max deg desig
 	 */
 	public static int []ck_redchain(PackDCEL pdc) {
 		int []ans=new int[3];
@@ -606,7 +630,7 @@ public class DcelCreation {
 			int w=rtrace.myEdge.origin.vertIndx;
 			int next=rtrace.nextRed.myEdge.origin.vertIndx;
 			int vec=(pdc.vertices[w].vutil-pdc.vertices[next].vutil+3)%3;
-			int nxmk=(pdc.vertices[w].vutil+vec)%3; // mark an added vert would have
+			int nxmk=(pdc.vertices[w].vutil+vec)%3; // mark added vert would have
 			mx=(nxmk>mx) ? nxmk : mx;
 			mn=(nxmk<mn) ? nxmk : mn;
 			rtrace=rtrace.nextRed;

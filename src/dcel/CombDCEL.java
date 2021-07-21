@@ -267,7 +267,6 @@ public class CombDCEL {
 		boolean debug=false; 
 		PackData debugPack=pdcel.p; // 
 		boolean click=false; // help debug
-		
 		int vertcount=pdcel.vertCount;
 
 		// reset 'alpha' to given edge, but avoid 'hlink'
