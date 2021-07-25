@@ -301,6 +301,7 @@ public class PackData{
    		alpha=pdcel.alpha.origin.vertIndx;
     	if (pdcel.gamma==null)
     		gamma=pdcel.setGamma(0);
+    	gamma=pdcel.gamma.origin.vertIndx;
 		
     	// set some counts
 		nodeCount=pdcel.vertCount;
@@ -327,7 +328,7 @@ public class PackData{
     		for (int v=1;v<=sizeLimit;v++) 
     			vData[v]=new VData();
     		
-    		// translation? make more efficient
+    		// translation? make more efficient with array
     		int[] new2old=null; // new2old[v] is old index for new vert v 
     		if (pdcel.oldNew!=null) {
     			new2old=new int[nodeCount+1];
@@ -14706,6 +14707,8 @@ public class PackData{
 			  
 			  // here's the main call.
 			  PackDCEL newDCEL=CombDCEL.d_adjoin(pdc1, pdc2, v1, v2, n);
+			  CombDCEL.redchain_by_edge(newDCEL, null, null, selfadjoin);
+			  CombDCEL.d_FillInside(newDCEL);
 			  newPack=new PackData(null);
 			  newPack.attachDCEL(newDCEL);
 			  PackDCEL pdcel=newPack.packDCEL;
@@ -17063,84 +17066,102 @@ public class PackData{
 	}
 	
 	/**
-	 * Does the work for the "get_data" and "put_data" calls, depending
-	 * on 'putget' flag. If 'put', then data goes from 'this' to 'q';
-	 * 'get' goes from 'q' to 'this'. Caution: 'translate' true means
-	 * the 'VertexMap' of 'this' is used to associate source with target.
-	 * So use of 'put' or 'get' with translation depends on who has the
+	 * Does the work for the "get_data" and "put_data" calls, 
+	 * depending on 'putget' flag. If 'put', then data goes 
+	 * from 'this' to 'q'; 'get' goes from 'q' to 'this'. 
+	 * Caution: 'translate' true means the 'VertexMap' of 'this' 
+	 * is used to associate source with target. So use of 
+	 * 'put'/'get' with translation depends on who has the
 	 * appropriate 'VertexMap'.
-	 * TODO: if there are multiple translations, we only use the first currently
-	 * @param q, other packing
-	 * @param flagsegs, vector of vectors of strings
-	 * @param putget, true==>'put' from 'this' to q, false==>'get' from q to 'this'
-	 * @param transl, true==>'translate' using VertexMap of 'this' 
+	 * TODO: multiple translations? we currently only use the first
+	 * @param q PackData, other packing
+	 * @param flagsegs Vector<Vector<String>>, vector of vectors of strings
+	 * @param putget boolean, true==>'put' from 'this' to q, false==>'get' from q to 'this'
+	 * @param transl boolean, true==>'translate' using VertexMap of 'this' 
 	 * @return int = count of actions taken.
 	 */
 	public int dataPutGet(PackData q,Vector<Vector<String>> flagsegs,
 			boolean putget,boolean transl) {
-		boolean face_colors=false;
-		boolean face_marks=false;
-		boolean cir_colors=false;
-		boolean radii=false;
-		boolean centers=false;
-		boolean aims=false;
-//		boolean ang_sums=false;  // OBE: needed 's' flag for 'schwarzian'
-		boolean marks=false;
-		boolean invD=false;
-		boolean schwarzian=false;
-		boolean v_map=false;
-		boolean V_map=false;
-		int count=0;
 
-		if (transl && vertexMap==null) {
-			flashError("usage: get/put_data: -t flag set but active packing p"+this.packNum+" " +
-					"has no 'vertexMap'.");
-			return 0;
+		if (q==null || !q.status)
+			throw new ParserException(
+				"'get/put_data': target packing null or 'status' false");
+		
+		// look first for '-t', '-v', and '-V' flags
+		boolean transflag=false;
+		boolean vflag=false;
+		boolean Vflag=false;
+		Iterator<Vector<String>> its=flagsegs.iterator();
+		while (its.hasNext()) {
+			String str=its.next().get(0);
+			if (str.startsWith("-t")) // usually this should occur first
+				transflag=true;
+			else if (str.startsWith("-v"))
+				vflag=true;
+			else if (str.startsWith("-V"))
+				Vflag=true;
 		}
 		
-		// set flags based on indicated data to put/get
-		Iterator<Vector<String>> its=flagsegs.iterator();
-		Vector<String> items=null;
-		String str=null;
-		while (its.hasNext()) {
-			items=(Vector<String>)its.next();
-			str=(String)items.get(0);
-			if (StringUtil.isFlag(str)) {
-				if (str.equals("-f")) face_colors=true;
-				else if (str.equals("-fm")) face_marks=true;
-				else if (str.equals("o")) {
-					if (face_colors || face_marks) {
-						flashError("usage: get/put_data: can't specify both faces and edges");
-						return count;
-					}
-					invD=true; 
-				}
-				else if (str.equals("-c")) { 
-					if (face_colors || face_marks || invD) {
-						flashError("usage: get/put_data: can't specify vertices and faces/edges");
-						return count;
-					}
-					cir_colors=true;
-				}
-				else if (str.equals("-r")) radii=true;
-				else if (str.equals("-z")) centers=true;
-				else if (str.equals("-a")) aims=true;
-				else if (str.equals("-s")) schwarzian=true;
-				else if (str.equals("-m")) marks=true;
-				
-				// manipulating vertex maps:
-				else if (str.equals("-v")) v_map=true;
-				else if (str.equals("-V")) V_map=true;				
+		if (transflag && vertexMap==null) {
+			flashError("usage: get/put_data: -t flag set but active packing p"+
+					this.packNum+" has no 'vertexMap'.");
+			return 0;
+		}
+
+		// vflag and Vflag cases: copying/composing vertexMap's
+		if (vflag && !transflag && putget) { // copy 'this.vertexMap' to q
+			if (vertexMap==null || vertexMap.size()==0) {
+				flashError("this packing did not have a vertex map");
+				return 0;
 			}
-			else throw new ParserException();
-		} // end of while
-		
-		items=(Vector<String>)flagsegs.lastElement();
-		str=(String)items.remove(0);
-		if (items.size()==0) items.add("a"); // default to all
-		
-		// See 'get_data' in 'CmdDetails' help file to sort this out
-		
+			q.vertexMap=vertexMap.makeCopy();
+			return q.vertexMap.size();
+		}
+		if (vflag && !transflag && !putget) { // copy from q.vertexMap to 'this'
+			if (q.vertexMap==null || q.vertexMap.size()==0) {
+				flashError("second packing did not have a vertex map");
+				return 0;
+			}
+			vertexMap=q.vertexMap.makeCopy();
+			return vertexMap.size();
+		}
+		if (vflag && transflag && putget) { // compose: 'q.vertexMap' followed by 'vertexMap'
+			VertexMap tvm=Translators.composeVMs(q.vertexMap,false,vertexMap,false);
+			if (tvm==null || tvm.size()==0) {
+				flashError("failed to compose vertex maps");
+				return 0;
+			}
+			q.vertexMap=tvm;
+			return tvm.size();
+		}
+		if (vflag && transflag && !putget) { // compose: 'vertexMap' followed by 'q.vertexMap'
+			VertexMap tvm=Translators.composeVMs(vertexMap,false,q.vertexMap,false);
+			if (tvm==null || tvm.size()==0) { 
+				flashError("failed to compose vertex maps");
+				return 0;
+			}
+			vertexMap=tvm;
+			return tvm.size();
+		}
+		if (Vflag && putget) { // compose
+			VertexMap tvm=Translators.composeVMs(q.vertexMap,false,vertexMap,true);
+			if (tvm==null || tvm.size()==0) { 
+				flashError("failed to compose vertex maps");
+				return 0;
+			}
+			q.vertexMap=tvm;
+			return tvm.size();
+		}
+		if (Vflag && !putget) { // compose
+			VertexMap tvm=Translators.composeVMs(vertexMap,false,q.vertexMap,true);
+			if (tvm==null || tvm.size()==0) { 
+				flashError("failed to compose vertex maps");
+				return 0;
+			}
+			vertexMap=tvm;
+			return tvm.size();
+		}
+
 		// which way are things going?
 		PackData source_p=this;
 		PackData target_p=q;
@@ -17148,136 +17169,412 @@ public class PackData{
 			source_p=q;
 			target_p=this;
 		}
+		int count=0;
 		
-		// v_map and V_map cases: moving or composing vertexMap's
-		if (v_map && !transl && putget) { // copy 'this.vertexMap' to q
-			if (vertexMap==null || vertexMap.size()==0) return 0;
-			q.vertexMap=vertexMap.makeCopy();
-			return q.vertexMap.size();
-		}
-		if (v_map && !transl && !putget) { // copy from q.vertexMap to 'this'
-			if (q.vertexMap==null || q.vertexMap.size()==0) return 0;
-			vertexMap=q.vertexMap.makeCopy();
-			return vertexMap.size();
-		}
-		if (v_map && transl && putget) { // compose: 'q.vertexMap' followed by 'vertexMap'
-			VertexMap tvm=Translators.composeVMs(q.vertexMap,false,vertexMap,false);
-			if (tvm==null || tvm.size()==0) return 0;
-			q.vertexMap=tvm;
-			return tvm.size();
-		}
-		if (v_map && transl && !putget) { // compose: 'vertexMap' followed by 'q.vertexMap'
-			VertexMap tvm=Translators.composeVMs(vertexMap,false,q.vertexMap,false);
-			if (tvm==null || tvm.size()==0) return 0;
-			vertexMap=tvm;
-			return tvm.size();
-		}
-		if (V_map && putget) { // compose
-			VertexMap tvm=Translators.composeVMs(q.vertexMap,false,vertexMap,true);
-			if (tvm==null || tvm.size()==0) return 0;
-			q.vertexMap=tvm;
-			return tvm.size();
-		}
-		if (V_map && !putget) { // compose
-			VertexMap tvm=Translators.composeVMs(vertexMap,false,q.vertexMap,true);
-			if (tvm==null || tvm.size()==0) return 0;
-			vertexMap=tvm;
-			return tvm.size();
-		}
-		
-		// Remaining options
-		
-		// handle faces
-		if (face_colors || face_marks) {
-		    FaceLink facelist=new FaceLink(this,items);
-			Iterator<Integer> flst=facelist.iterator();
-			int f=1;
-			int nf=0;
-			while (flst.hasNext()) {
-				f=(Integer)flst.next();
-				try {
-					if ((nf=Translators.face_translate(this,vertexMap,f,q,putget).get(0))>0) {
-						if (face_colors) {
-							Color col=source_p.getFaceColor(f);
-							target_p.setFaceColor(nf,ColorUtil.cloneMe(col));
-						}
-						if (face_marks) target_p.setFaceMark(nf,source_p.getFaceMark(f));
-						count++;
-					}
-				} catch (Exception ex) {}
-			}
-			return count;
-		}
-		else if (invD) {	
-			EdgeLink edgelist=new EdgeLink(this,items);
-			Iterator<EdgeSimple> elst=edgelist.iterator();
-			EdgeSimple edge=null;
-			EdgeSimple ne=null;
-			// if looking for inv distances, are there any? 
-			if (invD) {
-				if (!source_p.overlapStatus) return 0;
-				if (!target_p.overlapStatus) target_p.alloc_overlaps();
-			}
-			while (elst.hasNext()) {
-				edge=(EdgeSimple)elst.next();
-				int j=source_p.nghb(edge.v,edge.w);
-				try {
-					if (j>=0 && (ne=Translators.edge_translate(this,vertexMap,
-							edge,q,putget).get(0))!=null) {
-						if (invD) {
-							double ovlp=source_p.getInvDist(edge.v,kData[edge.v].flower[j]);
-							count+=target_p.set_single_invDist(ne.v,ne.w,ovlp);
-						}
-					}
-				} catch (Exception ex) {}
-			}
-			return count;
-		}
-		else {
-		    NodeLink vertlist=new NodeLink(this,items);
-			Iterator<Integer> vlst=vertlist.iterator();
-			int v=1,w=0;
-			while (vlst.hasNext()) {
-				v=w=(Integer)vlst.next();
-				if (transl) {
-					try {
-						// TODO: do we want to use multiple translations?
-						// Note: 'v' and 'vertexMap' are always from 'this'
-						w=Translators.vert_translate(vertexMap,v,true).get(0);
-					} catch (Exception ex) {
-						w=0;
-					}
-				}
+		// both with DCEL structures?
+		if (source_p.packDCEL!=null && target_p.packDCEL!=null) {
+
+			// TODO: we parse in a new way for DCEL case;
+			//       must come back later if we want to update
+			//       the traditional parsing.
+			
+			// 'flagSeg's as with commands: process in succession
+			
+			// circle-related (followed by {v..})
+			//  * -z  centers (same as -cz)
+			//  * -r  radii   (same as -cr)
+			//  * -a  aims    (same as -ca)
+			//  * -c[zrcma]  multiple data types: c = color, m = mark
+			
+			// face-related (followed by {f..})
+			//  * -f[mc]  mark and/or color
+			// NOTE: use face's vert triples rather than indices.
+			
+			// edge-related (followed by {v w..})
+			//  * -e[mcis]  mark, color, inv distance, and/or schwarzian
+			
+			NodeLink vlink=null;
+			FaceLink flink=null;
+			HalfLink hlink=null;
+			boolean cr=false;
+			boolean cz=false;
+			boolean ca=false;
+			
+			its=flagsegs.iterator();
+			while (its.hasNext()) {
+				Vector<String> items=its.next();
+				String flag=items.remove(0);
+
+				// must be a flag 
+				// Note: on failure, previous actions remain in place
+				if (!StringUtil.isFlag(flag)) 
+					throw new ParserException("'put/get_data' flag missing");
 				
-				// which vert is which 
-				int src_v=v;
-				int tgt_v=w;
-				if (!putget) {
-					src_v=w;
-					tgt_v=v;
+				// next get the appropriate list, "a" by default
+				char c=flag.charAt(1);
+				switch(c) {
+				case 'f': // face-related
+				{
+					if (items.size()==0)
+						flink=new FaceLink(this,"a");
+					else
+						flink=new FaceLink(this,items);
+					break;
 				}
+				case 'e': // 
+				{
+					if (items.size()==0)
+						hlink=new HalfLink(this,"a");
+					else
+						hlink=new HalfLink(this,items);
+					break;
+				}
+				case 'z': // fall through
+				case 'r': // fall through
+				case 'a': // fall through
+				case 'c':
+				{
+					if (items.size()==0)
+						vlink=new NodeLink(this,"a");
+					else
+						vlink=new NodeLink(this,items);
+					break;
+				}
+				} // end of switch for list
 				
-				// move the data
-				if (tgt_v>0 && tgt_v<=target_p.nodeCount) {
-					if (radii) {target_p.setRadius(tgt_v,source_p.getRadius(src_v));count++;}
-					if (aims) {target_p.setAim(tgt_v,source_p.getAim(src_v));count++;}
-					if (marks) {target_p.setVertMark(tgt_v,source_p.getVertMark(src_v));count++;}
-					if (centers) {target_p.setCenter(tgt_v,new Complex(source_p.getCenter(src_v)));count++;}
-					if (cir_colors) {
-						Color col=source_p.getCircleColor(src_v);
-						target_p.setCircleColor(tgt_v,ColorUtil.cloneMe(col));
+				// now for the action
+				switch(c) {
+				case 'f':
+				{
+					boolean fc=false;
+					boolean fm=false;
+					if (flag.contains("c"))
+						fc=true;
+					if (flag.contains("m"))
+						fm=true;
+					if (!fm && !fc) {
+						flashError("face flag without c or m");
+						return count;
 					}
-					if (schwarzian) {
+					
+					Iterator<Integer> fis=flink.iterator();
+					while(fis.hasNext()) {
+						int findx=fis.next();
+						int nf=0;
 						try {
-							target_p.kData[tgt_v].schwarzian=source_p.kData[src_v].schwarzian;
+							if ((nf=Translators.face_trans(source_p,
+									target_p,findx,vertexMap))>0) {
+								if (fc) {
+									Color col=source_p.getFaceColor(findx);
+									target_p.setFaceColor(nf,ColorUtil.cloneMe(col));
+									count++;
+								}
+								if (fm) { 
+									target_p.setFaceMark(nf,source_p.getFaceMark(findx));
+									count++;
+								}
+							}
+						} catch (Exception ex) {}
+					} // end of while through faces
+					break;
+				} // end of face case					
+				case 'e': // edges
+				{
+					boolean ec=false;
+					boolean em=false;
+					boolean ei=false;
+					boolean es=false;
+					boolean ez=false;
+					
+					if (flag.contains("c"))
+						ec=true;
+					if (flag.contains("m"))
+						em=true;
+					if (flag.contains("i"))
+						ei=true;
+					if (flag.contains("s"))
+						es=true;
+					if (flag.contains("z"))  
+						ez=true;
+					
+					Iterator<HalfEdge> his=hlink.iterator();
+					while (his.hasNext()) {
+						HalfEdge he=his.next();
+						int tv=he.origin.vertIndx;
+						int tw=he.twin.origin.vertIndx;
+						if (transflag) {
+							tv=vertexMap.findW(tv);
+							tw=vertexMap.findW(tw);
+						}
+						HalfEdge the=target_p.packDCEL.findHalfEdge(new EdgeSimple(tv,tw));
+						if (the!=null) {
+							if (ec) {
+								the.setColor(he.getColor());
+								count++;
+							}
+							if (em) {
+								the.setMark(he.getMark());
+								count++;
+							}
+							if (ei) {
+								the.setInvDist(he.getInvDist());
+								count++;
+							}
+							if (es) {
+								the.setSchwarzian(he.getSchwarzain());
+								count++;
+							}
+							if (ez) {
+								Complex z=source_p.packDCEL.getVertCenter(he);
+								target_p.packDCEL.setCent4Edge(the, z);
+							}
+						}
+					} // end of while through edges
+					break;
+				} // end of edge case
+				case 'z': // centers, fall through
+				{
+					cz=true;
+				}
+				case 'r': // radii, fall through
+				{
+					cr=true;
+				}
+				case 'a': // aims, fall through
+				{
+					ca=true;
+				}
+				case 'c':
+				{
+					boolean cm=false;
+					boolean cc=false;
+					if (flag.contains("z"))
+						cz=true;
+					if (flag.contains("r"))
+						cr=true;
+					if (flag.contains("m"))
+						cm=true;
+					if (flag.contains("a"))
+						ca=true;
+					if (flag.indexOf('c',2)>0)
+						cc=true;
+					
+					Iterator<Integer> vis=vlist.iterator();
+					while (vis.hasNext()) {
+						int v=vis.next();
+						int tv=v;
+						if (transflag)
+							tv=vertexMap.findW(v);
+						if (cz) {
+							target_p.setCenter(tv,source_p.getCenter(v));
+							count++;
+						}
+						if (cr) {
+							target_p.setRadius(tv,source_p.getRadius(v));
+							count++;
+						}
+						if (cm) {
+							target_p.setVertMark(tv,source_p.getVertMark(v));
+							count++;
+						}
+						if (cc) {
+							target_p.setCircleColor(tv,source_p.getCircleColor(v));
+							count++;
+						}
+						if (ca) {
+							target_p.setAim(tv,source_p.getAim(v));
+							count++;
+						}
+					} // end of while through vlist
+					break;
+				}
+				default:
+				{
+					flashError("'get/put_data': unrecognized flag");
+					return count;
+				}
+				} // end of switch
+			} // end of while through flags
+			return count;
+		} // end of DCEL situation
+		
+		// traditional (not updated to new flag definitions)
+		else if (source_p.packDCEL==null && target_p.packDCEL==null) {
+			
+			boolean face_colors=false;
+			boolean face_marks=false;
+			boolean edge_marks=false;
+			boolean cir_colors=false;
+			boolean radii = false;
+			boolean centers = false;
+			boolean aims = false;
+			boolean marks = false;
+			boolean invD = false;
+			boolean schwarzian = false;
+
+			// set flags based on indicated data to put/get
+			its = flagsegs.iterator();
+			Vector<String> items = null;
+			String str = null;
+			while (its.hasNext()) {
+				items = (Vector<String>) its.next();
+				str = (String) items.get(0);
+				if (StringUtil.isFlag(str)) {
+					if (str.equals("-f"))
+						face_colors = true;
+					else if (str.equals("-fm"))
+						face_marks = true;
+					else if (str.equals("-em")) {
+						if (face_colors || face_marks) {
+							flashError("usage: get/put_data: can't specify both faces and edges");
+							return count;
+						}
+						edge_marks = true;
+					} else if (str.equals("o")) {
+						if (face_colors || face_marks || edge_marks) {
+							flashError("usage: get/put_data: can't specify both faces and edges");
+							return count;
+						}
+						invD = true;
+					} else if (str.equals("-c")) {
+						if (face_colors || face_marks || invD || edge_marks) {
+							flashError("usage: get/put_data: can't specify verts and faces/edges");
+							return count;
+						}
+						cir_colors = true;
+					} else if (str.equals("-r"))
+						radii = true;
+					else if (str.equals("-z"))
+						centers = true;
+					else if (str.equals("-a"))
+						aims = true;
+					else if (str.equals("-s"))
+						schwarzian = true;
+					else if (str.equals("-m"))
+						marks = true;
+				} else
+					throw new ParserException();
+			} // end of while
+
+			// handle faces
+			if (face_colors || face_marks) {
+				FaceLink facelist = new FaceLink(this, items);
+				Iterator<Integer> flst = facelist.iterator();
+				int f = 1;
+				int nf = 0;
+				while (flst.hasNext()) {
+					f = (Integer) flst.next();
+					try {
+						if ((nf = Translators.face_trans(source_p,target_p,f,vertexMap)) > 0) {
+							if (face_colors) {
+								Color col = source_p.getFaceColor(f);
+									target_p.setFaceColor(nf, ColorUtil.cloneMe(col));
+								}
+								if (face_marks)
+									target_p.setFaceMark(nf, source_p.getFaceMark(f));
+								count++;
+						}
+					} catch (Exception ex) {}
+					
+				}
+				return count;
+			} 
+			else if (invD) {
+				if (source_p.packDCEL != null || target_p.packDCEL != null)
+					throw new ParserException("put/get 'invD' not yet implemented in DCEL setting.");
+
+				EdgeLink edgelist = new EdgeLink(this, items);
+				Iterator<EdgeSimple> elst = edgelist.iterator();
+				EdgeSimple edge = null;
+				EdgeSimple ne = null;
+				// if looking for inv distances, are there any?
+
+				if (invD) {
+					if (!source_p.overlapStatus)
+						return 0;
+					if (!target_p.overlapStatus)
+						target_p.alloc_overlaps();
+				}
+				while (elst.hasNext()) {
+					edge = (EdgeSimple) elst.next();
+					int j = source_p.nghb(edge.v, edge.w);
+					try {
+						if (j>=0 && 
+								(ne = Translators.edge_translate(this, 
+										vertexMap, edge, q, putget))!=null) {
+							if (invD) {
+								double ovlp = source_p.getInvDist(edge.v, kData[edge.v].flower[j]);
+								count += target_p.set_single_invDist(ne.v, ne.w, ovlp);
+							}
+						}
+					} catch (Exception ex) {}
+				}
+				return count;
+			} 
+			else {
+				NodeLink vertlist = new NodeLink(this, items);
+				Iterator<Integer> vlst = vertlist.iterator();
+				int v = 1, w = 0;
+				while (vlst.hasNext()) {
+					v = w = (Integer) vlst.next();
+					if (transl) {
+						try {
+							// TODO: do we want to use multiple translations?
+							// Note: 'v' and 'vertexMap' are always from 'this'
+							w = Translators.vert_translate(vertexMap, v, true).get(0);
 						} catch (Exception ex) {
-							throw new DataException("get/put usage: 'schwarzian' data is missing for either source or target");
+							w = 0;
 						}
 					}
+					// which vert is which
+					int src_v = v;
+					int tgt_v = w;
+					if (!putget) {
+						src_v = w;
+						tgt_v = v;
+					}
+
+					// move the data
+					if (tgt_v > 0 && tgt_v <= target_p.nodeCount) {
+						if (radii) {
+							target_p.setRadius(tgt_v, source_p.getRadius(src_v));
+							count++;
+						}
+						if (aims) {
+							target_p.setAim(tgt_v, source_p.getAim(src_v));
+							count++;
+						}
+						if (marks) {
+							target_p.setVertMark(tgt_v, source_p.getVertMark(src_v));
+							count++;
+						}
+						if (centers) {
+							target_p.setCenter(tgt_v, new Complex(source_p.getCenter(src_v)));
+							count++;
+						}
+						if (cir_colors) {
+							Color col = source_p.getCircleColor(src_v);
+							target_p.setCircleColor(tgt_v, ColorUtil.cloneMe(col));
+						}
+						if (schwarzian) {
+							try {
+								target_p.kData[tgt_v].schwarzian = source_p.kData[src_v].schwarzian;
+							} catch (Exception ex) {
+								throw new DataException(
+										"get/put usage: 'schwarzian' data is missing for either source or target");
+							}
+						}
+					}
+					count++;
 				}
-				count++;
+				return count;
 			}
-			return count;
+		}
+		
+		else {
+			throw new ParserException(
+					"put/get: if one packing has DCEL structure, so"
+					+ "must the other");
 		}
 	}
 	
@@ -18020,8 +18317,8 @@ public class PackData{
 		// translate
 	    try {
 	    	if (nodeCount==q.nodeCount || vertexMap==null || !trans_flag)
-	    		nface=Translators.face_translate(this,null,face,q,true).get(0);
-	    	else nface=Translators.face_translate(this,this.vertexMap,face,q,true).get(0);
+	    		nface=Translators.face_trans(this,q,face,null);
+	    	else nface=Translators.face_trans(this,q,face,this.vertexMap);
 	    } catch (Exception ex) {
 	    	return 0;
 	    }

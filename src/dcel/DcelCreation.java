@@ -434,7 +434,8 @@ public class DcelCreation {
 	   							pdata.countFaces(pdata.nodeCount));
 	   				return pdata;
 	   			}
-	   			if (bdryinfo[0]==3) { // just need single last face?
+	   			//	three bdry edge? May need one last face.
+	   			if (bdryinfo[0]==3) { 
 	   				RedHEdge rtrace=pdcel.redChain;
 	   				int[] uhits=new int[3];
 	   				do {

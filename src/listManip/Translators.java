@@ -17,9 +17,9 @@ public class Translators {
 	 * Find mates to v in elist (e.g., vertexMap). Return just v if 
 	 * elist is null or return 0 if v is not there. If 'forward' is true, 
 	 * return w's in pairs (v,w), else w's in pairs (w,v).
-	 * @param EdgeLink, elist (e.g., vertexMap)
-	 * @param int v
-	 * @param forward: boolean: true, return w's in (v,w); else return
+	 * @param elist EdgeLink, (e.g., a 'vertexMap')
+	 * @param v int
+	 * @param forward boolean: true, return w's in (v,w); else return
 	 * w's in (w,v).
 	 * @return NodeLink
 	*/
@@ -37,65 +37,54 @@ public class Translators {
 	}
 
 	/**
-	 * Idea is to translate face 'f_in' of p to face of q, including
-	 * translation via 'elist' (e.g., like 'vertexMap') if elist is not null. 
-	 * Trivial case: if elist==null and q==p, return f_out=f_in. 
-	 * Return 0 if vertices of f_in are not found or (their translates) don't 
-	 * define a face in q. If 'forward' is true, translate from p to q,
-	 * else from q to p. 
-	 * TODO: note that translation only uses first of potentially many mates.
-	 * Hard to see an easy way to handle multiple translation cases.
+	 * Idea is to translate face 'f_in' of 'source_p' 
+	 * to 'target_p'. If 'elist' is not null, use it for
+	 * translatation as a 'vertexMap'.
+	 * Trivial case: if elist==null and source_p==target_pp, 
+	 * return f_out=f_in. 
+	 * Return 0 if vertices of 'f_in' are not found or (their 
+	 * translates) don't define a face in 'target_p'. 
+	 * TODO: translation only uses first of potentially many
+	 * matches in 'elist'; hard to see an easy way to handle 
+	 * multiple translation cases.
+	 * @param source_p PackData, source
+	 * @param elist EdgeLink
+	 * @param f_in int, face index in source_p
+	 * @param target_p PackData
+	 * @return int, 0 on failure
 	 */
-	public static FaceLink face_translate(PackData p,EdgeLink elist,int f_in,
-			PackData q,boolean forward) {
-	    if (p==null || !p.status) return null;
-	    if (q==null || !q.status) q=p; 
-	    if (f_in<0 || (forward && f_in>p.faceCount) 
-	    		|| (!forward && f_in>q.faceCount)) return null;
-	    if (q==p && elist==null) // just return f_in alone
-	    	return new FaceLink((PackData)null,Integer.valueOf(f_in).toString()); 
-	    int v0=0,v1=0,v2=0;
-	    if (forward) {
-		v0=p.faces[f_in].vert[0];
-		v1=p.faces[f_in].vert[1];
-		v2=p.faces[f_in].vert[2];
+	public static int face_trans(PackData source_p,PackData target_p,
+			int f_in, EdgeLink elist) {
+	    if (target_p==source_p && elist==null) // just return f_in alone
+	    	return f_in;
+	    if (elist==null || source_p==null ||
+	    		f_in<0 || f_in>source_p.faceCount) 
+	    	return 0;
+	    if (target_p==null)
+	    	target_p=source_p;
+
+	    int[] source_v=source_p.getFaceVerts(f_in);
+	    int[] target_v=new int[source_v.length];
+	    for (int j=0;j<source_v.length;j++) {
+	    	target_v[j]=elist.findW(source_v[j]);
+	    	if (target_v[j]<=0)
+	    		return 0;
 	    }
-	    else {
-		v0=q.faces[f_in].vert[0];
-		v1=q.faces[f_in].vert[1];
-		v2=q.faces[f_in].vert[2];
-	    }
-	    int w0,w1,w2;
-	    try {
-	    	w0=vert_translate(elist,v0,forward).get(0);
-	    	w1=vert_translate(elist,v1,forward).get(0);
-	    	w2=vert_translate(elist,v2,forward).get(0);
-	    } catch (Exception ex) {
-	    	return null;
-	    }
-	    int f_out=0;
-	    if (forward) {
-	    	f_out=q.what_face(w0,w1,w2);
-	    	return new FaceLink(q,Integer.valueOf(f_out).toString());
-	    }
-	    else { 
-	    	f_out=p.what_face(w0,w1,w2);
-	    	return new FaceLink(p,Integer.valueOf(f_out).toString());
-	    }
+	    
+	    // now have to find face index
+	    return target_p.what_face(target_v[0],target_v[1],target_v[2]);
 	}
 	
-	// TODO: need method for 'HalfEdge' links.
-
 	/**
-	 * See description of face_translate
+	 * See description of 'face_trans'
 	 * @param p 'PackData'
 	 * @param elist 'EdgeLink'
 	 * @param e_in
 	 * @param q
 	 * @param forward
-	 * @return  'EdgeLink' linked list of edges
+	 * @return  'EdgeSimple', null on failure
 	 */
-	public static EdgeLink edge_translate(PackData p, EdgeLink elist,
+	public static EdgeSimple edge_translate(PackData p, EdgeLink elist,
 			EdgeSimple e_in, PackData q, boolean forward) {
 		if (p == null || !p.status)
 			return null;
@@ -106,19 +95,23 @@ public class Translators {
 				|| (!forward && e_in.v > q.nodeCount || e_in.w > q.nodeCount))
 			return null;
 		if (q == p && elist == null)
-			return new EdgeLink((PackData)null,e_in); // nothing to do
-		int v,w;
-		try {
-			v = vert_translate(elist, e_in.v, forward).get(0);
-			w = vert_translate(elist, e_in.w, forward).get(0);
-		} catch (Exception ex) {
-			return null;
+			return e_in; // nothing to do
+
+		int v;
+		int w;
+		if (forward) {
+			v=elist.findW(e_in.v);
+			w=elist.findW(e_in.w);
+		}
+		else {
+			v=elist.findV(e_in.v);
+			w=elist.findV(e_in.w);
 		}
 		
 		if (forward && q.nghb(v, w) >= 0)
-			return new EdgeLink(q,new EdgeSimple(v, w));
+			return new EdgeSimple(v, w);
 		if (!forward && p.nghb(v, w) >= 0)
-			return new EdgeLink(p,new EdgeSimple(v, w));
+			return new EdgeSimple(v, w);
 		return null;
 	}
 

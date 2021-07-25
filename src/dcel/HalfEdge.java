@@ -30,7 +30,7 @@ public class HalfEdge {
 	// TODO: figure out how to transfer this info as edges change.
 	double invDist;  // inversive distance assigned, default 1.0 (tangency)
 	double schwarzian; // see 'Schwarzian.java'
-	Color color; 
+	Color color;  // not used much yet: traditional packings didn't store
 	
 	// for temporary use only
 	public int eutil; 
@@ -250,6 +250,14 @@ public class HalfEdge {
 	
 	public void setColor(Color col) {
 		color=new Color(col.getRed(),col.getGreen(),col.getBlue(),col.getAlpha());
+	}
+	
+	public int getMark() {
+		return mark;
+	}
+	
+	public void setMark(int m) {
+		mark=m;
 	}
 	
 	/**

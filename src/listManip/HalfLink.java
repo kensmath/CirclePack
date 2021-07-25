@@ -228,8 +228,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	 */
 	public int addHalfLink(Vector<String> items,boolean xtd) {
 		int count=0;
-		if (packData==null) return -1;
-
+		if (packData==null) 
+			return -1;
 		Iterator<String> its=items.iterator();
 		
 		while (its!=null && its.hasNext()) {
@@ -532,16 +532,38 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			  }
 			  break;
 			} // end of 'R'
-			case 'm': // marked
+			case 'm': // marked (or 'mv' both ends marked)
 			{
-				boolean not_m=false;
+				boolean not_m=false; // want those not marked?
+				boolean byEnds=false; // with end vertices both marked?
 				// 'mc'? want those NOT marked?
-				if (str.length()>1 && str.charAt(1)=='c') not_m=true;
-				int m;
+				if (str.length()>1) {
+					if (str.contains("c")) 
+						not_m=true;
+					if (str.contains("v"))
+						byEnds=true;
+				}
+				
 				for (int e=1;e<=packData.packDCEL.edgeCount;e++) {
-					m=packData.packDCEL.edges[e].mark;
-					if ((not_m && m==0) || (!not_m && m!=0)) { // this end is marked
-						add(packData.packDCEL.edges[e]);
+					if (byEnds) {
+						HalfEdge he=packData.packDCEL.edges[e];
+						int v=he.origin.vertIndx;
+						int w=he.next.origin.vertIndx;
+						if (packData.getVertMark(v)!=0 &&
+								packData.getVertMark(w)!=0) {
+							if (!not_m) { 
+								add(packData.packDCEL.edges[e]);
+							}
+						}
+						else if (not_m) {
+							add(packData.packDCEL.edges[e]);
+						}
+					}
+					else {
+						int m=packData.packDCEL.edges[e].mark;
+						if ((not_m && m==0) || (!not_m && m!=0)) {
+							add(packData.packDCEL.edges[e]);
+						}
 					}
 				}
 				break;

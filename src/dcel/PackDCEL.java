@@ -1586,6 +1586,19 @@ public class PackDCEL {
 	}
 	
 	/**
+	 * Find 'dcel.Face' for give edge <v,w> 
+	 * @param v int
+	 * @param w int
+	 * @return dcel.Face or null on failure
+	 */
+	public dcel.Face findFace(int v, int w) {
+		HalfEdge he=findHalfEdge(new EdgeSimple(v,w));
+		if (he!=null)
+			return he.face;
+		return null;
+	}
+	
+	/**
  	 * NEEDED FOR CIRCLEPACK
 	 * Local data may not agree with parent packing 'p' (e.g., after
 	 * creating barycenters). However, if they do agree, we may need

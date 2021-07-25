@@ -4820,14 +4820,16 @@ public class CommandStrParser {
     	  PackData q=null;
     	  if (qnum<0 || (q=CPBase.cpScreens[qnum].getPackData())==null || 
     			  !q.status) {
-    		  throw new ParserException("usage: get_data "+
-    				  "must start with '-q{p}' indicating the "+
+    		  throw new ParserException("usage: get_/put_data "+
+    				  "must start with '-q{k}' indicating the "+
     				  "other packing");
     	  }
     	  if (flagSegs.size()==0) {
-    		  throw new ParserException("usage: get_data; "+
+    		  throw new ParserException("usage: get_/put_data; "+
     				  "check formating of data to pass");
     	  }
+    	  
+    	  // next must be '-t' if translation is desired
     	  items=(Vector<String>)flagSegs.get(0);
     	  str=(String)items.get(0);
     	  boolean translate=false;
@@ -4835,8 +4837,19 @@ public class CommandStrParser {
     		  translate=true;
     		  flagSegs.remove(0);
     	  }
+    	  
+    	  // no data flags?
+    	  if (flagSegs.size()==0) {
+    		  throw new ParserException("usage: get_/put_data; "+
+    				  "check formating of data to pass");
+    	  }
+    	  
+    	  // put or get?
     	  boolean putget=true;
-    	  if (cmd.startsWith("get")) putget=false;
+    	  if (cmd.startsWith("get")) 
+    		  putget=false;
+    	  
+    	  // parse the request
     	  return packData.dataPutGet(q,flagSegs,putget,translate);
       }
       
@@ -7857,12 +7870,15 @@ public class CommandStrParser {
 	    		  // else, must have some flag
 	    		  items.remove(0);
 	    		  switch(str.charAt(1)) {
-	    		      case 'w': // wipe out all marks, faces/circles
+	    		      case 'w': // wipe out all marks, faces/circles/edges
 	    			  {
 	    				  for (int v=1;v<=packData.nodeCount;v++) 
 	    					  packData.setVertMark(v,0);
 	    				  for (int f=1;f<=packData.faceCount;f++) 
 	    					  packData.setFaceMark(f,0);
+	    				  if (packData.packDCEL!=null)
+	    					  for (int e=1;e<=packData.packDCEL.edgeCount;e++)
+	    						  packData.packDCEL.edges[e].mark=0;
 	    				  count++;
 	    				  break;
 	    			  }
@@ -7881,18 +7897,41 @@ public class CommandStrParser {
 	    					  }
 	    					  break;
 	    				  }
-	    				  else if (str.length()>2 && str.charAt(2)=='w') { // wipe out first
+	    				  else if (str.length()>2 && str.charAt(2)=='w') { // wipe first
 	        				  for (int v=1;v<=packData.nodeCount;v++) 
 	        					  packData.setVertMark(v,0);
 	        				  count++;
 	    				  }
-	    				  if (items.size()==0) break; // do not default to all here
+	    				  if (items.size()==0) 
+	    					  break; // do not default to all here
 	    				  NodeLink vlist=new NodeLink(packData,items);
 	    				  if (vlist==null || vlist.size()==0) break;
 	    				  Iterator<Integer> vs=vlist.iterator();
 	    				  while (vs.hasNext()) {
 	    					  packData.setVertMark((Integer)vs.next(),1);
 	    					  count++;
+	    				  }
+	    				  break;
+	    			  }
+	    			  case 'e': // edges (this is new with DCEL structures)
+	    			  {
+	    				  if (packData.packDCEL==null)
+	    					  break;
+	    				  if (str.length()>2 && str.charAt(2)=='w') { // wipe first
+	        				  for (int e=1;e<=packData.packDCEL.edgeCount;e++) {
+	        					  packData.packDCEL.edges[e].mark=0;
+	        					  count++;
+	        				  }
+	    				  }
+	    				  if (items.size()==0) 
+	    					  break; // do not default to all here
+
+	    				  // mark selected
+	    				  HalfLink hlink=new HalfLink(packData,items);
+	    				  Iterator<HalfEdge> his=hlink.iterator();
+	    				  while(his.hasNext()) {
+	    					  HalfEdge he=his.next();
+	    					  he.mark=1;
 	    				  }
 	    				  break;
 	    			  }

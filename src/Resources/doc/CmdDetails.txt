@@ -1409,17 +1409,19 @@ the face furthest from the boundary faces</instance>
 </command>
 
 <command cmd="get_data" flags="-q{q} [-t] {flag} {v..}">
-<description>Specified, perhaps multiple, types of data for a single list 
-	of vertices (or faces) of the active pack is copied from 
-	pack q to the active packing. If the -t flag is set and the 
-	active packing has a 'vertex_map', then the data for vertices 
-	v (or faces f defined by triples of vertices) in the active 
-	pack is replaced by that of (legal) image vertices w (or faces)
-	in pack q. The flags for the type(s) of data to get are given 
-	below; several may be specified, but there is a single list
-	of vertices or faces
-	E.g. "get_data -q2 -t -z -r a" will get (translated) centers
-	and radii from q for all vertices of the active pack.
+<description>Specified, perhaps multiple, types of data, each
+	associated with a list of vertices/faces/edges of the 
+	active pack is copied from pack q to the active packing. 
+	If the -t flag is set it must be first and the active 
+	packing must have a 'vertex_map'; then the data for 
+	verts/faces/edges in the active	pack is replaced by 
+	that of (legal) image vertices w (or faces) in pack q. 
+	(Note: faces are associated with triples of vertices.)
+	The flags for the type(s) of data to get are given 
+	below; several may be specified, each with a list of
+	objects. E.g. "get_data -q2 -t -z b -r a" will get 
+	(translated) centers for bdry vertices and radii all
+	vertices of the active pack, the data taken from q.
 	Note: some data that transfers may be inappropriate: e.g.
 	moving hyperbolic radii to a spherical packing. Minimal
 	checking is carried out.
@@ -1427,7 +1429,7 @@ the face furthest from the boundary faces</instance>
 	The -v and -V flags behave differently: these serve to
 	transfer or 'compose' vertex maps (or their inverses).
 	These are useful as "maps" or "correspondences" between
-	the vertex sets of packings. They use the "a" 
+	the vertex sets of packings. They default to the "a" 
 	specification for 'all' vertices.
 	
 	Consider "get_data -q2 -v {v..}". This will transfer 
@@ -1448,12 +1450,13 @@ the face furthest from the boundary faces</instance>
 	and assume p2 has a vertex map as well. This command 
 	uses (v,w) in the vertex map of p to translate v 
 	into w, then looks for (w,u) in the vertex map of p2; 
-	if it finds a pair (it takes the first), it adds (v,u) 
-	to the new vertex map for p. Thus, if the vertex maps
-	for p and p2 represented maps p --> p2 and p2 --> q, resp.,
-	then the result is the composition, p --> q. (Likewise,
-	"put_data -q2 -t -v", results in a new vertex map for p2
-	representing the composition p2 --> p --> q. 
+	if it finds a pair (it takes the first encountered), 
+	it adds (v,u) to the new vertex map for p. Thus, if 
+	the vertex maps for p and p2 represented maps p --> p2 
+	and p2 --> q, resp., then the result is the composition, 
+	p --> q. (Likewise, "put_data -q2 -t -v", results in a 
+	new vertex map for p2 representing the composition 
+	p2 --> p --> q. 
 	
 	The -V flag is slightly different (and assumes -t). Say 
 	the vertex map for p represents a map p --> r and that 
@@ -1465,21 +1468,33 @@ the face furthest from the boundary faces</instance>
 	ambiguous.
 
 <options heading="Data specification flags">
-<opt flag="-r"> radii</opt>
-<opt flag="-z"> centers</opt>
-<opt flag="-a"> aims</opt>
-<opt flag="-s"> schwarzians</opt>
-<opt flag="-c"> circle colors</opt>
-<opt flag="-m"> vertex 'mark'</opt>
-<opt flag="-f"> face colors</opt>
-<opt flag="-fm"> face marks</opt>
-<opt flag="-o"> inversive distances (for edges)</opt>
-<opt flag="-v -V"> vertex_map (see above)</opt>
+<opt flag="-t"> translate (see above); must occur first after '-q2'</opt>
+<opt flag="-r"> radii (same as '-cr')</opt>
+<opt flag="-z"> centers (same as '-cz')</opt>
+<opt flag="-a"> aims (same as '-ca')</opt>
+<opt flag="-cc"> circle colors</opt>
+<opt flag="-cm"> circle 'mark's</opt>
+<opt flag="-c[rzmca]"> multiple specifications (same vertex list)</opt>
+<opt flag="-fc"> face colors</opt>
+<opt flag="-fm"> face 'mark's</opt>
+<opt flag="-f[mc]"> mutilple specifications (same face list)</opt>
+<opt flag="-em"> edge 'mark's</opt>
+<opt flag="-ec"> edge color</opt>
+<opt flag="-es"> schwarzians (for edges)</opt>
+<opt flag="-ei"> inversive distances (for edges)</opt>
+<opt flag="-e[mcsi]"> multiple specifications (same edge list)</opt>
+<opt flag="-v -V"> vertex_map (see above); these occur alone</opt>
 </options> 
 </description>
 <examples>
-<instance text="get_data -q2 -t -z -r a">Copy (translated) centers
-	and radii from p2 for all vertices of the active pack.</instance>
+<instance text="get_data -q2 -t -crz b">Copy (translated) centers
+	and radii from p2 for all bdry vertices of the active pack.</instance>
+<instance text="get_data -q2 -ems">Copy all edge marks and schwarzians
+    from p2 to the active packing for all edges.</instance>
+<instance text="get_data -q2 -fm {f...} -cz {v...}"> Combined call with
+	lists specified for each flag.</instance> 
+<instance text="get_data -q2 -ca {c:a.gt.3.0}"> Aims for circles with
+    aim greater than 3.0*Pi.</instance>	 	
 </examples>
 <seealso>
 <see>put_data</see>
