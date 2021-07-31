@@ -131,7 +131,10 @@ containing one of vertices v.</opt>
 <opt text="-s {v w}">  add ideal vertices neighboring boundary segment from v to w.</opt>
 </options>
 <examples>
-<instance text="add_ideal"> add an ideal vertex for every boundary component</instance>
+<instance text="add_ideal"> add an ideal vertex for every boundary 
+component</instance>
+<instance text="add_ideal 8"> add an ideal vertex for the boundary 
+component containing vertex 8</instance>
 <instance text="add_ideal -f v"> add an ideal face to the bdry component containing v if it
 has 3 vertices</instance>
 <instance text="add_ideal -s 4 23"> if 4 and 23 are in the same bdry component, add a new vertex 

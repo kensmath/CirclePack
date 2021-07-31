@@ -283,7 +283,7 @@ public class PackData{
      * TODO: may need to save additional info when 
      * swapping in new dcel: e.g., 'invDist's, 
      * 'schwarzian's, face colors, etc. And may need
-     * to adjust vlist, elist, hlist, etc. based on 'oldNew'.
+     * to adjust vlist, elist, flist, etc. based on 'oldNew'.
      * 
      * @param pdcel PackDCEL
      * @return int, vertCount on success, 0 on failure
@@ -351,6 +351,7 @@ public class PackData{
     				pdcel.setVertRadii(v,rData[oldv].rad);
     				pdcel.setVertCenter(v,new Complex(rData[oldv].center));
     				vData[v].color=ColorUtil.cloneMe(kData[oldv].color);
+    				vData[v].aim=rData[oldv].aim;
     			}
     			else {
     				if (vert.isBdry())
@@ -360,7 +361,8 @@ public class PackData{
     			}
     		}
 
-        	// preassign arrays of indices
+        	// preassign arrays of indices; these allow quick association
+    		//   of faces and their vertices.
     		for (int v=1;v<=nodeCount;v++)
     			pdcel.setVDataIndices(v);
     		    		
@@ -13426,6 +13428,8 @@ public class PackData{
 	}
 
 	  /** 
+	   * traditional
+	   * 
 	   * Remove boundary vert v from pack p; have verified 
 	   * v is bdry, and removal doesn't disconnect or leave 
 	   * a nghb w/o any faces. On success, indices larger 
@@ -13488,12 +13492,15 @@ public class PackData{
 	  }
 	  
 	  /** 
-	   * Remove a trivalent, interior vertex. Already checked that v qualifies.
-	   * On success, indices larger than v will be reduced by 1 and,
-	   * flowers and lists, etc., will be adjusted. 
-	   * CAUTION: user must be sure that successive removals take account 
-	   * of these dynamic indices, e.g., in 'remove_circle', 'remove_tri_vert',
-	   * etc.
+	   * traditional
+	   * 
+	   * Remove a trivalent, interior vertex. Already checked 
+	   * that v qualifies. On success, indices larger than v 
+	   * will be reduced by 1 and, flowers and lists, etc., 
+	   * will be adjusted. 
+	   * CAUTION: user must be sure that successive removals 
+	   * take account of these dynamic indices, e.g., in 
+	   * 'remove_circle', 'remove_tri_vert', etc.
 	   */
 	  public int remove_tri_vert(int v) {
 	    int w,indx;
@@ -13532,6 +13539,8 @@ public class PackData{
 	  } 
 	  
 	  /** 
+	   * traditional
+	   * 
 	   * Remove 4-deg interior vert v, but put in edge between w and 
 	   * the vertex z which is opposite v. Note that indices larger
 	   * than v are decreased by 1, lists are adjusted, etc. Calling
@@ -13699,6 +13708,8 @@ public class PackData{
 	  }
 	  	
 	  /** 
+	   * traditional
+	   * 
 	   * Remove listed vertices: remove qualifying bdry 
 	   * vertex and/or a list of trivalent interior 
 	   * verts. In the bdry case, we make sure there is
@@ -13720,6 +13731,7 @@ public class PackData{
 	      if (vertlist==null || vertlist.size()==0) 
 	    	  return 0;
 	      
+	      // traditional
 	      int count=0;
 	      int flag=0;
 	      int orig_nodeCount=nodeCount;
@@ -13757,58 +13769,27 @@ public class PackData{
 	    		  // if vertex qualifies
 	    		  if (!nogo) { 
     				  boolean didit=false;
-	    			  if (packDCEL!=null) {
-	    				  Vertex vert=packDCEL.vertices[tv];
-	    				  HalfLink hlink=vert.getOuterEdges();
-	    				  int[] intverts=CombDCEL.findComponent(packDCEL,0, hlink);
-	    				  
-	    				  // will there be an interior remaining?
-	    				  if (intverts[0]>0) {
-	    					  boolean isbdry=isBdry(tv);
-	    					  ArrayList<Vertex> blist=RawDCEL.rmVert_raw(packDCEL, tv);
-	    					  Iterator<Vertex> bis=blist.iterator();
-	    					  if (!isbdry) { // bdry
-	    						  while (bis.hasNext()) {
-	    							  vert=bis.next();
-	    							  vert.bdryFlag=0;
-	    							  vert.halfedge.twin.face=null;
-	    						  }
-	    					  }
-	    					  didit=true;
-	    				  }
-	    			  }
-	    			  else {
-	    				  if (isBdry(v)) {
-	    					  for (int i=0;i<=countFaces(v);i++) 
-	    						  setAim(flower[i],-0.1);
-	    					  if (remove_bdry_vert(v)!=0) 
-	    						  didit=true;
-	    				  }
-	    				  else if (remove_tri_vert(v)!=0) 
-	    					  didit=true;
-	    			  }
-	    			  if (didit) { // yes, removed vert v
-	    				  count++;
-	    				  newIndex[v]=0;
-	    				  for (int j=1;j<=orig_nodeCount;j++)
-	    					  if (newIndex[j]>v) newIndex[j]--;
-	    			  }
+	   				  if (isBdry(v)) {
+    					  for (int i=0;i<=countFaces(v);i++) 
+    						  setAim(flower[i],-0.1);
+    					  if (remove_bdry_vert(v)!=0) 
+    						  didit=true;
+    				  }
+    				  else if (remove_tri_vert(v)!=0) 
+    					  didit=true;
+
+    				  if (didit) { // yes, removed vert v
+    					  count++;
+    					  newIndex[v]=0;
+    					  for (int j=1;j<=orig_nodeCount;j++)
+    						  if (newIndex[j]>v) newIndex[j]--;
+    				  }
 	    		  }
 	    	  } // end of while
 	      }
 	      if (count==0) { 
 	    	  flashError("No vertices qualified for deletion");
 	    	  return 0;
-	      }
-	      if (packDCEL!=null) {
-	    	  for (int k=1;k<=orig_nodeCount;k++) {
-	    		  int nw=newIndex[k];
-	    		  if (nw!=0 && nw!=k) {
-	    			  vData[nw]=vData[k];
-	    			  vData[nw].setBdryFlag(packDCEL.vertices[nw].bdryFlag);;
-	    		  }
-	    	  }
-	    	  packDCEL.fixDCEL_raw(this);
 	      }
 	      return count;
 	  }
@@ -17163,11 +17144,13 @@ public class PackData{
 		}
 
 		// which way are things going?
+		VertexMap vMap=vertexMap;
 		PackData source_p=this;
 		PackData target_p=q;
 		if (!putget) {
 			source_p=q;
 			target_p=this;
+			vMap=vertexMap.flipEachEntry();
 		}
 		int count=0;
 		
@@ -17263,7 +17246,7 @@ public class PackData{
 						int nf=0;
 						try {
 							if ((nf=Translators.face_trans(source_p,
-									target_p,findx,vertexMap))>0) {
+									target_p,findx,vMap))>0) {
 								if (fc) {
 									Color col=source_p.getFaceColor(findx);
 									target_p.setFaceColor(nf,ColorUtil.cloneMe(col));
@@ -17303,8 +17286,8 @@ public class PackData{
 						int tv=he.origin.vertIndx;
 						int tw=he.twin.origin.vertIndx;
 						if (transflag) {
-							tv=vertexMap.findW(tv);
-							tw=vertexMap.findW(tw);
+							tv=vMap.findW(tv);
+							tw=vMap.findW(tw);
 						}
 						HalfEdge the=target_p.packDCEL.findHalfEdge(new EdgeSimple(tv,tw));
 						if (the!=null) {
@@ -17364,7 +17347,7 @@ public class PackData{
 						int v=vis.next();
 						int tv=v;
 						if (transflag)
-							tv=vertexMap.findW(v);
+							tv=vMap.findW(v);
 						if (cz) {
 							target_p.setCenter(tv,source_p.getCenter(v));
 							count++;
@@ -17396,7 +17379,7 @@ public class PackData{
 				} // end of switch
 			} // end of while through flags
 			return count;
-		} // end of DCEL situation
+		} // end for DCEL setting
 		
 		// traditional (not updated to new flag definitions)
 		else if (source_p.packDCEL==null && target_p.packDCEL==null) {
@@ -17465,7 +17448,7 @@ public class PackData{
 				while (flst.hasNext()) {
 					f = (Integer) flst.next();
 					try {
-						if ((nf = Translators.face_trans(source_p,target_p,f,vertexMap)) > 0) {
+						if ((nf = Translators.face_trans(source_p,target_p,f,vMap)) > 0) {
 							if (face_colors) {
 								Color col = source_p.getFaceColor(f);
 									target_p.setFaceColor(nf, ColorUtil.cloneMe(col));

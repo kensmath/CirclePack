@@ -2224,9 +2224,11 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Look through 'Vertex.vutil' entries to find references
-	 * to other vertex indices, return 'VertexMap', (new, old).
-	 * @return VertexMap (new,old), null on nothing found
+	 * Look for positive 'Vertex.vutil' entries to find index
+	 * references; return 'VertexMap' <v,vutil>. E.g. may be 
+	 * "old-new" pairings, or "new-reference", etc. Normally
+	 * independent of 'pdcel.oldNew'.
+	 * @return VertexMap (v,vutil), null on nothing found
 	 */
 	public VertexMap reapVUtil() {
 		VertexMap vmap=new VertexMap();
@@ -2241,20 +2243,23 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * The given 'VertexMap' has <old,new> indices; 
-	 * copy rad/center from 'old' vertex to 'new'.
+	 * The given 'VertexMap' containing <vert,ref> indices, 
+	 * copy rad/center to 'vert' from 'ref' vertex. 
 	 * @param vmap VertexMap
-	 * @return count
+	 * @return count, 0 on failure
 	 */
 	public int modRadCents(VertexMap vmap) {
+		if (this.p==null)
+			return 0;
+		
 		int count=0;
 		Iterator<EdgeSimple> vis=vmap.iterator();
 		while(vis.hasNext()) {
-			EdgeSimple nwod=vis.next();
-			if (nwod.v>0 && nwod.w>0) {
+			EdgeSimple vertref=vis.next();
+			if (vertref.v>0 && vertref.w>0) {
 				try {
-					p.setRadius(nwod.v,p.getRadius(nwod.w));
-					p.setCenter(nwod.v,p.getCenter(nwod.w));
+					p.setRadius(vertref.v,p.getRadius(vertref.w));
+					p.setCenter(vertref.v,p.getCenter(vertref.w));
 					count++;
 				} catch(Exception ex) {
 					throw new CombException("'modRadCents' usage error");

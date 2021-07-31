@@ -60,21 +60,49 @@ public class VertexMap extends EdgeLink {
 	}
 	
 	/**
-	 * Return the composition: 'this' followed by given 'maP'. So if
-	 * 'this' has (a,b) and 'maP' has (b,c), then result contains (a,c).
-	 * @param maP
+	 * In many situations, we do repeated adjustments in DCEL and
+	 * need to connect a final new index with its original from 
+	 * several steps back. Start with null VertexMap, and each stage
+	 * compose with VertexMap from that stage. Return the composition: 
+	 * 'domainMap' followed by given 'rangeMap'. Typically, for (b,c) 
+	 * in 'rangeMap', look for (a,b) in 'domainMap'. If found, put 
+	 * (a,c) in output map. 
+	 * Some details:
+	 *   * if (b,c) is in rangeMap and (*,b) does not exist in domainMap,
+	 *     then (b,c) is inserted in output. (I.e., as though (b,b) were
+	 *     in domainMap).
+	 *   * may be ambiguous: if (a1,b) before (a2,b) in 'domainMap', then 
+	 *     (a1,c) is the result (i.e., the first occurrance of (*.b)). 
+	 *   * However, if (b,c1) before (b,c2) in 'rangeMap', then (*,c2) 
+	 *     is the outcome (i.e., the last occurrance of (b,*)).
+	 *   * if 'domainMap' null, return 'rangeMap'
+	 *   * if 'rangeMap' null, return 'domainMap'
+	 *   * if (b,c) in 'rangeMap' and b==c, then ignore.
+	 * Note: typically, not including (x,x) entries in 'VertexMap's
+	 * @param domainMap VertexMap
+	 * @param rangeMap VertexMap
 	 * @return new VertexMap; null on error or empty map
 	 */
-	public VertexMap followedBy(VertexMap maP) {
-		if (maP==null || maP.size()==0) return null;
+	public static VertexMap followedBy(VertexMap domainMap,VertexMap rangeMap) {
+		if (domainMap==null)
+			return rangeMap;
+		if (rangeMap==null || rangeMap.size()==0) 
+			return domainMap;
 		VertexMap nmap=new VertexMap();
-		Iterator<EdgeSimple> vml=this.iterator();
-		while (vml.hasNext()) {
-			EdgeSimple edge=(EdgeSimple)vml.next();
-			int w=maP.findW(edge.w);
-			if (w>0) nmap.add(new EdgeSimple(edge.v,w));
+		Iterator<EdgeSimple> rmis=rangeMap.iterator();
+		while (rmis.hasNext()) {
+			EdgeSimple edge=(EdgeSimple)rmis.next();
+			if (edge.v<=0 || edge.w<=0 || edge.v==edge.w)
+				continue;
+			int b=edge.v;
+			int v=domainMap.findV(b);
+			if (v>0) 
+				nmap.add(new EdgeSimple(v,edge.w));
+			else if (v==0) // nothing matching?
+				nmap.add(new EdgeSimple(edge.v,edge.w)); // add edge copy
 		}
-		if (nmap.size()==0) return null;
+		if (nmap.size()==0) 
+			return null;
 		return nmap;
 	}
 	

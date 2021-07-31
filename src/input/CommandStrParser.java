@@ -5236,22 +5236,26 @@ public class CommandStrParser {
 	    		  cmd.startsWith("add_face_t")) {
 	    	  boolean baryOpt=true;  // add_barycenter
 	    	  // add face triple
-	    	  if (cmd.charAt(4)=='f') baryOpt=false; 
+	    	  if (cmd.charAt(4)=='f') 
+	    		  baryOpt=false; 
 	    	  int f;
 	    	  int node=packData.nodeCount;
+	    	  
 	    	  // should be only one segment
 	    	  items=flagSegs.elementAt(0); 
 	   		  FaceLink faceLink=new FaceLink(packData,items);
-	   		  if (faceLink==null || faceLink.size()<1) return 0;
+	   		  if (faceLink==null || faceLink.size()<1) 
+	   			  return 0;
 	      		  
 	   		  Iterator<Integer> flist=faceLink.iterator();
 	   		  // avoid duplication
 	   		  int []xdup=new int[packData.faceCount+1];
 	   		  
 	   		  if (packData.packDCEL!=null) {
-	   			  if (!baryOpt) 
+	   			  if (!baryOpt)
+	   				  // TODO: add this option
    					  throw new ParserException("'face_triple' "+
-   							  "not yet available for dcel case.");
+   							  "call is not yet available for dcel case.");
 
 		   		  while (flist.hasNext()) {
 		   			  f=(Integer)flist.next();
@@ -5269,15 +5273,12 @@ public class CommandStrParser {
 		   		  
 		   		  if (count==0)
 		   			  return 0;
-		   		  if (packData.packDCEL.redChain==null)
-		   			  CombDCEL.redchain_by_edge(
-		   					  packData.packDCEL,null,null,false);
-		   		  CombDCEL.d_FillInside(packData.packDCEL);
-		   		  packData.attachDCEL(packData.packDCEL);
+
+		   		  packData.packDCEL.fixDCEL_raw(packData);
 		   		  return count;
 	   		  }
 	   		  
-	   		  // traditional packing
+	   		  // traditional
 	   		  while (flist.hasNext()) {
 	   			  f=(Integer)flist.next();
 		   		  if ((node=packData.nodeCount+
@@ -8480,7 +8481,8 @@ public class CommandStrParser {
 	    	  	// default to puncture maximal vertex index
 	    	  	if (flagSegs==null || flagSegs.size()==0) { 
 	    	  		pv=packData.nodeCount;
-	  				if (packData.puncture_vert(pv)==0) return 0;
+	  				if (packData.puncture_vert(pv)==0) 
+	  					return 0;
 	  				packData.xyzpoint=null; // ditch any xyz data
 	    	  		if (packData.packDCEL==null) {
 	    	  			packData.setCombinatorics();
@@ -9044,14 +9046,46 @@ public class CommandStrParser {
     		  items=new Vector<String>();
 	    	  if (flagSegs!=null && flagSegs.size()>0)
 	    		  items=(Vector<String>)flagSegs.get(0); // just one seqment
-			  
-			  if (cmd.startsWith("bary")) { // remove barycenters
-	    		  NodeLink vertlist=new NodeLink(packData,items);
-	    		  
+	    	  
+			  if (cmd.startsWith("bary")) { // "rm_bary": barycenters
+				  
 	    		  // default to all 3-degree interior
-	    		  if (vertlist==null || vertlist.size()==0) 
+				  NodeLink vertlist=null;
+				  if (items==null || items.size()==0)
 	    			  vertlist=new NodeLink(packData,"{c:(i).and.(d.eq.3)}");
+				  else
+					  vertlist=new NodeLink(packData,items);
 	    		  
+	    		  if (vertlist==null || vertlist.size()==0) {
+	    			  CirclePack.cpb.errMsg("'rm_bary': no vertices specified");
+	    			  return count;
+	    		  }
+	    		  
+	    		  // DCEL setting
+	    		  if (packData.packDCEL!=null) {
+	    			  packData.packDCEL.oldNew=new VertexMap();
+	    			  Iterator<Integer> vis=vertlist.iterator();
+	    			  while(vis.hasNext()) {
+	    				  int v=vis.next();
+	    				  int newv=packData.packDCEL.oldNew.findW(v);
+	    				  if (newv==0)
+	    					  newv=v;
+	    				  int rslt=RawDCEL.rmBary_raw(packData.packDCEL,
+	    						  packData.packDCEL.vertices[newv]);
+	    				  if (rslt==0) {
+	    					  CirclePack.cpb.errMsg("'rm_bary' failed on vertex "+v);
+	    					  if (count>0)
+	    						  packData.packDCEL.fixDCEL_raw(packData);
+	    					  return count;
+	    				  }
+	    				  count++;
+	    			  }
+	    			  packData.packDCEL.oldNew=null;
+					  packData.packDCEL.fixDCEL_raw(packData);
+	    			  return count++;
+	    		  }
+
+	    		  // traditional
 	    		  count=packData.remove_barycenters(vertlist);
 	    		  if (count>0) { 
 	    			  CirclePack.cpb.msg("rm_bary: removed "+count+
@@ -9060,18 +9094,71 @@ public class CommandStrParser {
 	    		  else return 1; // don't want to return 0 
 			  }
 
-			  else if (cmd.startsWith("cir")) { // rm_circles
+			  else if (cmd.startsWith("cir")) { // "rm_circle"
 	    		  NodeLink vertlist=new NodeLink(packData,items);
-	    		  count=packData.remove_circle(vertlist);
+	    		  
+	    	      // DCEL version
+	    	      if (packData.packDCEL!=null) {
+	    	    	  int origCount=packData.packDCEL.vertCount;
+	    	    	  HalfLink hlink=new HalfLink();
+	    	    	  Iterator<Integer> vis=vertlist.iterator();
+	    	    	  while (vis.hasNext()) {
+	    	    		  hlink.abutMore(packData.packDCEL.vertices[vis.next()].
+	    	    				  getOuterEdges());
+	    	    	  }
+	    	    	  PackDCEL pdc=CombDCEL.extractDCEL(packData.packDCEL, hlink, null);
+	    	    	  pdc.fixDCEL_raw(packData);
+	    	    	  packData.xyzpoint=null;
+	    	    	  int n=origCount-packData.packDCEL.vertCount;
+	    			  CirclePack.cpb.msg("rm_cir: removed "+n+" circles from p"+
+	    					  packData.packNum);
+	    	    	  if (n>0)
+	    	    		  return n;
+	    	    	  return 1;
+	    	      }
+	    	      
+	    	      // traditional
+	    	      count=packData.remove_circle(vertlist);
 	    		  if (count>0) { 
 	    			  CirclePack.cpb.msg("rm_cir: removed "+count+" circles from p"+
 	    					  packData.packNum);
-	    			  if (packData.packDCEL!=null)
-	    				  return count;
+	    			  return count;
 	    		  }
-	    		  else return 1;
+	    		  return 1;
 	    	  }
-			  else if (cmd.startsWith("quad")) { // remove one quad vertex
+			  else if (cmd.startsWith("quad")) { // "rm_quad"
+				  
+				  if (packData.packDCEL!=null) {
+					  HalfLink hlink=new HalfLink(packData,items);
+				
+					  if (hlink==null || hlink.size()==0) {
+						  CirclePack.cpb.errMsg("usage: rm_quad {u v ...} (give edges)");
+						  return count;
+					  }
+					  
+					  // do in succession while succeeding: a vert 
+					  //   may/maynot qualify after previous actions.
+					  Iterator<HalfEdge> his=hlink.iterator();
+					  
+					  packData.packDCEL.oldNew=new VertexMap();
+					  while (his.hasNext()) {
+						  HalfEdge edge=his.next();
+						  int rslt=RawDCEL.rmQuadNode(packData.packDCEL,edge);
+						  if (rslt==0) {
+							  CirclePack.cpb.errMsg("rm_quad failed for edge "+edge);
+							  if (count>0)
+								  packData.packDCEL.fixDCEL_raw(packData);
+							  return count;
+						  }
+						  count++;
+					  }
+					  
+					  // finish up
+					  packData.packDCEL.fixDCEL_raw(packData);
+					  return count;
+				  }
+				  
+				  // traditional: one vert only
 				  try {
 		    		  NodeLink vertlist=new NodeLink(packData,items);
 					  int v=(Integer)vertlist.get(0);
@@ -9085,18 +9172,66 @@ public class CommandStrParser {
 					  throw new ParserException("must specify 'v' and 'w'");
 				  }
 	    	  }
-			  else if (cmd.startsWith("edge")) { // remove edges
+			  else if (cmd.startsWith("edge")) { // "rm_edge"
+				  
+		    	  // check for '-c' (consolidate) flag (only for "rm_edge")
+		    	  boolean consolid=false;
 				  String strg=items.get(0);
 				  if (StringUtil.isFlag(strg)) {
 					  if (!strg.equals("-c"))
 						  throw new ParserException("illegal flag "+strg);
 					  // collapsing int/bdry edges
 					  items.remove(0); // shuck this entry
-					  EdgeLink edgelist=new EdgeLink(packData,items);
+					  consolid=true;
+				  }
+				  
+				  // DCEL setting
+				  if (packData.packDCEL!=null) {
+					  HalfLink hlink=new HalfLink(packData,items);
+					  packData.packDCEL.oldNew=new VertexMap();
+					  Iterator<HalfEdge> his=hlink.iterator();
+					  while(his.hasNext()) {
+						  HalfEdge edge=his.next();
+						  int rslt=0;
+						  if (consolid)
+							  rslt=RawDCEL.meldEdge_raw(packData.packDCEL,edge);
+						  else
+							  rslt=RawDCEL.rmEdge_raw(packData.packDCEL,edge);
+						  if (rslt==0) {
+							  CirclePack.cpb.errMsg("rm_edge failed for edge "+edge);
+							  if (count>0)
+								  packData.packDCEL.fixDCEL_raw(packData);
+							  return count;
+						  }
+						  
+						  // negative: reset default new red edge data using
+						  //    current vData. (-rslt has just become a bdry 
+						  //    vertex, so it comes back with red edge having
+						  //    default data)
+						  if (rslt<0) {
+							  Vertex vert=packData.packDCEL.vertices[-rslt];
+							  RedHEdge redge=vert.halfedge.myRedEdge;
+							  
+							  // get the original index for this vertex
+							  int origv=packData.packDCEL.oldNew.findV(-rslt);
+							  if (origv==0)
+								  origv=-rslt;
+							  
+							  redge.setCenter(new Complex(packData.vData[origv].center));
+							  redge.setRadius(packData.vData[origv].rad);
+						  }
+						  count++;
+					  }
+					  packData.packDCEL.fixDCEL_raw(packData);
+					  return count;
+				  }
+				  
+				  // traditional
+				  EdgeLink edgelist=new EdgeLink(packData,items);
+				  if (consolid) {
 					  count=packData.collapse_edge(edgelist);
 				  }
 				  else { // removing bdry edges
-					  EdgeLink edgelist=new EdgeLink(packData,items);
 					  count=packData.remove_edge(edgelist);
 				  }
 	    		  if (count>0) { 

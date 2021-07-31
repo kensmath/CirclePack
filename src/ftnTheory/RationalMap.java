@@ -479,13 +479,14 @@ public class RationalMap extends PackExtender {
 					" "+pc.targetSheet+" "+pc.targetEdge);
 		}
 
-		// both sheets already attached to base? 'edgeSeg's should be in 'masterESlist'
+		// both sheets already attached to base? 'edgeSeg's 
+		//    should be in 'masterESlist'
 		if (sheetCheck[pc.sourceSheet]<0 && sheetCheck[pc.targetSheet]<0) {
 			EdgeSeg sES=findMasterES(pc.sourceSheet,pc.sourceEdge);
 			EdgeSeg tES=findMasterES(pc.targetSheet,pc.targetEdge);
 			if (pasteEm(sES,tES)>0) {
 				pasteCount++;
-				masterMap=domainPack.vertexMap.followedBy(masterMap);
+				masterMap=VertexMap.followedBy(domainPack.vertexMap,masterMap);
 				domainPack.vertexMap=masterMap.makeCopy();
 				if (debug) 
 					msg("success (target sheet already attached)");
@@ -925,7 +926,8 @@ public class RationalMap extends PackExtender {
 				slits.add(es);
 
 				// update 'slitMap'
-				VertexMap tmpVM=slitPack.vertexMap.followedBy(slitMap);
+				VertexMap tmpVM=
+						VertexMap.followedBy(slitPack.vertexMap,slitMap);
 				Iterator<EdgeSimple> nvm=tmpVM.iterator();
 				while (nvm.hasNext()) {
 					slitMap.add((EdgeSimple)nvm.next());

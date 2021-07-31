@@ -458,14 +458,15 @@ public class DcelCreation {
 	   		}
 	   		
 	   		RedHEdge rtrace=pdcel.redChain;
-	   		RedHEdge stopred=rtrace.prevRed.prevRed;
+	   		int lastVert=rtrace.prevRed.myEdge.origin.vertIndx;
+//	   		RedHEdge stopred=rtrace.prevRed.prevRed;
 	   		RedHEdge nxtred=rtrace.nextRed;
 	   		boolean wflag=false; // stop signal
 	   		int count=1;
 	   		while (!wflag && count<10000) {
 	   			nxtred=rtrace.nextRed;
 	   			int w=rtrace.myEdge.origin.vertIndx;
-	   			if (nxtred==stopred)
+	   			if (w==lastVert)
 	   				wflag=true;
 	   			int prev=rtrace.prevRed.myEdge.origin.vertIndx;
 	   			int n=degs[pdcel.vertices[w].vutil]-pdcel.vertices[w].getNum()-1;
