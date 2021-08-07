@@ -1631,7 +1631,7 @@ public class NodeLink extends LinkedList<Integer> {
 	  * @return NodeLink, new, null if nlink is null.
 	  */
 	 public static NodeLink translate(NodeLink nlink,VertexMap vmap) {
-		 if (nlink==null)
+		 if (nlink==null || nlink.size()==0)
 			 return null;
 		 NodeLink out=new NodeLink(nlink.packData);
 		 

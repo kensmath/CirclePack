@@ -908,13 +908,14 @@ public class CommandStrParser {
 	    	  
 	    	  // call to adjoin
 	    	  PackData newPack=PackData.adjoinCall(packData, qackData, v1, v2, N);
+	    	  newPack.packDCEL.fixDCEL_raw(newPack);
 	    	  
 	    	  if (newPack==null) {
     			  CirclePack.cpb.errMsg("'adjoin' failed: ");
     			  return 0;
 	    	  }
 	    	  
-	    	  int ans=CirclePack.cpb.swapPackData(newPack,pnum1,false);
+	    	  int ans=CirclePack.cpb.swapPackData(newPack,pnum1,true);
 
 			  return 1;
 	      } // e)nd of 'adjoin'
@@ -9136,12 +9137,13 @@ public class CommandStrParser {
 						  return count;
 					  }
 					  
-					  // do in succession while succeeding: a vert 
+					  // repeat while succeeding: a vert 
 					  //   may/maynot qualify after previous actions.
 					  Iterator<HalfEdge> his=hlink.iterator();
 					  
 					  packData.packDCEL.oldNew=new VertexMap();
-					  while (his.hasNext()) {
+					  while (his.hasNext()) { 
+						  // DCELdebug.printRedChain(packData.packDCEL.redChain);
 						  HalfEdge edge=his.next();
 						  int rslt=RawDCEL.rmQuadNode(packData.packDCEL,edge);
 						  if (rslt==0) {
@@ -11429,8 +11431,7 @@ public class CommandStrParser {
 	          // vertex index (one only) comes first
 	          int v=NodeLink.grab_one_vert(packData,items.remove(0));
         	  if (!packData.isBdry(v)) {
-        		  CirclePack.cpb.errMsg("'zip' usage: n v, 'v' must be boundary");
-        		  return 0;
+        		  throw new ParserException("'zip' usage: n v, 'v' must be boundary");
         	  }
 	          
 	          try {
@@ -11439,8 +11440,34 @@ public class CommandStrParser {
 	          
         	  int b=packData.bdry_comp_count(v);
         	  int m=b/2;
-        	  if (b!=2*m) m=(b-1)/2;
-        	  if (n<0 || n>=m) n=m; // full bdry
+        	  if (b!=2*m) 
+        		  m=(b-1)/2;
+        	  if (n<0 || n>=m) 
+        		  n=m; // full bdry
+        	  
+        	  if (packData.packDCEL!=null) {
+        		  PackDCEL pdcel=packData.packDCEL;
+        		  for (int j=1;j<=pdcel.vertCount;j++) 
+        			  pdcel.vertices[j].vutil=j;
+				  HalfEdge nxtedge=
+						  pdcel.vertices[v].halfedge.twin.next;
+				  for (int j=1;j<=n;j++) {
+					  Vertex vert=nxtedge.origin;
+					  nxtedge=nxtedge.next;
+					  CombDCEL.zipEdge(pdcel,vert);
+				  }
+				  pdcel=CombDCEL.wrapAdjoin(pdcel,pdcel);
+				  VertexMap oldnew=pdcel.oldNew;
+				  pdcel.fixDCEL_raw(packData);
+				  packData.vertexMap=oldnew;
+				  packData.vlist=NodeLink.translate(packData.vlist,oldnew);
+				  packData.elist=EdgeLink.translate(packData.elist,oldnew);
+				  return packData.nodeCount;
+			  }
+        	  
+        	  // TODO: so the 'zip' directly. For now, I need to 
+        	  //   debug this call, however.
+        	  
         	  StringBuilder strbld=new StringBuilder("adjoin "+
         			  packData.packNum+" "+packData.packNum+" "+
         			  v+" "+v+" "+n);

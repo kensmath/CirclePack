@@ -33,6 +33,7 @@ import dcel.RawDCEL;
 import dcel.RedHEdge;
 import dcel.VData;
 import dcel.Vertex;
+import deBugging.DCELdebug;
 import deBugging.DebugHelp;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
@@ -279,6 +280,9 @@ public class PackData{
      * if a new structure was cookied from the original), then go to
      * the existing 'vData' to populate the new 'vData', using
      * 'pdcel.oldNew'.
+     * 
+     * NOTE: on leaving, 'pdcel.oldNew' is set to null. Calling 
+     * routine needs to save it first and reinstall if needed. 
      *  
      * TODO: may need to save additional info when 
      * swapping in new dcel: e.g., 'invDist's, 
@@ -427,17 +431,27 @@ public class PackData{
    					}
    				} catch(Exception ex) {}
 				pdcel.setVertData(he, new CircleSimple(z,rad));
+				vData[v].setBdryFlag(vert.bdryFlag);
 				vData[v].color=oldVData[oldv].color;
 				vData[v].mark=oldVData[oldv].mark;
+				
+				// try to keep aim; but may swap int/bdry
 				vData[v].aim=oldVData[oldv].aim;
+				if (oldVData[oldv].getBdryFlag()!=0 && vert.bdryFlag==0)
+					vData[v].aim=2.0*Math.PI;
+				else if (oldVData[oldv].getBdryFlag()==0 && vert.bdryFlag!=0)
+					vData[v].aim=-.1;
+
    			}
    			else {
     			if (vert.isBdry()) { 
     				vData[v].setBdryFlag(1);
     				vData[v].aim=-0.1;
     			}
-    			else
+    			else {
+    				vData[v].setBdryFlag(0);
 					vData[v].aim=2.0*Math.PI;
+    			}
    			}
 			pdcel.setVDataIndices(v);
     	}
@@ -445,7 +459,8 @@ public class PackData{
 		// TODO: convert lists before killing 'oldNew'??  
 		pdcel.oldNew=null;
 		
-    	set_aim_default(); // too difficult to figure out old aims
+//    	set_aim_default(); // I'm using old aims
+		
     	fillcurves();
     	if (pdcel.gamma==null)
     		pdcel.gamma=pdcel.alpha.next;
@@ -14646,7 +14661,9 @@ public class PackData{
 	   * @param n int
 	   * @return new PackData, null or exception on error
 	   */
-	  public static PackData adjoinCall(PackData p1,PackData p2,int v1,int v2,int n) {
+	  public static PackData adjoinCall(PackData p1,
+			  PackData p2,int v1,int v2,int n) {
+		  boolean debug=false;
 		  PackData newPack=null;
 		  PackData np1=null;
 		  PackData np2=null;
@@ -14688,14 +14705,17 @@ public class PackData{
 			  
 			  // here's the main call.
 			  PackDCEL newDCEL=CombDCEL.d_adjoin(pdc1, pdc2, v1, v2, n);
+			  VertexMap oldnew=newDCEL.oldNew;
 			  CombDCEL.redchain_by_edge(newDCEL, null, null, selfadjoin);
 			  CombDCEL.d_FillInside(newDCEL);
+			  newDCEL.oldNew=oldnew;
 			  newPack=new PackData(null);
 			  newPack.attachDCEL(newDCEL);
 			  PackDCEL pdcel=newPack.packDCEL;
-			  newPack.vertexMap=pdcel.oldNew;
-			  pdcel.oldNew=null;
-			  pdcel.redChain=null;
+			  newPack.vertexMap=newDCEL.oldNew;
+			  
+			  if (debug) // debug=true;
+				   DCELdebug.printRedChain(pdcel.redChain);
 			  
     		  // Set up 'VData' (at original size) 
     		  VData[] newV=new VData[p1.sizeLimit+1];
@@ -14703,26 +14723,42 @@ public class PackData{
     		  // copy the 'p1' info?
     		  if (selfadjoin) 
     			  for (int v=1;v<=pdcel.vertCount;v++) {
-    				  newV[v]=p1.vData[pdcel.vertices[v].vutil].clone();
+    				  newV[v]=p1.vData[v].clone();
+    				  newV[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
     			  }
     		  else {
     			  // all 'p1' vertices should still be there, same indices
-    			  for (int v=1;v<=p1.nodeCount;v++)
+    			  for (int v=1;v<=p1.nodeCount;v++) {
     				  newV[v]=p1.vData[v].clone();
+    				  newV[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
+    			  }
     			  // rest are from 'p2'.
     			  for (int v=p1.nodeCount+1;v<=pdcel.vertCount;v++) {
     				  newV[v]=new VData();
-    				  // v is 'oldv' in 'qackData'
-    				  int oldv=newPack.vertexMap.findV(v); 
-//System.out.println("<v,oldv>="+v+","+oldv);    				  
-    				  newV[v].rad=p2.getRadius(oldv);
-    				  newV[v].center=p2.getCenter(oldv);
-    				  newV[v].aim=p2.getAim(oldv);
+    				  // 'old2v' is original index in 'qackData'
+    				  int old2v=newPack.vertexMap.findV(v); 
+//System.out.println("<old2v,v>=<"+old2v+","+v+">");    				  
+    				  newV[v].rad=p2.getRadius(old2v);
+    				  newV[v].center=p2.getCenter(old2v);
+    				  newV[v].aim=p2.getAim(old2v);
+    				  newV[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
     			  }
     		  }
     		  newPack.vData=newV;
+    		  
+    		  // get red cent/rad from vData
+    		  if (pdcel.redChain!=null) {
+    			  RedHEdge rtrace=pdcel.redChain;
+    			  do {
+    				  int v=rtrace.myEdge.origin.vertIndx;
+    				  rtrace.setCenter(new Complex(newPack.vData[v].center));
+    				  rtrace.setRadius(newPack.vData[v].rad);
+    				  rtrace=rtrace.nextRed;
+    			  } while (rtrace!=pdcel.redChain);
+    		  }
 
-			  // ensure bdry twins have face with negative index. 
+/* don't recall what this was for
+	// ensure bdry twins have face with negative index. 
     		  try {
     			  if (pdcel.redChain!=null) {
     				  RedHEdge rhe=pdcel.redChain;
@@ -14736,6 +14772,7 @@ public class PackData{
     		  } catch(Exception ex) {
     			  throw new CombException("'adjoinCall' error: "+ex.getMessage());
     		  }
+*/
 		  }
 		  
 		  // traditional: again, we operate on clones

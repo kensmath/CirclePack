@@ -3,7 +3,10 @@ package tiling;
 import java.awt.Color;
 import java.util.Vector;
 
-import dcel.DcelCreation;
+import dcel.CombDCEL;
+import dcel.PackDCEL;
+import dcel.RawDCEL;
+import dcel.RedHEdge;
 import exceptions.CombException;
 import exceptions.DataException;
 import komplex.EdgeSimple;
@@ -30,11 +33,12 @@ import packing.PackData;
  * so the information may not be set correctly when a tiling is read in
  * for an existing packing. (Consider using 'pave' command.)
  * 
- * A tile is identified by 'tileIndex' (starting with 1). 'vert' is list of its 
- * vertices (generally legitimate circle indices in a packing P), overriding 
- * the old limit of three vertices in 'Face.vert[]'. Its tile neighbors in ccw 
- * order are listed in 'tileFlower'; jth entry is index of tile across 
- * edge (vert[j],vert[j+1]) (though vert[j] and vert[j+1] may not be 
+ * A tile is identified by 'tileIndex' (starting with 1). 'vert' is 
+ * list of its vertices (generally legitimate circle indices in a 
+ * packing P), overriding the old limit of three vertices in 
+ * 'Face.vert[]'. Its tile neighbors in ccw order are listed in 
+ * 'tileFlower'; jth entry is index of tile across edge 
+ * (vert[j],vert[j+1]) (though vert[j] and vert[j+1] may not be 
  * neighbors in P any longer). If no tile across that edge, entry is 0. 
  * Note: same neighbor may be listed more than once if tiles share more 
  * than one edge, perhaps even non-contiguous (which may cause problems).
@@ -42,26 +46,31 @@ import packing.PackData;
  * As the associated 'dual' and 'quad' tilings are generated, we build
  * white/grey faces, a pair for each edge. The white/grey ('TileData.wgTiles')
  * are associated (a la dessins) with triples {0,1,infty} of vertices (0), 
- * midpoints of edges (1), and baryVert (infty).
+ * midpoints of original polygon edges (1), and baryVert (infty).
  * 
- * There may be several stages of tilings, typically from multiple stages of 
- * subdivision. The 'TileData' to which this tile belongs is saved and
- * if this tile has been subdivided, pointer 'myTileData' gives its 
- * 'TileData' object.
+ * There may be several stages of tilings, typically from multiple 
+ * stages of subdivision. The 'TileData' to which this tile belongs 
+ * is saved and if this tile has been subdivided, pointer 
+ * 'myTileData' gives its 'TileData' object.
  * 
  * @author kstephe2
  */
 public class Tile extends Face {
 	
-	public int tileIndex;	    // index generally independent of associated packings 
-	public int tileType;		// -1=unset: give the 'type', e.g., for subdivision rules.
+	public int tileIndex;	    // index generally independent of 
+								//   associated packings 
+	public int tileType;		// -1=unset: give the 'type', e.g., 
+								//    for subdivision rules.
 	public TileData TDparent; // 'TileData' structure to which this belongs
 	public int baryVert;       	// barycenter vertex in canonical packing
-	public int[][] tileFlower;  // ccw list (t_j,e_j), where 't_j' is the index of the tile
-								//   edge (vert[j],vert[j+1]) (may be 0 for no nghb or this
-								//   same tile). In reading a tiling, the 't_j' are filled  
-								//   first and may be set temporarily negative, then the 'e_j' 
-								//   are determined and consistency checked.
+	public int[][] tileFlower;  // ccw list (t_j,e_j), where 't_j' is the 
+								//   index of the tile across edge 
+								//   (vert[j],vert[j+1]) (may be 0 for no 
+								//   nghb or this may be this same tile). 
+								// In reading a tiling, the 't_j' are filled  
+								//   first and may be set temporarily negative, 
+								//   then the 'e_j' are determined and 
+								//   consistency checked.
 	
 	// this tile may be a tiling itself --- as with subdivision rules
 	public TileData myTileData; // null by default
@@ -69,13 +78,15 @@ public class Tile extends Face {
 	// for edge-tracing during displays, augment border vertex list;
 	public int augVertCount; // -1 on startup
 	// these are generally null by default
-	public int []augVert;    // null until created: augVert[0] always equals vert[0]
-	
-	public int []wgIndices;  // null until created: each n-gon breaks into 2n wg (white/grey) 
-							 // triangular tiles stored in 'tileData.wgTiles'. Each wg tile 
-							 // has 'mark' set: 1=white, -1=grey, for orientation. vert[0]
-							 // (the 'principal' vertex) is the 0-corner,  
-							 // Each wgTile is bary_refined, so is a hex flower.
+	public int []augVert;    // null until created: augVert[0] always 
+							 //     equals vert[0]
+	public int []wgIndices;  // null until created: each n-gon breaks 
+							 //   into 2n wg (white/grey) 
+							 //   triangular tiles stored in 'tileData.wgTiles'.
+							 //   Each wg tile has 'mark' set: 
+							 //   1=white, -1=grey, for orientation. vert[0]
+							 //   (the 'principal' vertex) is the 0-corner,  
+							 // Each wgTile is bary_refined, so its a hex flower.
 	public int utilFlag;	 // utility for future use: e.g., mark specific edge
 	
 	// Constructors
@@ -124,7 +135,8 @@ public class Tile extends Face {
 		
 		if (mode==1) { // simple tiling
 			if(vertCount<3)
-				throw new DataException("unigons and digons are not allowed in 'simple' mode");
+				throw new DataException(
+						"unigons/digons not allowed in tile mode 1");
 			PackData p=dcel.DcelCreation.seed(vertCount,0);
 			p.tileData=new TileData(1,1);
 			Tile tile=new Tile(p.tileData,vertCount);
@@ -141,13 +153,12 @@ public class Tile extends Face {
 				p.vertexMap.add(new EdgeSimple(j,m));
 			}
 			p.tileData.myTiles[1]=tile;
-			p.setCombinatorics();
 			return p;
 
 		}
 		if (mode==2) { // edge barycenters added
 			if(vertCount<2)
-				throw new DataException("unigons are not allowed in tile mode 2");
+				throw new DataException("unigons not allowed in tile mode 2");
 			PackData p=dcel.DcelCreation.seed(2*vertCount,0);
 			p.tileData=new TileData(1,2);
 			Tile tile=new Tile(p.tileData,vertCount);
@@ -167,136 +178,50 @@ public class Tile extends Face {
 				tile.augVert[2*j+1]=m+1;
 			}	
 			p.tileData.myTiles[1]=tile;
-			p.setCombinatorics();
 			return p;
-
 		}
 
 		// else mode==3, more complicated combinatorics
 		
 		// is this a uni-gon?
 		if (vertCount==1) {
+			
+			// build bouquet
+			int[][] bouquet=new int[10][];
+			int a1[]= {6,7,8,9,6};
+			bouquet[1]=a1;
+			int a2[]={3,7,6,9,5}; 
+			bouquet[2]=a2;
+			int a3[]= {4,7,2};
+			bouquet[3]= a3;
+			int a4[]={5,9,8,7,3}; 
+			bouquet[4]= a4;
+			int a5[]={2,9,4}; 
+			bouquet[5]= a5;
+			int a6[]= {1,9,2,7,1}; 
+			bouquet[6]=a6;
+			int a7[]= {1,6,2,3,4,8,1}; 
+			bouquet[7]=a7;
+			int a8[]={1,7,4,9,1}; 
+			bouquet[8]= a8;
+			int a9[]={1,8,4,5,2,6,1}; 
+			bouquet[9]= a9;
+			
+			PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet,1);
 			PackData p=new PackData(null);
-			p.nodeCount=9;
-			p.setAlpha(1);
+			pdcel.fixDCEL_raw(p);
 			p.setGamma(2);
-			p.status=true;
-			p.locks=0;
 			p.activeNode=1;
 			p.hes=0;
 
-			// create flowers, etc.
-			p.kData[1].num=4;
-			p.setBdryFlag(1,0);
-			p.kData[1].flower=new int[5];
-			p.kData[1].flower[0]=6;
-			p.kData[1].flower[1]=7;
-			p.kData[1].flower[2]=8;
-			p.kData[1].flower[3]=9;
-			p.kData[1].flower[4]=6;
-			p.rData[1].rad=.5;
-
-			// fix the 4 flowers
-			p.kData[6].flower=new int[5];
-			p.kData[6].num=4;
-			p.kData[6].flower[0]=1;
-			p.kData[6].flower[1]=9;
-			p.kData[6].flower[2]=2;
-			p.kData[6].flower[3]=7;
-			p.kData[6].flower[4]=1;
-			p.setBdryFlag(6,0);
-			p.kData[6].utilFlag=0;
-			p.setVertMark(6,0);
-			p.rData[6].rad=2.5/(double)4;
-			
-			p.kData[7].flower=new int[7];
-			p.kData[7].num=6;
-			p.kData[7].flower[0]=1;
-			p.kData[7].flower[1]=6;
-			p.kData[7].flower[2]=2;
-			p.kData[7].flower[3]=3;
-			p.kData[7].flower[4]=4;
-			p.kData[7].flower[5]=8;
-			p.kData[7].flower[6]=1;
-			p.setBdryFlag(7,0);
-			p.kData[7].utilFlag=0;
-			p.setVertMark(7,0);
-			p.rData[7].rad=2.5/(double)6;
-			
-			p.kData[8].flower=new int[5];
-			p.kData[8].num=4;
-			p.kData[8].flower[0]=1;
-			p.kData[8].flower[1]=7;
-			p.kData[8].flower[2]=4;
-			p.kData[8].flower[3]=9;
-			p.kData[8].flower[4]=1;
-			p.setBdryFlag(8,0);
-			p.kData[8].utilFlag=0;
-			p.setVertMark(8,0);
-			p.rData[8].rad=2.5/(double)4;
-			
-			p.kData[9].flower=new int[7];
-			p.kData[9].num=6;
-			p.kData[9].flower[0]=1;
-			p.kData[9].flower[1]=8;
-			p.kData[9].flower[2]=4;
-			p.kData[9].flower[3]=5;
-			p.kData[9].flower[4]=2;
-			p.kData[9].flower[5]=6;
-			p.kData[9].flower[6]=1;
-			p.setBdryFlag(9,0);
-			p.kData[9].utilFlag=0;
-			p.setVertMark(9,0);
-			p.rData[9].rad=2.5/(double)6;
-			
-			// fix boundary flowers
-			p.kData[2].flower=new int[5];
-			p.kData[2].num=5;
-			p.kData[2].flower[0]=3;
-			p.kData[2].flower[1]=7;
-			p.kData[2].flower[2]=6;
-			p.kData[2].flower[3]=9;
-			p.kData[2].flower[4]=5;
-			p.setBdryFlag(2,1);
-			p.kData[2].utilFlag=0;
-			p.setVertMark(5,0);
-			p.rData[2].rad=2.5/(double)4;
-
-			p.kData[3].flower=new int[3];
-			p.kData[3].num=3;
-			p.kData[3].flower[0]=4;
-			p.kData[3].flower[1]=7;
-			p.kData[3].flower[2]=2;
-			p.setBdryFlag(3,1);
-			p.kData[3].utilFlag=0;
-			p.setVertMark(3,0);
-			p.rData[3].rad=2.5/(double)4;
-
-			p.kData[4].flower=new int[5];
-			p.kData[4].num=5;
-			p.kData[4].flower[0]=5;
-			p.kData[4].flower[1]=9;
-			p.kData[4].flower[2]=8;
-			p.kData[4].flower[3]=7;
-			p.kData[4].flower[4]=3;
-			p.setBdryFlag(4,1);
-			p.kData[4].utilFlag=0;
-			p.setVertMark(4,0);
-			p.rData[4].rad=2.5/(double)4;
-
-			p.kData[5].flower=new int[3];
-			p.kData[5].num=3;
-			p.kData[5].flower[0]=2;
-			p.kData[5].flower[1]=9;
-			p.kData[5].flower[2]=4;
-			p.setBdryFlag(5,1);
-			p.kData[5].utilFlag=0;
-			p.setVertMark(5,0);
-			p.rData[5].rad=2.5/(double)4;
-				
-			// process the combinatorics 
-			p.complex_count(true);
-			p.facedraworder(false);
+			p.setRadius(6,2.5/4.0);
+			p.setRadius(7,2.5/6.0);
+			p.setRadius(8,2.5/4.0);
+			p.setRadius(9,2.5/6.0);
+			p.setRadius(2,2.5/4.0);
+			p.setRadius(3,2.5/4.0);
+			p.setRadius(4,2.5/4.0);
+			p.setRadius(5,2.5/4.0);
 			p.set_aim_default();
 
 			// mark vertices and store info
@@ -304,7 +229,7 @@ public class Tile extends Face {
 			p.setVertMark(2,2);
 			p.setVertMark(4,3);
 			p.vertexMap=new VertexMap();
-			p.vertexMap.add(new EdgeSimple(0,2)); // vert[0] is represented by 2
+			p.vertexMap.add(new EdgeSimple(0,2)); // vert[0] represented by circle 2
 
 			p.tileData=new TileData(1,3);
 			Tile tile=new Tile(p,p.tileData,1);
@@ -318,15 +243,16 @@ public class Tile extends Face {
 			tile.augVert[2]=4;
 			tile.augVert[3]=5;
 			p.tileData.myTiles[1]=tile;
-
-			p.setCombinatorics();
 			return p;
 		}
 		
 		// general n-gon case, n>=2
-		PackData p=DcelCreation.seed(2*vertCount,0);
-		p.bary_refine(-1); // mark new barycenters with -1
-			
+		PackDCEL pdcel=CombDCEL.seed_raw(2*vertCount);
+		CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha, false);
+		CombDCEL.d_FillInside(pdcel);
+		RawDCEL.hexBaryRefine_raw(pdcel, true);
+		PackData p=new PackData(null);
+		pdcel.fixDCEL_raw(p);
 		p.setVertMark(1,1);
 		p.vertexMap=new VertexMap();
 		for (int j=0;j<vertCount;j++) {
@@ -344,14 +270,14 @@ public class Tile extends Face {
 		}
 		tile.augVertCount=4*vertCount;
 		tile.augVert=new int[tile.augVertCount];
-		NodeLink nlk=new NodeLink(p,"b(2,2)");
-		for (int j=0;j<4*vertCount;j++) {
-			int n=nlk.get(j);
-			tile.augVert[j]=n;
-		}
+		int tick=0;
+		RedHEdge rtrace=p.packDCEL.redChain;
+		do {
+			tile.augVert[tick++]=rtrace.myEdge.origin.vertIndx;
+			rtrace=rtrace.nextRed;
+		} while (rtrace!=p.packDCEL.redChain);
 		
 		p.tileData.myTiles[1]=tile;
-		p.setCombinatorics();
 		return p;
 	}
 	
@@ -395,11 +321,11 @@ public class Tile extends Face {
 	/**
 	 * This method depends on 'tileFlower's. Consider vert[indx]: 
 	 * return |index| for the index of the tile across the 
-	 * ccw edge (dir >= 0) or across the cw edge (dir < 0).
+	 * cclw edge (dir >= 0) or across the clw edge (dir < 0).
 	 * Note: sometimes negative entries are stored during processing;
 	 * this returns the absolute value, which should be the index.
 	 * @param indx int, which edge to look at
-	 * @param dir int, >= 0 then ccw; < 0 then cw 
+	 * @param dir int, >= 0 then cclw; < 0 then clw 
 	 * @return int, |index| of tile, 0 for "no tile", < 0 on error 
 	 */
 	public int nghb_tile(int indx,int dir) {
@@ -419,7 +345,7 @@ public class Tile extends Face {
 	/**
 	 * This method needs 'tileFlower', which lists the tiles 
 	 * neighboring 'this' tile. 
-	 * Find vector of contiguous ccw indices of edges shared
+	 * Find vector of contiguous cclw indices of edges shared
 	 * with 't'. Each n-edge chain leads to n+1 indices, since
 	 * we add in the last vertex.
 	 * Return null on error, meaning 't' doesn't occur as neighbor 
@@ -510,7 +436,7 @@ public class Tile extends Face {
 	}
 
 	/**
-	 * Return the ccw closed list of augmented vertices forming the boundary
+	 * Return the cclw closed list of augmented vertices forming the boundary
 	 * of this tile. If there are no augmented vertices, then just
 	 * return the closed vertex list. 
 	 * 
@@ -534,7 +460,7 @@ public class Tile extends Face {
 	}
 		
 	/**
-	 * Return the ccw list of augmented vertices associated with
+	 * Return the cclw list of augmented vertices associated with
 	 * 'indx' edge of this tile, including first and last vert. 
 	 * If the edge goes from v=vert[indx] to w=vert[indx+1], then 
 	 * search 'augVert' for v and w to determine the segment of 
@@ -640,17 +566,28 @@ public class Tile extends Face {
     
     /**
      * Recursively translate 'vert' and 'augVert' arrays and 'baryVert'
-     * according to 'vmap' 
+     * according to 'vmap', which lists <old,new>.
      * @param vmap VertexMap
-     * @return int 'vertCount'
+     * @return int 'vertCount', 0 if vmap is null
      */
     public int updateMyVerts(VertexMap vmap) {
-    	for (int j=0;j<augVertCount;j++)
-    		augVert[j]=vmap.findW(augVert[j]);
-    	for (int j=0;j<vertCount;j++)
-    		vert[j]=vmap.findW(vert[j]);
-    	if (baryVert>0)
-    		baryVert=vmap.findW(baryVert);
+    	if (vmap==null)
+    		return 0;
+    	for (int j=0;j<augVertCount;j++) {
+    		int w=vmap.findW(augVert[j]);
+    		if (w!=0)
+    			augVert[j]=w;
+    	}
+    	for (int j=0;j<vertCount;j++) {
+    		int w=vmap.findW(vert[j]);
+    		if (w!=0)
+    			vert[j]=w;
+    	}
+    	if (baryVert>0) {
+    		int w=vmap.findW(baryVert);
+    		if (w!=0)
+    			baryVert=w;
+    	}
     	if (myTileData!=null) {
     		for (int t=1;t<=myTileData.tileCount;t++)
     			myTileData.myTiles[t].updateMyVerts(vmap);

@@ -1334,9 +1334,9 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	 * @return new EdgeLink (with null PackData)
 	 */
 	public static EdgeLink translate(EdgeLink elink,VertexMap oldnew) {
+		if (elink==null || elink.size()==0)
+			return null;
 	    EdgeLink qtmp=new EdgeLink();
-	    if (elink.size()==0) 
-	    	return qtmp;
 	    EdgeSimple edge=null;
 	    Iterator<EdgeSimple> it=elink.iterator();
 	    while (it.hasNext()) {

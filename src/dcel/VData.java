@@ -36,7 +36,8 @@ public class VData{
 	public int plotFlag;	// often OBE
 	public int qualFlag;    // often OBE
 
-	int bdryFlag;           // set in 'PackData.attachDCEL' according to 'Vertex.bdryFlag' 
+	int bdryFlag;           // set in 'PackData.attachDCEL' as 'Vertex.bdryFlag'
+							// Caution: this can get out of sync with DCEL flag
 
 	// Constructor (needed only to create 'center')
 	public VData() {

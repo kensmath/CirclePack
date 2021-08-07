@@ -866,6 +866,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 	 * @return int, nodeCount
 	 */
 	public int setPackData(PackData p) {
+		p.packNum=screenNum;
 		if (packData!=null && packData!=p) { // a different packing?
 			if (packData.radiiSliders!=null) {
 				packData.radiiSliders.dispose();
@@ -878,7 +879,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 			if (packData.angSumSliders!=null) {
 				packData.angSumSliders.dispose();
 				packData.angSumSliders=null;
-			}
+			}			
 			packData.smoother=null;
 		}
 		// handshake

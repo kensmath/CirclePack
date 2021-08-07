@@ -2060,7 +2060,7 @@ public class RawDCEL {
 	   * Either hex or bary refine the given DCEL. Start either
 	   * process by first dividing each edge in half and either 
 	   * adding edges between the new edge vertices (hex refining)
-	   * or adding a bary center and new edges (bary refining).
+	   * or adding a barycenter and new edges (bary refining).
 	   * The 'pdcel.redChain' should remain in tact, but is subdivided 
 	   * to get the new red chain. All original vertices have their 
 	   * original 'halfedge's, 'vutil' holds index of reference 
@@ -2743,61 +2743,12 @@ public class RawDCEL {
 		Vertex vert=edge.origin;
 		if (vert.isBdry() || vert.getNum()!=4)
 			return 0;
-		if (vert.redFlag)
-			pdcel.redChain=null;
-		
-		// find edges about the quad, check their 'halfedge's
-		HalfEdge[] outer=new HalfEdge[4];
-		HalfEdge spk=edge;
-		for (int k=0;k<4;k++) {
-			outer[k]=spk.next;
-			if (outer[k].origin.halfedge==spk.twin)
-				outer[k].origin.halfedge=outer[k];
-			spk=spk.prev.twin;
-		}
-		
-		// opposite spoke
-		HalfEdge oppspoke=edge.prev.twin.prev;
-		Vertex uert=oppspoke.origin;
-		
-		// stretched edges
-		HalfEdge newedge=new HalfEdge(uert);
-		HalfEdge newtwin=new HalfEdge(edge.twin.origin);
-		
-		newedge.twin=newtwin;
-		newtwin.twin=newedge;
-		
-		// form face on left
-		newedge.next=outer[0];
-		outer[0].prev=newedge;
-		outer[0].next=outer[1];
-		outer[1].prev=outer[0];
-		outer[1].next=newedge;
-		newedge.prev=outer[1];
-		
-		// form face on right
-		newtwin.next=outer[2];
-		outer[2].prev=newtwin;
-		outer[2].next=outer[3];
-		outer[3].prev=outer[2];
-		outer[3].next=newtwin;
-		newtwin.prev=outer[3];
-		
-		if (pdcel.alpha!=null && pdcel.alpha.origin==vert) {
-			pdcel.alpha=newedge;
-		}
 
-		int v=vert.vertIndx;
-		VertexMap oldnew=new VertexMap();
-		for (int j=v+1;j<=pdcel.vertCount;j++) {
-			Vertex vt=pdcel.vertices[j];
-			pdcel.vertices[j-1]=vt;
-			vt.vertIndx=j-1;
-			oldnew.add(new EdgeSimple(j,j-1));
-		}
-		pdcel.oldNew=VertexMap.followedBy(pdcel.oldNew,oldnew); // compose
-		pdcel.vertCount--;
-		return v;
+		if (pdcel.alpha!=null && 
+				pdcel.alpha.origin.vertIndx==edge.origin.vertIndx)
+			pdcel.alpha=null;
+		
+		return RawDCEL.meldEdge_raw(pdcel,edge.twin);
 	}
 
 	/**

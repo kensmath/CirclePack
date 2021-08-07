@@ -9,6 +9,9 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.CombDCEL;
+import dcel.PackDCEL;
+import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
@@ -2339,7 +2342,7 @@ public class ConformalTiling extends PackExtender {
 //			depthPD=null;
 //		}
 		
-		if (buildDeBug) {
+		if (buildDeBug) { // buildDeBug=true;
 			int pTt=-1;
 			if (tData.parentTile!=null)
 				pTt=tData.parentTile.tileType;
@@ -2425,7 +2428,8 @@ public class ConformalTiling extends PackExtender {
 			TileData tmpTD=topTD.get(tt).copyMyTileData();
 			tmpTD.subRules=tData.subRules;
 			
-			// now see if we've done this packing, else recurse to get the associated packing
+			// now see if we've done this packing, 
+			//   else recurse to get the associated packing
 			if (depthPD!=null && depthPD.get(tt).size()>depth) {
 				tmpPD=copyDepthPacking(depthPD,tt,depth);
 				needsave=false;
@@ -2434,13 +2438,16 @@ public class ConformalTiling extends PackExtender {
 			// didn't have one to copy? build the packing
 			if (tmpPD==null) {
 				tmpPD=build2Depth(tmpTD,depth-1,mode,topTD,depthPD);
+				if (tmpPD==null)
+					return null;
 				needsave=true;
 			}
 			
 			// fix up our one tile, create augmented vertices
 			tData.myTiles[1].myTileData=tmpPD.tileData;
 //			for (int j=1;j<=tData.myTiles[1].myTileData.tileCount;j++)
-//				tData.myTiles[1].myTileData.myTiles[j].TDparent=tData.myTiles[1].myTileData;
+//				tData.myTiles[1].myTileData.myTiles[j].TDparent=
+//				     tData.myTiles[1].myTileData;
 			tData.myTiles[1].myTileData.parentTile=tData.myTiles[1];
 			tData.createAugBorder(1);
 			
@@ -2451,7 +2458,8 @@ public class ConformalTiling extends PackExtender {
 			// Do we need a copy of the one just built
 			Vector<PackData> vpd=null;
 			if (needsave && depthPD!=null &&
-					(vpd=depthPD.get(tt))!=null && (vpd.size()<=depth || vpd.get(depth)==null)) {
+					(vpd=depthPD.get(tt))!=null && 
+					(vpd.size()<=depth || vpd.get(depth)==null)) {
 				if (vpd.size()<=depth)
 					vpd.setSize(depth+1);
 				PackData savePD=tmpPD.copyPackTo();
@@ -2465,7 +2473,7 @@ public class ConformalTiling extends PackExtender {
 			// return new packing with original 'tData' attached
 			tmpPD.tileData=tData;
 			return tmpPD;
-		}
+		} // end of single tile case
 		
 		// **************************** else, multiple tiles: 
 		// maintain 2 lists; indices of current tiles, new ones that are touched
@@ -2483,10 +2491,11 @@ public class ConformalTiling extends PackExtender {
 		}
 		
 		// track tiles whose packings are created, and those with pasting done
-		int []tilepack=new int[tData.tileCount+1];
+		int []tilehaspack=new int[tData.tileCount+1];
 		int []tiledone=new int[tData.tileCount+1];
 		
-		// 'p' is parent packing we are building, 'tilePack' is current tile packing
+		// 'p' = parent packing we are building, while 
+		//    'tilePack' is current tile packing
 		PackData p=null; 
 		PackData tilePack=null;
 		
@@ -2549,7 +2558,7 @@ public class ConformalTiling extends PackExtender {
 			if (tt==0) 
 				throw new CombException("should have tile type at this point");
 
-			// otherwise, we must get stored subdivision 'TileData'
+			// we must get stored subdivision 'TileData'
 			TileData tmpTD=topTD.get(tt).copyMyTileData();
 			tmpTD.subRules=tData.subRules;
 			
@@ -2587,7 +2596,7 @@ public class ConformalTiling extends PackExtender {
 		}
 
 		next.add(1); // put in list for later processing
-		tilepack[1]=1;
+		tilehaspack[1]=1;
 		
 		// now cycle between 'curr' and 'next'		
 		int safety=100*tData.tileCount;
@@ -2602,10 +2611,10 @@ public class ConformalTiling extends PackExtender {
 				// entries go into 'next' (and later into 'curr') as their 
 				//    packings are generated and then pasted to growing pack 'p'.
 				
-				// go around tileFlower to paste (or create and paste) tiles on;
-				//    self-pastings of edges may occur. Identification of vertices
-				//    is not needed, as they will eventuate when further pasting
-				//    is done.
+				// go around tileFlower to paste (or create and paste) tiles;
+				//    self-pastings of edges may occur. Identification of 
+				//    vertices is not needed, as they will eventuate when 
+				//    further pasting is done.
 				if (tiledone[t]!=0) 
 					break;
 
@@ -2623,7 +2632,7 @@ public class ConformalTiling extends PackExtender {
 						boolean isnew=false;
 						
 						// do we need to create?
-						if (tilepack[nghbJ]==0) {
+						if (tilehaspack[nghbJ]==0) {
 							tilePack=null;
 							isnew=true;
 
@@ -2702,11 +2711,12 @@ public class ConformalTiling extends PackExtender {
 								tilePack.tileData=null;  
 							}
 							
-							tilepack[nghbJ]=1;
+							tilehaspack[nghbJ]=1;
 							next.add(Integer.valueOf(nghbJ));
 						}
-						else // self pasting 
+						else { // already attached, so this is self pasting 
 							tilePack=p;
+						}
 						
 						// find how to paste 'nghbTile' to 'tile' (may be self-pasting)
 						int nti=tile.tileFlower[ti][1];
@@ -2722,13 +2732,39 @@ public class ConformalTiling extends PackExtender {
 
 						int v=tedge.get(n);
 						int w=nghbedge.get(0);
+			
+						PackDCEL pdc1=p.packDCEL;
+						PackDCEL pdc2=tilePack.packDCEL;
 						
-						int adrslt=PackData.adjoin(p,tilePack,v,w,n); // DebugHelp.debugPackWrite(p,"tilestage");
-						if (adrslt!=1) {
+// debugging 	
+						boolean debug=false; // debug=true;
+						if (debug) {
+							DCELdebug.printRedChain(pdc1.redChain);
+							DCELdebug.printRedChain(pdc2.redChain);
+							pdc1.fixDCEL_raw(CPBase.packings[1]);
+							CPBase.packings[1].attachDCEL(pdc1);
+							pdc2.fixDCEL_raw(CPBase.packings[2]);
+							CPBase.packings[2].attachDCEL(pdc2);
+
+							debug=false;
+						} // return null;
+						
+						PackDCEL pdcel=CombDCEL.d_adjoin(pdc1, pdc2, v, w, n);
+						p.vertexMap=pdcel.oldNew;
+						pdcel.fixDCEL_raw(null);
+						
+// debugging				
+						if (debug) { // debug=true;
+							CPBase.packings[1].attachDCEL(pdcel);
+							debug=false;
 							return null;
 						}
-						p.complex_count(true);
 						
+//						CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha,false);
+						// DCELdebug.printRedChain(pdcel.redChain);
+//						p.attachDCEL(pdcel);
+//						pdcel.oldNew=null; 
+
 						// reset info
 						tile.tileFlower[ti][0]=Math.abs(tile.tileFlower[ti][0]);
 						nghbTile.tileFlower[nti][0]=tile.tileIndex;
@@ -2739,7 +2775,7 @@ public class ConformalTiling extends PackExtender {
 						}
 						else { // self pasting of p; adjust all attached tiles
 							for (int j=1;j<=tData.tileCount;j++) {
-								if (tilepack[j]==1)
+								if (tilehaspack[j]==1)
 									tData.myTiles[j].updateMyVerts(p.vertexMap);
 							}
 						}
@@ -2750,8 +2786,9 @@ public class ConformalTiling extends PackExtender {
 			} // end of while on 'curr'
 		} // end of while on 'next'
 		
-		
 		// attach updated 'tData'
+		p.packDCEL.fixDCEL_raw(p);
+		p.attachDCEL(p.packDCEL);
 		p.tileData=tData;
 		return p;
 	}

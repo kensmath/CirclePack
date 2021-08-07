@@ -14,33 +14,41 @@ import exceptions.ParserException;
 /**
  * TileBuilder is intended for building 'TileData' structures and their packings.
  * 
- * NOTE: We assume our tiling is simply connected --- there are too many 
- * problems to consider for the multiply connected cases.
+ * NOTE: We assume our tiling is simply connected --- there are 
+ * too many problems to consider for the multiply connected cases.
  *  
- * Basic method here is build tile-by-tile so we can handle situations that
- * come up when applying subdivision rules, building dessins, fusion tilings, etc.
- * Namely, we need to handle unigons, digons, and various self-pastings.
+ * Basic method here is build tile-by-tile so we can handle 
+ * situations that come up when applying subdivision rules, 
+ * building dessins, fusion tilings, etc. Namely, we need to 
+ * handle unigons, digons, and various self-pastings.
  * 
- * For recursive use, we need to allow 'origTD' to have some "null" tiles:
- * E.g. 'origTD' may be a connected subset of tiles from a larger tiling, but
- * it keeps the original tile indices and inherits original 'myTiles' length.
+ * For recursive use, we need to allow 'origTD' to have some 
+ * "null" tiles: E.g. 'origTD' may be a connected subset of 
+ * tiles from a larger tiling, but it keeps the original tile 
+ * indices and inherits original 'myTiles' length.
  * 
- * Idea: start with rootTile and keep adding tiles. There are many complications.
- * E.g., a loop is an edge with same vertex at its ends, and to paste along a
- * loop in 'masterPack' requires special 'adjoin' method: do all but one of the 
- * sub-edge pastings with usual adjoin, fix up the packing, then do one last 
- * self-adjoin to close the last edge. However, this may require recursive 
- * calls so the stuff being adjoined, if not just a unigon, has already been
- * consolidated in a simply connected packing.
+ * Idea: start with rootTile and keep adding tiles. There are 
+ * many complications. E.g., a loop is an edge with same vertex 
+ * at its ends, and to paste along a loop in 'masterPack' 
+ * requires special 'adjoin' method: do all but one of the 
+ * sub-edge pastings with usual adjoin, fix up the packing, 
+ * then do one last self-adjoin to close the last edge. However, 
+ * this may require recursive calls so the stuff being adjoined, 
+ * if not just a unigon, has already been consolidated in a 
+ * simply connected packing.
  * 
  * Issues:
  *  * tiles may attach along edges with multiple vertices
- *  * tiles may attach to themselves (more than once, even) along edges or at vertices
- *  * two tiles may be attached along more than one, perhaps non-contiguous edges.
+ *  * tiles may attach to themselves (more than once, even) 
+ *    along edges or at vertices
+ *  * two tiles may be attached along more than one, perhaps 
+ *    non-contiguous edges.
  *  * tiles may be unigons or digons
  *  * tiles must have 'tileflower' data: 
- *  *    t=tile.tileflower[i][0] is the index of the tile across edge i (if t=0, this is
- *  *    a bdry edge) and tile.tileflower[i][1] is the index of the shared edge in t.
+ *  *    t=tile.tileflower[i][0] is the index of the tile 
+ *         across edge i (if t=0, this is a bdry edge) and 
+ *         tile.tileflower[i][1] is the index of the shared 
+ *         edge in t.
  *  
  * @author kstephe2, started November 2013, restarted 7/2014
  *
@@ -77,22 +85,24 @@ public class TileBuilder {
 	 * face is marked -1.
 	 * 
 	 * Strategy:
-	 * * we work purely from 'tileFlower' data, so we discard and reconstitute
-	 *   all vert indices using 'tileflowers2verts'.
-	 * * We create a packing for each tile as needed: barycentrically subdivided
-	 *   2n-gon, recording original corner indices from tile (tile_v,pack_v) in 
-	 *   its 'VertexMap'.
-	 * * the first tile is chosen as rootTile; we may need to make some choice 
-	 *   so we have an easy base.
-	 * * Each tile, including the first, is processed for slit-type self-pastings,
-	 *   surrounded unigons, etc. (E.g. suppose an n-gon shares one edge with a unigon; then
-	 *   we create and paste in that unigon.) (we'll see what other circumstances show up)
-	 * * We have the growing 'masterPack'. We search through unpasted, non-bdry
-	 *   tile edges to find one which can be unambiguously pasted.
-	 * * We create the packing for a new tile (processed as above), paste it in, 
-	 *   then look for any self-pastings this may lead to for 'masterPack' itself.
-	 * * We past, adjust the 'VertexMap', and iterate until all tiles are in and all non-bdry
-	 *   tile edges are pasted.
+	 * * we work purely from 'tileFlower' data, so we discard and 
+	 *   reconstitute all vert indices using 'tileflowers2verts'.
+	 * * We create a packing for each tile as needed: barycentrically 
+	 *   subdivided 2n-gon, recording original corner indices from 
+	 *   tile (tile_v,pack_v) in its 'VertexMap'.
+	 * * the first tile is chosen as rootTile; we may need to make 
+	 *   some choice so we have an easy base.
+	 * * Each tile, including the first, is processed for slit-type 
+	 *   self-pastings, surrounded unigons, etc. (E.g. suppose an 
+	 *   n-gon shares one edge with a unigon; then we create and paste 
+	 *   in that unigon.) (we'll see what other circumstances show up)
+	 * * We have the growing 'masterPack'. We search through unpasted, 
+	 *   non-bdry tile edges to find one which can be unambiguously pasted.
+	 * * We create the packing for a new tile (processed as above), 
+	 *   paste it in, then look for any self-pastings this may lead to 
+	 *   for 'masterPack' itself.
+	 * * We past, adjust the 'VertexMap', and iterate until all tiles 
+	 *   are in and all non-bdry tile edges are pasted.
 	 * @return PackData with attached TileData, null on error
 	 */
 	public PackData fullfromFlowers() {
@@ -100,15 +110,11 @@ public class TileBuilder {
 		boolean debug=false; // debug=true;
 		
 		// check that all tiles have 'tileFlower's
-		boolean gotflowers=true;
-		for (int t=1;(t<=origTD.tileCount && gotflowers);t++) {
+		for (int t=1;t<=origTD.tileCount;t++) {
 			Tile otile = origTD.myTiles[t];
 			if (otile.tileFlower==null)
-				gotflowers=false;
+				return null;
 		}
-		
-		if (!gotflowers)
-			return null;
 
 		// throw out the original vertex indices and rebuild from flowers
 		for (int t=1;t<=origTD.tileCount;t++) {

@@ -41,21 +41,25 @@ import packing.RData;
  * "conformal tiling" definitions. Mode 1 and 2 have less structure.
  * 
  * Since subdivision is one of our main interests, we can build 
- * Tiledata to some subdivision depth using subdivision rules. The
- * construction then gives a hierarchy of tilings, stored in 'gradedTileData'.
- * This depends on 'buildMode', which records the 'mode' setting of the
- * stored structure and be redone if mode is changed. 'gradedTileData'
- * is kept ONLY in 'canonicalPack.tileData'; other instances of 'TileData'
- * will have 'gradedTileData' set to null. When some depth of a tiling tree
- * is needed, it is put in 'packData.tilingData', but it does not contain full 
- * information. In particular, the full hierarchy cannot be saved to a file,
- * so it must be rebuilt if canonicalPack is lost.
+ * Tiledata to some subdivision depth using subdivision rules. 
+ * The construction then gives a hierarchy of tilings, stored 
+ * in 'gradedTileData'. This depends on 'buildMode', which records 
+ * the 'mode' setting of the stored structure and be redone if 
+ * mode is changed. 'gradedTileData' is kept ONLY in 
+ * 'canonicalPack.tileData'; other instances of 'TileData' will 
+ * have 'gradedTileData' set to null. When some depth of a tiling
+ * tree is needed, it is put in 'packData.tilingData', but it 
+ * does not contain full information. In particular, the full 
+ * hierarchy cannot be saved to a file, so it must be rebuilt if 
+ * canonicalPack is lost.
  *  
- * 'gradedTileData' is generated to some depth in the 'build_sub' and 'subtile' 
- * commands of 'ConformalTiling'; so 'canonicalPack.tileData.myTiles' has pointers 
- * to the leaf tiles in the hierarchy. In general, however, 'packData.TileData' is
- * pulled out of the hierarchy to some specified depth. If not full depth, then
- * its 'myTiles' are copies (see 'copyBareBones') only at the specified tile depth.
+ * 'gradedTileData' is generated to some depth in the 'build_sub' 
+ * and 'subtile' commands of 'ConformalTiling'; so 
+ * 'canonicalPack.tileData.myTiles' has pointers to the leaf 
+ * tiles in the hierarchy. In general, however, 
+ * 'packData.TileData' is pulled out of the hierarchy to some 
+ * specified depth. If not full depth, then its 'myTiles' are 
+ * copies (see 'copyBareBones') only at the specified tile depth.
  * All this depends on 'mode' and must be rebuilt if mode changes.
 
  * @author kens
@@ -70,7 +74,7 @@ public class TileData {
 	// see info above about full tiling hierarchy, kept only by 'canonicalPack'.
 	public int builtMode;   	 // the 'mode' in effect when constructed
 	public Vector<TileData> gradedTileData; // tilings in hierarchy;
-											// only for 'canonicalPack', 'deepestTD'
+								 // only for 'canonicalPack', 'deepestTD'
 	public SubdivisionRules subRules;  // subdivision rules; may be null
 	public int tileCount;        // number of tiles
 	public Tile []myTiles;       // array of tiles, index starts at 1
@@ -154,7 +158,8 @@ public class TileData {
 				for (int j=0;(j<num && seemsOK);j++) {
 					int pet=tile.tileFlower[j][0];
 					if (pet<=0) {
-						CirclePack.cpb.errMsg("in 'tiles2simpleCP', seems the tilings has boundary");
+						CirclePack.cpb.errMsg(
+								"in 'tiles2simpleCP', seems the tilings has boundary");
 						seemsOK=false;
 					}
 					flower[j]=pet;
@@ -200,7 +205,8 @@ public class TileData {
 		if (td==null || td.tileCount<=0 || td.myTiles==null)
 			throw new CombException("Tile data is missing");
 		if (td.myTiles[1].vert[0]<=0 && td.myTiles[1].tileFlower==null)
-			throw new CombException("Tile data doesn't seem to have vertices or tileFlowers");
+			throw new CombException(
+					"Tile data doesn't seem to have vertices or tileFlowers");
 
 		// in 'TILEFLOWERS' case, we need to set consistent vert lists first
 		if (td.myTiles[1].vert[0]<=0) {

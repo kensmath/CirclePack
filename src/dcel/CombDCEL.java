@@ -295,7 +295,9 @@ public class CombDCEL {
 			// 'eutil's identify forbidden/bdry edges
 			HalfEdge edge=vtx.halfedge;
 			HalfEdge he=edge;
+			int safety=1000;
 			do {
+				safety--;
 				he.myRedEdge=null; // toss old red edge pointers
 				he.eutil=0;
 				// set 'eutil' -1 for bdry edges
@@ -306,7 +308,9 @@ public class CombDCEL {
 					vstat[he.twin.origin.vertIndx]=-1;
 				}
 				he=he.prev.twin;
-			} while (he!=edge);
+			} while (he!=edge && safety>0);
+			if (safety==0)
+				throw new CombException("'safety' valve breached, edge "+edge);
 		}
 		pdcel.redChain=null;
 		
@@ -1104,12 +1108,12 @@ public class CombDCEL {
 	}
 
 	/**
-	 * Given a DCEL structure with an already processed red chain, 
-	 * an 'alpha' edge, and 'vertices' updated, we process to 
-	 * create 'faces', 'edges', layout order, etc. This can be 
-	 * used when we modify the structure inside but can keep or
-	 * modify the red chain, e.g., when flipping an edge, 
-	 * adding an edge, etc. 
+	 * Given a DCEL structure with an already processed 
+	 * red chain and 'vertices' updated, we process to 
+	 * create 'faces', 'edges', layout order, etc. 
+	 * This can be used when we modify the structure 
+	 * inside but can keep or modify the red chain, 
+	 * e.g., when flipping an edge, adding an edge, etc. 
 	 * @param pdcel
 	 * @return PackDCEL
 	 */
@@ -1120,6 +1124,28 @@ public class CombDCEL {
 		//      pdcel.oldNew.
 		
 		pdcel.triData=null;  // filled when needed for repacking
+		
+		// we prefer that 'alpha' be set already, but in some
+		//    cases it is tossed out. Here we make simple choice:
+		//    some edge which is not red.
+		if (pdcel.alpha==null) {
+			for (int v=1;(v<=pdcel.vertCount && pdcel.alpha==null);v++) {
+				HalfLink spokes=pdcel.vertices[v].getEdgeFlower();
+				Iterator<HalfEdge> sis=spokes.iterator();
+				while (pdcel.alpha==null && sis.hasNext()) {
+					HalfEdge he=sis.next();
+					if (he.myRedEdge==null && he.twin.myRedEdge==null) {
+						pdcel.alpha=he;
+						if (pdcel.p!=null) 
+							pdcel.p.directAlpha(he.origin.vertIndx);
+					}
+				}
+			}
+		}
+		
+		if (pdcel.alpha==null) 
+			throw new CombException(
+					"'alpha' is missing and 'd_FillInside' failed to set it");
 		
 		// use 'HalfEdge.eutil' to keep track of edges hit; this
 		//   should be used in initializing interior edges.
@@ -1141,7 +1167,7 @@ public class CombDCEL {
 		}
 		
 		// zero out 'RedHEdge.redutil'
-		RedHEdge rtrace=pdcel.redChain;
+		RedHEdge rtrace=pdcel.redChain; // DCELdebug.printRedChain(pdcel.redChain);
 		if (rtrace!=null) { // not spherical case
 			int safety=2*pdcel.vertCount+100;
 			do {
@@ -2961,9 +2987,10 @@ public class CombDCEL {
 	   * abandoned. Mark them by setting 'halfedge' to null and
 	   * put new index in 'vutil'.
 	   * 
-	   * Call 'wrapAdjoin' to wrap up before returning; calling 
-	   * routine only needs to 'attachDCEL', but may have some 
-	   * updating because of new indexing.
+	   * Call 'wrapAdjoin' to wrap up before returning; this
+	   * creates 'oldNew'. Calling routine only needs to 'attachDCEL', 
+	   * but may have some updating because of new indexing, saving
+	   * lists, etc.
 	   * 
 	   * @param pdc1 PackDCEL (typically a clone)
 	   * @param pdc2 PackDCEL (typically a clone)
@@ -2975,11 +3002,11 @@ public class CombDCEL {
 	  public static PackDCEL d_adjoin(PackDCEL pdc1,PackDCEL pdc2,
 			  int v1,int v2, int n) {
 		  
-		  // 'he1/2' to be identified: clw from 'v1' cclw from 'v2'
+		  // 'he1/2' to be identified: clw from 'v1', cclw from 'v2'
 		  HalfEdge he1=pdc1.vertices[v1].halfedge.twin.next.twin;
 		  HalfEdge he2=pdc2.vertices[v2].halfedge;
 
-		  // save some red edge
+		  // save some red edge // DCELdebug.printRedChain(pdc1.redChain);
 		  RedHEdge red1=he1.myRedEdge;
 		  RedHEdge red2=he2.myRedEdge;
 		  
@@ -3044,26 +3071,34 @@ public class CombDCEL {
 					  
 				  // need to check suitability
 				  if (he2.twin.prev.prev==he1.twin)
-					  throw new CombException("self-adjoin: given vertices too close");
-				  HalfEdge he=he1.twin;
-				  HalfEdge lastedge=he;
+					  throw new CombException(
+							  "self-adjoin: given vertices too close");
+				  HalfEdge nxtedge=he1.twin;
 				  int indx2=0;
 				  for (int j=1;(j<n1 && indx2==0);j++) {
-					  lastedge=he=he.next;
-					  if (he==he2.twin)
+					  nxtedge=nxtedge.next;
+					  if (nxtedge==he2.twin)
 						  indx2=j;
 				  }
 					  
 				  // not enough edges
 				  if ((indx2+1)<2*n || indx2==2*n)
-					  throw new CombException("self-adjoin: not enough edges");
+					  throw new CombException(
+							  "self-adjoin: not enough edges");
 					  
 				  // can we zip the other direction from common vert?
 				  if ((indx2+1)==2*n) {
-					  HalfEdge nxtedge=lastedge; // start at other ennd
+					  
+					  // find the clw edge from common vert
+					  nxtedge=he2.twin;
+					  for (int j=1;j<n;j++) {
+						  nxtedge=nxtedge.prev;
+					  }
+					  
 					  for (int j=1;j<=n;j++) {
-						  CombDCEL.zipEdge(pdc1,nxtedge.origin);
+						  Vertex cmVert=nxtedge.origin;
 						  nxtedge=nxtedge.next;
+						  CombDCEL.zipEdge(pdc1,cmVert);
 					  }
 					  return CombDCEL.wrapAdjoin(pdc1, pdc2);
 				  }
@@ -3088,14 +3123,14 @@ public class CombDCEL {
 			  he=he.prev.twin; // cclw
 		  } while (he!=he2);
 		  oldvert1.halfedge=null; // abandoned
-		  oldvert1.vutil=vert1.vertIndx; // vutil hold new index
+		  oldvert1.vutil=vert1.vertIndx; // vutil holds new index
 		  he=he2.twin;
 		  do {
 			  he.origin=vert2;
 			  he=he.twin.next; // clw
 		  } while(he!=he2.twin);
 		  oldvert2.halfedge=null; // abandoned
-		  oldvert2.vutil=vert2.vertIndx; // vutil hold new index
+		  oldvert2.vutil=vert2.vertIndx; // vutil holds new index
 		  vert2.halfedge=he2.twin.prev.twin;
 
 		  // fix things pointing to orphaned he1.twin, he2.twin
@@ -3194,7 +3229,7 @@ public class CombDCEL {
 			  vtick=pdc1.vertCount; // start here
 			  for (int v=1;v<=pdc2.vertCount;v++) {
 				  Vertex vert=pdc2.vertices[v];
-				  if (vert.halfedge!=null) {
+				  if (vert.halfedge!=null) { // not abandoned?
 					  ++vtick;
 					  if (vtick!=vert.vutil)
 						  pdc1.oldNew.add(new EdgeSimple(vert.vutil,vtick));
@@ -3204,12 +3239,13 @@ public class CombDCEL {
 			  } // DCELdebug.printRedChain(pdc2.redChain);
 			  
 			  // oldNew for orphaned verts: 
-			  //  NOTE: "old" is the original pdc2 index + pdc1.vertCount
+			  //  NOTE: "old" = original pdc2 index = vertIndx - pdc1.vertCount
 			  for (int v=1;v<=pdc2.vertCount;v++) {
 				  Vertex vert=pdc2.vertices[v];
-				  if (vert.halfedge==null) { 
+				  if (vert.halfedge==null) { // was abandoned
 					  int newindx=vert.vutil; // pdc1 vert this was identified with
-					  pdc1.oldNew.add(new EdgeSimple(vert.vertIndx,newindx));
+					  int orig2Indx=vert.vertIndx-pdc1.vertCount;
+					  pdc1.oldNew.add(new EdgeSimple(orig2Indx,newindx));
 				  }
 			  }
 		  }
