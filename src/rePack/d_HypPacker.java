@@ -20,6 +20,7 @@ public class d_HypPacker extends RePacker {
     // Constructors
     public d_HypPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
     	p=pd;
+		oldReliable=false;
     	if (pass_limit<0) passLimit=PASSLIMIT;
 		else passLimit=pass_limit;
 		status=load(); 
@@ -50,7 +51,7 @@ public class d_HypPacker extends RePacker {
     		}
     	}
     	if (aimnum==0) return FAILURE; // nothing to repack
-    	if (super.triDataLoad()<0) return FAILURE;
+    	oldReliable=super.triDataLoad();
     	return LOADED; 
 
  /* TODO: have to convert this old code designed, I guess,
@@ -389,7 +390,6 @@ public class d_HypPacker extends RePacker {
 			localPasses++;
 		} // end of main while loop
 
-		reapResults();
 		totalPasses += localPasses;
 		return RIFFLE;
 	}
@@ -406,6 +406,8 @@ public class d_HypPacker extends RePacker {
 		if (!useSparseC) {
 			try {
 				count=genericRePack(cycles);
+				if (count!=0)
+					reapResults();
 				p.fillcurves();
 				p.packDCEL.dcelCompCenters();
 			} catch (Exception ex) {

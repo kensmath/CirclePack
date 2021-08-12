@@ -108,7 +108,7 @@ public class TriAspect extends TriData {
 			sides[j]=asp.sides[j];
 			redFlags[j]=asp.redFlags[j];
 			t_vals[j]=asp.t_vals[j];
-			invDist[j]=asp.invDist[j];
+			setInvDist(j,asp.getInvDist(j));
 			schwarzian[j]=asp.schwarzian[j];
 		}
 		if (asp.baseMobius!=null) {

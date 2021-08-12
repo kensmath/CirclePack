@@ -94,6 +94,9 @@ public abstract class RePacker {
 	public double []R1;
 	public double []R2;
 	public UtilPacket utilPacket;
+
+	// When inv dist involved or optional, use old reliable 
+	public boolean oldReliable; 
 	
 	// Constructor: 
 	// NOTE: calling routine should kill if 'pd.status' is not positive
@@ -225,15 +228,16 @@ public abstract class RePacker {
 	 * methods, typically with supersteps, etc. Originally in C,
 	 * now implemented in Java. 
 	 * 
-	 * TODO: may want to reimplement in C library, could be part of standalone
-	 * code (and might be faster??).
+	 * TODO: may want to reimplement in C library, could be part 
+	 * of standalone code (and might be faster??).
 	 * 
 	 * On success, reap resulting radii; normally centers are computed 
 	 * in a separate call at user's discretion. 
 	 * 
 	 * Alternate methods: Orick's method and using GOpack for max 
 	 * packings (which by nature also computes centers); also 
-	 * 'oldReliable' is used, e.g., with inversive distances.
+	 * 'oldReliable' is used, e.g., when there are nontrivial 
+	 * inversive distances involved.
 	 * 
 	 * @param pass_limit
 	 * @return int, 0 on error
@@ -275,7 +279,8 @@ public abstract class RePacker {
 			CirclePack.cpb.myErrorMsg("genericRePack: not in prepared status");
 			return 0;
 		}
-		if (status==LOADED) localPasses=startRiffle();
+		if (status==LOADED) 
+			localPasses=startRiffle();
 		else localPasses=0;
 		totalPasses += localPasses;
 		if (continueRiffle(pass_limit)!=0) {  // successful?
@@ -284,7 +289,10 @@ public abstract class RePacker {
 		return 0;
 	}
 
-	// Convenience: this is first thing called in 'load()' calls.
+	/**
+	 * traditional: this is first thing called in 'load()' calls.
+	 * @return
+	 */
 	public int genericLoad() {
 		int num;
 		try {
@@ -322,23 +330,25 @@ public abstract class RePacker {
 		return 1;
 	}
 	
-	// Convenience: for DCEL packing, this is first call in 'load()' calls.
-	public int triDataLoad() {
-		try {
+	/**
+	 * This is first call in 'load()' calls in DCEL setting.
+	 * Return true if there are non-trivial inv distances involved.
+	 * @return boolean
+	 */
+	public boolean triDataLoad() {
+		boolean hit=false;
 		if (pdcel.triData==null) {
 			pdcel.triData=new TriData[pdcel.faceCount+1];
 			for (int f=1;f<=pdcel.faceCount;f++) {
 				pdcel.triData[f]=new TriData(pdcel,f);
+				if (pdcel.triData[f].hasInvDist())
+					hit=true;
 			}
 		}
 		else {
-			pdcel.updateTriDataRadii();
+			hit=pdcel.updateTriDataRadii();
 		}
-		} catch (Exception ex) {
-			CirclePack.cpb.myErrorMsg("'RePacker' has failed with DCEL load");
-			return FAILURE;
-		}
-		return 1;
+		return hit;
 	}
 	
 	/**

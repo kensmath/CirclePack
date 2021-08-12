@@ -11,17 +11,16 @@ import packing.PackData;
 import packing.RData;
 
 /**
- * First attempt to modify methods to accommodate DCEL data. Begin
- * with oldReliable. Other routines remain here but are not used (1/2021)
+ * Euclidean repacking with DCEL structures
  * @author kstephe2 1/2021
  *
  */
 public class d_EuclPacker extends RePacker {
 	
-
     // Constructors
     public d_EuclPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
     	p=pd;
+		oldReliable=false;
     	if (pass_limit<0) passLimit=PASSLIMIT;
 		else passLimit=pass_limit;
 		status=load(); 
@@ -48,8 +47,12 @@ public class d_EuclPacker extends RePacker {
     			aimnum++;
     		}
     	}
-    	if (aimnum==0) return FAILURE; // nothing to repack
-    	if (super.triDataLoad()<0) return FAILURE;
+    	if (aimnum==0)  // nothing to repack
+    		return FAILURE;
+    	
+    	// load the 'TriData'; true if inv distances involved
+   		oldReliable=triDataLoad();
+   		
     	return LOADED; 
     }
     
@@ -341,7 +344,6 @@ public class d_EuclPacker extends RePacker {
 	    localPasses++;
 	} // end of main while loop 
 	
-	reapResults();
 	totalPasses+=localPasses;
 	return RIFFLE;
     }
@@ -402,7 +404,6 @@ public class d_EuclPacker extends RePacker {
       } /* end of while */
       return count;
     }
-    
     
     /**
      * Copied from '*_radcalc'. This uses data in

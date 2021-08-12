@@ -31,6 +31,8 @@ import util.ColorUtil;
 import util.StringUtil;
 
 /**
+ * traditional
+ * 
  * This is a specialized class created for calls to 'cookie' and
  * containing specialized combinatoric routines. It first creates a
  * clone of the packing and any poison lists (saving aside various other 

@@ -70,11 +70,12 @@ public class CircleSimple{
    * @return int CircleSimple.flag
    */
   public int save(PackData p,int v) {
-	  if (p==null || v<=0 || v>p.nodeCount) return -1;
+	  if (p==null || v<=0 || v>p.nodeCount) 
+		  return -1;
 	  if (flag>=0) { // seems to be good data
 		  p.setCenter(v,new Complex(center));
 		  p.setRadius(v,rad);
-//		  p.kData[v].plotFlag=flag;
+		  p.setPlotFlag(v,flag);
 	  }
 	  return flag; 
   }

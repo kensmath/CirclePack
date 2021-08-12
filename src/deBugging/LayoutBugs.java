@@ -7,6 +7,7 @@ import java.util.Iterator;
 
 import allMains.CirclePack;
 import dcel.PackDCEL;
+import dcel.RedHEdge;
 import input.CPFileManager;
 import komplex.EdgeSimple;
 import komplex.Face;
@@ -101,14 +102,15 @@ public class LayoutBugs {
 	}
 	
 	/**
-	 * log main information on 'RedList' and/or 'RedEdge', put in 'RedList_xx_log.txt'. 
-	 * @param p, PackData
+	 * log main information on 'RedList' and/or 'RedEdge', 
+	 * put in 'RedList_xx_log.txt'. 
+	 * @param p PackData
 	 * @param redface, RedList
 	 * @return count
 	 */
-	public static int log_RedList(PackData p,RedList redface) {
+	public static int log_RedList(PackData p,RedHEdge redface) {
 		  int count=0;
-		  RedList rtrace;
+		  RedHEdge rtrace;
 
 		  String filename=new String("RedList_"+(rankStamp++)+"_log.txt");
 		  BufferedWriter dbw=CPFileManager.openWriteFP(tmpdir,filename,false);
@@ -122,12 +124,12 @@ public class LayoutBugs {
 				  dbw.close();
 				  return 1;
 			  }
-			  writeRed(redface.packData,redface,dbw);
-		      rtrace=redface.next;
+			  writeRed(redface,dbw);
+		      rtrace=redface.nextRed;
 		      while (rtrace!= redface && count<1000) {
-				  writeRed(redface.packData,rtrace,dbw);
+				  writeRed(redface,dbw);
 			      count++;
-			      rtrace=rtrace.next;
+			      rtrace=rtrace.nextRed;
 		      }
 		      
 		      dbw.flush();
@@ -234,18 +236,18 @@ public class LayoutBugs {
 		  String filename=new String("faceOrder_"+(rankStamp++)+"_log.txt");
 		  BufferedWriter dbw=CPFileManager.openWriteFP(tmpdir,filename,false);
 		  try {
-			  CirclePack.cpb.msg("debug faceorder to: "+tmpdir.toString()+File.separator+filename);
+			  CirclePack.cpb.msg("debug 'computeOrder' to: "+tmpdir.toString()+File.separator+filename);
 		      dbw.write("\nFace order: nodeCount "+p.nodeCount+
 		    		  ", faceCount "+p.faceCount+"\n  firstFace "+p.firstFace+
-		    		  ", firstRedFace "+p.firstRedFace+
-		    		  ", redChain "+p.redChain.face+" --- \n\n");
-		      int nf=p.firstFace;
-		      boolean keepon=true;
-		      while ((nf>0 && nf<=p.faceCount && nf!=p.firstFace && count<=2*p.faceCount) || keepon) {
-		    	  keepon=false;
-		    	  Face face=p.faces[nf];
-		    	  writeFace(p,nf,dbw);
-		    	  nf=face.nextFace;
+		    		  ", redChain starts with edge "+p.packDCEL.redChain.myEdge+
+		    		  " and face "+p.packDCEL.redChain.myEdge.face.faceIndx+
+		    		  " --- \n\n");
+		      Iterator<EdgeSimple> gis=p.packDCEL.computeOrder.iterator();
+		      EdgeSimple edge=gis.next();
+		      writeFace(p.packDCEL,edge.w,dbw);
+		      count++;
+		      while(gis.hasNext()) {
+		    	  writeFace(p.packDCEL,gis.next().w,dbw);
 		    	  count++;
 		      }
 			  dbw.flush();
@@ -391,7 +393,8 @@ public class LayoutBugs {
 	}
 
 	/**
-	 * List face indices of given 'RedList' in FaceLink; for debugging red chain
+	 * List face indices of given 'RedList' in FaceLink; for 
+	 * debugging red chain
 	 * @param redface, RedList
 	 * @return FaceLink
 	 */
@@ -666,24 +669,40 @@ public class LayoutBugs {
 	 * @param f, face index
 	 * @param dbw, writer
 	 */
-	private static void writeFace(PackData p, int f, BufferedWriter dbw) {
-		Face face = p.faces[f];
+	private static void writeFace(PackDCEL pdcel, int f, BufferedWriter dbw) {
+		dcel.Face face = pdcel.faces[f];
 		try {
-			dbw.write("Face " + f + ": [" + face.vert[0] + "," + face.vert[1]
-					+ "," + face.vert[2] + "]; \n");
-			dbw.write("   plots circle " + face.vert[(face.indexFlag + 2) % 3]
-					+ "    " + ",rwbFlag=" + face.rwbFlag + ",plotFlag="
-					+ face.plotFlag + "rwbFlag=" + face.rwbFlag + ",plotFlag="
-					+ face.plotFlag + ",indexFlag=" + face.indexFlag + "\n");
-			dbw.write("     nextFace=" + face.nextFace + ", nextRed="
-					+ face.nextRed + ")\n");
+			dbw.write("Face " + f + "=<"+face+">; \n");
+			dbw.write("   plots circle " + face.edge.prev.origin+"\n");
+		} catch (Exception ex) {
+			System.err.print(ex.toString());
+		}
+	}
+
+
+	/**
+	 * traditional 
+	 * 
+	 * @param rededge RedHEdge
+	 * @param dbw BufferedWriter
+	 */
+	private static void writeRed(RedHEdge rededge,BufferedWriter dbw) {
+		dcel.Face face=rededge.myEdge.face;
+		try {
+		dbw.write("RedHEdge: "+rededge.myEdge+", face "+face.faceIndx+
+				"=<"+face+">\n");
+		
+		// is the face blue? (has two successive red edges)
+		if (rededge.nextRed.myEdge==rededge.myEdge.next ||
+				rededge.prevRed.myEdge==rededge.myEdge.prev)
+			dbw.write("This face is 'blue' (two redchain edges)\n");
 		} catch (Exception ex) {
 			System.err.print(ex.toString());
 		}
 	}
 
 	/**
-	 * Internal utility routine to write data on one 'RedList' or 'RedEdge'
+	 * Internal utility routine to write data on one 'RedHEdge' as
 	 * entry to a BufferedWriter. See also 'print_one_redEdge' for
 	 * @param p, PackData
 	 * @param red, RedList

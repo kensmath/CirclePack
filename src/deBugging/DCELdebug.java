@@ -453,6 +453,15 @@ public class DCELdebug {
 		}
 	}
 
+	public static void drawEFC(PackDCEL pdcel,HalfEdge hfe) {
+		drawEdgeFace(pdcel,hfe);
+		StringBuilder strbld=new StringBuilder("disp -c "+
+				hfe.origin.vertIndx+" "+hfe.twin.origin.vertIndx+" "+
+				hfe.prev.origin.vertIndx);
+		CommandStrParser.jexecute(pdcel.p,strbld.toString());
+		pdcel.p.cpScreen.rePaintAll();
+	}
+	
 	public static void drawEdgeFace(PackDCEL pdcel,HalfEdge hfe) {
 		EdgeSimple es=new EdgeSimple(hfe.origin.vertIndx,hfe.twin.origin.vertIndx);
 		if (pdcel.oldNew!=null) {

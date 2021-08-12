@@ -28,7 +28,7 @@ cir_invert [-u] {v} {w}
 Cleanse 
 cleanse 
 close [window list] 
-color [options] 
+color -[cf] [options] 
 cookie [option] {v..} 
 copy {p} 
 count -[vef] {..} 
@@ -103,8 +103,9 @@ molify_centers [option] {v..}
 msg {text} 
 msg_remote {pid or moniker} {msg} 
 nan {filename} 
-NSpole [{N S {E} [t]} (or -a N {E} [t])] 
+newRed [-t, {v..}] 
 norm_scale [options] 
+NSpole [{N S {E} [t]} (or -a N {E} [t])] 
 open [window list] 
 outlist 
 output [format] [-af] {filename} 
@@ -121,6 +122,7 @@ polypack -[o] {w ..}
 post [options] 
 pre_cookie 
 project [options] 
+prune 
 puncture [{v}] [-f {f}] 
 put_data -q{q} [-t] {flag} {v..} 
 pwd 
@@ -138,13 +140,14 @@ Read_CT [-q{p}] {filename}
 read_color [options] {filename} 
 read_path -[as] {filename} 
 Read_path {filename} 
+renumber 
 reorient 
 red_from_elist 
 repack [options] [k] 
 ring {v..} 
 rld 
 rm_bary {v..} 
-rm_cir {v..} [-x x y] 
+rm_cir {v} 
 rm_edge [option] {v w..} 
 rm_quad {v w} 
 rotate {a} 
@@ -212,7 +215,7 @@ slit {v..}
 smooth  -[abcdsx] 
 spiral [-f] {a b} 
 split_edge v1 w1  v2 w2 .. 
-split_flower v w u 
+split_flower v w [u] 
 socketServe n 
 sq_fit 
 sq_grid_overlaps 
@@ -239,7 +242,7 @@ write_custom -[option] -[fa] {file}
 write_carrier [option] {file} 
 writeL(_raw) {filename} 
 WriteL(_raw) {filename} 
-write_path {file} 
+write_path -[s] {file} 
 Write_path {file} 
 write_select_radii {file} {v..} 
 Write_select_radii {file} {v..} 
@@ -249,7 +252,7 @@ write_tiling -s
 Write_tiling -s 
 write_vert_list {filename} {v..} 
 Write_vert_list {filename} {v..} 
-zip v n 
+zip n v 
 := [[SLIDER..]'] {x} 
 !! 
 ?aim {v} 

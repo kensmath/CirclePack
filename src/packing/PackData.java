@@ -298,6 +298,7 @@ public class PackData{
     		alloc_pack_space(pdcel.vertCount+10,true);
     	
     	packDCEL=pdcel;
+    	firstFace=pdcel.computeOrder.get(0).w;
     	pdcel.p=this;
     	int origNodeCount=nodeCount;
     	if (pdcel.alpha==null)
@@ -752,9 +753,11 @@ public class PackData{
                     		(mainTok.equals("FLOWERS:") || mainTok.equals("BOUQUET:"))) ||
                     		(state==PackState.TILECOUNT && (mainTok.equals("TILES:") || 
                     				mainTok.equals("TILEFLOWERS:")))) {
-                		
+
+                    	// NOTE: as of 8/11/2021, 
+                    	//       equate "BOUQUET:" and "FLOWERS:" calls 
                     	// read all or until error. 
-                    	if (mainTok.equals("BOUQUET:"))
+                    	if (mainTok.equals("BOUQUET:") || mainTok.equals("FLOWERS:"))
                     		dcelread=true;
                         gotFlowers = true;
                     	int num;
@@ -2375,6 +2378,8 @@ public class PackData{
     */
     
     /** 
+     * traditional 
+     * 
      * Allocate space for circle overlaps/inversive distances. 
      * With new DCEL structure, space is already allocated in
      * 'HalfEdge's, so this call is OBE. 
@@ -7458,7 +7463,7 @@ public class PackData{
 					while (sis.hasNext()) {
 						HalfEdge he=sis.next();
 						int kk=he.twin.origin.vertIndx;
-						schw=he.getSchwarzain();
+						schw=he.getSchwarzian();
 						if (schw!=1.0 && v < kk) {
 							if (!hitflag) {
 								hitflag=true;
@@ -8168,10 +8173,13 @@ public class PackData{
 			if (packDCEL!=null) {
 				if (hes < 0) { // hyp
 					d_HypPacker h_packer=new d_HypPacker(this,passes);
+					oldRel=oldRel || h_packer.oldReliable;
+					int ans=0;
 					if (!oldRel) {
-						return h_packer.genericRePack(passes);
+						ans=h_packer.genericRePack(passes);
 					}
-					int ans=h_packer.d_oldReliable(1000); 
+					else
+						ans=h_packer.d_oldReliable(1000); 
 					if (ans>0) {
 						h_packer.reapResults();
 						fillcurves();
@@ -8186,10 +8194,13 @@ public class PackData{
 				}
 				else  { // eucl
 					d_EuclPacker e_packer=new d_EuclPacker(this,passes);
+					oldRel=oldRel || e_packer.oldReliable;
+					int ans=0;
 					if (!oldRel) {
-						return e_packer.genericRePack(passes);
+						ans=e_packer.genericRePack(passes);
 					}
-					int ans=e_packer.d_oldReliable(passes); // TODO: specify in call
+					else
+						ans=e_packer.d_oldReliable(passes); // TODO: specify in call
 					if (ans>0) {
 						e_packer.reapResults();
 //						CirclePack.cpb.msg("Did DCEL eucl repack, count="+ans);
@@ -8203,8 +8214,8 @@ public class PackData{
 			
 			// else, traditional call
 			if (hes < 0) { // hyp
+				HypPacker hyppack = new HypPacker(this, useC);
 				if (!oldRel) {
-					HypPacker hyppack = new HypPacker(this, useC);
 					if (hyppack.status > 0)
 						count = hyppack.genericRePack(passes);
 				} else
@@ -8214,7 +8225,8 @@ public class PackData{
 					EuclPacker euclpack = new EuclPacker(this, useC);
 					if (euclpack.status > 0)
 						count = euclpack.genericRePack(passes);
-				} else
+				} 
+				else
 					count = EuclPacker.oldReliable(this, passes);
 			} else { // sph
 				if (this.intrinsicGeom <= 0) {
@@ -13330,16 +13342,15 @@ public class PackData{
 	  }
 	  
 	  /**
-		 * Use xyz data to set invDist, allocating space 
-		 * if necessary. This command is still evolving. 
-		 * Eventually, may want to specify which ones to set;
-		 * for now, set all.
+		 * Use xyz data to set 'invDist's. This command 
+		 * is still evolving. Eventually, may want to 
+		 * specify which ones to set; for now, set all.
 		 * 
 		 * flag=1: find max/min edge lengths in xyz data, set 
 		 * inv distances as though circle radii were all min/2.
 		 * 
 		 * flag=2: for each vertex v find min edgelength, 
-		 * set inv distance as though radius of v was half that.
+		 * set inv distance as though radius of v is half that.
 		 * 
 		 * Radii are NOT changed --- only used to set
 		 * invDistances. Return count, 0 on error.
@@ -13350,50 +13361,56 @@ public class PackData{
 	public int set_xyz_overlaps(Point3D[] xyz_list,int flag) {
 		
 		// right size list?
-		if (!status || xyz_list==null || xyz_list.length!=nodeCount)
+		if (!status || xyz_list==null || xyz_list.length!=nodeCount) {
+			CirclePack.cpb.errMsg("usage: 'set_xyz_overlaps': recorded 'xyz' "+
+					"data is not correct size");
 			return 0;
-		
-		int k;
-		double[] tmprads;
+		}
+
 		double miN = 1000000000.0, maX = 0.0;
-		double ovlp, dist, rad, ovlpmax = OKERR, ovlpmin = 1000;
+		double ivdmax= OKERR, ivdmin = 1000;
 
-
-		alloc_overlaps();
+		if (packDCEL==null) 
+			throw new DCELException("'set_xyz_overlaps' requires DCEL structure");
 
 		if (flag == 1) { // treat as though all radii were miN/2.
 
 			// compute maX/miN distances
 			for (int i = 1; i <= nodeCount; i++) {
 				int[] petals=getPetals(i);
+				int k;
 				for (int j = 0; j < petals.length; j++)
 					if ((k = petals[j]) > i && i <= nodeCount
 							&& k <= nodeCount) {
-						dist = EuclMath.xyz_dist(xyz_list[i], xyz_list[k]);
+						double dist = EuclMath.xyz_dist(xyz_list[i], xyz_list[k]);
 						miN = (dist < miN) ? dist : miN;
 						maX = (dist > maX) ? dist : maX;
 					}
 			}
 			if (miN == 1000000000.0 || maX == 0.0 || (miN < OKERR))
 				return 0; // ??
-			rad = miN / 2.0;
+			double rad = miN / 2.0;
 			// compute and store overlaps
-			for (int i = 1; i <= nodeCount; i++) {
-				int[] petals=getPetals(i);
-				for (int j = 0; j < petals.length; j++)
-					if ((k = petals[j]) > i && i <= nodeCount
-							&& k <= nodeCount) {
-						ovlp = xyz_inv_dist(xyz_list[i], xyz_list[k], rad, rad);
-						set_single_invDist(i, k, ovlp);
-						ovlpmax = (ovlp > ovlpmax) ? ovlp : ovlpmax;
-						ovlpmin = (ovlp < ovlpmin) ? ovlp : ovlpmin;
+			for (int v=1;v<=nodeCount;v++) {
+				Vertex vert=packDCEL.vertices[v];
+				HalfLink spokes=vert.getEdgeFlower();
+				Iterator<HalfEdge> sis=spokes.iterator();
+				while (sis.hasNext()) {
+					HalfEdge he=sis.next();
+					int w=he.twin.origin.vertIndx;
+					if (v<w) {
+						double ivd = xyz_inv_dist(xyz_list[v], xyz_list[w], rad, rad);
+						he.setInvDist(ivd);
+						ivdmax = (ivd > ivdmax) ? ivd : ivdmax;
+						ivdmin = (ivd < ivdmin) ? ivd : ivdmin;
 					}
+				}
 			}
 			CirclePack.cpb.msg("Set overlaps using "
 					+ "euclidean 3-space distances.\n"
 					+ "  side lengths: max = " + maX + ", max/min = "
 					+ (maX / miN) + "\n" + "  radius " + rad + "\n"
-					+ "  overlaps: max = " + ovlpmax + ", min = " + ovlpmin);
+					+ "  inv distance: max = " + ivdmax + ", min = " + ivdmin);
 			return 1;
 		}
 		if (flag == 2) { /*
@@ -13401,14 +13418,15 @@ public class PackData{
 							 * minimum eldg length from v.
 							 */
 			// compute temporary radii
-			tmprads = new double[nodeCount + 2];
+			double[] tmprads = new double[nodeCount + 2];
 			for (int i = 1; i <= nodeCount; i++) {
 				miN = 100000000;
 				int[] petals=getPetals(i);
+				int k;
 				for (int j = 0; j < petals.length; j++) {
 					if ((k = petals[j]) != 0 && i <= nodeCount
 							&& k <= nodeCount) {
-						dist = Math.sqrt((xyz_list[i].x - xyz_list[k].x)
+						double dist = Math.sqrt((xyz_list[i].x - xyz_list[k].x)
 								* (xyz_list[i].x - xyz_list[k].x)
 								+ (xyz_list[i].y - xyz_list[k].y)
 								* (xyz_list[i].y - xyz_list[k].y)
@@ -13420,23 +13438,26 @@ public class PackData{
 				tmprads[i] = miN / 2.0;
 			}
 			// compute and store overlaps
-			for (int i = 1; i <= nodeCount; i++) {
-				int[] petals=getPetals(i);
-				for (int j = 0; j < petals.length; j++) {
-					if ((k = petals[j]) > i && i <= nodeCount
-							&& k <= nodeCount) {
-						ovlp = xyz_inv_dist(xyz_list[i], xyz_list[k],
-								tmprads[i], tmprads[k]);
-						set_single_invDist(i, k, ovlp);
-						ovlpmax = (ovlp > ovlpmax) ? ovlp : ovlpmax;
-						ovlpmin = (ovlp < ovlpmin) ? ovlp : ovlpmin;
+			for (int v=1;v<=nodeCount;v++) {
+				Vertex vert=packDCEL.vertices[v];
+				HalfLink spokes=vert.getEdgeFlower();
+				Iterator<HalfEdge> sis=spokes.iterator();
+				while (sis.hasNext()) {
+					HalfEdge he=sis.next();
+					int w=he.twin.origin.vertIndx;
+					if (v<w) {
+						double ivd =xyz_inv_dist(xyz_list[v], xyz_list[w],
+								tmprads[v], tmprads[w]); 
+						he.setInvDist(ivd);
+						ivdmax = (ivd > ivdmax) ? ivd : ivdmax;
+						ivdmin = (ivd < ivdmin) ? ivd : ivdmin;
 					}
 				}
 			}
 			CirclePack.cpb.msg("Set overlaps using "
 					+ "euclidean 3-space distances and for each vert v, \n"
 					+ "  use 1/2 the length of the shortest edge from v .\n"
-					+ "  overlaps: max = " + ovlpmax + ", min = " + ovlpmin);
+					+ "  inv distances: max = " + ivdmax + ", min = " + ivdmin);
 			return 1;
 		}
 		return 0;
@@ -15239,20 +15260,11 @@ public class PackData{
 	   * @return double, 
 	   */
 	  public double getSchwarzian(EdgeSimple es) { // given <v,w>
-		  if (packDCEL!=null) {
-			  HalfEdge he=packDCEL.findHalfEdge(es);
-			  if (he==null)
-				  throw new DataException("schwarzian failure: "+
-						  es.v+" and "+es.w+" are not neighbors");
-			  return he.getSchwarzain();
-		  }
-		  
-		  // else check in kData.
-		  int k=nghb(es.v,es.w);
-		  if (k<0) 
+		  HalfEdge he=packDCEL.findHalfEdge(es);
+		  if (he==null)
 			  throw new DataException("schwarzian failure: "+
 					  es.v+" and "+es.w+" are not neighbors");
-		  return kData[es.v].schwarzian[k];
+		  return he.getSchwarzian();
 	  }
 	  
 	  /**
@@ -15299,26 +15311,17 @@ public class PackData{
 	  
 	  /**
 	   * Return the inversive distance recorded for edge from
-	   * v to nghb w. 1.0 is default. 1.0 for default
+	   * v to nghb w. 1.0 is default.
 	   * @param v int
 	   * @param w int
 	   * @return double
 	   */
 	  public double getInvDist(int v,int w) {
-		  if (packDCEL!=null) {
-			  HalfEdge he=packDCEL.findHalfEdge(v,w);
-			  if (he!=null)
-				  return he.getSchwarzain();
-			  throw new CombException("invDist error: <"+v+","+w+"> is not a valid edge");
-		  }
-		  
-		  // else look in kData
-		  if (!overlapStatus)
-			  return 1.0;
-		  int j=nghb(v,w);
-		  if (j<0) // not an edge
-			  return 1.0;
-		  return getPetal(v,nghb(v,w));
+		  HalfEdge he=packDCEL.findHalfEdge(v,w);
+		  if (he!=null)
+			  return he.getInvDist();
+		  throw new CombException(
+			  "invDist error: <"+v+","+w+"> is not a valid edge");
 	  }
 	  
 	  /** 
@@ -15453,133 +15456,7 @@ public class PackData{
 	    return null;
 	  }
 
-	  /**
-	   * Routine to 'migrate' a branch point in a complex. This is based on
-	   * the geometric method for creating branch points, namely, attaching 
-	   * two packings along a common slit, the tips of the slit becoming the 
-	   * branch circle. If the local combinatorics of the two complexes were
-	   * identical, then the slit could be extended on each piece to end at 
-	   * the common neighbors of the original tips so that after pasting the 
-	   * branching would occur at that neighbor. This routine adjusts the 
-	   * combinatorics of the original pasted complex locally to accomplish 
-	   * the same result -- so a branch point v is "migrated" to a neighbor w.
-	   * 
-	   * Branching is a geometric phenomenon, while the work here seems purely 
-	   * combinatoric. The local combinatorics must have certain symmetries to
-	   * make this work: namely, the original 'branch' vertex v must have even 
-	   * degree (at least 6) and the neighbor w must have the same degree as
-	   * the vertex on the opposite side of v. 
-	   * 
-	   * After migration, as a bookkeeping convenience, indices are reset so v 
-	   * again points to the branch vertex, w is one of the two neighbors
-	   * corresponding to the original branch point.
-	   * 
-	   * Return 0 on error, return new w on success. 
-	   */
-	   
-	  public int migrate(int v,int w) {
-	   	int u,jdex,dex,ww,node=nodeCount;
-	   	
-	   	if (v<1 || v>nodeCount || w<1 || w>nodeCount
-	   		|| isBdry(v) || isBdry(w)) {
-	  	    return 0;
-	  	}
-	   	int num_v=countFaces(v);
-	   	int halfv=(int)(num_v/2);
-	   	int ind_w=nghb(v,w);
-	   	if (ind_w<0 || num_v<6 || halfv*2!=num_v) return 0;
-	   	int num_w=countFaces(w);
-	   	ww=getPetal(v,(ind_w+halfv)%num_v);
-	   	if (isBdry(ww) || num_w!=countFaces(ww)) return 0;
-	   	
-	   	/* At end will identify ww with w to become new branch point. "Half" 
-	   	 * of v starting at w will become new vert w; other half, vert ww.*/
-    	int[] flower_w=new int[halfv+1];
-	  	int[] flower_ww=new int[halfv+1];
-	  	
-	  	flower_w[0]=flower_w[halfv]=v; 
-	  	for (int i=1;i<halfv;i++) {
-	  		flower_w[i]=getPetal(v,(ind_w+i)%num_v);
-	  	}
-	  	flower_ww[0]=flower_ww[halfv]=v;
-	  	for (int i=1;i<halfv;i++) {
-	  		flower_ww[i]=getPetal(v,(ind_w+halfv+i)%num_v);
-	  	}
-	  	
-	  	// At end, new v is combination of old w and old ww 
-	  	int[] flower_v=new int[2*num_w+1];
-	  	flower_v[0]=flower_v[2*num_w]=w;
-	  	dex=nghb(ww,v);
-	  	for (int i=1;i<num_w;i++) {
-	  		flower_v[i]=getPetal(ww,(dex+i)%num_w);
-	  	}
-	  	flower_v[num_w]=ww;
-	  	dex=nghb(w,v);
-	  	for (int i=1;i<num_w;i++) {
-	  		flower_v[num_w+i]=getPetal(w,(dex+i)%num_w);
-	  	}
 
-	  	// temporarily fix nghbs of original v (use fake indices for now) 
-	  	for (int i=1;i<num_v;i++) {
-	  		u=getPetal(v,(ind_w+i)%num_v);
-	  		if (u!=w && u!=ww && (dex=nghb(u,v))>=0) {
-	  			kData[u].flower[dex]=node+w;
-	  			if (dex==0 && !isBdry(u))
-	  			kData[u].flower[countFaces(u)]=node+w;
-	  		}
-	  		u=getPetal(v,(ind_w+halfv+i)%num_v);
-	  		if (u!=w && u!=ww && (dex=nghb(u,v))>=0) {
-	  			kData[u].flower[dex]=node+ww;
-	  	  		if (dex==0 && !isBdry(u))
-	  		    	kData[u].flower[countFaces(u)]=node+ww;
-	  		}
-	  	}
-	  	// fix nghbs of original w 
-	  	dex=nghb(w,v);
-	  	for (int i=1;i<num_w;i++) {
-	  		u=getPetal(w,(dex+i)%num_w);
-	  		jdex=nghb(u,w);
-	  		kData[u].flower[jdex]=v;
-	  		if (jdex==0 && !isBdry(u)) 
-	  			kData[u].flower[countFaces(u)]=v;
-	  	}
-	  	// fix nghbs of original ww 
-	  	dex=nghb(ww,v);
-	  	for (int i=1;i<num_w;i++) {
-	  	        u=getPetal(ww,(dex+i)%num_w);
-	  		jdex=nghb(u,ww);
-	  		kData[u].flower[jdex]=v;
-	  		if (jdex==0 && !isBdry(u)) 
-	  			kData[u].flower[countFaces(u)]=v;
-	      }
-
-	  	// now replace the fake indices of original v 
-	  	for (int i=0;i<num_v;i++) {
-	  		u=kData[v].flower[i];
-	  		for (int j=0;j<=countFaces(u);j++) {
-	  			if (getPetal(u,j)==node+w) 
-	  				kData[u].flower[j]=w;
-	  			else if (getPetal(u,j)==node+ww) 
-	  				kData[u].flower[j]=ww;
-	  		}
-	  	}
-
-
-	  	// implement new flowers, num's, etc. 
-
-	  	kData[v].flower=flower_v;
-	  	kData[v].num=2*num_w;
-	  	kData[w].flower=flower_w;
-	  	kData[w].num=halfv;
-	  	kData[ww].flower=flower_ww;
-	  	kData[w].num=kData[ww].num=halfv;
-
-	  	complex_count(true);
-	  	facedraworder(false);
-
-	  	return 1;
-	  }
-	  
 	  /**
 	   * If {v,w} is an edge between vertices, this returns the
 	   * dual edge {f,g} of neighboring faces to left/right of 
@@ -15773,21 +15650,20 @@ public class PackData{
 	  * @return int, count or 0 on error 
 	 */
 	 public int flat_hex(NodeLink vertlist) {
-		int v, count = 0;
+		 int count = 0;
 
-		Iterator<Integer> vlist = vertlist.iterator();
-		while (vlist.hasNext()) {
-			v = (Integer) vlist.next();
-			if (isBdry(v) && countFaces(v) == 2) {
-				if (!overlapStatus && alloc_overlaps() == 0)
-					return 0;
-				set_single_invDist(v, kData[v].flower[1], -0.5); // overlap 2*pi/3 
-				set_single_invDist(v, kData[v].flower[0], 0.5); // overlap pi/3 
-				set_single_invDist(v, kData[v].flower[2], 0.5); // overlap pi/3 
+		 Iterator<Integer> vlist = vertlist.iterator();
+		 while (vlist.hasNext()) {
+			 Vertex vert = packDCEL.vertices[vlist.next()];
+			 if (vert.isBdry() && vert.getNum() == 2) {
+				HalfLink spokes=vert.getEdgeFlower();
+				spokes.get(0).setInvDist(.5);
+				spokes.get(1).setInvDist(-.5);
+				spokes.get(2).setInvDist(.5);
 				count++;
-			}
-		}
-		return count;
+			 }
+		 }
+		 return count;
 	 }
 	 
 	 /** 
@@ -16031,6 +15907,8 @@ public class PackData{
 	 }
 	 
 	 /**
+	  * traditional
+	  * 
 	  * Open interior edge from a boundary vertex v to neighbor w,
 	  * calling for cloning of v, and cloning of w if it is bdry. 
 	  * Return 0 on failure and return index of the
@@ -17187,7 +17065,8 @@ public class PackData{
 		if (!putget) {
 			source_p=q;
 			target_p=this;
-			vMap=vertexMap.flipEachEntry();
+			if (vertexMap!=null && vertexMap.size()>0)
+				vMap=vertexMap.flipEachEntry();
 		}
 		int count=0;
 		
@@ -17341,7 +17220,7 @@ public class PackData{
 								count++;
 							}
 							if (es) {
-								the.setSchwarzian(he.getSchwarzain());
+								the.setSchwarzian(he.getSchwarzian());
 								count++;
 							}
 							if (ez) {
@@ -17353,17 +17232,8 @@ public class PackData{
 					break;
 				} // end of edge case
 				case 'z': // centers, fall through
-				{
-					cz=true;
-				}
 				case 'r': // radii, fall through
-				{
-					cr=true;
-				}
 				case 'a': // aims, fall through
-				{
-					ca=true;
-				}
 				case 'c':
 				{
 					boolean cm=false;
@@ -17379,7 +17249,7 @@ public class PackData{
 					if (flag.indexOf('c',2)>0)
 						cc=true;
 					
-					Iterator<Integer> vis=vlist.iterator();
+					Iterator<Integer> vis=vlink.iterator();
 					while (vis.hasNext()) {
 						int v=vis.next();
 						int tv=v;

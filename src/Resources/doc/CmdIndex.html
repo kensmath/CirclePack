@@ -61,7 +61,7 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="close">close</a></strong></font><font face="sans-serif" size="-1">&nbsp; [window list]</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="color">color</a></strong></font><font face="sans-serif" size="-1">&nbsp; [options]</font><br/>
+<strong> <font size="-2"><a class="llink" href="color">color</a></strong></font><font face="sans-serif" size="-1">&nbsp; -[cf] [options]</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="cookie">cookie</a></strong></font><font face="sans-serif" size="-1">&nbsp; [option] {v..}</font><br/>
 
@@ -211,9 +211,11 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="nan">nan</a></strong></font><font face="sans-serif" size="-1">&nbsp; {filename}</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="NSpole">NSpole</a></strong></font><font face="sans-serif" size="-1">&nbsp; [{N S {E} [t]} (or -a N {E} [t])]</font><br/>
+<strong> <font size="-2"><a class="llink" href="newRed">newRed</a></strong></font><font face="sans-serif" size="-1">&nbsp; [-t, {v..}]</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="norm_scale">norm_scale</a></strong></font><font face="sans-serif" size="-1">&nbsp; [options]</font><br/>
+
+<strong> <font size="-2"><a class="llink" href="NSpole">NSpole</a></strong></font><font face="sans-serif" size="-1">&nbsp; [{N S {E} [t]} (or -a N {E} [t])]</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="open">open</a></strong></font><font face="sans-serif" size="-1">&nbsp; [window list]</font><br/>
 
@@ -246,6 +248,8 @@ A:link {text_decoration: none}</style>
 <strong> <font size="-2"><a class="llink" href="pre_cookie">pre_cookie</a></strong></font><font face="sans-serif" size="-1"></font><br/>
 
 <strong> <font size="-2"><a class="llink" href="project">project</a></strong></font><font face="sans-serif" size="-1">&nbsp; [options]</font><br/>
+
+<strong> <font size="-2"><a class="llink" href="prune">prune</a></strong></font><font face="sans-serif" size="-1"></font><br/>
 
 <strong> <font size="-2"><a class="llink" href="puncture">puncture</a></strong></font><font face="sans-serif" size="-1">&nbsp; [{v}] [-f {f}]</font><br/>
 
@@ -281,6 +285,8 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="Read_path">Read_path</a></strong></font><font face="sans-serif" size="-1">&nbsp; {filename}</font><br/>
 
+<strong> <font size="-2"><a class="llink" href="renumber">renumber</a></strong></font><font face="sans-serif" size="-1"></font><br/>
+
 <strong> <font size="-2"><a class="llink" href="reorient">reorient</a></strong></font><font face="sans-serif" size="-1"></font><br/>
 
 <strong> <font size="-2"><a class="llink" href="red_from_elist">red_from_elist</a></strong></font><font face="sans-serif" size="-1"></font><br/>
@@ -293,7 +299,7 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="rm_bary">rm_bary</a></strong></font><font face="sans-serif" size="-1">&nbsp; {v..}</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="rm_cir">rm_cir</a></strong></font><font face="sans-serif" size="-1">&nbsp; {v..} [-x x y]</font><br/>
+<strong> <font size="-2"><a class="llink" href="rm_cir">rm_cir</a></strong></font><font face="sans-serif" size="-1">&nbsp; {v}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="rm_edge">rm_edge</a></strong></font><font face="sans-serif" size="-1">&nbsp; [option] {v w..}</font><br/>
 
@@ -429,7 +435,7 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="split_edge">split_edge</a></strong></font><font face="sans-serif" size="-1">&nbsp; v1 w1  v2 w2 ..</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="split_flower">split_flower</a></strong></font><font face="sans-serif" size="-1">&nbsp; v w u</font><br/>
+<strong> <font size="-2"><a class="llink" href="split_flower">split_flower</a></strong></font><font face="sans-serif" size="-1">&nbsp; v w [u]</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="socketServe">socketServe</a></strong></font><font face="sans-serif" size="-1">&nbsp; n</font><br/>
 
@@ -483,7 +489,7 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="WriteL(_raw)">WriteL(_raw)</a></strong></font><font face="sans-serif" size="-1">&nbsp; {filename}</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="write_path">write_path</a></strong></font><font face="sans-serif" size="-1">&nbsp; {file}</font><br/>
+<strong> <font size="-2"><a class="llink" href="write_path">write_path</a></strong></font><font face="sans-serif" size="-1">&nbsp; -[s] {file}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="Write_path">Write_path</a></strong></font><font face="sans-serif" size="-1">&nbsp; {file}</font><br/>
 
@@ -503,7 +509,7 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="Write_vert_list">Write_vert_list</a></strong></font><font face="sans-serif" size="-1">&nbsp; {filename} {v..}</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="zip">zip</a></strong></font><font face="sans-serif" size="-1">&nbsp; v n</font><br/>
+<strong> <font size="-2"><a class="llink" href="zip">zip</a></strong></font><font face="sans-serif" size="-1">&nbsp; n v</font><br/>
 
 <strong> <font size="-2"><a class="llink" href=":=">:=</a></strong></font><font face="sans-serif" size="-1">&nbsp; [[SLIDER..]'] {x}</font><br/>
 

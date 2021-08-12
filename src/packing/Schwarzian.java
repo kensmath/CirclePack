@@ -1,12 +1,11 @@
 package packing;
 
-import java.awt.Color;
 import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CPBase;
-import allMains.CirclePack;
 import complex.Complex;
+import dcel.D_Schwarzian;
 import deBugging.LayoutBugs;
 import exceptions.DataException;
 import geometry.CircleSimple;
@@ -18,12 +17,8 @@ import komplex.RedEdge;
 import komplex.RedList;
 import komplex.SideDescription;
 import listManip.EdgeLink;
-import listManip.NodeLink;
 import math.CirMatrix;
 import math.Mobius;
-import util.ColorUtil;
-import util.DispFlags;
-import util.StringUtil;
 import util.TriAspect;
 
 /**
@@ -35,7 +30,7 @@ import util.TriAspect;
  * for related work in the setting of maps, which is based on the original
  * notions of Gerald Orick in his thesis.
  * 
- * Here we work with parameters associated with edge in packing complexes,
+ * Here we work with parameters associated with edges in packing complexes,
  * the "real" schwarzians. These are stored in "KData.schwarzian". (Note:
  * schwarzian length is num+1; last is redundant or always zero, but kept
  * to avoid errors.) The methods here are for creating, analyzing, 
@@ -114,7 +109,8 @@ public class Schwarzian {
 
 					// now get the schwarzian using the radii
 					try {
-						double schn = rad_to_schwarzian(rad, p.hes);
+						double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
+						double schn = D_Schwarzian.rad_to_schwarzian(rad,ivd,p.hes);
 						p.kData[v].schwarzian[indx_vw] = schn;
 						p.kData[w].schwarzian[indx_wv] = schn;
 						count++;
@@ -131,7 +127,7 @@ public class Schwarzian {
 					
 					// now get the schwarzian using the radii
 					try {
-						double schn = cents_to_schwarzian(cents,p.hes);
+						double schn = D_Schwarzian.cents_to_schwarzian(cents,p.hes);
 						p.kData[v].schwarzian[indx_vw] = schn;
 						p.kData[w].schwarzian[indx_wv] = schn;
 						count++;
@@ -316,7 +312,8 @@ public class Schwarzian {
 						rad[1]=redTri.getRadius((findx+1)%3);
 						rad[2]=redTri.getRadius((findx+2)%3);
 						rad[3]=crossTri.getRadius((gindx+2)%3);
-						double sch=rad_to_schwarzian(rad,p.hes);
+						double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
+						double sch=D_Schwarzian.rad_to_schwarzian(rad,ivd,p.hes);
 						p.setSchwarzian(edge,sch);
 						count++;
 					}
@@ -326,7 +323,7 @@ public class Schwarzian {
 						cents[1]=redTri.getCenter((findx+1)%3);
 						cents[2]=redTri.getCenter((findx+2)%3);
 						cents[3]=crossTri.getCenter((gindx+2)%3);
-						double sch=cents_to_schwarzian(cents,p.hes);
+						double sch=D_Schwarzian.cents_to_schwarzian(cents,p.hes);
 						p.setSchwarzian(edge,sch);
 						count++;
 					}
@@ -356,7 +353,8 @@ public class Schwarzian {
 					double[] rad=new double[4];
 					for (int j=0;j<4;j++)
 						rad[j]=daddys[j].rad;
-					double sch=rad_to_schwarzian(rad,p.hes);
+					double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
+					double sch=D_Schwarzian.rad_to_schwarzian(rad,ivd,p.hes);
 					p.setSchwarzian(edge,sch);
 					count++;
 				}
@@ -364,7 +362,7 @@ public class Schwarzian {
 					Complex[] cents=new Complex[4];
 					for (int j=0;j<4;j++)
 						cents[j]=new Complex(daddys[j].center);
-					double sch=cents_to_schwarzian(cents,p.hes);
+					double sch=D_Schwarzian.cents_to_schwarzian(cents,p.hes);
 					p.setSchwarzian(edge,sch);
 					count++;
 				}
@@ -389,7 +387,8 @@ public class Schwarzian {
 					double[] rad=new double[4];
 					for (int j=0;j<4;j++)
 						rad[j]=p.getRadius(vrts[j]);
-					double sch=rad_to_schwarzian(rad,p.hes);
+					double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
+					double sch=D_Schwarzian.rad_to_schwarzian(rad,ivd,p.hes);
 					p.setSchwarzian(edge,sch);
 					count++;
 				}
@@ -397,103 +396,13 @@ public class Schwarzian {
 					Complex[] cents=new Complex[4];
 					for (int j=0;j<4;j++)
 						cents[j]=new Complex(p.getCenter(vrts[j]));
-					double sch=cents_to_schwarzian(cents,p.hes);
+					double sch=D_Schwarzian.cents_to_schwarzian(cents,p.hes);
 					p.setSchwarzian(edge,sch);
 					count++;
 				}
 			}
 		} // done with while through given edges
 		return count;
-	}
-	
-	/**
-	 * Given radii (r0,r1,r2) for oriented face <v,w,u> and radius r4 for
-	 * a in the oriented face <w,v,a> and geometry, find edge schwarzian.
-	 * @param rad double[]
-	 * @param hes int, geometry
-	 * @return double
-	 * @throws DataException
-	 */
-	public static double rad_to_schwarzian(double[] rad,int hes) {
-		CircleSimple[] sC=new CircleSimple[4];
-		for (int i=0;i<4;i++) {
-			sC[i]=new CircleSimple();
-			sC[i].rad=rad[i];
-		}
-
-		// get the four centers in the appropriate geometry
-		Complex []Z=new Complex[4];
-		
-		// find centers for face f <v,w,u>
-		int ans=CommonMath.placeOneFace(sC[0],sC[1],sC[2],hes);
-		if (ans<0) {
-			throw new DataException("Problem in 'rad_to_schwarzian' placeOneFace");
-		}
-		Z[0]=new Complex(sC[0].center);
-		Z[1]=new Complex(sC[1].center);
-		Z[2]=new Complex(sC[2].center);
-		
-		// find center for a in <w,v,a>
-		sC[3]=CommonMath.comp_any_center(sC[1].center, sC[0].center, sC[1].rad, sC[0].rad, rad[3], hes);
-		sC[3].rad=rad[3];
-		Z[3]=new Complex(sC[3].center);
-		
-		// compute the face tangency points, then face mobius, i.e.,
-		//    the mobius maps FROM the base equilateral to the face
-		DualTri dtri=new DualTri(hes,Z[0],Z[1],Z[2]); // <v,w,u>
-		Complex []tanPts=new Complex[3];
-		for (int j=0;j<3;j++) {
-			if (dtri.TangPts==null || dtri.TangPts[j]==null) {
-				System.out.println("stop here");
-			}
-			tanPts[j]=new Complex(dtri.TangPts[j]);
-		}
-		Mobius fbase=Mobius.mob_xyzXYZ(
-				CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
-				tanPts[0],tanPts[1],tanPts[2],0,hes);
-		
-		dtri=new DualTri(hes,Z[1],Z[0],Z[3]); // <w,v,a>
-		for (int j=0;j<3;j++)
-			tanPts[j]=new Complex(dtri.TangPts[j]);
-		Mobius gbase=Mobius.mob_xyzXYZ(
-				CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
-				tanPts[0],tanPts[1],tanPts[2],0,hes);
-
-		Mobius dMob = Schwarzian.getMobDeriv(fbase,gbase,0,0);
-		if (Math.abs(dMob.c.y)>.001) {
-			throw new DataException("error: Schwarzian is not real");
-		}
-		return dMob.c.x;
-	}
-	
-	/**
-	 * Given centers for oriented face <v,w,u> and center for a in 
-	 * oriented face <w,v,a> and geometry, find edge schwarzian.
-	 * @param Z Complex[4]
-	 * @param hes int, geometry
-	 * @return double
-	 * @throws DataException
-	 */
-	public static double cents_to_schwarzian(Complex[] Z,int hes) {
-		// compute the face tangency points, then face mobius, i.e.,
-		//    the mobius maps FROM the base equilateral to the face
-		DualTri dtri=new DualTri(hes,Z[0],Z[1],Z[2]); // <v,w,u>
-		Complex []tanPts=new Complex[3];
-		for (int j=0;j<3;j++)
-			tanPts[j]=new Complex(dtri.TangPts[j]);
-		Mobius fbase=Mobius.mob_xyzXYZ(
-			CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
-			tanPts[0],tanPts[1],tanPts[2],0,hes);
-			
-		dtri=new DualTri(hes,Z[1],Z[0],Z[3]); // <w,v,a>
-		for (int j=0;j<3;j++)
-			tanPts[j]=new Complex(dtri.TangPts[j]);
-		Mobius gbase=Mobius.mob_xyzXYZ(
-				CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
-				tanPts[0],tanPts[1],tanPts[2],0,hes);
-
-		Mobius dMob = Schwarzian.getMobDeriv(fbase,gbase,0,0);
-		return dMob.c.x;
 	}
 
 	/**
@@ -510,20 +419,25 @@ public class Schwarzian {
 	 * @param indx_g int, index of shared edge in g
 	 * @return Mobius, identity on error
 	 */
-	public static Mobius getMobDeriv(Mobius bm_f,Mobius bm_g,int indx_f,int indx_g) {
+	public static Mobius getMobDeriv(Mobius bm_f,Mobius bm_g,
+			int indx_f,int indx_g) {
 		
-		// Let F be the base equilateral, edge 0 centered on 1, let G be the contiguous
-		//   equilateral across that edge. To get the edge Mobius derivative, we must
-		//   pre-compose bm_f and bm_g, which map F to f and g, to get mu_f, mu_g.
-		//   For mu_f, pre-rotate so the first edge of F maps to the indx_f edge
-		//   of f; i.e., rotation by omega3[indx_f]. 
-		//   For mu_g we want to map G to g. We pre-compose bm_g by translation by
-		//   -2, rotation by omega3[indx_g], then rotation by pi. 
-		Mobius pre_f=new Mobius(CPBase.omega3[indx_f],new Complex(0.0),new Complex(0.0),new Complex(1.0));
+		// Let F be the base equilateral, edge 0 centered on 1, 
+		//   let G be the contiguous equilateral across that edge. 
+		//   To get the edge Mobius derivative, we must pre-compose 
+		//   bm_f and bm_g, which map F to f and g, to get mu_f, mu_g.
+		//   For mu_f, pre-rotate so the first edge of F maps 
+		//   to the indx_f edge of f; i.e., rotation by omega3[indx_f]. 
+		//   For mu_g we want to map G to g. We pre-compose bm_g 
+		//   by translation by -2, rotation by omega3[indx_g], then 
+		//   rotation by pi. 
+		Mobius pre_f=new Mobius(CPBase.omega3[indx_f],
+				new Complex(0.0),new Complex(0.0),new Complex(1.0));
 		Mobius mu_f=(Mobius)bm_f.rmult(pre_f);
 	
 		Complex wi=new Complex(CPBase.omega3[indx_g]).times(-1.0);
-		Mobius pre_g=new Mobius(wi,wi.times(-2.0),new Complex(0.0),new Complex(1.0));
+		Mobius pre_g=new Mobius(wi,wi.times(-2.0),
+				new Complex(0.0),new Complex(1.0));
 		Mobius mu_g=(Mobius)bm_g.rmult(pre_g); // mob_g.det();
 		Mobius edgeMob=(Mobius)mu_g.inverse().rmult(mu_f);
 		Complex tc=edgeMob.a.plus(edgeMob.d);
@@ -615,119 +529,7 @@ public class Schwarzian {
 		}
 		return triasp;
 	}
-	
-	/**
-	 * Develop various schemes to help understand schwarzians: e.g., 
-	 * draw circles with color blue-to-red based on sum of 
-	 * schwarzians; draw edges blue-to-red based on schwarzians.
-	 * @param p PackData
-	 * @param flagsegs Vector<Vector<String>> options
-	 * @return
-	 */
-	public static int schwarzReport(PackData p,Vector<Vector<String>> flagsegs) {
-		int count=0;
-		Vector<String> items=null;
-		
-		if (flagsegs==null || flagsegs.size()==0) {
-			CirclePack.cpb.errMsg("usage: sch_report [flags]");
-			return count;
-		}
-		if (!p.haveSchwarzians()) {
-			CirclePack.cpb.errMsg("schwarzians are not allocated");
-		}
-		
-		Iterator<Vector<String>> its=flagsegs.iterator();
-		while (its.hasNext()) {
-			items=its.next();
-			String str=items.remove(0);
-			if (!StringUtil.isFlag(str)) {
-				CirclePack.cpb.errMsg("usage: sch_report -[?] : must have c or e flag");
-			}
-			char c=str.charAt(1);
-			str=str.substring(2);
-			DispFlags dflags=new DispFlags(str);
-			
-			// TODO: might add typical 'DispFlag' options to call, then
-			//    could have immediate drawing as one option with -c flag
-			switch(c) {
-			// color vertices by schwarzian sum: blue <0, red > 0; don't display
-			case 'c': {
-				
-				// set all the colors for validity of the color ramp
-				Vector<Double> c_sch=new Vector<Double>();
-				for (int v=1;v<=p.nodeCount;v++) {
-					double accum=0.0;
-					for (int j=0;j<p.countFaces(v);j++)
-						accum+=p.kData[v].schwarzian[j];
-					c_sch.add(accum);
-				}
-				Vector<Color> c_color=util.ColorUtil.blue_red_diff_ramp_Color(c_sch);
-				Iterator<Color> clst=c_color.iterator();
-				for (int v=1;v<=p.nodeCount;v++) {
-					p.setCircleColor(v,ColorUtil.cloneMe(clst.next())); // store the color
-					count++;
-				}
-				
-				// now, draw just those requested (default to none)
-				NodeLink vlist=null;
-				if (items!=null && items.size()>0)
-					vlist=new NodeLink(p,items);
-				if (vlist!=null) {
-					Iterator<Integer> vlst=vlist.iterator();
-					while(vlst.hasNext()) {
-						int v=vlst.next();
-						if (dflags.draw || dflags.fill) 
-							dflags.setColor(p.getCircleColor(v));
-						if (dflags.label)
-							dflags.setLabel(Integer.toString(v));
-						p.cpScreen.drawCircle(p.getCenter(v),p.getRadius(v),dflags);
-						count++;
-					}
-					p.cpScreen.repaint();
-				}
-				break;
-			}
-			// color all edges so color ramp is valid; 
-			//    then draw requested (default all) 
-			case 'e': { // color edges for schwarzian: blue < 0, red > 0
-				Vector<Double> e_sch=new Vector<Double>(); 
-				for (int v=1;v<=p.nodeCount;v++) {
-					int[] flower=p.getFlower(v);
-					for (int j=0;j<flower.length;j++) {
-						int w=flower[j];
-						if (w>v) 
-							e_sch.add(p.kData[v].schwarzian[j]);
-					}
-				}
-				Vector<Color> e_color=ColorUtil.blue_red_diff_ramp_Color(e_sch);
-				EdgeLink elink=new EdgeLink(p,items);
-				if (elink==null || elink.size()==0)
-					elink=new EdgeLink(p,"a"); // default to all
-				for (int v=1;v<=p.nodeCount;v++) {
-					int[] flower=p.getFlower(v);
-					for (int j=0;j<flower.length;j++) {
-						int w=flower[j];
-						if (w>v) {
-							if (EdgeLink.ck_in_elist(elink, v, w)) {
-								dflags.setColor(e_color.remove(0));
-								if (dflags.thickness==0)
-									dflags.thickness=5;
-								p.cpScreen.drawEdge(p.getCenter(v), p.getCenter(w), dflags);
-								count++;
-							}
-						}
-					}
-				}
-				p.cpScreen.repaint();
-				break;
-			}
-			} // end of switch
-			return count;
-		}
-		
-		return count;
-	}
-	
+
 	/**
 	 * Compute Mobius transformation from base equilateral to packing 
 	 * face f. (The "base" refers to eucl equilateral triangle
@@ -777,20 +579,6 @@ public class Schwarzian {
 		return tmpMob;
 	}
 
-	/**
-	 * For debugging: print center of circle and of image circle under a Mobius.
-	 * @param mob Mobius
-	 * @param hes int
-	 * @param r double
-	 * @param z Complex
-	 */
-	public static void CirMobCir(Mobius mob, int hes,double r,Complex z) {
-		CircleSimple sC=new CircleSimple();
-		Mobius.mobius_of_circle(mob, hes, z, r, sC, false);
-		System.out.println("  domain z and r: "+z.toString()+" "+r+
-				"   range z and r: "+sC.center.toString()+" "+sC.rad);
-	}
-	
 	/** 
 	 * inner class to keep track of edges involving red faces on one
 	 * or both sides. Use the neighboring red faces to find the pertinent

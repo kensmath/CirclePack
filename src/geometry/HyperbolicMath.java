@@ -344,15 +344,20 @@ public class HyperbolicMath{
   }
 
   /** 
-   * Return the eucl radius of the horocycle which overlaps a circle 
+   * Return the eucl rad for horocycle which overlaps a 
+   * circle centered at origin and having x-radius x1. 
    * at origin having s-radius >0 given the cosine of the overlap angle.
-   * @param s1 double, s-radius of circle at origin
-   * @param ovlp double, cosine of overlap angle. 
-   * @return double
+   * @param x1 double, x-radius of circle at origin
+   * @param invdist double, inversive distance between circles
+   * @return double, 0.0 if circle at origin is a horocycle
   */
-  public static double h_horo_rad(double s1,double ovlp) {
-  	double r=(1-s1)/(1+s1);
-  	return (1-r*r)/(2.0+2*r*ovlp);
+  public static double h_horo_rad(double x1,double invdist) {
+	  double s1=x_to_s_rad(x1);
+	  if (s1<=0) // horocycle at origin?
+		  return 0;
+	  double r=(1-s1)/(1+s1); // get eucl radius 
+	  double R=(1-r*r)/(2.0+2*r*invdist);
+	  return R;
   }
 
 
@@ -772,7 +777,6 @@ used to be passed in here as an argument).
    * oj=inv dist of edge opposite circle j. No consistency check on 
    * first two circles or incompatiblities. 'iflag' true reflects
    * incompatibilities (but not yet passed back). 
-   * Return empty CircleSimple on error.
    * @param z1 Complex 
    * @param z2 Complex
    * @param x1 double 
@@ -968,8 +972,9 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
   }
 
   /**
-   * Return length of edge between circles with x-radii x1, x2, and
-   * inversive distance 'ivd'. Return -1 if length is infinite.
+   * Return hyp length of edge between centers of circles with 
+   * x-radii x1, x2, and inversive distance 'ivd'. 
+   * Return -1 if length is infinite.
    * @param x1
    * @param x2
    * @param ivd

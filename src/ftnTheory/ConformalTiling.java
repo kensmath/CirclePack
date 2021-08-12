@@ -1678,7 +1678,8 @@ public class ConformalTiling extends PackExtender {
 				msg("'canonicalPack' is set");
 			return canonicalPack.nodeCount;
 		} catch(Exception ex) {
-			throw new CombException("problem in canonicalPack layout or max_packing ");
+			throw new CombException(
+					"problem in canonicalPack layout or max_packing ");
 		}
 	}
 	

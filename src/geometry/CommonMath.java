@@ -41,75 +41,69 @@ public class CommonMath {
 	 * @return int, 0 on layout error, circle data given in CircleSimple's
 	*/
 	public static int placeOneFace(CircleSimple sC0,CircleSimple sC1,CircleSimple sC2,int hes) {
-		return placeOneFace(sC0,sC1,sC2,1.0,1.0,1.0,hes);
+		double[] invD= {1.0,1.0,1.0};
+		return placeOneFace(sC0,sC1,sC2,invD,hes);
 	}
 
 	/** 
-	 * Given radii, inv. distances, and geometry, place a triple of 
-	 * circles; first is at origin, next in standard orientation 
-	 * (namely, in eucl, on positive x-axis), last determined by 
-	 * law of cosines.
+	 * Use radii, invdist, geometry, to place triple of circles; 
+	 * first is at origin, next on positive x-axis, last based
+	 * on law of cosines and 'invDist'. Calling routine typically
+	 * applies a Mobius to move to desired location. Recall invDist 
+	 * index j is for edge opposite vert j.
 	 * 
 	 * TODO: use this to replace 'place_face' in other contexts
 	 *  
 	 * @param sC0 CircleSimple,
 	 * @param sC1 CircleSimple,
 	 * @param sC2 CircleSimple,
-	 * @param id0 double
-	 * @param id1 double
-	 * @param id2 double
+	 * @param invDist double[3],
 	 * @param hes int
 	 * @return int, 0 on layout error, circle data given in CircleSimple's
 	*/
 	public static int placeOneFace(CircleSimple sC0,CircleSimple sC1,CircleSimple sC2,
-			double id0,double id1,double id2,int hes) {
+			double[] invDist,int hes) {
 
 	  // first is always at origin
 	  sC0.center=new Complex(0.0);
 	  
-	  // place the second on the real axis
-	  if (hes<0) { // hyp case 
-	    double x1=sC0.rad;
-	    double s1=HyperbolicMath.x_to_s_rad(x1);
-	    double x2=sC1.rad;
-	    double s2=HyperbolicMath.x_to_s_rad(x2);
-	    if (s1<=0) {
-	      x1 = 0.99;
-	      s1=HyperbolicMath.x_to_s_rad(x1);
-	      sC0.rad=x1;
-	      /* strcpy(msgbuf,"Circle at origin had "
-		     "infinite radius; radius reset.");*/
-	    }
+	  if (hes<0) { // hyp case
+		  double x0=sC0.rad;
+		  if (x0<=0) { // horocycle? can't handle this
+			  CirclePack.cpb.errMsg("Can't place hyp triple: first is horocycle");
+			  return 0;
+		  }
 
-	    if (s2<=0) { /* if next one is infinite radius */
-	      sC1.center=new Complex(1.0);
-	      double erad=x1/((1+s1)*(1+s1));
-	      sC1.rad=(-1)*(1-erad*erad)/(2.0+2.0*erad*id0);
-	    }
-	    else { 
-	      double x12 = x1*x2;
-	      double x1p2 = x1+x2;
-	      double s12 = s1*s2;
-	      double x = (x1p2-x12)/(s12*(1+s12)) - (2*x1p2 - (1+id0)*x12)/(4*s12);
-	      double s= x + Math.sqrt(x*(x+2));
-	      sC1.center=new Complex(s/(s+2),0.0);
-	    }
+		  // next circle on positive axis
+		  double x1=sC1.rad;
+		  if (x1<=0) { // horocycle?
+			  double s0=HyperbolicMath.x_to_s_rad(x0);
+			  double e0=(1-s0)/(1+s0);
+			  double R=HyperbolicMath.h_horo_rad(x1,invDist[2]);
+			  sC1.center=new Complex(1.0);
+			  sC1.rad=-R; // negative of euclidean radius
+		  }
+		  else {
+			  double h=HyperbolicMath.h_ivd_length(x0, x1, invDist[2]);
+			  double e=Math.exp(h);
+			  sC1.center=new Complex((e-1)/(e+1));
+		  }
 	  }
 	  else if (hes>0) { // sphere case 
-	    // next out pos x-axis 
-		  double sdist=SphericalMath.s_ivd_length(sC0.rad,sC1.rad,id0);
-	    sC1.center = new Complex(0.0,sdist);
+		  // next out pos x-axis 
+		  double sdist=SphericalMath.s_ivd_length(sC0.rad,sC1.rad,invDist[2]);
+		  sC1.center = new Complex(0.0,sdist);
 	  }
 	  else { // eucl case 
-	    // next on x-axis
-	    double r=sC0.rad;
-	    double r2=sC1.rad;
-	    sC1.center=new Complex(Math.sqrt(r*r+r2*r2+2*r*r2*id0),0.0);
+		  // next on positive x-axis
+		  double r=sC0.rad;
+		  double r2=sC1.rad;
+		  sC1.center=new Complex(Math.sqrt(r*r+r2*r2+2*r*r2*invDist[2]));
 	  }
 	  
 	  CircleSimple sC=new CircleSimple();
 	  sC=CommonMath.comp_any_center(sC0.center, sC1.center,sC0.rad,sC1.rad,
-				sC2.rad, id0, id1,id2,hes);
+				sC2.rad, invDist[0],invDist[1],invDist[2],hes);
 	  sC2.center=sC.center;
 	  return sC.flag;  // in case there's an error
 	}
@@ -121,13 +115,13 @@ public class CommonMath {
 	}
 	
 	/**
-	 * Compute third circle given two centers, radii, and overlaps
+	 * Compute third circle given two centers, radii, inv distances
 	 * @param z1 Complex
 	 * @param z2 Complex
 	 * @param r1 double
 	 * @param r2 double
 	 * @param r3 double
-	 * @param o1 double, overlap opposite z1
+	 * @param o1 double, inv distance, edge opposite z1
 	 * @param o2 double, opposite z2
 	 * @param o3 double, opposite z3
 	 * @param hes int
@@ -145,12 +139,12 @@ public class CommonMath {
 	
 	/**
 	 * Compute third circle give two centers, radii, no overlaps
-	 * @param z1
-	 * @param z2
-	 * @param r1
-	 * @param r2
-	 * @param r3
-	 * @param hes
+	 * @param z1 Complex
+	 * @param z2 Complex
+	 * @param r1 double
+	 * @param r2 double
+	 * @param r3 double
+	 * @param hes int
 	 * @return
 	 */
 	public static CircleSimple comp_any_center(Complex z1, Complex z2,

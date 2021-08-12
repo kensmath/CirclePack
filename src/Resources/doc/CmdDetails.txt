@@ -3615,6 +3615,46 @@ face drawing order.</opt>
 </seealso>
 </command>	
 
+
+<command cmd="set_hlist" flags="[options] {v w, ..}">
+<description>
+	Like 'set_elist', except that this is a list of 
+	halfedges associated with the active pack; previous 
+	contents are discarded. 
+</description>
+<examples>
+<instance text="set_hlist 1 3  75 4  17 3"> removes the former list, 
+enters legal halfedges from the list</instance>
+<instance text="set_hlist hlist 1 3  75 4  17 3"> appends these to the existing 'elist'
+</instance>
+</examples> 
+<seealso>
+<see>set_Hlist</see>
+</seealso>
+</command>
+
+
+<command cmd="set_Hlist" flags="{e..}">
+<description>
+	Same as above, only stores indices in utility "Elist".
+	(Validity check against active pack.)
+</description>
+<examples>
+<instance text="set_Hlist 1 3  75 4  17 3"> removes the former list, 
+enters these pairs in order</instance>
+<instance text="set_Hlist Hlist 1 3  75 4  17 3"> appends these to 
+the existing 'Hlist'</instance>
+<instance text="set_Hlist hlist"> appends hlist items to 
+the existing 'Hlist'</instance>
+</examples> 
+<seealso>
+<see>set_hlist</see>
+<see>set_elist</see>
+<see>set_Elist</see>
+</seealso>
+</command>
+
+
 <command cmd="set_invdist" flags="[option] {{x} (v w)..}">
 <description>
 	"Inversive distance" is a conformal invariant. It is a 
@@ -4924,7 +4964,7 @@ of the tiles are the larger indices.
 <seealso>
 <see>adjoin</see>
 <see>enclose</see>
-</seealso></seealso>
+</seealso>
 </command>
 
 <command cmd=":=" flags="[[SLIDER..]'] {x}">

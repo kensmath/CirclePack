@@ -62,15 +62,15 @@ public class EuclMath{
 
 		if ((ivd1==1) && (ivd2==1) && (ivd3==1))
 			return e_cos_overlap(e1,e2,e3);
-		double e12 = e1 * e1;
-		double e22 = e2 * e2;
-		double e32 = e3 * e3;
+		double e1sq = e1 * e1;
+		double e2sq = e2 * e2;
+		double e3sq = e3 * e3;
 		double x3 = e1 * e2 * ivd3;
 		double x2 = e1 * e3 * ivd2;
 		double x1 = e2 * e3 * ivd1;
-		double l3 = e12 + e22 + 2 * x3;
-		double l2 = e12 + e32 + 2 * x2;
-		double sqrlen=(e12 + x2 + x3 - x1) / Math.sqrt(l2 * l3);
+		double l3 = e1sq + e2sq + 2 * x3; // lengths opposite
+		double l2 = e1sq + e3sq + 2 * x2;
+		double sqrlen=(e1sq + x2 + x3 - x1) / Math.sqrt(l2 * l3);
 		if (sqrlen < -1.0 || sqrlen>1.0) { // error?
 			throw new DataException("error in computing eucl angle cosine");
 		}
@@ -422,8 +422,8 @@ public class EuclMath{
 	}
 
 	/**
-	 * Given centers/radii of circles 1 and 2 and rad of 3, and inv distances oj
-	 * (opposite zj), find eucl center of 3.
+	 * Given centers/radii of circles 1 and 2 and rad of 3, 
+	 * and inv distances oj (opposite zj), find eucl center of 3.
 	 * @param z1 Complex
 	 * @param z2 Complex
 	 * @param e1 double
@@ -689,8 +689,9 @@ public class EuclMath{
 	}
 
 	/** 
-	 * Return eucl length l of edge with eucl radii r1, r2, and inv dist
-	 * 'ivd'. Then l*l=r1*r1+r2*r2+2*r1*r2*ivd;
+	 * Return eucl length l of edge between centers of eucl
+	 * circles of radii r1, r2, and inv dist 'ivd'. 
+	 * Then l*l=r1*r1+r2*r2+2*r1*r2*ivd;
 	 * @param r1 double
 	 * @param r2 double
 	 * @param ivd double

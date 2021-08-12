@@ -6,6 +6,7 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
 import complex.MathComplex;
+import dcel.D_Schwarzian;
 import exceptions.DataException;
 import exceptions.MobException;
 import ftnTheory.SchwarzMap;
@@ -15,7 +16,6 @@ import geometry.SphericalMath;
 import math.group.ComplexTransformation;
 import math.group.GroupElement;
 import packing.PackData;
-import packing.Schwarzian;
 
 /**
  * Mobius transformations of the sphere are represented by 
@@ -1766,8 +1766,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 */
 	public void debugMob(SchwarzMap schwarzMap, int f, int v, int w) {
 		System.out.println("Face "+f+": First circle "+v);
-		Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.getRadius(v),schwarzMap.packData.getCenter(v));
+		D_Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.getRadius(v),schwarzMap.packData.getCenter(v));
 		System.out.println("Second circle "+w);
-		Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.getRadius(w),schwarzMap.packData.getCenter(w));
+		D_Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.getRadius(w),schwarzMap.packData.getCenter(w));
 	}
 }

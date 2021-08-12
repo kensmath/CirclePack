@@ -4,6 +4,7 @@ import java.awt.Color;
 
 import complex.Complex;
 import exceptions.CombException;
+import exceptions.ParserException;
 import komplex.EdgeSimple;
 import util.ColorUtil;
 
@@ -240,7 +241,7 @@ public class HalfEdge {
 		schwarzian=sch;
 	}
 	
-	public double getSchwarzain() {
+	public double getSchwarzian() {
 		return schwarzian;
 	}
 	
@@ -261,14 +262,32 @@ public class HalfEdge {
 	}
 	
 	/**
-	 * Set to 1.0 unless 'invd' differs by more than .000001
+	 * Set legal 'invDist' for 'this' and 'this.twin'.
+	 * Legal values lie in [-1,infty): in [-1,1] circles 
+	 * overlapping with angle acos(invDist), so 1.0 is
+	 * default, tangency and 0.0 represnts orthogonality. 
+	 * Values in (-1,0) called "deep" overlaps, those 
+	 * in (0,infty) for "separated" circles. Deep overlaps 
+	 * and separations can lead to packing incompatibilities: 
+	 * existence and uniqueness results guaranteed only 
+	 * for values in [0,1].
+	 * Note: Set to 1.0 unless 'invd' differs from 1.0 by more 
+	 * than .000001.
 	 * @param invd double
 	 */
 	public void setInvDist(double invd) {
-		if (Math.abs(invd-1.0)<.000001)
+		if (invd<-1.0)
+			throw new ParserException("Inversive distance must be in [-1,infty)");
+		if (Math.abs(invd-1.0)<.000001) {
 			invDist=1.0;
-		else
+			if (twin!=null)
+				twin.setInvDist(1.0);
+		}
+		else {
 			invDist=invd;
+			if (twin!=null)
+				twin.invDist=invd;
+		}
 	}
 	
 	/**
@@ -279,6 +298,34 @@ public class HalfEdge {
 		if (Math.abs(invDist-1.0)<.000001)
 			return 1.0;
 		return invDist;
+	}
+	
+	/**
+	 * Return 'HalfEdge' opposite 'this'; i.e., 'this.origin'
+	 * must be even degree.
+	 * @return HalfEdge, null if not even degree
+	 */
+	public HalfEdge findOppEdge() {
+		HalfEdge he=this;
+		HalfEdge ohe=this;
+		do {
+			he=he.prev.twin; // cclw
+			ohe=ohe.twin.next; // clw
+			if (he==ohe)
+				return he;
+		} while (he!=this);
+		return null;
+	}
+	
+	/**
+	 * Give oriented 'EdgeSimple' <v,w> of endpoints
+	 * @param he HalfEdge
+	 * @return EdgeSimple, null on error
+	 */
+	public static EdgeSimple getEdgeSimple(HalfEdge he) {
+		if (he==null)
+			return null;
+		return new EdgeSimple(he.origin.vertIndx,he.twin.origin.vertIndx);
 	}
 	
 	/**
@@ -301,17 +348,6 @@ public class HalfEdge {
 	 */
 	public String toString() {
 		return(" "+origin.vertIndx+" "+twin.origin.vertIndx+" ");
-	}
-	
-	/**
-	 * Give oriented 'EdgeSimple' <v,w> of endpoints
-	 * @param he HalfEdge
-	 * @return EdgeSimple, null on error
-	 */
-	public static EdgeSimple getEdgeSimple(HalfEdge he) {
-		if (he==null)
-			return null;
-		return new EdgeSimple(he.origin.vertIndx,he.twin.origin.vertIndx);
 	}
 
 }

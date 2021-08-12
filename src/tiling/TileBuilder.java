@@ -395,16 +395,17 @@ public class TileBuilder {
 	}
 	
 	/**
-	 * Start with packing for barycentric subdivision of tiling. The packing has
-	 * 'tileData' and vertices are marked: 1 = tile baryVert, 2 = tile corner,
-	 * 3 = tile edge barycenter. Barycenters of hex-refined faces are marked -1.
-	 * All tiles have 'augVert's.
+	 * Start with packing for barycentric subdivision of tiling. 
+	 * The packing has 'tileData' and vertices are marked: 
+	 * 1 = tile baryVert, 2 = tile corner, 3 = tile edge barycenter. 
+	 * Barycenters of hex-refined faces are marked -1. All tiles 
+	 * have 'augVert's.
 	 * 
-	 * Here we build the 'dual', 'quad', and all the white and grey tilings. 
+	 * Here we build 'dual', 'quad', and all white/grey tilings. 
 	 * 
-	 * When done, should have the full 'canonicalPack' for 'ConformalTiling' extender
+	 * When done, should have the full 'canonicalPack' for 
+	 * 'ConformalTiling' extender
 	 * @param p PackData
-	 * @param mode int, tiling mode
 	 * @return int count of wgtiles
 	 */
 	public static int prepCanonical(PackData p) {

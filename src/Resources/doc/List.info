@@ -7,14 +7,14 @@ are created temporarily in interpreting commands. In these help
 files, command descriptions indicate user specifiable lists by {v..}, 
 {e..}, and {f..}. The syntax is described below. 
 
-Each packing in CirclePack has its own 'vlist', 'elist', and 'flist'. 
-In addition, there is a generic 'Vlist', 'Elist', and 'Flist' which 
-can be used with any packing (though each is processed before use 
-to ensure the data is legal for the packing to which it's being applied).
+Each packing in CirclePack has its own 'vlist', 'elist', 'flist',
+'glist', and 'hlist'. In addition, are generic 'Vlist', 'Elist', 
+'Flist', 'Glist', and 'Hlist', which can be used with any packing 
+(though each is processed before use to ensure the data is legal 
+for the packing to which it's being applied).
 
-Explicit list functions are 'set_vlist', 'set_elist', 'set_flist' 
-(attached to specific packings) and 'set_Vlist', 'set_Elist', 
-'set_Flist' (global).
+Explicit list functions are 'set_*list' (attached to specific 
+packings) and 'set_*list' (e.g., 'set_Elist') (global).
   
 List creation syntax:
 	a			'all' the objects (vertices, faces, or edges)
@@ -70,6 +70,8 @@ List creation syntax:
 	Gf <f> {(x,y)..}	Same as above, but for faces and tries to start
 				with face 'f'.
 	Gv <v> {(x,y)..}	For edges or vertices, try starting at vertex 'v' 
+	glist (Glist)  will return dual graph edges from the current list
+	hlist (Hlist)  will return halfedges from the current list
 	h v w n		vertices only; hex_walk: starting with edge {vw},
 				walk as though counterclockwise around hexagon 
 				having sides of length n. List may truncate, eg,

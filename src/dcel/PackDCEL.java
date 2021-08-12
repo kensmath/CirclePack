@@ -203,7 +203,14 @@ public class PackDCEL {
 		return faceCount;
 	}
 	
-	public void updateTriDataRadii() {
+	/**
+	 * Update existing 'triData'. Return true if there
+	 * are nontrivial inversive distances so we can set
+	 * oldReliable flag in repacking.
+	 * @return boolean
+	 */
+	public boolean updateTriDataRadii() {
+		boolean hit=false;
 		for (int f=1;f<=faceCount;f++) { 
 			triData[f].hes=p.hes;
 			HalfLink eflower=faces[f].getEdges();
@@ -213,9 +220,14 @@ public class PackDCEL {
 				HalfEdge he=eflower.get(j);
 				int v=he.origin.vertIndx;
 				triData[f].radii[j]=p.getRadius(v);
-				triData[f].invDist[j]=he.getInvDist();
+				double ivd=he.getInvDist();
+				if (ivd!=1.0) {
+					triData[f].setInvDist((j+2)%3,ivd);
+					hit=true;
+				}
 			}	
 		}
+		return hit;
 	}
 	
 	/**
@@ -540,7 +552,7 @@ public class PackDCEL {
 		double r0=getVertRadius(edge);
 		double r1=getVertRadius(edge.next);
 		setCent4Edge(edge,new Complex(0.0));
-		double invd=getInvDist(edge);
+		double invd=edge.getInvDist();
 		double dist=CommonMath.ivd_edge_length(r0,r1,invd,p.hes);
 		if (p.hes>0) // sph
 			setCent4Edge(edge.next,new Complex(0.0,dist));
@@ -579,9 +591,9 @@ public class PackDCEL {
 		CircleSimple c0=getVertData(edge);
 		CircleSimple c1=getVertData(edge.next);
 		CircleSimple c2=getVertData(edge.next.next);
-		double ov0=getInvDist(edge);
-		double ov1=getInvDist(edge.next);
-		double ov2=getInvDist(edge.next.next);
+		double ov0=edge.next.getInvDist();
+		double ov1=edge.prev.getInvDist();
+		double ov2=edge.getInvDist();
 		CircleSimple sC=CommonMath.comp_any_center(c0.center,
 			c1.center,c0.rad,c1.rad,c2.rad,ov0,ov1,ov2,p.hes);
 		return sC;
@@ -605,9 +617,9 @@ public class PackDCEL {
 		CircleSimple c0=getVertData(etwin.next);
 		CircleSimple c1=getVertData(etwin);
 		double rad2=getVertRadius(edge.next.next);
-		double ov0=getInvDist(etwin.next);
-		double ov1=getInvDist(etwin);
-		double ov2=getInvDist(edge.next.next);
+		double ov0=edge.next.getInvDist();
+		double ov1=edge.prev.getInvDist();
+		double ov2=edge.getInvDist();
 		CircleSimple sC=CommonMath.comp_any_center(c0.center,
 			c1.center,c0.rad,c1.rad,rad2,ov0,ov1,ov2,p.hes);
 		setVertData(edge.next.next,sC);
@@ -709,16 +721,29 @@ public class PackDCEL {
 	 */
 	public int dcelCompCenters(GraphLink faceorder) {
 		
+		boolean debug=false; // debug=true;
+		
 		Iterator<EdgeSimple> git=faceorder.iterator();
 		EdgeSimple edge=faceorder.get(0);
 		int f=edge.v;
 		if (f==0) { // this is a root (as expected)
 			f=edge.w;
+			git.next(); // ditch this entry
 		}
 		
 		// lay out the first face, it's 'origin' at z=0;
 		Face face=faces[f];
 		placeFirstFace(face.edge);
+		
+		if (debug) {// debug=true;
+			DCELdebug.drawEFC(this,face.edge);
+			StringBuilder strbld=new StringBuilder("disp -c "+
+					face.edge.origin.vertIndx+" "+
+					face.edge.twin.origin.vertIndx);
+			CommandStrParser.jexecute(p,strbld.toString());
+			p.cpScreen.rePaintAll();
+		}
+			
 	    int count=1;
 	    
 	    // now layout face-by-face
@@ -732,11 +757,16 @@ public class PackDCEL {
 		    setCent4Edge(face.edge.next.next, sc.center);
 		    if (sc.rad<0) // horocycle?
 		    	setRad4Edge(face.edge.next.next,sc.rad);
+		    
+		    if (debug)
+		    	DCELdebug.drawEFC(this,face.edge);
+		    
 		    count++;
 	    }
 
 	    double ang=-getVertCenter(gamma).arg()+Math.PI/2.0;
-	    p.rotate(ang);
+	    if (!debug)
+	    	p.rotate(ang); // usual normalization
 	    return count;
 	}
 	
@@ -1516,14 +1546,6 @@ public class PackDCEL {
 	public void setVertData(HalfEdge edge,CircleSimple cS) {
 		setCent4Edge(edge,cS.center);
 		setRad4Edge(edge,cS.rad);
-	}
-
-	public double getInvDist(HalfEdge edge) {
-		if (!p.overlapStatus)
-			return 1.0;
-		int v=edge.origin.vertIndx;
-		int w=edge.twin.origin.vertIndx;
-		return p.getInvDist(v,w);
 	}
 	
 	/**

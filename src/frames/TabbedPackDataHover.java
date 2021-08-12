@@ -735,7 +735,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 					ev=he.origin.vertIndx;
 					ew=he.next.origin.vertIndx;
 					invDist=he.getInvDist();
-					schwar=he.getSchwarzain();
+					schwar=he.getSchwarzian();
 				}
 				
 				// traditional

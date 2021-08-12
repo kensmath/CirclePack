@@ -30,8 +30,8 @@ public class TriData {
 	public int[] vert;   // 'Face.vert' vector (as ordered in packdata 'faces')
 	public double[] radii;      // concrete numbers representing labels
 	
-	// edge data: [i] entry for edge <i,i+1>
-	public double[] invDist;    // inversive distance
+	// Caution: edge data [i] entry is for edge OPPOSITE to vertex i.
+	double[] invDist;    // inversive distance: null if none non-trivial
 	
 	// constructor(s)
 	public TriData() {
@@ -41,14 +41,13 @@ public class TriData {
 	public TriData(PackDCEL pdc) { // default euclidean
 		pdcel=pdc;
 		hes=0;
+		invDist=null;
 		if (pdcel.p!=null)
 			hes=pdcel.p.hes;
 		vert=new int[3];
 		radii=new double[3];
-		invDist=new double[3];
-		for (int i=0;i<3;i++) {
-			radii[i]=.05;
-			invDist[i]=1.0; // default to tangency
+		for (int j=0;j<3;j++) {
+			radii[j]=.05;
 		}
 	}
 
@@ -65,7 +64,16 @@ public class TriData {
 				int v=he.origin.vertIndx;
 				vert[j]=v;
 				radii[j]=pdcel.p.getRadius(v);
-				invDist[j]=he.getInvDist();
+				
+				// only create invDist if non-trivial is found
+				double ivd=he.getInvDist();
+				if (ivd!=1.0) {
+					if (invDist==null) {
+						invDist=new double[3];
+						invDist[0]=invDist[1]=invDist[2]=1.0;
+					}
+					setInvDist((j+2)%3,ivd); // store for opposite vert
+				}
 			}
 		} catch(Exception ex) {
 			throw new DataException("error building 'TriData' for face f="+f);
@@ -98,12 +106,43 @@ public class TriData {
 		return radii[j];
 	}
 	
+	/**
+	 * are there any non-trivail inversive distances?
+	 * @return boolean
+	 */
+	public boolean hasInvDist() {
+		if (invDist!=null)
+			return true;
+		return false;
+	}
+	
+	/**
+	 * Caution: invDist[j] is for edge opposite vertex j.
+	 * @param j int
+	 * @return double, 1.0 if 'invDist' is null
+	 */
 	public double getInvDist(int j) {
+		if (invDist==null)
+			return 1.0;
+		if (Math.abs(invDist[j]-1.0)<.000001)
+			return 1.0;
 		return invDist[j];
 	}
 	
+	/**
+	 * Caution: invDist[j] is for edge opposite vertex j.
+	 * Note: this call may have no effect if 'sch' is 1.0.
+	 * @param j int
+	 * @param sch double
+	 */
 	public void setInvDist(int j, double sch) {
-		invDist[j]=sch;
+		if (invDist==null && sch!=1.0) {
+			invDist=new double[3];
+			invDist[0]=invDist[1]=invDist[2]=1.0;
+			invDist[j]=sch;
+		}
+		else 
+			invDist[j]=sch;
 	}
 	
 	/** 
@@ -120,24 +159,30 @@ public class TriData {
 
 	/**
 	 * Return angle at v=vert[j] using current data, but radius 
-	 * 'rad' at v itself.
+	 * 'rad' at v itself. Recall, if 'invDist' exists, then
+	 * invDist[j] is for edge opposite vertex j.
 	 * @param j int
 	 * @param rad double
 	 * @return double
 	 */
 	public double compOneAngle(int j,double rad) {
-		return CommonMath.get_face_angle(rad,radii[(j+1)%3],radii[(j+2)%3],
-				invDist[j],invDist[(j+1)%3],invDist[(j+2)%3],hes);
+		if (invDist!=null)
+			return CommonMath.get_face_angle(rad,radii[(j+1)%3],radii[(j+2)%3],
+				getInvDist(j),getInvDist((j+1)%3),getInvDist((j+2)%3),hes);
+		return CommonMath.get_face_angle(rad,radii[(j+1)%3],radii[(j+2)%3],hes);
 	}
 
 	/**
-	 * Return angle at vert[j] using current data.
-	 * @param j
-	 * @return
+	 * Return angle at vert[j] using current data. Recall, if 
+	 * 'invDist' exists, then invDist[j] is for edge opposite vertex j.
+	 * @param j int
+	 * @return double
 	 */
 	public double compOneAngle(int j) {
-		return CommonMath.get_face_angle(radii[j],radii[(j+1)%3],radii[(j+2)%3],
-				invDist[j],invDist[(j+1)%3],invDist[(j+2)%3],hes);
+		if (invDist!=null)
+			return CommonMath.get_face_angle(radii[j],radii[(j+1)%3],radii[(j+2)%3],
+				getInvDist(j),getInvDist((j+1)%3),getInvDist((j+2)%3),hes);
+		return CommonMath.get_face_angle(radii[j],radii[(j+1)%3],radii[(j+2)%3],hes);
 	}
 
 }

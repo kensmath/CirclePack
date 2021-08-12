@@ -2058,9 +2058,12 @@ public class RawDCEL {
 
 	  /**
 	   * Either hex or bary refine the given DCEL. Start either
-	   * process by first dividing each edge in half and either 
-	   * adding edges between the new edge vertices (hex refining)
-	   * or adding a barycenter and new edges (bary refining).
+	   * process by first dividing each edge in half. Then either 
+	   * add edges between the new edge vertices (hex refining)
+	   * or add a barycenter and new edges (bary refining). We
+	   * return 'ArrayList<Integer>': in baryrefine case, this
+	   * list all the new barycenters, in hexrefine case, it is
+	   * not null but is empty.  
 	   * The 'pdcel.redChain' should remain in tact, but is subdivided 
 	   * to get the new red chain. All original vertices have their 
 	   * original 'halfedge's, 'vutil' holds index of reference 
@@ -2074,19 +2077,21 @@ public class RawDCEL {
 	   * get adjusted to accommodate.
 	   * 
 	   * (Nominally works for non-triangular faces, but that has
-	   * not been tested. Also can be repeated 'Ntimes', but that
-	   * also has not been thoroughly tested.)
+	   * not been tested.)
 	   *  
 	   * @param pdcel  PackDCEL
 	   * @param baryFlag boolean; true, then do bary refine, else hex
-	   * @return int number of repeats
+	   * @return ArrayList<Integer>, may be empty
 	   */
-		public static int hexBaryRefine_raw(PackDCEL pdcel, boolean baryFlag) {
+		public static ArrayList<Integer> hexBaryRefine_raw(PackDCEL pdcel,
+				boolean baryFlag) {
 
 			boolean debug=false; // debug=true;
 			// DCELdebug.printRedChain(pdcel.redChain);
 			
-			// need to make 'vertices' bigger?
+			ArrayList<Integer> barycents=new ArrayList<Integer>();
+			
+			// need to make 'vertices' array bigger?
 			int newsz=pdcel.vertCount+pdcel.edgeCount;
 			if (baryFlag)
 				newsz += pdcel.faceCount;
@@ -2390,6 +2395,7 @@ public class RawDCEL {
 							
 						// new vertex
 						Vertex baryCent=new Vertex(++pdcel.vertCount);
+						barycents.add(pdcel.vertCount); 
 						pdcel.vertices[pdcel.vertCount]=baryCent;
 						baryCent.vutil=spoke.origin.vertIndx;
 							
@@ -2454,7 +2460,103 @@ public class RawDCEL {
 			if (debug)
 				DCELdebug.printRedChain(pdcel.redChain);
 			
-			return 1;
+			return barycents;
+		}
+		  
+		/**
+		 * Routine to 'migrate' a branch point from interior point
+		 * v to nghb w. Based on a common geometric method for 
+		 * creating branch points, namely, by attaching two packings 
+		 * along a common slit, the tips of the slits becoming the 
+		 * common branch circle. If the local combinatorics of the two 
+		 * complexes were identical, then the branch point could be 
+		 * modified by extending the slit one more edge on each 
+		 * piece to end at the common neighbors of the original 
+		 * tips; after pasting, the branching would occur at that 
+		 * neighbor. This routine adjusts the combinatorics of 
+		 * the original pasted complex locally to accomplish the 
+		 * same result -- so a branch point v is "migrated" to 
+		 * a neighbor w.
+		 * 
+		 * Branching is a geometric phenomenon, and while the work
+		 * is combinatoric, there must exist certain local 
+		 * symmetries to make this work: if 'edge' is <v,w>,
+		 * the original 'branch' vertex is 'v' and must have 
+		 * even degree (at least 6) and neighbor w must have 
+		 * the same degree as the vertex ww directly opposite of v.
+		 * 
+		 * After migration, 'v' remains as the branch vertex,
+		 * 'w' and 'ww' split the old branch vert edges; no need
+		 * to adjust aims.
+		 * 
+		 * @param edge HalfEdge
+		 * @return int, new 'w', else 0 on error
+		 */
+		public static int migrate(HalfEdge edge) {
+			  Vertex vert=edge.origin;
+			  Vertex wert=edge.twin.origin;
+			  if (vert.isBdry() || wert.isBdry() || vert.getNum()<6)
+				  return 0;
+			  
+			  // must have edge opposite w
+			  HalfEdge oppedge=edge.findOppEdge();
+			  if (oppedge==null)
+				  return 0;
+			  Vertex uert=oppedge.twin.origin;
+
+			  // store 
+			  HalfEdge holdw_v=edge.twin;
+			  HalfEdge holdww_v=oppedge.twin;
+			  HalfEdge enext=edge.next;
+			  HalfEdge eprev=edge.prev;
+			  
+			  // new twinning
+			  edge.twin=holdw_v;
+			  holdw_v.twin=edge;
+			  
+			  oppedge.twin=holdww_v;
+			  holdww_v.twin=oppedge;
+			  
+			  // new links
+			  edge.next=oppedge.next;
+			  oppedge.next.prev=edge;
+			  oppedge.next=enext;
+			  enext.prev=oppedge;
+			  edge.prev=oppedge.prev;
+			  oppedge.prev.next=edge;
+			  oppedge.prev=eprev;
+			  eprev.next=oppedge;
+			  
+			  // new branch point is 
+			  vert.halfedge=edge.twin;
+			  HalfEdge he=vert.halfedge;
+			  do {
+				  he.origin=vert;
+				  he=he.prev.twin; // cclw
+			  } while (he!=vert.halfedge);
+
+			  edge.origin=wert;
+			  wert.halfedge=edge;
+			  he=wert.halfedge;
+			  do {
+				  he.origin=wert;
+				  he=he.prev.twin; // cclw
+			  } while(he!=wert.halfedge);
+			  
+			  oppedge.origin=uert;
+			  uert.halfedge=oppedge;
+			  he=uert.halfedge;
+			  do {
+				  he.origin=uert;
+				  he=he.prev.twin; // cclw
+			  } while(he!=uert.halfedge);
+			  
+// debugging
+//			  System.out.println("v="+vert.vertIndx+" deg="+vert.getNum()+
+//					  "; w="+wert.vertIndx+" deg="+wert.getNum()+
+//					  "; u="+uert.vertIndx+" deg="+uert.getNum());
+			  
+			  return wert.vertIndx;
 		}
 		  
 		/**

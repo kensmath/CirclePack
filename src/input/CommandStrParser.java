@@ -35,6 +35,7 @@ import cpContributed.BoundaryValueProblems;
 import cpContributed.CurvFlow;
 import cpContributed.FracBranching;
 import dcel.CombDCEL;
+import dcel.D_Schwarzian;
 import dcel.DataDCEL;
 import dcel.DcelCreation;
 import dcel.HalfEdge;
@@ -205,7 +206,8 @@ public class CommandStrParser {
 	 * @return 0 on error or no action
 	 */
   public static int jexecute(PackData packData, String cmdstr) {
-	  if (cmdstr==null) return 0;
+	  if (cmdstr==null) 
+		  return 0;
 	  CPScreen cpScreen=packData.cpScreen;
 	  int count=0;
 	  String cmd=null;
@@ -231,7 +233,8 @@ public class CommandStrParser {
     	  items=flagSegs.get(0);
 
 	  // 'fix' is deprecated
-	  if (cmd.startsWith("fix")) cmd=new String("layout");
+	  if (cmd.startsWith("fix")) 
+		  cmd=new String("layout");
 
 	  // "Cleanse" all packings
       if (cmd.startsWith("Clean")) { 
@@ -1535,11 +1538,10 @@ public class CommandStrParser {
 		  else if (cmd.startsWith("debug")) {
 			  char flag='d'; // default
 			  try {
-//				  items=(Vector<String>)flagSegs.get(0); // flag
 				  if (StringUtil.isFlag(items.get(0)))
 					  flag=items.get(0).charAt(1);
-				  else flag=items.get(0).charAt(0);
-		    	  
+				  else 
+					  flag=items.get(0).charAt(0);
 			  } catch(Exception ex) {
 				  flag='d';
 			  }
@@ -1547,7 +1549,8 @@ public class CommandStrParser {
 	    	  switch(flag) {
 	    	  case 'r': // log_RedList
 	    	  {
-	    		  LayoutBugs.log_RedList(packData,packData.redChain);
+	    		  LayoutBugs.log_RedList(packData,
+	    				  packData.packDCEL.redChain);
 	    		  return 1;
 	    	  }
 	    	  case 'd': // face drawing order
@@ -5589,9 +5592,9 @@ public class CommandStrParser {
 	      else if (cmd.startsWith("bary_refine")) {
 	    	  if (packData.packDCEL!=null) {
 	    		  int origCount=packData.nodeCount;
-	    		  int rslt=RawDCEL.hexBaryRefine_raw(
+	    		  ArrayList<Integer> a=RawDCEL.hexBaryRefine_raw(
 	    				  packData.packDCEL,true);
-	    		  if (rslt==0)
+	    		  if (a==null)
 	    			  return 0;
 	    		  VertexMap oldnew=packData.packDCEL.reapVUtil();
 	    		  packData.packDCEL.fixDCEL_raw(packData);
@@ -8071,10 +8074,13 @@ public class CommandStrParser {
 	      // ========= migrate ======
 	      else if (cmd.startsWith("migrate")) {
 	    	  items=(Vector<String>)flagSegs.get(0); // just v w
-			  NodeLink vlist=new NodeLink(packData,items);
-			  int v=(Integer)vlist.get(0);
-			  int w=(Integer)vlist.get(1);
-	    	  return packData.migrate(v,w);
+			  HalfLink hlist=new HalfLink(packData,items);
+			  HalfEdge edge=hlist.get(0);
+	    	  int rslt = RawDCEL.migrate(edge);
+	    	  if (rslt==0)
+	    		  return 0;
+	    	  packData.packDCEL.fixDCEL_raw(packData);
+	    	  return rslt;
 	      }
 		  break;
 	  } // end of 'm' and 'M'
@@ -9501,7 +9507,7 @@ public class CommandStrParser {
 			
 			// =============== sch_report =======
 			if (cmd.startsWith("sch_repo")) {
-				return Schwarzian.schwarzReport(packData,flagSegs);
+				return D_Schwarzian.schwarzReport(packData,flagSegs);
 			}
 
 			// =============== sch_layout ========
@@ -9863,10 +9869,10 @@ public class CommandStrParser {
 	    	  // ========= set_invdist  ========
 	    	  if (cmd.startsWith("invdist")) {
 	    		  
-	    		  // if not segments, then reset to default
+	    		  // if no segments, error
 	    		  if (flagSegs==null || flagSegs.size()==0) { 
-	    			  packData.set_invD_default();
-	    			  return 1;
+	    			  CirclePack.cpb.errMsg("usage: 'set_invdist' has no arguments");
+	    			  return 0;
 	    		  }
 
 	    		  items=flagSegs.get(0);
@@ -9916,8 +9922,8 @@ public class CommandStrParser {
 							  count++;
 						  }
 		    			  packData.fillcurves();
-		    			  CirclePack.cpb.msg("set_over: set "+count+
-		    					  " overlaps to default");
+		    			  CirclePack.cpb.msg("set_invdist: set "+count+
+		    					  " inversive distances to default");
 		    			  return count;
 					  }
 						  
@@ -9929,8 +9935,8 @@ public class CommandStrParser {
 	    					  count+=packData.set_single_invDist(edge.v,edge.w,1.0);
     				  }
 	    			  packData.fillcurves();
-	    			  CirclePack.cpb.msg("set_over: set "+count+
-	    					  " overlaps to default");
+	    			  CirclePack.cpb.msg("set_invdist: set "+count+
+	    					  " inversive distances to default");
 					  return count;
 	    		  }
 	    		  
@@ -10022,14 +10028,22 @@ public class CommandStrParser {
 	    		  if (invDist<-1.0) 
      				  throw new ParserException(" tried to set 'invDist' < -1.0");
 	     		  
-	    		  // essentially the default value
-     			  if (Math.abs(invDist-1.0)<=.0000001) {  
-     				  packData.set_invD_default();
-     				  return 1;
-     			  }
-     			  
-	     		  // Is space allocated?
-	     		  if (packData.packDCEL==null && !packData.overlapStatus) 
+	    		  if (packData.packDCEL!=null) {
+	    			  while (eis.hasNext()) {
+	    				  HalfEdge he=packData.packDCEL.findHalfEdge(eis.next());
+	    				  if (he!=null) {
+	    					  he.setInvDist(invDist);
+	    					  count++;
+	    				  }
+	    			  }
+					  packData.fillcurves();
+					  CirclePack.cpb.msg("Set "+count+
+							   " inversive distances to "+invDist);
+	    			  return count;
+	    		  }
+	    		  
+	     		  // traditional
+	     		  if (!packData.overlapStatus) 
 	     			  packData.alloc_overlaps();
 	     		  
 	     		  while (eis.hasNext()) {
@@ -10048,8 +10062,8 @@ public class CommandStrParser {
 	    		  
 	    		  // if no segments, then reset to default
 	    		  if (flagSegs==null || flagSegs.size()==0) { 
-	    			  packData.set_invD_default();
-	    			  return 1;
+	    			  throw new ParserException(
+	    					  "usage: 'set_overlaps' has not edges specified");
 	    		  }
 	    		  
 	    		  items=flagSegs.get(0);
@@ -10448,7 +10462,7 @@ public class CommandStrParser {
 	    		  NodeLink nodeLink=new NodeLink(packData,(String)items.get(1));
 	    		  Iterator<Integer> vlist=nodeLink.iterator();
 	    		  while (vlist.hasNext()) {
-	    			  packData.kData[(Integer)vlist.next()].plotFlag=pf;
+	    			  packData.setPlotFlag((Integer)vlist.next(),pf);
 	    			  count++;
 	    		  }
 	    	  }

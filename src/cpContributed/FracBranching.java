@@ -1818,8 +1818,9 @@ public class FracBranching extends PackExtender {
 	}
 	
 	/**
-	 * Finds and sets the inversive distances for an existing placed circle and its petals.
-	 * The intention is to preserve an existing structure by using overlaps
+	 * Finds and sets the inversive distances for an 
+	 * existing placed circle and its petals. The intention 
+	 * is to preserve an existing structure by using overlaps
 	 * @param pd incoming packing.
 	 * @param v vertex of placed (should be unpacked) circle.
 	 */

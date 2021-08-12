@@ -1,6 +1,8 @@
 package tiling;
 
 import java.awt.Color;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Vector;
 
 import dcel.CombDCEL;
@@ -228,8 +230,10 @@ public class Tile extends Face {
 			p.setVertMark(1,1);
 			p.setVertMark(2,2);
 			p.setVertMark(4,3);
+			p.setVertMark(7, -1); // hex refined face centers
+			p.setVertMark(9, -1);
 			p.vertexMap=new VertexMap();
-			p.vertexMap.add(new EdgeSimple(0,2)); // vert[0] represented by circle 2
+			p.vertexMap.add(new EdgeSimple(0,2)); // vert[0] --> circle 2
 
 			p.tileData=new TileData(1,3);
 			Tile tile=new Tile(p,p.tileData,1);
@@ -250,9 +254,12 @@ public class Tile extends Face {
 		PackDCEL pdcel=CombDCEL.seed_raw(2*vertCount);
 		CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha, false);
 		CombDCEL.d_FillInside(pdcel);
-		RawDCEL.hexBaryRefine_raw(pdcel, true);
+		ArrayList<Integer> barycents=RawDCEL.hexBaryRefine_raw(pdcel, true);
+		
 		PackData p=new PackData(null);
 		pdcel.fixDCEL_raw(p);
+		
+		// mark various vertices
 		p.setVertMark(1,1);
 		p.vertexMap=new VertexMap();
 		for (int j=0;j<vertCount;j++) {
@@ -261,6 +268,10 @@ public class Tile extends Face {
 			p.setVertMark(m,2);
 			p.setVertMark(m+1,3);
 		}
+		Iterator<Integer> bis=barycents.iterator();
+		while (bis.hasNext()) 
+			p.setVertMark(bis.next(),-1);
+		
 		p.tileData=new TileData(1,3);
 		Tile tile=new Tile(p.tileData,vertCount);
 		tile.tileType=tileType;

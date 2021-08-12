@@ -3063,8 +3063,9 @@ public class CombDCEL {
 				  if (he1.twin.origin==he2.origin) {
 					  HalfEdge nxtedge=he1.twin;
 					  for (int j=1;j<=n;j++) {
-						  CombDCEL.zipEdge(pdc1,nxtedge.origin);
+						  Vertex vert=nxtedge.origin;
 						  nxtedge=nxtedge.next;
+						  CombDCEL.zipEdge(pdc1,vert);
 					  }
 					  return CombDCEL.wrapAdjoin(pdc1, pdc2);
 				  }

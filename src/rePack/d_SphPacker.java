@@ -84,9 +84,7 @@ public class d_SphPacker extends RePacker {
 		
 		// set up 'TriData
 		pdcel.triData=null;
-		if (triDataLoad()==0) {
-			throw new PackingException("failed to load 'TriData' in SphPacker");
-		}
+		oldReliable=triDataLoad(); // not yet used
 		for (int j=1;j<=pdcel.faceCount;j++) {
 			TriData td=pdcel.triData[j];
 			td.hes=0; // treat as euclidean
