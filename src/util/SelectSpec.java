@@ -522,7 +522,7 @@ public class SelectSpec {
 			}
 			case 'L': // in Hlist?
 			{
-				if (CPBase.HLink!=null && CPBase.HLink.containsVW(he))
+				if (CPBase.Hlink!=null && CPBase.Hlink.containsVW(he))
 					uP.value=1;
 				uP.rtnFlag=1;
 				return uP;

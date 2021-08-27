@@ -71,7 +71,8 @@ List creation syntax:
 				with face 'f'.
 	Gv <v> {(x,y)..}	For edges or vertices, try starting at vertex 'v' 
 	glist (Glist)  will return dual graph edges from the current list
-	hlist (Hlist)  will return halfedges from the current list
+	hlist (Hlist)  for edges, will return halfedges from the current list
+	            for faces, will list the faces of the given edges
 	h v w n		vertices only; hex_walk: starting with edge {vw},
 				walk as though counterclockwise around hexagon 
 				having sides of length n. List may truncate, eg,

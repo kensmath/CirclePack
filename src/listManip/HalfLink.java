@@ -371,9 +371,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				// hlist or Hlist
 				else if ((str.startsWith("h") && (hlink=packData.hlist)!=null
 						&& hlink.size()>0) ||
-						(str.startsWith("H") && (hlink=CPBase.HLink)!=null
-								&& CPBase.HLink.size()>0)) {
-					HalfEdge hedge=null;
+						(str.startsWith("H") && (hlink=CPBase.Hlink)!=null
+								&& CPBase.Hlink.size()>0)) {
 				
 					// check for brackets first
 					String brst=StringUtil.brackets(str);
@@ -593,7 +592,6 @@ public class HalfLink extends LinkedList<HalfEdge> {
 					HalfEdge edge=hlist.get(0);
 					int v=edge.origin.vertIndx;
 					int w=edge.next.origin.vertIndx;
-					int indx=-1;
 					// v, w must be interior and hex and form an edge
 					if (packData.isBdry(v) || packData.countFaces(v)!=6
 							|| packData.isBdry(w) || packData.countFaces(w)!=6)
@@ -628,6 +626,17 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				//  restriction must be met by one neighbor. 
 			{
 				// TODO: see 'EdgeLink'
+				break;
+			}
+			case 's': // edges defining by side or by full red chain
+			{
+				int sideIndx=-1;
+				if (its.hasNext()) {
+					try {
+						sideIndx=Integer.parseInt(its.next());
+					} catch (Exception ex) {}
+				}
+				abutMore(HalfLink.HoloHalfLink(packData.packDCEL,sideIndx));
 				break;
 			}
 			case 'I': // incident to vertices/edges/faces; redundancies not checked
@@ -746,7 +755,6 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			}
 			default: // if nothing else, see if there is an edge (or extended edges)
 			{
-				EdgeSimple edge=null;
 				int v,w;
 				try{
 					if ((v=MathUtil.MyInteger(str))>0 && its.hasNext() 
@@ -863,6 +871,186 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		return -1;
 	}
 	
+	/**
+	 * This is list of 'HalfEdge's whose faces form
+	 * a closed contiguous chain along the full side 
+	 * 'sideIndx' of the packing, or if 'sideIndx<0', 
+	 * along the full red chain. Note that the first
+	 * and last edges in the result should have the
+	 * same face, so, e.g., we can layout along this chain
+	 * of faces to compute holonomy.
+	 * @param pdcel PackDCEL
+	 * @param sideIndx int, possibly <0
+	 * @return HalfLink, null on error
+	 */
+	public static HalfLink HoloHalfLink(PackDCEL pdcel,int sideIndx) {
+		
+		HalfLink hlink=new HalfLink();
+		RedHEdge rtrace=pdcel.redChain;
+		boolean debug=false; // debug=true;
+		
+		// for whole red chain, we don't include any red edges
+		if (sideIndx<0) {
+			if (rtrace==null)
+				return null;
+		
+			// add first
+			hlink.add(rtrace.myEdge);
+					
+			// get clw edges until next red edge
+			do {
+				HalfEdge he=rtrace.myEdge.next;
+				while (he.myRedEdge==null) {
+					hlink.add(he.twin);
+					he=he.twin.next;
+				}
+				rtrace=rtrace.nextRed;
+			} while (rtrace!=pdcel.redChain);
+
+			return hlink;
+		}
+		
+		// however, if the given side is part of a closed loop,
+		//    may cross paired reds as we go until closing up.
+		if (pdcel.pairLink==null || sideIndx>=pdcel.pairLink.size()) 
+			throw new CombException(
+				"packing does not side with index "+sideIndx);
+		D_SideData sdata=pdcel.pairLink.get(sideIndx);
+		rtrace=sdata.startEdge;
+		HalfEdge he=rtrace.myEdge;
+		hlink.add(he);
+		HalfEdge hold4end=he.prev;
+		
+		// Is this a bdry side? follow the bdry component
+		if (rtrace.myEdge.isBdry()) {
+			// get clw edges until next bdry edge
+			do {
+				he=he.next;
+				while (!he.isBdry()) {
+					hlink.add(he.twin);
+					he=he.twin.next;
+				}
+			} while (he!=rtrace.myEdge);
+			return hlink;
+		}
+		
+		// otherwise should be closed interior loop;
+		// finding it can take some work in general.
+		
+		// first check if side start/end at same vert
+		int v=rtrace.myEdge.origin.vertIndx;
+		int w=sdata.endEdge.myEdge.next.origin.vertIndx;
+		
+		if (v==w) {
+			
+			// should not encounter red edges along the side
+			int safety=1000;
+			do {
+				he=rtrace.myEdge.next;
+				while (he.myRedEdge==null) {
+					safety--;
+					hlink.add(he.twin);
+					if (debug) 
+						System.out.println("v=w case: added "+he.twin);
+					he=he.twin.next;
+				}
+				rtrace=rtrace.nextRed;
+				safety--;
+			} while (rtrace!=sdata.endEdge && safety>0);
+			if (safety==0)
+				throw new CombException("safety exit in 'HoloHalfLink'");
+			
+			// finish connection to sdata.startEdge
+			he=sdata.endEdge.myEdge.next;
+			while (he!=sdata.startEdge.myEdge) { // he=rtrace.myEdge;
+				hlink.add(he.twin);
+				if (debug) 
+					System.out.println("v=w case: added "+he.twin);
+				he=he.twin.next;
+			}
+			
+			return hlink;
+		}
+		
+		// not so simple? start by following red until
+		//   first return to v, then reprocess to 
+		//   eliminate detours.     
+		
+		// zero out 'redutil'
+		RedHEdge rtr=pdcel.redChain;
+		do {
+			rtr.redutil=0;
+			rtr=rtr.nextRed;
+		} while (rtr!=pdcel.redChain);
+		
+		// preliminary link: follow and mark the reds.
+		HalfLink prelink=new HalfLink(); // debug=true;
+		int tick=0;
+		rtrace.redutil=++tick;
+		int safety=1000;
+		do {
+			he=rtrace.myEdge.next;
+			while (he.myRedEdge==null && safety>0) {
+				safety--;
+				prelink.add(he.twin);
+				if (debug) 
+					System.out.println("prelink: added "+he.twin);
+				he=he.twin.next;
+			}
+			rtrace=rtrace.nextRed;
+			rtrace.redutil=++tick;
+			safety--;
+		} while (rtrace.myEdge.origin.vertIndx!=v && safety>0);
+		if (safety==0)
+			throw new CombException("safety exit in 'HoloHalfLink'");
+		
+		// now pass through the list again. 
+		Iterator<HalfEdge> pis=prelink.iterator();
+		while (pis.hasNext() && safety>0) {
+			safety--;
+			he=pis.next();
+			hlink.add(he);
+			if (debug) 
+				System.out.println("hlink: added "+he);
+			if (he.next.myRedEdge!=null) {
+				if (he.next.origin.vertIndx==v) {
+					HalfEdge firsthe=hlink.get(0);
+					while (he.next!=firsthe && safety>0) { // firsthe=he.next;
+						safety--;
+						he=he.next.twin;
+						hlink.add(he);
+						if (debug) 
+							System.out.println("hlink: added "+he);
+					}
+					if (safety==0)
+						throw new CombException("safety exit in 'HoloHalfLink'");
+					return hlink;
+				}
+				he=he.next; // this is red, should we include it and jump?
+				if (he.twin.myRedEdge!=null && he.twin.myRedEdge.redutil!=0) {
+					HalfEdge newhe=he.twin;
+					hlink.add(newhe);
+					if (debug) 
+						System.out.println("hlink: added "+newhe);
+					HalfEdge stophe=he.twin.prev;
+					
+					// jump over the detour
+					do {
+						safety--;
+						if (!pis.hasNext())
+							throw new CombException("some error in processin 'prelink'");
+						he=pis.next();
+					} while (he!=stophe && safety>0);
+					if (safety==0)
+						throw new CombException("safety exit in 'HoloHalfLink'");
+				}
+			}
+		} // done with while
+
+		// should exit before this
+		return hlink;
+	}
+
 	/**
 	 * Rotate EdgeLink so it starts with 'indx'.
 	 * @param link @see EdgeLink

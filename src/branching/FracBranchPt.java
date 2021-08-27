@@ -35,7 +35,6 @@ import util.UtilPacket;
 
 public class FracBranchPt extends GenBranchPt {
 	
-//	public int myIndex;		// face whose vertices support the branching
 	double []cos_overs;         // cos of overlap angle attached to an edge.
 	FaceLink borderLink;  		// chain used for layout (local indexing)
 

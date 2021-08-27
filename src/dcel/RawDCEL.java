@@ -2,7 +2,6 @@ package dcel;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-
 import allMains.CirclePack;
 import complex.Complex;
 import deBugging.DCELdebug;
@@ -11,7 +10,6 @@ import exceptions.DCELException;
 import exceptions.DataException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
-import komplex.RedEdge;
 import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
@@ -3401,6 +3399,142 @@ public class RawDCEL {
 		if (safety==0) // didn't close up
 			return -count;
 		return count;
+	}
+	
+	/**
+	 * Build the 'HalfLink' whose faces define an oriented 
+	 * chain outside of 'beach'; beach represents a cclw 
+	 * closed chain of vertices, as a beach around an island. 
+	 * If 'beach' is all interior, the result should define a
+	 * closed chain of faces (so the first and last 'HalfEdge's
+	 * have the same face). Otherwise, 'HalfLink' will define
+	 * one or more open chains of faces, which the calling 
+	 * routine processes. Return null if 'beach' is all bdry.
+	 * 
+	 * Combinatorial detail: if face f2 shares an edge e with f0 and
+	 * vert v of f2 opposite to e is degree 3, then swallow v into 
+	 * the interior; thus, .. f0 f1 f2 .. replaced by .. f0 f2 .. 
+	 *  
+	 * @param p @see PackData
+	 * @param beach @see NodeLink
+	 * @return ArrayList<HalfLink>, null on error
+	 */
+	public static ArrayList<HalfLink> islandSurround(PackDCEL pdcel,
+			NodeLink beach) {
+		
+		// check validity, remove repeat at end 
+		if (beach==null || beach.size()==0)
+			return null;
+		if (beach.get(0)==beach.getLast()) 
+			beach.removeLast();
+		
+		// build 'HalfLink' chain(s) from 'beach'.
+		HalfLink blink=new HalfLink();
+		Iterator<Integer> bis=beach.iterator();
+		int v=bis.next();
+		boolean bdryhits=pdcel.vertices[v].isBdry();
+		int w=v;
+		while (bis.hasNext()) {
+			v=w;
+			w=bis.next();
+			HalfEdge he=pdcel.findHalfEdge(v,w);
+			if (he.origin.isBdry())
+				bdryhits=true;
+			if (he==null)
+				return null;
+			blink.add(he);
+		}
+
+		// close up unless beach has boundary vertices
+		HalfEdge he=pdcel.findHalfEdge(beach.getLast(),beach.get(0));
+		if (he==null && !bdryhits) 
+			return null;
+		blink.add(he);
+		
+		// check for any deg-3 interiors to enclose
+		HalfLink newblink=new HalfLink();
+		for (int j=0;j<blink.size();j++) {
+			he=blink.get(j);
+			Vertex oppV=he.next.next.origin;
+			// deg-3 interior? add edges envelop it
+			if (!he.isBdry() && oppV.bdryFlag==0 && pdcel.countFaces(oppV)==3) {
+				newblink.add(he.twin.next);
+				newblink.add(he.twin.prev);
+			}
+			else
+				newblink.add(he);
+		}
+		blink=newblink;
+		int bcount=blink.size();
+		
+		// find bdry edges that lead into segments of interior edges
+		ArrayList<HalfLink> multiLinks=new ArrayList<HalfLink>();
+		
+		int[] marks=new int[bcount];
+		if (bdryhits) {
+			for (int j=0;j<blink.size();j++) {
+				he=blink.get(j);
+				if (he.origin.bdryFlag!=0 && he.next.origin.bdryFlag==0)
+					marks[j]=1;
+			}
+		}
+
+		// bdry in 'beach' means possible segments
+		if (bdryhits) {
+			for (int j=0;j<bcount;j++) {
+				HalfEdge currhe=blink.get(j);
+				// does a new segment starts here?
+				if (marks[j]==1) {
+					boolean segdone=false;
+					HalfLink linkseg=new HalfLink();
+					he=currhe.origin.halfedge; // should be bdry edge
+					linkseg.add(he);
+					he=he.prev.twin;
+					int spot=j;
+
+					int safety=1000;
+					do {
+						safety--;
+						while (he!=currhe && !he.isBdry()) {
+							linkseg.add(he);
+							he=he.prev.twin;
+						}
+						if (he.isBdry()) {
+							multiLinks.add(linkseg);
+							segdone=true;
+						}
+						else {
+							spot=(spot+1)%bcount;
+							currhe=blink.get(spot);
+							he=he.twin.prev.twin;
+						}
+					} while (!segdone && safety>0);
+					if (safety==0)
+						throw new CombException("looping in search for segment");
+				} 							
+			} // loop for new segments
+			
+			return multiLinks;
+		} // done if multiple segments			
+		
+		HalfEdge nexthe=blink.get(0);
+		HalfEdge currhe=nexthe;
+		HalfLink seg=new HalfLink();
+		seg.add(blink.get(0).twin);
+		
+		// add cclw spokes 
+		for (int j=0;j<bcount;j++) {
+			currhe=blink.get(j);
+			nexthe=blink.get((j+1)%bcount);
+			he=currhe.twin.prev.twin;
+			while (he!=nexthe) { 
+				seg.add(he);
+				he=he.prev.twin; // cclw
+			}
+		}
+		
+		multiLinks.add(seg);
+		return multiLinks; 
 	}
 	
 }

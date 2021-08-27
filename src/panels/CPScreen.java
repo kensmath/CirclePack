@@ -441,12 +441,24 @@ public class CPScreen extends JPanel implements	MouseListener {
 	 * @param dflags DispFlags
 	 */
 	public void drawCircle(Complex z,double rad,DispFlags dflags) {
+		drawCircle(new CircleSimple(z,rad),dflags);
+	}
+	
+	/**
+	 * Draw circle using 'DispFlags' encoding for color, thickness, 
+	 * label, etc. 
+	 * @param z Complex
+	 * @param rad double
+	 * @param dflags DispFlags
+	 */
+	public void drawCircle(CircleSimple cs,DispFlags dflags) {
+		Complex z=cs.center;
 		try {
-			if (packData.hes > 0)
-				z = sphView.toApparentSph(z);
+			if (packData.hes>0)
+				z=sphView.toApparentSph(z);
 			circle.x = z.x;
 			circle.y = z.y;
-			circle.radius = rad;
+			circle.radius = cs.rad;
 			
 			Color fcolor=null;
 			Color bcolor=null;

@@ -180,6 +180,8 @@ set_function_text {text}
 set_glist [options] {f1 f2 ..} 
 set_Glist [a] {f1 g1 f2 g2 ..} 
 set_grid -[crg] -[n] 
+set_hlist [options] {v w, ..} 
+set_Hlist {e..} 
 set_invdist [option] {{x} (v w)..} 
 set_Mobius {a.re a.im b.re b.im c.re c.im d.re d.im flip} 
 set_over [option] {{x} (v w)..} 
@@ -258,16 +260,30 @@ zip n v
 ?aim {v} 
 ?anglesum {v} 
 ?antip {v...} 
+?area {f...}
 ?cent {v} 
 ?count {..} 
-?energy -[chlm] 
+?DCEL
+?energy -[chlm]
+?edge_x {v w ..}
 ?flower {v} 
 ?f(z) {x [y]} 
 ?gam(t) {t} 
-?invdist {v w} 
+?invdist {v w}
+?mark -[vft] {j...}
+?mob
+?nodeCount
+?packNum
+?Redchain 
+?rad {v...}
 ?schwarz {v w} 
+?sch_flower {v...}
+?screen
+?socket
+?status
 ?mark -[vft] {.} 
 ?rad {v} 
+?vertmap
 #XY 
 [{script cmd}] 
 {..cmd..} 

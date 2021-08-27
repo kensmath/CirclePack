@@ -146,7 +146,6 @@ public class PackDCEL {
 	 * @param prune boolean
 	 */
 	public void fixDCEL_raw(PackData p,boolean prune) {
-		boolean debug=false; // debug=true; // prune=false;
 		if (p==null)
 			p=this.p;
 		try {
@@ -708,12 +707,13 @@ public class PackDCEL {
 	}
 		
 	/**
-	 * Compute circle centers based on GraphLink of faces. 
-	 * The first is the 'alpha' edge 'origin' vertex at the 
-	 * origin, its other end on the positive real axis. Taking 
-	 * faces in turn, the next face should have two of its 
-	 * vertices in place so we can compute/store the third. 
-	 * After layout, rotate so 'gamma' is on positive y-axis.
+	 * Compute circle centers based on GraphLink of faces:
+	 * typically the first is associated with 'alpha', then
+	 * each successive face should have its 'face.edge' already
+	 * in place and it lays out the opposite vertex. The 
+	 * first edge's 'origin' is at the origin, its other end 
+	 * on the positive real axis. After layout, rotate so 
+	 * 'gamma' is on positive y-axis.
 	 * Note: radii are already computed.
 	 * @param faceorder GraphLink
 	 * @return int, count (may exceed 'vertCount' as some vertices
@@ -737,10 +737,10 @@ public class PackDCEL {
 		
 		if (debug) {// debug=true;
 			DCELdebug.drawEFC(this,face.edge);
-			StringBuilder strbld=new StringBuilder("disp -c "+
-					face.edge.origin.vertIndx+" "+
-					face.edge.twin.origin.vertIndx);
-			CommandStrParser.jexecute(p,strbld.toString());
+//			StringBuilder strbld=new StringBuilder("disp -c "+
+//					face.edge.origin.vertIndx+" "+
+//					face.edge.twin.origin.vertIndx);
+//			CommandStrParser.jexecute(p,strbld.toString());
 			p.cpScreen.rePaintAll();
 		}
 			
@@ -1462,7 +1462,7 @@ public class PackDCEL {
 		}
 
 		// else, go clw to reach a spoke that has 'myRedEdge'
-		HalfEdge he=edge;
+		HalfEdge he=edge;   // he=edge;
 		while (he.myRedEdge==null) {
 			he=he.twin.next;
 		}
@@ -1587,13 +1587,17 @@ public class PackDCEL {
 	 * @return HalfEdge or null on failure
 	 */
 	public HalfEdge findHalfEdge(EdgeSimple es) {
-		Vertex vert=vertices[es.v];
-		HalfEdge trace=vert.halfedge;
-		do {
-			if (trace.twin.origin.vertIndx==es.w) 
-				return trace;
-			trace=trace.prev.twin;
-		} while (trace!=vert.halfedge);
+		if (es.v<=0 || es.w<=0)
+			return null;
+		try {
+			Vertex vert=vertices[es.v];
+			HalfEdge trace=vert.halfedge;
+			do {
+				if (trace.twin.origin.vertIndx==es.w) 
+					return trace;
+				trace=trace.prev.twin;
+			} while (trace!=vert.halfedge);
+		} catch (Exception ex) {}
 		return null;
 	}
 
@@ -1608,7 +1612,7 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Find 'dcel.Face' for give edge <v,w> 
+	 * Find 'dcel.Face' for given edge <v,w> 
 	 * @param v int
 	 * @param w int
 	 * @return dcel.Face or null on failure

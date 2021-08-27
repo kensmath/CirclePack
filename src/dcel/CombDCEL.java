@@ -263,8 +263,8 @@ public class CombDCEL {
 			HalfLink hlink,HalfEdge alphaEdge,boolean prune) {
 		
 		// debug? Try to draw things on existing packing
-		//    debug=true;debugPack=CPBase.packings[0];
-		boolean debug=false; 
+		//    debugPack=CPBase.packings[0];
+		boolean debug=false; // debug=true;
 		PackData debugPack=pdcel.p; // 
 		boolean click=false; // help debug
 		int vertcount=pdcel.vertCount;
@@ -411,6 +411,7 @@ public class CombDCEL {
 				int v = currRed.myEdge.origin.vertIndx;
 				
 				if (debug && click) { // debug=true;
+					System.out.println("next v: "+v);
 					DCELdebug.drawTmpRedChain(debugPack,currRed);
 //					DCELdebug.printRedChain(pdcel.redChain);
 				}
@@ -1027,7 +1028,7 @@ public class CombDCEL {
 			gotone=false;
 			
 			// pass around red chain
-			rtrace=pdcel.redChain;
+			rtrace=pdcel.redChain; // DCELdebug.printRedChain(pdcel.redChain);
 			INNER_LOOP: do {
 
 				HalfEdge base=rtrace.myEdge;
@@ -1056,8 +1057,8 @@ public class CombDCEL {
 					continue INNER_LOOP;
 				}
 				
-				// easiest situation: successive reds are twinned
-				//   make 'shortcut' into a red edge
+				// easiest situation: successive reds have successive
+				//   twins as well: make 'shortcut' into a red edge
 				if (tw2!=null && tw1!=null && tw2.nextRed==tw1) {
 					Vertex vert=rtrace.nextRed.myEdge.origin;
 					RedHEdge rhold=rtrace.nextRed;
@@ -1086,8 +1087,13 @@ public class CombDCEL {
 					rtrace.nextRed=rhold.nextRed;
 					rhold.nextRed.prevRed=rtrace;
 					
-					rtrace.myEdge.origin.halfedge=rtrace.myEdge;
-					tw2.myEdge.origin.halfedge=tw2.myEdge;
+					// check: if bdry, make it the 'halfedge'
+					HalfEdge he=rtrace.myEdge;
+					if (he.twin.face!=null && he.twin.face.faceIndx<0)
+						rtrace.myEdge.origin.halfedge=rtrace.myEdge;
+					he=tw2.myEdge;
+					if (he.twin.face!=null && he.twin.face.faceIndx<0)
+						he.origin.halfedge=he;
 					
 					// tw1 and rhold should now be orphaned
 					
@@ -1125,9 +1131,8 @@ public class CombDCEL {
 		
 		pdcel.triData=null;  // filled when needed for repacking
 		
-		// we prefer that 'alpha' be set already, but in some
-		//    cases it is tossed out. Here we make simple choice:
-		//    some edge which is not red.
+		// we prefer that 'alpha' be set, but if it was tossed out,
+		//    make simple choice: some edge which is not red.
 		if (pdcel.alpha==null) {
 			for (int v=1;(v<=pdcel.vertCount && pdcel.alpha==null);v++) {
 				HalfLink spokes=pdcel.vertices[v].getEdgeFlower();
@@ -1158,7 +1163,7 @@ public class CombDCEL {
 			do {
 				trace.eutil=0;
 				trace.twin.eutil=0;
-				trace=trace.prev.twin;
+				trace=trace.prev.twin; // cclw
 				safety--;
 			} while(trace!=edge && safety>0);
 			if (safety==0)
@@ -1192,7 +1197,7 @@ public class CombDCEL {
 		ArrayList<Vertex> currv=new ArrayList<Vertex>(0);
 		ArrayList<Vertex> nxtv=new ArrayList<Vertex>(0);
 
-		// put alpha in first and mark its edges
+		// put alpha in first and mark its face's edges
 		orderEdges.add(pdcel.alpha);
 		ordertick++;
 		
@@ -1207,8 +1212,8 @@ public class CombDCEL {
 			tr=tr.next;
 		} while(tr!=pdcel.alpha);
 
-		// now keep two lists to progress through rest of
-		//   interior.
+		// keep two lists to progress through rest of non-red
+		//   interior. Note: at least 'alpha' is in 'nxtv'.
 		while (nxtv.size()>0) {
 			currv=nxtv;
 			nxtv=new ArrayList<Vertex>(0);
@@ -1223,8 +1228,6 @@ public class CombDCEL {
 					continue;
 				}
 				
-				// DCELdebug.edgeFlowerUtils(pdcel,pdcel.vertices[17]);
-
 				// rotate cclw to find eutil==1; should always exist
 				HalfEdge startspoke=vert.halfedge;
 				HalfEdge he=startspoke;
@@ -1234,11 +1237,12 @@ public class CombDCEL {
 					safety--;
 				}
 				if (safety==0)
-					throw new CombException("startedge "+startspoke+"; didn't find eutil==1");
-				startspoke=he.prev.twin;
+					throw new CombException(
+							"startedge "+startspoke+"; didn't find eutil==1");
+				startspoke=he.prev.twin; // cclw of edge with 'eutil'==1
 				he=startspoke;
 				
-				// move cclw through to layout new faces
+				// move cclw about 'vert' to layout new faces
 				do {
 					if (he.eutil==0 && he.twin.eutil==1) {
 						orderEdges.add(he);
@@ -1258,65 +1262,54 @@ public class CombDCEL {
 						tr=he;
 						do { 
 							tr.eutil=1;
-							if (debug) {
-								System.out.println(" set 'eutil' of "+tr);
-							}
 							tr=tr.next;
 						} while(tr!=he);
 					}
-					he=he.prev.twin;
+					he=he.prev.twin; // cclw
 				} while(he!=startspoke);
 				vhits[vert.vertIndx]=1;
 			} // end of while on 'currv'
 		} // end of while on 'nxtv'
 		
-		// Not a sphere? go around redChain for stragglers
+		// Status: all 'orderEdges' entries have 'origin' in
+		//   non-red interior, and every edge from that origin
+		//   should have 'eutil' set to 1. 
+		
+		// If not a sphere, go around redChain for stragglers,
+		//   namely, any outer vertex of a blue face.
 		if (pdcel.redChain!=null) {
-			RedHEdge startred=pdcel.redChain;
-			
-			// don't want to start with unplotted "blue" face
-			while (startred.myEdge.eutil==0 && (startred.myEdge.next==startred.nextRed.myEdge
-					|| startred.myEdge.prev==startred.prevRed.myEdge))
-				startred=startred.nextRed;
-			
-			rtrace=startred;
+			rtrace=pdcel.redChain;
 			do {
-				
-				// if associated face already plotted, continue
-				if (rtrace.myEdge.eutil==1) {
+				HalfEdge he=rtrace.myEdge;
+				if (he.eutil==1) {
 					rtrace=rtrace.nextRed;
 					continue;
 				}
 
-				// otherwise, search cclw for edge with eutil==0, twin.eutil==1
-				HalfEdge stopedge=rtrace.prevRed.myEdge.next;
-				HalfEdge he=rtrace.myEdge;
-				while (he!=stopedge && he.eutil==0)
-					he=he.prev.twin;
-				if (he.eutil==0)
-					throw new DCELException("seems that no edge from red vertex "+
-							he.origin.vertIndx+
-							" has been laid out");
-				HalfEdge bhe=he.twin; 
-				// DCELdebug.vertConsistency(pdcel,30); // DCELdebug.redConsistency(pdcel.redChain);
-				
-				// then rotate clw adding faces
-				do {
-					orderEdges.add(bhe);
+				// if 'myEdge' not yet laid out, one of its
+				//   face edges twins should be.
+				he=he.next;
+				if (he.myRedEdge==null && he.twin.eutil==1) {
+					orderEdges.add(he);
 					ordertick++;
+				}
+				else {
+					he=he.next;
+					if (he.myRedEdge==null && he.twin.eutil==1) {
+						orderEdges.add(he);
+						ordertick++;
+					}
+					else {
+						throw new CombException(
+							"Failed in laying out red face "+rtrace.myEdge.face);
+					}
+				}
+				he.eutil=1;
+				he.next.eutil=1;
+				he.next.next.eutil=1;
 					
-//					if (debug) // debug=true;
-//						DCELdebug.drawEdgeFace(pdcel,bhe);
-						
-					HalfEdge bt=bhe;
-					do {
-						bt.eutil=1;
-						bt=bt.next;
-					} while (bt!=bhe); 
-					bhe=bhe.next.twin; // next clw spoke
-				} while (bhe.twin!=rtrace.myEdge);
 				rtrace=rtrace.nextRed;
-			} while (rtrace!=startred);	
+			} while (rtrace!=pdcel.redChain);
 		}
 		
 		if (debug) 
@@ -2358,7 +2351,7 @@ public class CombDCEL {
 			CPBase.Elink=new EdgeLink();
 			CPBase.Elink.abutHalfLink(hlink);
 			CPBase.Vlink=vlink;
-			CPBase.HLink=hlink;
+			CPBase.Hlink=hlink;
 		}
 		
 		return hlink; // hlink.size();

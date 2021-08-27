@@ -29,6 +29,7 @@ import listManip.BaryLink;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.PointLink;
 import math.Mobius;
@@ -67,7 +68,7 @@ public class GenBranching extends PackExtender {
 	
 	Vector<GenBranchPt> branchPts; // ignore 0 index, start with 1
 	public static final double LAYOUT_THRESHOLD=.00001; // for layouts based on quality
-	FaceLink parentBorder;
+	HalfLink holoBorder; // for checking holonomy
 	
 	GraphLink layoutTree;  // tree for parent layout
 	int []vertTracker;  // who is laying out each vertex? branchID for those interior 
@@ -91,8 +92,8 @@ public class GenBranching extends PackExtender {
 			packData.poisonVerts=null;
 		}
 		
-		parentBorder=new FaceLink(packData,"Ra");
-		parentBorder.add(parentBorder.getFirst());
+		// initialize 'holoBorder' along full red chain
+		holoBorder=HalfLink.HoloHalfLink(packData.packDCEL,-1);
 		branchPts=new Vector<GenBranchPt>(3);
 		branchPts.add((GenBranchPt)null); // make index 0 empty; numbering is from 1
 		layoutTree=parentLayout();
@@ -280,8 +281,9 @@ public class GenBranching extends PackExtender {
 		}	
 		// =========== holonomy ===================
 		if (cmd.startsWith("holon")) {
-			// Idea is to use parentBorder to check holonomy of full packing
-			double frobNorm=PolyBranching.holonomy_trace(packData, null, parentBorder, false);
+			// Idea is to use holoBorder to check holonomy of full packing
+			// Note: this does not actually change any centers
+			double frobNorm=PolyBranching.holonomy_trace(packData, null, holoBorder, false);
 			if (frobNorm<0)
 				return 0;
 			return 1;
@@ -928,9 +930,9 @@ public class GenBranching extends PackExtender {
 	}
 
 	/**
-	 * We start with a normal layout tree and drawing order for 'packData',
-	 * but then we modify it to keep branch points whole. Careful: plotFlag's may
-	 * be reset.
+	 * We start with a normal layout tree and drawing order for 
+	 * 'packData', but then we modify it to keep branch points 
+	 * whole. Careful: plotFlag's may be reset.
 	 */
 	public GraphLink parentLayout() {
 		// create typical full layout to get appropriate red chain to use below

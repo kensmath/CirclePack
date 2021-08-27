@@ -2640,7 +2640,128 @@ public class CommandStrParser {
 		  }
 	      break;
 	  } // end of 'l'
-	  case 'm': // fall through
+	  case 'm': 
+	  {
+		  // ============ map ====================
+		  if (cmd.startsWith("map")) {
+			  if (packData.vertexMap==null || packData.vertexMap.size()==0) {
+				  CirclePack.cpb.errMsg(
+						  "usage 'map': packing has no 'vertexMap'");
+				  return 0;
+			  }
+			  
+			  // check for/remove 'reverse' flag -r
+			  boolean reverse=false;
+			  String str=items.get(0);
+			  if (str.startsWith("-r")) {
+				  reverse=true;
+				  items.remove(0);
+				  if (items.size()==0) { // there must be later flags
+					  flagSegs.remove(0);
+				  }
+			  }
+			  
+			  // there should be one action to process
+			  items=flagSegs.get(0);
+			  str=items.get(0);
+				  
+			  // faces?
+			  if (str.startsWith("-f")) {
+				  items.remove(0);
+				  boolean trans2q=false;
+				  int qnum=-1;
+				  if (items.size()==0) { // must be -q flag
+					  items=flagSegs.get(1);
+					  if ((qnum=StringUtil.qItemParse(items))>=0 &&
+							  qnum<CPBase.NUM_PACKS &&
+							  CPBase.packings[qnum].status) {
+						  trans2q=true;
+						  items.remove(0);
+					  }
+					  else {
+						  throw new ParserException(
+							"usage: 'map -f -q{p} {f..}' parsing failure");
+					  }
+				  }
+			  
+				  FaceLink flink=new FaceLink(packData,items);
+				  if (trans2q) {
+					  PackData qdata=CPBase.packings[qnum];
+					  CPBase.Flink=new FaceLink(packData);
+					  Iterator<Integer> fis=flink.iterator();
+					  while (fis.hasNext()) {
+						  int f=fis.next();
+						  HalfEdge he=packData.packDCEL.faces[f].edge;
+						  int wa=-1;
+						  int wb=-1;
+						  if (reverse) {
+							  wa=packData.vertexMap.findV(he.origin.vertIndx);
+							  wb=packData.vertexMap.findV(he.twin.origin.vertIndx);
+						  }
+						  else {
+							  wa=packData.vertexMap.findW(he.origin.vertIndx);
+							  wb=packData.vertexMap.findW(he.twin.origin.vertIndx);
+						  }
+						  HalfEdge qedge=qdata.packDCEL.findHalfEdge(wa,wb);
+						  if (qedge!=null) {
+							  CPBase.Flink.add(qedge.face.faceIndx);
+							  count++;
+						  }
+					  }
+				  }
+				  else {
+					  CPBase.Flink=flink;
+					  count += flink.size();
+				  }
+				  return count;
+			  } // done with face case
+
+			  // reaching here, must be vertices w or w/o flag
+			  if (str.startsWith("-v") || str.startsWith("-c")) {
+				  items.remove(0); // shuck this flag
+				  if (items.size()==0) 
+					  throw new ParserException(
+							  "usage 'map': no vertices listed");
+			  }
+			  
+			  NodeLink vlist=new NodeLink(packData,items);
+			  CPBase.Vlink=new NodeLink();
+			  Iterator<Integer> vis=vlist.iterator();
+			  while (vis.hasNext()) {
+				  int v=vis.next();
+				  int w=-1;
+				  if (reverse) {
+					  w=packData.vertexMap.findV(v);
+				  }
+				  else
+					  w=packData.vertexMap.findW(v);
+				  if (w>0) {
+					  CPBase.Vlink.add(w);
+					  count++;
+				  }
+			  } 
+			  return count;
+		  }
+		  
+	      // ============ mode_change =============
+		  else if (cmd.startsWith("mode_chan")) {
+	    	  String str=null;
+			  try {
+				  items=(Vector<String>)flagSegs.remove(0);
+				  str=items.get(0);
+				  for (int j=0;j<CursorCtrl.scriptModes.size();j++) {
+					  MyCanvasMode mcm=CursorCtrl.scriptModes.get(j);
+					  if (str.equals(mcm.nameString)) {
+						  PackControl.activeFrame.mainToolHandler.setCanvasMode(mcm);
+						  return 1;
+					  }
+				  }
+			  } catch(Exception ex) {} // go to default
+			  PackControl.activeFrame.mainToolHandler.setCanvasMode(ActiveWrapper.defaultMode);
+			  return 1;
+	      }
+	      break;
+	  }
 	  case 'M':
 	  {
 //		  if (cmd.startsWith("mlhistodegree")) {
@@ -4438,18 +4559,24 @@ public class CommandStrParser {
   } // end of 's'
   case 'T': // "test" routines, meant to be temporary, developmental
   {
-	  // ======= faceSurround ====
-	  if (cmd.startsWith("T_islandSurround")) {
+	  // ======= T_islandSurround ====
+	  if (cmd.startsWith("T_isl")) {
 		  NodeLink beach=null;
 		  try {
 			  beach=new NodeLink(packData,flagSegs.get(0));
 		  } catch(Exception ex) {
 			  throw new ParserException("usage; T_islandSurround {v..}");
 		  }
-		  packData.flist=PackData.islandSurround(packData,beach);
-		  if (packData.flist==null) {
-			  CirclePack.cpb.errMsg("islandSurround failed");
+		  ArrayList<HalfLink> hllist=
+				  RawDCEL.islandSurround(packData.packDCEL,beach);
+		  if (hllist==null) {
+			  CirclePack.cpb.errMsg("RawDCEL.islandSurround failed");
 			  return 0;
+		  }
+		  Iterator<HalfLink> his=hllist.iterator();
+		  while (his.hasNext()) {
+			  packData.hlist=his.next();
+			  CommandStrParser.jexecute(packData,"disp -ff hlist");
 		  }
 		  return 1;
 	  }
@@ -7288,14 +7415,64 @@ public class CommandStrParser {
 	       	  				"' for writing");	
 	    	  }
 	    	  
-	    	  // this should be facelist
+	    	  // '-s {n}' flag or facelist
 	    	  items=(Vector<String>)flagSegs.get(0);
-	    	  FaceLink facelist=new FaceLink(packData,items);
-	    	  if (facelist==null || facelist.size()==0) {
-	    		  throw new ParserException("failed to get facelist");
+	    	  HalfLink hlink=new HalfLink();
+	    	  if (StringUtil.isFlag(items.get(0))) {
+	    		  if (items.get(0).charAt(1)=='s') { // side index
+	    			  int sideIndx=-1;
+	    			  try {
+	    			  if (items.size()==1 && items.get(0).length()>2) { // no space?
+	    				  String substr=items.get(0).substring(2);
+	    				  sideIndx=Integer.parseInt(substr);
+	    			  }
+	    			  else 
+	    				  sideIndx=Integer.parseInt(items.get(1));
+	    			  } catch (Exception ex) {
+	    				  throw new ParserException("usage: holonomy -s {n}");
+	    			  }
+	    			  hlink=HalfLink.HoloHalfLink(packData.packDCEL,sideIndx);
+	    		  }
 	    	  }
-	    	  double frobNorm=PolyBranching.holonomy_trace(packData,fp,
-	    			  facelist,true);
+	    	  else {
+	    		  FaceLink facelist=new FaceLink(packData,items);
+	    		  if (facelist==null || facelist.size()<2) {
+	    			  throw new ParserException("usage: holonomy: {f..}");
+	    		  }
+	    	  
+	    		  // convert to corresponding 'HalfLink'
+	    		  Iterator<Integer> fis=facelist.iterator();
+	    		  dcel.Face currF=packData.packDCEL.faces[fis.next()];
+	    		  dcel.Face nextF=packData.packDCEL.faces[fis.next()];
+	    		  HalfEdge he=currF.faceNghb(nextF);
+	    		  if (he==null) {
+	    			  throw new ParserException("first two faces not contiguous");
+	    		  }
+	    	  
+	    		  hlink.add(he.prev);
+	    		  hlink.add(he.twin);
+	    		  while (fis.hasNext()) {
+	    			  currF=nextF;
+	    			  nextF=packData.packDCEL.faces[fis.next()];
+	    			  he=currF.faceNghb(nextF);
+	    			  if (he==null) 
+	    				  throw new ParserException("Faces "+currF.faceIndx+
+	    					  " and "+nextF.faceIndx+" are not contiguous");
+	    			  hlink.add(he.twin);
+	    		  }
+	    	  }
+	    	  
+	    	  if (hlink==null || hlink.size()<3) {
+	    		  throw new ParserException("usage holonomy: failed to get HalfLink");
+	    	  }
+	    	  dcel.Face firstF=hlink.getFirst().face;
+	    	  dcel.Face lastF=hlink.getLast().face;
+	    	  if (firstF==null || lastF==null || firstF!=lastF)
+	    		  throw new ParserException(
+	    				  "usage holonomy: list doesn't have same face first and last");
+	    	  
+	    	  double frobNorm=PolyBranching.holonomy_trace(packData,
+	    			  fp,hlink,true);
 	    	  if (fp!=null) {
 	    		  try {
 	    			  fp.flush();
@@ -7385,8 +7562,10 @@ public class CommandStrParser {
 	       * combinatorics of layout and values of angle sums, etc.
 	       * 
 	       * NOTE: some options change the information held in faces
-	       * about the drawing order, others use use various info to
+	       * about the drawing order, others use various info to
 	       * set centers.
+	       * 
+	       * TODO: not all options are yet covered in DCEL case.
 	       * 
 	       * Typical call is just 'layout' without any flags.
 	       * 
@@ -7420,7 +7599,37 @@ public class CommandStrParser {
 		  else if (cmd.startsWith("layout")) {
 			  PackDCEL pdc=packData.packDCEL;
 			  if (pdc!=null) {
-				  pdc.dcelCompCenters(packData.packDCEL.computeOrder);
+
+				  // most typical call
+		    	  if (flagSegs.size()==0) {
+		    		  pdc.dcelCompCenters(packData.packDCEL.computeOrder);
+		    		  packData.fillcurves();
+		    		  return 1;
+		    	  }
+
+		    	  Iterator<Vector<String>> its=flagSegs.iterator();
+		    	  String str=null;
+		    	  boolean tflag=false;
+		    	  Face []newfaces=null;
+		    	  while (its.hasNext()) {
+		    		  items=(Vector<String>)its.next();
+		    		  str=(String)items.remove(0);
+		    		  switch(str.charAt(1)) {
+		    		  case 'a': // default aims
+		    		  {packData.set_aim_default();count++;break;}
+		    		  case 's': // recompute angle sums
+		    		  {packData.fillcurves();count++;break;}
+		    		  
+		    		  case 'K': // redo combinatorics only
+		    		  {
+		    			  pdc.redChain=null;
+		    			  pdc.fixDCEL_raw(packData);
+		    			  count++;
+		    			  break;
+		    		  }
+		    		  } // done with cases
+		    	  }
+		    	  return count;
 			  }
 			  
 			  // traditional
@@ -7466,9 +7675,12 @@ public class CommandStrParser {
 	    			  }
 	    			  else {
 	    				  str=str.substring(2);
-	    				  if (str.contains("d")) dflag=true;
-	    				  if (str.contains("f")) errflag=true;
-	    				  if (str.contains("s")) opt=1;
+	    				  if (str.contains("d")) 
+	    					  dflag=true;
+	    				  if (str.contains("f")) 
+	    					  errflag=true;
+	    				  if (str.contains("s")) 
+	    					  opt=1;
 	    				  if (str.contains("c")) { 
 	    					  try {
 	    						  crit=Double.parseDouble((String)items.
@@ -10522,6 +10734,30 @@ public class CommandStrParser {
 	    			  else {
 	    				  CPBase.Elink=new EdgeLink(packData,items);
 	    				  count=CPBase.Elink.size();
+	    			  }
+	    			  break;
+	    		  }
+	    		  case 'h':
+	    		  {
+	    			  if (items==null) {
+	    				  packData.hlist=null;
+	    				  count=1;
+	    			  }
+	    			  else {
+	    				  packData.hlist=new HalfLink(packData,items);
+	    				  count=packData.hlist.size();
+	    			  }
+	    			  break;
+	    		  }
+	    		  case 'H':
+	    		  {
+	    			  if (items==null) {
+	    				  CPBase.Hlink=null;
+	    				  count=1;
+	    			  }
+	    			  else {
+	    				  CPBase.Hlink=new HalfLink(packData,items);
+	    				  count=CPBase.Hlink.size();
 	    			  }
 	    			  break;
 	    		  }

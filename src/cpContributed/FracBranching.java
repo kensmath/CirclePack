@@ -27,8 +27,9 @@ import util.StringUtil;
 import util.UtilPacket;
 
 /**
- * Work with "fractional" branching, with branch points fractured to reside in part
- * at multiple vertices.
+ * Work with "fractional" branching, with branch points 
+ * fractured to reside in part at multiple vertices. Started
+ * by James Ashe with ideas from Ed Crane and Ken Stephenson
  */
 public class FracBranching extends PackExtender {
 
@@ -61,7 +62,8 @@ public class FracBranching extends PackExtender {
 		}
 		fbState=1;
 	}
-	//CmdParser
+	
+	// Here's where commands get parsed
 	public int cmdParser(String cmd,Vector<Vector<String>> flagSegs) {
 		Vector<String> items=null;
 		if (cmd.startsWith("sdisp")) {
@@ -458,12 +460,14 @@ public class FracBranching extends PackExtender {
 		return 1;
 	}
 	/**
-	 * Stores branch points in branchVert[][] array. If 3 ints then a new array is created [0][3] 
-	 * and these ints are stored in order as vertices. If {i,v1,v2,v3} then the last three are 
-	 * copied into branchVert[i][3]. If i exceeds the lenght then branchVert is expanded. 
-	 * @param flagSegs
-	 * @param items
-	 * @return
+	 * Stores branch points in branchVert[][] array. If 3 ints 
+	 * then a new array is created [0][3] and these ints are 
+	 * stored in order as vertices. If {i,v1,v2,v3} then the 
+	 * last three are copied into branchVert[i][3]. If i exceeds 
+	 * the length then branchVert is expanded. 
+	 * @param flagSegs Vector<Vector<String))
+	 * @param items Vector<String>
+	 * @return int
 	 */
 	public int a1_branch(Vector<Vector<String>> flagSegs, Vector<String> items) {
 		items=flagSegs.get(0);
@@ -480,12 +484,13 @@ public class FracBranching extends PackExtender {
 			if (packData.isBdry(branchVert[0][0]) ||
 					packData.isBdry(branchVert[0][1]) ||
 					packData.isBdry(branchVert[0][2])) {
-				msg("NOTE: one branch vertex is not interior");
+				msg("NOTE: one of the branch vertices is not interior");
 			}
 		}
 		else {
 			int i=Integer.parseInt((String)items.get(0));
-			if (branchVert==null) branchVert =new int[i][3];
+			if (branchVert==null) 
+				branchVert =new int[i][3];
 			if (branchVert.length-1<=i) {
 				int branchVertOld[][]=branchVert;
 				branchVert=new int[i+1][3];
@@ -507,12 +512,14 @@ public class FracBranching extends PackExtender {
 		fbState=2;
 		return 1;
 	}
+	
 	public int a1_chain_err(Vector<Vector<String>> flagSegs, Vector<String> items) {
 		items=flagSegs.get(0);
 		double err =fundChainError(items,250,0,1);
 		msg("Chain error: "+err);
 		return 1;
 	}
+	
 	public int a1_chain_lay(Vector<Vector<String>> flagSegs, Vector<String> items) {
 		try {
 			items=flagSegs.get(0);
@@ -1364,12 +1371,12 @@ public class FracBranching extends PackExtender {
 
 	/**
 	 * Creates a list of border faces on b's border element
-	 * @param b border vertex
-	 * @param pd incoming packData
+	 * @param b int, border vertex
 	 * @return face list as a String
 	 */
 	public String findBorderChain(int b) {
-		if (!packData.isBdry(b) || b<0) Oops("b must be a boundary circle");
+		if (!packData.isBdry(b) || b<0) 
+			Oops("b needs to be a boundary circle");
 		int first_b =b;
 		int stop=0;
 		String Flist ="";
@@ -1377,13 +1384,14 @@ public class FracBranching extends PackExtender {
 		while (stop ==0) {
 			int count=0;
 			int[] faceFlower=packData.getFaceFlower(b);
-			while (count+skip_first<packData.countFaces(b)) {
+			while ((count+skip_first)<packData.countFaces(b)) {
 				Flist =Flist+""+faceFlower[count+skip_first]+" ";
 				count++;
 			}
 			b =packData.kData[b].flower[packData.countFaces(b)]; //next bdry vertex
 			skip_first =1; //avoids repetitive faces in Flist
-			if (b ==first_b) stop=1;
+			if (b ==first_b) 
+				stop=1;
 		}
 		return Flist;
 	}
@@ -1843,7 +1851,6 @@ public class FracBranching extends PackExtender {
 
 	/**
 	 * Returns inversive distance for current position of two vertices
-	 * @param pd
 	 * @param v1
 	 * @param v2
 	 * @return 
@@ -2279,8 +2286,8 @@ public class FracBranching extends PackExtender {
 	}
 	
 	/**
-	 * Finds two interior branch points which result in lowest error on border chain of 
-	 * an annulus.
+	 * Finds two interior branch points which result in lowest error on 
+	 * border chain of an annulus.
 	 * @return an array of length 3, [0],[1] are two vertices; [2] is the error.
 	 */
 	public double[] findBestBranchDAF() {
@@ -3595,10 +3602,11 @@ public class FracBranching extends PackExtender {
 	}
 	
 	/**
-	 * Layout_facelist procedure modified to accomidate shift points.
-	 * WARNING. Correct faces are found by finding the inversive distance between petals
-	 * and the shift point's little circle. The original overlap distances are NOT preserved.
-	 * @param pd incoming packData
+	 * Layout_facelist procedure modified to accommodate shift points.
+	 * WARNING. Correct faces are found by finding the inversive 
+	 * distance between petals and the shift point's little circle. 
+	 * The original overlap distances are NOT preserved.
+	 * @param pd packData
 	 * @param facelist a chain of faces 
 	 * @return last face (usually also the first face) in the chain
 	 */
@@ -5145,9 +5153,9 @@ public class FracBranching extends PackExtender {
 	 * Iterate to find weights giving a coherent packing; idea is James Ashe's.
 	 * Weights need to be twice the angles in the triangle formed by the 
 	 * fractured branch points.
-	 * @param n, int, max iterations
-	 * @param report, int 0/1 turns off/on msg report
-	 * @return number of iterations
+	 * @param n int, max iterations
+	 * @param report int: 0/1 turns off/on msg report
+	 * @return double number of iterations
 	 * TODO: move to new code
 	 */
     public double fracShuffle3(int n, int report) {

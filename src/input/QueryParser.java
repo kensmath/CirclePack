@@ -7,6 +7,8 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.HalfEdge;
+import dcel.RedHEdge;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -16,6 +18,7 @@ import input.CommandStrParser.Energy;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.TileLink;
 import math.Matrix3D;
@@ -107,9 +110,52 @@ public class QueryParser {
 			
 			// handle any 'list' requests first: limit is 1000 or
 			//    12 if intended as a message.
-			if (query.length()>=5 && query.substring(1,5).equalsIgnoreCase("list")) {
+			if (query.length()>=5 && 
+					query.substring(1,5).equalsIgnoreCase("list")) {
 				int n=0;
 				switch(c) {
+				case 'h': {
+					if (p.hlist==null || p.hlist.size()==0) {
+						if (forMsg)
+							ans.append("empty");
+						break;
+					}
+					gotone=true;
+					n=p.hlist.size();
+					if (forMsg && n>12) {
+						n=12;
+		  	      		suffix=" ... ";
+					}
+					n=(n>1000)? 1000:n;
+					Iterator<HalfEdge> hlst=p.hlist.iterator();
+					int click=0;
+					while (hlst.hasNext() && click<n) {
+						HalfEdge edge=hlst.next();
+						ans.append(" "+edge+"  ");
+					}
+					break;
+				} 
+				case 'H': {
+					if (CPBase.Hlink==null || CPBase.Hlink.size()==0) {
+						if (forMsg)
+							ans.append("empty");
+						break;
+					}
+					gotone=true;
+					n=CPBase.Hlink.size();
+					if (forMsg && n>12) {
+						n=12;
+		  	      		suffix=" ... ";
+					}
+					n=(n>1000)? 1000:n;
+					Iterator<HalfEdge> hlst=PackControl.Hlink.iterator();
+					int click=0;
+					while (hlst.hasNext() && click<n) {
+						HalfEdge edge=hlst.next();
+						ans.append(" "+edge+"  ");
+					}
+					break;
+				}
 				case 'e': {
 					if (p.elist==null || p.elist.size()==0) {
 						if (forMsg)
@@ -370,7 +416,7 @@ public class QueryParser {
 			// now process the rest
 			else switch(c) {
 			
-			// NOTE: as queries are added, they should be added to 'CmdCompletion.txt'
+			// NOTE: as queries added, also add to 'CmdCompletion.txt'
 			
 			case 'a': { // --------------------------------------------------------
 			
@@ -452,11 +498,11 @@ public class QueryParser {
 			case 'd': 
 			case 'D': 
 			{
-				if (query.startsWith("dce") || query.startsWith("DCE")) {
+				if (query.toLowerCase().startsWith("dce")) {
 					if (p.packDCEL!=null)
-						words.append("yes, dcel exists");
+						words.append("yes, DCEL exists");
 					else
-						words.append("no, dcel does not exist");
+						words.append("no, DCEL does NOT exist");
 					gotone=true;
 				}
 				break;
@@ -495,7 +541,7 @@ public class QueryParser {
 					gotone=true;
 				}
 				
-				else if (query.startsWith("edge_x")) { // cross-ration of edge
+				else if (query.startsWith("edge_x")) { // cross-ratio of edge
 					int j,k,v1,v3;
 					words=new StringBuilder("Edge cross_ratios (p"+p.packNum);
 					EdgeLink edgelist=new EdgeLink(p,flagSegs.get(0));
@@ -739,28 +785,20 @@ public class QueryParser {
 			
 			case 'R': { // --------------------------------------------------------
 				if (query.startsWith("Redchai")) {
-					FaceLink redlink=new FaceLink(p,"R");
-					int n;
-					if (redlink==null || (n=redlink.size())==0) {
+					if (p.packDCEL.redChain==null) {
 						exception_words="?Redchain usage: appears to be empty";
 						throw new CombException("");
 					}
-					int firstf=redlink.get(0);
-					if (forMsg && n>50) {
-						n=50;
-	  	      			suffix=" ... ";
-					}
-					n=(n>1000)? 1000:n;
-					Iterator<Integer> rlk=redlink.iterator();
+					RedHEdge rtrace=p.packDCEL.redChain;
 					int click=0;
-					while (rlk.hasNext() && click<n) {
-						ans.append(" "+rlk.next());
-					}
-					if (!rlk.hasNext()) // if done, close with first face
-						ans.append(" "+firstf);
+					do {
+						ans.append(" <"+rtrace.myEdge+">");
+						rtrace=rtrace.nextRed;
+					} while (rtrace!=p.packDCEL.redChain && click<12);
+					if (click==12) // if done, close with first face
+						ans.append(" ... ");
 					gotone=true;
 				}
-
 				break;
 			}
 			
@@ -835,17 +873,15 @@ public class QueryParser {
 					gotone=true;
 				}
 				else if (query.startsWith("schw")) {
-					EdgeSimple edge=EdgeLink.grab_one_edge(p, flagSegs);
+					HalfEdge edge=HalfLink.grab_one_edge(p, flagSegs);
 					if (edge!=null) {
 						try {
-							int indx=p.nghb(edge.v,edge.w);
-							ans.append(String.format("%.6f",p.kData[edge.v].schwarzian[indx]));
+							ans.append(String.format("%.6f",edge.getSchwarzian()));
 						} catch (Exception ex) {
-							exception_words="?schw usage: 'schwarzian' data space not allocated";
 							throw new DataException("");
 						}
 						if (forMsg) 
-							words.append(" <v,w>"+edge.v+" "+edge.w);
+							words.append(" <v,w>"+edge);
 						gotone=true;
 					}
 				}
@@ -854,11 +890,14 @@ public class QueryParser {
 					if (vv!=0) {
 						try {
 							double accum=0.0;
-							for (int j=0;j<p.countFaces(vv);j++)
-								accum += p.kData[vv].schwarzian[j];
+							HalfLink spokes=p.packDCEL.vertices[vv].getEdgeFlower();
+							Iterator<HalfEdge> sis=spokes.iterator();
+							while (sis.hasNext()) {
+								HalfEdge he=sis.next();
+								accum+=he.getSchwarzian();
+							}
 							ans.append(String.format("%.6f",accum));
 						} catch (Exception ex) {
-							exception_words="?sch_flower usage: 'schwarzian' may not be allocated";
 							throw new DataException("");
 						}
 						if (forMsg)

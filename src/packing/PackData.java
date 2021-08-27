@@ -2040,6 +2040,7 @@ public class PackData{
         
         if (packDCEL==null)
         	facedraworder(false);
+        
         if ((flags & 0010)!= 0 && (flags & 0020)==0) { // new radii, no centers
         	try {
         		CompPackLayout();
@@ -19645,7 +19646,7 @@ public class PackData{
 			bs=beach.size();
 		}
 		
-		// are verts contiguous?
+		// are verts contiguous? list closed?
 		for (int i=0;i<(bs-1);i++)
 			if (p.nghb(beach.get(i),beach.get(i+1))<0)
 				return null;
@@ -19657,31 +19658,23 @@ public class PackData{
 		// find 'start', index of vert where a chain of outside faces starts
 		//   look for 'curr' a bdry vert with edge to 'next' not a bdry edge; 
 		//   then start is 'next'. 
-		int curr,prev,next,indx_cn,indx_cp;
+		int indx_cn,indx_cp;
 		int start=-1;
 		for (int i=0;(i<bs && start<0);i++) {
-			curr=beach.get(i);
+			int curr=beach.get(i);
 			if (p.isBdry(curr))
 				start=i;
 		}
 		
-		boolean full=false;
+
+		// is all 'beach' interior; get full closed chain
 		if (start<0) {
-			// all 'beach' must be interior, full closed chain
-			if (!p.isBdry(beach.get(0))) {
-				start=0;
-				full=true;
-			}
-			else // there are no outside faces
-				return null;
-		}
-		
-		if (full) {
+			start=0;
 			for (int i=0;i<bs;i++) {
-				int b_ind=(start+i)%bs;
-				curr=beach.get(b_ind);
-				prev=beach.get((b_ind-1+bs)%bs);
-				next=beach.get((b_ind+1)%bs);
+				int b_ind=i;
+				int curr=beach.get(b_ind);
+				int prev=beach.get((b_ind-1+bs)%bs);
+				int next=beach.get((b_ind+1)%bs);
 				indx_cp=p.nghb(curr,prev);
 				indx_cn=p.nghb(curr,next);
 				int num=p.countFaces(curr);
@@ -19691,14 +19684,11 @@ public class PackData{
 				int offset=1;
 				if (i==0)
 					offset=0;
-				
-				// interior? 
-				if (!p.isBdry(curr)) {
-					del=(del+num)%num;
-					int[] faceFlower=p.getFaceFlower(curr);
-					for (int v=offset;v<del;v++) {
-						flist.add(faceFlower[(indx_cp+v)%num]);
-					}
+
+				del=(del+num)%num;
+				int[] faceFlower=p.getFaceFlower(curr);
+				for (int v=offset;v<del;v++) {
+					flist.add(faceFlower[(indx_cp+v)%num]);
 				}
 			}
 		}
@@ -19706,9 +19696,9 @@ public class PackData{
 		else {
 			for (int i=0;i<=bs;i++) {
 				int b_ind=(start+i)%bs;
-				curr=beach.get(b_ind);
-				prev=beach.get((b_ind-1+bs)%bs);
-				next=beach.get((b_ind+1)%bs);
+				int curr=beach.get(b_ind);
+				int prev=beach.get((b_ind-1+bs)%bs);
+				int next=beach.get((b_ind+1)%bs);
 				indx_cp=p.nghb(curr,prev);
 				indx_cn=p.nghb(curr,next);
 				int num=p.countFaces(curr);

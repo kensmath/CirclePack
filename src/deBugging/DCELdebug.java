@@ -5,7 +5,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import allMains.CirclePack;
+import allMains.CPBase;
 import complex.Complex;
 import dcel.D_SideData;
 import dcel.Face;
@@ -13,6 +13,7 @@ import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RedHEdge;
 import dcel.Vertex;
+import exceptions.CombException;
 import exceptions.DCELException;
 import input.CPFileManager;
 import input.CommandStrParser;
@@ -139,7 +140,7 @@ public class DCELdebug {
 		if (pnum<0)
 			p=pdcel.p;
 		else 
-			p=CirclePack.cpb.packings[pnum];
+			p=CPBase.packings[pnum];
 		Iterator<EdgeSimple> git=glink.iterator();
 		while (git.hasNext()) {
 			int f=git.next().w;
@@ -453,22 +454,40 @@ public class DCELdebug {
 		}
 	}
 
+	/**
+	 * Given oriented 'HalfEdge', draw it in blue, its face 
+	 * on left in pale red, and the three circles.
+	 * @param pdcel PackDCEL
+	 * @param hfe HalfEdge
+	 */
 	public static void drawEFC(PackDCEL pdcel,HalfEdge hfe) {
 		drawEdgeFace(pdcel,hfe);
-		StringBuilder strbld=new StringBuilder("disp -c "+
-				hfe.origin.vertIndx+" "+hfe.twin.origin.vertIndx+" "+
-				hfe.prev.origin.vertIndx);
-		CommandStrParser.jexecute(pdcel.p,strbld.toString());
-		pdcel.p.cpScreen.rePaintAll();
+		CPScreen cps=pdcel.p.cpScreen;
+		HalfEdge he=hfe;
+		int safety=100;
+		do {
+			cps.drawCircle(pdcel.getVertData(he),null);
+			cps.rePaintAll();
+			he=he.next;
+			safety--;
+		} while (he!=hfe && safety>0);
+		if (safety==0) 
+			throw new CombException("exit due to safety");
 	}
 	
+	/**
+	 * Given oriented 'HalfEdge', draw it in blue and face 
+	 * on left in pale red.
+	 * @param pdcel PackDCEL
+	 * @param hfe HalfEdge
+	 */
 	public static void drawEdgeFace(PackDCEL pdcel,HalfEdge hfe) {
-		EdgeSimple es=new EdgeSimple(hfe.origin.vertIndx,hfe.twin.origin.vertIndx);
-		if (pdcel.oldNew!=null) {
-			es.v=pdcel.oldNew.findV(es.v);
-			es.w=pdcel.oldNew.findV(es.w);
-		}
-		drawEdgeFace(pdcel.p,es);
+		Complex z1=pdcel.getVertCenter(hfe);
+		Complex z2=pdcel.getVertCenter(hfe.next);
+		DispFlags dispflags=new DispFlags("t5c5");
+		pdcel.p.cpScreen.drawEdge(z1,z2,dispflags);
+		CommandStrParser.jexecute(pdcel.p,"disp -ffc120 "+hfe.face.faceIndx);
+		pdcel.p.cpScreen.rePaintAll();
 	}
 
 	/**

@@ -624,11 +624,10 @@ does not eliminate redundancies, as other counts do.)
 <description>This command allows you to create various types of
     packings from scratch. Generally, parameters are specified,
     e.g., the number of construction steps for an iterative 
-    construction like "chair" and "sq_grid", or the number of
-    petals for "seed", or the number of generations, as with "hex"
-    or "tri_group". Depending on the type, there may be special numbering 
-    or marking of vertices and/or edges, as with the 'tiles' in 
-    the "chair" construction.
+    construction like "sq_grid", or the number of petals for 
+    "seed", or the number of generations, as with "hex"
+    or "tri_group". Depending on the type, there may be special 
+    numbering or marking of vertices and/or edges.
     
     The "hex_torus" construction builds a regular parallelogram-like
     hex torus with given w/h for width/height.
@@ -651,8 +650,6 @@ does not eliminate redundancies, as other counts do.)
 </description>
 <examples>
 	<instance text="hex_torus 3 6"> build 3-by-6 hex torus</instance>
-	<instance text="create chair 4"> 4 stages of a 'chair' substitution tiling;
-	tile centers are in 'vlist', subdivision stage outlines in 'elist'</instance>
 	<instance text="create hex 23"> hexagonal packing of 23 generations</instance>
 	<instance text="create sq_grid 4"> 'square grid' pattern from 4 quadruplings of a 4-flower</instance>
 	<instance text="create tri_group 8 2 3 5"> 8 generations of the (2 3 5) triangle group on
@@ -1906,7 +1903,7 @@ these packings and the corresponding object is displayed in both.
 	resulting list in Vlist (or Flist). By default, index v of 
 	the active packing is translated to image index w (as 
 	specified in the vertex_map). If the '-r' flag is set,
-	this is reversed: w --> v.
+	this is reversed: w --> v; '-r' must be the first flag
 
 	Face numbers depend on packing layout, so translated face 
 	indices might be meaningless without some target pack q in 
@@ -1915,15 +1912,18 @@ these packings and the corresponding object is displayed in both.
 </description>
 
 <options> 
-	<opt flag="-r"> translate via inverse of vertex_map</opt>
+	<opt flag="-r"> translate via inverse of vertex_map (must appear first)</opt>
 	<opt flag="-v"> circles (the default) (or -c)</opt>
 	<opt flag="-f"> faces</opt>
-	<opt flag="-t{q}"> vis-a-vis pack number q.</opt>
+	<opt flag="-q{q}"> for faces only, vis-a-vis pack number q.</opt>
 </options>
 
 <examples> 
 	<instance text="map a(1,10)"> This will store the translated 
 	indices of circles 1-10 of the active pack in Vlist.</instance>
+	
+	<instance test="map -r a"> Store reverse translated indices of
+	all circlesin Vlist.</instance>
 	
 	<instance text="map -p1 -f -q2 b"> This will store the bdry 
 	face indices of p1 into Flist, but will translate them to 
@@ -3636,7 +3636,7 @@ enters legal halfedges from the list</instance>
 
 <command cmd="set_Hlist" flags="{e..}">
 <description>
-	Same as above, only stores indices in utility "Elist".
+	Same as above, only stores indices in utility "Hlist".
 	(Validity check against active pack.)
 </description>
 <examples>
@@ -3698,6 +3698,9 @@ the existing 'Hlist'</instance>
 	<instance text="set_invdist 1.25 i"> The inversive distances for all interior 
 	edges are set to 1.25</instance>
 </examples>
+<seealso>
+<see>set_overlaps</see>
+</seealso>
 </command>
 
 
@@ -3724,8 +3727,28 @@ the existing 'Hlist'</instance>
  
 <command cmd="set_over" flags="[option] {{x} (v w)..}">
 <description>
-	This is OBE, deprecated: see "set_invdist" instead.
+	Circles that intersect are said to 'overlap' with an angle
+	'theta' in the range [0,Pi], with 0 being external tangency, 
+	Pi/2 being orthogonality, and Pi being internal tangency
+	(one circle interior to the other). 'theta' measures the 
+	"external angle" of overlap, the angle between the tangent
+	lines to the two circles at a point of intersection and is
+	related to the "inversive distance" 'invdist' between the 
+	circles	by invdist=cos(theta). You can set overlaps with a
+	call to 'set_invdist', but then you need to know the cosine
+	of the intended angle. The 'set_overlap' call is thus helpful
+	if you want to specify 'theta' directly: namely, you give
+	parameter 'x' given for convenience by x=theta/Pi. I.e.,
+	'theta' is x*Pi. 
 </description>
+<examples>
+<instance text="set_overlap 0.0 6 12"> specifies that circles 6
+and 12 be tangent (equivalent to "set_invdist 1.0 6 12")
+</instance>
+<instance text="set_overlap 0.333333 17 4"> specifies angle Pi/3
+between 17 and 4 (equivalent to "set_invdist .5 17 4")
+</instance>
+</examples>
 <seealso>
 <see>set_invdist</see>
 </seealso>

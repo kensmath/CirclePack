@@ -1,15 +1,20 @@
 package ftnTheory;
 
 import java.io.BufferedWriter;
+import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.HalfEdge;
+import dcel.PackDCEL;
 import exceptions.DataException;
 import exceptions.ParserException;
 import geometry.CircleSimple;
+import geometry.CommonMath;
 import geometry.HyperbolicMath;
 import listManip.FaceLink;
+import listManip.HalfLink;
 import math.Mobius;
 import packing.PackData;
 import packing.PackExtender;
@@ -132,48 +137,89 @@ public class PolyBranching extends PackExtender {
 	}
 	
 	/**
-	 * Compute Mobius associated with holonomy along a given closed
-	 * face path. Display the transformation and its Frobenius norm 
-	 * (how close to identity) results in message, write them to file 
-	 * if fp!=null. Return Frobenius norm.
+	 * Compute Mobius associated with holonomy along 
+	 * a closed chain of faces. The faces are defined
+	 * by given 'HalfLink', the first assumed to be 
+	 * in the desired geometric location. Centers are
+	 * then recomputed iteratively until the final
+	 * locations of the original three are found. Note
+	 * that data in the packing is not changed.
+	 * The transformation and its Frobenius norm (how 
+	 * close to identity) are displayed in 'Messages' and
+	 * written to a file if fp!=null. Return Frobenius norm.
 	 * @param p PackData,
 	 * @param fp BufferedWriter (or null)
-	 * @param facelist FaceLink
+	 * @param hlink HalfLink, gives associated chain of faces
 	 * @param fix boolean: true, then draw colored faces as we go
 	 * @return double, -1 on error 
 	 */
-	public static double holonomy_trace(PackData p,BufferedWriter fp,FaceLink facelist,boolean fix) {
+	public static double holonomy_trace(PackData p,
+			BufferedWriter fp,HalfLink hlink,boolean fix) {
 
 		  if (p.hes>0) {
-			  CirclePack.cpb.myErrorMsg("holonomy not yet available in spherical setting.");
+			  CirclePack.cpb.myErrorMsg(
+					  "holonomy not yet available in spherical setting.");
 		    return -1;
 		  }
 
-		  /* We are assuming:
-		   *  -  face1 is in geometric location where we want it
-		   *  -  its 0, 1 verts used for defining the Mobius
-		   *  -  last_face is the same as face1.
-		   */
-		  int face1=(Integer)facelist.get(0);
-		  Complex z1=p.getCenter(p.faces[face1].vert[0]);
-		  Complex z2=p.getCenter(p.faces[face1].vert[1]);
+		  PackDCEL pdcel=p.packDCEL;
+		  HalfEdge startedge=hlink.getFirst();
+		  HalfEdge endedge=hlink.getLast();
+		  
+		  Iterator<HalfEdge> his=hlink.iterator();
+		  
+		  // locate the first face
+		  HalfEdge currhe=his.next();
+		  HalfEdge nexthe=currhe;
+		  CircleSimple cs0=pdcel.getVertData(currhe);
+		  CircleSimple cs1=pdcel.getVertData(currhe.next);
+		  double rad=pdcel.getVertRadius(currhe.next.next);
+		  CircleSimple cs2=CommonMath.comp_any_center(cs0,cs1,rad,
+				  currhe.next.getSchwarzian(),
+				  currhe.next.next.getSchwarzian(),
+				  currhe.getSchwarzian(),p.hes);
+		  Complex[] startZ=new Complex[2];
+		  startZ[0]=new Complex(cs0.center);
+		  startZ[1]=new Complex(cs1.center);
+		  while (his.hasNext()) {
+			  currhe=nexthe;
+			  nexthe=his.next();
+			  
+			  if (nexthe.twin.prev==currhe) // head-to-head?
+ 				  cs0=cs2;
+			  else // tail-to-tail
+				  cs1=cs2;
+
+			  rad=pdcel.getVertRadius(nexthe.next.next);
+			  cs2=CommonMath.comp_any_center(cs0,cs1,rad,
+				  nexthe.next.getSchwarzian(),
+				  nexthe.next.next.getSchwarzian(),
+				  nexthe.getSchwarzian(),p.hes);
+		  }
+		  
+		  // line up triples
+		  Complex[] endZ=new Complex[2];
+		  if (endedge.next==startedge) { // head-to-tail
+			  endZ[0]=cs1.center;
+			  endZ[1]=cs2.center;
+		  }
+		  else { // tail-to-head
+			  endZ[0]=cs2.center;
+			  endZ[1]=cs0.center;
+		  }
 		  
 		  String opts=null;
 		  if (fix) opts=new String("-ff"); // draw the colored faces as we go
 		  DispFlags dflags=new DispFlags(opts,p.cpScreen.fillOpacity);
-		  int last_face=p.layout_facelist(null,facelist,dflags,null,true,false,face1,-1.0);
-		  if (last_face!=face1) {
-			  throw new DataException("last face not equal to first face");
-		  }
-		  Complex w1=p.getCenter(p.faces[last_face].vert[0]);
-		  Complex w2=p.getCenter(p.faces[last_face].vert[1]);
 		  Mobius mob=new Mobius(); // initialize transformation 
-		  if (p.hes<0) mob=Mobius.auto_abAB(z1,z2,w1,w2);
+		  if (p.hes<0) 
+			  mob=Mobius.auto_abAB(startZ[0],startZ[1],endZ[0],endZ[1]);
 		  else {
-		    Complex denom=z1.minus(z2);
-		    if (denom.abs()<.00000000001) return 0;
-		    mob.a=w1.minus(w2).divide(denom);
-		    mob.b=w1.minus(mob.a.times(z1));
+			  Complex denom=startZ[1].minus(startZ[0]);
+			  if (denom.abs()<.00000001) 
+				  return 0;
+			  mob.a=endZ[0].minus(endZ[1]).divide(denom);
+			  mob.b=endZ[0].minus(mob.a.times(startZ[0]));
 		  }
 		  double frobNorm=Mobius.frobeniusNorm(mob);
 		  CirclePack.cpb.msg(

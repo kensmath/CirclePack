@@ -147,6 +147,7 @@ public class FaceLink extends LinkedList<Integer> {
 			else if (str.substring(1).startsWith("list")) {
 				int f;
 				FaceLink flink=null;
+				HalfLink hlink=null;
 				boolean ck=false;
 				
 				// flist or Flist
@@ -209,6 +210,20 @@ public class FaceLink extends LinkedList<Integer> {
 									count++;
 								}
 							}
+						}
+					}
+				}
+				if ((str.startsWith("h") && (hlink=packData.hlist)!=null
+						&& hlink.size()>0) ||
+						(str.startsWith("H") && (hlink=CPBase.Hlink)!=null
+								&& CPBase.Hlink.size()>0)) {
+					Iterator<HalfEdge> his=hlink.iterator();
+					while (his.hasNext()) {
+						HalfEdge he=his.next();
+						dcel.Face face=he.face;
+						if (face!=null) {
+							add(face.faceIndx);
+							count++;
 						}
 					}
 				}
@@ -450,6 +465,7 @@ public class FaceLink extends LinkedList<Integer> {
 			}
 			case 'R': // faces from red chain,
 			{
+				// TODO: DCEL version
 				if (packData.packDCEL!=null) {
 					throw new DCELException("DCEL version of faces "+
 							"with 'R' flag not yet implemented");
