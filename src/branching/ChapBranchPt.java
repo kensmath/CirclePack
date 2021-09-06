@@ -1,76 +1,85 @@
 package branching;
 
-import input.CommandStrParser;
-
 import java.awt.Color;
 import java.util.Iterator;
 import java.util.Vector;
 
-import komplex.CookieMonster;
-import komplex.DualGraph;
-import komplex.EdgeSimple;
-import komplex.KData;
-import komplex.RedEdge;
-import komplex.RedList;
-import listManip.EdgeLink;
-import listManip.FaceLink;
-import listManip.GraphLink;
-import listManip.NodeLink;
-import listManip.VertexMap;
-import math.Mobius;
-import packing.PackData;
-import packing.RData;
-import util.StringUtil;
-import util.UtilPacket;
-import allMains.CPBase;
 import allMains.CirclePack;
 import canvasses.DisplayParser;
 import circlePack.PackControl;
-
 import complex.Complex;
-
+import dcel.HalfEdge;
+import dcel.PackDCEL;
+import dcel.RawDCEL;
+import dcel.RedHEdge;
 import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
-import ftnTheory.GenBranching;
 import geometry.HyperbolicMath;
+import input.CommandStrParser;
+import komplex.CookieMonster;
+import komplex.DualGraph;
+import komplex.EdgeSimple;
+import listManip.EdgeLink;
+import listManip.FaceLink;
+import listManip.GraphLink;
+import listManip.HalfLink;
+import listManip.NodeLink;
+import listManip.VertexMap;
+import math.Mobius;
+import packing.PackData;
+import util.StringUtil;
+import util.UtilPacket;
 
 /**
- * A @see GenBranchPt of the "chaparone" type is associated with a 
- * circle (versus an interstice). This idea originated with Ed Crane,
- * and is preferable to the related "shifted" type. Add "sister" and chaparone 
- * circles to the branch point combinatorics. Parameters tell where 
- * chaperones are added and each chaparone has an overlap angle and its 
- * supplementary angle as parameters.
+ * A 'GenBranchPt' of the "chaparone" type is associated 
+ * with a circle (versus with an interstice). This formulation
+ * originated with Ed Crane and turns out to be preferable 
+ * to the related "shifted" type. One adds "sister" and 
+ * "chaparone" circles to the branch point combinatorics. 
+ * Parameters tell where chaperones are added and each 
+ * chaparone has an overlap angle and its supplementary 
+ * angle as parameters.
  * 
- * The circle is represented as two 'sister' circles. Going around the petals
- * of the original vertex, one encounters "prejump/jump" pairs of contiguous 
- * petals. The "jump" petal is in the flower of one sister, while the 
- * preceding "prejump" petal is in the flower of the other. Jumps are 
- * determined by two parameters on creation and these are subject to change.
- * The parameters first determine locations of two chaperones in the 
- * combinatorics, then provide overlap angles. Each jump gets an overlap 
- * angle a between its chaperone and the prejump petal; the supplementary angle
- * sa is the overlap between the chaperone and the jump petal. When a is
- * close to 0, jump circle remains almost in contact with original sister, and
- * as a grows, it jumps more firmly onto the next sister. 
+ * The circle is represented as two 'sister' circles. 
+ * Going around the petals of the original vertex, one 
+ * encounters "prejump/jump" pairs of contiguous petals. 
+ * The "jump" petal is in the flower of one sister, while 
+ * the preceding "prejump" petal is in the flower of 
+ * the other. Jumps are determined by two parameters on 
+ * creation and these are subject to change. The 
+ * parameters first determine locations of two chaperones 
+ * in the combinatorics, then provide overlap angles. 
+ * Each jump gets an overlap angle a between its chaperone 
+ * and the prejump petal; the supplementary angle sa is 
+ * the overlap between the chaperone and the jump petal. 
+ * When a is close to 0, jump circle remains almost in 
+ * contact with its original sister, and as a grows it jumps 
+ * more firmly onto the next sister. 
  * 
- * Thus the circles from jump1 to prejump2 are on sister2 only, from jump2 to 
- * prejump1 are on sister1 only. In particular, jumps and prejumps must be
- * distinct. 
+ * Thus the circles from jump1 to prejump2 are associated
+ * with sister2 only, from jump2 to prejump1 are associated
+ * with sister1 only. In particular, jumps and prejumps 
+ * must be distinct. 
  * 
- * There is a third chaperone "fall guy" who carries this branch point's
- * "aim"; this is normally 4*Pi, in which case the fall guy's radius will 
- * drop to zero. However, to see the underlying structure, one can set the aim
- * to 2*Pi or to follow computations you can let it approach 4*Pi.
+ * There is a third chaperone "fall guy" who carries 
+ * this branch point's "aim"; this is normally 4*Pi, in 
+ * which case the fall guy's radius will drop to zero. 
+ * However, to visualize the underlying structure, one 
+ * can set the aim to 2*Pi, while to follow computations 
+ * one can let it incrementally approach 4*Pi.
  * 
- * Changes in the local structure require changes to 'packData':
- *   * 'packData.poisonEdges' are updated via EdgeLink 'parentPoison'.
- *   * Aims of 'myIndex' and its petals are set negative (so parent doesn't repack)
- *   * The radius of v is sent to parent after repack if transData[v]<0.
+ * Changes in local structure require changes to 'packData':
+ *   * 'packData.poisonEdges' are updated via EdgeLink 
+ *   	'parentPoison'.
+ *   * Aims of 'myIndex' and its petals are set negative 
+ *   	(so parent doesn't repack)
+ *   * The radius of v is sent to parent after repack 
+ *      if transData[v]<0.
  *    
- * TODO: may eventually want to convert between 'shifted' and 'chaperone' types.
+ * TODO: may eventually want to convert between 'shifted' 
+ * and 'chaperone' types.
 
  * @author kens
  */
@@ -109,19 +118,22 @@ public class ChapBranchPt extends GenBranchPt {
 		int numSV=p.countFaces(myIndex);
 		
 		if (packData.getBdryFlag(myIndex)!=0 || packData.countFaces(myIndex)<5)
-			throw new CombException("singular vert must be interior, degree at least 5");
+			throw new CombException(
+					"singular vert must be interior, degree at least 5");
 
-		// set jump indices: note, these are local petal indices for flower of 'myIndex' 
-		//     but will be same petal indices as corresponding circles of the parent's flower.
+		// set jump indices: note, these are local petal indices 
+		//   for flower of 'myIndex' but will be same petal indices 
+		//   as corresponding circles of the parent's flower.
 		jumpIndx=new int[3];
 		jumpIndx[1]=((int)Math.floor(psdo1)+1)%numSV;
 		jumpIndx[2]=((int)Math.floor(psdo2)+1)%numSV;
 		jumpCircle=new int[3];
-		jumpCircle[1]=p.kData[myIndex].flower[jumpIndx[1]];
-		jumpCircle[2]=p.kData[myIndex].flower[jumpIndx[2]];
+		int[] flower=p.getFlower(myIndex);
+		jumpCircle[1]=flower[jumpIndx[1]];
+		jumpCircle[2]=flower[jumpIndx[2]];
 		preJump=new int[3];
-		preJump[1]=p.kData[myIndex].flower[(jumpIndx[1]-1+numSV)%numSV];
-		preJump[2]=p.kData[myIndex].flower[(jumpIndx[2]-1+numSV)%numSV];
+		preJump[1]=flower[(jumpIndx[1]-1+numSV)%numSV];
+		preJump[2]=flower[(jumpIndx[2]-1+numSV)%numSV];
 
 		// set overlaps
 		double o1=1-(psdo1-Math.floor(psdo1));
@@ -154,9 +166,10 @@ public class ChapBranchPt extends GenBranchPt {
 		jumpIndx[1]=p.nghb(myIndex,w1);
 		jumpIndx[2]=p.nghb(myIndex,w2);
 		int numSV=p.countFaces(myIndex);
+		int[] flower=p.getFlower(myIndex);
 		jumpCircle=new int[3];
-		jumpCircle[1]=p.kData[myIndex].flower[jumpIndx[1]];
-		jumpCircle[2]=p.kData[myIndex].flower[jumpIndx[2]];
+		jumpCircle[1]=flower[jumpIndx[1]];
+		jumpCircle[2]=flower[jumpIndx[2]];
 		
 		if ((jumpIndx[2]-jumpIndx[1]+numSV)%numSV<2 || (jumpIndx[1]-jumpIndx[2]+numSV)%numSV<2) {
 			CirclePack.cpb.errMsg("char jump vertices "+jumpCircle[1]+", "+jumpCircle[2]+
@@ -165,8 +178,8 @@ public class ChapBranchPt extends GenBranchPt {
 		}
 			
 		preJump=new int[3];
-		preJump[1]=p.kData[myIndex].flower[(jumpIndx[1]-1+numSV)%numSV];
-		preJump[2]=p.kData[myIndex].flower[(jumpIndx[2]-1+numSV)%numSV];
+		preJump[1]=flower[(jumpIndx[1]-1+numSV)%numSV];
+		preJump[2]=flower[(jumpIndx[2]-1+numSV)%numSV];
 
 		// set overlaps
 		cos_overs=new double[3];
@@ -187,18 +200,19 @@ public class ChapBranchPt extends GenBranchPt {
 	 * whose combinatorial locations are determined by the user as part of 
 	 * parameter setting.
 	 *  
-	 * The 'vertexMap' should be fine, but must update 'borderLink' for any
-	 * combinatorial changes.
+	 * The 'vertexMap' should be fine, but 'borderLink' must be updated
+	 * for any combinatorial changes.
 	 * @return PackData
 	 */
 	public PackData createMyPack() {
 		PackData myPack=null;
 		
 		// identify island containing branch circle
-		NodeLink petals=new NodeLink(packData);
+		NodeLink beach=new NodeLink(packData);
+		int[] flower=packData.getFlower(myIndex);
 		for (int j=0;j<packData.countFaces(myIndex);j++)
-			petals.add(packData.kData[myIndex].flower[j]);
-		bdryLink=PackData.islandSurround(packData,petals);
+			beach.add(flower[j]);
+		bdryLink=PackData.islandSurround(packData,beach);
 		if (bdryLink==null)
 			throw new CombException("Failed to build surround faces");
 
@@ -245,7 +259,7 @@ public class ChapBranchPt extends GenBranchPt {
   	  		myPack.hes=0;
   	  		
   	  	// swap nodes: 'myIndex' becomes 1, its first petal becomes 2
-  	  	int firstpetal=myPack.kData[myIndex].flower[0];
+  	  	int firstpetal=myPack.getFirstPetal(myIndex);
   	  	myPack.swap_nodes(vertexMap.findV(myIndex), 1);
   	  	myPack.swap_nodes(vertexMap.findV(firstpetal), 2);
   	  	vertexMap=myPack.vertexMap.makeCopy(); // reset to get the swaps
@@ -254,7 +268,7 @@ public class ChapBranchPt extends GenBranchPt {
   	  	myPack.setCombinatorics();
   	  	boolean debug=false;
   	  	if (debug)
-  	  		DebugHelp.debugPackWrite(myPack,"Shifted.p");
+  	  		DebugHelp.debugPackWrite(myPack,"Chaperone.p");
   	  	packData.poisonVerts=holdPoison;
   	  	
 		// need to convert 'bdryLink' to local face numbers
@@ -267,7 +281,6 @@ public class ChapBranchPt extends GenBranchPt {
 					vertexMap.findV(packData.faces[F].vert[2])));
 		}
 		myPack.set_aim_default();
-		myPack.alloc_overlaps();
 		
 		matchCount=myPack.nodeCount;
 
@@ -285,22 +298,24 @@ public class ChapBranchPt extends GenBranchPt {
 		
 		// 'myIndex' and its petals are packed locally; set aim < 0 in parent
 		packData.setAim(myIndex,-1.0);
-		for (int j=0;j<packData.countFaces(myIndex)+packData.getBdryFlag(myIndex);j++)
-			packData.setAim(packData.kData[myIndex].flower[j],-1.0);
+		int[] petals=packData.getPetals(myIndex);
+		for (int j=0;j<petals.length;j++)
+			packData.setAim(petals[j],-1.0);
 
 		// store as permanent 'origChild' 
 		origChild=myPack;
 
 		setPoisonEdges();
-  	  	return modifyMyPack();
+  	  	return modifyMyPack(); // modifications of 'origChild'
 	}
 	
 	public void delete() {
 		// reset aims of parent
 		if (packData.getBdryFlag(myIndex)==0)
 			packData.setAim(myIndex,2.0*Math.PI);
-		for (int j=0;j<packData.countFaces(myIndex)+packData.getBdryFlag(myIndex);j++) {
-			int k=packData.kData[myIndex].flower[j];
+		int[] petals=packData.getPetals(myIndex);
+		for (int j=0;j<petals.length;j++) {
+			int k=petals[j];
 			if (packData.getBdryFlag(k)==0)
 				packData.setAim(k,2.0*Math.PI);
 		}
@@ -391,7 +406,7 @@ public class ChapBranchPt extends GenBranchPt {
 			
 			// hyperbolic? have to adjust to euclidean data
 			if (myPackData.hes<0) {
-				// get euclidean radii of 1 and v=chap[2] (as though they go through the origin);
+				// get eucl radii of 1 and v=chap[2] (as though they go through the origin);
 				double h1=HyperbolicMath.x_to_h_rad(e1);
 				double exph=Math.exp(h1);
 				e1=(exph-1.0)/(exph+1.0);
@@ -462,7 +477,7 @@ public class ChapBranchPt extends GenBranchPt {
 		// get centers from parent
 		for (int v=1;v<=matchCount;v++) {
 			myPackData.setCenter(v,packData.getCenter(Math.abs(transData[v])));
-			myPackData.kData[v].plotFlag=1;
+			myPackData.setPlotFlag(v,1);
 			count++;
 		}
 		
@@ -471,30 +486,14 @@ public class ChapBranchPt extends GenBranchPt {
 	}
 	
 	/**
-	 * Compute the holonomy Mobius transform by laying out 'borderLink'
-	 * using current local radii.
-	 * @return @see Mobius, 
+	 * Compute the holonomy Mobius transform by laying 
+	 * out faces according to the red chain using current 
+	 * local radii.
+	 * @return Mobius, 
 	 */
 	public Mobius myHolonomy() {
-		int F=borderLink.get(0);
-
-		// initial location of F
-		Complex []firstF=new Complex[3];
-		firstF[0]=myPackData.getCenter(myPackData.faces[F].vert[0]);
-		firstF[1]=myPackData.getCenter(myPackData.faces[F].vert[1]);
-		firstF[2]=myPackData.getCenter(myPackData.faces[F].vert[2]);
-		
-		// if borderLink closed, compute holonomy
-		myPackData.recomp_facelist(borderLink);
-		
-		// final location of F (only different if 'bdryLink' is closed)
-		Complex []lastF=new Complex[3];
-		lastF[0]=myPackData.getCenter(myPackData.faces[F].vert[0]);
-		lastF[1]=myPackData.getCenter(myPackData.faces[F].vert[1]);
-		lastF[2]=myPackData.getCenter(myPackData.faces[F].vert[2]);
-
-		// update myHolonomy
-		return Mobius.mob_xyzXYZ(firstF[0],firstF[1],firstF[2],lastF[0],lastF[1],lastF[2],0,0);
+		HalfLink hlink=new HalfLink(myPackData,"-R");
+		return PackData.holonomyMobius(myPackData,hlink,false);
 	}
 	
 	/**
@@ -507,9 +506,9 @@ public class ChapBranchPt extends GenBranchPt {
 	}
 
 	/**
-	 * reset parameters using angles o1, o2. These are
-	 * @param o1 angle
-	 * @param o2 angle
+	 * reset parameters using angles o1, o2. 
+	 * @param o1 double, angle
+	 * @param o2 double, angle
 	 * @return 1 on success
 	 */
 	public int resetParameters(double o1,double o2){
@@ -521,12 +520,13 @@ public class ChapBranchPt extends GenBranchPt {
 		double ov2=o1-Math.floor(o2)/Math.PI; // remainder/Pi
 		
 		jumpCircle=new int[3];
-		jumpCircle[1]=packData.kData[myIndex].flower[jumpIndx[1]];
-		jumpCircle[2]=packData.kData[myIndex].flower[jumpIndx[2]];
+		int[] flower=packData.getFlower(myIndex);
+		jumpCircle[1]=flower[jumpIndx[1]];
+		jumpCircle[2]=flower[jumpIndx[2]];
 		int numSV=packData.countFaces(myIndex);
 		preJump=new int[3];
-		preJump[1]=packData.kData[myIndex].flower[(jumpIndx[1]-1+numSV)%numSV];
-		preJump[2]=packData.kData[myIndex].flower[(jumpIndx[2]-1+numSV)%numSV];
+		preJump[1]=flower[(jumpIndx[1]-1+numSV)%numSV];
+		preJump[2]=flower[(jumpIndx[2]-1+numSV)%numSV];
 
 		// remove old poisons
 		if (parentPoison!=null)
@@ -699,10 +699,13 @@ public class ChapBranchPt extends GenBranchPt {
 		
 		// Create the new packing starting with the original cutout patch
 		PackData modifyPack=origChild.copyPackTo();
-		int numV=modifyPack.countFaces(1);
-		
-  		// DebugHelp.debugPackWrite(myPackData,"ChapChild.p");
 		modifyPack.alloc_pack_space(modifyPack.nodeCount+5,true);
+		PackDCEL pdc=modifyPack.packDCEL;
+
+//		int numV=modifyPack.countFaces(1);
+		
+		
+/*		
 		KData kData1=modifyPack.kData[1].clone();
 		
 		// new vertices: 
@@ -715,11 +718,31 @@ public class ChapBranchPt extends GenBranchPt {
 		// save info before it's lost
 		preJump=new int[3];
 		jumpCircle=new int[3];
-		preJump[1]=kData1.flower[(jumpIndx[1]-1+numV)%numV];
-		jumpCircle[1]=kData1.flower[jumpIndx[1]];
-		preJump[2]=kData1.flower[(jumpIndx[2]-1+numV)%numV];
-		jumpCircle[2]=kData1.flower[jumpIndx[2]];
+		int[] flower=modifyPack.getFlower(1);
+		preJump[1]=flower[(jumpIndx[1]-1+numV)%numV];
+		jumpCircle[1]=flower[jumpIndx[1]];
+		preJump[2]=flower[(jumpIndx[2]-1+numV)%numV];
+		jumpCircle[2]=flower[jumpIndx[2]];
 		
+*/
+
+		HalfLink spokes=pdc.vertices[1].getEdgeFlower();
+		HalfEdge wedge=spokes.get(jumpIndx[1]);
+		HalfEdge uedge=spokes.get(jumpIndx[2]);
+		int w=wedge.twin.origin.vertIndx;
+		int u=uedge.twin.origin.vertIndx;
+		
+		HalfEdge sisteredge=RawDCEL.splitFlower_raw(pdc, wedge, uedge);
+		sister2=sisteredge.twin.origin.vertIndx;
+		
+		chap=new int[3]; // chap[0] entry is not used
+		HalfEdge sp1=pdc.findHalfEdge(1,w);
+		HalfEdge sp2=pdc.findHalfEdge(pdc.vertCount,u);
+		chap[1]=RawDCEL.splitEdge_raw(pdc,sp1);
+		chap[2]=RawDCEL.splitEdge_raw(pdc,sp2);
+		newBrSpot=RawDCEL.splitEdge_raw(pdc,sisteredge);
+
+/*		
 		// create newCent
 		KData newK=new KData();
 		RData newR=new RData();
@@ -831,11 +854,13 @@ public class ChapBranchPt extends GenBranchPt {
 		modifyPack.insert_petal(jumpCircle[1],indx,chap[1]);
 		
 		// fix preJump2 (careful, this may be jump1)
-		indx=(modifyPack.nghb(preJump[2],jumpCircle[2])+1)%(modifyPack.countFaces(preJump[2]));
+		indx=(modifyPack.nghb(preJump[2],jumpCircle[2])+1)%
+				(modifyPack.countFaces(preJump[2]));
 		modifyPack.insert_petal(preJump[2],indx,chap[2]);
 		
 		// fix jump2
-		indx=(modifyPack.nghb(jumpCircle[2],1)+1)%(modifyPack.countFaces(jumpCircle[2])+1);
+		indx=(modifyPack.nghb(jumpCircle[2],1)+1)%
+				(modifyPack.countFaces(jumpCircle[2])+1);
 		modifyPack.insert_petal(jumpCircle[2],indx,chap[2]);
 
 	  	// new pack should be ready
@@ -846,6 +871,7 @@ public class ChapBranchPt extends GenBranchPt {
 	  		DebugHelp.debugPackWrite(modifyPack,"ChapParam.p");
 
 		modifyPack.setCombinatorics();
+*/
 		
 		// set colors
 		modifyPack.setCircleColor(1,new Color(125,0,0)); // light red
@@ -855,44 +881,77 @@ public class ChapBranchPt extends GenBranchPt {
 		modifyPack.setCircleColor(newBrSpot,new Color(205,205,205)); // grey
 				
 		// set overlaps
-		modifyPack.alloc_overlaps();
+		
+		HalfEdge he=pdc.findHalfEdge(chap[1],preJump[1]);		
+		he.setInvDist(cos_overs[1]);
+
+		he=pdc.findHalfEdge(chap[1],jumpCircle[1]);
+		he.setInvDist((-1.0)*cos_overs[1]);
+		
+		he=pdc.findHalfEdge(chap[2],preJump[2]);
+		he.setInvDist(cos_overs[2]);
+		
+		he=pdc.findHalfEdge(chap[2],jumpCircle[2]);
+		he.setInvDist((-1.0)*cos_overs[2]);
+		
+/*		
+ 		modifyPack.alloc_overlaps();
 		modifyPack.set_single_invDist(chap[1],preJump[1],cos_overs[1]);
 		modifyPack.set_single_invDist(chap[1],jumpCircle[1],(-1.0)*cos_overs[1]);
 		modifyPack.set_single_invDist(chap[2],preJump[2],cos_overs[2]);
 		modifyPack.set_single_invDist(chap[2],jumpCircle[2],(-1.0)*cos_overs[2]);
+*/		
+		
+		// set layout: around the outside first, then face for 
+		//    edge <1,chap[1]> to position 'newBrSpot'.
+		
+		// get redChain to start at edge across from vert 1
+		RedHEdge rtrace=pdc.redChain;
+		while (rtrace.myEdge.prev.origin.vertIndx!=1)
+			rtrace=rtrace.nextRed;
+		pdc.redChain=rtrace;
+		
+		// 'alpha' is edge from 1
+		pdc.alpha=pdc.redChain.myEdge.prev;
+		modifyPack.directAlpha(1);
+		modifyPack.directGamma(sister2);
+		
+		HalfLink redlink=new HalfLink(modifyPack,"-R");
+		pdc.layoutOrder=RawDCEL.leftsideLink(pdc,redlink);
+		pdc.layoutOrder.add(0,pdc.alpha);
+		pdc.layoutOrder.removeLast();
+		pdc.layoutOrder.add(pdc.findHalfEdge(1,chap[1]));
 		
 		// unbranched packing to start
 		try {
-			double crit=GenBranching.LAYOUT_THRESHOLD;
-			int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
+//			double crit=GenBranching.LAYOUT_THRESHOLD;
+//			int opt=2; // 2=use all plotted neighbors, 
+					   // 1=use only those of one face 
 			modifyPack.set_aim_default();
 			modifyPack.fillcurves();
 			modifyPack.repack_call(100);
-			modifyPack.CompPackLayout(); // comp_pack_centers(false,false,opt,crit);
+			modifyPack.packDCEL.layoutPacking(); 
 		} catch(Exception ex) {
-			throw new CombException("layout: "+ex.toString());
+			throw new CombException("layoutCenters: "+ex.toString());
 		}
+		
+//      DebugHelp.debugPackWrite(myPackData,"modifyPack.p");
+
 		
 		// now reset aim to get branching
 		modifyPack.setAim(newBrSpot,myAim);
-		
+/*		
 		// first face is {1,chap[2],u)
-		modifyPack.firstFace=
-				modifyPack.what_face(1,chap[2],modifyPack.kData[1].flower[
-				       (modifyPack.nghb(1,chap[2])+1)%modifyPack.countFaces(1)]);
-/*		GraphLink dG=DualGraph.buildDualGraph(myPackData,myPackData.firstFace,eL);
-		dG=DualGraph.drawSpanner(myPackData,dG,myPackData.firstFace);
-		DualGraph.tree2Order(myPackData,dG);
-*/
+//		modifyPack.packDCEL.alpha=modifyPack.packDCEL.findHalfEdge(1, chap[2]);
 		
 		// need to redefine 'borderLink'; first mark the bdry faces
-		int []futil=new int[modifyPack.faceCount+1];
-		for (int v=1;v<=modifyPack.nodeCount;v++) {
-			if (modifyPack.isBdry(v)) {
-				for (int j=0;j<modifyPack.countFaces(v);j++)
-					futil[modifyPack.getFaceFlower(v,j)]=1;
-			}
-		}
+//		int []futil=new int[modifyPack.faceCount+1];
+//		for (int v=1;v<=modifyPack.nodeCount;v++) {
+//			if (modifyPack.isBdry(v)) {
+//				for (int j=0;j<modifyPack.countFaces(v);j++)
+//					futil[modifyPack.getFaceFlower(v,j)]=1;
+//			}
+//		}
 		
 		// Find first red edge which is a bdry face
 		RedEdge rededge=modifyPack.firstRedEdge;
@@ -923,8 +982,10 @@ public class ChapBranchPt extends GenBranchPt {
 		if (redface.face==modifyPack.firstRedFace)
 			borderLink.add(redface.face);
 		
-		// set face drawing order: poison edges allow just one face to reach 'newBrSpot'
-		//   (radius of 'newBrSpot' may be zero, so its faces are not used for subsequent layout
+		// set face drawing order: poison edges allow just 
+		//   one face to reach 'newBrSpot' (radius of 'newBrSpot' 
+		//   may be zero, so its faces are not used for subsequent 
+		//   layout
 		if (borderLink!=null && borderLink.size()>0)
 			modifyPack.firstFace=borderLink.get(0);
 		else 
@@ -942,14 +1003,15 @@ public class ChapBranchPt extends GenBranchPt {
 		modifyPack.drawingTree=DualGraph.drawSpanner(modifyPack,gl,modifyPack.firstFace);
 		CPBase.Glink=null;
 //		CPBase.Glink= modifyPack.drawingTree.makeCopy();DualGraph.printGraph(modifyPack.drawingTree);
-		
+*/		
+
 		return modifyPack;
 	}
 
 	/**
-	 * See if there are special actions for display on screen of parent packing.
-	 * If so, do them, remove them, and pass the rest to 'super'.
-	 * 
+	 * See if there are special actions for display on screen 
+	 * of parent packing. If so, do them, remove them, and 
+	 * pass the rest to 'super'.
 	 * @param flagSegs flag sequences
 	 * @return int count of display actions
 	 */
@@ -1061,16 +1123,18 @@ public class ChapBranchPt extends GenBranchPt {
 	}
 	
 	/**
-	 * The parameters (for 'chaperone' version of "shifted") are (jump1, jump2),
-	 * (indices for circles jumping to new sister) and associated overlap angles over1, over2.
+	 * The parameters for 'chaperone' type are (jump1, jump2),
+	 * (indices for circles jumping to new sister) and 
+	 * associated overlap angles over1, over2.
 	 * @return String
 	 */
 	public String getParameters() {
+		int[] flower=packData.getFlower(myIndex);
 		return new String("'chaperone' branch point: aim "+
 				myAim/Math.PI+"*Pi, vertex "+myIndex+", jumps "+
-				packData.kData[myIndex].flower[jumpIndx[1]]+
-				" "+packData.kData[myIndex].flower[jumpIndx[2]]+
-				", overlaps "+Math.acos(cos_overs[1])/Math.PI+"*Pi "+Math.acos(cos_overs[2])/Math.PI+"*Pi");
+				flower[jumpIndx[1]]+" "+flower[jumpIndx[2]]+
+				", overlaps "+Math.acos(cos_overs[1])/Math.PI+"*Pi "+
+				Math.acos(cos_overs[2])/Math.PI+"*Pi");
 	}
 	
 	public String reportExistence() {

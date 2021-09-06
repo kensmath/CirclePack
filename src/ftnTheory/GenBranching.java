@@ -40,7 +40,7 @@ import util.StringUtil;
 import util.UtilPacket;
 
 /**
- * Generalized branch points are small subregions of circle packing
+ * Generalized branch points are small subcomplexes of circle packing
  * complexes which are structured to support branching-like behavior 
  * via various non-standard packing procedures. 
  * 
@@ -73,7 +73,6 @@ public class GenBranching extends PackExtender {
 	GraphLink layoutTree;  // tree for parent layout
 	int []vertTracker;  // who is laying out each vertex? branchID for those interior 
 						//   to branch point
-	int []faceTracker;  // who is doing each face? branchID if face is in bdryLink,
 	public static double m2pi=2.0*Math.PI;
 
 	// Constructor
@@ -81,10 +80,11 @@ public class GenBranching extends PackExtender {
 		super(p);
 		extensionType="GENERALIZED_BRANCHING";
 		extensionAbbrev="GB";
-		toolTip="'Generalized_Branching' provides methods for incorporating various "+
-		  	"generalized branched points into the parent circle packing. "+
-				"(For purposes of interaction, a copy of the original parent is "+
-				"held in 'refPack'.)";
+		toolTip="'Generalized_Branching' provides methods for "+
+				"incorporating various "+"generalized branched "+
+				"points into the parent circle packing. "+
+				"(For purposes of interaction, a copy of the "+
+				"original parent is held in 'refPack'.)";
 		registerXType();
 		if (running) {
 			packData.packExtensions.add(this);
@@ -283,7 +283,8 @@ public class GenBranching extends PackExtender {
 		if (cmd.startsWith("holon")) {
 			// Idea is to use holoBorder to check holonomy of full packing
 			// Note: this does not actually change any centers
-			double frobNorm=PolyBranching.holonomy_trace(packData, null, holoBorder, false);
+			Mobius holomob=PackData.holonomyMobius(packData,holoBorder,false);
+			double frobNorm=Mobius.frobeniusNorm(holomob);
 			if (frobNorm<0)
 				return 0;
 			return 1;
@@ -509,7 +510,8 @@ public class GenBranching extends PackExtender {
 		
 		// =========== layout =================
 		else if (cmd.startsWith("layout")) {
-			// lay out specified or all branch points in their normalized positions.
+			// lay out specified or all branch points in 
+			//    their normalized positions.
 			int id=-1;
 			try {
 				if (cmdBranchPt!=null) {
@@ -536,7 +538,8 @@ public class GenBranching extends PackExtender {
 				layoutCount=combinedLayout();
 				count++;
 			} catch (Exception ex) {
-				errorMsg("Parent seems to have no layout; lay out the branch point(s) alone");
+				errorMsg("Parent seems to have no layout; "+
+						"lay out the branch point(s) alone");
 			}
 			if (layoutCount<=0) {
 				try {
@@ -938,25 +941,29 @@ public class GenBranching extends PackExtender {
 		// create typical full layout to get appropriate red chain to use below
 		if (packData.firstFace<1 || packData.firstFace>packData.faceCount)
 			packData.firstFace=1;
-		GraphLink gl=DualGraph.buildDualGraph(packData,packData.firstFace,null); // DualGraph.printGraph(gl);
-		packData.dualGraph=branchSpanner(gl,packData.firstFace); // DualGraph.printGraph(packData.dualGraph);
-		DualGraph.tree2Order(packData,packData.dualGraph);
+//	OBE	
+//		GraphLink gl=DualGraph.buildDualGraph(packData,packData.firstFace,null);
+//		packData.dualGraph=branchSpanner(gl,packData.firstFace); // DualGraph.printGraph(packData.dualGraph);
+//		DualGraph.tree2Order(packData,packData.dualGraph);
 		
 		// need poison edges; start with outer edges of redChain poison
-		packData.poisonEdges=new EdgeLink(packData,"Ra"); // cpCommand("disp -ec20t8 P");
+//		packData.poisonEdges=new EdgeLink(packData,"Ra"); // cpCommand("disp -ec20t8 P");
 
 		// debug: see the poison edges with cpCommand("disp -ec198t8 P");
 		
-		boolean debug=false; // debug=true;
-		if (debug) {
-			CPBase.Glink=packData.dualGraph.makeCopy();
-			cpCommand("disp -ddc20t8 Glist");
-		}
+//		boolean debug=false; // debug=true;
+//		if (debug) {
+//			CPBase.Glink=packData.dualGraph.makeCopy();
+//			cpCommand("disp -ddc20t8 Glist");
+//		}
+		
+		// TODO: don't know if this is still needed.
+		CPBase.Hlink=packData.packDCEL.layoutOrder.makeCopy();
 		
 		// clear out branch point 'attachFace' entries, get their poison edges
 		for (int b=1;b<branchPts.size();b++) {
 			GenBranchPt gbp=branchPts.get(b);
-			gbp.setAttachFace(null);
+			gbp.setAttachments(null);
 			packData.poisonEdges.abutMore(gbp.parentPoison);
 		}
 
@@ -1151,17 +1158,13 @@ public class GenBranching extends PackExtender {
 		
 		// store generations of verts, those of startface are 1.
 		for (int v=1;v<=packData.nodeCount;v++) {
-			packData.kData[v].utilFlag=0;
-			// TODO: commented out changes in vertex plotFlags on 5/23/13. 
-			//       Don't know why this was needed.
-//			packData.kData[v].plotFlag=0;
+			packData.setVertUtil(v,0);
 		}
 		
 		// set startface vertices at generation 1
 		for (int j=0;j<3;j++) {
 			int k=packData.faces[startface].vert[j];
-			packData.kData[k].utilFlag=1;
-//			packData.kData[k].plotFlag=1;
+			packData.setVertUtil(k,1);
 		}
 		
 		// get generations of the other vertices
@@ -1262,7 +1265,7 @@ public class GenBranching extends PackExtender {
 	
 	/**
 	 * Find maximal tree subgraph in 'bdryLink' for 'GenBranchPt' 'gbp', 
-	 * starting with face 'f'. Reset 'faceTracker' to -ID of faces reached.
+	 * starting with face 'f'. 
 	 * @param gbp @see GenBranchPt
 	 * @param f int, first face
 	 * @return @see GraphLink, starting with (f,g) for some face g. Null on error or 
@@ -1286,7 +1289,6 @@ public class GenBranching extends PackExtender {
 				lastf=currf;
 				currf=gbp.bdryLink.get(i);
 				ans.add(new EdgeSimple(lastf,currf));
-//				faceTracker[currf]=-gbp.branchID;
 			}
 			return ans;	
 		}
@@ -1296,7 +1298,6 @@ public class GenBranching extends PackExtender {
 				lastf=currf;
 				currf=gbp.bdryLink.get(i);
 				ans.add(new EdgeSimple(lastf,currf));
-//				faceTracker[currf]=-gbp.branchID;
 			}
 			return ans;
 		}
@@ -1307,7 +1308,6 @@ public class GenBranching extends PackExtender {
 			lastf=currf;
 			currf=gbp.bdryLink.get(i);
 			ans.add(new EdgeSimple(lastf,currf));
-//			faceTracker[currf]=-gbp.branchID;
 		}
 		// go down
 		currf=f;
@@ -1315,7 +1315,6 @@ public class GenBranching extends PackExtender {
 			lastf=currf;
 			currf=gbp.bdryLink.get(i);
 			ans.add(new EdgeSimple(lastf,currf));
-//			faceTracker[currf]=-gbp.branchID;
 		}
 		return ans;
 	}
@@ -1340,8 +1339,9 @@ public class GenBranching extends PackExtender {
 	}
 	
 	/**
-	 * Given the branch point ID, find its index in current 'branchPts' vector.
-	 * ID is assigned on creation, but may get out of line with index in 'branchPts'
+	 * Given the branch point ID, find its index in current 
+	 * 'branchPts' vector. ID is assigned on creation, but 
+	 * may get out of line with index in 'branchPts'
 	 * @param bpID int, assigned on creation
 	 * @return -1 on failure to find
 	 */
@@ -1435,8 +1435,9 @@ public class GenBranching extends PackExtender {
 	}
 	
 	/**
-	 * Given a point 'pt', determine if it gives 'singular' (interstice) or
-	 * 'chaperone' branching (relative to 'refPack') and return appropriate 
+	 * Given a point 'pt', determine if it gives 
+	 * 'singular' (interstice) or 'chaperone' branching 
+	 * (relative to 'refPack') and return appropriate 
 	 * parameters: 
 	 * 
 	 * (1) Singular: return face index and barycentric coords b1, b2.
@@ -1449,8 +1450,8 @@ public class GenBranching extends PackExtender {
 	 * 
 	 * (3) near to center, use traditional branch point
 	 * 
-	 * (4) TODO: near tangency point, use special structure: is common point
-	 * of two interstices, eg.
+	 * (4) TODO: near tangency point, use special structure: this, e.g.,
+	 *     is common point of two interstices.
 	 * 
 	 * Return vector, length depending on situation:
 	 *   [0] = 1 for interstice, 2 for circle, 3 for traditional,
@@ -1654,11 +1655,13 @@ public class GenBranching extends PackExtender {
 	}
 	
 	/**
-	 * Transform x in [0,pi/2] into return T(x) in [mn,mx], with T(0)=mn, T(pi/2)=mx.
-	 * Note that mn may be less than or greater than mx, so we may have to reverse.
+	 * Transform x in [0,pi/2] into return T(x) in [mn,mx], 
+	 * with T(0)=mn, T(pi/2)=mx. Note that mn may be less 
+	 * than or greater than mx, so we may have to reverse.
 	 * 
-	 * TODO: Currently we use linear interpolation, but as we learn more, we may be able
-	 * to improve on this for our purposes.
+	 * TODO: Currently we use linear interpolation, but as 
+	 * we learn more, we may be able to improve on this 
+	 * for our purposes.
 	 * 
 	 * @param value double in [0,pi/2]
 	 * @param mn ClickValue

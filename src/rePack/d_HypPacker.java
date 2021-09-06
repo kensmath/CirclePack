@@ -409,7 +409,7 @@ public class d_HypPacker extends RePacker {
 				if (count!=0)
 					reapResults();
 				p.fillcurves();
-				p.packDCEL.dcelCompCenters();
+				p.packDCEL.layoutPacking();
 			} catch (Exception ex) {
 				throw new PackingException("error in Java DCEL repack computation"); 
 			}

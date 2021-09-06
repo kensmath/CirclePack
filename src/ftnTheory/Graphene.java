@@ -1115,7 +1115,7 @@ public class Graphene extends PackExtender {
 		// build hex to cut half planes from
 		PackData basePack=DcelCreation.hexBuild(n);
 		basePack.set_rad_default();
-		basePack.packDCEL.dcelCompCenters(basePack.packDCEL.computeOrder);
+		basePack.packDCEL.layoutPacking();
 		double ctr=basePack.getCenter(basePack.nodeCount).abs();
 		double factor=2.0/ctr;
 		basePack.eucl_scale(factor); 

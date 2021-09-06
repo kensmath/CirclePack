@@ -6,7 +6,9 @@ import allMains.CirclePack;
 import canvasses.DisplayParser;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.HalfEdge;
 import exceptions.CombException;
+import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
@@ -15,6 +17,7 @@ import komplex.Face;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
+import listManip.HalfLink;
 import listManip.VertexMap;
 import math.Mobius;
 import packing.PackData;
@@ -33,17 +36,18 @@ import util.UtilPacket;
  * is to make the holonomy on the boundary vanish. This may involve various
  * adjustments to combinatorics, overlaps, etc. in the internal structure.
  * The outside vertices along 'bdryLink' are put in the @see NodeLink
- * 'joinVerts'. These are ones shared by 'myPackData' and the parent 'packData'.
- * (If 'bdryLink' is closed, these are the boundary vertices of 'myPackData'.)
- * These are important: they are not adjusted in the local repack computations,
- * but rather in the repack of the parent, after which they must be updated
- * in the local packing. So the global repacking requires bouncing back and
- * forth between local and parent repack cycles.
+ * 'joinVerts'. These are ones shared by 'myPackData' and the parent 
+ * 'packData'. (If 'bdryLink' is closed, these are the boundary vertices 
+ * of 'myPackData'.) These are important: they are not adjusted in the 
+ * local repack computations, but rather in the repack of the parent, 
+ * after which they must be updated in the local packing. So the 
+ * global repacking requires bouncing back and forth between local 
+ * and parent repack cycles.
  * 
  * For example:
  * 
- * (1) For a traditional discrete branch point, the flower
- * is the subcomplex and an angle sum condition is placed at the center v,
+ * (1) For a "traditional" discrete branch point v, the subcomplex is
+ * just it flower and an angle sum condition is placed at the center v,
  * e.g. aim = 4 pi. 
  * 
  * (2) For "singular" and "fractured" branching the subcomplex consists of
@@ -54,10 +58,10 @@ import util.UtilPacket;
  * (3) A "quad" branch point involves fracturing two contiguous faces.
  * 
  * (4) For "shift" branching at v, the subcomplex is the flower augmented
- * with one more row of faces. In one form, the structure involves associating 
- * two 'sister' circles with v and controlling their radii ratio and/or where
- * petals start. A second form uses chaperone circles to accomplish similar
- * structures.
+ * with one more row of faces. In one form, the structure involves 
+ * associating two 'sister' circles with v and controlling their radii 
+ * ratio and/or where petals start. A second form uses chaperone 
+ * circles to accomplish similar structures.
  * 
  * In all cases there is basic functionality that has to be defined
  * and implemented: get/set control parameters, riffle, normalized
@@ -71,6 +75,9 @@ import util.UtilPacket;
  *
  */
 public abstract class GenBranchPt {
+
+	static final double RIFF_TOLER=.00000001;
+	static final double pi2=Math.PI*2.0;
 	
 	// branch type
 	public static final int TRADITIONAL=1;
@@ -83,25 +90,29 @@ public abstract class GenBranchPt {
 	
 	public int branchID;  // id number, starting from 0 as created by parent
 	PackData packData;    // who's your daddy?
-	PackData myPackData;  // local complex
+	PackData myPackData;  // packing with complex local to this branch point.
 	double myAim;		  // target angle sum; e.g. 4*pi.
 	Mobius myHolonomy;    // Can update this after each layout
 	Mobius placeMe;       // Mobius that aligns layout with parent packing
-	GraphLink myLayoutTree; // ordered list of dual edges for layout 
-	Face attachFace;      // for aligning with parent: use vertices indexFlag and (indexFlag+1)%3
-	public int myIndex;		  // this may be face index or vert index, depending on type
-	
+	public int myIndex;	  // may be face index or vert index, depending on type
+
 	// ***** these are generated in each 'createMyPack'
 	public VertexMap vertexMap;  // pairs (l n): local index l, parent index n
-	public int matchCount;       // local verts 1 to matchCount match to parent; may have other aux verts
-	public FaceLink bdryLink;    // oriented bdry face chain (parent indices)
-	public int []transData;		 // _ n=transData[i] positive means get data for i from n in parent, 
-								 // 	negative means put data of i into n in parent (typically, radii). 
-	public EdgeLink parentPoison;   	 // edges of parent to become poison
+	public int matchCount;       // local verts 1 to matchCount match to parent; 
+								 //   may have other aux verts
+	public int []transData;		 // n=transData[i] positive means get data for 
+								 //   i from n in parent; negative means put data
+								 //   of i into n in parent (typically, radii). 
 	// NOTE: 'myPackData.rData[]' points to 'packData.rData[]' area.
 	
-	static final double RIFF_TOLER=.00000001;
-	static final double pi2=Math.PI*2.0;
+	// TODO: converting to dcel structure, build temporary parallel data 
+	GraphLink myLayoutTree; // ordered list of dual edges for layout 
+	public FaceLink bdryLink;    // oriented bdry face chain (parent indices)
+	public EdgeLink parentPoison;   // edges of parent to become poison
+	
+	HalfLink myLinkTree;  // local layout tree
+	HalfEdge myAttachEdge;  // local, for aligning with parent
+	HalfEdge parentAttachEdge;  // parent edge (same orientation)
 	
 	// Constructor
 	public GenBranchPt(PackData p,int bID,FaceLink blink,double aim) {
@@ -111,7 +122,8 @@ public abstract class GenBranchPt {
 		myAim=aim;
 		placeMe=null;
 		myHolonomy=null;
-		attachFace=null;
+		myAttachEdge=null;
+		parentAttachEdge=null;
 	}
 	
 	// ************** abstract methods ******************
@@ -159,31 +171,35 @@ public abstract class GenBranchPt {
 		// each type has its way of creating the packing
 		myPackData=createMyPack();
 		if (myPackData==null)
-			throw new CombException("Failed to create packing for general branch point, type "+myType);
+			throw new CombException(
+					"Failed to create packing for general branch "+
+							"point, type "+myType);
 		myPackData.fillcurves();
 	}
 
 	/**
-	 * Set 'attachFace' with info on how this branch point is aligned
-	 * with the parent. This is a packData face.  
-	 * @param edge EdgeSimple: if improper, then clear current values
-	 * @return int, index of layoutA, -1 on reset
+	 * Set attachment edges for aligning this branch point
+	 * with the parent. 
+	 * @param edge HalfEdge: if improper, then clear current values
 	 */
-	public void setAttachFace(EdgeSimple edge) {
-		if (edge==null || edge.v==0) {
-			attachFace=null;
+	public void setAttachments(HalfEdge edge) {
+		if (edge==null) {
+			myAttachEdge=null;
+			parentAttachEdge=null;
 			return;
 		}
-		if (bdryLink.containsV(edge.w)<0)
-			throw new CombException("bdryLink doesn't contain face "+edge.w);
-		attachFace=packData.faces[edge.w].clone();
-		attachFace.indexFlag=packData.face_nghb(edge.v,edge.w);
-		if (attachFace.indexFlag<0)
-			throw new CombException("seems "+edge.v+" is not a nghb of "+edge.w);
+		if (myAttachEdge.myRedEdge==null)
+			throw new CombException(
+					"attachment edge "+edge+" is not in local red chain ");
+		parentAttachEdge=packData.packDCEL.findHalfEdge(new EdgeSimple(myAttachEdge));
+		if (parentAttachEdge==null)
+			throw new CombException(
+					"local attachment edge "+edge+" not found in parent"); 
 	}
 	
 	/**
-	 * For the first 'matchCount' vertices, update parent radii from local radii.
+	 * For the first 'matchCount' vertices, update parent radii from 
+	 * local radii.
 	 * @return int count, 0 on error
 	 */
 	public int sendMyRadii() {
@@ -197,7 +213,8 @@ public abstract class GenBranchPt {
 	}
 
 	/**
-	 * For the first 'matchCount' vertices, update parent centers from local centers
+	 * For the first 'matchCount' vertices, update parent 
+	 * centers from local centers
 	 * @return int count, 0 on error
 	 */
 	public int sendMyCenters() {
@@ -220,7 +237,7 @@ public abstract class GenBranchPt {
 	}
 
 	/**
-	 * Given local vertex v, return corresponding local index
+	 * Given local vertex v, return corresponding parent index
 	 * @param v my index
 	 * @return parent index, 0 on failure (e.g., none exists)
 	 */
@@ -263,10 +280,10 @@ public abstract class GenBranchPt {
 	}
 		
 	/**
-	 * Apply given Mobius transformation (assumed appropriate to the
-	 * geometry) to any local circles which belong to the branch point but
-	 * not to the parent. (Note: SHIFTED overrides this method, has to plot
-	 * vert 0.)
+	 * Apply given Mobius transformation (assumed appropriate 
+	 * to the geometry) to any local circles which belong to 
+	 * the branch point but not to the parent.
+	 * (Note: SHIFTED overrides this method, must plot vert 0.)
 	 * @param mob @see Mobius
 	 */
 	public void applyMob(Mobius mob) {
@@ -278,7 +295,7 @@ public abstract class GenBranchPt {
 	/**
 	 * Find two 'joinVerts' to use in aligning this branch point with 
 	 * the parent. Use first of 'joinVerts', then using its
-	 * local center, find a second of 'joinVerts' whose center is
+	 * local center, find second of 'joinVerts' whose center is
 	 * farthest away. Note this may change as layout changes. 
 	 * (Want to use locations versus combinatorics because, e.g.
 	 * branching may put combinatorially distance points close
@@ -313,9 +330,10 @@ public abstract class GenBranchPt {
 */
 	
 	/**
-	 * Find the @see Mobius which best maps two local bdry vertices (@see choose2RefPts)
-	 * to the corresponding vertices in the parent.
-	 * @return @see Mobius, null in spherical case 
+	 * Find the @see Mobius which best maps two local bdry 
+	 * vertices (@see choose2RefPts) to the corresponding 
+	 * vertices in the parent.
+	 * @return Mobius, null in spherical case 
 	 */
 /*	public Mobius match2Pts() {
 		if (myPackData.hes>0)
@@ -337,7 +355,7 @@ public abstract class GenBranchPt {
 	 * just want to move it. Two possible methods, depending on how 
 	 * complicated the grand layout of the parent is.
 	 * @param mode int: 
-	 *   1=try 'match2Pts' (currently disablesd), 
+	 *   1=try 'match2Pts' (currently disabled), 
 	 *   2=use 'layoutFace' (default)
 	 * @return int, -1 on error
 	 */
@@ -351,29 +369,27 @@ public abstract class GenBranchPt {
 			if (mob==null) 
 				return 0;
 			for (int v=0;v<=myPackData.nodeCount;v++) {
-				myPackData.rData[v].center=mob.apply(myPackData.rData[v].center);
+				myPackData.rData[v].center=
+					mob.apply(myPackData.rData[v].center);
 				count++;
 			}
 			return count;
 		}
 */		
-		// else, use 'layoutFace'
-		if (attachFace==null || attachFace.indexFlag<0) {
-			CirclePack.cpb.errMsg("error in 'layoutFace' for branch point "+branchID);
+		// else, attach using 'attachEdge'
+		if (myAttachEdge==null || parentAttachEdge==null) {
+			CirclePack.cpb.errMsg(
+					"error in edge attachments edges for branch point "+branchID);
 			return -1;
 		}
 		
-		int indx=attachFace.indexFlag;
-		int lFv=attachFace.vert[indx];
-		int lFw=attachFace.vert[(indx+1)%3];
-		
 		// local centers
-		Complex a=myPackData.getCenter(vertexMap.findV(lFv));
-		Complex b=myPackData.getCenter(vertexMap.findV(lFw));
+		Complex a=myPackData.packDCEL.getVertCenter(myAttachEdge);
+		Complex b=myPackData.packDCEL.getVertCenter(myAttachEdge.next);
 		
 		// parent centers
-		Complex A=packData.getCenter(lFv);
-		Complex B=packData.getCenter(lFw);
+		Complex A=packData.packDCEL.getVertCenter(parentAttachEdge);
+		Complex B=packData.packDCEL.getVertCenter(parentAttachEdge.next);
 		
 		// compute/apply mobius
 		Mobius mb=null;
@@ -395,15 +411,7 @@ public abstract class GenBranchPt {
 	 * @return double distance
 	 */
 	public double genPtDist(Complex z, Complex w) {
-		switch (myPackData.hes) {
-			case -1: { //Hyperbolic case
-				return HyperbolicMath.h_dist(z,w);
-			}
-			case 1: { //Spherical case
-				return SphericalMath.s_dist(z,w);
-			}
-		} // end of switch
-		return EuclMath.e_dist(z,w);
+		return CommonMath.get_pt_dist(z, w,myPackData.hes);
 	}
 	
 	/**

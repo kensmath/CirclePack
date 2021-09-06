@@ -23,20 +23,22 @@ import packing.PackData;
 import util.UtilPacket;
 
 /**
- * A @see GenBranchPt of "shifted" type developed by Ed Crane; related to "shepherd" type.
- * 'singVert' is represented by two "sister" circles. These layout internally
- * tangent and the petals of 'singVert' march around one and then the other before
+ * A GenBranchPt of "shifted" type developed by Ed Crane; 
+ * related to "shepherd" type. 'singVert' is represented by 
+ * two "sister" circles. These layout internally tangent and 
+ * the petals of 'singVert' march around one and then the other before
  * closing up. 
  * 
- * In this version of "shifted", the parameters are t and s. The angle 't' is 
- * measured around the big sister from the tangency point of 'singPetal'. The
- * double 's' is the ratio between radii, sister2/sister1.
+ * In this version of "shifted", the parameters are t and s. 
+ * The angle 't' is measured around the big sister from the 
+ * tangency point of 'singPetal'. The double 's' is the 
+ * ratio between radii, sister2/sister1.
  * 
- * The data for sister1 is in the usual storage for myPackData vertex 1, whereas 
- * sister2's info is kept in myPackData vertex 0; so we have to create kData[0]
- * and rData[0].
+ * The data for sister1 is in the usual storage for myPackData 
+ * vertex 1, whereas sister2's info is kept in myPackData 
+ * vertex 0; so we have to create kData[0] and rData[0].
  * 
- * Note: many routines started out in @see FracBranching.
+ * Note: many routines started out in 'FracBranching'.
  * 
  * @author kens
  */
@@ -150,7 +152,8 @@ public class ShiftBranchPt extends GenBranchPt {
 		Iterator<Integer> dL=bdryLink.iterator();
 		while (dL.hasNext()) {
 			int F=dL.next();
-			borderLink.add(myPack.what_face(vertexMap.findV(packData.faces[F].vert[0]),
+			borderLink.add(myPack.what_face(
+					vertexMap.findV(packData.faces[F].vert[0]),
 					vertexMap.findV(packData.faces[F].vert[1]),
 					vertexMap.findV(packData.faces[F].vert[2])));
 		}
@@ -166,8 +169,10 @@ public class ShiftBranchPt extends GenBranchPt {
 		
 		// 'singVert' and its petals are packed here; set aim < 0 in parent
 		packData.setAim(myIndex,-1.0);
-		for (int j=0;j<packData.countFaces(myIndex)+packData.getBdryFlag(myIndex);j++)
-			packData.setAim(vertexMap.findW(packData.kData[myIndex].flower[j]),-1.0);
+		for (int j=0;j<packData.countFaces(myIndex)+
+				packData.getBdryFlag(myIndex);j++)
+			packData.setAim(vertexMap.findW(
+					packData.kData[myIndex].flower[j]),-1.0);
 
 		setPoisonEdges();
 		return myPack;
@@ -178,7 +183,8 @@ public class ShiftBranchPt extends GenBranchPt {
 		// reset aims in parent
 		if (!packData.isBdry(myIndex))
 			packData.setAim(myIndex,2.0*Math.PI);
-		for (int j=0;j<(packData.countFaces(myIndex)+packData.getBdryFlag(myIndex));j++) {
+		for (int j=0;j<(packData.countFaces(myIndex)+
+				packData.getBdryFlag(myIndex));j++) {
 			int k=vertexMap.findW(packData.kData[myIndex].flower[j]);
 			if (!packData.isBdry(k))
 				packData.setAim(k,2.0*Math.PI);
@@ -210,10 +216,11 @@ public class ShiftBranchPt extends GenBranchPt {
 	}
 	
 	/**
-	 * Normalized position has sister 1 centered at the origin and
-	 * sister 2 centered on the positive real axis (should be internally
-	 * tangent). (Note that we may want to allow sister2 to be larger than
-	 * sister1.) Update 'myHolonomy'.
+	 * Normalized position has sister 1 centered at the 
+	 * origin and sister 2 centered on the positive real 
+	 * axis (should be internally tangent). (Note that we 
+	 * may want to allow sister2 to be larger than sister1.) 
+	 * Update 'myHolonomy'.
 	 * @param norm boolean, if true, freshly layout the first face an normalize
 	 * @return double, error in myHolonomy
 	 */
@@ -245,7 +252,8 @@ public class ShiftBranchPt extends GenBranchPt {
 		lastF[2]=myPackData.getCenter(myPackData.faces[F].vert[2]);
 
 		// update myHolonomy
-		myHolonomy=Mobius.mob_xyzXYZ(firstF[0],firstF[1],firstF[2],lastF[0],lastF[1],lastF[2],0,0);
+		myHolonomy=Mobius.mob_xyzXYZ(firstF[0],firstF[1],firstF[2],
+				lastF[0],lastF[1],lastF[2],0,0);
 		
 		// rotate to get 2 on positive y-axis
 		if (norm) {
@@ -274,11 +282,12 @@ public class ShiftBranchPt extends GenBranchPt {
 	}
 	
 	/**
-	 * Shifted branch point parameters (for SHIFTED type) are 'petalPhase' angle
-	 * t=param[0]*PI and 'sisterRatio' s=param[1]. Normally we expect s to be in (0,1], 
+	 * Shifted branch point parameters (for SHIFTED type) 
+	 * are 'petalPhase' angle t=param[0]*PI and 'sisterRatio' 
+	 * s=param[1]. Normally we expect s to be in (0,1], 
 	 * but let's allow s>1. t=(param[0]*PI)modulo(aim).
 	 * 
-	 * @param flagSegs Vector<Vector<String>>, normal flag sequences
+	 * @param flagSegs Vector<Vector<String>>
 	 * @return int, count of parameters set
 	 */
 	public int setParameters(Vector<Vector<String>> flagSegs) {
@@ -327,7 +336,8 @@ public class ShiftBranchPt extends GenBranchPt {
 	}
 	
 	public String reportStatus() {
-		return new String("'shifted', ID "+branchID+": vert="+myIndex+", basepetal="+singPetal+
+		return new String("'shifted', ID "+branchID+
+				": vert="+myIndex+", basepetal="+singPetal+
 				", aim="+myAim+", holonomy err="+super.myHolonomyError());
 	}
 	
@@ -336,7 +346,8 @@ public class ShiftBranchPt extends GenBranchPt {
      * sister1 to tangency to sister 2 is made.
      * @param Rf double, rad of circle moving 'from'
      * @param Rt double, rad of circle moving 'to'
-     * @param Af double, accumulated angle up to circle c2, assuming tangency pt of
+     * @param Af double, accumulated angle up to circle c2, 
+     * 					 assuming tangency pt of
      *    Rt and Rf is at angle 0.
      * @param R2 double, radius of c2
      * @param R3 double, radius of c3
@@ -346,21 +357,25 @@ public class ShiftBranchPt extends GenBranchPt {
 //  !!!accum=PI+jasheroutine!!!
 //    		Complex cRt_smaller=HES_Norm(xRadToH(Rt)-xRadToH(Rf),Math.PI); 
 //    		//when Rt is smaller
-//    		Complex cRt_larger=HES_Norm(xRadToH(Rt)-xRadToH(Rf),(Rt-Rf)/Math.abs(Rt-Rf)*Math.PI); 
+//    		Complex cRt_larger=HES_Norm(xRadToH(Rt)-
+//    			xRadToH(Rf),(Rt-Rf)/Math.abs(Rt-Rf)*Math.PI); 
 //    		//when Rf is bigger
 //    		Complex cRt = (Rt>=Rf) ? cRt_larger : cRt_smaller;
     		double Rotate = 0; if (Rf-Rt<0) Rotate =-1*Math.PI; 
     		//determines rotate pt. is 0 or Pi. 
-    		Complex cRt = HES_Norm(HyperbolicMath.x_to_h_rad(Rt)-HyperbolicMath.x_to_h_rad(Rf),
-    				Rotate); 
+    		Complex cRt = HES_Norm(HyperbolicMath.x_to_h_rad(Rt)-
+    				HyperbolicMath.x_to_h_rad(Rf),Rotate); 
     		//Rf needs to be centered at (0,0). If Rf<Rt, Rt is at (-|Rf-Rt|,0); 
     		// else it is (|Rf-Rt|,0).
-    		Complex c2=HES_Norm(HyperbolicMath.x_to_h_rad(Rf)+HyperbolicMath.x_to_h_rad(R2),Af); 
+    		Complex c2=HES_Norm(HyperbolicMath.x_to_h_rad(Rf)+
+    				HyperbolicMath.x_to_h_rad(R2),Af); 
     		//normalized center of R2. Af should be given assuming p is at 0.
     		Complex xPt=new Complex(.5,0); //arbitrary pt on the x-axis 
     		double d = genPtDist(cRt,c2);
-    		double u=HyperbolicMath.x_to_h_rad(Rt)+HyperbolicMath.x_to_h_rad(R3);//TODO allow for inv distances her 
-   			double op=HyperbolicMath.x_to_h_rad(R2)+HyperbolicMath.x_to_h_rad(R3);// and here
+    		double u=HyperbolicMath.x_to_h_rad(Rt)+
+    				HyperbolicMath.x_to_h_rad(R3);//TODO allow for inv dist 
+   			double op=HyperbolicMath.x_to_h_rad(R2)+
+   					HyperbolicMath.x_to_h_rad(R3);// and here
    			double At=genAngleSides(d,u,op);
    			return At-1*genAngleSides(d,genPtDist(cRt,xPt),genPtDist(c2,xPt)); 
     		}
@@ -378,15 +393,20 @@ public class ShiftBranchPt extends GenBranchPt {
      */
     public double jumpAngle2(double Rf,double Rt, double Af,double R2,double R3) {
 //  !!!accum=PI+jasheroutine!!!
-    		Complex cRt_smaller=new Complex((HES_Norm(HyperbolicMath.x_to_h_rad(Rt)-HyperbolicMath.x_to_h_rad(Rf),
+    		Complex cRt_smaller=new Complex(
+    				(HES_Norm(HyperbolicMath.x_to_h_rad(Rt)-
+    						HyperbolicMath.x_to_h_rad(Rf),
     				2*Math.PI).real()),0); 
     		//when Rt is little circle
-    		Complex cRt_bigger=new Complex(-(HES_Norm(HyperbolicMath.x_to_h_rad(Rt)-HyperbolicMath.x_to_h_rad(Rf),
+    		Complex cRt_bigger=new Complex(
+    				-(HES_Norm(HyperbolicMath.x_to_h_rad(Rt)-
+    						HyperbolicMath.x_to_h_rad(Rf),
     				2*Math.PI).real()),0); 
     		//when Rf is big circle
     		Complex cRt = (Rt>=Rf) ? cRt_bigger : cRt_smaller;
     		
-    		Complex c2=HES_Norm(HyperbolicMath.x_to_h_rad(Rf)+HyperbolicMath.x_to_h_rad(R2),Af); //normalized center of R2
+    		Complex c2=HES_Norm(HyperbolicMath.x_to_h_rad(Rf)+
+    				HyperbolicMath.x_to_h_rad(R2),Af); //normalized center of R2
     		Complex xPt=new Complex(0.5,0); //arbitrary pt on the x-axis 
     		double d = genPtDist(cRt,c2);
     		double u=HyperbolicMath.x_to_h_rad(Rt)+HyperbolicMath.x_to_h_rad(R3);
@@ -408,7 +428,7 @@ public class ShiftBranchPt extends GenBranchPt {
      * @param theta, desired angle for (Rv;rl,gr,rr)
      * @return
      */
-    public double ghostrad(double Rv, double rl, double rr, double gr, double theta) {
+    public double ghostrad(double Rv,double rl,double rr,double gr,double theta) {
         double bestR=gr;
         double bestAS=quadfind(Rv, rl, rr, bestR);
 		double diff=bestAS-theta;
@@ -531,7 +551,8 @@ public class ShiftBranchPt extends GenBranchPt {
     }
     
 	/**
-	 * Using Law of Cosines, find angle in a triangle face given lengths of sides.
+	 * Using Law of Cosines, find angle in a triangle 
+	 * face given lengths of sides.
 	 * @param right double, right of angle
 	 * @param left double, left of angle
 	 * @param opp double, opposite of angle
@@ -567,24 +588,24 @@ public class ShiftBranchPt extends GenBranchPt {
     		return HyperbolicMath.h_comp_cos(R, rn, rp, 1.0, 1.0, 1.0);
     	}
     	if (packData.hes>1) { // sph  
-   			throw new DataException("cannot compute spherical case; need to insert spherical case.");
+   			throw new DataException(
+   					"cannot compute spherical case; "+
+   					"need to insert spherical case.");
     	}
  		return EuclMath.e_cos_overlap(R, rn, rp);
     }
     
     /**
-     * Convert phase angle to tangency point in the complex plane. The 'phase' 
-     * angle of a point on the union of sister1 and sister2 circles is like an 
-     * argument, but adjusted for twin circles. Sisters 1 and 2 are to be tangent, 
-     * and in normalized position, sister 1 will be at the origin and sister 2 
-     * internally tangent at a point on the positive x-axis. Suppose radii are 
-     * R and r, resp. Define curve gamma around sister1, then around sister2 back
-     * to start by
-     * 
-     *   gamma(t)= R exp(it),       t in [0,2pi]; 
-     *   gamma(t)=(R-r)+r exp(it),  t in [2pi,4pi]
-     *   
-     * and define gamma(t)=gamma((t)mod(4pi)) in general.
+     * Convert phase angle to tangency point in the complex plane. 
+     * The 'phase' angle of a point on the union of sister1 and 
+     * sister2 circles is like an argument, but adjusted for twin 
+     * circles. Sisters 1 and 2 are to be tangent, and in 
+     * normalized position, sister 1 will be at the origin and 
+     * sister 2 internally tangent at a point on the positive x-axis.
+     * Suppose radii are R and r, resp. Define curve gamma around 
+     * sister1, then around sister2 back to start by 
+     * gamma(t)= R exp(it), t in [0,2pi]; gamma(t)=(R-r)+r exp(it),
+     * t in [2pi,4pi] and define gamma(t)=gamma((t)mod(4pi)) in general.
      * @param t double, treated mod(4) and multiplied by Pi
      * @param R double, radius of sister1 (generally the larger)
      * @param r double, radius of sister2

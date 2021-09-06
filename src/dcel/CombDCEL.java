@@ -1393,12 +1393,12 @@ public class CombDCEL {
 		int count_vhits=2;
 		
 		oit=orderEdges.iterator();
-		ArrayList<Face> tmpLayout=new ArrayList<Face>();
-		ArrayList<Face> tmpfullLayout=new ArrayList<Face>();
+		pdcel.layoutOrder=new HalfLink();
+		pdcel.fullOrder=new HalfLink();
 		while (oit.hasNext()) {
 			HalfEdge hfe=oit.next();
 			if (!fhits[hfe.face.faceIndx]) {
-				tmpfullLayout.add(hfe.face);
+				pdcel.fullOrder.add(hfe);
  				fhits[hfe.face.faceIndx]=true;
 				
 				if (debug) { // debug=true;
@@ -1418,7 +1418,7 @@ public class CombDCEL {
 				if (oppVert.vutil==0) { // yes, add 'hfe' to 'tmpLayout'
 					oppVert.vutil=1;
 					count_vhits++;
-					tmpLayout.add(hfe.face);
+					pdcel.layoutOrder.add(hfe);
 					
 					if (debug) { // debug=true;
 						System.out.println("  normal "+hfe.face.faceIndx+" = <"+
@@ -1438,7 +1438,7 @@ public class CombDCEL {
 				if (redge.redutil==0) {
 					redge.redutil=1;
 					count_vhits++;
-					tmpLayout.add(hfe.face);
+					pdcel.layoutOrder.add(hfe);
 					
 					if (debug) { // debug=true;
 						System.out.println("  red case "+hfe.face.faceIndx+" = <"+
@@ -1458,7 +1458,7 @@ public class CombDCEL {
 					// pivot clw adding faces until hitting redge
 					// Note: none of this faces could have been hit before
 					while (sea!=redge.myEdge) {
-						tmpfullLayout.add(sea.twin.face);
+						pdcel.fullOrder.add(sea.twin);
 						fhits[sea.twin.face.faceIndx]=true;
 						oppVert=sea.twin.next.next.origin;
 
@@ -1482,7 +1482,7 @@ public class CombDCEL {
 						// put in 'tmpLayout'?
 						if (!alreadyhit) {  
 							oppVert.vutil=1;
-							tmpLayout.add(sea.twin.face);
+							pdcel.layoutOrder.add(sea.twin);
 							count_vhits++;
 
 							if (debug) { // debug=true;
@@ -1500,8 +1500,7 @@ public class CombDCEL {
 					if (redge.redutil==0) { // yes, add 'hfe' to 'tmpLayout'
 						redge.redutil=1;
 						count_vhits++;
-						tmpLayout.add(hfe.face);
-
+						pdcel.layoutOrder.add(hfe);
 						if (debug) { // debug=true;
 							System.out.println("  later red "+hfe.face.faceIndx+" = <"+
 									hfe.face.toString()+">, oppVErt "+oppVert.vertIndx+
@@ -1715,39 +1714,11 @@ public class CombDCEL {
 			}
 		}
 		
-		if (debug) { // debug=true;
-			DCELdebug.drawEdgeFace(pdcel,tmpLayout);
-			DCELdebug.drawEdgeFace(pdcel,tmpfullLayout);
-			debug=false;
-		}
-		
-		// (4) Create 'faceOrder' and 'computeOrder': ------------------------
-		// set drawing order for computations of cent/rad
-		pdcel.computeOrder=new GraphLink();
-		Iterator<Face> lit=tmpLayout.iterator();
-		int faceIndx=lit.next().faceIndx;
-		pdcel.computeOrder.add(new EdgeSimple(0,faceIndx)); // root 
-		while (lit.hasNext()) {
-			Face face=lit.next();
-			int nxtIndx=face.faceIndx;
-			EdgeSimple es=new EdgeSimple(face.edge.twin.face.faceIndx,nxtIndx);
-			pdcel.computeOrder.add(es);
-			faceIndx=nxtIndx;
-		}
-		
-		// set drawing order for all faces
-		pdcel.faceOrder=new GraphLink();
-		lit=tmpfullLayout.iterator();
-		faceIndx=lit.next().faceIndx;
-		pdcel.faceOrder.add(new EdgeSimple(0,faceIndx));
-		while (lit.hasNext()) {
-			Face face=lit.next();
-			int nxtIndx=face.faceIndx;
-			pdcel.faceOrder.add(new EdgeSimple(face.edge.twin.face.faceIndx,nxtIndx));
-			faceIndx=nxtIndx;
-		}
-		tmpfullLayout=null;
-		tmpLayout=null;
+//		if (debug) { // debug=true;
+//			DCELdebug.drawEdgeFace(pdcel,tmpLayout);
+//			DCELdebug.drawEdgeFace(pdcel,tmpfullLayout);
+//			debug=false;
+//		}
 
 		// Arrange the side pairings in order of 'sideStarts'
 		if (pdcel.sideStarts!=null) {
@@ -2689,18 +2660,18 @@ public class CombDCEL {
     	}
 
     	// clone other things
-    	if (pdc.faceOrder!=null) {
-    		pdcel.faceOrder=new GraphLink();
-    		Iterator<EdgeSimple> fois=pdc.faceOrder.iterator();
+    	if (pdc.fullOrder!=null) {
+    		pdcel.fullOrder=new HalfLink(pdc.p);
+    		Iterator<HalfEdge> fois=pdc.fullOrder.iterator();
     		while (fois.hasNext()) {
-    			pdcel.faceOrder.add(fois.next().clone());
+    			pdcel.fullOrder.add(fois.next().clone());
     		}
     	}
-    	if (pdc.computeOrder!=null) {
-    		pdcel.computeOrder=new GraphLink();
-    		Iterator<EdgeSimple> cois=pdc.computeOrder.iterator();
-    		while (cois.hasNext()) {
-    			pdcel.computeOrder.add(cois.next().clone());
+    	if (pdc.layoutOrder!=null) {
+    		pdcel.layoutOrder=new HalfLink();
+    		Iterator<HalfEdge> heis=pdc.layoutOrder.iterator();
+    		while (heis.hasNext()) {
+    			pdcel.layoutOrder.add(heis.next().clone());
     		}
     	}
     	if (pdc.sideStarts!=null) {

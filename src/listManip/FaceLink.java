@@ -18,7 +18,6 @@ import exceptions.ParserException;
 import geometry.EuclMath;
 import input.SetBuilderParser;
 import komplex.EdgeSimple;
-import komplex.Face;
 import komplex.RedList;
 import komplex.SideDescription;
 import packing.PackData;
@@ -117,11 +116,9 @@ public class FaceLink extends LinkedList<Integer> {
 	 */
 	public int addFaceLinks(Vector<String> items) {
 		int count=0;
-		Face []faces;
 		
 		if (packData==null) return -1;
 		int facecount=packData.faceCount;
-		faces=packData.faces;
 		
 		Iterator<String>its=items.iterator();
 		
@@ -415,7 +412,6 @@ public class FaceLink extends LinkedList<Integer> {
 			}
 			case 'n': // nan? (not-a-number check on radius/center
 			{
-				boolean hit;
 				for (int f=1;f<=facecount;f++) {
 					int []vert=packData.getFaceVerts(f);
 					Complex[] z=new Complex[3];
@@ -683,13 +679,12 @@ public class FaceLink extends LinkedList<Integer> {
 			{
 
 				if (packData.packDCEL!=null) {
-					GraphLink glink=packData.packDCEL.computeOrder;
+					HalfLink hlink=packData.packDCEL.layoutOrder;
 					if (str.length()>1 && str.charAt(1)=='s') 
-						glink=packData.packDCEL.faceOrder; 
-					Iterator<EdgeSimple> gis=glink.iterator();
-					while (gis.hasNext()) {
-						EdgeSimple edge=gis.next();
-						add(edge.w);
+						hlink=packData.packDCEL.fullOrder; 
+					Iterator<HalfEdge> heis=hlink.iterator();
+					while (heis.hasNext()) {
+						add(heis.next().face.faceIndx);
 						count++;
 					}
 					break;
@@ -1429,7 +1424,6 @@ public class FaceLink extends LinkedList<Integer> {
 		double []ans=new double[2];
 		
 		// find min of radii of f and contiguous faces
-		int initFace=f;
 		int[] fverts=p.getFaceVerts(f);
 		double step=p.getRadius(fverts[0]);
 		double rad=p.getRadius(fverts[1]);

@@ -1,12 +1,5 @@
 package dcel;
 
-import java.util.Iterator;
-
-import deBugging.DCELdebug;
-import komplex.EdgeSimple;
-import packing.PackData;
-import packing.RData;
-
 /**
  * Static routines related to the "data" for DCEL's. 
  * Due to compute time considerations, much of the data on radii,
@@ -22,6 +15,8 @@ import packing.RData;
 public class DataDCEL {
 	
 	/**
+	 * traditional: 
+	 * OBE:
 	 * Given a dcel structure, create a traditional packing.
 	 * We use traditional methods with the packing, so we
 	 * adjust the 'faceIndx's in the dcel after they're computed
@@ -33,7 +28,7 @@ public class DataDCEL {
 	 * @param pdcel PackDCEL
 	 * @return PackData
 	 */
-	public static PackData dcel_to_packing(PackDCEL pdcel) {
+/*	public static PackData dcel_to_packing(PackDCEL pdcel) {
 		boolean debug=false;
 		PackData p=new PackData(null);
 		p.hes=0;
@@ -160,6 +155,7 @@ public class DataDCEL {
 		p.attachDCEL(pdcel);
 		return p;
 	}
+*/
 	
 	/**
 	 * Find the vertices for the 'face' associated with this

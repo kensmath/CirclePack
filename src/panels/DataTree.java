@@ -118,11 +118,11 @@ public class DataTree extends JPanel {
 		
 		if (p.packDCEL!=null) {
 			if (p.packDCEL.redChain==null) {
-				v2.add("First Face = "+p.packDCEL.faceOrder.get(0).w);
+				v2.add("First Face = "+p.packDCEL.layoutOrder.get(0).face.faceIndx);
 			}
 			else 
 				v2.add("First Face/BdryFace = " + 
-						p.packDCEL.faceOrder.get(0).w+" / "+
+						p.packDCEL.layoutOrder.get(0).face.faceIndx+" / "+
 						p.packDCEL.redChain.myEdge.face.faceIndx);
 			int bcount=p.packDCEL.idealFaceCount;
 			v2.add("Bdry Component Count = " + bcount);

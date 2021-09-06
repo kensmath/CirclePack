@@ -73,12 +73,11 @@ public class d_SphPacker extends RePacker {
 	 */
 	public int load() {
 		
-		// find face to remove: want one in 'faceOrder', else the
-		//    last face in 'faceOrder' (so rest of it remains valid).
-//		int[] fhits=new int[pdcel.faceCount+1];
-//		Iterator<Integer> fis=pdcel.faceO
+		// find the face to be remove so we can pack in the
+		//    unit disc: want one in 'computeOrder', else the
+		//    last face in 'fullOrder' (so rest of it remains valid).
 		
-		int lastface=pdcel.faceOrder.getLast().w;
+		int lastface=pdcel.layoutOrder.getLast().face.faceIndx;
 		Face outface=pdcel.faces[lastface];
 		int[] bdryVerts=outface.getVerts();
 		
@@ -117,13 +116,8 @@ public class d_SphPacker extends RePacker {
 		}
 		
 		// find and lay out first face
-		Iterator<EdgeSimple> cis=pdcel.computeOrder.iterator();
-		EdgeSimple edge=cis.next();
-		if (edge.v!=0) {
-			throw new PackingException("In sph packing; not root in 'computeOrder'");
-		}
-		Face firstface=pdcel.faces[edge.w];
-		HalfEdge he=firstface.edge;
+		Iterator<HalfEdge> heis=pdcel.layoutOrder.iterator();
+		HalfEdge he=heis.next();
 		int alph=he.origin.vertIndx;
 		int v1=he.next.origin.vertIndx;
 		int v2=he.next.next.origin.vertIndx;
@@ -132,7 +126,7 @@ public class d_SphPacker extends RePacker {
 		z[v1]=new Complex(dist,0.0);
 		CircleSimple cS=EuclMath.e_compcenter(z[alph],z[v1],
 				radii[alph],radii[v1],radii[v2],
-				he.getInvDist(),he.next.getInvDist(),he.next.next.getInvDist());
+				he.next.getInvDist(),he.next.next.getInvDist(),he.getInvDist());
 		z[v2]=cS.center;
 
 		// debug=true;
@@ -141,15 +135,14 @@ public class d_SphPacker extends RePacker {
 		}
 
 		// lay out the rest of the eucl circles
-		while(cis.hasNext()) {
-			int w=cis.next().w;
-			he=pdcel.faces[w].edge;
+		while(heis.hasNext()) {
+			he=heis.next();
 			int v0=he.origin.vertIndx;
 			v1=he.next.origin.vertIndx;
 			v2=he.next.next.origin.vertIndx;
 			cS=EuclMath.e_compcenter(z[v0],z[v1],
 					radii[v0],radii[v1],radii[v2],
-					he.getInvDist(),he.next.getInvDist(),he.next.next.getInvDist());
+					he.next.getInvDist(),he.next.next.getInvDist(),he.getInvDist());
 			z[v2]=cS.center;
 		}
 		

@@ -3704,24 +3704,32 @@ the existing 'Hlist'</instance>
 </command>
 
 
-<command cmd="set_Mobius" flags="{a.re a.im b.re b.im c.re c.im d.re d.im flip}">
+<command cmd="set_Mobius" flags="[options] -[f]">
 <description>
 	CirclePack maintains a current Mobius transformation. It defaults
 	to the identity, but can be set to any other, whether orientation
-	preserving (flip=0) or orientation reversing (flip=1). The default
-	is to read in 8 real numbers, real and imaginary parts for the standard four
-	complex entries a, b, c, and d, plus an integer 'flip' for 
-	orientation (flip is optional, default is 0). Alternatives are being
-	developed and are indicated with option flags. 
+	preserving (default) or orientation reversing ('-f' flag). If
+	there are no flags, then default is to read in 8 real numbers, real 
+	and imaginary parts for the standard four complex entries a, b, c, 
+	and d. Alternatives are based on halfedge chains defining closed
+	face chains: flags are passed to creating the halfedge chain, as
+	in 'set_hlist'. 
 </description>
 <options>
-    <opt flag="-xyzXYZ x y z X Y Z"> Mobius mapping complex numbers x y z to X Y Z</opt>
+    <opt flag="-xyzXYZ x y z X Y Z"> Mobius mapping one triple of 
+    complex numbers to another</opt>
+    <opt flag="-[]"> holonomy along halfedge chain built using these flags;
+    e.g., '-R 3' for redchain side 3.</opt>
+	<opt flag="{a.re a.im b.re b.im c.re c.im d.re d.im flip}"> create explicitly</opt>
 </options> 
 <examples>
 	<instance text="set_Mobius 0.0 0.0 1.0 0.0 1.0 0.0 0.0 0.0"> specifies reciprocation, z maps to 1/z</instance>
 	<instance text="set_Mobius 2.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0"> specifies z maps to 2*z</instance>
 	<instance text="set_Mobius 1.0 0.0 0.0 -0.5 0.0 0.5 1.0 0.0"> specifies the disc automorphism (z-i/2)/(z*i/2+1)</instance>  
 </examples>
+<seealso>
+<see> set_hlist</see>
+</seealso>
 </command>
 
  

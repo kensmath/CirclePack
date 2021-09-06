@@ -2,6 +2,7 @@ package dcel;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+
 import allMains.CirclePack;
 import complex.Complex;
 import deBugging.DCELdebug;
@@ -3403,17 +3404,19 @@ public class RawDCEL {
 	
 	/**
 	 * Build the 'HalfLink' whose faces define an oriented 
-	 * chain outside of 'beach'; beach represents a cclw 
-	 * closed chain of vertices, as a beach around an island. 
+	 * chain outside of 'beach'; beach is typically a closed 
+	 * chain of vertices, as a cclw beach around an island. 
 	 * If 'beach' is all interior, the result should define a
 	 * closed chain of faces (so the first and last 'HalfEdge's
 	 * have the same face). Otherwise, 'HalfLink' will define
 	 * one or more open chains of faces, which the calling 
 	 * routine processes. Return null if 'beach' is all bdry.
 	 * 
-	 * Combinatorial detail: if face f2 shares an edge e with f0 and
-	 * vert v of f2 opposite to e is degree 3, then swallow v into 
-	 * the interior; thus, .. f0 f1 f2 .. replaced by .. f0 f2 .. 
+	 * TODO:
+	 * Combinatorial detail: if face f2 shares an edge e 
+	 * with f0 and vert v of f2 opposite to e is degree 3, 
+	 * then may want to swallow v into the interior; 
+	 * i.e., .. f0 f1 f2 .. replaced by .. f0 f2 .. 
 	 *  
 	 * @param p @see PackData
 	 * @param beach @see NodeLink
@@ -3438,10 +3441,10 @@ public class RawDCEL {
 			v=w;
 			w=bis.next();
 			HalfEdge he=pdcel.findHalfEdge(v,w);
-			if (he.origin.isBdry())
-				bdryhits=true;
 			if (he==null)
 				return null;
+			if (he.origin.isBdry())
+				bdryhits=true;
 			blink.add(he);
 		}
 
@@ -3451,28 +3454,17 @@ public class RawDCEL {
 			return null;
 		blink.add(he);
 		
-		// check for any deg-3 interiors to enclose
-		HalfLink newblink=new HalfLink();
-		for (int j=0;j<blink.size();j++) {
-			he=blink.get(j);
-			Vertex oppV=he.next.next.origin;
-			// deg-3 interior? add edges envelop it
-			if (!he.isBdry() && oppV.bdryFlag==0 && pdcel.countFaces(oppV)==3) {
-				newblink.add(he.twin.next);
-				newblink.add(he.twin.prev);
-			}
-			else
-				newblink.add(he);
-		}
-		blink=newblink;
-		int bcount=blink.size();
+		// TODO: thought about cleanup to check for deg-3 
+		//       interiors to enclose or intruding faces 
+		//       to bypass. But decided it wasn't worth it.
 		
-		// find bdry edges that lead into segments of interior edges
+		// find bdry edges that are followed segments of interior edges
 		ArrayList<HalfLink> multiLinks=new ArrayList<HalfLink>();
-		
+
+		int bcount=blink.size();
 		int[] marks=new int[bcount];
 		if (bdryhits) {
-			for (int j=0;j<blink.size();j++) {
+			for (int j=0;j<bcount;j++) {
 				he=blink.get(j);
 				if (he.origin.bdryFlag!=0 && he.next.origin.bdryFlag==0)
 					marks[j]=1;
@@ -3482,36 +3474,41 @@ public class RawDCEL {
 		// bdry in 'beach' means possible segments
 		if (bdryhits) {
 			for (int j=0;j<bcount;j++) {
-				HalfEdge currhe=blink.get(j);
 				// does a new segment starts here?
 				if (marks[j]==1) {
-					boolean segdone=false;
-					HalfLink linkseg=new HalfLink();
-					he=currhe.origin.halfedge; // should be bdry edge
-					linkseg.add(he);
-					he=he.prev.twin;
-					int spot=j;
+					HalfLink tmplink=new HalfLink();
+					for (int k=j;k<bcount;k++) 
+						tmplink.add(blink.get(k));
+					HalfLink linkseg=RawDCEL.rightsideLink(pdcel,tmplink);
 
+					// may add at beginning/end until we reach bdry
 					int safety=1000;
-					do {
-						safety--;
-						while (he!=currhe && !he.isBdry()) {
+					if (linkseg.size()>0) {
+						he=linkseg.get(0).twin.next.next;
+						linkseg.add(0,he);
+						he=he.twin.next; // clw
+						while ((he.twin.face==null || he.twin.face.faceIndx>0) &&
+								safety>0) {
+							safety--;
+							linkseg.add(0,he);
+							he=he.twin.next; // clw
+						}
+						if (safety==0)
+							throw new CombException("extending end of 'linkseg'");
+						he=linkseg.getLast();
+						he=he.next.twin; // cclw
+						while ((he.twin.face==null || he.twin.face.faceIndx>0) && 
+								safety>0) {
+							safety--;
 							linkseg.add(he);
-							he=he.prev.twin;
+							he=he.prev.twin; // cclw
 						}
-						if (he.isBdry()) {
-							multiLinks.add(linkseg);
-							segdone=true;
-						}
-						else {
-							spot=(spot+1)%bcount;
-							currhe=blink.get(spot);
-							he=he.twin.prev.twin;
-						}
-					} while (!segdone && safety>0);
-					if (safety==0)
-						throw new CombException("looping in search for segment");
-				} 							
+						if (safety==0)
+							throw new CombException("extending end of 'linkseg'");
+						
+						multiLinks.add(linkseg);
+					}
+				}
 			} // loop for new segments
 			
 			return multiLinks;
@@ -3519,7 +3516,11 @@ public class RawDCEL {
 		
 		HalfEdge nexthe=blink.get(0);
 		HalfEdge currhe=nexthe;
-		HalfLink seg=new HalfLink();
+		HalfLink seg=RawDCEL.rightsideLink(pdcel,blink);
+		if (seg==null) 
+			return null;
+		
+		// add twin of first edge
 		seg.add(blink.get(0).twin);
 		
 		// add cclw spokes 
@@ -3537,4 +3538,136 @@ public class RawDCEL {
 		return multiLinks; 
 	}
 	
+	/**
+	 * Build the 'HalfLink' whose faces define the contiguous
+	 * chain of faces to the left of 'hlink'. So these are
+	 * halfedges inward from the left; used, e.g., for 
+	 * holonomy or layout purposes. Start with halfedges 
+	 * into the end of the first edge of 'hlink' and 
+	 * continue only as long as the edges of 'hlink' remain 
+	 * contiguous and we don't encounter an incoming edge 
+	 * whose face is ideal. Stop with incoming edges for 
+	 * the origin of the last halfedge, but watch in case 
+	 * 'hlink' is closed --- then end with the last clw 
+	 * incoming edges at the common vertex. The link we
+	 * return here does not have the initial edge of 'hlink'
+	 * in it: the user may need to insert that or other
+	 * edges at one end, depending on the purpose.
+	 * @param pdcel PackDCEL
+	 * @param hlink HalfLink, should be contiguous, may be closed
+	 * @return HalfLink, may be null or empty
+	 */
+	public static HalfLink leftsideLink(PackDCEL pdcel,HalfLink hlink) {
+		if (hlink==null || hlink.size()==0)
+			return null;
+		HalfLink incoming=new HalfLink(pdcel.p);
+		
+		// save first/last
+		HalfEdge firsthe=hlink.getFirst();
+		HalfEdge lasthe=hlink.getLast();
+		 
+		Iterator<HalfEdge> his=hlink.iterator();
+		HalfEdge currhe=his.next();
+		HalfEdge nexthe=currhe;
+		while (his.hasNext()) {
+			  currhe=nexthe;
+			  nexthe=his.next();
+			  
+			  // not contiguous?
+			  if (currhe.twin.origin!=nexthe.origin) {
+				  return incoming;
+			  }
+			  
+			  HalfEdge he=currhe.next.twin;
+			  while (he!=nexthe.twin) {
+				  
+				  // hit an ideal face?
+				  if (he.face!=null && he.face.faceIndx<0) 
+					  return incoming;
+				  
+				  incoming.add(he);
+				  he=he.next.twin; // clw
+			  }
+		}
+		if (nexthe==lasthe) {
+			HalfEdge he=nexthe.next.twin;
+			while (he!=firsthe.twin) {
+				  
+				// hit an ideal face?
+				if (he.face!=null && he.face.faceIndx<0) 
+					return incoming;
+				  
+				incoming.add(he);
+				he=he.next.twin; // clw
+			}
+		}
+		return incoming;
+	}
+
+	/**
+	 * Build the 'HalfLink' whose faces define the contiguous
+	 * chain of faces to the right of 'hlink'. So these are
+	 * halfedges outward from the right; used, e.g., to get
+	 * the faces surrounding an island. Start with halfedges 
+	 * outward from the end of the first edge of 'hlink' and 
+	 * continue only as long as the edges of 'hlink' remain 
+	 * contiguous and we don't encounter an outgoing edge 
+	 * whose face is ideal. Stop with outgoing edges for 
+	 * the origin of the last halfedge, but watch in case 
+	 * 'hlink' is closed --- then end with the last cclw 
+	 * outgoing edges from the common vertex. The link we
+	 * return here does not have the initial edge of 'hlink'
+	 * in it: the user may need to insert that or other
+	 * edges at one end, depending on the purpose.
+	 * @param pdcel PackDCEL
+	 * @param hlink HalfLink, should be contiguous, may be closed
+	 * @return HalfLink, may be null or empty
+	 */
+	public static HalfLink rightsideLink(PackDCEL pdcel,HalfLink hlink) {
+		if (hlink==null || hlink.size()==0)
+			return null;
+		HalfLink outgoing=new HalfLink(pdcel.p);
+		
+		// save first/last
+		HalfEdge firsthe=hlink.getFirst();
+		HalfEdge lasthe=hlink.getLast();
+		 
+		Iterator<HalfEdge> his=hlink.iterator();
+		HalfEdge currhe=his.next();
+		HalfEdge nexthe=currhe;
+		while (his.hasNext()) {
+			  currhe=nexthe;
+			  nexthe=his.next();
+			  
+			  // not contiguous?
+			  if (currhe.twin.origin!=nexthe.origin) {
+				  return outgoing;
+			  }
+			  
+			  HalfEdge he=currhe.twin.prev.twin;
+			  while (he!=nexthe) {
+				  
+				  // hit an ideal face?
+				  if (he.face!=null && he.face.faceIndx<0) 
+					  return outgoing;
+				  
+				  outgoing.add(he);
+				  he=he.prev.twin; // cclw
+			  }
+		}
+		if (nexthe==lasthe) {
+			HalfEdge he=nexthe.twin.prev.twin;
+			while (he!=firsthe) {
+				  
+				// hit an ideal face?
+				if (he.face!=null && he.face.faceIndx<0) 
+					return outgoing;
+				  
+				outgoing.add(he);
+				he=he.prev.twin; // cclw
+			}
+		}
+		return outgoing;
+	}
+
 }

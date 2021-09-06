@@ -36,7 +36,6 @@ import cpContributed.CurvFlow;
 import cpContributed.FracBranching;
 import dcel.CombDCEL;
 import dcel.D_Schwarzian;
-import dcel.DataDCEL;
 import dcel.DcelCreation;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
@@ -478,7 +477,8 @@ public class CommandStrParser {
 
 		  // create a new 'PackData' from pDCEL
 
-		  PackData newPack=DataDCEL.dcel_to_packing(pDCEL);
+		  PackData newPack=new PackData(null);
+		  pDCEL.fixDCEL_raw(newPack);
 		  if (newPack!=null && newPack.status==true && newPack.nodeCount>3) {
 			  CirclePack.cpb.msg("Have replaced packing with new "+
 					  "one derived from '"+filename+"'.");
@@ -1191,11 +1191,7 @@ public class CommandStrParser {
 					  throw new DataException("Use 'Hex' (cap 'H') for more than 100 generations");
 				  }
 				  newPack=DcelCreation.hexBuild(param);
-				  newPack.set_rad_default();
-				  newPack.packDCEL.dcelCompCenters(newPack.packDCEL.computeOrder);
-    			  double ctr=newPack.getCenter(newPack.nodeCount).abs();
-    			  double factor=1.0/ctr;
-    			  newPack.eucl_scale(factor); // bdry centers on unit circle
+				  newPack.packDCEL.layoutPacking();
 				  break;
 			  }
 			  case 3: // square grid
@@ -3853,11 +3849,17 @@ public class CommandStrParser {
 
     				  return 1;
     			  }
+    			  
+    			  // otherwise, send flags to define 'HalfLink'
+    			  else { 
+    				  HalfLink hlink=new HalfLink(packData,items);
+    				  CPBase.Mob=PackData.holonomyMobius(packData,hlink,false);
+    				  return 1;
+    			  }
     		  }
     		  
     		  // default is 8 doubles, plus perhaps one integer
     		  else {
-    		  
     			  
     			  Iterator<String> its=items.iterator();
         		  
@@ -4986,7 +4988,7 @@ public class CommandStrParser {
       
       // ============ Mobius ===============
       if (cmd.startsWith("Mobius") || cmd.startsWith("inv_Mobius") ||
-    		  cmd.startsWith("mobiu") || cmd.startsWith("inv_obiu")) {
+    		  cmd.startsWith("mobiu") || cmd.startsWith("inv_mobiu")) {
     	  String str=null;
     	  if (flagSegs.size()==0 || 
     			  (items=(Vector<String>)flagSegs.remove(0))==null || 
@@ -6304,10 +6306,10 @@ public class CommandStrParser {
 					}
 					pdcel=CombDCEL.extractDCEL(raw,hlink,raw.alpha);
 					
-					pdcel.p=packData;
-					PackData p=DataDCEL.dcel_to_packing(pdcel);
+					PackData p=new PackData(null);
+					pdcel.fixDCEL_raw(p);
 					CirclePack.cpb.swapPackData(p,qnum,false);
-					pdcel.D_CompCenters();
+					pdcel.layoutPacking();
 					p.fillcurves();
 					p.set_aim_default();
 					return 1;
@@ -6358,9 +6360,8 @@ public class CommandStrParser {
 							items.remove(0);
 					}
 					
-					PackData pdata=DataDCEL.dcel_to_packing(
-							packData.packDCEL);
-					pdata.setCombinatorics();
+					PackData pdata=new PackData(null);
+					packData.packDCEL.fixDCEL_raw(pdata);
 					pdata.set_aim_default();
 					return CirclePack.cpb.swapPackData(pdata,qnum,false);
 				}
@@ -6389,12 +6390,8 @@ public class CommandStrParser {
 					}
 					
 					// convert to a new packing
-					PackData tmppack=DataDCEL.dcel_to_packing(tmpdcel);
-					if (tmppack==null) {
-						CirclePack.cpb.errMsg("failed to "+
-								"convert 'PackDCEL' into packing");
-						return 0;
-					}
+					PackData tmppack=new PackData(null);
+					tmpdcel.fixDCEL_raw(tmppack);
 					tmppack.setCombinatorics();
 					tmppack.set_aim_default();
 					return CirclePack.cpb.swapPackData(tmppack,qnum,false);
@@ -6402,8 +6399,7 @@ public class CommandStrParser {
 				else if (str.contains("layout")) {
 					if (packData.packDCEL==null)
 						return 0;
-					return packData.packDCEL.dcelCompCenters(
-							packData.packDCEL.computeOrder);
+					return packData.packDCEL.layoutPacking();
 				} 
 				// sync p.faces to packDCEL.faces
 				else if (str.contains("syncF")) {
@@ -6613,44 +6609,26 @@ public class CommandStrParser {
 	    	  if (vertlist==null || vertlist.size()==0) 
 	    		  throw new ParserException("usage: double v1 v2 [b(v,w)]");
 
-	    	  // DCEL version; return
-	    	  if (packData.packDCEL!=null) {
-	    		  int origVC=packData.packDCEL.vertCount;
-	    		  PackDCEL pdans=CombDCEL.d_double(packData.packDCEL,
-	    				  vertlist,segment);
-	    		  alp_sym=pdans.oldNew.findW(packData.getAlpha());
-	    		  if (alp_sym==0)
-	    			  alp_sym=sym_alp_tmp;
-	    		  pdans.redChain=null;
-	    		  VertexMap vmap=pdans.oldNew;
-	    		  pdans.fixDCEL_raw(packData);
-	    		  packData.vertexMap=vmap;
+    		  int origVC=packData.packDCEL.vertCount;
+    		  PackDCEL pdans=CombDCEL.d_double(packData.packDCEL,
+    				  vertlist,segment);
+    		  alp_sym=pdans.oldNew.findW(packData.getAlpha());
+    		  if (alp_sym==0)
+    			  alp_sym=sym_alp_tmp;
+    		  pdans.redChain=null;
+    		  VertexMap vmap=pdans.oldNew;
+    		  pdans.fixDCEL_raw(packData);
+    		  packData.vertexMap=vmap;
 	    		  
-	    		  // duplicate radii (from 'vData' only, ignore centers);
-	    		  if (packData.vertexMap!=null) {
-	    			  for (int v=origVC+1;v<=packData.packDCEL.vertCount;v++) {
-	    				  int orig_v=packData.vertexMap.findV(v);
-	    				  if (orig_v>0)
-	    					  packData.setRadius(v,packData.getRadius(orig_v));
-	    			  }
-	    		  }
-	    	  }
-
-	    	  // traditional
-	    	  else {
-	    		  if (!segment)
-	    			  alp_sym=packData.double_K(vertlist);
-	    		  else 
-	    			  alp_sym=packData.double_on_edge(vertlist);
-	    		  if (alp_sym>0) 
-	    			  packData.setCombinatorics();
-	    	  }
-	    	  if (alp_sym!=0) {
-	    		  CirclePack.cpb.msg("double: vert symmetric "+
-	    				  "to 'alpha' is "+alp_sym);
-	    		  return alp_sym;
-	    	  }
-	    	  return 0;
+    		  // duplicate radii (from 'vData' only, ignore centers);
+    		  if (packData.vertexMap!=null) {
+    			  for (int v=origVC+1;v<=packData.packDCEL.vertCount;v++) {
+    				  int orig_v=packData.vertexMap.findW(v);
+    				  if (orig_v>0)
+    					  packData.setRadius(v,packData.getRadius(orig_v));
+    			  }
+    		  }
+    		  return 1;
 	      }
 		  
 		  // ========= disp (and dISp) ======== 
@@ -7415,7 +7393,7 @@ public class CommandStrParser {
 	       	  				"' for writing");	
 	    	  }
 	    	  
-	    	  // '-s {n}' flag or facelist
+	    	  // '-s {n}' flag or halfedge list
 	    	  items=(Vector<String>)flagSegs.get(0);
 	    	  HalfLink hlink=new HalfLink();
 	    	  if (StringUtil.isFlag(items.get(0))) {
@@ -7463,16 +7441,40 @@ public class CommandStrParser {
 	    	  }
 	    	  
 	    	  if (hlink==null || hlink.size()<3) {
-	    		  throw new ParserException("usage holonomy: failed to get HalfLink");
+	    		  throw new ParserException(
+	    				  "usage holonomy: failed to get HalfLink");
 	    	  }
 	    	  dcel.Face firstF=hlink.getFirst().face;
 	    	  dcel.Face lastF=hlink.getLast().face;
 	    	  if (firstF==null || lastF==null || firstF!=lastF)
 	    		  throw new ParserException(
 	    				  "usage holonomy: list doesn't have same face first and last");
-	    	  
-	    	  double frobNorm=PolyBranching.holonomy_trace(packData,
-	    			  fp,hlink,true);
+	    	  Mobius holomob=PackData.holonomyMobius(packData,hlink,true);
+	    	  double frobNorm=Mobius.frobeniusNorm(holomob);
+			  CirclePack.cpb.msg(
+					  "Frobenius norm "+String.format("%.8e",frobNorm)+
+					  ", \nMobius is: \n"+
+					  "  a = ("+String.format("%.8e",holomob.a.x)+","+
+					  String.format("%.8e",holomob.a.y)+
+					  ")   b = ("+String.format("%.8e",holomob.b.x)+","+
+					  String.format("%.8e",holomob.b.y)+")\n"+
+					  "  c = ("+String.format("%.8e",holomob.c.x)+","+
+					  String.format("%.8e",holomob.c.y)+
+					  ")   d = ("+String.format("%.8e",holomob.d.x)+","+
+					  String.format("%.8e",holomob.d.y)+")");
+			  if (fp!=null) { // print to file also 
+				  try {
+			    fp.write("\nFrobenius norm:\n  ");
+			    fp.write(frobNorm+" \n");
+			    // print mobius 
+			    fp.write("Mobius:\n  a= "+holomob.a.x+" + i*("+holomob.a.y+")\n");
+			    fp.write("  b= "+holomob.b.x+" + i*("+holomob.b.y+")\n");
+			    fp.write("  c= "+holomob.c.x+" + i*("+holomob.c.y+")\n");
+			    fp.write("  d= "+holomob.d.x+" + i*("+holomob.d.y+")\n\n");
+				  } catch(Exception ex) {
+					  CirclePack.cpb.myErrorMsg("There were IOExceptions");
+				  }
+			  }
 	    	  if (fp!=null) {
 	    		  try {
 	    			  fp.flush();
@@ -7602,7 +7604,7 @@ public class CommandStrParser {
 
 				  // most typical call
 		    	  if (flagSegs.size()==0) {
-		    		  pdc.dcelCompCenters(packData.packDCEL.computeOrder);
+		    		  pdc.layoutPacking();
 		    		  packData.fillcurves();
 		    		  return 1;
 		    	  }
@@ -7734,10 +7736,7 @@ public class CommandStrParser {
 	    						  "faces were provided.");
 	    				  break;
 	    			  }
-	    			  if (pdc!=null)
-	    				  count +=pdc.layoutFaceList(facelist,0);
-	    			  else
-	    				  count += packData.reLayList(facelist,0);
+    				  count +=pdc.layoutFaceList(facelist);
 	    			  break;
 	    		  }
 
@@ -8489,6 +8488,7 @@ public class CommandStrParser {
 				
 	    	  CombDCEL.finishRedChain(packData.packDCEL,packData.packDCEL.redChain);
 	    	  packData.packDCEL.fixDCEL_raw(packData);
+	    	  packData.packDCEL.layoutPacking();
 	    	  return 1;
 	      }
 	      break;

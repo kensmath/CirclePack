@@ -152,7 +152,7 @@ public class DcelCreation {
 		public static PackData hexBuild(int n) {
 			if (n==0)
 				n=1;
-			double rad=Math.pow(2.0,n-2);
+			double rad=1.0/(2.0*n);
 			PackDCEL pdcel=CombDCEL.seed_raw(6);
 			PackData p=new PackData(null);
 			pdcel.p=p;
@@ -160,7 +160,6 @@ public class DcelCreation {
 			for (int k=2;k<=n;k++) {
 				int m=pdcel.vertCount;
 				int ans=RawDCEL.addlayer_raw(pdcel,1,6,m,m);
-	//			pdcel=CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha);
 				if (ans<=0)
 					return null;
 			}
@@ -366,7 +365,7 @@ public class DcelCreation {
 		for (int v=(Nsq+1);v<=p.nodeCount;v++)
 			p.setRadius(v, r);
 		p.fillcurves();
-		p.packDCEL.dcelCompCenters();
+		p.packDCEL.layoutPacking();
 		
 		return p;
 	}

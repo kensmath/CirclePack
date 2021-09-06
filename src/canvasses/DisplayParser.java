@@ -309,100 +309,58 @@ public class DisplayParser {
 				boolean useRed=false;
 				if (sub_cmd.length()>0 && sub_cmd.startsWith("F"))
 					useRed=true;
-				
-//				if (debug) // debug=true;
-//					LayoutBugs.log_faceOrder(p);
-				
-				GraphLink graphlist=null;
-				int first_face = 0;
+				HalfLink hlink=null;
 				if (items.size() == 0) { // default to drawing order (plus stragglers 
 										 // (i.e., not needed in drawing order)) 
-					if (p.packDCEL!=null) {
-						graphlist=p.packDCEL.faceOrder;
-					}
-					else {
-						graphlist=new GraphLink(p,"s");
-					}
+					hlink=p.packDCEL.fullOrder;
 				}
 				else { // there is a given list
-					graphlist=new GraphLink(p,items);
+					hlink=new HalfLink(p,items);
 				}
-				if (graphlist==null || graphlist.size()==0)
+				if (hlink==null || hlink.size()==0)
 					break;
-				first_face=graphlist.get(0).w;
 				
 				// NOTE: We do NOT recompute the location for the first face
 				//   (unless it occurs again later in the list); to lay out
 				//   the first face, you do that separately, e.g. in layout.
+				boolean firstFace=false;
 				
 				// When circles are indicated, we need to handle the first two 
 				//   of the first face separately here; the third is handled 
 				//   in layout_facelist call.
 				if (c == 'C' || c == 'B') {
-					int[] trip=new int[2];
-					if (p.packDCEL!=null) {
-						HalfEdge strt=p.packDCEL.faces[first_face].edge;
-						trip[0]=strt.origin.vertIndx;
-						trip[1]=strt.next.origin.vertIndx;
-					}
-					
-					// traditional
-					else {
-						int indx = p.faces[first_face].indexFlag;
-						Face face = p.faces[first_face];
-						trip[0]=face.vert[indx];
-						trip[1]=face.vert[(indx+1)%3];
-					}
-					
-					for (int i=0;i<2;i++) {
-						v=trip[i];
-						z = p.getCenter(v);
-						
-						// set up color (there's only one)
-						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.getCircleColor(v));
-
-						// label?
-						if (dispFlags.label) 
-							dispFlags.setLabel(Integer.toString(v));
-						
-						// now draw it
-						cpScreen.drawCircle(z, p.getRadius(v), dispFlags);
-						
-					} // end of for loop
+					HalfEdge he=hlink.getFirst();
+					v=he.origin.vertIndx;
+					// set up color (there's only one)
+					if (!dispFlags.colorIsSet)
+						dispFlags.setColor(p.getCircleColor(v));
+					// label?
+					if (dispFlags.label) 
+						dispFlags.setLabel(Integer.toString(v));
+					cpScreen.drawCircle(p.getCenter(v), p.getRadius(v), dispFlags);
+					v=he.next.origin.vertIndx;
+					// set up color (there's only one)
+					if (!dispFlags.colorIsSet)
+						dispFlags.setColor(p.getCircleColor(v));
+					// label?
+					if (dispFlags.label) 
+						dispFlags.setLabel(Integer.toString(v));
+					cpScreen.drawCircle(p.getCenter(v), p.getRadius(v), dispFlags);
 					count++;
 				} // done with first two circles of first face
 
 				// now proceed with layout
 				if (c == 'F') {
-					if (p.packDCEL!=null) 
-						count += p.packDCEL.layoutTree(null, graphlist, dispFlags,null,
-								true, false,-1.0);
-					
-					// traditional
-					else 
-						count += p.layoutTree(null, graphlist, dispFlags,null,
-								true, useRed,-1.0);
+					count += p.packDCEL.layoutFactory(null, 
+							hlink,dispFlags,null,true,firstFace,-1.0);
 				} 
 				else if (c == 'C') {
-					if (p.packDCEL!=null) 
-						count += p.packDCEL.layoutTree(null, graphlist, null,dispFlags,
-								true, false,-1.0);
-					
-					// traditional
-					else
-						count += p.layoutTree(null, graphlist, null,dispFlags,
-								true,useRed,-1.0);
-				} 
+					count += p.packDCEL.layoutFactory(null,
+							hlink,null,dispFlags,true,firstFace,-1.0);
+				}
 				else if (c == 'B') { // we have only one color we can use
-					if (p.packDCEL!=null) 
-						count += p.packDCEL.layoutTree(null, graphlist,dispFlags,dispFlags,
-								true, false,-1.0);
-					
-					// traditional
-					else
-						count += p.layoutTree(null, graphlist, dispFlags,dispFlags,
-								true, useRed,-1.0);
+					count += p.packDCEL.layoutFactory(null,
+							hlink,dispFlags,dispFlags,true,firstFace,-1.0);
 				}
 				break;
 			} // done with C/B/F

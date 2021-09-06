@@ -298,7 +298,6 @@ public class PackData{
     		alloc_pack_space(pdcel.vertCount+10,true);
     	
     	packDCEL=pdcel;
-    	firstFace=pdcel.computeOrder.get(0).w;
     	pdcel.p=this;
     	int origNodeCount=nodeCount;
     	if (pdcel.alpha==null)
@@ -307,6 +306,7 @@ public class PackData{
     	if (pdcel.gamma==null)
     		gamma=pdcel.setGamma(0);
     	gamma=pdcel.gamma.origin.vertIndx;
+    	firstFace=pdcel.alpha.face.faceIndx;
 		
     	// set some counts
 		nodeCount=pdcel.vertCount;
@@ -3279,20 +3279,14 @@ public class PackData{
 	}
 	
 	/**
-	 * Return the internal radius. This means in the hyp case,
+	 * Return the stored radius. This means in the hyp case,
 	 * return the x-radius. (See 'getActualRadius' to instead
 	 * convert x-radius to actual hyp radius.).
-	 * TODO: want to turn "rData[].rad" to private as part of DCEL
-	 * conversion, so I've set this up
 	 * @param v int
 	 * @return double
 	 */
 	public double getRadius(int v) {
-		double x=rData[v].rad;
-		if (packDCEL!=null) {
-			x=packDCEL.getVertRadius(packDCEL.vertices[v].halfedge);
-		}
-	    return x;
+		return packDCEL.getVertRadius(packDCEL.vertices[v].halfedge);
 	}
 	  
 	/**
@@ -6201,7 +6195,7 @@ public class PackData{
 	public int CompPackLayout() {
 		int ans=0;
 		if (packDCEL!=null) {
-			return packDCEL.dcelCompCenters();
+			return packDCEL.layoutPacking();
 		}
 		
 		// traditional
@@ -6389,7 +6383,7 @@ public class PackData{
 		
 		// TODO: ignore parameters for now in DCEL case
 		if (packDCEL!=null) {
-			return packDCEL.dcelCompCenters();
+			return packDCEL.layoutPacking();
 		}
 		
 	  int nf,n0,n1,n,vert,count,v,indx,lastface;
@@ -10816,10 +10810,8 @@ public class PackData{
 
 	  /** 
 	   * Return an int array with the generations of verts, 
-	   * generation "1" being those v with 'utilFlag' non-zero. 
-	   * The utility flage here is either 'KData[].utilFlag' 
-	   * or 'VData[].vutil'; it does not get changed during 
-	   * this method. Additional info is returned via 'uP'.  
+	   * generation "1" being those v with 'VData[].vutil' 
+	   * non-zero. Additional info is returned via 'uP'.  
 	   * @param max int, if max>0, stop at last with gen = max.
 	   * @param uP UtilPacket; instantiated by calling routine: 
 	   *    returns last vertex as 'uP.rtnFlag' and
@@ -20143,6 +20135,95 @@ public class PackData{
 			return 1; // should support spherical geom
 		return iG; // just its own geom
 	}
+	
+	/**
+	 * Compute Mobius associated with holonomy along 
+	 * a closed chain of faces. The faces are defined
+	 * by given 'HalfLink', the first assumed to be 
+	 * in the desired geometric location. Centers are
+	 * then recomputed iteratively until the final
+	 * locations of the original face vertices are found. 
+	 * Note that data in the packing is not changed.
+	 * The transformation and its Frobenius norm (how 
+	 * close to identity) are displayed in 'Messages' and
+	 * written to a file if fp!=null. Return Frobenius norm.
+	 * @param p PackData,
+	 * @param hlink HalfLink, gives associated chain of faces
+	 * @param draw boolean: true, then draw colored faces as we go
+	 * @return Mobius, null on error
+	 */
+	public static Mobius holonomyMobius(PackData p,
+			HalfLink hlink,boolean draw) {
+
+		  PackDCEL pdcel=p.packDCEL;
+		  HalfEdge startedge=hlink.getFirst();
+		  HalfEdge endedge=hlink.getLast();
+		  
+		  Iterator<HalfEdge> his=hlink.iterator();
+		  
+		  // locate the first face
+		  HalfEdge currhe=his.next();
+		  HalfEdge nexthe=currhe;
+		  CircleSimple cs0=pdcel.getVertData(currhe);
+		  CircleSimple cs1=pdcel.getVertData(currhe.next);
+		  double rad=pdcel.getVertRadius(currhe.next.next);
+		  CircleSimple cs2=CommonMath.comp_any_center(cs0,cs1,rad,
+				  currhe.next.getSchwarzian(),
+				  currhe.next.next.getSchwarzian(),
+				  currhe.getSchwarzian(),p.hes);
+		  Complex[] startZ=new Complex[2];
+		  startZ[0]=new Complex(cs0.center);
+		  startZ[1]=new Complex(cs1.center);
+		  startZ[2]=new Complex(cs2.center);
+		  while (his.hasNext()) {
+			  currhe=nexthe;
+			  nexthe=his.next();
+			  
+			  if (nexthe.twin.prev==currhe) // head-to-head?
+ 				  cs0=cs2;
+			  else // tail-to-tail
+				  cs1=cs2;
+
+			  rad=pdcel.getVertRadius(nexthe.next.next);
+			  cs2=CommonMath.comp_any_center(cs0,cs1,rad,
+				  nexthe.next.getSchwarzian(),
+				  nexthe.next.next.getSchwarzian(),
+				  nexthe.getSchwarzian(),p.hes);
+		  }
+		  
+		  // line up triples
+		  Complex[] endZ=new Complex[2];
+		  if (endedge.next==startedge) { // head-to-tail
+			  endZ[0]=cs1.center;
+			  endZ[1]=cs2.center;
+			  endZ[2]=cs0.center;
+		  }
+		  else { // tail-to-head
+			  endZ[0]=cs2.center;
+			  endZ[1]=cs0.center;
+			  endZ[2]=cs1.center;
+		  }
+		  
+		  String opts=null;
+		  if (draw) opts=new String("-ff"); // draw the colored faces as we go
+		  DispFlags dflags=new DispFlags(opts,p.cpScreen.fillOpacity);
+		  Mobius mob=new Mobius(); // initialize transformation 
+		  if (p.hes<0) // hyp
+			  mob=Mobius.auto_abAB(startZ[0],startZ[1],endZ[0],endZ[1]);
+		  else if (p.hes==0) { // eucl
+			  Complex denom=startZ[1].minus(startZ[0]);
+			  if (denom.abs()<.00000001) 
+				  return null;
+			  mob.a=endZ[0].minus(endZ[1]).divide(denom);
+			  mob.b=endZ[0].minus(mob.a.times(startZ[0]));
+		  }
+		  else { // sph: TODO: this is untested
+			  mob=Mobius.mob_xyzXYZ(startZ[0],startZ[1],startZ[2],
+					  endZ[0],endZ[1],endZ[2],1,1);
+		  }
+		  return mob;
+	}
+	
 		
 } // end of 'PackData' class
 	  

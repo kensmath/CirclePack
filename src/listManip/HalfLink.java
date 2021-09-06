@@ -40,7 +40,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	PackData packData;
 	PackDCEL pdc;
 	
-	static final int XTD_LINKS=16; // how many links to look for in 'extended' edges.
+	static final int XTD_LINKS=16; // link count limit in 'extended' edges.
 
 	// Constructors
 	public HalfLink(PackData p,HalfEdge edge) {
@@ -274,14 +274,16 @@ public class HalfLink extends LinkedList<HalfEdge> {
 						if (brst.startsWith("r") 
 								|| brst.startsWith("n")) { // use up first
 							edge=(EdgeSimple)elink.remove(0);
-							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+							if (edge.v<=packData.nodeCount && 
+									edge.w<=packData.nodeCount) {
 								add(packData.packDCEL.findHalfEdge(edge));
 								count++;
 							}
 						}
 						if (brst.startsWith("l")) { // last
 							edge=(EdgeSimple)elink.getLast();
-							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+							if (edge.v<=packData.nodeCount && 
+									edge.w<=packData.nodeCount) {
 								add(packData.packDCEL.findHalfEdge(edge));
 								count++;
 							}
@@ -291,7 +293,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 								int n=MathUtil.MyInteger(brst);
 								if (n>=0 && n<elink.size()) {
 									edge=(EdgeSimple)elink.get(n);
-									if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+									if (edge.v<=packData.nodeCount && 
+											edge.w<=packData.nodeCount) {
 										add(packData.packDCEL.findHalfEdge(edge));
 										count++;
 									}
@@ -304,7 +307,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 						Iterator<EdgeSimple> elst=elink.iterator();
 						while (elst.hasNext()) {
 							edge=(EdgeSimple)elst.next();
-							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+							if (edge.v<=packData.nodeCount && 
+									edge.w<=packData.nodeCount) {
 								HalfEdge ehe=packData.packDCEL.findHalfEdge(edge);
 								if (ehe!=null)
 									add(ehe);
@@ -330,14 +334,16 @@ public class HalfLink extends LinkedList<HalfEdge> {
 						if (brst.startsWith("r") 
 								|| brst.startsWith("n")) { // use up first
 							edge=(EdgeSimple)glink.remove(0);
-							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+							if (edge.v<=packData.nodeCount && 
+									edge.w<=packData.nodeCount) {
 								add(packData.packDCEL.findHalfEdge(edge));
 								count++;
 							}
 						}
 						if (brst.startsWith("l")) { // last
 							edge=(EdgeSimple)glink.getLast();
-							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+							if (edge.v<=packData.nodeCount && 
+									edge.w<=packData.nodeCount) {
 								add(packData.packDCEL.findHalfEdge(edge));
 								count++;
 							}
@@ -347,7 +353,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 								int n=MathUtil.MyInteger(brst);
 								if (n>=0 && n<glink.size()) {
 									edge=(EdgeSimple)glink.get(n);
-									if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+									if (edge.v<=packData.nodeCount && 
+											edge.w<=packData.nodeCount) {
 										add(packData.packDCEL.findHalfEdge(edge));
 										count++;
 									}
@@ -360,7 +367,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 						Iterator<EdgeSimple> glst=glink.iterator();
 						while (glst.hasNext()) {
 							edge=(EdgeSimple)glst.next();
-							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+							if (edge.v<=packData.nodeCount && 
+									edge.w<=packData.nodeCount) {
 								add(packData.packDCEL.findHalfEdge(edge));
 								count++;
 							}
@@ -449,12 +457,12 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			{
 				HalfEdge firsthe=null;
 				HalfEdge lasthe=null;
-				String []pair_str=StringUtil.parens_parse(str); // get two strings
+				String []pair_str=StringUtil.parens_parse(str); // two strings
 				if (pair_str!=null) { // got two strings
 					int a,b;
 					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))==0
-							|| (b=NodeLink.grab_one_vert(packData,pair_str[1]))==0
-							|| !packData.isBdry(a) || !packData.isBdry(b))
+						|| (b=NodeLink.grab_one_vert(packData,pair_str[1]))==0
+						|| !packData.isBdry(a) || !packData.isBdry(b))
 						return count;
 					firsthe=pdc.vertices[a].halfedge;
 					lasthe=pdc.vertices[b].halfedge.twin.next.twin;
@@ -491,13 +499,14 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			  String itstr=null;
 			  if (packData.packDCEL.pairLink==null || 
 					  (numSides=packData.packDCEL.pairLink.size())==0) {
-				  while (its.hasNext()) itstr=(String)its.next(); // toss rest of items
+				  while (its.hasNext()) itstr=(String)its.next(); // toss rest 
 				  break;
 			  }
 			  boolean []tag=new boolean[numSides];
 			  for (int i=0;i<numSides;i++) tag[i]=false;
 			  if (!its.hasNext()) { // default to 'all'
-				  for (int i=0;i<numSides;i++) tag[i]=true;
+				  for (int i=0;i<numSides;i++) 
+					  tag[i]=true;
 			  }
 			  else do {
 				  itstr=(String)its.next();
@@ -880,7 +889,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	 * same face, so, e.g., we can layout along this chain
 	 * of faces to compute holonomy.
 	 * @param pdcel PackDCEL
-	 * @param sideIndx int, possibly <0
+	 * @param sideIndx int, possibly <=0
 	 * @return HalfLink, null on error
 	 */
 	public static HalfLink HoloHalfLink(PackDCEL pdcel,int sideIndx) {
@@ -890,7 +899,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		boolean debug=false; // debug=true;
 		
 		// for whole red chain, we don't include any red edges
-		if (sideIndx<0) {
+		if (sideIndx<=0) {
 			if (rtrace==null)
 				return null;
 		
@@ -1167,24 +1176,29 @@ public class HalfLink extends LinkedList<HalfEdge> {
      * to a 'FaceLink', then go down the right side of this chain of faces.
      * May have a preferred starting vertex. 
      * TODO: currently, eucl only
-     * @param p
-     * @param pInt, PathInterpolator
+     * @param p PackData
+     * @param pInt PathInterpolator
      * @param startVert (or 0 if non specified)
-     * @return
+     * @return EdgeLink
      */
-	public static EdgeLink path2edgepath(PackData p,PathInterpolator pInt,int startVert) {
+	public static EdgeLink path2edgepath(PackData p,
+			PathInterpolator pInt,int startVert) {
 		FaceParam startFP=FaceLink.pathProject(p,pInt,startVert);
-		if (startFP==null || startFP.next==null) return null;
+		if (startFP==null || startFP.next==null) 
+			return null;
 		int startFace=startFP.face;
 		FaceParam ftrace=startFP;
-		while (ftrace.next!=null) ftrace=ftrace.next;
+		while (ftrace.next!=null) 
+			ftrace=ftrace.next;
 		int endFace=ftrace.face;
 		
 		// get start/end complex points
 		Complex startZ=pInt.sToZ(0.0);
 		Complex endZ=null;
-		if (pInt.closed) endZ=new Complex(startZ);
-		else endZ=new Complex(pInt.pathZ.lastElement());
+		if (pInt.closed) 
+			endZ=new Complex(startZ);
+		else 
+			endZ=new Complex(pInt.pathZ.lastElement());
 		
 		// start/end vertices are those closest to startZ/endZ
 		double smin=10000.0;
@@ -1208,7 +1222,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		}
 		int startV=sface.vert[sindx];
 		int endV=eface.vert[eindx];
-		if (startV==endV) return null;
+		if (startV==endV) 
+			return null;
 		
 		// Remove any unneeded faces at beginning (i.e, next face has startV)
 		while (startFP.next!=null && p.face_index(startFP.next.face,startV)>=0)
@@ -1218,18 +1233,22 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		ftrace=startFP; 
 		while (ftrace!=null && p.face_index(ftrace.face,endV)<0) // find first face containing endV
 			ftrace=ftrace.next;
-		if (ftrace==null) return null; // should not happen
+		if (ftrace==null)  // should not happen 
+			return null;
 		// ftrace is first 'FaceParam' whose face contains endV; do the rest?
 		boolean done=false;
 		FaceParam ntrace=ftrace;
 		while (!done) {
 			while (ntrace.next!=null && p.face_index(ntrace.next.face,endV)>=0)
 				ntrace=ntrace.next;
-			if (ntrace.next==null) done=true; 
-			else ftrace=ntrace.next; // a face that doesn't have endV
+			if (ntrace.next==null) 
+				done=true; 
+			else  // a face that doesn't have endV
+				ftrace=ntrace.next;
 			while (ftrace!=null && p.face_index(ftrace.face,endV)<0) // find next face with endV
 				ftrace=ftrace.next; 
-			if (ftrace==null) return null; // should not happen
+			if (ftrace==null) 
+				return null; // should not happen
 		}				
 		ftrace.next=null; // stop chain here
 		
@@ -1250,7 +1269,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 
 				// create putative next edge
 				int nt=p.face_nghb(ftrace.face,ftrace.next.face);
-				if (nt<0) throw new CombException("broken chain in 'FaceParam' list");
+				if (nt<0) 
+					throw new CombException("broken chain in 'FaceParam' list");
 				nextv=p.faces[ftrace.next.face].vert[nt];
 				nextedge=new EdgeSimple(v,nextv);
 				ftrace=ftrace.next;
@@ -1282,28 +1302,29 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		if (elink==null || elink.size()==0) return null;
 		return elink;
 	}
+	
 	 /**
-	  * Does the given list of edges have vertices that separate the complex? 
-	  * If the return is 0, then answer is NO.
-	  * @param p
-	  * @param edgelist, EdgeLink
-	  * @return lowest index of circles not reachable from first non-green,
-	  * else 0, and complex is NOT separated.
-	  *   
+	  * Does the given list of halfedges have vertices that 
+	  * separate the complex? If the return is 0, then 
+	  * answer is NO, else return the lowest index of circles
+	  * not reachable.
+	  * @param p PackData
+	  * @param hlist HalfLink
+	  * @return int, 0 if complex is NOT separated.
 	  */
-	 public static int separates(PackData p,EdgeLink edgelist) {
+	 public static int separates(PackData p,HalfLink hlist) {
 		 NodeLink nodes=new NodeLink(p);
-		 Iterator<EdgeSimple> elst=edgelist.iterator();
-		 while (elst.hasNext()) {
-			 EdgeSimple edge=elst.next();
-			 nodes.add(edge.v);
-			 nodes.add(edge.w);
+		 Iterator<HalfEdge> hlst=hlist.iterator();
+		 while (hlst.hasNext()) {
+			 HalfEdge he=hlst.next();
+			 nodes.add(he.origin.vertIndx);
+			 nodes.add(he.next.origin.vertIndx);
 		 }
 		 return NodeLink.separates(p,nodes);
 	 }
 	 
 	 /**
-	  * Create an EdgeLink that eliminates duplicate edges.
+	  * Create an HalfLink that eliminates duplicate edges.
 	  * @param el HalfLink
 	  * @param orient boolean, true, then take account of orientation
 	  * @return new HalfLink
@@ -1461,138 +1482,133 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		String str=StringUtil.reconstitute(flagsegs);
 		return grab_one_edge(p,str);
 	}
-	
-	
-	 /**
-	  * Return fresh EdgeLink with entries translated 
-	  * from 'hlink' using 'vmap'. So, entry <v,w> in 
-	  * 'hlink' and entries <v,V> and <w,W> in 'vmap' 
-	  * leads to EdgeSimple <V,W> entry. If 'vmap' has 
-	  * no translation for v or w, use the original.
-	  * Note: calling routine with access to parent DCEL
-	  * may want to reinterpret EdgeLink as HalfLink.
-	  * @param hlink HalfLink
-	  * @param vmap VertexMap (giving pairs <v,V> for translation)
-	  * @return EdgeLink, new, null if hlink is null.
-	  */
-	 public static EdgeLink translate(HalfLink hlink,VertexMap vmap) {
-		 if (hlink==null)
-			 return null;
-		 EdgeLink out=new EdgeLink(hlink.packData);
-		 
-		 // if no 'vmap', return new copy of nlink
-		 if (vmap==null || vmap.size()==0) {
-			 Iterator<HalfEdge> hl=hlink.iterator();
-			 while (hl.hasNext()) { 
-				 out.add(HalfEdge.getEdgeSimple(hl.next()));
-			 }
-			 return out;
-		 }
-			 
-		 Iterator<HalfEdge> hl=hlink.iterator();
-		 while (hl.hasNext()) {
-			 HalfEdge he=hl.next();
-			 int v=he.origin.vertIndx;
-			 int w=he.twin.origin.vertIndx;
-			 if (v<=0 || w<=0)
-				 continue;
-			 int V=vmap.findW(v);
-			 int W=vmap.findW(w);
-			 if (V==0)
-				 V=v;
-			 if (W==0)
-				 W=w;
-			 
-			 out.add(new EdgeSimple(v,w));
-		 }
-		 return out;
-	 }
-	 
-		/**
-		 * Make up list by looking through SetBuilder specs 
-		 * (from {..} set-builder notation). Use 'tmpUtil' to 
-		 * collect information before creating the HalfLink for 
-		 * return. (Have not yet implemented many edge selections)
-		 * TODO: This duplicates 'EdgeLink' version
-		 * @param p PackData (with DCEL structure)
-		 * @param specs Vector<SelectSpec>
-		 * @return HalfLink list of specified edges
-		 */
-		public static HalfLink edgeSpecs(PackData p,Vector<SelectSpec> specs) {
-			if (p.packDCEL==null) {
-				throw new DCELException("'edgeSpecs' require a DCEL structure");
+
+	/**
+	 * Return fresh EdgeLink with entries translated from 'hlink' using 'vmap'. So,
+	 * entry <v,w> in 'hlink' and entries <v,V> and <w,W> in 'vmap' leads to
+	 * EdgeSimple <V,W> entry. If 'vmap' has no translation for v or w, use the
+	 * original. Note: calling routine with access to parent DCEL may want to
+	 * reinterpret EdgeLink as HalfLink.
+	 * 
+	 * @param hlink HalfLink
+	 * @param vmap  VertexMap (giving pairs <v,V> for translation)
+	 * @return EdgeLink, new, null if hlink is null.
+	 */
+	public static EdgeLink translate(HalfLink hlink, VertexMap vmap) {
+		if (hlink == null)
+			return null;
+		EdgeLink out = new EdgeLink(hlink.packData);
+
+		// if no 'vmap', return new copy of nlink
+		if (vmap == null || vmap.size() == 0) {
+			Iterator<HalfEdge> hl = hlink.iterator();
+			while (hl.hasNext()) {
+				out.add(HalfEdge.getEdgeSimple(hl.next()));
 			}
-			if (specs==null || specs.size()==0) 
-				return null;
-			SelectSpec sp=null;
-			int count=0;
-				// will store results in 'eutil'
-			
-			int[] tmpUtil=new int[p.packDCEL.edgeCount+1];
-			// loop through all the specifications: these should alternate
-			//   between 'specifications' and 'connectives', starting 
-			//   with the former, although typically there will be just 
-			//   one specification in the vector and no connective.
-			UtilPacket uPx=null;
-			UtilPacket uPy=null;
-			boolean isAnd=false; // true for '&&' connective, false for '||'.
-			for (int j=0;j<specs.size();j++) {
-				sp=(SelectSpec)specs.get(j);
-				if (sp.object!='e') 
-					throw new ParserException(); // spec must be edges/halfedges
-				try {
-					for (int e=1;e<=p.packDCEL.edgeCount;e++) {
-						
-						// success?
-						boolean outcome=false;
-						uPx=sp.node_to_value(p,e,0);
-						if (sp.unary) {
-							if (uPx.rtnFlag!=0)
-								outcome=sp.comparison(uPx.value,0);
+			return out;
+		}
+
+		Iterator<HalfEdge> hl = hlink.iterator();
+		while (hl.hasNext()) {
+			HalfEdge he = hl.next();
+			int v = he.origin.vertIndx;
+			int w = he.twin.origin.vertIndx;
+			if (v <= 0 || w <= 0)
+				continue;
+			int V = vmap.findW(v);
+			int W = vmap.findW(w);
+			if (V == 0)
+				V = v;
+			if (W == 0)
+				W = w;
+
+			out.add(new EdgeSimple(v, w));
+		}
+		return out;
+	}
+
+	/**
+	 * Make up list by looking through SetBuilder specs (from {..} set-builder
+	 * notation). Use 'tmpUtil' to collect information before creating the HalfLink
+	 * for return. (Have not yet implemented many edge selections) TODO: This
+	 * duplicates 'EdgeLink' version
+	 * 
+	 * @param p     PackData (with DCEL structure)
+	 * @param specs Vector<SelectSpec>
+	 * @return HalfLink list of specified edges
+	 */
+	public static HalfLink edgeSpecs(PackData p, Vector<SelectSpec> specs) {
+		if (p.packDCEL == null) {
+			throw new DCELException("'edgeSpecs' require a DCEL structure");
+		}
+		if (specs == null || specs.size() == 0)
+			return null;
+		SelectSpec sp = null;
+		int count = 0;
+		// will store results in 'eutil'
+
+		int[] tmpUtil = new int[p.packDCEL.edgeCount + 1];
+		// loop through all the specifications: these should alternate
+		// between 'specifications' and 'connectives', starting
+		// with the former, although typically there will be just
+		// one specification in the vector and no connective.
+		UtilPacket uPx = null;
+		UtilPacket uPy = null;
+		boolean isAnd = false; // true for '&&' connective, false for '||'.
+		for (int j = 0; j < specs.size(); j++) {
+			sp = (SelectSpec) specs.get(j);
+			if (sp.object != 'e')
+				throw new ParserException(); // spec must be edges/halfedges
+			try {
+				for (int e = 1; e <= p.packDCEL.edgeCount; e++) {
+
+					// success?
+					boolean outcome = false;
+					uPx = sp.node_to_value(p, e, 0);
+					if (sp.unary) {
+						if (uPx.rtnFlag != 0)
+							outcome = sp.comparison(uPx.value, 0);
+					} else {
+						uPy = sp.node_to_value(p, e, 1);
+						if (uPy.rtnFlag != 0)
+							outcome = sp.comparison(uPx.value, uPy.value);
+					}
+					if (outcome) { // yes, this value satisfies condition
+						if (!isAnd && tmpUtil[e] == 0) { // 'or' situation
+							tmpUtil[e] = 1;
+							count++;
 						}
-						else {
-							uPy=sp.node_to_value(p,e,1);
-							if (uPy.rtnFlag!=0)
-								outcome=sp.comparison(uPx.value, uPy.value);
-						}
-						if (outcome) { // yes, this value satisfies condition
-							if (!isAnd && tmpUtil[e]==0) { // 'or' situation
-								tmpUtil[e]=1;
-								count++;
-							}
-						}
-						else { // no, fails this condition
-							if (isAnd && tmpUtil[e]!=0) { // 'and' situation
-								tmpUtil[e]=0;
-								count--;
-							}
+					} else { // no, fails this condition
+						if (isAnd && tmpUtil[e] != 0) { // 'and' situation
+							tmpUtil[e] = 0;
+							count--;
 						}
 					}
-				} catch (Exception ex) {
+				}
+			} catch (Exception ex) {
+				throw new ParserException();
+			}
+
+			// if specs has 2 or more additional specifications, the next must
+			// be a connective. Else, finish loop.
+			if ((j + 2) < specs.size()) {
+				sp = (SelectSpec) specs.get(j + 1);
+				if (!sp.isConnective)
 					throw new ParserException();
-				}
-				
-				// if specs has 2 or more additional specifications, the next must
-				//    be a connective. Else, finish loop.
-				if ((j+2)<specs.size()) {
-					sp=(SelectSpec)specs.get(j+1);
-					if (!sp.isConnective) 
-						throw new ParserException();
-					isAnd=sp.isAnd; 
-					j++;
-				}
-				else j=specs.size(); // kick out of loop
-			}
-		
-			if (count>0) {
-				HalfLink hl=new HalfLink(p);
-				for (int e=1;e<=p.packDCEL.edgeCount;e++)
-					if (tmpUtil[e]!=0) 
-						hl.add(p.packDCEL.edges[e]);
-				return hl;
-			}
-			else 
-				return null;
-		}	 
-	 
+				isAnd = sp.isAnd;
+				j++;
+			} else
+				j = specs.size(); // kick out of loop
+		}
+
+		if (count > 0) {
+			HalfLink hl = new HalfLink(p);
+			for (int e = 1; e <= p.packDCEL.edgeCount; e++)
+				if (tmpUtil[e] != 0)
+					hl.add(p.packDCEL.edges[e]);
+			return hl;
+		} else
+			return null;
+	}
+
 }

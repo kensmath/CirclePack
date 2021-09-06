@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.Iterator;
 
 import allMains.CirclePack;
+import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RedHEdge;
 import input.CPFileManager;
@@ -242,12 +243,12 @@ public class LayoutBugs {
 		    		  ", redChain starts with edge "+p.packDCEL.redChain.myEdge+
 		    		  " and face "+p.packDCEL.redChain.myEdge.face.faceIndx+
 		    		  " --- \n\n");
-		      Iterator<EdgeSimple> gis=p.packDCEL.computeOrder.iterator();
-		      EdgeSimple edge=gis.next();
-		      writeFace(p.packDCEL,edge.w,dbw);
+		      Iterator<HalfEdge> heis=p.packDCEL.layoutOrder.iterator();
+		      HalfEdge edge=heis.next();
+		      writeFace(p.packDCEL,edge.face.faceIndx,dbw);
 		      count++;
-		      while(gis.hasNext()) {
-		    	  writeFace(p.packDCEL,gis.next().w,dbw);
+		      while(heis.hasNext()) {
+		    	  writeFace(p.packDCEL,heis.next().face.faceIndx,dbw);
 		    	  count++;
 		      }
 			  dbw.flush();
