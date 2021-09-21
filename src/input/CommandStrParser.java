@@ -3853,7 +3853,7 @@ public class CommandStrParser {
     			  // otherwise, send flags to define 'HalfLink'
     			  else { 
     				  HalfLink hlink=new HalfLink(packData,items);
-    				  CPBase.Mob=PackData.holonomyMobius(packData,hlink,false);
+    				  CPBase.Mob=PackData.holonomyMobius(packData,hlink);
     				  return 1;
     			  }
     		  }
@@ -4465,18 +4465,18 @@ public class CommandStrParser {
    			  if (packData.packDCEL!=null) {
    				  HalfEdge he=packData.packDCEL.findHalfEdge(edge);
    				  if (he==null)
-					  CirclePack.cpb.errMsg("{"+edge.v+" "+edge.w+"} is not an edge");
+					  CirclePack.cpb.errMsg(
+							  "{"+edge.v+" "+edge.w+"} is not an edge");
    				  else {
-   					  int vindx=RawDCEL.splitEdge_raw(packData.packDCEL,he);
-   					  if (vindx>0) {
-   						  packData.packDCEL.fixDCEL_raw(packData);
-   						  count++;
-   					  }
+   					  RawDCEL.splitEdge_raw(packData.packDCEL,he);
+					  packData.packDCEL.fixDCEL_raw(packData);
+					  count++;
    				  }
    			  }
    			  else {
    				  if (packData.nghb(edge.v,edge.w)<0) { // not neighbors?
-   					  CirclePack.cpb.errMsg("{"+edge.v+" "+edge.w+"} is not an edge");
+   					  CirclePack.cpb.errMsg(
+   							  "{"+edge.v+" "+edge.w+"} is not an edge");
    				  }
    				  else {
    					  int returnVal=packData.split_edge(edge.v, edge.w);
@@ -4492,17 +4492,9 @@ public class CommandStrParser {
 	  
 	  // ========= split_flower =============
 	  if (cmd.startsWith("split_flo")) {
-		  boolean merge=false;
 		  int v,w;
 		  int u=0;
 		  try {
-			  items=flagSegs.get(0);
-			  if (StringUtil.isFlag(items.get(0))) {
-				  String flg=items.remove(0);
-				  if (flg.equals("-m"))
-					  merge=true;
-			  }
-			  
 			  // should have 2 or 3 integers
 			  v=Integer.parseInt(items.get(0));
 			  w=Integer.parseInt(items.get(1));
@@ -4512,50 +4504,39 @@ public class CommandStrParser {
 					  throw new ParserException();
 			  } catch (Exception ex) {}; // u remains 0
 		  } catch(Exception ex) {
-			  throw new ParserException("usage: v w [u] or -m v w");
+			  throw new ParserException("usage: v w [u]");
 		  } 
 		  
-		  if (!merge) {
-			  if (packData.packDCEL!=null) {
-				  HalfEdge newEdge;
-				  HalfEdge wedge=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
-				  // bdry case
-				  if (packData.isBdry(v)) {
-					  if (wedge==null || packData.isBdry(w))
-						  throw new ParserException("usage: v w when v bdry, w interior");
-					  newEdge=RawDCEL.splitFlower_raw(packData.packDCEL, wedge,null);
-				  }
-				  // interior case
-				  else {
-					  HalfEdge uedge=packData.packDCEL.findHalfEdge(new EdgeSimple(v,u));
-					  if (wedge==null || uedge==null) 
-						  throw new ParserException("usage: v w u; w & u must be nghbs of v");
-					  newEdge=RawDCEL.splitFlower_raw(packData.packDCEL, wedge,uedge);
-				  }
-				  if (newEdge==null) 
-					  return 0;
-				  packData.packDCEL.fixDCEL_raw(packData);
-				  int newindx=newEdge.origin.vertIndx;
-				  // a,b are ref vertices; for debug, center new vert between a,b.
-				  int a=newEdge.twin.origin.vertIndx;
-				  int b=newEdge.next.twin.origin.vertIndx;
-				  Complex za=packData.getCenter(a);
-				  Complex zb=packData.getCenter(b);
-				  packData.setCenter(newindx,za.plus(zb).divide(2.0));
-				  packData.setRadius(newindx,packData.getRadius(a));
-				  return newindx;
-			  }
-
-			  // else traditional case
-			  int returnVal=packData.split_flower(v,w,u);
-			  packData.setCombinatorics();
-			  return returnVal;
+		  HalfEdge newEdge;
+		  HalfEdge wedge=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
+		  // bdry case
+		  if (packData.isBdry(v)) {
+			  if (wedge==null || packData.isBdry(w))
+				  throw new ParserException("usage: v w when v bdry, w interior");
+			  newEdge=RawDCEL.splitFlower_raw(packData.packDCEL, wedge,null);
 		  }
-		  
-// TODO: merge, both DCEL and traditional need work
-//		  else
-//		  	  returnVal=packData.merge_vert(v,w);
-
+		  // interior case
+		  else {
+			  if (u==0) {
+				  throw new ParserException("usage: v w u when v is interior");
+			  }
+			  HalfEdge uedge=packData.packDCEL.findHalfEdge(new EdgeSimple(v,u));
+			  if (wedge==null || uedge==null) 
+				  throw new ParserException("usage: v w u; w & u must be nghbs of v");
+			  newEdge=RawDCEL.splitFlower_raw(packData.packDCEL, wedge,uedge);
+		  }
+		  if (newEdge==null) 
+			  return 0;
+		  packData.packDCEL.fixDCEL_raw(packData);
+		  int newindx=newEdge.origin.vertIndx;
+		  // a,b are ref vertices; for debug, center new vert between a,b.
+		  int a=newEdge.twin.origin.vertIndx;
+		  int b=newEdge.next.twin.origin.vertIndx;
+		  Complex za=packData.getCenter(a);
+		  Complex zb=packData.getCenter(b);
+		  packData.setCenter(newindx,za.plus(zb).divide(2.0));
+		  packData.setRadius(newindx,packData.getRadius(a));
+		  return newindx;
 	  }
    	  break;
   } // end of 's'
@@ -5279,12 +5260,21 @@ public class CommandStrParser {
 
 	   		  // proceed while we get successive pairs that work
 	   		  Iterator<Integer> vlist=nodeLink.iterator();
+	   		  boolean ehit=true;
 
-	   		  while (vlist.hasNext()) {
+	   		  while (vlist.hasNext() && ehit) {
+	   			  ehit=false;
 	   			  int v=vlist.next();
 	   			  if (!vlist.hasNext())
 	   				  return count;
 	   			  int w=vlist.next();
+	   			  
+	   			  if (!packData.isBdry(v) || !packData.isBdry(w)) {
+	   				  CirclePack.cpb.errMsg("usage: "+
+	   						  "add_edge v w, vertices must "+
+	   						  "be on boundary");
+	   				  break;
+	   			  }
 	   			  
 	   			  // is {v w} already an edge?
 	   			  if (packData.areNghbs(v,w)) {
@@ -5292,72 +5282,28 @@ public class CommandStrParser {
    							  "is already an edge");
    					  break;
 	   			  }
-	   			  if (!packData.isBdry(v) || !packData.isBdry(w)) {
-	   				  CirclePack.cpb.errMsg("usage: "+
-	   						  "add_edge v w, vertices must "+
-	   						  "be on boundary");
-	   				  break;
+	   			  
+	   			  int u=-1;
+	   			  HalfEdge he=packData.packDCEL.vertices[v].halfedge;
+	   			  if (he.twin.prev.origin.vertIndx==w) 
+	   				  u=he.twin.origin.vertIndx; // v,u,w is cclw
+	   			  else if (he.twin.next.next.twin.origin.vertIndx==w)
+	   				  u=he.twin.next.next.origin.vertIndx; // w,u,v is cclw
+	   			  else {
+   					  CirclePack.cpb.errMsg(
+   							  "v = "+v+" and w = "+w+" don't have common nghb");
+   					  break;
 	   			  }
 
-	   			  // dcel case
-   				  if (packData.packDCEL!=null) {
-   					  if (RawDCEL.addEdge_raw(packData.packDCEL, v, w)!=null)
-   						  count++;
-   					  else
-   						  break;
-   				  }
-
-   				  // traditional packing
-   				  else {
-   	   				  
-	   				  // reaching here, 2 boundary verts.	   				  
-	   				  int afterv=packData.getFirstPetal(v);
-	   				  int afterw=packData.getFirstPetal(w);
-		   			  
-	   				  // Special case: bdry component is 
-	   				  //     {v,afterv,w,afterw,v}
-	   				  if (packData.nghb(afterv,w)>=0 && 
-	   						  packData.nghb(afterw,v)>=0) {
-	   					  // two steps: 
-	   					  //  * add edge {v,w} with "enfold", 
-	   					  //    leaving bdry component {v,w,afterw}
-	   					  //  * "enclose 0 afterw" to make that 
-	   					  //    bdry component into an interior face
-	   					  if (packData.enfold(afterv)==0)
-	   						  return count;
-	   					  packData.complex_count(false);
-	   					  String cs=new String("enclose 0 "+afterw);
-	   					  if (jexecute(packData,cs)==0)
-	   						  return count;
-	   					  packData.complex_count(false);
-	   					  count++;
-	   				  }
-
-	   				  else {
-	   					  // downstream from v, is this common neighbor?
-	   					  if (packData.nghb(afterv,w)>=0) { // yes
-	   						  if (packData.enfold(afterv)==0)
-	   							  return count;
-	   						  packData.complex_count(false);
-	   						  count++;
-	   					  }
-	   					  // else, downstream from w, is this common nghb?
-	   					  if (packData.nghb(afterw,v)>=0) { // yes
-	   						  if (packData.enfold(afterw)==0)
-	   							  return count;
-	   						  packData.complex_count(false);
-	   						  count++;
-	   					  }
-	   				  } // end of normal case
-	   			  }
-	   		  }
+	   			  RawDCEL.enfold_raw(packData.packDCEL,u);
+	   			  packData.setAim(u,2*Math.PI);
+	   			  count++;
+	   			  ehit=true;
+	   		  } // end of while
+	   		  
 	   		  if (count>0) {
 	   			  packData.xyzpoint=null;
-	   			  if (packData.packDCEL!=null) {
-	   				  packData.packDCEL.fixDCEL_raw(packData);
-	   			  }
-	   			  else 
-	   				  packData.setCombinatorics();
+   				  packData.packDCEL.fixDCEL_raw(packData);
 	   			  packData.fillcurves();
 	   		  }
 	   		  return count;
@@ -7449,7 +7395,7 @@ public class CommandStrParser {
 	    	  if (firstF==null || lastF==null || firstF!=lastF)
 	    		  throw new ParserException(
 	    				  "usage holonomy: list doesn't have same face first and last");
-	    	  Mobius holomob=PackData.holonomyMobius(packData,hlink,true);
+	    	  Mobius holomob=PackData.holonomyMobius(packData,hlink);
 	    	  double frobNorm=Mobius.frobeniusNorm(holomob);
 			  CirclePack.cpb.msg(
 					  "Frobenius norm "+String.format("%.8e",frobNorm)+
@@ -8279,6 +8225,22 @@ public class CommandStrParser {
 	    	  else return 0;
 	    	  if (CirclePack.cpb!=null)
 	    		  CirclePack.cpb.msg("max_pack: "+count+" repacking cycles");
+	    	  return count;
+	      }
+		  
+		  // ========= meld_edge =======
+	      else if (cmd.startsWith("meld_ed")) {
+	    	  items=(Vector<String>)flagSegs.get(0); // just v w
+	    	  HalfLink hlink=new HalfLink(packData,items);
+	    	  Iterator<HalfEdge> his=hlink.iterator();
+	    	  while (his.hasNext()) {
+	    		  HalfEdge he=his.next();
+	    		  if (RawDCEL.meldEdge_raw(packData.packDCEL,he)>0)
+	    			  count++;
+	    	  }
+	    	  if (count>0) {
+	    		  packData.packDCEL.fixDCEL_raw(packData);
+	    	  }
 	    	  return count;
 	      }
 	      

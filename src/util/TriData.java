@@ -28,7 +28,7 @@ public class TriData {
 	
 	// triples of data
 	public int[] vert;   // 'Face.vert' vector (as ordered in packdata 'faces')
-	public double[] radii;      // concrete numbers representing labels
+	public double[] radii;  // concrete numbers representing labels
 	
 	// Caution: edge data [i] entry is for edge OPPOSITE to vertex i.
 	double[] invDist;    // inversive distance: null if none non-trivial
@@ -83,18 +83,32 @@ public class TriData {
 	/**
 	 * Upload all radii to the packing. Note: record only for the edges
 	 * associated with 'face', since the same vertex may get different 
-	 * radii for other faces (e.g.,as recorded in appropriate 'RedHEdge's) 
+	 * radii for other faces (e.g.,as recorded in appropriate 'RedHEdge's)
+	 * @param pdc PackDCEL 
 	 */
-	public void uploadRadii() {
-		HalfEdge he=pdcel.faces[face].edge;
+	public void uploadRadii(PackDCEL pdc) {
+		HalfEdge he=pdc.faces[face].edge;
 		for (int j=0;j<3;j++) {
-			pdcel.setRad4Edge(he, radii[j]);
+			pdc.setRad4Edge(he, radii[j]);
 			he=he.next;
 		}
 	}
+	
+	public void uploadRadii() {
+		uploadRadii(pdcel);
+	}
+	
+	/**
+	 * If 'v' is a vert, set radius 'r'; allocate 'radii[]' if necessary 
+	 */
+	public void setVertRadius(int v,double r) {
+		int j=vertIndex(v);
+		if (j>=0)
+			setRadius(j,r);
+	}
 
 	/**
-	 * allocate 'center[]' and create with value 0.0
+	 * set entry for index j, allocating 'radii[]' if necessary 
 	 */
 	public void setRadius(int j,double r) {
 		if (radii==null || radii.length!=3)
@@ -107,7 +121,7 @@ public class TriData {
 	}
 	
 	/**
-	 * are there any non-trivail inversive distances?
+	 * are there any non-trivial inversive distances?
 	 * @return boolean
 	 */
 	public boolean hasInvDist() {

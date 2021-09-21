@@ -79,9 +79,9 @@ public class FracBranchPt extends GenBranchPt {
 		NodeLink corn=new NodeLink(packData);
 		for (int ii=0;ii<3;ii++)
 			corn.add(vert[ii]);
-		bdryLink=PackData.islandSurround(packData,corn);
-		if (bdryLink==null)
-			throw new CombException("Didn't get 'faceSurround' list");
+//		bdryLink=PackData.islandSurround(packData,corn);
+//		if (bdryLink==null)
+//			throw new CombException("Didn't get 'faceSurround' list");
 
 		// cookie
 		NodeLink seedlist=new NodeLink(packData);
@@ -156,13 +156,13 @@ public class FracBranchPt extends GenBranchPt {
 		
 		// need to convert 'bdryLink' to local face numbers
 		borderLink=new FaceLink(myPack);
-		Iterator<Integer> dL=bdryLink.iterator();
-		while (dL.hasNext()) {
-			int F=dL.next();
-			borderLink.add(myPack.what_face(vertexMap.findV(packData.faces[F].vert[0]),
-					vertexMap.findV(packData.faces[F].vert[1]),
-					vertexMap.findV(packData.faces[F].vert[2])));
-		}
+//		Iterator<Integer> dL=bdryLink.iterator();
+//		while (dL.hasNext()) {
+//			int F=dL.next();
+//			borderLink.add(myPack.what_face(vertexMap.findV(packData.faces[F].vert[0]),
+//					vertexMap.findV(packData.faces[F].vert[1]),
+//					vertexMap.findV(packData.faces[F].vert[2])));
+//		}
 		
 		myPack.alloc_overlaps();
 		

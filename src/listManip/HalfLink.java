@@ -803,13 +803,13 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	}
 	
 	/**
-	 * Make a distinct copy of this linked list, checking against
-	 * the current edgelist's packData setting.
-	 * @return new @see EdgeLink
+	 * Make a distinct copy of this linked list, disregarding
+	 * 'packData' setting.
+	 * @return new HalfLink
 	 */
 	public HalfLink makeCopy() {
 		Iterator<HalfEdge> elist=this.iterator();
-		HalfLink newlist=new HalfLink(packData);
+		HalfLink newlist=new HalfLink();
 		while (elist.hasNext()) {
 			newlist.add(new HalfEdge(elist.next()));
 		}
@@ -928,7 +928,6 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		rtrace=sdata.startEdge;
 		HalfEdge he=rtrace.myEdge;
 		hlink.add(he);
-		HalfEdge hold4end=he.prev;
 		
 		// Is this a bdry side? follow the bdry component
 		if (rtrace.myEdge.isBdry()) {
@@ -1484,15 +1483,16 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	}
 
 	/**
-	 * Return fresh EdgeLink with entries translated from 'hlink' using 'vmap'. So,
-	 * entry <v,w> in 'hlink' and entries <v,V> and <w,W> in 'vmap' leads to
-	 * EdgeSimple <V,W> entry. If 'vmap' has no translation for v or w, use the
-	 * original. Note: calling routine with access to parent DCEL may want to
-	 * reinterpret EdgeLink as HalfLink.
+	 * Return fresh EdgeLink with entries translated from 
+	 * 'hlink' using 'vmap'. So, entry <v,w> in 'hlink' and 
+	 * entries <v,V> and <w,W> in 'vmap' leads to EdgeSimple 
+	 * <V,W> entry. If 'vmap' has no translation for v or w, 
+	 * use the original. Note: calling routine with access to 
+	 * parent DCEL may want to reinterpret EdgeLink as HalfLink.
 	 * 
 	 * @param hlink HalfLink
-	 * @param vmap  VertexMap (giving pairs <v,V> for translation)
-	 * @return EdgeLink, new, null if hlink is null.
+	 * @param vmap VertexMap, giving pairs <v,V> for translation
+	 * @return EdgeLink, null if hlink is null.
 	 */
 	public static EdgeLink translate(HalfLink hlink, VertexMap vmap) {
 		if (hlink == null)
@@ -1511,29 +1511,46 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		Iterator<HalfEdge> hl = hlink.iterator();
 		while (hl.hasNext()) {
 			HalfEdge he = hl.next();
-			int v = he.origin.vertIndx;
-			int w = he.twin.origin.vertIndx;
-			if (v <= 0 || w <= 0)
-				continue;
-			int V = vmap.findW(v);
-			int W = vmap.findW(w);
-			if (V == 0)
-				V = v;
-			if (W == 0)
-				W = w;
-
-			out.add(new EdgeSimple(v, w));
+			EdgeSimple es=translate(he,vmap);
+			if (es!=null)
+				out.add(es);
 		}
 		return out;
 	}
-
+	
+	/**
+	 * Return EdgeSimple with entries translated from 
+	 * 'hlink' using 'vmap'. So, entry <v,w> in 'hlink' and 
+	 * entries <v,V> and <w,W> in 'vmap' leads to EdgeSimple 
+	 * <V,W> entry. If 'vmap' has no translation for v or w, 
+	 * use the original.
+	 * @param hlink HalfLink
+	 * @param vmap VertexMap, giving pairs <v,V> for translation
+	 * @return EdgeLink, null if edge is null.
+	 */
+	public static EdgeSimple translate(HalfEdge edge, VertexMap vmap) {
+		if (edge==null)
+			return null;
+		int v = edge.origin.vertIndx;
+		int w = edge.twin.origin.vertIndx;
+		if (v <= 0 || w <= 0)
+			return null;
+		int V = vmap.findW(v);
+		int W = vmap.findW(w);
+		if (V == 0)
+			V = v;
+		if (W == 0)
+			W = w;
+		return new EdgeSimple(v,w);
+	}
+		
 	/**
 	 * Make up list by looking through SetBuilder specs (from {..} set-builder
 	 * notation). Use 'tmpUtil' to collect information before creating the HalfLink
 	 * for return. (Have not yet implemented many edge selections) TODO: This
 	 * duplicates 'EdgeLink' version
 	 * 
-	 * @param p     PackData (with DCEL structure)
+	 * @param p PackData
 	 * @param specs Vector<SelectSpec>
 	 * @return HalfLink list of specified edges
 	 */

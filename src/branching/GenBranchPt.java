@@ -1,5 +1,6 @@
 package branching;
 
+import java.util.ArrayList;
 import java.util.Vector;
 
 import allMains.CirclePack;
@@ -7,20 +8,20 @@ import canvasses.DisplayParser;
 import circlePack.PackControl;
 import complex.Complex;
 import dcel.HalfEdge;
+import dcel.RawDCEL;
+import dcel.RedHEdge;
 import exceptions.CombException;
+import exceptions.PackingException;
+import exceptions.ParserException;
 import geometry.CommonMath;
-import geometry.EuclMath;
-import geometry.HyperbolicMath;
-import geometry.SphericalMath;
 import komplex.EdgeSimple;
-import komplex.Face;
 import listManip.EdgeLink;
 import listManip.FaceLink;
-import listManip.GraphLink;
 import listManip.HalfLink;
 import listManip.VertexMap;
 import math.Mobius;
 import packing.PackData;
+import util.TriData;
 import util.UtilPacket;
 
 /**
@@ -89,12 +90,14 @@ public abstract class GenBranchPt {
 	public int myType;	  // type (see above)
 	
 	public int branchID;  // id number, starting from 0 as created by parent
+	public int myIndex;	  // may be face index or vert index, depending on type
+	double myAim;		  // target angle sum; e.g. 4*pi.
 	PackData packData;    // who's your daddy?
 	PackData myPackData;  // packing with complex local to this branch point.
-	double myAim;		  // target angle sum; e.g. 4*pi.
+	public HalfEdge lastLayoutEdge; // for combined layout process
+	public HalfLink myHoloBorder;  // for local holonomy 
 	Mobius myHolonomy;    // Can update this after each layout
 	Mobius placeMe;       // Mobius that aligns layout with parent packing
-	public int myIndex;	  // may be face index or vert index, depending on type
 
 	// ***** these are generated in each 'createMyPack'
 	public VertexMap vertexMap;  // pairs (l n): local index l, parent index n
@@ -106,24 +109,25 @@ public abstract class GenBranchPt {
 	// NOTE: 'myPackData.rData[]' points to 'packData.rData[]' area.
 	
 	// TODO: converting to dcel structure, build temporary parallel data 
-	GraphLink myLayoutTree; // ordered list of dual edges for layout 
-	public FaceLink bdryLink;    // oriented bdry face chain (parent indices)
-	public EdgeLink parentPoison;   // edges of parent to become poison
+	public EdgeLink parentPoison;   // traditional: edges of parent to become poison
+	public HalfLink parentHPoison;  // migrate to this
 	
-	HalfLink myLinkTree;  // local layout tree
 	HalfEdge myAttachEdge;  // local, for aligning with parent
 	HalfEdge parentAttachEdge;  // parent edge (same orientation)
-	
+
+	EventHorizon eventHorizon; 	// storage of bdry combinatorics
+
 	// Constructor
 	public GenBranchPt(PackData p,int bID,FaceLink blink,double aim) {
 		packData=p;
 		branchID=bID;
-		bdryLink=blink;
 		myAim=aim;
 		placeMe=null;
 		myHolonomy=null;
 		myAttachEdge=null;
 		parentAttachEdge=null;
+		eventHorizon=null;
+		lastLayoutEdge=null;
 	}
 	
 	// ************** abstract methods ******************
@@ -133,9 +137,6 @@ public abstract class GenBranchPt {
 	
 	// prepare to delete by resetting any parent info
 	abstract public void delete();
-	
-	// set parent edges as poison to be used in layout
-	abstract public int setPoisonEdges();
 	
 	// compute local radii; return remaining error.
 	abstract public UtilPacket riffleMe(int cycles);
@@ -168,33 +169,131 @@ public abstract class GenBranchPt {
 	 */
 	public void initLocalPacking() {
 		
-		// each type has its way of creating the packing
+		// each type has its way of creating/modifying the packing
 		myPackData=createMyPack();
 		if (myPackData==null)
 			throw new CombException(
 					"Failed to create packing for general branch "+
 							"point, type "+myType);
-		myPackData.fillcurves();
+		
+		// set 'myHoloBorder'
+		HalfLink myred=new HalfLink();
+		RedHEdge rtrace=myPackData.packDCEL.redChain;
+		do {
+			myred.add(rtrace.myEdge);
+			rtrace=rtrace.nextRed;
+		} while (rtrace!=myPackData.packDCEL.redChain);
+		myHoloBorder=RawDCEL.leftsideLink(myPackData.packDCEL,myred);
+		
+		// create horizon data
+		eventHorizon=new EventHorizon();
 	}
 
 	/**
-	 * Set attachment edges for aligning this branch point
-	 * with the parent. 
-	 * @param edge HalfEdge: if improper, then clear current values
+	 * Event horizon vertices (mostly interior) have neighbors 
+	 * inside the branch points and outside in the parent. We use
+	 * an old-reliable riffle, but must compute angle sums 
+	 * in a special way based on 'EventHorizon' structure
+	 * @param passes int 
+	 * @return UtilPacket, value is cummulative angle sum error
 	 */
-	public void setAttachments(HalfEdge edge) {
-		if (edge==null) {
-			myAttachEdge=null;
-			parentAttachEdge=null;
-			return;
+	public UtilPacket horizonRiffle(int passes) {
+		UtilPacket uP=new UtilPacket();
+		int count=0;
+		boolean flip=false; // if error goes up
+		EventHorizon ev=eventHorizon;
+		double faim=pi2; // all have aim 2pi
+		double origError=ev.angleSumError();
+		double curvError=origError;
+				
+			
+		double recip=.333333/ev.hitCount;
+	    double cut=curvError*recip;
+		while ((cut > rePack.RePacker.RP_TOLER && count < passes)) {
+		    double c1=0.0;
+		    
+			// make one adjustment at each adjustable vertex
+			for (int j = 0; j < ev.hitCount; j++) {
+				double r = ev.getRadius(j);
+				int N = 2 * (ev.innerTriData[j].length + ev.outerTriData[j].length);
+
+				if (packData.hes > 0) { // no sph algorithm yet
+					throw new ParserException("for general branching, no sph algorithm yet");
+				}
+
+				if (packData.hes<0) { // hyp uniform model
+					// Remember, we use squared s-radius here
+					double x_rad = ev.getRadius(j);
+					r = 1.0 - x_rad;
+					if (r >= 1.0)
+						r = 0;
+					double sr = Math.sqrt(r);
+
+					// compute anglesum: ?????
+					double fbest = ev.getAngleSum(j, x_rad);
+
+					// set up for model
+					double del = Math.sin(faim / N);
+					double bet = Math.sin(fbest / N);
+					double r2 = (bet - sr) / (bet * r - sr); // reference radius
+					if (r2 > 0) { // calc new label
+						double t1 = 1 - r2;
+						double t2 = 2 * del;
+						double t3 = t2 / (Math.sqrt(t1 * t1 + t2 * t2 * r2) + t1);
+						r2 = t3 * t3;
+					} else
+						r2 = del * del; // use lower limit
+					ev.setVertRadius(j, 1.0 - r2); // store new x-radii
+					fbest = ev.getAngleSum(j, 1.0 - r2);
+					fbest -= faim;
+					c1 += fbest * fbest; // accumulate error
+				} // end of hyp case
+				else { // eucl case
+					double fbest = ev.getAngleSum(j, ev.getRadius(j));
+
+					// use the model to predict the next value
+					double del = Math.sin(faim / N);
+					double bet = Math.sin(fbest / N);
+					double r2 = r * bet * (1 - del) / (del * (1 - bet));
+					// store as new radius label
+					if (r2 < 0)
+						throw new PackingException();
+					ev.setVertRadius(j, r2);
+					fbest = ev.getAngleSum(j, r2);
+					fbest -= faim;
+					c1 += fbest * fbest; // accumulate error
+				}
+			} // done with all vertices
+			c1=Math.sqrt(c1); // l2-error
+
+			double newError=ev.angleSumError();
+			if (newError>curvError)
+				flip=true;
+			curvError=newError;
+			cut = curvError * recip;
+			count++;
+			
+			boolean debug=false;
+			if (debug) // debug=true;
+				System.out.println("repack count = "+count+"; error at "+curvError);
+		} // end of while
+
+		// store horizon radii in both parent and branch point
+		for (int j=0;j<ev.hitCount;j++) {
+			int v=ev.innerAdjust[j];
+			int V=ev.outerAdjust[j];
+			double r=ev.getRadius(j);
+			myPackData.setRadius(v,r);
+			packData.setRadius(V, r);
 		}
-		if (myAttachEdge.myRedEdge==null)
-			throw new CombException(
-					"attachment edge "+edge+" is not in local red chain ");
-		parentAttachEdge=packData.packDCEL.findHalfEdge(new EdgeSimple(myAttachEdge));
-		if (parentAttachEdge==null)
-			throw new CombException(
-					"local attachment edge "+edge+" not found in parent"); 
+
+		curvError=ev.angleSumError();
+		uP.value=curvError;
+		if (flip) {
+			uP.rtnFlag=-1; // indicates error not monotone
+		}
+		uP.rtnFlag=1;
+		return uP;
 	}
 	
 	/**
@@ -250,9 +349,12 @@ public abstract class GenBranchPt {
 	 * where M is the holonomy with det(M)=1. This is
 	 * square root of sum of squares of absolute values
 	 * of the entries of M-I; how close to the identity
-	 */
+	 * @return double, <0 on problem.
+	 */ 
 	public double myHolonomyError() {
-		return (Mobius.frobeniusNorm(myHolonomy));
+		myPackData.packDCEL.layoutPacking();
+		myHolonomy=PackData.holonomyMobius(myPackData,myHoloBorder);
+		return Mobius.frobeniusNorm(myHolonomy);
 	}
 	
 	/**
@@ -348,7 +450,7 @@ public abstract class GenBranchPt {
 		else 
 			return Mobius.affine_mob(a,b,A,B);
 	} */
-	
+
 	/**
 	 * Compute and apply a Mobius to 'myPackData' that aligns it with
 	 * the parent. Assume the local 'myPackData' has been laid out, we
@@ -415,7 +517,8 @@ public abstract class GenBranchPt {
 	}
 	
 	/**
-	 * Display on screen of parent packing. May be overridden by classes.
+	 * Display on screen of parent packing. Typically overridden 
+	 * by derived classes so tailored commands can be picked off.
 	 * @param flagSegs flag sequences
 	 * @return int count of display actions
 	 */
@@ -425,4 +528,211 @@ public abstract class GenBranchPt {
 			PackControl.canvasRedrawer.paintMyCanvasses(packData,false); 
 		return n;
 	}
+	
+	/**
+	 * Private inner class to hold combinatorics of event horizon, mainly
+	 * for use in repacking. Note that "inner" refers to data from inside
+	 * the branch region, "outer" refers to corresponding data from parent
+	 * packing, and that their indexing is synchronized.
+	 * @author kstephe2, 9/2021
+	 *
+	 */
+	private class EventHorizon {
+		
+		// branch point red chain halfedges (cclw wrt the branch region)
+		HalfLink innerHorizon;  
+		HalfLink outerHorizon;  
+		
+		// horizon vertices with adjustable radii (typically all) 
+		int hitCount=0; 
+		int[] innerAdjust;
+		int[] outerAdjust;
+		
+		// face data (radii/invDist) for faces incident to horizon;
+		//   e.g., innerTriData[j] is list of inner faces incident 
+		//   to vertex innerAdjust[j]. 
+		TriData[][] innerTriData; 
+		TriData[][] outerTriData; 
+		
+		// indexes into tridata: e.g. innerDexes[j] is a list of
+		//    indices for v=innerAdjust[j] in innerTriData[j]
+		public int[][] innerDexes;
+		public int[][] outerDexes;
+		
+		// Constructor
+		public EventHorizon() {
+			
+			// set up horizon 'HalfLink's
+			innerHorizon=new HalfLink();
+			outerHorizon=new HalfLink();
+			RedHEdge rtrace=myPackData.packDCEL.redChain;
+			do {
+				HalfEdge he=rtrace.myEdge;
+				innerHorizon.add(he); // cclw wrt branch region
+				outerHorizon.add(packData.packDCEL.findHalfEdge(he)); // clw
+				rtrace=rtrace.nextRed;
+			} while (rtrace!=myPackData.packDCEL.redChain);
+
+			ArrayList<EdgeSimple> vhits=new ArrayList<EdgeSimple>();
+			for (int j=0;j<innerHorizon.size();j++) {
+				HalfEdge he=innerHorizon.get(j);
+				int v=he.origin.vertIndx;
+				int V=vertexMap.findW(v); // parent's index
+				if (!packData.packDCEL.vertices[V].isBdry())
+					vhits.add(new EdgeSimple(v,V));
+			}
+			hitCount=vhits.size();
+			innerAdjust=new int[hitCount];
+			outerAdjust=new int[hitCount];
+			innerTriData=new TriData[hitCount][];
+			outerTriData=new TriData[hitCount][];
+			innerDexes=new int[hitCount][];
+			outerDexes=new int[hitCount][];
+			
+			// now go around the horizon to set up data
+			int horizonCount=innerHorizon.size();
+			int tick=0;
+			for (int j=0;j<horizonCount;j++) {
+				HalfEdge he=innerHorizon.get(j);
+				HalfEdge hE=outerHorizon.get(j);
+				if (hE.origin.isBdry())
+					continue;
+				int v=he.origin.vertIndx;
+				int V=hE.origin.vertIndx;
+				innerAdjust[tick]=v;
+				outerAdjust[tick]=V;
+				
+				// get cclw list of inner face at v
+				HalfEdge previnner=
+						innerHorizon.get((j-1+horizonCount)%horizonCount).twin;
+				ArrayList<Integer> innerFaces=new ArrayList<Integer>();
+				HalfEdge edge=he;
+				int safety=100;
+				do {
+					innerFaces.add(edge.face.faceIndx);
+					edge=edge.prev.twin; // cclw
+					safety--;
+				} while (edge!=previnner && safety>0);
+
+				// get cclw list of outer faces at V
+				ArrayList<Integer> outerFaces=new ArrayList<Integer>();
+				HalfEdge prevouter=
+						outerHorizon.get((j-1+horizonCount)%horizonCount).twin;
+				edge=prevouter;
+				do {
+					outerFaces.add(edge.face.faceIndx);
+					edge=edge.prev.twin; // cclw
+					safety--;
+				} while (edge!=hE && safety>0);
+				if (safety==0)
+					throw new CombException("safety exit in branch pt angle sums");
+
+				innerTriData[tick]=new TriData[innerFaces.size()];
+				innerDexes[tick]=new int[innerFaces.size()];
+				outerTriData[tick]=new TriData[outerFaces.size()];
+				outerDexes[tick]=new int[outerFaces.size()];
+
+				for (int k=0;k<innerFaces.size();k++) {
+					int f=innerFaces.get(k);
+					TriData trid=new TriData(myPackData.packDCEL,f);
+					innerDexes[tick][k]=trid.vertIndex(v);
+					innerTriData[tick][k]=trid;
+				}
+				for (int k=0;k<outerFaces.size();k++) {
+					int f=outerFaces.get(k);
+					TriData trid=new TriData(packData.packDCEL,f);
+					outerDexes[tick][k]=trid.vertIndex(V);
+					outerTriData[tick][k]=trid;
+				}
+				tick++;
+			}
+		}
+		
+		public void updateTriRadii() {
+			for (int k=0;k<hitCount;k++) {
+				TriData[] innerdata=innerTriData[k];
+				TriData[] outerdata=outerTriData[k];
+				for (int j=0;j<innerdata.length;j++)
+					innerdata[j].uploadRadii();
+				for (int j=0;j<outerdata.length;j++)
+					outerdata[j].uploadRadii();
+			}
+		}
+		
+		/**
+		 * Get full anglesum for vertex of index j using
+		 * its stored radius.
+		 * @param j int
+		 * @return double
+		 */
+		public double getAngleSum(int j) {
+			double rad=getRadius(j);
+			return getAngleSum(j,rad);
+		}
+		
+		/**
+		 * Get full anglesum for vertex of index j if its
+		 * radius is 'rad'. 
+		 * @param j int
+		 * @param rad double
+		 * @return double
+		 */
+		public double getAngleSum(int j,double rad) {
+//			if (j<0 || j>=hitCount)
+//				throw new CombException("index not in [0,hitCount)");
+			double innerAS=0;
+			TriData[] tridata=innerTriData[j];
+			for (int k=0;k<tridata.length;k++) {
+				innerAS +=tridata[k].compOneAngle(innerDexes[j][k],rad);
+			}
+			double outerAS=0;
+			tridata=outerTriData[j];
+			for (int k=0;k<tridata.length;k++) {
+				outerAS +=tridata[k].compOneAngle(outerDexes[j][k],rad);
+			}
+			return innerAS+outerAS;
+		}
+		
+		/**
+		 * get cumulative anglesum error at all adjustable vertices
+		 * assuming aims are 2Pi.
+		 * @return double
+		 */
+		public double angleSumError() {
+			double err=0.0;
+			for (int j=0;j<hitCount;j++)
+				err +=Math.abs(getAngleSum(j)-pi2);
+			return err;
+		}
+		
+		/**
+		 * get radius from first 'innerTriData' associated with 
+		 * v=innerAdjust[j]. 
+		 * @param j int
+		 * @return double, 
+		 */
+		public double getRadius(int j) {
+			return innerTriData[j][0].getRadius(innerDexes[j][0]);
+		}
+		
+		/**
+		 * Adjust radius for jth vertex in every inner/outer 
+		 * TriData for which it is a vertex.
+		 * @param j int
+		 * @param r double
+		 */
+		public void setVertRadius(int j,double r) {
+			for (int k=0;k<hitCount;k++) {
+				TriData[] tridata=innerTriData[k];
+				int v=innerAdjust[j];
+				for (int m=0;m<tridata.length;m++) 
+					tridata[m].setVertRadius(v, r);
+				tridata=outerTriData[j];
+				int V=outerAdjust[j];
+				for (int m=0;m<tridata.length;m++) 
+					tridata[m].setVertRadius(V, r);
+			}
+		}
+		
+	} // end of inner class EventHorizon
 }

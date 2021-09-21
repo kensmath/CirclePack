@@ -73,6 +73,10 @@ import listManip.VertexMap;
  * @author kens
  *
  */
+/**
+ * @author kstephe2
+ *
+ */
 public class RawDCEL {
 	
 	/**
@@ -168,22 +172,26 @@ public class RawDCEL {
 	/**
 	 * Add a new vertex which splits this edge and connects
 	 * to shared neighbors. So new vert degree is 3 for bdry
-	 * edge, 4 for interior edge. Red chain should stay in tact.
+	 * edge, 4 for interior edge. Red chain should stay intact.
+	 * Call to 'meldEdge_raw' should reverse this using the
+	 * returned 'HalfEdge'.
 	 * @param pdcel PackDCEL
 	 * @param edge HalfEdge
-	 * @return int, new vertex index
+	 * @return HalfEdge, 'edge', but with new 'midVert' as end
 	 */
-	public static int splitEdge_raw(PackDCEL pdcel,HalfEdge edge) {
+	public static HalfEdge splitEdge_raw(PackDCEL pdcel,HalfEdge edge) {
 		
 		// make room
 		if (pdcel.vertCount+1>=pdcel.p.sizeLimit)
 			pdcel.p.alloc_pack_space(pdcel.vertCount+11,true);
 	
-		// switch to twin?
+		// If bdry, ensure it is cclw edge, set 'twinIdeal'
 		HalfEdge he=edge;
-		if (he.face.faceIndx<=0)
+		if (he.face!=null && he.face.faceIndx<=0) // bdry
 			he=edge.twin;
-		boolean twinIdeal=he.twin.face.faceIndx<=0; 
+		boolean bdryCase=false;
+		if (he.twin.face!=null && he.twin.face.faceIndx<=0)
+			bdryCase=true;
 				
 		// hold some edges
 		HalfEdge he_next=he.next;
@@ -246,6 +254,7 @@ public class RawDCEL {
 			midVert.redFlag=true;
 			RedHEdge new_redge=new RedHEdge(newEdge);
 			newEdge.myRedEdge=new_redge;
+			new_redge.rad=redge.rad;
 			
 			new_redge.nextRed=redge.nextRed;
 			redge.nextRed.prevRed=new_redge;
@@ -255,7 +264,7 @@ public class RawDCEL {
 		}
 		
 		// handle right side
-		if (!twinIdeal) {
+		if (!bdryCase) {
 			midVert.bdryFlag=1;
 			oppV=he_twin.next.next.origin;
 			HalfEdge rightedge=new HalfEdge(midVert);
@@ -286,14 +295,13 @@ public class RawDCEL {
 				new_redge.prevRed=tredge;
 			}
 		}
-		
 		else {
 			he_twin.next=newTwin;
 			newTwin.prev=he_twin;
 			midVert.bdryFlag=1;
 		}
 		
-		return midVert.vertIndx;
+		return edge;
 	}
 	
 	/**
@@ -303,14 +311,16 @@ public class RawDCEL {
 	 * interior: first flower is w --> u about V,
 	 * while second is u --> w about 'newV'. 
 	 * Thus <v',V,u>, <v',w,V> are new oriented faces.
-	 * Return new edge <v',v> 
+	 * Return new edge <v,v'> (we can reverse with
+	 * a call to 'meldEdge' using <v,v'>).
 	 * (2) If 'uedge' is null, then V
 	 * must be a bdry; split the flower at 'wedge' 
 	 * (which must be interior edge): first flower 
-	 * downstream bdry to 'wedge' about V, second 
-	 * from 'wedge' to upstream bdry about new upstream 
-	 * bdry vertex 'newV'. Return new bdry edge <newV,V> 
+	 * downstream bdry around 'newV' to 'wedge'; 
+	 * the second from 'wedge' around V to the 
+	 * upstream bdry. Return new bdry edge <V,newV> 
 	 * Red chain is adjusted.
+	 * To reverse, use 'meldEdge_raw' with <V,newV>
 	 * @param pdcel PackDCEL
 	 * @param wedge HalfEdge
 	 * @param uedge HalfEdge
@@ -320,7 +330,7 @@ public class RawDCEL {
 			HalfEdge uedge) {
 		boolean debug=false; // debug=true;
 
-		if (pdcel.isBdryEdge(wedge))
+		if (wedge.isBdry())
 			throw new ParserException("Given 'wedge' should be interior");
 
 		// make room
@@ -332,106 +342,99 @@ public class RawDCEL {
 
 		// first case: boundary
 		if (uedge==null) {
+			double rad=.05;
+			if (V.halfedge.myRedEdge!=null)
+				rad=V.halfedge.myRedEdge.rad;
 			
 			// hold some info
 			spks=V.getSpokes(V.halfedge);
-			HalfEdge upspoke=V.halfedge.twin.next; // upstream spoke
-			HalfEdge wedge_twin=wedge.twin;
-			HalfEdge next_spoke=wedge.prev.twin;
+			HalfEdge downspoke=V.halfedge; // downstream edge
+			HalfEdge next_spoke=wedge.twin.next; // clw
+			RedHEdge newred=null;
 			
 			// scope out the red chain situation
 			RedHEdge red_out=V.halfedge.myRedEdge;
-			RedHEdge red_in=red_out.prevRed;
-			// if 'wedge' happens to be red, must be twinned
-			boolean tricky=false;
-			if (wedge.myRedEdge!=null) {
-				red_out=wedge.myRedEdge;
-				red_in=wedge.myRedEdge.prevRed;
-				tricky=true;
-			}
-				
-			// create new vertex
+			RedHEdge red_in=V.halfedge.twin.next.twin.myRedEdge;
+			if (red_out.prevRed!=red_in) // too messy
+				pdcel.redChain=null;
+			if (pdcel.redChain!=null && pdcel.redChain==red_out)
+				pdcel.redChain=red_out.nextRed;
+
+			// new stuff: vert, bdry edge, twins, and maybe red edge
 			Vertex newV=new Vertex(++pdcel.vertCount);
 			pdcel.vertices[pdcel.vertCount]=newV;
 			newV.bdryFlag=1;
 			newV.redFlag=true;
-			// fix origin for its spoke
-			if (next_spoke!=upspoke) {
-				HalfEdge he=next_spoke;
-				do {
-					he.origin=newV;
-					he=he.prev.twin;
-				} while (he!=upspoke);
-			}
-			upspoke.origin=newV;
-			
-			// new bdry edge
+
+			// new bdry edge and twin
 			HalfEdge newbdry=new HalfEdge(newV);
 			newV.halfedge=newbdry;
-			newbdry.twin=new HalfEdge(V);
+			newbdry.twin=new HalfEdge(downspoke.twin.origin);
 			newbdry.twin.twin=newbdry;
-			newbdry.twin.face=V.halfedge.twin.face; // should be ideal
-			// link outside of bdry
-			newbdry.twin.next=upspoke;
-			upspoke.prev=newbdry.twin;
-			
-			V.halfedge.twin.next=newbdry.twin;
-			newbdry.twin.prev=V.halfedge.twin;
-			
-			// newedge, <newV, w> 
-			HalfEdge newedge=new HalfEdge(newV);
-			
-			wedge_twin.twin=newedge;
-			newedge.twin=wedge_twin;
+			// new spoke 'newV' to end of 'wedge'
+			HalfEdge newspoke=new HalfEdge(newV);
+			newspoke.twin=new HalfEdge(wedge.twin.origin);
+			newspoke.twin.twin=newspoke;
+			newbdry.twin.face=downspoke.twin.face;
+			// new red and links
+			if (pdcel.redChain!=null) {
+				newred=new RedHEdge(newbdry);
+				newbdry.myRedEdge=newred;
+				newred.rad=rad;
 
-			newedge.prev=next_spoke.twin;
-			next_spoke.twin.next=newedge;
-			
-			newedge.next=wedge.next;
-			wedge.next.prev=newedge;
+				newred.nextRed=red_out;
+				red_out.prevRed=newred;
+					
+				newred.prevRed=red_in;
+				red_in.nextRed=newred;
+			}
 
-			// newtwin, <w,v> 
-			HalfEdge newtwin=new HalfEdge(wedge.twin.origin);
-
-			newtwin.next=wedge_twin.next;
-			wedge_twin.next.prev=newtwin;
-			
-			newtwin.prev=wedge_twin.prev;
-			wedge_twin.prev.next=newtwin;
-			
-			wedge.twin=newtwin;
-			newtwin.twin=wedge;
-
-			// link new face
-			newbdry.next=wedge;
-			wedge.prev=newbdry;
-			wedge.next=wedge_twin;
-			wedge_twin.prev=wedge;
-			wedge_twin.next=newbdry;
-			newbdry.prev=wedge_twin;
-			
-			// now fix the red chain
-			RedHEdge newred=new RedHEdge(newbdry);
-			newbdry.myRedEdge=newred;
-			
-			newred.prevRed=red_in;
-			red_in.nextRed=newred;
-			
-			newred.nextRed=red_out;
-			red_out.prevRed=newred;
-			
-			if (tricky) {
-				wedge.twin.myRedEdge=wedge_twin.myRedEdge;
-				wedge.twin.myRedEdge.myEdge=wedge.twin;
-				wedge_twin.myRedEdge=null;
+			// reset old origins
+			HalfEdge he=spks.get(1);
+			while (he!=wedge) {
+				he.origin=newV;
+				he=he.prev.twin;
 			}
 			
-			if (debug) { // debug=true;
-				 DCELdebug.vertConsistency(pdcel,newV.vertIndx);
-				 DCELdebug.printRedChain(pdcel.redChain,null);
+			// relink outer edges
+			newbdry.twin.prev=downspoke.twin.prev;
+			downspoke.twin.prev.next=newbdry.twin;
+			downspoke.twin.origin=newV;
+
+			newbdry.twin.next=downspoke.twin; 
+			downspoke.twin.prev=newbdry.twin;
+			
+			// link in 'newbdry'
+			he=spks.get(1);
+			newbdry.next=downspoke.next;
+			downspoke.next.prev=newbdry;
+			
+			newbdry.prev=he.twin;
+			he.twin.next=newbdry;
+			
+			// link in 'newspoke' and twin
+			newspoke.prev=downspoke;
+			downspoke.next=newspoke;
+			
+			newspoke.twin.prev=wedge.twin.prev;
+			wedge.twin.prev.next=newspoke.twin;
+			
+			newspoke.next=wedge.twin;
+			wedge.twin.prev=newspoke;
+			
+			wedge.twin.next=downspoke;
+			downspoke.prev=wedge.twin;
+				
+			if (he==wedge) {
+				newspoke.twin.next=newbdry;
+				newbdry.prev=newspoke.twin;
+			}
+			else {
+				newspoke.twin.next=next_spoke;
+				next_spoke.prev=newspoke.twin;
 			}
 			
-			return newbdry;  
+			return V.halfedge;
 		}
 		
 		// second, more typical, 
@@ -590,7 +593,7 @@ public class RawDCEL {
 		f1tof2.twinRed=f2tof1;
 		f2tof1.twinRed=f1tof2;
 
-		return new_mid;
+		return new_mid.twin; // should go from <v,newV> 
 	}
 	
 	/**
@@ -721,17 +724,9 @@ public class RawDCEL {
 		}
 		face.edge=outer.get(0);
 		
+		// update vertices 
 		int v=vert.vertIndx;
-		VertexMap oldnew=new VertexMap();
-		for (int j=v+1;j<=pdcel.vertCount;j++) {
-			Vertex vt=pdcel.vertices[j];
-			pdcel.vertices[j-1]=vt;
-			vt.vertIndx=j-1;
-			oldnew.add(new EdgeSimple(j,j-1));
-		}
-		pdcel.oldNew=VertexMap.followedBy(pdcel.oldNew,oldnew); // compose
-		pdcel.vertCount--;
-		
+		RawDCEL.removeVertIndex(pdcel,v);
 		return v;
 	}
 	
@@ -803,12 +798,12 @@ public class RawDCEL {
 	}
 
 	/**
-	 * v must be boundary vertex; link cclw and clw nghbs,
-	 * making v interior. Red chain is adjusted, but 
-	 * calling routine updates combinatorics. If v and its
-	 * 2 nghbs form an ideal face, make it interior by
-	 * making them interior and adjusting or tossing 
-	 * the red chain.
+	 * v must be boundary vertex; link cclw and clw nghbs
+	 * with a new edge, making v interior. Red chain is 
+	 * adjusted, but calling routine updates combinatorics. 
+	 * If v and its 2 nghbs form an ideal face, make it 
+	 * interior by making them interior and adjusting or 
+	 * tossing the red chain.
 	 * Note: fails if v has just two nghb's.
 	 * @param pdcel PackDCEL
 	 * @param v int
@@ -816,7 +811,7 @@ public class RawDCEL {
 	 */
 	public static int enfold_raw(PackDCEL pdcel,int v) {
 		  if (!pdcel.vertices[v].isBdry() || pdcel.countPetals(v)<=2)
-			  throw new CombException("dcel: can't enfold with just 2 nghbs");
+			  throw new CombException("can't enfold v = "+v+" with just 2 nghbs");
 		  
 		  // key players
 		  Vertex vert=pdcel.vertices[v];
@@ -1021,201 +1016,92 @@ public class RawDCEL {
 	  }
 
 	  /**
-	   * We modify an existing 'PackDCEL' with a new boundary
-	   * edge between v and w. Call routine insures that v and w
-	   * have common bdry neighbor u. Only possible anbiguity is
-	   * if bdry component has 4 vertices: we choose u so <v,u,w>
-	   * is cclw. Adjust edge links, adjust red chain; may be
-	   * called several times before parent completes combinatorics.
-	   * @param pdcel PackDCEL
-	   * @param v int
-	   * @param w int
-	   * @return new HalfEdge, null on error
+	   * Add a layer of nodes to bdry segment from vertex v1 to v2. Three modes:
+	   * 
+	   * TENT=0: add one-on-one layer, a new bdry vert for each edge between v1 and
+	   * v2. Unless v1==v2, v1 and v2 remain as bdry vertices.
+	   * 
+	   * DEGREE=1: add nghb's to make vertices from v1 to v2, inclusive, interior with
+	   * degree d. However, no edge should connect existing bdry vertices. If v1==v2
+	   * or v1 is nghb of v2, do whole bdry component.
+	   * 
+	   * DUPLICATE=2: attach "square" face with bary center to each edge between v1
+	   * and v2. Unless v1==v2, v1 and v2 remain on bdry.
+	   * 
+	   * Calling routine checks v1,v2 and updates combinatorics.
+	   * 
+	   * @param pdcel  PackDCEL
+	   * @param mode   int, how to add: 0=TENT, 1=DEGREE, 2=DUPLICATE
+	   * @param degree int
+	   * @param v1     int, start bdry vert
+	   * @param v2     int, end bdry vert
+	   * @return int, count of added vertices
 	   */
-	  public static HalfEdge addEdge_raw(PackDCEL pdcel,int v,int w) {
-		  Vertex v1=pdcel.vertices[v];
-		  HalfEdge edge1=v1.halfedge;
-		  
-		  // two step cclw may be w
-		  Vertex v2=edge1.twin.prev.origin;
-		  if (v2.vertIndx!=w) { 
-			  v1=pdcel.vertices[w];
-			  edge1=v1.halfedge;
-			  v2=edge1.twin.prev.origin;
-			  if (v2.vertIndx!=w)
-				  throw new CombException("vertices "+v+" and "+w+" can't form a legal edge");
-			  int hld=w;
-			  w=v;
-			  v=hld;
-		  }
+	  public static int addlayer_raw(PackDCEL pdcel, int mode, int deg, int v1, int v2) {
+			int count = 0;
 
-		  // v1, u, v2 should be cclw nghbs, edge1=[v1,u], edge2=[u,v2] 
-		  HalfEdge edge2=edge1.twin.prev.twin;
-		  RedHEdge red_in=edge1.myRedEdge;
-		  RedHEdge red_out=edge2.myRedEdge;
-		  if (red_in==null || red_out==null)
-			  throw new DCELException("add_edge usage: edges are not red");
-		  
-		  // adjust redChain if needed
-		  if (pdcel.redChain==red_in)
-			  pdcel.redChain=red_in.nextRed;
-		  if (pdcel.redChain==red_out)
-			  pdcel.redChain=red_out.nextRed;
-		  
-		  // new objects
-		  HalfEdge newedge=new HalfEdge(v1);
-		  HalfEdge newtwin=newedge.twin=new HalfEdge(v2);
-		  newtwin.twin=newedge;
-		  RedHEdge newred=red_in.clone(); // inherit cent/rad
-		  
-		  // fix red pointers
-		  newred.myEdge=newedge;
-		  newedge.myRedEdge=newred;
-		  
-		  newred.prevRed=red_in.prevRed;
-		  red_in.prevRed.nextRed=newred;
-		  
-		  // simplest case, red1 and red2 orphaned
-		  if (red_in.nextRed==red_out) { 
-			  
-			  newred.nextRed=red_out.nextRed;
-			  red_out.nextRed.prevRed=newred;
-			  edge1.myRedEdge=null;
-			  edge2.myRedEdge=null;
-			  edge2.origin.redFlag=false;
+			// modes
+			int TENT = 0;
+			int DEGREE = 1;
+			int DUPLICATE = 2;
 
-			  // orphan red_in/red_out
-			  red_in.nextRed=null;
-			  red_out.prevRed=null;
-		  }
-		  // else, reroute: red1 orphaned, red2 gets twin
-		  else {
-			  RedHEdge redTwin=new RedHEdge(edge2.twin);
-			  edge2.twin.myRedEdge=redTwin;
-			  
-			  redTwin.prevRed=newred;
-			  newred.nextRed=redTwin;
-			  redTwin.nextRed=red_in.nextRed;
-			  redTwin.nextRed.prevRed=redTwin;
-			  red_out.twinRed=redTwin;
-			  redTwin.twinRed=red_out;
-			  edge1.myRedEdge=null;
-		  }
-		  
-		  // fix edge pointers
-		  edge1.twin.next.prev=newtwin;
-		  newtwin.next=edge1.twin.next;
-		  
-		  edge2.twin.prev.next=newtwin;
-		  newtwin.prev=edge2.twin.prev;
-		  
-		  edge1.twin.next=newedge;
-		  newedge.prev=edge1.twin;
-		  
-		  edge2.twin.prev=newedge;
-		  newedge.next=edge2.twin;
-		  
-		  // fix face pointers
-		  edge1.twin.face=null;
-		  edge2.twin.face=null;
-		  newtwin.face=newtwin.next.face; // should be ideal face
-		  
-		  edge2.origin.bdryFlag=0;
-		  v1.halfedge=newedge;
-		  
-		  return newedge;
-	  }
+			if (mode == DEGREE) {
+				Vertex vert = pdcel.vertices[v1];
+				if (v2 == v1)
+					v2 = vert.halfedge.twin.next.twin.origin.vertIndx;
+				int v = v1;
+				int nextv = v;
 
-	/** 
-		   * Add a layer of nodes to bdry segment from vertex v1 to v2.
-		   * Three modes:
-		   * 
-		   * TENT=0: add one-on-one layer, a new bdry vert for 
-		   *   each edge between v1 and v2. Unless v1==v2, 
-		   *   v1 and v2 remain as bdry vertices.	
-		   *   
-		   * DEGREE=1: add nghb's to make vertices from v1 to v2,
-		   *   inclusive, interior with degree d. However, no edge
-		   *   should connect existing bdry vertices. If v1==v2 or
-		   *   v1 is nghb of v2, do whole bdry component.
-		   *   
-		   * DUPLICATE=2: attach "square" face with bary center 
-		   *   to each edge between v1 and v2. Unless v1==v2, 
-		   *   v1 and v2 remain on bdry.
-		   *   
-		   * Calling routine checks v1,v2 and updates combinatorics.
-		   * @param pdcel PackDCEL
-		   * @param mode int, how to add: 0=TENT, 1=DEGREE, 2=DUPLICATE
-		   * @param degree int
-		   * @param v1 int, start bdry vert
-		   * @param v2 int, end bdry vert
-		   * @return int, count of added vertices 
-		   */
-		  public static int addlayer_raw(PackDCEL pdcel,int mode,
-				  int deg,int v1,int v2) {
-			  int count=0;
-			  
-	    	  // modes
-	    	  int TENT=0;
-	    	  int DEGREE=1;
-	    	  int DUPLICATE=2;
-	    	  
-			  if (mode == DEGREE) {
-				  Vertex vert=pdcel.vertices[v1];
-				  if (v2 == v1)
-					  v2 = vert.halfedge.twin.next.twin.origin.vertIndx;
-				  int v = v1;
-				  int nextv = v;
-	
-				  // handle v first; must add new circle shared with upstream nghb.
-				  RawDCEL.addVert_raw(pdcel,v);
-				  count++;
-	
-				  // go until you finish v2
-				  do {
-					  v=nextv; // get 'v' and downstream bdry nghb 'nextv'
-					  nextv=pdcel.vertices[v].halfedge.twin.origin.vertIndx;
-					  int need=deg-pdcel.countPetals(v);
-					  for (int i = 1; i <= need; i++) {
-						  RawDCEL.addVert_raw(pdcel,v);
-						  count++;
-					  }
-					  enfold_raw(pdcel,v);
-				  } while (v!=v2);
-	
-				  return count;
-			  }
-			  if (mode==TENT) {
-	//			  int lastv=pdcel.vertices[v2].halfedge.twin.next.twin.origin.vertIndx;
-				  HalfEdge edge=pdcel.vertices[v1].halfedge;
-				  int w=edge.origin.vertIndx;
-				  int v=edge.twin.origin.vertIndx;
-				  int nextv=edge.twin.prev.origin.vertIndx;
-				  RawDCEL.addVert_raw(pdcel,v);
-				  while (v!=v2) {
-					  w=v;
-					  v=nextv;
-					  edge=pdcel.vertices[v].halfedge;
-					  nextv=edge.twin.origin.vertIndx;
-					  RawDCEL.addVert_raw(pdcel,v);
-					  enfold_raw(pdcel,w);
-					  count++;
-				  }
-				  if (v1==v2) {
-					  enfold_raw(pdcel,v1);
-					  count++;
-				  }
-				  return count;
-			  }
-			  if (mode==DUPLICATE) { // DCELdebug.redConsistency(pdcel);
-				  count+=RawDCEL.baryBox_raw(pdcel, v1, v2);
-			  }
-			  return count;
-		  }
+				// handle v first; must add new circle shared with upstream nghb.
+				RawDCEL.addVert_raw(pdcel, v);
+				count++;
+
+				// go until you finish v2
+				do {
+					v = nextv; // get 'v' and downstream bdry nghb 'nextv'
+					nextv = pdcel.vertices[v].halfedge.twin.origin.vertIndx;
+					int need = deg - pdcel.countPetals(v);
+					for (int i = 1; i <= need; i++) {
+						RawDCEL.addVert_raw(pdcel, v);
+						count++;
+					}
+					enfold_raw(pdcel, v);
+				} while (v != v2);
+
+				return count;
+			}
+			if (mode == TENT) {
+				// int lastv=pdcel.vertices[v2].halfedge.twin.next.twin.origin.vertIndx;
+				HalfEdge edge = pdcel.vertices[v1].halfedge;
+				int w = edge.origin.vertIndx;
+				int v = edge.twin.origin.vertIndx;
+				int nextv = edge.twin.prev.origin.vertIndx;
+				RawDCEL.addVert_raw(pdcel, v);
+				while (v != v2) {
+					w = v;
+					v = nextv;
+					edge = pdcel.vertices[v].halfedge;
+					nextv = edge.twin.origin.vertIndx;
+					RawDCEL.addVert_raw(pdcel, v);
+					enfold_raw(pdcel, w);
+					count++;
+				}
+				if (v1 == v2) {
+					enfold_raw(pdcel, v1);
+					count++;
+				}
+				return count;
+			}
+			if (mode == DUPLICATE) { // DCELdebug.redConsistency(pdcel);
+				count += RawDCEL.baryBox_raw(pdcel, v1, v2);
+			}
+			return count;
+		}
 
 	/**
 	   * Add vertex nghb'ing bdry vertex w and clw bdry nghb.
-	   * Set 'vutil' to 'w'. Requires red chain and adjusts it.
+	   * Set 'vutil' of new vertex to 'w' as its reference vertex. 
+	   * Requires red chain and adjusts it.
 	   * @param pdcel PackDCEL
 	   * @param w int
 	   * @return new Vertex
@@ -1324,94 +1210,93 @@ public class RawDCEL {
 		  return new_vert;
 	  }
 
-	/**
-	   * add combinatorics for a layer of "square" 
-	   * faces with barycenters, one for each bdry
-	   * edge, 'v1' to 'v2'. 'vutil' of new vertex is
-	   * index of reference circle on original bdry.
-	   * Calling routine does the rest.
-	   * @param pdcel PackDCEL
-	   * @param v1 int
-	   * @param v2 int
-	   * @return int, new 'vertCount'
-	   */
-	  public static int baryBox_raw(PackDCEL pdcel,int v1,int v2) {
-		  
-		  // check legality and count edges
-		  if (pdcel.p==null)
-			  throw new ParserException("'baryBox_raw' requires 'PackData' parent");
-		  
-		  int e_count = pdcel.p.verts_share_bdry(v1, v2);
-		  if (e_count == 0)
-			  throw new CombException("verts " + v1 + " and " + 
-					  v2 + " are not " + "on the same component");
-		  int nodes = pdcel.vertCount + 2 * e_count;
-		  if (nodes > pdcel.p.sizeLimit)
-			  pdcel.p.alloc_pack_space(nodes + 10, true);
-	
-		  // place a "square" 'Face' next to each bdry
-		  // if we close up, shift v1 cclw as stop signal
-		  boolean closeup = false;
-		  if (v1 == v2) {
-			  closeup = true;
-			  v1 = pdcel.p.getFirstPetal(v1);
-		  }
-	
-			int count=0;
-	
+		/**
+		 * add combinatorics for a layer of "square" 
+		 * faces with barycenters, one for each bdry edge, 
+		 * 'v1' to 'v2'. 'vutil' of new vertex is index of 
+		 * reference circle on original bdry. Calling routine 
+		 * does the rest.
+		 * @param pdcel PackDCEL
+		 * @param v1 int
+		 * @param v2 int
+		 * @return int, new 'vertCount'
+		 */
+		public static int baryBox_raw(PackDCEL pdcel, int v1, int v2) {
+
+			// check legality and count edges
+			if (pdcel.p == null)
+				throw new ParserException("'baryBox_raw' requires 'PackData' parent");
+
+			int e_count = pdcel.p.verts_share_bdry(v1, v2);
+			if (e_count == 0)
+				throw new CombException("verts " + v1 + " and " + v2 + " are not " + "on the same component");
+			int nodes = pdcel.vertCount + 2 * e_count;
+			if (nodes > pdcel.p.sizeLimit)
+				pdcel.p.alloc_pack_space(nodes + 10, true);
+
+			// place a "square" 'Face' next to each bdry
+			// if we close up, shift v1 cclw as stop signal
+			boolean closeup = false;
+			if (v1 == v2) {
+				closeup = true;
+				v1 = pdcel.p.getFirstPetal(v1);
+			}
+
+			int count = 0;
+
 			// get relevant edges, vertices
 			HalfEdge he = pdcel.vertices[v2].halfedge;
-			HalfEdge twin_prev=he.twin;
+			HalfEdge twin_prev = he.twin;
 			HalfEdge base_twin = twin_prev.next;
-			HalfEdge twin_next=base_twin.next;
-			
+			HalfEdge twin_next = base_twin.next;
+
 			dcel.Face outFace = base_twin.face;
 			Vertex lastV = base_twin.origin;
 			Vertex nextV = twin_next.origin;
-			
+
 			// relevant red edges: note, prev/next
-			//    red may not be on bdry.
+			// red may not be on bdry.
 			RedHEdge base_red = base_twin.twin.myRedEdge;
-			RedHEdge next_red=base_red.nextRed; 
-			RedHEdge prev_red=base_red.prevRed;
-			base_twin.twin.myRedEdge=null;
-	
+			RedHEdge next_red = base_red.nextRed;
+			RedHEdge prev_red = base_red.prevRed;
+			base_twin.twin.myRedEdge = null;
+
 			// create first square face: prep for iteration.
-			
+
 			// left spike
 			Vertex v_left = new Vertex(++pdcel.vertCount);
 			pdcel.vertices[pdcel.vertCount] = v_left;
-			v_left.vutil=lastV.vertIndx; // reference vertex
+			v_left.vutil = lastV.vertIndx; // reference vertex
 			v_left.bdryFlag = 1;
-			v_left.redFlag=true;
+			v_left.redFlag = true;
 			HalfEdge down_left = new HalfEdge(v_left);
 			HalfEdge up_left = new HalfEdge(lastV);
 			up_left.face = outFace;
 			v_left.halfedge = down_left;
-			
+
 			up_left.twin = down_left;
 			down_left.twin = up_left;
-			
-			up_left.prev=twin_prev;
-			twin_prev.next=up_left;
-	
+
+			up_left.prev = twin_prev;
+			twin_prev.next = up_left;
+
 			// right spike
 			Vertex v_right = new Vertex(++pdcel.vertCount);
 			pdcel.vertices[pdcel.vertCount] = v_right;
-			v_right.vutil=nextV.vertIndx; // reference vertex
+			v_right.vutil = nextV.vertIndx; // reference vertex
 			v_right.bdryFlag = 1;
-			v_right.redFlag=true;
+			v_right.redFlag = true;
 			HalfEdge down_right = new HalfEdge(v_right);
 			HalfEdge up_right = new HalfEdge(nextV);
-			nextV.halfedge=up_right;
+			nextV.halfedge = up_right;
 			down_right.face = outFace;
-			
+
 			up_right.twin = down_right;
 			down_right.twin = up_right;
-			
-			down_right.next=twin_next;
-			twin_next.prev=down_right;
-	
+
+			down_right.next = twin_next;
+			twin_next.prev = down_right;
+
 			// top
 			HalfEdge top = new HalfEdge(v_right);
 			v_right.halfedge = top;
@@ -1420,99 +1305,99 @@ public class RawDCEL {
 			dcel.Face new_face = new dcel.Face(pdcel.vertCount);
 			top.face = new_face;
 			count++;
-			
+
 			top.twin = top_tw;
 			top_tw.twin = top;
-			
-			top_tw.next=down_right;
-			down_right.prev=top_tw;
-			
-			top_tw.prev=up_left;
-			up_left.next=top_tw;
-			
+
+			top_tw.next = down_right;
+			down_right.prev = top_tw;
+
+			top_tw.prev = up_left;
+			up_left.next = top_tw;
+
 			// link around face
-			base_twin.next=up_right;
-			up_right.prev=base_twin;
-			base_twin.face=new_face;
-			new_face.edge=base_twin;
-			
-			up_right.next=top;
-			top.prev=up_right;
-			up_right.face=new_face;
-			
-			top.next=down_left;
-			down_left.prev=top;
-			down_left.face=new_face;
-			
-			down_left.next=base_twin;
-			base_twin.prev=down_left;
-			
+			base_twin.next = up_right;
+			up_right.prev = base_twin;
+			base_twin.face = new_face;
+			new_face.edge = base_twin;
+
+			up_right.next = top;
+			top.prev = up_right;
+			up_right.face = new_face;
+
+			top.next = down_left;
+			down_left.prev = top;
+			down_left.face = new_face;
+
+			down_left.next = base_twin;
+			base_twin.prev = down_left;
+
 			// add barycenter
-			addBary_raw(pdcel,new_face,false);
-			
+			addBary_raw(pdcel, new_face, false);
+
 			// create red
-			RedHEdge up_red=new RedHEdge(up_right);
-			up_right.myRedEdge=up_red;
-			RedHEdge top_red=new RedHEdge(top);
-			top.myRedEdge=top_red;
-			RedHEdge down_red=new RedHEdge(down_left);
-			down_left.myRedEdge=down_red;
-			
+			RedHEdge up_red = new RedHEdge(up_right);
+			up_right.myRedEdge = up_red;
+			RedHEdge top_red = new RedHEdge(top);
+			top.myRedEdge = top_red;
+			RedHEdge down_red = new RedHEdge(down_left);
+			down_left.myRedEdge = down_red;
+
 			// get red chain out of the way
-			pdcel.redChain=top_red;
-			
+			pdcel.redChain = top_red;
+
 			// link red
-			up_red.prevRed=prev_red;
-			prev_red.nextRed=up_red;
-			
-			up_red.nextRed=top_red;
-			top_red.prevRed=up_red;
-			
-			top_red.nextRed=down_red;
-			down_red.prevRed=top_red;
-			
-			down_red.nextRed=next_red;
-			next_red.prevRed=down_red;
-			
-			base_twin.twin.myRedEdge=null;
-			
+			up_red.prevRed = prev_red;
+			prev_red.nextRed = up_red;
+
+			up_red.nextRed = top_red;
+			top_red.prevRed = up_red;
+
+			top_red.nextRed = down_red;
+			down_red.prevRed = top_red;
+
+			down_red.nextRed = next_red;
+			next_red.prevRed = down_red;
+
+			base_twin.twin.myRedEdge = null;
+
 			// save some info for closing up
 			RedHEdge firstRed = down_left.myRedEdge;
-	
+
 			// ======= iterate until finishing with v1 =======
-			while (nextV.vertIndx!=v1) {
-				
+			while (nextV.vertIndx != v1) {
+
 				// shift
 				down_left = down_right;
 				up_left = up_right;
 				v_left = v_right;
-				lastV=nextV;
-	
+				lastV = nextV;
+
 				// set new base 'bdry_twin' and save 'twin_next'
 				base_twin = twin_next;
 				twin_next = base_twin.next;
-				base_red=base_twin.twin.myRedEdge;
-				prev_red=base_red.prevRed;
-				next_red=base_red.nextRed;
-				nextV=base_red.myEdge.origin;
-	
+				base_red = base_twin.twin.myRedEdge;
+				prev_red = base_red.prevRed;
+				next_red = base_red.nextRed;
+				nextV = base_red.myEdge.origin;
+
 				// right spike
 				v_right = new Vertex(++pdcel.vertCount);
 				pdcel.vertices[pdcel.vertCount] = v_right;
-				v_right.vutil=nextV.vertIndx; // reference vertex
+				v_right.vutil = nextV.vertIndx; // reference vertex
 				v_right.bdryFlag = 1;
-				v_right.redFlag=true;
+				v_right.redFlag = true;
 				down_right = new HalfEdge(v_right);
 				up_right = new HalfEdge(nextV);
-				nextV.halfedge=up_right;
+				nextV.halfedge = up_right;
 				down_right.face = outFace;
-				
+
 				up_right.twin = down_right;
 				down_right.twin = up_right;
-				
-				down_right.next=twin_next;
-				twin_next.prev=down_right;
-	
+
+				down_right.next = twin_next;
+				twin_next.prev = down_right;
+
 				// top
 				top = new HalfEdge(v_right);
 				v_right.halfedge = top;
@@ -1521,181 +1406,181 @@ public class RawDCEL {
 				new_face = new dcel.Face(pdcel.vertCount);
 				top.face = new_face;
 				count++;
-				
+
 				top.twin = top_tw;
 				top_tw.twin = top;
-				
-				top_tw.next=down_right;
-				down_right.prev=top_tw;
-				
-				top_tw.prev=down_left.prev;
-				down_left.prev.next=top_tw;
-				
+
+				top_tw.next = down_right;
+				down_right.prev = top_tw;
+
+				top_tw.prev = down_left.prev;
+				down_left.prev.next = top_tw;
+
 				// link around face
-				base_twin.next=up_right;
-				up_right.prev=base_twin;
-				base_twin.face=new_face;
-				new_face.edge=base_twin;
-				
-				up_right.next=top;
-				top.prev=up_right;
-				up_right.face=new_face;
-				
-				top.next=down_left;
-				down_left.prev=top;
-				down_left.face=new_face;
-				
-				down_left.next=base_twin;
-				base_twin.prev=down_left;
-				
+				base_twin.next = up_right;
+				up_right.prev = base_twin;
+				base_twin.face = new_face;
+				new_face.edge = base_twin;
+
+				up_right.next = top;
+				top.prev = up_right;
+				up_right.face = new_face;
+
+				top.next = down_left;
+				down_left.prev = top;
+				down_left.face = new_face;
+
+				down_left.next = base_twin;
+				base_twin.prev = down_left;
+
 				// add barycenter
-				addBary_raw(pdcel,new_face,false);
-				
+				addBary_raw(pdcel, new_face, false);
+
 				// create red
-				up_red=new RedHEdge(up_right);
-				up_right.myRedEdge=up_red;
-				top_red=new RedHEdge(top);
-				top.myRedEdge=top_red;
-				down_red=new RedHEdge(down_left);
-				down_left.myRedEdge=down_red;
-				
+				up_red = new RedHEdge(up_right);
+				up_right.myRedEdge = up_red;
+				top_red = new RedHEdge(top);
+				top.myRedEdge = top_red;
+				down_red = new RedHEdge(down_left);
+				down_left.myRedEdge = down_red;
+
 				// link red
-				up_red.prevRed=prev_red;
-				prev_red.nextRed=up_red;
-				
-				up_red.nextRed=top_red;
-				top_red.prevRed=up_red;
-				
-				top_red.nextRed=down_red;
-				down_red.prevRed=top_red;
-				
-				down_red.nextRed=next_red;
-				next_red.prevRed=down_red;
-				
-				base_twin.twin.myRedEdge=null;
-				
+				up_red.prevRed = prev_red;
+				prev_red.nextRed = up_red;
+
+				up_red.nextRed = top_red;
+				top_red.prevRed = up_red;
+
+				top_red.nextRed = down_red;
+				down_red.prevRed = top_red;
+
+				down_red.nextRed = next_red;
+				next_red.prevRed = down_red;
+
+				base_twin.twin.myRedEdge = null;
+
 				// left reds typically switchback, so remove
-				if (down_left.myRedEdge.nextRed==up_left.myRedEdge) {
-					top_red.nextRed=up_left.myRedEdge.nextRed;
-					up_left.myRedEdge.nextRed.prevRed=top_red;
-					
-					up_left.myRedEdge=null;
-					down_left.myRedEdge=null;
-					
-					lastV.redFlag=false;
+				if (down_left.myRedEdge.nextRed == up_left.myRedEdge) {
+					top_red.nextRed = up_left.myRedEdge.nextRed;
+					up_left.myRedEdge.nextRed.prevRed = top_red;
+
+					up_left.myRedEdge = null;
+					down_left.myRedEdge = null;
+
+					lastV.redFlag = false;
 				}
-				lastV.bdryFlag=0;
+				lastV.bdryFlag = 0;
 			} // end of while
-	
+
 			// if closing up, need one more face
 			if (closeup) {
-	
+
 				base_twin = twin_next;
 				base_red = base_twin.twin.myRedEdge;
 				prev_red = base_red.prevRed;
 				next_red = base_red.nextRed;
-				lastV=nextV;
-				nextV=base_twin.twin.origin;
-				up_left=up_right;
-				down_left=down_right;
-				
-				down_right=firstRed.myEdge;
-				up_right=down_right.twin;
-				
-				v_left=v_right;
-				v_right=firstRed.myEdge.origin;
-	
+				lastV = nextV;
+				nextV = base_twin.twin.origin;
+				up_left = up_right;
+				down_left = down_right;
+
+				down_right = firstRed.myEdge;
+				up_right = down_right.twin;
+
+				v_left = v_right;
+				v_right = firstRed.myEdge.origin;
+
 				// top
 				top = new HalfEdge(v_right);
 				v_right.halfedge = top;
 				top_tw = new HalfEdge(v_left);
 				top_tw.face = outFace;
-				new_face = new dcel.Face(pdcel.vertCount+1);
+				new_face = new dcel.Face(pdcel.vertCount + 1);
 				top.face = new_face;
 				count++;
-				
+
 				top.twin = top_tw;
 				top_tw.twin = top;
-				
-				top_tw.next=up_right.next;
-				up_right.next.prev=top_tw;
-				
-				top_tw.prev=down_left.prev;
-				down_left.prev.next=top_tw;
-				
+
+				top_tw.next = up_right.next;
+				up_right.next.prev = top_tw;
+
+				top_tw.prev = down_left.prev;
+				down_left.prev.next = top_tw;
+
 				// link around face
-				base_twin.next=up_right;
-				up_right.prev=base_twin;
-				base_twin.face=new_face;
-				new_face.edge=base_twin;
-				
-				up_right.next=top;
-				top.prev=up_right;
-				up_right.face=new_face;
-				
-				top.next=down_left;
-				down_left.prev=top;
-				down_left.face=new_face;
-				
-				down_left.next=base_twin;
-				base_twin.prev=down_left;
-	
+				base_twin.next = up_right;
+				up_right.prev = base_twin;
+				base_twin.face = new_face;
+				new_face.edge = base_twin;
+
+				up_right.next = top;
+				top.prev = up_right;
+				up_right.face = new_face;
+
+				top.next = down_left;
+				down_left.prev = top;
+				down_left.face = new_face;
+
+				down_left.next = base_twin;
+				base_twin.prev = down_left;
+
 				// create barycenter
-				addBary_raw(pdcel,new_face,false);
-				
+				addBary_raw(pdcel, new_face, false);
+
 				// create red
-				up_red=new RedHEdge(up_right);
-				up_right.myRedEdge=up_red;
-				top_red=new RedHEdge(top);
-				top.myRedEdge=top_red;
-				down_red=new RedHEdge(down_left);
-				down_left.myRedEdge=down_red;
-				
+				up_red = new RedHEdge(up_right);
+				up_right.myRedEdge = up_red;
+				top_red = new RedHEdge(top);
+				top.myRedEdge = top_red;
+				down_red = new RedHEdge(down_left);
+				down_left.myRedEdge = down_red;
+
 				// link red
-				up_red.prevRed=prev_red;
-				prev_red.nextRed=up_red;
-				
-				up_red.nextRed=top_red;
-				top_red.prevRed=up_red;
-				
-				top_red.nextRed=down_red;
-				down_red.prevRed=top_red;
-				
-				down_red.nextRed=next_red;
-				next_red.prevRed=down_red;
-				
-				base_twin.twin.myRedEdge=null;
-				
+				up_red.prevRed = prev_red;
+				prev_red.nextRed = up_red;
+
+				up_red.nextRed = top_red;
+				top_red.prevRed = up_red;
+
+				top_red.nextRed = down_red;
+				down_red.prevRed = top_red;
+
+				down_red.nextRed = next_red;
+				next_red.prevRed = down_red;
+
+				base_twin.twin.myRedEdge = null;
+
 				// left reds typically switchback, so remove
-				if (down_left.myRedEdge.nextRed==up_left.myRedEdge) {
-					top_red.nextRed=up_left.myRedEdge.nextRed;
-					up_left.myRedEdge.nextRed.prevRed=top_red;
-					
-					up_left.myRedEdge=null;
-					down_left.myRedEdge=null;
-	
-					lastV.redFlag=false;
+				if (down_left.myRedEdge.nextRed == up_left.myRedEdge) {
+					top_red.nextRed = up_left.myRedEdge.nextRed;
+					up_left.myRedEdge.nextRed.prevRed = top_red;
+
+					up_left.myRedEdge = null;
+					down_left.myRedEdge = null;
+
+					lastV.redFlag = false;
 				}
-				
+
 				// right typically switchback, so remove
-				if (prev_red==firstRed) {
-					firstRed.prevRed.nextRed=top_red;
-					top_red.prevRed=firstRed.prevRed;
-					up_right.myRedEdge=null;
-					firstRed.myEdge.myRedEdge=null;
-	
-					nextV.redFlag=false;
+				if (prev_red == firstRed) {
+					firstRed.prevRed.nextRed = top_red;
+					top_red.prevRed = firstRed.prevRed;
+					up_right.myRedEdge = null;
+					firstRed.myEdge.myRedEdge = null;
+
+					nextV.redFlag = false;
 				}
-				lastV.bdryFlag=0;
+				lastV.bdryFlag = 0;
 			}
-	
+
 			// Only one? barycenter not connected to interior
-			if (count==1) {
-				pdcel.redChain=null;
+			if (count == 1) {
+				pdcel.redChain = null;
 			}
 			return count;
-	  }
-	  
+		}
+
 	  /**
 	   * If 'rededge' backtracks, we can shrink red chain 
 	   * (moving 'redChain' as necessary). No action? return
@@ -2560,11 +2445,13 @@ public class RawDCEL {
 		  
 		/**
 		 * Add a new vertex to some or all vertices bounding 
-		 * an ideal face, start with 'v' and go cclw about the 
-		 * boundary component (clw about the ideal face) until 
-		 * getting to 'w'. Calling must check that v, w on same 
-		 * bdry comp, and handles combinatorics. New vert should 
-		 * have the largest index. 
+		 * an ideal face, starting with 'v' and going cclw about 
+		 * the bdry component (clw about the ideal face) until the
+		 * new vertex neighbors w. If w=v, then we're adding a 
+		 * barycenter to the ideal face and this bdry component 
+		 * becomes interior. Calling must check that v, w on 
+		 * same bdry comp, and handles combinatorics. New vert 
+		 * should have the largest index. 
 		 * Exception if bdry comp has just two edges.
 		 * @param pdcel PackDCEL
 		 * @param v int
@@ -2576,38 +2463,26 @@ public class RawDCEL {
 			boolean debug=false;
 			
 			HalfEdge vedge=pdcel.vertices[v].halfedge;
+			if (vedge.twin.prev.twin==vedge.twin.next.twin)
+				throw new CombException("bdry component has just two edges");
 			HalfEdge nextedge=vedge.twin.prev.twin;
-			HalfEdge prevedge=vedge.twin.next.twin;
+//			HalfEdge prevedge=vedge.twin.next.twin;
 			  
-			// tent 'vedge'; 'vertCount', 'vertices' should be updated
+			// tent over 'vedge'; 'vertCount', 'vertices' should be updated
 			RawDCEL.addVert_raw(pdcel,nextedge.origin.vertIndx);
 			int newVindx=pdcel.vertCount;
-			  
 			int count=2;
 			  
-			// now proceed along the bdry edge adding new edges
-			while (nextedge!=prevedge && nextedge.origin.vertIndx!=w) {
+			// now proceed cclw enfolding vertices
+			int u=0;
+			while ((u=nextedge.origin.vertIndx)!=w && u!=v) {
 				nextedge=nextedge.twin.prev.twin;
-				RawDCEL.addEdge_raw(pdcel,newVindx,nextedge.origin.vertIndx);
+				RawDCEL.enfold_raw(pdcel,u);
 				count++;
-				if (debug) // pdcel.p.getCenter(300);
+				if (debug)
 					DCELdebug.redConsistency(pdcel.redChain);
-			  } 
-			  
-			  // finish if we reach w (which thus cannot be v)
-			  if (nextedge.origin.vertIndx==w) 
-				  return count;
-			  
-			  // otherwise, left with bdry having 3 edges?
-			  Face triface=new Face(-1);
-			  triface.edge=prevedge.twin;
-			  prevedge.twin.face=triface;
-			  RawDCEL.addIdealFace_raw(pdcel,prevedge.twin.face);
-			  if (debug) { 
-//				  v=4;DCELdebug.vertConsistency(pdcel,v);
-				  DCELdebug.redConsistency(pdcel.redChain);
-			  }
-			  return count;
+			} 
+			return count;
 		}
 		
 		/**
@@ -2836,6 +2711,7 @@ public class RawDCEL {
 	 * new edge from opposite vertex 'u' to 'w'. (So we
 	 * collapse 'v' to 'u'.) Fix up 'vertices', 'vertCount',
 	 * compose to update 'oldNew'. If 'v' is red, null red chain.
+	 * May have to reset 'alpha'.
 	 * @param pdcel PackDCEL
 	 * @param edge HalfEdge
 	 * @return int, orphaned vert index, 0 on failure
@@ -2846,7 +2722,8 @@ public class RawDCEL {
 			return 0;
 
 		if (pdcel.alpha!=null && 
-				pdcel.alpha.origin.vertIndx==edge.origin.vertIndx)
+				(pdcel.alpha.origin.vertIndx==edge.origin.vertIndx ||
+				pdcel.alpha.twin.origin.vertIndx==edge.origin.vertIndx))
 			pdcel.alpha=null;
 		
 		return RawDCEL.meldEdge_raw(pdcel,edge.twin);
@@ -2873,73 +2750,50 @@ public class RawDCEL {
 	}
 	
 	/**
-	 * Remove 'edge'. 'edge' must be a bdry edge or it
-	 * must have both ends interior. If edge is part of
-	 * a protruding bdry face, then we will orphan one
-	 * vertex (and set 'oldNew'). We try to keep the red
-	 * chain in tact.
+	 * Remove 'edge', which must be bdry or have both ends 
+	 * interior. 
+	 * + If edge has two interior, this creates a next
+	 *   bdry component surrounding the edge, red chain
+	 *   is lost. 'alpha' may need to be reset.
+	 * + If edge is bdry: if part of a protruding bdry face, 
+	 *   then we will orphan one vertex (and set 'oldNew').
+	 *   Keep 'edge.origin' vertex, or surviving vertex if
+	 *   one end is orphaned. We try to keep the red chain.
+	 *  
+	 * Return int: 
+	 *  * if -w, then vert of index w is now red and
+	 *    calling routine should set rad/center.
+	 *  * 0 on failure
 	 * @param pdcel PackDCEL
 	 * @param edge HalfEdge
-	 * @return int, 0 on failure
+	 * @return int
 	 */
 	public static int rmEdge_raw(PackDCEL pdcel,HalfEdge edge) {
 		Vertex vend=edge.origin;
 		Vertex wend=edge.twin.origin;
 		if (edge.isBdry()) { // DCELdebug.printRedChain(pdcel.redChain);
 			// get positive orientation
-			if (edge.face!=null && edge.face.faceIndx<0)
+			if (edge.face!=null && edge.face.faceIndx<0) {
 				edge=edge.twin;
+				vend=edge.origin;
+				wend=edge.twin.origin;
+			}
 			Vertex oppV=edge.next.next.origin;
 			RedHEdge redge=edge.myRedEdge;
 			
 			// special cases: 'edge' is one edge of protruding face,
 			//    must remove the face and outside vertex
-			if (vend.getNum()==1) {
-				HalfEdge opp=edge.next.twin;
-				if (redge!=null) {
-					if (pdcel.redChain==redge || pdcel.redChain==redge.prevRed)
-						pdcel.redChain=redge.nextRed;
-					RedHEdge redgeprev=redge.prevRed;
-					RedHEdge prered=redgeprev.prevRed;
-					RedHEdge postred=redge.nextRed;
-					RedHEdge newred=new RedHEdge(opp);
-					
-					// transfer data for 'oppV'
-					newred.rad=redgeprev.rad;
-					newred.center=redgeprev.center;
-					
-					opp.myRedEdge=newred;
-					opp.origin.halfedge=opp;
-					prered.nextRed=newred;
-					newred.prevRed=prered;
-					newred.nextRed=postred;
-					postred.prevRed=newred;
-					edge.myRedEdge=null;
-					edge.prev.myRedEdge=null;
+			if (vend.getNum()==1 || wend.getNum()==1) {
+				// adjust so wend will be orphaned
+				if (wend.getNum()!=1) {
+					edge=edge.prev;
+					vend=edge.origin;
+					wend=edge.twin.origin;
+					oppV=edge.next.next.origin;
+					redge=edge.myRedEdge;
 				}
-				
-				// cut out face
-				edge.next.prev=edge.twin.prev;
-				edge.twin.prev.next=edge.next;
-				HalfEdge phe=edge.prev.twin;
-				phe.next.prev=opp.twin;
-				opp.twin.next=phe.next;
-				opp.twin.face=edge.twin.face;
-				opp.origin.halfedge=opp;
-				
-				// toss 'vend'
-				int v=vend.vertIndx;
-				VertexMap oldnew=new VertexMap();
-				for (int j=v+1;j<=pdcel.vertCount;j++) {
-					pdcel.vertices[j-1]=pdcel.vertices[j];
-					pdcel.vertices[j-1].vertIndx=j-1;
-					oldnew.add(new EdgeSimple(j,j-1));
-				}
-				pdcel.oldNew=VertexMap.followedBy(pdcel.oldNew,oldnew);
-				pdcel.vertCount--;
-				return v;
-			}				
-			else if (wend.getNum()==1) {
+			}
+			if (wend.getNum()==1) {
 				HalfEdge opp=edge.prev.twin;
 				if (redge!=null) {
 					if (pdcel.redChain==redge || pdcel.redChain==redge.nextRed)
@@ -2971,20 +2825,13 @@ public class RawDCEL {
 				opp.twin.face=edge.twin.face;
 				opp.origin.halfedge=opp;
 				
-				// toss 'vend'
+				// toss 'wend'
 				int w=wend.vertIndx;
-				VertexMap oldnew=new VertexMap();
-				for (int j=w+1;j<=pdcel.vertCount;j++) {
-					pdcel.vertices[j-1]=pdcel.vertices[j];
-					pdcel.vertices[j-1].vertIndx=j-1;
-					oldnew.add(new EdgeSimple(j,j-1));
-				}
-				pdcel.oldNew=VertexMap.followedBy(pdcel.oldNew,oldnew);
-				pdcel.vertCount--;
-				return w;
+				RawDCEL.removeVertIndex(pdcel, w);
+				return w; // this vertex is lost
 			}
 				
-			// more typical: just remove edge and relink
+			// more typical for bdry: just remove edge and relink
 			HalfEdge side1=edge.prev.twin;
 			HalfEdge side2=edge.next.twin;
 			if (redge==null || oppV.redFlag)
@@ -3035,7 +2882,7 @@ public class RawDCEL {
 		
 		if (vend.vertIndx==pdcel.alpha.origin.vertIndx ||
 				wend.vertIndx==pdcel.alpha.origin.vertIndx)
-			pdcel.alpha=null; // reset later
+			pdcel.alpha=null; // calling routine must reset
 		
 		HalfEdge[] outer=new HalfEdge[4];
 		outer[0]=edge.next;
@@ -3061,255 +2908,229 @@ public class RawDCEL {
 	}
 	
 	/**
-	 * Meld the two ends of 'edge'. Try to keep the red chain
-	 * in tact, but if too complicated, set to null.
+	 * Meld the two ends of 'edge' <v,w>, orphaning the edge
+	 * and one end. If <v,w> is cclw bdry edge or <v,w> is 
+	 * interior and w is interior, then orphan w.
+	 * Try to keep the red chain intact, but if too 
+	 * complicated, set to null. 'alpha' may also be set to null.
+	 * This can be used to reverse 'splitEdge_raw' and
+	 * 'splitFlower_raw' if called with the proper 'edge'. 
 	 * @param pdcel PackDCEL
 	 * @param edge HalfEdge
 	 * @return int, orphaned vert index, 0 on failure
 	 */
-	public static int meldEdge_raw(PackDCEL pdcel,HalfEdge edge) {
-		Vertex vend=edge.origin;
-		Vertex wend=edge.twin.origin;
-		
+	public static int meldEdge_raw(PackDCEL pdcel, HalfEdge edge) {
+		Vertex vend = edge.origin;
+		Vertex wend = edge.next.origin;
+		int w = wend.vertIndx;
+
 		// bdry edge?
 		if (edge.isBdry()) { // DCELdebug.printRedChain(pdcel.redChain);
 			// get positive orientation
-			if (edge.face!=null && edge.face.faceIndx<0)
-				edge=edge.twin;
-			Vertex oppV=edge.next.next.origin;
-			if (oppV.bdryFlag==0 && oppV.getNum()==3) {
-				CirclePack.cpb.errMsg("can't remove edge "+edge+
-						" because it create a degree-2 interior nghb");
-				return 0;
+			if (edge.face != null && edge.face.faceIndx < 0) {
+				edge = edge.twin;
+				vend = edge.origin;
+				wend = edge.next.origin;
+				w = wend.vertIndx;
 			}
+			Vertex oppV = edge.next.next.origin;
+			if (oppV.bdryFlag == 0 && oppV.getNum() == 3)
+				throw new CombException("melding edge " + edge + " woulc create a degree-2 interior nghb");
 
-			RedHEdge redge=edge.myRedEdge;
-			RedHEdge prevred=redge.prevRed;
-			RedHEdge postred=redge.nextRed;
-			HalfEdge side1=edge.prev.twin;
-			HalfEdge side2=edge.next.twin;
-			HalfEdge outerup=edge.twin.prev;
-			HalfEdge outerdown=edge.twin.next;
-			
+			RedHEdge redge = edge.myRedEdge;
+			RedHEdge prevred = redge.prevRed;
+			RedHEdge postred = redge.nextRed;
+			HalfEdge side1 = edge.prev.twin;
+			HalfEdge side2 = edge.next.twin;
+			HalfEdge outerup = edge.twin.prev;
+			HalfEdge outerdown = edge.twin.next;
+
 			// settle red chain first
-			if (pdcel.redChain==redge)
-				pdcel.redChain=redge.nextRed;
-			prevred.nextRed=postred;
-			postred.prevRed=prevred;
-			if (prevred.myEdge==side1.twin) {
-				prevred.myEdge=side2;
-				side2.myRedEdge=prevred;
+			if (pdcel.redChain == redge)
+				pdcel.redChain = redge.nextRed;
+			prevred.nextRed = postred;
+			postred.prevRed = prevred;
+			if (prevred.myEdge == side1.twin) {
+				prevred.myEdge = side2;
+				side2.myRedEdge = prevred;
+			} else if (postred.myEdge == side2.twin) {
+				postred.myEdge = side1;
+				side1.myRedEdge = postred;
 			}
-			else if (postred.myEdge==side2.twin) {
-				postred.myEdge=side1;
-				side1.myRedEdge=postred;
-			}
-			
+
 			// orphan wend
-			HalfEdge he=wend.halfedge;
-			vend.halfedge=he;
+			HalfEdge he = wend.halfedge;
+			vend.halfedge = he;
 			do {
-				he.origin=vend;
-				he=he.prev.twin;
-			} while (he!=side2.twin);
-			side2.twin.origin=vend;
-			
+				he.origin = vend;
+				he = he.prev.twin;
+			} while (he != side2.twin);
+			side2.twin.origin = vend;
+
 			// twin the sides
-			side1.twin=side2;
-			side2.twin=side1;
-			
-			outerup.next=outerdown;
-			outerdown.prev=outerup;
+			side1.twin = side2;
+			side2.twin = side1;
 
-			VertexMap oldnew=new VertexMap();
-			int w=wend.vertIndx;
-			for (int j=w+1;j<=pdcel.vertCount;j++) {
-				pdcel.vertices[j-1]=pdcel.vertices[j];
-				pdcel.vertices[j-1].vertIndx=j-1;
-				oldnew.add(new EdgeSimple(j,j-1));
-			}
-			pdcel.vertCount--;
-			VertexMap.followedBy(pdcel.oldNew,oldnew);
-			return w;
+			outerup.next = outerdown;
+			outerdown.prev = outerup;
 		}
-		
-		if (vend.isBdry() && wend.isBdry()) {
-			CirclePack.cpb.errMsg("'rm_edge -c': can't remove edge "+edge+
-					" because it would disconnect.");
-			return 0;
-		}
-		
-		// one bdry end; make that 'v'
-		if (vend.isBdry() || wend.isBdry()) {
-			if (wend.isBdry()) {
-				edge=edge.twin;
-				vend=edge.origin;
-				wend=edge.twin.origin;
-			}
-			HalfEdge in_v=vend.halfedge.twin;
-			HalfEdge out_v=in_v.next;
-			
-			Vertex left_v=edge.prev.origin;
-			Vertex right_v=edge.twin.prev.origin;
-			if ((left_v.bdryFlag==0 && left_v.getNum()==3) ||
-					(right_v.bdryFlag==0 && right_v.getNum()==3)) {
-				CirclePack.cpb.errMsg("can't remove edge "+edge+
-						" because it create a degree-2 interior nghb");
-				return 0;
-			}
-			
-			// handle red chain first
-			RedHEdge redouter=vend.halfedge.myRedEdge;
-			if (pdcel.redChain==redouter)
-				pdcel.redChain=redouter.nextRed;
-			
-			if (edge.myRedEdge!=null) { // must have red twin, too
-				RedHEdge redge=edge.myRedEdge;
-				RedHEdge rtwin=edge.twin.myRedEdge;
-				
-				if (redge.nextRed==rtwin) { // can shrink, then neglect
-					redge.prevRed.nextRed=rtwin.nextRed;
-					rtwin.nextRed.prevRed=redge.prevRed;
-				}
-				else {
-					redge.prevRed.nextRed=redge.nextRed;
-					redge.nextRed.prevRed=redge.prevRed;
-					rtwin.prevRed.nextRed=rtwin.nextRed;
-					rtwin.nextRed.prevRed=rtwin.prevRed;
-				}
-			}
-			
-			// orphan w
-			if (pdcel.alpha.invDist==wend.vertIndx)
-				pdcel.alpha=null;
-			HalfEdge side1=edge.next.twin;
-			HalfEdge side2=edge.twin.prev.twin;
-			HalfEdge he=side2;
-			do {
-				he.origin=vend;
-				he=he.prev.twin;
-			} while(he!=side1.twin);
 
-			HalfEdge side1twin=side1.twin.next.twin;
-			if (side1twin==out_v) { // may be out_v
-				out_v.twin.origin.halfedge=side1;
-				side1.myRedEdge=out_v.twin.myRedEdge;
-				side1.myRedEdge.myEdge=side1;
-				out_v.twin=side1;
-				side1.twin=out_v;
-				side1.origin.halfedge=side1;
-			}
-			else {
-				side1.twin=side1twin;
-				side1twin.twin=side1;
-				if (side1twin.myRedEdge!=null || side1.myRedEdge!=null)
-					pdcel.redChain=null;
-			}
-			
-			HalfEdge side2twin=side2.twin.prev.twin;
-			if (side2twin==in_v) { // may be in_v
-				in_v.twin=side2;
-				side2.twin=in_v;
-				side2.myRedEdge=in_v.twin.myRedEdge;
-				side2.myRedEdge.myEdge=side2;
-			}
-			else {
-				if (side2.myRedEdge!=null || side2twin.myRedEdge!=null)
-					pdcel.redChain=null;
-				side2twin.twin=side2;
-				side2.twin=side2twin;
-			}
-			
-			VertexMap oldnew=new VertexMap();
-			int w=wend.vertIndx;
-			for (int j=w+1;j<=pdcel.vertCount;j++) {
-				pdcel.vertices[j-1]=pdcel.vertices[j];
-				pdcel.vertices[j-1].vertIndx=j-1;
-				oldnew.add(new EdgeSimple(j,j-1));
-			}
-			pdcel.vertCount--;
-			VertexMap.followedBy(pdcel.oldNew,oldnew);
-			return w;
-		}
-		
-		// both ends internal
-		
-		// these edges are kept
-		HalfEdge v_out=edge.prev.twin;
-		HalfEdge w_in=edge.next.twin;
-		HalfEdge w_out=edge.twin.prev.twin;
-		HalfEdge v_in=edge.twin.next.twin;
-		Vertex left_v=w_in.origin;
-		Vertex right_v=v_in.origin;
-		
-		if ((left_v.bdryFlag==0 && left_v.getNum()==3) || 
-				(right_v.bdryFlag==0 && right_v.getNum()==3)) {
-			CirclePack.cpb.errMsg("can't remove edge "+edge+
-					" because it would leave a degree-2 vertex");
-			return 0;
-		}
-		
-		// any red chain involvement?
-		if (vend.redFlag || wend.redFlag) {
-			RedHEdge redge=edge.myRedEdge; // must be twinned, too
-			
-			// if others not involved, may be able to fix
-			if (!left_v.redFlag && !right_v.redFlag) {
-				RedHEdge rprev=redge.prevRed;
-				RedHEdge rnxt=redge.nextRed;
-				RedHEdge tprev=redge.twinRed.prevRed;
-				RedHEdge tnxt=redge.twinRed.nextRed;
-				
-				// twinned reds before or after? can fix
-				if (rprev.twinRed==tnxt || rnxt.twinRed==tprev) {
-					rprev.nextRed=rnxt;
-					rnxt.prevRed=rprev;
-					tprev.nextRed=tnxt;
-					tnxt.prevRed=tprev;
+		// interior case
+		else {
+
+			if (vend.isBdry() && wend.isBdry())
+				throw new CombException("melding edge " + edge + " would disconnect.");
+
+			// one bdry end; make that 'v'
+			if (vend.isBdry() || wend.isBdry()) {
+				if (wend.isBdry()) {
+					edge = edge.twin;
+					vend = edge.origin;
+					wend = edge.twin.origin;
+					w = wend.vertIndx;
 				}
-				else 
-					pdcel.redChain=null;
+				HalfEdge in_v = vend.halfedge.twin;
+				HalfEdge out_v = in_v.next;
+
+				Vertex left_v = edge.prev.origin;
+				Vertex right_v = edge.twin.prev.origin;
+				if ((left_v.bdryFlag == 0 && left_v.getNum() == 3)
+						|| (right_v.bdryFlag == 0 && right_v.getNum() == 3)) {
+					CirclePack.cpb.errMsg("can't remove edge " + edge + " because it create a degree-2 interior nghb");
+					return 0;
+				}
+
+				// handle red chain first
+				RedHEdge redouter = vend.halfedge.myRedEdge;
+				if (pdcel.redChain == redouter)
+					pdcel.redChain = redouter.nextRed;
+
+				if (edge.myRedEdge != null) { // must have red twin, too
+					RedHEdge redge = edge.myRedEdge;
+					RedHEdge rtwin = edge.twin.myRedEdge;
+
+					if (redge.nextRed == rtwin) { // can shrink, then neglect
+						redge.prevRed.nextRed = rtwin.nextRed;
+						rtwin.nextRed.prevRed = redge.prevRed;
+					} else {
+						redge.prevRed.nextRed = redge.nextRed;
+						redge.nextRed.prevRed = redge.prevRed;
+						rtwin.prevRed.nextRed = rtwin.nextRed;
+						rtwin.nextRed.prevRed = rtwin.prevRed;
+					}
+				}
+
+				// orphan w
+				if (pdcel.alpha.invDist == wend.vertIndx)
+					pdcel.alpha = null;
+				HalfEdge side1 = edge.next.twin;
+				HalfEdge side2 = edge.twin.prev.twin;
+				HalfEdge he = side2;
+				do {
+					he.origin = vend;
+					he = he.prev.twin;
+				} while (he != side1.twin);
+
+				HalfEdge side1twin = side1.twin.next.twin;
+				if (side1twin == out_v) { // may be out_v
+					out_v.twin.origin.halfedge = side1;
+					side1.myRedEdge = out_v.twin.myRedEdge;
+					side1.myRedEdge.myEdge = side1;
+					out_v.twin = side1;
+					side1.twin = out_v;
+					side1.origin.halfedge = side1;
+				} else {
+					side1.twin = side1twin;
+					side1twin.twin = side1;
+					if (side1twin.myRedEdge != null || side1.myRedEdge != null)
+						pdcel.redChain = null;
+				}
+
+				HalfEdge side2twin = side2.twin.prev.twin;
+				if (side2twin == in_v) { // may be in_v
+					in_v.twin = side2;
+					side2.twin = in_v;
+					side2.myRedEdge = in_v.twin.myRedEdge;
+					side2.myRedEdge.myEdge = side2;
+				} else {
+					if (side2.myRedEdge != null || side2twin.myRedEdge != null)
+						pdcel.redChain = null;
+					side2twin.twin = side2;
+					side2.twin = side2twin;
+				}
 			}
-			else
-				pdcel.redChain=null;
-		}
-		
-		// check 'halfedge's
-		if (vend.halfedge==edge || vend.halfedge==v_in.twin)
-			vend.halfedge=v_out; // will replace 'left2v.twin'
-		if (left_v.halfedge==v_out.twin)
-			left_v.halfedge=w_in;
-		if (right_v.halfedge==w_out.twin)
-			right_v.halfedge=v_in;
-		
-		// orphan wend
-		HalfEdge he=w_out;
-		he.origin=vend;
-		do {
-			he=he.prev.twin; // cclw
-			he.origin=vend;
-		} while (he!=w_in.twin);
-		
-		// collapse the quad
-		w_in.twin=v_out;
-		v_out.twin=w_in;
-		w_out.twin=v_in;
-		v_in.twin=w_out;
-		
+
+			// both ends internal
+			else {
+
+				// these edges are kept
+				HalfEdge v_out = edge.prev.twin;
+				HalfEdge w_in = edge.next.twin;
+				HalfEdge w_out = edge.twin.prev.twin;
+				HalfEdge v_in = edge.twin.next.twin;
+				Vertex left_v = w_in.origin;
+				Vertex right_v = v_in.origin;
+
+				if ((left_v.bdryFlag == 0 && left_v.getNum() == 3)
+						|| (right_v.bdryFlag == 0 && right_v.getNum() == 3)) {
+					CirclePack.cpb.errMsg("can't remove edge " + edge + " because it would leave a degree-2 vertex");
+					return 0;
+				}
+
+				// any red chain involvement?
+				if (vend.redFlag || wend.redFlag) {
+					RedHEdge redge = edge.myRedEdge; // must be twinned, too
+
+					// if others not involved, may be able to fix
+					if (!left_v.redFlag && !right_v.redFlag) {
+						RedHEdge rprev = redge.prevRed;
+						RedHEdge rnxt = redge.nextRed;
+						RedHEdge tprev = redge.twinRed.prevRed;
+						RedHEdge tnxt = redge.twinRed.nextRed;
+
+						// twinned reds before or after? can fix
+						if (rprev.twinRed == tnxt || rnxt.twinRed == tprev) {
+							rprev.nextRed = rnxt;
+							rnxt.prevRed = rprev;
+							tprev.nextRed = tnxt;
+							tnxt.prevRed = tprev;
+						} else
+							pdcel.redChain = null;
+					} else
+						pdcel.redChain = null;
+				}
+
+				// check 'halfedge's
+				if (vend.halfedge == edge || vend.halfedge == v_in.twin)
+					vend.halfedge = v_out; // will replace 'left2v.twin'
+				if (left_v.halfedge == v_out.twin)
+					left_v.halfedge = w_in;
+				if (right_v.halfedge == w_out.twin)
+					right_v.halfedge = v_in;
+
+				// orphan wend
+				HalfEdge he = w_out;
+				he.origin = vend;
+				do {
+					he = he.prev.twin; // cclw
+					he.origin = vend;
+				} while (he != w_in.twin);
+
+				// collapse the quad
+				w_in.twin = v_out;
+				v_out.twin = w_in;
+				w_out.twin = v_in;
+				v_in.twin = w_out;
+			}
 // debugging
 //		HalfLink spokes=right_v.getEdgeFlower();
 //		spokes=left_v.getEdgeFlower();
 //		spokes=vend.getEdgeFlower();
-		
-		VertexMap oldnew=new VertexMap();
-		int w=wend.vertIndx;
-		for (int j=w+1;j<=pdcel.vertCount;j++) {
-			pdcel.vertices[j-1]=pdcel.vertices[j];
-			pdcel.vertices[j-1].vertIndx=j-1;
-			oldnew.add(new EdgeSimple(j,j-1));
+
 		}
-		pdcel.vertCount--;
-		VertexMap.followedBy(pdcel.oldNew,oldnew);
+
+		// w is orphaned
+		RawDCEL.removeVertIndex(pdcel, w);
 		return w;
 	}
 	
@@ -3400,6 +3221,31 @@ public class RawDCEL {
 		if (safety==0) // didn't close up
 			return -count;
 		return count;
+	}
+	
+	/**
+	 * Remove the 'Vertex' with index 'v', readjusting 'vertices',
+	 * 'vertexCount', and 'oldNew'. If 'oldNew' is null and 'v' 
+	 * is less than 'vertexCount', then 'oldNew' is initiated.
+	 * This code allows various 'raw' routines to be called
+	 * multiple times before requiring combinatorial processing.
+	 * @param pdcel PackDCEL
+	 * @param v int
+	 * @return int, new 'vertCount'
+	 */
+	public static int removeVertIndex(PackDCEL pdcel,int v) {
+		VertexMap oldnew = new VertexMap();
+		if (v<0 || v>pdcel.vertCount)
+			throw new CombException("trying to remove improper index "+v);
+		for (int j = v + 1; j <= pdcel.vertCount; j++) {
+			pdcel.vertices[j - 1] = pdcel.vertices[j];
+			pdcel.vertices[j - 1].vertIndx = j - 1;
+			oldnew.add(new EdgeSimple(j, j - 1));
+		}
+		pdcel.vertCount--;
+		// adjust 'oldNew' by composing.
+		VertexMap.followedBy(pdcel.oldNew, oldnew);
+		return pdcel.vertCount;
 	}
 	
 	/**
@@ -3560,7 +3406,7 @@ public class RawDCEL {
 	public static HalfLink leftsideLink(PackDCEL pdcel,HalfLink hlink) {
 		if (hlink==null || hlink.size()==0)
 			return null;
-		HalfLink incoming=new HalfLink(pdcel.p);
+		HalfLink incoming=new HalfLink();
 		
 		// save first/last
 		HalfEdge firsthe=hlink.getFirst();

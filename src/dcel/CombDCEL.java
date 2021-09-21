@@ -13,7 +13,7 @@ import exceptions.DataException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
-import listManip.GraphLink;
+import listManip.FaceLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
@@ -634,8 +634,8 @@ public class CombDCEL {
 	 * 1-tori), and this processes a proposed red chain.
 	 * CAUTION: Be sure to run 'wipeRedChain', tossing old
 	 * 'RedHEdge's, reset 'Vertex.redFlag's, also check 
-	 * 'HalfEdge.eutil'. (if 'eutil' is negative, then that
-	 * edge will not be red-twinned.)
+	 * 'HalfEdge.eutil'. (if 'eutil' is negative, then we
+	 * don't allow that edge to be red-twinned.)
 	 * Here preRedVertices are created and processed (to form new
 	 * vertices, if necessary), surviving and new vertices are
 	 * identified, 'vertCount' and 'vertices' are reset.
@@ -1798,22 +1798,97 @@ public class CombDCEL {
 			pdcel.redChain=newRedChain;
 	}
 	
-	/** 
-	 * Convert a chain of 'HalfEdge's to form a new "red chain", and
-	 * process its side pairings. Typically this will now pass to
-	 * 'd_FillInside'. If the given chain is improper, return null.
-	 * @param edges
-	 * @return RedHEdge, null on error
+	/**
+	 * Determine a partial order to lay out faces
+	 * for computing radii, starting with 'alpha' and 
+	 * avoiding crossing any forbidden edges in 'hlink' 
+	 * (or in the bdry). Note that we do not make twinned 
+	 * red chain edges forbidden, so even when 'hlink' 
+	 * is empty, this may give a different layout order 
+	 * than 'PackDCEL.layoutOrder' itself.
+	 * This method is used, e.g., for general branch 
+	 * points, were we layout some subregions separately.  
+	 * @param pdcel PackDCEL
+	 * @param hlink HalfLink
+	 * @return HalfLink, null on error
 	 */
-	// TODO: under development, 10/2020
-//	public static RedHEdge chain2Red(ArrayList<HalfEdge> edges) {
-//		RedHEdge newChain=-new RedHEdge();
-//		Iterator<HalfEdge> eit=edges.iterator();
-//		while (eit.hasNext()) {
+	public static HalfLink partialTree(PackDCEL pdcel,
+			HalfLink hlink) {
+		
+		// include bdry edges in 'hlink'
+		if (hlink==null)
+			hlink=new HalfLink();
+		if (pdcel.redChain!=null) {
+			RedHEdge rtrace=pdcel.redChain;
+			do {
+				HalfEdge hetw=rtrace.myEdge.twin;
+				if (hetw.face==null || hetw.face.faceIndx<0)
+					hlink.add(rtrace.myEdge);
+				rtrace=rtrace.nextRed;
+			} while (rtrace!=pdcel.redChain);
+		}
+		if (hlink.size()==0)
+			return null;
+		for (int j=1;j<=pdcel.edgeCount;j++)
+			pdcel.edges[j].eutil=0;
+
+		int alph=pdcel.alpha.origin.vertIndx;
+		Iterator<HalfEdge> his=hlink.iterator();
+		while (his.hasNext()) {
+			HalfEdge he=his.next();
+			if (he.origin.vertIndx==alph || he.twin.origin.vertIndx==alph) {
+				CirclePack.cpb.errMsg("partialTree: 'alpha' is on a forbidden edge");
+				return null;
+			}
+			he.eutil=-1;
+			he.twin.eutil=-1;
+		}
+		
+		// Get the 'HalfLink' started
+		HalfLink partialOrder=new HalfLink();
+		partialOrder.add(pdcel.alpha);
+		pdcel.alpha.eutil=1;
+		pdcel.alpha.next.eutil=1;
+		pdcel.alpha.next.next.eutil=1;
+		
+		// keep two lists of face indices
+		FaceLink currf=new FaceLink();
+		FaceLink nextf=currf;
+		nextf.add(pdcel.alpha.face.faceIndx);
+		boolean hit=true;
+		while (hit && nextf.size()>0) {
+			hit=false;
+			currf=nextf;
+			nextf=new FaceLink();
 			
-//		}
-//	}
-	
+			Iterator<Integer> cis=currf.iterator();
+			while (cis.hasNext()) {
+				int f=cis.next(); // this face should be done
+				Face face=pdcel.faces[f];
+				HalfEdge he=face.edge;
+				do {
+					if (he.twin.eutil==0) { // not forbidden, not handled
+						Face newface=he.twin.face;
+						partialOrder.add(he.twin);
+						if (newface.edge.eutil>=0) 
+							newface.edge.eutil=1;
+						if (newface.edge.next.eutil>=0)
+							newface.edge.next.eutil=1;
+						if (newface.edge.next.next.eutil>=0)
+							newface.edge.next.next.eutil=1;
+						nextf.add(newface.faceIndx);
+						hit=true;
+					}
+					he=he.next;
+				} while (he!=face.edge);
+			} // done with currf	
+		} // done with nextf
+		
+//		CPBase.Hlink=partialOrder;
+
+		return partialOrder;
+	}
+
 	/**
 	 * 'pdcel' should be complete with red chain
 	 * established. Goal is to renumber the vertices,
@@ -2179,7 +2254,7 @@ public class CombDCEL {
 	 * 
 	 * If there is an input list of vertices to be excised, 
 	 * they should appear in  first vector of strings in 
-	 * 'flags' without a preceding flag. Outer edges about 
+	 * 'flags' without a preceding flag. Edges surrounding
 	 * these will be included as forbidden.
 	 * 
 	 * Then check for flag segments:
@@ -2193,9 +2268,9 @@ public class CombDCEL {
 	 * and 'non-keepers': the latter may remain in the boundary of 
 	 * the excised DCEL structure.
      *
-	 * If no verts are listed and poisonVerts was empty on entry, then the 
-	 *   points on the side of 'ClosedPath' (if there is one) opposite to 'seed' 
-	 *   are poison by default.
+	 * If no verts are listed and poisonVerts was empty on entry, 
+	 *   then the points on the side of 'CPBase.ClosedPath' 
+	 *   (if not null) opposite to 'seed' are poison by default.
 	 *   
 	 * @param p PackData
 	 * @param flags Vector<Vector<String>>; may be null
@@ -2204,7 +2279,7 @@ public class CombDCEL {
 	public static HalfLink d_CookieData(PackData p,
 			Vector<Vector<String>> flags) {
 		boolean debug=false;
-		PackDCEL pdcel=p.packDCEL; // p.getFlower(1132);
+		PackDCEL pdcel=p.packDCEL; 
 		if (pdcel==null) 
 			return null;
 		NodeLink vlink=new NodeLink();
@@ -2298,12 +2373,10 @@ public class CombDCEL {
 			
 			if (debug) // debug=true; 
 				CPBase.Vlink=vlink;
-			
 		}
 		
 		if (vlink.size()!=0) {
 			hlink.separatingLinks(pdcel,vlink,pdcel.alpha.origin.vertIndx);
-			// pdcel.p.getFlower(1132);
 			// add any missing bdry edges
 			for (int f=1;f<=pdcel.idealFaceCount;f++) {
 				Face idealf=pdcel.idealFaces[f];
@@ -2639,7 +2712,7 @@ public class CombDCEL {
     		RedHEdge oldrtrace=pdc.redChain;
     		do {
     			newRedEdges[++rtick]=oldrtrace.clone();
-    			// set index and store in old and new 'redutil'
+    			// set index, store in both old and new 'redutil'
     			newRedEdges[rtick].redutil=oldrtrace.redutil=rtick;
     			newRedEdges[rtick].myEdge=
     					pdcel.edges[oldrtrace.myEdge.edgeIndx];
@@ -2664,14 +2737,14 @@ public class CombDCEL {
     		pdcel.fullOrder=new HalfLink(pdc.p);
     		Iterator<HalfEdge> fois=pdc.fullOrder.iterator();
     		while (fois.hasNext()) {
-    			pdcel.fullOrder.add(fois.next().clone());
+    			pdcel.fullOrder.add(pdcel.edges[fois.next().edgeIndx]);
     		}
     	}
     	if (pdc.layoutOrder!=null) {
     		pdcel.layoutOrder=new HalfLink();
     		Iterator<HalfEdge> heis=pdc.layoutOrder.iterator();
     		while (heis.hasNext()) {
-    			pdcel.layoutOrder.add(heis.next().clone());
+    			pdcel.layoutOrder.add(pdcel.edges[heis.next().edgeIndx]);
     		}
     	}
     	if (pdc.sideStarts!=null) {
@@ -2695,10 +2768,11 @@ public class CombDCEL {
     		pdcel.pairLink=new D_PairLink();
     		Iterator<D_SideData> pis=pdc.pairLink.iterator();
     		pis.next(); // flush first null entry
-    		pdcel.pairLink.add(null); // first null entry innew
+    		pdcel.pairLink.add(null); // first null entry in new
     		while (pis.hasNext()) {
     			RedHEdge rhe=null;
-    			D_SideData sd=pis.next().clone();
+    			D_SideData old_sd=pis.next();
+    			D_SideData sd=old_sd.clone();
 
     			// fix pointers
     			if ((rhe=sd.startEdge)!=null)
@@ -2817,7 +2891,7 @@ public class CombDCEL {
 	 * @return ArrayList<RedVertex> of new 'RedVertex's
 	 */
 	public static ArrayList<Vertex> process(PreRedVertex prV) {
-		boolean debug=false; // debug=true;
+//		boolean debug=false; // debug=true;
 		HalfEdge he=null;
 		prV.bdryFlag=1;
 		ArrayList<Vertex> redList=new ArrayList<Vertex>();

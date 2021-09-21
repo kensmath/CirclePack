@@ -188,7 +188,7 @@ public class D_SideData {
     }
 
 	/**
-	 * clone: CAUTION: pointers may be in conflict or outdated.
+	 * clone: CAUTION: pointers are likely in conflict or outdated.
 	 * @return new D_SideData
 	 */
     public D_SideData clone() {

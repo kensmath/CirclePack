@@ -43,8 +43,8 @@ packings by repeatedly adding barycenters to all interstices
 
 <command cmd="add_edge" flags="{v1 w2  v2 w2 ..}">
 <description> Given a list of vertices, we pick off successive pairs
-	{v,w}. We stop unless v and w are bdry vertices sharing one or
-	two common neighbor(s). In this case we create a new edge {v w}
+	{v,w}. We stop unless v and w are bdry vertices sharing one 
+	(resp. two) common neighbor(s). In this case we create a new edge {v w}
 	and one (resp. two) new faces. Note that successive pairs may 
 	become eligible as earlier edges are added. If two faces are 
 	added, this means the vertices were part of a 4-edge bdry component;
@@ -54,6 +54,7 @@ packings by repeatedly adding barycenters to all interstices
 <seealso>
 <see> enclose</see>
 <see> split_edge</see>
+<see> meld_edge</see>
 </seealso>
 </command>
 
@@ -1910,14 +1911,12 @@ these packings and the corresponding object is displayed in both.
 	mind; the -q option lets the user specify q. (See VERTEX_MAP 
 	in data file descriptions.)
 </description>
-
 <options> 
 	<opt flag="-r"> translate via inverse of vertex_map (must appear first)</opt>
 	<opt flag="-v"> circles (the default) (or -c)</opt>
 	<opt flag="-f"> faces</opt>
 	<opt flag="-q{q}"> for faces only, vis-a-vis pack number q.</opt>
 </options>
-
 <examples> 
 	<instance text="map a(1,10)"> This will store the translated 
 	indices of circles 1-10 of the active pack in Vlist.</instance>
@@ -2023,6 +2022,21 @@ these packings and the corresponding object is displayed in both.
 <see>set_radii</see>
 </seealso>
 </command>
+
+
+<command cmd="meld_edge" flags="{v w ..}">
+<description>This call will remove the specified edges by melding
+	their vertices. Edge order is important: given edge <v,w>, 
+	the vertices are combined to a single vertex, with w being
+	orphaned. Applied carefully, this command can undo some 
+	other commands that add edges.
+</description>
+<seealso>
+<see>split_edge</see>
+<see>split_flower</see>
+<see>enclose</see>
+</seealso>
+</command>      		
      		
 <command cmd="mend" flags="{data}">
 <description>(Not maintained robustly) Routine to fix small 
@@ -2066,11 +2080,12 @@ these packings and the corresponding object is displayed in both.
 	combinatorial modification mimicking the effect of having
 	advanced that slit along one additional edge. So it 
 	'migrates' a simple branch point at v to a simple branch 
-	point at neighbor w. There are combintoric restrictions:
+	point at neighbor w. There are combinatoric restrictions:
 	* v must have even degree, at least 6
 	* w and the neighbor ww opposite across v must have the
 	  same degree.
-	* v, w, and ww must be interior
+	* v, w, and ww must be interior.
+	This has worked well, for example, with hexagonal packings.
 	After the migration, the index of the new branch point is
 	reset to v as a convenience for further migrations.  
 </description>
@@ -4443,9 +4458,11 @@ of circles with that particular edge displayed.</instance>
 	oriented cycle {v,u,v',w} bounds the two faces sharing edge 
 	{v',v}. The new vertex v' is given the maximal index in the 
 	packing. Any stored data in 'flist' and 'xyzpoint' is lost.
+	To undo the split, call 'meld_edge'.
 </description>
 <seealso>
 <see>split_edge</see>
+<see>meld_edge</see>
 <see>add_bary</see>
 <see>add_edge</see>
 </seealso>

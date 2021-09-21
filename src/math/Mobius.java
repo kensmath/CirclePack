@@ -1656,12 +1656,13 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/**
-	 * For Mobius, returns the distance of normalized mobius from identity in
-	 * the Frobenius norm (which is sqrt of sum of squares of abs entries).
-	 * Useful for seeing how close a mobius is to being the identity.
-	 * 
+	 * For Mobius, returns the distance of normalized mobius from 
+	 * identity in the Frobenius norm (which is sqrt of sum of 
+	 * squares of abs entries). Useful for seeing how close a 
+	 * mobius is to being the identity.
 	 * @param mob Mobius
-	 * @return double, Frobenius norm, >=0, but -1 on error (such as extreme det(mob))
+	 * @return double, Frobenius norm of 'mob-Id', -1 on error 
+	 * (such as extreme det(mob))
 	 */
 	public static double frobeniusNorm(Mobius mob) {
 		if (mob == null)

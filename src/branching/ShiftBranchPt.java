@@ -85,9 +85,9 @@ public class ShiftBranchPt extends GenBranchPt {
 		for (int j=0;j<packData.countFaces(myIndex);j++)
 			petals.add(packData.kData[myIndex].flower[j]);
 		
-		bdryLink=PackData.islandSurround(packData,petals);
-		if (bdryLink==null)
-			throw new CombException("Failed to build surround faces");
+//		bdryLink=PackData.islandSurround(packData,petals);
+//		if (bdryLink==null)
+//			throw new CombException("Failed to build surround faces");
 
 		// cookie
 		NodeLink seedlist=new NodeLink(packData,myIndex);
@@ -149,14 +149,14 @@ public class ShiftBranchPt extends GenBranchPt {
 		
 		// need to convert 'bdryLink' to local face numbers
 		borderLink=new FaceLink(myPack);
-		Iterator<Integer> dL=bdryLink.iterator();
-		while (dL.hasNext()) {
-			int F=dL.next();
-			borderLink.add(myPack.what_face(
-					vertexMap.findV(packData.faces[F].vert[0]),
-					vertexMap.findV(packData.faces[F].vert[1]),
-					vertexMap.findV(packData.faces[F].vert[2])));
-		}
+//		Iterator<Integer> dL=bdryLink.iterator();
+//		while (dL.hasNext()) {
+//			int F=dL.next();
+//			borderLink.add(myPack.what_face(
+//					vertexMap.findV(packData.faces[F].vert[0]),
+//					vertexMap.findV(packData.faces[F].vert[1]),
+//					vertexMap.findV(packData.faces[F].vert[2])));
+//		}
 	  		
 		// vertex 0 is the second sister; don't change nodeCount
 		myPack.kData[0]=myPack.kData[1].clone();

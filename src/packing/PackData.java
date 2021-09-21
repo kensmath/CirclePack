@@ -178,7 +178,8 @@ public class PackData{
     public PointLink zlist;   // pack utility complex point list
     public BaryLink blist;    // pack utility barycentric point list
     public VertexMap vertexMap;// optional map of (some) indices 
-    public EdgeLink poisonEdges; // 
+    public EdgeLink poisonEdges; // traditional
+    public HalfLink poisonHEdges; // migrate to this
     public NodeLink poisonVerts; //
     public Point3D []xyzpoint;  // TODO: should be vector? pointer to associated 3D coords
     public Vector<Double> utilDoubles;  // utility vector to hold doubles (caution: indexed from 0)
@@ -2699,6 +2700,8 @@ public class PackData{
 		try {
 			if (packDCEL!=null) 
 				return vData[v].curv;
+			
+			// traditional:
 			else
 				return rData[v].curv;
 		} catch(Exception ex) {
@@ -3324,16 +3327,8 @@ public class PackData{
 	public void setRadius(int v,double r) {
 		if (hes>0 && r>=Math.PI) 
 			r=Math.PI-OKERR;
-		
-		if (packDCEL!=null) { 
-			packDCEL.setVertRadii(v,r);
-			return;
-		}
-		
-		// traditional packing
-		if (v<1 || v>nodeCount) 
-			return;
-		rData[v].rad=r;
+		packDCEL.setVertRadii(v,r);
+		return;
 	}
 
 	/**
@@ -16985,7 +16980,7 @@ public class PackData{
 			String str=its.next().get(0);
 			if (str.startsWith("-t")) // usually this should occur first
 				transflag=true;
-			else if (str.startsWith("-v"))
+			else if (str.startsWith("-v") || str.startsWith("-c"))
 				vflag=true;
 			else if (str.startsWith("-V"))
 				Vflag=true;
@@ -16998,7 +16993,7 @@ public class PackData{
 		}
 
 		// vflag and Vflag cases: copying/composing vertexMap's
-		if (vflag && !transflag && putget) { // copy 'this.vertexMap' to q
+		if (vflag && transflag && putget) { // copy 'this.vertexMap' to q
 			if (vertexMap==null || vertexMap.size()==0) {
 				flashError("this packing did not have a vertex map");
 				return 0;
@@ -17006,7 +17001,7 @@ public class PackData{
 			q.vertexMap=vertexMap.makeCopy();
 			return q.vertexMap.size();
 		}
-		if (vflag && !transflag && !putget) { // copy from q.vertexMap to 'this'
+		if (vflag && transflag && !putget) { // copy from q.vertexMap to 'this'
 			if (q.vertexMap==null || q.vertexMap.size()==0) {
 				flashError("second packing did not have a vertex map");
 				return 0;
@@ -17188,6 +17183,8 @@ public class PackData{
 						es=true;
 					if (flag.contains("z"))  
 						ez=true;
+					if (flag.contains("c"))
+						ec=true;
 					
 					Iterator<HalfEdge> his=hlink.iterator();
 					while (his.hasNext()) {
@@ -20148,12 +20145,10 @@ public class PackData{
 	 * close to identity) are displayed in 'Messages' and
 	 * written to a file if fp!=null. Return Frobenius norm.
 	 * @param p PackData,
-	 * @param hlink HalfLink, gives associated chain of faces
 	 * @param draw boolean: true, then draw colored faces as we go
 	 * @return Mobius, null on error
 	 */
-	public static Mobius holonomyMobius(PackData p,
-			HalfLink hlink,boolean draw) {
+	public static Mobius holonomyMobius(PackData p,HalfLink hlink) {
 
 		  PackDCEL pdcel=p.packDCEL;
 		  HalfEdge startedge=hlink.getFirst();
@@ -20171,7 +20166,7 @@ public class PackData{
 				  currhe.next.getSchwarzian(),
 				  currhe.next.next.getSchwarzian(),
 				  currhe.getSchwarzian(),p.hes);
-		  Complex[] startZ=new Complex[2];
+		  Complex[] startZ=new Complex[3];
 		  startZ[0]=new Complex(cs0.center);
 		  startZ[1]=new Complex(cs1.center);
 		  startZ[2]=new Complex(cs2.center);
@@ -20192,7 +20187,7 @@ public class PackData{
 		  }
 		  
 		  // line up triples
-		  Complex[] endZ=new Complex[2];
+		  Complex[] endZ=new Complex[3];
 		  if (endedge.next==startedge) { // head-to-tail
 			  endZ[0]=cs1.center;
 			  endZ[1]=cs2.center;
@@ -20205,8 +20200,8 @@ public class PackData{
 		  }
 		  
 		  String opts=null;
-		  if (draw) opts=new String("-ff"); // draw the colored faces as we go
-		  DispFlags dflags=new DispFlags(opts,p.cpScreen.fillOpacity);
+//		  if (draw) opts=new String("-ff"); // draw the colored faces as we go
+//		  DispFlags dflags=new DispFlags(opts,p.cpScreen.fillOpacity);
 		  Mobius mob=new Mobius(); // initialize transformation 
 		  if (p.hes<0) // hyp
 			  mob=Mobius.auto_abAB(startZ[0],startZ[1],endZ[0],endZ[1]);

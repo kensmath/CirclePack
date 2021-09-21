@@ -201,8 +201,8 @@ public class Vertex {
 		
 	/**
 	 * Get cclw ordered vector of "spokes", 'HalfEdge's with this
-	 * vertex as origin, starting with 'halfedge'. Expect
-	 * that if vertex is bdry, first in list will have 
+	 * vertex as origin, starting with 'halfedge'. Do not close up.
+	 * Expect that if vertex is bdry, first in list will have 
 	 * ideal 'twin.face' and last will have ideal 'face'.
 	 * @return ArrayList<HalfEdge> or null on error
 	 */

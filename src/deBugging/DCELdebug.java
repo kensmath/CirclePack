@@ -424,8 +424,8 @@ public class DCELdebug {
 				if (safety==0) {
 					strbld.append("  oops, safetied out");
 				}
-				else
-					strbld.append("\n");
+				if (he.twin.face==null || he.twin.face.faceIndx>=0)
+					strbld.append(" "+vert.halfedge.twin.origin.vertIndx);
 				System.out.println(strbld.toString());
 			}
 		}

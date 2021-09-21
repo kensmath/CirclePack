@@ -641,15 +641,25 @@ public class PackDCEL {
 	 * centers for 'edge.face'. Note: if 'edge.myRedEdge' is 
 	 * not null, this will update the centers stored for both 
 	 * red vertices at the ends of 'edge'. 
+	 * if 'edge' has bdry twin, then use its own end centers.
 	 * @param edge HalfEdge
 	 * @return int, 1 or 3 centers set.
 	 */
 	public int d_faceXedge(HalfEdge edge) {
-		
-		// get centers of end vertices from opposed face 
+		CircleSimple c0=null;
+		CircleSimple c1=null;
 		HalfEdge etwin=edge.twin;
-		CircleSimple c0=getVertData(etwin.next);
-		CircleSimple c1=getVertData(etwin);
+				
+		// opposite face is ideal?
+		if (etwin.face!=null && etwin.face.faceIndx<0) {
+			c0=getVertData(edge);
+			c1=getVertData(edge.next);
+		}
+		// typical: get centers of end vertices from opposed face 
+		else {
+			c0=getVertData(etwin.next);
+			c1=getVertData(etwin);
+		}
 		double rad2=getVertRadius(edge.next.next);
 		double ov0=edge.next.getInvDist();
 		double ov1=edge.prev.getInvDist();
@@ -1542,6 +1552,18 @@ public class PackDCEL {
 	 */
 	public HalfEdge findHalfEdge(int v,int w) {
 		return findHalfEdge(new EdgeSimple(v,w));
+	}
+
+	/**
+	 * Find the 'HalfEdge' based on 'vertIndx's of
+	 * the given 'he' (typically from a related 
+	 * DCEL structure).
+	 * @param he HalfEdge
+	 * @return HalfEdge, null on failure to find
+	 */
+	public HalfEdge findHalfEdge(HalfEdge he) {
+		EdgeSimple es=new EdgeSimple(he);
+		return findHalfEdge(es);
 	}
 	
 	/**

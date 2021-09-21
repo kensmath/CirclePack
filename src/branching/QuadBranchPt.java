@@ -85,9 +85,9 @@ public class QuadBranchPt extends GenBranchPt {
 		corn.add(vert[2]);
 		corn.add(vert[1]);
 		corn.add(vert[3]);
-		bdryLink=PackData.islandSurround(packData,corn);
-		if (bdryLink==null)
-			throw new CombException("Didn't get 'faceSurround' list");
+//		bdryLink=PackData.islandSurround(packData,corn);
+//		if (bdryLink==null)
+//			throw new CombException("Didn't get 'faceSurround' list");
 
 		// cookie
 		NodeLink seedlist=new NodeLink(packData,"If "+singFace_f+" "+singFace_g);
@@ -158,13 +158,13 @@ public class QuadBranchPt extends GenBranchPt {
 				
 		// need to convert 'bdryLink' to local face numbers
 		borderLink=new FaceLink(myPack);
-		Iterator<Integer> dL=bdryLink.iterator();
-		while (dL.hasNext()) {
-			int F=dL.next();
-			borderLink.add(myPack.what_face(vertexMap.findV(packData.faces[F].vert[0]),
-					vertexMap.findV(packData.faces[F].vert[1]),
-					vertexMap.findV(packData.faces[F].vert[2])));
-		}
+//		Iterator<Integer> dL=bdryLink.iterator();
+//		while (dL.hasNext()) {
+//			int F=dL.next();
+//			borderLink.add(myPack.what_face(vertexMap.findV(packData.faces[F].vert[0]),
+//					vertexMap.findV(packData.faces[F].vert[1]),
+//					vertexMap.findV(packData.faces[F].vert[2])));
+//		}
 		
 		myPack.set_aim_default();
 		myPack.alloc_overlaps();

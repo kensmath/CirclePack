@@ -225,7 +225,7 @@ public class d_HypPacker extends RePacker {
 
 					int v = index[j];
 					double faim=p.vData[v].aim;
-					// Remember, computataions depend on using squared s-radius
+					// Remember, computations depend on using squared s-radius
 					double x_rad=getTriRadius(v);
 					double r=1.0-x_rad;
 					if (r>=1.0)

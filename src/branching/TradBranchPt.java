@@ -56,19 +56,17 @@ public class TradBranchPt extends GenBranchPt {
 		// set up vertexMap, 'bdryLink', transData, etc.
 		matchCount=packData.countFaces(myIndex)+1; // petals plus center
 		vertexMap=new VertexMap();
-		bdryLink=new FaceLink(packData);
 		transData=new int[matchCount+1];
 		int[] faceFlower=packData.getFaceFlower(myIndex);
 		for (int j=0;j<packData.countFaces(myIndex);j++) {
 			int vv=packData.kData[myIndex].flower[j];
 			vertexMap.add(new EdgeSimple(j+2,vv));
 			transData[j+2]=vv;
-			bdryLink.add(faceFlower[j]);
 		}
 		vertexMap.add(new EdgeSimple(1,myIndex)); // add center
 		transData[1]=-myIndex;
-		if (!packData.isBdry(myIndex)) // close up? 
-			bdryLink.add(bdryLink.get(0)); 
+//		if (!packData.isBdry(myIndex)) // close up? 
+//			bdryLink.add(bdryLink.get(0)); 
 		
 		packData.setAim(myIndex,-1.0); // 1 is packed locally 
 		

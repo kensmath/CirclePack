@@ -90,9 +90,9 @@ public class SingBranchPt extends GenBranchPt {
 		NodeLink beach=new NodeLink(packData);
 		for (int ii=0;ii<3;ii++)
 			beach.add(face.vert[ii]);
-		bdryLink=PackData.islandSurround(packData,beach);
-		if (bdryLink==null)
-			throw new CombException("Didn't get 'faceSurround' list");
+//		bdryLink=PackData.islandSurround(packData,beach);
+//		if (bdryLink==null)
+//			throw new CombException("Didn't get 'faceSurround' list");
 
 		// identify 'connect's (no longer want these in 'beach')
 		int []parentconnect=new int[3]; // parent indices of 'connection' vertices
@@ -223,13 +223,13 @@ public class SingBranchPt extends GenBranchPt {
 		
 		// need to convert 'bdryLink' to local face numbers
 		borderLink=new FaceLink(myPack);
-		Iterator<Integer> dL=bdryLink.iterator();
-		while (dL.hasNext()) {
-			int F=dL.next();
-			borderLink.add(myPack.what_face(vertexMap.findV(packData.faces[F].vert[0]),
-					vertexMap.findV(packData.faces[F].vert[1]),
-					vertexMap.findV(packData.faces[F].vert[2])));
-		}
+//		Iterator<Integer> dL=bdryLink.iterator();
+//		while (dL.hasNext()) {
+//			int F=dL.next();
+//			borderLink.add(myPack.what_face(vertexMap.findV(packData.faces[F].vert[0]),
+//					vertexMap.findV(packData.faces[F].vert[1]),
+//					vertexMap.findV(packData.faces[F].vert[2])));
+//		}
 		
 		// set face drawing order: poison edges allow one face to get to 'newBranchSpot' 
 		myPack.firstFace=borderLink.get(0);

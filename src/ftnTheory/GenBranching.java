@@ -15,7 +15,7 @@ import branching.ShiftBranchPt;
 import branching.SingBranchPt;
 import branching.TradBranchPt;
 import complex.Complex;
-import exceptions.CombException;
+import dcel.CombDCEL;
 import exceptions.DataException;
 import exceptions.InOutException;
 import exceptions.ParserException;
@@ -23,12 +23,9 @@ import geometry.CircleSimple;
 import geometry.HyperbolicMath;
 import input.CPFileManager;
 import komplex.AmbiguousZ;
-import komplex.DualGraph;
 import komplex.EdgeSimple;
 import listManip.BaryLink;
-import listManip.EdgeLink;
 import listManip.FaceLink;
-import listManip.GraphLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.PointLink;
@@ -53,7 +50,7 @@ import util.UtilPacket;
  * Among the methods currently available are "singular" and "fractured" 
  * branching in faces, "shifted" and "chaperone" branching in circles,
  * and "quad" branching in pairs of faces. Others options may be developed,
- * but the main ones now are "singular" (replacing "fractured" and 
+ * but the main ones now are "singular" (replacing "fractured") and 
  * "chaperone" (replacing, but sometimes referred to as, "shifted");
  * "quad" hasn't been fully developed and may not be needed. 
  * 
@@ -64,15 +61,15 @@ import util.UtilPacket;
  */
 public class GenBranching extends PackExtender {
 	
-	public PackData refPack;  // reference copy of original packing
+	// a reference copy of original packing is maintained unchanged
+	public PackData refPack;  
 	
-	Vector<GenBranchPt> branchPts; // ignore 0 index, start with 1
+	Vector<GenBranchPt> branchPts; // start with index 1
 	public static final double LAYOUT_THRESHOLD=.00001; // for layouts based on quality
-	HalfLink holoBorder; // for checking holonomy
-	
-	GraphLink layoutTree;  // tree for parent layout
-	int []vertTracker;  // who is laying out each vertex? branchID for those interior 
-						//   to branch point
+	HalfLink holoBorder;   // for holonomy about the parent's red chain
+	HalfLink outerLayout;  // layout for parent circumventing branch regions
+	int []vertTracker;  // who lays out each vertex? branchID for 
+						// those interior to branch region
 	public static double m2pi=2.0*Math.PI;
 
 	// Constructor
@@ -87,18 +84,16 @@ public class GenBranching extends PackExtender {
 				"original parent is held in 'refPack'.)";
 		registerXType();
 		if (running) {
-			packData.packExtensions.add(this);
-			packData.poisonEdges=null;
+			packData.poisonHEdges=null;
 			packData.poisonVerts=null;
+			refPack=packData.copyPackTo(); // maintains original
+			packData.packExtensions.add(this);
 		}
 		
 		// initialize 'holoBorder' along full red chain
 		holoBorder=HalfLink.HoloHalfLink(packData.packDCEL,-1);
 		branchPts=new Vector<GenBranchPt>(3);
 		branchPts.add((GenBranchPt)null); // make index 0 empty; numbering is from 1
-		layoutTree=parentLayout();
-		
-		refPack=packData.copyPackTo(); // maintains original data and geometry
 	}
 
     /**
@@ -256,9 +251,8 @@ public class GenBranching extends PackExtender {
 				else 
 					return 0;
 				
-				// get layoutTree, use it to set parent's drawing order
-				layoutTree=parentLayout(); //  CPBase.Glink=layoutTree.makeCopy(); cpCommand("disp -w -ddc20t3 Glist");
-				DualGraph.tree2Order(packData,layoutTree);
+				// get drawing order for outside of branch regions
+				outerLayout=parentLayout();
 				return 1;
 				
 			} catch (Exception ex) {
@@ -283,7 +277,7 @@ public class GenBranching extends PackExtender {
 		if (cmd.startsWith("holon")) {
 			// Idea is to use holoBorder to check holonomy of full packing
 			// Note: this does not actually change any centers
-			Mobius holomob=PackData.holonomyMobius(packData,holoBorder,false);
+			Mobius holomob=PackData.holonomyMobius(packData,holoBorder);
 			double frobNorm=Mobius.frobeniusNorm(holomob);
 			if (frobNorm<0)
 				return 0;
@@ -303,8 +297,7 @@ public class GenBranching extends PackExtender {
 			branchPts.remove(cmdBranchPt);
 
 			// reset parent's drawing order
-			layoutTree=parentLayout();
-			DualGraph.tree2Order(packData,layoutTree);
+			outerLayout=parentLayout();
 			count++;
 		}
 		
@@ -444,7 +437,8 @@ public class GenBranching extends PackExtender {
 		// =========== Repack =====================
 		else if (cmd.startsWith("Repack")) {
 			double currErr=1.0;
-			double prevErr=1.0;
+			double prevErr=100000;
+			boolean flip=false; // set true if error goes up on some cycle
 			
 			// there is just one argument, max iterations
 			int parentcycles=10;
@@ -454,16 +448,29 @@ public class GenBranching extends PackExtender {
 				cycles=Integer.parseInt(items.get(0));
 			} catch (Exception ex) {}
 			
-			// ping-pong between branch point repacking and parent
-			//   repacking, exchanging radii in between steps.
+			// cycle through: 
+			//   (1) repacking along the event horizon(s),
+			//   (2) the parent,
+			//   (3) and the branch point(s), 
+			// exchanging radii in between steps.
 			int safety=0;
 			int docount=1;
 			while (docount>0 && currErr>PackData.OKERR && safety<cycles) {
 				docount=0;
 				safety++;
 				currErr=0.0;
+				
+				// (1) horizon(s); horizon radii equal in branch and parent
+				for (int b=1;b<branchPts.size();b++) {
+					GenBranchPt gbp=branchPts.get(b);
+					UtilPacket uP=gbp.horizonRiffle(100); 
+					if (uP.rtnFlag>=0) {
+						currErr +=uP.value;
+						docount++;
+					}
+				}
 					
-				// first, repack all branch points, send their radii to parent
+				// (2) repack all branch points; should only change branch interior
 				for (int b=1;b<branchPts.size();b++) {
 					GenBranchPt gbp=branchPts.get(b);
 					UtilPacket uP=gbp.riffleMe(-1);
@@ -475,9 +482,7 @@ public class GenBranching extends PackExtender {
 //					msg("Repack branch points "+safety);
 				}
 				
-				// repack parent (don't use C library) 
-				//    (this should not change interior info of branch points)
-//				count+=
+				// (3) repack parent
 				packData.fillcurves();
 				int rc=packData.repack_call(parentcycles,true,false);
 				if (rc>0) {
@@ -485,17 +490,20 @@ public class GenBranching extends PackExtender {
 					currErr += packData.angSumError();
 //					msg("Repack parent "+safety);
 				}
-				
+
+				// check error
+				if (currErr>prevErr) {
+					flip=true;
+				}
 				// try to prevent unhelpful runs
 				if ((prevErr-currErr)> 10*PackData.OKERR) {
 					prevErr=currErr;
 				}
 				else 
 					safety *= 2; // cut down the cycles
-					
-					
-			} // end of while
 
+				prevErr=currErr;
+			} // end of while
 			
 			// any success?
 			if (safety>0) {
@@ -510,8 +518,8 @@ public class GenBranching extends PackExtender {
 		
 		// =========== layout =================
 		else if (cmd.startsWith("layout")) {
-			// lay out specified or all branch points in 
-			//    their normalized positions.
+			// lay out for specified or for all branch points 
+			//    as independent packing(s).
 			int id=-1;
 			try {
 				if (cmdBranchPt!=null) {
@@ -541,30 +549,7 @@ public class GenBranching extends PackExtender {
 				errorMsg("Parent seems to have no layout; "+
 						"lay out the branch point(s) alone");
 			}
-			if (layoutCount<=0) {
-				try {
-					for (int b=1;b<branchPts.size();b++) {
-						GenBranchPt gbp=branchPts.get(b);
-						gbp.layout(true);
-						count++;
-					}
-				} catch (Exception e) {
-					throw new InOutException("problem in branch point layouts");
-				}
-			}
-			
-			// if layout of parent seems to succeed
-			else {
-				try {
-					for (int b=1;b<branchPts.size();b++) {
-						GenBranchPt gbp=branchPts.get(b);
-						gbp.placeMyCircles();
-						count++;
-					}
-				} catch (Exception e) {
-					throw new InOutException("problem in branch point layouts");
-				}
-			}
+			return layoutCount;
 		}
 		
 		// =========== local display command =================
@@ -591,8 +576,7 @@ public class GenBranching extends PackExtender {
 					throw new ParserException();
 				if (ans<0) { 
 					// get layoutTree, use it to set parent's drawing order
-					layoutTree=parentLayout(); //  CPBase.Glink=layoutTree.makeCopy(); cpCommand("disp -w -ddc20t3 Glist");
-					DualGraph.tree2Order(packData,layoutTree);
+					outerLayout=parentLayout(); 
 				}
 			} catch (Exception ex) {
 				Oops("Branch ID="+cmdBranchPt.branchID+", set parameters failed: "+ex.getMessage());
@@ -610,17 +594,6 @@ public class GenBranching extends PackExtender {
 				return 0;
 			}
 			CirclePack.cpb.msg(cmdBranchPt.getParameters());
-			return 1;
-		}
-		
-		// ============== set_G =========================
-		else if (cmd.startsWith("set_G")) {
-			if (layoutTree!=null) {
-				CPBase.Glink=layoutTree.makeCopy();
-				return CPBase.Glink.size();
-			}
-			else 
-				CPBase.Glink=null;
 			return 1;
 		}
 		
@@ -674,8 +647,8 @@ public class GenBranching extends PackExtender {
 					branchPts.add(tbp);
 					
 					// get layoutTree, use it to set parent's drawing order
-					layoutTree=parentLayout(); //  CPBase.Glink=layoutTree.makeCopy(); cpCommand("disp -w -ddc20t3 Glist");
-					DualGraph.tree2Order(packData,layoutTree);
+					outerLayout=parentLayout(); //  CPBase.Glink=layoutTree.makeCopy(); cpCommand("disp -w -ddc20t3 Glist");
+					packData.packDCEL.layoutOrder=outerLayout.makeCopy();
 				}
 				count=GenBranchPt.TRADITIONAL;
 			} catch (Exception ex) {
@@ -700,8 +673,7 @@ public class GenBranching extends PackExtender {
 					branchPts.add(fbp);
 
 					// get layoutTree, use it to set parent's drawing order
-					layoutTree=parentLayout(); //  CPBase.Glink=layoutTree.makeCopy(); cpCommand("disp -w -ddc20t3 Glist");
-					DualGraph.tree2Order(packData,layoutTree);
+					outerLayout=parentLayout(); 
 				}				
 				count=GenBranchPt.FRACTURED;
 			} catch (Exception ex) {
@@ -726,9 +698,8 @@ public class GenBranching extends PackExtender {
 					msg(qbp.reportExistence());
 					branchPts.add(qbp);
 
-					// get layoutTree, use it to set parent's drawing order
-					layoutTree=parentLayout(); //  CPBase.Glink=layoutTree.makeCopy(); cpCommand("disp -w -ddc20t3 Glist");
-					DualGraph.tree2Order(packData,layoutTree);
+					// get outerLayout; parent maintains its usual drawing order
+					outerLayout=parentLayout(); //  CPBase.Glink=layoutTree.makeCopy(); cpCommand("disp -w -ddc20t3 Glist");
 				}
 				count=GenBranchPt.QUADFACE;
 			} catch (Exception ex) {
@@ -820,8 +791,7 @@ public class GenBranching extends PackExtender {
 				branchPts.add(sbp);
 					
 				// get layoutTree, use it to set parent's drawing order
-				layoutTree=parentLayout(); //  CPBase.Glink=layoutTree.makeCopy(); cpCommand("disp -w -ddc20t3 Glist");
-				DualGraph.tree2Order(packData,layoutTree);
+				outerLayout=parentLayout(); 
 			}
 			count=GenBranchPt.SINGULAR;
 		}
@@ -837,10 +807,8 @@ public class GenBranching extends PackExtender {
 				branchPts.add(sbp);
 				count=GenBranchPt.SHIFTED;
 				
-				// get layoutTree, use it to set parent's drawing order
-				layoutTree=parentLayout(); //  CPBase.Glink=layoutTree.makeCopy(); cpCommand("disp -w -ddc20t3 Glist");
-				DualGraph.tree2Order(packData,layoutTree);
-				
+				// get 'outerLayout'; parent maintains its usual layoutOrder
+				outerLayout=parentLayout(); 
 			} catch (Exception ex) {
 				throw new ParserException("'shifted' usage: v w aim");
 			}
@@ -868,7 +836,7 @@ public class GenBranching extends PackExtender {
 						count++;
 						break;
 					}
-					case 'j': // jump petals (as vertex indices from parent)
+					case 'j': // jump petals indices 
 					{
 						getW1=Integer.parseInt(items.get(0));
 						getW2=Integer.parseInt(items.get(1));
@@ -895,9 +863,7 @@ public class GenBranching extends PackExtender {
 						packData.poisonVerts=null;
 						branchPts=new Vector<GenBranchPt>(3);
 						branchPts.add((GenBranchPt)null);
-						packData.setCombinatorics();
 						packData.set_aim_default();
-						packData.free_overlaps();
 					}
 					} // end of switch
 				
@@ -910,9 +876,10 @@ public class GenBranching extends PackExtender {
 			
 			if (getV<1 || getV>packData.nodeCount) // packData.vert_isPoison(1);
 				throw new ParserException("chaperone vertex missing or inappropriate");
-			if (getW1<0 || getW2<0) {
-				getW1=packData.kData[getV].flower[1];
-				getW2=packData.kData[getV].flower[3];
+			if (getW1<0 || getW2<0) { // default settings
+				int[] flower=packData.getFlower(getV);
+				getW1=flower[1];
+				getW2=flower[3];
 			}
 			
 			ChapBranchPt cbp=new ChapBranchPt(packData,branchPts.size(),getAim*Math.PI,
@@ -923,9 +890,8 @@ public class GenBranching extends PackExtender {
 				branchPts.add(cbp);
 				count=GenBranchPt.CHAPERONE;
 					
-				// get layoutTree, use it to set parent's drawing order 
-				layoutTree=parentLayout(); //  CPBase.Glink=layoutTree.makeCopy(); cpCommand("disp -w -ddc20t3 Glist");
-				DualGraph.tree2Order(packData,layoutTree);  // DualGraph.printGraph(layoutTree);
+				// get specialized layout order
+				outerLayout=parentLayout();
 				count++;
 			}
 		}
@@ -933,154 +899,68 @@ public class GenBranching extends PackExtender {
 	}
 
 	/**
-	 * We start with a normal layout tree and drawing order for 
-	 * 'packData', but then we modify it to keep branch points 
-	 * whole. Careful: plotFlag's may be reset.
+	 * This creates 'outerOrder', which partially lays out 
+	 * the parent, circumventing the branch points so they
+	 * can manage their own layouts. 
+	 * @return HalfLink
 	 */
-	public GraphLink parentLayout() {
-		// create typical full layout to get appropriate red chain to use below
-		if (packData.firstFace<1 || packData.firstFace>packData.faceCount)
-			packData.firstFace=1;
-//	OBE	
-//		GraphLink gl=DualGraph.buildDualGraph(packData,packData.firstFace,null);
-//		packData.dualGraph=branchSpanner(gl,packData.firstFace); // DualGraph.printGraph(packData.dualGraph);
-//		DualGraph.tree2Order(packData,packData.dualGraph);
+	public HalfLink parentLayout() {
 		
-		// need poison edges; start with outer edges of redChain poison
-//		packData.poisonEdges=new EdgeLink(packData,"Ra"); // cpCommand("disp -ec20t8 P");
-
-		// debug: see the poison edges with cpCommand("disp -ec198t8 P");
-		
-//		boolean debug=false; // debug=true;
-//		if (debug) {
-//			CPBase.Glink=packData.dualGraph.makeCopy();
-//			cpCommand("disp -ddc20t8 Glist");
-//		}
-		
-		// TODO: don't know if this is still needed.
-		CPBase.Hlink=packData.packDCEL.layoutOrder.makeCopy();
-		
-		// clear out branch point 'attachFace' entries, get their poison edges
+		// re-establish 'poisonHEdges'
+		packData.poisonHEdges=new HalfLink();
+		int[] vhits=new int[packData.nodeCount+1];
 		for (int b=1;b<branchPts.size();b++) {
 			GenBranchPt gbp=branchPts.get(b);
-			gbp.setAttachments(null);
-			packData.poisonEdges.abutMore(gbp.parentPoison);
-		}
-
-		// identify ends of poison edges as poison vertices, used to find firstface
-		packData.poisonVerts=new NodeLink(packData,"Ie P"); // cpCommand("disp -cf P");
-		
-		// set parent's firstFace: want it (if possible) to be interior, with no 
-		//    poison vertices. Try in order:
-		//  (1) current 'firstFace'
-		//  (2) containing alpha 
-		//  (3) farthest from poison and boundary
-		//  (4) any 'faceOK'
-		//  (5) current 'firstFace' (last resort)
-		int firstFace=-1;
-		if (faceOK(packData.firstFace))
-			firstFace=packData.firstFace;
-		if (firstFace<=0 || packData.firstFace>packData.faceCount) {
-			int farV=packData.getAlpha();
-			// try to use some face containing 'alpha'
-			for (int kk=0;(kk<packData.countFaces(farV) && firstFace<0);kk++) {
-				int f=packData.getFaceFlower(farV,kk);
-				if (faceOK(f))
-					firstFace=f;
+			for (int j=1;j<=gbp.matchCount;j++) {
+				int w=gbp.vertexMap.findW(j);
+				vhits[w]=1; // okay even if w==0
 			}
-
-			// no luck, try some face far from poison and boundary
-			if (firstFace<0) {
-				NodeLink sa=new NodeLink(packData,"P b");
-				farV=packData.gen_mark(sa,-1,false);
-				if (farV>0) {
-					for (int kk=0;(kk<packData.countFaces(farV) && firstFace<0);kk++) {
-						int f=packData.getFaceFlower(farV,kk);
-						if (faceOK(f))
-							firstFace=f;
-					}
-				}
-				// next, try any face
-				if (firstFace<0) {
-					for (int ff=1;(ff<=packData.faceCount && firstFace<0);ff++) {
-						if (faceOK(ff))
-							firstFace=ff;
-					}
-				}
-				// nothing yet? just stick with current
-				if (firstFace<0) {
-					firstFace=packData.firstFace;
+			packData.poisonHEdges.abutMore(gbp.parentHPoison);
+		}
+		
+		// reset parent's 'alpha', 'gamma' if necessary
+		int alph=packData.packDCEL.alpha.origin.vertIndx;
+		if (vhits[alph]!=0) {
+			for (int v=1;v<=packData.nodeCount;v++) {
+				if (vhits[v]==0) {
+					packData.setAlpha(v);
+					packData.chooseGamma();
 				}
 			}
 		}
-		
-		// now find the dual spanning graph 
-		// TODO: note this will treat the branch regions as islands and include
-		//       them in the red chain --- we want old redchain.
-		GraphLink dG=DualGraph.buildDualGraph(packData,firstFace,packData.poisonEdges);
-		GraphLink ans=null;
-		try {
-			ans=DualGraph.drawSpanner(packData,dG,firstFace); // CPBase.Glink=dG.makeCopy();cpCommand("disp -w -ddc190t4 Glist");
-		} catch (Exception ex) {
-			msg("dual spanning graph for the parent is null");
-		}
-		return ans; // CPBase.Glink=ans.makeCopy();cpCommand("disp -w -ddc190t4 Glist");
+
+		// now get the layout circumventing the branch points
+		HalfLink partOrder=CombDCEL.partialTree(packData.packDCEL,packData.poisonHEdges);
+		return partOrder; 
 	}
 
-	/** 
-	 * Check if face f is free of boundary or poison vertices
-	 * @param f int
-	 * @return boolean, true if is free of these
-	 */
-	public boolean faceOK(int f) {
-		int[] fverts=packData.getFaceVerts(f);
-		for (int i=0;i<3;i++) {
-			int v=fverts[i];
-			if (packData.isBdry(v) || packData.poisonVerts.containsV(v)>=0)
-				return false;
-		}
-		return true;
-	}
-	
 	/**
-	 * First, the parent positions most circles using the layout tree, then
-	 * the branch points place any circles they're responsible for. After that,
-	 * things are normalized --- first the parent, then the branch circles.
+	 * First, position the parent's outer circles using 'outerLayout'.
+	 * Then layout each branch point as follows: layout 'myHoloBorder'
+	 * whose first edge was positioned by the parent, then 
+	 * 'lastLayoutEdge' to pick up 'newBrPoint'. 
+	 * After that, everything is normalized based on the parent's
+	 * 'alpha' and 'gamma', and that Mobius is applied to reposition 
+	 * the centers of each branch point packing.
+	 * Note that the parent holds data for all vertices except
+	 * any added to branch points, e.g., chaperones, and their
+	 * data is held by the 'myPackData's.  
 	 * @return int, count of actions
 	 */
 	public int combinedLayout() {
 		int count=0;
-		if (layoutTree==null) { // CPBase.Glink=layoutTree.makeCopy();cpCommand("disp -w -f -ddc180t2 Glist");
-			throw new ParserException("do custom layout first");
+		if (outerLayout==null) { 
+			throw new ParserException("Custom parent layout not available");
 		}
 		
-		// find and place the first face
-		EdgeSimple edge=layoutTree.get(0); // this should be root
-		if (edge.v!=0)
-			throw new DataException("first entry of layoutTree is not a root");
-		int f=edge.w; // root face
-		edge=layoutTree.get(1);
-		int indx=(packData.face_nghb(edge.w, f)+2)%3; // if next is (f,g), use info on g
-		int pl=packData.place_face(f,indx);
-		if (pl==0)
-			throw new CombException("error plotting root face "+f);
-		
-		Iterator<EdgeSimple> gk=layoutTree.iterator();
-		edge=gk.next(); // get rid of root
-		while(gk.hasNext()) {
-			edge=gk.next();
-			int currf=edge.v;
-			int nextf=edge.w;
-			indx=packData.face_nghb(currf,nextf);
-			if (!packData.layByFaces(currf,nextf))
-				throw new DataException("error in layByFace, "+edge.v+" "+edge.w);
-			count++;
-		} // end of while
+		// use 'outerLayout' first
+		packData.packDCEL.layoutFactory(outerLayout,true,true);
 
 		// position the branch points
 		for (int b=1;b<branchPts.size();b++) {
 			GenBranchPt gbp=branchPts.get(b);
-			gbp.placeMyCircles();
+			gbp.getMyPackData().
+				packDCEL.layoutFactory(gbp.myHoloBorder,true,false);
 			count++;
 		}
 		
@@ -1092,6 +972,7 @@ public class GenBranching extends PackExtender {
 		if (agdist>=0.00001) {
 			if (packData.hes<0) 
 				mob=Mobius.standard_mob(az,gz);
+			// TODO: not yet ready for sph case
 			else 
 				mob=Mobius.affine_mob(az,gz,new Complex(0.0),new Complex(0.0,agdist));
 		}
@@ -1104,219 +985,7 @@ public class GenBranching extends PackExtender {
 				count++;
 			}
 		}
-			
 		return count;
-		
-	}
-	
-	/**
-	 * Specialized version of 'DualGraph.drawSpanner' which 
-	 * scoops up branch points as it encounters them. Basic 
-	 * idea is to pick up faces in generational order, but 
-	 * when we encounter any branch point for first time, 
-	 * pick up max connected subtree of dual edges in its 
-	 * 'bdryLink'.
-	 * Calling routine may want to choose 'startface' --- if 
-	 * not valid, search for one.
-	 * @param p PackData
-	 * @param graph GraphLink
-	 * @param startface int, first face to use.
-	 * @return GraphLink
-	 */
-	public GraphLink branchSpanner(GraphLink graph,int startface) {
-		
-		boolean debug=false;
-		if (graph==null || graph.size()==0)
-			throw new ParserException("problem with graph or node "+startface);
-
-		int []bfaces=new int[packData.faceCount+1];
-		
-		// mark all 'bdryLink' faces
-		for (int b=1;b<branchPts.size();b++) {
-			Iterator<Integer> bl=branchPts.get(b).bdryLink.iterator();
-			while (bl.hasNext()) {
-				bfaces[bl.next()]=b;
-				if (debug) // debug=true;
-					System.err.println("next b: "+b);
-			}
-			
-		}
-
-		// invalid starting face; choose one.
-		// TODO: need more rational choice
-		if (!graph.nodeExists(startface)) {
-			startface=graph.get(0).w;
-		}
-		
-		// keep track of:
-		//  * vgens[]: generation of circles, 1 means is in startface
-		//  * futil[]: generation of faces (lowest generation of its vertices)
-		//  * currFaceGen: which generation is being done now?
-		//  * currFaces: lowest gen faces with placed partners
-		
-		int count=0; // faces processed
-		
-		// store generations of verts, those of startface are 1.
-		for (int v=1;v<=packData.nodeCount;v++) {
-			packData.setVertUtil(v,0);
-		}
-		
-		// set startface vertices at generation 1
-		for (int j=0;j<3;j++) {
-			int k=packData.faces[startface].vert[j];
-			packData.setVertUtil(k,1);
-		}
-		
-		// get generations of the other vertices
-		util.UtilPacket uP=new util.UtilPacket();
-		int []vgens=packData.label_generations(-1,uP);
-		
-		//  store generation of faces (lowest generation of vertices) 
-		int []futil=new int[packData.faceCount+1];
-		for (int f=1;f<=packData.faceCount;f++) {
-			int[] fverts=packData.getFaceVerts(f);
-			futil[f]=vgens[fverts[0]];
-			for (int j=1;j<3;j++) {
-				int k=fverts[j];
-				if (vgens[k]<futil[f])
-					futil[f]=vgens[k];
-			}
-			packData.setFacePlotFlag(f,0);
-		}
-
-		// rotating lists of current/next faces being processed
-		FaceLink currFaces=null;
-		FaceLink nextFaces=new FaceLink(packData);
-		
-		// start tree
-		GraphLink dtree = new GraphLink();
-		dtree.add(new EdgeSimple(0,startface));
-		
-		// see if it's in a bdryLink
-		if (bfaces[startface]>0) {
-			GenBranchPt gbp=branchPts.get(bfaces[startface]);
-			dtree=bdrySubLink(gbp,startface);
-			for (int i=0;i<gbp.bdryLink.size();i++) {
-				int ff=gbp.bdryLink.get(i);
-				packData.setFacePlotFlag(ff,++count);
-				nextFaces.add(ff);
-			}				
-		}
-		else {
-			nextFaces.add(startface);
-			packData.setFacePlotFlag(startface,++count);
-		}		
-		int currFaceGen=0;
-		int safety=packData.faceCount;
-		while(nextFaces.size()>0 && safety>0) {
-			safety--;
-			currFaces=nextFaces;
-			nextFaces=new FaceLink(packData);
-			
-			// get lowest generation in 'currFaces'
-			currFaceGen=futil[currFaces.get(0)]; // generation of this list
-			for (int fi=1;fi<currFaces.size();fi++) {
-				int cg=futil[currFaces.get(fi)];
-				currFaceGen = (cg>currFaceGen) ? cg:currFaceGen;
-			}
-			
-			// process the current list
-			while (currFaces.size()>0) {
-				int face=currFaces.remove(0);
-//System.err.println("dS face="+face);				
-				NodeLink partners=graph.findPartners(face);
-				Iterator<Integer> ptns=partners.iterator();
-				while (ptns.hasNext()) {
-					int nghb=ptns.next();
-					if (packData.getFacePlotFlag(nghb)==0) {
-						
-						// add the dual edge
-						dtree.add(new EdgeSimple(face,nghb));
-						
-						// if in a bdryLink, add dual edges
-						if (bfaces[nghb]>0) {
-							GenBranchPt gbp=branchPts.get(bfaces[nghb]);
-							dtree.abutMore(bdrySubLink(gbp,nghb));
-							for (int i=0;i<gbp.bdryLink.size();i++) {
-								int ff=gbp.bdryLink.get(i);
-								packData.setFacePlotFlag(ff,++count);
-								// add ff to one of the lists
-								if (futil[ff]<=currFaceGen)
-									currFaces.add(ff);
-								else 
-									nextFaces.add(ff);
-							}				
-						}
-						else {
-							packData.setFacePlotFlag(nghb,++count);
-							// add nghb to one of the lists
-							if (futil[nghb]<=currFaceGen)
-								currFaces.add(nghb);
-							else 
-								nextFaces.add(nghb);
-						}
-					}
-				} // end of while on partners
-			} // end of while on currFace
-		} // end of outer while
-		
-		return dtree;
-	}	
-	
-	/**
-	 * Find maximal tree subgraph in 'bdryLink' for 'GenBranchPt' 'gbp', 
-	 * starting with face 'f'. 
-	 * @param gbp @see GenBranchPt
-	 * @param f int, first face
-	 * @return @see GraphLink, starting with (f,g) for some face g. Null on error or 
-	 * if bdryLink has only f in it.
-	 */
-	public GraphLink bdrySubLink(GenBranchPt gbp,int f) {
-		int indx=gbp.bdryLink.containsV(f);
-		if (indx<0 || gbp.bdryLink.size()<2)
-			return null;
-		GraphLink ans=new GraphLink();
-		
-		// need to know if it's closed
-		int clsd=0;
-		if (gbp.bdryLink.getLast()==gbp.bdryLink.getFirst()) // closed
-			clsd=1;
-		
-		int lastf=f;
-		int currf=f;
-		if (indx==0) { // f is first in list
-			for (int i=1;i<(gbp.bdryLink.size()-clsd);i++) {
-				lastf=currf;
-				currf=gbp.bdryLink.get(i);
-				ans.add(new EdgeSimple(lastf,currf));
-			}
-			return ans;	
-		}
-		if (indx==gbp.bdryLink.size()-1) { // f is last in list
-			currf=f;
-			for (int i=gbp.bdryLink.size()-1;i>=clsd;i--) {
-				lastf=currf;
-				currf=gbp.bdryLink.get(i);
-				ans.add(new EdgeSimple(lastf,currf));
-			}
-			return ans;
-		}
-		
-		// else, f is in interior of list
-		// go up 
-		for (int i=indx+1;i<(gbp.bdryLink.size()-clsd);i++) {
-			lastf=currf;
-			currf=gbp.bdryLink.get(i);
-			ans.add(new EdgeSimple(lastf,currf));
-		}
-		// go down
-		currf=f;
-		for (int i=indx-1;i>=0;i--) {
-			lastf=currf;
-			currf=gbp.bdryLink.get(i);
-			ans.add(new EdgeSimple(lastf,currf));
-		}
-		return ans;
 	}
 	
 	/**
@@ -1965,8 +1634,6 @@ public class GenBranching extends PackExtender {
 				"report the status of branch point 'b'"));
 		cmdStruct.add(new CmdStruct("angsum_err",null,null,
 				"report the l^2 anglesum error of parent and all branch points"));
-		cmdStruct.add(new CmdStruct("set_Glist",null,null,
-				"set Glist to 'layoutTree'"));
 		cmdStruct.add(new CmdStruct("get_param",null,null,
 				"report branch point parameters"));
 		cmdStruct.add(new CmdStruct("repack","[-b{b}] [N]",null,
