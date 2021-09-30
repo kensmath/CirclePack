@@ -307,13 +307,13 @@ public class RawDCEL {
 	/**
 	 * Split 'V' flower into two cclw flowers, 
 	 * depending on situation.  
-	 * (1) 'wedge', 'uedge' both non-null, then V must be
-	 * interior: first flower is w --> u about V,
-	 * while second is u --> w about 'newV'. 
-	 * Thus <v',V,u>, <v',w,V> are new oriented faces.
-	 * Return new edge <v,v'> (we can reverse with
-	 * a call to 'meldEdge' using <v,v'>).
-	 * (2) If 'uedge' is null, then V
+	 * (1) 'uedge', 'wedge' both non-null, then V must be
+	 * interior: first flower is u --> w about V,
+	 * while second is w --> u about 'newV'. 
+	 * Thus <V,v',u>, <v',V,w> are new oriented faces.
+	 * Return new edge <V,v'> (we can reverse with
+	 * a call to 'meldEdge' using <V,v'>).
+	 * (2) If 'wedge' is null, then V
 	 * must be a bdry; split the flower at 'wedge' 
 	 * (which must be interior edge): first flower 
 	 * downstream bdry around 'newV' to 'wedge'; 
@@ -322,26 +322,26 @@ public class RawDCEL {
 	 * Red chain is adjusted.
 	 * To reverse, use 'meldEdge_raw' with <V,newV>
 	 * @param pdcel PackDCEL
-	 * @param wedge HalfEdge
 	 * @param uedge HalfEdge
+	 * @param wedge HalfEdge
 	 * @return HalfEdge, new edge
 	 */
-	public static HalfEdge splitFlower_raw(PackDCEL pdcel,HalfEdge wedge,
-			HalfEdge uedge) {
+	public static HalfEdge splitFlower_raw(PackDCEL pdcel,HalfEdge uedge,
+			HalfEdge wedge) {
 		boolean debug=false; // debug=true;
 
-		if (wedge.isBdry())
-			throw new ParserException("Given 'wedge' should be interior");
+		if (uedge.isBdry())
+			throw new ParserException("Given 'uedge' should be interior");
 
 		// make room
 		if (pdcel.vertCount+1>=pdcel.p.sizeLimit)
 			pdcel.p.alloc_pack_space(pdcel.vertCount+11,true);
 
-		Vertex V=wedge.origin;
+		Vertex V=uedge.origin;
 		HalfLink spks=null;
 
 		// first case: boundary
-		if (uedge==null) {
+		if (wedge==null) {
 			double rad=.05;
 			if (V.halfedge.myRedEdge!=null)
 				rad=V.halfedge.myRedEdge.rad;
@@ -349,7 +349,7 @@ public class RawDCEL {
 			// hold some info
 			spks=V.getSpokes(V.halfedge);
 			HalfEdge downspoke=V.halfedge; // downstream edge
-			HalfEdge next_spoke=wedge.twin.next; // clw
+			HalfEdge next_spoke=uedge.twin.next; // clw
 			RedHEdge newred=null;
 			
 			// scope out the red chain situation
@@ -439,9 +439,11 @@ public class RawDCEL {
 		
 		// second, more typical, 
 		if (wedge.origin!=uedge.origin)
-			throw new DCELException("edges' origins don't match");
+			throw new DCELException(
+					"edges' origins don't match");
 		if (V.bdryFlag!=0)
-			throw new ParserException("given edge is supposed to be interior");
+			throw new ParserException(
+					"given edge is supposed to be interior");
 		
 		// hold some info
 		spks=V.getSpokes(wedge);
@@ -455,57 +457,61 @@ public class RawDCEL {
 			HalfEdge he=uedge.prev.twin;
 			do {
 				he.origin=newV;
-				he=he.prev.twin; // clw
+				he=he.prev.twin; // cclw
 			} while (he!=wedge);
 		}
 		V.halfedge=wedge;
 		
-		// create edge from newV to v
-		HalfEdge new_mid=new HalfEdge(newV);
-		newV.halfedge=new_mid;
-		new_mid.twin=new HalfEdge(V);
-		new_mid.twin.twin=new_mid;
+		// deBugging.DCELdebug.vertConsistency(pdcel,V.vertIndx);
 
-		// new 'uedge'
+		// create <v,newV> and twin
+		HalfEdge new_mid=new HalfEdge(V);
+		new_mid.twin=new HalfEdge(newV);
+		new_mid.twin.twin=new_mid;
+		newV.halfedge=new_mid.twin;
+		
+		// 'new_uedge' and twin
 		HalfEdge new_uedge=new HalfEdge(newV);
-		new_uedge.next=uedge.next;
-		uedge.next.prev=new_uedge;
+		new_uedge.twin=new HalfEdge(uedge.twin.origin);
+		new_uedge.twin.twin=new_uedge;
+		
 		new_uedge.prev=uedge.prev;
 		uedge.prev.next=new_uedge;
-		new_uedge.twin=u_twin;
-		u_twin.twin=new_uedge; // DCELdebug.edge2face(new_wedge.twin);
 		
-		//new 'uedge.twin'
-		HalfEdge new_uedge_twin=new HalfEdge(uedge.twin.origin);
-		new_uedge_twin.next=u_twin.next;
-		u_twin.next.prev=new_uedge_twin;
-		new_uedge_twin.prev=u_twin.prev;
-		u_twin.prev.next=new_uedge_twin;
-		new_uedge_twin.twin=uedge;
-		uedge.twin=new_uedge_twin;
+		new_uedge.next=uedge.next;
+		uedge.next.prev=new_uedge;
+
+		new_mid.twin.next=uedge;
+		uedge.prev=new_mid.twin;
+
+		new_uedge.twin.next=new_mid.twin;
+		new_mid.twin.prev=new_uedge.twin;
 		
-		u_twin.prev=uedge;
-		uedge.next=u_twin;
-		u_twin.next=new_mid;
-		new_mid.prev=u_twin;
-		new_mid.next=uedge;
-		uedge.prev=new_mid;
+		new_uedge.twin.prev=uedge;
+		uedge.next=new_uedge.twin;
 		
 		// now the w side of things
-		HalfEdge new_wedge_twin=new HalfEdge(wedge.twin.origin);
-		new_wedge_twin.twin=wedge;
-		wedge.twin=new_wedge_twin;
-		new_wedge_twin.next=new_mid.twin;
-		new_mid.twin.prev=new_wedge_twin; // DCELdebug.edge2face(uedge);
-		
 		HalfEdge new_wedge=new HalfEdge(newV);
-		new_wedge.twin=w_twin;
-		w_twin.twin=new_wedge;
-		new_wedge.prev=new_mid.twin;
-		new_mid.twin.next=new_wedge;
-		new_wedge.next=new_wedge_twin;
-		new_wedge_twin.prev=new_wedge;
+		new_wedge.twin=new HalfEdge(wedge.twin.origin);
+		new_wedge.twin.twin=new_wedge;
+		
+		new_wedge.twin.prev=wedge.twin.prev;
+		wedge.twin.prev.next=new_wedge.twin;
+		
+		new_wedge.twin.next=wedge.twin.next;
+		wedge.twin.next.prev=new_wedge.twin;
 
+		new_wedge.prev=new_mid;
+		new_mid.next=new_wedge;
+		
+		new_wedge.next=wedge.twin;
+		wedge.twin.prev=new_wedge;
+
+		wedge.twin.next=new_mid;
+		new_mid.prev=wedge.twin;
+		
+	      // deBugging.DCELdebug.vertConsistency(pdcel,newV.vertIndx);
+		
 		// most typical:
 		if (!V.redFlag)
 			return new_mid;
@@ -593,7 +599,7 @@ public class RawDCEL {
 		f1tof2.twinRed=f2tof1;
 		f2tof1.twinRed=f1tof2;
 
-		return new_mid.twin; // should go from <v,newV> 
+		return new_mid; // should go from <v,newV> 
 	}
 	
 	/**
@@ -2914,7 +2920,12 @@ public class RawDCEL {
 	 * Try to keep the red chain intact, but if too 
 	 * complicated, set to null. 'alpha' may also be set to null.
 	 * This can be used to reverse 'splitEdge_raw' and
-	 * 'splitFlower_raw' if called with the proper 'edge'. 
+	 * 'splitFlower_raw' if called with the proper 'edge'
+	 * 
+	 * TODO: synchronize meldEdge with splitEdge and splitFlwoer
+	 * so that the orphaned edge in meldEdge is the newly
+	 * created edge during the split operations. 
+	 * 
 	 * @param pdcel PackDCEL
 	 * @param edge HalfEdge
 	 * @return int, orphaned vert index, 0 on failure
@@ -3398,7 +3409,11 @@ public class RawDCEL {
 	 * incoming edges at the common vertex. The link we
 	 * return here does not have the initial edge of 'hlink'
 	 * in it: the user may need to insert that or other
-	 * edges at one end, depending on the purpose.
+	 * edges at one end, depending on the purpose. 
+	 * (E.g. for holonomy with hlink closed, add first edge 
+	 * so we layout its face at the beginning, then we
+	 * automotically repeat that face at the end.)
+	 * 
 	 * @param pdcel PackDCEL
 	 * @param hlink HalfLink, should be contiguous, may be closed
 	 * @return HalfLink, may be null or empty

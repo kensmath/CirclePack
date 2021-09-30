@@ -20143,9 +20143,9 @@ public class PackData{
 	 * Note that data in the packing is not changed.
 	 * The transformation and its Frobenius norm (how 
 	 * close to identity) are displayed in 'Messages' and
-	 * written to a file if fp!=null. Return Frobenius norm.
+	 * written to a file if fp!=null. 
 	 * @param p PackData,
-	 * @param draw boolean: true, then draw colored faces as we go
+	 * @param hlink HalfLink
 	 * @return Mobius, null on error
 	 */
 	public static Mobius holonomyMobius(PackData p,HalfLink hlink) {

@@ -8,6 +8,7 @@ import canvasses.DisplayParser;
 import circlePack.PackControl;
 import complex.Complex;
 import dcel.HalfEdge;
+import dcel.PackDCEL;
 import dcel.RawDCEL;
 import dcel.RedHEdge;
 import exceptions.CombException;
@@ -95,6 +96,7 @@ public abstract class GenBranchPt {
 	PackData packData;    // who's your daddy?
 	PackData myPackData;  // packing with complex local to this branch point.
 	public HalfEdge lastLayoutEdge; // for combined layout process
+	public HalfLink layoutAddons;  // adjoined to parent layout for this branch
 	public HalfLink myHoloBorder;  // for local holonomy 
 	Mobius myHolonomy;    // Can update this after each layout
 	Mobius placeMe;       // Mobius that aligns layout with parent packing
@@ -115,19 +117,24 @@ public abstract class GenBranchPt {
 	HalfEdge myAttachEdge;  // local, for aligning with parent
 	HalfEdge parentAttachEdge;  // parent edge (same orientation)
 
-	EventHorizon eventHorizon; 	// storage of bdry combinatorics
+	EventHorizon evtHorizon; 	// OBE: storage of bdry combinatorics
+	public HalfLink eventHorizon;  // edges surrounding the face or vertex
 
+	PackDCEL pdc; // convenience
+	
 	// Constructor
 	public GenBranchPt(PackData p,int bID,FaceLink blink,double aim) {
 		packData=p;
+		pdc=p.packDCEL;
 		branchID=bID;
 		myAim=aim;
 		placeMe=null;
 		myHolonomy=null;
 		myAttachEdge=null;
 		parentAttachEdge=null;
-		eventHorizon=null;
+		evtHorizon=null;
 		lastLayoutEdge=null;
+		layoutAddons=null;
 	}
 	
 	// ************** abstract methods ******************
@@ -186,7 +193,7 @@ public abstract class GenBranchPt {
 		myHoloBorder=RawDCEL.leftsideLink(myPackData.packDCEL,myred);
 		
 		// create horizon data
-		eventHorizon=new EventHorizon();
+		evtHorizon=new EventHorizon();
 	}
 
 	/**
@@ -201,7 +208,7 @@ public abstract class GenBranchPt {
 		UtilPacket uP=new UtilPacket();
 		int count=0;
 		boolean flip=false; // if error goes up
-		EventHorizon ev=eventHorizon;
+		EventHorizon ev=evtHorizon;
 		double faim=pi2; // all have aim 2pi
 		double origError=ev.angleSumError();
 		double curvError=origError;

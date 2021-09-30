@@ -64,7 +64,7 @@ import ftnTheory.Exponential;
 import ftnTheory.FeedBack;
 import ftnTheory.FlattenTri;
 import ftnTheory.FlipStrategy;
-import ftnTheory.GenBranching;
+import ftnTheory.GenModBranching;
 import ftnTheory.Graphene;
 import ftnTheory.HarmonicMap;
 import ftnTheory.HexPlaten;
@@ -1915,7 +1915,7 @@ public class CommandStrParser {
 	    	  }
 	    	  else if (str.equalsIgnoreCase("gb")) {
 	    		  if (!packData.status || packData.nodeCount==0) return 0;
-	    		  GenBranching px=new GenBranching(packData);
+	    		  GenModBranching px=new GenModBranching(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
 		    				  ": started "+px.extensionAbbrev+" extender");

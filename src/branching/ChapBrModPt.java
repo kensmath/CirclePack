@@ -1,0 +1,366 @@
+package branching;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Vector;
+
+import allMains.CirclePack;
+import dcel.HalfEdge;
+import dcel.RawDCEL;
+import exceptions.CombException;
+import exceptions.DataException;
+import exceptions.ParserException;
+import ftnTheory.GenModBranching;
+import komplex.EdgeSimple;
+import listManip.FaceLink;
+import listManip.HalfLink;
+import math.Mobius;
+import packing.PackData;
+import util.StringUtil;
+import util.UtilPacket;
+
+/**
+ * This is a new approach to "chaperone" generalized branch
+ * points. The old approach in 'ChapBranchPt' excised a flower,
+ * then manipulated it separately from the parent packing. In
+ * this new approach, we will modify the parent packing itself
+ * in a way that can be undone. 
+ * 
+ * The parameters are the "jump" circles w1/w2 and associated 
+ * overlap angles. 
+ * 
+ * Construction goes like this:
+ * (1) split_flower of myIndex, creating sister2
+ *     and sisterEdge=<myIndex,sister2>. Petals of sister2
+ *     go from w1 to preJump[2], petals of myIndex go
+ *     from we to preJump[1].
+ * (2) set chapEdge[1]=<sister2,w1>, then
+ *     split_edge; end up with chapEdge[1]=<sister2,chap1>
+ * (3) set chapEdge[2]=<myIndex,w2>, then
+ *     split_edge; end up with chapEdge[2]=<myIndex,chap2>
+ * (4) split_edge sisterEdge to create newBrSpot.
+ * 
+ * Delete by reversing: melt_edge in this order
+ *   sisterEdge -> chapEdge[2] -> chapEdge[1] -> sisterEdge
+ *   
+ * The overlaps o1/o2 are assigned to cclw spokes from chap1/2
+ * to preJump[1]/[2], and complementary angles to edges next
+ * cclw spokes.
+ *  
+ * @author kstephe2, 9/2021
+ *
+ */
+public class ChapBrModPt extends GenBrModPt {
+	
+	// parameters: indices start with 1 (not 0)
+	int[] jumpCircle;
+	double[] cos_overs;
+	
+	// needed in construction/destruction
+	HalfEdge[] jumpEdge; // from tangent sister
+	HalfEdge[] preJump;	 // from other sister
+	HalfEdge[] chapEdge; // from sister1/2 to chap1/2
+	HalfEdge sisterEdge; // <myIndex,sister2>
+	
+	// need for overlap data
+	HalfEdge[] overEdge; // for overlaps, <chap[*],preJump[*]>
+	HalfEdge[] compEdge; // for overlap complements
+
+	// four added circles: chaperones and these
+	int[] chap;     // chap[1]/[2]
+	int sister2;	// index of sister2 to 'myIndex'
+	int newBrSpot;	// circle with aim=myAim
+	
+	// Constructor
+	public ChapBrModPt(GenModBranching g,int bID,double aim,
+			int v,int w1,int w2,double o1,double o2) {
+		super(g,bID,(FaceLink)null,aim);
+		gmb=g;
+		myType=GenBranchPt.CHAPERONE;
+		myIndex=v;
+		
+		if (p.getBdryFlag(myIndex)!=0 || p.countFaces(myIndex)<5)
+			throw new CombException(
+					"chaperone vert must be interior, degree at least 5");
+
+		int[] petals=p.getPetals(myIndex);
+		int num=petals.length;
+		int indx1=p.nghb(myIndex, w1);
+		int indx2=p.nghb(myIndex, w2);
+		if (indx1<0 || indx2<0)
+			throw new ParserException(
+					w1+" and/or "+w2+" is not a neighbor of "+v);
+		if (indx1==indx2 || (indx1+1)%num==indx2 ||
+				(indx2+1)%num==indx1)
+			throw new CombException(
+					"petals "+w1+" and "+w2+" are too close");
+		
+		// jump circles
+		jumpCircle=new int[3];
+		jumpCircle[1]=w1;
+		jumpCircle[2]=w2;
+		
+		jumpEdge=new HalfEdge[3];
+		jumpEdge[1]=pdc.findHalfEdge(new EdgeSimple(myIndex,jumpCircle[1]));
+		jumpEdge[2]=pdc.findHalfEdge(new EdgeSimple(myIndex,jumpCircle[2]));
+		
+		preJump=new HalfEdge[3];
+		preJump[1]=jumpEdge[1].twin.next;
+		preJump[2]=jumpEdge[2].twin.next;
+		
+		chapEdge=new HalfEdge[3];
+
+		// set overlaps
+		cos_overs=new double[3];
+		cos_overs[1]=Math.cos(o1*Math.PI);
+		cos_overs[2]=Math.cos(o2*Math.PI);
+
+		// debug help
+		System.out.println("chapMod attempt: a = "+aim/Math.PI+
+				"; v = "+v+"; jumps "+w1+" "+w2+"; "+
+				"overlaps/Pi "+o1+" "+o2);
+				
+		// this modifies the parent packing
+		modifyPackData();
+	}
+	
+	// **** abstract methods *************
+	public void dismantle() {
+		RawDCEL.meldEdge_raw(pdc,sisterEdge);
+		RawDCEL.meldEdge_raw(pdc,chapEdge[2]);
+		RawDCEL.meldEdge_raw(pdc,chapEdge[1]);
+		RawDCEL.meldEdge_raw(pdc,sisterEdge);
+		return;
+	}
+	
+	public double currentError() {
+		return 1.0;
+	}
+	
+	public String reportExistence() {
+		return new String(
+				"Started 'chaperone' branch point; v = "+
+						myIndex);				
+	}
+	
+	public String reportStatus() {
+		return new String("'chap' ID"+branchID+": vert="+myIndex+
+				"; jump circles "+jumpCircle[1]+", "+jumpCircle[2]+
+				"; over1="+Math.acos(cos_overs[1])/Math.PI+
+				"; over2="+Math.acos(cos_overs[2])/Math.PI+
+				"; aim="+myAim/Math.PI+"; holonomy err="+
+				Mobius.frobeniusNorm(getLocalHolonomy()));
+	}
+
+	/**
+	 * The parameters for 'chaperone' type are (jump1, jump2),
+	 * (indices for circles jumping to new sister) and 
+	 * associated overlap angles over1, over2.
+	 * @return String
+	 */
+	public String getParameters() {
+		return new String("'chaperone' branch point: aim "+
+				myAim/Math.PI+"*Pi, vertex "+myIndex+", jump circles "+
+				jumpCircle[1]+", "+jumpCircle[2]+
+				", overlaps "+Math.acos(cos_overs[1])/Math.PI+"*Pi "+
+				Math.acos(cos_overs[2])/Math.PI+"*Pi");
+	}
+	
+
+	/**
+	 * Chaperone branch point parameters are jump circles 
+	 * and corresponding overlap angles (to be multiplied by 
+	 * PI here). We read "w1 w2 a1 a2"; a1, a2 are multiplied 
+	 * by Pi and their cosines are stored in cos_overs[] 
+	 * (negative is cosine of supplementary angle).
+	 * @param flagSegs Vector<Vector<String>>, "w1 w2 a1 a2"
+	 * @return int count; 0 on error, negative if new 'layoutTree' 
+	 * is required in parent
+	 */
+	public int setParameters(Vector<Vector<String>> flagSegs) {
+		if (flagSegs==null || flagSegs.size()==0)
+			throw new ParserException("usage: -a aim -j w1 w2 -o o1 o2");
+		int count=0;
+		boolean gotjumps=false;
+		boolean gotovers=false;
+		double []ovlp=new double[2];
+		
+		// parse the parameter info: -a aim, -j w1 w2, -o o1 o2
+		Iterator<Vector<String>> fit=flagSegs.iterator();
+		while (fit.hasNext()) {
+			Vector<String> items=fit.next();
+			try {
+				if (!StringUtil.isFlag(items.get(0)))
+					throw new ParserException("usage: -a aim -j j1 j2 -o o1 o2");
+				String str=items.remove(0);
+				switch (str.charAt(1)) {
+				case 'a': // new aim
+				{
+					myAim=Double.parseDouble(items.get(0))*Math.PI;
+					p.setAim(newBrSpot,myAim);
+					p.setRadius(newBrSpot,0.5); // kick-start repacking
+					count++;
+					break;
+				}
+				case 'j': // jump petals (as vertex indices from parent)
+				{
+					jumpCircle=new int[3]; 
+					jumpCircle[1]=Integer.parseInt(items.get(0));
+					jumpCircle[2]=Integer.parseInt(items.get(1));
+					count += 2;
+					gotjumps=true;
+					break;
+				}
+				case 'o': // overlaps
+				{
+					for (int i=0;i<2;i++) {
+						ovlp[i]=Double.parseDouble(items.remove(0));
+						if (ovlp[i]<0 || ovlp[i]>1.0) {
+							throw new ParserException("overlap not in [0,1]");
+						}
+						cos_overs[i+1]=Math.cos(ovlp[i]*Math.PI);
+						count++;
+					}
+					count++;
+					gotovers=true;
+					break;
+				}
+				} // end of switch
+			
+				// TODO: may want to accommodate more jumps/overlaps in future,
+				//       depending, e.g., on 'myAim'.
+			} catch(Exception ex) {
+				throw new ParserException(ex.getMessage());
+			}
+		}
+
+		if (gotjumps) {
+			int ans=modifyPackData();
+			if (ans==0) {
+				throw new ParserException("failed to modify packData");
+			}
+		}
+		if (gotovers) {
+
+			// reset overlaps
+			return resetOverlaps(ovlp[0],ovlp[1]);
+		}
+		return count;
+	}
+	
+	// **********************
+	
+	/**
+	 * This incorporates this branch point into 'packData'
+	 * @return int, vertCount
+	 */
+	public int modifyPackData() {
+		
+		// start horizon with non-bdry edge
+		eventHorizon=pdc.vertices[myIndex].getOuterEdges();
+		HalfEdge tmphe=null;
+		for (int j=0;(j<eventHorizon.size() && tmphe==null);j++) {
+			HalfEdge he=eventHorizon.get(j);
+			if (he.twin.face==null || he.twin.face.faceIndx>=0)
+				tmphe=he;
+		}
+		eventHorizon=HalfLink.rotateMe(eventHorizon,tmphe);
+
+		// first, split the flower, then split 3 edges
+		overEdge=new HalfEdge[3];
+		compEdge=new HalfEdge[3];
+		chap=new int[3];
+		sisterEdge=RawDCEL.splitFlower_raw(pdc,jumpEdge[1],
+				jumpEdge[2]);
+		sister2=pdc.vertCount;   // deBugging.DCELdebug.vertConsistency(pdc,myIndex);
+		
+		// create chaperone 1, to allow jump1 to separate from 'myIndex'
+		tmphe=pdc.findHalfEdge(new EdgeSimple(
+				myIndex,jumpCircle[1]));
+		chapEdge[1]=RawDCEL.splitEdge_raw(pdc,tmphe);
+		chap[1]=chapEdge[1].twin.origin.vertIndx;
+		overEdge[1]=chapEdge[1].twin.prev.twin;
+		compEdge[1]=overEdge[1].prev.twin;
+		
+		// create chaperone 2, to allow jump2 to separate from 'sister2'
+		tmphe=pdc.findHalfEdge(new EdgeSimple(
+				sister2,jumpCircle[2]));
+		chapEdge[2]=RawDCEL.splitEdge_raw(pdc,tmphe);
+		chap[2]=chapEdge[2].twin.origin.vertIndx;
+		overEdge[2]=chapEdge[2].twin.prev.twin;
+		compEdge[2]=overEdge[2].prev.twin;
+		
+		// create newBrPt
+		RawDCEL.splitEdge_raw(pdc,sisterEdge);
+		newBrSpot=sisterEdge.twin.origin.vertIndx;
+
+		// get encircling link for local holonomy   
+		myHoloBorder=RawDCEL.leftsideLink(pdc,eventHorizon);
+		myHoloBorder.add(0,eventHorizon.get(0));
+		
+		// one edge added to be added to parent layout
+		layoutAddons=new HalfLink();
+		layoutAddons.abutMore(myHoloBorder);
+		layoutAddons.add(preJump[1].prev.twin);
+
+		// set the overlaps
+		resetOverlaps(cos_overs[1],cos_overs[2]);
+
+		// record exclusions
+		myExclusions=new ArrayList<dcel.Vertex>();
+		Iterator<HalfEdge> eis=eventHorizon.iterator();
+		while (eis.hasNext()) {
+			myExclusions.add(eis.next().origin);
+		}
+		myExclusions.add(pdc.vertices[myIndex]);
+		myExclusions.add(pdc.vertices[sister2]);
+		myExclusions.add(pdc.vertices[chap[1]]);
+		myExclusions.add(pdc.vertices[chap[2]]);
+		myExclusions.add(pdc.vertices[newBrSpot]);
+		
+		return pdc.vertCount;
+	}
+	
+	public int resetOverlaps(double o1,double o2) {
+		if (o1<0 || o1>=1.0 || o2<0 || o2>=1.0)
+			throw new DataException(
+					"'chaperon' usage: 2 overlaps in [0,1]");
+		
+		// if jump 1 and jump 2 are separated by just one
+		//   circle, neighbors then ovlp can be anything
+		//   in [0,1], but I think ovlp[1] must equal ovlp[0].
+		// REASON: If sister 2 goes to zero in radius, then sister1, jump 1, and
+		//   prejump 2 go though common point (at the 'newBrSpot'), so sum of overlaps
+		//   must be Pi, but jump 1 and prejump 2 are tangent, so overlap of jump 1
+		//   and prejump2 must be Pi-ovlp[0]. By definition is this same overlap is
+		//   the supplement of ovlp[1], so ovlp[0]=ovlp[1].
+		// ?????? can sister 2 go to zero in radius ?????
+		if (jumpEdge[1].prev.twin.prev.twin==jumpEdge[2]) {
+			if (o2>o1)
+				o2=o1;
+			CirclePack.cpb.msg(
+				"short jump: overlap 2 cut back to size of overlap 1");
+		}
+		else if (jumpEdge[2].prev.twin.prev.twin==jumpEdge[1]) {
+			if (o1>o2)
+				o1=o2;
+			CirclePack.cpb.msg(
+				"short jump: overlap 1 cut back to size of overlap 2");
+		}
+	
+		overEdge[1].setInvDist(o1);
+		compEdge[1].setInvDist(-1.0*o1);
+
+		overEdge[2].setInvDist(o2);
+		compEdge[2].setInvDist(-1.0*o2);
+		return 0;
+	}
+	
+	public int displayMe(Vector<Vector<String>> flagSegs) {
+		Vector<Vector<String>> newFlagSegs=new Vector<Vector<String>>(1);
+		Vector<String> items=new Vector<String>(2);
+		
+		return 0;
+	}
+	
+}

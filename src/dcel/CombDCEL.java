@@ -1802,12 +1802,9 @@ public class CombDCEL {
 	 * Determine a partial order to lay out faces
 	 * for computing radii, starting with 'alpha' and 
 	 * avoiding crossing any forbidden edges in 'hlink' 
-	 * (or in the bdry). Note that we do not make twinned 
-	 * red chain edges forbidden, so even when 'hlink' 
-	 * is empty, this may give a different layout order 
-	 * than 'PackDCEL.layoutOrder' itself.
-	 * This method is used, e.g., for general branch 
-	 * points, were we layout some subregions separately.  
+	 * (or in the red chain). This method is used, e.g., 
+	 * to layout outside one or more general branch points, 
+	 * where we layout additional local edges separately.  
 	 * @param pdcel PackDCEL
 	 * @param hlink HalfLink
 	 * @return HalfLink, null on error
@@ -1821,9 +1818,8 @@ public class CombDCEL {
 		if (pdcel.redChain!=null) {
 			RedHEdge rtrace=pdcel.redChain;
 			do {
-				HalfEdge hetw=rtrace.myEdge.twin;
-				if (hetw.face==null || hetw.face.faceIndx<0)
-					hlink.add(rtrace.myEdge);
+				hlink.add(rtrace.myEdge);
+				hlink.add(rtrace.myEdge.twin);
 				rtrace=rtrace.nextRed;
 			} while (rtrace!=pdcel.redChain);
 		}
@@ -3453,8 +3449,7 @@ public class CombDCEL {
 			  throw new CombException("couldn't find qualifying 'seededge'");
 
 		  // rotate 'path' to start with 'seededge'
-		  int se=path.indexOf(seededge);
-		  path=HalfLink.rotateMe(path,se);
+		  path=HalfLink.rotateMe(path,seededge);
 
 		  // get 'cutPath' starting and ending at 'seededge.origin'
 		  //   and otherwise disjoint from 'path'.

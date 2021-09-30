@@ -1,9 +1,12 @@
 package branching;
 
-import input.CommandStrParser;
-
 import java.util.Vector;
 
+import canvasses.DisplayParser;
+import circlePack.PackControl;
+import complex.Complex;
+import dcel.DcelCreation;
+import ftnTheory.GenModBranching;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
@@ -11,11 +14,6 @@ import listManip.VertexMap;
 import math.Mobius;
 import packing.PackData;
 import util.UtilPacket;
-import canvasses.DisplayParser;
-import circlePack.PackControl;
-
-import complex.Complex;
-import dcel.DcelCreation;
 
 /**
  * This is a traditional branch point, extra angle assigned to an interior circle.

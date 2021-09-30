@@ -8,6 +8,7 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import baryStuff.BaryPoint;
 import branching.ChapBranchPt;
+import branching.ChapBrModPt;
 import branching.FracBranchPt;
 import branching.GenBranchPt;
 import branching.QuadBranchPt;
@@ -898,6 +899,14 @@ public class GenBranching extends PackExtender {
 		return count;
 	}
 
+	public void updateHorizons() {
+		packData.poisonHEdges=new HalfLink();
+		for (int b=1;b<branchPts.size();b++) {
+			GenBranchPt gbp=branchPts.get(b);
+			packData.poisonHEdges.abutMore(gbp.eventHorizon);
+		}
+	}
+	
 	/**
 	 * This creates 'outerOrder', which partially lays out 
 	 * the parent, circumventing the branch points so they

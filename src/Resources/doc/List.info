@@ -92,6 +92,7 @@ List creation syntax:
 	It {t..}	Incident to (ie., corner of) a tile
 	j			faces only; faces which are negatively oriented
 				(ie. clockwise)
+    L           packing 'layoutOrder', for halfedges only 				
 	m			'marked' objects (e.g. 'mark', 'gen_mark' operations)
 	mc			'unmarked' objects
 	mp{p}		'marked' objects in pack p

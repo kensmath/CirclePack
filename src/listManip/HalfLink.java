@@ -422,7 +422,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 					return 0;
 			} // end of "?list" search
 			
-			// sort by first character 
+			// ************* sort by first character ************* 
 			 
 			else {
 			switch(str.charAt(0)) {
@@ -489,9 +489,14 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				}
 				break;
 			}
-			case 'g': // combinatorial geodesic path from v to w
+			case 'g': // TODO: combinatorial geodesic path from v to w
 			{
 				return count;
+			}
+			case 'L': // 'layoutOrder' for the packing
+			{
+				count +=this.abutMore(packData.packDCEL.layoutOrder);
+				break;
 			}
 			case 'R': // designated "sides" of redChain; absorb rest of 'items'
 			{
@@ -648,7 +653,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				abutMore(HalfLink.HoloHalfLink(packData.packDCEL,sideIndx));
 				break;
 			}
-			case 'I': // incident to vertices/edges/faces; redundancies not checked
+			case 'I': // incident to vertices/halfedges/faces; redundancies not checked
 			{
 				if (str.length()<=1) break;
 				switch(str.charAt(1)) {
@@ -1060,24 +1065,28 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	}
 
 	/**
-	 * Rotate EdgeLink so it starts with 'indx'.
-	 * @param link @see EdgeLink
-	 * @param indx new starting index
-	 * @return @see EdgeLink, null if empty or on error.
+	 * Rotate EdgeLink so it starts with 'edge', if 'edge'
+	 * is in the link.
+	 * @param hlink EdgeLink
+	 * @param edge HalfEdge
+	 * @return HalfLink, null if empty or does not contain 'edge'
 	 */
-	public static HalfLink rotateMe(HalfLink link,int indx) {
-		int sz=link.size();
-		if (link==null || sz<=indx)
+	public static HalfLink rotateMe(HalfLink hlink,HalfEdge edge) {
+		int sz=hlink.size();
+		if (hlink==null || sz==0)
 			return null;
 		HalfLink nlink=new HalfLink();
+		int indx=hlink.lastIndexOf(edge);
+		if (indx<0)
+			return null;
 		int i=indx;
 		while (i<sz) { // 
-			nlink.add(link.get(i));
+			nlink.add(hlink.get(i));
 			i++;
 		}
 		i=0;
 		while (i<indx) {
-			nlink.add(link.get(i));
+			nlink.add(hlink.get(i));
 			i++;
 		}
 		return nlink;
