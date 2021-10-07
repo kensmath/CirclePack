@@ -48,8 +48,8 @@ public class EuclMath{
 	}
     
   /**
-	 * Given three eucl radii and inv distances of opposite edges, compute
-	 * up.value=cos(angle at e1). 
+	 * Given three eucl radii and inv distances of opposite 
+	 * edges, compute cos(angle at e1). 
 	 * @param e1 double, eucl radii, etc
 	 * @param e2 double
 	 * @param e3, double
@@ -71,8 +71,13 @@ public class EuclMath{
 		double l3 = e1sq + e2sq + 2 * x3; // lengths opposite
 		double l2 = e1sq + e3sq + 2 * x2;
 		double sqrlen=(e1sq + x2 + x3 - x1) / Math.sqrt(l2 * l3);
-		if (sqrlen < -1.0 || sqrlen>1.0) { // error?
-			throw new DataException("error in computing eucl angle cosine");
+		if (sqrlen < -1.0 || sqrlen>1.0) { // error? 
+			if (sqrlen>1.0)
+				return .9999999999; 
+			if (sqrlen<-1.0)
+				return -.9999999999;
+			
+//			throw new DataException("error in computing eucl angle cosine");
 		}
 		return sqrlen;
 	}

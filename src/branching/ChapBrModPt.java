@@ -1,23 +1,25 @@
 package branching;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CirclePack;
+import canvasses.DisplayParser;
+import circlePack.PackControl;
 import dcel.HalfEdge;
 import dcel.RawDCEL;
+import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
 import ftnTheory.GenModBranching;
+import input.CommandStrParser;
 import komplex.EdgeSimple;
-import listManip.FaceLink;
 import listManip.HalfLink;
 import math.Mobius;
-import packing.PackData;
 import util.StringUtil;
-import util.UtilPacket;
 
 /**
  * This is a new approach to "chaperone" generalized branch
@@ -52,6 +54,8 @@ import util.UtilPacket;
  */
 public class ChapBrModPt extends GenBrModPt {
 	
+	int myIndex;         // index for 'myEdge.origin'
+	
 	// parameters: indices start with 1 (not 0)
 	int[] jumpCircle;
 	double[] cos_overs;
@@ -67,16 +71,17 @@ public class ChapBrModPt extends GenBrModPt {
 	HalfEdge[] compEdge; // for overlap complements
 
 	// four added circles: chaperones and these
-	int[] chap;     // chap[1]/[2]
-	int sister2;	// index of sister2 to 'myIndex'
-	int newBrSpot;	// circle with aim=myAim
+	Vertex[] chap;     // chap[1]/[2]
+	Vertex sister2;	// sister created for 'myIndex'
+	Vertex newBrSpot;	// vertex carrying 'myAim'
 	
 	// Constructor
 	public ChapBrModPt(GenModBranching g,int bID,double aim,
 			int v,int w1,int w2,double o1,double o2) {
-		super(g,bID,(FaceLink)null,aim);
+		super(g,bID,aim);
 		gmb=g;
 		myType=GenBranchPt.CHAPERONE;
+		myEdge=pdc.vertices[v].halfedge;
 		myIndex=v;
 		
 		if (p.getBdryFlag(myIndex)!=0 || p.countFaces(myIndex)<5)
@@ -122,6 +127,8 @@ public class ChapBrModPt extends GenBrModPt {
 				
 		// this modifies the parent packing
 		modifyPackData();
+		
+		success=true;
 	}
 	
 	// **** abstract methods *************
@@ -133,14 +140,13 @@ public class ChapBrModPt extends GenBrModPt {
 		return;
 	}
 	
-	public double currentError() {
-		return 1.0;
-	}
-	
 	public String reportExistence() {
-		return new String(
-				"Started 'chaperone' branch point; v = "+
-						myIndex);				
+		if (success)
+			return new String(
+				"Started 'chaperone' branching at v = "+myIndex);
+		else 
+			return new String(
+					"Failed to initiate 'chaperone' branching for v = "+myIndex);
 	}
 	
 	public String reportStatus() {
@@ -165,7 +171,6 @@ public class ChapBrModPt extends GenBrModPt {
 				", overlaps "+Math.acos(cos_overs[1])/Math.PI+"*Pi "+
 				Math.acos(cos_overs[2])/Math.PI+"*Pi");
 	}
-	
 
 	/**
 	 * Chaperone branch point parameters are jump circles 
@@ -197,8 +202,8 @@ public class ChapBrModPt extends GenBrModPt {
 				case 'a': // new aim
 				{
 					myAim=Double.parseDouble(items.get(0))*Math.PI;
-					p.setAim(newBrSpot,myAim);
-					p.setRadius(newBrSpot,0.5); // kick-start repacking
+					p.setAim(newBrSpot.vertIndx,myAim);
+					p.setRadius(newBrSpot.vertIndx,0.5); // kick-start repacking
 					count++;
 					break;
 				}
@@ -248,6 +253,23 @@ public class ChapBrModPt extends GenBrModPt {
 		return count;
 	}
 	
+	/**
+	 * Changes in 'packData' may require us to reassert
+	 * the data for this branch point. This is also called
+	 * when a newly created branch point is installed.
+	 */
+	public void renew() {
+		// reset the overlaps
+		resetOverlaps(cos_overs[1],cos_overs[2]);
+		// reset aim
+		p.setAim(myIndex,myAim);
+		p.setCircleColor(myIndex,new Color(125,0,0)); // light red
+		p.setCircleColor(sister2.vertIndx,new Color(255,0,0)); // dark red
+		p.setCircleColor(chap[1].vertIndx,new Color(0,200,0)); // green
+		p.setCircleColor(chap[2].vertIndx,new Color(0,0,200)); // blue
+		p.setCircleColor(newBrSpot.vertIndx,new Color(205,205,205)); // grey
+	}
+	
 	// **********************
 	
 	/**
@@ -269,42 +291,40 @@ public class ChapBrModPt extends GenBrModPt {
 		// first, split the flower, then split 3 edges
 		overEdge=new HalfEdge[3];
 		compEdge=new HalfEdge[3];
-		chap=new int[3];
+		chap=new Vertex[3];
 		sisterEdge=RawDCEL.splitFlower_raw(pdc,jumpEdge[1],
 				jumpEdge[2]);
-		sister2=pdc.vertCount;   // deBugging.DCELdebug.vertConsistency(pdc,myIndex);
+		sister2=pdc.vertices[pdc.vertCount]; 
+		// deBugging.DCELdebug.vertConsistency(pdc,myIndex);
 		
 		// create chaperone 1, to allow jump1 to separate from 'myIndex'
 		tmphe=pdc.findHalfEdge(new EdgeSimple(
 				myIndex,jumpCircle[1]));
 		chapEdge[1]=RawDCEL.splitEdge_raw(pdc,tmphe);
-		chap[1]=chapEdge[1].twin.origin.vertIndx;
+		chap[1]=chapEdge[1].twin.origin;
 		overEdge[1]=chapEdge[1].twin.prev.twin;
 		compEdge[1]=overEdge[1].prev.twin;
 		
 		// create chaperone 2, to allow jump2 to separate from 'sister2'
 		tmphe=pdc.findHalfEdge(new EdgeSimple(
-				sister2,jumpCircle[2]));
+				sister2.vertIndx,jumpCircle[2]));
 		chapEdge[2]=RawDCEL.splitEdge_raw(pdc,tmphe);
-		chap[2]=chapEdge[2].twin.origin.vertIndx;
+		chap[2]=chapEdge[2].twin.origin;
 		overEdge[2]=chapEdge[2].twin.prev.twin;
 		compEdge[2]=overEdge[2].prev.twin;
 		
 		// create newBrPt
 		RawDCEL.splitEdge_raw(pdc,sisterEdge);
-		newBrSpot=sisterEdge.twin.origin.vertIndx;
+		newBrSpot=sisterEdge.twin.origin;
 
 		// get encircling link for local holonomy   
 		myHoloBorder=RawDCEL.leftsideLink(pdc,eventHorizon);
 		myHoloBorder.add(0,eventHorizon.get(0));
 		
-		// one edge added to be added to parent layout
+		// add 'myHoloBorder' plus edge to pick up 'newBrSpot'
 		layoutAddons=new HalfLink();
 		layoutAddons.abutMore(myHoloBorder);
 		layoutAddons.add(preJump[1].prev.twin);
-
-		// set the overlaps
-		resetOverlaps(cos_overs[1],cos_overs[2]);
 
 		// record exclusions
 		myExclusions=new ArrayList<dcel.Vertex>();
@@ -313,10 +333,10 @@ public class ChapBrModPt extends GenBrModPt {
 			myExclusions.add(eis.next().origin);
 		}
 		myExclusions.add(pdc.vertices[myIndex]);
-		myExclusions.add(pdc.vertices[sister2]);
-		myExclusions.add(pdc.vertices[chap[1]]);
-		myExclusions.add(pdc.vertices[chap[2]]);
-		myExclusions.add(pdc.vertices[newBrSpot]);
+		myExclusions.add(sister2);
+		myExclusions.add(chap[1]);
+		myExclusions.add(chap[2]);
+		myExclusions.add(newBrSpot);
 		
 		return pdc.vertCount;
 	}
@@ -355,12 +375,113 @@ public class ChapBrModPt extends GenBrModPt {
 		compEdge[2].setInvDist(-1.0*o2);
 		return 0;
 	}
-	
+
+	/**
+	 * See if there are special actions for display. If so,
+	 * do them, remove them, and pass the rest to 'super'.
+	 * @param flagSegs flag sequences
+	 * @return int count of display actions
+	 */
 	public int displayMe(Vector<Vector<String>> flagSegs) {
+		StringBuilder pulloff=new StringBuilder();
 		Vector<Vector<String>> newFlagSegs=new Vector<Vector<String>>(1);
 		Vector<String> items=new Vector<String>(2);
-		
-		return 0;
+		int n=0;
+		for (int j=0;j<flagSegs.size();j++) {
+			items=flagSegs.get(j);
+			String str=items.get(0);
+			
+			// get info to reconstruct new command: 
+			// e.g. -s1fc20 converts to -cfc20 <sister1>
+			String suff="";  // save suffex of original, e.g. 'fc5t4' 
+			String target=null; // build target list
+			Character c=null;  // possible number character
+			if (str.length()>2)
+				c=Character.valueOf(str.charAt(2));
+
+			// look for objects to parse here
+			char c2;
+			if (str.length()>1 && 
+					((c2=str.charAt(1))=='s' || c2=='h' || c2=='y' || c2=='j')) {
+				if (str.startsWith("-s")) { // sisters: 1=original, 2=sister2 
+					if (c!=null && (char)c=='1' || (char)c=='2') {
+						if ((char)c=='1')
+							target=new String(" "+myIndex);
+						else
+							target=new String(" "+sister2.vertIndx+" ");
+						if (str.length()>3)
+							suff=str.substring(3);
+					}
+					else { 
+						target=new String(" "+myIndex+" "+sister2.vertIndx+" ");
+						if (str.length()>2)
+							suff=str.substring(2);
+					}
+				}
+				else if (str.startsWith("-h")) { // chaperones
+					if (c!=null && (char)c=='1' || (char)c=='2') {
+						if ((char)c=='1')
+							target=new String(" "+chap[1].vertIndx+" ");
+						else
+							target=new String(" "+chap[2].vertIndx+" ");
+						if (str.length()>3)
+							suff=str.substring(3);
+					}
+					else {
+						target=new String(" "+chap[1].vertIndx+" "+chap[2].vertIndx+" ");
+						if (str.length()>2)
+							suff=str.substring(2);
+					}
+				}
+				else if (str.contains("-j")) { // jump circles
+					if (c!=null && ((char)c=='1' || (char)c=='2')) {
+						if ((char)c=='1')
+							target=new String(" "+jumpCircle[1]+" ");
+						else
+							target=new String(" "+jumpCircle[2]+" ");
+						if (str.length()>3)
+							suff=str.substring(3);
+					}
+					else { 
+						target=new String(" "+jumpCircle[1]+" "+jumpCircle[2]+" ");
+						if (str.length()>2)
+							suff=str.substring(2);
+					}
+				}
+				else if (str.startsWith("-y")) { // newBrSpot
+					target=new String(" "+newBrSpot+" ");
+				}
+				
+				// build display string
+				pulloff.append("-c");
+				pulloff.append(suff);
+				pulloff.append(target);
+				
+				// found something? display on parent canvas
+				if (pulloff.length()>0) {
+					n=DisplayParser.dispParse(p,p.cpScreen,StringUtil.flagSeg(pulloff.toString()));
+				}
+				
+			}
+			// else if -w flag, have parent run it, or store it to pass on to parent
+			else {
+				if (items.size()>0 && items.get(0).startsWith("-w")) {
+					String fs=items.remove(0);
+					CommandStrParser.jexecute(p,"disp "+fs);
+					n++;
+					if (items.size()>0) // save anything after the -w flag
+						newFlagSegs.add(items);
+				}
+				else 
+					newFlagSegs.add(items);
+			}
+				
+		} // end of loop through items
+
+		n+=DisplayParser.dispParse(p,p.cpScreen,newFlagSegs);
+		if (n!=0)
+			PackControl.canvasRedrawer.paintMyCanvasses(p,false); 
+		return n;
 	}
 	
 }

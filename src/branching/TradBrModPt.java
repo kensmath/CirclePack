@@ -1,5 +1,6 @@
 package branching;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
@@ -10,7 +11,6 @@ import dcel.HalfEdge;
 import dcel.RawDCEL;
 import dcel.Vertex;
 import ftnTheory.GenModBranching;
-import listManip.FaceLink;
 import listManip.HalfLink;
 import math.Mobius;
 
@@ -33,20 +33,22 @@ public class TradBrModPt extends GenBrModPt {
 	
 	// Constructor
 	public TradBrModPt(GenModBranching g,int bID,double aim,int v) {
-		super(g,bID,(FaceLink)null,aim);
+		super(g,bID,aim);
 		gmb=g;
 		myType=GenBranchPt.TRADITIONAL;
-		myIndex=v;
+		myEdge=pdc.vertices[v].halfedge;
 		
 		// debug help
 		System.out.println("traditional branch attempt: a = "+aim/Math.PI+"; v = "+v);
 		
 		modifyPackData();
+		
+		success=true;
 	}
 
 	// modify 'packData'
 	public int modifyPackData() {
-		eventHorizon=pdc.vertices[myIndex].getOuterEdges();
+		eventHorizon=myEdge.origin.getOuterEdges();
 		myHoloBorder=RawDCEL.leftsideLink(pdc,eventHorizon);
 		myExclusions=new ArrayList<Vertex>();
 		Iterator<HalfEdge> vis=eventHorizon.iterator();
@@ -57,7 +59,7 @@ public class TradBrModPt extends GenBrModPt {
 				starthe=he;
 			myExclusions.add(he.origin);
 		}
-		myExclusions.add(pdc.vertices[myIndex]);
+		myExclusions.add(myEdge.origin);
 		layoutAddons=new HalfLink();
 		layoutAddons.add(starthe);
 		
@@ -71,14 +73,6 @@ public class TradBrModPt extends GenBrModPt {
 	}
 
 	/**
-	 * Assume radii have been updated, what is the angle sum error?
-	 * @return double, l^2 angle sum error.
-	 */
-	public double currentError() {
-		return (p.getCurv(myIndex)-p.getAim(myIndex));
-	}
-	
-	/**
 	 * No parameters to set for this branch type.
 	 * @return 1
 	 */
@@ -87,8 +81,9 @@ public class TradBrModPt extends GenBrModPt {
 	}
 	
 	 /**
-	  * See if there are special actions for display on screen of parent packing.
-	  * If so, do them, remove them, and pass the rest to 'super'. May flush some
+	  * See if there are special actions for display on screen.
+	  * I don't think there are any for traditional branch points,
+	  * so pass the rest of flags to 'super'. May flush some
 	  * commands designed for other types of branch points.
 	  * 
 	  * @param flagSegs flag sequences
@@ -122,30 +117,36 @@ public class TradBrModPt extends GenBrModPt {
 	 * @return String
 	 */
 	public String getParameters() {
+		int v=myEdge.origin.vertIndx;
 		return new String("Traditional branch point, aim "+
-				p.getAim(myIndex)/Math.PI+"*Pi at vertex "+myIndex);
+				p.getAim(v)/Math.PI+"*Pi at vertex "+v);
 	}
 	
 	
 	public String reportExistence() {
-		return new String("Started 'traditional' branch point; center = "+myIndex);
+		return new String("Started 'traditional' branch point; center = "+
+				myEdge.origin.vertIndx);
 	}
-	
+		
 	public String reportStatus() {
-		return new String("'traditional', ID "+branchID+": vert="+myIndex+
+		return new String("'traditional', ID "+branchID+": vert="+
+				myEdge.origin.vertIndx+
 				", aim="+myAim+", holonomy err="+
 				Mobius.frobeniusNorm(getLocalHolonomy()));
 
 	}
 
 	/**
-	 * Set 'plotFlag' for petals of vert 1, get positions from parent,
-	 * then compute and set the center of vertex 1 locally and for 'myIndex' 
-	 * in parent.
-	 * @return 0 on error
+	 * Changes in 'packData' may require us to reassert
+	 * the data for this branch point. This is also called
+	 * when a newly created branch point is first installed.
 	 */
-	public int placeMyCircles() {
-		return 0;
+	public void renew() {
+		int v=myEdge.origin.vertIndx;
+		// reset the aim
+		p.setAim(v, myAim);
+		// set color
+		p.setCircleColor(v,new Color(200,0,0)); // red
 	}
 	
 }

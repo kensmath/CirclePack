@@ -8,7 +8,6 @@ import allMains.CirclePack;
 import baryStuff.BaryPoint;
 import branching.ChapBrModPt;
 import branching.GenBrModPt;
-import branching.GenBranchPt;
 import branching.SingBrModPt;
 import branching.TradBrModPt;
 import complex.Complex;
@@ -127,7 +126,8 @@ public class GenModBranching extends PackExtender {
 					int bn=Integer.parseInt(str);
 					int bpIndx=findBPindex(bn);
 					
-					// want 'delete' command to go through even if no branch point
+					// want 'delete' command to go through even 
+					//    if no branch point
 					if (bpIndx<0) {
 						if (cmd.startsWith("delet"))
 							return 1;
@@ -141,7 +141,8 @@ public class GenModBranching extends PackExtender {
 				}
 			}
 		} catch(Exception ex) {
-			throw new ParserException("parse error with branch ID: "+ex.getMessage());
+			throw new ParserException(
+					"parse error with branch ID: "+ex.getMessage());
 		}
 		// ---------------------------------------------------
 		
@@ -165,7 +166,7 @@ public class GenModBranching extends PackExtender {
 					}
 					case 'X':
 					{
-						fullWipe=true;
+						revert();
 						break;
 					}
 					case 'a':
@@ -197,7 +198,8 @@ public class GenModBranching extends PackExtender {
 				if (mode<0 || mode>3 || indx<=0 || indx>packData.nodeCount) 
 					return 0;
 
-				// wipe out contiguous branch points (including, possibly the current circle)
+				// wipe out contiguous branch points 
+				//    (including, possibly the current circle)
 				if (localWipe) {
 					if (mode>1) // circle case
 						nlink=new NodeLink(packData,"Iv "+indx);
@@ -229,24 +231,32 @@ public class GenModBranching extends PackExtender {
 				
 				// circle?
 				if (mode==2) { // data[2]/[3] are the jump petals, data[4]/[5] the overlaps
-					ChapBrModPt cbp=new ChapBrModPt(this,branchPts.size(),theAim*Math.PI,indx,
-						(int)data[2],(int)data[3],data[4],data[5]);
-					msg(cbp.reportExistence());
-					branchPts.add(cbp);
+					ChapBrModPt cbp=new ChapBrModPt(this,branchPts.size(),
+							theAim*Math.PI,indx,(int)data[2],(int)data[3],data[4],data[5]);
+					if (cbp.success) {
+						msg(cbp.reportExistence());
+						branchPts.add(cbp);
+					}
 				} 
 
 				// traditional branch point
 				else if (mode==3) { // traditional branch point
-					TradBrModPt tbp=new TradBrModPt(this,branchPts.size(),theAim*Math.PI,indx);
-					msg(tbp.reportExistence());
-					branchPts.add(tbp);
+					TradBrModPt tbp=new TradBrModPt(this,
+							branchPts.size(),theAim*Math.PI,indx);
+					if (tbp.success) {
+						msg(tbp.reportExistence());
+						branchPts.add(tbp);
+					}
 				}
 
 				// interstice?
 				else if (mode==1) { // find data and create 
-					SingBrModPt sbp=new SingBrModPt(this,branchPts.size(),theAim*Math.PI,indx,data[2],data[3]); 
-					msg(sbp.reportExistence());
-					branchPts.add(sbp);
+					SingBrModPt sbp=new SingBrModPt(this,branchPts.size(),
+							theAim*Math.PI,indx,data[2],data[3]); 
+					if (sbp.success) {
+						msg(sbp.reportExistence());
+						branchPts.add(sbp);
+					}
 				}
 				else 
 					return 0;
@@ -271,7 +281,14 @@ public class GenModBranching extends PackExtender {
 			} catch (Exception ex) {
 				return 0;
 			}
-		}	
+		}
+		
+		// =========== revert ===========
+		if (cmd.startsWith("revert")) { // revert 'packData' to 'refPack'
+			revert();
+			return 1;
+		}
+		
 		// =========== holonomy ===================
 		if (cmd.startsWith("holon")) {
 			// Idea is to use holoBorder to check holonomy of full packing
@@ -350,7 +367,8 @@ public class GenModBranching extends PackExtender {
 				if (ans==0) 
 					throw new ParserException();
 			} catch (Exception ex) {
-				Oops("Branch ID="+cmdBranchPt.branchID+", set parameters failed: "+ex.getMessage());
+				Oops("Branch ID="+cmdBranchPt.branchID+
+						", set parameters failed: "+ex.getMessage());
 			}
 			return Math.abs(ans);
 		}
@@ -358,7 +376,7 @@ public class GenModBranching extends PackExtender {
 		// =========== get_parameters =================
 		else if (cmd.startsWith("get_para")) {
 			if (cmdBranchPt==null) {
-				if (branchPts!=null || branchPts.size()==1) {
+				if (branchPts!=null && branchPts.size()>1) {
 					CirclePack.cpb.msg(branchPts.get(1).getParameters());
 					return 1;
 				}
@@ -393,30 +411,37 @@ public class GenModBranching extends PackExtender {
 		}
 		
 		// =========== create various branch types =============
+		
 		// ============ traditional
 		else if (cmd.startsWith("bp_trad")) { // type=1
+			double aim=2.0;
+			int getV=0;
 			try {
-				double aim=Double.parseDouble(items.get(0));
-				int v=Integer.parseInt(items.get(1));
-				int bindx=brptExists(v,GenBrModPt.TRADITIONAL);
-				TradBrModPt tbp=null;
-				// already exists?
-				if (bindx>=0) { 
-					// nothing to do here
-				}
-				// else create
-				else {
-					tbp=new TradBrModPt(this,branchPts.size(),aim*Math.PI,v);
-					msg(tbp.reportExistence());
-					branchPts.add(tbp);
-					
-					// recompute layout of 'packData'
-					parentLayout(); 
-				}
-				count=GenBranchPt.TRADITIONAL;
+				aim=Double.parseDouble(items.get(0));
+				getV=Integer.parseInt(items.get(1));
 			} catch (Exception ex) {
 				throw new ParserException("'traditional' usage: v aim");
 			}
+
+			// match against 'exclusions'.
+			HalfLink hlink=packData.packDCEL.vertices[getV].getOuterEdges();
+			Iterator<HalfEdge> his=hlink.iterator();
+			boolean hitx=false;
+			if (exclusions!=null) {
+				while (his.hasNext() && !hitx) {
+					if (exclusions.contains(his.next().origin))
+						hitx=true;
+					if (exclusions.contains(packData.packDCEL.vertices[getV]))
+						hitx=true;
+				}
+			}
+			
+			if (hitx)
+				throw new ParserException("traditional branch at "+getV+
+						" would interfere with another branch point");
+			TradBrModPt tbp=new TradBrModPt(this,
+					branchPts.size(),aim*Math.PI,getV);
+			count=installBrPt(tbp);
 		}
 
 		// ============ singular
@@ -437,7 +462,7 @@ public class GenModBranching extends PackExtender {
 					case 'a': // aim, multiplied by 2pi here
 					{
 						getAim=Double.parseDouble(items.get(0));
-						getAim *=2.0*Math.PI;
+						getAim *=Math.PI;
 						count++;
 						break;
 					}
@@ -449,7 +474,8 @@ public class GenModBranching extends PackExtender {
 						BaryPoint bp=bl.get(0);
 						if (bp.face>0)
 							getF=bp.face;
-						// bary coords are angle based appropriate to interstice (not to face itself)
+						// bary coords are angle based appropriate 
+						//    to interstice (not to face itself)
 						getO1=(1-bp.b0)/2.0;
 						getO2=(1-bp.b1)/2.0;
 						count++;
@@ -471,42 +497,38 @@ public class GenModBranching extends PackExtender {
 					}
 					case 'X':  // wipe out all old
 					{
-						packData.poisonEdges=null;
-						packData.poisonVerts=null;
-						branchPts=new Vector<GenBrModPt>(3);
-						branchPts.add((GenBrModPt)null);
-						packData.setCombinatorics();
-						packData.set_aim_default();
-						packData.free_overlaps();
+						revert();
 					}
 					} // end of switch
 
 				} // end of while
 			} catch(Exception ex) {
-				throw new ParserException("usage: -a {a} -f {f} -o {o1 o2} [-b {blist}]. "+ex.getMessage());
+				throw new ParserException(
+						"usage: -a {a} -f {f} -o {o1 o2} [-b {blist}]. "+
+								ex.getMessage());
 			}
 			
 			if (getF<1 || getF>packData.faceCount)
 				throw new ParserException("singular face missing or inappropriate");
 			
-			int bindx=brptExists(getF,GenBrModPt.SINGULAR);
-			SingBrModPt sbp=null;
-			// already exists?
-			if (bindx>=0) { 
-				sbp=(SingBrModPt)branchPts.get(bindx);
-				sbp.setParameters(StringUtil.flagSeg("-o "+getO1+" "+getO2));
-			}
-			// else create
-			else {
-				sbp=new SingBrModPt(this,branchPts.size(),
+			// match again 'exclusions'.
+			dcel.Face singFace=packData.packDCEL.faces[getF];
+			HalfEdge he=singFace.edge;
+			boolean hitx=false;
+			do {
+				if (exclusions!=null && exclusions.contains(he.origin))
+					hitx=true;
+				he=he.next;
+			} while (he!=singFace.edge && !hitx);
+			if (hitx)
+				throw new ParserException("singular face "+singFace+" would "+
+						"interfere with another branch point");
+
+			// create the branch point
+			SingBrModPt sbp=new SingBrModPt(this,branchPts.size(),
 					getAim,getF,getO1,getO2);
-				msg(sbp.reportExistence());
-				branchPts.add(sbp);
-					
-				// recompute layout of 'packData'
-				parentLayout(); 
-			}
-			count=GenBrModPt.SINGULAR;
+			
+			count=installBrPt(sbp);
 		}
 
 		// ============ chaperone
@@ -555,11 +577,7 @@ public class GenModBranching extends PackExtender {
 					}
 					case 'X':  // wipe out all former branch points
 					{
-						packData.poisonEdges=null;
-						packData.poisonVerts=null;
-						branchPts=new Vector<GenBrModPt>(3);
-						branchPts.add((GenBrModPt)null);
-						packData.set_aim_default();
+						revert();
 					}
 					} // end of switch
 				
@@ -567,7 +585,9 @@ public class GenModBranching extends PackExtender {
 					//       depending, e.g., on 'myAim'.
 				} // end of while
 			} catch(Exception ex) {
-				throw new ParserException("usage: -a {a} -v {v} -j {j1 j2} -o {o1 o2}. "+ex.getMessage());
+				throw new ParserException(
+						"usage: -a {a} -v {v} -j {j1 j2} -o {o1 o2}. "+
+								ex.getMessage());
 			}
 			
 			if (getV<1 || getV>packData.nodeCount) // packData.vert_isPoison(1);
@@ -578,17 +598,28 @@ public class GenModBranching extends PackExtender {
 				getW2=flower[3];
 			}
 			
+			// match against 'exclusions'.
+			HalfLink hlink=packData.packDCEL.vertices[getV].getOuterEdges();
+			Iterator<HalfEdge> his=hlink.iterator();
+			boolean hitx=false;
+			if (exclusions!=null) {
+				while (his.hasNext() && !hitx) {
+					if (exclusions.contains(his.next().origin))
+						hitx=true;
+					if (exclusions.contains(packData.packDCEL.vertices[getV]))
+						hitx=true;
+				}
+			}
+
+			if (hitx)
+				throw new ParserException("chaperone branch at "+getV+
+						" would interfere with another branch point");
+
+			// create the branch point
 			ChapBrModPt cbp=new ChapBrModPt(this,branchPts.size(),getAim*Math.PI,
 					getV,getW1,getW2,getO1,getO2);
 
-			if (cbp!=null) {
-				msg(cbp.reportExistence());
-				branchPts.add(cbp);
-				count=GenBrModPt.CHAPERONE;
-					
-				// recompute layout of 'packData'
-				parentLayout(); 
-			}
+			count=installBrPt(cbp);
 		}
 		return count;
 	} // done with cmdParser
@@ -606,43 +637,40 @@ public class GenModBranching extends PackExtender {
 	}
 	
 	/**
-	 * This creates 'outerOrder', which partially lays out 
-	 * the parent, circumventing the branch points. Then for
-	 * each branch point we append edges to the parent's 
-	 * 'layoutOrder' to handle its additional circles.
+	 * This creates 'layoutOrder' by partially lays out 
+	 * the parent, circumventing the branch points, and then
+	 * appending edges to handle its additional circles.
 	 * @return HalfLink
 	 */
-	public HalfLink parentLayout() {
+	public void setLayoutOrder() {
 		
 		updateExclusions(); // update poisons and vertex exclusions
 		
 		// reset parent's 'alpha' if necessary
-		int alph=packData.packDCEL.alpha.origin.vertIndx;
-		NodeLink vlist=new NodeLink();
-		Iterator<Vertex> eis=exclusions.iterator();
-		while (eis.hasNext()) {
-			Vertex vert=eis.next();
-			vlist.add(vert.vertIndx);
-		}
-		if (vlist.contains(alph)) { // have to reset?
+		Vertex alph=packData.packDCEL.alpha.origin;
+		if (exclusions!=null && alph!=null && exclusions.contains(alph)) {
+			NodeLink vlist=new NodeLink();
+			Iterator<Vertex> vis=exclusions.iterator();
+			while (vis.hasNext()) 
+				vlist.add(vis.next().vertIndx);
 			packData.packDCEL.setAlpha(0, vlist,false);
 		}
 		
-		// update the packing, but then update its layout
+		// update the packing/dcel first
 		packData.packDCEL.fixDCEL_raw(packData);
 
 		// first get the layout circumventing the branch points
-		HalfLink partOrder=CombDCEL.partialTree(packData.packDCEL,
+		HalfLink outerOrder=CombDCEL.partialTree(packData.packDCEL,
 				packData.poisonHEdges); // allMains.CPBase.Hlink=partOrder;
 
 		// throw in 'layoutAddons' from branch points
 		for (int b=1;b<branchPts.size();b++) {
 			GenBrModPt gbp=branchPts.get(b);
-			partOrder.abutMore(gbp.layoutAddons);
+			outerOrder.abutMore(gbp.layoutAddons);
 		}
-		
-		packData.packDCEL.layoutOrder=partOrder;
-		return partOrder;
+
+		// record
+		packData.packDCEL.layoutOrder=outerOrder;
 	}
 
 	/**
@@ -670,15 +698,51 @@ public class GenModBranching extends PackExtender {
 	 * @return int 'myType' or -1 if no branch point of right type exists
 	 */
 	public int brptExists(int j,int type) {
-		if(branchPts==null || branchPts.size()==0)
+		if(branchPts==null || branchPts.size()<=1)
 			return -1;
 		Iterator<GenBrModPt> bps=branchPts.iterator();
+		bps.next(); // flush first null entry
 		while (bps.hasNext()) {
 			GenBrModPt gbp=bps.next();
-			if (gbp!=null && gbp.myType==type && gbp.myIndex==j)
-				return gbp.branchID;
+			if (gbp!=null && gbp.myType==type) {
+				if (type==GenBrModPt.SINGULAR) {
+					dcel.Face face=packData.packDCEL.faces[j];
+					HalfEdge he=face.edge;
+					do {
+						if (he==gbp.myEdge) {
+							return gbp.branchID;
+						}
+						he=he.next;
+					} while(he!=face.edge);
+					return -1;
+				}
+				else if (type==GenBrModPt.CHAPERONE) {
+					if (gbp.myEdge.origin.vertIndx==j)
+						return gbp.branchID;
+					return -1;
+				}
+				else if (type==GenBrModPt.QUADFACE) {
+					return -1; // not yet implemented
+				}
+			}
 		}
 		return -1;
+	}
+	
+	/**
+	 * Return true if j is one of the "excluded" vertices, not
+	 * eligible for supporting a new branch point.
+	 * @param j int
+	 * @return boolean
+	 */
+	public boolean isExcluded(int j) {
+		if (exclusions==null)
+			return false;
+		Iterator<Vertex> vis=exclusions.iterator();
+		while (vis.hasNext())
+			if (vis.next().vertIndx==j)
+				return true;
+		return false;
 	}
 	
 	/**
@@ -689,14 +753,15 @@ public class GenModBranching extends PackExtender {
 	 * @return -1 on failure to find
 	 */
 	public int findBPindex(int bpID) {
-		if (branchPts==null || branchPts.size()==1) // 0th spot should be empty
+		if (branchPts==null || branchPts.size()<=1) // 0th spot should be empty
 			return -1;
 		int indx=-1;
 		for (int j=1;j<branchPts.size();j++) {
 			GenBrModPt gbp=branchPts.get(j);
 			if (gbp.branchID==bpID) {
 				if (indx>0)
-					throw new DataException("more than one branch point with ID = "+bpID);
+					throw new DataException(
+							"more than one branch point with ID = "+bpID);
 				indx=j;
 			}
 		}
@@ -715,9 +780,10 @@ public class GenModBranching extends PackExtender {
 			return ans;
 		for (int j=1;j<branchPts.size();j++) {
 			GenBrModPt gbp=branchPts.get(j);
-			if ((gbp.myType==GenBrModPt.CHAPERONE && nlink.containsV(gbp.myIndex)!=-1) ||
-					(gbp.myType==GenBrModPt.SHIFTED && nlink.containsV(gbp.myIndex)!=-1) ||
-					(gbp.myType==GenBrModPt.TRADITIONAL && nlink.containsV(gbp.myIndex)!=-1))
+			if ((gbp.myType==GenBrModPt.CHAPERONE && 
+					nlink.containsV(gbp.myEdge.origin.vertIndx)!=-1) ||
+					(gbp.myType==GenBrModPt.TRADITIONAL && 
+					nlink.containsV(gbp.myEdge.origin.vertIndx)!=-1))
 				ans.add(gbp.branchID);
 		}
 		return ans;
@@ -735,9 +801,10 @@ public class GenModBranching extends PackExtender {
 			return ans;
 		for (int j=1;j<branchPts.size();j++) {
 			GenBrModPt gbp=branchPts.get(j);
-			if ((gbp.myType==GenBrModPt.FRACTURED && flink.containsV(gbp.myIndex)>=0) ||
-					(gbp.myType==GenBrModPt.QUADFACE && flink.containsV(gbp.myIndex)>=0) ||
-					(gbp.myType==GenBrModPt.SINGULAR && flink.containsV(gbp.myIndex)>=0))
+			if ((gbp.myType==GenBrModPt.QUADFACE && 
+					flink.containsV(gbp.myEdge.face.getVertIndx(j))>=0) ||
+					(gbp.myType==GenBrModPt.SINGULAR && 
+					flink.containsV(gbp.myEdge.face.faceIndx)>=0))
 				ans.add(gbp.branchID);
 		}
 		return ans;
@@ -749,14 +816,13 @@ public class GenModBranching extends PackExtender {
 	 */
 	public NodeLink getBPverts() {
 		NodeLink nlink=new NodeLink(packData);
-		if (branchPts==null || branchPts.size()==1)
+		if (branchPts==null || branchPts.size()<=1)
 			return nlink;
 		for (int j=1;j<branchPts.size();j++) {
 			GenBrModPt gbp=branchPts.get(j);
 			if (gbp.myType==GenBrModPt.CHAPERONE || 
-					gbp.myType==GenBrModPt.SHIFTED ||
 					gbp.myType==GenBrModPt.TRADITIONAL)
-				nlink.add(gbp.myIndex);
+				nlink.add(gbp.myEdge.origin.vertIndx);
 		}
 		return nlink;
 	}
@@ -767,14 +833,13 @@ public class GenModBranching extends PackExtender {
 	 */
 	public FaceLink getBPfaces() {
 		FaceLink flink=new FaceLink(packData);
-		if (branchPts==null || branchPts.size()==1)
+		if (branchPts==null || branchPts.size()<=1)
 			return flink;
 		for (int j=1;j<branchPts.size();j++) {
 			GenBrModPt gbp=branchPts.get(j);
 			if (gbp.myType==GenBrModPt.SINGULAR || 
-					gbp.myType==GenBrModPt.QUADFACE ||
-					gbp.myType==GenBrModPt.FRACTURED)
-				flink.add(gbp.myIndex);
+					gbp.myType==GenBrModPt.QUADFACE)
+				flink.add(gbp.myEdge.face.faceIndx);
 		}
 		return flink;
 	}
@@ -823,7 +888,8 @@ public class GenModBranching extends PackExtender {
 		// not in circle, try interstice
 		if (v<=0) { 
 			// barycentric coords are related to angles, see 'HyperbolicMath.ideal_bary'
-			BaryPoint bpt=BaryLink.grab_one_barypoint(refPack,new String("-i "+pt.x+" "+pt.y));
+			BaryPoint bpt=BaryLink.grab_one_barypoint(refPack,
+					new String("-i "+pt.x+" "+pt.y));
 			if (bpt!=null) {
 				ans=new double[4];
 				ans[0]=1.0;
@@ -892,8 +958,10 @@ public class GenModBranching extends PackExtender {
 		ClickModValue maxDownClick=petalClicks(c2pt_arg+Math.PI/2.0,petalAngs); // pi/2 cclw
 		
 		// move one petal upstream, one petal downstream
-		ClickModValue minUpClick=new ClickModValue((centClick.petal-1.0+num)%num+centClick.fraction); 
-		ClickModValue minDownClick=new ClickModValue((centClick.petal+1.0)%num+centClick.fraction); // one petal downstream
+		ClickModValue minUpClick=new ClickModValue((centClick.petal-1.0+num)%num+
+				centClick.fraction);
+		ClickModValue minDownClick=new ClickModValue((centClick.petal+1.0)%num+
+				centClick.fraction); 
 
 		// get the 'shadow' cast by pt; this is half the angular arc subtended
 		//   by a circle through pt, perpendicular to 'cent2pt' and hitting the circle
@@ -958,7 +1026,8 @@ public class GenModBranching extends PackExtender {
 		// not in circle, try interstice
 		if (v<=0) { 
 			// barycentric coords are related to angles, see 'HyperbolicMath.ideal_bary'
-			BaryPoint bpt=BaryLink.grab_one_barypoint(refPack,new String("-i "+pt.x+" "+pt.y));
+			BaryPoint bpt=BaryLink.grab_one_barypoint(refPack,
+					new String("-i "+pt.x+" "+pt.y));
 			if (bpt!=null) {
 				ans=new double[4];
 				ans[0]=1.0;
@@ -1003,12 +1072,13 @@ public class GenModBranching extends PackExtender {
 
 		// gather info to decide on jumps and overlaps
 		
-		// find all tangency points with petals; special case if pt is very close
+		// find all tangency points with petals; special case if pt very close
 		@SuppressWarnings("unused")
 		int nearOne=-1;
 		Complex []petalTangency=new Complex[num+1];
 		for (int j=0;j<=num;j++) {
-			petalTangency[j]=refPack.tangencyPoint(new EdgeSimple(v,refPack.kData[v].flower[j]));
+			petalTangency[j]=refPack.tangencyPoint(
+					new EdgeSimple(v,refPack.kData[v].flower[j]));
 			if (petalTangency[j].minus(pt).abs()<.025*refPack.getRadius(v)) {
 				nearOne=refPack.kData[v].flower[j];
 			}
@@ -1025,7 +1095,8 @@ public class GenModBranching extends PackExtender {
 		// if pt lies in the incircle of 'myface', that should tell us
 		//    the jump circles and give estimate of parameters.
 		if (myface>0) {
-			CircleSimple incirc=refPack.faceIncircle(myface,AmbiguousZ.getAmbiguousZs(refPack));
+			CircleSimple incirc=refPack.faceIncircle(myface,
+					AmbiguousZ.getAmbiguousZs(refPack));
 			if (pt.minus(incirc.center).abs()<incirc.rad) {
 				ans=new double[6];
 				ans[0]=2.0;
@@ -1067,7 +1138,8 @@ public class GenModBranching extends PackExtender {
 		Complex []petalVectors=new Complex[num+1];
 		for (int j=0;j<=num;j++) {
 			int k=refPack.kData[v].flower[j];
-			petalVectors[j]=new Complex(refPack.getCenter(k).minus(refPack.getCenter(v)));
+			petalVectors[j]=new Complex(
+					refPack.getCenter(k).minus(refPack.getCenter(v)));
 			petalVectors[j]=petalVectors[j].divide(petalVectors[j].abs()); 
 		}
 		
@@ -1091,7 +1163,8 @@ public class GenModBranching extends PackExtender {
 			else pos[j]=true;
 		}
 		
-		// jump1 is first clw petal from dvec direction: here's where we jump to sister2.
+		// jump1 is first clw petal from dvec direction: here's where 
+		//    we jump to sister2.
 		int jump1=-1;
 		for (int j=1;j<=num;j++) {
 			if (jump1==-1 && pos[j] && !pos[j-1])
@@ -1106,9 +1179,11 @@ public class GenModBranching extends PackExtender {
 		if (!refPack.isBdry(v))
 			jump1=jump1%num;
 		
-		// how deep is dvec in this sector? The deeper in, the smaller overlap 1
+		// how deep is dvec in this sector? The deeper, the smaller overlap 1
 		int pj=(jump1-1+num)%num; // index of prejump
-		double overlap1=1.0-dvec.divide(petalVectors[pj]).arg()/petalVectors[jump1].divide(petalVectors[pj]).arg();
+		double overlap1=1.0-dvec.divide(
+				petalVectors[pj]).arg()/petalVectors[jump1].divide(
+						petalVectors[pj]).arg();
 		
 		// Now have to find jump 2; 
 		// Try to judge how may circles will go how far around sister2
@@ -1116,12 +1191,15 @@ public class GenModBranching extends PackExtender {
 		// get angle at sister2 as if jump1 were tangent to prejump and sister2
 		int jumpCir1=refPack.kData[v].flower[jump1];
 		int pv1=refPack.kData[v].flower[pj];
-		double sp=pt.minus(refPack.getCenter(refPack.kData[v].flower[pj])).abs(); // distance pv1 to sister2
+		// distance pv1 to sister2
+		double sp=pt.minus(refPack.getCenter(refPack.kData[v].flower[pj])).abs();
 		double pv1v1=refPack.getRadius(pv1)+refPack.getRadius(jumpCir1);
 		double v1s=rad+refPack.getRadius(jumpCir1);
 		double ang=Math.acos((sp*sp+pv1v1*pv1v1-v1s*v1s)/(2.0*sp*pv1v1));
-		Complex stpv=refPack.getCenter(pv1).minus(pt); // vector, pt to center of prejump1
-		double pva=dvec.divide(stpv).arg(); // angle along sister1; subtract this
+		// vector, pt to center of prejump1
+		Complex stpv=refPack.getCenter(pv1).minus(pt);
+		// angle along sister1; subtract this
+		double pva=dvec.divide(stpv).arg(); 
 		double anglesum=ang-pva;
 		
 		// add angles of successive neighbors of sister2 until exceeding 2pi
@@ -1201,7 +1279,28 @@ public class GenModBranching extends PackExtender {
 			accumAng +=incr;
 		}
 		
-		return ((double)k)*Math.PI; // essentially, myang should equal full angle sum
+		return ((double)k)*Math.PI; // myang should ~ full anglesum
+	}
+	
+	/**
+	 * Install a new branch point
+	 * parameters. 
+	 * @param bpt GenBrModPt
+	 * @return int
+	 */
+	public int installBrPt(GenBrModPt bpt) {
+		if (bpt!=null && bpt.success) {
+			msg(bpt.reportExistence());
+			branchPts.add(bpt);
+				
+			// recompute layout of 'packData'
+			setLayoutOrder(); 
+				
+			// renew colors and parameters
+			bpt.renew();
+			return bpt.myType;
+		}
+		return 0;
 	}
 	
 	/**
@@ -1218,11 +1317,24 @@ public class GenModBranching extends PackExtender {
 		GenBrModPt gbp=branchPts.remove(indx);
 		gbp.dismantle();
 		
-		this.parentLayout();
+		this.setLayoutOrder();
 		
 		return indx; // should be >= 1
 	}
 	
+	/**
+	 * Throw out all generalized branch points and revert
+	 * to the original packing held in 'refPack'.
+	 */
+	public void revert() {
+		branchPts=new Vector<GenBrModPt>();
+		branchPts.add(null); // first spot empty
+		exclusions=new ArrayList<Vertex>();
+		PackData newCopy=refPack.copyPackTo();
+		CirclePack.cpb.swapPackData(newCopy,packData.packNum,true);
+		packData.set_aim_default();
+		packData.set_invD_default();
+	}
 		
 	/** 
 	 * Override method for cataloging command structures
@@ -1233,60 +1345,49 @@ public class GenModBranching extends PackExtender {
 				"first flag '-b' designates a branch point ID number"));
 		cmdStruct.add(new CmdStruct("disp","-[shyj] {usual}",null,
 				"display on parents packing. For chaperone: s=sisters, "+
-				"h=chaperones, y=putative branch point, j=jumps. Also, {usual} display options"));
+				"h=chaperones, y=putative branch point, "+
+						"j=jumps. Also, {usual} display options"));
 		cmdStruct.add(new CmdStruct("status","-b{b}",null,
 				"report the status of branch point 'b'"));
 		cmdStruct.add(new CmdStruct("angsum_err",null,null,
-				"report the l^2 anglesum error of parent and all branch points"));
+				"report the l^2 anglesum error of parent and "+
+						"all branch points"));
 		cmdStruct.add(new CmdStruct("get_param",null,null,
 				"report branch point parameters"));
-		cmdStruct.add(new CmdStruct("repack","[-b{b}] [N]",null,
-				"repack specified (or default to all) branch point, N repack cycles"));
-		cmdStruct.add(new CmdStruct("Repack","[N]",null,
-				"Repack everything, parent and branch points, in 'ping-pong' precess"));
-		cmdStruct.add(new CmdStruct("layout",null,null,
-				"layout specified (default to all) branch point in normalized position "+
-				"(assume packed)"));
-		cmdStruct.add(new CmdStruct("Layout",null,null,
-				"layout parent and branch points (assume all are packed)"));
 		cmdStruct.add(new CmdStruct("click","-[xX] z [-a {x}] ",null,
-				"create a chaparone or a singular branch point (as appropriate) at the "+
-				"point z (relative to 'refPack'); '-x' flag means to remove other nearby "+
+				"create a chaparone or a singular branch point "+
+						"(as appropriate) at the "+
+				"point z (relative to 'refPack'); '-x' flag means "+
+						"to remove other nearby "+
 				"branch points; '-X' remove all others; -a set aim to x*Pi"));
-		cmdStruct.add(new CmdStruct("sendmydata","[-b{b}]",null,
-				"send branch point radii, centers to parent (may want layout/align first)"));
 		cmdStruct.add(new CmdStruct("reset_over","o1 o2",null,
-				"For resetting overlaps for 'singular' and 'chaperone' branch points"));
-		cmdStruct.add(new CmdStruct("export","[-qn] [-s {filename}]",null,
-				"Export the local packing to packing 'n', the script, or "+
-				"to 'filename' in the packing directory"));
+				"For resetting overlaps for 'singular' and 'chaperone' "+
+						"branch points"));
 		cmdStruct.add(new CmdStruct("delete","-b{b}",null,
 				"delete branch point 'b'"));
 		cmdStruct.add(new CmdStruct("set_param","{param list}",null,
 				"Set parameters for branch point, format depends on type: "+
 				"sing '-a {a} -o {o1 o2}'; "+
 				"chap '-a {a} -j {w1 w2} -o {o1 o2}'"));
+		cmdStruct.add(new CmdStruct("copy","{pnum}",null,
+				"write 'refPack' into designated packing"));
+		cmdStruct.add(new CmdStruct("revert",null,null,
+				"revert to the original unbranched packing 'refPack'"));
 		
 		// creating branch point types:
 		cmdStruct.add(new CmdStruct("bp_trad","-a {a} -v {v}",null,
 				"Create 'traditional' branch point, aim 'a', vert 'v'."));
-		cmdStruct.add(new CmdStruct("bp_frac","-a {a} -f {f}",null,
-				"Create 'fractured' branch point, aim 'a', face 'f'."));
-		cmdStruct.add(new CmdStruct("bp_quad","-a {a} -f {f g}",null,
-				"Create 'quadface' branch point: aim 'a', contig faces 'f', 'g'."));
-		cmdStruct.add(new CmdStruct("bp_sing","-a {a} -f {f} -o {o1 o2} [-b {blist}]",null,
+		cmdStruct.add(new CmdStruct("bp_sing",
+				"-a {a} -f {f} -o {o1 o2} [-b {blist}]",null,
 				"Create 'singular' branch point, aim 'a'; face 'f'; "+
 				"overlaps 'o1', 'o2' in [0,1], o1+o2 in [0,1]. "+
 				"'blist' is 'BaryLink' option for face and overlaps."));
-		cmdStruct.add(new CmdStruct("bp_shift","-a {a} -v {v} -w {w}",null,
-				"Create 'shifted' branch point, aim 'a', vert 'v'."));
-		cmdStruct.add(new CmdStruct("bp_chap","-a {a} -v {v} -j {w1 w2} -o {o1 o2}",null,
+		cmdStruct.add(new CmdStruct("bp_chap",
+				"-a {a} -v {v} -j {w1 w2} -o {o1 o2}",null,
 				"Create 'chaperone' branch point, aim 'a', vert 'v'; "+
 				"optional jump vertices, petals 'w1' 'w2', "+
 				"overlap parameters 'o1', 'o2' in [0,1]."));
-		cmdStruct.add(new CmdStruct("copy","{pnum}",null,
-				"write 'refPack' into designated packing"));
-		
+
 	}
 
 }

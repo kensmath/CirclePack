@@ -6912,7 +6912,7 @@ public class PackData{
 		UtilPacket uP=new UtilPacket();
 
 		uP.value=0.0;
-		for (v=1;v<=nodeCount;v++) {
+		for (v=1;v<=nodeCount;v++) { // getRadius(40)
 			if (!CommonMath.get_anglesum(this,v,getRadius(v),uP)) 
 				throw new DataException("failed to compute angle sum for "+v);
 			setCurv(v,uP.value);
@@ -11449,7 +11449,7 @@ public class PackData{
   	  	if (packDCEL!=null) {
   	  		try { 
   	  			packDCEL.redChain=null;
-  	  			RawDCEL.addBary_raw(packDCEL,packDCEL.idealFaces[1],false);
+  	  			RawDCEL.addBary_raw(packDCEL,packDCEL.idealFaces[1].edge,false);
   	  		} catch(Exception ex) {
   	  			throw new CombException("'proj' dcel error");
   	  		}

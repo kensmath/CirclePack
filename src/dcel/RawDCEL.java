@@ -910,35 +910,35 @@ public class RawDCEL {
 	}
 
 	/**
-	   * Create a barycenter for face 'f', a new interior
-	   * vertex; 'vutil' gives reference vert. Red chain,
+	   * Create a barycenter for face 'edge.face'; 
+	   * 'vutil' set to hold reference vert. Red chain,
 	   * 'redFlag's, and 'bdryFlag's should normally remain 
 	   * undisturbed. 
 	   * 
 	   * Note: calling routine should throw out 
-	   * 'redChain' if 'f' is ideal face.
+	   * 'redChain' if 'edge.face' is ideal.
 	   * 
 	   * TODO: 'multi-bary' true, then add three vertices
 	   * to the face instead of just one (if the face
 	   * has 3 edges?)
+	   * 
 	   * @param pdcel PackDCEL
-	   * @param f Face
+	   * @param edge HalfEdge
 	   * @param mutli_bary boolean, 
 	   * @return int new index
 	   */
 	  public static int addBary_raw(PackDCEL pdcel,
-			  Face f,boolean multi_bary) {
+			  HalfEdge edge,boolean multi_bary) {
 		  
 		  // make room
 		  int node=pdcel.vertCount+1; // new index 
 		  if (node>=pdcel.p.sizeLimit)
 			  pdcel.p.alloc_pack_space(node+10,true);
-			
-		  HalfLink polyE=null;
-		  int n=0;
-		  if (f.edge==null || (polyE=f.getEdges())==null || 
-				  (n=polyE.size())<=2) 
+		  
+		  HalfLink hlink=HalfLink.nextLink(pdcel,edge);
+		  if (hlink==null || hlink.size()<=2)
 			  return 0;
+		  int n=hlink.size();
 		  
 		  Vertex newV=new Vertex(node); // this is the barycenter
 		  newV.redFlag=false;
@@ -949,7 +949,7 @@ public class RawDCEL {
 		  HalfEdge base;
 		  HalfEdge next_in;
 		  for (int j=0;j<(n-1);j++) {
-			  base=polyE.get(j);
+			  base=hlink.get(j);
 			  base.origin.bdryFlag=0; // becomes interior
 			  base.face=null;
 			  next_in=new HalfEdge(base.twin.origin);
@@ -970,7 +970,7 @@ public class RawDCEL {
 		  }
 		  
 		  // last face
-		  base=polyE.get(n-1);
+		  base=hlink.getLast();
 		  base.face=null;
 		  base.origin.bdryFlag=0;
 		  next_in=new HalfEdge(base.twin.origin);
@@ -1011,7 +1011,7 @@ public class RawDCEL {
 		  Iterator<Face> flst=farray.iterator();
 		  while (flst.hasNext()) {
 			  Face face=flst.next();
-			  count += RawDCEL.addBary_raw(pdcel,face,false);
+			  count += RawDCEL.addBary_raw(pdcel,face.edge,false);
 				
 			  // face was ideal? toss 'redChain'
 			  if (face.faceIndx<0) 
@@ -1339,7 +1339,7 @@ public class RawDCEL {
 			base_twin.prev = down_left;
 
 			// add barycenter
-			addBary_raw(pdcel, new_face, false);
+			addBary_raw(pdcel, new_face.edge, false);
 
 			// create red
 			RedHEdge up_red = new RedHEdge(up_right);
@@ -1440,7 +1440,7 @@ public class RawDCEL {
 				base_twin.prev = down_left;
 
 				// add barycenter
-				addBary_raw(pdcel, new_face, false);
+				addBary_raw(pdcel, new_face.edge, false);
 
 				// create red
 				up_red = new RedHEdge(up_right);
@@ -1532,7 +1532,7 @@ public class RawDCEL {
 				base_twin.prev = down_left;
 
 				// create barycenter
-				addBary_raw(pdcel, new_face, false);
+				addBary_raw(pdcel, new_face.edge, false);
 
 				// create red
 				up_red = new RedHEdge(up_right);

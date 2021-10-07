@@ -5342,7 +5342,7 @@ public class CommandStrParser {
 		   			  if (xdup[f]==0) {
 		   				  int ans;
 	   					  ans=RawDCEL.addBary_raw(
-	   							  packData.packDCEL,face,false);
+	   							  packData.packDCEL,face.edge,false);
 	   					  xdup[f]=1;
 		   				  if (ans!=0 && face.faceIndx<0)
 		   					  packData.packDCEL.redChain=null; // redo red

@@ -1552,6 +1552,31 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			W = w;
 		return new EdgeSimple(v,w);
 	}
+	
+	/**
+	 * Find the link of 'next' halfedges starting with 'edge':
+	 * i.e. edge, edge.next,edge.next.next, etc. ending with
+	 * 'edge.prev'. Thus these bound a face, usually there are
+	 * 3, but for ideal face may be more. Set safety to avoid
+	 * loop; return null if tripped.
+	 * NOTE: use 'edge' because faces are ephemeral
+	 * @param pdcel PackDCEL
+	 * @param edge HalfEdge
+	 * @return HalfLink, null on error
+	 */
+	public static HalfLink nextLink(PackDCEL pdcel,HalfEdge edge) {
+		HalfLink hlink=new HalfLink();
+		HalfEdge he=edge;
+		int safety=(int)(pdcel.vertCount/2);
+		do {
+			safety--;
+			hlink.add(he);
+			he=he.next;
+		} while (he!=edge && safety>0);
+		if (safety==0)
+			return null;
+		return hlink;
+	}
 		
 	/**
 	 * Make up list by looking through SetBuilder specs (from {..} set-builder

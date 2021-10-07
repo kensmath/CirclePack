@@ -3,10 +3,10 @@ package branching;
 import java.util.ArrayList;
 import java.util.Vector;
 
+import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.Vertex;
 import ftnTheory.GenModBranching;
-import listManip.FaceLink;
 import listManip.HalfLink;
 import math.Mobius;
 import packing.PackData;
@@ -74,8 +74,9 @@ public abstract class GenBrModPt {
 	public GenModBranching gmb;  // parent extender
 
 	public int myType;	  // type (see above)
+	public HalfEdge myEdge;  // each type can be associated with a halfedge
 	public int branchID;  // id number, starting from 0 as created by parent
-	public int myIndex;	  // may be face index or vert index, depending on type
+//	public int myIndex;	  // may be face index or vert index, depending on type
 	double myAim;		  // target angle sum; e.g. 4*pi.
 	PackData p;    		  // who's your daddy? (held by GenModBranching extender)
 	public HalfLink layoutAddons;  // adjoined to parent layout for this branch
@@ -86,10 +87,12 @@ public abstract class GenBrModPt {
 	public HalfLink eventHorizon;  // surrounding the branch region
 	public ArrayList<Vertex> myExclusions; // vertices on/inside 'eventHorizon'
 
+	public boolean success; // false if something went wrong during construction
+	
 	PackDCEL pdc; // convenience
 	
 	// Constructor
-	public GenBrModPt(GenModBranching gmb,int bID,FaceLink blink,double aim) {
+	public GenBrModPt(GenModBranching gmb,int bID,double aim) {
 		p=gmb.packData;
 		pdc=p.packDCEL; 
 		branchID=bID;
@@ -97,6 +100,7 @@ public abstract class GenBrModPt {
 		myHolonomy=null;
 		layoutAddons=null;
 		myHoloBorder=null;
+		success=false;  
 	}
 	
 	// ************** abstract methods ******************
@@ -107,9 +111,6 @@ public abstract class GenBrModPt {
 	// prepare to delete by resetting 'packData'
 	abstract public void dismantle();
 	
-	// current
-	abstract public double currentError();
-	
 	// report existence and main data
 	abstract public String reportExistence();
 	
@@ -118,9 +119,12 @@ public abstract class GenBrModPt {
 
 	// report parameters in String
 	abstract public String getParameters();
-
+	
 	// set parameters (list depends on branch type)
 	abstract public int setParameters(Vector<Vector<String>> flagSegs);
+	
+	// renew parameters and colors
+	abstract public void renew();
 	
 	// ************************************************
 

@@ -281,7 +281,7 @@ public class HalfEdge {
 		if (Math.abs(invd-1.0)<.000001) {
 			invDist=1.0;
 			if (twin!=null)
-				twin.setInvDist(1.0);
+				twin.invDist=1.0;
 		}
 		else {
 			invDist=invd;
