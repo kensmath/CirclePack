@@ -16,11 +16,10 @@ import dcel.HalfEdge;
 import dcel.Vertex;
 import exceptions.DataException;
 import exceptions.ParserException;
-import geometry.CircleSimple;
 import geometry.HyperbolicMath;
-import komplex.AmbiguousZ;
 import komplex.EdgeSimple;
 import listManip.BaryLink;
+import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
@@ -63,7 +62,10 @@ import util.StringUtil;
  */
 public class GenModBranching extends PackExtender {
 	
-	// a reference copy of original packing is maintained unchanged
+	// Stored copy of original packing, with layout and everything.
+	// NOTE: Usually displayed on a separate canvas for interactive
+	//       "clicks", but the data is computed using the stored
+	//       'refPack', not its copy.
 	public PackData refPack;  
 	
 	Vector<GenBrModPt> branchPts; // start with index 1
@@ -146,6 +148,25 @@ public class GenModBranching extends PackExtender {
 		}
 		// ---------------------------------------------------
 		
+		// =========== event ====== (append horizon to 'vlist')
+		if (cmd.startsWith("event")) {
+			if (branchPts.size()==1)
+				return 1;
+			GenBrModPt gbp=branchPts.get(1);
+			if (cmdBranchPt!=null)
+				gbp=cmdBranchPt;
+
+			if (packData.elist==null)
+				packData.elist=new EdgeLink();
+			Iterator<HalfEdge> bis=gbp.eventHorizon.iterator();
+			while (bis.hasNext()) {
+				HalfEdge he=bis.next();
+				packData.elist.add(new EdgeSimple(he.origin.vertIndx,
+						he.twin.origin.vertIndx));
+			}
+			return 1;
+		}
+		
 		// =========== click ===================
 		if (cmd.startsWith("click")) {
 			boolean localWipe=false;
@@ -164,7 +185,7 @@ public class GenModBranching extends PackExtender {
 						localWipe=true;
 						break;
 					}
-					case 'X':
+					case 'X': // global revert
 					{
 						revert();
 						break;
@@ -186,8 +207,8 @@ public class GenModBranching extends PackExtender {
 			try {
 				Complex pt=PointLink.grab_one_z(StringUtil.reconItem(items));
 				
-				// here's key routine: find out type of branching and parameters
-				double []data=getClickData(pt);
+				// key routine: find type of branching/parameters at 'pt'
+				double []data=getClickData(refPack,pt);
 				
 				int mode=(int)data[0];
 				int indx=(int)data[1];
@@ -233,30 +254,21 @@ public class GenModBranching extends PackExtender {
 				if (mode==2) { // data[2]/[3] are the jump petals, data[4]/[5] the overlaps
 					ChapBrModPt cbp=new ChapBrModPt(this,branchPts.size(),
 							theAim*Math.PI,indx,(int)data[2],(int)data[3],data[4],data[5]);
-					if (cbp.success) {
-						msg(cbp.reportExistence());
-						branchPts.add(cbp);
-					}
+					installBrPt(cbp);
 				} 
 
 				// traditional branch point
 				else if (mode==3) { // traditional branch point
 					TradBrModPt tbp=new TradBrModPt(this,
 							branchPts.size(),theAim*Math.PI,indx);
-					if (tbp.success) {
-						msg(tbp.reportExistence());
-						branchPts.add(tbp);
-					}
+					installBrPt(tbp);
 				}
 
 				// interstice?
 				else if (mode==1) { // find data and create 
 					SingBrModPt sbp=new SingBrModPt(this,branchPts.size(),
 							theAim*Math.PI,indx,data[2],data[3]); 
-					if (sbp.success) {
-						msg(sbp.reportExistence());
-						branchPts.add(sbp);
-					}
+					installBrPt(sbp);
 				}
 				else 
 					return 0;
@@ -276,7 +288,7 @@ public class GenModBranching extends PackExtender {
 				int pnum=Integer.parseInt((String)items.get(0));
 				PackData newCopy=refPack.copyPackTo();
 				for (int v=1;v<=newCopy.nodeCount;v++)
-					newCopy.kData[v].plotFlag=1;
+					newCopy.setPlotFlag(v, 1);
 				return CirclePack.cpb.swapPackData(newCopy,pnum,false);
 			} catch (Exception ex) {
 				return 0;
@@ -302,15 +314,29 @@ public class GenModBranching extends PackExtender {
 		
 		// =========== delete =====================
 		if (cmd.startsWith("dele")) {
+			int bps=branchPts.size()-1;
+			if (bps==0) {
+				CirclePack.cpb.errMsg(
+						"The packing has no generalized branch points to delete.");
+				return 1;
+			}
+			
+			// is all is specified or there's only one branch pt, revert. 
+			items=(Vector<String>)flagSegs.get(0);
+			if (items!=null && items.get(0).startsWith("a") || bps==1) { 
+				revert();
+				return 1;
+			}
+			
+			// nothing specified?
 			if (cmdBranchPt==null) {
 				if (branchPts.size()>1)
 					throw new ParserException("branch pt wasn't specified.");
 				return 1;
 			}
 			
-			// otherwise, delete
-			cmdBranchPt.dismantle();
-			branchPts.remove(cmdBranchPt);
+			// otherwise, delete specified one
+			deleteBP(cmdBranchPt.branchID);
 
 			// reset parent's drawing order
 			count++;
@@ -417,10 +443,37 @@ public class GenModBranching extends PackExtender {
 			double aim=2.0;
 			int getV=0;
 			try {
-				aim=Double.parseDouble(items.get(0));
-				getV=Integer.parseInt(items.get(1));
-			} catch (Exception ex) {
-				throw new ParserException("'traditional' usage: v aim");
+				Iterator<Vector<String>> fit=flagSegs.iterator();
+				while (fit.hasNext()) {
+					items=fit.next();
+					if (!StringUtil.isFlag(items.get(0)))
+						throw new ParserException("bp_trad requires flags -[ai]");
+					String sstr=items.remove(0);
+					switch (sstr.charAt(1)) {
+					case 'a': // aim, multiplied by 2pi here
+					{
+						aim=Double.parseDouble(items.get(0))*Math.PI;
+						count++;
+						break;
+					}
+					case 'v': // OBE: deprecated
+					case 'i': // index of vertex
+					{
+						NodeLink vl=new NodeLink(packData,items);
+						getV=vl.get(0);
+						count++;
+						break;
+					}
+					case 'X':  // wipe out all old
+					{
+						revert();
+					}
+					} // end of switch
+				} // end of while	
+			} catch(Exception ex) {
+				throw new ParserException(
+						"usage: -a {a} -i {v} "+
+								ex.getMessage());
 			}
 
 			// match against 'exclusions'.
@@ -440,7 +493,7 @@ public class GenModBranching extends PackExtender {
 				throw new ParserException("traditional branch at "+getV+
 						" would interfere with another branch point");
 			TradBrModPt tbp=new TradBrModPt(this,
-					branchPts.size(),aim*Math.PI,getV);
+					branchPts.size(),aim,getV);
 			count=installBrPt(tbp);
 		}
 
@@ -456,7 +509,7 @@ public class GenModBranching extends PackExtender {
 				while (fit.hasNext()) {
 					items=fit.next();
 					if (!StringUtil.isFlag(items.get(0)))
-						throw new ParserException("bp_sing requires flags -[abfo]");
+						throw new ParserException("bp_sing requires flags -[abio]");
 					String sstr=items.remove(0);
 					switch (sstr.charAt(1)) {
 					case 'a': // aim, multiplied by 2pi here
@@ -481,7 +534,8 @@ public class GenModBranching extends PackExtender {
 						count++;
 						break;
 					}
-					case 'f': // face
+					case 'f': // OBE: deprecated
+					case 'i': // index of face
 					{
 						FaceLink fl=new FaceLink(packData,items);
 						getF=fl.get(0);
@@ -504,7 +558,7 @@ public class GenModBranching extends PackExtender {
 				} // end of while
 			} catch(Exception ex) {
 				throw new ParserException(
-						"usage: -a {a} -f {f} -o {o1 o2} [-b {blist}]. "+
+						"usage: -a {a} -i {f} -o {o1 o2} [-b {blist}]. "+
 								ex.getMessage());
 			}
 			
@@ -545,7 +599,7 @@ public class GenModBranching extends PackExtender {
 				while (fit.hasNext()) {
 					items=fit.next();
 					if (!StringUtil.isFlag(items.get(0)))
-						throw new ParserException("missing flag -[ajov] or -z {x y} ");
+						throw new ParserException("missing flag -[aijo] or -z {x y} ");
 					String sstr=items.remove(0);
 					switch (sstr.charAt(1)) {
 					case 'a': // new aim
@@ -568,7 +622,8 @@ public class GenModBranching extends PackExtender {
 						count++;
 						break;
 					}
-					case 'v': // vertex
+					case 'v': // OBE: deprecated
+					case 'i': // index of vertex
 					{
 						NodeLink nl=new NodeLink(packData,items);
 						getV=nl.get(0);
@@ -586,7 +641,7 @@ public class GenModBranching extends PackExtender {
 				} // end of while
 			} catch(Exception ex) {
 				throw new ParserException(
-						"usage: -a {a} -v {v} -j {j1 j2} -o {o1 o2}. "+
+						"usage: -a {a} -i {v} -j {j1 j2} -o {o1 o2}. "+
 								ex.getMessage());
 			}
 			
@@ -845,7 +900,8 @@ public class GenModBranching extends PackExtender {
 	}
 	
 	/**
-	 * Given a point 'pt', determine if it gives 
+	 * Designed for use in study of generalized branching.
+	 * Given a point 'pt', determine if it determines
 	 * 'singular' (interstice) or 'chaperone' branching 
 	 * (relative to 'refPack') and return appropriate 
 	 * parameters: 
@@ -872,14 +928,16 @@ public class GenModBranching extends PackExtender {
 	 *   for interstice:
 	 *   	[2],[3] = bary coords b1, b2 for interstice
 	 *   for chaperone
-	 *      [2],[3] = jump petals (circle indices in refPack, not petal indices)
+	 *      [2],[3] = jump petals (circle indices in refPack)
 	 *      [4],[5] = overlaps in [0,1], depending on situation
 	 *    
+	 * @param refPack PackData    
 	 * @param pt Complex
 	 * @return double[2], double[4], or double[6], null on error 
 	 */
-	public double []getClickData(Complex pt) {
-		if (pt==null) return null;
+	public double []getClickData(PackData refPack, Complex pt) {
+		if (pt==null) 
+			return null;
 		double []ans=null;
 		
 		// first check if pt is inside a circle
@@ -887,7 +945,8 @@ public class GenModBranching extends PackExtender {
 
 		// not in circle, try interstice
 		if (v<=0) { 
-			// barycentric coords are related to angles, see 'HyperbolicMath.ideal_bary'
+			// barycentric coords relative to angles, 
+			//     see 'HyperbolicMath.ideal_bary'
 			BaryPoint bpt=BaryLink.grab_one_barypoint(refPack,
 					new String("-i "+pt.x+" "+pt.y));
 			if (bpt!=null) {
@@ -909,6 +968,7 @@ public class GenModBranching extends PackExtender {
 
 		// Key variables are R, r, and shadow.
 		int num=refPack.countFaces(v);
+		int[] flower=refPack.getFlower(v);
 		double R=refPack.getRadius(v);
 		Complex cent=refPack.getCenter(v);
 		Complex cent2pt=pt.minus(cent);
@@ -920,16 +980,16 @@ public class GenModBranching extends PackExtender {
 		// close to center of v? use traditional branch point
 		// TODO: need to experiment to find best 'dcutoff'
 		double dcutoff=.025;
-		if ((R-r)<dcutoff*refPack.getRadius(v)) {
-			ans=new double[2];
-			ans[0]=3.0;
+		if ((R-r)<dcutoff*R) {
+			ans=new double[2]; 
+			ans[0]=3.0; // traditional
 			ans[1]=(double)v;
 			return ans;
 		}
 
-		// prepare return data for circle case
+		// else prepare return data for circle case
 		ans=new double[6];
-		ans[0]=2.0; 
+		ans[0]=2.0; // circle
 		ans[1]=(double)v; // circle index
 
 		// closed list the arguments of edges from v to petals v_j
@@ -939,11 +999,11 @@ public class GenModBranching extends PackExtender {
 //		int nearOne=-1;
 		double []petalAngs=new double[num+1]; // closed cycle of angles to petals
 		for (int j=0;j<num;j++) {
-			Complex c2pet=refPack.getCenter(refPack.kData[v].flower[j]).minus(cent);
+			Complex c2pet=refPack.getCenter(flower[j]).minus(cent);
 			petalAngs[j]=(c2pet.arg()+m2pi)%m2pi;
 //			c2pet=c2pet.times(R/c2pet.abs());
 //			if (c2pet.minus(cent2pt).abs()<.025*R) {
-//				nearOne=refPack.kData[v].flower[j];
+//				nearOne=flower[j];
 //			}
 		}
 		petalAngs[num]=petalAngs[0]; // close up
@@ -953,19 +1013,25 @@ public class GenModBranching extends PackExtender {
 		//    containing the point, and the F is the cclw fraction of
 		//    angle the point occupies in that petal.
 		// We get the upstream and downstream max and min data we can use
-		ClickModValue centClick=petalClicks(c2pt_arg,petalAngs); // click data for pt itself
-		ClickModValue maxUpClick=petalClicks(c2pt_arg-Math.PI/2.0,petalAngs); // pi/2 clw
-		ClickModValue maxDownClick=petalClicks(c2pt_arg+Math.PI/2.0,petalAngs); // pi/2 cclw
+		ClickModValue centClick=
+				petalClicks(c2pt_arg,petalAngs); // click data for pt itself
+		ClickModValue maxUpClick=
+				petalClicks(c2pt_arg-Math.PI/2.0,petalAngs); // pi/2 clw
+		ClickModValue maxDownClick=
+				petalClicks(c2pt_arg+Math.PI/2.0,petalAngs); // pi/2 cclw
 		
 		// move one petal upstream, one petal downstream
-		ClickModValue minUpClick=new ClickModValue((centClick.petal-1.0+num)%num+
+		ClickModValue minUpClick=
+				new ClickModValue((centClick.petal-1.0+num)%num+
 				centClick.fraction);
-		ClickModValue minDownClick=new ClickModValue((centClick.petal+1.0)%num+
+		ClickModValue minDownClick=
+				new ClickModValue((centClick.petal+1.0)%num+
 				centClick.fraction); 
 
-		// get the 'shadow' cast by pt; this is half the angular arc subtended
-		//   by a circle through pt, perpendicular to 'cent2pt' and hitting the circle
-		//   of radius R at right angles (i.e., hyp geodesic, vis-a-vis this disc).
+		// get the 'shadow' cast by pt; this is half the angular 
+		//   arc subtended by a circle through pt, perpendicular to 
+		//   'cent2pt' and hitting the circle of radius R at right 
+		//   angles (i.e., hyp geodesic, vis-a-vis this disc).
 		// 'shadow' is in [0,pi/2].
 		double shadow=HyperbolicMath.shadow_angle((R-r)/R); // geodesic half-length 
 
@@ -974,16 +1040,18 @@ public class GenModBranching extends PackExtender {
 		//   monotonically to virtual click data used to find jumps and overlaps. 
 		// On the upstream side: T: [0,pi/2] --> [minright, maxright].
 		// On the downstream side: T: [0,pi/2] --> [minleft, maxleft].
-		ClickModValue vertualUp=clickTransform(shadow,minUpClick,maxUpClick,num);
-		ClickModValue vertualDown=clickTransform(shadow,minDownClick,maxDownClick,num);
+		ClickModValue vertualUp=
+				clickTransform(shadow,minUpClick,maxUpClick,num);
+		ClickModValue vertualDown=
+				clickTransform(shadow,minDownClick,maxDownClick,num);
 
 		// jump and overlap depend on upstream or downstream
 		int upj=(int)((vertualUp.petal+1)%num);
-		ans[2]=refPack.kData[v].flower[upj];
+		ans[2]=flower[upj];
 		ans[4]=1.0-vertualUp.fraction;
 		
 		int downj=(int)(vertualDown.petal+1)%num;
-		ans[3]=refPack.kData[v].flower[downj];
+		ans[3]=flower[downj];
 		ans[5]=vertualDown.fraction;
 		
 		return ans;
@@ -1015,213 +1083,7 @@ public class GenModBranching extends PackExtender {
 		return new ClickModValue(newpetal+result-Math.floor(result));
 	}
 	
-	// OBE, but saved in case it's useful again
-	public double []old_getClickData(Complex pt) {
-		if (pt==null) return null;
-		double []ans=null;
-		
-		// first check if pt is inside a circle
-		int v=NodeLink.grab_one_vert(refPack,"z "+pt.x+" "+pt.y);
-
-		// not in circle, try interstice
-		if (v<=0) { 
-			// barycentric coords are related to angles, see 'HyperbolicMath.ideal_bary'
-			BaryPoint bpt=BaryLink.grab_one_barypoint(refPack,
-					new String("-i "+pt.x+" "+pt.y));
-			if (bpt!=null) {
-				ans=new double[4];
-				ans[0]=1.0;
-				ans[1]=(double)bpt.face;
-				ans[2]=bpt.b0;
-				ans[3]=bpt.b1;
-				return ans;
-			}
-			return null; // nope
-		}
-
-		// okay, we're in a circle
-		int num=refPack.countFaces(v);
-		
-		// can't yet branch a boundary circle 
-		if (refPack.isBdry(v)) {
-			CirclePack.cpb.errMsg("Can't yet branch at boundary vertex v="+v);
-			throw new DataException(v+" is a bdry vertex");
-		}
-
-		double rad=refPack.getRadius(v);
-		Complex dvec=pt.minus(refPack.getCenter(v));
-		double dist=dvec.abs();
-		if (dist>rad) // error: not in the right circle
-			throw new DataException("hum...?, selected point is not in circle "+v);
-		
-		// close to center? use traditional branch point
-		// TODO: need to experiment to find best 'dcutoff'
-		double dcutoff=.025;
-		if (dist<dcutoff*refPack.getRadius(v)) {
-			ans=new double[2];
-			ans[0]=3.0;
-			ans[1]=(double)v;
-			return ans;
-		}
-
-		// think of this as radius of sister2 (thus necessarily the smaller).
-		double smallrad=rad-dist;
-
-		// TODO: if dist==rad, perhaps treat as singular? else, prepare special
-		//       new type of branch point (to avoid numerical difficulties)?
-
-		// gather info to decide on jumps and overlaps
-		
-		// find all tangency points with petals; special case if pt very close
-		@SuppressWarnings("unused")
-		int nearOne=-1;
-		Complex []petalTangency=new Complex[num+1];
-		for (int j=0;j<=num;j++) {
-			petalTangency[j]=refPack.tangencyPoint(
-					new EdgeSimple(v,refPack.kData[v].flower[j]));
-			if (petalTangency[j].minus(pt).abs()<.025*refPack.getRadius(v)) {
-				nearOne=refPack.kData[v].flower[j];
-			}
-		}
-		
-		// TODO: if nearOne>0, use routine for point where two interstices meet
-		
-		// find face pt lies in 
-		FaceLink faces=refPack.tri_search(pt);
-		int myface=-1;
-		if (faces!=null && faces.size()>0) 
-			myface=faces.get(0);
-				
-		// if pt lies in the incircle of 'myface', that should tell us
-		//    the jump circles and give estimate of parameters.
-		if (myface>0) {
-			CircleSimple incirc=refPack.faceIncircle(myface,
-					AmbiguousZ.getAmbiguousZs(refPack));
-			if (pt.minus(incirc.center).abs()<incirc.rad) {
-				ans=new double[6];
-				ans[0]=2.0;
-				ans[1]=(double)v;
-
-				int k=refPack.face_index(myface,v);
-				int w1=refPack.faces[myface].vert[(k+1)%3];
-				int w2=refPack.faces[myface].vert[(k+2)%3];
-				Complex w1w2tangency=refPack.tangencyPoint(new EdgeSimple(w1,w2));
-				
-				// get angle-type interstice coords: 
-				// NOTE: order of tangencies: opposite v, w2, then w1. 
-				//       Barycentric coord b1 should be negative 
-				Complex z1=w1w2tangency.minus(incirc.center);
-				Complex z2=petalTangency[refPack.nghb(v,w2)].minus(incirc.center);
-				Complex z3=petalTangency[refPack.nghb(v,w1)].minus(incirc.center);
-				z1=z1.divide(incirc.rad);
-				z2=z2.divide(incirc.rad);
-				z3=z3.divide(incirc.rad);
-				Complex z=pt.minus(incirc.center);
-				z=z.divide(incirc.rad);
-				BaryPoint barypt=HyperbolicMath.ideal_bary(z,z1,z2,z3);
-				
-				// TODO: have to figure out how to use the coords
-				ans[2]=barypt.b1;
-				ans[3]=barypt.b2;
-
-				ans[4]=w1;
-				int j=refPack.nghb(v,w2);
-				ans[5]=refPack.kData[v].flower[(j+1)%num];
-				return ans;
-			}
-		}
-		
-		// find face z is in
-		dvec=dvec.divide(dist); // unit vector
-		
-		// save unit vectors from center to petal centers
-		Complex []petalVectors=new Complex[num+1];
-		for (int j=0;j<=num;j++) {
-			int k=refPack.kData[v].flower[j];
-			petalVectors[j]=new Complex(
-					refPack.getCenter(k).minus(refPack.getCenter(v)));
-			petalVectors[j]=petalVectors[j].divide(petalVectors[j].abs()); 
-		}
-		
-		// angle sum at sister2 in <sister2, petal[j], petal[j+1]>
-		double []petalAngles=new double[num+1];
-		for (int j=0;j<=num;j++) {
-			double r1=refPack.getRadius(refPack.kData[v].flower[j]);
-			double r2=refPack.getRadius(refPack.kData[v].flower[(j+1)%num]);
-			double m1=r1/(smallrad+r1);
-			double m2=r2/(smallrad+r2);
-			petalAngles[j]=Math.acos(1-2*m1*m2);
-		}
-		
-		// which sector is to contain tangency point of sister1,sister2?
-		// pos[j] true ==> petalVectors[j] left when looking in dvec direction
-		boolean []pos=new boolean[num+1];
-		for (int j=0;j<=num;j++) {
-			Complex pvec=petalVectors[j];
-			if (pvec.divide(dvec).arg()<=0.0)
-				pos[j]=false;
-			else pos[j]=true;
-		}
-		
-		// jump1 is first clw petal from dvec direction: here's where 
-		//    we jump to sister2.
-		int jump1=-1;
-		for (int j=1;j<=num;j++) {
-			if (jump1==-1 && pos[j] && !pos[j-1])
-				jump1=j;
-		}
-		
-		// note: if jump1<0, should mean that our vertex isn't interior.
-		if (jump1==-1)
-			throw new ParserException("jump1<0, vertex may not be interior");
-		
-		// reset to zero if at last petal of closed flower
-		if (!refPack.isBdry(v))
-			jump1=jump1%num;
-		
-		// how deep is dvec in this sector? The deeper, the smaller overlap 1
-		int pj=(jump1-1+num)%num; // index of prejump
-		double overlap1=1.0-dvec.divide(
-				petalVectors[pj]).arg()/petalVectors[jump1].divide(
-						petalVectors[pj]).arg();
-		
-		// Now have to find jump 2; 
-		// Try to judge how may circles will go how far around sister2
-		
-		// get angle at sister2 as if jump1 were tangent to prejump and sister2
-		int jumpCir1=refPack.kData[v].flower[jump1];
-		int pv1=refPack.kData[v].flower[pj];
-		// distance pv1 to sister2
-		double sp=pt.minus(refPack.getCenter(refPack.kData[v].flower[pj])).abs();
-		double pv1v1=refPack.getRadius(pv1)+refPack.getRadius(jumpCir1);
-		double v1s=rad+refPack.getRadius(jumpCir1);
-		double ang=Math.acos((sp*sp+pv1v1*pv1v1-v1s*v1s)/(2.0*sp*pv1v1));
-		// vector, pt to center of prejump1
-		Complex stpv=refPack.getCenter(pv1).minus(pt);
-		// angle along sister1; subtract this
-		double pva=dvec.divide(stpv).arg(); 
-		double anglesum=ang-pva;
-		
-		// add angles of successive neighbors of sister2 until exceeding 2pi
-		int n=jump1;
-		while (anglesum<=Math.PI) {
-			n=(n+1)%num;
-			if (n==(jump1-1+num)%num)
-				throw new DataException("angles must be wrong");
-			anglesum+=petalAngles[n];
-		}
-		int jumpCir2=refPack.kData[v].flower[n];
-		double overlap2=(anglesum-Math.PI)/Math.PI;
-
-		ans=new double[6];
-		ans[0]=2.0;
-		ans[1]=(double)v;
-		ans[2]=overlap1;
-		ans[3]=overlap2;
-		ans[4]=jumpCir1;
-		ans[5]=jumpCir2;
-		return ans;
-	}
+	// OBE: I've remove 'old_getClickData'
 	
 	/**
 	 * Given argument 'spot' and closed list of arguments to petals 
@@ -1341,6 +1203,8 @@ public class GenModBranching extends PackExtender {
 	 */
 	public void initCmdStruct() {
 		super.initCmdStruct();
+		cmdStruct.add(new CmdStruct("event",null,null,
+				"append event horizon vertices to packing's 'vlist'"));
 		cmdStruct.add(new CmdStruct("'Comment'","-b{b}",null,
 				"first flag '-b' designates a branch point ID number"));
 		cmdStruct.add(new CmdStruct("disp","-[shyj] {usual}",null,
@@ -1375,15 +1239,15 @@ public class GenModBranching extends PackExtender {
 				"revert to the original unbranched packing 'refPack'"));
 		
 		// creating branch point types:
-		cmdStruct.add(new CmdStruct("bp_trad","-a {a} -v {v}",null,
+		cmdStruct.add(new CmdStruct("bp_trad","-a {a} -i {v}",null,
 				"Create 'traditional' branch point, aim 'a', vert 'v'."));
 		cmdStruct.add(new CmdStruct("bp_sing",
-				"-a {a} -f {f} -o {o1 o2} [-b {blist}]",null,
+				"-a {a} -i {f} -o {o1 o2} [-b {blist}]",null,
 				"Create 'singular' branch point, aim 'a'; face 'f'; "+
 				"overlaps 'o1', 'o2' in [0,1], o1+o2 in [0,1]. "+
 				"'blist' is 'BaryLink' option for face and overlaps."));
 		cmdStruct.add(new CmdStruct("bp_chap",
-				"-a {a} -v {v} -j {w1 w2} -o {o1 o2}",null,
+				"-a {a} -i {v} -j {w1 w2} -o {o1 o2}",null,
 				"Create 'chaperone' branch point, aim 'a', vert 'v'; "+
 				"optional jump vertices, petals 'w1' 'w2', "+
 				"overlap parameters 'o1', 'o2' in [0,1]."));

@@ -32,13 +32,13 @@ import listManip.TileLink;
 import packQuality.QualMeasures;
 import packing.PackData;
 import panels.DataTree;
-import panels.SliderControlPanel;
 import panels.VariableControlPanel;
 import tiling.Tile;
 import util.ColorUtil;
 import util.ComplexField;
 import util.IntegerField;
 import util.RealField;
+import variables.SliderControlPanel;
 
 /**
  * TabbedPackDataHover is a hover panel displaying pack data. It contains
@@ -131,23 +131,26 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		/*
 		 * Some notes on using BoxLayout:
 		 * 
-		 * Building a GUI in BoxLayout is about establishing a hierarchy of panels and
-		 * ultimately components in terms of rows and columns. In this case, the
-		 * ultimate parent is this instance, which is a JPanel. It contains two
-		 * components as rows - the tabbed pane containing the bulk of the GUI, and
-		 * the update button.
+		 * Building a GUI in BoxLayout is about establishing a 
+		 * hierarchy of panels and ultimately components in terms 
+		 * of rows and columns. In this case, the ultimate parent 
+		 * is this instance, which is a JPanel. It contains two
+		 * components as rows - the tabbed pane containing the 
+		 * bulk of the GUI, and the update button.
 		 * 
-		 * The first tab of the tabbed pane is the combinatoric information panel. It
-		 * contains three rows - the vertex panel, the edge panel, and the face panel.
-		 * Further subdividing, the vertex panel has three rows displaying different
-		 * text fields. The second row contains four columns - the degree field, the
-		 * flower field, the angle sum field, and the boundary check box. The degree
-		 * field is made up of two rows - the title label and the text field.
+		 * The first tab of the tabbed pane is the combinatoric
+		 * information panel. It contains three rows - the vertex 
+		 * panel, the edge panel, and the face panel. Further 
+		 * subdividing, the vertex panel has three rows displaying 
+		 * different text fields. The second row contains four 
+		 * columns - the degree field, the flower field, the angle 
+		 * sum field, and the boundary check box. The degree field 
+		 * is made up of two rows - the title label and the text field.
 		 * 
-		 * Ultimately, what you end up with is a tree of components representing a
-		 * nested hierarchy of rows and columns.
+		 * Ultimately, what you end up with is a tree of components
+		 * representing a nested hierarchy of rows and columns.
 		 */
-		
+	
 		/*
 		 * 
 		 * Initialize vertex panel.
@@ -158,14 +161,18 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		vertexChoiceField.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
-				updateActions.updateVertex(CirclePack.cpb.getActivePackData(), false);
+				updateActions.updateVertex(
+						CirclePack.cpb.getActivePackData(), false);
 			}
 		});
-		vertexChoiceField.setToolTipText("Enter index (or legal description) of vertex.");
+		vertexChoiceField.setToolTipText(
+				"Enter index (or legal description) of vertex.");
 		limitFieldHeight(vertexChoiceField);
 		JPanel vertexPanelRowOne = new JPanel();
-		vertexPanelRowOne.setLayout(new BoxLayout(vertexPanelRowOne, BoxLayout.LINE_AXIS));
-		vertexPanelRowOne.setBorder(BorderFactory.createEmptyBorder(SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
+		vertexPanelRowOne.setLayout(new BoxLayout(vertexPanelRowOne,
+				BoxLayout.LINE_AXIS));
+		vertexPanelRowOne.setBorder(BorderFactory.createEmptyBorder(
+				SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
 		vertexPanelRowOne.add(vertexChoiceLabel);
 		vertexPanelRowOne.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		vertexPanelRowOne.add(vertexChoiceField);
@@ -176,7 +183,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		// Both components in the sub-panel must be left aligned.
 		// This is because they align with respect to each other.
 		JLabel verticesLabel = new JLabel("Flower");
-		verticesLabel.setFont(verticesLabel.getFont().deriveFont(Font.PLAIN, 10.0F));
+		verticesLabel.setFont(
+				verticesLabel.getFont().deriveFont(Font.PLAIN, 10.0F));
 		verticesLabel.setAlignmentX(Box.LEFT_ALIGNMENT);
 		flowerField = new JTextField();
 		flowerField.setEditable(false);
@@ -185,12 +193,14 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		// TODO: Consider using (building if necessary) a class for generic strings similar to RealField, etc.
 		// It would make this GUI code more consistent.
 		JPanel flowerSubPanel = new JPanel();
-		flowerSubPanel.setLayout(new BoxLayout(flowerSubPanel, BoxLayout.PAGE_AXIS));
+		flowerSubPanel.setLayout(new BoxLayout(flowerSubPanel,
+				BoxLayout.PAGE_AXIS));
 		flowerSubPanel.add(verticesLabel);
 		flowerSubPanel.add(flowerField);
 		boundaryCheckBox = new JCheckBox();
 		boundaryCheckBox.setText("Boundary");
-		boundaryCheckBox.setFont(boundaryCheckBox.getFont().deriveFont(Font.PLAIN, 10.0F));
+		boundaryCheckBox.setFont(
+				boundaryCheckBox.getFont().deriveFont(Font.PLAIN, 10.0F));
 		vertexColorField = new IntegerField("Color");
 		vertexColorField.setActionCommand("vert_color");
 		vertexColorField.addActionListener(this);
@@ -198,8 +208,10 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		vertMarkField.setActionCommand("vert_mark");
 		vertMarkField.addActionListener(this);
 		JPanel vertexPanelRowTwo = new JPanel();
-		vertexPanelRowTwo.setLayout(new BoxLayout(vertexPanelRowTwo, BoxLayout.LINE_AXIS));
-		vertexPanelRowTwo.setBorder(BorderFactory.createEmptyBorder(SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
+		vertexPanelRowTwo.setLayout(new BoxLayout(vertexPanelRowTwo,
+				BoxLayout.LINE_AXIS));
+		vertexPanelRowTwo.setBorder(BorderFactory.createEmptyBorder(
+				SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
 		vertexPanelRowTwo.add(degreeField);
 		vertexPanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		vertexPanelRowTwo.add(flowerSubPanel);
@@ -216,8 +228,10 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		angleSumField = new RealField("AngleSum / Pi");
 		angleSumField.setEditable(false);
 		JPanel vertexPanelRowThree = new JPanel();
-		vertexPanelRowThree.setLayout(new BoxLayout(vertexPanelRowThree, BoxLayout.LINE_AXIS));
-		vertexPanelRowThree.setBorder(BorderFactory.createEmptyBorder(SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
+		vertexPanelRowThree.setLayout(new BoxLayout(vertexPanelRowThree,
+				BoxLayout.LINE_AXIS));
+		vertexPanelRowThree.setBorder(BorderFactory.createEmptyBorder(
+				SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
 		vertexPanelRowThree.add(aimField);
 		vertexPanelRowThree.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		vertexPanelRowThree.add(angleSumField);
@@ -229,16 +243,22 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		centerField.setActionCommand("set_center");
 		centerField.addActionListener(this);
 		JPanel vertexPanelRowFour = new JPanel();
-		vertexPanelRowFour.setLayout(new BoxLayout(vertexPanelRowFour, BoxLayout.LINE_AXIS));
-		vertexPanelRowFour.setBorder(BorderFactory.createEmptyBorder(SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
+		vertexPanelRowFour.setLayout(new BoxLayout(vertexPanelRowFour,
+				BoxLayout.LINE_AXIS));
+		vertexPanelRowFour.setBorder(BorderFactory.createEmptyBorder(
+				SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
 		vertexPanelRowFour.add(radiusField);
 		vertexPanelRowFour.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		vertexPanelRowFour.add(centerField);
 
 		vertexPanel = new JPanel();
-		vertexPanel.setLayout(new BoxLayout(vertexPanel, BoxLayout.PAGE_AXIS));
-		vertexPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.RED, LINE_BORDER_WIDTH), "Vertex Data", TitledBorder.LEADING, TitledBorder.TOP));
-		// Add vertical glue between rows to fill empty space as the frame grows.
+		vertexPanel.setLayout(new BoxLayout(vertexPanel,
+				BoxLayout.PAGE_AXIS));
+		vertexPanel.setBorder(BorderFactory.createTitledBorder(
+				BorderFactory.createLineBorder(Color.RED,
+						LINE_BORDER_WIDTH), "Vertex Data",
+				TitledBorder.LEADING, TitledBorder.TOP));
+		// Add vertical glue between rows to fill empty space as frame grows.
 		vertexPanel.add(Box.createVerticalGlue());
 		vertexPanel.add(vertexPanelRowOne);
 		vertexPanel.add(Box.createVerticalGlue());
@@ -262,11 +282,14 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 				updateActions.updateEdge(CirclePack.cpb.getActivePackData());
 			}
 		});
-		edgeChoiceField.setToolTipText("Enter index (or legal description) of edge.");
+		edgeChoiceField.setToolTipText(
+				"Enter index (or legal description) of edge.");
 		limitFieldHeight(edgeChoiceField);
 		JPanel edgePanelRowOne = new JPanel();
-		edgePanelRowOne.setLayout(new BoxLayout(edgePanelRowOne, BoxLayout.LINE_AXIS));
-		edgePanelRowOne.setBorder(BorderFactory.createEmptyBorder(SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
+		edgePanelRowOne.setLayout(new BoxLayout(edgePanelRowOne,
+				BoxLayout.LINE_AXIS));
+		edgePanelRowOne.setBorder(BorderFactory.createEmptyBorder(
+				SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
 		edgePanelRowOne.add(edgeChoiceLabel);
 		edgePanelRowOne.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		edgePanelRowOne.add(edgeChoiceField);
@@ -282,8 +305,10 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		edgeIntendField = new RealField("Length (intended)");
 		edgeIntendField.setEditable(false);
 		JPanel edgePanelRowTwo = new JPanel();
-		edgePanelRowTwo.setLayout(new BoxLayout(edgePanelRowTwo, BoxLayout.LINE_AXIS));
-		edgePanelRowTwo.setBorder(BorderFactory.createEmptyBorder(SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
+		edgePanelRowTwo.setLayout(new BoxLayout(edgePanelRowTwo,
+				BoxLayout.LINE_AXIS));
+		edgePanelRowTwo.setBorder(BorderFactory.createEmptyBorder(
+				SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
 		edgePanelRowTwo.add(invDistanceField);
 		edgePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		edgePanelRowTwo.add(schwarzianField);
@@ -294,7 +319,10 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 
 		edgePanel = new JPanel();
 		edgePanel.setLayout(new BoxLayout(edgePanel, BoxLayout.PAGE_AXIS));
-		edgePanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GREEN, LINE_BORDER_WIDTH), "Edge Data", TitledBorder.LEADING, TitledBorder.TOP));
+		edgePanel.setBorder(BorderFactory.createTitledBorder(
+				BorderFactory.createLineBorder(Color.GREEN,
+						LINE_BORDER_WIDTH), "Edge Data",
+				TitledBorder.LEADING, TitledBorder.TOP));
 		// Add vertical glue between rows to fill empty space as the frame grows.
 		edgePanel.add(Box.createVerticalGlue());
 		edgePanel.add(edgePanelRowOne);
@@ -315,11 +343,14 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 				updateActions.updateFace(CirclePack.cpb.getActivePackData());
 			}
 		});
-		faceChoiceField.setToolTipText("Enter index (or legal description) of face.");
+		faceChoiceField.setToolTipText(
+				"Enter index (or legal description) of face.");
 		limitFieldHeight(faceChoiceField);
 		JPanel facePanelRowOne = new JPanel();
-		facePanelRowOne.setLayout(new BoxLayout(facePanelRowOne, BoxLayout.LINE_AXIS));
-		facePanelRowOne.setBorder(BorderFactory.createEmptyBorder(SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
+		facePanelRowOne.setLayout(new BoxLayout(facePanelRowOne,
+				BoxLayout.LINE_AXIS));
+		facePanelRowOne.setBorder(BorderFactory.createEmptyBorder(
+				SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
 		facePanelRowOne.add(faceChoiceLabel);
 		facePanelRowOne.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		facePanelRowOne.add(faceChoiceField);
@@ -327,14 +358,16 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		// Both components in the sub-panel must be left aligned.
 		// This is because they are aligned with respect to each other.
 		verticesLabel = new JLabel("Vertices");
-		verticesLabel.setFont(verticesLabel.getFont().deriveFont(Font.PLAIN, 10.0F));
+		verticesLabel.setFont(
+				verticesLabel.getFont().deriveFont(Font.PLAIN, 10.0F));
 		verticesLabel.setAlignmentX(Box.LEFT_ALIGNMENT);
 		verticesField = new JTextField();
 		verticesField.setEditable(false);
 		verticesField.setAlignmentX(Box.LEFT_ALIGNMENT);
 		limitFieldHeight(verticesField);
 		JPanel verticesSubpanel = new JPanel();
-		verticesSubpanel.setLayout(new BoxLayout(verticesSubpanel, BoxLayout.PAGE_AXIS));
+		verticesSubpanel.setLayout(new BoxLayout(verticesSubpanel,
+				BoxLayout.PAGE_AXIS));
 		verticesSubpanel.add(verticesLabel);
 		verticesSubpanel.add(verticesField);
 		// Combinatoric information.
@@ -356,8 +389,10 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 //		redCheckBox.setText("Red");
 
 		JPanel facePanelRowTwo = new JPanel();
-		facePanelRowTwo.setLayout(new BoxLayout(facePanelRowTwo, BoxLayout.LINE_AXIS));
-		facePanelRowTwo.setBorder(BorderFactory.createEmptyBorder(SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
+		facePanelRowTwo.setLayout(new BoxLayout(facePanelRowTwo,
+				BoxLayout.LINE_AXIS));
+		facePanelRowTwo.setBorder(BorderFactory.createEmptyBorder(
+				SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
 		facePanelRowTwo.add(verticesSubpanel);
 		facePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		facePanelRowTwo.add(faceColorField);
@@ -372,8 +407,11 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 
 		facePanel = new JPanel();
 		facePanel.setLayout(new BoxLayout(facePanel, BoxLayout.PAGE_AXIS));
-		facePanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.BLUE, LINE_BORDER_WIDTH), "Face Data", TitledBorder.LEADING, TitledBorder.TOP));
-		// Add vertical glue between rows to fill empty space as the frame grows.
+		facePanel.setBorder(BorderFactory.createTitledBorder(
+				BorderFactory.createLineBorder(Color.BLUE, 
+						LINE_BORDER_WIDTH), "Face Data",
+				TitledBorder.LEADING, TitledBorder.TOP));
+		// Add vertical glue between rows to fill empty space as frame grows.
 		facePanel.add(Box.createVerticalGlue());
 		facePanel.add(facePanelRowOne);
 		facePanel.add(Box.createVerticalGlue());
@@ -393,11 +431,15 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 				updateActions.updateTile(CirclePack.cpb.getActivePackData());
 			}
 		});
-		tileChoiceField.setToolTipText("Enter index (or legal description) of tile.");
+		tileChoiceField.setToolTipText("Enter index "
+				+ "(or legal description) of tile.");
 		limitFieldHeight(tileChoiceField);
 		JPanel tilePanelRowOne = new JPanel();
-		tilePanelRowOne.setLayout(new BoxLayout(tilePanelRowOne, BoxLayout.LINE_AXIS));
-		tilePanelRowOne.setBorder(BorderFactory.createEmptyBorder(SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
+		tilePanelRowOne.setLayout(new BoxLayout(tilePanelRowOne,
+				BoxLayout.LINE_AXIS));
+		tilePanelRowOne.setBorder(BorderFactory.createEmptyBorder(
+				SPACER_WIDTH, SPACER_WIDTH,
+				SPACER_WIDTH, SPACER_WIDTH));
 		tilePanelRowOne.add(tileChoiceLabel);
 		tilePanelRowOne.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		tilePanelRowOne.add(tileChoiceField);
@@ -414,10 +456,12 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		tileflowerField.setEditable(false);
 		tileflowerField.setAlignmentX(Box.LEFT_ALIGNMENT);
 		limitFieldHeight(tileflowerField);
-		// TODO: Consider using (building if necessary) a class for generic strings similar to RealField, etc.
-		// It would make this GUI code more consistent.
+		// TODO: Consider using (building if necessary) a class 
+		//    for generic strings similar to RealField, etc.
+		//    It would make this GUI code more consistent.
 		JPanel tileflowerSubPanel = new JPanel();
-		tileflowerSubPanel.setLayout(new BoxLayout(tileflowerSubPanel, BoxLayout.PAGE_AXIS));
+		tileflowerSubPanel.setLayout(new BoxLayout(tileflowerSubPanel,
+				BoxLayout.PAGE_AXIS));
 		tileflowerSubPanel.add(tileLabel);
 		tileflowerSubPanel.add(tileflowerField);
 		tileColorField = new IntegerField("Color");
@@ -427,8 +471,12 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		tileMarkField.setActionCommand("tile_mark");
 		tileMarkField.addActionListener(this);
 		JPanel tilePanelRowTwo = new JPanel();
-		tilePanelRowTwo.setLayout(new BoxLayout(tilePanelRowTwo, BoxLayout.LINE_AXIS));
-		tilePanelRowTwo.setBorder(BorderFactory.createEmptyBorder(SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH, SPACER_WIDTH));
+		tilePanelRowTwo.setLayout(new BoxLayout(tilePanelRowTwo,
+				BoxLayout.LINE_AXIS));
+		tilePanelRowTwo.setBorder(
+				BorderFactory.createEmptyBorder(
+						SPACER_WIDTH, SPACER_WIDTH, 
+						SPACER_WIDTH, SPACER_WIDTH));
 		tilePanelRowTwo.add(tiledegreeField);
 		tilePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		tilePanelRowTwo.add(tileflowerSubPanel);
@@ -440,7 +488,10 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 
 		tilePanel = new JPanel();
 		tilePanel.setLayout(new BoxLayout(tilePanel, BoxLayout.PAGE_AXIS));
-		tilePanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.orange, LINE_BORDER_WIDTH), "Tile Data", TitledBorder.LEADING, TitledBorder.TOP));
+		tilePanel.setBorder(BorderFactory.
+				createTitledBorder(BorderFactory.createLineBorder(
+						Color.orange, LINE_BORDER_WIDTH), 
+						"Tile Data", TitledBorder.LEADING, TitledBorder.TOP));
 		// Add vertical glue between rows to fill empty space as the frame grows.
 		tilePanel.add(Box.createVerticalGlue());
 		tilePanel.add(tilePanelRowOne);
@@ -467,8 +518,13 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		 */
 		dataTree = new DataTree();
 		dataTreePanel = new JPanel();
-		dataTreePanel.setLayout(new BoxLayout(dataTreePanel, BoxLayout.PAGE_AXIS));
-		dataTreePanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Pack Data", TitledBorder.LEADING, TitledBorder.TOP));
+		dataTreePanel.setLayout(new BoxLayout(dataTreePanel,
+				BoxLayout.PAGE_AXIS));
+		dataTreePanel.setBorder(
+				BorderFactory.createTitledBorder(
+						BorderFactory.createEtchedBorder(),
+						"Pack Data", TitledBorder.LEADING,
+						TitledBorder.TOP));
 		dataTreePanel.add(dataTree);
 
 		/*
@@ -479,7 +535,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		JSplitPane varSplitPane=new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		
 		JPanel variablesPanel = new JPanel();
-		variablesPanel.setLayout(new BoxLayout(variablesPanel, BoxLayout.PAGE_AXIS));
+		variablesPanel.setLayout(new BoxLayout(variablesPanel, 
+				BoxLayout.PAGE_AXIS));
 		variablesPanel.setBorder(BorderFactory.createTitledBorder(
 				BorderFactory.createEtchedBorder(), "Variable Control", 
 				TitledBorder.LEADING, TitledBorder.TOP));
@@ -546,32 +603,35 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 	}
 
 	/**
-	 * Internal convenience method for limiting the maximum height of an entry
-	 * field component. This prevents entry fields from growing vertically when
-	 * the window is resized to be larger.
+	 * Internal convenience method for limiting the maximum height 
+	 * of an entry field component. This prevents entry fields from 
+	 * growing vertically when the window is resized to be larger.
 	 * 
-	 * @param toLimit the <code>JTextField</code> component needing a limited height
+	 * @param toLimit JTextField, component needing a limited height
 	 */
 	private void limitFieldHeight(JTextField toLimit) {
-		// Set the maximum height to the preferred height, but do not change the maximum width.
+		// Set max height to the preferred height, but do not change max width.
 		Dimension preferredSize = toLimit.getPreferredSize();
 		Dimension oldMaximumSize = toLimit.getMaximumSize();
-		toLimit.setMaximumSize(new Dimension(oldMaximumSize.width, preferredSize.height));
+		toLimit.setMaximumSize(
+				new Dimension(oldMaximumSize.width, preferredSize.height));
 	}
 
 	/**
-	 * Quick and dirty hack to request this object update its GUI. Should be removed
-	 * after the real PackDataListener system is implemented.
+	 * hack to request this object update its GUI. Should be removed
+	 * 	after the real PackDataListener system is implemented.
 	 */
 	public void update(PackData packData) {
 		updateActions.updateData(packData);
 	}
 	
 	/**
-	 * UpdateActions encapsulates the UI update functionality of TabbedPackDataHover.
-	 * This is primarily for organizational clarity, but also prevents outside classes
-	 * from directly manipulating the update functionality of TabbedPackDataHover. If
-	 * external control of update functionality is desired, TabbedPackDataHover should
+	 * UpdateActions encapsulates the UI update functionality 
+	 * of TabbedPackDataHover. This is primarily for 
+	 * organizational clarity, but also prevents outside classes
+	 * from directly manipulating the update functionality of 
+	 * TabbedPackDataHover. If external control of update 
+	 * functionality is desired, TabbedPackDataHover should
 	 * expose an appropriate interface for doing so.
 	 * 
 	 * @author kens
@@ -596,14 +656,15 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		/**
 		 * Update the vertex information.
 		 * 
-		 * @param p the <code>PackData</code> to reflect in the update
-		 * @param useActiveVertex whether or not to use the packing's active vertex
+		 * @param p PackData, to reflect in the update
+		 * @param useActiveVertex boolean: true, use packing's active vertex
 		 */
 		public void updateVertex(PackData p, boolean useActiveVertex) {
 			// If packData is null or empty just return.
 			if (p == null || !p.status) return;
 
-			// Update for the current active or chosen vertex, depending on the call signature.
+			// Update for the current active or chosen vertex, 
+			//    depending on the call signature.
 			int v;
 			try {
 				if (useActiveVertex) v = p.activeNode;
@@ -619,7 +680,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 				aimField.setValue(p.getAim(v)/Math.PI);
 				angleSumField.setValue(p.getCurv(v)/Math.PI);
 				degreeField.setValue(p.countFaces(v));
-				vertexColorField.setValue(ColorUtil.col_to_table(p.getCircleColor(v)));
+				vertexColorField.setValue(
+						ColorUtil.col_to_table(p.getCircleColor(v)));
 				vertMarkField.setValue(p.getVertMark(v));
 
 				if (p.isBdry(v)) boundaryCheckBox.setSelected(true);
@@ -649,7 +711,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		 */
 		public void updateFace(PackData packData) {
 			// If packData is null or empty just return.
-			if (packData == null || !packData.status) return;
+			if (packData == null || !packData.status) 
+				return;
 
 			Color fcolor;
 			int fmark;
@@ -657,39 +720,33 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			
 			// Get the index of the chosen face or use first index
 			try {
-				int currentFace = FaceLink.grab_one_face(packData, faceChoiceField.getText());
+				int currentFace = FaceLink.grab_one_face(packData,
+						faceChoiceField.getText());
 				if (currentFace==0) 
 					currentFace=1;
 				
-				// dcel case
-				if (packData.packDCEL!=null) {
-					if (currentFace<0) {
-						fverts=packData.packDCEL.idealFaces[-currentFace].getVerts();
-						fcolor=packData.packDCEL.idealFaces[-currentFace].getColor();
-						fmark=packData.packDCEL.idealFaces[-currentFace].mark;
-					}
-					else {
-						fverts=packData.packDCEL.faces[currentFace].getVerts();
-						fcolor=packData.packDCEL.faces[currentFace].getColor();
-						fmark=packData.packDCEL.faces[currentFace].mark;
-					}
+				if (currentFace<0) {
+					fverts=packData.packDCEL.
+							idealFaces[-currentFace].getVerts();
+					fcolor=packData.packDCEL.
+							idealFaces[-currentFace].getColor();
+					fmark=packData.packDCEL.
+							idealFaces[-currentFace].mark;
+				}
+				else {
+					fverts=packData.packDCEL.faces[currentFace].getVerts();
+					fcolor=packData.packDCEL.faces[currentFace].getColor();
+					fmark=packData.packDCEL.faces[currentFace].mark;
 				}
 				
-				// traditional case
-				else {
-					if (currentFace <= 0) currentFace = 1;
-					komplex.Face kface=packData.faces[currentFace];
-					fverts=kface.vert;
-					fcolor=kface.color;
-					fmark=kface.mark;
-				}
-
 				// Update the UI elements.
 				faceChoiceField.setText(Integer.toString(currentFace));
 				if (fverts.length>3) // Corner vertices.
-					verticesField.setText(fverts[0] + " " + fverts[1] + " " + fverts[2]+"...");
+					verticesField.setText(fverts[0] + " " + fverts[1] + 
+							" " + fverts[2]+"...");
 				else
-					verticesField.setText(fverts[0] + " " + fverts[1] + " " + fverts[2]);
+					verticesField.setText(fverts[0] + " " + fverts[1] + 
+							" " + fverts[2]);
 				faceColorField.setValue(ColorUtil.col_to_table(fcolor));
 				faceMarkField.setValue(fmark);
 //				nextField.setValue(face.nextFace);
@@ -720,41 +777,21 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 
 			// Get the chosen edge and test it for validity.
 			try {
-				EdgeSimple edge = EdgeLink.grab_one_edge(packData, edgeChoiceField.getText());
+				EdgeSimple edge = EdgeLink.grab_one_edge(packData,
+						edgeChoiceField.getText());
 				if (edge == null) return;
 				int ev=edge.v;
 				int ew=edge.w;
 				double invDist=1.0;
 				double schwar=0.0;
 				
-				// DCEL version
-				if (packData.packDCEL!=null) {
-					HalfEdge he=packData.packDCEL.findHalfEdge(edge);
-					if (he==null)
-						return;
-					ev=he.origin.vertIndx;
-					ew=he.next.origin.vertIndx;
-					invDist=he.getInvDist();
-					schwar=he.getSchwarzian();
-				}
-				
-				// traditional
-				else {
-					// Get the flower index of w with respect to v and test it for validity.
-					int flowerIndexWFromV = packData.nghb(edge.v, edge.w);
-					if (flowerIndexWFromV < 0) return;
-
-					if (packData.overlapStatus) {
-						double actualInvDist = packData.getInvDist(edge.v,
-							packData.kData[edge.v].flower[flowerIndexWFromV]);
-						if (Math.abs(1.0D - actualInvDist) > 0.0000001D) invDist = actualInvDist;
-					}
-					if (packData.kData[edge.v].schwarzian!=null) {
-						if (flowerIndexWFromV<packData.countFaces(edge.v))
-							schwarzianField.setValue(packData.kData[edge.v].
-									schwarzian[flowerIndexWFromV]);
-					}
-				}
+				HalfEdge he=packData.packDCEL.findHalfEdge(edge);
+				if (he==null)
+					return;
+				ev=he.origin.vertIndx;
+				ew=he.next.origin.vertIndx;
+				invDist=he.getInvDist();
+				schwar=he.getSchwarzian();
 				
 				edgeChoiceField.setText(ev + " " + ew);
 				invDistanceField.setValue(invDist);
@@ -775,19 +812,22 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		/**
 		 * Update the tile information.
 		 * 
-		 * @param packData the <code>PackData</code> to reflect in the update
-		 * @param useActiveVertex whether or not to use the packing's active vertex
+		 * @param packData the <code>PackData</code> to reflect in update
+		 * @param useActiveVertex whether or not to use packing's active vertex
 		 */
 		public void updateTile(PackData packData) {
 			// If tileData is null or empty just return.
-			if (packData == null || !packData.status || packData.tileData==null ||
+			if (packData == null || !packData.status || 
+					packData.tileData==null ||
 					packData.tileData.tileCount==0) 
 				return;
 
-			// Update for the current active or chosen vertex, depending on the call signature.
+			// Update for the current active or chosen vertex, 
+			//    depending on the call signature.
 			int currentTile=1;
 			try {
-				currentTile = TileLink.grab_one_tile(packData.tileData, tileChoiceField.getText());
+				currentTile = TileLink.grab_one_tile(packData.tileData,
+						tileChoiceField.getText());
 
 				// If the current vertex is invalid, use the zero vertex.
 				if (currentTile <= 0 || currentTile > packData.tileData.tileCount) currentTile = 1;
@@ -804,9 +844,10 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 				StringBuilder tileflowerBuilder = new StringBuilder();
 				for (int i = 0; i < tile.vertCount; i++) {
 					/*
-					 * TODO: NullPointerException on kData.flower array. If possible, avoid
-					 * checking the value or catching the exception and instead address the
-					 * implementation problem in KData that is allowing this field to be
+					 * TODO: NullPointerException on kData.flower array. 
+					 * If possible, avoid checking the value or catching 
+					 * the exception and instead address the implementation 
+					 * problem in KData that is allowing this field to be
 					 * null (it probably shouldn't be).
 					 */
 					tileflowerBuilder.append(Integer.toString(tile.vert[i]));
@@ -840,7 +881,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			if (vert==0) 
 				return;
 			p.setCircleColor(vert,ColorUtil.coLor(vertexColorField.getValue()));
-			vertexColorField.setValue(ColorUtil.col_to_table(p.getCircleColor(vert)));
+			vertexColorField.setValue(
+					ColorUtil.col_to_table(p.getCircleColor(vert)));
 		}
 		
 		public void putVertMark(PackData p) {
@@ -867,8 +909,10 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		public void putTileColor(PackData p) {
 			int tindx = NodeLink.grab_one_vert(p, tileChoiceField.getText());
 			if (tindx==0) return;
-			p.tileData.myTiles[tindx].color=ColorUtil.coLor(tileColorField.getValue());
-			tileColorField.setValue(ColorUtil.col_to_table(p.tileData.myTiles[tindx].color));
+			p.tileData.myTiles[tindx].color=
+					ColorUtil.coLor(tileColorField.getValue());
+			tileColorField.setValue(
+					ColorUtil.col_to_table(p.tileData.myTiles[tindx].color));
 		}
 		
 		public void putTileMark(PackData p) {
@@ -916,6 +960,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			EdgeSimple edge=EdgeLink.grab_one_edge(p,edgeChoiceField.getText());
 			if (edge==null)
 				return;
+			HalfEdge hedge=p.packDCEL.findHalfEdge(edge);
 			String id=invDistanceField.getText().trim();
 			if (id.charAt(0)=='_') // variable?
 				id=CPBase.varControl.getValue(id.substring(1));
@@ -932,18 +977,15 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 				else {
 					invDist=Double.parseDouble(id);
 	     			if (invDist<0.0 || invDist>1.0) 
-	     				  throw new ParserException("Use '*' for 'inversive distance' parameter");
+	     				  throw new ParserException(
+	     						  "Use '*' for 'inversive distance' parameter");
 	     			invDist=Math.cos(invDist*Math.PI);
 				}
 	     		  
-				// Is space allocated?
-				if (!p.overlapStatus) {
-					// 'invDist' essentially default and nothing to reset? 
-					if (Math.abs(invDist-1.0)<=.0000001)  
-						return;
-	     			p.alloc_overlaps();
-	     		}
-				
+				// 'invDist' essentially default and nothing to reset? 
+				if (Math.abs(invDist-1.0)<=.0000001)  
+					return;
+				hedge.setInvDist(invDist);
 				outstr.append(Double.toString(invDist));
 				invDistanceField.realField.setText(outstr.toString());
 
@@ -957,19 +999,14 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			EdgeSimple edge=EdgeLink.grab_one_edge(p,edgeChoiceField.getText());
 			if (edge==null)
 				return;
-			if (!p.haveSchwarzians()) { // allocate space,
-				for (int v=1;v<=p.nodeCount;v++) {
-					p.kData[v].schwarzian=new double[p.countFaces(v)+1];
-				}
-			}
+			HalfEdge hedge=p.packDCEL.findHalfEdge(edge);
 			String sch=schwarzianField.getText().trim();
 			if (sch.charAt(0)=='_') // variable?
 				sch=CPBase.varControl.getValue(sch.substring(1));
 			try {
 				StringBuilder outstr=new StringBuilder();
 				double schval=Double.parseDouble(sch);
-				p.kData[edge.v].schwarzian[p.nghb(edge.v, edge.w)]=schval;
-				p.kData[edge.v].schwarzian[p.nghb(edge.w, edge.v)]=schval;
+				hedge.setSchwarzian(schval);
 				outstr.append(Double.toString(schval));
 				schwarzianField.realField.setText(outstr.toString());
 			} catch (Exception ex) {
@@ -1018,6 +1055,5 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		}
 
 	}
-
 
 }

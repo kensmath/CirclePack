@@ -116,53 +116,26 @@ public class MobiusFrame extends JFrame implements ActionListener {
 		sidePairHandler.wipeoutTools();
 		sidePairHandler.clearToolBar();
 		
-		if (pdcel!=null) {
-			if (pdcel.redChain==null || pdcel.pairLink==null ||
-					pdcel.pairLink.size()<2)
-				return 0;
-			Iterator<D_SideData> sides=pdcel.pairLink.iterator();
-			D_SideData sd=sides.next(); // first spot empty
-			while (sides.hasNext()) {
-				sd=(D_SideData)sides.next();
-				// yes, this is part of a side-pairing, add its tool 
-				if (sd.label!=null && sd.mateIndex>0) {
-					String letterIcon=new String("mobius/mob_"+sd.label+".png");
-					String mobCmd=new String("appMob "+sd.mob.a.x+" "+
-							sd.mob.a.y+" "+sd.mob.b.x+" "+sd.mob.b.y+" "+
-							sd.mob.c.x+" "+sd.mob.c.y+" "+sd.mob.d.x+" "+
-							sd.mob.d.y);
-					MyTool but=new MyTool(new CPIcon(letterIcon),mobCmd,null,null,
-							new String("Drop: Mobius transformation for side-pairing '"+sd.label+"'"),
-							"MOBIUS:",true,this,(PopupBuilder)null);
-					sidePairHandler.addTool(but);
-					count++;
-				}
+		if (pdcel.redChain==null || pdcel.pairLink==null ||
+				pdcel.pairLink.size()<2)
+			return 0;
+		Iterator<D_SideData> sides=pdcel.pairLink.iterator();
+		D_SideData sd=sides.next(); // first spot empty
+		while (sides.hasNext()) {
+			sd=(D_SideData)sides.next();
+			// yes, this is part of a side-pairing, add its tool 
+			if (sd.label!=null && sd.mateIndex>0) {
+				String letterIcon=new String("mobius/mob_"+sd.label+".png");
+				String mobCmd=new String("appMob "+sd.mob.a.x+" "+
+						sd.mob.a.y+" "+sd.mob.b.x+" "+sd.mob.b.y+" "+
+						sd.mob.c.x+" "+sd.mob.c.y+" "+sd.mob.d.x+" "+
+						sd.mob.d.y);
+				MyTool but=new MyTool(new CPIcon(letterIcon),mobCmd,null,null,
+						new String("Drop: Mobius transformation for side-pairing '"+sd.label+"'"),
+						"MOBIUS:",true,this,(PopupBuilder)null);
+				sidePairHandler.addTool(but);
+				count++;
 			}
-		}		
-		
-		// traditional packing
-		else {
-			if (p.redChain==null || p.firstRedEdge==null 
-					|| p.getSidePairs()==null || p.getSidePairs().size()==0) 
-				return 0;
-			sidePairHandler.wipeoutTools();
-			sidePairHandler.clearToolBar();
-			Iterator<SideDescription> sides=p.getSidePairs().iterator();
-			SideDescription ep=null;
-			while (sides.hasNext()) {
-				ep=(SideDescription)sides.next();
-				// yes, this is part of a side-pairing, add its tool 
-				if (ep.label!=null && ep.pairedEdge!=null) {
-					String letterIcon=new String("mobius/mob_"+ep.label+".png");
-					String mobCmd=new String("appMob "+ep.mob.a.x+" "+ep.mob.a.y+" "+ep.mob.b.x+" "+ep.mob.b.y+" "+
-							ep.mob.c.x+" "+ep.mob.c.y+" "+ep.mob.d.x+" "+ep.mob.d.y);
-					MyTool but=new MyTool(new CPIcon(letterIcon),mobCmd,null,null,
-							new String("Drop: Mobius transformation for side-pairing '"+ep.label+"'"),
-							"MOBIUS:",true,this,(PopupBuilder)null);
-					sidePairHandler.addTool(but);
-					count++;
-				}
-			}	
 		}
 
 		sidePairHandler.repopulateTools();

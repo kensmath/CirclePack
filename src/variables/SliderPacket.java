@@ -1,13 +1,14 @@
-package util;
+package variables;
 
 import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CirclePack;
+import util.StringUtil;
 
 /**
  * For processing and storage of information on CirclePack variables 
- * of the "slider" type. This go in the "Pack Info -> Variables" tab
+ * of the "slider" type. This goes in the "Pack Info -> Variables" tab
  * in the lower panel. They are specified, when setting variables, by
  * starting with "[SLIDER {optional}]" and ending with their value,
  * which must be a double. See 'SliderControlPanel' and 'SliderPanel'.
@@ -20,9 +21,9 @@ public class SliderPacket {
 	double minValue;	// minimum in of value range
 	double maxValue;	// maximum of value range
 	String function;    // function to apply; default "z*pi"
-	boolean functionApply;  // whether or not to apply the function
+	boolean functionActive;  // whether or not to apply the function
 	String command;		// command to apply, generally named command '[.]'
-	boolean commandAction;  // whether or not to apply the command
+	boolean commandActive;  // whether or not to apply the command
 	
 	// Constructor
 	public SliderPacket(String vName,String initStr) {
@@ -30,20 +31,20 @@ public class SliderPacket {
 		minValue=0.0;
 		maxValue=1.0;
 		function="j*pi";
-		functionApply=false;
+		functionActive=false;
 		command="";
-		commandAction=false;
+		commandActive=false;
 		adjustParameters(initStr);
 	}
 
 	/**
 	 * Processing the 'specification' string that came as "[SLIDER {spec}]".
-	 * (The 'value' was specified separately, is maintained by 'SliderPanel'.)
+	 * (The 'value' is specified separately, maintained by 'SliderPanel'.)
 	 * @param stString String, spec string
 	 */
 	public void adjustParameters(String specStr) {
 		
-		// process the 'specs' string: -m {min} -M {max} -ftn {ftn} -Pi *pi -cmd {str}
+		// process 'specs' string: -m {min} -M {max} -ftn {ftn} -Pi *pi -cmd {str}
 		Vector<Vector<String>> specSegs=StringUtil.flagSeg(specStr);
 		Iterator<Vector<String>> segs=specSegs.iterator();
 		Vector<String> items=null;
@@ -58,23 +59,23 @@ public class SliderPacket {
 					maxValue=Double.parseDouble(items.get(0));
 				}
 				else if (str.equals("-cmd")) { // command (only if nonempty)
-					commandAction=true;
+					commandActive=true;
 					// can turn off by setting without string
 					if (items.size()>0 && items.get(0).length()>0) {
 						command=StringUtil.reconItem(items);
 					}
 					else
-						commandAction=false;
+						commandActive=false;
 				}
 				else if (str.equals("-ftn")) { // function
-					functionApply=true;
+					functionActive=true;
 					
 					// may leave 'function' at default 'z*pi'
 					if (items.size()>0)
 						function=StringUtil.reconItem(items);
 				}
 				else if (str.equals("-Pi")) { // set function to z*pi
-					functionApply=true;
+					functionActive=true;
 					function="z*pi";
 				}
 			} catch (Exception ex) {
@@ -109,20 +110,20 @@ public class SliderPacket {
 		maxValue=max;
 	}
 	
-	public boolean getFunctionApply() {
-		return functionApply;
+	public boolean getFunctionActive() {
+		return functionActive;
 	}
 	
-	public void setFunctionApply(boolean fA) {
-		functionApply=fA;
+	public void setFunctionActive(boolean fA) {
+		functionActive=fA;
 	}
 
-	public void setCommandAction(boolean cA) {
-		commandAction=cA;
+	public void setCommandActive(boolean cA) {
+		commandActive=cA;
 	}
 	
-	public boolean getCommandAction() {
-		return commandAction;
+	public boolean getCommandActive() {
+		return commandActive;
 	}
 	
 	public String getFunction() {

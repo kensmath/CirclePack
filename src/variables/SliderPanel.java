@@ -1,4 +1,4 @@
-package panels;
+package variables;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -27,9 +27,7 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import exceptions.DataException;
-import util.SliderPacket;
 import util.xNumField;
-
 
 /**
  * Slider panels occur in 'Pack Info' under the 'Variables' tab
@@ -70,16 +68,21 @@ public class SliderPanel extends JPanel
 	
 	AbstractTableModel varModel;
 
-	// Constructors
-	public SliderPanel(String name,String specs,String valueStr) { // empty for new variable
+	// Constructor
+	public SliderPanel(String name,String specs,
+			String valueStr) { 	
 		super();
-		varModel=CPBase.varControl.getVarTableModel(); // model of variable tab for refreshing
 		
+		// model of variable will need refreshing
+		varModel=CPBase.varControl.getVarTableModel();
+		
+		// 'specs' give all the info for the new slider
 		sliderPacket=new SliderPacket(name,specs);
 		
 		// create the layout
 		this.setLayout(new BoxLayout(this,BoxLayout.PAGE_AXIS));
-		this.setBorder(BorderFactory.createCompoundBorder(new LineBorder(Color.blue),
+		this.setBorder(BorderFactory.createCompoundBorder(
+				new LineBorder(Color.blue),
 				new EmptyBorder(5, 5, 5, 5)));
 		this.setMinimumSize(new Dimension(350,45));
 		this.setMaximumSize(new Dimension(Integer.MAX_VALUE,100));
@@ -130,20 +133,19 @@ public class SliderPanel extends JPanel
 		liveCheck.addItemListener(this);
 		
 		liveCommand=new JTextField("",6);
-		liveCommand.setToolTipText("Command to execute on slider change (preferably a key '[*]')");
+		liveCommand.setToolTipText(
+				"Command to execute on slider change (preferably a key '[*]')");
 		liveCommand.setMaximumSize(new Dimension(Integer.MAX_VALUE,20));
 
 		// current value (just for display)
 		currentValue=new xNumField("Current value",10);
 		currentValue.setValue(value);
 		
-		// scale minimum
+		// scale minimum/maximum
 		sliderMin=new xNumField("min",8);
 		sliderMin.setActionCommand("minval");
 		sliderMin.addActionListener(this);
 		sliderMin.setToolTipText("minimum value");
-	
-		// scale maximum
 		sliderMax=new xNumField("max",8);
 		sliderMax.setActionCommand("maxval");
 		sliderMax.addActionListener(this);
@@ -158,7 +160,8 @@ public class SliderPanel extends JPanel
 	    theSlider.setPaintTicks(true);
 	    theSlider.setPaintLabels(false);
 	    
-//		ImageIcon ii= new ImageIcon(CPBase.getResourceURL("/Icons/script/kill_16x16.png"));
+//		ImageIcon ii= new ImageIcon(CPBase.getResourceURL(
+//	    "/Icons/script/kill_16x16.png"));
 //	    killMe=new JButton();
 //		killMe.setIcon(ii);
 //		killMe.setOpaque(false);
@@ -203,11 +206,11 @@ public class SliderPanel extends JPanel
 		liveCheck.setSelected(false);
 		
 		// set some items
-		if (sliderPacket.getCommandAction()) {
+		if (sliderPacket.getCommandActive()) {
 			liveCheck.setSelected(true);
 			liveCommand.setText(sliderPacket.getCommand());
 		}
-		if (sliderPacket.getFunctionApply()) {
+		if (sliderPacket.getFunctionActive()) {
 			ftnCheck.setSelected(true);
 			ftnField.setText(sliderPacket.getFunction());
 	    	ftnField.setBackground(Color.white);
@@ -232,7 +235,9 @@ public class SliderPanel extends JPanel
 		if (sliderPacket.getMax()<value)
 			sliderPacket.setMax(value);
 		sliderMax.setValue(sliderPacket.getMax());
-	    int tick=(int)(100*(value-sliderPacket.getMin()/(sliderPacket.getMax()-sliderPacket.getMin())));
+	    int tick=(int)(100*(value-
+	    		sliderPacket.getMin()/
+	    		(sliderPacket.getMax()-sliderPacket.getMin())));
 	    theSlider.setValue(tick);
 	    fireFlag=true;
 	}
@@ -241,15 +246,17 @@ public class SliderPanel extends JPanel
 	 * Get current value as a string; it should be a double, may send it 
 	 * through a function first, but should still be a double, e.g., z*pi.
 	 * 
-	 * CAUTION: this is called 'toString' to override the parent class 'toString'
-	 * so that we get the double value in 'QueryParser' instead of the class.
+	 * CAUTION: this is called 'toString' to override the 
+	 * parent class 'toString' so that we get the double value 
+	 * in 'QueryParser' instead of the class.
 	 * 
 	 * @return String, representation of variable's current value
 	 */
 	public String toString() {
 		if (ftnCheck.isSelected()) {
 		  	try {
-	    		com.jimrolf.complex.Complex w=ftnField.parser.evalFunc(new com.jimrolf.complex.Complex(value,0.0));
+	    		com.jimrolf.complex.Complex w=ftnField.parser.evalFunc(
+	    				new com.jimrolf.complex.Complex(value,0.0));
 	    		return Double.toString(w.re());
 	    	} catch (Exception ex) {
 	    		throw new DataException("Ftn Panel error: "+ex.getMessage());
@@ -264,16 +271,21 @@ public class SliderPanel extends JPanel
         JSlider source = (JSlider)ce.getSource();
         if (!source.getValueIsAdjusting()) {  // ignore intermediate events 
             double factor = (double)(source.getValue()/100.0);
-            value=sliderPacket.getMin()+(sliderPacket.getMax()-sliderPacket.getMin())*factor;
+            value=sliderPacket.getMin()+
+            		(sliderPacket.getMax()-sliderPacket.getMin())*factor;
             currentValue.setValue(value);
             
             // try to update by adding using the same key
-            PackControl.varControl.variables.put(varNameButton.getText(),new String("[SLIDER] "+Double.toString(value)));
+            PackControl.varControl.variables.put(
+            		varNameButton.getText(),new String("[SLIDER] "+
+            				Double.toString(value)));
             varModel.fireTableDataChanged();
 
             // execute specified command?
-            if (sliderPacket.getCommandAction())
-    			CPBase.trafficCenter.parseWrapper(liveCommand.getText(),CirclePack.cpb.getActivePackData(),false,true,0,null);
+            if (sliderPacket.getCommandActive())
+    			CPBase.trafficCenter.parseWrapper(
+    					liveCommand.getText(),
+    					CirclePack.cpb.getActivePackData(),false,true,0,null);
         }
     }
     
@@ -301,7 +313,8 @@ public class SliderPanel extends JPanel
 				sliderMax.setValue(maxVal);
 			}
 			sliderPacket.setMax(maxVal);
-			int tick=(int)(100*(value-sliderPacket.getMin())/(maxVal-sliderPacket.getMin()));
+			int tick=(int)(100*(value-sliderPacket.getMin())/
+					(maxVal-sliderPacket.getMin()));
 			fireFlag=false; // suppress event
 			theSlider.setValue(tick);
 			fireFlag=true;
@@ -314,9 +327,9 @@ public class SliderPanel extends JPanel
     	
     	if (ie.getSource()==(Object)liveCheck) {
     		if (state==ItemEvent.SELECTED)
-    			sliderPacket.setCommandAction(true);
+    			sliderPacket.setCommandActive(true);
     		else
-    			sliderPacket.setCommandAction(false);
+    			sliderPacket.setCommandActive(false);
     	}
     }
     
@@ -332,7 +345,8 @@ public class SliderPanel extends JPanel
     		sliderPacket.setMax(newValue);
     		sliderMax.setValue(newValue);
     	}
-    	tick=(int)(100.0*(newValue-sliderPacket.getMin())/(sliderPacket.getMax()-sliderPacket.getMin()));
+    	tick=(int)(100.0*(newValue-sliderPacket.getMin())/
+    			(sliderPacket.getMax()-sliderPacket.getMin()));
     	
     	// TODO: will this automatically call 
     	theSlider.setValue(tick);

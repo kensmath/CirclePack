@@ -16,7 +16,7 @@ import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.ParserException;
-import ftnTheory.GenBranching;
+import ftnTheory.GenModBranching;
 import komplex.EdgeSimple;
 import komplex.KData;
 import listManip.EdgeLink;
@@ -1333,7 +1333,7 @@ public class PackCreation {
 		growWheel.setAim(2,.5*Math.PI-growWheel.getAim(3)); // 0.463647609, 1.107148717794
 
 		// repack, layout
-		double crit=GenBranching.LAYOUT_THRESHOLD;
+		double crit=GenModBranching.LAYOUT_THRESHOLD;
 		int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
 		growWheel.fillcurves();
 		growWheel.repack_call(1000);
@@ -1359,140 +1359,7 @@ public class PackCreation {
 		return growWheel;
 	}
 	
-	
-	/**
-	 * Create N generations of a naive circle packing of the "chair" 
-	 * substitution tiling.
-	 * @param N int, number of generations; N=1 is basic, single flower chair
-	 * @return new @see PackData
-	 */
-	public static PackData chairTiling(int N) {
 
-		int generation=1; // number of generations in current build
-		int edgeNumber=1; // count of vertices along each edge
-
-		// chair starts as 8-seed, but 1 is put back on the boundary
-		PackData growChair = DcelCreation.seed(8, 0);
-		growChair.swap_nodes(9, 1);
-		growChair.complex_count(false);
-		growChair.vlist=new NodeLink();
-		growChair.vlist.add(9);
-		growChair.elist=new EdgeLink(growChair,"b");
-
-		boolean debug=false; // for debugging edge lists
-
-		while (generation < N) {
-
-			// tempPack is unit we adjoin 3 times
-			PackData tempPack=growChair.copyPackTo();
-			tempPack.vlist=growChair.vlist.makeCopy();
-			tempPack.elist=new EdgeLink(tempPack,"b");
-
-			// add the chair above left
-			PackData.adjoin(growChair,tempPack, 4,8,2*edgeNumber);
-			updateLists(growChair,tempPack.vlist,tempPack.elist,growChair.vertexMap);
-			int new3=growChair.vertexMap.findW(3);
-			int new5=growChair.vertexMap.findW(5);
-			int new7=growChair.vertexMap.findW(7);
-			growChair.swap_nodes(new3,2);
-			growChair.swap_nodes(new5,3);
-			growChair.swap_nodes(new7,4);
-			growChair.complex_count(false);
-			
-			if (debug) {
-				Iterator<EdgeSimple> es=growChair.elist.iterator();
-				System.err.println("\n add upper left");
-				while (es.hasNext()) {
-					EdgeSimple edge=es.next();
-					System.err.println("("+edge.v+" "+edge.w+")");
-				}
-				DebugHelp.debugPackWrite(growChair,"growChair1.p");
-			}
-			
-			// add the chair below right
-			PackData.adjoin(growChair,tempPack, 8,8,2*edgeNumber);
-			updateLists(growChair,tempPack.vlist,tempPack.elist,growChair.vertexMap);
-			new3=growChair.vertexMap.findW(3);
-			new5=growChair.vertexMap.findW(5);
-			new7=growChair.vertexMap.findW(7);
-			growChair.swap_nodes(new3,6);
-			growChair.swap_nodes(new5,7);
-			growChair.swap_nodes(new7,8);
-			growChair.complex_count(false);
-			if (debug) {
-				System.err.println("\n add lower right");
-				Iterator<EdgeSimple> es=growChair.elist.iterator();
-				while (es.hasNext()) {
-					EdgeSimple edge=es.next();
-					System.err.println("("+edge.v+" "+edge.w+")");
-				}
-				DebugHelp.debugPackWrite(growChair,"growChair2.p");
-			}
-	  		
-
-			// add the chair between --- lower left
-			PackData.adjoin(growChair,tempPack,6,7,4*edgeNumber);
-			updateLists(growChair,tempPack.vlist,tempPack.elist,growChair.vertexMap);
-			new5=growChair.vertexMap.findW(5);
-			growChair.swap_nodes(new5,5);
-			growChair.complex_count(false);
-			if (debug) {
-				System.err.println("\n add lower left");
-				Iterator<EdgeSimple> es=growChair.elist.iterator();
-				while (es.hasNext()) {
-					EdgeSimple edge=es.next();
-					System.err.println("("+edge.v+" "+edge.w+")");
-				}
-				DebugHelp.debugPackWrite(growChair,"FullChair.p");
-			}
-		
-			generation++;
-			edgeNumber= 2*edgeNumber;
-			
-		} // end of while
-		
-		growChair.facedraworder(false);
-		
-		// set the aims
-		growChair.set_aim_default();
-		for (int v=1;v<=growChair.nodeCount;v++) {
-			if (growChair.isBdry(v))
-				growChair.setAim(v,1.0*Math.PI);
-		}
-		growChair.setAim(1,1.5*Math.PI);
-		growChair.setAim(2,0.5*Math.PI);
-		growChair.setAim(3,0.5*Math.PI);
-		growChair.setAim(5,0.5*Math.PI);
-		growChair.setAim(7,0.5*Math.PI);
-		growChair.setAim(8,0.5*Math.PI);
-		
-		// repack, layout
-		double crit=GenBranching.LAYOUT_THRESHOLD;
-		int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
-		growChair.fillcurves();
-		growChair.repack_call(1000);
-		try {
-			growChair.CompPackLayout(); // comp_centers(false,false,opt,crit);
-		} catch (Exception ex) {
-			throw new CombException("'chair' creation failed");
-		}
-		
-		// normalize: 3 on unit circle, 5 7 horizontal
-		double ctr=growChair.getCenter(3).abs();
-		double factor=1.0/ctr;
-		growChair.eucl_scale(factor);
-		Complex z=growChair.getCenter(7).minus(growChair.getCenter(5));
-		double ang=(-1.0)*(MathComplex.Arg(z));
-		growChair.rotate(ang);
-		
-		try {
-			growChair.tileData=TileData.paveMe(growChair,growChair.alpha);
-		} catch(Exception ex) {
-			CirclePack.cpb.errMsg("Failed to create chair 'TileData'");
-		}
-		return growChair;
-	}
-	
 	/**
 	 * Create N generations of a 2D fusion tiling related
 	 * to Fibonnacci numbers. I learned this from Natalie Frank.
@@ -1671,7 +1538,7 @@ public class PackCreation {
 		fusionA.setAim(4,0.5*Math.PI);
 				
 		// repack, layout
-		double crit=GenBranching.LAYOUT_THRESHOLD;
+		double crit=GenModBranching.LAYOUT_THRESHOLD;
 		int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
 		fusionA.fillcurves();
 		fusionA.repack_call(1000);
@@ -2127,7 +1994,7 @@ public class PackCreation {
 		newv=base.vertexMap.findW(4);
 		base.swap_nodes(newv,4);
 		
-		base.setCombinatorics();
+		base.packDCEL.fixDCEL_raw(base);
 		return base;
 	}
 	

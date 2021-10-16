@@ -80,8 +80,9 @@ public class BrooksQuad extends PackExtender {
 	}
 	
 	/**
-	 * This creates an initial 4-flower as the basis for later changes,
-	 * swap so the center is the largest index, it's the 'plug'.
+	 * This creates an initial 4-flower as the basis for later 
+	 * changes, swap so the center is the largest index, it's 
+	 * the 'plug'.
 	 */
 	public void initQuad() {
 		PackData newData=DcelCreation.seed(4,0);
@@ -89,7 +90,7 @@ public class BrooksQuad extends PackExtender {
 			Oops("Failed to build initial seed.");
 		CirclePack.cpb.swapPackData(newData,packData.packNum,true);
 		packData=newData;
-		packData.swap_nodes(1,5);
+		RawDCEL.swapNodes_raw(packData.packDCEL,1,5);
 		for (int v=1;v<=4;v++) {
 			packData.setCircleColor(v,ColorUtil.coLor(208)); // line green
 		}

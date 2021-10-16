@@ -589,28 +589,37 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				}
 				break;
 			}
-			case 'e': // find edges, 'ee' hex-extended edges, or 'eh' 
-				// hex extrapolated, loop from vertlist.
-				/* attempt to make edgelist from raw vert list. Move down the list
-				 * and see if next vert (ignoring repeats) is neighbor. If yes, 
-				 * add to edge list. Disregard duplication, eat rest of 'items'. 
-				 * 'ee' form means to look for 'hex extended' edges, 'eh' means to 
-				 * use 'hex_extrapolate' and get hex loop of edges. */
+			case 'e': // find edges: may be 'ee' hex-extended edges, 
+				// or 'eh', hex-extrapolated, which means a closed
+				// hex loop (only one in 'eh' case)
+				// Move down the list and see if next vert (ignoring 
+				// repeats) is neighbor. If yes, add to edge list
+				// (possibly extended). Disregard duplication, eat 
+				// rest of 'items'.
 			{
-				if (str.length()>=2 && str.charAt(1)=='h') { // hex extrapolated (as in 'NodeLink')
-					// need just first edge to get started
-					HalfLink hlist=new HalfLink(packData,items);
+				if (str.length()>=2 && str.charAt(1)=='h') { // hex extrapolated
+					// need first vert v or first edge <v,w>
+					NodeLink vlink=new NodeLink(packData,items);
 					its=null; // eat rest of items
-					if (hlist==null || hlist.size()==0) 
+					if (vlink==null || vlink.size()==0) 
 						break;
-					HalfEdge edge=hlist.get(0);
-					int v=edge.origin.vertIndx;
-					int w=edge.next.origin.vertIndx;
-					// v, w must be interior and hex and form an edge
-					if (packData.isBdry(v) || packData.countFaces(v)!=6
-							|| packData.isBdry(w) || packData.countFaces(w)!=6)
+					HalfLink hex_loop=null;
+					
+					// may get single vertex v or pair for edge <v,w>
+					int v=vlink.get(0);
+					if (packData.isBdry(v) || packData.countFaces(v)!=6)
 						break;
-					HalfLink hex_loop=CombDCEL.shootExtended(edge.origin,v,1025,true);
+					if (vlink.size()==1) { // shortest among all directions from v
+						hex_loop=CombDCEL.shootExtended(pdc.vertices[v],v,1025,true);
+					}
+					else {
+						int w=vlink.get(1);
+						HalfEdge he=pdc.findHalfEdge(new EdgeSimple(v,w));
+						// w must also be interior and hex
+						if (packData.isBdry(w) || packData.countFaces(w)!=6)
+							break;
+						hex_loop=CombDCEL.axisExtended(he,v,1025,true);
+					}
 					if (hex_loop==null || hex_loop.size()==0) 
 						break;
 					count+=hex_loop.size();
@@ -621,7 +630,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 					if (str.length()>=2 && str.charAt(1)=='e') 
 						extended=true;
 					NodeLink vertlist=new NodeLink(packData,items);
-					if (vertlist==null || vertlist.size()==0) break;
+					if (vertlist==null || vertlist.size()==0) 
+						break;
 					its=null; // eat rest of 'items'
 					count+=abutMore(CombDCEL.verts2Edges(
 							packData.packDCEL,vertlist,extended));

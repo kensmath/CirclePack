@@ -83,7 +83,7 @@ public class SingBrModPt extends GenBrModPt {
 	public SingBrModPt(GenModBranching g,int bID,double aim, int f, double o1,double o2) {
 		super(g,bID,aim);
 		gmb=g;
-		myType=GenBranchPt.SINGULAR;
+		myType=GenBrModPt.SINGULAR;
 		myEdge=pdc.faces[f].edge; // halfedge associated with f
 		
 		// set default overlaps to  pi/3; indexing from 0

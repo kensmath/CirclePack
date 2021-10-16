@@ -155,10 +155,6 @@ public class RedList {
 		PackData p=redface.packData;
 		
 		boolean debug=false; // debug=true;
-		if (debug) {
-			LayoutBugs.log_RedCenters(p);
-			debug=false;
-		}
 		
 		// special circumstance: 'redface' is a "blue" 'RedEdge'.
 		//   In this case, there are 2 copies, and we must point

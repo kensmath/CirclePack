@@ -973,8 +973,8 @@ public class CombDCEL {
 		}
 		
 		// Now we must give the new indices in 'newVertices', but
-		//   want to take care of 'oldNew'.
-		// Do added vertices first before changing the orig vert indices
+		//   want to take care of 'oldNew'. Do added vertices first 
+		//   before changing the orig vert indices.
 		VertexMap oldnew=new VertexMap();
 		for (int j=1;j<=totalCount;j++) {
 			Vertex vert=newVertices[j];
@@ -2246,17 +2246,17 @@ public class CombDCEL {
 	 * Process the incoming strings to set seed and forbidden 
 	 * edges for cookie'ing DCEL structures. Forbidden edges 
 	 * are ones which are never crossed in building the red chain;
-	 * bdry edges are always included.
+	 * bdry edges are always forbidden.
 	 * 
 	 * If there is an input list of vertices to be excised, 
-	 * they should appear in  first vector of strings in 
+	 * they should appear in first vector of strings in 
 	 * 'flags' without a preceding flag. Edges surrounding
 	 * these will be included as forbidden.
 	 * 
 	 * Then check for flag segments:
 	 * * Flags: -v {v}, for identifying seed: 'p.alpha' is reset.
 	 * * Flag -e {u v...} is edge list, adds to any forbidden
-	 *   already included.
+	 *   edges already included.
 	 * * flag -n {v}, non-keepers; any edges with both ends
 	 *   non-keepers will be added as forbidden edges.
 	 *   
@@ -2264,9 +2264,12 @@ public class CombDCEL {
 	 * and 'non-keepers': the latter may remain in the boundary of 
 	 * the excised DCEL structure.
      *
-	 * If no verts are listed and poisonVerts was empty on entry, 
-	 *   then the points on the side of 'CPBase.ClosedPath' 
-	 *   (if not null) opposite to 'seed' are poison by default.
+	 * If no forbidden edges are found then use 'CPBase.ClosedPath': 
+	 * the points on the side of 'CPBase.ClosedPath' (if not null) 
+	 * opposite to 'seed' are poison by default.
+	 * 
+	 * Return 'HalfLink' of forbidden edges used, with alpha, 
+	 * which can then be used to create a red chain.
 	 *   
 	 * @param p PackData
 	 * @param flags Vector<Vector<String>>; may be null
@@ -2276,8 +2279,6 @@ public class CombDCEL {
 			Vector<Vector<String>> flags) {
 		boolean debug=false;
 		PackDCEL pdcel=p.packDCEL; 
-		if (pdcel==null) 
-			return null;
 		NodeLink vlink=new NodeLink();
 		HalfLink hlink=new HalfLink();
 		int[] eutil=new int[pdcel.edgeCount+1]; // mark chosen edges
@@ -2285,7 +2286,7 @@ public class CombDCEL {
 		// read incoming data
 		while (flags!=null && flags.size()>0) { 
 			Vector<String> items=(Vector<String>)flags.remove(0);
-			if (!StringUtil.isFlag(items.get(0))) { // no flag? must be poison vertices
+			if (!StringUtil.isFlag(items.get(0))) { // no flag? poison vertices
 				vlink=new NodeLink(p,items);
 			}
 			else {
@@ -3394,10 +3395,10 @@ public class CombDCEL {
 	  }
 	  
 	  /**
-	   * Given 'pdcel' must be a topological torus with a 
-	   * 'redChain'. Typically, the red chain has 3 side 
-	   * pairings; this routine finds a new red chain with 
-	   * just two side pairings and returns the linked list: 
+	   * Given 'pdcel' must be a topological torus with an 
+	   * existing 'redChain'. Generically a red chain will
+	   * have 3 side pairings; this routine finds a new red 
+	   * chain with just two and returns the linked list: 
 	   * CAUTION: 'myEdges' are set, but not 'myRedEdge's,
 	   * in order that old data can be cleared out on return. 
 	   * The calling routine must also call 'd_FillInside', 

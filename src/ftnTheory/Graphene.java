@@ -7,14 +7,19 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.CombDCEL;
 import dcel.DcelCreation;
+import dcel.HalfEdge;
+import dcel.RawDCEL;
+import dcel.RedHEdge;
+import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.ParserException;
 import geometry.EuclMath;
-import komplex.CookieMonster;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.PackExtender;
@@ -962,10 +967,10 @@ public class Graphene extends PackExtender {
 		case 0: // close flower by identifying
 		{
 			int origv=packData.getFirstPetal(v);
-			PackData.adjoin(packData,packData, v, v, 1);
+			CombDCEL.d_adjoin(packData.packDCEL,packData.packDCEL,v,v,1);
 			
 			// fix up numbering
-			newIndx=packData.vertexMap.findW(origv);
+			newIndx=packData.packDCEL.oldNew.findW(origv);
 			break;
 		}	
 		case 1: // close flower with edge, choose left as pole
@@ -1023,7 +1028,7 @@ public class Graphene extends PackExtender {
 		int count=0;
 		try {
 			// combinatorics, aims
-			packData.setCombinatorics();
+			packData.packDCEL.fixDCEL_raw(packData);
 			packData.set_aim_default();
 			
 			// set boundary, pole radii
@@ -1106,8 +1111,8 @@ public class Graphene extends PackExtender {
 	 * 
 	 * Initialize data that we keep track of: tips of slits, where stitching
 	 * takes place, angles phi1/phi2, edges on the seam, boundary radii.
-	 * @param phi1
-	 * @param phi2
+	 * @param phi1 double
+	 * @param phi2 double
 	 * @return int count
 	 */
 	public int stitchStart(int n,double phi1,double phi2,int startMode) {
@@ -1120,11 +1125,14 @@ public class Graphene extends PackExtender {
 		double factor=2.0/ctr;
 		basePack.eucl_scale(factor); 
 		
-		// create leftPack/rightPack: poison determined by phi1/phi2
-		leftPack=cut4halfplane(basePack, phi1);
-  	  	msg("cookie for 'leftPack' seems to have succeeded");
-		rightPack=cut4halfplane(basePack, phi2);
-  	  	msg("cookie for 'rightPack' seems to have succeeded");
+		// create leftPack/rightPack: bdry determined by phi1/phi2
+		try {
+			leftPack=cut4halfplane(basePack, phi1);
+			rightPack=cut4halfplane(basePack, phi2);
+		} catch (Exception ex) {
+			throw new CombException("half-plane problem: "+ex.getMessage());
+		}
+  	  	msg("cutting out 'leftPack' and 'rightPack' seems to have succeeded");
 
   	  	// now attach along 2 edges, <v, alpha, w> to <rw, alpha,rv>,
   	  	int v=leftPack.getFirstPetal(1);
@@ -1142,8 +1150,9 @@ public class Graphene extends PackExtender {
   	  	default: // (currently the only)
   	  	{
   	  	  	// adjoin at alpha's and one vert either side
-  	  	  	PackData.adjoin(stitchBase,rightPack, v, rw, 2);
-  	  	  	stitchBase.complex_count(false);
+  	  		CombDCEL.d_adjoin(stitchBase.packDCEL,
+  	  				rightPack.packDCEL,v,rw,2);
+  	  		stitchBase.packDCEL.fixDCEL_raw(stitchBase);
   	  	  	
   	  	  	// these shouldn't have changed indices
   	  	  	northpole=v;
@@ -1153,16 +1162,15 @@ public class Graphene extends PackExtender {
   	  	} // end of switch
 
   	  	// swap poles for 2 and 3, 
-  	  	stitchBase.swap_nodes(northpole, 2);
-  	  	stitchBase.swap_nodes(southpole, 3);
+  	  	stitchBase.packDCEL.swapNodes(northpole, 2);
+  	  	stitchBase.packDCEL.swapNodes(southpole, 3);
   	  	northpole=2;
   	  	southpole=3;
   	  	
-  	  	stitchBase.complex_count(true);
+  	  	stitchBase.packDCEL.fixDCEL_raw(stitchBase);
   	  	stitchBase.setAlpha(1);
   	  	stitchBase.setGamma(2);
   	  	cpCommand(stitchBase,"set_rad .075 a");
-  	  	stitchBase.facedraworder(false);
   	  	stitchBase.set_aim_default();
   	  	
 		// keep track of the seam
@@ -1249,57 +1257,95 @@ public class Graphene extends PackExtender {
 	}
 	
 	/**
-	 * Given a packing (laid out), assume alpha = 1 is at origin.
-	 * Rotate by 'angle', cut out below the x-axis, return
-	 * the result, p unchanged. 
+	 * We cut a "half-plane" out. Given a packing (laid out) 
+	 * and with alpha = 1 at origin, rotate by 'angle', cut 
+	 * out below the x-axis, return the result as a new 
+	 * PackData; p itself is unchanged. On return, vertex 1
+	 * should be a bdry vertex closest to the origin. 
 	 * @param p PackData
 	 * @param angle double
-	 * @return PackData
+	 * @return new PackData
 	 */
 	public PackData cut4halfplane(PackData p, double angle) {
 		PackData newPack=p.copyPackTo();
 		Complex rot=new Complex(0.0,Math.PI*(-angle)).exp();
-		newPack.poisonEdges=null;
-		newPack.poisonVerts=new NodeLink(newPack);
-		for (int v=1;v<=newPack.nodeCount;v++) {
-			if (newPack.getCenter(v).times(rot).y<(-0.01*newPack.getRadius(1)))
-				newPack.poisonVerts.add(v);
-		}
-		newPack.gen_mark(newPack.poisonVerts, -1, true);
 		
-		// add one more layer of poisonverts, find an alpha
+		// catalog vertices
+		NodeLink seedlist=new NodeLink();
+		int[] vhits=new int[p.nodeCount+1]; // will be -1 for poison
+		for (int v=1;v<=newPack.nodeCount;v++) {
+			if (newPack.getCenter(v).times(rot).y<(-0.01*newPack.getRadius(1))) 
+				vhits[v]=-1;
+		}
+		newPack.gen_mark(seedlist, -1, true);
+		
+		// add one more layer which acts as bdry, also find an alpha
 		int newAlp=-1;
 		for (int v=1;v<=newPack.nodeCount;v++) {
 			if (newPack.getVertMark(v)<=2)
-				newPack.poisonVerts.add(v);
+				vhits[v]=-1;
 			if (newAlp<0 && !newPack.isBdry(v) && newPack.getVertMark(v)==3)
 				newAlp=v;
 		}
-
-  	  	CookieMonster cM=null;
-  	  	int origAlpha=newPack.getAlpha(); // expect this to be 1
-  	  	int outcome=0;
-  	  	try {
-  	  		cM=new CookieMonster(newPack,"-v "+newAlp);
-  	  		outcome=cM.goCookie();
-  	  	  	if (outcome<0) {
-  	  	  		cM=null;
-  	  	  		errorMsg("cookie failed in 'cut4halfplane'.");
-  	  	  		return null;
-  	  	  	}
-  	  	} catch (Exception ex) {
-  	  		this.errorMsg("cookie problem for half plane: "+ex.getMessage());
-  	  		return null;
-  	  	}
-  	  	newPack=cM.getPackData();
-  	  	newPack.poisonEdges=null;
-  	  	newPack.poisonVerts=null;
-  	  	cM=null;
-  	  	int new1=newPack.vertexMap.findV(origAlpha);
-		if (new1>0)  // would like 1 to be the original alpha
-			newPack.swap_nodes(1, new1);
+		newPack.setAlpha(newAlp);
 		
-  	  	newPack.complex_count(true);
+		// get HalfLink of forbidden edges
+		HalfLink hlink=new HalfLink();
+		for (int v=1;v<=newPack.nodeCount;v++) {
+			Vertex vert=newPack.packDCEL.vertices[v];
+			if (vhits[v]==-1) {
+				HalfLink spokes=vert.getEdgeFlower();
+				for (int j=0;j<spokes.size();j++) {
+					HalfEdge he=spokes.get(j);
+					// both ends poison?
+					if (vhits[he.twin.origin.vertIndx]==-1) 
+						hlink.add(he);
+				}
+			}
+		}
+		
+		// Check to get appropriate bdry vert, maybe 1
+		Vertex vert=newPack.packDCEL.vertices[1];
+		HalfLink spokes=vert.getEdgeFlower();
+		boolean is1good=false;
+		for (int j=0;(j<spokes.size() && !is1good);j++) {
+			HalfEdge he=spokes.get(j);
+			if (vhits[he.twin.origin.vertIndx]>=0)
+				is1good=true;
+		}
+		
+ 		// get red chain
+		CombDCEL.redchain_by_edge(
+				  newPack.packDCEL,hlink,
+				  newPack.packDCEL.alpha,true);
+		newPack.packDCEL.fixDCEL_raw(newPack);
+  	  	
+  	  	// do we need to find an appropriate bdry vert?
+		if (!is1good) {
+  	  		double dist=newPack.getCenter(1).abs();
+  	  		if (dist>packData.getRadius(1)) { // no, so search for new 1
+  	  			// find bdry closest to the origin; may be origin 1  	  		
+  	  			double mindist=1000000.0;
+  	  			int minIndx=-1;
+  	  			RedHEdge rtrace=newPack.packDCEL.redChain;
+  	  			do {
+  	  				int w=rtrace.myEdge.origin.vertIndx;
+  	  				dist=newPack.getCenter(w).abs();
+  	  				if (dist<mindist && rtrace.myEdge.origin.bdryFlag!=0) {
+  	  					mindist=dist;
+  	  					minIndx=w;
+  	  				}
+  	  				rtrace=rtrace.nextRed;
+  	  			} while (rtrace!=newPack.packDCEL.redChain); 
+  	  			if (minIndx<0) {
+  	  				throw new CombException("no bdry vertex near the origin?");
+  	  			}
+  	  			if (minIndx!=1) {
+  	  				RawDCEL.swapNodes_raw(newPack.packDCEL,1,minIndx);
+  	  			}
+  	  		}
+		}
+
 		return newPack;
 	}
 	

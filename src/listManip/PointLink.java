@@ -136,7 +136,7 @@ public class PointLink extends LinkedList<Complex> {
 			return abutMore(packData.zlist);
 		}
 
-		if (items==null || items.size()==0) // nothing to do?
+		if (!thereIsFlag && (items==null || items.size()==0)) // nothing to do?
 			return 0;
 		
 		// If there is a flag, we get it, process, and return.
@@ -144,9 +144,11 @@ public class PointLink extends LinkedList<Complex> {
 			String str2=items.get(0);
 			char aa=str2.charAt(0);
 			
-			// because of recursion, must check for second flag: should be only points
-			if (StringUtil.isFlag(str2) || (aa!='-' && aa!='.' && !Character.isDigit(aa))) {
-				// have to check for 'Zlist' and 'zlist' again (since they may follow a flag 
+			// because of recursion, must check for second flag: 
+			//   should be only points
+			if (StringUtil.isFlag(str2) || (aa!='-' && aa!='.' && 
+					!Character.isDigit(aa))) {
+				// check for 'Zlist' and 'zlist' again (since they may follow a flag) 
 				if (str2.startsWith("Zli")) {
 					abutMore(CPBase.Zlink);
 					return CPBase.Zlink.size();
@@ -162,7 +164,8 @@ public class PointLink extends LinkedList<Complex> {
 				throw new ParserException("'PointLink' data can have only one flag");
 			}
 			
-			// recursive call to process the rest of the input (should be just x y pairs)
+			// recursive call to process the rest of the input 
+			//    (should be just x y pairs)
 			PointLink ptlink=new PointLink(items);
 			if (ptlink==null || ptlink.size()==0)
 				throw new ParserException("failed in getting complex points");
@@ -184,7 +187,8 @@ public class PointLink extends LinkedList<Complex> {
 				}
 				break;
 			}
-			case 'g': // run string through 'parameter path', if define in function window
+			case 'g': // run string through 'parameter path', 
+						//  if defined in function window
 			{
 				if (PackControl.functionPanel.paramField.getText().trim().length()==0) {
 					CirclePack.cpb.errMsg("'Parameter' field in Function Frame is not set");

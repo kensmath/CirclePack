@@ -440,40 +440,25 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			// all (undirected, so if v < w, then (v,w) is included but not (w,v))
 			case 'a':
 			{
-				if (pdc!=null) { // organize via vertices -- more rational order?
-					for (int v=1;v<=pdc.vertCount;v++) {
-						Vertex vert=pdc.vertices[v];
-						HalfLink hlink=vert.getSpokes(null);
-						Iterator<HalfEdge> hits=hlink.iterator();
-						while (hits.hasNext()) {
-							HalfEdge he=hits.next();
-							if (he.myRedEdge!=null) {
-								add(new EdgeSimple(he.origin.vertIndx,
-										he.twin.origin.vertIndx));
+				for (int v=1;v<=pdc.vertCount;v++) {
+					Vertex vert=pdc.vertices[v];
+					HalfLink hlink=vert.getSpokes(null);
+					Iterator<HalfEdge> hits=hlink.iterator();
+					while (hits.hasNext()) {
+						HalfEdge he=hits.next();
+						if (he.myRedEdge!=null) {
+							add(new EdgeSimple(he.origin.vertIndx,
+									he.twin.origin.vertIndx));
+							count++;
+						}
+						else {
+							int ev=he.origin.vertIndx;
+							int ew=he.twin.origin.vertIndx;
+							if (ev<ew) {
+								add(new EdgeSimple(ev,ew));
 								count++;
-							}
-							else {
-								int ev=he.origin.vertIndx;
-								int ew=he.twin.origin.vertIndx;
-								if (ev<ew) {
-									add(new EdgeSimple(ev,ew));
-									count++;
-								}
 							}
 						}
-					}
-				}
-				
-				// traditional
-				else {
-					for (int v=1;v<=nodeCount;v++) {
-						int w;
-						int[] petals=packData.getPetals(v);
-						for (int j=0;j<petals.length;j++) 
-							if ((w=petals[j])>v) {
-								add(new EdgeSimple(v,w));
-								count++;
-							}
 					}
 				}
 				break;
@@ -630,40 +615,16 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				}
 				break;
 			}
-			case 'e': // find edges, 'ee' hex-extended edges, or 'eh' 
-				// hex extrapolated, loop from vertlist.
-				/* attempt to make edgelist from raw vert list. Move down the list
-				 * and see if next vert (ignoring repeats) is neighbor. If yes, 
-				 * add to edge list. Disregard duplication, eat rest of 'items'. 
-				 * 'ee' form means to look for 'hex extended' edges, 'eh' means to 
-				 * use 'hex_extrapolate' and get hex loop of edges. */
+			case 'e': // find edges: 'ee' for hex-extended edges,
+				// or 'eh' for hex-extrapolated
+				// do the work in 'HalfLink'
 			{
-				if (str.length()>=2 && str.charAt(1)=='h') { // hex extrapolated (as in 'NodeLink')
-					// need just first edge to get started
-					EdgeLink edgelist=new EdgeLink(packData,items);
-					its=null; // eat rest of items
-					if (edgelist==null || edgelist.size()==0) break;
-					EdgeSimple edge=(EdgeSimple)edgelist.get(0);
-					int v=edge.v;
-					int w=edge.w;
-					int indx=-1;
-					// v, w must be interior and hex and form an edge
-					if (packData.isBdry(v) || packData.countFaces(v)!=6
-							|| packData.isBdry(w) || packData.countFaces(w)!=6
-							|| (indx=packData.nghb(v,w))<0) break; // no hex edges to w
-					EdgeLink hex_loop=packData.hex_extrapolate(v,indx,v,1025);
-					if (hex_loop==null || hex_loop.size()==0) break;
-					count+=hex_loop.size();
-					addAll(hex_loop);
-				}
-				else {
-					boolean extended=false;
-					if (str.length()>=2 && str.charAt(1)=='e') extended=true;
-					NodeLink vertlist=new NodeLink(packData,items);
-					if (vertlist==null || vertlist.size()==0) break;
-					its=null; // eat rest of 'items'
-					count+=abutMore(verts2edges(packData,vertlist,extended));
-				}
+				StringBuilder strbld=new StringBuilder("-"+str+" "+
+						StringUtil.reconItem(items));
+				HalfLink hlink=new HalfLink(packData,strbld.toString());
+				if (hlink==null || hlink.size()==0)
+					break;
+				count +=abutHalfLink(hlink);
 				break;
 			}
 			case 'd': // degrees of edge's quad vertices; eat rest of flagSeg's
@@ -1032,31 +993,21 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				}
 				break;
 			}
-			default: // if nothing else, see if there is an edge (or extended edges)
+			default: // if nothing else, look for edge (maybe extended edges)
 			{
 				EdgeSimple edge=null;
 				int v,w;
 				try{
+					// Note: if <v w> not an edge, may look for hex-extended
 					if ((v=MathUtil.MyInteger(str))>0 && its.hasNext() 
 							&& (w=MathUtil.MyInteger((String)its.next()))>0) {
-						if (xtd) { // allow extended edges
-							if (packData.packDCEL!=null) {
-								HalfLink hlink=CombDCEL.shootExtended(
-										packData.packDCEL.vertices[v],w,
-										XTD_LINKS,true);
-								if (hlink!=null && hlink.size()>0) {
-									this.abutHalfLink(hlink);
-									count +=hlink.size();
-								}
-							}
-							
-							// traditional
-							else {
-								EdgeLink newlinks=packData.get_extended_edge(v,w,XTD_LINKS);
-								if (newlinks!=null && newlinks.size()>0) {
-									this.addAll(newlinks);
-									count++;
-								}
+						if (xtd) { // allow hex-extended edges
+							HalfLink hlink=CombDCEL.shootExtended(
+									packData.packDCEL.vertices[v],w,
+									XTD_LINKS,true);
+							if (hlink!=null && hlink.size()>0) {
+								this.abutHalfLink(hlink);
+								count +=hlink.size();
 							}
 						}
 						else if (packData.nghb(v, w)>=0) {
@@ -1505,12 +1456,15 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	 * edges, which pass through interior vertices so same number 
 	 * of edges are on each side. See 'axis_extend' call. 
 	 * Else, convert to edge geodesic.
+	 * TODO: do I really mean "hex" extend, or more general axis
+	 *       extend?
 	 * @param p PackData
 	 * @param vlist NodeLink
 	 * @param hexflag boolean, true, hex extend
 	 * @return EdgeLink, possibly empty or null
 	 */
-	public static EdgeLink verts2edges(PackData p,NodeLink vertlist,boolean hexflag) {
+	public static EdgeLink verts2edges(PackData p,
+			NodeLink vertlist,boolean hexflag) {
 		EdgeLink ans=new EdgeLink(p);
 		if (vertlist==null || vertlist.size()==0) 
 			return ans;
@@ -1524,38 +1478,22 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			}
 			if (nextv!=endv) {
 				if (hexflag) { // look for/use axis-extended edges
-					if (p.packDCEL!=null) {
-						HalfEdge petal=p.packDCEL.findHalfEdge(endv,nextv);
-						if (petal!=null)
-							ans.add(HalfEdge.getEdgeSimple(petal));
-						else {
-							Vertex basevert=p.packDCEL.vertices[endv];
-							HalfLink hlink=
-								CombDCEL.shootExtended(basevert,nextv,16,hexflag);
-							if (hlink!=null && hlink.size()>0) 
-								ans.abutHalfLink(hlink);
-						}
-					}
-					
-					// traditional
+					HalfEdge petal=p.packDCEL.findHalfEdge(endv,nextv);
+					if (petal!=null)
+						ans.add(HalfEdge.getEdgeSimple(petal));
 					else {
-						if (p.nghb(nextv,endv)>=0)
-							ans.add(new EdgeSimple(nextv,endv));
-						else {
-							int dir=0;
-							if ((dir=p.axis_extend(endv,nextv,16))>=0) {
-								EdgeLink newedges=p.axis_extrapolate(endv, dir,nextv,16);
-								if (newedges!=null && newedges.size()>0)  
-									ans.addAll(newedges);
-							}
-						}
+						Vertex basevert=p.packDCEL.vertices[endv];
+						HalfLink hlink=
+							CombDCEL.shootExtended(basevert,nextv,16,hexflag);
+						if (hlink!=null && hlink.size()>0) 
+							ans.abutHalfLink(hlink);
 					}
 				}
 				else if (p.nghb(endv,nextv)>=0) {
 					ans.add(new EdgeSimple(endv,nextv));
 				}
 				
-				// TODO: do I want to default to this? have to do DCEL versin
+				// TODO: do I want to default to this? have to do DCEL version
 				else { 
 					ans.abutMore(EdgeLink.getCombGeo(p, new NodeLink(p,endv),new NodeLink(p,nextv),null));
 				}

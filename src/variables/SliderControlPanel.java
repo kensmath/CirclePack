@@ -1,4 +1,4 @@
-package panels;
+package variables;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -24,14 +24,17 @@ import exceptions.ParserException;
  */
 public class SliderControlPanel extends JPanel {
 	/*
-	 * Regenerate serialVersionUID whenever the nature of this class's fields change
-	 * so that this class may be flattened. As background, serialization provides a
-	 * unified interface for writing and reading an instance's current state to and
-	 * from the file system. The value of serialVersionUID is used to ensure that an
-	 * instance state being read from the file system is compatible.
+	 * Regenerate serialVersionUID whenever the nature of this 
+	 * class's fields change so that this class may be flattened. 
+	 * As background, serialization provides a unified interface 
+	 * for writing and reading an instance's current state to and
+	 * from the file system. The value of serialVersionUID is 
+	 * used to ensure that an instance state being read from the 
+	 * file system is compatible.
 	 * 
-	 * Note that we are sub-classing a class that implements serialization (JPanel),
-	 * so we must respect that in our implementation.
+	 * Note that we are sub-classing a class that implements 
+	 * serialization (JPanel), so we must respect that in our 
+	 * implementation.
 	 */
 	private static final long serialVersionUID = 5199506647863934696L;
 

@@ -14,7 +14,6 @@ import complex.Complex;
 import dcel.D_SideData;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import deBugging.LayoutBugs;
 import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.CommonMath;
@@ -25,7 +24,6 @@ import komplex.AmbiguousZ;
 import komplex.DualGraph;
 import komplex.DualTri;
 import komplex.EdgeSimple;
-import komplex.Face;
 import komplex.SideDescription;
 import listManip.BaryCoordLink;
 import listManip.BaryLink;
@@ -200,26 +198,13 @@ public class DisplayParser {
 					Complex[] cents=new Complex[3];
 					Complex[] sides = new Complex[3];
 					double[] lgths = new double[3];
-					if (p.packDCEL!=null) {
-						HalfEdge he=p.packDCEL.faces[f].edge;
-						for (int j=0;j<3;j++) {
-							Complex ww=p.packDCEL.getVertCenter(he.next);
-							cents[j]=p.packDCEL.getVertCenter(he);
-							sides[j]=ww.minus(cents[j]);
-							lgths[j]=sides[j].abs();
-							he=he.next;
-						}
-					}
-					
-					// traditional
-					else {
-						int[] fverts=p.getFaceVerts(f);
-						for (int j = 0; j < 3; j++) {
-							cents[j]=p.getCenter(fverts[j]);
-							sides[j] = p.getCenter(fverts[(j + 1) % 3])
-									.minus(cents[j]);
-							lgths[j] = sides[j].abs();
-						}
+					HalfEdge he=p.packDCEL.faces[f].edge;
+					for (int j=0;j<3;j++) {
+						Complex ww=p.packDCEL.getVertCenter(he.next);
+						cents[j]=p.packDCEL.getVertCenter(he);
+						sides[j]=ww.minus(cents[j]);
+						lgths[j]=sides[j].abs();
+						he=he.next;
 					}
 					
 					for (int j = 0; j < 3; j++) {
@@ -787,54 +772,26 @@ public class DisplayParser {
 			} // end of 'd' dual options
 			case 'e': // edges
 			{
-				
-				if (p.packDCEL!=null) {
-					HalfLink helist=new HalfLink(p);
-					// axis extended edges? 
-					if (sub_cmd.length() > 0 && sub_cmd.charAt(0) == 'e'
-							&& items.size() > 0) {
-						helist.addHalfLink(items, true);
-					} 
-					// else if description empty, default to all
-					else { 
-						helist.addHalfLink(items, false);
-					}
-					if (helist != null && helist.size() > 0) {
-						Iterator<HalfEdge> his = helist.iterator();
-						HalfEdge edge = null;
-						while (his.hasNext()) {
-							edge = (HalfEdge) his.next();
-							Complex []pts=new Complex[2];
-							pts[0]=p.getCenter(edge.origin.vertIndx);
-							pts[1]=p.getCenter(edge.twin.origin.vertIndx);
-							cpScreen.drawEdge(pts[0],pts[1],dispFlags);
-							count++; // cpScreen.rePaintAll();
-						}
-					}
+				HalfLink helist=new HalfLink(p);
+				// axis extended edges? 
+				if (sub_cmd.length() > 0 && sub_cmd.charAt(0) == 'e'
+						&& items.size() > 0) {
+					helist.addHalfLink(items, true);
+				} 
+				// else if description empty, default to all
+				else { 
+					helist.addHalfLink(items, false);
 				}
-				
-				// traditional
-				else {
-					EdgeLink edgelist = new EdgeLink(p);
-					// axis extended edges? 
-					if (sub_cmd.length() > 0 && sub_cmd.charAt(0) == 'e'
-							&& items.size() > 0) {
-						edgelist.addEdgeLinks(items, true);
-					} 
-					// else if description empty, default to all
-					else { 	
-						edgelist.addEdgeLinks(items, false);
-					}
-					if (edgelist != null && edgelist.size() > 0) {
-						AmbiguousZ []amb=AmbiguousZ.getAmbiguousZs(p);
-						Iterator<EdgeSimple> elist = edgelist.iterator();
-						EdgeSimple edge = null;
-						while (elist.hasNext()) {
-							edge = (EdgeSimple) elist.next();
-							Complex []pts=p.ends_edge(edge, amb);
-							cpScreen.drawEdge(pts[0],pts[1],dispFlags);
-							count++;
-						}
+				if (helist != null && helist.size() > 0) {
+					Iterator<HalfEdge> his = helist.iterator();
+					HalfEdge edge = null;
+					while (his.hasNext()) {
+						edge = (HalfEdge) his.next();
+						Complex []pts=new Complex[2];
+						pts[0]=p.getCenter(edge.origin.vertIndx);
+						pts[1]=p.getCenter(edge.twin.origin.vertIndx);
+						cpScreen.drawEdge(pts[0],pts[1],dispFlags);
+						count++; // cpScreen.rePaintAll();
 					}
 				}
 				break;
@@ -858,58 +815,28 @@ public class DisplayParser {
 				if (faceLink==null || faceLink.size() == 0)
 					break; // nothing in list
 
-				if (p.packDCEL!=null) {
-					Iterator<Integer> flist = faceLink.iterator();
-					while (flist.hasNext()) {
-						f = (Integer) flist.next();
-						dcel.Face face=p.packDCEL.faces[f];
-						Complex []pts=p.packDCEL.getFaceCorners(face);
+				Iterator<Integer> flist = faceLink.iterator();
+				while (flist.hasNext()) {
+					f = (Integer) flist.next();
+					dcel.Face face=p.packDCEL.faces[f];
+					Complex []pts=p.packDCEL.getFaceCorners(face);
+					if (!dispFlags.colorIsSet)
+						dispFlags.setColor(p.getFaceColor(f));
+					if (dispFlags.label)
+						dispFlags.setLabel(Integer.toString(f));
+					cpScreen.drawFace(pts[0],pts[1], pts[2], null, null, null, dispFlags);
+					if (circleToo) { // also, color circle this face is responsible for
+						int cirIndx=face.edge.next.next.origin.vertIndx;
 						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.getFaceColor(f));
-						if (dispFlags.label)
-							dispFlags.setLabel(Integer.toString(f));
-						cpScreen.drawFace(pts[0],pts[1], pts[2], null, null, null, dispFlags);
-						if (circleToo) { // also, color circle this face is responsible for
-							int cirIndx=face.edge.next.next.origin.vertIndx;
-							if (!dispFlags.colorIsSet)
-								dispFlags.setColor(p.getCircleColor(cirIndx));
-							// suppress label
-							dispFlags.setLabel(null);
-						
-							cpScreen.drawCircle(pts[2],
-									p.packDCEL.getVertRadius(face.edge.next.next),
-									dispFlags);
-						}
-						count++;
+							dispFlags.setColor(p.getCircleColor(cirIndx));
+						// suppress label
+						dispFlags.setLabel(null);
+					
+						cpScreen.drawCircle(pts[2],
+								p.packDCEL.getVertRadius(face.edge.next.next),
+								dispFlags);
 					}
-				}
-				
-				// traditional
-				else {
-					AmbiguousZ []amb=AmbiguousZ.getAmbiguousZs(p);
-
-					Iterator<Integer> flist = faceLink.iterator();
-					while (flist.hasNext()) {
-						f = (Integer) flist.next();
-						Complex []pts=p.corners_face(f, amb);
-						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.getFaceColor(f));
-						if (dispFlags.label)
-							dispFlags.setLabel(Integer.toString(f));
-						cpScreen.drawFace(pts[0],pts[1], pts[2], null, null, null, dispFlags);
-						if (circleToo) { // also, color circle this face is responsible for
-							int cirIndx;
-							cirIndx=p.faces[f].vert[(p.faces[f].indexFlag+2)%3];
-							if (!dispFlags.colorIsSet)
-								dispFlags.setColor(p.getCircleColor(cirIndx));
-							// suppress label
-							dispFlags.setLabel(null);
-						
-							cpScreen.drawCircle(pts[cirIndx],p.getRadius(cirIndx),
-									dispFlags);
-						}
-						count++;
-					}
+					count++;
 				}
 				break;
 			} // done with faces

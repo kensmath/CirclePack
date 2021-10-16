@@ -80,7 +80,7 @@ public class ChapBrModPt extends GenBrModPt {
 			int v,int w1,int w2,double o1,double o2) {
 		super(g,bID,aim);
 		gmb=g;
-		myType=GenBranchPt.CHAPERONE;
+		myType=GenBrModPt.CHAPERONE;
 		myEdge=pdc.vertices[v].halfedge;
 		myIndex=v;
 		
@@ -95,10 +95,9 @@ public class ChapBrModPt extends GenBrModPt {
 		if (indx1<0 || indx2<0)
 			throw new ParserException(
 					w1+" and/or "+w2+" is not a neighbor of "+v);
-		if (indx1==indx2 || (indx1+1)%num==indx2 ||
-				(indx2+1)%num==indx1)
+		if (indx1==indx2)
 			throw new CombException(
-					"petals "+w1+" and "+w2+" are too close");
+					"petals must be distinct");
 		
 		// jump circles
 		jumpCircle=new int[3];
@@ -373,7 +372,7 @@ public class ChapBrModPt extends GenBrModPt {
 
 		overEdge[2].setInvDist(o2);
 		compEdge[2].setInvDist(-1.0*o2);
-		return 0;
+		return 1;
 	}
 
 	/**

@@ -1065,11 +1065,7 @@ public class ProjStruct extends PackExtender {
 				}
 			}
 		}
-		
-		// debug=true;
-		if (debug) 
-			LayoutBugs.log_RedCenters(p);
-		
+
 		// Now, go back and set redchain centers
 		RedList red=p.redChain;
 		boolean hit=true;
@@ -1092,10 +1088,6 @@ public class ProjStruct extends PackExtender {
 			red.rad=asp[red.face].labels[red.vIndex];
 			red=red.next;
 		}
-
-		// debug=true;
-		if (debug) 
-			LayoutBugs.log_RedCenters(p);
 
 		// update the mobius pairs
 		p.update_pair_mob();
@@ -1405,7 +1397,9 @@ public class ProjStruct extends PackExtender {
 			}
 			
 			if (mode==1) {
-				dTree=torus4layout(packData,0); 
+				
+				// TODO: redo using 'CombDCEL.torus4Sides'
+//				dTree=torus4layout(packData,0); 
 				if (dTree==null)
 					errorMsg("torus4layout failed");
 			}
@@ -1971,122 +1965,6 @@ public class ProjStruct extends PackExtender {
 		return super.cmdParser(cmd, flagSegs);
 	}
 	
-	/** 
-	 * traditional
-	 * 
-	 * Given torus, change the drawing order to get a 2-side-pairing 
-	 * layout. Idea: start with spanning tree and its redchain; find 
-	 * one short closed edgepath (use vert with large degree as alpha); 
-	 * then find second short edgepath; build spanning tree not crossing 
-	 * the edges in these paths. This spanning tree leads (via face_order) 
-	 * to layout.
-	 * @param p @see PackData
-	 * @param baseVert (potential corner); if 0, search for largest 
-	 * 	degree vert
-	 * @return GraphLink, dual spanning tree, null on error or if not a torus.
-	 */
-	public static GraphLink torus4layout(PackData p,int baseVert) {
-
-		// is this a torus?
-		if (p.getBdryCompCount()>0 || p.genus!=1) { 
-			return null;
-		}
-		
-		// set baseVert: use given or choose largest degree vert
-		if (baseVert<1) {  
-			baseVert=p.getAlpha();
-			int fs=p.countFaces(baseVert);
-			for (int v=1;v<=p.nodeCount;v++) {
-				if (!p.isBdry(v) ||	p.countFaces(v)>fs) {
-					baseVert=v;
-					fs=p.countFaces(baseVert);
-				}
-			}
-		}
-		
-		// set alpha and set usual redChain via 'facedraworder'
-		if (p.getAlpha()!=baseVert)
-			p.setAlpha(baseVert);
-		// LayoutBugs.print_drawingorder(p);
-		// get closed, ordered 'NodeLink' of vertices on outside red chain
-		NodeLink outverts=new NodeLink(p,"Ra");
-		outverts.add(outverts.get(0)); // repeat to close
-		
-		// get closed paths and create EdgeLink 
-		NodeLink firstPath=p.findShortPath(p.getAlpha(),outverts);
-		
-		// Want to get seed far from the first path
-		for (int v=1;v<=p.nodeCount;v++)
-			p.kData[v].utilFlag=0;
-		Iterator<Integer> fplst=firstPath.iterator();
-		while (fplst.hasNext()) 
-			p.kData[fplst.next()].utilFlag=1;
-		util.UtilPacket uP=new util.UtilPacket();
-		int[] fp_gens=p.label_generations(-1, uP);
-		if (fp_gens!=null && uP.rtnFlag>0)
-			baseVert=uP.rtnFlag;
-		else baseVert=p.getAlpha();
-		
-		// now find second closed path
-		NodeLink secondPath=p.findShortPath(baseVert,firstPath);
-		EdgeLink cutEdges=new EdgeLink(p);
-		int fst=firstPath.get(0);
-		int nxt=0;
-		for (int k=1;k<firstPath.size();k++) {
-			cutEdges.add(new EdgeSimple(fst,(nxt=firstPath.get(k))));
-			fst=nxt;
-		}
-		fst=secondPath.get(0);
-		for (int k=1;k<secondPath.size();k++) {
-			cutEdges.add(new EdgeSimple(fst,(nxt=secondPath.get(k))));
-			fst=nxt;
-		}
-		
-		// Want 'alpha' far from the union of these paths
-		for (int v=1;v<=p.nodeCount;v++)
-			p.kData[v].utilFlag=0;
-		Iterator<Integer> fpl=firstPath.iterator();
-		while (fpl.hasNext()) 
-			p.kData[fpl.next()].utilFlag=1;
-		fpl=secondPath.iterator();
-		while (fpl.hasNext()) 
-			p.kData[fpl.next()].utilFlag=1;
-		uP=new util.UtilPacket();
-		fp_gens=p.label_generations(-1, uP);
-		if (fp_gens!=null && uP.rtnFlag>0)
-			p.setAlpha(uP.rtnFlag); // one of largest generation
-		
-		// firstFace is one containing 'alpha'
-		p.firstFace=p.getFaceFlower(p.getAlpha(),0);
-		
-		// build list 'cutDuals' of dual edges
-		EdgeLink cutDuals=new EdgeLink();
-		Iterator<EdgeSimple> cutlst=cutEdges.iterator();
-		while (cutlst.hasNext()) {
-			EdgeSimple edg=cutlst.next();
-			cutDuals.add(p.dualEdge(edg.v,edg.w));
-		}
-		
-		// create the full dual graph, except don't cross 'cutEdges'
-		GraphLink fullDual=DualGraph.buildDualGraph(p,p.firstFace,cutEdges); 
-		
-		// LayoutBugs.log_GraphLink(p,fullDual); // graphLink_xx_log.txt
-		
-		// extract a drawing tree 
-		// to see edge DualGraph.showGraph(fullDual); 
-		GraphLink tree=DualGraph.drawSpanner(p,fullDual,p.firstFace);
-		 
-		// LayoutBugs.log_GraphLink(p,tree);
-		
-		// convert to drawing order for p  // DualGraph.printGraph(tree);
-		DualGraph.graph2Order(p,tree,p.firstFace);
-		
-		// extract the dual tree 
-		tree=DualGraph.easySpanner(p,false);
-		
-		return tree;
-	}
-	
 	/**
 	 * Assuming 'sidePairs' exists, return info for the
 	 * sides (in the red chain) based on current 'TriAspect'
@@ -2169,11 +2047,13 @@ public class ProjStruct extends PackExtender {
 
 		for (int v=1;v<=p.nodeCount;v++) {
 			// Strong: find sum[|Log(t.t')|]^2 for interior edges
-			for (int j=0;j<p.countFaces(v);j++) {
-				int w=p.kData[v].flower[j];
+			int[] flower=p.packDCEL.vertices[v].getFlower(false);
+			for (int j=0;j<flower.length;j++) {
+				int w=flower[j];
 				// if w>v and edge is interior
 				if (w>v) {
-					double prd=Math.abs(Math.log(Math.abs(edgeRatioError(p,aspects,new EdgeSimple(v,w)))));
+					double prd=Math.abs(Math.log(Math.abs(
+							edgeRatioError(p,aspects,new EdgeSimple(v,w)))));
 					TLog_max=(prd>TLog_max) ? prd:TLog_max;
 					TLog_err += prd*prd;
 				}
@@ -2207,8 +2087,6 @@ public class ProjStruct extends PackExtender {
 	 * @return int, repack count, -1 on error
 	 */
 	public static int affinePack(PackData p,double[] factors,int passes) {
-  	  if (p.packDCEL==null) 
-		  throw new ParserException("'affpack' requires a dcel structure");
   	  PackDCEL pdcel=p.packDCEL;
   	  if (pdcel.pairLink==null || pdcel.pairLink.countPairs()<2)
 		  throw new ParserException("'affpack' requires side-pairings to exit");

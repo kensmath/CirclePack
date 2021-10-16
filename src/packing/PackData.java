@@ -780,52 +780,30 @@ public class PackData{
                     				for (int i=0;i<=num;i++) {
                     					bouquet[vert][i]=Integer.valueOf(loctok.nextToken());
                     				}
-                    				setBdryFlag(vert,0);
                     			} // end of while
                     			if (vert<nodeCount) {
                     				flashError("Read failed while getting flowers");
                     				return -1;
                     			}
-                    			// this is dcel data
-                    			if (dcelread) {
-                    				PackDCEL pdc;
-                    				int tmpAlpha=newAlpha;
-                    				if (tmpAlpha==-1)
-                    					tmpAlpha=alpha;
-                    				if ((pdc=CombDCEL.getRawDCEL(bouquet,tmpAlpha))==null) {
-                    					flashError("Problem reading DCEL data");
-                    					return -1;
-                    				}
-                    				pdc.redChain=null;
-                    				pdc.fixDCEL_raw(this);
-                    				if (pdc.oldNew!=null) {
-                						readOldNew=new int[pdc.vertCount+1];
-                    					Iterator<EdgeSimple> vmp=pdc.oldNew.iterator();
-                    					while (vmp.hasNext()) {
-                    						EdgeSimple edge=vmp.next();
-                    						readOldNew[edge.v]=edge.w;
-                    					}
-                    				}
-                    			}
-                    			// traditional packing
-                    			else {
-                    				for (int i=1;i<=nodeCount;i++) {
-                    					kData[i].num=bouquet[i].length-1;
-                    					kData[i].flower=bouquet[i];
-                    					kData[i].plotFlag=1;
-                    				}
-                    				try {
-                    					if (complex_count(true)<=0)
-                    						flashError("Failed to set packing combinatorics (may be tiling data)");
-                    				} catch (Exception ex) {
-                    					flashError("Exception setting packing combinatorics (may be tiling data)");
-                    				}
-//                        			status=false;
-//                        			return -1;
-                    				for (int i=1;i<=faceCount;i++) 
-                    					faces[i].plotFlag=1;
-                    				
-                    			}
+
+                   				PackDCEL pdc;
+                   				int tmpAlpha=newAlpha;
+                   				if (tmpAlpha==-1)
+                   					tmpAlpha=alpha;
+                   				if ((pdc=CombDCEL.getRawDCEL(bouquet,tmpAlpha))==null) {
+                   					flashError("Problem reading DCEL data");
+                   					return -1;
+                   				}
+                   				pdc.redChain=null;
+                   				pdc.fixDCEL_raw(this);
+                   				if (pdc.oldNew!=null) {
+               						readOldNew=new int[pdc.vertCount+1];
+                   					Iterator<EdgeSimple> vmp=pdc.oldNew.iterator();
+                   					while (vmp.hasNext()) {
+                   						EdgeSimple edge=vmp.next();
+                   						readOldNew[edge.v]=edge.w;
+                   					}
+                   				}
                     		} catch(Exception ex){ // try to reset to previous line and proceed
                     			try {fp.reset();} catch(IOException ioe) {
                     				flashError("IOException: "+ioe.getMessage());
@@ -2402,68 +2380,29 @@ public class PackData{
     }
 
     /** 
-     * Choose 'alpha' vertex or 'alpha' halfedge; 
-     * acts as root vertex. Should be interior if 
-     * possible. Keep current value if it is legal.
-     * Drawing order recomputed if needed. 
+     * Choose 'alpha' halfedge; acts as root vertex. 
+     * Should be interior if possible. Keep current 
+     * value if it is legal. Drawing order recomputed 
+     * if needed. 
      */
     public void chooseAlpha(){
-    	if (packDCEL!=null) {
-    		packDCEL.setAlpha(0,null,true);
-    		return;
-    	}
-    	
-        // traditional: is the current alpha okay?
-        if (alpha>0 && alpha<= nodeCount 
-        		&& getFirstPetal(alpha)==getLastPetal(alpha)) {
-            if (alpha==gamma){
-                gamma=getFirstPetal(alpha);
-            }
-            return;
-        }
-        
-        // choose first interior
-        alpha=0;
-        for (int v=1;v<=nodeCount;v++) 
-            if (getFirstPetal(v)==getLastPetal(v)) {
-                alpha=v;
-                break;
-            }
+   		packDCEL.setAlpha(0,null,true);
+   		return;
+    }
 
-        if (alpha==0)
-        	alpha=1;
-        if (gamma==alpha) {
-            gamma=getFirstPetal(alpha);
-        }
-        return;
-    } 
-    
     /**
-     * Choose packing's 'gamma' vertex or 'gamma' halfedge, 
-     * normally placed on positive y-axis. Must be distinct 
-     * from 'alpha'. Keep current value, if legal.
+     * Choose 'gamma' halfedge, normally placed on 
+     * positive y-axis. Must be distinct from 'alpha'. 
+     * Keep current value, if legal.
      */
     public void chooseGamma() { // avoid alpha
-    	if (packDCEL!=null) {
-    		packDCEL.setGamma(0);
-    		return;
-    	}
-    	
-    	// traditional packing
-        int i=gamma;
-        if (i>0 && i<= nodeCount && i!= alpha){
-            return; // this choice is okay 
-        }
-        if (alpha==1) 
-        	gamma=getFirstPetal(1);
-        else gamma=1;
-        return;
+   		packDCEL.setGamma(0);
+   		return;
     } 
     
     /**
      * Only used to avoid 'setAlpha' calls which loop
-     * between 'PackData' and 'PackDCEL'. Sometimes used
-     * if no 'PackDCEL' is involved.
+     * between 'PackData' and 'PackDCEL'. 
      * @param v int
      */
     public void directAlpha(int v) {
@@ -2489,25 +2428,8 @@ public class PackData{
     public int setAlpha(int v) {
     	if (!status) 
     		return 0;
-    	
 		int alp=getAlpha(); // backup
-		
-    	if (packDCEL!=null) { // most are traditional calls
-    		return packDCEL.setAlpha(v,null,false);
-        }
-    	
-    	// traditional
-    	if (v<=0 || v>nodeCount) {
-    		if (alp>0 && alp<=nodeCount)
-    			this.alpha=alp;
-    		else this.alpha=1; // default to 1
-    		return 1;
-    	}
-    	
-        alpha=v;
-        if (v==gamma) gamma=getFirstPetal(v);
-        facedraworder(false);
-        return 1;
+   		return packDCEL.setAlpha(v,null,false);
     } 
 
     /**
@@ -2516,13 +2438,8 @@ public class PackData{
      * @return 1 on success, 0 on failure
      */
     public int setGamma(int i) {
-        if (status && i>0 && i<= nodeCount && i != alpha){
-        	
-           	if (packDCEL!=null) {
-        		return packDCEL.setGamma(i);
-            }
-            return 1;
-        }
+        if (status && i>0 && i<= nodeCount && i != alpha)
+       		return packDCEL.setGamma(i);
         return 0;
     } 
     
@@ -2561,7 +2478,7 @@ public class PackData{
 	 * @return int
 	 */
 	public int getAlpha() {
-		if (packDCEL!=null && packDCEL.alpha!=null) {
+		if (packDCEL.alpha!=null) {
 			int alp=packDCEL.alpha.origin.vertIndx;
 			if (alp>0 && alp<=packDCEL.vertCount)
 				directAlpha(alp); // update 'this.alpha' 
@@ -2575,7 +2492,7 @@ public class PackData{
 	 * @return int
 	 */
 	public int getGamma() {
-		if (packDCEL!=null && packDCEL.gamma!=null) {
+		if (packDCEL.gamma!=null) {
 			int gam=packDCEL.gamma.origin.vertIndx;
 			if (gam>0 && gam<=packDCEL.vertCount)
 				directGamma(gam); // update 'this.gamma' 
@@ -2642,10 +2559,7 @@ public class PackData{
 	 */
 	public double getAim(int v) {
 		try {
-			if (packDCEL!=null) 
-				return vData[v].aim;
-			else
-				return rData[v].aim;
+			return vData[v].aim;
 		} catch(Exception ex) {
 			throw new DataException("error in getting 'aim' for v = "+v);
 		}
@@ -2657,12 +2571,8 @@ public class PackData{
 	 */
 	public void setAim(int v,double aim) {
 		try {
-			if (packDCEL!=null) { 
-				vData[v].aim=aim;
-				rData[v].aim=aim; // backup
-			}
-			else
-				rData[v].aim=aim;
+			vData[v].aim=aim;
+			rData[v].aim=aim; // backup
 		} catch(Exception ex) {
 			throw new DataException("error in setting 'aim' for v = "+v);
 		}
@@ -2675,9 +2585,7 @@ public class PackData{
 	 * @return int
 	 */
 	public int countFaces(int v) {
-		if (packDCEL!=null)
-			return packDCEL.countFaces(packDCEL.vertices[v]);
-		return kData[v].num;
+		return packDCEL.countFaces(packDCEL.vertices[v]);
 	}
 	
 	/**
@@ -2686,9 +2594,7 @@ public class PackData{
 	 * @return int (same as 'countFaces' for interior 'v')
 	 */
 	public int countPetals(int v) {
-		if (packDCEL!=null)
-			return packDCEL.countPetals(v);
-		return kData[v].num+kData[v].bdryFlag;
+		return packDCEL.countPetals(v);
 	}
 	
 	/**
@@ -2698,12 +2604,7 @@ public class PackData{
 	 */
 	public double getCurv(int v) {
 		try {
-			if (packDCEL!=null) 
-				return vData[v].curv;
-			
-			// traditional:
-			else
-				return rData[v].curv;
+			return vData[v].curv;
 		} catch(Exception ex) {
 			throw new DataException("error in getting 'curv' for v = "+v);
 		}
@@ -2715,12 +2616,8 @@ public class PackData{
 	 */
 	public void setCurv(int v,double curv) {
 		try {
-			if (packDCEL!=null) { 
-				vData[v].curv=curv;
-				rData[v].curv=curv; // backup
-			}
-			else
-				rData[v].curv=curv;
+			vData[v].curv=curv;
+			rData[v].curv=curv; // backup
 		} catch(Exception ex) {
 			throw new DataException("error in setting 'curv' for v = "+v);
 		}
@@ -2733,16 +2630,11 @@ public class PackData{
 	 * @return int (should be 0 or 1)
 	 */
 	public int getBdryFlag(int v) {
-		if (packDCEL!=null)
-			return vData[v].getBdryFlag();
-		return kData[v].bdryFlag;
+		return vData[v].getBdryFlag();
 	}
 	
 	public void setBdryFlag(int v,int flag) {
-		if (packDCEL!=null)
-			vData[v].setBdryFlag(flag);
-		else
-			kData[v].bdryFlag=flag;
+		vData[v].setBdryFlag(flag);
 	}
 	
 	/**
@@ -2752,13 +2644,8 @@ public class PackData{
 	 * @return boolean
 	 */
 	public boolean isBdry(int v) {
-		if (packDCEL!=null) {
-			HalfEdge he=packDCEL.vertices[v].halfedge;
-			if (he.twin.face!=null && he.twin.face.faceIndx<0)
-				return true;
-			return false;
-		}
-		if (kData[v].bdryFlag!=0)
+		HalfEdge he=packDCEL.vertices[v].halfedge;
+		if (he.twin.face!=null && he.twin.face.faceIndx<0)
 			return true;
 		return false;
 	}
@@ -2786,11 +2673,7 @@ public class PackData{
 	 * @return boolean
 	 */
 	public boolean areNghbs(int v,int w) {
-		if (packDCEL!=null)
-			return packDCEL.vertices[v].halfedge.isNghb(w);
-		if (nghb(v,w)>=0)
-			return true;
-		return false;
+		return packDCEL.vertices[v].halfedge.isNghb(w);
 	}
 	
 	/**
@@ -2804,51 +2687,27 @@ public class PackData{
 			return false;
 		if (v==w)
 			return true;
-		if (packDCEL!=null) {
-			return CombDCEL.onSameBdryComp(packDCEL,v,w);
-		}
-		
-		// traditional packing
-		int nxt=kData[v].flower[0];
-		while (nxt!=v) {
-			if (nxt==w) 
-				return true;
-			nxt=kData[nxt].flower[0];
-		}
-		return false;
+		return CombDCEL.onSameBdryComp(packDCEL,v,w);
 	}
 	
 	/**
 	 * Get array of vertices for face 'f'
 	 */
 	public int[] getFaceVerts(int f) {
-		if (packDCEL!=null) {
-			return packDCEL.faces[f].getVerts();
-		}
-		return faces[f].vert;
+		return packDCEL.faces[f].getVerts();
 	}
 	
 	public Complex[] getFaceCorners(int f) {
 		if (f<=0)
 			return null;
 		Complex[] corners=new Complex[3];
-		if (packDCEL!=null) {
-			dcel.Face dface=packDCEL.faces[f];
-			HalfEdge he=dface.edge;
-			for (int j=0;j<3;j++) {
-				corners[j]=packDCEL.getVertCenter(he);
-				he=he.next;
-			}
-			return corners;
+		dcel.Face dface=packDCEL.faces[f];
+		HalfEdge he=dface.edge;
+		for (int j=0;j<3;j++) {
+			corners[j]=packDCEL.getVertCenter(he);
+			he=he.next;
 		}
-		
-		// traditional
-		int[] fverts=getFaceVerts(f);
-		corners[0]=getCenter(fverts[0]);
-		corners[1]=getCenter(fverts[1]);
-		corners[2]=getCenter(fverts[2]);
 		return corners;
-		
 	}
 	
 	/**
@@ -2859,25 +2718,16 @@ public class PackData{
 	public int[] getPetals(int v) {
 
 		int[] petals;
-		if (packDCEL!=null) {
-			ArrayList<Integer> al=new ArrayList<Integer>(0);
-			HalfEdge he=packDCEL.vertices[v].halfedge;
-			do {
-				al.add(he.twin.origin.vertIndx);
-				he=he.prev.twin; // cclw
-			} while (he!=packDCEL.vertices[v].halfedge);
-			int n=al.size();
-			petals=new int[n];
-			for (int j=0;j<n;j++)
-				petals[j]=al.get(j);
-			return petals;
-		}
-		
-		// traditional
-		int n=kData[v].num+kData[v].bdryFlag;
+		ArrayList<Integer> al=new ArrayList<Integer>(0);
+		HalfEdge he=packDCEL.vertices[v].halfedge;
+		do {
+			al.add(he.twin.origin.vertIndx);
+			he=he.prev.twin; // cclw
+		} while (he!=packDCEL.vertices[v].halfedge);
+		int n=al.size();
 		petals=new int[n];
 		for (int j=0;j<n;j++)
-			petals[j]=kData[v].flower[j];
+			petals[j]=al.get(j);
 		return petals;
 	}
 	
@@ -2888,10 +2738,7 @@ public class PackData{
 	 * @return int[]
 	 */
 	public int[] getFlower(int v) {
-		if (packDCEL!=null) { 
-			return packDCEL.vertices[v].getFlower(true);
-		}
-		return kData[v].flower;
+		return packDCEL.vertices[v].getFlower(true);
 	}
 	
 	/** 
@@ -2901,12 +2748,8 @@ public class PackData{
 	 * @return int
 	 */
 	public int getFirstPetal(int v) {
-		if (packDCEL!=null) {
-			Vertex vert=packDCEL.vertices[v];
-			return vert.halfedge.twin.origin.vertIndx;
-		}
-		// traditional packing
-		return kData[v].flower[0];
+		Vertex vert=packDCEL.vertices[v];
+		return vert.halfedge.twin.origin.vertIndx;
 	}
 
 	/** 
@@ -2954,27 +2797,20 @@ public class PackData{
 	 */
 	public int[] getFaceFlower(int v) {
 		int[] flower;
-		if (packDCEL!=null) {
-			Vertex vert=packDCEL.vertices[v];
-			int n=vert.getNum();
-			flower=new int[n];
-			if (!vert.isBdry()) // close up
-				flower=new int[n+1];
-			int ftick=0;
-			HalfEdge he=vert.halfedge;
-			do {
-				flower[ftick]=he.face.faceIndx;
-				ftick++;
-				he=he.prev.twin;
-			} while (ftick<n);
-			if (!vert.isBdry())
-				flower[n]=flower[0];
-			return flower;
-		}
-		int n=kData[v].faceFlower.length;
+		Vertex vert=packDCEL.vertices[v];
+		int n=vert.getNum();
 		flower=new int[n];
-		for (int j=0;j<n;j++)
-			flower[j]=kData[v].faceFlower[j];
+		if (!vert.isBdry()) // close up
+			flower=new int[n+1];
+		int ftick=0;
+		HalfEdge he=vert.halfedge;
+		do {
+			flower[ftick]=he.face.faceIndx;
+			ftick++;
+			he=he.prev.twin;
+		} while (ftick<n);
+		if (!vert.isBdry())
+			flower[n]=flower[0];
 		return flower;
 	}
 
@@ -2984,16 +2820,8 @@ public class PackData{
 	 * @return Complex
 	 */
 	public Complex getFaceCenter(int f) {
-		if (packDCEL!=null) {
-			return packDCEL.getFaceCenter(packDCEL.faces[f]);
-		}
-		
-		// traditional
-		Complex []pts = corners_face(f, null);
-		CircleSimple sc=CommonMath.tri_incircle(pts[0],pts[1],pts[2],hes);
-		return sc.center;
+		return packDCEL.getFaceCenter(packDCEL.faces[f]);
 	}
-	
 		
 	/**
 	 * Reset the geometry for the cpScreen graphic objects;
@@ -3010,9 +2838,7 @@ public class PackData{
 	 * @return
 	 */
 	public int getBdryCompCount() {
-		if (packDCEL!=null)
-			return packDCEL.idealFaceCount;
-		return bdryCompCount;
+		return packDCEL.idealFaceCount;
 	}
 	
 	/**
@@ -3022,9 +2848,7 @@ public class PackData{
 	 * @return int, bdry vert index
 	 */
 	public int getBdryStart(int j) {
-		if (packDCEL!=null)
-			return packDCEL.idealFaces[j].edge.origin.vertIndx;
-		return bdryStarts[j];
+		return packDCEL.idealFaces[j].edge.origin.vertIndx;
 	}
 	
 	/**
@@ -3080,23 +2904,7 @@ public class PackData{
 		// TODO: somewhere, have to do checks in hyp/sph
 		//    cases. Problem we might be in the midst of 
 		//    changing geometry.
-		if (packDCEL!=null)
-			packDCEL.setCent4Edge(packDCEL.vertices[v].halfedge,z);
-		
-		// traditional
-		if(hes < 0) { // hyperbolic: must be in unit disc
-			double abval=z.absSq();
-			if (abval>1.0) { // error; scale until it's in the unit disc
-				double sqabval=Math.sqrt(abval);
-				z.mult(1/sqabval);
-			}
-		}
-		if (hes>0) { // sphere: y=phi should be between 0 and pi
-			while (z.y<0.0) z.y += Math.PI;
-			while (z.y>Math.PI) z.y = Math.PI; // truncate at Pi
-		}
-		else
-			rData[v].center=new Complex(z);
+		packDCEL.setCent4Edge(packDCEL.vertices[v].halfedge,z);
 	}
 	
 	/**
@@ -3106,11 +2914,7 @@ public class PackData{
 	 */
 	public Complex getCenter(int v) {
 		Complex z=null; 
-		if (packDCEL!=null) {
-			z=packDCEL.getVertCenter(packDCEL.vertices[v].halfedge);
-		}
-		else
-			z=new Complex(rData[v].center);
+		z=packDCEL.getVertCenter(packDCEL.vertices[v].halfedge);
 		return z;
 	}
 	
@@ -3120,10 +2924,7 @@ public class PackData{
 	 * @return new Color
 	 */
 	public Color getFaceColor(int f) {
-		if (packDCEL!=null) {
-			return packDCEL.faces[f].getColor();
-		}
-		return ColorUtil.cloneMe(faces[f].color);
+		return packDCEL.faces[f].getColor();
 	}
 	
 	/**
@@ -3132,11 +2933,7 @@ public class PackData{
 	 * @param color Color
 	 */
 	public void setFaceColor(int f,Color color) {
-		if (packDCEL!=null) {
-			packDCEL.faces[f].setColor(color);
-		}
-		else
-			faces[f].color=ColorUtil.cloneMe(color);
+		packDCEL.faces[f].setColor(color);
 	}
 	
 	/**
@@ -3145,10 +2942,7 @@ public class PackData{
 	 * @return new Color
 	 */
 	public Color getCircleColor(int v) {
-		if (packDCEL!=null) {
-			return vData[v].getColor();
-		}
-		return ColorUtil.cloneMe(kData[v].color);
+		return vData[v].getColor();
 	}
 	
 	/**
@@ -3158,105 +2952,64 @@ public class PackData{
 	 */
 	public void setCircleColor(int v,Color color) {
 		try {
-		if (packDCEL!=null) 
-				vData[v].setColor(color);
-		else
-			kData[v].color=ColorUtil.cloneMe(color);
+			vData[v].setColor(color);
 		} catch(Exception ex) {}
 	}
 	
 	public int getVertUtil(int v) {
-		if (packDCEL!=null)
-			return packDCEL.vertices[v].vutil;
-		else
-			return kData[v].utilFlag;
+		return packDCEL.vertices[v].vutil;
 	}
 	
 	public void setVertUtil(int v,int m) {
-		if (packDCEL!=null)
-			packDCEL.vertices[v].vutil=m;
-		else
-			kData[v].utilFlag=m;
+		packDCEL.vertices[v].vutil=m;
 	}
 
 	public int getEdgeUtil(int e) {
-		if (packDCEL!=null)
-			return packDCEL.edges[e].eutil;
-		else
-			return 0;
+		return packDCEL.edges[e].eutil;
 	}
 	
 	public void setEdgeUtil(int e,int m) {
-		if (packDCEL!=null)
-			packDCEL.edges[e].eutil=m;
+		packDCEL.edges[e].eutil=m;
 	}
 
 	public int getVertMark(int v) {
-		if (packDCEL!=null)
-			return vData[v].mark;
-		else 
-			return kData[v].mark;
+		return vData[v].mark;
 	}
 	
 	public void setVertMark(int v,int m) {
-		if (packDCEL!=null) 
-			vData[v].mark=m;
-		else 
-			kData[v].mark=m;
+		vData[v].mark=m;
 	}
 	
 	public int getPlotFlag(int v) {
-		if (packDCEL!=null) 
-			return vData[v].plotFlag;
-		return kData[v].plotFlag;
+		return vData[v].plotFlag;
 	}
 	
 	public void setQualFlag(int v,int m) {
-		if (packDCEL!=null) 
-			vData[v].qualFlag=m;
-		else 
-			kData[v].qualFlag=m;
+		vData[v].qualFlag=m;
 	}
 	
 	public int getFacePlotFlag(int f) {
-		if (packDCEL!=null)
-			return packDCEL.faces[f].plotFlag;
-		else
-			return faces[f].plotFlag;
+		return packDCEL.faces[f].plotFlag;
 	}
 	
 	public void setFacePlotFlag(int f,int m) {
-		if (packDCEL!=null)
-			packDCEL.faces[f].plotFlag=m;
-		else
-			faces[f].plotFlag=m;
+		packDCEL.faces[f].plotFlag=m;
 	}
 	
 	public int getQualFlag(int v) {
-		if (packDCEL!=null) 
-			return vData[v].qualFlag;
-		return kData[v].qualFlag;
+		return vData[v].qualFlag;
 	}
 	
 	public void setPlotFlag(int v,int m) {
-		if (packDCEL!=null) 
-			vData[v].plotFlag=m;
-		else 
-			kData[v].plotFlag=m;
+		vData[v].plotFlag=m;
 	}
 	
 	public int getFaceMark(int f) {
-		if (packDCEL!=null) 
-			return packDCEL.faces[f].mark;
-		else 
-			return faces[f].mark;
+		return packDCEL.faces[f].mark;
 	}
 	
 	public void setFaceMark(int f,int m) {
-		if (packDCEL!=null) 
-			packDCEL.faces[f].mark=m;
-		else 
-			faces[f].mark=m;
+		packDCEL.faces[f].mark=m;
 	}
 	
 	/** 
@@ -3268,10 +3021,7 @@ public class PackData{
 	 * @return double
 	*/
 	public double getActualRadius(int v) {
-		double x=rData[v].rad;
-		if (packDCEL!=null) {
-			x=packDCEL.getVertRadius(packDCEL.vertices[v].halfedge);
-		}
+		double x=packDCEL.getVertRadius(packDCEL.vertices[v].halfedge);
 		
 		// check for hyp case
 	    if (hes<0 && x> 0.0) {
@@ -4280,19 +4030,7 @@ public class PackData{
 	 * @return index or -1 if v not a vert of face f
 	 */
 	public int face_index(int f,int v) {
-		if (packDCEL!=null) {
-			return packDCEL.faces[f].getVertIndx(v);
-		}
-		
-		// traditional
-		int m=0;
-		int[] fverts=getFaceVerts(f);
-		while (m<3) { 
-			if (fverts[m]==v) 
-				return m;
-			m++;
-		}
-		return -1;
+		return packDCEL.faces[f].getVertIndx(v);
 	}
 	
 	/** 
@@ -4302,23 +4040,10 @@ public class PackData{
 	 * @return int index f or -1 if there is no such face 
 	 */
 	public int face_right_of_edge(int v,int w) {
-		if (packDCEL!=null) {
-			HalfEdge he=packDCEL.findHalfEdge(new EdgeSimple(v,w));
-			if (he==null)
-				return -1;
-			return he.twin.face.faceIndx;
-		}
-		
-		// traditional
-		int indx,f;
-
-		if ((indx=nghb(w,v))<0 
-				|| (isBdry(v) && w==kData[v].flower[0]))
-			return -1; // {w,v} not an edge or {v,w} is in bdry 
-		int u=kData[w].flower[indx+1];
-		if ((f=what_face(w,v,u))==0) 
+		HalfEdge he=packDCEL.findHalfEdge(new EdgeSimple(v,w));
+		if (he==null)
 			return -1;
-		return f;
+		return he.twin.face.faceIndx;
 	}
 
 	/**
@@ -4329,18 +4054,8 @@ public class PackData{
 	 * @return int, face index or -1 on error
 	 */
 	public int face_opposite(int f,int v) {
-		if (packDCEL!=null) {
-			dcel.Face face =packDCEL.faces[f];
-			return face.faceOpposite(v).faceIndx;
-		}
-		
-		// traditional
-		int[] fverts=getFaceVerts(f);
-		for (int j=0;j<3;j++) {
-			if (v==fverts[j])
-				return face_right_of_edge(fverts[(j+1)%3],fverts[(j+2)%3]);
-		}
-		return -1;
+		dcel.Face face =packDCEL.faces[f];
+		return face.faceOpposite(v).faceIndx;
 	}
 	
 	/** 
@@ -4351,24 +4066,10 @@ public class PackData{
 	 * @return int f, else return 0. 
 	 */
 	public int what_face(int a,int b,int c) {
-		if (packDCEL!=null) {
-			dcel.Face fce=packDCEL.whatFace(a, b, c);
-			if (fce==null)
-				return 0;
-			return fce.faceIndx;
-		}
-		
-		// traditional
-		if (!status || a<1 || b<1 || c<1 
-	      || a>nodeCount || a>nodeCount || c>nodeCount) return 0;
-		for (int f=1;f<=faceCount;f++)
-			for (int j=0;j<3;j++) {
-				int[] fverts=getFaceVerts(f);
-				if (fverts[j]==a && ((fverts[(j+1)%3]==b && fverts[(j+2)%3]==c)
-						|| (fverts[(j+1)%3]==c && fverts[(j+2)%3]==b)))
-					return f;
-			}
-		return 0;
+		dcel.Face fce=packDCEL.whatFace(a, b, c);
+		if (fce==null)
+			return 0;
+		return fce.faceIndx;
 	}
 	
 	/**
@@ -4466,26 +4167,11 @@ public class PackData{
 	public int getOppVert(int v,int w) {
 		if (v<1 || v>nodeCount || w<1 || w>nodeCount)
 			return 0;
-		if (packDCEL!=null) {
-			HalfEdge vw=packDCEL.findHalfEdge(v,w);
-			HalfEdge desig=vw.next;
-			if (vw==null || packDCEL.isBdryEdge(desig)) 
-				return 0;
-			return desig.twin.next.twin.origin.vertIndx;
-		}
-		
-		// traditional adapted from old 'cross_edge_vert'
-		int N=countFaces(v);
-		int k=nghb(v,w);
-		if (k<0 || k>N || (k==N && isBdry(v)))
+		HalfEdge vw=packDCEL.findHalfEdge(v,w);
+		HalfEdge desig=vw.next;
+		if (vw==null || packDCEL.isBdryEdge(desig)) 
 			return 0;
-		int ind_wv=nghb(w,v);
-		if (isBdry(w)) {
-			if (ind_wv<2) return 0;
-		    else return (getFlower(w)[ind_wv-2]);
-		}
-		int M=countFaces(w);
-		return (getFlower(w)[(ind_wv+M-2)%(M)]);
+		return desig.twin.next.twin.origin.vertIndx;
 	}
 	
 	/**
@@ -4548,36 +4234,19 @@ public class PackData{
 		if (!status || v1<1 || v1>nodeCount || v2<1 || v2>nodeCount
 			|| !isBdry(v1) || !isBdry(v2))
 			return 0;
-		if (packDCEL!=null) {
-			HalfEdge he=packDCEL.vertices[v2].halfedge.twin.next;
-			if (v1==v2)
-				return he.face.getNum();
-			int safety=he.face.getNum()+1;
-			do {
-				count++;
-				he=he.next;
-				safety--;
-			} while (he.origin.vertIndx!=v1 && safety>0);
-			if (safety==0) // not on same bdry segment
-				return 0;
-			return count;
-		}
-		
-		// traditional packing
-		if (v1==v2) { // reset to upstream vert
-			v2=kData[v1].flower[countFaces(v1)];
-		}
-		int vert=v1;
-	    int nextvert=kData[vert].flower[0];
-	    while (vert!=v2 && isBdry(vert)) {
-	      vert=nextvert;
-	      nextvert=kData[vert].flower[0];
-	      count++;
-	      if(vert==v1) return 0; /* didn't find v2 */
-	    }
-	    if (vert==v2) return count+1;
-	    return 0; // must have been error in combinatorics
-	} 
+		HalfEdge he=packDCEL.vertices[v2].halfedge.twin.next;
+		if (v1==v2)
+			return he.face.getNum();
+		int safety=he.face.getNum()+1;
+		do {
+			count++;
+			he=he.next;
+			safety--;
+		} while (he.origin.vertIndx!=v1 && safety>0);
+		if (safety==0) // not on same bdry segment
+			return 0;
+		return count;
+	}
 	
 	/**
 	 * Find the tangency point between the circles of given edge.
@@ -4640,28 +4309,11 @@ public class PackData{
 		if (v==w || (isBdry(v) && !isBdry(w))) // ?? don't understand this
 			return 0;
 		
-		if (packDCEL!=null) {
-			HalfEdge spoke=packDCEL.findHalfEdge(new EdgeSimple(v,w));
-			if (spoke==null)
-				return 0;
-			HalfEdge oppspoke=spoke.origin.oppSpoke(spoke,false);
-			return oppspoke.twin.origin.vertIndx;
-		}
-		
-		// traditional
-		int[] flower=getFlower(v);
-		if (isBdry(v)) {
-			int indx=nghb(v,w);
-			if (indx<(int)(countFaces(v)/2.0))
-				return flower[countFaces(v)];
-			else
-				return flower[0];
-		}
-		
-		int half=countFaces(v)/2;
-		if (2*half!=countFaces(v)) // not even degree
+		HalfEdge spoke=packDCEL.findHalfEdge(new EdgeSimple(v,w));
+		if (spoke==null)
 			return 0;
-		return flower[(nghb(v,w)+half)% countFaces(v)];
+		HalfEdge oppspoke=spoke.origin.oppSpoke(spoke,false);
+		return oppspoke.twin.origin.vertIndx;
 	}
 	
 	/**
@@ -4673,24 +4325,8 @@ public class PackData{
 	 * @return EdgeSimple, null on failure
 	 */
 	public EdgeSimple getCommonEdge(int v, int w) {
-		if (packDCEL!=null) {
-			HalfEdge he=RawDCEL.getCommonEdge(packDCEL, v, w);
-			return HalfEdge.getEdgeSimple(he);
-		}
-		
-		// traditional
-		int[] faceflower=kData[v].faceFlower;
-		int num=kData[v].num;
-		for (int j=0;j<num;j++) {
-			int f=faceflower[j];
-			Face face=faces[f];
-			int g=this.face_opposite(f, v);
-			int indx=face_nghb(f,g);
-			int[] gverts=getFaceVerts(g);
-			if (gverts[(indx+1)%3]==w)
-				return new EdgeSimple(gverts[indx],gverts[(indx+2)%3]);
-		}
-		return null;
+		HalfEdge he=RawDCEL.getCommonEdge(packDCEL, v, w);
+		return HalfEdge.getEdgeSimple(he);
 	}
 		
 	/** 
@@ -4745,94 +4381,6 @@ public class PackData{
 	}
 
 	/**
-	 * traditional: for dcel see 'shootExtended'
- 
-	 * TODO: 'axis-extend' more general. Perhaps that's enough?
-     * Check for a "hex-extended" edge from v to w of length no more
-	 * than 'lgth'. Return index in flower of 'v' of direction in which
-	 * 'w' can be reached in the fewest steps, or -1 on failure. 
-	 * See 'hex_extrapolate' to create edgelist.
-	 * @param v int
-	 * @param v int
-	 * @param lgth int
-	 * @return int, index or -1 on failure
-	*/
-	public int hex_extend(int v,int w,int lgth) {
-	  int i,dir,next,current,last;
-
-	  if (v==w || lgth<1) return -1;
-	  int pets=countFaces(v)+getBdryFlag(v);
-	  int []dists=new int[pets];
-	  for (dir=0;dir<pets;dir++) {
-	      last=v;
-	      current=kData[v].flower[dir];
-	      i=1;
-	      while (current!=w && i<lgth && (next=hex_proj(current,last))!=0) {
-	    	  last=current;
-	    	  current=next;
-	    	  i++;
-	      }
-	      if (current==w) dists[dir]=i;
-	      else dists[dir]=-1;
-	  }
-	  
-	  // look for direction reaching 'w' in smallest number of steps
-	  int theDir=-1;
-	  int theDist=lgth+1;
-	  for (int j=0;j<pets;j++) {
-		  if (dists[j]>0 && dists[j]<theDist) {
-			  theDir=j;
-			  theDist=dists[j];
-		  }
-	  }
-	  return theDir; 
-	}
-
-	/** 
-	 * traditional: for dcel see 'shootExtended'
-	 * 
-	 * Check for an "axis-extended" edge from v to w of length no more
-	 * than 'lgth'. Return index in flower of 'v' of direction in which
-	 * 'w' can be reached in the fewest steps, or -1 on failure. 
-	 * See 'axis_extrapolate' to create edgelist.
-	 * @param v int
-	 * @param v int
-	 * @param lgth int
-	 * @return int, index or -1 on failure
-	*/
-	public int axis_extend(int v,int w,int lgth) {
-	  int i,dir,next,current,last;
-
-	  if (v==w || lgth<1) return -1;
-//	  int pets=countFaces(v)+getBdryFlag(v);
-	  int[] petals=getPetals(v);
-	  int []dists=new int[petals.length];
-	  for (dir=0;dir<petals.length;dir++) {
-	      last=v;
-	      current=petals[dir];
-	      i=1;
-	      while (current!=w && i<lgth && (next=axis_proj(current,last))!=0) {
-	    	  last=current;
-	    	  current=next;
-	    	  i++;
-	      }
-	      if (current==w) dists[dir]=i;
-	      else dists[dir]=-1;
-	  }
-	  
-	  // look for direction reaching 'w' in smallest number of steps
-	  int theDir=-1;
-	  int theDist=lgth+1;
-	  for (int j=0;j<petals.length;j++) {
-		  if (dists[j]>0 && dists[j]<theDist) {
-			  theDir=j;
-			  theDist=dists[j];
-		  }
-	  }
-	  return theDir; 
-	}
-	
-	/**
 	 * Return edge for v,w, null if they're not neighbors
 	 * @param v int
 	 * @param w int
@@ -4840,16 +4388,9 @@ public class PackData{
 	 */
 	public EdgeSimple getEdge(int v,int w) {
 		EdgeSimple edge=new EdgeSimple(v,w);
-		if (packDCEL!=null) {
-			if (packDCEL.findHalfEdge(edge)!=null) 
-				return edge;
-			return null;
-		}
-		
-		// traditional packing
-		if (nghb(v,w)>=0) 
-			return new EdgeSimple(v,w);
-		return (EdgeSimple)null;
+		if (packDCEL.findHalfEdge(edge)!=null) 
+			return edge;
+		return null;
 	}
 	
 	/**
@@ -5191,23 +4732,7 @@ public class PackData{
 		setBdryCompCount(bs);
 		return bcount;
 	}
-	
-	/**
-	 * traditional (testing?)
-	 * 
-	 * Just trying out this new drawing order, 5/12: Not working yet.
-	 * TODO: switch uses with original 'facedraworder' by changing names.
-	 * @param poison boolean, if true, take account of poison vertices
-	 * @return int, count of faces laid out or -1 on error
-	 */
-	public int newfacedraworder(boolean poison) {
-		EdgeLink pE=null;
-		if (poison) pE=new EdgeLink(this,"Ivw P");
-		GraphLink dG=DualGraph.buildDualGraph(this,this.firstFace,pE);
-		dG=DualGraph.drawSpanner(this,dG,this.firstFace);
-		return DualGraph.tree2Order(this,dG);
-	}
-	
+
 	/* Specify an order appropriate for drawing faces of a circle packing */
 
 	/* A separate routine (simple_layout, new as of Feb. 2004) is used 
@@ -8826,101 +8351,20 @@ public class PackData{
 
 	/** 
 	 * Interchange two legal vertex numbers; in the DCEL case, all
-	 * information goes along, other indices remain unchanged.
-	 * vlist, elist, vertexMap, tiling info are adjusted, flist is lost. 
-	 * If there's an error, the packing data will likely be compromised. 
+	 * information goes along, other indices remain unchanged, 
+	 * tiling info are adjusted. If there's an error, the packing 
+	 * data will likely be compromised. 
 	 * Caution: v w are switched in vertexMap (first entries only)
 	 * Caution: calling routine must do complex_count, facedraworder, etc.
 	 * @param v int
 	 * @param w int
-	 * @return 1
+	 * @return 1, 0 on error
 	 */
 	public int swap_nodes(int v, int w) {
-		int rslt=0;
-		if (packDCEL!=null) {
-			rslt=packDCEL.swapNodes(v, w);
-			if (rslt==0)
-				return 0;
-		}
-
-		else {
-			RData holdR = rData[v];
-			KData holdK = kData[v];
-			rData[v] = rData[w];
-			kData[v] = kData[w];
-			rData[w] = holdR;
-			kData[w] = holdK;
-			int vdum = 0;
-
-			// for petals in v's new flower, replace w's with vdum's
-			for (int i = 0; i < (countFaces(v) + getBdryFlag(v)); i++) {
-				int pet = kData[v].flower[i];
-				if (pet == v)
-					pet = w;
-				for (int j = 0; j <= countFaces(pet); j++)
-					if (kData[pet].flower[j] == w)
-						kData[pet].flower[j] = vdum;
-			}
-
-			// for petals in w's new flower, replace v's with w's
-			for (int i = 0; i < (countFaces(w) + getBdryFlag(w)); i++) {
-				int pet = kData[w].flower[i];
-				if (pet == vdum)
-					pet = v;
-				for (int j = 0; j <= countFaces(pet); j++)
-					if (kData[pet].flower[j] == v)
-						kData[pet].flower[j] = w;
-			}
-
-			// for petals in v's new flower, replace vdum's with v
-			for (int i = 0; i <= countFaces(v); i++) {
-				int pet = kData[v].flower[i];
-				for (int j = 0; j <= countFaces(pet); j++)
-					if (kData[pet].flower[j] == vdum)
-						kData[pet].flower[j] = v;
-			}
-
-			if (alpha == v)
-				alpha = w;
-			else if (alpha == w)
-				alpha = v;
-			if (gamma == v)
-				gamma = w;
-			else if (gamma == w)
-				gamma = v;
-
-		}
+		int rslt = packDCEL.swapNodes(v, w);
+		if (rslt==0)
+			return 0;
 		
-		// other adjustments
-		if (activeNode == v)
-			activeNode = w;
-		else if (activeNode == w)
-			activeNode = v;
-
-		// fix up various lists: flist, glist invalidated
-		flist = null;
-		glist = null;
-
-		// fix up first entries in vertex_map
-		if (vertexMap != null) {
-			Iterator<EdgeSimple> etrace = vertexMap.iterator();
-			while (etrace.hasNext()) {
-				EdgeSimple es = (EdgeSimple) etrace.next();
-				if (es.v == v)
-					es.v = w;
-				else if (es.v == w)
-					es.v = v;
-			}
-		}
-
-		// fix up elist
-		if (elist != null) 
-			elist.swapVW(v, w);;
-			
-		// fix up vlist
-		if (vlist != null) 
-			vlist=vlist.swapVW(v, w);
-
 		// fix up if there is TileData
 		if (tileData != null && tileData.tileCount > 0) {
 			for (int j = 1; j <= tileData.tileCount; j++) {
@@ -8939,7 +8383,7 @@ public class PackData{
 				}
 			}
 		}
-		return 1;
+		return rslt;
 	}
 
 	/**
@@ -8953,7 +8397,7 @@ public class PackData{
 	public int swap_nodes(int v, int w, int keepFlags) {
 
 		// do the combinatorics of swap
-		int ans = swap_nodes(v, w);
+		int ans = packDCEL.swapNodes(v, w);
 		if (ans == 0)
 			return 0;
 		
@@ -14889,6 +14333,8 @@ public class PackData{
 	  }
 
 	  /** 
+	   * traditional
+	   * 
 	   * Adjoin p2 to 'this': start with vert v2 of p2 to vert v1 
 	   * of 'this', proceed n additional verts CLOCKWISE (negative 
 	   * direction) about bdry of 'this' (counterclockwise about
@@ -15574,6 +15020,8 @@ public class PackData{
 	  }
 	  
 	  /** 
+	   * traditional
+	   * 
 	   * Generate new combinatorics in pack p which are 
 	   * the barycentric subdivision of the original 
 	   * faces. I.e., each edge gets new vertex, each 
@@ -20033,17 +19481,8 @@ public class PackData{
 	 * @return Mobius
 	 */
 	public Mobius getSideMob(int e) {
-		if (packDCEL!=null) {
-			try {
-				return packDCEL.pairLink.get(e).mob;
-			} catch(Exception ex) {
-				throw new CombException("failed to get side pair "+e);
-			}
-		}
-		
-		// traditional
 		try {
-			return sidePairs.get(e).mob;
+			return packDCEL.pairLink.get(e).mob;
 		} catch(Exception ex) {
 			throw new CombException("failed to get side pair "+e);
 		}

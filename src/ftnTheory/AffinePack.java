@@ -82,7 +82,9 @@ public class AffinePack extends PackExtender {
 			running=false;
 		}
 		if (running) {
-			dTree=ProjStruct.torus4layout(packData,0);
+			
+			// TODO: redo using 'CombDCEL.torus4Sides'
+//			dTree=ProjStruct.torus4layout(packData,0);
 			
 			// LayoutBugs.log_GraphLink(p,dTree);
 			// LayoutBugs.pfacered(packData); // DualGraph.printGraph(dTree);

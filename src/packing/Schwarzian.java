@@ -226,10 +226,6 @@ public class Schwarzian {
 			RedList isRedList=null;
 			
 			boolean debug=false;  // debug=true;
-			if (debug) { 
-				LayoutBugs.log_RedCenters(p);
-				debug=false;
-			}
 			
 			// is outer 'RedEdge'?
 			for (int j=0;(j<elink_vec.size() && isRedEdge==null);j++) {

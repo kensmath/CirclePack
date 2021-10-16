@@ -1,7 +1,4 @@
-package util;
-
-import input.CommandStrParser;
-import input.QueryParser;
+package variables;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -9,18 +6,23 @@ import java.util.Vector;
 
 import javax.swing.table.AbstractTableModel;
 
-import packing.PackData;
-import panels.SliderPanel;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import exceptions.DataException;
 import exceptions.ParserException;
+import input.CommandStrParser;
+import input.QueryParser;
+import packing.PackData;
+import util.CallPacket;
+import util.StringUtil;
 
 /**
- * Class for handling variables in 'CirclePack'. Basically, any 
- * string can be treated as a named variable and associated with a 
- * string 'value'. Initially, definitions are limited (e.g., 'X:= 4.5'), 
- * but additional ways are anticipated, as via queries, 'r:=?rad 12'. 
+ * The 'variables' package is for handling variables in 
+ * 'CirclePack'. Basically, any string can be treated as a 
+ * named variable and associated with a string 'value'. 
+ * Initially, definitions are limited (e.g., 'X:= 4.5'), 
+ * but additional ways are anticipated, as via queries, 
+ * 'r:=?rad 12'.
  * 
  * On executing commands, variable name 'X' is specified via 
  * '_X ' (note the trailing whitespace to delineate the 
@@ -28,10 +30,13 @@ import exceptions.ParserException;
  * value string (which is then processed in the usual way, so 
  * it may be a number, a string, etc.) 
  * 
- * Keyword "[SLIDER..] " at beginning of value string means the variable
- * is under slider control, see 'SliderControlPanel'. CirclePack 
- * will then look for or adjust the value via the SliderPanel in
- * Variables tab of the 'Pack Info' frame. 
+ * I am splitting off the GUI components, which allow for
+ * input/display and for slider control. For example, the
+ * keyword "[SLIDER..] " at beginning of value string means 
+ * the variable is under slider control, see 
+ * 'SliderControlPanel'. CirclePack will then look for or 
+ * adjust the value via the SliderPanel in Variables tab 
+ * of the 'Pack Info' frame. 
  * 
  * Only restriction on names/values: they cannot contain ';'.
  * 
@@ -43,11 +48,11 @@ public class VarControl {
 	// 'variables' is hashmap for the current variables.
 	public LinkedHashMap<String, String> variables;
 	
-	// 'sliderVariables' is hashmap for the subset of variables currently
-	//     under slider control. Slider variables added/removed must also
-	//     be added/removed in 'variables' list of 'VariableControlTableModel',
-	//     (where they are identified by having a value string starting with 
-	//     "[SLIDER]".
+	// 'sliderVariables' is hashmap for the subset of variables 
+	//     currently under slider control. Slider variables 
+	//     added/removed must also be added/removed in 'variables' 
+	//     list of 'VariableControlTableModel', (identified by 
+	//     having value string starting with "[SLIDER]".)
 	public LinkedHashMap<String, SliderPanel> sliderVariables;
 	
 	protected VariableControlTableModel varModel;
@@ -81,9 +86,9 @@ public class VarControl {
 	/**
 	 * In hash table, set 'vkey' string to value given in 'flagSegs'.
 	 * If 'vkey' already in the table, this replaces its value.
-	 * Routine case, the value is a 'reconstituted' flagSeqs. 
-	 * (Note that we may even want vkey to be associated with command
-	 * string (though ';'s would be a problem).)
+	 * Routine case, the value is a string, usually 'reconstituted' 
+	 * flagSeqs. (Note that we may even want vkey to be associated 
+	 * with command string (though ';'s would be a problem).)
 	 * 
 	 * But also, want various options:
 	 * TODO: to be implemented as necessary and as time permits:
@@ -102,15 +107,16 @@ public class VarControl {
 	 *       e.g. 112 (as a String).
 	 *       Have to write a separate parser for this, as well.    
 	 *       
-	 * @param p @see PackData   
+	 * @param p PackData   
 	 * @param vkey String, the name to attach to the quantity
-	 * @param flagSegs vector, usual vector of vectors of strings; these
-	 * contain the description of String to associate with vkey.
-	 * Should be nonempty, check first character of first string 
-	 * for '?' or '&', else store reconstitute(flagSegs).
+	 * @param flagSegs Vector<Vector<String>>, usual flagSegs
+	 * 	contain the description of String to associate with vkey.
+	 * 	Should be nonempty, check first character of first string 
+	 * 	for '?' or '&', else store reconstitute(flagSegs).
 	 * @return boolean: false on failure or error.
 	 */
-	public boolean putVariable(PackData p,String vkey,Vector<Vector<String>> flagSegs) {
+	public boolean putVariable(PackData p,String vkey,
+			Vector<Vector<String>> flagSegs) {
 		Vector<String> items=flagSegs.get(0);
 		String theStuff=null;
 		
@@ -119,19 +125,22 @@ public class VarControl {
 
 		// this is form '{..cmd..}', so do a 'valueExecute', 
 		if (c=='{') {
-			theStuff=StringUtil.getBracesString(StringUtil.reconstitute(flagSegs));
+			theStuff=StringUtil.
+					getBracesString(StringUtil.reconstitute(flagSegs));
 			CallPacket cP=CommandStrParser.valueExecute(p,theStuff);
 			if (cP==null || cP.error)
 				return false;
 			
 			// expect double value or else int value
-			if (cP.double_vec!=null && cP.double_vec.size()>0)
-				varModel.put(vkey,cP.double_vec.get(0).toString());
-			else if (cP.int_vec!=null && cP.int_vec.size()>0)
-				varModel.put(vkey,cP.int_vec.get(0).toString());
-			else // else problem
+			try {
+				if (cP.double_vec!=null)
+					varModel.put(vkey,cP.double_vec.get(0).toString());
+				else if (cP.int_vec!=null)
+					varModel.put(vkey,cP.int_vec.get(0).toString());
+				return true;
+			} catch (Exception ex) {
 				return false;
-			return true;
+			}
 		}
 		
 		// routine case
@@ -168,6 +177,7 @@ public class VarControl {
 		// finally, store 'theStuff' under 'vkey'
 		try {
 			varModel.put(vkey,theStuff); // in case it's displacing something
+			varModel.fireTableDataChanged();
 		} catch (Exception ex) {
 			CirclePack.cpb.errMsg("failed to store variable");
 			return false;
@@ -180,20 +190,25 @@ public class VarControl {
 	 * 
 	 * @param variableName name of variable to remove
 	 */
-	public void removeVariable(String variableName) {varModel.remove(variableName);}
+	public void removeVariable(String variableName) {
+		varModel.remove(variableName);
+		varModel.fireTableDataChanged();
+	}
 	
 	/**
-	 * Returns a model of CirclePack variable state. Tables may use this model to
-	 * display the names and values of current variables.
-	 * 
-	 * @return <code>AbstractTableModel</code> representing the state of CirclePack variables.
+	 * Returns a model of CirclePack variable state. In GUI
+	 * mode, tables may use this model to display names and values 
+	 * of current variables.
+	 * @return AbstractTableModel representing state of CirclePack variables.
 	 */
-	public AbstractTableModel getVarTableModel() {return varModel;}
+	public AbstractTableModel getVarTableModel() {
+		return varModel;
+	}
 	
 	/**
-	 * <code>VariableControlTableModel</code> encapsulates CirclePack variable 
+	 * VariableControlTableModel encapsulates CirclePack variable 
 	 * state information. External classes must get this instance from 
-	 * <code>VarControl</code>.
+	 * 'VarControl'.
 	 * 
 	 * @author Alex Fawkes
 	 */
@@ -212,14 +227,20 @@ public class VarControl {
 
 		@Override
 		public Object getValueAt(int rowIndex, int columnIndex) {
-			if (rowIndex < 0 || rowIndex >= variables.size()) return null; // Out of bounds.
+			if (rowIndex<0 || rowIndex>=variables.size()) 
+				return null; // Out of bounds.
 			
 			//TODO: Memoize for performance.
-			// First column contains keys. Get an ordered list of keys from the map and return the rowIndexth key.
-			if (columnIndex == 0) return new ArrayList<String>(variables.keySet()).get(rowIndex);
-			// Second column contains values. Get an ordered list of values from the map and return the rowIndexth value.
-			else if (columnIndex == 1) return new ArrayList<String>(variables.values()).get(rowIndex);
-			else return null; // Out of bounds.
+			// First column contains keys. Get an ordered list of keys from the 
+			//    map and return the rowIndexth key.
+			if (columnIndex == 0) 
+				return new ArrayList<String>(variables.keySet()).get(rowIndex);
+			// Second column contains values. Get an ordered list of values 
+			//    from the map and return the rowIndexth value.
+			else if (columnIndex == 1) 
+				return new ArrayList<String>(variables.values()).get(rowIndex);
+			else 
+				return null; // Out of bounds.
 		}
 		
 		@Override
@@ -231,93 +252,123 @@ public class VarControl {
 		
 		@Override
 		public boolean isCellEditable(int rowIndex, int columnIndex) {
-			if (rowIndex < 0 || rowIndex >= variables.size()) return false; // Out of bounds.
-			else if (columnIndex < 0 || columnIndex > 1) return false; // Out of bounds.
+			if (rowIndex<1 || rowIndex>=variables.size()) 
+				return false; // Out of bounds.
+			else if (columnIndex < 0 || columnIndex > 1) 
+				return false; // Out of bounds.
 			else return true;
 		}
 		
 		@Override
 		public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
-			if (rowIndex < 0 || rowIndex >= variables.size()) return; // Out of bounds.
+			if (rowIndex < 0 || rowIndex >= variables.size()) 
+				return; // Out of bounds.
 			
-			// First, check if the new entry is a string. We can only work with strings,
-			// so return if something else has been passed.
+			// First, check if the new entry is a string. We can only work
+			//   with strings, so return if something else has been passed.
 			String newEntry;
-			if (aValue instanceof String) newEntry = (String) aValue;
-			else return;
-			newEntry = newEntry.trim(); // Remove leading and trailing whitespace.
-			if (newEntry.isEmpty()) return; // Ignore empty submissions.
+			if (aValue instanceof String) 
+				newEntry = (String) aValue;
+			else 
+				return;
+			newEntry = newEntry.trim(); // Remove leading/trailing whitespace.
+			if (newEntry.isEmpty()) 
+				return; // Ignore empty submissions.
 		
 			if (columnIndex == 0) {
-				// We want to change a name. First, check if a variable already has that name.
-				// If so, just return;
-				if (variables.containsKey(newEntry)) return;
+				// We want to change a name. First, check if a variable 
+				//     already has that name. If so, just return;
+				if (variables.containsKey(newEntry)) 
+					return;
 				
-				// Now, get the old name and old value from the hash map. Remove the old variable
-				// entry, and resubmit it with the new name and old value. We can't change the
+				// Now, get the old name and old value from the hash map. 
+				//   Remove the old variable entry, and resubmit it with 
+				//   the new name and old value. We can't change the
 				// variable name in place, since it is the key in the hash map.
-				String oldName = new ArrayList<String>(variables.keySet()).get(rowIndex);
+				String oldName = 
+						new ArrayList<String>(variables.keySet()).get(rowIndex);
 				
-				// is this a slider as well?
+				// is this a slider as well? 
 				SliderPanel sp=sliderVariables.get(oldName);
-				if (sp!=null) {
+				if (sp!=null) { // must be in GUImode
 					sliderVariables.remove(oldName);
 					sliderVariables.put(newEntry,sp);
 					sp.varNameButton.setText(newEntry);
 				}
 				
-				String oldValue = new ArrayList<String>(variables.values()).get(rowIndex);
+				String oldValue = new ArrayList<String>(
+						variables.values()).get(rowIndex);
 				variables.remove(oldName);
 				variables.put(newEntry, oldValue);
 
-				// Mark that the underlying data has changed so listeners may be updated.
+				// underlying data has changed so listeners may be updated.
 				fireTableDataChanged();
-				PackControl.packDataHover.sliderControlPanel.revalidate();
+				if (CirclePack.cpb.GUImode>0)
+					PackControl.packDataHover.sliderControlPanel.revalidate();
 			} else if (columnIndex == 1) {
-				// We want to change a value. Get the name of the variable and resubmit it to
-				// the hash map with the new value.
-				String oldName = new ArrayList<String>(variables.keySet()).get(rowIndex);
-				SliderPanel sp=sliderVariables.get(oldName);
+				// We want to change a value. Get the name of the variable 
+				//   and resubmit it to the hash map with the new value.
+				String oldName = new ArrayList<String>(variables.keySet()).
+						get(rowIndex);
+				SliderPanel sp=sliderVariables.get(oldName); // null is not GUImode
 				
 				// should we create a special type variable?
 				String []slidestrs=null;
 				if ((slidestrs=isSpecVariable(newEntry))!=null) {
 					if (!slidestrs[0].equals("SLIDER") && sp!=null) 
 						sliderVariables.remove(oldName);
-					
-					else if (slidestrs[0].equals("SLIDER")) { // (only special type so far)
+					// SLIDER is the only special type so far
+					else if (slidestrs[0].equals("SLIDER")) { 
 						
 						newEntry=new String("[SLIDER"+slidestrs[1]+"] "+slidestrs[2]);
 
-						// should be in 'sliderVariables'; if not, go on to create as new
+						// should be in 'sliderVariables'; if not, create as new
 					
-						// if exists, may just want to change value without messing with other parameters;
-						//    syntax for user is "[SLIDER] <double as string>".
-						if (sp!=null && newEntry.startsWith("[SLIDER")) { // plan to just change double value
+						// if exists, may just want to change value without 
+						//    messing with other parameters; syntax for user 
+						//    is "[SLIDER] <double as string>".
+						if (sp!=null && newEntry.startsWith("[SLIDER")) { 
+							// plan to just change value
 							double newdoub=0.0;
 							try {
 								newdoub=Double.parseDouble(newEntry.substring(8));
 							} catch (Exception ex) {
-								throw new DataException("bad 'value' for slider '"+oldName+"'");
+								throw new DataException(
+										"bad 'value' for slider '"+oldName+"'");
 							}
 							sp.resetValue(newdoub);
 							return;
 						}
 					
-						// else create in 'sliderVariables'; this will check if value is a double
-						PackControl.packDataHover.sliderControlPanel.putSlider(oldName,slidestrs[1],slidestrs[2]);
+						// else create in 'sliderVariables'; this will check for double
+						PackControl.packDataHover.sliderControlPanel.
+							putSlider(oldName,slidestrs[1],slidestrs[2]);
 					}	
 				}
 				
 				variables.put(oldName, newEntry);
 
-				// Mark that the underlying data has changed so listeners may be updated.
+				// Mark that underlying data has changed so listeners may be updated.
 				fireTableDataChanged();
-				PackControl.packDataHover.sliderControlPanel.revalidate();
+				if (CirclePack.cpb.GUImode>0)
+					PackControl.packDataHover.sliderControlPanel.revalidate();
 			}
 		}
 
-
+		/**
+		 * Get the table row in which variable 'key'
+		 * @param key String, should be trimmed
+		 * @return int row number
+		 */
+		public int getVarRow(String key) {
+			int N=getRowCount();
+			for (int j=1;j<N;j++) {
+				if (key.equalsIgnoreCase((String)getValueAt(j,1)))
+					return j;
+			}
+			return -1;
+		}
+		
 		/**
 		 * Returns the value string of the specified CirclePack variable;
 		 * string rep of double if a slider variable
@@ -345,11 +396,12 @@ public class VarControl {
 		}
 		
 		/**
-		 * Adds a CirclePack variable to the model.
+		 * Adds to or updates a CirclePack variable in the model. On
+		 * creation, 'value' may contain specs (e.g., for sliders).
 		 * 
-		 * @param key the name of the CirclePack variable to add
-		 * @param value the value of the CirclePack variable to add
-		 * @return a <code>String</code> representation of the variable's previous value, or <code>null</code> on a new mapping
+		 * @param key String, name 
+		 * @param value String, the value of the CirclePack variable to add
+		 * @return String representation of previous value, or null if new 
 		 */
 		protected String put(String key, String value) {
 			key = key.trim(); // Remove leading and trailing whitespace.
@@ -376,16 +428,23 @@ public class VarControl {
 						}
 						// else create; this will check if value is a double
 						else {
-							PackControl.packDataHover.sliderControlPanel.putSlider(key,specStuff[1],specStuff[2]);
+							PackControl.packDataHover.
+								sliderControlPanel.putSlider(key,
+										specStuff[1],specStuff[2]);
 						}
 						
-						// also put in 'variables' (but without sliders 'spec' string)
-						variables.put(key, new String("["+specStuff[0]+"] "+specStuff[2]));
+						// also put in 'variables' (but w/o sliders 'spec' string)
+						variables.put(key, new String(
+								"["+specStuff[0]+"] "+specStuff[2]));
+			            PackControl.varControl.variables.put(
+			            		key,new String("[SLIDER] "+specStuff[2]));
+			            varModel.fireTableDataChanged();
 					}
 					
 					// else a regular variable
-					else 
+					else {
 						variables.put(key, value);
+					}
 				} catch (Exception ex) {
 					throw new DataException("bad specs or value' for '"+key+"'");
 				}
@@ -402,27 +461,34 @@ public class VarControl {
 						// if it is in 'sliderVariables', adjust it
 						SliderPanel sp=sliderVariables.get(key);
 						if (sp!=null) { 
-							sp.sliderPacket.adjustParameters(specStuff[1]);
+							sp.sliderPacket.adjustParameters(oldvalue);
 							sp.adjustValue4Range();
+							sp.resetValue(Double.parseDouble(value));
 						}
 						// else create; this will check if value is a double
 						else {
-							PackControl.packDataHover.sliderControlPanel.putSlider(key,specStuff[1],specStuff[2]);
+							PackControl.packDataHover.
+								sliderControlPanel.putSlider(key,
+										specStuff[1],value);
 						}
 						
 						// also put in 'variables' (but without sliders 'spec' string)
-						variables.put(key, new String("["+specStuff[0]+"] "+specStuff[2]));
+						variables.put(key, 
+								new String("["+specStuff[0]+"] "+specStuff[2]));
+			            PackControl.varControl.variables.put(
+			            		key,new String("[SLIDER] "+value));
 					}
 					// else a regular variable
-					else
+					else 
 						variables.put(key, value);
 				} catch (Exception ex) {
 					throw new DataException("bad specs or value' for '"+key+"'");
 				}
 			}
 
-			// The variables have changed (probably). Fire a notice to the listeners.
-			// TODO: Calculate exactly what has changed, and only update that instead of updating everything.
+			// The variables have changed (probably). Fire notice to listeners.
+			// TODO: Calculate exactly what changed, and only update that 
+			//       instead of updating everything.
 			fireTableDataChanged();
 			PackControl.packDataHover.sliderControlPanel.revalidate();
 			
@@ -433,7 +499,8 @@ public class VarControl {
 		 * Remove a CirclePack variable from the model.
 		 * 
 		 * @param key the name of the CirclePack variable to remove
-		 * @return a <code>String</code> representation of the value removed by the key, or <code>null</code> if nothing removed
+		 * @return a <code>String</code> representation of the value 
+		 *    removed by the key, or <code>null</code> if nothing removed
 		 */
 		protected String remove(String key) {
 			String returnValue = variables.remove(key);
@@ -446,7 +513,8 @@ public class VarControl {
 			}
 					
 			// The variables have changed (probably). Fire a notice to the listeners.
-			// TODO: Calculate exactly what has changed, and only update that instead of updating everything.
+			// TODO: Calculate exactly what has changed, and only update that 
+			//       instead of updating everything.
 			fireTableDataChanged();
 			PackControl.packDataHover.sliderControlPanel.validate();
 			PackControl.packDataHover.sliderControlPanel.repaint();

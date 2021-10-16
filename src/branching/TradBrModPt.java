@@ -35,7 +35,7 @@ public class TradBrModPt extends GenBrModPt {
 	public TradBrModPt(GenModBranching g,int bID,double aim,int v) {
 		super(g,bID,aim);
 		gmb=g;
-		myType=GenBranchPt.TRADITIONAL;
+		myType=GenBrModPt.TRADITIONAL;
 		myEdge=pdc.vertices[v].halfedge;
 		
 		// debug help
@@ -55,7 +55,7 @@ public class TradBrModPt extends GenBrModPt {
 		HalfEdge starthe=null;
 		while (vis.hasNext()) {
 			HalfEdge he=vis.next();
-			if (starthe==null && he.isBdry())
+			if (starthe==null && !he.isBdry())
 				starthe=he;
 			myExclusions.add(he.origin);
 		}

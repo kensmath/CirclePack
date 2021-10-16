@@ -142,7 +142,7 @@ public class BeltramiFlips extends PackExtender {
 				throw new ParserException("Problem with 'goOrder'");
 			}
 			if (count>0) {
-				packData.facedraworder(false);
+				packData.packDCEL.fixDCEL_raw(packData);
 				// resort the edges
 				double []iln=sortEdges();
 				CirclePack.cpb.msg(iln[0]+" illegal edges, norm "+iln[1]);
@@ -290,31 +290,13 @@ public class BeltramiFlips extends PackExtender {
 			return null;
 		int []corn_vert=new int[4];
 		
-		if (packData.packDCEL!=null) {
-			HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
-			if (he==null || packData.packDCEL.isBdryEdge(he))
-				return null;
-			corn_vert[0]=v;
-			corn_vert[1]=he.twin.next.twin.origin.vertIndx; // clw edge
-			corn_vert[2]=w;
-			corn_vert[3]=he.prev.origin.vertIndx; // cclw edge
-		}
-
-		// traditional
-		else {
-			int vw=packData.nghb(v,w);
-			if (vw<0) 
-				return null;
-			int num=packData.countFaces(v);
-			int[] flower=packData.getFlower(v);
-			int j=(vw-1+num)%num;
-			int k=(vw+1)%num;
-		
-			corn_vert[0]=v;
-			corn_vert[1]=flower[j];
-			corn_vert[2]=w;
-			corn_vert[3]=flower[k];
-		}
+		HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
+		if (he==null || packData.packDCEL.isBdryEdge(he))
+			return null;
+		corn_vert[0]=v;
+		corn_vert[1]=he.twin.next.twin.origin.vertIndx; // clw edge
+		corn_vert[2]=w;
+		corn_vert[3]=he.prev.origin.vertIndx; // cclw edge
 		
 		// affine map based on Beltrami coeff at centroid of these 4 verts  
 		Complex midZ=packData.getCenter(v).add(packData.getCenter(corn_vert[1])).
@@ -347,24 +329,14 @@ public class BeltramiFlips extends PackExtender {
 			return 0;
 		double x=getLegality(v,w);
 		if (x>0) {
-			if (packData.packDCEL!=null) {
-				HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
-				if (he==null)
-					return 0;
-				HalfEdge newhe=RawDCEL.flipEdge_raw(packData.packDCEL, null);
-				if (newhe==null)
-					return 0;
-				packData.packDCEL.fixDCEL_raw(packData);
-				return 1;
-			}
-			
-			// traditional
-			if (packData.flip_edge(v,w,2)!=0) {
-				// fix up combinatorics
-				packData.complex_count(false);
-				return 1;
-			}
-			return 0;
+			HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
+			if (he==null)
+				return 0;
+			HalfEdge newhe=RawDCEL.flipEdge_raw(packData.packDCEL, null);
+			if (newhe==null)
+				return 0;
+			packData.packDCEL.fixDCEL_raw(packData);
+			return 1;
 		} 
 		return 0;
 	}

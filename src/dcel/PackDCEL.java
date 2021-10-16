@@ -29,6 +29,7 @@ import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
 import posting.PostFactory;
+import tiling.Tile;
 import util.ColorUtil;
 import util.DispFlags;
 import util.TriData;
@@ -36,26 +37,15 @@ import util.TriData;
 /** 
  * The "DCEL" is a common way that computer scientists 
  * encode graphs; it's also called a 'half-edge' structure.
- * At the suggestion of John Bowers, I am converting all of
- * CirclePack to use DCEL structures as the central 
- * mechanism for combinatorics. Our triangulations are 
- * assumed to be 3-connected.
+ * I have converted the combinatorics underlying CirclePack
+ * to use this model (at the suggestion of John Bowers).
  * 
- * This preliminary class is for testing DCEL methods. 
- * In particular, things are not sync'ed well with the 
- * traditional 'PackData' parent. In testing, therefore, 
- * we often write the results out and read them into 
- * 'CirclePack' and create the new DCEL structure, rather
- * than try to update everything with the current DCEL 
- * structure. Interim routines for interacting with 
  * 'CirclePack' are marked with "NEEDED FOR CIRCLEPACK". 
  * 
  * Note on indices: Vertices, edges, and faces all get indices;
- * these are independent and all start with 1. Those for vertices
- * are intended to align with indices of p. Others are a convenience,
- * i.e. for writing DCEL structures to files. In particular, face
- * indices are not sync'ed with face indices in 'p', since these
- * are ephemeral. 
+ * these are independent and all start indexing with 1. Those 
+ * for vertices are most important, others are more ephemeral and
+ * for convenience. 
  * 
  * The principal route to creating DCEL structures uses 'bouquet's
  * in 'CombDCEL.d_redChainBuilder', which first calls 'CombDCEL.createVE'
@@ -2068,8 +2058,8 @@ public class PackDCEL {
 	
 	/**
 	 * Swap vertices for 'v' and 'w'. This has minimal impact on the DCEL
-	 * structure, eg., drawing order, etc., but calling routing may
-	 * adjust Note that all the 'VData' info
+	 * structure, eg., drawing order, etc., but calling routine may
+	 * adjust various lists. Note that all the 'VData' info
 	 * goes along, 'aim', 'rad', etc., so if you didn't want to swap
 	 * this, the calling routine has to swap it back.
 	 * @param v int
@@ -2097,6 +2087,26 @@ public class PackDCEL {
 			p.directAlpha(alpha.origin.vertIndx);
 			p.directGamma(gamma.origin.vertIndx);
 		}
+		
+		// fix up if there parent has TileData
+		if (p.tileData != null && p.tileData.tileCount > 0) {
+			for (int j = 1; j <= p.tileData.tileCount; j++) {
+				Tile t = p.tileData.myTiles[j];
+				if (t == null)
+					continue;
+				if (t.baryVert == w)
+					t.baryVert = v;
+				else if (t.baryVert == v)
+					t.baryVert = w;
+				for (int k = 0; k < t.vertCount; k++) {
+					if (t.vert[k] == w)
+						t.vert[k] = v;
+					else if (t.vert[k] == v)
+						t.vert[k] = w;
+				}
+			}
+		}
+		
 		return 1;
 	}
 	

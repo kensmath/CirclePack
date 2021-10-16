@@ -2689,19 +2689,11 @@ bottom of postscript file.</opt>
 <description>See "get_data". The same comments apply here, only the data is
 	moved FROM the active pack TO pack q. The -t flag means to 
 	translate using the vertex_map of the active packing, if it has
-	one. (The -v and -V options of get_data do not apply here).
+	one. (The -v and -V options of 'get_data' do not apply here).
 </description>
-<options heading="Data specification flags">
-<opt flag="-r"> radii</opt>
-<opt flag="-z"> centers</opt>
-<opt flag="-a"> aims</opt>
-<opt flag="-s"> angle sums</opt>
-<opt flag="-c"> circle colors</opt>
-<opt flag="-m"> vertex 'mark'</opt>
-<opt flag="-f"> face colors</opt>
-<opt flag="-fm"> face marks</opt>
-<opt flag="-o"> inversive distances (for edges)</opt>
-</options> 
+<seealso>
+<see>get_data</see>
+</seealso>
 </command>
 
 <command cmd="pwd">

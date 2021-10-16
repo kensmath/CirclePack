@@ -283,7 +283,8 @@ public class MyCanvasMode extends MyTool {
 		Point2D.Double pt=aW.cpScreen.pt2RealPt(point, dim.width,dim.height);
 		int ans=0;
 		try {
-			ans=TrafficCenter.cmdGUI(aW.cpScreen.getPackData(),"locate -f " + pt.x + " " + pt.y);
+			ans=TrafficCenter.cmdGUI(
+					aW.cpScreen.getPackData(),"locate -f " + pt.x + " " + pt.y);
 		} catch (Exception ex) {return;}
 		if (ans>0) 
 			rePaint(aW);

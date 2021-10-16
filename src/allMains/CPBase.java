@@ -32,19 +32,16 @@ import posting.PostManager;
 import script.ScriptManager;
 import util.CPTimer;
 import util.CallPacket;
-import util.VarControl;
+import variables.VarControl;
 
 /**
  * This is abstract class intended to serve as the head for 
  * programs that do circle packing. It allows some generic 
  * flexibility (i.e., 'msg()'), sets up the key general 
  * variables, the packing data objects, and models for data
- * managers, etc. Not all needed in every case. 
- * TODO: Working on moving all GUI stuff out of this class.
- * 
- * 'CirclePack' itself is the full-featured implementation;
- * other applications, perhaps with GUI's, but also stand-alone 
- * or as background packages, will need many of the same basics.
+ * managers, etc. Not all needed in every case; in particular,
+ * I am working toward a "standalone" version and a full
+ * GUI version.
  */
 public abstract class CPBase {
 	

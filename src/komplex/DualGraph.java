@@ -534,9 +534,6 @@ public class DualGraph {
 			rtrace=(RedList)rtrace.next;
 		}
 			
-		if (debug)
-			LayoutBugs.log_RedList(p,p.packDCEL.redChain);
-		
 		// initialize
 		for (int f=1;f<=p.faceCount;f++) {
 			p.faces[f].nextFace=0;
