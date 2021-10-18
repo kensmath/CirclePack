@@ -6,6 +6,7 @@ import java.util.Vector;
 import allMains.CirclePack;
 import complex.Complex;
 import dcel.DcelCreation;
+import dcel.RawDCEL;
 import exceptions.CombException;
 import komplex.EdgeSimple;
 import komplex.KData;
@@ -1382,9 +1383,9 @@ public class TileData {
 			p.kData[9].flower[1]=5;
 			p.kData[9].flower[2]=8;
 			p.setBdryFlag(9,1);
-			p.kData[9].utilFlag=0;
+			p.setVertUtil(9,0);
 			p.setVertMark(9,0);
-			p.rData[9].rad=2.5/(double)4;
+			p.setRadius(9,2.5/(double)4);
 				
 			// process the combinatorics 
 			p.complex_count(true);
@@ -1416,7 +1417,8 @@ public class TileData {
 		if (elist.size()==2) {
 			
 			PackData p=DcelCreation.seed(4,0);
-			p.bary_refine();
+			RawDCEL.hexBaryRefine_raw(p.packDCEL,false);
+			p.packDCEL.fixDCEL_raw(p);
 			
 			p.vertexMap=new VertexMap();
 			p.vertexMap.add(new EdgeSimple(elist.get(0).v,2));
@@ -1427,7 +1429,6 @@ public class TileData {
 			p.setVertMark(3,3);
 			p.setVertMark(5,3);
 			
-			p.setCombinatorics();
 			return p;
 		}			
 		
@@ -1459,7 +1460,6 @@ public class TileData {
 		// TODO: handle other special cases
 		
 		return null;
-		
 	}
 	
 	/**
@@ -1639,92 +1639,6 @@ public class TileData {
 		
 		return viaFlowers(p,finalList);
 	}
-
-	/* put into 'ConformalTiling.java' instead
-	public static int writeEuclTiling(TileData tileData,BufferedWriter fp) {
-		int tilesdrawn=0;
-		try {
-			fp.write("%!PS-Adobe-2.0 EPSF-2.0\n%%Title: Traditional Eucl Tiling\n");
-			fp.write("%%Creator: "+PackControl.CPVersion+
-					"\n%%CreationDate: "+new Date().toString()+"\n");
-			fp.write("%%For: "+System.getProperty("user.name")+"\n%%Orientation: Portrait\n");
-
-			fp.write("Magnification: 1.0000\n%%EndComments\n");
-			TileRule topRule=tileData.subRules.tileRules.get(4);
-	    
-			// compute/set bounding box based on toptile
-			double minx=0.0;
-			double maxx=0.0;
-			double miny=0.0;
-			double maxy=0.0;
-			for (int j=1;j<topRule.edgeCount;j++) {
-				Complex z=topRule.stdCorners[j];
-				minx=(z.x<minx) ? z.x : minx;
-				maxx=(z.x>maxx) ? z.x : maxx;
-				miny=(z.y<miny) ? z.y : miny;
-				minx=(z.y>maxx) ? z.y : maxy;
-			}
-			double sz=maxx-minx;
-			double lng=maxy-miny;
-			sz=(lng>sz) ? lng:sz;
-	    
-			int bblx=(int)(72*(minx))-10;
-			int bbly=(int)(72*(miny))-10;
-			int bbrx=(int)(72*(minx+sz))+10;
-			int bbry=(int)(72*(miny+sz))+10;
-			fp.write("%%BoundingBox: "+bblx+" "+bbly+" "+bbrx+" "+bbry+"\n");
-		
-			Complex []topBase=new Complex[2];
-			topBase[0]=topRule.stdCorners[0];
-			tilesdrawn=printTilePS(tileData,0,topBase,fp); 
-		
-			fp.write("\nend\nshowpage\n");
-			fp.flush();
-			fp.close();
-		} catch(Exception ex) {
-			throw new InOutException("problem: ps file for 'write_eucl'");
-		}
-
-		return tilesdrawn;
-	}
-	
-	
-	public static int printTilePS(TileData tdata,int tileIndx,Complex []base,BufferedWriter fp) {
-		Tile tile=tdata.myTiles[tileIndx];
-		Complex bvec=base[1].minus(base[0]);
-		Complex []stdC=null;
-		Complex []mybase=new Complex[2];
-		
-		// first, draw yourself, then position and recursively draw any children
-		try {
-			stdC=tdata.subRules.tileRules.get(tileIndx).stdCorners;
-			fp.write(base[0].x+" "+base[0].y+"newpath\nmoveto\n");
-			for (int j=1;j<stdC.length;j++) {
-				Complex z=stdC[j].times(bvec).add(base[0]);
-				fp.write(z.x+" "+z.y+"lineto\n");
-			}
-			fp.write("closepath\n");
-		} catch(Exception ex) {
-			throw new InOutException("failed in writing a tile.");
-		}
-		
-		// recurse through children
-		int count=1;
-		if (tile.myTileData!=null) {
-			TileData mytile=tile.myTileData;
-			for (int t=0;t<mytile.tileCount;t++) {
-				Complex []subtileBase=tdata.subRules.tileRules.get(tileIndx).tileBase[t];
-				subtileBase[0]=subtileBase[0].times(bvec).add(base[0]);
-				subtileBase[1]=subtileBase[1].times(bvec).add(base[0]);
-				int rslt=printTilePS(mytile,t,subtileBase,fp);
-				if (rslt<=0)
-					return 0;
-				count +=rslt;
-			}
-		}
-		return count;
-	}
-	*/
 	
 	/**
 	 * Given a packing and a list of its vertices, create tiling

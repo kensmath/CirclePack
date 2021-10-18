@@ -166,6 +166,8 @@ public class KData{
      }
      
      /**
+      * traditional
+      * 
       * Add v as a petal in flower after petal w
       * @param v int, new petal
       * @param w int, position
@@ -184,6 +186,8 @@ public class KData{
      }
      
      /**
+      * traditional
+      * 
       * remove petal at index j. If flower is closed,
       * it remains closed.
       * @param j int, index of petal to be removed

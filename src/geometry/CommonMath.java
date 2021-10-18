@@ -414,21 +414,12 @@ public class CommonMath {
 	 * @return boolean, false on some failure
 	 */
 	public static boolean get_anglesum(PackData p,int v,double rad,UtilPacket uP) {
-		if (p.packDCEL!=null) {
-			try {
-				uP.value=p.packDCEL.getVertAngSum(p.packDCEL.vertices[v],rad);
-			} catch (Exception ex) {
-				return false;
-			}
-			return true;
+		try {
+			uP.value=p.packDCEL.getVertAngSum(p.packDCEL.vertices[v],rad);
+		} catch (Exception ex) {
+			return false;
 		}
-		
-		if (p.hes<0) // hyp
-			return p.h_anglesum_overlap(v,rad,uP);
-		else if (p.hes>0) // sph
-			return p.s_anglesum(v,rad,uP);
-		else // eucl
-			return p.e_anglesum_overlap(v,rad,uP);
+		return true;
 	}
 
 	/**

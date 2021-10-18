@@ -179,23 +179,6 @@ public class CookieMonster {
 	}
 
 	/**
-	 * Cookie using zigzag idea with 'ClosedPath'.
-	 * @return int nodecount
-	 */
-	public int zigzagCookie() {
-		
-		try {
-			Triangulation Tri=zigzag_cutter(monsterPackData.getTriangulation(),CPBase.ClosedPath);
-			monsterPackData=Triangulation.tri_to_Complex(Tri, 0);
-		} catch (Exception ex) {
-			throw new CombException("tri_to_complex error: "+ex.getMessage());
-		}
-		monsterPackData.setCombinatorics();
-		monsterPackData.fillcurves();
-		return monsterPackData.nodeCount;
-	}
-
-	/**
 	 * After 'cookie', need to restore various data using new
 	 * indexing. We also set the vertexMap <new, old> indices
 	 */
@@ -350,18 +333,6 @@ public class CookieMonster {
 					gotPoison=true;
 				}
 			}
-			// Traditionally, also make immediate nghbs of outside vertices poison; recall,
-			//   poisons do get included in cutout packing, we just don't loop around
-			//    them. Set myPoison to +1
-			if (p.packDCEL==null) {
-				for (int v=1;v<=p.nodeCount;v++) {
-					int[] flower=p.getFlower(v);
-					int cFv=p.countFaces(v);
-					for (int j=0;(j<=cFv && myPoison[v]==0);j++) 
-						if (myPoison[flower[j]]==-1) 
-							myPoison[v]=1;
-				}
-			}
 		}
 
 		// no poison?
@@ -370,22 +341,6 @@ public class CookieMonster {
 			return null;
 		}
 		
-		// Traditinally, remove any isolated poisons 
-		// TODO: maybe allow these?
-		if (p.packDCEL==null) {
-			for (int i=1;i<=p.nodeCount;i++) {
-				if (myPoison[i]!=0)  {
-					int k=0;
-					int[] flower=p.getFlower(i);
-					for (int j=0;j<=p.countFaces(i);j++) 
-						if (myPoison[flower[j]]!=0) 
-							k++;
-					if (k==0) // no poison neighbors 
-						myPoison[i]=0;
-				}
-			}
-		}
-
 		// seed can't be poison
 		if (mySeed!=0 && myPoison[mySeed]<0) {
 			myPoison=null;
@@ -485,9 +440,10 @@ public class CookieMonster {
 				int num=p.countFaces(v);
 
 				Vector<Integer> jumps=new Vector<Integer>(1);
-				for (int j=0;j<p.countFaces(v);j++) {
-					int k=p.kData[v].flower[j];
-					int kk=p.kData[v].flower[j+1];
+				int[] flower=p.getFlower(v);
+				for (int j=0;j<flower.length;j++) {
+					int k=flower[j];
+					int kk=flower[j+1];
 					if (util[k]!=util[kk]) {
 						if (util[k]==1) // jump to negative at j
 							jumps.add(-j); 

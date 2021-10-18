@@ -171,14 +171,8 @@ public class QualMeasures {
 	 * @return double, -1 in case of infinite hyp radius or error
 	 */
 	public static double desired_length(PackData p, int v, int w) {
-		if (p.packDCEL==null) {
-			if (p.nghb(v, w)<0)
-				return -1;
-		}
-		else {
-			if (p.packDCEL.findHalfEdge(new EdgeSimple(v,w))==null)
-				return -1;
-		}
+		if (p.packDCEL.findHalfEdge(new EdgeSimple(v,w))==null)
+			return -1;
 		double rv=p.getRadius(v);
 		double rw=p.getRadius(w);
 		double ivd=p.getInvDist(v,w);

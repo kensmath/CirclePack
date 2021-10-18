@@ -216,13 +216,10 @@ public class BaryPoint {
 	}
 	
 	public void printDebug(PackData p,String lead) {
-		if (p.packDCEL!=null) {
-			throw new DCELException("'printDebug' not DCEL ready");
-		}
+		int[] vert=p.packDCEL.faces[f].getVerts();
 		System.out.println(lead+": face="+this.face+" verts="+
-				p.faces[this.face].vert[0]+" "+p.faces[this.face].vert[1]+" "+
-				p.faces[this.face].vert[2]+" barys: "+
-	this.b0+" "+this.b1+" "+this.b2);
+				vert[0]+" "+vert[1]+" "+vert[2]+" barys: "+
+				this.b0+" "+this.b1+" "+this.b2);
 	}
 	
 	/**

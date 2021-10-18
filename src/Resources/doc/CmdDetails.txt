@@ -2177,7 +2177,7 @@ these packings and the corresponding object is displayed in both.
 	list of boundary edges, but it is essential for multiply
 	connected situations. It is generated automatically.
 	This command gives two options for redoing the red chain.
-	The -t option is only for topogical tori and recomputes
+	The -t option is only for topological tori and recomputes
 	the red chain so it has only two side-pairing (rather
 	than the generic three). The second option is to provide
 	a vertex list defining the red chain. This is difficult:
@@ -2186,7 +2186,7 @@ these packings and the corresponding object is displayed in both.
 	such as cutting out some vertices. One use is to make
 	small modifications to an existing red chain (display 
 	this using the '-R' option). On failure, this command
-	should not hurt the packing.
+	should not damage the packing.
 </description>
 <options>
 <opt flag="-t"> For torus only, creates domain with only 
@@ -2278,15 +2278,16 @@ two side-pairings</opt>
 </command>
 
 <command cmd="outlist"> 
-<description> (Technical) If the packing has a 'redchain' of faces (mainly 
-	in multiply	connected settings), this finds the chain of edges on the
-	outside (right-hand side) of the redfaces. The result is
-	stored as the packings 'elist' (note: old elist will be lost).
-	Generally used in conjunction with 'red_from_elist', which
-	converts from the elist to a new redchain. This is a mechanism
-	for preventing the wholesale readjustments due to layout that
-	occur when redfaces are computed automatically after changes
-	in combintorics, such as edge flips or slits.
+<description> (Technical, now OBE) If the packing has a
+	"red chain" (mainly in multiply connected settings), this finds 
+	the chain of edges on the outside (right-hand side) of the 
+	red chain. The result is stored as the packings 'elist' 
+	(note: old elist will be lost).	Generally used in conjunction 
+	with 'red_from_elist', which converts from the elist to 
+	a new redchain. This is a mechanism	for preventing the 
+	wholesale readjustments due to layout that occur when 
+	red chain data are computed automatically after changes
+	in combinatorics, such as edge flips or slits.
 </description>
 </command>
 	
@@ -2976,6 +2977,7 @@ script and append it to 'ClosedPath'.</instance>
 
 <command cmd="red_from_elist">
 <description>
+	OBE. See 'newRed' 
 	Uses 'elist' to create a 'redfaces' chain for the packing,
 	with the elist as the edgelist on the outside of the red chain.
 	Generally used in conjunction with 'outlist', which goes the

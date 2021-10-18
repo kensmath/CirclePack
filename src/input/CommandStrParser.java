@@ -4369,30 +4369,15 @@ public class CommandStrParser {
    		  Iterator<EdgeSimple> elst=edgeLink.iterator();
    		  while (elst.hasNext()) {
    			  EdgeSimple edge=elst.next();
-   			  if (packData.packDCEL!=null) {
-   				  HalfEdge he=packData.packDCEL.findHalfEdge(edge);
-   				  if (he==null)
-					  CirclePack.cpb.errMsg(
-							  "{"+edge.v+" "+edge.w+"} is not an edge");
-   				  else {
-   					  RawDCEL.splitEdge_raw(packData.packDCEL,he);
-					  packData.packDCEL.fixDCEL_raw(packData);
-					  count++;
-   				  }
-   			  }
-   			  else {
-   				  if (packData.nghb(edge.v,edge.w)<0) { // not neighbors?
-   					  CirclePack.cpb.errMsg(
-   							  "{"+edge.v+" "+edge.w+"} is not an edge");
-   				  }
-   				  else {
-   					  int returnVal=packData.split_edge(edge.v, edge.w);
-   					  if (returnVal>0) {
-   						  packData.setCombinatorics();
-   						  count++;
-   					  }
-   				  }
-   			  }
+			  HalfEdge he=packData.packDCEL.findHalfEdge(edge);
+			  if (he==null)
+				  CirclePack.cpb.errMsg(
+						  "{"+edge.v+" "+edge.w+"} is not an edge");
+			  else {
+				  RawDCEL.splitEdge_raw(packData.packDCEL,he);
+				  packData.packDCEL.fixDCEL_raw(packData);
+				  count++;
+			  }
    		  }
    		  return count;
 	  }
@@ -4911,9 +4896,7 @@ public class CommandStrParser {
 	      // =========== alpha ============
 	      if (cmd.startsWith("alpha")) {
 	    	  int a=NodeLink.grab_one_vert(packData,flagSegs);
-	    	  if (packData.packDCEL!=null)
-	    		  return packData.packDCEL.setAlpha(a,null,true);
-	    	  return packData.setAlpha(a);
+    		  return packData.packDCEL.setAlpha(a,null,true);
 	      }
 		  
 		  // ============ appMob ==========
@@ -6043,9 +6026,6 @@ public class CommandStrParser {
 					return packData.attachDCEL();
 				}
 				else if (str.contains("export")) {
-					if (packData.packDCEL==null)
-						return 0;
-					
 					// what packing? default to current
 					int qnum=packData.packNum;
 					if (items!=null && items.size()>0) {
@@ -6063,8 +6043,6 @@ public class CommandStrParser {
 					return CirclePack.cpb.swapPackData(pdata,qnum,false);
 				}
 				else if (str.contains("redcook")) {
-					if (packData.packDCEL==null)
-						return 0;
 					if (items==null || items.size()==0) 
 						return 0;
 					int qnum= StringUtil.qFlagParse(items.get(0));
@@ -6094,14 +6072,10 @@ public class CommandStrParser {
 					return CirclePack.cpb.swapPackData(tmppack,qnum,false);
 				}
 				else if (str.contains("layout")) {
-					if (packData.packDCEL==null)
-						return 0;
 					return packData.packDCEL.layoutPacking();
 				} 
 				// sync p.faces to packDCEL.faces
 				else if (str.contains("syncF")) {
-					if (packData.packDCEL==null)
-						return 0;
 					return packData.packDCEL.syncFaceData();
 				}
 				else if (str.contains("bary")) { // baryrefine given faces
@@ -6501,10 +6475,7 @@ public class CommandStrParser {
     		  } // end of while
 	    	  
 	    	  if (count>0) {
-	    		  if (packData.packDCEL!=null)
-	    			  packData.packDCEL.fixDCEL_raw(packData);
-	    		  else
-	    			  packData.setCombinatorics();
+    			  packData.packDCEL.fixDCEL_raw(packData);
 	    		  packData.fillcurves();
 	    	  }
     		  if (overCount>0) {
@@ -6787,9 +6758,7 @@ public class CommandStrParser {
 	      // =========== gamma ============
 	      if (cmd.startsWith("gamma")) {
 	    	  int a=NodeLink.grab_one_vert(packData,flagSegs);
-	    	  if (packData.packDCEL!=null)
-	    		  return packData.packDCEL.setGamma(a);
-	    	  return packData.setGamma(a);
+    		  return packData.packDCEL.setGamma(a);
 	      }
 	      
 	      // ========= gen_cut =========
@@ -7682,7 +7651,8 @@ public class CommandStrParser {
 	          NodeLink qverts=null;
 	          try {
 	        	  qackData=CPBase.cpScreens[StringUtil.qFlagParse(str)].getPackData();
-	        	  if (qackData==null) throw new ParserException("'q' packing is not active");
+	        	  if (qackData==null) 
+	        		  throw new ParserException("'q' packing is not active");
 
 	        	  // next two entries are verts from this packing
 	        	  StringBuilder strb=new StringBuilder((String)items.get(0));
@@ -7694,7 +7664,8 @@ public class CommandStrParser {
 	        	  strb.append(" ");
 	        	  strb.append((String)items.get(3));
 	        	  qverts=new NodeLink(qackData,strb.toString());
-	        	  if (pverts==null || qverts==null || pverts.size()<2 || qverts.size()<2)
+	        	  if (pverts==null || qverts==null || 
+	        			  pverts.size()<2 || qverts.size()<2)
 	        		  throw new ParserException("node lists not big enough");
 	          } catch(Exception ex) {
 	        	  throw new ParserException("usage: match -q{p} v w V W");
@@ -7741,9 +7712,8 @@ public class CommandStrParser {
 	    					  packData.setVertMark(v,0);
 	    				  for (int f=1;f<=packData.faceCount;f++) 
 	    					  packData.setFaceMark(f,0);
-	    				  if (packData.packDCEL!=null)
-	    					  for (int e=1;e<=packData.packDCEL.edgeCount;e++)
-	    						  packData.packDCEL.edges[e].mark=0;
+    					  for (int e=1;e<=packData.packDCEL.edgeCount;e++)
+    						  packData.packDCEL.edges[e].mark=0;
 	    				  count++;
 	    				  break;
 	    			  }
@@ -7780,8 +7750,6 @@ public class CommandStrParser {
 	    			  }
 	    			  case 'e': // edges (this is new with DCEL structures)
 	    			  {
-	    				  if (packData.packDCEL==null)
-	    					  break;
 	    				  if (str.length()>2 && str.charAt(2)=='w') { // wipe first
 	        				  for (int e=1;e<=packData.packDCEL.edgeCount;e++) {
 	        					  packData.packDCEL.edges[e].mark=0;
@@ -7807,9 +7775,11 @@ public class CommandStrParser {
 	        					  packData.setFaceMark(f,0);
 	        				  count++;
 	    				  }
-	    				  if (items.size()==0) break; // do not default to all here
+	    				  if (items.size()==0) 
+	    					  break; // do not default to all here
 	    				  FaceLink flist=new FaceLink(packData,items);
-	    				  if (flist==null || flist.size()==0) break;
+	    				  if (flist==null || flist.size()==0) 
+	    					  break;
 	    				  Iterator<Integer> fs=flist.iterator();
 	    				  while (fs.hasNext()) {
 	    					  packData.setFaceMark((Integer)fs.next(),1);
@@ -7892,14 +7862,8 @@ public class CommandStrParser {
 	    			  jexecute(packData,"set_rad 5.0 b");
 	    		  } catch (Exception ex) { } 
 	    		  
-	    		  if (packData.packDCEL!=null) {
-						d_HypPacker h_packer=new d_HypPacker(packData,-1);
-						count=h_packer.maxPack(cycles);
-	    		  }
-	    		  else { // will use Orick's code, if available
-	    			  HypPacker hypPacker=new HypPacker(packData); 
-	    			  count=hypPacker.maxPack(cycles);
-	    		  }
+	    		  d_HypPacker h_packer=new d_HypPacker(packData,-1);
+	    		  count=h_packer.maxPack(cycles);
 	    	  }
 	    	  else if (packData.intrinsicGeom == 0) { // must be 1-torus 
 	    		  if (packData.hes !=0) {
@@ -7916,14 +7880,8 @@ public class CommandStrParser {
 	    		  packData.hes=1;
     			  packData.setGeometry(1);
 	    		  packData.set_aim_default();
-	    		  if (packData.packDCEL!=null) {
-	    			  d_SphPacker d_sphpack=new d_SphPacker(packData,cycles);
-	    			  count=d_sphpack.maxPack(cycles);
-	    		  }
-	    		  else {
-	    			  SphPacker sphpack=new SphPacker(packData);
-	    			  count=sphpack.maxPack(puncture_v,cycles);
-	    		  }
+    			  d_SphPacker d_sphpack=new d_SphPacker(packData,cycles);
+    			  count=d_sphpack.maxPack(cycles);
 	    	  }
 	    	  else return 0;
 	    	  if (CirclePack.cpb!=null)
@@ -8048,7 +8006,8 @@ public class CommandStrParser {
 	    			  int v=NodeLink.grab_one_vert(packData,(String)items.get(0));
 	    			  Complex z=packData.getCenter(v);
 	    			  double x=z.abs();
-	    			  if (x<PackData.OKERR) return 1; // don't need to adjust
+	    			  if (x<PackData.OKERR) 
+	    				  return 1; // don't need to adjust
 	    			  double factor=1.0/x;
 	    			  double ang=(-1.0)*(MathComplex.Arg(z))+Math.PI/2.0;
 	    			  packData.rotate(ang);
@@ -8127,7 +8086,7 @@ public class CommandStrParser {
 	    	  RedHEdge newRed=null;
 	    	  
 	    	  // torus: '-t' flag only
-	    	  if (items.get(0).startsWith("-t") && packData.packDCEL!=null  &&
+	    	  if (items.get(0).startsWith("-t") &&
 	    			  packData.genus==1 && packData.getBdryCompCount()==0) {
 				newRed=CombDCEL.torus4Sides(packData.packDCEL);
 	    	  }
@@ -8226,13 +8185,11 @@ public class CommandStrParser {
 	  {
 	      // ============ pair_mob ===============
 	      if (cmd.startsWith("pair_mob")) {
-	    	  if (packData.packDCEL!=null) {
-	    		  if (packData.packDCEL.pairLink==null || 
-	    				  packData.packDCEL.pairLink.size()<2) {
-		    		  CirclePack.cpb.errMsg("Packing has no side-pairings");
-		    		  return 0;
-	    		  }
-	    	  }
+    		  if (packData.packDCEL.pairLink==null || 
+    				  packData.packDCEL.pairLink.size()<2) {
+	    		  CirclePack.cpb.errMsg("Packing has no side-pairings");
+	    		  return 0;
+    		  }
 	    	  
 	          items=(Vector<String>)flagSegs.get(0); // one segment
 	          String str=(String)items.get(0);
@@ -8267,9 +8224,12 @@ public class CommandStrParser {
 	    	  if (flagSegs!=null && (items=flagSegs.get(0))!=null) {
     			  try {
     				  int k=Integer.parseInt(items.elementAt(0));
-    				  if (k<1) cycles=1;
-    				  else if (k>100000) cycles=100000; // 100,000 limit
-    				  else cycles=k;
+    				  if (k<1) 
+    					  cycles=1;
+    				  else if (k>100000) 
+    					  cycles=100000; // 100,000 limit
+    				  else 
+    					  cycles=k;
     			  } catch(Exception ex) {
     				  cycles=5000;
     			  }
@@ -8314,9 +8274,6 @@ public class CommandStrParser {
 
 	      // =========== prune ============
 	      else if (cmd.startsWith("prun")) {
-	    	  if (packData.packDCEL==null) {
-	    		  throw new ParserException("usage: 'prune' requires a DCEL structure");
-	    	  }
 	    	  int rslt=CombDCEL.pruneDCEL(packData.packDCEL);
 	    	  if (rslt>0) {
 	    		  packData.attachDCEL(packData.packDCEL);
@@ -8337,11 +8294,6 @@ public class CommandStrParser {
 	  				if (packData.puncture_vert(pv)==0) 
 	  					return 0;
 	  				packData.xyzpoint=null; // ditch any xyz data
-	    	  		if (packData.packDCEL==null) {
-	    	  			packData.setCombinatorics();
-		    	  		packData.chooseAlpha();
-		    	  		packData.chooseGamma();
-	    	  		}
 	    	  		return 1;
 	    	  	}
 	  			
@@ -8369,23 +8321,19 @@ public class CommandStrParser {
 	    	  			if (pv<=0)
 	    	  				pv=packData.nodeCount; // default to max index
 	    	  			count +=pv;
-	    	  			if (packData.puncture_vert(pv)==0) return 0;
+	    	  			if (packData.puncture_vert(pv)==0) 
+	    	  				return 0;
 	    	  			packData.xyzpoint=null;
 	    	  		}
 	    	  		else { // puncture a face
 	    	  			pf=FaceLink.grab_one_face(packData,flagSegs);
 	    	  			count+=pf;
-	    	  			if (packData.puncture_face(pf)==0) return 0;
+	    	  			if (packData.puncture_face(pf)==0) 
+	    	  				return 0;
 	    	  		}
 	    	  	} catch (Exception ex) {
 	    	  		CirclePack.cpb.errMsg("attemp to puncture at "+pv+" went wrong.");
 	    	  		return 0;
-	    	  	}
-    	  	
-	    	  	if (packData.packDCEL==null) {
-	    	  		packData.chooseAlpha();
-	    	  		packData.chooseGamma();
-	    	  		packData.setCombinatorics();
 	    	  	}
 	    	  	return count;
 	      }
@@ -8496,7 +8444,8 @@ public class CommandStrParser {
 	    	  // pick off v1
 	    	  int v1=vertlist.remove(0);
 	    	  if (v1<1 || v1>packData.nodeCount || vertlist==null
-	    			  || vertlist.size()==0) throw new ParserException();
+	    			  || vertlist.size()==0) 
+	    		  throw new ParserException();
 	    	  NodeLink new_verts=packData.path_construct(mode,v1,vertlist);
 	    	  if (new_verts==null || new_verts.size()==0) return 0;
 	    	  if (CPBase.Vlink==null) {
@@ -8793,9 +8742,6 @@ public class CommandStrParser {
 		  
 		  // =========== renumber =========
 		  if (cmd.startsWith("renum")) {
-			  if (packData.packDCEL==null) 
-				  throw new ParserException("usage: 'renumber' only for packings "+
-						  "with DCEL structures");
 			  int rslt=CombDCEL.d_reNumber(packData.packDCEL); // packData.getFlower(1132);
 			  if (rslt>0) {
 				  CirclePack.cpb.msg("Renumbering seemed to work");
@@ -8821,7 +8767,6 @@ public class CommandStrParser {
 	    	  
 	    	  // flags controlling the calls
 	    	  boolean oldReliable=false;
-	    	  if (packData.overlapStatus) oldReliable=true;
 	    	  boolean use_C=true;
 
 	    	  Iterator<Vector<String>> nextFlag=flagSegs.iterator();
@@ -8915,29 +8860,27 @@ public class CommandStrParser {
 	    		  }
 	    		  
 	    		  // DCEL setting
-	    		  if (packData.packDCEL!=null) {
-	    			  packData.packDCEL.oldNew=new VertexMap();
-	    			  Iterator<Integer> vis=vertlist.iterator();
-	    			  while(vis.hasNext()) {
-	    				  int v=vis.next();
-	    				  int newv=packData.packDCEL.oldNew.findW(v);
-	    				  if (newv==0)
-	    					  newv=v;
-	    				  int rslt=RawDCEL.rmBary_raw(packData.packDCEL,
-	    						  packData.packDCEL.vertices[newv]);
-	    				  if (rslt==0) {
-	    					  CirclePack.cpb.errMsg("'rm_bary' failed on vertex "+v);
-	    					  if (count>0)
-	    						  packData.packDCEL.fixDCEL_raw(packData);
-	    					  return count;
-	    				  }
-	    				  count++;
-	    			  }
-	    			  packData.packDCEL.oldNew=null;
-					  packData.packDCEL.fixDCEL_raw(packData);
-	    			  return count++;
-	    		  }
-			  }
+    			  packData.packDCEL.oldNew=new VertexMap();
+    			  Iterator<Integer> vis=vertlist.iterator();
+    			  while(vis.hasNext()) {
+    				  int v=vis.next();
+    				  int newv=packData.packDCEL.oldNew.findW(v);
+    				  if (newv==0)
+    					  newv=v;
+    				  int rslt=RawDCEL.rmBary_raw(packData.packDCEL,
+    						  packData.packDCEL.vertices[newv]);
+    				  if (rslt==0) {
+    					  CirclePack.cpb.errMsg("'rm_bary' failed on vertex "+v);
+    					  if (count>0)
+    						  packData.packDCEL.fixDCEL_raw(packData);
+    					  return count;
+    				  }
+    				  count++;
+    			  }
+    			  packData.packDCEL.oldNew=null;
+				  packData.packDCEL.fixDCEL_raw(packData);
+    			  return count++;
+    		  }
 
 			  else if (cmd.startsWith("cir")) { // "rm_circle"
 	    		  NodeLink vertlist=new NodeLink(packData,items);
@@ -9044,28 +8987,14 @@ public class CommandStrParser {
 			  // fix things up
 			  packData.chooseAlpha();
 			  packData.chooseGamma();
-
-		      packData.setCombinatorics();
-		      packData.fillcurves();
 		      return count;
 	      }
 	      
 	      // ========= reorient =======
 	      else if (cmd.startsWith("reorie")) {
-	    	  
     		  PackDCEL pdcel=packData.packDCEL.reverseOrientation();
     		  return packData.attachDCEL(pdcel);
 	      }
-	      
-	      // ========= red_from_el ======
-	      else if (cmd.startsWith("red_from_el")) {
-	    	  BuildPacket bP=packData.redChainer.red_from_outlist(packData.elist);
-	    	  if (!bP.success) return 0;
-	    	  packData.redChain=bP.redList;
-	    	  packData.firstRedEdge=bP.firstRedEdge;
-	    	  packData.setSidePairs(bP.sidePairs);
-	    	  return 1;
-	      }	  
 		  break;
 	  } // end of 'r' and 'R'
 	  case 's':
@@ -9409,8 +9338,6 @@ public class CommandStrParser {
 		    		  packData.swap_nodes(nL.get(0),nL.get(1),keepFlag);
 		    	  else 
 		    		  packData.swap_nodes(nL.get(0),nL.get(1));
-		    	  if (packData.packDCEL==null)
-		    		  packData.setCombinatorics();
 		      } catch(Exception ex) {
 		    	  throw new ParserException("usage: swap [-cma] v w");
 		      }
@@ -11187,33 +11114,23 @@ public class CommandStrParser {
         	  if (n<0 || n>=m) 
         		  n=m; // full bdry
         	  
-        	  if (packData.packDCEL!=null) {
-        		  PackDCEL pdcel=packData.packDCEL;
-        		  for (int j=1;j<=pdcel.vertCount;j++) 
-        			  pdcel.vertices[j].vutil=j;
-				  HalfEdge nxtedge=
-						  pdcel.vertices[v].halfedge.twin.next;
-				  for (int j=1;j<=n;j++) {
-					  Vertex vert=nxtedge.origin;
-					  nxtedge=nxtedge.next;
-					  CombDCEL.zipEdge(pdcel,vert);
-				  }
-				  pdcel=CombDCEL.wrapAdjoin(pdcel,pdcel);
-				  VertexMap oldnew=pdcel.oldNew;
-				  pdcel.fixDCEL_raw(packData);
-				  packData.vertexMap=oldnew;
-				  packData.vlist=NodeLink.translate(packData.vlist,oldnew);
-				  packData.elist=EdgeLink.translate(packData.elist,oldnew);
-				  return packData.nodeCount;
+       		  PackDCEL pdcel=packData.packDCEL;
+       		  for (int j=1;j<=pdcel.vertCount;j++) 
+       			  pdcel.vertices[j].vutil=j;
+			  HalfEdge nxtedge=
+					  pdcel.vertices[v].halfedge.twin.next;
+			  for (int j=1;j<=n;j++) {
+				  Vertex vert=nxtedge.origin;
+				  nxtedge=nxtedge.next;
+				  CombDCEL.zipEdge(pdcel,vert);
 			  }
-        	  
-        	  // TODO: so the 'zip' directly. For now, I need to 
-        	  //   debug this call, however.
-        	  
-        	  StringBuilder strbld=new StringBuilder("adjoin "+
-        			  packData.packNum+" "+packData.packNum+" "+
-        			  v+" "+v+" "+n);
-        	  return CommandStrParser.jexecute(packData,strbld.toString());
+			  pdcel=CombDCEL.wrapAdjoin(pdcel,pdcel);
+			  VertexMap oldnew=pdcel.oldNew;
+			  pdcel.fixDCEL_raw(packData);
+			  packData.vertexMap=oldnew;
+			  packData.vlist=NodeLink.translate(packData.vlist,oldnew);
+			  packData.elist=EdgeLink.translate(packData.elist,oldnew);
+			  return packData.nodeCount;
 	      } 		  
 		  break;
 	  } // end of 'z'

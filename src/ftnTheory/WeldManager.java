@@ -497,7 +497,7 @@ public class WeldManager extends PackExtender {
 				targ[v] = 1;
 				p.setRadius(v,1.0);
 				p.setCenter(v,new Complex(0.0));
-				p.kData[v].plotFlag = 1;
+				p.setPlotFlag(v,1);
 			}
 		}
 
@@ -601,7 +601,7 @@ public class WeldManager extends PackExtender {
 			if ((v = targ[n]) != 0) {
 				q.setRadius(v,p.getRadius(n));
 				q.setCenter(v,p.getCenter(n));
-				q.kData[v].plotFlag = 1;
+				q.setPlotFlag(v,1);
 			}
 		edge = (EdgeSimple) elist.get(0);
 		v = targ[edge.v];
@@ -617,8 +617,8 @@ public class WeldManager extends PackExtender {
 			q.setAlpha(new_alp);
 			q.chooseAlpha();
 		}
-		q.complex_count(true);
-		q.facedraworder(false);
+//		q.complex_count(true);
+//		q.facedraworder(false);
 		q.set_aim_default();
 		return q;
 	} 
@@ -1091,7 +1091,7 @@ public class WeldManager extends PackExtender {
 				//   with partial bdry's, have to do something else.
 				// TODO: use to pass back 'Oldnew' to define vertex_map of q.
 				for (v = 1; v <= p.nodeCount; v++)
-					p.kData[v].plotFlag = 1;
+					p.setPlotFlag(v,1);
 			}
 		} 
 		else {
@@ -1161,7 +1161,7 @@ public class WeldManager extends PackExtender {
 			newflower[2] = a;
 			p.kData[y].flower = newflower;
 			p.kData[y].num = 2;
-			p.kData[y].plotFlag = 1;
+			p.setPlotFlag(y,1);
 
 			// fix new_v
 			newflower = new int[5];
@@ -1172,7 +1172,7 @@ public class WeldManager extends PackExtender {
 			p.kData[new_v].num = 4;
 			p.setBdryFlag(new_v,0);
 			p.kData[new_v].flower = newflower;
-			p.kData[new_v].plotFlag = 1;
+			p.setPlotFlag(new_v,1);
 			p.setCircleColor(new_v,ColorUtil.getFGColor());
 			p.setRadius(new_v,p.getRadius(v));
 
@@ -1187,7 +1187,7 @@ public class WeldManager extends PackExtender {
 			newflower[indx + 1] = new_v;
 			p.kData[w].flower = newflower;
 			p.kData[w].num++;
-			p.kData[w].plotFlag = 1;
+			p.setPlotFlag(w,1);
 
 			p.nodeCount++;
 		}

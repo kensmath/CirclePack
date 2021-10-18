@@ -15,7 +15,9 @@ import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
 import dcel.CombDCEL;
+import dcel.HalfEdge;
 import dcel.PackDCEL;
+import dcel.RawDCEL;
 import exceptions.CombException;
 import exceptions.InOutException;
 import exceptions.ParserException;
@@ -1912,17 +1914,16 @@ public class MicroGrid extends PackExtender {
 			gridPack.fillcurves();
 			CommandStrParser.jexecute(gridPack,"layout");
 			CommandStrParser.jexecute(CPBase.cpScreens[2].getPackData(),"disp -w -c -e b");
-			gridPack.facedraworder(false);
 			CirclePack.cpb.swapPackData(gridPack, 2,false);
 		}
 		for (int v=1;v<=gridPack.nodeCount;v++) // need to use 'utilFlag's
-			gridPack.kData[v].utilFlag=0;
+			gridPack.setVertUtil(v,0);
 		
 		// Mark faces f of 'gridPack' that contain a processed microGrid vert.
 		boolean gotahit=false;
 		int []abc=new int[3];
 		for (int f=1;f<=gridPack.faceCount;f++) {
-			int []verts=gridPack.faces[f].vert;
+			int[] verts=gridPack.packDCEL.faces[f].getVerts();
 // debug
 //			System.out.println(" f "+f);
 			
@@ -1933,7 +1934,7 @@ public class MicroGrid extends PackExtender {
 				if (processed[abc[j]]!=0) {
 					fhit=true;
 					if (processed[abc[j]]==-(level+1))
-						gridPack.kData[k].utilFlag=-(level+1); // mark for later 
+						gridPack.setVertUtil(k,-(level+1)); // mark for later 
 				}
 			}
 			// if no face corners were processed, check the other microGrid
@@ -1956,10 +1957,11 @@ public class MicroGrid extends PackExtender {
 			//   bring it to attention (see below).
 			if (fhit) {
 				gridPack.setFaceMark(f,level+1);
+				int[] vert=gridPack.packDCEL.faces[f].getVerts();
 				for (int j=0;j<3;j++) {
-					int k=gridPack.faces[f].vert[j];
-					if (gridPack.kData[k].utilFlag!=-(level+1))
-						gridPack.kData[k].utilFlag=(level+1);
+					int k=vert[j];
+					if (gridPack.getVertUtil(k)!=-(level+1))
+						gridPack.setVertUtil(k,level+1);
 				}
 				gotahit=true;
 			}
@@ -2326,11 +2328,10 @@ public class MicroGrid extends PackExtender {
 
 	public static int addBearings(PackData q,double thresh) {
 		int count=0;
-		AmbiguousZ []amb=AmbiguousZ.getAmbiguousZs(q);
 		for (int f=1;f<=q.faceCount;f++) {
 			boolean marked=false;
-			int []vert=q.faces[f].vert;
-			double []radii=new double[3];
+			int[] vert=q.packDCEL.faces[f].getVerts();
+			double[] radii=new double[3];
 			for (int j=0;j<3;j++) {
 				radii[j]=q.getRadius(vert[j]);
 			}
@@ -2352,45 +2353,20 @@ public class MicroGrid extends PackExtender {
 			
 			// for marked faces, add a new circle, center at average
 			if (marked) {
-				Complex []pts=q.corners_face(f, amb);
+				dcel.Face face=q.packDCEL.faces[f];
+				int newval=RawDCEL.addBary_raw(q.packDCEL,face.edge,false);
+				Complex[] pts=q.packDCEL.getFaceCorners(face);
 				Complex bcent=pts[0].add(pts[1].add(pts[2])).divide(3.0);
 				double brad=(radii[0]+radii[1]+radii[2])/6.0; // half the average
-
-				
-			    int newval=q.nodeCount+1;
-			    if (newval>q.sizeLimit)
-			    	q.alloc_pack_space(newval+10,true);
-			    q.nodeCount++;
-			    q.kData[newval]=new KData();
-			    q.rData[newval]=new RData();
-			    q.kData[newval].num=3;
-			    q.kData[newval].flower=new int[4];
-			    q.kData[newval].flower[0]=q.kData[newval].flower[3]=
-			    		q.faces[f].vert[0];
-			    q.kData[newval].flower[1]=q.faces[f].vert[1];
-			    q.kData[newval].flower[2]=q.faces[f].vert[2];
-			    if (q.overlapStatus) {
-			    	q.kData[newval].invDist=new double[4];
-			    	q.set_single_invDist(newval,q.kData[newval].flower[0],1.0);
-			    	q.set_single_invDist(newval,q.kData[newval].flower[1],1.0);
-			    	q.set_single_invDist(newval,q.kData[newval].flower[2],1.0);
-			    	q.set_single_invDist(newval,q.kData[newval].flower[0],1.0);
-			    }
-			    q.setBdryFlag(newval,0);
 			    q.setVertMark(newval,++count);
 			    q.setCircleColor(newval,ColorUtil.getFGColor());
 			    q.setRadius(newval,brad);
 			    q.setCenter(newval,new Complex(bcent));
 			    q.setAim(newval,2.0*Math.PI);
-			    
-			    // adjust nghb flowers
-			    q.kData[vert[0]].add_petal_w(newval,vert[1]);
-			    q.kData[vert[1]].add_petal_w(newval,vert[2]);
-			    q.kData[vert[2]].add_petal_w(newval,vert[0]);
 			}
 		} // end of for loop on f
 		
-		q.setCombinatorics();
+		q.packDCEL.fixDCEL_raw(q);
 		return count;
 	}
 	
@@ -2411,7 +2387,7 @@ public class MicroGrid extends PackExtender {
 		// reset face marks, mark with largest level among vertices
 		for (f=1;f<=packData.faceCount;f++) {
 			int num=packData.faces[f].vertCount;
-			int []verts=packData.faces[f].vert;
+			int[] verts=packData.packDCEL.faces[f].getVerts();
 			
 			int mxlevel=1;
 			for (int j=0;j<num;j++) {

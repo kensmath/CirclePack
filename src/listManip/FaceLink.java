@@ -9,10 +9,12 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.D_SideData;
 import dcel.HalfEdge;
+import dcel.RawDCEL;
+import dcel.RedHEdge;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
-import exceptions.DCELException;
 import exceptions.DataException;
 import exceptions.ParserException;
 import geometry.EuclMath;
@@ -388,18 +390,10 @@ public class FaceLink extends LinkedList<Integer> {
 				if (packData.hes>0) break;
 				for (int f=1;f<=packData.faceCount;f++) {
 					Complex[] z=new Complex[3];
-					if (packData.packDCEL!=null) {
-						HalfEdge he=packData.packDCEL.faces[f].edge;
-						for (int j=0;j<3;j++) {
-							z[j]=packData.packDCEL.getVertCenter(he);
-							he=he.next;
-						}
-					}
-					else {
-						int []vert=packData.getFaceVerts(f);
-						for (int j=0;j<3;j++) {
-							z[j]=packData.getCenter(vert[j]);
-						}
+					HalfEdge he=packData.packDCEL.faces[f].edge;
+					for (int j=0;j<3;j++) {
+						z[j]=packData.packDCEL.getVertCenter(he);
+						he=he.next;
 					}
 					
 					// TODO: what about sph case? "oriented" can be ambiguous
@@ -415,17 +409,10 @@ public class FaceLink extends LinkedList<Integer> {
 				for (int f=1;f<=facecount;f++) {
 					int []vert=packData.getFaceVerts(f);
 					Complex[] z=new Complex[3];
-					if (packData.packDCEL!=null) {
-						HalfEdge he=packData.packDCEL.faces[f].edge;
-						for (int j=0;j<3;j++) {
-							z[j]=packData.packDCEL.getVertCenter(he);
-							he=he.next;
-						}
-					}
-					else {
-						for (int j=0;j<3;j++) {
-							z[j]=packData.getCenter(vert[j]);
-						}
+					HalfEdge he=packData.packDCEL.faces[f].edge;
+					for (int j=0;j<3;j++) {
+						z[j]=packData.packDCEL.getVertCenter(he);
+						he=he.next;
 					}
 					
 					// any of the data bad?
@@ -461,28 +448,27 @@ public class FaceLink extends LinkedList<Integer> {
 			}
 			case 'R': // faces from red chain,
 			{
-				// TODO: DCEL version
-				if (packData.packDCEL!=null) {
-					throw new DCELException("DCEL version of faces "+
-							"with 'R' flag not yet implemented");
+				if (packData.packDCEL.redChain==null) 
+					break;
+
+				if (str.length()>1 && str.charAt(1)=='a') { 
+					HalfLink hlink=new HalfLink();
+					RedHEdge rtrace=packData.packDCEL.redChain;
+					do {
+						hlink.add(rtrace.myEdge);
+						rtrace=rtrace.nextRed;
+					} while(rtrace!=packData.packDCEL.redChain);
+					HalfLink leftlink=RawDCEL.leftsideLink(
+							packData.packDCEL,hlink);
+					Iterator<HalfEdge> lis=leftlink.iterator();
+					while (lis.hasNext()) {
+						add(lis.next().face.faceIndx);
+						count++;
+					}
+					break;
 				}
 				
 				// traditional
-				if (packData.redChain==null) 
-					break;
-				
-				// 'Ra', want full redchain, so it closes up
-				if (str.length()>1 && str.charAt(1)=='a') { 
-					RedList rlst=(RedList)packData.redChain;
-					add(rlst.face);
-					while ((rlst=rlst.next)!=(RedList)packData.redChain && count<2*packData.faceCount) {
-						add(rlst.face);
-						count++;
-					}
-					if (count>=2*packData.faceCount)
-						CirclePack.cpb.errMsg("error in transiting redchain in 'Ra' command");
-					break;
-				}
 				
 				// otherwise, select by given 'side' indices: absorbs rest of 'items'.
 				  int numSides=-1;
@@ -493,7 +479,8 @@ public class FaceLink extends LinkedList<Integer> {
 				  boolean []tag=new boolean[numSides];
 				  for (int i=0;i<numSides;i++) tag[i]=false;
 				  if (!its.hasNext()) { // default to 'all'
-					  for (int i=0;i<numSides;i++) tag[i]=true;
+					  for (int i=0;i<numSides;i++) 
+						  tag[i]=true;
 				  }
 				  else do {
 					  String itstr=(String)its.next();
@@ -502,7 +489,8 @@ public class FaceLink extends LinkedList<Integer> {
 					  else {
 						  try {
 							  int n=MathUtil.MyInteger(itstr);
-							  if (n>=0 && n<numSides) tag[n]=true;
+							  if (n>=0 && n<numSides) 
+								  tag[n]=true;
 						  } catch (NumberFormatException nfx) {}
 					  }
 				  } while (its.hasNext());
@@ -510,26 +498,23 @@ public class FaceLink extends LinkedList<Integer> {
 				  // now to get the chosen segments
 				  // NOTE: some faces between end of one segment and
 				  //       start of next are not picked up.
-				  Iterator<SideDescription> sp=packData.getSidePairs().iterator();
-				  SideDescription ep=null;
-				  RedList rlst=null;
+				  Iterator<D_SideData> sp=packData.getSidePairs().iterator();
+				  D_SideData ep=null;
+				  RedHEdge rlst=null;
 				  int tick=0;
 				  while (sp.hasNext()) {
-					  ep=(SideDescription)sp.next();
+					  ep=(D_SideData)sp.next();
 					  if (tag[tick++]) { // yes, do this one
-						  rlst=(RedList)ep.startEdge;
-//System.err.println(" startEdge (tick "+tick+") "+ep.startEdge+", face="+ep.startEdge.face+
-//		                     "; endEdge "+ep.endEdge+", endface="+ep.endEdge.face);	
-						  if (ep.startEdge!=ep.endEdge) {
-							  do {
-//System.err.println(" next face is "+rlst.face);							  
-								  add(rlst.face);
-								  count++;
-								  rlst=rlst.next;
-							  } while (rlst!=(RedList)ep.endEdge);
-						  }
-						  add(rlst.face);
+						  HalfLink sidelink=ep.sideHalfLink();
+						  HalfLink leftlink=RawDCEL.leftsideLink(
+								  packData.packDCEL,sidelink);
+						  add(ep.startEdge.myEdge.face.faceIndx);
 						  count++;
+						  Iterator<HalfEdge> lis=leftlink.iterator();
+						  while (lis.hasNext()) {
+							  add(lis.next().face.faceIndx);
+							  count++;
+						  }
 					  }
 				  }
 				  break;

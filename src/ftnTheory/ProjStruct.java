@@ -1384,54 +1384,6 @@ public class ProjStruct extends PackExtender {
 	public int cmdParser(String cmd, Vector<Vector<String>> flagSegs) {
 		Vector<String> items = null;
 
-		// ======== testTree =========
-		// for testing new 'DualGraph' routines
-		if (cmd.startsWith("tT")) {
-			int mode=1;
-			// mode specified?
-			try {
-				items=flagSegs.get(0);
-				mode=Integer.parseInt(items.get(0));
-			} catch (Exception ex) {
-				mode=1;
-			}
-			
-			if (mode==1) {
-				
-				// TODO: redo using 'CombDCEL.torus4Sides'
-//				dTree=torus4layout(packData,0); 
-				if (dTree==null)
-					errorMsg("torus4layout failed");
-			}
-
-			else { // older method
-				// create the full dual graph
-				GraphLink fullDual=DualGraph.buildDualGraph(packData,packData.firstFace,null);
-		
-				// extract the dual tree
-				dTree=fullDual.extractSpanTree(packData.firstFace);
-			
-				boolean debug=false;
-				if (!debug) {
-					// get RedList from dual tree
-					RedList newRedList=DualGraph.graph2red(packData,dTree,packData.firstFace);
-				
-					// process to get redChain
-					RedChainer newRC=new RedChainer(packData);
-					BuildPacket bP=new BuildPacket();
-					bP=newRC.redface_comb_info(newRedList, false);
-					if (!bP.success) {
-						throw new LayoutException("Layout error, simply connected case ");
-					}
-					packData.setSidePairs(bP.sidePairs);
-					packData.labelSidePairs(); // establish 'label's
-					packData.redChain=packData.firstRedEdge=bP.firstRedEdge;
-				}
-			}
-			
-			return 1;
-		}
-		
 		// ======== sideInfo =========
 		if (cmd.startsWith("sI")) {
 			Vector<Integer> sideStartVerts=new Vector<Integer>(6);

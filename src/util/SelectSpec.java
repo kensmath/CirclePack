@@ -504,12 +504,7 @@ public class SelectSpec {
 		
 		// 'HalfEdge's (this is new)
 		else if (object=='e') {
-			
-			if (packData.packDCEL==null) {
-				return null;
-			}
 			HalfEdge he=packData.packDCEL.edges[node];
-			
 			switch(c) {
 			
 			// TODO; add as we needed

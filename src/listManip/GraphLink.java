@@ -1119,13 +1119,6 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 					count += abutMore(DualGraph.drawSpanner(packData,gl,f));
 					break;
 				}
-				
-				// TODO: ? default: spanning tree based on face drawing order
-				if (packData.packDCEL==null) {
-					count += abutMore(DualGraph.easySpanner(packData,false));
-				}
-//				else
-//					count+=abutMore(packData.packDCEL.computeOrder);
 				break;
 			}
 			

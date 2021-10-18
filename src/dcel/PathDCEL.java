@@ -88,7 +88,7 @@ public class PathDCEL {
 		  
 		  // found one?
 		  if (bestSide!=-1)
-			  return pdcel.pairLink.get(bestSide).sideLink();
+			  return pdcel.pairLink.get(bestSide).sideHalfLink();
 		  
 		  // else, cycle through side 'startEdge's origins and find
 		  //    the one for which the count of edges between it

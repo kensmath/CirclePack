@@ -3401,9 +3401,9 @@ public class RawDCEL {
 	 * halfedges inward from the left; used, e.g., for 
 	 * holonomy or layout purposes. Start with halfedges 
 	 * into the end of the first edge of 'hlink' and 
-	 * continue only as long as the edges of 'hlink' remain 
-	 * contiguous and we don't encounter an incoming edge 
-	 * whose face is ideal. Stop with incoming edges for 
+	 * continue only as long as the edges of 'hlink' 
+	 * remain contiguous and we don't encounter an incoming 
+	 * edge whose face is ideal. Stop with incoming edges for 
 	 * the origin of the last halfedge, but watch in case 
 	 * 'hlink' is closed --- then end with the last clw 
 	 * incoming edges at the common vertex. The link we

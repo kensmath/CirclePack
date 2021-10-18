@@ -8,17 +8,16 @@ import java.util.Vector;
 import allMains.CPBase;
 import complex.Complex;
 import dcel.CombDCEL;
+import dcel.D_SideData;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
+import dcel.RedHEdge;
 import dcel.Vertex;
 import exceptions.CombException;
-import exceptions.DCELException;
 import exceptions.ParserException;
 import komplex.DualGraph;
 import komplex.EdgeSimple;
 import komplex.Face;
-import komplex.RedEdge;
-import komplex.SideDescription;
 import packQuality.QualMeasures;
 import packing.PackData;
 import util.FaceParam;
@@ -146,6 +145,18 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 		else return false;
 	}
 	
+	public boolean add(HalfEdge edge) {
+		if (edge==null)
+			return false;
+		int v=edge.origin.vertIndx;
+		int w=edge.twin.origin.vertIndx;
+		if (packData==null)
+			return super.add(new EdgeSimple(v,w));
+		if ((v>0 && w>0) && v<=packData.nodeCount && w<=packData.nodeCount) 
+			return super.add(new EdgeSimple(v,w));
+		else return false;
+	}
+	
 	/** 
 	 * Enforce legality of vertex indices if and only 'packData' is not null
 	 * @param v int
@@ -266,9 +277,9 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 		int count=0;
 		int nodeCount=packData.nodeCount;
 		
-		// In DCEL case, if a single numerical vertex is given, then
+		// If a single numerical vertex is given, then
 		//   add it's 'halfedge' 
-		if (packData.packDCEL!=null && items.size()==1) {
+		if (items.size()==1) {
 			try {
 				int v=Integer.parseInt(items.get(0));
 				if (v>0 && v<=packData.nodeCount) {
@@ -277,7 +288,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 					add(new EdgeSimple(v,w));
 					return 1;
 				}
-				else return -1;
+				else 
+					return -1;
 			} catch(NumberFormatException ex) {
 				// non integer? continue processing
 			}
@@ -552,25 +564,19 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			  } while (its.hasNext()); // eating rest of 'items'
 
 			  // now to traverse the 'RedEdge's in chosen segments
-			  Iterator<SideDescription> sp=packData.getSidePairs().iterator();
-			  SideDescription ep=null;
-			  RedEdge rlst=null;
+			  Iterator<D_SideData> sp=packData.getSidePairs().iterator();
+			  D_SideData ep=null;
+			  RedHEdge rlst=null;
 			  int tick=0;
 			  while (sp.hasNext()) {
-				  ep=(SideDescription)sp.next();
+				  ep=(D_SideData)sp.next();
 				  if (tag[tick++]) { // yes, do this one
 					  rlst=ep.startEdge;
-					  int v=rlst.vert(rlst.startIndex);
-					  int w=rlst.vert((rlst.startIndex+1)%3);
-					  add(new EdgeSimple(v,w));
-					  count++;
-					  while (rlst!=ep.endEdge) {
-						  rlst=rlst.nextRed;
-						  v=rlst.vert(rlst.startIndex);
-						  w=rlst.vert((rlst.startIndex+1)%3);
-						  add(new EdgeSimple(v,w));
+					  do {
+						  add(rlst.myEdge);
 						  count++;
-					  } 
+						  rlst=rlst.nextRed;
+					  } while(rlst!=ep.endEdge.nextRed);
 				  }
 			  }
 			  break;
@@ -995,7 +1001,6 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			}
 			default: // if nothing else, look for edge (maybe extended edges)
 			{
-				EdgeSimple edge=null;
 				int v,w;
 				try{
 					// Note: if <v w> not an edge, may look for hex-extended
@@ -1067,7 +1072,6 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			return 0;
 		int ticks=0;
 		Iterator<HalfEdge> hit=hlink.iterator();
-		EdgeSimple edge=null;
 		while (hit.hasNext()) {
 			HalfEdge he=(HalfEdge)hit.next();
 			add(new EdgeSimple(he.origin.vertIndx,he.twin.origin.vertIndx));
@@ -1801,9 +1805,6 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	 * @return HalfLink list of specified edges
 	 */
 	public static HalfLink edgeSpecs(PackData p,Vector<SelectSpec> specs) {
-		if (p.packDCEL==null) {
-			throw new DCELException("'edgeSpecs' require a DCEL structure");
-		}
 		if (specs==null || specs.size()==0) 
 			return null;
 		SelectSpec sp=null;

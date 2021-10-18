@@ -10,6 +10,10 @@ import packing.PackData;
 import util.ColorUtil;
 
 /**
+ * traditional
+ * 
+ * see 'dcel.D_SideData'
+ * 
  * A "side" of a complex is a segment of faces in 'redChain'. 
  * A "side-pairing" occurs only when a complex is not simply 
  * connected and then it refers to a pair of segments which are

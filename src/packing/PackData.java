@@ -26,6 +26,7 @@ import circlePack.PackControl;
 import complex.Complex;
 import complex.MathComplex;
 import dcel.CombDCEL;
+import dcel.D_PairLink;
 import dcel.D_SideData;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
@@ -53,7 +54,6 @@ import geometry.SphericalMath;
 import input.CommandStrParser;
 import komplex.AmbiguousZ;
 import komplex.CookieMonster;
-import komplex.DualGraph;
 import komplex.DualTri;
 import komplex.EdgeSimple;
 import komplex.Face;
@@ -83,10 +83,7 @@ import math.Point3D;
 import microLattice.Smoother;
 import panels.CPScreen;
 import posting.PostFactory;
-import rePack.EuclPacker;
-import rePack.HypPacker;
 import rePack.RePacker;
-import rePack.SphPacker;
 import rePack.d_EuclPacker;
 import rePack.d_HypPacker;
 import tiling.Tile;
@@ -2012,13 +2009,7 @@ public class PackData{
         else if (getGamma()<=0)
         	chooseGamma();
         
-        if (packDCEL!=null)
-        	activeNode = packDCEL.alpha.origin.vertIndx;
-        else 
-        	activeNode=alpha;
-        
-        if (packDCEL==null)
-        	facedraworder(false);
+       	activeNode = packDCEL.alpha.origin.vertIndx;
         
         if ((flags & 0010)!= 0 && (flags & 0020)==0) { // new radii, no centers
         	try {
@@ -2065,10 +2056,6 @@ public class PackData{
         }
         setGeometry(hes);
     	set_plotFlags();
-        if (packDCEL==null) {
-        	CirclePack.cpb.msg("Note: traditional packing in p"+this.packNum+
-        			". Call 'DCEL dcel' to attach DCEL structure.");
-        }
         return flags; // this.getFlower(1132);
     }
     
@@ -2266,7 +2253,7 @@ public class PackData{
         
         // almost no action needed? 'vertices' may be too small
         if (keepit && size==sizeLimit) { 
-        	if (packDCEL!=null && packDCEL.vertices.length<sizeLimit+1) {
+        	if (packDCEL.vertices.length<sizeLimit+1) {
         		packDCEL.alloc_vert_space(sizeLimit,keepit);
         	}
             return 1; 
@@ -2289,11 +2276,9 @@ public class PackData{
                 if (vData!=null)
                 	newV[v]=new VData();
             }
-            if (packDCEL!=null) {
-            	Vertex[] new_vertices=new Vertex[sizeLimit+1];
-            	for (int v=1;v<=packDCEL.vertCount;v++)
-            		new_vertices[v]=packDCEL.vertices[v];
-            }
+           	Vertex[] new_vertices=new Vertex[sizeLimit+1];
+           	for (int v=1;v<=packDCEL.vertCount;v++)
+           		new_vertices[v]=packDCEL.vertices[v];
         }
         else{ 
             // empty out pack and reset 
@@ -2314,8 +2299,7 @@ public class PackData{
             locks=0;
             fileName = "";
             tileData=null;
-            if (packDCEL!=null)
-            	packDCEL.vertices=new Vertex[sizeLimit+1];
+           	packDCEL.vertices=new Vertex[sizeLimit+1];
         }
 
         kData=newK;
@@ -2459,10 +2443,7 @@ public class PackData{
 	 * @return
 	 */
 	public int getNodeCount() {
-		if (packDCEL==null)
-			return nodeCount;
-		else
-			return packDCEL.vertCount;
+		return packDCEL.vertCount;
 	}
 	
 	/** 
@@ -4462,12 +4443,7 @@ public class PackData{
 	public int setCombinatorics() throws DCELException {
 		int ans=1;
 		// TODO: eventually, just return; but for debugging, keep this.
-		if (packDCEL!=null) {
-			throw new DCELException("DCEL combinatorics are required.");
-		}
-		if (complex_count(false)==0 || facedraworder(false)==0) 
-			ans=0;
-		return ans;
+		throw new DCELException("DCEL combinatorics are required.");
 	}
 	
 	/**
@@ -4547,7 +4523,8 @@ public class PackData{
 		
 		// find Euler characteristic and genus 
 		int count=0;
-		for (k=1;k<=nodeCount;k++) count += countFaces(k);
+		for (k=1;k<=nodeCount;k++) 
+			count += countFaces(k);
 		faceCount=count/3;
 		int num_edges=(count + bcount)/2;
 		euler=nodeCount-num_edges+faceCount;
@@ -6953,10 +6930,7 @@ public class PackData{
 					+ "\n");
 			if (fileName.length() > 0)
 				file.write("PACKNAME: " + fileName + "\n");
-			if (packDCEL==null)
-				file.write("FLOWERS: ");
-			else
-				file.write("BOUQUET: ");
+			file.write("BOUQUET: ");
 			for (int n = 1; n <= nodeCount; n++) {
 				file.write("\n" + n + " " + countFaces(n) + "  ");
 				int[] gfl=getFlower(n);
@@ -7358,13 +7332,6 @@ public class PackData{
 		
 		if (fp==null)
 			throw new IOException("BufferedWriter was not set");
-		if (packDCEL==null || packDCEL.vertCount<=0) {
-			
-			// create the DCEL structure
-			PackDCEL pdc=CombDCEL.getRawDCEL(this);
-			packDCEL=CombDCEL.extractDCEL(pdc,null,pdc.alpha);
-
-		}
 		if (dual) {
 			PackDCEL dualdcel=packDCEL.createDual(false);
 			return dualdcel.writeDCEL(fp);
@@ -7685,75 +7652,43 @@ public class PackData{
 		int count = 0;
 
 		try {
-			if (packDCEL!=null) {
-				if (hes < 0) { // hyp
-					d_HypPacker h_packer=new d_HypPacker(this,passes);
-					oldRel=oldRel || h_packer.oldReliable;
-					int ans=0;
-					if (!oldRel) {
-						ans=h_packer.genericRePack(passes);
-					}
-					else
-						ans=h_packer.d_oldReliable(1000); 
-					if (ans>0) {
-						h_packer.reapResults();
-						fillcurves();
-						return ans;
-					}
-					else if (ans<0)
-						throw new PackingException("dcel hyp repack failure");
-				}
-				else if (hes>0) { // sph
-					CirclePack.cpb.errMsg("DCEL packing routines don't (yet) handle sph geom.");
-					return 0;
-				}
-				else  { // eucl
-					d_EuclPacker e_packer=new d_EuclPacker(this,passes);
-					oldRel=oldRel || e_packer.oldReliable;
-					int ans=0;
-					if (!oldRel) {
-						ans=e_packer.genericRePack(passes);
-					}
-					else
-						ans=e_packer.d_oldReliable(passes); // TODO: specify in call
-					if (ans>0) {
-						e_packer.reapResults();
-//						CirclePack.cpb.msg("Did DCEL eucl repack, count="+ans);
-						return ans;
-					}
-					else if (ans<0)
-						throw new PackingException("dcel eucl repack failure");
-					return 1;
-				}
-			}
-			
-			// else, traditional call
 			if (hes < 0) { // hyp
-				HypPacker hyppack = new HypPacker(this, useC);
+				d_HypPacker h_packer=new d_HypPacker(this,passes);
+				oldRel=oldRel || h_packer.oldReliable;
+				int ans=0;
 				if (!oldRel) {
-					if (hyppack.status > 0)
-						count = hyppack.genericRePack(passes);
-				} else
-					count = HypPacker.oldReliable(this, passes);
-			} else if (hes == 0) { // eucl
-				if (!oldRel) {
-					EuclPacker euclpack = new EuclPacker(this, useC);
-					if (euclpack.status > 0)
-						count = euclpack.genericRePack(passes);
-				} 
-				else
-					count = EuclPacker.oldReliable(this, passes);
-			} else { // sph
-				if (this.intrinsicGeom <= 0) {
-					CirclePack.cpb
-							.errMsg("No packing algorithm in "
-									+ "spherical geometry (yet) when the complex is not "
-									+ "a sphere");
-					return -1;
+					ans=h_packer.genericRePack(passes);
 				}
-				// or else, max pack
-				SphPacker sphpack = new SphPacker(this, useC);
-				count = sphpack.maxPack(0, passes);
+				else
+					ans=h_packer.d_oldReliable(1000); 
+				if (ans>0) {
+					h_packer.reapResults();
+					fillcurves();
+					return ans;
+				}
+				else if (ans<0)
+					throw new PackingException("dcel hyp repack failure");
+			}
+			else if (hes>0) { // sph
+				CirclePack.cpb.errMsg("DCEL packing routines don't (yet) handle sph geom.");
+				return 0;
+			}
+			else  { // eucl
+				d_EuclPacker e_packer=new d_EuclPacker(this,passes);
+				oldRel=oldRel || e_packer.oldReliable;
+				int ans=0;
+				if (!oldRel) {
+					ans=e_packer.genericRePack(passes);
+				}
+				else
+					ans=e_packer.d_oldReliable(passes); // TODO: specify in call
+				if (ans>0) {
+					e_packer.reapResults();
+					return ans;
+				}
+				else if (ans<0)
+					throw new PackingException("dcel eucl repack failure");
+				return 1;
 			}
 		} catch (Exception pex) {
 			CirclePack.cpb.errMsg(pex.getMessage());
@@ -7784,21 +7719,6 @@ public class PackData{
 				setCenter(v,sc.center);
 				setRadius(v,sc.rad);
 			}
-			if (packDCEL==null && (trace = redChain) != null) {
-				try {
-					keepon = true;
-					while (trace != redChain || keepon) {
-						keepon = false;
-						sc = HyperbolicMath
-								.h_to_e_data(trace.center, trace.rad);
-						trace.center = sc.center;
-						trace.rad = sc.rad;
-						trace = trace.next;
-					}
-				} catch (Exception ex) {
-					throw new DataException(" problem in 'geom_to_e', hes="+oldhes);
-				}
-			}
 		} else { // sph
 			// Note: sc.flag==-1 means disc is outside of circle
 			for (int v = 1; v <= nodeCount; v++) {
@@ -7807,22 +7727,6 @@ public class PackData{
 				if (sc.flag==-1) 
 					sc.rad *=-1.0; // this may not signal what we want
 				setRadius(v,sc.rad);
-			}
-			if (packDCEL==null && (trace = redChain) != null) {
-				try {
-					keepon = true;
-					while (trace != redChain || keepon) {
-						keepon = false;
-						sc = SphericalMath.s_to_e_data(trace.center, trace.rad);
-						trace.center = sc.center;
-						trace.rad = sc.rad;
-						if (sc.flag==-1)
-							trace.rad *=-1.0; // this may not signal what we want
-						trace = trace.next;
-					}
-				} catch (Exception ex) {
-					throw new DataException(" problem in 'geom_to_e', hes="+oldhes);
-				}
 			}
 		}
 
@@ -7867,23 +7771,6 @@ public class PackData{
 				setCenter(v,sc.center);
 				setRadius(v,sc.rad);
 			}
-			if (packDCEL==null && (trace = redChain) != null) { // adjust redface data too.
-				try {
-					keepon = true;
-					while (trace != redChain || keepon) {
-						keepon = false;
-						trace.center = trace.center.divide(mx);
-						trace.rad /= mx;
-						sc = HyperbolicMath.e_to_h_data(trace.center,
-								rData[trace.vIndex].rad);
-						trace.center = sc.center;
-						trace.rad = sc.rad;
-						trace = trace.next;
-					}
-				} catch (Exception ex) {
-					throw new DataException(" problem in 'geom_to_h', hes="+oldhes);
-				}
-			}
 		} 
 		else { // pass sph through eucl first
 			geom_to_e();
@@ -7904,9 +7791,6 @@ public class PackData{
 			return 1; // sph already
 		int oldhes=hes;
 		hes=1;
-		
-		boolean keepon;
-		RedList trace;
 		CircleSimple sc;
 
 		if (oldhes < 0) { // from hyp
@@ -7916,42 +7800,12 @@ public class PackData{
 				setCenter(v,sc.center);
 				setRadius(v,sc.rad);
 			}
-			if (packDCEL==null && (trace = redChain) != null) {
-				try {
-					keepon = true;
-					while (trace != redChain || keepon) {
-						keepon = false;
-						sc = HyperbolicMath
-								.h_to_e_data(trace.center, trace.rad);
-						sc = SphericalMath.e_to_s_data(sc.center, sc.rad);
-						trace.center = sc.center;
-						trace.rad = sc.rad;
-						trace = trace.next;
-					}
-				} catch (Exception ex) {
-					throw new DataException(" problem in 'geom_to_s', hes="+oldhes);
-				}
-			}
 		} 
 		else { // from eucl
 			for (int v = 1; v <= nodeCount; v++) {
 				sc = SphericalMath.e_to_s_data(getCenter(v),getRadius(v));
 				setCenter(v,new Complex(sc.center));
 				setRadius(v,sc.rad);
-			}
-			if (packDCEL==null && (trace = redChain) != null) {
-				try {
-					keepon = true;
-					while (trace != redChain || keepon) {
-						keepon = false;
-						sc = SphericalMath.e_to_s_data(trace.center, trace.rad);
-						trace.center = sc.center;
-						trace.rad = sc.rad;
-						trace = trace.next;
-					}
-				} catch (Exception ex) {
-					throw new DataException(" problem in 'geom_to_s', hes="+oldhes);
-				}
 			}
 		}
 		return 1;
@@ -7969,8 +7823,7 @@ public class PackData{
 		if (v < 1 || v > nodeCount || !isBdry(v))
 			return 0;
 		int node=nodeCount+1; // new index
-		if (packDCEL!=null)
-			node=packDCEL.vertCount+1;
+		node=packDCEL.vertCount+1;
 		if (node > (sizeLimit)
 				&& alloc_pack_space(node, true) == 0) 
 			throw new CombException("Pack space allocation failure");
@@ -7979,68 +7832,12 @@ public class PackData{
 		}
 		int v2 = getLastPetal(v); // upstream nghb
 		
-		if (packDCEL!=null) {
-			Vertex vert=RawDCEL.addVert_raw(packDCEL,v);
-			if (vert==null)
-				throw new CombException("failed 'add_vert'");
-			setRadius(vert.vertIndx,getRadius(vert.vutil));
-			packDCEL.fixDCEL_raw(this);
-		}
-		 
-		// traditional packing
-		else {
-			int n;
-			int[] newflower;
-			double[] newoverlaps;
-
-			// add to flower of v
-			n = countFaces(v);
-			newflower = new int[n + 2];
-			for (int i = 0; i <= n; i++)
-				newflower[i] = kData[v].flower[i];
-			newflower[n + 1] = node;
-			kData[v].flower = newflower;
-			if (kData[v].invDist != null) {
-				newoverlaps = new double[n + 2];
-				for (int i = 0; i <= n; i++)
-					newoverlaps[i] = getInvDist(v, kData[v].flower[i]);
-				newoverlaps[n + 1] = 1.0;
-				kData[v].invDist = newoverlaps;
-			}
-			kData[v].num = n + 1;
-			// add to flower of v2
-			n = countFaces(v2);
-			newflower = new int[n + 2];
-			for (int i = 1; i <= n + 1; i++)
-				newflower[i] = kData[v2].flower[i - 1];
-			newflower[0] = node;
-			kData[v2].flower = newflower;
-			if (kData[v2].invDist != null) {
-				newoverlaps = new double[n + 2];
-				for (int i = 1; i <= n + 1; i++)
-					newoverlaps[i] = getInvDist(v2, kData[v2].flower[i - 1]);
-				newoverlaps[0] = 1.0;
-				kData[v2].invDist = newoverlaps;
-			}
-			kData[v2].num = n + 1;
-			// add new node
-			nodeCount++;
-			kData[node] = new KData();
-			kData[node].num = 1;
-			kData[node].flower = new int[2];
-			kData[node].flower[0] = v;
-			kData[node].flower[1] = v2;
-			if (overlapStatus) {
-				kData[node].invDist = new double[2];
-				set_single_invDist(node, kData[node].flower[0], 1.0);
-				set_single_invDist(node, kData[node].flower[1], 1.0);
-			}
-			setBdryFlag(node, 1);
-			kData[node].plotFlag = 1;
-			setVertMark(node, 0);
-			rData[node] = new RData();
-		}
-		
+		Vertex vert=RawDCEL.addVert_raw(packDCEL,v);
+		if (vert==null)
+			throw new CombException("failed 'add_vert'");
+		setRadius(vert.vertIndx,getRadius(vert.vutil));
+		packDCEL.fixDCEL_raw(this);
+	
 		setCircleColor(node,ColorUtil.getFGColor());
 		setRadius(node,getRadius(v));
 		CircleSimple sc = CommonMath.comp_any_center(getCenter(v),
@@ -8075,98 +7872,12 @@ public class PackData{
 		if (!isBdry(v1))
 			return 0;
 		
-		if (packDCEL!=null) {
-			if (getRadius(v1) <= 0) // avoid infinity hyp rad
-				setRadius(v1, 0.1);
-			int ans=RawDCEL.enfold_raw(packDCEL,v1);
-			if (ans<=0)
-				throw new CombException("dcel enfold failed in 'enfold'");
-			packDCEL.fixDCEL_raw(this);
-			return 1;
-		}
-
-		// traditional packing
-			int n, v2, v3;
-			int[] newflower;
-			double[] newoverlaps;
-
-			n = countFaces(v1);
-			v2 = getFirstPetal(v1); // cclw nghb
-			v3 = getLastPetal(v1); // clw nghb
-
-			// adjust flower of v1
-			newflower = new int[n + 2];
-			int[] flower = getFlower(v1);
-			for (int i = 0; i <= n; i++)
-				newflower[i] = flower[i];
-			newflower[n + 1] = v2;
-			kData[v1].flower = newflower;
-			if (kData[v1].invDist != null) {
-				newoverlaps = new double[n + 2];
-				for (int i = 0; i <= n; i++)
-					newoverlaps[i] = getInvDist(v1, kData[v1].flower[i]);
-				newoverlaps[n + 1] = getInvDist(v1, kData[v1].flower[0]);
-				kData[v1].invDist = newoverlaps;
-			}
-			setBdryFlag(v1, 0);
-			setAim(v1, 2.0 * Math.PI);
-			kData[v1].num++;
-			if (getRadius(v1) <= 0) { // avoid infinity rad
-				setRadius(v1, 0.1);
-			}
-
-			// add to flower of v2
-			n = countFaces(v2);
-			newflower = new int[n + 2];
-			flower = getFlower(v2);
-			for (int i = 0; i <= n; i++)
-				newflower[i] = flower[i];
-			newflower[n + 1] = v3;
-			kData[v2].flower = newflower;
-			kData[v2].num++;
-			if (kData[v2].invDist != null) {
-				newoverlaps = new double[n + 2];
-				for (int i = 0; i <= n; i++)
-					newoverlaps[i] = getInvDist(v2, kData[v2].flower[i]);
-				newoverlaps[n + 1] = 1.0;
-				kData[v2].invDist = newoverlaps;
-			}
-			if (kData[v2].flower[0] == v3) {
-				setBdryFlag(v2, 0);
-				if (getRadius(v2) <= 0) { // avoid infinity
-					setRadius(v2, 0.1);
-				}
-				if (kData[v2].invDist != null)
-					set_single_invDist(v2, kData[v2].flower[n + 1], getInvDist(v2, kData[v2].flower[0]));
-				setAim(v2, 2.0 * Math.PI);
-			}
-
-			// add to flower of v3
-			n = countFaces(v3);
-			newflower = new int[n + 2];
-			for (int i = 1; i <= n + 1; i++)
-				newflower[i] = kData[v3].flower[i - 1];
-			newflower[0] = v2;
-			kData[v3].flower = newflower;
-			if (kData[v3].invDist != null) {
-				newoverlaps = new double[n + 2];
-				for (int i = 1; i <= n + 1; i++)
-					newoverlaps[i] = getInvDist(v3, kData[v3].flower[i - 1]);
-				newoverlaps[0] = 1.0;
-				kData[v3].invDist = newoverlaps;
-			}
-			kData[v3].num++;
-			if (kData[v3].flower[countFaces(v3)] == v2) {
-				setBdryFlag(v3, 0);
-				if (getRadius(v3) <= 0) { // avoid infinity
-					setRadius(v3, 0.1);
-				}
-				if (kData[v3].invDist != null)
-					set_single_invDist(v3, kData[v3].flower[0], getInvDist(v3, kData[v3].flower[n + 1]));
-				setAim(v2, 2.0 * Math.PI);
-			}
-
-		// calling routine should update pack after returning
+		if (getRadius(v1) <= 0) // avoid infinity hyp rad
+			setRadius(v1, 0.1);
+		int ans=RawDCEL.enfold_raw(packDCEL,v1);
+		if (ans<=0)
+			throw new CombException("dcel enfold failed in 'enfold'");
+		packDCEL.fixDCEL_raw(this);
 		return 1;
 	}
 
@@ -8227,14 +7938,6 @@ public class PackData{
 			}
 			if (vert == v1)
 				enfold(vert); // full bdry
-			if (packDCEL==null) {
-				try {
-					setBdryFlags();
-				} catch (Exception ex) {
-					CirclePack.cpb.errMsg("Some problem with add_layer.");
-					return 0;
-				}
-			}
 			return count;
 		}
 
@@ -8272,81 +7975,20 @@ public class PackData{
 					count += add_vert(vert);
 				enfold(vert);
 			}
-			if (packDCEL==null) {
-				try {
-					setBdryFlags();
-				} catch (Exception ex) {
-					CirclePack.cpb.errMsg("Problem setting bdry flags in 'add_layer'.");
-					return 0;
-				}
-			}
 			return count;
 		}
-
 		else if (mode == DUPLICATE) {
 
-			if (packDCEL!=null) {
-				int origcount=packDCEL.vertCount;
-				// generate combinatoric
-				int ans= RawDCEL.baryBox_raw(packDCEL,v1,v2);
-				if (ans==0)
-					return 0;
-				// TODO: too difficult to set radii
-				CombDCEL.d_FillInside(packDCEL);
-				return attachDCEL(packDCEL);
-			}
-			
-			// traditional packing
-			// get started with first edge
-			// first circle is a bearing
-			int vert = getFirstPetal(v1);
-			count += add_vert(vert);
-			int bearing = nodeCount;
-			add_vert(bearing); // add two circles to start
-			count += add_vert(bearing);
-			enfold(bearing);
-
-			// cycle until next point is v2
-			int nextvert=0;
-			if (vert != v2) {
-				while ((nextvert = kData[vert].flower[0]) != v2) {
-					// add bearing first
-					count += add_vert(vert);
-					enfold(vert);
-					bearing = nodeCount;
-					count += add_vert(bearing);
-					enfold(bearing);
-					vert = nextvert;
-				}
-				count += add_vert(vert);
-				enfold(vert);
-				bearing = nodeCount;
-				if (v2 != v1) {
-					count += add_vert(bearing);
-					enfold(bearing);
-				} else { // close up for full layer
-					enfold(nextvert);
-					enfold(bearing);
-
-					// bearing ends up as interior; we want the circle of max
-					// index
-					// to be on the boundary, so we swap indices.
-					int w = kData[bearing].flower[countFaces(bearing)];
-					swap_nodes(w, nodeCount);
-				}
-			}
-
-			try {
-				setBdryFlags();
-			} catch (Exception ex) {
-				CirclePack.cpb.errMsg("Some problem with add_layer.");
+			int origcount=packDCEL.vertCount;
+			// generate combinatoric
+			int ans= RawDCEL.baryBox_raw(packDCEL,v1,v2);
+			if (ans==0)
 				return 0;
-			}
-
-			return count;
+			// TODO: too difficult to set radii
+			CombDCEL.d_FillInside(packDCEL);
+			return attachDCEL(packDCEL);
 		}
-
-		return count;
+		return 1;
 	}
 
 	/** 
@@ -11861,46 +11503,29 @@ public class PackData{
 		  p.activeNode=activeNode;
 		  p.packExtensions=new Vector<PackExtender>(2); // old are lost
 
-		  if (packDCEL!=null) {
-			  RedHEdge oldred=packDCEL.redChain;
-			  PackDCEL pdcel=CombDCEL.cloneDCEL(packDCEL);
-			  pdcel.fixDCEL_raw(p);
-			  p.vData=new VData[sizeLimit+1];
-			  for (int v=1;v<=nodeCount;v++) 
-				  p.vData[v]=vData[v].clone(); // this.getCenter(v);
+		  RedHEdge oldred=packDCEL.redChain;
+		  PackDCEL pdcel=CombDCEL.cloneDCEL(packDCEL);
+		  pdcel.fixDCEL_raw(p);
+		  p.vData=new VData[sizeLimit+1];
+		  for (int v=1;v<=nodeCount;v++) 
+			  p.vData[v]=vData[v].clone(); // this.getCenter(v);
 			  
-			  // typically, if not a sphere, will have redChain
-			  if (oldred!=null) {
-				  RedHEdge newred=pdcel.redChain;
-				  RedHEdge rhe=newred;
-				  do {
-					  rhe.setCenter(oldred.getCenter());
-					  rhe.setRadius(oldred.getRadius());
-					  rhe=rhe.nextRed;
-					  oldred=oldred.nextRed;
-				  } while (rhe!=newred);
-			  }
-
-		  }
-		  
-		  // traditional: copy rData and kData
-		  else {
-			  for (int v=1;v<=nodeCount;v++) {
-				  p.kData[v]=kData[v].clone();
-				  p.rData[v]=rData[v].clone();
-			  }
+		  // typically, if not a sphere, will have redChain
+		  if (oldred!=null) {
+			  RedHEdge newred=pdcel.redChain;
+			  RedHEdge rhe=newred;
+			  do {
+				  rhe.setCenter(oldred.getCenter());
+				  rhe.setRadius(oldred.getRadius());
+				  rhe=rhe.nextRed;
+				  oldred=oldred.nextRed;
+			  } while (rhe!=newred);
 		  }
 		  
 		  // copy tile data, if it exists
 		  if (keepTD && tileData!=null && tileData.tileCount>0) {
 			  p.tileData=tileData.copyMyTileData();
 			  TileData.setPackings(p.tileData,p);
-		  }
-		  
-		  // set the combinatorics
-		  if (packDCEL==null) {
-			  p.complex_count(false);
-			  p.facedraworder(false);
 		  }
 		  
 		  // TODO: Prefer to make copy of layout in case face order 
@@ -12801,9 +12426,6 @@ public class PackData{
 
 		double miN = 1000000000.0, maX = 0.0;
 		double ivdmax= OKERR, ivdmin = 1000;
-
-		if (packDCEL==null) 
-			throw new DCELException("'set_xyz_overlaps' requires DCEL structure");
 
 		if (flag == 1) { // treat as though all radii were miN/2.
 
@@ -14148,10 +13770,7 @@ public class PackData{
 			  PackDCEL pdc1=CombDCEL.cloneDCEL(p1.packDCEL);
 			  PackDCEL pdc2=p2.packDCEL;
 			  if (!selfadjoin) {
-				  if (p2.packDCEL==null) 
-					  pdc2=CombDCEL.cloneDCEL(CombDCEL.getRawDCEL(p2));
-				  else
-					  pdc2=CombDCEL.cloneDCEL(p2.packDCEL);
+				  pdc2=CombDCEL.cloneDCEL(p2.packDCEL);
 			  }
 			  else
 				  pdc2=pdc1;
@@ -14766,21 +14385,13 @@ public class PackData{
 	  public RadIvdPacket getRIpacket(int f) {
 		  RadIvdPacket rip=new RadIvdPacket();
 		  int[] fverts=getFaceVerts(f);
-		  if (packDCEL==null) {
-			  for (int j=0;j<3;j++) {
-				  rip.rad[j]=getRadius(fverts[(j)]);
-				  rip.oivd[j]=getInvDist(fverts[(j+1)%3],fverts[(j+2)%3]);
-			  }
-		  }
-		  else {
-			  HalfEdge he=packDCEL.faces[f].edge;
-			  int k=0;
-			  do {
-				  rip.rad[k]=getRadius(he.origin.vertIndx);
-				  rip.oivd[k]=he.next.getInvDist();
-				  k++;
-			  } while(k<3);
-		  }
+		  HalfEdge he=packDCEL.faces[f].edge;
+		  int k=0;
+		  do {
+			  rip.rad[k]=getRadius(he.origin.vertIndx);
+			  rip.oivd[k]=he.next.getInvDist();
+			  k++;
+		  } while(k<3);
 		  return rip;
 	  }
 	  
@@ -14801,10 +14412,6 @@ public class PackData{
 	   * @exception ParserException if space has not been allocated. 
 	   */
 	  public int set_single_invDist(int v,int w,double invDist) {
-		  
-		  if (packDCEL==null && !overlapStatus) 
-			  throw new ParserException("set_invdist: space not allocated");
-		  
 		  int indx=nghb(v,w);
 		  if (indx<0)
 	    	throw new ParserException("set_single_overlap error: "+w+" is not a petal of "+v);
@@ -19437,12 +19044,12 @@ public class PackData{
 		return retLinks;
 	}
 	
-	public void setSidePairs(PairLink plink) {
-		sidePairs=plink;
+	public void setSidePairs(D_PairLink plink) {
+		packDCEL.pairLink=plink;
 	}
 	
-	public PairLink getSidePairs() {
-		return sidePairs;
+	public D_PairLink getSidePairs() {
+		return packDCEL.pairLink;
 	}
 	
 	/**
@@ -19451,28 +19058,14 @@ public class PackData{
 	 */
 	public NodeLink getPairIndices() {
 		NodeLink indices=new NodeLink();
-		if (packDCEL!=null) {
-			if (packDCEL.pairLink!=null || packDCEL.pairLink.countPairs()==0)
-				return null;
-			for (int j=1;j<packDCEL.pairLink.size();j++) {
-				D_SideData sidd=packDCEL.pairLink.get(j);
-				if (sidd.mateIndex>sidd.spIndex)
-					indices.add(sidd.spIndex);
-			}
-			return indices;
+		if (packDCEL.pairLink!=null || packDCEL.pairLink.countPairs()==0)
+			return null;
+		for (int j=1;j<packDCEL.pairLink.size();j++) {
+			D_SideData sidd=packDCEL.pairLink.get(j);
+			if (sidd.mateIndex>sidd.spIndex)
+				indices.add(sidd.spIndex);
 		}
-		
-		// traditional
-		else {
-			if (sidePairs!=null || sidePairs.countPairs()==0)
-				return null;
-			for (int j=0;j<sidePairs.size()-1;j++) {
-				SideDescription sdd=sidePairs.get(j);
-				if (sdd.mateIndex>sdd.spIndex)
-					indices.add(sdd.spIndex);
-			}
-			return indices;
-		}
+		return indices;
 	}
 
 	/**

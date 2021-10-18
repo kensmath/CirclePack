@@ -23,9 +23,9 @@ import util.ColorUtil;
  * 
  * Caution: 'mob' element can easily be out of date. Likewise, the 
  * 'center' information on the circles along the red chain are kept
- * in the 'RedList' objects, and these are updated during 'layout'
+ * in the 'RedHEdge's, and these are updated during 'layout'
  * operations. To update 'mob' one generally has to start by updating
- * the 'RedList.center' information.
+ * the 'RedHEdge's.
  * @author kens
  */
 public class D_SideData {
@@ -170,11 +170,11 @@ public class D_SideData {
     }
     
     /**
-     * Return 'HalfLink' with the cclw 'myEdge's 
-     * from 'this' side.
+     * Return 'HalfLink' with successive 'myEdge's 
+     * from 'this' cclw side.
      * @return HalfLink, null on failure
      */
-    public HalfLink sideLink() {
+    public HalfLink sideHalfLink() {
     	if (startEdge==null || endEdge==null)
     		return null;
     	HalfLink hlink=new HalfLink();

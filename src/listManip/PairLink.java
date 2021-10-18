@@ -9,6 +9,10 @@ import komplex.SideDescription;
 import packing.PackData;
 
 /**
+ * traditional
+ * 
+ * see 'dcel.D_PairLink'
+ * 
  * Linked list of 'SideDescription' objects; these contain data on side-pairings 
  * and on non-pairing border segments for non-simply connected complexes.
  * (Note: formerly, indexing was from 1, but that changed 9/07.) 
