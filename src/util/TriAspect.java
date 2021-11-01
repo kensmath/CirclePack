@@ -26,7 +26,8 @@ import math.Mobius;
  * have different labels in different faces).
  * 
  * Likewise, 'sides' typically represents edge lengths, often in
- * eucl case, in homogeneous coordinates; note that 
+ * eucl case, in homogeneous coordinates; note that given the
+ * array 'vert' of vertex indices, 
  *    sides[j]=length of edge <vert[j],vert[(j+1)%3]>
  *  
  * We also keep track of which vertices are 'red' (on the
@@ -36,29 +37,26 @@ import math.Mobius;
  * For use with Schwarzian derivative, we store Mobius of an
  * equilateral face to this face. The "base" equilateral face
  * is formed by tangent triple of eucl circles of radius 
- * sqrt(3), symmetric w.r.t. the origin, and with tangeny 
- * points at the cube roots of unity (which are also the outward
- * unit normals of the 0, 1, 2 edges, resp. Also, circle centers are
- * center[0]=1-sqrt(3)i, center[1]=1+sqrt(3)i, center[2]=-2.
+ * sqrt(3), symmetric w.r.t. the origin, and with tangency 
+ * points at the cube roots of unity (which are also the 
+ * outward unit normals of the 0, 1, 2 edges, resp. Also, 
+ * circle centers are center[0]=1-sqrt(3)i, 
+ * center[1]=1+sqrt(3)i, center[2]=-2.
  *  
  * @author kens
  */
 public class TriAspect extends TriData {
 	
-	public RedList redList; // 'packData.redChain' entry for this (generally 'null')
 	boolean need_update; // signal when data changes require update
 	
 	// various triples of data (other data in 'TriData' super)
 	public Complex[] center;    // centers of circles
-	public double []schwarzian; // signed scalar coeffs for schwarzian derivative 
-	public boolean []redFlags; // true if vertex is on outside of redChain
-	public Complex []tanPts;  // tangency points, if saved
-	public double []labels; // labels for verts: often, treated as homogeneous coords
-	public double []sides; // edge lengths, [j] = <v[j],v[j+1]>
-	public double []t_vals;  // label ratios: t_vals[j]=labels[(j+1)%3]/labels[j]
+	public double[] schwarzian; // signed scalar coeffs for schwarzian 
+	public Complex[] tanPts;  // tangency points, if saved
+	public double[] sides; // edge lengths, [j] = <v[j],v[j+1]>
 	
-	// Base data is determined by centers and radii; relate the actual face to
-	//   the "base" equilateral. 
+	// Base data is determined by centers and radii and relate the actual 
+	//   face to the "base" equilateral. 
 	public Mobius baseMobius; 
 	public double []baseSchwarz;  
 	
@@ -68,24 +66,14 @@ public class TriAspect extends TriData {
 	// constructor(s)
 	public TriAspect() { // default euclidean
 		super();
-		
 	}
 	
 	public TriAspect(int geom) {
-		this(geom,(RedList)null);
-	}
-
-	public TriAspect(int geom,RedList rl) {
+		super();
 		hes=geom;
-		if (rl!=null) {
-			face=rl.face;
-		}
-		redList=rl;
-		redFlags=new boolean[3];
 		tanPts=null;
 		labels=new double[3];
 		sides=new double[3];
-		t_vals=new double[3];
 		baseMobius=new Mobius();
 		baseSchwarz=new double[3];
 		need_update=true;
@@ -98,16 +86,15 @@ public class TriAspect extends TriData {
 	
 	// clone
 	public TriAspect(TriAspect asp) {
-		this(asp.hes,asp.redList);
-		face=asp.face;
+		this(asp.hes);
+		baseEdge=asp.baseEdge;
+		face=baseEdge.face.faceIndx;
 		for (int j=0;j<3;j++) {
 			vert[j]=asp.vert[j];
 			center[j]=asp.getCenter(j);
 			radii[j]=asp.getRadius(j);
 			labels[j]=asp.labels[j];
 			sides[j]=asp.sides[j];
-			redFlags[j]=asp.redFlags[j];
-			t_vals[j]=asp.t_vals[j];
 			setInvDist(j,asp.getInvDist(j));
 			schwarzian[j]=asp.schwarzian[j];
 		}
@@ -173,7 +160,7 @@ public class TriAspect extends TriData {
 	/**
 	 * Return index of initial vertex of first shared edge 
 	 * with 'ntri', it it exists.
-	 * @param ntri
+	 * @param ntri TriAspect
 	 * @return int index, -1 on failure
 	 */
 	public int nghb_Tri(TriAspect ntri) {
@@ -457,7 +444,7 @@ public class TriAspect extends TriData {
 	 * @param t double, by which 'labels' at v is scaled.
 	 * @return double[2]: [0]=angle sum, [1]=derivative, null on error
 	 */
-	public double []angleV(int v,double t) {
+	public double[] angleV(int v,double t) {
 		int k=vertIndex(v);
 		if (k<0) 
 			return null;

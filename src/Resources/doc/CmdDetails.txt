@@ -1772,10 +1772,10 @@ the new path.</opt>
 		   center by averaging computations from all available plotted neighbors.</opt>
 	<opt flag="-d [v]"> comp centers using current draw order; report 
 	position(s) of vertex v</opt>
-	<opt flag="-e {e..}"> redo drawingorder with given edgelist as 
-	desired outer boundary. (These edges are declared as 'poison' before
- 	the drawing order is computed; also see 'set_poison' for
- 	poison vertices.)</opt>
+	<opt flag="-dt [v]"> for torus packings only; arrange for just two side
+	pairings. Optional, report positions of the corner.</opt>
+	<opt flag="-v {v..}"> redo drawingorder with given vertex list defining 
+	the outer boundary.</opt>
 	<opt flag="-f {f..}"> redo drawingorder with given facelist as a
 		   (putative) red chain; the outside edges of the faces
 		    are used to set poison edges.</opt>

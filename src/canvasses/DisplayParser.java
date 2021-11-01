@@ -24,7 +24,6 @@ import komplex.AmbiguousZ;
 import komplex.DualGraph;
 import komplex.DualTri;
 import komplex.EdgeSimple;
-import komplex.SideDescription;
 import listManip.BaryCoordLink;
 import listManip.BaryLink;
 import listManip.EdgeLink;
@@ -939,7 +938,7 @@ public class DisplayParser {
 						count +=pdcel.d_draw_bdry_seg(n, do_label, do_circle, sdata.color, thickness);
 					}
 					else {
-						SideDescription epair = p.getSidePairs().get(n);
+						D_SideData epair = p.getSidePairs().get(n);
 						count += p.sa_draw_bdry_seg(n, do_label, do_circle,
 							epair.color, thickness);
 					}
@@ -954,7 +953,7 @@ public class DisplayParser {
 							}
 						}
 						else {
-							SideDescription ep = (SideDescription) p.getSidePairs().get(n);
+							D_SideData ep = p.getSidePairs().get(n);
 							if ((k = ep.mateIndex) >= 0)
 							count+=p.sa_draw_bdry_seg(k, do_label, do_circle,
 									ep.color, thickness);

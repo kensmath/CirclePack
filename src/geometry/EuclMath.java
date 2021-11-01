@@ -5,10 +5,11 @@ import java.util.Vector;
 import allMains.CPBase;
 import baryStuff.BaryPoint;
 import complex.Complex;
+import dcel.PackDCEL;
+import dcel.RedHEdge;
 import exceptions.DataException;
 import komplex.EdgeSimple;
-import komplex.RedEdge;
-import komplex.RedList;
+import math.Mobius;
 import math.Point3D;
 import packing.PackData;
 import util.RadIvdPacket;
@@ -866,46 +867,29 @@ public class EuclMath{
 	/** 
 	 * Normalizes eucl data of pack p by putting point a at origin 
 	 * and g (if not too close to a) on the positive y-axis.
-	 * @param p PackData
+	 * @param p PackDCEL
 	 * @param a Complex (usually, a=alpha center)
 	 * @param g Complex (usually, g=gamma center)
-	 * @return 1 
+	 * @return the Mobius applied
 	*/
-	public static int e_norm_pack(PackData p,Complex a,Complex g) {
-	    int i;
-
-	    // set up rotation
-	    Complex w=g.sub(a);
-	    double argag=0.0;
-	    Complex z=new Complex(1.0); // default to z=1
-    	if (w.abs()>OKERR) {
-    		argag=Math.PI/2.0-w.arg();
-    		z=new Complex(0.0,argag).exp();
-    	}
-    	
-	    // translate and rotate
-	    for (i=1;i<=p.nodeCount;i++) 
-	    	p.setCenter(i,p.getCenter(i).sub(a).times(z));
-
-	    // normalize info in redchain as well
-	    RedList trace=p.redChain;
-	    if (trace!=null) {
-		    boolean keepon=true;
-	    	while (trace!=p.redChain  || keepon) {
-	    		keepon=false;
-	    		// debug help: LayoutBugs.pfacered(this);LayoutBugs.log_Red_Hash(this,trace,null);
-	    		if (trace.center!=null) 
-	    			trace.center=trace.center.sub(a).times(z);
-	    		
-	    		// if "blue", must fix second copy also
-	    		if (trace.next.face==trace.prev.face && trace instanceof RedEdge) {
-	    			RedEdge re=((RedEdge)trace).nextRed;
-	    			re.center=re.center.sub(a).times(z);
-	    		}	    		
-	    		trace=trace.next;
-	    	}
-	    }
-	    return 1;
+	public static Mobius e_norm_pack(PackDCEL pdcel,Complex a,Complex g) {
+		Mobius mob=Mobius.mobNormPlane(a,g);
+		if (Mobius.frobeniusNorm(mob)>Mobius.MOB_TOLER) {
+			// directly adjust in 'vData'
+			for (int v = 1; v <= pdcel.vertCount; v++) {
+				Complex z = pdcel.p.vData[v].center;
+				pdcel.p.vData[v].center = mob.apply(z);
+			}
+			// directly adjust in red chain
+			if (pdcel.redChain != null) {
+				RedHEdge rtrace = pdcel.redChain;
+				do {
+					rtrace.setCenter(mob.apply(rtrace.getCenter()));
+					rtrace = rtrace.nextRed;
+				} while (rtrace != pdcel.redChain);
+			}
+		}
+		return mob;
 	} 
 	
 	/** 

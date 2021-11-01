@@ -13,13 +13,11 @@ import circlePack.PackControl;
 import complex.Complex;
 import dcel.CombDCEL;
 import dcel.D_SideData;
-import dcel.PackDCEL;
 import dcel.RedHEdge;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
-import exceptions.LayoutException;
 import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.EuclMath;
@@ -29,7 +27,6 @@ import komplex.EdgeSimple;
 import komplex.Face;
 import komplex.RedEdge;
 import komplex.RedList;
-import komplex.SideDescription;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
@@ -37,10 +34,6 @@ import listManip.NodeLink;
 import math.Mobius;
 import packing.PackData;
 import packing.PackExtender;
-import packing.RedChainer;
-import rePack.RePacker;
-import rePack.d_EuclPacker;
-import util.BuildPacket;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.DispFlags;
@@ -48,44 +41,43 @@ import util.StringUtil;
 import util.TriAspect;
 /**
  * Projective structures on triangulated surfaces (such as
- * affine structures on tori) require new data structures.
- * Namely, computations are face-based rather than vertex-based.
- * This class is used to develop and test manipulations, and
- * provides static functionality for use by other classes.
+ * affine structures on tori) require face-based data 
+ * structures, now available (2021) in DCEL structures.
  * 
  * First setting was tori, thanks to Chris Sass. Those methods
  * are affine, however, so they don't extend to higher genus.
  * Since then I've introduced two things: starting in 2018 I
  * began studying discrete Schwarzians, generalizing ideas due
- * to Gerald Orick. In 2019, I began a major conversion in
- * combinatorics: dcel structures.
+ * to Gerald Orick. In 2019, I began the major conversion to
+ * DCEL combinatorial structures.
  * 
- * Now in 2021, I will start converting the code here in hopes
- * of advancing the use of Schwarzians, the first goal being
- * to replicate what this code did for tori. I will have a
- * 'dcel' mode here.
+ * I will start converting the code to advance the use of 
+ * Schwarzians, the first goal being to replicate what this 
+ * code did for tori.
  * 
- * The original approach replaced radii as the parameters, using 
- * localized geometry. In particular, to each face we attached
- * 'labels' r1:r2:r3 of radii (in eucl case, the radii are not
- * important, only their ratios). The angle sum at a vertex v is
- * obtained face-by-face. 
+ * Our approach in the affine setting is to replace radii 
+ * as the parameters, using localized geometry instead. In 
+ * particular, to each face we attached 'labels' r1:r2:r3 
+ * of radii (in eucl case, the radii are not important, only 
+ * their ratios). The angle sum at a vertex v is obtained 
+ * face-by-face. 
  * 
- * Initial scenario was for tori: First open as a combinatorial quadrilateral, 
- * noting identifications of top/bottom, left/right end vertices.
- * Assign radii, assuring that those on top are 'a' times those
- * at the bottom and those on the right are 'b' times those on
- * the left. Now record all face labels. Run an iterative 
- * routine to get angle sums 2pi at all vertices. With luck,
- * we get an affine torus, with the arguments of the side pairings 
- * determined by the process (so, 2 real parameters result in 2 complex
- * parameters).
+ * Initial scenario is tori: Arrange as combinatorial 
+ * quadrilaterals, noting identifications of top/bottom, 
+ * left/right end vertices. Assign radii, assuring that 
+ * those on top are 'a' times those at the bottom and 
+ * those on the right are 'b' times those on the left. 
+ * Now record all face labels. Run an iterative routine 
+ * to get angle sums 2pi at all vertices. With luck,
+ * we get an affine torus, with the arguments of the side 
+ * pairings determined by the process (so, 2 real parameters 
+ * result in 2 complex parameters).
  * 
  * Ken Stephenson
  */
 
 public class ProjStruct extends PackExtender {
-	public TriAspect []aspects;
+	public TriAspect[] aspects;
 	public GraphLink dTree; // dual spanning tree
 	public static double TOLER=.00000001;
 	public static double OKERR=.0000000001; 
@@ -143,21 +135,9 @@ public class ProjStruct extends PackExtender {
 		aspects=new TriAspect[packData.faceCount+1];
 		for (int f=1;f<=packData.faceCount;f++) {
 			aspects[f]=new TriAspect(packData.hes);
-		}
-		
-		// those for redChain faces, get a redList pointer
-		RedList rtrace=(RedList)packData.redChain;
-		boolean done=false;
-		while (rtrace!=(RedList)packData.redChain || !done) {
-			done=true;
-			aspects[rtrace.face].redList=rtrace;
-			rtrace=rtrace.next;
-		}
-		
-		// initiate aspects
-		for (int f=1;f<=packData.faceCount;f++) {
 			TriAspect tas=aspects[f];
-			tas.face=f;
+			tas.baseEdge=pdc.faces[f].edge;
+			tas.face=tas.baseEdge.face.faceIndx;
 			for (int j=0;j<3;j++) {
 				int v=packData.faces[f].vert[j];
 				tas.vert[j]=v;
@@ -165,9 +145,6 @@ public class ProjStruct extends PackExtender {
 				tas.labels[j]=packData.getRadius(v);
 				// set 'centers'
 				tas.setCenter(packData.getCenter(v),j);
-				if (packData.kData[v].utilFlag==1)
-					tas.redFlags[j]=true;
-				else tas.redFlags[j]=false;
 			}
 			// set 'sides' from 'center's
 			tas.centers2Sides();
@@ -263,7 +240,8 @@ public class ProjStruct extends PackExtender {
 	    		v=inDex[j];
 	    		double vAim=p.getAim(v);
 	    		  
-	    		// find/apply factor to labels at 'v' if error is bad enough to riffle
+	    		// find/apply factor to labels at 'v' if error 
+	    		//    is bad enough to riffle
 	    		if (mode==1)  // mode=1, default
 	    			verr = Math.abs(angSumTri(p,v,1.0,aspts)[0]-p.getAim(v));
 	    		else if (mode==2) 
@@ -280,7 +258,8 @@ public class ProjStruct extends PackExtender {
 	    			
 	    			// start error
     				if (debug) {
-    					System.err.println(" v="+v+", start error = "+Math.abs(valder[0]));
+    					System.err.println(" v="+v+", start error = "+
+    							Math.abs(valder[0]));
     				}
     				  
 	    			// use one Newton step, but restrict to [.5,2].
@@ -303,7 +282,8 @@ public class ProjStruct extends PackExtender {
     	    			else if (mode==2) {
     	    				vd=skewTri(p,v,1.0,aspts);
     	    			}
-    					System.err.println("   v="+v+", new error = "+Math.abs(vd[0]));
+    					System.err.println("   v="+v+", new error = "+
+    							Math.abs(vd[0]));
     				}
 	    		}
 	    	}
@@ -361,7 +341,8 @@ public class ProjStruct extends PackExtender {
 		for (int vv = 1; vv <= p.nodeCount; vv++) {
 			// TODO: can speed up with temp matrix instead of search of vlist
 			if (p.getAim(vv) > 0
-					&& (vlist == null || vlist.contains(Integer.valueOf(vv)))) {
+					&& (vlist == null || 
+					vlist.contains(Integer.valueOf(vv)))) {
 				inDex[aimNum] = vv;
 				aimNum++;
 			}
@@ -425,7 +406,8 @@ public class ProjStruct extends PackExtender {
 	 * @param asps []TriAspect
 	 * @return angsum double
 	 */
-	public static double angSumSide(PackData p,int v,double factor,TriAspect []asps) {
+	public static double angSumSide(PackData p,int v,double factor,
+			TriAspect []asps) {
 		double angsum=0.0;
 		int[] faceFlower=p.getFaceFlower(v);
 		for (int j=0;j<p.countFaces(v);j++) {
@@ -447,7 +429,8 @@ public class ProjStruct extends PackExtender {
 	 * @param asp []TriAspect
 	 * @return 1
 	 */
-	public static int adjustSides(PackData p,int v,double factor,TriAspect []asp) {
+	public static int adjustSides(PackData p,int v,double factor,
+			TriAspect []asp) {
 		int[] faceFlower=p.getFaceFlower(v);
 		for (int j=0;j<p.countFaces(v);j++) {
 			int f=faceFlower[j];
@@ -471,7 +454,8 @@ public class ProjStruct extends PackExtender {
 	 * @param asps []TriAspect
 	 * @return best double
 	*/
-	public static double sideCalc(PackData p,int v,double aim,int N,TriAspect []asps) {
+	public static double sideCalc(PackData p,int v,double aim,int N,
+			TriAspect []asps) {
 		double bestcurv,upcurv,lowcurv;
 		double lower,upper;
 		double limit=0.5;
@@ -546,7 +530,8 @@ public class ProjStruct extends PackExtender {
 			double lSide=asps[f].sides[(k+2)%3];
 			double oppSide=asps[f].sides[(k+1)%3];
 			if ((rSide+lSide)<oppSide || oppSide<Math.abs(rSide-lSide))
-				throw new DataException("Triangle inequality fails for face "+f);
+				throw new DataException(
+						"Triangle inequality fails for face "+f);
 			double a=oppSide/(lSide+rSide);
 			lower=(a>lower) ? a : lower;
 			double b=oppSide/Math.abs(rSide-lSide);
@@ -568,7 +553,8 @@ public class ProjStruct extends PackExtender {
 	 * @param asps[] @see TriAspect
 	 * @return double
 	 */
-	public static double []angSumTri(PackData p, int v, double t,TriAspect[] asps) {
+	public static double []angSumTri(PackData p, int v, double t,
+			TriAspect[] asps) {
 		double []ans=new double[2];
 		int[] faceFlower=p.getFaceFlower(v);
 		for (int j = 0; j < p.countFaces(v); j++) {
@@ -590,7 +576,8 @@ public class ProjStruct extends PackExtender {
 	 * @param asps[] @see TriAspect
 	 * @return double[2]: [0]=skew, [1]=deriv
 	 */
-	public static double []skewTri(PackData p, int v,double t, TriAspect[] asps) {
+	public static double []skewTri(PackData p, int v,double t,
+			TriAspect[] asps) {
 		double []ans = new double[2];
 		int[] faceFlower=p.getFaceFlower(v);
 		for (int j = 0; j < p.countFaces(v); j++) {
@@ -603,7 +590,8 @@ public class ProjStruct extends PackExtender {
 	}
 	  	
 	/**
-	 * Change label for v in all faces containing 'v' and change 'rData[v].rad'
+	 * Change label for v in all faces containing 'v' and 
+	 * change 'rData[v].rad'
 	 * by multiplicative 'factor'.
 	 * @param p @see PackData 
 	 * @param v int, parent vertex
@@ -611,7 +599,8 @@ public class ProjStruct extends PackExtender {
 	 * @param asp[] @see TriAspect
 	 * @return int -1 on error
 	 */
-	public static int adjustRadii(PackData p,int v,double factor,TriAspect []asp) {
+	public static int adjustRadii(PackData p,int v,double factor,
+			TriAspect []asp) {
 		p.setRadius(v,factor*p.getRadius(v));
 		int[] faceFlower=p.getFaceFlower(v);
 		for (int j=0;j<p.countFaces(v);j++) {
@@ -625,179 +614,48 @@ public class ProjStruct extends PackExtender {
 	/**
 	 * For setting prescribed parameters for affine torus
 	 * construction.
-	 * @param p, PackData
-	 * @param A,B, double side-pairing parameters
+	 * @param p PackData
+	 * @param A double
+	 * @param B double
 	 */
-	public static boolean affineSet(PackData p,TriAspect []asps,double A,double B) {
-		// how many torus side-pairings? 3 (generic) or 2?
-		boolean hexGram=true; // 3 
-		if (p.getSidePairs().size()<6) // 2 
-			hexGram=false; 
+	public static boolean affineSet(PackData p,TriAspect[] asps,
+			double A,double B) {
+		if (p.getSidePairs().size()>5) { // want just 2 side-pairings
+			CombDCEL.torus4Sides(p.packDCEL);
+			p.packDCEL.fixDCEL_raw(p);
+		}
+		if (p.getSidePairs().size()!=5) {
+			throw new CombException("failed to layout 2-side paired edges");
+		}
+		
+		// set all RedHEdge radii to 1.0
+		RedHEdge rtrace=p.packDCEL.redChain;
+		do {
+			rtrace.setRadius(1.0);
+			rtrace=rtrace.nextRed;
+		} while (rtrace!=p.packDCEL.redChain);
 		
 		/* Idea: prescribe (via A and B) the radii for vertices 
 		 * along the outside of the red chain. Use these and 
-		 * interior radii 1.0 to set 'labels' in vector 'aspects'.
-		 * Went there are just two side-pairings (preferable),
+		 * existing interior radii to set 'radii' in vector 'aspects'.
+		 * When there are just two side-pairings (preferable),
 		 * want A to be scale factor from #1 to #3, and B to be 
 		 * scale factor from #2 to #4. TODO: verify that this
 		 * lines up with the generic (3 side-pairing) situation.
 		 */
+		D_SideData side=p.getSidePairs().get(3);
+		rtrace=side.startEdge;
+		do {
+			rtrace.setRadius(A*rtrace.getRadius());
+			rtrace=rtrace.nextRed;
+		} while(rtrace!=side.endEdge.nextRed);
 		
-		// Create list of vertices on the outside edge of the redchain.
-		NodeLink redVerts=new NodeLink(p,"Ra");
-		int rvSize=redVerts.size();
-		if (redVerts==null || rvSize<4)
-			throw new ParserException("error in getting outside of redchain");
-		
-		// rotate to start at first red edge <v,w> of first side
-		RedEdge re=p.getSidePairs().get(0).startEdge;
-		int vindx=re.vIndex;
-		if (re.prev.face==re.next.face && re.prevRed.face!=re.face) // blue face, first edge 
-			vindx = (vindx+1)%3;
-		int v=p.faces[re.face].vert[(vindx+2)%3];
-		int w=p.faces[re.face].vert[vindx];
-		int y=redVerts.findVW(v,w);
-		if (y==-1)
-			throw new ParserException("error in finding first edge");
-		else if (y==-2) // v is last, w first
-			y=redVerts.size()-1;
-		redVerts=NodeLink.rotateMe(redVerts,y);
-
-		// Get vector of indices in 'redVerts' of the corners
-		int []cornIndx=new int[p.getSidePairs().size()+1]; 
-		for (int j=0;j<p.getSidePairs().size();j++) {
-			try {
-				re=p.getSidePairs().get(j).startEdge;
-				vindx=re.vIndex;
-				if (re.prev.face==re.next.face && re.prevRed.face!=re.face) // first edge is blue face?
-					vindx = (vindx+1)%3;
-				v=p.faces[re.face].vert[(vindx+2)%3];
-				w=p.faces[re.face].vert[vindx];
-				cornIndx[j]=redVerts.findVW(v,w);
-				if (cornIndx[j]<0) 
-					throw new ParserException();
-			} catch (Exception ex) {
-				throw new ParserException("error finding corners: "+ex.getMessage());
-			}
-		}
-		cornIndx[p.getSidePairs().size()]=redVerts.size()-1;
-		
-		// set up radii. Want A to be scale factor from #1 to #3,
-		//   B to be scale factor from #2 to #4
-		// ====== 2 pairings --- parallelogram case ======
-		//   Side 1: radii run from 1.0 to B,
-		//   Side 3: (paired with 1) radii from A*B to A.
-		//   Side 2: radii run from B to A*B,
-		//   Side 4: (paired with 2) radii from A to 1.0.
-		double []redRad=new double[redVerts.size()+1];
-		if (!hexGram) { // parallelogram case
-			int j;
-			
-			// bottom (#1); Starts with radius 1.0 at first corner
-			int n13=cornIndx[1]-cornIndx[0];
-			double inc13=(B-1.0)/n13;
-			for (j=0;j<n13;j++) {
-				redRad[j]=1.0+j*inc13;
-			}
-			// right end (#2)
-			int n24=cornIndx[2]-cornIndx[1];
-			double inc24=(A-1.0)/n24;
-			for (j=0;j<n24;j++) {
-				redRad[cornIndx[1]+j]=(1.0+j*inc24)*B;
-			}
-			// top (#3)
-			if (cornIndx[3]-cornIndx[2]!=n13) {
-				throw new CombException("top and bottom counts don't match");
-			}
-			for (j=0;j<n13;j++) {
-				redRad[cornIndx[2]+j]=A*(B-inc13*j);
-			}
-			// left end (#4)
-			if (cornIndx[4]-cornIndx[3]!=n24) {
-				throw new CombException("left and right counts don't match");
-			}
-			for (j=0;j<=n24;j++) {
-				redRad[cornIndx[3]+j]=A-j*inc24;
-			}
-		}
-		else { // hex fundamental domain
-			// ====== 3 pairings --- hex fundamental domain =====
-			//  Side 1: all radii 1
-			//  Side 2: radii from 1 to B
-			//  Side 3: radii from B to A
-			//  Side 4: all radii A
-			//  Side 5: radii from A to C=A/B
-			//	Side 6: radii from C to 1
-			int j;
-			redRad[0]=1.0;
-			// first side
-			int n=cornIndx[1]-cornIndx[0];
-			for (j=1;j<=n;j++) {
-				redRad[cornIndx[0]+j]=1.0;
-			}
-			// second
-			n=cornIndx[2]-cornIndx[1];
-			double inc=(B-1.0)/n;
-			for (j=1;j<=n;j++) {
-				redRad[cornIndx[1]+j]=1.0+j*inc;
-			}
-			// third
-			n=cornIndx[3]-cornIndx[2];
-			inc=(A-B)/n;
-			for (j=1;j<=n;j++) {
-				redRad[cornIndx[2]+j]=B+j*inc;
-			}
-			// fourth
-			n=cornIndx[4]-cornIndx[3];
-			for (j=1;j<=n;j++) {
-				redRad[cornIndx[3]+j]=A;
-			}
-			// fifth
-			n=cornIndx[5]-cornIndx[4];
-			inc=(A/B-A)/n;
-			for (j=1;j<=n;j++) {
-				redRad[cornIndx[4]+j]=A+j*inc;
-			}
-			// sixth
-			n=cornIndx[6]-cornIndx[5]; // extra count here
-			inc=(1.0-A/B)/n;
-			for (j=1;j<=n;j++) {
-				redRad[cornIndx[5]+j]=A/B+j*inc;
-			}
-		}
-		
-		// set 'labels' vectors for all faces to 1.0:1.0:1.0
-		for (int f=1;f<=p.faceCount;f++) {
-			for (int j=0;j<3;j++)
-				asps[f].labels[j]=1.0;
-		}
-		
-		// Along each edge, reset face 'labels' for the red verts on the
-		//  outside of that edge.
-		for (int i=0;i<p.getSidePairs().size();i++) {
-
-			SideDescription thisSide=p.getSidePairs().get(i);
-
-			// go through outer red edges and their initial red
-			//    verts 'vi'; find fans of ref faces about vi and
-			//    set labels just for vi in these faces.
-			int h=cornIndx[i];
-			RedEdge rl=thisSide.startEdge;
-			while (h<cornIndx[i+1]) {
-				int vi=redVerts.get(h);
-				int []fanInfo=p.red_fan((RedList)rl,vi);
-				if (fanInfo[0]<0)
-					throw new CombException("error setting red radii");
-				for (int j=0;j<fanInfo[1];j++) {
-					int fc=p.getFaceFlower(vi,(fanInfo[0]+j)%p.countFaces(vi));
-					Face face=p.faces[fc];
-					asps[fc].labels[face.vertIndx(vi)]=redRad[h];
-				}
-				h++;
-				rl=rl.nextRed;
-			}
-		} // done with various sides
-
+		side=p.getSidePairs().get(4);
+		rtrace=side.startEdge;
+		do {
+			rtrace.setRadius(B*rtrace.getRadius());
+			rtrace=rtrace.nextRed;
+		} while(rtrace!=side.endEdge.nextRed);
 		return true;
 	}
 	
@@ -817,12 +675,15 @@ public class ProjStruct extends PackExtender {
 	public static CircleSimple compThird(TriAspect asp,int v2,
 			Complex c0,Complex c1) {
 		int k0,k1,k2;
-		if ((k2=asp.vertIndex(v2))<0 || asp.getCenter((k0=(k2+1)%3))==null ||
-				asp.getCenter((k1=(k2+2)%3))==null) return null;
+		if ((k2=asp.vertIndex(v2))<0 || 
+				asp.getCenter((k0=(k2+1)%3))==null ||
+				asp.getCenter((k1=(k2+2)%3))==null) 
+			return null;
 		Complex inc=c1.minus(c0);
 		Complex dis=asp.getCenter(k1).minus(asp.getCenter(k0));
 		Complex Z=inc.divide(dis);
-		Complex cent=asp.getCenter(k2).minus(asp.getCenter(k0)).times(Z).add(c0);
+		Complex cent=asp.getCenter(k2).minus(asp.getCenter(k0)).
+				times(Z).add(c0);
 		double newRad=asp.labels[k2]*Z.abs();
 		return new CircleSimple(cent,newRad,0);
 	}
@@ -872,7 +733,8 @@ public class ProjStruct extends PackExtender {
 		// store first two radii in rData: these arn't associated
 		//   with any face and they shouldn't change
 		p.setRadius(baseVert,0.1);
-		p.setRadius(nf.vert[(nf.indexFlag+1)%3],baseFactor*asp[fIndx].labels[(nf.indexFlag+1)%3]);
+		p.setRadius(nf.vert[(nf.indexFlag+1)%3],
+				baseFactor*asp[fIndx].labels[(nf.indexFlag+1)%3]);
 		
 		// store myVert radius in 'rData' and radii
 		radii[fIndx]=baseFactor*asp[fIndx].labels[(nf.indexFlag+2)%3];
@@ -882,7 +744,7 @@ public class ProjStruct extends PackExtender {
 		while (flist.hasNext()) {
 			fIndx=flist.next();
 			nf=p.faces[fIndx];
-			myVert=nf.vert[(nf.indexFlag+2)%3]; // vert this face is responsible for
+			myVert=nf.vert[(nf.indexFlag+2)%3]; // vert this face responsible for
 			baseVert=p.faces[fIndx].vert[nf.indexFlag];
 			// Except when face is blue, 'baseVert' should not be on
 			//   redchain and its radius should have been placed in rData
@@ -907,7 +769,8 @@ public class ProjStruct extends PackExtender {
 			
 			if (debug)
 				System.out.println("myVert: "+myVert+" rad "+radii[fIndx]+
-						" from "+nf.vert[nf.indexFlag]+" and "+nf.vert[(nf.indexFlag+1)%3]);
+						" from "+nf.vert[nf.indexFlag]+
+						" and "+nf.vert[(nf.indexFlag+1)%3]);
 		} // end of while
 
 		// go back to store the correct radii in 'rData' (some may have been
@@ -917,7 +780,7 @@ public class ProjStruct extends PackExtender {
 		while (flist.hasNext()) {
 			fIndx=flist.next();
 			nf=p.faces[fIndx];
-			myVert=nf.vert[(nf.indexFlag+2)%3]; // vert this face is responsible for
+			myVert=nf.vert[(nf.indexFlag+2)%3]; // vert this face responsible for
 			p.setRadius(myVert,radii[fIndx]);
 		
 			if (debug) {
@@ -949,7 +812,8 @@ public class ProjStruct extends PackExtender {
 	 * @param dtree GraphLink
 	 * @param asp []TriAspect
 	 */
-	public static void treeLayout(PackData p,GraphLink dtree,TriAspect []asp) {
+	public static void treeLayout(PackData p,GraphLink dtree,
+			TriAspect []asp) {
 		// log for debugging in /tmp/redface ...
 		DispFlags dispflags=null;
 		boolean debug=false;
@@ -988,7 +852,8 @@ public class ProjStruct extends PackExtender {
 			if (debug) {
 				int []vts=p.faces[dedge.w].vert;
 				for (int j=0;j<3;j++)
-				p.cpScreen.drawCircle(asp[dedge.w].getCenter(j), p.getRadius(vts[j]), dispflags);
+				p.cpScreen.drawCircle(asp[dedge.w].getCenter(j), 
+						p.getRadius(vts[j]), dispflags);
 				PackControl.canvasRedrawer.paintMyCanvasses(p,false);
 			}
 				
@@ -1004,7 +869,8 @@ public class ProjStruct extends PackExtender {
 	 * @param edge (faces f=edge.v, g=edge.w)
 	 * @return new TriAspect, null on error
 	 */
-	public static TriAspect plopAcrossEdge(PackData p,TriAspect []asps,EdgeSimple edge) {
+	public static TriAspect plopAcrossEdge(PackData p,
+			TriAspect []asps,EdgeSimple edge) {
 		int j;
 		if (edge==null || edge.v<=0 || edge.w<=0 || edge.v>p.faceCount ||
 				edge.w>p.faceCount || (j=p.face_nghb(edge.v,edge.w))<0)
@@ -1031,7 +897,8 @@ public class ProjStruct extends PackExtender {
 	 * @param dtree, GraphLink
 	 * @param asp[], TriAspect
 	 */
-	public static void storeCenters(PackData p,GraphLink dtree,TriAspect []asp) {
+	public static void storeCenters(PackData p,GraphLink dtree,
+			TriAspect []asp) {
 		int []cck=new int[p.nodeCount+1];
 		
 		boolean debug=false;
@@ -1059,7 +926,8 @@ public class ProjStruct extends PackExtender {
 					p.setRadius(v,asp[f].labels[j]);
 					cck[v]=1; // mark as set
 				if (debug) {// draw the circle	
-					p.cpScreen.drawCircle(p.getCenter(v), p.getRadius(v), dispflags);
+					p.cpScreen.drawCircle(p.getCenter(v), 
+							p.getRadius(v), dispflags);
 					PackControl.canvasRedrawer.paintMyCanvasses(p,false);
 				}
 				}
@@ -1082,8 +950,12 @@ public class ProjStruct extends PackExtender {
 			}
 			red.center=new Complex(asp[red.face].getCenter(red.vIndex));
 			if (debug) {
-				System.out.println("Face "+red.face+"=<"+p.faces[red.face].vert[0]+","+p.faces[red.face].vert[1]+","+
-						p.faces[red.face].vert[2]+">, vert v="+p.faces[red.face].vert[red.vIndex]+", center=("+red.center.x+","+red.center.y+")");
+				System.out.println("Face "+red.face+"=<"+
+						p.faces[red.face].vert[0]+","+
+						p.faces[red.face].vert[1]+","+
+						p.faces[red.face].vert[2]+">, vert v="+
+						p.faces[red.face].vert[red.vIndex]+
+						", center=("+red.center.x+","+red.center.y+")");
 				}
 			red.rad=asp[red.face].labels[red.vIndex];
 			red=red.next;
@@ -1128,7 +1000,8 @@ public class ProjStruct extends PackExtender {
 				next_asp.setCenters(); // put centers in normalized position
 				int jj = p.face_nghb(last_face,next_face);
 				if (jj<0) { // error, stop adding to the list
-					throw new ParserException("disconnect in chain of faces.");
+					throw new ParserException(
+							"disconnect in chain of faces.");
 				}
 				int v2=next_asp.vert[(jj+2)%3];
 				next_asp.adjustData(v2,last_asp);
@@ -1187,7 +1060,8 @@ public class ProjStruct extends PackExtender {
 			Complex c1=asp.getCenter(asp.vertIndex(v1));
 			Complex c2=asp.getCenter(asp.vertIndex(v2));
 			if (faceDo) { // draw the faces
-				if (!faceFlags.colorIsSet && (faceFlags.fill || faceFlags.colBorder))
+				if (!faceFlags.colorIsSet && 
+						(faceFlags.fill || faceFlags.colBorder))
 					faceFlags.setColor(p.getFaceColor(asp.face));
 				if (faceFlags.label)
 					faceFlags.setLabel(Integer.toString(asp.face));
@@ -1195,23 +1069,29 @@ public class ProjStruct extends PackExtender {
 				count++;
 			}
 			if (circDo) { // also draw the circles
-				if (!circFlags.colorIsSet && (circFlags.fill || circFlags.colBorder))
+				if (!circFlags.colorIsSet && 
+						(circFlags.fill || circFlags.colBorder))
 					circFlags.setColor(p.getCircleColor(v2));
 				if (circFlags.label)
 					circFlags.setLabel(Integer.toString(v2));
-				p.cpScreen.drawCircle(c2,asp.labels[asp.vertIndex(v2)],circFlags);
+				p.cpScreen.drawCircle(c2,
+						asp.labels[asp.vertIndex(v2)],circFlags);
 				count++;
 				if (drawfirst && firstasp) { // draw all circles of first face
-					if (!circFlags.colorIsSet && (circFlags.fill || circFlags.colBorder))
+					if (!circFlags.colorIsSet && 
+							(circFlags.fill || circFlags.colBorder))
 						circFlags.setColor(p.getCircleColor(v0));
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(v0));
-					p.cpScreen.drawCircle(c0,asp.labels[asp.vertIndex(v0)],circFlags);
-					if (!circFlags.colorIsSet && (circFlags.fill || circFlags.colBorder))
+					p.cpScreen.drawCircle(c0,asp.labels[asp.vertIndex(v0)],
+							circFlags);
+					if (!circFlags.colorIsSet && 
+							(circFlags.fill || circFlags.colBorder))
 						circFlags.setColor(p.getCircleColor(v1));
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(v1));
-					p.cpScreen.drawCircle(c1,asp.labels[asp.vertIndex(v1)],circFlags);
+					p.cpScreen.drawCircle(c1,
+							asp.labels[asp.vertIndex(v1)],circFlags);
 					count++;
 				}
 			}
@@ -1234,7 +1114,8 @@ public class ProjStruct extends PackExtender {
 		System.out.println("face "+fnum+": <"+vts[0]+","+vts[1]+","+vts[2]+">");
 		System.out.println("   rad labels:   "+1+",  "+r1/r0+",  "+r2/r0);
 		double rat0=asp[fnum].labels[0];
-		System.out.println("   face labels:  "+1+",  "+asp[fnum].labels[1]/rat0+",  "+
+		System.out.println("   face labels:  "+1+",  "+
+		asp[fnum].labels[1]/rat0+",  "+
 				asp[fnum].labels[2]/rat0);
 	}
 	
@@ -1248,7 +1129,8 @@ public class ProjStruct extends PackExtender {
 	 * @param edge, EdgeSimple
 	 * @return abs(log(t_f/t_g)), -1 on error, 0 for bdry edge.
 	 */
-	public static double logEdgeTs(PackData p,EdgeSimple edge,TriAspect []asp) {
+	public static double logEdgeTs(PackData p,EdgeSimple edge,
+			TriAspect []asp) {
 		int v=edge.v;
 		int w=edge.w;
 		int f=p.left_face(edge)[0];
@@ -1313,7 +1195,8 @@ public class ProjStruct extends PackExtender {
 				count++;
 			} 
 		} catch (Exception ex) {
-			throw new DataException("Error in 'effective rad' comp: "+ex.getMessage());
+			throw new DataException("Error in 'effective rad' comp: "+
+		ex.getMessage());
 		}
 		return count;
 	}
@@ -1328,7 +1211,8 @@ public class ProjStruct extends PackExtender {
 	 * @param asps, TriAspect[]
 	 * @return 1.0 if not interior edge.
 	 */
-	public static double edgeRatioError(PackData p,TriAspect []asps,EdgeSimple edge) {
+	public static double edgeRatioError(PackData p,
+			TriAspect []asps,EdgeSimple edge) {
 		if (p.isBdry(edge.v) && p.isBdry(edge.w)) // bdry edge 
 			return 1.0;
 		int []lf=p.left_face(edge.v,edge.w);
@@ -1352,7 +1236,8 @@ public class ProjStruct extends PackExtender {
 	public double angsumError(int v) {
 		if (packData.getAim(v)<=0)
 			return 0;
-		return Math.abs(angSumTri(packData,v,1.0,aspects)[0]-packData.getAim(v));
+		return Math.abs(angSumTri(packData,v,1.0,
+				aspects)[0]-packData.getAim(v));
 	}
 	
 	/** 
@@ -1364,7 +1249,8 @@ public class ProjStruct extends PackExtender {
 	 * @param v int, vertex
 	 * @return double, 1.0 if v not interior.
 	 */  
-	public static double weakConError(PackData p,TriAspect []aspects,int v) {
+	public static double weakConError(PackData p,
+			TriAspect []aspects,int v) {
 		if (p.isBdry(v))
 			return 1.0;
 		double rtio=1.0;
@@ -1394,7 +1280,8 @@ public class ProjStruct extends PackExtender {
 					sideArgChanges,sideMobius);
 //System.err.println("'theCorner' found was "+theCorner);
 			if (theCorner>0) {
-				CirclePack.cpb.msg("Torus layout corner vert = "+theCorner+" and locations are:");
+				CirclePack.cpb.msg("Torus layout corner vert = "+
+						theCorner+" and locations are:");
 				Iterator<Complex> corners=cornerPts.iterator();
 				while (corners.hasNext()) 
 					CirclePack.cpb.msg(corners.next().toString());
@@ -1407,7 +1294,8 @@ public class ProjStruct extends PackExtender {
 			DispFlags dflags=new DispFlags("");
 			for (int f=1;f<=packData.faceCount;f++) {
 				packData.cpScreen.drawFace(aspects[f].getCenter(0),
-						aspects[f].getCenter(1),aspects[f].getCenter(2),null,null,null,dflags);
+						aspects[f].getCenter(1),
+						aspects[f].getCenter(2),null,null,null,dflags);
 			}
 			repaintMe();
 			return 1;
@@ -1451,6 +1339,8 @@ public class ProjStruct extends PackExtender {
 		else if (cmd.startsWith("affine")) {
 			// this routine is tailored for tori: specify side-pair
 			// scaling in an attempt to build general affine tori
+			if (aspects==null || aspects.length!=(packData.faceCount+1))
+				setupAspects();
 
 			if (packData.genus != 1 || packData.getBdryCompCount()>0) {
 				int count=0;
@@ -1463,9 +1353,6 @@ public class ProjStruct extends PackExtender {
 				return count;
 			}
 
-			if (aspects==null || aspects.length!=(packData.faceCount+1))
-				setupAspects();
-			
 			// get the user-specified
 			double A = 1.2; // default
 			double B = .75;
@@ -1514,7 +1401,8 @@ public class ProjStruct extends PackExtender {
 				try {
 					dbw.write("anglesum:\n\n");
 					for (int v = 1; v <= packData.nodeCount; v++) {
-						dbw.write("vertex " + v + ": " + angSumTri(packData,v,1.0,aspects)[0] + "\n");
+						dbw.write("vertex " + v + ": " + 
+								angSumTri(packData,v,1.0,aspects)[0] + "\n");
 					}
 					dbw.flush();
 					dbw.close();
@@ -1558,7 +1446,8 @@ public class ProjStruct extends PackExtender {
 							if (elist!=null && elist.size()>0) {
 								EdgeSimple edge=elist.get(0);
 								msg("Edge <"+edge.v+" "+edge.w+">, t*t' = "+
-										String.format("%.8e",edgeRatioError(packData,aspects,edge)));
+										String.format("%.8e",
+												edgeRatioError(packData,aspects,edge)));
 								return 1;
 							}
 							break;
@@ -1649,7 +1538,8 @@ public class ProjStruct extends PackExtender {
 					
 					// do what's ordered
 					if (circs || facs) {
-						DispFlags dispFlags=new DispFlags(str.substring(2),packData.cpScreen.fillOpacity); // cut out -?
+						DispFlags dispFlags=new DispFlags(str.substring(2),
+								packData.cpScreen.fillOpacity); // cut out -?
 						FaceLink facelist;
 						if (items==null || items.size()==0) // do all
 							facelist = new FaceLink(packData, "F");
@@ -1671,7 +1561,8 @@ public class ProjStruct extends PackExtender {
 										double rad = tasp.labels[kk];
 										int v = tasp.vert[kk];
 							
-										if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
+										if (!dispFlags.colorIsSet && 
+												(dispFlags.fill || dispFlags.colBorder))
 											dispFlags.setColor(packData.getCircleColor(v));
 										if (dispFlags.label)
 											dispFlags.setLabel(Integer.toString(v));
@@ -1680,11 +1571,13 @@ public class ProjStruct extends PackExtender {
 									}
 								}
 								if (facs) {
-									if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
+									if (!dispFlags.colorIsSet && 
+											(dispFlags.fill || dispFlags.colBorder))
 										dispFlags.setColor(packData.getFaceColor(fnum));
 									if (dispFlags.label)
 										dispFlags.setLabel(Integer.toString(fnum));
-									packData.cpScreen.drawFace(tasp.getCenter(0),tasp.getCenter(1),tasp.getCenter(2),
+									packData.cpScreen.drawFace(tasp.getCenter(0),
+											tasp.getCenter(1),tasp.getCenter(2),
 											null,null,null,dispFlags);
 									count++;
 								}
@@ -1838,10 +1731,11 @@ public class ProjStruct extends PackExtender {
 			double pr;
 			for (int f = 1; f <= packData.faceCount; f++)
 				for (int j = 0; j < 3; j++) {
-					mnX = ((pr=aspects[f].getCenter(j).x-aspects[f].labels[j])<mnX) ? pr : mnX; 
-					mxX = ((pr=aspects[f].getCenter(j).x+aspects[f].labels[j])>mxX) ? pr : mxX; 
-					mnY = ((pr=aspects[f].getCenter(j).y-aspects[f].labels[j])<mnY) ? pr : mnY; 
-					mxY = ((pr=aspects[f].getCenter(j).y+aspects[f].labels[j])>mxY) ? pr : mxY; 
+					pr=aspects[f].getCenter(j).x-aspects[f].labels[j];
+					mnX = (pr<mnX) ? pr : mnX; 
+					mxX = (pr>mxX) ? pr : mxX; 
+					mnY = (pr<mnY) ? pr : mnY; 
+					mxY = (pr>mxY) ? pr : mxY; 
 				}
 			cpCommand("set_screen -b "+mnX+" "+mnY+" "+mxX+" "+mxY);
 			packData.cpScreen.repaint();
@@ -1927,19 +1821,21 @@ public class ProjStruct extends PackExtender {
 	 * @param sideStarts Vector<Integer) (must be allocated)
 	 * @param cornerZs Vector<Complex> (can be null)
 	 * @param sideArgs Vector<Double> (can be null)
-	 * @param sideMobs Vector<Mobius>, SidePair Mobius transformations (can be null)
+	 * @param sideMobs Vector<Mobius>, SidePair Mobius (can be null)
 	 * @return index of corner vert if there is only one
 	 *  (as obtained in 'torus4layout'), else return 0 or
 	 *  -1 on error.
 	 */
-	public static int sideInfo(PackData p,TriAspect []asps,Vector<Integer> sideStarts,
-			Vector<Complex> cornerZs,Vector<Double> sideArgs,Vector<Mobius> sideMobs) {
+	public static int sideInfo(PackData p,
+			TriAspect []asps,Vector<Integer> sideStarts,
+			Vector<Complex> cornerZs,Vector<Double> sideArgs,
+			Vector<Mobius> sideMobs) {
 		
 		if (p.getSidePairs()==null || p.getSidePairs().size()==0)
 			throw new ParserException("side pairs not set or nonexistent");
 		
-		Iterator<SideDescription> sides=p.getSidePairs().iterator();
-		SideDescription epair=null;
+		Iterator<D_SideData> sides=p.getSidePairs().iterator();
+		D_SideData epair=null;
 		int theCorner=-1;
 		while (sides.hasNext()) {
 				epair=sides.next();
@@ -1951,26 +1847,31 @@ public class ProjStruct extends PackExtender {
 				sideStarts.add(vert);
 				
 				if (cornerZs!=null || sideArgs!=null) {
-					int findx=epair.startEdge.face;
+					int findx=epair.startEdge.myEdge.face.faceIndx;
 					Face face=p.faces[findx];
-					Complex z1=new Complex(asps[findx].getCenter(face.vertIndx(vert)));
+					Complex z1=new Complex(asps[findx].
+							getCenter(face.vertIndx(vert)));
 					if (cornerZs!=null)
 						cornerZs.add(z1);
 
 					if (sideArgs!=null) {
-						Complex z2=new Complex(asps[findx].getCenter((face.vertIndx(vert)+1)%3));
+						Complex z2=new Complex(asps[findx].
+								getCenter((face.vertIndx(vert)+1)%3));
 				
 						// find change in argument along this side
 						double argSum =z2.divide(z1).arg();
-						RedEdge currRe=epair.startEdge;
-						RedEdge nextRe=currRe.nextRed;
+						RedHEdge currRe=epair.startEdge;
+						RedHEdge nextRe=currRe.nextRed;
 						while (currRe!=epair.endEdge) { 
 							currRe=nextRe;
 							nextRe=currRe.nextRed;
-							face=p.faces[currRe.face];
-							z1=new Complex(asps[currRe.face].getCenter(currRe.startIndex));
-							z2=new Complex(asps[currRe.face].getCenter((currRe.startIndex+1)%3));
-							argSum +=z2.divide(z1).arg();
+							face=p.faces[currRe.myEdge.face.faceIndx];
+// OBE:??
+//							z1=new Complex(asps[currRe.myEdge.face.faceIndx].
+//									getVertCenter(currRe.myEdge));
+//							z2=new Complex(asps[currRe.myEdge.face.faceIndx].
+//									getCenter((currRe.startIndex+1)%3));
+//							argSum +=z2.divide(z1).arg();
 						}
 						sideArgs.add(argSum);
 					}
@@ -2031,140 +1932,54 @@ public class ProjStruct extends PackExtender {
 		return ans;
 	}
 	
-	/**
-	 * 
-	 * @param p PackData
-	 * @param factors
-	 * @param passes
-	 * @return int, repack count, -1 on error
-	 */
-	public static int affinePack(PackData p,double[] factors,int passes) {
-  	  PackDCEL pdcel=p.packDCEL;
-  	  if (pdcel.pairLink==null || pdcel.pairLink.countPairs()<2)
-		  throw new ParserException("'affpack' requires side-pairings to exit");
-  	  int geom=PackData.getConfGeometry(p);
-  	  if (geom!=0)
-  		  throw new DataException("'affpack': data doesn't support affine structure");
-  	  if (p.hes!=0)
-  		  p.geom_to_e();
-  	  int pairCount=pdcel.pairLink.countPairs();
 
-  	  // is this a torus? adjust layout to have 2 side-pairings
-  	  if (factors!=null && p.getBdryCompCount()==0 && p.genus==1) { 
-		  if (pdcel.pairLink.countPairs()!=2) 
-			  CombDCEL.torus4Sides(pdcel);
-  	  }
-
-  	  // Figure out the situation: 
-  	  // are scalar factors specified?
-  	  if (factors!=null) {
-  		  // find first paired edge
-
-  		  D_SideData aSide=pdcel.pairLink.getPair(1);
-  		  if (aSide==null) {
-  			  throw new CombException("didn't find expected paired sides");
-  		  }
-  		  
-  		  // multiply paired vertices with factor[0]
-  		  RedHEdge rtrace=aSide.startEdge;
-  		  do {
-  			  double rad=rtrace.getRadius();
-  			  rtrace.twinRed.nextRed.setRadius(rad*factors[0]);
-  			  rtrace=rtrace.nextRed;
-  		  } while (rtrace!=aSide.startEdge);
-  		  
-  		  // find a second paired edge?
-		  if (factors.length==2) {
-			  aSide=pdcel.pairLink.getPair(2);
-		  }
-  		  if (aSide==null) {
-  			  throw new CombException("didn't find expected paired sides");
-  		  }
-  		  
-  		  // multiply paired vertices with factor[1]
-  		  rtrace=aSide.startEdge;
-  		  do {
-  			  double rad=rtrace.getRadius();
-  			  rtrace.twinRed.nextRed.setRadius(rad*factors[1]);
-  			  rtrace=rtrace.nextRed;
-  		  } while (rtrace!=aSide.startEdge);
-  		  
-  	  }
-  	  
-      int count = 0;
-      double accum=0.0;
-      if (passes<=0)
-    	  passes=1000;
-
-      // find vertices to work on and set cutoff value
-      int []inDex =new int[p.nodeCount+1];
-      int aimnum=0;
-      for (int v=1;v<=p.nodeCount;v++) {
-    	  if (p.getAim(v)>0) { //   p.getAim(j)>0) {
-    		  inDex[aimnum++]=v;
-        	  double curv=pdcel.getVertAngSum(pdcel.vertices[v]);
-        	  double err=curv-p.getAim(v);
-    		  accum += (err<0) ? (-err) : err;
-    	  }
-      }
-      if (aimnum==0) return 0; // nothing to repack
-      
-      double recip=.333333/aimnum;
-      double cut=accum*recip;
-
-      while ((cut > RePacker.RP_TOLER && count<passes)) {
-    	  for (int j=0;j<aimnum;j++) {
-    		  int v=inDex[j];
-        	  double asum=pdcel.getVertAngSum(pdcel.vertices[v]);
-        	  double aim=pdcel.p.getAim(v);
-        	  int num=p.countFaces(v);
-        	  double factor=d_EuclPacker.uniFactor(num, asum, aim);
-        	  pdcel.setRadii_by_factor(v,factor);
-    	  }
-
-          accum=0;
-          for (int j=0;j<aimnum;j++) {
-        	  int v=inDex[j];
-        	  double curv=pdcel.getVertAngSum(pdcel.vertices[v]);
-        	  double err=curv-p.getAim(v);
-        	  accum += (err<0) ? (-err) : err;
-          }
-          cut=accum*recip;
-        
-          // show activity 
-//          if ((count % 10)==0) repack_activity_msg();
-                
-          count++;
-      } /* end of while */
-      return count;
-    }
     
 	/** 
 	 * Override method for cataloging command structures
 	 */
 	public void initCmdStruct() {
 		super.initCmdStruct();
-		cmdStruct.add(new CmdStruct("affine","{a b}",null,"set face ratio data for torus, side pairing factors a, b"));
-		cmdStruct.add(new CmdStruct("corners","v1 v2 v3 v4",null,"vertices at corners, v1,v2=bottom, v2,v3=right"));
-		cmdStruct.add(new CmdStruct("affpack","{v..}",null,"run iterative affine packing method"));
-		cmdStruct.add(new CmdStruct("afflayout",null,null,"layout a fundamental domain using computed ratios"));
-		cmdStruct.add(new CmdStruct("set_labels","-[rzst] f..",null,"face label data using: -r = radii, -z = centers, -s= random"));
-		cmdStruct.add(new CmdStruct("draw","-[cfB]flags",null,"faces, f, circles, c, both B, plus normal flags"));
-		cmdStruct.add(new CmdStruct("set_screen",null,null,"set screen to get the full fundamental domain"));
-		cmdStruct.add(new CmdStruct("log_radii",null,null,"write /tmp file with labels"));
-		cmdStruct.add(new CmdStruct("status",null,null,"No flags? error norms: curvatures, strong consistency\n"+
+		cmdStruct.add(new CmdStruct("affine","{a b}",null,
+				"set face ratio data for torus, side pairing factors a, b"));
+		cmdStruct.add(new CmdStruct("corners","v1 v2 v3 v4",null,
+				"vertices at corners, v1,v2=bottom, v2,v3=right"));
+		cmdStruct.add(new CmdStruct("affpack","{v..}",null,
+				"run iterative affine packing method"));
+		cmdStruct.add(new CmdStruct("afflayout",null,null,
+				"layout a fundamental domain using computed ratios"));
+		cmdStruct.add(new CmdStruct("set_labels","-[rzst] f..",null,
+				"face label data using: -r = radii, -z = centers, -s= random"));
+		cmdStruct.add(new CmdStruct("draw","-[cfB]flags",null,
+				"faces, f, circles, c, both B, plus normal flags"));
+		cmdStruct.add(new CmdStruct("set_screen",null,null,
+				"set screen to get the full fundamental domain"));
+		cmdStruct.add(new CmdStruct("log_radii",null,null,
+				"write /tmp file with labels"));
+		cmdStruct.add(new CmdStruct("status",null,null,
+				"No flags? error norms: curvatures, strong consistency\n"+
 				"With flags: return single vert info"));
-		cmdStruct.add(new CmdStruct("set_eff",null,null,"Using centers, set packing rad to the 'effective' radii"));
-		cmdStruct.add(new CmdStruct("ccode","-[cfe] -m m j..",null,"Color code faces, vertices, or edges, mode m"));
-		cmdStruct.add(new CmdStruct("dTree",null,null,"Update the dual spanning tree, e.g., after edge flip."));
-		cmdStruct.add(new CmdStruct("Lface",null,null,"draw faces using TriAspect centers, spanning tree"));
-		cmdStruct.add(new CmdStruct("Ltree",null,null,"draw dual spanning tree using TriAspect centers"));
-		cmdStruct.add(new CmdStruct("LinCircs",null,null,"Draw the incircles of the faces, using aspects 'center's"));
-		cmdStruct.add(new CmdStruct("equiSides",null,null,"set 'sides' to 1; faces are equilateral"));
-		cmdStruct.add(new CmdStruct("sideRif","v..",null,"Riffle by adjusting 'sides'"));
-		cmdStruct.add(new CmdStruct("update","-[sl] f..",null,"Update: -s centers to sides; -l sides to labels"));
-		cmdStruct.add(new CmdStruct("tT","m",null,"Experimental layouts: m=1 is latest, m>1 older"));
-		cmdStruct.add(new CmdStruct("sI",null,null,"Side information: corners, angles, etc."));
+		cmdStruct.add(new CmdStruct("set_eff",null,null,
+				"Using centers, set packing rad to the 'effective' radii"));
+		cmdStruct.add(new CmdStruct("ccode","-[cfe] -m m j..",null,
+				"Color code faces, vertices, or edges, mode m"));
+		cmdStruct.add(new CmdStruct("dTree",null,null,
+				"Update the dual spanning tree, e.g., after edge flip."));
+		cmdStruct.add(new CmdStruct("Lface",null,null,
+				"draw faces using TriAspect centers, spanning tree"));
+		cmdStruct.add(new CmdStruct("Ltree",null,null,
+				"draw dual spanning tree using TriAspect centers"));
+		cmdStruct.add(new CmdStruct("LinCircs",null,null,
+				"Draw the incircles of the faces, using aspects 'center's"));
+		cmdStruct.add(new CmdStruct("equiSides",null,null,
+				"set 'sides' to 1; faces are equilateral"));
+		cmdStruct.add(new CmdStruct("sideRif","v..",null,
+				"Riffle by adjusting 'sides'"));
+		cmdStruct.add(new CmdStruct("update","-[sl] f..",null,
+				"Update: -s centers to sides; -l sides to labels"));
+		cmdStruct.add(new CmdStruct("tT","m",null,
+				"Experimental layouts: m=1 is latest, m>1 older"));
+		cmdStruct.add(new CmdStruct("sI",null,null,
+				"Side information: corners, angles, etc."));
 
 	}
 	

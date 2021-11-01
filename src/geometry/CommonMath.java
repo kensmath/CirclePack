@@ -406,10 +406,11 @@ public class CommonMath {
 	}
 
 	/**
-	 * Compute angle sum at 'v' given radius 'rad'
+	 * Compute angle sum at 'v' given radius 'rad'. Note: if 'rad'
+	 * is <= 0, then computation uses current stored radius.
 	 * @param p PackData
 	 * @param v int
-	 * @param rad double
+	 * @param rad double, possibly <= 0
 	 * @param uP UtilPacket, instantiated by calling routine
 	 * @return boolean, false on some failure
 	 */

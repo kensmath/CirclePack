@@ -2,14 +2,13 @@ package geometry;
 import baryStuff.BaryPoint;
 import complex.Complex;
 import complex.MathComplex;
+import dcel.PackDCEL;
+import dcel.RedHEdge;
 import exceptions.DataException;
 import exceptions.LayoutException;
 import exceptions.MobException;
-import komplex.RedEdge;
-import komplex.RedList;
 import math.Mobius;
 import math.Point3D;
-import packing.PackData;
 import util.RadIvdPacket;
 
 /**
@@ -1011,78 +1010,75 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
   }
 	
 	/**
-	 * Normalizes hyperbolic packing by putting point a at origin and (if g is
-	 * not essentially equal to a) rotating to put g on positive y-axis.
-	 * @param p @see PackData
+	 * Normalizes hyperbolic packing by putting 'a' at origin 
+	 * and (if g is not essentially equal to a) rotating so 'g'
+	 * is on positive y-axis.
+	 * @param p PackDCEL
 	 * @param a Complex (usually, a=alpha center)
 	 * @param g Complex (usually, g=gamma center)
-	 * @return int: 0=nothing done, 1=translation, 2=rotation, 3=both
+	 * @return int: 0=nothing done
 	 */
-	public static int h_norm_pack(PackData p,Complex a, Complex g) {
-		Complex z=new Complex(1.0);
-		int retn=0;
-		boolean keepon = false;
-		RedList trace;
-		
+	public static Mobius h_norm_pack(PackDCEL pdcel,Complex a, Complex g) {
 		if (a.abs()>Mobius.MOD1)
 			throw new DataException("'a' is too close to unit circle");
-		
-		// get rotation amount: multiply by z 
-		if (a.abs()>OKERR)  // transform by a to get new g
-			g=Mobius.mob_trans(g,a);
-		double argag=0.0;
-		if (g.abs()>100.0*OKERR) {
-			argag=Math.PI/2.0-g.arg();
-			retn=2;
-		}
-		z=new Complex(0.0,argag).exp();
-
-		// is a non-zero enough to bother to move?
-		if (a.abs()>OKERR) {
-			for (int i = 1; i <= p.nodeCount; i++)
-				p.setCenter(i,Mobius.mob_trans(p.getCenter(i),a).times(z));
-			if ((trace = p.redChain) != null) {
-				keepon = true;
-				while (trace != p.redChain || keepon) {
-					keepon = false;
-					trace.center = Mobius.mob_trans(trace.center,a).times(z);
-					
-		    		// if "blue", must fix second copy also
-					if (trace.prev.face==trace.next.face && trace instanceof RedEdge) {
-						RedEdge re=((RedEdge)trace).nextRed;
-						if (re.face==trace.face) // yes, this is second copy 
-							re.center=Mobius.mob_trans(re.center,a).times(z);
-					}
-					
-					trace = trace.next;
+		Mobius mob=Mobius.mobNormDisc(a,g);
+		if (Mobius.frobeniusNorm(mob)>Mobius.MOB_TOLER) {
+			// directly adjust in 'vData'
+			for (int v = 1; v <= pdcel.vertCount; v++) {
+				Complex z = pdcel.p.vData[v].center;
+				Complex newz= mob.apply(z);
+				pdcel.p.vData[v].center =newz;
+				
+				// if horocycle, adjust radius as well
+				double radius=pdcel.p.vData[v].rad;
+				if (radius<0) {
+					double newr=horoEuclRad(mob,z,-radius);
+					pdcel.p.vData[v].rad=-newr;
 				}
 			}
-			return retn+1;
-		}
-		
-		else if (retn==2) { // just do rotation
-			for (int i = 1; i <= p.nodeCount; i++)
-				p.setCenter(i,p.getCenter(i).times(z));
-			if ((trace = p.redChain) != null) {
-				keepon = true;
-				while (trace != p.redChain || keepon) {
-					keepon = false;
-					trace.center = trace.center.times(z);
-
-		    		// if "blue", must fix second copy also
-					if (trace.prev.face==trace.next.face && trace instanceof RedEdge) {
-						RedEdge re=((RedEdge)trace).nextRed;
-						if (re.face==trace.face) // yes, this is second copy 
-							re.center=re.center.times(z);
+			// directly adjust in red chain
+			if (pdcel.redChain != null) {
+				RedHEdge rtrace = pdcel.redChain;
+				do {
+					Complex z = rtrace.getCenter();
+					Complex newz= mob.apply(z);
+					rtrace.setCenter(newz);
+					
+					// if horocycle, adjust radius as well
+					double radius=rtrace.getRadius();
+					if (radius<0) {
+						double newr=horoEuclRad(mob,z,-radius);
+						rtrace.setRadius(-newr);
 					}
 
-					trace = trace.next;
-				}
+					rtrace = rtrace.nextRed;
+				} while (rtrace != pdcel.redChain);
 			}
-			return retn;
 		}
-		
-		return 0; // did neither
+		return mob;
+	}
+	
+	/**
+	 * Given horocycle (center z, eucl radius rad) and
+	 * Mobius transformation of the disc, return eucl 
+	 * radius of the image horocycle.
+	 * @param mob Mobius
+	 * @param z Complex
+	 * @param rad double, positive
+	 * @return double, new positive radius
+	 */
+	public static double horoEuclRad(Mobius mob,Complex z,double rad) {
+		// get three pts on original horocycle
+		Complex z1=z.divide(z.abs());
+		Complex z2=z1.times(1.0-2.0*rad);
+		Complex e_ctr=z1.times(1.0-rad);
+		Complex perp=z1.times(rad).times(new Complex(0,1));
+		Complex z3=e_ctr.add(perp);
+		z1=mob.apply(z1);
+		z2=mob.apply(z2);
+		z3=mob.apply(z3);
+		CircleSimple sc = EuclMath.circle_3(z1, z2, z3);
+		return sc.rad;
 	}
 
 	/**

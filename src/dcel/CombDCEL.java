@@ -12,12 +12,10 @@ import exceptions.DCELException;
 import exceptions.DataException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
-import komplex.Face;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
-import listManip.VertList;
 import listManip.VertexMap;
 import packing.PackData;
 import panels.PathManager;
@@ -1889,13 +1887,13 @@ public class CombDCEL {
 	
 	/** 
 	 * Alternative face drawing orders for simply connected 
-	 * complexes. Typically ('keepon=true') we have a 'HalfLink'
+	 * complexes. Typically ('keepon=true') we get a 'HalfLink'
 	 * which lays out every circle, but our aim is to avoid 
 	 * some layout problems by not using some possibly unreliable
-	 * locations for later layouts, e.g., avoiding use of
+	 * vertices for later layouts, e.g., avoiding use of
 	 * 3/4-degree vertices and/or vertices having extremely 
-	 * small radii. Note that we are not actually computing the
-	 * layout, just arranging the drawing order.
+	 * small radii. (Note that we are not actually computing the
+	 * layout, just arranging the drawing order.)
 	 * 
 	 * The vertices to avoid using (as much as possible) are
 	 * provided in 'uvert'. We keep track in 'vstatus' of 
@@ -1967,207 +1965,65 @@ public class CombDCEL {
 		
 		// now we cycle through 'redolist' to identify
 		//    vertices not placed, see if they're ready
-		//    to be placed.
+		//    to be placed, then follow 'redolist' to
+		//    see if this allows any of them to be placed.
 
 		// finding one ready for
+		boolean hits=true;
+		while (hits && redolist.size()>0) {
+			hits=false;
+			// go until you find one vert you can place
+			for (int j=0;(j<redolist.size() && !hits);j++) {
+				HalfEdge edgetry=redolist.get(j);
+				Vertex oppVert=edgetry.next.next.origin;
+				int opp=oppVert.vertIndx;
 				
-			}
-			
-		}
-		
-		
-	  int num,vert,face,v1,v2,lastface,indx,v,w,way;
-	  int vertcount=0,nnum;
-	  VertList priortrace,trace,endmain,endnew;
-	  VertList newlist=null,mainlist=null;
-
-	  boolean pickup=false;
-	  boolean hits=true;
-	  boolean fstop=true;
-
-	  if (isSimplyConnected()) {
-	      flashError("Tailored layouts (layout -t) currently limited "+
-			 "to simply connected complexes.");
-	      throw new ParserException();
-	  }
-	  // create "newfaces" space, copy most stuff over.
-	  Face []newfaces=new Face[faceCount+1];
-	  for (int j=1;j<=faceCount;j++) {
-		  newfaces[j]=new Face(this);
-	      newfaces[j]=faces[j].clone();
-	      newfaces[j].plotFlag=newfaces[j].nextFace=newfaces[j].indexFlag=0;
-	    }
-	    
-	  // initialize 
-	  mainlist=trace=priortrace=endmain=new VertList();
-	  newlist=endnew=new VertList();
-	  for (int i=1;i<=nodeCount;i++) kData[i].utilFlag=kData[i].plotFlag=0;
-
-	  /* start with alpha (regardless of its situation) and contiguous
-	     neighbors (unmarked, if possible). */
-	  v=kData[alpha].flower[0];
-	  w=kData[alpha].flower[1];
-	  int nbr=0;
-	  if (getVertMark(v)!=0 || getVertMark(w)!=0) {
-	      for (int i=0;((i<countFaces(alpha)) && nbr==0);i++)
-		if (getVertMark((v=kData[alpha].flower[i]))==0
-		    && getVertMark((w=kData[alpha].flower[i+1]))==0)
-		  nbr=i;
-	    }
-	  kData[alpha].plotFlag=kData[v].plotFlag=kData[w].plotFlag=1;
-	  for (int i=0;i<=countFaces(alpha);i++)
-	    kData[kData[alpha].flower[i]].utilFlag++;
-	  for (int i=0;i<=countFaces(v);i++)
-	    kData[kData[v].flower[i]].utilFlag++;
-	  for (int i=0;i<=countFaces(w);i++)
-	    kData[kData[w].flower[i]].utilFlag++;
-	  vertcount=3;
-	  endmain.v=alpha;
-	  endmain=endmain.next=new VertList();
-	  endmain.v=v;
-	  endmain=endmain.next=new VertList();
-	  endmain.v=w;
-	  util_A=lastface=getFaceFlower(alpha,nbr);// **** *(face_org[alpha]+nbr+1);
-	  newfaces[lastface].indexFlag=face_index(lastface,alpha);
-	  newfaces[lastface].plotFlag=1;
-	  for (int i=1;i<=faceCount;i++) newfaces[i].nextFace=lastface;
-
-
-	  /* We keep two lists of vertices: 'mainlist' is the one we're
-	     going through. As long as mainlist isn't empty and we're
-	     getting hits of new vertices, build 'newlist' of newly added
-	     vertices. When through mainlist, we adjoin newlist to end,
-	     pass through mainlist again. If we get through mainlist and
-	     newlist is null, we pass through mainlist to add first 'marked'
-	     vertex, add it to end of mainlist, then go through mainlist
-	     again. Keeping track in utilFlag of number of nghbs placed
-	     (depends on with int/bdry), plotFlag indicates faces placed
-	     (though others may have all vertices placed). Remove verts 
-	     from mainlist if all nghbs placed. */
-
-	  hits=true;
-	  while (mainlist!=null && (pickup || hits)) {
-	      hits=false;
-	      priortrace=trace=mainlist;
-
-	      /* Go through mainlist of verts. Add new verts to newlist as
-		 encountered, remove from mainlist those we're finished
-		 with. */
-	      while (trace!=null) {
-		  vert=trace.v;
-		  // already hit all neighbors of this vert? 
-		  if (kData[vert].utilFlag
-		      ==(countFaces(vert)+getBdryFlag(vert))) {
-		      if (trace==mainlist) { // at beginning of list 
-			  priortrace=trace=mainlist.next;
-			  mainlist=trace;
-			}
-		      else if (trace==endmain) { // at end of list 
-			  endmain=priortrace;
-			  endmain.next=trace=null;
-			}
-		      else {
-			  priortrace.next=trace.next;
-			  trace=priortrace.next;
-			}
-		    }
-		  else if (getVertMark(vert)==0 || pickup) { // process this vert 
-		      num=countFaces(vert); // num of faces
-		      nnum=num+getBdryFlag(vert); // num of nghbs 
-		      // go through the faces 
-		      fstop=true;
-		      while (fstop && kData[vert].utilFlag!=nnum) {
-			  fstop=false;
-			  for (int f=0;(f<num && kData[vert].utilFlag!=nnum);f++) 
-			      // **** replaced a face_org here. okay??
-			      if (newfaces[(face=getFaceFlower(vert,f))].plotFlag<=0) {
-			      indx=face_index(face,vert);
-			      v1=newfaces[face].vert[(indx+1)%3];
-			      v2=newfaces[face].vert[(indx+2)%3];
-			      // can we place either v1 or v2? 
-			      if (kData[v2].plotFlag>0 && kData[v1].plotFlag>0)
-				newfaces[face].plotFlag=1;
-			      else if (kData[v2].plotFlag<=0 
-				       && kData[v1].plotFlag>0
-				       && (pickup || getVertMark(v1)==0)) {
-				  newfaces[lastface].nextFace=face;
-				  lastface=face;
-				  newfaces[face].indexFlag=indx;
-				  newfaces[face].plotFlag=1;
-				  kData[v2].plotFlag=1;
-				  way=countFaces(v2)+getBdryFlag(v2);
-				  for (int i=0;i<way;i++)
-				    kData[kData[v2].flower[i]].utilFlag++;
-				  hits=true;
-				  fstop=true;
-				  vertcount++;
-				  if (kData[v2].utilFlag<
-				      (countFaces(v2)+getBdryFlag(v2))) {
-				      endnew=endnew.next=new VertList();
-				      endnew.v=v2;
-				  }
-			      }
-			      else if (kData[v1].plotFlag<=0 
-				       && kData[v2].plotFlag>0
-				       && (pickup || getVertMark(v2)==0)) {
-				  newfaces[lastface].nextFace=face;
-				  lastface=face;
-				  newfaces[face].indexFlag=(indx+2)%3;
-				  newfaces[face].plotFlag=1;
-				  kData[v1].plotFlag=1;
-				  way=countFaces(v1)+getBdryFlag(v1);
-				  for (int i=0;i<way;i++)
-				    kData[kData[v1].flower[i]].utilFlag++;
-				  hits=true;
-				  fstop=true;
-				  vertcount++;
-				  if (kData[v1].utilFlag<
-				      (countFaces(v1)+getBdryFlag(v1))) {
-				      endnew=endnew.next=new VertList();
-				      endnew.v=v1;
-				    }
+				// if 'opp' not placed, try to place it using
+				//   outer edges
+				if (vstatus[opp]==-1 || vstatus[opp]==0) { // not yet placed
+					HalfLink outer=oppVert.getOuterEdges();
+					Iterator<HalfEdge> ois=outer.iterator();
+					while (ois.hasNext()) {
+						he=ois.next();
+						if (vstatus[he.origin.vertIndx]>0 &&
+								vstatus[he.next.origin.vertIndx]>0) {
+							if (vstatus[opp]==-1) {
+								vstatus[opp]=-2;
+								redolist.remove(j);
+								hits=true;
+							}
+							else if (vstatus[opp]==0) {
+								vstatus[opp]=1;
+								redolist.remove(j);
+								hits=true;
+							}
+							
+							// only keep edges of redolist if target vert
+							//   still not placed.
+							HalfLink newredo=new HalfLink();
+							for (int k=0;k<redolist.size();k++) {
+								he=redolist.get(k);
+								opp=he.next.next.origin.vertIndx;
+								// not placed?
+								if (vstatus[opp]==-1 || vstatus[opp]==0) {
+									newredo.add(he);
+								}
+							}
+							redolist=newredo;
+						}
+					}
 				}
-			      if (pickup && hits) { // kick out of for and while's 
-				  f=num+1;
-				  fstop=false;
-				  trace=null;
-				}
-			      } // end of for f 
-		      } // end of face while 
-		      if (trace!=null) {
-			  priortrace=trace;
-			  trace=trace.next;
-		      }
-		  } // end of else processing 
-		  else {
-		      priortrace=trace;
-		      trace=trace.next;
-		    }
-		} // end of trace while 
-	      if (hits) {
-		  if (newlist.next!=null) { // add newlist to end of mainlist 
-		      endmain.next=newlist.next;
-		      endmain=endnew;
-		      newlist.next=null;
-		      endnew=newlist;
-		    }
-		  pickup=false;
-		}
-	      else if (keepon && !pickup) pickup=true; /* pickup true means to
-						      use a marked vert;
-						      we resort to this
-						      only when keepon is true. */
-	      else pickup=false; // no hits among marked/unmarked; quit. 
-	    } // end of mainlist while 
-	    
-	  if (vertcount!=nodeCount)
-	    CirclePack.cpb.msg("tailor_face_order: only placed "+
-						   vertcount+" of the "+
-						   nodeCount+" vertices");
-	  else 
-	    CirclePack.cpb.msg("tailor_face_order success");
-	  if (vertcount!=0) return newfaces;
-	  return null;
+			} // done going through 'redolist'
+		} // 
+
+		// reaching here, if 'redolist' is not yet empty, there
+		//   should be vertices not laid out; the only choice
+		//   now is whether to use unreliables to finish off
+		if (!keepon || redolist.size()==0)
+			return newOrder;
+		
+		newOrder.abutMore(redolist);
+		return newOrder;
 	}
 		      
 	/**
@@ -2738,10 +2594,9 @@ public class CombDCEL {
 	 * Double this packing across one or more full 
 	 * bdry components, or if 'segment' is true, 
 	 * double across a segment of one bdry component. 
-	 * Return the index of the reflection of alpha.
-	 * Using clones, so origin should be unchanged.
+	 * Using clones, so original data should be unchanged.
 	 * 'oldNew' can be used to find reflection of alpha.
-	 * @param pdcel PackDCEL
+	 * @param pdc PackDCEL
 	 * @param blist NodeLink
 	 * @param segment boolean
 	 * @return PackDCEL
@@ -2758,7 +2613,8 @@ public class CombDCEL {
 			if (segment) {
 				int n=blist.size()-1; // number of edges
 				int v=blist.getLast(); // choose last to be clw
-				return CombDCEL.d_adjoin(pdc1, pdc2,v,v,n);
+				PackDCEL newpdcel=CombDCEL.d_adjoin(pdc1, pdc2,v,v,n);
+				return newpdcel; 
 			}			
 		
 			// first adjoins two, the rest are self-adjoins 
@@ -3613,18 +3469,19 @@ public class CombDCEL {
 	  /**
 	   * Flip an interior edge. In a triangulation, an interior edge is
 	   * shared by two faces. To "flip" the edge means to remove it and
-	   * replace it with the other diagonal in the union of those faces. The
-	   * number of faces, edges, and vertices is not changed, but the calling
-	   * routine must update combinatorics. 'redProblem' is instantiated by
-	   * the calling routine; if true on return, then the flipped edge was
-	   * in the red chain, requiring extra work in the update. Faces are
-	   * reused.
+	   * replace it with the other diagonal in the union of those faces. 
+	   * The number of faces, edges, and vertices is not changed, but 
+	   * the calling routine must update combinatorics. 'redProblem' 
+	   * is instantiated by the calling routine; if true on return, 
+	   * then the flipped edge was in the red chain, requiring extra 
+	   * work in the update. Faces are reused.
 	   * @param pdcel PackDCEL
 	   * @param hedge HalfEdge
 	   * @param redProblem Boolean, return true if red Chain is disrupted
 	   * @return int 1 on success
 	   */
-	  public static int flipEdge(PackDCEL pdcel,HalfEdge hedge,Boolean redProblem) {
+	  public static int flipEdge(PackDCEL pdcel,HalfEdge hedge,
+			  Boolean redProblem) {
 		  redProblem=false;
 		  
 		  // if 'hedge' is bdry or faces not triangles, error

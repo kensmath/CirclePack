@@ -51,7 +51,6 @@ import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
-import input.CommandStrParser;
 import komplex.AmbiguousZ;
 import komplex.CookieMonster;
 import komplex.DualTri;
@@ -65,7 +64,6 @@ import komplex.SideDescription;
 import komplex.Triangulation;
 import listManip.BaryCoordLink;
 import listManip.BaryLink;
-import listManip.CentList;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
@@ -2013,7 +2011,7 @@ public class PackData{
         
         if ((flags & 0010)!= 0 && (flags & 0020)==0) { // new radii, no centers
         	try {
-        		CompPackLayout();
+        		packDCEL.layoutPacking();
         	} catch(Exception ex) {
         		CirclePack.cpb.errMsg("'readpack': exception in drawing order");
         	}
@@ -5684,26 +5682,6 @@ public class PackData{
 			setPlotFlag(i,1);
 	}
 	
-	
-	/**
-	 * TODO: convenience for DCEL or traditional
-	 * @return int
-	 */
-	public int CompPackLayout() {
-		int ans=0;
-		if (packDCEL!=null) {
-			return packDCEL.layoutPacking();
-		}
-		
-		// traditional
-		try {
-			return comp_pack_centers(false,false,2,
-					CommandStrParser.LAYOUT_THRESHOLD);
-		} catch(Exception ex) {
-			throw new CombException("layout error (traditional). "+ex.getMessage());
-		}
-	}
-	
 	/** 
 	 * Compute centers of face: 'indx' circle at origin, indx+1
 	 * in standard orientation (namely, in eucl, on positive x-axis),
@@ -5837,440 +5815,6 @@ public class PackData{
 	  setCenter(vert,z);
 	  return (count);
 	} 
-	
-	/**
-	 * Find circle centers for packing based on current radii by going through
-	 * faces in order (see 'facedraworder'). Various options and error cutoffs 
-	 * to improve quality, catch errors. (Note: spherical layout is not
-	 * robust (actually, it hardly exists); best to project from plane or disc.)
-	 * 
-	 * Each vertex has 'plot_flag'; set to 1 if placement seems okay; some 
-	 * display/print situations may use only circles with plot_flag>0.
-	 * 
-	 * Start layout with 'firstFace' (normally, 'alpha' at origin); last step
-	 * normalizes 'gamma' vert on y>0 axis. Only compute each circle's center
-	 * once. If errflag is true, only circles placed w/o too much error have
-	 * plot_flag>0.
-	 * 
-	 * Wrap up tasks: identify/fix any 'nan' centers, which happen most often in
-	 * inv dist cases. For now, fix by using average of nghb centers.
-	 * 
-	 * Record rad/cent in redlist, if it exists, BUT use cent/rad data from pack
-	 * (not redlist data).
-	 * 
-	 * Use redlist data to set any side-pairing Mobius transforms.
-	 * 
-	 * @param errflag boolean: true, then plot_flag <=0 if center doesn't meet 
-	 * placement criteria; use only verts with plotFlag's >0 when computing 
-	 * later centers. 
-	 * @param dflag boolean: true, then write diagnostic file /tmp/layout.log 
-	 * of problem placements.
-	 * @param opt int: 1 = use drawing-order only (ie. go to next face, compute center of
-	 * third vert from other two -- this is the original 'fix' method); 2 = use
-	 * average of already plotted neighbors; 3 = ??? 
-	 * @param crit double: gives accuracy criteria (if errflag true). Eg., don't
-	 * use computed center of v if nghbs u,w actual distance apart is off by
-	 * factor > crit. Should have default value to use for crit in general; can
-	 * experiment with it.
-	 * @return int, number of failed placements.
-	 * 
-	 */
-	public int comp_pack_centers(boolean errflag,boolean dflag,int opt,double crit) 
-	throws CombException,MobException,RedListException,IOException {
-		
-		// TODO: ignore parameters for now in DCEL case
-		if (packDCEL!=null) {
-			return packDCEL.layoutPacking();
-		}
-		
-	  int nf,n0,n1,n,vert,count,v,indx,lastface;
-	  int v_ind;
-	  boolean keepon=true;
-	  boolean simp_conn_flag=false;
-	  boolean flick=true;
-	  boolean carryon=false;
-	  boolean tmp_debug=false;
-	  Complex z;
-	  RedList trace;
-	  BufferedWriter logwriter=null;
-	  boolean debug=false;
-	  
-	  if (debug) LayoutBugs.print_drawingorder(this,true);
-
-	  if ((euler==1 || euler==2) && genus==0) 
-		  simp_conn_flag=true;
-	  for (int j=1;j<=nodeCount;j++) { 
-		  setPlotFlag(j,0);
-		  setQualFlag(j,0);
-	  }
-	  for (int j=1;j<=faceCount;j++) 
-		  setFacePlotFlag(j,1);
-	  nf=firstFace;
-	  File file=null;
-	  
-	  if (dflag) { // dflag=true;
-	  
-		  file = new File(System.getProperty("java.io.tmpdir")+File.separator+"layout_log");
-		  try {
-			logwriter = new BufferedWriter(new FileWriter(file));
-		    logwriter.write("Diagnostic file created in 'comp_pack_centers'.\n");
-		    logwriter.write("Packing "+fileName+", nodecount "+nodeCount+
-		    		", 'critical' tolerance set at "+crit+"\n\n");
-		  } catch(IOException ioe) {
-				String cof=new String("Couldn't open '"+file.toString()+"'");
-				PackControl.consoleCmd.dispConsoleMsg(cof);
-				PackControl.shellManager.recordError(cof);
-			return 0;
-		  }
-	  }
-		
-
-	  // bomb out if first face fails to lay out properly
-
-	  if (place_face(nf,faces[nf].indexFlag)==0) {
-	    flashError("Layout error in placing the initial face");
-	    if (dflag) {
-	      logwriter.write("first face, "+nf+" problem.\n");
-	      logwriter.flush();
-	      logwriter.close();
-	      return 0;
-	    }
-	    return 0;
-	  }
-	   
-	  for (int j=0;j<3;j++) kData[faces[nf].vert[j]].plotFlag=1;
-	  count=3;
-
-	/* ------------ simply connected case ----------- */
-
-	  if (simp_conn_flag) {
-	    while ( (nf=faces[nf].nextFace)!=firstFace 
-		    && nf>0 && nf<=faceCount) {
-	      vert=faces[nf].vert[(indx=(faces[nf].indexFlag +2) % 3)];
-	      n0=nghb(vert,faces[nf].vert[(indx+1)%3]);
-	      if (kData[vert].plotFlag<=0 && (kData[vert].plotFlag=
-	    	  fancy_comp_center(vert,n0,0,countFaces(vert),opt,false,errflag,crit))!=0)
-	    	  count++;
-	      else if (kData[vert].plotFlag<=0 && dflag)
-	    	  logwriter.write("\t"+count+"\t"+vert+"\t"+nf+"\n");
-	    }
-	  } // end of first pass in simply connected case
-
-	/* -------- multiply connected case ----------------- */
-
-	  else { 
-	    for (int i=1;i<=nodeCount;i++) kData[i].utilFlag=0;
-
-	    if (opt==2) { /* want to use average, so have to mark outer verts of
-					   * red chain using utilFlag; need to find fans. */
-	      trace=redChain;
-	      keepon=true;
-	      while (trace!=redChain || keepon) {
-	    	  keepon=false;
-	    	  indx=face_nghb(trace.next.face,trace.face);
-	    	  v=faces[trace.face].vert[indx];
-	    	  kData[v].utilFlag=1;
-	    	  if (trace.next.face==trace.prev.face) { // blue?
-	    		  v=faces[trace.face].vert[(indx+2) % 3];
-	    		  kData[v].utilFlag=1;
-	    	  }
-	    	  trace=trace.next;
-	      }
-	    }
-
-	    lastface=firstFace;
-	    nf=firstFace;
-	    if (faces[firstFace].nextFace==firstRedFace)
-	    	nf=firstRedFace;
-
-//	    LayoutBugs.log_Red_Hash(this,this.redChain,this.firstRedEdge);
-	    
-	    // this while loops exits from a 'break'; count is a safety 
-	    while (nf>0 && nf<=faceCount && count<(3*faceCount)) {
-	    	
-//System.err.println("nf="+nf);	    	
-
-	    	if (flick && nf==firstRedFace) { 	// yes, reached firstRedFace
-	    		
-//System.err.println("go with red");
-
-	    		/*
-	    		 * When we first reach firstRedFace, we switch to layout whole red chain
-	    		 * in order. This is: 1) necessary because some faces will occur twice,
-	    		 * placing possibly a different one of its circles each time, and 2) to
-	    		 * load rad/cent data in red chain faces for other purposes. 
-	    		 * Note: the kData[].centers end up wherever last placed.
-	    		 */
-		
-	    		flick=false;
-	    		vert=faces[nf].vert[(indx=(faces[nf].indexFlag +2) % 3)];
-	    		n0=nghb(vert,faces[nf].vert[(indx+1)%3]);
-	    		if (kData[vert].utilFlag!=0) { // red chain, outer vert, using averaging
-	    			int ans[] =red_fan(redChain,vert);
-	    			n1=ans[0];
-	    			n=ans[1];
-	    		}
-	    		else {
-	    			n1=0;
-	    			n=countFaces(vert);
-	    		}
-	    		if (kData[vert].plotFlag<=0 && (kData[vert].plotFlag=
-	    			fancy_comp_center(vert,n0,n1,n,opt,false,errflag,crit))!=0) {
-	    			count++;
-	    		}
-	    		else if (kData[vert].plotFlag>=0 && dflag)
-	  	    	  logwriter.write("\t"+count+"\t"+vert+"\t"+nf+"\n");
-	    		
-	    		// position the first outer circle of the red chain
-	    		redChain.rad=getRadius(faces[redChain.face].vert[redChain.vIndex]);
-	    		redChain.center=new Complex(getCenter(faces[redChain.face].vert[redChain.vIndex]));
-	    		
-	    		/*
-	    		 * Now proceed through rest of the redchain. Which center to compute is
-	    		 * based on indices stored in f_data. This should fit 'nextFace' order
-	    		 * (which reflects redFace order). Note, this can differ from 'vIndex' 
-	    		 * in redlist. Record rad/cent whether or not error is within tolerance.
-	    		 */
-		
-	    		/*
-	    		 * This can be tricky. One problem with going through redfaces in
-	    		 * order, each depending only on last, is that errors will build up and
-	    		 * bdry may detach from white faces. Indices in f_data try to be smart
-	    		 * in choosing which of three verts to plot, but I'm not sure if it
-	    		 * might rely on outdated locations for the other two. May have to pad
-	    		 * the 'nextFace' order with sections of redfaces list which it skips
-	    		 * (because those faces already had a 'nextFace' -- see 'final_order').
-	    		 */
-	    		
-	    		lastface=firstRedFace;
-	    		trace=redChain.next;
-	    		while (!carryon && trace!=redChain) {
-	    			nf=trace.face;
-	    			if ((indx=face_nghb(lastface,nf))<0) {
-	    				flashError("Problem with redFace order, redFace = "+redChain+
-	    						", lastface = "+lastface);
-	    				lastface=nf;
-	    				carryon=true; // jump out and continue
-	    			}
-	    			if (!carryon) {
-	    				indx=(faces[nf].indexFlag+2) % 3;
-	    				vert=faces[nf].vert[indx];
-	    				n0=nghb(vert,faces[nf].vert[(indx+1)%3]);
-	    				if (kData[vert].utilFlag!=0) { // this is redchain outer vert and we're averaging
-	    					int ans[]=red_fan(trace,vert);
-	    					n1=ans[0];
-	    					n=ans[1];
-	    				}
-	    				else {
-	    					n1=0;
-	    					n=countFaces(vert);
-	    				}
-	    				if ((kData[vert].plotFlag=
-	    					fancy_comp_center(vert,n0,n1,n,1,false,false,crit))!=0) {
-
-	    					/*
-	    					 * Note: since the red faces are needed downstream and it's
-	    					 * difficult to keep track of which nghbs should be used to
-	    					 * plot a vert at each visit, we use values errflag=0 and
-	    					 * opt=1 in this call.
-	    					 */
-		    
-	    					/*
-	    					 * fixup: Can we rearrange drawing order so as many verts as
-	    					 * possible not on outside of red chain are laid out first,
-	    					 * then the red chain?
-	    					 */
-		    
-	    					count++;
-	    				}
-	    				else if (dflag)
-	    	    			logwriter.write("Error: \t face "+nf+";\t vert "+vert+
-	    	    					";\tcount "+count+". Failed in fancy_comp_center.\n");
-		  
-	    				/*
-	    				 * Now record rad/cent in redface data. This may not be the data
-	    				 * we just computed, so we may have to do yet another
-	    				 * computation here (depends on 'vIndex').
-	    				 */
-		  
-	    				v_ind=faces[nf].vert[trace.vIndex];
-	    				if (v_ind!=vert) { // update center for 'vIndex' of redface.
-	    					n0=nghb(v_ind,faces[nf].vert[((trace.vIndex)+1)%3]);
-	    					fancy_comp_center(v_ind,n0,0,0,1,true,false,crit);
-	    				}
-	    				trace.center=getCenter(v_ind);
-	    				trace.rad=getRadius(v_ind);
-	    				
-	    				// Suppose this is 'RedEdge' and it's blue; then 'nextRed' is a repeat
-	    				//    of this face, and we store its center and rad. The center is 
-	    				//    stored in the 'prev' face (typically a 'redList' not a 'redEdge').
-	    				//    Note: the 'prev' and 'next' faces are the same, but the center
-	    				//    of interest is that downstream of the center for this redEdge, and
-	    				//    that's stored as 'prev.center'.
-	    				if (trace instanceof RedEdge) {
-	    					RedEdge rtrace=(RedEdge)trace;
-	    					if (rtrace.face==rtrace.nextRed.face) {
-	    						rtrace=rtrace.nextRed;
-	    						vert=faces[nf].vert[rtrace.vIndex];
-	    						rtrace.center=new Complex(rtrace.prev.center);
-	    						rtrace.rad=getRadius(vert);
-	    					}
-	    				}
-	    				lastface=nf;
-	    				trace=trace.next;
-	    			}
-		  
-	    			if (tmp_debug) {  // set during debugging
-	    				if (dflag) LayoutBugs.log_Red_Hash(this,redChain,null);// LayoutBugs.log_Red_Hash(this,redChain,firstRedEdge);
-	    			}
-		  
-	    		} // end of while
-
-//System.err.println("done with red; nf="+nf+" lastface="+lastface);	    		
-	    	} // end of if (flick ...
-	      
-	    	// done with red chain; pick up order from f_data again
-
-	    	if ((nf=faces[lastface].nextFace)==firstFace) {
-	    		break;
-	    	}
-	    	vert=faces[nf].vert[(indx=(faces[nf].indexFlag +2) % 3)];
-	    	n0=nghb(vert,faces[nf].vert[(indx+1)%3]);
-	    	if (kData[vert].plotFlag<=0 && (kData[vert].plotFlag=
-	    		fancy_comp_center(vert,n0,0,countFaces(vert),opt,false,errflag,crit))!=0)
-	    		count++;
-	    	else if (dflag && kData[vert].plotFlag<=0)
-	    		logwriter.write("\t"+count+"\t"+vert+"\t"+nf+"\n");
-
-	    	lastface=nf;
-	    	nf=faces[lastface].nextFace;
-	    }
-	  } // end of multiply connected case
-	  
-	  if (dflag) {
-		  logwriter.write("\nFinished original pass with "+count+" successful"+
-				  " placements, nodeCount ="+nodeCount+".\n\n");
-		  logwriter.flush();
-		  logwriter.close();
-		  CirclePack.cpb.msg("Layout logged in "+file);
-	  }
-	  
-	/*
-	 * Check whether some circles weren't placed. Make several passes to catch
-	 * any further legitimate layouts. Note: count may exceed nodeCount in
-	 * multiply-connected cases since a center may be computed several times
-	 */
-
-	  keepon=false; // LayoutBugs.pRedEdges(this);
-	  for (int i=1;i<=nodeCount;i++)
-		  if (kData[i].plotFlag==0) keepon=true;
-	  if (keepon) { // Some circles not plotted
-	      while (keepon) { // with hits, keep cycling through
-	    	  keepon=false;
-	    	  nf=firstFace;
-	    	  while ((nf=faces[nf].nextFace)!=firstFace && nf>0 && nf<=faceCount) {
-	    		  vert=faces[nf].vert[(indx=(faces[nf].indexFlag +2) % 3)];
-	    		  if (kData[vert].plotFlag<=0) {
-	    			  n0=nghb(vert,faces[nf].vert[(indx+1)%3]);
-	    			  if ((kData[vert].plotFlag=
-	    				  fancy_comp_center(vert,n0,0,countFaces(vert),opt,false,errflag,crit))!=0) {
-	    				  count++;
-	    				  keepon=true;
-	    			  }
-	    		  }
-	    	  } // end of inner while
-	      } // end of outer while
-
-	    /*
-		 * Try to find appropriate center for circles that didn't plot for some
-		 * reason (eg. inv dist incompatibility). Simply average the centers of
-		 * any petals that are plotted (often problem circles are extremely
-		 * small, so this is reasonable). I'll use 'qualFlag' to keep track, and
-		 * pass through repeatedly as long as we're getting results. (Some
-		 * centers may be based on neighbors which were only set based on their
-		 * neighbors, but at least they're getting some location!) I do not set
-		 * their plotFlags.
-		 */
-
-	    keepon=true;
-	    while (keepon) {
-	    	keepon=false;
-	    	for (vert=1;vert<=nodeCount;vert++) {
-	    		if (kData[vert].plotFlag==0 && kData[vert].qualFlag==0) {
-	    			z=new Complex(0.0);
-	    			n=0;
-	    			// first use plotted neighbors
-	    			for (int j=0;j<(countFaces(vert)+getBdryFlag(vert));j++) 
-	    				if (kData[(v=kData[vert].flower[j])].plotFlag!=0) {
-	    					z=z.add(getCenter(v));
-	    					n++;
-	    				}
-	    			if (n==0) { // none? try qualFlag neighbors
-	    				for (int j=0;j<(countFaces(vert)+getBdryFlag(vert));j++) 
-	    					if (kData[(v=kData[vert].flower[j])].qualFlag!=0) {
-	    						z=z.add(getCenter(v));
-	    						n++;
-	    					}
-	    			}
-	    			if (n!=0) { // got something!
-	    				z=z.times(1/n);
-	    				setCenter(vert,z);
-	    				kData[vert].qualFlag=1;
-	    				count++;
-	    				keepon=true;
-	    			}
-	    		}
-	    	} // end of for loop
-	    } // end of while loop
-	  }
-
-	  if (simp_conn_flag && (trace=redChain)!=null) {
-	    keepon=true;
-	    while (trace!=redChain || keepon) {
-		keepon=false;
-	      v=faces[trace.face].vert[trace.vIndex];
-	      trace.center=getCenter(v);
-	      trace.rad=getRadius(v);
-	      trace=trace.next;
-	    }
-	  }
-
-	  // Set face plotFlag's to default
-	  for (int j=1;j<=faceCount;j++) faces[j].plotFlag=1;
-
-	  /*
-		 * For simply connected, try this; precision is rather experimental.
-		 * fixup: this is much more complicated in multiply conn case.
-		 */
-
-	  if (simp_conn_flag && (trace=redChain)!=null && errflag) {
-	    for (int j=1;j<=faceCount;j++)
-	      if (kData[faces[j].vert[0]].plotFlag<=0
-		  || kData[faces[j].vert[1]].plotFlag<=0
-		  || kData[faces[j].vert[2]].plotFlag<=0
-		  || Math.abs(invdist_err(faces[j].vert[0],faces[j].vert[1]))
-		  >100000*TOLER
-		  || Math.abs(invdist_err(faces[j].vert[1],faces[j].vert[2]))
-		  >100000*TOLER
-		  || Math.abs(invdist_err(faces[j].vert[2],faces[j].vert[0]))
-		  >100000*TOLER)
-		faces[j].plotFlag=0;
-	  }
-	    
-	  // Normalize: fixup? what if errflag is set and gamma is poorly plotted?
-
-	  norm_any_pack(getCenter(alpha),getCenter(gamma)); 
-
-	  if (!simp_conn_flag) {
-	    // Record any edge-pairing Mobius transforms
-	    this.update_pair_mob();
-	    // sprintf(msgbuf,"run updateSidePairs");
-	    // debugmsg();
-// updateSidePairs(); // send to Java
-	  }
-
-	  return (count);
-	}
 
 	/**
 	 * Update the mobius transformations associated with side pairings in
@@ -6393,29 +5937,17 @@ public class PackData{
 	}
 
 	/**
-	 * Standard normalization: a at origin, g on positive y-axis.
-	 * Not ready for spherical case yet
-	 * @param a Complex
-	 * @param g Complex
-	 * @return int, 0 for the sphere
-	 */
-	public int norm_any_pack(Complex a,Complex g) {
-	  if (hes<0) return HyperbolicMath.h_norm_pack(this,a,g);
-	  if (hes==0) return EuclMath.e_norm_pack(this,a,g);
-	  else return 0; // TODO: fixup? haven't yet done sphere case 
-	} 
-
-	/**
-	 * Fill in curvatures of the packing. 
+	 * Fill in the angle sums (curvature) of the packing. Note that 
+	 * angle sums at a vertex are computed face-by-face for faces
+	 * containing that vertex.
 	 * @return int 1
 	*/
 	public int fillcurves() {
-		int v;
 		UtilPacket uP=new UtilPacket();
 
 		uP.value=0.0;
-		for (v=1;v<=nodeCount;v++) { // getRadius(40)
-			if (!CommonMath.get_anglesum(this,v,getRadius(v),uP)) 
+		for (int v=1;v<=nodeCount;v++) {
+			if (!CommonMath.get_anglesum(this,v,0,uP)) 
 				throw new DataException("failed to compute angle sum for "+v);
 			setCurv(v,uP.value);
 	    }
@@ -15151,6 +14683,8 @@ public class PackData{
 	  * If hyperbolic, apply a Mobius trans of disc putting ctr 
 	  * at origin. If euclidean, translate. If sphere, rigid 
 	  * Mobius moves ctr to north pole.
+	  * @param ctr Complex
+	  * @return int
 	  */
 	public int center_point(Complex ctr) {
 		Complex z1, z2;
@@ -15160,7 +14694,7 @@ public class PackData{
 		boolean keepon = true;
 
 		if (hes < 0) {
-			if ((ctr.x * ctr.x + ctr.y * ctr.y) > (1.0 - TOLER)) {
+			if (ctr.absSq() > (1.0 - TOLER)) {
 				flashError("usage: center_point: chosen point is too "
 						+ "close to ideal boundary.");
 				return 0;
@@ -15614,6 +15148,7 @@ public class PackData{
 	 * Create 'TriAspect' face data, which contains data face-by-face
 	 * for use, e.g., in 'Schwarzian' and 'ProjStruct'. This does not
 	 * change data in the packing itself.
+	 * @param p PackData
 	 * @return int count 
 	 */
 	public static TriAspect []getTriAspects(PackData p) {
@@ -16908,7 +16443,12 @@ public class PackData{
 		return count;
 	}
 	
-	/** Alternative face drawing orders for simply connected complexes.
+	/** 
+	 * traditional
+	 * 
+	 * see 'CombDCEL.tailorFaceOrder'
+	 * 
+	 * Alternative face drawing orders for simply connected complexes.
 	The aim is to avoid some layout problems by, e.g., avoiding use of
 	3/4-degree vertices and/or vertices having extremely small radii.
 	 
@@ -17128,114 +16668,6 @@ public class PackData{
 	  if (vertcount!=0) return newfaces;
 	  return null;
 	}
-		      
-	/** 
-	 * Recompute centers of circles using face drawing order as in 
-	 * 'draw_in_order'. Report all locations of vertex v. Option to
-	 * recompute first face or leave it in current location. Option
-	 * to apply usual alpha/gamma normalization. 
-	 * Note: this command modifies the recorded centers.
-	 * @param v int, index of vertex whose locations are reported (0 for none)
-	 * @param place_first boolean, if true place the first face
-	 * @param norm boolean, true then do usual alpha/gamma normalization
-	 * @return int, 0 on error 
-	*/
-	public int layout_report(int v, boolean place_first, boolean norm) {
-		int start = 0;
-		int move = 0;
-		int vflag = 1;
-
-		CentList centlist = null;
-		CentList ctmp;
-		CentList ctrace = null;
-		if (v > 0 && v <= nodeCount)
-			vflag = 0;
-		int nf = firstFace;
-		if (place_first)
-			place_face(nf, faces[nf].indexFlag);
-		for (int j = 0; j < 3; j++)
-			// initial location of v
-			if (faces[nf].vert[j] == v) { // record first center
-				start = j + 1;
-				ctmp = new CentList();
-				ctmp.z = new Complex(getCenter(v));
-				if (centlist == null)
-					centlist = ctrace = ctmp;
-				else
-					ctrace = ctrace.next = ctmp;
-			}
-		int ck = 0;
-		while ((nf = faces[nf].nextFace) != firstFace && ck < 2 * faceCount
-				&& nf > 0 && nf <= faceCount) {
-			int indx=(faces[nf].indexFlag + 2) % 3;
-			int vert = faces[nf].vert[indx];
-			int n0 = nghb(vert, faces[nf].vert[(indx + 1) % 3]);
-			fancy_comp_center(vert, n0, n0, 1, 0, true, true, TOLER);
-			if (vflag == 0 && vert == v) { // record center
-				move++;
-				ctmp = new CentList();
-				ctmp.z = getCenter(v);
-				if (centlist == null)
-					centlist = ctrace = ctmp;
-				else
-					ctrace = ctrace.next = ctmp;
-			}
-			ck++;
-		}
-		if (nf != firstFace) { // some error
-			flashError("error in 'simple_layout'");
-			throw new ParserException();
-		}
-		if (vflag == 0 && start != 0 && move != 0) {
-			// if v in first face and has moved, also include final location
-			ctmp = new CentList();
-			ctmp.z = getCenter(v);
-			if (centlist == null)
-				centlist = ctrace = ctmp;
-			else
-				ctrace = ctrace.next = ctmp;
-		}
-
-		// normalize?
-		if (norm) {
-			Complex a = getCenter(alpha);
-			Complex g = getCenter(gamma);
-			norm_any_pack(a, g);
-
-			// adjust locations reported for v because of normalization
-			if (centlist != null) {
-				ctrace = centlist;
-				while (ctrace != null) {
-					Complex newz=new Complex(ctrace.z);
-					Complex z = new Complex(ctrace.z);
-					if (hes < 0) // hyp
-						newz = Mobius.mobDiscValue(z, a, g);
-					else if (hes == 0) { // eucl
-						Complex w = g.minus(a);
-						Complex I = new Complex(0.0, w.abs());
-						Complex modw = I.divide(w);
-						Complex y = z.minus(a);
-						newz = modw.times(y);
-					}
-					CirclePack.cpb.msg("  " + newz.x + " " + newz.y + "i ;");
-					ctmp = ctrace;
-					ctrace = ctrace.next;
-				}
-			}
-		} // done with normalization
-		
-		// report locations
-		if (centlist!=null) {
-			CirclePack.cpb.msg("Locations of vertex " + v);
-			ctrace = centlist;
-			while (ctrace != null) {
-				CirclePack.cpb.msg("  " + ctrace.z.x + " " + ctrace.z.y + "i ;");
-				ctrace=ctrace.next;
-			}
-		}
-
-		return (vflag + start + move); // error if this is zero
-	}
 
 	/**
 	 * When clicking on face in this packing, display it for this canvas 
@@ -17358,44 +16790,53 @@ public class PackData{
 	/**
 	 * Currently, put segment number at first circle.
 	 * TODO: need better placement; e.g. this will conflict with circle index
+	 * @param n int
+	 * @return int, 0 on error
 	*/
 	public int sa_draw_bdry_seg_num(int n) {
-		RedEdge trace=null;
-	    SideDescription epair=null;
-	    if (sidePairs==null || n<0 || n>=sidePairs.size() 
-	    		|| (epair=(SideDescription)sidePairs.get(n))==null
-	    		|| (trace=epair.startEdge)==null) 
+		RedHEdge rtrace=null;
+	    D_SideData epair=null;
+	    if (packDCEL.pairLink==null || n<0 || n>=sidePairs.size() 
+	    		|| (epair=packDCEL.pairLink.get(n))==null
+	    		|| (rtrace=epair.startEdge)==null) 
 	    	return 0;
-		Complex ctr=new Complex(RedList.whos_your_daddy(trace,trace.startIndex).center);
+		Complex ctr=packDCEL.getVertCenter(rtrace.myEdge);
+		if (hes>0)
+			ctr=cpScreen.sphView.toApparentSph(ctr);
 	    cpScreen.drawIndex(ctr,n,1);
 	    return 1;
 	}
 	
 	/**
 	 * Currently, put segment number at first circle.
-	 * TODO: need better placement; e.g. this will conflict with circle index
+	 * TODO: need better placement; e.g. this will conflict with 
+	 * circle index
+	 * @param pF PostFactory
+	 * @param n int
+	 * @return int, 0 on error
 	*/
 	public int post_bdry_seg_num(PostFactory pF,int n) {
-		RedEdge trace=null;
-	    SideDescription epair=null;
-	    if (sidePairs==null || n<0 || n>=sidePairs.size() 
-	    		|| (epair=(SideDescription)sidePairs.get(n))==null
+		RedHEdge trace=null;
+	    D_SideData epair=null;
+	    if (packDCEL.pairLink==null || n<0 || n>=packDCEL.pairLink.size() 
+	    		|| (epair=packDCEL.pairLink.get(n))==null
 	    		|| (trace=epair.startEdge)==null) 
 	    	return 0;
-		Complex ctr=new Complex(RedList.whos_your_daddy(trace,trace.startIndex).center);
+		Complex ctr=trace.getCenter();
 		if (hes>0) {
 			ctr=cpScreen.sphView.toApparentSph(ctr);
-			if (Math.cos(ctr.x)>=0) pF.postIndex(ctr,n);
+			if (Math.cos(ctr.x)>=0) 
+				pF.postIndex(ctr,n);
 		}
-		else pF.postIndex(ctr,n);
+		else 
+			pF.postIndex(ctr,n);
 	    return 1;
 	}
 	
 	/** 
-	 * Draw an edge-pairing boundary segment based on starting face and 
-	 * index of beginning vert. 
+	 * Draw an edge-pairing boundary segment for side n.
 	 * @param n int, index of side-pair (indices start at 0)
-	 * @param do_label boolean, label also?
+	 * @param do_label boolean, label side edge also?
 	 * @param do_circle boolean, circles also?
 	 * @param ecol Color
 	 * @param int thickness to draw
@@ -17403,109 +16844,118 @@ public class PackData{
 	 */
 	public int sa_draw_bdry_seg(int n,boolean do_label,boolean do_circle,
 			Color ecol,int thickness) {
-	  RedEdge trace=null;
-	  SideDescription epair=null;
+	  RedHEdge trace=null;
+	  D_SideData epair=null;
 	  
-	  if (sidePairs==null || n<0 || n>=sidePairs.size() 
-			  || (epair=(SideDescription)sidePairs.get(n))==null
-			  || (trace=epair.startEdge)==null) 
+	  if (packDCEL.pairLink==null || n<0 || n>=packDCEL.pairLink.size() 
+			  || (epair=packDCEL.pairLink.get(n))==null
+			  || epair.startEdge==null) 
 		  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
 		  return 0;
+	  RedHEdge rtrace=epair.startEdge;
 	  int old_thickness=cpScreen.getLineThickness();
-//	  LayoutBugs.log_Red_Hash(this,this.redChain,null);
-//	  LayoutBugs.log_RedCenters(this);
-//    int v_indx=trace.vert(trace.startIndex);
-// deBugging.LayoutBugs.log_RedCenters(this);
-	  RedList wyd_w=RedList.whos_your_daddy(trace,trace.startIndex); 
-	  // wyd_w.center; wyd_w.hashCode();
-	  Complex w_cent=new Complex(wyd_w.center);
-      DispFlags dflags=new DispFlags(""); 
-      // System.out.println("v_indx="+v_indx+", 
-      //  wyd_w center.x "+wyd_w.center.x+" and hash "+wyd_w.hashCode());
-	  if (do_circle) { // handle draw/label for first circle
-	      int w_indx=trace.vert(trace.startIndex);
-	      if (do_label) { 
-	    	  dflags.label=true;
-	    	  dflags.setLabel(Integer.toString(w_indx));
-	      }
-	      cpScreen.drawCircle(w_cent,getRadius(w_indx),dflags);
-	  }
-	  RedEdge goon=trace;
+
+	  DispFlags dflags=new DispFlags(""); 
       cpScreen.setLineThickness(thickness);
+	  
+      Vertex w_vert=rtrace.myEdge.origin;
+	  Complex w_cent=packDCEL.getVertCenter(rtrace.myEdge);
+	  int w_indx=w_vert.vertIndx;
 	  do {
 	      Complex v_cent=w_cent;
-	      int w_indx=goon.vert((goon.startIndex+1)%3); 
-		  RedList wyd_v=RedList.whos_your_daddy(goon,(goon.startIndex+1)%3); // wyd_v.center; wyd_v.hashCode();
-	      w_cent=new Complex(wyd_v.center);
+	      int v_indx=w_indx;
+	      double v_rad=packDCEL.getVertRadius(rtrace.myEdge);
+	      rtrace=rtrace.nextRed;
+	      w_vert=rtrace.myEdge.origin;
+	      w_indx=w_vert.vertIndx;
+	      w_cent=packDCEL.getVertCenter(rtrace.myEdge);
+	      if (do_circle) { // do v circle
+		      cpScreen.setLineThickness(old_thickness);
+	    	  cpScreen.drawCircle(v_cent,v_rad,dflags);
+	          cpScreen.setLineThickness(thickness);
+	      }
 	      DispFlags df=new DispFlags(null); 
 	      df.setColor(ecol);
 	      cpScreen.drawEdge(v_cent,w_cent,df);
-	      if (do_circle) { 
-	          if (do_label) { 
-	        	  dflags.label=true;
-	        	  dflags.setLabel(Integer.toString(w_indx));
-	          }
-		      cpScreen.setLineThickness(old_thickness);
-	    	  cpScreen.drawCircle(w_cent,getRadius(w_indx),dflags);
-	          cpScreen.setLineThickness(thickness);
-	      }
-	      goon=goon.nextRed;
-	    } while (goon!=epair.endEdge.nextRed);
+	  } while (rtrace!=epair.endEdge.nextRed);
+	  
+	  // last circle?
+	  if (do_circle) {
+		  w_vert=rtrace.myEdge.origin;
+		  w_cent=packDCEL.getVertCenter(rtrace.myEdge);
+		  double w_rad=packDCEL.getVertRadius(rtrace.myEdge);
+	      cpScreen.setLineThickness(old_thickness);
+    	  cpScreen.drawCircle(w_cent,w_rad,dflags);
+          cpScreen.setLineThickness(thickness);
+	  }
+	  
       cpScreen.setLineThickness(old_thickness);
-	  if (do_label) sa_draw_bdry_seg_num(n);
+	  if (do_label) 
+		  sa_draw_bdry_seg_num(n);
 	  return 1;
 	}
 	
 	/** 
 	 * Post an edge-pairing boundary segment based on starting face and 
 	 * index of beginning vert. 
+	 * @param pF PostFactory
 	 * @param n int, index of side-pair (starting at 0)
 	 * @param do_label boolean, label also?
 	 * @param do_circle boolean, circles also?
 	 * @param ecol Color
-	 * @param tx, double thickness factor if > 0
+	 * @param tx double, thickness factor if > 0
 	 * @return int
 	 */
-	public int post_bdry_seg(PostFactory pF,int n,boolean do_label,boolean do_circle,
-			Color ecol,double tx) {
-	  int w_indx=0;
-	  Complex v_cent,w_cent;
-	  RedEdge trace=null;
-	  SideDescription epair=null;
-	  
-	  if (sidePairs==null || n<0 || n>=sidePairs.size() 
-			  || (epair=(SideDescription)sidePairs.get(n))==null
-			  || (trace=epair.startEdge)==null) 
-		  return 0;
-	  w_cent=new Complex(RedList.whos_your_daddy(trace,trace.startIndex).center);
-	  if (do_circle) { // handle draw/label for first circle
-	      w_indx=trace.vert(trace.startIndex);
-	      if (hes>0) w_cent=cpScreen.sphView.toApparentSph(w_cent);
-	      pF.postCircle(hes,w_cent,getRadius(w_indx));
-	      if (do_label) {
-	    	  if (hes>0 && Math.cos(w_cent.x)>=0) 
-	    		  pF.postIndex(w_cent,w_indx);
-	    	  else pF.postIndex(w_cent,w_indx);
-	      }
-	  }
-	  RedEdge goon=trace;
-	  do {
-	      v_cent=w_cent;
-	      w_cent=new Complex(RedList.whos_your_daddy(goon,(goon.startIndex+1)%3).center);
-	      w_indx=goon.vert((goon.startIndex+1)%3);
-	      if (hes>0) {
-	    	  v_cent=cpScreen.sphView.toApparentSph(v_cent);
+	public int post_bdry_seg(PostFactory pF,int n,boolean do_label,
+			boolean do_circle,Color ecol,double tx) {
+		
+		  RedHEdge trace=null;
+		  D_SideData epair=null;
+		  
+		  if (packDCEL.pairLink==null || n<0 || n>=packDCEL.pairLink.size() 
+				  || (epair=packDCEL.pairLink.get(n))==null
+				  || epair.startEdge==null) 
+			  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
+			  return 0;
+		  RedHEdge rtrace=epair.startEdge;
+		  int old_thickness=cpScreen.getLineThickness();
+
+		  DispFlags dflags=new DispFlags(""); 
+		  
+	      Vertex w_vert=rtrace.myEdge.origin;
+		  Complex w_cent=packDCEL.getVertCenter(rtrace.myEdge);
+		  int w_indx=w_vert.vertIndx;
+		  do {
+		      Complex v_cent=w_cent;
+		      int v_indx=w_indx;
+		      rtrace=rtrace.nextRed;
+		      w_vert=rtrace.myEdge.origin;
+		      w_indx=w_vert.vertIndx;
+		      w_cent=packDCEL.getVertCenter(rtrace.myEdge);
+		      if (hes>0) { 
+		    	  v_cent=cpScreen.sphView.toApparentSph(v_cent);
+		    	  w_cent=cpScreen.sphView.toApparentSph(w_cent);
+		      }
+		      if (do_circle) { // do v circle
+			      double v_rad=packDCEL.getVertRadius(rtrace.myEdge);
+			      pF.postCircle(hes,v_cent,v_rad);
+		      }
+		      pF.postColorEdge(hes,v_cent,w_cent,ecol,tx);
+		  } while (rtrace!=epair.endEdge.nextRed);
+		  
+		  // last circle?
+		  if (do_circle) {
+			  w_vert=rtrace.myEdge.origin;
+			  w_cent=packDCEL.getVertCenter(rtrace.myEdge);
 	    	  w_cent=cpScreen.sphView.toApparentSph(w_cent);
-	      }
-	      pF.postColorEdge(hes,v_cent,w_cent,ecol,tx);
-	      if (do_circle) { 
-	    	  pF.postCircle(hes,w_cent,getRadius(w_indx));
-	    	  if (do_label) pF.postIndex(w_cent,w_indx);
-	      }
-	      goon=goon.nextRed;
-	    } while (goon!=epair.endEdge.nextRed);
-	  if (do_label) post_bdry_seg_num(pF,n);
-	  return 1;
+			  double w_rad=packDCEL.getVertRadius(rtrace.myEdge);
+		      pF.postCircle(hes,w_cent,w_rad);
+		  }
+		  
+	      cpScreen.setLineThickness(old_thickness);
+		  if (do_label) 
+			  post_bdry_seg_num(pF,n);
+		  return 1;
 	}
 
 	/**

@@ -2,8 +2,10 @@ package rePack;
 
 import JNI.JNIinit;
 import allMains.CirclePack;
+import dcel.PackDCEL;
 import exceptions.DataException;
 import exceptions.PackingException;
+import ftnTheory.D_ProjStruct;
 import input.CommandStrParser;
 import komplex.KData;
 import listManip.NodeLink;
@@ -18,7 +20,7 @@ import packing.RData;
 public class d_EuclPacker extends RePacker {
 	
     // Constructors
-    public d_EuclPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
+    public d_EuclPacker(PackData pd,int pass_limit) { 
     	p=pd;
 		oldReliable=false;
     	if (pass_limit<0) passLimit=PASSLIMIT;
@@ -64,7 +66,9 @@ public class d_EuclPacker extends RePacker {
     
     /**
      * Store any newly computed radii (from 'triData') and
-     * recompute curvatures.
+     * recompute curvatures. Note that some vertices will have
+     * different radii in different faces; we record that from
+     * the first face in the 'findices' list. 
      */
     public void reapResults() {
     	for (int i=0;i<aimnum;i++) {
@@ -72,6 +76,24 @@ public class d_EuclPacker extends RePacker {
     		int findx=p.vData[v].findices[0];
     		int vindx=p.vData[v].myIndices[0];
     		p.setRadius(v,pdcel.triData[findx].radii[vindx]);
+    	}
+    	p.fillcurves();
+    }
+    
+    /**
+     * For some computations, radius data is stored as 'labels'.
+     * Store any newly computed labels in 'triData' as radii
+     * for the packing. Note that some vertices will have
+     * different labels in different faces; we record that from
+     * the first face in the 'findices' list as its radius.
+     * Recompute curvatures.  
+     */
+    public void reapLabels() {
+    	for (int i=0;i<aimnum;i++) {
+    		int v=index[i];
+    		int findx=p.vData[v].findices[0];
+    		int vindx=p.vData[v].myIndices[0];
+    		p.setRadius(v,pdcel.triData[findx].labels[vindx]);
     	}
     	p.fillcurves();
     }
@@ -462,8 +484,86 @@ public class d_EuclPacker extends RePacker {
   	    return r;
     }
     
+	/**
+	 * Affine repacking uses the "old reliable" iterative routines,
+	 * but works face-by-face and only in the eucl setting. The
+	 * radii are in 'PackDCEL.triData'. Only the ratios of radii within 
+	 * each face are important. In the typical process (as with affine 
+	 * tori), all radii are set to a constant; then selected radii 
+	 * in selected faces (e.g., outer radii of red edges) are 
+	 * reset (e.g., with side-pair scalings in the torus case). 
+	 * This must be set by calling routine, which also carries
+	 * out layout and normalization after the radii are found.
+	 * 
+	 * This repacking procedure computes angle sums face-by-face
+	 * using 'PackDCEL.triData', where data such as radii, inv
+	 * distances, aims, etc. are stored by the calling routine.
+	 * When a new radius is to be tried, the "factor" by which
+	 * the current radii are modifed is used in each face angle
+	 * sum computation. Thus, for any two occurrences of a vertex v
+	 * in different faces, the ratio between its radii will remain
+	 * unchanged. This will give normal circle packing radii if all
+	 * radii for any given v are initially the same 
+	 * 
+	 * Note: this should be interesting to experiment with in cases
+	 * other than affine tori: e.g., give different radii for v in
+	 * different faces, perhaps set aim negative for some vertices,
+	 * etc. What happens?
+	 * @param passes
+	 * @return int, repack count, -1 on error
+	 */
+	public int affinePack(int passes) {
+		int count = 0;
+		double accum=0.0;
+		if (passes<=0)
+    	  passes=PASSLIMIT;
+
+		// find vertices to work on and set cutoff value
+		int []inDex =new int[p.nodeCount+1];
+		int aimnum=0;
+		for (int v=1;v<=p.nodeCount;v++) {
+			if (p.getAim(v)>0) { //   p.getAim(j)>0) {
+				inDex[aimnum++]=v;
+				double curv=D_ProjStruct.labelAngSum(p,pdcel.triData,v,1.0)[0];
+				double err=curv-p.getAim(v);
+				accum += (err<0) ? (-err) : err;
+			}
+		}
+		if (aimnum==0) 
+			return 0; // nothing to repack
+      
+		double recip=.333333/aimnum;
+		double cut=accum*recip;
+
+		while ((cut > RePacker.RP_TOLER && count<passes)) {
+			for (int j=0;j<aimnum;j++) {
+				int v=inDex[j];
+				double asum=D_ProjStruct.labelAngSum(p,pdcel.triData,v,1.0)[0];
+        	  double aim=pdcel.p.getAim(v);
+        	  int num=p.countFaces(v);
+        	  double factor=d_EuclPacker.uniFactor(num, asum, aim);
+        	  D_ProjStruct.adjustLabel(p,pdcel.triData,v,factor);
+    	  }
+
+          accum=0;
+          for (int j=0;j<aimnum;j++) {
+        	  int v=inDex[j];
+        	  double curv=D_ProjStruct.labelAngSum(p,pdcel.triData,v,1.0)[0];
+        	  double err=curv-p.getAim(v);
+        	  accum += (err<0) ? (-err) : err;
+          }
+          cut=accum*recip;
+        
+          // show activity 
+//          if ((count % 10)==0) repack_activity_msg();
+                
+          count++;
+      } /* end of while */
+      return count;
+    }
+    
     /**
-     * Pack as euclidean to form a polgon with equal corner angles.
+     * Pack as euclidean to form a polygon with equal corner angles.
      * Normalize so the edge from first to second corners 
      * is horizontal (right to left).
      * @param p PackData, 
@@ -814,9 +914,8 @@ public class d_EuclPacker extends RePacker {
 			// assume all petals have radius 1.0
 			double del = Math.sin(aim/N);
 			double bet = Math.sin(asum/N);
-			// current radius is r=(1/bet)-1.0
-			// desired radius is R=(1/del)-1.0
-			// return R/r
+			// current rad r=(1/bet)-1.0, desired rad R=(1/del)-1.0, 
+			// so return R/r
 			return ((1.0/del)-1.0)/((1.0/bet)-1.0);
 	}
 

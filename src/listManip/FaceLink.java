@@ -1398,10 +1398,10 @@ public class FaceLink extends LinkedList<Integer> {
 	 * Idea: starting in f, find min radius among verts of f and 
 	 * contiguous faces. Take steps 1/3 this until we succeed or reach edge
 	 * of carrier or end of path.
-	 * @param p
-	 * @param face
-	 * @param param
-	 * @param pInt
+	 * @param p PackData
+	 * @param f int
+	 * @param param double
+	 * @param pInt PathInterpolator
 	 * @return, ans[0]=0, if none found
 	 */
 	public static double []next_incident_face(PackData p,int f,

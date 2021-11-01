@@ -48,7 +48,6 @@ import exceptions.DCELException;
 import exceptions.DataException;
 import exceptions.InOutException;
 import exceptions.JNIException;
-import exceptions.LayoutException;
 import exceptions.MobException;
 import exceptions.ParserException;
 import exceptions.VarException;
@@ -58,6 +57,7 @@ import ftnTheory.BeurlingFlow;
 import ftnTheory.BrooksQuad;
 import ftnTheory.ComplexAnalysis;
 import ftnTheory.ConformalTiling;
+import ftnTheory.D_ProjStruct;
 import ftnTheory.Erf_function;
 import ftnTheory.Exponential;
 import ftnTheory.FeedBack;
@@ -98,7 +98,6 @@ import komplex.EdgeSimple;
 import komplex.Embedder;
 import komplex.Face;
 import komplex.HexPaths;
-import komplex.RedList;
 import komplex.Triangulation;
 import listManip.BaryCoordLink;
 import listManip.BaryLink;
@@ -120,7 +119,6 @@ import packing.PackData;
 import packing.PackExtender;
 import packing.PackMethods;
 import packing.RData;
-import packing.RedChainer;
 import packing.Schwarzian;
 import panels.CPScreen;
 import panels.ImagePanel;
@@ -132,12 +130,11 @@ import random.RandomTriangulation;
 import rePack.EuclPacker;
 import rePack.GOpacker;
 import rePack.HypPacker;
-import rePack.SphPacker;
+import rePack.d_EuclPacker;
 import rePack.d_HypPacker;
 import rePack.d_SphPacker;
 import script.ScriptBundle;
 import tiling.TileData;
-import util.BuildPacket;
 import util.CallPacket;
 import util.DispFlags;
 import util.PathBaryUtil;
@@ -1815,7 +1812,7 @@ public class CommandStrParser {
 	    	  }
 	    	  else if (str.equalsIgnoreCase("ps")) {
 	    		  if (!packData.status || packData.nodeCount==0) return 0;
-	    		  ProjStruct px=new ProjStruct(packData);
+	    		  D_ProjStruct px=new D_ProjStruct(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
 		    				  ": started "+px.extensionAbbrev+" extender");
@@ -7197,11 +7194,9 @@ public class CommandStrParser {
 	       *       s   use drawing order only -- not average.
 	       *       c x (with f) critical value x (double)
 	       *    -d [v]    layout by drawing order, reporting location(s) of v.
-	       *    -dt [v]   special for torus: create 2 side-pairing layout
-	       *    -e {e..}  redo facedraworder with closed edgelist to 
-	       *    		  define red chain
+	       *    -dt [c]   special for torus: create 2 side-pairing layout, report
+	       *    		  locations of corner.
 	       *    -F        redo everything
-	       *    -f {f..}  (must be last flag) redo facedraworder using face list
 	       *    -h vwn    drawing order by 'hex_walk' routine (not active)
 	       *    -K        redo combinatorics
 	       *    -r {f..}  recompute (don't draw) centers along given facelist
@@ -7215,6 +7210,7 @@ public class CommandStrParser {
 	       *    -T        same as -t, but routine will NOT use the 
 	       *    		  vertices with 'mark' set; it will simply stop 
 	       *    		  once it has done all it can without them.
+	       *    -v {v..}  redo facedraworder with vertices defining the bdry
 	       *    -x        experimental routine.
 	       */
 		  else if (cmd.startsWith("layout")) {
@@ -7268,7 +7264,7 @@ public class CommandStrParser {
 	    	  
 	    	  // most typical call
 	    	  if (flagSegs.size()==0) {
-	    		  int ans=packData.CompPackLayout();
+	    		  int ans=packData.packDCEL.layoutPacking();
 	    		  packData.fillcurves();
 	    		  return ans;
 	    	  }
@@ -7287,58 +7283,18 @@ public class CommandStrParser {
 	    		  case 's': // recompute angle sums
 	    		  {packData.fillcurves();count++;break;}
 	    		  case 'c': // compute center:
-	    			  // for traditional, have compute centers (with options) 
 	    		  {
-	    			  
-	    			  // TODO: haven't yet implemented sub-options in DCEL case
-	    			  if (packData.packDCEL!=null) {
-	    				  packData.CompPackLayout();
-	    			  }
-	    			  else {
-	    				  str=str.substring(2);
-	    				  if (str.contains("d")) 
-	    					  dflag=true;
-	    				  if (str.contains("f")) 
-	    					  errflag=true;
-	    				  if (str.contains("s")) 
-	    					  opt=1;
-	    				  if (str.contains("c")) { 
-	    					  try {
-	    						  crit=Double.parseDouble((String)items.
-	    								  remove(0));
-	    					  } catch(Exception ex) {
-	    						  crit=LAYOUT_THRESHOLD;
-	    						  CirclePack.cpb.myErrorMsg("layout: "+
-	    						  "error reading 'crit' value for -cc flag.");
-	    					  }
-	    				  }
-	    				  try { 
-	    					  packData.comp_pack_centers(errflag,
-	    							  dflag,opt,crit);
-	    					  count++;
-	    				  } catch (Exception ex) {
-	    					  CirclePack.cpb.myErrorMsg("layout: "+
-	    							  "error in computing pack centers.");
-	    					  return count;
-	    				  }
-	    			  }
+    				  pdc.layoutPacking();
 	    			  break;
 	    		  }
 	    		  case 'F': // redo combinatorics, reset aims/curv
 	    		  {
     				  pdc.redChain=null;
     				  pdc.fixDCEL_raw(packData);
-    				  packData.CompPackLayout();
+    				  pdc.layoutPacking();
 	    			  
 	    			  // TODO: some traditional pflag options 
 	    			  //    aren't implemented in DCEL version yet
-//	    			  else {
-//	    				  packData.complex_count(true);
-//	    				  boolean pflag=false;
-//	    				  if (items.size()>0 && items.get(0).equals("P"))
-//	    					  pflag=true; // use poison verts/edges
-//	    				  packData.facedraworder(pflag);
-//	    			  }
 	    			  
 	    			  packData.fillcurves();
 	    			  packData.set_aim_default();
@@ -7361,39 +7317,34 @@ public class CommandStrParser {
 	    			  	    // 'dt [v]' for torus only, tries to layout 2-side pairs, with
 	    			  		//  optional corner vertex 'v'.
 	    		  {
-	    			  // TODO: not yet ready for DCEL case
-	    			  if (pdc!=null) {
-	    				  CirclePack.cpb.errMsg("TODO for DCEL case");
-	    				  break;
-	    			  }
-	    		
-	    			  // traditional
 	    			  if (str.charAt(2)=='t') { // does nothing if not a torus
-	    				  int v=0;
-	    				  if (items.size()>0) {
-	    					  str=(String)items.get(0);
-	    					  v=NodeLink.grab_one_vert(packData, str);
+	    				  if (packData.genus!=1 || packData.getBdryCompCount()!=0) {
+	    					  CirclePack.cpb.errMsg(
+    		    				"usage: 'layout -dt' only applies to "+
+    		    						"complex that is a torus.");
+	    					  break;
 	    				  }
-	    				  // it worked
-//	    				  if (ProjStruct.torus4layout(packData, v)!=null) { 
-//	    					  packData.complex_count(true);
-//	    					  packData.fillcurves();
-//	    					  try {
-//	    						  packData.comp_pack_centers(errflag,
-//	    					  		dflag,opt,LAYOUT_THRESHOLD);
-//	    					  } catch (Exception ex) {
-//	    						  CirclePack.cpb.
-//	    					  		myErrorMsg("layout: error in "+
-//	    					  			"computing pack centers");
-//	    					  }
-//	    					  count++;
+    		    				
+	    				  // TODO: formerly, could specify common corner
+	    				  //       vertex for the layout
+//	    			  	  int v=0;
+//	    			      if (items.size()>0) {
+//		    				  str=(String)items.get(0);
+//		    				  v=NodeLink.grab_one_vert(packData, str);
 //	    				  }
+
+	    				  if (CombDCEL.torus4Sides(pdc)==null) {
+	    					  pdc.fixDCEL_raw(packData);
+	    					  throw new CombException("torus 4-sided layout failed");
+	    				  }
+	    				  CombDCEL.d_FillInside(pdc);
+	    				  pdc.layoutPacking();
 	    				  break;
 	    			  }
 	    			  else { // 'd' with optional vert whose locations to report
 	    				  str=(String)items.get(0);
 	    				  int v=NodeLink.grab_one_vert(packData,str);
-	    				  packData.layout_report(v,true,false);
+	    				  pdc.layoutReport(v,true,false);
 	    				  count++;
 	    				  break;
 	    			  }
@@ -7425,150 +7376,48 @@ public class CommandStrParser {
 	    		  }
 	    		  case 't': // tailored
 	    		  {
-	    			  // TODO: not yet ready for DCEL case
-	    			  if (pdc!=null) { 
-	    				  CirclePack.cpb.errMsg("TODO for DCEL case");
-	    				  break;
+	    			  NodeLink markedV=new NodeLink(packData);
+	    			  HalfLink newOrder;
+	    			  for (int i=1;i<=packData.nodeCount;i++)
+	    				  if(packData.getVertMark(i)!=0)  
+	    					  markedV.add(i);
+	    			  if (markedV.size()==0) {
+	    				  CirclePack.cpb.myErrorMsg("layout -[tT]: no vertices "+
+	    			    		"have been marked?");
 	    			  }
-	    			  
-	       			  str=str.substring(2);
-	    			  if (str.contains("d")) dflag=true;
-	    			  if (str.contains("f")) errflag=true;
-	    			  if (str.contains("s")) opt=1;
-	    			  if (str.contains("c")) { 
-	    				  try {
-	    					  crit=Double.parseDouble((String)items.remove(0));
-	    				  } catch(Exception ex) {
-	    					  crit=LAYOUT_THRESHOLD;
-	    					  CirclePack.cpb.myErrorMsg("layout: error "+
-	    							  "reading 'crit' value for -cc flag: "+
-	    							  ex.getMessage());
-	    				  }
-	    			  }
-	    			    int tick=0;
-	    			    for (int i=1;i<=packData.nodeCount;i++) 
-	    			    	if(packData.getVertMark(i)!=0) tick++;
-	    			    if (tick==0) {
-	    			    	CirclePack.cpb.myErrorMsg("layout -[tT]: no vertices "+
-	    			    			"have been marked?");
-	    			    }
-	    			    else if ((newfaces=packData.tailor_face_order(tflag))!=null) {
-	    			    	packData.faces=newfaces;
-	    			    	packData.firstFace=packData.util_A;
-	    			    	try {
-	    			    		count += packData.comp_pack_centers(errflag,
-	    			    				dflag,opt,crit);
-	    			    	}catch (Exception ex) {
-	    			    		CirclePack.cpb.myErrorMsg("error in computing "+
-	    			    				"pack centers: "+ex.getMessage());
-	    			    		return count;
-	    			    	}
-	    			    }
-	    			    if (count>0) packData.fillcurves();
-	    			    break;
+	    			  else if ((newOrder=CombDCEL.
+	    					  tailorFaceOrder(pdc,markedV,tflag))!=null) {
+	    				  pdc.layoutOrder=newOrder;
+	    				  pdc.layoutPacking();
+	    				  count++;
+    				  }
+	    			  packData.fillcurves();
+	    			  break;
 	    		  }
 	    		  case 'e': // use edgelist of poison edges.
 	    		  {
-	    			  
-	    			  // TODO: not yet ready for DCEL case
-	    			  if (pdc!=null) { 
-	    				  CirclePack.cpb.errMsg("TODO for DCEL case");
-	    				  break;
-	    			  }
-	    			  
-	    			  if (items.size()==0) { // no edges given, use 'packData.poisonEdges'
-	    				  if (packData.poisonEdges==null) {
-	    					  throw new ParserException("no poison edge were provided.");
-	    				  }
-	    			  }
-	    			  else packData.poisonEdges=new EdgeLink(packData,items);
-	    			  
-	    			  if (packData.poisonEdges==null || packData.poisonEdges.size()==0
-	    					  || packData.poisonEdges.size()>=
-	    						  (packData.nodeCount+packData.faceCount-packData.euler)) {
-	    				  throw new CombException("error in poison edges.");
-	    			  }
-	    			  packData.poisonVerts=null; // trash poison vertices.
-	    			  
-	    			  // until 1/2011, used 'facedraworder', but that gives problems
-//	    			  packData.facedraworder(true);
-	    			  
-	    			  // use dual tree approach
-	    				// build list of dual edges
-	    			  EdgeLink cutDuals=new EdgeLink();
-	    			  Iterator<EdgeSimple> cutlst=packData.poisonEdges.iterator();
-	    			  while (cutlst.hasNext()) {
-	    				  EdgeSimple edg=cutlst.next();
-	    				  cutDuals.add(packData.dualEdge(edg.v,edg.w));
-	    			  }
+    		    	  NodeLink vlink=new NodeLink(packData,items);
+    		    	  RedHEdge newRed=RawDCEL.vlink2red(packData.packDCEL,vlink);
+	    	    	  
+	    	    	  if (newRed==null) { 
+	    	    		  CirclePack.cpb.errMsg("failed to get a new red chain");
+	    	    		  break;
+	    	    	  }
+	    	    		  
+	        		  // clear out old red info, then install 'newRed'
+	        		  RawDCEL.wipeRedChain(packData.packDCEL,packData.packDCEL.redChain);
+	        		  packData.packDCEL.redChain=newRed;
+
+	        		  // zero out 'eutil'; can set negative for edges to prevent
+	        		  //   them from being red-twinned.
+	        		  for (int e=1;e<=packData.packDCEL.edgeCount;e++)
+	        			  packData.packDCEL.edges[e].eutil=0;
 	    				
-	    			  // create the full dual graph
-	    			  GraphLink fullDual=DualGraph.buildDualGraph(packData,
-	    					  packData.firstFace,null);
-	    			
-	    			  // extract the dual tree, but with no edges belonging to 'cutDuals'
-	    			  GraphLink tree=fullDual.extractSpanTree(packData.firstFace,cutDuals);
-	    				
-// debug		
-	    		//System.err.println("dTree");		
-//	    				Iterator<EdgeSimple> trl=dTree.iterator();
-//	    				while (trl.hasNext()) {
-//	    					EdgeSimple ed=trl.next();
-	    		//System.err.println("<"+ed.v+","+ed.w+">");
-//	    				}
-	    				
-	    			  // get RedList from dual tree
-	    			  RedList newRedList=DualGraph.graph2red(packData,tree,packData.firstFace);
-	    					
-	    			  // process to get redChain
-	    			  RedChainer newRC=new RedChainer(packData);
-	    			  BuildPacket bP=new BuildPacket();
-	    			  bP=newRC.redface_comb_info(newRedList, false);
-	    			  if (!bP.success) {
-	    				  throw new LayoutException("Layout error in ProjStruct");
-	    			  }
-	    			  packData.setSidePairs(bP.sidePairs);
-	    			  packData.labelSidePairs(); // establish 'label's
-	    			  packData.redChain=packData.firstRedEdge=bP.firstRedEdge;
-	    			  packData.facedraworder(false);
-	    			  // LayoutBugs.log_Red_Hash(packData,packData.redChain,packData.firstRedEdge);
-	    			  // dump poisonEdges
-	    			  packData.poisonEdges=null;
-	    			  try {
-	    				  count+=packData.comp_pack_centers(errflag,dflag,opt,crit);
-	    				  return count;
-	    			  } catch (Exception ex) {
-	    				  throw new CombException("error in layout: "+ex.getMessage());
-	    			  }
+	    	    	  CombDCEL.finishRedChain(pdc,pdc.redChain);
+	    	    	  packData.packDCEL.fixDCEL_raw(packData);
+	    	    	  packData.packDCEL.layoutPacking();	
+	    	    	  break;
 	    		  }
-	       		  case 'f': // use given facelist to create list of poison edges.
-	    		  {
-	    			  // TODO: not yet ready for DCEL case
-	    			  if (pdc!=null) { 
-	    				  CirclePack.cpb.errMsg("TODO for DCEL case");
-	    				  break;
-	    			  }
-	    			  
-	    			  if (items.size()==0) { // no faces given
-	    				  throw new CombException("no poison edge were provided.");
-	    			  }
-	    			  FaceLink facelist=new FaceLink(packData,items);
-	    			  packData.poisonEdges=packData.outer_edges(facelist);
-	    			  if (packData.poisonEdges==null || packData.poisonEdges.size()==0
-	    					  || packData.poisonEdges.size()>=
-	    						  (packData.nodeCount+packData.faceCount-packData.euler)) {
-	    				  throw new CombException("error in number of poison edges.");
-	    			  }
-	    			  packData.poisonVerts=null; // trash poison vertices.
-	    			  packData.facedraworder(true);
-	    			  packData.poisonEdges=null;
-	    			  try { // dflag=true; to spit out debugging file
-	    				  count+=packData.comp_pack_centers(errflag,dflag,opt,crit);
-	    				  return count;
-	    			  } catch (Exception ex) {
-	    				  throw new CombException("-e: error in the layout");
-	    			  }
-	    		  }   		  
 	    		  } // end of switch
 	    	  } // end of while
 	    	  return count;
@@ -7870,11 +7719,10 @@ public class CommandStrParser {
 	    			  jexecute(packData,"geom_to_e");
 	    		  }	
 	    		  packData.set_aim_default(); // Orick's code, if available
-	    		  count=packData.repack_call(cycles); 
+	    		  d_EuclPacker e_packer=new d_EuclPacker(packData,-1);
+	    		  count=e_packer.genericRePack(cycles);
 				  packData.fillcurves();
-				  try {
-					  packData.comp_pack_centers(false,false,2,LAYOUT_THRESHOLD);
-				  } catch (IOException ex) {};
+				  packData.packDCEL.layoutPacking();
 	    	  }
 	    	  else if (packData.intrinsicGeom > 0) { // sphere: Note that NSpole is included
 	    		  packData.hes=1;
@@ -8236,15 +8084,14 @@ public class CommandStrParser {
 	    	  }
 	    	  
 	    	  // convert to euclidean geometry
-	    	  CommandStrParser.jexecute(packData,"geom_to_e");
+//	    	  CommandStrParser.jexecute(packData,"geom_to_e");
 	    	  
 	    	  // create copy
 	    	  PackData holdPack=packData.copyPackTo();
-	    	  
-	    	  // double the copy
-	    	  CPBase.Vlink=new NodeLink(packData,"B"); // all of the bdry
-	    	  int antip=holdPack.double_K(CPBase.Vlink);
-	    	  holdPack.hes=1; // make spherical
+	    	  PackDCEL newpdcel=CombDCEL.d_double(holdPack.packDCEL,null,false);
+	    	  int antip=newpdcel.oldNew.findW(packData.getAlpha()+packData.nodeCount);
+	    	  newpdcel.fixDCEL_raw(holdPack);
+	    	  holdPack.hes=1;
 	    	  
 	    	  // max_pack the copy
 	    	  int ans=0;
@@ -8254,7 +8101,8 @@ public class CommandStrParser {
 	    	  }
 	    	
 	    	  // normalize the copy
-	    	  StringBuilder strbld=new StringBuilder("NSPole "+holdPack.getAlpha()+" "+antip);
+	    	  StringBuilder strbld=new StringBuilder("NSPole "+
+	    			  holdPack.getAlpha()+" "+antip);
 	    	  if (CommandStrParser.jexecute(holdPack,strbld.toString())==0) {
 	    		  CirclePack.cpb.errMsg("hum.. ran into normalizing problem with 'perp_pack'");
 	    		  return 0;
@@ -8263,7 +8111,7 @@ public class CommandStrParser {
 	    	  // project the copy to the plane
 	    	  CommandStrParser.jexecute(holdPack,"geom_to_e");
 	    	  
-	    	  // now copy centers and radii into 'packData'
+	    	  // now copy center/rad into 'packData'
 	    	  for (int v=1;v<=packData.nodeCount;v++) {
 	    		  packData.setRadiusActual(v,holdPack.getActualRadius(v));
 	    		  packData.setCenter(v,holdPack.getCenter(v));

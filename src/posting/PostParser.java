@@ -8,6 +8,7 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.D_SideData;
 import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.CommonMath;
@@ -16,7 +17,6 @@ import komplex.AmbiguousZ;
 import komplex.DualTri;
 import komplex.EdgeSimple;
 import komplex.Face;
-import komplex.SideDescription;
 import listManip.BaryCoordLink;
 import listManip.EdgeLink;
 import listManip.FaceLink;
@@ -716,11 +716,11 @@ public class PostParser {
 				int n, k;
 				for (int j = 0; j < verts.size(); j++) {
 					n = (Integer) verts.get(j);
-					SideDescription epair = p.getSidePairs().get(n);
+					D_SideData epair = p.getSidePairs().get(n);
 					count += p.post_bdry_seg(pF, n, do_label, do_circle,
 							epair.color, tx);
 					if (do_mate) { // do paired edge?
-						SideDescription ep = (SideDescription) p.getSidePairs().get(n);
+						D_SideData ep =p.getSidePairs().get(n);
 						if ((k = ep.mateIndex) >= 0)
 							p.post_bdry_seg(pF, k, do_label, do_circle,
 									epair.color, tx);

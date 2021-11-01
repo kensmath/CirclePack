@@ -2,6 +2,9 @@ package geometry;
 import allMains.CPBase;
 import baryStuff.BaryPoint;
 import complex.Complex;
+import dcel.PackDCEL;
+import dcel.RedHEdge;
+import math.Mobius;
 import math.Point3D;
 import packing.PackData;
 import util.RadIvdPacket;
@@ -127,6 +130,35 @@ public class SphericalMath{
    */
   public static double s_face_area(RadIvdPacket rip) {
 	  return s_area(rip.rad[0],rip.rad[1],rip.rad[2],rip.oivd[0],rip.oivd[1],rip.oivd[2]);
+  }
+  
+  /**
+   * Usual normalization, 'a' at origin, 'b' on positive imaginary axis
+   * @param pdcel PackDCEL
+   * @param a complex, (theta,phi)
+   * @param g complex, (theta,phi)
+   * @return the Mobius applied
+   */
+  public static Mobius s_norm_pack(PackDCEL pdcel,Complex a,Complex g) {
+	  int count=0;
+	  Mobius mob=Mobius.rigidAlphaGamma(a, g);
+	  if (Mobius.frobeniusNorm(mob)>.0001) {
+		  // directly adjust in 'vData'
+		  for (int v=1;v<=pdcel.vertCount;v++) {
+			  Complex z=pdcel.p.vData[v].center;
+			  pdcel.p.vData[v].center=mob.apply_2_s_pt(z);
+			  count++;
+		  }
+		  // directly adjust in red chain
+		  if (pdcel.redChain!=null) {
+			  RedHEdge rtrace=pdcel.redChain;
+			  do {
+				  rtrace.setCenter(mob.apply_2_s_pt(rtrace.getCenter()));
+				  rtrace=rtrace.nextRed;
+			  } while(rtrace!=pdcel.redChain);
+		  }
+	  }
+	  return mob;
   }
   
   /**

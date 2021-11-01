@@ -53,7 +53,8 @@ public class PointLink extends LinkedList<Complex> {
 	public PointLink(PackData p,Complex z) {
 		super();
 		packData=p;
-		if (z!=null) add(z);
+		if (z!=null) 
+			add(z);
 	}
 	
 	public PointLink(Complex z) {

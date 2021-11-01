@@ -12,6 +12,9 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.D_PairLink;
+import dcel.D_SideData;
+import dcel.RedHEdge;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
 import exceptions.InOutException;
@@ -28,6 +31,7 @@ import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
 import listManip.NodeLink;
+import math.Mobius;
 import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
@@ -37,8 +41,8 @@ import util.StringUtil;
 import util.TriAspect;
 
 /**
- * This class allows for the study of affine structures on
- * surfaces. @see ProjStruct contains many static routines for
+ * This extender allows for the study of affine structures 
+ * on surfaces. 'ProjStruct' contains many static routines for
  * computations.
  * 
  * Now in 2021, I am moving to dcel structures, so see
@@ -110,38 +114,13 @@ public class AffinePack extends PackExtender {
 	 * this if the packing or its drawing order is changed.
 	 */
 	public void resetAspects() {
-		for (int v=1;v<=packData.nodeCount;v++)
-			packData.kData[v].utilFlag=0;
-		NodeLink redVert=new NodeLink(packData,"R");
-		if (redVert==null || redVert.size()==0) {
-			msg("No list of red vertices was found");
-			return;
-		}
-
-		// indicate red vertices with utilFlag=1
-		Iterator<Integer> rit=redVert.iterator();
-		while(rit.hasNext())
-			packData.kData[rit.next()].utilFlag=1;
-		
 		// create vector of 'TriAspect's, one for each face
 		aspects=new TriAspect[packData.faceCount+1];
 		for (int f=1;f<=packData.faceCount;f++) {
 			aspects[f]=new TriAspect(packData.hes);
-		}
-		
-		// those for redChain faces, get a redList pointer
-		RedList rtrace=(RedList)packData.redChain;
-		boolean done=false;
-		while (rtrace!=(RedList)packData.redChain || !done) {
-			done=true;
-			aspects[rtrace.face].redList=rtrace;
-			rtrace=rtrace.next;
-		}
-		
-		// initiate aspects
-		for (int f=1;f<=packData.faceCount;f++) {
 			TriAspect tas=aspects[f];
-			tas.face=f;
+			tas.baseEdge=pdc.faces[f].edge;
+			tas.face=tas.baseEdge.face.faceIndx;
 			for (int j=0;j<3;j++) {
 				int v=packData.faces[f].vert[j];
 				tas.vert[j]=v;
@@ -149,9 +128,6 @@ public class AffinePack extends PackExtender {
 				tas.labels[j]=packData.getRadius(v);
 				// set 'centers'
 				tas.setCenter(new Complex(packData.getCenter(v)),j);
-				if (packData.kData[v].utilFlag==1)
-					tas.redFlags[j]=true;
-				else tas.redFlags[j]=false;
 			}
 			// set 'sides' from 'center's
 			tas.centers2Sides();
@@ -892,7 +868,8 @@ public class AffinePack extends PackExtender {
 	/*
 	 *    ADJBD
 	 *    
-	 *    Assume the centers have been placed for a triangulation and stored in PackData
+	 *    Assume the centers have been placed for a triangulation 
+	 *    and stored in PackData
 	 *    
 	 */
 	public static int adjBd(PackData p, TriAspect[] asp){
@@ -1239,7 +1216,8 @@ public class AffinePack extends PackExtender {
 	/*
 	 *    NEW CENTER
 	 *    
-	 *    Assume the centers have been placed for a triangulation and stored in PackData
+	 *    Assume the centers have been placed for a triangulation and 
+	 *    stored in PackData
 	 *    
 	 *    @param v (interior vertex)
 	 *    @return new center nz (Complex)
@@ -2262,6 +2240,7 @@ public class AffinePack extends PackExtender {
 		Complex z2=cornerPts.get(1);
 		Complex z3=cornerPts.get(2);
 		Complex z4=cornerPts.get(3);
+//		Mobius mob=Mobius.mob_NormQuad(cornerPts);
 		Complex denom=z1.minus(z4).times(z3.minus(z2));
 		Complex x_ratio=z1.minus(z2).times(z3.minus(z4)).divide(denom);
 		
@@ -2324,57 +2303,64 @@ public class AffinePack extends PackExtender {
 	}
 	
 	/**
-	 * Compute various data from the current packing and aspects
-	 * and fill 'TorusData' structure. Also redo the packing layout
-	 * to put it in normalized position.
-	 * NOTE: the packing should be repacked and laid out before 
-	 * calling this routine.
-	 * @param writ, boolean; false, don't write output in message window.
+	 * Put a torus in normalized position and compute 
+	 * various data for 'TorusData' structure. Calling
+	 * routine should have arranged 2 side-pairings and 
+	 * repacked and laid out the affine packing. 
+	 * @param writ boolean; false, don't write output messages.
 	 * @return TorusData object or null on error
 	 */
 	public TorusData getTorusData(boolean writ) {
 		TorusData torusData=new TorusData();
+		Complex[] Z=new Complex[4];
+
+		D_PairLink plink=packData.packDCEL.pairLink;
+		if (plink==null || plink.size()!=5) 
+			throw new ParserException("torus appears to have no "+
+					"'pairLink' or there are not two side-pairings.");
+		for (int j=1;j<=4;j++) {
+			D_SideData sdata=plink.get(j);
+			Z[j-1]=sdata.startEdge.getCenter();
+		}
 		
 		// make sure the torus is normalized
-		torusData.x_ratio=normalize(writ);
-		if (torusData.x_ratio==null) {
-			CirclePack.cpb.errMsg("normalization failed");
-			return null;
-		}
+		Mobius mob=Mobius.mob_NormQuad(Z);
+		for (int j=0;j<4;j++)
+			Z[j]=mob.apply(Z[j]);
+		torusData.cornerPts=Z;
 		
-		// need argument changes on the sides
-		Vector<Integer> sideStartVerts=new Vector<Integer>(6);
-		Vector<Complex> cornerPts=new Vector<Complex>(6);
-		Vector<Double> sideArgChanges=new Vector<Double>(6);
-		torusData.cornerVert=ProjStruct.sideInfo(packData,aspects,
-				sideStartVerts,cornerPts,sideArgChanges,null);
-		if (torusData.cornerVert<=0) {
-			CirclePack.cpb.errMsg("Torus lacks 2-sidepair form");
-			return null;
-		}
-		torusData.cornerPts=new Complex[4];
+		torusData.x_ratio=torusData.cornerPts[0].minus(torusData.cornerPts[1]).
+				times(torusData.cornerPts[2].minus(torusData.cornerPts[3])).
+				divide(torusData.cornerPts[0].minus(torusData.cornerPts[3]).
+				times(torusData.cornerPts[2].minus(torusData.cornerPts[1])));
+				// cross-ratio (z1-z2)*(z3-z4)/((z1-z4)*(z3-z2))
+		
+		Mobius.mobiusDirect(packData,mob);
+		
 		torusData.mean=new Complex(0.0);
 		for (int i=0;i<4;i++) {
-			torusData.cornerPts[i]=cornerPts.get(i);
 			torusData.mean.add(torusData.cornerPts[i].times(.25));
 		}
-				
-		// compute Teichmuller parameter 'T' and the modulus 'tau'
-		//   and the affine parameter 'c' of Sass.
-		torusData.a=Math.log(torusData.cornerPts[1].abs());
-		torusData.b=sideArgChanges.get(0); // arg change on [z1,z2]
-		torusData.M=Math.log(torusData.cornerPts[3].abs());
-		torusData.N=(-1.0)*sideArgChanges.get(3); // arg change on [z4,z1]
-		torusData.affCoeff=new Complex(torusData.a,torusData.b);
-		double x=(torusData.a*torusData.M+torusData.b*torusData.N)/torusData.affCoeff.absSq();
-		double y=(torusData.a*torusData.N-torusData.b*torusData.M)/torusData.affCoeff.absSq();
-		torusData.teich=new Complex(x,y);
-		torusData.tau=TorusModulus.Teich2Tau(torusData.teich);
-		torusData.alpha=torusData.cornerPts[3].minus(torusData.cornerPts[2]).
-		divide(torusData.cornerPts[0].minus(torusData.cornerPts[1]));
-		torusData.beta=torusData.cornerPts[3].minus(torusData.cornerPts[0]).
-		divide(torusData.cornerPts[2].minus(torusData.cornerPts[1]));
-		
+
+		return torusData;
+	}	
+	
+	// compute Teichmuller parameter 'T' and the modulus 'tau'
+	//   and the affine parameter 'c' of Sass.
+	torusData.a=Math.log(torusData.cornerPts[1].abs());
+	torusData.b=sideArgChanges.get(0); // arg change on [z1,z2]
+	torusData.M=Math.log(torusData.cornerPts[3].abs());
+	torusData.N=(-1.0)*sideArgChanges.get(3); // arg change on [z4,z1]
+	torusData.affCoeff=new Complex(torusData.a,torusData.b);
+	double x=(torusData.a*torusData.M+torusData.b*torusData.N)/torusData.affCoeff.absSq();
+	double y=(torusData.a*torusData.N-torusData.b*torusData.M)/torusData.affCoeff.absSq();
+	torusData.teich=new Complex(x,y);
+	torusData.tau=TorusModulus.Teich2Tau(torusData.teich);
+	torusData.alpha=torusData.cornerPts[3].minus(torusData.cornerPts[2]).
+	divide(torusData.cornerPts[0].minus(torusData.cornerPts[1]));
+	torusData.beta=torusData.cornerPts[3].minus(torusData.cornerPts[0]).
+	divide(torusData.cornerPts[2].minus(torusData.cornerPts[1]));
+	
 		return torusData;
 	}
 	
@@ -3114,7 +3100,8 @@ public class AffinePack extends PackExtender {
 							if (vlist!=null && vlist.size()>0) {
 								int v=(int)vlist.get(0);
 								msg("Curvature (angle sum - aim) of "+v+" is "+
-										String.format("%.8e",Math.abs(ProjStruct.angSumTri(packData,v,1.0,aspects)[0]-
+										String.format("%.8e",Math.abs(ProjStruct.
+												angSumTri(packData,v,1.0,aspects)[0]-
 												packData.getAim(v))));
 								return 1;
 							}
@@ -3153,7 +3140,8 @@ public class AffinePack extends PackExtender {
 			// find sum[angsum-aim]^2 (for verts with aim>0)
 			for (int v=1;v<=packData.nodeCount;v++) {
 				if (packData.getAim(v)>0.0) {
-					double diff=Math.abs(ProjStruct.angSumTri(packData,v,1.0,aspects)[0]-
+					double diff=Math.abs(ProjStruct.
+							angSumTri(packData,v,1.0,aspects)[0]-
 						packData.getAim(v));
 					Angsum_err += diff*diff;
 				}
@@ -3163,7 +3151,8 @@ public class AffinePack extends PackExtender {
 					int w=packData.kData[v].flower[j];
 					// if w>v and edge is interior
 					if (w>v) {
-						double prd=Math.log(Math.abs(edgeRatioError(packData,new EdgeSimple(v,w),aspects)));
+						double prd=Math.log(Math.abs(edgeRatioError(packData,
+								new EdgeSimple(v,w),aspects)));
 						TLog_err += prd*prd;
 					}
 				}
@@ -3505,44 +3494,44 @@ public class AffinePack extends PackExtender {
 		}
 		
 		// =========== equiBd =============
-		else if (cmd.startsWith("equiBd")) {
-			for (int f=1;f<=packData.faceCount;f++) {
-				for (int j=0;j<3;j++){	
-					if (aspects[f].redFlags[j]==true && aspects[f].redFlags[(j+1)%3]==true){
-						aspects[f].sides[j]=1.0;
-					}
-				}
-			}
-			return 1;
-		}
+//		else if (cmd.startsWith("equiBd")) {
+//			for (int f=1;f<=packData.faceCount;f++) {
+//				for (int j=0;j<3;j++){	
+//					if (aspects[f].redFlags[j]==true && aspects[f].redFlags[(j+1)%3]==true){
+//						aspects[f].sides[j]=1.0;
+//					}
+//				}
+//			}
+//			return 1;
+//		}
 		
 		// =========== avBd ===============
 		
-		else if (cmd.startsWith("avBd")){
-			double sum=0;
-			int count=0;
-			double av=0;
-			for (int f=1;f<=packData.faceCount;f++){
-				for (int j=0;j<3;j++){
-					if (aspects[f].redFlags[j]==true && aspects[f].redFlags[(j+1)%3]==true){
-						sum +=aspects[f].sides[j];
-						count++;
-					}
-				}
-			}
-			av=sum/count;
-			for (int f=1;f<=packData.faceCount;f++){
-				for (int j=0;j<3;j++){
-					if (aspects[f].redFlags[j]==true && aspects[f].redFlags[(j+1)%3]==true)
-						aspects[f].sides[j]=av;
-				}
-			}
-			for (int f=1;f<=packData.faceCount;f++){
-				aspects[f].sides2Labels();
-			}
-			msg("Boundary Edge Count:"+count);
-			return 1;
-		}
+//		else if (cmd.startsWith("avBd")){
+//			double sum=0;
+//			int count=0;
+//			double av=0;
+//			for (int f=1;f<=packData.faceCount;f++){
+//				for (int j=0;j<3;j++){
+//					if (aspects[f].redFlags[j]==true && aspects[f].redFlags[(j+1)%3]==true){
+//						sum +=aspects[f].sides[j];
+//						count++;
+//					}
+//				}
+//			}
+//			av=sum/count;
+//			for (int f=1;f<=packData.faceCount;f++){
+//				for (int j=0;j<3;j++){
+//					if (aspects[f].redFlags[j]==true && aspects[f].redFlags[(j+1)%3]==true)
+//						aspects[f].sides[j]=av;
+//				}
+//			}
+//			for (int f=1;f<=packData.faceCount;f++){
+//				aspects[f].sides2Labels();
+//			}
+//			msg("Boundary Edge Count:"+count);
+//			return 1;
+//		}
 			
 		// =========== update ==============
 		else if (cmd.startsWith("updat")) {
@@ -3804,22 +3793,3 @@ public class AffinePack extends PackExtender {
 	
 }
 
-/** 
- * Specialized class for accumulating torus data.
- * Torus must have been given layout in 2-sidepair form.
- */
-class TorusData {
-	int cornerVert; // corner vertex
-	Complex []cornerPts; // four locations for single corner vertex
-	Complex x_ratio; // cross-ratio (z1-z2)*(z3-z4)/((z1-z4)*(z3-z2))
-	Complex mean;  // average of four corners --- for display use
-	Complex teich;  // Teichmuller parameter
-	Complex tau;    // conformal modulus
-	Complex affCoeff; // affine coefficient
-	double a;   // log(|z2|)
-	double b;   // argument change on [z1 z2]
-	double M;   // log(|z4|)
-	double N;   // argument change on [z1,z4]
-	Complex alpha; // side pair maps in normalized situation
-	Complex beta; // z goes to alpha*z and beta*z.
-}

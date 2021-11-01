@@ -15,6 +15,7 @@ import javax.swing.ImageIcon;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
+import dcel.PackDCEL;
 import exceptions.ExtenderException;
 import exceptions.PackingException;
 import images.CPIcon;
@@ -43,10 +44,11 @@ import util.UtilPacket;
  *
  */
 public abstract class PackExtender {
-	public String extensionType; // type of 'PackExtender', e.g., RIEMANN-HILBERT
+	public String extensionType; // 'PackExtender' type, e.g., RIEMANN-HILBERT
 	public String extensionAbbrev; // Abbreviation, e.g.,'RH','rh', used in commands
 	public CPScreen cpScreen;  // keep cpScreen because 'PackData' can get swapped out.
 	public PackData packData;  // every 'PackExtender' is associated with a single packing
+	public PackDCEL pdc;       // convenience
 	public String iconName="GUI/Xtender.png";  // Extender icon in Resources/Icon
 	public MyTool XtenderTool;
 	public String toolTip;  // for icon and startup message
@@ -58,6 +60,7 @@ public abstract class PackExtender {
 	// Constructor
 	public PackExtender(PackData p) {
 		packData=p;
+		pdc=p.packDCEL;
 		cpScreen=p.cpScreen;
 		running=false;
 		toolTip="No startup information provided on this PackExtender";
@@ -112,8 +115,8 @@ public abstract class PackExtender {
 	
 	/**
 	 * Replace 'this.packData' with a copy of 'newPD'. Maintain 
-	 * 'this' as PackExtension, but no others. The particular PackExtender 
-	 * may have additional cleanup to do.
+	 * 'this' as PackExtension, but no others. Any particular 
+	 * PackExtender may have additional cleanup to do.
 	 * @param newPD PackData
 	 * @return NodeCount, 0 on error
 	 */
@@ -124,6 +127,7 @@ public abstract class PackExtender {
 		packData=newPD.copyPackTo();
 		packData.packExtensions=new Vector<PackExtender>(1);
 		packData.packExtensions.add(this);
+		pdc=newPD.packDCEL;
 		
 		// reconnect pack and screen
 		packData.cpScreen=holdcpS;

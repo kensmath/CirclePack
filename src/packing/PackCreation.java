@@ -1338,7 +1338,7 @@ public class PackCreation {
 		growWheel.fillcurves();
 		growWheel.repack_call(1000);
 		try {
-			growWheel.CompPackLayout(); // comp_pack_centers(false,false,opt,crit);
+			growWheel.packDCEL.layoutPacking(); 
 		} catch (Exception ex) {
 			throw new CombException("'pinWheel' creation failed");
 		}
@@ -1543,7 +1543,7 @@ public class PackCreation {
 		fusionA.fillcurves();
 		fusionA.repack_call(1000);
 		try {
-			fusionA.CompPackLayout(); // comp_pack_centers(false,false,opt,crit);
+			fusionA.packDCEL.layoutPacking(); 
 		} catch (Exception ex) {
 			throw new CombException("'fib2D' creation failed");
 		}
@@ -1659,7 +1659,7 @@ public class PackCreation {
 		pent.repack_call(1000);
 
 		try {
-			pent.CompPackLayout(); // comp_pack_centers(false,false,2,.00001);
+			pent.packDCEL.layoutPacking();
 		} catch(Exception ex) {}
 		
 		double mod=pent.getCenter(2).abs();
@@ -1715,7 +1715,7 @@ public class PackCreation {
 		heap.repack_call(1000);
 
 		try {
-			heap.CompPackLayout(); // comp_pack_centers(false,false,2,.00001);
+			heap.packDCEL.layoutPacking();
 		} catch(Exception ex) {}
 		
 		double mod=heap.getCenter(3).abs();
@@ -1778,7 +1778,7 @@ public class PackCreation {
 		triPent.repack_call(1000);
 
 		try {
-			triPent.CompPackLayout();   // comp_pack_centers(false,false,2,.00001);
+			triPent.packDCEL.layoutPacking();  
 		} catch(Exception ex) {}
 		
 		double mod=triPent.getCenter(2).abs();
@@ -1828,7 +1828,7 @@ public class PackCreation {
 		quadPent.repack_call(1000);
 
 		try {
-			quadPent.CompPackLayout(); // comp_pack_centers(false,false,2,.00001);
+			quadPent.packDCEL.layoutPacking();
 		} catch(Exception ex) {}
 		
 		double mod=quadPent.getCenter(2).abs();

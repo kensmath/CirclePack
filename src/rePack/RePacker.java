@@ -69,7 +69,6 @@ public abstract class RePacker {
 	public RData []rdata;
 	public int []index;			// indices of adjustable radii
 	public TmpData []kdata;     // locally copy of needed part of p.kData.
-	public TriData []triData;   // for use with DCEL data
 
 	// holding area for list
 	NodeLink holdv=null;
@@ -331,8 +330,8 @@ public abstract class RePacker {
 	}
 	
 	/**
-	 * This is first call in 'load()' calls in DCEL setting.
-	 * Return true if there are non-trivial inv distances involved.
+	 * This is first call in 'load()'. Return true if there 
+	 * are non-trivial inversive distances involved.
 	 * @return boolean
 	 */
 	public boolean triDataLoad() {
@@ -340,7 +339,7 @@ public abstract class RePacker {
 		if (pdcel.triData==null) {
 			pdcel.triData=new TriData[pdcel.faceCount+1];
 			for (int f=1;f<=pdcel.faceCount;f++) {
-				pdcel.triData[f]=new TriData(pdcel,f);
+				pdcel.triData[f]=new TriData(pdcel,pdcel.faces[f].edge);
 				if (pdcel.triData[f].hasInvDist())
 					hit=true;
 			}
@@ -429,7 +428,27 @@ public abstract class RePacker {
      * @return double
      */
     public double getTriRadius(int v) {
-    	return pdcel.triData[p.vData[v].findices[0]].radii[p.vData[v].myIndices[0]];
+    	return pdcel.triData[p.vData[v].findices[0]].
+    			radii[p.vData[v].myIndices[0]];
+    }
+    
+    /**
+     * Given 'p' and 'triData', compute the angle sum at 'v' 
+     * face-by-face, in each face using factor*rad(v) as the 
+     * radius at v, where rad(v) is the current radius recorded 
+     * for 'v' in that face.
+     * @param v int
+     * @param factor double
+     * @return double
+     */
+    public double factorTriCurv(int v,double factor) {
+    	int[] findices=p.vData[v].findices;
+    	double curv=0;
+    	for (int j=0;j<findices.length;j++) {
+    		int k=p.vData[v].myIndices[j];
+    		curv += pdcel.triData[findices[j]].compFactorAngle(k,factor);
+    	}
+    	return curv;
     }
     
     /**

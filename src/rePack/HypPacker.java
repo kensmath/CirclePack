@@ -464,50 +464,7 @@ public class HypPacker extends RePacker {
 		totalPasses += localPasses;
 		return RIFFLE;
 	}
-	
-	/**
-	 * Generic call; computes both radii and centers (use 'repack' if
-	 * you want centers only). Depending on 'useSparseC', use Java or Orick's  
-	 * method, which by its nature computes radii and centers in unison. 
-	 * @param cycles, int, limit on recompute cycles; no effect in Orick's method
-	 * @return int; may be number of cycles used.
-	 */
-	public int maxPack(int cycles) {
-		int count=0;
-		if (!useSparseC) {
-			try {
-				count=genericRePack(cycles);
-				p.fillcurves();
-				p.comp_pack_centers(false,false,2,CommandStrParser.LAYOUT_THRESHOLD);
-			} catch (Exception ex) {
-				throw new PackingException("error in Java repack computation"); 
-			}
-		}
-		else { // use GOpack
-			count=maxPackC();
-			// normalize to put alpha at the origin, gamma on imaginary axis.
-			p.center_point(p.getCenter(p.getAlpha()));
-			p.rotate((-1.0)*p.getCenter(p.getGamma()).arg()+Math.PI/2.0);
-		}
-		return count;
-	}
-	
-	/**
-	 * Call to Orick's code in GOpacker using 'SolverFunction' C code.
-	 * For maximal packing in disc computes centers and radii in concert. 
-	 * @return 1 on success, exceptions thrown on error
-	 */
-	public int maxPackC() {
-		GOpacker goPack=new GOpacker(p);
-		goPack.setMode(1); // max pack mode
-		goPack.startRiffle();
-		int cnt=goPack.continueRiffle(30);
-		goPack=null;
 		
-		p.fillcurves();
-		return cnt;
-	}
-	
 	/**
      * Original repack algorithm implemented in Java. Used, e.g., with 
      * overlap packings, where the more sophisticated Java routines and

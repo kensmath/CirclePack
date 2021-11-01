@@ -216,7 +216,7 @@ public class BaryPoint {
 	}
 	
 	public void printDebug(PackData p,String lead) {
-		int[] vert=p.packDCEL.faces[f].getVerts();
+		int[] vert=p.packDCEL.faces[face].getVerts();
 		System.out.println(lead+": face="+this.face+" verts="+
 				vert[0]+" "+vert[1]+" "+vert[2]+" barys: "+
 				this.b0+" "+this.b1+" "+this.b2);

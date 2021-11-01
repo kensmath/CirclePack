@@ -6,10 +6,11 @@ import java.util.Random;
 import java.util.Vector;
 
 import allMains.CPBase;
+import dcel.D_SideData;
+import dcel.RedHEdge;
 import exceptions.CombException;
 import exceptions.DataException;
 import komplex.DualGraph;
-import komplex.SideDescription;
 import komplex.EdgeSimple;
 import komplex.GraphSimple;
 import komplex.RedList;
@@ -69,7 +70,8 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 	
 	public GraphLink(PackData p,String datastr) {
 		packData=p;
-		if (datastr!=null) addDualLinks(datastr);
+		if (datastr!=null) 
+			addDualLinks(datastr);
 	}
 	
 	/**
@@ -88,8 +90,8 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 	
 	/**
 	 * Extract a GraphLink of the connected component containing
-	 * 'base', then build a directed spanning tree.
-	 * @param base, face for root of tree
+	 * 'root', then build a directed spanning tree.
+	 * @param root int, face for root of tree
 	 * @return GraphLink, a directed spanning tree or null on 
 	 * error. Note that "tree" may have only <0,base>.
 	 */
@@ -102,7 +104,7 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 	 * 'base', then build a directed spanning tree. Indices may 
 	 * be excluded; resulting tree will have no edges with an
 	 * end in 'exclude'.
-	 * @param base, node for root of tree
+	 * @param base int, node for root of tree
 	 * @param exclude, NodeLink (may be null)
 	 * @return GraphLink, a directed spanning tree or null on 
 	 * error. Note that "tree" may have only <0,base>.
@@ -1138,30 +1140,30 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 					sideNum=-1;
 				
 				// no side indicated, default to full redchain
-				RedList rlst=(RedList)packData.redChain;
+				RedHEdge rlst=packData.packDCEL.redChain;
 				if (sideNum==-1) { 
-					add(new EdgeSimple(0,rlst.face));
-					int curr=rlst.face;
-					RedList trace=rlst.next;
-					while (trace!=(RedList)packData.redChain) {
-						if (curr!=trace.face)
-							add(new EdgeSimple(curr,trace.face));
-						curr=trace.face;
-						trace=trace.next;
+					int curr=rlst.myEdge.face.faceIndx;
+					add(new EdgeSimple(0,curr));
+					RedHEdge trace=rlst.nextRed;
+					while (trace!=packData.packDCEL.redChain) {
+						if (curr!=trace.myEdge.face.faceIndx)
+							add(new EdgeSimple(curr,trace.myEdge.face.faceIndx));
+						curr=trace.myEdge.face.faceIndx;
+						trace=trace.nextRed;
 						count++;
 					}
 					// 'Ra' want to close the list				
-					if (trace==(RedList)packData.redChain && 
+					if (trace==packData.packDCEL.redChain && 
 							(str.length()>1 && str.charAt(1)=='a')) {
-						if (curr!=trace.face)
-							add(new EdgeSimple(curr,trace.face));
+						if (curr!=trace.myEdge.face.faceIndx)
+							add(new EdgeSimple(curr,trace.myEdge.face.faceIndx));
 						count++;
 					}
 					break;
 				}
 
 				// else, do the chosen side
-				SideDescription ep=packData.getSidePairs().get(sideNum);
+				D_SideData ep=packData.getSidePairs().get(sideNum);
 				rlst=(RedList)ep.startEdge;
 				add(new EdgeSimple(0,rlst.face)); // root
 				int curr=rlst.face;

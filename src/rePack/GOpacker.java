@@ -496,7 +496,6 @@ public class GOpacker extends RePacker {
 //		}
 		
 		return 1;
-		
 	}
 	
 	/**
@@ -1139,12 +1138,11 @@ public class GOpacker extends RePacker {
     	
     	return count;
     }
-
  
     /**
      * Given the corners, set up the 'sides', cclw lists of vertices 
      * forming the sides, including first and last vertex.
-     * @param crnrs []int, corner vertices, local indices
+     * @param crnrs[] int, corner vertices, local indices
      * @return
      */
     public int sideSetup(int []crnrs) {

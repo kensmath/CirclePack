@@ -7,8 +7,10 @@ import allMains.CirclePack;
 import complex.Complex;
 import complex.MathComplex;
 import dcel.D_Schwarzian;
+import dcel.RedHEdge;
 import exceptions.DataException;
 import exceptions.MobException;
+import exceptions.ParserException;
 import ftnTheory.SchwarzMap;
 import geometry.CircleSimple;
 import geometry.HyperbolicMath;
@@ -106,9 +108,9 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/**
-	 * Return new Complex by applying this Mobius tranformation to z.
-	 * 
-	 * @param z Complex
+	 * Return new Complex by applying this Mobius 
+	 * transformation to z = x + iy
+	 * @param z Complex, x+iy
 	 * @return Complex
 	 */
 	public Complex apply(Complex z) {
@@ -633,6 +635,45 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 	
 	/**
+	 * Intended mainly for normalizing affine tori. Given the
+	 * cclw list 'Z' of four corners (typically 4 locations of
+	 * a common vertex), find Mobius that puts it in normalized
+	 * position: If a parallelogram, put z1 at origin, z2 at 1. 
+	 * Else, arrange so side pairing maps are z -> az, z -> bz 
+	 * and so z1 is at 1.
+	 * @param Z Complex[]
+	 * @return Mobius
+	 */
+	public static Mobius mob_NormQuad(Complex[] Z) {
+		if (Z.length!=4)
+			throw new ParserException("expected 4 centers");
+		Mobius mob=new Mobius();
+		
+		double A=Z[2].minus(Z[3]).abs()/Z[1].minus(Z[0]).abs();
+		double B=Z[2].minus(Z[1]).abs()/Z[3].minus(Z[0]).abs();
+		
+		// rectangle?
+		if (Math.abs(A-1.0)<.0000001 && Math.abs(B-1.0)<.0000001) {
+			mob.b=Z[0].times(-1.0);
+			mob.d=Z[1].minus(Z[0]);
+			return mob;
+		}
+		
+		// side-pairings are linear:
+		//    z1 -> z4 and z2 -> z3
+		//    z1 -> z2 and z4 -> z3
+		// where 'fixed' is common fixed point, so mob(z)=az+b, 
+		// where b=fixed/(fixed-Z[0]) and a= 1/(Z[0]-fixed)
+		Complex numtor=Z[0].times(Z[2]).minus(Z[1].times(Z[3]));
+		Complex denom=Z[0].add(Z[2]).minus(Z[1]).minus(Z[3]);
+		Complex fixed=numtor.minus(denom);
+		mob.a=new Complex(1.0).divide(Z[0].minus(fixed));
+		mob.b=fixed.divide(fixed.minus(Z[0]));
+
+		return mob;
+	}
+
+	/**
 	 * Find Mobius that maps centers of 3 circles of eucl packing p to 
 	 * the centers of 3 other circles.
 	 * @param p PackData, eucl only for now
@@ -686,8 +727,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/**
-	 * Convenience routine: return value of z under (a-z)/(1-z*conj(a)).
-	 * 
+	 * Convenience routine: return value of z under 
+	 * (a-z)/(1-z*conj(a)), which interchanges a and z.
 	 * @param z Complex
 	 * @param a Complex
 	 * @return Complex
@@ -697,8 +738,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/**
-	 * Convenience routine: return preimage of w under mobius of disc which maps
-	 * a to zero and b to positive x-axis
+	 * Convenience routine: return preimage of w under mobius 
+	 * of disc which maps a to zero and b to positive x-axis
 	 * 
 	 * @param w Complex
 	 * @param a Complex
@@ -718,27 +759,61 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/**
-	 * Convenience routine: return value at z of mobius transform of unit disc
-	 * which maps a to the origin and (if a and g are not essentially equal) maps g 
-	 * to positive x-axis. 
-	 * @param z Complex
-	 * @param a Complex, |a|<1.0
+	 * Find the mobius of the unit disc which maps a to the
+	 * origin and (if g not to close to a) rotates so g is
+	 * on the positive imaginary axis.
+	 * @param a Complex
 	 * @param g Complex
-	 * @return Complex
+	 * @return new Mobius
 	 */
-	public static Complex mobDiscValue(Complex z, Complex a, Complex g) {
-		Complex w, v;
-		double c;
+	public static Mobius mobNormDisc(Complex a, Complex g) {
+		Mobius mob=new Mobius(); // identity
+		mob.a=new Complex(1.0);
+		mob.b=a.times(-1.0);
+		mob.c=a.conj();
+		mob.d=new Complex(1.0);
+		if (a.minus(g).abs()<MOB_TOLER)
+			return mob;
 		
-		if (a.abs()>MOD1)
-			throw new DataException("'a' is too close to unit circle");
-
-		v = mob_trans(g, a);
-		c = v.abs();
-		if (c < MOB_TOLER)
-			return (mob_trans(z, a));
-		w = mob_trans(z, a).divide(v);
-		return w.times(c);
+		// rotate to put g on positive y-axis
+		Complex rot=new Complex(0,1).divide(mob.apply(g));
+		Mobius mobrot=new Mobius();
+		mobrot.a=rot;
+		mobrot.b=new Complex(0.0);
+		mobrot.c=new Complex(0.0);
+		mobrot.d=new Complex(1.0);
+		
+		mob=(Mobius)mob.lmult(mobrot);
+		return mob;
+	}
+	
+	/**
+	 * Find the mobius of the plane which maps a to the
+	 * origin and (if g not to close to a) rotates so g is
+	 * on the positive imaginary axis.
+	 * @param a Complex
+	 * @param g Complex
+	 * @return new Mobius
+	 */
+	public static Mobius mobNormPlane(Complex a, Complex g) {
+		Mobius mob=new Mobius(); // identity
+		mob.a=new Complex(1.0);
+		mob.b=a.times(-1.0);
+		mob.c=a.conj();
+		mob.d=new Complex(1.0);
+		if (a.minus(g).abs()<MOB_TOLER)
+			return mob;
+		
+		// rotate to put g on positive y-axis
+		Complex rot=new Complex(0,1).divide(mob.apply(g));
+		Mobius mobrot=new Mobius();
+		mobrot.a=rot;
+		mobrot.b=new Complex(0.0);
+		mobrot.c=new Complex(0.0);
+		mobrot.d=new Complex(1.0);
+		
+		mob=(Mobius)mob.lmult(mobrot);
+		return mob;
 	}
 	
 	/**
@@ -1158,7 +1233,36 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		return mob;
 	}
 
-	/* ----------------- applying Mobius to single circles ------- */
+	/* ----------------- applying Mobius to circles -------------- */
+	
+	/**
+	 * Apply a Mobius directly to adjust radii/centers of
+	 * a given packing
+	 * @param p PackData
+	 * @param mob Mobius
+	 * @return count
+	 */
+	public static int mobiusDirect(PackData p,Mobius mob) {
+		int count=0;
+		for (int v=1;v<=p.nodeCount;v++) {
+			CircleSimple csOut=new CircleSimple();
+			mobius_of_circle(mob,p.hes,p.vData[v].center,
+					p.vData[v].rad,csOut,true);
+			p.vData[v].center=csOut.center;
+			p.vData[v].rad=csOut.rad;
+			count++;
+		}
+		RedHEdge rtrace=p.packDCEL.redChain;
+		do {
+			CircleSimple csOut=new CircleSimple();
+			mobius_of_circle(mob,p.hes,rtrace.getCenter(),
+				rtrace.getRadius(),csOut,true);
+			rtrace.setCenter(csOut.center);
+			rtrace.setRadius(csOut.rad);
+			rtrace=rtrace.nextRed;
+		} while(rtrace!=p.packDCEL.redChain);
+		return count;
+	}
 	
 	/**
 	 * Apply mobius ('oriented' true) or inverse ('oriented' false) 
@@ -1176,9 +1280,9 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 * 
 	 * TODO: update calls to use 'csIn' version
 	 */
-	public static int mobius_of_circle(Mobius Mob, int hes, Complex z,
+	public static int mobius_of_circle(Mobius mob, int hes, Complex z,
 			double r, CircleSimple csOut, boolean oriented) {
-		return mobius_of_circle(Mob,hes,new CircleSimple(z,r),csOut,oriented);
+		return mobius_of_circle(mob,hes,new CircleSimple(z,r),csOut,oriented);
 	}
 	
 	/**
@@ -1190,7 +1294,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 * eucl case, negative newr means use outside of circle; calling 
 	 * routine will handle this. Center/radius in specified 
 	 * geometry returned in 'CircleSimple'.
-	 * @param Mob Mobius
+	 * @param mob Mobius
 	 * @param hes int, geometry
 	 * @param z Complex, circle center
 	 * @param r double, circle radius
@@ -1198,7 +1302,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 * @param oriented boolean, if false, use Mob^{-1}
 	 * @return int, 0 on error; results in hes geom are in 'sC'
 	 */
-	public static int mobius_of_circle(Mobius Mob, int hes, 
+	public static int mobius_of_circle(Mobius mob, int hes, 
 			CircleSimple csIn,CircleSimple csOut, boolean oriented) {
 		Complex z=csIn.center;
 		double r=csIn.rad;
@@ -1212,7 +1316,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			tmpr = sc.rad;
 			
 			CirMatrix C=new CirMatrix(tmpz,tmpr);
-			CirMatrix CC=CirMatrix.applyTransform(Mob,C,oriented);
+			CirMatrix CC=CirMatrix.applyTransform(mob,C,oriented);
 
 			sc=CirMatrix.cirMatrix2eucl(CC);
 			if (sc==null)
@@ -1230,17 +1334,17 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			// for NaN problem with r, just move center
 			if (Double.isNaN(r)) { // just move center (without adjusting as
 									// usual)
-				csOut.center = Mob.apply_2_s_pt(z);
+				csOut.center = mob.apply_2_s_pt(z);
 				/* fixup: for Nan problem, should get better estimate of r 
 				 * using, e.g., derivative of Mob.*/
 				csOut.rad = r;
 				return 1;
 			}
 			CirMatrix C =CirMatrix.sph2CirMatrix(z, r);
-			CirMatrix CC = CirMatrix.applyTransform(Mob, C, oriented);
+			CirMatrix CC = CirMatrix.applyTransform(mob, C, oriented);
 			sc=CirMatrix.cirMatrix2sph(CC);
 			if (Double.isNaN(csOut.center.x) || Double.isNaN(csOut.center.y)) {
-				sc.center = Mob.apply(z);
+				sc.center = mob.apply(z);
 				/* fixup: see above */
 				/*
 				 * fixup: problem is sometimes that imaginary part comes out
@@ -1253,7 +1357,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			return 1;
 		} else { // euclidean
 			CirMatrix C=new CirMatrix(z,r);
-			CirMatrix CC=CirMatrix.applyTransform(Mob,C,oriented);
+			CirMatrix CC=CirMatrix.applyTransform(mob,C,oriented);
 
 			CircleSimple scl=CirMatrix.cirMatrix2eucl(CC);
 			csOut.center=new Complex(scl.center);

@@ -20,13 +20,14 @@ import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import input.CPFileManager;
-import input.CommandStrParser;
 import komplex.EdgeSimple;
 import listManip.FaceLink;
 import listManip.GraphLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
+import listManip.PointLink;
 import listManip.VertexMap;
+import math.Mobius;
 import packing.PackData;
 import posting.PostFactory;
 import tiling.Tile;
@@ -48,11 +49,12 @@ import util.TriData;
  * for convenience. 
  * 
  * The principal route to creating DCEL structures uses 'bouquet's
- * in 'CombDCEL.d_redChainBuilder', which first calls 'CombDCEL.createVE'
- * to build vertices and faces and set 'alpha', then creates the
- * redchain, and then calls 'CombDCEL.d_FillInside' to finish.
- * (This is done because many manipulations, such as adding barycenters,
- * need only call 'd_FillInside' to adjust the DCEL structure if
+ * in 'CombDCEL.d_redChainBuilder', which first calls 
+ * 'CombDCEL.createVE' to build vertices and faces and set 
+ * 'alpha', then creates the redchain, and then calls 
+ * 'CombDCEL.d_FillInside' to finish. (This is done because many 
+ * manipulations, such as adding barycenters, need only call 
+ * 'd_FillInside' to adjust the DCEL structure if
  * the redchain was not disturbed.) Note that these routines create 
  * only a 'PackDCEL' object; a call to 'DataDCEL.dcel_to_packing' 
  * will create an associated packing.
@@ -88,7 +90,11 @@ public class PackDCEL {
 	
 	public D_PairLink pairLink;  // linked list of 'D_SideData' on side-pairings
 	
-	public TriData[] triData;    // 'TriData'; typically null, used for repacking
+	// face-by-face data storage: used, e.g. in typical 'repack' 
+	//   calls and for work in 'ProjStruct'. Offen the data is
+	//   in 'labels' and treated as homogeneous (eucl) data.
+	public TriData[] triData; 
+	
 	boolean debug;
 	
 	// Constructor(s)
@@ -181,25 +187,33 @@ public class PackDCEL {
 	}
 	/**
 	 * Create and populate 'triData[]'. This loads 'radii', 
-	 * 'invDist's, 'aim', and computes 'angles'.
+	 * 'invDist's, 'aim'.
 	 * @return int faceCount
 	 */
 	public int allocTriData() {
 		triData=new TriData[faceCount+1];
 		for (int f=1;f<=faceCount;f++) {
-			triData[f]=new TriData(this,f);
+			triData[f]=new TriData(this,faces[f].edge);
 		}
 		return faceCount;
 	}
 	
 	/**
-	 * Update existing 'triData'. Return true if there
-	 * are nontrivial inversive distances so we can set
-	 * oldReliable flag in repacking.
+	 * Update 'triData', creating, if necessary. Return true 
+	 * if there are nontrivial inversive distances so we can set
+	 * "oldReliable" flag in repacking.
 	 * @return boolean
 	 */
 	public boolean updateTriDataRadii() {
 		boolean hit=false;
+		if (triData==null || triData.length!=(faceCount+1)) {
+			triData=new TriData[faceCount+1];
+			for (int f=1;f<=faceCount;f++) {
+				triData[f]=new TriData(this,faces[f].edge);
+				if (triData[f].hasInvDist())
+					hit=true;
+			}
+		}
 		for (int f=1;f<=faceCount;f++) { 
 			triData[f].hes=p.hes;
 			HalfLink eflower=faces[f].getEdges();
@@ -567,7 +581,22 @@ public class PackDCEL {
 		setCent4Edge(edge.next.next,cS.center);
 		return cS;
 	}
-	
+
+	/**
+	 * Standard normalization: a at origin, g on positive y-axis.
+	 * Not ready for spherical case yet
+	 * @param pdcel PackDCEL
+	 * @param a Complex
+	 * @param g Complex
+	 * @return the Mobius applied
+	 */
+	public static Mobius norm_any_pack(PackDCEL pdcel,Complex a,Complex g) {
+	  if (pdcel.p.hes<0) 
+		  return HyperbolicMath.h_norm_pack(pdcel,a,g);
+	  if (pdcel.p.hes>0) 
+		  return SphericalMath.s_norm_pack(pdcel,a,g);
+	  return EuclMath.e_norm_pack(pdcel,a,g);
+	} 
 
 	/**
 	 * Place a 'HalfEdge' so 'origin' is at z=0 and the
@@ -672,17 +701,16 @@ public class PackDCEL {
 	 * position is what is stored in 'Vertex' for now. 
 	 * This also rotates the packing to put gamma on the 
 	 * positive y-axis and it updates the side-pairing maps.
-	 * TODO: for more accuracy, average all computations of center that are
-	 * available: Idea: make all centers null so we can see which are set.
+	 * TODO: for more accuracy, average all computations of 
+	 * center that are available: 
+	 * Idea: make all centers null so we can see which are set.
 	 * @return count
 	 */
 	public int layoutPacking() {
-		
 		boolean debug=false; // debug=true;
+	    int count=1;
 		
 		Iterator<HalfEdge> hit=layoutOrder.iterator();
-		placeFirstEdge(alpha);
-		
 		if (debug) {// debug=true;
 			DCELdebug.drawEFC(this,alpha);
 //			StringBuilder strbld=new StringBuilder("disp -c "+
@@ -691,8 +719,6 @@ public class PackDCEL {
 //			CommandStrParser.jexecute(p,strbld.toString());
 			p.cpScreen.rePaintAll();
 		}
-			
-	    int count=1;
 	    
 	    // now layout face-by-face
 	    while (hit.hasNext()) {
@@ -704,6 +730,88 @@ public class PackDCEL {
 	    if (!debug)
 	    	p.rotate(ang); // usual normalization
 		updatePairMob();
+	    return count;
+	}
+	
+	/** 
+	 * Recompute centers of circles via 'layoutOrder' as usual,
+	 * but if 'v' is valid vertex, then report its placements,
+	 * which may be more than one. Option to recompute first 
+	 * face or leave it in current location. Option to apply 
+	 * usual alpha/gamma normalization. 
+	 * Note: this command modifies the recorded centers.
+	 * @param v int, vert index (<=0 for none)
+	 * @param place_first boolean, if true place the first face
+	 * @param norm boolean, true then do usual alpha/gamma normalization
+	 * @return int, 0 on error 
+	*/
+	public int layoutReport(int v, boolean place_first, boolean norm) {
+	    int count=1;
+		int vflag = 1;
+		Vertex V=null;
+
+		PointLink centlist = null;
+		if (v > 0 && v <= vertCount)
+			V=vertices[v];
+		
+		Iterator<HalfEdge> hit=layoutOrder.iterator();
+		if (place_first) { 
+			placeFirstEdge(alpha);
+			if (V!=null) { // may involve 'v'
+				int[] verts=alpha.face.getVerts();
+				HalfEdge vhe=null;
+				if (v==verts[0])
+					vhe=alpha;
+				else if (v==verts[1])
+					vhe=alpha.next;
+				else if (v==verts[2])
+					vhe=alpha.next.next;
+				centlist.add(getVertCenter(vhe));
+			}
+		}
+		
+		if (debug) {// debug=true;
+			DCELdebug.drawEFC(this,alpha);
+//			StringBuilder strbld=new StringBuilder("disp -c "+
+//					face.edge.origin.vertIndx+" "+
+//					face.edge.twin.origin.vertIndx);
+//			CommandStrParser.jexecute(p,strbld.toString());
+			p.cpScreen.rePaintAll();
+		}
+	    
+	    // now layout face-by-face
+	    while (hit.hasNext()) {
+	    	HalfEdge he=hit.next();
+	    	this.d_faceXedge(he);
+	    	if (V!=null && V==he.next.next.origin) { // add new location
+	    		centlist.add(getVertCenter(he.next.next));
+	    	}
+		    count++;
+	    }
+
+	    if (norm) {
+	    	Mobius mob=new Mobius();
+	    	Complex g=getVertCenter(gamma);
+	    	if (place_first) { // just need to rotate
+	    		double ang=-g.arg()+Math.PI/2.0;
+	    		mob=Mobius.rotation(ang/Math.PI);
+    			p.rotate(ang); // usual normalization
+	    	}
+	    	else {
+	    		Complex a=getVertCenter(alpha);
+	    		mob=norm_any_pack(this,a,g);
+	    	}
+	    	updatePairMob();
+	    	
+	    	// adjust 'centlist'
+	    	if (centlist!=null && centlist.size()>0) {
+	    		CirclePack.cpb.msg("Layout locations for vertex "+v);
+	    		for (int j=0;j<centlist.size();j++) {
+	    			Complex z=mob.apply(centlist.get(j));
+	    			CirclePack.cpb.msg("  " + z.x + " " + z.y + "i ;");
+	    		}
+	    	}
+	    }
 	    return count;
 	}
 	
@@ -1197,9 +1305,9 @@ public class PackDCEL {
 
 	/**
 	 * Get angle in 'edge.face' at 'edge.origin' assuming origin
-	 * radius is 'r'.
+	 * radius is 'r'. If 'r' is <= 0, then use current recorded radius.
 	 * @param edge HalfEdge
-	 * @param r double
+	 * @param r double, possibly <=0
 	 * @return double, 0.0 if bdry edge
 	 */
 	public double getEdgeAngle(HalfEdge edge,double r) {
@@ -1208,6 +1316,8 @@ public class PackDCEL {
 			return 0.0;
 		}
 		double r0=r;
+		if (r0<=0)
+			r0=getVertRadius(edge);
 		double r1=getVertRadius(edge.next);
 		double r2=getVertRadius(edge.prev);
 		double o0=edge.invDist;
@@ -1217,9 +1327,11 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Get the angle sum at 'vert' using radius 'rad'
+	 * Get the angle sum at 'vert' using radius 'rad'.
+	 * Note: if 'rad' is <= 0, then computation uses current 
+	 * stored radius.
 	 * @param vert Vertex
-	 * @param rad double
+	 * @param rad double, possibly <= 0
 	 * @return double
 	 */
 	public double getVertAngSum(Vertex vert,double rad) {
@@ -1467,6 +1579,11 @@ public class PackDCEL {
 			p.setRadius(v, rad*factor);
 			return;
 		}
+		RedHEdge rtrace=redChain;
+		do {
+			rtrace.rad *=factor;
+			rtrace=rtrace.nextRed;
+		} while(rtrace!=redChain);
 	}
 	
 	/**

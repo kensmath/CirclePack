@@ -149,8 +149,8 @@ public class MobiusFrame extends JFrame implements ActionListener {
 				loadSidePairs();
 			else if (command.equals("layout_reset")) {
 				PackData p=CirclePack.cpb.getActivePackData();
+				p.packDCEL.layoutPacking();
 				p.fillcurves();
-				p.CompPackLayout();
 				loadSidePairs();
 			}
 		} catch(Exception ex) {

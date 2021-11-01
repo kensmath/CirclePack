@@ -22,8 +22,6 @@ import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import input.SetBuilderParser;
 import komplex.EdgeSimple;
-import komplex.RedEdge;
-import komplex.SideDescription;
 import packQuality.QualMeasures;
 import packing.PackData;
 import panels.PathManager;
@@ -649,150 +647,71 @@ public class NodeLink extends LinkedList<Integer> {
 			case 'R': // red circles, outer edge of "sides" of red chain; 
 			      // absorb rest of 'items'
 			{
-				if (packData.packDCEL!=null) {
-					PackDCEL pdc=packData.packDCEL;
-					int numsides=pdc.pairLink.size()-1;
-					if ((str.length()>1 && str.charAt(1)=='a') ||
-							numsides<=0) {
-						RedHEdge rtrace=pdc.redChain;
+				PackDCEL pdc=packData.packDCEL;
+				int numsides=pdc.pairLink.size()-1;
+				if ((str.length()>1 && str.charAt(1)=='a') ||
+						numsides<=0) {
+					RedHEdge rtrace=pdc.redChain;
+					do {
+						add(rtrace.myEdge.origin.vertIndx);
+						rtrace=rtrace.nextRed;
+						count++;
+					} while (rtrace!=pdc.redChain);
+					add(pdc.redChain.myEdge.origin.vertIndx); // close up
+						
+					// eat the rest of the stings
+					String itstr=null;
+					while (its.hasNext()) 
+						itstr=(String)its.next();
+					break;
+				}
+					
+				boolean []tag=new boolean[numsides+1];
+				for (int i=1;i<=numsides;i++) 
+					tag[i]=false;
+				if (!its.hasNext()) // default to 'all'
+					for (int i=1;i<=numsides;i++) 
+						tag[i]=true;
+				else {
+					do {
+						String itstr=(String)its.next();
+						if (itstr.startsWith("a"))
+							for (int i=1;i<=numsides;i++) 
+								tag[i]=true;
+						else {
+							try {
+								int n=Integer.parseInt(itstr);
+								if (n>=0 && n<numsides) 
+									tag[n]=true;
+							} catch (NumberFormatException nfx) {
+								while (its.hasNext()) 
+									itstr=(String)its.next(); // toss rest
+								break;
+							}
+						}
+					} while (its.hasNext());
+				}
+				
+				// now traverse the chosen sides
+				for (int i=1;i<=numsides;i++) {
+					if (tag[i]) {
+						D_SideData dsd=pdc.pairLink.get(i);
+						RedHEdge rtrace=dsd.startEdge;
 						do {
 							add(rtrace.myEdge.origin.vertIndx);
 							rtrace=rtrace.nextRed;
 							count++;
-						} while (rtrace!=pdc.redChain);
-						add(pdc.redChain.myEdge.origin.vertIndx); // close up
+						} while (rtrace!=dsd.endEdge);
+						add(dsd.endEdge.myEdge.origin.vertIndx);
 						
-						// eat the rest of the stings
-						String itstr=null;
-						while (its.hasNext()) 
-							itstr=(String)its.next();
-						break;
+						// should we add end vertex?
+						if ((i<numsides && !tag[i+1]) || 
+								(i==numsides))
+							add(dsd.endEdge.myEdge.twin.origin.vertIndx);
+						count+=2;
 					}
-					
-					boolean []tag=new boolean[numsides+1];
-					for (int i=1;i<=numsides;i++) 
-						tag[i]=false;
-					if (!its.hasNext()) // default to 'all'
-						for (int i=1;i<=numsides;i++) 
-							tag[i]=true;
-					else {
-						do {
-							String itstr=(String)its.next();
-							if (itstr.startsWith("a"))
-								for (int i=1;i<=numsides;i++) 
-									tag[i]=true;
-							else {
-								try {
-									int n=Integer.parseInt(itstr);
-									if (n>=0 && n<numsides) 
-										tag[n]=true;
-								} catch (NumberFormatException nfx) {
-									while (its.hasNext()) 
-										itstr=(String)its.next(); // toss rest
-									break;
-								}
-							}
-						} while (its.hasNext());
-					}
-					
-					// now traverse the chosen sides
-					for (int i=1;i<=numsides;i++) {
-						if (tag[i]) {
-							D_SideData dsd=pdc.pairLink.get(i);
-							RedHEdge rtrace=dsd.startEdge;
-							do {
-								add(rtrace.myEdge.origin.vertIndx);
-								rtrace=rtrace.nextRed;
-								count++;
-							} while (rtrace!=dsd.endEdge);
-							add(dsd.endEdge.myEdge.origin.vertIndx);
-							
-							// should we add end vertex?
-							if ((i<numsides && !tag[i+1]) || 
-									(i==numsides))
-								add(dsd.endEdge.myEdge.twin.origin.vertIndx);
-							count+=2;
-						}
-					}
-					break;
 				}
-					
-				// traditional
-				RedEdge hold=packData.firstRedEdge;
-				if (hold==null) break; // no/defective redchain
-
-				RedEdge rtrace=packData.firstRedEdge;
-				// 'Ra', want closed list of circles on outer edge of full redchain
-				if (str.length()>1 && str.charAt(1)=='a') {
-					// get first vertex (which should be hit again at the end)
-					add(rtrace.sharedPrev());
-					
-					// now the rest
-					boolean keepon=true;
-					while (rtrace!=hold || keepon) {
-						keepon=false;
-						add(packData.faces[rtrace.face].vert[rtrace.vIndex]);
-						// if this is blue face, have to add next vertex as well
-						if (rtrace.next.face==rtrace.prev.face) {
-							add(packData.faces[rtrace.face].vert[(rtrace.vIndex+1)%3]);
-							rtrace=rtrace.nextRed;
-							if (rtrace==hold) { // shouldn't happen, but reset to kick out of while
-								rtrace=rtrace.prevRed;
-							}
-						}
-						count++;
-						rtrace=rtrace.nextRed;
-					} // end of while
-					break;
-				}
-				
-				// otherwise, circles on outer edge of given edge segments
-				//   absorb rest of 'items'
-				  int numSides=-1;
-				  String itstr=null;
-				  if (packData.getSidePairs()==null || (numSides=packData.getSidePairs().size())==0) {
-					  while (its.hasNext()) itstr=(String)its.next(); // use up
-					  break;
-				  }
-				  boolean []tag=new boolean[numSides];
-				  for (int i=0;i<numSides;i++) tag[i]=false;
-				  if (!its.hasNext()) { // default to 'all'
-					  for (int i=0;i<numSides;i++) tag[i]=true;
-				  }
-				  else do {
-					  itstr=(String)its.next();
-					  if (itstr.startsWith("a"))
-						  for (int i=0;i<numSides;i++) tag[i]=true;
-					  else {
-						  try {
-							  int n=Integer.parseInt(itstr);
-							  if (n>=0 && n<numSides) tag[n]=true;
-						  } catch (NumberFormatException nfx) {}
-					  }
-				  } while (its.hasNext());
-
-				  // now to traverse the 'RedEdge's in chosen segments
-				  Iterator<SideDescription> sp=packData.getSidePairs().iterator();
-				  SideDescription ep=null;
-				  RedEdge rlst=null;
-				  int tick=0;
-				  while (sp.hasNext()) {
-					  ep=(SideDescription)sp.next();
-					  if (tag[tick++]) { // yes, do this one
-						  rlst=ep.startEdge;
-						  add(rlst.vert(rlst.startIndex));
-						  count++;
-						  if (ep.startEdge!=ep.endEdge) {
-							  do {
-								  add(rlst.vert((rlst.startIndex+1)%3));
-								  rlst=rlst.nextRed;
-							  } while (rlst!=ep.endEdge);
-						  }
-						  add(rlst.vert((rlst.startIndex+1)%3));
-						  count++;
-					  }
-				  }
-				  break;
+				break;
 			} // end of 'R'
 			case 'M': // vertex having max index
 			{
