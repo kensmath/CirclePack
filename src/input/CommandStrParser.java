@@ -73,7 +73,6 @@ import ftnTheory.MeanMove;
 import ftnTheory.Necklace;
 import ftnTheory.Percolation;
 import ftnTheory.PolyBranching;
-import ftnTheory.ProjStruct;
 import ftnTheory.RationalMap;
 import ftnTheory.RiemHilbert;
 import ftnTheory.SchwarzMap;
@@ -119,7 +118,6 @@ import packing.PackData;
 import packing.PackExtender;
 import packing.PackMethods;
 import packing.RData;
-import packing.Schwarzian;
 import panels.CPScreen;
 import panels.ImagePanel;
 import panels.OutPanel;
@@ -870,9 +868,12 @@ public class CommandStrParser {
 			  return 1;
 	      } // e)nd of 'adjoin'
 	      
-	      // =========== affpack ===========
-	      else if(cmd.startsWith("affp")) {
+	      // =========== torpack ===========
+	      else if(cmd.startsWith("torpack")) {
 	    	  // 1 or 2 doubles as side-pairing factors
+	    	  double[] factors=new double[2];
+	    	  factors[0]=1.0;
+	    	  factors[1]=1.0;
     		  ArrayList<Double> ftrs=new ArrayList<Double>();
 	    	  if (flagSegs!=null && flagSegs.size()>0) {
 	    		  items=(Vector<String>)flagSegs.get(0);
@@ -881,18 +882,30 @@ public class CommandStrParser {
 	    				  ftrs.add(Double.parseDouble(items.remove(0)));
 	    			  }
 	    		  } catch(Exception ex) {
-	    			  throw new ParserException("Usage: affpack [a [b]]");
+	    			  throw new ParserException("Usage: torpack [A B]");
 	    		  }
 	    	  }
 	    	  int n=ftrs.size();
-	    	  if (n>2) // get at most 2 doubles
-	    		  n=2;
-	    	  double[] factors=new double[2];
-	    	  for (int i=0;i<n;i++) 
-	    		  factors[i]=ftrs.get(i);
+	    	  if (n>=1)
+	    		  factors[0]=ftrs.get(0);
+	    	  if (n>=2) 
+	    		  factors[1]=ftrs.get(1);
 	    	  
 	    	  // now try the affine packing
-	    	  return ProjStruct.affinePack(packData,factors,0);
+	    	  if (!D_ProjStruct.affineSet(packData,null,factors[0],factors[1]))
+	    		  throw new ParserException("torpack failed");
+	    	  
+	    	  d_EuclPacker e_packer=new d_EuclPacker(packData,-1);
+	    	  d_EuclPacker.affinePack(packData,-1);
+				
+	    	  // store results as radii
+	    	  NodeLink vlist=new NodeLink();
+	    	  for (int i=0;i<e_packer.aimnum;i++) {
+	    		  vlist.add(e_packer.index[i]);
+	    	  }
+
+	    	  e_packer.reapResults();
+	    	  return packData.packDCEL.layoutPacking();
 	      }
 		  break;
 	  } // end of 'a'
@@ -4463,8 +4476,48 @@ public class CommandStrParser {
   case 't':
   {
 	  
+      // =========== torpack ===========
+      if(cmd.startsWith("torpack")) {
+    	  // 1 or 2 doubles as side-pairing factors
+    	  double[] factors=new double[2];
+    	  factors[0]=1.0;
+    	  factors[1]=1.0;
+		  ArrayList<Double> ftrs=new ArrayList<Double>();
+    	  if (flagSegs!=null && flagSegs.size()>0) {
+    		  items=(Vector<String>)flagSegs.get(0);
+    		  try {
+    			  while (items.size()>0) {
+    				  ftrs.add(Double.parseDouble(items.remove(0)));
+    			  }
+    		  } catch(Exception ex) {
+    			  throw new ParserException("Usage: torpack [A B]");
+    		  }
+    	  }
+    	  int n=ftrs.size();
+    	  if (n>=1)
+    		  factors[0]=ftrs.get(0);
+    	  if (n>=2) 
+    		  factors[1]=ftrs.get(1);
+    	  
+    	  // now try the affine packing
+    	  if (!D_ProjStruct.affineSet(packData,null,factors[0],factors[1]))
+    		  throw new ParserException("torpack failed");
+    	  
+    	  d_EuclPacker e_packer=new d_EuclPacker(packData,-1);
+    	  d_EuclPacker.affinePack(packData,-1);
+			
+    	  // store results as radii
+    	  NodeLink vlist=new NodeLink();
+    	  for (int i=0;i<e_packer.aimnum;i++) {
+    		  vlist.add(e_packer.index[i]);
+    	  }
+
+    	  e_packer.reapResults();
+    	  return packData.packDCEL.layoutPacking();
+      }
+	  
 	  // ========= timer ==========
-	  if (cmd.startsWith("timer")) {
+	  else if (cmd.startsWith("timer")) {
 		  
 		  // at most one flag: check for -s or -x
 		  if (flagSegs!=null && flagSegs.size()!=0) {
@@ -5684,13 +5737,8 @@ public class CommandStrParser {
 	  case 'D': // fall through
 	  case 'd':
 	  {
-			// =============== dual_layout (OBE: sch_layout)
+			// =============== dual_layout (replaced 'sch_layout')
 			if (cmd.startsWith("dual_lay")) {
-				if (!packData.haveSchwarzians()) {
-					CirclePack.cpb.errMsg("Schwarzians are "+
-							"not allocated for p"+packData.packNum);
-					return 0;
-				}
 				if (packData.hes < 0) {
 					CirclePack.cpb.errMsg("usage: dual_layout "+
 							"is not used for hyperbolic packings");
@@ -5698,7 +5746,8 @@ public class CommandStrParser {
 				}
 				// look for list of face pairs; default to a spanning tree
 				boolean debug = false;
-				GraphLink graph = null;
+				HalfLink hlink=null;
+				boolean first=false; // first face first 
 				String cflags = null; // flags for drawing circles
 				String fflags = null; // flags for drawing faces
 				if (flagSegs != null && flagSegs.size() > 0 && 
@@ -5729,19 +5778,22 @@ public class CommandStrParser {
 						}
 					}
 
-					// 'items' should be dual edge list, 
-					//    default to spanning tree
+					// 'items' should be HalfEdge list,
 					if (items != null && items.size() > 0)
-						graph = new GraphLink(packData, items);
-					else
-						graph = DualGraph.easySpanner(packData, true);
-				} else // no flags or list?
-					graph = DualGraph.easySpanner(packData, true);
+						hlink=new HalfLink(packData,items);
+					else { // use layoutOrder and layout first face
+						hlink = packData.packDCEL.layoutOrder;
+						first=true;
+					}
+				} else { // no flags or list?
+					hlink = packData.packDCEL.layoutOrder;
+					first=true;
+				}
 
 				// Do we need to place the first face? Only if
 				// we start with a "root".
-				EdgeSimple edge = graph.get(0);
-				int baseface = 0;
+				EdgeSimple edge = hlink.remove(0);
+
 				if (edge.v == 0) { // root? yes, then have to place
 					graph.remove(0);
 					baseface = edge.w;
@@ -5851,10 +5903,10 @@ public class CommandStrParser {
 					//   'target' (across the shared edge).
 					try {
 						// compute map from base equilateral
-						Mobius bm_f = Schwarzian.faceBaseMob(packData, f);
+						Mobius bm_f = D_Schwarzian.faceBaseMob(packData, f);
 
 						// compute the target circle
-						CircleSimple sC = Schwarzian.getThirdCircle(
+						CircleSimple sC = D_Schwarzian.getThirdCircle(
 								s, j, bm_f, packData.hes);
 
 						// debug info
@@ -9334,13 +9386,15 @@ public class CommandStrParser {
 
 	    	  // ========= set_schwarzians ==========
 	    	  if (cmd.startsWith("sch")) { 
-    			  EdgeLink clink=null; // those done using current layout
-    			  EdgeLink rlink=null; // those done using current radii only
+    			  HalfLink clink=null; // those done using current layout
+    			  HalfLink rlink=null; // those done using current radii only
 
 	    		  // no arguments, set all to current values based on radii
-    			  if (flagSegs==null || flagSegs.size()==0 || flagSegs.get(0).size()==0) 
-    				  rlink=new EdgeLink(packData,"a");
-    			  else if ((items=flagSegs.get(0)).size()!=0 && StringUtil.isFlag(items.get(0))) {
+    			  if (flagSegs==null || flagSegs.size()==0 || 
+    					  flagSegs.get(0).size()==0) 
+    				  rlink=new HalfLink(packData,"a");
+    			  else if ((items=flagSegs.get(0)).size()!=0 && 
+    					  StringUtil.isFlag(items.get(0))) {
     				  Iterator<Vector<String>> its=flagSegs.iterator();
     				  while (its.hasNext()) {
     					  items=flagSegs.remove(0);
@@ -9351,17 +9405,17 @@ public class CommandStrParser {
     						  switch(c) {
     						  case 'r': // use current radii
     						  {
-    							  rlink=new EdgeLink(packData,items); // default to all
+    							  rlink=new HalfLink(packData,items); // default to all
     							  break;
     						  }
     						  default: // use current layout
     						  {
-    							  clink=new EdgeLink(packData,items); // default to all
+    							  clink=new HalfLink(packData,items); // default to all
     						  }
     						  } // end of switch
     					  }
     					  else // default to all using current layout
-    						  clink=new EdgeLink(packData,items);
+    						  clink=new HalfLink(packData,items);
     				  } // end of reading option
     			  }
     				
@@ -9376,7 +9430,7 @@ public class CommandStrParser {
     				  } catch (Exception ex) {
     					  throw new InOutException("usage: set_sch x {v w ...}");
     				  }
-    				  EdgeLink elink=new EdgeLink(packData,items);
+    				  HalfLink elink=new HalfLink(packData,items);
     				  if (elink==null || elink.size()==0)
     					  return count;
     				  
@@ -9387,24 +9441,15 @@ public class CommandStrParser {
     						  new double[packData.countFaces(vv)+1];
     				  }
     				  
-    				  Iterator<EdgeSimple> elk=elink.iterator();
+    				  Iterator<HalfEdge> elk=elink.iterator();
     				  while (elk.hasNext()) {
     					  try {
-    						  EdgeSimple edge=elk.next();
-    						  int ind_vw=packData.nghb(edge.v, edge.w);
-    						  int ind_wv=packData.nghb(edge.w, edge.v);
-    						  int f=packData.face_right_of_edge(edge.w,edge.v);
-    						  int g=packData.face_right_of_edge(edge.v,edge.w);
-    						  if (g<0 || f<0) {
-    							  packData.kData[edge.v].schwarzian[ind_vw]=0.0;
-    							  packData.kData[edge.w].schwarzian[ind_wv]=0.0;
-    							  count++;
-    						  }
-    						  else {
-    							  packData.kData[edge.v].schwarzian[ind_vw]=sch_value;
-    							  packData.kData[edge.w].schwarzian[ind_wv]=sch_value;
-    							  count++;
-    						  }
+    						  HalfEdge edge=elk.next();
+    						  if (edge.isBdry()) 
+    							  edge.setSchwarzian(0.0);
+    						  else
+    							  edge.setSchwarzian(sch_value);
+							  count++;
     					  } catch (Exception ex) {
     						  throw new DataException("error in set_schwarz: "+
     								  "perhaps schwarzians not allocated?");
@@ -9414,10 +9459,10 @@ public class CommandStrParser {
     			  }
     			  
     			  if (clink!=null) {
-    				  count += Schwarzian.set_rad_or_cents(packData, clink,2);
+    				  count += D_Schwarzian.set_rad_or_cents(packData, clink,2);
 	    		  }
     			  if (rlink!=null) {
-    				  count += Schwarzian.set_rad_or_cents(packData, rlink,1);
+    				  count += D_Schwarzian.set_rad_or_cents(packData, rlink,1);
 	    		  }
 	    		  
     			  return count;

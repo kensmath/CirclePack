@@ -2,21 +2,16 @@ package komplex;
 
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Vector;
 
 import allMains.CirclePack;
 import complex.Complex;
-import deBugging.LayoutBugs;
 import exceptions.CombException;
-import exceptions.LayoutException;
 import exceptions.ParserException;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
 import listManip.NodeLink;
 import packing.PackData;
-import packing.RedChainer;
-import util.BuildPacket;
 
 /**
  * For creating/manipulating combinatoric information for
@@ -473,209 +468,6 @@ public class DualGraph {
 	 */
 	public static GraphLink plotTree(PackData p) {
 		return easySpanner(p,true);
-	}
-	
-	
-	/**
-	 * Use a tree in the dual graph of pack p to set the face drawing 
-	 * order. Start at root, go until a red face is hit, then go around 
-	 * the full red chain, then complete the rest.
-	 * @param p PackData
-	 * @param graph GraphLink
-	 * @return int, count of faces in drawing order or -1 on error
-	 */
-	public static int tree2Order(PackData p,GraphLink graph) {
-		Vector<Integer> roots=graph.isForest();
-		if (roots==null || roots.size()!=1 || roots.get(0)<0)
-			return -1;
-		return graph2Order(p,graph,roots.get(0));
-	}
-	
-	/**
-	 * Use a subgraph of the dual graph to set the face drawing 
-	 * order in pack p. Go until a red face is hit, then go around 
-	 * the full red chain, then complete the rest.
-	 * TODO: should 'baseface' be removed, find it as root?
-	 * @param p PackData
-	 * @param graph GraphLink
-	 * @param baseface int
-	 * @return int, count of faces in drawing order.
-	 */
-	public static int graph2Order(PackData p,GraphLink graph,int baseface) {
-//		boolean debug=true;
-		boolean debug=false;
-		
-		int count=0;
-		
-		// get RedList from dual tree
-		// LayoutBugs.log_GraphLink(p,graph); or DualGraph.printGraph(graph);
-		RedList newRedList=DualGraph.graph2red(p,graph,baseface);
-		// deBugging.LayoutBugs.log_RedList(p,newRedList);
-		
-		// process to get redChain
-		RedChainer newRC=new RedChainer(p);
-		BuildPacket bP=new BuildPacket();
-		bP=newRC.redface_comb_info(newRedList, false);
-		if (!bP.success) {
-			throw new LayoutException("Layout error in DualGraph");
-		}
-		p.setSidePairs(bP.sidePairs);
-		p.labelSidePairs(); // establish 'label's
-		p.redChain=p.firstRedEdge=bP.firstRedEdge;
-		for (int f=1;f<=p.faceCount;f++) {
-			p.faces[f].nextRed=0;
-		}
-		RedList rtrace=(RedList)p.redChain.next;
-		p.faces[p.firstRedFace].nextRed=rtrace.face;
-		int safety=p.faceCount+10;
-		while (rtrace!=p.redChain && safety>0) {
-			safety--;
-			p.faces[rtrace.face].nextRed=rtrace.next().face;
-			rtrace=(RedList)rtrace.next;
-		}
-			
-		// initialize
-		for (int f=1;f<=p.faceCount;f++) {
-			p.faces[f].nextFace=0;
-			p.faces[f].rwbFlag=-1; 
-		}
-		
-		// mark the red
-		RedList trace=p.redChain;
-		p.faces[trace.face].rwbFlag=1;
-		while ((trace=trace.next)!=p.redChain) {
-			p.faces[trace.face].rwbFlag=1;
-		}
-
-		// which faces are plotted
-		int []fck=new int[p.faceCount+1];
-
-		// which face plotted each vertex
-		int []cck=new int[p.nodeCount+1];
-		
-		// process the root
-		int root=graph.get(0).w;
-		int lastface=p.firstFace=root;
-		fck[p.firstFace]=++count;
-		p.faces[p.firstFace].indexFlag=0;
-		for (int j=0;j<3;j++) {
-			cck[p.faces[root].vert[j]]=root;
-		}
-		
-		// -------- simply-connected (applied to tree, not full complex) -----
-		if (p.getSidePairs()==null || p.getSidePairs().size()==0) { 
-
-			Iterator<EdgeSimple> tc=graph.iterator();
-			tc.next(); // shuck root entry
-			while (tc.hasNext()) {
-				EdgeSimple edge=tc.next();
-				int f1=edge.v;
-				int f2=edge.w;
-				int indx=p.face_nghb(f1,f2);
-				if (indx<0) 
-					throw new CombException("faces "+f1+" and "+f2+" don't share an edge");
-				cck[p.faces[f2].vert[(indx+2)%3]]=f2;
-				p.faces[f2].indexFlag=indx;
-				fck[f2]=++count;
-				lastface=p.faces[lastface].nextFace=f2; 
-			}
-		} // end of simply connected case
-		
-		// -------- multiply-connected (applied to tree, not full complex) ---
-		else {
-			int hit_red=0;
-			if (p.faces[root].rwbFlag>0) // root might be red
-				hit_red=root;
-			Iterator<EdgeSimple> tc=graph.iterator();
-			tc.next(); // shuck the root
-			int f1=0;
-			
-			// put faces in drawing order until reaching the first red
-			while (tc.hasNext() && hit_red==0) {
-				EdgeSimple edge=tc.next();
-				f1=edge.v;
-				if (fck[f1]==0) 
-					throw new CombException("this face should have been plotted");
-				int f2=edge.w;
-				int indx=p.face_nghb(f1,f2);
-				if (indx<0) 
-					throw new CombException("faces "+f1+" and "+f2+" don't share an edge");
-
-				// put in drawing order?
-				int vert=p.faces[f2].vert[(indx+2)%3];
-				if (fck[f2]==0) { // && cck[vert]==0) {
-					fck[f2]=++count;
-					p.faces[f2].indexFlag=indx;
-					cck[vert]=f2;
-					lastface=p.faces[lastface].nextFace=f2;
-				}
-				
-				// is this the first red?
-				if (p.faces[f2].rwbFlag>0) {
-					hit_red=f2;
-				}
-				
-			} // end of first while --- should stop after plotting first red 
-			
-			// put in the red chain
-		    int red_count=1;
-			p.position_redlist(p.redChain,hit_red);
-			int curf=p.firstRedFace=hit_red;
-		    trace=p.redChain.next;
-		    int newf=trace.face;
-		    while (trace!=p.redChain && red_count<(3*p.faceCount)) {
-		    	red_count++;
-		    	// skip over faces with nextFace already set, or if pointing to self
-		    	while (trace!=p.redChain && (p.faces[newf].nextFace!=0 || newf==curf)) {
-		    		trace=trace.next;
-		    		newf=trace.face;
-		    	}
-		    	if (trace!=p.redChain) {
-		    		p.faces[curf].nextFace=p.faces[curf].nextRed=newf;
-					int index=p.face_nghb(trace.prev.face,newf);
-		    		p.faces[newf].indexFlag=index;
-		    		fck[newf]=++count;
-		    		int vert=p.faces[newf].vert[(p.faces[newf].indexFlag+2) % 3];
-		    		cck[vert]=newf;
-
-					lastface=p.faces[lastface].nextFace=newf;
-		    		trace=trace.next;
-		    		curf=newf;
-		    		newf=trace.face;
-		    	}
-		    } // end of second while
-		    if (red_count > (3*p.faceCount)) throw new LayoutException("'red_count' is too large");
-		    
-		    // Now continue to get the rest of the faces
-			while (tc.hasNext()) {
-				EdgeSimple edge=tc.next();
-				if (fck[edge.v]>0) {
-					f1=edge.v;
-					int f2=edge.w;
-					int indx=p.face_nghb(f1,f2);
-					if (indx<0) 
-						throw new CombException("faces "+f1+" and "+f2+" don't share an edge");
-					// put in drawing order?
-					int vert=p.faces[f2].vert[(indx+2)%3];
-					if (fck[f2]==0) { // && cck[vert]==0) {
-						fck[f2]=++count;
-						p.faces[f2].indexFlag=indx;
-						cck[vert]=f2;
-						int tmpface=lastface;
-						lastface=p.faces[tmpface].nextFace=f2;
-					}
-				}
-			} // end of third while
-		} // end of else
-		
-		// ??? close up list by pointing back to first.
-		// I think it points to zero --- not sure
-		p.faces[lastface].nextFace=0;
-		
-		if (debug) // (goes to /tmp/faceOrder_..._log)
-			LayoutBugs.log_faceOrder(p);
-		
-		return count;
 	}
 	
 	/**

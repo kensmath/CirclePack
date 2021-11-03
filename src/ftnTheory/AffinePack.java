@@ -14,7 +14,6 @@ import circlePack.PackControl;
 import complex.Complex;
 import dcel.D_PairLink;
 import dcel.D_SideData;
-import dcel.RedHEdge;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
 import exceptions.InOutException;
@@ -1689,7 +1688,7 @@ public class AffinePack extends PackExtender {
 		// compute initial curvatures
 		for (int j = 0; j < aimNum; j++) {
 			v = inDex[j];
-			curv[v] = ProjStruct.angSumSide(p, v, 1.0,aspts);
+			curv[v] = D_ProjStruct.angSumSide(p, v, 1.0,aspts);
 		}
 
 		// set cutoff value
@@ -1705,15 +1704,15 @@ public class AffinePack extends PackExtender {
 		// now cycle through adjustments --- riffle
 			for (int j = 0; j < aimNum; j++) {
 				v = inDex[j];
-				curv[v] = ProjStruct.angSumSide(p, v,1.0,aspts);
+				curv[v] = D_ProjStruct.angSumSide(p, v,1.0,aspts);
 				verr = curv[v] - p.getAim(v);
 
 				// find/apply factor to radius or sides at v
 				if (Math.abs(verr) > cut) {
 					double sideFactor = ProjStruct.sideCalc(p,v, p.getAim(v), 5,
 							aspts);
-					ProjStruct.adjustSides(p,v, sideFactor,aspts);
-					curv[v] = ProjStruct.angSumSide(p, v,1.0, aspts);
+					D_ProjStruct.adjustSides(p,v, sideFactor,aspts);
+					curv[v] = D_ProjStruct.angSumSide(p, v,1.0, aspts);
 				}
 			}
 
@@ -2301,69 +2300,7 @@ public class AffinePack extends PackExtender {
 		
 		return x_ratio;
 	}
-	
-	/**
-	 * Put a torus in normalized position and compute 
-	 * various data for 'TorusData' structure. Calling
-	 * routine should have arranged 2 side-pairings and 
-	 * repacked and laid out the affine packing. 
-	 * @param writ boolean; false, don't write output messages.
-	 * @return TorusData object or null on error
-	 */
-	public TorusData getTorusData(boolean writ) {
-		TorusData torusData=new TorusData();
-		Complex[] Z=new Complex[4];
 
-		D_PairLink plink=packData.packDCEL.pairLink;
-		if (plink==null || plink.size()!=5) 
-			throw new ParserException("torus appears to have no "+
-					"'pairLink' or there are not two side-pairings.");
-		for (int j=1;j<=4;j++) {
-			D_SideData sdata=plink.get(j);
-			Z[j-1]=sdata.startEdge.getCenter();
-		}
-		
-		// make sure the torus is normalized
-		Mobius mob=Mobius.mob_NormQuad(Z);
-		for (int j=0;j<4;j++)
-			Z[j]=mob.apply(Z[j]);
-		torusData.cornerPts=Z;
-		
-		torusData.x_ratio=torusData.cornerPts[0].minus(torusData.cornerPts[1]).
-				times(torusData.cornerPts[2].minus(torusData.cornerPts[3])).
-				divide(torusData.cornerPts[0].minus(torusData.cornerPts[3]).
-				times(torusData.cornerPts[2].minus(torusData.cornerPts[1])));
-				// cross-ratio (z1-z2)*(z3-z4)/((z1-z4)*(z3-z2))
-		
-		Mobius.mobiusDirect(packData,mob);
-		
-		torusData.mean=new Complex(0.0);
-		for (int i=0;i<4;i++) {
-			torusData.mean.add(torusData.cornerPts[i].times(.25));
-		}
-
-		return torusData;
-	}	
-	
-	// compute Teichmuller parameter 'T' and the modulus 'tau'
-	//   and the affine parameter 'c' of Sass.
-	torusData.a=Math.log(torusData.cornerPts[1].abs());
-	torusData.b=sideArgChanges.get(0); // arg change on [z1,z2]
-	torusData.M=Math.log(torusData.cornerPts[3].abs());
-	torusData.N=(-1.0)*sideArgChanges.get(3); // arg change on [z4,z1]
-	torusData.affCoeff=new Complex(torusData.a,torusData.b);
-	double x=(torusData.a*torusData.M+torusData.b*torusData.N)/torusData.affCoeff.absSq();
-	double y=(torusData.a*torusData.N-torusData.b*torusData.M)/torusData.affCoeff.absSq();
-	torusData.teich=new Complex(x,y);
-	torusData.tau=TorusModulus.Teich2Tau(torusData.teich);
-	torusData.alpha=torusData.cornerPts[3].minus(torusData.cornerPts[2]).
-	divide(torusData.cornerPts[0].minus(torusData.cornerPts[1]));
-	torusData.beta=torusData.cornerPts[3].minus(torusData.cornerPts[0]).
-	divide(torusData.cornerPts[2].minus(torusData.cornerPts[1]));
-	
-		return torusData;
-	}
-	
 	/**
 	 * Run trials over a grid and put the results in a buffer.
 	 * Output lines: A B t T c a.x a.y b.x b.y z's
@@ -2398,7 +2335,7 @@ public class AffinePack extends PackExtender {
 				double B=Math.exp(grid[1]+(grid[3]-grid[1])*j/N);
 				
 				// set affine data
-				boolean result = ProjStruct.affineSet(packData,aspects,A, B);
+				boolean result = D_ProjStruct.affineSet(packData,aspects,A, B);
 				if (!result) {
 					msg("affine has failed for A, B = "+A+","+B);
 					okay=false;
@@ -2414,11 +2351,8 @@ public class AffinePack extends PackExtender {
 					break;
 				}
 				
-				// so afflayout
-				ProjStruct.treeLayout(packData,dTree,aspects);
-				
 				// gather torus data
-				TorusData torusData=getTorusData(true);
+				TorusData torusData=D_ProjStruct.getTorusData(packData,true);
 				if (torusData==null) {
 					msg("failed to get torus data");
 					okay=false;
@@ -2457,9 +2391,7 @@ public class AffinePack extends PackExtender {
 				output.append(i+" "+j+"  "+A+" "+B+"  "+
 						torusData.tau.toString()+"    "+
 						torusData.teich.toString()+"   "+
-						torusData.affCoeff.toString()+"   "+
-						torusData.alpha.toString()+"   "+
-						torusData.beta.toString()+"   ");
+						torusData.affCoeff.toString()+"   ");
 //				for (int k=0;k<4;k++)
 //						output.append(" "+torusData.cornerPts[k].toString());
 				output.append(";\n\n");
@@ -2493,7 +2425,7 @@ public class AffinePack extends PackExtender {
 			} catch (Exception ex){}
 			Vector<Double> data=new Vector<Double>(packData.nodeCount);
 			for (int v=1;v<=packData.nodeCount;v++) 
-				data.add(v,ProjStruct.weakConError(packData,aspects,v));
+				data.add(v,D_ProjStruct.weakConError(packData,aspects,v));
 			Vector<Color> colIndices=ColorUtil.blue_red_diff_ramp_Color(data);
 
 			for (int v=1;v<=packData.nodeCount;v++) {
@@ -2697,7 +2629,7 @@ public class AffinePack extends PackExtender {
 					double B=Bdata[b];
 					
 					// set affine parameters
-					boolean result = ProjStruct.affineSet(packData,aspects,A, B);
+					boolean result = D_ProjStruct.affineSet(packData,aspects,A, B);
 					if (!result)
 						Oops("affine has failed in 'matdat', A="+A+", B="+B);
 					
@@ -2710,15 +2642,13 @@ public class AffinePack extends PackExtender {
 					ProjStruct.treeLayout(packData,dTree,aspects);
 					
 					// compute data
-					TorusData tD=getTorusData(false);
+					TorusData tD=D_ProjStruct.getTorusData(packData,false);
 					if (tD==null) 
 						Oops("failed to compute 'TorusData' in 'matdat'");
 					
 					// store data in matrices
 					tau[a][b]=new Complex(tD.tau);
 					teich[a][b]=new Complex(tD.teich);
-					alpha[a][b]=new Complex(tD.alpha);
-					beta[a][b]=new Complex(tD.beta);
 					xrat[a][b]=new Complex(tD.x_ratio);
 					affC[a][b]=new Complex(tD.affCoeff);
 					z1[a][b]=new Complex(tD.cornerPts[0]);
@@ -2874,34 +2804,7 @@ public class AffinePack extends PackExtender {
 			return 1;
 		}
 		
-		// ======== TorusData =========
-		if (cmd.startsWith("tD")) {
-			TorusData torusData=getTorusData(true);
-			if (torusData==null) 
-				throw new CombException("failed to compute 'TorusData'; "+
-						"is it in 2-sidepair form?");
 
-			// print out the data
-			try {
-				CirclePack.cpb.msg("Torus layout corner vert = "+
-						torusData.cornerVert+" and locations are:");
-				for (int j=0;j<4;j++)
-					CirclePack.cpb.msg(torusData.cornerPts[j].toString());
-
-				CirclePack.cpb.msg("Affine parameter 'c' = "+
-						torusData.affCoeff.toString());
-				CirclePack.cpb.msg("Teich = "+torusData.teich.toString());
-				CirclePack.cpb.msg("tau = "+torusData.tau.toString());
-				CirclePack.cpb.msg("cross_ratio = "+torusData.x_ratio.toString());
-				CirclePack.cpb.msg("side-pair parameters:\n  alpha = "+torusData.alpha.toString()+
-						"\n   beta = "+torusData.beta.toString());
-			} catch(Exception ex){}
-			
-			// store the layout in the packing, update side pairing maps.
-			ProjStruct.storeCenters(packData,dTree,aspects);
-			return 1;
-		}
-		
 		// ========= afflayout ========
 		else if (cmd.startsWith("afflay")) { // use
 			ProjStruct.treeLayout(packData,dTree,aspects);
@@ -2958,7 +2861,7 @@ public class AffinePack extends PackExtender {
 			} catch (Exception ex) {
 			}
 
-			boolean result = ProjStruct.affineSet(packData,aspects,A, B);
+			boolean result = D_ProjStruct.affineSet(packData,aspects,A, B);
 			if (!result)
 				Oops("affine has failed");
 			msg("Affine data set: A = " + A + " B = " + B);
@@ -3068,7 +2971,7 @@ public class AffinePack extends PackExtender {
 		
 		// ======== error ============
 		else if (cmd.startsWith("error")) {
-			double []wsa_error=ProjStruct.getErrors(packData,aspects);
+			double []wsa_error=D_ProjStruct.getErrors(packData,aspects);
 			msg("Errors: weak, strong, angle sum: (l^2 and max):");
 			msg(" weak: ("+String.format("%.6e",wsa_error[0])+", "+String.format("%.6e",wsa_error[1])+")");
 			msg(" strong: ("+String.format("%.6e",wsa_error[2])+", "+String.format("%.6e",wsa_error[3])+")");
@@ -3100,9 +3003,9 @@ public class AffinePack extends PackExtender {
 							if (vlist!=null && vlist.size()>0) {
 								int v=(int)vlist.get(0);
 								msg("Curvature (angle sum - aim) of "+v+" is "+
-										String.format("%.8e",Math.abs(ProjStruct.
-												angSumTri(packData,v,1.0,aspects)[0]-
-												packData.getAim(v))));
+										String.format("%.8e",Math.abs(D_ProjStruct.angSumTri(
+											packData,v,1.0,aspects)[0]-
+											packData.getAim(v))));
 								return 1;
 							}
 							break;
@@ -3140,7 +3043,7 @@ public class AffinePack extends PackExtender {
 			// find sum[angsum-aim]^2 (for verts with aim>0)
 			for (int v=1;v<=packData.nodeCount;v++) {
 				if (packData.getAim(v)>0.0) {
-					double diff=Math.abs(ProjStruct.
+					double diff=Math.abs(D_ProjStruct.
 							angSumTri(packData,v,1.0,aspects)[0]-
 						packData.getAim(v));
 					Angsum_err += diff*diff;

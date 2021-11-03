@@ -549,7 +549,7 @@ public class PackDCEL {
 	 * Place the face associated with 'edge', with 'edge.origin' at 
 	 * the origin, and 'edge.next.origin' on the positive real axis. 
 	 * @param edge HalfEdge
-	 * @return CircleSimple
+	 * @return CircleSimple opposite the edge
 	 */
 	public CircleSimple placeFirstFace(HalfEdge edge) {
 		double r0=getVertRadius(edge);
@@ -2293,10 +2293,11 @@ public class PackDCEL {
 	 */
 	public void zeroEUtil() {
 		for (int v=1;v<=vertCount;v++) {
-			HalfLink flwr=vertices[v].getEdgeFlower();
-			Iterator<HalfEdge> fis=flwr.iterator();
-			while(fis.hasNext())
-				fis.next().eutil=0;
+			HalfEdge he=vertices[v].halfedge;
+			do {
+				he.eutil=0;
+				he=he.prev.twin; // cclw
+			} while (he!=vertices[v].halfedge);
 		}
 	}
 	
@@ -2352,7 +2353,7 @@ public class PackDCEL {
 	 */
 	public int updatePairMob() {
 		if (redChain==null || pairLink==null) 
-			return 1;
+			return 0;
 			
 		Iterator<D_SideData> dsis=pairLink.iterator();
 		dsis.next(); // first is null

@@ -23,7 +23,6 @@ public class TorusModulus {
 	 * TODO: start including affine tori.
 	*/
 	public static double []torus_tau(PackData p) {
-	  int j;
 	  double []ans=new double[3];
 
 	  // Determine if this is a torus. 
@@ -79,6 +78,7 @@ public class TorusModulus {
 			  for(int k=1;k<=4;k++) {
 				  D_SideData sd=p.packDCEL.pairLink.get(k);
 				  W[j]=sd.startEdge.getCenter();
+			  }
 		  }
 	  }
 

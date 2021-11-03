@@ -35,7 +35,8 @@ public class D_SideData {
 	public int mateIndex;     // 'spIndex' of paired side (-1 if no mate)
 	public RedHEdge startEdge; // the first 'RedEdge' of this "side"
 	public RedHEdge endEdge;   // the final 'RedEdge' of this "side"
-	public Mobius mob;        // Mobius transform when side is paired (TODO: for spherical) 
+	public Mobius mob;        // Mobius transform when side is paired: map
+							  //   of paired edge TO this edge (TODO: for spherical) 
 	public double mobErr;     // error in the Mobius transform (mainly for hyp
                         	  //   case; mob is always an automorphism, but roundoff 
                         	  //   can prevent it from providing exact match).
@@ -72,8 +73,10 @@ public class D_SideData {
     }
     
     /**
-     * Update side-pair 'mob' based on latest 'center' data in relevant 
-     * 'RedList' faces. Return 0 on error, check 'mobErr' for accuracy
+     * Update side-pair 'mob' based on latest 'center' data in 
+     * relevant red edges. Return 0 on error, check 'mobErr' 
+     * for accuracy. Note: this mob maps the matched edge TO
+     * this edge.
      * TODO: not much error checking. (I think this is old 
      * 'pair_mobius' code.)
      * @return, 0 on error
@@ -132,7 +135,8 @@ public class D_SideData {
     		mob=Mobius.affine_mob(a,b,A,B);
     		mobErr=mob.error;
     	}
-    	// TODO: sph not yet implemented 
+    	// TODO: sph not yet implemented, but may be set elsewhere,
+    	//    e.g., under projection to the sphere.
     	else return 0; 
     	return 1;
     }

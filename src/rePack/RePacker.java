@@ -66,9 +66,9 @@ public abstract class RePacker {
     boolean useSparseC;  // if true, use 'SolverFunction' lib when available and applicable
 
 	// main data
-	public RData []rdata;
-	public int []index;			// indices of adjustable radii
-	public TmpData []kdata;     // locally copy of needed part of p.kData.
+	public RData[] rdata;
+	public int[] index;			// indices of adjustable radii
+	public TmpData[] kdata;     // locally copy of needed part of p.kData.
 
 	// holding area for list
 	NodeLink holdv=null;

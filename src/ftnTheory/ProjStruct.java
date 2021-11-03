@@ -13,6 +13,7 @@ import circlePack.PackControl;
 import complex.Complex;
 import dcel.CombDCEL;
 import dcel.D_SideData;
+import dcel.HalfEdge;
 import dcel.RedHEdge;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
@@ -107,8 +108,6 @@ public class ProjStruct extends PackExtender {
 			dcelMode=true;
 		if (running) {
 			dTree= DualGraph.easySpanner(packData,false);
-			if (!dcelMode)
-				setupAspects();
 			packData.packExtensions.add(this);
 		}
 		debug=false;
@@ -205,25 +204,28 @@ public class ProjStruct extends PackExtender {
 		boolean debug=false;
 	      
 		int aimNum = 0;
-		int []inDex =new int[p.nodeCount+1];
-		// only verts with aim>0 for mode 1 or interior for mode 2 and in the list
+		int[] inDex =new int[p.nodeCount+1];
+		// only verts with aim>0 for mode 1 
+		//    or interior for mode 2 and in the list
 		for (int vv=1;vv<=p.nodeCount;vv++) {
-			if (((mode==1 && p.getAim(vv)>0) || (mode==2 && !p.isBdry(vv))) 
+			if (((mode==1 && p.getAim(vv)>0) || 
+					(mode==2 && !p.packDCEL.vertices[vv].isBdry())) 
 					&& (vlist==null || vlist.contains(Integer.valueOf(vv)))) {
 				inDex[aimNum]=vv;
 				aimNum++;
 			}
 		}
-		if (aimNum==0) return -1; // nothing to repack
+		if (aimNum==0) 
+			return -1; // nothing to repack
 	      
 	    // compute initial errors and set cutoff value
 	    double accum=0.0;
 	    for (int j=0;j<aimNum;j++) {
 	    	v=inDex[j];
 	    	if (mode==1)  // mode=1, default
-	    		accum += Math.abs(angSumTri(p,v,1.0,aspts)[0]-p.getAim(v));
+	    		accum += Math.abs(D_ProjStruct.angSumTri(p,v,1.0,aspts)[0]-p.getAim(v));
 	    	else if (mode==2) 
-	    		accum += Math.abs(skewTri(p,v,1.0,aspts)[0]);
+	    		accum += Math.abs(D_ProjStruct.skewTri(p,v,1.0,aspts)[0]);
 	    }
 	    double recip=.333333/aimNum;
 	    double cut=accum*recip;
@@ -233,9 +235,14 @@ public class ProjStruct extends PackExtender {
 	    while ((cut > TOLER && count<passes)) {
 	    	double verr=0.0;
 	    	try {
-	    		if(debug) System.out.println(Math.log(Math.abs(
-	    			edgeRatioError(p,aspts,new EdgeSimple(17,24)))));}
-	    	catch (Exception ex){}
+	    		if(debug) {
+	    			HalfEdge he=p.packDCEL.findHalfEdge(new EdgeSimple(17,24));
+	    			if (he!=null)
+	    				System.out.println(Math.log(Math.abs(
+	    						D_ProjStruct.edgeRatioError(p,aspts,he))));
+	    		}
+	    	} catch (Exception ex){}
+	    	
 	    	for (int j=0;j<aimNum;j++) {
 	    		v=inDex[j];
 	    		double vAim=p.getAim(v);
@@ -243,17 +250,17 @@ public class ProjStruct extends PackExtender {
 	    		// find/apply factor to labels at 'v' if error 
 	    		//    is bad enough to riffle
 	    		if (mode==1)  // mode=1, default
-	    			verr = Math.abs(angSumTri(p,v,1.0,aspts)[0]-p.getAim(v));
+	    			verr = Math.abs(D_ProjStruct.angSumTri(p,v,1.0,aspts)[0]-p.getAim(v));
 	    		else if (mode==2) 
-	    			verr = Math.abs(skewTri(p,v,1.0,aspts)[0]);
+	    			verr = Math.abs(D_ProjStruct.skewTri(p,v,1.0,aspts)[0]);
 	    		if (Math.abs(verr)>cut) {
 	    			double []valder=new double[2];
 	    			if (mode==1) {
-	    				valder=angSumTri(p,v,1.0,aspts);
+	    				valder=D_ProjStruct.angSumTri(p,v,1.0,aspts);
 	    				valder[0] -= vAim;
 	    			}
 	    			else if (mode==2) {
-	    				valder=skewTri(p,v,1.0,aspts);
+	    				valder=D_ProjStruct.skewTri(p,v,1.0,aspts);
 	    			}
 	    			
 	    			// start error
@@ -270,17 +277,17 @@ public class ProjStruct extends PackExtender {
 	    				factor=2.0;
     				  
 	    			// make the change
-	    			adjustRadii(p,v,factor,aspts);
+	    			D_ProjStruct.adjustRadii(p,v,factor,aspts);
 	    			
 	    			// new error
     				if (debug) {
     					double []vd=new double[2];
     	    			if (mode==1) {
-    	    				vd=angSumTri(p,v,1.0,aspts);
+    	    				vd=D_ProjStruct.angSumTri(p,v,1.0,aspts);
     	    				vd[0] -= vAim;
     	    			}
     	    			else if (mode==2) {
-    	    				vd=skewTri(p,v,1.0,aspts);
+    	    				vd=D_ProjStruct.skewTri(p,v,1.0,aspts);
     	    			}
     					System.err.println("   v="+v+", new error = "+
     							Math.abs(vd[0]));
@@ -294,10 +301,10 @@ public class ProjStruct extends PackExtender {
 	    		int V=inDex[jj];
 	    		v=Math.abs(V);
 	    		if (mode==1) { // mode=1, default
-	    			accum += Math.abs(angSumTri(p,v,1.0,aspts)[0]-p.getAim(v));
+	    			accum += Math.abs(D_ProjStruct.angSumTri(p,v,1.0,aspts)[0]-p.getAim(v));
 	    		}
 	    		else if (mode==2) {
-	    			accum += Math.abs(skewTri(p,v,1.0,aspts)[0]);
+	    			accum += Math.abs(D_ProjStruct.skewTri(p,v,1.0,aspts)[0]);
 	    		}
 	    	}
 	    	cut=accum*recip;
@@ -353,7 +360,7 @@ public class ProjStruct extends PackExtender {
 		// compute initial curvatures
 		for (int j = 0; j < aimNum; j++) {
 			v = inDex[j];
-			curv[v] = angSumSide(p, v, 1.0,aspts);
+			curv[v] = D_ProjStruct.angSumSide(p, v, 1.0,aspts);
 		}
 
 		// set cutoff value
@@ -370,22 +377,22 @@ public class ProjStruct extends PackExtender {
 		while ((cut > TOLER && count < passes)) {
 			for (int j = 0; j < aimNum; j++) {
 				v = inDex[j];
-				curv[v] = angSumSide(p, v,1.0,aspts);
+				curv[v] = D_ProjStruct.angSumSide(p, v,1.0,aspts);
 				verr = curv[v] - p.getAim(v);
 
 				// find/apply factor to radius or sides at v
 				if (Math.abs(verr) > cut) {
 					double sideFactor = sideCalc(p,v, p.getAim(v), 5,
 							aspts);
-					adjustSides(p,v, sideFactor,aspts);
-					curv[v] = angSumSide(p, v,1.0, aspts);
+					D_ProjStruct.adjustSides(p,v, sideFactor,aspts);
+					curv[v] = D_ProjStruct.angSumSide(p, v,1.0, aspts);
 				}
 			}
 			accum = 0;
 			for (int j = 0; j < aimNum; j++) {
 				int V = inDex[j];
 				v = Math.abs(V);
-				curv[v] = angSumSide(p, v, 1.0,aspts);
+				curv[v] = D_ProjStruct.angSumSide(p, v, 1.0,aspts);
 				err = curv[v] - p.getAim(v);
 				accum += (err < 0) ? (-err) : err;
 			}
@@ -397,50 +404,7 @@ public class ProjStruct extends PackExtender {
 		return count;
 	}
 	
-    /**
-	 * Compute angle sum at v face-by-face using the TriAspect
-	 * 'sides' data, with sides ending at v multiplied by 'factor'.
-	 * @param p PackData
-	 * @param v int
-	 * @param factor double
-	 * @param asps []TriAspect
-	 * @return angsum double
-	 */
-	public static double angSumSide(PackData p,int v,double factor,
-			TriAspect []asps) {
-		double angsum=0.0;
-		int[] faceFlower=p.getFaceFlower(v);
-		for (int j=0;j<p.countFaces(v);j++) {
-			int f=faceFlower[j];
-			int k=asps[f].vertIndex(v);
-			double s0=factor*asps[f].sides[k];
-			double s1=asps[f].sides[(k+1)%3];
-			double s2=factor*asps[f].sides[(k+2)%3];
-			angsum += Math.acos((s0*s0+s2*s2-s1*s1)/(2.0*s0*s2));
-		}
-		return angsum;
-	}
-	
-	/**
-	 * Change side lengths at v by 'factor' in every face containing v.
-	 * @param p PackData 
-	 * @param v vertex
-	 * @param factor double
-	 * @param asp []TriAspect
-	 * @return 1
-	 */
-	public static int adjustSides(PackData p,int v,double factor,
-			TriAspect []asp) {
-		int[] faceFlower=p.getFaceFlower(v);
-		for (int j=0;j<p.countFaces(v);j++) {
-			int f=faceFlower[j];
-			int k=asp[f].vertIndex(v);
-			asp[f].sides[k] *=factor;
-			asp[f].sides[(k+2)%3] *=factor;
-		}
-		return 1;
-	}
-	
+ 
 	/** 
 	 * Find adjustment to 'sides' in faces at 'v' to move
 	 * anglesum closer to aim; use secant method, with limit
@@ -462,19 +426,19 @@ public class ProjStruct extends PackExtender {
 		double best=1.0;
 
 		// starting curvature
-		bestcurv=lowcurv=upcurv=ProjStruct.angSumSide(p,v,best,asps);
+		bestcurv=lowcurv=upcurv=D_ProjStruct.angSumSide(p,v,best,asps);
 		
 		if (Math.abs(bestcurv-aim)<=OKERR)
 			return 1.0;
 		
 		// set upper/lower limits on possible factors due to triangle inequality
-		double []bds=sideBounds(p,v,asps);
+		double []bds=D_ProjStruct.sideBounds(p,v,asps);
 		lower=1.0-(1-bds[0])*limit; // interpolate between bds[0] and 1
 		upper=1.0+(bds[1]-1.0)*limit; // interpolate between 1 and bds[1]
 		
 		// does lowest allowed factor undershoot?
 		if (bestcurv<(aim-OKERR)) { 
-			lowcurv=ProjStruct.angSumSide(p,v,lower,asps);
+			lowcurv=D_ProjStruct.angSumSide(p,v,lower,asps);
 			if (lowcurv<aim) { // still not enough, but return
 				return lower;
 			}
@@ -482,7 +446,7 @@ public class ProjStruct extends PackExtender {
 
 		// does largest allowed factor overshoot?
 		else if (bestcurv>(aim+OKERR)) {  
-			upcurv=ProjStruct.angSumSide(p,v,upper,asps);
+			upcurv=D_ProjStruct.angSumSide(p,v,upper,asps);
 			if (upcurv>aim) { // still not enough, but return
 				return upper; 
 			}
@@ -505,160 +469,11 @@ public class ProjStruct extends PackExtender {
 			}
 			
 			// angle sum with current 'best' factor
-			bestcurv=ProjStruct.angSumSide(p,v,best,asps);
+			bestcurv=D_ProjStruct.angSumSide(p,v,best,asps);
 		}
 		return best;
 	}
-	
-	/**
-  	 * Return upper/lower bounds on factor by which sides can 
-  	 * be adjusted at v while preserving the triangle inequality
-  	 * for all faces containing v.
-  	 * @param p PackData
-  	 * @param v vertex
-  	 * @param asps []TriAspect
-  	 * @return int[2]: [0], lower; [1], upper
-  	 */
-  	public static double []sideBounds(PackData p,int v,TriAspect []asps) {
-  		double lower=0.0;
-  		double upper=100000000;
-  		int[] faceFlower=p.getFaceFlower(v);
-		for (int j=0;j<p.countFaces(v);j++) {
-			int f=faceFlower[j];
-			int k=asps[f].vertIndex(v);
-			double rSide=asps[f].sides[k];
-			double lSide=asps[f].sides[(k+2)%3];
-			double oppSide=asps[f].sides[(k+1)%3];
-			if ((rSide+lSide)<oppSide || oppSide<Math.abs(rSide-lSide))
-				throw new DataException(
-						"Triangle inequality fails for face "+f);
-			double a=oppSide/(lSide+rSide);
-			lower=(a>lower) ? a : lower;
-			double b=oppSide/Math.abs(rSide-lSide);
-			upper=(b<upper) ? b : upper;
-		}
-  		double []ans=new double[2];
-  		ans[0]=lower;
-  		ans[1]=upper;
-  		return ans;
-  	}
-  	
-	/**
-	 * Compute angle sum at 'v' face-by-face using 'labels'
-	 * with labels at v multiplied by factor t>0. Also, return
-	 * the derivative w.r.t. t.
-	 * @param p @see PackData
-	 * @param v int, vertex
-	 * @param t double, factor > 0 for multiplying labels at 'v'
-	 * @param asps[] @see TriAspect
-	 * @return double
-	 */
-	public static double []angSumTri(PackData p, int v, double t,
-			TriAspect[] asps) {
-		double []ans=new double[2];
-		int[] faceFlower=p.getFaceFlower(v);
-		for (int j = 0; j < p.countFaces(v); j++) {
-			int f = faceFlower[j];
-			double []sd= asps[f].angleV(v,t);
-			ans[0] += sd[0];
-			ans[1] += sd[1];
-		}
-		return ans;
-	}
-	  	
-	/**
-	 * Compute skew and its derivative at 'v' face-by-face using 'labels'
-	 * with labels at v multiplied by factor t>0. Also, return
-	 * the derivative w.r.t. t.
-	 * @param p @see PackData
-	 * @param v int, vertex
-	 * @param t double, factor > 0 for multiplying labels at 'v'
-	 * @param asps[] @see TriAspect
-	 * @return double[2]: [0]=skew, [1]=deriv
-	 */
-	public static double []skewTri(PackData p, int v,double t,
-			TriAspect[] asps) {
-		double []ans = new double[2];
-		int[] faceFlower=p.getFaceFlower(v);
-		for (int j = 0; j < p.countFaces(v); j++) {
-			int f = faceFlower[j];
-			double []sd= asps[f].skew(v,t);
-			ans[0] += sd[0];
-			ans[1] += sd[1];
-		}
-		return ans;
-	}
-	  	
-	/**
-	 * Change label for v in all faces containing 'v' and 
-	 * change 'rData[v].rad'
-	 * by multiplicative 'factor'.
-	 * @param p @see PackData 
-	 * @param v int, parent vertex
-	 * @param factor double
-	 * @param asp[] @see TriAspect
-	 * @return int -1 on error
-	 */
-	public static int adjustRadii(PackData p,int v,double factor,
-			TriAspect []asp) {
-		p.setRadius(v,factor*p.getRadius(v));
-		int[] faceFlower=p.getFaceFlower(v);
-		for (int j=0;j<p.countFaces(v);j++) {
-			int f=faceFlower[j];
-			int k=asp[f].vertIndex(v);
-			asp[f].labels[k] *=factor;
-		}
-		return 1;
-	}
 
-	/**
-	 * For setting prescribed parameters for affine torus
-	 * construction.
-	 * @param p PackData
-	 * @param A double
-	 * @param B double
-	 */
-	public static boolean affineSet(PackData p,TriAspect[] asps,
-			double A,double B) {
-		if (p.getSidePairs().size()>5) { // want just 2 side-pairings
-			CombDCEL.torus4Sides(p.packDCEL);
-			p.packDCEL.fixDCEL_raw(p);
-		}
-		if (p.getSidePairs().size()!=5) {
-			throw new CombException("failed to layout 2-side paired edges");
-		}
-		
-		// set all RedHEdge radii to 1.0
-		RedHEdge rtrace=p.packDCEL.redChain;
-		do {
-			rtrace.setRadius(1.0);
-			rtrace=rtrace.nextRed;
-		} while (rtrace!=p.packDCEL.redChain);
-		
-		/* Idea: prescribe (via A and B) the radii for vertices 
-		 * along the outside of the red chain. Use these and 
-		 * existing interior radii to set 'radii' in vector 'aspects'.
-		 * When there are just two side-pairings (preferable),
-		 * want A to be scale factor from #1 to #3, and B to be 
-		 * scale factor from #2 to #4. TODO: verify that this
-		 * lines up with the generic (3 side-pairing) situation.
-		 */
-		D_SideData side=p.getSidePairs().get(3);
-		rtrace=side.startEdge;
-		do {
-			rtrace.setRadius(A*rtrace.getRadius());
-			rtrace=rtrace.nextRed;
-		} while(rtrace!=side.endEdge.nextRed);
-		
-		side=p.getSidePairs().get(4);
-		rtrace=side.startEdge;
-		do {
-			rtrace.setRadius(B*rtrace.getRadius());
-			rtrace=rtrace.nextRed;
-		} while(rtrace!=side.endEdge.nextRed);
-		return true;
-	}
-	
 	/**
 	 * Given TriAspect, vert v2, and oriented centers for opposite 
 	 * edge vertices, return center and rad of v2's circle.
@@ -962,7 +777,7 @@ public class ProjStruct extends PackExtender {
 		}
 
 		// update the mobius pairs
-		p.update_pair_mob();
+		p.packDCEL.updatePairMob();
 		PackControl.mobiusFrame.loadSidePairs();
 	}
 	
@@ -1143,22 +958,6 @@ public class ProjStruct extends PackExtender {
 		return Math.abs(lg);
 	}
 
-	public double ratioErr() {
-		double err=0;
-		for (int f=1;f<=packData.faceCount;f++) {
-			Face face=packData.faces[f];
-			for (int j=0;j<3;j++) {
-				int v=face.vert[j];
-				int w=face.vert[(j+1)%3];
-				int g=packData.face_right_of_edge(v,w);
-				int k=packData.faces[g].vertIndx(w);
-				double er=aspects[f].labels[j] - aspects[g].labels[k];
-				err += er*er;
-			}
-		}
-		return err;
-	}
-	
 	/**
 	 * Compute "effective" radii (Gerald Orick's term) from centers
 	 * and store as packing radii: NOTE: use centers because 'labels'
@@ -1183,7 +982,7 @@ public class ProjStruct extends PackExtender {
 						double areaSum=0.0;
 						double angSum=0.0;
 						int[] faceFlower=p.getFaceFlower(v);
-						for (int vj=0;vj<num;vj++) { // iterate over faces
+						for (int vj=0;vj<faceFlower.length;vj++) { // iterate over faces
 							int fv=faceFlower[vj];
 							areaSum += asp[fv].sectorAreaZ(v);
 							angSum +=asp[fv].angleV(v,1.0)[0];
@@ -1201,69 +1000,6 @@ public class ProjStruct extends PackExtender {
 		return count;
 	}
 	
-	/**
-	 * Return 'edge' consistency error computed from 'labels'. 
-	 * For interior edge, this is t*t', where t is the ratio 
-	 * of 'labels' for 'edge' in lefthand face, t' is that of
-	 * lefthand face. 
-	 * @param edge, EdgeSimple
-	 * @param p, PackData,
-	 * @param asps, TriAspect[]
-	 * @return 1.0 if not interior edge.
-	 */
-	public static double edgeRatioError(PackData p,
-			TriAspect []asps,EdgeSimple edge) {
-		if (p.isBdry(edge.v) && p.isBdry(edge.w)) // bdry edge 
-			return 1.0;
-		int []lf=p.left_face(edge.v,edge.w);
-		int lface=lf[0];
-		lf=p.left_face(edge.w,edge.v);
-		int rface=lf[0];
-		int lj=asps[lface].vertIndex(edge.v);
-		int rj=asps[rface].vertIndex(edge.w);
-		double prd=asps[lface].labels[(lj+1)%3];
-		prd /=asps[lface].labels[lj];
-		prd *=asps[rface].labels[(rj+1)%3];
-		prd /=asps[rface].labels[rj];
-		return prd;
-	}
-
-	/**
-	 * Return angle sum error at 'v' based on TriAspect 'labels'.
-	 * @param v int, vertex index in packing
-	 * @return double, abs(error); 0 if 'aim' <=0
-	 */
-	public double angsumError(int v) {
-		if (packData.getAim(v)<=0)
-			return 0;
-		return Math.abs(angSumTri(packData,v,1.0,
-				aspects)[0]-packData.getAim(v));
-	}
-	
-	/** 
-	 * Return weak consistency error for interior 'v'.
-	 * This is product of leftlenght/rightlength for all 
-	 * faces in star(v).
-	 * @param p @see PackData
-	 * @param aspects []TriAspect
-	 * @param v int, vertex
-	 * @return double, 1.0 if v not interior.
-	 */  
-	public static double weakConError(PackData p,
-			TriAspect []aspects,int v) {
-		if (p.isBdry(v))
-			return 1.0;
-		double rtio=1.0;
-		int[] faceFlower=p.getFaceFlower(v);
-		for (int j=0;j<p.countFaces(v);j++) {
-			int ff=faceFlower[j];
-			int k=aspects[ff].vertIndex(v);
-			rtio *= aspects[ff].sides[(k+2)%3]; // left sidelength
-			rtio /= aspects[ff].sides[k]; // right sidelength
-		}
-		return rtio;
-	}
-
 	/**
 	 * This is were the user's commands are "parsed"
 	 */
@@ -1335,41 +1071,6 @@ public class ProjStruct extends PackExtender {
 			return 1;
 		}
 		
-		// ======== affine ===========
-		else if (cmd.startsWith("affine")) {
-			// this routine is tailored for tori: specify side-pair
-			// scaling in an attempt to build general affine tori
-			if (aspects==null || aspects.length!=(packData.faceCount+1))
-				setupAspects();
-
-			if (packData.genus != 1 || packData.getBdryCompCount()>0) {
-				int count=0;
-				msg("Simply connected case: 'affine' defaults to all 'labels' 1");
-				for (int f=1;f<=packData.faceCount;f++) {
-					for (int j=0;j<3;j++) 
-						aspects[f].labels[j]=1.0;
-					count++;
-				}
-				return count;
-			}
-
-			// get the user-specified
-			double A = 1.2; // default
-			double B = .75;
-			try {
-				items = flagSegs.get(0);
-				A = Double.parseDouble((String) items.get(0));
-				B = Double.parseDouble((String) items.get(1));
-			} catch (Exception ex) {
-			}
-
-			boolean result = affineSet(packData,aspects,A, B);
-			if (!result)
-				Oops("affine has failed");
-			msg("Affine data set: A = " + A + " B = " + B);
-			return 1;
-		}
-		
 		// ======== affpack ===========
 		else if (cmd.startsWith("affpack")) {
 			NodeLink vlink=null;
@@ -1378,7 +1079,9 @@ public class ProjStruct extends PackExtender {
 			try {
 				items=flagSegs.get(0);
 				vlink=new NodeLink(packData,items);
-			} catch (Exception ex) {}
+			} catch (Exception ex) {
+				vlink=null;
+			}
 			
 			// first, riffle to get weak consistency
 			int count = vertRiffle(packData, aspects,2,PASSES,vlink);
@@ -1402,7 +1105,7 @@ public class ProjStruct extends PackExtender {
 					dbw.write("anglesum:\n\n");
 					for (int v = 1; v <= packData.nodeCount; v++) {
 						dbw.write("vertex " + v + ": " + 
-								angSumTri(packData,v,1.0,aspects)[0] + "\n");
+								D_ProjStruct.angSumTri(packData,v,1.0,aspects)[0] + "\n");
 					}
 					dbw.flush();
 					dbw.close();
@@ -1422,71 +1125,7 @@ public class ProjStruct extends PackExtender {
 			return 1;
 		}
 
-		// ======== status ==========
-		else if (cmd.startsWith("stat")) {
-			NodeLink vlist=null;
-			EdgeLink elist=null;
-			double Angsum_err=0.0;
-			double TLog_err=0.0;
-			double SLog_err=0.0;
-			int count=0;
-			
-			// if one or more flags, report for just first object only
-			if (flagSegs!=null && flagSegs.size()>0) {
-				Iterator<Vector<String>> flgs=flagSegs.iterator();
-				while (flgs.hasNext()) {
-					items=flgs.next();
-					String str=items.remove(0);
-					if (StringUtil.isFlag(str)) {
-						char c=str.charAt(1);
-						switch(c) {
-						case 's': // strong consistency: (t.t') for edges
-						{
-							elist=new EdgeLink(packData,items);
-							if (elist!=null && elist.size()>0) {
-								EdgeSimple edge=elist.get(0);
-								msg("Edge <"+edge.v+" "+edge.w+">, t*t' = "+
-										String.format("%.8e",
-												edgeRatioError(packData,aspects,edge)));
-								return 1;
-							}
-							break;
-						}
-						case 'c': // curvature error (angle sum-aim)
-						{
-							vlist=new NodeLink(packData,items);
-							if (vlist!=null && vlist.size()>0) {
-								int v=(int)vlist.get(0);
-								msg("Angle sum error of "+v+" is "+
-										String.format("%.8e",angsumError(v)));
-								return 1;
-							}
-							break;
-						}
-						} // end of switch
-					}
-				}
-				return 0; // didn't find valid flag??
-			}
-			
-			// if no flags?
-			
-			// find sum[angsum-aim]^2 (for verts with aim>0)
-			for (int v=1;v<=packData.nodeCount;v++) {
-				double diff=angsumError(v);
-				Angsum_err += diff*diff;
-			}
-				
-			// report
-			msg("Status: anglesum error norm = "+
-					String.format("%.8e",Math.sqrt(Angsum_err)));
-			msg("Edge ratio (Log(t.t')) error norm = "+
-					String.format("%.8e",Math.sqrt(TLog_err)));
-			msg("Weak consistency (Log(ll../rr..)) error norm = "+
-					String.format("%.8e",Math.sqrt(SLog_err)));
-			return count;
-		}
-		
+
 		// ======== set_eff =========
 		else if (cmd.startsWith("set_eff")) {
 			if (setEffective(packData,aspects)<0)
@@ -1880,58 +1519,6 @@ public class ProjStruct extends PackExtender {
 		
 		return theCorner;
 	}
-
-	/**
-	 * Compute weak, strong consistency, and angle sum errors, both in l^2
-	 * and sup norm.
-	 * @return double[6]: 
-	 *   [0]=weak l^2;[1]=weak max (among vertices);
-	 *   [2]=strong l^2;[3]=strong max (among edge); 
-	 *   [4]=angle sum l^2;[5]=angle sum max
-	 */
-	public static double []getErrors(PackData p,TriAspect []aspects) {
-		double weak_err=0.0;
-		double weak_max=0.0;
-		double TLog_err=0.0;
-		double TLog_max=0.0;
-		double ang_err=0.0;
-		double ang_max=0.0;
-		double []ans=new double[6];
-
-		for (int v=1;v<=p.nodeCount;v++) {
-			// Strong: find sum[|Log(t.t')|]^2 for interior edges
-			int[] flower=p.packDCEL.vertices[v].getFlower(false);
-			for (int j=0;j<flower.length;j++) {
-				int w=flower[j];
-				// if w>v and edge is interior
-				if (w>v) {
-					double prd=Math.abs(Math.log(Math.abs(
-							edgeRatioError(p,aspects,new EdgeSimple(v,w)))));
-					TLog_max=(prd>TLog_max) ? prd:TLog_max;
-					TLog_err += prd*prd;
-				}
-			}
-			
-			// weak;
-			double werr=Math.abs(Math.log(weakConError(p,aspects,v)));
-			weak_err += werr*werr;
-			weak_max=(werr>weak_max) ? werr:weak_max;
-			
-			// angle sum
-			double ang=Math.abs(angSumTri(p,v,1.0,aspects)[0]-p.getAim(v));
-			ang_err += ang*ang;
-			ang_max=(ang>ang_max) ? ang:ang_max;
-		}
-		ans[0]=Math.sqrt(weak_err);
-		ans[1]=weak_max;
-		ans[2]=Math.sqrt(TLog_err);
-		ans[3]=TLog_max;
-		ans[4]=Math.sqrt(ang_err);
-		ans[5]=ang_max;
-		
-		return ans;
-	}
-	
 
     
 	/** 

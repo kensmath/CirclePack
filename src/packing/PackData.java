@@ -5696,7 +5696,8 @@ public class PackData{
 	public int place_face(int face,int indx) {
 	  double ovlp;
 
-	  if (face>faceCount || face<1 || indx <0 || indx >2) return 0;
+	  if (face>faceCount || face<1 || indx <0 || indx >2) 
+		  return 0;
 	  int a=faces[face].vert[indx]; // at origin
 	  int k=faces[face].vert[(indx+1) % 3]; // on positive x-axis
 	  int v=faces[face].vert[(indx+2) % 3]; // to be computed
@@ -5814,36 +5815,6 @@ public class PackData{
 	  z=z.times(1.0/((double)count));
 	  setCenter(vert,z);
 	  return (count);
-	} 
-
-	/**
-	 * Update the mobius transformations associated with side pairings in
-	 * multiply connected cases. 
-	 * TODO: need error-checking; particularly arithmetic errors 
-	 * in routines of Mobius.java.
-	 * @return 0 if 'redChain' 'firstRedEdge' or 'sidePairs' is null
-	 */
-	public int update_pair_mob() throws RedListException, MobException {
-		if (packDCEL!=null) {
-			if (packDCEL.redChain==null || packDCEL.pairLink==null) 
-				return 0;
-				
-			Iterator<D_SideData> dsis=packDCEL.pairLink.iterator();
-			dsis.next(); // first is null
-			while (dsis.hasNext()) {
-				D_SideData dsdata=dsis.next();
-				dsdata.set_sp_Mobius();
-			}
-			return 1;
-		}
-		
-		// traditional
-		if (redChain==null || firstRedEdge==null || sidePairs==null) return 0;
-		for (int j=0;j<sidePairs.size();j++) {
-			SideDescription ep=(SideDescription)sidePairs.get(j);
-			ep.set_sp_Mobius();
-		}
-		return 1;
 	} 
 
 	/** 
@@ -9604,7 +9575,7 @@ public class PackData{
 	  /** 
 	   * Apply Mobius Mob (oriented), or inverse (!oriented) to
 	   * specified list of circles. If 'red_flag' (default),
-	   * adjust selected redchain circle centers; if sp_flag is 
+	   * adjust selected red chain circle centers; if sp_flag is 
 	   * true (default), also recompute the side-pairing maps.
 	   * For hyperbolic ideal circles, also adjust the negative
 	   * radius (which reflects euclidean radius of horocycle). 
@@ -9624,113 +9595,34 @@ public class PackData{
 	    Iterator<Integer> vlist=vertlist.iterator();
 	    CircleSimple sc=new CircleSimple(true);
 
-	    if (packDCEL!=null) {
-	    	Iterator<Integer> vis=vertlist.iterator();
-	    	while (vis.hasNext()) {
-	    		Vertex vert=packDCEL.vertices[vis.next()];
-	    		if (vert.redFlag) {
-	    			HalfEdge he=vert.halfedge;
-	    			// just handle red edges from 'vert'
-	    			do {
-	    				if (he.myRedEdge!=null) {
-	    	    			CircleSimple circle=he.myRedEdge.getCircleSimple();
-	    	    			count += Mobius.mobius_of_circle(Mob,hes,circle,
-	 	    		 	  	       sc,oriented);
-	     					he.myRedEdge.setCircleSimple(sc);
-	    				}
-	    				he=he.prev.twin; // cclw
-	    			} while (he!=vert.halfedge);
-	    		}
-
+    	Iterator<Integer> vis=vertlist.iterator();
+    	while (vis.hasNext()) {
+    		Vertex vert=packDCEL.vertices[vis.next()];
+    		if (vert.redFlag) {
+    			HalfEdge he=vert.halfedge;
+    			// just handle red edges from 'vert'
+    			do {
+    				if (he.myRedEdge!=null) {
+    	    			CircleSimple circle=he.myRedEdge.getCircleSimple();
+    	    			count += Mobius.mobius_of_circle(Mob,hes,circle,
+ 	    		 	  	       sc,oriented);
+     					he.myRedEdge.setCircleSimple(sc);
+    				}
+    				he=he.prev.twin; // cclw
+    			} while (he!=vert.halfedge);
+    		}
 	    		// set in 'vData'
-    			CircleSimple circle=getCircleSimple(vert.vertIndx);
-    			count += Mobius.mobius_of_circle(Mob,hes,circle,
-    		 	  	       sc,oriented);
- 				setCircleSimple(vert.vertIndx,sc);
-    			count++;
-	    	}
-	    	
-	   		// update the side-pairing (not for spherical)
-	   		if (hes<=0 && sp_flag)
-	   			update_pair_mob();
-
-	    	return count;
-	    }
-
-	    // traditional packing
-	    while (vlist.hasNext()) {
-	        int v=(Integer)vlist.next();
-	        
-	        count += Mobius.mobius_of_circle(Mob,hes,getCenter(v),getRadius(v),
-	 	  	       sc,oriented);
-	        Complex Z=new Complex(sc.center);
-	        double R=sc.rad;
-	        if (hes==0 && R<0) R=Math.abs(R);
-	        /* if (debug && (Double.isNaN(Z.re) 
-	  	      || Double.isnan(Z.im) || Double.isNaN(R))) 
-	  	{
-	  	  flashError("bad data "+v);
-	  	}
-	        */
-	        setCenter(v,Z);
-	        setRadius(v,R);
-	    }
-
-		// if 'red_flag', adjust centers/radii for redlist/redchain
-		// NOTE: not all 'RedEdge's are in 'redChain', so need two passes
-		if (red_flag) {
-			double R;
-			
-			// first adjust all the 'RedEdge's 
-			if (firstRedEdge!=null) {
-				RedEdge rtrack=firstRedEdge;
-				boolean keepon=true;
-				while (rtrack!=firstRedEdge || keepon) {
-					keepon=false;
-					Mobius.mobius_of_circle(Mob, hes, rtrack.center, rtrack.rad, sc, oriented);
-					R = sc.rad;
-					if (hes == 0 && R < 0)
-						R = Math.abs(R);
-					rtrack.rad = R;
-					rtrack.center = new Complex(sc.center);
-					rtrack = rtrack.nextRed;
-				}
-			}
-			
-			// then go through 'redChain', but only adjust 'redList' elements 
-			if (redChain != null) {
-				boolean keepon = true;
-				RedList rtrace = redChain;
-				while (rtrace != redChain || keepon) {
-					keepon = false;
-					
-					// don't do again if object is 'RedEdge'
-					if (!(rtrace instanceof RedEdge)) {
-						// note that centers may not be set
-						try {
-							Mobius.mobius_of_circle(Mob, hes, rtrace.center, rtrace.rad, sc, oriented);
-							R = sc.rad;
-							if (hes == 0 && R < 0)
-								R = Math.abs(R);
-							rtrace.rad = R;
-							rtrace.center = new Complex(sc.center);
-						} catch(Exception ex) {}
-					}
-					rtrace = rtrace.next;
-				}
-			}
-		}
-	    
-	    // fix side-pairing mobius transforms also 
-	    // TODO: side-pairing transforms not yet implemented on sphere
-	    if (hes<=0 && red_flag && sp_flag) {
-	    	try {
-	    		update_pair_mob();
-	    	} catch(MobException mex) {
-	    		flashError("error in updating side-pairings.");
-	    	}
-	    }
-	    return count;
+   			CircleSimple circle=getCircleSimple(vert.vertIndx);
+   			count += Mobius.mobius_of_circle(Mob,hes,circle,
+   		 	  	       sc,oriented);
+				setCircleSimple(vert.vertIndx,sc);
+   			count++;
+    	}
+    	
+   		// update the side-pairing (not for spherical)
+   		if (hes<=0 && sp_flag)
+   			packDCEL.updatePairMob();
+    	return count;
 	  } 
 
 	  /** 
@@ -14742,7 +14634,7 @@ public class PackData{
 				}
 			if (sidePairs != null)
 				// fix side-pairing mobius transforms also
-				update_pair_mob();
+				packDCEL.updatePairMob();
 			return 1;
 		} 
 		else if (hes>0) { // sph
@@ -14767,7 +14659,7 @@ public class PackData{
 				}
 			if (sidePairs != null)
 				// fix side-pairing mobius transforms also
-				update_pair_mob();
+				packDCEL.updatePairMob();
 			return 1;
 		}
 	}

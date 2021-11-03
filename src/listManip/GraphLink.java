@@ -6,14 +6,11 @@ import java.util.Random;
 import java.util.Vector;
 
 import allMains.CPBase;
-import dcel.D_SideData;
-import dcel.RedHEdge;
 import exceptions.CombException;
 import exceptions.DataException;
 import komplex.DualGraph;
 import komplex.EdgeSimple;
 import komplex.GraphSimple;
-import komplex.RedList;
 import packing.PackData;
 import util.MathUtil;
 import util.StringUtil;
@@ -1123,74 +1120,7 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 				}
 				break;
 			}
-			
-			case 'R': // empty, then faces from red chain, or side
-			{
-				emptyMe();
-				if (packData.redChain==null) break;
-				
-				// is there a side indicated (indexed from 0)?
-				int sideNum=-1;
-				try {
-					sideNum=Integer.parseInt(its.next());
-				} catch (Exception ex) {
-					sideNum=-1;
-				}
-				if (sideNum<0 || sideNum>=packData.getSidePairs().size())
-					sideNum=-1;
-				
-				// no side indicated, default to full redchain
-				RedHEdge rlst=packData.packDCEL.redChain;
-				if (sideNum==-1) { 
-					int curr=rlst.myEdge.face.faceIndx;
-					add(new EdgeSimple(0,curr));
-					RedHEdge trace=rlst.nextRed;
-					while (trace!=packData.packDCEL.redChain) {
-						if (curr!=trace.myEdge.face.faceIndx)
-							add(new EdgeSimple(curr,trace.myEdge.face.faceIndx));
-						curr=trace.myEdge.face.faceIndx;
-						trace=trace.nextRed;
-						count++;
-					}
-					// 'Ra' want to close the list				
-					if (trace==packData.packDCEL.redChain && 
-							(str.length()>1 && str.charAt(1)=='a')) {
-						if (curr!=trace.myEdge.face.faceIndx)
-							add(new EdgeSimple(curr,trace.myEdge.face.faceIndx));
-						count++;
-					}
-					break;
-				}
-
-				// else, do the chosen side
-				D_SideData ep=packData.getSidePairs().get(sideNum);
-				rlst=(RedList)ep.startEdge;
-				add(new EdgeSimple(0,rlst.face)); // root
-				int curr=rlst.face;
-				RedList trace=rlst.next;
-				// just one face?
-				if (ep.startEdge==ep.endEdge) {
-					count++;
-					break;
-				}
-				while (trace!=ep.endEdge) {
-					if (curr!=trace.face) {
-						add(new EdgeSimple(curr,trace.face));
-						count++;
-					}
-					curr=trace.face;
-					trace=trace.next;
-					System.out.println("c,f = "+curr+" "+trace.face);
-				} 
-				if (trace==ep.endEdge)
-					if (curr!=trace.face) {
-						add(new EdgeSimple(curr,trace.face));
-						count++;
-						System.out.println("c,f = "+curr+" "+trace.face);
-					}
-				break;
-			}
-			
+	
 			// ----------- TODO: many other future options --------------
 			
 			default: // if nothing else, see if it's face index or 0

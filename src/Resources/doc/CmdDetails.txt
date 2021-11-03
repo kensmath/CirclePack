@@ -4555,6 +4555,14 @@ of circles with that particular edge displayed.</instance>
 </options>
 </command>
 
+<command cmd="torpack [A B]">
+<description>
+	If the active packing is a combinatorial packing, then
+	this we create an affine torus with two side-pairings
+	having affine scaling by factors A and B, defaulting to
+	1 and 1.
+</description>
+
 <command cmd="torus_t">
 <description>
  	Computes the modulus of a packing for a 1-torus. It returns

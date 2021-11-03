@@ -1,10 +1,13 @@
 package rePack;
 
+import java.util.Iterator;
+
 import JNI.JNIinit;
 import allMains.CirclePack;
 import dcel.PackDCEL;
 import exceptions.DataException;
 import exceptions.PackingException;
+import exceptions.ParserException;
 import ftnTheory.D_ProjStruct;
 import input.CommandStrParser;
 import komplex.KData;
@@ -86,11 +89,20 @@ public class d_EuclPacker extends RePacker {
      * for the packing. Note that some vertices will have
      * different labels in different faces; we record that from
      * the first face in the 'findices' list as its radius.
-     * Recompute curvatures.  
+     * Recompute curvatures. 
+     * @param p PackData
+     * @param vlist NodeLink
      */
-    public void reapLabels() {
-    	for (int i=0;i<aimnum;i++) {
-    		int v=index[i];
+    public static void reapLabels(PackData p,NodeLink vlist) {
+    	PackDCEL pdcel=p.packDCEL;
+    	if (pdcel.triData==null || 
+    			pdcel.triData.length<(pdcel.faceCount+1)) 
+    		throw new ParserException("no 'triData' allocated");
+    	if (vlist==null || vlist.size()==0)
+    		vlist=new NodeLink(p,"a");
+    	Iterator<Integer> vis=vlist.iterator();
+    	while (vis.hasNext()) {
+    		int v=vis.next();
     		int findx=p.vData[v].findices[0];
     		int vindx=p.vData[v].myIndices[0];
     		p.setRadius(v,pdcel.triData[findx].labels[vindx]);
@@ -509,10 +521,15 @@ public class d_EuclPacker extends RePacker {
 	 * other than affine tori: e.g., give different radii for v in
 	 * different faces, perhaps set aim negative for some vertices,
 	 * etc. What happens?
+	 * @param p PackData
 	 * @param passes
 	 * @return int, repack count, -1 on error
 	 */
-	public int affinePack(int passes) {
+	public static int affinePack(PackData p,int passes) {
+		PackDCEL pdcel=p.packDCEL;
+		if (pdcel.triData==null || pdcel.triData.length<pdcel.faceCount+2)
+			throw new ParserException(
+					"usage error: 'affinePack' needs 'PackDCEL.triCata'");
 		int count = 0;
 		double accum=0.0;
 		if (passes<=0)

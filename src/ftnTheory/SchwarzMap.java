@@ -10,6 +10,7 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.D_Schwarzian;
 import exceptions.DataException;
 import exceptions.MiscException;
 import exceptions.ParserException;
@@ -26,7 +27,6 @@ import listManip.NodeLink;
 import math.Mobius;
 import packing.PackData;
 import packing.PackExtender;
-import packing.Schwarzian;
 import util.CmdStruct;
 import util.DispFlags;
 import util.StringUtil;
@@ -1363,7 +1363,7 @@ public class SchwarzMap extends PackExtender {
 					ftri.tanPts[0],ftri.tanPts[1],ftri.tanPts[2],0,ftri.hes);
 			
 			// compute the target circle
-			CircleSimple sC = Schwarzian.getThirdCircle(s, j, bm_f, ftri.hes);
+			CircleSimple sC = D_Schwarzian.getThirdCircle(s, j, bm_f, ftri.hes);
 
 			gtri.setRadius(sC.rad, J);
 			gtri.setCenter(sC.center, J);

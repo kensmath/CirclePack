@@ -18,49 +18,220 @@ import listManip.NodeLink;
 import math.CirMatrix;
 import math.Mobius;
 import packing.PackData;
-import packing.Schwarzian;
 import util.ColorUtil;
 import util.DispFlags;
 import util.StringUtil;
+import util.TriAspect;
 
 /**
- * This is for parallel DCEL versions of 'packing/Schwarzian'
- * methods. Note that we assume tangency packing, but in some
- * places we are prepared for overlaps (though that will have
- * huge impact).
- * @author kstephe2, started 8/2021
- *
+ * These are static routines for working with discrete Schwarzian 
+ * derivatives. Here schwarzians are associated with a packing 
+ * based on identification of faces with the "base equilateral"; 
+ * namely, the tangent triple of circles of radius sqrt(3), 
+ * symmetric w.r.t. the origin, and having its first edge 
+ * vertical through z=1. See "ftnTheory.SchwarzMap.java"
+ * for related work in the setting of maps, which is based on 
+ * the original notions of Gerald Orick in his thesis.
+ * 
+ * Here we work with parameters associated with edges in 
+ * packing complexes, the "real" schwarzians. These are stored in 
+ * in 'HalfEdge.schwarzian', defaulting to 0.0. The methods here 
+ * are for creating, analyzing, manipulating this data. To start 
+ * we restrict to tangency packing, and some routines do not apply 
+ * in the hyperbolic setting since layouts can leave the disc. 
+ * 
+ * @author kens, January 2020
  */
 public class D_Schwarzian {
+
 	
 	/**
-	 * Compute real schwarzians for specified edges based 
-	 * only on radii (mode=1) or only on centers (mode=2).
+	 * Compute real schwarzians for give interior edges based 
+	 * only on radii (mode=1) or on centers (mode=2). 
 	 * For each edge, find the 4 radii/centers involved, 
-	 * layout them out to compute the schwarzian. 
+	 * and compute the schwarzian. 
+	 * 
+	 * Multi-connected cases are much more complicated for 
+	 * some edegs; we must assume here that we have updated 
+	 * the 'RedChain', 'sidePairs', and Mobius maps. Edges fall
+	 * into three categories: outer edges of the 'RedChain' faces, 
+	 * successive edges between 'RedChain' faces, and remaining 
+	 * 'interior' edges. (As an example, keep affine tori in mind.)
 	 * @param p PackData
-	 * @param elink EdgeLink, default to all (Note, edges, not dual edges)
+	 * @param hlink HalfLink, default to all (Note, edges, not dual edges)
 	 * @param mode int, 1=radii, 2=centers
 	 * @return count, 0 on error
 	 */
 	public static int set_rad_or_cents(PackData p,HalfLink hlink,int mode) {
+		PackDCEL pdcel=p.packDCEL;
 		int count=0;
 		if (hlink==null || hlink.size()==0) // default to all
 			hlink=new HalfLink(p,"a");
+		
+		// to avoid redundancy, use 'eutil': 
+		//    -1 bdry; 0 ignore; 1 do; n = side index along paired edge
+		pdcel.zeroEUtil();
+		
 		Iterator<HalfEdge> hlst = hlink.iterator();
+		while (hlst.hasNext()) {
+			HalfEdge he=hlst.next();
+			if (!he.isBdry() && he.eutil==0 && he.twin.eutil==0)
+				he.eutil=1;
+			if (he.isBdry()) { 
+				he.eutil=-1;
+				he.twin.eutil=-1;
+			}
+		}
+		
+		// easy case (e.g. simply connected)
+		if (pdcel.pairLink==null) {
+			hlst = hlink.iterator();
+			HalfEdge edge=null;
+			while (hlst.hasNext()) {
+				edge=hlst.next();
+				if (edge.eutil==-1)
+					edge.setSchwarzian(0.0);
+				else if (edge.eutil>0) {
+					if (mode==1) { // use radii only
+						double[] rad = new double[4];
+						rad[0] = pdcel.getVertRadius(edge);
+						rad[1] = pdcel.getVertRadius(edge.next);
+						rad[2] = pdcel.getVertRadius(edge.next.next);
+						rad[3] = pdcel.getVertRadius(edge.twin.prev);
 
-		// compute/store schwarzians edge-by-edge
+						// now get the schwarzian using the radii
+						try {
+							double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
+							double schn = D_Schwarzian.rad_to_schwarzian(rad,ivd,p.hes);
+							edge.setSchwarzian(schn);
+							count++;
+						} catch (DataException dex) {
+							throw new DataException(dex.getMessage());
+						}
+					}
+					else if (mode==2) { // use centers only
+						Complex[] cents=new Complex[4];
+						cents[0]=pdcel.getVertCenter(edge);
+						cents[1]=pdcel.getVertCenter(edge.next);
+						cents[2]=pdcel.getVertCenter(edge.next.next);
+						cents[3]=pdcel.getVertCenter(edge.twin.prev);
+						
+						// now get the schwarzian using the radii
+						try {
+							double schn = D_Schwarzian.cents_to_schwarzian(cents,p.hes);
+							edge.setSchwarzian(schn);
+							count++;
+						} catch (DataException dex) {
+							throw new DataException(dex.getMessage());
+						}
+					}
+				}
+			} // done with while
+			return count;
+		} // done with simply connected
+		
+		// Multi-connected case. set 'eutil' to account for side-pairings;
+		int S=pdcel.pairLink.size()-1;
+		Mobius[] sideMobs=new Mobius[S+1];
+		for (int j=1;j<=S;j++) {
+			sideMobs[j]=new Mobius(); // default to identity
+			D_SideData sd=pdcel.pairLink.get(j);
+			if (sd.mateIndex>=0) { // has mate
+				if (Mobius.frobeniusNorm(sd.mob)>.0001)
+					sideMobs[j]=sd.mob;
+				RedHEdge rtrace=sd.startEdge;
+				do {
+					if (rtrace.myEdge.eutil>0)
+						rtrace.myEdge.eutil=j;
+					rtrace=rtrace.nextRed;
+				} while (rtrace!=sd.endEdge.nextRed);
+			}
+		}
+
+		hlst = hlink.iterator();
 		while (hlst.hasNext()) {
 			HalfEdge edge=hlst.next();
-			if (mode==1)
-				edge.schwarzian=rads_to_schwarzian(p,edge);
-			else
-				edge.schwarzian=cents_to_schwarzian(p,edge);
-			count++;
-		}
+			
+			// normal interior edges
+			if (edge.eutil>0 && edge.myRedEdge==null) {
+				if (mode==1) { // use radii only
+					double[] rad = new double[4];
+					rad[0] = pdcel.getVertRadius(edge);
+					rad[1] = pdcel.getVertRadius(edge.next);
+					rad[2] = pdcel.getVertRadius(edge.next.next);
+					rad[3] = pdcel.getVertRadius(edge.twin.prev);
+
+					// now get the schwarzian using the radii
+					try {
+						double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
+						double schn = D_Schwarzian.rad_to_schwarzian(rad,ivd,p.hes);
+						edge.setSchwarzian(schn);
+						count++;
+					} catch (DataException dex) {
+						throw new DataException(dex.getMessage());
+					}
+				}
+				else if (mode==2) { // use centers only
+					Complex[] cents=new Complex[4];
+					cents[0]=pdcel.getVertCenter(edge);
+					cents[1]=pdcel.getVertCenter(edge.next);
+					cents[2]=pdcel.getVertCenter(edge.next.next);
+					cents[3]=pdcel.getVertCenter(edge.twin.prev);
+					
+					// now get the schwarzian using the radii
+					try {
+						double schn = D_Schwarzian.cents_to_schwarzian(cents,p.hes);
+						edge.setSchwarzian(schn);
+						count++;
+					} catch (DataException dex) {
+						throw new DataException(dex.getMessage());
+					}
+				}				
+			}
+			// else a twinned red edge
+			else if (edge.eutil>0) {
+				Mobius mob=sideMobs[edge.eutil];
+				CircleSimple cs=pdcel.getVertData(edge.twin.prev);
+				CircleSimple csout=new CircleSimple();
+				Mobius.mobius_of_circle(mob,p.hes,cs,csout,true);
+				if (mode==1) { // use radii only
+					double[] rad = new double[4];
+					rad[0] = pdcel.getVertRadius(edge);
+					rad[1] = pdcel.getVertRadius(edge.next);
+					rad[2] = pdcel.getVertRadius(edge.next.next);
+					rad[3] = csout.rad;
+
+					// now get the schwarzian using the radii
+					try {
+						double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
+						double schn = D_Schwarzian.rad_to_schwarzian(rad,ivd,p.hes);
+						edge.setSchwarzian(schn);
+						count++;
+					} catch (DataException dex) {
+						throw new DataException(dex.getMessage());
+					}
+				}
+				else if (mode==2) { // use centers only
+					Complex[] cents=new Complex[4];
+					cents[0]=pdcel.getVertCenter(edge);
+					cents[1]=pdcel.getVertCenter(edge.next);
+					cents[2]=pdcel.getVertCenter(edge.next.next);
+					cents[3]=csout.center;
+					
+					// now get the schwarzian using the radii
+					try {
+						double schn = D_Schwarzian.cents_to_schwarzian(cents,p.hes);
+						edge.setSchwarzian(schn);
+						count++;
+					} catch (DataException dex) {
+						throw new DataException(dex.getMessage());
+					}
+				}
+			}
+		} // end of while
 		return count;
 	}
-	
+
 	public static double cents_to_schwarzian(PackData p,HalfEdge edge) {
 		if (edge.isBdry())
 			return 1.0;
@@ -120,7 +291,7 @@ public class D_Schwarzian {
 				CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
 				tanPts[0],tanPts[1],tanPts[2],0,hes);
 
-		Mobius dMob = Schwarzian.getMobDeriv(fbase,gbase,0,0);
+		Mobius dMob = D_Schwarzian.getMobDeriv(fbase,gbase,0,0);
 		return dMob.c.x;
 	}
 	
@@ -136,7 +307,8 @@ public class D_Schwarzian {
 	 * @return double
 	 * @throws DataException
 	 */
-	public static double rad_to_schwarzian(double[] rad,double[] invDist, int hes) {
+	public static double rad_to_schwarzian(double[] rad,double[] invDist,
+			int hes) {
 		CircleSimple[] sC=new CircleSimple[4];
 		for (int i=0;i<4;i++) {
 			sC[i]=new CircleSimple();
@@ -190,7 +362,7 @@ public class D_Schwarzian {
 				CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
 				tanPts[0],tanPts[1],tanPts[2],0,hes);
 
-		Mobius dMob = Schwarzian.getMobDeriv(fbase,gbase,0,0);
+		Mobius dMob = D_Schwarzian.getMobDeriv(fbase,gbase,0,0);
 		if (Math.abs(dMob.c.y)>.001) {
 			throw new DataException("error: Schwarzian is not real");
 		}
@@ -312,7 +484,8 @@ public class D_Schwarzian {
 		int tick=0;
 		do {
 			rads[tick]=p.packDCEL.getVertRadius(edge);
-			Z[tick++]=p.packDCEL.getVertCenter(edge);
+			Z[tick]=p.packDCEL.getVertCenter(edge);
+			tick++;
 			edge=edge.next;
 		} while (tick<3);
 		if (p.hes > 0) { // sph? check for circles containing infinity
@@ -478,5 +651,45 @@ public class D_Schwarzian {
 		System.out.println("  domain z and r: "+z.toString()+" "+r+
 				"   range z and r: "+sC.center.toString()+" "+sC.rad);
 	}
-	
+
+	/**
+	 * TODO: is this a duplicate of some other routine?
+	 * 
+	 * Create TriAspects for packing p; generally this is only done
+	 * if TriAspects are not available in an active 'AffinePack' or 
+	 * 'ProjStruct' packextender. The resulting dual triangles have 
+	 * tanPts[j] = tangency point of edge (j,(j+1)%3). 
+	 * 
+	 * TODO: If p is not simply connected, centers for some faces will 
+	 * be in the wrong place. Should process like in p.layoutTree.
+	 * @param p PackData
+	 * @return TriAspect[]
+	 */
+	public static TriAspect []DualTriData(PackData p) {
+		TriAspect []triasp=new TriAspect[p.faceCount+1];
+		for (int f=1;f<=p.faceCount;f++) {
+			dcel.Face face=p.packDCEL.faces[f];
+			triasp[f]=new TriAspect(p.hes);
+			
+			HalfEdge he=face.edge;
+			
+			triasp[f].vert=face.getVerts();
+			DualTri dtri=new DualTri(p.hes,
+				p.packDCEL.getVertCenter(he),
+			    p.packDCEL.getVertCenter(he.next),
+			    p.packDCEL.getVertCenter(he.next.next));
+			
+			triasp[f].tanPts=new Complex[3];
+			int j=0;
+			do {
+				triasp[f].setCenter(p.packDCEL.getVertCenter(he),j);
+				triasp[f].tanPts[j]=dtri.getTP(j);
+				j++;
+				he=he.next;
+			} while (he!=face.edge);
+		}
+		return triasp;
+	}
+
+
 }
