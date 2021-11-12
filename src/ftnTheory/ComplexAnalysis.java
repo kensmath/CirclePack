@@ -96,13 +96,13 @@ public class ComplexAnalysis extends PackExtender {
 	public double []LaplaceIt(double []values) {
 		double []lp=new double[packData.nodeCount+1];
 		for (int v=1;v<=packData.nodeCount;v++) {
-			
+			int[] flower=packData.getFlower(v);
 			double tot=0.0;
-			for (int j=0;j<packData.countFaces(v)+packData.getBdryFlag(v);j++) 
+			for (int j=0;j<flower.length;j++) 
 				tot += conductance[v][j];
 			double avg=0.0;
-			for (int j=0;j<packData.countFaces(v)+packData.getBdryFlag(v);j++) 
-				avg += values[packData.kData[v].flower[j]]*conductance[v][j]/tot;
+			for (int j=0;j<flower.length;j++) 
+				avg += values[flower[j]]*conductance[v][j]/tot;
 			lp[v]=avg-values[v];
 		}
 		return lp;
@@ -596,7 +596,7 @@ public class ComplexAnalysis extends PackExtender {
 			
 			// for bdry, use ratio of inRad/length for first and last edges
 			if (domData.isBdry(v)) {
-				f1=domData.getCenter(domData.kData[v].flower[0]);
+				f1=domData.getCenter(domData.getFirstPetal(v));
 				f2=domData.getCenter(domData.kData[v].flower[1]);
 				double inRad=EuclMath.eucl_tri_inradius(spokes[0],spokes[1],f1.minus(f2).abs());
 				conductance[v][0]=inRad/spokes[0];
@@ -706,12 +706,12 @@ public class ComplexAnalysis extends PackExtender {
 
 			// compute the 'weights'
 			// compute for first edge
-			double rad1=packData.getRadius(packData.kData[v].flower[0]);
+			double rad1=packData.getRadius(packData.getFirstPetal(v));
 			double rad2=packData.getRadius(packData.kData[v].flower[1]);
 			double inRad=EuclMath.eucl_tri_inradius(rad+rad1,rad+rad2,rad1+rad2);
-			domSpokes[0]=z.minus(packData.getCenter(packData.kData[v].flower[0]));
+			domSpokes[0]=z.minus(packData.getCenter(packData.getFirstPetal(v)));
 			domSpokes[1]=z.minus(packData.getCenter(packData.kData[v].flower[1]));
-			ranSpokes[0]=w.minus(rangeData.getCenter(rangeData.kData[v].flower[0]));
+			ranSpokes[0]=w.minus(rangeData.getCenter(rangeData.getFirstPetal(v)));
 			ranSpokes[1]=w.minus(rangeData.getCenter(rangeData.kData[v].flower[1]));
 			weights[0]=inRad/domSpokes[0].abs();
 			totalWeight=weights[0];

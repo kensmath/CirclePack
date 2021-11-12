@@ -315,26 +315,22 @@ public class HilbertTransform extends PackExtender
 	{
 		// determine which neighbor of vert belongs to the boundary
 		int[] nb = new int[2];
-		int[] flwr;
 		int sz_flwr;
 		int count = 0;
 		
-		flwr = packData.kData[vert].flower;
+		int[] flwr = packData.getFlower(vert);
 		if (packData.isBdry(vert))
 			// vert is a boundary vertex
 			sz_flwr = flwr.length;
 		else
 			sz_flwr = flwr.length - 1;
 		
-		for(int k = 0; k < sz_flwr; k++)
-		{
-			if (packData.isBdry(flwr[k]))
-			{
+		for(int k = 0; k < sz_flwr; k++) {
+			if (packData.isBdry(flwr[k])) {
 				nb[count] = flwr[k];
 				count++;
 			}
 		}
-		
 		return nb;
 	}
 	

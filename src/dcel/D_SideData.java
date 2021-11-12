@@ -132,7 +132,7 @@ public class D_SideData {
     		mobErr=mob.error;
     	}
     	else if (hes==0) { // eucl 
-    		mob=Mobius.affine_mob(a,b,A,B);
+    		mob=Mobius.mob_abAB(a,b,A,B);
     		mobErr=mob.error;
     	}
     	// TODO: sph not yet implemented, but may be set elsewhere,

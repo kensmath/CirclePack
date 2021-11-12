@@ -1148,7 +1148,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 * @param B Complex
 	 * @return Mobius, identity on error.
 	 */
-	public static Mobius affine_mob(Complex a, Complex b, Complex A, Complex B)
+	public static Mobius mob_abAB(Complex a, Complex b, Complex A, Complex B)
 			throws MobException {
 		Mobius M;
 		if (a.sub(b).abs() < 100 * MOB_TOLER
@@ -1712,7 +1712,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		Complex b = new Complex(ctr2);
 		b.x+=Math.abs(CPrad2);
 		
-		mob1=(Mobius)Mobius.affine_mob(ctr1,a,ctr2,b);
+		mob1=(Mobius)Mobius.mob_abAB(ctr1,a,ctr2,b);
 		
 		// just need affine map carrying c1 to c2
 		if (CPrad1<0 && CPrad2>0) 
@@ -1720,7 +1720,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		
 		// need affine c1 to c2, then invert in c2 
 		if (CPrad1<0.0) { // note: CPrad2<0
-			Mobius toU=Mobius.affine_mob(ctr2,b,new Complex(0.0),new Complex(1.0));
+			Mobius toU=Mobius.mob_abAB(ctr2,b,new Complex(0.0),new Complex(1.0));
 			return (Mobius)toU.inverse().rmult(Mobius.recip_mob().rmult(toU));
 		}
 		

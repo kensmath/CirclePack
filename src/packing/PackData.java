@@ -2297,6 +2297,10 @@ public class PackData{
             locks=0;
             fileName = "";
             tileData=null;
+            if (packDCEL==null) {
+            	packDCEL=new PackDCEL();
+            	packDCEL.p=this;
+            }
            	packDCEL.vertices=new Vertex[sizeLimit+1];
         }
 
@@ -2577,7 +2581,7 @@ public class PackData{
 	}
 	
 	/**
-	 * 'aim' from 'vData', if available, else from 'rData'
+	 * 'curv' from 'vData'
 	 * @param v int
 	 * @return double
 	 */
@@ -2589,7 +2593,7 @@ public class PackData{
 		}
 	}
 	
-	/** Store 'curv' in 'vData', if available, else in 'rData'
+	/** Store 'curv' in 'vData'
 	 * @param v int
 	 * @param aim double
 	 */
@@ -5924,45 +5928,7 @@ public class PackData{
 	    }
 		return 1;
 	}
-	
-	/** 
-	 * Compute angle sum at v, allowing for inversive distances.
-	 * uP.value = anglesum. Return false in case of radii/inv dist 
-	 * incompatibilies (results are not reliable).
-	 * @param v int
-	 * @param r double
-	 * @param uP UtilPacket
-	 * @return boolean, 
-	*/
-	public boolean e_anglesum_overlap(int v,double r,UtilPacket uP) {
-		  int j2=getFirstPetal(v);
-		  double r2=getRadius(j2);
-		  uP.value=0.0;
-		  if (!overlapStatus) {
-		      double m2 = r2/(r+r2);
-		      for (int n=1;n<=countFaces(v);n++) {
-		    	  double m1 = m2;
-		    	  r2 = getRadius(getPetal(v,n));
-		    	  m2 = r2/(r+r2);
-		    	  uP.value += Math.acos(1-2*m1*m2);
-		      }
-		  }
-		  else  {
-		      double o2=getInvDist(v,getFirstPetal(v));
-		      for (int n=1;n<=countFaces(v);n++) {
-		    	  int j1=j2;
-		    	  double r1=r2;
-		    	  double o1=o2;
-		    	  j2=getPetal(v,n);
-		    	  r2=getRadius(j2);
-		    	  o2=getInvDist(v,getPetal(v,n));
-		    	  double ovlp=getInvDist(j1,j2);
-		    	  uP.value += Math.acos(EuclMath.e_cos_overlap(r,r1,r2,ovlp,o2,o1));
-		      }
-		  }
-		  return true;
-	}
-	
+
 	/**
 	 * Find anglesum at given vertex. Inversive distances not yet
 	 * included.
@@ -5977,7 +5943,8 @@ public class PackData{
 	  double r1,r2;
 
 	  uP.value=0.0;
-	  if (r<=0) return false;
+	  if (r<=0) 
+		  return false;
 	  j2=getFirstPetal(v);
 	  r2=getRadius(j2);
 	  for (k=1;k<=countFaces(v);k++) {
@@ -6123,37 +6090,34 @@ public class PackData{
 		double factor=0.5;
 		double upcurv;
 		double lowcurv;
-	    UtilPacket curveUp=new UtilPacket();
 	  
-	  if (!e_anglesum_overlap(v,r,curveUp)) 
-		  return false;
-	  double bestcurv=lowcurv=upcurv=curveUp.value;
-	  if (bestcurv>(aim+OKERR)) {
+	    Vertex vert=packDCEL.vertices[v];
+	    double angsum=packDCEL.getVertAngSum(vert);
+	    double bestcurv=lowcurv=upcurv=angsum;
+	    if (bestcurv>(aim+OKERR)) {
 	      upper=r/factor;
-	      if (!e_anglesum_overlap(v,upper,curveUp)) 
-	    	  return false;
-	      upcurv=curveUp.value;
+	      angsum=packDCEL.getVertAngSum(vert,upper);
+	      upcurv=angsum;
 	      if (upcurv>aim) {
 	    	  uP.value=upper;
 	    	  return true;
 	      }
-	  }
-	  else if (bestcurv<(aim-OKERR)) {
+	    }
+	    else if (bestcurv<(aim-OKERR)) {
 	      lower=r*factor;
-	      if (!e_anglesum_overlap(v,lower,curveUp)) 
-	    	  return false;
-	      lowcurv=curveUp.value;
+	      angsum=packDCEL.getVertAngSum(vert,lower);
+	      upcurv=angsum;
 	      if (lowcurv<aim) {
 	    	  uP.value=lower;
 	    	  return true;
 	      }
-	  }
-	  else {
-	      uP.value=r;
-	      return true;
-	  }
+	    }
+	    else {
+	    	uP.value=r;
+	    	return true;
+	    }
 
-	  for (int n=1;n<=N;n++) {
+	    for (int n=1;n<=N;n++) {
 	      if (bestcurv>(aim+OKERR)) {
 	    	  lower=r;
 	    	  lowcurv=bestcurv;
@@ -6168,11 +6132,11 @@ public class PackData{
 	    	  uP.value= r;
 	    	  return true;
 	      }
-	      if (!e_anglesum_overlap(v,r,curveUp)) return false;
-	      bestcurv=curveUp.value;
+	      angsum=packDCEL.getVertAngSum(vert,r);
+	      bestcurv=r;
 	    }
-	  uP.value=r;
-	  return true;
+	    uP.value=r;
+	    return true;
 	}
 	
 	/**
@@ -6229,30 +6193,32 @@ public class PackData{
 	}
 	
 	/**
-	  * Compute and store eucl radius of given vertex to achieve given 'aim'.
-	  * Currently using 20 naive iterations.
+	  * Compute and store eucl radius of given vertex to achieve 
+	  * given 'aim'. Currently using 20 naive iterations.
 	  * @param v int
 	  * @param aim double
 	  * @param int, 0 on error
 	  */
 	public int e_riffle_vert(int v,double aim) throws PackingException {
+		Vertex vert=packDCEL.vertices[v];
 		int n=0;
 		UtilPacket uP=new UtilPacket();
 
-		double r=getRadius(v);
-		if (!e_anglesum_overlap(v,r,uP)) return 0;
-	    double curv=uP.value;
+		double orig_r=packDCEL.getVertRadius(vert.halfedge);
+	    double curv=packDCEL.getVertAngSum(vert,orig_r);
 	    double diff=curv-aim;
+		double r=orig_r;
 	    while (n<20 && (diff>OKERR || diff<(-OKERR)) ) {
-	    	if (!e_radcalc(v,r,aim,5,uP)) return 0; // something went wrong
+	    	if (!e_radcalc(v,r,aim,5,uP)) 
+	    		return 0; // something went wrong
 	    	r=uP.value;
-	    	if (!e_anglesum_overlap(v,r,uP)) return 0;
-	    	curv=uP.value;
+	    	curv=packDCEL.getVertAngSum(vert,r);
 	    	diff=curv-aim;
 	    	n++;
 	    }
-	    if (n>0 && r!=getRadius(v)) { // changed?
-	    	setRadiusActual(v,r);
+	    
+	    if (n>0 && r!=orig_r) { // changed?
+	    	packDCEL.setVertRadii(v,r);
 	    	setCurv(v,curv);
 	    }  
 	    return 1; // seemed to go okay
@@ -16047,36 +16013,43 @@ public class PackData{
 	  return 0; // didn't find appropriate bdry vert 
 	} 
 
-	/** 
-	 * Reset aims of vlist based on their current angle sum, aim, 
-	 * and specified factor x. If aim is positive,
-	 * aim(v)=angle sum(v) + x*[aim(v)-angle sum(v)].
+	/**
+	 * Reset aims of vlist based on their current angle sum, aim, and specified
+	 * factor x. If aim is positive, aim(v)=angle sum(v) + x*[aim(v)-angle sum(v)].
 	 * Return count of adjustments.
 	 */
-	public int scale_aims(double x,NodeLink vlist) {
-	  int count=0,v;
-	  UtilPacket uP=new UtilPacket();
+	public int scale_aims(double x, NodeLink vlist) {
+		int count = 0, v;
+		UtilPacket uP = new UtilPacket();
 
-	  if (!status || vlist==null || x < 0.0) return 0;
-	  Iterator<Integer> vtrace=vlist.iterator();
+		if (!status || vlist == null || x < 0.0)
+			return 0;
+		Iterator<Integer> vtrace = vlist.iterator();
 
-	  while (vtrace.hasNext()) {
-	    v=(Integer)vtrace.next();
-	    if (getAim(v)>0) {
-	      if (hes<0)
-		h_anglesum_overlap(v,getRadius(v),uP);
-	      else if (hes>0)
-		s_anglesum(v,getRadius(v),uP);
-	      else 
-		e_anglesum_overlap(v,getRadius(v),uP);
-	      setCurv(v,uP.value);
-	      setAim(v,getCurv(v)-x*(getCurv(v)-getAim(v)));
-	      count++;
-	    }
-	  }
-	  return count;
-	} 
-	
+		while (vtrace.hasNext()) {
+			v = (Integer) vtrace.next();
+			Vertex vert = packDCEL.vertices[v];
+			if (getAim(v) > 0) {
+				double angsum;
+				double rad = packDCEL.getVertRadius(vert.halfedge);
+				// TODO: use DCEL calls if hes!=0
+				if (hes < 0) {
+					h_anglesum_overlap(v, rad, uP);
+					angsum = uP.value;
+				} else if (hes > 0) {
+					s_anglesum(v, rad, uP);
+					angsum = uP.value;
+				} else {
+					angsum = packDCEL.getVertAngSum(vert, rad);
+				}
+				setCurv(v, angsum);
+				setAim(v, getCurv(v) - x * (getCurv(v) - getAim(v)));
+				count++;
+			}
+		} // end of while
+		return count;
+	}
+
 	/** 
 	 * Reset radii of p to interpolate between current values and
 	 * values in q by factor: 
@@ -17219,7 +17192,7 @@ public class PackData{
 		a2 = getCenter(v2);
 		b1 = qackData.getCenter(w1);
 		b2 = qackData.getCenter(w2);
-		mob = Mobius.affine_mob(a1, a2, b1, b2);
+		mob = Mobius.mob_abAB(a1, a2, b1, b2);
 		return 1;
 	}
 	

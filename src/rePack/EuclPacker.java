@@ -3,6 +3,7 @@ package rePack;
 import JNI.JNIinit;
 import allMains.CPBase;
 import allMains.CirclePack;
+import dcel.Vertex;
 import exceptions.DataException;
 import exceptions.PackingException;
 import geometry.EuclMath;
@@ -466,19 +467,17 @@ public class EuclPacker extends RePacker {
       while ((cut > RP_TOLER && count<passes)) {
     	  for (int j=0;j<aimNum;j++) {
     		  v=inDex[j];
-    		  r=pd.getRadius(v);
-    		  
+    		  Vertex vert=pd.packDCEL.vertices[v];
+    		  r=pd.packDCEL.getVertRadius(vert.halfedge);
     		  uP=new UtilPacket();
-    		  if (!pd.e_anglesum_overlap(v,r,uP)) 
-    			  return 0;
-    		  pd.setCurv(v,uP.value);
+    		  double angsum=pd.packDCEL.getVertAngSum(vert,r);
+    		  pd.setCurv(v,angsum);
     		  verr=pd.getCurv(v)-pd.getAim(v);
     		  if (Math.abs(verr)>cut) {
     			  if (pd.e_radcalc(v,pd.rData[v].rad,pd.getAim(v),5,uP)) {
     				  pd.setRadius(v,uP.value);	
-    				  if (!pd.e_anglesum_overlap(v,r,uP)) 
-    					  return 0;
-    				  pd.setCurv(v,uP.value);
+    				  angsum=pd.packDCEL.getVertAngSum(vert,r);
+    				  pd.setCurv(v,angsum);
     			  }
     		  }
           }

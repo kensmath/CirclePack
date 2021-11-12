@@ -1,21 +1,28 @@
 package util;
 
+import java.util.Iterator;
+
 import dcel.HalfEdge;
 import dcel.PackDCEL;
+import exceptions.CombException;
 import exceptions.DataException;
+import exceptions.ParserException;
 import geometry.CommonMath;
 import listManip.HalfLink;
+import listManip.NodeLink;
+import packing.PackData;
 
 /**
  * Utility class holding fundamental geometric data needed for
  * repacking computations, localized to (triangular only) face 
  * of some parent complex. Typically, this is temporary storage
- * during repack computations and is NOT routinely maintained; 
- * started 12/2020 to accommodate repacking for DCEL structures.
+ * during repack computations and is NOT routinely maintained.
  * 
- * The derived class 'TriAspects' has been used in many other
+ * The derived class 'TriAspects' has been used in additional
  * situtaions.e.g., with projective and affine structures and 
- * with discrete Schwarzians. 
+ * with discrete Schwarzians. 'labels' are typically of use only
+ * in the eucl setting and are treated as homogeneous radii --
+ * that is, only their ratios are important. 
  *  
  * @author kens
  */
@@ -28,10 +35,12 @@ public class TriData {
 	public HalfEdge baseEdge;  
 	
 	// triples of data
-	public int[] vert;   // 'Face.vert' vector (as ordered in packdata 'faces')
+	public int[] vert;   // vertices (as ordered in packdata 'faces')
 	public double[] radii;  // concrete numbers representing labels
 	public double[] labels; // labels for verts: often homogeneous coords
 
+	// TODO: Rejigger: changing so edge data [i] is for edge whose
+	//       origin is vertex i.
 	// Caution: edge data [i] entry is for edge OPPOSITE to vertex i.
 	double[] invDist;    // inversive distance: null if none non-trivial
 	
@@ -55,18 +64,19 @@ public class TriData {
 
 	public TriData(PackDCEL pdcel,HalfEdge hedge) {
 		this(pdcel);
-		baseEdge=hedge;
-		face=baseEdge.face.faceIndx;
+		if (hedge.next.next.next!=hedge)
+			throw new CombException();
+		baseEdge=hedge.face.edge; // Note: baseEdge may not be hedge
+		face=baseEdge.face.faceIndx; 
 		try {
 			hes=pdc.p.hes;
-			HalfLink eflower=baseEdge.face.getEdges();
-			if (eflower.size()!=3)
-				throw new DataException();
-			for (int j=0;j<3;j++) {
-				HalfEdge he=eflower.get(j);
-				int v=he.origin.vertIndx;
-				vert[j]=v;
-				radii[j]=pdc.p.getRadius(v);
+			int j=0;
+			HalfEdge he=baseEdge;
+			do {
+				vert[j]=he.origin.vertIndx;
+				radii[j]=pdc.getVertRadius(he);
+				if (hes==0)
+					labels[j]=radii[j];
 				
 				// only create invDist if non-trivial is found
 				double ivd=he.getInvDist();
@@ -75,9 +85,11 @@ public class TriData {
 						invDist=new double[3];
 						invDist[0]=invDist[1]=invDist[2]=1.0;
 					}
-					setInvDist((j+2)%3,ivd); // store for opposite vert
+					setInvDist(j,ivd); // store for opposite vert
 				}
-			}
+				j++;
+				he=he.next;
+			} while (j<3);
 		} catch(Exception ex) {
 			throw new DataException("error building 'TriData' for face f="+face);
 		}
@@ -106,6 +118,27 @@ public class TriData {
 		return radii[j];
 	}
 	
+	public double getLabel(int j) {
+		return labels[j];
+	}
+	
+	public void setLabel(double lbl,int j) {
+		labels[j]=lbl;
+	}
+
+	/**
+	 * Find the 'HalfEdge' with index j.
+	 * @param j int, 0, 1, or 2
+	 * @return
+	 */
+	public HalfEdge getHalfEdge(int j) {
+		if (j==0)
+			return baseEdge;
+		if (j==1)
+			return baseEdge.next;
+		return baseEdge.next.next;
+	}
+	
 	/**
 	 * are there any non-trivial inversive distances for 
 	 * this face?
@@ -118,7 +151,7 @@ public class TriData {
 	}
 	
 	/**
-	 * Caution: invDist[j] is for edge opposite vertex j.
+	 * Caution: invDist[j] is for edge <j,j+1>
 	 * @param j int
 	 * @return double, 1.0 if 'invDist' is null
 	 */
@@ -159,10 +192,43 @@ public class TriData {
 		return -1;
 	}
 
+	/** 
+	 * Find local index (0,1, or 2) for vertex v which
+	 * is origin of 'edge' in this face; return -1 
+	 * if not an edge of this face.
+	 * @param edge HalfEdge
+	 * @return int, local index or -1 on failure
+	 */
+	public int edgeIndex(HalfEdge edge) {
+		if (edge==baseEdge)
+			return 0;
+		if (edge==baseEdge.next)
+			return 1;
+		if (edge==baseEdge.next.next)
+			return 2;
+		return -1;
+	}
+	
+	/**
+	 * Return angle at vert[j] using current data. If 
+	 * 'invDist' exists, then invDist[j] is for edge <j,j+1>
+	 * @param j int
+	 * @return double
+	 */
+	public double compOneAngle(int j) {
+		if (invDist!=null)
+			return CommonMath.get_face_angle(radii[j],radii[(j+1)%3],
+					radii[(j+2)%3],getInvDist(j),
+					getInvDist((j+1)%3),getInvDist((j+2)%3),hes);
+		return CommonMath.get_face_angle(radii[j],radii[(j+1)%3],
+				radii[(j+2)%3],hes);
+	}
+
+	
 	/**
 	 * Return angle at v=vert[j] using current data, but radius 
-	 * 'rad' at v itself. Recall, if 'invDist' exists, then
-	 * invDist[j] is for edge opposite vertex j.
+	 * 'rad' at v itself. If 'invDist' exists, then invDist[j] is 
+	 * for edge <j,j+1>
 	 * @param j int
 	 * @param rad double
 	 * @return double
@@ -177,10 +243,8 @@ public class TriData {
 	}
 	
 	/**
-	 * Return angle at v=vert[j] using current data, but radius 
-	 * 'rad' at v itself is its current radius multiplied by 'factor'. 
-	 * Recall, if 'invDist' exists, then invDist[j] is for edge 
-	 * opposite vertex j.
+	 * Return angle at v=vert[j] using 'radii', except radius 
+	 * at v itself is its current radius multiplied by 'factor'. 
 	 * @param j int
 	 * @param rad double
 	 * @return double
@@ -196,18 +260,59 @@ public class TriData {
 	}
 
 	/**
-	 * Return angle at vert[j] using current data. Recall, if 
-	 * 'invDist' exists, then invDist[j] is for edge opposite vertex j.
-	 * @param j int
-	 * @return double
-	 */
-	public double compOneAngle(int j) {
-		if (invDist!=null)
-			return CommonMath.get_face_angle(radii[j],radii[(j+1)%3],
-					radii[(j+2)%3],getInvDist(j),
-					getInvDist((j+1)%3),getInvDist((j+2)%3),hes);
-		return CommonMath.get_face_angle(radii[j],radii[(j+1)%3],
-				radii[(j+2)%3],hes);
-	}
-
+     * We may want to move local 'radii' or 'labels' (typically 
+     * labels are only for eucl case) stored in 'PackDCEL.triData'
+     * to the radii of the parent packing. Modes are: 
+     *   1 to use local 'radii', 
+     *   2 to use 'labels' 
+     * Some vertices will have different labels in different 
+     * faces; the DCEL structure expects this for red vertices.
+     * For other vertices, 'vData' get the value in the first
+     * face containing that vertex Recompute curvatures.
+     * @param p PackData
+     * @param vlist NodeLink
+     * @param mode int
+     * @return int, count
+     */
+    public static int reapRadii(PackData p,NodeLink vlist,int mode) {
+    	PackDCEL pdcel=p.packDCEL;
+    	if (pdcel.triData==null || 
+    			pdcel.triData.length<(pdcel.faceCount+1)) 
+    		throw new ParserException("no 'triData' allocated");
+    	if (vlist==null || vlist.size()==0)
+    		vlist=new NodeLink(p,"a");
+    	Iterator<Integer> vis=vlist.iterator();
+    	int count=0;
+    	while (vis.hasNext()) {
+    		dcel.Vertex vert=pdcel.vertices[vis.next()];
+    		if (vert.redFlag) {
+    			HalfLink spokes=vert.getEdgeFlower();
+    			Iterator<HalfEdge> sis=spokes.iterator();
+    			while (sis.hasNext()) {
+    				HalfEdge he=sis.next();
+    				int f=he.face.faceIndx;
+    				int indx=pdcel.triData[f].edgeIndex(he);
+    				if (he.myRedEdge!=null) {
+    	    			if (mode==2)
+        					pdcel.setRad4Edge(he,pdcel.triData[f].labels[indx]);
+    	    			else
+        					pdcel.setRad4Edge(he,pdcel.triData[f].radii[indx]);
+    				}
+    			}
+    		}
+    		else { // store from first face containing v
+    			int v=vert.vertIndx;
+    			int findx=pdcel.p.vData[v].findices[0];
+    			int vindx=pdcel.p.vData[v].myIndices[0];
+    			if (mode==2)
+    				p.setRadius(v,pdcel.triData[findx].labels[vindx]);
+    			else
+    				p.setRadius(v,pdcel.triData[findx].radii[vindx]);
+    		}
+    		count++;
+    	}
+    	p.fillcurves();
+    	return count;
+    }
+    
 }

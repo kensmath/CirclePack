@@ -96,8 +96,9 @@ public class JammedPack extends PackExtender {
 				istices[++tick]=v;
 				homePack.setVertMark(v,tick); // index of interstice
 				iFlowers[tick]=new int[homePack.countFaces(v)+1];
-				for (int j=0;j<=homePack.countFaces(v);j++)
-					iFlowers[tick][j]=homePack.kData[v].flower[j];
+				int[] hflower=homePack.getFlower(v);
+				for (int j=0;j<hflower.length;j++)
+					iFlowers[tick][j]=hflower[j];
 			}
 		}
 		cpCommand(homePack,"color -c s a");
@@ -267,8 +268,8 @@ public class JammedPack extends PackExtender {
 
 			// v and w must share one (and only one) paver
 			int bary=0;
-			int []vflower=homePack.kData[v].flower;
-			for (int j=0;j<homePack.countFaces(v);j++) {
+			int []vflower=homePack.getPetals(v);
+			for (int j=0;j<vflower.length;j++) {
 				if (homePack.getVertMark(vflower[j])>=0) { //
 					int b=vflower[j];
 					if (homePack.nghb(w,b)>=0) {

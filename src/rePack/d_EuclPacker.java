@@ -1,10 +1,14 @@
 package rePack;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 
 import JNI.JNIinit;
 import allMains.CirclePack;
+import dcel.Face;
+import dcel.HalfEdge;
 import dcel.PackDCEL;
+import dcel.Vertex;
 import exceptions.DataException;
 import exceptions.PackingException;
 import exceptions.ParserException;
@@ -14,6 +18,7 @@ import komplex.KData;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.RData;
+import util.TriData;
 
 /**
  * Euclidean repacking with DCEL structures
@@ -38,7 +43,7 @@ public class d_EuclPacker extends RePacker {
     }
   
     /**
-     * Load relevant radius data
+     * Load relevant radius data into 'PackDCEL.triData'.
      * @return LOADED =1 or FAILURE = -1
      */
     public int load() {
@@ -68,47 +73,37 @@ public class d_EuclPacker extends RePacker {
     }
     
     /**
-     * Store any newly computed radii (from 'triData') and
-     * recompute curvatures. Note that some vertices will have
-     * different radii in different faces; we record that from
-     * the first face in the 'findices' list. 
+     * Store any newly computed radii and recompute curvatures. 
      */
     public void reapResults() {
+    	PackDCEL pdcel=p.packDCEL;
     	for (int i=0;i<aimnum;i++) {
     		int v=index[i];
-    		int findx=p.vData[v].findices[0];
-    		int vindx=p.vData[v].myIndices[0];
-    		p.setRadius(v,pdcel.triData[findx].radii[vindx]);
+    		Vertex vert=pdcel.vertices[v];
+    		
+    		// for reds, need to find red edges
+    		//    
+    		if (vert.redFlag) { 
+    			ArrayList<Face> facelist=vert.getFaceFlower();
+    			Iterator<Face> fist=facelist.iterator();
+    			while(fist.hasNext()) {
+    				TriData trid=pdcel.triData[fist.next().faceIndx];
+    				int j=trid.vertIndex(v);
+    				HalfEdge he=trid.getHalfEdge(j);
+    				pdcel.setRad4Edge(he,trid.radii[j]);
+    				p.vData[v].rad=trid.radii[j];
+    			}
+    		}
+    		else {
+    			int findx=p.vData[v].findices[0];
+    			int vindx=p.vData[v].myIndices[0];
+    			p.setRadius(v,pdcel.triData[findx].radii[vindx]);
+    		}
     	}
     	p.fillcurves();
     }
     
-    /**
-     * For some computations, radius data is stored as 'labels'.
-     * Store any newly computed labels in 'triData' as radii
-     * for the packing. Note that some vertices will have
-     * different labels in different faces; we record that from
-     * the first face in the 'findices' list as its radius.
-     * Recompute curvatures. 
-     * @param p PackData
-     * @param vlist NodeLink
-     */
-    public static void reapLabels(PackData p,NodeLink vlist) {
-    	PackDCEL pdcel=p.packDCEL;
-    	if (pdcel.triData==null || 
-    			pdcel.triData.length<(pdcel.faceCount+1)) 
-    		throw new ParserException("no 'triData' allocated");
-    	if (vlist==null || vlist.size()==0)
-    		vlist=new NodeLink(p,"a");
-    	Iterator<Integer> vis=vlist.iterator();
-    	while (vis.hasNext()) {
-    		int v=vis.next();
-    		int findx=p.vData[v].findices[0];
-    		int vindx=p.vData[v].myIndices[0];
-    		p.setRadius(v,pdcel.triData[findx].labels[vindx]);
-    	}
-    	p.fillcurves();
-    }
+ 
         
     public int reStartRiffle(int passes) {    // continue the packing computation
     	return 1;

@@ -1320,10 +1320,10 @@ public class PackDCEL {
 			r0=getVertRadius(edge);
 		double r1=getVertRadius(edge.next);
 		double r2=getVertRadius(edge.prev);
-		double o0=edge.invDist;
-		double o1=edge.next.invDist;
-		double o2=edge.prev.invDist;
-		return CommonMath.get_face_angle(r0, r1, r2, o0, o1, o2, p.hes);
+		double ivd0=edge.invDist;
+		double ivd1=edge.next.invDist;
+		double ivd2=edge.prev.invDist;
+		return CommonMath.get_face_angle(r0, r1, r2, ivd0, ivd1, ivd2, p.hes);
 	}
 	
 	/**
@@ -1528,7 +1528,6 @@ public class PackDCEL {
 		Vertex vert=vertices[v];
 		if (p.packDCEL==this) {
 			p.vData[v].rad=rad;
-			p.rData[v].rad=rad;
 		}
 		if (vert.redFlag) {
 			HalfEdge he=vert.halfedge;

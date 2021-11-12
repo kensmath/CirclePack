@@ -115,64 +115,66 @@ public class CommonMath {
 	}
 	
 	/**
-	 * Compute third circle given two centers, radii, inv distances
+	 * Compute third circle given two centers, radii, inv distances;
+	 * ivdj is edge <j,j+1>.
+	 * @param z0 Complex
 	 * @param z1 Complex
-	 * @param z2 Complex
+	 * @param r0 double
 	 * @param r1 double
 	 * @param r2 double
-	 * @param r3 double
-	 * @param o1 double, inv distance, edge opposite z1
-	 * @param o2 double, opposite z2
-	 * @param o3 double, opposite z3
+	 * @param ivd0 double
+	 * @param ivd1 double
+	 * @param ivd2 double
 	 * @param hes int
 	 * @return CircleSimple
 	 */
-	public static CircleSimple comp_any_center(Complex z1, Complex z2,
-	  		 double r1,double r2,double r3, double o1,double o2,double o3,int hes) {
+	public static CircleSimple comp_any_center(Complex z0, Complex z1,
+	  		 double r0,double r1,double r2, double ivd0,double ivd1,double ivd2,int hes) {
 		if (hes<0)
-			return HyperbolicMath.h_compcenter(z1,z2,r1,r2,r3,o1,o2,o3);
+			return HyperbolicMath.h_compcenter(z0,z1,r0,r1,r2,ivd0,ivd1,ivd2);
 		if (hes>0)
-			return SphericalMath.s_compcenter(z1,z2,r1,r2,r3,o1,o2,o3);
+			return SphericalMath.s_compcenter(z0,z1,r0,r1,r2,ivd0,ivd1,ivd2);
 		else
-			return EuclMath.e_compcenter(z1,z2,r1,r2,r3,o1,o2,o3);
+			return EuclMath.e_compcenter(z0,z1,r0,r1,r2,ivd0,ivd1,ivd2);
 	}
 	
 	/**
 	 * Compute third circle give two centers, radii, no overlaps
+	 * @param z0 Complex
 	 * @param z1 Complex
-	 * @param z2 Complex
+	 * @param r0 double
 	 * @param r1 double
 	 * @param r2 double
-	 * @param r3 double
 	 * @param hes int
 	 * @return
 	 */
-	public static CircleSimple comp_any_center(Complex z1, Complex z2,
-	  		 double r1,double r2,double r3, int hes) {
+	public static CircleSimple comp_any_center(Complex z0, Complex z1,
+	  		 double r0,double r1,double r2, int hes) {
 		if (hes<0)
-			return HyperbolicMath.h_compcenter(z1,z2,r1,r2,r3,1.0,1.0,1.0);
+			return HyperbolicMath.h_compcenter(z0,z1,r0,r1,r2,1.0,1.0,1.0);
 		if (hes>0)
-			return SphericalMath.s_compcenter(z1,z2,r1,r2,r3,1.0,1.0,1.0);
+			return SphericalMath.s_compcenter(z0,z1,r0,r1,r2,1.0,1.0,1.0);
 		else
-			return EuclMath.e_compcenter(z1,z2,r1,r2,r3,1.0,1.0,1.0);
+			return EuclMath.e_compcenter(z0,z1,r0,r1,r2,1.0,1.0,1.0);
 	} 
 	
 	/**
 	 * Get triangle incircle from corners (this is incircle of triangle, not 
 	 * dependent on the circles.
 	 * TODO: hyp computations don't seem right yet.
+	 * @param z0
 	 * @param z1
 	 * @param z2
-	 * @param z3
 	 * @param hes int
 	 * @return CircleSimple
 	 */
-	public static CircleSimple tri_incircle(Complex z1,Complex z2,Complex z3,int hes) {
+	public static CircleSimple tri_incircle(
+			Complex z0,Complex z1,Complex z2,int hes) {
 		if (hes<0) 
-			return HyperbolicMath.hyp_tri_incircle(z1,z2,z3);
+			return HyperbolicMath.hyp_tri_incircle(z0,z1,z2);
 		if (hes>0)
-			return SphericalMath.sph_tri_incircle(z1, z2, z3);
-		return EuclMath.eucl_tri_incircle(z1, z2, z3);
+			return SphericalMath.sph_tri_incircle(z0, z1, z2);
+		return EuclMath.eucl_tri_incircle(z0, z1, z2);
 	}
 	
 	/**
@@ -376,29 +378,29 @@ public class CommonMath {
 	}
 
 	/**
-	 * Compute angle at v0 in mutually tangent triple of circles with
-	 * given radii. x-radii in hyp case.
+	 * Compute angle at r0 in mutually tangent triple of circles with
+	 * given radii (x-radii in hyp case). 
 	 * @param r0 double
 	 * @param r1 double
 	 * @param r2 double
-	 * @param o0 double
-	 * @param o1 double
-	 * @param o2 double
+	 * @param ivd0 double
+	 * @param ivd1 double
+	 * @param ivd2 double
 	 * @param hes int
 	 * @return double
 	 * @throws DataException
 	 */
 	public static double get_face_angle(double r0,double r1,double r2,
-			double o0,double o1,double o2,int hes) throws DataException {
+			double ivd0,double ivd1,double ivd2,int hes) throws DataException {
 		double theCos=0.0;
 		if (hes<0) { // hyp 
-			theCos=HyperbolicMath.h_comp_cos(r0,r1,r2,o0,o1,o2);
+			theCos=HyperbolicMath.h_comp_cos(r0,r1,r2,ivd0,ivd1,ivd2);
 		}
 		else if (hes>0) { // sph
 			theCos=SphericalMath.s_comp_cos(r0, r1, r2);
 		}
 		else { // eucl
-			theCos=EuclMath.e_cos_overlap(r0, r1, r2, o0,o1,o2);
+			theCos=EuclMath.e_cos_overlap(r0, r1, r2, ivd0,ivd1,ivd2);
 		}
 		if (Math.abs(theCos)>1.0)
 			throw new DataException("error calculating angle");
@@ -540,9 +542,9 @@ public class CommonMath {
 	/**
 	 * Given three circles, find the incircle of the triangular
 	 * face they form. 
+	 * @param cs0 CircleSimple
 	 * @param cs1 CircleSimple
 	 * @param cs2 CircleSimple
-	 * @param cs3 CircleSimple
 	 * @param hes int
 	 * @return
 	 */
@@ -681,15 +683,12 @@ public class CommonMath {
 			return HyperbolicMath.hyp_tangency(z1,z2,r1,r2);
 	}
 	
-
-	
 } // end of class
 
 /** 
  * For holding data on a face. Calling routine must know the
  * order of the data, the geometry, etc.
  * @author kstephe2
- *
  */
 class TmpFaceData {
 	public Complex[] center;

@@ -79,7 +79,8 @@ public class HyperbolicMath{
    *  @param x_rad double
    *  @return CircleSimple
    */
-  public static CircleSimple HyperbolicToEuclidean(Complex h_center, double x_rad){
+  public static CircleSimple HyperbolicToEuclidean(Complex h_center,
+		  double x_rad){
     double s_rad;
     Complex e_center=null;
 
@@ -364,25 +365,25 @@ public class HyperbolicMath{
    * Given ordered triple of x-radii, compute cosine(angle)
    * at first circle in triangle formed by mutually tangent 
    * circles. (If there are inv distances, see 'h_comp_cos'.)
+   * @param x0 double
    * @param x1 double
    * @param x2 double
-   * @param x3 double
    * @return double, cos of angle
   */
-  public static double h_comp_x_cos(double x1,double x2,double x3) {
-	  if (x1<=0) 
+  public static double h_comp_x_cos(double x0,double x1,double x2) {
+	  if (x0<=0) 
 		  return (1.0);
-	  if ((x2<=0) && (x3<=0)) 
-		  return (2.0*x1-1);
+	  if ((x1<=0) && (x2<=0)) 
+		  return (2.0*x0-1);
+	  if (x1<=0) {
+		  double tmp = x2-x0*x2;
+		  return ((x0-tmp)/(x0+tmp));
+	  }
 	  if (x2<=0) {
-		  double tmp = x3-x1*x3;
-		  return ((x1-tmp)/(x1+tmp));
+		  double tmp = x1-x0*x1;
+		  return ((x0-tmp)/(x0+tmp));
 	  }
-	  if (x3<=0) {
-		  double tmp = x2-x1*x2;
-		  return ((x1-tmp)/(x1+tmp));
-	  }
-	  double ans=x1 * (x1+(1.0-x1)*(x2+x3-x2*x3)) / ((x1+x3-x1*x3)*(x1+x2-x1*x2));
+	  double ans=x0 * (x0+(1.0-x0)*(x1+x2-x1*x2)) / ((x0+x2-x0*x2)*(x0+x1-x0*x1));
 	  ans=2.0*ans-1.0;
 	  if (ans>1.0) return 0.9999999999999;
 	  if (ans<-1.0) return -0.9999999999999;
@@ -392,174 +393,173 @@ public class HyperbolicMath{
 	/**
 	 * Given three x-radii and inv distances for opposite sides, compute
 	 * up.value=cos(angle at e1). 
-	 * @param x1 double
+	 * @param x0 double
+	 * @param x1  double
 	 * @param x2  double
-	 * @param x3  double
 	 * @return double cos(angle)
 	 */
-	public static double h_comp_cos(double x1, double x2, double x3) {
-		return h_comp_cos(x1,x2,x3,1.0,1.0,1.0);
+	public static double h_comp_cos(double x0, double x1, double x2) {
+		return h_comp_cos(x0,x1,x2,1.0,1.0,1.0);
 	}
 
 	/**
-	 * Given three x-radii and inv distances for opposite sides, compute
+	 * Given three x-radii and inv distances, compute
 	 * up.value=cos(angle at e1). 
-	 * @param x1 double
+	 * @param x0 double
+	 * @param x1  double
 	 * @param x2  double
-	 * @param x3  double
-	 * @param t1  double
-	 * @param t2  double
-	 * @param t3  double
+	 * @param ivd0  double
+	 * @param ivd1  double
+	 * @param ivd2  double
 	 * @return double cos(angle)
 	 */
-	public static double h_comp_cos(double x1, double x2, double x3,
-			double t1, double t2, double t3) {
+	public static double h_comp_cos(double x0, double x1, double x2,
+			double ivd0, double ivd1, double ivd2) {
 		
 		// all tangencies? call other routine
-		if ((t1 == 1) && (t2 == 1) && (t3 == 1)) {
-			return h_comp_x_cos(x1, x2, x3);
+		if ((ivd0 == 1) && (ivd1 == 1) && (ivd2 == 1)) {
+			return h_comp_x_cos(x0, x1, x2);
 		}
 		
 		// all radii finite? find edge lengths, use cosine law
-		if (x1>0 && x2>0 && x3>0) {
-			double ch=h_ivd_cosh(x2,x3,t1); // cosh's of edge lengths
-			double ch3=h_ivd_cosh(x1,x3,t2);
-			double ch2=h_ivd_cosh(x1,x2,t3);
+		if (x0>0 && x1>0 && x2>0) {
+			double ch=h_ivd_cosh(x1,x2,ivd1); // cosh of edge length
+			double ch2=h_ivd_cosh(x2,x0,ivd2);
+			double ch0=h_ivd_cosh(x0,x1,ivd0);
 			// use law of cosines: recall sinh^2=cosh^2-1
-			return (ch3*ch2 - ch) / Math.sqrt((ch3*ch3-1.0)*(ch2*ch2-1.0));
+			return (ch2*ch0 - ch) / Math.sqrt((ch2*ch2-1.0)*(ch0*ch0-1.0));
 		}
 
 		// horocycle at vertex 1? angle is zero.
-		if (x1 <= 0) {
+		if (x0 <= 0) {
 			return 1.0;
 		}
 
 		// recall x=1-s*s
+		double s0 = x_to_s_rad(x0);
 		double s1 = x_to_s_rad(x1);
 		double s2 = x_to_s_rad(x2);
-		double s3 = x_to_s_rad(x3);
 		
 		// Remaining cases must involve horocycle(s) and inv distance(s).
 		// We compute using euclidean data; wolog, center first at origin.
-		double e1 = (1.0-s1)/(1.0+s1); // eucl radius, center at origin
+		double e0 = (1.0-s0)/(1.0+s0); // eucl radius, center at origin
+		double e1;
 		double e2;
-		double e3;
 
 		// Now find the petal radii. Wolog, center petal circle on x axis.
 		//   Consider outer point p where petal circle intersects 
 		//   the x axis. We can find the eucl distance E and hyp
 		//   distance H from p to origin and use these to solve for 
-		//   e2 (or e3). 
+		//   e1 (or e2). 
 
 
-		// find radius e2 for second circle
-		double ivd=t3;
-		if (s2 <= 0) { 	// horocycle? So E=1
-			if (ivd == 1) { // tangency: e1+2*e2=1
-				e2 = 0.5*(1.0-e1);
+		// find radius e1 for second circle
+		if (s1 <= 0) { 	// horocycle? So E=1
+			if (ivd0 == 1) { // tangency: e1+2*e2=1
+				e1 = 0.5*(1.0-e0);
 			}
 			// else we compute eucl dist d between centers, 
 			//   then use d+e2=1 to find e2.
 			else { 
-				e2 = (1.0-e1*e1)/2*(e1*ivd+1.0);
+				e1 = (1.0-e0*e0)/2*(e0*ivd0+1.0);
 			}
 		} 
 		else { // else regular circle; compare eucl/hyp dist to M
-			if (ivd == 1) { // tangency
-				// E=e1+2*e2 <==> H=h1+2*h2, so E=(1-exp(-H))/(1+exp(-H))
-				//   and exp(-H)=s1*(s2^2)
-				double s122=s1*s2*s2;
-				e2 = 0.5*((1-s122)/(1+s122)-e1);
+			if (ivd0 == 1.0) { // tangency
+				// E=e0+2*e1 <==> H=h0+2*h1, so E=(1-exp(-H))/(1+exp(-H))
+				//   and exp(-H)=s0*(s1^2)
+				double s011=s0*s1*s1;
+				e1 = 0.5*((1-s011)/(1+s011)-e0);
 			} 
 			else {
 				// E=sqrt(e1^2+e2^2+2*e1*e2*inv)+e2 and H=h_dist+h2
 				// E=(1-exp(-H))/(1+exp(-H))
-				double ch2=h_ivd_cosh(x1,x2,ivd);
-				double lch2=ch2+Math.sqrt(ch2*ch2-1.0);
-				double E=(lch2-s2)/(lch2+s2);
-				e2=(E*E-e1*e1)/(2.0*(e1*ivd+E));
+				double ch0=h_ivd_cosh(x0,x1,ivd0);
+				double lch0=ch0+Math.sqrt(ch0*ch0-1.0);
+				double E=(lch0-s1)/(lch0+s1);
+				e1=(E*E-e0*e0)/(2.0*(e0*ivd0+E));
 			}
 		}
 
 		// Similar for second petal
-		ivd=t2;
-		if (s3 <= 0) { 	// horocycle? So E=1
-			if (ivd == 1) { // tangency: e1+2*e2=1
-				e3 = 0.5*(1.0-e1);
+		if (s2 <= 0) { 	// horocycle? So E=1
+			if (ivd2 == 1.0) { // tangency: e0+2*e1=1
+				e2 = 0.5*(1.0-e0);
 			}
 			// else we compute eucl dist d between centers, 
-			//   then use d+e2=1 to find e2.
+			//   then use d+e1=1 to find e1.
 			else { 
-				e3 = (1.0-e1*e1)/2*(e1*ivd+1.0);
+				e2 = (1.0-e0*e0)/2*(e0*ivd2+1.0);
 			}
 		} 
 		else { // else regular circle; compare eucl/hyp dist to M
-			if (ivd == 1) { // tangency
-				// E=e1+2*e3 <==> H=h1+2*h3, so E=(1-exp(-H))/(1+exp(-H))
-				//   and exp(-H)=s1*(s3^2)
-				double s133=s1*s3*s3;
-				e3 = 0.5*((1-s133)/(1+s133)-e1);
+			if (ivd2 == 1.0) { // tangency
+				// E=e0+2*e2 <==> H=h0+2*h2, so E=(1-exp(-H))/(1+exp(-H))
+				//   and exp(-H)=s0*(s2^2)
+				double s022=s0*s2*s2;
+				e2 = 0.5*((1-s022)/(1+s022)-e0);
 			} 
 			else {
-				// E=sqrt(e1^2+e2^2+2*e1*e2*inv)+e2 and H=h_dist+h2
+				// E=sqrt(e0^2+e1^2+2*e0*e1*inv)+e1 and H=h_dist+h1
 				// E=(1-exp(-H))/(1+exp(-H))
-				double ch3=h_ivd_cosh(x1,x3,ivd);
-				double lch3=ch3+Math.sqrt(ch3*ch3-1.0);
-				double E=(lch3-s2)/(lch3+s2);
-				e3=(E*E-e1*e1)/(2.0*(e1*ivd+E));
+				double ch2=h_ivd_cosh(x2,x0,ivd2);
+				double lch2=ch2+Math.sqrt(ch2*ch2-1.0);
+				double E=(lch2-s1)/(lch2+s1);
+				e2=(E*E-e0*e0)/(2.0*(e0*ivd2+E));
 			}
 		}
 
 		// Now compute with the euclidean radii
-		return EuclMath.e_cos_overlap(e1, e2, e3, t1, t2, t3);
+		return EuclMath.e_cos_overlap(e0, e1, e2, ivd0, ivd1, ivd2);
 	}
 
 	/** 
    * TODO: some confusion on what this does and whether there's an error.
-   * All three circles are horocycles, so centers z1, z2 should be on 
+   * All three circles are horocycles, so centers z0, z1 should be on 
    * unit circle. Idea is to compute data for third circle. Third center
-   * should be on unit circle, radius returned should be the negative of its
-   * euclidean radius. e2 is positive euclidean radius of circle 2. (??) 
-   * Inversive distances passed as usual (oj = inv_dist between edge opposite j). 
+   * should be centered on unit circle, so radius returned should be the 
+   * negative of its eucl radius. e1 is positive euclidean radius of 
+   * circle 1. (??) 
+   * Inversive distances passed as usual (oj = inv_dist of edge <j,j+1>). 
+   * @param z0 Complex
    * @param z1 Complex
-   * @param z2 Complex
    * @param e2 double
-   * @param o1 double
-   * @param o2 double
-   * @param o3 double
+   * @param ivd0 double
+   * @param ivd1 double
+   * @param ivd2 double
    * @return CircleSimple
    * 
   */
-  public static CircleSimple h_horo_center(Complex z1,Complex z2,double e2,
-	  double o1,double o2,double o3) throws MobException {
+  public static CircleSimple h_horo_center(Complex z0,Complex z1,double e2,
+	  double ivd0,double ivd1,double ivd2) throws MobException {
 
-	  // Is one of z1 or z2 too far from unit circle to be accurate?
-      if ((z1.x*z1.x+z1.y*z1.y)<(0.999999999999) 
-    		  || (z2.x*z2.x+z2.y*z2.y)<(0.999999999999)) {
+	  // Is one of z0 or z1 too far from unit circle to be accurate?
+      if ((z0.x*z0.x+z0.y*z0.y)<(0.999999999999) 
+    		  || (z1.x*z1.x+z1.y*z1.y)<(0.999999999999)) {
     	  return (new CircleSimple(false)); 
       }
       
 /* Don't follow some of this: third circle is supposed to be a horocycle,
-so s-rad should be zero. Let's assume that (don't need x_rad3, which
+so s-rad should be zero. Let's assume that (don't need x_rad, which
 used to be passed in here as an argument).  
-        double S3=HyperbolicMath.x_to_s_rad(x_rad3);
+        double S2=HyperbolicMath.x_to_s_rad(x_rad2);
 
-        if (S3<=0) srad2=0.0;
-        else srad2=(S3)*(S3);
+        if (S2<=0) srad1=0.0;
+        else srad1=(S2)*(S2);
 */	
       /* first, compute eucl center/rad of third circle in a normalized 
        * situation: namely first horo at -1 with eucl rad R (computed below), 
        * second horo at 1, eucl rad 1/2, target circle in upper half plane.
        * We compute r/ectr as eucl rad/cent of target circle in this situation. */
 
-      double srad2=0.0;
-      double R=2/(o3+3.0);
-      double d=Math.sqrt(0.25 + R*R+R*o3);
-      double r=(2.0*(d+R*o3)+1.0)*(1.0-srad2)/
-        (8.0*d*(1.0+srad2)+((2.0-4.0*d)*o1 - 4.0*R*o2)*(srad2-1.0));
+      double srad1=0.0;
+      double R=2/(ivd2+3.0);
+      double d=Math.sqrt(0.25 + R*R+R*ivd2);
+      double r=(2.0*(d+R*ivd2)+1.0)*(1.0-srad1)/
+        (8.0*d*(1.0+srad1)+((2.0-4.0*d)*ivd0 - 4.0*R*ivd1)*(srad1-1.0));
       Complex ectr=new Complex();
-      ectr.x=0.5*(1-d)-(1.0/(2.0*d))*(0.25+r*o1-R*R-2.0*R*r*o2);
-      double a_sq=0.25+r*(r+o1);
+      ectr.x=0.5*(1-d)-(1.0/(2.0*d))*(0.25+r*ivd0-R*R-2.0*R*r*ivd1);
+      double a_sq=0.25+r*(r+ivd0);
       ectr.y=Math.sqrt(a_sq-(ectr.x-0.5)*(ectr.x-0.5));
 
       /* Next, find normalizing mobius transformations: M1 moves original
@@ -567,63 +567,63 @@ used to be passed in here as an argument).
        * causes second circle to go through the origin. */
 
       // find 3 pts on the original second circle (this is were e2 is used).
-      Complex ecent=new Complex((1.0-e2)*z2.x,(1.0-e2)*z2.y);
-      Complex p1=new Complex(ecent.x,ecent.y+e2);
-      Complex p2=new Complex(ecent.y,ecent.x+e2);
-      Complex p3=new Complex(ecent.y,ecent.x-e2);
+      Complex ecent=new Complex((1.0-e2)*z1.x,(1.0-e2)*z1.y);
+      Complex p0=new Complex(ecent.x,ecent.y+e2);
+      Complex p1=new Complex(ecent.y,ecent.x+e2);
+      Complex p2=new Complex(ecent.y,ecent.x-e2);
       
       Complex One=new Complex(1.0);
       Complex negOne=new Complex(-1.0);
       Complex Two=new Complex(2.0);
-      Mobius M1=(Mobius)Mobius.trans_abAB(z1,z2,negOne,One,Two,Two);
+      Mobius M1=(Mobius)Mobius.trans_abAB(z0,z1,negOne,One,Two,Two);
       /* if there's some error, err_flag will be set (though
          we don't currently test it) and M1 should be identity */
       /* put 'Two' arguments in to signal that we accept one
          unspecified degree of freedom; we handle it with work below.*/
 
+      Complex w0=M1.apply(p0);
       Complex w1=M1.apply(p1);
       Complex w2=M1.apply(p2);
-      Complex w3=M1.apply(p3);
-      CircleSimple tc=EuclMath.circle_3(w1,w2,w3); // find new eucl rad
+      CircleSimple tc=EuclMath.circle_3(w0,w1,w2); // find new eucl rad
       double rad=tc.rad;
       double pp=(1.0-2*rad); // pp is the spot where M1(c2) hits real axis
       // M2(z)->(z-pp)/(-z*pp+1) moves pp to origin.
       Mobius M2=new Mobius(new Complex(1.0,0.0),new Complex(-pp,0.0),new Complex(-pp,0.0),
     		  new Complex(1.0,0.0));
+      w0=M2.apply(w0);
       w1=M2.apply(w1);
       w2=M2.apply(w2);
-      w3=M2.apply(w3);
-      tc=EuclMath.circle_3(w1,w2,w3); // find new eucl rad
+      tc=EuclMath.circle_3(w0,w1,w2); // find new eucl rad
       rad=tc.rad;
 
       // pick three pts on normalized circle three
       double h=ectr.abs();
       if (h>.0000000000001) { // typical: not centered at origin
-		p1=ectr.times((h+r)/h);
-		p2=ectr.times((h-r)/h);
-		p3=new Complex(ectr);p3.x += r;
+		p0=ectr.times((h+r)/h);
+		p1=ectr.times((h-r)/h);
+		p2=new Complex(ectr);p2.x += r;
       }
       else { 
-			p1=new Complex(ectr);p1.x -= r;
-			p2=new Complex(ectr);p2.x += r;
-			p3=new Complex(ectr);p3.y -= r;
+			p0=new Complex(ectr);p0.x -= r;
+			p1=new Complex(ectr);p1.x += r;
+			p2=new Complex(ectr);p2.y -= r;
       }
 	
       // apply inverses of first M2 and then M1.
       Mobius m1=(Mobius)M1.inverse();
       Mobius m2=(Mobius)M2.inverse();
+      p0=m2.apply(p0);
       p1=m2.apply(p1);
       p2=m2.apply(p2);
-      p3=m2.apply(p3);
+      p0=m1.apply(p0);
       p1=m1.apply(p1);
       p2=m1.apply(p2);
-      p3=m1.apply(p3);
 
       // images under mobius 
-      tc=EuclMath.circle_3(p1,p2,p3); // find new eucl cent/rad
+      tc=EuclMath.circle_3(p0,p1,p2); // find new eucl cent/rad
       rad=tc.rad;
       // p1 should be on the unit circle
-      return new CircleSimple(p1,-rad,1);
+      return new CircleSimple(p0,-rad,1);
 /* ?? Don't know what to make of this old stuff
       if (S3<=.0000000000001) { // horocycle? p1 should be on unit circle 
     	  return new CircleSimple(p1,-rad,1);
@@ -655,60 +655,63 @@ used to be passed in here as an argument).
    * algorithm.
    * TODO: should also handle non-tangency cases -- e.g., just get
    * incircle of arbitrary hyp triangle.
+   * @param z0 Complex
    * @param z1 Complex
    * @param z2 Complex
-   * @param z3 Complex
+   * @param r0 double (hyp x-radius)
    * @param r1 double (hyp x-radius)
    * @param r2 double (hyp x-radius)
-   * @param r3 double (hyp x-radius)
    * @return CircleSimple
    */
-	public static CircleSimple hyp_tang_incircle(Complex z1,Complex z2,Complex z3,
-			double r1,double r2,double r3) {
+	public static CircleSimple hyp_tang_incircle(
+			Complex z0,Complex z1,Complex z2,
+			double r0,double r1,double r2) {
+		CircleSimple sC0=h_to_e_data(z0,r0);
 		CircleSimple sC1=h_to_e_data(z1,r1);
 		CircleSimple sC2=h_to_e_data(z2,r2);
-		CircleSimple sC3=h_to_e_data(z3,r3);
-		CircleSimple sc=EuclMath.eucl_tri_incircle(sC1.center,sC2.center,sC3.center);
+		CircleSimple sc=EuclMath.eucl_tri_incircle(
+				sC0.center,sC1.center,sC2.center);
 		return e_to_h_data(sc.center,sc.rad);
 	}
 	
 	/**
 	 * Get inscribed circle for any hyp triangle. 
+	 * @param z0 Complex
 	 * @param z1 Complex
 	 * @param z2 Complex
-	 * @param z3 Complex
 	 * @return CircleSimple
 	 */
-	public static CircleSimple hyp_tri_incircle(Complex z1,Complex z2,Complex z3) {
+	public static CircleSimple hyp_tri_incircle(
+			Complex z0,Complex z1,Complex z2) {
+		Complex w0=null;
 		Complex w1=null;
 		Complex w2=null;
-		Complex w3=null;
 		
 		// if there is a non-horocycle, we will move it to the origin
-		if (z1.absSq()<.9999) {
+		if (z0.absSq()<.9999) {
+			w0=z0;
 			w1=z1;
 			w2=z2;
-			w3=z3;
 		}
-		else z1=z1.divide(z1.abs()); 
-		if (w1==null && z2.absSq()<.9999) {
+		else z0=z0.divide(z0.abs()); 
+		if (w0==null && z1.absSq()<.9999) {
+			w0=z1;
 			w1=z2;
-			w2=z3;
-			w3=z1;
+			w2=z0;
 		}
-		else if (w1==null) 
-			z2=z2.divide(z2.abs());
-		if (w1==null && z3.absSq()<.9999) {
-			w1=z3;
+		else if (w0==null) 
+			z1=z1.divide(z1.abs());
+		if (w0==null && z2.absSq()<.9999) {
+			w0=z2;
+			w1=z0;
 			w2=z1;
-			w3=z2;
 		}
 		
 		// all essentially horocycles? Apply mobius to put them at -1, 1, i, 
 		// resp., then circle radius 1/4, center i/4
-		if (w1==null) {
-			Mobius tmob=Mobius.trans_abAB(w1,w2,new Complex(-1.0),
-					new Complex(1.0),w3,new Complex(0.0,1.0));
+		if (w0==null) {
+			Mobius tmob=Mobius.trans_abAB(w0,w1,new Complex(-1.0),
+					new Complex(1.0),w2,new Complex(0.0,1.0));
 			CircleSimple sC=new CircleSimple();
 			int rslt=Mobius.mobius_of_circle(tmob, -1,
 					new Complex(0.0,0.25), 0.25, sC, false);
@@ -719,15 +722,15 @@ used to be passed in here as an argument).
 		}
 		
 		// move w1 to origin, w2 to positive x-axis
-		Mobius tmob=Mobius.standard_mob(w1, w2); // tmob.apply(w1);
-		Complex pt2=tmob.apply(w2);
-		Complex pt3=tmob.apply(w3); // image of w3
+		Mobius tmob=Mobius.standard_mob(w0, w1); // tmob.apply(w1);
+		Complex pt1=tmob.apply(w1);
+		Complex pt2=tmob.apply(w2); // image of w3
 		
 		// now find the center/rad of geodesic between pt2, pt3
-		HypGeodesic hgeo=new HypGeodesic(pt2,pt3);
+		HypGeodesic hgeo=new HypGeodesic(pt1,pt2);
 		
 		// center is on bisecting ray 
-		double theta=pt3.arg()/2.0;
+		double theta=pt2.arg()/2.0;
 		
 		// use quadratic formula to find
 		double ct=Math.cos(theta);
@@ -776,65 +779,65 @@ used to be passed in here as an argument).
    * oj=inv dist of edge opposite circle j. No consistency check on 
    * first two circles or incompatiblities. 'iflag' true reflects
    * incompatibilities (but not yet passed back). 
-   * @param z1 Complex 
-   * @param z2 Complex
+   * @param z0 Complex 
+   * @param z1 Complex
+   * @param x0 double 
    * @param x1 double 
-   * @param x2 double 
-   * @param x3 double
+   * @param x2 double
    * @param o1_flag boolean (OBE, can remove)
+   * @param ivd0 double
    * @param ivd1 double
    * @param ivd2 double
-   * @param ivd3 double
    * @return CircleSimple
    *  
   */
-public static CircleSimple h_compcenter(Complex z1, Complex z2,
- 		 double x1,double x2,double x3, double ivd1,double ivd2,double ivd3) {
+public static CircleSimple h_compcenter(Complex z0, Complex z1,
+ 		 double x0,double x1,double x2, double ivd0,double ivd1,double ivd2) {
     double sgn=1;
     CircleSimple sici;
 
+    double s0=HyperbolicMath.x_to_s_rad(x0);
     double s1=HyperbolicMath.x_to_s_rad(x1);
     double s2=HyperbolicMath.x_to_s_rad(x2);
-    double s3=HyperbolicMath.x_to_s_rad(x3);
 
-    // If s3 is wrong, return with an error
-    if (s1<=(-1.0) || s2<=(-1.0)) // not valid eucl radius
+    // If s2 is wrong, return with an error
+    if (s0<=(-1.0) || s1<=(-1.0)) // not valid eucl radius
       throw new DataException("error in computing center: horocycle radius <= -1.0");
     
-    Complex a=z1;
-    Complex b=z2;
-    if ((s1<=0) && (s2>0)) { // second circle finite, first not? 
+    Complex a=z0;
+    Complex b=z1;
+    if ((s0<=0) && (s1>0)) { // second circle finite, first not? 
       // then interchange order 
-      a=z2; b=z1; double s=s1; s1=s2; s2=s; s=x1; x1=x2; x2 = s;
-      s=ivd1; ivd1=ivd2; ivd2=s; sgn=(-1.0); 
+      a=z1; b=z0; double s=s0; s0=s1; s1=s; s=x0; x0=x1; x1 = s;
+      s=ivd0; ivd0=ivd1; ivd1=s; sgn=(-1.0); 
     }
-    if (s1>0) { // first is now finite
-    	double cc=h_comp_cos(x1,x2,x3,ivd1,ivd2,ivd3);
+    if (s0>0) { // first is now finite
+    	double cc=h_comp_cos(x0,x1,x2,ivd0,ivd1,ivd2);
 
         // if third circle is finite 
-        if (s3>0) {
-        	double x13 = x1*(x3);
-        	double x1p3 = x1+(x3);
-        	double s13=s1*s3;
-        	double acstuff=(x1p3-x13)/(s13*(1+s13))-(2*x1p3-(1+ivd2)*x13)/(4*s13);
+        if (s2>0) {
+        	double x13 = x0*(x2);
+        	double x1p3 = x0+(x2);
+        	double s13=s0*s2;
+        	double acstuff=(x1p3-x13)/(s13*(1+s13))-(2*x1p3-(1+ivd1)*x13)/(4*s13);
         	if (acstuff<0.0) // error
         		return new CircleSimple(false);
         	double side_p1= acstuff + Math.sqrt(acstuff*(acstuff+2));
         
         	double ahc=side_p1/(side_p1+2); // abs value of hyp center
-        	// center as if z1 at origin
+        	// center as if z0 at origin
         	Complex z3=new Complex(cc*ahc,sgn*Math.sqrt(1-cc*cc)*ahc);  
         
         	if (a.x==b.x && a.y==b.y) z3.x *= ahc;
 
         	z3=Mobius.mobDiscInvValue(z3,a,b); // move to right place
-        	return new CircleSimple(z3,x3,1);
+        	return new CircleSimple(z3,x2,1);
         }
 
         // else third circle is a horocycle 
 
-        double r=(1-s1)/(1+s1);
-        double sc=(r*r+1+2*r*ivd2)/(2*(1+r*ivd2)); // abs value of eucl center
+        double r=(1-s0)/(1+s0);
+        double sc=(r*r+1+2*r*ivd1)/(2*(1+r*ivd1)); // abs value of eucl center
         Complex c=new Complex();
         c.x=sc*cc;
         double cc2;
@@ -842,29 +845,29 @@ public static CircleSimple h_compcenter(Complex z1, Complex z2,
         	return new CircleSimple(false);
         c.y=sc*sgn*Math.sqrt(1-cc2);
         double rad=1-sc; // Now have c and its radius
-        Complex w1=new Complex(c.x-rad,c.y);
-        Complex w2=new Complex(c.x+rad,c.y);
-        Complex w3=new Complex(c.x,c.y+rad); // three points on the circle 
+        Complex w0=new Complex(c.x-rad,c.y);
+        Complex w1=new Complex(c.x+rad,c.y);
+        Complex w2=new Complex(c.x,c.y+rad); // three points on the circle 
+        w0=Mobius.mobDiscInvValue(w0,a,b);
         w1=Mobius.mobDiscInvValue(w1,a,b);
-        w2=Mobius.mobDiscInvValue(w2,a,b);
-        w3=Mobius.mobDiscInvValue(w3,a,b);       // 3 pts on new circle
-        sici=EuclMath.circle_3(w1,w2,w3);
+        w2=Mobius.mobDiscInvValue(w2,a,b);       // 3 pts on new circle
+        sici=EuclMath.circle_3(w0,w1,w2);
         sici.rad *= -1.0; // store neg of eucl radius as x_rad
         sici.center=sici.center.times(1.0/(sici.center.abs())); // get hyp center on unit circle
     }
     
     // first two horocycles, third finite (Note: generally prefer to avoid this situation)
-    else if (s3>0) {
+    else if (s2>0) {
     	// Idea: build triple with circle 3 centered at origin, then apply a Mobius to 
     	//       get its euclidean radius and tangency points right to original values,
     	//       see where circle 3 ends up
-    	double erad=(1.0-s3)/(1.0+s3); // eucl radius of circle 3 if centered at origin
+    	double erad=(1.0-s2)/(1.0+s2); // eucl radius of circle 3 if centered at origin
     	// Compute eucl radii of horocycles with correct inv dist to circle 3 (at origin)
-    	double hororad1=(1.0-erad*erad)/(2.0*(1+erad*ivd2));  // o2 = inv dist, circles 1 and 3
-    	double hororad2=(1.0-erad*erad)/(2.0*(1+erad*ivd1));  // o1 = inv dist, circles 2 and 3
+    	double hororad1=(1.0-erad*erad)/(2.0*(1+erad*ivd1));  // o2 = inv dist, circles 1 and 3
+    	double hororad2=(1.0-erad*erad)/(2.0*(1+erad*ivd0));  // o1 = inv dist, circles 2 and 3
     	
     	// Assume circle 1 tangent at z=1, compute tangency point of circle 2.
-    	double dist12=EuclMath.e_ivd_length(hororad1,hororad2,ivd3);
+    	double dist12=EuclMath.e_ivd_length(hororad1,hororad2,ivd2);
     	double d1=1.0-hororad1;
     	double d2=1.0-hororad2;
     	double theta=Math.acos((d1*d1+d2*d2-dist12*dist12)/(2.0*d1*d2));
@@ -875,7 +878,7 @@ public static CircleSimple h_compcenter(Complex z1, Complex z2,
     	// Apply it to origin to see where hyp center of circle 3 is and to tangency
     	//   point of circle 2.
     	d1=1.0-2.0*hororad1;
-    	d2=1.0+2.0*s1;
+    	d2=1.0+2.0*s0;
     	double t=(d2-d1)/(d2*d1-1.0);
     	Mobius m1=new Mobius(new Complex(1.0),new Complex(-t),new Complex(-t),new Complex(1.0));
     	Complex newZ=m1.apply(new Complex(0.0));
@@ -888,22 +891,22 @@ public static CircleSimple h_compcenter(Complex z1, Complex z2,
     	//   Mobius is ((2+it)z-it)/(itz+(2-it)).
     	// Under this map, exp{a} goes to -sin(a)/(1-cos(a)) time i. So want t to equal
     	//   to difference between old image and new.
-    	double origTheta=z2.divide(z1).arg();
+    	double origTheta=z1.divide(z0).arg();
     	t=Math.sin(theta)/(1.0-Math.cos(theta))-Math.sin(origTheta)/(1.0-Math.cos(origTheta));
     	Mobius m2=new Mobius(new Complex(2.0,t),new Complex(0.0,-t),new Complex(0.0,t),new Complex(2.0,-t));
     	Complex nextZ=m2.apply(newZ);
     	
     	// Final step is to rotate to put tangency point of circle 1 where it was originally
     	sici=new CircleSimple(true);
-    	sici.center=nextZ.times(z1); // recall z1 should be on unit circle
-    	sici.rad=x3;
+    	sici.center=nextZ.times(z0); // recall z1 should be on unit circle
+    	sici.rad=x2;
     }
     
     // remaining case: all three are horocycles. Expect -eucl radius as
     //      s-rad of target circle.
     else {
         try {
-        	sici=h_horo_center(z1,z2,-s2,ivd1,ivd2,ivd3);
+        	sici=h_horo_center(z0,z1,-s1,ivd0,ivd1,ivd2);
         } catch(MobException mex) {
         	throw new MobException("error computing horocycle center");
         }
@@ -914,16 +917,16 @@ public static CircleSimple h_compcenter(Complex z1, Complex z2,
 
 /**
  * Compute a hyperbolic circle
+ * @param z0
  * @param z1
- * @param z2
+ * @param x0
  * @param x1
  * @param x2
- * @param x3
  * @return CircleSimple
  */
-public static CircleSimple h_compcenter(Complex z1,Complex z2,
-	  		 double x1,double x2,double x3) {
-	  return h_compcenter(z1,z2,x1,x2,x3,1.0,1.0,1.0);
+public static CircleSimple h_compcenter(Complex z0,Complex z1,
+	  		 double x0,double x1,double x2) {
+	  return h_compcenter(z0,z1,x0,x1,x2,1.0,1.0,1.0);
   }
 
   /** 
@@ -1069,15 +1072,15 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
 	 */
 	public static double horoEuclRad(Mobius mob,Complex z,double rad) {
 		// get three pts on original horocycle
-		Complex z1=z.divide(z.abs());
-		Complex z2=z1.times(1.0-2.0*rad);
-		Complex e_ctr=z1.times(1.0-rad);
-		Complex perp=z1.times(rad).times(new Complex(0,1));
-		Complex z3=e_ctr.add(perp);
+		Complex z0=z.divide(z.abs());
+		Complex z1=z0.times(1.0-2.0*rad);
+		Complex e_ctr=z0.times(1.0-rad);
+		Complex perp=z0.times(rad).times(new Complex(0,1));
+		Complex z2=e_ctr.add(perp);
+		z0=mob.apply(z0);
 		z1=mob.apply(z1);
 		z2=mob.apply(z2);
-		z3=mob.apply(z3);
-		CircleSimple sc = EuclMath.circle_3(z1, z2, z3);
+		CircleSimple sc = EuclMath.circle_3(z0, z1, z2);
 		return sc.rad;
 	}
 
@@ -1087,9 +1090,9 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
 	 * computation. Data is given in usual hyp form 
 	 * (i.e., Poincare model).
 	 * @param z Complex
+	 * @param p0 Complex
 	 * @param p1 Complex
 	 * @param p2 Complex
-	 * @param p3 Complex
 	 * @return boolean
 	 */
 	public static boolean pt_in_hyp_tri(Complex z,
@@ -1171,37 +1174,38 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
 	 * of z relative to hyperbolic triangle {z1,z2,z3}. For conversion the
 	 * other way, see BaryPoint.bp2Complex.
 	 * @param z Complex
+	 * @param z0 Complex
 	 * @param z1 Complex
 	 * @param z2 Complex
-	 * @param z3 Complex
 	 * @return BaryPoint
 	 */
-	public static BaryPoint h_pt_to_bary(Complex z,Complex z1, Complex z2, Complex z3) {
+	public static BaryPoint h_pt_to_bary(
+			Complex z,Complex z0, Complex z1, Complex z2) {
 		
 		// check if all are in unit disc
 		double max=-1.0;
+		max = (z0.abs()>max)?z0.abs():max;
 		max = (z1.abs()>max)?z1.abs():max;
 		max = (z2.abs()>max)?z2.abs():max;
-		max = (z3.abs()>max)?z3.abs():max;
 		if (max>1.000001)
 			throw new DataException("some point not in disc");
 		
 		// if one is essentially on unit circle, shrink all slightly
 		if (max>.99999999) {
+			z0=z0.times(.999999);
 			z1=z1.times(.999999);
 			z2=z2.times(.999999);
-			z3=z3.times(.999999);
 		}
 	
-		// find points p1,p2,p3 on the hyperboloid t-(x1^2+x2^2) = 1
+		// find points p0,p1,p2 on the hyperboloid t-(x1^2+x2^2) = 1
+		Point3D p0=pt2Hyperboloid(z0);
 		Point3D p1=pt2Hyperboloid(z1);
 		Point3D p2=pt2Hyperboloid(z2);
-		Point3D p3=pt2Hyperboloid(z3);
 		
 		// displacement vectors and normal to plane containing the points
-		Point3D v12=Point3D.displacement(p1,p2);
-		Point3D v13=Point3D.displacement(p1,p3);
-		Point3D nrml=Point3D.CrossProduct(v12,v13);
+		Point3D v01=Point3D.displacement(p0,p1);
+		Point3D v02=Point3D.displacement(p0,p2);
+		Point3D nrml=Point3D.CrossProduct(v01,v02);
 
 		// check if triangle is degenerate
 		if (nrml.norm()<.00001)
@@ -1211,16 +1215,16 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
 		Point3D hyp_pt=pt2Hyperboloid(z);
 		
 		// project hyp_pt away from origin to the plane
-		double s=Point3D.DotProduct(nrml,p1)/Point3D.DotProduct(nrml,hyp_pt);
-		Point3D p0=Point3D.scalarMult(hyp_pt,s);
-		Point3D v10=Point3D.displacement(p1,p0);
+		double s=Point3D.DotProduct(nrml,p0)/Point3D.DotProduct(nrml,hyp_pt);
+		Point3D pp0=Point3D.scalarMult(hyp_pt,s);
+		Point3D v10=Point3D.displacement(p0,pp0);
 		
 		// now represent v10 as linear combination of v12 and v13; solve a
 		//   linear system: v10=a*v12+b*v13. Conside [v12 v13 v10] matrix and
 		//   row reduce.
-		Point3D row1=new Point3D(v12.x,v13.x,v10.x);
-		Point3D row2=new Point3D(v12.y,v13.y,v10.y);
-		Point3D row3=new Point3D(v12.z,v13.z,v10.z);
+		Point3D row1=new Point3D(v01.x,v02.x,v10.x);
+		Point3D row2=new Point3D(v01.y,v02.y,v10.y);
+		Point3D row3=new Point3D(v01.z,v02.z,v10.z);
 		Point3D hold;
 		
 		// interchange rows, if necessary, to get first pivot
@@ -1267,33 +1271,34 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
 	/**
 	 * Given corners, convert 'BaryPoint' to complex value
 	 * @param bp BaryPoint
+	 * @param z0 Complex
 	 * @param z1 Complex
 	 * @param z2 Complex
-	 * @param z3 Complex
 	 * @return new Complex
 	 */
-	public static Complex bary_to_h_pt(BaryPoint bp,Complex z1,Complex z2,Complex z3) {
+	public static Complex bary_to_h_pt(BaryPoint bp,
+			Complex z0,Complex z1,Complex z2) {
 		double max=-1.0;
+		max = (z0.abs()>max)?z0.abs():max;
 		max = (z1.abs()>max)?z1.abs():max;
 		max = (z2.abs()>max)?z2.abs():max;
-		max = (z3.abs()>max)?z3.abs():max;
 		if (max>1.000001)
 			throw new DataException("some point not in disc");
 		
 		// if one is essentially on unit circle, shrink all slightly
 		if (max>.99999999) {
+			z0=z0.times(.999999);
 			z1=z1.times(.999999);
 			z2=z2.times(.999999);
-			z3=z3.times(.999999);
 		}
 	
 		// find points pt1,pt2,pt3 on the hyperboloid t-(x1^2+x2^2) = 1
+		Point3D pt0=HyperbolicMath.pt2Hyperboloid(z0);
 		Point3D pt1=HyperbolicMath.pt2Hyperboloid(z1);
 		Point3D pt2=HyperbolicMath.pt2Hyperboloid(z2);
-		Point3D pt3=HyperbolicMath.pt2Hyperboloid(z3);
 		
 		// find the point in space
-		Point3D spt=EuclMath.getSpacePoint(bp,pt1,pt2,pt3);
+		Point3D spt=EuclMath.getSpacePoint(bp,pt0,pt1,pt2);
 		
 		// project it toward the origin until it hits the paraboloid
 		double s=Math.sqrt(spt.z*spt.z-spt.x*spt.x-spt.y*spt.y);
@@ -1338,12 +1343,13 @@ public static CircleSimple h_compcenter(Complex z1,Complex z2,
 	}
 	
 	/**
-	 * Converts a point w of the unit disc to a point on the upper sheet of the
-	 * hyperboloid t^2-(x1^2+x2^2) = 1. To cover all possibilities, if w is on or
-	 * outside the unit circle we return point with z-coord set to  -|w|.
+	 * Converts a point w of the unit disc to a point on the 
+	 * upper sheet of the hyperboloid t^2-(x1^2+x2^2) = 1. 
+	 * To cover all possibilities, if w is on or outside the 
+	 * unit circle we return point with z-coord set to  -|w|.
 	 * @param w Complex
-	 * @return Point3D (x1,x2,t) on paraboloid; if t<0, then point is on or 
-	 * outside the unit circle
+	 * @return Point3D (x1,x2,t) on paraboloid; if t<0, then point 
+	 * is on or outside the unit circle
 	 */
 	public static Point3D pt2Hyperboloid(Complex w) {
 		if (w.abs() >= 1.0)

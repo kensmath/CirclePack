@@ -182,37 +182,37 @@ public class SphWidget extends JFrame implements ActionListener {
 		indexPanel.setLayout(null);
 		JLabel indexLabel;
 		// set radius bars (checking for illegal situations)
-		for (int j=1;j<=packData.nodeCount;j++) {
-			double rad=packData.getRadius(j);
-			double mx=SphericalMath.sph_rad_max(packData,j);
+		for (int v=1;v<=packData.nodeCount;v++) {
+			double rad=packData.getRadius(v);
+			double mx=SphericalMath.sph_rad_max(packData,v);
 			if (rad>=mx) {
 				CirclePack.cpb.msg("Illegal radius encountered");
 			}
-			int startX=TEXT_PADDING+BAR_FOOTPRINT*(j-1);
+			int startX=TEXT_PADDING+BAR_FOOTPRINT*(v-1);
 			int startY=BAR_DROP;
 			// set radius
-			radBars[j]=new DisplayBar(this,j,true,packData.getRadius(j));
-			radBars[j].setBounds(startX,startY,BAR_FOOTPRINT,RAD_BAR_HEIGHT+BAR_PADDING);
-			radPanel.add(radBars[j]);
-			radBars[j].barArea.setVisible(true);
-			radBars[j].placePointer(SphericalMath.sph_rad_max(packData,j));
-			if (lock[j]) radBars[j].barArea.setBackground(Color.blue);//new Color(220,220,255));
+			radBars[v]=new DisplayBar(this,v,true,packData.getRadius(v));
+			radBars[v].setBounds(startX,startY,BAR_FOOTPRINT,RAD_BAR_HEIGHT+BAR_PADDING);
+			radPanel.add(radBars[v]);
+			radBars[v].barArea.setVisible(true);
+			radBars[v].placePointer(SphericalMath.sph_rad_max(packData,v));
+			if (lock[v]) radBars[v].barArea.setBackground(Color.blue);//new Color(220,220,255));
 			
 			// compute, set angle sum
 			UtilPacket uP=new UtilPacket();
-			if (packData.s_anglesum(j,packData.getRadius(j),uP)) {
-				packData.setCurv(j,uP.value);
+			if (packData.s_anglesum(v,packData.getRadius(v),uP)) {
+				packData.setCurv(v,uP.value);
 			}
-			else packData.setCurv(j,0.0);
-			angsumBars[j]=new DisplayBar(this,j,false,packData.getCurv(j));
-			angsumBars[j].setBounds(startX,startY,BAR_FOOTPRINT,ANG_BAR_HEIGHT+BAR_PADDING);
-			angsumPanel.add(angsumBars[j]);
-			angsumBars[j].barArea.setVisible(true);
-			if (!lock[j]) // only set initially for unlocked vertices 
-				angsumBars[j].placePointer(packData.getAim(j));
+			else packData.setCurv(v,0.0);
+			angsumBars[v]=new DisplayBar(this,v,false,packData.getCurv(v));
+			angsumBars[v].setBounds(startX,startY,BAR_FOOTPRINT,ANG_BAR_HEIGHT+BAR_PADDING);
+			angsumPanel.add(angsumBars[v]);
+			angsumBars[v].barArea.setVisible(true);
+			if (!lock[v]) // only set initially for unlocked vertices 
+				angsumBars[v].placePointer(packData.getAim(v));
 			
 			// enter indices
-			indexLabel=new JLabel(Integer.toString(j),JLabel.LEFT);
+			indexLabel=new JLabel(Integer.toString(v),JLabel.LEFT);
 			indexLabel.setBounds(startX,0,16,15);
 			indexPanel.add(indexLabel);
 			
@@ -267,8 +267,9 @@ public class SphWidget extends JFrame implements ActionListener {
 		double accum=0.0;
 		if (packData.getBdryFlag(vert)==0) 
 			accum=packData.getCurv(vert)-packData.getAim(vert);
-		for (int j=0;j<packData.countFaces(vert);j++) {
-			int k=packData.kData[vert].flower[j];
+		int[] petals=packData.getPetals(vert);
+		for (int j=0;j<petals.length;j++) {
+			int k=petals[j];
 			if (!packData.isBdry(k))
 				accum += Math.abs(packData.getCurv(k)-packData.getAim(k));
 		}
@@ -304,8 +305,9 @@ public class SphWidget extends JFrame implements ActionListener {
 		displayRad(vertnum);
 		displayAngSum(vertnum);
 		
-		for (int j=0;j<=packData.countFaces(vertnum);j++) {
-			int v=packData.kData[vertnum].flower[j];
+		int[] flower=packData.getFlower(vertnum);
+		for (int j=0;j<=flower.length;j++) {
+			int v=flower[j];
 			radBars[v].setBarGreen();
 			angsumBars[v].setBarGreen();
 		}			
@@ -331,10 +333,10 @@ public class SphWidget extends JFrame implements ActionListener {
 				angsumBars[vert].setBarHeight(angsum);
 				radBars[vert].placePointer(SphericalMath.sph_rad_max(packData,vert));
 			}
-			int num=packData.countFaces(vert);
 			// update petals
-			for (int k=0;k<=num;k++) {
-				int v=packData.kData[vert].flower[k];
+			int[] petals=packData.getPetals(vert);
+			for (int k=0;k<petals.length;k++) {
+				int v=petals[k];
 				uP=new UtilPacket();
 				if (packData.s_anglesum(v,packData.getRadius(v),uP)) {
 					packData.setCurv(v,uP.value);

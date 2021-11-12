@@ -243,9 +243,10 @@ public class MeanMove extends PackExtender {
 		double dtdr=0.0;
 		
 		// compute the derivative of theta w.r.t. r
-		for (int j=0;j<p.countFaces(v);j++) {
-			int k=p.kData[v].flower[j];
-			double y=p.getRadius(k);
+		int[] petals=p.getPetals(v);
+		for (int j=0;j<petals.length;j++) {
+			int k=petals[j];
+			double y=p.getRadius(k); // TODO: ?????
 			double z=p.getRadius(k);
 			dtdr +=EuclMath.Fx(r,y,z);
 		}

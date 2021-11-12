@@ -144,9 +144,9 @@ public class Face {
 	}
 	
 	/**
-	 * Return edge of 'this' if it is shared with 'face';
-	 * else return null. Should work whether normal or
-	 * ideal faces involved.
+	 * Return the edge of 'this' face if its twin is
+	 * an edge of 'gface', else return null. Should 
+	 * work for both normal and ideal faces.
 	 * @param gface Face
 	 * @return HalfEdge, null if no shared edge
 	 */

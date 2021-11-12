@@ -15,6 +15,8 @@ import dcel.RedHEdge;
 import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.ParserException;
+import geometry.CircleSimple;
+import geometry.CommonMath;
 import geometry.EuclMath;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
@@ -548,11 +550,11 @@ public class Graphene extends PackExtender {
 		Vector<Double> carbs=new Vector<Double>(packData.faceCount+1);
 		carbs.add(0,null); // first spot unused
 		for (int f=1;f<=packData.faceCount;f++)
-			carbs.add(carbonEnergies.get(f).carbonEnergy());
+			carbs.add(carbonEnergies.get(f).atomEnergy());
 		Vector<Color> carbColors=ColorUtil.richter_red_ramp(carbs); // first spot also unused
 		for (int f=1;f<=packData.faceCount;f++) {
 			Color colf=carbColors.get(f);
-			carbonEnergies.get(f).carbonColor=colf;
+			carbonEnergies.get(f).atomColor=colf;
 			packData.setFaceColor(f,new Color(colf.getRed(),colf.getGreen(),colf.getBlue()));
 		}
 		
@@ -624,7 +626,7 @@ public class Graphene extends PackExtender {
 
 		for (int f = 1; f <= packData.faceCount; f++) {
 			CarbonEnergy cE = carbonEnergies.get(f);
-			double newC = cE.carbonEnergy();
+			double newC = cE.atomEnergy();
 
 			// look for largest carbon
 			if (newC > topCarbonE) {
@@ -634,7 +636,7 @@ public class Graphene extends PackExtender {
 
 			int k = -1;
 			for (int j = 0; (j < 3 && k < 0); j++) {
-				int myf = cE.face;
+				int myf = cE.faceIndx;
 				int vj = packData.faces[myf].vert[j];
 				int oppf = packData.face_opposite(myf, vj);
 				if (oppf >= 0) { // ignore phantom bonds
@@ -655,8 +657,9 @@ public class Graphene extends PackExtender {
 			double newE = ringEnergy(v);
 			double newASE=0.0;
 			if (!packData.isBdry(v)) {
-				packData.e_anglesum_overlap(v,packData.getRadius(v),uPkt);
-				double term=2.0*Math.PI-uPkt.value;
+				Vertex vert=packData.packDCEL.vertices[v];
+				double angsum=packData.packDCEL.getVertAngSum(vert);
+				double term=2.0*Math.PI-angsum;
 				newASE=planarParam*term*term;
 			}
 			if (newE > topRingE) {
@@ -725,11 +728,11 @@ public class Graphene extends PackExtender {
 			}
 			angE += cE.getAngleEnergy(v);
 		}
-		if (!packData.e_anglesum_overlap(v,packData.getRadius(v),uPkt))
-			Oops("Error in computing angle sum");
 		double planarE=0.0;
 		if (!packData.isBdry(v)) { // interior?
-			double angleErr=Math.PI*2-uPkt.value;
+			Vertex vert=packData.packDCEL.vertices[v];
+			double angsum=packData.packDCEL.getVertAngSum(vert);
+			double angleErr=Math.PI*2-angsum;
 			planarE=planarParam*(angleErr*angleErr);
 		}
 		return (bondE+angE+planarE);
@@ -863,8 +866,8 @@ public class Graphene extends PackExtender {
 	
 	// Angle Sum energy
 	public double phi(int v,double r) {
-		packData.e_anglesum_overlap(v,r,uPkt);
-		return uPkt.value;
+		Vertex vert=packData.packDCEL.vertices[v];
+		return packData.packDCEL.getVertAngSum(vert);
 	}
 	
 	public double dphidr(double r,double t,double u) {
@@ -880,29 +883,33 @@ public class Graphene extends PackExtender {
 	}
 	
 	/**
+	 * traditional, needs work to recall the computation
+	 * 
 	 * Return array, gradient of energy w.r.t. radii.
 	 * @return double[nodeCount+1]
 	 */
 	public double []energyGrad() {
 		double []grad=new double[packData.nodeCount+1];
-		for (int vert=1;vert<=packData.nodeCount;vert++) {
-			int num=packData.countFaces(vert);
-			double r=packData.getRadius(vert);
-			boolean bdryvert=packData.isBdry(vert);
+		for (int vertindx=1;vertindx<=packData.nodeCount;vertindx++) {
+			int num=packData.countFaces(vertindx);
+			double r=packData.getRadius(vertindx);
+			boolean bdryvert=packData.isBdry(vertindx);
 			
 			// each contribution due to anglesums = ASfactor*partial.
-			packData.e_anglesum_overlap(vert,r,uPkt);
-			double ASfactor=(-2.0)*planarParam*(Math.PI*2.0-uPkt.value);
+			double angsum=packData.packDCEL.getVertAngSum(
+					packData.packDCEL.vertices[vertindx],r);
+			double ASfactor=(-2.0)*planarParam*(Math.PI*2.0-angsum);
 			
+			// Find radii of t
 			// get data for faces {r,s,t}, {r,t,u}, and {r,u,v}
 			for (int j=0;j<num;j++) {
-				int sv=packData.getPetal(vert,(j-1+num)%num);
+				int sv=packData.getPetal(vertindx,(j-1+num)%num);
 				double s=packData.getRadius(sv);
-				int tv=packData.getPetal(vert,j);
+				int tv=packData.getPetal(vertindx,j);
 				double t=packData.getRadius(tv);
-				int uv=packData.getPetal(vert,(j+1)%num);
+				int uv=packData.getPetal(vertindx,(j+1)%num);
 				double u=packData.getRadius(uv);
-				int vv=packData.getPetal(vert,(j+2)%num);
+				int vv=packData.getPetal(vertindx,(j+2)%num);
 				double v=packData.getRadius(vv);
 
 				if (j==0 && bdryvert) { 
@@ -914,7 +921,7 @@ public class Graphene extends PackExtender {
 				
 				if ((j>0 || !bdryvert) && (j<(num-1) || !bdryvert)) {
 					// bond contributions (cut in half due to duplication)
-					grad[vert] += 0.5*dBdr(r,s,t,u);
+					grad[vertindx] += 0.5*dBdr(r,s,t,u);
 					if (j==0) { // not bdry, 
 						grad[sv] += 0.5*dBds(r,s,t,u);
 					}
@@ -923,7 +930,7 @@ public class Graphene extends PackExtender {
 							grad[uv] += 0.5*dBdu(r,s,t,u);
 					
 					// angle contributions
-					grad[vert] += dAdr(r,s,t,u,v);
+					grad[vertindx] += dAdr(r,s,t,u,v);
 					grad[sv] +=dAds(r,s,t,u,v);
 					grad[tv] +=dAdt(r,s,t,u,v);
 					grad[uv] +=dAdu(r,s,t,u,v);
@@ -931,8 +938,8 @@ public class Graphene extends PackExtender {
 				}
 				
 				// anglesum contributions if vert interior
-				if (!packData.isBdry(vert)) {
-					grad[vert]+=ASfactor*dphidr(r,t,u);
+				if (!bdryvert) {
+					grad[vertindx]+=ASfactor*dphidr(r,t,u);
 					grad[tv]+=ASfactor*dphidt(r,t,u);
 					grad[uv]+=ASfactor*dphidu(r,t,u);
 				}
@@ -1435,38 +1442,41 @@ public class Graphene extends PackExtender {
 
 	/********************************************
 	 * Utility class:
-	 * Holds data on carbons: bond lengths, bond angles, angle
-	 * energies. Have three bonds, hence three bond angles/energies. 
-	 * 'verts' typically taken from the associated face.
-	 * Note that for carbons associated with boundary faces, one
+	 * Holds data on atom in a molecule: bond lengths, bond angles,
+	 * angle energies. Have three bonds, hence three bond 
+	 * angles/energies. Indexing is based on the associated face.
+	 * Note that for atoms associated with boundary faces, one
 	 * or two bonds are 'phantom' bonds to allow for the angle
 	 * energy computation. Not yet settled on best approach; for 
 	 * now, assume phantom neighboring face has same inradius as
 	 * this face.
+	 * Note on indexing: vert[j] is the origin of edge[j], so
+	 * edge[(j+1)%3] is the edge opposite vert[j].
 	 */
 	class CarbonEnergy {
-		int face; // associated face
-		int []verts=new int[3];
-		double []rad=new double[3];
-		double []ov=new double[3];
-		public Color carbonColor;
+		dcel.Face face;  //  
+		
+		
+		
+		int faceIndx; // associated face index
+		int []verts=new int[3]; 
+		double []rad=new double[3]; // eucl
+		double []invdist=new double[3]; 
+		public Color atomColor;
 		public Color []bondColors;
-		public double []bondLengths;
-		public double []bondAngles;  // angle[j] associated with verts[j].
-//		UtilPacket up=new UtilPacket();
+		public double []bondLengths; 
+		public double []bondAngles;  // complement of face angle at vert[j]
 
 		// Constructor
 		public CarbonEnergy(int f) {
-			face=f;
-			for (int j=0;j<3;j++) {
-				verts[j]=packData.faces[face].vert[j];
-			}
+			face=packData.packDCEL.faces[f];
+			verts=face.getVerts();
 			bondColors=new Color[3];
 			for (int j=0;j<3;j++)
 				bondColors[j]=ColorUtil.getBGColor();
-			bondLengths=new double[3]; // j bond is dual to edge opposite j vert
+			bondLengths=new double[3]; 
 			bondAngles=new double[3]; // j angle is complement of that at j vert
-			carbonColor =ColorUtil.getBGColor();
+			atomColor =ColorUtil.getBGColor();
 		}
 
 		/**
@@ -1474,14 +1484,16 @@ public class Graphene extends PackExtender {
 		 */
 		public void update() {
 			
-			// update radii and overlaps
-			for (int j=0;j<3;j++) 
-				rad[j]=packData.getRadius(verts[j]);
-			if (packData.overlapStatus) {
-				for (int j=0;j<3;j++) {
-					ov[j]=packData.getInvDist(verts[(j+1)%3],verts[(j+2)%3]);
-				}
-			}
+			// update radii and overlaps (for opposite edges)
+			HalfEdge he=face.edge;
+			rad[0]=packData.packDCEL.getVertRadius(he);
+			invdist[0]=he.getInvDist();
+			he=he.next;
+			rad[1]=packData.packDCEL.getVertRadius(he);
+			invdist[1]=he.getInvDist();
+			he=he.next;
+			rad[2]=packData.packDCEL.getVertRadius(he);
+			invdist[2]=he.getInvDist();
 
 			// compute and store the angles. Recall, the j
 			//    angle at the carbon is the complement of the
@@ -1490,46 +1502,46 @@ public class Graphene extends PackExtender {
 				double r=rad[j];
 				double rr=rad[(j+1)%3];
 				double rl=rad[(j+2)%3];			
-				if (!packData.overlapStatus) {
-					bondAngles[j]=Math.PI-Math.acos(1-2*(rr/(r+rr))*(rl/(r+rl)));
-				}
-				else  {
-					double ovl=ov[j];
-					double ovlr=ov[(j+1)%3];
-					double ovll=ov[(j+2)%3];
-					bondAngles[j]=Math.PI-Math.acos(EuclMath.e_cos_overlap(r,rr,rl,ovl,ovlr,ovll));
-			      }
+				bondAngles[j]=Math.PI-Math.acos(EuclMath.e_cos_overlap(
+						r,rr,rl,invdist[0],invdist[1],invdist[2]));
 			} // done with bond angles 
 			
 			// store bond lengths: j length is for bond opposite j vert
 			for (int j=0;j<3;j++) {
-				bondLengths[j]=inRad(packData,face);
-				int opface=packData.face_opposite(face,verts[j]);
-				if (opface<0) // bdry edge
+				Complex[] Z=packData.packDCEL.getFaceCorners(face);
+				CircleSimple cs=CommonMath.tri_incircle(Z[0],Z[1],Z[2],0);
+				bondLengths[j]=cs.rad;
+				int opface=packData.face_opposite(faceIndx,verts[j]);
+				dcel.Face face_opp=packData.packDCEL.faces[opface];
+				if (face_opp.faceIndx<=0) // bdry edge
 					bondLengths[j] *= 2.0;
-				else
-					bondLengths[j] +=inRad(packData,opface);
+				else {
+					Z=packData.packDCEL.getFaceCorners(face_opp);
+					cs=CommonMath.tri_incircle(Z[0],Z[1],Z[2],0);
+					bondLengths[j] +=cs.rad;
+				}
 			} // done with bond length
 		}
 
 		/**
-		 * Each bond angle is the complement of a vertex angle in the face,
-		 * so their sum should always be 2pi.
+		 * Each bond angle is the complement of a vertex angle in 
+		 * the face, so their sum should always be 2pi.
 		 * @return double
 		 */
-		public double carbonAngleSum() {
+		public double AtomAngleSum() {
 			return (bondAngles[0]+bondAngles[1]+bondAngles[2]);
 		}
 		
 		/**
-		 * The carbon energy is the sum of 'angle' energies from bond lengths 
-		 * and bond angles.
-		 * @return
+		 * The atom energy is the sum of 'angle' energies from 
+		 * bond lengths and bond angles.
+		 * @return double
 		 */
-		public double carbonEnergy() {
+		public double atomEnergy() {
 			double energy=0.0;
 			for (int j=0;j<3;j++) {
-				double term=bondLengths[(j+1)%3]*bondLengths[(j+2)%3]*Math.cos(bondAngles[j])+.5;
+				double term=bondLengths[j]*
+						bondLengths[(j+1)%3]*Math.cos(bondAngles[j])+.5;
 				energy +=angleParam*term*term;
 			}
 			return energy;
@@ -1538,26 +1550,27 @@ public class Graphene extends PackExtender {
 		/**
 		 * If v is a vert, return the associated bond length, namely,
 		 * that for dual to edge opposite v. 
-		 * @param v
-		 * @return 0.0 on error
+		 * @param v int
+		 * @return double, 0.0 on error
 		 */
 		public double getBondLength(int v) {
-			int j=packData.faces[face].vertIndx(v);
+			int j=face.getVertIndx(v);
 			if (j>=0) {
-				return bondLengths[j];
+				return bondLengths[(j+1)%3];
 			}
 			return 0.0;
 		}
 
 		/**
 		 * If v is a vert, return the associated bond energy
-		 * @param v
-		 * @return 0 on error
+		 * @param v int
+		 * @return double, 0 on error
 		 */
 		public double getBondEnergy(int v) {
-			int j=packData.faces[face].vertIndx(v);
+			int j=face.getVertIndx(v);
 			if (j>=0) {
-				double L=bondLengths[j]*bondLengths[j];
+				double L=bondLengths[(j+1)%3];
+				L=L*L;
 				return (bondParam/4.0)*(L-1.0)*(L-1.0);
 			}
 			return 0.0;
@@ -1566,13 +1579,13 @@ public class Graphene extends PackExtender {
 		/**
 		 * If v is a vert, return the associated angle energy in
 		 * this face.
-		 * @param v
-		 * @return 0 on error
+		 * @param v int
+		 * @return double, 0.0 on error
 		 */
 		public double getAngleEnergy(int v) {
-			int j=packData.faces[face].vertIndx(v);
+			int j=face.getVertIndx(v);
 			if (j>=0) {
-				double term=bondLengths[(j+1)%3]*bondLengths[(j+2)%3]*Math.cos(bondAngles[j])+.5;
+				double term=bondLengths[j]*bondLengths[(j+1)%3]*Math.cos(bondAngles[j])+.5;
 				return angleParam*term*term;
 			}
 			return 0.0; 

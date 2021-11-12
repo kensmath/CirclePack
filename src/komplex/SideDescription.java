@@ -124,7 +124,7 @@ public class SideDescription{
     		mobErr=mob.error;
     	}
     	else if (packData.hes==0) { // eucl 
-    		mob=Mobius.affine_mob(a,b,A,B);
+    		mob=Mobius.mob_abAB(a,b,A,B);
     		mobErr=mob.error;
     	}
     	// TODO: sph not yet implemented 

@@ -602,11 +602,12 @@ public class D_Schwarzian {
 			case 'e': { // color edges for schwarzian: blue < 0, red > 0
 				Vector<Double> e_sch=new Vector<Double>(); 
 				for (int v=1;v<=p.nodeCount;v++) {
-					int[] flower=p.getFlower(v);
-					for (int j=0;j<flower.length;j++) {
-						int w=flower[j];
-						if (w>v) 
-							e_sch.add(p.kData[v].schwarzian[j]);
+					HalfLink spokes=p.packDCEL.vertices[v].getEdgeFlower();
+					Iterator<HalfEdge> sis=spokes.iterator();
+					while (sis.hasNext()) {
+						HalfEdge he=sis.next();
+						if (he.twin.origin.vertIndx>v) 
+							e_sch.add(he.getSchwarzian());
 					}
 				}
 				Vector<Color> e_color=ColorUtil.blue_red_diff_ramp_Color(e_sch);

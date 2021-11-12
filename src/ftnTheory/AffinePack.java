@@ -10,12 +10,8 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
-import circlePack.PackControl;
 import complex.Complex;
-import dcel.D_PairLink;
-import dcel.D_SideData;
 import deBugging.LayoutBugs;
-import exceptions.CombException;
 import exceptions.InOutException;
 import exceptions.ParserException;
 import geometry.CircleSimple;
@@ -24,13 +20,11 @@ import input.CPFileManager;
 import komplex.DualGraph;
 import komplex.EdgeSimple;
 import komplex.Face;
-import komplex.RedEdge;
 import komplex.RedList;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
 import listManip.NodeLink;
-import math.Mobius;
 import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
@@ -141,7 +135,7 @@ public class AffinePack extends PackExtender {
 		double EL=0.0;
 		double L=0.0;
 		
-		ProjStruct.setEffective(p,asp);
+		D_ProjStruct.setEffective(p,asp);
 		
 		NodeLink vlist = null;
 		vlist=new NodeLink(p,"b(1,2)");
@@ -200,7 +194,7 @@ public class AffinePack extends PackExtender {
 		double EL=0.0;
 		double L=0.0;
 		
-		ProjStruct.setEffective(p,asp);
+		D_ProjStruct.setEffective(p,asp);
 		
 		NodeLink vlist = null;
 		vlist=new NodeLink(p,"b(3,4)");
@@ -258,7 +252,7 @@ public class AffinePack extends PackExtender {
 		double EL=0.0;
 		double L=0.0;
 		
-		ProjStruct.setEffective(p,asp);
+		D_ProjStruct.setEffective(p,asp);
 		
 		NodeLink vlist = null;
 		vlist=new NodeLink(p,"b(2,3)");
@@ -316,7 +310,7 @@ public class AffinePack extends PackExtender {
 		double EL=0.0;
 		double L=0.0;
 		
-		ProjStruct.setEffective(p,asp);
+		D_ProjStruct.setEffective(p,asp);
 		
 		NodeLink vlist = null;
 		vlist=new NodeLink(p,"b(4,1)");
@@ -371,7 +365,7 @@ public class AffinePack extends PackExtender {
 	 */
 	public static int AdjBd(PackData p, TriAspect[] asp){
 		
-		ProjStruct.setEffective(p,asp);
+		D_ProjStruct.setEffective(p,asp);
 		
 		//edge12
 		
@@ -873,7 +867,7 @@ public class AffinePack extends PackExtender {
 	 */
 	public static int adjBd(PackData p, TriAspect[] asp){
 		
-		ProjStruct.setEffective(p,asp);
+		D_ProjStruct.setEffective(p,asp);
 		
 		//edge12
 		
@@ -1297,10 +1291,10 @@ public class AffinePack extends PackExtender {
 		}
 		
 		// compute initial error E
-		
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.countFaces(v);j++) {
-				int w=p.kData[v].flower[j];
+			int[] petals=p.getPetals(v);
+			for (int j=0;j<petals.length;j++) {
+				int w=petals[j];
 				if (w>v) {
 					double prd=Math.log(Math.abs(edgeRatioError(p,new EdgeSimple(v,w),asp)));
 					E += prd*prd;
@@ -1525,8 +1519,9 @@ public class AffinePack extends PackExtender {
 		
 		// count interior edges
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.countFaces(v);j++) {
-				int w=p.kData[v].flower[j];
+			int[] petals=p.getPetals(v);
+			for (int j=0;j<petals.length;j++) {
+				int w=petals[j];
 				if ((!p.isBdry(v) || !p.isBdry(w)) && w>v){
 					num++;
 				}
@@ -1539,8 +1534,9 @@ public class AffinePack extends PackExtender {
 		int C=1;
 		
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.countFaces(v);j++) {
-				int w=p.kData[v].flower[j];
+			int[] petals=p.getPetals(v);
+			for (int j=0;j<petals.length;j++) {
+				int w=petals[j];
 				if ((!p.isBdry(v) || !p.isBdry(w)) && w>v){
 					e[C]=v;
 					ee[C]=w;
@@ -1576,7 +1572,7 @@ public class AffinePack extends PackExtender {
 //					t=(2+del)/(10*del);
 					// del>1 and 0.1<t<0.3
 					edgeAdjust(p,new EdgeSimple (e[v],ee[v]),t,aspts);
-					ProjStruct.sideRiffle(p, aspts, 20, null);
+					D_ProjStruct.sideRiffle(p, aspts, 20, null);
 					N++;
 					}
 			}
@@ -1617,8 +1613,9 @@ public class AffinePack extends PackExtender {
 		
 		// compute initial SC error
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.countFaces(v);j++) {
-				int w=p.kData[v].flower[j];
+			int[] petals=p.getPetals(v);
+			for (int j=0;j<petals.length;j++) {
+				int w=petals[j];
 				if (w>v) {
 					double prd=Math.log(Math.abs(edgeRatioError(p,new EdgeSimple(v,w),aspts)));
 					err += prd*prd;
@@ -1628,8 +1625,9 @@ public class AffinePack extends PackExtender {
 		
 		//set cutoff value
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.countFaces(v);j++) {
-				int w=p.kData[v].flower[j];
+			int[] petals=p.getPetals(v);
+			for (int j=0;j<petals.length;j++) {
+				int w=petals[j];
 				if ((!p.isBdry(v) || !p.isBdry(w)) && w>v){
 					num++;
 				}
@@ -1648,8 +1646,8 @@ public class AffinePack extends PackExtender {
 		// choose random edge
 		int m = p.countFaces(r);
 		int s = (int)(Math.floor(m*rand.nextDouble()));
+		int w=p.getPetals(r)[s];
 		
-		int w=p.kData[r].flower[s];
 		if (!p.isBdry(r) || !p.isBdry(w)){
 			double f=Math.log(Math.abs(edgeRatioError(p,new EdgeSimple(r,w),aspts)));
 			if ((f*f)>cut){
@@ -1709,7 +1707,7 @@ public class AffinePack extends PackExtender {
 
 				// find/apply factor to radius or sides at v
 				if (Math.abs(verr) > cut) {
-					double sideFactor = ProjStruct.sideCalc(p,v, p.getAim(v), 5,
+					double sideFactor = D_ProjStruct.sideCalc(p,v, p.getAim(v), 5,
 							aspts);
 					D_ProjStruct.adjustSides(p,v, sideFactor,aspts);
 					curv[v] = D_ProjStruct.angSumSide(p, v,1.0, aspts);
@@ -2189,8 +2187,9 @@ public class AffinePack extends PackExtender {
 		double maxwe=0.0;
 		EdgeSimple maxES=null;
 		for (int v=1;v<=packData.nodeCount;v++) {
-			for (int j=0;j<=packData.countFaces(v);j++) {
-				int w=packData.kData[v].flower[j];
+			int[] flower=packData.getFlower(v);
+			for (int j=0;j<flower.length;j++) {
+				int w=flower[j];
 				if ((!packData.isBdry(v) || !packData.isBdry(w)) && w>v) {
 					double ere=Math.abs(Math.log(edgeRatioError(packData,new EdgeSimple(v,w),aspects)));
 					if (ere>maxwe) {
@@ -2208,99 +2207,7 @@ public class AffinePack extends PackExtender {
 		return maxES;	
 	}
 
-	/**
-	 * Normalize a torus tailored to have just two side pairings
-	 * so those side pairings are z goes to a*z and b*z and so
-	 * that one corner is at z1=1.
-	 * @param writ, boolean; false, don't write in message window
-	 * @return Complex cross ratio of the four corner positions
-	 *   (z1-z2)*(z3-z4)/((z1-z4)*(z3-z2)).
-	 */
-	public Complex normalize(boolean writ) {
-		Vector<Integer> sideStartVerts=new Vector<Integer>(6);
-		Vector<Complex> cornerPts=new Vector<Complex>(6);
-		int theCorner=ProjStruct.sideInfo(packData,aspects,
-				sideStartVerts,cornerPts,null,null);
-		if (theCorner<=0) {
-			CirclePack.cpb.errMsg("Torus does not seem to have a 2-sidepair form");
-			return null;
-		}
-		
-		// Compute normalization of affine torus: two side pairings,
-		//   hence one vertex occurring at 4 points, z1, z2, z3, z4,
-		//   counterclockwise around the redchain boundary using
-		//   computed 'aspects'.
-		
-		if (cornerPts.size()!=4 && writ) {
-			CirclePack.cpb.errMsg("Didn't get 4 corner locations");
-			return null;
-		}
-		Complex z1=cornerPts.get(0);
-		Complex z2=cornerPts.get(1);
-		Complex z3=cornerPts.get(2);
-		Complex z4=cornerPts.get(3);
-//		Mobius mob=Mobius.mob_NormQuad(cornerPts);
-		Complex denom=z1.minus(z4).times(z3.minus(z2));
-		Complex x_ratio=z1.minus(z2).times(z3.minus(z4)).divide(denom);
-		
-		denom=z1.add(z3).minus(z2).minus(z4);
-		Complex K1=z1.minus(z4).times(z1.minus(z2)).divide(denom);
-		Complex K2=z1.times(z3).minus(z2.times(z4)).divide(denom);
-		
-		// normalize: subtract K2, divide result by K1 for face centers
-		//   stored in 'aspects'
-		double divfac=1.0/K1.abs();
-		for (int f=1;f<=packData.faceCount;f++) { 
-			for (int j=0;j<3;j++) {
-				int k=packData.faces[f].vert[j]; // vert index 
-				Complex newCtr=aspects[f].getCenter(j).minus(K2).divide(K1);
-				// reset aspects
-				aspects[f].setCenter(newCtr,j); 
-				aspects[f].labels[j] *= divfac;
-				
-				// reset packing itself (some change more than once)
-				packData.setCenter(k,new Complex(newCtr));
-				packData.setRadius(k,aspects[f].labels[j]);
-			}
-		}
-		
-		// store firstface, first redChain face data again 
-		//   (in case they were changed in the previous stage)
-		int ff=packData.firstFace;
-		int frf=packData.redChain.face;
-		for (int j=0;j<3;j++) {
-			packData.setRadius(packData.faces[ff].vert[j],aspects[ff].labels[j]);
-			packData.setCenter(packData.faces[ff].vert[j],new Complex(aspects[ff].getCenter(j)));
-			packData.setRadius(packData.faces[frf].vert[j],aspects[frf].labels[j]);
-			packData.setCenter(packData.faces[frf].vert[j],new Complex(aspects[frf].getCenter(j)));
-		}
-		
-		// store normalized data in redchain
-		if (packData.redChain!=null) {
-			RedList trace=(RedList)packData.redChain;
-			int f=trace.face;
-			trace.center=new Complex(aspects[f].getCenter(trace.vIndex));
-			trace.rad=aspects[f].labels[trace.vIndex];
-			trace=trace.next;
-			int safety=packData.faceCount;
-			while(trace!=packData.redChain && safety>0) {
-				safety--;
-				f=trace.face;
-				trace.center=new Complex(aspects[f].getCenter(trace.vIndex));
-				// if face is blue, have to see the nextRed center as well
-				if (trace instanceof RedEdge && ((RedEdge)trace).nextRed.face==f) {
-					RedEdge rtrace=(RedEdge)trace;
-					rtrace.nextRed.center=new Complex(aspects[f].getCenter(rtrace.vIndex));
-					rtrace.rad=aspects[f].labels[rtrace.vIndex];
-				}
-				trace.rad=aspects[f].labels[trace.vIndex];
-				trace=trace.next;
-			}
-		}
-		
-		return x_ratio;
-	}
-
+	
 	/**
 	 * Run trials over a grid and put the results in a buffer.
 	 * Output lines: A B t T c a.x a.y b.x b.y z's
@@ -2344,7 +2251,7 @@ public class AffinePack extends PackExtender {
 				
 				// do affpack
 				NodeLink vlink=new NodeLink(packData,"a");
-				int count = ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
+				int count = D_ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
 				if (count < 0) {
 					msg("affpack seems to have failed");
 					okay=false;
@@ -2464,7 +2371,7 @@ public class AffinePack extends PackExtender {
 				throw new ParserException("usage: riffle {m}: 1=ang sum, 2=weak, 3=effective, 4=side");
 			}
 			if (mode==1 || mode == 2) { // ang sum or weak
-				int count = ProjStruct.vertRiffle(packData, aspects,mode,PASSES,vlink);
+				int count = D_ProjStruct.vertRiffle(packData, aspects,mode,PASSES,vlink);
 				if (count < 0) {
 					Oops("riffle for aims seems to have failed");
 					return 0;
@@ -2634,7 +2541,7 @@ public class AffinePack extends PackExtender {
 						Oops("affine has failed in 'matdat', A="+A+", B="+B);
 					
 					// repack
-					int count = ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
+					int count = D_ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
 					if (count < 0)
 						Oops("affpack seems to have failed in 'matdat'");
 						
@@ -2804,14 +2711,6 @@ public class AffinePack extends PackExtender {
 			return 1;
 		}
 		
-
-		// ========= afflayout ========
-		else if (cmd.startsWith("afflay")) { // use
-			ProjStruct.treeLayout(packData,dTree,aspects);
-			ProjStruct.storeCenters(packData,dTree,aspects);
-			return 1;
-		}
-
 		// ========= affpack =========
 		if (cmd.startsWith("affpac")) {
 			NodeLink vlink=null;
@@ -2824,7 +2723,7 @@ public class AffinePack extends PackExtender {
 				vlink=new NodeLink(packData,"a");
 			}
 			
-			int count = ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
+			int count = D_ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
 			if (count < 0) {
 				Oops("affpack seems to have failed");
 				return 0;
@@ -2969,273 +2868,6 @@ public class AffinePack extends PackExtender {
 			return 1;
 		}
 		
-		// ======== error ============
-		else if (cmd.startsWith("error")) {
-			double []wsa_error=D_ProjStruct.getErrors(packData,aspects);
-			msg("Errors: weak, strong, angle sum: (l^2 and max):");
-			msg(" weak: ("+String.format("%.6e",wsa_error[0])+", "+String.format("%.6e",wsa_error[1])+")");
-			msg(" strong: ("+String.format("%.6e",wsa_error[2])+", "+String.format("%.6e",wsa_error[3])+")");
-			msg(" angle sum: ("+String.format("%.6e",wsa_error[4])+", "+String.format("%.6e",wsa_error[5])+")");
-			return 1;
-		}
-
-		// ======== status ==========
-		else if (cmd.startsWith("stat")) {
-			NodeLink vlist=null;
-			EdgeLink elist=null;
-			double Angsum_err=0.0;
-			double TLog_err=0.0;
-			double SLog_err=0.0;
-			int count=0;
-			
-			// if one or more flags, report for just first object only
-			if (flagSegs!=null && flagSegs.size()>0) {
-				Iterator<Vector<String>> flgs=flagSegs.iterator();
-				while (flgs.hasNext()) {
-					items=flgs.next();
-					String str=items.remove(0);
-					if (StringUtil.isFlag(str)) {
-						char c=str.charAt(1);
-						switch(c) {
-						case 'c': // curvature error (angle sum-aim)
-						{
-							vlist=new NodeLink(packData,items);
-							if (vlist!=null && vlist.size()>0) {
-								int v=(int)vlist.get(0);
-								msg("Curvature (angle sum - aim) of "+v+" is "+
-										String.format("%.8e",Math.abs(D_ProjStruct.angSumTri(
-											packData,v,1.0,aspects)[0]-
-											packData.getAim(v))));
-								return 1;
-							}
-							break;
-						}
-						case 'w': // weak consistency: ll../rr.. for verts
-						{
-							vlist=new NodeLink(packData,items);
-							if (vlist!=null && vlist.size()>0) {
-								int v=(int)vlist.get(0);
-								msg("Weak consistency value at "+v+" = "+
-										String.format("%.8e",weakConError(packData,v,aspects)));
-								return 1;
-							}
-							break;
-						}
-						case 's': // strong consistency: (t.t') for edges
-						{
-							elist=new EdgeLink(packData,items);
-							if (elist!=null && elist.size()>0) {
-								EdgeSimple edge=elist.get(0);
-								msg("Strong consitency, <"+edge.v+" "+edge.w+">, t*t' = "+
-										String.format("%.8e",edgeRatioError(packData,edge,aspects)));
-								return 1;
-							}
-							break;
-						}
-						} // end of switch
-					}
-				}
-				return 0; // didn't find valid flag??
-			}
-			
-			// if no flags?
-			
-			// find sum[angsum-aim]^2 (for verts with aim>0)
-			for (int v=1;v<=packData.nodeCount;v++) {
-				if (packData.getAim(v)>0.0) {
-					double diff=Math.abs(D_ProjStruct.
-							angSumTri(packData,v,1.0,aspects)[0]-
-						packData.getAim(v));
-					Angsum_err += diff*diff;
-				}
-				
-				// find sum[|Log(t.t')|]^2 for interior edges
-				for (int j=0;j<packData.countFaces(v);j++) {
-					int w=packData.kData[v].flower[j];
-					// if w>v and edge is interior
-					if (w>v) {
-						double prd=Math.log(Math.abs(edgeRatioError(packData,
-								new EdgeSimple(v,w),aspects)));
-						TLog_err += prd*prd;
-					}
-				}
-				// find sum[|Log(lll../rrr..)|^2] for interior v
-				double we=Math.log(weakConError(packData,v,aspects));
-				SLog_err +=we*we;
-					
-				count++;
-			}
-				
-			// report
-			msg("Status: anglesum error norm = "+
-					String.format("%.8e",Math.sqrt(Angsum_err)));
-			msg("Edge ratio (Log(t.t')) error norm = "+
-					String.format("%.8e",Math.sqrt(TLog_err)));
-			msg("Weak consistency (Log(ll../rr..)) error norm = "+
-					String.format("%.8e",Math.sqrt(SLog_err)));
-			return count;
-		}
-		
-		// ======== set_eff =========
-		else if (cmd.startsWith("set_eff")) {
-			if (ProjStruct.setEffective(packData,aspects)<0)
-				Oops("Error in setting effective radii.");
-			return 1;
-		}
-		
-		// ======== disp (deprecated 'draw') ============
-		else if (cmd.startsWith("disp") || cmd.startsWith("Disp") || cmd.startsWith("draw")) {
-			// no flags? default to '-fn'
-			if (flagSegs==null || flagSegs.size()==0) {
-				flagSegs=StringUtil.flagSeg("-fn");
-			}
-			// if first segment has no flag, treat it as a list of faces
-			else if (!StringUtil.isFlag(flagSegs.get(0).get(0))) {
-				Vector<String> its=flagSegs.get(0);
-				its.insertElementAt("-f ",0);
-				flagSegs=new Vector<Vector<String>>(0);
-				flagSegs.add(its);
-			}
-
-			int count = 0;
-			String str = null;
-			try {
-				Iterator<Vector<String>> fls = flagSegs.iterator();
-				while (fls.hasNext()) {
-					items = fls.next();
-					str = items.remove(0);
-					// check for faces or circles
-					char c=str.charAt(1);
-					switch(c){
-					case 'c': {
-						DispFlags dispFlags=new DispFlags(str.substring(2),packData.cpScreen.fillOpacity); // cut out -?
-						NodeLink nodelist=null;
-						if (items==null || items.size()==0) // do all
-							nodelist = new NodeLink(packData, "a");
-						else nodelist=new NodeLink(packData,items);
-							
-						// mark those selected
-						int []mv=new int[packData.nodeCount+1];
-						Iterator<Integer> nlst=nodelist.iterator();
-						while (nlst.hasNext()) {
-							int vt=nlst.next();
-							mv[vt]=1;
-						}
-							
-						Iterator<EdgeSimple> ft=dTree.iterator(); // DualGraph.printGraph(dTree);
-						Complex z=null;
-						double rad=0.1;
-						TriAspect tasp=null;
-						
-						// do any circles of first face
-						EdgeSimple firstf=ft.next();
-						tasp=aspects[firstf.w];
-						for (int j=0;j<3;j++) {
-							int v=tasp.vert[j];
-							if (mv[v]>0) {
-								z = tasp.getCenter(j);
-								rad = tasp.labels[j];
-								if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
-									dispFlags.setColor(packData.getCircleColor(v));
-								if (dispFlags.label)
-									dispFlags.setLabel(Integer.toString(v));
-								packData.cpScreen.drawCircle(z, rad,dispFlags);
-								count++;
-							}
-						}
-							
-						// now go through the tree
-						while (ft.hasNext()) {
-							int f=ft.next().w;
-							tasp=aspects[f];
-							int j=(packData.faces[f].indexFlag+2)%3;
-							int v=tasp.vert[j];
-							if (mv[v]>0) {
-								z = tasp.getCenter(j);
-								rad = tasp.labels[j];
-								if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
-									dispFlags.setColor(packData.getCircleColor(v));
-								if (dispFlags.label)
-									dispFlags.setLabel(Integer.toString(v));
-								packData.cpScreen.drawCircle(z, rad,dispFlags);
-								count++;
-							}
-						}
-						PackControl.canvasRedrawer.paintMyCanvasses(packData,false);
-						break;
-					}
-					case 'f': {
-						DispFlags dispFlags=new DispFlags(str.substring(2),packData.cpScreen.fillOpacity); // cut out -?
-						FaceLink facelist;
-						if (items==null || items.size()==0) // do all
-							facelist = new FaceLink(packData, "Fs");
-						else facelist=new FaceLink(packData,items);
-						Iterator<Integer> flst = facelist.iterator();
-						while (flst.hasNext()) {
-							int fnum = flst.next();
-							TriAspect tasp = aspects[fnum];
-							if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
-								dispFlags.setColor(packData.getFaceColor(fnum));
-							if (dispFlags.label)
-								dispFlags.setLabel(Integer.toString(fnum));
-							packData.cpScreen.drawFace(tasp.getCenter(0),tasp.getCenter(1),tasp.getCenter(2),
-								null,null,null,dispFlags);
-							count++;
-						}
-						PackControl.canvasRedrawer.paintMyCanvasses(packData,false);
-						break;
-					}
-					case 'e': { // non-empty list of edges; for all, call with -f flag
-						DispFlags dispFlags=new DispFlags(str.substring(2),packData.cpScreen.fillOpacity); // cut out -?
-						EdgeLink edgelist;
-						if (items==null || items.size()==0) // return
-							break;
-						else edgelist=new EdgeLink(packData,items);
-						Iterator<EdgeSimple> elst = edgelist.iterator();
-						Complex z1=null;
-						Complex z2=null;
-						TriAspect tasp=null;
-						while (elst.hasNext()) {
-							EdgeSimple edge=elst.next();
-							int f=0;
-							if ((f=packData.face_right_of_edge(edge.v, edge.w))>0) {
-								tasp=aspects[f];
-								for (int j=0;j<3;j++) {
-									if (tasp.vert[j]==edge.w) {
-										z1=tasp.getCenter(j);
-										z2=tasp.getCenter((j+1)%3);
-										packData.cpScreen.drawEdge(z1,z2,dispFlags);
-										break;
-									}
-								}
-							}
-							if ((f=packData.face_right_of_edge(edge.w, edge.v))>0) {
-								tasp=aspects[f];
-								for (int j=0;j<3;j++) {
-									if (tasp.vert[j]==edge.v) {
-										z1=tasp.getCenter(j);
-										z2=tasp.getCenter((j+1)%3);
-										packData.cpScreen.drawEdge(z1,z2,dispFlags);
-										break;
-									}
-								}
-							}
-						} // end of while
-						PackControl.canvasRedrawer.paintMyCanvasses(packData,false);
-						break;
-					}
-					case 'w': {
-						cpCommand("disp -w");
-						count++;
-						break;
-					}
-					} // end of switch
-				} // end of while through flags
-			} catch (Exception ex) {
-			}
-			return count;
-		}
-		
 		// ========= dTree ============
 		else if (cmd.startsWith("dTree")) {
 			dTree=DualGraph.easySpanner(packData,false);
@@ -3306,44 +2938,6 @@ public class AffinePack extends PackExtender {
 			return count;
 		}
 
-		// ========== ccode ===========
-		else if (cmd.startsWith("ccod")) {
-			// currently we only color/draw all edges
-			// Note: colors cannot be stored for edges.
-			
-			// store data for qualifying edges in vector
-			Vector<Double> edata=new Vector<Double>();
-			for (int v=1;v<=packData.nodeCount;v++) {
-				int num=packData.countFaces(v)+packData.getBdryFlag(v);
-				for (int j=0;j<num;j++) {
-					int w=packData.kData[v].flower[j];
-					if (w>v) {
-						if (!packData.isBdry(v) || !packData.isBdry(w))
-							edata.add(ProjStruct.logEdgeTs(packData,new EdgeSimple(v,w),aspects));
-					}
-				}
-			}
-			
-			Vector<Integer> ccodes=ColorUtil.blue_red_diff_ramp(edata);
-			
-			// draw (same order)
-			int spot=0;
-			for (int v=1;v<=packData.nodeCount;v++) {
-				int num=packData.countFaces(v)+packData.getBdryFlag(v);
-				for (int j=0;j<num;j++) {
-					int w=packData.kData[v].flower[j];
-					if (w>v) {
-						if (packData.isBdry(v) && packData.isBdry(w))
-							cpCommand("disp -e "+v+" "+w);
-						else {
-							cpCommand("disp -ec"+(int)ccodes.get(spot)+" "+v+" "+w);
-							spot++;
-						}
-					}
-				}
-			}
-		}
-		
 		// ========== set_screen ======
 		else if (cmd.startsWith("set_scre")) {
 			double mnX=100000.0;
@@ -3377,7 +2971,7 @@ public class AffinePack extends PackExtender {
 			}
 			
 			// riffle side lengths to get target angle sums
-			int its=ProjStruct.sideRiffle(packData,aspects,2000,vlink);
+			int its=D_ProjStruct.sideRiffle(packData,aspects,2000,vlink);
 			msg("'sideRif' iterations: "+its);
 			
 			
@@ -3385,28 +2979,6 @@ public class AffinePack extends PackExtender {
 			if (its>0) return its;
 			return 0;
 		}
-		
-		// ========== equiSides ==========
-		
-		else if (cmd.startsWith("equiSid")) {
-			for (int f=1;f<=packData.faceCount;f++) {
-				for (int j=0;j<3;j++)
-					aspects[f].sides[j]=1.0;
-			}
-			return 1;
-		}
-		
-		// =========== equiBd =============
-//		else if (cmd.startsWith("equiBd")) {
-//			for (int f=1;f<=packData.faceCount;f++) {
-//				for (int j=0;j<3;j++){	
-//					if (aspects[f].redFlags[j]==true && aspects[f].redFlags[(j+1)%3]==true){
-//						aspects[f].sides[j]=1.0;
-//					}
-//				}
-//			}
-//			return 1;
-//		}
 		
 		// =========== avBd ===============
 		
@@ -3436,40 +3008,6 @@ public class AffinePack extends PackExtender {
 //			return 1;
 //		}
 			
-		// =========== update ==============
-		else if (cmd.startsWith("updat")) {
-			Iterator<Vector<String>> flgs=flagSegs.iterator();
-			while (flgs.hasNext()) {
-				items=flgs.next();
-				String str=items.get(0);
-				if (StringUtil.isFlag(str)) {
-					char c=str.charAt(1);
-					items.remove(0);
-					FaceLink flist=new FaceLink(packData,items);
-					Iterator<Integer> fls=flist.iterator();
-					switch(c) {
-					case 's': // update sides using packData centers  
-					{
-						while (fls.hasNext()) {
-							int f=fls.next();
-							aspects[f].centers2Sides();
-						}
-						break;
-					}
-					case 'l': // update labels using sides
-					{
-						while (fls.hasNext()) {
-							int f=fls.next();
-							aspects[f].sides2Labels();
-						}
-						break;
-					}
-					} // end of switch
-				}
-			} // end of while
-			return 1;
-		}
-		
 		// ========== rand_ad ============
 		else if (cmd.startsWith("rand_ad")) {
 			

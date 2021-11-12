@@ -1,14 +1,20 @@
 package util;
 
+import java.util.Iterator;
+
 import allMains.CPBase;
 import complex.Complex;
+import dcel.HalfEdge;
+import dcel.PackDCEL;
+import exceptions.ParserException;
+import geometry.CircleSimple;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
-import geometry.CircleSimple;
 import komplex.DualTri;
-import komplex.RedList;
+import listManip.NodeLink;
 import math.Mobius;
+import packing.PackData;
 
 /**
  * Utility class holding geometric info localized to 
@@ -87,7 +93,7 @@ public class TriAspect extends TriData {
 	// clone
 	public TriAspect(TriAspect asp) {
 		this(asp.hes);
-		baseEdge=asp.baseEdge;
+		baseEdge=asp.baseEdge; // note: same object
 		face=baseEdge.face.faceIndx;
 		for (int j=0;j<3;j++) {
 			vert[j]=asp.vert[j];
@@ -134,6 +140,15 @@ public class TriAspect extends TriData {
 		center[j]=new Complex(z);
 		need_update=true;
 	}
+	
+	public void setCircleData(int j,CircleSimple cs) {
+		center[j]=cs.center;
+		radii[j]=cs.rad;
+	}
+	
+	public CircleSimple getCircleData(int j) {
+		return new CircleSimple(center[j],radii[j]);
+	}
 
 	/**
 	 * Compute 'baseMobius' based on current 'tanPts'. This is
@@ -146,9 +161,12 @@ public class TriAspect extends TriData {
 	}
 		
 	/**
-	 * Compute and store the tangency points based on current
-	 * centers (computation assumes the radii are those of a tangent 
-	 * triple with the given centers).
+	 * Compute/store "tangency" points based on current
+	 * centers. Actually these are points here the incircle
+	 * of the triangle formed by the centers hits the edges.
+	 * (These points are conformally invariant under mobius
+	 * mob IF the centers are mapped as centers, i.e., 
+	 * apply mob to circles and use the new centers.)
 	 */
 	public void setTanPts() {
 		DualTri dtri=new DualTri(hes,center[0],center[1],center[2]);
@@ -159,7 +177,7 @@ public class TriAspect extends TriData {
 	
 	/**
 	 * Return index of initial vertex of first shared edge 
-	 * with 'ntri', it it exists.
+	 * of 'this' with 'ntri', it it exists.
 	 * @param ntri TriAspect
 	 * @return int index, -1 on failure
 	 */
@@ -176,19 +194,20 @@ public class TriAspect extends TriData {
 	}
 	
 	/**
-	 * Compute the centers in normalized position (v0 at origin,
-	 * v1 on positive real, v2 in upper half plane) using 'labels' 
-	 * entries as the current euclidean radii.
-	 *
+	 * Compute the eucl centers in normalized position 
+	 * (v0 at origin, v1 on positive real, v2 in upper half 
+	 * plane) using 'labels' as the current eucl radii.
 	 * @return true; no checks yet implemented
 	 */
-	public boolean setCenters() {
+	public boolean setCents_by_label() {
+		double baselength=EuclMath.e_ivd_length(labels[0],labels[1],
+				getInvDist(0));
 		center[0]=new Complex(0.0);
-		center[1]=new Complex(labels[0]+labels[1]);
-		center[2]=new Complex(0.0);
+		center[1]=new Complex(baselength);
 		CircleSimple sp=new CircleSimple();
 		sp=EuclMath.e_compcenter(center[0],center[1],
-				labels[0],labels[1],labels[2],1.0,1.0,1.0);
+				labels[0],labels[1],labels[2],
+				getInvDist(0),getInvDist(1),getInvDist(2));
 		center[2]=sp.center;
 		return true;
 	}
@@ -209,6 +228,7 @@ public class TriAspect extends TriData {
 	public void setSchwarzian(int j, double sch) {
 		schwarzian[j]=sch;
 	}
+
 
 	/**
 	 * Utility routine: only use 'TriAspect' to hold rad/cent data.
@@ -236,28 +256,80 @@ public class TriAspect extends TriData {
 	}
 	
 	/**
-	 * Compute the Mobius that would align this 'TriAspect' 
-	 * with the 'TriAspect' across edge <v,w>. Return identity on error 
-	 * @param indx int, index of v for my oriented edge <v,w> 
-	 * @param across TriAspect, face across edge <v,w>
+	 * Compute the Mobius that would align 'this' with 
+	 * 'acrossTri', the 'TriAspect' across 'edge'. 
+	 * Mode determines what to align: 
+	 *    mode 1: use 'radii' 
+	 *    mode 2: use 'labels' in place of radii
+	 *    mode 3: use 'sidelengths'
+	 * Return identity on error. 
+	 * 
+	 * TODO: compare to 'propogateMe', which recomputes and
+	 * aligns.
+	 * 
+	 * @param acrossTri TriAspect
+	 * @param HalfEdge edge, edge in 'this'
+	 * @param mode int
 	 * @return Mobius
 	 */
-	public Mobius alignMe(int indx,TriAspect across) {
+	public Mobius alignMe(TriAspect acrossTri,HalfEdge edge,int mode) {
 
-		int w=vert[(indx+1)%3];
-		int windx=across.vertIndex(w);
+		int indx=edgeIndex(edge);
+		int windx=acrossTri.edgeIndex(edge.twin);
 		
 		// mobius identifying circles
-		Mobius mob=Mobius.mob_MatchCircles(center[indx], radii[indx],
+		if (mode==2) // use 'labels'
+			return Mobius.mob_MatchCircles(center[indx], labels[indx],
+					center[(indx+1)%3], labels[(indx+1)%3],
+					acrossTri.center[(windx+1)%3],acrossTri.labels[(windx+1)%3],
+					acrossTri.center[windx],acrossTri.labels[windx],
+					hes,acrossTri.hes);
+		if (mode==3) {
+			if (hes==0 && acrossTri.hes==0) {
+				double factor=acrossTri.sides[windx]/sides[indx];
+				Mobius mob=new Mobius();
+				mob.a=new Complex(factor);
+				mobiusMe(mob);
+				Complex a=center[indx];
+				Complex b=center[(indx+1)%3];
+				Complex A=acrossTri.center[(windx+1)%3];
+				Complex B=acrossTri.center[windx];
+				return Mobius.mob_abAB(a, b, A, B);
+			}
+			
+			// TODO: not yet ready in sph/hyp cases
+			
+			return new Mobius();
+		}
+
+		// else assume mode==1
+		return Mobius.mob_MatchCircles(center[indx], radii[indx],
 				center[(indx+1)%3], radii[(indx+1)%3],
-				across.center[(windx+1)%3],across.radii[(windx+1)%3],
-				across.center[windx],across.radii[windx],
-				hes,across.hes);
-		return mob;
+				acrossTri.center[(windx+1)%3],acrossTri.radii[(windx+1)%3],
+				acrossTri.center[windx],acrossTri.radii[windx],
+				hes,acrossTri.hes);
+
 	}
 	
 	/**
-	 * Assume 'center's give euclidean face in normalized position 
+	 * Apply a Mobius transformation to my centers/radii.
+	 * Note: other data, eg. labels, sides, tangPts, are not ajusted
+	 * @param mob Mobius
+	 */
+	public void mobiusMe(Mobius mob) {
+		if (Mobius.frobeniusNorm(mob)>.00001) {
+			CircleSimple sC=new CircleSimple();
+			for (int j=0;j<3;j++) {
+				Mobius.mobius_of_circle(mob,hes,
+					getCenter(j),getRadius(j), sC,true);
+				setCenter(sC.center, j);
+				setRadius(sC.rad, j);
+			}
+		}
+	}
+	
+	/**
+	 * Assume 'center's give eucl face in normalized position 
 	 * based on current 'labels'. Given vert v2 and centers of 
 	 * opposite edge e, adjust 'center', 'labels', and 'sides' data
 	 * so centers of e match given centers. (Used to layout this face 
@@ -265,8 +337,9 @@ public class TriAspect extends TriData {
 	 * 
 	 * TODO: use the newer 'alignMe' code here
 	 * 
-	 * @param v2 vertex to be placed 
-	 * @param c0 c1 centers of edge for <v0,v1>.
+	 * @param v2 int, vertex to be placed 
+	 * @param c0 Complex 
+	 * @param c1 Complex, centers of for <v0,v1> of this face
 	 * @return true if it seems to work
 	 */
 	public boolean adjustData(int v2,Complex c0,Complex c1) {
@@ -348,6 +421,8 @@ public class TriAspect extends TriData {
 	 * Sets homogeneous 'labels' based on current 'sides' data. 
 	 * In particular, value at corner a is (B+C-A)/2, where A, B, C 
 	 * are the side lengths.
+	 * 
+	 * TODO: have to adjust for invDist
 	 */
 	public void sides2Labels() {
 		for (int j=0;j<3;j++) 
@@ -355,11 +430,13 @@ public class TriAspect extends TriData {
 	}
 	
 	/**
-	 * Sets homogeneous 'sides' based on current 'labels' data. 
+	 * Sets homogeneous 'sides' based on current 'labels' and
+	 * 'invDist' data. 
 	 */
 	public void labels2Sides() {
 		for (int j=0;j<3;j++)
-			sides[j]=labels[j]+labels[(j+1)%3];
+			sides[j]=EuclMath.e_ivd_length(labels[j],labels[(j+1)%3],
+					getInvDist(j));
 	}
 	
 	/**
@@ -382,8 +459,7 @@ public class TriAspect extends TriData {
 	}
 	
 	/**
-	 * Normalize the 'labels' vector so the max entry
-	 * is 1.0.
+	 * Normalize 'labels' vector so the max entry is 1.0.
 	 */
 	public void normRatio() {
 		int n=0;
@@ -396,21 +472,6 @@ public class TriAspect extends TriData {
 			n=2;
 		for (int j=0;j<3;j++)
 			labels[j] /= labels[n];
-	}
-	
-	/**
-	 * Given vertex 'v' (from parent packing) of this face, 
-	 * return the 2-vector of other entries in 'labels' after 
-	 * scaling so value at 'v' is 1.0.
-	 * @param v, vertex from parent packing
-	 * @return double[2] of other labels, null on error.
-	 */
-	public double []getRatio(int v) {
-		int k=vertIndex(v);
-		if (k<0) return null;
-		double []newRatio = new double[2];
-		newRatio[0]=labels[(k+1)%3]/labels[k];
-		return newRatio;
 	}
 	
 	/**
@@ -486,5 +547,6 @@ public class TriAspect extends TriData {
 				center[(j+2)%3].minus(center[(j+1)%3]).abs());
 		return (0.5*r*r*angleV(v,1.0)[0]);
 	}
+
 
 }

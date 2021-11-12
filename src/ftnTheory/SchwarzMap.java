@@ -11,6 +11,7 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
 import dcel.D_Schwarzian;
+import dcel.HalfEdge;
 import exceptions.DataException;
 import exceptions.MiscException;
 import exceptions.ParserException;
@@ -284,7 +285,9 @@ public class SchwarzMap extends PackExtender {
 				int J=(rangeTri[g].vertIndex(v)+1)%3;
 				// get schwarzian from 'packData'
 				double s=packData.kData[v].schwarzian[k];
-				SchwarzMap.propogate(rangeTri[f],rangeTri[g], s, qData.hes);
+				HalfEdge hedge=packData.packDCEL.findHalfEdge(edge);
+				int mode=1; // use 'radii'
+				SchwarzMap.propogate(rangeTri,f,hedge, s,mode,qData.hes);
 				
 				int[] verts=rangeTri[g].vert;
 				for (int jj=0;jj<3;jj++) {
@@ -726,17 +729,14 @@ public class SchwarzMap extends PackExtender {
 
 				// ------- get face g ready in domain - align with f -------
 				int gfindx=packData.face_nghb(f,g);
-				Mobius aligng=domainTri[g].alignMe(gfindx,domainTri[f]);
-				if (Mobius.frobeniusNorm(aligng)>.00001) {
-					sC=new CircleSimple();
-					for (int j=0;j<3;j++) {
-						Mobius.mobius_of_circle(aligng, packData.hes,
-							domainTri[g].getCenter(j),domainTri[g].getRadius(j), 
-								sC,true);
-						domainTri[g].setCenter(sC.center, j);
-						domainTri[g].setRadius(sC.rad, j);
-					}
-				}
+				
+				// using 'alignMe'
+				dcel.Face gface=packData.packDCEL.faces[g];
+				dcel.Face fface=packData.packDCEL.faces[f];
+				HalfEdge hedge=gface.faceNghb(fface);
+				int mode=1; // use 'radii'
+				Mobius aligng=domainTri[g].alignMe(domainTri[f],hedge,mode);
+				domainTri[g].mobiusMe(aligng);
 				domainTri[g].setTanPts();					
 
 				// find rangeTri[g]
@@ -1332,44 +1332,57 @@ public class SchwarzMap extends PackExtender {
 	}
 	
 	/**
-	 * Compute rad/cent data for 'gtri' based on existing data for 'ftri'
-	 * if these faces share an edge. 's' is the 'schwarzian' for that edge.
-	 * Assume tanPts of 'ftri' are set, update the tanPts of the new 'gtri'.
-	 * @param ftri TriAspect
-	 * @param gtri TriAspect
+	 * Compute 'TriAspect' data for the face 'gtri' across 'edge' 
+	 * from 'ftri'. Use 's', the 'schwarzian' for 'edge'. We 
+	 * assume tanPts of 'ftri' are already set, we update the 
+	 * tanPts of 'gtri'. mode=1 use 'radii', mode=2 use 'labels'
+	 * for the circles. 
+	 * @param asp TriAspect[]
+	 * @param ftri int
+	 * @param edge HalfEdgeg
 	 * @param s double, schwarzian
+	 * @param mode int, 
 	 * @param hes int, geometry
 	 * @return index of computed circle in 'gtri', -1 on error
 	 */
-	public static int propogate(TriAspect ftri,TriAspect gtri,double s,int hes) {
-		int J=-1;
+	public static int propogate(TriAspect[] asp,int ftri,HalfEdge edge,
+			double s,int mode,int hes) {
+		int j=asp[ftri].edgeIndex(edge);
+		if (j<0)
+			throw new ParserException(
+					"TriAspect does not contain given HalfEdge "+edge);
+		int gtri=edge.twin.face.faceIndx;
+		int J=asp[gtri].edgeIndex(edge.twin.next);
+		// so j, j+1 in ftri correspond to J, J-1 in gtri
 		try {
-			int j=ftri.nghb_Tri(gtri);
-			if (j==-1)
-				return -1;
 			
-			// edge <v,w> of f and its recorded 'schwarzian'
-			int v=ftri.vert[j];
-
-			// copy over shared rad/cents:
-			J=(gtri.vertIndex(v)+1)%3; // index of target circle in 'gtri'
-			gtri.setRadius(ftri.getRadius(j), (J+2)%3);
-			gtri.setRadius(ftri.getRadius((j+1)%3),(J+1)%3);
-			gtri.setCenter(ftri.getCenter(j), (J+2)%3);
-			gtri.setCenter(ftri.getCenter((j+1)%3),(J+1)%3);
+			if (mode==2) { // copy over shared labels/cents:
+				asp[gtri].setLabel(asp[ftri].getLabel(j),J);
+				asp[gtri].setLabel(asp[ftri].getLabel((j+1)%3),(J+2)%3);
+				asp[gtri].setCenter(asp[ftri].getCenter(j),J);
+				asp[gtri].setCenter(asp[ftri].getCenter((j+1)%3),(J+2)%3);
+			}
+			else { // default
+				asp[gtri].setRadius(asp[ftri].getRadius(j),J);
+				asp[gtri].setRadius(asp[ftri].getRadius((j+1)%3),(J+2)%3);
+				asp[gtri].setCenter(asp[ftri].getCenter(j),J);
+				asp[gtri].setCenter(asp[ftri].getCenter((j+1)%3),(J+2)%3);
+			}
 			
 			// compute map from base equilateral
-			Mobius bm_f=Mobius.mob_xyzXYZ(CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
-					ftri.tanPts[0],ftri.tanPts[1],ftri.tanPts[2],0,ftri.hes);
+			Mobius bm_f=Mobius.mob_xyzXYZ(
+					CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
+					asp[ftri].tanPts[0],asp[ftri].tanPts[1],asp[ftri].tanPts[2],
+					0,asp[ftri].hes);
 			
 			// compute the target circle
-			CircleSimple sC = D_Schwarzian.getThirdCircle(s, j, bm_f, ftri.hes);
+			CircleSimple sC = D_Schwarzian.getThirdCircle(s, j, bm_f, asp[ftri].hes);
 
-			gtri.setRadius(sC.rad, J);
-			gtri.setCenter(sC.center, J);
+			asp[gtri].setRadius(sC.rad, J);
+			asp[gtri].setCenter(sC.center, J);
 			
-			// reset the tangency points
-			gtri.setTanPts();
+			// reset 'tanPts' (which only depend on centers) 
+			asp[gtri].setTanPts();
 			
 		} catch (Exception ex) {
 			throw new DataException("propogate via schwarzian problem.");

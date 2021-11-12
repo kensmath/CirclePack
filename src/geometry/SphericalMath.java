@@ -13,7 +13,9 @@ import util.UtilPacket;
 /** 
  * The unit (Riemann) sphere is x^2 + y^2 + z^2 = 1 in 3-space. 
  * Spherical points are stored as complex numbers in usual polar
- * form (theta,phi); radii are spherical, measured in radians. 
+ * form (theta,phi), so theta is the angle measured from the 
+ * positive x-axis and phi is the angle down to the point from
+ * the N pole. Radii are spherical, measured in radians. 
  * To get the correct orientation on the sphere when viewed from 
  * outside, we project from the SOUTH pole (unlike the typical 
  * complex analysis definition projecting from the NORTH pole). 
@@ -54,10 +56,12 @@ public class SphericalMath{
   }
   
   /** 
-	 * Return sph length of edge with spherical radii r1, r2, and inv dist 'ivd'.
-	 * For two circles, 'ivd'=(-cos(phi)+cos(r1)*cos(r2))/(sin(r1)*sin(r2)),
-	 * where phi is the angle between the unit position vectors p1, p2 of the 
-	 * centers of the two circles. That is, cos(phi)=dot(p1,p2).
+	 * Return sph length of edge with spherical radii r1, r2, 
+	 * and inv dist 'ivd'. For two circles, 
+	 * 'ivd'=(-cos(phi)+cos(r1)*cos(r2))/(sin(r1)*sin(r2)),
+	 * where phi is the angle between the unit position vectors 
+	 * p1, p2 of the centers of the two circles. That is, 
+	 * cos(phi)=dot(p1,p2).
 	 * @param r1 double 
 	 * @param r2 double
 	 * @param ivd double
@@ -197,30 +201,33 @@ public class SphericalMath{
 	
   /**
    * Find "incircle", sph center/radius of circle inscribed in 
-   * trianglular face with given cclw oriented corners. Build 
+   * triangular face with given cclw oriented corners. Build 
    * faux circles to find the 3D eucl circle through the points 
    * of tangency. 
-   * @param z1,z2,z3, Complex, sph centers
+   * @param z0 Complex
+   * @param z1 Complex
+   * @param z2, Complex, sph centers
    * @return CircleSimple
    */
-	public static CircleSimple sph_tri_incircle(Complex z1,Complex z2,Complex z3) {
+	public static CircleSimple sph_tri_incircle(
+			Complex z0,Complex z1,Complex z2) {
 
 		// edge lengths
-		double a=s_dist(z3,z2);
-		double b=s_dist(z1,z3);
-		double c=s_dist(z1,z2);
+		double a=s_dist(z2,z1);
+		double b=s_dist(z0,z2);
+		double c=s_dist(z0,z1);
 		
 		// putative radii (based just on edge lengths)
-		double r1=(b+c-a)/2.0;
-		double r2=(a+c-b)/2.0;
-		double r3=(a+b-c)/2.0;
+		double r0=(b+c-a)/2.0;
+		double r1=(a+c-b)/2.0;
+		double r2=(a+b-c)/2.0;
 		
 		// pts of tangency 
-		Complex T12=sph_tangency(z1,z2,r1,r2);
-		Complex T23=sph_tangency(z2,z3,r2,r3);
-		Complex T31=sph_tangency(z3,z1,r3,r1);
+		Complex t01=sph_tangency(z0,z1,r0,r1);
+		Complex t12=sph_tangency(z1,z2,r1,r2);
+		Complex t20=sph_tangency(z2,z0,r2,r0);
 		
-		return circle_3_sph(T12,T23,T31);
+		return circle_3_sph(t01,t12,t20);
 	}
 	
 	/** 
@@ -476,6 +483,12 @@ public static double vec_norm(double X[]){
 	  return Point3D.vectorSum(A,B).times(1/(1+AdotB));
   }
   
+  /**
+   * Cross product of 2 3-vectors, XxY
+   * @param X double[3]
+   * @param Y double[3]
+   * @return double[3]
+   */
   public static double[] crossProduct(double X[], double Y[]) {
     double[] Z = new double[3];
     Z[0] = X[1] * Y[2] - X[2] * Y[1];
@@ -520,47 +533,64 @@ public static double vec_norm(double X[]){
   }
 
   /** 
-   * Find center of third circle in ordered tangent triple. Note: 
-   * orientation is counterclockwise looking at sphere from outside. 
-   * Overlaps not yet used, but flag is there to parallel other geoms..
+   * Find center of third circle in ordered triple. Note: 
+   * orientation is counterclockwise looking at sphere from outside.
+   * ivdj is inv distance for edge <j,j+1>. 
+   * TODO: inv distances not yet used; there to parallel other geoms.
+   * @param z0 Complex, (theta, phi)
+   * @param z1 Complex
+   * @param r0 double
+   * @param r1 double
+   * @param r2 double
+   * @param ivd0 double
+   * @param ivd1 double
+   * @param ivd2 double
+   * @return CircleSimple
   */ 
-  public static CircleSimple s_compcenter(Complex z1,Complex z2,
-  		double r1,double r2,double r3,double o1,double o2,double o3) {
-    double a,b,c,angle;
-    double []TV;
-    double []P=new double[3];
-    double []N=new double[3];
-    double []mtan=new double[3];
-    Complex z=new Complex(0.0);
-
-    a=Math.sin(z1.y)*Math.cos(z1.x);
-    b=Math.sin(z1.y)*Math.sin(z1.x);
-    c=Math.cos(z1.y);
-    // angle is how far around from T we will rotate 
-    angle=Math.acos(( Math.cos(r2+r3)-Math.cos(r1+r3)*Math.cos(r1+r2) )/
-  	     ( Math.sin(r1+r3)*Math.sin(r1+r2) ));
-    // TV is a tangent vector at z1
-    TV=sph_tangent(z1,z2);
-    // N is T x z1 
-    N[0]=b*TV[2]-c*TV[1];
-    N[1]=c*TV[0]-a*TV[2];
-    N[2]=a*TV[1]-b*TV[0];
+  public static CircleSimple s_compcenter(Complex z0,Complex z1,
+  		double r0,double r1,double r2,double ivd0,double ivd1,double ivd2) {
+    double[] vec0=s_pt_to_vec(z0);
+    // side lengths
+    double s0=s_ivd_length(r0,r1,ivd0);
+    double s1=s_ivd_length(r1,r2,ivd1);
+    double s2=s_ivd_length(r2,r0,ivd2);
+    // angle is how far around from TV we will rotate 
+    double angle=Math.acos(( Math.cos(s1)-Math.cos(s2)*Math.cos(s0) )/
+  	     ( Math.sin(s2)*Math.sin(s0) ));
+    // TV is a tangent vector at z0
+    double[] TV=sph_tangent(z0,z1);
+    // N = z0 x T
+    double[] N=crossProduct(vec0,TV);
     // P will point toward the new center 
+    double []P=new double[3];
     P[0]=Math.cos(angle)*TV[0]+Math.sin(angle)*N[0];
     P[1]=Math.cos(angle)*TV[1]+Math.sin(angle)*N[1];
     P[2]=Math.cos(angle)*TV[2]+Math.sin(angle)*N[2];
-    mtan[0]=Math.cos(r1+r3)*a+Math.sin(r1+r3)*P[0];
-    mtan[1]=Math.cos(r1+r3)*b+Math.sin(r1+r3)*P[1];
-    mtan[2]=Math.cos(r1+r3)*c+Math.sin(r1+r3)*P[2];
+    
+    double []mtan=new double[3];
+    mtan[0]=Math.cos(r0+r2)*vec0[0]+Math.sin(r0+r2)*P[0];
+    mtan[1]=Math.cos(r0+r2)*vec0[1]+Math.sin(r0+r2)*P[1];
+    mtan[2]=Math.cos(r0+r2)*vec0[2]+Math.sin(r0+r2)*P[2];
+    Complex z=new Complex(0.0);
     if(mtan[2]<=(1.0-S_TOLER)) {
     	z=new Complex(Math.atan2(mtan[1],mtan[0]),Math.acos(mtan[2]));
     }
-    return new CircleSimple(z,r3,1);
+    return new CircleSimple(z,r2,1);
   }
   
-  public static CircleSimple s_compcenter(Complex z1,Complex z2,
-	  		double r1,double r2,double r3) {
-	  	return s_compcenter(z1,z2,r1,r2,r3,1.0,1.0,1.0);
+  /** 
+   * Find center of third circle in ordered triple in tangency
+   * case. 
+   * @param z0 Complex, (theta, phi)
+   * @param z1 Complex
+   * @param r0 double
+   * @param r1 double
+   * @param r2 double
+   * @return CircleSimple
+  */ 
+  public static CircleSimple s_compcenter(Complex z0,Complex z1,
+	  		double r0,double r1,double r2) {
+	  	return s_compcenter(z0,z1,r0,r1,r2,1.0,1.0,1.0);
   }
   
   /**

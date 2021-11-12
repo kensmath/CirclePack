@@ -138,7 +138,8 @@ public class d_HypPacker extends RePacker {
     // abstract method for initiating packing computation
 	public int startRiffle() throws PackingException { 
 
-		if (status != LOADED) throw new PackingException();
+		if (status != LOADED) 
+			throw new PackingException();
 
 		maxBadCuts = 0;
 		minBadCuts = 0;
@@ -181,6 +182,10 @@ public class d_HypPacker extends RePacker {
 				else
 					r2 = del * del; // use lower limit
 				setTriRadius(v,1-r2); // store new label as x-radius
+
+				// TODO: is this right?
+				fbest=compTriCurv(v,1-r2);
+				
 				p.vData[v].curv = fbest; // store new anglesum
 				fbest -= faim;
 				accumErr2 += fbest * fbest; // accumulate error

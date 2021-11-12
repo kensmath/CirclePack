@@ -25,7 +25,7 @@ public class DualTri {
 	
 	public static double OKERR=.0000000001; 
 	public Complex []corners; // vertices
-	public Complex []TangPts;  // tangency points
+	public Complex []TangPts;  // incircle tangency points
 	int hes;
 
 	public DualTri(int hs,Complex z0,Complex z1,Complex z2) {
@@ -35,19 +35,19 @@ public class DualTri {
 		corners[1]=new Complex(z1);
 		corners[2]=new Complex(z2);
 		TangPts=new Complex[3]; // filled in other calls
-		setTangPts();
+		setInCirclePts();
 	}
 	
 	/**
-	 * Compute/store the tangency points based on 'corners' only;
-	 * intended for cases when radii are not available.
+	 * Compute/store the tangency points based on 'corners' 
+	 * only; intended for cases when radii are not available.
 	 * The hyperbolic case is somewhat complicated if one or 
 	 * more 'corners' is on the unit circle. Set 'TangPts' to 
 	 * null if situation is illegal.
 	 * In the sph case, can get the wrong distance between
 	 * 'corners'.
 	 */
-	public void setTangPts() {
+	public void setInCirclePts() {
 		double []len=new double[3];
 		double []r=new double[3];
 		double mindist;

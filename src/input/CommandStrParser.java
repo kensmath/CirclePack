@@ -66,7 +66,6 @@ import ftnTheory.FlipStrategy;
 import ftnTheory.GenModBranching;
 import ftnTheory.Graphene;
 import ftnTheory.HarmonicMap;
-import ftnTheory.HexPlaten;
 import ftnTheory.HypDensity;
 import ftnTheory.JammedPack;
 import ftnTheory.MeanMove;
@@ -86,7 +85,6 @@ import ftnTheory.WeldManager;
 import ftnTheory.WordWalker;
 import ftnTheory.iGame;
 import geometry.CircleSimple;
-import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.NSpole;
@@ -1691,16 +1689,6 @@ public class CommandStrParser {
 	    				  returnVal=1;
 	    			  }
 	    		  }
-			  }
-	    	  else if (str.equalsIgnoreCase("hp")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
-	    		  HexPlaten px=new HexPlaten(packData);
-	    		  if (px.running) {
-				   	  CirclePack.cpb.msg("Pack "+packData.packNum+
-				   			  ": started "+px.extensionAbbrev+" extender");
-			    	  px.StartUpMsg();
-			    	  returnVal=1;
-				  }
 			  }
 	    	  else if (str.equalsIgnoreCase("ft")) { // FlattenTri
 	    		  if (!packData.status || packData.nodeCount==0) return 0;
@@ -5737,6 +5725,9 @@ public class CommandStrParser {
 	  case 'D': // fall through
 	  case 'd':
 	  {
+		  
+/* TODO: have to redo this without a dual graph of the old style.
+ * 		  
 			// =============== dual_layout (replaced 'sch_layout')
 			if (cmd.startsWith("dual_lay")) {
 				if (packData.hes < 0) {
@@ -5790,17 +5781,15 @@ public class CommandStrParser {
 					first=true;
 				}
 
+				// TODO: how to signify this using hlink???
+				
 				// Do we need to place the first face? Only if
 				// we start with a "root".
-				EdgeSimple edge = hlink.remove(0);
-
-				if (edge.v == 0) { // root? yes, then have to place
-					graph.remove(0);
-					baseface = edge.w;
-				}
+				
+				HalfEdge edge = hlink.remove(0);
 
 				// yes, place base equilateral, zero out 'curv's
-				if (baseface > 0) {
+				if (edge==packData.packDCEL.alpha) {
 					
 					// zero out the curvatures
 					for (int v=1;v<=packData.nodeCount;v++)
@@ -5981,11 +5970,12 @@ public class CommandStrParser {
 				}
 				return count;
 			}
+*/
 
 			// ========= DCEL <stuff> ==========
 			
 			// TODO: this is experimental related to DCEL combinatorics
-			else if (cmd.startsWith("DCE")) {
+			if (cmd.startsWith("DCE")) {
 				
 				// have to pull off the dcel command and maintain the rest
 				if (flagSegs==null || flagSegs.size()==0) // nothing?
@@ -7950,7 +7940,7 @@ public class CommandStrParser {
 	    			  }
 	    			  Mobius mymob=null;
 	    			  try {
-	    				  mymob=Mobius.affine_mob(packData.getCenter(u),
+	    				  mymob=Mobius.mob_abAB(packData.getCenter(u),
 	    						  packData.getCenter(v),z1,z2);
 	    			  } catch (Exception ex) {
 	    				  throw new DataException("failed to create Mobius: "+

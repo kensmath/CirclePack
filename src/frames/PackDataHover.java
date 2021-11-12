@@ -382,7 +382,8 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 	 * @param useActiveVert, boolean: true, use packings active vert
 	 */
 	public void update_vert(PackData p,boolean useActive) {
-		if (p==null || !p.status) return;
+		if (p==null || !p.status) 
+			return;
 		int v=NodeLink.grab_one_vert(p,vertChoice.getText());
 		
 		// update for vertChoice, or use the pack active
@@ -412,16 +413,18 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 		
 		// bdry?
 		bdryCkBoxV.setSelected(false);
-		if (p.kData[v].bdryFlag>0) bdryCkBoxV.setSelected(true);
+		if (p.getBdryFlag(v)>0) 
+			bdryCkBoxV.setSelected(true);
 		
 		// degree
 		degreeField.setField(p.countFaces(v));
 		
 		// flower
-		StringBuilder flower=new StringBuilder();
-		for (int j=0;j<=p.kData[v].num;j++)
-			flower.append(Integer.toString(p.kData[v].flower[j])+" ");
-		flowerField.setText(flower.toString());
+		StringBuilder flowstr=new StringBuilder();
+		int[] flower=p.getFlower(v);
+		for (int j=0;j<flower.length;j++)
+			flowstr.append(Integer.toString(flower[j])+" ");
+		flowerField.setText(flowstr.toString());
 		
 		// color
 		// TODO: color_conversion task, need new GUI method
