@@ -1129,6 +1129,9 @@ public class CommandStrParser {
 				  else if (type.startsWith("tetra") || type.startsWith("Tetra")) {
 					  mode=13;
 				  }
+				  else if (type.startsWith("Kag")) {
+					  mode=14;
+				  }
 			  } catch (Exception ex) {
 				  throw new ParserException("usage: create "+type+" {n}");
 			  }
@@ -1321,6 +1324,11 @@ public class CommandStrParser {
 			  case 13: // regular tetrahedron on the sphere
 			  {
 				  newPack=DcelCreation.tetrahedron();
+				  break;
+			  }
+			  case 14: // Kagome lattice
+			  {
+				  newPack=DcelCreation.buildKagome(param);
 				  break;
 			  }
 			  } // end of switch
@@ -5118,7 +5126,6 @@ public class CommandStrParser {
 	      
 	      // =========== add_cir =========
 	      else if (cmd.startsWith("add_cir")) {
-	    	  int v;
 	    	  try {
 	    		  items=flagSegs.elementAt(0); // should be only one segment
 	    	  } catch(Exception ex) {
@@ -5618,7 +5625,8 @@ public class CommandStrParser {
 	    	  items=(Vector<String>)flagSegs.get(0);
 	    	  try {
 	    		  int qnum=Integer.parseInt((String)items.get(0));
-	    		  if (qnum==packData.packNum) return 1; // same packing
+	    		  if (qnum==packData.packNum) 
+	    			  return 1; // same packing
 	    		  PackData tmpPD=packData.copyPackTo();
 	    		  CirclePack.cpb.swapPackData(tmpPD,qnum,false);
 	    		  tmpPD.setName(packData.fileName);
@@ -6787,7 +6795,15 @@ public class CommandStrParser {
 	    				  "must provide vertices");
 	    		  return 0;
 	    	  }
-	    	  return packData.frackMe(verts);
+	    	  
+	    	  Iterator<Integer> vis=verts.iterator();
+	    	  while (vis.hasNext() && 
+	    			  RawDCEL.frackVert(packData.packDCEL,vis.next())>0) {
+	    		  count++;
+	    	  }
+	    	  if (count>0)
+	    		  packData.packDCEL.fixDCEL_raw(packData);
+	    	  return packData.nodeCount;
 	      }
 	      
 		  break;
@@ -7257,61 +7273,14 @@ public class CommandStrParser {
 	       */
 		  else if (cmd.startsWith("layout")) {
 			  PackDCEL pdc=packData.packDCEL;
-			  if (pdc!=null) {
 
-				  // most typical call
-		    	  if (flagSegs.size()==0) {
-		    		  pdc.layoutPacking();
-		    		  packData.fillcurves();
-		    		  return 1;
-		    	  }
-
-		    	  Iterator<Vector<String>> its=flagSegs.iterator();
-		    	  String str=null;
-		    	  boolean tflag=false;
-		    	  Face []newfaces=null;
-		    	  while (its.hasNext()) {
-		    		  items=(Vector<String>)its.next();
-		    		  str=(String)items.remove(0);
-		    		  switch(str.charAt(1)) {
-		    		  case 'a': // default aims
-		    		  {packData.set_aim_default();count++;break;}
-		    		  case 's': // recompute angle sums
-		    		  {packData.fillcurves();count++;break;}
-		    		  
-		    		  case 'K': // redo combinatorics only
-		    		  {
-		    			  pdc.redChain=null;
-		    			  pdc.fixDCEL_raw(packData);
-		    			  count++;
-		    			  break;
-		    		  }
-		    		  } // done with cases
-		    	  }
-		    	  return count;
-			  }
-			  
-			  // traditional
-	    	  double crit=LAYOUT_THRESHOLD;
-	    	  // Options for computing center of v:
-	    	  //   opt=1: use only one pair of contiguous neighbors, 
-	    	  //          typically specified in the data of face 
-	    	  //          used to plot v.
-	    	  //   opt=2: use all pairs of contiguous neighbors 
-	    	  //          already plotted, average the resulting 
-	    	  //          centers for v.
-	    	  int opt=2;             // default to use all plotted neighbors
-	    	  boolean errflag=false; // only use 'well-plotted' in layout
-	    	  boolean dflag=false;   // debugging help
-	    	  
-	    	  // most typical call
+			  // most typical call
 	    	  if (flagSegs.size()==0) {
-	    		  int ans=packData.packDCEL.layoutPacking();
+	    		  pdc.layoutPacking();
 	    		  packData.fillcurves();
-	    		  return ans;
+	    		  return 1;
 	    	  }
 
-	    	  // catch various flags (DCEL versions not yet ready for some
 	    	  Iterator<Vector<String>> its=flagSegs.iterator();
 	    	  String str=null;
 	    	  boolean tflag=false;
@@ -7321,59 +7290,35 @@ public class CommandStrParser {
 	    		  str=(String)items.remove(0);
 	    		  switch(str.charAt(1)) {
 	    		  case 'a': // default aims
-	    		  {packData.set_aim_default();count++;break;}
-	    		  case 's': // recompute angle sums
-	    		  {packData.fillcurves();count++;break;}
+	    		  {
+	    			  packData.set_aim_default();
+	    			  count++;
+	    			  break;
+	    		  }
 	    		  case 'c': // compute center:
 	    		  {
     				  pdc.layoutPacking();
 	    			  break;
 	    		  }
-	    		  case 'F': // redo combinatorics, reset aims/curv
-	    		  {
-    				  pdc.redChain=null;
-    				  pdc.fixDCEL_raw(packData);
-    				  pdc.layoutPacking();
-	    			  
-	    			  // TODO: some traditional pflag options 
-	    			  //    aren't implemented in DCEL version yet
-	    			  
-	    			  packData.fillcurves();
-	    			  packData.set_aim_default();
-	    			  return 1;
-	    		  }
-	    		  
-	    		  case 'r': // recompute centers along given facelist 
-	    		  {
-	    			  FaceLink facelist=new FaceLink(packData,items);
-	    			  if (facelist==null || facelist.size()==0) {
-	    				  CirclePack.cpb.myErrorMsg("layout -r: no "+
-	    						  "faces were provided.");
-	    				  break;
-	    			  }
-    				  count +=pdc.layoutFaceList(facelist);
-	    			  break;
-	    		  }
-
 	    		  case 'd': // 'd [v]' layout by drawing order, normalize, report
-	    			  	    // 'dt [v]' for torus only, tries to layout 2-side pairs, with
-	    			  		//  optional corner vertex 'v'.
+  			  	    // 'dt [v]' for torus only, tries to layout 2-side pairs, with
+  			  		//  optional corner vertex 'v'.
 	    		  {
 	    			  if (str.charAt(2)=='t') { // does nothing if not a torus
 	    				  if (packData.genus!=1 || packData.getBdryCompCount()!=0) {
 	    					  CirclePack.cpb.errMsg(
-    		    				"usage: 'layout -dt' only applies to "+
-    		    						"complex that is a torus.");
+	    							  "usage: 'layout -dt' only applies to "+
+	    							  "complex that is a torus.");
 	    					  break;
 	    				  }
-    		    				
+		    				
 	    				  // TODO: formerly, could specify common corner
 	    				  //       vertex for the layout
-//	    			  	  int v=0;
-//	    			      if (items.size()>0) {
-//		    				  str=(String)items.get(0);
-//		    				  v=NodeLink.grab_one_vert(packData, str);
-//	    				  }
+//  			  	      int v=0;
+//	  			      	  if (items.size()>0) {
+//	    				  	str=(String)items.get(0);
+//	    				  	v=NodeLink.grab_one_vert(packData, str);
+//  				  	  }
 
 	    				  if (CombDCEL.torus4Sides(pdc)==null) {
 	    					  pdc.fixDCEL_raw(packData);
@@ -7390,52 +7335,7 @@ public class CommandStrParser {
 	    				  count++;
 	    				  break;
 	    			  }
-	    		  }			
-	/*    		  case 'h': // drawing order via hex_walk routine
-	    		  {
-	    			  int v=0,w=0,n=1;
-	    			  try {
-	    				  v=Integer.parseInt((String)items.get(0));
-	    				  w=Integer.parseInt((String)items.get(1));
-	    				  n=Integer.parseInt((String)items.get(2));
-	    			  } catch (Exception ex) {
-	    				  throw new ParserException();
-	    			  }
-	    			  int []corners=new int[5];
-	    			  FaceLink hexwalklist=packData.try_hex_pg(v,w,n,corners);
-	    			  if (hexwalklist==null || hexwalklist.size()==0) {
-	    				  CirclePack.cpb.myErrorMsg("layout -h: error in finding this face list");
-	    				  break;
-	    			  }
-	    			  packData.poisonEdges=packData.outer_edges(hexwalklist);
-	    			  count +=packData.facedraworder(true);
-	    			  break;
-	    		  }
-	*/
-	    		  case 'T': // tailored (falls through to 't')
-	    		  {
-	    			  tflag=true;
-	    		  }
-	    		  case 't': // tailored
-	    		  {
-	    			  NodeLink markedV=new NodeLink(packData);
-	    			  HalfLink newOrder;
-	    			  for (int i=1;i<=packData.nodeCount;i++)
-	    				  if(packData.getVertMark(i)!=0)  
-	    					  markedV.add(i);
-	    			  if (markedV.size()==0) {
-	    				  CirclePack.cpb.myErrorMsg("layout -[tT]: no vertices "+
-	    			    		"have been marked?");
-	    			  }
-	    			  else if ((newOrder=CombDCEL.
-	    					  tailorFaceOrder(pdc,markedV,tflag))!=null) {
-	    				  pdc.layoutOrder=newOrder;
-	    				  pdc.layoutPacking();
-	    				  count++;
-    				  }
-	    			  packData.fillcurves();
-	    			  break;
-	    		  }
+	    		  }		
 	    		  case 'e': // use edgelist of poison edges.
 	    		  {
     		    	  NodeLink vlink=new NodeLink(packData,items);
@@ -7460,11 +7360,108 @@ public class CommandStrParser {
 	    	    	  packData.packDCEL.layoutPacking();	
 	    	    	  break;
 	    		  }
-	    		  } // end of switch
-	    	  } // end of while
+	    		  case 'F': // redo combinatorics, reset aims/curv
+	    		  {
+    				  pdc.redChain=null;
+    				  pdc.fixDCEL_raw(packData);
+    				  pdc.layoutPacking();
+	    			  
+	    			  // TODO: some traditional pflag options 
+	    			  //    aren't implemented in DCEL version yet
+	    			  
+	    			  packData.fillcurves();
+	    			  packData.set_aim_default();
+	    			  return 1;
+	    		  }
+	    			/*    		  case 'h': // drawing order via hex_walk routine
+	    		  {
+	    			  int v=0,w=0,n=1;
+	    			  try {
+	    				  v=Integer.parseInt((String)items.get(0));
+	    				  w=Integer.parseInt((String)items.get(1));
+	    				  n=Integer.parseInt((String)items.get(2));
+	    			  } catch (Exception ex) {
+	    				  throw new ParserException();
+	    			  }
+	    			  int []corners=new int[5];
+	    			  FaceLink hexwalklist=packData.try_hex_pg(v,w,n,corners);
+	    			  if (hexwalklist==null || hexwalklist.size()==0) {
+	    				  CirclePack.cpb.myErrorMsg("layout -h: error in finding this face list");
+	    				  break;
+	    			  }
+	    			  packData.poisonEdges=packData.outer_edges(hexwalklist);
+	    			  count +=packData.facedraworder(true);
+	    			  break;
+	    		  }
+	*/
+	    		  case 'K': // redo combinatorics only
+	    		  {
+	    			  pdc.redChain=null;
+	    			  pdc.fixDCEL_raw(packData);
+	    			  count++;
+	    			  break;
+	    		  }
+	    		  case 'r': // recompute centers along given facelist 
+	    		  {
+	    			  FaceLink facelist=new FaceLink(packData,items);
+	    			  if (facelist==null || facelist.size()==0) {
+	    				  CirclePack.cpb.myErrorMsg("layout -r: no "+
+	    						  "faces were provided.");
+	    				  break;
+	    			  }
+    				  count +=pdc.layoutFaceList(facelist);
+	    			  break;
+	    		  }
+	    		  case 's': // recompute angle sums
+	    		  {
+	    			  packData.fillcurves();
+	    			  count++;
+	    			  break;
+	    		  }
+	    		  case 'T': // tailored (falls through to 't')
+	    		  {
+	    			  tflag=true;
+	    		  }
+	    		  case 't': // tailored
+	    		  {
+	    			  NodeLink markedV=new NodeLink(packData);
+	    			  HalfLink newOrder;
+	    			  for (int i=1;i<=packData.nodeCount;i++)
+	    				  if(packData.getVertMark(i)!=0)  
+	    					  markedV.add(i);
+	    			  if (markedV.size()==0) {
+	    				  CirclePack.cpb.myErrorMsg("layout -[tT]: no vertices "+
+	    			    		"have been marked?");
+	    			  }
+	    			  else if ((newOrder=CombDCEL.
+	    					  tailorFaceOrder(pdc,markedV,tflag))!=null) {
+	    				  pdc.layoutOrder=newOrder;
+	    				  pdc.layoutPacking();
+	    				  count++;
+    				  }
+	    			  packData.fillcurves();
+	    			  break;
+	    		  }
+
+
+	    		  } // done with cases
+	    	  }  // end of while
 	    	  return count;
-	      }		  
-		   break;
+	    	  
+			  // traditional
+//	    	  double crit=LAYOUT_THRESHOLD;
+	    	  // Options for computing center of v:
+	    	  //   opt=1: use only one pair of contiguous neighbors, 
+	    	  //          typically specified in the data of face 
+	    	  //          used to plot v.
+	    	  //   opt=2: use all pairs of contiguous neighbors 
+	    	  //          already plotted, average the resulting 
+	    	  //          centers for v.
+//	    	  int opt=2;             // default to use all plotted neighbors
+//	    	  boolean errflag=false; // only use 'well-plotted' in layout
+//	    	  boolean dflag=false;   // debugging help
+
+		  }
 	  } // end of 'l'
 	  case 'm': // fall through
 	  case 'M':
@@ -10979,16 +10976,17 @@ public class CommandStrParser {
 	          items=(Vector<String>)flagSegs.get(0);
 	          if (items.size()<2)
 	        	  throw new ParserException("usage: zip n v");
+
+	          // get n
+	          try {
+	        	  n=Integer.parseInt((String)items.remove(0));
+	          } catch(Exception ex) {n=-1;}  // default: do whole bdry comp
 	          
 	          // vertex index (one only) comes first
 	          int v=NodeLink.grab_one_vert(packData,items.remove(0));
         	  if (!packData.isBdry(v)) {
         		  throw new ParserException("'zip' usage: n v, 'v' must be boundary");
         	  }
-	          
-	          try {
-	        	  n=Integer.parseInt((String)items.remove(0));
-	          } catch(Exception ex) {n=-1;}  // default: do whole bdry comp
 	          
         	  int b=packData.bdry_comp_count(v);
         	  int m=b/2;

@@ -10,8 +10,9 @@ import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.ParserException;
 import input.CommandStrParser;
-import listManip.NodeLink;
 import packing.PackData;
+import tiling.Tile;
+import tiling.TileData;
 
 /**
  * Move things from 'PackCreation' as they are converted
@@ -186,11 +187,9 @@ public class DcelCreation {
 		if (n<3)
 			throw new ParserException("'seed' usage: n must be at least 3");
 		PackDCEL pdcel=CombDCEL.seed_raw(n);
-		CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha,false);
-		CombDCEL.d_FillInside(pdcel);
 		pdcel.gamma=pdcel.alpha.twin;
 		PackData p=new PackData(null);
-		p.attachDCEL(pdcel);
+		pdcel.fixDCEL_raw(p);
 		p.activeNode=pdcel.alpha.origin.vertIndx;
 		p.set_aim_default();
 		
@@ -205,6 +204,161 @@ public class DcelCreation {
 		p.setName("Seed "+n);
 	
 		return p;
+	}
+	
+	/**
+	 * This builds several generations of packing for the famous Kagome lattice,
+	 * popular in theoretical physics and material science. For us, this is a
+	 * tiling, a pattern of hexagons and triangles. We build the tile data by hand
+	 * and then get the packing.
+	 * 
+	 * To index vertices forming the tiles, we use the regular hex grid, e.g.,
+	 * identified with span of independent vectors u=<1/2,-sqrt(3)/2> and
+	 * w=<1/2,sqrt(3)/2>, so <i,j> is interpreted as i*u+j*w. We start with a
+	 * fundamental domain consisting of a hex tile and two attached triangle tiles
+	 * which fill the "square" with corners (-1,-1), (1,-1), (1,1), (-1,1) We can
+	 * then shift it by (2i,2j) for i=0,1,...,n and j=0,1,....,n to fill out a large
+	 * "square" in u,v.
+	 * 
+	 * @param n int
+	 * @return PackData, null on error
+	 */
+	public static PackData buildKagome(int n) {
+		// prepare 'TileData', mode 1
+		int numtiles = (2 * n + 1) * (2 * n + 1) * 3;
+		int mode = 1;
+		TileData tileData = new TileData((PackData) null, numtiles, mode);
+
+		// first task: set vertex indices for all locations
+		// in a (4n+2)x(4n+2) array that will be used.
+		// This is basically a square in the Gaussian
+		// lattice, but we don't use (i,j) if i and j are
+		// both even.
+		int[][] indices = new int[3 + 4 * n][3 + 4 * n];
+		int offset = 2 * n + 1; // origin at (2n+1,2n+1)
+		int tick = 0;
+
+		// do first generation
+		int J = -1 + offset; // bottom edge
+		for (int i = -1; i <= 1; i++)
+			indices[i + offset][J] = ++tick;
+		int I = 1 + offset; // right edge
+		indices[I][1] = ++tick;
+		J = 1 + offset; // top edge
+		for (int i = 1; i >= -1; i--)
+			indices[i + offset][J] = ++tick;
+		I = -1 + offset; // left edge
+		indices[I][1] = ++tick;
+
+		// iterate: 2n further generations of paths about
+		// the origin, each forming a cclw "square"
+		for (int g = 1; g <= n; g++) {
+
+			// next generation, omit when i, j both even
+			J = -2 * g + offset;
+			for (int i = 1; i < 2 * g; i = i + 2)
+				indices[-2 * g + i + offset][J] = ++tick;
+			I = 2 * g + offset;
+			for (int j = 1; j < 2 * g; j = j + 2)
+				indices[I][-2 * g + j + offset] = ++tick;
+			J = 2 * g + offset;
+			for (int i = 1; i < 2 * g; i = i + 2)
+				indices[2 * g - i + offset][J] = ++tick;
+			I = -2 * g + offset;
+			for (int j = 1; j < 2 * g; j = j + 2)
+				indices[I][2 * g - j + offset] = ++tick;
+
+			// next generation, take all vertices
+			J = -2 * g - 1 + offset;
+			for (int i = 0; i <= 4 * g + 1; i++)
+				indices[-2 * g - 1 + i + offset][J] = ++tick;
+			I = 2 * g - 1 + offset;
+			for (int j = 1; j < 4 * g + 1; j++)
+				indices[I][-2 * g - 1 + j + offset] = ++tick;
+			J = 2 * g + 1 + offset;
+			for (int i = 0; i <= 4 * g + 1; i++)
+				indices[2 * g + 1 - i + offset][J] = ++tick;
+			I = -2 * g - 1 + offset;
+			for (int j = 1; j < 4 * g + 1; j++)
+				indices[I][2 * g - 1 - j + offset] = ++tick;
+		}
+
+		// build 3 prototype tiles: a hex and two opposite
+		// triangles form a combinatorial square, which
+		// we replicate in an (2n+1)x(2n+1) pattern.
+		int[][] hextile = new int[6][2];
+		hextile[0][0] = -1;
+		hextile[0][1] = -1;
+		hextile[1][0] = 0;
+		hextile[1][1] = -1;
+		hextile[2][0] = 1;
+		hextile[2][1] = 0;
+		hextile[3][0] = 1;
+		hextile[3][1] = 1;
+		hextile[4][0] = 0;
+		hextile[4][1] = 1;
+		hextile[5][0] = -1;
+		hextile[5][1] = 0;
+
+		int[][] lowtri = new int[3][2];
+		lowtri[0][0] = 0;
+		lowtri[0][1] = -1;
+		lowtri[1][0] = 1;
+		lowtri[1][1] = -1;
+		lowtri[2][0] = 1;
+		lowtri[2][1] = 0;
+
+		int[][] uptri = new int[3][2];
+		uptri[0][0] = 0;
+		uptri[0][1] = 1;
+		uptri[1][0] = -1;
+		uptri[1][1] = 1;
+		uptri[2][0] = -1;
+		uptri[2][1] = 0;
+
+		// Create shifted copies of the fundamental
+		// tiles, iterating over their center locations
+		int count = 0;
+		int vtick = 0;
+		for (int a = -2 * n; a <= 2 * n; a++)
+			for (int b = -2 * n; b <= 2 * n; b++) {
+				I = a + offset;
+				J = b + offset;
+
+				// hexagon tile first, type=4
+				tileData.myTiles[++count] = new Tile(null, tileData, 6);
+				tileData.myTiles[count].tileType=4;
+				tileData.myTiles[count].tileIndex = count;
+				for (int k = 0; k < 6; k++) {
+					int v = indices[I + hextile[k][0]][J + hextile[k][1]];
+					vtick = (v > vtick) ? v : vtick;
+					tileData.myTiles[count].vert[k] = v;
+				}
+
+				// lower triangle, type=5
+				tileData.myTiles[++count] = new Tile(null, tileData, 3);
+				tileData.myTiles[count].tileType=5;
+				tileData.myTiles[count].tileIndex = count;
+				for (int k = 0; k < 3; k++) {
+					int v = indices[I + lowtri[k][0]][J + lowtri[k][1]];
+					vtick = (v > vtick) ? v : vtick;
+					tileData.myTiles[count].vert[k] = v;
+				}
+
+				// upper triangle, type=5
+				tileData.myTiles[++count] = new Tile(null, tileData, 3);
+				tileData.myTiles[count].tileType=5;
+				tileData.myTiles[count].tileIndex = count;
+				for (int k = 0; k < 3; k++) {
+					int v = indices[I + uptri[k][0]][J + uptri[k][1]];
+					vtick = (v > vtick) ? v : vtick;
+					tileData.myTiles[count].vert[k] = v;
+				}
+			} // done with double for loops
+
+		tileData.tileCount = count;
+		PackData newPack = TileData.tiles2packing(tileData);
+		return newPack;
 	}
 
 	/**

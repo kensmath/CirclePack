@@ -470,8 +470,8 @@ center from the origin (when |z| is non-zero).
 
 <command cmd="cleanse">
 <description>This empties a packing, clears its canvas, resets
-various options for display and screen control. Caution, there
-is no verification and all packing data is lost.
+    various options for display and screen control. Caution, there
+	is no verification and all packing data is lost.
 </description>
 <seealso>
 <see>Cleanse</see>
@@ -624,11 +624,10 @@ does not eliminate redundancies, as other counts do.)
 <command cmd="create" flags="{type} [options]">
 <description>This command allows you to create various types of
     packings from scratch. Generally, parameters are specified,
-    e.g., the number of construction steps for an iterative 
-    construction like "sq_grid", or the number of petals for 
-    "seed", or the number of generations, as with "hex"
-    or "tri_group". Depending on the type, there may be special 
-    numbering or marking of vertices and/or edges.
+    e.g., the number of petals for "seed", or the number of 
+    generations, as with "hex" or "tri_group". Depending on 
+    the type, there may be special numbering or marking of 
+    vertices and/or edges.
     
     The "hex_torus" construction builds a regular parallelogram-like
     hex torus with given w/h for width/height.
@@ -638,6 +637,9 @@ does not eliminate redundancies, as other counts do.)
 	integers, and if one is a half integer, then the other two must be 
 	equal to make combinatoric sense. The geometry for the packing is 
 	chosen based on the angles. 
+	
+	The "Kagome" construction builds the packing for a tiling in
+	the famous Kagome latttice pattern.
 	
 	The Fibonacci tilings are "fusion" type of Frank and Sadun.
 	Parameters W H X determine combinatorial edge lengths, 
@@ -655,6 +657,8 @@ does not eliminate redundancies, as other counts do.)
 	<instance text="create sq_grid 4"> 'square grid' pattern from 4 quadruplings of a 4-flower</instance>
 	<instance text="create tri_group 8 2 3 5"> 8 generations of the (2 3 5) triangle group on
 	the sphere.</instance>
+	<instance text="create Kag 4"> 4 layers of Kagome lattice about a central hexagon
+	</instance>
 	<instance text="create pent 5"> 5 generations of regular pentagonal tiling</instance>
 	<instance text="create pent3 3"> 3 generations of pent tiling centered on triple point</instance>
 	<instance text="create pent4 3"> 3 generations of pent tiling centered on quad point</instance>
@@ -698,25 +702,25 @@ default temporary directory (see 'Messages'), others print something.
 
 <command cmd="delaunay" flags="-[cfgs]">
 <description>Create the "Delaunay triangulation" for a set
-of points and store the resulting complex in the current packing. 
-The points may come from the active packing centers or from a file
-(see mutually exclusive options). 
+    of points and store the resulting complex in the current packing. 
+    The points may come from the active packing centers or from a file
+    (see mutually exclusive options). 
 
-If the points are read from a file, an attempt is made to read some
-standard formats giving 2D or 3D points. A euclidean 
-or spherical packing is generated with a C library call to 'qconvex' 
-(one of the "QHull" programs) or to Shewchuk's 'triangle' code, respectively. 
+    If the points are read from a file, an attempt is made to read some
+    standard formats giving 2D or 3D points. A euclidean 
+    or spherical packing is generated with a C library call to 'qconvex' 
+    (one of the "QHull" programs) or to Shewchuk's 'triangle' code, respectively. 
 
-There is one special case: if the file of points begins with keyword
-"UNIT_SQUARE:", then its points (x,y) lie in [0,1]x[0,1]. If the user
-chooses spherical geometry via the "-g s" flag, then these points are
-interpreted as being on the sphere: namely, (x,y) converts to the point
-(theta, phi) where theta=2pi*x and phi=arccos(2*(y-.5)). This is a
-convenience for generating random points on the sphere, for if (x,y) 
-are, say, Poisson random in the unit square, then (theta,phi) are Poisson
-random on the sphere. 
+    There is one special case: if the file of points begins with keyword
+    "UNIT_SQUARE:", then its points (x,y) lie in [0,1]x[0,1]. If the user
+    chooses spherical geometry via the "-g s" flag, then these points are
+    interpreted as being on the sphere: namely, (x,y) converts to the point
+    (theta, phi) where theta=2pi*x and phi=arccos(2*(y-.5)). This is a
+    convenience for generating random points on the sphere, for if (x,y) 
+    are, say, Poisson random in the unit square, then (theta,phi) are Poisson
+    random on the sphere. 
 
-CAUTION: This call will not work if the C++ library is not operational.
+    CAUTION: This call will not work if the C++ library is not operational.
 </description>	
 <options>
 	<opt flag="-c"> use the centers of the active packing</opt>
@@ -774,6 +778,8 @@ CAUTION: This call will not work if the C++ library is not operational.
 	<opt flag="-e {v w..}"> edges </opt>
 	<opt flag="-ec{n} {e..}"> colored edges with color code 'n'</opt>
     <opt flag="-a {f..}"> sector arcs (eucl); based on edgelength</opt>
+    <opt flag="-h {v..}"> hull, meaning convex hull of tangency 
+points with nghbs</opt>
 	<opt flag="-nc {v..}"> label circles</opt>
 	<opt flag="-nf {f..}"> label faces</opt>
 	<opt flag="-B"> all faces and circles, recomp'd by drawing order</opt>
@@ -792,16 +798,17 @@ CAUTION: This call will not work if the C++ library is not operational.
 	<opt flag="-r"> reset screen parameters to defaults </opt>
 	<opt flag="-x (-xu)"> turn display of axes on (resp. off)</opt>
 	<opt flag="-u"> draw unit circle</opt>
-	<opt flag="-y {f..}"> display circumcircles of given faces (useful for Delaunay triangulations)</opt>
+	<opt flag="-y {f..}"> display circumcircles of given faces 
+	(useful for Delaunay triangulations)</opt>
 </options>
 
 <options heading="Dual Object Options">
 	<opt flag="-dc"> dual circles (associated with packing interstices)</opt>
 	<opt flag="-de"> dual edges</opt>
 	<opt flag="-df"> dual faces</opt>
+	<opt flag="-dh"> dual face hull (polygon of tangency point)</opt>
 	<opt flag="-dg"> dual edges given, else those in pack's 'dualGraph'</opt>
 	<opt flag="-dp"> dual circle tangency points</opt>
-	<opt flag="-dw"> dual wedges (triangles formed by tangency points)</opt>
 	<opt flag="-dt"> trinkets at dual centers</opt>
 	<opt flag="-D?"> (layout as needed, e.g. multiply connected cases)</opt>
 </options>
@@ -1339,11 +1346,13 @@ circles from 1 to 39.</instance>
 
 <command cmd="frack" flags="{v..}">
 <description>This is a local refinement method for combinatorics.
-A list of vertices must be provided. A barycenter is added to each
-face neighboring one of these vertices, then the new barycenter 
-vertices about any of the given vertices v are connected to form a 
-flower around v, while the former edges from v are remove. The user
-will typically repack, layout, and display.
+    A list of vertices must be provided. A barycenter is added to each
+	face neighboring one of these vertices, then the new barycenter 
+	vertices about any of the given vertices v are connected to form a 
+	flower around v, while any former edges from v are remove. 
+	Caution: adjustment for neighboring vertices in the list will
+	interfer with one another, and results are difficult to predict.
+	The user will typically repack, layout, and display.
 </description>
 <seealso>
 <see>hex_refine</see>
@@ -2026,7 +2035,7 @@ these packings and the corresponding object is displayed in both.
 
 <command cmd="meld_edge" flags="{v w ..}">
 <description>This call will remove the specified edges by melding
-	their vertices. Edge order is important: given edge <v,w>, 
+	their vertices. Edge order is important: given edge (v,w), 
 	the vertices are combined to a single vertex, with w being
 	orphaned. Applied carefully, this command can undo some 
 	other commands that add edges.
@@ -2428,14 +2437,14 @@ of the active packing on the canvas for packing p2</instance>
 
 <command cmd="pave" flags="{v}">
 <description>In working with 'tilings' in CirclePack it is often the
-case that the 'tiles' (combinatorial polygons) are the
-flowers of selected vertices, i.e. their 'barycenters'. This command
-seeds a tiling with a given vertex 'v' (defaulting to the active vertex
-or to 'alpha') as the
-barycenter of the initial tile, then defines the rest of the tiling
-by accretion of neighboring flowers as additional tiles. The results
-are stored in the packing's 'TileData', used for example, to display
-tiles. 
+    case that the 'tiles' (combinatorial polygons) are the
+    flowers of selected vertices, i.e. their 'barycenters'. This command
+    seeds a tiling with a given vertex 'v' (defaulting to the active vertex
+    or to 'alpha') as the
+    barycenter of the initial tile, then defines the rest of the tiling
+    by accretion of neighboring flowers as additional tiles. The results
+    are stored in the packing's 'TileData', used for example, to display
+    tiles. 
 
 Note that the process can be foiled by combinatorics, but works well 
 when the combinatorics were intended as the basis of a tiling, as 
@@ -4959,17 +4968,17 @@ faces. Puts out face centers and pairs of indices forming edges</opt>
 
 <command cmd="write_tiling" flags="-s">
 <description>
-Write a "tiling" ('TileData' subclass of 'PackData' class) to a file
-or to the script ('-s' option).
+    Write a "tiling" ('TileData' subclass of 'PackData' class) to a file
+	or to the script ('-s' option).
 
-A "tiling" is a combinatorial, locally planar pattern of tiles, where
-each tile is an n-gon for some n (at least 3) and is defined by the
-counterclockwise ordered closed list of its corner vertices. (Each tile
-also has a 'type' reserved for future use.) See 'Help --> Formats' 
-tab for the tiling file format. Note that when a tiling is read in, 
-a barycentric subdivision is automatically generated, yielding a 
-standard packing complex: the vertices associated with the barycenters
-of the tiles are the larger indices.
+	A "tiling" is a combinatorial, locally planar pattern of tiles, where
+	each tile is an n-gon for some n (at least 3) and is defined by the
+	counterclockwise ordered closed list of its corner vertices. (Each tile
+	also has a 'type' reserved for future use.) See 'Help --> Formats' 
+	tab for the tiling file format. Note that when a tiling is read in, 
+	a barycentric subdivision is automatically generated, yielding a 
+	standard packing complex: the vertices associated with the barycenters
+	of the tiles are the larger indices.
 </description>
 <options>
 <opt flag="-s"> save as file in the current script</opt>
@@ -5182,4 +5191,5 @@ xy-coords of the mouse, then executes the 'flip' command for the resulting edge.
 
 </CPdocs>
 </body>
+
 

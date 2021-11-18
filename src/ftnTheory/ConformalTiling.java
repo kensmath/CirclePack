@@ -3032,9 +3032,12 @@ public class ConformalTiling extends PackExtender {
 		super.initCmdStruct();
 		cmdStruct.add(new CmdStruct("set_mode","[mode]",null,"Mode 1 = simple (this can fail); 2 = with edge barycenters;"
 				+ "3 = barycentrically subdivided (default)"));
-		cmdStruct.add(new CmdStruct("set_type","{x} -t {t..}",null,"Set tile type to {x} for listed tiles"));
-		cmdStruct.add(new CmdStruct("set_TD","[d]",null,"Attaching tiling data to active pack; if 'canonicalPack' "+
-				"has a TileData subdivision tree, then this loads the tiling at depth 'd', "
+		cmdStruct.add(new CmdStruct("set_type","{x} -t {t..}",null,
+				"Set tile type to {x} for listed tiles"));
+		cmdStruct.add(new CmdStruct("set_TD","[d]",null,
+				"Attaching tiling data to active pack; if "+
+				"'canonicalPack' has a TileData subdivision tree, "+
+				"then this loads the tiling at depth 'd', "
 				+"defaulting to maximum depth"));
 		cmdStruct.add(new CmdStruct("disp","-[[g]TDQ m] {j..} -[E -m{x}] {t..}",null,
 				"display specified tiles: T = tiles, D = dual tiles, Q = quad tiles, "+

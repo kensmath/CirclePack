@@ -1577,7 +1577,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	public static HalfLink nextLink(PackDCEL pdcel,HalfEdge edge) {
 		HalfLink hlink=new HalfLink();
 		HalfEdge he=edge;
-		int safety=(int)(pdcel.vertCount/2);
+		int safety=100;
 		do {
 			safety--;
 			hlink.add(he);

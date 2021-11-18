@@ -532,7 +532,7 @@ public class PackCreation {
 		ans[2] = dead;
 		return ans;
 	} 
-		
+	
 	/** 
 	 * Construct hex packings of annuli. Parameters in data string 
 	 * are p, q, steps forming the fundamental loop for this Doyle
@@ -1171,15 +1171,13 @@ public class PackCreation {
 		//     hence from 3 to 1 is 2*e. Long leg is always twice the end leg
 		
 		PackData growWheel = DcelCreation.seed(3*e+h, 0);
-		growWheel.swap_nodes(3*e+h+1, 1);
-		growWheel.alpha=3*e+h+1;
-		growWheel.complex_count(false);
+		PackDCEL pdcel=growWheel.packDCEL;
+		pdcel.swapNodes(3*e+h+1, 1);
+		pdcel.setAlpha(3*e+h+1, null,false);
 		growWheel.vlist=new NodeLink();
 		growWheel.vlist.add(3*e+h+1); // list center verts of tiles added
-		growWheel.swap_nodes(1+e,2);
-//		growWheel.complex_count(false);
-		growWheel.swap_nodes(1+e+h,3);
-		growWheel.complex_count(false);
+		pdcel.swapNodes(1+e,2);
+		pdcel.swapNodes(1+e+h,3);
 		growWheel.elist=new EdgeLink(growWheel,"b");
 		
 		// mark the boundary
@@ -1209,22 +1207,21 @@ public class PackCreation {
 			PackData tempPack=growWheel.copyPackTo();
 			PackData tempReverse=growWheel.copyPackTo();
 			tempReverse.reverse_orient();
-			tempReverse.complex_count(true);
 			
 			tempPack.vlist=growWheel.vlist.makeCopy();
 			tempReverse.vlist=growWheel.vlist.makeCopy();
 			
 			tempPack.elist=new EdgeLink(tempPack,"b");
 			tempReverse.elist=new EdgeLink(tempReverse,"b");
-
 						
 			// A serves as the base:
 			// adjoin B^ to A along end 
 			//        2 on A to 2 on B^, endcount edges
 			//        don't need to mark any vertices
-			PackData.adjoin(growWheel,tempReverse,2,2,endcount);
-			updateLists(growWheel,tempReverse.vlist,tempReverse.elist,growWheel.vertexMap);
-			growWheel.complex_count(false);
+			pdcel=CombDCEL.d_adjoin(pdcel,tempReverse.packDCEL,2,2,endcount);
+			growWheel.vertexMap=pdcel.oldNew;
+			updateLists(growWheel,tempReverse.vlist,tempReverse.elist,
+					growWheel.vertexMap);
 			
 			// transfer all the marks as each piece is adjoined
 			Iterator<EdgeSimple> vM=growWheel.vertexMap.iterator();
@@ -1233,7 +1230,8 @@ public class PackCreation {
 				growWheel.setVertMark(edge.w,tempReverse.getVertMark(edge.v));
 			}
 			
-			// this new part is the rotated core, mark its center vert with -2 (first pass only)
+			// this new part is the rotated core;
+			//    first pass only, mark its center vert with -2
 			if (generation==1) 
 				growWheel.setVertMark(growWheel.vertexMap.findW(tempReverse.nodeCount),-2);
 
@@ -1252,10 +1250,10 @@ public class PackCreation {
 			//		  2 on A+B^ to 3 on C^, hypcount edges
 			//        don't need to mark any vertices
 			//        identify 'alpha' of 'growWheel' as alpha of C
-			PackData.adjoin(growWheel,tempReverse,2,3,hypcount);
+			pdcel=CombDCEL.d_adjoin(pdcel,tempReverse.packDCEL,2,3,hypcount);
+			growWheel.vertexMap=pdcel.oldNew;
 			updateLists(growWheel,tempReverse.vlist,tempReverse.elist,growWheel.vertexMap);
-			growWheel.alpha=growWheel.vertexMap.findW(tempReverse.alpha);
-			growWheel.complex_count(false);
+			pdcel.setAlpha(growWheel.vertexMap.findW(tempReverse.alpha),null,false);
 			vM=growWheel.vertexMap.iterator();
 			while (vM.hasNext()) {
 				EdgeSimple edge=vM.next();
@@ -1270,10 +1268,10 @@ public class PackCreation {
 			// adjoin D to C^ along long 
 			//        2 on A+B^+C^ to 3 on D, longcount edges
 			//        X keeps track of old 2.
-			PackData.adjoin(growWheel,tempPack,2,3,longcount);
+			pdcel = CombDCEL.d_adjoin(pdcel,tempPack.packDCEL,2,3,longcount);
+			growWheel.vertexMap=pdcel.oldNew;
 			updateLists(growWheel,tempPack.vlist,tempPack.elist,growWheel.vertexMap);
 			int X=growWheel.vertexMap.findW(2);
-			growWheel.complex_count(false);
 			vM=growWheel.vertexMap.iterator();
 			while (vM.hasNext()) {
 				EdgeSimple edge=vM.next();
@@ -1283,11 +1281,10 @@ public class PackCreation {
 			// adjoin E ends of C^ and D, endcount each
 			//        X on A+B^+C^+D to 3 on E
 			//        Y keeps track of old 2.
-			PackData.adjoin(growWheel,tempPack,X,3,longcount);
-			growWheel.complex_count(false);
+			pdcel=CombDCEL.d_adjoin(pdcel,tempPack.packDCEL,X,3,longcount);
+			growWheel.vertexMap=pdcel.oldNew;
 			updateLists(growWheel,tempPack.vlist,tempPack.elist,growWheel.vertexMap);
 			int Y=growWheel.vertexMap.findW(2);
-			growWheel.complex_count(false);
 			vM=growWheel.vertexMap.iterator();
 			while (vM.hasNext()) {
 				EdgeSimple edge=vM.next();
@@ -1296,8 +1293,8 @@ public class PackCreation {
 			
 			
 			// renumber: X --> 1, Y --> 2
-			growWheel.swap_nodes(X,1);
-			growWheel.swap_nodes(Y,2);
+			pdcel.swapNodes(X,1);
+			pdcel.swapNodes(Y,2);
 			
 			// side lengths follow recursion formula
 			int holdhyp=hypcount;
@@ -1305,10 +1302,6 @@ public class PackCreation {
 			endcount=holdhyp;
 			longcount=2*endcount;
 			
-			// new generation is reverse oriented
-			growWheel.reverse_orient();
-			growWheel.complex_count(false);
-
 			// increment marks on boundary
 			for (int vi=1;vi<=growWheel.nodeCount;vi++)
 				if (growWheel.isBdry(vi)) {
@@ -1316,11 +1309,13 @@ public class PackCreation {
 					growWheel.setVertMark(vi,om+1);
 				}
 			
+			// new generation is reverse oriented
+			growWheel.reverse_orient();
+			pdcel.fixDCEL_raw(growWheel);
+
 			generation++;
 
 		} // end of while
-		
-		growWheel.facedraworder(false);
 		
 		// set the aims to make it a right triangle
 		growWheel.set_aim_default();
@@ -1389,10 +1384,6 @@ public class PackCreation {
 		PackData fusionB = DcelCreation.seed(2*W+2*X,0); // B is W x X
 		PackData fusionC = DcelCreation.seed(2*H+2*X,0); // C is X x H
 		PackData fusionD = DcelCreation.seed(4*X,0);     // D is X x X
-		fusionA.complex_count(false);
-		fusionB.complex_count(false);
-		fusionC.complex_count(false);
-		fusionD.complex_count(false);
 
 		// keep track of tiles by marking barycenter vertex
 		fusionA.setVertMark(1,1);
@@ -1580,21 +1571,19 @@ public class PackCreation {
 			return false;
 		
 		int swp=blist.get(0);
-		p.swap_nodes(swp,1);
+		p.packDCEL.swapNodes(swp,1);
 		blist=blist.swapVW(swp, 1);
 		
 		swp=blist.get(h);
-		p.swap_nodes(swp,2);
+		p.packDCEL.swapNodes(swp,2);
 		blist=blist.swapVW(swp, 2);
 		
 		swp=blist.get(h+w);
-		p.swap_nodes(swp,3);
+		p.packDCEL.swapNodes(swp,3);
 		blist=blist.swapVW(swp, 3);
 		
 		swp=blist.get(h+w+h);
-		p.swap_nodes(swp,4);
-
-		p.complex_count(false);
+		p.packDCEL.swapNodes(swp,4);
 		
 		return true;
 	}
@@ -1679,9 +1668,10 @@ public class PackCreation {
 
 	public static PackData pentHypTiling(int N) {
 		PackData pentBase=DcelCreation.seed(5,0);
-		pentBase.swap_nodes(1,6);
+		pentBase.packDCEL.swapNodes(1,6);
 		
 		PackData heap=pentBase.copyPackTo();
+		PackDCEL pdcel=heap.packDCEL;
 		
 		int generation=0;
 		
@@ -1689,21 +1679,21 @@ public class PackCreation {
 			
 			// expand 
 			heap=doublePent(heap,generation);
+			pdcel=heap.packDCEL;
 			//	DebugHelp.debugPackWrite(heap,"doubleheap.p");
 			
-			PackData.adjoin(heap,pentBase,4,5,2);
-			
+			pdcel=CombDCEL.d_adjoin(pdcel,pentBase.packDCEL,4,5,2);
+			heap.vertexMap=pdcel.oldNew;
 			int new4=heap.vertexMap.findW(4);
 			int new3=heap.vertexMap.findW(3);
-			heap.swap_nodes(new3,3);
-			heap.swap_nodes(new4,4);
-			heap.complex_count(false);
+			pdcel.swapNodes(new3,3);
+			pdcel.swapNodes(new4,4);
+			pdcel.fixDCEL_raw(heap);
 			generation++;
 		}
 		
-		heap.alpha=6;
-		heap.gamma=1;
-		heap.setCombinatorics();
+		pdcel.setAlpha(6, null,false);
+		pdcel.setGamma(1);
 		heap.set_aim_default();
 		for (int v=1;v<=heap.nodeCount;v++) {
 			heap.setRadius(v,0.1);
@@ -1957,42 +1947,46 @@ public class PackCreation {
 	 */
 	public static PackData adjoin5(PackData p,int sidelength) {
 		PackData base=p.copyPackTo();
+		PackDCEL pdcel=base.packDCEL;
 		PackData temp=p.copyPackTo();
-		base.complex_count(false);
-		temp.complex_count(false);
 		
 		// adjoin 2
-		PackData.adjoin(base,temp,3,5,sidelength);
+		pdcel=CombDCEL.d_adjoin(pdcel,temp.packDCEL,3,5,sidelength);
+		base.vertexMap=pdcel.oldNew;
 		int newv=base.vertexMap.findW(2);
-		base.swap_nodes(newv,2);
+		pdcel.swapNodes(newv,2);
 		base.setBdryFlags();
 		
 		// adjoin 3
-		PackData.adjoin(base,temp,4,1,2*sidelength);
+		pdcel=CombDCEL.d_adjoin(pdcel,temp.packDCEL,4,1,2*sidelength);
+		base.vertexMap=pdcel.oldNew;
 		newv=base.vertexMap.findW(6);
-		base.swap_nodes(newv,6); // new center
+		pdcel.swapNodes(newv,6); // new center
 		newv=base.vertexMap.findW(4);
-		base.swap_nodes(newv,7); // temp for later use
+		pdcel.swapNodes(newv,7); // temp for later use
 		base.setBdryFlags();
 
 		// adjoin 4
-		PackData.adjoin(base,temp,5,1,2*sidelength);
+		pdcel=CombDCEL.d_adjoin(pdcel,temp.packDCEL,5,1,2*sidelength);
+		base.vertexMap=pdcel.oldNew;
 		newv=base.vertexMap.findW(5);
-		base.swap_nodes(newv,5);
+		pdcel.swapNodes(newv,5);
 		newv=base.vertexMap.findW(4);
-		base.swap_nodes(newv,8); // temp for later use
+		pdcel.swapNodes(newv,8); // temp for later use
 		base.setBdryFlags();
 
 		// adjoin 5
-		PackData.adjoin(base,temp,7,5,2*sidelength);
+		pdcel=CombDCEL.d_adjoin(pdcel,temp.packDCEL,7,5,2*sidelength);
+		base.vertexMap=pdcel.oldNew;
 		newv=base.vertexMap.findW(3);
-		base.swap_nodes(newv,3);
+		pdcel.swapNodes(newv,3);
 		base.setBdryFlags();
 		
 		// adjoin 6
-		PackData.adjoin(base,temp,8,5,3*sidelength);
+		pdcel=CombDCEL.d_adjoin(pdcel,temp.packDCEL,8,5,3*sidelength);
+		base.vertexMap=pdcel.oldNew;
 		newv=base.vertexMap.findW(4);
-		base.swap_nodes(newv,4);
+		pdcel.swapNodes(newv,4);
 		
 		base.packDCEL.fixDCEL_raw(base);
 		return base;
@@ -2079,20 +2073,24 @@ public class PackCreation {
 	 */
 	public static PackData doublePent(PackData p,int N) {
 		PackData newPack=p.copyPackTo();
+		PackDCEL pdcel=newPack.packDCEL;
 		PackData temp=p.copyPackTo();
 		int sidelength=N+1;
 		
 		// adjoin on left
-		PackData.adjoin(newPack,temp,5,2,sidelength); //	DebugHelp.debugPackWrite(temp,"dyadicLeft.p");
+		
+		pdcel=CombDCEL.d_adjoin(pdcel,temp.packDCEL,5,2,sidelength); 
+		//	DebugHelp.debugPackWrite(temp,"dyadicLeft.p");
+		newPack.vertexMap=pdcel.oldNew;
 
 		int new5=newPack.vertexMap.findW(5);
 		int new4=newPack.vertexMap.findW(4);
-		newPack.swap_nodes(6,4);
-		newPack.swap_nodes(new5,5);
-		newPack.swap_nodes(new4,4);
-		newPack.swap_nodes(new5,1);
+		pdcel.swapNodes(6,4);
+		pdcel.swapNodes(new5,5);
+		pdcel.swapNodes(new4,4);
+		pdcel.swapNodes(new5,1);
 
-		newPack.setCombinatorics();
+		pdcel.fixDCEL_raw(newPack);
 		return newPack;
 	}
 	

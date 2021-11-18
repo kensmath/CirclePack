@@ -410,10 +410,11 @@ public class CombDCEL {
 				// along redchain 
 				int v = currRed.myEdge.origin.vertIndx;
 				
+//				DCELdebug.printRedChain(pdcel.redChain);
+				
 				if (debug && click) { // debug=true;
 					System.out.println("next v: "+v);
 					DCELdebug.drawTmpRedChain(debugPack,currRed);
-//					DCELdebug.printRedChain(pdcel.redChain);
 				}
 				
 				// shrink backtrack?
@@ -754,7 +755,7 @@ public class CombDCEL {
 				}
 				if (nxtre.twinRed==null) { // must be bdry
 					nxtre.myEdge.twin.face=new Face(-1);
-					nxtre.myEdge.twin.face.edge=nxtre.myEdge;
+					nxtre.myEdge.twin.face.edge=nxtre.myEdge.twin;
 				}
 			}
 			nxtre=nxtre.nextRed;
@@ -1275,39 +1276,94 @@ public class CombDCEL {
 		//   non-red interior, and every edge from that origin
 		//   should have 'eutil' set to 1. 
 		
-		// If not a sphere, go around redChain for stragglers,
-		//   namely, any outer vertex of a blue face.
+		// If not a sphere, look for two types of stragglers:
+		//   1 red edge is part of "blue" face 
+		//   2 opposite vert is interior "bearing", degree 3.
 		if (pdcel.redChain!=null) {
 			rtrace=pdcel.redChain;
 			do {
-				HalfEdge he=rtrace.myEdge;
-				if (he.eutil==1) {
-					rtrace=rtrace.nextRed;
-					continue;
-				}
+				
+				boolean gotit=false;
+				
+				// if already laid out, continue
+				if (rtrace.myEdge.eutil==1) 
+					gotit=true;
 
-				// if 'myEdge' not yet laid out, one of its
-				//   face edges twins should be.
-				he=he.next;
-				if (he.myRedEdge==null && he.twin.eutil==1) {
-					orderEdges.add(he);
-					ordertick++;
-				}
-				else {
-					he=he.next;
+				// check if one of face's edges is laid out
+				if (!gotit) { // first edge
+					// check next edge
+					HalfEdge he=rtrace.myEdge.next;
 					if (he.myRedEdge==null && he.twin.eutil==1) {
 						orderEdges.add(he);
+						tr=he;
+						do { 
+							tr.eutil=1;
+							tr=tr.next;
+						} while(tr!=he);
 						ordertick++;
-					}
-					else {
-						throw new CombException(
-							"Failed in laying out red face "+rtrace.myEdge.face);
+						gotit=true;
 					}
 				}
-				he.eutil=1;
-				he.next.eutil=1;
-				he.next.next.eutil=1;
-					
+
+				if (!gotit) { // second edge
+					HalfEdge he=rtrace.myEdge.next.next;
+					if (he.myRedEdge==null && he.twin.eutil==1) {
+						orderEdges.add(he);
+						tr=he;
+						do { 
+							tr.eutil=1;
+							tr=tr.next;
+						} while(tr!=he);
+						ordertick++;
+						gotit=true;
+					}
+				}
+				
+				// reaching here, one last possibility: see if rtrace is 
+				//   edge of a face having a bearing (barycenter) and
+				//   some outer edge is laid out.
+				if (!gotit) {
+					Vertex oppVert=rtrace.myEdge.next.next.origin;
+					if (oppVert.bdryFlag==0 && pdcel.countFaces(oppVert)==3) {
+						
+						// do any faces about oppVert have edge already laid out?
+						HalfEdge goodspoke=null;
+						HalfLink spokes=oppVert.getEdgeFlower();
+						Iterator<HalfEdge> sis=spokes.iterator();
+						while (goodspoke==null && sis.hasNext()) {
+							HalfEdge he=sis.next();
+							if (he.eutil==1 || he.next.twin.eutil==1)  
+								goodspoke=he;
+						}
+						
+						// starting with goodspoke, lay out all faces,
+						//    using an opposite edge, if possible.
+						if (goodspoke!=null) {
+							gotit=true; // should be able to complete
+							HalfEdge he=goodspoke;
+							do {
+								if (he.eutil!=1) { // yes, lay this
+									if (he.next.twin.eutil==1)
+										orderEdges.add(he.next);
+									else
+										orderEdges.add(he);
+									tr=he;
+									do { 
+										tr.eutil=1;
+										tr=tr.next;
+									} while(tr!=he);
+									ordertick++;
+								}
+								he=he.prev.twin; // cclw spoke
+							} while (he!=goodspoke);
+						} // done with faces
+					} // done with barycenter
+				}
+				if (!gotit)
+					throw new CombException(
+							"Failed in laying out a face for red edge "+
+									rtrace.myEdge.face);
+				
 				rtrace=rtrace.nextRed;
 			} while (rtrace!=pdcel.redChain);
 		}

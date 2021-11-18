@@ -547,7 +547,8 @@ public class PackDCEL {
 
 	/**
 	 * Place the face associated with 'edge', with 'edge.origin' at 
-	 * the origin, and 'edge.next.origin' on the positive real axis. 
+	 * the origin, 'edge.next.origin' on the positive real axis, and
+	 * compute/store 'edge.next.next.origin'. 
 	 * @param edge HalfEdge
 	 * @return CircleSimple opposite the edge
 	 */
@@ -599,7 +600,7 @@ public class PackDCEL {
 	} 
 
 	/**
-	 * Place a 'HalfEdge' so 'origin' is at z=0 and the
+	 * Place a 'HalfEdge' so 'origin' is at z=0 and other
 	 * end is on the positive real axis. Store the centers. 
 	 * @param edge HalfEdge
 	 */
@@ -698,7 +699,7 @@ public class PackDCEL {
 	 * Use 'layoutOrder' to compute the packing centers, 
 	 * laying base face first, then the rest. Note that 
 	 * some circles get laid down more than once, so last 
-	 * position is what is stored in 'Vertex' for now. 
+	 * position is what is stored in 'vData' for now. 
 	 * This also rotates the packing to put gamma on the 
 	 * positive y-axis and it updates the side-pairing maps.
 	 * TODO: for more accuracy, average all computations of 
@@ -710,8 +711,10 @@ public class PackDCEL {
 		boolean debug=false; // debug=true;
 	    int count=1;
 		
-		Iterator<HalfEdge> hit=layoutOrder.iterator();
-		if (debug) {// debug=true;
+	    placeFirstFace(alpha);
+		
+		// debug=true;
+		if (debug) {
 			DCELdebug.drawEFC(this,alpha);
 //			StringBuilder strbld=new StringBuilder("disp -c "+
 //					face.edge.origin.vertIndx+" "+
@@ -721,6 +724,7 @@ public class PackDCEL {
 		}
 	    
 	    // now layout face-by-face
+		Iterator<HalfEdge> hit=layoutOrder.iterator();
 	    while (hit.hasNext()) {
 	    	this.d_faceXedge(hit.next());
 		    count++;

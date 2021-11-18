@@ -156,7 +156,6 @@ public class Tile extends Face {
 			}
 			p.tileData.myTiles[1]=tile;
 			return p;
-
 		}
 		if (mode==2) { // edge barycenters added
 			if(vertCount<2)

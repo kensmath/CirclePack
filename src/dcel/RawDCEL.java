@@ -911,12 +911,10 @@ public class RawDCEL {
 
 	/**
 	   * Create a barycenter for face 'edge.face'; 
-	   * 'vutil' set to hold reference vert. Red chain,
-	   * 'redFlag's, and 'bdryFlag's should normally remain 
+	   * 'vutil' set to hold reference vert. If 'edge.face'
+	   * is ideal, throw out the red chain; otherwise,
+	   * 'redFlag's, and 'bdryFlag's should remain 
 	   * undisturbed. 
-	   * 
-	   * Note: calling routine should throw out 
-	   * 'redChain' if 'edge.face' is ideal.
 	   * 
 	   * TODO: 'multi-bary' true, then add three vertices
 	   * to the face instead of just one (if the face
@@ -929,6 +927,12 @@ public class RawDCEL {
 	   */
 	  public static int addBary_raw(PackDCEL pdcel,
 			  HalfEdge edge,boolean multi_bary) {
+
+		  boolean ideal=false;
+		  if (edge.face.faceIndx<0) {
+			  pdcel.redChain=null;
+			  ideal=true;
+		  }
 		  
 		  // make room
 		  int node=pdcel.vertCount+1; // new index 
@@ -950,7 +954,8 @@ public class RawDCEL {
 		  HalfEdge next_in;
 		  for (int j=0;j<(n-1);j++) {
 			  base=hlink.get(j);
-			  base.origin.bdryFlag=0; // becomes interior
+			  if (ideal)
+				  base.origin.bdryFlag=0; // becomes interior 
 			  base.face=null;
 			  next_in=new HalfEdge(base.twin.origin);
 	
@@ -972,7 +977,8 @@ public class RawDCEL {
 		  // last face
 		  base=hlink.getLast();
 		  base.face=null;
-		  base.origin.bdryFlag=0;
+		  if (ideal)
+			  base.origin.bdryFlag=0; // becomes interior
 		  next_in=new HalfEdge(base.twin.origin);
 		  
 		  base.next=next_in;
@@ -1703,8 +1709,8 @@ public class RawDCEL {
 	   * Calling routine handles processing.
 	   * 
 	   * @param pdcel PackDCEL
-	   * @param edge  HalfEdge
-	   * @return HalfEdge, null failure
+	   * @param edge HalfEdge
+	   * @return HalfEdge, new edge, null failure
 	   */
 	  public static HalfEdge flipEdge_raw(PackDCEL pdcel, HalfEdge edge) {
 		  
@@ -2756,9 +2762,49 @@ public class RawDCEL {
 	}
 	
 	/**
+	 * Fracking is a combinatorial refinement process. Given 
+	 * a vertex, we first add a barycenter to each neighboring face.
+	 * Then we flip each edge shared by two of these faces. Finally,
+	 * we remove any boundary edges of these faces. Return the 
+	 * count of new vertices. Note: if v is bdry with just one face,
+	 * then return 0. 
+	 * @param verts NodeLink
+	 * @return int, count of new vertices, 0 on error
+	 */
+	public static int frackVert(PackDCEL pdcel,int v) {
+		if (v<1 || v>pdcel.vertCount) 
+			return 0;
+		Vertex vert=pdcel.vertices[v];
+		HalfLink spokes=vert.getEdgeFlower();
+		if (vert.isBdry() && spokes.size()==2)
+			return 0;
+		int count=0;
+		Iterator<HalfEdge> sis=spokes.iterator();
+		while (sis.hasNext()) {
+			HalfEdge he=sis.next();
+			if (he.face.faceIndx>=0) {
+				addBary_raw(pdcel,he,false);
+				count++;
+			}
+		}
+		sis=spokes.iterator();
+		while (sis.hasNext()) {
+			HalfEdge he=sis.next();
+			if (!he.isBdry())
+				flipEdge_raw(pdcel,he);
+			else {
+				int rslt=rmEdge_raw(pdcel,he);
+				if (rslt<0)
+					pdcel.redChain=null;
+			}
+		}
+		return count;
+	}
+	
+	/**
 	 * Remove 'edge', which must be bdry or have both ends 
 	 * interior. 
-	 * + If edge has two interior, this creates a next
+	 * + If edge has two interior ends, this creates a new
 	 *   bdry component surrounding the edge, red chain
 	 *   is lost. 'alpha' may need to be reset.
 	 * + If edge is bdry: if part of a protruding bdry face, 
@@ -2772,7 +2818,7 @@ public class RawDCEL {
 	 *  * 0 on failure
 	 * @param pdcel PackDCEL
 	 * @param edge HalfEdge
-	 * @return int
+	 * @return int, 0 on failure
 	 */
 	public static int rmEdge_raw(PackDCEL pdcel,HalfEdge edge) {
 		Vertex vend=edge.origin;

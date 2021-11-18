@@ -9,6 +9,7 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
 import dcel.D_SideData;
+import dcel.HalfEdge;
 import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.CommonMath;
@@ -21,6 +22,7 @@ import listManip.BaryCoordLink;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.TileLink;
 import packing.PackData;
@@ -398,12 +400,12 @@ public class PostParser {
 					// for scaling trinkets
 					double diam = 5 / cpScreen.pixFactor;
 
-					EdgeLink elist = new EdgeLink(p, items);
-					if (elist != null && elist.size() > 0) {
-						EdgeSimple edge = null;
-						Iterator<EdgeSimple> edges = elist.iterator();
+					HalfLink hlist = new HalfLink(p, items);
+					if (hlist != null && hlist.size() > 0) {
+						HalfEdge edge = null;
+						Iterator<HalfEdge> edges = hlist.iterator();
 						while (edges.hasNext()) {
-							edge = (EdgeSimple) edges.next();
+							edge = (HalfEdge) edges.next();
 							Complex ctr = p.tangencyPoint(edge);
 							if (ctr == null)
 								break;
@@ -429,8 +431,8 @@ public class PostParser {
 				case 'c': // dual 'circles' indexed by faces
 				{
 					FaceLink faceLink = new FaceLink(p, items);
-					if (faceLink != null && faceLink.size() <= 0) // nothing in
-																	// list
+					// nothing in list?
+					if (faceLink != null && faceLink.size() <= 0) 
 						break;
 					Iterator<Integer> flist = faceLink.iterator();
 					int f;

@@ -8,8 +8,7 @@ import util.ColorUtil;
 /**
  * Structure for face information; this was designed for triangular faces,
  * later modified for more general polygonal faces. Note that in CirclePack,
- * face indices are not persistent but created on the fly in 'complex_count'.
- * They could change, e.g., if 'alpha' is changed.
+ * face indices are not persistent but created on the fly.
  * @author kens
  *
  */

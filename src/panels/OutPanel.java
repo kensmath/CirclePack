@@ -443,7 +443,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 	}
 	
 	public static int print_vert_obj(PackData p,BufferedWriter fp,
-			dataCode code,int v,AmbiguousZ []amb) {
+			dataCode code,int v) {
 		  int w;
 		  Complex z=null;
 
@@ -514,10 +514,11 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 			  fp.write(xyz[0]+" "+xyz[1]+" "+xyz[2]+" ");
 			  return 1;
 		  }
-		  if (code==dataCode.PAVER_CORNERS) { // a 'paver' is polygon formed by union
-			  // of faces containing a given vertex; we save the open list of polygon
-			  // corners. For boundary v, include corner at v itself.
-				Complex []pts=p.corners_paver(v,amb);
+		  if (code==dataCode.PAVER_CORNERS) { // a 'paver' is polygon 
+			  // formed by union of faces containing a given vertex; 
+			  // we save the open list of polygon corners. For 
+			  // boundary v, include corner at v itself.
+				Complex []pts=p.corners_paver(v); // non-closed list
 				int num=pts.length;
 				fp.write(pts[0].x+" "+pts[0].y+"i   ");
 				for (int j=1;j<num;j++) {
@@ -620,9 +621,9 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		/**
 		 * Loop through data objects to print. Note, 'Vfe' has been
 		 * set based on the types of objects selected: vertices, faces,
-		 * edges, and a few others. There may be more than one 'DataObj' specified.
-		 * E.g, if Vfe==1 for vertices, we might want both centers and
-		 * radii. There may also we 'DataObj's for literals.
+		 * edges, and a few others. There may be more than one 'DataObj' 
+		 * specified. E.g, if Vfe==1 for vertices, we might want both 
+		 * centers and radii. There may also we 'DataObj's for literals.
 		 * @param fp BufferedWriter
 		 * @param p PackData
 		 * @param loopstr String, specifying vertices, edges, faces, or other
@@ -654,7 +655,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		    					fp.write(dtrace.spec);
 		    					count++;
 		    				}
-		    				else count+=print_vert_obj(p,fp,dtrace.code,v,amb);
+		    				else count+=print_vert_obj(p,fp,dtrace.code,v);
 		    			} 
 		    		} // done going through objects
 		    	} // done going through vertices

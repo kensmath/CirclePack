@@ -218,7 +218,7 @@ public class DisplayParser {
 					}
 				} // end of while
 				break;
-			}
+			} // end of 'a'
 			
 			case 'b': // bary-coord encoded paths, use color/thickness options
 			{
@@ -256,7 +256,7 @@ public class DisplayParser {
 				// restore color
 				cpScreen.imageContextReal.setColor(holdcolor);
 				break;
-			}
+			} // end of 'b'
 			case 'g': // draw 'ClosedPath'; use color/thickness, default, blue/3
 			{
 				Color holdcolor = null;
@@ -280,7 +280,8 @@ public class DisplayParser {
 				}
 				count++;
 				break;
-			}
+			} // end of 'g'
+			
 			// show recomputed faces and/or circles in given face order;
 			//   if no list is given, then default to drawing order.
 			// NOTE: this may change stored centers
@@ -369,7 +370,7 @@ public class DisplayParser {
 					count++;
 				}
 				break;
-			}
+			} // done with 'c'
 			case 'D': { // dual faces, recomp'd by drawing order
 				
 				// TODO: 
@@ -378,7 +379,7 @@ public class DisplayParser {
 				break;
 			}
 			case 'd': { // dual objects: 
-				// 'de' (default), 'dc', 'df', 'dg', 'dt', 'dw', or 'dp'
+				// 'de' (default), 'dc', 'df', 'dg', 'dt', 'dh', or 'dp'
 				
 				PackDCEL pdcel=p.packDCEL;
 				if (pdcel!=null) {
@@ -495,17 +496,44 @@ public class DisplayParser {
 					}
 					case 'p': // trinket at tangency points, indexed by edge
 					{
-						EdgeLink elist = new EdgeLink(p, items);
-						if (elist != null && elist.size() > 0) {
-							EdgeSimple edge = null;
-							Iterator<EdgeSimple> edges = elist.iterator();
+						HalfLink hlist = new HalfLink(p, items);
+						if (hlist != null && hlist.size() > 0) {
+							HalfEdge edge = null;
+							Iterator<HalfEdge> edges = hlist.iterator();
 							while (edges.hasNext()) {
-								edge = (EdgeSimple) edges.next();
+								edge = (HalfEdge) edges.next();
 								Complex ctr=p.tangencyPoint(edge);
 								if (ctr==null)
 									break;
 								cpScreen.drawTrinket(trinket,ctr, dispFlags);
+								count++;
+							}
+						}
+						break;
+					}
+					case 'h': // "hull" of dual circles, ie. polygon through
+						// tangency points of a face.
+					{
+						FaceLink flist=new FaceLink(p,items);
+						if (flist !=null && flist.size()>0) {
+							Iterator<Integer> fis=flist.iterator();
+							while(fis.hasNext()) {
+								dcel.Face face=p.packDCEL.faces[fis.next()];
+								Complex[] pts=p.face_hull_corners(face);
+								int n=pts.length;
 
+								double []fanCenters=new double[2*n];
+								for (int j=0;j<n;j++) {
+									fanCenters[2*j]=pts[j].x;
+									fanCenters[2*j+1]=pts[j].y;
+								}
+								cpScreen.drawClosedPoly(n,fanCenters,dispFlags);
+
+								if (dispFlags.label) {
+									int f=face.faceIndx;
+									cpScreen.drawIndex(
+											p.getFaceCenter(f),f,1);
+								}
 								count++;
 							}
 						}
@@ -703,43 +731,18 @@ public class DisplayParser {
 					} // end of while
 					break;
 				}
-				case 'w': // dual 'triangles' (i.e., formed by interstice
-						  // tangency pts, indexed by face index
-				{
-					FaceLink faceLink = new FaceLink(p, items);
-					if (faceLink != null && faceLink.size() <= 0) // nothing in list
-						break;
-					Iterator<Integer> flist = faceLink.iterator();
-					int f;
-					while (flist.hasNext()) {
-						f = flist.next();
-						int[] vts = p.faces[f].vert;
-						DualTri dtri = new DualTri(p.hes,
-								p.getCenter(vts[0]), p.getCenter(vts[1]),
-								p.getCenter(vts[2]));
-						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.getFaceColor(f));
-						if (dispFlags.label)
-							dispFlags.setLabel(Integer.toString(f));
-						cpScreen.drawFace(dtri.TangPts[0],dtri.TangPts[1], dtri.TangPts[2],
-										null,null,null,dispFlags);
-						count++;
-					}
-					break;
-				}
 				case 'p': // trinket at tangency points, indexed by edge
 				{
-					EdgeLink elist = new EdgeLink(p, items);
-					if (elist != null && elist.size() > 0) {
-						EdgeSimple edge = null;
-						Iterator<EdgeSimple> edges = elist.iterator();
+					HalfLink hlist = new HalfLink(p, items);
+					if (hlist != null && hlist.size() > 0) {
+						HalfEdge edge = null;
+						Iterator<HalfEdge> edges = hlist.iterator();
 						while (edges.hasNext()) {
-							edge = (EdgeSimple) edges.next();
+							edge = (HalfEdge) edges.next();
 							Complex ctr=p.tangencyPoint(edge);
 							if (ctr==null)
 								break;
 							cpScreen.drawTrinket(trinket,ctr, dispFlags);
-
 							count++;
 						}
 					}
@@ -794,7 +797,7 @@ public class DisplayParser {
 					}
 				}
 				break;
-			} // finished with edges
+			} // finished with 'e'
 			case 'f': { // faces
 				int f;
 				boolean circleToo=false;
@@ -838,16 +841,15 @@ public class DisplayParser {
 					count++;
 				}
 				break;
-			} // done with faces
-			case 'P': // pavers --- i.e., polygons defined by outer edges of
-				// faces sharing specified vertices (see 'pave' command);
+			} // done with 'f'
+			case 'h': // hulls --- ie., polygons defined by tangency
+				// points of v with nghbs.
 			{
 				NodeLink nodeLink = new NodeLink(p, items);
 				if (nodeLink.size() <= 0)
 					break; // nothing in list
-				AmbiguousZ []amb=AmbiguousZ.getAmbiguousZs(p);
 				
-				// get centers
+				// get corners
 				Iterator<Integer> vlist = nodeLink.iterator();
 				while (vlist.hasNext()) {
 					v=vlist.next();
@@ -858,7 +860,42 @@ public class DisplayParser {
 					if (dispFlags.label)
 						dispFlags.setLabel(Integer.toString(v));
 
-					Complex []pts=p.corners_paver(v,amb);
+					Complex []pts=p.corners_hull(v);
+					int n=pts.length;
+
+					double []fanCenters=new double[2*n];
+					for (int j=0;j<n;j++) {
+						fanCenters[2*j]=pts[j].x;
+						fanCenters[2*j+1]=pts[j].y;
+					}
+					cpScreen.drawClosedPoly(n, fanCenters, dispFlags);
+
+					if (dispFlags.label)
+						cpScreen.drawIndex(p.getCenter(v), v, 1);
+
+					count++;
+				}
+				break;
+			}
+			case 'P': // pavers --- i.e., polygons defined by outer edges of
+				// faces sharing specified vertices (see 'pave' command);
+			{
+				NodeLink nodeLink = new NodeLink(p, items);
+				if (nodeLink.size() <= 0)
+					break; // nothing in list
+				
+				// get corners
+				Iterator<Integer> vlist = nodeLink.iterator();
+				while (vlist.hasNext()) {
+					v=vlist.next();
+
+					// some set up
+					if (!dispFlags.colorIsSet)
+						dispFlags.setColor(p.getCircleColor(v));
+					if (dispFlags.label)
+						dispFlags.setLabel(Integer.toString(v));
+
+					Complex []pts=p.corners_paver(v);
 					int n=pts.length;
 
 					double []fanCenters=new double[2*n];

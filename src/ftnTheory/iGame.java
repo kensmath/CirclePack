@@ -3,6 +3,12 @@ package ftnTheory;
 import java.awt.Color;
 import java.util.Vector;
 
+import allMains.CirclePack;
+import complex.Complex;
+import dcel.HalfEdge;
+import dcel.RawDCEL;
+import exceptions.DataException;
+import exceptions.ParserException;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
@@ -11,12 +17,6 @@ import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
 import util.ColorUtil;
-import allMains.CirclePack;
-
-import complex.Complex;
-
-import exceptions.DataException;
-import exceptions.ParserException;
 
 public class iGame extends PackExtender {
 	public int []corner;
@@ -146,14 +146,20 @@ public class iGame extends PackExtender {
 		int p=player[playerNum];
 		int t=targets[targetNum];
 		int oldV=t;
-		if (p>t) oldV=p;
+		if (p>t) 
+			oldV=p;
 		if (packData.nghb(p,t)>=0) {
-			int fused=packData.collapse_edge(new EdgeLink(packData,
-					new String(p+" "+t)));
-			packData.setCombinatorics();
+			HalfEdge edge=packData.packDCEL.findHalfEdge(p,t);
+			int rslt=RawDCEL.meldEdge_raw(packData.packDCEL,edge);
+			if (rslt<=0) 
+				return -1;
+			packData.packDCEL.fixDCEL_raw(packData);
 			packData.fillcurves();
-			if (fused<=0) return -1; 
 			
+			// which vertex survives?
+			int fused=t; 
+			if (rslt==t)
+				fused=p;
 			player[playerNum]=fused;
 			for (int i=0;i<playerCount;i++) {
 				if (i!=playerNum && player[i]>oldV) player[i]--;
@@ -172,14 +178,17 @@ public class iGame extends PackExtender {
 	 * Modify the complex so edge <v,u> is collapsed.
 	 * @param v int
 	 * @param u int
-	 * @return int
+	 * @return int, 0 on error
 	 */
 	public int crunchEdge(int v,int u) {
-		if (packData.nghb(v,u)<0 || 
+		HalfEdge edge=packData.packDCEL.findHalfEdge(v,u);
+		if (edge==null || 
 			(packData.isBdry(v) && packData.isBdry(u)))
 			return 0;
-		EdgeLink edgelist=new EdgeLink(packData,new String(v+" "+u));
-		return packData.collapse_edge(edgelist);
+		int rslt=RawDCEL.meldEdge_raw(packData.packDCEL,edge);
+		if (rslt!=0)
+			packData.packDCEL.fixDCEL_raw(packData);
+		return rslt;
 	}
 	
 	/**

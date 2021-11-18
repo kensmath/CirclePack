@@ -75,9 +75,12 @@ public class TriData {
 			do {
 				vert[j]=he.origin.vertIndx;
 				radii[j]=pdc.getVertRadius(he);
-				if (hes==0)
+				if (hes==0) {
+					if (labels==null) {
+						labels=new double[3];
+					}
 					labels[j]=radii[j];
-				
+				}
 				// only create invDist if non-trivial is found
 				double ivd=he.getInvDist();
 				if (ivd!=1.0) {
