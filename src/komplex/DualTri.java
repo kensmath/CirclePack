@@ -3,7 +3,8 @@ package komplex;
 import math.Mobius;
 
 import complex.Complex;
-
+import dcel.HalfEdge;
+import dcel.PackDCEL;
 import exceptions.DataException;
 import geometry.CommonMath;
 import geometry.EuclMath;
@@ -17,8 +18,8 @@ import geometry.SphericalMath;
  * The dual triangle is computed based solely on the vertices of
  * the containing face --- namely, the resulting three points are the
  * points where the incircle is tangent to the edges. 
- * 
- * Note: TangPts[j] is on edge {v(j), v((j+1)%3)}.
+ * Note: Indexing corresponds to that of the face, and TangPts[j] 
+ * is on edge {v(j), v((j+1)%3)}.
  * @author kens, 4/2010
   */
 public class DualTri {
@@ -28,7 +29,11 @@ public class DualTri {
 	public Complex []TangPts;  // incircle tangency points
 	int hes;
 
-	public DualTri(int hs,Complex z0,Complex z1,Complex z2) {
+	// constructors
+	public DualTri() {
+	}
+	
+	public DualTri(Complex z0,Complex z1,Complex z2,int hs) {
 		hes=hs;
 		corners=new Complex[3];
 		corners[0]=new Complex(z0);
@@ -38,13 +43,28 @@ public class DualTri {
 		setInCirclePts();
 	}
 	
+	public DualTri(PackDCEL pdcel,dcel.Face face) {
+		super();
+		HalfEdge he=face.edge; // based on face edges
+		hes=pdcel.p.hes;
+		corners=new Complex[3];
+		corners[0]=pdcel.getVertCenter(he);
+		corners[1]=pdcel.getVertCenter(he.next);
+		corners[2]=pdcel.getVertCenter(he.next.next);
+		TangPts=new Complex[3]; // filled in other calls
+		setInCirclePts();
+	}
+	
 	/**
-	 * Compute/store the tangency points based on 'corners' 
-	 * only; intended for cases when radii are not available.
-	 * The hyperbolic case is somewhat complicated if one or 
-	 * more 'corners' is on the unit circle. Set 'TangPts' to 
-	 * null if situation is illegal.
-	 * In the sph case, can get the wrong distance between
+	 * Compute/store points where triangle incircle hits
+	 * edges, based solely on 'corners'; intended for cases 
+	 * when radii are not available, so hyperbolic case is 
+	 * somewhat complicated if one or more 'corners' is on 
+	 * the unit circle. Set 'TangPts' to null if situation is 
+	 * illegal. 
+	 * (Note: see 'PackDCEL.getTriIncircle', but this needs
+	 * radii in the hyperbolic case.)
+	 * Caution: In the sph case, can get the wrong distance between
 	 * 'corners'.
 	 */
 	public void setInCirclePts() {

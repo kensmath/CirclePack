@@ -7,7 +7,6 @@ import java.util.Vector;
 
 import baryStuff.BaryPacket;
 import complex.Complex;
-import exceptions.DataException;
 import exceptions.InOutException;
 import komplex.EdgeSimple;
 import listManip.BaryCoordLink;
@@ -61,7 +60,7 @@ public class PackMethods {
 		while (dits.hasNext()) {
 			try {
 				EdgeSimple edge = dits.next();
-				Complex[] pts = p.ends_dual_edge(edge, null); // ends
+				Complex[] pts = p.ends_dual_edge(edge); // ends
 				Path2D.Double path = new Path2D.Double();
 				path.moveTo(pts[0].x, pts[0].y);
 				path.lineTo(pts[1].x, pts[1].y);

@@ -118,14 +118,14 @@ public class ComplexAnalysis extends PackExtender {
 		ranTPs=new DualTri[rangeData.faceCount+1];
 		for (int f=1;f<=domainData.faceCount;f++) {
 			int []verts=domainData.faces[f].vert;
-			domTPs[f]=new DualTri(domainData.hes,
+			domTPs[f]=new DualTri(
 					domainData.getCenter(verts[0]),
 					domainData.getCenter(verts[1]),
-					domainData.getCenter(verts[2]));
-			ranTPs[f]=new DualTri(rangeData.hes,
+					domainData.getCenter(verts[2]),domainData.hes);
+			ranTPs[f]=new DualTri(
 					rangeData.getCenter(verts[0]),
 					rangeData.getCenter(verts[1]),
-					rangeData.getCenter(verts[2]));
+					rangeData.getCenter(verts[2]),rangeData.hes);
 		}
 		return true;
 	}

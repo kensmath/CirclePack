@@ -339,7 +339,7 @@ public abstract class RePacker {
 		if (pdcel.triData==null) {
 			pdcel.triData=new TriData[pdcel.faceCount+1];
 			for (int f=1;f<=pdcel.faceCount;f++) {
-				pdcel.triData[f]=new TriData(pdcel,pdcel.faces[f].edge);
+				pdcel.triData[f]=new TriData(pdcel,pdcel.faces[f]);
 				if (pdcel.triData[f].hasInvDist())
 					hit=true;
 			}

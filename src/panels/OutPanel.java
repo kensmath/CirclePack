@@ -27,7 +27,6 @@ import geometry.CircleSimple;
 import geometry.SphericalMath;
 import input.CPFileManager;
 import input.FileDialogs;
-import komplex.AmbiguousZ;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
@@ -541,7 +540,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		} 
 	
 		public static int print_face_obj(PackData p,
-				BufferedWriter fp,dataCode code,int f,AmbiguousZ []amb) {
+				BufferedWriter fp,dataCode code,int f) {
 
 			try {
 		  if (code==dataCode.FACE_INDEX) { // face index
@@ -549,17 +548,17 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		    return 1;
 		  }
 		  if (code==dataCode.FACE_CORNERS) { // corner locations
-			  Complex []pts=p.corners_face(f, amb);
+			  Complex []pts=p.corners_face(f);
 			  fp.write(pts[0].x+" "+pts[0].y+"   "+pts[1].x+" "+pts[1].y+"   "+pts[2].x+" "+pts[2].y+"   ");
 			  return 1;
 		  }
 		  if (code==dataCode.FACE_DUAL_CENTER) {
-			  Complex z=p.faceIncircle(f,amb).center;
+			  Complex z=p.faceIncircle(f).center;
 			  fp.write(z.x+" "+z.y+" ");
 			  return 1;
 		  }
 		  if (code==dataCode.FACE_DUAL_RADII) {
-			  CircleSimple sc=p.faceIncircle(f,amb);
+			  CircleSimple sc=p.faceIncircle(f);
 			  fp.write(sc.rad+" ");
 			  return 1;
 		  }
@@ -581,7 +580,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		} 
 									       
 		public static int print_edge_obj(PackData p,
-				BufferedWriter fp,dataCode code,int v,int w,AmbiguousZ []amb) {
+				BufferedWriter fp,dataCode code,int v,int w) {
 
 			try {
 		  if (code==dataCode.EDGE_COLOR) { // color
@@ -602,7 +601,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 			    return 1;
 			  }
 		  if (code==dataCode.EDGE_DUAL_CENTERS) { // centers of dual edgea
-			  Complex []pts=p.ends_dual_edge(new EdgeSimple(v,w), amb);
+			  Complex []pts=p.ends_dual_edge(new EdgeSimple(v,w));
 			  fp.write(pts[0].x+" "+pts[0].y+"  "+pts[1].x+" "+pts[1].y);
 			  return 1;
 		  }
@@ -633,9 +632,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		public static int outputLoop(BufferedWriter fp,PackData p,
 				String loopstr,Vector<DataObj> dataobj) {
 			int count=0;
-			
-			AmbiguousZ []amb=AmbiguousZ.getAmbiguousZs(p);
-			
+
 			try {
 			// output calls for vertex indices? expect vert list
 		    if (Vfe==1) {
@@ -681,7 +678,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		    					count++;
 		    				}
 		    				else {
-		    					count+=print_face_obj(p,fp,dtrace.code,f,amb);
+		    					count+=print_face_obj(p,fp,dtrace.code,f);
 		    				}
 		    			} 
 		    		} // done going through objects
@@ -707,7 +704,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		    					fp.write(dtrace.spec);
 		    					count++;
 		    				}
-		    				else count+=print_edge_obj(p,fp,dtrace.code,edge.v,edge.w,amb);
+		    				else count+=print_edge_obj(p,fp,dtrace.code,edge.v,edge.w);
 		    			} 
 		    		} // done going through objects
 		    	} // done going through vertices

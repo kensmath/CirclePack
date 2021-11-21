@@ -854,13 +854,12 @@ public class CommandStrParser {
 	    	  
 	    	  // call to adjoin
 	    	  PackData newPack=PackData.adjoinCall(packData, qackData, v1, v2, N);
-	    	  newPack.packDCEL.fixDCEL_raw(newPack);
-	    	  
 	    	  if (newPack==null) {
     			  CirclePack.cpb.errMsg("'adjoin' failed: ");
     			  return 0;
 	    	  }
 	    	  
+	    	  newPack.packDCEL.fixDCEL_raw(newPack);
 	    	  int ans=CirclePack.cpb.swapPackData(newPack,pnum1,true);
 
 			  return 1;

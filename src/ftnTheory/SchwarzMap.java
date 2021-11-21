@@ -959,8 +959,10 @@ public class SchwarzMap extends PackExtender {
 				ourTri=new TriAspect[pd.faceCount+1];
 				for (int f=1;f<=pd.faceCount;f++) {
 					ourTri[f]=new TriAspect(aspect[f]);
-					DualTri dtri=new DualTri(pd.hes,
-						aspect[f].getCenter(0),aspect[f].getCenter(1),aspect[f].getCenter(2));
+					DualTri dtri=new DualTri(
+						aspect[f].getCenter(0),
+						aspect[f].getCenter(1),
+						aspect[f].getCenter(2),pd.hes);
 					ourTri[f].tanPts=new Complex[3];
 					for (int j=0;j<3;j++)
 						ourTri[f].tanPts[j]=new Complex(dtri.TangPts[j]);

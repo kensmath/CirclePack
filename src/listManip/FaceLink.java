@@ -1302,16 +1302,20 @@ public class FaceLink extends LinkedList<Integer> {
 	 * @return
 	 */
 	public static FaceParam filloutFan(PackData p,FaceParam initFP) {
-		if (initFP==null || initFP.next==null) return null;
+		if (initFP==null || initFP.next==null) 
+			return null;
 		int face=initFP.face;
 		int nface=initFP.next.face;
-		if (face<=0 || nface<=0) return null;
+		if (face<=0 || nface<=0) 
+			return null;
 		if (face==nface) {  // same face? don't resolve redundancy, just return
 			return initFP.next;
 		}
 		int vert=-1;
-		if ((vert=p.face_vert_share(face,nface))<0) return null; // not incident
-		if (p.face_nghb(face,nface)>=0) return initFP.next; // share an edge: done
+		if ((vert=p.face_vert_share(face,nface))<0) 
+			return null; // not incident
+		if (p.face_nghb(face,nface)>=0) 
+			return initFP.next; // share an edge: done
 
 		int indx1=-1;
 		int indx2=-1;
@@ -1321,7 +1325,8 @@ public class FaceLink extends LinkedList<Integer> {
 			else if (p.getFaceFlower(vert,j)==nface)
 				indx2=j;
 		}
-		if (indx1<0 || indx2<0 || indx1==indx2) return null;
+		if (indx1<0 || indx2<0 || indx1==indx2) 
+			return null;
 		
 		FaceParam nextFP=initFP;
 		

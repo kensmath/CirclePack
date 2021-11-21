@@ -195,7 +195,7 @@ public class TileBuilder {
 			System.out.println(strbld.toString());
 		}
 		
-		// main loop for unattached
+		// main loop for picking up unattached
 		boolean hit=true;
 		int safety=10000;
 		while (hit && safety>0) {
@@ -431,7 +431,6 @@ public class TileBuilder {
 			else if (mark==3)
 				qcount++;
 		}
-		p.complex_count(true);
 		
 		p.tileData.dualTileData=new TileData(dcount,p.tileData.builtMode);
 		p.tileData.quadTileData=new TileData(qcount,p.tileData.builtMode);
@@ -448,13 +447,13 @@ public class TileBuilder {
 			// is in direction of vert[0]
 			// TODO: to handle dual tilings consistently, have to consider 
 			//       case that baryVert is on the boundary (and tile bdry 
-			//       goes through it. Best is vert[0] is required to be 
+			//       goes through it. Best if vert[0] is required to be 
 			//       flower[0] in this case from the beginning.
 			int offset=-1;
 			int []myflower=p.kData[bv].flower;
 			for (int k=0;(k<num && offset<0);k++) {
-			int m=myflower[k];
-			if (p.countFaces(m)==4 && p.nghb(m, tile.vert[0])>=0)
+				int m=myflower[k];
+				if (p.countFaces(m)==4 && p.nghb(m, tile.vert[0])>=0)
 					offset=k;
 			}
 			if (offset<0) {

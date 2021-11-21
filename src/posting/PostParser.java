@@ -14,7 +14,6 @@ import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.CommonMath;
 import geometry.SphericalMath;
-import komplex.AmbiguousZ;
 import komplex.DualTri;
 import komplex.EdgeSimple;
 import komplex.Face;
@@ -53,7 +52,6 @@ public class PostParser {
 			return 0;
 		int count=0;
 		CPScreen cpScreen=p.cpScreen;
-		AmbiguousZ []amb=AmbiguousZ.getAmbiguousZs(p);
 
 		// iterate through successive flag segments.
 		Iterator<Vector<String>> its=flagSegs.iterator();
@@ -438,7 +436,7 @@ public class PostParser {
 					int f;
 					while (flist.hasNext()) {
 						f = flist.next();
-						CircleSimple sc = p.faceIncircle(f,amb);
+						CircleSimple sc = p.faceIncircle(f);
 						z = sc.center;
 						if (p.hes > 0)
 							z = cpScreen.sphView.toApparentSph(z);
@@ -480,7 +478,7 @@ public class PostParser {
 								+ p.getBdryFlag(v)];
 						for (int j = 0; j < num; j++) {
 							int ff = faceFlower[j];
-							z = new Complex(p.faceIncircle(ff,amb).center);
+							z = new Complex(p.faceIncircle(ff).center);
 							if (p.hes > 0)
 								z = cpScreen.sphView.toApparentSph(z);
 							fanCenters[j] = z;
@@ -547,9 +545,9 @@ public class PostParser {
 					while (flist.hasNext()) {
 						f = flist.next();
 						int[] vts = p.faces[f].vert;
-						DualTri dtri = new DualTri(p.hes,
+						DualTri dtri = new DualTri(
 								p.getCenter(vts[0]), p.getCenter(vts[1]),
-								p.getCenter(vts[2]));
+								p.getCenter(vts[2]),p.hes);
 						Complex []Z=new Complex[3];
 						Z[0] = new Complex(dtri.TangPts[0]);
 						Z[1] = new Complex(dtri.TangPts[1]);

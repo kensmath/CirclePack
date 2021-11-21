@@ -276,7 +276,7 @@ public class D_Schwarzian {
 	public static double cents_to_schwarzian(Complex[] Z,int hes) {
 		// compute the face tangency points, then face mobius, i.e.,
 		//    the mobius maps FROM the base equilateral to the face
-		DualTri dtri=new DualTri(hes,Z[0],Z[1],Z[2]); // <v,w,u>
+		DualTri dtri=new DualTri(Z[0],Z[1],Z[2],hes); // <v,w,u>
 		Complex []tanPts=new Complex[3];
 		for (int j=0;j<3;j++)
 			tanPts[j]=new Complex(dtri.TangPts[j]);
@@ -284,7 +284,7 @@ public class D_Schwarzian {
 			CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
 			tanPts[0],tanPts[1],tanPts[2],0,hes);
 			
-		dtri=new DualTri(hes,Z[1],Z[0],Z[3]); // <w,v,a>
+		dtri=new DualTri(Z[1],Z[0],Z[3],hes); // <w,v,a>
 		for (int j=0;j<3;j++)
 			tanPts[j]=new Complex(dtri.TangPts[j]);
 		Mobius gbase=Mobius.mob_xyzXYZ(
@@ -343,7 +343,7 @@ public class D_Schwarzian {
 		
 		// compute the face tangency points, then face mobius, i.e.,
 		//    the mobius maps FROM the base equilateral to the face
-		DualTri dtri=new DualTri(hes,Z[0],Z[1],Z[2]); // <v,w,u>
+		DualTri dtri=new DualTri(Z[0],Z[1],Z[2],hes); // <v,w,u>
 		Complex []tanPts=new Complex[3];
 		for (int j=0;j<3;j++) {
 			if (dtri.TangPts==null || dtri.TangPts[j]==null) {
@@ -355,7 +355,7 @@ public class D_Schwarzian {
 				CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
 				tanPts[0],tanPts[1],tanPts[2],0,hes);
 		
-		dtri=new DualTri(hes,Z[1],Z[0],Z[3]); // <w,v,a>
+		dtri=new DualTri(Z[1],Z[0],Z[3],hes); // <w,v,a>
 		for (int j=0;j<3;j++)
 			tanPts[j]=new Complex(dtri.TangPts[j]);
 		Mobius gbase=Mobius.mob_xyzXYZ(
@@ -675,10 +675,10 @@ public class D_Schwarzian {
 			HalfEdge he=face.edge;
 			
 			triasp[f].vert=face.getVerts();
-			DualTri dtri=new DualTri(p.hes,
+			DualTri dtri=new DualTri(
 				p.packDCEL.getVertCenter(he),
 			    p.packDCEL.getVertCenter(he.next),
-			    p.packDCEL.getVertCenter(he.next.next));
+			    p.packDCEL.getVertCenter(he.next.next),p.hes);
 			
 			triasp[f].tanPts=new Complex[3];
 			int j=0;

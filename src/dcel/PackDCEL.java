@@ -33,6 +33,7 @@ import posting.PostFactory;
 import tiling.Tile;
 import util.ColorUtil;
 import util.DispFlags;
+import util.TriAspect;
 import util.TriData;
 
 /** 
@@ -193,7 +194,7 @@ public class PackDCEL {
 	public int allocTriData() {
 		triData=new TriData[faceCount+1];
 		for (int f=1;f<=faceCount;f++) {
-			triData[f]=new TriData(this,faces[f].edge);
+			triData[f]=new TriData(this,faces[f]);
 		}
 		return faceCount;
 	}
@@ -209,7 +210,7 @@ public class PackDCEL {
 		if (triData==null || triData.length!=(faceCount+1)) {
 			triData=new TriData[faceCount+1];
 			for (int f=1;f<=faceCount;f++) {
-				triData[f]=new TriData(this,faces[f].edge);
+				triData[f]=new TriData(this,faces[f]);
 				if (triData[f].hasInvDist())
 					hit=true;
 			}
@@ -634,10 +635,8 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Compute the center of the vertex oppose 'edge' in its 
-	 * face. Use radii stored for 'Vertex's of the face 
-	 * and the centers of the ends of 'edge' to compute the 
-	 * center of the third vertex. 
+	 * Compute the center of the vertex opposite 'edge' in
+	 * 'edge.face'. 
 	 * @param edge HalfEdge
 	 * @return CircleSimple  
 	 */
@@ -654,45 +653,78 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Compute/store centers for 'edge.face' from the opposed 
-	 * 'edge.twin.face'. That is, get the cent/rad for the ends 
-	 * of 'edge' from the opposing face, compute the center 
-	 * opposite 'edge' in 'edge.face', then store all three 
-	 * centers for 'edge.face'. Note: if 'edge.myRedEdge' is 
+	 * Compute/store centers for 'edge.face' g from the opposed 
+	 * 'edge.twin.face' f. That is, using cent/rad for ends
+	 * from f, compute center opposite 'edge' in g, then 
+	 * store all 3 cents for g. Note: if 'edge.myRedEdge' is 
 	 * not null, this will update the centers stored for both 
 	 * red vertices at the ends of 'edge'. 
 	 * if 'edge' has bdry twin, then use its own end centers.
 	 * @param edge HalfEdge
-	 * @return int, 1 or 3 centers set.
+	 * @return int, 0, 1 or 3 centers set.
 	 */
 	public int d_faceXedge(HalfEdge edge) {
-		CircleSimple c0=null;
-		CircleSimple c1=null;
-		HalfEdge etwin=edge.twin;
-				
-		// opposite face is ideal?
-		if (etwin.face!=null && etwin.face.faceIndx<0) {
-			c0=getVertData(edge);
-			c1=getVertData(edge.next);
+		if (edge.face!=null && edge.face.faceIndx<0) // 
+			return 0;
+		
+		// on bdry? compute data for opposite circle
+		if (edge.twin.face!=null && edge.twin.face.faceIndx<0) {
+			TriAspect tri_g=new TriAspect(this,edge.face);
+			CircleSimple cs=tri_g.compOppCircle(tri_g.edgeIndex(edge));
+			setVertData(edge.next.next,cs);
+			return 1;
 		}
-		// typical: get centers of end vertices from opposed face 
-		else {
-			c0=getVertData(etwin.next);
-			c1=getVertData(etwin);
-		}
-		double rad2=getVertRadius(edge.next.next);
-		double ov0=edge.next.getInvDist();
-		double ov1=edge.prev.getInvDist();
-		double ov2=edge.getInvDist();
-		CircleSimple sC=CommonMath.comp_any_center(c0.center,
-			c1.center,c0.rad,c1.rad,rad2,ov0,ov1,ov2,p.hes);
-		setVertData(edge.next.next,sC);
+
+		TriAspect tri_f=new TriAspect(this,edge.twin.face);
+		TriAspect tri_g=analContinue(this,edge.twin,tri_f);
+		int j=tri_g.edgeIndex(edge);
+		setCent4Edge(edge.next.next,tri_g.center[(j+2)%3]);
 		if (edge.myRedEdge!=null) {
-			setVertData(edge,c0);
-			setVertData(edge.next,c1);
+			setCent4Edge(edge,tri_g.center[j]);
+			setCent4Edge(edge.next,tri_g.center[(j+1)%3]);
 			return 3;
 		}
 		return 1;
+	}
+	
+	/**
+	 * Given HalfEdge (v,w) with faces f and g (left/right
+	 * resp.), assuming f is in place, compute the center 
+	 * of vert opposite (w,v) in face g using centers for 
+	 * v/w from f and usual radius. 
+	 * @param pdcel PackDCEL
+	 * @param hedge HalfEdge, with f on left
+	 * @return TriAspect, null if hedge is bdry
+	 */
+	public static TriAspect analContinue(PackDCEL pdcel,HalfEdge hedge) {
+		if (hedge.isBdry())
+			return null;
+		// set up tmp 'TriAspect'
+		TriAspect tri_f=new TriAspect(pdcel,hedge.face);
+		return analContinue(pdcel,hedge,tri_f);
+	}
+	
+	/**
+	 * Given HalfEdge (v,w) with faces f and g (left/right
+	 * resp.), assuming f data is in 'tri_f', compute the center 
+	 * of vert opposite (w,v) in face g using centers for 
+	 * v/w from f and usual radius. 
+	 * @param pdcel PackDCEL
+	 * @param hedge HalfEdge, with f on left
+	 * @param tri_f TriAspect, data for f
+	 * @return TriAspect, null if hedge is bdry
+	 */
+	public static TriAspect analContinue(PackDCEL pdcel,HalfEdge hedge,
+			TriAspect tri_f) {
+		TriAspect tri_g=new TriAspect(pdcel,hedge.twin.face);
+		int fv=tri_f.vertIndex(hedge.origin.vertIndx);
+		int fw=tri_f.vertIndex(hedge.twin.origin.vertIndx);
+		int j=tri_g.vertIndex(hedge.twin.origin.vertIndx);
+		tri_g.setCircleData(j,tri_f.getCircleData(fw));
+		int k=tri_g.vertIndex(hedge.origin.vertIndx);
+		tri_g.setCircleData(k,tri_f.getCircleData(fv));
+		tri_g.setCircleData((k+1)%3,tri_g.compOppCircle(j));
+		return tri_g;
 	}
 	
 	/**
@@ -1222,7 +1254,7 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Given HalfEdge he=<v,w>, return ordered ends, g then f,
+	 * Given HalfEdge <v,w>, return ordered ends, g then f,
 	 * of dual edge <f,g>. CAUTION: f is to left of <v,w>, g 
 	 * to right, so result goes from right to left across <v,w>.
 	 * Return null if f an ideal face. If <v,w> is a oriented 
@@ -1935,6 +1967,36 @@ public class PackDCEL {
 		return count;
 	}
 	
+	/**
+	 * Get the incircle of the triangle formed by three
+	 * circles. In hyperbolic case, need radii since we
+	 * use the generalized tangency points in the computation.
+	 * @param c0 CircleSimple
+	 * @param c1 CircleSimple
+	 * @param c2 CircleSimple
+	 * @param hes int
+	 * @return CircleSimple
+	 */
+	public static CircleSimple getTriIncircle(CircleSimple c0,
+		CircleSimple c1,CircleSimple c2,int hes) {
+		
+		// for eucl and spherical, only need centers
+		if (hes==0)
+			return EuclMath.eucl_tri_incircle(c0.center,c1.center,c2.center);
+		if (hes>0) 
+			return SphericalMath.sph_tri_incircle(c0.center,c1.center,c2.center);
+		
+		// hyp case; use generalized tangency points, so need radii also
+		CircleSimple[] cS=new CircleSimple[3];
+		cS[0]=c0;
+		cS[1]=c1;
+		cS[2]=c2;
+		Complex[] pts=new Complex[3];
+		for (int j=0;j<3;j++) 
+			pts[j]=CommonMath.genTangPoint(cS[j],cS[(j+1)%3],hes);
+		return HyperbolicMath.e_to_h_data(
+				EuclMath.circle_3(pts[0], pts[1], pts[2]));
+	}
 	
 	/**
 	 * Find the incircle for the given face. For eucl
@@ -1944,30 +2006,11 @@ public class PackDCEL {
 	 * @return CircleSimple
 	 */
 	public CircleSimple getFaceIncircle(Face face) {
-		Complex[] pts=new Complex[3];
 		HalfEdge he=face.edge;
-		for (int j=0;j<3;j++) { 
-			pts[j]=p.packDCEL.getVertCenter(he);
-			he=he.next;
-		}
-		if (p.hes>=0) {
-			if (p.hes>0) 
-				return SphericalMath.sph_tri_incircle(pts[0],pts[1],pts[2]);
-			else
-				return EuclMath.eucl_tri_incircle(pts[0],pts[1],pts[2]);
-		}
-		
-		// hyp case
-		CircleSimple[] cS=new CircleSimple[3];
-		he=face.edge;
-		for (int j=0;j<3;j++) {
-			cS[j]=new CircleSimple(pts[j],p.packDCEL.getVertRadius(he));
-			he=he.next;
-		}
-		for (int j=0;j<3;j++) {
-			pts[j]=CommonMath.genTangPoint(cS[j],cS[(j+1)%3],p.hes);
-		}
-		return HyperbolicMath.e_to_h_data(EuclMath.circle_3(pts[0], pts[1], pts[2]));
+		CircleSimple c0=getVertData(he);
+		CircleSimple c1=getVertData(he.next);
+		CircleSimple c2=getVertData(he.next.next);
+		return getTriIncircle(c0,c1,c2,p.hes);
 	}
 
 	/**

@@ -1,20 +1,17 @@
 package util;
 
-import java.util.Iterator;
-
 import allMains.CPBase;
 import complex.Complex;
+import dcel.Face;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import exceptions.ParserException;
 import geometry.CircleSimple;
+import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import komplex.DualTri;
-import listManip.NodeLink;
 import math.Mobius;
-import packing.PackData;
 
 /**
  * Utility class holding geometric info localized to 
@@ -90,6 +87,19 @@ public class TriAspect extends TriData {
 		}
 	}
 	
+	public TriAspect(PackDCEL pdcel,dcel.Face face) {
+		super(pdcel,face);
+		center=new Complex[3];
+		HalfEdge he=face.edge;
+		center[0]=pdcel.getVertCenter(he);
+		center[1]=pdcel.getVertCenter(he.next);
+		center[2]=pdcel.getVertCenter(he.next.next);
+		invDist=new double[3];
+		invDist[0]=he.getInvDist();
+		invDist[1]=he.next.getInvDist();
+		invDist[2]=he.next.next.getInvDist();
+	}
+	
 	// clone
 	public TriAspect(TriAspect asp) {
 		this(asp.hes);
@@ -137,17 +147,63 @@ public class TriAspect extends TriData {
 	}
 	
 	public void setCenter(Complex z,int j) {
+		if (center==null)
+			allocCenters();
 		center[j]=new Complex(z);
 		need_update=true;
 	}
 	
 	public void setCircleData(int j,CircleSimple cs) {
+		if (center==null)
+			allocCenters();
 		center[j]=cs.center;
 		radii[j]=cs.rad;
 	}
 	
 	public CircleSimple getCircleData(int j) {
 		return new CircleSimple(center[j],radii[j]);
+	}
+	
+	/**
+	 * Find the incircle. For eucl/sph, just use centers; 
+	 * for hyp case, use 3 generalized tangency points.
+	 * @param face Face
+	 * @return CircleSimple
+	 */
+	public CircleSimple getFaceIncircle() {
+		CircleSimple c0=new CircleSimple(center[0],radii[0]);
+		CircleSimple c1=new CircleSimple(center[1],radii[1]);
+		CircleSimple c2=new CircleSimple(center[2],radii[2]);
+		return PackDCEL.getTriIncircle(c0,c1,c2,hes);
+	}
+	
+	/**
+	 * Compute the circle opposite edge (j,j+1).
+	 * @param j int
+	 * @return CircleSimple
+	 */
+	public CircleSimple compOppCircle(int j) {
+		return CommonMath.comp_any_center(center[j],
+				center[(j+1)%3],radii[j],radii[(j+1)%3],radii[(j+2)%3],
+				invDist[j],invDist[(j+1)%3],invDist[(j+2)%3],hes);
+	}
+	
+	public Complex getTangPt(int j) {
+		Complex ctr = null;
+		if (hes < 0)
+			ctr = HyperbolicMath.hyp_tangency(center[j],center[(j+1)%3],
+					radii[j],radii[(j+1)%3]);
+		else if (hes > 0)
+			ctr = SphericalMath.sph_tangency(center[j],center[(j+1)%3],
+					radii[j],radii[(j+1)%3]);
+		else
+			ctr = EuclMath.eucl_tangency(center[j],center[(j+1)%3],
+					radii[j],radii[(j+1)%3]);
+		return ctr;
+	}
+	
+	public CircleSimple compIncircle() {
+		return CommonMath.tri_incircle(center[0],center[1],center[2],hes);
 	}
 
 	/**
@@ -169,7 +225,7 @@ public class TriAspect extends TriData {
 	 * apply mob to circles and use the new centers.)
 	 */
 	public void setTanPts() {
-		DualTri dtri=new DualTri(hes,center[0],center[1],center[2]);
+		DualTri dtri=new DualTri(center[0],center[1],center[2],hes);
 		tanPts=new Complex[3];
 		for (int j=0;j<3;j++) 
 			tanPts[j]=dtri.getTP(j);

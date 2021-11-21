@@ -1385,7 +1385,7 @@ public class PackCreation {
 		PackData fusionC = DcelCreation.seed(2*H+2*X,0); // C is X x H
 		PackData fusionD = DcelCreation.seed(4*X,0);     // D is X x X
 
-		// keep track of tiles by marking barycenter vertex
+		// keep track of tiles using mark of barycenter vertex
 		fusionA.setVertMark(1,1);
 		fusionB.setVertMark(2,2);
 		fusionC.setVertMark(1,3);
@@ -1412,8 +1412,10 @@ public class PackCreation {
 			// new level of A = [C A/D B], (X+W) x (H+X)
 			// top part, [C A] first, (X+W) x H
 			fusionA=holdC.copyPackTo();
-			if (PackData.adjoin(fusionA,holdA,4,1,currentHeight)!=1 ||
-					!reNumBdry(fusionA,1,baseWidth+currentWidth,currentHeight))
+			fusionA.packDCEL=CombDCEL.d_adjoin(fusionA.packDCEL,
+					holdA.packDCEL,4,1,currentHeight);
+			fusionA.vertexMap=fusionA.packDCEL.oldNew;
+			if (!reNumBdry(fusionA,1,baseWidth+currentWidth,currentHeight))
 				throw new CombException("failed [C A]");
 			// transfer non-zero marks
 			for (int v=1;v<=holdA.nodeCount;v++) {
@@ -1425,8 +1427,10 @@ public class PackCreation {
 			}
 			// lower part, [D B], (X+W) x X
 			PackData lower=holdD.copyPackTo();
-			if (PackData.adjoin(lower,holdB,4,1,baseHeight)!=1 ||
-					!reNumBdry(lower,1,baseWidth+currentWidth,baseHeight))
+			lower.packDCEL=CombDCEL.d_adjoin(lower.packDCEL,
+					holdB.packDCEL,4,1,baseHeight);
+			lower.vertexMap=lower.packDCEL.oldNew;
+			if (!reNumBdry(lower,1,baseWidth+currentWidth,baseHeight))
 				throw new CombException("failed [D B]");
 			// transfer non-zero marks
 			for (int v=1;v<=holdB.nodeCount;v++) {
@@ -1437,8 +1441,10 @@ public class PackCreation {
 				}
 			}
 			// adjoin them, (X+W) x (H+X)
-			if (PackData.adjoin(fusionA,lower,3,4,baseWidth+currentWidth)!=1 ||
-					!reNumBdry(fusionA,1,baseWidth+currentWidth,baseHeight+currentHeight))
+			fusionA.packDCEL=CombDCEL.d_adjoin(fusionA.packDCEL,
+					lower.packDCEL,3,4,baseWidth+currentWidth);
+			fusionA.vertexMap=fusionA.packDCEL.oldNew;
+			if (!reNumBdry(fusionA,1,baseWidth+currentWidth,baseHeight+currentHeight))
 				throw new CombException("failed [C A/D B]");
 			// transfer non-zero marks
 			for (int v=1;v<=lower.nodeCount;v++) {
@@ -1451,8 +1457,10 @@ public class PackCreation {
 
 			// new level of B = [A C], (W+X) x H
 			fusionB=holdA.copyPackTo();
-			if (PackData.adjoin(fusionB,holdC, 4, 1,currentHeight)!=1 ||
-					!reNumBdry(fusionB,1,currentWidth +baseWidth,currentHeight))
+			fusionB.packDCEL=CombDCEL.d_adjoin(fusionB.packDCEL,
+					holdC.packDCEL, 4, 1,currentHeight);
+			fusionB.vertexMap=fusionB.packDCEL.oldNew;
+			if (!reNumBdry(fusionB,1,currentWidth +baseWidth,currentHeight))
 				throw new CombException("failed [A C]");
 			// transfer non-zero marks
 			for (int v=1;v<=holdC.nodeCount;v++) {
@@ -1465,8 +1473,10 @@ public class PackCreation {
 
 			// new level of C = [B/A], W x (X+H)
 			fusionC=holdB.copyPackTo();
-			if (PackData.adjoin(fusionC,holdA,3,4,currentWidth)!=1 ||
-					!reNumBdry(fusionC,1,currentWidth,baseHeight+currentHeight))
+			fusionC.packDCEL=CombDCEL.d_adjoin(fusionC.packDCEL,
+					holdA.packDCEL,3,4,currentWidth);
+			fusionC.vertexMap=fusionC.packDCEL.oldNew;
+			if (!reNumBdry(fusionC,1,currentWidth,baseHeight+currentHeight))
 				throw new CombException("failed [B/A]");
 			// transfer non-zero marks
 			for (int v=1;v<=holdA.nodeCount;v++) {
@@ -1504,8 +1514,6 @@ public class PackCreation {
 			} // end of switch
 			
 			// continue
-			fusionA.setCombinatorics();
-			
 			int oldBaseHeight=baseHeight;
 			int oldBaseWidth=baseWidth;
 			baseWidth=currentWidth;
@@ -1514,8 +1522,6 @@ public class PackCreation {
 			currentHeight += oldBaseHeight;
 
 		} // end of while
-		
-		fusionA.facedraworder(false);
 		
 		// set the aims
 		fusionA.set_aim_default();
@@ -1529,8 +1535,8 @@ public class PackCreation {
 		fusionA.setAim(4,0.5*Math.PI);
 				
 		// repack, layout
-		double crit=GenModBranching.LAYOUT_THRESHOLD;
-		int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
+//		double crit=GenModBranching.LAYOUT_THRESHOLD;
+//		int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
 		fusionA.fillcurves();
 		fusionA.repack_call(1000);
 		try {

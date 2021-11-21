@@ -4,8 +4,6 @@ import java.awt.Color;
 import java.awt.geom.Path2D;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -35,13 +33,11 @@ import dcel.RedHEdge;
 import dcel.VData;
 import dcel.Vertex;
 import deBugging.DCELdebug;
-import deBugging.DebugHelp;
 import deBugging.LayoutBugs;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.DataException;
 import exceptions.InOutException;
-import exceptions.LayoutException;
 import exceptions.PackingException;
 import exceptions.ParserException;
 import exceptions.RedListException;
@@ -50,7 +46,6 @@ import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
-import komplex.AmbiguousZ;
 import komplex.CookieMonster;
 import komplex.DualTri;
 import komplex.EdgeSimple;
@@ -85,7 +80,6 @@ import rePack.d_EuclPacker;
 import rePack.d_HypPacker;
 import tiling.Tile;
 import tiling.TileData;
-import util.BuildPacket;
 import util.ColorUtil;
 import util.DispFlags;
 import util.PathBaryUtil;
@@ -3365,558 +3359,277 @@ public class PackData{
 	}
 	
 	/**
-	 * Return non-closed list of corners for dual face (incircle centers
-	 * of faces). For multiply connected cases, may have ambiguous centers
-	 * TODO: unsettled issue, what to do for bdry vertices? Currently add
-	 * half edges ending at tangency points ob the two bdry edges from v.
-	 * Calling routine can also distinguish by size of returned array, one
-	 * more than '.num'. 
+	 * Return non-closed list of corners for dual face for v,
+	 * mainly centers of faces. For bdry v, add the partial 
+	 * edges ending at the tang pts of the two bdry edges. For v red, assume initial face is
+	 * in place, but the proceed face-by-face.
 	 * @param v int
-	 * @param ambigZs AmbiguousZ
 	 * @return Complex[]
 	 */
-	public Complex []corners_dual_face(int v,AmbiguousZ []ambigZs) {
-		int num = countFaces(v);
-		int[] flower=getFlower(v);
-		int []faceflower=getFaceFlower(v);
-		Complex []pts=new Complex[num];
-		boolean easycase= (ambigZs==null) || (hes>0); // 
-		CircleSimple sC=null;
-		int offset=-1; // offset for starting petal
+	public Complex[] corners_dual_face(int v) {
+		Vertex vert=packDCEL.vertices[v];
+		HalfEdge spoke=vert.halfedge;
+		ArrayList<Complex> zs=new ArrayList<Complex>();
 		
-		if (!easycase) {
-			boolean ambig=false;
-			for (int j=0;j<(num+getBdryFlag(v));j++) {
-				if (ambigZs[flower[j]]!=null)
-					ambig=true;
-				else if (offset<0)
-					offset=j; // catch first non-ambiguous petal
-			}
-			// no ambiguity v or its petals?
-			if (!ambig && ambigZs[v]==null)
-				easycase=true;
+		// if !simple, then will be laying faces out
+		//    successively
+		boolean simple=true;
+		if (vert.redFlag) {
+			HalfEdge upstream=spoke.twin.next.twin;
+			if (spoke.myRedEdge==null || 
+					spoke.myRedEdge.prevRed.myEdge!=upstream)
+				simple=false;
 		}
-
-		if (easycase) {
-			if (!isBdry(v)) { // interior case
-				for (int j=0;j<num;j++) {
-					int f=faceflower[j];
-					sC=faceIncircle(f,ambigZs);
-					pts[j]=new Complex(sC.center);
-				}
-				return pts;
+		ArrayList<dcel.Face> faceflower=vert.getFaceFlower();
+		Iterator<dcel.Face> fis=faceflower.iterator();
+		
+		// use faces as already placed
+		if (simple) {			
+			while(fis.hasNext()) {
+				dcel.Face face=fis.next();
+				if (face.faceIndx>=0)
+					zs.add(packDCEL.getFaceIncircle(face).center);
 			}
 			
-			// else is bdry case
-			pts=new Complex[num+2];
-			pts[0]=CommonMath.get_tang_pt(getCenter(v), getCenter(flower[0]),
-					getRadius(v),getRadius(flower[0]),hes);
-			pts[num+1]=CommonMath.get_tang_pt(getCenter(v), getCenter(flower[num]),
-					getRadius(v),getRadius(flower[num]),hes);
-			for (int j=0;j<num;j++) {
-				int f=faceflower[j];
-				sC=faceIncircle(f,ambigZs);
-				pts[j+1]=new Complex(sC.center);
+			// for bdry, include v itself, and bdry tangency points
+			if (vert.bdryFlag!=0) {
+				CircleSimple cs0=packDCEL.getVertData(vert.halfedge);
+				CircleSimple cs1=packDCEL.getVertData(vert.halfedge.next);
+				CircleSimple csup=packDCEL.getVertData(vert.halfedge.twin.next.twin);
+				zs.add(0,CommonMath.genTangPoint(cs0,cs1,hes));
+				zs.add(0,packDCEL.getVertCenter(spoke)); // include v itself
+				zs.add(CommonMath.genTangPoint(cs0,csup,hes));
 			}
-			return pts;
 		}
 		
-		// for non-easy cases, keep v in place, find solid petal,
-		//   then recompute the rest of the centers (though we don't
-		//   record these in rData).
-		Complex vcent=getCenter(v);
-		double rad = getRadius(v);
-		int v2 = -1;
-		int v1 = -1;
-		Complex pt1 = null;
-		Complex pt2 = null;
-		double ivd1 = 1.0;
-		double ivd2 = 1.0;
-		double ivd = 1.0;
+		// else treat first face as in place, but 
+		else {
+			HalfLink spokes=vert.getEdgeFlower();
+			HalfEdge he=spokes.remove(0);
+			TriAspect tri=new TriAspect(packDCEL,he.face);
+			do {
+				CircleSimple cs=tri.getFaceIncircle();
+				zs.add(cs.center);
+				he=he.prev.twin;
+				tri=PackDCEL.analContinue(packDCEL,he,tri);
+			} while (tri!=null && he!=vert.halfedge);
 
-		// First: find or create reliable first petal; several situations
+			// for bdry, include v itself, and bdry tangency points
+			if (vert.bdryFlag!=0) {
+				CircleSimple cs0=packDCEL.getVertData(vert.halfedge);
+				CircleSimple cs1=packDCEL.getVertData(vert.halfedge.next);
+				CircleSimple csup=packDCEL.getVertData(vert.halfedge.twin.next.twin);
+				zs.add(0,CommonMath.genTangPoint(cs0,cs1,hes));
+				zs.add(0,packDCEL.getVertCenter(spoke)); // include v itself
+				zs.add(CommonMath.genTangPoint(cs0,csup,hes));
+			}
+		}			
 
-		// v is boundary; make the first edge work
-		if (isBdry(v)) {
-			offset=0;
-			v2 = flower[offset];
-			pt2 = new Complex(getCenter(v2));
-			if (ambigZs[v2] != null) {
-				ivd2=getInvDist(v,v2);
-				sC=ambigZs[v2].theOne(vcent, rad, ivd2, hes);
-				pt2=sC.center;
-			} 
-		}
+		int n=zs.size();
+		Complex[] pts=new Complex[n];
+		Iterator<Complex> zis=zs.iterator();
+		int tick=0;
+		while (zis.hasNext())
+			pts[tick++]=zis.next();
+		return pts;
+	}
+	
+	/**
+	 * Return non-closed list of corners hull of v,
+	 * formed by the tangency points of edges from v,
+	 * including v itself if v is bdry.
+	 * @param v int
+	 * @return Complex[]
+	 */
+	public Complex[] vertex_hull(int v) {
+		Vertex vert=packDCEL.vertices[v];
+		HalfEdge he=vert.halfedge;
+		ArrayList<Complex> zs=new ArrayList<Complex>();
 		
-		else { // interior cases
-			// v is non-ambiguous
-			if (ambigZs[v] == null) {
-				if (offset >= 0) { // use this first non-ambiguous nghb
-					v2 = flower[offset];
-					ivd2=getInvDist(v,v2);
-					pt2 = new Complex(getCenter(v2));
-				} 
-				else { // no non-ambiguous petal, so position first petal
-					offset = 0;
-					v2 = flower[offset];
-					ivd2=getInvDist(v,v2);
-					pt2 = ambigZs[v2].theOne(vcent, rad, ivd2, hes).center;
-				}
-			}
-			else { // v int/ambiguous; don't move v; 
-				   // note: there should exist some nghb in place.
-				offset = -1;
-				for (int j = 0; j < num && offset < 0; j++) {
-					v2 = flower[j];
-					ivd2=getInvDist(v,v2);
-					pt2 = getCenter(v2);
-					double thislength=-1.0;
-					double actuallength=-1.0;
-					if (hes<0) {
-						thislength=HyperbolicMath.h_ivd_length(rad, getRadius(v2), ivd2);
-						actuallength=HyperbolicMath.h_dist(vcent,pt2);
-					}
-					else {
-						thislength= EuclMath.e_ivd_length(rad,getRadius(v2),ivd2);
-						actuallength=vcent.minus(pt2).abs();
-					}
-					if (Math.abs((thislength - actuallength) / rad) < .001)
-						offset = j;
-				}
-				if (offset < 0) {
-					throw new DataException("no neighbor in place?");
-				}
+		boolean simple=true;
+		if (vert.redFlag) {
+			HalfEdge upstream=he.twin.next.twin;
+			if (he.myRedEdge==null || 
+					he.myRedEdge.prevRed.myEdge!=upstream)
+				simple=false;
+		}
+		HalfLink spokes=vert.getEdgeFlower();
+		Iterator<HalfEdge> sis=spokes.iterator();
+		
+		// use spokes as already placed
+		if (simple) {			
+			while(sis.hasNext()) {
+				he=sis.next();
+				zs.add(CommonMath.genTangPoint(
+						packDCEL.getVertData(he),
+						packDCEL.getVertData(he.next),hes));
 			}
 		}
 		
-		// position the 'offset' center, then recompute the rest
-		for (int j=1;j<=(num+getBdryFlag(v));j++) {
-			v1 = v2;
-			v2 = flower[(j + offset) % num];
-			ivd1 = ivd2;
-			ivd2=getInvDist(v,v2);
-			pt1 = pt2;
-			ivd=getInvDist(v1,v2);
-			if (hes<0) // hyp
-				sC = HyperbolicMath.h_compcenter(vcent, pt1, rad, getRadius(v1),
-						getRadius(v2), ivd, ivd2, ivd1);
-			else 
-				sC=EuclMath.e_compcenter(vcent, pt1, rad, getRadius(v1),
-						getRadius(v2), ivd, ivd2, ivd1);
-			pt2=sC.center;
-			if (hes<0) 
-				sC=HyperbolicMath.hyp_tang_incircle(vcent,pt1,pt2,rad,
-						getRadius(v1),getRadius(v2));
-			else
-				sC=EuclMath.eucl_tri_incircle(vcent,pt1,pt2);
-			pts[j-1]=sC.center;
-		}
-		
+		// else treat first face as in place, but 
+		else {
+			he=sis.next();
+			zs.add(CommonMath.genTangPoint(
+					packDCEL.getVertData(he),
+					packDCEL.getVertData(he.next),hes));
+			TriAspect tri=new TriAspect(packDCEL,he.face);
+			do {
+				int j=tri.edgeIndex(he);
+				CircleSimple c1=new CircleSimple(tri.center[j],tri.radii[j]);
+				CircleSimple c2=new CircleSimple(tri.center[(j+2)%3],tri.radii[(j+2)%3]);
+				zs.add(CommonMath.genTangPoint(c1,c2,hes));
+				he=he.prev.twin;
+				tri=PackDCEL.analContinue(packDCEL,he,tri);
+			} while (tri!=null && he!=vert.halfedge);
+		}			
+
+		// for bdry, include v itself, and bdry tangency points
+		if (vert.bdryFlag!=0) 
+			zs.add(packDCEL.getVertCenter(vert.halfedge)); // v itself
+		int n=zs.size();
+		Complex[] pts=new Complex[n];
+		Iterator<Complex> zis=zs.iterator();
+		int tick=0;
+		while (zis.hasNext())
+			pts[tick++]=zis.next();
+		return pts;
+	}
+	
+	/**
+	 * Return corners of "hull" for this face; that is,
+	 * formed by the tangency points of the face edges.
+	 * @param face Face
+	 * @return Complex[], non-closed array
+	 */
+	public Complex[] face_hull(dcel.Face face) {
+		ArrayList<Complex> zs=new ArrayList<Complex>();
+		HalfEdge he=face.edge;
+		do {
+			zs.add(tangencyPoint(he));
+			he=he.next;
+		} while (he!=face.edge);
+
+		// convert
+		int n=zs.size();
+		Complex[] pts=new Complex[n];
+		Iterator<Complex> zis=zs.iterator();
+		int tick=0;
+		while (zis.hasNext())
+			pts[tick++]=zis.next();
+
 		return pts;
 	}
 	
 	/**
 	 * Return non-closed list of corners for face f, in correct order. 
-	 * May be complicated in non-simply connected situations when
-	 * 'ambigZs' is non-trivial; then we have to search for the best
-	 * three centers. 
 	 * @param f int
 	 * @return Complex[]
 	 */
-	public Complex []corners_face(int f,AmbiguousZ []ambigZs) {
-		int []vert=getFaceVerts(f);
-		int baseindx=-1;
-		Complex []pts=new Complex[3];
-		boolean easycase= (ambigZs==null) || (hes>0);
+	public Complex[] corners_face(int f) {
+		ArrayList<Complex> zs=new ArrayList<Complex>();
+		dcel.Face face=packDCEL.faces[f];
 
-		// if not simply connected and eucl/hyp, assume usual layout 
-		//    with red chain is in place.
-		if (!easycase) {
-			if (ambigZs==null)
-				throw new CombException("problems in 'face_corners' creating 'ambigZs'");
-			boolean ambig = false;
-			for (int j=0;j<3;j++) {
-				if (ambigZs[vert[j]] != null)
-					ambig = true;
-				else if (baseindx < 0)
-					baseindx = j; // catch first non-ambiguous corner
-			}
-			
-			// none of these is ambiguous?
-			if (!ambig) 
-				easycase=true;
-		}
-		
-		// in generic easy case, just list vert centers
-		if (easycase) {
-			for (int j=0;j<3;j++) {
-				pts[j]=getCenter(vert[j]);
-			}
-			return pts;
-		}
-		
-		// for non-easy cases, various situations:
-		double ovlp01=getInvDist(vert[0],vert[1]);
-		double ovlp12=getInvDist(vert[1],vert[2]);
-		double ovlp20=getInvDist(vert[2],vert[0]);
+		HalfEdge he=face.edge;
+		do {
+			zs.add(packDCEL.getVertCenter(he));
+			he=he.next;
+		} while(he!=face.edge);
 
-		// Cases when two are non-ambiguous, can compute the third
-		// base 0 and next non-ambiguous
-		if (baseindx==0 && ambigZs[vert[1]]==null) {
-			pts[0]=getCenter(vert[0]);
-			pts[1]=getCenter(vert[1]);
-			CircleSimple sC=new CircleSimple();
-			if (hes<0) // hyp
-				sC = HyperbolicMath.h_compcenter(pts[0], pts[1],
-						getRadius(vert[0]),getRadius(vert[1]),
-						getRadius(vert[2]), ovlp12, ovlp20, ovlp01);
-			else 
-				sC=EuclMath.e_compcenter(pts[0], pts[1],
-						getRadius(vert[0]),getRadius(vert[1]),
-						getRadius(vert[2]), ovlp12, ovlp20, ovlp01);
-			pts[2]=sC.center;
-			return pts;
-		}
-		// base 0 and previous non-ambiguous
-		if (baseindx==0 && ambigZs[vert[2]]==null) {
-			pts[0]=getCenter(vert[0]);
-			pts[2]=getCenter(vert[2]);
-			CircleSimple sC=new CircleSimple();
-			if (hes<0) // hyp
-				sC = HyperbolicMath.h_compcenter(pts[2], pts[0],
-						getRadius(vert[2]),getRadius(vert[0]),
-						getRadius(vert[1]), ovlp01, ovlp12, ovlp20);
-			else 
-				sC=EuclMath.e_compcenter(pts[2], pts[0],
-						getRadius(vert[2]),getRadius(vert[0]),
-						getRadius(vert[1]), ovlp01, ovlp12, ovlp20);
-			pts[1]=sC.center;
-			return pts;
-		}
-		// base 1 and next non-ambiguous (base =1 ==> previous must be ambiguous)
-		if (baseindx==1 && ambigZs[vert[2]]==null) {
-			pts[1]=getCenter(vert[1]);
-			pts[2]=getCenter(vert[2]);
-			CircleSimple sC=new CircleSimple();
-			if (hes<0) // hyp
-				sC = HyperbolicMath.h_compcenter(pts[1], pts[2],
-					getRadius(vert[1]),getRadius(vert[2]),
-					getRadius(vert[0]), ovlp12, ovlp20, ovlp01);
-			else 
-				sC=EuclMath.e_compcenter(pts[1], pts[2],
-						getRadius(vert[1]),getRadius(vert[2]),
-						getRadius(vert[0]),ovlp12, ovlp20, ovlp01);
-			pts[0]=sC.center;
-			return pts;
-		}
-		
-		// There msut be at least 2 that are ambiguous
-		boolean firsttest=false; // acceptable error with first edge?
-		boolean secondtest=false; // acceptable error with second edge?
-		Complex z=new Complex(0.0);
-		Complex best1=new Complex(0.0);
-		Complex best2=new Complex(0.0);
-
-		// is there precisely one non-ambiguous?
-		if (baseindx>=0) {
-			int v=vert[baseindx];
-			int v1=vert[(baseindx+1)%3];
-			int v2=vert[(baseindx+2)%3];
-			z=getCenter(v);
-			double rad=getRadius(v);
-			double ovlp=getInvDist(v,v1);
-			CircleSimple sC=ambigZs[v1].theOne(z,rad,ovlp,hes);
-			best1=sC.center;
-			// recall that sC.rad contains rel error (mindist/truedist)
-			if (sC.rad<0.1*rad) 
-				firsttest=true;
-			ovlp=getInvDist(v,v2);
-			sC=ambigZs[v2].theOne(z,rad,ovlp,hes);
-			best2=sC.center;
-			if (sC.rad<0.1*rad) 
-				secondtest=true;
-			if (firsttest && secondtest) { // TODO: how is the last leg?
-				ovlp=getInvDist(v1,v2);
-				sC=ambigZs[v2].theOne(best1,getRadius(v1),ovlp,hes);
-				if (sC.rad<0.1*rad) {
-					pts[baseindx]=z;
-					pts[(baseindx+1)%3]=best1;
-					pts[(baseindx+2)%3]=best2;
-					return pts;
-				}
-			}
-			// else, go with best1 and best2
-		}
-		
-		// all ambiguous (e.g., as with vertices of a blue face in redchain)
-		if (baseindx<0) {
-			int n=ambigZs[vert[0]].centers.size();
-			for (int j=0;j<n;j++) {
-				z=ambigZs[vert[0]].centers.get(j);
-				double rad=getRadius(vert[0]);
-				CircleSimple sC=ambigZs[vert[1]].theOne(z,rad,ovlp01,hes);
-				best1=sC.center;
-				// recall that sC.rad contains rel error (mindist/truedist)
-				if (sC.rad<0.1*rad) 
-					firsttest=true;
-				sC=ambigZs[vert[2]].theOne(z,rad,ovlp20,hes);
-				best2=sC.center;
-				if (sC.rad<0.1*rad) 
-					secondtest=true;
-				if (firsttest && secondtest) { // but what about the last leg?
-					sC=ambigZs[vert[2]].theOne(best1,getRadius(vert[1]),ovlp12,hes);
-					if (sC.rad<0.1*rad) {
-						pts[0]=z;
-						pts[1]=best1;
-						pts[2]=best2;
-						return pts;
-					}
-				}
-			}
-		}
-		
-		// shouldn't leave without an answer
-		pts[0]=z;
-		pts[1]=best1;
-		pts[2]=best2;
+		int n=zs.size();
+		Complex[] pts=new Complex[n];
+		Iterator<Complex> zis=zs.iterator();
+		int tick=0;
+		while (zis.hasNext())
+			pts[tick++]=zis.next();
 		return pts;
 	}		
 	
 	/**
-	 * Return corners of "hull" for this face; that is,
-	 * the tangency points of the face edges.
-	 * @param face Face
-	 * @return Complex[], non-closed array
-	 */
-	public Complex[] face_hull_corners(dcel.Face face) {
-		ArrayList<Complex> zlist=new ArrayList<Complex>();
-		HalfEdge he=face.edge;
-		do {
-			zlist.add(tangencyPoint(he));
-			he=he.next;
-		} while (he!=face.edge);
-
-		// convert
-		int n=zlist.size();
-		Complex[] pts=new Complex[n];
-		Iterator<Complex> zis=zlist.iterator();
-		int tick=0;
-		while (zis.hasNext())
-			pts[tick++]=zis.next();
-
-		return pts;
-		
-	}
-	
-	/**
-	 * Return non-closed list of corners for a "hull" face
-	 * for 'v'; that is, a list of tangency points v has with
-	 * nghbs (including v itself if v is bdry). 
+	 * Return non-closed list of corners for "paver" of v, i.e.,
+	 * polygonal region defined as union of v's faces (include
+	 * center of v itself if bdry). If v is red, we treat its 
+	 * first face as in place, but successively recompute the 
+	 * remaining faces.
 	 * @param v int
 	 * @return Complex[], non-closed array 
 	 */
-	public Complex[] corners_hull(int v) {
-		ArrayList<Complex> zlist=new ArrayList<Complex>();
+	public Complex[] corners_paver(int v) {
+		ArrayList<Complex> zs=new ArrayList<Complex>();
 		Vertex vert=packDCEL.vertices[v];
+		HalfEdge he=vert.halfedge;
 		
+		boolean simple=true;
+		if (vert.redFlag) {
+			HalfEdge upstream=he.twin.next.twin;
+			if (he.myRedEdge==null || 
+					he.myRedEdge.prevRed.myEdge!=upstream)
+				simple=false;
+		}
 		HalfLink spokes=vert.getEdgeFlower();
 		Iterator<HalfEdge> sis=spokes.iterator();
-		while(sis.hasNext()) 
-			zlist.add(tangencyPoint(sis.next()));
-
-		// bdry? include z
-		if (vert.bdryFlag!=0) 
-			zlist.add(packDCEL.getVertCenter(vert.halfedge));
-
-		int n=zlist.size();
-		Complex[] pts=new Complex[n];
-		Iterator<Complex> zis=zlist.iterator();
-		int tick=0;
-		while (zis.hasNext())
-			pts[tick++]=zis.next();
-
-		return pts;
-	}
 	
-	
-	
-	/**
-	 * Return non-closed list of corners for "paver" of v, i.e.,
-	 * polygonal region given by union of v's faces (including v
-	 * itself if v is bdry). 
-	 * @param v int
-	 * @return Complex[], non-closed array 
-	 */
-	public Complex []corners_paver(int v) {
-		ArrayList<Complex> zlist=new ArrayList<Complex>();
-		Vertex vert=packDCEL.vertices[v];
-		
-		// interior?
-		if (vert.bdryFlag==0) {
-			HalfLink outer=vert.getOuterEdges();
-			Iterator<HalfEdge> ois=outer.iterator();
-			while(ois.hasNext()) 
-				zlist.add(packDCEL.getVertCenter(ois.next()));
+		// assume faces in place
+		if (!simple) {
+			while(sis.hasNext()) 
+				zs.add(packDCEL.getVertCenter(sis.next().next));
 		}
-		
 		else {
-			// center of v itself, and first petal
-			zlist.add(packDCEL.getVertCenter(vert.halfedge));
-			zlist.add(packDCEL.getVertCenter(vert.halfedge.next));
-			HalfLink spokes=vert.getEdgeFlower();
-			spokes.removeLast();
-			Iterator<HalfEdge> sis=spokes.iterator();
-			while (sis.hasNext()) {
-				HalfEdge he=sis.next().next;
-				zlist.add(packDCEL.getVertCenter(he.next));
-			}
+			HalfEdge spoke=vert.halfedge;
+			zs.add(packDCEL.getVertCenter(spoke.next));
+			TriAspect tri=new TriAspect(packDCEL,spoke.face);
+			do {
+				int j=tri.edgeIndex(spoke);
+				zs.add(tri.center[(j+2)%3]);
+				spoke=spoke.prev.twin;
+				tri=PackDCEL.analContinue(packDCEL,spoke.twin,tri);
+			} while (tri!=null && spoke!=vert.halfedge);
 		}
 
-		int n=zlist.size();
+		if (vert.bdryFlag!=0)
+			zs.add(0,packDCEL.getVertCenter(vert.halfedge)); // v itself
+		int n=zs.size();
 		Complex[] pts=new Complex[n];
-		Iterator<Complex> zis=zlist.iterator();
+		Iterator<Complex> zis=zs.iterator();
 		int tick=0;
 		while (zis.hasNext())
 			pts[tick++]=zis.next();
-
 		return pts;
 	}
-	
-	/** 
-	 * Find endpoints of given edge; complicated only in non-simply
-	 * connected case (eucl or hyp only).
-	 * @param edge EdgeSimple
-	 * @return Complex[2]
-	 */
-	public Complex []ends_edge(EdgeSimple edge,AmbiguousZ []ambigZs) {
-		if (nghb(edge.v,edge.w)<0)
-			return null;
-		Complex []pts=new Complex[2];
-		boolean easycase= ((ambigZs==null) || (hes>0));
-		
-		// generic case, use stored centers
-		if (easycase) {
-			pts[0]=getCenter(edge.v);
-			pts[1]=getCenter(edge.w);
-			return pts;
-		}
 
-		// if not simply connected and eucl/hyp, assume usual layout 
-		//    with red chain is in place.
-		int goodone=-1;
-		int badone=-1;
-		boolean oriented=true;
-		if (!easycase) {
-			if (ambigZs==null)
-				throw new CombException("problems creating 'ambigZs' in 'ends_edge' call");
-			if (ambigZs[edge.v]==null && ambigZs[edge.w]==null) {
-				pts[0]=getCenter(edge.v);
-				pts[1]=getCenter(edge.w);
-				return pts;
-			}
-			else if (ambigZs[edge.v]==null) {
-				goodone=edge.v;
-				badone=edge.w;
-			}
-			else if (ambigZs[edge.w]==null) {
-				goodone=edge.w;
-				badone=edge.v;
-				oriented=false;
-			}
-		}
-		
-		double ovlp=getInvDist(edge.v,edge.w);
-		
-		if (goodone<0) { // both ambiguous? 
-			// try pairings until you meet threshold or return best.
-			Complex bestz0=null;
-			Complex bestz1=null;
-			double besterr=100000.0;
-
-			// note that the current location is first among ambiguous 'centers'
-			Iterator<Complex> vit=ambigZs[edge.v].centers.iterator();
-			while (vit.hasNext()) {
-				double rad=getRadius(edge.v);
-				Complex zv=vit.next();
-				// get the best fit 
-				CircleSimple sC=ambigZs[edge.w].theOne(zv,rad,ovlp,hes); 
-				Complex zw=sC.center;
-				if (sC.rad<besterr) {
-					if (sC.rad<0.05) { // less than 5% relative error?
-						pts[0]=zv;
-						pts[1]=zw;
-						return pts;
-					}
-					bestz0=zv;
-					bestz1=zw;
-					besterr=sC.rad;
-				}
-			}
-			if (bestz0==null || bestz1==null) {
-				pts[0]=getCenter(edge.v);
-				pts[1]=getCenter(edge.w);
-			}
-			else {
-				pts[0]=bestz0;
-				pts[1]=bestz1;
-			}
-			return pts;
-		}
-		
-		// 'goodone' not ambiguous, so find best match 
-		pts[0]=getCenter(goodone);
-		double rad=getRadius(goodone);
-		CircleSimple sC=ambigZs[badone].theOne(pts[0],rad,ovlp,hes); // get the best fit
-		pts[1]=sC.center;
-
-		if (!oriented) {
-			Complex holdz=new Complex(pts[0]);
-			pts[0]=pts[1];
-			pts[1]=holdz;
-		}
-		
-		return pts;
-	}
-	
 	/**
-	 * Return complex locations of ends of dual edge, 
-	 * possibly complicated for non-simply connected
+	 * Return complex locations of ends of dual edge <f,g>.
+	 * If the edge between in red, we do a faux layout of g
+	 * to get its incircle.
 	 * @param edge EdgeSimple
-	 * @param ambigZs Ambiguous[]
 	 * @return Complex[2], null on failure
 	 */
-	public Complex []ends_dual_edge(EdgeSimple edge,AmbiguousZ []ambigZs) {
-		int f=edge.v;
-		int g=edge.w;
-		int indx=-1;
-		if (f<1 || g<1 || f>faceCount || g>faceCount || (indx=face_nghb(g,f))<0)
-			return null;
-		// generic case
-		Complex []pts=new Complex[2];
-		if (ambigZs==null || hes>0) {
-			pts[0]=faceIncircle(f,ambigZs).center;
-			pts[1]=faceIncircle(g,ambigZs).center;
-			return pts;
+	public Complex[] ends_dual_edge(EdgeSimple edge) {
+		EdgeSimple dedge=packDCEL.dualEdge_to_Edge(edge); 
+		int v=dedge.v;
+		int w=dedge.w;
+		HalfEdge hedge=packDCEL.findHalfEdge(dedge);
+		// incircle of f
+		CircleSimple cSf= CommonMath.tri_incircle(
+				packDCEL.getVertCenter(hedge),
+				packDCEL.getVertCenter(hedge.next),
+				packDCEL.getVertCenter(hedge.next.next),hes);
+		// incircle of g
+		CircleSimple cSg=null;
+		if (hedge.myRedEdge!=null) {
+			// set up tmp 'TriAspect'
+			TriAspect tri_g=PackDCEL.analContinue(packDCEL,hedge);
+			cSg=tri_g.compIncircle();
 		}
-		
-		// We arbitrarily work with f first
-		Complex []zf=corners_face(f,ambigZs);
-		
-		// get ends v,w for edge between f and g, and third of g
-		int v=faces[f].vert[indx];
-		int w=faces[f].vert[(indx+1)%3];
-		int oddg=faces[g].vert[(face_nghb(f,g)+2)%3];
-		
-		Complex []zg=new Complex[3];
-		zg[0]=zf[(indx+1)%3];
-		zg[1]=zf[indx];
-		double ovlp2=getInvDist(v,w);
-		double ovlp1=getInvDist(w,oddg);
-		double ovlp0=getInvDist(v,oddg);
-		zg[2]=CommonMath.comp_any_center(zg[0], zg[1],
-				getRadius(2),getRadius(v),getRadius(oddg),ovlp0,ovlp1,ovlp2,hes).center;
-		pts[0]=CommonMath.tri_incircle(zf[0],zf[1],zf[2],hes).center;
-		pts[1]=CommonMath.tri_incircle(zg[0],zg[1],zg[2],hes).center;
+		else {
+			cSg= CommonMath.tri_incircle(
+					packDCEL.getVertCenter(hedge.twin),
+					packDCEL.getVertCenter(hedge.twin.next),
+					packDCEL.getVertCenter(hedge.twin.next.next),hes);
+		}
+
+		Complex []pts=new Complex[2];
+		pts[0]=cSf.center;
+		pts[1]=cSg.center;
 		return pts;
 	}
 
@@ -4408,195 +4121,7 @@ public class PackData{
 		// TODO: eventually, just return; but for debugging, keep this.
 		throw new DCELException("DCEL combinatorics are required.");
 	}
-	
-	/**
-	 * Vertex combinatorics are given. Here we create new face indices, identify
-	 * and count bdry/interior nodes, bdry/interior components, Euler characteristic,
-	 * genus, etc. Store indicators of bdry and int components
-	 * (at most MAX_COMPONENTS of each). 
-	 * @param defaultColor boolean: true means set default color codes for circles.
-	 * @return int 'nodeCount', 0 on error
-	*/
-	public int complex_count(boolean defaultColor) {
-		int m,n,v,w;
-		boolean tmp_debug=false;
 
-		if (defaultColor) 
-			for (int i=1;i<=nodeCount;i++)
-				setCircleColor(i,ColorUtil.getFGColor());
-		
-		// set 'bdryFlag's, 'bdryCompCount' and 'bdryStarts'
-		// combinatorial errors often occur here
-		int bcount=0;
-		try {
-			bcount=setBdryFlags(); // 0=interior, 1=bdry
-		} catch (Exception ex) {
-			throw new CombException("error in bdry: "+ex.getMessage());
-		}
-
-		// identify interior components and pointers to them 
-		intStarts=new int[2*MAX_COMPONENTS];
-		intNodeCount=nodeCount-bcount; // number of interior vertices
-		int icount=0;
-		for (int i=1;i<=nodeCount;i++) {
-			if (isBdry(i))
-				kData[i].utilFlag=-1;
-			else {
-				kData[i].utilFlag=0;
-				icount++;
-			}
-		}
-		int Ii,k;
-		int comp_count=0;
-		NodeLink nL=null;
-		NodeLink lL=null;
-		while(icount>0) {
-			// find fresh interior
-			Ii=0;
-			for (int i=1;(i<=nodeCount && Ii==0);i++) 
-				if (kData[i].utilFlag==0) Ii=i;
-			if (Ii==0) {
-				throw new CombException("error processing interiors");
-			}
-			comp_count++;
-			icount--;
-			intStarts[comp_count]=Ii;
-			kData[Ii].utilFlag=comp_count;
-			
-			// start two lists: follow lL, add to nL (new ones)
-			nL=new NodeLink(this,Ii);
-			while (nL!=null && nL.size()>0 && icount>0) {
-				lL=nL;
-				nL=new NodeLink(this); // restart new list
-				Iterator<Integer> vlist=lL.iterator();
-				while (vlist.hasNext()) {
-					v=(int)vlist.next();
-					for (int j=0;j<(countFaces(v)+getBdryFlag(v));j++) {
-						k=kData[v].flower[j];
-						if (kData[k].utilFlag==0) {
-							nL.add(k);
-							kData[k].utilFlag=comp_count;
-							icount--;
-						}
-					}
-				} // end of inner while
-			} // end of middle while
-		} // end of outer while
-		intCompCount=comp_count;
-		
-		// find Euler characteristic and genus 
-		int count=0;
-		for (k=1;k<=nodeCount;k++) 
-			count += countFaces(k);
-		faceCount=count/3;
-		int num_edges=(count + bcount)/2;
-		euler=nodeCount-num_edges+faceCount;
-		genus=(2-euler-getBdryCompCount())/2;
-		// check if geom is appropriate 
-		if (bdryCompCount==0 && genus==0 && hes<=0) {
-			CirclePack.cpb.msg("NOTE: This complex is a topological sphere");
-		}
-		
-		// allocate faces space
-		if (alloc_faces_space()==0) {
-			CirclePack.cpb.errMsg("Error allocating 'faces' data space.");
-			return 0;
-		}
-		count=1;
-		int hit=1;
-		while (count<=faceCount && hit<=nodeCount) {
-			for (int j=0;j<countFaces(hit);j++) {
-				m=kData[hit].flower[j];
-				n=kData[hit].flower[j+1];
-				if (m>hit && n>hit) {
-					faces[count].vert[0]=hit;
-					faces[count].vert[1]=m;
-					faces[count].vert[2]=n;
-					
-					// want interior in [0] location: rotate if necessary
-					if (isBdry(hit)) {
-						if (!isBdry(m)) {
-							faces[count].vert[0]=m;
-							faces[count].vert[1]=n;
-							faces[count].vert[2]=hit;
-						}
-						else if (!isBdry(n)) {
-							faces[count].vert[0]=n;
-							faces[count].vert[1]=hit;
-							faces[count].vert[2]=m;
-						}
-					}
-					setFaceColor(count,ColorUtil.getFGColor());
-					faces[count].plotFlag=1;
-					count++;
-				}
-			}
-			hit++;
-		}
-		
-		// Some feedback if there's an error
-		if (count < faceCount) {
-			CirclePack.cpb.errMsg("Combinatoric error in facecount.");
-			count=0;
-			for (int i=1;i<=nodeCount && count < 25;i++)
-				for (int j=0;j<(countFaces(i)+getBdryFlag(i));j++)
-					if (nghb((v=kData[i].flower[j]),i) < 0) {
-						if (count ==0 ) {
-							detailError("  Here are some vertices which " +
-							"disagree about begin neighbors:\n");
-						}
-						detailError("     "+i+" -- "+v);
-						count ++;
-					}
-			if (count == 25) {
-				CirclePack.cpb.errMsg("Stop: too many errors.");
-				detailError("Stop counting (there may be yet more combinatoric errors).");
-			}
-			return 0;
-		}
-		
-		// Catalog the faces in 'faceFlower' arrays
-		for (int j=1;j<=nodeCount;j++) kData[j].faceFlower=new int[countFaces(j)];
-		for (int f=1;f<=faceCount;f++)
-			for (int j=0;j<3;j++) {
-				v=faces[f].vert[j];
-				w=faces[f].vert[(j+1)%3];
-				if ((n=nghb(v,w))<0) {
-					throw new CombException("nbhb error for v,w = "+v+","+w);
-				}
-				int vw=kData[v].faceFlower[n];
-				if (vw!=0 && vw!=f) {
-					boolean debug=false; // debug=true;
-					if (debug)
-						DebugHelp.debugPackWrite(this,"badflowers.p"); // DebugHelp.debugPackWrite(this,"badflowers.p");
-					throw new CombException("error in face numbering");  
-				}
-				kData[v].faceFlower[n]=f;
-			}
-			
-		// determine intrinsic geometry (but let user set 'hes')
-		intrinsicGeom=PackData.getIntrinsicGeom(this);
-
-		if (tmp_debug) { // set during debugging
-			  File file = new File(System.getProperty("java.io.tmpdir")+
-					  File.separator+"CompCount.dblog");
-			  try {
-				BufferedWriter dbw = new BufferedWriter(new FileWriter(file));
-				dbw.write("Debug file: nodeCount="+nodeCount+", faceCount="+faceCount+"\n");
-				for (int jj=1;jj<=faceCount;jj++) {
-					dbw.write("Face "+jj+", vert[]={");
-					dbw.write(faces[jj].vert[0]+","+faces[jj].vert[1]+","+faces[jj].vert[2]+"}\n");
-				}
-				dbw.flush();
-				dbw.close();
-			  } catch(Exception ex) {
-				System.err.print(ex.toString());
-			}
-		}
-		
-		return nodeCount;
-	} 
-	
 	/**
 	 * Return true if complex is simply connected: use
 	 * 'genus'==0 and 'euler' either 1 or 2.
@@ -4736,235 +4261,6 @@ public class PackData{
 	/* fixup: these routines could be more efficient -- they're too 
 	   slow when working with large packings */
 
-	/** 
-	 * traditional
-	 * 
-	 * Find and store order for computing all circle centers. Uses faces
-	 * starting with one containing alpha. Every subsequent face f has two
-	 * of its circles in place and is responsible for placing a new circle. 
-	 * NOTE: T is NOT necessarily a tree in the dual graph; e.g., faces are 
-	 * omitted if their circles are all placed using other faces.
-	 * For spanning tree, see 'dualSpanner', 'DualGraph' stuff.
-	 * 
-	 * If pflag is set, then take account of "poison" edges (first 
-	 * precedence) or vertices which are stored by the calling routine in 
-	 * 'PackData.poisonEdges' and 'PackData.poisonVerts'. This is typically 
-	 * how one can influence the form of final red chain, which is otherwise 
-	 * determined automatically. 
-	 * @param pflag boolean: true, then take account of 'poison' verts.
-	 * @return int 1; errors give exceptions 
-	*/
-	public int facedraworder(boolean pflag) 
-	throws RedListException, CombException, LayoutException {
-	  int k,f,lastface,w,stop_vert;
-	  RedList trace;
-	  VertList faceOrder;
-	  VertList fDo;
-	  boolean debug=false;
-	  
-	  // Initialize
-	  if (pflag && poisonEdges==null && poisonVerts==null) pflag=false;
-	  if (alpha>nodeCount || alpha<=0 || isBdry(alpha)) 
-		  chooseAlpha();
-
-	  // ============= Try "simple" layout first if it applies 
-	  
-	  boolean simplayoutflag=false;
-	  if (!pflag && isSimplyConnected()) {
-		  int sl=0;
-		  try {
-			  sl=simple_layout(0);
-		  } catch (Exception ex) {}
-		  if (sl!=0)
-			  simplayoutflag=true;
-	  }
-	  
-	  if (simplayoutflag) { // simple layout worked
-		  
-		  // Now we create/process the redChain
-		  
-		  // Couple of checks first: Sphere? thus, no redChain needed
-	      if (getBdryCompCount()==0) {
-	    	  redChain=null;
-	    	  return 1;
-	      }
-	      if (getBdryCompCount()>1) 
-	    	  throw new CombException("Claims simply-connected, but 'bdryCompCount'== "+getBdryCompCount());
-	      
-		  // Need to start with bdry vert having at least two faces
-	      int bstart=bdryStarts[1]; 
-	      int v=bstart;
-		  int safety=nodeCount;
-		  while (countFaces(v)<2 && (v=kData[v].flower[0])!=bstart && safety>0) {
-			  safety--;
-		  }
-		  if (countFaces(v)<2 || safety==0) 
-			  throw new CombException("No bdry vertices with interior neighbor");
-		  
-		  // redChain is all bdry faces; start with last face 
-		  //    at v (which won't be blue)
-	      w=stop_vert=kData[v].flower[0];
-		  redChain=trace=new RedList(this,getFaceFlower(w,countFaces(w)-1));
-		  trace.center=getCenter(w);
-		  trace.vIndex=face_index(trace.face,w);
-		  
-		  // rwbFlag is reset later in 'build_redchain' and used to identify
-		  //   when we get to a red face.
-		  faces[trace.face].rwbFlag=1;
-
-		  // add rest of w's flower (reverse order); then continue around boundary
-		  boolean keepon=true;
-		  while (keepon || w!=stop_vert) {
-		      keepon=false;
-		      for (int i=countFaces(w)-2;i>=0;i--) {
-		    	  trace=trace.next=new RedList(trace,getFaceFlower(w,i));
-		      }
-		      w=kData[w].flower[0];
-		  }
-		  // drop the last face, it's a repeat of the initial one
-		  trace=trace.remove();
-		  redChain=trace.next; // should now point to first 'RedEdge'
-		  trace=null; // toss
-		  
-		  // Main processing: set pointers, set vIndex, center, rad, sidepairing's, etc.
-		  firstRedFace=redChain.face;
-		  BuildPacket bP=new BuildPacket();
-		  bP=redChainer.redface_comb_info(redChain,pflag); //
-		  if (!bP.success) {
-			  throw new LayoutException("Layout error, simply connected case ");
-		  }
-		  sidePairs=bP.sidePairs;
-		  labelSidePairs(); // establish the pairing 'label's
-		  redChain=firstRedEdge=bP.firstRedEdge;
-		  // set centers
-		  if (redChain!=null) {
-			  keepon=true;
-			  trace=redChain;
-			  while (trace!=redChain || keepon) {
-				  keepon=false;
-				  trace.center=new Complex(0.0);
-				  trace=trace.next;
-			  }
-		  }
-		  
-	      if (debug) { // see the current red chain
-			  System.out.println("redChain, simply connected case\n"+
-					  LayoutBugs.quick_redlist(redChain));
-		  }
-	      
-	      return 1;
-	  }
-
-	  // ============== Can't use simple_layout, so use general methods
-	  
-	  for (int i=1;i<=nodeCount;i++) kData[i].utilFlag=0;
-	  for (int j=1;j<=faceCount;j++) faces[j].rwbFlag=0;
-
-	  /* Normally start with 'alpha'. However, if 'pflag' is set and 
-	   * 'alpha' is poison, search for non-poison start among nghb's 
-	   * of 'alpha', else first eligible interior, else abandon poison 
-	   * designations and proceed. */
-	  if (pflag && kData[alpha].utilFlag==-1) {
-		  k=0;
-		  while (kData[kData[alpha].flower[k]].utilFlag==-1
-				  && k<=countFaces(alpha)) k++;
-		  if (k>countFaces(alpha)) {
-			  k=1;
-			  while (k<=nodeCount && (isBdry(k) || (kData[k].utilFlag==-1)))
-				  k++;
-			  if (k==(nodeCount+1)) { // can't find any interior, non-poison; abandon poisons
-				  flashError("Had to abandon given poison vertices;"+
-						  "Try again with a different initial vertex.");
-				  for (int i=1;i<=nodeCount;i++) kData[i].utilFlag=0;
-			  }
-		  }
-		  else alpha=kData[alpha].flower[k]; // replace 'alpha' by its first non-poison petal
-	  }
-			
-	  /* If not a sphere, compute red chain ('pflag' true, then 
-	   * watch for poison edges/verts) and preliminary face order.*/
-	  BuildPacket bP=redChainer.build_redchain(alpha,pflag);
-
-	  if (!bP.success) {
-		  throw new RedListException(bP.buildMsg);
-	  }
-	  faceOrder=bP.faceOrdering;
-	  redChain=bP.redList;
-	  firstRedEdge=bP.firstRedEdge; // debug=true; // LayoutBugs.pRedEdges(this);
-	  
-	  if (debug) LayoutBugs.log_build_faceOrder(this,faceOrder);
-	  
-	  // 'redChain' should be null only for sphere
-	  if (redChain==null && intrinsicGeom<=0) {
-		  throw new RedListException("layout error: no 'red chain'");
-	  }
-	  
-	  // Process the red chain to find edges, pairings, etc.
-	  initRedCenters(firstRedEdge);
-	  if (redChain!=null) {
-
-		  bP=redChainer.redface_comb_info(redChain,pflag);
-		  if (!bP.success) {
-			  throw new LayoutException("multiply-connected layout error");
-		  }
-		  sidePairs=bP.sidePairs;
-		  labelSidePairs();
-		  redChain=firstRedEdge=bP.firstRedEdge;
-	  }
-
-	  if (debug) LayoutBugs.log_PairLink(this,sidePairs);
-	  
-	  // set final order info in 'Face' array 
-	  lastface=1;
-	  fDo=faceOrder;
-	  int []ans=final_order(fDo);
-	  if (ans[0]!=0 ) { // this is the outcome flag:
-	      // have some missing faces?
-	      if (ans[0]==-1) { // error, set up to redo by old reliable methods
-	    	  for (int i=1;i<=nodeCount;i++) 
-	    		  kData[i].utilFlag=0;
-	    	  kData[alpha].utilFlag=1;
-	    	  f=getFaceFlower(alpha,0);
-	    	  for (int i=0;i<3;i++) 
-	    		  kData[faces[f].vert[i]].utilFlag=1;
-	    	  fDo=faceOrder; // now, fall through 
-	      }
-	      if (wrapup_order(lastface)==0) { // old-style order 
-	    	  flashError("A drawing order error has occurred");
-	      }
-	  }
-
-	  if (redChain==null) { // e.g., sphere; throw away red chain 
-		  firstRedFace=0;
-		  firstRedEdge=null;
-	  }
-
-	  for (int i=1;i<=faceCount;i++) {
-		  if (faces[i].nextFace==0)
-			  faces[i].nextFace=firstFace;
-		  if (faces[i].rwbFlag>0 && faces[i].nextRed==0)
-			  faces[i].nextRed=firstRedFace;
-	  }
-	  if (debug) LayoutBugs.log_build_faceOrder(this,faceOrder);
-	  return 1;
-	} 
-	
-	/** 
-	 * Back through red face list (counterclockwise) while faces share 'vert';
-	 * return the face furthest upstream (clockwise).
-	 * @param spot RedList
-	 * @param vert int
-	 * @return RedList
-	*/
-	public RedList back_red_face(RedList spot,int vert) {
-	  int n;
-
-	  while ((n=face_nghb(spot.face,spot.prev.face))>=0
-		 && faces[spot.prev.face].vert[n]==vert)
-	    spot=spot.prev;
-	  return spot;
-	} 
-	
 	/** 
 	 * Input: spot_ptr in red chain and index for an edge. (Note: 'index' 
 	 * of an edge is index of its first vertex in 'vert' vector for face.)
@@ -5122,397 +4418,17 @@ public class PackData{
 	  return false;
 	} 
 
-	/** 
-	 * Return int[2], where int[0] is flag: 0 for success, all faces plotted; 
-	 * -1 error requiring old method; 1 success, but some circles not plotted. 
-	 * int[1] contains 'lastface'. 
-	 * 
-	 * Strategy: Simply connected case, do in order without regard	to red/white 
-	 * color. Non-simply connected case, start with	alpha, proceed to first red 
-	 * face, do whole red chain, come back for rest. (Needed because some circles 
-	 * get moved while drawing redchain.)
-	 * @param fDo VertList
-	 * @return int[]
-	*/
-	public int[] final_order(VertList fDo) throws LayoutException,
-			RedListException {
-		int red_count = 0, f, index, next_face, lastred;
-		VertList temp;
-		RedList trace;
-		int lastface;
-		boolean debug = false;
-
-		temp = fDo;
-		firstRedFace = 0;
-		firstFace = fDo.v;
-		for (int i = 1; i <= nodeCount; i++)
-			kData[i].utilFlag = 0;
-		for (int i = 1; i <= faceCount; i++)
-			faces[i].nextFace = faces[i].nextRed = 0;
-
-		if (debug) {
-			for (int i = 1; i <= faceCount; i++) {
-				System.out.println("f=" + i + "; rwb=" + faces[i].rwbFlag
-						+ "; nextFace=" + faces[i].nextFace);
-			}
-		}
-
-		// take care of first face bookkeeping
-		for (int j = 0; j < 3; j++)
-			kData[faces[fDo.v].vert[j]].utilFlag = 1;
-		fUtil = new int[faceCount + 1];
-		fUtil[fDo.v] = 1;
-		if (fDo.next == null || fDo.next.next == null)
-			throw new LayoutException(
-					"Error in beginning of 'fDo' (facedraworder)");
-
-		/* ----------------- simply connected ------------------------- */
-
-		if (isSimplyConnected()) {
-			faces[fDo.v].nextFace = f = fDo.next.v;
-			index = faces[f].indexFlag;
-			faces[f].indexFlag = nice_index(f, index);
-			kData[faces[f].vert[(faces[f].indexFlag + 2) % 3]].utilFlag = 1;
-			fUtil[f] = 1;
-			lastface = f;
-			/* now look for qualifying next_face for f to point to */
-			fDo = fDo.next.next;
-			while (fDo != null) {
-				/*
-				 * get all rest in fdo, avoiding repeats (i.e., wiping out an
-				 * original 'nextFace')
-				 */
-				while (fDo != null
-						&& (faces[fDo.v].nextFace != 0 || fDo.v == f))
-					fDo = fDo.next;
-				if (fDo != null) {
-					f = faces[f].nextFace = fDo.v;
-					index = faces[f].indexFlag;
-					faces[f].indexFlag = nice_index(f, index);
-					kData[faces[f].vert[(faces[f].indexFlag + 2) % 3]].utilFlag = 1;
-					fUtil[f] = 1;
-					lastface = f;
-					fDo = fDo.next;
-				}
-			} // end of while
-
-			// set first_red_face and red face list in f_data
-			if (redChain != null) {
-				// skip 'white' or 'free' faces
-				while (temp.next != null && faces[temp.v].rwbFlag <= 0)
-					temp = temp.next;
-				if (temp.next != null
-						&& position_redlist(redChain, temp.v) != 0) {
-					// seem to have found one
-					firstRedFace = temp.v;
-					fUtil[firstRedFace] = 1;
-					next_face = redChain.next.face;
-					faces[firstRedFace].nextRed = next_face;
-					fUtil[next_face] = 1;
-					trace = redChain.next;
-					while (trace != redChain.prev
-							&& red_count < (2 * faceCount)) {
-						red_count++;
-						next_face = trace.next.face;
-						// skip over red faces already plotted
-						while (trace != redChain.prev && fUtil[next_face] != 0) {
-							trace = trace.next;
-							next_face = trace.next.face;
-						}
-						if (trace != redChain.prev) {
-							faces[trace.face].nextRed = next_face;
-							fUtil[next_face] = 1;
-							trace = trace.next;
-						}
-					} // end of while
-					if (red_count > faceCount) {
-						throw new LayoutException("redcount > faceCount");
-					}
-				} else {
-					throw new RedListException("error positioning redlist");
-				}
-			}
-			// check for remaining faces
-			for (int i = 1; i <= nodeCount; i++)
-				if (kData[i].utilFlag == 0) { // circle not plotted
-					int[] ans = new int[2];
-					ans[0] = 1;
-					ans[1] = lastface;
-					return ans;
-				}
-			int[] ans = new int[2];
-			ans[0] = 0;
-			ans[1] = lastface;
-			return ans;
-		}
-
-		/* ------------------------ non-simply connected ----------------- */
-
-		else {
-
-			// first, order the interiors;
-			f = lastface = firstFace;
-
-			// special handling to get started with first_face.
-			if (faces[f].rwbFlag < 0)
-				fDo = fDo.next;
-
-			// seek qualifying next_face for f; avoid repeats
-			while (fDo != null && faces[fDo.v].rwbFlag < 0) {
-				while (fDo != null && faces[fDo.v].rwbFlag < 0
-						&& faces[fDo.v].nextFace != 0)
-					fDo = fDo.next;
-				if (fDo != null && faces[fDo.v].rwbFlag < 0) {
-					f = faces[f].nextFace = fDo.v;
-					index = faces[f].indexFlag;
-					faces[f].indexFlag = nice_index(f, index);
-					kData[faces[f].vert[(faces[f].indexFlag + 2) % 3]].utilFlag = 1;
-					lastface = f;
-					fDo = fDo.next;
-				}
-			}
-			if (fDo == null || faces[fDo.v].rwbFlag < 0) { // should not happen
-				faces[f].nextFace = temp.v;
-				throw new LayoutException("fDo error.");
-			}
-			/*
-			 * Should be pointing to first red face (which could also be
-			 * 'first_face' itself); now, put in whole red chain, also arrange
-			 * 'nextRed' data
-			 */
-			if (f == firstFace && faces[f].rwbFlag >= 0) {
-				// firstFace red? already in place
-				firstRedFace = firstFace;
-				
-			} else {
-				f = faces[f].nextFace = firstRedFace = fDo.v;
-				index = faces[f].indexFlag;
-				faces[f].indexFlag = nice_index(f, index);
-				kData[faces[f].vert[(faces[f].indexFlag + 2) % 3]].utilFlag = 1;
-			}
-			fUtil[f] = 1;
-			lastface = f;
-
-			/*
-			 * We need a qualifying nextFace for f, but now we look in
-			 * 'redChain', being careful to avoid repeats
-			 */
-			RedList rdlst = redChain;
-			position_redlist(rdlst, firstRedFace);
-			trace = redChain.next;
-
-			while (trace != redChain && red_count < (3 * faceCount)) {
-				red_count++;
-				// skip over faces with next_face already set
-				// careful not to point to self
-				while (trace != redChain
-						&& (faces[trace.face].nextFace != 0 || trace.face == f))
-					trace = trace.next;
-				if (trace != redChain) {
-					f = faces[f].nextFace = faces[f].nextRed = trace.face;
-					index = faces[f].indexFlag;
-					faces[f].indexFlag = nice_index(f, index);
-					kData[faces[f].vert[(faces[f].indexFlag + 2) % 3]].utilFlag = 1;
-					fUtil[f] = 1;
-					lastface = f;
-					trace = trace.next;
-				}
-			}
-			if (red_count > (3 * faceCount))
-				throw new LayoutException("'red_count' is too large");
-
-			if (debug)
-				LayoutBugs.print_drawingorder(this, true); // with faces
-			if (debug)
-				LayoutBugs.print_drawingorder(this, false);
-
-			// now at last red face
-			lastred = f;
-
-			/*
-			 * get rest of white by following fDo; avoid repeats, skip red. The
-			 * last red face must point to the rest of the list for purposes of
-			 * 'comp_pack_centers'. Last face indicated by nextFace=0.
-			 */
-			while (fDo != null) {
-				while (fDo != null
-						&& (faces[fDo.v].rwbFlag >= 0 || faces[fDo.v].nextFace != 0))
-					fDo = fDo.next;
-				if (fDo != null) {
-					if (lastred != 0) {
-						faces[lastred].nextFace = fDo.v;
-						lastred = 0;
-					}
-					f = faces[f].nextFace = fDo.v;
-					index = faces[f].indexFlag;
-					faces[f].indexFlag = nice_index(f, index);
-					kData[faces[f].vert[(faces[f].indexFlag + 2) % 3]].utilFlag = 1;
-					fUtil[f] = 1;
-					lastface = f;
-					fDo = fDo.next;
-				}
-			}
-
-			// check: any circles missed?
-			for (int i = 1; i <= nodeCount; i++)
-				if (kData[i].utilFlag == 0) {
-					int[] ans = new int[2];
-					ans[0] = 1;
-					ans[1] = lastface;
-					return ans;
-				}
-			int[] ans = new int[2];
-			ans[0] = 0;
-			ans[1] = lastface;
-			return ans;
-		} // end of non-simply connected case
-	}
-
-	/** 
-	 * Wrap up face order. fUtil should have been set in
-	 * 'final_order' to show faces handled already (reset to zero if 
-	 * final_order hit a snag). Put in remaining faces; return 0 on error.
-	 * @param lastface int
-	 * @return 1, 0 on error 
-	*/
-	public int wrapup_order(int lastface) {
-	  int k=1,hit=1,F,i,index,count=0,n;
-	  boolean stop=false;
-	  F=faceCount;
-	  for (i=1;i<=F;i++) if (fUtil[i]!=0) count++;
-	  while (count<F && !stop) {
-		if (k > F) {
-		  k=1;
-		  if (hit==0) stop=true; // no new faces being added 
-		  hit=0;
-		}
-		while (fUtil[k]!=0 && k < F) k++;
-		if (fUtil[k]==0 && (index=face_ready(faces[k]))>=0) { 
-			if ((n=face_nghb(lastface,k))<0) {
-				faces[k].indexFlag=index;
-			}
-			else faces[k].indexFlag=n;
-			faces[lastface].nextFace=k;
-			fUtil[k]=1;
-			kData[faces[k].vert[(index+2) % 3]].utilFlag=1;
-			lastface=k;
-			count++;
-			hit=1;
-		}
-		k++;
-	  }
-	  faces[lastface].nextFace=firstFace;
-	  if (count<F) return 0; // should never happen 
-	  return 1;
-	} 
-	
 	/**
-	 * If face ready to draw, return index of vert to be drawn first.
-	 * @param face int
-	 * @return int, -1 on error. 
-	*/
-	public int face_ready(Face face) {
-	  if (kData[face.vert[0]].utilFlag !=0 && kData[face.vert[1]].utilFlag!=0)
-		  return 0;
-	  if (kData[face.vert[1]].utilFlag!=0 && kData[face.vert[2]].utilFlag!=0)
-	      return 1;	
-	  if (kData[face.vert[2]].utilFlag !=0 && kData[face.vert[0]].utilFlag!=0)
-		  return 2;
-	  return -1;
-	} 
-	
-	/** 
-	 * Position 'redChain' at next occurance of 'face' in red chain 
-	 * (skip 'redFace' itself and test it when it comes around at end); 
-	 * return 0 if 'face' not found. 
-	 * 
-	 * TODO: should this be static method in 'RedList'?
-	 * 
-	 * @param redface RedList
-	 * @param face int
-	 * @return int, 0 if not found
-	*/
-	public int position_redlist(RedList redface,int face) {
-	  RedList current;
-
-	  current=redface.next;
-	  if (current.face==face) {
-	      redChain=current;
-	      return 1;
-	    }
-	  current=current.next;
-	  while (current!=redface.next) {
-	      if (current.face==face) {
-		  redChain=current;
-		  return 1;
-	      }
-	      current=current.next;
-	  }
-	  return 0;
-	} 
-
-	/** 
-	 * set indexFlag of face f so that, if possible, it uses nghb'ing
-	 * white face using verts already drawn. "index" is first
-	 * preference and default. index<0 or >2 will give exception.
-	 * Note: 'utilFlag' nonnegative for verts already drawn.
-	 * Note: 'rwbFlag' is <0 for white faces 
-	 * @param f int, face number
-	 * @param index int, index in face 'vert' list
-	 * @return int, suggested index.
-	 */
-	public int nice_index(int f,int index) {
-	  int v,w,i,m,num,g;
-
-	  for (i=0;i<3;i++) {
-	      v=faces[f].vert[(index+i)%3];
-	      w=faces[f].vert[(index+i+1)%3];
-	      if (kData[v].utilFlag > 0 && !isBdry(v)
-		  && kData[w].utilFlag > 0 && !isBdry(w)) {
-		  num=countFaces(w);
-		  m=0;
-		  while (getFaceFlower(w,m)!=f && m<(num-2)) m++;
-		  g=getFaceFlower(w,(m+1) % num);
- 		  // if face is "white", use it
-		  if (faces[g].rwbFlag<0) 
- 			  return ((index+i)%3);
-		  }
-	  }
-	  for (i=0;i<3;i++) { // fallback: try for white neighbor 
-	      v=faces[f].vert[(index+i)%3];
-	      w=faces[f].vert[(index+i+1)%3];
-	      if (kData[v].utilFlag > 0 && kData[w].utilFlag!=0) {
-		  num=countFaces(w);
-		  m=0;
-		  while (getFaceFlower(w,m)!=f && m<(num-2)) m++;
-		  g=getFaceFlower(w,(m+1) % num);
-		  // if face is "white", suggest it
-		  if (faces[g].rwbFlag<0) 
-			  return ((index+i)%3);
-		}
-	  }
-	  for (i=0;i<3;i++) { // fallback: use any two plotted ngbh's.
-	      v=faces[f].vert[(index+i)%3];
-	      w=faces[f].vert[(index+i+1)%3];
-	      if (kData[v].utilFlag > 0  && kData[w].utilFlag!=0) 
-	    	  return ((index+i)%3);
-	    }
-	  if (index<0 || index>2) return 0;
-	  return index;
-	} 
-
-	/**
-	 * Return incircle of face f. Note: this in the incircle of the
+	 * Return incircle of face f. Note: this is the incircle of the
 	 * triangle formed by the centers of the circles, irrespective of
-	 * whether the packing has non-trivial inv distances. Can also be 
-	 * complicated in non-simply connected situation.
+	 * whether the packing has non-trivial inv distances. 
 	 * @param f int
-	 * @param amb AmbiguousZ[]
 	 * @return CircleSimple, null on error
 	 */
-	public CircleSimple faceIncircle(int f,AmbiguousZ []amb) {
-		if (f<1 || f>faceCount) return null;
-		Complex []pts=corners_face(f,amb);
+	public CircleSimple faceIncircle(int f) {
+		if (f<1 || f>faceCount) 
+			return null;
+		Complex []pts=corners_face(f);
 		if (hes<0) { //
 			CircleSimple sc1=HyperbolicMath.hyp_tang_incircle(pts[0],pts[1],pts[2],
 					getRadius(faces[f].vert[0]),
@@ -5588,14 +4504,8 @@ public class PackData{
 	 * Set default invDistances to 1.0.
 	 */
 	public void set_invD_default() {
-		if (packDCEL!=null) {
-			for (int e=1;e<=packDCEL.edgeCount;e++) 
-				packDCEL.edges[e].setInvDist(1.0);
-			return;
-		}
-		
-		// traditional: free up space
-		free_overlaps();
+		for (int e=1;e<=packDCEL.edgeCount;e++) 
+			packDCEL.edges[e].setInvDist(1.0);
 	}
 	
 	/**
@@ -5649,158 +4559,6 @@ public class PackData{
 		for (int i=1;i<=nodeCount;i++) 
 			setPlotFlag(i,1);
 	}
-	
-	/** 
-	 * Compute centers of face: 'indx' circle at origin, indx+1
-	 * in standard orientation (namely, in eucl, on positive x-axis),
-	 * indx+2 determined by law of cosines.
-	 *  
-	 * TODO: hyp radii are stored as x-radius, yet our computations
-	 * remain in s-radius, so we have to convert.
-	 * @param face int
-	 * @param indx int, circle to be at origin
-	 * @return int, 0 on layout error
-	*/
-	public int place_face(int face,int indx) {
-	  double ovlp;
-
-	  if (face>faceCount || face<1 || indx <0 || indx >2) 
-		  return 0;
-	  int a=faces[face].vert[indx]; // at origin
-	  int k=faces[face].vert[(indx+1) % 3]; // on positive x-axis
-	  int v=faces[face].vert[(indx+2) % 3]; // to be computed
-	  if (overlapStatus)
-	    ovlp=getInvDist(a,k);
-	  else ovlp=1.0;
-	  if (hes<0) { // hyp case 
-	    double x1=getRadius(a);
-	    double s1=HyperbolicMath.x_to_s_rad(x1);
-	    double x2=getRadius(k);
-	    double s2=HyperbolicMath.x_to_s_rad(x2);
-	    if (s1<=0) {
-	      x1 = 0.99;
-	      s1=HyperbolicMath.x_to_s_rad(x1);
-	      setRadius(a,x1);
-	      /* strcpy(msgbuf,"Circle at origin had "
-		     "infinite radius; radius reset.");*/
-	    }
-	    setCenter(a,0.0,0.0);
-	    if (s2<=0) { /* if next one is infinite radius */
-	      setCenter(k,1.0,0.0);
-	      double erad=x1/((1+s1)*(1+s1));
-	      setRadiusActual(k,(-1)*(1-erad*erad)/(2.0+2.0*erad*ovlp));
-	    }
-	    else { 
-	      double x12 = x1*x2;
-	      double x1p2 = x1+x2;
-	      double s12 = s1*s2;
-	      double x = (x1p2-x12)/(s12*(1+s12)) - (2*x1p2 - (1+ovlp)*x12)/(4*s12);
-	      double s= x + Math.sqrt(x*(x+2));
-	      setCenter(k,s/(s+2),0.0);
-	    }
-	  }
-	  else if (hes>0) { // sphere case 
-	      // alpha at north pole 
-	    setCenter(a,0.0,0.0);
-	    // next out pos x-axis 
-	    // TODO: need to incorporate overlaps
-	    setCenter(k,0.0,getActualRadius(a)+getActualRadius(k));
-	  }
-	  else { // eucl case 
-	      // alpha at origin 
-	    double r=getRadius(a);
-	    setCenter(a,0.0,0.0);
-	    // next on x-axis
-	    double r2=getRadius(k);
-	    setCenter(k,Math.sqrt(r*r+r2*r2+2*r*r2*ovlp),0.0);
-	  }
-	  return (fancy_comp_center(v,nghb(v,a),0,1,1,true,false,TOLER));
-	}
-	
-	/** 
-	 * Compute and store center for vert by specified method using 
-	 * pair of contiguous petals. 
-     * crit_flag: only use centers from computations where invdist_err < crit. Eg.
-     * 	in opt=2 case, don't put poor results into average; but note this
-     * 	doesn't mean different values going into average might not be off from
-     * 	one another. (That's to worry about in the future.)
-     * This routine does not set 'plotFlag' for 'vert'.
-     * @param vert int, index of circle being computed
-     * @param n0 int, petal index for 'opt'=1 case
-     * @param n1 int, petal index for 'opt'=2 case
-	 * @param n int, number of petals (or faces) to use in 'opt'=2 case
-     * @param opt int
-	 *    opt=1: by drawing order (original method): use index n0 
-	 *    	petal and its oriented neighbor petal only.
-	 * 	  opt=2: average all centers as computed from pairs of contig 
-	 * 	    petals, starting with flower index n1 and checking next n 
-	 * 		faces around.
-	 * @param npf boolean, true ==>  disregard 'plotFlag's; false ==> use only 
-	 * 		pairs of circles with plotFlag >0.
-	 * @param crit double, if placement quality > crit, then do not
-	 * 	    set plotFlag.
-	 * @return 0 if center is not well-placed 
-	 */
-	public int fancy_comp_center(int vert,int n0,int n1,int n,
-			      int opt,boolean npf,boolean crit_flag,double crit) {
-	  int count=0;
-
-	  int num=countFaces(vert)+getBdryFlag(vert);
-	  int[] flower=getFlower(vert);
-	  if (opt==1) {n1=n0; n=1;}
-	  /*  use original center already computed??
-	      if (kData[vert].plot_flag>0) z=rData[vert].center;*/
-	  Complex z=new Complex(0.0,0.0);
-	  for (int i=n1;i<(n1+n);i++) {
-		  CircleSimple sc;
-	    int j=flower[i % num];
-	    int k=flower[(i+1) % num];
-	    if (npf || (getPlotFlag(j) > 0 && getPlotFlag(k) > 0)) {
-	    	
-				if (overlapStatus) {
-					double o1 = getInvDist(k,vert);
-					double o2 = getInvDist(vert,j);
-					double o3 = getInvDist(j, k);
-					sc = CommonMath.comp_any_center(getCenter(j), getCenter(k),
-							getRadius(j),getRadius(k),getRadius(vert), o1, o2, o3,hes);
-				} 
-				else
-					sc = CommonMath.comp_any_center(getCenter(j),getCenter(k),
-							getRadius(j),getRadius(k),getRadius(vert),hes);
-				if (!sc.gotError()
-						|| !crit_flag
-						|| (Math.abs(invdist_err(vert, j)) < crit && Math
-								.abs(invdist_err(vert, k)) < crit)) {
-					if (sc.save(this, vert) >= 0) { // 
-						z = z.add(getCenter(vert));
-						count++;
-					}
-				}
-			}
-	  }
-	  if (count==0) return 0;
-	  if (count==1) return 1;
-	  z=z.times(1.0/((double)count));
-	  setCenter(vert,z);
-	  return (count);
-	} 
-
-	/** 
-	 * Compute error (target-actual) for inv_distance (including
-	 * overlap) between neighboring vertices v and w.
-	 * @param v int
-	 * @param w int
-	 * @return double
-	*/
-	public double invdist_err(int v,int w) {
-		  int k;
-	  double target=1.0;
-
-	  if (v<0 || w<0 || v>nodeCount || w>nodeCount 
-	      || (k=nghb(v,w))<0) return 0.0;
-	  if (overlapStatus) target=getInvDist(v,kData[v].flower[k]);
-	  return (target-comp_inv_dist(v,w));
-	}
 
 	/** 
 	 * Return inversive distance between circles for v and w,
@@ -5809,13 +4567,9 @@ public class PackData{
 	 * rho=0 for orthogonal circles; rho=1 for tangency; rho>1 for
 	 * separated circles, where invDist is cosh of the hyperbolic distance
 	 * between the circles (bubbled into hyperbolic upper half space).
-	 * 
-	 * NOTE: I often use "overlap" to include both overlap and separated.
-	 * Even true overlaps are stored in the data using inversive distance,
-	 * i.e., the cosine of actual angle.
 	 *  
 	 * TODO: routines not very robust
-	 *  
+	 * 
 	 * @param v int
 	 * @param w int
 	 * @return double, 1.0 (default tangency) on error/problem
@@ -6187,17 +4941,6 @@ public class PackData{
 	    }  
 	    return 1; // seemed to go okay
 	  } 
-
-	/** 
-	 * Given spot in the redchain and e_indx pointing to one of its
-	 * vertices, return Complex[2] with center for that circle and center 
-	 * for same circle but from opposite side of a side-paired edge. 
-	 * e_indx must point to vert for which redface (or a predecessor, 
-	 * if blue) keeps center info. 
-
-	 * (Key example: redface=edge and e_indx=edge_indx from SideDescription structure.)
-
-	  Return 0 on failure. */
 
 	  /** 
 	   * Write circle packing p to an open 'file'. Return 0 on error.
@@ -6752,7 +5495,6 @@ public class PackData{
 		file.flush();
 		return 1;
 	}
-
 	
 	/**
 	 * Write *.dcel output; this format is tentative as of 4/2017.
@@ -7425,11 +6167,8 @@ public class PackData{
 	}
 
 	/** 
-	 * Interchange two legal vertex numbers; in the DCEL case, all
-	 * information goes along, other indices remain unchanged
-	 * (if tiling info exists, it is adjusted). If there's an 
-	 * error, the packing data will likely be compromised. 
-	 * Caution: v w are switched in vertexMap (first occurrence only)
+	 * Interchange two legal vertex numbers (if tiling info 
+	 * exists, it is adjusted). 
 	 * @param v int
 	 * @param w int
 	 * @return 1, 0 on error
@@ -7519,21 +6258,18 @@ public class PackData{
 
 	  /**
 	   * Intended (not actual) edge length from v to w, using invDist
-	   * is that is set. This is not well defined in the sphere.
-	   * @param v
-	   * @param w
+	   * if that is set. This is not well defined in the sphere.
+	   * @param v int
+	   * @param w int
 	   * @return double, -1 on error (e.g., if geometry is spherical)
 	   */
 	  public double intendedEdgeLength(int v,int w) {
-		  double rv=getRadius(v);
-		  double rw=getRadius(w);
-		  double t=1.0;
 		  if (hes>0) { // spherical: not-well defined
 			  return -1;
 		  }
-		  if (overlapStatus) {
-			  t=getInvDist(v,w);
-		  }
+		  double rv=getRadius(v);
+		  double rw=getRadius(w);
+		  double t=getInvDist(v,w);
 		  if (hes<0) { // hyperbolic
 			  return HyperbolicMath.h_ivd_length(rv,rw,t);
 		  }
@@ -7681,124 +6417,7 @@ public class PackData{
 	    }
 	    return null;
 	  } 
-	  
-	  /**
-	   * traditional: see 'CombDCEL.shootExtended' for DCEL version
-	   *  
-	   * TODO: 'axis-extrapolate' more general. Perhaps that's enough?
-	   * From vertex v, look out edge in direction 'indx' and see if 
-	   * vertex w is encountered within 'lgth' edges along a hex axis. 
-	   * (Note: we do NOT check whether v and/or w themselves are hex 
-	   * and/or interior. Return edge list forming the "hex axis" from 
-	   * v to w, or null on failure. 
-	   * If w equals v, then we're looking for a closed hex axis; 
-	   * in particular, v=w must be interior and edge through v must
-	   * be hex axis. (In particular, can reenter v in wrong way, but
-	   * can continue and might come in in correct way within 'lgth' 
-	   * distance.)
-	   * @param v, starting vertex
-	   * @param indx, which direction to look
-	   * @param w, which vertex we're aiming at
-	   * @param lgth, limit on how many edge 
-	   * @return EdgeLink or null on error
-	   */
-	  public EdgeLink hex_extrapolate(int v,int indx,int w,int lgth) {
-		  if (v==w && (isBdry(v) || countFaces(v)!=6)) {
-	    	  flashError("hex_extrapolate: v=w must be interior and hex");
-	    	  return null;
-	      }
-		  EdgeLink edgelist=new EdgeLink(this);
-		  boolean okay=true; 
-		  int next=0;
-	      int i=0;
-		  while (okay && i<lgth) { // allow multiple returns to v when v=w.
-			  if (v!=w) okay=false;
-			  int last=v;
-			  int current=kData[v].flower[indx];
-			  edgelist.add(new EdgeSimple(last,current));
-			  i++;
-			  while (current!=w && i<lgth && (next=hex_proj(current,last))!=0) {
-				  edgelist.add(new EdgeSimple(current,next));
-				  last=current;
-				  current=next;
-				  i++;
-			  }
-			  if (current!=w) return null; // didn't find w
-			  if (v!=w) return edgelist; // found our axis.
-	      
-			  // in v=w situation, so check axis condition through v.
-			  EdgeSimple edge=(EdgeSimple)edgelist.getFirst();
-			  next=edge.w;
-			  int j=nghb(v,last);
-			  indx=nghb(v,next);
-			  if (j==(indx+3)%6) return edgelist; // is a hex axis through v
-	      
-			  // closed, but not an axis? so try again
-		  } // end of 'okay' while
-		  return null; // must have failed
-	  }
-	  
-	  /**
-	   * From vertex v, look out edge in direction 'indx' and see if 
-	   * vertex w is encountered within 'lgth' edges along an axis.
-	   * 
-	   * (An 'axis' is an interior edge list which leaves same number
-	   * of edges on left and right (e.g., a "hex" axis, with 2 edges
-	   * to each side). It can also extend along a boundary, the only
-	   * condition that degree >= 2.)
-	   *  
-	   * Note: we do NOT check whether v and/or w themselves are even
-	   * degree and/or interior. 
-	   * Return edge list forming the "axis" from v to w, or null on failure. 
-	   * If w equals v, then we're looking for a closed axis; 
-	   * in particular, v=w must be interior and edge through v must
-	   * be an axis. (In particular, can reenter v in wrong way, but
-	   * can continue and might come in in correct way within 'lgth' 
-	   * distance.)
-	   * @param v int, starting vertex
-	   * @param indx int, which direction to look
-	   * @param w int, which vertex we're aiming at
-	   * @param lgth int, limit on how many edge 
-	   * @return EdgeLink or null on error
-	   */
-	  public EdgeLink axis_extrapolate(int v,int indx,int w,int lgth) {
-		  if (v==w && (isBdry(v) || 2*(countFaces(v)/2)!=countFaces(v))) {
-	    	  flashError("axis_extrapolate: if v=w, must be interior, even degree");
-	    	  return null;
-	      }
-		  EdgeLink edgelist=new EdgeLink(this);
-		  boolean okay=true; 
-		  int next=0;
-	      int i=0;
-		  while (okay && i<lgth) { // allow multiple returns to v when v=w.
-			  if (v!=w) okay=false;
-			  int last=v;
-			  int current=kData[v].flower[indx];
-			  edgelist.add(new EdgeSimple(last,current));
-			  i++;
-			  while (current!=w && i<lgth && (next=axis_proj(current,last))!=0) {
-				  edgelist.add(new EdgeSimple(current,next));
-				  last=current;
-				  current=next;
-				  i++;
-			  }
-			  if (current!=w) return null; // didn't find w
-			  if (v!=w) return edgelist; // found our axis.
-	      
-			  // in v=w situation, so check axis condition through v.
-			  EdgeSimple edge=(EdgeSimple)edgelist.getFirst();
-			  next=edge.w;
-			  int j=nghb(v,last);
-			  int half=countFaces(v)/2;
-			  indx=nghb(v,next);
-			  if (j==(indx+half)%countFaces(v)) // is a hex axis through v 
-				  return edgelist; 
-	      
-			  // closed, but not an axis? so try again
-		  } // end of 'okay' while
-		  return null; // must have failed
-	  }
-	  
+
 	  /**
 	   * Given a closed chain of hex interior vertices (along a hex axis),
 	   * "slide" the right side forward along the chain one notch.
@@ -8598,71 +7217,6 @@ public class PackData{
 	  }
 
 	  /**
-	   * Called only by 'add_face_t'; put triple of new vertices inside 
-	   * face f; data not updated between calls, so face data remains
-	   * valid.
-	   * @param f int
-	   * @return 1
-	  */
-	  public int add_face_triple(int f) {
-
-		// add new vertex
-	    int []newV=new int[3];
-	    for (int i=0;i<3;i++) {
-	    	newV[i]=nodeCount+1+i;
-	    }
-	    nodeCount += 3;
-	    for (int i=0;i<3;i++) {
-	    	kData[newV[i]]=new KData();
-	    	rData[newV[i]]=new RData();
-	    	setCenter(newV[i],getCenter(faces[f].vert[i]));
-	    	kData[newV[i]].num=4;
-	    	kData[newV[i]].flower=new int[5];
-	    	kData[newV[i]].flower[0]=kData[newV[i]].flower[4]=faces[f].vert[i];
-	    	kData[newV[i]].flower[1]=faces[f].vert[(i+1)%3];
-	    	kData[newV[i]].flower[2]=newV[(i+1)%3];
-	    	kData[newV[i]].flower[3]=newV[(i+2)%3];
-	    	if (overlapStatus) {
-	    		kData[newV[i]].invDist=new double[5];
-	    		set_single_invDist(newV[i],kData[newV[i]].flower[0],1.0);
-	    		set_single_invDist(newV[i],kData[newV[i]].flower[1],1.0);
-	    		set_single_invDist(newV[i],kData[newV[i]].flower[2],1.0);
-	    		set_single_invDist(newV[i],kData[newV[i]].flower[3],1.0);
-	    		set_single_invDist(newV[i],kData[newV[i]].flower[4],1.0);
-	    	}
-	    	setBdryFlag(newV[i],0);
-	    	setVertMark(newV[i],0);
-	    	setCircleColor(newV[i],ColorUtil.getFGColor());
-	    	setRadius(newV[i],getRadius(faces[f].vert[i]));
-	    	setAim(newV[i],2.0*Math.PI);
-	    }
-	    // adjust nghb flowers 
-	    for (int ii=0;ii<3;ii++) {
-	    	int v=faces[f].vert[ii];
-	    	int w=faces[f].vert[(ii+1)%3];
-	    	int indx=nghb(v,w);
-	    	int []newflower=new int[countFaces(v)+3];
-	    	for (int j=0;j<=indx;j++) newflower[j]=kData[v].flower[j];
-	    	for (int j=countFaces(v);j>indx;j--)
-	    		newflower[j+2]=kData[v].flower[j];
-	    	newflower[indx+1]=newV[ii];
-	    	newflower[indx+2]=newV[(ii+2)%3];
-	    	kData[v].flower=newflower;
-	    	if (overlapStatus) {
-	    		double []newol=new double[countFaces(v)+3];
-	    		for (int j=0;j<=indx;j++) newol[j]=getInvDist(v,kData[v].flower[j]);
-	    		for (int j=countFaces(v);j>indx;j--)
-	    			newol[j+2]=getInvDist(v,kData[v].flower[j]);
-	    		newol[indx+1]=1.0;
-	    		newol[indx+2]=1.0;
-	    		kData[v].invDist=newol;
-	    	}
-	    	kData[v].num +=2;
-	    }
-	    return 1;
-	  }
-
-	  /**
 	 * Replace complex by one of reverse orientation; calling routine
 	 * handles updates of combinatorics
 	 * @return 1
@@ -8886,11 +7440,11 @@ public class PackData{
 		int[] final_list = new int[nodeCount + 1];
 		VertList genlist = new VertList();
 		for (int i = 1; i <= nodeCount; i++)
-			kData[i].utilFlag = 0;
+			setVertUtil(i,0);
 		if (greens != null)
 			for (int i = 1; i <= nodeCount; i++)
 				if (greens[i] < 0)
-					kData[i].utilFlag = -1;
+					setVertUtil(i,-1);
 		genlist.v = seed;
 		final_list[seed] = 1;
 		count++;
@@ -8913,11 +7467,11 @@ public class PackData{
 				int j;
 				for (int i = 0; i <= countFaces(v); i++)
 					if (final_list[(j = kData[v].flower[i])] == 0
-							&& kData[j].utilFlag == 0) {
+							&& getVertUtil(j) == 0) {
 						final_list[j] = gen_count;
 						count++;
 						if (!bdry_hits
-								&& (isBdry(j) || kData[j].utilFlag != 0)) {
+								&& (isBdry(j) || getVertUtil(j) != 0)) {
 							bdry_hits = true;
 							far_vert = j;
 						}
@@ -8941,28 +7495,6 @@ public class PackData{
 		return final_list;
 	}
 
-	  /**
-	   * Apply side-pairing Mobius having the specified 'SideDescription.label'. 
-	   * Return 'index' on success, zero on failure.
-	   * @param pairLabel String
-	   * @return int, index on success, 0 on error.
-	   */
-	  public int apply_pair_mobius(String pairLabel) {
-		  int count=0;
-		  if (sidePairs==null || sidePairs.size()==0) return 0;
-		  Iterator<SideDescription> sides=sidePairs.iterator();
-		  SideDescription edge=null;
-		  while (sides.hasNext()) {
-			  edge=(SideDescription)sides.next();
-			  if (edge.label.equals(pairLabel)) {
-				  // apply to whole packing, plus redchain, but not to side-pairings
-				  apply_Mobius(edge.mob, new NodeLink(this,"a"),true,true,false);
-				  count++;
-			  }
-		  }
-		  return count;
-	  }
-	  
 	  /**
 	   * Apply Mobius Mob to specified list of circles. (See more detailed call
 	   * for inverse and side-pairing issues.)
@@ -9035,19 +7567,9 @@ public class PackData{
 	   */
 	  public int ideal_bdry_node(int v) {
 		  int loccount=0;
-		  if (packDCEL!=null) {
-			  loccount=RawDCEL.addIdeal_raw(packDCEL, v, v);
-			  if (loccount==0) 
-				  throw new CombException("add failed");
-			  return loccount;
-		  }
-
-		  // traditional
-		  loccount=ideal_bdry_node(v,v);
-		  if (loccount!=0) {
-			  setCombinatorics();
-			  fillcurves();
-		  }
+		  loccount=RawDCEL.addIdeal_raw(packDCEL, v, v);
+		  if (loccount==0) 
+			  throw new CombException("add failed");
 		  return loccount;
 	  }
 
@@ -11342,207 +9864,16 @@ public class PackData{
 		return 0;
 	}
 
-	  /** 
-	   * traditional
-	   * 
-	   * Remove boundary vert v from pack p; have verified 
-	   * v is bdry, and removal doesn't disconnect or leave 
-	   * a nghb w/o any faces. On success, indices larger 
-	   * than v will be reduced by 1 and, flowers and lists, 
-	   * etc., will be adjusted. 
-	   * CAUTION: user must be sure that successive removals 
-	   * take account of these dynamic indices, e.g., in 'remove_circle', 'remove_tri_vert',
-	   * etc.
-	  */
-	  public int remove_bdry_vert(int v) {
-	    int num,w,indx,start;
-	    int []newflower=null;
-	    double []newoverlaps=null;
-
-	    // fix flowers of neighbors 
-	    for (int i=0;i<=countFaces(v);i++) {
-	        w=kData[v].flower[i];
-	        num=countFaces(w);
-	        if (isBdry(w)) {
-	  	  newflower=new int[countFaces(w)];
-	  	  if (kData[w].flower[0]==v) 
-	  	    for (int j=0;j<countFaces(w);j++) 
-	  	      newflower[j]=kData[w].flower[j+1];
-	  	  else if (kData[w].flower[countFaces(w)]==v)
-	  	    for (int j=0;j<countFaces(w);j++)
-	  	      newflower[j]=kData[w].flower[j];
-	  	  if (kData[w].invDist!=null) {
-	  	      newoverlaps=new double[countFaces(w)];
-	  	      if (kData[w].flower[0]==v) 
-	  		for (int j=0;j<countFaces(w);j++) 
-	  		  newoverlaps[j]=getInvDist(w,kData[w].flower[j+1]);
-	  	      else if (kData[w].flower[countFaces(w)]==v)
-	  		for (int j=0;j<countFaces(w);j++)
-	  		  newoverlaps[j]=getInvDist(w,kData[w].flower[j]);
-	  	      kData[w].invDist=newoverlaps;
-	  	    }
-	  	  kData[w].flower=newflower;
-	  	  kData[w].num--;
-	  	}
-	        else {
-	  	  indx=nghb(w,v);
-	  	  newflower=new int[countFaces(w)-1];
-	  	  start=(indx+1)%countFaces(w);
-	  	  for (int j=0;j<countFaces(w)-1;j++) newflower[j]=
-	  	    kData[w].flower[(start+j)%countFaces(w)];
-	  	  if (kData[w].invDist!=null) {
-	  	      newoverlaps=new double[countFaces(w)-1];
-	  	      start=(indx+1)%countFaces(w);
-	  	      for (int j=0;j<countFaces(w)-1;j++) 
-	  	    	  newoverlaps[j]=getInvDist(w,kData[w].flower[(start+j)%countFaces(w)]);
-	  	      kData[w].invDist=newoverlaps;
-	  	  }
-	  	  kData[w].flower=newflower;
-	  	  kData[w].num=num-2;
-	  	  setBdryFlag(w,1);
-	  	}
-	    } // done removing references to v
-	    delete_vert(v);
-	    return 1;
-	  }
-	  
-	  /** 
-	   * traditional
-	   * 
-	   * Remove a trivalent, interior vertex. Already checked 
-	   * that v qualifies. On success, indices larger than v 
-	   * will be reduced by 1 and, flowers and lists, etc., 
-	   * will be adjusted. 
-	   * CAUTION: user must be sure that successive removals 
-	   * take account of these dynamic indices, e.g., in 
-	   * 'remove_circle', 'remove_tri_vert', etc.
-	   */
-	  public int remove_tri_vert(int v) {
-	    int w,indx;
-	    int []newflower=null;
-	    double []newoverlaps=null;
-	  	
-	    // adjust nghbs 
-	    for (int k=0;k<3;k++) {
-	        w=kData[v].flower[k];
-	        indx=nghb(w,v);
-	        newflower=new int[countFaces(w)];
-	        for (int j=0;j<indx;j++) newflower[j]=kData[w].flower[j];
-	        for (int j=indx;j<countFaces(w);j++) {
-	  	  newflower[j]=kData[w].flower[j+1];
-	        }
-	        kData[w].flower=newflower;
-	        if (kData[w].invDist!=null) {
-	  	  newoverlaps=new double[countFaces(w)];
-	  	  for (int j=0;j<indx;j++) 
-	  	    newoverlaps[j]=getInvDist(w,kData[w].flower[j]);
-	  	  for (int j=indx;j<countFaces(w);j++) {
-	  	      newoverlaps[j]=getInvDist(w,kData[w].flower[j+1]);
-	  	  }
-	  	  kData[w].invDist=newoverlaps;
-	        }
-	        kData[w].num--;
-	        if (indx==0 && !isBdry(w)) {
-	  	  kData[w].flower[countFaces(w)]=
-	  	    kData[w].flower[0];
-	  	  if (kData[w].invDist!=null)
-	  	    set_single_invDist(w,kData[w].flower[countFaces(w)],getInvDist(w,kData[w].flower[0]));
-	        }
-	      }
-	    delete_vert(v);
-	    return 1;
-	  } 
-	  
-	  /** 
-	   * traditional
-	   * 
-	   * Remove 4-deg interior vert v, but put in edge between w and 
-	   * the vertex z which is opposite v. Note that indices larger
-	   * than v are decreased by 1, lists are adjusted, etc. Calling
-	   * routine must be aware of this.
-	   * TODO: Currently does only one vert at a time and overlaps 
-	   * are discarded. Calling routine does 'complex_count', etc.
-	  */
-	  public int remove_quad_vert(int v,int w) {
-	    int z,x,indx;
-	    int []newflower=null;
-	    double []newol=null;
-
-	    if (isBdry(v) || countFaces(v)!=4
-	        || (indx=nghb(w,v))<0) return 0;
-	    z=kData[v].flower[(nghb(v,w)+2)%countFaces(v)]; 
-	    // fix data for w and z
-	    if (indx==0) {
-	        kData[w].flower[0]=kData[w].flower[countFaces(w)]=z;
-	        if (overlapStatus) {
-	        	set_single_invDist(w,kData[w].flower[0],1.0);
-	        	set_single_invDist(w,kData[w].flower[countFaces(w)],1.0);
-	        }
-	    }
-	    else {
-	        kData[w].flower[indx]=z;
-	        if (overlapStatus)
-	        	set_single_invDist(w,kData[w].flower[indx],1.0);
-	    }
-	    if ((indx=nghb(z,v))==0) {
-	        kData[z].flower[0]=kData[z].flower[countFaces(z)]=w;
-	        if (overlapStatus) {
-	        	set_single_invDist(z,kData[z].flower[0],1.0);
-	        	set_single_invDist(z,kData[z].flower[countFaces(z)],1.0);
-	        }
-	    }
-	    else {
-	        kData[z].flower[indx]=w;
-	        if (overlapStatus)
-	        	set_single_invDist(z,kData[z].flower[indx],1.0);
-	    }
-	    // remove v from others 
-	    x=kData[v].flower[(nghb(v,w)+1)%countFaces(v)];
-	    indx=nghb(x,v);
-	    newflower=new int[countFaces(x)];
-	    for (int j=0;j<indx;j++) newflower[j]=kData[x].flower[j];
-	    for (int j=indx;j<countFaces(x);j++)
-	      newflower[j]=kData[x].flower[j+1];
-	    kData[x].flower=newflower;
-	    if (overlapStatus) {
-	        newol=new double[countFaces(x)];
-	        for (int j=0;j<indx;j++) 
-	        	newol[j]=getInvDist(x,kData[x].flower[j]);
-	        for (int j=indx;j<countFaces(x);j++)
-	        	newol[j]=getInvDist(x,kData[x].flower[j+1]);
-	        kData[x].invDist=newol;
-	    }
-	    kData[x].num--;
-	    x=kData[v].flower[(nghb(v,z)+1)%countFaces(v)];
-	    indx=nghb(x,v);
-	    newflower=new int[countFaces(x)];
-	    for (int j=0;j<indx;j++) newflower[j]=kData[x].flower[j];
-	    for (int j=indx;j<countFaces(x);j++)
-	      newflower[j]=kData[x].flower[j+1];
-	    kData[x].flower=newflower;
-	    if (overlapStatus) {
-	        newol=new double[countFaces(x)];
-	        for (int j=0;j<indx;j++) 
-	        	newol[j]=getInvDist(x,kData[x].flower[j]);
-	        for (int j=indx;j<countFaces(x);j++)
-	        	newol[j]=getInvDist(x,kData[x].flower[j+1]);
-	        kData[x].invDist=newol;
-	    }
-	    kData[x].num--;
-	    delete_vert(v);
-	    return 1;
-	  } 
-	  
-	  /**
-	   * Insert 'newV' as petal of 'v' so it has petal index 'indx'. Return
-	   * the new 'num' of faces. Only kData[v] is changed; calling routine
-	   * must clean up; e.g., fix the flower of 'w', 'complex_count', etc.
-	   * @param v int, center vertex
-	   * @param indx int, desired indx of newV
-	   * @param newV int, new petal vertex index
-	   * @return int 'num', 0 on error (should be unharmed)
-	   */
-	  public int insert_petal(int v,int indx,int newV) {
+	/**
+	 * Insert 'newV' as petal of 'v' so it has petal index 'indx'. Return
+	 * the new 'num' of faces. Only kData[v] is changed; calling routine
+	 * must clean up; e.g., fix the flower of 'w', 'complex_count', etc.
+	 * @param v int, center vertex
+	 * @param indx int, desired indx of newV
+	 * @param newV int, new petal vertex index
+	 * @return int 'num', 0 on error (should be unharmed)
+	 */
+	public int insert_petal(int v,int indx,int newV) {
 		  int num=countFaces(v);
 		  if (indx<0 || indx>(num+1))
 			  return 0;
@@ -12006,16 +10337,12 @@ public class PackData{
 	  } 
 	  
 	  /**
-	   * Consolidating 'adjoin' calls. p1 and p2 may or
-	   * may not have dcel structures; if either has dcel
-	   * structure, then result will have dcel.
+	   * Top level 'adjoin' call. 
 	   *  * test for legality
-	   *  * adjoin via dcel or traditional methods
+	   *  * adjoin via DCEL
 	   *  * fix up results such as 'vlist', 'elist'.
 	   * Returned 'PackData' should be fully processed. 
 	   * 'PackExtender's and some lists will be lost.
-	   * 
-	   * TODO: replace some calls to old 'adjoin'
 	   * 
 	   * @param p1 PackData
 	   * @param p2 PackData (may equal p1)
@@ -12030,12 +10357,7 @@ public class PackData{
 		  PackData newPack=null;
 		  PackData np1=null;
 		  PackData np2=null;
-		  
-		  // flags
-		  boolean dcelcase=false;
-		  int offset=0;
-		  Overlap overlaps=null;
-		  boolean overlap_flag=false;
+
 		  boolean selfadjoin=false;
 		  if (p1==p2)
 			  selfadjoin=true;
@@ -12051,170 +10373,69 @@ public class PackData{
 			  throw new ParserException("'adjoin' usage: data problem");
 		  
 		  // create 'newPack'
-		  
-		  // DCEL situation: note, we use clones
-		  if (p1.packDCEL!=null) {
-			  dcelcase=true;
-			  PackDCEL pdc1=CombDCEL.cloneDCEL(p1.packDCEL);
-			  PackDCEL pdc2=p2.packDCEL;
-			  if (!selfadjoin) {
-				  pdc2=CombDCEL.cloneDCEL(p2.packDCEL);
-			  }
-			  else
-				  pdc2=pdc1;
+		  PackDCEL pdc1=CombDCEL.cloneDCEL(p1.packDCEL);
+		  PackDCEL pdc2=p2.packDCEL;
+		  if (!selfadjoin) {
+			  pdc2=CombDCEL.cloneDCEL(p2.packDCEL);
+		  }
+		  else
+			  pdc2=pdc1;
 			  
-			  // here's the main call.
-			  PackDCEL newDCEL=CombDCEL.d_adjoin(pdc1, pdc2, v1, v2, n);
-			  VertexMap oldnew=newDCEL.oldNew;
-			  CombDCEL.redchain_by_edge(newDCEL, null, null, selfadjoin);
-			  CombDCEL.d_FillInside(newDCEL);
-			  newDCEL.oldNew=oldnew;
-			  newPack=new PackData(null);
-			  newPack.attachDCEL(newDCEL);
-			  PackDCEL pdcel=newPack.packDCEL;
-			  newPack.vertexMap=newDCEL.oldNew;
+		  // here's the main call.
+		  PackDCEL newDCEL=CombDCEL.d_adjoin(pdc1, pdc2, v1, v2, n);
+		  VertexMap oldnew=newDCEL.oldNew;
+		  CombDCEL.redchain_by_edge(newDCEL, null, null, selfadjoin);
+		  CombDCEL.d_FillInside(newDCEL);
+		  newDCEL.oldNew=oldnew;
+		  newPack=new PackData(null);
+		  newPack.attachDCEL(newDCEL);
+		  PackDCEL pdcel=newPack.packDCEL;
+		  newPack.vertexMap=newDCEL.oldNew;
 			  
-			  if (debug) // debug=true;
-				   DCELdebug.printRedChain(pdcel.redChain);
+		  if (debug) // debug=true;
+			   DCELdebug.printRedChain(pdcel.redChain);
 			  
-    		  // Set up 'VData' (at original size) 
-    		  VData[] newV=new VData[p1.sizeLimit+1];
+   		  // Set up 'VData' (at original size) 
+   		  VData[] newV=new VData[p1.sizeLimit+1];
     		  
-    		  // copy the 'p1' info?
-    		  if (selfadjoin) 
-    			  for (int v=1;v<=pdcel.vertCount;v++) {
-    				  newV[v]=p1.vData[v].clone();
-    				  newV[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
-    			  }
-    		  else {
-    			  // all 'p1' vertices should still be there, same indices
-    			  for (int v=1;v<=p1.nodeCount;v++) {
-    				  newV[v]=p1.vData[v].clone();
-    				  newV[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
-    			  }
-    			  // rest are from 'p2'.
-    			  for (int v=p1.nodeCount+1;v<=pdcel.vertCount;v++) {
-    				  newV[v]=new VData();
-    				  // 'old2v' is original index in 'qackData'
-    				  int old2v=newPack.vertexMap.findV(v); 
+   		  // copy the 'p1' info?
+   		  if (selfadjoin) 
+   			  for (int v=1;v<=pdcel.vertCount;v++) {
+   				  newV[v]=p1.vData[v].clone();
+   				  newV[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
+   			  }
+   		  else {
+   			  // all 'p1' vertices should still be there, same indices
+   			  for (int v=1;v<=p1.nodeCount;v++) {
+   				  newV[v]=p1.vData[v].clone();
+   				  newV[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
+   			  }
+   			  // rest are from 'p2'.
+   			  for (int v=p1.nodeCount+1;v<=pdcel.vertCount;v++) {
+   				  newV[v]=new VData();
+   				  // 'old2v' is original index in 'qackData'
+   				  int old2v=newPack.vertexMap.findV(v); 
 //System.out.println("<old2v,v>=<"+old2v+","+v+">");    				  
-    				  newV[v].rad=p2.getRadius(old2v);
-    				  newV[v].center=p2.getCenter(old2v);
-    				  newV[v].aim=p2.getAim(old2v);
-    				  newV[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
-    			  }
-    		  }
-    		  newPack.vData=newV;
+   				  newV[v].rad=p2.getRadius(old2v);
+   				  newV[v].center=p2.getCenter(old2v);
+   				  newV[v].aim=p2.getAim(old2v);
+   				  newV[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
+   			  }
+   		  }
+   		  newPack.vData=newV;
     		  
-    		  // get red cent/rad from vData
-    		  if (pdcel.redChain!=null) {
-    			  RedHEdge rtrace=pdcel.redChain;
-    			  do {
-    				  int v=rtrace.myEdge.origin.vertIndx;
-    				  rtrace.setCenter(new Complex(newPack.vData[v].center));
-    				  rtrace.setRadius(newPack.vData[v].rad);
-    				  rtrace=rtrace.nextRed;
-    			  } while (rtrace!=pdcel.redChain);
-    		  }
+   		  // get red cent/rad from vData
+   		  if (pdcel.redChain!=null) {
+   			  RedHEdge rtrace=pdcel.redChain;
+   			  do {
+   				  int v=rtrace.myEdge.origin.vertIndx;
+   				  rtrace.setCenter(new Complex(newPack.vData[v].center));
+   				  rtrace.setRadius(newPack.vData[v].rad);
+   				  rtrace=rtrace.nextRed;
+   			  } while (rtrace!=pdcel.redChain);
+   		  }
 
-/* don't recall what this was for
-	// ensure bdry twins have face with negative index. 
-    		  try {
-    			  if (pdcel.redChain!=null) {
-    				  RedHEdge rhe=pdcel.redChain;
-    				  do {
-    					  if (rhe.twinRed==null)
-    						  rhe.myEdge.twin.face=new dcel.Face(-1);
-    					  rhe=rhe.nextRed;
-    				  } while (rhe!=pdcel.redChain);
-    			  }
-    			  pdcel.fixDCEL_raw(newPack);
-    		  } catch(Exception ex) {
-    			  throw new CombException("'adjoinCall' error: "+ex.getMessage());
-    		  }
-*/
-		  }
-		  
-		  // traditional: again, we operate on clones
-		  else {
-			  np1=p1.copyPackTo();
-			  if (!selfadjoin) 
-				  np2=p2.copyPackTo();
-			  
-			  // save overlaps
-	    	  if (!selfadjoin) { 
-	    		  offset=p1.nodeCount;
-	    		  overlap_flag=false;
-	    		  if (p1.overlapStatus || p2.overlapStatus )
-	    			  overlap_flag=true;
-	  	  
-	    		  // save pnum1 overlaps
-	    		  Overlap trace=null;
-	    		  double angle;
-	    		  if (p1.overlapStatus) {
-	    			  overlaps=new Overlap();
-	    			  trace=overlaps;
-	    			  for (int v=1;v<=p1.nodeCount;v++) {
-	    				  int[] petals=p1.getPetals(v);
-	    				  for (int j=0;j<petals.length;j++) {
-	    					  // only store for petals with larger indices
-	    					  if (v<petals[j]
-	    							  && (angle=p1.getInvDist(v,petals[j]))!=1.0 ) {
-	    						  trace.v=v;
-	    						  trace.w=petals[j];
-	    						  trace.angle=angle;
-	    						  trace=trace.next=new Overlap();
-	    					  }
-	    				  }
-	    			  }
-	    		  }
-	    	  }
-	    	  
-			  PackData.adjoin(np1, np2, v1, v2, n);
-			  newPack=np1;
-			  newPack.complex_count(true);
-		  }
-		  
 		  // restablish certain things
-		  
-		  // traditional; restablish saved overlaps  
-		  if (!dcelcase) {
-		      try {
-			  if(overlap_flag && newPack.alloc_overlaps()!=0) {
-				  if (offset==0 && overlaps!=null) { // self-adjoin, use new indices 
-					  Overlap trace=overlaps;
-				      while (trace!=null && trace.next!=null) {
-				    	  int vv=newPack.vertexMap.findW(trace.v);
-				    	  int ww=newPack.vertexMap.findW(trace.w);
-				    	  newPack.set_single_invDist(vv,ww,trace.angle);
-				    	  trace=trace.next;
-				      }
-				  }
-				  else if (overlaps!=null) { // reestablish pnum1 overlaps 
-				      Overlap trace=overlaps;
-				      while (trace!=null && trace.next!=null) {
-				    	  newPack.set_single_invDist(trace.v,trace.w,trace.angle);
-				    	  trace=trace.next;
-				      }
-				  }
-				  if ( offset!=0 && p2.overlapStatus) { // new overlaps from p2? 
-
-				      for(int v=1;v<=p2.nodeCount;v++) {
-				    	  double angle;
-				    	  int[] petals=p2.getPetals(v);
-				    	  int vv=newPack.vertexMap.findW(v);
-				    	  for(int j=0;j<petals.length;j++)
-				    		  if (v<petals[j]) {
-				    			  int ww=newPack.vertexMap.findW(petals[j]);
-				    			  if ((angle=p2.getInvDist(v,petals[j]))!=1.0)
-				    				  newPack.set_single_invDist(vv,ww,angle);
-				    		  }
-				      }
-				  }
-			  }
-		      } catch (Exception ex) {}
-		  }
-
 		  if (selfadjoin && p1.vlist!=null 
 				  && newPack.vertexMap!=null && newPack.vertexMap.size()>0) {
 			  newPack.vlist=NodeLink.translate(p1.vlist,newPack.vertexMap);
@@ -12806,16 +11027,17 @@ public class PackData{
 	  }
 	  
 	  /**
-	   * Returns @see GraphLink of pairs {n,m} where m and n indices
-	   * of faces sharing an edge {v,w} from the given input elist.
-	   * Note orientation: n is to left of directed edge {v w}, m is 
-	   * to right. Skip edges lying in only one face.
-	   * @param elist @see EdgeLink
+	   * Returns GraphLink of face pairs {f,g} sharing given 
+	   * edges {v,w} from input elist. Note orientation: f is 
+	   * to left of directed edge {v w}, g is to right. Skip 
+	   * edges lying in only one face.
+	   * @param elist EdgeLink
 	   * @return GraphLink, null on error or if 'elist' is empty
 	   */
 	  public GraphLink dualEdges(EdgeLink elist) {
 		  GraphLink dlink=new GraphLink();
-		  if (elist==null || elist.size()==0) return null;
+		  if (elist==null || elist.size()==0) 
+			  return null;
 		  Iterator<EdgeSimple> est=elist.iterator();
 		  EdgeSimple edge=null;
 		  while (est.hasNext()) {
@@ -12838,17 +11060,15 @@ public class PackData{
 		  Complex z=null;
 		  Complex w=null;
 		  while (eit.hasNext()) {
-			  EdgeSimple dedge=eit.next();
-			  z=getFaceCenter(dedge.v);
-			  w=getFaceCenter(dedge.w);
+			  Complex[] pts=ends_dual_edge(eit.next());
 			  if (hes>0) {
-				  totlen += SphericalMath.s_dist(z,w);
+				  totlen += SphericalMath.s_dist(pts[0],pts[1]);
 			  }
 			  else if (hes<0) {
-				  totlen += HyperbolicMath.h_dist(z,w);
+				  totlen += HyperbolicMath.h_dist(pts[0],pts[1]);
 			  }
 			  else {
-				  totlen += z.minus(w).abs();
+				  totlen += pts[1].minus(pts[0]).abs();
 			  }
 		  }
 		  return totlen;
@@ -13979,12 +12199,13 @@ public class PackData{
 						myOvl[0] = p.getInvDist(myVerts[1],myVerts[2]);
 						myOvl[1] = p.getInvDist(myVerts[2],myVerts[0]);
 						myOvl[2] = p.getInvDist(myVerts[0],myVerts[1]);
-						sc = CommonMath.comp_any_center(myCenters[0],myCenters[1],myRadii[0],myRadii[1],
-								myRadii[2],myOvl[0],myOvl[1],myOvl[2],p.hes);
+						sc = CommonMath.comp_any_center(myCenters[0],myCenters[1],
+								myRadii[0],myRadii[1],myRadii[2],
+								myOvl[0],myOvl[1],myOvl[2],p.hes);
 					} 
 					else {
-						sc = CommonMath.comp_any_center(myCenters[0],myCenters[1],myRadii[0],myRadii[1],
-								myRadii[2],p.hes);
+						sc = CommonMath.comp_any_center(myCenters[0],myCenters[1],
+								myRadii[0],myRadii[1],myRadii[2],p.hes);
 					}
 					
 					aspect[next_face].setCenter(myCenters[0],jj);
@@ -13996,8 +12217,10 @@ public class PackData{
 				}
 
 				// compute/store the tangency points
-				DualTri dtri=new DualTri(p.hes,aspect[next_face].getCenter(0),
-						aspect[next_face].getCenter(1),aspect[next_face].getCenter(2));
+				DualTri dtri=new DualTri(
+						aspect[next_face].getCenter(0),
+						aspect[next_face].getCenter(1),
+						aspect[next_face].getCenter(2),p.hes);
 				aspect[next_face].tanPts=new Complex[3];
 				for (int j=0;j<3;j++)
 					aspect[next_face].tanPts[j]=new Complex(dtri.TangPts[j]);
@@ -15721,240 +13944,6 @@ public class PackData{
 		  return 1;
 	}
 
-	/**
-	 * Double packing across some or all bdry components (in latter case, get
-	 * compact complex). Error should leave pack unharmed, but there is not a
-	 * lot of checking. Note: this only does full boundary components.
-	 * 'vertexMap' gets vertex conversion: {old,new} where 'old' is the index
-	 * from the original packing and 'new' is the index of the double vertex.
-	 * @param, NodeLink vert list, at least one on each bdry component
-	 *     to be doubled 
-	 * @return: the index of the vertex symmetic to 'alpha'
-	 */
-	public int double_K(NodeLink vertlist) {
-		int final_node_count, num, newval;
-		int[] newflower = null;
-		double[] newol = null;
-		int[] oldnewflag = null; // non-zero indicates index data not needed 
-		int[] old2new = null; // holds temporary new index number during construction
-		KData[] newK_ptr = null;
-		RData[] newR_ptr = null;
-
-		// check suitability
-		if (getBdryCompCount()==0) { // already compact
-			throw new CombException("this complex has no boundary vertices");
-		}
-		if (vertlist == null)
-			vertlist = new NodeLink(this, "B"); // all bdry components
-		int node = nodeCount;
-		for (int i = 1; i <= node; i++)
-			setVertUtil(i,0);
-		/*
-		 * mark all bdry verts to be identified. Illegal to have v hanging or to
-		 * have v and one of its 'middle' petals (ie. not first or last) marked;
-		 * throw exception.
-		 */
-		Iterator<Integer> vlist = vertlist.iterator();
-		while (vlist.hasNext()) {
-			int v = (Integer) vlist.next();
-			if (isBdry(v) && getVertUtil(v)== 0) {
-				int vert = v;
-				int[] petals=getPetals(v);
-				for (int j = 1; j < petals.length; j++)
-					if (petals.length < 2
-							|| getVertUtil(petals[j]) != 0) {
-						throw new CombException("combinatoric problem at v="+v);
-					}
-				setVertUtil(v,1);
-				v = petals[0];
-				while (v != vert) {
-					petals=getPetals(v);
-					for (int j = 1; j < petals.length; j++)
-						if (petals.length < 2
-								|| getVertUtil(petals[j]) != 0) {
-							throw new CombException("combinatoric problem at v="+v);
-						}
-					setVertUtil(v,1);
-					v = petals[0];
-				}
-			}
-		}
-
-		// create new data areas
-		alloc_pack_space(2 * nodeCount, true);
-		newK_ptr = new KData[sizeLimit + 1];
-		newR_ptr = new RData[sizeLimit + 1];
-		for (int i = 1; i <= node; i++) {
-			newK_ptr[i] = kData[i].clone();
-			newK_ptr[i + node] = kData[i].clone();
-			newR_ptr[i] = rData[i].clone();
-			newR_ptr[i + node] = rData[i].clone();
-			num = newK_ptr[i].num;
-			newflower = new int[num + 1];
-			for (int j = 0; j <= num; j++)
-				// change orientation
-				newflower[j] = kData[i].flower[num - j] + node;
-			newK_ptr[i + node].flower = newflower;
-			if (overlapStatus) {
-				newol = new double[num + 1];
-				for (int j = 0; j <= num; j++)
-					// change orientation
-					newol[j] = getInvDist(i,kData[i].flower[num - j]);
-				newK_ptr[i + node].invDist = newol;
-			}
-		}
-
-		oldnewflag = new int[node + 1];
-		old2new = new int[node + 1];
-		for (int i = 1; i <= node; i++) { 
-			// set to one when data for the double has moved to new location
-			oldnewflag[i] = 0;
-			// track new indices of doubles
-			old2new[i] = i+node;
-		}
-		
-		// We want to return index for vert symmetric to alpha, so track it
-		int alp_sym=node+alpha;
-
-		// begin processing boundary components
-		vlist = vertlist.iterator();
-		while (vlist.hasNext()) {
-			int startv = (Integer) vlist.next();
-			int v = startv;
-			if (newK_ptr[v].bdryFlag != 0) {
-				
-				// take care of this whole bdry component
-				do { 
-					// 'alpha' on original bdry? identify as 'alp_sym'  
-					if ((v+node)==alp_sym)  
-						alp_sym=v;
-					old2new[v] = v;
-					oldnewflag[v] = 1;
-					if (hes < 0 && getRadius(v) <= 0)
-						setRadius(v,0.5);
-					// fix flower
-					num = countFaces(v);
-					newK_ptr[v].num = 2 * num;
-					newK_ptr[v].bdryFlag = 0;
-					newR_ptr[v].aim = 2.0 * Math.PI;
-					if (num < 2) {
-						throw new CombException("the flower of bdry vert " + v
-								+ " is too small.");
-					}
-					newflower = new int[2 * num + 1];
-					for (int j = 0; j <= num; j++)
-						newflower[j] = newK_ptr[v].flower[j];
-					for (int j = 1; j < num; j++)
-						newflower[j + num] = newK_ptr[v + node].flower[j];
-					newK_ptr[v].flower = newflower;
-					newK_ptr[v].flower[2 * num] = newK_ptr[v].flower[0];
-					if (overlapStatus) {
-						newol = new double[2 * num + 1];
-						for (int j = 0; j <= num; j++)
-							newol[j] = newK_ptr[v].invDist[j];
-						for (int j = 1; j < num; j++)
-							newol[j + num] = newK_ptr[v + node].invDist[j];
-						newK_ptr[v].invDist = newol;
-						newK_ptr[v].invDist[2 * num] = newK_ptr[v].invDist[0];
-					}
-					/* remove refs to old nums; flowers get only (temporarily) good numbers */
-					for (int j = 0; j <= countFaces(v); j++) {
-						int jj = newK_ptr[v + node].flower[j];
-						for (int k = 0; k <= newK_ptr[jj].num; k++) {
-							int vert=newK_ptr[jj].flower[k];
-							if (vert>node && oldnewflag[vert-node] != 0)
-								newK_ptr[jj].flower[k] = old2new[vert-node];
-						}
-					}
-					v = kData[v].flower[0];
-				} while (v != startv);
-			}
-		}
-
-		// throw out unused numbs, replacing from top. 
-		final_node_count = 2 * node;
-		for (int i = node + 1; i <= 2 * node; i++) {
-			int j,jj,k;
-			if (oldnewflag[i-node] != 0) { // i is available to be used for new data
-				// start from top and drop until we find something not already moved elsewhere 
-				while (oldnewflag[final_node_count-node] != 0) 
-					final_node_count--;
-				if ((newval = final_node_count) > i) {
-					// swap nums: good data 'newval' goes to opening at i.
-					for (j = 0; j < (newK_ptr[newval].num+newK_ptr[newval].bdryFlag); j++) {
-						jj = newK_ptr[newval].flower[j];
-						for (k = 0; k <=newK_ptr[jj].num; k++) {
-							if (newK_ptr[jj].flower[k] == newval)
-								newK_ptr[jj].flower[k] = i;
-						}
-					}
-					newR_ptr[i] = newR_ptr[newval].clone();
-					newK_ptr[i] = newK_ptr[newval].clone();
-					// indicate newval as available, i as now in use
-					oldnewflag[newval-node] = 1;
-					oldnewflag[i-node] = 0;
-					
-					// change tracking indices
-					if (newval==alp_sym) alp_sym=i;
-					for (int kk=1;kk<=node;kk++) 
-						if (old2new[kk]==newval) old2new[kk]=i;
-				}
-			}
-		}
-		
-		// attach new data structures, clean up, and leave 
-		free_overlaps();
-		nodeCount = final_node_count;
-		kData = newK_ptr;
-		rData = newR_ptr;
-		alloc_pack_space(nodeCount, true);
-		setCombinatorics();
-		fillcurves();
-		// 'vertexMap' holds {orig,double} indices
-		vertexMap=new VertexMap();
-		for (int i=1;i<=node;i++)
-			vertexMap.add(new EdgeSimple(i,old2new[i]));
-		return alp_sym;
-	} 
-
-	/**
-	 * Replace this packing by a new one which has been doubled across the edge(s) 
-	 * defined by 'vertlist'. 'vertexMap' holds {orig,double} pairings; for each
-	 * original vertex, gives its doubled index
-	 * @param vertlist
-	 * @return 0 on error or improper data
-	 */
-	public int double_on_edge(NodeLink vertlist) {
-		if (vertlist==null || vertlist.size()<3) return 0;
-		int count=0;
-		Iterator<Integer> vlist=vertlist.iterator();
-		int v,w=0;
-		int startv=v=(Integer)vlist.next();
-		count++;
-		if (!isBdry(v)) return 0;
-		while (vlist.hasNext()) {
-			w=(Integer)vlist.next();
-			if (w!=kData[v].flower[0]) return 0;
-			count++;
-			v=w;
-		}
-		int stopv=w;
-		int bdrycnt=0;
-		// CMD_REORG -- should do directly
-		try {
-			bdrycnt=NodeLink.countMe(
-					new NodeLink(this,new String("b("+startv+" "+startv+")")));
-		} catch (Exception ex) {return 0;}
-		if (count>bdrycnt-3 && count!=(bdrycnt+1)) { // while boundary is okay
-			CirclePack.cpb.errMsg("double: the indicated segment is in error or too long");
-			return 0;
-		}
-		
-		PackData p=this.copyPackTo();
-		p.reverse_orient();
-		return PackData.adjoin(this,p,stopv,stopv,count-1);
-	}
-	
 	public int output_parse(BufferedWriter fp,String prefix,String data,String loop,
 			String suffix,Mobius mob) {
 		try {
@@ -16336,45 +14325,6 @@ public class PackData{
 	  }
 	  return 1;
 	}
-
-	/**
-	 * Set the 'sidePairs' label 'Character's. Paired sides will 
-	 * be labeled 'a','b', etc, with pair 'A', 'B', etc. Any nonpaired 
-	 * will be labeled '1','2', etc.
-	 * This is to be used in 'disp -Rn' calls and in 'pair_mob' calls
-	 * to apply side-pairings.
-	 * @param sp_index in 'sidePairs'; >= 0, < 'sidePairs.size()'
-	 * @return count or zero on error.
-	 */
-	public int labelSidePairs() throws CombException {
-		int count=0;
-		int pairNum=0;
-		int edgeNum=1;
-		if (sidePairs==null || sidePairs.size()==0) return 0;
-		Iterator<SideDescription> sides=sidePairs.iterator();
-		SideDescription epair=null;
-		while (sides.hasNext()) {
-				epair=(SideDescription)sides.next();
-				if (epair.label==null) { // need label
-					if (epair.pairedEdge!=null) {
-						char c=(char)('a'+pairNum);
-						epair.label=String.valueOf(c);
-						// Note: in place of upper case, use repeat lower
-						//   (e.g. instead of 'A', label is 'aa'.)
-						epair.pairedEdge.label=
-							new String(String.valueOf(c)+String.valueOf(c));
-						pairNum++;
-						count++;
-					}
-					else { // gets next integer as label
-						epair.label=String.valueOf(edgeNum);
-						edgeNum++;
-						count++;
-					}
-				}
-		} // end of 'while'
-		return count;
-	}
 	
 	/**
 	 * adjust a radius by a given factor
@@ -16410,46 +14360,20 @@ public class PackData{
 		}
 		else if (hes>0) { // spherical
 			newrad=rad*factor;
-			if (newrad<=0 || newrad>=Math.PI) newrad=rad; // illegal, don't change
-			else count++;
+			if (newrad<=0 || newrad>=Math.PI) 
+				newrad=rad; // illegal, don't change
+			else 
+				count++;
 		}
 		else { // eucl
 			newrad=rad*factor;
 			count++;
 		}
-		if (count>0) setRadius(v,newrad);
+		if (count>0) 
+			setRadius(v,newrad);
 		return count;
 	}
 
-	/**
-	 * Initialize the 'center' elements of the 'redChain' to the
-	 * center stored in 'rData' or to 0.
-	 * @return count set
-	 */
-	public int initRedCenters(RedList redchain) {
-		if (redchain==null) return 0;
-		int count=0;
-		RedList rtrace=redchain;
-		boolean keepon=true;
-		Complex z=null;
-		while ((keepon || rtrace!=redchain) && count<3*faceCount) {
-			keepon=false;
-			int f=rtrace.face;
-			int v=faces[f].vert[rtrace.vIndex];
-			z=getCenter(v);
-			if (z!=null)
-				rtrace.center=new Complex(z);
-			else 
-				rtrace.center=new Complex(0.0);
-			rtrace=rtrace.next;
-			count++;
-		}
-		if (count>=3*faceCount) {
-			throw new CombException("redchain doens't close");
-		}
-		return count;
-	}
-	
 	/**
 	 * create a circular spoke/circle grid from {cent,rad}, filling 
 	 * global vector 'Blink' of 'BaryLink's.
@@ -16876,387 +14800,6 @@ public class PackData{
 		  return randPack;
 	}
 	
-	/**
-	 * Find the oriented chain of faces outside 'beach', which is a 
-	 * connected closed chain of successive neighbor vertices. 
-	 * If 'beach' verts are all interior, face list should be closed 
-	 * (first f is repeated at end). Otherwise, face list will consist 
-	 * of one or more open chains of faces. It may be empty if 'beach'
-	 * consists of boundary vertices.
-	 * 
-	 * Combinatorial detail: if face f2 shares an edge e with f0 and
-	 * vert v of f2 opposite to e is degree 3, then swallow v into 
-	 * the interior; thus, .. f0 f1 f2 .. replaced by .. f0 f2 .. 
-	 *  
-	 * @param p @see PackData
-	 * @param beach @see NodeLink
-	 * @return @see FaceLink, null on error
-	 */
-	public static FaceLink islandSurround(PackData p,NodeLink beach) {
-
-		// check validity of 'beach'
-		int bs=0;
-		if (beach==null || (bs=beach.size())==0)
-			return null;
-		if (beach.get(0)==beach.getLast()) {
-			beach.removeLast();
-			bs=beach.size();
-		}
-		
-		// are verts contiguous? list closed?
-		for (int i=0;i<(bs-1);i++)
-			if (p.nghb(beach.get(i),beach.get(i+1))<0)
-				return null;
-		if (p.nghb(beach.get(0),beach.getLast())<0)
-			return null;
-		
-		FaceLink flist=new FaceLink(p);
-		
-		// find 'start', index of vert where a chain of outside faces starts
-		//   look for 'curr' a bdry vert with edge to 'next' not a bdry edge; 
-		//   then start is 'next'. 
-		int indx_cn,indx_cp;
-		int start=-1;
-		for (int i=0;(i<bs && start<0);i++) {
-			int curr=beach.get(i);
-			if (p.isBdry(curr))
-				start=i;
-		}
-		
-
-		// is all 'beach' interior; get full closed chain
-		if (start<0) {
-			start=0;
-			for (int i=0;i<bs;i++) {
-				int b_ind=i;
-				int curr=beach.get(b_ind);
-				int prev=beach.get((b_ind-1+bs)%bs);
-				int next=beach.get((b_ind+1)%bs);
-				indx_cp=p.nghb(curr,prev);
-				indx_cn=p.nghb(curr,next);
-				int num=p.countFaces(curr);
-				int del=indx_cn-indx_cp;
-				
-				// for first face only, have to add face shared with prev
-				int offset=1;
-				if (i==0)
-					offset=0;
-
-				del=(del+num)%num;
-				int[] faceFlower=p.getFaceFlower(curr);
-				for (int v=offset;v<del;v++) {
-					flist.add(faceFlower[(indx_cp+v)%num]);
-				}
-			}
-		}
-			
-		else {
-			for (int i=0;i<=bs;i++) {
-				int b_ind=(start+i)%bs;
-				int curr=beach.get(b_ind);
-				int prev=beach.get((b_ind-1+bs)%bs);
-				int next=beach.get((b_ind+1)%bs);
-				indx_cp=p.nghb(curr,prev);
-				indx_cn=p.nghb(curr,next);
-				int num=p.countFaces(curr);
-				int del=indx_cn-indx_cp;
-				int[] faceFlower=p.getFaceFlower(curr);
-
-				// interior? 
-				if (!p.isBdry(curr)) {
-					del=(del+num)%num;
-					for (int v=0;v<del;v++) {
-						flist.add(faceFlower[(indx_cp+v)%num]);
-					}
-				}
-			
-				// bdry?
-				else {
-					if (indx_cp<(num-1) && i!=0) {
-						for (int ii=indx_cp;ii<num;ii++)
-							flist.add(faceFlower[ii]);
-					}
-					if (indx_cn>0 && i!=bs) {
-						for (int ii=0;ii<indx_cn;ii++)
-							flist.add(faceFlower[ii]);
-					}
-				}
-			}
-		} // end of loop through beach
-
-		// check: swallow any degree 3 verts? (see note above)
-		boolean got=true;
-		while (got) { // at least one pass
-			got=false;
-			int len=flist.size();
-			for (int i=0;(i<len && !got);i++) {
-				int j=(i+2)%len;
-				if (j!=0 && i!=len-1 && p.face_nghb(flist.get(i),flist.get(j))>=0) {
-					int kk=(i+1)%len;
-					flist.remove(kk);
-					got=true;
-				}
-			}
-		} // end of while
-		
-		return flist;
-	}
-	
-	/**
-	 * Given list of "interior" vertices and 'alp' vertex, build 
-	 * EdgeLink lists of bdry edges counterclockwise around the connected 
-	 * component of 'intV' containing 'alp' (including bdry vertices, even
-	 * if in 'intV'). Typical: bdry edges counterclockwise 
-	 * around interior. However, we create a vector because there may 
-	 * be more components and/or isolated bdry points (given its own list 
-	 * as (b,b) and listed after the others).
-	 * (Refer to intV as "interior" and nghbs as "bdry") 
-	 * 
-	 * TODO: for non-typical situations, not always clear what is best: 
-	 *   e.g., multiple boundary components, vlist contains bdry verts, 
-	 *   hit a boundary vert from two sides, incoming edge, etc, etc.
-	 *   
-	 * @param intV NodeLink
-	 * @param alp int, preferred starting interior, default to first entry
-	 * @return Vector<EdgeLink>, null on empty vector
-	 */
-	public Vector<EdgeLink> surroundComp(NodeLink intV, int alp) {
-		Vector<EdgeLink> bdryLinks=new Vector<EdgeLink>();
-		if (intV==null || intV.size()==0)
-			throw new ParserException("surround list error");
-		if (alp<=0 || alp > nodeCount)
-			alp=intV.get(0);
-		
-		// we handle connected components of intV one at a time,
-		//    get its outer edge list and add it to our vector
-		
-		// start by marking intV verts with -v in 'utilFlag'
-		for (int v=1;v<=nodeCount;v++)
-			setVertUtil(v,0);
-		Iterator<Integer> vl=intV.iterator();
-		while (vl.hasNext()) {
-			int v=vl.next();
-			setVertUtil(v,-v);
-		}
-		
-		if (getVertUtil(alp)>=0) // alp must be in 'intV'
-			alp=intV.get(0);
-
-		// gather info in 'util': 
-		//    -v for v in component (and interior of packing)
-		//    +v for neighbors of intV or bdry in 'intV'
-		int []util=new int[nodeCount+1];
-		NodeLink bdryV=new NodeLink(this);
-		
-		NodeLink currl=new NodeLink();
-		NodeLink nextl=new NodeLink();
-		util[alp]=-alp;
-		nextl.add(alp);
-		while (nextl.size()>0) {
-			currl=nextl;
-			nextl=new NodeLink();
-			Iterator<Integer> cl=currl.iterator();
-			while (cl.hasNext()) {
-				int w=cl.next();
-				int[] flower=getFlower(w);
-				for (int j=0;j<=(countFaces(w)+getBdryFlag(w));j++) { 
-					int k=flower[j];
-					if (getVertUtil(k)<0 && util[k]==0) { // new one in 'intV'?
-						util[k]=-k;
-						if (isBdry(k)) {
-							util[k]=k; // is bdry of packing
-							bdryV.add(k);
-						}
-						nextl.add(k);
-					}
-					else if (util[k]==0) { // is nghb of 'intV'
-						bdryV.add(k);
-						util[k]=k;
-					}
-				}
-			}
-		}
-			
-		// get next w and process it entirely; it may be hit
-		//    multiple times, but all those should be picked
-		//    up in same bdry component of current 'comp'.
-		Iterator<Integer> bV=bdryV.iterator();
-		while (bV.hasNext()) {
-			int w=bV.next();
-				
-			EdgeLink edgelist=new EdgeLink(this);
-				
-			// sweep clw to find int nghb and subsequent bdry nghb
-			boolean done=false;
-			int num=countFaces(w);
-			int bhit=-1;
-			int ihit=-1;
-			for (int j=(num+getBdryFlag(w));(j>0 && bhit<0);j--) {
-				int k=kData[w].flower[j];
-					
-				// first vlist nghb?
-				if (ihit<0 && util[k]<0)
-					ihit=j;
-				
-				// first bdry nghb after int nghb
-				if (ihit>0 && util[k]>0)
-					bhit=j;
-			}
-				
-			// no int nghb? error
-			if (ihit<0)
-				throw new CombException("error in surroundVlist: must have vlist nghb");
-				
-			// no bdry nghb?
-			if (bhit<0) {
-				
-				// special case: w is bdry vert and only vlist nghb is
-				//   the downstream bdry nghb. Start edge, but in reverse
-				//   direction. 
-				if (isBdry(w) && ihit==0) {
-					EdgeSimple edge=new EdgeSimple(kData[w].flower[1],w);
-					edgelist.add(edge);
-					// reset w, ihit, bhit for later processing
-					int u=kData[w].flower[0];
-					int oldw=w;
-					w=edge.v;
-					ihit=nghb(w,u);
-					bhit=nghb(w,oldw);
-				}
-				
-				// else its isolated and we're done
-				else {
-					edgelist.add(new EdgeSimple(w,w)); // (w,w) indicates isolated bdry vert
-					done=true;
-				}
-			}
-				
-			// build out this edge cclw until we close up, or end at bdry.
-			// We have bdry vert w, ihit index to int nghb, bhit index to cclw bdry nghb
-			if (!done) {
-				int startw=w;
-				int nxtW=kData[w].flower[bhit];
-				
-				// get cclw edges starting with w (can skip in special case above when
-				//    we know we have the last cclw segment)
-				if (edgelist.size()==0) {
-					EdgeSimple startedge=new EdgeSimple(w,nxtW);
-					edgelist.add(startedge);
-					// go cclw until you get closing edge or end at bdry
-					boolean goon=true; 						
-					while (nxtW!=startw || goon) {
-						goon=false;
-						int backindx=nghb(nxtW,w);
-						w=nxtW;
-						int nhit=-1;
-						if (isBdry(w)) { // w is bdry vert?
-							if (backindx==0)
-								throw new CombException("surroundVlist: error. hit bdry?");
-							if (backindx>0) {
-								for (int j=backindx-1;(j>0 && nhit<0);j--)
-									if (util[kData[w].flower[j]]>=0) // next bdry?
-										nhit=j;
-							}
-						}
-						else { // w is interior vert
-							int numw=countFaces(w);
-							if (util[(backindx-1+numw)%numw]>=0)
-								throw new CombException("surroundVlist: clw should be interior");
-							for (int j=2;(j<=numw && nhit<0);j++) { 
-								int idx=(backindx-j+numw)%numw;
-								if (util[kData[w].flower[idx]]>=0)
-									nhit=idx;
-							}
-						}
-						
-						if (nhit>=0) {
-							nxtW=kData[w].flower[nhit];
-							EdgeSimple e=new EdgeSimple(w,nxtW);
-							if (edgelist.isThereVW(w,nxtW)<0) { // not in list
-								edgelist.add(e);
-								w=nxtW;
-								goon=true;
-							}
-							else {
-								if (e.v!=startedge.v || e.w!=startedge.w)
-									throw new CombException("surroundVlist: should be initial edge");
-								else 
-									done=true;
-							}
-						} 
-					} // end of while
-				} // end of cclw direction
-				
-				// now clw direction: if path were closed, we would be done.
-				//   Only way to end is run into bdry(?)
-				if (!done) {
-					w=startw;
-					nxtW=kData[w].flower[bhit];
-					while (bhit>=0) {
-						int uphit=-1;
-						int numw=countFaces(w);
-						
-						// w is bdry
-						if (isBdry(w)) {
-							if (bhit==numw || util[kData[w].flower[bhit+1]]>=0)
-								throw new CombException("surroundVlist: bhit can't point upstream");
-							for (int j=bhit+1;j<=numw;j++) {
-								int k=kData[w].flower[j];
-								if (util[k]>=0)
-									uphit=j;
-							}
-							bhit=-1;
-						}
-						
-						// w is interior
-						else {
-							for (int j=1;j<numw;j++) {
-								int m=(bhit+1+j)%numw;
-								if (util[m]>=0)
-									uphit=m;
-							}
-							bhit=-1;
-						}
-						
-						// found next cclw nghb petal, upstream 
-						if (uphit>=0) {
-							int upw=kData[w].flower[uphit];
-							edgelist.add(0,new EdgeSimple(upw,w));
-							bhit=nghb(upw,w);
-							w=upw;
-						}
-							
-					} // end of while
-				}
-				done=true;
-				if (edgelist!=null && edgelist.size()>0)
-					bdryLinks.add(edgelist);
-			}
-			
-		} // done with while loop
-		
-		if (bdryLinks==null || bdryLinks.size()==0)
-			return null;
-		
-		// move any isolated to the end 
-		Vector<EdgeLink> retLinks=new Vector<EdgeLink>();
-		int N=bdryLinks.size();
-		int tick=0;
-		for (int n=0;n<N;n++) {
-			EdgeLink el=bdryLinks.remove(0);
-			
-			// keep non-isolated in order at front
-			if (el.size()>1)
-				retLinks.add(tick++,el);
-			
-			// move isolated to the end
-			else 
-				retLinks.add(el);
-		}
-
-		return retLinks;
-	}
-	
 	public void setSidePairs(D_PairLink plink) {
 		packDCEL.pairLink=plink;
 	}
@@ -17331,51 +14874,6 @@ public class PackData{
 		else if (p.genus==0) // 
 			iG=0;
 		return iG;
-	}
-	
-	/**
-	 * The "conformal geometry", -1,0,1, has to do 
-	 * both with 'intrinsicGeom' and with interior 
-	 * branching; assume 'genus' is set.
-	 * Depend on Riemann-Hurwitz formula.
-	 *   mapping pi:S'->S, br=branch count, N=sheeet count,
-	 *    then: chi(S')=N*chi(S)-br
-	 *    
-	 * E.g., torus, 4 simple branch points, has
-	 * spherical geometry, i.e., via Weierstrass 
-	 * functions (though we can't yet compute it 
-	 * in general). A higher genus closed S' 
-	 * might be mapped to a torus or the sphere 
-	 * (perhaps as an orbifold versus normal 
-	 * covering, as with a sphere having one 
-	 * branch point mapping to a sphere). 
-	 * Note: we only count integral branching based on
-	 * 'aim's; throw excption for non-integral branching.
-	 * @param p PackData
-	 * @return int -1, 0, 1, default -1
-	 * @throws ParserException
-	 */
-	public static int getConfGeometry(PackData p) 
-		throws ParserException {
-		int iG=getIntrinsicGeom(p);
-		int brN=0; // branching: only count integral
-		for (int v=1;v<=p.nodeCount;v++) {
-			double aim=p.getAim(v);
-			if (!p.isBdry(v) && aim>0.0) { // interior, not cusp
-				int tick=0;
-				while ((aim-(tick+1)*Math.PI*2.0)>.001)
-					tick++;
-				if (Math.abs(aim-(tick+1)*Math.PI*2.0)>.001)
-					throw new ParserException("there is non-integer branching at "+v);
-				brN += tick;
-			}
-		}
-		int NX=2-2*p.genus+brN;
-		if (NX==0)
-			return 0; // should support eucl geom
-		else if (2*(NX/2)==NX) // even? NX/2= sheet count
-			return 1; // should support spherical geom
-		return iG; // just its own geom
 	}
 	
 	/**
@@ -17466,12 +14964,3 @@ public class PackData{
 	
 		
 } // end of 'PackData' class
-	  
-/** =================== local utility classes ========================
-/** for use with 'adjoin' */
-class Overlap {
-    int v,w;
-    double angle;
-    Overlap next;
-}
-	  

@@ -10,6 +10,7 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.CombDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
@@ -549,20 +550,20 @@ public class RationalMap extends PackExtender {
 		if (es1==null || es2==null) return 0;
 		int length=1;
 		int v=es1.endV;
-		int next=domainPack.kData[v].flower[0];
+		int next=domainPack.getFirstPetal(v);
 		int safety=domainPack.nodeCount;
 		while (next!=es1.startV && next!=es1.endV && safety>0) {
 			v=next;
-			next=domainPack.kData[v].flower[0];
+			next=domainPack.getFirstPetal(v);
 			length++;
 			safety--;
 		}
-		if (safety<=0 || next==es1.endV) return 0;
-		if (PackData.adjoin(domainPack,domainPack, es1.startV,es2.endV,length)<=0)
-			throw new CombException("adjoin has failed for v = "+es1.startV+
-					" and w = "+es2.endV);
-		
-		domainPack.complex_count(false);
+		if (safety<=0 || next==es1.endV) 
+			return 0;
+		domainPack.packDCEL=CombDCEL.d_adjoin(domainPack.packDCEL,
+				domainPack.packDCEL, es1.startV,es2.endV,length);
+		domainPack.vertexMap=domainPack.packDCEL.oldNew;
+		domainPack.packDCEL.fixDCEL_raw(domainPack);
 		
 		// remove these 'EdgeSeg's from 'masterESlist'
 		masterESlist.remove((EdgeSeg)es1);

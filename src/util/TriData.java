@@ -62,11 +62,9 @@ public class TriData {
 		}
 	}
 
-	public TriData(PackDCEL pdcel,HalfEdge hedge) {
+	public TriData(PackDCEL pdcel,dcel.Face fce) {
 		this(pdcel);
-		if (hedge.next.next.next!=hedge)
-			throw new CombException();
-		baseEdge=hedge.face.edge; // Note: baseEdge may not be hedge
+		baseEdge=fce.edge;
 		face=baseEdge.face.faceIndx; 
 		try {
 			hes=pdc.p.hes;
@@ -88,7 +86,7 @@ public class TriData {
 						invDist=new double[3];
 						invDist[0]=invDist[1]=invDist[2]=1.0;
 					}
-					setInvDist(j,ivd); // store for opposite vert
+					setInvDist(j,ivd); // store
 				}
 				j++;
 				he=he.next;
