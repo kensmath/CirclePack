@@ -3449,21 +3449,10 @@ public class CommandStrParser {
 			  throw new ParserException("Random triangulation failed 12 times; try more vertices.");
 		  }
 		  
-		  // =========== ring ======
+		  // =========== ring (OBE: see ======
 		  else if (cmd.startsWith("ring")) {
-			  if (flagSegs==null || flagSegs.size()==0 ||
-					  (items=flagSegs.elementAt(0)).size()==0) {
-				  throw new ParserException("check 'ring' usage");
-			  }
-			  NodeLink nodeLink=new NodeLink(packData,items);
-			  
-			  Iterator<Integer> nlk=nodeLink.iterator();
-			  while (nlk.hasNext()) {
-				  int v=nlk.next();
-				  if (packData.ring_vert(v)>0 && packData.setCombinatorics()!=0)
-					  count++;
-			  }
-			  return count;
+			  CirclePack.cpb.errMsg("The 'ring' command has been replaced by 'frackMe'");
+			  return 0;
 		  }
 		  
 		  // =========== rld =======
@@ -5112,14 +5101,25 @@ public class CommandStrParser {
 	    	  
 	    	  Iterator<Integer> vlst=vertlist.iterator();
 	    	  while (vlst.hasNext()) {
-	    		  int v=vlst.next();
-	    		  if (packData.isBdry(v)) {
-	    			  int ans=packData.add_ideal_face(v);
-	    			  if (ans>0)
-	    				  packData.setCombinatorics();
-	    			  count++;
+	    		  Vertex vert=packData.packDCEL.vertices[vlst.next()];
+	    		  if (vert.bdryFlag!=0) {
+	    			  dcel.Face newface=
+	    					  new dcel.Face(packData.packDCEL.faceCount+1);
+	    			  HalfEdge he=vert.halfedge.twin;
+	    			  newface.edge=he;
+	    			  if (he.next.next.next==he) {
+	    				  do {
+	    					  he.face=newface;
+	    					  he.origin.bdryFlag=0;
+	    					  he.origin.redFlag=false;
+	    					  he=he.next;
+	    				  } while (he!=vert.halfedge.twin);
+	    				  count++;
+	    			  }
 	    		  }
 	    	  }
+	    	  if (count>0)
+	    		  packData.packDCEL.fixDCEL_raw(packData);
 	    	  return count;
 	      }
 	      
@@ -6058,19 +6058,6 @@ public class CommandStrParser {
 					DCELdebug.redChainDetail(packData.packDCEL);
 					return 1;
 				}
-				
-				else if (str.contains("red")) {
-					// TODO: have to replace after debugging
-					DCELdebug.drawRedChain(packData,
-							packData.packDCEL.redChain);
-					PackControl.canvasRedrawer.paintMyCanvasses(
-							packData,false);
-					return 1;
-				}
-
-				else if (str.contains("dcel")) {
-					return packData.attachDCEL();
-				}
 				else if (str.contains("export")) {
 					// what packing? default to current
 					int qnum=packData.packNum;
@@ -6116,35 +6103,6 @@ public class CommandStrParser {
 					tmppack.setCombinatorics();
 					tmppack.set_aim_default();
 					return CirclePack.cpb.swapPackData(tmppack,qnum,false);
-				}
-				else if (str.contains("layout")) {
-					return packData.packDCEL.layoutPacking();
-				} 
-				// sync p.faces to packDCEL.faces
-				else if (str.contains("syncF")) {
-					return packData.packDCEL.syncFaceData();
-				}
-				else if (str.contains("bary")) { // baryrefine given faces
-					FaceLink flink=null;
-					if (items==null || items.size()==0) // default to 'all'
-						flink=new FaceLink(packData,"a");
-					else
-						flink=new FaceLink(packData,items);
-					ArrayList<dcel.Face> farray=new ArrayList<dcel.Face>();
-					Iterator<Integer> fits=flink.iterator();
-					while (fits.hasNext()) {
-						farray.add(packData.packDCEL.faces[fits.next()]);
-					}
-					return RawDCEL.addBaryCents_raw(packData.packDCEL,farray);
-				}
-				// do local refinement at given vertices
-				else if (str.contains("frac")) {
-					NodeLink vlist=null;
-					if (items==null || items.size()==0) // default to 'all'
-						vlist=new NodeLink(packData,"a");
-					else
-						vlist=new NodeLink(packData,items);
-					return packData.packDCEL.localRefine(vlist);
 				}
 				else if (str.contains("write")) {
 					int len;

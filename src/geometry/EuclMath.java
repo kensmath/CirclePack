@@ -5,6 +5,7 @@ import java.util.Vector;
 import allMains.CPBase;
 import baryStuff.BaryPoint;
 import complex.Complex;
+import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RedHEdge;
 import exceptions.DataException;
@@ -570,89 +571,6 @@ public class EuclMath{
 	  return (Math.sqrt((xyz.x-XYZ.x)*(xyz.x-XYZ.x)+
 		       (xyz.y-XYZ.y)*(xyz.y-XYZ.y)+
 		       (xyz.z-XYZ.z)*(xyz.z-XYZ.z)));
-	}
-	
-	/** 
-	 * Distance in R^3 between points z, w (in spherical form)
-	 * @param z Complex
-	 * @param w Complex
-	 * @return double 
-	*/
-	public static double chordal_dist(Complex z,Complex w) {
-	  double []Z=new double[3];
-	  double []W=new double[3];
-	  
-	  Z=SphericalMath.s_pt_to_vec(z);
-	  W=SphericalMath.s_pt_to_vec(w);
-	  
-	  Z[0]=Z[0]-W[0];
-	  Z[1]=Z[1]-W[1];
-	  Z[2]=Z[2]-W[2];
-	  
-	  return (SphericalMath.vec_norm(Z));
-	}
-
-	/**
-	 * Given tangent circles v w and mutually tangent neighbors
-	 * vl, vr, in a euclidean packing, find their tangency points 
-	 * p0: <w vl>; p1: <vl v>; p2: <v vr>; p3 <vr w>
-	 * and return cross ratio (should be real)
-	 * [(p0-p1)/(p1-p2)]*[(p2-p3)/(p3-p0)].
-	 * TODO: done quickly at Brown Univ., 2017; probably needs work.
-	 * @param p
-	 * @param edge
-	 * @return
-	 */
-	public static Complex tang_cross_ratio(PackData p,EdgeSimple edge) {
-		Complex cr=null;
-		if (p.hes!=0 || edge==null)
-			return cr;
-		int []verts=new int[5];
-		Complex []cents=new Complex[5];
-		double []rads=new double[5];
-		
-		// treat w first
-		verts[0]=edge.w;
-		verts[4]=verts[0];
-		cents[0]=p.getCenter(verts[0]);
-		cents[4]=cents[0];
-		rads[0]=p.getRadius(verts[0]);
-		rads[4]=rads[0];
-		
-		// then v 
-		verts[2]=edge.v;
-		cents[2]=p.getCenter(verts[2]);
-		rads[2]=p.getRadius(verts[2]);
-		
-		// if bdry edge return null
-		int indxvw=p.nghb(verts[0],verts[2]);
-		int num=p.countFaces(verts[2]);
-		if (p.isBdry(verts[2]) && (indxvw==0 || indxvw==num))
-				return null;
-		
-		// next is v
-		verts[1]=p.kData[verts[2]].flower[indxvw+1];
-		cents[1]=p.getCenter(verts[1]);
-		rads[1]=p.getRadius(verts[1]);
-
-		// finally, vr
-		verts[3]=p.kData[verts[2]].flower[(indxvw-1+num)%num];
-		cents[3]=p.getCenter(verts[3]);
-		rads[3]=p.getRadius(verts[3]);
-		
-		// find intersection points cclw: <w,vl>,<vl,v>,<v,vr>,<vr,w> 
-		Complex []pts=new Complex[5];
-		Complex []diffs=new Complex[4];
-		for (int j=0;j<4;j++) {
-			pts[j]=eucl_tangency(cents[j],cents[j+1],rads[j],rads[j+1]);
-		}
-		pts[4]=pts[0];
-		for (int j=0;j<4;j++) {
-			diffs[j]=pts[j].minus(pts[j+1]);
-		}
-		Complex ff=diffs[0].divide(diffs[1]);
-		Complex sf=diffs[2].divide(diffs[3]);
-		return ff.times(sf);
 	}
 
 	/** 

@@ -328,15 +328,16 @@ public class SphericalMath{
   }
   
   /** 
-   * Stereographic projection of complex number to complex spherical point, 
-   * form (theta,phi). IMPORTANT: note that we project so zero goes to North pole,
-   * infinity to South.
+   * Stereographic projection of complex number to complex spherical 
+   * point, form (theta,phi). IMPORTANT: note that we project so zero 
+   * goes to North pole, infinity to South.
    * @param z Complex
    * @return new Complex, (theta,phi)
    */
   public static Complex proj_pt_to_sph(Complex z) {
 	  double zs=z.absSq();
-	  if (zs<.00000000001) return new Complex(0.0);
+	  if (zs<.00000000001) 
+		  return new Complex(0.0);
 	  return new Complex(Math.atan2(z.y,z.x),Math.acos((1-zs)/(1+zs)));
   }
 
@@ -344,7 +345,8 @@ public class SphericalMath{
    * Find distance from spherical point to geodesic between two
    * spherical points.
    */
-  public static double s_dist_pt_to_line(Complex z,Complex end1,Complex end2) {
+  public static double s_dist_pt_to_line(Complex z,
+		  Complex end1,Complex end2) {
   	double []A;
   	double []B;
   	double []C;
@@ -403,8 +405,9 @@ public class SphericalMath{
   } 
   
   /**
-   * Return new Complex (theta,phi) representing projection of given 3D vector
-   * (x,y,z) to the unit sphere; recall, origin goes to NORTH pole.
+   * Return new Complex (theta,phi) representing projection of 
+   * given 3D vector (x,y,z) to the unit sphere; recall, origin 
+   * goes to NORTH pole.
    * @param x double
    * @param y double
    * @param z double
@@ -510,7 +513,8 @@ public static double vec_norm(double X[]){
    * @param r2 double
    * @return new Complex, (theta,phi), null on error
    */
-  public static Complex sph_tangency(Complex z1,Complex z2,double r1,double r2) {
+  public static Complex sph_tangency(Complex z1,Complex z2,
+		  double r1,double r2) {
 	  double dratio=(s_dist(z1,z2))*r1/(r1+r2);
 	  // try first direction
 	  Point3D T3=new Point3D(sph_tangent(z1,z2));
@@ -696,7 +700,7 @@ public static double vec_norm(double X[]){
    * project from the south pole) of spherical point z to complex 
    * point w in plane. Key is |w| = sin(phi)/(1+cos(phi)).
    * 
-   * If z is essentially at sorth pole, project to distance 10000 from origin.
+   * If z is essentially sorth pole, project to distance 10000 from origin.
    * @param z Complex (theta,phi)
    * @return new Complex
    */

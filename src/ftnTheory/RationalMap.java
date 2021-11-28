@@ -626,11 +626,9 @@ public class RationalMap extends PackExtender {
 		}
 		
 		// do the 'adjoin'
-		if (PackData.adjoin(domainPack,slitPack, es.startV,tES.endV,length)<=0)
-			throw new CombException("adjoin has failed for v = "+es.startV+
-					" and w = "+tES.endV);
-
-		domainPack.setCombinatorics();
+		domainPack.packDCEL=CombDCEL.d_adjoin(domainPack.packDCEL,
+				slitPack.packDCEL, es.startV,tES.endV,length);
+		domainPack.packDCEL.fixDCEL_raw(domainPack);
 		
 		// must remove the 'EdgeSeg' from 'masterESlist'
 		masterESlist.remove((EdgeSeg)es);

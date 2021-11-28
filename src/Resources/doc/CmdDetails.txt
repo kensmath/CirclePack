@@ -3030,14 +3030,12 @@ script and append it to 'ClosedPath'.</instance>
 
 <command cmd="ring" flags="{v..}">
 <description>
-	This modifies the packings combinatorics by adding a "ring" of
-	n new vertices around each specified vertex v, where n is the
-	degree of v. This ring separates v from it original flower. The
-	new vertices have degree 5. If v is a boundary vertex, then 
-	new boundary vertices are also added on each side, separating v
-	from it former boundary neighbors.
+	OBE: see "frackMe"
 </description>
-</command>	
+<seealso>
+<see>frackMe</see>
+</seealso>	
+</command>
 
 <command cmd="rld">
 <description>
@@ -5138,8 +5136,7 @@ these or other functionality).
 	     ?vertexMap		If there is a "vertex_map", what are
 					indices (up to 12) associated with list?
 	     ?map_rev {v}       same, but return reverse association for
-				a single vertex. 
-	     ?edge_x_ratio {e..} cross-ratios of interior edges</comment>
+				a single vertex.</comment> 
 </options>
 <examples>
 <instance text="?rad 17"> prints the radius in "Messages"</instance>

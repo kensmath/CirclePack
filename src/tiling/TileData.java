@@ -5,6 +5,8 @@ import java.util.Vector;
 
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.HalfEdge;
+import dcel.RawDCEL;
 import exceptions.CombException;
 import komplex.EdgeSimple;
 import komplex.KData;
@@ -604,12 +606,13 @@ public class TileData {
 				else 
 					w=tile.vert[j];
 				newPD.setVertMark(w,2);
-				if (newPD.split_edge(v,w)>0)
-					newPD.setVertMark(newPD.nodeCount,3);
+				HalfEdge he=newPD.packDCEL.findHalfEdge(v,w);
+				RawDCEL.splitEdge_raw(newPD.packDCEL, he);
+				newPD.setVertMark(newPD.packDCEL.vertCount,3);
 			}
 		}
 		
-		newPD.setCombinatorics();
+		newPD.packDCEL.fixDCEL_raw(newPD);
 
 /*		
 		// create the 'wgTile' (white/grey) array for each tile
@@ -912,11 +915,12 @@ public class TileData {
 				else 
 					w=tile.vert[j];
 				newPD.setVertMark(w,2);
-				if (newPD.split_edge(v,w)>0)
-					newPD.setVertMark(newPD.nodeCount,3);
+				HalfEdge he=newPD.packDCEL.findHalfEdge(v, w);
+				RawDCEL.splitEdge_raw(newPD.packDCEL,he);
+				newPD.setVertMark(newPD.packDCEL.vertCount,3);
 			}
 		}
-		newPD.setCombinatorics();
+		newPD.packDCEL.fixDCEL_raw(newPD);
 
 		// prepare for 'quadTile' and 'dualTile'
 		int dcount=0;
@@ -938,11 +942,14 @@ public class TileData {
 		//   as they are created, indexed from 1 by using the index
 		//   of the barycenter circle and subtracting 'bcbase'.
 		workingTD.wgTileCount=newPD.faceCount;
-		newPD.bary_refine();
+		RawDCEL.hexBaryRefine_raw(newPD.packDCEL,true);
+		newPD.packDCEL.fixDCEL_raw(newPD);
 		int bcbase=newPD.nodeCount-workingTD.wgTileCount;
-		workingTD.wgTiles=new Tile[workingTD.wgTileCount+1]; // indexed from 1 to wgCount
+		// indexed from 1 to wgCount
+		workingTD.wgTiles=new Tile[workingTD.wgTileCount+1];
 
-		// for each tile create 'augVert' list for tile, create and save 'wgTiles' 
+		// for each tile create 'augVert' list for tile, 
+		//    create and save 'wgTiles' 
 		for (int t=1;t<=workingTD.tileCount;t++) {
 			Tile tile=workingTD.myTiles[t];
 			tile.wgIndices=new int[2*tile.vertCount];

@@ -10,7 +10,9 @@ import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
 import dcel.CombDCEL;
+import dcel.HalfEdge;
 import dcel.PackDCEL;
+import dcel.RawDCEL;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DataException;
@@ -1527,7 +1529,8 @@ public class ConformalTiling extends PackExtender {
 		
 		// ============= split ==========
 		else if (cmd.startsWith("split3")) {
-			if (packData==null || packData.tileData==null || packData.tileData.tileCount==0) {
+			if (packData==null || packData.tileData==null || 
+					packData.tileData.tileCount==0) {
 				errorMsg("'packData' does not have tile data");
 				return 0;
 			}
@@ -1547,7 +1550,8 @@ public class ConformalTiling extends PackExtender {
 
 		// ============= godual ==========
 		else if (cmd.startsWith("godual")) {
-			if (packData==null || packData.tileData==null || packData.tileData.tileCount==0) {
+			if (packData==null || packData.tileData==null || 
+					packData.tileData.tileCount==0) {
 				errorMsg("parent packing does not have tile data");
 				return 0;
 			}
@@ -1728,17 +1732,19 @@ public class ConformalTiling extends PackExtender {
 				else 
 					w=tile.vert[j];
 				newPD.setVertMark(w,2);
-				int v1=newPD.split_edge(v,w);
-				if (v1!=0) { // if you add one
-					newPD.setVertMark(v1,4);
-					int v2=newPD.split_edge(v,v1); // then add a second
-					if (v2!=0)
-						newPD.setVertMark(v2,3);
-				}
+				HalfEdge he=newPD.packDCEL.findHalfEdge(v,w);
+				RawDCEL.splitEdge_raw(newPD.packDCEL,he);
+				int v1=newPD.packDCEL.vertCount;
+				newPD.setVertMark(v1,4);
+				// then add a second
+				he=newPD.packDCEL.findHalfEdge(v,v1);
+				RawDCEL.splitEdge_raw(newPD.packDCEL,he);
+				int v2=newPD.packDCEL.vertCount; 
+				newPD.setVertMark(v2,3);
 			}
 		}
 		
-		newPD.setCombinatorics();
+		newPD.packDCEL.fixDCEL_raw(newPD);
 		return newPD;
 	}
 	

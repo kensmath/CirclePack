@@ -540,48 +540,6 @@ public class QueryParser {
 					ans.append(energy);
 					gotone=true;
 				}
-				
-				else if (query.startsWith("edge_x")) { // cross-ratio of edge
-					int j,k,v1,v3;
-					words=new StringBuilder("Edge cross_ratios (p"+p.packNum);
-					EdgeLink edgelist=new EdgeLink(p,flagSegs.get(0));
-					Iterator<EdgeSimple> elist=edgelist.iterator();
-					EdgeSimple edge=null;
-					int count=0;
-					if (!forMsg) // just return value
-						count=11;
-					while(elist.hasNext() && ((!forMsg || count<12) || count<1000)) {
-						edge=(EdgeSimple)elist.next();
-						if ((j=p.nghb((v1=edge.v),(v3=edge.w)))>=0 
-								&& (k=p.nghb(v3,v1))>=0 && j!=p.countFaces(v1) && k!=p.countFaces(v1)) {
-
-							// TODO: what about case of inv distances/overlaps?
-							
-							Complex z=EuclMath.tang_cross_ratio(p, edge);
-							if (!forMsg) {
-								ans.append("edge <"+edge.v+" "+edge.w+"> cross-ratio is "+z.x+" "+z.y+"i");
-								count++;
-							}
-							else { // create message along the way
-								words.append(" edge ("+edge.v+" "+edge.w+"): cross_ratio = ("+
-										z.x+" i "+z.y+" ");
-								count++;
-			  			  	}
-						}
-						else {
-							exception_words="?edge_x usage: error in list of edges";
-							throw new ParserException("");
-						}
-						gotone=true;
-					} // end of while
-					
-					// return from here
-					if (!forMsg) 
-						return ans.toString();
-					else
-						return words.toString();
-				}
-				
 				break;
 			} // end of 'e'
 			

@@ -1272,11 +1272,11 @@ public class PackDCEL {
 		if (f.faceIndx<0) 
 			return null;
 		
-		pts[1]=getFaceCenter(f);
+		pts[1]=getFaceCenter(f).center;
 		
 		// he is normal interior edge
 		if (he.myRedEdge==null) {
-			pts[0]=getFaceCenter(g);
+			pts[0]=getFaceCenter(g).center;
 			return pts;
 		}
 
@@ -1720,44 +1720,7 @@ public class PackDCEL {
 			return he.face;
 		return null;
 	}
-	
-	/**
- 	 * NEEDED FOR CIRCLEPACK
-	 * Local data may not agree with parent packing 'p' (e.g., after
-	 * creating barycenters). However, if they do agree, we may need
-	 * to sync 'p' with the local data. Here's one example: after redoing
-	 * the face indexing, we may want to set corresponding 'PackData.faces' 
-	 * structure, and if all looks okay, we can insert that in 'p'. 
-	 * @return intFaceCount
-	 */
-	public int syncFaceData() {
-		
-		// minimal check on compatibility
-		if (p.nodeCount!=vertCount)
-			return 0;
-		p.faceCount=intFaceCount;
-		p.faces=new komplex.Face[p.faceCount+1]; // new face structure
-		for (int f=1;f<=intFaceCount;f++) {
-			Face face=faces[f];
-			if (face.faceIndx>0) {
-				face.faceIndx=f; // reset indices (perhaps already in order)
-				// for new komplex.Face
-				p.faces[f]=new komplex.Face();
-				p.faces[f].vert=face.getVerts();
-				p.faces[f].vertCount=p.faces[f].vert.length;
-				p.faces[f].indexFlag=0;
-			}
-		}
-		
-		if (fullOrder!=null) {
-			HalfEdge edge=fullOrder.get(0); 
-			p.firstFace=edge.face.faceIndx;
-		}
 
-		// TODO: could transfer layout order to parent 'p' too.
-		return intFaceCount;
-	}
-	
 	public int layoutFactory(HalfLink heTree,boolean fix,boolean placeFirst) {
 		return layoutFactory(null,heTree,null,null,fix,placeFirst,-1.0);
 	}
@@ -1798,9 +1761,9 @@ public class PackDCEL {
 		if (heTree==null || heTree.size()==0)
 			heTree=fullOrder;
 		
-		int []myVerts=new int[3];
-		double []myRadii=new double[3];
-		Complex []myCenters=new Complex[3];
+		int[] myVerts=new int[3];
+		double[] myRadii=new double[3];
+		Complex[] myCenters=new Complex[3];
 		
 		// handle root first
 		HalfEdge he=heTree.getFirst();
@@ -1847,13 +1810,15 @@ public class PackDCEL {
 			p.cpScreen.drawCircle(myCenters[2],myRadii[2],circFlags);
 			if (debug) p.cpScreen.rePaintAll(); 
 		}
+		
+		// TODO: if pF!=null, need to layout the first face and/or circles
 
 		// now go through the rest of the tree
 		Iterator<HalfEdge> hest = heTree.iterator();
 		hest.next(); // ditch the first, already handled
 		
 		while (hest.hasNext()) {
-			HalfEdge edge = hest.next();  // normally, this edge is already in place
+			he = hest.next();  // normally, this edge is already in place
 			if (fix) {
 				d_faceXedge(he);
 			}
@@ -1888,82 +1853,85 @@ public class PackDCEL {
 					if (debug) p.cpScreen.rePaintAll();
 				}
 				
-				if (pF!=null && p.hes>0) { // post routines don't know how to convert
-					myCenters[0]=new Complex(p.cpScreen.
-							sphView.toApparentSph(myCenters[0]));
-					myCenters[1]=new Complex(p.cpScreen.
-							sphView.toApparentSph(myCenters[1]));
-					myCenters[2]=new Complex(p.cpScreen.
-							sphView.toApparentSph(myCenters[2]));
-				}
-
 				// postscript
-				if (faceDo && pF!=null) { // also post the faces
-					
-					// set face/bdry colors
-					Color fcolor=null;
-					Color bcolor=null;
-					if (faceFlags.fill) {  
-						if (!faceFlags.colorIsSet) 
-							fcolor=p.getFaceColor(he.face.faceIndx);
-						if (faceFlags.colBorder)
-							bcolor=fcolor;
+				if (pF!=null) {
+					if (p.hes>0) { // post routines don't know how to convert
+						myCenters[0]=new Complex(p.cpScreen.
+							sphView.toApparentSph(myCenters[0]));
+						myCenters[1]=new Complex(p.cpScreen.
+							sphView.toApparentSph(myCenters[1]));
+						myCenters[2]=new Complex(p.cpScreen.
+							sphView.toApparentSph(myCenters[2]));
 					}
-					if (faceFlags.draw) {
-						if (faceFlags.colBorder)
-							bcolor=p.getFaceColor(he.face.faceIndx);
-						else 
-							bcolor=ColorUtil.getFGColor();
-					}
-					pF.post_Poly(p.hes, myCenters, fcolor, bcolor, tx);
 
-					if (faceFlags.label) { // label the face
-						Complex z=getFaceCenter(faces[he.face.faceIndx]);
-						if (p.hes>0) {
-							z=p.cpScreen.sphView.toApparentSph(z);
-							if(Math.cos(z.x)>=0.0) {
-								z=util.SphView.s_pt_to_visual_plane(z);
-								pF.postIndex(z,he.face.faceIndx);
-							}
+					if (faceDo) { // also post the faces
+					
+						// set face/bdry colors
+						Color fcolor=null;
+						Color bcolor=null;
+						if (faceFlags.fill) {  
+							if (!faceFlags.colorIsSet) 
+								fcolor=p.getFaceColor(he.face.faceIndx);
+							if (faceFlags.colBorder)
+								bcolor=fcolor;
 						}
-						else pF.postIndex(z,he.face.faceIndx);
+						if (faceFlags.draw) {
+							if (faceFlags.colBorder)
+								bcolor=p.getFaceColor(he.face.faceIndx);
+							else 
+								bcolor=ColorUtil.getFGColor();
+						}
+						pF.post_Poly(p.hes, myCenters, fcolor, bcolor, tx);
+
+						if (faceFlags.label) { // label the face
+							Complex z=getFaceCenter(faces[he.face.faceIndx]).center;
+							if (p.hes>0) {
+								z=p.cpScreen.sphView.toApparentSph(z);
+								if(Math.cos(z.x)>=0.0) {
+									z=util.SphView.s_pt_to_visual_plane(z);
+									pF.postIndex(z,he.face.faceIndx);
+								}
+							}
+							else pF.postIndex(z,he.face.faceIndx);
+						}
 					}
-				}
-				if (circDo && pF!=null) { // also post the circles
-					if (!circFlags.fill) { // not filled
-						if (circFlags.colBorder)
-							pF.postColorCircle(p.hes,myCenters[2],myRadii[2],
+					if (circDo) { // also post the circles
+						if (!circFlags.fill) { // not filled
+							if (circFlags.colBorder)
+								pF.postColorCircle(p.hes,myCenters[2],myRadii[2],
 									p.getCircleColor(he.next.next.origin.vertIndx),tx);
-						else 
-							pF.postCircle(p.hes,myCenters[2],myRadii[2],tx);
-					} 
-					else {
-						Color ccOl=ColorUtil.getFGColor();
-						if (!circFlags.colorIsSet)
-							ccOl = p.getCircleColor(he.next.next.origin.vertIndx);
-						if (circFlags.colBorder) {
-							pF.postFilledColorCircle(p.hes,myCenters[2],
-									myRadii[2],ccOl,ccOl,tx);
-						}
-						else 
-							pF.postFilledCircle(p.hes,myCenters[2],
-									myRadii[2],ccOl,tx);
-					}
-					if (circFlags.label) { // label the face
-						if (p.hes>0) {
-							Complex z=p.cpScreen.sphView.
-									toApparentSph(myCenters[2]);
-							if(Math.cos(z.x)>=0.0) {
-								z=util.SphView.s_pt_to_visual_plane(z);
-								pF.postIndex(z,myVerts[2]);
+							else 
+								pF.postCircle(p.hes,myCenters[2],myRadii[2],tx);
+						} 
+						else {
+							Color ccOl=ColorUtil.getFGColor();
+							if (!circFlags.colorIsSet)
+								ccOl = p.getCircleColor(he.next.next.origin.vertIndx);
+							if (circFlags.colBorder) {
+								pF.postFilledColorCircle(p.hes,myCenters[2],
+										myRadii[2],ccOl,ccOl,tx);
 							}
+							else 
+								pF.postFilledCircle(p.hes,myCenters[2],
+										myRadii[2],ccOl,tx);
 						}
-						else pF.postIndex(myCenters[2],myVerts[2]);
+						if (circFlags.label) { // label the circle
+							if (p.hes>0) {
+								Complex z=p.cpScreen.sphView.
+									toApparentSph(myCenters[2]);
+								if(Math.cos(z.x)>=0.0) {
+									z=util.SphView.s_pt_to_visual_plane(z);
+									pF.postIndex(z,myVerts[2]);
+								}
+							}
+							else pF.postIndex(myCenters[2],myVerts[2]);
+						}
 					}
 				}
 			}
 			count++;
 		} // end of while through trees
+//		p.cpScreen.rePaintAll();
 		return count;
 	}
 	
@@ -2016,9 +1984,9 @@ public class PackDCEL {
 	/**
 	 * Return center of incircle of face with given index.
 	 * @param face int
-	 * @return Complex, null on error
+	 * @return CircleSimple, null on error
 	 */
-	public Complex getFaceCenter(Face face) {
+	public CircleSimple getFaceCenter(Face face) {
 		if (face.faceIndx<0)
 			return null;
 		HalfEdge he=face.edge;
@@ -2036,7 +2004,7 @@ public class PackDCEL {
 			}
 			CircleSimple theCircle=EuclMath.circle_3(pts[0], pts[1], pts[2]);
 			theCircle=HyperbolicMath.e_to_h_data(theCircle);
-			return theCircle.center;
+			return theCircle;
 		}
 		
 		Complex p0 = getVertCenter(he);
@@ -2047,7 +2015,7 @@ public class PackDCEL {
 			sc = SphericalMath.sph_tri_incircle(p0, p1, p2);
 		else
 			sc = EuclMath.eucl_tri_incircle(p0, p1, p2);
-		return sc.center;
+		return sc;
 	}
 	
 	/**
@@ -2115,7 +2083,7 @@ public class PackDCEL {
 		while (fits.hasNext()) {
 			Face face=fits.next();
 			if (face.faceIndx>=0)
-				corners[tick++]=getFaceCenter(face);
+				corners[tick++]=getFaceCenter(face).center;
 		}
 		return corners;
 	}

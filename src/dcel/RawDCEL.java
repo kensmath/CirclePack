@@ -2767,7 +2767,7 @@ public class RawDCEL {
 	 * Then we flip each edge shared by two of these faces. Finally,
 	 * we remove any boundary edges of these faces. Return the 
 	 * count of new vertices. Note: if v is bdry with just one face,
-	 * then return 0. 
+	 * then return 0. See the "ring" command.
 	 * @param verts NodeLink
 	 * @return int, count of new vertices, 0 on error
 	 */

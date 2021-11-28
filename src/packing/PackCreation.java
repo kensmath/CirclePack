@@ -1108,9 +1108,9 @@ public class PackCreation {
 		}
 		
 		int v1=blink.get(i);
-		int rslt=PackData.adjoin(p1,p2,v1,v2,n);
-		if (rslt<=0) 
-			return 0;
+		p1.packDCEL=CombDCEL.d_adjoin(p1.packDCEL,
+				p2.packDCEL,v1,v2,n);
+		p1.packDCEL.fixDCEL_raw(p1);
 		
 		int centerV=p1.vertexMap.findW(1);
 
@@ -1206,7 +1206,7 @@ public class PackCreation {
 			// 5 copies of tempPack and tempReverse are adjoined
 			PackData tempPack=growWheel.copyPackTo();
 			PackData tempReverse=growWheel.copyPackTo();
-			tempReverse.reverse_orient();
+			tempReverse.packDCEL.reverseOrientation();
 			
 			tempPack.vlist=growWheel.vlist.makeCopy();
 			tempReverse.vlist=growWheel.vlist.makeCopy();
@@ -1310,7 +1310,7 @@ public class PackCreation {
 				}
 			
 			// new generation is reverse oriented
-			growWheel.reverse_orient();
+			growWheel.packDCEL.reverseOrientation();
 			pdcel.fixDCEL_raw(growWheel);
 
 			generation++;
@@ -1847,17 +1847,22 @@ public class PackCreation {
 		PackData triPent=p.copyPackTo();
 
 		// adjoin 2
-		PackData.adjoin(triPent,p,1,1,sidelength);
+		triPent.packDCEL=CombDCEL.d_adjoin(triPent.packDCEL,
+				p.packDCEL,1,1,sidelength);
+		triPent.packDCEL.fixDCEL_raw(triPent);
+		triPent.vertexMap=triPent.packDCEL.oldNew;
 		int newv=triPent.vertexMap.findW(3);
 		triPent.swap_nodes(newv,7);
 		newv=triPent.vertexMap.findW(4);
 		triPent.swap_nodes(newv,8);
 		newv=triPent.vertexMap.findW(5);
 		triPent.swap_nodes(newv,9);
-		triPent.setBdryFlags();
 		
 		// adjoin 3
-		PackData.adjoin(triPent,p,7,1,2*sidelength);
+		triPent.packDCEL=CombDCEL.d_adjoin(triPent.packDCEL,
+				p.packDCEL,7,1,2*sidelength);
+		triPent.packDCEL.fixDCEL_raw(triPent);
+		triPent.vertexMap=triPent.packDCEL.oldNew;
 		int new5=triPent.vertexMap.findW(4);
 		int new6=triPent.vertexMap.findW(5);
 		triPent.swap_nodes(new5,5);
@@ -1866,7 +1871,6 @@ public class PackCreation {
 		
 		triPent.alpha=10;
 		triPent.gamma=7;
-		triPent.setCombinatorics();
 		
 		return triPent;
 	}
@@ -1882,7 +1886,10 @@ public class PackCreation {
 		PackData triPent=p.copyPackTo();
 
 		// adjoin 2
-		PackData.adjoin(triPent,p,5,1,sidelength);
+		triPent.packDCEL=CombDCEL.d_adjoin(triPent.packDCEL,
+				p.packDCEL,5,1,sidelength);
+		triPent.packDCEL.fixDCEL_raw(triPent);
+		triPent.vertexMap=triPent.packDCEL.oldNew;
 		
 		boolean debug=false; // debug=true;
 		if (debug) {
@@ -1896,10 +1903,12 @@ public class PackCreation {
 		int new7=triPent.vertexMap.findW(4);
 		int new8=triPent.vertexMap.findW(5);
 		int newCorner=triPent.vertexMap.findW(3); 
-		triPent.setBdryFlags();
 		
 		// adjoin 3
-		PackData.adjoin(triPent,p,newCorner,1,sidelength);
+		triPent.packDCEL=CombDCEL.d_adjoin(triPent.packDCEL,
+				p.packDCEL,newCorner,1,sidelength);
+		triPent.packDCEL.fixDCEL_raw(triPent);
+		triPent.vertexMap=triPent.packDCEL.oldNew;
 		if (debug) {
 			Iterator<EdgeSimple> tPit=triPent.vertexMap.iterator();
 			System.err.println("vertexMap after 3: ");
@@ -1911,10 +1920,12 @@ public class PackCreation {
 		int new5=triPent.vertexMap.findW(4);
 		int new6=triPent.vertexMap.findW(5);
 		int newGamma=triPent.vertexMap.findW(3);
-		triPent.setBdryFlags();
 
 		// adjoin 4
-		PackData.adjoin(triPent,p,newGamma,1,2*sidelength);
+		triPent.packDCEL=CombDCEL.d_adjoin(triPent.packDCEL,
+				p.packDCEL,newGamma,1,2*sidelength);
+		triPent.packDCEL.fixDCEL_raw(triPent);
+		triPent.vertexMap=triPent.packDCEL.oldNew;
 		if (debug) {
 			Iterator<EdgeSimple> tPit=triPent.vertexMap.iterator();
 			System.err.println("vertexMap after 4: ");
@@ -1935,10 +1946,9 @@ public class PackCreation {
 		triPent.swap_nodes(new8,8);
 		triPent.swap_nodes(new4,9);
 		
-		triPent.alpha=9;
-		triPent.gamma=newGamma;
-		triPent.setCombinatorics();
-		
+		triPent.setAlpha(9);
+		triPent.setGamma(newGamma);
+
 		return triPent;
 	}
 	

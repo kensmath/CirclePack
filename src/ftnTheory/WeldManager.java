@@ -14,6 +14,7 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.CombDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
@@ -1060,8 +1061,6 @@ public class WeldManager extends PackExtender {
 			throw new DataException("weld: problem reading list: "
 					+ ex.getMessage());
 		}
-		p.setCombinatorics();
-		q.setCombinatorics();
 
 		String buf = null;
 		if (v == p.kData[v_orig].flower[0]) {
@@ -1085,14 +1084,15 @@ public class WeldManager extends PackExtender {
 		if (opt_flag>0) { 
 			q.bdryStarts[1] = w_orig;
 
-			if ((ans = PackData.adjoin(p,q, v_orig, w_orig, count)) != 0) {
+			p.packDCEL=CombDCEL.d_adjoin(p.packDCEL,
+				q.packDCEL, v_orig, w_orig, count);
+			p.packDCEL.fixDCEL_raw(p);
 				// TODO: note that 'adjoin' pastes p clockwise, q
 				//   counterclockwise; no problem for full bdry, but 
 				//   with partial bdry's, have to do something else.
 				// TODO: use to pass back 'Oldnew' to define vertex_map of q.
-				for (v = 1; v <= p.nodeCount; v++)
-					p.setPlotFlag(v,1);
-			}
+			for (v = 1; v <= p.nodeCount; v++)
+				p.setPlotFlag(v,1);
 		} 
 		else {
 			msg("weld: two packs appear ready to adjoint:\n"

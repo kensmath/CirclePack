@@ -7,6 +7,7 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import dcel.CombDCEL;
 import dcel.DcelCreation;
 import exceptions.CombException;
 import exceptions.DataException;
@@ -205,9 +206,9 @@ public class Necklace extends PackExtender {
 			CPBase.Elink=new EdgeLink(topPack,"b("+topleftend+" "+vtop+")");
 
 			// ------------------ now, do the adjoin 
-			int rslt=PackData.adjoin(topPack,bottomPack,vtop,vbottom,length);
-			if (rslt<=0)
-				Oops("problem with adjoin");
+			topPack.packDCEL=CombDCEL.d_adjoin(topPack.packDCEL,
+					bottomPack.packDCEL,vtop,vbottom,length);
+			topPack.packDCEL.fixDCEL_raw(topPack);
 			
 			// save the resulting packing as the parent packing
 			int pnum=packData.packNum;
@@ -310,9 +311,11 @@ System.err.println("starting bottomHemi:");
 			int b=2;
 			for (int j=0;j<k;j++)
 				b=bottomHemi.kData[b].flower[0];
-			
-			PackData.adjoin(topHemi,bottomHemi,2,b,N*2);
-			topHemi.setCombinatorics();
+
+			topHemi.packDCEL=CombDCEL.d_adjoin(topHemi.packDCEL,
+					bottomHemi.packDCEL,2,b,N*2);
+			topHemi.packDCEL.fixDCEL_raw(topHemi);
+
 			cpCommand(topHemi,"max_pack");
 			
 			// save the resulting packing as the parent packing
@@ -435,8 +438,10 @@ System.err.println("starting bottomHemi:");
 				if (rightPack.vertexMap.findW(bn)==u)
 					rightIndx=bn;
 			}
-System.err.println("adjoining right");			
-			PackData.adjoin(myPacking,rightPack,2,rightIndx,2);
+//System.err.println("adjoining right");
+			myPacking.packDCEL=CombDCEL.d_adjoin(myPacking.packDCEL,
+					rightPack.packDCEL,2,rightIndx,2);
+			myPacking.packDCEL.fixDCEL_raw(myPacking);
 			
 			// save original index info
 			Iterator<EdgeSimple> vM=rightPack.vertexMap.iterator();
@@ -462,7 +467,9 @@ System.err.println("adjoining right");
 			}
 			System.err.println("adjoining left");			
 
-			PackData.adjoin(myPacking,leftPack,6,leftIndx,2);
+			myPacking.packDCEL=CombDCEL.d_adjoin(myPacking.packDCEL,
+					leftPack.packDCEL,6,leftIndx,2);
+			myPacking.packDCEL.fixDCEL_raw(myPacking);
 
 			// save original index infor
 			Iterator<EdgeSimple> vM=leftPack.vertexMap.iterator();

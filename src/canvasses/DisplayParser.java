@@ -832,9 +832,11 @@ public class DisplayParser {
 					Iterator<BaryPoint> byl=bylink.iterator();
 					while (byl.hasNext()) {
 						BaryPoint bp=byl.next();
-						if (bp.face>0 && bp.face<=p.faceCount) { // must have face index
-							int []vert=p.faces[bp.face].vert;
-							z=bp.bp2Complex(p.hes,p.getCenter(vert[0]),p.getCenter(vert[1]),
+						if (bp.face>0 && bp.face<=p.packDCEL.faceCount) { // must have face index
+							int[] vert=p.packDCEL.faces[bp.face].getVerts();
+							z=bp.bp2Complex(p.hes,
+									p.getCenter(vert[0]),
+									p.getCenter(vert[1]),
 									p.getCenter(vert[2]));
 							cpScreen.drawTrinket(trinket,z,dispFlags);
 							count++;
@@ -859,8 +861,8 @@ public class DisplayParser {
 				}
 				break;
 			} // done with 't'
-			case 'T': // tiles (if they exist) (note: 'ConformalTiling' extender 
-				// has more complete options)
+			case 'T': // tiles (if they exist) (note: 'ConformalTiling' 
+				// extender has more complete options)
 			{
 				if (p.tileData!=null && p.tileData.tileCount>0) {
 					// default to 'all'
@@ -977,9 +979,10 @@ public class DisplayParser {
 				count++;
 				break;
 			}
-			case 'y': // circles defined by face centers (as in Delaunay triangulations)
+			case 'y': // circles defined by face centers 
+				//  (as in Delaunay triangulations)
 			{
-				FaceLink flink=new FaceLink(p,items); // should default to 'all'
+				FaceLink flink=new FaceLink(p,items); // default to 'all'
 				Iterator<Integer> fit=flink.iterator();
 				CircleSimple sc=null;
 				while (fit.hasNext()) {
@@ -987,17 +990,20 @@ public class DisplayParser {
 					Complex z0=null;
 					Complex z1=null;
 					Complex z2=null;
-					if (face>0 && face<=p.faceCount) {
-						int []vert=p.faces[face].vert;
+					if (face>0 && face<=p.packDCEL.faceCount) {
+						int[] vert=p.packDCEL.faces[face].getVerts();
 						z0=p.getCenter(vert[0]);
 						z1=p.getCenter(vert[1]);
 						z2=p.getCenter(vert[2]);
 						if (p.hes<0) {  // hyp
-							sc=HyperbolicMath.h_to_e_data(z0, p.getRadius(vert[0]));
+							sc=HyperbolicMath.h_to_e_data(z0,
+									p.getRadius(vert[0]));
 							z0=sc.center;
-							sc=HyperbolicMath.h_to_e_data(z1, p.getRadius(vert[1]));
+							sc=HyperbolicMath.h_to_e_data(z1,
+									p.getRadius(vert[1]));
 							z1=sc.center;
-							sc=HyperbolicMath.h_to_e_data(z2, p.getRadius(vert[2]));
+							sc=HyperbolicMath.h_to_e_data(z2,
+									p.getRadius(vert[2]));
 							z2=sc.center;
 							sc=EuclMath.circle_3(z0,z1,z2);
 						}

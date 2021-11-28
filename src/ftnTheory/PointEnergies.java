@@ -7,15 +7,16 @@ import packing.PackData;
 import complex.Complex;
 
 /**
- * A class for computing various energies of point distributions, a principal
- * one being the 'coulomb' energy of points on the sphere. The class is created
- * when a '?energy' of 'energy' call is made and vanishes after the computation.
+ * A class for computing various energies of point distributions, 
+ * a principal one being the 'coulomb' energy of points on the 
+ * sphere. The class is created when a '?energy' of 'energy' 
+ * call is made and vanishes after the computation.
  * @author kens
- *
  */
 public class PointEnergies {
 	
-	public static double comp_energy(PackData packData,CommandStrParser.Energy eng) {
+	public static double comp_energy(PackData packData,
+			CommandStrParser.Energy eng) {
 		double sum=0.0,pwr=0.0,d;
 		Complex z;
 
@@ -39,7 +40,6 @@ public class PointEnergies {
 			}
 			return sum;
 		}
-		
 		
 		// else eucl/hyperbolic
 		for(int i=1;i<packData.nodeCount;i++) {
@@ -104,6 +104,5 @@ public class PointEnergies {
 		}
 		return min_s_dist;
 	} 
-
 
 }
