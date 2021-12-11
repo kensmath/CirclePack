@@ -179,7 +179,10 @@ make a difference: formats below indicate when data must be on separate lines.
 
 Alternately: Files with other data but no combinatorics are stored as *.q files. They must begin with keyword "CHECKCOUNT:" instead of "NODECOUNT:".
 
-2. 'Lite' packings: This is a compressed form for speedy communication and is a continuous string of values as follows. 
+2. 'Lite' packings: OBE: all "Lite" reading/writing/processing has been
+removed from the code in version 5.0 (2021).
+
+This was a compressed form for speedy communication and was a continuous string of values as follows. 
 Local vertex indexing is enforced with interiors coming first, followed by boundary in counterclockwise order (though there
 maybe more than one boundary component). Files typically saved with .pl extension.
 

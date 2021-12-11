@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Random;
-import java.util.Scanner;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
@@ -33,7 +32,6 @@ import dcel.RedHEdge;
 import dcel.VData;
 import dcel.Vertex;
 import deBugging.DCELdebug;
-import deBugging.LayoutBugs;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.DataException;
@@ -46,7 +44,6 @@ import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
-import komplex.CookieMonster;
 import komplex.DualTri;
 import komplex.EdgeSimple;
 import komplex.Face;
@@ -107,7 +104,7 @@ public class PackData{
 	public static final int MAX_ACCUR=15;   // digits of accuracy for file writing
 	public static final int MAX_PETALS=1000; // the most petals a flower can have
 	
-	public enum PackState { INITIAL,NODECOUNT,CHECKCOUNT,TILECOUNT,PACKLITE,
+	public enum PackState { INITIAL,NODECOUNT,CHECKCOUNT,TILECOUNT,
 		TRIANGULATION,NEUTRAL,PACKNAME,ABG,
 		GEOMETRY,CIRCLE_PLOT_FLAGS,FACE_PLOT_FLAGS,SELECT_RADII,ANGLE_AIMS,
 		INV_DISTANCES,ANGLESUMS,C_COLORS,CIRCLE_COLORS,TILE_COLORS,VERT_MARK,
@@ -394,6 +391,10 @@ public class PackData{
 
 		// note: 'nodeCount' may be larger than 'origNodeCount'
 		for (int v=1;v<=nodeCount;v++) { // 'v' is "new" index
+			
+// debugging
+//			System.out.println("attach v "+v);
+			
 			Vertex vert=pdcel.vertices[v];
 			HalfEdge he=vert.halfedge;
    			int oldv=v;
@@ -541,7 +542,7 @@ public class PackData{
         boolean col_c_flag = false;
         boolean col_f_flag = false;
         EdgeLink vertMarks=null; // holds optional marks 
-        boolean dcelread=false; // true, dcel data, triggered by key "BOUQUET:"
+//        boolean dcelread=false; // true, dcel data, triggered by key "BOUQUET:"
         
         PackState state = PackState.INITIAL;
         String line;
@@ -624,9 +625,6 @@ public class PackData{
                     	state=PackState.TRIANGULATION;
                     	break;
                     }
-                    else if (mainTok.equals("1234321")) {
-                    	state=PackState.PACKLITE;
-                    }
                     else if (mainTok.equals("NEUTRAL:")) {
                     	state=PackState.NEUTRAL;
                     }
@@ -664,54 +662,11 @@ public class PackData{
         			"' failed: 'NODECOUNT:', 'CHECKCOUNT:', 'TILECOUNT:', 'TRIANGULATION:' or PackLite magic number not at top");
         	return -1;
         }
-        if (state==PackState.PACKLITE) {
-        	PackData newPack=null;
-        	try {
-        		fp.reset();
-        		newPack=PackData.readLite(fp,"lite");
-        		if (newPack==null) 
-        			throw new ParserException();
-        	} catch(Exception ex) {
-    			flashError("failed in reading file as 'PackLite'");
-    			return -1;
-        	}
 
-       		this.status=true;
-       		this.packExtensions=new Vector<PackExtender>(2); // trash extenders
-       		this.nodeCount=newPack.nodeCount;
-       		this.hes=newPack.hes;
-       		this.cpScreen.setGeometry(this.hes);
-       		this.intrinsicGeom=newPack.intrinsicGeom;
-       		this.alpha=newPack.alpha;
-       		this.gamma=newPack.gamma;
-       		this.sizeLimit=newPack.sizeLimit;
-       		this.kData=newPack.kData;
-       		this.rData=newPack.rData;
-       		this.poisonEdges=newPack.elist;
-       		this.poisonVerts=newPack.vlist;
-       		this.vertexMap=null;
-       		this.xyzpoint=null;
-       		this.vlist=null;
-       		this.flist=null;
-       		this.elist=null;
-       		this.blist=null;
-       		this.glist=null;
-       		this.tlist=null;
-       		this.zlist=null;
-       		this.overlapStatus=false;
-       		this.free_overlaps();
-       		this.locks=0;
-       		this.tileData=newPack.tileData;
-       		this.setCombinatorics();
-			
-       		flags |= 00033;
-       		return flags;
-        }
         // Reaching here, state must be NODECOUNT, CHECKCOUNT, TILECOUNT, 
-        //     PACKLITE, TRIANGULATION or NEUTRAL
+        //     TRIANGULATION or NEUTRAL
         // If NODECOUNT, must get FLOWERS next (can pick up PACKNAME, 
-        //    ALPHA..,, GEOM along the way); if TILECOUNT, must get TILES;
-        //    if PACKLITE send to 'readLite'
+        //    ALPHA..,, GEOM along the way); if TILECOUNT, must get TILES.
         try {
             while(newPacking && !gotFlowers 
             		&& (line=StringUtil.ourNextLine(fp))!=null) {
@@ -746,10 +701,9 @@ public class PackData{
                     	// NOTE: as of 8/11/2021, 
                     	//       equate "BOUQUET:" and "FLOWERS:" calls 
                     	// read all or until error. 
-                    	if (mainTok.equals("BOUQUET:") || mainTok.equals("FLOWERS:"))
-                    		dcelread=true;
-                        gotFlowers = true;
-                    	int num;
+//                    	if (mainTok.equals("BOUQUET:") || mainTok.equals("FLOWERS:"))
+//                    		dcelread=true;
+//                    	int num;
                     	
                     	// normal packing
                     	if (state==PackState.NODECOUNT) { 
@@ -760,7 +714,7 @@ public class PackData{
                     			while (vert<nodeCount && (line=StringUtil.ourNextLine(fp))!=null) {
                     				StringTokenizer loctok = new StringTokenizer(line);
                     				vert=Integer.valueOf(loctok.nextToken());
-                    				num=Integer.valueOf(loctok.nextToken());
+                    				int num=Integer.valueOf(loctok.nextToken());
                     				if (num<=0) 
                     					throw(new Exception()); // bomb out
                     				bouquet[vert]=new int[num+1];
@@ -792,11 +746,12 @@ public class PackData{
                    						readOldNew[edge.v]=edge.w;
                    					}
                    				}
+                                gotFlowers = true;
                     		} catch(Exception ex){ // try to reset to previous line and proceed
-                    			try {fp.reset();} catch(IOException ioe) {
-                    				flashError("IOException: "+ioe.getMessage());
+//                    			try {fp.reset();} catch(IOException ioe) {
+                    				flashError("reading exception:"+ex.getMessage());
                     				return -1;
-                    			}
+//                    			}
                     		}
                     	}
                     	
@@ -823,7 +778,7 @@ public class PackData{
                     					StringTokenizer loctok = new StringTokenizer(line);
                     					@SuppressWarnings("unused")
 										int t=Integer.valueOf(loctok.nextToken()); // disregard t
-                    					num=Integer.valueOf(loctok.nextToken());
+                    					int num=Integer.valueOf(loctok.nextToken());
                             			if (num<=0) throw(new Exception()); // bomb out
                             			tileData.myTiles[tick]=new Tile(this,tileData,num);
                             			tileData.myTiles[tick].tileIndex=tick;
@@ -2053,174 +2008,7 @@ public class PackData{
     	}
     	return old_v;
     }
-    
-    /**
-     * Read a file in 'PackLite' form and convert it to a packing. 
-     * Set the VertexMap (new,old) to convert new indices
-     * to indices of some parent based on 'origIndices'. Careful, 
-     * watch for negative vertex indices, indicating a vertex which was added 
-     * as an ideal vertex and is not represented in the parent.
-     * @param fp BufferedReader, instantiated by the calling routine
-     * @param filename String
-     * @return PackData, null on error
-     */
-    public static PackData readLite(BufferedReader fp,String filename) 
-    throws IOException {
-    	
-    	PackLite pL=new PackLite(null);  // instantiate empty PackLite
-    	boolean yesRadii=false;
-    	boolean yesCenters=false;
 
-    	Scanner src=new Scanner(fp);
-    	int tick=1;
-    	pL.counts=new int[21];
-    	
-    	try {
-    		tick=1;
-
-    		// dispose of the "magic" number identifying this as 'Lite'
-    		if (src.hasNextInt()) {
-    			int magic=src.nextInt();
-    			if (magic != 1234321)  // not the magic number? read as first entry
-    				pL.counts[tick++]=magic;
-    		}
-    		
-    		// read 20 lead integers
-    		while (tick<=20 && src.hasNextInt()) {
-    			pL.counts[tick++]=src.nextInt();
-    		}
-    		if (tick<21) {
-    			src.close();
-    			throw new InOutException("Only got "+tick+" lead integers");
-    		}
-    		
-    		// store the lead information
-    		pL.checkCount=pL.counts[1];
-    		pL.hes=pL.counts[2];
-    		pL.vertCount=pL.counts[3];
-    		pL.intVertCount=pL.counts[4];
-    		pL.vCount=pL.counts[5];
-    		pL.flowerCount=pL.counts[6]; // may be 0
-    		pL.aimCount=pL.counts[7]; // may be 0
-    		pL.invDistCount=pL.counts[8]; // may be 0
-    		if (pL.counts[9]>0)
-    			yesRadii=true;
-    		if (pL.counts[10]>0)
-    			yesCenters=true;
-    		
-    		// **** varIndices
-    		pL.varIndices=new int[pL.vCount];
-    		tick=0;
-    		for (int n=0;n<pL.vCount;n++) {
-    			if (src.hasNextInt())
-    				pL.varIndices[tick++]=src.nextInt();
-    		}
-    		
-    		// **** flowers
-    		if (pL.flowerCount>0) {
-    			pL.flowerHeads=new int[pL.flowerCount];
-    			tick=0;
-    			for (int n=0;n<pL.flowerCount;n++) {
-    				if (src.hasNextInt())
-    					pL.flowerHeads[tick++]=src.nextInt();
-    			}
-    		}
-    		 
-    		// **** read original indices, create back list
-    		pL.v2parent=new int[pL.vertCount+1];
-    		pL.parent2v=new int[pL.checkCount+1];
-    		tick=1;
-    		for (int n=1;n<=pL.vertCount;n++) {
-    			if (src.hasNextInt()) {
-    				int ni=src.nextInt();
-    				pL.v2parent[tick]=ni;
-    				if (ni<=pL.checkCount)
-    					pL.parent2v[ni]=tick;
-    				tick++;
-    			}
-    		}
-    		
-    		// **** radii 
-    		if (yesRadii) {
-    			tick=1;
-    			pL.radii=new double[pL.vertCount+1];
-        		for (int n=1;n<=pL.vertCount;n++) {
-        			if (src.hasNextDouble())
-        				pL.radii[tick++]=src.nextDouble();
-        		}
-    		}
-    		
-    		// **** Centers
-    		if (yesCenters) {
-    			tick=1;
-    			pL.centers=new Complex[pL.vertCount+1];
-        		for (int n=1;n<=pL.vertCount;n++) {
-        			double x=0.0;
-        			double y=0.0;
-        			if (src.hasNextDouble())
-        				x=src.nextDouble();
-        			if (src.hasNextDouble())
-        				y=src.nextDouble();
-        			pL.centers[tick++]=new Complex(x,y);
-        		}
-    		}
-    		
-    		// **** aim indices
-    		if (pL.aimCount>0) {
-    			pL.aimIndices=new int[pL.aimCount];
-    			tick=0;
-    			for (int n=0;n<pL.aimCount;n++)
-    				if (src.hasNextInt()) 
-    					pL.aimIndices[tick++]=src.nextInt();
-    		}
-    		
-    		// **** aims
-    		if (pL.aimCount>0) {
-    			pL.aims=new double[pL.aimCount];
-    			tick=0;
-    			for (int n=0;n<pL.aimCount;n++)
-    				if (src.hasNextDouble()) 
-    					pL.aims[tick++]=src.nextDouble();
-    		}
-    		
-    		// **** inv distances
-    		if (pL.invDistCount>0) {
-    			pL.invDistLink=new EdgeLink();
-    			tick=0;
-    			for (int n=0;n<pL.invDistCount;n++) {
-    				int v=0;
-    				int w=0;
-    				if (src.hasNextInt()) {
-    					v=src.nextInt();
-    					if (src.hasNextInt())
-    						w=src.nextInt();
-    					tick++;
-    				}
-    				pL.invDistLink.add(new EdgeSimple(v,w));
-    			}
-    		}
-    		
-    		// **** invDistances
-    		if (pL.invDistCount>0) {
-    			pL.invDistances=new double[pL.invDistCount];
-    			tick=0;
-    			for (int n=0;n<pL.invDistCount;n++) 
-    				if (src.hasNextDouble()) 
-    					pL.invDistances[tick++]=src.nextDouble();
-    		}
-
-    	} catch (InOutException iox) { // exceptions I throw
-    		src.close();
-    		throw new IOException(iox.getMessage());
-    	} 
-    	
-    	src.close();
-    	
-    	// Note: convertTo may reestablish original indices
-    	return pL.convertTo();
-    	
-    }
-    
     /**
      * Enlarge (or reduce) pack data space, increments of 1000.
      * Free old space, allocate space for KData, RData, VData
@@ -2423,14 +2211,6 @@ public class PackData{
 		else fileName="NoName";
 		if (cpScreen!=null)
 			cpScreen.setPackName(); // record in small canvas label
-	}
-
-	/**
-	 * Typically 'nodeCount', but if 'packDCEL' exists, use 'vertCount'
-	 * @return
-	 */
-	public int getNodeCount() {
-		return packDCEL.vertCount;
 	}
 	
 	/** 
@@ -3412,7 +3192,7 @@ public class PackData{
 				CircleSimple cs=tri.getFaceIncircle();
 				zs.add(cs.center);
 				he=he.prev.twin;
-				tri=PackDCEL.analContinue(packDCEL,he,tri);
+				tri=PackDCEL.analContinue(packDCEL,he.twin,tri);
 			} while (tri!=null && he!=vert.halfedge);
 
 			// for bdry, include v itself, and bdry tangency points
@@ -3480,7 +3260,7 @@ public class PackData{
 				CircleSimple c2=new CircleSimple(tri.center[(j+2)%3],tri.radii[(j+2)%3]);
 				zs.add(CommonMath.genTangPoint(c1,c2,hes));
 				he=he.prev.twin;
-				tri=PackDCEL.analContinue(packDCEL,he,tri);
+				tri=PackDCEL.analContinue(packDCEL,he.twin,tri);
 			} while (tri!=null && he!=vert.halfedge);
 		}			
 
@@ -4073,42 +3853,6 @@ public class PackData{
 	  if (trace==redface) return null;
 	  return trace;
 	} 
-	
-	/** 
-	 * v must be a vertex of 'redface' which lies on outside of redchain
-	 * of faces. We want to find the maximal sequential fan of faces 
-	 * for v in the redchain. We return int[2].
-	 * Return null on error.
-	 * @param reface RedList
-	 * @param v int
-	 * @return int[] with int[0]=n1, flower index of first petal
-	 *         circle (hence, index of first face in 'faceFlower')
-	 *         int[1]=n, number of faces in redchain fan, counterclockwise
-	 *         around v.
-	*/
-	public int []red_fan(RedList redface,int v) throws RedListException {
-	  int face,f,cf;
-	  RedList rtrace;
-
-	  face=cf=redface.face;
-	  rtrace=redface;
-	  while ((f=rtrace.next().face)!=face 
-		 && v==faces[f].vert[(face_nghb(cf,f)+1)%3]) {
-	      rtrace=rtrace.next();
-	      cf=rtrace.face;
-	    }
-	  int n1=nghb(v,faces[cf].vert[(face_index(cf,v)+1)% 3]);
-	  int n=1;
-	  while (((f=rtrace.prev().face)!=cf) 
-		 && v==faces[f].vert[face_nghb(rtrace.face,f)]) {
-	      n++;
-	      rtrace=rtrace.prev();
-	    }
-	  int []ans=new int[2];
-	  ans[0]=n1;
-	  ans[1]=n;
-	  return ans;
-	}
 
 	/**
 	 * traditional
@@ -5595,160 +5339,7 @@ public class PackData{
 
 		return count;
 	}
-	
-	/**
-	 * Write an ascii file with compressed data for a portion of the packing
-	 * using the PackLite structure (a simple listing of numerical values; 
-	 * see 'PackLite'.)
-	 * 
-	 * Three tasks:
-	 * 1. Cut out the connected component of 'intV' containing 'alp' (default 
-	 *    to interior vertices and alp=alpha) and find the cclw chain of bdry
-	 *    edges around it (there may be more than one and/or isolated verts)
-	 * 
-	 * 2. Re-index so interiors of 'intV' are listed first, then bdry in cclw
-	 *    order, starting with 'gam', and get various counts and arrays of indices. 
-	 *    Note that which verts are variable, which fixed, etc. are independent of
-	 *    the new indices. E.g., bdry verts may be adjustable if packing a
-	 *    rectangle. (Numbering is tailored for use in Orick's algorithm.)
-	 *    
-	 * 3. Write out the PackLite data for just these int/bdry vertices.
-	 * 
-	 * "act": (parallel to 'writePack') 
-	 *      3: 00004     non-default inv_dist & aims
-	 *      4: 00010     radii
-	 *      5: 00020     centers
-	 *      18: 0400000  misc: add ideal vert for each interior bdry hole
 
-	 * @param file
-	 * @param act int, bit encoded choices of data to include
-	 * @param intV NodeLink, labeled as "interior" (default to actual interior)
-	 * @param alp int, "alpha" vert (default to actual alpha)
-	 * @param gam int, "gamma" bdry vert (default to actual gamma) 
-	 * @return int, vCount or 0 on error
-	 * @throws IOException
-	 */
-	public int writeLite(BufferedWriter file,int act,NodeLink intV,int alp,int gam)
-			throws IOException {
-		
-		if (file==null)
-			throw new IOException("BufferedWriter was not set");
-		
-		// create a 'PackLite'.
-		boolean addIdeals=((act & 0400000)==0400000);
-		PackLite pL=new PackLite(this);
-		pL.createFrom(this,addIdeals,intV,alp,gam);
-
-		// task 3: --------------- write the packData file ----------------
-		
-		// **** magic number identifying this as 'Lite' 
-		file.write("1234321\n");
-		
-		// **** preliminary 20 integers
-		file.write(nodeCount+"\n"); // nodeCount as check
-		file.write(hes+"\n"); // geometry
-		file.write(pL.vertCount+"\n");
-		file.write(pL.intVertCount+"\n"); 
-		file.write(pL.vCount+"\n"); 
-		file.write(pL.flowerCount+"\n");
-		
-		// are we asked fo non-default aims, inv distances?
-		if ((act & 00004)==00004) { 
-			file.write(pL.aimCount+"\n"); 
-			file.write(pL.invDistCount+"\n");
-		}
-		else file.write("0\n0\n");
-		
-		if ((act & 00010)==00010)
-			file.write("1\n"); // include radii
-		else
-			file.write("0\n"); // no radii
-		if ((act & 00020)==00020)
-			file.write("1\n"); // include centers
-		else
-			file.write("0\n"); // no centers
-		file.write("0\n"); // future use
-		file.write("0\n"); // future use
-		file.write("0\n"); // future use
-		file.write("0\n"); // future use
-		file.write("0\n"); // future use
-		file.write("0\n"); // future use
-		file.write("0\n"); // future use
-		file.write("0\n"); // future use
-		file.write("0\n"); // future use
-		file.write("0\n"); // future use
-		
-		// **** variable vertices (local indices)
-		for (int i=0;i<pL.vCount;i++) {
-			file.write(pL.varIndices[i]+"\n");
-		}
-			
-		// **** all flowers n num p0 p1 .... pnum (local indices)
-		int tick=0;
-		int v=0;
-		while (tick<pL.flowerCount && v<pL.vertCount) {
-			v=pL.flowerHeads[tick++];
-			StringBuilder strbld=new StringBuilder(v+" ");
-			int num=pL.flowerHeads[tick++];
-			strbld.append(num+" ");
-			for (int j=0;j<=num;j++)
-				strbld.append(pL.flowerHeads[tick++]+" ");
-			strbld.append("\n");
-			file.write(strbld.toString());
-		}
-
-		// **** original indices
-		for (int n=1;n<=pL.vertCount;n++) {
-			file.write(pL.v2parent[n]+"\n");
-		}
-		
-		// **** radii
-		if (((act & 00010)==00010) && pL.radii!=null) {
-			for (int n=1;n<=pL.vertCount;n++) {
-				file.write(pL.radii[n]+"\n");
-			}
-		}
-		
-		// **** centers
-		if (((act & 00020)==00020) && pL.centers!=null) {
-			for (int n=1;n<=pL.vertCount;n++) 
-				file.write(pL.centers[n].x+" "+pL.centers[n].y+"\n");
-		}
-		
-		if ((act & 00004)==00004) { // non-default aims, inv distances?
-
-			if (pL.aimCount>0 && pL.aimIndices!=null && pL.aims!=null) {
-				// **** aimIndices (local indices)
-				for (int n=1;n<=pL.vertCount;n++) 
-					if (pL.aims[n]!=0.0) 
-						file.write(n+"\n");
-		
-				// **** aims
-				for (int n=1;n<=pL.vertCount;n++) 
-					if (pL.aims[n]!=0.0)
-						file.write(pL.aims[n]+"\n");
-			}
-
-			// **** edges with non-default inv distances (local indices, v<w only)
-			if (pL.invDistCount>0 && pL.invDistLink!=null && pL.invDistances!=null) {
-				Iterator<EdgeSimple> el=pL.invDistLink.iterator();
-				while (el.hasNext()) {
-					EdgeSimple edge=el.next();
-					file.write(edge.v+" "+edge.w+" ");
-				}
-		
-				// **** corresponding inv distances, indexed from 0
-				for (int i=0;i<pL.invDistances.length;i++) {
-					if (pL.invDistances[i]!=0.0) 
-						file.write(pL.invDistances[i]+" ");
-				}
-			}
-		}
-		
-		file.flush();
-		return pL.vCount;
-	}
-	
 	/**
 	 * Return side pairing mobius with given label (should be
 	 * just one letter, caps converted to two lower case.
@@ -6784,8 +6375,8 @@ public class PackData{
 	  
 	  /** 
 	   * Determine generation of vertices starting from given seeds.
-	   * If 'mark' is true, store in 'kData[].mark' or 'vData[].mark', 
-	   * else just return the index of the last vertex. 'utilFlag' 
+	   * If 'mark' is true, store in 'vData[].mark', else just 
+	   * return the index of the last vertex. 'utilFlag' 
 	   * is used to pass seed info to 'label_generations'.
 	   * @param mx int, if mx>0, stop at generation mx.
 	   * @param seedlist NodeLink, list defined as first generation (1)
@@ -6805,7 +6396,7 @@ public class PackData{
 		}
 
 		UtilPacket uP = new UtilPacket();
-		if ((list = label_generations(mx, uP)) == null)
+		if ((list = packDCEL.label_generations(mx, uP)) == null)
 			return 0;
 		if (mark)
 			for (int i = 1; i <= nodeCount; i++)
@@ -6864,7 +6455,7 @@ public class PackData{
 		  
 		  UtilPacket uP=new UtilPacket();
 		  for (int k=ants.size();k<N;k++) {
-			  label_generations(-1,uP);
+			  packDCEL.label_generations(-1,uP);
 			  if (uP.value==0.0) { // error: no verts of higher gen found??
 				  throw new CombException("ran out of vertices");
 			  }
@@ -6873,62 +6464,6 @@ public class PackData{
 		  }
 		  return antipods;
 	  }
-
-	  /** 
-	   * Return an int array with the generations of verts, 
-	   * generation "1" being those v with 'VData[].vutil' 
-	   * non-zero. Additional info is returned via 'uP'.  
-	   * @param max int, if max>0, stop at last with gen = max.
-	   * @param uP UtilPacket; instantiated by calling routine: 
-	   *    returns last vertex as 'uP.rtnFlag' and
-	   *    count of vertices as 'uP.value'.
-	   * @return int[], int[u]=generation of u; return null on error
-	   */
-	public int[] label_generations(int max, UtilPacket uP) {
-		int last_vert = nodeCount;
-		int gen_count = 2;
-		int count = 0;
-
-		int[] final_list = new int[nodeCount + 1];
-		NodeLink genlist = new NodeLink(this);
-
-		// first generation identified by nonzero utilFlag's
-		for (int i = 1; i <= nodeCount; i++)
-			if (getVertUtil(i) != 0) {
-				final_list[i] = 1;
-				count++;
-				genlist.add(i);
-				last_vert = i;
-			}
-		int n = genlist.size();
-		// none/all vertices as seeds?
-		if (n == 0 || n == nodeCount)
-			return null;
-
-		boolean hits = true;
-		int j=0;
-		while (hits && genlist.size() > 0 && (max <= 0 || gen_count <= max)) {
-			hits = false;
-			NodeLink vertlist = genlist; // process old list
-			genlist = new NodeLink(this); // start new list
-			do {
-				int v = vertlist.remove(0);
-				int[] petals=getPetals(v);
-				for (int i=0; i<petals.length; i++)
-					if (final_list[(j = petals[i])] == 0) {
-						final_list[j] = gen_count;
-						count++;
-						last_vert = j;
-						genlist.add(j);
-						hits = true;
-					}
-			} while (vertlist.size() > 0);
-			gen_count++;
-		}
-		uP.rtnFlag = last_vert;
-		uP.value = (double) count;
-		return final_list;
-	}
 	  
 	  /** 
 	   * Return array giving the generations of vertices from 'seed'; 
@@ -6949,8 +6484,8 @@ public class PackData{
 	   * Return 'null' on error; return count via 'util_B' and 'far_vert'
 	   * via 'util_A'.
 	   * @param seed int, starting vertex
-	   * @param greens []int, stop when greens <0
-	   * @param max int stop here if max>0.
+	   * @param greens int[], stop when greens <0
+	   * @param max int, stop here if max>0.
 	   * @param far boolean
 	   * @return int[] containing generations.
 	  */
@@ -6959,18 +6494,19 @@ public class PackData{
 		int count = 0;
 		int far_vert = seed;
 
-		if (!status || seed < 1 || seed > nodeCount
-				|| (greens != null && greens.length > seed && greens[seed] < 0))
+		if (!status || seed < 1 || seed > nodeCount ||
+				(greens != null && greens.length > seed && greens[seed] < 0))
 			return null;
 
 		int[] final_list = new int[nodeCount + 1];
 		VertList genlist = new VertList();
 		for (int i = 1; i <= nodeCount; i++)
 			setVertUtil(i,0);
-		if (greens != null)
+		if (greens != null) {
 			for (int i = 1; i <= nodeCount; i++)
 				if (greens[i] < 0)
 					setVertUtil(i,-1);
+		}
 		genlist.v = seed;
 		final_list[seed] = 1;
 		count++;
@@ -6982,40 +6518,40 @@ public class PackData{
 			bdry_hits = true; // pretend that a bdry/green has been found
 		boolean hits = true;
 		int gen_count = 2;
-		while (hits && genlist != null
-				&& (max <= 0 || gen_count <= max || bdry_hits)) {
+		while (hits && genlist != null &&
+				(max <= 0 || gen_count <= max || bdry_hits)) {
 			hits = false;
 			VertList vertlist = genlist;
 			VertList gtrace;
 			genlist = gtrace = new VertList();
 			do {
-				int v = vertlist.v;
-				int j;
-				for (int i = 0; i <= countFaces(v); i++)
-					if (final_list[(j = kData[v].flower[i])] == 0
-							&& getVertUtil(j) == 0) {
-						final_list[j] = gen_count;
+				Vertex vert=packDCEL.vertices[vertlist.v];
+				HalfEdge he=vert.halfedge;
+				do {
+					int w=he.twin.origin.vertIndx;
+					if (final_list[w]==0 && getVertUtil(w)==0) {
+						final_list[w]=gen_count;
 						count++;
-						if (!bdry_hits
-								&& (isBdry(j) || getVertUtil(j) != 0)) {
-							bdry_hits = true;
-							far_vert = j;
+						if (!bdry_hits &&
+								(isBdry(w) || getVertUtil(w)!=0)) {
+							bdry_hits=true;
+							far_vert=w;
 						}
-						gtrace = gtrace.next = new VertList();
-						gtrace.v = j;
-						hits = true;
-						last_marked = j;
+						gtrace=gtrace.next=new VertList();
+						gtrace.v=w;
+						hits=true;
+						last_marked=w;
+						he=he.prev.twin;
 					}
+				} while(he!=vert.halfedge);
 				vertlist = vertlist.next;
 			} while (vertlist != null);
 			genlist = genlist.next; // first position was empty
 			gen_count++;
 		}
-		if (!bdry_hits)
-			far_vert = last_marked; /*
-									 * no bdry or green vert found, return vert
-									 * of largest generation
-									 */
+		if (!bdry_hits) // no bdry or green vert found, return
+						// index of largest generation
+			far_vert = last_marked; 
 		util_A = far_vert;
 		util_B = count;
 		return final_list;
@@ -8791,43 +8327,12 @@ public class PackData{
 	  public int puncture_face(int f) {
 		  if (f<1 || f>faceCount)
 			  return 0;
-		  if (packDCEL!=null) {
-			  PackDCEL newDCEL=CombDCEL.d_puncture_face(packDCEL, f);
-			  if (newDCEL==null) {
-				  throw new DCELException("DCEL puncturing face "+f+" failed");
-			  }
-			  attachDCEL(newDCEL);
-			  packDCEL.oldNew=null;
-			  return 1;
+		  PackDCEL newDCEL=CombDCEL.d_puncture_face(packDCEL, f);
+		  if (newDCEL==null) {
+			  throw new DCELException("DCEL puncturing face "+f+" failed");
 		  }
-		  
-		  Face face=faces[f];
-		  
-		  // find faces next to boundary, then vertices next to these
-		  flist= new FaceLink(this,"-Iv b");
-		  NodeLink nlink=new NodeLink(this,"-If flist");
-		  for (int k=0;k<3;k++) {
-			  int v=face.vert[k];
-			  if (isBdry(v) || nlink.containsV(v)>=0) {
-				  CirclePack.cpb.errMsg("face is too close to the bdry to puncture");
-				  return 0;
-			  }
-		  }
-		  flist=null; // wanted to empty 'flist' in any case.
-		  
-		  // fix flowers
-		  for (int j=0;j<3;j++) {
-			  int v=face.vert[j];
-			  int indx=nghb(v,face.vert[(j+2)%3]);
-			  int num=countFaces(v);
-			  int []newflower=new int[num+1];
-			  for (int kk=0;kk<num;kk++)
-				  newflower[kk]=kData[v].flower[(kk+indx)%num];
-			  kData[v].num--;
-			  kData[v].flower=newflower;
-			  setBdryFlag(v,1);
-		  }
-			  
+		  attachDCEL(newDCEL);
+		  packDCEL.oldNew=null;
 		  return 1;
 	  }
 	  
@@ -11529,76 +11034,7 @@ public class PackData{
 			return 0;
 		}
 	}
-	
-	/**
-	 * Cut largest simply connected subcomplex containing 'v' (generation 1) 
-	 * and vertices of generation up to and including 'gen'.
-	 * @param v int
-	 * @param gen int
-	 * @return @see PackData, null on error or no change
-	 */
-	public PackData gen_cut(int v,int gen) {
-	    int oldcount,count;
 
-	    // build the appropriate red chain 
-	    RedList redlist=redChainer.build_gen_redlist(v,null,gen);
-	    count=redChainer.util_1;
-	    if (redlist==null || count>=nodeCount) { // packing unchanged
-	    	return null;
-	    }
-
-	    /* Mark the outside verts 'poison' and call cookie to finish up */
-
-	    for (int i=1;i<=nodeCount;i++) setVertMark(i,0);
-	    RedList rtrace=redlist;
-	    boolean keepon=true;
-	    while (rtrace!=redlist || keepon) {
-	    	keepon=false;
-	    	setVertMark(faces[rtrace.face].vert[face_nghb(rtrace.next.face,rtrace.face)],1);
-	    	rtrace=rtrace.next;
-	    }
-	    
-	    // now for cookie
-	    oldcount=nodeCount; // save orig nodecount
-	    String cookit=new String("m -v "+v);
-	    CookieMonster cM=null;
-	    try {
-	    	cM=new CookieMonster(this,cookit);
-	    } catch (Exception ex) {
-	    	System.err.println("Error in starting CookieMonster");
-	    	cM=null;
-	    	return null;
-	    }
-	    int outcome=cM.goCookie();
-	    if (outcome<0) {
-	    	flashError("gen_cut: CookieMonster returned negative outcome");
-	    	cM=null;
-	    	return null;
-	    }
-	    if (outcome==0) {
-	    	CirclePack.cpb.msg("gen_cut: no change in the packing");
-	    	cM=null;
-		    return null;
-	    }
-
-	    // for outcome >0, set up vertexMap
-	    if (nodeCount<oldcount) {
-	    	for (int i=1;i<=nodeCount;i++) kData[i].plotFlag=1;
-	    	if (cM.new2old!=null) {
-	    		vertexMap=new VertexMap();
-	    		int w;
-	    		for (int j=1;j<=nodeCount;j++)
-	    			if ((w=cM.new2old[j])!=0) {
-	    				vertexMap.add(new EdgeSimple(j,w));
-	    			}
-	    	}
-		    CirclePack.cpb.msg("gen_cut seems to have succeeded; nodeCount is "+nodeCount);
-	    }
-	    PackData newp=cM.getPackData();
-	    cM=null;
-	    return newp;
-	}
-	
 	/**
 	 * Find Mobius 'mob' to apply to this pack to put it in register with q. 
 	 * Both packs hyp or both eucl. Apply 'best' automorphism to line up centers 
@@ -11754,7 +11190,7 @@ public class PackData{
 	      q.setVertUtil(v,1);
 	  }
 	  UtilPacket uP=new UtilPacket();
-	  int []genlist=q.label_generations(depth,uP);
+	  int []genlist=q.packDCEL.label_generations(depth,uP);
 	  if (genlist==null)
 	      return 0;
 	  

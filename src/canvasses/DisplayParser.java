@@ -353,16 +353,21 @@ public class DisplayParser {
 				Iterator<Integer> vlist = nodeLink.iterator();
 				while (vlist.hasNext()) {
 					v = (Integer) vlist.next();
-					z = p.getCenter(v);
+					if (v>0 && v<=p.nodeCount) {
+// debugging					
+//					System.out.println("vert "+v);
+					
+						z = p.getCenter(v);
 
-					// color? label?
-					if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
-						dispFlags.setColor(p.getCircleColor(v));
-					if (dispFlags.label)
-						dispFlags.setLabel(Integer.toString(v));
+						// color? label?
+						if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
+							dispFlags.setColor(p.getCircleColor(v));
+						if (dispFlags.label)
+							dispFlags.setLabel(Integer.toString(v));
 
-					cpScreen.drawCircle(z,p.getRadius(v),dispFlags);
-					count++;
+						cpScreen.drawCircle(z,p.getRadius(v),dispFlags);
+						count++;
+					}
 				}
 				break;
 			} // done with 'c'
@@ -598,25 +603,27 @@ public class DisplayParser {
 				Iterator<Integer> flist = faceLink.iterator();
 				while (flist.hasNext()) {
 					f = (Integer) flist.next();
-					dcel.Face face=p.packDCEL.faces[f];
-					Complex []pts=p.packDCEL.getFaceCorners(face);
-					if (!dispFlags.colorIsSet)
-						dispFlags.setColor(p.getFaceColor(f));
-					if (dispFlags.label)
-						dispFlags.setLabel(Integer.toString(f));
-					cpScreen.drawFace(pts[0],pts[1], pts[2], null, null, null, dispFlags);
-					if (circleToo) { // also, color circle this face is responsible for
-						int cirIndx=face.edge.next.next.origin.vertIndx;
+					if (f>0 && f<=p.faceCount) {
+						dcel.Face face=p.packDCEL.faces[f];
+						Complex []pts=p.packDCEL.getFaceCorners(face);
 						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.getCircleColor(cirIndx));
-						// suppress label
-						dispFlags.setLabel(null);
+							dispFlags.setColor(p.getFaceColor(f));
+						if (dispFlags.label)
+							dispFlags.setLabel(Integer.toString(f));
+						cpScreen.drawFace(pts[0],pts[1], pts[2], null, null, null, dispFlags);
+						if (circleToo) { // also, color circle this face is responsible for
+							int cirIndx=face.edge.next.next.origin.vertIndx;
+							if (!dispFlags.colorIsSet)
+								dispFlags.setColor(p.getCircleColor(cirIndx));
+							// suppress label
+							dispFlags.setLabel(null);
 					
-						cpScreen.drawCircle(pts[2],
-								p.packDCEL.getVertRadius(face.edge.next.next),
-								dispFlags);
+							cpScreen.drawCircle(pts[2],
+									p.packDCEL.getVertRadius(face.edge.next.next),
+									dispFlags);
+						}
+						count++;
 					}
-					count++;
 				}
 				break;
 			} // done with 'f'

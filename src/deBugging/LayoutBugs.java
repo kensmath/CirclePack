@@ -2,21 +2,16 @@ package deBugging;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.IOException;
 import java.util.Iterator;
 
 import allMains.CirclePack;
-import dcel.HalfEdge;
+import dcel.D_PairLink;
+import dcel.D_SideData;
 import dcel.PackDCEL;
 import input.CPFileManager;
 import komplex.EdgeSimple;
 import komplex.Face;
-import komplex.RedEdge;
-import komplex.RedList;
-import komplex.SideDescription;
-import listManip.FaceLink;
 import listManip.GraphLink;
-import listManip.PairLink;
 import listManip.VertList;
 import packing.PackData;
 
@@ -39,100 +34,6 @@ public class LayoutBugs {
 	
 	static File tmpdir=new File(System.getProperty("java.io.tmpdir"));
 	static int rankStamp=1; // progressive number to distinguish file instances
-
-	/** 
-	 * log details of 'RedList' and/or 'RedEdge' lists in 'redface_xx_log.txt'.
-	 * Includes hash codes to confirm that the correct objects are references.
-	 * (Safer than just looking at face index, e.g.)
-	 * @param p, PackData
-	 * @param redface, RedList, can be null
-	 * @param rededge, RedEdge, can be null
-	 * @return count, 0 if one of the pointers is missing
-	*/
-	public static int log_Red_Hash(PackData p,RedList redface,RedEdge rededge) {
-		  int count=0;
-		  RedList rtrace;
-		  RedEdge etrace;
-
-		  String filename=new String("redface_"+(rankStamp++)+"_log.txt");
-		  BufferedWriter dbw=CPFileManager.appendToFP(tmpdir,filename,false);
-		  try {
-			  CirclePack.cpb.msg("'RedList' and 'RedEdge' info logged to: "+
-					  tmpdir.toString()+File.separator+filename);
-
-			  // 'RedList'
-			  if (redface==null) {
-		    	  dbw.write("   No pointer to red chain ??\n");
-		    	  dbw.flush();
-		    	  dbw.close();
-		      }
-		      else {
-			      dbw.write("\nRed face list: ------------------- \n\n");
-		    	  print_one_redface(dbw,p,redface);
-		    	  rtrace=redface.next;
-		    	  while (rtrace!= redface && count<1000) {
-		    		  print_one_redface(dbw,p,rtrace);
-		    		  count++;
-		    		  rtrace=rtrace.next;
-		    	  }
-		      }
-		      
-			  // 'RedList'
-		      if (rededge==null) {
-		    	  dbw.write("   No pointer to red EDGE chain ??\n");
-		    	  dbw.flush();
-		    	  dbw.close();
-		    	  return 1;
-		      }
-		      dbw.write("\nRed Edge list: ================ \n\n");
-		      print_one_redEdge(dbw,p,rededge);
-		      etrace=rededge.nextRed;
-		      while (etrace!= rededge && count<1000) {
-		    	  print_one_redEdge(dbw,p,etrace);
-		    	  count++;
-		    	  etrace=etrace.nextRed;
-		      }
-		      		      
-		      dbw.flush();
-		      dbw.close();
-		  } catch(Exception ex) {
-		      System.err.print(ex.toString());
-		  }
-		  return count;
-	}
-	
-	/**
-	 * log packing "face order" and main details in 'faceOrder_xx_log.txt'
-	 * @param p PackData
-	 * @return count, 0 on exception
-	 */
-	public static int log_faceOrder(PackData p) {
-		  int count=0;
-
-		  String filename=new String("faceOrder_"+(rankStamp++)+"_log.txt");
-		  BufferedWriter dbw=CPFileManager.openWriteFP(tmpdir,filename,false);
-		  try {
-			  CirclePack.cpb.msg("debug 'computeOrder' to: "+tmpdir.toString()+File.separator+filename);
-		      dbw.write("\nFace order: nodeCount "+p.nodeCount+
-		    		  ", faceCount "+p.faceCount+"\n  firstFace "+p.firstFace+
-		    		  ", redChain starts with edge "+p.packDCEL.redChain.myEdge+
-		    		  " and face "+p.packDCEL.redChain.myEdge.face.faceIndx+
-		    		  " --- \n\n");
-		      Iterator<HalfEdge> heis=p.packDCEL.layoutOrder.iterator();
-		      HalfEdge edge=heis.next();
-		      writeFace(p.packDCEL,edge.face.faceIndx,dbw);
-		      count++;
-		      while(heis.hasNext()) {
-		    	  writeFace(p.packDCEL,heis.next().face.faceIndx,dbw);
-		    	  count++;
-		      }
-			  dbw.flush();
-			  dbw.close();
-		  } catch (Exception ex){
-		      System.err.print(ex.toString());
-		  }
-		  return count;
-	}
 
 	/**
 	 * log order pairs from a 'GraphLink', typically a face tree, 
@@ -215,10 +116,10 @@ public class LayoutBugs {
 	/** 
 	 * Log details of 'PairLink' of 'SideDescription's in 'SideDescriptions_xxxx_log.txt'
 	 * @param p, PackData
-	 * @param pairs, PairLink
+	 * @param pairs, D_PairLink
 	 * @return count 
 	*/
-	public static int log_PairLink(PackData p,PairLink pairs) {
+	public static int log_PairLink(PackData p,D_PairLink pairs) {
 		  int count=0;
 
 		  String filename=new String("SideDescriptions_"+(rankStamp++)+"_log.txt");
@@ -227,19 +128,16 @@ public class LayoutBugs {
 			  CirclePack.cpb.msg("debug 'SideDescription' to: "+tmpdir.toString()+File.separator+filename);
 			  dbw.write("SideDesriptions ============================= \n\n");
 			  
-			  Iterator<SideDescription> eps=pairs.iterator();
+			  Iterator<D_SideData> eps=pairs.iterator();
 			  while (eps.hasNext()) {
-				  SideDescription ep=(SideDescription)eps.next();
+				  D_SideData ep=(D_SideData)eps.next();
 				  dbw.write("Index "+count+":\n");
 				  count++;
 				  dbw.write("spIndex="+ep.spIndex+";  mateIndex="+ep.mateIndex+"\n");
-				  if (ep.startEdge!=null) dbw.write("startEdge (face) "+ep.startEdge.face);
-				  if (ep.endEdge!=null) dbw.write(";  endEdge (face) "+ep.endEdge.face+"; \n");
-				  if (ep.pairedEdge!=null) { 
-					  try {
-					  dbw.write("pairedEdge: (face, mateface): ("+ep.pairedEdge.startEdge.face+","+ep.pairedEdge.endEdge.face+")\n");
-					  } catch(Exception ex) {};
-				  }
+				  if (ep.startEdge!=null) dbw.write("startEdge (face) "+
+						  ep.startEdge.myEdge.face.faceIndx);
+				  if (ep.endEdge!=null) dbw.write(";  endEdge (face) "+
+						  ep.endEdge.myEdge.face.faceIndx+"; \n");
 			  }
 			  dbw.write("=============\n");
 			  dbw.flush();
@@ -248,294 +146,6 @@ public class LayoutBugs {
 		      System.err.print(ex.toString());
 		  }
 		  return count;
-	}
-
-	/**
-	 * List faces indices of given 'RedList' in string. (Usually included
-	 * in message printed to System.err.)
-	 * @param redface, RedList
-	 * @return String
-	 */
-	public static String quick_redlist(RedList redface) {
-	  RedList trace=redface;
-	  StringBuilder strb=new StringBuilder(" "+trace.face); // first
-	  trace=trace.next;
-	  while (trace!=redface) {
-		  strb.append(" "+trace.face);
-		  trace=trace.next;
-	  }
-	  strb.append(" "+trace.face); //  last 
-	  return strb.toString();
-	}
-
-	/**
-	 * List face indices of given 'RedList' in FaceLink; for 
-	 * debugging red chain
-	 * @param redface, RedList
-	 * @return FaceLink
-	 */
-	public static FaceLink redChain2redLink(RedList redface) {
-	  RedList trace=redface;
-	  FaceLink flink=new FaceLink();
-	  trace=trace.next;
-	  while (trace!=redface) {
-		  flink.add(trace.face);
-		  trace=trace.next;
-	  }
-	  if (flink.size()==0)
-		  return null;
-	  return flink;
-	}
-
-    /** 
-     * print ordered 'RedFace' list to System.err 
-     * @param p, PackData
-     * @return count
-     */
-	public static int pfacered(PackData p) {
-
-		int f,count=1;
-
-		int stop=p.firstRedFace;
-		System.err.println("Pack red face order: "+stop+"\n");
-		f=stop;
-		while (p.faces[f].nextRed!=stop  && count < 2*p.faceCount
-				&& p.faces[f].nextRed >0 && p.faces[f].nextRed <=p.faceCount 
-				&& (count++)>0)
-			System.err.println(" "+(f=p.faces[f].nextRed)+" ");
-		return count;
-	}
-
-    /** 
-     * print ordered 'RedFace' list to System.err 
-     * @param p, PackData
-     * @return count
-     */
-	public static int pRedEdges(PackData p) {
-
-		int count=1;
-
-		RedEdge stop=p.firstRedEdge;
-		RedEdge rtrace= stop;
-		boolean keepon=true;
-		System.err.println("Pack RedEdge order: "+stop.face+"\n");
-		while (rtrace!=stop || keepon) {
-			keepon=false;
-			System.err.println(" f="+(rtrace.face)+" , v="+
-					p.faces[rtrace.face].vert[rtrace.vIndex]+
-					", center = "+rtrace.center.x+" "+rtrace.center.y);
-			rtrace=rtrace.nextRed;
-			count++;
-		}
-
-		System.err.println("count was "+count);
-		return count;
-	}
-
-	/** 
-     * print ordered 'RedList' list to System.err 
-     * @param p, PackData
-     * @return count
-     */
-	public static int pRedList(PackData p) {
-
-		int count=1;
-
-		RedList stop=p.redChain;
-		RedList rtrace= stop;
-		boolean keepon=true;
-		System.err.println("Pack RedList: "+stop.face+"\n");
-		while (rtrace!=stop || keepon) {
-			keepon=false;
-			System.err.println(" f="+(rtrace.face)+" , v="+
-					p.faces[rtrace.face].vert[rtrace.vIndex]+
-					", center = "+rtrace.center.x+" "+rtrace.center.y);
-			rtrace=rtrace.next;
-			count++;
-		}
-
-		System.err.println("count was "+count);
-		return count;
-	}
-		
-	/** 
-	 * Check doubly linked 'RedList' and print info to System.err
-	 * @param handle, RedList
-	 * @return count 
-	 */
-	public static int showhandle(RedList handle) {
-		int count=0,total=1,first,last=0;
-		RedList trace;
-
-		if ((trace=handle.next)==null) return 0;
-		first=trace.face;
-		while (trace!=handle && total < 2000) {
-			total++;
-			last=trace.face;
-			trace=trace.next;
-		}
-		System.err.println("\nCheck double linked face list: count="+total+
-					", first="+first+",last="+last);
-		while (trace!=handle && count <= total+1) {
-			count++;
-			System.err.println("  "+trace.face);
-			if (trace.prev.next!=trace)
-				System.err.println(" prev.next wrong: "+handle.prev.face+" "+
-						handle.prev.next.face+" skips "+handle.face);
-			if (trace.next.prev!=trace)
-				System.err.println(" next.prev wrong: "+handle.next.face+" "+
-						handle.next.prev.face+" skips "+handle.face);
-		}
-		return count;
-	}
-
-	/**
-	 * Internal utility routine to write partial info on a single red face to 
-	 * BufferedWriter. Red/Blue are distinguished, 'red' edges and non-contiguous 
-	 * errors are reported. Hash codes help verify the actual objects.
-	 * @param dbw, writer
-	 * @param p, PackData
-	 * @param redface, RedList
-	 * @return 1
-	 * @throws IOException
-	 */
-	private static int print_one_redface(BufferedWriter dbw,PackData p,RedList redface) 
-	throws IOException {
-		// face and its vert[]
-		dbw.write(" Face "+redface.face+": {"+
-				p.faces[redface.face].vert[0]+" "+
-				p.faces[redface.face].vert[1]+" "+
-				p.faces[redface.face].vert[2]+"} "+"(redface hash="+redface.hashCode()+") \n");
-		// prev and next
-		dbw.write("  redface.prev="+redface.prev.hashCode()+"; redface.next="+redface.next.hashCode()+"\n");
-		int nt1,nt2;
-
-		if (redface.next.face==redface.prev.face) {
-			// BLUE instance
-			dbw.write("BLUE, ");
-			  nt1=p.face_nghb(redface.prev.face,redface.face);
-			  
-			  // a common error in handling blue faces
-			  if (nt1<0) 
-				  dbw.write("(error: red faces not contiguous \n");
-			  
-			  // there are 2 red edges in this case
-			  else 
-				  dbw.write("red edges: {"+
-					  p.faces[redface.face].vert[(nt1+1)%3]+","+
-					  p.faces[redface.face].vert[(nt1+2)%3]+"}, {"+
-					  p.faces[redface.face].vert[(nt1+2)%3]+","+
-					  p.faces[redface.face].vert[nt1]+"}");
-		}
-		else {
-			// RED instance
-			dbw.write("RED, ");
-			nt1=p.face_nghb(redface.face,redface.prev.face);
-			nt2=p.face_nghb(redface.next.face,redface.face);
-			
-			// catch non-contiguous
-			if (nt1<0 || nt2<0) 
-				dbw.write("(error: red faces not contiguous \n");
-			
-			// is there a red edge?
-			else {
-				int vert1=p.faces[redface.prev.face].vert[nt1];
-				int vert2=p.faces[redface.face].vert[nt2];
-				
-				// must be red edge if vert1!=vert2
-				if (vert1!=vert2) 
-					dbw.write("red edge: {"+vert1+" "+vert2+"},");
-			}
-		}
-		dbw.write("\n");
-		return 1;
-	}
-	
-	public static int print_drawingorder(PackData p) {
-		return print_drawingorder(p,true);
-	}
-
-	/**
-	 * Print drawing order of faces in System.out. Include vertex being
-	 * placed.
-	 * @param p PackData
-	 * @param verts_too boolean: true, then also print face's vertices
-	 * @return 1;
-	 */
-	public static int print_drawingorder(PackData p, boolean verts_too) {
-		int nf;
-		int tick = 0;
-		int tickstop = 15;
-
-		if (verts_too)
-			tickstop = 8;
-		nf = p.firstFace;
-		System.out.print("Circle-drawing order, faceCount=" + p.faceCount
-				+ ": firstFace=" + nf + "\n");
-		if (nf < 1 || nf > p.faceCount) {
-			System.out.print("xx " + nf + " xx \n");
-			return 0;
-		}
-		while ((nf = p.faces[nf].nextFace) != p.firstFace && nf >= 1
-				&& nf <= p.faceCount) {
-			if (verts_too)
-				System.out
-						.print(" nf=" + nf + ",[" + p.faces[nf].vert[0] + ","
-								+ p.faces[nf].vert[1] + ","
-								+ p.faces[nf].vert[2] + "],v="+p.faces[nf].vert[(p.faces[nf].indexFlag+2)%3]+"; ");
-			else
-				System.out.print(" " + nf);
-			if (nf == p.firstRedFace) {
-				if (verts_too)
-					System.out.print("\n firstRedFace=" + nf + ":["
-							+ p.faces[nf].vert[0] + "," + p.faces[nf].vert[1]
-							+ "," + p.faces[nf].vert[2] + "]");
-				else
-					System.out.print("\n firstRedFace=" + nf);
-				tick = 0;
-			}
-			tick++;
-			if ((tick % tickstop) == 0)
-				System.out.print("\n");
-		}
-		System.out.print(" done.\n");
-		return 1;
-	}
-
-	/**
-	 * Internal utility routine to write detail on 'RedEges': start/stop,
-	 * cornerFlags, etc. to BufferedWriter. Hashcodes help verify the actual
-	 * objects. See also 'writeRed'.
-	 * 
-	 * @param dbw, writer
-	 * @param p, PackData
-	 * @param redge, RedEdge
-	 * @return 1
-	 * @throws IOException
-	 */
-	private static int print_one_redEdge(BufferedWriter dbw, PackData p,
-			RedEdge redge) throws IOException {
-		dbw.write("Face " + redge.face + " (redge hash=" + redge.hashCode()
-				+ ") ; \n");
-		dbw.write("  redge.prev=" + redge.prev.hashCode() + "; redge.next="
-				+ redge.next.hashCode() + "; redge.prevRed="
-				+ redge.prevRed.hashCode() + "; redge.nextRed="
-				+ redge.nextRed.hashCode() + "\n");
-		// begin/end?
-		dbw.write("   RedEdge: startIndex = " + redge.startIndex + ";\n");
-		if ((redge.cornerFlag & 1) == 1) {
-			dbw.write("    BEGIN EDGE, start vert = "
-					+ redge.vert(redge.startIndex) + "\n");
-		}
-		if ((redge.cornerFlag & 2) == 2) {
-			dbw.write("    END EDGE, end vert = "
-					+ redge.vert((redge.startIndex + 1) % 3) + "\n");
-		}
-		// cross face?
-		if (redge.crossRed != null)
-			dbw.write("   crossRed = " + redge.crossRed.face + " ");
-		dbw.write("\n");
-		return 1;
 	}
 
 	/**

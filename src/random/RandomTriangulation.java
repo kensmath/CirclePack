@@ -15,11 +15,11 @@ import JNI.DelaunayBuilder;
 import JNI.DelaunayData;
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.CombDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
 import geometry.SphericalMath;
-import komplex.CookieMonster;
 import komplex.EdgeSimple;
 import komplex.Face;
 import komplex.Triangulation;
@@ -582,23 +582,12 @@ public class RandomTriangulation {
 				CirclePack.cpb.errMsg("tri_to_Complex has failed.");
 				return null;
 			}
-			p.setCombinatorics();
 			
-			// use 'cookie' to prune
-			CookieMonster cM=null;
-			int outcome=-1;
-			try {
-				cM=new CookieMonster(p,"b");
-				outcome=cM.goCookie();
-
-		  	  	// go new packing? swap it out
-				if (outcome>0) {
-					p=cM.getPackData();
-				}
-					
-				p.poisonVerts=null;
-				p.poisonEdges=null;
-			} catch (Exception ex) {}
+			// prune
+			CombDCEL.pruneDCEL(p.packDCEL);
+			p.packDCEL.fixDCEL_raw(p);
+			p.poisonVerts=null;
+			p.poisonEdges=null;
 		} catch (Exception ex) {
 			throw new DataException("tri_to_Complex failed: "+ex.getMessage());
 		}
@@ -643,7 +632,7 @@ public class RandomTriangulation {
 		DelaunayData dData=new DelaunayData(0,zvec);
 		Triangulation SqTri= dData.getTriangulation();
 		
-		return CookieMonster.zigzag_cutter(SqTri,Gamma);
+		return Triangulation.zigzag_cutter(SqTri,Gamma);
 	}
 	
     /**

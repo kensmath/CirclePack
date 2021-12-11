@@ -498,7 +498,7 @@ public class DualGraph {
 			p.setPlotFlag(k,1);
 		}
 		util.UtilPacket uP=new util.UtilPacket();
-		int []vgens=p.label_generations(-1,uP);
+		int []vgens=p.packDCEL.label_generations(-1,uP);
 		
 		//  store generation of faces by lowest vertex degree.
 		int []futil=new int[p.faceCount+1];
@@ -661,7 +661,7 @@ System.err.println("  place nghb "+nghb+" point to vert "+vert);
 		
 		// get generations of the other vertices
 		util.UtilPacket uP=new util.UtilPacket();
-		int []vgens=p.label_generations(-1,uP);
+		int []vgens=p.packDCEL.label_generations(-1,uP);
 		
 		//  store generations of faces (lowest generation of its vertices) 
 		int []futil=new int[p.faceCount+1];

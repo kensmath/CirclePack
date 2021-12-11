@@ -889,10 +889,13 @@ public class CombDCEL {
 		
 		// ============= last job: clean up 'pdcel.vertices' =====
 		
-		// Try to keep as many indices of original vertices 
-		// unchanged as possible. Then we have some added vertices
-		// to slot in to open slots in the index set. Then we have
-		// to do successive shifts to keep indices contiguous.
+		// We may have lost some vertices and/or added vertices.
+		// Try to keep indices unchanged for as many original 
+		// vertices as possible, so we first put added vertices
+		// into open slots in the original index set and after that, 
+		// append the rest at the end. If there remain open slots 
+		// in to original index set, we do successive shifts to 
+		// keep indices contiguous.
 		
 		// search red chain for original vertices not interior or
 		//    next to interior; set vstat=3.
@@ -1131,7 +1134,7 @@ public class CombDCEL {
 		//      pdcel.oldNew.
 		
 		pdcel.triData=null;  // filled when needed for repacking
-		
+		// DCELdebug.printRedChain(pdcel.redChain);
 		// we prefer that 'alpha' be set, but if it was tossed out,
 		//    make simple choice: some edge which is not red.
 		if (pdcel.alpha==null) {
@@ -1276,99 +1279,48 @@ public class CombDCEL {
 		//   non-red interior, and every edge from that origin
 		//   should have 'eutil' set to 1. 
 		
-		// If not a sphere, look for two types of stragglers:
-		//   1 red edge is part of "blue" face 
-		//   2 opposite vert is interior "bearing", degree 3.
+		// However, if notsphere, there may be stragglers:
+		//   e.g., blue faces, faces with a bearing, faces
+		//   without interior vertex.
+		
 		if (pdcel.redChain!=null) {
+			// Set 'redChain' to one already laid; typically, no change
+			rtrace=pdcel.redChain;
+			RedHEdge hitred=null;
+			do {
+				if (rtrace.myEdge.eutil!=0)
+					hitred=rtrace;
+				rtrace=rtrace.nextRed;
+			} while (hitred==null && rtrace!=pdcel.redChain);
+			if (hitred==null)
+				throw new CombException("Failure: no red edge is laid out");
+			else
+				pdcel.redChain=hitred;
+		
+			// Circulate clw around terminal red edge vertex to get all 
+			//   faces on left of redchain
 			rtrace=pdcel.redChain;
 			do {
-				
-				boolean gotit=false;
-				
-				// if already laid out, continue
-				if (rtrace.myEdge.eutil==1) 
-					gotit=true;
-
-				// check if one of face's edges is laid out
-				if (!gotit) { // first edge
-					// check next edge
-					HalfEdge he=rtrace.myEdge.next;
-					if (he.myRedEdge==null && he.twin.eutil==1) {
+				RedHEdge nxred=rtrace.nextRed;
+				HalfEdge he=rtrace.myEdge;
+				do {
+					if (he.eutil==0) {
 						orderEdges.add(he);
+						ordertick++;
+						// mark face edges
 						tr=he;
 						do { 
 							tr.eutil=1;
 							tr=tr.next;
 						} while(tr!=he);
-						ordertick++;
-						gotit=true;
 					}
-				}
-
-				if (!gotit) { // second edge
-					HalfEdge he=rtrace.myEdge.next.next;
-					if (he.myRedEdge==null && he.twin.eutil==1) {
-						orderEdges.add(he);
-						tr=he;
-						do { 
-							tr.eutil=1;
-							tr=tr.next;
-						} while(tr!=he);
-						ordertick++;
-						gotit=true;
-					}
-				}
-				
-				// reaching here, one last possibility: see if rtrace is 
-				//   edge of a face having a bearing (barycenter) and
-				//   some outer edge is laid out.
-				if (!gotit) {
-					Vertex oppVert=rtrace.myEdge.next.next.origin;
-					if (oppVert.bdryFlag==0 && pdcel.countFaces(oppVert)==3) {
-						
-						// do any faces about oppVert have edge already laid out?
-						HalfEdge goodspoke=null;
-						HalfLink spokes=oppVert.getEdgeFlower();
-						Iterator<HalfEdge> sis=spokes.iterator();
-						while (goodspoke==null && sis.hasNext()) {
-							HalfEdge he=sis.next();
-							if (he.eutil==1 || he.next.twin.eutil==1)  
-								goodspoke=he;
-						}
-						
-						// starting with goodspoke, lay out all faces,
-						//    using an opposite edge, if possible.
-						if (goodspoke!=null) {
-							gotit=true; // should be able to complete
-							HalfEdge he=goodspoke;
-							do {
-								if (he.eutil!=1) { // yes, lay this
-									if (he.next.twin.eutil==1)
-										orderEdges.add(he.next);
-									else
-										orderEdges.add(he);
-									tr=he;
-									do { 
-										tr.eutil=1;
-										tr=tr.next;
-									} while(tr!=he);
-									ordertick++;
-								}
-								he=he.prev.twin; // cclw spoke
-							} while (he!=goodspoke);
-						} // done with faces
-					} // done with barycenter
-				}
-				if (!gotit)
-					throw new CombException(
-							"Failed in laying out a face for red edge "+
-									rtrace.myEdge.face);
-				
+					he=he.next.twin; // incoming spoke, clw
+				} while(he.twin!=nxred.myEdge);
 				rtrace=rtrace.nextRed;
 			} while (rtrace!=pdcel.redChain);
 		}
-		
-		if (debug) 
+
+		if (debug) // debug=true;
 			System.out.println("ordertick = "+ordertick);
 			
 		debug=false; // debug=true;
@@ -2461,12 +2413,12 @@ public class CombDCEL {
 	 * and 'non-keepers': the latter may remain in the boundary of 
 	 * the excised DCEL structure.
      *
-	 * If no forbidden edges are found then use 'CPBase.ClosedPath': 
+	 * If no forbidden edges are specified then use 'CPBase.ClosedPath': 
 	 * the points on the side of 'CPBase.ClosedPath' (if not null) 
-	 * opposite to 'seed' are poison by default.
+	 * opposite to 'seed' become poison by default.
 	 * 
-	 * Return 'HalfLink' of forbidden edges used, with alpha, 
-	 * which can then be used to create a red chain.
+	 * Return 'HalfLink' of forbidden edges used, which can 
+	 * then be used, with alpha, to create a red chain.
 	 *   
 	 * @param p PackData
 	 * @param flags Vector<Vector<String>>; may be null
@@ -2483,6 +2435,7 @@ public class CombDCEL {
 		// read incoming data
 		while (flags!=null && flags.size()>0) { 
 			Vector<String> items=(Vector<String>)flags.remove(0);
+			// if no flag, then list is poison vertices
 			if (!StringUtil.isFlag(items.get(0))) { // no flag? poison vertices
 				vlink=new NodeLink(p,items);
 			}
@@ -2599,7 +2552,8 @@ public class CombDCEL {
 	 * Given 'pdcel' with redchain, we want to "prune" so 
 	 * that every bdry vertex has an interior neighbor. 
 	 * We simply cookie with halfLink as the current 
-	 * red chain and 'prune'=true and then call 'd_FillInside'.
+	 * red chain and 'prune'=true. Calling routine should
+	 * 'fixDCEL_raw'.
 	 * @param pdcel PackDCEL
 	 * @return int, count of adjustments made (may be zero)
 	 */
@@ -2619,12 +2573,51 @@ public class CombDCEL {
 		CombDCEL.redchain_by_edge(pdcel, hlink, null, true);
 		
 		// see if anything was pruned
-		int diff=vcount-pdcel.vertCount;
+		return (vcount-pdcel.vertCount);
+	}
+	
+	/**
+	 * Create largest simply connected complex containing
+	 * 'seed' vertices as generation 0, and up to generation 
+	 * no bigger than 'gen' from those seeds. This is two step
+	 * process: first create a new red chain, but then clone 
+	 * vertices as needed to cut apart any twinned red 
+	 * segments to get simple connectivity. Use 'vutil' to 
+	 * refer to parent vertices. We clone 'pdcel' first;
+	 * calling routine must process on return. 
+	 * @param pdcel PackDCEL
+	 * @param vec_seed int[], default to 'alpha'
+	 * @param gen int
+	 * @return PackDCEL
+	 */
+	public static PackDCEL gen2red(PackDCEL pdcel,
+			int[] vec_seed,int gen) {
 		
-		if (diff>0)
-			CombDCEL.d_FillInside(pdcel);
+		// make sure there's enough space
+		int tick=0;
+		RedHEdge rtrace=pdcel.redChain;
+		do {
+			tick++;
+			rtrace=rtrace.nextRed;
+		} while(rtrace!=pdcel.redChain);
+		int n=pdcel.vertCount+tick+10;
+
+		// clone
+		PackDCEL newcel=CombDCEL.cloneDCEL(pdcel);
+		Vertex[] newverts=new Vertex[n];
+		if (pdcel.vertices.length<n) {
+			for (int j=1;j<=pdcel.vertCount;j++)
+				newverts[j]=pdcel.vertices[j];
+		}
+		newcel.vertices=newverts;
 		
-		return diff;
+		// TODO: not yet sure of behavior. I think we identify
+		//   forbidden edges by current red chain and those of
+		//   generation < 'gen'. But then we have to separate
+		//   any twinned red segments, making clones of their
+		//   vertices.
+		
+		return (PackDCEL)null;
 	}
 		
 	/** 

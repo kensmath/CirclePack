@@ -280,7 +280,8 @@ public abstract class RePacker {
 		}
 		if (status==LOADED) 
 			localPasses=startRiffle();
-		else localPasses=0;
+		else 
+			localPasses=0;
 		totalPasses += localPasses;
 		if (continueRiffle(pass_limit)!=0) {  // successful?
 			return totalPasses;

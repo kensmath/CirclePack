@@ -167,10 +167,7 @@ public class GOpacker extends RePacker {
 		setCorners(null,null);
 	
 		// create persistent 'PackLite', 'SolverData', and 'rhs' stuff
-		if (v_int!=null && v_int.size()>0)
-			myPLite=new PackLite(p,v_int);
-		else 
-			myPLite=new PackLite(p); 
+		PackLite myPLite=new PackLite(p);
 		origNodeCount=p.nodeCount;
 		
 		// what to do about aims? Let's reset to default, then change as

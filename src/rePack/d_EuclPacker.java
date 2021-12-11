@@ -31,8 +31,10 @@ public class d_EuclPacker extends RePacker {
     public d_EuclPacker(PackData pd,int pass_limit) { 
     	p=pd;
 		oldReliable=false;
-    	if (pass_limit<0) passLimit=PASSLIMIT;
-		else passLimit=pass_limit;
+    	if (pass_limit<0) 
+    		passLimit=PASSLIMIT;
+		else 
+			passLimit=pass_limit;
 		status=load(); 
 		if (status!=LOADED) 
 			throw new PackingException("'d_EuclPacker' failed to load");
@@ -52,7 +54,7 @@ public class d_EuclPacker extends RePacker {
     	aimnum = 0;
     	index =new int[p.nodeCount+1];
     	for (int i=1;i<=p.nodeCount;i++) {
-    		if (p.getAim(i)>0) {
+    		if (p.getAim(i)>0) { // p.getAim(39);
     			index[aimnum]=i;
     			aimnum++;
     		}
@@ -87,11 +89,14 @@ public class d_EuclPacker extends RePacker {
     			ArrayList<Face> facelist=vert.getFaceFlower();
     			Iterator<Face> fist=facelist.iterator();
     			while(fist.hasNext()) {
-    				TriData trid=pdcel.triData[fist.next().faceIndx];
-    				int j=trid.vertIndex(v);
-    				HalfEdge he=trid.getHalfEdge(j);
-    				pdcel.setRad4Edge(he,trid.radii[j]);
-    				p.vData[v].rad=trid.radii[j];
+    				int f=fist.next().faceIndx;
+    				if (f>0) {
+    					TriData trid=pdcel.triData[f];
+    					int j=trid.vertIndex(v);
+    					HalfEdge he=trid.getHalfEdge(j);
+    					pdcel.setRad4Edge(he,trid.radii[j]);
+    					p.vData[v].rad=trid.radii[j];
+    				}
     			}
     		}
     		else {

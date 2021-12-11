@@ -1,6 +1,7 @@
 package komplex;
 
 import java.awt.Color;
+import java.awt.geom.Path2D;
 import java.io.BufferedReader;
 import java.util.Iterator;
 import java.util.StringTokenizer;
@@ -11,11 +12,15 @@ import JNI.DelaunayData;
 import JNI.JNIinit;
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.CombDCEL;
+import dcel.HalfEdge;
+import dcel.PackDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
 import exceptions.JNIException;
 import listManip.GraphLink;
+import listManip.HalfLink;
 import listManip.VertexMap;
 import math.Point3D;
 import packing.PackData;
@@ -55,13 +60,12 @@ public class Triangulation {
 	}
 	
 	/**
-	 * Attempt to create 'PackData' from 'Triangulation' object. Calling
-	 * routine must setCombinatorics, choose alpha/gamma, set radii and aims,
-	 * etc. Errors may not show up until packing is processed in calling
-	 * routine.
-	 * @param Tri @see Triangulation
+	 * Attempt to create 'PackData' from 'Triangulation' object. 
+	 * Calling routine must set radii, aims, etc. Errors may not 
+	 * show up until packing is processed in calling routine.
+	 * @param Tri Triangulation
 	 * @param hes geometry
-	 * @return @see PackData, null on failure
+	 * @return PackData, null on failure
 	 */
 	public static PackData tri_to_Complex(Triangulation Tri,int hes) {
 		if (Tri==null || Tri.faceCount<1) return null;
@@ -70,7 +74,8 @@ public class Triangulation {
     	double min0=10000.0;
     	double dist=0.0;
 
-		// if Tri has node locations, find the face having node closest to origin
+		// if Tri has node locations, find the face having node 
+    	//   closest to origin
     	int starter=1;
 	    if (Tri.nodes!=null) {
 	    	Point3D z=null;
@@ -95,7 +100,7 @@ public class Triangulation {
 	    	}
 	    }
 	  
-		// ========== Convert the Triangulation to 'KData' 
+		// ========== generate 'KData' array from Triangulation
 		KData []kdata=null;
 		int []ans=new int[2];
 		try {
@@ -107,21 +112,27 @@ public class Triangulation {
 			CirclePack.cpb.errMsg("tri_to_pack failed");
 			return null;
 		}
+		
+		// ========== create bouquet from KData array
+		int[][] bouquet=new int[kdata.length+1][];
+		for (int v=1;v<=ans[0];v++) {
+			bouquet[v]=kdata[v].flower;
+		}
 	  
 		// =========== create the packing itself
 		PackData p=new PackData((CPScreen)null);
-		p.alloc_pack_space(ans[0]+100,false);
-		p.status=true;
-		p.nodeCount=ans[0];
+		PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet);
+		pdcel.fixDCEL_raw(p);
 		p.hes=hes;
-		for (int i=1;i<=p.nodeCount;i++)
-			p.kData[i]=kdata[i];
+		for (int v=1;v<=p.nodeCount;v++) {
+			p.vData[v].mark=kdata[v].mark; // original index in triangulation
+		}
 	  
 		// Record the node locations and vert colors from Tri, 
 		//   if they exist (orig indices stored in 'mark').
 		if (Tri.nodes!=null) {
 			for (int i=1;i<=p.nodeCount;i++) {
-				int j=p.getVertMark(i);
+				int j=p.vData[i].mark;
 				if (hes<=0) {
 					p.setCenter(i,new Complex(Tri.nodes[j].x,Tri.nodes[j].y));
 				}
@@ -131,7 +142,8 @@ public class Triangulation {
 		}
 		if (Tri.vertColors!=null) {
 			for (int i=1;i<=p.nodeCount;i++) {
-				p.setCircleColor(i,ColorUtil.cloneMe(Tri.vertColors[p.getVertMark(i)]));
+				p.setCircleColor(i,ColorUtil.
+						cloneMe(Tri.vertColors[p.getVertMark(i)]));
 			}
 		}
 		
@@ -201,26 +213,29 @@ public class Triangulation {
 	} 
 
 	/** 
-	 * Process collection of triangles to see if it can	form a packing 
-	 * complex. For now we don't bother to try to salvage bad data --- just
-	 * throw 'DataException'.
+	 * Process collection of triangles to see if it can	
+	 * form a packing complex. For now we don't bother to try 
+	 * to salvage bad data --- just throw 'DataException'.
 	 * 
 	 * Do a number of adjustments: adjust indices to start at 1,
 	 * run contiguously; original indices stored in 'KData.mark'.
 	 * Make face orientations consistent, etc. 
 	 * 
-	 * Return pointer to new 'KData', which calling program uses for
-	 * new packing; 'DataException' on error. ans[0] gives nodecount. 
+	 * Return pointer to new 'KData', which calling program 
+	 * can use to generate a bouquet new packing; 
+	 * 'DataException' on error. ans[0] gives nodecount. 
 	 * 
-	 * TODO: weakness = connected set of faces, so may throw out the major
-	 * portion of the triangulation.
+	 * TODO: weakness = connected set of faces, so may throw 
+	 * out the major portion of the triangulation.
 	 * 
 	 * @param T Triangulation
 	 * @param start int, index of first face
-	 * @param []ans int[], instantiated by calling routine to get data: ans[0]=nodecount. 
-	 * @return KData, null on error. Original indices stored in 'mark' element.
+	 * @param []ans int[], instantiated by calling routine to get data: 
+	 * 	ans[0]=nodecount. 
+	 * @return KData[], null on error. Original indices stored in 'mark'
 	*/
-	public static KData[] parse_triangles(Triangulation T, int start, int[] ans)
+	public static KData[] parse_triangles(Triangulation T, 
+			int start, int[] ans)
 			throws DataException {
 
 		boolean debug=false;
@@ -317,7 +332,7 @@ public class Triangulation {
 		}
 
 		// create K_data (but will adjust it later)
-		KData []pK = new KData[top + 1];
+		KData[] pK = new KData[top + 1];
 		for (int i = 1; i <= top; i++)
 			pK[i] = new KData();
 
@@ -349,10 +364,10 @@ public class Triangulation {
 				if (nodefaces[vtarget][i] == first_face)
 					ffindx = i;
 			if (ffindx == -1)
-				throw new DataException();
+				throw new DataException("didn't find a first face index");
 
 			// make room, allowing for growth forward or back
-			int []preflower = new int[2 * count[vtarget] + 4];
+			int[] preflower = new int[2 * count[vtarget] + 4];
 
 			// put verts of first face in middle of preflower space
 			int front = 0;
@@ -450,7 +465,7 @@ public class Triangulation {
 				} // while
 			} 
 			else if (pK[vtarget].num < 3) // interior vert needs at least 3 faces
-				throw new DataException("Interior vert in less than 3 faces"); 
+				throw new DataException("Interior vert is in less than 3 faces"); 
 
 			// Note: could do check here that we've used all the faces,
 			// but for now, we just forget this and use what faces we get.
@@ -1274,7 +1289,251 @@ public class Triangulation {
 		}
 		return null;
 	}
-	
+
+	/**
+	 * Alternate type of cookie cutting: (Jan 2017) We basically 
+	 * keep only those faces whose centroids are in the region. 
+	 * We want a simply connected result, however, so we must 
+	 * fill in any encircled faces. Problem: many boundary faces 
+	 * poke out, leaving a vertex with no interior neighbors. 
+	 * Hence, this turns out to be less useful than I had hoped.
+	 * 
+	 * @param Tri Triangulation, with 'nodes' giving 2D locations
+	 * @param Gamma Path2D.Double, closed curve, assumed Jordan
+	 * @return Triangulation or null on error
+	 */
+	public static Triangulation zigzag_cutter(Triangulation Tri, 
+			Path2D.Double Gamma) {
+
+		// store vertex centers
+		Complex[] Z = new Complex[Tri.nodeCount+1];
+		for (int n = 1; n <= Tri.nodeCount; n++)
+			Z[n] = new Complex(Tri.nodes[n].x, Tri.nodes[n].y);
+		
+		// Now the processing to prune this; create and work with DCEL data
+		int[] ans=new int[2];
+		KData[] kData=Triangulation.parse_triangles(Tri,0,ans);
+		int nodecount=ans[0];
+		if (nodecount<=2)
+			throw new DataException("DCEL: parse_triangles came up short");
+		
+		// get the bouquet of flowers
+		int [][]bouquet=new int[nodecount+1][];
+		for (int v=1;v<=nodecount;v++) 
+			bouquet[v]=kData[v].flower;
+
+		PackDCEL pdc=CombDCEL.getRawDCEL(bouquet);
+		PackDCEL myDCEL=CombDCEL.extractDCEL(pdc,null,pdc.alpha);
+		int facecount = myDCEL.intFaceCount;
+
+		// find the centroids
+		Complex[] faceC = new Complex[facecount+1]; // centroids
+		int tick = 0;
+		for (int f=1;f<=myDCEL.faceCount;f++) {
+			HalfLink edges=myDCEL.faces[f].getEdges();
+			Iterator<HalfEdge> eit=edges.iterator();
+			Complex accum=new Complex(0.0);
+			while (eit.hasNext()) {
+				HalfEdge he = eit.next();
+				accum = accum.add(Z[he.origin.vertIndx]);
+			}
+			// average of vertex locations
+			faceC[++tick] = new Complex(accum.times(1.0/(double)edges.size())); 
+		}
+
+		// determine which faces have centroids in Gamma; these are included
+		Complex firstC = null;
+		dcel.Face firstFace=null;
+		int[] facestat = new int[facecount + 1]; // 1=included
+
+		for (int j = 1; j <= facecount; j++) {
+			if (Gamma.contains(faceC[j].x, faceC[j].y)) {
+				facestat[j] = 1;
+				if (firstC == null) { // mark the first included centroid and its face
+					firstC = new Complex(faceC[j]);
+					firstFace=myDCEL.faces[j];
+				}
+			}
+		}
+		
+		// There may be other faces included, we may have to fill in holes.
+		// Idea is to find simple closed path from included, and
+		// add those inside this path.
+
+		// Find all 'HalfEdge's of included faces with non-included (or
+		// ideal) face on the other side.
+		Vector<HalfEdge> putbdry = new Vector<HalfEdge>(0);
+		for (int f = 1; f <= Tri.faceCount; f++) {
+			if (facestat[f] > 0) {
+				HalfLink edges=myDCEL.faces[f].getEdges();
+				Iterator<HalfEdge> eit=edges.iterator();
+				while (eit.hasNext()) {
+					HalfEdge he=eit.next();
+					dcel.Face oppface = he.twin.face;
+					if (Math.abs(oppface.faceIndx) > facecount || facestat[Math.abs(oppface.faceIndx)] == 0)
+						putbdry.add(he);
+				}
+			}
+		}
+
+		// sift through 'putbdry', removing cclw closed chains until
+		// we get one which wraps positively about 'firstC'. This
+		// should be "outer" bdry.
+
+		Path2D.Double outerPath = null;
+		
+		while (outerPath == null && putbdry.size() > 0) {
+			// debug: 'disp -ffc120 flist -tfc195t2 z zlist;'
+			
+			// start a new closed edge path
+			Vector<HalfEdge> bpath = new Vector<HalfEdge>(0);
+			HalfEdge start = putbdry.remove(0);
+			bpath.add(start);
+			
+			HalfEdge nextedge = start.twin.prev.twin;
+			while (!putbdry.contains(nextedge) && nextedge != start) {
+				nextedge = nextedge.prev.twin;
+			}
+			if (nextedge == start)
+				throw new CombException("comb problem in dcel");
+			HalfEdge curredge = start;
+			while (putbdry.size()>0 && nextedge != start) {
+				curredge = nextedge;
+				putbdry.remove(curredge);
+				bpath.add(curredge);
+				
+				nextedge = curredge.twin.prev.twin;
+				while (!putbdry.contains(nextedge) && nextedge!=start && nextedge != curredge) {
+					nextedge = nextedge.prev.twin;
+				} // now have 'nextedge'
+				if (nextedge == curredge)
+					throw new CombException("combinatoric problem in dcel");
+			} // end of while to close path
+			
+			// create cclw Path2D.Double using ends of 'bpath'
+			Path2D.Double putPath = new Path2D.Double();
+			Complex pt = new Complex(Z[bpath.remove(0).twin.origin.vertIndx]);
+			putPath.moveTo(pt.x, pt.y);
+			Iterator<HalfEdge> bpi = bpath.iterator();
+			while (bpi.hasNext()) {
+				pt = new Complex(Z[bpi.next().twin.origin.vertIndx]);
+				putPath.lineTo(pt.x, pt.y);
+			}
+			putPath.closePath();
+
+			// is 'putPath' the outer path? Yes, if it contains 'firstC'
+			if (putPath.contains(firstC.x, firstC.y))
+				outerPath = putPath;
+		} // should have outer path
+
+		if (outerPath == null)
+			throw new CombException("couldn't build 'outerPath'");
+
+		// convert to triangulation
+		Triangulation zzTri = new Triangulation();
+
+		// Two steps: (1) find all faces inside 'outerPath'; 
+		//    (2) build out simply connected patch
+		int startindx=-1;
+		int []inouter=new int[myDCEL.faceCount+1];
+		for (int j = 1; j <= facecount; j++) { 
+			if (outerPath.contains(faceC[j].x, faceC[j].y)) { 
+				inouter[j]=1;
+				if (startindx==-1)
+					startindx=j;
+			}
+		}
+		
+		// if 'firstFace' is no longer included, use new starting place
+		if (inouter[Math.abs(firstFace.faceIndx)]==0)
+			firstFace=myDCEL.faces[startindx];
+			
+		// cycle through adding faces to 'firstFace'
+		Vector<dcel.Face> nextF=new Vector<dcel.Face>();
+		Vector<dcel.Face> currF=nextF;
+		nextF.add(firstFace);
+		int[] newfaces = new int[myDCEL.faceCount+1];
+		newfaces[Math.abs(firstFace.faceIndx)]=1;
+		int infacecount = 1;
+		tick=0;
+		while(nextF.size()>0) {
+			currF=nextF;
+			nextF=new Vector<dcel.Face>();
+			while (currF.size()>0) {
+				dcel.Face currface=currF.remove(0);
+				HalfLink edges=currface.getEdges();
+				Iterator<HalfEdge> eit=edges.iterator();
+				while (eit.hasNext()) {
+					HalfEdge he=eit.next();
+					int findx=Math.abs(he.twin.face.faceIndx);
+					if (findx<=facecount && inouter[findx]>0 && newfaces[findx]==0) {
+						newfaces[findx]=1;
+						infacecount++;
+						nextF.add(he.twin.face);
+					}
+				}
+			} // end of while on 'currF'
+		} // end of while on 'nextF'
+		
+		// reindex the needed vertices
+		int[] old2new = new int[myDCEL.vertCount + 1];
+		tick = 0;
+		for (int j = 1; j <= facecount; j++) {
+			if (newfaces[j]>0) {
+				
+				// debug
+				int []fv= myDCEL.faces[j].getVerts();
+				StringBuilder ddstr=new StringBuilder("face: ");
+				for (int nm=0;nm<fv.length;nm++)
+					ddstr.append(" "+fv[nm]);
+				System.err.println(ddstr.toString());
+				
+				int []verts=myDCEL.faces[j].getVerts();
+				for (int m=0;m<verts.length;m++) {
+					int v=verts[m];
+					if (old2new[v] == 0)
+						old2new[v] = tick++; // new index;
+				}
+			} 
+		} // have new indices
+
+
+		// fill triangulation data
+		zzTri.nodeCount = tick;
+		zzTri.maxIndex = tick;
+		zzTri.nodes = new Point3D[tick + 1];
+
+		// fill 'faces'
+		zzTri.faceCount = infacecount;
+		zzTri.faces = new Face[zzTri.faceCount + 1];
+		tick = 0;
+		for (int j = 1; j <= facecount; j++) {
+			if (newfaces[j] == 1) {
+				Vector<Integer> vertvec = new Vector<Integer>(0);
+				HalfEdge he = myDCEL.faces[j].edge;
+				vertvec.add(old2new[he.origin.vertIndx]); // new index
+				HalfEdge nhe = he.next;
+				while (nhe != he) {
+					vertvec.add(old2new[nhe.origin.vertIndx]);
+					nhe = nhe.next;
+				}
+				int sz = vertvec.size();
+				int[] findx = new int[sz];
+				for (int k = 0; k < sz; k++)
+					findx[k] = vertvec.get(k);
+				zzTri.faces[++tick]=new Face();
+				zzTri.faces[tick].vert = findx;
+			}
+		}
+		
+		// set node locations
+		for (int m = 1; m <= myDCEL.vertCount; m++) {
+			if (old2new[m] != 0)
+				zzTri.nodes[old2new[m]] = new Point3D(Z[m].x, Z[m].y, 0.0);
+		}
+
+		return zzTri;
+	}
 
 	/**
 	 * Create new triangulation by barycentrically subdividing
@@ -1389,14 +1648,16 @@ public class Triangulation {
 */
 	
 }
-	
+
 class TmpVert {
 	int vert;  // index of this vertex
-	Vector<Integer> flowerV; // counterclockwise flower
+	int num;
+	int[] flower; // counterclockwise flower
+	int utilFlag;
+	int bdryFlag;
+	int mark;
 		
-	public TmpVert(int v) {
-		vert=v;
-		flowerV=new Vector<Integer>(5);
+	public TmpVert() {
 	}
 }		
 

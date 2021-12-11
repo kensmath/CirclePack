@@ -31,16 +31,20 @@ import util.ColorUtil;
 public class D_SideData {
 	
 	public int hes;           // geometry from parent packing
-	public int spIndex;       // index in 'D_PairLink' linked list (indexed from 1)
+	public int spIndex;       // index in 'D_PairLink' linked list 
+							  //   (indexed from 1)
 	public int mateIndex;     // 'spIndex' of paired side (-1 if no mate)
-	public RedHEdge startEdge; // the first 'RedEdge' of this "side"
-	public RedHEdge endEdge;   // the final 'RedEdge' of this "side"
+	public RedHEdge startEdge; // the first 'RedHEdge' of this "side"
+	public RedHEdge endEdge;   // the final 'RedHEdge' of this "side"
 	public Mobius mob;        // Mobius transform when side is paired: map
-							  //   of paired edge TO this edge (TODO: for spherical) 
+							  //   of paired edge TO this edge 
+							  //   (TODO: for spherical) 
 	public double mobErr;     // error in the Mobius transform (mainly for hyp
-                        	  //   case; mob is always an automorphism, but roundoff 
-                        	  //   can prevent it from providing exact match).
-	public Color color;	      // paired segments are color-coded for visual matching
+                        	  //   case; mob is always an automorphism, but 
+							  //   roundoff can prevent it from providing 
+							  //   exact match).
+	public Color color;	      // paired segments are color-coded for 
+							  //   visual matching
 	public String label;	  // 'a', 'b', etc. for paired sides, ('A', 'B', etc) for
 							  //   other side. '1', '2', etc. for unpaired sides.
 							  //   Default is null. Note: due to Windows treatment
@@ -146,7 +150,7 @@ public class D_SideData {
      * "side" of the complex which contains 'RedHEdge' redge
      * return null on failure. 
      * @param pairLink PairLink
-     * @param redface RedList (or may be 'RedEdge')
+     * @param redge RedHEdge
      * @return 'D_SideData' of containing side or null on failure
      */
     public static D_SideData which_side(D_PairLink pairLink,RedHEdge redge) {

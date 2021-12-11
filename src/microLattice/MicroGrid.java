@@ -22,12 +22,12 @@ import exceptions.InOutException;
 import exceptions.ParserException;
 import input.CPFileManager;
 import input.CommandStrParser;
-import komplex.CookieMonster;
 import komplex.EdgeSimple;
 import komplex.Face;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.PointLink;
 import listManip.VertexMap;
@@ -992,29 +992,16 @@ public class MicroGrid extends PackExtender {
 			Path2D.Double holdPath=CPBase.ClosedPath;
 			CPBase.ClosedPath=tmpTrim;
 			
-			// now, 'cookie' based on poison vertices;
-	    	CookieMonster cM=null;
-	    	try {
-	    		cM=new CookieMonster(qPack,(Vector<Vector<String>>)null);
-	    		int outcome=cM.goCookie();
-		    	if (outcome<0) {
-		    		throw new ParserException("cookie crumbled");
-		    	}
-		    	else if (outcome>0) {
-		    		if (!debug) { // debug=true;
-		    			CirclePack.cpb.swapPackData(cM.getPackData(),1,true);
-		    			qPack=cM.getPackData();
-		    		}
-		    	}
-//		    	else {
-		    		// debug
-//					qPack.cpScreen.drawPath(tmpTrim);
-//					PackControl.canvasRedrawer.paintMyCanvasses(qPack,false); 
-//		    	}
-	    	} catch(Exception ex) {
-	    		CPBase.ClosedPath=holdPath;
-	    		Oops("cookie failed in MicroGrid");
-	    	}
+			// now, 'cookie' based on closed path
+  		  	HalfLink hlink=CombDCEL.d_CookieData(qPack,
+  		  			(Vector<Vector<String>>)null);
+		  
+  		  	// cookie out by forming new red chain
+  		  	CombDCEL.redchain_by_edge(
+  		  			qPack.packDCEL,hlink,
+  		  			qPack.packDCEL.alpha,true);
+  		  	qPack.packDCEL.fixDCEL_raw(qPack);
+			CirclePack.cpb.swapPackData(qPack,1,true);
 	    	
     		CPBase.ClosedPath=holdPath;
 	    	return 1;

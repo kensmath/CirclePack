@@ -75,9 +75,9 @@ public class EuclMath{
 		double t0=2.0*r0*r1*ivd0;
 		double t1=2.0*r1*r2*ivd1;
 		double t2=2.0*r2*r0*ivd2;
-		double len0sq=e0sq+e1sq+2.0*t0;
-		double len1sq=e1sq+e2sq+2.0*t1;
-		double len2sq=e2sq+e0sq+2.0*t2;
+		double len0sq=e0sq+e1sq+t0;
+		double len1sq=e1sq+e2sq+t1;
+		double len2sq=e2sq+e0sq+t2;
 		double cos_ang=(len0sq+len2sq-len1sq)/(2.0*Math.sqrt(len0sq * len2sq));
 		if (cos_ang < -1.0 || cos_ang>1.0) { // error? 
 			if (cos_ang>1.0)

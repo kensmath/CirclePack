@@ -2,55 +2,52 @@ package packing;
 
 import java.util.Iterator;
 
-import komplex.CookieMonster;
-import komplex.EdgeSimple;
-import komplex.KData;
-import listManip.EdgeLink;
-import listManip.NodeLink;
-import listManip.VertexMap;
-import panels.CPScreen;
 import allMains.CirclePack;
-
 import complex.Complex;
-
+import dcel.CombDCEL;
+import dcel.HalfEdge;
+import dcel.PackDCEL;
+import dcel.RedHEdge;
+import dcel.Vertex;
 import exceptions.DataException;
 import exceptions.MiscException;
-import exceptions.ParserException;
+import komplex.EdgeSimple;
+import listManip.EdgeLink;
+import listManip.HalfLink;
+import listManip.VertexMap;
+import panels.CPScreen;
 
 /**
- * PackLite simply holds data for reading/writing in compressed and highly
- * structured form with no key words
+ * PackLite simply holds packing data in compressed and highly
+ * structured form which avoids key words. Originally this was
+ * intended for efficient communication between processors, 
+ * or to repack a portion of a larger packing. However, I have
+ * now removed the read/write commands and methods. The purpose
+ * now is to prepare data for 'GoPacker' by re-indexing 
+ * vertices in a way suitable to its sparse-matrix computations: 
+ * interior first, bdry last in cclw order. For spherical case, 
+ * last 3 go with a face in clw order as faux bdry.
  * 
- * Purposes:
+ * What to store? When generating PackLite, use bit-encoded info. 
+ * "act" (parallel to 'writePack') 3: 00004 non-default inv_dist & 
+ * aims; 4: 00010 radii; 5: 00020 centers; 18: 0400000 misc.
  * 
- * (1) put things in compressed array form for efficient communication between
- * processor (e.g., between Java/C++/matlab calls).
- * 
- * (2) Package packable portions of larger packings (eg. for parallel or
- * progressive packing). This involves re-indexing and hence mapping to parent
- * indices.
- * 
- * (3) For compressed file format, see 'PackData.writeLite'
- * 
- * (4) Re-index the vertices in a way suitable to sparse-matrix computations:
- * interior first, bdry last in cclw order. For spherical case, last 3 go with a
- * face in clw order --- these 3 may be used as a bdry.
- * 
- * What to store? When generating PackLite, use bit-encoded info. "act"
- * (parallel to 'writePack') 3: 00004 non-default inv_dist & aims 4: 00010 radii
- * 5: 00020 centers 18: 0400000 misc: add ideal vert for each interior bdry hole
- * 
- * History: started with 'p_light' structure in former C++ version of CPack,
- * then version for communicating with C++ libraries, more recently (10/2014) for
- * sending info to matlab code, and now (3/2015) to implement Orick's methods
- * using calls sparse matrix solvers via C++ code.
+ * History: started with 'p_light' structure in former C++ version 
+ * of CPack, then version for communicating with C++ libraries, more 
+ * recently (10/2014) for sending info to matlab code, and  
+ * (3/2015) to implement Orick's methods using calls sparse matrix 
+ * solvers via C++ code. Unfortunately, my C++ calls are not working
+ * (2021). In converting to DCEL structures, I have removed the
+ * reading/writing of files in packLite form.
  * 
  * @author kens
  * 
  */
 public class PackLite {
 
-	public PackData parent; // may be null
+	private static final long serialVersionUID = 1L;
+
+	public PackData parent; 
 	public int hes; // geometry (generally inherited from parent)
 	public int checkCount; // used as weak check against potential parent
 	public int vertCount; // total of local indices, contiguous 1 ... vertCount
@@ -134,296 +131,109 @@ public class PackLite {
 		}
 	}
 
-	public PackLite(PackData p, NodeLink int_V) throws MiscException {
-		parent = p;
-		hes = 0;
-		if (p != null)
-			hes = p.hes;
-		counts = new int[21];
-		vertCount = intVertCount = vCount = bdryCount = flowerCount = aimCount = invDistCount = 0;
-		varIndices = v2parent = parent2v = aimIndices = null;
-		radii = aims = centerRe = centerIm= null;
-		invDistEdges = null;
-		invDistLink = null;
-		invDistances = null;
-		centers = null;
-		flowerHeads = null;
-		generations = null;
-		if (parent != null) {
-			createFrom(parent,false,int_V,0,0);
-		}
-	}
-
 	/**
 	 * Populate from PackData 'p'.
 	 * 
-	 * @param p
-	 *            PackData
+	 * @param p PackData
 	 * @return vertCount or 0 on error
 	 */
-	public int createFrom(PackData p) throws MiscException {
-		NodeLink intV = new NodeLink(p, "i");
-		return createFrom(p, false, intV, 0, 0);
+	public int createFrom(PackData p) {
+		return createFrom(p,0);
 	}
 
 	/**
-	 * Create PackLite from PackData p, core vertices intV, alpha = alp,
-	 * gamma=gam. If 'addIdeals' is true, then add ideal vertices to all
-	 * boundary components except outside --- try to identify the outside by
-	 * setting gam.
-	 * 
-	 * Here we re-index to vertices so the interior come first (starting with
-	 * alp) and the bdry come at the end, in counterclockwise order, starting
-	 * with gam.
-	 * 
-	 * If this is a sphere, then we choose a face containing gam and put list
-	 * its vertices (clockwise order) as the last 3 vertices. These may be
-	 * treated as 3 bdry vertices in applying Orick's algorithm.
+	 * Create PackLite from PackData p with 'alp' as 
+	 * suggested alpha vertex. The packing must be simply
+	 * connected. If a sphere, we puncture a face far
+	 * from alpha to create a faux bdry. We re-index 
+	 * vertices so the interior come first (starting with 
+	 * alp) and the bdry comes at the end, in 
+	 * counterclockwise order, starting with gam.
 	 * 
 	 * @param p PackData
-	 * @param addIdeals boolean: if true, we add ideal vertices
-	 * @param intV NodeLink
 	 * @param alp int, suggested alpha
-	 * @param gam int, suggested gamma
-	 * @return PackLite
-	 * @throws MiscException
+	 * @return int, 0 on error
 	 */
-	public int createFrom(PackData packData,boolean addIdeals,
-			NodeLink intV,int alp,int gam) throws MiscException {
+	public int createFrom(PackData packData,int alp) {
 		
-		NodeLink intlist=null;
-		if (intV==null || intV.size()==0) // default to interior vertices
-			intlist=new NodeLink(packData,"i");
-		else 
-			intlist=intV;
-		
-		if (alp==0)
-			alp=packData.alpha;
-		if (gam==0)
-			gam=packData.gamma;
-		
-		// task 1: ------ identify "bdry", "interior" 
-		int []util=new int[packData.nodeCount+1];
-		Iterator<Integer> iV=intlist.iterator();
-		while (iV.hasNext()) {
-			int v=iV.next();
-			util[v]=-v; // negative if in 'intV'
-			// mark nghbs of 'intV'
-			for (int j=0;j<(packData.countFaces(v)+packData.getBdryFlag(v));j++) {
-				int k=packData.kData[v].flower[j];
-				if (util[k]==0)
-					util[k]=k; // positive (at least temporarily)
-			}
+		if (!packData.isSimplyConnected()) {
+			CirclePack.cpb.errMsg(
+					"Can't create 'PackLite', as packing is not "+
+							"simply connected");
+			return 0;
 		}
 		
-		PackData p=packData;
+		// work with copy so 'packData' doesn't get changed
+		PackData p=packData.copyPackTo();
+		p.setAlpha(alp);
+		alp=p.alpha;
+		int gam=0;
 		
-		// to avoid changing 'packData', may need copy if we 'cookie' or 'add_ideal' is needed
-		boolean mustcookie=false; // are there any vertices not in or next to interior?
-		for (int i=1;(i<=packData.nodeCount && !mustcookie);i++)
-			if (util[i]==0)
-				mustcookie=true;
+		if (p.packDCEL.redChain==null) { // sphere?
+			gam=p.antipodal_vert(alp);
+			dcel.Face fauxface=p.packDCEL.vertices[gam].halfedge.face;
+			p.puncture_face(fauxface.faceIndx);
+		}
 
-		if (mustcookie || p.getBdryCompCount()>=2) // create new packing
-			p=packData.copyPackTo();
-		
-		// now work with p (which is typically just packData itself)
-  	  	int []new2old=null;
+		// prune to ensure every bdry has an interior nghb.
+		int rslt=CombDCEL.pruneDCEL(p.packDCEL);
+		packData.vertexMap=null;
+		if (rslt>0) { 
+			p.packDCEL.fixDCEL_raw(p);
+			packData.vertexMap=p.packDCEL.oldNew;
+			alp=p.packDCEL.alpha.origin.vertIndx;
+			gam=p.packDCEL.redChain.myEdge.origin.vertIndx;
+		}
 
-		// alp not in 'intV'?
-		if (alp<1 || alp>p.nodeCount || util[alp]>=0) {
-			alp=intlist.get(0);
-		}
-		p.alpha=alp;
-		
-		// gam not nghb of 'intV'?
-		if (util[gam]<=0) {
-			gam=p.bdryStarts[1]; 
-		}
-  	  	int newGam=gam;
-  	  	int newAlp=alp;
-  	  	
-		// mark all nghbs of intV as poison
-  	  	p.poisonVerts=new NodeLink(p);
-		for (int v=1;v<=p.nodeCount;v++)
-			if (util[v]>0)
-				p.poisonVerts.add(v);
-		
-		// need to cookie? (avoid this if possible)
-		boolean okay=false;
-		if (mustcookie && p.poisonVerts.size()>0) {
-  	  		CookieMonster cM=null;
-  	  		try {
-  	  			cM=new CookieMonster(p,"P");
-  	  			int outcome=cM.goCookie();
-  	  			if (outcome>0) { // success
-  	  	  			new2old=cM.new2old;
-  	  	  			p=cM.getPackData();
-  	  	  			newGam=p.vertexMap.findV(newGam);
-  	  	  			newAlp=p.vertexMap.findV(newAlp);
-  	  	  			cM=null;
-  	  	  			okay=true;
-  	  			}
-  	  			else if (outcome<0) 
-  	  				throw new ParserException();
-  	  			// else if outcome==0, no change in packing
-  	  		} catch (Exception ex) {
-  	  			CirclePack.cpb.errMsg("cookie failed in 'writeLite'; proceed with full packing");
-  	  		}
-		}
-		
-		// if we do without cookie, we still need 'new2old', so set it to identity
-		if (!okay) { 
-  			new2old=new int[p.nodeCount+1];
-  			for (int ii=1;ii<=p.nodeCount;ii++)
-  				new2old[ii]=ii; // need this later
-  	  		if (newGam<=0 || newGam>p.nodeCount ||
-  	  				!p.isBdry(newGam))
-  	  			newGam=p.bdryStarts[1];
-  	  		if (newAlp<=0 || newAlp>p.nodeCount ||
-  	  				p.isBdry(newAlp)) {
-  	  			p.chooseAlpha();
-  	  			newAlp=p.alpha;
-  	  		}
-  	  		
-  		}
-  	  	
-  	  	// arrange for 'gam' to be in first bdry component
-  	  	if (p.getBdryCompCount()>0) {
-  	  		int gamBdry=1;
-  	  		if (newGam<1 || newGam>p.nodeCount)
-  	  			newGam=p.bdryStarts[1];
-  	  		else {
-  	  			gamBdry=p.whichBdryComp(newGam);
-  	  			if (gamBdry<0)
-  	  				newGam=p.bdryStarts[1];
-  	  			else if (gamBdry>1) {
-  	  				int holdw=p.bdryStarts[1];
-  	  				p.bdryStarts[1]=newGam;
-  	  				p.bdryStarts[gamBdry]=holdw;
-  	  			}
-  	  			else {
-  	  				p.bdryStarts[1]=newGam;
-  	  			}
-  	  	  	}
-		}
-  	  	
-  	  	// add ideal to all other bdy comps, if there are any
-  	  	int idealVertCount=0;
-  	  	if (addIdeals && p.getBdryCompCount()>=2) {
-  	  		NodeLink bl=new NodeLink(p);
-  	  		for (int b=2;b<=p.getBdryCompCount();b++)
-  	  			bl.add(p.bdryStarts[b]);
-  	  		idealVertCount=p.add_ideal(bl);
+		// 'new2old' is needed later
+  	  	int []new2old=new int[p.nodeCount+1];
+  	  	if (packData.vertexMap==null) {
+			for (int ii=1;ii<=p.nodeCount;ii++)
+  	  			new2old[ii]=ii; 
   	  	}
-		
-  	  	// check alpha
-  	  	if (newAlp<1)
-  	  		p.chooseAlpha();
+  	  	else {
+  	  		for (int ii=1;ii<=p.nodeCount;ii++) 
+  	  			new2old[ii]=packData.vertexMap.findW(ii);
+  	  	}
 
-		// task 2: ------------------ re-index, counts ------------------------------
-  	  	// now work entirely in new packing: assume 'intlist' is now all interiors
-  	  	
-		int []p_Indices=new int[p.nodeCount+1];
-		int []newIndices=new int[p.nodeCount+1];
-		util=new int[p.nodeCount+1];
+		// re-index, set counts 
+		int[] p_Indices=new int[p.nodeCount+1];
+		int[] newIndices=new int[p.nodeCount+1];
+		int[] util=new int[p.nodeCount+1];
 		for (int v=1;v<=p.nodeCount;v++) {
 			if (!p.isBdry(v))
 				util[v]=-v; // negative at interior
 			else
 				util[v]=v;
 		}
-		int newIndx=1;
+		int newIndx=0;
 		
 		// get all interiors, alpha first
-		if (util[p.alpha]<0) {
-			newIndices[p.alpha]=newIndx;
-			p_Indices[newIndx++]=p.alpha;
-			util[p.alpha]=0; // so we don't repeat it
-		}
-		for (int v=1;v<=p.nodeCount;v++)
+		newIndices[alp]=newIndx;
+		p_Indices[newIndx++]=alp;
+		util[alp]=0; // so we don't repeat it
+		for (int v=1;v<=p.nodeCount;v++) {
 			if (util[v]<0) {
-				newIndices[v]=newIndx;
-				p_Indices[newIndx++]=v;
+				newIndices[v]=++newIndx;
+				p_Indices[newIndx]=v;
 			}
-		
-		// get the count of interiors; needed, e.g., for Tutte embedding
-		intVertCount=newIndx-1;
-		
-		// if no boundary, p should be a sphere. We want to list 3 verts of 
-		//     one face in, clw order, as last three indices --- in Orick's approach, 
-		//      these may be treated as bdry.
-		if (intVertCount==p.nodeCount) {
-			p.setBdryCompCount(0);
-			int b1=-1;
-			int b2=-1;
-			int b3=-1;
-			
-			// try to use clw verts of face containing gam as boundary
-			if (newGam>0 && newGam<=p.nodeCount && p.nghb(newGam, newAlp)<0) {
-				b1=newGam;
-				b2=p.kData[newGam].flower[1];
-				b3=p.kData[newGam].flower[0];
-			}
-			else { // use antipodal vert
-				b1=p.antipodal_vert(p.alpha);
-				b2=p.kData[b1].flower[1];
-				b3=p.kData[b1].flower[0];
-			}
-
-			// swap b1 and p.nodeCount-2
-			int new1=newIndices[b1];
-			int old1=p_Indices[p.nodeCount-2];
-			p_Indices[new1]=old1;
-			newIndices[old1]=new1;
-			p_Indices[p.nodeCount-2]=b1;
-			newIndices[b1]=p.nodeCount-2;
-
-			// swap b2 and p.nodeCount-1
-			new1=newIndices[b2];
-			old1=p_Indices[p.nodeCount-1];
-			p_Indices[new1]=old1;
-			newIndices[old1]=new1;
-			p_Indices[p.nodeCount-1]=b2;
-			newIndices[b2]=p.nodeCount-1;
-
-			// swap b3 and p.nodeCount
-			new1=newIndices[b3];
-			old1=p_Indices[p.nodeCount];
-			p_Indices[new1]=old1;
-			newIndices[old1]=new1;
-			p_Indices[p.nodeCount]=b3;
-			newIndices[b3]=p.nodeCount;
-			vertCount=p.nodeCount;
-			intVertCount=p.nodeCount-3;
-			bdryCount=3;
 		}
-		// now boundary component (should be just one) in cclw order
-		else { 
-			for (int b=1;b<=p.getBdryCompCount();b++) {
-				int w=p.bdryStarts[b];
-				int stopw=p.kData[w].flower[p.countFaces(w)]; // upstream nghb
-				if (util[w]>0) {
-					newIndices[w]=newIndx;
-					p_Indices[newIndx++]=w;
-					util[w]=0; // so this one won't be duplicated
-				}
-				while (w!=stopw) {
-					w=p.kData[w].flower[0];
-					if (util[w]>0) {
-						newIndices[w]=newIndx;
-						p_Indices[newIndx++]=w;
-						util[w]=0; // so this one won't be duplicated
-					}
-				}
-			}
-			vertCount=newIndx-1;
-			bdryCount=vertCount-intVertCount;
-		}
-
-		// task 3: ------------------------ store the info ----------------------------
 		
-		// various counts
+		// save count of interiors; needed, e.g., for Tutte embedding
+		intVertCount=newIndx;
+		
+		// now the cclw bdry
+		RedHEdge rtrace=p.packDCEL.redChain;
+		do {
+			int w=rtrace.myEdge.origin.vertIndx;
+			newIndices[w]=++newIndx;
+			p_Indices[newIndx]=w;
+			rtrace=rtrace.nextRed;
+		} while (rtrace!=p.packDCEL.redChain);
+		vertCount=newIndx;
+		bdryCount=vertCount-intVertCount;
+
+		// store the info; indexing is from 0
 		vCount=0;
 		flowerCount=0;
 		aimCount=0;
@@ -431,26 +241,26 @@ public class PackLite {
 		double aim=-1.0;
 		for (int n=1;n<=vertCount;n++) {
 			int v=p_Indices[n];
-			flowerCount += p.countFaces(v)+3;
+			flowerCount += p.countFaces(v)+3; 
 			
-			// is this a variable vertex
+			// is this a variable vertex (int or bdry)
 			if ((aim=p.getAim(v))>=0.0) {
+				vCount++; // list as variable vert
 
-				// list as variable vert
-				vCount++;
-				
 				// is aim also non-default? (non-default 'aims' indexed from 0)
 				if (p.isBdry(v) || Math.abs(aim-2.0*Math.PI)>.0000001) 
 					aimCount++;
 			}
 
-			// does it have new inversive distances? (only pairs (v,w) with w>v) 
-			if (p.overlapStatus && p.kData[v].invDist!=null) {
-				for (int jj=0;jj<(p.countFaces(v)+p.getBdryFlag(v));jj++) {
-					int w=p.kData[v].flower[jj];
-					if (w>v && p.getInvDist(v,p.kData[v].flower[jj])!=1.0)
-						invDistCount++;
-				}
+			// non-trivial inversive distances? ((v,w) only with w>v)
+			Vertex vert=p.packDCEL.vertices[v];
+			HalfLink spokes=vert.getSpokes(null);
+			Iterator<HalfEdge> sis=spokes.iterator();
+			while (sis.hasNext()) {
+				HalfEdge he=sis.next();
+				double ivd=he.getInvDist();
+				if (ivd!=1.0 && he.twin.origin.vertIndx>v)
+					invDistCount++;
 			}
 		} // done with counts
 		
@@ -467,25 +277,26 @@ public class PackLite {
 		int iDtick=0;
 		for (int n=1;n<=vertCount;n++) {
 			int v=p_Indices[n];
+			Vertex vert=p.packDCEL.vertices[v];
+			HalfLink spokes=vert.getSpokes(null);
+			Iterator<HalfEdge> sis=spokes.iterator();
+			while (sis.hasNext()) {
+				HalfEdge he=sis.next();
+				double ivd=he.getInvDist();
+				if (ivd!=1.0 && he.twin.origin.vertIndx>v) {
+					invDistLink.add(new EdgeSimple(v,he.twin.origin.vertIndx));
+					invDistances[iDtick++]=ivd;
+				}
+			}
 
 			// variable vertex
 			if ((aim=p.getAim(v))>=0.0) {
 				varIndices[vtick++]=n;
 				
-				// is aim also non-default? (non-default 'aims' indexed from 0)
-				if (aimCount>0 && (p.isBdry(v) || Math.abs(aim-2.0*Math.PI)>.0000001)) 
+				// is aim also non-default?
+				if (aimCount>0 && (p.isBdry(v) || 
+						Math.abs(aim-2.0*Math.PI)>.0000001)) 
 					aims[aimtick++]=aim;
-			}
-
-			// does it have new inversive distances? (only pairs (v,w) with w>v) 
-			if (invDistCount>0 && p.overlapStatus && p.kData[v].invDist!=null) {
-				for (int jj=0;jj<(p.countFaces(v)+p.getBdryFlag(v));jj++) {
-					int w=p.kData[v].flower[jj];
-					if (w>v && p.getInvDist(v,p.kData[v].flower[jj])!=1.0) {
-						invDistLink.add(new EdgeSimple(v,w));
-						invDistances[iDtick++]=p.getInvDist(v,p.kData[v].flower[jj]);
-					}
-				}
 			}
 		}
 		
@@ -500,8 +311,10 @@ public class PackLite {
 			flowers[n]=new int[vNum[n]+1];
 			flowerHeads[tick++]=n;
 			flowerHeads[tick++]=vNum[n];
-			for (int j=0;j<=p.countFaces(v);j++) {
-				flowers[n][j]=flowerHeads[tick++]=newIndices[p.kData[v].flower[j]];
+			int[] flower=p.getFlower(v);
+			for (int j=0;j<=vNum[n];j++) {
+				flowers[n][j]=flowerHeads[tick++]=
+						newIndices[flower[j]];
 			}
 		}
 		
@@ -510,42 +323,31 @@ public class PackLite {
 		parent2v=new int[packData.nodeCount+1];
 		tick=1;
 		for (int n=1;n<=vertCount;n++) {
-			int px=p_Indices[n];
-			int overNC=px-p.nodeCount+idealVertCount;
-			
-			// Caution: added ideal verts don't have corresponding verts in the parent
-			if (overNC>0)
-				v2parent[tick++]=-overNC; // store negative of 'j' if this is jth added ideal
-			else {
-				int n2o=new2old[px];
-				v2parent[tick]=n2o; // all the way back to original parent (not just p)
-				parent2v[n2o]=tick;
-				tick++;
-			}
+			int px=p_Indices[n]; // index in p
+			int n2o=new2old[px]; // index in packData
+			v2parent[n]=n2o; 
+			parent2v[n2o]=n;
 		}
 		
 		// **** radii/centers, indexed from 1
 		radii=new double[vertCount+1];
 		centers=new Complex[vertCount+1];
-		tick=1;
 		for (int n=1;n<=vertCount;n++) {
 			int v=p_Indices[n];
-			radii[tick]=p.getRadius(v);
-			centers[tick]=p.getCenter(v);
-			tick++;
+			radii[n]=p.getRadius(v);
+			centers[n]=p.getCenter(v);
 		}
 		
 		return vertCount;
 	}
 
 	/**
-	 * Convert 'this' into a packing. If 'checkCount' and 'vertCount' and
-	 * 'v2parent' are okay (e.g., no added ideal verts, etc.), then we
-	 * convert back to original vertices; otherwise the packing uses the local
-	 * indices from 'this'. In either case, 'vertexMap' maps local to the
-	 * 'v2parent' (when >0), e.g., when data came from a piece of another
-	 * packing or ideal verts were added.
-	 * 
+	 * Convert 'this' into a packing. Note that if 'this' was
+	 * created from 'parent', it may not reconstitute exactly.
+	 * E.g, if a sphere, we get the faux bdry, or if pruned,
+	 * it may be missing some vertices. In any case, 
+	 * 'vertexMap' maps local indexes to the 'parent' 
+	 * indices.
 	 * @return PackData or null on error
 	 */
 	public PackData convertTo() {
@@ -555,106 +357,83 @@ public class PackLite {
 					.errMsg("Conversion of PackLite failed: missing data");
 			return null;
 		}
+		
+		int[] indx=new int[vertCount+1];
+		for (int ii=1;ii<=vertCount;ii++)
+			indx[ii]=ii;
+		
+		if (parent.nodeCount==vertCount)
+			for (int ii=1;ii<=vertCount;ii++)
+				indx[ii]=v2parent[ii];
 
-		PackData p = new PackData((CPScreen) null);
-		p.nodeCount = vertCount;
-		p.hes = hes;
-		p.kData = new KData[vertCount + 1];
-		p.rData = new RData[vertCount + 1];
-		p.vertexMap = new VertexMap();
-
-		// set up veconversion default=identity
-		int[] vertConvert = new int[vertCount + 1];
-		for (int v = 1; v <= vertCount; v++)
-			vertConvert[v] = v;
-
-		// see about converting to 'origIndices'; check first
-		if (checkCount == vertCount) {
-			int hit = -1;
-			int[] ck = new int[vertCount + 1];
-			for (int v = 1; (v <= vertCount && hit < 0); v++) {
-				if (v2parent[v] < 1 || v2parent[v] > vertCount
-						|| ck[v2parent[v]] != 0)
-					hit = 0;
-				ck[v2parent[v]] = v;
-			}
-			if (hit < 0) { // legal indices, no ideals, no redundancies
-				vertConvert = v2parent;
-			}
-		}
-
-		p.alpha = vertConvert[1];
-		if (intVertCount < vertCount)
-			p.gamma = vertConvert[intVertCount + 1];
-		else
-			p.gamma = vertConvert[vertCount];
-
-		// store the flower info
-		int tick = 0;
+		// build the vertex bouquet
+		int[][] bouquet=new int[vertCount+1][];
+		int tick=0;
 		for (int vv = 1; vv <= vertCount; vv++) {
-			int v = vertConvert[vv];
-			p.kData[v] = new KData();
-			p.rData[v] = new RData();
-			if (flowerHeads[tick++] != vv) {
-				// this is an error;
-				continue;
-			}
-			int num = p.kData[v].num = flowerHeads[tick++];
-			p.kData[v].flower = new int[num + 1];
-			for (int j = 0; j <= num; j++)
-				p.kData[v].flower[j] = vertConvert[flowerHeads[tick++]];
+			int v=indx[vv];
+			int num=flowerHeads[tick++];
+			int[] flower=new int[num+1];
+			for (int j=0;j<=num;j++)
+				flower[j]=indx[flowerHeads[tick++]];
+			bouquet[v]=flower;
 		}
+
+		PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet);
+		PackData p = new PackData((CPScreen) null);
+		pdcel.fixDCEL_raw(p);
+		p.hes = parent.hes;
+		p.setAlpha(indx[1]);
+		p.setGamma(indx[intVertCount+1]);
+
+		// set up vertexMap: 
+		p.vertexMap = new VertexMap();
+		for (int v=1;v<=vertCount;v++) 
+			p.vertexMap.add(new EdgeSimple(v,indx[v]));
 
 		// some default stuff
 		double rad = 0.025;
 		if (hes < 0)
 			rad = 1.0 - Math.exp(-1.0);
 		for (int v = 1; v <= vertCount; v++) {
-			p.setRadius(v,rad);
-			p.setCenter(v,new Complex(0.0));
+			p.setRadius(indx[v],rad);
+			p.setCenter(indx[v],new Complex(0.0));
 		}
 
 		// set vertexMap (whether we converted back to original or not)
 		for (int v = 1; v <= vertCount; v++) {
-			int oldv = v2parent[v];
-			// added ideal vertices are negative, don't put in map
-			if (oldv > 0)
-				p.vertexMap.add(new EdgeSimple(v, oldv));
+			p.vertexMap.add(new EdgeSimple(v, indx[v]));
 		}
 
 		// store radii
 		if (radii != null) {
 			for (int v = 1; v <= vertCount; v++)
-				p.setRadius(vertConvert[v],radii[v]);
+				p.setRadius(indx[v],radii[v]);
 		}
 
 		// store centers
 		if (centers != null) {
 			for (int v = 1; v <= vertCount; v++)
-				p.setCenter(vertConvert[v],new Complex(centers[v]));
-		}
-
-		// process packing, drawingorder and complex_count
-		if (p.setCombinatorics() <= 0) {
-			throw new DataException(
-					"combinatoric problems with conversion of PackLite");
+				p.setCenter(indx[v],new Complex(centers[v]));
 		}
 
 		// nondefault aims
 		p.set_aim_default();
 		if (aimCount > 0) {
 			for (int i = 0; i < aimCount; i++)
-				p.setAim(vertConvert[aimIndices[i]],aims[i]);
+				p.setAim(indx[aimIndices[i]],aims[i]);
 		}
 
 		if (invDistCount > 0 && invDistLink != null) {
-			p.alloc_overlaps();
 			tick = 0;
 			Iterator<EdgeSimple> iL = invDistLink.iterator();
 			while (tick < invDistCount && iL.hasNext()) {
-				EdgeSimple edge = iL.next();
-				p.set_single_invDist(vertConvert[edge.v],vertConvert[edge.w],
-						invDistances[tick++]);
+				EdgeSimple es=iL.next();
+				es.v=indx[es.v];
+				es.w=indx[es.w];
+				HalfEdge edge=p.packDCEL.findHalfEdge(es);
+				if (edge==null) 
+					throw new DataException("failed to find edge "+es);
+				edge.setInvDist(invDistances[tick++]);
 			}
 		}
 

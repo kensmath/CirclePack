@@ -1,23 +1,17 @@
 package branching;
 
-import java.awt.Color;
 import java.util.Iterator;
 import java.util.Vector;
 
 import dcel.HalfEdge;
-import deBugging.DebugHelp;
-import exceptions.CombException;
 import exceptions.ParserException;
 import ftnTheory.GenModBranching;
-import komplex.CookieMonster;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
-import listManip.NodeLink;
 import listManip.VertexMap;
 import math.Mobius;
 import packing.PackData;
-import util.UtilPacket;
 
 /**
  * The "quad" branching was intended to branching that occurs 

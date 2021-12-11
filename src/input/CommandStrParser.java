@@ -42,7 +42,6 @@ import dcel.RawDCEL;
 import dcel.RedHEdge;
 import dcel.Vertex;
 import deBugging.DCELdebug;
-import deBugging.LayoutBugs;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.DataException;
@@ -89,7 +88,6 @@ import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.NSpole;
 import geometry.SphericalMath;
-import komplex.CookieMonster;
 import komplex.DualGraph;
 import komplex.EdgeSimple;
 import komplex.Embedder;
@@ -564,66 +562,6 @@ public class CommandStrParser {
     	  return 1;
       }
 			  
-	  // ====== readLite =========
-	  if (cmd.startsWith("readL") || cmd.startsWith("infile_readL") ||
-			  cmd.startsWith("ReadL")) {
-
-		  int sz=items.size();
-		  if (sz==0) return 0;
-    	  boolean script_flag=false;
-    	  if (cmd.charAt(0)=='i')  // catch "infile"
-    		  script_flag=true;
-    	  if (sz>1 && items.get(0).equals("-s")) {
-    		  items.remove(0);
-    		  script_flag=true;
-    	  }
-
-		  String filename=StringUtil.reconItem(items);
-		  BufferedReader fp=null;
-		  
-		  try {
-			  File dir = CPFileManager.PackingDirectory;
-			  if (cmd.charAt(0) == 'R') {
-				  if (filename.startsWith("~/"))
-					  filename = new String(CPFileManager.HomeDirectory
-							  + File.separator + filename.substring(2));
-				  dir = new File(filename);
-				  filename = dir.getName();
-				  dir = new File(dir.getParent());
-			  }
-			  fp = CPFileManager.openReadFP(dir, filename, script_flag);
-			  if (fp == null) {
-				  throw new InOutException("failed to open " + filename
-						  + ", directory " + dir.toString());
-			  }
-			  PackData p_from_lite= PackData.readLite(fp, filename);
-			  if (p_from_lite!=null) {
-				  fp.close();
-				  p_from_lite.packNum=packData.packNum;
-				  p_from_lite.cpScreen=packData.cpScreen;
-				  packData=p_from_lite;
-				  packData.cpScreen.setPackData(packData);
-				  packData.cpScreen.setGeometry(packData.hes);
-				  packData.status=true;
-				  packData.setName(filename);
-				  if (packData.getDispOptions != null)
-					  CommandStrParser.jexecute(packData, "disp -wr");
-				  return packData.nodeCount;
-			  }
-				
-			  fp.close();
-			  return 0;
-		  } catch (IOException iox) {
-			  try {
-				  if (fp != null)
-					  fp.close();
-			  } catch (IOException e) {
-			  }
-			  throw new ParserException("trying to read PackLite " + filename + ": "
-					  + iox.getMessage());
-		  }
-	  }		  
-		  
 	  // ====== read === infile_read ===== Read ===== 
 	  else if (cmd.startsWith("read") || cmd.startsWith("infile_read") || 
 			  cmd.startsWith("Read")) { // read a packing file
@@ -1504,11 +1442,6 @@ public class CommandStrParser {
 			  }
 			  
 	    	  switch(flag) {
-	    	  case 'd': // face drawing order
-	    	  {
-	    		  LayoutBugs.log_faceOrder(packData);
-	    		  return 1;
-	    	  }
 	    	  case 's': // print stackbox sizes
 	    	  {
 	    		  System.err.println("Here's the current script layout info:");
@@ -2077,7 +2010,6 @@ public class CommandStrParser {
 	  case 'g': // fall through
 	  case 'G': 
 	  {
-		  
 		  // flags: s=start, r=restart, c=continue, g=get rad/cent, q=quality
 		  if (cmd.startsWith("GOpack")) {
 			  
@@ -3341,19 +3273,10 @@ public class CommandStrParser {
 					  if (randPack==null) {
 						  throw new CombException("'tri_to_Complex' failed");
 					  }
-					  randPack.setCombinatorics();
 
-					  // use 'cookie' to prune
-					  CookieMonster cM=null;
-					  int outcome=-1;
-					  cM=new CookieMonster(randPack,"b");
-					  outcome=cM.goCookie();
-					  
-					  // got new packing? swap it out
-					  if (outcome>0) {
-						  randPack=cM.getPackData();
-					  }
-								
+					  // "prune" the packing
+					  CombDCEL.pruneDCEL(randPack.packDCEL);
+					  randPack.packDCEL.fixDCEL_raw(randPack);
 					  randPack.poisonVerts=null;
 					  randPack.poisonEdges=null;
 				  } catch (Exception ex) {
@@ -6543,7 +6466,7 @@ public class CommandStrParser {
 	    	  // from that. The next edge itself is stored in 'elist'
 	    	  // in case this is called again.
 
-    		  if (pdc!=null) { // packData.elist;
+    		  if (fstr.charAt(0)=='h') { 
     			  HalfLink hlink=new HalfLink(packData,flagSegs.get(0));
     			  HalfEdge flipped=null;
     			  HalfEdge he=hlink.get(0); // only one edge
@@ -6658,7 +6581,7 @@ public class CommandStrParser {
 	    		  }
 	    	  }  
 	    		
-	    	  // done building list, so flip (DCEL or traditional)
+	    	  // done building list, so flip
 	    	  return packData.flipList(elink);
 	      }
 	      
@@ -6775,7 +6698,15 @@ public class CommandStrParser {
 	      
 	      // ========= gen_cut =========
 	      else if (cmd.startsWith("gen_cut")) {
-	    	  if (packData.locks!=0 || !packData.isSimplyConnected()) {
+	    	  
+	    	  // TODO: Need to recode this; not sure what behaviour
+	    	  //   was intended, but some of the old 'RedChainer'
+	    	  //   code has not been updated.
+	    	  
+	    	  throw new ParserException(
+	    			  "'gen_cut' call is no longer implemented");
+/*
+ 	    	  if (packData.locks!=0 || !packData.isSimplyConnected()) {
 	    		  throw new ParserException(
 	    				  "packing must be simply connected");
 	    	  }
@@ -6801,6 +6732,7 @@ public class CommandStrParser {
 			  CirclePack.cpb.msg("gen_cut: the new packing has "+
 					  pd.nodeCount+" vertices");
 	    	  return pd.nodeCount;
+*/
 	      }
 	      
 	      // =========== gen_mark ==========
@@ -7645,7 +7577,7 @@ public class CommandStrParser {
 	    					  packData.setVertUtil(v,0);
 	    				  packData.setVertUtil(V,1);
 	    				  UtilPacket uP=new UtilPacket();
-	    				  int []gens=packData.label_generations(-1,uP);
+	    				  int []gens=packData.packDCEL.label_generations(-1,uP);
 	    				  for (int v=1;v<=packData.nodeCount;v++) {
 	    					  packData.setVertMark(v,gens[v]);
 	    					  count++;
@@ -8120,7 +8052,7 @@ public class CommandStrParser {
 	      else if (cmd.startsWith("prun")) {
 	    	  int rslt=CombDCEL.pruneDCEL(packData.packDCEL);
 	    	  if (rslt>0) {
-	    		  packData.attachDCEL(packData.packDCEL);
+	    		  packData.packDCEL.fixDCEL_raw(packData);
 	    		  return rslt;
 	    	  }
 	    	  return 1;
@@ -9424,8 +9356,7 @@ public class CommandStrParser {
 	    		  items=flagSegs.get(0);
 	    		  String str=(String)items.remove(0);
 
-	    		  // do we need to look for a file of xyz values?
-	    		  // form -x <filename>
+	    		  // look for a file of xyz values; must start "-x <name>"
 	    		  if (str.startsWith("-x")) {
 	    			  StringBuilder strbld=new StringBuilder();
 	    			  int rwflag=CPFileManager.trailingFile(flagSegs,strbld);
@@ -9476,7 +9407,8 @@ public class CommandStrParser {
 	    			  
     				  while (eis.hasNext()) {
     					  HalfEdge he=packData.packDCEL.findHalfEdge(eis.next());
-    					  he.setInvDist(packData.comp_inv_dist(edge.v,edge.w));
+    					  he.setInvDist(packData.comp_inv_dist(
+    							  he.origin.vertIndx,he.twin.origin.vertIndx));
     					  count++;
     				  }
 	    			  packData.fillcurves();
@@ -9545,31 +9477,38 @@ public class CommandStrParser {
 	    	  // OBE. use 'set_invdist' after adjusting 'invDist', if given
 	    	  if (cmd.startsWith("ove")) { 
 	    		  
-	    		  // if no segments, then reset to default
+	    		  // if no segments, exception
 	    		  if (flagSegs==null || flagSegs.size()==0) { 
 	    			  throw new ParserException(
-	    					  "usage: 'set_overlaps' has not edges specified");
+	    					  "usage: 'set_overlaps' has no edges specified");
 	    		  }
 	    		  
 	    		  items=flagSegs.get(0);
+    			  StringBuilder strbld=new StringBuilder("set_invdist ");
 	    		  
 	    		  // if a flag, just pass to 'set_invdist'
-	    		  if (StringUtil.isFlag(items.get(0)))
-    				  return CommandStrParser.jexecute(packData,
-    						  StringUtil.reconstitute(flagSegs));
+	    		  if (StringUtil.isFlag(items.get(0))) {
+	    			  strbld.append(StringUtil.reconstitute(flagSegs));
+	    		  }
 	    		  
 	    		  // otherwise look for <x> or <*x> format
-	    		  String str=items.get(0);
-	    		  double invDist=1.0; 
-	     		  if (str.charAt(0)=='*') { // indicates inv_dist in (1, infty)
-	     			  String newstr=str.substring(1,str.length()); // remove '*'
-	     			  items.insertElementAt(newstr,0);
-	     			  items.remove(1);
-    				  return CommandStrParser.jexecute(packData,
-    						  StringUtil.reconstitute(flagSegs));
-	     		  }
-				  return CommandStrParser.jexecute(packData,
-						  StringUtil.reconstitute(flagSegs));
+	    		  else {
+	    			  String str=items.get(0);
+	    			  if (str.charAt(0)=='*') { // indicates inv_dist in (1, infty)
+	    				  String newstr=str.substring(1,str.length()); // remove '*'
+	    				  items.remove(0);
+	    				  Double invdist=Double.parseDouble(newstr);
+	    				  strbld.append(invdist.toString());
+	    				  strbld.append(StringUtil.reconstitute(flagSegs));
+	    			  }
+	    			  else {
+	    				  String number=items.remove(0);
+	    				  Double costheta=Math.cos(Double.parseDouble(number)*Math.PI);
+	    				  strbld.append(costheta.toString()+" ");
+	    				  strbld.append(StringUtil.reconstitute(flagSegs));
+	    			  }
+	    		  }
+				  return CommandStrParser.jexecute(packData,strbld.toString());
 	    	  }
 
 	    	  // ========= set_xyz =============
@@ -10583,177 +10522,7 @@ public class CommandStrParser {
     	  break;
       } // end of 'v'
       
-	  case 'w': 
-	  {
-	      // =============== writeLite ==============
-		  /**
-		   * Parse options for writing 'Lite' packings given a list of of
-		   * vertices defining some patch of interest. 
-		   * 
-		   * Default is 'rz'. Note: all content options in first continuous
-		   * string directly after '-'. If 'prePath' is true, then prepend path
-		   * (i.e., not default).
-		   * 
-		   * r radii (g needed) 
-		   * z centers 
-		   * i non-default inv_dist and aims 
-		   * b add ideal verts to all but outer bdry component
-		   * 
-		   * -v {v..} core vertices (else default to interior verts)
-		   * -A {a} suggested alpha vert
-		   * -G {g} suggested gamma vert 
-		   * -[fs] {filename} 
-		   */
-	      if ((cmd.startsWith("writeL") || cmd.startsWith("WriteL")) && !cmd.contains("_")) {
-	      	  int act=00030;  // bit-encoded write flags
-	      	  String flagstr=null;
-//	      	  boolean append_flag=false; // no append option for now
-	      	  boolean script_flag=false;
-	      	  int alp=-1; // user's alpha choice
-	      	  int gam=-1; // user's gamma choice
-	      	  NodeLink intV=null;
-	      	  
-	      	  // Get and remove trailing filename as first step
-	      	  StringBuilder strbld=new StringBuilder();
-	      	  int fra=CPFileManager.trailingFile(flagSegs, strbld);
-	      	  if (fra==0)
-	      		  throw new ParserException("No filename in 'writeLite'");
-	      	  String fname=strbld.toString();
-	      	  
-	      	  // process just the first flag sequence
-	      	  if (flagSegs!=null && flagSegs.size()>0) {
-	      		  items=flagSegs.remove(0);
-
-	      		  // string of options should be first flag string
-	      		  
-	      		  // if not flag string, then should get list of vertices
-	     		  if (!StringUtil.isFlag(flagstr=items.firstElement())) {
-	     			  flagstr="rz"; // default to radii/centers
-     				  intV=new NodeLink(packData,items);
-	     		  }
-	     		  
-	     		  // else, -A {alpha}, -G {gamma}, -v {v..}, or options 
-	     		  else {
-	     			  String fstr=items.remove(0).substring(1);
-	     			  if (fstr.charAt(0)=='A') { // alpha?
-	     				  try {
-	     					  alp=Integer.parseInt(items.remove(0));
-	     				  } catch(Exception ex) {
-	     					  throw new ParserException("usage -A {alpha}");
-	     				  }
-	     			  }
-	     			  else if (fstr.charAt(0)=='G') { // gamma?
-	     				  try {
-	     					  gam=Integer.parseInt(items.remove(0));
-	     				  } catch(Exception ex) {
-	     					  throw new ParserException("usage -G {gamma}");
-	     				  }
-	     			  }
-	     			  else if (fstr.charAt(0)=='v') { // vertices?
-	     				  intV=new NodeLink(packData,items);
-	     			  }
-	     			  else {
-	     				  flagstr=new String(fstr);
-	     			  }
-	     		  }
-	      	  } // done looking at first flag sequence
-	      		  
-	      	  // else look for other flags, -A, -G, -f
-     		  while (flagSegs!=null && flagSegs.size()>0) {
-     			  items=flagSegs.remove(0);
-	     			  
-     			  String str=items.get(0);
-	     			  
-     			  // if not a flag, should be string of vertices
-     			  if (!StringUtil.isFlag(str)) {
-     				  intV=new NodeLink(packData,items);
-     			  }
-     			  
-     			  // is a flag
-     			  else { 
-	     			  String fstr=items.remove(0).substring(1);
-	     			  if (fstr.charAt(0)=='A') {
-	     				  try {
-	     					  alp=Integer.parseInt(items.remove(0));
-	     				  } catch(Exception ex) {
-	     					  throw new ParserException("usage -A {alpha}");
-	     				  }
-	     			  }
-	     			  else if (fstr.charAt(0)=='G') {
-	     				  try {
-	     					  gam=Integer.parseInt(items.remove(0));
-	     				  } catch(Exception ex) {
-	     					  throw new ParserException("usage -G {gamma}");
-	     				  }
-	     			  } 
-	     			  else if (fstr.charAt(0)=='v') { // vertices?
-	     				  items.remove(0);
-	     				  intV=new NodeLink(packData,items);
-	     			  }
-     			  }
-     		  }
-
-     		  // default settings
-     		  if (alp==-1)
-     			  alp=packData.getAlpha();
-     		  if (gam==-1)
-     			  gam=packData.getGamma();
-     		  if (intV==null || intV.size()==0)
-     			  intV=new NodeLink(packData,"i");
-	     		  
-     		  // parsing the options (if some were given)
-     		  if (flagstr!=null && flagstr.length()>0) { 
-     			  int len=flagstr.length();
-
-     			  // just "s"? equivalent to "rzs" 
-     			  if (len==1 && flagstr.equalsIgnoreCase("s")) {
-     				  if (cmd.charAt(0)=='W') {
-     					  CirclePack.cpb.myErrorMsg("Can't 'Write' (cap 'W') to script");
-     					  return 0;
-     				  }
-     				  script_flag=true;
-     				  act=00030;
-     			  }
-     			  
-     			  // build 'act' encoding
-     			  for(int j=0;j<len;j++) {
-     				  switch(flagstr.charAt(j)) {
-     				  case 'r': {act |= 00010;break;}
-     				  case 'z': {act |= 00020;break;}
-     				  case 'i': {act |= 00004;break;} // non-default aims/invdist
-     				  case 'b': {act |= 0400000;break;} // misc (add_ideal)
-     				  } // end of switch
-     			  } // done with 'act'
-     		  } // done with options flags
-
-     		  // now process
-   	  		  File dir=CPFileManager.PackingDirectory;
-   	   		  if (cmd.charAt(0)=='W') { // use given directory
-   	   			  if (fname.startsWith("~/")) {
-   	   				  fname=new String(CPFileManager.HomeDirectory+
-   	   						  File.separator+fname.substring(2).trim());
-   	   			  }
-   	   			  dir=new File(fname);
-   	   			  fname=dir.getName();
-   	   			  dir=new File(dir.getParent());
-   	   		  }
-   	   		  BufferedWriter fp=CPFileManager.openWriteFP(dir,false,fname,script_flag);
-   	   		  try {
-   	   			  packData.writeLite(fp,act,intV,alp,gam); // 
-   	   		  } catch(Exception ex) {
-   	   			  throw new InOutException("writeLite failed");
-   	   		  }
-   	   		  if (script_flag) { // include in script
-   	   			  CPBase.scriptManager.includeNewFile(fname);
-   	   			  CirclePack.cpb.msg("Wrote packing "+fname+" to the script");
-   	   			  return act;
-   	   		  }
-   	   		  CirclePack.cpb.msg("Wrote packing to "+dir.getPath()+
-   	   				  File.separator+fname);
-   	   		  return act;
-	      }
-	      // fall through from 'w' to 'W'
-	  }
+	  case 'w':  // fall through from 'w' to 'W'
 	  case 'W': 
 	  {  	      // =============== write ==============
 	      /**

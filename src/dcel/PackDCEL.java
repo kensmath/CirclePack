@@ -35,6 +35,7 @@ import util.ColorUtil;
 import util.DispFlags;
 import util.TriAspect;
 import util.TriData;
+import util.UtilPacket;
 
 /** 
  * The "DCEL" is a common way that computer scientists 
@@ -226,7 +227,7 @@ public class PackDCEL {
 				triData[f].radii[j]=p.getRadius(v);
 				double ivd=he.getInvDist();
 				if (ivd!=1.0) {
-					triData[f].setInvDist((j+2)%3,ivd);
+					triData[f].setInvDist(j,ivd);
 					hit=true;
 				}
 			}	
@@ -727,6 +728,67 @@ public class PackDCEL {
 		return tri_g;
 	}
 	
+
+	/** 
+	 * Return integer array with the generations of verts, 
+	 * generation "1" being those v with 'VData[].vutil' 
+	 * non-zero. Additional info is returned via 'uP'.  
+	 * @param max int, if max>0, stop at last with gen = max.
+	 * @param uP UtilPacket; instantiated by calling routine: 
+	 *    returns last vertex as 'uP.rtnFlag' and
+	 *    count of vertices as 'uP.value'.
+	 * @return int[], int[u]=generation of u; return null on error
+	 */
+	public int[] label_generations(int max, UtilPacket uP) {
+		int last_vert = vertCount;
+		int gen_count = 2;
+		int count = 0;
+
+		int[] final_list = new int[vertCount + 1];
+		NodeLink genlist = new NodeLink();
+
+		// first generation identified by nonzero utilFlag's
+		for (int i = 1; i <= vertCount; i++)
+			if (p.getVertUtil(i) != 0) {
+				final_list[i] = 1;
+				count++;
+				genlist.add(i);
+				last_vert = i;
+			}
+		int n = genlist.size();
+		// none/all vertices as seeds?
+		if (n == 0 || n == vertCount)
+			return null;
+
+		boolean hits = true;
+		int j=0;
+		while (hits && genlist.size() > 0 && (max <= 0 || gen_count <= max)) {
+			hits = false;
+			NodeLink vertlist = genlist; // process old list
+			genlist = new NodeLink(); // start new list
+			do {
+				Vertex vert=vertices[vertlist.remove(0)];
+				HalfEdge he=vert.halfedge;
+				do {
+					int w=he.twin.origin.vertIndx;
+					if (final_list[w]==0) {
+						final_list[w]=gen_count;
+						count++;
+						last_vert=w;
+						genlist.add(w);
+						hits=true;
+						he=he.prev.twin; // cclw
+					} 
+				} while (he!=vert.halfedge);
+			} while (vertlist.size() > 0);
+			gen_count++;
+		}
+		uP.rtnFlag = last_vert;
+		uP.value = (double) count;
+		return final_list;
+	}
+	  
+	
 	/**
 	 * Use 'layoutOrder' to compute the packing centers, 
 	 * laying base face first, then the rest. Note that 
@@ -743,7 +805,7 @@ public class PackDCEL {
 		boolean debug=false; // debug=true;
 	    int count=1;
 		
-	    placeFirstFace(alpha);
+	    placeFirstEdge(alpha);
 		
 		// debug=true;
 		if (debug) {
@@ -2054,6 +2116,8 @@ public class PackDCEL {
 	 */
 	public Complex[] getFaceCorners(Face face) {
 		HalfLink hlink=face.getEdges();
+		if (hlink==null || hlink.size()==0)
+			throw new CombException("face "+face+" has no edges");
 		Complex[] corners=new Complex[hlink.size()];
 		Iterator<HalfEdge> hits=hlink.iterator();
 		int tick=0;

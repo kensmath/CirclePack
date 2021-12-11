@@ -58,7 +58,7 @@ public class NodeLink extends LinkedList<Integer> {
 		super();
 		packData=p;
 		if (p!=null)
-			vCount=p.getNodeCount();
+			vCount=p.packDCEL.vertCount;
 		if (datastr!=null) addNodeLinks(datastr);
 	}
 	
@@ -66,7 +66,7 @@ public class NodeLink extends LinkedList<Integer> {
 		super();
 		packData=p;
 		if (p!=null)
-			vCount=p.getNodeCount();
+			vCount=p.packDCEL.vertCount;
 		if (n>0 && (packData==null || n<=vCount)) add(n);
 	}
 	
@@ -74,7 +74,7 @@ public class NodeLink extends LinkedList<Integer> {
 		super();
 		packData=p;
 		if (p!=null)
-			vCount=p.getNodeCount();
+			vCount=p.packDCEL.vertCount;
 		if (items==null || items.size()==0) { // default to 'a' (all vertices)
 			items=new Vector<String>(1);
 			items.add("a");
@@ -1386,7 +1386,7 @@ public class NodeLink extends LinkedList<Integer> {
 	  * non-green; else 0, and complex is NOT separated.
 	  */
 	 public static int separates(PackData p,NodeLink vertlist) {
-		 int vCount=p.getNodeCount();
+		 int vCount=p.packDCEL.vertCount;
 		 int []greens=new int[vCount+1];
 		 Iterator<Integer> vlst=vertlist.iterator();
 		 while (vlst.hasNext()) {
@@ -1405,7 +1405,7 @@ public class NodeLink extends LinkedList<Integer> {
 		int []gens=p.label_seed_generations(seed,greens,-1,false);
 //		boolean hit=false;
 		
-		// are their any vertices not reached (not counting green)?
+		// are there any vertices not reached (not counting green)?
 		int not_reached=0;
 		for (int v=1;(v<=vCount && not_reached==0);v++)
 			if (greens[v]>=0 && gens[v]==0) // not green and not reached

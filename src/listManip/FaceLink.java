@@ -13,15 +13,12 @@ import dcel.D_SideData;
 import dcel.HalfEdge;
 import dcel.RawDCEL;
 import dcel.RedHEdge;
-import deBugging.LayoutBugs;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
 import geometry.EuclMath;
 import input.SetBuilderParser;
 import komplex.EdgeSimple;
-import komplex.RedList;
-import komplex.SideDescription;
 import packing.PackData;
 import util.FaceParam;
 import util.MathUtil;
@@ -663,49 +660,13 @@ public class FaceLink extends LinkedList<Integer> {
 				//    * faces in list not necessarily contiguous
 			{
 
-				if (packData.packDCEL!=null) {
-					HalfLink hlink=packData.packDCEL.layoutOrder;
-					if (str.length()>1 && str.charAt(1)=='s') 
-						hlink=packData.packDCEL.fullOrder; 
-					Iterator<HalfEdge> heis=hlink.iterator();
-					while (heis.hasNext()) {
-						add(heis.next().face.faceIndx);
-						count++;
-					}
-					break;
-				}
-					
-				// traditional
-				boolean debg=false; // degb=true;
-				if (debg) 
-					LayoutBugs.log_faceOrder(packData);
-
-				int nf=packData.firstFace;
-				int []futil=new int[packData.faceCount+1];
-				if (nf>0) {
-					add(nf);
-					futil[nf]=1;
+				HalfLink hlink=packData.packDCEL.layoutOrder;
+				if (str.length()>1 && str.charAt(1)=='s') 
+					hlink=packData.packDCEL.fullOrder; 
+				Iterator<HalfEdge> heis=hlink.iterator();
+				while (heis.hasNext()) {
+					add(heis.next().face.faceIndx);
 					count++;
-				}
-				int safty = 0;
-				while (nf > 0
-						&& nf <= packData.faceCount
-						&& (nf = packData.faces[nf].nextFace)<=packData.faceCount
-						&& nf!= packData.firstFace
-						&& safty < (2 + packData.faceCount)) {
-					add(nf);
-					futil[nf]=1;
-					count++;
-				}
-				
-				// pick up stragglers? yes, if flag is 'Fs'
-				if (str.length()>1 && str.charAt(1)=='s') {
-					for (int j=1;j<=packData.faceCount;j++) { 
-						if (futil[j]==0) {
-							add(j);
-							count++;
-						}
-					}
 				}
 				break;
 			}

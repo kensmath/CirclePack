@@ -67,7 +67,7 @@ public class TriData {
 		baseEdge=fce.edge;
 		face=baseEdge.face.faceIndx; 
 		try {
-			hes=pdc.p.hes;
+			hes=pdcel.p.hes;
 			int j=0;
 			HalfEdge he=baseEdge;
 			do {

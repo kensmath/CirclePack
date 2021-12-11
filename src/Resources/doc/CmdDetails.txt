@@ -2832,7 +2832,6 @@ vertices</instance>
 </description>
 <seealso>
 <see>Read</see>
-<see>readLite</see>
 <see>delaunay</see>
 </seealso>
 </command>
@@ -2846,36 +2845,8 @@ vertices</instance>
 </description>
 <seealso>
 <see>read</see>
-<see>ReadLite</see>
 </seealso>
 </command>
-
-
-<command cmd="readLite" flags="{filename}">
-<description>
-	There is a 'PackLite' compressed form of packing data
-	useful for more efficient communication and for arranging
-	indices to match Orick's packing algorithm. This reads a
-	file in that form: see the help 'DataFormats' tab.
-</description>
-<seealso>
-<see>ReadLite</see>
-<see>writeLite</see>
-</seealso>
-</command>
-
-
-<command cmd="ReadLite" flags="{filename}">
-<description>
-	Same as "readLite", except default directory is not prepended 
-	to the filename, so an explicit path (possibly starting '~/')
-	is allowed.
-</description>
-<seealso>
-<see>readLite</see>
-</seealso>
-</command>
-
 
 <command cmd="read_CT" flags="[-q{p}] {filename}">
 <description>
@@ -3062,7 +3033,7 @@ script and append it to 'ClosedPath'.</instance>
 </seealso>
 </command>
 
-<command cmd="rm_cir" flags="{v}">
+<command cmd="rm_cir" flags="{v..}">
 <description>
 	Given a qualifying boundary or interior trivalent 
 	circle; other conditions are checked so that the 
@@ -4835,30 +4806,6 @@ does 'repack', then reports the elapsed time.
 </seealso>
 </command>
 
-<command cmd="writeLite" flags="-[rzib] -[AG] -v {v..} -[fs] {file}">
-<description>
-    A "Lite" packing is one with data compressed into a 
-    of values stream. It also allows a subset of vertices to
-    be selected: we cut out this core and adjoin any neighboring
-    vertices. We also re-index the packing, primarily to be
-    used with Orick-type packing algorithms, which need the
-    boundary vertices to appear last and in counterclockwise 
-    order. (See the "Data Formats" tab.)
-</description>
-<options>  
-<comment>First flag is single string with any combination of these:</comment>
-	<opt flag="-r"> include radii </opt>
-	<opt flag="-z"> include radii </opt>
-	<opt flag="-i"> non-default aims and/or inv distances</opt>
-	<opt flag="-b"> add ideal vertices to bdry components except the outer one</opt>
-	<opt flag="default">-rz</opt>
-	<comment> Other options:</comment>
-	<opt flag="-A {a}"> set an alpha vertex</opt>
-	<opt flag="-G {g}"> set a gamma vertex (on bdry)</opt>
-	<opt flag="-v {v..}"> vertices for core, default to interior vertices</opt>
-</options>
-</command>
-
 <command cmd="write_custom" flags="-[option] -[fa] {file}">
 <description>
 	This is intended to allow specialized data export. One specifies a
@@ -4892,24 +4839,6 @@ faces. Puts out face centers and pairs of indices forming edges</opt>
 <see>write</see>
 <see>Write</see>
 </seealso>
-</command>
-
-<command cmd="writeL(_raw)" flags="{filename}">
-<description>
-	Writing data for subcomplex to file in "lite" packing 
-	format;	"_raw" stores data only, no keywords. The 'variable'
-	vertices of the lite packing are those "marked" in the 
-	packing; typical is to clear the markings with "mark -cw"
-	and then the default of all interior vertices takes over.
-</description>
-</command>
-
-<command cmd="WriteL(_raw)" flags="{filename}">
-<description>
-	Same as "writeL", except default directory is not prepended 
-	to the filename, so an explicit path (possibly starting '~/')
-	is allowed.
-</description>
 </command>
 
 <command cmd="write_path" flags="-[s] {file}">
