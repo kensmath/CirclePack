@@ -19,11 +19,11 @@ import geometry.CircleSimple;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import input.CPFileManager;
-import komplex.DualGraph;
 import komplex.DualTri;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.GraphLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import math.Mobius;
 import packing.PackData;
@@ -87,19 +87,18 @@ import widgets.RadiiSliders;
  * in 'TriAspect.sch_coeff'. So the range packing is Mobius image 
  * of domain packing iff all 'sch_coeff' are zero.
  * 
- * However, I am moving to a different model: see 
- * "packing.Schwarzian.java".
+ * TODO: fix 'layOrder' so that its 'HalfEdge's are from the correct
+ * PackDCEL.
  * 
  * @author kens, November 2018
- *
- */
+ * */
 public class SchwarzMap extends PackExtender {
 	
-	public TriAspect []domainTri; // domain face data; 'MobDeriv's are stored here
+	public TriAspect []domainTri; // domain faces; 'MobDeriv's stored here
 	public TriAspect []rangeTri;  // created with 'set_range' or filled by 'go'
 	public int rangeHes;          // range geometry
 	public int rangePackNum;
-	public GraphLink dTree;       // dual spanning tree for layout (root is removed)
+	public HalfLink layOrder;  // drawing order, default to full 'layoutOrder' 
 	
 	public RadiiSliders radSliders; // for opening a slider window
 
@@ -108,21 +107,20 @@ public class SchwarzMap extends PackExtender {
 		super(p);
 		extensionType="SCHWARZIAN";
 		extensionAbbrev="SM";
-		toolTip="'Schwarz Mapping' is for developing and exploiting a discrete "
-				+ "Schwarzian derivative proposed by Gerald Orick";
+		toolTip="'Schwarz Mapping' is for developing and "+
+				"exploiting a discrete Schwarzian derivative "+
+				"proposed by Gerald Orick";
 		registerXType();
 		if (running) {
 			packData.packExtensions.add(this);
 		}
-		domainTri=PackData.getTriAspects(packData); // default: look at 'set_domain' call
-		rangeTri=PackData.getTriAspects(packData); // could change: look at 'set_range' call
-		rangeHes=packData.hes; // may be reset when rangeTri is filled.
-		
-		// get the spanning tree (without stragglers)
-		dTree=DualGraph.easySpanner(packData,false);
-		if (dTree.get(0).v==0) // prune root
-			dTree.remove(0);
-		
+		// default: look at 'set_domain' call
+		domainTri=PackData.getTriAspects(packData);
+		// could change: look at 'set_range' call
+		rangeTri=PackData.getTriAspects(packData);
+		// may be reset when rangeTri is filled.
+		rangeHes=packData.hes; 
+
 		// compute/store the 'schwarzian's for 'packData'
 		cpCommand(packData,"set_sch"); 
 	}
@@ -133,13 +131,15 @@ public class SchwarzMap extends PackExtender {
 	public int cmdParser(String cmd, Vector<Vector<String>> flagSegs) {
 		Vector<String> items = null;
 		
-		// ======= s_layout ================
+		// ======= s_layout =============
+		
 		if (cmd.startsWith("s_lay")) {
 
 			// copy from "s_map"
 
 			if (!packData.haveSchwarzians()) {
-				CirclePack.cpb.errMsg("seems 'packData' doesn't have 'schwarzian's set");
+				CirclePack.cpb.errMsg("seems 'packData' doesn't "+
+						"have 'schwarzian's set");
 				return 0;
 			}
 			PackData qData=packData;
@@ -151,7 +151,8 @@ public class SchwarzMap extends PackExtender {
 			// normally there's a -q{} flag; it has to be first
 			if (flagSegs!=null && flagSegs.size()>0) {
 				items=flagSegs.get(0);
-				if (items!=null && items.size()>0 && items.get(0).startsWith("-q")) {
+				if (items!=null && items.size()>0 && 
+						items.get(0).startsWith("-q")) {
 					if ((qnum=StringUtil.qFlagParse(items.get(0)))>=0) {
 						items.remove(0);
 						flagSegs.remove(0);
@@ -160,19 +161,24 @@ public class SchwarzMap extends PackExtender {
 						//   default is copy of packData
 						if (qnum!=packData.packNum) {
 							qData=CPBase.cpScreens[qnum].getPackData();
-							if ((qData.faceCount!=packData.faceCount) || qData.hes<0) {
-								CirclePack.cpb.msg("Copy domain packing into target, p"+qData.packNum+", "+
-										" with spherical geometry because original target does "+
-										"not match nodeCount or is hyperbolic.");
+							if ((qData.faceCount!=packData.faceCount) || 
+									qData.hes<0) {
+								CirclePack.cpb.msg("Copy domain packing "+
+									"into target, p"+qData.packNum+
+									", with spherical geometry "+
+									"because original target does "+
+									"not match nodeCount or is hyperbolic.");
 								cpCommand(packData,"copy "+qnum);
-								cpCommand(qData,"geom_to_s"); //  make range spherical
+								// make range spherical
+								cpCommand(qData,"geom_to_s"); 
 							}
 						}
 					}
 					else
 						Oops("failed to parse '-q' flag");
 					if (flagSegs.size()>0 && items.size()>0) { 
-						Oops("There shouldn't be items left if there are more segments");
+						Oops("There shouldn't be items left if "+
+								"there are more segments");
 					}
 				}
 				
@@ -204,39 +210,35 @@ public class SchwarzMap extends PackExtender {
 					}
 				}
 
-				// Now look for list of face pairs; default is spanning tree
+				// Now look for list of face pairs
 				if (items.size()>0) {
-					graph=new GraphLink(packData,items);
+					layOrder=new HalfLink(packData,items);
 				}
 			} // done with flags
 			
-			// default to 'dTree'
-			if (graph==null || graph.size()==0)
-				graph=dTree;
+			// default to full 'layoutOrder'
+			if (layOrder==null || layOrder.size()==0)
+				layOrder=packData.packDCEL.layoutOrder;
 			
 			// keeping track of processed faces
 			int []hitfaces=new int[packData.faceCount+1];
 			
-			// ensure radii/centers are in 'rangeTri' (in geometry of 'qData')
+			// ensure radii/centers are in 'rangeTri' 
+			//   (in geometry of 'qData')
 			if (rangeTri==null || rangeTri.length!=packData.faceCount+1 || 
 					rangeTri[1].hes!=qData.hes)
 				rangeTri=PackData.getTriAspects(qData);
 			
 			// Do we need to place the first face?
+			// TODO: for now, always layout first edge
 			EdgeSimple edge=graph.get(0);
-			int baseface=0;
-			if (edge.v==0) { // root? yes, then will have to place
-				graph.remove(0); 
-				baseface=edge.w;
-			}
-			else if (graph==dTree) { // yes, will place the first face
-				baseface=edge.v;
-			}
-			
+			HalfEdge leadedge=layOrder.get(0);
+			packData.packDCEL.placeFirstEdge(leadedge);
+			int baseface=leadedge.face.faceIndx;
 			int count=0;
 			
-			// If we need to place the base face, we make it a 'baseEquilateral',
-			//   as used in 'Schwarzian.java'.
+			// If we need to place the base face, we make 
+			//   it a 'baseEquilateral', as used in 'Schwarzian.java'.
 			if (baseface>0) {
 				TriAspect tri=TriAspect.baseEquilaterl(qData.hes);
 				TriAspect myTri=rangeTri[baseface];
@@ -245,7 +247,8 @@ public class SchwarzMap extends PackExtender {
 					myTri.setCenter(tri.getCenter(j), j);
 					
 					// put in qData as well (though may be changed later)\
-					// TODO: here and later, put new data in redchain, if appropriate
+					// TODO: here and later, put new data in redchain, 
+					//   if appropriate
 					qData.setRadius(myTri.vert[j],myTri.getRadius(j));
 					qData.setCenter(myTri.vert[j],myTri.getCenter(j));
 				}
@@ -255,54 +258,52 @@ public class SchwarzMap extends PackExtender {
 				if (cirFlags!=null)
 					for (int j=0;j<3;j++) {
 						qData.cpScreen.drawCircle(
-								myTri.getCenter(j), myTri.getRadius(j), cirFlags);
+							myTri.getCenter(j), myTri.getRadius(j),
+							cirFlags);
 					}
 				if (faceFlags!=null) 
-					qData.cpScreen.drawFace(myTri.getCenter(0),myTri.getCenter(1),myTri.getCenter(2),
-							myTri.getRadius(0),myTri.getRadius(1),myTri.getRadius(2),faceFlags);
+					qData.cpScreen.drawFace(myTri.getCenter(0),
+							myTri.getCenter(1),myTri.getCenter(2),
+							myTri.getRadius(0),myTri.getRadius(1),
+							myTri.getRadius(2),faceFlags);
 				qData.cpScreen.repaint();
 				
 				hitfaces[baseface]=1;
 				count=1;
 			}
 			// Now proceed through 'graph', propogating from face to face.
-			// Note: each 'TriAspect' has rad/center and data for a given circle
-			//       may differ as the layout progresses. Nevertheless, we but 
-			//       the latest rad/cent into qData
-			Iterator<EdgeSimple> dit=graph.iterator();
-			while (dit.hasNext()) {
-				edge=dit.next();
-				int f=edge.v; // should already have its data
-				int g=edge.w;
-				
-				int j=rangeTri[f].nghb_Tri(rangeTri[g]);
-				if (j<0)
-					Oops("faces "+f+" and "+g+" don't see to share an edge");
-				
-				int v=rangeTri[f].vert[j];
-				int w=rangeTri[f].vert[(j+1)%3];
-				int k=qData.nghb(v, w);
-				int J=(rangeTri[g].vertIndex(v)+1)%3;
-				// get schwarzian from 'packData'
-				double s=packData.kData[v].schwarzian[k];
-				HalfEdge hedge=packData.packDCEL.findHalfEdge(edge);
+			// Note: each 'TriAspect' has rad/center and data for a given 
+			//   circle may differ as the layout progresses. Nevertheless, 
+			//   we use the latest rad/cent into qData
+			Iterator<HalfEdge> lit=layOrder.iterator();
+			while (lit.hasNext()) {
+				HalfEdge he=lit.next();
+				double s=he.getSchwarzian();
+				int f=he.face.faceIndx; // should already have its data
+				int g=he.twin.face.faceIndx;
 				int mode=1; // use 'radii'
-				SchwarzMap.propogate(rangeTri,f,hedge, s,mode,qData.hes);
+				SchwarzMap.propogate(rangeTri,f,he,s,mode,qData.hes);
 				
 				int[] verts=rangeTri[g].vert;
 				for (int jj=0;jj<3;jj++) {
 					qData.setRadius(verts[jj],rangeTri[g].getRadius(jj));
-					qData.setCenter(verts[jj],new Complex(rangeTri[g].getCenter(jj)));
+					qData.setCenter(verts[jj],
+							new Complex(rangeTri[g].getCenter(jj)));
 				}
 				
 				// Now, draw this face using 'TriAspect' data
+				int J=(rangeTri[g].edgeIndex(he.twin)+1)%3;
+				
 				if (cirFlags!=null)  
 					qData.cpScreen.drawCircle(
-							rangeTri[g].getCenter(J), rangeTri[g].getRadius(J), cirFlags);
+							rangeTri[g].getCenter(J),
+							rangeTri[g].getRadius(J), cirFlags);
 				if (faceFlags!=null) 
 					qData.cpScreen.drawFace(rangeTri[g].getCenter(0),
-							rangeTri[g].getCenter(1),rangeTri[g].getCenter(2),
-							rangeTri[g].getRadius(0),rangeTri[g].getRadius(1),
+							rangeTri[g].getCenter(1),
+							rangeTri[g].getCenter(2),
+							rangeTri[g].getRadius(0),
+							rangeTri[g].getRadius(1),
 							rangeTri[g].getRadius(2),faceFlags);
 				qData.cpScreen.repaint();
 				
@@ -334,18 +335,24 @@ public class SchwarzMap extends PackExtender {
 				int qnum=rangePackNum;
 				if ((qnum=StringUtil.qFlagParse(items.get(0)))>=0) {
 					items.remove(0);
-					// Want map to develop in specified packing (versus back in packData).
-					//   minimal check that packing is same and not hyperbolic; else copy 
-					//   packData into qdata.
+					// Want map to develop in specified packing 
+					//   (versus back in packData). minimal check 
+					//   that packing is same and not hyperbolic; 
+					//   else copy packData into qdata.
 					if (qnum!=packData.packNum) {
 						qData=CPBase.cpScreens[qnum].getPackData();
-						if ((qData.faceCount!=packData.faceCount) || qData.hes<0) {
-							CirclePack.cpb.msg("Copy domain packing into target, p"+qData.packNum+", "+
-									"because current packing does not match nodeCount. Convert to spherical.");
+						if ((qData.faceCount!=packData.faceCount) || 
+								qData.hes<0) {
+							CirclePack.cpb.msg("Copy domain packing "+
+								"into target, p"+qData.packNum+
+								", because current packing does "+
+								"not match nodeCount. "+
+								"Convert to spherical.");
 							cpCommand(packData,"copy "+qnum);
 							qData=CPBase.cpScreens[qnum].getPackData();
 							qData.setCombinatorics();
-							cpCommand(qData,"geom_to_s"); //  make range spherical
+							// make range spherical
+							cpCommand(qData,"geom_to_s"); 
 						}
 						rangeTri=PackData.getTriAspects(qData);
 					}
@@ -353,19 +360,16 @@ public class SchwarzMap extends PackExtender {
 			}
 			
 			// get desired dual edges, default to dTree
-			GraphLink graph=null;
+			HalfLink layOrder=null;
 			if (items.size()>0)
-				graph=new GraphLink(packData,items);
-			else graph=dTree;
+				layOrder=new HalfLink(packData,items);
+			else 
+				layOrder=packData.packDCEL.layoutOrder;
 			
 			// Do we need to place the first face? Only if
-			//   there is a root.
-			EdgeSimple edge=graph.get(0);
-			int baseface=0;
-			if (edge.v==0) { // root? yes, then have to place
-				graph.remove(0); 
-				baseface=edge.w;
-			}
+			// TODO: for now always lay out first face
+			HalfEdge he=layOrder.get(0);
+			int baseface=he.face.faceIndx;
 
 			// keep track of how many times a center is reset, error
 			int []verthits=new int[packData.nodeCount+1];
@@ -382,12 +386,13 @@ public class SchwarzMap extends PackExtender {
 			}
 			
 			// Now proceed through 'graph'
-			Iterator<EdgeSimple> dit=graph.iterator();
-			while (dit.hasNext()) {
-				edge=dit.next();
-				int g=edge.w;
+			Iterator<HalfEdge> lit=layOrder.iterator();
+			while (lit.hasNext()) {
+				he=lit.next();
+				int f=he.face.faceIndx;
+				int g=he.twin.face.faceIndx;
 				TriAspect mytri=rangeTri[g];
-				int indx=(packData.face_nghb(edge.v,g)+2)%3;
+				int indx=(packData.face_nghb(f,g)+2)%3;
 				int v=mytri.vert[indx]; // opposite edge with f
 				Complex z=mytri.getCenter(indx);
 				if (verthits[v]>0) {
@@ -403,8 +408,10 @@ public class SchwarzMap extends PackExtender {
 				verthits[v]++;
 			}
 			
-			this.msg("Data for p"+qData.packNum+" was set from 'rangeTri' data; "+
-					"max swap error in centers was "+String.format("%.6f",maxError));
+			this.msg("Data for p"+qData.packNum+
+					" was set from 'rangeTri' data; "+
+					"max swap error in centers was "+
+					String.format("%.6f",maxError));
 			return 1;
 		}
 		
@@ -454,11 +461,13 @@ public class SchwarzMap extends PackExtender {
 		// =========== s_get =============
 		else if (cmd.startsWith("s_get")) {
 			if (domainTri[1].schwarzian==null) {
-				CirclePack.cpb.errMsg("'seems there are no schwarz coefficients");
+				CirclePack.cpb.errMsg("'seems there are no "+
+						"schwarz coefficients");
 				return 0;
 			}
 			if (flagSegs==null || flagSegs.size()<1) {
-				CirclePack.cpb.errMsg("'seems there are no schwarz coefficients");
+				CirclePack.cpb.errMsg("'seems there are no "+
+						"schwarz coefficients");
 				return 0;
 			}
 			items=flagSegs.get(0);
@@ -473,15 +482,18 @@ public class SchwarzMap extends PackExtender {
 			}
 			double []rslts=get_s_coeff(v,w);
 			Complex z=new Complex(rslts[1],rslts[2]);
-			CirclePack.cpb.msg("Schwarzian data for edge ("+v+","+w+"): s_coeff = "+
-					String.format("%.8e",rslts[0])+"; tang Pt = "+z.toString());
+			CirclePack.cpb.msg("Schwarzian data for edge ("+v+
+					","+w+"): s_coeff = "+
+					String.format("%.8e",rslts[0])+
+					"; tang Pt = "+z.toString());
 			return 1;
 		}
 
 		// ======= s_load ============
 		else if (cmd.startsWith("s_lo")) {
 			if (domainTri==null) {
-				throw new DataException("packing have no 'domainTri' for the Schwarzian");
+				throw new DataException(
+					"packing have no 'domainTri' for the Schwarzian");
 			}
 			StringBuilder strbld =new StringBuilder("");
 			int ans=CPFileManager.trailingFile(flagSegs,strbld);
@@ -491,10 +503,12 @@ public class SchwarzMap extends PackExtender {
 				return 0;
 			}
 
-			BufferedReader 	fp=CPFileManager.openReadFP(CPFileManager.PackingDirectory,filename,false);
+			BufferedReader fp=CPFileManager.openReadFP(
+					CPFileManager.PackingDirectory,filename,false);
 			if (fp==null) { 
-				CirclePack.cpb.errMsg("'s_load' did not find the Schwarzian file '"+filename+
-					"' in directory '"+CPFileManager.PackingDirectory.toString());
+				CirclePack.cpb.errMsg("'s_load' did not find the "+
+						"Schwarzian file '"+filename+"' in directory '"+
+						CPFileManager.PackingDirectory.toString());
 				return 0;
 			}
 			
@@ -526,7 +540,7 @@ public class SchwarzMap extends PackExtender {
             }
             
             CirclePack.cpb.msg(count+" Schwarzians from "+filename+
-            		" are stored in 'domainTri' of p"+packData.packNum);
+            	" are stored in 'domainTri' of p"+packData.packNum);
             return count;
 		}
 		
@@ -537,33 +551,42 @@ public class SchwarzMap extends PackExtender {
 			boolean debug=false;
 			
 			if (domainTri[1].schwarzian==null) {
-				CirclePack.cpb.errMsg("seems 'domainTri' doesn't have 'sch_coeffs' data");
+				CirclePack.cpb.errMsg(
+						"seems 'domainTri' doesn't have "+
+								"'sch_coeffs' data");
 				return 0;
 			}
 			PackData qData=packData;
 			DispFlags dispFlags=new DispFlags("");
-			DispFlags oldFlags=new DispFlags("cc241t6"); // pink range circles for face f
-			DispFlags newFlags=new DispFlags("cc218t2"); // green range circles for new face g
+			// pink range circles for f
+			DispFlags oldFlags=new DispFlags("cc241t6"); 
+			// green range circles for new g
+			DispFlags newFlags=new DispFlags("cc218t2"); 
 			GraphLink graph=null;
 			
 			// should be at most one item: look for -q{} flag to designate 
-			// image packing first, then display flags for color, thickness, fill, etc
+			//   image packing first, then display flags for color, 
+			//   thickness, fill, etc
 			if (flagSegs!=null && (items=flagSegs.get(0))!=null) {
 				flagSegs.remove(0); // toss the -s flag
 				int qnum=packData.packNum;
 				if ((qnum=StringUtil.qFlagParse(items.get(0)))>=0) {
 					items.remove(0);
-					// Want map to develop in specified packing (versus back in packData).
-					//   minimal check that packing is same and not hyperbolic; else copy 
-					//   packData into qdata.
+					// Want map to develop in specified packing (versus 
+					//   back in packData). Minimal check that packing is 
+					//   same, not hyp; else copy packData into qdata.
 					if (qnum!=packData.packNum) {
 						qData=CPBase.cpScreens[qnum].getPackData();
-						if ((qData.faceCount!=packData.faceCount) || qData.hes<0) {
-							CirclePack.cpb.msg("Copy domain packing into target, p"+qData.packNum+", "+
-									" with spherical geometry because original target does "+
-									"not match nodeCount or is hyperbolic.");
+						if ((qData.faceCount!=packData.faceCount) || 
+								qData.hes<0) {
+							CirclePack.cpb.msg("Copy domain packing into "+
+								"target, p"+qData.packNum+
+								", with spherical "+
+								"geometry because original target does "+
+								"not match nodeCount or is hyperbolic.");
 							cpCommand(packData,"copy "+qnum);
-							cpCommand(qData,"geom_to_s"); //  make range spherical
+							// make range spherical
+							cpCommand(qData,"geom_to_s");
 						}
 					}
 				}
@@ -571,44 +594,41 @@ public class SchwarzMap extends PackExtender {
 				// display flag info; may be separate item
 				if (items.size()>0 || flagSegs.size()>0) {
 					if (items.size()>0)
-						dispFlags=new DispFlags(items.remove(0),qData.cpScreen.fillOpacity);
-					else { // only other flag should be display (can be done without flag)
+						dispFlags=new DispFlags(items.remove(0),
+								qData.cpScreen.fillOpacity);
+					// only other flag should be display (can go without flag)
+					else { 
 						items=flagSegs.get(0);
 						if (StringUtil.isFlag(items.get(0))) {
 							items.remove(0);
-							dispFlags=new DispFlags(items.get(0),qData.cpScreen.fillOpacity);
+							dispFlags=new DispFlags(items.get(0),
+									qData.cpScreen.fillOpacity);
 						}
 					}
 				}
 				
-				// Now look for list of face pairs; default is spanning tree
+				// Now look for list of face pairs; 
+				//    default is spanning tree
 				if (items.size()>0) {
-					graph=new GraphLink(packData,items);
+					layOrder=new HalfLink(qData,items);
 				}
 			}
 			
-			if (graph==null || graph.size()==0)
-				graph=dTree;
+			if (layOrder==null || layOrder.size()==0)
+				layOrder=qData.packDCEL.layoutOrder;
 			
 			// keeping track of processed faces
 			int []hitfaces=new int[packData.faceCount+1];
 			
-			// ensure radii/centers are in 'rangeTri' (in geometry of 'qData')
+			// ensure radii/centers are in 'rangeTri' 
+			//    (in geometry of 'qData')
 			if (rangeTri==null || rangeTri.length!=packData.faceCount+1 || 
 					rangeTri[1].hes!=qData.hes)
 				rangeTri=PackData.getTriAspects(qData);
 			
 			// Do we need to place the first face?
-			EdgeSimple edge=graph.get(0);
-			int baseface=0;
-			if (edge.v==0) { // root? yes, then have to place
-				graph.remove(0); 
-				baseface=edge.w;
-			}
-			else if (graph==dTree) { // yes, place the first face
-				baseface=edge.v;
-			}
-			
+			HalfEdge he=layOrder.get(0);
+			int baseface=he.face.faceIndx;
 			int dom_hes=packData.hes;
 			int rangeHes=qData.hes;
 			boolean geo_switch=(dom_hes!=rangeHes);
@@ -622,7 +642,8 @@ public class SchwarzMap extends PackExtender {
 				if (dom_hes<0 && rangeHes==0) { // domain is hyp, range eucl
 					for (int j=0;j<3;j++) {
 						int v=mytri.vert[j];
-						sC=HyperbolicMath.h_to_e_data(packData.getCenter(v),packData.getRadius(v));
+						sC=HyperbolicMath.h_to_e_data(packData.getCenter(v),
+								packData.getRadius(v));
 						mytri.setCenter(sC.center,j);
 						mytri.setRadius(sC.rad,j);
 					}
@@ -630,7 +651,8 @@ public class SchwarzMap extends PackExtender {
 				else if (dom_hes<0 && rangeHes>0) {
 					for (int j=0;j<3;j++) {
 						int v=mytri.vert[j];
-						sC = HyperbolicMath.h_to_e_data(packData.getCenter(v), packData.getRadius(v));
+						sC = HyperbolicMath.h_to_e_data(packData.getCenter(v),
+								packData.getRadius(v));
 						sC = SphericalMath.e_to_s_data(sC.center, sC.rad);
 						mytri.setCenter(sC.center,j);
 						mytri.setRadius(sC.rad,j);
@@ -639,7 +661,8 @@ public class SchwarzMap extends PackExtender {
 				else if (dom_hes==0 && rangeHes>0) {
 					for (int j=0;j<3;j++) {
 						int v=mytri.vert[j];
-						sC=SphericalMath.e_to_s_data(packData.getCenter(v),packData.getRadius(v));
+						sC=SphericalMath.e_to_s_data(packData.getCenter(v),
+								packData.getRadius(v));
 						mytri.setCenter(sC.center,j);
 						mytri.setRadius(sC.rad,j);
 					}
@@ -647,7 +670,8 @@ public class SchwarzMap extends PackExtender {
 						qData.cpScreen.drawFace(mytri.getCenter(0),
 								mytri.getCenter(1),mytri.getCenter(2),
 								mytri.getRadius(0),
-								mytri.getRadius(1),mytri.getRadius(2),dispFlags);
+								mytri.getRadius(1),
+								mytri.getRadius(2),dispFlags);
 						qData.cpScreen.repaint();
 					}
 				}
@@ -656,7 +680,8 @@ public class SchwarzMap extends PackExtender {
 //				else if (dom_hes==0 && rangeHes<0) {
 //					for (int j=0;j<3;j++) {
 //						int v=mytri.vert[j];
-//						sC=HyperbolicMath.e_to_h_data(packData.rData[v].center,packData.rData[v].rad);
+//						sC=HyperbolicMath.e_to_h_data(packData.rData[v].center,
+//							packData.rData[v].rad);
 //						mytri.setRadius(sC.rad,j);
 //						mytri.setCenter(sC.center,j);
 //					}
@@ -664,7 +689,8 @@ public class SchwarzMap extends PackExtender {
 //				else if (dom_hes>0 && rangeHes<0) {
 //					for (int j=0;j<3;j++) {
 //						int v=mytri.vert[j];
-//						sC = SphericalMath.s_to_e_data(packData.rData[v].center, packData.rData[v].rad);
+//						sC = SphericalMath.s_to_e_data(
+//							packData.rData[v].center, packData.rData[v].rad);
 //						sC=HyperbolicMath.e_to_h_data(sC.center,sC.rad);
 //						mytri.setCenter(sC.center,j);
 //						mytri.setRadius(sC.rad,j);
@@ -674,7 +700,8 @@ public class SchwarzMap extends PackExtender {
 				else if (dom_hes>0 && rangeHes==0) {
 					for (int j=0;j<3;j++) {
 						int v=mytri.vert[j];
-						sC = SphericalMath.s_to_e_data(packData.getCenter(v), packData.getRadius(v));
+						sC = SphericalMath.s_to_e_data(packData.getCenter(v),
+								packData.getRadius(v));
 						if (sC.flag!=-1) { // normal case
 							mytri.setCenter(sC.center,j);
 							mytri.setRadius(sC.rad,j);
@@ -698,16 +725,20 @@ public class SchwarzMap extends PackExtender {
 				// Draw
 				if (dispFlags.label)
 					dispFlags.setLabel(Integer.toString(baseface));
-				qData.cpScreen.drawFace(mytri.getCenter(0),mytri.getCenter(1),mytri.getCenter(2),
-						mytri.getRadius(0),mytri.getRadius(1),mytri.getRadius(2),dispFlags);
+				qData.cpScreen.drawFace(mytri.getCenter(0),
+						mytri.getCenter(1),mytri.getCenter(2),
+						mytri.getRadius(0),mytri.getRadius(1),
+						mytri.getRadius(2),dispFlags);
 				qData.cpScreen.repaint();
 				count=1;
 				
 				// debug?
 				if (debug) {
 					packData.cpScreen.drawFace(domainTri[baseface].getCenter(0),
-							domainTri[baseface].getCenter(1),domainTri[baseface].getCenter(2),
-							domainTri[baseface].getRadius(0),domainTri[baseface].getRadius(1),
+							domainTri[baseface].getCenter(1),
+							domainTri[baseface].getCenter(2),
+							domainTri[baseface].getRadius(0),
+							domainTri[baseface].getRadius(1),
 							domainTri[baseface].getRadius(2),dispFlags);
 					packData.cpScreen.repaint();
 				}
@@ -715,11 +746,11 @@ public class SchwarzMap extends PackExtender {
 			}
 			
 			// Now proceed through 'graph'
-			Iterator<EdgeSimple> dit=graph.iterator();
-			while (dit.hasNext()) {
-				edge=dit.next();
-				int f=edge.v; // should already have its data
-				int g=edge.w;
+			Iterator<HalfEdge> lit=layOrder.iterator();
+			while (lit.hasNext()) {
+				he=lit.next();
+				int f=he.face.faceIndx; // should already have its data
+				int g=he.twin.face.faceIndx;
 				
 				// --------- get face f ready --------------------
 				// We assume domainTri[f] and rangeTri[f] have radii/centers.
@@ -755,8 +786,10 @@ public class SchwarzMap extends PackExtender {
 					qData.cpScreen.drawCircle(rangeTri[f].getCenter((fgindx+1)%3),
 							rangeTri[f].getRadius((fgindx+1)%3),oldFlags);
 					qData.cpScreen.repaint();
-					qData.cpScreen.drawCircle(gtri.getCenter(gfindx),gtri.getRadius(gfindx),newFlags);
-					qData.cpScreen.drawCircle(gtri.getCenter((gfindx+1)%3),gtri.getRadius((gfindx+1)%3),newFlags);
+					qData.cpScreen.drawCircle(gtri.getCenter(gfindx),
+							gtri.getRadius(gfindx),newFlags);
+					qData.cpScreen.drawCircle(gtri.getCenter((gfindx+1)%3),
+							gtri.getRadius((gfindx+1)%3),newFlags);
 					qData.cpScreen.repaint();
 				}
 
@@ -771,9 +804,11 @@ public class SchwarzMap extends PackExtender {
 						domainTri[f].tanPts[1],domainTri[f].tanPts[2],
 						ftri.tanPts[0],ftri.tanPts[1],ftri.tanPts[2],
 						packData.hes,rangeHes);
-				Mobius mobg=(Mobius)fmob.rmult(domainTri[f].MobDeriv[fgindx].inverse());
+				Mobius mobg=(Mobius)fmob.rmult(
+						domainTri[f].MobDeriv[fgindx].inverse());
 				
-				// Either way, apply to domainTri[g] to get last circle for rangeTri[g]
+				// Either way, apply to domainTri[g] to get last 
+				//   circle for rangeTri[g]
 				Mobius.mobius_of_circle(mobg, packData.hes,
 						domainTri[g].getCenter((gfindx+2)%3),
 						domainTri[g].getRadius((gfindx+2)%3), sC,true);
@@ -804,15 +839,18 @@ public class SchwarzMap extends PackExtender {
 				gtri.setRadius(r,(gfindx+2)%3);
 				
 				if (debug) { // draw the new circle
-					qData.cpScreen.drawCircle(gtri.getCenter((gfindx+2)%3),gtri.getRadius((gfindx+2)%3),newFlags);
+					qData.cpScreen.drawCircle(gtri.getCenter((gfindx+2)%3),
+							gtri.getRadius((gfindx+2)%3),newFlags);
 					qData.cpScreen.repaint();
 				}
 				
 				// Now, draw this face
 				if (dispFlags.label)
 					dispFlags.setLabel(Integer.toString(g));
-				qData.cpScreen.drawFace(gtri.getCenter(0),gtri.getCenter(1),gtri.getCenter(2),
-						gtri.getRadius(0),gtri.getRadius(1),gtri.getRadius(2),dispFlags);
+				qData.cpScreen.drawFace(gtri.getCenter(0),
+						gtri.getCenter(1),gtri.getCenter(2),
+						gtri.getRadius(0),gtri.getRadius(1),
+						gtri.getRadius(2),dispFlags);
 				qData.cpScreen.repaint();
 				count++;
 			} // end of while through dTree
@@ -821,10 +859,9 @@ public class SchwarzMap extends PackExtender {
 		
 		// ======= get_tree (copy it into 'glist')
 		else if (cmd.startsWith("get_tre")) {
-			if (dTree==null || dTree.size()==0)
+			if (layOrder==null || layOrder.size()==0)
 				return 0;
-			packData.glist=new GraphLink();
-			return packData.glist.abutMore(dTree);
+			return packData.hlist.abutMore(layOrder);
 		}
 
 		// ======= get ===============
@@ -847,21 +884,30 @@ public class SchwarzMap extends PackExtender {
 					int g=-1;
 					if ((g=packData.face_right_of_edge(v,w))>=0) {
 								
-						// Mobius of g to align it with f along <v,w> in the domain
+						// Mobius of g to align it with f along <v,w> 
+						//   in the domain
 						Mobius domainalign=new Mobius();
-						Complex fvz=domainTri[f].getCenter(domainTri[f].vertIndex(v));
-						Complex fwz=domainTri[f].getCenter(domainTri[f].vertIndex(w));
-						Complex gvz=domainTri[g].getCenter(domainTri[g].vertIndex(v));
-						Complex gwz=domainTri[g].getCenter(domainTri[g].vertIndex(w));
+						Complex fvz=domainTri[f].getCenter(
+								domainTri[f].vertIndex(v));
+						Complex fwz=domainTri[f].getCenter(
+								domainTri[f].vertIndex(w));
+						Complex gvz=domainTri[g].getCenter(
+								domainTri[g].vertIndex(v));
+						Complex gwz=domainTri[g].getCenter(
+								domainTri[g].vertIndex(w));
 						double eror=fvz.minus(gvz).abs()+fwz.minus(gwz).abs();
-						if (eror>0.001*domainTri[f].getRadius(domainTri[f].vertIndex(v))) {
-							Complex ftanz=domainTri[f].tanPts[domainTri[f].vertIndex(v)];
-							Complex gtanz=domainTri[g].tanPts[domainTri[g].vertIndex(w)];
+						if (eror>0.001*domainTri[f].getRadius(
+								domainTri[f].vertIndex(v))) {
+							Complex ftanz=
+								domainTri[f].tanPts[domainTri[f].vertIndex(v)];
+							Complex gtanz=
+								domainTri[g].tanPts[domainTri[g].vertIndex(w)];
 							domainalign=Mobius.mob_xyzXYZ(gvz, gtanz, gwz,
 									fvz, ftanz,fwz,packData.hes,packData.hes);
 						}
 						
-						// Mobius of image of g to align with image of f along <v,w> (in range)
+						// Mobius of image of g to align with image of f 
+						//    along <v,w> (in range)
 						fvz=rangeTri[f].getCenter(rangeTri[f].vertIndex(v));
 						fwz=rangeTri[f].getCenter(rangeTri[f].vertIndex(w));
 						gvz=rangeTri[g].getCenter(rangeTri[g].vertIndex(v));
@@ -888,7 +934,8 @@ public class SchwarzMap extends PackExtender {
 								
 						// show results
 						Complex detdM=edgeMob.det();
-						System.out.println("Edge <"+v+","+w+"> ; Schwarzian trace is "+
+						System.out.println("Edge <"+v+","+w+
+							"> ; Schwarzian trace is "+
 							String.format("%.6f",edgeMob.c.x)+" "+
 							String.format("%.6f", edgeMob.c.y)+"; det(dM) = "+
 							String.format("%.6f",detdM.x)+" "+
@@ -897,7 +944,8 @@ public class SchwarzMap extends PackExtender {
 					
 					count=count+1;
 				} catch(Exception ex) {
-					Oops("failed to compute Schwarzian for edge <"+v+","+w+">");
+					Oops("failed to compute Schwarzian for edge <"+
+							v+","+w+">");
 				}
 			}
 			
@@ -907,7 +955,8 @@ public class SchwarzMap extends PackExtender {
 		// ======= field ===============
 		else if (cmd.startsWith("field")) {
 			if (domainTri==null || rangeTri==null) {
-				Oops("'domainTri', 'rangeTri' must have data to construct face Mobius's");
+				Oops("'domainTri', 'rangeTri' must have data to "+
+						"construct face Mobius's");
 			}
 			
 			// TODO:
@@ -916,9 +965,11 @@ public class SchwarzMap extends PackExtender {
 		}
 		
 		// ======== set_domain/range ===========
-		// TODO: 7/2020. I'm not adjusting this right now, because I'm moving
-		//       tom implement for real schwarzians for domain packing. 
-		else if (cmd.startsWith("set_domain") || cmd.startsWith("set_range")) {
+		// TODO: 7/2020. I'm not adjusting this right now, 
+		//     because I'm moving to implement for real 
+		//     schwarzians for domain packing. 
+		else if (cmd.startsWith("set_domain") || 
+				cmd.startsWith("set_range")) {
 			PackData pd=packData;
 			if (flagSegs!=null && flagSegs.size()>0) {
 				items=flagSegs.get(0);
@@ -939,7 +990,8 @@ public class SchwarzMap extends PackExtender {
 				PackExtender pe=(PackExtender)pXs.next();
 				if (pe.extensionAbbrev.equalsIgnoreCase("ap")) {
 					AffinePack afpex=(AffinePack)pe;
-					if (afpex.aspects!=null || afpex.aspects.length==packData.faceCount+1) { 
+					if (afpex.aspects!=null || 
+							afpex.aspects.length==packData.faceCount+1) { 
 						aspect=afpex.aspects;
 						hitap=true;
 					}
@@ -948,7 +1000,8 @@ public class SchwarzMap extends PackExtender {
 				// only look for 'ProjStruct' if as yet no 'AffinePack'.
 				if (!hitap && pe.extensionAbbrev.equalsIgnoreCase("ps")) {
 					ProjStruct pspex=(ProjStruct)pe;
-					if (pspex.aspects!=null || pspex.aspects.length==pd.faceCount+1) { 
+					if (pspex.aspects!=null || pspex.aspects.length==
+							pd.faceCount+1) { 
 						aspect=pspex.aspects;
 					}
 				}
@@ -1015,8 +1068,9 @@ public class SchwarzMap extends PackExtender {
 							int jg=domainTri[g].vertIndex(w);
 							int jg1=(jg+1)%3;
 							
-							// Recall that the packings may not be planar, so we
-							//   want to align the neighboring faces before computing
+							// Recall that the packings may not be planar, 
+							//   so we want to align the neighboring faces 
+							//   before computing
 							
 							// Mobius of g to align it with f along <v,w>
 							Mobius domainalign=new Mobius(); // identity
@@ -1025,9 +1079,13 @@ public class SchwarzMap extends PackExtender {
 							Complex gvz=domainTri[g].getCenter(jg1);
 							Complex gwz=domainTri[g].getCenter(jg);
 							
-							// misaligned? (compare centers, don't worry about radii)
-							if ((fvz.minus(gvz).abs()+fwz.minus(gwz).abs()>0.001*domainTri[f].getRadius(jf))) {
-								domainalign=Mobius.mob_MatchCircles(gvz, domainTri[g].getRadius(jg1), 
+							// misaligned? (compare centers, don't worry 
+							//    about radii)
+							if ((fvz.minus(gvz).abs()+
+									fwz.minus(gwz).abs()>
+										0.001*domainTri[f].getRadius(jf))) {
+								domainalign=Mobius.mob_MatchCircles(gvz,
+										domainTri[g].getRadius(jg1), 
 										gwz, domainTri[g].getRadius(jg),
 										fvz,domainTri[f].getRadius(jf), 
 										fwz, domainTri[f].getRadius(jf1),
@@ -1036,7 +1094,8 @@ public class SchwarzMap extends PackExtender {
 //								Complex ftanz=domainTri[f].tanPts[jf];
 //								Complex gtanz=domainTri[g].tanPts[jg];
 //								domainalign=Mobius.
-//									mob_xyzXYZ(gvz, gtanz, gwz,fvz, ftanz,fwz,packData.hes,packData.hes);
+//									mob_xyzXYZ(gvz, gtanz, gwz,fvz, ftanz,
+//										fwz,packData.hes,packData.hes);
 							}
 							
 							// Mobius to align image of g with image of f along <v,w>
@@ -1047,8 +1106,11 @@ public class SchwarzMap extends PackExtender {
 							gwz=rangeTri[g].getCenter(jg);
 							
 							// misaligned? (compare centers, don't worry about radii)
-							if ((fvz.minus(gvz).abs()+fwz.minus(gwz).abs()>0.001*rangeTri[f].getRadius(jf))) {
-								domainalign=Mobius.mob_MatchCircles(gvz, rangeTri[g].getRadius(jg1), 
+							if ((fvz.minus(gvz).abs()+
+									fwz.minus(gwz).abs()>
+										0.001*rangeTri[f].getRadius(jf))) {
+								domainalign=Mobius.mob_MatchCircles(gvz,
+										rangeTri[g].getRadius(jg1), 
 										gwz, rangeTri[g].getRadius(jg),
 										fvz,rangeTri[f].getRadius(jf), 
 										fwz, rangeTri[f].getRadius(jf1),
@@ -1059,7 +1121,8 @@ public class SchwarzMap extends PackExtender {
 									lmult(galign).rmult(domainalign.inverse());
 							
 							// By our notation conventions, dM(e)=mob_g^{-1}*mob_f
-							myasp.MobDeriv[jf]=(Mobius)newg.inverse().rmult(faceMobs[f]);
+							myasp.MobDeriv[jf]=(Mobius)newg.inverse().
+									rmult(faceMobs[f]);
 							
 							// may need this normalization to get trace=+2.0;
 							Complex tc=myasp.MobDeriv[jf].a.plus(myasp.MobDeriv[jf].d);
@@ -1078,18 +1141,23 @@ public class SchwarzMap extends PackExtender {
 							Complex ctr1=domainTri[f].getCenter(jf1);
 							Complex ctr=domainTri[f].getCenter(jf);
 							if (packData.hes>0) { // sph
-								CircleSimple sC1=SphericalMath.s_to_e_data(ctr1,domainTri[f].getRadius(jf1));
+								CircleSimple sC1=SphericalMath.s_to_e_data(ctr1,
+									domainTri[f].getRadius(jf1));
 								ctr1=sC1.center;
-								CircleSimple sC2=SphericalMath.s_to_e_data(ctr,domainTri[f].getRadius(jf));
+								CircleSimple sC2=SphericalMath.s_to_e_data(ctr,
+									domainTri[f].getRadius(jf));
 								ctr=sC2.center;
 								if (sC1.flag==-1 || sC2.flag==-1)
-									throw new MiscException("A disc contains infinity: "+
-											"Schwarz not ready for this.");
+									throw new MiscException("A disc contains "+
+											"infinity: Schwarz not ready "+
+											"for this.");
 							}
 							if (packData.hes<0) { // hyp
-								CircleSimple sC=HyperbolicMath.h_to_e_data(ctr1,domainTri[f].getRadius(jf1));
+								CircleSimple sC=HyperbolicMath.h_to_e_data(ctr1,
+										domainTri[f].getRadius(jf1));
 								ctr1=sC.center;
-								sC=HyperbolicMath.h_to_e_data(ctr,domainTri[f].getRadius(jf));
+								sC=HyperbolicMath.h_to_e_data(ctr,
+										domainTri[f].getRadius(jf));
 								ctr=sC.center;
 							}
 							
@@ -1102,7 +1170,8 @@ public class SchwarzMap extends PackExtender {
 							myasp.schwarzian[jf]=sder.x;
 							
 							if (Math.abs(sder.y)>.001) {
-								CirclePack.cpb.errMsg("schwarz coeff should be real; imag = "+sder.y);
+								CirclePack.cpb.errMsg(
+									"schwarz coeff should be real; imag = "+sder.y);
 								if (debug) {
 									faceMobs[f].MobPrint("faceMob_f");
 									faceMobs[g].MobPrint("faceMob_g");
@@ -1110,7 +1179,8 @@ public class SchwarzMap extends PackExtender {
 								}
 							}
 						} catch(Exception ex) {
-							Oops("failed to compute dM for face "+f+" index "+jf);
+							Oops("failed to compute dM for face "+f+
+									" index "+jf);
 						}
 					}
 					else 
@@ -1121,12 +1191,14 @@ public class SchwarzMap extends PackExtender {
 					Complex Z0=faceMobs[f].apply(domainTri[f].getCenter(0));
 					Complex Z1=faceMobs[f].apply(domainTri[f].getCenter(1));
 					Complex Z2=faceMobs[f].apply(domainTri[f].getCenter(2));
-					System.out.println("\nFace "+f+", centers (domain,range): ("+
-						domainTri[f].getCenter(0).toString()+", "+Z0.toString()+")\n"+
-						"        = ("+
-						domainTri[f].getCenter(1).toString()+", "+Z1.toString()+")\n"+
-						"        = ("+
-						domainTri[f].getCenter(2).toString()+", "+Z2.toString()+")\n");
+					System.out.println("\nFace "+f+
+						", centers (domain,range): ("+
+						domainTri[f].getCenter(0).toString()+", "+
+						Z0.toString()+")\n        = ("+
+						domainTri[f].getCenter(1).toString()+", "+
+						Z1.toString()+")\n        = ("+
+						domainTri[f].getCenter(2).toString()+", "+
+						Z2.toString()+")\n");
 				}
 			}
 		}
@@ -1140,7 +1212,8 @@ public class SchwarzMap extends PackExtender {
 				return 0;
 			}
 			if (domainTri[1].schwarzian==null) {
-				CirclePack.cpb.errMsg("Schwarzians are not computed in 'domainTri'");
+				CirclePack.cpb.errMsg("Schwarzians are not computed "
+						+ "in 'domainTri'");
 				return 0;
 			}
 
@@ -1217,7 +1290,8 @@ public class SchwarzMap extends PackExtender {
 						if (v<w && (!packData.isBdry(v) || 
 								!packData.isBdry(w))) {
 							Mobius mob=domainTri[f].MobDeriv[j];
-							fp.write(v+" "+w+"  "+String.format("%.6f",domainTri[f].tanPts[j].x)+
+							fp.write(v+" "+w+"  "+String.format("%.6f",
+									domainTri[f].tanPts[j].x)+
 									" "+String.format("%.6f",domainTri[f].tanPts[j].y)+
 									" "+String.format("%.6f",mob.a.x)+" "+
 									String.format("%.6f",mob.a.y)+
@@ -1252,13 +1326,14 @@ public class SchwarzMap extends PackExtender {
 	 * @return double[] = {coeff, x, y} 
 	 */
 	public double []get_s_coeff(int v,int w) {
-		if (v<1 || v>packData.nodeCount || w<1 || w>packData.nodeCount)
-			CirclePack.cpb.errMsg("something wrong with v or w");
-		int f=packData.face_right_of_edge(w,v);
-		int j=packData.face_index(f, v);
+		HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
+		if (he==null)
+			CirclePack.cpb.errMsg("something wrong with edge v or w");
+		int f=he.face.faceIndx;
 		if (domainTri[f].schwarzian==null || domainTri[f].tanPts==null)
 			CirclePack.cpb.errMsg("'sch_coeffs' of 'tanPts' do not exist");
 		double []ans=new double[3];
+		int j=domainTri[f].vertIndex(v);
 		ans[0]=domainTri[f].schwarzian[j];
 		ans[1]=domainTri[f].tanPts[j].x;
 		ans[2]=domainTri[f].tanPts[j].y;
@@ -1275,10 +1350,11 @@ public class SchwarzMap extends PackExtender {
 	 * @return boolean, false on failure
 	 */
 	public boolean set_s_coeff(int v,int w,double s_coeff) {
-		if (v<1 || v>packData.nodeCount || w<1 || w>packData.nodeCount)
+		HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
+		if (he==null)
 			return false;
-        int f=packData.face_right_of_edge(w,v);
-        int g=packData.face_right_of_edge(v,w);
+		int f=he.face.faceIndx;
+		int g=he.twin.face.faceIndx;
         if (f<=0 || g<=0)
         	return false;
         TriAspect ftri=domainTri[f];
@@ -1291,7 +1367,8 @@ public class SchwarzMap extends PackExtender {
         // store the Mobius edge derivatives for f and g
         Mobius mobf=new Mobius();
         Complex tpt=ftri.tanPts[jf];
-        Complex vw_perp=ftri.getCenter((jf+1)%3).minus(ftri.getCenter(jf)).times(new Complex(0,1));
+        Complex vw_perp=ftri.getCenter((jf+1)%3).minus(
+        		ftri.getCenter(jf)).times(new Complex(0,1));
         vw_perp=vw_perp.divide(vw_perp.abs());
         Complex c=vw_perp.conj().times(s_coeff);
         mobf.a=c.times(tpt).add(new Complex(1,0));
@@ -1341,7 +1418,7 @@ public class SchwarzMap extends PackExtender {
 	 * for the circles. 
 	 * @param asp TriAspect[]
 	 * @param ftri int
-	 * @param edge HalfEdgeg
+	 * @param edge HalfEdge
 	 * @param s double, schwarzian
 	 * @param mode int, 
 	 * @param hes int, geometry
@@ -1378,7 +1455,7 @@ public class SchwarzMap extends PackExtender {
 					0,asp[ftri].hes);
 			
 			// compute the target circle
-			CircleSimple sC = D_Schwarzian.getThirdCircle(s, j, bm_f, asp[ftri].hes);
+			CircleSimple sC=D_Schwarzian.getThirdCircle(s,j,bm_f,asp[ftri].hes);
 
 			asp[gtri].setRadius(sC.rad, J);
 			asp[gtri].setCenter(sC.center, J);
@@ -1398,39 +1475,51 @@ public class SchwarzMap extends PackExtender {
 	 */
 	public void initCmdStruct() {
 		super.initCmdStruct();
-		cmdStruct.add(new CmdStruct("radS","{v..}",null,"Create and display a widget "+ 
-				"for adjusting radii"));
-		cmdStruct.add(new CmdStruct("put","[-q{n} [{f g .. }]",null,"Put rangeTri "+
-				"radii/centers into packing {n} (default to image). First check "+
-				"p{n} geometry and combinatorics. Determine for dual edge pairs (f,g) "+
-				"(default to spanning tree); add root to guarantee placing of first face."));
-		cmdStruct.add(new CmdStruct("set_domain","[-q{}]",null,"Fill 'domainTri' "+
-				"data; default to this packing"));
-		cmdStruct.add(new CmdStruct("set_range","[-q{}]",null,"Fill 'rangeTri' "+
-				"data; default to this packing"));
-		cmdStruct.add(new CmdStruct("go",null,null,"Compute and store Schwarzians; "+
+		cmdStruct.add(new CmdStruct("radS","{v..}",null,
+				"Create and display a widget for adjusting radii"));
+		cmdStruct.add(new CmdStruct("put","[-q{n} [{f g .. }]",null,
+				"Put rangeTri radii/centers into packing {n} "+
+						"(default to image). First check "+
+				"p{n} geometry and combinatorics. Determine "+
+						"for dual edge pairs (f,g) "+
+				"(default to spanning tree); add root to guarantee "+
+						"placing of first face."));
+		cmdStruct.add(new CmdStruct("set_domain","[-q{}]",null,
+				"Fill 'domainTri' data; default to this packing"));
+		cmdStruct.add(new CmdStruct("set_range","[-q{}]",null,
+				"Fill 'rangeTri' data; default to this packing"));
+		cmdStruct.add(new CmdStruct("go",null,null,
+				"Compute and store Schwarzians; "+
 				"call 'set_range' using current packing if necessary"));
-		cmdStruct.add(new CmdStruct("get","{v w ..}",null,"Compute Schwarzian "+
+		cmdStruct.add(new CmdStruct("get","{v w ..}",null,
+				"Compute Schwarzian "+
 				"for designated edges"));
-		cmdStruct.add(new CmdStruct("get_tree",null,null,"copy spanning tree into 'glist'"));
-		cmdStruct.add(new CmdStruct("s_load","<filename>",null,"Read Schwarzian "+
+		cmdStruct.add(new CmdStruct("get_tree",null,null,
+				"copy spanning tree into 'glist'"));
+		cmdStruct.add(new CmdStruct("s_load","<filename>",null,
+				"Read Schwarzian "+
 				"derivates from a file into 'rangeTri'"));
-		cmdStruct.add(new CmdStruct("s_map","-q{q} [{g f ..}]",null,"Use Schwarzians "+
-				"stored in 'rangeTri' to successively insert radii and centers into "+
-				"'rangeTri'. Pairs {f,g} defining dual edges are given: default to "+
+		cmdStruct.add(new CmdStruct("s_map","-q{q} [{g f ..}]",null,
+				"Use Schwarzians stored in 'rangeTri' to successively "+
+				"insert radii and centers into 'rangeTri'. Pairs "+
+				"{f,g} defining dual edges are given: default to "+
 				"spanning tree. New faces are laid out in q canvas. "));
-		cmdStruct.add(new CmdStruct("s_out","-[fa] <filename>",null,"Write Schwarzian "+
+		cmdStruct.add(new CmdStruct("s_out","-[fa] <filename>",null,
+				"Write Schwarzian "+
 				"scalars to file: f g  sch_coeff"));
-		cmdStruct.add(new CmdStruct("s_set","{v w s ...}",null,"Set the Schwarzian "+
-				"scalar for oriented edge v,w to 's' (and w,v to -s)"));
-		cmdStruct.add(new CmdStruct("s_inc","x {f g ..}",null,"Increment "+
-				"schwarzian by factor x for given dual edges"));
-		cmdStruct.add(new CmdStruct("output","-[fa] <filename>",null,"Write dM data to "+
-				"matlab-style file: 'v w tangPt dM'"));
-		cmdStruct.add(new CmdStruct("field",null,null,"display vector field of "+
-				"Schwarzian derivatives, color/length encoded."));
-		cmdStruct.add(new CmdStruct("s_layout","[-d{flags}] {f g ...}",null,"Us the "+
-				"schwarzians stored with the domain packing to compute and lay out "+
-				"successive face pairs <f,g>, placing data in the domain's 'TriAspect's."));
+		cmdStruct.add(new CmdStruct("s_set","{v w s ...}",null,
+				"Set the Schwarzian scalar for oriented edge v,w "+
+				"to 's' (and w,v to -s)"));
+		cmdStruct.add(new CmdStruct("s_inc","x {f g ..}",null,
+				"Increment schwarzian by factor x for given dual edges"));
+		cmdStruct.add(new CmdStruct("output","-[fa] <filename>",null,
+				"Write dM data to matlab-style file: 'v w tangPt dM'"));
+		cmdStruct.add(new CmdStruct("field",null,null,
+				"display vector field of Schwarzian derivatives, "+
+				"color/length encoded."));
+		cmdStruct.add(new CmdStruct("s_layout","[-d{flags}] {f g ...}",
+				null,"Us the schwarzians stored with the domain "+
+				"packing to compute and lay out successive face "+
+				"pairs <f,g>, placing data in the domain's 'TriAspect's."));
 	}
 }

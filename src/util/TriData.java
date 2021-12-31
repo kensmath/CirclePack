@@ -52,7 +52,7 @@ public class TriData {
 	public TriData(PackDCEL pdcel) { // default euclidean
 		pdc=pdcel;
 		hes=0;
-		invDist=null;
+		invDist=null; // only allocate when needed
 		if (pdc.p!=null)
 			hes=pdc.p.hes;
 		vert=new int[3];

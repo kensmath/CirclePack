@@ -5,6 +5,8 @@ import java.util.Vector;
 
 import allMains.CirclePack;
 import complex.Complex;
+import dcel.HalfEdge;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import math.Mobius;
 import math.Point3D;
@@ -56,9 +58,12 @@ public class NSpole {
 
 		// default: put centroid of tangency points or centers at origin, 1/2017
 		if (flagSegs == null || flagSegs.size() == 0) {
+			
+			// check if there are any non-default inv Distances set
+			boolean ivdflag=packData.haveInvDistances();
 
 			// if overlaps are set, use the centers.
-			if (packData.overlapStatus) {
+			if (ivdflag) {
 				Complex []T=loadCenters(); // from local data
 				double best=SphericalMath.getCentroid(T).normSq();
 

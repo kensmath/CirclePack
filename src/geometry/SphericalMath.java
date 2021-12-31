@@ -183,17 +183,19 @@ public class SphericalMath{
    * Find the maximum value that the radius of vert can have 
    * based on the current radii of neighbors. (Because no triple
    * can have radii summing to more than PI.)
-   * @param PackData p
-   * @param vert
-   * @return
+   * @param p PackData
+   * @param v int
+   * @return double
    */
-  public static double sph_rad_max(PackData p,int vert) {
-		if (vert<1 || vert>p.nodeCount) return 0.0; // error
+  public static double sph_rad_max(PackData p,int v) {
+		if (v<1 || v>p.nodeCount) 
+			return 0.0; // error
 		double mx=0.0;
-		int num=p.countFaces(vert);
+		int num=p.countFaces(v);
+		int[] flower=p.packDCEL.vertices[v].getFlower(true);
 		for (int j=0;j<num;j++) {
-			double sum =p.getRadius(p.kData[vert].flower[j])
-				+p.getRadius(p.kData[vert].flower[j+1]);
+			double sum =p.getRadius(flower[j])
+				+p.getRadius(flower[j+1]);
 			mx = (sum>mx) ? sum : mx;
 		}
 		return Math.PI-mx;

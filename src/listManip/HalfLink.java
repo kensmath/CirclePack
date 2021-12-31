@@ -581,11 +581,23 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				}
 				break;
 			}
-			case 'o': // edges having non-trivial overlaps
+			case 'o': // edges having non-trivial inv dist
 			{
-				for (int e=1;e<=packData.packDCEL.edgeCount;e++) {
-					if (packData.packDCEL.edges[e].getInvDist()!=1.0)
-						add(packData.packDCEL.edges[e]);
+				if (!packData.haveInvDistances()) 
+					break; 
+				for (int v=1;v<=packData.nodeCount;v++) {
+					HalfLink spokes=packData.packDCEL.vertices[v].getSpokes(null);
+					Iterator<HalfEdge> sis=spokes.iterator();
+					while (sis.hasNext()) {
+						HalfEdge he=sis.next();
+						v=he.origin.vertIndx;
+						int w=he.twin.origin.vertIndx;
+						double ivd=he.getInvDist();
+						if (ivd!=1.0 && v<w) {
+							add(he);
+							count++;
+						}
+					}
 				}
 				break;
 			}
@@ -597,7 +609,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				// (possibly extended). Disregard duplication, eat 
 				// rest of 'items'.
 			{
-				if (str.length()>=2 && str.charAt(1)=='h') { // hex extrapolated
+				// if hex extrapolated
+				if (str.length()>=2 && str.charAt(1)=='h') { 
 					// need first vert v or first edge <v,w>
 					NodeLink vlink=new NodeLink(packData,items);
 					its=null; // eat rest of items
@@ -769,7 +782,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				Iterator<HalfEdge> eit=elist.iterator();
 				while (eit.hasNext()) {
 					HalfEdge he=eit.next();
-					double verr=QualMeasures.d_edge_vis_error(packData, he);
+					double verr=QualMeasures.edge_vis_error(packData, he);
 					if (verr>thresh) {
 						add(he);
 						count++;
@@ -780,6 +793,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			default: // if nothing else, see if there is an edge (or extended edges)
 			{
 				int v,w;
+				HalfEdge hvw=null;
 				try{
 					if ((v=MathUtil.MyInteger(str))>0 && its.hasNext() 
 							&& (w=MathUtil.MyInteger((String)its.next()))>0) {
@@ -792,8 +806,9 @@ public class HalfLink extends LinkedList<HalfEdge> {
 								count +=hlink.size();
 							}
 						}
-						else if (packData.nghb(v, w)>=0) {
-							add(packData.packDCEL.findHalfEdge(new EdgeSimple(v,w)));
+						else if ((hvw=packData.packDCEL.
+								findHalfEdge(new EdgeSimple(v, w)))!=null) {
+							add(hvw);
 							count++;
 						}
 					}
@@ -893,6 +908,134 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			if (edge.origin.vertIndx==v && edge.twin.origin.vertIndx==w) return j;
 		}
 		return -1;
+	}
+	
+
+	/**
+	 * Return a combinatorial geodesic 'HalfLink' between two sets
+	 * of vertices. This can fail in various ways, so exceptions
+	 * must be caught. There may be multiple shortest paths,
+	 * even with same endpoints; this returns the first encountered.
+	 * 
+	 * TODO: might look for the shortest with certain preference,
+	 * for example, with most symmetry, closest to hex, etc.
+	 * 
+	 * @param p
+	 * @param seeds NodeLink, starting point(s)
+	 * @param targets NodeLink, target(s)
+	 * @param nonos NodeLink, verts to avoid (except seeds or targets)
+	 *    in this list
+	 * @return HalfLink, null when empty.
+	 */
+	public static HalfLink getCombGeo(PackDCEL pdcel,
+			NodeLink seeds,NodeLink targets,NodeLink nonos) 
+					throws CombException {
+		int []book=new int[pdcel.vertCount+1];
+		if (seeds==null || seeds.size()==0 
+				|| targets==null || targets.size()==0) 
+			throw new CombException("no 'seeds' and/or no 'targets'");
+		int maxdist=pdcel.vertCount;
+		
+		// mark the 'nonos' as -1, targets as -2
+		if (nonos!=null && nonos.size()>0) { 
+			Iterator<Integer> nlst=nonos.iterator();
+			while(nlst.hasNext()) {
+				book[nlst.next()]=-1;
+			}
+		}
+		
+		// mark targets as -2
+		Iterator<Integer> tlst=targets.iterator();
+		while(tlst.hasNext()) {
+			int k=tlst.next();
+			if (book[k]!=-1)
+			book[k]=-2;
+		}
+		
+		// label seeds as first generation
+		int currgen=1;
+		Iterator<Integer> slst=seeds.iterator();
+		while (slst.hasNext()) {
+			int v=slst.next();
+			if (book[v]==-2)
+				throw new CombException("'seed' and 'target' sets intersect");
+			book[v]=currgen;
+		}
+		
+		NodeLink prevGen=seeds.makeCopy();
+		NodeLink nextGen=null;
+		int safty=pdcel.vertCount*10;
+		boolean hit=true;
+		int theOne=0;
+		while (hit && (safty--)>0 && currgen<maxdist) {
+			hit=false;
+			currgen++; 
+			nextGen=new NodeLink();
+			Iterator<Integer> prevG=prevGen.iterator();
+			while (prevG.hasNext() && safty>0) {
+				Vertex vert=pdcel.vertices[prevG.next()];
+				HalfEdge he=vert.halfedge;
+				do {
+					int k=he.next.origin.vertIndx;
+					
+					// new vertex
+					if (book[k]==0) {
+						hit=true;
+						book[k]=currgen;
+						nextGen.add(k);
+					}
+					
+					// hit a target?
+					if (book[k]==-2) {
+						hit=true;
+						book[k]=currgen;
+						maxdist=currgen;  // won't need to search further, 
+										  // but continue to find competitors
+						if (theOne==0)
+							theOne=k;
+					}
+					he=he.prev.twin; // cclw
+				} while (he!=vert.halfedge);
+			} // inner while
+			safty--;
+			prevGen=nextGen;
+		} // outer while
+		if (safty<=0) {
+			throw new CombException(
+					"problem creating combinatorial geodesic");
+		}
+		if (currgen<maxdist) {
+			throw new CombException(
+					"'seed' and 'target' separated, no geodesic");
+		}
+	
+		// create the edge path from 'theOne' to some seed
+		HalfLink hlink=new HalfLink();
+		int start=theOne;
+		int gen=book[theOne]-1;
+		while (gen>0) {
+			int ed=-1;
+			Vertex vert=pdcel.vertices[start];
+			HalfEdge he=vert.halfedge;
+			do {
+				int k=he.next.origin.vertIndx;
+				if (book[k]==gen) {
+					ed=k;
+					break;
+				}
+				he=he.prev.twin; // cclw
+			} while (he!=vert.halfedge);
+			if (ed==-1)
+				throw new CombException("error in generation "+gen);
+			hlink.add(he);
+			start=ed;
+			gen--;
+		}
+		
+		if (hlink.size()==0) 
+			throw new CombException("Failed to get comb geodesic");
+		hlink=HalfLink.reverseElements(hlink);
+		return HalfLink.reverseLink(hlink);
 	}
 	
 	/**
@@ -1403,20 +1546,28 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	}
 	
 	/**
-	 * Add 'HalfEdge's which separate 'vlist' vertices from 
-	 * 'alphaIndx'. In the connected component of 'alphaIndx'
+	 * Add 'HalfEdge's which separates 'vlist' vertices from 
+	 * 'alphaIndx' and from those vertices connected to 'alphaIndx'
+	 * in the complement of 'vlist'. Vertices along this edge
+	 * are not in 'vlist' and may include 'alphaIndx' itself.
+	 * Exception if 'alphaIndx' is in 'vlist'.  
 	 * @param pdcel packDCEL
 	 * @param vlist nodeLink
-	 * @return int, count of edges, -1 on error
+	 * @return int, count of edges or exception on error
 	 */
-	public int separatingLinks(PackDCEL pdcel,NodeLink vlist,int alphaIndx) {
+	public int separatingLinks(PackDCEL pdcel,NodeLink vlist,
+			int alphaIndx) {
 		int count=0;
-		int[] vhits=new int[pdcel.vertCount+1];  // pdcel.p.getFlower(1132);
+		int[] vhits=new int[pdcel.vertCount+1]; 
 		
 		// mark vertices: -1=excluded, 1=added to nxt, 2=handled
 		Iterator<Integer> vst=vlist.iterator();
 		while(vst.hasNext()) 
 			vhits[vst.next()]=-1;
+		
+		if (alphaIndx<1 || alphaIndx>pdcel.vertCount || vhits[alphaIndx]==-1)
+			throw new ParserException(
+					"improper alpha specified: "+alphaIndx);
 
 		// set 'eutil' for edges that get chosen
 		for (int e=1;e<=pdcel.edgeCount;e++) {

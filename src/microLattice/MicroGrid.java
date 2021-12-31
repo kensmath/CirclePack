@@ -169,7 +169,8 @@ public class MicroGrid extends PackExtender {
 	
 	// constructors
 	// this is the original mode, flat case, with path and intensity field
-	public MicroGrid(PackData p,String pathfile,String intfile,boolean s_flag) {
+	public MicroGrid(PackData p,String pathfile,
+			String intfile,boolean s_flag) {
 		super(p);
 		mode=1;   // this is mode for original development of MicroGrid
 		qackData=null;
@@ -178,7 +179,9 @@ public class MicroGrid extends PackExtender {
 		intensityFile=intfile;
 		extensionType="MICROGRID";
 		extensionAbbrev="MG";
-		toolTip="'MicroGrid' for creating hex based grids for planar regionsvariable sized for circle packings to be used in 3D printing.";
+		toolTip="'MicroGrid' for creating hex based grids "
+				+ "for planar regionsvariable sized for circle "
+				+ "packings to be used in 3D printing.";
 		registerXType();
 		if (running)
 			packData.packExtensions.add(this);
@@ -195,7 +198,8 @@ public class MicroGrid extends PackExtender {
 		pathFileName=null;
 		extensionType="MICROGRID";
 		extensionAbbrev="MG";
-		toolTip="'MicroGrid' for creating hex based grids for curved surfaces to be used in 3D printing.";
+		toolTip="'MicroGrid' for creating hex based grids "
+				+ "for curved surfaces to be used in 3D printing.";
 		registerXType();
 		if (running)
 			packData.packExtensions.add(this);
@@ -217,29 +221,38 @@ public class MicroGrid extends PackExtender {
 		
 		// original mode -- planar regions
 		if (mode==1) { 
-			// read intensity field: this should give 'microCenter', 'microAngle', 'iBox', etc.
+			// read intensity field: this should give 
+			//    'microCenter', 'microAngle', 'iBox', etc.
 			microCenter=null;
 			gridPoints=mode1_Intensity(intensityFile,script_flag);
 
 			// read the path, set center
 			File dir=CPFileManager.PackingDirectory;
-			CPBase.ClosedPath=PathManager.readpath(dir,pathFileName,script_flag);
-			myClosedPath=PathManager.readpath(dir,pathFileName,script_flag); // hold as backup
+			CPBase.ClosedPath=PathManager.readpath(dir,
+					pathFileName,script_flag);
+			myClosedPath=PathManager.readpath(dir,
+					pathFileName,script_flag); // hold as backup
 			Rectangle rect=CPBase.ClosedPath.getBounds();
-			// (x,y) is lower left corner (not upper left) due to orientation of y.
+			// (x,y) is lower left corner (not upper left) 
+			//    due to orientation of y.
 			Complex corner=new Complex(rect.getX(),rect.getY());
 			if (microCenter==null) { // not specified in intensity file
-				microCenter=new Complex(rect.getX()+rect.getWidth()/2.0,rect.getY()+rect.getHeight()/2.0);
+				microCenter=new Complex(rect.getX()+rect.getWidth()/2.0,
+						rect.getY()+rect.getHeight()/2.0);
 			}
 		
-			// find radius of disc at microCenter which encircles the curve's rectangle
+			// find radius of disc at microCenter which 
+			//   encircles the curve's rectangle
 			double mdist=microCenter.minus(corner).abs();
 			corner.x +=rect.getWidth();
-			mdist=(mdist<microCenter.minus(corner).abs()) ? microCenter.minus(corner).abs() : mdist;
+			mdist=(mdist<microCenter.minus(corner).abs()) ? 
+					microCenter.minus(corner).abs() : mdist;
 			corner.y +=rect.getHeight();
-			mdist=(mdist<microCenter.minus(corner).abs()) ? microCenter.minus(corner).abs() : mdist;
+			mdist=(mdist<microCenter.minus(corner).abs()) ? 
+					microCenter.minus(corner).abs() : mdist;
 			corner.x -=rect.getWidth();
-			mdist=(mdist<microCenter.minus(corner).abs()) ? microCenter.minus(corner).abs() : mdist;
+			mdist=(mdist<microCenter.minus(corner).abs()) ? 
+					microCenter.minus(corner).abs() : mdist;
 			encircleRad=mdist*1.2; // add some extra
 		}
 		// curved surface mode
@@ -247,13 +260,13 @@ public class MicroGrid extends PackExtender {
 			microCenter=new Complex(0.0);
 			microAngle=0.0;
 			encircleRad=1.1; // slightly larger than unit disc
-			CPBase.ClosedPath=PathUtil.getCirclePath(1.0,new Complex(0.0),180);
-			myClosedPath=PathUtil.getCirclePath(1.0,new Complex(0.0),180); // backup
+			CPBase.ClosedPath=PathUtil.getCirclePath(1.0,
+					new Complex(0.0),180);
+			myClosedPath=PathUtil.getCirclePath(1.0,new Complex(0.0),180); 
 			
 			// TODO: gridPoints are for debugging, not used yet in mode 2
 //			gridPoints=mode2_Intensity(intensityFile,script_flag);
-			
-			
+
 		}
 		
 		// build closed hex path for trimming
@@ -277,20 +290,23 @@ public class MicroGrid extends PackExtender {
 	}
 	
 	/**
-	 * TODO: Still working on this new mode=2 situation. We have two effects, the 
-	 * area density attached to faces of 'qackData'; this comes with the 
-	 * conformal map. On top of that we may impose an additional density 
-	 * pulled back from the surface under the conformal map. These will be
+	 * TODO: Still working on this new mode=2 situation. 
+	 * We have two effects, the area density attached to faces 
+	 * of 'qackData'; this comes with the conformal map. On top 
+	 * of that we may impose an additional density pulled back 
+	 * from the surface under the conformal map. These will be
 	 * combined to replace the intensity.
 	 * @param intensityfile String
 	 * @param s_flag boolean
 	 * @return Complex[][]
 	 */
-	public Complex [][]mode2_Intensity(String intensityfile,boolean s_flag) {
+	public Complex [][]mode2_Intensity(String intensityfile,
+			boolean s_flag) {
 
 		// TODO: load the input file
 //		File dir=CPFileManager.PackingDirectory;
-//		BufferedReader fp=CPFileManager.openReadFP(dir,intensityfile,s_flag);
+//		BufferedReader fp=
+//			CPFileManager.openReadFP(dir,intensityfile,s_flag);
 		
 		qackData.utilBary=null;
 		Complex [][]ans=null;
@@ -302,7 +318,8 @@ public class MicroGrid extends PackExtender {
 	
 	/**
 	 * Format for intensity file, mode=1 (planar case) 
-	 * (NOTE: i,j are flipped here. Each row is a y-level, each column an x-level
+	 * (NOTE: i,j are flipped here. Each row is a y-level, 
+	 * each column an x-level
 	 * 
 	 * 		Rows(y)/Columns(x): {yrows} {xcols}
 	 * 		Box[lx,ly,ux.uy]: {lx,ly,ux.uy} 
@@ -311,20 +328,23 @@ public class MicroGrid extends PackExtender {
 	 * 		Intensity:
 	 *        {yrows lines, each xcols long}
 	 * 
-	 * Note that each row is a y-value, and as row index goes up, y-value goes up.
-	 * Suppose we have NxM data, N=xcols, M=yrows. Then break Box into N-1 equal
-	 * vertical pieces and into M-1 horizontal pieces. So, for 3x5 data, we'll 
-	 * have intensity data at 15 locations, including values around the outer 
-	 * edge of Box.       
+	 * Note that each row is a y-value, and as row index goes up, 
+	 * y-value goes up. Suppose we have NxM data, N=xcols, 
+	 * M=yrows. Then break Box into N-1 equal vertical pieces 
+	 * and into M-1 horizontal pieces. So, for 3x5 data, we'll 
+	 * have intensity data at 15 locations, including values 
+	 * around the outer edge of Box.       
 	 * @param intensityfile String
 	 * @param script_flag boolean, stored in script?
 	 * @return Complex[][] grid locations for debugging
 	 */
-	public Complex [][]mode1_Intensity(String intensityfile,boolean s_flag) {
+	public Complex [][]mode1_Intensity(String intensityfile,
+			boolean s_flag) {
 		
 		// load the input file
 		File dir=CPFileManager.PackingDirectory;
-		BufferedReader fp=CPFileManager.openReadFP(dir,intensityfile,s_flag);
+		BufferedReader fp=CPFileManager.openReadFP(dir,
+				intensityfile,s_flag);
 		
 		// initialize
 		xcols=0;
@@ -496,7 +516,7 @@ public class MicroGrid extends PackExtender {
 			int []uw=v2micro[v];
 			if ((uw[0]%basediam)==0 && (uw[1]%basediam)==0)
 				flg=-1;
-			packData.kData[v].utilFlag=flg; // -1 for basegrid vertices
+			packData.setVertUtil(v,flg); // -1 for basegrid vertices
 		}
 
 		// if called for, apply optional rotation, then translation
@@ -1963,7 +1983,7 @@ public class MicroGrid extends PackExtender {
 		//   vert was excluded, so it is not put in 'vhits'.
 		NodeLink vhits=new NodeLink(gridPack);
 		for (int v=1;v<=gridPack.nodeCount;v++) { 
-			if (gridPack.kData[v].utilFlag==(level+1)) { // some nghb face was hit
+			if (gridPack.getVertUtil(v)==(level+1)) { // some nghb face was hit
 				int num=gridPack.countFaces(v);
 				int[] faceFlower=gridPack.getFaceFlower(v);
 				boolean notAll=false;

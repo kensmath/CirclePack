@@ -50,11 +50,8 @@ public class LayoutBugs {
 		  BufferedWriter dbw=CPFileManager.appendToFP(tmpdir,filename,false);
 		  try {
 			  CirclePack.cpb.msg("debug GraphLink to: "+tmpdir.toString()+File.separator+filename);
-		      dbw.write("\nGraphLink of directed pairs of faces: faceCount "+p.faceCount+
-		    		  "\n  firstFace "+p.firstFace+
-		    		  ", firstRedFace "+p.firstRedFace+
-		    		  ", redChain "+p.redChain.face+" --- \n\n");
-		      
+		      dbw.write("\nGraphLink of directed pairs of faces: faceCount "+
+			  p.faceCount+" --- \n\n");
 		      Iterator<EdgeSimple> dlk=dlink.iterator();
 		      while (dlk.hasNext()) {
 		    	  EdgeSimple edge=dlk.next();
@@ -78,13 +75,15 @@ public class LayoutBugs {
 	public static int log_build_faceOrder(PackData p,VertList fDo) {
 		  int count=0;
 
-		  String filename=new String("build_faceOrder_"+(rankStamp++)+"_log.txt");
+		  String filename=new String("build_faceOrder_"+
+				  (rankStamp++)+"_log.txt");
 		  BufferedWriter dbw=CPFileManager.appendToFP(tmpdir,filename,false);
 		  try {
-			  CirclePack.cpb.msg("debug faceOrder to: "+tmpdir.toString()+File.separator+filename);
-		      dbw.write("\nFace order from 'build_redchain': nodeCount "+p.nodeCount+
-		    		  ", faceCount "+p.faceCount+", firstFace "+p.firstFace+
-		    		  ", firstRedFace "+p.firstRedFace+" --- \n\n");
+			  CirclePack.cpb.msg("debug faceOrder to: "+
+					  tmpdir.toString()+File.separator+filename);
+		      dbw.write("\nFace order from 'build_redchain': nodeCount "+
+					  p.nodeCount+
+		    		  ", faceCount "+p.faceCount+" --- \n\n");
 		      VertList trace=fDo;
 		      while (trace!=null) {
 		    	  if (trace.v<1 || trace.v>p.faceCount) { 
@@ -114,9 +113,10 @@ public class LayoutBugs {
 	}
 
 	/** 
-	 * Log details of 'PairLink' of 'SideDescription's in 'SideDescriptions_xxxx_log.txt'
-	 * @param p, PackData
-	 * @param pairs, D_PairLink
+	 * Log details of 'D_PairLink' of 'D_SideData's in 
+	 * 'SideDescriptions_xxxx_log.txt'
+	 * @param p PackData
+	 * @param pairs D_PairLink
 	 * @return count 
 	*/
 	public static int log_PairLink(PackData p,D_PairLink pairs) {

@@ -636,7 +636,12 @@ does not eliminate redundancies, as other counts do.)
 	triangle angles	pi/a, pi/b, pi/c; a, b, c can be (at worst) half 
 	integers, and if one is a half integer, then the other two must be 
 	equal to make combinatoric sense. The geometry for the packing is 
-	chosen based on the angles. 
+	chosen based on the angles.
+	
+	The "j_ftn" is like a triangle group (0 a b), the 0 indicating
+	logarithmic branching at one point (taken as infinity). Default
+	to a=2 and b=3, the classical j-function associated with the
+	modular group.
 	
 	The "Kagome" construction builds the packing for a tiling in
 	the famous Kagome latttice pattern.
@@ -652,21 +657,35 @@ does not eliminate redundancies, as other counts do.)
 	required options.
 </description>
 <examples>
-	<instance text="hex_torus 3 6"> build 3-by-6 hex torus</instance>
-	<instance text="create hex 23"> hexagonal packing of 23 generations</instance>
-	<instance text="create sq_grid 4"> 'square grid' pattern from 4 quadruplings of a 4-flower</instance>
-	<instance text="create tri_group 8 2 3 5"> 8 generations of the (2 3 5) triangle group on
+	<instance text="hex_torus 3 6"> 
+	build 3-by-6 hex torus</instance>
+	<instance text="create hex 23"> 
+	hexagonal packing of 23 generations</instance>
+	<instance text="create sq_grid 4"> 
+	'square grid' pattern from 4 quadruplings of a 4-flower</instance>
+	<instance text="create tri_group 8 2 3 5"> 
+	8 generations of the (2 3 5) triangle group on
 	the sphere.</instance>
-	<instance text="create Kag 4"> 4 layers of Kagome lattice about a central hexagon
-	</instance>
-	<instance text="create pent 5"> 5 generations of regular pentagonal tiling</instance>
-	<instance text="create pent3 3"> 3 generations of pent tiling centered on triple point</instance>
-	<instance text="create pent4 3"> 3 generations of pent tiling centered on quad point</instance>
-	<instance text="create pin 5"> 5 generations of Conway's pinwheel tiling, packed as a triangle (1 2 3), 1 = right angle,
-	2 = atan(2) = .35241638*Pi, 3 = atan(1/2) = .1475836*Pi.</instance>
-	<instance text="create dyadic 6"> 6 generations of Penrose's hyperbolic tiling (Carleson squares in the limit)</instance>
-	<instance text="create fib 5 6 3 2"> 5 generations of Fibonnacci-related tiling, W=6,H=3,X=2.</instance>
-	<instance text="tetra"> regular tetrahedron on the sphere</instance>
+	<instance text="create j_ftn 8"> 
+	8 generations of the classical j-function.</instance>
+	<instance text="create Kag 4"> 
+	4 layers of Kagome lattice about a central hexagon</instance>
+	<instance text="create pent 5">
+	5 generations of regular pentagonal tiling</instance>
+	<instance text="create pent3 3"> 
+	3 generations of pent tiling centered on triple point</instance>
+	<instance text="create pent4 3"> 
+	3 generations of pent tiling centered on quad point</instance>
+	<instance text="create pin 5"> 
+	5 generations of Conway's pinwheel tiling, packed as a 
+	triangle (1 2 3), 1 = right angle, 2 = atan(2) = .35241638*Pi, 
+	3 = atan(1/2) = .1475836*Pi.</instance>
+	<instance text="create dyadic 6"> 
+	6 generations of Penrose's hyperbolic tiling (Carleson squares in the limit)</instance>
+	<instance text="create fib 5 6 3 2"> 
+	5 generations of Fibonnacci-related tiling, W=6,H=3,X=2.</instance>
+	<instance text="tetra"> 
+	regular tetrahedron on the sphere</instance>
 </examples>
 <seealso>
 <see>seed</see>
@@ -1733,7 +1752,7 @@ the new path.</opt>
 </seealso>
 </command>
 
-<command cmd="j_ftn" flags="{n0 n1 maxsize}">
+<command cmd="j_ftn" flags="{maxsize n0 n1}">
 <description>This is a very specialized command. It's aim is to build
 	the complexes associated with the classical "j-function"
 	of function theory (related to the modular function) and
@@ -1748,6 +1767,9 @@ the new path.</opt>
 	The classical j-function itself would have n0=2 and n1=1,
 	but other values can be specified.
 </description>
+<seealso>
+<see>create</see>
+</seealso>
 </command>
 
 

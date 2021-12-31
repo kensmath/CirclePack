@@ -24,8 +24,6 @@ import handlers.MOBIUSHandler;
 import handlers.PACKMOBHandler;
 import images.CPIcon;
 import input.CPFileManager;
-import input.CommandStrParser;
-import komplex.SideDescription;
 import mytools.MyTool;
 import packing.PackData;
 import util.PopupBuilder;

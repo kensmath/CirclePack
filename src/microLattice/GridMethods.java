@@ -1,12 +1,12 @@
 package microLattice;
 
 import complex.Complex;
+import dcel.CombDCEL;
+import dcel.PackDCEL;
 import exceptions.CombException;
 import komplex.EdgeSimple;
-import komplex.KData;
 import listManip.EdgeLink;
 import packing.PackData;
-import packing.RData;
 
 /**
  * These static methods are for working with hex grids, 
@@ -20,54 +20,40 @@ public class GridMethods {
 	
 	/**
 	 * Create hex packing as in 'hexBuild', but by direct build
-	 * rather than adding generations in succession. (Advantage should
-	 * be speed, but vert numbering does not spiral out so nicely.)
-	 * The hex grid here is identified with span of independent vectors
-	 * u=<1/2,-sqrt(3)/2> and w=<1/2,sqrt(3)/2>, so <i,j> is i*u+j*w.
-	 * We also set up translation info in 'micro2v' and 'v2micro'.
+	 * rather than adding generations in succession and repacking. 
+	 * (Advantage should be speed, but numbering does not spiral 
+	 * out so nicely.) The hex grid here is identified with span 
+	 * of independent vectors u=<1/2,-sqrt(3)/2> and 
+	 * w=<1/2,sqrt(3)/2>, so <i,j> is i*u+j*w. We also set up 
+	 * translation info in 'micro2v' and 'v2micro'.
 	 * Alpha is set to center vertex and gamma so positive x-axis goes through u+w.
 	 * The faces are unit-sided equilateral triangles, radii = 1/2.
 	 * @param n int, number of generations (seed is 1 generation)
-	 * @param m2v [][]int, allocated with proper size by calling routing
-	 * @param v2m [][]int, allocated with proper size by calling routing
-	 * @return @see PackData
+	 * @param m2v [][]int, allocated with proper size by calling routine
+	 * @param v2m [][]int, allocated with proper size by calling routine
+	 * @return new PackData
 	*/
 	public static PackData hexByHand(int n,int [][]m2v,int [][]v2m) {
 		PackData newPack=new PackData(null);
-		newPack.status=true;
-		newPack.locks=0;
-		newPack.activeNode=1;
 		newPack.hes=0;
 		
-		// prepare KData and RData
-		KData []kdata;
-		RData []rdata;
+		// prepare bouquet
 		int nodecount=3*n*n+3*n+1;
-		kdata=new KData[nodecount+1];
-		rdata=new RData[nodecount+1];
-		for (int v=1;v<=nodecount;v++) {
-			kdata[v]=new KData();
-			rdata[v]=new RData();
-			rdata[v].rad=0.5;
-			rdata[v].aim=2*Math.PI;
-		}
+		int[][] bouquet=new int[nodecount+1][];
 
+		// set up 'm2v' and 'v2m'
 		int vtick=0;
-		Complex uz=new Complex(0.5,-Math.sqrt(3)/2.0);
-		Complex wz=new Complex(0.5,Math.sqrt(3)/2.0);
 		for (int u=0;u<=n;u++) 
 			for (int w=0;w<=n+u;w++) {
 				m2v[u][w]=++vtick;
 				v2m[vtick][0]=u-n;
 				v2m[vtick][1]=w-n;
-				rdata[vtick].center=uz.times(u-n).add(wz.times(w-n));
 			}
 		for (int u=1;u<=n;u++)
 			for (int w=u;w<=2*n;w++) {
 				m2v[n+u][w]=++vtick;
 				v2m[vtick][0]=u;
 				v2m[vtick][1]=w-n;
-				rdata[vtick].center=uz.times(u).add(wz.times(w-n));
 			}
 		
 		// prepare flowers
@@ -85,146 +71,139 @@ public class GridMethods {
 		for (int u=1;u<=n;u++) 
 			for (int w=1;w<n+u;w++) {
 				v=m2v[u][w];
-				kdata[v].num=6;
-				kdata[v].flower=new int[7];
+				bouquet[v]=new int[7];
 				for (int j=0;j<6;j++) {
 					EdgeSimple edge=hexstencil[j];
 					int uu=u+edge.v;
 					int ww=w+edge.w;
-					kdata[v].flower[j]=m2v[uu][ww];
+					bouquet[v][j]=m2v[uu][ww];
 				}
-				kdata[v].flower[6]=kdata[v].flower[0];
+				bouquet[v][6]=bouquet[v][0];
 			}
 		for (int u=1;u<n;u++) 
 			for (int w=u+1;w<2*n;w++) {
 				v=m2v[n+u][w];
-				kdata[v].num=6;
-				kdata[v].flower=new int[7];
+				bouquet[v]=new int[7];
 				for (int j=0;j<6;j++) {
 					EdgeSimple edge=hexstencil[j];
 					int uu=n+u+edge.v;
 					int ww=w+edge.w;
-					kdata[v].flower[j]=m2v[uu][ww];
+					bouquet[v][j]=m2v[uu][ww];
 				}
-				kdata[v].flower[6]=kdata[v].flower[0];
+				bouquet[v][6]=bouquet[v][0];
 			}
 		
 		// corners
 		v=m2v[0][0]; // lower left
-		kdata[v].num=2;
-		kdata[v].bdryFlag=1;
-		kdata[v].flower=new int[3];
-		kdata[v].flower[0]=m2v[1][0];
-		kdata[v].flower[1]=m2v[1][1];
-		kdata[v].flower[2]=m2v[0][1];
+		bouquet[v]=new int[3];
+		bouquet[v][0]=m2v[1][0];
+		bouquet[v][1]=m2v[1][1];
+		bouquet[v][2]=m2v[0][1];
+		
 		
 		v=m2v[n][0]; // bottom
-		kdata[v].num=2;
-		kdata[v].bdryFlag=1;
-		kdata[v].flower=new int[3];
-		kdata[v].flower[0]=m2v[n+1][1];
-		kdata[v].flower[1]=m2v[n][1];
-		kdata[v].flower[2]=m2v[n-1][0];
+		bouquet[v]=new int[3];
+		bouquet[v][0]=m2v[n+1][1];
+		bouquet[v][1]=m2v[n][1];
+		bouquet[v][2]=m2v[n-1][0];
 
 		v=m2v[2*n][n]; // lower right
-		kdata[v].num=2;
-		kdata[v].bdryFlag=1;
-		kdata[v].flower=new int[3];
-		kdata[v].flower[0]=m2v[2*n][n+1];
-		kdata[v].flower[1]=m2v[2*n-1][n];
-		kdata[v].flower[2]=m2v[2*n-1][n-1];
+		bouquet[v]=new int[3];
+		bouquet[v][0]=m2v[2*n][n+1];
+		bouquet[v][1]=m2v[2*n-1][n];
+		bouquet[v][2]=m2v[2*n-1][n-1];
 
 		v=m2v[2*n][2*n]; // upper right
-		kdata[v].num=2;
-		kdata[v].bdryFlag=1;
-		kdata[v].flower=new int[3];
-		kdata[v].flower[0]=m2v[2*n-1][2*n];
-		kdata[v].flower[1]=m2v[2*n-1][2*n-1];
-		kdata[v].flower[2]=m2v[2*n][2*n-1];
+		bouquet[v]=new int[3];
+		bouquet[v][0]=m2v[2*n-1][2*n];
+		bouquet[v][1]=m2v[2*n-1][2*n-1];
+		bouquet[v][2]=m2v[2*n][2*n-1];
 
 		v=m2v[n][2*n]; // top
-		kdata[v].num=2;
-		kdata[v].bdryFlag=1;
-		kdata[v].flower=new int[3];
-		kdata[v].flower[0]=m2v[n-1][2*n-1];
-		kdata[v].flower[1]=m2v[n][2*n-1];
-		kdata[v].flower[2]=m2v[n+1][2*n];
+		bouquet[v]=new int[3];
+		bouquet[v][0]=m2v[n-1][2*n-1];
+		bouquet[v][1]=m2v[n][2*n-1];
+		bouquet[v][2]=m2v[n+1][2*n];
 
 		v=m2v[0][n]; // upper left
-		kdata[v].num=2;
-		kdata[v].bdryFlag=1;
-		kdata[v].flower=new int[3];
-		kdata[v].flower[0]=m2v[0][n-1];
-		kdata[v].flower[1]=m2v[1][n];
-		kdata[v].flower[2]=m2v[1][n+1];
+		bouquet[v]=new int[3];
+		bouquet[v][0]=m2v[0][n-1];
+		bouquet[v][1]=m2v[1][n];
+		bouquet[v][2]=m2v[1][n+1];
 
 		// edges
 		for (int j=1;j<n;j++) {
-			
 			v=m2v[0][j]; // left
-			kdata[v].num=3;
-			kdata[v].bdryFlag=1;
-			kdata[v].flower=new int[4];
-			kdata[v].flower[0]=m2v[0][j-1];
-			kdata[v].flower[1]=m2v[1][j];
-			kdata[v].flower[2]=m2v[1][j+1];
-			kdata[v].flower[3]=m2v[0][j+1];
+			bouquet[v]=new int[4];
+			bouquet[v][0]=m2v[0][j-1];
+			bouquet[v][1]=m2v[1][j];
+			bouquet[v][2]=m2v[1][j+1];
+			bouquet[v][3]=m2v[0][j+1];
 			
 			v=m2v[j][0]; // bottom left
-			kdata[v].num=3;
-			kdata[v].bdryFlag=1;
-			kdata[v].flower=new int[4];
-			kdata[v].flower[0]=m2v[j+1][0];
-			kdata[v].flower[1]=m2v[j+1][1];
-			kdata[v].flower[2]=m2v[j][1];
-			kdata[v].flower[3]=m2v[j-1][0];
+			bouquet[v]=new int[4];
+			bouquet[v][0]=m2v[j+1][0];
+			bouquet[v][1]=m2v[j+1][1];
+			bouquet[v][2]=m2v[j][1];
+			bouquet[v][3]=m2v[j-1][0];
 			
 			v=m2v[n+j][j]; // bottom right
-			kdata[v].num=3;
-			kdata[v].bdryFlag=1;
-			kdata[v].flower=new int[4];
-			kdata[v].flower[0]=m2v[n+j+1][j+1];
-			kdata[v].flower[1]=m2v[n+j][j+1];
-			kdata[v].flower[2]=m2v[n+j-1][j];
-			kdata[v].flower[3]=m2v[n+j-1][j-1];
+			bouquet[v]=new int[4];
+			bouquet[v][0]=m2v[n+j+1][j+1];
+			bouquet[v][1]=m2v[n+j][j+1];
+			bouquet[v][2]=m2v[n+j-1][j];
+			bouquet[v][3]=m2v[n+j-1][j-1];
 			
 			v=m2v[2*n][n+j]; // right
-			kdata[v].num=3;
-			kdata[v].bdryFlag=1;
-			kdata[v].flower=new int[4];
-			kdata[v].flower[0]=m2v[2*n][n+j+1];
-			kdata[v].flower[1]=m2v[2*n-1][n+j];
-			kdata[v].flower[2]=m2v[2*n-1][n+j-1];
-			kdata[v].flower[3]=m2v[2*n][n+j-1];
+			bouquet[v]=new int[4];
+			bouquet[v][0]=m2v[2*n][n+j+1];
+			bouquet[v][1]=m2v[2*n-1][n+j];
+			bouquet[v][2]=m2v[2*n-1][n+j-1];
+			bouquet[v][3]=m2v[2*n][n+j-1];
 			
 			v=m2v[n+j][2*n]; // top right
-			kdata[v].num=3;
-			kdata[v].bdryFlag=1;
-			kdata[v].flower=new int[4];
-			kdata[v].flower[0]=m2v[n+j-1][2*n];
-			kdata[v].flower[1]=m2v[n+j-1][2*n-1];
-			kdata[v].flower[2]=m2v[n+j][2*n-1];
-			kdata[v].flower[3]=m2v[n+j+1][2*n];
+			bouquet[v]=new int[4];
+			bouquet[v][0]=m2v[n+j-1][2*n];
+			bouquet[v][1]=m2v[n+j-1][2*n-1];
+			bouquet[v][2]=m2v[n+j][2*n-1];
+			bouquet[v][3]=m2v[n+j+1][2*n];
 			
 			v=m2v[j][n+j]; // top left
-			kdata[v].num=3;
-			kdata[v].bdryFlag=1;
-			kdata[v].flower=new int[4];
-			kdata[v].flower[0]=m2v[j-1][n+j-1];
-			kdata[v].flower[1]=m2v[j][n+j-1];
-			kdata[v].flower[2]=m2v[j+1][n+j];
-			kdata[v].flower[3]=m2v[j+1][n+j+1];
+			bouquet[v]=new int[4];
+			bouquet[v][0]=m2v[j-1][n+j-1];
+			bouquet[v][1]=m2v[j][n+j-1];
+			bouquet[v][2]=m2v[j+1][n+j];
+			bouquet[v][3]=m2v[j+1][n+j+1];
 		}
 		
-		newPack.kData=kdata;
-		newPack.rData=rdata;
-		newPack.nodeCount=nodecount;
-		newPack.setAlpha(m2v[n][n]);
+		int alphaIndx=m2v[n][n];
+		PackDCEL newDCEL=CombDCEL.getRawDCEL(bouquet,alphaIndx);
+		newDCEL.fixDCEL_raw(newPack);
 		int n2n=(int)(n/2);
 		newPack.setGamma(m2v[n-n2n][n+n2n]);
-//		newPack.gamma=m2v[(int)(n*3/2)][(int)(n*3/2)];
+
+		// set radii/centers
+		Complex uz=new Complex(0.5,-Math.sqrt(3)/2.0);
+		Complex wz=new Complex(0.5,Math.sqrt(3)/2.0);
 		
-		newPack.setCombinatorics();
+		for (int u=0;u<=n;u++) 
+			for (int w=0;w<=n+u;w++) {
+				int vv=m2v[u][w];
+				v2m[vv][0]=u-n;
+				v2m[vv][1]=w-n;
+				newPack.setCenter(vv,uz.times(u-n).add(wz.times(w-n)));
+				newPack.setRadius(vv,0.5);
+			}
+		for (int u=1;u<=n;u++)
+			for (int w=u;w<=2*n;w++) {
+				int vv=m2v[n+u][w];
+				v2m[vv][0]=u;
+				v2m[vv][1]=w-n;
+				newPack.setCenter(vv,uz.times(u).add(wz.times(w-n)));
+				newPack.setRadius(vv,0.5);
+			}
+
+		newPack.set_aim_default();
 		return newPack;
 	}
 	

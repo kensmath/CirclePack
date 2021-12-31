@@ -83,7 +83,8 @@ public class DataTree extends JPanel {
 		Hashtable<String,Hashtable<String,Vector<String>>> 
 		root = new Hashtable<String,Hashtable<String,Vector<String>>>(2);
 		Hashtable<String,Vector<String>> sub = new Hashtable<String,Vector<String>>(4);
-		if (!p.status || p.nodeCount==0) return null;
+		if (!p.status || p.nodeCount==0) 
+			return null;
 
 		Vector<String> v1 = new Vector<String>(4);
 		double []curvErr=p.packCurvError();
@@ -116,35 +117,22 @@ public class DataTree extends JPanel {
 			v2.add("Area = " + String.format("%.6e",p.carrierArea()));
 		} catch (Exception ex) {}
 		
-		if (p.packDCEL!=null) {
-			if (p.packDCEL.redChain==null) {
-				v2.add("First Face = "+p.packDCEL.layoutOrder.get(0).face.faceIndx);
-			}
-			else 
-				v2.add("First Face/BdryFace = " + 
-						p.packDCEL.layoutOrder.get(0).face.faceIndx+" / "+
-						p.packDCEL.redChain.myEdge.face.faceIndx);
-			int bcount=p.packDCEL.idealFaceCount;
-			v2.add("Bdry Component Count = " + bcount);
-			if (bcount>0) {
-				strbuf=new StringBuilder(p.packDCEL.idealFaces[1].edge.origin.vertIndx);
-				for (int j=2;j<bcount;j++)
-					strbuf.append(" "+p.packDCEL.idealFaces[j].edge.origin.vertIndx);
-				v2.add("Bdry Start verts = " +strbuf.toString());
-			}
-			sub.put("Technical", v2);
+		if (p.packDCEL.redChain==null) {
+			v2.add("First Face = "+p.packDCEL.layoutOrder.get(0).face.faceIndx);
 		}
-		else {
-			v2.add("First Face/BdryFace = " + p.firstFace+" / "+p.firstRedFace);
-			v2.add("Bdry Component Count = " + p.getBdryCompCount());
-			if (p.getBdryCompCount()>0) {
-				strbuf=new StringBuilder(p.bdryStarts[1]);
-				for (int j=2;j<p.getBdryCompCount();j++)
-					strbuf.append(" "+p.bdryStarts[j]);
-				v2.add("Bdry Start verts = " +strbuf.toString());
-			}
-			sub.put("Technical", v2);
+		else 
+			v2.add("First Face/BdryFace = " + 
+					p.packDCEL.layoutOrder.get(0).face.faceIndx+" / "+
+					p.packDCEL.redChain.myEdge.face.faceIndx);
+		int bcount=p.packDCEL.idealFaceCount;
+		v2.add("Bdry Component Count = " + bcount);
+		if (bcount>0) {
+			strbuf=new StringBuilder(p.packDCEL.idealFaces[1].edge.origin.vertIndx);
+			for (int j=2;j<bcount;j++)
+				strbuf.append(" "+p.packDCEL.idealFaces[j].edge.origin.vertIndx);
+			v2.add("Bdry Start verts = " +strbuf.toString());
 		}
+		sub.put("Technical", v2);
 
 		Vector<String> v3 = new Vector<String>(4);
 
@@ -193,10 +181,10 @@ public class DataTree extends JPanel {
 				String.format("%.6e",std_dev));
 
 		// inversive distances
-		if (p.overlapStatus) 
-			v3.add("Some inverse distances are set");
+		if (p.haveInvDistances()) 
+			v3.add("Some non-trivial inverse distances are set");
 		else 
-			v3.add("No inverse distances are set");
+			v3.add("No non-trivial inverse distances are set");
 
 		sub.put("Lists", v3);
 		String s = new String("Pack "+p.packNum+" Data");

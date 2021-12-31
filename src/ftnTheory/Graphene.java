@@ -1057,7 +1057,8 @@ public class Graphene extends PackExtender {
 			count += cpCommand("color -c d");
 			
 			// display stitched edges, graph, dots
-			packData.elist=EdgeLink.verts2edges(packData,stitchVerts,false);
+			packData.elist=
+				EdgeLink.verts2edges(packData.packDCEL,stitchVerts,false);
 			count += cpCommand("Disp -w -f -tf b -t1ft3 "+northpole+" -t2ft3 "+southpole+" -cf i -et8 elist");
 		} catch (Exception ex) {
 			errorMsg("Graphene: problem with 'fixUp'");

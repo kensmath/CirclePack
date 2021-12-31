@@ -1063,18 +1063,18 @@ public class WeldManager extends PackExtender {
 		}
 
 		String buf = null;
-		if (v == p.kData[v_orig].flower[0]) {
+		if (v == p.getFirstPetal(v_orig)) {
 			buf = new String("b");
 		} else {
-			v = p.kData[v].flower[p.countFaces(v)];
+			v = p.getLastPetal(v);
 			buf = new String("b(" + v_orig + " " + v + ")");
 		}
 		p.vlist = new NodeLink(p, buf);
 		p.elist = new EdgeLink(p, buf);
-		if (w == q.kData[w_orig].flower[q.countFaces(w_orig)]) {
+		if (w == q.getLastPetal(w_orig)) {
 			buf = new String("b");
 		} else {
-			w = q.kData[w].flower[0];
+			w = q.getFirstPetal(w);
 			buf = new String("b(" + w + " " + w_orig + ")");
 		}
 		q.vlist = new NodeLink(q, buf);
@@ -1103,8 +1103,9 @@ public class WeldManager extends PackExtender {
 	} 
 
 	/**
-	 * Adds a new vert on boundary between v and v_next. Assumes both v, v_next
-	 * are on boundary and v_next=p.kData[v].flower[0]. Results in v_next +++++
+	 * Adds a new vert on boundary between v and v_next. 
+	 * Assumes both v, v_next are on boundary and 
+	 * v_next=p.kData[v].flower[0]. Results in v_next +++++
 	 * newvert +++++ v ++ + ++ ++ + ++ ++ u ++
 	 * 
 	 * Special cases: if v or v_next lies in just one face, must add interior

@@ -211,24 +211,25 @@ public class BeltramiFlips extends PackExtender {
 	 */
 	public int gogo(int N) {
 		int count=0;
-		int v=1;
-		int w=1;
-		int j=0;
-		int num=0;
 		int flipCount=0;
 		int node=packData.nodeCount;
 		while (count<N) {
 			// random vert, random petal
-			v=rand.nextInt(node)+1;
-			num=packData.countFaces(v);
-			// degree must be >3 for interior, >2 for bdry
-			if ((num+packData.getBdryFlag(v))>3) {
-				// random petal
-				if (packData.isBdry(v)) // boundary v   
-					j=rand.nextInt(num-1)+1;
-				else  
-					j=rand.nextInt(num);
-				w=packData.kData[v].flower[j];
+			int v=rand.nextInt(node)+1;
+			int j=-1;
+			int[] petals=packData.packDCEL.vertices[v].getPetals();
+			int num=petals.length;
+			if (packData.isBdry(v)) { // degree must be >3 for interior, >2 for bdry
+
+				if (num<3)
+					continue;
+				j=1+rand.nextInt(num-1);
+			}
+			else if (num>3)
+				j=rand.nextInt(num);
+
+			if (j>-1) {
+				int w=petals[j];
 				flipCount += flip2Legal(v,w);
 			}
 			count++;

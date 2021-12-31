@@ -11,19 +11,17 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
-import deBugging.LayoutBugs;
+import dcel.HalfEdge;
+import dcel.RedHEdge;
 import exceptions.InOutException;
 import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.EuclMath;
 import input.CPFileManager;
-import komplex.DualGraph;
 import komplex.EdgeSimple;
 import komplex.Face;
-import komplex.RedList;
 import listManip.EdgeLink;
 import listManip.FaceLink;
-import listManip.GraphLink;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.PackExtender;
@@ -34,24 +32,25 @@ import util.StringUtil;
 import util.TriAspect;
 
 /**
- * This extender allows for the study of affine structures 
- * on surfaces. 'ProjStruct' contains many static routines for
- * computations.
+ * This extender was started to study affine structures
+ * on tori, but with advent of DCEL structures most of
+ * functionality has been moved to 'ProjStruct'; e.g. see
+ * 'affinepack'.
  * 
- * Now in 2021, I am moving to dcel structures, so see
- * command 'affinepack'.
- * 
- * 
- * (Note: This code was developed originally as part of 
- * Chris Sass's 2011 PhD thesis at Tennessee: formerly in
- * 'SassStuff.java'.) 
+ * This class also contains legacy code for experiments on
+ * "weak consistency", which I don't quite recall now: 
+ * In a geometric triangulation, each triangle can be 
+ * formed by a tangent triple of circles. If the tangency 
+ * points for the triangles on either side of a shared edge 
+ * agree, then we call that weak consistency --- its 
+ * weaker than when the triangulation is formed by a circle
+ * packing.
  * 
  * @authors, Chris Sass and Ken Stephenson
  */
 public class AffinePack extends PackExtender {
 	public Random rand;
 	public TriAspect []aspects;
-	public GraphLink dTree; // dual spanning tree
 	public static double TOLER=.00000001;
 	public static double OKERR=.0000000001; 
 	public static int PASSES=10000;
@@ -79,26 +78,9 @@ public class AffinePack extends PackExtender {
 			running=false;
 		}
 		if (running) {
-			
-			// TODO: redo using 'CombDCEL.torus4Sides'
-//			dTree=ProjStruct.torus4layout(packData,0);
-			
-			// LayoutBugs.log_GraphLink(p,dTree);
-			// LayoutBugs.pfacered(packData); // DualGraph.printGraph(dTree);
-			// LayoutBugs.print_drawingorder(packData); 
-			
-//			LayoutBugs.log_GraphLink(packData,dTree);
-			boolean teststop=true;
-			if (teststop) {
-				dTree= DualGraph.easySpanner(packData,false);
-//				LayoutBugs.log_GraphLink(packData,dTree);
-			}
-			// deBugging.LayoutBugs.log_RedList(packData,packData.redChain);
 			resetAspects();
 			packData.packExtensions.add(this);
-			
 			rand=new Random(0); // seed for debugging
-			
 		}
 	}
 	
@@ -1205,7 +1187,6 @@ public class AffinePack extends PackExtender {
 		
 	}
 	
-	
 	/*
 	 *    NEW CENTER
 	 *    
@@ -1340,169 +1321,7 @@ public class AffinePack extends PackExtender {
 		return C;
 		
 	}
-	
-	/*
-	 *    RING LEMMA
-	 */
-	public static double [] RL(PackData p, TriAspect[] asp){
-		
-		double bad=0.0;
-		double worst=0.0;
-		double ratio=0.0;
-		int face1=0;
-		int face2=0;
-		int n=0;
-		int v1=0;
-		int v2=0;
-		double RL=0.0;
-		double a=(5-2*Math.sqrt(5))/5;
-		double b=(3+Math.sqrt(5))/2;
-		double c=(5+2*Math.sqrt(5))/5;
-		double d=(3-Math.sqrt(5))/2;
-		
-		for (int v=1;v<=p.nodeCount;v++){
-			
-			if (!p.isBdry(v)){
-				
-				n=p.countFaces(v);
-				
-				int[] faceFlower=p.getFaceFlower(v);
-				for (int j=0;j<p.countFaces(v);j++) {
-					int f=faceFlower[j];
-					int k=asp[f].vertIndex(v);
-					int w1=p.faces[f].vert[(k+1)%3];
-					int w2=p.faces[f].vert[(k+2)%3];
-					int[] faceFlower1=p.getFaceFlower(w1);
-					int[] faceFlower2=p.getFaceFlower(w2);
-					
-					for (int l=0;l<p.countFaces(w1);l++){
-						int f1=faceFlower1[l];
-						int k1=asp[f1].vertIndex(w1);
-						ratio=asp[f].labels[k]/asp[f1].labels[k1];
-						RL=a*Math.pow(b,(double)n)+c*Math.pow(d,(double)n)-1;
-						bad=ratio/RL;
-						
-						if (bad>=worst){
-							worst=bad;
-							face1=f;
-							v1=v;
-							face2=f1;
-							v2=w1;
-						}
-					}
-					
-					for (int l=0;l<p.countFaces(w2);l++){
-						int f2=faceFlower2[l];
-						int k2=asp[f2].vertIndex(w2);
-						ratio=asp[f].labels[k]/asp[f2].labels[k2];
-						RL=a*Math.pow(b,(double)n)+c*Math.pow(d,(double)n)-1;
-						bad=ratio/RL;
-						
-						if (bad>=worst){
-							worst=bad;
-							face1=f;
-							v1=v;
-							face2=f2;
-							v2=w2;
-						}
-					}
-				}
-			}
-			
-			else {
-				
-			}
-			
-		}
-		double info[] = new double[5];
-		info[0]=worst;
-		info[1]=(double)face1;
-		info[2]=(double)v1;
-		info[3]=(double)face2;
-		info[4]=(double)v2;
-		return info;
-	}
-	
-	/*
-	 *   WORST FACE (RING LEMMA)
-	 */
-	public static double [] WF(PackData p, TriAspect[] asp){
-		
-		int k=0;
-		int face=0;
-		int w=0;
-		int count=0;
-		double RAD=0.0;
-		double rad=0.0;
-		double degree=0.0;
-		double rl=0.0;
-		double bad=0.0;
-		double RL=0;
-		double ratio=1.0;
-		double worst=0.0;
-		double a=(5-2*Math.sqrt(5))/5;
-		double b=(3+Math.sqrt(5))/2;
-		double c=(5+2*Math.sqrt(5))/5;
-		double d=(3-Math.sqrt(5))/2;
-		
-		for (int f=1;f<=p.faceCount;f++) {
-			for (int j=0; j<3; j++){
-				
-				w=p.faces[f].vert[j];
-				k=p.countFaces(w);
-				
-				if (!p.isBdry(w)){
-					
-					ratio=asp[f].labels[j]/asp[f].labels[(j+1)%3];
-					RL=a*Math.pow(b,(double)k)+c*Math.pow(d,(double)k)-1;
-					bad=ratio/RL;
-					
-					if (bad>=worst){
-						worst=bad;
-						face=f;
-						degree=(double)k;
-						rl=RL;
-						RAD=asp[f].labels[j];
-						rad=asp[f].labels[(j+1)%3];
-					}
-					
-					if (bad>=1){
-						count++;
-					}
-					ratio=asp[f].labels[j]/asp[f].labels[(j+2)%3];
-					RL=a*Math.pow(b,(double)k)+c*Math.pow(d,(double)k)-1;
-					bad=ratio/RL;
-					
-					if (bad>=worst){
-						worst=bad;
-						face=f;
-						degree=(double)k;
-						rl=RL;
-						RAD=asp[f].labels[j];
-						rad=asp[f].labels[(j+2)%3];
-						
-					}
-					
-					if (bad>=1){
-						count++;
-					}
-				}	
-			}
-		}
-		
-		double info[]= new double[7];
-		info[0]=worst;
-		info[1]=(double)face;
-		info [2]=degree;
-		info[3]=rl;
-		info[4]=RAD;
-		info[5]=rad;
-		info[6]=(double)count;
-		
-		return info;
-		
-	}
-	
+
 	
 	/**
 	 *   RECTANGLE ADJUST
@@ -1716,11 +1535,6 @@ public class AffinePack extends PackExtender {
 
 		return 1;
 	}
-	
-
-	  	
-
-
 	
 	/** 
 	 * edgeAdjust
@@ -2120,11 +1934,6 @@ public class AffinePack extends PackExtender {
 		return 1;
 	}*/
 	
-	
-	
-	
-	
-	
 	/**
 	 * Find 'edge' consistency error using TriAspect 'labels'.
 	 * Suppose edge e = (u,v), f_left and f_right are left/right faces,
@@ -2206,7 +2015,6 @@ public class AffinePack extends PackExtender {
 		}
 		return maxES;	
 	}
-
 	
 	/**
 	 * Run trials over a grid and put the results in a buffer.
@@ -2268,24 +2076,24 @@ public class AffinePack extends PackExtender {
 				
 				// on last run, center the data
 				if (i==N && j==N) {
-					double rad=packData.redChain.rad;
-					Complex cent=packData.redChain.center;
+					RedHEdge rtrace=packData.packDCEL.redChain;
+					double rad=rtrace.getRadius();
+					Complex cent=rtrace.getCenter();
+					int safety=packData.faceCount+1;
 					double minx=cent.x-rad;
 					double miny=cent.y-rad;
 					double maxx=cent.x+rad;
 					double maxy=cent.y+rad;
-					RedList trace=(RedList)packData.redChain.next;
-					int safety=packData.faceCount+1;
-					while (trace!=packData.redChain && safety>0) {
-						safety--;
-						rad=trace.rad;
-						cent=trace.center;
+					rtrace=rtrace.nextRed;
+					while (rtrace!=packData.packDCEL.redChain && safety>0) {
+						rad=rtrace.getRadius();
+						cent=rtrace.getCenter();
 						minx=((cent.x-rad)<minx) ? (cent.x-rad) : minx;
 						miny=((cent.y-rad)<miny) ? (cent.y-rad) : miny;
 						maxx=((cent.x+rad)>maxx) ? (cent.x+rad) : maxx;
 						maxy=((cent.y+rad)>maxy) ? (cent.y+rad) : maxy;
-						trace=trace.next;
-					}
+						safety--;
+					} 
 					if (safety>0) {
 						cpCommand("set_screen -b "+minx+" "+miny+" "+maxx+" "+maxy);
 					}
@@ -2546,7 +2354,8 @@ public class AffinePack extends PackExtender {
 						Oops("affpack seems to have failed in 'matdat'");
 						
 					// layout
-					ProjStruct.treeLayout(packData,dTree,aspects);
+					// TODO: OBE
+//					ProjStruct.treeLayout(packData,dTree,aspects);
 					
 					// compute data
 					TorusData tD=D_ProjStruct.getTorusData(packData,false);
@@ -2848,16 +2657,18 @@ public class AffinePack extends PackExtender {
 		
 		// ======== Ltree ==========
 		else if (cmd.startsWith("Ltree")) {
-			Iterator<EdgeSimple> ft=dTree.iterator(); // DualGraph.printGraph(dTree);
+			Iterator<HalfEdge> ft=packData.packDCEL.layoutOrder.iterator(); 
 			while (ft.hasNext()) {
-				EdgeSimple edge=ft.next();
-				if (edge.v!=0) {
+				HalfEdge he=ft.next();
+				int f=he.face.faceIndx;
+				int g=he.twin.face.faceIndx;
+				if (f>=0 && g>=0) {
 					CircleSimple sc;
-					sc=EuclMath.eucl_tri_incircle(aspects[edge.v].getCenter(0),
-							aspects[edge.v].getCenter(1),aspects[edge.v].getCenter(2));
+					sc=EuclMath.eucl_tri_incircle(aspects[f].getCenter(0),
+							aspects[f].getCenter(1),aspects[f].getCenter(2));
 					Complex vc=sc.center;
-					sc=EuclMath.eucl_tri_incircle(aspects[edge.w].getCenter(0),
-							aspects[edge.w].getCenter(1),aspects[edge.w].getCenter(2));
+					sc=EuclMath.eucl_tri_incircle(aspects[g].getCenter(0),
+							aspects[g].getCenter(1),aspects[g].getCenter(2));
 					Complex wc=sc.center;
 					DispFlags df=new DispFlags(null);
 					df.setColor(Color.green);
@@ -2865,18 +2676,6 @@ public class AffinePack extends PackExtender {
 				}
 			}
 			repaintMe();
-			return 1;
-		}
-		
-		// ========= dTree ============
-		else if (cmd.startsWith("dTree")) {
-			dTree=DualGraph.easySpanner(packData,false);
-			return 1;
-		}
-		
-		// ============ create dTree by simple method
-		else if (cmd.startsWith("Dtree")) {
-			dTree=DualGraph.easySpanner(packData,false);
 			return 1;
 		}
 		
@@ -3043,12 +2842,6 @@ public class AffinePack extends PackExtender {
 			return 1;
 		}
 		
-		// ========== debug dTree
-		else if (cmd.startsWith("debu")) {
-			LayoutBugs.log_GraphLink(packData,dTree);
-			return 1;
-		}
-		
 		// ========== manip ==================
 		else if (cmd.startsWith("manip")) {
 			Iterator<Vector<String>> flgs=flagSegs.iterator();
@@ -3204,7 +2997,6 @@ public class AffinePack extends PackExtender {
 		cmdStruct.add(new CmdStruct("set_screen",null,null,"set screen to get the full fundamental domain"));
 		cmdStruct.add(new CmdStruct("riffle","-m {x} [-v {v..}]",null,"Riffle for x: 1=ang sums, 2=weak, "+
 				"3=effective, 4=sides"));
-		cmdStruct.add(new CmdStruct("dTree",null,null,"Update the dual spanning tree, e.g., after edge flip."));
 		cmdStruct.add(new CmdStruct("Lface",null,null,"draw faces using TriAspect centers, spanning tree"));
 		cmdStruct.add(new CmdStruct("Ltree",null,null,"draw dual spanning tree using TriAspect centers"));
 		cmdStruct.add(new CmdStruct("set_labels","-[rzst] f..",null,"face 'label' data using: -r = radii, -z = centers, -s= random"));

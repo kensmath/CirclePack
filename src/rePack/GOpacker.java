@@ -1349,23 +1349,6 @@ public class GOpacker extends RePacker {
     }
     
     /**
-     * Typically used in FIXED_BDRY case when the bdry radii and centers 
-     * are to remain fixed. Alternately, to initialize bdry data in a particular way.
-     * @return int count
-     */
-    public int setBdrys() {
-    	int count=0;
-    	for (int j=0;j<myPLite.bdryCount;j++) {
-    		int k=myPLite.intVertCount+1+j; // local index
-    		int w=myPLite.v2parent[k]; // parent index
-    		myPLite.centers[k]=p.getCenter(w);
-    		myPLite.radii[k]=p.rData[w].rad;
-    		count++;
-    	}
-    	return count;
-    }
-    
-    /**
      * Spherical packings involve three fixed bdry circles; this
      * sets their radii/centers. The three circles are radius 2*sqrt(3)-3,
      * form tangent triple, and are tangent to the unit circle, first at z=i.

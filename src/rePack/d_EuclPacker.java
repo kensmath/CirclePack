@@ -439,6 +439,7 @@ public class d_EuclPacker extends RePacker {
       return count;
     }
     
+   
     /**
      * Copied from '*_radcalc'. This uses data in
      * 'TriData' structure, so it knows the geometry.
@@ -599,7 +600,7 @@ public class d_EuclPacker extends RePacker {
     	CommandStrParser.jexecute(p,"geom_to_e");
   	  	p.set_aim_default();
   	  	
-  	  	// use traditional java packing routine
+  	  	// use traditional java packing routine calls
   	  	if (!okayC || p.nodeCount<GOPACK_THRESHOLD || !JNIinit.SparseStatus()) {
   	  		
   	  		// set the aims
@@ -625,279 +626,291 @@ public class d_EuclPacker extends RePacker {
   	  	CommandStrParser.jexecute(p,strbld.toString());
   	  	return CommandStrParser.jexecute(p,"GOpack -c 30");
     }
-  	  	
-    /**
-     * Static up/down (or down/up) Perron version of oldReliable.
-     * Not intended for speed, rather to try to ensure monotone 
-     * behavior of radii. We use the uniform neighbor model (which 
-     * theoretically avoids overshooting); this also allows us to
-     * easily convert computation to euclidean.
+  	
+	/**
+	 * Static up/down (or down/up) Perron version of oldReliable. Not intended for
+	 * speed, rather to try to ensure monotone behavior of radii. We use the uniform
+	 * neighbor model (which theoretically avoids overshooting); this also allows us
+	 * to easily convert computation to euclidean.
 	 *
-     * 'direction': radii go down only, down/up in turn, up only,
-     * or up/down in turn. 
-     * 
-     * E.g., up/down means increase radii (of adjustable circles) 
-     * until anglesum <= aim. Then subsequent downward adjustments will, in
-     * theory, producing a packing label (at adjustable circles). This
-     * 'up/down' would be considered our standard "downward" Perron: the up
-     * stage leads to a superpacking, then the downward Perron. CAUTION:
-     * may not have enough passes to reach superpacking, then packing.
-     * 
-     * Return double[3]: s=anglesum, a=aim
-     * 	  [0]: count of iterations, -1 on FAILURE
-     *    [1]: l^2 deficiency on upward, sqrt(sum (s-a)^2) when (s-a)>0
-     *    [2]: l^2 deficiency on downward, sqrt(sum (s-a)^2) when (s-a)<0
-     *    [3]: total l^2 error: sqrt(sum(s-a)^2)
-     * 
-     * Note: This code could serve as base for an arbitrary precision 
-     * version in future.
-     * 
-     * @param p PackData
-     * @param direction int: -1 down only, -2 down/up, 1 up only, 2 up/down
-     * @param passes int, maximal number of full passes
-     * @return double[]: [0]<0 on failure.
-     */
-    public static double []euclPerron(PackData p,int direction,int passes) {
-    	double []results=new double[4];
-    	results[0]=results[1]=results[2]=results[3]=FAILURE;
-    	double dirSign=-1.0;
-        if (direction>=0) dirSign=1.0;
-        boolean both=false;
-        if (direction==2 || direction==-2 || direction==0)
-        	both=true;
-    	KData []kdata=p.kData;
-    	RData []rdata=p.rData;
-    	int count=0;
+	 * 'direction': radii go down only, down/up in turn, up only, or up/down in
+	 * turn.
+	 * 
+	 * E.g., up/down means increase radii (of adjustable circles) until anglesum <=
+	 * aim. Then subsequent downward adjustments will, in theory, producing a
+	 * packing label (at adjustable circles). This 'up/down' would be considered our
+	 * standard "downward" Perron: the up stage leads to a superpacking, then the
+	 * downward Perron. CAUTION: may not have enough passes to reach superpacking,
+	 * then packing.
+	 * 
+	 * Return double[3]: s=anglesum, a=aim [0]: count of iterations, -1 on FAILURE
+	 * [1]: l^2 deficiency on upward, sqrt(sum (s-a)^2) when (s-a)>0 [2]: l^2
+	 * deficiency on downward, sqrt(sum (s-a)^2) when (s-a)<0 [3]: total l^2 error:
+	 * sqrt(sum(s-a)^2)
+	 * 
+	 * Note: This code could serve as base for an arbitrary precision version in
+	 * future.
+	 * 
+	 * @param p         PackData
+	 * @param direction int: -1 down only, -2 down/up, 1 up only, 2 up/down
+	 * @param passes    int, maximal number of full passes
+	 * @return double[]: [0]<0 on failure.
+	 */
+	public static double[] euclPerron(PackData p, int direction, int passes) {
+		double[] results = new double[4];
+		results[0] = results[1] = results[2] = results[3] = FAILURE;
+		double dirSign = -1.0;
+		if (direction >= 0)
+			dirSign = 1.0;
+		boolean both = false;
+		if (direction == 2 || direction == -2 || direction == 0)
+			both = true;
+		int count = 0;
 
-        // whom to repack?
-        int aimNum = 0;
-        int []inDex =new int[p.nodeCount+1];
-        for (int k=1;k<=p.nodeCount;k++) {
-      	  if (p.getAim(k)>0) {
-      		  inDex[aimNum]=k;
-      		  aimNum++;
-      	  }
-        }
-        if (aimNum==0) { // nothing to repack
-        	return results;
-        }
-        
-        // =============== First stage ======================
-        // radii going up if direction>=0 or else down: 
-        // compute discrepency from being super/subpacking 
-    	double discrepency=0.0;
-        double fbest=0.0;
-        for (int j=0;j<aimNum;j++) {
-        	int v=inDex[j];
-        	double r=rdata[v].rad;
-    		fbest = 0.0;
-    		double r2 = rdata[kdata[v].flower[0]].rad;
-  	      	double m2 = r2/(r+r2);
-  	      	for (int n=1;n<=kdata[v].num;n++) {
-  	      		double m1 = m2;
-  	      		r2 = rdata[kdata[v].flower[n]].rad;
-  	      		m2 = r2/(r+r2);
-  	      		fbest += Math.acos(1-2*m1*m2);
-  	      	}
-			rdata[v].curv=fbest;
-			double diff2=dirSign*(rdata[v].curv-p.getAim(v));
-			if (diff2>0.0)
-				discrepency += diff2*diff2;
-        }
-        	
-        // Perron until we have a super/subpacking (or pass out)
-        int safety=0;
-        while (safety<passes && discrepency>RP_TOLER) {
-        	safety++;
-        	discrepency=0.0;
-            for (int j=0;j<aimNum;j++) {
-            	int v=inDex[j];
-            	double r=rdata[v].rad;
+		// whom to repack?
+		int aimNum = 0;
+		int[] inDex = new int[p.nodeCount + 1];
+		for (int k = 1; k <= p.nodeCount; k++) {
+			if (p.getAim(k) > 0) {
+				inDex[aimNum] = k;
+				aimNum++;
+			}
+		}
+		if (aimNum == 0) { // nothing to repack
+			return results;
+		}
 
-            	// update anglesum for initial r (nghb's may have changed)
-        		fbest = 0.0;
-        		double r2 = rdata[kdata[v].flower[0]].rad;
-      	      	double m2 = r2/(r+r2);
-      	      	for (int n=1;n<=kdata[v].num;n++) {
-      	      		double m1 = m2;
-      	      		r2 = rdata[kdata[v].flower[n]].rad;
-      	      		m2 = r2/(r+r2);
-      	      		fbest += Math.acos(1-2*m1*m2);
-      	      	}
-    			rdata[v].curv=fbest;
-    			
-    			// sub/superpacking at v? want to adjust radius
-    			double diff2=dirSign*(rdata[v].curv-p.getAim(v));
-    			if (diff2>RP_TOLER) { // uniform neighbor computation
-    				int N = 2*kdata[v].num;
-    				double del = Math.sin(p.getAim(v)/N);
-    				double bet = Math.sin(fbest/N);
-    				r = r*bet*(1-del)/(del*(1-bet));
-    				rdata[v].rad=r;
-    				count++;
-    				
-    				// update the anglesum for new r
-            		fbest = 0.0;
-            		r2 = rdata[kdata[v].flower[0]].rad;
-          	      	m2 = r2/(r+r2);
-          	      	for (int n=1;n<=kdata[v].num;n++) {
-          	      		double m1 = m2;
-          	      		r2 = rdata[kdata[v].flower[n]].rad;
-          	      		m2 = r2/(r+r2);
-          	      		fbest += Math.acos(1-2*m1*m2);
-          	      	}
-        			rdata[v].curv=fbest;
-    			
-        			// get squared discrepency
-        			diff2=dirSign*(rdata[v].curv-p.getAim(v));
-        			if (diff2<-(100*RP_TOLER)) {
-        				throw new PackingException("uniform neighbor computation overshoots at v="+v);
-        			}
-    			}
-    			if (diff2>0.0)
-    				discrepency += diff2*diff2;
-            }
-        } // end of while loop
-        if (dirSign>=0) // upward
-        	results[1]=Math.sqrt(discrepency);
-        else 
-        	results[2]=Math.sqrt(discrepency);
-        
-        // failed?
-        if (safety==passes) {
-        	if (dirSign>0)
-        		CirclePack.cpb.errMsg("failed to get a superpacking in euclPerron");
-        	else
-        		CirclePack.cpb.errMsg("failed to get a subpacking in euclPerron");
-        }
+		// =============== First stage ======================
+		// radii going up if direction>=0 or else down:
+		// compute discrepency from being super/subpacking
+		double discrepency = 0.0;
+		double fbest = 0.0;
+		for (int j = 0; j < aimNum; j++) {
+			int v = inDex[j];
+			double vaim = p.getAim(v);
+			double r = p.getRadius(v);
+			fbest = 0.0;
+			int[] flower = p.packDCEL.vertices[v].getFlower(true);
+			int num=flower.length-1;
+			double r2 = p.getRadius(flower[0]);
+			double m2 = r2 / (r + r2);
+			for (int n = 1; n <= num; n++) {
+				double m1 = m2;
+				r2 = p.getRadius(flower[n]);
+				m2 = r2 / (r + r2);
+				fbest += Math.acos(1 - 2 * m1 * m2);
+			}
+			p.setCurv(v, fbest);
+			double diff2 = dirSign * (fbest - vaim);
+			if (diff2 > 0.0)
+				discrepency += diff2 * diff2;
+		}
 
-        // to prepare for stage 2 or return, update discrepency and accum
-        double accum=0.0;
-        discrepency=0.0;
-        for (int j=0;j<aimNum;j++) {
-        	int v=inDex[j];
-        	double r=rdata[v].rad;
-    		fbest = 0.0;
-    		double r2 = rdata[kdata[v].flower[0]].rad;
-  	      	double m2 = r2/(r+r2);
-  	      	for (int n=1;n<=kdata[v].num;n++) {
-  	      		double m1 = m2;
-  	      		r2 = rdata[kdata[v].flower[n]].rad;
-  	      		m2 = r2/(r+r2);
-  	      		fbest += Math.acos(1-2*m1*m2);
-  	      	}
-			rdata[v].curv=fbest;
-			double diff=rdata[v].curv-p.getAim(v);
-			double sqdiff=diff*diff;
-			if (diff>0.0)
-				discrepency+=sqdiff;
-			accum +=sqdiff;
-        }
-        double sqError=Math.sqrt(accum);
+		// Perron until we have a super/subpacking (or pass out)
+		int safety = 0;
+		while (safety < passes && discrepency > RP_TOLER) {
+			safety++;
+			discrepency = 0.0;
+			for (int j = 0; j < aimNum; j++) {
+				int v = inDex[j];
+				double vaim = p.getAim(v);
+				double r = p.getRadius(v);
 
-        if (!both) { // return after the first stage
-        	results[0]=count;
-        	results[3]=sqError;
-        	return results;
-        }
-        
-        // =============== Second stage (optional) =================
-        // radii going down if direction>=0 or else up: 
-        // set cutoff value
-        double recip=.333333/aimNum;
-        double cut=sqError*recip;
-        
-        safety=0;
-        while (both && (cut > RP_TOLER) && safety<passes) {
-        	safety++;
-        	accum=0.0;
-        	discrepency=0.0;
-        	for (int j = 0; j < aimNum; j++) {
-        		int v = inDex[j];
-        		double r=rdata[v].rad;
+				// update anglesum for initial r (nghb's may have changed)
+				fbest = 0.0;
+				int[] flower = p.packDCEL.vertices[v].getFlower(true);
+				int num=flower.length-1;
+				double r2 = p.getRadius(flower[0]);
+				double m2 = r2 / (r + r2);
+				for (int n = 1; n <= num; n++) {
+					double m1 = m2;
+					r2 = p.getRadius(flower[n]);
+					m2 = r2 / (r + r2);
+					fbest += Math.acos(1 - 2 * m1 * m2);
+				}
+				p.setCurv(v, fbest);
 
-        		// update the anglesum
-        		fbest = 0.0;
-        		double r2 = rdata[kdata[v].flower[0]].rad;
-      	      	double m2 = r2/(r+r2);
-      	      	for (int n=1;n<=kdata[v].num;n++) {
-      	      		double m1 = m2;
-      	      		r2 = rdata[kdata[v].flower[n]].rad;
-      	      		m2 = r2/(r+r2);
-      	      		fbest += Math.acos(1-2*m1*m2);
-      	      	}
-      	      	rdata[v].curv=fbest;
-        		double diff2=dirSign*(rdata[v].curv-p.getAim(v));
-        		if (diff2<-(100*RP_TOLER)) {
-        			// uniform neighbor computation
-        			int N = 2*kdata[v].num;
-        			double del = Math.sin(p.getAim(v)/N);
-        			double bet = Math.sin(fbest/N);
-        			r = r*bet*(1-del)/(del*(1-bet));
-        			rdata[v].rad=r;
-        			count++;
+				// sub/superpacking at v? want to adjust radius
+				double diff2 = dirSign * (fbest - vaim);
+				if (diff2 > RP_TOLER) { // uniform neighbor computation
+					int N = 2 * num;
+					double del = Math.sin(vaim / N);
+					double bet = Math.sin(fbest / N);
+					r = r * bet * (1 - del) / (del * (1 - bet));
+					p.setRadius(v, r);
+					count++;
 
-        			// update the anglesum for new r
-        			fbest=0;
-        			r2 = rdata[kdata[v].flower[0]].rad;
-        			m2 = r2/(r+r2);
-        			for (int n=1;n<=kdata[v].num;n++) {
-        				double m1 = m2;
-        				r2 = rdata[kdata[v].flower[n]].rad;
-        				m2 = r2/(r+r2);
-        				fbest += Math.acos(1-2*m1*m2);
-        			}
-        			rdata[v].curv=fbest;
-        		}
-        		
-        		// update diff2 and gather data
-       			diff2=dirSign*(rdata[v].curv-p.getAim(v));
-       			double sqdiff=diff2*diff2;
-        		if (diff2<-(100*RP_TOLER)) {
-        			discrepency+=sqdiff;
-        		}
-        		accum += sqdiff;
-        	} // end of for loop
+					// update the anglesum for new r
+					fbest = 0.0;
+					r2 = p.getRadius(flower[0]);
+					m2 = r2 / (r + r2);
+					for (int n = 1; n <= num; n++) {
+						double m1 = m2;
+						r2 = p.getRadius(flower[n]);
+						m2 = r2 / (r + r2);
+						fbest += Math.acos(1 - 2 * m1 * m2);
+					}
+					p.setCurv(v, fbest);
 
-        	sqError = Math.sqrt(accum);
-            cut=sqError*recip;
-        	// note that 'cut' is old data; in downward Perron, the
-            //    accumulated error should be less than accum.
-        } // end of while loop
-        
-        // update accum and discrepency before returning
-        accum=0.0;
-        discrepency=0.0;
-        for (int j=0;j<aimNum;j++) {
-        	int v=inDex[j];
-        	double r=rdata[v].rad;
-    		fbest = 0.0;
-    		double r2 = rdata[kdata[v].flower[0]].rad;
-  	      	double m2 = r2/(r+r2);
-  	      	for (int n=1;n<=kdata[v].num;n++) {
-  	      		double m1 = m2;
-  	      		r2 = rdata[kdata[v].flower[n]].rad;
-  	      		m2 = r2/(r+r2);
-  	      		fbest += Math.acos(1-2*m1*m2);
-  	      	}
-			rdata[v].curv=fbest;
-			double diff=rdata[v].curv-p.getAim(v);
-			diff=diff*diff;
-			if (diff<0.0)
-				discrepency+=diff;
-			accum +=diff;
-        }
-        sqError=Math.sqrt(accum);
-        
-        results[0]=count;
-        if (dirSign>=0) // up/down
-        	results[2]=Math.sqrt(discrepency);
-        else // down/up
-        	results[1]=Math.sqrt(discrepency);
-    	results[3]=sqError;
-    	return results;
-    }
-  
+					// get squared discrepency
+					diff2 = dirSign * (fbest - vaim);
+					if (diff2 < -(100 * RP_TOLER)) {
+						throw new PackingException("uniform neighbor computation overshoots at v=" + v);
+					}
+				}
+				if (diff2 > 0.0)
+					discrepency += diff2 * diff2;
+			}
+		} // end of while loop
+		if (dirSign >= 0) // upward
+			results[1] = Math.sqrt(discrepency);
+		else
+			results[2] = Math.sqrt(discrepency);
+
+		// failed?
+		if (safety == passes) {
+			if (dirSign > 0)
+				CirclePack.cpb.errMsg("failed to get a superpacking in euclPerron");
+			else
+				CirclePack.cpb.errMsg("failed to get a subpacking in euclPerron");
+		}
+
+		// to prepare for stage 2 or return, update discrepency and accum
+		double accum = 0.0;
+		discrepency = 0.0;
+		for (int j = 0; j < aimNum; j++) {
+			int v = inDex[j];
+			double vaim = p.getAim(v);
+			double r = p.getRadius(v);
+			fbest = 0.0;
+			int[] flower = p.packDCEL.vertices[v].getFlower(true);
+			int num=flower.length-1;
+			double r2 = p.getRadius(flower[0]);
+			double m2 = r2 / (r + r2);
+			for (int n = 1; n <= num; n++) {
+				double m1 = m2;
+				r2 = p.getRadius(flower[n]);
+				m2 = r2 / (r + r2);
+				fbest += Math.acos(1 - 2 * m1 * m2);
+			}
+			p.setCurv(v, fbest);
+			double diff = fbest - vaim;
+			double sqdiff = diff * diff;
+			if (diff > 0.0)
+				discrepency += sqdiff;
+			accum += sqdiff;
+		}
+		double sqError = Math.sqrt(accum);
+
+		if (!both) { // return after the first stage
+			results[0] = count;
+			results[3] = sqError;
+			return results;
+		}
+
+		// =============== Second stage (optional) =================
+		// radii going down if direction>=0 or else up:
+		// set cutoff value
+		double recip = .333333 / aimNum;
+		double cut = sqError * recip;
+
+		safety = 0;
+		while (both && (cut > RP_TOLER) && safety < passes) {
+			safety++;
+			accum = 0.0;
+			discrepency = 0.0;
+			for (int j = 0; j < aimNum; j++) {
+				int v = inDex[j];
+				double vaim = p.getAim(v);
+				double r = p.getRadius(v);
+
+				// update the anglesum
+				fbest = 0.0;
+				int[] flower = p.packDCEL.vertices[v].getFlower(true);
+				int num=flower.length-1;
+				double r2 = p.getRadius(flower[0]);
+				double m2 = r2 / (r + r2);
+				for (int n = 1; n <= num; n++) {
+					double m1 = m2;
+					r2 = p.getRadius(flower[n]);
+					m2 = r2 / (r + r2);
+					fbest += Math.acos(1 - 2 * m1 * m2);
+				}
+				p.setCurv(v, fbest);
+				double diff2 = dirSign * (fbest - vaim);
+				if (diff2 < -(100 * RP_TOLER)) {
+					// uniform neighbor computation
+					int N = 2 * num;
+					double del = Math.sin(vaim / N);
+					double bet = Math.sin(fbest / N);
+					r = r * bet * (1 - del) / (del * (1 - bet));
+					p.setRadius(v, r2);
+					count++;
+
+					// update the anglesum for new r
+					fbest = 0;
+					r2 = p.getRadius(flower[0]);
+					m2 = r2 / (r + r2);
+					for (int n = 1; n <= num; n++) {
+						double m1 = m2;
+						r2 = p.getRadius(flower[n]);
+						m2 = r2 / (r + r2);
+						fbest += Math.acos(1 - 2 * m1 * m2);
+					}
+					p.setCurv(v, fbest);
+				}
+
+				// update diff2 and gather data
+				diff2 = dirSign * (p.getAim(v) - vaim);
+				double sqdiff = diff2 * diff2;
+				if (diff2 < -(100 * RP_TOLER)) {
+					discrepency += sqdiff;
+				}
+				accum += sqdiff;
+			} // end of for loop
+
+			sqError = Math.sqrt(accum);
+			cut = sqError * recip;
+			// note that 'cut' is old data; in downward Perron, the
+			// accumulated error should be less than accum.
+		} // end of while loop
+
+		// update accum and discrepency before returning
+		accum = 0.0;
+		discrepency = 0.0;
+		for (int j = 0; j < aimNum; j++) {
+			int v = inDex[j];
+			double vaim = p.getAim(v);
+			double r = p.getRadius(v);
+			fbest = 0.0;
+			int[] flower = p.packDCEL.vertices[v].getFlower(true);
+			int num=flower.length-1;
+			double r2 = p.getRadius(flower[0]);
+			double m2 = r2 / (r + r2);
+			for (int n = 1; n <= num; n++) {
+				double m1 = m2;
+				r2 = p.getRadius(flower[n]);
+				m2 = r2 / (r + r2);
+				fbest += Math.acos(1 - 2 * m1 * m2);
+			}
+			p.setCurv(v, fbest);
+			double diff = fbest - vaim;
+			diff = diff * diff;
+			if (diff < 0.0)
+				discrepency += diff;
+			accum += diff;
+		}
+		sqError = Math.sqrt(accum);
+
+		results[0] = count;
+		if (dirSign >= 0) // up/down
+			results[2] = Math.sqrt(discrepency);
+		else // down/up
+			results[1] = Math.sqrt(discrepency);
+		results[3] = sqError;
+		return results;
+	}
+
 	public void setSparseC(boolean useC) {
 		useSparseC=false;
 		if (useC) { // requested to use GOpacker routines if possible

@@ -1158,8 +1158,10 @@ public class StringUtil {
 		  int k=0;
 		  // delete leading whitespace characters (<=' ')
 		  while (k<inbuffer.length()&& inbuffer.charAt(k)<=' ') k++; // means whitespace
-		  if (k>0 && k<inbuffer.length()) inbuffer.delete(0,k);
-		  if (inbuffer.length()==0) return null;
+		  if (k>0 && k<inbuffer.length()) 
+			  inbuffer.delete(0,k);
+		  if (inbuffer.length()==0) 
+			  return null;
 		  k=inbuffer.indexOf(" ");
 		  String ans=null;
 		  if (k<0) {
@@ -1193,8 +1195,8 @@ public class StringUtil {
 	  }
 	  
 	  /**
-	   * Return the next non-empty line from file; return null if
-	   * end of file is reached, (this catches IOExceptions)
+	   * Return the next non-empty trimmed line from file; 
+	   * return null if end-of-file reached, catch IOExceptions.
 	   * @param reader BufferedReader
 	   * @return trimmed String or null
 	   */

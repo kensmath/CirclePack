@@ -50,6 +50,7 @@ public class CombDCEL {
 		try {
 			CombDCEL.redchain_by_edge(pdcel,hlink,alphaEdge,false);
 			CombDCEL.d_FillInside(pdcel);
+			// DCELdebug.printRedChain(pdcel.redChain);
 		} catch (Exception ex) {
 			throw new DCELException(ex.getMessage());
 		}
@@ -245,12 +246,13 @@ public class CombDCEL {
 	
 	/**
 	 * Modify given 'pdcel' based on red chain formed about 
-	 * given 'alphaEdge' and not crossing any edge in 'hlink'. 
-	 * Vertex count typically changes, but I've tried to 
-	 * save indexing as much as possible. Face and edge indexing
-	 * are no longer reliable. Calling routine should call
-	 * 'd_FillInside' to complete processing. 'pdcel.oldNew'
-	 * contains index conversion info. 
+	 * given 'alphaEdge' and not crossing any edge in 'hlink'.
+	 * Face and edge indexing are no longer reliable. After
+	 * building the red chain, continue processing with
+	 * 'finishRedChain', which organizes vertex indexing and
+	 * builds 'oldNew'. See more details there.
+	 * After 'finishRedChain', the calling routine should call
+	 * 'd_FillInside' to complete processing.  
 	 * The 'prune' flag true means every bdry vertex must have an 
 	 * interior neighbor; this enters just one spot in the code.
 	 * @param pdcel PackDCEL
@@ -301,13 +303,12 @@ public class CombDCEL {
 				he.myRedEdge=null; // toss old red edge pointers
 				he.eutil=0;
 				// set 'eutil' -1 for bdry edges
-				if ((he.face!=null && he.face.faceIndx<0) || 
-						(he.twin.face!=null && he.twin.face.faceIndx<0)) {
+				if (he.isBdry()) {
 					he.eutil=-1;
 					vstat[he.origin.vertIndx]=-1;
 					vstat[he.twin.origin.vertIndx]=-1;
 				}
-				he=he.prev.twin;
+				he=he.prev.twin; // cclw
 			} while (he!=edge && safety>0);
 			if (safety==0)
 				throw new CombException("'safety' valve breached, edge "+edge);
@@ -420,7 +421,7 @@ public class CombDCEL {
 				// shrink backtrack?
 				HalfEdge upspoke = currRed.prevRed.myEdge.twin;
 				HalfEdge downspoke = currRed.myEdge;
-				if (upspoke==downspoke && vstat[v]==1) {
+				if (upspoke==downspoke && vstat[v]==1 && upspoke.eutil!=-1) {
 					currRed.prevRed.prevRed.nextRed=currRed.nextRed;
 					currRed.nextRed.prevRed=currRed.prevRed.prevRed;
 					upspoke.myRedEdge=null;
@@ -465,7 +466,7 @@ public class CombDCEL {
 						redge=isMyEdge(pdcel.redChain,spktrace);
 						while (spktrace!=downspoke && redge==null && 
 								spktrace.eutil>=0) {
-							spktrace=spktrace.prev.twin;
+							spktrace=spktrace.prev.twin; // cclw
 							redge=isMyEdge(
 									pdcel.redChain,spktrace);
 						}
@@ -530,7 +531,7 @@ public class CombDCEL {
 						
 						// not 'prune' and one or other end is int or has 
 						//   int nghb (and not disqualified, see below)
-						if (!OK && !prune &&
+						if (!OK && !prune && upspoke.eutil!=-1 &&
 								(vstat[upspoke.origin.vertIndx]>=1 || 
 								vstat[upspoke.twin.origin.vertIndx]>=1)) {
 							OK=true;
@@ -586,6 +587,10 @@ public class CombDCEL {
 			} while (rtrace!=pdcel.redChain);
 
 			rtrace=pdcel.redChain;
+			
+// debugging
+//			System.out.println("edge "+rtrace.myEdge);
+			
 			do {
 				redN--;
 				// if backtrack with nextRed
@@ -640,6 +645,11 @@ public class CombDCEL {
 	 * Here preRedVertices are created and processed (to form new
 	 * vertices, if necessary), surviving and new vertices are
 	 * identified, 'vertCount' and 'vertices' are reset.
+	 * Vertex count typically changes, but I've tried to 
+	 * save indexing as much as possible. In 'pdcel.oldNew'
+	 * we have pairs {v,w} only if w is a new index, e.g.,
+	 * a changed index for original v or index for a new vertex
+	 * originating from original v.
 	 * @param pdcel PackDCEL
 	 * @param redchain RedHEdge
 	 * @return int, new vertCount
@@ -649,6 +659,7 @@ public class CombDCEL {
 		
 		int vertcount=pdcel.vertCount; 
 		boolean debug=false; // debug=true;
+		// DCELdebug.printRedChain(pdcel.redChain);
 		
 		// ============ set 'myRedEdge' pointers ================
 		
@@ -923,7 +934,7 @@ public class CombDCEL {
 
 		// accounting: 
 		int[] vindices=new int[vertcount+1]; // new indices for originals
-		Vertex[] allSlots=new Vertex[maxCount+1]; // filled if non-zero
+		Vertex[] allSlots=new Vertex[maxCount+1]; // if !=0, slot is filled
 
 		// store existing vertices that survived in their own slots
 		for (int v=1;v<=vertcount;v++) {
@@ -933,21 +944,23 @@ public class CombDCEL {
 			}
 		}
 		
-		// Put added vertices into successive emtpy slots
+		// Finish by putting added verts into successive emtpy slots
 		int slotptr=1;
 		Iterator<Vertex> avis=addedVertices.iterator();
 		while (avis.hasNext()) {
 			Vertex vert=avis.next();
+			// put in next open
 			while (allSlots[slotptr]!=null && slotptr<maxCount)
 				slotptr++;
 			allSlots[slotptr]=vert; 
 		}
 		
-		// 'allSlots' now has all vertices (original and new), but may have
-		// some empty slots (intermingled with slots of original vertices only).
-		// For contiguity, repeatedly look successive still-open slots: shift 
-		// following slots down to fill in. 'vindices' keeps track of new 
-		// indices for original verts.
+		// 'allSlots' now has all vertices (original and new), 
+		// but may have some empty slots (intermingled with slots 
+		// of original vertices only). For contiguity, repeatedly 
+		// fill successive still-open slots: shift following slots 
+		// down to fill in. 'vindices' keeps track of new indices 
+		// for original verts.
 		slotptr=1;
 		while (slotptr<maxCount && allSlots[slotptr]!=null)
 			slotptr++; // slotptr should point to first open slot
@@ -966,6 +979,7 @@ public class CombDCEL {
 			while (shift && slotptr<maxCount && allSlots[slotptr]!=null)
 				slotptr++; // next open slot
 		} 
+		
 		// Note: at this point, all non-empty slots are contiguous, 
 		//   holes filled in as much as possible, empty slots filled in.
         int size=((int)((totalCount-1)/1000))*1000+1000;
@@ -976,15 +990,16 @@ public class CombDCEL {
 			newVertices[j]=allSlots[j];
 		}
 		
-		// Now we must give the new indices in 'newVertices', but
-		//   want to take care of 'oldNew'. Do added vertices first 
-		//   before changing the orig vert indices.
+		// Now we must set the new indices in 'newVertices'.
+		//   However, we want to take care of 'oldNew', so do
+		//   the added vertices first before changing their 
+		//   orig vert indices.
 		VertexMap oldnew=new VertexMap();
 		for (int j=1;j<=totalCount;j++) {
 			Vertex vert=newVertices[j];
 			int oldIndx = Math.abs(vert.vertIndx); // +/- original parent index
 			if (oldIndx!=j)
-				oldnew.add(new EdgeSimple(oldIndx,j));
+				oldnew.add(new EdgeSimple(oldIndx,j)); // add only if changed
 			vert.vertIndx=j;
 		}
 
@@ -1525,7 +1540,7 @@ public class CombDCEL {
 		pdcel.intFaceCount=ftick;
 
 		debug=false;
-		// DCELdebug.printRedChain(pdcel.redChain,pdcel.oldNew); 
+		// DCELdebug.printRedChain(newRedChain,null); // pdcel.oldNew); 
 		
 		pdcel.sideStarts=null;
 		pdcel.pairLink=null;
@@ -2392,15 +2407,19 @@ public class CombDCEL {
 	}
 	
 	/**
-	 * Process the incoming strings to set seed and forbidden 
-	 * edges for cookie'ing DCEL structures. Forbidden edges 
-	 * are ones which are never crossed in building the red chain;
-	 * bdry edges are always forbidden.
+	 * The "cookie" process (cutting out a subcomplex from an
+	 * existing packing) involves specifying a new red chain 
+	 * defining the subcomplex. To get that red chain, we must
+	 * specify a 'HalfLink' of forbidden edges that can't be
+	 * crossed as the red chain in built. 
 	 * 
-	 * If there is an input list of vertices to be excised, 
+	 * In this routine, we process 'flags' to set seed and 
+	 * forbidden edges. Note that bdry edges are always forbidden.
+	 * 
+	 * If there is an list of "poison" vertices (to be excised), 
 	 * they should appear in first vector of strings in 
-	 * 'flags' without a preceding flag. Edges surrounding
-	 * these will be included as forbidden.
+	 * 'flags' without a preceding flag. Edges separating these
+	 * from the "seed" vertex will be included as forbidden.
 	 * 
 	 * Then check for flag segments:
 	 * * Flags: -v {v}, for identifying seed: 'p.alpha' is reset.
@@ -2413,11 +2432,13 @@ public class CombDCEL {
 	 * and 'non-keepers': the latter may remain in the boundary of 
 	 * the excised DCEL structure.
      *
-	 * If no forbidden edges are specified then use 'CPBase.ClosedPath': 
-	 * the points on the side of 'CPBase.ClosedPath' (if not null) 
-	 * opposite to 'seed' become poison by default.
+	 * If no forbidden edges are specified then use 
+	 * 'CPBase.ClosedPath' (if not null); points on the side 
+	 * of 'CPBase.ClosedPath' opposite to 'seed' become poison 
+	 * by default.
 	 * 
-	 * Return 'HalfLink' of forbidden edges used, which can 
+	 * Return 'HalfLink' of forbidden edges which are actually
+	 * encountered, which can 
 	 * then be used, with alpha, to create a red chain.
 	 *   
 	 * @param p PackData
@@ -2443,13 +2464,20 @@ public class CombDCEL {
 				String str=(String)items.get(0);
 				if (str.equals("-v")) { // given seed, reset 'alpha' and continue
 					if (items.size()<2) 
-						throw new ParserException("cookie crumbled: error in -v flag");
-					pdcel.alpha=pdcel.vertices[
-					            Integer.parseInt((String)items.get(1))].halfedge;
+						throw new ParserException(
+								"cookie crumbled: error in -v flag");
+					int alp=Integer.parseInt((String)items.get(1));
+					Vertex alphavert=pdcel.vertices[alp];
+					if (alphavert.bdryFlag!=0) 
+						throw new ParserException(
+								"cookie crumbled: chosen seed "+alp+
+								"is not interior");
+					p.directAlpha(alp);
+					pdcel.alpha=pdcel.vertices[alp].halfedge;
 					items.remove(1);
 					items.remove(0);
 				}
-				else if (str.equals("-e")) { // specified poison edges
+				else if (str.equals("-e")) { // specified forbidden edges
 					if (items.size()<2) 
 						throw new ParserException("cookie crumbled: no edges with -e flag");
 					items.remove(0);
@@ -2476,13 +2504,14 @@ public class CombDCEL {
 					for (int v=1;v<=pdcel.vertCount;v++) 
 						pdcel.vertices[v].vutil=0;
 
+					// mark verts that are non-keepers in 'vutil'
 					Iterator<Integer> nis=nonvs.iterator();
 					while (nis.hasNext()) {
 						int v=nis.next();
 						pdcel.vertices[v].vutil=v;
 					}
 					
-					// include edges between non-keepers
+					// edges between non-keepers are forbidden
 					int w;
 					for (int v=1;v<=pdcel.vertCount;v++) {
 						Vertex vert=pdcel.vertices[v];
@@ -2504,7 +2533,7 @@ public class CombDCEL {
 			} // done with flags
 		} // done with while through segments
 				
-		// If no poisons so far, then use stored 'ClosePath'
+		// If no forbiddens so far, then use stored 'ClosePath'
 		if (hlink.size()==0 && vlink.size()==0) {
 			if (CPBase.ClosedPath==null) 
 				throw new ParserException("cookie: No path defined.");
@@ -2921,7 +2950,7 @@ public class CombDCEL {
 
     	// clone other things
     	if (pdc.fullOrder!=null) {
-    		pdcel.fullOrder=new HalfLink(pdc.p);
+    		pdcel.fullOrder=new HalfLink();
     		Iterator<HalfEdge> fois=pdc.fullOrder.iterator();
     		while (fois.hasNext()) {
     			pdcel.fullOrder.add(pdcel.edges[fois.next().edgeIndx]);

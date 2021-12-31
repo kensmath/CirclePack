@@ -187,7 +187,7 @@ public abstract class RePacker {
 	 */
 	public boolean useSparseC(boolean useC) {
 		if (useC) { // requested to use 'SolverFunction' C lib routines if possible
-			if (p.overlapStatus) {
+			if (p.haveInvDistances()) {
 //				CirclePack.cpb.msg("'SolverFunction' libs not used with inv. distances.");
 				return false;
 			}
@@ -290,47 +290,6 @@ public abstract class RePacker {
 	}
 
 	/**
-	 * traditional: this is first thing called in 'load()' calls.
-	 * @return
-	 */
-	public int genericLoad() {
-		int num;
-		try {
-			rdata=new RData[p.nodeCount+1];  // TODO: can we save time with block transfer??
-			kdata=new TmpData[p.nodeCount+1];
-			for (int i=1;i<=p.nodeCount;i++) {
-				rdata[i]=new RData();
-				kdata[i]=new TmpData();
-				rdata[i].aim=p.getAim(i);
-				rdata[i].rad=p.rData[i].rad;
-				kdata[i].num=num=p.countFaces(i);
-				kdata[i].flower=new int[kdata[i].num+1];
-				for (int j=0;j<=num;j++) kdata[i].flower[j]=p.kData[i].flower[j];
-				if (p.overlapStatus) {
-					kdata[i].overlaps=new double[kdata[i].num+1];
-					for (int j=0;j<=num;j++) kdata[i].overlaps[j]=p.getInvDist(i,p.kData[i].flower[j]);
-				}
-			}
-			// load 'petallaps' (vectors of overlaps between successive petals of flowers)
-			if (p.overlapStatus) {
-				for (int i=1;i<=p.nodeCount;i++) {
-					kdata[i].petallaps=new double[kdata[i].num];
-					for (int j=0;j<kdata[i].num;j++) {
-						int v=kdata[i].flower[j];
-						int w=kdata[i].flower[j+1];
-						int k=p.nghb(w,v);
-						kdata[i].petallaps[j]=p.getInvDist(w,p.kData[w].flower[k]);
-					}
-				}
-			}
-		} catch (Exception ex) {
-			CirclePack.cpb.myErrorMsg("The 'RePacker' has failed to load");
-			return FAILURE;
-		}
-		return 1;
-	}
-	
-	/**
 	 * This is first call in 'load()'. Return true if there 
 	 * are non-trivial inversive distances involved.
 	 * @return boolean
@@ -362,8 +321,6 @@ public abstract class RePacker {
 			  holde=pd.elist.makeCopy();
 		  if (pd.flist!=null && pd.flist.size()>0)
 			  holdf=pd.flist.makeCopy();
-		  if (pd.glist!=null && pd.glist.size()>0)
-			  holdg=pd.glist.makeCopy();
 		  if (pd.vertexMap!=null && pd.vertexMap.size()>0)
 			  holdmap=pd.vertexMap.makeCopy();
 		  pd.vlist=null;
@@ -381,7 +338,6 @@ public abstract class RePacker {
 		  pd.vlist=holdv;
 		  pd.elist=holde;
 		  pd.flist=holdf;
-		  pd.glist=holdg;
 		  pd.vertexMap=holdmap;
 	}
 	   

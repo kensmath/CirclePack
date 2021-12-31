@@ -13,6 +13,7 @@ import geometry.SphericalMath;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
+import listManip.HalfLink;
 import packing.PackData;
 import util.UtilPacket;
 
@@ -26,68 +27,36 @@ import util.UtilPacket;
 public class QualMeasures {
 
 	/**
-	 * "visual error" of an edge is diff/smallest, where diff is the
-	 * absolute difference between desired distance (based on radii 
-	 * and overlap) and actual distance between endpoints, and smallest 
-	 * is the lesser of the two radius. If less than .01, should be
-	 * almost postscript invisible.  
+	 * "visual error" of an edge is diff/smallest, where 
+	 * diff is the absolute difference between desired distance 
+	 * (based on radii and inv dist) and actual distance 
+	 * between endpoints, and smallest is the lesser of the 
+	 * two radii. If less than .01, error should be almost 
+	 * "postscript invisible".  
 	 * @param p PackData
-	 * @param elist EdgeLink; edges to run through
+	 * @param elist HalfLink; edges to run through
 	 * @param uP UtilPack; instantiated by calling routine
-	 * @return EdgeSimple, worst edge or null on error; uP.rtnFlag==1 implies
+	 * @return HalfEdge, worst edge or null on error; uP.rtnFlag==1 implies
 	 * some radii too small to depend upon.
 	 */
-	public static EdgeSimple visualErrMax(PackData p,EdgeLink elist,UtilPacket uP) {
-		EdgeSimple worstedge=null;
+	public static HalfEdge visualErrMax(PackData p,HalfLink elist,
+			UtilPacket uP) {
+		HalfEdge worstedge=null;
 		if (elist==null || elist.size()==0)
 			return worstedge;
 
 		double worstviserr=0.0;
-		Iterator<EdgeSimple> elst=elist.iterator();
+		Iterator<HalfEdge> elst=elist.iterator();
 		uP.rtnFlag=0;
 		while (elst.hasNext()) {
-			try {
-				
-				// get the edge, its radii, centers, and inv_dist
-				EdgeSimple edge=elst.next();
-				double inv_dist=1.0;
-				int indx = p.nghb(edge.v, edge.w);
-				if (p.overlapStatus && indx >= 0)
-					inv_dist=p.getInvDist(edge.v,p.kData[edge.v].flower[indx]);
-				Complex z1=p.getCenter(edge.v);
-				Complex z2=p.getCenter(edge.w);
-				double r1=p.getRadius(edge.v);
-				double r2=p.getRadius(edge.w);
-				double verr=-1.0;
-				if (p.hes<0) { // hyperbolic
-					CircleSimple sc=HyperbolicMath.h_to_e_data(z1, r1);
-					z1=sc.center;
-					r1=sc.rad;
-					sc=HyperbolicMath.h_to_e_data(z2, r2);
-					z2=sc.center;
-					r2=sc.rad;
-					verr=visual_error(r1,r2,z1,z2,inv_dist);
-				}
-				
-				else if (p.hes>0) { // spherical
-					verr=sph_visual_error(r1,r2,z1,z2,inv_dist);
-				}
-				
-				else { // eucl
-					verr=visual_error(r1,r2,z1,z2,inv_dist);
-				}
-				
-				if (verr>worstviserr) {
-					worstedge=new EdgeSimple(edge);
-					worstviserr=verr;
-				}
-				else if (verr<0) 
-					uP.rtnFlag=-1;
-			} catch(Exception ex) {
-				System.err.println("visualErrMax problem: "+ex.getMessage());
-				uP.rtnFlag=-1; 
-				return null;
+			HalfEdge edge=elst.next();
+			double edge_error=edge_vis_error(p,edge);
+			if (edge_error>worstviserr) {
+				worstedge=edge;
+				worstviserr=edge_error;
 			}
+			else if (edge_error<0) 
+				uP.rtnFlag=-1;
 		} // end of while
 		
 		uP.value=worstviserr;
@@ -332,9 +301,11 @@ public class QualMeasures {
 	 */
 	public static double vert_ErrMax(PackData p,int v) {
 		double worstviserr=0.0;
-		for (int j=0;j<(p.countFaces(v)+p.getBdryFlag(v));j++) {
-			EdgeSimple edge=new EdgeSimple(v,p.kData[v].flower[j]);
-			double verr=edge_vis_error(p,edge);
+		HalfLink spokes=p.packDCEL.vertices[v].getSpokes(null);
+		Iterator<HalfEdge> sis=spokes.iterator();
+		while (sis.hasNext()) {
+			HalfEdge he=sis.next();
+			double verr=edge_vis_error(p,he);
 			if (verr>worstviserr) {
 				worstviserr=verr;
 			}
@@ -345,21 +316,15 @@ public class QualMeasures {
 	/** 
 	 * get visual error of this edge
 	 * @param p PackData
-	 * @param edge EdgeSimple
+	 * @param edge HalfEdge
 	 * @return double
 	 */
-	public static double edge_vis_error(PackData p,EdgeSimple edge) {
-		double inv_dist=1.0;
-		int v=edge.v;
-		int w=edge.w;
-		if (p.overlapStatus) {
-			int indx=p.nghb(v,w);
-			inv_dist=p.getInvDist(v,p.kData[v].flower[indx]);
-		}
-		Complex z1=p.getCenter(v);
-		Complex z2=p.getCenter(w);
-		double r1=p.getRadius(v);
-		double r2=p.getRadius(w);
+	public static double edge_vis_error(PackData p,HalfEdge edge) {
+		double inv_dist=edge.getInvDist();
+		Complex z1=p.packDCEL.getVertCenter(edge);
+		Complex z2=p.packDCEL.getVertCenter(edge.next);
+		double r1=p.packDCEL.getVertRadius(edge);
+		double r2=p.packDCEL.getVertRadius(edge.next);
 		double verr=-1.0;
 		if (p.hes<0) { // hyperbolic
 			CircleSimple sc=HyperbolicMath.h_to_e_data(z1, r1);
@@ -377,40 +342,6 @@ public class QualMeasures {
 		
 		else { // eucl
 			verr=visual_error(r1,r2,z1,z2,inv_dist);
-		}
-		return verr;
-	}
-
-	/** 
-	 * get visual error for DCEL 'HalfEdge'
-	 * @param p PackData
-	 * @param edge HalfEdge
-	 * @return double
-	 */
-	public static double d_edge_vis_error(PackData p,HalfEdge edge) {
-		int v=edge.origin.vertIndx;
-		int w=edge.twin.origin.vertIndx;
-		Complex zv=p.packDCEL.getVertCenter(edge);
-		Complex zw=p.packDCEL.getVertCenter(edge.twin);
-		double rv=p.getRadius(v);
-		double rw=p.getRadius(w);
-		double verr=-1.0;
-		if (p.hes<0) { // hyperbolic
-			CircleSimple sc=HyperbolicMath.h_to_e_data(zv, rv);
-			zv=sc.center;
-			rv=sc.rad;
-			sc=HyperbolicMath.h_to_e_data(zw, rw);
-			zw=sc.center;
-			rw=sc.rad;
-			verr=visual_error(rv,rw,zv,zw,edge.getInvDist());
-		}
-		
-		else if (p.hes>0) { // spherical
-			verr=sph_visual_error(rv,rw,zv,zw,edge.getInvDist());
-		}
-		
-		else { // eucl
-			verr=visual_error(rv,rw,zv,zw,edge.getInvDist());
 		}
 		return verr;
 	}

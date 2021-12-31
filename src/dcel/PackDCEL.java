@@ -166,6 +166,7 @@ public class PackDCEL {
 
 		  if (p!=null)
 			  p.attachDCEL(this);
+		  p.status=true;
 	  } catch (Exception ex) {
 		  throw new DCELException("Problem with 'fix_raw' or 'attachDCEL'. "
 				  +ex.getMessage());
@@ -287,7 +288,7 @@ public class PackDCEL {
 				;
 	/**
 	 * The "red" chain is a closed cclw chain of edges about
-	 * a simple connected fundamental domain for the complex.
+	 * a simply connected fundamental domain for the complex.
 	 * This is rather difficult because 'this' PackDCEL should 
 	 * remain unchanged --- we depend on 'bouquet' to create 
 	 * new 'Vertex's and 'HalfEdge's.
@@ -323,7 +324,8 @@ public class PackDCEL {
 	 * @param bdryedges ArrayList<HalfEdge>
 	 * @return int count, 0 on error
 	 */
-	public int indexFaces(ArrayList<HalfEdge> edges,ArrayList<HalfEdge> bdryedges) {
+	public int indexFaces(ArrayList<HalfEdge> edges,
+			ArrayList<HalfEdge> bdryedges) {
 
 		faceCount=0;
 		// need starting place; try 'alpha' first, else look for first interior
@@ -443,146 +445,6 @@ public class PackDCEL {
 		}
 		
 		return faceCount;
-	}
-	
-	/**
-	 * Return array of faces to be used in order for
-	 * computing circle centers. Start with edge 'alpha'
-	 * and its face. As each face is added to the array,
-	 * its 'edge' is set to that from v to u, where v and
-	 * u will have been laid out earlier in the process;
-	 * one uses these to find the third circle w.
-	 * @return ArrayList<Face>
-	 */
-	public ArrayList<Face> simpleLayout() {
-		ArrayList<Face> farray=new ArrayList<Face>();
-		HalfEdge []vedges=new HalfEdge[p.nodeCount+1]; // edges laid at v 
-		int []vhits=new int[p.nodeCount+1];  // verts laid out
-		NodeLink currv=new NodeLink();
-		NodeLink nextv=new NodeLink();
-		
-		// first face
-		Face f=alpha.face;
-		p.firstFace=f.faceIndx;
-		f.edge=alpha; 
-		farray.add(f); 
-		vedges[alpha.origin.vertIndx]=alpha; // marks as laid out
-		vedges[alpha.twin.origin.vertIndx]=alpha.next;
-		vedges[alpha.next.twin.origin.vertIndx]=alpha.next.next;
-		vhits[alpha.origin.vertIndx]=-1; // marks as laid out
-		vhits[alpha.twin.origin.vertIndx]=-1;
-		vhits[alpha.next.twin.origin.vertIndx]=-1;
-		nextv.add(alpha.origin.vertIndx);
-		nextv.add(alpha.twin.origin.vertIndx);
-		nextv.add(alpha.next.twin.origin.vertIndx);
-		int count=3; // number laid out
-		
-		while (nextv!=null && nextv.size()>0) {
-			currv=nextv;
-			nextv=new NodeLink();
-			Iterator<Integer> cit=currv.iterator();
-			while (cit.hasNext()) {
-				int v=cit.next();
-				
-				// process this 'v'?
-				if (vhits[v]==-1) {
-					HalfEdge myedge=vedges[v];
-					HalfLink fflower=myedge.origin.getEdgeFlower(); 
-					int n=fflower.size();
-					int k=fflower.indexOf(myedge);
-					
-					// go counterclockwise
-					for (int j=1;j<n;j++) {
-						HalfEdge he=fflower.get((j+k)%n);
-						
-						// should he.face be used in layout? 
-						if (he.face.faceIndx>0 && 
-								vhits[he.twin.origin.vertIndx]!=0 &&
-								vhits[he.next.twin.origin.vertIndx]==0) {
-							// touched new vert
-							int newvert=he.next.twin.origin.vertIndx;
-							vhits[newvert]=-1;
-							nextv.add(newvert);
-							count++;
-							
-							// identify an edge for it
-							vedges[newvert]=he.next.next;
-							
-							// store this face in layout list
-							he.face.edge=he;
-							farray.add(he.face);
-						}
-					}
-					
-					// now go clockwise -- only needed for boundary vertices
-					for (int j=1;j<n;j++) {
-						HalfEdge he=fflower.get((k-j+n)%n).twin;
-						
-						// should he.face be used in layout? 
-						if (he.face.faceIndx>0 && 
-								vhits[he.origin.vertIndx]!=0 &&
-								vhits[he.next.twin.origin.vertIndx]==0) {
-							// touched new vert
-							int newvert=he.next.twin.origin.vertIndx;
-							vhits[newvert]=-1;
-							nextv.add(newvert);
-							count++;
-							
-							// identify an edge for it
-							vedges[newvert]=he.next.next;
-							
-							// store this face in layout list
-							he.face.edge=he;
-							farray.add(he.face);
-						}
-					}
-					
-					vhits[v]=2; 
-				} // done processing 'v'
-			} // end of while on currv
-		} // end of while on nextv
-		
-		if (count!=vertCount)
-			CirclePack.cpb.errMsg("dcel layout: missed some vertex?");
-		return farray;
-	}
-
-	/**
-	 * Place the face associated with 'edge', with 'edge.origin' at 
-	 * the origin, 'edge.next.origin' on the positive real axis, and
-	 * compute/store 'edge.next.next.origin'. 
-	 * @param edge HalfEdge
-	 * @return CircleSimple opposite the edge
-	 */
-	public CircleSimple placeFirstFace(HalfEdge edge) {
-		double r0=getVertRadius(edge);
-		double r1=getVertRadius(edge.next);
-		setCent4Edge(edge,new Complex(0.0));
-		double invd=edge.getInvDist();
-		double dist=CommonMath.ivd_edge_length(r0,r1,invd,p.hes);
-		if (p.hes>0) // sph
-			setCent4Edge(edge.next,new Complex(0.0,dist));
-		else if (p.hes<0){ // hyp
-			if (dist<0) { // horocycle?
-				dist=1;
-
-				// must also store negative of eucl radius
-				double s_rad=Math.sqrt(1.0-r0);
-				double e_rad=(1.0-s_rad)/(1.0+s_rad);
-				e_rad=0.5*(1.0-e_rad);
-				setRad4Edge(edge.next,-e_rad); 
-			}
-			else {
-				double expdist=Math.exp(dist);
-				dist=(expdist-1.0)/(expdist+1.0);
-			}
-			setCent4Edge(edge.next,new Complex(dist,0.0));
-		}
-		else // eucl
-			setCent4Edge(edge.next,new Complex(dist,0.0));
-		CircleSimple cS=d_compOppCenter(edge);
-		setCent4Edge(edge.next.next,cS.center);
-		return cS;
 	}
 
 	/**
@@ -1570,7 +1432,6 @@ public class PackDCEL {
 		Vertex vert=vertices[v];
 		if (this==p.packDCEL) {
 			p.vData[v].center=new Complex(z);
-			p.rData[v].center=new Complex(z);
 		}
 		HalfEdge he=vert.halfedge;
 		do {
@@ -1789,13 +1650,13 @@ public class PackDCEL {
 
 	/** 
 	 * Recompute, draw, and/or post circles and/or faces along a
-	 * specified HalfLink. 
+	 * specified HalfLink. (replaces old 'PackData.layout_facelist')
 	 * @param pF PostFactory
 	 * @param heTree HalfLink
 	 * @param faceFlags DispFlags, may be null
 	 * @param circFlags DispFlags, may be null
 	 * @param fix boolean
-	 * @param placeFirst boolean: true = place anew; false, assume 2 verts in place
+	 * @param placeFirst boolean: true: place anew; false, assume 2 verts in place
 	 * @param tx double, only used for postscript output
 	 * @return int count 
 	 */
@@ -1805,8 +1666,7 @@ public class PackDCEL {
 
 		boolean debug=false;
 		if (debug) { // debug=true;
-//			LayoutBugs.log_GraphLink(this.p,faceTree);
-			DCELdebug.drawRedChain(p, redChain);
+			DCELdebug.drawRedChain(p,redChain);
 			DCELdebug.printRedChain(redChain);
 		}
 		
@@ -2478,7 +2338,7 @@ public class PackDCEL {
 			
 			// else, use alpha or get first non-forbidden interior
 			if (myTry==null)
-				for (int j=1;j<=vertCount;j++)
+				for (int j=1;(j<=vertCount && (myTry==null));j++)
 					if (!vertices[j].isBdry() && 
 							(nlink!=null && nlink.containsV(j)<0))
 						myTry=vertices[j].halfedge;

@@ -63,7 +63,8 @@ public class Face{
       */
      public int vertIndx(int v) {
     	 for (int j=0;j<vertCount;j++)
-    		 if (v==vert[j]) return j;
+    		 if (v==vert[j]) 
+    			 return j;
     	 return -1;
      }
 

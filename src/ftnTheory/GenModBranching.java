@@ -247,7 +247,6 @@ public class GenModBranching extends PackExtender {
 					branchPts.add((GenBrModPt)null);
 					packData.setCombinatorics();
 					packData.set_aim_default();
-					packData.free_overlaps();
 				}
 				
 				// circle?

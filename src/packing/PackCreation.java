@@ -5,28 +5,23 @@ import java.util.LinkedList;
 import java.util.Random;
 
 import allMains.CirclePack;
-import complex.Complex;
-import complex.MathComplex;
 import dcel.CombDCEL;
 import dcel.DcelCreation;
 import dcel.PackDCEL;
-import dcel.RawDCEL;
-import dcel.RedHEdge;
-import deBugging.DebugHelp;
 import exceptions.CombException;
-import exceptions.DCELException;
 import exceptions.ParserException;
-import ftnTheory.GenModBranching;
 import komplex.EdgeSimple;
-import komplex.KData;
 import listManip.EdgeLink;
 import listManip.NodeLink;
 import tiling.TileData;
 import util.ColorUtil;
 
 /**
- * For creation of packings from scratch, such as seeds, Cayley graphs
- * of triangle groups {a b c}, tilings, etc.
+ * traditional: now see 'DcelCreation.java' 
+ * 
+ * For creation of packings from scratch, such as seeds, 
+ * Cayley graphs of triangle groups {a b c}, tilings, etc.
+ * 
  * 
  * TODO: add creation calls for soccerball? perhaps other tiling patterns?
  * 
@@ -36,223 +31,15 @@ import util.ColorUtil;
 public class PackCreation {
 
 	/**
-	 * TODO: this code isn't called yet, should replace 'hexbuild' sometimes.
-	 * Create hex packing as in 'hexBuild', but by direct build
-	 * rather than adding generations in succession. Will be faster
-	 * and for large packings more accurate layout. Vert numbering 
-	 * does not spiral out so nicely.
-	 * The hex grid here is identified with span of independent vectors
-	 * u=<1/2,-sqrt(3)/2> and w=<1/2,sqrt(3)/2>, so <i,j> is i*u+j*w.
-	 * We also set up translation info in 'micro2v' and 'v2micro', but
-	 * that is difficult to pass back to the calling routine.
-	 * Alpha is set to center vertex and gamma so positive x-axis goes through u+w.
-	 * @param n int, number of generations (seed is 1 generation)
-	 * @return @see PackData
-	*/
-	public PackData hexByHand(int n) {
-		PackData newPack=new PackData(null);
-		newPack.status=true;
-		newPack.locks=0;
-		newPack.activeNode=1;
-		newPack.hes=0;
-		
-		// prepare KData and RData
-		KData []kData;
-		RData []rData;
-		int nodecount=3*n*n+3*n+1;
-		kData=new KData[nodecount+1];
-		rData=new RData[nodecount+1];
-		for (int v=1;v<=nodecount;v++) {
-			kData[v]=new KData();
-			rData[v]=new RData();
-			rData[v].rad=0.5;
-			rData[v].aim=2*Math.PI;
-		}
-		
-		// allocate 'micro2v' and 'v2micro'
-		int [][]micro2v=new int[2*n+1][];
-		for (int i=0;i<=2*n;i++)
-			micro2v[i]=new int[2*n+1];
-		int [][]v2micro=new int[nodecount+1][];
-		for (int kv=0;kv<=nodecount;kv++)
-			v2micro[kv]=new int[2];
-
-		int vtick=0;
-		double sq32=Math.sqrt(3.0)/2.0;
-		Complex uz=new Complex(0.5,-sq32);
-		Complex wz=new Complex(0.5,sq32);
-		for (int u=0;u<=n;u++) 
-			for (int w=0;w<=n+u;w++) {
-				micro2v[u][w]=++vtick;
-				v2micro[vtick][0]=u-n;
-				v2micro[vtick][1]=w-n;
-				rData[vtick].center=uz.times(u-n).add(wz.times(w-n));
-			}
-		for (int u=1;u<=n;u++)
-			for (int w=u;w<=2*n;w++) {
-				micro2v[n+u][w]=++vtick;
-				v2micro[vtick][0]=u;
-				v2micro[vtick][1]=w-n;
-				rData[vtick].center=uz.times(u).add(wz.times(w-n));
-			}
-		
-		// prepare flowers
-		// helpful stencil
-		EdgeSimple []hexstencil=new EdgeSimple[7];
-		hexstencil[0]=hexstencil[6]=new EdgeSimple(1,0);
-		hexstencil[1]=new EdgeSimple(1,1);
-		hexstencil[2]=new EdgeSimple(0,1);
-		hexstencil[3]=new EdgeSimple(-1,0);
-		hexstencil[4]=new EdgeSimple(-1,-1);
-		hexstencil[5]=new EdgeSimple(0,-1);
-		
-		// interiors
-		int v=0;
-		for (int u=1;u<=n;u++) 
-			for (int w=1;w<n+u;w++) {
-				v=micro2v[u][w];
-				kData[v].num=6;
-				kData[v].flower=new int[7];
-				for (int j=0;j<6;j++) {
-					EdgeSimple edge=hexstencil[j];
-					int uu=u+edge.v;
-					int ww=w+edge.w;
-					kData[v].flower[j]=micro2v[uu][ww];
-				}
-				kData[v].flower[6]=kData[v].flower[0];
-			}
-		for (int u=1;u<n;u++) 
-			for (int w=u+1;w<2*n;w++) {
-				v=micro2v[n+u][w];
-				kData[v].num=6;
-				kData[v].flower=new int[7];
-				for (int j=0;j<6;j++) {
-					EdgeSimple edge=hexstencil[j];
-					int uu=n+u+edge.v;
-					int ww=w+edge.w;
-					kData[v].flower[j]=micro2v[uu][ww];
-				}
-				kData[v].flower[6]=kData[v].flower[0];
-			}
-		
-		// corners
-		v=micro2v[0][0]; // lower left
-		kData[v].num=2;
-		kData[v].bdryFlag=1;
-		kData[v].flower=new int[3];
-		kData[v].flower[0]=micro2v[1][0];
-		kData[v].flower[1]=micro2v[1][1];
-		kData[v].flower[2]=micro2v[0][1];
-		
-		v=micro2v[n][0]; // bottom
-		kData[v].num=2;
-		kData[v].bdryFlag=1;
-		kData[v].flower=new int[3];
-		kData[v].flower[0]=micro2v[n+1][1];
-		kData[v].flower[1]=micro2v[n][1];
-		kData[v].flower[2]=micro2v[n-1][0];
-
-		v=micro2v[2*n][n]; // lower right
-		kData[v].num=2;
-		kData[v].bdryFlag=1;
-		kData[v].flower=new int[3];
-		kData[v].flower[0]=micro2v[2*n][n+1];
-		kData[v].flower[1]=micro2v[2*n-1][n];
-		kData[v].flower[2]=micro2v[2*n-1][n-1];
-
-		v=micro2v[2*n][2*n]; // upper right
-		kData[v].num=2;
-		kData[v].bdryFlag=1;
-		kData[v].flower=new int[3];
-		kData[v].flower[0]=micro2v[2*n-1][2*n];
-		kData[v].flower[1]=micro2v[2*n-1][2*n-1];
-		kData[v].flower[2]=micro2v[2*n][2*n-1];
-
-		v=micro2v[n][2*n]; // top
-		kData[v].num=2;
-		kData[v].bdryFlag=1;
-		kData[v].flower=new int[3];
-		kData[v].flower[0]=micro2v[n-1][2*n-1];
-		kData[v].flower[1]=micro2v[n][2*n-1];
-		kData[v].flower[2]=micro2v[n+1][2*n];
-
-		v=micro2v[0][n]; // upper left
-		kData[v].num=2;
-		kData[v].bdryFlag=1;
-		kData[v].flower=new int[3];
-		kData[v].flower[0]=micro2v[0][n-1];
-		kData[v].flower[1]=micro2v[1][n];
-		kData[v].flower[2]=micro2v[1][n+1];
-
-		// edges
-		for (int j=1;j<n;j++) {
-			
-			v=micro2v[0][j]; // left
-			kData[v].num=3;
-			kData[v].bdryFlag=1;
-			kData[v].flower=new int[4];
-			kData[v].flower[0]=micro2v[0][j-1];
-			kData[v].flower[1]=micro2v[1][j];
-			kData[v].flower[2]=micro2v[1][j+1];
-			kData[v].flower[3]=micro2v[0][j+1];
-			
-			v=micro2v[j][0]; // bottom left
-			kData[v].num=3;
-			kData[v].bdryFlag=1;
-			kData[v].flower=new int[4];
-			kData[v].flower[0]=micro2v[j+1][0];
-			kData[v].flower[1]=micro2v[j+1][1];
-			kData[v].flower[2]=micro2v[j][1];
-			kData[v].flower[3]=micro2v[j-1][0];
-			
-			v=micro2v[n+j][j]; // bottom right
-			kData[v].num=3;
-			kData[v].bdryFlag=1;
-			kData[v].flower=new int[4];
-			kData[v].flower[0]=micro2v[n+j+1][j+1];
-			kData[v].flower[1]=micro2v[n+j][j+1];
-			kData[v].flower[2]=micro2v[n+j-1][j];
-			kData[v].flower[3]=micro2v[n+j-1][j-1];
-			
-			v=micro2v[2*n][n+j]; // right
-			kData[v].num=3;
-			kData[v].bdryFlag=1;
-			kData[v].flower=new int[4];
-			kData[v].flower[0]=micro2v[2*n][n+j+1];
-			kData[v].flower[1]=micro2v[2*n-1][n+j];
-			kData[v].flower[2]=micro2v[2*n-1][n+j-1];
-			kData[v].flower[3]=micro2v[2*n][n+j-1];
-			
-			v=micro2v[n+j][2*n]; // top right
-			kData[v].num=3;
-			kData[v].bdryFlag=1;
-			kData[v].flower=new int[4];
-			kData[v].flower[0]=micro2v[n+j-1][2*n];
-			kData[v].flower[1]=micro2v[n+j-1][2*n-1];
-			kData[v].flower[2]=micro2v[n+j][2*n-1];
-			kData[v].flower[3]=micro2v[n+j+1][2*n];
-			
-			v=micro2v[j][n+j]; // top left
-			kData[v].num=3;
-			kData[v].bdryFlag=1;
-			kData[v].flower=new int[4];
-			kData[v].flower[0]=micro2v[j-1][n+j-1];
-			kData[v].flower[1]=micro2v[j][n+j-1];
-			kData[v].flower[2]=micro2v[j+1][n+j];
-			kData[v].flower[3]=micro2v[j+1][n+j+1];
-		}
-		
-		newPack.kData=kData;
-		newPack.rData=rData;
-		newPack.nodeCount=nodecount;
-		newPack.alpha=micro2v[n][n];
-		newPack.gamma=micro2v[(int)(n*3/2)][(int)(n*3/2)];
-		
-		newPack.setCombinatorics();
-		return newPack;
-	}
-	
-	public static PackData build_j_function(int n0, int n1, int maxsize) {
+	 * The creates generations of the classical "j-function" (related
+	 * to the modular function) when n0=1 and n1=2 and similar functions
+	 * for other integer parameters.
+	 * @param maxsize int, number of generations to build
+	 * @param n0 int
+	 * @param n1 int
+	 * @return PackData
+	 */
+	public static PackData build_j_function(int maxsize,int n0,int n1) {
 		int next_bdry, aft_bdry, fore_bdry, cur_bdry, num;
 		int N, alive = 0, dead = 0, vert;
 		int[] util = null;
@@ -262,15 +49,15 @@ public class PackCreation {
 
 		PackData p = DcelCreation.seed(2 * (n1 + 1), -1);
 		// expand pack to hold maxsize
-		if (maxsize < 10 || n0 < 1 || n1 < 1
-				|| p.alloc_pack_space(maxsize + 10 * (n0 + 1) * (n1 + 1),
+		if (maxsize > 10 || n0 < 1 || n1 < 1 ||
+				p.alloc_pack_space(maxsize + 10 * (n0 + 1) * (n1 + 1),
 						false) == 0)
 			throw new CombException("allocation failed");
 
-		p.kData[1].utilFlag = 2; // 1-type vert at center
+		p.setVertUtil(1,2); // 1-type vert at seed center
 		for (int i = 1; i <= n1 + 1; i++) {
-			p.kData[2 * i].utilFlag = 1; // 0-type vert
-			p.kData[2 * i + 1].utilFlag = 3; // inf-type vert
+			p.setVertUtil(2 * i,1); // 0-type vert
+			p.setVertUtil(2 * i + 1,3); // inf-type vert
 		}
 		cur_bdry = next_bdry = 2; /*
 									 * get started traveling around the
@@ -278,12 +65,12 @@ public class PackCreation {
 									 * and 1-type bdry verts.
 									 */
 		// find the next bdry subject to added faces for later use.
-		while (p.kData[(next_bdry = p.kData[next_bdry].flower[0])].utilFlag == 3) {
+		while (p.getVertUtil((next_bdry = p.getFirstPetal(next_bdry))) == 3) {
 			if (next_bdry == cur_bdry) // error, bomb
 				throw new CombException();
 		}
 		// set intended flower multiplicities
-		if (p.kData[cur_bdry].utilFlag == 1) // 0-type vert
+		if (p.getVertUtil(cur_bdry) == 1) // 0-type vert
 			N = n0 + 1;
 		else
 			N = n1 + 1; // 1-type vert
@@ -291,34 +78,34 @@ public class PackCreation {
 		// main while loop
 
 		while (p.nodeCount < maxsize) {
-			if (!p.isBdry(cur_bdry) || p.kData[cur_bdry].utilFlag == 3) { // done
+			if (!p.isBdry(cur_bdry) || p.getVertUtil(cur_bdry) == 3) { // done
 																					// with
 																					// this
 																					// one
 				cur_bdry = next_bdry;
-				if (p.kData[cur_bdry].utilFlag == 1) // 0-type vert
+				if (p.getVertUtil(cur_bdry) == 1) // 0-type vert
 					N = n0 + 1;
 				else
 					N = n1 + 1; // 1-type vert
 
 				// TODO: 'j_ftn 2 1 400' was in infinite loop here.
 				// find the next bdry subject to added faces for later use.
-				while (p.kData[(next_bdry = p.kData[next_bdry].flower[0])].utilFlag == 3) {
+				while (p.getVertUtil((next_bdry = p.getFirstPetal(next_bdry))) == 3) {
 					if (next_bdry == cur_bdry) // error, bomb
 						throw new CombException();
 				}
 			}
 
 			// cur_bdry shouldn't be inf-type
-			if (p.kData[cur_bdry].utilFlag == 3)
+			if (p.getVertUtil(cur_bdry) == 3)
 				break; // goto BACK_TO_WHILE;
 
-			if (p.kData[cur_bdry].utilFlag == 1) // 0-type vert
+			if (p.getVertUtil(cur_bdry) == 1) // 0-type vert
 				N = n0 + 1;
 			else
 				N = n1 + 1; // 1-type vert
-			fore_bdry = p.kData[cur_bdry].flower[0];
-			aft_bdry = p.kData[cur_bdry].flower[p.countFaces(cur_bdry)];
+			fore_bdry = p.getFirstPetal(cur_bdry);
+			aft_bdry = p.getLastPetal(cur_bdry);
 
 			// break into cases depending on face count at cur_bdry */
 
@@ -357,7 +144,7 @@ public class PackCreation {
 				new_flower[2 * N] = new_flower[0];
 				p.kData[cur_bdry].flower = new_flower;
 				p.kData[cur_bdry].num++;
-				p.kData[cur_bdry].bdryFlag = 0;
+				p.setBdryFlag(cur_bdry,0);
 
 				// fix fore_bdry
 				fore_flower = new int[p.countFaces(fore_bdry) + 2];
@@ -376,10 +163,10 @@ public class PackCreation {
 				p.kData[aft_bdry].num++;
 
 				// too many faces at neighbors?
-				if ((p.kData[fore_bdry].utilFlag == 1 && p.countFaces(fore_bdry) > 2 * (n0 + 1))
-						|| (p.kData[fore_bdry].utilFlag == 2 && p.countFaces(fore_bdry) > 2 * (n1 + 1))
-						|| (p.kData[aft_bdry].utilFlag == 1 && p.countFaces(aft_bdry) > 2 * (n0 + 1))
-						|| (p.kData[aft_bdry].utilFlag == 2 && p.countFaces(aft_bdry) > 2 * (n1 + 1)))
+				if ((p.getVertUtil(fore_bdry) == 1 && p.countFaces(fore_bdry) > 2 * (n0 + 1))
+						|| (p.getVertUtil(fore_bdry) == 2 && p.countFaces(fore_bdry) > 2 * (n1 + 1))
+						|| (p.getVertUtil(aft_bdry) == 1 && p.countFaces(aft_bdry) > 2 * (n0 + 1))
+						|| (p.getVertUtil(aft_bdry) == 2 && p.countFaces(aft_bdry) > 2 * (n1 + 1)))
 					throw new CombException();
 				break; // goto BACK_TO_WHILE;
 			} else { // have to add one face and check aft_bdry
@@ -401,24 +188,24 @@ public class PackCreation {
 				p.kData[cur_bdry].num++;
 
 				// set utilFlag's
-				if (p.kData[cur_bdry].utilFlag == 1
-						&& p.kData[aft_bdry].utilFlag == 2)
-					p.kData[vert].utilFlag = 3;
-				else if (p.kData[cur_bdry].utilFlag == 2
-						&& p.kData[aft_bdry].utilFlag == 1)
-					p.kData[vert].utilFlag = 3;
-				else if (p.kData[cur_bdry].utilFlag == 3
-						&& p.kData[aft_bdry].utilFlag == 2)
-					p.kData[vert].utilFlag = 1;
-				else if (p.kData[cur_bdry].utilFlag == 2
-						&& p.kData[aft_bdry].utilFlag == 3)
-					p.kData[vert].utilFlag = 1;
-				else if (p.kData[cur_bdry].utilFlag == 1
-						&& p.kData[aft_bdry].utilFlag == 3)
-					p.kData[vert].utilFlag = 2;
-				else if (p.kData[cur_bdry].utilFlag == 3
-						&& p.kData[aft_bdry].utilFlag == 1)
-					p.kData[vert].utilFlag = 2;
+				if (p.getVertUtil(cur_bdry) == 1
+						&& p.getVertUtil(aft_bdry) == 2)
+					p.setVertUtil(vert,3);
+				else if (p.getVertUtil(cur_bdry) == 2
+						&& p.getVertUtil(aft_bdry) == 1)
+					p.setVertUtil(vert,3);
+				else if (p.getVertUtil(cur_bdry) == 3
+						&& p.getVertUtil(aft_bdry) == 2)
+					p.setVertUtil(vert,1);
+				else if (p.getVertUtil(cur_bdry) == 2
+						&& p.getVertUtil(aft_bdry) == 3)
+					p.setVertUtil(vert,1);
+				else if (p.getVertUtil(cur_bdry) == 1
+						&& p.getVertUtil(aft_bdry) == 3)
+					p.setVertUtil(vert,2);
+				else if (p.getVertUtil(cur_bdry) == 3
+						&& p.getVertUtil(aft_bdry) == 1)
+					p.setVertUtil(vert,2);
 
 				// fix up aft_bdry
 				num = p.countFaces(aft_bdry);
@@ -430,8 +217,8 @@ public class PackCreation {
 				p.kData[aft_bdry].num++;
 
 				// too many faces at the consolidated neighbor
-				if ((p.kData[aft_bdry].utilFlag == 1 && p.countFaces(aft_bdry) > 2 * (n0 + 1))
-						|| (p.kData[aft_bdry].utilFlag == 2 && p.countFaces(aft_bdry) > 2 * (n1 + 1)))
+				if ((p.getVertUtil(aft_bdry) == 1 && p.countFaces(aft_bdry) > 2 * (n0 + 1))
+						|| (p.getVertUtil(aft_bdry) == 2 && p.countFaces(aft_bdry) > 2 * (n1 + 1)))
 					throw new CombException();
 
 			}
@@ -440,7 +227,7 @@ public class PackCreation {
 		// set radii, etc
 		p.hes = -1;
 		for (int j = 1; j <= p.nodeCount; j++) {
-			if (p.kData[j].bdryFlag != 0)
+			if (p.isBdry(j))
 				p.setRadius(j,10.0);
 			// bdry radii essentially infinite
 			else
@@ -452,7 +239,7 @@ public class PackCreation {
 		// save utilFlags
 		util = new int[p.nodeCount + 1];
 		for (int j = 1; j <= p.nodeCount; j++)
-			util[j] = p.kData[j].utilFlag;
+			util[j] = p.getVertUtil(j);
 
 		// fix packing up
 		p.setName("j_ftn");
@@ -491,8 +278,8 @@ public class PackCreation {
 			ans[0] = 0;
 			return ans;
 		}
-		alive = fore_vert = p.kData[v].flower[0];
-		dead = aft_vert = p.kData[v].flower[p.countFaces(v)];
+		alive = fore_vert = p.getFirstPetal(v);
+		dead = aft_vert = p.getLastPetal(v);
 
 		// make new flower for fore_vert
 		fore_num = p.countFaces(fore_vert) + p.countFaces(aft_vert);
@@ -1146,487 +933,6 @@ public class PackCreation {
 		return centerV; 
 	}
 
-	/** 
-	 * Create N generations of Conway's "pinwheel" combinatorics.
-	 * Need to specify number of edges of "end" (short) leg, 
-	 * number for "long" leg is twice this, number on "hypotenuse"
-	 * is independent.
-	 * 
-	 * The packing is made into euclidean right triangle, with
-	 * other angles 
-	 * atan(.5) = 0.463647609 = .14758362*pi and 
-	 * atan(2) = 1.107148717794 =.352416382*pi
-	 * 
-	 * @param N int: generations N>=1, 1 means single flower.
-	 * @param e int, edge count on "end" leg
-	 * @param h int, edge count on "hypotenuse"
-	 * @return PackData with vlist of tile centers.
-	 */
-	public static PackData pinWheel(int N,int e,int h) {
-		int generation=1; // number of generations in current build
-		boolean debug=false; 
-		// pinwheel starts as n-flower, where n=e+2*e+h, with v=1 swapped to
-		//     be on the boundary; vertices to keep track of are 1, 2, 3. 
-		//     Distance from 1 to 2 is e, from 2 to 3 is h, 
-		//     hence from 3 to 1 is 2*e. Long leg is always twice the end leg
-		
-		PackData growWheel = DcelCreation.seed(3*e+h, 0);
-		PackDCEL pdcel=growWheel.packDCEL;
-		pdcel.swapNodes(3*e+h+1, 1);
-		pdcel.setAlpha(3*e+h+1, null,false);
-		growWheel.vlist=new NodeLink();
-		growWheel.vlist.add(3*e+h+1); // list center verts of tiles added
-		pdcel.swapNodes(1+e,2);
-		pdcel.swapNodes(1+e+h,3);
-		growWheel.elist=new EdgeLink(growWheel,"b");
-		
-		// mark the boundary
-		for (int vi=1;vi<growWheel.nodeCount;vi++) {
-			int om=growWheel.getVertMark(vi);
-			growWheel.setVertMark(vi,om+1);
-		}
-		
-		// want to mark the smallest level "core" (middle triangle)
-		//    with -1 and it's rotated neighbor with -2;
-		if (N<=1) { // at first level, just the core
-			growWheel.setVertMark(growWheel.nodeCount,-2);
-			N=1;
-		}
-		
-		// keep track of number of edges in 'end', 'long', 'hypotenuse'
-		int endcount=e;
-		int longcount=2*e;
-		int hypcount=h;
-
-		while (generation < N) {
-			
-			if (N==1) // unmark the center on the first run
-				growWheel.setVertMark(growWheel.nodeCount,0);
-			
-			// 5 copies of tempPack and tempReverse are adjoined
-			PackData tempPack=growWheel.copyPackTo();
-			PackData tempReverse=growWheel.copyPackTo();
-			tempReverse.packDCEL.reverseOrientation();
-			
-			tempPack.vlist=growWheel.vlist.makeCopy();
-			tempReverse.vlist=growWheel.vlist.makeCopy();
-			
-			tempPack.elist=new EdgeLink(tempPack,"b");
-			tempReverse.elist=new EdgeLink(tempReverse,"b");
-						
-			// A serves as the base:
-			// adjoin B^ to A along end 
-			//        2 on A to 2 on B^, endcount edges
-			//        don't need to mark any vertices
-			pdcel=CombDCEL.d_adjoin(pdcel,tempReverse.packDCEL,2,2,endcount);
-			growWheel.vertexMap=pdcel.oldNew;
-			updateLists(growWheel,tempReverse.vlist,tempReverse.elist,
-					growWheel.vertexMap);
-			
-			// transfer all the marks as each piece is adjoined
-			Iterator<EdgeSimple> vM=growWheel.vertexMap.iterator();
-			while (vM.hasNext()) {
-				EdgeSimple edge=vM.next();
-				growWheel.setVertMark(edge.w,tempReverse.getVertMark(edge.v));
-			}
-			
-			// this new part is the rotated core;
-			//    first pass only, mark its center vert with -2
-			if (generation==1) 
-				growWheel.setVertMark(growWheel.vertexMap.findW(tempReverse.nodeCount),-2);
-
-			// for debugging edge lists: debug=false;
-			if (debug) {
-				Iterator<EdgeSimple> es=growWheel.elist.iterator();
-				System.err.println("\n add upper left");
-				while (es.hasNext()) {
-					EdgeSimple edge=es.next();
-					System.err.println("("+edge.v+" "+edge.w+")");
-				}
-				DebugHelp.debugPackWrite(growWheel,"growWheel.p");
-			}
-			
-			// adjoin C^ to B^ along hyp 
-			//		  2 on A+B^ to 3 on C^, hypcount edges
-			//        don't need to mark any vertices
-			//        identify 'alpha' of 'growWheel' as alpha of C
-			pdcel=CombDCEL.d_adjoin(pdcel,tempReverse.packDCEL,2,3,hypcount);
-			growWheel.vertexMap=pdcel.oldNew;
-			updateLists(growWheel,tempReverse.vlist,tempReverse.elist,growWheel.vertexMap);
-			pdcel.setAlpha(growWheel.vertexMap.findW(tempReverse.alpha),null,false);
-			vM=growWheel.vertexMap.iterator();
-			while (vM.hasNext()) {
-				EdgeSimple edge=vM.next();
-				growWheel.setVertMark(edge.w,tempReverse.getVertMark(edge.v));
-			}
-			
-			// this new part is the core, mark its center with -1 (first pass only)
-			if (generation==1)
-				growWheel.setVertMark(growWheel.vertexMap.findW(tempReverse.nodeCount),-1);
-
-						
-			// adjoin D to C^ along long 
-			//        2 on A+B^+C^ to 3 on D, longcount edges
-			//        X keeps track of old 2.
-			pdcel = CombDCEL.d_adjoin(pdcel,tempPack.packDCEL,2,3,longcount);
-			growWheel.vertexMap=pdcel.oldNew;
-			updateLists(growWheel,tempPack.vlist,tempPack.elist,growWheel.vertexMap);
-			int X=growWheel.vertexMap.findW(2);
-			vM=growWheel.vertexMap.iterator();
-			while (vM.hasNext()) {
-				EdgeSimple edge=vM.next();
-				growWheel.setVertMark(edge.w,tempPack.getVertMark(edge.v));
-			}
-
-			// adjoin E ends of C^ and D, endcount each
-			//        X on A+B^+C^+D to 3 on E
-			//        Y keeps track of old 2.
-			pdcel=CombDCEL.d_adjoin(pdcel,tempPack.packDCEL,X,3,longcount);
-			growWheel.vertexMap=pdcel.oldNew;
-			updateLists(growWheel,tempPack.vlist,tempPack.elist,growWheel.vertexMap);
-			int Y=growWheel.vertexMap.findW(2);
-			vM=growWheel.vertexMap.iterator();
-			while (vM.hasNext()) {
-				EdgeSimple edge=vM.next();
-				growWheel.setVertMark(edge.w,tempPack.getVertMark(edge.v));
-			}
-			
-			
-			// renumber: X --> 1, Y --> 2
-			pdcel.swapNodes(X,1);
-			pdcel.swapNodes(Y,2);
-			
-			// side lengths follow recursion formula
-			int holdhyp=hypcount;
-			hypcount=5*endcount;
-			endcount=holdhyp;
-			longcount=2*endcount;
-			
-			// increment marks on boundary
-			for (int vi=1;vi<=growWheel.nodeCount;vi++)
-				if (growWheel.isBdry(vi)) {
-					int om=growWheel.getVertMark(vi);
-					growWheel.setVertMark(vi,om+1);
-				}
-			
-			// new generation is reverse oriented
-			growWheel.packDCEL.reverseOrientation();
-			pdcel.fixDCEL_raw(growWheel);
-
-			generation++;
-
-		} // end of while
-		
-		// set the aims to make it a right triangle
-		growWheel.set_aim_default();
-		for (int v=1;v<=growWheel.nodeCount;v++) {
-			if (growWheel.isBdry(v))
-				growWheel.setAim(v,1.0*Math.PI);
-		}
-		growWheel.setAim(1,.5*Math.PI); 
-		growWheel.setAim(3,Math.atan(.5)); // 0.463647609 
-		growWheel.setAim(2,.5*Math.PI-growWheel.getAim(3)); // 0.463647609, 1.107148717794
-
-		// repack, layout
-		double crit=GenModBranching.LAYOUT_THRESHOLD;
-		int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
-		growWheel.fillcurves();
-		growWheel.repack_call(1000);
-		try {
-			growWheel.packDCEL.layoutPacking(); 
-		} catch (Exception ex) {
-			throw new CombException("'pinWheel' creation failed");
-		}
-		
-		// normalize: 2 3 horizontal, 3 on unit circle.
-		Complex z=growWheel.getCenter(3).minus(growWheel.getCenter(2));
-		double ang=(-1.0)*(MathComplex.Arg(z));
-		growWheel.rotate(ang);
-		double scl=growWheel.getCenter(3).abs();
-		if (scl>.000001)
-			growWheel.eucl_scale(1.0/scl);
-
-		try {
-			growWheel.tileData=TileData.paveMe(growWheel,growWheel.alpha);
-		} catch(Exception ex) {
-			CirclePack.cpb.errMsg("Failed to create pinWheel 'TileData'");
-		}
-		return growWheel;
-	}
-	
-
-	/**
-	 * Create N generations of a 2D fusion tiling related
-	 * to Fibonnacci numbers. I learned this from Natalie Frank.
-	 * There are four tile types, A, B, C, D, each has next
-	 * fusion stage made from a certain combination. Here is
-	 * the pattern ('/' means horizontally below):
-	 * A -> [C A / D B]; B -> [A C]; C -> [B/A]; D -> [A]
-	 * H, W, X are integer height/width parameters, >= 1.
-	 * A is W x H, B is W x X, C is X x H, D is X x X.
-	 * @param W int
-	 * @param H int
-	 * @param X int
-	 * @param N int, number of generations
-	 * @return new PackData, null on error 
-	 */
-	public static PackData fibonacci2D(int N,int W,int H,int X) {
-
-		int generation=1; // number of generations in current build
-		int currentWidth=W;
-		int currentHeight=H;
-		int startBase=X;
-		int baseWidth=X;
-		int baseHeight=X;
-
-		// We start with base tile of each type:
-		PackData fusionA = DcelCreation.seed(2*W+2*H,0); // A is W x H
-		PackData fusionB = DcelCreation.seed(2*W+2*X,0); // B is W x X
-		PackData fusionC = DcelCreation.seed(2*H+2*X,0); // C is X x H
-		PackData fusionD = DcelCreation.seed(4*X,0);     // D is X x X
-
-		// keep track of tiles using mark of barycenter vertex
-		fusionA.setVertMark(1,1);
-		fusionB.setVertMark(2,2);
-		fusionC.setVertMark(1,3);
-		fusionD.setVertMark(1,4);
-				
-		// Corners are 1,2,3,4 at every stage in every tile, upper left is 1
-		// reset the corner numbers, starting at '2' (first petal for seed)
-		if (!reNumBdry(fusionA,2,currentWidth,currentHeight) ||
-				!reNumBdry(fusionB,2,currentWidth,startBase) ||
-				!reNumBdry(fusionC,2,startBase,currentHeight) ||
-				!reNumBdry(fusionD,2,startBase,startBase))
-			throw new CombException("problem with first renumbering");
-
-		// iterate construction
-		while (generation < N) {
-			generation++;
-			
-			// hold old copies
-			PackData holdA=fusionA.copyPackTo();
-			PackData holdB=fusionB.copyPackTo();
-			PackData holdC=fusionC.copyPackTo();
-			PackData holdD=fusionD.copyPackTo();
-
-			// new level of A = [C A/D B], (X+W) x (H+X)
-			// top part, [C A] first, (X+W) x H
-			fusionA=holdC.copyPackTo();
-			fusionA.packDCEL=CombDCEL.d_adjoin(fusionA.packDCEL,
-					holdA.packDCEL,4,1,currentHeight);
-			fusionA.vertexMap=fusionA.packDCEL.oldNew;
-			if (!reNumBdry(fusionA,1,baseWidth+currentWidth,currentHeight))
-				throw new CombException("failed [C A]");
-			// transfer non-zero marks
-			for (int v=1;v<=holdA.nodeCount;v++) {
-				if(holdA.getVertMark(v)!=0) {
-					int w=fusionA.vertexMap.findW(v);
-					if (w>0)
-						fusionA.setVertMark(w,holdA.getVertMark(v));
-				}
-			}
-			// lower part, [D B], (X+W) x X
-			PackData lower=holdD.copyPackTo();
-			lower.packDCEL=CombDCEL.d_adjoin(lower.packDCEL,
-					holdB.packDCEL,4,1,baseHeight);
-			lower.vertexMap=lower.packDCEL.oldNew;
-			if (!reNumBdry(lower,1,baseWidth+currentWidth,baseHeight))
-				throw new CombException("failed [D B]");
-			// transfer non-zero marks
-			for (int v=1;v<=holdB.nodeCount;v++) {
-				if(holdB.getVertMark(v)!=0) {
-					int w=lower.vertexMap.findW(v);
-					if (w>0)
-						lower.setVertMark(w,holdB.getVertMark(v));
-				}
-			}
-			// adjoin them, (X+W) x (H+X)
-			fusionA.packDCEL=CombDCEL.d_adjoin(fusionA.packDCEL,
-					lower.packDCEL,3,4,baseWidth+currentWidth);
-			fusionA.vertexMap=fusionA.packDCEL.oldNew;
-			if (!reNumBdry(fusionA,1,baseWidth+currentWidth,baseHeight+currentHeight))
-				throw new CombException("failed [C A/D B]");
-			// transfer non-zero marks
-			for (int v=1;v<=lower.nodeCount;v++) {
-				if(lower.getVertMark(v)!=0) {
-					int w=fusionA.vertexMap.findW(v);
-					if (w>0)
-						fusionA.setVertMark(w,lower.getVertMark(v));
-				}
-			}
-
-			// new level of B = [A C], (W+X) x H
-			fusionB=holdA.copyPackTo();
-			fusionB.packDCEL=CombDCEL.d_adjoin(fusionB.packDCEL,
-					holdC.packDCEL, 4, 1,currentHeight);
-			fusionB.vertexMap=fusionB.packDCEL.oldNew;
-			if (!reNumBdry(fusionB,1,currentWidth +baseWidth,currentHeight))
-				throw new CombException("failed [A C]");
-			// transfer non-zero marks
-			for (int v=1;v<=holdC.nodeCount;v++) {
-				if(holdC.getVertMark(v)!=0) {
-					int w=fusionB.vertexMap.findW(v);
-					if (w>0)
-						fusionB.setVertMark(w,holdC.getVertMark(v));
-				}
-			}
-
-			// new level of C = [B/A], W x (X+H)
-			fusionC=holdB.copyPackTo();
-			fusionC.packDCEL=CombDCEL.d_adjoin(fusionC.packDCEL,
-					holdA.packDCEL,3,4,currentWidth);
-			fusionC.vertexMap=fusionC.packDCEL.oldNew;
-			if (!reNumBdry(fusionC,1,currentWidth,baseHeight+currentHeight))
-				throw new CombException("failed [B/A]");
-			// transfer non-zero marks
-			for (int v=1;v<=holdA.nodeCount;v++) {
-				if(holdA.getVertMark(v)!=0) {
-					int w=fusionC.vertexMap.findW(v);
-					if (w>0)
-						fusionC.setVertMark(w,holdA.getVertMark(v));
-				}
-			}
-
-			// new level D = old level A; on first pass only,
-			//     reset the mark at barycenter vertex to 4
-			fusionD=holdA;
-			if (generation==2)
-				fusionD.setVertMark(fusionD.alpha,4);
-				
-			// debug options to see specified piece, default to 'A'
-			char c='A'; // c='B'    c='C'    c='D'
-			switch(c) {
-			case 'B':
-			{
-				fusionA=fusionB;
-				break;
-			}
-			case 'C':
-			{
-				fusionA=fusionC;
-				break;
-			}
-			case 'D':
-			{
-				fusionA=fusionD;
-				break;
-			}
-			} // end of switch
-			
-			// continue
-			int oldBaseHeight=baseHeight;
-			int oldBaseWidth=baseWidth;
-			baseWidth=currentWidth;
-			baseHeight=currentHeight;
-			currentWidth += oldBaseWidth;
-			currentHeight += oldBaseHeight;
-
-		} // end of while
-		
-		// set the aims
-		fusionA.set_aim_default();
-		for (int v=1;v<=fusionA.nodeCount;v++) {
-			if (fusionA.isBdry(v))
-				fusionA.setAim(v,1.0*Math.PI);
-		}
-		fusionA.setAim(1,0.5*Math.PI);
-		fusionA.setAim(2,0.5*Math.PI);
-		fusionA.setAim(3,0.5*Math.PI);
-		fusionA.setAim(4,0.5*Math.PI);
-				
-		// repack, layout
-//		double crit=GenModBranching.LAYOUT_THRESHOLD;
-//		int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
-		fusionA.fillcurves();
-		fusionA.repack_call(1000);
-		try {
-			fusionA.packDCEL.layoutPacking(); 
-		} catch (Exception ex) {
-			throw new CombException("'fib2D' creation failed");
-		}
-		
-		// normalize: 3 on unit circle, 5 7 horizontal
-		double ctr=fusionA.getCenter(1).abs();
-		double factor=1.0/ctr;
-		fusionC.eucl_scale(factor);
-		Complex z=fusionA.getCenter(3).minus(fusionA.getCenter(2));
-		double ang=(-1.0)*(MathComplex.Arg(z));
-		fusionA.rotate(ang);
-		
-		try {
-			fusionA.tileData=TileData.paveMe(fusionA,fusionA.alpha);
-		} catch(Exception ex) {
-			CirclePack.cpb.errMsg("Failed to create Fibonacci 'TileData'");
-		}
-
-		return fusionA;
-	}
-	
-	/**
-	 * Renumber the four corners of current fusionA
-	 * @param p PackData, current stage 
-	 * @param corner1, bdry vert to become '1'.
-	 * @param w int, width
-	 * @param h int, height
-	 * @return false on error
-	 */
-	public static boolean reNumBdry(PackData p,int corner1,int w,int h) {
-		String bstr=new String("b("+corner1+" "+corner1+")");
-		NodeLink blist=new NodeLink(p,bstr);
-		if (blist==null || blist.get(0)!=corner1)
-			return false;
-		
-		int swp=blist.get(0);
-		p.packDCEL.swapNodes(swp,1);
-		blist=blist.swapVW(swp, 1);
-		
-		swp=blist.get(h);
-		p.packDCEL.swapNodes(swp,2);
-		blist=blist.swapVW(swp, 2);
-		
-		swp=blist.get(h+w);
-		p.packDCEL.swapNodes(swp,3);
-		blist=blist.swapVW(swp, 3);
-		
-		swp=blist.get(h+w+h);
-		p.packDCEL.swapNodes(swp,4);
-		
-		return true;
-	}
-	
-	/**
-	 * Given PackData, add to its 'vlist' and 'elist' from
-	 * the lists 'nl' and 'el', resp., but using the EdgeLink 
-	 * of {old,new} pairs to translate the indices.
-	 * @param p PackData; we'll change the lists here
-	 * @param nl NodeLink, new vertices ('nl' remains unchanged)
-	 * @param el EdgeLink, new edges ('el' remains unchanged)
-	 * @param vertMap EdgeLink, (should remain unchanged)
-	 */
-	public static void updateLists(PackData p,NodeLink nl,EdgeLink el,EdgeLink vertMap) {
-		if (nl!=null && nl.size()>0) {
-			if (p.vlist==null)
-				p.vlist=new NodeLink(p);
-			Iterator<Integer> cV=nl.iterator();
-			while (cV.hasNext()) {
-				int v=cV.next();
-				p.vlist.add(vertMap.findW(v));
-			}
-		}
-		if (el!=null && el.size()>0) {
-			if (p.elist==null)
-				p.elist=new EdgeLink(p);
-			Iterator<EdgeSimple> cE=el.iterator();
-			EdgeSimple edge=null;
-			while (cE.hasNext()) {
-				edge=cE.next();
-				int V=vertMap.findW(edge.v);
-				int W=vertMap.findW(edge.w);
-				p.elist.add(new EdgeSimple(V,W));
-			}
-		}
-	}
-	
 	public static PackData pentTiling(int N) {
 		PackData pent=DcelCreation.seed(5,0);
 		pent.swap_nodes(1,6);
@@ -2007,76 +1313,7 @@ public class PackCreation {
 		base.packDCEL.fixDCEL_raw(base);
 		return base;
 	}
-	
-	/**
-	 * DCEL version of specialized routine to create a 
-	 * 'gens' generations of a pentagonal tiling in a
-	 * DCEL having equally spaced vertices 1 2 3 4 5 
-	 * on its bdry and 6 at its center. Calling routine
-	 * only needs to attachDCEL, set aims, bdry radii,
-	 * repack, etc.
-	 * @param gens int, number of generations.
-	 * @return PackDCEL
-	 */
-	public static PackDCEL pentagonal_dcel(int gens) {
-		PackDCEL base=CombDCEL.seed_raw(5);
-		RawDCEL.swapNodes_raw(base,1,6);
-		CombDCEL.redchain_by_edge(base, null,null,false);
-		CombDCEL.d_FillInside(base);
-		PackDCEL pdcel=CombDCEL.cloneDCEL(base); 
-		if (gens==0) // single pentagon?
-			return pdcel;
-		// DCELdebug.printRedChain(btrfly.redChain);
-		
-		// This is iterative, each from new 'base'
-		double sidesize=0.5;
-		for (int g=1;g<=gens;g++) {
-			sidesize=2*sidesize;
-			int sidelength=(int)sidesize;
 
-			// attach first copy; note where old1 ended up
-			PackDCEL temp=CombDCEL.cloneDCEL(base);
-			pdcel=CombDCEL.d_adjoin(pdcel,temp,1,3,sidelength);
-			int new5=pdcel.oldNew.findW(5); // new index
-			CombDCEL.d_FillInside(pdcel); 
-
-			// DCELdebug.redindx(btrfly);
-		
-			// these two form a butterfly
-			PackDCEL btrfly=CombDCEL.cloneDCEL(pdcel);
-			PackDCEL btrfly2=CombDCEL.cloneDCEL(pdcel); // copy for next step
-			pdcel=CombDCEL.d_adjoin(pdcel,btrfly,3,4,3*sidelength);
-			
-			// adjoin this for two more faces
-			pdcel=CombDCEL.d_adjoin(pdcel,btrfly2,new5,3,4*sidelength);
-			CombDCEL.d_FillInside(pdcel);
-		
-			// find 5 cclw bdry vertices with degree 3.
-			NodeLink corners=new NodeLink();
-			RedHEdge rtrace=pdcel.redChain;
-			
-			do {
-				int num=rtrace.myEdge.origin.getNum();
-				if (num==2)
-					corners.add(rtrace.myEdge.origin.vertIndx);
-				rtrace=rtrace.nextRed;
-			} while(rtrace!=pdcel.redChain);
-			// DCELdebug.printRedChain(pdcel.redChain);
-			
-			if (corners==null || corners.size()!=5)
-				throw new DCELException("failed to find 5 corners");
-			
-			for (int v=1;v<=5;v++) {
-				int oldv=corners.get(v-1);
-				RawDCEL.swapNodes_raw(pdcel,v,oldv);
-			}
-			
-			base=pdcel;
-		} // done with construction
-
-		return pdcel;
-	}
-	
 	/**
 	 * Subdivision rule of Bill Floyd (I think) that is said to be
 	 * a hyperbolic Penrose tiling. This is, again, p is a pentagonal tile,

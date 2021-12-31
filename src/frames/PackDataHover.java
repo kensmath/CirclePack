@@ -20,10 +20,10 @@ import javax.swing.border.TitledBorder;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
-import komplex.EdgeSimple;
+import dcel.HalfEdge;
 import komplex.Face;
-import listManip.EdgeLink;
 import listManip.FaceLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import packQuality.QualMeasures;
 import packing.PackData;
@@ -465,21 +465,18 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 	 * @param p
 	 */
 	public void update_edge(PackData p) {
-		if (p==null || !p.status) return;
-		EdgeSimple edge=EdgeLink.grab_one_edge(p,edgeChoice.getText());
-		int j=-1;
-		if (edge==null || (j=p.nghb(edge.v,edge.w))<0) 
+		if (p==null || !p.status) 
 			return;
-		double invDist=1.0;
-		if (p.overlapStatus) {
-			double iD=p.getInvDist(edge.v,edge.w);
-			if (j>=0 && Math.abs(1.0-iD)>.0000001)
-				invDist=iD;
-		}
-		edgeChoice.setText(edge.v+" "+edge.w);
+		HalfEdge edge=HalfLink.grab_one_edge(p,edgeChoice.getText());
+		if (edge==null)
+			return;
+		double invDist=edge.getInvDist();
+		int v=edge.origin.vertIndx;
+		int w=edge.twin.origin.vertIndx;
+		edgeChoice.setText(v+" "+w);
 		overlapField.setValue(invDist);
 		try {
-			double el=QualMeasures.edge_length(p,edge.v,edge.w);
+			double el=QualMeasures.edge_length(p,v,w);
 			edgelenField.setValue(el);
 		} catch (Exception ex) {}
 	}

@@ -1307,7 +1307,8 @@ public class ConformalTiling extends PackExtender {
 						TileRule tr=subdivRules.tileRules.get(subdivRules.type2Rule.findW(tile.tileType));
 						for (int e=0;e<tr.edgeCount;e++) {
 							if(tr.edgeRule[e].mark==mark) {
-								EdgeLink elink=EdgeLink.verts2edges(packData,tile.findAugEdge(e),true);
+								EdgeLink elink=
+									EdgeLink.verts2edges(packData.packDCEL,tile.findAugEdge(e),true);
 								StringBuilder strb=new StringBuilder("disp -e"+df.reconstitute()+" ");
 								Iterator<EdgeSimple> elk=elink.iterator();
 								while (elk.hasNext()) {
@@ -1874,7 +1875,7 @@ public class ConformalTiling extends PackExtender {
 		triPD.tileData.myTiles=newTiles;
 
 		// create packing from new tiling.
-		triPD = TileData.tiles2canonical(triPD.tileData);
+		triPD = TileData.tiles2FullBary(triPD.tileData);
 		return triPD;
 	}
 	
@@ -1944,24 +1945,21 @@ public class ConformalTiling extends PackExtender {
 	}
 
 	/**
-	 * Create a packing from 'tileData' obtained by barycentrically
-	 * subdividing the original tiles.
+	 * Create a packing from 'tileData' obtained by 
+	 * barycentrically subdividing the original tiles.
 	 * @param td TileData
 	 * @return PackData, null on error
 	 */
 	public PackData baryize(TileData td) {
-
-		// is there tile data?
-		if (td==null || td.tileCount<=0) {
+		if (td==null || td.tileCount<=0) 
 			return null;
-		}
 
 		// estimate number of tiles
 		int ecount=1;
 		for (int t=1;t<=td.tileCount;t++) 
 			ecount +=2*td.myTiles[t].vertCount;
 		
-		PackData newPD=TileData.tiles2canonical(td);
+		PackData newPD=TileData.tiles2FullBary(td);
 		
 		// point to new tiles
 		Tile []newTiles=new Tile[ecount];
@@ -1997,7 +1995,7 @@ public class ConformalTiling extends PackExtender {
 		newPD.tileData.myTiles=newTiles;
 		
 		// create packing from new tiling.
-		newPD = TileData.tiles2canonical(newPD.tileData);
+		newPD = TileData.tiles2FullBary(newPD.tileData);
 		return newPD;
 	}
 
@@ -2067,7 +2065,7 @@ public class ConformalTiling extends PackExtender {
 		newPD.tileData.myTiles=newTiles;
 		
 		// create packing from new tiling.
-		newPD = TileData.tiles2canonical(newPD.tileData);
+		newPD = TileData.tiles2FullBary(newPD.tileData);
 		return newPD;
 	}
 
@@ -2108,7 +2106,7 @@ public class ConformalTiling extends PackExtender {
 		newTD.myTiles=newTiles;
 		
 		// create packing from new tiling.
-		return (TileData.tiles2canonical(newTD));
+		return (TileData.tiles2FullBary(newTD));
 	}
 
 	/**
@@ -2130,7 +2128,7 @@ public class ConformalTiling extends PackExtender {
 		for (int t=1;t<=td.tileCount;t++) 
 			ecount +=td.myTiles[t].vertCount;
 		
-		PackData newPD=TileData.tiles2canonical(td);
+		PackData newPD=TileData.tiles2FullBary(td);
 
 		Tile []newTiles=new Tile[ecount];
 		
@@ -2166,7 +2164,7 @@ public class ConformalTiling extends PackExtender {
 		newPD.tileData.myTiles=newTiles;
 		
 		// create packing from new tiling.
-		newPD = TileData.tiles2canonical(newPD.tileData);
+		newPD = TileData.tiles2FullBary(newPD.tileData);
 		return newPD;
 	}
 

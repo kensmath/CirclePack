@@ -4,23 +4,23 @@ import listManip.VertexMap;
 import packing.PackData;
 
 /**
- * Store and maintain information of a chain (segment) of 
- * edges. Just need the first and last vertices, presumably
- * boundary vertices of some complex, then assume the
- * edge segment is the counterclockwise edge path between
- * them. Keep number of edges for compatibility checks.
- * Need routines for modifying the segment when vertices 
- * get renumbered via a VertexMap.
+ * Store and maintain information on a chain (segment) of 
+ * edges. (Used, e.g., in 'RationalMap.java'.) Just need 
+ * the first and last vertices, which should be boundary 
+ * vertices, defining the cclw edge segment. Keep number of 
+ * edges for compatibility checks. Have routines to use
+ * 'VertexMap' to modify the segment indices when vertices 
+ * get renumbered.
  * @author kens
  *
  */
 public class EdgeSeg {
 	
-	public int slitNumber; // name for this edgeSeg
-	public int sheetNumber;    // which sheet this is on
+	public int slitNumber; 		// index for this edgeSeg
+	public int sheetNumber;		// which sheet this is on
 	public int startV;
 	public int endV;
-	private int length;  // set once, use for consistency
+	private int length;			// number of edges
 
 	public EdgeSeg(int id,int sV,int eV) {
 		slitNumber=id;
@@ -30,14 +30,16 @@ public class EdgeSeg {
 	}
 	
 	/**
-	 * Set the final length. (Done in calling routine because requires 'PackData')
+	 * Set the final length. (Done in calling routine because this
+	 * requires 'PackData')
 	 * @param len
 	 */
 	public void setLength(int len) {
 		length=len;
 	}
 	
-	/** Make a copy with given 'sheetNumber'. Generally done when 
+	/** 
+	 * Make a copy with given 'sheetNumber'. Generally done when 
 	 * a new copy of 'slitPack' is attached to the growing 'domainPack' 
 	 * and corresponding edge segments are listed in 'masterESlist'.
 	 * @param sheet, desired sheet number
@@ -55,7 +57,7 @@ public class EdgeSeg {
 	 * has length, this compares and returns -count if count!=length.
 	 * If length not set, this sets it. 
 	 * NOTE: <startV,endV> is a CLOCKWISE (negatively oriented) bdry segment.
-	 * @param p, PackData to check against
+	 * @param p PackData, to check against
 	 * @return count of edges, 0 on error, or -count if count!=length.
 	 */
 	public int validate(PackData p) {
@@ -65,14 +67,17 @@ public class EdgeSeg {
 			return 0;
 		}
 		int count=1;
-		int next=p.kData[endV].flower[0];
+		int next=p.getFirstPetal(endV);
 		while (next!=startV && count<p.nodeCount) {
-			next=p.kData[next].flower[0];
+			next=p.getFirstPetal(next);
 			count++;
 		}
-		if (count>=p.nodeCount) return 0;
-		if (initlength==0) length=count;
-		else if (length!=count) return -count;
+		if (count>=p.nodeCount) 
+			return 0;
+		if (initlength==0) 
+			length=count;
+		else if (length!=count) 
+			return -count;
 		return count;
 	}
 	

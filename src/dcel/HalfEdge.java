@@ -165,10 +165,10 @@ public class HalfEdge {
 	}
 	
 	/**
-	 * Return the next half-hex 'HalfEdge'; that,
-	 * if this edge is <v,w>, the pass by two 
-	 * intervening spokes to find <w,u>,  3 clw 
-	 * around w from <w,v>. Return null on failure. 
+	 * Return the next half-hex 'HalfEdge'; 
+	 * if this edge is <v,w>, then pass by two 
+	 * intervening spokes to find <w,u>; that is, 
+	 * 3 clw around w from <w,v>. Return null on failure. 
 	 * Note that return might be <w,v> if degree 
 	 * of w is three, or null if a bdry edge is 
 	 * encountered. 

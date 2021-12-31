@@ -2,6 +2,7 @@ package ftnTheory;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
@@ -11,6 +12,9 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
 import dcel.CombDCEL;
+import dcel.HalfEdge;
+import dcel.PackDCEL;
+import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
@@ -18,6 +22,7 @@ import exceptions.ParserException;
 import input.CPFileManager;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
@@ -59,7 +64,11 @@ import util.StringUtil;
  *    <startV, endV> w.r.t. the bdry of the opened complex. Now 
  *    proceed counterclockwise around T, and each time a new edge
  *    of T is encountered (one not yet slit from the other side), 
- *    the next two numbered edge segments are created. 
+ *    the next two numbered edge segments are created. Note: each
+ *    edge segment must have at least 3 vertices, as we need to 
+ *    use the second clw vertex from the start of the edge to
+ *    properly identify the new vertex numbers of its opposite
+ *    edge. 
  * 
  * There is also a numbering of the sheets to be used in the 
  * construction, so eventually, edge segments are indexed using
@@ -71,8 +80,9 @@ import util.StringUtil;
  * Data input format (from *.rmd file or in script data section):
  * 
  * 	SLITCOUNT: <n>
- * 		x1 y1   u1 v1	(complex endpoints of the slit; NOTE: these are spherical,
- * 						(theta,phi); delineated by linebreak)
+ * 		x1 y1   u1 v1	(complex endpoints of the slit: these 
+ * 						are spherical, (theta,phi); delineated 
+ * 						by linebreak)
  *      ..
  *      xn yn   un vn
  *      
@@ -82,7 +92,7 @@ import util.StringUtil;
  *      vn1 vn2 ... vnj)
  *      
  *  PASTECOUNT: <k>
- *      ss1 se1 ts1 te1 (source sheet, source edge, target sheet, target edge)
+ *      ss1 se1 ts1 te1 (source sheet/edge, target sheet/edge)
  *      ss2 se2 ts2 te2 (delineated by linebreak)  
  *      ..
  *      ssk sek tsk tek 
@@ -99,9 +109,9 @@ import util.StringUtil;
  * When all prescribed pastings are done, default pastings (which should 
  * just be the reclosing of un-used slits on the same sheet) are done, and
  * the final result lies in 'domainPack'. This can be max_packed by the user 
- * to create the domain packing. The 'vertexMap' of 'domainPack' should indicate 
- * where each vertex maps in 'rangePack'. Also, the vertex 'mark' data in 'domainPack'
- * reflects the sheet numbers of the vertices.
+ * to create the domain packing. The 'vertexMap' of 'domainPack' should 
+ * indicate where each vertex maps in 'rangePack'. Also, the vertex 
+ * 'mark' data in 'domainPack' reflects the sheet numbers of the vertices.
  * 
  * @author kens, started April 2008
  */
@@ -116,22 +126,29 @@ public class RationalMap extends PackExtender {
 	public String []stateStr={"ERROR","RANGE","RM_DATA","SLIT","BUILT"};
 	public int rmState;  // current state in processing
 
-	PackData rangePack; // the range packing (copy of original parent packing)
-	PackData slitPack; // holds the range packing with the slits
-	PackData domainPack; // holds growing pasted packing; will contain the result
-	LinkedList<EdgeSeg> slits; // permanent list of slits, used for every sheet
+	PackData rangePack; // range packing (copy of original parent packing)
+	PackData slitPack; // range packing with introduced slits
+	PackData domainPack; // growing pasted packing; will contain result
+	ArrayList<HalfLink> slitLinks;  // slits using edges of 'slitPack' before
+									//  it is slit open. Only needed until
+									//  'slits' is set up.  
+	LinkedList<EdgeSeg> slits; // permanent list of slits, used on all sheets
 	Vector<NodeLink> vlists; // lists of vertices defining the slits
 	int numSlits; // number of slits; identical for all sheets
 	int numSheets; // number of sheets in final packing
-	int baseSheet; // number of the 'base' sheet; others are pasted to this
+	int baseSheet; // index of the 'base' sheet; others are pasted to this
 	int numCodes; // number of pasting codes specified
 	int pasteCount; // count of pairs of edge segments that have been pasted
-	int []sheetCheck; // initially 0; 1 if in a PasteCode; -1 when attached to base
-	LinkedList<PasteCode> pasteCodes; // ss se ts te sourcesheet sourceedge targetsheet targetedge
-	LinkedList<EdgeSeg> masterESlist; // master list of unpasted edge segments
+	int []sheetCheck; // initially 0; 1 if in a PasteCode; 
+					  // -1 when attached to base
+	LinkedList<PasteCode> pasteCodes; // ss se ts te sourcesheet/edge 
+									  // targetsheet/edge
+	LinkedList<EdgeSeg> masterESlist; // master list of unpasted 
+									  // edge segments
 	public VertexMap masterMap; // latest map from 'domainPack' to 'rangePack'
-	public VertexMap slitMap; // persistent vertex map from 'slitPack' to 'rangePack'
-	public NodeLink branchList; // vertices in 'rangePack' at ends of the slits
+	public VertexMap slitMap; // persistent 'VertexMap' from 'slitPack' 
+							  // to 'rangePack'
+	public NodeLink branchList; // vertices in 'rangePack' at ends of slits
 	
 	// Constructor
 	public RationalMap(PackData p) {
@@ -139,7 +156,7 @@ public class RationalMap extends PackExtender {
 		packData=p;
 		extensionType="RATIONAL_MAP";
 		extensionAbbrev="RM";
-		toolTip="'RationalMap' builds discrete rational maps "+
+		toolTip="'RationalMap' builds discrete meromorphic mappings "+
 		"from branch values and tree branch structure";
 		registerXType();
 		
@@ -167,14 +184,199 @@ public class RationalMap extends PackExtender {
 	public int cmdParser(String cmd,Vector<Vector<String>> flagSegs) {
 		Vector<String> items=null;
 
+		// ============= read_data, infile_data
+		// read a file containing slit lists and sheet pastings
+		if (cmd.startsWith("read_da") || cmd.startsWith("infile_da")) { 
+			CPBase.Elink=new EdgeLink();
+			if (rmState!=RANGE) {
+				CirclePack.cpb.errMsg("Can't read data; not in RANGE state");
+				return 0;
+			}
+			
+			try {
+				items=(Vector<String>)flagSegs.get(0);
+				String filename=StringUtil.reconItem(items);
+				boolean infile_flag=false;
+				File dir=null;
+				if (cmd.charAt(0)=='i')
+					infile_flag=true;
+				else 
+					dir=CPFileManager.PackingDirectory;
+				BufferedReader fp=
+					CPFileManager.openReadFP(dir,filename,infile_flag);
+				if (fp==null) { 
+					CirclePack.cpb.errMsg("failed to open "+filename+
+							" in directory "+dir.toString());
+					return 0;
+				}
+				
+				// process the slit/sheet data
+				if (readRMData(fp)==0) {
+					CirclePack.cpb.errMsg("failed to read 'vlists' from "+
+							filename);
+					rmState=ERROR;
+					fp.close();
+					return 0;
+				}
+				fp.close();
+				rmState=RM_DATA;
+			} catch (Exception ex) {
+				throw new InOutException("failed in looking for slit lists");
+			}
+
+			// Process sheet info: number of sheets, 'baseSheet' 
+			//   (lowest number), 'topSheet', initial 'sheetCheck' 
+			//   for keeping track of existing/used sheets
+			numSheets=0;
+			int topSheet=0;
+			baseSheet=((PasteCode)pasteCodes.get(0)).sourceSheet; // initiate
+			Iterator<PasteCode> pclist=pasteCodes.iterator();
+			while (pclist.hasNext()) {
+				PasteCode pc=(PasteCode)pclist.next();
+				baseSheet=(pc.sourceSheet<baseSheet) ? 
+						pc.sourceSheet : baseSheet;
+				baseSheet=(pc.targetSheet<baseSheet) ? 
+						pc.targetSheet : baseSheet;
+				topSheet=(pc.sourceSheet>topSheet) ? 
+						pc.sourceSheet : topSheet;
+				topSheet=(pc.targetSheet>topSheet) ? 
+						pc.targetSheet : topSheet;
+			}
+
+			sheetCheck=new int[topSheet+1]; // list sheets that occur
+			for (int i=1;i<=topSheet;i++) 
+				sheetCheck[i]=0;
+			
+			pclist=pasteCodes.iterator();
+			while (pclist.hasNext()) {
+				PasteCode pc=(PasteCode)pclist.next();
+				if (sheetCheck[pc.sourceSheet]==0) {
+					sheetCheck[pc.sourceSheet]=1;
+					numSheets++;
+				}
+				if (sheetCheck[pc.targetSheet]==0) {
+					sheetCheck[pc.targetSheet]=1;
+					numSheets++;
+				}
+			}
+			
+			msg("read data: "+numSlits+" slits, "+
+					numCodes+" pastings, "+numSheets+" sheets");
+			return numSheets;
+		}
+		
+		// ========== doSlits ====================
+		if (cmd.startsWith("doSli")) { // apply the slits to slitPack
+			if (rmState!=RM_DATA) {
+				throw new ParserException(
+						"Can't doSlits: not in RM_DATA state");
+			}
+			
+			// first have to process the slits, currently stored
+			//   only in 'slitLinks'. 
+			//  + accumulate all as "forbidden" edges.
+			//  + create 'slitPack' via 'extractDCEL'
+			//  + call to 'catalogSlits', which needs 'slitLinks'
+			// all sheets are copies of 'slitPack'.
+
+			try {
+				
+				// accumulate all the slit list vertices
+				HalfLink forbid=new HalfLink();
+				CPBase.Elink=new EdgeLink(); // for debugging
+				Iterator<HalfLink> his=slitLinks.iterator();
+				while (his.hasNext()) {
+					HalfLink hlk=his.next();
+					forbid.abutMore(hlk);
+					CPBase.Elink.abutHalfLink(hlk); // for debugging
+				}
+				
+				// extract 'slitPack'
+				PackDCEL pdcel=CombDCEL.extractDCEL(slitPack.packDCEL,
+					forbid,slitPack.packDCEL.alpha);
+				VertexMap holdvm=pdcel.oldNew;
+				slitPack.attachDCEL(pdcel);
+				slitPack.vertexMap=holdvm;
+				pdcel.layoutPacking();
+				
+// debugging, copy into pack[2]				
+			PackData debugPack=slitPack.copyPackTo();
+			CirclePack.cpb.swapPackData(debugPack, 2, false);
+
+			
+			} catch(Exception ex) {
+				rmState=ERROR;
+				errorMsg("RM: error in creating slitPack");
+				return 0;
+			}
+
+			// seems okay: 'domainPack' is the base sheet to which 
+			//    we attach others
+			domainPack=slitPack.copyPackTo();
+			sheetCheck[baseSheet]=-1; // always indicated as 'attached'
+			for (int v=1;v<=domainPack.nodeCount;v++) // 'mark'= sheet index
+				domainPack.setVertMark(v,baseSheet);
+			
+			// arrange the 'EdgeSeg's for the various slits.
+			try {
+				catalogSlits();
+			} catch(Exception ex) {
+				rmState=ERROR;
+				errorMsg("RM: error in arranging the 'EdgeSeg's");
+				return 0;
+			}
+			
+			// initiate master list of edge segments
+			masterESlist=new LinkedList<EdgeSeg>();
+			Iterator<EdgeSeg> esl=slits.iterator();
+			while (esl.hasNext()) {
+				EdgeSeg es=(EdgeSeg)esl.next();
+				masterESlist.add(es.clone(baseSheet));
+			}
+			pasteCount=0;
+
+			// initiate 'masterMap' to keep track of vertex images
+			masterMap=slitMap.makeCopy();
+			
+			rmState=SLIT; 
+			return masterESlist.size();
+		}
+
+		// ============= paste ======================
+		// set_[EV]list with specified slit(s)
+		if (cmd.startsWith("paste")) { 
+			// do all the pastings, including default
+			if (rmState!=SLIT) {
+				throw new ParserException("Can't paste: not in SLIT state");
+			}
+			int pcount=0;
+			while (rmState<BUILT && pasteNext()>0) 
+				pcount++;
+			
+			if (domainPack.getBdryCompCount()!=0) {
+				errorMsg("RM: don't seem able to complete all pastings");
+				rmState=ERROR;
+			}
+			else {
+				rmState=BUILT;
+				domainPack.status=true;
+				domainPack.hes=1;
+				domainPack.set_aim_default();
+				domainPack.vertexMap=masterMap.makeCopy();
+				msg("Build succeeded.");
+			}
+			return pcount;
+		}
+
 		// ========== status
-		if (cmd.startsWith("status")) {
+		else if (cmd.startsWith("status")) {
 			msg("|RM| is currently in '"+stateStr[rmState]+"' state");
 			return 1;
 		}
 		
 		// ========== slit_[EV] {n ..}
-		if (cmd.startsWith("slit_")) { // set_[EV]list with specified slit(s)
+		// set_[EV]list with specified slit(s)
+		else if (cmd.startsWith("slit_")) { 
 			char c='V';
 			if (rmState<RM_DATA || cmd.length()<6 ||
 					((c=cmd.charAt(5))!='V' && c!='E')) 
@@ -202,7 +404,9 @@ public class RationalMap extends PackExtender {
 				int n=Integer.parseInt(tok.nextToken());
 				if (n>0 && n<=numSlits) {
 					if (c=='E') {
-						Elink.abutMore(EdgeLink.verts2edges(rangePack,vlists.get(n),false));
+						Elink.abutMore(
+							EdgeLink.verts2edges(rangePack.packDCEL,
+								vlists.get(n),false));
 					}
 					else {
 						Vlink.abutMore(vlists.get(n));
@@ -223,15 +427,36 @@ public class RationalMap extends PackExtender {
 			return 0;
 		}
 		
+		// =============== paste_next ================
+		// paste the next segments in the list
+		if (cmd.startsWith("paste_n")) { 
+			if (rmState>SLIT) {
+				throw new ParserException(
+						"Can't paste_next: not in SLIT state");
+			}
+			if (pasteCodes.size()==0) {
+				CirclePack.cpb.msg("all paste codes seem to have been used");
+				return 0;
+			}
+			int ans=pasteNext();
+			if (ans<=0) {
+				rmState=ERROR;
+				throw new ParserException("failed next pasting");
+			}
+			return pasteCount;
+		}
+		
 		// ========== branchValues
-		if (cmd.startsWith("branchVal")) { // global 'Vlist' to the branch image vertices 
+		// global 'Vlist' to branch image vertices 
+		if (cmd.startsWith("branchVal")) { 
 			if (rmState<RM_DATA) return 0;
 			CPBase.Vlink=new NodeLink((PackData)null);
 			return CPBase.Vlink.abutMore(branchList);
 		}
 		
 		// =========== find[zoib]
-		if (cmd.startsWith("find")) { // get lists of verts mapping to zero/one/infty
+		// get lists of verts mapping to zero/one/infty
+		if (cmd.startsWith("find")) { 
 			if (rmState<BUILT) {
 				errorMsg("image packing not yet in BUILT state");
 				return 0;
@@ -280,7 +505,8 @@ public class RationalMap extends PackExtender {
 		}
 		
 		// ========== copy <pnum> 
-		if (cmd.startsWith("copy")) { // copy 'domainPack' somewhere (e.g. for inspection)
+		if (cmd.startsWith("copy")) { // copy 'domainPack' somewhere 
+									  // (e.g. for inspection)
 			if (rmState==ERROR) {
 				CirclePack.cpb.errMsg("can't copy; packing is in ERROR state");
 				return 0;
@@ -296,147 +522,6 @@ public class RationalMap extends PackExtender {
 			return 1;
 		}
 		
-		// ============= read_data, infile_data
-		// read a file containing slit lists and sheet pastings
-		if (cmd.startsWith("read_da") || cmd.startsWith("infile_da")) { 
-			if (rmState!=RANGE) {
-				CirclePack.cpb.errMsg("Can't read data; not in RANGE state");
-				return 0;
-			}
-			try {
-				items=(Vector<String>)flagSegs.get(0);
-				String filename=StringUtil.reconItem(items);
-				boolean infile_flag=false;
-				File dir=null;
-				if (cmd.charAt(0)=='i') infile_flag=true;
-				else dir=CPFileManager.PackingDirectory;
-				BufferedReader fp=
-					CPFileManager.openReadFP(dir,filename,infile_flag);
-				if (fp==null) { 
-					CirclePack.cpb.errMsg("failed to open "+filename+" in directory "+dir.toString());
-					return 0;
-				}
-				if (readRMData(fp)==0) {
-					CirclePack.cpb.errMsg("failed to read 'vlists' from "+filename);
-					rmState=ERROR;
-					fp.close();
-					return 0;
-				}
-				fp.close();
-				rmState=RM_DATA;
-			} catch (Exception ex) {
-				throw new InOutException("failed in looking for slit lists");
-			}
-
-			// Process sheet info: number of sheets, 'baseSheet' (lowest number),
-			//   'topSheet', initial 'sheetCheck' for keeping track of existing/used sheets
-			numSheets=0;
-			int topSheet=0;
-			baseSheet=((PasteCode)pasteCodes.get(0)).sourceSheet; // initiate
-			Iterator<PasteCode> pclist=pasteCodes.iterator();
-			while (pclist.hasNext()) {
-				PasteCode pc=(PasteCode)pclist.next();
-				baseSheet=(pc.sourceSheet<baseSheet) ? pc.sourceSheet : baseSheet;
-				baseSheet=(pc.targetSheet<baseSheet) ? pc.targetSheet : baseSheet;
-				topSheet=(pc.sourceSheet>topSheet) ? pc.sourceSheet : topSheet;
-				topSheet=(pc.targetSheet>topSheet) ? pc.targetSheet : topSheet;
-			}
-
-			sheetCheck=new int[topSheet+1]; // list sheets that occur
-			for (int i=1;i<=topSheet;i++) sheetCheck[i]=0;
-			
-			pclist=pasteCodes.iterator();
-			while (pclist.hasNext()) {
-				PasteCode pc=(PasteCode)pclist.next();
-				if (sheetCheck[pc.sourceSheet]==0) {
-					sheetCheck[pc.sourceSheet]=1;
-					numSheets++;
-				}
-				if (sheetCheck[pc.targetSheet]==0) {
-					sheetCheck[pc.targetSheet]=1;
-					numSheets++;
-				}
-			}
-			
-			msg("read data: "+numSlits+" slits, "+
-					numCodes+" pastings, "+numSheets+" sheets");
-			return numSheets;
-		}
-
-		if (cmd.startsWith("doSli")) { // apply the slits to slitPack
-			if (rmState!=RM_DATA) {
-				throw new ParserException("Can't doSlits: not in RM_DATA state");
-			}
-			
-			// now we put the slits in 'slitPack'; all sheets are copies of 'slitPack'
-			int scount=createSlits();
-			if (scount<=0) {
-				errorMsg("RM: error in making slits");
-				rmState=ERROR;
-				return 0;
-			}
-			
-			// seems okay: 'domainPack' is the base sheet to which we attach others
-			domainPack=slitPack.copyPackTo();
-			sheetCheck[baseSheet]=-1; // always indicated as 'attached'
-			for (int v=1;v<=domainPack.nodeCount;v++) // 'mark' holds the sheet number
-				domainPack.setVertMark(v,baseSheet);
-			
-			// initiate master list of edge segments
-			masterESlist=new LinkedList<EdgeSeg>();
-			Iterator<EdgeSeg> esl=slits.iterator();
-			while (esl.hasNext()) {
-				EdgeSeg es=(EdgeSeg)esl.next();
-				masterESlist.add(es.clone(baseSheet));
-			}
-			pasteCount=0;
-
-			// initiate 'masterMap' to keep track of vertex images
-			masterMap=slitMap.makeCopy();
-			
-			rmState=SLIT;
-			return scount;
-		}
-		
-		if (cmd.startsWith("paste_n")) { // paste the next segments in the list
-			if (rmState>SLIT) {
-				throw new ParserException("Can't paste_next: not in SLIT state");
-			}
-			if (pasteCodes.size()==0) {
-				CirclePack.cpb.msg("all paste codes seem to have been used");
-				return 0;
-			}
-			int ans=pasteNext();
-			if (ans<=0) {
-				rmState=ERROR;
-				throw new ParserException("failed next pasting");
-			}
-			return pasteCount;
-		}
-		
-		if (cmd.startsWith("paste")) { // do all the pastings, including default
-			if (rmState!=SLIT) {
-				throw new ParserException("Can't paste: not in SLIT state");
-			}
-			int pcount=0;
-			while (rmState<BUILT && pasteNext()>0) 
-				pcount++;
-			
-			if (domainPack.getBdryCompCount()!=0) {
-				errorMsg("RM: don't seem able to complete all pastings");
-				rmState=ERROR;
-			}
-			else {
-				rmState=BUILT;
-				domainPack.status=true;
-				domainPack.hes=1;
-				domainPack.set_aim_default();
-				domainPack.vertexMap=masterMap.makeCopy();
-				msg("Build succeeded.");
-			}
-			return pcount;
-		}
-		
 		// ============= dbs
 		if (cmd.startsWith("dbs")) { // debug info on current edge segments
 			if (displayES()==0)
@@ -450,11 +535,11 @@ public class RationalMap extends PackExtender {
 	/**
 	 * Look for and paste the next pasting in 'pasteCodes', if there
 	 * is one, else the next "default" pasting (two sides of same slit 
-	 * on same sheet); otherwise, put in ERROR or BUILT state.
+	 * on same sheet); otherwise, set ERROR or BUILT state.
 	 * @return -1 on error
 	 */
 	public int pasteNext() {
-		boolean debug=true; // false;
+		boolean debug=false; // true
 		PasteCode pc=nextPasteCode();
 		
 		// no remaining 'PasteCode'? ERROR or BUILT?
@@ -476,7 +561,8 @@ public class RationalMap extends PackExtender {
 		// debug
 		if (debug) {
 			displayES();
-			msg("Try next pasteCode: <ss,sc,ts,tc>: "+pc.sourceSheet+" "+pc.sourceEdge+
+			msg("Try next pasteCode: <ss,sc,ts,tc>: "+
+					pc.sourceSheet+" "+pc.sourceEdge+
 					" "+pc.targetSheet+" "+pc.targetEdge);
 		}
 
@@ -487,7 +573,8 @@ public class RationalMap extends PackExtender {
 			EdgeSeg tES=findMasterES(pc.targetSheet,pc.targetEdge);
 			if (pasteEm(sES,tES)>0) {
 				pasteCount++;
-				masterMap=VertexMap.followedBy(domainPack.vertexMap,masterMap);
+				masterMap=VertexMap.followedBy(domainPack.vertexMap,
+						masterMap);
 				domainPack.vertexMap=masterMap.makeCopy();
 				if (debug) 
 					msg("success (target sheet already attached)");
@@ -503,7 +590,8 @@ public class RationalMap extends PackExtender {
 			EdgeSeg aES; // the one attached
 			int toSlit;  // the slit number for the unattached sheet
 			int newSheetNum; // the number of this new sheet
-			if (sheetCheck[pc.sourceSheet]<0 && sheetCheck[pc.targetSheet]>0) { 
+			if (sheetCheck[pc.sourceSheet]<0 && 
+					sheetCheck[pc.targetSheet]>0) { 
 				aES=findMasterES(pc.sourceSheet,pc.sourceEdge);
 				toSlit=pc.targetEdge;
 				newSheetNum=pc.targetSheet;
@@ -519,7 +607,8 @@ public class RationalMap extends PackExtender {
 				pasteCount++;
 				sheetCheck[newSheetNum]=-1;
 				if (debug) 
-					msg("New sheet "+newSheetNum+" attached via slit "+toSlit);
+					msg("New sheet "+newSheetNum+
+							" attached via slit "+toSlit);
 			}
 			else if (debug) {
 				msg("Failed to attach new sheet "+newSheetNum);
@@ -579,7 +668,8 @@ public class RationalMap extends PackExtender {
 				throw new ParserException("Missing vertexMap entry");
 		}
 		
-		// fix 'masterMap': should <dp,rp> pairs, dp in domainPack to rp in rangePack
+		// fix 'masterMap': should <dp,rp> pairs, dp in 
+		//    domainPack to rp in rangePack
 		VertexMap tmpVM=new VertexMap();
 		for (int i=1;i<=domainPack.nodeCount;i++) {
 			int oi=domainPack.vertexMap.findV(i); // find former index
@@ -592,7 +682,7 @@ public class RationalMap extends PackExtender {
 	
 	/**
 	 * Paste new sheet 'tSheet' to domainPack by attaching its 'tSlit' to
-	 * the given edge segment of domainPack. We remove the used slit from 
+	 * the given edge segment of domainPack. We remove the used slit 
 	 * and add all but 'tSlit' to 'masterESlist'. Also, update 'masterMap'. 
 	 * @param es
 	 * @param tSheet, sheet number
@@ -600,7 +690,8 @@ public class RationalMap extends PackExtender {
 	 * @return 0 on error
 	 */
 	public int attachIt(EdgeSeg es,int tSheet,int tSlit) {
-		if (es==null) return 0;
+		if (es==null) 
+			return 0;
 		
 		// 'domainPack' is the base packing we attach to.
 		int holdCount=domainPack.nodeCount;
@@ -628,14 +719,17 @@ public class RationalMap extends PackExtender {
 		// do the 'adjoin'
 		domainPack.packDCEL=CombDCEL.d_adjoin(domainPack.packDCEL,
 				slitPack.packDCEL, es.startV,tES.endV,length);
+		VertexMap holdvm=domainPack.packDCEL.oldNew;
 		domainPack.packDCEL.fixDCEL_raw(domainPack);
+		domainPack.vertexMap=holdvm;
 		
 		// must remove the 'EdgeSeg' from 'masterESlist'
-		masterESlist.remove((EdgeSeg)es);
+		masterESlist.remove(es);
 		
-		// clone 'slits', shift indices, remove tES, add rest to 'masterESlist'
+		// clone 'slits', shift indices, remove tES, add rest to 
+		//    'masterESlist'; hold conversion from 'slitPack'
 		Iterator<EdgeSeg> sls=slits.iterator();
-		VertexMap vM=domainPack.vertexMap; // holds conversion from 'slitPack' indices
+		VertexMap vM=domainPack.vertexMap;
 		while (sls.hasNext()) {
 			EdgeSeg ees=(EdgeSeg)sls.next();
 			if (ees.slitNumber!=tSlit) {
@@ -650,7 +744,7 @@ public class RationalMap extends PackExtender {
 		while (doml.hasNext()) {
 			EdgeSimple edge=(EdgeSimple)doml.next();
 			if (edge.w>holdCount) { // this is a new vertex
-				int w=slitMap.findW(edge.v); // w is image vert in 'rangePack'
+				int w=slitMap.findW(edge.v); // w=image vert in 'rangePack'
 				masterMap.add(new EdgeSimple(edge.w,w));
 			}
 		}
@@ -659,12 +753,9 @@ public class RationalMap extends PackExtender {
 		for (int v=(holdCount+1);v<=domainPack.nodeCount;v++) {
 			domainPack.setVertMark(v,tSheet);
 		}
-		
 		return 1;
-		
 	}
 	
-
 	/**
 	 * Find the segment for sheet sht,slit cut in 'masterESlist'.
 	 * @return null on error
@@ -681,7 +772,7 @@ public class RationalMap extends PackExtender {
 	
 	/**
 	 * See format in comments at top of this file:
-	 * @param fp, open BufferedReader
+	 * @param fp BufferedReader, opened by calling routine
 	 * @return 0 on error. 
 	 */
 	public int readRMData(BufferedReader fp) {
@@ -698,22 +789,24 @@ public class RationalMap extends PackExtender {
 					// get number of slits 
 					numSlits=Integer.parseInt(tok.nextToken());
 			
-					// get that many pairs of complex slits endpts (delineated by linebreaks)
-					vlists=new Vector<NodeLink>(numSlits+1);
-					vlists.add((NodeLink)null); // want indexing to start at 1
-					branchList=new NodeLink(rangePack); // keep list of endpoints of slits
+					// get that many pairs of complex slits endpts 
+					//    (delineated by linebreaks)
+					slitLinks=new ArrayList<HalfLink>();
+					// keep list of endpoints of slits
+					branchList=new NodeLink(rangePack); 
 					line=StringUtil.ourNextLine(fp);
 					int tick=0;
 					
-					// accumulate edge lists so each new geo misses previous 
+					// with 'nonos' we try to insure each new geo 
+					//    misses previous
 					NodeLink nonos=new NodeLink(rangePack);
-					
 					while (tick<numSlits && line!=null) {
 						// line of form "v1 v2 ... vn" or "x1 y1 x2 y2"
 						//    check if first entry is integer.
 						boolean zform=false;
 						try {
-							int dumy=Integer.parseInt(line);
+							String first=StringUtil.grabNext(line);
+							int dumy=Integer.parseInt(first);
 							if (dumy<1 || dumy>rangePack.nodeCount)
 								zform=true;
 						} catch(NumberFormatException nfe) {
@@ -722,38 +815,45 @@ public class RationalMap extends PackExtender {
 						
 						NodeLink nlk=null;
 						try {
-							if (zform) { // create comb geodesic based on endpoints
-								String []splits=line.split("\\s+"); // on whitespace
-								Complex z1=null;
-								Complex z2=null;
-								z1=new Complex(Double.parseDouble(splits[0]),Double.parseDouble(splits[1]));
-								z2=new Complex(Double.parseDouble(splits[2]),Double.parseDouble(splits[3]));
+							if (zform) { // create geodesic based on endpoints
+								String []splits=line.split("\\s+"); // whitespace
+								Complex z1=new Complex(Double.parseDouble(splits[0]),
+										Double.parseDouble(splits[1]));
+								Complex z2=new Complex(Double.parseDouble(splits[2]),
+										Double.parseDouble(splits[3]));
 								int v1=0;
 								int v2=0;
 								try {
 									v1=rangePack.cir_closest(z1,false).get(0);
 									v2=rangePack.cir_closest(z2,false).get(0);
 								} catch (Exception ex) {
-									throw new DataException("Didn't find closest circle to an endpoint");
+									throw new DataException(
+										"Didn't find closest circle to an endpoint");
 								}
 								
-								// get geodesic edgelist (may throw exception)
-								EdgeLink elk=EdgeLink.getCombGeo(rangePack,
+								// get geodesic halflinks (may throw exception)
+								HalfLink elk=HalfLink.getCombGeo(rangePack.packDCEL,
 									new NodeLink(rangePack,v1),
 									new NodeLink(rangePack,v2),nonos);
 								
 								// convert to vertlist
-								nlk=new NodeLink(rangePack,elk.get(0).v);
-								Iterator<EdgeSimple> elst=elk.iterator();
-								while (elst.hasNext()) {
-									EdgeSimple edge=elst.next();
-									nlk.add(edge.w);
+								nlk=new NodeLink(rangePack,
+										elk.get(0).origin.vertIndx);
+								Iterator<HalfEdge> hlst=elk.iterator();
+								while (hlst.hasNext()) {
+									HalfEdge edge=hlst.next();
+									nlk.add(edge.next.origin.vertIndx);
 								}
 							}
 							else { // vertices are specified directly
 								nlk=new NodeLink(rangePack,line);
 							}
-							vlists.add(nlk);
+							if (nlk.size()<3)
+								throw new CombException(
+										"Slit starting with "+nlk.get(0)+
+										" does not have 3 vertices.");
+							slitLinks.add(CombDCEL.verts2Edges(
+									slitPack.packDCEL,nlk,false));
 							branchList.add(nlk.getFirst());
 							branchList.add(nlk.getLast());
 							nonos.abutMore(nlk); // accumulate with others
@@ -761,7 +861,7 @@ public class RationalMap extends PackExtender {
 							line=StringUtil.ourNextLine(fp);
 						} catch (Exception ex) {
 							throw new ParserException(
-									"error creating slit lists; "+ex.getMessage());
+								"error creating slit lists; "+ex.getMessage());
 						}
 					}
 					if (tick<numSlits)
@@ -801,162 +901,57 @@ public class RationalMap extends PackExtender {
 			} // end of while
 			if (numCodes<=0 || numSlits<=0) 
 				throw new ParserException();
-			
 		} catch (Exception ex) {
 			throw new ParserException("failed in reading RM data");
 		}
-
 		return 1;
 	}
 	
 	/**
-	 * Assume 'vlists' contains 'numSlits' NodeLink lists for the 
-	 * individual slits. Here we have to make the slits in 'slitPack'
-	 * and record/label associated 'EdgeSegs' (2 for each slit). This
-	 * permanent list will be cloned and added to the masterESlist 
-	 * as needed, with sheet numbers attached at that time. We must
-	 * also maintain the vertexMap 'slitMap'.
-	 * @return int, number of EdgeSeg's created.
+	 * The 'slitLinks' are original half edges of 'slitPack',
+	 * so should be inherited as the cclw oriented half edges
+	 * in bdry of current 'slitPack' (i.e., after 'extractDCEL').
+	 * Now we must set up the various 'EdgeSeg's in 'slits', two
+	 * successive ones for each slit.
+	 * @return int count
 	 */
-	public int createSlits() {
+	public int catalogSlits() {
+		PackDCEL pdcel=slitPack.packDCEL;
 		slits=new LinkedList<EdgeSeg>();
-		numSlits=0;
-		int nslits=0;
-		int baseV=0;
-		int []slitans=new int[4];
-		NodeLink vlink=null;
-
-		// first slit
-		// must start with "leaf" vertex (i.e., one starting no other slit) to
-		//   avoid problems with reindexing it at end of slitting iteration.
-		try {
-			int []util=new int[slitPack.nodeCount+1];
-			for (int i=1;i<=slitPack.nodeCount;i++) util[i]=0;
+		int tick=0;
+		Iterator<HalfLink> his=slitLinks.iterator();
+		while (his.hasNext()) {
+			HalfLink hlist=his.next(); // cclw segment
+			int length=hlist.size();
+			Vertex startVert=hlist.getFirst().origin;
+			Vertex endVert=hlist.getLast().twin.origin;
+			int startV=startVert.vertIndx;
+			int endV=endVert.vertIndx;
+			EdgeSeg edgeSeg=new EdgeSeg(++tick,startV,endV);
+			edgeSeg.setLength(length);
+			slits.add(edgeSeg);
 			
-			Iterator<NodeLink> vlst=vlists.iterator();
-			vlink=(NodeLink)vlst.next(); // first list is null
-			vlink=(NodeLink)vlst.next();
-			baseV=(int)vlink.getFirst();
-			while (vlst.hasNext()) {
-				vlink=(NodeLink)vlst.next();
-				util[(int)vlink.get(0)]=1;
+			// identify opposite edge, which may be new or 
+			//   original indices. One edge downstream should
+			//   provide unambiguous vertex for pasting, so we
+			//   leverage this.
+			int downV=hlist.get(1).origin.vertIndx; // downstream one edge
+			Vertex oppV=pdcel.vertices[slitPack.vertexMap.findW(downV)];
+			if (downV>rangePack.nodeCount) { // 'downV' is new
+				oppV=pdcel.vertices[slitPack.vertexMap.findV(downV)];
 			}
-			if (util[baseV]>0) { // oops, first is not a leaf, must find a leaf
-				boolean hit=false;
-				int j=0;
-				for (j=2;(!hit && j<vlists.size());j++) {
-					vlink=(NodeLink)vlists.get(j);
-					int s=(int)vlink.getFirst();
-					int n=vlists.size();
-					if (util[s]==1 && s!=baseV) { // found leaf; rotate list, this one first
-						hit=true;
-						Vector<NodeLink> newVlists=new Vector<NodeLink>(vlists.size());
-						newVlists.add((NodeLink)null); // first spot empty
-						for (int k=j;k<n;k++) {
-							newVlists.add((NodeLink)vlists.get(k));
-						}
-						for (int k=1;k<j;k++) {
-							newVlists.add((NodeLink)vlists.get(k));
-						}
-						vlists=newVlists;
-					}
-				}
-			}				
-		} catch (Exception ex) {
-			throw new CombException("can't find a 'leaf' in given tree of vertex lists");
-		}
-
-		// Copy 'vlists' to working 'nvlists' to preserve 'vlists'
-		Vector<NodeLink> nvlists=new Vector<NodeLink>(vlists.size());
-		nvlists.add((NodeLink)null); // first spot empty
-		for (int k=1;k<vlists.size();k++) {
-			nvlists.add((NodeLink)(vlists.get(k).makeCopy()));
-		}
-		
-		try {
-			vlink=(NodeLink)nvlists.remove(0); // first is null, toss it
-			vlink=(NodeLink)nvlists.remove(0); // use the first list and remove it
-			baseV=(int)vlink.getFirst();
-		} catch(Exception ex) {
-			throw new ParserException("problems with lists of slits");
-		}
-
-		// carry out first slit
-		try {
-			slitans=slitPack.slit_complex(vlink);
-			slitPack.setBdryFlags();
-			if (slitans[0]==0) slitans[0]=slitans[2]; // both ends interior (no clone)
+			HalfEdge he=oppV.halfedge;
+			endV=he.twin.origin.vertIndx;
 			
-			// pair of EdgeSegs
-			EdgeSeg es=new EdgeSeg(++numSlits,slitans[2],slitans[1]);
-			es.validate(slitPack);
-			slits.add(es);
-			es=new EdgeSeg(++numSlits,slitans[1],slitans[0]);
-			es.validate(slitPack);
-			slits.add(es);
-			
-			// update 'slitMap'
-			Iterator<EdgeSimple> nvm=slitPack.vertexMap.iterator();
-			while (nvm.hasNext()) {
-				slitMap.add((EdgeSimple)nvm.next());
-			}
-			
-			nslits=1;
-		} catch (Exception ex) {
-			throw new CombException("problem with first slit");
-		}
-		
-		// carry out rest of slits
-		try {
-			Iterator<NodeLink> vIt=nvlists.iterator();
-			while (vIt.hasNext()) {
-				vlink=(NodeLink)vIt.next();
-				int idx=(int)vlink.get(0); // get next list and remove it
-				slitans=slitPack.slit_complex(vlink);
-				slitPack.setBdryFlags();
-				int newIdx=slitans[0];
-
-				// pair of EdgeSegs
-				EdgeSeg es=new EdgeSeg(++numSlits,slitans[2],slitans[1]);
-				es.validate(slitPack);
-				slits.add(es);
-				es=new EdgeSeg(++numSlits,slitans[1],slitans[0]);
-				es.validate(slitPack);
-				slits.add(es);
-
-				// update 'slitMap'
-				VertexMap tmpVM=
-						VertexMap.followedBy(slitPack.vertexMap,slitMap);
-				Iterator<EdgeSimple> nvm=tmpVM.iterator();
-				while (nvm.hasNext()) {
-					slitMap.add((EdgeSimple)nvm.next());
-				}
-				
-				// Convert 'idx' entries to 'newIdx' in certain 'slits', 'nvlists'
-				// adjust opposite side segments beginning with idx.
-				for (int j=1;j<numSlits-2;j=j+2) {
-					EdgeSeg eseg=slits.get(j);
-					if (eseg.startV==idx) 
-						eseg.startV=newIdx;
-				}
-				Iterator<NodeLink> tmpVL=nvlists.iterator();
-				while (tmpVL.hasNext()) {
-					NodeLink tmpNL=(NodeLink)tmpVL.next();
-					int tmpv=(int)tmpNL.get(0);
-					if (tmpv==idx) {  // first entry is 
-						tmpNL.remove(0);
-						tmpNL.add(0,newIdx);
-					}
-				}
-				
-				nslits++;
-			}	
-		} catch (Exception ex) {
-			throw new CombException("problem in slit number "+nslits+1);
-		}
-		
-		// success??
-		return nslits;
+			// go clw along bdry to find start
+			for (int j=0;j<length;j++)
+				he=he.twin.next.twin;
+			startV=he.twin.origin.vertIndx;
+			edgeSeg=new EdgeSeg(++tick,startV,endV);
+			edgeSeg.setLength(length);
+			slits.add(edgeSeg);
+		} // end of while
+		return tick;
 	}
 
 	/**
@@ -969,16 +964,19 @@ public class RationalMap extends PackExtender {
 		try {
 			int []starts=new int[domainPack.nodeCount+1];
 			int []ends=new int[domainPack.nodeCount+1];
-			for (int j=1;j<=domainPack.nodeCount;j++) starts[j]=ends[j]=0;
+			for (int j=1;j<=domainPack.nodeCount;j++) 
+				starts[j]=ends[j]=0;
 			Iterator<EdgeSeg> dsl=masterESlist.iterator();
 			System.err.println("Current 'masterSGlist' of 'EdgeSeg's");
 			while (dsl.hasNext()) {
 				EdgeSeg es=(EdgeSeg)dsl.next();
 				int next=es.endV;
 				int tcnt=1;
-				while ((next=domainPack.kData[next].flower[0])!=es.startV) tcnt++;
+				while ((next=domainPack.getFirstPetal(next))!=
+						es.startV) tcnt++;
 				System.err.println(" sheet "+es.sheetNumber+", slit: "+
-					es.slitNumber+" <"+es.startV+","+es.endV+">, length = "+tcnt);
+					es.slitNumber+" <"+es.startV+","+es.endV+">, "
+							+ "length = "+tcnt);
 				starts[es.startV]++;
 				ends[es.endV]++;
 			}
@@ -994,7 +992,8 @@ public class RationalMap extends PackExtender {
 			ex.printStackTrace();
 			return 0;
 		}
-		if (hit) return 0;
+		if (hit) 
+			return 0;
 		return 1;
 	}
 	
@@ -1017,7 +1016,8 @@ public class RationalMap extends PackExtender {
 				dSlit=ct+1;
 			else dSlit=ct-1;
 			EdgeSeg des=findMasterES(st,dSlit);
-			if (des==null) return null;
+			if (des==null) 
+				return null;
 			PasteCode PC=new PasteCode();
 			PC.sourceSheet=st;
 			PC.sourceEdge=ct;
@@ -1032,7 +1032,7 @@ public class RationalMap extends PackExtender {
 	 * Expand a vertex list to its "hex-extended" version, as when the
 	 * packing has been hex-refined. May just return vlist as is. 
 	 * @param packing p, NodeLink vlist
-	 * @return NodeLink (perhaps just vlist itself), null on error or empty
+	 * @return NodeLink (perhaps just vlist itself), null on error/empty
 	 */
 	public NodeLink hexExtendNL(PackData p,NodeLink vlist) {
 		if (vlist==null || vlist.size()==0) return null;
@@ -1069,15 +1069,25 @@ public class RationalMap extends PackExtender {
 	 */
 	public void initCmdStruct() {
 		super.initCmdStruct();
-		cmdStruct.add(new CmdStruct("doSlits",null,null,"make the prescribe slits to create 'slitPack'"));
-		cmdStruct.add(new CmdStruct("read_data (infile_data)","{filename}",null,"read the *.rmd data"));
-		cmdStruct.add(new CmdStruct("copy","{pnum}",null,"copy 'domainPack' to the indicated packing"));
-		cmdStruct.add(new CmdStruct("paste_next",null,null,"paste the next unused slit"));
-		cmdStruct.add(new CmdStruct("paste",null,null,"do all remaining pastings"));
-		cmdStruct.add(new CmdStruct("slit_[EV]list","{n1, n2, ...}",null,"set [EV]list to the designated slits"));
-		cmdStruct.add(new CmdStruct("status",null,null,"Give RM state: ERROR, RANGE, RM_DATA, SLIT, BUILT"));
-		cmdStruct.add(new CmdStruct("branchVal",null,null,"set Vlist with the branch circle indices"));
-		cmdStruct.add(new CmdStruct("find[zoib]",null,null,"If BUILT, set Vlist to verts over zero/one/infty or branched"));
+		cmdStruct.add(new CmdStruct("doSlits",null,null,
+				"make the prescribe slits to create 'slitPack'"));
+		cmdStruct.add(new CmdStruct("read_data (infile_data)",
+				"{filename}",null,"read the *.rmd data"));
+		cmdStruct.add(new CmdStruct("copy","{pnum}",null,
+				"copy 'domainPack' to the indicated packing"));
+		cmdStruct.add(new CmdStruct("paste_next",null,null,
+				"paste the next unused slit"));
+		cmdStruct.add(new CmdStruct("paste",null,null,
+				"do all remaining pastings"));
+		cmdStruct.add(new CmdStruct("slit_[EV]list","{n1, n2, ...}",null,
+				"set [EV]list to the designated slits"));
+		cmdStruct.add(new CmdStruct("status",null,null,
+				"Give RM state: ERROR, RANGE, RM_DATA, SLIT, BUILT"));
+		cmdStruct.add(new CmdStruct("branchVal",null,null,
+				"set Vlist with the branch circle indices"));
+		cmdStruct.add(new CmdStruct("find[zoib]",null,null,
+				"If BUILT, set Vlist to verts over "+
+						"zero/one/infty or branched"));
 	}
 	
 }

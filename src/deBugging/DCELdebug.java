@@ -512,6 +512,7 @@ public class DCELdebug {
 		int len=Z.length-1;
 		for (int v=1;v<=len;v++) {
 			cps.drawCircle(Z[v],R[v],new DispFlags());
+			cps.drawIndex(Z[v],v,1);
 		}
 		cps.rePaintAll();
 	}

@@ -1696,15 +1696,15 @@ public class RawDCEL {
 	  }
 
 	  /**
-	   * Flip an edge in a triangulation, subject to combinatoric
-	   * conditions on 'edge':
-	   * + must be shared by two non-ideal faces. 
-	   * + must not have an edge of degree 3.
-	   * + if end of degree 4, it cannot have nghb of degree 3.
-	   * + new edge ends cannot already be neighbors.
-	   * To "flip" means to replace 'edge' by the other 
-	   * diagonal in the union of its two faces. The 
-	   * numbers of faces, edges, and verts is unchanged.
+	   * "Flip" an 'edge' in the combinatorics; that means, 
+	   * to replace 'edge' by the other diagonal in the union
+	   * of its two faces. The numbers of faces, edges, and 
+	   * verts is unchanged. There are combinatoric conditions 
+	   * on 'edge':
+	   *  + shared by two non-ideal faces (i.e. interior edge)
+	   *  + must not have an end of degree 3.
+	   *  + if end of degree 4, it cannot have nghb of degree 3.
+	   *  + new edge ends cannot already be neighbors.
 	   * If 'edge' is in red chain, then set 'redChain' null. 
 	   * Calling routine handles processing.
 	   * 
@@ -1815,8 +1815,9 @@ public class RawDCEL {
 	   */
 	  public static int[] slitVW(PackDCEL pdcel,HalfEdge edge) {
 		  
-		  if (edge.twin.face!=null && edge.twin.face.faceIndx<0)
-			  throw new DataException("usage: slit, <v,w> can't be a bdry edge");
+		  if (edge.isBdry())
+			  throw new DataException(
+					  "usage: slit, <v,w> can't be a bdry edge");
 		  boolean swap_vw=false;
 		  if (edge.twin.origin.bdryFlag>0) {
 			  if (edge.origin.bdryFlag==0) {
@@ -1825,7 +1826,8 @@ public class RawDCEL {
 			  }
 		  }
 		  else if (edge.origin.bdryFlag==0)
-			  throw new DataException("usage: slit v w; at least one must be bdry");
+			  throw new DataException(
+					  "usage: slit v w; at least one must be bdry");
 		  
 		  // move 'alpha', if necessary
 		  NodeLink vlink=new NodeLink();

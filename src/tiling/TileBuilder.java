@@ -953,9 +953,9 @@ public class TileBuilder {
 	 *   * ans[1] = number of clockwise tile edges to paste
 	 *   * ans[2] = index in 't2.vert' where pasting starts
 	 *   * ans[3] = number of counterclockwise tile edges to paste.
-	 * Both t1 and t2 must have 'tileFlower's. (This follows 
-	 * routine follows the orientation convention of 'adjoin' 
-	 * operations, adjoining t2 to t1.)
+	 * Both t1 and t2 must have 'tileFlower's. (This routine
+	 * follows the orientation conventions of 'adjoin' when 
+	 * adjoining t2 to t1.)
 	 *   
 	 * Note that t1 and t2 may be the same tile, but we can handle
 	 * only the limited case of pasting associated with a single slit.
@@ -1078,17 +1078,18 @@ public class TileBuilder {
 		ans[3]=t1length;
 
 		return ans;
-		
 	}
 	
 	/**
-	 * This routine creates tile vertices based entirely on tileFlowers. 
-	 * In special cases, such as existence of uniqons, digons, slits, 
-	 * or self-pastings (e.g., perhaps non-simply connected surfaces), 
-	 * we must specify the tiling using 'tileFlower' information, as when 
-	 * it was read from a file with data in form 'TILEFLOWERS:'.
-	 * Return nodecount of vertex indices, -1 on failure (e.g., if 
-	 * 'tileflowers' are not set);
+	 * This routine adds tile vertices to tiles of 'td'
+	 * based entirely on 'td's tileFlowers. In special 
+	 * cases, such as existence of uniqons, digons, slits, 
+	 * or self-pastings (e.g., perhaps non-simply connected 
+	 * surfaces), we must specify the tiling using 'tileFlower' 
+	 * information, as when it was read from a file with data 
+	 * in form 'TILEFLOWERS:'. Return nodecount of vertex 
+	 * indices, -1 on failure (e.g., if 'tileflowers' are 
+	 * not set in 'td');
 
 	 * @param td TileData
 	 * @return int, nodecount, -1 on error
@@ -1115,7 +1116,6 @@ public class TileBuilder {
 		// Alternate between curr/next lists of tiles visited.
 		NodeLink next=new NodeLink();
 		NodeLink curr = new NodeLink();
-		
 		int tick = 1;
 		next.add(tick);
 		while (next.size() > 0) {

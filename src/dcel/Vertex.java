@@ -142,14 +142,13 @@ public class Vertex {
 	}
 	
 	/**
-	 * Return normal cclw flower of nghb indices, closed if interior.
+	 * Return normal cclw flower of nghb indices.
 	 * Get it by chasing spokes, which will close up whether bdry or
 	 * interior, so have to use 'bdryFlag'.
 	 * If this is a 'RedVertex', call 'getRedFlower'; it may be interior
 	 * or boundary. If not a 'RedVertex', it should be interior and we
 	 * get the flower in the usual way, starting with 'halfedge'.
-	 * @param closeInt boolean, if true and vert is interior, then
-	 * close up.
+	 * @param closeInt boolean; true, then close up if interior
 	 * @return int[]
 	 */
 	public int[] getFlower(boolean closeInt) {

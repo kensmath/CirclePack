@@ -604,7 +604,7 @@ public class Percolation extends PackExtender {
 
 	/** 
 	 * Does this infected circle complete a path?
-	 * @param v vertex which is marked 1, 2, 199, or 198
+	 * @param v int, vertex which is marked 1, 2, 199, or 198
 	 * @return 'completed' if yes; 0 if no.
 	 */
 	public int areWeDone(int v) {
@@ -616,8 +616,9 @@ public class Percolation extends PackExtender {
 		case 198: {opposite=199;break;}
 		case 199: {opposite=198;break;}
 		}
-		for (int j=0;j<packData.countFaces(v);j++) {
-			int k=packData.kData[v].flower[j];
+		int[] petals=packData.packDCEL.vertices[v].getPetals();
+		for (int j=0;j<petals.length;j++) {
+			int k=petals[j];
 			if (ColorUtil.col_to_table(packData.getCircleColor(k))==opposite) {
 				completed=mark;
 				return completed;

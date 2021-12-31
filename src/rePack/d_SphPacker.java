@@ -73,13 +73,22 @@ public class d_SphPacker extends RePacker {
 	 */
 	public int load() {
 		
-		// find the face to be remove so we can pack in the
-		//    unit disc: want one in 'computeOrder', else the
-		//    last face in 'fullOrder' (so rest of it remains valid).
+		// find a face to be remove so we can euclidean pack.
+		//   The last edge in 'layoutOrder' lays out the final
+		//   circle, so we use this as our face. However, because
+		//   of orientation, we also need to replace this in
+		//   'layoutOrder' with another edge that can lay out
+		//   this last circle. So we move to the next face.
 		
-		int lastface=pdcel.layoutOrder.getLast().face.faceIndx;
+		// TODO: case not covered here is when overlaps exist
+		//   for the last face and sum to pi/2 or more: this
+		//   means there is no interstice.
+		
+		HalfEdge lastedge=pdcel.layoutOrder.removeLast();
+		int lastface=lastedge.face.faceIndx;
 		Face outface=pdcel.faces[lastface];
 		int[] bdryVerts=outface.getVerts();
+		pdcel.layoutOrder.add(lastedge.next.twin.next); // new last edge
 		
 		// set up 'TriData
 		pdcel.triData=null;
@@ -116,8 +125,7 @@ public class d_SphPacker extends RePacker {
 		}
 		
 		// find and lay out first face
-		Iterator<HalfEdge> heis=pdcel.layoutOrder.iterator();
-		HalfEdge he=heis.next();
+		HalfEdge he=pdcel.layoutOrder.getFirst();
 		int alph=he.origin.vertIndx;
 		int v1=he.next.origin.vertIndx;
 		int v2=he.next.next.origin.vertIndx;
@@ -135,6 +143,7 @@ public class d_SphPacker extends RePacker {
 		}
 
 		// lay out the rest of the eucl circles
+		Iterator<HalfEdge> heis=pdcel.layoutOrder.iterator();
 		while(heis.hasNext()) {
 			he=heis.next();
 			int v0=he.origin.vertIndx;

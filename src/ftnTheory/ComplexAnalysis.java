@@ -581,7 +581,7 @@ public class ComplexAnalysis extends PackExtender {
 			conductance[v]=new double[num+1];
 
 			// store edge lengths, incenters
-			f2=domData.getCenter(domData.kData[v].flower[0]);
+			f2=domData.getCenter(domData.getFirstPetal(v));
 			spokes[0]=z.minus(f2).abs();
 			CircleSimple sc=null;
 			for (int j=1;j<=num;j++) {
@@ -637,7 +637,6 @@ public class ComplexAnalysis extends PackExtender {
 			errorMsg("conductances are not set");
 			return 0;
 		}
-		Complex z,w,deriv;
 		Complex []domSpokes=null;
 		Complex []ranSpokes=null;
 		try {
@@ -645,8 +644,8 @@ public class ComplexAnalysis extends PackExtender {
 			
 			// data at v
 			int num=dData.countFaces(v);
-			z=dData.getCenter(v);
-			w=rData.getCenter(v);
+			Complex z=dData.getCenter(v);
+			Complex w=rData.getCenter(v);
 
 			// check if packings match here
 			if (num!=rData.countFaces(v) || num!=dData.countFaces(v)
@@ -659,16 +658,18 @@ public class ComplexAnalysis extends PackExtender {
 
 			double totalWeight=0.0;
 
-			// store complex edge vectors
-			for (int j=0;j<dData.countFaces(v)+dData.getBdryFlag(v);j++) {
-				domSpokes[j]=z.minus(dData.getCenter(dData.kData[v].flower[j]));
-				ranSpokes[j]=w.minus(rData.getCenter(rData.kData[v].flower[j]));
+			// store complex edge vectors, compute node conductance
+			int[] petals=dData.getPetals(v);
+			for (int j=0;j<petals.length;j++) {
+				domSpokes[j]=z.minus(dData.getCenter(petals[j]));
+				ranSpokes[j]=w.minus(rData.getCenter(petals[j]));
 				totalWeight+=conductance[v][j];
 			}
 
-			deriv=new Complex(0.0);
-			for (int j=0;j<num+dData.getBdryFlag(v);j++) 
-				deriv=deriv.add(ranSpokes[j].divide(domSpokes[j]).times(conductance[v][j]));
+			Complex deriv=new Complex(0.0);
+			for (int j=0;j<petals.length;j++) 
+				deriv=deriv.add(ranSpokes[j].divide(domSpokes[j]).
+						times(conductance[v][j]));
 			outputData.setCenter(v,deriv.divide(totalWeight));
 		}
 		} catch(Exception ex) {
@@ -681,64 +682,6 @@ public class ComplexAnalysis extends PackExtender {
 			errorMsg("error in setting 'effective' radii.");
 		}
 		return 1;
-	}
-
-
-	
-	public int oldComputeDerivative(int mode) {
-		for (int v=1;v<=packData.nodeCount;v++) {
-			double totalWeight=0.0;
-			
-			// data at v
-			int num=packData.countFaces(v);
-			double rad=packData.getRadius(v);
-			Complex z=packData.getCenter(v);
-			Complex w=rangeData.getCenter(v);
-
-			// check if packings match here
-			if (num!=rangeData.countFaces(v)
-					|| packData.getBdryFlag(v)!=rangeData.getBdryFlag(v))
-				throw new DataException("combinatorics of packings are not the same");
-			// for the data
-			double []weights=new double[num+1];
-			Complex []domSpokes=new Complex[num+1];
-			Complex []ranSpokes=new Complex[num+1];
-
-			// compute the 'weights'
-			// compute for first edge
-			double rad1=packData.getRadius(packData.getFirstPetal(v));
-			double rad2=packData.getRadius(packData.kData[v].flower[1]);
-			double inRad=EuclMath.eucl_tri_inradius(rad+rad1,rad+rad2,rad1+rad2);
-			domSpokes[0]=z.minus(packData.getCenter(packData.getFirstPetal(v)));
-			domSpokes[1]=z.minus(packData.getCenter(packData.kData[v].flower[1]));
-			ranSpokes[0]=w.minus(rangeData.getCenter(rangeData.getFirstPetal(v)));
-			ranSpokes[1]=w.minus(rangeData.getCenter(rangeData.kData[v].flower[1]));
-			weights[0]=inRad/domSpokes[0].abs();
-			totalWeight=weights[0];
-			weights[1]=inRad/domSpokes[1].abs();
-			
-			// compute for remaining edges
-			// Note: for interior v, weight = weights[0]+weights[num]
-			for (int j=1;j<packData.countFaces(v);j++) {
-				rad1=rad2;
-				rad2=packData.getRadius(packData.kData[v].flower[j+1]);
-				inRad=EuclMath.eucl_tri_inradius(rad+rad1,rad+rad2,rad1+rad2);
-				domSpokes[j+1]=z.minus(packData.getCenter(packData.kData[v].flower[j+1]));
-				ranSpokes[j+1]=w.minus(rangeData.getCenter(rangeData.kData[v].flower[j+1]));
-				weights[j]+=inRad/domSpokes[j].abs(); // for this edge
-				weights[j+1]=inRad/domSpokes[j+1].abs(); // add to next weight
-				totalWeight+=weights[j];
-			}
-			totalWeight+=weights[num];
-
-			Complex deriv=new Complex(0.0);
-			for (int j=0;j<=num;j++) 
-				deriv=deriv.add(ranSpokes[j].divide(domSpokes[j]).times(weights[j]));
-			outputData.setCenter(v,deriv.divide(totalWeight));
-		}
-		
-		EuclMath.effectiveRad(outputData,null);
-		return	1;
 	}
 	
 	public void initCmdStruct() {

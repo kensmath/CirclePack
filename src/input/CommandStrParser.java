@@ -60,7 +60,6 @@ import ftnTheory.D_ProjStruct;
 import ftnTheory.Erf_function;
 import ftnTheory.Exponential;
 import ftnTheory.FeedBack;
-import ftnTheory.FlattenTri;
 import ftnTheory.FlipStrategy;
 import ftnTheory.GenModBranching;
 import ftnTheory.Graphene;
@@ -88,7 +87,6 @@ import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.NSpole;
 import geometry.SphericalMath;
-import komplex.DualGraph;
 import komplex.EdgeSimple;
 import komplex.Embedder;
 import komplex.Face;
@@ -113,7 +111,6 @@ import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
 import packing.PackMethods;
-import packing.RData;
 import panels.CPScreen;
 import panels.ImagePanel;
 import panels.OutPanel;
@@ -121,9 +118,7 @@ import panels.PathManager;
 import posting.PostFactory;
 import posting.PostParser;
 import random.RandomTriangulation;
-import rePack.EuclPacker;
 import rePack.GOpacker;
-import rePack.HypPacker;
 import rePack.d_EuclPacker;
 import rePack.d_HypPacker;
 import rePack.d_SphPacker;
@@ -1038,6 +1033,9 @@ public class CommandStrParser {
 				  else if (type.startsWith("tri_g") || type.startsWith("Tri_g")) {
 					  mode=5;
 				  }
+				  else if (type.startsWith("j") || type.startsWith("J")) {
+					  mode=5; // special triangle group
+				  }
 				  else if (type.startsWith("pent3")) {
 					  mode=7;
 				  }
@@ -1104,19 +1102,63 @@ public class CommandStrParser {
 			  {
 				  throw new DataException("No longer active: use tile machinery");
 			  }
-			  case 5: // triangle group
+			  case 5: // triangle group, and j-function 
 			  {
-				  if (type.charAt(0)=='t' && param>15) {
-					  throw new DataException("Use 'Tri_group' (cap 'T') for more than 15 generations");
+				  if ((type.charAt(0)=='t' || type.charAt(0)=='j') && 
+						  param>15) {
+					  throw new DataException(
+							  "Use 'Tri_group' or 'J_ftn' (capitalize) for more "
+							  + "than 15 generations");
 				  }
-				  double a=2.0;
-				  double b=3.0;
-				  double c=7.0;  
+				  
+				  double a,b,c;
+				  boolean jftn=false;
+				  if (items.size()==2)
+					  jftn=true;
+				  
+				  // j-function version specified via 'j-ftn' command
+				  //    or by specifying 0 as first parameter
+				  // defaults: 
+				  //   if 3 parameters, a=2, b=3, c=7
+				  //   if 2 parameters, a=0, b=2, c=3
 				  try {
 					  a=Double.parseDouble(items.get(0));
 					  b=Double.parseDouble(items.get(1));
-					  c=Double.parseDouble(items.get(2));
-				  } catch (Exception ex) {} // go with defaults
+					  if (!jftn) 
+						  c=Double.parseDouble(items.get(2));
+					  else {
+						  b=a;
+						  c=b;
+						  a=0.0;
+					  }
+				  } catch (Exception ex) {
+					  if (jftn) { // j-functions version
+						  a=0.0;
+						  b=2.0;
+						  c=3.0;
+					  }
+					  else {
+						  a=2.0;
+						  b=3.0;
+						  c=7.0;
+					  }
+				  } // go with defaults
+				  
+				  if (a==0.0)  
+					  jftn=true;
+				  
+				  // parameters B and C must be integers >= 1
+				  if (jftn) {
+					  int B=(int)(1.01*b);
+					  int C=(int)(1.01*c);
+					  if (B<1 || C<1)
+						  throw new DataException(
+								  "usage: j-function parameters "
+								  + "are 2 positive integers");
+					  newPack=PackCreation.build_j_function(param,B,C);
+					  break;
+				  }
+				  
 				  // set degrees: params should be (at worst) half ints
 				  if (Math.abs(2.0*a-(int)(2.0*a))>.0001 ||
 						  Math.abs(2.0*b-(int)(2.0*b))>.0001 ||
@@ -1126,12 +1168,14 @@ public class CommandStrParser {
 				  if (Math.abs(2.0*((int)a)-2.0*a)>.1) {
 					  if (((int)b-(int)c)>0.1) 
 						  throw new DataException(
-							  "usage: tri_group: 'a' half-int, then b, c must be equal");
+							  "usage: tri_group: 'a' half-int, "
+							  + "then b, c must be equal");
 				  }
 				  else if (Math.abs(2.0*((int)b)-2.0*b)>.1) {
 					  if (((int)a-(int)c)>0.1) 
 						  throw new DataException(
-								  "usage: tri_group: 'b' is half-integer, but a, c not equal");
+								  "usage: tri_group: 'b' is "
+								  + "half-integer, but a, c not equal");
 				  }
 				  if (Math.abs(2.0*((int)c)-2.0*c)>.1) {
 					  if (((int)b-(int)a)>0.1) 
@@ -1148,7 +1192,7 @@ public class CommandStrParser {
 			  {
 				  if (param<0)
 					  param=0;
-				  PackDCEL pdcel=PackCreation.pentagonal_dcel(param);
+				  PackDCEL pdcel=DcelCreation.pentagonal_dcel(param);
 				  newPack=new PackData(null); // DCELdebug.printRedChain(pdcel.redChain);
 				  newPack.attachDCEL(pdcel);
 				  newPack.set_rad_default();
@@ -1181,7 +1225,7 @@ public class CommandStrParser {
 				  int N=mode-4; // number to cluster at center
 				  
 				  // get pentagonal packing, right number of generations
-				  PackDCEL pent=PackCreation.pentagonal_dcel(param);
+				  PackDCEL pent=DcelCreation.pentagonal_dcel(param);
 				  int sidelength=(int)Math.pow(2.0,param);
 				  PackDCEL pdcel=RawDCEL.polyCluster(pent,1,sidelength,N);
 				  CombDCEL.d_FillInside(pdcel);
@@ -1219,7 +1263,7 @@ public class CommandStrParser {
 				  if (type.charAt(0)=='p' && param>8) {
 					  throw new DataException("Use 'Pinwheel' (cap 'P') for more than 8 generations");
 				  }
-				  newPack=PackCreation.pinWheel(param,pinParam[0],pinParam[1]);
+				  newPack=DcelCreation.pinWheel(param,pinParam[0],pinParam[1]);
 				  break;
 			  }
 			  case 11: // fibonnacci 2D: W, H, X, width/height/base, with 'TileData'
@@ -1235,7 +1279,7 @@ public class CommandStrParser {
 					  H=Integer.parseInt(items.get(1));
 					  X=Integer.parseInt(items.get(2));
 				  } catch (Exception ex) {} // go with defaults
-				  newPack=PackCreation.fibonacci2D(param, W, H, X);
+				  newPack=DcelCreation.fibonacci2D(param, W, H, X);
 				  break;
 			  }
 			  case 12: // hex torus, H height, W width
@@ -1286,12 +1330,9 @@ public class CommandStrParser {
 	  } // end of 'c'
 	  case 'd':
 	  {
-		  if (cmd.startsWith("dualG")) {
-			  packData.dualGraph=DualGraph.buildDualGraph(packData,packData.firstFace,null);
-		  }
 		  
 		  // ========= delaunay (this is 2D) ==========
-		  else if (cmd.startsWith("delaun") || cmd.startsWith("Delaun")) {
+		  if (cmd.startsWith("delaun") || cmd.startsWith("Delaun")) {
 			  int N=0;
 			  String str;
 			  boolean script_flag=false; // data from script?
@@ -1426,7 +1467,7 @@ public class CommandStrParser {
 			  packData.set_aim_default();
 			  packData.set_rad_default();
 			  for (int v=1;v<=packData.nodeCount;v++) 
-				  packData.kData[v].plotFlag=1;
+				  packData.setPlotFlag(v,1);
 			  return N;
 		  } // end of 'delaunay'
 		  
@@ -1597,8 +1638,9 @@ public class CommandStrParser {
 	    			  try {
 	    				  items=flagSegs.get(1);
 	    			  } catch(Exception ex) {
-	    				  throw new ParserException("'extender' mg call needs packing or "+
-	    						  "file info");
+	    				  throw new ParserException(
+	    						  "'extender' mg call needs packing or "
+	    						  +"file info");
 	    			  }
 	    		  }
 	    		  String srpt=items.get(0);
@@ -1629,16 +1671,6 @@ public class CommandStrParser {
 	    				  returnVal=1;
 	    			  }
 	    		  }
-			  }
-	    	  else if (str.equalsIgnoreCase("ft")) { // FlattenTri
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
-	    		  FlattenTri ft=new FlattenTri(packData);
-	    		  if (ft.running) {
-				   	  CirclePack.cpb.msg("Pack "+packData.packNum+
-				   			  ": started "+ft.extensionAbbrev+" extender");
-			    	  ft.StartUpMsg();
-			    	  returnVal=1;
-				  }
 			  }
 	    	  else if (str.equalsIgnoreCase("rh")) {
 	    		  if (!packData.status || packData.nodeCount==0) return 0;
@@ -2353,13 +2385,6 @@ public class CommandStrParser {
 	    				  "p1 not all less than p0 or else p0 is not locally univalent\n");
 	    	  */
 	    	  
-	    	  // TODO: only want rad/center, so an make this easier.
-	    	  RData []newRdata;
-	    	  if ((newRdata=HarmonicMap.h_g_bar(Hp,Gp))==null) {
-	    		  CirclePack.cpb.msg("h_g_bar failed");
-	    		  return 0;
-	    	  }
-	    	  
 	    	  // duplicate p0 in p2, then replace its RData by the new stuff
 	    	  int holdPNum=packData.packNum;
 	    	  PackData tmpPD=Hp.copyPackTo();
@@ -2368,8 +2393,7 @@ public class CommandStrParser {
 				  packData=CPBase.cpScreens[2].getPackData();
 			  
 			  for (int v=1;v<=tmpPD.nodeCount;v++) {
-				  packData.setRadius(v, newRdata[v].rad);
-				  packData.setCenter(v, newRdata[v].center);
+					packData.setCenter(v,Hp.getCenter(v).add(Gp.getCenter(v).conj()));
 			  }
 
 	    	  jexecute(CPBase.packings[2],"set_screen -a");
@@ -2386,13 +2410,6 @@ public class CommandStrParser {
 	    	  if (HarmonicMap.ck_size(Hp,Gp)==0) {
 	    		  return 0;
 	    	  }
-
-	    	  // TODO: only want rad/center, so an make this easier.
-	    	  RData []newRdata;
-	    	  if ((newRdata=HarmonicMap.h_g_add(Hp,Gp))==null) {
-	    		  CirclePack.cpb.msg("h_g_add failed");
-	    		  return 0;
-	    	  }
 	    	  
 	    	  // duplicate p0 in p2, then replace its RData by the new stuff
 	    	  int holdPNum=packData.packNum;
@@ -2400,10 +2417,11 @@ public class CommandStrParser {
 	    	  CirclePack.cpb.swapPackData(tmpPD,2,false);
 			  if (holdPNum==2) 
 				  packData=CPBase.packings[2];
-			  
+
+	    	  // TODO: only want rad/center
 			  for (int v=1;v<=tmpPD.nodeCount;v++) {
-				  tmpPD.setRadius(v, newRdata[v].rad);
-				  tmpPD.setCenter(v, newRdata[v].center);
+				  tmpPD.setRadius(v,Hp.getRadius(v)+Gp.getRadius(v));
+				  tmpPD.setCenter(v,Hp.getCenter(v).add(Gp.getCenter(v)));
 			  }
 
 	    	  jexecute(CPBase.packings[2],"set_screen -a");
@@ -2419,32 +2437,14 @@ public class CommandStrParser {
 	  case 'j':
 	  {
 	      // =========== j_ftn ==============
+		  // OBE: call "create j_ftn ..."
 	      if (cmd.startsWith("j_ftn")) {
-	    	  int n0=0,n1=0,maxsize=0;
-	    	  try {
-//		    	  items=(Vector<String>)flagSegs.get(0); // should be just one segment
-	    		  n0=Integer.parseInt((String)items.get(0));
-	    		  n1=Integer.parseInt((String)items.get(1));
-	    		  maxsize=Integer.parseInt((String)items.get(2));
-	    	  } catch(Exception ex) {
-	    		  throw new ParserException("usage: n0, n1, desired orders,"+
-	    	    	      " 'maxsize' limits size: "+ex.getMessage());
+	    	  StringBuilder strbld=new StringBuilder("create j_ftn ");
+	    	  Iterator<String> sis=items.iterator();
+	    	  while (sis.hasNext()) {
+	    		  strbld.append(sis.next()+" ");
 	    	  }
-	    	  try {
-	    		  int pnum=packData.packNum;
-	    		  PackData newData=PackCreation.build_j_function(n0,n1,maxsize);
-	    		  if (newData==null) 
-	    			  throw new CombException("new packing failed");
-	    		  CirclePack.cpb.swapPackData(newData,pnum,false);
-	    		  packData=newData;
-	    	  } catch(CombException cex) {
-	    		  throw new ParserException("build failed.");
-	    	  }
-	    	  cpScreen.reset();
-	    	  cpScreen.clearCanvas(true);
-	    	  packData.setName("j_ftn_"+n0+"_"+n1);
-	    	  packData.setGeometry(-1);
-	    	  return 1;
+	    	  return jexecute(packData,strbld.toString());
 	      }
 	      break;
 	  } // end of 'j'
@@ -2911,9 +2911,9 @@ public class CommandStrParser {
 	      
 	      // ============ perronDown ============
 	      if (cmd.startsWith("perron")) {
-	    	  if (packData.hes>0 || packData.overlapStatus) {
-	    		  CirclePack.cpb.errMsg("'perron' methods only apply to eucl/hyp "+
-	    				  "packings without overlaps");
+	    	  if (packData.hes>0 || packData.haveInvDistances()) {
+	    		  CirclePack.cpb.errMsg("'perron' methods only apply "+
+	    				  "to eucl/hyp packings without overlaps");
 	    		  return 0;
 	    	  }
 	    	  
@@ -2980,14 +2980,14 @@ public class CommandStrParser {
 	    			  
 	    		  }
 	    		  else
-	    			  perronResults=HypPacker.hypPerron(packData,direction, passes);
+	    			  perronResults=d_HypPacker.hypPerron(packData,direction, passes);
 	    	  }
 	    	  else { 
 	    		  if (SparseC) {
 	    			  
 	    		  }
 	    		  else 
-	    			  perronResults=EuclPacker.euclPerron(packData,direction, passes);
+	    			  perronResults=d_EuclPacker.euclPerron(packData,direction, passes);
 	    	  }
 	    	  
 	    	  if (perronResults[0]<0) {
@@ -3027,7 +3027,7 @@ public class CommandStrParser {
 	    	  }
 	    	  
     		  // repack/layout/display
-    		  return EuclPacker.polyPack(packData,clink,useC);
+    		  return d_EuclPacker.polyPack(packData,clink,useC);
 	      }
 
 	      // ========== pwd =============
@@ -4172,13 +4172,15 @@ public class CommandStrParser {
 	      
 	  // ============= smooth =========
 	  if (cmd.startsWith("smoo")) {
-		  // Note: if smoother is to work in concert with a 'MicroGrid', then it
-		  //   is initiated in that 'MicroGrid'.
+		  // Note: if smoother is to work in concert with a 'MicroGrid', 
+		  //  then it is initiated in that 'MicroGrid'.
 		  if (packData.smoother==null) { // try to create
 			  // start the smoother
 			  packData.smoother=new Smoother(packData,null); // no 'MicroGrid' attached
 			  if (packData.smoother==null) {
-				  CirclePack.cpb.errMsg("error: smoother failed to start for pack "+packData.packNum);
+				  CirclePack.cpb.errMsg(
+						  "error: smoother failed to start for pack "+
+								  packData.packNum);
 				  return 0;
 			  }
 		  }
@@ -4193,7 +4195,9 @@ public class CommandStrParser {
 			  if (str.startsWith("-q")) // toss, redundant (or wrong)
 				  continue;
 			  if (!StringUtil.isFlag(str)) {
-				  CirclePack.cpb.errMsg("usage: smoother -q{n} -a -b {b} -c {n] -d {flags} -r -s {x} -x");
+				  CirclePack.cpb.errMsg("usage: smoother "+
+						  "-q{n} -a -b {b} -c {n] -d {flags} "+
+						  "-r -s {x} -x");
 				  return 0;
 			  }
 			  items.remove(0); // toss the flag, there may be other stuff
@@ -5918,15 +5922,6 @@ public class CommandStrParser {
 						items=flagSegs.get(0);
 				}
 				
-				// debug
-				if (str.contains("compOrder")) {
-					packData.glist=new GraphLink(packData,"s");
-					DualGraph.printGraph(packData.glist);
-					DCELdebug.visualDualEdges(packData.packDCEL,
-							packData.packNum,packData.glist);
-					return 1;
-				}
-			
 				// Create
 				if (str.contains("clone")) {
 					int qnum= StringUtil.qFlagParse(items.remove(0));
@@ -7496,17 +7491,22 @@ public class CommandStrParser {
 	    			  }
 	    			  case 'c': // circles
 	    			  {
-	    				  if (str.length()>2 && str.charAt(2)=='o') { // mark by drawing order
-	    					  if (packData.vert_draw_order()>0) {
-	    						  int tick=1;
-	    						  packData.setVertMark(packData.getAlpha(),tick++);
-	    						  int nv=packData.kData[packData.getAlpha()].nextVert;
-	    						  while (nv>0 && nv!=packData.getAlpha()) {
-	    							  packData.setVertMark(nv,tick++);
-	    							  nv=packData.kData[nv].nextVert;
-	    							  count++;
-	    						  }
+	    				  // mark by drawing order:
+	    				  if (str.length()>2 && str.charAt(2)=='o') {
+	    					  Iterator<HalfEdge> vis=
+	    							  packData.packDCEL.layoutOrder.iterator();
+	    					  HalfEdge he=vis.next(); // mark first face
+	    					  int tick=1;
+	    					  packData.setVertMark(he.origin.vertIndx,tick++);
+	    					  he=he.next;
+	    					  packData.setVertMark(he.origin.vertIndx,tick++);
+	    					  he=he.next;
+	    					  packData.setVertMark(he.origin.vertIndx,tick++);
+	    					  while (vis.hasNext()) {
+	    						  he=vis.next();
+	    						  packData.setVertMark(he.next.next.origin.vertIndx,tick++);
 	    					  }
+	    					  count=tick;
 	    					  break;
 	    				  }
 	    				  else if (str.length()>2 && str.charAt(2)=='w') { // wipe first
@@ -7652,7 +7652,7 @@ public class CommandStrParser {
 				  packData.fillcurves();
 				  packData.packDCEL.layoutPacking();
 	    	  }
-	    	  else if (packData.intrinsicGeom > 0) { // sphere: Note that NSpole is included
+	    	  else if (packData.intrinsicGeom > 0) { // sph (NSpole also called)
 	    		  packData.hes=1;
     			  packData.setGeometry(1);
 	    		  packData.set_aim_default();
@@ -8152,13 +8152,15 @@ public class CommandStrParser {
 	    				  if (E<3) { // 'E flag takes precedence
 	    		    			for (int j=1;j<=packData.nodeCount;j++){
 	    		      			  if (packData.isBdry(j)) 
-	    		      				  packData.kData[j].utilFlag=1;
-	    		      			  else packData.kData[j].utilFlag=0;
+	    		      				  packData.setVertUtil(j,1);
+	    		      			  else 
+	    		      				  packData.setVertUtil(j,0);
 	    		      			}
-	    		      			packData.kData[packData.getAlpha()].utilFlag=1;
+	    		      			packData.setVertUtil(packData.getAlpha(),1);
 	    		      			UtilPacket uP=new UtilPacket();
 //	    		      			int []list=packData.label_generations(-1,uP);
-	    		      			if ((E=uP.rtnFlag)>0 && E!=packData.getAlpha() &&
+	    		      			if ((E=uP.rtnFlag)>0 && 
+	    		      					E!=packData.getAlpha() &&
 	    		      					!packData.isBdry(E)) { // okay choice
 	    		      				ratio=0.0;
 	    		      			}
@@ -9242,12 +9244,16 @@ public class CommandStrParser {
 	    				  v=(Integer)vlist.next();
 	    				  if (factor_flag) { // use a factor
 	    					  if (jiggle) {
-	    						  factor=Math.exp(randizer.nextGaussian()*pctg);
+	    						  factor=Math.exp(
+	    							randizer.nextGaussian()*pctg);
 	    					  }
-	    					  else factor=low+randizer.nextDouble()*(high-low);
-	    					  packData.setRadiusActual(v,packData.getActualRadius(v)*factor);
+	    					  else 
+	    						  factor=low+randizer.nextDouble()*(high-low);
+	    					  packData.setRadiusActual(v,
+	    						  packData.getActualRadius(v)*factor);
 	    				  }
-	    				  else packData.setRadiusActual(v,low+randizer.nextDouble()*(high-low));
+	    				  else packData.setRadiusActual(v,
+	    						  low+randizer.nextDouble()*(high-low));
 	    				  count++;
 	    			  }
 	    		  }
@@ -9256,7 +9262,8 @@ public class CommandStrParser {
 	    	  }
 	    	  
 	    	  // ========= set_poison ==========
-	    	  if (cmd.startsWith("poison")) { // set utilFlags=-1 for poison vertices
+	    	  // set utilFlags=-1 for poison vertices
+	    	  if (cmd.startsWith("poison")) { 
 	    		  return packData.set_poison((Vector<String>)flagSegs.get(0));
 	    	  }
 
@@ -9306,21 +9313,14 @@ public class CommandStrParser {
     				  } catch (Exception ex) {
     					  throw new InOutException("usage: set_sch x {v w ...}");
     				  }
-    				  HalfLink elink=new HalfLink(packData,items);
-    				  if (elink==null || elink.size()==0)
+    				  HalfLink hlink=new HalfLink(packData,items);
+    				  if (hlink==null || hlink.size()==0)
     					  return count;
     				  
-    				  // allocate if needed
-    				  if (!packData.haveSchwarzians()) {
-    					  for (int vv=1;vv<=packData.nodeCount;vv++)
-    						  packData.kData[vv].schwarzian=
-    						  new double[packData.countFaces(vv)+1];
-    				  }
-    				  
-    				  Iterator<HalfEdge> elk=elink.iterator();
-    				  while (elk.hasNext()) {
+    				  Iterator<HalfEdge> his=hlink.iterator();
+    				  while (his.hasNext()) {
     					  try {
-    						  HalfEdge edge=elk.next();
+    						  HalfEdge edge=his.next();
     						  if (edge.isBdry()) 
     							  edge.setSchwarzian(0.0);
     						  else
@@ -9360,7 +9360,8 @@ public class CommandStrParser {
 	    		  if (str.startsWith("-x")) {
 	    			  StringBuilder strbld=new StringBuilder();
 	    			  int rwflag=CPFileManager.trailingFile(flagSegs,strbld);
-	    			  if (rwflag==0 || (rwflag & 01)== 01) // error or no filename, use 'packData.xyzpoint'
+	    			  // error or no filename, use 'packData.xyzpoint'
+	    			  if (rwflag==0 || (rwflag & 01)== 01) 
 	    				  return packData.set_xyz_overlaps(packData.xyzpoint,1);
 	    			  boolean in_script=false;
 	    			  if ((rwflag & 04)==04) // bit 3 
@@ -9369,7 +9370,8 @@ public class CommandStrParser {
     				  
     				  // try to read the data into 'packData.xyzpoint'.
 	    			  if (CPFileManager.readDataFile(packData,dataname,in_script,1)==0) {
-	    				  CirclePack.cpb.errMsg("Failed to load file "+dataname);
+	    				  CirclePack.cpb.errMsg(
+	    						  "Failed to load file "+dataname);
 	    				  return 0;
 	    			  }
 	    			  return packData.set_xyz_overlaps(packData.xyzpoint,1);
@@ -9421,7 +9423,8 @@ public class CommandStrParser {
 	    		  else if (str.startsWith("-t")) {
 	    			  double uplim=Double.parseDouble((String)items.get(0));
 	    		      if (uplim<=1.0) {
-	    		    	  throw new DataException("usage: truncation value x must be >=1");
+	    		    	  throw new DataException(
+	    		    			 "usage: truncation value x must be >=1");
 	    		      }
 	    			  
     				  while(eis.hasNext()) {
@@ -9454,7 +9457,8 @@ public class CommandStrParser {
 	    		  try {
 	    			  invDist=Double.parseDouble(str);
 	    		  } catch (Exception ex) {
-	    			  throw new ParserException("usage: invdist <x> {v w ...}"+ex.getMessage());
+	    			  throw new ParserException(
+	    				  "usage: invdist <x> {v w ...}"+ex.getMessage());
 	    		  }
      			  
 	    		  if (invDist<-1.0) 
@@ -9743,7 +9747,8 @@ public class CommandStrParser {
 	        				  try {
 	         					 inc=Double.parseDouble(items.get(0));
 	        					 if (inc<=0.0) {
-	        						 CirclePack.cpb.myErrorMsg("set_aim: usage: -% x. Must have x>0.");
+	        						 CirclePack.cpb.myErrorMsg(
+	        								 "set_aim: usage: -% x. Must have x>0.");
 	        					 }
 	        					 items.remove(0);
 	        				  } catch (NumberFormatException nfe) {
@@ -9825,8 +9830,6 @@ public class CommandStrParser {
 	        		  NodeLink vertlist=new NodeLink(packData,items);
 	        		  if (vertlist.size()>0) {
 	        			  Iterator<Integer> vl=vertlist.iterator();
-//	        			  KData []kdata=packData.kData;
-//	        			  RData []rdata=packData.rData;
 	        			  
 	        			  while (vl.hasNext()) {
 	        				  int v=(Integer)vl.next();
@@ -9834,12 +9837,14 @@ public class CommandStrParser {
 	        					  packData.set_aim_default(vertlist);
 	        					  count++;
 	        				  }
-	        				  else if (mode==2) { 
-	        					  packData.rData[v].aim=
-	        						  packData.rData[v].curv;count++;} // current
-	        				  else if (mode==3) { 
-	        					  packData.rData[v].aim=  // TODO: not right adjustment
-	        						  packData.rData[v].aim+inc*Math.PI;count++;} 
+	        				  else if (mode==2) {
+	        					  packData.setAim(v,packData.getCurv(v));
+	        					  count++;
+	        				  }
+	        				  else if (mode==3) { // TODO: is this the right adjustment?
+	        					  packData.setAim(v,packData.getAim(v)+inc*Math.PI);
+	        					  count++;
+	        				  }
 	        				  else if (mode==0) {
 	        					  if (aim!=0.0 || ((packData.hes < 0) && packData.isBdry(v))) {
 	        						  packData.setAim(v,aim*Math.PI);
@@ -10120,7 +10125,6 @@ public class CommandStrParser {
 	    				  double dist;
 	    				  if (packData.hes!=0) // not error, but no effect 
 	    					  return 1;
-	    				  RData []rdata=packData.rData;
 	    				  
 	    				  double hwid=vbox.getWidth()/2.0;
 	    				  double hhgt=vbox.getHeight()/2.0;
@@ -11170,16 +11174,16 @@ public static CallPacket valueExecute(PackData packData,
 					rtnCp = new CallPacket("qual");
 					rtnCp.strValue="v";
 	    			UtilPacket uP=new UtilPacket();
-	    			EdgeLink elt=new EdgeLink(packData,items);
-	    			EdgeSimple worstedge=QualMeasures.visualErrMax(packData, elt, uP);
+	    			HalfLink elt=new HalfLink(packData,items);
+	    			HalfEdge worstedge=QualMeasures.visualErrMax(packData, elt, uP);
 	    			if (worstedge==null)
 	    				throw new DataException("error in measuring visual error");
 	    			if (uP.rtnFlag<0) { // some radii too small?
 	    				rtnCp.strValue="v -- some radii too small to use";
 	    			}
 					rtnCp.int_vec = new Vector<Integer>();
-					rtnCp.int_vec.add(Integer.valueOf(worstedge.v));
-					rtnCp.int_vec.add(Integer.valueOf(worstedge.w));
+					rtnCp.int_vec.add(Integer.valueOf(worstedge.origin.vertIndx));
+					rtnCp.int_vec.add(Integer.valueOf(worstedge.twin.origin.vertIndx));
 					rtnCp.double_vec=new Vector<Double>(1);
 					rtnCp.double_vec.add(Double.valueOf(uP.value));
 					rtnCp.error=false;

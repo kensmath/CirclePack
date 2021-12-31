@@ -234,9 +234,11 @@ public class TorusEnergy extends PackExtender {
 //		double [][]conductance=ComplexAnalysis.setConductances(p);
 		double groundLength=2.0*(TorusEnergy.mycon/Math.sqrt(p.faceCount));
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.countFaces(v);j++)
-				if (j>v) {
-					double len=groundLength-(p.getRadius(v)+p.getRadius(p.kData[v].flower[j]));
+			int[] petals=p.packDCEL.vertices[v].getPetals();
+			for (int j=0;j<petals.length;j++)
+				if (petals[j]>v) {
+					double len=groundLength-(p.getRadius(v)+
+							p.getRadius(petals[j]));
 					erg += len*len;
 				}
 		}

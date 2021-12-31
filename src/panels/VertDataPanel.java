@@ -17,15 +17,13 @@ import javax.swing.border.TitledBorder;
 
 import allMains.CirclePack;
 import circlePack.PackControl;
-import complex.Complex;
+import dcel.HalfEdge;
 import komplex.EdgeSimple;
 import komplex.Face;
-import komplex.KData;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.NodeLink;
 import packing.PackData;
-import packing.RData;
 import util.ColorUtil;
 import util.intNumField;
 import util.xNumField;
@@ -323,37 +321,37 @@ public class VertDataPanel extends JPanel implements ActionListener {
 		
 		// reset index field
 		vertChoice.setText(Integer.toString(v));
-		
-		KData kdata=p.kData[v];
-		RData rdata=p.rData[v];
-		
+
 		// set radius
 		radField.setValue(p.getActualRadius(v));
 		
 		// set center
-		centerField.setValue(new Complex(rdata.center.x,rdata.center.y));
+		centerField.setValue(p.getCenter(v));
 		
 		// set aim
-		aimField.setValue(rdata.aim/Math.PI);
+		aimField.setValue(p.getAim(v)/Math.PI);
 		
 		// set angle sum
-		angleSumField.setValue(rdata.curv/Math.PI);
+		angleSumField.setValue(p.getCurv(v)/Math.PI);
 		
 		// bdry?
-		bdryCkBoxV.setSelected(false);
-		if (kdata.bdryFlag>0) bdryCkBoxV.setSelected(true);
+		if (p.isBdry(v)) 
+			bdryCkBoxV.setSelected(true);
+		else 
+			bdryCkBoxV.setSelected(false);
 		
 		// degree
-		degreeField.setField(kdata.num);
+		degreeField.setField(p.countFaces(v));
 		
 		// flower
-		StringBuilder flower=new StringBuilder();
-		for (int j=0;j<=kdata.num;j++)
-			flower.append(Integer.toString(kdata.flower[j])+" ");
-		flowerField.setText(flower.toString());
+		StringBuilder flowerStr=new StringBuilder();
+		int[] petal=p.getPetals(v);
+		for (int j=0;j<petal.length;j++)
+			flowerStr.append(Integer.toString(petal[j])+" ");
+		flowerField.setText(flowerStr.toString());
 		
 		// color
-		colorFieldV.setField(ColorUtil.col_to_table(kdata.color));
+		colorFieldV.setField(ColorUtil.col_to_table(p.vData[v].color));
 	}
 	
 	public void update_face(PackData p) {
@@ -388,16 +386,12 @@ public class VertDataPanel extends JPanel implements ActionListener {
 	}
 
 	public void update_edge(PackData p) {
-		if (p==null || !p.status) return;
-		EdgeSimple edge=EdgeLink.grab_one_edge(p,edgeChoice.getText());
-		if (edge==null) return;
-		double invDist=1.0;
-		if (p.overlapStatus) {
-			int j=p.nghb(edge.v,edge.w);
-			double iD=p.getInvDist(edge.v,p.kData[edge.v].flower[j]);
-			if (j>=0 && Math.abs(1.0-iD)>.0000001)
-				invDist=iD;
-		}
-		overlapField.setValue(invDist);
+		if (p==null || !p.status) 
+			return;
+		HalfEdge he=p.packDCEL.findHalfEdge(
+				EdgeLink.grab_one_edge(p,edgeChoice.getText()));
+		if (he==null) 
+			return;
+		overlapField.setValue(he.getInvDist());
 	}
 }

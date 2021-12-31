@@ -243,23 +243,26 @@ public class PostParser {
 				}
 				break;
 			}
-			case 'B': // post both faces and circles in drawing order
-			case 'C':
+			case 'B': // post faces and circles recomputed in drawing order
+			case 'C': // post circles recomputed in drawing order
 			case 'F': // post faces recomputed in drawing order
 			{
+				HalfLink hlink=null;
 				FaceLink facelist = null;
 				int first_face = 0;
 				// no list? default to drawing order (plus stragglers)
 				if (items.size() == 0) {
+					hlink=p.packDCEL.fullOrder;
 					facelist = new FaceLink(p, "Fs");
 					// handle first face circles (without adjusting centers)
 					if (c == 'C' || c == 'B') {
 						first_face = p.firstFace;
 						int indx = p.faces[first_face].indexFlag;
 
-						Face face = p.faces[first_face];
+						dcel.Face face = hlink.get(0).face;
+						int[] verts=face.getVerts();
 						for (int i = 0; i < 3; i++) {
-							v = face.vert[(indx + i) % 3];
+							v = verts[i];
 							z = p.getCenter(v);
 							if (p.hes > 0)
 								z = cpScreen.sphView.toApparentSph(z);
@@ -268,13 +271,14 @@ public class PostParser {
 									pF.postCircle(p.hes, z, p.getRadius(v), tx);
 								} else {
 									if (!dispFlags.colBorder)
-										col = p.kData[v].color;
+										col = p.vData[v].color;
 									pF.postColorCircle(p.hes, z,
 											p.getRadius(v), col, tx);
 								}
-							} else {
+							} 
+							else {
 								if (!dispFlags.colorIsSet)
-									col = p.kData[v].color;
+									col = p.vData[v].color;
 								if (!dispFlags.colBorder)
 									pF.postCircle(p.hes, z, p.getRadius(v), tx);
 								else
@@ -291,20 +295,23 @@ public class PostParser {
 						} // end of for loop
 						count++;
 					} // done with first three circles
-				} else
-					// there is a list
+				} 
+				else {	// there is a list
 					facelist = new FaceLink(p, items);
+					hlink=facelist.getHalfLink(p.packDCEL);
+				}
+				
 
 				// now proceed with layout
 				if (c == 'F') {
-					count += p.layout_facelist(pF, facelist, dispFlags, null, true,
-							false, first_face, tx);
+					count += p.packDCEL.layoutFactory(pF,hlink,dispFlags,
+							null,true,false,tx);
 				} else if (c == 'C') {
-					count += p.layout_facelist(pF, facelist, null, dispFlags, true,
-							false, first_face, tx);
+					count += p.packDCEL.layoutFactory(pF,hlink,null,
+							dispFlags,true,false,tx);
 				} else if (c == 'B') { // we have only one color we can use
-					count += p.layout_facelist(pF, facelist, dispFlags,dispFlags,
-							true, false, first_face, tx);
+					count += p.packDCEL.layoutFactory(pF,hlink,dispFlags,
+							dispFlags,true,false,tx);
 				}
 				break;
 			}
@@ -792,7 +799,8 @@ public class PostParser {
 							
 							// get list of tile border and make axis-extended edgelist
 							NodeLink cornlist=tile.tileBorderLink();
-							EdgeLink tedgelist=EdgeLink.verts2edges(p,cornlist,true);
+							EdgeLink tedgelist=
+								EdgeLink.verts2edges(p.packDCEL,cornlist,true);
 							Iterator<EdgeSimple> tel=tedgelist.iterator();
 
 							// set face/bdry colors

@@ -76,13 +76,22 @@ public class Translators {
 	}
 	
 	/**
-	 * See description of 'face_trans'
-	 * @param p 'PackData'
-	 * @param elist 'EdgeLink'
-	 * @param e_in
-	 * @param q
-	 * @param forward
-	 * @return  'EdgeSimple', null on failure
+	 * Idea is to translate edge 'e_in' of 'p' to edge
+	 * of 'q'. If 'elist' is not null, use it for
+	 * translation as a 'vertexMap'.
+	 * Trivial case: if elist==null and source_p==target_pp, 
+	 * return e_out=e_in. 
+	 * Return null if vertices of 'e_in' (or their translates)
+	 * do not form an edge in q. 
+	 * TODO: translation only uses first of potentially many
+	 * matches in 'elist'; hard to see an easy way to handle 
+	 * multiple translation cases.
+	 * @param p PackData, source
+	 * @param elist VertexMap
+	 * @param e_in EdgeSimple, edge in source_p
+	 * @param q PackData
+	 * @param forward boolean, true, then from p to q
+	 * @return EdgeSimple, null on error
 	 */
 	public static EdgeSimple edge_translate(PackData p, EdgeLink elist,
 			EdgeSimple e_in, PackData q, boolean forward) {

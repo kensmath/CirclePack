@@ -2,24 +2,10 @@ package ftnTheory;
 
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Vector;
-
-import circlePack.PackControl;
 import complex.Complex;
-import dcel.D_SideData;
-import dcel.HalfEdge;
-import dcel.RedHEdge;
-import deBugging.LayoutBugs;
-import exceptions.DataException;
 import exceptions.ParserException;
-import komplex.DualGraph;
-import komplex.EdgeSimple;
-import komplex.Face;
-import komplex.RedEdge;
-import komplex.RedList;
 import listManip.FaceLink;
 import listManip.GraphLink;
-import math.Mobius;
 import packing.PackData;
 import packing.PackExtender;
 import util.DispFlags;
@@ -42,60 +28,6 @@ public class ProjStruct extends PackExtender {
 	public ProjStruct(PackData p) {
 		super(p);
 	}
-
-	/**
-	 * Layout face-by-face using current 'labels' information
-	 * and using 'dTree'. Centers are entered only in 'asp'
-	 * @param p PackData
-	 * @param dtree GraphLink
-	 * @param asp []TriAspect
-	 */
-	public static void treeLayout(PackData p,GraphLink dtree,
-			TriAspect []asp) {
-		// log for debugging in /tmp/redface ...
-		DispFlags dispflags=null;
-		boolean debug=false;
-		if (dtree==null || dtree.size()==0) 
-			throw new DataException("GraphLink error");
-		if (debug) 
-			LayoutBugs.log_GraphLink(p, dtree);
-		Iterator<EdgeSimple> dlk=dtree.iterator();
-		while (dlk.hasNext()) {
-			EdgeSimple dedge=dlk.next();
-			
-			// root faces just get laid in place
-			if (dedge.v==0) {
-				asp[dedge.w].setCents_by_label();
-				for (int j=0;j<3;j++) {
-					int k=asp[dedge.w].vert[j];
-					p.setCenter(k,asp[dedge.w].getCenter(j));
-				}
-			}
-			else {
-				int k=p.face_nghb(dedge.v,dedge.w);
-				int v2=p.faces[dedge.w].vert[(k+2)%3];
-				HalfEdge dhe=p.packDCEL.findHalfEdge(dedge);
-				TriAspect newasp=D_ProjStruct.plopAcrossEdge(asp,dhe);
-				if (newasp==null) 
-					return;
-				asp[dedge.w]=new TriAspect(newasp);
-				p.setCenter(v2,asp[dedge.w].getCenter((k+2)%3));
-			}
-			
-			// draw the new face
-			if (debug) {
-				int []vts=p.faces[dedge.w].vert;
-				for (int j=0;j<3;j++)
-				p.cpScreen.drawCircle(asp[dedge.w].getCenter(j), 
-						p.getRadius(vts[j]), dispflags);
-				PackControl.canvasRedrawer.paintMyCanvasses(p,false);
-			}
-				
-		} // end of while
-	}
-
-
-
 	
 	/**
 	 * Given a linked list of faces, find successive locations

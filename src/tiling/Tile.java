@@ -626,7 +626,7 @@ public class Tile extends Face {
     }
     
     /**
-     * Given lists int[][2] 't' and 'tn', return vector of 
+     * Given lists int[][2] 't' and 'nt', return vector of 
      * EdgeSimple's (myindex,nghbindex): entry 'myindex' of 't' 
      * is matched to entry 'nghbindex' of 'nt'.  
      * 
@@ -658,7 +658,8 @@ public class Tile extends Face {
      * @param ntindx int, index (e.g. tile index) associated with 'nt' list
      * @return Vector<int[][]>, null if none found, exceptions on error
      */
-    public static Vector<EdgeSimple> tile2tileMatch(int [][]t,int tindx,int [][]nt,int ntindx) {
+    public static Vector<EdgeSimple> tile2tileMatch(int [][]t,
+    		int tindx,int [][]nt,int ntindx) {
     	
     	// check hints for minimal consistency
     	boolean hints=false; 

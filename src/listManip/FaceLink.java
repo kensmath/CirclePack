@@ -11,6 +11,7 @@ import circlePack.PackControl;
 import complex.Complex;
 import dcel.D_SideData;
 import dcel.HalfEdge;
+import dcel.PackDCEL;
 import dcel.RawDCEL;
 import dcel.RedHEdge;
 import exceptions.CombException;
@@ -1102,6 +1103,33 @@ public class FaceLink extends LinkedList<Integer> {
 			nextFP=fP;
 		}
 		return startFP;
+	}
+	
+	/**
+	 * Generate 'HalfLink' of edges associated with this 
+	 * ordered 'FaceLink'; if successive faces f,g share 
+	 * a halfedge, then this is the halfedge for g.
+	 * @param pdcel PackDCEL
+	 * @return
+	 */
+	public HalfLink getHalfLink(PackDCEL pdcel) {
+		if (this.size()==0)
+			return null;
+		HalfLink hlink=new HalfLink();
+		Iterator<Integer> fit=this.iterator();
+		dcel.Face nextface=pdcel.faces[fit.next()];
+		hlink.add(nextface.edge);
+		dcel.Face lastface=nextface;
+		while(fit.hasNext()) {
+			lastface=nextface;
+			nextface=pdcel.faces[fit.next()];
+			HalfEdge he=nextface.faceNghb(lastface);
+			if (he!=null) // yes, shared edge
+				hlink.add(he);
+			else
+				hlink.add(nextface.edge); // no, own edge
+		}
+		return hlink;
 	}
 	
 	/**

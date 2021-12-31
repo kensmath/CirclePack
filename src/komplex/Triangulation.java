@@ -100,7 +100,7 @@ public class Triangulation {
 	    	}
 	    }
 	  
-		// ========== generate 'KData' array from Triangulation
+		// ===== generate temporary 'KData' array from Triangulation
 		KData []kdata=null;
 		int []ans=new int[2];
 		try {

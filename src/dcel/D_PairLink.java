@@ -29,7 +29,7 @@ public class D_PairLink extends LinkedList<D_SideData> {
 	 * is a mate to 'sideDes'. Match involves 'startEdge' of one equal
 	 * to 'endEdge' of other and vice verse. Return -1 if not found; may
 	 * indicate an error.
-	 * @param pairLink PairLink, list of side pairings
+	 * @param pairLink D_PairLink, list of side pairings
 	 * @param sideDes D_SideData
 	 * @return index of mate to sideDes, -1 if none found
 	 */
@@ -51,7 +51,8 @@ public class D_PairLink extends LinkedList<D_SideData> {
 	 * @param labelStr 
 	 * @return D_SideData, or null if not found
 	 */
-	public static D_SideData findLabeled(D_PairLink pairLink, String labelStr) {
+	public static D_SideData findLabeled(D_PairLink pairLink,
+			String labelStr) {
 		if (pairLink==null || pairLink.size()==0) return null;
 		Iterator<D_SideData> sides=pairLink.iterator();
 		D_SideData edge=null;

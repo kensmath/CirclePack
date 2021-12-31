@@ -4,7 +4,9 @@ import java.util.Vector;
 
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.PackDCEL;
 import listManip.FaceLink;
+import listManip.HalfLink;
 import packing.PackData;
 import packing.PackExtender;
 import util.ColorUtil;
@@ -59,13 +61,16 @@ public class WordWalker extends PackExtender {
 					int lastface=(int)facelink.get(facelink.size()-1);
 					imprintFace(firstface);
 					count++;
-					if (facelink.size()>1) {
+					HalfLink hlink=null;
+					PackDCEL pdcel=packData.packDCEL;
+					if (facelink.size()>1 && 
+							(hlink=facelink.getHalfLink(pdcel))!=null) {
 						Integer []codes=new Integer[3];
 						codes[0]=Integer.valueOf(1);
 						codes[1]=null;
 						codes[2]=null;
 						DispFlags dflags=new DispFlags(null);
-						packData.layout_facelist(null,facelink,dflags,null,true,false,firstface,-1.0);
+						pdcel.layoutFactory(null,hlink,dflags,null,true,false,-1.0);
 						count++;
 					}
 					imprintFace(lastface);

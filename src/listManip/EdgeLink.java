@@ -140,7 +140,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			return false;
 		if (packData==null)
 			return super.add(edge);
-		if ((edge.v>0 && edge.w>0) && edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) 
+		if ((edge.v>0 && edge.w>0) && edge.v<=packData.nodeCount && 
+				edge.w<=packData.nodeCount) 
 			return super.add(edge);
 		else return false;
 	}
@@ -165,7 +166,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	 */
 	public boolean add(int v, int w) {
 		if ((packData==null || (v>0 && w>0 
-				&& v<=packData.nodeCount && w<=packData.nodeCount)) || packData==null)
+				&& v<=packData.nodeCount && w<=packData.nodeCount)) || 
+				packData==null)
 			return super.add(new EdgeSimple(v,w));
 		else return false;
 	}
@@ -335,14 +337,16 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 						if (brst.startsWith("r") 
 								|| brst.startsWith("n")) { // use up first
 							edge=(EdgeSimple)elink.remove(0);
-							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+							if (edge.v<=packData.nodeCount && 
+									edge.w<=packData.nodeCount) {
 									add(edge);
 									count++;
 							}
 						}
 						else if (brst.startsWith("l")) { // last
 							edge=(EdgeSimple)elink.getLast();
-							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+							if (edge.v<=packData.nodeCount && 
+									edge.w<=packData.nodeCount) {
 								add(edge);
 								count++;
 							}
@@ -352,7 +356,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 								int n=MathUtil.MyInteger(brst);
 								if (n>=0 && n<elink.size()) {
 									edge=(EdgeSimple)elink.get(n);
-									if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+									if (edge.v<=packData.nodeCount && 
+											edge.w<=packData.nodeCount) {
 										add(edge);
 										count++;
 									}
@@ -367,7 +372,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 						Iterator<EdgeSimple> elst=elink.iterator();
 						while (elst.hasNext()) {
 							edge=(EdgeSimple)elst.next();
-							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+							if (edge.v<=packData.nodeCount && 
+									edge.w<=packData.nodeCount) {
 								add(edge);
 								count++;
 							}
@@ -391,14 +397,16 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 						if (brst.startsWith("r") 
 								|| brst.startsWith("n")) { // use up first
 							edge=(EdgeSimple)glink.remove(0);
-							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+							if (edge.v<=packData.nodeCount && 
+									edge.w<=packData.nodeCount) {
 									add(edge);
 									count++;
 							}
 						}
 						if (brst.startsWith("l")) { // last
 							edge=(EdgeSimple)glink.getLast();
-							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+							if (edge.v<=packData.nodeCount && 
+									edge.w<=packData.nodeCount) {
 								add(edge);
 								count++;
 							}
@@ -408,7 +416,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 								int n=MathUtil.MyInteger(brst);
 								if (n>=0 && n<glink.size()) {
 									edge=(EdgeSimple)glink.get(n);
-									if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+									if (edge.v<=packData.nodeCount && 
+											edge.w<=packData.nodeCount) {
 										add(edge);
 										count++;
 									}
@@ -421,7 +430,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 						Iterator<EdgeSimple> glst=glink.iterator();
 						while (glst.hasNext()) {
 							edge=(EdgeSimple)glst.next();
-							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+							if (edge.v<=packData.nodeCount && 
+									edge.w<=packData.nodeCount) {
 								add(edge);
 								count++;
 							}
@@ -529,10 +539,10 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				int v=vertlist.get(0);
 				int w=vertlist.get(1);
 				if (v==w) break;
-				EdgeLink newelist=EdgeLink.getCombGeo(packData,
+				HalfLink newelist=HalfLink.getCombGeo(packData.packDCEL,
 						new NodeLink(packData,v),new NodeLink(packData,w),null);
 				if (newelist!=null && newelist.size()>0) {
-					abutMore(newelist);
+					abutHalfLink(newelist);
 					count +=newelist.size();
 				}
 				return count;
@@ -542,7 +552,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			{
 			  int numSides=-1;
 			  String itstr=null;
-			  if (packData.getSidePairs()==null || (numSides=packData.getSidePairs().size())==0) {
+			  if (packData.getSidePairs()==null || 
+					  (numSides=packData.getSidePairs().size())==0) {
 				  while (its.hasNext()) itstr=(String)its.next(); // use up
 				  break;
 			  }
@@ -604,16 +615,19 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				}
 				break;
 			}
-			case 'o': // edges having non-trivial overlaps
+			case 'o': // edges having non-trivial inv dist
 			{
-				if (!packData.overlapStatus) break; 
-				int w;
+				if (!packData.haveInvDistances()) 
+					break; 
 				for (int v=1;v<=packData.nodeCount;v++) {
-					int[] petals=packData.getPetals(v);
-					for (int j=0;j<petals.length;j++) {
-						w=petals[j];
-						// add only if w>v
-						if (w>v && Math.abs(packData.getInvDist(v,petals[j])-1.0)>PackData.TOLER) {
+					HalfLink spokes=packData.packDCEL.vertices[v].getSpokes(null);
+					Iterator<HalfEdge> sis=spokes.iterator();
+					while (sis.hasNext()) {
+						HalfEdge he=sis.next();
+						v=he.origin.vertIndx;
+						int w=he.twin.origin.vertIndx;
+						double ivd=he.getInvDist();
+						if (ivd!=1.0 && v<w) {
 							add(new EdgeSimple(v,w));
 							count++;
 						}
@@ -664,7 +678,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 							strr=strr.substring(1);
 							deg[i]=MathUtil.MyInteger(strr);
 							if (i==0) {
-								vlist=new NodeLink(packData,new String("{c:d.gt."+deg[i]+"}"));
+								vlist=new NodeLink(packData,
+										new String("{c:d.gt."+deg[i]+"}"));
 							}
 						}
 						else if (c=='l' || c=='L') { // less than
@@ -672,7 +687,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 							strr=strr.substring(1);
 							deg[i]=MathUtil.MyInteger(strr);
 							if (i==0) {
-								vlist=new NodeLink(packData,new String("{c:d.lt."+deg[i]));
+								vlist=new NodeLink(packData,
+										new String("{c:d.lt."+deg[i]));
 							}
 						}
 						else if (c=='?') { // anything
@@ -685,7 +701,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 							crit[i]=0; // equality
 							deg[i]=Integer.parseInt(strr);
 							if (i==0) {
-								vlist=new NodeLink(packData,new String("{c:d.eq."+deg[i]+"}"));
+								vlist=new NodeLink(packData,
+										new String("{c:d.eq."+deg[i]+"}"));
 							}
 						}
 					} 
@@ -716,7 +733,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 							incld=true;
 						if (incld && w>v)
 							elist.add(new EdgeSimple(v,w));
-						else if (incld && elist.isThereVW(v,w)<0) // if w < v, is edge already included?
+						// if w < v, is edge already included?
+						else if (incld && elist.isThereVW(v,w)<0) 
 							elist.add(new EdgeSimple(v,w));
 					}
 				} // end of while
@@ -756,7 +774,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 							t=wflower[(k+1)%packData.countFaces(w)];
 						}
 						if (s==-1 && t==-1) 
-							throw new CombException("no common verts to edge "+v+" "+w);
+							throw new CombException(
+									"no common verts to edge "+v+" "+w);
 						int sdeg,tdeg;
 						if (s==-1) {
 							s=t;
@@ -831,7 +850,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				while (its.hasNext()) its.next(); // eating rest of 'items'
 				break;
 			}
-			case 'I': // incident to vertices/edges/faces; redundancies not checked
+			case 'I': // incident to verts/edges/faces; redundancies not checked
 			{
 				if (str.length()<=1) break;
 				switch(str.charAt(1)) {
@@ -915,13 +934,6 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				} // end of switch
 				break;
 			}
-			case 't': // associated with dual 'PlotTree' from drawingorder
-			{
-				GraphLink dlink=DualGraph.plotTree(packData);
-				count +=dlink.size();
-				abutMore(packData.reDualEdges(dlink));
-				break;
-			}
 			case 'z': // closest edge to complex number z
 			case 'Z': // for sphere, use actual (theta,phi)	
 			{
@@ -944,7 +956,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			case 'G': // edgelist approximating the given curve (x,y),...
 			{
 				if (packData.hes!=0) {
-					throw new ParserException("'G' option only in euclidean cases");
+					throw new ParserException(
+							"'G' option only in euclidean cases");
 				}
 				int startVert=0;
 				// option 'Gv': start with given vert
@@ -962,16 +975,19 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 					PathLink pLink=new PathLink(packData.hes,items);
 					PathInterpolator pInt=new PathInterpolator(packData.hes);
 					pInt.pathInit(pLink);
-					count +=this.abutMore(path2edgepath(packData,pInt,startVert));
+					count +=this.abutMore(path2edgepath(packData,pInt,
+							startVert));
 				} catch (Exception ex) {
-					throw new ParserException("failed to get or convert path");
+					throw new ParserException(
+							"failed to get or convert path");
 				}
 				break;
 			}
 			// TODO: should we accept non-neighbors????
 			case 'P': // edges from 'poisonEdges'
 			{
-				if (packData.poisonEdges!=null && packData.poisonEdges.size()>0) {
+				if (packData.poisonEdges!=null && 
+						packData.poisonEdges.size()>0) {
 					Iterator<EdgeSimple> elist=packData.poisonEdges.iterator();
 					while (elist.hasNext()) {
 						add((EdgeSimple)elist.next());
@@ -979,7 +995,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				}
 				break;
 			}
-			case 'q': // quality: edges with visual error worse that given number
+			case 'q': // quality: edges with visual error worse 
+					  //  than given number
 			{
 				double thresh=.01; // default threshold 
 				try{
@@ -987,10 +1004,10 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				} catch(Exception ex) {
 					thresh=.01;
 				}
-				EdgeLink elist=new EdgeLink(packData,items);
-				Iterator<EdgeSimple> eit=elist.iterator();
+				HalfLink elist=new HalfLink(packData,items);
+				Iterator<HalfEdge> eit=elist.iterator();
 				while (eit.hasNext()) {
-					EdgeSimple edge=eit.next();
+					HalfEdge edge=eit.next();
 					double verr=QualMeasures.edge_vis_error(packData, edge);
 					if (verr>thresh) {
 						add(edge);
@@ -1305,126 +1322,6 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	}
 
 	/**
-	 * Return a combinatorial geodesic between two sets of
-	 * vertices. This can fail in various ways, so exceptions
-	 * must be caught. There may be multiple shortest paths,
-	 * even with same endpoints; this returns the first encountered.
-	 * 
-	 * TODO: might look for the shortest with certain preference,
-	 * for example, with most symmetry, closest to hex, etc.
-	 * 
-	 * @param p
-	 * @param seeds NodeLink, starting point(s)
-	 * @param targets NodeLink, target(s)
-	 * @param nonos NodeLink, verts to avoid (except seeds or targets)
-	 *    in this list
-	 * @return EdgeLink, null when empty.
-	 */
-	public static EdgeLink getCombGeo(PackData p,
-			NodeLink seeds,NodeLink targets,NodeLink nonos) 
-					throws CombException {
-		int []book=new int[p.nodeCount+1];
-		if (seeds==null || seeds.size()==0 
-				|| targets==null || targets.size()==0) 
-			throw new CombException("no 'seeds' and/or no 'targets'");
-		int maxdist=p.nodeCount;
-		
-		// mark the 'nonos' as -1, targets as -2
-		if (nonos!=null && nonos.size()>0) { 
-			Iterator<Integer> nlst=nonos.iterator();
-			while(nlst.hasNext()) {
-				book[nlst.next()]=-1;
-			}
-		}
-		
-		// mark targets as -2
-		Iterator<Integer> tlst=targets.iterator();
-		while(tlst.hasNext()) {
-			int k=tlst.next();
-			if (book[k]!=-1)
-			book[k]=-2;
-		}
-		
-		// label seeds as first generation
-		int currgen=1;
-		Iterator<Integer> slst=seeds.iterator();
-		while (slst.hasNext()) {
-			int v=slst.next();
-			if (book[v]==-2)
-				throw new CombException("'seed' and 'target' sets intersect");
-			book[v]=currgen;
-		}
-		
-		NodeLink prevGen=seeds.makeCopy();
-		NodeLink nextGen=null;
-		int safty=p.nodeCount*10;
-		boolean hit=true;
-		int theOne=0;
-		while (hit && (safty--)>0 && currgen<maxdist) {
-			hit=false;
-			currgen++; 
-			nextGen=new NodeLink(p);
-			Iterator<Integer> prevG=prevGen.iterator();
-			while (prevG.hasNext() && safty>0) {
-				int v=prevG.next();
-				int[] petals=p.getPetals(v);
-				for (int j=0;j<petals.length;j++) {
-					int k=petals[j];
-					
-					// new vertex
-					if (book[k]==0) {
-						hit=true;
-						book[k]=currgen;
-						nextGen.add(k);
-					}
-					
-					// hit a target?
-					if (book[k]==-2) {
-						hit=true;
-						book[k]=currgen;
-						maxdist=currgen;  // won't need to search further, but continue to find competitors
-						if (theOne==0)
-							theOne=k;
-					}
-				}
-			} // inner while
-			safty--;
-			prevGen=nextGen;
-		} // outer while
-		if (safty<=0) {
-			throw new CombException("problem creating combinatorial geodesic");
-		}
-		if (currgen<maxdist) {
-			throw new CombException("'seed' and 'target' separated, no geodesic");
-		}
-	
-		// create the edge path from 'theOne' to some seed
-		EdgeLink elink=new EdgeLink(p);
-		int start=theOne;
-		int gen=book[theOne]-1;
-		while (gen>0) {
-			int ed=-1;
-			int[] petals=p.getPetals(start);
-			for (int j=0;j<petals.length;j++) {
-				int k=petals[j];
-				if (book[k]==gen) {
-					ed=k;
-					j=p.nodeCount+1; // kick out
-				}
-			}
-			if (ed==-1)
-				throw new CombException("error in generation "+gen);
-			elink.add(start,ed);
-			start=ed;
-			gen--;
-		}
-		
-		if (elink.size()==0) 
-			throw new CombException("Failed to get comb geodesic");
-		return elink.reverseMe();
-	}
-
-	/**
 	 * Pick first edge off a string. Return null on failure.
 	 * @param p PackData
 	 * @param str String
@@ -1449,7 +1346,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	 * @param flagsegs Vector<Vector<String>>
 	 * @return EdgeSimple, null if none found
 	 */
-	public static EdgeSimple grab_one_edge(PackData p,Vector<Vector<String>> flagsegs) {
+	public static EdgeSimple grab_one_edge(PackData p,
+			Vector<Vector<String>> flagsegs) {
 		String str=StringUtil.reconstitute(flagsegs);
 		return grab_one_edge(p,str);
 	}
@@ -1462,14 +1360,14 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	 * Else, convert to edge geodesic.
 	 * TODO: do I really mean "hex" extend, or more general axis
 	 *       extend?
-	 * @param p PackData
+	 * @param pdcel PackDCEL
 	 * @param vlist NodeLink
 	 * @param hexflag boolean, true, hex extend
 	 * @return EdgeLink, possibly empty or null
 	 */
-	public static EdgeLink verts2edges(PackData p,
+	public static EdgeLink verts2edges(PackDCEL pdcel,
 			NodeLink vertlist,boolean hexflag) {
-		EdgeLink ans=new EdgeLink(p);
+		EdgeLink ans=new EdgeLink();
 		if (vertlist==null || vertlist.size()==0) 
 			return ans;
 		Iterator<Integer> vlist=vertlist.iterator();
@@ -1481,25 +1379,21 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				nextv=(Integer)vlist.next();
 			}
 			if (nextv!=endv) {
+				HalfEdge ee;
 				if (hexflag) { // look for/use axis-extended edges
-					HalfEdge petal=p.packDCEL.findHalfEdge(endv,nextv);
-					if (petal!=null)
-						ans.add(HalfEdge.getEdgeSimple(petal));
+					ee=pdcel.findHalfEdge(endv,nextv);
+					if (ee!=null)
+						ans.add(HalfEdge.getEdgeSimple(ee));
 					else {
-						Vertex basevert=p.packDCEL.vertices[endv];
+						Vertex basevert=pdcel.vertices[endv];
 						HalfLink hlink=
 							CombDCEL.shootExtended(basevert,nextv,16,hexflag);
 						if (hlink!=null && hlink.size()>0) 
 							ans.abutHalfLink(hlink);
 					}
 				}
-				else if (p.nghb(endv,nextv)>=0) {
-					ans.add(new EdgeSimple(endv,nextv));
-				}
-				
-				// TODO: do I want to default to this? have to do DCEL version
-				else { 
-					ans.abutMore(EdgeLink.getCombGeo(p, new NodeLink(p,endv),new NodeLink(p,nextv),null));
+				else if ((ee=pdcel.findHalfEdge(endv,nextv))!=null) {
+					ans.add(HalfEdge.getEdgeSimple(ee));
 				}
 				endv=nextv;
 			}
@@ -1567,7 +1461,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
      * @param startVert (or 0 if non specified)
      * @return
      */
-	public static EdgeLink path2edgepath(PackData p,PathInterpolator pInt,int startVert) {
+	public static EdgeLink path2edgepath(PackData p,
+			PathInterpolator pInt,int startVert) {
 		FaceParam startFP=FaceLink.pathProject(p,pInt,startVert);
 		if (startFP==null || startFP.next==null) return null;
 		int startFace=startFP.face;
@@ -1611,7 +1506,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 		
 		// Remove any unneeded faces at end (i.e., previous face has endV)
 		ftrace=startFP; 
-		while (ftrace!=null && p.face_index(ftrace.face,endV)<0) // find first face containing endV
+		// find first face containing endV
+		while (ftrace!=null && p.face_index(ftrace.face,endV)<0)
 			ftrace=ftrace.next;
 		if (ftrace==null) return null; // should not happen
 		// ftrace is first 'FaceParam' whose face contains endV; do the rest?
@@ -1622,7 +1518,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				ntrace=ntrace.next;
 			if (ntrace.next==null) done=true; 
 			else ftrace=ntrace.next; // a face that doesn't have endV
-			while (ftrace!=null && p.face_index(ftrace.face,endV)<0) // find next face with endV
+			// find next face with endV
+			while (ftrace!=null && p.face_index(ftrace.face,endV)<0) 
 				ftrace=ftrace.next; 
 			if (ftrace==null) return null; // should not happen
 		}				
@@ -1641,11 +1538,13 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			// continue until the putative 'nextedge' is satifactory:
 			//  non-trivial, connected to previous, not reverse of previous
 			while( (v==nextv || nextedge.v==nextedge.w ||
-					nextedge.v!=edge.w || nextedge.w==edge.v) && ftrace.next!=null) {
+					nextedge.v!=edge.w || nextedge.w==edge.v) && 
+					ftrace.next!=null) {
 
 				// create putative next edge
 				int nt=p.face_nghb(ftrace.face,ftrace.next.face);
-				if (nt<0) throw new CombException("broken chain in 'FaceParam' list");
+				if (nt<0) throw new CombException(
+						"broken chain in 'FaceParam' list");
 				nextv=p.faces[ftrace.next.face].vert[nt];
 				nextedge=new EdgeSimple(v,nextv);
 				ftrace=ftrace.next;
@@ -1657,14 +1556,17 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				v=nextv;
 				edge=nextedge;
 			}
-			// no success, but check last face: if v,endV are in it, add last edge 
+			// no success, but check last face: 
+			//     if v,endV are in it, add last edge 
 			else if (ftrace!=null && ftrace.next==null && v!=endV
-					&& p.face_index(ftrace.face,endV)>=0 && p.face_index(ftrace.face,v)>=0) {
+					&& p.face_index(ftrace.face,endV)>=0 && 
+					p.face_index(ftrace.face,v)>=0) {
 				elink.add(new EdgeSimple(v,endV));
 				v=endV;
 			}
 			else if (v!=endV)
-				throw new CombException("seem to have error in finding next edge");
+				throw new CombException(
+						"seem to have error in finding next edge");
 		} // end of while
 
 		// there may be a last edge
@@ -1855,8 +1757,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				throw new ParserException();
 			}
 			
-			// if specs has 2 or more additional specifications, the next must
-			//    be a connective. Else, finish loop.
+			// if specs has 2 or more additional specifications, 
+			//    the next must be a connective. Else, finish loop.
 			if ((j+2)<specs.size()) {
 				sp=(SelectSpec)specs.get(j+1);
 				if (!sp.isConnective) 

@@ -793,7 +793,8 @@ public class DisplayParser {
 					vertlist.add(vertlist.getFirst());
 				
 				// now find comb geodesic, create corner list
-				EdgeLink elist=EdgeLink.verts2edges(p,vertlist,false);
+				EdgeLink elist=
+					EdgeLink.verts2edges(p.packDCEL,vertlist,false);
 				int lnum=elist.size();
 				double[] corners = new double[2 * (lnum+1)];
 				int tick=0;
@@ -896,7 +897,8 @@ public class DisplayParser {
 							
 							// get list of tile border and make axis-extended edgelist
 							NodeLink cornlist=tile.tileBorderLink();
-							EdgeLink tedgelist=EdgeLink.verts2edges(p,cornlist,true);
+							EdgeLink tedgelist=
+								EdgeLink.verts2edges(p.packDCEL,cornlist,true);
 							Iterator<EdgeSimple> tel=tedgelist.iterator();
 							EdgeSimple edge=null;
 							int lnum=tedgelist.size();

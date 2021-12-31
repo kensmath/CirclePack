@@ -3,17 +3,17 @@ package ftnTheory;
 import java.util.Iterator;
 import java.util.Vector;
 
-import complex.Complex;
-
 import allMains.CirclePack;
-import exceptions.CombException;
+import complex.Complex;
+import dcel.HalfEdge;
+import dcel.PackDCEL;
+import dcel.RawDCEL;
 import komplex.EdgeSimple;
-import komplex.KData;
 import listManip.EdgeLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.StringUtil;
 
@@ -77,7 +77,8 @@ public class JammedPack extends PackExtender {
 		
 		// small checks on data
 		if (markCount==0 || markCount==packData.nodeCount) {
-			errorMsg("'JammedPack' extender failed: packing no or all vertices marked");
+			errorMsg("'JammedPack' extender failed: packing no "+
+					"or all vertices marked");
 			running=false;
 		}
 		
@@ -261,7 +262,7 @@ public class JammedPack extends PackExtender {
 				return 0;
 			}
 			
-			if (packData.nghb(v,w)>=0) {
+			if (packData.packDCEL.findHalfEdge(new EdgeSimple(v,w))!=null) {
 				errorMsg("vertices "+v+" and "+w+" already share an edge");
 				return 0;
 			}
@@ -272,7 +273,7 @@ public class JammedPack extends PackExtender {
 			for (int j=0;j<vflower.length;j++) {
 				if (homePack.getVertMark(vflower[j])>=0) { //
 					int b=vflower[j];
-					if (homePack.nghb(w,b)>=0) {
+					if (homePack.packDCEL.findHalfEdge(new EdgeSimple(w,b))!=null) {
 						if (bary!=0 && bary!=b) {
 							errorMsg("ambiguous: tile bary "+bary+" and "+b);
 							return 0;
@@ -290,14 +291,14 @@ public class JammedPack extends PackExtender {
 			PackData holdpack=packData.copyPackTo();
 
 			// add an edge from v to w;
-			packData.tileData=null;
-			if (addEdge(v,w,bary)==0) {
+			packData.tileData=null; // toss the old
+			if (addEdge(v,w,bary)==null) {
 				packData=holdpack;   // restore
 				return 0;
 			}
 			
 			// fix the packing
-			packData.setCombinatorics();
+			packData.packDCEL.fixDCEL_raw(packData);
 			cpCommand("pave "+bary); // repave
 				
 			// prepare in case of 'undo'
@@ -314,30 +315,25 @@ public class JammedPack extends PackExtender {
 			
 
 			// read and process listed edges
-			EdgeLink elink=new EdgeLink(packData,items);
-			if (elink==null || elink.size()==0) {
+			HalfLink hlink=new HalfLink(packData,items);
+			if (hlink==null || hlink.size()==0) {
 				errorMsg("no edge specified in "+StringUtil.reconItem(items));
 				return 0;
 			}
 			PackData holdpack=null; 
-			Iterator<EdgeSimple> elst=elink.iterator();
-			while (elst.hasNext()) {
-				EdgeSimple edge=elst.next();
+			Iterator<HalfEdge> his=hlink.iterator();
+			while (his.hasNext()) {
+				HalfEdge edge=his.next();
 
-				int v=edge.v;
-				int w=edge.w;
+				int v=edge.origin.vertIndx;
+				int w=edge.twin.origin.vertIndx;
 				// are both ends original vertices? neighbors?
 				if (homePack.getVertMark(v)>=0 || homePack.getVertMark(w)>=0) {
 					errorMsg("vertices "+v+" and "+w+" are not original vertices");
 					return 0;
 				}
-				int vw_indx=packData.nghb(v,w);
-				if (vw_indx<0 || (vw_indx==0 && packData.isBdry(v))) {
-					errorMsg("vertices "+v+", "+w+" not neighbors or this is bdry edge");
-					break;
-				}
 			
-				// we want every network node to have at least three network edges
+				// want every network node to have at least three network edges
 				int vmark=0;
 				int[] flower=packData.getFlower(v);
 				int num=packData.countFaces(v);
@@ -362,9 +358,9 @@ public class JammedPack extends PackExtender {
 				
 				// try to remove the edge
 				packData.tileData=null;
-				int bary=removeEdge(v,w);
+				int bary=RawDCEL.rmEdge_raw(packData.packDCEL,edge);
 				if (bary>0) {
-					packData.setCombinatorics(); // fix packing
+					packData.packDCEL.fixDCEL_raw(packData);
 					cpCommand("pave "+bary); // repave
 					addrmPack=packData.copyPackTo();
 					count += 1;
@@ -424,203 +420,39 @@ public class JammedPack extends PackExtender {
 	} // end of 'cmdParser'
 	
 	/**
-	 * Remove an edge between original vertices; legality has been checked.
-	 * Calling routine must update the packing.
-	 * @param v int
-	 * @param w int
-	 * @return 0 on error, bary center 'bary' on success
-	 */
-	public int removeEdge(int v,int w) {
-
-		int vw_indx=packData.nghb(v,w);
-		int wv_indx=packData.nghb(w,v);
-		int vtogo=packData.kData[w].flower[wv_indx+1]; // common nghb to remove, right of <v,w>
-		int bary=packData.kData[v].flower[vw_indx+1]; // common nghb to keep, left of <v,w>
-		
-		// we will remove 'vtogo', so swap it for max 'M' 
-		int M=packData.nodeCount;
-		if (cpCommand("swap "+vtogo+" "+M)<=0) {
-			errorMsg("error in swappng vertices");
-			return 0;
-		}
-
-		// proceed to fix things up: 'bary' first
-//		KData []kData=packData.kData; // update
-		PackData p=packData; // to save typing
-
-		// some petals for 'bary' will come from those of 'M'
-		int numM=p.countFaces(M);
-		int M2v=packData.nghb(M,v);
-		int M2w=packData.nghb(M,w);
-		int Mcount=(M2w-M2v+numM)%numM;
-		int []Mhalf=new int[Mcount];
-		
-		// list cclw portion of 'M's flower, [v,w)
-		for (int j=0;j<Mcount;j++)
-			Mhalf[j]=p.kData[M].flower[(M2v+j)%numM];
-
-		// rest from flower of 'bary', cclw [w, v) 
-		int numbary=p.countFaces(bary);
-		int b2v=packData.nghb(bary,v);
-		int b2w=packData.nghb(bary,w);
-		int bcount=(b2v-b2w+numbary)%numbary;
-		int petalcount=bcount+Mcount;
-		int []newbflower=new int[petalcount+1];
-		for (int j=0;j<Mcount;j++)
-			newbflower[j]=Mhalf[j];
-		for (int j=0;j<bcount;j++)
-			newbflower[j+Mcount]=p.kData[bary].flower[(b2w+j+numbary)%numbary];
-		newbflower[petalcount]=newbflower[0]; // close up
-		p.kData[bary].flower=newbflower;
-		p.kData[bary].num=petalcount;
-
-		// replace 'M' by 'bary' in petal flowers of petals (v,w)
-		for (int j=1;j<Mcount;j++) {
-			int ptl=Mhalf[j];
-			int ptlnum=p.countFaces(ptl);
-			for (int pj=0;pj<=ptlnum;pj++) 
-				if (p.kData[ptl].flower[pj]==M)
-					p.kData[ptl].flower[pj]=bary;
-		}
-		
-		// fix v flower; remove 'M' and 'w'
-		int numv=p.countFaces(v);
-		int []vflower=p.kData[v].flower;
-		NodeLink newflower=new NodeLink(packData);
-		for (int j=0;j<numv;j++) {
-			int u=vflower[j];
-			if (u!=M && u!=w) 
-				newflower.add(u);
-		}
-		vflower=new int[numv-1];
-		Iterator<Integer> nit=newflower.iterator();
-		int tick=0;
-		while(nit.hasNext())
-			vflower[tick++]=(int)nit.next();
-		vflower[tick]=vflower[0]; // close up
-		packData.kData[v].flower=vflower;
-		packData.kData[v].num=tick;
-		
-		// fix w flower; remove 'M' and 'v'
-		int numw=p.countFaces(w);
-		int []wflower=p.kData[w].flower;
-		newflower=new NodeLink(packData);
-		for (int j=0;j<numw;j++) {
-			int u=wflower[j];
-			if (u!=M && u!=v) 
-				newflower.add(u);
-		}
-		wflower=new int[numw-1];
-		nit=newflower.iterator();
-		tick=0;
-		while(nit.hasNext())
-			wflower[tick++]=(int)nit.next();
-		wflower[tick]=wflower[0]; // close up
-		p.kData[w].flower=wflower;
-		p.kData[w].num=tick;			
-
-		// remove 'M'
-		packData.nodeCount--;
-		
-		return bary;
-	}
-	
-	/**
 	 * Add a new edge between original vertices. The edge is from v to w
 	 * within the paver with barycenter b. Note that we increase the number
-	 * of vertices by 1. Calling routine updates the packing
+	 * of vertices by 1. Calling routine updates the packing.
 	 * @param v int
 	 * @param w int
 	 * @param b int
 	 * @return M on success, 0 on error
 	 */
-	public int addEdge(int v,int w,int b) {
+	public HalfEdge addEdge(int v,int w,int b) {
 		if (v==w || homePack.getVertMark(v)>=0 || homePack.getVertMark(w)>=0 || 
 				homePack.getVertMark(b)<0 || packData.isBdry(b))
-			return 0;
-		int b2v=-1;
-		int b2w=-1;
-		if ((b2v=packData.nghb(b, v))<0 || (b2w=packData.nghb(b, w))<0)
-			return 0;
-		int num=packData.countFaces(b);
-		int []bflower=packData.kData[b].flower;
+			return null;
 		
-		// make sure there is space for new vertex
-		int M=packData.nodeCount+1;
-		if (M > (packData.sizeLimit)
-				&& packData.alloc_pack_space(M, true) == 0) {
-			throw new CombException("Pack space allocation failure");
-		}
+		PackDCEL pdcel=packData.packDCEL;
+		// if red chain runs through 'b', then toss it
+		if (pdcel.vertices[b].redFlag)
+			pdcel.redChain=null;
 		
-		// create the new vertex 'M'
-		int numM=(b2w-b2v+num)%num+1;
-		KData new_kData=new KData();
-		new_kData.num=numM;
-		new_kData.bdryFlag=0;
-		new_kData.flower=new int[numM+1];
-		for (int j=0;j<numM;j++)
-			new_kData.flower[j]=bflower[(b2v+j)%numM];
-		new_kData.flower[numM]=new_kData.flower[0]; // close up
-		packData.nodeCount=M;
-		packData.kData[M]=new_kData;
-		packData.rData[M]=packData.rData[b].clone();
-		
-		// fix petals now next to 'M'
-		int vwdiff=(b2w-b2v-1+num)%num;
-		for (int j=0;j<vwdiff;j++) {
-			int u=bflower[(b2v+j+1)%num];
-			int numu=packData.countFaces(u);
-			for (int jj=0;jj<=numu;jj++)
-				if (packData.kData[u].flower[jj]==b)
-					packData.kData[u].flower[jj]=M;
-		}
-		
-		// fix 'v'; add 'M' and 'w'
-		int numv=packData.countFaces(v);
-		int v2b=packData.nghb(v,b);
-		int []vflower=new int[numv+2+1];
-		if (v2b==0) { // insert at end; 'v' must be interior
-			for (int jj=0;jj<numv;jj++)
-				vflower[jj]=packData.kData[v].flower[jj];
-			vflower[numv]=M;
-			vflower[numv+1]=w;
-			vflower[numv+2]=b; // close up again
-		}
-		else {
-			for (int jj=0;jj<v2b;jj++) 
-				vflower[jj]=packData.kData[v].flower[jj];
-			vflower[v2b]=M;
-			vflower[v2b+1]=b;
-			for (int jj=v2b;jj<=numv;jj++)
-				vflower[jj+2]=packData.kData[v].flower[jj];
-		}
-		packData.kData[v].flower=vflower;
-		packData.kData[v].num=numv+2;
+		// first split the flower at b, giving new vertex
+		//   and edge connecting it to b
+		HalfEdge vedge=pdcel.findHalfEdge(new EdgeSimple(b,v));
+		HalfEdge wedge=pdcel.findHalfEdge(new EdgeSimple(b,w));
+		if (vedge==null || wedge==null)
+			return null;
+		HalfEdge tmpEdge=RawDCEL.splitFlower_raw(pdcel,vedge,wedge);
+		if (tmpEdge==null)
+			return null;
 
-		// fix 'w'; add 'M' and 'v'
-		int numw=packData.countFaces(w);
-		int w2b=packData.nghb(w,b);
-		int []wflower=new int[numw+2+1];
-		for (int jj=0;jj<=w2b;jj++)
-			wflower[jj]=packData.kData[w].flower[jj];
-		wflower[w2b+1]=v;
-		wflower[w2b+2]=M;
-		for (int jj=w2b+1;jj<=numw;jj++)
-			wflower[jj+2]=packData.kData[w].flower[jj];
-		packData.kData[w].flower=wflower;
-		packData.kData[w].num=numw+2;
-	
-		// fix data for 'b'
-		int numb=(b2v-b2w+num)%num+1;
-		packData.kData[b].num=numb;
-		packData.kData[b].flower=new int[numb+1];
-		for (int j=0;j<numb;j++)
-			packData.kData[b].flower[j]=bflower[(b2w+j)%num];
-		packData.kData[b].flower[numb]=packData.kData[b].flower[0]; // close up
-		
-		return M;
+		// now flip that new edge
+		HalfEdge newEdge=RawDCEL.flipEdge_raw(pdcel,tmpEdge);
+		return newEdge;
 	}
-	
+
 	public void initCmdStruct() {
 		super.initCmdStruct();
 		cmdStruct.add(new CmdStruct("add_edge","{v w}",null,"Add an edge between original vertices across a face."));

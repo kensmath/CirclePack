@@ -8,7 +8,6 @@ import complex.Complex;
 import geometry.EuclMath;
 import input.CommandStrParser;
 import packing.PackData;
-import packing.RData;
 import util.PathUtil;
 import util.StringUtil;
 
@@ -20,7 +19,7 @@ import util.StringUtil;
  * of an ambient field, such as a stress field. 
  * 
  * This normally is created in concert with a 'MicroGrid' PackExtender,
- * 'parentMG' because of the access the ambient field and the path.
+ * 'parentMG' because of the access to the ambient field and the path.
  * Commands may then be sent via the 'MicrGrid' parent. 
  * However, even then, it is associated with a separate packing
  * obtained in MicroGrid's "tailored sectioning" step.
@@ -41,7 +40,9 @@ public class Smoother {
 	
 	MicroGrid parentMG;     // parent MicroGrid, null for standalone
 	PackData myPackData;    // access to parent packing
-	RData[] newRData;       // adjusted data; can swap out to visualize changes
+//	RData[] newRData;       // adjusted data; can swap out to visualize changes
+	Complex[] origCenters;
+	double[] origRadii;
 	Vector<Complex> myPolygon;   // polygonal
 
 	double minRadius;       // slightly smaller than smallest radius (of parentMG)
@@ -108,16 +109,19 @@ public class Smoother {
 		}
 		
 		// copy rData
-		newRData=new RData[myPackData.rData.length+1];
-		for (int v=1;v<=myPackData.nodeCount;v++) 
-			newRData[v]=myPackData.rData[v].clone();
-
-		// allocate space, insert data
+		origRadii=new double[myPackData.nodeCount+1];
+		origCenters=new Complex[myPackData.nodeCount+1];
+		for (int v=1;v<=myPackData.nodeCount;v++) { 
+			origRadii[v]=myPackData.getRadius(v);
+			origCenters[v]=new Complex(myPackData.getCenter(v));
+		}
+		
+		// allocate space, insert original data
 		newRadii=new double[myPackData.nodeCount+1];
 		newCenters=new Complex[myPackData.nodeCount+1];
 		for (int v=1;v<=myPackData.nodeCount;v++) {
-			newRadii[v]=myPackData.getRadius(v);
-			newCenters[v]=myPackData.getCenter(v);
+			newRadii[v]=origRadii[v];
+			newCenters[v]=new Complex(origCenters[v]);
 		}
 	}
 	
@@ -151,13 +155,6 @@ public class Smoother {
 			}
 			count++;
 		} // end of loop
-		
-		// put the info into the alternate RData
-		for (int v=1;v<=myPackData.nodeCount;v++) {
-			newRData[v].rad=newRadii[v];
-			newRData[v].center=new Complex(newCenters[v]);
-		}
-		
 		return count;
 	}
 
@@ -176,14 +173,19 @@ public class Smoother {
 	 * @return int result for execution call
 	 */
 	public int dispNewData(Vector<Vector<String>> flagSegs) {
-		RData[] holdRData=myPackData.rData;
-		myPackData.rData=newRData;
+		for (int v=0;v<=myPackData.nodeCount;v++) {
+			myPackData.setRadius(v,newRadii[v]);
+			myPackData.setCenter(v, newCenters[v]);
+		}
 		StringBuilder strbld=new StringBuilder("disp ");
 		strbld.append(StringUtil.reconstitute(flagSegs));
 		int ans=CommandStrParser.jexecute(myPackData,strbld.toString());
 		
 		// restore original data
-		myPackData.rData=holdRData;
+		for (int v=0;v<=myPackData.nodeCount;v++) {
+			myPackData.setRadius(v,origRadii[v]);
+			myPackData.setCenter(v,new Complex(origCenters[v]));
+		}
 		return ans;
 	}
 	
@@ -193,7 +195,12 @@ public class Smoother {
 	 * @return 1
 	 */
 	public int acceptNewData() {
-		myPackData.rData=newRData;
+		for (int v=1;v<=myPackData.nodeCount;v++) {
+			myPackData.setRadius(v,newRadii[v]);
+			origRadii[v]=newRadii[v];
+			myPackData.setCenter(v, new Complex(newCenters[v]));
+			origCenters[v]=newCenters[v];
+		}
 		return 1;
 	}
 	
@@ -210,7 +217,7 @@ public class Smoother {
 		double radF=0.0;
 		int N=0;
 		int num=p.countFaces(v)+p.getBdryFlag(v);
-		int[] flower=p.kData[v].flower;
+		int[] flower=p.packDCEL.vertices[v].getFlower(true);
 		for (int j=0;j<num;j++) {
 			int w=flower[j];
 			double inv_d=EuclMath.inv_dist(newCenters[v],newCenters[w],
@@ -309,13 +316,16 @@ public class Smoother {
 	}
 
 	/**
-	 * Reset new rad/centers to values in the packing
+	 * Reset 'newRadii'/'newCenters' and 'origRadii'/'origCenters'
+	 * to values in 'myPackData'
 	 * @return 1
 	 */
 	public int reset() { 
-		newRData=new RData[myPackData.rData.length+1];
-		for (int v=1;v<=myPackData.nodeCount;v++) 
-			newRData[v]=myPackData.rData[v].clone();
+		for (int v=1;v<=myPackData.nodeCount;v++) {
+			newRadii[v]=origRadii[v]=myPackData.getRadius(v);
+			newCenters[v]=new Complex(myPackData.getCenter(v));
+			origCenters[v]=new Complex(myPackData.getCenter(v));
+		}
 		return 1;
 	}
 	

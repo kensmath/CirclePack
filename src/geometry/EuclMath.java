@@ -5,11 +5,9 @@ import java.util.Vector;
 import allMains.CPBase;
 import baryStuff.BaryPoint;
 import complex.Complex;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RedHEdge;
 import exceptions.DataException;
-import komplex.EdgeSimple;
 import math.Mobius;
 import math.Point3D;
 import packing.PackData;
@@ -746,7 +744,7 @@ public class EuclMath{
 	 * radii don't form a packing. 'radii' must be created in calling
 	 * routine: if null, radii recorded directly in p.rData.
 	 * @param p PackData
-	 * @param radii double[], if null, radii recorded directly in p.rData
+	 * @param radii double[], if null, use radii from p
 	 * @return 1
 	 */
 	public static int effectiveRad(PackData p,double []radii) {
@@ -756,11 +754,15 @@ public class EuclMath{
 
 			double thsum = 0.0;
 			double asum = 0.0;
-			for (int j=0;j<p.countFaces(v);j++) {
-				Complex spoke0 = z.minus(p.getCenter(p.kData[v].flower[j]));
-				Complex spoke1 = z.minus(p.getCenter(p.kData[v].flower[j+1]));
-				Complex farside = (p.getCenter(p.kData[v].flower[j])).
-					minus(p.getCenter(p.kData[v].flower[j+1]));
+			int num=p.countFaces(v);
+			int[] flower=p.packDCEL.vertices[v].getFlower(true);
+			for (int j=0;j<num;j++) {
+				Complex spoke0 = 
+						z.minus(p.getCenter(flower[j]));
+				Complex spoke1 = 
+						z.minus(p.getCenter(flower[j+1]));
+				Complex farside = (p.getCenter(flower[j])).
+					minus(p.getCenter(flower[j+1]));
 				double a, b, c;
 				a = spoke0.abs(); b = farside.abs(); c = spoke1.abs();
 				double facerad = (a+c-b)/2.0;

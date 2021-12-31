@@ -102,7 +102,8 @@ public class D_Schwarzian {
 						// now get the schwarzian using the radii
 						try {
 							double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
-							double schn = D_Schwarzian.rad_to_schwarzian(rad,ivd,p.hes);
+							double schn=D_Schwarzian.rad_to_schwarzian(rad,
+									ivd,p.hes);
 							edge.setSchwarzian(schn);
 							count++;
 						} catch (DataException dex) {
@@ -118,7 +119,8 @@ public class D_Schwarzian {
 						
 						// now get the schwarzian using the radii
 						try {
-							double schn = D_Schwarzian.cents_to_schwarzian(cents,p.hes);
+							double schn=D_Schwarzian.cents_to_schwarzian(
+									cents,p.hes);
 							edge.setSchwarzian(schn);
 							count++;
 						} catch (DataException dex) {
@@ -164,7 +166,8 @@ public class D_Schwarzian {
 					// now get the schwarzian using the radii
 					try {
 						double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
-						double schn = D_Schwarzian.rad_to_schwarzian(rad,ivd,p.hes);
+						double schn=D_Schwarzian.rad_to_schwarzian(
+								rad,ivd,p.hes);
 						edge.setSchwarzian(schn);
 						count++;
 					} catch (DataException dex) {
@@ -180,7 +183,8 @@ public class D_Schwarzian {
 					
 					// now get the schwarzian using the radii
 					try {
-						double schn = D_Schwarzian.cents_to_schwarzian(cents,p.hes);
+						double schn=D_Schwarzian.cents_to_schwarzian(
+								cents,p.hes);
 						edge.setSchwarzian(schn);
 						count++;
 					} catch (DataException dex) {
@@ -204,7 +208,8 @@ public class D_Schwarzian {
 					// now get the schwarzian using the radii
 					try {
 						double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
-						double schn = D_Schwarzian.rad_to_schwarzian(rad,ivd,p.hes);
+						double schn=D_Schwarzian.rad_to_schwarzian(
+								rad,ivd,p.hes);
 						edge.setSchwarzian(schn);
 						count++;
 					} catch (DataException dex) {
@@ -220,7 +225,8 @@ public class D_Schwarzian {
 					
 					// now get the schwarzian using the radii
 					try {
-						double schn = D_Schwarzian.cents_to_schwarzian(cents,p.hes);
+						double schn=D_Schwarzian.cents_to_schwarzian(
+								cents,p.hes);
 						edge.setSchwarzian(schn);
 						count++;
 					} catch (DataException dex) {
@@ -307,8 +313,8 @@ public class D_Schwarzian {
 	 * @return double
 	 * @throws DataException
 	 */
-	public static double rad_to_schwarzian(double[] rad,double[] invDist,
-			int hes) {
+	public static double rad_to_schwarzian(double[] rad,
+			double[] invDist,int hes) {
 		CircleSimple[] sC=new CircleSimple[4];
 		for (int i=0;i<4;i++) {
 			sC[i]=new CircleSimple();
@@ -325,7 +331,8 @@ public class D_Schwarzian {
 		ivd[2]=invDist[2];
 		int ans=CommonMath.placeOneFace(sC[0],sC[1],sC[2],ivd,hes);
 		if (ans<0) {
-			throw new DataException("Problem in 'rad_to_schwarzian' placeOneFace");
+			throw new DataException(
+					"Problem in 'rad_to_schwarzian' placeOneFace");
 		}
 		Z[0]=new Complex(sC[0].center);
 		Z[1]=new Complex(sC[1].center);
@@ -336,8 +343,9 @@ public class D_Schwarzian {
 		ivd[0]=invDist[3];
 		ivd[1]=invDist[4];
 		ivd[2]=invDist[5];
-		sC[3]=CommonMath.comp_any_center(sC[1].center,sC[0].center,sC[1].rad,
-				sC[0].rad, rad[3],ivd[0],ivd[1],ivd[2], hes);
+		sC[3]=CommonMath.comp_any_center(sC[1].center,
+				sC[0].center,sC[1].rad,sC[0].rad,
+				rad[3],ivd[0],ivd[1],ivd[2], hes);
 		sC[3].rad=rad[3];
 		Z[3]=new Complex(sC[3].center);
 		
@@ -439,14 +447,18 @@ public class D_Schwarzian {
 	 * @param hes int, geometry
 	 * @return CircleSimple
 	 */
-	public static CircleSimple getThirdCircle(double s,int j,Mobius bm_f,int hes) {
-		Mobius dMob_inv=new Mobius(new Complex(1-s),new Complex(s),new Complex(-s),new Complex(1+s));
-		Mobius pre_f=new Mobius(CPBase.omega3[j],new Complex(0.0),new Complex(0.0),new Complex(1.0));
+	public static CircleSimple getThirdCircle(double s,
+			int j,Mobius bm_f,int hes) {
+		Mobius dMob_inv=new Mobius(new Complex(1-s),new Complex(s),
+				new Complex(-s),new Complex(1+s));
+		Mobius pre_f=new Mobius(CPBase.omega3[j],
+				new Complex(0.0),new Complex(0.0),new Complex(1.0));
 		
 		Mobius mu_g=(Mobius)bm_f.rmult(pre_f);
 		mu_g=(Mobius)mu_g.rmult(dMob_inv);
 
-		CirMatrix circle3=new CirMatrix(new Complex(4.0),CPBase.sqrt3by2*2.0);
+		CirMatrix circle3=new CirMatrix(new Complex(4.0),
+				CPBase.sqrt3by2*2.0);
 		CirMatrix outCM=CirMatrix.applyTransform(mu_g,circle3,true);
 		
 		boolean debug=false; // debug=true;
@@ -531,7 +543,8 @@ public class D_Schwarzian {
 	 * @param flagsegs Vector<Vector<String>> options
 	 * @return
 	 */
-	public static int schwarzReport(PackData p,Vector<Vector<String>> flagsegs) {
+	public static int schwarzReport(PackData p,
+			Vector<Vector<String>> flagsegs) {
 		int count=0;
 		Vector<String> items=null;
 		
@@ -555,7 +568,8 @@ public class D_Schwarzian {
 			// TODO: might add typical 'DispFlag' options to call, then
 			//    could have immediate drawing as one option with -c flag
 			switch(c) {
-			// color vertices by schwarzian sum: blue <0, red > 0; don't display
+			// color vertices by schwarzian sum: blue <0, red > 0; 
+			//   don't display
 			case 'c': {
 				
 				// set all the colors for validity of the color ramp
@@ -571,10 +585,12 @@ public class D_Schwarzian {
 					}
 					c_sch.add(accum);
 				}
-				Vector<Color> c_color=util.ColorUtil.blue_red_diff_ramp_Color(c_sch);
+				Vector<Color> c_color=
+						util.ColorUtil.blue_red_diff_ramp_Color(c_sch);
 				Iterator<Color> clst=c_color.iterator();
+				// store the color
 				for (int v=1;v<=p.nodeCount;v++) {
-					p.setCircleColor(v,ColorUtil.cloneMe(clst.next())); // store the color
+					p.setCircleColor(v,ColorUtil.cloneMe(clst.next())); 
 					count++;
 				}
 				
@@ -590,7 +606,8 @@ public class D_Schwarzian {
 							dflags.setColor(p.getCircleColor(v));
 						if (dflags.label)
 							dflags.setLabel(Integer.toString(v));
-						p.cpScreen.drawCircle(p.getCenter(v),p.getRadius(v),dflags);
+						p.cpScreen.drawCircle(p.getCenter(v),
+								p.getRadius(v),dflags);
 						count++;
 					}
 					p.cpScreen.repaint();
@@ -610,7 +627,8 @@ public class D_Schwarzian {
 							e_sch.add(he.getSchwarzian());
 					}
 				}
-				Vector<Color> e_color=ColorUtil.blue_red_diff_ramp_Color(e_sch);
+				Vector<Color> e_color=
+						ColorUtil.blue_red_diff_ramp_Color(e_sch);
 				EdgeLink elink=new EdgeLink(p,items);
 				if (elink==null || elink.size()==0)
 					elink=new EdgeLink(p,"a"); // default to all
@@ -623,7 +641,8 @@ public class D_Schwarzian {
 								dflags.setColor(e_color.remove(0));
 								if (dflags.thickness==0)
 									dflags.thickness=5;
-								p.cpScreen.drawEdge(p.getCenter(v), p.getCenter(w), dflags);
+								p.cpScreen.drawEdge(p.getCenter(v),
+										p.getCenter(w), dflags);
 								count++;
 							}
 						}
@@ -640,13 +659,15 @@ public class D_Schwarzian {
 	}
 
 	/**
-	 * For debugging: print center of circle and of image circle under a Mobius.
+	 * For debugging: print center of circle and of image 
+	 * circle under a Mobius.
 	 * @param mob Mobius
 	 * @param hes int
 	 * @param r double
 	 * @param z Complex
 	 */
-	public static void CirMobCir(Mobius mob, int hes,double r,Complex z) {
+	public static void CirMobCir(Mobius mob, int hes,
+			double r,Complex z) {
 		CircleSimple sC=new CircleSimple();
 		Mobius.mobius_of_circle(mob, hes, z, r, sC, false);
 		System.out.println("  domain z and r: "+z.toString()+" "+r+
@@ -691,6 +712,5 @@ public class D_Schwarzian {
 		}
 		return triasp;
 	}
-
 
 }

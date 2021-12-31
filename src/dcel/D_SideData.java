@@ -149,7 +149,7 @@ public class D_SideData {
      * Search 'D_PairLink' to find the 'D_SideData' for the 
      * "side" of the complex which contains 'RedHEdge' redge
      * return null on failure. 
-     * @param pairLink PairLink
+     * @param pairLink D_PairLink
      * @param redge RedHEdge
      * @return 'D_SideData' of containing side or null on failure
      */

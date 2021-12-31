@@ -602,14 +602,12 @@ public class d_HypPacker extends RePacker {
         boolean both=false;
         if (direction==2 || direction==-2 || direction==0)
         	both=true;
-    	KData []kdata=p.kData;
-    	RData []rdata=p.rData;
     	int count=0;
     	
     	// Note: for uniform neighbor computations use (s-radius)^2 
     	double []rad=new double[p.nodeCount+1];
     	for (int k=1;k<=p.nodeCount;k++) 
-    		rad[k]=(rdata[k].rad<0) ? 0.0: 1.0-rdata[k].rad;
+    		rad[k]=(p.getRadius(k)<0) ? 0.0: 1.0-p.getRadius(k);
     	
         // whom to repack?
         int aimNum = 0;
@@ -630,19 +628,22 @@ public class d_HypPacker extends RePacker {
         double fbest=0.0;
         for (int j=0;j<aimNum;j++) {
         	int v=inDex[j];
+        	double vaim=p.getAim(v);
         	double r=rad[v];
 
         	fbest=0.0;
-        	double r2 = rad[kdata[v].flower[0]];
+        	int[] flower=p.packDCEL.vertices[v].getFlower(true);
+        	int num=flower.length-1;
+        	double r2 = rad[flower[0]];
         	double m2 = (r2 > 0) ? (1 - r2) / (1 - r * r2) : (double) 1;
-        	for (int k = 1; k <= kdata[v].num; k++) { // loop through petals
-				double r3 = rad[kdata[v].flower[k]];
+        	for (int k = 1; k <= num; k++) { // loop through petals
+				double r3 = rad[flower[k]];
 				double m3 = (r3 > 0) ? (1 - r3) / (1 - r * r3) : (double) 1;
 				fbest += Math.acos(1 - 2.0*r * m2 * m3); // angle calc
 				m2 = m3;
 			}
-			rdata[v].curv=fbest;
-			double diff2=dirSign*(rdata[v].curv-rdata[v].aim);
+			p.setCurv(v,fbest);
+			double diff2=dirSign*(fbest-vaim);
 			if (diff2>0.0)
 				discrepency += diff2*diff2;
         }
@@ -654,38 +655,41 @@ public class d_HypPacker extends RePacker {
         	discrepency=0.0;
             for (int j=0;j<aimNum;j++) {
             	int v=inDex[j];
+            	double vaim=p.getAim(v);
             	double r=rad[v];
             	
             	// update anglesum for initial r (nghb's may have changed)
                	fbest=0.0;
-            	double r2 = rad[kdata[v].flower[0]];
+               	int[] flower=p.packDCEL.vertices[v].getFlower(true);
+               	int num=flower.length;
+            	double r2 = rad[flower[0]];
             	double m2 = (r2 > 0) ? (1 - r2) / (1 - r * r2) : (double) 1;
-            	for (int k = 1; k <= kdata[v].num; k++) { // loop through petals
-    				double r3 = rad[kdata[v].flower[k]];
+            	for (int k = 1; k <= num; k++) { // loop through petals
+    				double r3 = rad[flower[k]];
     				double m3 = (r3 > 0) ? (1 - r3) / (1 - r * r3) : (double) 1;
     				fbest += Math.acos(1 - 2.0*r * m2 * m3); // angle calc
     				m2 = m3;
     			}
-    			rdata[v].curv=fbest;
+    			p.setCurv(v,fbest);
     			
     			// sub/superpacking at v? want to adjust radius
-    			double diff2=dirSign*(rdata[v].curv-rdata[v].aim);
+    			double diff2=dirSign*(fbest-vaim);
     			if (diff2>RP_TOLER) { 
     				
     				// get current anglesum at v
     				fbest=0.0;
-    				r2 = rad[kdata[v].flower[0]];
+    				r2 = rad[flower[0]];
     				m2 = (r2 > 0) ? (1 - r2) / (1 - r * r2) : (double) 1;
-    				for (int k = 1; k <= kdata[v].num; k++) { // loop through petals
-    					double r3 = rad[kdata[v].flower[k]];
+    				for (int k = 1; k <= num; k++) { // loop through petals
+    					double r3 = rad[flower[k]];
     					double m3 = (r3 > 0) ? (1 - r3) / (1 - r * r3) : (double) 1;
     					fbest += Math.acos(1 - 2.0*r * m2 * m3); // angle calc
     					m2 = m3;
     				}
 
     				// set up for uniform neighbor model
-    				double denom = 1.0 / (2.0 * ((double)kdata[v].num));
-    				double del = Math.sin(rdata[v].aim * denom);
+    				double denom = 1.0 / (2.0 * ((double)num));
+    				double del = Math.sin(vaim * denom);
     				double bet = Math.sin(fbest * denom);
                 	double sr=Math.sqrt(r);
     				r2 = (bet - sr) / (bet * r - sr); // reference radius
@@ -701,18 +705,18 @@ public class d_HypPacker extends RePacker {
     				
     				// update the anglesum for new r
     				fbest=0.0;
-    				r2 = rad[kdata[v].flower[0]];
+    				r2 = rad[flower[0]];
     				m2 = (r2 > 0) ? (1 - r2) / (1 - r * r2) : (double) 1;
-    				for (int k = 1; k <= kdata[v].num; k++) { // loop through petals
-    					double r3 = rad[kdata[v].flower[k]];
+    				for (int k = 1; k <= num; k++) { // loop through petals
+    					double r3 = rad[flower[k]];
     					double m3 = (r3 > 0) ? (1 - r3) / (1 - r * r3) : (double) 1;
     					fbest += Math.acos(1 - 2.0*r * m2 * m3); // angle calc
     					m2 = m3;
     				}
-        			rdata[v].curv=fbest;
+        			p.setCurv(v,fbest);
     			
         			// get squared discrepency
-        			diff2=dirSign*(rdata[v].curv-rdata[v].aim);
+        			diff2=dirSign*(fbest-vaim);
         			if (diff2<-(100*RP_TOLER)) {
         				throw new PackingException("uniform neighbor computation overshoots at v="+v);
         			}
@@ -739,21 +743,24 @@ public class d_HypPacker extends RePacker {
         discrepency=0.0;
         for (int j=0;j<aimNum;j++) {
         	int v=inDex[j];
+        	double vaim=p.getAim(v);
         	double r=rad[v];
         	
         	// update anglesum
         	fbest=0.0;
-        	double r2 = rad[kdata[v].flower[0]];
+        	int[] flower=p.packDCEL.vertices[v].getFlower(true);
+        	int num=flower.length-1;
+        	double r2 = rad[flower[0]];
         	double m2 = (r2 > 0) ? (1 - r2) / (1 - r * r2) : (double) 1;
-        	for (int k = 1; k <= kdata[v].num; k++) { // loop through petals
-        		double r3 = rad[kdata[v].flower[k]];
+        	for (int k = 1; k <= num; k++) { // loop through petals
+        		double r3 = rad[flower[k]];
         		double m3 = (r3 > 0) ? (1 - r3) / (1 - r * r3) : (double) 1;
         		fbest += Math.acos(1 - 2.0*r * m2 * m3); // angle calc
         		m2 = m3;
         	}
-        	rdata[v].curv=fbest;
+        	p.setCurv(v,fbest);
 
-			double diff=rdata[v].curv-rdata[v].aim;
+			double diff=fbest-vaim;
 			double sqdiff=diff*diff;
 			if (diff>0.0)
 				discrepency+=sqdiff;
@@ -765,7 +772,7 @@ public class d_HypPacker extends RePacker {
         	results[0]=count;
             results[3]=sqError;
             for (int j=0;j<aimNum;j++) 
-            	rdata[inDex[j]].rad=1.0-rad[inDex[j]];
+            	p.setRadius(inDex[j],1.0-rad[inDex[j]]);
         	return results;
         }
         
@@ -781,30 +788,33 @@ public class d_HypPacker extends RePacker {
         	discrepency=0.0;
         	for (int j = 0; j < aimNum; j++) {
         		int v = inDex[j];
+        		double vaim=p.getAim(v);
         		double r=rad[v];
         		if (r < 0.0)
         			r = 0.0;
 
         		// update the anglesum
             	fbest=0.0;
-            	double r2 = rad[kdata[v].flower[0]];
+            	int[] flower=p.packDCEL.vertices[v].getFlower(true);
+            	int num=flower.length-1;
+            	double r2 = rad[flower[0]];
             	double m2 = (r2 > 0) ? (1 - r2) / (1 - r * r2) : (double) 1;
-            	for (int k = 1; k <= kdata[v].num; k++) { // loop through petals
-            		double r3 = rad[kdata[v].flower[k]];
+            	for (int k = 1; k <= num; k++) { // loop through petals
+            		double r3 = rad[flower[k]];
             		double m3 = (r3 > 0) ? (1 - r3) / (1 - r * r3) : (double) 1;
             		fbest += Math.acos(1 - 2.0*r * m2 * m3); // angle calc
             		m2 = m3;
             	}
-            	rdata[v].curv=fbest;
-        		double diff2=dirSign*(rdata[v].curv-rdata[v].aim);
+            	p.setCurv(v,fbest);
+        		double diff2=dirSign*(fbest-vaim);
 
                 // Change radii in one direction only: down if direction>0 or else up: 
         		if (diff2<-(100*RP_TOLER)) {
         			
         			// set up for uniform neighbor model
-    				double denom = 1.0 / (2.0 * ((double)kdata[v].num));
-    				double del = Math.sin(rdata[v].aim * denom);
-    				double bet = Math.sin(rdata[v].curv * denom);
+    				double denom = 1.0 / (2.0 * ((double)num));
+    				double del = Math.sin(vaim * denom);
+    				double bet = Math.sin(p.getCurv(v) * denom);
                 	double sr=Math.sqrt(r);
     				r2 = (bet - sr) / (bet * r - sr); // reference radius
     				if (r2 > 0) { // calc new label
@@ -815,24 +825,24 @@ public class d_HypPacker extends RePacker {
     				} else
     					r2 = del * del; // use lower limit
     				rad[v] = r2; // store new label
-    				rdata[v].curv = fbest; // store new anglesum
+    				p.setCurv(v,fbest); // store new anglesum
         			count++;
         			
         			// update the anglesum for new r
                   	fbest=0.0;
-                	r2 = rad[kdata[v].flower[0]];
+                	r2 = rad[flower[0]];
                 	m2 = (r2 > 0) ? (1 - r2) / (1 - r * r2) : (double) 1;
-                	for (int k = 1; k <= kdata[v].num; k++) { // loop through petals
-        				double r3 = rad[kdata[v].flower[k]];
+                	for (int k = 1; k <= num; k++) { // loop through petals
+        				double r3 = rad[flower[k]];
         				double m3 = (r3 > 0) ? (1 - r3) / (1 - r * r3) : (double) 1;
         				fbest += Math.acos(1 - 2.0*r * m2 * m3); // angle calc
         				m2 = m3;
         			}
-        			rdata[v].curv=fbest;
+        			p.setCurv(v,fbest);
         		}
         		
         		// update diff2 and gather data
-    			diff2=dirSign*(rdata[v].curv-rdata[v].aim);
+    			diff2=dirSign*(p.getCurv(v)-vaim);
     			double sqdiff=diff2*diff2;
     			if (diff2<-(100*RP_TOLER)) {
     				discrepency+=sqdiff;
@@ -851,17 +861,20 @@ public class d_HypPacker extends RePacker {
         discrepency=0.0;
         for (int j=0;j<aimNum;j++) {
         	int v=inDex[j];
-        	double r=rdata[v].rad;
+        	double vaim=p.getCurv(v);
+        	double r=p.getRadius(v);
 
         	fbest=0.0;
-        	double r3 = rdata[kdata[v].flower[0]].rad;
-        	for (int k = 1; k <= kdata[v].num; k++) { // loop through petals
+        	int[] flower=p.packDCEL.vertices[v].getFlower(true);
+        	int num=flower.length-1;
+        	double r3 = p.getRadius(flower[0]);
+        	for (int k = 1; k <= num; k++) { // loop through petals
 				double r2 = r3;
-				r3=rdata[kdata[v].flower[k]].rad;
+				r3=p.getRadius(flower[k]);
 				fbest += Math.acos(HyperbolicMath.h_comp_x_cos(r,r2,r3));
 			}
-			rdata[v].curv=fbest;
-			double diff=rdata[v].curv-rdata[v].aim;
+			p.setCurv(v,fbest);
+			double diff=fbest-vaim;
 			double sqdiff=diff*diff;
 			if (diff>0.0)
 				discrepency+=sqdiff;
@@ -876,7 +889,7 @@ public class d_HypPacker extends RePacker {
         	results[1]=Math.sqrt(discrepency);
     	results[3]=sqError;
         for (int j=0;j<aimNum;j++) 
-        	rdata[inDex[j]].rad=1.0-rad[inDex[j]];
+        	p.setRadius(inDex[j],1.0-rad[inDex[j]]);
     	return results;
     }
     

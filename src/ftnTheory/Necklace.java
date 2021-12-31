@@ -310,7 +310,7 @@ System.err.println("starting bottomHemi:");
 			int k=2*rand.nextInt(7);
 			int b=2;
 			for (int j=0;j<k;j++)
-				b=bottomHemi.kData[b].flower[0];
+				b=bottomHemi.getFirstPetal(b);
 
 			topHemi.packDCEL=CombDCEL.d_adjoin(topHemi.packDCEL,
 					bottomHemi.packDCEL,2,b,N*2);

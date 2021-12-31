@@ -68,7 +68,7 @@ public class RadiiSliders extends SliderFrame {
 		while (vlst.hasNext()) {
 			int v=vlst.next();
 			mySliders[tick]=new ActiveSlider(this,tick,Integer.toString(v),
-					packData.rData[v].rad,true);
+					packData.getRadius(v),true);
 			sliderPanel.add(mySliders[tick]);
 			tick++;
 		}
@@ -88,7 +88,7 @@ public class RadiiSliders extends SliderFrame {
 			if (verts.contains(v))
 				continue;
 			String str=Integer.toString(v);
-			double rad=packData.rData[v].rad;
+			double rad=packData.getRadius(v);
 			tmpSliders[sliderCount+hit]=
 					new ActiveSlider(this,sliderCount+hit,str,rad,true);
 			sliderPanel.add(tmpSliders[sliderCount+hit]);
@@ -144,14 +144,16 @@ public class RadiiSliders extends SliderFrame {
 	 * when a slider changes, it sends the new value to packData
 	 */
 	public void upValue(int indx) {
-		packData.rData[verts.get(indx)].rad=mySliders[indx].value;
+		int v=verts.get(indx);
+		packData.setRadius(v,mySliders[indx].value);
 	}
 	
 	/**
 	 * Set slider value from packing data
 	 */
 	public void downValue(int indx) {
-		mySliders[indx].setValue(packData.rData[verts.get(indx)].rad);
+		int v=verts.get(indx);
+		mySliders[indx].setValue(packData.getRadius(v));
 	}
 	
 	/**
@@ -188,7 +190,7 @@ public class RadiiSliders extends SliderFrame {
 		Iterator<Integer> vlst=verts.iterator();
 		while (vlst.hasNext()) {
 			int v=vlst.next();
-			double rad=packData.rData[v].rad;
+			double rad=packData.getRadius(v);
 			val_min= (rad<val_min) ? rad :val_min;
 			val_max= (rad>val_max) ? rad :val_max;
 		}

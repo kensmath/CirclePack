@@ -35,7 +35,6 @@ public class VData{
 	public double curv;	    // angle sum at this vertex. 
 	public int plotFlag;	// often OBE
 	public int qualFlag;    // often OBE
-
 	int bdryFlag;           // set in 'PackData.attachDCEL' as 'Vertex.bdryFlag'
 							// Caution: this can get out of sync with DCEL flag
 

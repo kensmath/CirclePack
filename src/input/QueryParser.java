@@ -555,14 +555,15 @@ public class QueryParser {
 						throw new ParserException("");
 					}
 					words.append(" v"+vv); // show which vert
-					int n=p.countFaces(vv);
-					if (forMsg && n>12) {
-						n=12;
+					int num=p.countFaces(vv);
+					if (forMsg && num>12) {
+						num=12;
 		  	      		suffix=" ... ";
 					}
 					int j=0;
-					while (j<=n) {
-						ans.append(Integer.toString(p.kData[vv].flower[j])+" ");
+					int[] flower=p.packDCEL.vertices[vv].getFlower(true);
+					while (j<=num) {
+						ans.append(Integer.toString(flower[j])+" ");
 						j++;
 					}
 					gotone=true;
@@ -902,8 +903,8 @@ public class QueryParser {
 		  	      				" Pi, boundaryFlag="+p.getBdryFlag(v)+
 		  	      				", star="+p.countFaces(v)+
 		  	      				", mark="+p.getVertMark(v)+
-		  	      				", plotFlag="+p.kData[v].plotFlag+
-		  	      				", color="+ColorUtil.col_to_table(p.getCircleColor(v)));
+		  	      				", plotFlag="+p.getPlotFlag(v)+", color="+
+		  	      				ColorUtil.col_to_table(p.getCircleColor(v)));
 		  	      		count++;
 		  	      	}
 		  	      	if (count<N) {
