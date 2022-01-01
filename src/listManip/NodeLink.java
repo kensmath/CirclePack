@@ -1075,7 +1075,7 @@ public class NodeLink extends LinkedList<Integer> {
 					PathLink pLink=new PathLink(packData.hes,items);
 					PathInterpolator pInt=new PathInterpolator(packData.hes);
 					pInt.pathInit(pLink);
-					EdgeLink el=EdgeLink.path2edgepath(packData,pInt,startVert);
+					EdgeLink el=HalfLink.path2edgepath(packData,pInt,startVert);
 					if (el!=null && el.size()>0) {
 						Iterator<EdgeSimple> elst=el.iterator();
 						EdgeSimple edge=null;

@@ -249,9 +249,11 @@ public class PackCreation {
 		// shade alternate faces
 
 		for (int j = 1; j <= p.faceCount; j++) {
-			int i = util[p.faces[j].vert[0]];
-			int k = util[p.faces[j].vert[1]];
-			if ((i == 1 && k == 2) || (i == 2 && k == 3) || (i == 3 && k == 1))
+			int[] verts=p.packDCEL.faces[j].getVerts();
+			int i = util[verts[0]];
+			int k = util[verts[1]];
+			if ((i == 1 && k == 2) || (i == 2 && k == 3) || 
+					(i == 3 && k == 1))
 				p.setFaceColor(j,ColorUtil.getFGColor());
 			else
 				p.setFaceColor(j,ColorUtil.getBGColor());

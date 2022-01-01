@@ -572,7 +572,8 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		    return 1;
 		  }
 		  if (code==dataCode.FACE_VERTICES) { // indices of vertices
-			  fp.write(p.faces[f].vert[0]+" "+p.faces[f].vert[1]+" "+p.faces[f].vert[2]+" ");
+			  int[] verts=p.getFaceVerts(f);
+			  fp.write(verts[0]+" "+verts[1]+" "+verts[2]+" ");
 			  return 1;
 		  } 
 			} catch (Exception ex) {}

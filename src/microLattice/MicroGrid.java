@@ -300,7 +300,7 @@ public class MicroGrid extends PackExtender {
 	 * @param s_flag boolean
 	 * @return Complex[][]
 	 */
-	public Complex [][]mode2_Intensity(String intensityfile,
+	public Complex[][] mode2_Intensity(String intensityfile,
 			boolean s_flag) {
 
 		// TODO: load the input file
@@ -2389,7 +2389,7 @@ public class MicroGrid extends PackExtender {
 		
 		// reset face marks, mark with largest level among vertices
 		for (f=1;f<=packData.faceCount;f++) {
-			int num=packData.faces[f].vertCount;
+			int num=packData.packDCEL.faces[f].getNum();
 			int[] verts=packData.packDCEL.faces[f].getVerts();
 			
 			int mxlevel=1;

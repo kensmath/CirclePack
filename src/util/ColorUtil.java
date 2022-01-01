@@ -401,6 +401,8 @@ public class ColorUtil {
 	 * @return int, color index
 	 */
 	public static int col_to_table(Color color) {
+		if (color==null)
+			return 100;
 		return col_to_table(color.getRed(),color.getGreen(),color.getBlue());
 	}
 	

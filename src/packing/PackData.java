@@ -126,7 +126,6 @@ public class PackData{
     public int faceCount;     // number of faces 
     public int intNodeCount;  // number of interior nodes
     public int bdryCompCount; // number of bdry components 
-    public int intCompCount;  // number of interior components  
     
     public PackDCEL packDCEL; // for possible DCEL structure 
 
@@ -134,15 +133,14 @@ public class PackData{
     public int hes;           // curvature of ambient geometry,-1=hyp,0=eucl,1=sph 
     public boolean status;    // false when pack is empty
 	public String fileName;   // filename when file was read/written
-    public int intrinsicGeom; // intrinsic geometry (due to combinatorics only)
     public int sizeLimit;     // current max number of nodes without reallocating
     int alpha;         // index of alpha node (origin)
     public int beta;          // OBE, not used now
     int gamma;         // index of node to be plotted on positive y-axis
     public int euler;   	  // Euler characteristic
     public int genus;         // genus of complex. Euler+#bdry=2-2g, g=(2-Euler-#bdy)/2 
+    public int intrinsicGeom; // intrinsic geometry (due to combinatorics only)
     public int activeNode;    // currently active_node 
-    public int locks;         // locks placed by remote processes; bitwise flags
     public int colorIndx;      // last index used for "spread" colors, see 'color_circles'. 
     
     // associated data
@@ -158,18 +156,16 @@ public class PackData{
     public EdgeLink poisonEdges; // traditional
     public HalfLink poisonHEdges; // migrate to this
     public NodeLink poisonVerts; //
-    public Point3D []xyzpoint;  // TODO: should be vector? pointer to associated 3D coords
+    public Point3D[] xyzpoint;  // TODO: should be vector? pointer to associated 3D coords
     public Vector<Double> utilDoubles;  // utility vector to hold doubles (caution: indexed from 0)
     public Vector<Integer> utilIntegers;  // utility vector to hold integers
     public Vector<Complex> utilComplexes;  // utility vector to hold complex numbers
     public Vector<BaryPtData> utilBary;    // utility vector of BaryPtData, holds points and data
     
     // combinatoric 
-    public Face []faces;      // array of face data
-    public int bdryStarts[];  // indices for verts starting the bdry components (indexed from 1) 
-    public int intStarts[];   // indices of nodes in interior components (indexed from 1)
+    public int[] bdryStarts;  // indices for verts starting the bdry components (indexed from 1) 
     public int firstFace;     // index of first face in plotting order
-    public int []fUtil;       // temp utility flags; user de/allocates as needed.
+    public int[] fUtil;       // temp utility flags; user de/allocates as needed.
     public int packNum;		// lies between 0 and CPBase.NUM_PACKS-1  
 
     // utility variables passing info in methods -- use immediately after method call!
@@ -802,7 +798,6 @@ public class PackData{
                     	xyzpoint=null;
                     	poisonEdges=null;
                         poisonVerts=null;  
-                        locks=0;
                     } // done with "FLOWERS", "BOUQUET", or "TILES"
                     else if (state==PackState.TRIANGULATION && !gotFlowers) {
                     	Triangulation tri=new Triangulation();
@@ -854,7 +849,6 @@ public class PackData{
                			this.xyzpoint=null;
                        	this.poisonEdges=null;
                        	this.poisonVerts=null;  
-                       	this.locks=0;
                        	this.packExtensions=new Vector<PackExtender>(2);
                        	
                        	// fix up 
@@ -894,7 +888,6 @@ public class PackData{
     				this.glist=null;
     				this.tlist=null;
     				this.zlist=null;
-    				this.locks=0;
     				this.tileData=newPack.tileData;
     				
                 	flags |= 020001;
@@ -1133,11 +1126,12 @@ public class PackData{
                 				int[] faceFlower=getFaceFlower(v);
                 				for (int j=0;j<countFaces(v);j++) {
                 					int k=faceFlower[j];
+                					int[] verts=packDCEL.faces[k].getVerts();
                 					int ind;
-                					if ( ((ind=check_face(k,v,v1)) >= 0 && faces[k].vert[(ind+2)%3]==v2)
-                         				 || ((ind=check_face(k,v1,v)) >= 0 && faces[k].vert[(ind+2)%3]==v2) ) {
-                						faces[k].plotFlag=flg;
-                						j=countFaces(v); // to stop loop 
+                					if ( ((ind=check_face(k,v,v1)) >= 0 && verts[(ind+2)%3]==v2)
+                         				 || ((ind=check_face(k,v1,v)) >= 0 && verts[(ind+2)%3]==v2)) {
+                						setFacePlotFlag(k,flg);
+                						j=countFaces(v); // t stop loop 
                 					}
                 				}
                 				} catch(Exception ex) {state=PackState.INITIAL;}
@@ -1341,9 +1335,10 @@ public class PackData{
                 				int[] faceFlower=getFaceFlower(v);
                 				for (int j=0;j<countFaces(v);j++) {
                 					int k=faceFlower[j];
+                					int[] verts=packDCEL.faces[k].getVerts();
                 					int ind;
-                					if ( ((ind=check_face(k,v,v1)) >= 0 && faces[k].vert[(ind+2)%3]==v2)
-                         				 || ((ind=check_face(k,v1,v)) >= 0 && faces[k].vert[(ind+2)%3]==v2) ) {
+                					if ( ((ind=check_face(k,v,v1)) >= 0 && verts[(ind+2)%3]==v2)
+                         				 || ((ind=check_face(k,v1,v)) >= 0 && verts[(ind+2)%3]==v2) ) {
                 						setFaceColor(k,ColorUtil.cloneMe(ColorUtil.coLor(colindx)));
                 						j=countFaces(v); // to stop loop 
                 					}
@@ -1661,7 +1656,7 @@ public class PackData{
                         	if (face!=0) {
                         	
                         		// check that order is right
-                        		int j0=faces[face].vert[0];
+                        		int j0=packDCEL.faces[face].getVerts()[0];
                         		if (j0==v1) {
                         			int hold=v0;
                         			v0=v1;
@@ -1735,7 +1730,7 @@ public class PackData{
                         				double e1=Double.parseDouble((String)loctok.nextToken());
                         				
                         				// check that order is right
-                        				int j0=faces[face].vert[0];
+                        				int j0=packDCEL.faces[face].getVerts()[0];
                         				if (j0==v1) {
                         					int hold=v0;
                         					v0=v1;
@@ -1947,13 +1942,11 @@ public class PackData{
             for(int v = 0; v < sizeLimit+1; v++) {
                	newV[v]=new VData();
             }
-            faces=null;
             fUtil=null;
             xyzpoint=null;
             status=false;
             nodeCount=0;
             status=false;
-            locks=0;
             fileName = "";
             tileData=null;
            	packDCEL=new PackDCEL();
@@ -2137,7 +2130,6 @@ public class PackData{
 		temp += "Number of interior nodes: " + intNodeCount + "\n";
 		temp += "Number of boundary nodes: " + (nodeCount - intNodeCount) + "\n";
 		temp += "Number of boundary components: " + getBdryCompCount() + "\n";
-		temp += "Number of interior components: " + intCompCount + "\n";
 		temp += "Geometry: " + intToGeometry(hes) + "\n";
 		temp += "Intrinsic geometry: " + intToGeometry(intrinsicGeom) + "\n";
 		temp += "Genus: " + genus + "\n";
@@ -2702,256 +2694,7 @@ public class PackData{
 	void detailError(String errmsg) {
 		// TODO: fixup 
 	}
-	
-	/**
-	 * allocate face data space (knowing facecount)
-	 * @return 1 
-	 */
-	public int alloc_faces_space() {
-		faces=new Face[faceCount+1];
-		for (int i=1;i<=faceCount;i++)
-			faces[i]=new Face(this);
-		fUtil=null;
-		return 1;
-	} 
-	
-/* =========================== layout routines =================================== */
 
-	/** 
-	 * Simplified drawing order creation, but only for simply connected complexes.
-	 * Use limited "tailoring". Main motivation is to avoid use of deg 3/4 
-	 * vertices in subsequent layout, and to improve speed.
-	 * 
-	 * option_flag:
-	 *   0     default: avoid using 3/4 degree vertices in the layout
-	 *   1     no tailoring
-	 *   2     avoid vertices with "mark" set to nonzero.
-	 *   
-	 * Marked vertices are the ones to be avoided: that is, lay out
-	 * all others first. When you run out of other faces, place one
-	 * of the 'offlist' vertices, then again try to lay out others 
-	 * until you run into another wall, etc.
-	 * 
-	 * We will keep a linked list of vertices whose faces we should
-	 * search through for new vertices to place at a given stage, 
-	 * adding to the end of the list as we progress; when that's 
-	 * used up, we try some that were skipped, creating a new list 
-	 * to search. Cycle through this process until all circles are
-	 * eventually placed.
-	 * On success, we set a whole new "faces" data structure and set
-	 * firstFace;	it is the responsibility of the calling routine 
-	 * to use the new stuff, throw out the redfaces, empty p.rwb_flags, 
-	 * allocate PairLink, manage the new faces, etc. Return 0 on error.
-	 * (Note: this routine empties and then uses vertex 'utilFlag'.)
-	 * @parm option_flag int
-	 * @return int vertcount, 0 on error
-	*/
-	public int simple_layout(int option_flag) throws CombException {
-		int num,vert,face=0,v1,v2,lastface;
-		int indx,v,w,way;
-		int first_face; // value to be put in 'firstFace' before returning
-
-		if (!isSimplyConnected() || faces==null) 
-			throw new CombException("Doesn't appear to be simply connected");
-
-		// any vertices to be avoided? put in 'offlist' 
-		boolean []offlist=new boolean[nodeCount+1];
-		if (option_flag==0) { /* default: avoid interior verts of degree < 5 or
-								 bdry verts without interior nghb. */
-			for (int i=1;i<=nodeCount;i++) {
-				if ((countFaces(i)<5 && !isBdry(i)) || countFaces(i)==1)
-					offlist[i]=true;
-			}
-		}
-		else if (option_flag==2) { // avoid the vertices that are marked 
-			for (int i=1;i<=nodeCount;i++) {
-				if (getVertMark(i)!=0)
-					offlist[i]=true;
-			}
-		}
-
-		// create "newfaces" space, copy most stuff over. 
-		Face []newfaces=new Face[faceCount+1];
-		for (int j=1;j<=faceCount;j++) {
-			newfaces[j]=faces[j].clone();
-			newfaces[j].nextFace=newfaces[j].indexFlag=0;
-		}
-	    
-		// create tmp space for keeping track of actions 
-		boolean []vflag=new boolean[nodeCount+1];
-		boolean []fflag=new boolean[faceCount+1];
-	  
-		// initialize linked lists for processing
-		NodeLink mainLink=new NodeLink(this);
-		NodeLink holdLink=new NodeLink(this);
-		for (int i=1;i<=nodeCount;i++) // zero out utilFlag 
-			setVertUtil(i,0);
-
-		/* start with alpha (regardless of its situation) and two contiguous
-	       neighbors (unmarked, if possible). */
-		v=kData[alpha].flower[0];
-		w=kData[alpha].flower[1];
-		int nbr=0;
-		if (offlist[v] || offlist[w]) {
-			for (int i=1;((i<countFaces(alpha)) && nbr==0);i++) {
-				if (!offlist[(v=kData[alpha].flower[i])] 
-				             && !offlist[(w=kData[alpha].flower[i+1])])
-					nbr=i;
-			}
-		}
-		if (nbr==0) { // default to first face 
-			v=kData[alpha].flower[0];
-			w=kData[alpha].flower[1];
-		}
-
-		vflag[alpha]=vflag[v]=vflag[w]=true;
-		for (int i=0;i<(countFaces(alpha)+getBdryFlag(alpha));i++)
-			kData[kData[alpha].flower[i]].utilFlag++;
-		for (int i=0;i<(countFaces(v)+getBdryFlag(v));i++)
-			kData[kData[v].flower[i]].utilFlag++;
-		for (int i=0;i<(countFaces(w)+getBdryFlag(w));i++)
-			kData[kData[w].flower[i]].utilFlag++;
-		int vertcount=3;
-		mainLink.add(alpha);
-		mainLink.add(v);
-		mainLink.add(w);
-		first_face=lastface=getFaceFlower(alpha,nbr);
-		beta=kData[alpha].flower[nbr]; // <alpha,beta> is base edge
-		newfaces[lastface].indexFlag=face_index(lastface,alpha);
-		fflag[lastface]=true;
-		
-		/* set all 'nextFace' to 'lastface', so we always have that
-		 * index to fall back on. */
-		for (int i=1;i<=faceCount;i++) newfaces[i].nextFace=lastface;
-
-
-		/* We keep two lists of vertices: 'mainLink' is the one we're
-		 going through. As long as mainLink isn't empty and we're
-	     getting hits of new vertices, put unhandled neighbors of the
-	     hits into 'holdLink'. When through mainLink, we adjoin holdLink 
-	     to end, restart holdList, pass through mainLink again. 
-	     If we get through mainLink and holdLink is empty, we pass 
-	     through mainLink and add the first 'marked' vertex to end,
-	     then go through mainLink again (may now be able to use 
-	     something earlier). Keeping track in utilFlag of number of nghbs 
-	     placed to compare to number of petals, fflag indicates faces placed
-	     (though others may have all vertices placed). Remove verts 
-	     from mainLink if all nghbs have been placed. */
-
-		boolean hits=true;
-		boolean pickup=false;
-		boolean keepon=true;
-		int safety=1000*nodeCount; // prevent infinite looping
-		while (mainLink.size() > 0 && (pickup || hits) && safety>0) {
-			safety--;
-			hits = false;
-			Iterator<Integer> ml = mainLink.iterator();
-
-			/* Go through mainLink, add new verts to newlist as faces suitable
-			 * for layout are encountered ; remove from mainLink those we're
-			 * finished with (namely, when their petal vertices have all been
-			 * laid, as reflected in utilFlag tally).
-			 */
-			while (ml.hasNext()) {
-				vert = (Integer) ml.next();
-				
-				// already hit all neighbors of this vert? remove it.
-				if (kData[vert].utilFlag == (countFaces(vert) + getBdryFlag(vert))) {
-					ml.remove();
-				} 
-				else if (!offlist[vert] || pickup) { // process this vert
-					num = countFaces(vert); // num of faces
-					int nnum = num + getBdryFlag(vert); // num of nghbs
-					// go through the faces of 'vert'
-					keepon = true;
-					while (keepon && kData[vert].utilFlag != nnum) {
-						keepon = false;
-						for (int f = 0; (f < num && kData[vert].utilFlag != nnum); f++) {
-							try {
-								face = getFaceFlower(vert,f);
-							} catch (Exception ex) {
-								// TODO: should put something to prevent looping on error
-								System.err.println("face " + face);
-							}
-							if (!fflag[face]) { // face not marked as done
-								indx = face_index(face, vert);
-								v1 = newfaces[face].vert[(indx + 1) % 3];
-								v2 = newfaces[face].vert[(indx + 2) % 3];
-								// can we place either v1 or v2?
-								if (vflag[v2] && vflag[v1]) { // verts already done, this face is done
-									fflag[face] = true;
-								}
-								// else, can we use vert and v1 to layout v2?
-								else if (!vflag[v2] && vflag[v1]
-										&& (pickup || !offlist[v1])) {
-									newfaces[lastface].nextFace = face;
-									lastface = face;
-									newfaces[face].indexFlag = indx;
-									fflag[face] = vflag[v2] = true;
-									way = countFaces(v2) + getBdryFlag(v2);
-									for (int i = 0; i < way; i++)
-										kData[kData[v2].flower[i]].utilFlag++;
-									hits = true;
-									keepon = true;
-									vertcount++;
-									if (kData[v2].utilFlag < (countFaces(v2) + getBdryFlag(v2))) {
-										holdLink.add(v2);
-									}
-								}
-								// else, should be able to use vert and v2 to layout v1
-								else if (!vflag[v1] && vflag[v2]
-										&& (pickup || !offlist[v2])) {
-									newfaces[lastface].nextFace = face;
-									lastface = face;
-									newfaces[face].indexFlag = (indx + 2) % 3;
-									fflag[face] = vflag[v1] = true;
-									way = countFaces(v) + getBdryFlag(v);
-									for (int i = 0; i < way; i++)
-										kData[kData[v1].flower[i]].utilFlag++;
-									hits = true;
-									keepon = true;
-									vertcount++;
-									if (kData[v1].utilFlag < (countFaces(v1) + getBdryFlag(v))) {
-										holdLink.add(v1);
-									}
-								}
-								if (pickup && hits) { // kick out of for and while's
-									f = num + 1;
-									keepon = false;
-								}
-							} // done with this face
-						} // end of for 'f'
-					} // end of 'keepon' while
-				} // end of else processing of vert
-			} // end of iterator 'ml' (for mainLink) while
-			if (hits) {
-				if (holdLink.size() != 0) { // holdLink added to end of
-											// mainLink, reset newlist
-					mainLink.addAll(holdLink);
-					holdLink = new NodeLink(this);
-				}
-				pickup = false;
-			} else if (!pickup)
-				pickup = true; /* pickup true means you have permission to
-				 use an 'offlist' vert;*/
-		} // end of mainLink while */
-		
-		if (safety<=0) {
-			throw new CombException("passed safety limit in simple_layout");
-		}
-	    
-		// clean up, set results, and leave 
-		if (vertcount!=nodeCount)
-			CirclePack.cpb.myMsg("simple_layout: only placed "+vertcount+" of the "+nodeCount+
-					" vertices.");
-		if (vertcount!=0) { // set the PackData 'faces' and 'firstFace'
-			firstFace=first_face;
-			faces=newfaces;
-			return vertcount;
-		}
-		else return 0;
-	}
-	
 /* ================== combinatoric utilies for complexes ================ */	
 	
 	/**
@@ -3422,24 +3165,15 @@ public class PackData{
 	*/
 	public int check_face(int f,int v,int w) {
 		int m=0;
-		if (packDCEL!=null) {
-			HalfEdge he=packDCEL.findHalfEdge(v,w);
-			if (he==null || he.face.faceIndx!=f)
-				return -1;
-			
-			int[] edges=getFaceVerts(f);
-			for (int j=0;j<edges.length;j++) {
-				if (edges[j]==v)
-					return j;
-			}
+		HalfEdge he=packDCEL.findHalfEdge(v,w);
+		if (he==null || he.face.faceIndx!=f)
 			return -1;
+		
+		int[] edges=getFaceVerts(f);
+		for (int j=0;j<edges.length;j++) {
+			if (edges[j]==v)
+				return j;
 		}
-		try {
-			while (m<3) {
-				if (faces[f].vert[m]==v && faces[f].vert[(m+1)%3]==w) return m; 
-				m++;
-			}
-		} catch(Exception ex) {return -1;}
 		return -1;
 	}
 	
@@ -3463,51 +3197,35 @@ public class PackData{
 	}
 	
 	/**
-	 * Return face to left of edge v w. On failure, return ans[0]=0.
-	 * Also return u, the third vert of face. 
-	 * @param edge EdgeSimple
-	 * @return int ans[2], with ans[0]=face to left and ans[1]=third vertex.
+	 * Return face to left of edge v w if not ideal. 
+	 * On failure, return ans[0]=0. Also return ans[1]=u, 
+	 * the third vert of face. 
+	 * @param int v
+	 * @param int w
+	 * @return int ans[2], ans[0]=face to left, ans[1]=third vertex.
 	*/
-	public int[] left_face(EdgeSimple edge) {
-		int[] ans=new int[2];
-		if (packDCEL!=null) {
-			HalfEdge he=packDCEL.findHalfEdge(edge);
-			if (he==null || he.face==null)
-				return ans;
-			ans[0]=he.face.faceIndx;
-			ans[1]=he.next.next.origin.vertIndx;
-			return ans;
-		}
-		if (edge==null) {
-			ans[0]=0;
-			return ans;
-		}
-		return left_face(edge.v,edge.w);
+	public int[] left_face(int v,int w) {
+		EdgeSimple edge=new EdgeSimple(v,w);
+		return left_face(edge);
 	}
 	
 	/**
-	 * Return face to left of edge <v w>. On failure, return ans[0]=0.
-	 * Also return u, the third vert of face. 
-	 * @param v int
-	 * @param w int
+	 * Return face to left of edge <v w> if it's not an ideal
+	 * face. On failure, return ans[0]=0. Also return ans[1]=u, 
+	 * the third vert of face. 
+	 * @param edge EdgeSimple
 	 * @return ans[2], with ans[0]=face to left and ans[1]=third vertex.
 	*/
-	public int []left_face(int v,int w) {
-	    int f,u;
+	public int []left_face(EdgeSimple edge) {
 	    int []ans=new int[2];
-
-	    for (f=1;f<=faceCount;f++) if (check_face(f,v,w)>=0) break;
-	    if (f>faceCount) { // no face
+	    HalfEdge he=packDCEL.findHalfEdge(edge);
+	    if (he==null || he.face==null || he.face.faceIndx<0) {
 	    	ans[0]=0;
-	    	return ans; 
-	    }
-	    for (int i=0;i<3;i++) if ((u=faces[f].vert[i])!=v && u!=w) {
-	    	ans[0]=f;
-	    	ans[1]=u;
 	    	return ans;
 	    }
-    	ans[0]=0;
-    	return ans; 
+	    ans[0]=he.face.faceIndx;
+	    ans[1]=he.next.next.origin.vertIndx;
+   		return ans; 
 	} 
 
 	/**
@@ -3826,10 +3544,12 @@ public class PackData{
 			return null;
 		Complex []pts=corners_face(f);
 		if (hes<0) { //
-			CircleSimple sc1=HyperbolicMath.hyp_tang_incircle(pts[0],pts[1],pts[2],
-					getRadius(faces[f].vert[0]),
-					getRadius(faces[f].vert[1]),
-					getRadius(faces[f].vert[2]));
+			int[] verts=packDCEL.faces[f].getVerts();
+			CircleSimple sc1=HyperbolicMath.hyp_tang_incircle(
+					pts[0],pts[1],pts[2],
+					getRadius(verts[0]),
+					getRadius(verts[1]),
+					getRadius(verts[2]));
 			
 			// TODO: the new method, hyp_tri_incircle is not working
 //			CircleSimple sc2=HyperbolicMath.hyp_tri_incircle(pts[0],pts[1],pts[2]);
@@ -4517,42 +4237,25 @@ public class PackData{
 			boolean hitflag=false;
 			double schw;
 			int k;
-			if (packDCEL!=null) {
-				for (int v = 1; v <= packDCEL.vertCount; v++) {
-					HalfLink spokes=packDCEL.vertices[v].getEdgeFlower();
-					Iterator<HalfEdge> sis=spokes.iterator();
-					while (sis.hasNext()) {
-						HalfEdge he=sis.next();
-						int kk=he.twin.origin.vertIndx;
-						schw=he.getSchwarzian();
-						if (schw!=1.0 && v < kk) {
-							if (!hitflag) {
-								hitflag=true;
-								file.write(hitstr);
-							}
-							file.write("\n" + v + " " + kk + "  "
-									+ String.format("%.10e",schw));
+			for (int v = 1; v <= packDCEL.vertCount; v++) {
+				HalfLink spokes=packDCEL.vertices[v].getEdgeFlower();
+				Iterator<HalfEdge> sis=spokes.iterator();
+				while (sis.hasNext()) {
+					HalfEdge he=sis.next();
+					int kk=he.twin.origin.vertIndx;
+					schw=he.getSchwarzian();
+					if (schw!=1.0 && v < kk) {
+						if (!hitflag) {
+							hitflag=true;
+							file.write(hitstr);
 						}
+						file.write("\n" + v + " " + kk + "  "
+								+ String.format("%.10e",schw));
 					}
 				}
 				file.write("\n");
 			}
-			
-			else {
-				// first check if data is all available
-				boolean okay=haveSchwarzians();
-				if (okay) {
-					file.write("SCHWARZIANS:\n");
-					for (int v=1;v<=nodeCount;v++) {
-						file.write(v+"    "); // indicate vertex
-						for (int j=0;j<=countFaces(v);j++) { // then list schwarzian for each edge 
-							file.write(String.format("%.12e",kData[v].schwarzian[j])+" ");
-						}
-						file.write("\n");
-					}
-				}
-				file.write("\n");
-			}
+
 		}
 
 		if ((act & 0004) == 0004) { // inv_dist? aims? (non-default only)
@@ -4695,16 +4398,17 @@ public class PackData{
 			}
 			flag = 0;
 			for (int i = 1; (i <= faceCount && flag == 0); i++)
-				if (faces[i].plotFlag <= 0)
+				if (getFacePlotFlag(i) <= 0)
 					flag++;
 			if (flag > 0) { // got some nondefault face plot_flags
 				file.write("FACE_PLOT_FLAGS: \n");
 				int j = 0;
 				for (int i = 1; i <= faceCount; i++)
-					if (faces[i].plotFlag <= 0) {
-						file.write(" " + faces[i].vert[0] + " "
-								+ faces[i].vert[1] + " " + faces[i].vert[2]
-								+ "   " + faces[i].plotFlag);
+					if (getFacePlotFlag(i) <= 0) {
+						int[] verts=packDCEL.faces[i].getVerts();
+						file.write(" " + verts[0] + " "
+								+ verts[1] + " " + verts[2]
+								+ "   " + getFacePlotFlag(i));
 						j++;
 						if ((j % 3) == 0)
 							file.write("\n");
@@ -4793,10 +4497,13 @@ public class PackData{
 				file.write("T_COLORS:\n"); // T_COLORS are for faces; superceded TRI_COLORS
 				for (int i = 1; i <= faceCount; i++) { // one face per line
 					vcol=getFaceColor(i);
-					if (vcol.getRed()!=0 || vcol.getGreen()!=0 || vcol.getBlue()!=0) { 
-						file.write(" " + faces[i].vert[0] + " "
-								+ faces[i].vert[1] + " " + faces[i].vert[2]+"   "+
-								vcol.getRed() + " "+vcol.getGreen()+" "+vcol.getBlue()+"\n");
+					if (vcol.getRed()!=0 || vcol.getGreen()!=0 || 
+							vcol.getBlue()!=0) { 
+						int[] verts=getFaceVerts(i);
+						file.write(" " + verts[0] + " "
+								+ verts[1] + " " + verts[2]+"   "+
+								vcol.getRed() + " "+
+								vcol.getGreen()+" "+vcol.getBlue()+"\n");
 					}
 				}
 				file.write("\n (done)\n\n");
@@ -4805,9 +4512,10 @@ public class PackData{
 			// check tile colors
 			if (tileData!=null) {
 				colorflag = 0;
-				for (int i = 1; i <= tileData.tileCount && colorflag == 0; i++) {
+				for (int i=1; (i<=tileData.tileCount && colorflag==0); i++) {
 					vcol=tileData.myTiles[i].color;
-					if (vcol.getRed()!=0 || vcol.getGreen()!=0 || vcol.getBlue()!=0)  
+					if (vcol.getRed()!=0 || vcol.getGreen()!=0 || 
+							vcol.getBlue()!=0)  
 						colorflag++;
 				}
 				if (colorflag > 0) { // found some non-default colors
@@ -4841,9 +4549,9 @@ public class PackData{
 				Iterator<Integer> fli = flist.iterator();
 				while (fli.hasNext()) {
 					int fl = (Integer) fli.next();
-					file.write(" " + faces[fl].vert[0] + " "
-							+ faces[fl].vert[1] + " " + faces[fl].vert[2]
-							+ "\n");
+					int[]  verts=getFaceVerts(fl);
+					file.write(" " + verts[0] + " "
+							+ verts[1] + " " + verts[2]	+ "\n");
 				}
 				file.write(" (done)\n\n");
 			}
@@ -5799,10 +5507,9 @@ public class PackData{
 	   * @return boolean
 	   */
 	  public boolean flipable(int v,int w) {
-		  int ind_v,ind_w;
+		  HalfEdge he=packDCEL.findHalfEdge(new EdgeSimple(v, w));
 		  try {
-			  if (v<1 || w<1 || v>nodeCount || w>nodeCount 
-					  || (ind_v=nghb(v,w))<0 || (ind_w=nghb(w,v))<0 
+			  if (he==null
 				  || (isBdry(v) && (getFirstPetal(v)==w || countFaces(v)<=2))
 				  || (isBdry(w) && (getFirstPetal(w)==v || countFaces(w)<=2))
 				  || (!isBdry(v) && countFaces(v)<=3) 
@@ -5812,26 +5519,6 @@ public class PackData{
 			  CirclePack.cpb.errMsg(dex.getMessage());
 			  return false;
 		  }
-
-		  if (packDCEL!=null) {
-			  HalfEdge he=packDCEL.findHalfEdge(new EdgeSimple(v, w));
-			  if (he!=null)
-				  return true;
-			  return false;
-		  }
-		  
-		  // traditional
-		  int[] flower=getFlower(v);
-		  int lv=flower[ind_v+1];
-		  int rv=flower[ind_w+1];
-		  try {
-			  if ((isBdry(lv) && isBdry(rv)) || nghb(lv,rv)>=0)
-	        	  throw new DataException("new edge is repeat or would connect bdry");
-		  } catch (Exception dex) {
-			  CirclePack.cpb.errMsg(dex.getMessage());
-	    	  return false;
-		  }
-		  
 		  return true;
 	  }
 	  
@@ -6912,8 +6599,8 @@ public class PackData{
 		  
 		  // color based on average of values at vertices
 		  for (int f=1;f<=faceCount;f++) {
-			  int []vts=faces[f].vert;
-			  int num=faces[f].vertCount;
+			  int[] vts=packDCEL.faces[f].getVerts();
+			  int num=packDCEL.faces[f].getNum();
 			  double accum=0.0;
 			  for (int j=0;j<num;j++)
 				  accum+=values[vts[j]];
@@ -7000,38 +6687,31 @@ public class PackData{
 
     	  double A,B,C,a,b,c;
 	      for (int f=1;f<=faceCount;f++) {
-	    	  int i=faces[f].vert[0];
-	    	  int j=faces[f].vert[1];
-	    	  int k=faces[f].vert[2];
-	    	  if (i<=xyzcount && j<=xyzcount && k<=xyzcount) {
+	    	  int[] verts=packDCEL.faces[f].getVerts();
+	    	  if (verts[0]<=xyzcount && verts[1]<=xyzcount && 
+	    			  verts[2]<=xyzcount) {
 	    		  // yes, we have xyz locations for these 
 	    		  
 	    		  // need euclidean side lengths A, B, C
 	    		  Point3D []pt=new Point3D[3];
 	    		  if (hes>0) { // sph
-	    			  pt[0]=new Point3D(getCenter(i));
-	    			  pt[1]=new Point3D(getCenter(j));
-	    			  pt[2]=new Point3D(getCenter(k));
+	    			  for (int j=0;j<3;j++)
+	    				  pt[j]=new Point3D(getCenter(verts[j]));
 	    		  }
 	    		  if (hes<0) { // hyp
 	    			  CircleSimple sc=null;
-	    			  sc=HyperbolicMath.h_to_e_data(getCenter(i),
-	    					  getRadius(i));
-	    			  pt[0]=new Point3D(sc.center);
-	    			  sc=HyperbolicMath.h_to_e_data(getCenter(j),
-	    					  getRadius(j));
-	    			  pt[1]=new Point3D(sc.center);
-	    			  sc=HyperbolicMath.h_to_e_data(getCenter(k),
-	    					  getRadius(k));
-	    			  pt[2]=new Point3D(sc.center);
+	    			  for (int j=0;j<3;j++) {
+	    				  sc=HyperbolicMath.h_to_e_data(getCenter(verts[j]),
+	    					  getRadius(verts[j]));
+	    				  pt[j]=new Point3D(sc.center);
+	    			  }
 	    		  }
 	    		  else {
-	    			  Complex z=getCenter(i);
-	    			  pt[0]=new Point3D(z.x,z.y,0.0);
-	    			  z=getCenter(j);
-	    			  pt[1]=new Point3D(z.x,z.y,0.0);
-	    			  z=getCenter(k);
-	    			  pt[2]=new Point3D(z.x,z.y,0.0);
+	    			  Complex z;
+	    			  for (int j=0;j<3;j++) {
+	    				  z=getCenter(verts[j]);
+	    				  pt[j]=new Point3D(z.x,z.y,0.0);
+	    			  }
 	    		  }
 	    		  
 	    		  // eucl edge lengths in packing
@@ -7041,17 +6721,26 @@ public class PackData{
 
 	    		  // eucl edge lengths in xyz data
 	    		  a=Math.sqrt(
-	    		      (xyz_list[i].x-xyz_list[j].x)*(xyz_list[i].x-xyz_list[j].x)
-	    		      + (xyz_list[i].y-xyz_list[j].y)*(xyz_list[i].y-xyz_list[j].y)
-	    		      + (xyz_list[i].z-xyz_list[j].z)*(xyz_list[i].z-xyz_list[j].z));
+	    		      (xyz_list[verts[0]].x-xyz_list[verts[1]].x)*
+	    		      	(xyz_list[verts[0]].x-xyz_list[verts[1]].x)
+	    		      + (xyz_list[verts[0]].y-xyz_list[verts[1]].y)*
+	    		      	(xyz_list[verts[0]].y-xyz_list[verts[1]].y)
+	    		      + (xyz_list[verts[0]].z-xyz_list[verts[1]].z)*
+	    		      	(xyz_list[verts[0]].z-xyz_list[verts[1]].z));
 	    		  b=Math.sqrt(
-	    		      (xyz_list[k].x-xyz_list[j].x)*(xyz_list[k].x-xyz_list[j].x)
-	    		      + (xyz_list[k].y-xyz_list[j].y)*(xyz_list[k].y-xyz_list[j].y)
-	    		      + (xyz_list[k].z-xyz_list[j].z)*(xyz_list[k].z-xyz_list[j].z));
+	    		      (xyz_list[verts[2]].x-xyz_list[verts[1]].x)*
+	    		      	(xyz_list[verts[2]].x-xyz_list[verts[1]].x)
+	    		      + (xyz_list[verts[2]].y-xyz_list[verts[1]].y)*
+	    		      	(xyz_list[verts[2]].y-xyz_list[verts[1]].y)
+	    		      + (xyz_list[verts[2]].z-xyz_list[verts[1]].z)*
+	    		      	(xyz_list[verts[2]].z-xyz_list[verts[1]].z));
 	    		  c=Math.sqrt(
-	    		      (xyz_list[i].x-xyz_list[k].x)*(xyz_list[i].x-xyz_list[k].x)
-	    		      + (xyz_list[i].y-xyz_list[k].y)*(xyz_list[i].y-xyz_list[k].y)
-	    		      + (xyz_list[i].z-xyz_list[k].z)*(xyz_list[i].z-xyz_list[k].z));
+	    		      (xyz_list[verts[0]].x-xyz_list[verts[2]].x)*
+	    		      	(xyz_list[verts[0]].x-xyz_list[verts[2]].x)
+	    		      + (xyz_list[verts[0]].y-xyz_list[verts[2]].y)*
+	    		      	(xyz_list[verts[0]].y-xyz_list[verts[2]].y)
+	    		      + (xyz_list[verts[0]].z-xyz_list[verts[2]].z)*
+	    		      	(xyz_list[verts[0]].z-xyz_list[verts[2]].z));
 	    		  
 	    		  // compute dilatation
 	    		  dil[f-1]=EuclMath.e_dilatation(A,B,C,a,b,c); 
@@ -7153,7 +6842,6 @@ public class PackData{
 		  p.faceCount=faceCount;
 		  p.hes=hes;
 		  p.intrinsicGeom=intrinsicGeom;
-		  p.locks=0;
 		  p.fileName=fileName;
 		  p.alpha=alpha;
 		  p.gamma=gamma;
@@ -8282,14 +7970,15 @@ public class PackData{
 	   * @return EdgeSimple {v,w}, null on error
 	   */
 	  public EdgeSimple reDualEdge(int f,int g) {
-		  if (f>0 && g>0 && f<=faceCount && g<=faceCount) { 
-			  int j=face_nghb(g,f);
-			  if (j<0) return null;
-			  int v=faces[f].vert[j];
-			  int w=faces[f].vert[(j+1)%3];
-			  return new EdgeSimple(v,w);
-		  }
-		  return null;
+		  if (f<1 || g<1 || f>faceCount || g>faceCount)
+			  return null;
+		  dcel.Face fface=packDCEL.faces[f];
+		  HalfEdge he=fface.faceNghb(packDCEL.faces[g]);
+		  if (he==null)
+			  return null;
+		  int v=he.origin.vertIndx;
+		  int w=he.twin.origin.vertIndx;
+		  return new EdgeSimple(v,w);
 	  }
 	  
 	  /**
@@ -9114,16 +8803,18 @@ public class PackData{
 	    }
 		if (nface!=0) {
 			// draw for this packing
-			Complex c0=getCenter(faces[face].vert[0]);
-			Complex c1=getCenter(faces[face].vert[1]);
-			Complex c2=getCenter(faces[face].vert[2]);
+			int[] verts=packDCEL.faces[face].getVerts();
+			Complex c0=getCenter(verts[0]);
+			Complex c1=getCenter(verts[1]);
+			Complex c2=getCenter(verts[2]);
 			DispFlags dflags=new DispFlags("f");
 			dflags.setColor(getFaceColor(face));
 			cpScreen.drawFace(c0,c1,c2,null,null,null,dflags);   
 			// draw other packing
-		    c0=q.getCenter(q.faces[nface].vert[0]);
-		    c1=q.getCenter(q.faces[nface].vert[1]);
-		    c2=q.getCenter(q.faces[nface].vert[2]);
+			verts=q.packDCEL.faces[nface].getVerts();
+		    c0=q.getCenter(verts[0]);
+		    c1=q.getCenter(verts[1]);
+		    c2=q.getCenter(verts[2]);
 			dflags.setColor(q.getFaceColor(nface));
 		    q.cpScreen.drawFace(c0,c1,c2,null,null,null,dflags);
 		}

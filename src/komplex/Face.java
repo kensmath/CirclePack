@@ -16,10 +16,9 @@ public class Face{
      public int vert[];      // ordered tuple of vertices 
      						 //   Note: first index is not repeated at end
      public int vertCount;	 // number of vertices (default 3)
-     public int indexFlag;   // which circles to use for drawing? use
-     					     // verts 'indexFlag', '(indexFlag+1)%3'
-                             // are used to plot '(indexFlag+2)%3'
-     						 // for triangular faces
+     public int indexFlag;   // which circles to use for drawing? use verts
+     					     // 'indexFlag', '(indexFlag+1)%3' to plot 
+     						 // '(indexFlag+2)%3' for triangular faces
      public int nextFace;    // next face in drawing order. 
      public int nextRed;     // next red face (if this face is red) 
      public int plotFlag;    // >0: face location (seems) reliable for plotting;

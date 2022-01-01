@@ -17,7 +17,6 @@ import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
-import komplex.Face;
 import packQuality.QualMeasures;
 import packing.PackData;
 import util.FaceParam;
@@ -1321,13 +1320,14 @@ public class HalfLink extends LinkedList<HalfEdge> {
     }
     
     /**
-     * Return random entry from edgelist; caution, does not adjust
+     * Return random entry from 'edgelist'; caution, does not adjust
      * for repeat entries.
      * @param edgelist
      * @return null on empty list
      */
     public static HalfEdge randEdge(HalfLink edgelist) {
-    	if (edgelist==null || edgelist.size()==0) return null;
+    	if (edgelist==null || edgelist.size()==0) 
+    		return null;
     	int n=new Random().nextInt(edgelist.size());
     	return (edgelist.get(n));
     }
@@ -1335,7 +1335,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
     /**
      * Convert a polygonal path into a linked list of edges; first convert
      * to a 'FaceLink', then go down the right side of this chain of faces.
-     * May have a preferred starting vertex. 
+     * May have a preferred starting vertex. Note: sometimes an 'EdgeLink'
+     * is better since in is based on indices.
      * TODO: currently, eucl only
      * @param p PackData
      * @param pInt PathInterpolator
@@ -1347,11 +1348,11 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		FaceParam startFP=FaceLink.pathProject(p,pInt,startVert);
 		if (startFP==null || startFP.next==null) 
 			return null;
-		int startFace=startFP.face;
+		int startFace=startFP.faceIndx;
 		FaceParam ftrace=startFP;
 		while (ftrace.next!=null) 
 			ftrace=ftrace.next;
-		int endFace=ftrace.face;
+		int endFace=ftrace.faceIndx;
 		
 		// get start/end complex points
 		Complex startZ=pInt.sToZ(0.0);
@@ -1364,35 +1365,35 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		// start/end vertices are those closest to startZ/endZ
 		double smin=10000.0;
 		double emin=10000.0;
-		Face sface=p.faces[startFace];
-		Face eface=p.faces[endFace];
+		int[] startverts=p.packDCEL.faces[startFace].getVerts();
+		int[] endverts=p.packDCEL.faces[endFace].getVerts();
 		int sindx=0;
 		int eindx=0;
 		double ut=0.0;
 		for (int i=0;i<3;i++) {
-			ut=startZ.minus(p.getCenter(sface.vert[i])).abs();
+			ut=startZ.minus(p.getCenter(startverts[i])).abs();
 			if (ut<smin) {
 				smin=ut;
 				sindx=i;
 			}
-			ut=endZ.minus(p.getCenter(eface.vert[i])).abs();
+			ut=endZ.minus(p.getCenter(endverts[i])).abs();
 			if (ut<emin) {
 				emin=ut;
 				eindx=i;
 			}
 		}
-		int startV=sface.vert[sindx];
-		int endV=eface.vert[eindx];
+		int startV=startverts[sindx];
+		int endV=endverts[eindx];
 		if (startV==endV) 
 			return null;
 		
 		// Remove any unneeded faces at beginning (i.e, next face has startV)
-		while (startFP.next!=null && p.face_index(startFP.next.face,startV)>=0)
+		while (startFP.next!=null && p.face_index(startFP.next.faceIndx,startV)>=0)
 			startFP=startFP.next;
 		
 		// Remove any unneeded faces at end (i.e., previous face has endV)
 		ftrace=startFP; 
-		while (ftrace!=null && p.face_index(ftrace.face,endV)<0) // find first face containing endV
+		while (ftrace!=null && p.face_index(ftrace.faceIndx,endV)<0) // find first face containing endV
 			ftrace=ftrace.next;
 		if (ftrace==null)  // should not happen 
 			return null;
@@ -1400,13 +1401,13 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		boolean done=false;
 		FaceParam ntrace=ftrace;
 		while (!done) {
-			while (ntrace.next!=null && p.face_index(ntrace.next.face,endV)>=0)
+			while (ntrace.next!=null && p.face_index(ntrace.next.faceIndx,endV)>=0)
 				ntrace=ntrace.next;
 			if (ntrace.next==null) 
 				done=true; 
 			else  // a face that doesn't have endV
 				ftrace=ntrace.next;
-			while (ftrace!=null && p.face_index(ftrace.face,endV)<0) // find next face with endV
+			while (ftrace!=null && p.face_index(ftrace.faceIndx,endV)<0) // find next face with endV
 				ftrace=ftrace.next; 
 			if (ftrace==null) 
 				return null; // should not happen
@@ -1426,13 +1427,14 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			// continue until the putative 'nextedge' is satifactory:
 			//  non-trivial, connected to previous, not reverse of previous
 			while( (v==nextv || nextedge.v==nextedge.w ||
-					nextedge.v!=edge.w || nextedge.w==edge.v) && ftrace.next!=null) {
+					nextedge.v!=edge.w || nextedge.w==edge.v) && 
+					ftrace.next!=null) {
 
 				// create putative next edge
-				int nt=p.face_nghb(ftrace.face,ftrace.next.face);
+				int nt=p.face_nghb(ftrace.faceIndx,ftrace.next.faceIndx);
 				if (nt<0) 
 					throw new CombException("broken chain in 'FaceParam' list");
-				nextv=p.faces[ftrace.next.face].vert[nt];
+				nextv=p.packDCEL.faces[ftrace.next.faceIndx].getVerts()[nt];
 				nextedge=new EdgeSimple(v,nextv);
 				ftrace=ftrace.next;
 			}
@@ -1445,7 +1447,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			}
 			// no success, but check last face: if v,endV are in it, add last edge 
 			else if (ftrace!=null && ftrace.next==null && v!=endV
-					&& p.face_index(ftrace.face,endV)>=0 && p.face_index(ftrace.face,v)>=0) {
+					&& p.face_index(ftrace.faceIndx,endV)>=0 && p.face_index(ftrace.faceIndx,v)>=0) {
 				elink.add(new EdgeSimple(v,endV));
 				v=endV;
 			}
@@ -1740,11 +1742,11 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	}
 		
 	/**
-	 * Make up list by looking through SetBuilder specs (from {..} set-builder
-	 * notation). Use 'tmpUtil' to collect information before creating the HalfLink
-	 * for return. (Have not yet implemented many edge selections) TODO: This
-	 * duplicates 'EdgeLink' version
-	 * 
+	 * Make up list by looking through SetBuilder specs 
+	 * (from {..} set-builder notation). Use 'tmpUtil' to 
+	 * collect information before creating the HalfLink
+	 * for return. (Have not yet implemented many edge 
+	 * selections) 
 	 * @param p PackData
 	 * @param specs Vector<SelectSpec>
 	 * @return HalfLink list of specified edges

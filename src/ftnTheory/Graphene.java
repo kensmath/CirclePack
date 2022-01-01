@@ -517,7 +517,7 @@ public class Graphene extends PackExtender {
 				if (dual!=null) {
 					int fa=dual.v;
 					CarbonEnergy carbon=carbonEnergies.get(fa);
-					int k=packData.faces[fa].vertIndx(v);
+					int k=packData.packDCEL.faces[fa].getVertIndx(v);
 					int colindx=ColorUtil.col_to_table(carbon.bondColors[k]); // get index
 					cpCommand("disp -det4c"+colindx+" "+v+" "+w);
 					count++;
@@ -635,9 +635,10 @@ public class Graphene extends PackExtender {
 			}
 
 			int k = -1;
+			int myf=cE.faceIndx;
+			int[] verts=packData.packDCEL.faces[myf].getVerts();
 			for (int j = 0; (j < 3 && k < 0); j++) {
-				int myf = cE.faceIndx;
-				int vj = packData.faces[myf].vert[j];
+				int vj = verts[j];
 				int oppf = packData.face_opposite(myf, vj);
 				if (oppf >= 0) { // ignore phantom bonds
 					double L = cE.bondLengths[j];
@@ -745,9 +746,10 @@ public class Graphene extends PackExtender {
 	 * @return double
 	 */
 	public static double inRad(PackData p,int f) {
-		double a=p.intendedEdgeLength(p.faces[f].vert[0],p.faces[f].vert[1]);
-		double b=p.intendedEdgeLength(p.faces[f].vert[1],p.faces[f].vert[2]);
-		double c=p.intendedEdgeLength(p.faces[f].vert[2],p.faces[f].vert[0]);
+		int[] verts=p.packDCEL.faces[f].getVerts();
+		double a=p.intendedEdgeLength(verts[0],verts[1]);
+		double b=p.intendedEdgeLength(verts[1],verts[2]);
+		double c=p.intendedEdgeLength(verts[2],verts[0]);
 		return EuclMath.eucl_tri_inradius(a,b,c);
 	}
 	

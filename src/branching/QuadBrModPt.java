@@ -142,18 +142,4 @@ public class QuadBrModPt extends GenBrModPt {
 				", aim="+myAim+", holonomy err="+
 				Mobius.frobeniusNorm(getLocalHolonomy()));
 	}
-
-	/**
-	 * Make all edges of 'singFace_f' and 'singFace_g' poison
-	 */
-	public int setPoisonEdges() {
-		EdgeLink elink=new EdgeLink(p);
-		elink.add(new EdgeSimple(myPackData.faces[singFace_f].vert[0],myPackData.faces[singFace_f].vert[1]));
-		elink.add(new EdgeSimple(myPackData.faces[singFace_f].vert[1],myPackData.faces[singFace_f].vert[2]));
-		elink.add(new EdgeSimple(myPackData.faces[singFace_f].vert[2],myPackData.faces[singFace_f].vert[0]));
-		elink.add(new EdgeSimple(myPackData.faces[singFace_g].vert[0],myPackData.faces[singFace_g].vert[1]));
-		elink.add(new EdgeSimple(myPackData.faces[singFace_g].vert[1],myPackData.faces[singFace_g].vert[2]));
-		elink.add(new EdgeSimple(myPackData.faces[singFace_g].vert[2],myPackData.faces[singFace_g].vert[0]));
-		return elink.size();
-	}
 }

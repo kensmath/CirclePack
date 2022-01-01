@@ -167,7 +167,7 @@ public class TriAspect extends TriData {
 	/**
 	 * Find the incircle. For eucl/sph, just use centers; 
 	 * for hyp case, use 3 generalized tangency points.
-	 * @param face Face
+	 * @param faceIndx Face
 	 * @return CircleSimple
 	 */
 	public CircleSimple getFaceIncircle() {

@@ -16,7 +16,6 @@ import geometry.CommonMath;
 import geometry.SphericalMath;
 import komplex.DualTri;
 import komplex.EdgeSimple;
-import komplex.Face;
 import listManip.BaryCoordLink;
 import listManip.EdgeLink;
 import listManip.FaceLink;
@@ -182,20 +181,20 @@ public class PostParser {
 			{
 				if (p.hes != 0)
 					break;
-				int f;
+				
 				FaceLink faceLink = new FaceLink(p, items);
 				Iterator<Integer> flist = faceLink.iterator();
 				while (flist.hasNext()) {
-					f = (Integer) flist.next();
+					int[] verts=p.getFaceVerts(flist.next());
 					Complex[] sides = new Complex[3];
 					double[] lgths = new double[3];
 					for (int j = 0; j < 3; j++) {
-						sides[j] = p.getCenter(p.faces[f].vert[(j + 1) % 3])
-								.minus(p.getCenter(p.faces[f].vert[j]));
+						sides[j] = p.getCenter(verts[(j + 1) % 3])
+								.minus(p.getCenter(verts[j]));
 						lgths[j] = sides[j].abs();
 					}
 					for (int j = 0; j < 3; j++) {
-						Complex cent = p.getCenter(p.faces[f].vert[j]);
+						Complex cent = p.getCenter(verts[j]);
 						double arg1 = sides[j].arg();
 						double extent = sides[(j + 2) % 3].times(-1.0)
 								.divide(sides[j]).arg();
@@ -257,8 +256,6 @@ public class PostParser {
 					// handle first face circles (without adjusting centers)
 					if (c == 'C' || c == 'B') {
 						first_face = p.firstFace;
-						int indx = p.faces[first_face].indexFlag;
-
 						dcel.Face face = hlink.get(0).face;
 						int[] verts=face.getVerts();
 						for (int i = 0; i < 3; i++) {
@@ -551,7 +548,7 @@ public class PostParser {
 					int f;
 					while (flist.hasNext()) {
 						f = flist.next();
-						int[] vts = p.faces[f].vert;
+						int[] vts = p.getFaceVerts(f);
 						DualTri dtri = new DualTri(
 								p.getCenter(vts[0]), p.getCenter(vts[1]),
 								p.getCenter(vts[2]),p.hes);
@@ -637,22 +634,20 @@ public class PostParser {
 
 				Iterator<Integer> flist = faceLink.iterator();
 				while (flist.hasNext()) {
-					f = (Integer) flist.next();
+					dcel.Face face=p.packDCEL.faces[flist.next()];
+					int[] verts=face.getVerts();
 					Complex []Z=new Complex[3];
-					Z[0] = p.getCenter(p.faces[f].vert[0]);
-					Z[1] = p.getCenter(p.faces[f].vert[1]);
-					Z[2] = p.getCenter(p.faces[f].vert[2]);
-					if (p.hes > 0) {
-						Z[0] = cpScreen.sphView.toApparentSph(Z[0]);
-						Z[1] = cpScreen.sphView.toApparentSph(Z[1]);
-						Z[2] = cpScreen.sphView.toApparentSph(Z[2]);
+					for (int j=0;j<3;j++) {
+						Z[j] = p.getCenter(verts[j]);
+						if (p.hes > 0) 
+							Z[j] = cpScreen.sphView.toApparentSph(Z[j]);
 					}
 					// set face/bdry colors
 					Color fcolor=null;
 					Color bcolor=null;
 					if (dispFlags.fill) {  
 						if (!dispFlags.colorIsSet) 
-							dispFlags.setColor(p.faces[f].color);
+							dispFlags.setColor(face.color);
 						fcolor=dispFlags.getFillColor();
 					}
 					if (dispFlags.draw) {

@@ -21,7 +21,6 @@ import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
 import dcel.HalfEdge;
-import komplex.Face;
 import listManip.FaceLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
@@ -67,9 +66,7 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 	private JTextField flowerField;
 	private JLabel jLabel6;
 	private JLabel jLabel1;
-	private intNumField nextRedField;
 	private JCheckBox redCkBox;
-	private intNumField nextField;
 	private JCheckBox bdryCkBoxV;
 	private JTextField vertsField;
 	private intNumField colorFieldF;
@@ -249,10 +246,6 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 		redCkBox.setFont(new Font("TrueType",Font.PLAIN,10));
 		redCkBox.setText("Red?");
 		redCkBox.setPreferredSize(new Dimension(60,20));
-		nextField=new intNumField("Next",5);
-		nextField.setEditable(false);
-		nextRedField=new intNumField("Next red",5);
-		nextRedField.setEditable(false);
 		
 		// vertices
 		JPanel faceList=new JPanel(null);
@@ -269,8 +262,6 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 		
 		combArea.add(faceList);
 		combArea.add(colorFieldF);
-		combArea.add(nextField);
-		combArea.add(nextRedField);
 		combArea.add(redCkBox);
 
 		combArea.setBounds(5,fhigh,PackControl.ControlDim1.width/2+20,36);
@@ -432,7 +423,8 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 	}
 	
 	public void update_face(PackData p) {
-		if (p==null || !p.status) return;
+		if (p==null || !p.status) 
+			return;
 		int f=FaceLink.grab_one_face(p,faceChoice.getText());
 		if (f<=0) 
 			f=1;
@@ -440,24 +432,14 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 		// set index field
 		faceChoice.setText(Integer.toString(f));
 
-		Face face=p.faces[f];
-		int []verts=p.getFaceVerts(f);
+		dcel.Face face=p.packDCEL.faces[f];
+		int[] verts=face.getVerts();
 
 		// list corner vertices
 		vertsField.setText(verts[0]+" "+verts[1]+" "+verts[2]);
 		
 		// color?
 		colorFieldF.setField(ColorUtil.col_to_table(face.color));
-		
-		// next face?
-		nextField.setField(face.nextFace);
-		
-		// red?
-		redCkBox.setSelected(false);
-		if (face.rwbFlag>0) {
-			redCkBox.setSelected(true);
-			nextRedField.setField(face.nextRed);
-		}
 	}
 
 	/**

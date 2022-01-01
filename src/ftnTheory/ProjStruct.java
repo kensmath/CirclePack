@@ -116,7 +116,8 @@ public class ProjStruct extends PackExtender {
 			past_face=next_face;
 			next_face=asp.face;
 			int j=p.face_nghb(past_face,next_face);
-			if (j<0) j=0;
+			if (j<0) 
+				j=0;
 			int v0=asp.vert[j];
 			int v1=asp.vert[(j+1)%3];
 			int v2=asp.vert[(j+2)%3];

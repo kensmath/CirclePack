@@ -1,14 +1,8 @@
 package komplex;
 
 import java.util.Iterator;
-import java.util.LinkedList;
 
-import allMains.CirclePack;
-import complex.Complex;
-import exceptions.CombException;
-import exceptions.ParserException;
 import listManip.EdgeLink;
-import listManip.FaceLink;
 import listManip.GraphLink;
 import listManip.NodeLink;
 import packing.PackData;
@@ -56,7 +50,7 @@ public class DualGraph {
 			startface=p.firstFace;
 		if (startface==0) // default to 1
 			startface=1;
-		int startvert=p.faces[startface].vert[0];
+		int startvert=p.packDCEL.faces[startface].getVerts()[0];
 		NodeLink nextNodes=new NodeLink(p,startvert);
 		NodeLink currNodes=new NodeLink(p);
 		int []gen=new int[p.nodeCount+1];

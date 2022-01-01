@@ -4,18 +4,15 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Vector;
 
-import komplex.EdgeSimple;
-import komplex.Face;
-import packing.PackData;
-import util.StringUtil;
 import allMains.CPBase;
 import baryStuff.BaryPoint;
 import complex.Complex;
-
 import exceptions.ParserException;
+import geometry.CircleSimple;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
-import geometry.CircleSimple;
+import packing.PackData;
+import util.StringUtil;
 
 /**
  * Linked list of barycentric coordinate 'BaryPoint's 
@@ -123,7 +120,7 @@ public class BaryLink extends LinkedList<BaryPoint> {
 					Iterator<Integer> fcs=faces.iterator();
 					while (fcs.hasNext()) {
 						int f=fcs.next();
-						int []verts=packData.faces[f].vert;
+						int[] verts=packData.packDCEL.faces[f].getVerts();
 						BaryPoint bp=null;
 						if (packData.hes==0) { // eucl
 							bp=EuclMath.e_pt_to_bary(z,

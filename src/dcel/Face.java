@@ -23,7 +23,7 @@ public class Face {
 
 	public HalfEdge edge; // 'this' is on the left of its halfedge
 	public int faceIndx;  // utility index for this face
-	Color color;
+	public Color color;
 	public int mark;
 	public int plotFlag;
 	public int util;

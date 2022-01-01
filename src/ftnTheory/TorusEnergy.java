@@ -252,7 +252,7 @@ public class TorusEnergy extends PackExtender {
 	public int normalize() {
 		double area=0;
 		for (int f=1;f<=packData.faceCount;f++) {
-			int []verts=packData.faces[f].vert;
+			int []verts=packData.packDCEL.faces[f].getVerts();
 		
 			// assume tangency
 			double r0=packData.getRadius(verts[0]);

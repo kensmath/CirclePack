@@ -143,8 +143,9 @@ public class ColorCoding {
 		  p.utilDoubles=new Vector<Double>(p.faceCount+1);
 		  p.utilDoubles.add((Double)0.0); // empty 0th spot
 		  for (int f=1;f<=p.faceCount;f++) {
-			  Double dbl=Double.valueOf((double)Point3D.triArea(p.xyzpoint[p.faces[f].vert[0]],
-					  p.xyzpoint[p.faces[f].vert[1]],p.xyzpoint[p.faces[f].vert[2]]));
+			  int[] verts=p.packDCEL.faces[f].getVerts();
+			  Double dbl=Double.valueOf((double)Point3D.triArea(p.xyzpoint[verts[0]],
+					  p.xyzpoint[verts[1]],p.xyzpoint[verts[2]]));
 			  p.utilDoubles.add(dbl);
 			  count++;
 		  }

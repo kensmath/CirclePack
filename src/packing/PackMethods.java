@@ -75,11 +75,10 @@ public class PackMethods {
 					Iterator<BaryPacket> bits = bcl.iterator();
 					while (bits.hasNext()) {
 						BaryPacket bpkt = bits.next();
-						int f = bpkt.faceIndx;
+						int[] verts=bp.getFaceVerts(bpkt.faceIndx);
 
 						// put in the three vertices of this face
-						fp.write(bp.faces[f].vert[0] + "   " + bp.faces[f].vert[1] + "   " + bp.faces[f].vert[2]
-								+ "\n   ");
+						fp.write(verts[0]+"   "+verts[1]+"   "+verts[2]+"\n   ");
 						fp.write(String.format("%.6f",bpkt.start.b0)+" "+
 								String.format("%.6f", bpkt.start.b1) + "\n   "+
 								String.format("%.6f", bpkt.end.b0)+" "+

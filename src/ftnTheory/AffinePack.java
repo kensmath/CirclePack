@@ -19,7 +19,6 @@ import geometry.CircleSimple;
 import geometry.EuclMath;
 import input.CPFileManager;
 import komplex.EdgeSimple;
-import komplex.Face;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.NodeLink;
@@ -96,8 +95,9 @@ public class AffinePack extends PackExtender {
 			TriAspect tas=aspects[f];
 			tas.baseEdge=pdc.faces[f].edge;
 			tas.face=tas.baseEdge.face.faceIndx;
+			int[] verts=packData.packDCEL.faces[f].getVerts();
 			for (int j=0;j<3;j++) {
-				int v=packData.faces[f].vert[j];
+				int v=verts[j];
 				tas.vert[j]=v;
 				// set 'labels'
 				tas.labels[j]=packData.getRadius(v);
@@ -1198,9 +1198,6 @@ public class AffinePack extends PackExtender {
 	 */
 	public static Complex NewCenter(PackData p, TriAspect[] asp, int v){
 		
-		int w0=0;
-		int w1=0;
-		int w2=0;
 		CircleSimple sc=new CircleSimple();
 		double x[] = new double[p.countFaces(v)];
 		double y[] = new double[p.countFaces(v)];
@@ -1211,11 +1208,9 @@ public class AffinePack extends PackExtender {
 		
 		int[] faceFlower=p.getFaceFlower(v);
 		for (int j=0;j<p.countFaces(v);j++){
-			int f=faceFlower[j];
-			w0=p.faces[f].vert[0];
-			w1=p.faces[f].vert[1];
-			w2=p.faces[f].vert[2];
-			sc=EuclMath.eucl_tri_incircle(p.getCenter(w0),p.getCenter(w1),p.getCenter(w2));
+			int[] verts=p.packDCEL.faces[faceFlower[j]].getVerts();
+			sc=EuclMath.eucl_tri_incircle(p.getCenter(verts[0]),
+					p.getCenter(verts[1]),p.getCenter(verts[2]));
 			z=sc.center;
 			x[j]=z.x;
 			y[j]=z.y;
@@ -1538,35 +1533,34 @@ public class AffinePack extends PackExtender {
 	
 	/** 
 	 * edgeAdjust
-	 * @param p @see PackData
-	 * @param edge @see EdgeSimple
-	 * @param t  double in (0,1)
+	 * @param p ackData
+	 * @param edge EdgeSimple
+	 * @param t double, in (0,1)
 	 * @param asp TriAspect[]
 	 * @return 0 if edge is not interior, -1 on error
 	 */
 	
 	//NEW VERSION
-	public static int edgeAdjust(PackData p,EdgeSimple edge,double t,TriAspect []asp) {
+	public static int edgeAdjust(PackData p,EdgeSimple edge,
+			double t,TriAspect []asp) {
 		int f_right,f_left; // face on right/left (resp) of edge
 		int j1; // index of v in face f1
 		int j2; // index of w in face f2
 		double R1,S2; // sector radii, near side R*, opp side S*
 		
+		HalfEdge hedge=p.packDCEL.findHalfEdge(edge);
+		if (hedge==null || hedge.isBdry())
+			return 0;
 		int v=edge.v;
 		int w=edge.w;
 		int v2w=p.nghb(v,w);
 		int w2v=p.nghb(w,v);
 		
-		// return if <v,w> is not an interior edge
-		if (v2w==0 && p.isBdry(v) ||
-				w2v==0 && p.isBdry(w))
-			return 0;
-				
 		// find two faces: f_right to right of <v,w>, f_left to left
-		f_right=p.left_face(w,v)[0];
-		f_left=p.left_face(v,w)[0];
-		j1=p.faces[f_right].vertIndx(v);
-		j2=p.faces[f_left].vertIndx(w);
+		f_right=hedge.twin.face.faceIndx;
+		f_left=hedge.face.faceIndx;
+		j1=p.packDCEL.faces[f_right].getVertIndx(v);
+		j2=p.packDCEL.faces[f_left].getVertIndx(w);
 
 		// find opposite faces
 		int oppF1, oppF2; // index of faces across opposite sides
@@ -2619,9 +2613,9 @@ public class AffinePack extends PackExtender {
 			try {
 				dbw.write("labels:\n\n");
 				for (int f = 1; f <= packData.faceCount; f++) {
-					Face face = packData.faces[f];
-					dbw.write("face " + f + ": <" + face.vert[0] + ","
-							+ face.vert[1] + "," + face.vert[2] + ">   "
+					int[] verts=packData.packDCEL.faces[f].getVerts();
+					dbw.write("face " + f + ": <" + verts[0] + ","
+							+ verts[1] + "," + verts[2] + ">   "
 							+ "labels: <" + (double) aspects[f].labels[0] + ","
 							+ aspects[f].labels[1] + "," + aspects[f].labels[2]
 							+ ">\n");
@@ -2705,10 +2699,11 @@ public class AffinePack extends PackExtender {
 					switch(c) {
 					case 'r':  { // use current radii
 						while (flt.hasNext()) {
-							int f=flt.next();
+							dcel.Face face=packData.packDCEL.faces[flt.next()];
+							int[] verts=face.getVerts();
 							for (int j = 0; j < 3; j++)
-								aspects[f].labels[j]=
-									packData.getRadius(packData.faces[f].vert[j]);
+								aspects[face.faceIndx].labels[j]=
+									packData.getRadius(verts[j]);
 							count++;
 						}
 						break;

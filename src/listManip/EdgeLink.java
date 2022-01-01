@@ -15,9 +15,7 @@ import dcel.RedHEdge;
 import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.ParserException;
-import komplex.DualGraph;
 import komplex.EdgeSimple;
-import komplex.Face;
 import packQuality.QualMeasures;
 import packing.PackData;
 import util.FaceParam;
@@ -894,11 +892,11 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 					its=null; // eat rest of items
 					if (facelist==null || facelist.size()==0) break;
 					Iterator<Integer> flist=facelist.iterator();
-					Face face=null;
 					while (flist.hasNext()) {
-						face=(Face)packData.faces[(Integer)flist.next()];
+						int f=flist.next();
+						int[] verts=packData.packDCEL.faces[f].getVerts();
 						for (int j=0;j<3;j++) {
-							add(new EdgeSimple(face.vert[j],face.vert[(j+1)%3]));
+							add(new EdgeSimple(verts[j],verts[(j+1)%3]));
 							count++;
 						}
 					}
@@ -975,8 +973,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 					PathLink pLink=new PathLink(packData.hes,items);
 					PathInterpolator pInt=new PathInterpolator(packData.hes);
 					pInt.pathInit(pLink);
-					count +=this.abutMore(path2edgepath(packData,pInt,
-							startVert));
+					count +=this.abutMore(
+							HalfLink.path2edgepath(packData,pInt,startVert));
 				} catch (Exception ex) {
 					throw new ParserException(
 							"failed to get or convert path");
@@ -1439,227 +1437,20 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
     }
     
     /**
+     * traditional my be able to remove
      * Return random entry from edgelist; caution, does not adjust
      * for repeat entries.
      * @param edgelist
      * @return null on empty list
      */
     public static EdgeSimple randEdge(EdgeLink edgelist) {
-    	if (edgelist==null || edgelist.size()==0) return null;
+    	if (edgelist==null || edgelist.size()==0) 
+    		return null;
     	int n=new Random().nextInt(edgelist.size());
     	EdgeSimple edge=edgelist.get(n);
     	return new EdgeSimple(edge.v,edge.w);
     }
-
-    /**
-     * Convert a polygonal path into a linked list of edges; first convert
-     * to a 'FaceLink', then go down the right side of this chain of faces.
-     * May have a preferred starting vertex. 
-     * TODO: currently, eucl only
-     * @param p
-     * @param pInt, PathInterpolator
-     * @param startVert (or 0 if non specified)
-     * @return
-     */
-	public static EdgeLink path2edgepath(PackData p,
-			PathInterpolator pInt,int startVert) {
-		FaceParam startFP=FaceLink.pathProject(p,pInt,startVert);
-		if (startFP==null || startFP.next==null) return null;
-		int startFace=startFP.face;
-		FaceParam ftrace=startFP;
-		while (ftrace.next!=null) ftrace=ftrace.next;
-		int endFace=ftrace.face;
-		
-		// get start/end complex points
-		Complex startZ=pInt.sToZ(0.0);
-		Complex endZ=null;
-		if (pInt.closed) endZ=new Complex(startZ);
-		else endZ=new Complex(pInt.pathZ.lastElement());
-		
-		// start/end vertices are those closest to startZ/endZ
-		double smin=10000.0;
-		double emin=10000.0;
-		Face sface=p.faces[startFace];
-		Face eface=p.faces[endFace];
-		int sindx=0;
-		int eindx=0;
-		double ut=0.0;
-		for (int i=0;i<3;i++) {
-			ut=startZ.minus(p.getCenter(sface.vert[i])).abs();
-			if (ut<smin) {
-				smin=ut;
-				sindx=i;
-			}
-			ut=endZ.minus(p.getCenter(eface.vert[i])).abs();
-			if (ut<emin) {
-				emin=ut;
-				eindx=i;
-			}
-		}
-		int startV=sface.vert[sindx];
-		int endV=eface.vert[eindx];
-		if (startV==endV) return null;
-		
-		// Remove any unneeded faces at beginning (i.e, next face has startV)
-		while (startFP.next!=null && p.face_index(startFP.next.face,startV)>=0)
-			startFP=startFP.next;
-		
-		// Remove any unneeded faces at end (i.e., previous face has endV)
-		ftrace=startFP; 
-		// find first face containing endV
-		while (ftrace!=null && p.face_index(ftrace.face,endV)<0)
-			ftrace=ftrace.next;
-		if (ftrace==null) return null; // should not happen
-		// ftrace is first 'FaceParam' whose face contains endV; do the rest?
-		boolean done=false;
-		FaceParam ntrace=ftrace;
-		while (!done) {
-			while (ntrace.next!=null && p.face_index(ntrace.next.face,endV)>=0)
-				ntrace=ntrace.next;
-			if (ntrace.next==null) done=true; 
-			else ftrace=ntrace.next; // a face that doesn't have endV
-			// find next face with endV
-			while (ftrace!=null && p.face_index(ftrace.face,endV)<0) 
-				ftrace=ftrace.next; 
-			if (ftrace==null) return null; // should not happen
-		}				
-		ftrace.next=null; // stop chain here
-		
-		// Some ambiguity in converting from face chain to edgepath.
-		// Take simple route: choose the edges along the left of the faces
-		EdgeLink elink=new EdgeLink(p);
-		int v=startV;
-		int nextv=v;
-		EdgeSimple edge=new EdgeSimple(v,v);
-		EdgeSimple nextedge=new EdgeSimple(v,v);
-		ftrace=startFP;
-		while (ftrace.next!=null) {
-			
-			// continue until the putative 'nextedge' is satifactory:
-			//  non-trivial, connected to previous, not reverse of previous
-			while( (v==nextv || nextedge.v==nextedge.w ||
-					nextedge.v!=edge.w || nextedge.w==edge.v) && 
-					ftrace.next!=null) {
-
-				// create putative next edge
-				int nt=p.face_nghb(ftrace.face,ftrace.next.face);
-				if (nt<0) throw new CombException(
-						"broken chain in 'FaceParam' list");
-				nextv=p.faces[ftrace.next.face].vert[nt];
-				nextedge=new EdgeSimple(v,nextv);
-				ftrace=ftrace.next;
-			}
-			// success??
-			if (v!=nextv && nextedge.v!=nextedge.w && nextedge.v==edge.w 
-					&& nextedge.w!=edge.v) { 
-				elink.add(nextedge);
-				v=nextv;
-				edge=nextedge;
-			}
-			// no success, but check last face: 
-			//     if v,endV are in it, add last edge 
-			else if (ftrace!=null && ftrace.next==null && v!=endV
-					&& p.face_index(ftrace.face,endV)>=0 && 
-					p.face_index(ftrace.face,v)>=0) {
-				elink.add(new EdgeSimple(v,endV));
-				v=endV;
-			}
-			else if (v!=endV)
-				throw new CombException(
-						"seem to have error in finding next edge");
-		} // end of while
-
-		// there may be a last edge
-		if (v!=endV) {
-			if (p.nghb(v,endV)<0) 
-				throw new CombException("failed to end at correct vertex");
-			elink.add(new EdgeSimple(v,endV));
-		}
-
-		if (elink==null || elink.size()==0) return null;
-		return elink;
-	}
-	 /**
-	  * Does the given list of edges have vertices that separate the complex? 
-	  * If the return is 0, then answer is NO.
-	  * @param p
-	  * @param edgelist, EdgeLink
-	  * @return lowest index of circles not reachable from first non-green,
-	  * else 0, and complex is NOT separated.
-	  *   
-	  */
-	 public static int separates(PackData p,EdgeLink edgelist) {
-		 NodeLink nodes=new NodeLink(p);
-		 Iterator<EdgeSimple> elst=edgelist.iterator();
-		 while (elst.hasNext()) {
-			 EdgeSimple edge=elst.next();
-			 nodes.add(edge.v);
-			 nodes.add(edge.w);
-		 }
-		 return NodeLink.separates(p,nodes);
-	 }
 	 
-	 /**
-	  * Create a new EdgeLink that eliminates duplicate edges.
-	  * @param el
-	  * @param orient boolean, true, then take account of orientation
-	  * @return new EdgeLink
-	  */
-	 public static EdgeLink removeDuplicates(EdgeLink el,boolean orient) {
-		 EdgeLink newEL=new EdgeLink(el.packData);
-		 Iterator<EdgeSimple> els=el.iterator();
-		 while (els.hasNext()) {
-			 EdgeSimple edge=els.next();
-			 if (newEL.containsVW(edge, orient))
-				 continue;
-			 newEL.add(edge);
-		 }
-		 return newEL;
-	 }
-	 
-	 /**
-	  * Check if this list contains (v,w) ( or (w,v) if orient=false)
-	  * @param v int
-	  * @param w int
-	  * @param orient boolean, true, enforce orientation
-	  * @return boolean
-	  */
-	 public boolean containsVW(int v,int w,boolean orient) {
-		 return containsVW(new EdgeSimple(v,w),orient);
-	 }
-	 
-	 /**
-	  * Check if this list contains (v,w) ( or (w,v) if orient=false)
-	  * @param edge EdgeSimple
-	  * @param orient boolean, true, enforce orientation
-	  * @return boolean
-	  */
-	 public boolean containsVW(EdgeSimple edge,boolean orient) {
-		 Iterator<EdgeSimple> els=this.iterator();
-		 while (els.hasNext()) {
-			 if (els.next().isEqual(edge,orient))
-				 return true;
-		 }
-		 return false;
-	 }
-	 
-	 public void swapVW(int v,int w) {
-		 if (v==w) 
-			 return;
-		Iterator<EdgeSimple> etrace = this.iterator();
-		while (etrace.hasNext()) {
-			EdgeSimple es = (EdgeSimple) etrace.next();
-			if (es.v == v)
-				es.v = w;
-			else if (es.v == w)
-				es.v = v;
-			if (es.w == v)
-				es.w = w;
-			else if (es.w == w)
-				es.w = v;
-		}
-	 }
-
 	 /**
 	  * Set 'packData' (which helps determine eligibility of entries)
 	  * @param p PackData
@@ -1694,90 +1485,6 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			sb.append(" "+edge.v+" "+edge.w);
 		}
 		return sb.toString();
-	}
-		
-	 
-	/**
-	 * Make up list by looking through SetBuilder specs 
-	 * (from {..} set-builder notation). Use 'tmpUtil' to 
-	 * collect information before creating the HalfLink for 
-	 * return. (Have not yet implemented edge selections)
-	 * @param p PackData (with DCEL structure)
-	 * @param specs Vector<SelectSpec>
-	 * @return HalfLink list of specified edges
-	 */
-	public static HalfLink edgeSpecs(PackData p,Vector<SelectSpec> specs) {
-		if (specs==null || specs.size()==0) 
-			return null;
-		SelectSpec sp=null;
-		int count=0;
-			// will store results in 'eutil'
-		
-		int[] tmpUtil=new int[p.packDCEL.edgeCount+1];
-		// loop through all the specifications: these should alternate
-		//   between 'specifications' and 'connectives', starting 
-		//   with the former, although typically there will be just 
-		//   one specification in the vector and no connective.
-		UtilPacket uPx=null;
-		UtilPacket uPy=null;
-		boolean isAnd=false; // true for '&&' connective, false for '||'.
-		for (int j=0;j<specs.size();j++) {
-			sp=(SelectSpec)specs.get(j);
-			if (sp.object!='e') 
-				throw new ParserException(); // spec must be edges/halfedges
-			try {
-				for (int e=1;e<=p.packDCEL.edgeCount;e++) {
-					
-					// success?
-					boolean outcome=false;
-					uPx=sp.node_to_value(p,e,0);
-					if (sp.unary) {
-						if (uPx.rtnFlag!=0)
-							outcome=sp.comparison(uPx.value,0);
-					}
-					else {
-						uPy=sp.node_to_value(p,e,1);
-						if (uPy.rtnFlag!=0)
-							outcome=sp.comparison(uPx.value, uPy.value);
-					}
-					if (outcome) { // yes, this value satisfies condition
-						if (!isAnd && tmpUtil[e]==0) { // 'or' situation
-							tmpUtil[e]=1;
-							count++;
-						}
-					}
-					else { // no, fails this condition
-						if (isAnd && tmpUtil[e]!=0) { // 'and' situation
-							tmpUtil[e]=0;
-							count--;
-						}
-					}
-				}
-			} catch (Exception ex) {
-				throw new ParserException();
-			}
-			
-			// if specs has 2 or more additional specifications, 
-			//    the next must be a connective. Else, finish loop.
-			if ((j+2)<specs.size()) {
-				sp=(SelectSpec)specs.get(j+1);
-				if (!sp.isConnective) 
-					throw new ParserException();
-				isAnd=sp.isAnd; 
-				j++;
-			}
-			else j=specs.size(); // kick out of loop
-		}
-	
-		if (count>0) {
-			HalfLink hl=new HalfLink(p);
-			for (int e=1;e<=p.packDCEL.edgeCount;e++)
-				if (tmpUtil[e]!=0) 
-					hl.add(p.packDCEL.edges[e]);
-			return hl;
-		}
-		else 
-			return null;
 	}
 		
 }

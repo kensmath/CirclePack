@@ -283,7 +283,7 @@ public class FaceLink extends LinkedList<Integer> {
 			
 				NodeLink currv=null;
 				NodeLink nextv=new NodeLink(packData);
-				nextv.add(packData.faces[startface].vert[0]);
+				nextv.add(packData.packDCEL.faces[startface].getVerts()[0]);
 				
 				try {
 				while (nextv.size()!=0) {
@@ -731,11 +731,11 @@ public class FaceLink extends LinkedList<Integer> {
 					FaceParam fP=FaceLink.pathProject(packData,pInt,startFace);
 					FaceParam ftrace=fP;
 					while (ftrace.next!=null) {
-						add(ftrace.face);
+						add(ftrace.faceIndx);
 						ftrace=ftrace.next;
 						count++;
 					}
-					add(ftrace.face);
+					add(ftrace.faceIndx);
 					count++;
 				} catch (Exception ex) {
 					throw new ParserException("failed to get or convert path");
@@ -967,12 +967,12 @@ public class FaceLink extends LinkedList<Integer> {
 				//    'Z', but then need next FaceParam for 'nghb_face'.
 				if (hit) { 
 					startFP=new FaceParam();
-					startFP.face=startFace;
+					startFP.faceIndx=startFace;
 					startFP.param=0.0;
 					startFP.Z=p.getFaceCenter(startFace);
 					startFP.firm=true;
 					startFP.next=nextFP=new FaceParam();
-					nextFP.face=nghb_face;
+					nextFP.faceIndx=nghb_face;
 					nextFP.param=.000001; // just to be different than 0.0
 					nextFP.Z=startZ;
 					nextFP.next=null;
@@ -982,7 +982,7 @@ public class FaceLink extends LinkedList<Integer> {
 			}
 			else { // yes, startZ is in given startFace
 				startFP=new FaceParam();
-				startFP.face=startFace;
+				startFP.faceIndx=startFace;
 				startFP.param=0.0;
 				startFP.Z=startZ;
 				startFP.firm=true;
@@ -992,7 +992,7 @@ public class FaceLink extends LinkedList<Integer> {
 		// If 'startFace' is (or was reset to) 0, use first face in 'startLink'
 		if (startFace<=0) { 
 			startFP=new FaceParam();
-			startFP.face=startLink.get(0);
+			startFP.faceIndx=startLink.get(0);
 			startFP.param=0.0;
 			startFP.Z=startZ;
 			startFP.firm=true;
@@ -1003,11 +1003,11 @@ public class FaceLink extends LinkedList<Integer> {
 		
 		// if we already have a next; have to get intervening faces
 		if (startFP.next!=null) {
-			if (p.face_nghb(startFP.face,startFP.next.face)>0) {
+			if (p.face_nghb(startFP.faceIndx,startFP.next.faceIndx)>0) {
 				nextFP=startFP.next;
 			}
 			else {
-				int v=p.face_vert_share(startFP.face,startFP.next.face);
+				int v=p.face_vert_share(startFP.faceIndx,startFP.next.faceIndx);
 				if (v<=0) {
 					CirclePack.cpb.errMsg("error in starting face list");
 					return null;
@@ -1016,9 +1016,9 @@ public class FaceLink extends LinkedList<Integer> {
 				int js=-1;
 				int jn=-1;
 				for (int j=0;j<num;j++) {
-					if (p.getFaceFlower(v,j)==startFP.face) 
+					if (p.getFaceFlower(v,j)==startFP.faceIndx) 
 						js=j;
-					if (p.getFaceFlower(v,j)==startFP.next.face)
+					if (p.getFaceFlower(v,j)==startFP.next.faceIndx)
 						jn=j;
 				}
 				
@@ -1029,17 +1029,17 @@ public class FaceLink extends LinkedList<Integer> {
 					if (js<jn) {
 						for (int j=js+1;j<jn;j++) {
 							nextFP=nextFP.next=new FaceParam();
-							nextFP.face=faceFlower[j];
+							nextFP.faceIndx=faceFlower[j];
 							nextFP.param=.000001;  // fake
-							nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
+							nextFP.Z=p.getFaceCenter(nextFP.faceIndx); // fake 
 						}
 					}
 					else {
 						for (int j=js-1;j>jn;j--) {
 							nextFP=nextFP.next=new FaceParam();
-							nextFP.face=faceFlower[j];
+							nextFP.faceIndx=faceFlower[j];
 							nextFP.param=.000001;  // fake
-							nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
+							nextFP.Z=p.getFaceCenter(nextFP.faceIndx); // fake 
 						}
 					}
 					nextFP=nextFP.next=holdFP; // reattach the known end one
@@ -1049,9 +1049,9 @@ public class FaceLink extends LinkedList<Integer> {
 						int jj=(js+1)%num;
 						while (jj<jn) {
 							nextFP=nextFP.next=new FaceParam();
-							nextFP.face=faceFlower[jj];
+							nextFP.faceIndx=faceFlower[jj];
 							nextFP.param=.000001;  // fake
-							nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
+							nextFP.Z=p.getFaceCenter(nextFP.faceIndx); // fake 
 							jj=(jj+1)%num;
 						}
 					}
@@ -1059,9 +1059,9 @@ public class FaceLink extends LinkedList<Integer> {
 						int jj=(js-1+num)%num;
 						while (jj>jn) {
 							nextFP=nextFP.next=new FaceParam();
-							nextFP.face=faceFlower[jj];
+							nextFP.faceIndx=faceFlower[jj];
 							nextFP.param=.000001;  // fake
-							nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
+							nextFP.Z=p.getFaceCenter(nextFP.faceIndx); // fake 
 							jj=(jj-1+num)%num;
 						}
 					}
@@ -1076,7 +1076,7 @@ public class FaceLink extends LinkedList<Integer> {
 		//   'nextFP' should have legitimate 'Z' and legitimate 'param'.
 
 		double param=nextFP.param;
-		int nextFace=nextFP.face;
+		int nextFace=nextFP.faceIndx;
 		
 		while (nextFP!=null && param<pInt.length && nextFace>0) {
 			FaceParam fP=prolongFP(p,nextFP,pInt);
@@ -1086,13 +1086,13 @@ public class FaceLink extends LinkedList<Integer> {
 				return startFP;
 
 			// or we reached end; check for closure
-			if (fP.face<=0 || fP.param==pInt.length) {  
-				int fAce=Math.abs(fP.face);
-				fP.face=fAce;
+			if (fP.faceIndx<=0 || fP.param==pInt.length) {  
+				int fAce=Math.abs(fP.faceIndx);
+				fP.faceIndx=fAce;
 				// try to get fan of new 'FaceParam's to close up
-				if (pInt.closed && fAce!=startFP.face) {
+				if (pInt.closed && fAce!=startFP.faceIndx) {
 					fP.next=new FaceParam();
-					fP.next.face=startFP.face;
+					fP.next.faceIndx=startFP.faceIndx;
 					fP.next.param=fP.param+.00001; // fake
 					fP.next.Z=pInt.sToZ(0.0);
 					FaceParam finalFP=filloutFan(p,fP);
@@ -1164,7 +1164,7 @@ public class FaceLink extends LinkedList<Integer> {
 	public static FaceParam prolongFP(PackData p,FaceParam initFP,PathInterpolator pInt) {
 		FaceParam nextFP=null;
 		FaceParam midFP=null;
-		int initFace=initFP.face;
+		int initFace=initFP.faceIndx;
 		
         // Go through successively incident faces until reaching first not 
 		//    incident to initFace
@@ -1189,7 +1189,7 @@ public class FaceLink extends LinkedList<Integer> {
 			if (pastFace!=initFace) { 
 				midFP=new FaceParam();
 				midFP.next=null;
-				midFP.face=pastFace;
+				midFP.faceIndx=pastFace;
 				midFP.param=pastparam;
 				midFP.Z=pInt.sToZ(pastparam);
 				initFP.next=midFP;
@@ -1228,10 +1228,10 @@ public class FaceLink extends LinkedList<Integer> {
 			for (int j=indx-1;j>=0;j--) {
 				param=nextFP.param;
 				nextFP=nextFP.next=new FaceParam();
-				nextFP.face=p.getFaceFlower(bvert,j);
+				nextFP.faceIndx=p.getFaceFlower(bvert,j);
 				nextFP.next=null;
 				nextFP.param=param+.0001; // fake
-				nextFP.Z=p.getFaceCenter(nextFP.face); // fake
+				nextFP.Z=p.getFaceCenter(nextFP.faceIndx); // fake
 			}
 			return null; 
 		}
@@ -1245,20 +1245,20 @@ public class FaceLink extends LinkedList<Integer> {
 			initFP.next=midFP;
 			
 			if (pastFace!=initFace) { // incident faces; can add more links
-				midFP.face=pastFace;
+				midFP.faceIndx=pastFace;
 				FaceParam returnFP=filloutFan(p,initFP); // get fan
 				if (returnFP==null) 
 					throw new CombException("projectFP error in ending path");
 				return returnFP;
 			}
-			midFP.face=-initFace; // calling routine decides on what to do
+			midFP.faceIndx=-initFace; // calling routine decides on what to do
 			return midFP;
 		}
 			
 		// reached non-incident face 'nextFace', but need to reach 'midFace' first
 		midFP=new FaceParam();
 		midFP.next=null;
-		midFP.face=pastFace;
+		midFP.faceIndx=pastFace;
 		midFP.param=pastparam;
 		midFP.Z=pInt.sToZ(pastparam);
 		initFP.next=midFP; 
@@ -1270,7 +1270,7 @@ public class FaceLink extends LinkedList<Integer> {
 		// now to go for 'nextFace'
 		nextFP=new FaceParam();
 		nextFP.param=param;
-		nextFP.face=nextFace;
+		nextFP.faceIndx=nextFace;
 		nextFP.next=null;
 		nextFP.Z=pInt.sToZ(param);
 		midFP.next=nextFP;
@@ -1293,8 +1293,8 @@ public class FaceLink extends LinkedList<Integer> {
 	public static FaceParam filloutFan(PackData p,FaceParam initFP) {
 		if (initFP==null || initFP.next==null) 
 			return null;
-		int face=initFP.face;
-		int nface=initFP.next.face;
+		int face=initFP.faceIndx;
+		int nface=initFP.next.faceIndx;
 		if (face<=0 || nface<=0) 
 			return null;
 		if (face==nface) {  // same face? don't resolve redundancy, just return
@@ -1328,9 +1328,9 @@ public class FaceLink extends LinkedList<Integer> {
 					double holdparam=nextFP.param;
 					nextFP=nextFP.next=new FaceParam();
 					nextFP.next=holdFP;
-					nextFP.face=faceFlower[j];
+					nextFP.faceIndx=faceFlower[j];
 					nextFP.param=(holdparam+nextFP.next.param)/2.0;  // fake
-					nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
+					nextFP.Z=p.getFaceCenter(nextFP.faceIndx); // fake 
 				}
 			}
 			else { // clockwise
@@ -1339,9 +1339,9 @@ public class FaceLink extends LinkedList<Integer> {
 					double holdparam=nextFP.param;
 					nextFP=nextFP.next=new FaceParam();
 					nextFP.next=holdFP;
-					nextFP.face=faceFlower[j];
+					nextFP.faceIndx=faceFlower[j];
 					nextFP.param=(holdparam+nextFP.next.param)/2.0;  // fake
-					nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
+					nextFP.Z=p.getFaceCenter(nextFP.faceIndx); // fake 
 				}
 			}
 		}
@@ -1359,9 +1359,9 @@ public class FaceLink extends LinkedList<Integer> {
 					double holdparam=nextFP.param;
 					nextFP=nextFP.next=new FaceParam();
 					nextFP.next=holdFP;
-					nextFP.face=faceFlower[jj];
+					nextFP.faceIndx=faceFlower[jj];
 					nextFP.param=(holdparam+nextFP.next.param)/2.0;  // fake
-					nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
+					nextFP.Z=p.getFaceCenter(nextFP.faceIndx); // fake 
 					jj=(jj+1)%num;
 				}
 			}
@@ -1372,9 +1372,9 @@ public class FaceLink extends LinkedList<Integer> {
 					double holdparam=nextFP.param;
 					nextFP=nextFP.next=new FaceParam();
 					nextFP.next=holdFP;
-					nextFP.face=faceFlower[jj];
+					nextFP.faceIndx=faceFlower[jj];
 					nextFP.param=(holdparam+nextFP.next.param)/2.0;  // fake
-					nextFP.Z=p.getFaceCenter(nextFP.face); // fake 
+					nextFP.Z=p.getFaceCenter(nextFP.faceIndx); // fake 
 					jj=(jj-1+num)%num;
 				}
 			}

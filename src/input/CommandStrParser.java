@@ -6130,22 +6130,23 @@ public class CommandStrParser {
 	    	  double r0,r1,r2;
 	    	  Complex z0,z1,z2;
 
-	    	  if (packData.hes!=0 || f<1 || f>packData.faceCount) {
+	    	  if (packData.hes!=0 || f<1 || f>packData.faceCount) 
 	    		  throw new ParserException("must specify face f of eucl packing");
-	    	  }
-	        r0=packData.getRadius(packData.faces[f].vert[0]);
-	        r1=packData.getRadius(packData.faces[f].vert[1]);
-	        r2=packData.getRadius(packData.faces[f].vert[2]);
-	        z0=packData.getCenter(packData.faces[f].vert[0]);
-	        z1=packData.getCenter(packData.faces[f].vert[1]);
-	        z2=packData.getCenter(packData.faces[f].vert[2]);
-	        double []ans=new double[4];
-	        if (Exponential.doyle_point(packData,r0,r1,r2,z0,z1,z2,ans)==0) 
-	            throw new ParserException("failed");
-	        CirclePack.cpb.msg("doyle_point for face "+f+", pt ="+
+
+	    	  int[] verts=packData.packDCEL.faces[f].getVerts();
+	    	  r0=packData.getRadius(verts[0]);
+	    	  r1=packData.getRadius(verts[1]);
+	    	  r2=packData.getRadius(verts[2]);
+	    	  z0=packData.getCenter(verts[0]);
+	    	  z1=packData.getCenter(verts[1]);
+	    	  z2=packData.getCenter(verts[2]);
+	    	  double []ans=new double[4];
+	    	  if (Exponential.doyle_point(packData,r0,r1,r2,z0,z1,z2,ans)==0) 
+	    		  throw new ParserException("failed");
+	    	  CirclePack.cpb.msg("doyle_point for face "+f+", pt ="+
 	      					 ans[2]+" "+ans[3]+"i, parameters a="+ans[0]+
 	      					 " and b="+ans[1]);
-	        return 1;
+	    	  return 1;
 	      }
 	          
 	      // ========= doyle_annulus =========
@@ -10992,9 +10993,10 @@ public static CallPacket valueExecute(PackData packData,
 							packData.setFaceMark(f,0);
 						for (int f = 1; f <= packData.faceCount; f++) {
 							gmax = gmin = 0;
-							if ((g0 = packData.getVertMark(packData.faces[f].vert[0])) != 0
-									&& (g1 = packData.getVertMark(packData.faces[f].vert[1])) != 0
-									&& (g2 = packData.getVertMark(packData.faces[f].vert[2])) != 0) {
+							int[] verts=packData.packDCEL.faces[f].getVerts();
+							if ((g0 = packData.getVertMark(verts[0])) != 0
+									&& (g1 = packData.getVertMark(verts[1])) != 0
+									&& (g2 = packData.getVertMark(verts[2])) != 0) {
 								gmax = g0;
 								gmax = (g1 > gmax) ? g1 : gmax;
 								gmax = (g2 > gmax) ? g2 : gmax;

@@ -364,18 +364,15 @@ public class D_ProjStruct extends PackExtender {
 							Iterator<Integer> flst = facelist.iterator();
 							boolean first_face = true;
 							while (flst.hasNext()) {
-
 								int fnum = flst.next();
 								TriAspect tasp = aspects[fnum];
 								if (circs) {
-									int k = packData.faces[fnum].indexFlag;
 									for (int j = 0; j < 3; j++) {
-										int kk = (k + 2 + j) % 3;
 										if (!first_face)
 											j = 2; // just one circle
-										Complex z = tasp.getCenter(kk);
-										double rad = tasp.labels[kk];
-										int v = tasp.vert[kk];
+										Complex z = tasp.getCenter(j);
+										double rad = tasp.labels[j];
+										int v = tasp.vert[j];
 							
 										if (!dispFlags.colorIsSet && 
 												(dispFlags.fill || dispFlags.colBorder))
@@ -397,6 +394,7 @@ public class D_ProjStruct extends PackExtender {
 											null,null,null,dispFlags);
 									count++;
 								}
+								first_face=false;
 							} // end of while 
 
 							PackControl.canvasRedrawer.
@@ -431,9 +429,9 @@ public class D_ProjStruct extends PackExtender {
 			try {
 				dbw.write("labels:\n\n");
 				for (int f = 1; f <= packData.faceCount; f++) {
-					Face face = packData.faces[f];
-					dbw.write("face " + f + ": <" + face.vert[0] + ","
-							+ face.vert[1] + "," + face.vert[2] + ">   "
+					int[] verts=packData.packDCEL.faces[f].getVerts();
+					dbw.write("face " + f + ": <" + verts[0] + ","
+							+ verts[1] + "," + verts[2] + ">   "
 							+ "labels: <" + (double) aspects[f].labels[0] + ","
 							+ aspects[f].labels[1] + "," + aspects[f].labels[2]
 							+ ">\n");
@@ -844,7 +842,7 @@ public class D_ProjStruct extends PackExtender {
 	 * @param asp TriAspect[]
 	 */
 	public static void printRadRatios(PackData p,int fnum,TriAspect []asp) {
-		int []vts=p.faces[fnum].vert;
+		int[] vts=p.packDCEL.faces[fnum].getVerts();
 		double r0=p.getRadius(vts[0]);
 		double r1=p.getRadius(vts[1]);
 		double r2=p.getRadius(vts[2]);
@@ -1898,7 +1896,8 @@ public class D_ProjStruct extends PackExtender {
 			past_face=next_face;
 			next_face=asp.face;
 			int j=p.face_nghb(past_face,next_face);
-			if (j<0) j=0;
+			if (j<0) 
+				j=0;
 			int v0=asp.vert[j];
 			int v1=asp.vert[(j+1)%3];
 			int v2=asp.vert[(j+2)%3];

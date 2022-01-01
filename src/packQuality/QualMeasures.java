@@ -106,13 +106,13 @@ public class QualMeasures {
 	 * On computation error, return vert[0].
 	 */	  
 	public static int pin_face(PackData p,int face) {
-	  int it=p.faces[face].vert[0];
+	  int it=p.packDCEL.faces[face].getVerts()[0];
 	  double dlength,elength,newrat,rat=-1.0;
 	  int []qual=new int[3];
 
 	  for (int i=0;i<3;i++) {
 	      qual[i]=0;
-	      int v=p.faces[face].vert[0];
+	      int v=p.packDCEL.faces[face].getVerts()[0];
 	      int num=p.countFaces(v)+p.getBdryFlag(v);
 	      for (int j=0;j<num;j++) {
 	    	  int w=p.kData[v].flower[j];
@@ -181,21 +181,26 @@ public class QualMeasures {
 	 * @return int, count of poorly plotted faces or -1 on error.
 	 */
 	public static int face_error(PackData p,double crit,FaceLink facelist) {
-		int count=0,v1,v2,face;
+		int count=0;
 		double elength,dlength,recip,quo;
 	  
-		if (crit<=1.0 || facelist==null || facelist.size()==0) return -1;
+		if (crit<=1.0 || facelist==null || facelist.size()==0) 
+			return -1;
 		recip=1/crit;
 		Iterator<Integer> flist=facelist.iterator();
-		while (flist.hasNext() && p.faces[(face=(Integer)flist.next())].plotFlag>0) {
+		while (flist.hasNext()) {
+			int face=flist.next();
+			if (p.getFacePlotFlag(face)<=0)
+				break;
+			int[] verts=p.getFaceVerts(face);
 			for (int i=0;i<3;i++) {
-				v1=p.faces[face].vert[i];
-				v2=p.faces[face].vert[(i+1)%3];
+				int v1=verts[i];
+				int v2=verts[(i+1)%3];
 				try {
 					if ((elength=edge_length(p,v1,v2))>=0.0
 							&& (dlength=desired_length(p,v1,v2))>0.0
 							&& ((quo=elength/dlength)>crit || quo<recip)) {
-						p.faces[face].plotFlag=0;
+						p.setFacePlotFlag(face,0);
 						count++;
 						i=3; // break out of for loop
 					}
@@ -260,7 +265,7 @@ public class QualMeasures {
 		int failface=0;
 		while (failface==0 && flk.hasNext()) {
 			int f=flk.next();
-			int []vert=p.faces[f].vert;
+			int[] vert=p.getFaceVerts(f);
 			try {
 				Complex vz=p.getCenter(vert[0]);
 				Complex uz=p.getCenter(vert[1]);
