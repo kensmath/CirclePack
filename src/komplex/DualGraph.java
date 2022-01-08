@@ -63,8 +63,9 @@ public class DualGraph {
 			Iterator<Integer> cl=currNodes.iterator();
 			while (cl.hasNext()) {
 				int v=cl.next();
-				for (int j=0;j<(p.countFaces(v)+p.getBdryFlag(v));j++) {
-					int w=p.kData[v].flower[j];
+				int[] petals=p.getPetals(v);
+				for (int j=0;j<petals.length;j++) {
+					int w=petals[j];
 					if (gen[w]==0) {
 						gen[w]=tick;
 						nextNodes.add(w);

@@ -20,6 +20,7 @@ import util.CmdStruct;
 import util.ColorUtil;
 import allMains.CPBase;
 import allMains.CirclePack;
+import dcel.HalfEdge;
 import exceptions.DataException;
 import exceptions.InOutException;
 import exceptions.ParserException;
@@ -367,8 +368,9 @@ public class SphereLayout extends PackExtender {
 			//   Dot product of b3 with a X b should be positive.
 			else {
 				int b3=beacons.get(3);
-				int v=packData.kData[beacons.get(3)].flower[0];
-				int w=packData.kData[beacons.get(3)].flower[1];
+				int[] flower=packData.getFlower(b3);
+				int v=flower[0];
+				int w=flower[1];
 				
 				// get center for b3
 				VertGPS gps=vertGPS[b3];

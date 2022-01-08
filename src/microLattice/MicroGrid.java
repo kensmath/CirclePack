@@ -860,10 +860,10 @@ public class MicroGrid extends PackExtender {
 					if (nlist!=null && nlist.size()>0 && (qv=nlist.get(0))>0) {
 						// find average radius of qv and nghbs
 						value=qackData.getRadius(qv);
-						int nbr=qackData.countFaces(qv)+qackData.getBdryFlag(qv);
-						for (int j=0;j<nbr;j++) 
-							value += qackData.getRadius(qackData.kData[qv].flower[j]);
-						value =(double)(nbr+1)/value;
+						int[] petals=qackData.getPetals(qv);
+						for (int j=0;j<petals.length;j++) 
+							value += qackData.getRadius(petals[j]);
+						value =(double)(petals.length+1)/value;
 					}
 				}
 			}	

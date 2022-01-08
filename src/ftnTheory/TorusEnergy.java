@@ -265,41 +265,7 @@ public class TorusEnergy extends PackExtender {
 			packData.setRadius(v,packData.getRadius(v)/factor);
 		return 1;
 	}
-	
-	/**
-	 * We call for an edge flip, but first we have to be ready
-	 * to readjust 'edgeList'.
-	 * @return 0 on error
-	 */
-	public int flipedge(int v,int w) {
-		if (v==w || v<1 || w<1 || v>packData.nodeCount || 
-				w>packData.nodeCount || packData.nghb(v, w)<0)
-			return 0;
-		
-		// common neighbors are 'a' and 'b'; make sure v < w and a < b
 
-		int indxvw=EdgeLink.getVW(edgeList,v,w);
-		if (indxvw<0)
-			return 0;
-		int a=packData.kData[w].flower[packData.nghb(w, v)+1];
-		int b=packData.kData[v].flower[packData.nghb(v,w)+1];
-		int rslt=cpCommand(packData,"flip "+v+" "+w);
-		if (rslt<=0)
-			return 0;
-		reset();
-		
-		// replace only edge by new edge
-		if (a>b) {
-			int hold=b;
-			b=a;
-			a=hold;
-		}
-		EdgeSimple ne=new EdgeSimple(a,b);
-		edgeList.remove(indxvw);
-		edgeList.add(indxvw,ne);
-		return 1;
-	}
-	
 	/**
 	 * Given an edge, copy the packing to 'tmpPack', flip the edge, repack/layout/normalize,
 	 * and return the resulting energy. Then one can decide whether to replace packData
@@ -315,7 +281,6 @@ public class TorusEnergy extends PackExtender {
 			tmpPack=null;
 			return -1.0;
 		}
-		tmpPack.setCombinatorics();
 		tmpPack.repack_call(1000,true,false); // use oldreliable
 //		tmpPack.fillcurves(); 
 //		try {

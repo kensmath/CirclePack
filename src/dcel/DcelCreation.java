@@ -1,5 +1,6 @@
 package dcel;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -19,6 +20,7 @@ import listManip.NodeLink;
 import packing.PackData;
 import tiling.Tile;
 import tiling.TileData;
+import util.ColorUtil;
 
 /**
  * Move things from 'PackCreation' as they are converted
@@ -601,242 +603,6 @@ public class DcelCreation {
 		return p;
 	}
 
-	/**
-	 * Create generations of the Cayley graph of a triangle 
-	 * group; A, B, C are the degrees of the vertices. Geometry
-	 * is determined by r=2*(1/A+1/B+1/C). if r>1 sph;
-	 * r=1 eucl; and r<1 hyp. If one of A/B/C is odd, then the
-	 * others must be equal.
-	 * @param A int
-	 * @param B int
-	 * @param C int
-	 * @param maxgen int
-	 * @return PackData
-	 */
-	public static PackData triGroup(int A, int B, int C, int maxgen) {
-		int []degs=new int[3];
-		degs[0]=A;
-		degs[1]=B;
-		degs[2]=C;
-		
-		// what geometry?
-		int hees=-1; // default: hyp
-		double recipsum
-			=2.0/(double)(A)+2.0/(double)(B)+2.0/(double)(C);
-		if (Math.abs(recipsum-1)<.0001)
-			hees=0; // eucl
-		else if (recipsum>1.0) 
-			hees=1; // sph
-		  
-		PackData pdata=new PackData(null); // eventually need this
-		PackDCEL pdcel=CombDCEL.seed_raw(A);
-		CombDCEL.redchain_by_edge(pdcel, null, null, false);
-		CombDCEL.d_FillInside(pdcel);
-		int gencount=1;
-	
-		// mark bdry vertices of first flower; alternate, B,C
-	   	for (int j=2;j<=pdcel.vertCount;j++) {
-	   		Vertex vert=pdcel.vertices[j];
-	   		if (vert.bdryFlag>0)
-	   			vert.vutil=(j)%2+1;
-	   	}
-	
-	   	while (gencount<=maxgen) { // DCELdebug.printRedChain(pdcel.redChain);
-   			int []bdryinfo=ck_redchain(pdcel); 
-	   		if (bdryinfo==null)
-	   			throw new CombException("no 'redChain' exists at gencount = "+
-	   					gencount);
-	   		// sph? need to check to close bdry 
-	   		if (hees>0) {
-	   			// one more vert needed; shortage of bdry vertices, so close up 
-	   			if (bdryinfo[1]==bdryinfo[2] && bdryinfo[2]>=bdryinfo[0]) {
-	   				int rslt=RawDCEL.addIdeal_raw(pdcel);
-	   				if (rslt==0)
-	   					throw new DCELException("in 'triGroup', 'addIdeal' failed");
-	   				pdcel.fixDCEL_raw(pdata);
-	   				CirclePack.cpb.msg("triG: closed as sphere:");
-	   				if (bdryinfo[0]<bdryinfo[2] || bdryinfo[1]!=bdryinfo[2])
-	   					CirclePack.cpb.errMsg(" final degree, "+
-	   							pdata.countFaces(pdata.nodeCount)+
-	   							" is inconsistent");
-	   				else 
-	   					CirclePack.cpb.msg("last degree "+
-	   							pdata.countFaces(pdata.nodeCount));
-	   				return pdata;
-	   			}
-	   			//	three bdry edge? May need one last face.
-	   			if (bdryinfo[0]==3) { 
-	   				RedHEdge rtrace=pdcel.redChain;
-	   				int[] uhits=new int[3];
-	   				do {
-	   					int k = pdcel.vertices[rtrace.myEdge.origin.vertIndx].vutil;
-	   					uhits[k]=1;
-	   					rtrace=rtrace.nextRed;
-	   				} while (rtrace!=pdcel.redChain);
-	   				// vertices, one mark for each of A, B, C
-	   				if (uhits[0]==1 && uhits[1]==1 && uhits[2]==1) {
-	   					int rslt=RawDCEL.addIdealFace_raw(pdcel,
-	   							pdcel.redChain.myEdge.twin.face);
-	   					if (rslt!=1)
-	   						throw new CombException(
-	   								"Failed with final triangular ideal face");
-		   				pdcel.fixDCEL_raw(pdata);
-		   				CirclePack.cpb.msg("triG: closed as sphere:");
-		   				return pdata;
-	   				}
-	   			}
-	   		}
-	   		
-	   		RedHEdge rtrace=pdcel.redChain;
-	   		int lastVert=rtrace.prevRed.myEdge.origin.vertIndx;
-//	   		RedHEdge stopred=rtrace.prevRed.prevRed;
-	   		RedHEdge nxtred=rtrace.nextRed;
-	   		boolean wflag=false; // stop signal
-	   		int count=1;
-	   		while (!wflag && count<10000) {
-	   			nxtred=rtrace.nextRed;
-	   			int w=rtrace.myEdge.origin.vertIndx;
-	   			if (w==lastVert)
-	   				wflag=true;
-	   			int prev=rtrace.prevRed.myEdge.origin.vertIndx;
-	   			int n=degs[pdcel.vertices[w].vutil]-pdcel.vertices[w].getNum()-1;
-	   			if (n<-1)
-	   				throw new CombException("violated degree at vert "+w);
-	
-	   			// add the n circles; two marks alternate around w
-	   			int []alt=new int[2];
-	   			alt[0]=pdcel.vertices[prev].vutil;
-	   			int vec=(alt[0]-pdcel.vertices[w].vutil+3)%3;
-	   			alt[1]=(alt[0]+vec)%3;
-	   			for (int i=1;i<=n;i++) {
-	   				// for sph case, check added vert to see if it's last
-	   				if (hees>0) {
-	   		   			bdryinfo=ck_redchain(pdcel);
-	   					if (bdryinfo==null) {
-	   						pdcel.fixDCEL_raw(pdata);
-	   						CirclePack.cpb.errMsg("triG, improper wrapup");
-	   						return pdata;
-	   					}
-	   					if (bdryinfo[1]==bdryinfo[2] && bdryinfo[2]>=bdryinfo[0]) {
-	   						int rslt=RawDCEL.addIdeal_raw(pdcel);
-	   		   				if (rslt==0)
-	   		   					throw new DCELException(
-	   		   							"in 'triGroup', 'addIdeal' failed");
-	   						pdcel.fixDCEL_raw(pdata);
-	   						CirclePack.cpb.msg("triG: closed as sphere:");
-	   						if (bdryinfo[0]<bdryinfo[1])
-	   							CirclePack.cpb.errMsg(" final degree of "+
-	   									pdcel.vertices[w].getNum()+" is too small");
-	   						else 
-	   							CirclePack.cpb.msg(" final degree is correct, "+
-	   									bdryinfo[1]);
-	   						return pdata;
-	   					}
-	   				} // done with sphere check
-	   				
-	   				Vertex newV=RawDCEL.addVert_raw(pdcel,w);
-	   				newV.vutil=alt[i%2];
-	   				// for sph, check whether to close up
-	   				if (hees>0) {
-	   		   			bdryinfo=ck_redchain(pdcel);
-	   		   			if (bdryinfo[1]==bdryinfo[2] && bdryinfo[2]>=bdryinfo[0]) {
-	   		   				int rslt=RawDCEL.addIdeal_raw(pdcel);
-	   		   				if (rslt==0)
-	   		   					throw new DCELException(
-	   		   							"in 'triGroup', 'addIdeal' failed");
-	   		   				pdcel.fixDCEL_raw(pdata);
-	   		   				CirclePack.cpb.msg("triG: closed as sphere:");
-	   		   				if (bdryinfo[0]<bdryinfo[2] || bdryinfo[1]!=bdryinfo[2])
-	   		   					CirclePack.cpb.errMsg(" final degree, "+
-	   		   							pdata.countFaces(pdata.nodeCount)+
-	   		   							" is inconsistent");
-	   		   				else 
-	   		   					CirclePack.cpb.msg("last degree "+
-	   		   							pdata.countFaces(pdata.nodeCount));
-	   		   				return pdata;
-	   		   			}
-	   				}
-	   			}
-	   			if (n==-1) {
-	   				
-// debugging
-//	   				System.out.println("next zip is "+w);
-	   				
-	   				int rslt=CombDCEL.zipEdge(pdcel,pdcel.vertices[w]);
-	   				if (rslt==0) {
-	   					pdcel.fixDCEL_raw(pdata);
-	   					CirclePack.cpb.errMsg("problem zipping at vertex "+w);
-	   					return pdata;
-	   				}
-	   				else if (rslt>0) { // 'rslt' is orphaned vertex
-	   					ArrayList<Vertex> newVs=new ArrayList<Vertex>();
-	   					for (int v=1;v<=pdcel.vertCount;v++) {
-	   						Vertex vert=pdcel.vertices[v];
-	   						if (vert.halfedge!=null) {
-	   							newVs.add(vert);
-	   						}
-	   					}
-	   					if (newVs.size()!=pdcel.vertCount-1)
-	   						throw new CombException(
-	   								"count of remaining vertices is off");
-	   					Iterator<Vertex> vis=newVs.iterator();
-	   					int vtick=0;
-	   					while (vis.hasNext()) {
-	   						Vertex vert=vis.next();
-	   						vert.vertIndx=++vtick; 
-	   						pdcel.vertices[vtick]=vert;
-	   					}
-	   					pdcel.vertCount=vtick;
-	   				}
-		   			
-	   				if (pdcel.redChain==null) { // closed up?
-	   					pdcel.fixDCEL_raw(pdata);
-	   					CirclePack.cpb.errMsg("With 'zip' at vert "+w+
-	   							" we have closed up the complex");
-	   					return pdata;
-	   				}
-	   			}
-	   			
-	   			else {
-	   				RawDCEL.enfold_raw(pdcel,w);
-	   				if (pdcel.redChain==null) {// closed up?
-	   					pdcel.fixDCEL_raw(pdata);
-	   					CirclePack.cpb.errMsg("With 'enfold' at vert "+w+
-	   							" we have closed up the complex");
-	   					return pdata;
-	   				}
-	   			}
-	   			count++;
-	   			rtrace=nxtred;
-	   		} // end of while around bdry
-	   		gencount++;
-	   	} // end of while on generations 
-
-	   	pdcel.fixDCEL_raw(pdata);
-	
-		// eucl cases, can compute radii
-	   	if (hees==0) {
-		   	double []rad=new double[3];
-	   		// law of sines for opposite lengths 
-	   		double []len=new double[3];
-	   		double m2pi=Math.PI*2.0;
-	   		len[0]=1.0;
-	   		double sina=Math.sin(m2pi/(double)degs[0]);
-	   		len[1]=Math.sin(m2pi/(double)degs[1])/sina;
-	   		len[2]=Math.sin(m2pi/(double)degs[2])/sina;
-	   		// get radii and scale by .2
-	   		rad[0]=.2*(len[1]+len[2]-len[0])/2.0;
-	   		rad[1]=.2*(len[0]+len[2]-len[1])/2.0;
-	   		rad[2]=.2*(len[1]+len[0]-len[2])/2.0;
-	   		for (int v=1;v<=pdata.nodeCount;v++) {
-	   			Vertex vert=pdata.packDCEL.vertices[v];
-	   			pdata.setRadius(v,rad[vert.vutil]);
-	   		}
-	   	}
-	
-	   	return pdata;
-	}
-
 	/** 
 	 * Create N generations of Conway's "pinwheel" combinatorics.
 	 * Need to specify number of edges of "end" (short) leg, 
@@ -1353,6 +1119,451 @@ public class DcelCreation {
 		ans[1]=mn;
 		ans[2]=mx;
 		return ans;
+	}
+	
+	/**
+	 * Create 'maxgens' generations of the Cayley graph of 
+	 * the triangle group {A/2, B/2, C/2}. A, B, C are the
+	 * degrees of the vertices, which are marked as 1, 2, 3,
+	 * resp. One and only one may be zero, indicating a type
+	 * of j-function with logarithmic branching.
+	 * 
+	 * Typical classical cases: 
+	 *    A=2, B=3, C=5: Schwarz triangles tiling the sphere
+	 *    A=0, B=2, C=3: the classical j-function in hyp plane
+	 *    A=B=C=7: constant 7-degree packing in hyp plane
+	 * 
+	 * Geometry is determined by r=2*(1/A+1/B+1/C). if r>1 sph;
+	 * r=1 eucl; and r<1 hyp. If one of A,B,C is odd, then the
+	 * others must be equal.The calling routine has checked 
+	 * validity of parameters. We compute/set radii using trig,
+	 * but the calling routine repacks. We set face colors,
+	 * blue for oriented, red for reverse oriented.
+	 * 
+	 * Our method is to continually expand a bdry chain of 'growbdry'
+	 * objects by proceeding cclw and completing flowers as we go.
+	 * Each completed flow adds to growing 'bouvec' vector that will
+	 * lead to the final 'bouquet'.
+	 * 
+	 * @param maxgens int
+	 * @param A int
+	 * @param B int
+	 * @param C int
+	 * @return PackData, null on error
+	 */
+	public static PackData buildTriGroup(int maxgens,int A,int B,int C) {
+
+		// what geometry?
+		int hees=-1; // default: hyp
+		if (A!=0 && B!=0 && C!=0) {
+			double recipsum=2.0/(double)(A)+2.0/(double)(B)+2.0/(double)(C);
+			if (Math.abs(recipsum-1)<.0001)
+				hees=0; // eucl
+			else if (recipsum>1.0) 
+				hees=1; // sph
+		}
+		else { // rotate
+			if (A==0) {
+				A=B;
+				B=C;
+				C=0;
+			}
+		}
+
+		// maintain various info on vertices during construction
+		ArrayList<TmpVert> tmpVerts=new ArrayList<TmpVert>();
+		int generation=1;
+		
+		// initial vertex has degree A (1-type)
+		int[] seedflower=new int[A+1];
+		for (int j=0;j<A;j++)
+			seedflower[j]=2+j;
+		seedflower[A]=2; // close up
+		tmpVerts.add(new TmpVert(1,1,seedflower));
+		
+		// start the first bdry node, 2-type
+		int nodecount=2; // this counts nodes as they are created
+		BdryNode baseNode=new BdryNode(2,2,B,generation,null,null);
+		baseNode.petals=new ArrayList<Integer>();
+		baseNode.petals.add(3);
+		baseNode.petals.add(1); // seed
+		baseNode.petals.add(A+1);
+
+		BdryNode preNode=baseNode;
+		for (int j=1;j<A;j++) {
+			nodecount=j+2;
+			// alternate B/C, mark 2/3
+			int AB;
+			int tp;
+			if (nodecount%2==0) {
+				AB=B;
+				tp=2;
+			}
+			else {
+				AB=C;
+				tp=3;
+			}
+			BdryNode newNode=new BdryNode(nodecount,tp,AB,generation,preNode,null);
+			preNode.next=newNode;
+			newNode.petals=new ArrayList<Integer>(3);
+			newNode.petals.add(2+(nodecount-1)%A);
+			newNode.petals.add(1);
+			newNode.petals.add(nodecount-1);
+			preNode=newNode;
+		}
+		preNode.next=baseNode; // close up
+		baseNode.prev=preNode; // baseNode.printBdry();
+		
+		// now we circulate cclw about the bdryNodes
+		while (generation<(maxgens+2) && baseNode!=null) {
+			
+			int mygen=baseNode.generation;
+			if (mygen==generation) {
+				generation++;
+				if (generation>=(maxgens+2)) { // to agree with old version
+					continue;
+				}
+			}
+			
+			// skip degree 0 types
+			if (baseNode.degree==0) {
+				baseNode=baseNode.next;
+				continue;
+			}
+		
+			// recursively check if previous BdryNode has all its petals
+			while (baseNode.prev.petals.size()==baseNode.prev.degree) {
+				
+				// add edge
+				baseNode.prev.prev.petals.add(0,baseNode.indx);
+				baseNode.petals.add(baseNode.prev.prev.indx);
+				
+				// close up/remove prev from bdry chain
+				baseNode.prev.petals.add(baseNode.prev.petals.get(0));
+				tmpVerts.add(bdry2tmp(baseNode.prev));
+
+				// check for closure
+				if (baseNode.next.next.next==baseNode) {
+					
+					// store the last two vertices
+					tmpVerts.add(bdry2tmp(baseNode));
+					tmpVerts.add(bdry2tmp(baseNode.next));
+
+					baseNode=null;
+					break;
+				}
+				
+				// else fix pointers, but baseNode is unchanged
+				baseNode.prev=baseNode.prev.prev;
+				baseNode.prev.next=baseNode;
+			}
+			
+			if (baseNode==null)
+				break;
+			
+			// now see if new petals are needed
+			int facecount=baseNode.petals.size()-1;
+			if (facecount>baseNode.degree)
+				throw new CombException(
+						"seems to be inconsistency at node "+baseNode.indx);
+			int newnum=baseNode.degree-facecount-1; // number of new petals needed
+			
+// debugging
+//			System.out.println("base is "+baseNode.indx+"; newnum="+newnum);
+
+			// add new nodes/bdryNodes, adjusting chain.
+			if (newnum>0) {
+				
+				// does baseNode.next have all its petals? 
+				boolean lastclose=
+					(baseNode.next.petals.size()==baseNode.next.degree);
+				
+				for (int j=1;j<=newnum;j++) {
+					
+					// last may need to be closed up
+					if (j==newnum && lastclose) {
+						baseNode.petals.add(baseNode.next.next.indx);
+						baseNode.next.next.petals.add(baseNode.indx);
+						baseNode.next.next.petals.add(baseNode.prev.indx);
+						
+						// close up next/remove next from bdry chain
+						baseNode.prev.petals.add(0,baseNode.next.next.indx);
+						baseNode.next.petals.add(baseNode.next.petals.get(0));
+						tmpVerts.add(bdry2tmp(baseNode.next));
+
+						// fix pointers, but baseNode is unchanged
+						baseNode.next=baseNode.next.next;
+						baseNode.next.prev=baseNode.prev;
+						break;
+					}
+
+					// otherwise, add petals as needed
+					nodecount++;
+					int presize=baseNode.prev.petals.size();
+					if (presize==baseNode.prev.degree)
+						throw new CombException(
+							"previous node already has all its petals");
+		
+					baseNode.prev.petals.add(0,nodecount);
+					baseNode.petals.add(nodecount);
+					int tp=baseNode.type;
+					int ptp=baseNode.prev.type;
+					int newdegree=A;
+					int newtype=1;
+					if ((tp==2 && ptp==1) || (tp==1 && ptp==2)) {
+						newdegree=C;
+						newtype=3;
+					}
+					else if ((tp==1 && ptp==3) || (tp==3 && ptp==1)) {
+						newdegree=B;
+						newtype=2;
+					}
+					else if ((tp==2 && ptp==3) || (tp==3 && ptp==2)) {
+						newdegree=A;
+						newtype=1;
+					}
+					else
+						throw new CombException(
+							"error, nodecount "+nodecount+
+							" sees types: deg/pdeg="+tp+"/"+ptp);
+				
+					BdryNode newNode=new BdryNode(nodecount,newtype,newdegree,generation,
+						baseNode.prev,baseNode);
+		
+					// new petal
+					newNode.petals=new ArrayList<Integer>(2);
+					newNode.petals.add(baseNode.indx);
+					newNode.petals.add(baseNode.prev.indx);
+						// fix pointers
+					baseNode.prev.next=newNode;
+					baseNode.prev=newNode;
+
+					// didn't have to close next? then add last edge
+					if (j==newnum) {
+						baseNode.next.petals.add(nodecount);
+						baseNode.prev.petals.add(0,baseNode.next.indx);
+					}
+				}
+			}
+			
+			// no new petals to add? finish last edge 
+			else {
+				baseNode.next.petals.add(baseNode.prev.indx);
+				baseNode.prev.petals.add(0,baseNode.next.indx);
+			}
+			
+			// now close/save the flower
+			baseNode.petals.add(baseNode.petals.get(0));
+			tmpVerts.add(bdry2tmp(baseNode));
+				
+			// check for final completion; not clear if this can happen
+			if (baseNode.prev==baseNode.next) {
+				baseNode.petals.add(baseNode.petals.get(0));
+				baseNode.next.petals.add(baseNode.next.petals.get(0));
+				tmpVerts.add(bdry2tmp(baseNode));
+				tmpVerts.add(bdry2tmp(baseNode.next));
+				baseNode=null;
+			}
+			else { // shift 'baseNode' cclw
+				baseNode.prev.next=baseNode.next;
+				baseNode.next.prev=baseNode.prev;
+				baseNode=baseNode.next;  // baseNode.printBdry();
+			}
+		
+		} // done with all generations
+		
+		// get remaining partial flowers
+		if (baseNode!=null) {
+			BdryNode bnode=baseNode;
+			do {
+				tmpVerts.add(bdry2tmp(bnode));
+				bnode=bnode.next;
+			} while(bnode!=baseNode);
+		}
+		
+		int[][] bouquet=new int[nodecount+1][];
+		int[] vertTypes=new int[nodecount+1];
+		Iterator<TmpVert> tvis=tmpVerts.iterator();
+		int tick=0;
+		while (tvis.hasNext()) {
+			TmpVert tv=tvis.next();
+			int v=tv.indx;
+			bouquet[v]=tv.flower;
+			vertTypes[v]=tv.type;
+			tick++;
+		}
+		
+		// check that counts agree
+		if (tick!=nodecount)
+			throw new CombException(
+				"nodecount and tmpVerts size don't agree");
+		
+		// create the packing // bouquet[84][0]=16;
+		PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet,1);
+		PackData newPack=new PackData(null);
+		newPack.hes=hees;
+		pdcel.fixDCEL_raw(newPack);
+		
+		// mark the vertices 1,2,3 for A,B,C, resp.
+		for (int v=1;v<=newPack.nodeCount;v++) {
+			newPack.setVertMark(v,vertTypes[v]);
+		}
+		
+		// set data
+		newPack.set_aim_default();
+
+		// sph, can compute 
+		if (newPack.hes>0) { 
+			double[] angs=new double[3];
+			double[] coss=new double[3];
+			double[] sins=new double[3];
+			double[] len=new double[3];
+			double[] rad=new double[3];
+
+			angs[0]=2.0*Math.PI/(double)A; // angs[0]+angs[1]+angs[2]-Math.PI;
+			angs[1]=2.0*Math.PI/(double)B; 
+			angs[2]=2.0*Math.PI/(double)C;
+			for (int j=0;j<3;j++) {
+				coss[j]=Math.cos(angs[j]);
+				sins[j]=Math.sin(angs[j]);
+			}
+			
+			// from law of cosines: get lengths, then radii
+			for (int j=0;j<3;j++) {
+				int i=j;
+				int m=(j+1)%3;
+				int n=(j+2)%3;
+				len[j]=Math.acos(
+					(coss[j]+coss[m]*coss[n])/(sins[m]*sins[n]));
+			}
+			rad[0]=(len[1]+len[2]-len[0])/2.0;
+			rad[1]=(len[0]+len[2]-len[1])/2.0;
+			rad[2]=(len[1]+len[0]-len[2])/2.0;
+			for (int v=1;v<=newPack.nodeCount;v++) {
+				int j=newPack.getVertMark(v)-1;
+				newPack.setRadius(v,rad[j]);
+			}
+		}
+		
+		// eucl, can compute
+		else if (newPack.hes==0) {
+			double[] rad=new double[3];
+			double[] angs=new double[3];
+			angs[0]=Math.PI/(double)A;
+			angs[1]=Math.PI/(double)B;
+			angs[2]=Math.PI/(double)C;
+			// law of sines for opposite lengths 
+			double []len=new double[3];
+			len[0]=1.0;
+			double sina=Math.sin(angs[0]);
+			len[1]=Math.sin(angs[1])/sina;
+			len[2]=Math.sin(angs[2])/sina;
+			// get radii and scale by .2
+			rad[0]=.2*(len[1]+len[2]-len[0])/2.0;
+			rad[1]=.2*(len[0]+len[2]-len[1])/2.0;
+			rad[2]=.2*(len[1]+len[0]-len[2])/2.0;
+			for (int v=1;v<=newPack.nodeCount;v++) {
+				int j=newPack.getVertMark(v)-1;
+				newPack.setRadius(v,rad[j]);
+			}
+		}
+		  
+		// hyp, set up for max_pack
+		else { 
+			for (int v=1;v<=newPack.nodeCount;v++) {
+				if (newPack.isBdry(v))
+					newPack.setRadius(v,5.0); // horocycles
+				else
+					newPack.setRadius(v,.1);
+			}
+		}
+		
+		// set face colors blue/red oriented/reverse-oriented
+		for (int f=1;f<=newPack.faceCount;f++) {
+			dcel.Face face=newPack.packDCEL.faces[f];
+			HalfEdge he=face.edge;
+			int a=newPack.getVertMark(he.origin.vertIndx);
+			int b=newPack.getVertMark(he.twin.origin.vertIndx);
+			if ((a==1 && b==2) || (a==2 && b==3) || (a==3 && b==1))
+				face.color=ColorUtil.cloneMe(Color.blue);
+			else
+				face.color=ColorUtil.cloneMe(Color.red);
+		}
+		
+		
+		return newPack;
+	}
+	
+	/**
+	 * Store a BdryNode as a TmpVert
+	 */
+	public static TmpVert bdry2tmp(BdryNode bnode) {
+		int[] flower=new int[bnode.petals.size()];
+		for (int j=0;j<bnode.petals.size();j++)
+			flower[j]=bnode.petals.get(j);
+		return new TmpVert(bnode.indx,bnode.type,flower);
+	}
+	
+}
+
+/**
+ * inner class for holding vertices as their flowers
+ * are completed.
+ * @author kstephe2
+ */
+class TmpVert {
+	public int indx;
+	public int type;
+	public int[] flower;
+	
+	// Constructon
+	public TmpVert(int idx,int tp,int[] fwr) {
+		indx=idx;
+		type=tp;
+		flower=fwr;
+	}
+	
+
+}
+ 
+/**
+ * inner class for holding boundary nodes during triangle group
+ * constructions. 
+ * @author kstephe2
+ *
+ */
+class BdryNode {
+	int indx;
+	int type; // 1, 2, or 3
+	int degree; // A, B, or C
+	int generation;
+	BdryNode prev;
+	BdryNode next;
+	ArrayList<Integer> petals; // cclw order petals
+	
+	// Constructor
+	public BdryNode(int idx,int tp,int deg,int gen,BdryNode prv,BdryNode nxt) {
+		indx=idx;
+		type=tp;
+		degree=deg;
+		generation=gen;
+		prev=prv;
+		next=nxt;
+		petals=new ArrayList<Integer>();
+	}
+	
+	public void printBdry() {
+		int safety=1000;
+		BdryNode btrace=this;
+		StringBuilder strbld=new StringBuilder("Bdry indx's\n");
+		do {
+			safety--;
+			strbld.append(" "+btrace.indx+" ("+btrace.degree+")");
+			btrace=btrace.next;
+		} while (btrace!=null && btrace!=this && safety>0);
+		if (btrace==this)
+			strbld.append(" "+btrace.indx+" ("+btrace.degree+") = closed up");
+		System.out.println(strbld.toString());
 	}
 	
 }

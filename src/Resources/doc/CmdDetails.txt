@@ -636,12 +636,13 @@ does not eliminate redundancies, as other counts do.)
 	triangle angles	pi/a, pi/b, pi/c; a, b, c can be (at worst) half 
 	integers, and if one is a half integer, then the other two must be 
 	equal to make combinatoric sense. The geometry for the packing is 
-	chosen based on the angles.
+	determined by the angles.
 	
-	The "j_ftn" is like a triangle group (0 a b), the 0 indicating
-	logarithmic branching at one point (taken as infinity). Default
-	to a=2 and b=3, the classical j-function associated with the
-	modular group.
+	The "j_ftn" is associated with a triangle group (0 a b). It
+	is similar to a dessin d'enfants with branch multiplicities
+	a and b over 0 and 1, respectively, but logarithmic branching
+	over infinity. Default to a=2 and b=3, the classical 
+	j-function associated with the modular group. 
 	
 	The "Kagome" construction builds the packing for a tiling in
 	the famous Kagome latttice pattern.
@@ -1752,20 +1753,9 @@ the new path.</opt>
 </seealso>
 </command>
 
-<command cmd="j_ftn" flags="{maxsize n0 n1}">
-<description>This is a very specialized command. It's aim is to build
-	the complexes associated with the classical "j-function"
-	of function theory (related to the modular function) and
-	others with similar structure. These functions are complete
-	unlimited branched coverings of the Riemann sphere, 
-	punctured at infinity, so that every point over 0 (resp. 1)
-	has branch order n0 (resp. n1). These are actually infinite
-	complexes, so maxsize puts a cap on the construction. The
-	resulting packing (which overwrites the prescribed packing)
-	is hyperbolic and the boundary radii are set to infinity.
-	
-	The classical j-function itself would have n0=2 and n1=1,
-	but other values can be specified.
+<command cmd="j_ftn" flags="{maxgens n0 n1}">
+<description>
+    Deprecated: see "create tri_group".
 </description>
 <seealso>
 <see>create</see>

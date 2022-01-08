@@ -3292,13 +3292,21 @@ public class PackData{
 	      || (!isBdry(v) && countFaces(v)!=6))
 	    return 0;
 	  if (isBdry(v)) {
-	      if (kData[v].flower[0]==w) 
-		return kData[v].flower[3];
-	      if (kData[v].flower[3]==w)
-		return kData[v].flower[0];
+		  HalfEdge he=packDCEL.vertices[v].halfedge;
+		  int u=he.twin.next.twin.origin.vertIndx;
+		  if (he.twin.origin.vertIndx==w)
+			  return u;
+	      if (u==w)
+	    	  return he.twin.origin.vertIndx;
 	      return 0;
 	    }
-	  return kData[v].flower[(nghb(v,w)+3)%6];
+	  
+	  // else interior hes
+	  HalfEdge he=packDCEL.findHalfEdge(new EdgeSimple(v,w));
+	  he=he.prev.twin; // rotate cclw 3
+	  he=he.prev.twin;
+	  he=he.prev.twin;
+	  return he.twin.origin.vertIndx;
 	}
 	
 	/**
@@ -5287,47 +5295,6 @@ public class PackData{
 	  }
 
 	  /**
-	   * Given v1 and v2, build edgelist from v1 to v2 through up to 
-	   * 'lgth' hex interior vertices. Return null if no such path
-	   * exists.   
-	   * @param v1, v2, given vertices
-	   * @param lgth, limit on length to search
-	   * @return EdgeLink of hex edges from v1 to v2.
-	   */
-	  public EdgeLink get_extended_edge(int v1,int v2,int lgth) {
-	    int next=0,dir;
-	    EdgeLink edgeLink;
-
-	    if (!status || v1==v2) return null;
-	    if ((dir=nghb(v1,v2))!=-1) { // immediate neighbor
-	        edgeLink=new EdgeLink(this);
-	        edgeLink.add(new EdgeSimple(v1,v2));
-	        return edgeLink;
-	    }
-	    // search in various directions, see if you find v2
-	    for (dir=0;dir<(countFaces(v1)+getBdryFlag(v1));dir++) {
-	        edgeLink=new EdgeLink(this);
-	        int v=v1;
-	        int w=kData[v1].flower[dir];
-	        edgeLink.add(new EdgeSimple(v,w));
-	        int i=1;
-	        while (i<lgth && (next=hex_proj(w,v))!=0 && next!=v2) {
-	        	v=w;
-	        	w=next;
-	        	edgeLink.add(new EdgeSimple(v,w));
-	        	i++;
-	        }
-	        if (next==v2) {  // found it! 
-	        	v=w;
-	        	w=next;
-	        	edgeLink.add(new EdgeSimple(v,w));
-	        	return edgeLink;
-	        }
-	    }
-	    return null;
-	  } 
-
-	  /**
 	   * Given a closed chain of hex interior vertices (along a hex axis),
 	   * "slide" the right side forward along the chain one notch.
 	   * This amounts to cutting the packing in two along the chain,
@@ -7051,8 +7018,8 @@ public class PackData{
 				}
 
 				// Find closer of two neighbors (in eucl distance in hyp/eucl).
-				int jup = kData[bestj].flower[countFaces(bestj)];
-				int jdown = kData[bestj].flower[0];
+				int jup = getLastPetal(bestj);
+				int jdown = getFirstPetal(bestj);
 				goit = new EdgeLink(this);
 				best = geom_dist(z, jup);
 				if (geom_dist(z, jdown) < best)
@@ -9167,7 +9134,7 @@ public class PackData{
 	    n=(int)(n/2);
 	    int w=v;
 	    for (int i=1;i<=n;i++) 
-	    	w=kData[w].flower[0];
+	    	w=getFirstPetal(v);
 	    ans[0]=v;
 	    ans[1]=w;
 	    return n;
@@ -9347,7 +9314,7 @@ public class PackData{
 		  start=bdryStarts[i];
 		  fp.write(new String(start+" "));
 		  nv=start;
-		  while ((nv=kData[nv].flower[0])!=start) {
+		  while ((nv=getFirstPetal(nv))!=start) {
 		    fp.write(new String(nv+" "));
 		  }
 	      }
@@ -9504,173 +9471,7 @@ public class PackData{
 		}
 		return lineCount;	
 	}
-	
-	/**
-	 * Given a designated closed ordered chain 'cutNodes' of 
-	 * vertices, return the shortest closed ordered path 
-	 * from 'base' through a single vertex on 'cutNodes'. 
-	 * Null on error. Result should pass from right to left across
-	 * 'cutNodes'.
-	 * @param base vertex
-	 * @param cutNodes
-	 * @return, closed chain of vertices or null on error
-	 */
-	public NodeLink findShortPath(int base,NodeLink cutNodes) {
 
-		// convert to graph excluding cutNodes
-		GraphLink graph=getAsGraph(cutNodes);
-		if (base<1 || base>nodeCount)
-			base=alpha;
-		if (cutNodes.containsV(base)>=0) {
-			int nb=base;
-			for (int j=0;(j<countFaces(base) && nb==base);j++) {
-				int p=kData[base].flower[j];
-				if (cutNodes.containsV(p)<0)
-					nb=p;
-			}
-			if (nb==base) 
-				throw new CombException("base vertex "+base+" is not suitable");
-			base=nb;
-		}
-		
-		// label generations from base 
-		int []vgen=graph.graphDistance(base,nodeCount);
-				
-		// prepare storage
-		int sz=cutNodes.size()-1;
-		int []leftv=new int[sz];
-		int []rightv=new int[sz];
-		
-		// pass through vert list and process 
-		int vert=0;
-		int prev=0;
-		int next=0;
-		for (int v=1;v<sz;v++) {
-			vert=cutNodes.get(v);
-			prev=cutNodes.get(v-1);
-			next=cutNodes.get(v+1);
-//System.err.println("prev="+prev+"; vert="+vert+"; next="+next);			
-			
-			// find petal on right of curve of lowest generation
-			int num=countFaces(vert);
-			int preindx=(nghb(vert,prev)+1)%num;
-			int nextindx=nghb(vert,next);
-			int infgen=nodeCount;
-			if (nextindx<preindx)
-				nextindx +=num;
-			for (int j=preindx;j<nextindx;j++) {
-				int k=kData[vert].flower[j%num];
-				if (k<=graph.maxIndex && vgen[k]>0 && vgen[k]<infgen) {
-					infgen=vgen[k];
-					rightv[v]=k;
-				}
-			}
-
-			// find petal on left of curve of lowest generation
-			nextindx=(nghb(vert,next)+1)%num;
-			preindx=nghb(vert,prev);
-			if (preindx<nextindx)
-				preindx +=num;
-			infgen=nodeCount;
-			int[] flower=packDCEL.vertices[vert].getFlower(true);
-			for (int j=nextindx;j<preindx;j++) {
-				int k=flower[j%num];
-				if (vgen[k]>0 && vgen[k]<infgen) {
-					infgen=vgen[k];
-					leftv[v]=k;
-				}
-			}
-//System.err.println(" vert "+vert+": left "+leftv[v]+" right "+rightv[v]);			
-		}
-		
-		// check for link giving shortest closed path
-		int minindx=-1;
-		int minlength=1000000;
-		int minright=-1;
-		int minleft=-1;
-		for (int v=1;v<sz;v++) {
-			if (rightv[v]>0 && leftv[v]>0) {
-				int sm=vgen[rightv[v]]+vgen[leftv[v]];
-				if (sm<minlength) {
-					minlength=sm;
-					minindx=v;
-					minright=rightv[v];
-					minleft=leftv[v];
-				}
-			}
-		}
-		if (minindx<0) {
-			throw new CombException("Didn't find a link (need more work)");
-			// due to combinatorics, some cutNOdes may not have a left or
-			//   a right petal in the graph.
-		}
-		
-		// here's the vertex closing up the shortest link
-		int capvert=cutNodes.get(minindx);
-		NodeLink pathList=new NodeLink(this,capvert);
-		
-		// add to chain from right side to base
-		next=minright;
-		pathList.add(next);
-		while (vgen[next]>1) {
-			int bestpetal=kData[next].flower[0];
-			int min=vgen[bestpetal];
-			int[] flower=packDCEL.vertices[next].getFlower(true);
-			for (int j=1;j<flower.length;j++) {
-				int k=flower[j];
-				int pgen=vgen[k];
-				if (pgen>0 && (min<=0 || pgen<min)) {
-					min=pgen;
-					bestpetal=k;
-				}
-			}
-			if (vgen[bestpetal]<=0 || vgen[bestpetal]>=vgen[next]) {
-				throw new CombException("problem following graph to base "+base);
-			}
-			next=bestpetal;
-			pathList.add(next);
-		}
-		
-		// reverse order
-		pathList=pathList.reverseMe();
-		
-		// finish chain from left side to base
-		int gotHit=-1;  // set this if we encounter a vert in pathList
-		next=minleft;
-		if (pathList.containsV(next)>=0) 
-			gotHit=next;
-		pathList.add(next);
-		while (gotHit<0 && vgen[next]>1) {
-			int bestpetal=this.getFirstPetal(next);
-			int min=vgen[bestpetal];
-			int[] flower=packDCEL.vertices[next].getFlower(true);
-			for (int j=1;j<flower.length;j++) {
-				int k=flower[j];
-				int pgen=vgen[k];
-				if (pgen>0 && (min<=0 || pgen<min)) {
-					min=pgen;
-					bestpetal=k;
-				}
-			}
-			if (vgen[bestpetal]<=0 || vgen[bestpetal]>=vgen[next]) {
-				throw new CombException("problem following graph to alpha");
-			}
-			next=bestpetal;
-			if (pathList.containsV(next)>=0)
-				gotHit=next;
-			pathList.add(next);
-		}
-
-		// can shorten list?
-		if (gotHit>0) {
-			while (pathList.get(0)!=gotHit) {
-				pathList.remove(0);
-			}
-		}
-		
-		return pathList;
-	}
-	
 	/**
 	 * Represent the combinatorics as an undirected graph in 
 	 * 'GraphLink' form. Each edge occurs only once, {u,v}

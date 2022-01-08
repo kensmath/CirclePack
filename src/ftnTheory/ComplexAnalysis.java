@@ -9,13 +9,14 @@ import circlePack.PackControl;
 import complex.Complex;
 import exceptions.DataException;
 import exceptions.ParserException;
-import geometry.EuclMath;
 import geometry.CircleSimple;
+import geometry.EuclMath;
 import geometry.SphericalMath;
 import komplex.DualTri;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import math.Mobius;
 import math.group.GroupElement;
@@ -562,33 +563,35 @@ public class ComplexAnalysis extends PackExtender {
 	 * @param 'PackData' domData
 	 * @return
 	 */
-	public static double [][]setConductances(PackData domData) {
+	public static double[][] setConductances(PackData domData) {
 		if (domData==null || domData.nodeCount<=0 || domData.hes!=0 
 				|| domData.status==false) {
 			throw new ParserException("packing not set or not suitable");
 		}
-		double []spokes=null;
-		Complex []inCenters=null;
-		double [][]conductance=new double[domData.nodeCount+1][];
+		double[] slengths=null; // spoke lengths
+		Complex[] inCenters=null;
+		double[][] conductance=new double[domData.nodeCount+1][];
 		Complex f1=null;
 		Complex f2=null;
 		for (int v=1;v<=domData.nodeCount;v++) {
+			int[] flower=domData.getFlower(v);
 			int num=domData.countFaces(v);
 			Complex z=domData.getCenter(v);
-			spokes=new double[num+1];
+			slengths=new double[num+1];
 			inCenters=new Complex[num];
 
-			conductance[v]=new double[num+1];
+			// closed for interior v
+			conductance[v]=new double[num+1]; 
 
 			// store edge lengths, incenters
-			f2=domData.getCenter(domData.getFirstPetal(v));
-			spokes[0]=z.minus(f2).abs();
+			f2=domData.getCenter(flower[0]);
+			slengths[0]=z.minus(f2).abs();
 			CircleSimple sc=null;
 			for (int j=1;j<=num;j++) {
 				f1=f2;
-				f2=domData.getCenter(domData.kData[v].flower[j]);
+				f2=domData.getCenter(flower[j]);
 				sc=EuclMath.eucl_tri_incircle(z,f1,f2);
-				spokes[j]=z.minus(f2).abs();
+				slengths[j]=z.minus(f2).abs();
 				inCenters[j-1]=sc.center;
 			}
 
@@ -596,23 +599,23 @@ public class ComplexAnalysis extends PackExtender {
 			
 			// for bdry, use ratio of inRad/length for first and last edges
 			if (domData.isBdry(v)) {
-				f1=domData.getCenter(domData.getFirstPetal(v));
-				f2=domData.getCenter(domData.kData[v].flower[1]);
-				double inRad=EuclMath.eucl_tri_inradius(spokes[0],spokes[1],f1.minus(f2).abs());
-				conductance[v][0]=inRad/spokes[0];
-				f1=domData.getCenter(domData.kData[v].flower[num-1]);
-				f2=domData.getCenter(domData.kData[v].flower[num]);
-				inRad=EuclMath.eucl_tri_inradius(spokes[num-1],spokes[num],f1.minus(f2).abs());
-				conductance[v][num]=inRad/spokes[num];
+				f1=domData.getCenter(flower[0]);
+				f2=domData.getCenter(flower[1]);
+				double inRad=EuclMath.eucl_tri_inradius(slengths[0],slengths[1],f1.minus(f2).abs());
+				conductance[v][0]=inRad/slengths[0];
+				f1=domData.getCenter(flower[num-1]);
+				f2=domData.getCenter(flower[num]);
+				inRad=EuclMath.eucl_tri_inradius(slengths[num-1],slengths[num],f1.minus(f2).abs());
+				conductance[v][num]=inRad/slengths[num];
 			}
 			else { // interior: first conductance repeated in last
 				conductance[v][0]=
-					conductance[v][num]=inCenters[num-1].minus(inCenters[0]).abs()/spokes[0];
+					conductance[v][num]=inCenters[num-1].minus(inCenters[0]).abs()/slengths[0];
 			}
 			
 			// now the rest
 			for (int j=1;j<num;j++) {
-				conductance[v][j]=inCenters[j-1].minus(inCenters[j]).abs()/spokes[j];
+				conductance[v][j]=inCenters[j-1].minus(inCenters[j]).abs()/slengths[j];
 			}
 		} // end of loop on v
 		return conductance;

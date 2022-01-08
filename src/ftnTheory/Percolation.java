@@ -556,8 +556,9 @@ public class Percolation extends PackExtender {
 
 			// look to see if vert can be infected by a petal
 			int infectedPetal = 0;
-			for (int j = 0; (j < packData.countFaces(nextv) && infectedPetal == 0); j++) {
-				int k = packData.kData[nextv].flower[j];
+			int[] petals=packData.packDCEL.vertices[nextv].getPetals();
+			for (int j = 0; (j < petals.length && infectedPetal == 0); j++) {
+				int k = petals[j];
 				int m = ColorUtil.col_to_table(packData.getCircleColor(k));
 				// is this petal infected by same color
 				if ((myColor == 244 && m > 0 && m < 100)
@@ -575,7 +576,7 @@ public class Percolation extends PackExtender {
 	/**
 	 * Recursive routine: vert v is infected if color is between 0 and 200.
 	 * If color < 100, it looks for neighboring petals with corresponding 
-	 * marks 244 (light blue), while if it color > 100, it looks for 243
+	 * marks 244 (light blue), while if color > 100, it looks for 243
 	 * (light red). If it finds such a neighbor, it recursively calls 
 	 * 'spreadInfect'.
 	 * @param v
@@ -591,9 +592,10 @@ public class Percolation extends PackExtender {
 			lookfor=244;
 		else if (m>100 && m<200)
 			lookfor=243;
-
-		for (int j=0;(j<packData.countFaces(v) && completed==0);j++) {
-			int k=packData.kData[v].flower[j];
+		int num=packData.countFaces(v);
+		int[] flower=packData.getFlower(v);
+		for (int j=0;(j<num && completed==0);j++) {
+			int k=flower[j];
 			if (ColorUtil.equalColors(packData.getCircleColor(k),ColorUtil.coLor(lookfor))) { 
 				packData.setCircleColor(k,ColorUtil.coLor(m));
 				count +=spreadInfection(k);
@@ -656,7 +658,7 @@ public class Percolation extends PackExtender {
 		bdryArcs.add(new NodeLink(packData,"b("+corners[0]+","+corners[1]+")"));
 		bdryArcs.add(new NodeLink(packData,"b("+corners[1]+","+corners[2]+")"));
 		bdryArcs.add(new NodeLink(packData,"b("+corners[2]+","+corners[3]+")"));
-		int v=packData.kData[corners[0]].flower[packData.countFaces(corners[0])];
+		int v=packData.getLastPetal(corners[0]);
 		bdryArcs.add(new NodeLink(packData,"b("+corners[3]+","+v+")"));
 		
 		// mark the points on the various boundary arcs.
@@ -694,6 +696,7 @@ public class Percolation extends PackExtender {
 	 * @return 0 on failure, 
 	 */
 	public int runWalker(int v) {
+		int[] flower=packData.getFlower(v);
 		int mySpot=v;
 
 		// is initial vertex already pinned?
@@ -703,7 +706,7 @@ public class Percolation extends PackExtender {
 		// run the walk; inherit the mark of first hit
 		while (ColorUtil.equalColors(packData.getCircleColor(mySpot),ColorUtil.FG_Color)) {
 			double x=rand.nextDouble();
-			mySpot=packData.kData[mySpot].flower[petalTrans[mySpot].whichPetal(x)];
+			mySpot=flower[petalTrans[mySpot].whichPetal(x)];
 		}
 		int	hitColor=ColorUtil.col_to_table(packData.getCircleColor(mySpot));
 		
@@ -760,7 +763,7 @@ public class Percolation extends PackExtender {
 			double accum=0.0;
 			for (int j=0;j<num;j++) {
 				accum+=conductances[v][j]/totalCond;
-				petalTrans[v].petals[j]=accum;
+				petalTrans[v].portions[j]=accum;
 			}
 				
 		}
@@ -795,21 +798,23 @@ public class Percolation extends PackExtender {
 	 */
 	class PetalTrans {
 		int num;
-		double []petals;
+		double []portions;
 		
 		public PetalTrans(int n) {
 			num=n;
-			petals=new double[n];
+			portions=new double[n];
 		}
 
 		/**
-		 * Which petal does random number indicate?
+		 * Which petal index does random number indicate
+		 * based on 'portions'? i.e. first index j so that 
+		 * x <= portions[j].
 		 * @param x random in [0,1]
 		 * @return petal index
 		 */
 		public int whichPetal(double x) {
 			int j=0;
-			while (j<num && x>petals[j])
+			while (j<num && x>portions[j])
 				j++;
 			return j;
 		}

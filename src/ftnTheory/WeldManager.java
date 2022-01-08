@@ -519,7 +519,7 @@ public class WeldManager extends PackExtender {
 
 		q.nodeCount = in_count;
 		for (int n = 1; n <= q.nodeCount; n++)
-			q.kData[n].utilFlag = 0;
+			q.setVertUtil(n,0);
 
 		// create the flowers for q
 
@@ -567,7 +567,7 @@ public class WeldManager extends PackExtender {
 		// now do the rest, all should be interior
 
 		for (int n = 1; n <= p.nodeCount; n++)
-			if ((vert = targ[n]) != 0 && q.kData[vert].utilFlag == 0) {
+			if ((vert = targ[n]) != 0 && q.getVertUtil(vert) == 0) {
 				// this is one of the marked vertices but not on edge-list
 				if (p.isBdry(n)) { // should be interior
 					throw new CombException();
@@ -1027,8 +1027,8 @@ public class WeldManager extends PackExtender {
 			if (!line.contains("V") || !line.contains("v")) {
 				Oops("weld list: first line must be 'Vv'.");
 			}
-			v_next = p.kData[v].flower[0];
-			w_next = q.kData[w].flower[q.countFaces(w)];
+			v_next = p.getFirstPetal(v);
+			w_next = q.getLastPetal(w);
 			while ((line = StringUtil.ourNextLine(fpr)) != null) {
 				count = count + 1;
 
@@ -1047,11 +1047,11 @@ public class WeldManager extends PackExtender {
 
 				if (line.contains("v")) {
 					w = w_next;
-					w_next = q.kData[w].flower[q.countFaces(w)];
+					w_next = q.getLastPetal(w);
 				} else if (line.contains("n")) {
 					if (add_between(q, w_next, w) == 0)
 						return -1;
-					w = q.kData[w].flower[q.countFaces(w)];
+					w = q.getLastPetal(w);
 					// w = newly added new vertex
 				} else { /* extraneous stuff? */
 					Oops("weld: weld file format problem, lower case");

@@ -195,17 +195,18 @@ public class TileColoring extends PackExtender {
 					TileInfo td=tiles.get(i);
 					int v=td.vert;
 					int num=packData.countFaces(v);
+					int[] flower=packData.getFlower(v);
 					int N=num+2*packData.getBdryFlag(v);
 					double []crnr=new double[2*N];
 					for (int j=0;j<num;j++) {
-						Complex Z=packData.getCenter(packData.kData[v].flower[j]);
+						Complex Z=packData.getCenter(flower[j]);
 						if (packData.hes>0)
 							Z=cpScreen.sphView.toApparentSph(Z);
 						crnr[2*j]=Z.x;
 						crnr[2*j+1]=Z.y;
 					}
 					if (packData.isBdry(v)) { // need extra points
-						Complex Z=packData.getCenter(packData.kData[v].flower[num]);
+						Complex Z=packData.getCenter(flower[num]);
 						if (packData.hes>0)
 							Z=cpScreen.sphView.toApparentSph(Z);
 						crnr[2*num]=Z.x;
@@ -240,12 +241,13 @@ public class TileColoring extends PackExtender {
 					TileInfo td=tiles.get(i);
 					int v=td.vert;
 					int num=packData.countFaces(v);
+					int[] flower=packData.getFlower(v);
 					int N=num+2*packData.getBdryFlag(v);
 					Complex []Z=new Complex[N];
 					for (int j=0;j<num;j++)
-						Z[j]=packData.getCenter(packData.kData[v].flower[j]);
+						Z[j]=packData.getCenter(flower[j]);
 					if (packData.isBdry(v)) { // need extra points
-						Z[num]=packData.getCenter(packData.kData[v].flower[num]);
+						Z[num]=packData.getCenter(flower[num]);
 						Z[num+1]=packData.getCenter(v); // bdry edge 
 					}
 					CPBase.postManager.pF.postFilledPoly(packData.hes,N,Z,

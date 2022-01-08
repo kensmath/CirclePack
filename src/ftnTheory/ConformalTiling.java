@@ -705,11 +705,12 @@ public class ConformalTiling extends PackExtender {
 					if (hit<0)
 						throw new CombException("corner "+v+" was not in augVert");
 					
-					// uv,v,dv in ccw order at corner v
+					// cwv,v,ccwv are in cclw order at corner v
 					int cwv=tile.augVert[(hit-1+tile.augVertCount)%tile.augVertCount];
 					int ccwv=tile.augVert[(hit+1)%tile.augVertCount];
 					
 					int num=packData.countFaces(v);
+					int[] flower=packData.getFlower(v);
 					double vrad=packData.getRadius(v);
 					double rad1=packData.getRadius(ccwv);
 					double rad2=rad1;
@@ -719,7 +720,7 @@ public class ConformalTiling extends PackExtender {
 					double angsum=0.0;
 					for (int k=1;k<=indxdiff;k++) {
 						rad1=rad2;
-						rad2=packData.getRadius(packData.kData[v].flower[(ccwv_indx+k)%num]);
+						rad2=packData.getRadius(flower[(ccwv_indx+k)%num]);
 						UtilPacket uP=new UtilPacket();
 						if (hes<0) { // hyp
 							angsum+=HyperbolicMath.h_comp_cos(vrad,rad1,rad2,1.0,1.0,1.0);
@@ -1405,7 +1406,7 @@ public class ConformalTiling extends PackExtender {
 						
 						// else get flower as a string (both corner and edge barycenters)
 						else {
-							int []flowr=canonicalPack.kData[tile.baryVert].flower;
+							int []flowr=canonicalPack.getFlower(tile.baryVert);
 							for (int j=0;j<=canonicalPack.countFaces(tile.baryVert);j++)
 								flwr.append(flowr[j]+" ");
 						}
@@ -1848,11 +1849,12 @@ public class ConformalTiling extends PackExtender {
 				int b=tile.baryVert;
 				int v=tile.vert[j];
 				int num=triPD.countFaces(b);
+				int[] flower=triPD.getFlower(b);
 				int indx_bv=triPD.nghb(b,v);
 				if (righttwist) {
-					int w=triPD.kData[b].flower[(indx_bv-2+num)%num];
-					int u=triPD.kData[b].flower[(indx_bv-1)%num];
-					int s=triPD.kData[b].flower[(indx_bv+1)%num];
+					int w=flower[(indx_bv-2+num)%num];
+					int u=flower[(indx_bv-1)%num];
+					int s=flower[(indx_bv+1)%num];
 					nt.vert[0]=b;
 					nt.vert[1]=w;
 					nt.vert[2]=u;
@@ -1860,9 +1862,9 @@ public class ConformalTiling extends PackExtender {
 					nt.vert[4]=s;
 				}
 				else {
-					int w=triPD.kData[b].flower[(indx_bv-1+num)%num];
-					int u=triPD.kData[b].flower[(indx_bv+1)%num];
-					int s=triPD.kData[b].flower[(indx_bv+2)%num];
+					int w=flower[(indx_bv-1+num)%num];
+					int u=flower[(indx_bv+1)%num];
+					int s=flower[(indx_bv+2)%num];
 					nt.vert[0]=b;
 					nt.vert[1]=w;
 					nt.vert[2]=v;
@@ -1925,9 +1927,10 @@ public class ConformalTiling extends PackExtender {
 				int b=tile.baryVert;
 				int v=tile.vert[j];
 				int num=newPD.countFaces(b);
+				int[] flower=newPD.getFlower(b);
 				int indx_bv=newPD.nghb(b,v);
-				int u=newPD.kData[b].flower[(indx_bv-1+num)%num];
-				int w=newPD.kData[b].flower[(indx_bv+1)%num];
+				int u=flower[(indx_bv-1+num)%num];
+				int w=flower[(indx_bv+1)%num];
 				nt.vert[0]=v;
 				nt.vert[1]=w;
 				nt.vert[2]=nct.vert[(j+1)%nct.vertCount];
@@ -1970,11 +1973,12 @@ public class ConformalTiling extends PackExtender {
 			Tile tile=td.myTiles[t];
 			int b=tile.baryVert;
 			int num=newPD.countFaces(b);
+			int[] flower=newPD.getFlower(b);
 			for (int j=0;j<tile.vertCount;j++) {
 				int v=tile.vert[j];
 				int indx_bv=newPD.nghb(b,v);
-				int w=newPD.kData[b].flower[(indx_bv-1+num)%num];
-				int u=newPD.kData[b].flower[(indx_bv+1)%num];
+				int w=flower[(indx_bv-1+num)%num];
+				int u=flower[(indx_bv+1)%num];
 				
 				// one triangle
 				Tile nt=newTiles[++tcount]=new Tile(newPD.tileData,3);
@@ -2031,6 +2035,7 @@ public class ConformalTiling extends PackExtender {
 			Tile tile=newPD.tileData.myTiles[t];
 			int v=tile.baryVert;
 			int num=newPD.countFaces(v);
+			int[] flower=newPD.getFlower(v);
 			
 			// new central tile; 
 			Tile nct=newTiles[++tcount]=new Tile(newPD.tileData,tile.vertCount);
@@ -2042,8 +2047,8 @@ public class ConformalTiling extends PackExtender {
 			// 2 new triangles for each vert/edge
 			for (int j=0;j<num;j++) {
 				int a=thestart+j;
-				int b=newPD.kData[v].flower[j];
-				int c=newPD.kData[v].flower[j+1];
+				int b=flower[j];
+				int c=flower[j+1];
 				int d=thestart+(j+1)%num;
 				
 				// new triangle <a,b,c>
@@ -2144,8 +2149,9 @@ public class ConformalTiling extends PackExtender {
 			newTiles[tcount].tileIndex=tcount;
 			int idx=newPD.nghb(b,v);
 			int num=newPD.countFaces(b);
+			int[] flower=newPD.getFlower(b);
 			for (int j=0;j<tile.vertCount;j++)
-				newTiles[tcount].vert[j]=newPD.kData[b].flower[(1+2*j)%num];
+				newTiles[tcount].vert[j]=flower[(1+2*j)%num];
 			
 			// new triangles in the corners
 			for (int j=0;j<tile.vertCount;j++) {
@@ -2153,8 +2159,8 @@ public class ConformalTiling extends PackExtender {
 				idx=newPD.nghb(b, v);
 				Tile nt=newTiles[++tcount]=new Tile(newPD.tileData,3);
 				nt.tileIndex=tcount;
-				int w=newPD.kData[b].flower[(idx-1+num)%num];
-				int u=newPD.kData[b].flower[(idx+1)%num];
+				int w=flower[(idx-1+num)%num];
+				int u=flower[(idx+1)%num];
 				nt.vert[0]=v;
 				nt.vert[1]=u;
 				nt.vert[2]=w;
@@ -2179,26 +2185,25 @@ public class ConformalTiling extends PackExtender {
 		if (tile==null || tile.augVert==null || av<0 || av>=tile.augVertCount)
 			return -1;
 		int v=tile.augVert[av];
-		// uv,v,dv in ccw order at vert v
+		// ccwv,v,cwv are in cclw order at vert v
 		int cwv=tile.augVert[(av-1+tile.augVertCount)%tile.augVertCount];
 		int ccwv=tile.augVert[(av+1)%tile.augVertCount];
 		
 		int num=packData.countFaces(v);
+		int[] flower=packData.getFlower(v);
 		double vrad=packData.getRadius(v);
 		double rad1=packData.getRadius(ccwv);
 		double rad2=rad1;
 		int ccwv_indx=packData.nghb(v, ccwv);
 		int indxdiff=(packData.nghb(v, cwv)-ccwv_indx+num)%num;
-		int hes=packData.hes;
 		double angsum=0.0;
 		for (int k=1;k<=indxdiff;k++) {
 			rad1=rad2;
-			rad2=packData.getRadius(packData.kData[v].flower[(ccwv_indx+k)%num]);
-			UtilPacket uP=new UtilPacket();
-			if (hes<0) { // hyp
+			rad2=packData.getRadius(flower[(ccwv_indx+k)%num]);
+			if (packData.hes<0) { // hyp
 				angsum+=HyperbolicMath.h_comp_cos(vrad,rad1,rad2,1.0,1.0,1.0);
 			}
-			else if (hes>0) { // sph
+			else if (packData.hes>0) { // sph
 				angsum+=Math.acos(SphericalMath.s_comp_cos(vrad,rad1,rad2));
 				
 			}

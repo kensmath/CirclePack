@@ -1110,7 +1110,10 @@ public class CommandStrParser {
 							  "Use 'Tri_group' or 'J_ftn' (capitalize) for more "
 							  + "than 15 generations");
 				  }
-				  
+
+				  // later we reorder to put A,B,C in ascending order.
+				  // 'parity' is true if this does not change orientation.
+				  boolean parity=true; 
 				  double a,b,c;
 				  boolean jftn=false;
 				  if (items.size()==2)
@@ -1118,9 +1121,10 @@ public class CommandStrParser {
 				  
 				  // j-function version specified via 'j-ftn' command
 				  //    or by specifying 0 as first parameter
+				  
 				  // defaults: 
-				  //   if 3 parameters, a=2, b=3, c=7
-				  //   if 2 parameters, a=0, b=2, c=3
+				  //   if 3 parameters, a=2, b=3, c=7 (classical hyp example)
+				  //   if 2 parameters, a=0, b=2, c=3 (j-ftn)
 				  try {
 					  a=Double.parseDouble(items.get(0));
 					  b=Double.parseDouble(items.get(1));
@@ -1147,19 +1151,24 @@ public class CommandStrParser {
 				  if (a==0.0)  
 					  jftn=true;
 				  
-				  // parameters B and C must be integers >= 1
+				  // j-ftn case: parameters B and C must be integers >= 2
 				  if (jftn) {
-					  int B=(int)(1.01*b);
-					  int C=(int)(1.01*c);
-					  if (B<1 || C<1)
+					  
+					  int B=(int)(2.01*b);
+					  int C=(int)(2.01*c);
+					  if (B<2 || C<2)
 						  throw new DataException(
 								  "usage: j-function parameters "
-								  + "are 2 positive integers");
-					  newPack=PackCreation.build_j_function(param,B,C);
+								  + "be positive integers >= 2");
+					  newPack=DcelCreation.buildTriGroup(param,0,B,C); 
 					  break;
 				  }
 				  
-				  // set degrees: params should be (at worst) half ints
+				  if (a<0.000000001 || b<0.00000001 || c<0.0000001) 
+					  throw new DataException(
+							  "usage: tri-group parameters must be positive");
+				  
+				  // set degrees: parameters should be (at worst) half ints
 				  if (Math.abs(2.0*a-(int)(2.0*a))>.0001 ||
 						  Math.abs(2.0*b-(int)(2.0*b))>.0001 ||
 						  Math.abs(2.0*c-(int)(2.0*c))>.0001)
@@ -1179,13 +1188,15 @@ public class CommandStrParser {
 				  }
 				  if (Math.abs(2.0*((int)c)-2.0*c)>.1) {
 					  if (((int)b-(int)a)>0.1) 
-						  throw new DataException("usage: create tri_group: 'c' is half-integer, but a, b not equal");
+						  throw new DataException(
+								  "usage: create tri_group: 'c' is "
+								  + "half-integer, but a, b not equal");
 				  }
 				  int A=(int)(2.01*a);
 				  int B=(int)(2.01*b);
 				  int C=(int)(2.01*c);
 
-				  newPack=DcelCreation.triGroup(A,B,C,param);
+				  newPack=DcelCreation.buildTriGroup(param, A, B, C);
 				  break;
 			  }
 			  case 6: // pentagonal tiling, with 'TileData'
@@ -4470,82 +4481,11 @@ public class CommandStrParser {
 	  }
 	  
 	  // ========= triG ===========
+	  // also see "create tri_gr" and "create j_ftn"
 	  if (cmd.startsWith("triG")) {
-		  double a=2.0;
-		  double b=3.0;
-		  double c=7.0;
-		  int maxgen=5;
-		  items=null;
-		  try {
-	      	  Iterator<Vector<String>> nextFlag=flagSegs.iterator();
-	      	  while (nextFlag.hasNext()) {
-	      		  items=(Vector<String>)nextFlag.next();
-	      		  String str=(String)items.get(0);
-	      		  if (StringUtil.isFlag(str)) {
-	      			  char ch=str.charAt(1);
-	      			  switch(ch) {
-	      			  // Note: triangle has angles pi/a, pi/b, pi/c
-	      			  // by convention, a, b, c are (at worst) half integers
-	      			  case 'd': { // read a b c 
-	    		    	  a=Double.parseDouble((String)items.get(1));
-	    		    	  b=Double.parseDouble((String)items.get(2));
-	    		    	  c=Double.parseDouble((String)items.get(3));
-	    		    	  break;
-	      			  }
-	      			  case 'g': { // number of generations
-	      				  int mg=Integer.parseInt((String)items.get(1));
-	      				  if (mg<1 || mg>1000) mg=10; // default
-	      				  maxgen=mg;
-	      				  break;
-	      			  }
-	      			  } // end of switch
-	      		  }
-	      		  else { // not flagged? default to a b c
-    		    	  a=Double.parseDouble((String)items.get(0));
-    		    	  b=Double.parseDouble((String)items.get(1));
-    		    	  c=Double.parseDouble((String)items.get(2));
-	      		  }
-	      	  } // end of while
-		  } catch (Exception ex) {
-			  if (items!=null)
-			  	throw new ParserException("usage: -d {a b c} -g {n}");
-		  }
-		  
-		  // set degrees: params should be (at worst) half ints
-		  if (Math.abs(2.0*a-(int)(2.0*a))>.0001 ||
-				  Math.abs(2.0*b-(int)(2.0*b))>.0001 ||
-				  Math.abs(2.0*c-(int)(2.0*c))>.0001)
-			  throw new DataException("paremeters must be form n/2");
-		  if (Math.abs(2.0*((int)a)-2.0*a)>.1) {
-			  if (((int)b-(int)c)>0.1) 
-				  throw new DataException("'a' is half-integer, but b, c not equal");
-		  }
-		  else if (Math.abs(2.0*((int)b)-2.0*b)>.1) {
-			  if (((int)a-(int)c)>0.1) 
-				  throw new DataException("'b' is half-integer, but a, c not equal");
-		  }
-		  if (Math.abs(2.0*((int)c)-2.0*c)>.1) {
-			  if (((int)b-(int)a)>0.1) 
-				  throw new DataException("'c' is half-integer, but a, b not equal");
-		  }
-		  int A=(int)(2.01*a);
-		  int B=(int)(2.01*b);
-		  int C=(int)(2.01*c);
-		  
-	   	  try{
-	   		  // have to hold this; packData get's replaced
-	   		  PackData newPack=DcelCreation.triGroup(A,B,C,maxgen);
-	   		  if (newPack!=null) {
-	   			  int pnum=packData.packNum;
-	   			  CirclePack.cpb.swapPackData(newPack,pnum,false);
-	   			  packData=newPack;
-	   			  return packData.nodeCount;
-	   		  }
-	   		  CirclePack.cpb.errMsg("triGroup failed to create a packing");
-	   		  return 0;
-	   	  } catch(Exception ex) {
-	   		  throw new ParserException(" "+ex.getMessage());
-	   	  }
+		  StringBuilder strbld=new StringBuilder("create tri_gr ");
+		  strbld.append(StringUtil.reconstitute(flagSegs));
+		  count +=jexecute(packData,strbld.toString());
 	  }
 	  break;
   } // end of 't'
@@ -10320,171 +10260,6 @@ public class CommandStrParser {
 	      }
 		  break;
       } // end of 's'
-      case 't':
-      {
-
-		  // ========= triG ===========
-		  if (cmd.startsWith("triG")) {
-			  double a=2.0;
-			  double b=3.0;
-			  double c=7.0;
-			  int maxgen=5;
-			  items=null;
-			  try {
-		      	  Iterator<Vector<String>> nextFlag=flagSegs.iterator();
-		      	  while (nextFlag.hasNext()) {
-		      		  items=(Vector<String>)nextFlag.next();
-		      		  String str=(String)items.get(0);
-		      		  if (StringUtil.isFlag(str)) {
-		      			  char ch=str.charAt(1);
-		      			  switch(ch) {
-		      			  // Note: triangle has angles pi/a, pi/b, pi/c
-		      			  // by convention, a, b, c are (at worst) half integers
-		      			  case 'd': { // read a b c 
-		    		    	  a=Double.parseDouble((String)items.get(1));
-		    		    	  b=Double.parseDouble((String)items.get(2));
-		    		    	  c=Double.parseDouble((String)items.get(3));
-		    		    	  break;
-		      			  }
-		      			  case 'g': { // number of generations
-		      				  int mg=Integer.parseInt((String)items.get(1));
-		      				  if (mg<1 || mg>1000) mg=10; // default
-		      				  maxgen=mg;
-		      				  break;
-		      			  }
-		      			  } // end of switch
-		      		  }
-		      		  else { // not flagged? default to a b c
-	    		    	  a=Double.parseDouble((String)items.get(0));
-	    		    	  b=Double.parseDouble((String)items.get(1));
-	    		    	  c=Double.parseDouble((String)items.get(2));
-		      		  }
-		      	  } // end of while
-			  } catch (Exception ex) {
-				  if (items!=null)
-				  	throw new ParserException("usage: -d {a b c} -g {n}");
-			  }
-			  
-			  // set degrees: params should be (at worst) half ints
-			  if (Math.abs(2.0*a-(int)(2.0*a))>.0001 ||
-					  Math.abs(2.0*b-(int)(2.0*b))>.0001 ||
-					  Math.abs(2.0*c-(int)(2.0*c))>.0001)
-				  throw new DataException("paremeters must be form n/2");
-			  if (Math.abs(2.0*((int)a)-2.0*a)>.1) {
-				  if (((int)b-(int)c)>0.1) 
-					  throw new DataException("'a' is half-integer, but b, c not equal");
-			  }
-			  else if (Math.abs(2.0*((int)b)-2.0*b)>.1) {
-				  if (((int)a-(int)c)>0.1) 
-					  throw new DataException("'b' is half-integer, but a, c not equal");
-			  }
-			  if (Math.abs(2.0*((int)c)-2.0*c)>.1) {
-				  if (((int)b-(int)a)>0.1) 
-					  throw new DataException("'c' is half-integer, but a, b not equal");
-			  }
-//			  int []degs=new int[3]; 
-			  int A=(int)(2.01*a);
-			  int B=(int)(2.01*b);
-			  int C=(int)(2.01*c);
-			  
-		   	  try{
-		   		  // have to hold this; packData get's replaced
-		   		  int pnum=packData.packNum;
-		   		  PackData newPack=DcelCreation.triGroup(A,B,C,maxgen);
-		   		  if (newPack!=null) {
-		   			  CirclePack.cpb.swapPackData(newPack,pnum,false);
-		   			  packData=newPack;
-		   			  return packData.nodeCount;
-		   		  }
-		   		  CirclePack.cpb.errMsg("triGroup failed to create a packing");
-		   		  return 0;
-		   	  } catch(Exception ex) {
-		   		  throw new ParserException(" "+ex.getMessage());
-		   	  }
-		   	  
-			  // geometry
-/*			  int hees=-1; // default: hyp
-			  double recipsum=1.0/a+1.0/b+1.0/c;
-			  if (Math.abs(recipsum-1)<.0001)
-				  hees=0; // eucl
-			  else if (recipsum>1.0) hees=1; // sph
-			  
-			  int gencount=1;
-			  // start seed
-		   	  try{
-		   		  // have to hold this; packData get's replaced
-		   		  CPScreen cps=packData.cpScreen;  
-		   		  count += cps.seed(degs[0],hees);
-		   		  packData=cps.packData; 
-		   	  } catch(Exception ex) {
-		   		  throw new ParserException(" "+ex.getMessage());
-		   	  }
-		   	  // mark vertices of first flower
-		   	  packData.setVertMark(1,0);
-		   	  for (int j=2;j<=packData.nodeCount;j++) {
-		   		  packData.setVertMark(j,(j)%2+1);
-		   	  }
-		   	  count++;
-		   	  
-		   	  // hyperbolic cases
-			  while (hees<0 && gencount<=maxgen) { 
-				  if (packData.bdryCompCount==0)
-					  throw new CombException("no boundary verts at gencount = "+gencount);
-				  int []alt=new int[2];
-				  int w=packData.bdryStarts[1];
-				  int stopv=packData.kData[w].flower[packData.getNum(w);
-				  int next=packData.kData[w].flower[0];
-				  boolean wflag=false;
-				  while (!wflag && count<10000) {
-//					  System.err.println("gencount="+gencount+", working on w="+w+
-//							  "; w's mark="+packData.getVertMark(w));
-					  if (w==stopv) wflag=true;
-					  int prev=packData.kData[w].flower[packData.getNum(w)];
-					  int n=degs[packData.getVertMark(w)]-packData.getNum(w)-1;
-					  if (n<-1)
-						  throw new CombException("violated degree at vert "+w);
-
-					  // add the n circles; two marks alternate around w
-					  alt[0]=packData.getVertMark(prev);
-					  int vec=(alt[0]-packData.getVertMark(w)+3)%3;
-					  alt[1]=(alt[0]+vec)%3;
-//					  System.out.println("w mark="+packData.getVertMark(w)+
-//							  "; prev mark (alt[0])="+alt[0]+"; alt[1]="+alt[1]);
-					  for (int i=1;i<=n;i++) { 
-						  packData.add_vert(w);
-						  packData.getVertMark(packData.nodeCount,alt[i%2]);
-					  }
-					  if (n==-1) { 
-						  int xv=packData.close_up(w); // vertex removed?
-						  if (xv>0 && xv<=stopv) // if yes, reset stopv
-							  stopv--;
-						  if (xv>0 && xv<=next) // may have to reset next, too
-							  next--;
-					  }
-					  else packData.enfold(w);
-					  packData.complex_count(true);
-					  w=next;
-					  next=packData.kData[w].flower[0];
-					  count++;
-				  } // end of while
-				  
-				  // debug
-				  NodeLink nodelink=new NodeLink(packData,"b");
-				  Iterator<Integer> nlink=nodelink.iterator();
-//				  System.out.println("bdry verts, marks");
-				  while (nlink.hasNext()) {
-					  int dw=nlink.next();
-//					  System.out.println("v "+dw+", "+packData.getVertMark(dw));
-				  }
-				  
-				  
-				  gencount++;
-			  }
-			  packData.setCombinatorics();
-			  return count; */
-		  }
-    	  break;
-	  }
       case 'u':
       {
 	      // ========= unflip ========

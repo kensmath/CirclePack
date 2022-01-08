@@ -228,7 +228,8 @@ public class Necklace extends PackExtender {
 			for (int v=1;v<=bottomPack.nodeCount;v++) {
 				int newv=packData.vertexMap.findW(v);
 				Color col=bottomPack.getCircleColor(v);
-				packData.setCircleColor(newv,new Color(col.getRed(),col.getGreen(),col.getBlue()));
+				packData.setCircleColor(newv,new Color(col.getRed(),
+						col.getGreen(),col.getBlue()));
 				packData.setVertMark(newv,bottomPack.getVertMark(v));
 			}
 
@@ -236,11 +237,13 @@ public class Necklace extends PackExtender {
 	 		//  face center vertices --- i.e. the graph edges
 	 		packData.elist=new EdgeLink(packData);
 	 		for (int v=1;v<=packData.nodeCount;v++) {
-	 			if (packData.getVertMark(v)!=1)
-	 				for (int j=0;j<packData.countFaces(v)+packData.getBdryFlag(v);j++) {
-	 					int k=packData.kData[v].flower[j];
+	 			if (packData.getVertMark(v)!=1) {
+	 				int[] petals=packData.packDCEL.vertices[v].getPetals();
+	 				for (int j=0;j<petals.length;j++) {
+	 					int k=petals[j];
 	 					if (k>v && packData.getVertMark(k)!=1)
 	 						packData.elist.add(new EdgeSimple(v,k));
+	 				}
 	 			}
 	 		}			
 			
