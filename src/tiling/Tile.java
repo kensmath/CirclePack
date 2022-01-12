@@ -540,10 +540,6 @@ public class Tile extends Face {
    	 	stile.color=new Color(color.getRed(),color.getGreen(),color.getBlue());
    	 	stile.indexFlag=indexFlag;
    	 	stile.mark=mark;
-   	 	stile.nextFace=nextFace;
-   	 	stile.nextRed=nextRed;
-   	 	stile.plotFlag=plotFlag;
-   	 	stile.rwbFlag=rwbFlag;
 		stile.vert=new int[vertCount];
 		for (int j=0;j<vertCount;j++) {
 			stile.vert[j]=vert[j];

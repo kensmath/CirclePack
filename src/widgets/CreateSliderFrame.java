@@ -7,6 +7,7 @@ import java.util.Vector;
 import allMains.CirclePack;
 import exceptions.DataException;
 import listManip.GraphLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import packing.PackData;
 import util.StringUtil;
@@ -43,7 +44,7 @@ public class CreateSliderFrame {
 				p.schwarzSliders.dispose();
 				p.schwarzSliders=null;
 			}
-			p.schwarzSliders = new SchwarzSliders(p,"","", new GraphLink(p,items));
+			p.schwarzSliders = new SchwarzSliders(p,"","", new HalfLink(p,items));
 			p.schwarzSliders.setVisible(true);
 			return p.schwarzSliders.sliderCount;
 		}
@@ -78,7 +79,7 @@ public class CreateSliderFrame {
 		String mvCmd="";
 		String optCmd="";
 		NodeLink vlist=null;
-		GraphLink glist=null;
+		HalfLink hlist=null;
 		
 		if (segments==null || segments.size()<2) {
 			CirclePack.cpb.errMsg("usage: slider: looking for '-[cmo] {cmd}' flags");
@@ -111,14 +112,14 @@ public class CreateSliderFrame {
 					return 0;
 				}
 			}
-		// Note: for schwarzians, 'lastStr' should be face pairs <f,g>
+		// Note: for schwarzians, 'lastStr' should be half edges
 		else if (type == 1) { // schwarzians
 			if (lastStr.length() == 0)
-				glist = new GraphLink(p, "s"); // spanning tree
+				hlist=p.packDCEL.fullOrder; // spanning tree
 			else
-				glist = new GraphLink(p, lastStr);
-			if (glist == null || glist.size() == 0) {
-				CirclePack.cpb.errMsg("usage: slider ..... {glist}");
+				hlist = new HalfLink(p, lastStr);
+			if (hlist == null || hlist.size() == 0) {
+				CirclePack.cpb.errMsg("usage: slider ..... {elist}");
 				return 0;
 			}
 		}
@@ -188,7 +189,7 @@ public class CreateSliderFrame {
 				p.schwarzSliders.dispose();
 				p.schwarzSliders=null;
 			}
-			p.schwarzSliders = new SchwarzSliders(p, chgCmd, mvCmd, glist);
+			p.schwarzSliders = new SchwarzSliders(p, chgCmd, mvCmd, hlist);
 			if (optCmd.length()>0)
 				p.schwarzSliders.optCmdField.setText(optCmd);
 			p.schwarzSliders.setVisible(true);

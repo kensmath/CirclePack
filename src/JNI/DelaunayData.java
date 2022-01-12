@@ -35,7 +35,8 @@ public class DelaunayData {
 	
 	// face information
 	public int myfaceCount;	// number of faces on return
-	public int []triLite;		// linearized array of face indices; for face f use indices {3*f, 3*f+1, 3*f+2}
+	public int []triLite;	// linearized array of face indices; 
+							// for face f use indices {3*f, 3*f+1, 3*f+2}
 	
 	// constructor(s)
 	public DelaunayData() {

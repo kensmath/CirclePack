@@ -46,7 +46,6 @@ import geometry.SphericalMath;
 import komplex.DualTri;
 import komplex.EdgeSimple;
 import komplex.Face;
-import komplex.GraphSimple;
 import komplex.KData;
 import komplex.Triangulation;
 import listManip.BaryCoordLink;
@@ -116,7 +115,6 @@ public class PackData{
     static int MAX_COMPONENTS=20;
 
 	// Main data vectors
-	public KData kData[];   // pointer to combinatoric data 
 	public VData vData[];   // instantiated only with packDCEL
 	public Vector<PackExtender> packExtensions;  // vector of extensions
 	public TileData tileData; // for associated tilings 
@@ -125,7 +123,6 @@ public class PackData{
 	public int nodeCount;   // number of nodes
     public int faceCount;     // number of faces 
     public int intNodeCount;  // number of interior nodes
-    public int bdryCompCount; // number of bdry components 
     
     public PackDCEL packDCEL; // for possible DCEL structure 
 
@@ -270,7 +267,6 @@ public class PackData{
     	// set some counts
 		nodeCount=pdcel.vertCount;
 		faceCount=pdcel.faceCount;
-		setBdryCompCount(pdcel.idealFaceCount);
     	euler=nodeCount-(pdcel.edgeCount/2)+faceCount;
 		genus=(2-euler-pdcel.idealFaceCount)/2;
 		intrinsicGeom=PackData.getIntrinsicGeom(this);
@@ -1101,7 +1097,7 @@ public class PackData{
                 				String str=(String)loctok.nextToken();
                 				int v=Integer.parseInt(str);
                 				int flg=Integer.parseInt((String)loctok.nextToken());
-                				kData[v].plotFlag=flg;
+                				setPlotFlag(v,flg);
                 			} catch(Exception ex) {state=PackState.INITIAL;}
                 		}
                 		flags |= 01000;
@@ -1175,8 +1171,7 @@ public class PackData{
                 				&& (line=StringUtil.ourNextLine(fp))!=null) {
                 			StringTokenizer loctok = new StringTokenizer(line);
                 			try {
-                				String str=(String)loctok.nextToken();
-                				int v=rON(Integer.parseInt(str));
+                				int v=rON(Integer.parseInt((String)loctok.nextToken()));
                 				int w=rON(Integer.parseInt((String)loctok.nextToken()));
                 				double invDist=Double.parseDouble((String)loctok.nextToken());
                 				this.set_single_invDist(v,w,invDist);
@@ -1204,25 +1199,27 @@ public class PackData{
                     }
                     // 'real' Schwarzian for edges, see 'Schwarzian.java'
                     // TODO: Have to adjust for dcel structures.
+                    // data: v w schw
                     else if (mainTok.equals("SCHWARZIANS:")) { 
                     	state=PackState.SCHWARZIAN;
-                    	int v=1;
                 		while (state==PackState.SCHWARZIAN 
                 				&& (line=StringUtil.ourNextLine(fp))!=null) {
                 			StringTokenizer loctok = new StringTokenizer(line);
-                			while (state==PackState.SCHWARZIAN 
-                					&& loctok.hasMoreTokens() && v<=nodeCount) {
+                			while (state==PackState.SCHWARZIAN && 
+                				loctok.hasMoreTokens() &&
+                				loctok.countTokens()==3) {
                 				try {
-                					int num=countFaces(v);
-                					kData[v].schwarzian=new double[num+1];
-                					if (loctok.countTokens()!=num+1)
-                						throw new InOutException("");
-                					// shuck first entry, vertex 
-                					loctok.nextToken(); 
-                					for (int j=0;j<num;j++)
-                						kData[v].schwarzian[j]=Double.parseDouble((String)loctok.nextToken());
-                					v++;
-                				} catch(Exception ex) {state=PackState.INITIAL;}
+                    				int v=rON(Integer.parseInt((String)loctok.nextToken()));
+                    				int w=rON(Integer.parseInt((String)loctok.nextToken()));
+                					double schw=Double.parseDouble((String)loctok.nextToken());
+// TODO: can we find 'he' at this stage?                					
+                					HalfEdge he=packDCEL.findHalfEdge(new EdgeSimple(v,w));
+                					he.setSchwarzian(schw);
+                				} catch (Exception ex) {
+                					CirclePack.cpb.errMsg(
+                						"Failed in reading some Schwarzians");
+                					state=PackState.INITIAL;
+                				}
                 			}
                 		}                    	
                 		flags |= 020000000;
@@ -2444,15 +2441,6 @@ public class PackData{
 	}
 	
 	/**
-	 * This only sets the traditional count, not the
-	 * 'idealFaceCount' in DCEL strutures
-	 * @param k
-	 */
-	public void setBdryCompCount(int k) {
-		bdryCompCount=k;
-	}
-	
-	/**
 	 * Get center/radius from 'vData' in 'CircleSimple' form.
 	 * Note: see 'RedHEdge.getCircleSimple' to get the data
 	 * from a red edge.
@@ -3116,11 +3104,11 @@ public class PackData{
 			int ws=bdryStarts[i];
 			if (ws==w)
 				hit=i;
-			int ww=kData[ws].flower[0];
+			int ww=getFirstPetal(ws);
 			while (ww!=ws && hit<0) {
 				if (ww==w)
 					hit=i;
-				ww=kData[ww].flower[0];
+				ww=getFirstPetal(ww);
 			}
 		}
 		return hit;
@@ -3498,7 +3486,6 @@ public class PackData{
 				else setBdryFlag(i,0);
 			}
 		}
-		setBdryCompCount(bs);
 		return bcount;
 	}
 
@@ -3598,9 +3585,10 @@ public class PackData{
 			return count;
 		for (int v=1;v<=nodeCount;v++) {
 			double angsum=0.0;
+			int[] flower=getFlower(v);
 			for (int j=0;j<countFaces(v);j++) {
-				int n=kData[v].flower[j];
-				int m=kData[v].flower[j+1];
+				int n=flower[j];
+				int m=flower[j+1];
 				angsum +=Math.acos(EuclMath.e_cos_3D(xyzpoint[v],xyzpoint[n],xyzpoint[m]));
 			}
 			if (flag && isBdry(v)) {
@@ -4390,14 +4378,14 @@ public class PackData{
 		if ((act & 01000) == 01000) { // nonpositive plot_flags
 			flag = 0;
 			for (int i = 1; (i <= nodeCount && flag == 0); i++)
-				if (kData[i].plotFlag <= 0)
+				if (getPlotFlag(i) <= 0)
 					flag++;
 			if (flag > 0) { // got some nondefault circle plot_flags
 				file.write("CIRCLE_PLOT_FLAGS: \n");
 				int j = 0;
 				for (int i = 1; i <= nodeCount; i++)
-					if (kData[i].plotFlag <= 0) {
-						file.write(i + " \t" + kData[i].plotFlag + " ");
+					if (getPlotFlag(i) <= 0) {
+						file.write(i + " \t" + getPlotFlag(i) + " ");
 						j++;
 						if ((j % 5) == 0)
 							file.write("\n");
@@ -5295,135 +5283,31 @@ public class PackData{
 	  }
 
 	  /**
-	   * Given a closed chain of hex interior vertices (along a hex axis),
-	   * "slide" the right side forward along the chain one notch.
-	   * This amounts to cutting the packing in two along the chain,
-	   * then reattaching with a shift. Return 0 on error. 
-	   * 
-	   * TODO: make this handle more general situations. 
-	   * 
-	   * @param hexChain EdgeLink
-	   * @return 1
+	   * This is more general version of 'hex_slide' mechanism.
+	   * Perform an edge flip on the edge to the right of each 
+	   * halfedge in 'hlink', i.e., flip twin.next. The effect
+	   * when 'hlink' is closed half-hex loop is to cut the
+	   * packing along hlink and slide the right side one notch
+	   * down before reattaching. Continue flipping as long as 
+	   * flips are successful, then fix the combinatorics. 
+	   * @param hlink HalfLink
+	   * @return int count, -count if there was a failure
 	  */
-	  public int hex_slide(EdgeLink hexChain) {
-		  EdgeSimple edge=null;
-		  EdgeSimple last_edge=null;
-		  EdgeSimple first_edge=null;
-		  
-		  	
-	    /* check that the chain is closed, all verts are hex, and
-	       the chain edges form a hex axis (two verts on right, two
-	       on left) (including where the start/end connect) */
-
-	      try {
-			  	if (hexChain==null || hexChain.size()==0) throw new CombException("Failed to get hex chain");
-			  	last_edge=(EdgeSimple)hexChain.getLast();
-			  	first_edge=(EdgeSimple)hexChain.getFirst();
-			  	int v=first_edge.v;
-			  	if (last_edge.w!=v || countFaces(v)!=6 || isBdry(v) ||
-			  			(nghb(v,last_edge.v)+3)%6 !=nghb(v,first_edge.w) ) {
-			  		throw new ParserException("hex_slide: problems with the given edge chain");
-			  	}
-			  	Iterator<EdgeSimple> hc=hexChain.iterator();
-			  	while (hc.hasNext()) {
-			  		edge=(EdgeSimple)hc.next();
-			  		if (edge.v!=v || countFaces(edge.w)!=6 || isBdry(edge.w)) 
-			  			throw new ParserException("Error in hex chain");
-			  		v=edge.w;
-			  	}
-	      } catch (Exception ex) { 
-	  		throw new ParserException("usage: hex_slide: some error in edge chain");
-	      }
-
-	      // have to have room to hold the new flowers.
-	      int count=hexChain.size();
-	      int [][]Nflowers=new int[2*count][];
-	      int []Nindices=new int[2*count]; // points to vert index of Nflower entry.
-	      int index_ptr=0;
-	      // modify flowers for parallel chain of verts to the right
-	      Iterator<EdgeSimple> hc=hexChain.iterator();
-	      int k,m,num;
-	      int n_w;
-	      EdgeSimple next_edge=last_edge;
-	      
-	      // along the chain we have vertices: p_v -> v -> n_v -> nn_v
-	      int v=next_edge.v;
-	      int n_v=first_edge.v;
-	      int nn_v=first_edge.w;
-	      edge=(EdgeSimple)hexChain.get(hexChain.size()-2);
-	      int p_v=edge.v;
-
-	      // along the parallel, pp_w -> p_w -> w -> n_w
-	      num=countFaces(n_v); // should be 6
-	      k=nghb(n_v,v);
-	      int w=kData[n_v].flower[(k+1)%num];
-	      num=countFaces(p_v); // should be 6
-	      k=nghb(p_v,v);
-	      int p_w=kData[p_v].flower[(k-1+num)%num];
-	      int pp_w=kData[p_v].flower[(k-2+num)%num];
-	      num=countFaces(w);
-	      k=nghb(w,n_v);
-	      n_w=kData[w].flower[(k-1+num)%num];
-	      while (hc.hasNext()) {
-	    	  edge=next_edge;
-	    	  next_edge=(EdgeSimple)hc.next();
-	    	  p_v=v;
-	    	  v=n_v;
-	    	  n_v=nn_v;
-	    	  // next along chain
-	    	  nn_v=hex_proj(n_v,v);
-	    	  
-	    	  pp_w=p_w;
-	    	  p_w=w;
-	    	  w=n_w;
-		      // next along parallel
-		      num=countFaces(w);
-		      k=nghb(w,n_v);
-		      n_w=kData[w].flower[(k-1+num)%num];
-	    	  
-		      // new flower for 'w' 
-		      m=(nghb(w,v)+1)%num;
-		      Nflowers[index_ptr]=new int[num+1];
-		      Nindices[index_ptr]=w;
-	    	  m=nghb(w,n_v);
-		      if (isBdry(w)) {
-		    	  for (int i=0;i<=m-1;i++)
-		    		  Nflowers[index_ptr][i]=kData[w].flower[i];
-		    	  Nflowers[index_ptr][m]=nn_v;
-		    	  Nflowers[index_ptr][(m+1)%num]=n_v;
-		    	  for (int i=m+2;i<=num;i++)
-		    		  Nflowers[index_ptr][i]=kData[w].flower[i];
-		      }
-		      else {
-		    	  Nflowers[index_ptr][m]=nn_v;
-		    	  Nflowers[index_ptr][(m+1)%num]=n_v;
-		    	  for (int i=2;i<num;i++) 
-		    		  Nflowers[index_ptr][(m+i)%num]=kData[w].flower[(m+i)%num];
-		    	  Nflowers[index_ptr][num]=Nflowers[index_ptr][0];
-		      }
-		      index_ptr++;
-		      
-		      // new flower for 'v'
-		      num=countFaces(v); // should be 6
-		      m=nghb(v,p_w);
-		      Nflowers[index_ptr]=new int[num+1];
-		      Nindices[index_ptr]=v;
-		      Nflowers[index_ptr][m]=pp_w;
-		      Nflowers[index_ptr][(m+1)%num]=p_w;;
-		      for (int i=2;i<num;i++) 
-		    	  Nflowers[index_ptr][(m+i)%num]=kData[v].flower[(m+i)%num];
-		      Nflowers[index_ptr][num]=Nflowers[index_ptr][0];
-		      
-		      index_ptr++;
-	      }		      
-	      
-	      // now, replace flowers with the new flowers
-	      for (int i=0;i<2*count;i++)
-	    	  kData[Nindices[i]].flower=Nflowers[i];
-	      
-	      setCombinatorics();
-	      return 1;
-	  }     
+	  public int right_slide(HalfLink hlink) {
+		  int count=0;
+		  Iterator<HalfEdge> his=hlink.iterator();
+		  while (his.hasNext()) {
+			  HalfEdge he=his.next().twin.prev;
+			  if (RawDCEL.flipEdge_raw(packDCEL,he)==null) {
+				  count *=-1;
+				  break;
+			  }
+			  count++;
+		  }
+		  if (count!=0)
+			  packDCEL.fixDCEL_raw(this);
+		  return count;
+	  }
 	  
 	  /**
 	   * Flip edges from a prepared list
@@ -7706,37 +7590,26 @@ public class PackData{
 	  }
 
 	  /**
-	   * Return schwarzian for edge <v,w>
-	   * @param es EdgeSimple
+	   * Return schwarzian for given halfedge
+	   * @param es HalfEdge
 	   * @return double, 
 	   */
-	  public double getSchwarzian(EdgeSimple es) { // given <v,w>
-		  HalfEdge he=packDCEL.findHalfEdge(es);
+	  public double getSchwarzian(HalfEdge he) { // given <v,w>
 		  if (he==null)
 			  throw new DataException("schwarzian failure: "+
-					  es.v+" and "+es.w+" are not neighbors");
+					  "edge was null");
 		  return he.getSchwarzian();
 	  }
-	  
-	  /**
-	   * Return schwarzian for  dual edge <f,g>, 
-	   * @param fg GraphSimple
-	   * @return double
-	   */
-	  public double getSchwarzian(GraphSimple fg) {
-		  return getSchwarzian(reDualEdge(fg.v,fg.w));
-	  }
-	  
+
 	  /**
 	   * Store schwarzian for EdgeSimple <v,w>
 	   * @param edge EdgeSimple
 	   * @param sch double
 	   * @return int 1 on success
 	   */
-	  public int setSchwarzian(EdgeSimple edge,double sch) {
-		  HalfEdge he=packDCEL.findHalfEdge(edge);
-		  he.setSchwarzian(sch);
-		  he.twin.setSchwarzian(sch);
+	  public int setSchwarzian(HalfEdge edge,double sch) {
+		  edge.setSchwarzian(sch);
+		  edge.twin.setSchwarzian(sch);
 		  return 1;
 	  }
 	  

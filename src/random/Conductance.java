@@ -26,8 +26,9 @@ public class Conductance {
 	public static double [][]adjacencyMatrix(PackData p,boolean stdt) {
 		double [][]admat=new double[p.nodeCount+1][p.nodeCount+1];
 		for (int i=1;i<=p.nodeCount;i++) {
-			for (int j=0;j<(p.countFaces(i)+p.getBdryFlag(i));j++) {
-				int k=p.kData[i].flower[j];
+			int[] flower=p.getFlower(i);
+			for (int j=0;j<flower.length;j++) {
+				int k=flower[j];
 				if (k<i) {
 					admat[i][k]=1;
 					admat[k][i]=1;
@@ -86,12 +87,13 @@ public class Conductance {
 			conductance[v]=new double[num+1];
 
 			// store edge lengths, incenters
-			f2=domData.getCenter(domData.kData[v].flower[0]);
+			f2=domData.getCenter(domData.getFirstPetal(v));
 			spokes[0]=z.minus(f2).abs();
 			CircleSimple sc=null;
+			int[] flower=domData.getFlower(v);
 			for (int j=1;j<=num;j++) {
 				f1=f2;
-				f2=domData.getCenter(domData.kData[v].flower[j]);
+				f2=domData.getCenter(flower[j]);
 				sc=EuclMath.eucl_tri_incircle(z,f1,f2);
 				spokes[j]=z.minus(f2).abs();
 				inCenters[j-1]=sc.center;
@@ -101,12 +103,12 @@ public class Conductance {
 			
 			// for bdry, use ratio of inRad/length for first and last edges
 			if (domData.isBdry(v)) {
-				f1=domData.getCenter(domData.kData[v].flower[0]);
-				f2=domData.getCenter(domData.kData[v].flower[1]);
+				f1=domData.getCenter(flower[0]);
+				f2=domData.getCenter(flower[1]);
 				double inRad=EuclMath.eucl_tri_inradius(spokes[0],spokes[1],f1.minus(f2).abs());
 				conductance[v][0]=inRad/spokes[0];
-				f1=domData.getCenter(domData.kData[v].flower[num-1]);
-				f2=domData.getCenter(domData.kData[v].flower[num]);
+				f1=domData.getCenter(flower[num-1]);
+				f2=domData.getCenter(flower[num]);
 				inRad=EuclMath.eucl_tri_inradius(spokes[num-1],spokes[num],f1.minus(f2).abs());
 				conductance[v][num]=inRad/spokes[num];
 			}

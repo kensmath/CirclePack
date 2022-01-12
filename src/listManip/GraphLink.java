@@ -654,7 +654,7 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 	}
 	
 	 /**
-	  * Create a new EdgeLink that eliminates duplicate edges.
+	  * Create a new GraphLink that eliminates duplicate edges.
 	  * @param el
 	  * @param orient boolean, true, then take account of orientation
 	  * @return new EdgeLink

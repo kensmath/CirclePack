@@ -453,8 +453,9 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		  }
 		  if (code==dataCode.VERT_FLOWER) {
 			  StringBuilder strbld=new StringBuilder("");
-			  for (int j=0;j<=(p.countFaces(v)+p.getBdryFlag(v));j++)
-				  strbld.append(p.kData[v].flower[j]+" ");
+			  int[] flower=p.getFlower(v);
+			  for (int j=0;j<flower.length;j++)
+				  strbld.append(flower[j]+" ");
 			  fp.write(strbld.toString());
 			  return 1;
 		  }

@@ -59,11 +59,11 @@ make a difference: formats below indicate when data must be on separate lines.
 		(done)
 		(vj,wj=circle indices, Dj=inversive distance
 		Dj in (-1,1) overlap; 1 tangency; > 1 separated)
-	SCHWARZIANS:       (optional)
-	    v1   e1 e2 ... en
-	    v2   e1 e2 ... em
+	SCHWARZIANS:       (optional, non trivial)
+	    v1 w1 S1
+	    v2 w2 S2
 	    ...
-	    vN   e1 e2 ... ek
+	    vN wN SN
 	CIRCLE_COLORS: 	   (optional, deprecated)
 		v1 c1
 		v2 c2 

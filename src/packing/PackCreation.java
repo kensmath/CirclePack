@@ -243,7 +243,7 @@ public class PackCreation {
 		myPacking.alpha=1;
 		
 		// gamma points to middle vertex of bdry edge in first face
- 		myPacking.gamma=myPacking.kData[1].flower[gamma_indx];
+ 		myPacking.gamma=myPacking.getFlower(1)[gamma_indx];
  		
  		// create 'elist' to hold edges not connected to
  		//  face center vertices --- i.e. the graph edges

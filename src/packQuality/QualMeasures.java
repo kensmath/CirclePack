@@ -114,8 +114,9 @@ public class QualMeasures {
 	      qual[i]=0;
 	      int v=p.packDCEL.faces[face].getVerts()[0];
 	      int num=p.countFaces(v)+p.getBdryFlag(v);
-	      for (int j=0;j<num;j++) {
-	    	  int w=p.kData[v].flower[j];
+	      int[] flower=p.getFlower(v);
+	      for (int j=0;j<flower.length;j++) {
+	    	  int w=flower[j];
 	    	  try {
 	    		  if ((dlength=desired_length(p,v,w))>0.0
 	    				  && (elength=edge_length(p,v,w))>0.0

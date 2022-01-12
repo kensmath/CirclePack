@@ -6773,27 +6773,27 @@ public class CommandStrParser {
 
 	      // =========== hex_slide ==========
 		  else if (cmd.startsWith("hex_slide")) {
-	    	  EdgeLink edgelist=null;
-	    	  EdgeSimple edge=null;
+	    	  HalfLink edgelist=null;
+	    	  HalfEdge he=null;
 	    	  try {
 	        	  items=(Vector<String>)flagSegs.get(0); // just one
-	    		  edgelist=new EdgeLink(packData,items);
-	    		  edge=(EdgeSimple)edgelist.get(0);
+	    		  edgelist=new HalfLink(packData,items);
+	    		  he=edgelist.get(0);
 	    	  } catch (Exception ex) {
 	    		  throw new ParserException("usage: hex_slide v w ");
 	    	  }
 	    	  // get 'hexChain' simple closed hex axis
-	    	  edgelist=new EdgeLink(packData,"eh "+edge.v+" "+edge.w);
-	    	  int ans= packData.hex_slide(edgelist);
+	    	  edgelist=new HalfLink(packData,"eh "+he);
+	    	  int ans= packData.right_slide(edgelist);
 	    	  if (ans==0) {
-	    		  edge=(EdgeSimple)edgelist.get(0);
+	    		  he=edgelist.get(0);
 	    		  throw new ParserException("failed for edge <"+
-	    				  edge.v+" "+edge.w+">");
+	    				  he+">");
 	    	  }
 	    	  else {
 	    		  count +=ans;
 	    		  CirclePack.cpb.msg(
-	    				  "hex_slide "+edge.v+" "+edge.w+" succeeded");
+	    				  "hex_slide "+he+" succeeded");
 	    	  }
 	    	  return count;
 	      }
@@ -7569,7 +7569,8 @@ public class CommandStrParser {
 	    		  }
 	    	  } catch(Exception ex) {}
 
-	    	  if ((packData.intrinsicGeom==0 && packData.bdryCompCount>0) || 
+	    	  if ((packData.intrinsicGeom==0 && 
+	    			  packData.packDCEL.idealFaceCount>0) || 
 	    			  packData.intrinsicGeom < 0) { // hyperbolic case 
 	    		  if (packData.hes >=0) {
 	    			  packData.geom_to_h();

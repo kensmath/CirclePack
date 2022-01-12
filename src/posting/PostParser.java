@@ -336,10 +336,10 @@ public class PostParser {
 						else
 							// use recorded color
 							pF.postColorCircle(p.hes, z, p.getRadius(v),
-									p.kData[v].color, tx);
+									p.vData[v].color, tx);
 					} else {
 						if (!dispFlags.colorIsSet) // none set? use recorded color
-							col = p.kData[v].color;
+							col = p.vData[v].color;
 						if (!dispFlags.colBorder)
 							pF.postFilledCircle(p.hes, z, p.getRadius(v), col,tx);
 						else
@@ -475,7 +475,7 @@ public class PostParser {
 					while (vlist.hasNext()) {
 						v = (Integer) vlist.next();
 						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.kData[v].color);
+							dispFlags.setColor(p.vData[v].color);
 						int num = p.countFaces(v);
 						int[] faceFlower=p.getFaceFlower(v);
 						Complex[] fanCenters = new Complex[num
@@ -758,7 +758,7 @@ public class PostParser {
 					if (p.hes <= 0 || front) {
 						if (dispFlags.colBorder) {
 							if (!dispFlags.colorIsSet)
-								dispFlags.setColor(p.kData[v].color);
+								dispFlags.setColor(p.vData[v].color);
 							pF.postColorTrinket(z, diam, dispFlags.getColor());
 						} else
 							pF.postTrinket(z, diam); // background

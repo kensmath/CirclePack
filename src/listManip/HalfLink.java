@@ -427,8 +427,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			switch(str.charAt(0)) {
 			
 			// "all" includes all red edges (whether twinned or not)
-			//    and one of each pair of twinned edges, namely, that
-			//    with smaller 'edgeIndx'.
+			//    and one of each pair of edges, namely, the edge
+			//    <v,w> with v<w.
 			case 'a': 
 			{
 				// organize via vertices -- more rational order?
@@ -442,7 +442,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 							add(he);
 							count++;
 						}
-						if (he.edgeIndx<he.twin.edgeIndx) {
+						else if (he.twin.origin.vertIndx>v) {
 							add(he);
 							count++;
 						}
@@ -491,6 +491,28 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			case 'g': // TODO: combinatorial geodesic path from v to w
 			{
 				return count;
+			}
+			case 'i': // interior
+			{
+				for (int v=1;v<=pdc.vertCount;v++) {
+					Vertex vert=pdc.vertices[v];
+					if (vert.isBdry())
+						continue;
+					HalfLink hlink=vert.getSpokes(null);
+					Iterator<HalfEdge> hits=hlink.iterator();
+					while (hits.hasNext()) {
+						HalfEdge he=hits.next();
+						if (he.myRedEdge!=null) {
+							add(he);
+							count++;
+						}
+						else if (he.twin.origin.vertIndx>v) {
+							add(he);
+							count++;
+						}
+					}
+				}
+				break;
 			}
 			case 'L': // 'layoutOrder' for the packing
 			{
@@ -602,7 +624,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			}
 			case 'e': // find edges: may be 'ee' hex-extended edges, 
 				// or 'eh', hex-extrapolated, which means a closed
-				// hex loop (only one in 'eh' case)
+				// hex loop (only one edge is used in 'eh' case)
 				// Move down the list and see if next vert (ignoring 
 				// repeats) is neighbor. If yes, add to edge list
 				// (possibly extended). Disregard duplication, eat 

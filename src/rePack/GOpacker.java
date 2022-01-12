@@ -8,7 +8,6 @@ import JNI.SolverData;
 import JNI.SolverFunction;
 import allMains.CirclePack;
 import complex.Complex;
-import complex.MathComplex;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.MiscException;
@@ -1213,97 +1212,7 @@ public class GOpacker extends RePacker {
 
         return n;
     }
-    
-    /**
-     * Given eucl boundary radii, form bdry circles into a triangle
-     * <u,v,w>, with given angle at v.
-     * 
-     * Position v at origin, w on positive x-axis, u ccw
-     * @param v int, principal corner
-     * @param u int
-     * @param w int
-     * @param v_ang double, designated angle at v
-     * @return double, stretch required in edge <w,u>
-     */
-    public double triSet(int v,int u,int w,double v_ang) {
-    	if (!p.isBdry(v) || !p.isBdry(u) ||	!p.isBdry(w) || 
-    			v_ang<.01 || (v_ang-Math.PI)<.1)
-    		throw new DataException("corner or angle problem in 'triSet'");
-    	
-    	// get length of edges <v w>
-    	double leg_vw=myPLite.radii[myPLite.parent2v[v]]+myPLite.radii[myPLite.parent2v[w]];
-    	int next=v;
-    	while((next=p.kData[next].flower[0])!=w) {
-    		leg_vw += 2.0*myPLite.radii[myPLite.parent2v[next]];
-    	}
-    	
-    	// get length of edges <u v>
-    	double leg_uv=myPLite.radii[myPLite.parent2v[v]]+myPLite.radii[myPLite.parent2v[u]];
-    	next=u;
-    	while((next=p.kData[next].flower[0])!=v) {
-    		leg_uv += 2.0*myPLite.radii[myPLite.parent2v[next]];
-    	}
-    	
-    	// get length of opposite side (strictly between u and w) from radii
-    	double opp_mid=0.0;
-    	next=w;
-    	while((next=p.kData[next].flower[0])!=u) {
-    		opp_mid += 2.0*myPLite.radii[myPLite.parent2v[next]];
-    	}
-    	double addon=myPLite.radii[myPLite.parent2v[w]]+myPLite.radii[myPLite.parent2v[u]];
-    	
-    	// get intended length based on leg lengths and ang_v
-    	Complex wu_vector=MathComplex.exp(new Complex(Math.log(leg_uv),v_ang)).
-    			minus(new Complex(leg_vw,0.0));
-    	double d=wu_vector.abs()-addon;
-    	wu_vector=wu_vector.divide(wu_vector.abs()); // unit vector
-    	if (d<(0.5*(leg_uv+leg_vw)))
-    		throw new DataException("opposite side too restricted to adjust");
-    	
-    	// adjust 'radii' between to get intended length
-    	double factor=d/opp_mid;
-    	next=w;
-    	while ((next=p.kData[next].flower[0])!=u)
-    		myPLite.radii[myPLite.parent2v[next]] *= factor;
-    	
-    	// lay out the circles: 
-    	// v at origin, extend vw along x-axis
-    	myPLite.centers[myPLite.parent2v[v]]=new Complex(0.0);
-    	next=v;
-    	double dist=myPLite.radii[myPLite.parent2v[next]];
-    	while ((next=p.kData[next].flower[0])!=w) {
-    		int ni=myPLite.parent2v[next];
-    		dist +=myPLite.radii[ni];
-    		myPLite.centers[ni]=new Complex(dist);
-    		dist +=myPLite.radii[ni];
-    	
-    		myPLite.centers[myPLite.parent2v[w]]=new Complex(leg_vw);
-    	
-    		// u to v in opposite direction of v_ang
-    		Complex uv_vector=MathComplex.exp(new Complex(0.0,v_ang)); // unit vector
-    		myPLite.centers[myPLite.parent2v[u]]=new Complex(uv_vector).times(leg_uv);
-    		next=u;
-    		dist=leg_uv-myPLite.radii[myPLite.parent2v[u]];
-    		while ((next=p.kData[next].flower[0])!=v) {
-    			int nid=myPLite.parent2v[next];
-    			dist -=myPLite.radii[nid];
-    			myPLite.centers[nid]=uv_vector.times(dist);
-    			dist -=myPLite.radii[nid];
-    		}
-    
-    		// layout opposite side
-    		next=w;
-    		dist=myPLite.radii[myPLite.parent2v[next]];
-    		while ((next=p.kData[next].flower[0])!=u) {
-    			int nid=myPLite.parent2v[next];
-    			dist +=myPLite.radii[nid];
-    			myPLite.centers[nid]=wu_vector.times(dist);
-    			dist +=myPLite.radii[nid];
-    		}
-    	}
-   		return factor;
-    }
-    
+ 
     /**
      * Reset corner info for polygonal packings. This nulls out old info,
      * but new is set up elsewhere when the code sees that 'parentCorners' 

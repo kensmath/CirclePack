@@ -450,7 +450,7 @@ public class TileBuilder {
 			//       goes through it. Best if vert[0] is required to be 
 			//       flower[0] in this case from the beginning.
 			int offset=-1;
-			int []myflower=p.kData[bv].flower;
+			int[] myflower=p.getFlower(bv);
 			for (int k=0;(k<num && offset<0);k++) {
 				int m=myflower[k];
 				if (p.countFaces(m)==4 && p.nghb(m, tile.vert[0])>=0)
@@ -463,9 +463,9 @@ public class TileBuilder {
 			if (offset>0) {
 				int []newflower=new int[num+1];
 				for (int k=0;k<num;k++)
-					newflower[k]=p.kData[bv].flower[(k+offset)%num];
+					newflower[k]=myflower[(k+offset)%num];
 				newflower[num]=newflower[0];
-				p.kData[bv].flower=newflower;
+				myflower=newflower;
 			}
 			
 			tile.wgIndices=new int[2*tile.vertCount];
@@ -478,12 +478,12 @@ public class TileBuilder {
 				wgtile.augVertCount=6;
 				wgtile.augVert=new int[6];
 				wgtile.mark=1; // positively oriented 
-				int baryV=p.kData[bv].flower[4*j+1]; // wgtile baryVert
+				int baryV=myflower[4*j+1]; // wgtile baryVert
 				wgtile.tileIndex=wgtick++;
 				p.setVertMark(baryV,-wgtile.tileIndex); // store neg of index in baryVert.mark
 				tile.wgIndices[2*j]=wgtile.tileIndex; // point to wgTile index
 				p.tileData.wgTiles[wgtile.tileIndex]=wgtile; // put wgTile into master list
-				int []itsflower=p.kData[baryV].flower;
+				int[] itsflower=p.getFlower(baryV);
 				int indx=p.nghb(baryV,bv);
 				for (int k=0;k<3;k++) {	// wgtile's augVert[0] points to the tile baryVert
 					wgtile.vert[k]=wgtile.augVert[2*k]=itsflower[(indx+2*k)%6];
@@ -496,12 +496,12 @@ public class TileBuilder {
 				wgtile.augVertCount=6;
 				wgtile.augVert=new int[6];
 				wgtile.mark=-1; // negatively oriented 
-				baryV=p.kData[bv].flower[4*j+3]; // its barycenter
+				baryV=itsflower[4*j+3]; // its barycenter
 				wgtile.tileIndex=wgtick++;
 				p.setVertMark(baryV,-wgtile.tileIndex); // store neg of index in baryVert.mark
 				tile.wgIndices[2*j+1]=wgtile.tileIndex; // point to wgTile index
 				p.tileData.wgTiles[wgtile.tileIndex]=wgtile; // put wgTile into master list
-				itsflower=p.kData[baryV].flower;
+				itsflower=p.getFlower(baryV);
 				indx=p.nghb(baryV,bv);
 				for (int k=0;k<3;k++) {	// wgtile's augVert[0] points to the tile baryVert
 					wgtile.vert[k]=wgtile.augVert[2*k]=itsflower[(indx+2*k)%6];
@@ -542,33 +542,37 @@ public class TileBuilder {
 						int tick=0; // counts wgTile's
 						// first: edge from bdry edge barycenter to first tile barycenter
 						int cv=flower[1];
+						int[] cvflower=p.getFlower(cv);
 						int myindx=p.nghb(cv,v);
-						vert[tick]=augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6];
-						augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
+						vert[tick]=augvert[2*tick]=cvflower[(myindx+2)%6];
+						augvert[2*tick+1]=cvflower[(myindx+3)%6];
 						dtile.wgIndices[tick++]= -p.getVertMark(cv); // index is temp stored in 'mark'
 						
 						// then pairs of grey/white to get edges between tile barycenters
 						for (int i=1;i<(num/4);i++) {
 							cv=flower[4*i-1];
 							myindx=p.nghb(cv,v);
-							augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6]; 
-							augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
+							cvflower=p.getFlower(cv);
+							augvert[2*tick]=cvflower[(myindx+2)%6]; 
+							augvert[2*tick+1]=cvflower[(myindx+3)%6];
 							dtile.wgIndices[tick++]= -p.getVertMark(cv);
 							cv=flower[4*i+1];
 							myindx=p.nghb(cv,v);
-							vert[tick/2]=augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6];
-							augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
+							cvflower=p.getFlower(cv);
+							vert[tick/2]=augvert[2*tick]=cvflower[(myindx+2)%6];
+							augvert[2*tick+1]=cvflower[(myindx+3)%6];
 							dtile.wgIndices[tick++]= -p.getVertMark(cv);
 						}							
 						
 						// then finish
 						cv=flower[num-1];
 						myindx=p.nghb(cv,v);
-						augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6]; 
-						augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
+						cvflower=p.getFlower(cv);
+						augvert[2*tick]=cvflower[(myindx+2)%6]; 
+						augvert[2*tick+1]=cvflower[(myindx+3)%6];
 						dtile.wgIndices[tick++]= -p.getVertMark(cv);
 						// last vert is edge barycenter
-						vert[tick/2]=augvert[2*tick]=p.kData[cv].flower[(myindx+4)%6];
+						vert[tick/2]=augvert[2*tick]=cvflower[(myindx+4)%6];
 						
 						// finish with augmented boundary 
 						augvert[2*tick+1]=flower[num];
@@ -591,7 +595,7 @@ public class TileBuilder {
 						// find a grey tile barycenter to start
 						int gdir=-1;
 						for (int j=0;(j<num && gdir<0);j++) {
-							int cv=p.kData[v].flower[j];
+							int cv=flower[j];
 							int cmark=p.getVertMark(cv);
 							if (cmark<0 && p.tileData.wgTiles[-cmark].mark==-1) // grey
 								gdir=j;
@@ -605,13 +609,15 @@ public class TileBuilder {
 							int ii=(gdir+i)%num;
 							int cv=flower[ii];
 							int myindx=p.nghb(cv,v);
-							vert[tick/2]=augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6];
-							augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
+							int[] cvflower=p.getFlower(cv);
+							vert[tick/2]=augvert[2*tick]=cvflower[(myindx+2)%6];
+							augvert[2*tick+1]=cvflower[(myindx+3)%6];
 							dtile.wgIndices[tick++]= -p.getVertMark(cv);
 							cv=flower[(ii+2)%num];
 							myindx=p.nghb(cv,v);
-							augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6];
-							augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
+							cvflower=p.getFlower(cv);
+							augvert[2*tick]=cvflower[(myindx+2)%6];
+							augvert[2*tick+1]=cvflower[(myindx+3)%6];
 							dtile.wgIndices[tick++]= -p.getVertMark(cv);
 						}							
 						p.tileData.dualTileData.myTiles[dcount].vert=vert;
@@ -652,22 +658,24 @@ public class TileBuilder {
 						// first is grey face
 						int cv=flower[1];
 						int myindx=p.nghb(cv,v);
+						int[] cvflower=p.getFlower(cv);
 						
 						// these go at end
-						augvert[6]=p.kData[cv].flower[myindx];
-						augvert[7]=p.kData[cv].flower[(myindx+1)%6];
+						augvert[6]=cvflower[myindx];
+						augvert[7]=cvflower[(myindx+1)%6];
 						
-						vert[0]=augvert[0]=p.kData[cv].flower[(myindx+2)%6];
-						augvert[1]=p.kData[cv].flower[(myindx+3)%6];
-						vert[1]=augvert[2]=p.kData[cv].flower[(myindx+4)%6];
+						vert[0]=augvert[0]=cvflower[(myindx+2)%6];
+						augvert[1]=cvflower[(myindx+3)%6];
+						vert[1]=augvert[2]=cvflower[(myindx+4)%6];
 						qtile.wgIndices[0]= -p.getVertMark(cv);
 						
 						// next is white
 						cv=flower[3];
 						myindx=p.nghb(cv,v);
-						augvert[3]=p.kData[cv].flower[(myindx+3)%6];
-						vert[2]=augvert[4]=p.kData[cv].flower[(myindx+4)%6];
-						augvert[5]=p.kData[cv].flower[(myindx+5)%6];
+						cvflower=p.getFlower(cv);
+						augvert[3]=cvflower[(myindx+3)%6];
+						vert[2]=augvert[4]=cvflower[(myindx+4)%6];
+						augvert[5]=cvflower[(myindx+5)%6];
 						qtile.wgIndices[1]= -p.getVertMark(cv);
 						vert[3]=v;
 
@@ -683,7 +691,7 @@ public class TileBuilder {
 						// find a grey tile barycenter to start
 						int gdir=-1;
 						for (int j=0;(j<num && gdir<0);j++) {
-							int cv=p.kData[v].flower[j];
+							int cv=flower[j];
 							int mark=p.getVertMark(cv);
 							if (mark<0 && p.tileData.wgTiles[-mark].mark==-1) // grey
 								gdir=j;
@@ -694,8 +702,9 @@ public class TileBuilder {
 						for (int j=0;j<4;j++) {
 							int cv=flower[(gdir+2*j)%num];
 							int myindx=p.nghb(cv,v);
-							vert[j]=augvert[2*j]=p.kData[cv].flower[(myindx+2)%6];
-							augvert[2*j+1]=p.kData[cv].flower[(myindx+3)%6];
+							int[] cvflower=p.getFlower(cv);
+							vert[j]=augvert[2*j]=cvflower[(myindx+2)%6];
+							augvert[2*j+1]=cvflower[(myindx+3)%6];
 							qtile.wgIndices[j]= -p.getVertMark(cv);
 						}
 						

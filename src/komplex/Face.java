@@ -19,10 +19,6 @@ public class Face{
      public int indexFlag;   // which circles to use for drawing? use verts
      					     // 'indexFlag', '(indexFlag+1)%3' to plot 
      						 // '(indexFlag+2)%3' for triangular faces
-     public int nextFace;    // next face in drawing order. 
-     public int nextRed;     // next red face (if this face is red) 
-     public int plotFlag;    // >0: face location (seems) reliable for plotting;
-                             // <=0 indicates some layout problem */
      public Color color;     // Java Color class.
      public int mark;        // mark
      PackData packData;      // packing this is associated with (if any)
@@ -43,10 +39,6 @@ public class Face{
     	 color=ColorUtil.getFGColor();
      }
      
-     public Face(PackData p) {
-    	 this(p,3);
-     }
-
      public Face(int vCount) {
     	 this(null,vCount);
      }
@@ -76,12 +68,9 @@ public class Face{
     	 sface.color=new Color(color.getRed(),color.getGreen(),color.getBlue());
     	 sface.indexFlag=indexFlag;
     	 sface.mark=mark;
-    	 sface.nextFace=nextFace;
-    	 sface.nextRed=nextRed;
-    	 sface.plotFlag=plotFlag;
-    	 sface.rwbFlag=rwbFlag;
 		 sface.vert=new int[vertCount];
-		 for (int j=0;j<vertCount;j++) sface.vert[j]=vert[j];
+		 for (int j=0;j<vertCount;j++) 
+			 sface.vert[j]=vert[j];
 		 return sface;
      }
 }

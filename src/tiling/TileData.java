@@ -642,6 +642,7 @@ public class TileData {
 			qcount=1;
 			for (int v=1;v<=newPD.nodeCount;v++) {
 				
+				int[] vflower=newPD.getFlower(v);
 				// dual tile for each original corner vertex
 				if (newPD.getVertMark(v)==2) {
 					int []vert=null;
@@ -653,10 +654,10 @@ public class TileData {
 						int num=newPD.countFaces(v)/2;
 						vert=new int[num+3];
 						vert[0]=v;
-						vert[1]=newPD.kData[v].flower[0];
+						vert[1]=vflower[0];
 						for (int j=0;j<num;j++) 
-							vert[2+j]=newPD.kData[v].flower[1+2*j];
-						vert[num+2]=newPD.kData[v].flower[newPD.countFaces(v)];
+							vert[2+j]=vflower[1+2*j];
+						vert[num+2]=vflower[newPD.countFaces(v)];
 						workingTD.dualTileData.myTiles[dcount]=new Tile(workingTD.dualTileData,num+3);
 					}
 					else {
@@ -664,7 +665,7 @@ public class TileData {
 						vert=new int[num];
 						int tick=0;
 						for (int j=0;j<newPD.countFaces(v);j++) {
-							int k=newPD.kData[v].flower[j];
+							int k=vflower[j];
 							if (newPD.getVertMark(k)==1)
 								vert[tick++]=k;
 						}
@@ -684,11 +685,11 @@ public class TileData {
 					if (newPD.isBdry(v)) { // bdry? num=2
 						vert[0]=v;
 						for (int j=0;j<=2;j++)
-							vert[j+1]=newPD.kData[v].flower[j];
+							vert[j+1]=vflower[j];
 					}
 					else { // interior? num=4
 						for (int j=0;j<4;j++)
-							vert[j]=newPD.kData[v].flower[j];
+							vert[j]=vflower[j];
 					}
 						
 					workingTD.quadTileData.myTiles[qcount]=new Tile(workingTD.quadTileData,4);
@@ -772,7 +773,6 @@ public class TileData {
 		
 		return newPD;
 	}
-	
 	
 	/**
 	 * Create a canonical packing for given 'TileData'. This is
@@ -933,8 +933,9 @@ public class TileData {
 			//       goes through it. Best is vert[0] is required to be 
 			//       flower[0] in this case from the beginning.
 			int offset=-1;
-			int []myflower=newPD.kData[tile.baryVert].flower;
-			for (int k=0;(k<newPD.kData[tile.baryVert].num && offset<0);k++) {
+			int[] myflower=newPD.getFlower(tile.baryVert);
+			int fnum=newPD.countFaces(tile.baryVert);
+			for (int k=0;(k<fnum && offset<0);k++) {
 				int m=myflower[k];
 				if (newPD.countFaces(m)==4 && newPD.nghb(m, tile.vert[0])>=0)
 						offset=k;
@@ -945,11 +946,11 @@ public class TileData {
 				break; // out of 'for' loop
 			}
 			if (offset>0) {
-				int []newflower=new int[num+1];
+				int[] newflower=new int[num+1];
 				for (int k=0;k<num;k++)
-					newflower[k]=newPD.kData[tile.baryVert].flower[(k+offset)%num];
+					newflower[k]=myflower[(k+offset)%num];
 				newflower[num]=newflower[0];
-				newPD.kData[tile.baryVert].flower=newflower;
+				myflower=newflower;
 			}
 			
 			// build augmented vertices
@@ -964,10 +965,10 @@ public class TileData {
 				wgtile.augVertCount=6;
 				wgtile.augVert=new int[6];
 				wgtile.mark=1; // positively oriented 
-				int baryV=newPD.kData[tile.baryVert].flower[4*j+1]; // its barycenter
+				int baryV=myflower[4*j+1]; // its barycenter
 				tile.wgIndices[2*j]=baryV-bcbase; // point to wgTile index
 				workingTD.wgTiles[tile.wgIndices[2*j]]=wgtile; // put wgTile into master list
-				int []itsflower=newPD.kData[baryV].flower;
+				int[] itsflower=newPD.getFlower(baryV);
 				int indx=newPD.nghb(baryV,tile.baryVert);
 				for (int k=0;k<3;k++) {
 					wgtile.vert[k]=wgtile.augVert[2*k]=itsflower[(indx+2*k)%6];
@@ -982,10 +983,10 @@ public class TileData {
 				wgtile.augVertCount=6;
 				wgtile.augVert=new int[6];
 				wgtile.mark=-1; // negatively oriented 
-				baryV=newPD.kData[tile.baryVert].flower[4*j+3]; // its barycenter
+				baryV=newPD.getFlower(tile.baryVert)[4*j+3]; // its barycenter
 				tile.wgIndices[2*j+1]=baryV-bcbase; // point to wgTile index
 				workingTD.wgTiles[tile.wgIndices[2*j+1]]=wgtile; // put wgTile into master list
-				itsflower=newPD.kData[baryV].flower;
+				itsflower=newPD.getFlower(baryV);
 				indx=newPD.nghb(baryV,tile.baryVert);
 				for (int k=0;k<3;k++) {
 					wgtile.vert[k]=wgtile.augVert[2*k]=itsflower[(indx+2*k)%6];
@@ -1030,8 +1031,9 @@ public class TileData {
 						// first: edge from bdry edge barycenter to first tile barycenter
 						int cv=flower[1];
 						int myindx=newPD.nghb(cv,v);
-						vert[tick]=augvert[2*tick]=newPD.kData[cv].flower[(myindx+2)%6];
-						augvert[2*tick+1]=newPD.kData[cv].flower[(myindx+3)%6];
+						int[] cvflower=newPD.getFlower(cv);
+						vert[tick]=augvert[2*tick]=cvflower[(myindx+2)%6];
+						augvert[2*tick+1]=cvflower[(myindx+3)%6];
 						dtile.wgIndices[tick++]=cv-bcbase;
 						
 						// then pairs of grey/white to get edges between tile barycenters
@@ -1039,23 +1041,26 @@ public class TileData {
 						for (int i=1;i<(num/4);i++) {
 							cv=flower[2*i+1];
 							myindx=newPD.nghb(cv,v);
-							vert[(tick+1)/2]=augvert[2*tick]=newPD.kData[cv].flower[(myindx+2)%6]; // tile barycenter
-							augvert[2*tick+1]=newPD.kData[cv].flower[(myindx+3)%6];
+							cvflower=newPD.getFlower(cv);
+							vert[(tick+1)/2]=augvert[2*tick]=cvflower[(myindx+2)%6]; // tile barycenter
+							augvert[2*tick+1]=cvflower[(myindx+3)%6];
 							dtile.wgIndices[tick++]=cv-bcbase;
 							cv=flower[2*i+3];
 							myindx=newPD.nghb(cv,v);
-							augvert[2*tick]=newPD.kData[cv].flower[(myindx+2)%6];
-							augvert[2*tick+1]=newPD.kData[cv].flower[(myindx+3)%6];
+							cvflower=newPD.getFlower(cv);
+							augvert[2*tick]=cvflower[(myindx+2)%6];
+							augvert[2*tick+1]=cvflower[(myindx+3)%6];
 							dtile.wgIndices[tick++]=cv-bcbase;
 						}							
 						
 						// then last tile barycenter to and including upstream edge barycenter
 						cv=flower[num-1];
 						myindx=newPD.nghb(cv,v);
-						vert[(tick+1)/2]=augvert[2*tick]=newPD.kData[cv].flower[(myindx+2)%6]; // get last tile barycenter
-						augvert[2*tick+1]=newPD.kData[cv].flower[(myindx+3)%6];
+						cvflower=newPD.getFlower(cv);
+						vert[(tick+1)/2]=augvert[2*tick]=cvflower[(myindx+2)%6]; // get last tile barycenter
+						augvert[2*tick+1]=cvflower[(myindx+3)%6];
 						dtile.wgIndices[tick++]=cv-bcbase;
-						vert[tick/2+1]=augvert[2*tick]=newPD.kData[cv].flower[(myindx+4)%6]; // last vert is edge barycenter
+						vert[tick/2+1]=augvert[2*tick]=cvflower[(myindx+4)%6]; // last vert is edge barycenter
 						
 						// finish with augmented boundary 
 						augvert[2*tick+1]=flower[num];
@@ -1078,7 +1083,7 @@ public class TileData {
 						// find a grey tile barycenter to start
 						int gdir=-1;
 						for (int j=0;(j<num && gdir<0);j++) {
-							int cv=newPD.kData[v].flower[j];
+							int cv=flower[j];
 							if (cv>bcbase && workingTD.wgTiles[cv-bcbase].mark==-1) // grey
 								gdir=j;
 						}
@@ -1091,13 +1096,15 @@ public class TileData {
 							int ii=(gdir+i)%num;
 							int cv=flower[ii];
 							int myindx=newPD.nghb(cv,v);
-							vert[tick/2]=augvert[2*tick]=newPD.kData[cv].flower[(myindx+2)%6];
-							augvert[2*tick+1]=newPD.kData[cv].flower[(myindx+3)%6];
+							int[] cvflower=newPD.getFlower(cv);
+							vert[tick/2]=augvert[2*tick]=cvflower[(myindx+2)%6];
+							augvert[2*tick+1]=cvflower[(myindx+3)%6];
 							dtile.wgIndices[tick++]=cv-bcbase;
 							cv=flower[(ii+2)%num];
 							myindx=newPD.nghb(cv,v);
-							augvert[2*tick]=newPD.kData[cv].flower[(myindx+2)%6];
-							augvert[2*tick+1]=newPD.kData[cv].flower[(myindx+3)%6];
+							cvflower=newPD.getFlower(cv);
+							augvert[2*tick]=cvflower[(myindx+2)%6];
+							augvert[2*tick+1]=cvflower[(myindx+3)%6];
 							dtile.wgIndices[tick++]=cv-bcbase;
 						}							
 						workingTD.dualTileData.myTiles[dcount].vert=vert;
@@ -1134,22 +1141,24 @@ public class TileData {
 						// first is grey face
 						int cv=flower[1];
 						int myindx=newPD.nghb(cv,v);
-						
+						int[] cvflower=newPD.getFlower(cv);
+
 						// these go at end
-						augvert[6]=newPD.kData[cv].flower[myindx];
-						augvert[7]=newPD.kData[cv].flower[(myindx+1)%6];
+						augvert[6]=cvflower[myindx];
+						augvert[7]=cvflower[(myindx+1)%6];
 						
-						vert[0]=augvert[0]=newPD.kData[cv].flower[(myindx+2)%6];
-						augvert[1]=newPD.kData[cv].flower[(myindx+3)%6];
-						vert[1]=augvert[2]=newPD.kData[cv].flower[(myindx+4)%6];
+						vert[0]=augvert[0]=cvflower[(myindx+2)%6];
+						augvert[1]=cvflower[(myindx+3)%6];
+						vert[1]=augvert[2]=cvflower[(myindx+4)%6];
 						qtile.wgIndices[0]=cv-bcbase;
 						
 						// next is white
 						cv=flower[3];
 						myindx=newPD.nghb(cv,v);
-						augvert[3]=newPD.kData[cv].flower[(myindx+3)%6];
-						vert[2]=augvert[4]=newPD.kData[cv].flower[(myindx+4)%6];
-						augvert[5]=newPD.kData[cv].flower[(myindx+5)%6];
+						cvflower=newPD.getFlower(cv);
+						augvert[3]=cvflower[(myindx+3)%6];
+						vert[2]=augvert[4]=cvflower[(myindx+4)%6];
+						augvert[5]=cvflower[(myindx+5)%6];
 						qtile.wgIndices[1]=cv-bcbase;
 						vert[3]=v;
 
@@ -1165,7 +1174,7 @@ public class TileData {
 						// find a grey tile barycenter to start
 						int gdir=-1;
 						for (int j=0;(j<num && gdir<0);j++) {
-							int cv=newPD.kData[v].flower[j];
+							int cv=flower[j];
 							if (cv>bcbase && workingTD.wgTiles[cv-bcbase].mark==-1) // grey
 								gdir=j;
 						}
@@ -1175,8 +1184,9 @@ public class TileData {
 						for (int j=0;j<4;j++) {
 							int cv=flower[(gdir+2*j)%num];
 							int myindx=newPD.nghb(cv,v);
-							vert[j]=augvert[2*j]=newPD.kData[cv].flower[(myindx+2)%6];
-							augvert[2*j+1]=newPD.kData[cv].flower[(myindx+3)%6];
+							int[] cvflower=newPD.getFlower(cv);
+							vert[j]=augvert[2*j]=cvflower[(myindx+2)%6];
+							augvert[2*j+1]=cvflower[(myindx+3)%6];
 							qtile.wgIndices[j]=cv-bcbase;
 						}
 						
@@ -1259,6 +1269,7 @@ public class TileData {
 			while (crt.hasNext()) {
 				int v=crt.next();
 				int num=packData.countFaces(v);
+				int[] vflower=packData.getFlower(v);
 				if (vtrack[v]!=num) { // not done with this vert
 					for (int j=0;j<num;j++) {
 						
@@ -1266,7 +1277,7 @@ public class TileData {
 						if (tflower[v][j]==0) {
 							Vector<Integer> tileVerts=new Vector<Integer>(3);
 							tileVerts.add(v);
-							int u=packData.kData[v].flower[j];
+							int u=vflower[j];
 							int safety=1000;
 							int w=v;
 							
@@ -1289,7 +1300,7 @@ public class TileData {
 								if (indx_uw==0) // must be closed flower
 									indx_uw=nm-1;
 								indx_uw=(indx_uw-1+nm)%nm;
-								u=packData.kData[u].flower[indx_uw];
+								u=packData.getFlower(v)[indx_uw];
 							} // while around tile
 							
 							// probably an error

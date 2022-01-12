@@ -53,7 +53,7 @@ public class TriData {
 		pdc=pdcel;
 		hes=0;
 		invDist=null; // only allocate when needed
-		if (pdc.p!=null)
+		if (pdc!=null && pdc.p!=null)
 			hes=pdc.p.hes;
 		vert=new int[3];
 		radii=new double[3];
