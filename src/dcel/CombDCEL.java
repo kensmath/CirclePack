@@ -3226,8 +3226,9 @@ public class CombDCEL {
 	   * Note: pdc2 may be changed: e.g., 'vertIndx's, 'halfedge's,
 	   * etc. However, the DCEL's are typically clones, so original 
 	   * copy should remain in tact. 
-	   *  
-	   * Note: Both pdc1/2 should have intact red chains.
+	   * 
+	   * TODO: not sure if red chains are essential. But if 
+	   * both pdc1/2 have intact red chains, try to meld them.
 	   * 
 	   * Note: if n==1, then result may have disconnected interior,
 	   * and 'd_FillInside' will not catalog all of the complex.
@@ -3256,14 +3257,14 @@ public class CombDCEL {
 		  
 		  // 'he1/2' to be identified: clw from 'v1', cclw from 'v2'
 		  HalfEdge he1=pdc1.vertices[v1].halfedge.twin.next.twin;
-		  HalfEdge he2=pdc2.vertices[v2].halfedge;
+		  HalfEdge he2=pdc2.vertices[v2].halfedge; // DCELdebug.printBouquet(pdc2);
 
 		  // save some red edge // DCELdebug.printRedChain(pdc1.redChain);
 		  RedHEdge red1=he1.myRedEdge;
 		  RedHEdge red2=he2.myRedEdge;
 		  
-		  if (red1==null || red2==null)
-			  throw new CombException("edges should hare red edges");
+//		  if (red1==null || red2==null)
+//			  throw new CombException("edges should hare red edges");
 
 		  // store original vert indices in 'vutil'
 		  for (int v=1;v<=pdc1.vertCount;v++) 
@@ -3400,16 +3401,18 @@ public class CombDCEL {
 		  he2.myRedEdge=null;
 		  
 		  // meld the red chains; red1/2 become orphans
-		  if (red1==pdc1.redChain)
-			  pdc1.redChain=red1.nextRed;
-		  red1.prevRed.nextRed=red2.nextRed;
-		  red2.nextRed.prevRed=red1.prevRed;
+		  if (red1!=null && red2!=null) {
+			  if (red1==pdc1.redChain)
+				  pdc1.redChain=red1.nextRed;
+			  red1.prevRed.nextRed=red2.nextRed;
+			  red2.nextRed.prevRed=red1.prevRed;
+			  
+			  red1.nextRed.prevRed=red2.prevRed;
+			  red2.prevRed.nextRed=red1.nextRed;
 		  
-		  red1.nextRed.prevRed=red2.prevRed;
-		  red2.prevRed.nextRed=red1.nextRed;
-		  
-		  red1.twinRed=null;
-		  red2.twinRed=null;
+			  red1.twinRed=null;
+			  red2.twinRed=null;
+		  }
 
 		  // now zip the rest   // pdc1.vertices[4].getFlower();
 		  PackDCEL ansDCEL=null;

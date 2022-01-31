@@ -2124,6 +2124,7 @@ public class PackDCEL {
 	public int swapNodes(int v,int w) {
 		if (v==w)
 			return 0;
+		triData=null; // outdated
 		Vertex holdv=vertices[v];
 		Vertex holdw=vertices[w];
 		holdv.vertIndx=w;

@@ -380,13 +380,6 @@ public class SelectSpec {
 				uP.rtnFlag = 1;
 				return uP;
 			}
-			case 'u': // utilFlag?
-			{
-				if (packData.fUtil != null) 
-					uP.value = (double) packData.fUtil[node];
-				uP.rtnFlag = 1;
-				return uP;
-			}
 			case 'x': // !plot_flag?
 			{
 				uP.value = (double) packData.getPlotFlag(node);

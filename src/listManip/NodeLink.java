@@ -1034,26 +1034,6 @@ public class NodeLink extends LinkedList<Integer> {
 				} catch(Exception ex) {}
 				break;
 			}
-			case 'P': // vertices in 'poisonVerts' and/or 'poisonEdges' 
-			{
-				if (packData.poisonVerts!=null && packData.poisonVerts.size()>0) {
-					Iterator<Integer> ppv=packData.poisonVerts.iterator();
-					while (ppv.hasNext()) {
-						add((Integer)ppv.next());
-						count++;
-					}
-				}
-				if (packData.poisonEdges!=null && packData.poisonEdges.size()>0) {
-					Iterator<EdgeSimple> ppv=packData.poisonEdges.iterator();
-					while (ppv.hasNext()) {
-						EdgeSimple edge=(EdgeSimple)ppv.next();
-						add(edge.v);
-						add(edge.w);
-						count+=2;
-					}
-				}
-				break;
-			}
 			case 'G': // nodelist approx to given curve (x,y),... (eucl only)
 			{
 				if (packData.hes!=0) {

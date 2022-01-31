@@ -20,11 +20,12 @@ import listManip.VertexMap;
  * These "*_raw" methods typically work just with combinatorics
  * (no rad/cents, little or no dependence on PackData parent).
  * The routines expect 'vertices' to be in place and for bdry
- * edges to be identifiable. The return with possibly new
- * 'vertices', 'vertCount' in tact. However, arrays 'edges' 
- * and 'faces' are not updated. Red chain may be adjusted, 
- * but will be null if there are problems modifying it
- * (sometimes because it is just too complicated).  
+ * edges to be identifiable. They return with possibly new
+ * 'vertices', but arrays 'edges' and 'faces' are not updated. 
+ * Red chain may be adjusted, but will be null if there are 
+ * problems modifying it (sometimes because it is just too 
+ * complicated). 'PackDCEL.triData' is set to null, since this
+ * data is generally outdated.
  * 
  * Typical process: 
  *   (1) calling routine may 'zeroVUtil'/'zeroEUtil' to zero 
@@ -32,15 +33,16 @@ import listManip.VertexMap;
  *   (2) calling routine runs '*_raw' method to modify the dcel 
  *   	 structure.
  *   (3) the '*_raw' routine should ensure 'vertices' and 'vertCount'
- *       are updated. If red chain could not be safely modified in 
- *       '*_raw', the set 'redChain' null. 
+ *       are updated and space is allocated. If red chain could not 
+ *       be safely modified in '*_raw', the set 'redChain' null. 
  *   (4) the '*_raw' routine may set 'Vertex.vutil' to original
  *   	 index or to index of "parent" circle, etc. 
- *   (5) call 'reapVUtil' to create a 'VertexMap', which is
- *       often "<new,reference>" pairing; given 'new', 'reference'
- *       points to where to copy useful data from. Careful, 
- *       'd_FillInside' resets 'vutil', so this 'VertexMap' 
- *       must be captured when available before that.
+ *   (5) calling routine can use 'reapVUtil' to create a 'VertexMap', 
+ *  	 which is often "<new,reference>" pairing; given 'new' index 
+ *  	 with 'reference' pointing to location of useful data from
+ *  	 the parent packing. Careful, 'd_FillInside' resets 'vutil', 
+ *  	 so this 'VertexMap' must be captured when available before 
+ *  	 that.
  *   (6) calling routine runs 'fixDCEL_raw', which computes red
  *   	 chain (if needed), calls 'd_FillInside' and 'attachDCEL'.
  *   (7) calling routine runs 'modRadCents' with 'VertexMap' saved
@@ -64,7 +66,7 @@ import listManip.VertexMap;
  *   (a) Before the first '*_raw' call, set 'packDCEL.oldNew' null.
  *   
  *   (b) during each call, compose 'packDCEL.oldNew' with local
- *       'oldnew' built during the routine. see 'VertexMap.followedBy'.
+ *       'oldnew' built during the routine; see 'VertexMap.followedBy'.
  *    
  *   (c) When done, 'packDCEL.oldNew' should have <orig,final>
  *       pairings which are used during 'attachDCEL' to copy
@@ -301,6 +303,7 @@ public class RawDCEL {
 			midVert.bdryFlag=1;
 		}
 		
+		pdcel.triData=null;
 		return edge;
 	}
 	
@@ -434,6 +437,7 @@ public class RawDCEL {
 				next_spoke.prev=newspoke.twin;
 			}
 			
+			pdcel.triData=null;
 			return V.halfedge;
 		}
 		
@@ -498,7 +502,7 @@ public class RawDCEL {
 		new_wedge.twin.prev=wedge.twin.prev;
 		wedge.twin.prev.next=new_wedge.twin;
 		
-		new_wedge.twin.next=wedge.twin.next;
+		new_wedge.twin.next=wedge.twin.next; 
 		wedge.twin.next.prev=new_wedge.twin;
 
 		new_wedge.prev=new_mid;
@@ -510,11 +514,14 @@ public class RawDCEL {
 		wedge.twin.next=new_mid;
 		new_mid.prev=wedge.twin;
 		
+		
 	      // deBugging.DCELdebug.vertConsistency(pdcel,newV.vertIndx);
 		
 		// most typical:
-		if (!V.redFlag)
+		if (!V.redFlag) {
+			pdcel.triData=null;
 			return new_mid;
+		}
 		
 		// Red chain could need adjustments
 		
@@ -599,6 +606,7 @@ public class RawDCEL {
 		f1tof2.twinRed=f2tof1;
 		f2tof1.twinRed=f1tof2;
 
+		pdcel.triData=null;
 		return new_mid; // should go from <v,newV> 
 	}
 	
@@ -733,10 +741,10 @@ public class RawDCEL {
 		// update vertices 
 		int v=vert.vertIndx;
 		RawDCEL.removeVertIndex(pdcel,v);
+		pdcel.triData=null;
 		return v;
 	}
-	
-	
+		
 	/**
 	 * Remove a vertex; 'vertices' are adjusted and reindexed,
 	 * with old index in 'vutil'. Calling routine must have
@@ -799,7 +807,8 @@ public class RawDCEL {
 		}
 		pdcel.vertCount--;
 		// give up on red chain
-		pdcel.redChain=null; 
+		pdcel.redChain=null;
+		pdcel.triData=null;
 		return vlist;
 	}
 
@@ -906,6 +915,7 @@ public class RawDCEL {
 	
 		  vert.bdryFlag=0;
 		  new_edge.origin.halfedge=new_edge;
+		  pdcel.triData=null;
 		  return pdcel.countPetals(vert.vertIndx);
 	}
 
@@ -1000,6 +1010,7 @@ public class RawDCEL {
 		  pdcel.vertices[node]=newV;
 		  pdcel.vertCount=node;
 				
+		  pdcel.triData=null;
 		  return node;
 	  }
 		
@@ -1024,6 +1035,7 @@ public class RawDCEL {
 				  pdcel.redChain=null;
 			  face.edge=null; // to avoid repeat in facelist
 		  } // end of while through facelist
+		  pdcel.triData=null;
 		  return count;
 	  }
 
@@ -1080,6 +1092,7 @@ public class RawDCEL {
 					enfold_raw(pdcel, v);
 				} while (v != v2);
 
+				pdcel.triData=null;
 				return count;
 			}
 			if (mode == TENT) {
@@ -1102,11 +1115,13 @@ public class RawDCEL {
 					enfold_raw(pdcel, v1);
 					count++;
 				}
+				pdcel.triData=null;
 				return count;
 			}
 			if (mode == DUPLICATE) { // DCELdebug.redConsistency(pdcel);
 				count += RawDCEL.baryBox_raw(pdcel, v1, v2);
 			}
+			pdcel.triData=null;
 			return count;
 		}
 
@@ -1219,6 +1234,7 @@ public class RawDCEL {
 		  new_vert.redFlag=true;
 		  new_vert.vutil=w;
 	
+		  pdcel.triData=null;
 		  return new_vert;
 	  }
 
@@ -1590,6 +1606,7 @@ public class RawDCEL {
 			if (count == 1) {
 				pdcel.redChain = null;
 			}
+			pdcel.triData=null;
 			return count;
 		}
 
@@ -1692,6 +1709,7 @@ public class RawDCEL {
 		  }
 		  ans[0]=adedge;
 		  ans[1]=fledge; // could be null if flip is illegal
+		  pdcel.triData=null;
 		  return ans;
 	  }
 
@@ -1796,6 +1814,7 @@ public class RawDCEL {
 		  hn.next = new_edge;
 		  new_edge.prev = hn;
 
+		  pdcel.triData=null;
 		  return new_edge;
 	  }
 	  
@@ -1899,6 +1918,7 @@ public class RawDCEL {
 			  ans[0]=newV.vertIndx;
 			  ans[1]=newW.vertIndx;
 			  
+			  pdcel.triData=null;
 			  return ans;
 		  }
 
@@ -1951,6 +1971,7 @@ public class RawDCEL {
 		  else
 			  ans[0]=newV.vertIndx;
 		  
+		  pdcel.triData=null;
 		  return ans;
 	  }
 
@@ -2358,6 +2379,7 @@ public class RawDCEL {
 			if (debug)
 				DCELdebug.printRedChain(pdcel.redChain);
 			
+			pdcel.triData=null;
 			return barycents;
 		}
 		  
@@ -2386,11 +2408,11 @@ public class RawDCEL {
 		 * After migration, 'v' remains as the branch vertex,
 		 * 'w' and 'ww' split the old branch vert edges; no need
 		 * to adjust aims.
-		 * 
+		 * @param pdcel PackDCEL, (only needed to null 'triData')
 		 * @param edge HalfEdge
 		 * @return int, new 'w', else 0 on error
 		 */
-		public static int migrate(HalfEdge edge) {
+		public static int migrate(PackDCEL pdcel,HalfEdge edge) {
 			  Vertex vert=edge.origin;
 			  Vertex wert=edge.twin.origin;
 			  if (vert.isBdry() || wert.isBdry() || vert.getNum()<6)
@@ -2454,6 +2476,7 @@ public class RawDCEL {
 //					  "; w="+wert.vertIndx+" deg="+wert.getNum()+
 //					  "; u="+uert.vertIndx+" deg="+uert.getNum());
 			  
+			  pdcel.triData=null;
 			  return wert.vertIndx;
 		}
 		  
@@ -2484,7 +2507,6 @@ public class RawDCEL {
 			  
 			// tent over 'vedge'; 'vertCount', 'vertices' should be updated
 			RawDCEL.addVert_raw(pdcel,nextedge.origin.vertIndx);
-			int newVindx=pdcel.vertCount;
 			int count=2;
 			  
 			// now proceed cclw enfolding vertices
@@ -2580,7 +2602,8 @@ public class RawDCEL {
 				reds[j].nextRed=reds[j].prevRed=null;
 			}
 			pdcel.redChain=null;
-				return 1;
+			pdcel.triData=null;
+			return 1;
 		}
 
 		// Find offset to point to reference corner
@@ -2659,6 +2682,7 @@ public class RawDCEL {
 			he.face=newface;
 			he.origin.bdryFlag=0; // all become interior
 		}
+		pdcel.triData=null;
 		return 1;
 	}
 		  	  
@@ -2760,6 +2784,7 @@ public class RawDCEL {
 		pdcel.vertices[w]=hold;
 		pdcel.vertices[w].vertIndx=w;
 		pdcel.vertices[v].vertIndx=v;
+		pdcel.triData=null;
 		return 1;
 	}
 	
@@ -2800,6 +2825,7 @@ public class RawDCEL {
 					pdcel.redChain=null;
 			}
 		}
+		pdcel.triData=null;
 		return count;
 	}
 	
@@ -2924,6 +2950,7 @@ public class RawDCEL {
 			side2.twin.face=edge.twin.face;
 
 			// Note: negative --> calling routine sets new red edge data
+			pdcel.triData=null;
 			return -oppV.vertIndx;
 		} // done with bdry edge case
 		
@@ -2958,6 +2985,7 @@ public class RawDCEL {
 		}
 		face.edge=outer[2];
 		pdcel.redChain=null;
+		pdcel.triData=null;
 		return 1;
 	}
 	
@@ -3303,6 +3331,7 @@ public class RawDCEL {
 		}
 		pdcel.vertCount--;
 		// adjust 'oldNew' by composing.
+		pdcel.triData=null;
 		VertexMap.followedBy(pdcel.oldNew, oldnew);
 		return pdcel.vertCount;
 	}

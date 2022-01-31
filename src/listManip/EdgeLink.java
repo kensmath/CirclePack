@@ -981,18 +981,6 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				}
 				break;
 			}
-			// TODO: should we accept non-neighbors????
-			case 'P': // edges from 'poisonEdges'
-			{
-				if (packData.poisonEdges!=null && 
-						packData.poisonEdges.size()>0) {
-					Iterator<EdgeSimple> elist=packData.poisonEdges.iterator();
-					while (elist.hasNext()) {
-						add((EdgeSimple)elist.next());
-					}
-				}
-				break;
-			}
 			case 'q': // quality: edges with visual error worse 
 					  //  than given number
 			{

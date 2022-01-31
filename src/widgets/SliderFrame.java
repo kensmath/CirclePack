@@ -27,7 +27,9 @@ import javax.swing.event.ChangeListener;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
+import dcel.HalfEdge;
 import input.CommandStrParser;
+import listManip.HalfLink;
 import packing.PackData;
 import util.ResultPacket;
 import util.xNumField;
@@ -425,12 +427,10 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 			downloadData();
 		}
 		else if (cmd.equals("add object")) {
-			String obj=addField.getText().trim();
-			addObject(obj);
+			addObject(addField.getText().trim());
 		}
 		else if (cmd.equals("remove object")) {
-			String obj=removeField.getText().trim();
-			removeObject(obj);
+			removeObject(removeField.getText().trim());
 		}
 		else if (cmd.equals("set minimum")) {
 			double min=minValue.getValue();

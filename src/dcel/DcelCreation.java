@@ -610,7 +610,7 @@ public class DcelCreation {
 	 * is independent.
 	 * 
 	 * The packing is made into euclidean right triangle, with
-	 * other angles 
+	 * acute angles 
 	 * atan(.5) = 0.463647609 = .14758362*pi and 
 	 * atan(2) = 1.107148717794 =.352416382*pi
 	 * 
@@ -630,11 +630,12 @@ public class DcelCreation {
 		PackData growWheel = DcelCreation.seed(3*e+h, 0);
 		PackDCEL pdcel=growWheel.packDCEL;
 		pdcel.swapNodes(3*e+h+1, 1);
+		pdcel.swapNodes(1+e,2);
+		pdcel.swapNodes(1+e+h,3);
 		pdcel.setAlpha(3*e+h+1, null,false);
 		growWheel.vlist=new NodeLink();
 		growWheel.vlist.add(3*e+h+1); // list center verts of tiles added
-		pdcel.swapNodes(1+e,2);
-		pdcel.swapNodes(1+e+h,3);
+		pdcel.fixDCEL_raw(growWheel);
 		growWheel.elist=new EdgeLink(growWheel,"b");
 		
 		// mark the boundary
@@ -642,6 +643,9 @@ public class DcelCreation {
 			int om=growWheel.getVertMark(vi);
 			growWheel.setVertMark(vi,om+1);
 		}
+		
+// debugging
+		DCELdebug.printBouquet(pdcel);
 		
 		// want to mark the smallest level "core" (middle triangle)
 		//    with -1 and it's rotated neighbor with -2;
@@ -657,13 +661,227 @@ public class DcelCreation {
 
 		while (generation < N) {
 			
-			if (N==1) // unmark the center on the first run
+			if (generation==1) // unmark the center on the first run
 				growWheel.setVertMark(growWheel.nodeCount,0);
 			
 			// 5 copies of tempPack and tempReverse are adjoined
 			PackData tempPack=growWheel.copyPackTo();
 			PackData tempReverse=growWheel.copyPackTo();
-			tempReverse.packDCEL.reverseOrientation();
+			PackDCEL tmpdcel=tempReverse.packDCEL.reverseOrientation();
+			tmpdcel.fixDCEL_raw(tempReverse);
+			
+			tempPack.vlist=growWheel.vlist.makeCopy();
+			tempReverse.vlist=growWheel.vlist.makeCopy();
+			
+			tempPack.elist=new EdgeLink(tempPack,"b");
+			tempReverse.elist=new EdgeLink(tempReverse,"b");
+						
+			// A serves as the base:
+			// adjoin B^ to A along end 
+			//        2 on A to 2 on B^, endcount edges
+			//        don't need to mark any vertices
+			pdcel=CombDCEL.d_adjoin(pdcel,tempReverse.packDCEL,2,2,endcount);
+			growWheel.vertexMap=pdcel.oldNew;
+			updateLists(growWheel,tempReverse.vlist,tempReverse.elist,
+					growWheel.vertexMap);
+			
+			// transfer all the marks as each piece is adjoined
+			Iterator<EdgeSimple> vM=growWheel.vertexMap.iterator();
+			while (vM.hasNext()) {
+				EdgeSimple edge=vM.next();
+				growWheel.setVertMark(edge.w,tempReverse.getVertMark(edge.v));
+			}
+			
+			// this new part is the rotated core;
+			//    first pass only, mark its center vert with -2
+			if (generation==1) 
+				growWheel.setVertMark(growWheel.vertexMap.findW(tempReverse.nodeCount),-2);
+
+			// for debugging edge lists: debug=false;
+			if (debug) {
+				Iterator<EdgeSimple> es=growWheel.elist.iterator();
+				System.err.println("\n add upper left");
+				while (es.hasNext()) {
+					EdgeSimple edge=es.next();
+					System.err.println("("+edge.v+" "+edge.w+")");
+				}
+				DebugHelp.debugPackWrite(growWheel,"growWheel.p");
+			}
+			
+			// adjoin C^ to B^ along hyp 
+			//		  2 on A+B^ to 3 on C^, hypcount edges
+			//        don't need to mark any vertices
+			//        identify 'alpha' of 'growWheel' as alpha of C
+			pdcel=CombDCEL.d_adjoin(pdcel,tempReverse.packDCEL,2,3,hypcount);
+			growWheel.vertexMap=pdcel.oldNew;
+			updateLists(growWheel,tempReverse.vlist,tempReverse.elist,growWheel.vertexMap);
+			pdcel.setAlpha(growWheel.vertexMap.findW(tempReverse.getAlpha()),null,false);
+			vM=growWheel.vertexMap.iterator();
+			while (vM.hasNext()) {
+				EdgeSimple edge=vM.next();
+				growWheel.setVertMark(edge.w,tempReverse.getVertMark(edge.v));
+			}
+			
+			// this new part is the core, mark its center with -1 (first pass only)
+			if (generation==1)
+				growWheel.setVertMark(growWheel.vertexMap.findW(tempReverse.nodeCount),-1);
+
+						
+			// adjoin D to C^ along long 
+			//        2 on A+B^+C^ to 3 on D, longcount edges
+			//        X keeps track of old 2.
+			pdcel = CombDCEL.d_adjoin(pdcel,tempPack.packDCEL,2,3,longcount);
+			growWheel.vertexMap=pdcel.oldNew;
+			updateLists(growWheel,tempPack.vlist,tempPack.elist,growWheel.vertexMap);
+			int X=growWheel.vertexMap.findW(2);
+			vM=growWheel.vertexMap.iterator();
+			while (vM.hasNext()) {
+				EdgeSimple edge=vM.next();
+				growWheel.setVertMark(edge.w,tempPack.getVertMark(edge.v));
+			}
+
+			// adjoin E ends of C^ and D, endcount each
+			//        X on A+B^+C^+D to 3 on E
+			//        Y keeps track of old 2.
+			pdcel=CombDCEL.d_adjoin(pdcel,tempPack.packDCEL,X,3,longcount);
+			growWheel.vertexMap=pdcel.oldNew;
+			updateLists(growWheel,tempPack.vlist,tempPack.elist,growWheel.vertexMap);
+			int Y=growWheel.vertexMap.findW(2);
+			vM=growWheel.vertexMap.iterator();
+			while (vM.hasNext()) {
+				EdgeSimple edge=vM.next();
+				growWheel.setVertMark(edge.w,tempPack.getVertMark(edge.v));
+			}
+			
+			
+			// renumber: X --> 1, Y --> 2
+			pdcel.swapNodes(X,1);
+			pdcel.swapNodes(Y,2);
+			
+			// side lengths follow recursion formula
+			int holdhyp=hypcount;
+			hypcount=5*endcount;
+			endcount=holdhyp;
+			longcount=2*endcount;
+			
+			// increment marks on boundary
+			for (int vi=1;vi<=growWheel.nodeCount;vi++)
+				if (growWheel.isBdry(vi)) {
+					int om=growWheel.getVertMark(vi);
+					growWheel.setVertMark(vi,om+1);
+				}
+			
+			// new generation is reverse oriented
+			growWheel.packDCEL.reverseOrientation();
+			pdcel.fixDCEL_raw(growWheel);
+
+			generation++;
+
+		} // end of while
+		
+		// set the aims to make it a right triangle
+		growWheel.set_aim_default();
+		for (int v=1;v<=growWheel.nodeCount;v++) {
+			if (growWheel.isBdry(v))
+				growWheel.setAim(v,1.0*Math.PI);
+		}
+		growWheel.setAim(1,.5*Math.PI); 
+		growWheel.setAim(3,Math.atan(.5)); // 0.463647609 
+		growWheel.setAim(2,.5*Math.PI-growWheel.getAim(3)); // 0.463647609, 1.107148717794
+
+		// repack, layout
+		double crit=GenModBranching.LAYOUT_THRESHOLD;
+		int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
+		growWheel.fillcurves();
+		growWheel.repack_call(1000);
+		try {
+			growWheel.packDCEL.layoutPacking(); 
+		} catch (Exception ex) {
+			throw new CombException("'pinWheel' creation failed");
+		}
+		
+		// normalize: 2 3 horizontal, 3 on unit circle.
+		Complex z=growWheel.getCenter(3).minus(growWheel.getCenter(2));
+		double ang=(-1.0)*(MathComplex.Arg(z));
+		growWheel.rotate(ang);
+		double scl=growWheel.getCenter(3).abs();
+		if (scl>.000001)
+			growWheel.eucl_scale(1.0/scl);
+
+		try {
+			growWheel.tileData=TileData.paveMe(growWheel,growWheel.getAlpha());
+		} catch(Exception ex) {
+			CirclePack.cpb.errMsg("Failed to create pinWheel 'TileData'");
+		}
+		return growWheel;
+	}
+	
+	/** 
+	 * Create N generations of Conway's "pinwheel" combinatorics.
+	 * Need to specify number of edges of "end" (short) leg, 
+	 * number for "long" leg is twice this, number on "hypotenuse"
+	 * is independent.
+	 * 
+	 * The packing is made into euclidean right triangle, with
+	 * acute angles 
+	 * atan(.5) = 0.463647609 = .14758362*pi and 
+	 * atan(2) = 1.107148717794 =.352416382*pi
+	 * 
+	 * @param N int: generations N>=1, 1 means single flower.
+	 * @param e int, edge count on "end" leg
+	 * @param h int, edge count on "hypotenuse"
+	 * @return PackData with vlist of tile centers.
+	 */
+	public static PackData oldPinWheel(int N,int e,int h) {
+		int generation=1; // number of generations in current build
+		boolean debug=false; 
+		// pinwheel starts as n-flower, where n=e+2*e+h, with v=1 swapped to
+		//     be on the boundary; vertices to keep track of are 1, 2, 3. 
+		//     Distance from 1 to 2 is e, from 2 to 3 is h, 
+		//     hence from 3 to 1 is 2*e. Long leg is always twice the end leg
+		
+		PackData growWheel = DcelCreation.seed(3*e+h, 0);
+		PackDCEL pdcel=growWheel.packDCEL;
+		pdcel.swapNodes(3*e+h+1, 1);
+		pdcel.setAlpha(3*e+h+1, null,false);
+		growWheel.vlist=new NodeLink();
+		growWheel.vlist.add(3*e+h+1); // list center verts of tiles added
+		pdcel.swapNodes(1+e,2);
+		pdcel.swapNodes(1+e+h,3);
+		pdcel.fixDCEL_raw(growWheel);
+		growWheel.elist=new EdgeLink(growWheel,"b");
+		
+		// mark the boundary
+		for (int vi=1;vi<growWheel.nodeCount;vi++) {
+			int om=growWheel.getVertMark(vi);
+			growWheel.setVertMark(vi,om+1);
+		}
+		
+// debugging
+		DCELdebug.printBouquet(pdcel);
+		
+		// want to mark the smallest level "core" (middle triangle)
+		//    with -1 and it's rotated neighbor with -2;
+		if (N<=1) { // at first level, just the core
+			growWheel.setVertMark(growWheel.nodeCount,-2);
+			N=1;
+		}
+		
+		// keep track of number of edges in 'end', 'long', 'hypotenuse'
+		int endcount=e;
+		int longcount=2*e;
+		int hypcount=h;
+
+		while (generation < N) {
+			
+			if (generation==1) // unmark the center on the first run
+				growWheel.setVertMark(growWheel.nodeCount,0);
+			
+			// 5 copies of tempPack and tempReverse are adjoined
+			PackData tempPack=growWheel.copyPackTo();
+			PackData tempReverse=growWheel.copyPackTo();
+			PackDCEL tmpdcel=tempReverse.packDCEL.reverseOrientation();
+			tmpdcel.fixDCEL_raw(tempReverse);
 			
 			tempPack.vlist=growWheel.vlist.makeCopy();
 			tempReverse.vlist=growWheel.vlist.makeCopy();

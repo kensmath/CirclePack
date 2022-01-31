@@ -58,32 +58,35 @@ import util.StringUtil;
  *  * Shape/intensity data are left in their real-world locations; our
  *    microgrid is scaled, translated, rotated to match.
  *    
- * Motivation: creating circle packings whose duals can be used as 2D grids 
- * for 3D printer head planning.
- * Started in response to inquiries by Greg Dreifus while he was at ORNL's,
- *    carried on with John Bowers (JMU), Pum Kim, and others at ORNL MDF.
+ * Motivation: creating circle packings whose duals can be used as 
+ * 2D grids for 3D printer head planning. Started in response to 
+ * inquiries by Greg Dreifus while he was at ORNL's, carried on with 
+ * John Bowers (JMU), Pum Kim, and others at ORNL MDF.
  * 
- * Potential advantages: * can use triangulation or dual; * can manipulate (within
- * limits) to change the shape; * connection to analytic/harmonic functions -- e.g.,
- * heat dissipation * dual graph generically has trivalent vertices, good for
- * rigidity.
+ * Potential advantages: * can use triangulation or dual; * can 
+ * manipulate (within limits) to change the shape; * connection to 
+ * analytic/harmonic functions -- e.g., heat dissipation * dual graph 
+ * generically has trivalent vertices, good for rigidity.
  * 
- * Aim Here: Use interconnected hex lattices so we can change circle sizes to
- * accommodate different strength/density requirements. However, we will have to
- * use overlaps and inversive distances mixed in with the usual tangencies. The
- * idea is to allow selective refinement but still maintain ability to manipulate
- * with conformal-like behavior.
+ * Aim Here: Use interconnected hex lattices so we can change circle 
+ * sizes to accommodate different strength/density requirements. 
+ * However, we will have to use overlaps and inversive distances 
+ * mixed in with the usual tangencies. The idea is to allow selective 
+ * refinement but still maintain ability to manipulate with 
+ * conformal-like behavior.
  * 
- * At the base is a "microgrid" --- several hex generations around the shape center
- * forming a global hex pattern. Within that we define "supergrids", uniform hex 
- * lattices chosen from the microgrid (always including the center as a supergrid 
- * vertex). The numerical "diameter" of the microgrid is 1, while supergrids have 
- * integral diameters.
+ * At the base is a "microgrid" --- several hex generations around 
+ * the shape center forming a global hex pattern. Within that we 
+ * define "supergrids", uniform hex lattices chosen from the 
+ * microgrid (always including the center as a supergrid vertex). 
+ * The numerical "diameter" of the microgrid is 1, while supergrids 
+ * have integral diameters.
  * 
- * The underlying packing always represents the full microgrid, but it is scaled by 
- * 'microScaling' (so its radii are 'microScaling'/2.0).
- * Only selected centers will end up being used; the data is kept in arrays of
- * 'Node's, which know 'myVert' (their index in the microgrid), their integral
+ * The underlying packing always represents the full microgrid, 
+ * but it is scaled by 'microScaling' (so its radii are 
+ * 'microScaling'/2.0). Only selected centers will end up being 
+ * used; the data is kept in arrays of 'Node's, which know 
+ * 'myVert' (their index in the microgrid), their integral
  * diameters, and other pertinent data.
  * 
  * @author kstephe2, February 2017
@@ -379,7 +382,8 @@ public class MicroGrid extends PackExtender {
         		boxhit=true;
         	}
         	else if (pieces[0].startsWith("Center:")) {
-        		microCenter=new Complex(Double.parseDouble(pieces[1]),Double.parseDouble(pieces[2]));
+        		microCenter=new Complex(Double.parseDouble(pieces[1]),
+        				Double.parseDouble(pieces[2]));
         		centhit=true;
         	}
         	else if (pieces[0].startsWith("Angle/pi:")) {
@@ -472,8 +476,9 @@ public class MicroGrid extends PackExtender {
 	}
 	
 	/**
-	 * Here we check the specified parameters and if they're in place, we
-	 * compute the various quantities that depend on them:
+	 * Here we check the specified parameters and if they're 
+	 * in place, we compute the various quantities that depend 
+	 * on them:
 	 * TODO: for future tailoring, we call with a 'mode' 
 	 * @param mode int, default to mode=0.
 	 * @return int nodeCount
@@ -493,7 +498,8 @@ public class MicroGrid extends PackExtender {
 			platenP.set_minR(encircleRad,encircleRad/max_gen);
 		
 		// compute 'microN', no. of hex generations in microgrid, up to max_gen.
-		microN=(int)Math.floor(encircleRad/(CPBase.sqrt3*platenP.minR))*basediam+2*basediam;
+		microN=(int)Math.floor(encircleRad/
+				(CPBase.sqrt3*platenP.minR))*basediam+2*basediam;
 		double denom=(double)basediam;
 		microScaling=2.0*platenP.minR/denom;
 		

@@ -1799,7 +1799,7 @@ the new path.</opt>
 	the outer boundary.</opt>
 	<opt flag="-f {f..}"> redo drawingorder with given facelist as a
 		   (putative) red chain; the outside edges of the faces
-		    are used to set poison edges.</opt>
+		    are set as forbidden.</opt>
 	<opt flag="-F [P]"> redo everything (aims reset to default) ('P' flag means use 'poison' verts/edges)</opt>
 	<opt flag="-K"> update combinatorics, redo drawingorder</opt>
 	<opt flag="-l"> verify consistency of plotted centers for circles
@@ -4552,6 +4552,7 @@ of circles with that particular edge displayed.</instance>
 	having affine scaling by factors A and B, defaulting to
 	1 and 1.
 </description>
+</command>
 
 <command cmd="torus_t">
 <description>
@@ -5095,7 +5096,6 @@ these or other functionality).
 	to real x y coordinates and that pair of real numbers is substituted 
 	for '#XY' (or '#xy') before the command is executed:
 </description>
-	
 <examples>
 <instance text="set_elist z #XY;flip elist[0]">  This chooses an edge closest to
 xy-coords of the mouse, then executes the 'flip' command for the resulting edge.

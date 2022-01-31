@@ -82,13 +82,13 @@ public class SubdivisionRules {
 	// put 'TileRule's in a vector
 	public Vector<TileRule> tileRules;
 	
-	// use EdgeLink for pairs <tt,r>, tt>=4 is tile type, r>=0 is index
-	//   in 'tileRules' vector of applicable rule.
+	// use EdgeLink for pairs <tt,r>, tt>=4 is tile type, and 
+	//   r>=0 is index in 'tileRules' vector of applicable rule.
 	public EdgeLink type2Rule;
 	
-	// use EdgeLink for pairs <tt,n>, tt>=4 is tile type, n is number of
-	//   edges (and vertices) of this tile type. (For generic rules,
-	//   this will somehow be variable)
+	// use EdgeLink for pairs <tt,n>, tt>=4 is tile type, 
+	//   n is number of edges (and vertices) of this tile type. 
+	//   (For generic rules, this will somehow be variable)
 	public EdgeLink type2Size;
 	
 	// constructor

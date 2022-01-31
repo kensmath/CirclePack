@@ -72,11 +72,6 @@ public class CPTreeNode extends DefaultMutableTreeNode {
   protected static ImageIcon  otherIcon=CPIcon.CPImageIcon("script/otherIcon.png");
   protected static ImageIcon  nowEditingIcon=CPIcon.CPImageIcon("script/e_edit.png");
   protected static ImageIcon  fileIcon=CPIcon.CPImageIcon("script/fileIcon.png");
-//  protected static ImageIcon  fileIcon_p=CPIcon.CPImageIcon("script/file_p.png");
-//  protected static ImageIcon  fileIcon_g=CPIcon.CPImageIcon("script/file_g.png");
-//  protected static ImageIcon  fileIcon_x=CPIcon.CPImageIcon("script/file_x.png");
-//  protected static ImageIcon  fileIcon_r=CPIcon.CPImageIcon("script/file_r.png");
-//  protected static ImageIcon  fileIcon_c=CPIcon.CPImageIcon("script/file_c.png");
 
   // Constructors
   public CPTreeNode(String s,int mytype,boolean inLine,MyTool ttool) {

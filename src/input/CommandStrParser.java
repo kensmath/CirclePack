@@ -2899,6 +2899,7 @@ public class CommandStrParser {
 	    	  return 1;
 	      }
 	      
+	      // =============== pave ================
 	      if (cmd.startsWith("pave")) {
 	    	  
 	    	  // get the seed tile barycenter vertex
@@ -3288,8 +3289,6 @@ public class CommandStrParser {
 					  // "prune" the packing
 					  CombDCEL.pruneDCEL(randPack.packDCEL);
 					  randPack.packDCEL.fixDCEL_raw(randPack);
-					  randPack.poisonVerts=null;
-					  randPack.poisonEdges=null;
 				  } catch (Exception ex) {
 					  throw new DataException("tri_to_Complex failed: "+ex.getMessage());
 				  }
@@ -5882,12 +5881,6 @@ public class CommandStrParser {
 						String nstr="-n Vlist";
 						hlink=CombDCEL.d_CookieData(packData,nstr);
 					}
-					else if (packData.poisonVerts!=null && 
-							packData.poisonVerts.size()>0) {
-						CPBase.Vlink=packData.poisonVerts;
-						String nstr="-n Vlist";
-						hlink=CombDCEL.d_CookieData(packData,nstr);
-					}
 					pdcel=CombDCEL.extractDCEL(raw,hlink,raw.alpha);
 					
 					PackData p=new PackData(null);
@@ -7628,7 +7621,7 @@ public class CommandStrParser {
 	    	  items=(Vector<String>)flagSegs.get(0); // just v w
 			  HalfLink hlist=new HalfLink(packData,items);
 			  HalfEdge edge=hlist.get(0);
-	    	  int rslt = RawDCEL.migrate(edge);
+	    	  int rslt = RawDCEL.migrate(packData.packDCEL,edge);
 	    	  if (rslt==0)
 	    		  return 0;
 	    	  packData.packDCEL.fixDCEL_raw(packData);
@@ -8846,14 +8839,14 @@ public class CommandStrParser {
 						{
 							items.remove(0);
 							if (type == 0 && packData.radiiSliders != null) {
-								NodeLink nl = new NodeLink(packData, items);
-								hits +=packData.radiiSliders.addObject(nl.toString());
+								hits +=packData.radiiSliders.addObject(
+										StringUtil.reconItem(items));
 							} else if (type == 1 && packData.schwarzSliders != null) {
-								GraphLink el= new GraphLink(packData, items);
-								hits +=packData.schwarzSliders.addObject(el.toString());
+								hits +=packData.schwarzSliders.addObject(
+										StringUtil.reconItem(items));
 							} else if (type == 2 && packData.angSumSliders != null) {
-								NodeLink nl= new NodeLink(packData, items);
-								hits +=packData.angSumSliders.addObject(nl.toString());
+								hits +=packData.angSumSliders.addObject(
+										StringUtil.reconItem(items));
 							}
 
 							break;
@@ -8862,14 +8855,14 @@ public class CommandStrParser {
 						{
 							items.remove(0);
 							if (type == 0 && packData.radiiSliders != null) {
-								NodeLink nl = new NodeLink(packData, items);
-								hits +=packData.radiiSliders.removeObject(nl.toString());
+								hits +=packData.radiiSliders.removeObject(
+										StringUtil.reconItem(items));
 							} else if (type == 1 && packData.schwarzSliders != null) {
-								GraphLink gl= new GraphLink(packData, items);
-								hits +=packData.schwarzSliders.addObject(gl.toString());
+								hits +=packData.schwarzSliders.removeObject(
+										StringUtil.reconItem(items));
 							} else if (type == 1 && packData.schwarzSliders != null) {
-								NodeLink nl= new NodeLink(packData, items);
-								hits +=packData.angSumSliders.addObject(nl.toString());
+								hits +=packData.angSumSliders.removeObject(
+										StringUtil.reconItem(items));
 							}
 							break;
 						}
@@ -9203,12 +9196,6 @@ public class CommandStrParser {
 	    		  return count;
 	    	  }
 	    	  
-	    	  // ========= set_poison ==========
-	    	  // set utilFlags=-1 for poison vertices
-	    	  if (cmd.startsWith("poison")) { 
-	    		  return packData.set_poison((Vector<String>)flagSegs.get(0));
-	    	  }
-
 	    	  // ========= set_schwarzians ==========
 	    	  if (cmd.startsWith("sch")) { 
     			  HalfLink clink=null; // those done using current layout

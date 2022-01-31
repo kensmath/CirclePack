@@ -5,10 +5,8 @@ import java.io.File;
 
 import JNI.SolverData;
 import allMains.CirclePack;
-import complex.Complex;
 import exceptions.DataException;
 import exceptions.InOutException;
-import geometry.CircleSimple;
 import input.CPFileManager;
 import math.Mobius;
 import packing.PackData;
@@ -159,4 +157,22 @@ public class DebugHelp {
 				mob.c+"   "+mob.d+"];\n");
 	}
 
+	public static void printtileflowers(TileData td) {
+		for (int t=1;t<=td.tileCount;t++) {
+			Tile tile=td.myTiles[t];
+			if (tile.tileFlower==null) {
+				System.out.println("tile "+t+" has no flower");
+				continue;
+			}
+			StringBuilder strbld=new StringBuilder("Tile "+t+": vertices ");
+			for (int j=0;j<tile.vertCount;j++)
+				strbld.append(" "+tile.vert[j]);
+			strbld.append("\n  tile flower: ");
+			for (int j=0;j<tile.vertCount;j++)
+				strbld.append(" "+tile.tileFlower[j][0]+" "+
+						tile.tileFlower[j][1]+"   ");
+			strbld.append("\n");
+			System.out.println(strbld.toString());
+		}
+	}
 }

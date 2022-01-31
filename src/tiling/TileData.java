@@ -1,5 +1,6 @@
 package tiling;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
@@ -8,6 +9,8 @@ import dcel.CombDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RawDCEL;
+import dcel.Vertex;
+import deBugging.DebugHelp;
 import exceptions.CombException;
 import komplex.EdgeSimple;
 import listManip.HalfLink;
@@ -77,9 +80,9 @@ public class TileData {
 								 // only for 'canonicalPack', 'deepestTD'
 	public SubdivisionRules subRules;  // subdivision rules; may be null
 	public int tileCount;        // number of tiles
-	public Tile []myTiles;       // array of tiles, index starts at 1
+	public Tile[] myTiles;       // array of tiles, index starts at 1
 	public int wgTileCount; 	 // number of white/grey tiles (2n for each n-gon tile)
-	public Tile []wgTiles;		 // array of white/grey tiles, index starts at 1
+	public Tile[] wgTiles;		 // array of white/grey tiles, index starts at 1
 	public TileData dualTileData;  // data for the dual tiling (null until created)
 	public TileData quadTileData;  // data for the quad tiling (null until created)
 	
@@ -185,11 +188,12 @@ public class TileData {
 	}
 
 	/**
-	 * Create a packing based on 'myTiles' data, as when reading
-	 * from a TILECOUNT file. There are two types of data input files: 
-	 * 'TILES:' and 'TILEFLOWERS:' (mutually exclusive). Normally,
-	 * need 'TILEFLOWERS:' if there are unigons, digons, slits, and/or
-	 * self-neighboring (so some vertex occurs twice around a tile).
+	 * Create the minimal packing based on 'myTiles' data, as when
+	 * reading from a TILECOUNT file. There are two types of data 
+	 * input files: 'TILES:' and 'TILEFLOWERS:' (mutually exclusive). 
+	 * Normally, need 'TILEFLOWERS:' if there are unigons, digons, 
+	 * slits, and/or self-neighboring (so some vertex occurs multiple
+	 * times around a tile).
 	 * 
 	 * Under 'TILES:', vertices are built from the tile corners,
 	 * then a baryCenter vert is added for each tile. A clone of
@@ -390,7 +394,7 @@ public class TileData {
 		int newNodeCount=tick;
 
 		int[][] bouquet=new int[newNodeCount+1][];
-		for (int v=1;v<=newNodeCount;v++) {
+		for (int v=1;v<=tmpNodeCount;v++) {
 			int newv=newIndx[v];
 			if (newv!=0) {
 				for (int j=0;j<midquet[v].length;j++)
@@ -497,294 +501,18 @@ public class TileData {
 	}
 
 	/**
-	 * NOTE: this is being replaced (10/22/13) by 'tiles2FullBary'.
-	 * 
-	 * Create the "barycentric tiling" for given tiling. 
-	 * This starts with the usual topological barycentric 
-	 * triangulation of the tiling (as a cell complex), 
-	 * followed by a further barycentric subdivision.
-	 * A clone of 'tileData' is attached to the packing. 
-	 * 
-	 * Three construction stages: (1) build a packing having a 
-	 * barycenter vert for each tile; (2) then split every tile 
-	 * edge with a new vertex, create 'dual', 'quad', and 
-	 * 'wgTiles' tileData; (3) barycentrically subdivide every face.
-	 * 
-	 * The vertex 'mark's in the new packing are set to {1,2,3}
-	 * for values under Belyi map {tile baryVert (value infty), 
-	 * original tile corner (value 0), and newvert (value 1)}, 
-	 * resp. Each face is now a hex flower, and its center is 
-	 * given mark = -1.
-	 * 
-	 * wgTiles are created for each original tile, also for 
-	 * 'dualTileData' and 'quadTileData'. 'wgTiles' are indexed 
-	 * from 0, type is set 1=original, 2=dual, 3=quad. Each has 
-	 * vert[3] positively oriented, starting with baryVert 
-	 * (vertex mark=1); this tile 'mark' sign shows whether 
-	 * positively or negatively oriented.
-	 *  
-	 * @param td TileData
-	 * @return PackData, null on error
-	 */
-	public static PackData tiles2canonical(TileData td) {
-		if (td==null || td.tileCount<=0) 
-			return null;
-
-		// check for: 
-		//   * any tile that is uni-gon or bi-gon  
-		//   * any tile with two edges identified 
-		boolean special=false;
-		for (int t=1;(t<=td.tileCount && !special);t++) {
-			Tile tile=td.myTiles[t];
-			if (tile.vertCount<3)
-				special=true;
-			for (int j=0;(j<(tile.vertCount-1) && !special);j++)
-				for (int k=j+1;(k<tile.vertCount && !special);k++)
-					if (tile.vert[j]==tile.vert[k])
-						special=true;
-		}
-		// TODO: need new routine to create the packing 
-		if (special) {
-			throw new CombException("Not yet ready for 'special' tile combinatorics");
-		}
-			
-		// create minimal packing for given 'TileData'
-		PackData newPD=TileData.tiles2packing(td);
-		TileData workingTD=newPD.tileData;
-
-		// clear 'mark's
-		for (int i=1;i<=newPD.nodeCount;i++)
-			newPD.setVertMark(i,0);
-		
-		// go through tiles, split edges, set marks;
-		//    splitting edge should prevent it being selected
-		//    to be split again from the other side.
-		for (int t=1;t<=workingTD.tileCount;t++) {
-			Tile tile=workingTD.myTiles[t];
-			newPD.setVertMark(tile.baryVert,1);
-			int w=tile.vert[0];
-			newPD.setVertMark(w,2);
-			int v=w;
-			for (int j=1;j<=tile.vertCount;j++) {
-				v=w;
-				if (j==tile.vertCount)
-					w=tile.vert[0];
-				else 
-					w=tile.vert[j];
-				newPD.setVertMark(w,2);
-				HalfEdge he=newPD.packDCEL.findHalfEdge(v,w);
-				RawDCEL.splitEdge_raw(newPD.packDCEL, he);
-				newPD.setVertMark(newPD.packDCEL.vertCount,3);
-			}
-		}
-		
-		newPD.packDCEL.fixDCEL_raw(newPD);
-
-/*		
-		// create the 'wgTile' (white/grey) array for each tile
-		for (int t=1;t<=workingTD.tileCount;t++) {
-			Tile tile=workingTD.myTiles[t];
-//			tile.wgTiles=new Tile[2*tile.vertCount];
-			int num=newPD.getNum(tile.baryVert);
-			if (newPD.isBdry(tile.baryVert) || num!=(2*tile.vertCount)) {
-				CirclePack.cpb.errMsg("Tile "+t+" (center "+tile.baryVert+") "+
-						"flower has problem");
-				break; // out of 'for' loop
-			}
-			
-			// adjust flower of baryVert so flower[0] = vert[0] of tile
-			int offset=newPD.nghb(tile.baryVert,tile.vert[0]);
-			if (offset>0) {
-				int []newflower=new int[num+1];
-				for (int k=0;k<num;k++)
-					newflower[k]=newPD.kData[tile.baryVert].flower[(k+offset)%num];
-				newflower[num]=newflower[0];
-				newPD.kData[tile.baryVert].flower=newflower;
-			}
-			
-			for (int j=0;j<tile.vertCount;j++) {
-				// two subFaces for each edge of tile
-				tile.wgTiles[2*j]=new Tile(3);
-				tile.wgTiles[2*j+1]=new Tile(3);
-				tile.wgTiles[2*j].type=1;
-				tile.wgTiles[2*j+1].type=1;
-				
-				// first is positively oriented
-				tile.wgTiles[2*j].vert[0]=tile.baryVert;
-				tile.wgTiles[2*j].vert[1]=newPD.kData[tile.baryVert].flower[2*j];
-				tile.wgTiles[2*j].vert[2]=newPD.kData[tile.baryVert].flower[2*j+1];
-				tile.wgTiles[2*j].mark=1;
-				
-				// second is negatively oriented
-				tile.wgTiles[2*j+1].vert[0]=tile.baryVert;
-				tile.wgTiles[2*j+1].vert[1]=newPD.kData[tile.baryVert].flower[2*j+1];
-				tile.wgTiles[2*j+1].vert[2]=newPD.kData[tile.baryVert].flower[(2*j+2)%num];
-				tile.wgTiles[2*j+1].mark=-1;
-			}
-		}
-*/
-		
-		try {
-			// fill 'quadTile' and 'dualTile' 
-			int dcount=0;
-			int qcount=0;
-			for (int v=1;v<=newPD.nodeCount;v++) {
-				int k=newPD.getVertMark(v);
-				if (k==2) 
-					dcount++;
-				else if (k==3)
-					qcount++;
-			}
-			
-			workingTD.dualTileData=new TileData(dcount,td.builtMode);
-			workingTD.quadTileData=new TileData(qcount,td.builtMode);
-			dcount=1;
-			qcount=1;
-			for (int v=1;v<=newPD.nodeCount;v++) {
-				
-				int[] vflower=newPD.getFlower(v);
-				// dual tile for each original corner vertex
-				if (newPD.getVertMark(v)==2) {
-					int []vert=null;
-					if (newPD.isBdry(v)) { // this is bdry tile
-						
-						// vert list starts with v, then bary center of 
-						//    bdry edge from v, around through tiles to
-						//    end with bary center of last bdry edge from v
-						int num=newPD.countFaces(v)/2;
-						vert=new int[num+3];
-						vert[0]=v;
-						vert[1]=vflower[0];
-						for (int j=0;j<num;j++) 
-							vert[2+j]=vflower[1+2*j];
-						vert[num+2]=vflower[newPD.countFaces(v)];
-						workingTD.dualTileData.myTiles[dcount]=new Tile(workingTD.dualTileData,num+3);
-					}
-					else {
-						int num=newPD.countFaces(v)/2;
-						vert=new int[num];
-						int tick=0;
-						for (int j=0;j<newPD.countFaces(v);j++) {
-							int k=vflower[j];
-							if (newPD.getVertMark(k)==1)
-								vert[tick++]=k;
-						}
-						workingTD.dualTileData.myTiles[dcount]=new Tile(workingTD.dualTileData,num);
-					}						
-					
-					workingTD.dualTileData.myTiles[dcount].baryVert=v; 
-					workingTD.dualTileData.myTiles[dcount].vert=vert;
-					dcount++;
-				} 
-				
-				// quad tile for each edge
-				else if (newPD.getVertMark(v)==3) {
-					
-					int []vert=new int[4];
-						
-					if (newPD.isBdry(v)) { // bdry? num=2
-						vert[0]=v;
-						for (int j=0;j<=2;j++)
-							vert[j+1]=vflower[j];
-					}
-					else { // interior? num=4
-						for (int j=0;j<4;j++)
-							vert[j]=vflower[j];
-					}
-						
-					workingTD.quadTileData.myTiles[qcount]=new Tile(workingTD.quadTileData,4);
-					workingTD.quadTileData.myTiles[qcount].baryVert=v;
-					workingTD.quadTileData.myTiles[qcount].vert=vert;
-
-					qcount++;
-				}
-			
-			} // done with for
-
-/*			
-			// create 'wgTiles' for 'dualTileData'
-			for (int t=1;t<=workingTD.dualTileData.tileCount;t++) {
-				Tile tile=workingTD.dualTileData.myTiles[t];
-				int v=tile.baryVert;
-				
-				// create the wgtiles
-				tile.wgTiles=new Tile[newPD.getNum(v)]; // number of wgTiles
-				for (int j=0;j<newPD.getNum(v);j++) {
-					tile.wgTiles[j]=new Tile(3);
-					tile.wgTiles[j].type=2;
-				}
-				
-				// alternate grey/white, start with grey, correct with offset
-				int offset=1;
-				if (!newPD.isBdry(v)) {
-					if (newPD.getVertMark(newPD.kData[v].flower[0])==1)
-						offset=-1; // to get started with grey
-				}
-				// define 2 at a time, grey/white
-				for (int j=0;j<(newPD.getNum(v)/2);j++) {
-					tile.wgTiles[2*j].vert[0]=v;
-					tile.wgTiles[2*j].vert[1]=newPD.kData[v].flower[2*j];
-					tile.wgTiles[2*j].vert[2]=newPD.kData[v].flower[2*j+1];
-					tile.wgTiles[2*j].mark=offset;
-					tile.wgTiles[2*j+1].vert[0]=v;
-					tile.wgTiles[2*j+1].vert[1]=newPD.kData[v].flower[2*j+1];
-					tile.wgTiles[2*j+1].vert[2]=newPD.kData[v].flower[2*j+2];
-					tile.wgTiles[2*j+1].mark=-1*offset;
-				}
-			}
-			
-			// create 'wgTiles' for 'quadTileData'
-			for (int t=1;t<=workingTD.quadTileData.tileCount;t++) {
-				Tile tile=workingTD.quadTileData.myTiles[t];
-				int v=tile.baryVert;
-				
-				// create the wgtiles
-				tile.wgTiles=new Tile[newPD.getNum(v)]; // should be 2 or 4 wgTiles
-				for (int j=0;j<newPD.getNum(v);j++) {
-					tile.wgTiles[j]=new Tile(3);
-					tile.wgTiles[j].type=3;
-				}
-				
-				// alternate grey/white, start with grey, correct with offset
-				int offset=1;
-				if (!newPD.isBdry(v)) {
-					if (newPD.getVertMark(newPD.kData[v].flower[0])==1)
-						offset=-1; // to get started with grey
-				}
-				// define 2 at a time, grey/white
-				for (int j=0;j<(newPD.getNum(v)/2);j++) {
-					tile.wgTiles[2*j].vert[0]=v;
-					tile.wgTiles[2*j].vert[1]=newPD.kData[v].flower[2*j];
-					tile.wgTiles[2*j].vert[2]=newPD.kData[v].flower[2*j+1];
-					tile.wgTiles[2*j].mark=-1*offset;
-					tile.wgTiles[2*j+1].vert[0]=v;
-					tile.wgTiles[2*j+1].vert[1]=newPD.kData[v].flower[2*j+1];
-					tile.wgTiles[2*j+1].vert[2]=newPD.kData[v].flower[2*j+2];
-					tile.wgTiles[2*j+1].mark=offset;
-				}
-			}
-*/			
-			
-		} catch (Exception ex) {
-			workingTD.dualTileData=null;
-			workingTD.quadTileData=null;
-			CirclePack.cpb.errMsg("Failed to complete dual and quad tile data");
-		}
-		
-		return newPD;
-	}
-	
-	/**
-	 * Create a canonical packing for given 'TileData'. This is
-	 * a barycentric refinement of the barycentric refinement 
-	 * of the original tiles: that is,
+	 * Create a fully realized (builtMode 3) packing for 
+	 * given 'TileData'. This is a barycentric refinement 
+	 * of the barycentric refinement of the original tiles: 
+	 * that is,
 	 * 
 	 * (1) start with tiles as ordered lists of vertices;
-	 * (2) get packing by adding a barycenter to each tile and a 
-	 *     barycenter to each tile edge.
-	 * (3) bary_refine: barycentrically subdivide resulting triangles.
+	 * (2) get triangulation by adding a barycenter to each 
+	 *     tile and a barycenter to each tile edge.
+	 * (3) bary_refine: barycentrically subdivide resulting 
+	 *     triangles.
 	 *  
-	 * This complicates the data, but contends with two problems:
+	 * This seems complicated, but contends with two problems:
 	 * 
 	 * (I)  Otherwise some vertices would have only 2 neighbors.
 	 *      Now we can handle all tilings from "drawings", e.g. dessins
@@ -792,17 +520,17 @@ public class TileData {
 	 *      the extra vertices, combinatorial geodesics are ambiguous
 	 *      due to the bary_refine of the faces in step (3).
 	 * 
-	 * A clone of 'tileData' is attached to the packing. 
+	 * A clone of 'tileData' with augmented vertices is attached 
+	 * to the final packing. 
 	 * 
 	 * Three construction stages: (1) build a packing having a 
 	 * barycenter vert for each tile and for each tile edge;
 	 * (2) barycentrically subdivide every face; (3) create
 	 * 'dual', 'quad', and 'wgTiles' tileData. 
 	 * 
-	 * The vertex 'mark's in the new packing are set 
-	 * to {1,2,3} for 
-	 *    {tile baryVert,original tile corner, newvert}, resp. 
-	 * Each face is now a hex flower, and its center is
+	 * Vertex 'mark's in the new packing are set to {1,2,3} for 
+	 *    {tile baryVert,original tile corner, new edge vert}, resp. 
+	 * Each face is becomes a hex flower, and its center is
 	 * given mark = -1.
 	 * 
 	 * wgTiles are created for each original tile, also for 
@@ -845,8 +573,6 @@ public class TileData {
 					if (tile.vert[j]==tile.vert[k])
 						special=true;
 		}
-		
-		// TODO: need new routines to create the packing: see 'TileBuilder', 7/2014
 		if (special) {
 			TileBuilder tileBuilder=new TileBuilder(td);
 			PackData p=tileBuilder.fullfromFlowers();
@@ -857,21 +583,21 @@ public class TileData {
 		}
 
 		// create minimal packing for given 'TileData'
-		PackData newPD=TileData.tiles2packing(td);
+		PackData newPD=TileData.tiles2packing(td); // minimal packing
 		TileData workingTD=newPD.tileData;
 
 		// clear 'mark's
 		for (int i=1;i<=newPD.nodeCount;i++)
 			newPD.setVertMark(i,0);
 		
-		// go through tiles, split edges, set marks;
-		//    splitting edge should prevent it being selected
-		//    to be split again from the other side.
+		// go through tiles, split edges; splitting edge 
+		//   should prevent it being selected to be split 
+		//   again from the other side.
+		int origcount=newPD.nodeCount;
 		for (int t=1;t<=workingTD.tileCount;t++) {
 			Tile tile=workingTD.myTiles[t];
 			newPD.setVertMark(tile.baryVert,1);
 			int w=tile.vert[0];
-			newPD.setVertMark(w,2);
 			int v=w;
 			for (int j=1;j<=tile.vertCount;j++) {
 				v=w;
@@ -879,14 +605,28 @@ public class TileData {
 					w=tile.vert[0];
 				else 
 					w=tile.vert[j];
-				newPD.setVertMark(w,2);
 				HalfEdge he=newPD.packDCEL.findHalfEdge(v, w);
-				RawDCEL.splitEdge_raw(newPD.packDCEL,he);
-				newPD.setVertMark(newPD.packDCEL.vertCount,3);
+				if (he!=null) 
+					RawDCEL.splitEdge_raw(newPD.packDCEL,he); 
+				else {  // old edge; already split
+//					DCELdebug.printBouquet(newPD.packDCEL);
+					continue;
+				}
 			}
 		}
-		newPD.packDCEL.fixDCEL_raw(newPD);
+		newPD.packDCEL.fixDCEL_raw(newPD); 
+		// DCELdebug.printBouquet(newPD.packDCEL);
 
+		// set marks: 1=barycenters, 2=tile verts, 3=new vertices
+		for (int t=1;t<=newPD.tileData.tileCount;t++) {
+			Tile tile=newPD.tileData.myTiles[t];
+			newPD.setVertMark(tile.baryVert,1);
+			for (int j=0;j<tile.vertCount;j++)
+				newPD.setVertMark(tile.vert[j],2);
+		}
+		for (int v=origcount+1;v<=newPD.nodeCount;v++) 
+			newPD.setVertMark(v,3);
+		
 		// prepare for 'quadTile' and 'dualTile'
 		int dcount=0;
 		int qcount=0;
@@ -902,7 +642,7 @@ public class TileData {
 
 		// bary_refine: each face in barycentric subdivision of
 		//   tiling is bary_refined, hence is a 6-flower: these 
-		//   barycenters are numbered starting at 'bcbase'.
+		//   new barycenters are numbered starting at 'bcbase'.
 		// Save lots of work by building master list 'wgTiles' as
 		//   as they are created, indexed from 1 by using the index
 		//   of the barycenter circle and subtracting 'bcbase'.
@@ -910,11 +650,12 @@ public class TileData {
 		RawDCEL.hexBaryRefine_raw(newPD.packDCEL,true);
 		newPD.packDCEL.fixDCEL_raw(newPD);
 		int bcbase=newPD.nodeCount-workingTD.wgTileCount;
-		// indexed from 1 to wgCount
+		// indexed from 1 to wgTileCount
 		workingTD.wgTiles=new Tile[workingTD.wgTileCount+1];
 
 		// for each tile create 'augVert' list for tile, 
 		//    create and save 'wgTiles' 
+		int wgTick=0; // for indices of wgTiles in master list
 		for (int t=1;t<=workingTD.tileCount;t++) {
 			Tile tile=workingTD.myTiles[t];
 			tile.wgIndices=new int[2*tile.vertCount];
@@ -927,37 +668,33 @@ public class TileData {
 				break; // out of 'for' loop
 			}
 			
-			// adjust flower of baryVert so flower[0] is direction of vert[0]
+			// arrange that halfedge of baryVert is direction to vert[0].
 			// TODO: to handle dual tilings consistently, have to consider 
 			//       case that baryVert is on the boundary (and tile bdry 
 			//       goes through it. Best is vert[0] is required to be 
 			//       flower[0] in this case from the beginning.
-			int offset=-1;
-			int[] myflower=newPD.getFlower(tile.baryVert);
-			int fnum=newPD.countFaces(tile.baryVert);
-			for (int k=0;(k<fnum && offset<0);k++) {
-				int m=myflower[k];
-				if (newPD.countFaces(m)==4 && newPD.nghb(m, tile.vert[0])>=0)
-						offset=k;
+			Vertex vert=newPD.packDCEL.vertices[tile.baryVert];
+			HalfLink spokes=vert.getSpokes(null);
+			vert.halfedge=null;
+			Iterator<HalfEdge> sis=spokes.iterator();
+			while (sis.hasNext()) {
+				HalfEdge he=sis.next();
+				int m=he.twin.origin.vertIndx;
+				if (newPD.countFaces(m)==4 && newPD.nghb(m, tile.vert[0])>=0) {
+					vert.halfedge=he;
+					break;
+				}
 			}
-			if (offset<0) {
+			if (vert.halfedge==null) {
 				CirclePack.cpb.errMsg("Tile "+t+" (center "+tile.baryVert+") "+
 						"refined flower has some problem");
 				break; // out of 'for' loop
 			}
-			if (offset>0) {
-				int[] newflower=new int[num+1];
-				for (int k=0;k<num;k++)
-					newflower[k]=myflower[(k+offset)%num];
-				newflower[num]=newflower[0];
-				myflower=newflower;
-			}
-			
-			// build augmented vertices
+
+			// build augmented vertices by visiting sectors in succession
 			int newAugCount=4*tile.vertCount;
 			int []augVs=new int[newAugCount];
-
-			// visit sectors in succession
+			int [] myflower=vert.getFlower(true);
 			for (int j=0;j<tile.vertCount;j++) {
 				
 				// two hex flower subfaces, first is white (positively oriented)
@@ -966,17 +703,21 @@ public class TileData {
 				wgtile.augVert=new int[6];
 				wgtile.mark=1; // positively oriented 
 				int baryV=myflower[4*j+1]; // its barycenter
-				tile.wgIndices[2*j]=baryV-bcbase; // point to wgTile index
-				workingTD.wgTiles[tile.wgIndices[2*j]]=wgtile; // put wgTile into master list
-				int[] itsflower=newPD.getFlower(baryV);
-				int indx=newPD.nghb(baryV,tile.baryVert);
-				for (int k=0;k<3;k++) {
-					wgtile.vert[k]=wgtile.augVert[2*k]=itsflower[(indx+2*k)%6];
-					wgtile.augVert[2*k+1]=itsflower[(indx+2*k+1)%6];
-				}
-				augVs[4*j]=itsflower[(indx+2)%6];
-				augVs[4*j+1]=itsflower[(indx+3)%6];
 				
+				// put wgTile in master list and record its index
+				tile.wgIndices[2*j]=++wgTick; // point to wgTile index
+				workingTD.wgTiles[tile.wgIndices[2*j]]=wgtile; // put wgTile into master list
+
+				// set halfedge of baryV to point to tile.baryVert
+				newPD.packDCEL.vertices[baryV].halfedge=
+						newPD.packDCEL.findHalfEdge(baryV,tile.baryVert);
+				int[] itsflower=newPD.getFlower(baryV);
+				for (int k=0;k<3;k++) {
+					wgtile.vert[k]=wgtile.augVert[2*k]=itsflower[2*k];
+					wgtile.augVert[2*k+1]=itsflower[2*k+1];
+				}
+				augVs[4*j]=itsflower[2];
+				augVs[4*j+1]=itsflower[3];
 				
 				// second is grey (negatively oriented)
 				wgtile=new Tile(3);
@@ -984,22 +725,24 @@ public class TileData {
 				wgtile.augVert=new int[6];
 				wgtile.mark=-1; // negatively oriented 
 				baryV=newPD.getFlower(tile.baryVert)[4*j+3]; // its barycenter
-				tile.wgIndices[2*j+1]=baryV-bcbase; // point to wgTile index
+				tile.wgIndices[2*j+1]=++wgTick; // point to wgTile index
 				workingTD.wgTiles[tile.wgIndices[2*j+1]]=wgtile; // put wgTile into master list
+				
+				// set halfedge of baryV to point to tile.baryVert
+				newPD.packDCEL.vertices[baryV].halfedge=
+						newPD.packDCEL.findHalfEdge(baryV,tile.baryVert);
 				itsflower=newPD.getFlower(baryV);
-				indx=newPD.nghb(baryV,tile.baryVert);
 				for (int k=0;k<3;k++) {
-					wgtile.vert[k]=wgtile.augVert[2*k]=itsflower[(indx+2*k)%6];
-					wgtile.augVert[2*k+1]=itsflower[(indx+2*k+1)%6];
+					wgtile.vert[k]=wgtile.augVert[2*k]=itsflower[2*k];
+					wgtile.augVert[2*k+1]=itsflower[2*k+1];
 				}
-				augVs[4*j+2]=itsflower[(indx+2)%6];
-				augVs[4*j+3]=itsflower[(indx+3)%6];
+				augVs[4*j+2]=itsflower[2];
+				augVs[4*j+3]=itsflower[3];
 			}
 			
 			tile.augVertCount=newAugCount;
 			tile.augVert=augVs;
 		} // end of 'for' loop on tiles
-
 		
 		// Now build the dual tiling
 		try {
@@ -1204,10 +947,12 @@ public class TileData {
 
 		} catch (Exception ex) {
 			workingTD.quadTileData=null;
-			CirclePack.cpb.errMsg("Failed to complete dual or quad tile data");
+			CirclePack.cpb.errMsg(
+					"Failed to complete dual or quad tile data");
 		}
 		
 		newPD.tileData=workingTD;
+		newPD.tileData.builtMode=3;
 		return newPD;
 	}
 	
@@ -1335,8 +1080,9 @@ public class TileData {
 	 * sharing edges.
 	 * 
 	 * This construction can be ambiguous or give malformed results
-	 * in general, I think. However, if p was built as the barycentric 
-	 * packing of some tiling, then this may reconstruct that tiling.
+	 * in general, I think. However, if p was built as the  packing 
+	 * of some tiling whose tiles have barycenters, then this may 
+	 * reconstruct that tiling.
 	 * @param p PackData
 	 * @param V int, interior vertex
 	 * @return new TileData (its packData is null)
@@ -1367,13 +1113,11 @@ public class TileData {
 					util[v]=1;
 					
 					// find vertices across its flower edges
-					int num=p.countFaces(v);
-					int[] flower=p.getFlower(v);
-					for (int j=0;j<num;j++) {
-						int w=flower[j];
-						int u=flower[j+1];
-						util[w]=util[u]=1;
-						int a=p.getOppVert(v,w);
+					HalfLink outlink=p.packDCEL.vertices[v].getOuterEdges();
+					Iterator<HalfEdge> ois=outlink.iterator();
+					while (ois.hasNext()) {
+						HalfEdge he=ois.next();
+						int a=he.twin.next.twin.origin.vertIndx;
 						if (a>0 && util[a]==0 && !p.isBdry(a)) {
 							next.add(a);
 							util[a]=-1;
@@ -1394,7 +1138,7 @@ public class TileData {
 	 * Given a packing and a list of its vertices, create tiling
 	 * consisting of the flowers of the given vertices. We check
 	 * that vertices in the list are interior and non-neighboring,
-	 * but the tiles may be disconnected, etc.
+	 * but the tile pattern may be disconnected, incomplete, etc.
 	 * @param p
 	 * @param vlist
 	 * @return new TileData (its packData is null)
@@ -1405,7 +1149,7 @@ public class TileData {
 		
 		int []util=new int[p.nodeCount+1]; // p.vlist=vlist;
 		
-		TileData td=new TileData(0,3); // default to tiling mode 3
+		TileData td=new TileData(0,1); // default to coarsest mode
 		td.myTiles=new Tile[p.sizeLimit+1];
 
 		Iterator<Integer> vlt=vlist.iterator();
@@ -1440,15 +1184,21 @@ public class TileData {
 			tile.tileFlower=new int[tile.vertCount][2];
 			for (int j=0;j<tile.vertCount;j++) {
 				int ww=tile.vert[j];
+				int pw=tile.vert[(j+1)%tile.vertCount];
 				int ov=p.getOppVert(tile.baryVert,ww);
-				if (util[ov]<0)
+				if (util[ov]<0) {
 					tile.tileFlower[j][0]=-util[ov];
-				else
-					tile.tileFlower[j][0]=0;
+					tile.tileFlower[j][1]=p.nghb(ov,pw);
+				}
 			}
 		}
 		
-		td.tileCount=tcount;
+		td.tileCount=tcount; 
+		
+		boolean debug=false;
+		if (debug) // debug=true;
+			DebugHelp.printtileflowers(td);
+		
 		return td;
 	}
 	
@@ -1683,9 +1433,9 @@ public class TileData {
 	}
 
 	/**
-	 * Fill in the tileFlower information. 
-	 * Caution: This can fail due to unigons and digons.
-	 * @param tData
+	 * Fill in the tileFlower information. Main complications
+	 * are due to possible unigons and digons.
+	 * @param tData TileData
 	 * @return int count
 	 */
 	public static int setTileFlowers(TileData tData) {
@@ -1693,25 +1443,122 @@ public class TileData {
 		// wipe out current 'tileFlower' data
 		for (int t = 1; t <= tData.tileCount; t++) {
 			Tile tile = tData.myTiles[t];
-			tile.tileFlower = new int[tile.vertCount][2];
+			tile.tileFlower = null;
 		}
+		
+		int[] done=new int[tData.tileCount+1];
+		
+		// Start by listing any unigons/digons (vertCount==1/2)
+		ArrayList<Integer> unigons=new ArrayList<Integer>(0);
+		ArrayList<Integer> digons=new ArrayList<Integer>(0);
+		for (int t = 1; t <= tData.tileCount; t++) {
+			Tile tile=tData.myTiles[t];
+			if (tile.vertCount==1)
+				unigons.add(tile.tileIndex);
+			else if (tile.vertCount==2)
+				digons.add(tile.tileIndex);
+		}
+		
+		// handle unigons, which have only one nghb
+		if (unigons.size()>0) {
+			Iterator<Integer> uis=unigons.iterator();
+			while(uis.hasNext()) {
+				int ug=uis.next();
+				Tile unitile=tData.myTiles[ug];
+				int node=unitile.vert[0];
+				
+				// search for nghb, must have two successive 'node' entries
+				for (int t=1;t<=tData.tileCount;t++) {
+					Tile tile=tData.myTiles[t];
+					int spot=-1;
+					if ((spot=tile.isTileEdge(node, node))>0) {
+						tile.tileFlower=new int[tile.vertCount][2];
+						tile.tileFlower[spot][0]=unitile.tileIndex;
+						tile.tileFlower[spot][1]=0;
+						unitile.tileFlower=new int[1][2];
+						unitile.tileFlower[0][0]=tile.tileIndex;
+						unitile.tileFlower[0][1]=spot;
+					}
+					if (spot==-1)
+						throw new CombException(
+							"Unigon tile "+unitile.tileIndex+
+							" has no neighboring tile.");
+				}
+				done[unitile.tileIndex]=1;
+			} // done with while
+		}  // done with unigons
+		
+		if (digons.size()>0) {
+			Iterator<Integer> dis=digons.iterator();
+			while(dis.hasNext()) {
+				int dg=dis.next();
+				Tile ditile=tData.myTiles[dg];
+				int v=ditile.vert[0];
+				int w=ditile.vert[1];
 
+				if (ditile.tileFlower==null) {
+					if (v==w)
+						throw new CombException(
+								"digon "+ditile.tileIndex+" unigon nghb should"
+										+ " have been picked up already");
+					ditile.tileFlower=new int[2][2];
+				}
+				
+				if (ditile.tileFlower[0][0]==0) {
+					for (int t=1;t<=tData.tileCount;t++) {
+						Tile tile=tData.myTiles[t];
+						int thit=-1;
+						if ((thit=tile.isTileEdge(w,v))>0) {
+							if (tile.tileFlower==null) 
+								tile.tileFlower=new int[tile.vertCount][2];
+							tile.tileFlower[thit][0]=t;
+							tile.tileFlower[thit][1]=0;
+							ditile.tileFlower[0][0]=tile.tileIndex;
+							ditile.tileFlower[0][1]=thit;
+						}
+					}
+				}
+				if (ditile.tileFlower[1][0]==0) {
+					for (int t=1;t<=tData.tileCount;t++) {
+						Tile tile=tData.myTiles[t];
+						int thit=-1;
+						if ((thit=tile.isTileEdge(v,w))>0) {
+							if (tile.tileFlower==null) 
+								tile.tileFlower=new int[tile.vertCount][2];
+							tile.tileFlower[thit][0]=t;
+							tile.tileFlower[thit][1]=1;
+							ditile.tileFlower[1][0]=tile.tileIndex;
+							ditile.tileFlower[1][1]=thit;
+						}
+					}
+				}
+				done[dg]=1;
+			}
+		} // done with digons
+				
 		// go through each edge of each tile
 		for (int t = 1; t <= tData.tileCount; t++) {
+			if (done[t]!=0)
+				continue;
 			Tile tile = tData.myTiles[t];
-			for (int j = 0; j < tile.vertCount; j++) {
+			if (tile.tileFlower==null)
+				tile.tileFlower=new int[tile.vertCount][2];
+			
+			for (int j=0;j<tile.vertCount;j++) {
 
 				// if this edge is not already settled
 				if (tile.tileFlower[j][0] == 0) {
-					int w = tile.vert[(j - 1 + tile.vertCount) % tile.vertCount];
 					int v = tile.vert[j];
+					int w = tile.vert[(j+1)%tile.vertCount];
 
-					// check only tile with larger indices
-					boolean hit = false;
-					for (int tj = t; (tj <= tData.tileCount && !hit); tj++) {
+					// check only tiles with larger indices
+					boolean hit=false;
+					for (int tj=t;(tj<=tData.tileCount && !hit);tj++) {
 						Tile petile = tData.myTiles[tj];
-						int indx = petile.isTileEdge(v, w);
+						int indx = petile.isTileEdge(w,v);
 						if (indx >= 0) {
+							if (petile.tileFlower==null)
+								petile.tileFlower=new int[petile.vertCount][2];
 							int[] tfind = petile.tileFlower[indx];
 							if ((tfind[0] > 0 && tfind[0] != t)
 									|| (tfind[0] == t && tfind[1] != j))
@@ -1726,10 +1573,10 @@ public class TileData {
 						}
 					}
 				}
-
 			}
-		}
-
+			done[tile.tileIndex]=1;
+		} // with all tiles
+		// tData.flowerConsistency(); DebugHelp.printtileflowers(tData);
 		return 1;
 	}
 

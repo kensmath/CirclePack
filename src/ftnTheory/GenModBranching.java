@@ -50,43 +50,43 @@ import util.StringUtil;
  * branching of circles; others, such as "quad" 
  * branching may be developed.
 
- * For general background, see Ashe's thesis and 
+ * For general background, see James Ashe's thesis and 
  * experiments. The original code and philosophy,
- * used e.g. in our joint paper with Crane, is 
- * OBE; this new code is much simpler and depends 
- * on DCEL structures.
+ * used e.g. in our joint paper with Crane, is OBE; 
+ * this new code is much simpler due to DCEL structures.
  * 
- * @author Ken Stephenson, James Ashe, Edward Crane, started 5/2012.
- * revised versions started 9/21
+ * @author Ken Stephenson, James Ashe, Edward Crane, 
+ * started 5/2012. revised versions started 9/21
  *
  */
 public class GenModBranching extends PackExtender {
 	
 	// Stored copy of original packing, with layout and everything.
 	// NOTE: Usually displayed on a separate canvas for interactive
-	//       "clicks", but the data is computed using the stored
-	//       'refPack', not its copy.
+	//   "clicks", but the data is computed using the stored
+	//   'refPack', not its copy.
 	public PackData refPack;  
 	
-	Vector<GenBrModPt> branchPts; // start with index 1
+	Vector<GenBrModPt> branchPts; // indexing starts with 1
 	public static final double LAYOUT_THRESHOLD=.00001; // for layouts based on quality
-	public HalfLink holoBorder;   // for holonomy about the parent's red chain
+	public HalfLink holoBorder; // for holonomy about the parent's red chain
 	public static double m2pi=2.0*Math.PI;
-	ArrayList<Vertex> exclusions;  // vertices to avoid when choosing 'alpha'
+	ArrayList<Vertex> exclusions; // vertices to avoid when choosing 'alpha'
+    private HalfLink poisonHEdges; // migrate to this
 
 	// Constructor
     public GenModBranching(PackData p) {
 		super(p);
 		extensionType="GENERALIZED_BRANCHING_MOD";
 		extensionAbbrev="GB";
-		toolTip="'Generalized_Branching' provides methods for "+
-				"incorporating various "+"generalized branched "+
-				"points into the parent circle packing. "+
-				"(For purposes of interaction, a copy of the "+
-				"original parent is held in 'refPack'.)";
+		toolTip="'Generalized_Branching' provides methods for "
+				+ "incorporating various generalized branched "
+				+ "points into the parent circle packing. "
+				+ "(For purposes of interaction, a copy of the "
+				+ "original parent is held in 'refPack'.)";
 		registerXType();
 		if (running) {
-			packData.poisonHEdges=null;
+			poisonHEdges=null;
 			refPack=packData.copyPackTo(); // maintains original
 			packData.packExtensions.add(this);
 		}
@@ -241,8 +241,6 @@ public class GenModBranching extends PackExtender {
 						deleteBP(vs.next());
 				}
 				else if (fullWipe) {
-					packData.poisonEdges=null;
-					packData.poisonVerts=null;
 					branchPts=new Vector<GenBrModPt>(3);
 					branchPts.add((GenBrModPt)null);
 					packData.setCombinatorics();
@@ -679,11 +677,11 @@ public class GenModBranching extends PackExtender {
 	} // done with cmdParser
 
 	public void updateExclusions() {
-		packData.poisonHEdges=new HalfLink();
+		poisonHEdges=new HalfLink();
 		exclusions=new ArrayList<Vertex>();
 		for (int b=1;b<branchPts.size();b++) {
 			GenBrModPt gbp=branchPts.get(b);
-			packData.poisonHEdges.abutMore(gbp.eventHorizon);
+			poisonHEdges.abutMore(gbp.eventHorizon);
 			Iterator<Vertex> eis=gbp.myExclusions.iterator();
 			while (eis.hasNext())
 				exclusions.add(eis.next());
@@ -715,7 +713,7 @@ public class GenModBranching extends PackExtender {
 
 		// first get the layout circumventing the branch points
 		HalfLink outerOrder=CombDCEL.partialTree(packData.packDCEL,
-				packData.poisonHEdges); // allMains.CPBase.Hlink=partOrder;
+				poisonHEdges); // allMains.CPBase.Hlink=partOrder;
 
 		// throw in 'layoutAddons' from branch points
 		for (int b=1;b<branchPts.size();b++) {

@@ -40,8 +40,8 @@ packings by repeatedly adding barycenters to all interstices
 <font size="+1" color="blue"><strong><a name="add_edge">add_edge</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v1 w2  v2 w2 ..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong> Given a list of vertices, we pick off successive pairs
-	{v,w}. We stop unless v and w are bdry vertices sharing one or
-	two common neighbor(s). In this case we create a new edge {v w}
+	{v,w}. We stop unless v and w are bdry vertices sharing one 
+	(resp. two) common neighbor(s). In this case we create a new edge {v w}
 	and one (resp. two) new faces. Note that successive pairs may 
 	become eligible as earlier edges are added. If two faces are 
 	added, this means the vertices were part of a 4-edge bdry component;
@@ -49,7 +49,7 @@ packings by repeatedly adding barycenters to all interstices
 	See also "enclose 0 u ", where u is the common neighbor.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href=" enclose">enclose</a>&nbsp;&nbsp; <a href=" split_edge">split_edge</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href=" enclose">enclose</a>&nbsp;&nbsp; <a href=" split_edge">split_edge</a>&nbsp;&nbsp; <a href=" meld_edge">meld_edge</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="add_face_triple">add_face_triple</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{f..}&nbsp;&nbsp; </font>
 <blockquote>
@@ -453,8 +453,8 @@ center from the origin (when |z| is non-zero).
 <font size="+1" color="blue"><strong><a name="cleanse">cleanse</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
 <strong>Description: </strong>This empties a packing, clears its canvas, resets
-various options for display and screen control. Caution, there
-is no verification and all packing data is lost.
+    various options for display and screen control. Caution, there
+	is no verification and all packing data is lost.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="Cleanse">Cleanse</a>&nbsp;&nbsp; 
@@ -649,12 +649,10 @@ does not eliminate redundancies, as other counts do.)
 <blockquote>
 <strong>Description: </strong>This command allows you to create various types of
     packings from scratch. Generally, parameters are specified,
-    e.g., the number of construction steps for an iterative 
-    construction like "chair" and "sq_grid", or the number of
-    petals for "seed", or the number of generations, as with "hex"
-    or "tri_group". Depending on the type, there may be special numbering 
-    or marking of vertices and/or edges, as with the 'tiles' in 
-    the "chair" construction.
+    e.g., the number of petals for "seed", or the number of 
+    generations, as with "hex" or "tri_group". Depending on 
+    the type, there may be special numbering or marking of 
+    vertices and/or edges.
     
     The "hex_torus" construction builds a regular parallelogram-like
     hex torus with given w/h for width/height.
@@ -663,7 +661,16 @@ does not eliminate redundancies, as other counts do.)
 	triangle angles	pi/a, pi/b, pi/c; a, b, c can be (at worst) half 
 	integers, and if one is a half integer, then the other two must be 
 	equal to make combinatoric sense. The geometry for the packing is 
-	chosen based on the angles. 
+	determined by the angles.
+	
+	The "j_ftn" is associated with a triangle group (0 a b). It
+	is similar to a dessin d'enfants with branch multiplicities
+	a and b over 0 and 1, respectively, but logarithmic branching
+	over infinity. Default to a=2 and b=3, the classical 
+	j-function associated with the modular group. 
+	
+	The "Kagome" construction builds the packing for a tiling in
+	the famous Kagome latttice pattern.
 	
 	The Fibonacci tilings are "fusion" type of Frank and Sadun.
 	Parameters W H X determine combinatorial edge lengths, 
@@ -679,32 +686,47 @@ does not eliminate redundancies, as other counts do.)
 <blockquote>
 <table>
 <tr><td width="30%"><font color="blue">hex_torus 3 6</font></td>
-<td width="68%"> build 3-by-6 hex torus</td></tr>
-<tr><td width="30%"><font color="blue">create chair 4</font></td>
-<td width="68%"> 4 stages of a 'chair' substitution tiling;
-	tile centers are in 'vlist', subdivision stage outlines in 'elist'</td></tr>
+<td width="68%"> 
+	build 3-by-6 hex torus</td></tr>
 <tr><td width="30%"><font color="blue">create hex 23</font></td>
-<td width="68%"> hexagonal packing of 23 generations</td></tr>
+<td width="68%"> 
+	hexagonal packing of 23 generations</td></tr>
 <tr><td width="30%"><font color="blue">create sq_grid 4</font></td>
-<td width="68%"> 'square grid' pattern from 4 quadruplings of a 4-flower</td></tr>
+<td width="68%"> 
+	'square grid' pattern from 4 quadruplings of a 4-flower</td></tr>
 <tr><td width="30%"><font color="blue">create tri_group 8 2 3 5</font></td>
-<td width="68%"> 8 generations of the (2 3 5) triangle group on
+<td width="68%"> 
+	8 generations of the (2 3 5) triangle group on
 	the sphere.</td></tr>
+<tr><td width="30%"><font color="blue">create j_ftn 8</font></td>
+<td width="68%"> 
+	8 generations of the classical j-function.</td></tr>
+<tr><td width="30%"><font color="blue">create Kag 4</font></td>
+<td width="68%"> 
+	4 layers of Kagome lattice about a central hexagon</td></tr>
 <tr><td width="30%"><font color="blue">create pent 5</font></td>
-<td width="68%"> 5 generations of regular pentagonal tiling</td></tr>
+<td width="68%">
+	5 generations of regular pentagonal tiling</td></tr>
 <tr><td width="30%"><font color="blue">create pent3 3</font></td>
-<td width="68%"> 3 generations of pent tiling centered on triple point</td></tr>
+<td width="68%"> 
+	3 generations of pent tiling centered on triple point</td></tr>
 <tr><td width="30%"><font color="blue">create pent4 3</font></td>
-<td width="68%"> 3 generations of pent tiling centered on quad point</td></tr>
+<td width="68%"> 
+	3 generations of pent tiling centered on quad point</td></tr>
 <tr><td width="30%"><font color="blue">create pin 5</font></td>
-<td width="68%"> 5 generations of Conway's pinwheel tiling, packed as a triangle (1 2 3), 1 = right angle,
-	2 = atan(2) = .35241638*Pi, 3 = atan(1/2) = .1475836*Pi.</td></tr>
+<td width="68%"> 
+	5 generations of Conway's pinwheel tiling, packed as a 
+	triangle (1 2 3), 1 = right angle, 2 = atan(2) = .35241638*Pi, 
+	3 = atan(1/2) = .1475836*Pi.</td></tr>
 <tr><td width="30%"><font color="blue">create dyadic 6</font></td>
-<td width="68%"> 6 generations of Penrose's hyperbolic tiling (Carleson squares in the limit)</td></tr>
+<td width="68%"> 
+	6 generations of Penrose's hyperbolic tiling (Carleson squares in the limit)</td></tr>
 <tr><td width="30%"><font color="blue">create fib 5 6 3 2</font></td>
-<td width="68%"> 5 generations of Fibonnacci-related tiling, W=6,H=3,X=2.</td></tr>
+<td width="68%"> 
+	5 generations of Fibonnacci-related tiling, W=6,H=3,X=2.</td></tr>
 <tr><td width="30%"><font color="blue">tetra</font></td>
-<td width="68%"> regular tetrahedron on the sphere</td></tr>
+<td width="68%"> 
+	regular tetrahedron on the sphere</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="seed">seed</a>&nbsp;&nbsp; <a href="pave">pave</a>&nbsp;&nbsp; 
@@ -743,25 +765,25 @@ default temporary directory (see 'Messages'), others print something.
 <font size="+1" color="blue"><strong><a name="delaunay">delaunay</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[cfgs]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>Create the "Delaunay triangulation" for a set
-of points and store the resulting complex in the current packing. 
-The points may come from the active packing centers or from a file
-(see mutually exclusive options). 
+    of points and store the resulting complex in the current packing. 
+    The points may come from the active packing centers or from a file
+    (see mutually exclusive options). 
 
-If the points are read from a file, an attempt is made to read some
-standard formats giving 2D or 3D points. A euclidean 
-or spherical packing is generated with a C library call to 'qconvex' 
-(one of the "QHull" programs) or to Shewchuk's 'triangle' code, respectively. 
+    If the points are read from a file, an attempt is made to read some
+    standard formats giving 2D or 3D points. A euclidean 
+    or spherical packing is generated with a C library call to 'qconvex' 
+    (one of the "QHull" programs) or to Shewchuk's 'triangle' code, respectively. 
 
-There is one special case: if the file of points begins with keyword
-"UNIT_SQUARE:", then its points (x,y) lie in [0,1]x[0,1]. If the user
-chooses spherical geometry via the "-g s" flag, then these points are
-interpreted as being on the sphere: namely, (x,y) converts to the point
-(theta, phi) where theta=2pi*x and phi=arccos(2*(y-.5)). This is a
-convenience for generating random points on the sphere, for if (x,y) 
-are, say, Poisson random in the unit square, then (theta,phi) are Poisson
-random on the sphere. 
+    There is one special case: if the file of points begins with keyword
+    "UNIT_SQUARE:", then its points (x,y) lie in [0,1]x[0,1]. If the user
+    chooses spherical geometry via the "-g s" flag, then these points are
+    interpreted as being on the sphere: namely, (x,y) converts to the point
+    (theta, phi) where theta=2pi*x and phi=arccos(2*(y-.5)). This is a
+    convenience for generating random points on the sphere, for if (x,y) 
+    are, say, Poisson random in the unit square, then (theta,phi) are Poisson
+    random on the sphere. 
 
-CAUTION: This call will not work if the C++ library is not operational.
+    CAUTION: This call will not work if the C++ library is not operational.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
@@ -830,6 +852,9 @@ CAUTION: This call will not work if the C++ library is not operational.
 <td width="65%" align="left"> colored edges with color code 'n'</td></tr>
 <tr><td width="25%" valign="top">-a {f..}</td>
 <td width="65%" align="left"> sector arcs (eucl); based on edgelength</td></tr>
+<tr><td width="25%" valign="top">-h {v..}</td>
+<td width="65%" align="left"> hull, meaning convex hull of tangency 
+points with nghbs</td></tr>
 <tr><td width="25%" valign="top">-nc {v..}</td>
 <td width="65%" align="left"> label circles</td></tr>
 <tr><td width="25%" valign="top">-nf {f..}</td>
@@ -865,7 +890,8 @@ CAUTION: This call will not work if the C++ library is not operational.
 <tr><td width="25%" valign="top">-u</td>
 <td width="65%" align="left"> draw unit circle</td></tr>
 <tr><td width="25%" valign="top">-y {f..}</td>
-<td width="65%" align="left"> display circumcircles of given faces (useful for Delaunay triangulations)</td></tr>
+<td width="65%" align="left"> display circumcircles of given faces 
+	(useful for Delaunay triangulations)</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Dual Object Options:</strong>
 <blockquote>
@@ -876,12 +902,12 @@ CAUTION: This call will not work if the C++ library is not operational.
 <td width="65%" align="left"> dual edges</td></tr>
 <tr><td width="25%" valign="top">-df</td>
 <td width="65%" align="left"> dual faces</td></tr>
+<tr><td width="25%" valign="top">-dh</td>
+<td width="65%" align="left"> dual face hull (polygon of tangency point)</td></tr>
 <tr><td width="25%" valign="top">-dg</td>
 <td width="65%" align="left"> dual edges given, else those in pack's 'dualGraph'</td></tr>
 <tr><td width="25%" valign="top">-dp</td>
 <td width="65%" align="left"> dual circle tangency points</td></tr>
-<tr><td width="25%" valign="top">-dw</td>
-<td width="65%" align="left"> dual wedges (triangles formed by tangency points)</td></tr>
 <tr><td width="25%" valign="top">-dt</td>
 <td width="65%" align="left"> trinkets at dual centers</td></tr>
 <tr><td width="25%" valign="top">-D?</td>
@@ -1396,11 +1422,13 @@ circles from 1 to 39.</td></tr>
 <font size="+1" color="blue"><strong><a name="frack">frack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>This is a local refinement method for combinatorics.
-A list of vertices must be provided. A barycenter is added to each
-face neighboring one of these vertices, then the new barycenter 
-vertices about any of the given vertices v are connected to form a 
-flower around v, while the former edges from v are remove. The user
-will typically repack, layout, and display.
+    A list of vertices must be provided. A barycenter is added to each
+	face neighboring one of these vertices, then the new barycenter 
+	vertices about any of the given vertices v are connected to form a 
+	flower around v, while any former edges from v are remove. 
+	Caution: adjustment for neighboring vertices in the list will
+	interfer with one another, and results are difficult to predict.
+	The user will typically repack, layout, and display.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="hex_refine">hex_refine</a>&nbsp;&nbsp; <a href="add_bary">add_bary</a>&nbsp;&nbsp; 
@@ -1791,22 +1819,14 @@ the new path.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="read">read</a>&nbsp;&nbsp; 
 <br/><br/>
-<font size="+1" color="blue"><strong><a name="j_ftn">j_ftn</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{n0 n1 maxsize}&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="j_ftn">j_ftn</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{maxgens n0 n1}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>This is a very specialized command. It's aim is to build
-	the complexes associated with the classical "j-function"
-	of function theory (related to the modular function) and
-	others with similar structure. These functions are complete
-	unlimited branched coverings of the Riemann sphere, 
-	punctured at infinity, so that every point over 0 (resp. 1)
-	has branch order n0 (resp. n1). These are actually infinite
-	complexes, so maxsize puts a cap on the construction. The
-	resulting packing (which overwrites the prescribed packing)
-	is hyperbolic and the boundary radii are set to infinity.
-	
-	The classical j-function itself would have n0=2 and n1=1,
-	but other values can be specified.
+<strong>Description: </strong>
+    Deprecated: see "create tri_group".
 </blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="create">create</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="layout">layout</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[ac[cdfs]defFKlrstT]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>Along with "repack", this is one of the key commands in CirclePack:
@@ -1847,15 +1867,16 @@ the new path.</td></tr>
 <tr><td width="25%" valign="top">-d [v]</td>
 <td width="65%" align="left"> comp centers using current draw order; report 
 	position(s) of vertex v</td></tr>
-<tr><td width="25%" valign="top">-e {e..}</td>
-<td width="65%" align="left"> redo drawingorder with given edgelist as 
-	desired outer boundary. (These edges are declared as 'poison' before
- 	the drawing order is computed; also see 'set_poison' for
- 	poison vertices.)</td></tr>
+<tr><td width="25%" valign="top">-dt [v]</td>
+<td width="65%" align="left"> for torus packings only; arrange for just two side
+	pairings. Optional, report positions of the corner.</td></tr>
+<tr><td width="25%" valign="top">-v {v..}</td>
+<td width="65%" align="left"> redo drawingorder with given vertex list defining 
+	the outer boundary.</td></tr>
 <tr><td width="25%" valign="top">-f {f..}</td>
 <td width="65%" align="left"> redo drawingorder with given facelist as a
 		   (putative) red chain; the outside edges of the faces
-		    are used to set poison edges.</td></tr>
+		    are set as forbidden.</td></tr>
 <tr><td width="25%" valign="top">-F [P]</td>
 <td width="65%" align="left"> redo everything (aims reset to default) ('P' flag means use 'poison' verts/edges)</td></tr>
 <tr><td width="25%" valign="top">-K</td>
@@ -1983,7 +2004,7 @@ these packings and the corresponding object is displayed in both.
 	resulting list in Vlist (or Flist). By default, index v of 
 	the active packing is translated to image index w (as 
 	specified in the vertex_map). If the '-r' flag is set,
-	this is reversed: w --> v.
+	this is reversed: w --> v; '-r' must be the first flag
 
 	Face numbers depend on packing layout, so translated face 
 	indices might be meaningless without some target pack q in 
@@ -1994,13 +2015,13 @@ these packings and the corresponding object is displayed in both.
 <blockquote>
 <table>
 <tr><td width="25%" valign="top">-r</td>
-<td width="65%" align="left"> translate via inverse of vertex_map</td></tr>
+<td width="65%" align="left"> translate via inverse of vertex_map (must appear first)</td></tr>
 <tr><td width="25%" valign="top">-v</td>
 <td width="65%" align="left"> circles (the default) (or -c)</td></tr>
 <tr><td width="25%" valign="top">-f</td>
 <td width="65%" align="left"> faces</td></tr>
-<tr><td width="25%" valign="top">-t{q}</td>
-<td width="65%" align="left"> vis-a-vis pack number q.</td></tr>
+<tr><td width="25%" valign="top">-q{q}</td>
+<td width="65%" align="left"> for faces only, vis-a-vis pack number q.</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
@@ -2008,6 +2029,9 @@ these packings and the corresponding object is displayed in both.
 <tr><td width="30%"><font color="blue">map a(1,10)</font></td>
 <td width="68%"> This will store the translated 
 	indices of circles 1-10 of the active pack in Vlist.</td></tr>
+<tr><td width="30%"></td>
+<td width="68%"> Store reverse translated indices of
+	all circlesin Vlist.</td></tr>
 <tr><td width="30%"><font color="blue">map -p1 -f -q2 b</font></td>
 <td width="68%"> This will store the bdry 
 	face indices of p1 into Flist, but will translate them to 
@@ -2112,6 +2136,17 @@ these packings and the corresponding object is displayed in both.
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="repack">repack</a>&nbsp;&nbsp; <a href="perp_pack">perp_pack</a>&nbsp;&nbsp; <a href="set_radii">set_radii</a>&nbsp;&nbsp; 
 <br/><br/>
+<font size="+1" color="blue"><strong><a name="meld_edge">meld_edge</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v w ..}&nbsp;&nbsp; </font>
+<blockquote>
+<strong>Description: </strong>This call will remove the specified edges by melding
+	their vertices. Edge order is important: given edge (v,w), 
+	the vertices are combined to a single vertex, with w being
+	orphaned. Applied carefully, this command can undo some 
+	other commands that add edges.
+</blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="split_edge">split_edge</a>&nbsp;&nbsp; <a href="split_flower">split_flower</a>&nbsp;&nbsp; <a href="enclose">enclose</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="mend">mend</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{data}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>(Not maintained robustly) Routine to fix small 
@@ -2147,11 +2182,12 @@ these packings and the corresponding object is displayed in both.
 	combinatorial modification mimicking the effect of having
 	advanced that slit along one additional edge. So it 
 	'migrates' a simple branch point at v to a simple branch 
-	point at neighbor w. There are combintoric restrictions:
+	point at neighbor w. There are combinatoric restrictions:
 	* v must have even degree, at least 6
 	* w and the neighbor ww opposite across v must have the
 	  same degree.
-	* v, w, and ww must be interior
+	* v, w, and ww must be interior.
+	This has worked well, for example, with hexagonal packings.
 	After the migration, the index of the new branch point is
 	reset to v as a convenience for further migrations.  
 </blockquote>
@@ -2239,7 +2275,7 @@ these packings and the corresponding object is displayed in both.
 	list of boundary edges, but it is essential for multiply
 	connected situations. It is generated automatically.
 	This command gives two options for redoing the red chain.
-	The -t option is only for topogical tori and recomputes
+	The -t option is only for topological tori and recomputes
 	the red chain so it has only two side-pairing (rather
 	than the generic three). The second option is to provide
 	a vertex list defining the red chain. This is difficult:
@@ -2248,7 +2284,7 @@ these packings and the corresponding object is displayed in both.
 	such as cutting out some vertices. One use is to make
 	small modifications to an existing red chain (display 
 	this using the '-R' option). On failure, this command
-	should not hurt the packing.
+	should not damage the packing.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
@@ -2370,15 +2406,16 @@ two side-pairings</td></tr>
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="outlist">outlist</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
-<strong>Description: </strong> (Technical) If the packing has a 'redchain' of faces (mainly 
-	in multiply	connected settings), this finds the chain of edges on the
-	outside (right-hand side) of the redfaces. The result is
-	stored as the packings 'elist' (note: old elist will be lost).
-	Generally used in conjunction with 'red_from_elist', which
-	converts from the elist to a new redchain. This is a mechanism
-	for preventing the wholesale readjustments due to layout that
-	occur when redfaces are computed automatically after changes
-	in combintorics, such as edge flips or slits.
+<strong>Description: </strong> (Technical, now OBE) If the packing has a
+	"red chain" (mainly in multiply connected settings), this finds 
+	the chain of edges on the outside (right-hand side) of the 
+	red chain. The result is stored as the packings 'elist' 
+	(note: old elist will be lost).	Generally used in conjunction 
+	with 'red_from_elist', which converts from the elist to 
+	a new redchain. This is a mechanism	for preventing the 
+	wholesale readjustments due to layout that occur when 
+	red chain data are computed automatically after changes
+	in combinatorics, such as edge flips or slits.
 </blockquote>
 <font size="+1" color="blue"><strong><a name="output">output</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[format] [-af] {filename}&nbsp;&nbsp; </font>
 <blockquote>
@@ -2529,14 +2566,14 @@ of the active packing on the canvas for packing p2</td></tr>
 <font size="+1" color="blue"><strong><a name="pave">pave</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>In working with 'tilings' in CirclePack it is often the
-case that the 'tiles' (combinatorial polygons) are the
-flowers of selected vertices, i.e. their 'barycenters'. This command
-seeds a tiling with a given vertex 'v' (defaulting to the active vertex
-or to 'alpha') as the
-barycenter of the initial tile, then defines the rest of the tiling
-by accretion of neighboring flowers as additional tiles. The results
-are stored in the packing's 'TileData', used for example, to display
-tiles. 
+    case that the 'tiles' (combinatorial polygons) are the
+    flowers of selected vertices, i.e. their 'barycenters'. This command
+    seeds a tiling with a given vertex 'v' (defaulting to the active vertex
+    or to 'alpha') as the
+    barycenter of the initial tile, then defines the rest of the tiling
+    by accretion of neighboring flowers as additional tiles. The results
+    are stored in the packing's 'TileData', used for example, to display
+    tiles. 
 
 Note that the process can be foiled by combinatorics, but works well 
 when the combinatorics were intended as the basis of a tiling, as 
@@ -2827,30 +2864,11 @@ bottom of postscript file.</td></tr>
 <strong>Description: </strong>See "get_data". The same comments apply here, only the data is
 	moved FROM the active pack TO pack q. The -t flag means to 
 	translate using the vertex_map of the active packing, if it has
-	one. (The -v and -V options of get_data do not apply here).
+	one. (The -v and -V options of 'get_data' do not apply here).
 </blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; Data specification flags:</strong>
-<blockquote>
-<table>
-<tr><td width="25%" valign="top">-r</td>
-<td width="65%" align="left"> radii</td></tr>
-<tr><td width="25%" valign="top">-z</td>
-<td width="65%" align="left"> centers</td></tr>
-<tr><td width="25%" valign="top">-a</td>
-<td width="65%" align="left"> aims</td></tr>
-<tr><td width="25%" valign="top">-s</td>
-<td width="65%" align="left"> angle sums</td></tr>
-<tr><td width="25%" valign="top">-c</td>
-<td width="65%" align="left"> circle colors</td></tr>
-<tr><td width="25%" valign="top">-m</td>
-<td width="65%" align="left"> vertex 'mark'</td></tr>
-<tr><td width="25%" valign="top">-f</td>
-<td width="65%" align="left"> face colors</td></tr>
-<tr><td width="25%" valign="top">-fm</td>
-<td width="65%" align="left"> face marks</td></tr>
-<tr><td width="25%" valign="top">-o</td>
-<td width="65%" align="left"> inversive distances (for edges)</td></tr>
-</table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="get_data">get_data</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="pwd">pwd</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
 <strong>Description: </strong>Give the working directory. You can use 'cd'
@@ -2991,7 +3009,7 @@ vertices</td></tr>
 	
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="Read">Read</a>&nbsp;&nbsp; <a href="readLite">readLite</a>&nbsp;&nbsp; <a href="delaunay">delaunay</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href="Read">Read</a>&nbsp;&nbsp; <a href="delaunay">delaunay</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="Read">Read</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{filename}&nbsp;&nbsp; </font>
 <blockquote>
@@ -3001,28 +3019,7 @@ vertices</td></tr>
 	is allowed.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="read">read</a>&nbsp;&nbsp; <a href="ReadLite">ReadLite</a>&nbsp;&nbsp; 
-<br/><br/>
-<font size="+1" color="blue"><strong><a name="readLite">readLite</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{filename}&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong>
-	There is a 'PackLite' compressed form of packing data
-	useful for more efficient communication and for arranging
-	indices to match Orick's packing algorithm. This reads a
-	file in that form: see the help 'DataFormats' tab.
-</blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="ReadLite">ReadLite</a>&nbsp;&nbsp; <a href="writeLite">writeLite</a>&nbsp;&nbsp; 
-<br/><br/>
-<font size="+1" color="blue"><strong><a name="ReadLite">ReadLite</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{filename}&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong>
-	Same as "readLite", except default directory is not prepended 
-	to the filename, so an explicit path (possibly starting '~/')
-	is allowed.
-</blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="readLite">readLite</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href="read">read</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="read_CT">read_CT</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-q{p}] {filename}&nbsp;&nbsp; </font>
 <blockquote>
@@ -3140,6 +3137,7 @@ script and append it to 'ClosedPath'.</td></tr>
 <font size="+1" color="blue"><strong><a name="red_from_elist">red_from_elist</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
 <strong>Description: </strong>
+	OBE. See 'newRed' 
 	Uses 'elist' to create a 'redfaces' chain for the packing,
 	with the elist as the edgelist on the outside of the red chain.
 	Generally used in conjunction with 'outlist', which goes the
@@ -3178,13 +3176,11 @@ script and append it to 'ClosedPath'.</td></tr>
 <font size="+1" color="blue"><strong><a name="ring">ring</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
-	This modifies the packings combinatorics by adding a "ring" of
-	n new vertices around each specified vertex v, where n is the
-	degree of v. This ring separates v from it original flower. The
-	new vertices have degree 5. If v is a boundary vertex, then 
-	new boundary vertices are also added on each side, separating v
-	from it former boundary neighbors.
+	OBE: see "frackMe"
 </blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="frackMe">frackMe</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="rld">rld</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
 <strong>Description: </strong>
@@ -3206,7 +3202,7 @@ script and append it to 'ClosedPath'.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="rm_edge">rm_edge</a>&nbsp;&nbsp; <a href="rm_quad">rm_quad</a>&nbsp;&nbsp; <a href="rm_cir">rm_cir</a>&nbsp;&nbsp; 
 <br/><br/>
-<font size="+1" color="blue"><strong><a name="rm_cir">rm_cir</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v}&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="rm_cir">rm_cir</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
 	Given a qualifying boundary or interior trivalent 
@@ -3840,7 +3836,7 @@ enters legal halfedges from the list</td></tr>
 <font size="+1" color="blue"><strong><a name="set_Hlist">set_Hlist</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{e..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
-	Same as above, only stores indices in utility "Elist".
+	Same as above, only stores indices in utility "Hlist".
 	(Validity check against active pack.)
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
@@ -3918,22 +3914,32 @@ the existing 'Hlist'</td></tr>
 <td width="68%"> The inversive distances for all interior 
 	edges are set to 1.25</td></tr>
 </table></blockquote>
-<font size="+1" color="blue"><strong><a name="set_Mobius">set_Mobius</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{a.re a.im b.re b.im c.re c.im d.re d.im flip}&nbsp;&nbsp; </font>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="set_overlaps">set_overlaps</a>&nbsp;&nbsp; 
+<br/><br/>
+<font size="+1" color="blue"><strong><a name="set_Mobius">set_Mobius</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options] -[f]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
 	CirclePack maintains a current Mobius transformation. It defaults
 	to the identity, but can be set to any other, whether orientation
-	preserving (flip=0) or orientation reversing (flip=1). The default
-	is to read in 8 real numbers, real and imaginary parts for the standard four
-	complex entries a, b, c, and d, plus an integer 'flip' for 
-	orientation (flip is optional, default is 0). Alternatives are being
-	developed and are indicated with option flags. 
+	preserving (default) or orientation reversing ('-f' flag). If
+	there are no flags, then default is to read in 8 real numbers, real 
+	and imaginary parts for the standard four complex entries a, b, c, 
+	and d. Alternatives are based on halfedge chains defining closed
+	face chains: flags are passed to creating the halfedge chain, as
+	in 'set_hlist'. 
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
 <table>
 <tr><td width="25%" valign="top">-xyzXYZ x y z X Y Z</td>
-<td width="65%" align="left"> Mobius mapping complex numbers x y z to X Y Z</td></tr>
+<td width="65%" align="left"> Mobius mapping one triple of 
+    complex numbers to another</td></tr>
+<tr><td width="25%" valign="top">-[]</td>
+<td width="65%" align="left"> holonomy along halfedge chain built using these flags;
+    e.g., '-R 3' for redchain side 3.</td></tr>
+<tr><td width="25%" valign="top">{a.re a.im b.re b.im c.re c.im d.re d.im flip}</td>
+<td width="65%" align="left"> create explicitly</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
@@ -3945,6 +3951,9 @@ the existing 'Hlist'</td></tr>
 <tr><td width="30%"><font color="blue">set_Mobius 1.0 0.0 0.0 -0.5 0.0 0.5 1.0 0.0</font></td>
 <td width="68%"> specifies the disc automorphism (z-i/2)/(z*i/2+1)</td></tr>
 </table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href=" set_hlist">set_hlist</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="set_over">set_over</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[option] {{x} (v w)..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
@@ -4724,9 +4733,10 @@ of circles with that particular edge displayed.</td></tr>
 	oriented cycle {v,u,v',w} bounds the two faces sharing edge 
 	{v',v}. The new vertex v' is given the maximal index in the 
 	packing. Any stored data in 'flist' and 'xyzpoint' is lost.
+	To undo the split, call 'meld_edge'.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="split_edge">split_edge</a>&nbsp;&nbsp; <a href="add_bary">add_bary</a>&nbsp;&nbsp; <a href="add_edge">add_edge</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href="split_edge">split_edge</a>&nbsp;&nbsp; <a href="meld_edge">meld_edge</a>&nbsp;&nbsp; <a href="add_bary">add_bary</a>&nbsp;&nbsp; <a href="add_edge">add_edge</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="socketServe">socketServe</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">n&nbsp;&nbsp; </font>
 <blockquote>
@@ -4822,6 +4832,14 @@ of circles with that particular edge displayed.</td></tr>
 <tr><td width="25%" valign="top">-n k</td>
 <td width="65%" align="left"> total passes, default 200</td></tr>
 </table></blockquote>
+<font size="+1" color="blue"><strong><a name="torpack [A B]">torpack [A B]</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
+<blockquote>
+<strong>Description: </strong>
+	If the active packing is a combinatorial packing, then
+	this we create an affine torus with two side-pairings
+	having affine scaling by factors A and B, defaulting to
+	1 and 1.
+</blockquote>
 <font size="+1" color="blue"><strong><a name="torus_t">torus_t</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
 <strong>Description: </strong>
@@ -5105,39 +5123,6 @@ Any combination of these:
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="write">write</a>&nbsp;&nbsp; <a href="write_carrier">write_carrier</a>&nbsp;&nbsp; 
 <br/><br/>
-<font size="+1" color="blue"><strong><a name="writeLite">writeLite</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[rzib] -[AG] -v {v..} -[fs] {file}&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong>
-    A "Lite" packing is one with data compressed into a 
-    of values stream. It also allows a subset of vertices to
-    be selected: we cut out this core and adjoin any neighboring
-    vertices. We also re-index the packing, primarily to be
-    used with Orick-type packing algorithms, which need the
-    boundary vertices to appear last and in counterclockwise 
-    order. (See the "Data Formats" tab.)
-</blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
-<blockquote>
-<table>
-First flag is single string with any combination of these:
-<tr><td width="25%" valign="top">-r</td>
-<td width="65%" align="left"> include radii </td></tr>
-<tr><td width="25%" valign="top">-z</td>
-<td width="65%" align="left"> include radii </td></tr>
-<tr><td width="25%" valign="top">-i</td>
-<td width="65%" align="left"> non-default aims and/or inv distances</td></tr>
-<tr><td width="25%" valign="top">-b</td>
-<td width="65%" align="left"> add ideal vertices to bdry components except the outer one</td></tr>
-<tr><td width="25%" valign="top">default</td>
-<td width="65%" align="left">-rz</td></tr>
- Other options:
-<tr><td width="25%" valign="top">-A {a}</td>
-<td width="65%" align="left"> set an alpha vertex</td></tr>
-<tr><td width="25%" valign="top">-G {g}</td>
-<td width="65%" align="left"> set a gamma vertex (on bdry)</td></tr>
-<tr><td width="25%" valign="top">-v {v..}</td>
-<td width="65%" align="left"> vertices for core, default to interior vertices</td></tr>
-</table></blockquote>
 <font size="+1" color="blue"><strong><a name="write_custom">write_custom</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[option] -[fa] {file}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
@@ -5176,22 +5161,6 @@ faces. Puts out face centers and pairs of indices forming edges</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="write">write</a>&nbsp;&nbsp; <a href="Write">Write</a>&nbsp;&nbsp; 
 <br/><br/>
-<font size="+1" color="blue"><strong><a name="writeL(_raw)">writeL(_raw)</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{filename}&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong>
-	Writing data for subcomplex to file in "lite" packing 
-	format;	"_raw" stores data only, no keywords. The 'variable'
-	vertices of the lite packing are those "marked" in the 
-	packing; typical is to clear the markings with "mark -cw"
-	and then the default of all interior vertices takes over.
-</blockquote>
-<font size="+1" color="blue"><strong><a name="WriteL(_raw)">WriteL(_raw)</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{filename}&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong>
-	Same as "writeL", except default directory is not prepended 
-	to the filename, so an explicit path (possibly starting '~/')
-	is allowed.
-</blockquote>
 <font size="+1" color="blue"><strong><a name="write_path">write_path</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[s] {file}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
@@ -5243,17 +5212,17 @@ faces. Puts out face centers and pairs of indices forming edges</td></tr>
 <font size="+1" color="blue"><strong><a name="write_tiling">write_tiling</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-s&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
-Write a "tiling" ('TileData' subclass of 'PackData' class) to a file
-or to the script ('-s' option).
+    Write a "tiling" ('TileData' subclass of 'PackData' class) to a file
+	or to the script ('-s' option).
 
-A "tiling" is a combinatorial, locally planar pattern of tiles, where
-each tile is an n-gon for some n (at least 3) and is defined by the
-counterclockwise ordered closed list of its corner vertices. (Each tile
-also has a 'type' reserved for future use.) See 'Help --> Formats' 
-tab for the tiling file format. Note that when a tiling is read in, 
-a barycentric subdivision is automatically generated, yielding a 
-standard packing complex: the vertices associated with the barycenters
-of the tiles are the larger indices.
+	A "tiling" is a combinatorial, locally planar pattern of tiles, where
+	each tile is an n-gon for some n (at least 3) and is defined by the
+	counterclockwise ordered closed list of its corner vertices. (Each tile
+	also has a 'type' reserved for future use.) See 'Help --> Formats' 
+	tab for the tiling file format. Note that when a tiling is read in, 
+	a barycentric subdivision is automatically generated, yielding a 
+	standard packing complex: the vertices associated with the barycenters
+	of the tiles are the larger indices.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
@@ -5434,8 +5403,7 @@ these or other functionality).
 	     ?vertexMap		If there is a "vertex_map", what are
 					indices (up to 12) associated with list?
 	     ?map_rev {v}       same, but return reverse association for
-				a single vertex. 
-	     ?edge_x_ratio {e..} cross-ratios of interior edges
+				a single vertex.
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>

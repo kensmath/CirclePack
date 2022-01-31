@@ -586,8 +586,6 @@ public class RandomTriangulation {
 			// prune
 			CombDCEL.pruneDCEL(p.packDCEL);
 			p.packDCEL.fixDCEL_raw(p);
-			p.poisonVerts=null;
-			p.poisonEdges=null;
 		} catch (Exception ex) {
 			throw new DataException("tri_to_Complex failed: "+ex.getMessage());
 		}

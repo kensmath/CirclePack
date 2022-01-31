@@ -903,10 +903,10 @@ public class DisplayParser {
 							EdgeSimple edge=null;
 							int lnum=tedgelist.size();
 							double[] corners = new double[2 * (lnum+1)];
-							int tick=0;
 							z=p.getCenter(((EdgeSimple)tedgelist.get(0)).v);
-							corners[tick*2]=z.x;
-							corners[tick*2+1]=z.y;
+							corners[0]=z.x;
+							corners[1]=z.y;
+							int tick=1;
 							while (tel.hasNext()) {
 								edge=tel.next();
 								z=p.getCenter(edge.w);

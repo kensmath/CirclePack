@@ -69,6 +69,9 @@ public class Tile extends Face {
 								//   index of the tile across edge 
 								//   (vert[j],vert[j+1]) (may be 0 for no 
 								//   nghb or this may be this same tile). 
+								//   e_j is the index of the first vertex
+								//   of the shared edge from perspective of 
+								//   tile t_j.
 								// In reading a tiling, the 't_j' are filled  
 								//   first and may be set temporarily negative, 
 								//   then the 'e_j' are determined and 
@@ -312,14 +315,34 @@ public class Tile extends Face {
 	}
 	
 	/**
-	 * Are v, w contiguous in 'vert'? Caution: does {v,w} form
-	 * an edge of 'this' tile? Sending routine has to get order
-	 * right. If yes, return index of the edge, else return -1; 
+	 * Are v and w cclw contiguous in 'vert'? i.e., does {v,w} 
+	 * form an edge of 'this'? If yes and v!=w, return index of 
+	 * that edge. 
+	 * 
+	 * Rarely, may be that v == w if a nghb tile is a 
+	 * unigon. This is okay unless 'this' is a digon, in which
+	 * case there may be ambiguity since both edges 
+	 * would be {v,v}. However, is tileFlower is not set, we 
+	 * can just choose, so return 0. 
 	 * @param v int
 	 * @param w int
-	 * @return int, index of edge, -1 on no match
+	 * @return int, index of edge, -1 if no match
 	 */
 	public int isTileEdge(int v,int w) {
+		
+		// special case
+		if (v==w) {
+			if (vertCount==1)
+				return -1;
+			if (vertCount==2) {
+				if (tileFlower==null || tileFlower[1][0]!=0)
+					return 0;
+				else
+					return 1;
+			}
+		}
+		
+		// typical search
 		if (vert[0]==w && vert[vertCount-1]==v)
 			return vertCount-1;
 		for (int i=0;i<(vertCount-1);i++)

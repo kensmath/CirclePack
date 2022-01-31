@@ -114,9 +114,10 @@ public abstract class PackExtender {
 	}
 	
 	/**
-	 * Replace 'this.packData' with a copy of 'newPD'. Maintain 
-	 * 'this' as PackExtension, but no others. Any particular 
-	 * PackExtender may have additional cleanup to do.
+	 * Replace 'this.packData' with a copy of 'newPD', including
+	 * a copyt of 'tileData'. Maintain 'this' as PackExtension, but 
+	 * no others. Any particular PackExtender may have additional 
+	 * cleanup to do.
 	 * @param newPD PackData
 	 * @return NodeCount, 0 on error
 	 */

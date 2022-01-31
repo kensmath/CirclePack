@@ -175,7 +175,7 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="infile_read">infile_read</a></strong></font><font face="sans-serif" size="-1">&nbsp; {name}</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="j_ftn">j_ftn</a></strong></font><font face="sans-serif" size="-1">&nbsp; {n0 n1 maxsize}</font><br/>
+<strong> <font size="-2"><a class="llink" href="j_ftn">j_ftn</a></strong></font><font face="sans-serif" size="-1">&nbsp; {maxgens n0 n1}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="layout">layout</a></strong></font><font face="sans-serif" size="-1">&nbsp; -[ac[cdfs]defFKlrstT]</font><br/>
 
@@ -194,6 +194,8 @@ A:link {text_decoration: none}</style>
 <strong> <font size="-2"><a class="llink" href="match">match</a></strong></font><font face="sans-serif" size="-1">&nbsp; -q{q} v w {V W}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="max_pack">max_pack</a></strong></font><font face="sans-serif" size="-1">&nbsp; [-r{v}] [k]</font><br/>
+
+<strong> <font size="-2"><a class="llink" href="meld_edge">meld_edge</a></strong></font><font face="sans-serif" size="-1">&nbsp; {v w ..}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="mend">mend</a></strong></font><font face="sans-serif" size="-1">&nbsp; {data}</font><br/>
 
@@ -271,10 +273,6 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="Read">Read</a></strong></font><font face="sans-serif" size="-1">&nbsp; {filename}</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="readLite">readLite</a></strong></font><font face="sans-serif" size="-1">&nbsp; {filename}</font><br/>
-
-<strong> <font size="-2"><a class="llink" href="ReadLite">ReadLite</a></strong></font><font face="sans-serif" size="-1">&nbsp; {filename}</font><br/>
-
 <strong> <font size="-2"><a class="llink" href="read_CT">read_CT</a></strong></font><font face="sans-serif" size="-1">&nbsp; [-q{p}] {filename}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="Read_CT">Read_CT</a></strong></font><font face="sans-serif" size="-1">&nbsp; [-q{p}] {filename}</font><br/>
@@ -299,7 +297,7 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="rm_bary">rm_bary</a></strong></font><font face="sans-serif" size="-1">&nbsp; {v..}</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="rm_cir">rm_cir</a></strong></font><font face="sans-serif" size="-1">&nbsp; {v}</font><br/>
+<strong> <font size="-2"><a class="llink" href="rm_cir">rm_cir</a></strong></font><font face="sans-serif" size="-1">&nbsp; {v..}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="rm_edge">rm_edge</a></strong></font><font face="sans-serif" size="-1">&nbsp; [option] {v w..}</font><br/>
 
@@ -371,7 +369,7 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="set_invdist">set_invdist</a></strong></font><font face="sans-serif" size="-1">&nbsp; [option] {{x} (v w)..}</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="set_Mobius">set_Mobius</a></strong></font><font face="sans-serif" size="-1">&nbsp; {a.re a.im b.re b.im c.re c.im d.re d.im flip}</font><br/>
+<strong> <font size="-2"><a class="llink" href="set_Mobius">set_Mobius</a></strong></font><font face="sans-serif" size="-1">&nbsp; [options] -[f]</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="set_over">set_over</a></strong></font><font face="sans-serif" size="-1">&nbsp; [option] {{x} (v w)..}</font><br/>
 
@@ -455,6 +453,8 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="test_repack">test_repack</a></strong></font><font face="sans-serif" size="-1">&nbsp; [options]</font><br/>
 
+<strong> <font size="-2"><a class="llink" href="torpack [A B]">torpack [A B]</a></strong></font><font face="sans-serif" size="-1"></font><br/>
+
 <strong> <font size="-2"><a class="llink" href="torus_t">torus_t</a></strong></font><font face="sans-serif" size="-1"></font><br/>
 
 <strong> <font size="-2"><a class="llink" href="timer -[sx]">timer -[sx]</a></strong></font><font face="sans-serif" size="-1"></font><br/>
@@ -483,15 +483,9 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="Write">Write</a></strong></font><font face="sans-serif" size="-1">&nbsp; -[AcgirzavloftTmMy] {filename}</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="writeLite">writeLite</a></strong></font><font face="sans-serif" size="-1">&nbsp; -[rzib] -[AG] -v {v..} -[fs] {file}</font><br/>
-
 <strong> <font size="-2"><a class="llink" href="write_custom">write_custom</a></strong></font><font face="sans-serif" size="-1">&nbsp; -[option] -[fa] {file}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="write_carrier">write_carrier</a></strong></font><font face="sans-serif" size="-1">&nbsp; [option] {file}</font><br/>
-
-<strong> <font size="-2"><a class="llink" href="writeL(_raw)">writeL(_raw)</a></strong></font><font face="sans-serif" size="-1">&nbsp; {filename}</font><br/>
-
-<strong> <font size="-2"><a class="llink" href="WriteL(_raw)">WriteL(_raw)</a></strong></font><font face="sans-serif" size="-1">&nbsp; {filename}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="write_path">write_path</a></strong></font><font face="sans-serif" size="-1">&nbsp; -[s] {file}</font><br/>
 

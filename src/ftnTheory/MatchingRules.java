@@ -47,8 +47,6 @@ public class MatchingRules extends PackExtender {
 		registerXType();
 		if (running) {
 			packData.packExtensions.add(this);
-			packData.poisonEdges=null;
-			packData.poisonVerts=null;
 		}
 	}
 

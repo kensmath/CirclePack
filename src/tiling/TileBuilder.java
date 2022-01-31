@@ -4,6 +4,8 @@ import java.util.Iterator;
 
 import allMains.CirclePack;
 import dcel.CombDCEL;
+import dcel.HalfEdge;
+import dcel.Vertex;
 import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.ParserException;
@@ -13,7 +15,8 @@ import listManip.VertexMap;
 import packing.PackData;
 
 /**
- * TileBuilder is intended for building 'TileData' structures and their packings.
+ * TileBuilder is intended for building 'TileData' structures 
+ * and their packings.
  * 
  * NOTE: We assume our tiling is simply connected --- there are 
  * too many problems to consider for the multiply connected cases.
@@ -69,7 +72,7 @@ public class TileBuilder {
 	public TileBuilder(TileData td) {
 		masterPack=null;
 		origTD=td;
-		origCount=origTD.myTiles.length-1;
+		origCount=origTD.tileCount;
 		growTD=new TileData(origCount,td.builtMode);
 		
 		// keep track: tiles added, tiles full
@@ -78,17 +81,23 @@ public class TileBuilder {
 	}
 
 	/**
-	 * Build associated full barycentric complex for origTD: that is,
-	 * every n-tile is barycentrically subdivided to form 2n triangles, and
-	 * these are then barycentrically subdivided. (This is required, e.g., 
-	 * to handle unigons, digons, and slits.) Vertices get marks {1,2,3}
-	 * if they are, resp, baryVert, original corner, edge barycenter (
-	 * for Belyi map values {infty, 0,1}. Also, barycenter of each hex
-	 * face is marked -1.
+	 * Build associated full barycentric complex for origTD: 
+	 * that is, every n-tile is barycentrically subdivided to 
+	 * form 2n triangles, and these are then barycentrically 
+	 * subdivided. (This is required, e.g., to handle unigons, 
+	 * digons, and slits.) Vertices get marks {1,2,3} if they 
+	 * are, resp, baryVert, original corner, edge barycenter 
+	 * (for Belyi map values {infty, 0,1}). Also, barycenter 
+	 * of each hex face is marked -1.
 	 * 
 	 * Strategy:
 	 * * we work purely from 'tileFlower' data, so we discard and 
 	 *   reconstitute all vert indices using 'tileflowers2verts'.
+	 *   
+	 * TODO: See if this first step can be avoided and we can
+	 *   restore the original indices for the verties of the
+	 *   original tiles.
+	 *   
 	 * * We create a packing for each tile as needed: barycentrically 
 	 *   subdivided 2n-gon, recording original corner indices from 
 	 *   tile (tile_v,pack_v) in its 'VertexMap'.
@@ -104,7 +113,11 @@ public class TileBuilder {
 	 *   paste it in, then look for any self-pastings this may lead 
 	 *   to for 'masterPack' itself.
 	 * * We paste, adjust the 'VertexMap', and iterate until all tiles 
-	 *   are in and all non-bdry tile edges are pasted.
+	 *   are included and all non-bdry tile edges are pasted.
+	 * * We build 'dual', 'quad', and 'wg' tilings.
+	 * 
+	 * The resulting packing and its tile data should be the
+	 * full deal, builtMode=3.
 	 * @return PackData with attached TileData, null on error
 	 */
 	public PackData fullfromFlowers() {
@@ -112,10 +125,14 @@ public class TileBuilder {
 		boolean debug=false; // debug=true;
 		
 		// check that all tiles have 'tileFlower's
-		for (int t=1;t<=origTD.tileCount;t++) {
+		boolean noflower=false;
+		for (int t=1;(t<=origTD.tileCount && !noflower);t++) {
 			Tile otile = origTD.myTiles[t];
 			if (otile.tileFlower==null)
-				throw new CombException("tile "+t+" has no 'tileFlower'");
+				noflower=true;
+		}
+		if (noflower) {
+			TileData.setTileFlowers(origTD); // DebugHelp.printtileflowers(origTD);
 		}
 
 		// throw out the original vertex indices and rebuild from flowers
@@ -136,7 +153,7 @@ public class TileBuilder {
 					"from 'tileFlowers'");
 		}
 		
-		// mark missing tiles as "done".
+		// mark missing tiles as "done". (e.g. disconnected tile)
 		for (int t=1;t<=origCount;t++)
 			if (origTD.myTiles[t]==null)
 				tileAdded[t]=1;
@@ -176,7 +193,6 @@ public class TileBuilder {
 		// do any slit-sewing, unigon swallowing that's needed
 		boolean keepup=true;
 		while (keepup) {
-			keepup=false;
 			keepup=false;
 			boolean newslit=sewOneSlit();
 			boolean newunigon=swallowOneUnigon();
@@ -272,7 +288,8 @@ public class TileBuilder {
 		} // end of while to get unattached files
 			
 		if (safety<=0)
-			throw new ParserException("ran through unattached safety fence in building growTD");
+			throw new ParserException(
+					"hit 'unattached' safety fence in building growTD");
 
 		// check for missing tiles and set 'hit' if there are unpasted edges
 		hit=false;
@@ -442,32 +459,25 @@ public class TileBuilder {
 			Tile tile=p.tileData.myTiles[t];
 			int bv=tile.baryVert;
 			int num=p.countFaces(bv);
-
-			// processing requries adjusting flower of baryVert so flower[0] 
-			// is in direction of vert[0]
-			// TODO: to handle dual tilings consistently, have to consider 
-			//       case that baryVert is on the boundary (and tile bdry 
-			//       goes through it. Best if vert[0] is required to be 
-			//       flower[0] in this case from the beginning.
-			int offset=-1;
-			int[] myflower=p.getFlower(bv);
-			for (int k=0;(k<num && offset<0);k++) {
-				int m=myflower[k];
-				if (p.countFaces(m)==4 && p.nghb(m, tile.vert[0])>=0)
-					offset=k;
-			}
-			if (offset<0) {
-				throw new CombException("Tile "+t+" (center "+bv+") "+
-					"refined flower has some problem");
-			}
-			if (offset>0) {
-				int []newflower=new int[num+1];
-				for (int k=0;k<num;k++)
-					newflower[k]=myflower[(k+offset)%num];
-				newflower[num]=newflower[0];
-				myflower=newflower;
-			}
 			
+			// want 'halfedge' to be that going toward vert[0].
+			Vertex vert=p.packDCEL.vertices[bv];
+			HalfEdge he=vert.halfedge;
+			HalfEdge wanthe=null; // the edge we want
+			do {
+				HalfEdge left=he.next.twin.next;
+				HalfEdge right=he.twin.prev.twin.prev.twin;
+				if (left.twin.origin.vertIndx==tile.vert[0] && left==right) { 
+					wanthe=he;
+					break;
+				}
+				he=he.prev.twin; // cclw
+			} while (wanthe==null && he!=vert.halfedge);
+			if (wanthe==null)
+				throw new CombException("didn't find edge toward vert[0]");
+			vert.halfedge=wanthe;
+			int[] myflower=p.getFlower(bv);
+
 			tile.wgIndices=new int[2*tile.vertCount];
 			
 			// visit sectors of the tile in succession
@@ -496,7 +506,7 @@ public class TileBuilder {
 				wgtile.augVertCount=6;
 				wgtile.augVert=new int[6];
 				wgtile.mark=-1; // negatively oriented 
-				baryV=itsflower[4*j+3]; // its barycenter
+				baryV=myflower[4*j+3]; // its barycenter
 				wgtile.tileIndex=wgtick++;
 				p.setVertMark(baryV,-wgtile.tileIndex); // store neg of index in baryVert.mark
 				tile.wgIndices[2*j+1]=wgtile.tileIndex; // point to wgTile index
@@ -1091,13 +1101,14 @@ public class TileBuilder {
 	
 	/**
 	 * This routine adds tile vertices to tiles of 'td'
-	 * based entirely on 'td's tileFlowers. In special 
+	 * based entirely on 'td's tileFlowers. This accommodates
 	 * cases, such as existence of uniqons, digons, slits, 
 	 * or self-pastings (e.g., perhaps non-simply connected 
-	 * surfaces), we must specify the tiling using 'tileFlower' 
-	 * information, as when it was read from a file with data 
-	 * in form 'TILEFLOWERS:'. Return nodecount of vertex 
-	 * indices, -1 on failure (e.g., if 'tileflowers' are 
+	 * surfaces), where we must specify the tiling using 
+	 * 'tileFlower' information (as when it was read from a 
+	 * file with data in form 'TILEFLOWERS:'). 
+	 * 
+	 * Return nodecount, -1 on failure (e.g., if 'tileflowers' are 
 	 * not set in 'td');
 
 	 * @param td TileData

@@ -324,7 +324,8 @@ public class ScriptLoader {
 			Node domchild=(Node)(domChildren).item(j);
 			if (domchild.getNodeName().equals("CPscript")) hit=1;
 		}
-		if (hit==0) throw new ScriptException("first node wasn't 'CPscript'");
+		if (hit==0) 
+			throw new ScriptException("first node wasn't 'CPscript'");
 
 		// go ahead, assume okay; on error, go to default 
 		manager.rootNode.displayString = manager.scriptName;

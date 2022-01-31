@@ -150,9 +150,6 @@ public class PackData{
     public PointLink zlist;   // pack utility complex point list
     public BaryLink blist;    // pack utility barycentric point list
     public VertexMap vertexMap;// optional map of (some) indices 
-    public EdgeLink poisonEdges; // traditional
-    public HalfLink poisonHEdges; // migrate to this
-    public NodeLink poisonVerts; //
     public Point3D[] xyzpoint;  // TODO: should be vector? pointer to associated 3D coords
     public Vector<Double> utilDoubles;  // utility vector to hold doubles (caution: indexed from 0)
     public Vector<Integer> utilIntegers;  // utility vector to hold integers
@@ -162,15 +159,12 @@ public class PackData{
     // combinatoric 
     public int[] bdryStarts;  // indices for verts starting the bdry components (indexed from 1) 
     public int firstFace;     // index of first face in plotting order
-    public int[] fUtil;       // temp utility flags; user de/allocates as needed.
     public int packNum;		// lies between 0 and CPBase.NUM_PACKS-1  
 
     // utility variables passing info in methods -- use immediately after method call!
     public int util_A;
     public int util_B;
     public boolean util_bool;
-    
-    public String[] ListText=new String[3]; // utility area for 'List' tab strings
 
     public CPScreen cpScreen; // pointer to screen associated with this packdata 
     
@@ -196,11 +190,6 @@ public class PackData{
         // Note: creating new speculative PackData sets, use 'null' CPScreen until finished. 
         if (cpScreen !=null) packNum = cpScreen.getPackNum();
         else packNum=CPBase.NUM_PACKS; // temporary number
-    	ListText[0]=new String("");
-    	ListText[1]=new String("");
-    	ListText[2]=new String("");
-    	poisonEdges=null;
-    	poisonVerts=null;
     	xyzpoint=null;
     	alloc_pack_space(500,false);
     	packExtensions=new Vector<PackExtender>(2);
@@ -792,8 +781,6 @@ public class PackData{
                     	blist=null;
                     	vertexMap=null;
                     	xyzpoint=null;
-                    	poisonEdges=null;
-                        poisonVerts=null;  
                     } // done with "FLOWERS", "BOUQUET", or "TILES"
                     else if (state==PackState.TRIANGULATION && !gotFlowers) {
                     	Triangulation tri=new Triangulation();
@@ -843,8 +830,6 @@ public class PackData{
                			this.blist=null;
                			this.vertexMap=null;
                			this.xyzpoint=null;
-                       	this.poisonEdges=null;
-                       	this.poisonVerts=null;  
                        	this.packExtensions=new Vector<PackExtender>(2);
                        	
                        	// fix up 
@@ -873,8 +858,6 @@ public class PackData{
     				this.alpha=newPack.alpha;
     				this.gamma=newPack.gamma;
     				this.sizeLimit=newPack.sizeLimit;
-    				this.poisonEdges=newPack.elist;
-    				this.poisonVerts=newPack.vlist;
     				this.vertexMap=null;
     				this.xyzpoint=null;
     				this.vlist=null;
@@ -1939,7 +1922,6 @@ public class PackData{
             for(int v = 0; v < sizeLimit+1; v++) {
                	newV[v]=new VData();
             }
-            fUtil=null;
             xyzpoint=null;
             status=false;
             nodeCount=0;
@@ -2096,25 +2078,6 @@ public class PackData{
 		return this.gamma;
 	}
 	
-	/**
-	 * Sets the text string for this packing's vertex/edge/face list (n=0/1/2). 
-	 * @param n int
-	 * @param listtext String
-	 */
-	public void setListText(int n,String listtext) {
-		if (n<0 || n>2) return;
-		ListText[n]=new String(listtext);
-	}
-
-	/**
-	 * Gets the text string for this packing's vertex/edge/face list (n=0/1/2).
-	 * @param n
-	 */
-	public String getListText(int n) {
-		if (n<0 || n>2) return (new String(""));
-		return new String(ListText[n].toString());
-	}
-
 	/**
 	 * Returns string listing key data on this circle packing.
 	 * @return String
@@ -2694,12 +2657,15 @@ public class PackData{
 	 * @return int index, -1 on problem
 	 */
 	public int nghb(int v,int w) {
-		if (v<1 || v>nodeCount || w<1 || w>nodeCount) 
-			return -1;
-		int[] flower=getFlower(v);
-		for (int j=0;j<=countFaces(v);j++)
-			if (flower[j]==w) 
+		HalfEdge vhe=packDCEL.vertices[v].halfedge;
+		HalfEdge he=vhe;
+		int j=0;
+		do {
+			if (he.twin.origin.vertIndx==w)
 				return j;
+			he=he.prev.twin;
+			j++;
+		} while (he!=vhe);
 		return -1;
 	}
 	
@@ -3488,44 +3454,6 @@ public class PackData{
 		}
 		return bcount;
 	}
-
-	/** 
-	 * Return true if this edge is poison, false otherwise.
-	 * If 'poisonEdges' is non-null, we only check if {v,w} is in it;
-	 * otherwise, check if both endpoints are in 'poisonVerts'. 
-	 * (have utilFlag == -1).
-	 * @param v int
-	 * @param w int
-	 * @return boolean
-	*/
-	public boolean edge_isPoison(int v,int w) {
-		if (poisonEdges!=null) {
-			Iterator<EdgeSimple> pe=poisonEdges.iterator();
-			while (pe.hasNext()) {
-				EdgeSimple edge=(EdgeSimple)pe.next();
-				if ((edge.v==v && edge.w==w) || (edge.w==v && edge.v==w)) 
-					return true;
-			}
-			return false;
-		}
-		return (vert_isPoison(v) && vert_isPoison(w));
-	} 
-
-	/** 
-	 * Return true if this vert is poison, false otherwise. If
-	 * 'poisonEdges' is not null, then check only if 'v' is an 
-	 * endpoint of a poison edge. Otherwise, check if 'v' is in
-	 * 'poisonVerts'.
-	 * @param v int
-	 * @return boolean 
-	*/
-	public boolean vert_isPoison(int v) {
-	  if (poisonEdges!=null && (poisonEdges.findV(v)>0 || poisonEdges.findW(v)>0))
-			  return true;
-	  if (poisonVerts!=null && poisonVerts.containsV(v)>=0) 
-		  return true;
-	  return false;
-	} 
 
 	/**
 	 * Return incircle of face f. Note: this is the incircle of the
@@ -8458,36 +8386,6 @@ public class PackData{
 			} // end of switch
 		} // end of while through flags
 		return count;
-	}
-
-	/** 
-	 * 'Poison' verts and edge are typically used to help define 
-	 * subcomplexes, as in the cookie process or in layouts and
-	 * dual graphs. Default to circles; '-e' flag for edges.
-	 * Previous contents are lost; use 'P' flag to retain,
-	 * as in 'set_poison P 7 8'. 
-	 * @param items Vector<String>
-	 * @return int, size of 'poisonVerts' or 'poisonEdges' array
-	*/
-	public int set_poison(Vector<String> items) {
-		boolean circs=true;
-		if (items!=null && items.size()>0 && StringUtil.isFlag(items.get(0))) {
-			String fstr=items.remove(0);
-			if (fstr.startsWith("-e"))
-				circs=false;
-		}
-		if (circs) {
-			poisonVerts=new NodeLink(this,items);
-			if (poisonVerts==null) 
-				return 0;
-			return poisonVerts.size();
-		}
-		else {
-			poisonEdges=new EdgeLink(this,items);
-			if (poisonEdges==null) 
-				return 0;
-			return poisonEdges.size();
-		}
 	}
 
 	/**

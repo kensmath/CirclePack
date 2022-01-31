@@ -85,7 +85,7 @@ IF .. THEN .. (ELSE ..)
 infile_cmds {name} 
 infile_path [-a] {name} 
 infile_read {name} 
-j_ftn {n0 n1 maxsize} 
+j_ftn {maxgens n0 n1} 
 layout -[ac[cdfs]defFKlrstT] 
 legal [options] [{e..}] 
 load_pack -[f] 
@@ -95,6 +95,7 @@ map [options] {v..}
 mark [options] 
 match -q{q} v w {V W} 
 max_pack [-r{v}] [k] 
+meld_edge {v w ..} 
 mend {data} 
 migrate v w 
 Mobius [s] {v..} (or Mobius_inv [s] {v..}) 
@@ -133,8 +134,6 @@ random_pack [options] N
 random_triangulation [options] 
 read {filename} 
 Read {filename} 
-readLite {filename} 
-ReadLite {filename} 
 read_CT [-q{p}] {filename} 
 Read_CT [-q{p}] {filename} 
 read_color [options] {filename} 
@@ -147,7 +146,7 @@ repack [options] [k]
 ring {v..} 
 rld 
 rm_bary {v..} 
-rm_cir {v} 
+rm_cir {v..} 
 rm_edge [option] {v w..} 
 rm_quad {v w} 
 rotate {a} 
@@ -183,7 +182,7 @@ set_grid -[crg] -[n]
 set_hlist [options] {v w, ..} 
 set_Hlist {e..} 
 set_invdist [option] {{x} (v w)..} 
-set_Mobius {a.re a.im b.re b.im c.re c.im d.re d.im flip} 
+set_Mobius [options] -[f] 
 set_over [option] {{x} (v w)..} 
 set_path_text {text} 
 set_path [{text}] 
@@ -225,6 +224,7 @@ surf_write [option] {f..}
 svg [-c{} {v..}] -f {filename.html} 
 swap [-cma] {v w} 
 test_repack [options] 
+torpack [A B] 
 torus_t 
 timer -[sx] 
 transition {filename} 
@@ -239,11 +239,8 @@ weld {p} {q} {v} {w} [options]
 weld_map {p} {q} {v} {w} {filename} [-gm] 
 write -[AcdegirRzZavloftmMy] {filename} 
 Write -[AcgirzavloftTmMy] {filename} 
-writeLite -[rzib] -[AG] -v {v..} -[fs] {file} 
 write_custom -[option] -[fa] {file} 
 write_carrier [option] {file} 
-writeL(_raw) {filename} 
-WriteL(_raw) {filename} 
 write_path -[s] {file} 
 Write_path {file} 
 write_select_radii {file} {v..} 
@@ -260,30 +257,16 @@ zip n v
 ?aim {v} 
 ?anglesum {v} 
 ?antip {v...} 
-?area {f...}
 ?cent {v} 
 ?count {..} 
-?DCEL
-?energy -[chlm]
-?edge_x {v w ..}
+?energy -[chlm] 
 ?flower {v} 
 ?f(z) {x [y]} 
 ?gam(t) {t} 
-?invdist {v w}
-?mark -[vft] {j...}
-?mob
-?nodeCount
-?packNum
-?Redchain 
-?rad {v...}
+?invdist {v w} 
 ?schwarz {v w} 
-?sch_flower {v...}
-?screen
-?socket
-?status
 ?mark -[vft] {.} 
 ?rad {v} 
-?vertmap
 #XY 
 [{script cmd}] 
 {..cmd..} 
