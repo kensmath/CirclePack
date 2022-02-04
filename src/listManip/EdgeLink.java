@@ -8,10 +8,10 @@ import java.util.Vector;
 import allMains.CPBase;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.D_SideData;
+import dcel.SideData;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RedHEdge;
+import dcel.RedEdge;
 import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.ParserException;
@@ -573,12 +573,12 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			  } while (its.hasNext()); // eating rest of 'items'
 
 			  // now to traverse the 'RedEdge's in chosen segments
-			  Iterator<D_SideData> sp=packData.getSidePairs().iterator();
-			  D_SideData ep=null;
-			  RedHEdge rlst=null;
+			  Iterator<SideData> sp=packData.getSidePairs().iterator();
+			  SideData ep=null;
+			  RedEdge rlst=null;
 			  int tick=0;
 			  while (sp.hasNext()) {
-				  ep=(D_SideData)sp.next();
+				  ep=(SideData)sp.next();
 				  if (tag[tick++]) { // yes, do this one
 					  rlst=ep.startEdge;
 					  do {

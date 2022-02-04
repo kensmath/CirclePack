@@ -19,23 +19,22 @@ import util.ColorUtil;
  * @author kstephe2
  *
  */
-public class Face {
+public class DcelFace {
 
 	public HalfEdge edge; // 'this' is on the left of its halfedge
 	public int faceIndx;  // utility index for this face
 	public Color color;
 	public int mark;
-	public int plotFlag;
 	public int util;
 	
 	// Constructor(s)
-	public Face() {
+	public DcelFace() {
 		edge=null;
 		faceIndx=0;
 		color=ColorUtil.getFGColor();
 	}
 	
-	public Face(int i) {
+	public DcelFace(int i) {
 		this();
 		faceIndx=i;
 	}
@@ -49,7 +48,7 @@ public class Face {
 	 * @param v int
 	 * @return Face, null on error
 	 */
-	public Face faceOpposite(int v) {
+	public DcelFace faceOpposite(int v) {
 		HalfEdge he=edge;
 		int safety=4;
 		do {
@@ -150,7 +149,7 @@ public class Face {
 	 * @param gface Face
 	 * @return HalfEdge, null if no shared edge
 	 */
-	public HalfEdge faceNghb(Face gface) {
+	public HalfEdge faceNghb(DcelFace gface) {
 		HalfEdge he=edge;
 		do {
 			if (he.twin.face==gface)
@@ -275,8 +274,8 @@ public class Face {
 	 * clone: CAUTION: pointers may be in conflict or outdated, 
 	 * @return new Face
 	 */
-	public Face clone() {
-		Face face=new Face();
+	public DcelFace clone() {
+		DcelFace face=new DcelFace();
 		face.color=ColorUtil.cloneMe(color);
 		face.edge=edge;
 		face.faceIndx=faceIndx;

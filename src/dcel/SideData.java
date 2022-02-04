@@ -18,7 +18,7 @@ import util.ColorUtil;
  * non-simply connected case there may also be "border" 
  * segments (maximal connected but unpaired segments).
  * 
- * A linked list 'PackDCEL.pairLink' of 'D_SideData's encodes the 
+ * A linked list 'PackDCEL.pairLink' of 'SideData's encodes the 
  * side-pairing information. 
  * 
  * Caution: 'mob' element can easily be out of date. Likewise, the 
@@ -28,14 +28,14 @@ import util.ColorUtil;
  * the 'RedHEdge's.
  * @author kens
  */
-public class D_SideData {
+public class SideData {
 	
 	public int hes;           // geometry from parent packing
-	public int spIndex;       // index in 'D_PairLink' linked list 
+	public int spIndex;       // index in 'PairLink' linked list 
 							  //   (indexed from 1)
 	public int mateIndex;     // 'spIndex' of paired side (-1 if no mate)
-	public RedHEdge startEdge; // the first 'RedHEdge' of this "side"
-	public RedHEdge endEdge;   // the final 'RedHEdge' of this "side"
+	public RedEdge startEdge; // the first 'RedHEdge' of this "side"
+	public RedEdge endEdge;   // the final 'RedHEdge' of this "side"
 	public Mobius mob;        // Mobius transform when side is paired: map
 							  //   of paired edge TO this edge 
 							  //   (TODO: for spherical) 
@@ -51,7 +51,7 @@ public class D_SideData {
 							  //   of case, label 'A' is stored as 'aa', etc.
 
     // Constructor
-    public D_SideData() {
+    public SideData() {
     	startEdge=null;
     	endEdge=null;
     	mob=new Mobius();
@@ -68,7 +68,7 @@ public class D_SideData {
      */
     public int sideCount() {
     	int count=1;
-    	RedHEdge rtrace=startEdge;
+    	RedEdge rtrace=startEdge;
     	do {
     		count++;
     		rtrace=rtrace.nextRed;
@@ -105,7 +105,7 @@ public class D_SideData {
 		         * midway along this paired side and match its centers.*/
     			
     			int count=0;
-    			RedHEdge etrace=startEdge;
+    			RedEdge etrace=startEdge;
     			while (etrace!=endEdge) {
     				count++;
     				etrace=etrace.nextRed;
@@ -146,23 +146,23 @@ public class D_SideData {
     }
     
     /**
-     * Search 'D_PairLink' to find the 'D_SideData' for the 
+     * Search 'PairLink' to find the 'SideData' for the 
      * "side" of the complex which contains 'RedHEdge' redge
      * return null on failure. 
-     * @param pairLink D_PairLink
+     * @param pairLink PairLink
      * @param redge RedHEdge
-     * @return 'D_SideData' of containing side or null on failure
+     * @return 'SideData' of containing side or null on failure
      */
-    public static D_SideData which_side(D_PairLink pairLink,RedHEdge redge) {
+    public static SideData which_side(PairLink pairLink,RedEdge redge) {
     	if (pairLink==null || pairLink.size()==0) return null;
-    	Iterator<D_SideData> pl=pairLink.iterator();
-    	D_SideData ep=null;
+    	Iterator<SideData> pl=pairLink.iterator();
+    	SideData ep=null;
     	while (pl.hasNext()) {
-    		ep=(D_SideData)pl.next();
-    		RedHEdge rdl=ep.startEdge;
+    		ep=(SideData)pl.next();
+    		RedEdge rdl=ep.startEdge;
     		if (rdl==null) return null;
     		do {
-    			if (redge==(RedHEdge)rdl) return ep;
+    			if (redge==(RedEdge)rdl) return ep;
     			rdl=rdl.nextRed;
     		} while (rdl!=ep.endEdge);
     	}
@@ -186,7 +186,7 @@ public class D_SideData {
     	if (startEdge==null || endEdge==null)
     		return null;
     	HalfLink hlink=new HalfLink();
-    	RedHEdge rtrace=startEdge;
+    	RedEdge rtrace=startEdge;
     	do {
     		hlink.add(rtrace.myEdge);
     		rtrace=rtrace.nextRed;
@@ -197,10 +197,10 @@ public class D_SideData {
 
 	/**
 	 * clone: CAUTION: pointers are likely in conflict or outdated.
-	 * @return new D_SideData
+	 * @return new SideData
 	 */
-    public D_SideData clone() {
-    	D_SideData sd=new D_SideData();
+    public SideData clone() {
+    	SideData sd=new SideData();
     	sd.hes=hes;
     	sd.startEdge=startEdge;
     	sd.endEdge=endEdge;

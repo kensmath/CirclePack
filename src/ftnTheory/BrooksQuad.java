@@ -5,12 +5,12 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
-import dcel.DcelCreation;
 import dcel.HalfEdge;
-import dcel.RawDCEL;
+import dcel.RawManip;
 import dcel.Vertex;
 import komplex.EdgeSimple;
 import math.Mobius;
+import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
@@ -85,12 +85,12 @@ public class BrooksQuad extends PackExtender {
 	 * the 'plug'.
 	 */
 	public void initQuad() {
-		PackData newData=DcelCreation.seed(4,0);
+		PackData newData=PackCreation.seed(4,0);
 		if (newData==null)
 			Oops("Failed to build initial seed.");
 		CirclePack.cpb.swapPackData(newData,packData.packNum,true);
 		packData=newData;
-		RawDCEL.swapNodes_raw(packData.packDCEL,1,5);
+		RawManip.swapNodes_raw(packData.packDCEL,1,5);
 		for (int v=1;v<=4;v++) {
 			packData.setCircleColor(v,ColorUtil.coLor(208)); // line green
 		}
@@ -137,7 +137,7 @@ public class BrooksQuad extends PackExtender {
 		HalfEdge PL=packData.packDCEL.findHalfEdge(new EdgeSimple(P,L));
 		
 		// split the edge from P (plug) to L (left) and fix
-		RawDCEL.splitEdge_raw(packData.packDCEL, PL);
+		RawManip.splitEdge_raw(packData.packDCEL, PL);
 				
 		// switch new vertex with old plug
 		int pnc=packData.packDCEL.vertCount;
@@ -198,7 +198,7 @@ public class BrooksQuad extends PackExtender {
 		HalfEdge PT=packData.packDCEL.findHalfEdge(new EdgeSimple(P,T));
 		
 		// split the edge from P (plug) to T (top) and fix
-		RawDCEL.splitEdge_raw(packData.packDCEL, PT);
+		RawManip.splitEdge_raw(packData.packDCEL, PT);
 			
 		// switch new vertex with old plug
 		int pnc=packData.packDCEL.vertCount;

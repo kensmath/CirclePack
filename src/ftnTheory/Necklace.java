@@ -8,7 +8,6 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import dcel.CombDCEL;
-import dcel.DcelCreation;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -206,7 +205,7 @@ public class Necklace extends PackExtender {
 			CPBase.Elink=new EdgeLink(topPack,"b("+topleftend+" "+vtop+")");
 
 			// ------------------ now, do the adjoin 
-			topPack.packDCEL=CombDCEL.d_adjoin(topPack.packDCEL,
+			topPack.packDCEL=CombDCEL.adjoin(topPack.packDCEL,
 					bottomPack.packDCEL,vtop,vbottom,length);
 			topPack.packDCEL.fixDCEL_raw(topPack);
 			
@@ -315,7 +314,7 @@ System.err.println("starting bottomHemi:");
 			for (int j=0;j<k;j++)
 				b=bottomHemi.getFirstPetal(b);
 
-			topHemi.packDCEL=CombDCEL.d_adjoin(topHemi.packDCEL,
+			topHemi.packDCEL=CombDCEL.adjoin(topHemi.packDCEL,
 					bottomHemi.packDCEL,2,b,N*2);
 			topHemi.packDCEL.fixDCEL_raw(topHemi);
 
@@ -360,7 +359,7 @@ System.err.println("starting bottomHemi:");
 			mylist[k]=list[k];
 		
 		// This is the packing we are growing.
-		PackData myPacking=DcelCreation.seed(6,-1);
+		PackData myPacking=PackCreation.seed(6,-1);
 		myPacking.setVertMark(1,-1);
 		myPacking.setVertMark(3,-2);
 		myPacking.setVertMark(5,-2);
@@ -442,7 +441,7 @@ System.err.println("starting bottomHemi:");
 					rightIndx=bn;
 			}
 //System.err.println("adjoining right");
-			myPacking.packDCEL=CombDCEL.d_adjoin(myPacking.packDCEL,
+			myPacking.packDCEL=CombDCEL.adjoin(myPacking.packDCEL,
 					rightPack.packDCEL,2,rightIndx,2);
 			myPacking.packDCEL.fixDCEL_raw(myPacking);
 			
@@ -470,7 +469,7 @@ System.err.println("starting bottomHemi:");
 			}
 			System.err.println("adjoining left");			
 
-			myPacking.packDCEL=CombDCEL.d_adjoin(myPacking.packDCEL,
+			myPacking.packDCEL=CombDCEL.adjoin(myPacking.packDCEL,
 					leftPack.packDCEL,6,leftIndx,2);
 			myPacking.packDCEL.fixDCEL_raw(myPacking);
 

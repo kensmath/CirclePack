@@ -9,11 +9,11 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
-import dcel.D_SideData;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RawDCEL;
-import dcel.RedHEdge;
+import dcel.RawManip;
+import dcel.RedEdge;
+import dcel.SideData;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -217,7 +217,7 @@ public class FaceLink extends LinkedList<Integer> {
 					Iterator<HalfEdge> his=hlink.iterator();
 					while (his.hasNext()) {
 						HalfEdge he=his.next();
-						dcel.Face face=he.face;
+						dcel.DcelFace face=he.face;
 						if (face!=null) {
 							add(face.faceIndx);
 							count++;
@@ -431,19 +431,19 @@ public class FaceLink extends LinkedList<Integer> {
 				} // done with for loop
 				break;
 			}
-			case 'p': // plotFlag set (or 'pc', not set);
-			{
-				boolean notset=false;
-				if (str.substring(1).contains("c")) notset=true;
-				for (int f=1;f<=facecount;f++) {
-					int pf=packData.getFacePlotFlag(f);
-					if ((notset && pf==0) || (!notset && pf!=0)) {
-						add(f);
-						count++;
-					}
-				}
-				break;
-			}
+//			case 'p': // plotFlag set (or 'pc', not set);
+//			{
+//				boolean notset=false;
+//				if (str.substring(1).contains("c")) notset=true;
+//				for (int f=1;f<=facecount;f++) {
+//					int pf=packData.getFacePlotFlag(f);
+//					if ((notset && pf==0) || (!notset && pf!=0)) {
+//						add(f);
+//						count++;
+//					}
+//				}
+//				break;
+//			}
 			case 'R': // faces from red chain,
 			{
 				if (packData.packDCEL.redChain==null) 
@@ -451,12 +451,12 @@ public class FaceLink extends LinkedList<Integer> {
 
 				if (str.length()>1 && str.charAt(1)=='a') { 
 					HalfLink hlink=new HalfLink();
-					RedHEdge rtrace=packData.packDCEL.redChain;
+					RedEdge rtrace=packData.packDCEL.redChain;
 					do {
 						hlink.add(rtrace.myEdge);
 						rtrace=rtrace.nextRed;
 					} while(rtrace!=packData.packDCEL.redChain);
-					HalfLink leftlink=RawDCEL.leftsideLink(
+					HalfLink leftlink=RawManip.leftsideLink(
 							packData.packDCEL,hlink);
 					Iterator<HalfEdge> lis=leftlink.iterator();
 					while (lis.hasNext()) {
@@ -496,15 +496,15 @@ public class FaceLink extends LinkedList<Integer> {
 				  // now to get the chosen segments
 				  // NOTE: some faces between end of one segment and
 				  //       start of next are not picked up.
-				  Iterator<D_SideData> sp=packData.getSidePairs().iterator();
-				  D_SideData ep=null;
-				  RedHEdge rlst=null;
+				  Iterator<SideData> sp=packData.getSidePairs().iterator();
+				  SideData ep=null;
+				  RedEdge rlst=null;
 				  int tick=0;
 				  while (sp.hasNext()) {
-					  ep=(D_SideData)sp.next();
+					  ep=(SideData)sp.next();
 					  if (tag[tick++]) { // yes, do this one
 						  HalfLink sidelink=ep.sideHalfLink();
-						  HalfLink leftlink=RawDCEL.leftsideLink(
+						  HalfLink leftlink=RawManip.leftsideLink(
 								  packData.packDCEL,sidelink);
 						  add(ep.startEdge.myEdge.face.faceIndx);
 						  count++;
@@ -1117,9 +1117,9 @@ public class FaceLink extends LinkedList<Integer> {
 			return null;
 		HalfLink hlink=new HalfLink();
 		Iterator<Integer> fit=this.iterator();
-		dcel.Face nextface=pdcel.faces[fit.next()];
+		dcel.DcelFace nextface=pdcel.faces[fit.next()];
 		hlink.add(nextface.edge);
-		dcel.Face lastface=nextface;
+		dcel.DcelFace lastface=nextface;
 		while(fit.hasNext()) {
 			lastface=nextface;
 			nextface=pdcel.faces[fit.next()];

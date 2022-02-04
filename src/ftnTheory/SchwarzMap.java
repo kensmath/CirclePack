@@ -10,8 +10,8 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
-import dcel.D_Schwarzian;
 import dcel.HalfEdge;
+import dcel.Schwarzian;
 import exceptions.DataException;
 import exceptions.MiscException;
 import exceptions.ParserException;
@@ -762,8 +762,8 @@ public class SchwarzMap extends PackExtender {
 				int gfindx=packData.face_nghb(f,g);
 				
 				// using 'alignMe'
-				dcel.Face gface=packData.packDCEL.faces[g];
-				dcel.Face fface=packData.packDCEL.faces[f];
+				dcel.DcelFace gface=packData.packDCEL.faces[g];
+				dcel.DcelFace fface=packData.packDCEL.faces[f];
 				HalfEdge hedge=gface.faceNghb(fface);
 				int mode=1; // use 'radii'
 				Mobius aligng=domainTri[g].alignMe(domainTri[f],hedge,mode);
@@ -1455,7 +1455,7 @@ public class SchwarzMap extends PackExtender {
 					0,asp[ftri].hes);
 			
 			// compute the target circle
-			CircleSimple sC=D_Schwarzian.getThirdCircle(s,j,bm_f,asp[ftri].hes);
+			CircleSimple sC=Schwarzian.getThirdCircle(s,j,bm_f,asp[ftri].hes);
 
 			asp[gtri].setRadius(sC.rad, J);
 			asp[gtri].setCenter(sC.center, J);

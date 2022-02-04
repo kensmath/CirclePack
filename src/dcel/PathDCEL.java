@@ -5,7 +5,6 @@ import java.util.Iterator;
 
 import exceptions.CombException;
 import exceptions.DCELException;
-import exceptions.ParserException;
 import komplex.EdgeSimple;
 import listManip.HalfLink;
 import listManip.NodeLink;
@@ -13,8 +12,7 @@ import listManip.NodeLink;
 /**
  * These are static utility routines concerned with paths
  * in DCEL structures: closed paths, non-separating, etc.
- * These are used, e.g., to find nice red chains for
- * tori.
+ * These are used, e.g., to find nice red chains for tori.
  * 
  * TODO: Some ideas have not worked out as expected --- it's
  * complicated. I'm still looking for efficient way to find 
@@ -45,7 +43,7 @@ public class PathDCEL {
 			  int ans=CombDCEL.redchain_by_edge(pdcel, null, null, false);
 			  if (ans==0)
 				  throw new CombException("No red chain, and failed to create one");
-			  CombDCEL.d_FillInside(pdcel); // this sets side-pairings
+			  CombDCEL.fillInside(pdcel); // this sets side-pairings
 		  }
 		  
 		  // first, check pairLink for shortest side which is either:
@@ -54,13 +52,13 @@ public class PathDCEL {
 		  int bestSide=-1;
 		  int shortest=10*pdcel.vertCount;
 		  int[] lengths=new int[pdcel.pairLink.size()]; // find lengths
-		  Iterator<D_SideData> dsp=pdcel.pairLink.iterator();
+		  Iterator<SideData> dsp=pdcel.pairLink.iterator();
 		  dsp.next(); // first is empty
 		  while (dsp.hasNext()) {
-			  D_SideData sdata=dsp.next();
+			  SideData sdata=dsp.next();
 			  int mIndx=sdata.mateIndex;
 			  if (mIndx>0) { // is paired
-				  RedHEdge oppStart=pdcel.pairLink.get(mIndx).startEdge;
+				  RedEdge oppStart=pdcel.pairLink.get(mIndx).startEdge;
 				  int end1=sdata.startEdge.myEdge.origin.vertIndx;
 				  int end2=oppStart.myEdge.origin.vertIndx;
 				  
@@ -97,12 +95,12 @@ public class PathDCEL {
 		  dsp=pdcel.pairLink.iterator();
 		  dsp.next(); // first is null
 		  while (dsp.hasNext()) {
-			  D_SideData sdata=dsp.next();
-			  RedHEdge rtrace=sdata.startEdge;
+			  SideData sdata=dsp.next();
+			  RedEdge rtrace=sdata.startEdge;
 			  int end1=rtrace.myEdge.origin.vertIndx;
 			  rtrace=rtrace.nextRed;
 			  int tick=0;
-			  RedHEdge stopRed=sdata.startEdge.prevRed;
+			  RedEdge stopRed=sdata.startEdge.prevRed;
 			  INNER_WHILE: while (rtrace!=stopRed && tick>=0 && 
 					  rtrace.myEdge.origin.vertIndx!=end1) {
 				  HalfEdge he=rtrace.myEdge;
@@ -134,7 +132,7 @@ public class PathDCEL {
 		  
 		  // return 
 		  HalfLink hlink=new HalfLink();
-		  RedHEdge rtrace=pdcel.pairLink.get(bestSide).startEdge;
+		  RedEdge rtrace=pdcel.pairLink.get(bestSide).startEdge;
 		  int end1=rtrace.myEdge.origin.vertIndx;
 		  hlink.add(rtrace.myEdge);
 		  rtrace=rtrace.nextRed;

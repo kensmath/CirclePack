@@ -2,7 +2,6 @@ package komplex;
 
 import java.awt.Color;
 
-import packing.PackData;
 import util.ColorUtil;
 
 /**
@@ -21,9 +20,7 @@ public class Face{
      						 // '(indexFlag+2)%3' for triangular faces
      public Color color;     // Java Color class.
      public int mark;        // mark
-     PackData packData;      // packing this is associated with (if any)
      // TODO: not sure 'packData' is ever needed.
-     public int rwbFlag;	 // "red/white/blue" indicator: see comment below:
      /* used to monitor status of faces during and after red chain manipulations.
       *    rwbFlag=0: "free" face, generally, not yet processed
       *    rwbFlag>0: "red" face, generally, currently in the 'red chain'
@@ -32,21 +29,12 @@ public class Face{
       */
      
      // Constructors
-     public Face(PackData p,int vCount) {
-    	 packData=p;
+     public Face(int vCount) {
     	 vertCount=vCount;
     	 vert=new int[vCount];
     	 color=ColorUtil.getFGColor();
      }
-     
-     public Face(int vCount) {
-    	 this(null,vCount);
-     }
-     
-     public Face() {
-    	 this(null,3);
-     }
-
+       
      /**
       * Find index of v in 'vert'.
       * @param v int

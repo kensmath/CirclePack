@@ -1,9 +1,17 @@
 package rePack;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+
 import JNI.JNIinit;
 import allMains.CPBase;
 import allMains.CirclePack;
+import dcel.DcelFace;
+import dcel.HalfEdge;
 import dcel.PackDCEL;
+import dcel.Vertex;
+import exceptions.CombException;
+import exceptions.DCELException;
 import exceptions.PackingException;
 import listManip.EdgeLink;
 import listManip.FaceLink;
@@ -19,17 +27,14 @@ import util.UtilPacket;
  * An abstract class to manage repacking in hyperbolic, euclidean, and
  * (eventually) spherical situations. Depending on performance issues, 
  * goal is to clone initial data for computations: 
- *  (1) allows the machine to run in a separate thread; but CAUTION: 
- *      KData remains with the parent packing, so it must not change. 
+ *  (1) allows the machine to run in a separate thread 
  *  (2) allows original centers/radii to be retained in case of failure. 
  *  (3) allows interruption and restarting of computations. 
  * 
- * In general, 'RePack' objects are to be released as garbage after 
- * computations are finished. However, perhaps we can replace original
- * RData with the local rdata: the only things missing are centers (which will
- * be outdated anyway) and curv (which may be out of date, too).
+ * Typically, 'RePack' objects are released after the computation. 
+ * However, may be able to keep it as long as we check that combinatorics
+ * don't change. 
  * @author kens
- *
  */
 public abstract class RePacker {
 	
@@ -54,6 +59,13 @@ public abstract class RePacker {
 	
 	public PackData p;      // parent packing
 	public PackDCEL pdcel;  // prepare for DCEL version
+	
+	// create combo info to easily access triData
+	public int[] vNum;        // facecount for each vertex
+	public int[][] findices;  // face index flower for each vertex
+	public int[][] vindices;  // Coordinated with 'findices': this give, for
+							  //    each vert v the index of v in the corresponding
+							  //    entry of 'findices'.
 	
 	public int chkCount;    // minimal check on whether packing has been switched
 	
@@ -98,7 +110,7 @@ public abstract class RePacker {
 	public boolean oldReliable; 
 	
 	// Constructor: 
-	// NOTE: calling routine should kill if 'pd.status' is not positive
+	// NOTE: inherited repackers call this first
 	public RePacker() {
 	}
 	
@@ -221,7 +233,7 @@ public abstract class RePacker {
 		else // said 'no' to using GOpacker
 			return false;
 	}
-	
+
 	/**
 	 * Generic 'repack' call is for the (now) classical "riffle" 
 	 * methods, typically with supersteps, etc. Originally in C,
@@ -290,11 +302,12 @@ public abstract class RePacker {
 	}
 
 	/**
-	 * This is first call in 'load()'. Return true if there 
-	 * are non-trivial inversive distances involved.
+	 * This is called in 'load()' to fill 'triData',
+	 * 'vNum', 'findices', and 'vindices'. Return true
+	 * if there are non-trivial inversive distances involved.
 	 * @return boolean
 	 */
-	public boolean triDataLoad() {
+	public boolean prepData() {
 		boolean hit=false;
 		if (pdcel.triData==null) {
 			pdcel.triData=new TriData[pdcel.faceCount+1];
@@ -306,6 +319,26 @@ public abstract class RePacker {
 		}
 		else {
 			hit=pdcel.updateTriDataRadii();
+		}
+		
+		// create 'vNum', 'findices', 'vindices' after a minimal
+		//    check on whether they already exist
+		if (findices==null || findices.length!=p.nodeCount+1) {
+			vNum=new int[p.nodeCount+1];
+			findices=new int[p.nodeCount+1][];
+			vindices=new int[p.nodeCount+1][];
+			for (int v=1;v<=p.nodeCount;v++) {
+				vNum[v]=p.countFaces(v);
+				findices[v]=new int[vNum[v]];
+				vindices[v]=new int[vNum[v]];
+				HalfEdge he=pdcel.vertices[v].halfedge;
+				int tick=0;
+				do {
+					findices[v][tick]=he.face.faceIndx;
+					vindices[v][tick++]=he.face.getVertIndx(v);
+					he=he.prev.twin;
+				} while(he!=pdcel.vertices[v].halfedge && he.face.faceIndx>=0);
+			}
 		}
 		return hit;
 	}
@@ -370,11 +403,10 @@ public abstract class RePacker {
      * @return double
      */
     public double compTriCurv(int v,double rad) {
-    	int[] findices=p.vData[v].findices;
     	double curv=0;
-    	for (int j=0;j<findices.length;j++) {
-    		int k=p.vData[v].myIndices[j];
-    		curv += pdcel.triData[findices[j]].compOneAngle(k,rad);
+    	for (int j=0;j<findices[v].length;j++) {
+    		int k=vindices[v][j];
+    		curv += pdcel.triData[findices[v][j]].compOneAngle(k,rad);
     	}
     	return curv;
     }
@@ -385,8 +417,8 @@ public abstract class RePacker {
      * @return double
      */
     public double getTriRadius(int v) {
-    	return pdcel.triData[p.vData[v].findices[0]].
-    			radii[p.vData[v].myIndices[0]];
+    	return pdcel.triData[findices[v][0]].
+    			radii[vindices[v][0]];
     }
     
     /**
@@ -399,11 +431,10 @@ public abstract class RePacker {
      * @return double
      */
     public double factorTriCurv(int v,double factor) {
-    	int[] findices=p.vData[v].findices;
     	double curv=0;
-    	for (int j=0;j<findices.length;j++) {
-    		int k=p.vData[v].myIndices[j];
-    		curv += pdcel.triData[findices[j]].compFactorAngle(k,factor);
+    	for (int j=0;j<findices[v].length;j++) {
+    		int k=vindices[v][j];
+    		curv += pdcel.triData[findices[v][j]].compFactorAngle(k,factor);
     	}
     	return curv;
     }
@@ -414,12 +445,10 @@ public abstract class RePacker {
      * @param rad double
      */
     public void setTriRadius(int v,double rad) {
-    	int[] findices=p.vData[v].findices;
-    	for (int j=0;j<findices.length;j++) {
-    		pdcel.triData[findices[j]].radii[p.vData[v].myIndices[j]]=rad;
+    	for (int j=0;j<findices[v].length;j++) {
+    		pdcel.triData[findices[v][j]].radii[vindices[v][j]]=rad;
     	}
     }
-    
 
 }
 

@@ -563,7 +563,7 @@ public class GenModBranching extends PackExtender {
 				throw new ParserException("singular face missing or inappropriate");
 			
 			// match again 'exclusions'.
-			dcel.Face singFace=packData.packDCEL.faces[getF];
+			dcel.DcelFace singFace=packData.packDCEL.faces[getF];
 			HalfEdge he=singFace.edge;
 			boolean hitx=false;
 			do {
@@ -758,7 +758,7 @@ public class GenModBranching extends PackExtender {
 			GenBrModPt gbp=bps.next();
 			if (gbp!=null && gbp.myType==type) {
 				if (type==GenBrModPt.SINGULAR) {
-					dcel.Face face=packData.packDCEL.faces[j];
+					dcel.DcelFace face=packData.packDCEL.faces[j];
 					HalfEdge he=face.edge;
 					do {
 						if (he==gbp.myEdge) {

@@ -10,11 +10,11 @@ import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.D_SideData;
-import dcel.Face;
+import dcel.SideData;
+import dcel.DcelFace;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RedHEdge;
+import dcel.RedEdge;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -349,7 +349,7 @@ public class NodeLink extends LinkedList<Integer> {
 			{
 				int first=1;
 				int last=vCount;
-				String []pair_str=StringUtil.parens_parse(str); // get two strings
+				String[] pair_str=StringUtil.parens_parse(str); // get two strings
 				if (pair_str!=null) { // must have 2 strings
 					int a,b;
 					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))!=0) first=a;
@@ -369,7 +369,7 @@ public class NodeLink extends LinkedList<Integer> {
 				int first=1;
 				int last=vCount;
 				boolean bad=false;
-				String []pair_str=StringUtil.parens_parse(str); // get two strings
+				String[] pair_str=StringUtil.parens_parse(str); // get two strings
 				if (pair_str!=null) { // must have 2 strings
 					int a,b;
 					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))!=0) 
@@ -398,7 +398,7 @@ public class NodeLink extends LinkedList<Integer> {
 				}
 				if (pair_str==null || bad) { // whole boundary
 					for (int f=1;f<=pdcel.idealFaceCount;f++) {
-						Face idealface=pdcel.idealFaces[f];
+						DcelFace idealface=pdcel.idealFaces[f];
 						int[] vs=idealface.getVerts();
 						for (int i=0;i<vs.length;i++)
 							add(vs[i]);
@@ -411,12 +411,14 @@ public class NodeLink extends LinkedList<Integer> {
 			{
 				int first=1;
 				int last=vCount;
-				String []pair_str=StringUtil.parens_parse(str); // get two strings
-				int a,b;
-				if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))!=0) 
-					first=a;
-				if ((b=NodeLink.grab_one_vert(packData,pair_str[1]))!=0) 
-					last=b;
+				String[] pair_str=StringUtil.parens_parse(str); // get two strings
+				if (pair_str!=null) {
+					int a,b;
+					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))!=0) 
+						first=a;
+					if ((b=NodeLink.grab_one_vert(packData,pair_str[1]))!=0) 
+						last=b;
+				}
 				for (int j=first;j<=last;j++) 
 					if (packData.getBdryFlag(j)==0) {
 						add(j);
@@ -651,7 +653,7 @@ public class NodeLink extends LinkedList<Integer> {
 				int numsides=pdc.pairLink.size()-1;
 				if ((str.length()>1 && str.charAt(1)=='a') ||
 						numsides<=0) {
-					RedHEdge rtrace=pdc.redChain;
+					RedEdge rtrace=pdc.redChain;
 					do {
 						add(rtrace.myEdge.origin.vertIndx);
 						rtrace=rtrace.nextRed;
@@ -695,8 +697,8 @@ public class NodeLink extends LinkedList<Integer> {
 				// now traverse the chosen sides
 				for (int i=1;i<=numsides;i++) {
 					if (tag[i]) {
-						D_SideData dsd=pdc.pairLink.get(i);
-						RedHEdge rtrace=dsd.startEdge;
+						SideData dsd=pdc.pairLink.get(i);
+						RedEdge rtrace=dsd.startEdge;
 						do {
 							add(rtrace.myEdge.origin.vertIndx);
 							rtrace=rtrace.nextRed;
@@ -819,7 +821,7 @@ public class NodeLink extends LinkedList<Integer> {
 				if (packData.getBdryCompCount()>0) {
 					for (int i=1;i<=packData.getBdryCompCount();i++) { // indexing starts at 1
 						if (packData.packDCEL!=null) {
-							Face idf=packData.packDCEL.idealFaces[i];
+							DcelFace idf=packData.packDCEL.idealFaces[i];
 							add(idf.edge.origin.vertIndx);
 						}
 						else 

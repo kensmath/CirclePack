@@ -10,7 +10,7 @@ import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
 import dcel.HalfEdge;
-import dcel.RawDCEL;
+import dcel.RawManip;
 import exceptions.DataException;
 import exceptions.ParserException;
 import geometry.EuclMath;
@@ -333,7 +333,7 @@ public class BeltramiFlips extends PackExtender {
 			HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
 			if (he==null)
 				return 0;
-			HalfEdge newhe=RawDCEL.flipEdge_raw(packData.packDCEL, null);
+			HalfEdge newhe=RawManip.flipEdge_raw(packData.packDCEL, null);
 			if (newhe==null)
 				return 0;
 			packData.packDCEL.fixDCEL_raw(packData);

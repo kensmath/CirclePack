@@ -16,7 +16,7 @@ import circlePack.PackControl;
 import complex.Complex;
 import dcel.CombDCEL;
 import dcel.HalfEdge;
-import dcel.RawDCEL;
+import dcel.RawManip;
 import dcel.Vertex;
 import exceptions.DataException;
 import exceptions.InOutException;
@@ -930,7 +930,7 @@ public class WeldManager extends PackExtender {
 		if (opt_flag>0) { 
 			q.bdryStarts[1] = w_orig;
 
-			p.packDCEL=CombDCEL.d_adjoin(p.packDCEL,
+			p.packDCEL=CombDCEL.adjoin(p.packDCEL,
 				q.packDCEL, v_orig, w_orig, count);
 			p.packDCEL.fixDCEL_raw(p);
 				// TODO: note that 'adjoin' pastes p clockwise, q
@@ -977,7 +977,7 @@ public class WeldManager extends PackExtender {
 		if (hedge.next.isBdry()) {
 			HalfEdge opp=hedge.next.next;
 			if (opp.isBdry() || 
-					RawDCEL.splitEdge_raw(p.packDCEL,opp)==null) {
+					RawManip.splitEdge_raw(p.packDCEL,opp)==null) {
 				CirclePack.cpb.errMsg(
 						"add_between: opp edge is bdry or failed to split");
 				return 0;
@@ -985,7 +985,7 @@ public class WeldManager extends PackExtender {
 		}
 		
 		// add new vertex between v and v_next
-		if (RawDCEL.splitEdge_raw(p.packDCEL,hedge)==null) {
+		if (RawManip.splitEdge_raw(p.packDCEL,hedge)==null) {
 			CirclePack.cpb.errMsg(
 					"add_between: failure in splitting "+hedge);
 			return 0;

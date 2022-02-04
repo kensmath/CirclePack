@@ -3,7 +3,7 @@ import allMains.CPBase;
 import baryStuff.BaryPoint;
 import complex.Complex;
 import dcel.PackDCEL;
-import dcel.RedHEdge;
+import dcel.RedEdge;
 import math.Mobius;
 import math.Point3D;
 import packing.PackData;
@@ -149,13 +149,13 @@ public class SphericalMath{
 	  if (Mobius.frobeniusNorm(mob)>.0001) {
 		  // directly adjust in 'vData'
 		  for (int v=1;v<=pdcel.vertCount;v++) {
-			  Complex z=pdcel.p.vData[v].center;
-			  pdcel.p.vData[v].center=mob.apply_2_s_pt(z);
+			  Complex z=pdcel.vertices[v].center;
+			  pdcel.vertices[v].center=mob.apply_2_s_pt(z);
 			  count++;
 		  }
 		  // directly adjust in red chain
 		  if (pdcel.redChain!=null) {
-			  RedHEdge rtrace=pdcel.redChain;
+			  RedEdge rtrace=pdcel.redChain;
 			  do {
 				  rtrace.setCenter(mob.apply_2_s_pt(rtrace.getCenter()));
 				  rtrace=rtrace.nextRed;

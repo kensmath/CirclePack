@@ -7,7 +7,7 @@ import allMains.CirclePack;
 import complex.Complex;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RawDCEL;
+import dcel.RawManip;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.HalfLink;
@@ -358,7 +358,7 @@ public class JammedPack extends PackExtender {
 				
 				// try to remove the edge
 				packData.tileData=null;
-				int bary=RawDCEL.rmEdge_raw(packData.packDCEL,edge);
+				int bary=RawManip.rmEdge_raw(packData.packDCEL,edge);
 				if (bary>0) {
 					packData.packDCEL.fixDCEL_raw(packData);
 					cpCommand("pave "+bary); // repave
@@ -444,12 +444,12 @@ public class JammedPack extends PackExtender {
 		HalfEdge wedge=pdcel.findHalfEdge(new EdgeSimple(b,w));
 		if (vedge==null || wedge==null)
 			return null;
-		HalfEdge tmpEdge=RawDCEL.splitFlower_raw(pdcel,vedge,wedge);
+		HalfEdge tmpEdge=RawManip.splitFlower_raw(pdcel,vedge,wedge);
 		if (tmpEdge==null)
 			return null;
 
 		// now flip that new edge
-		HalfEdge newEdge=RawDCEL.flipEdge_raw(pdcel,tmpEdge);
+		HalfEdge newEdge=RawManip.flipEdge_raw(pdcel,tmpEdge);
 		return newEdge;
 	}
 

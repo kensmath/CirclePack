@@ -6,7 +6,7 @@ import java.util.Vector;
 import allMains.CirclePack;
 import complex.Complex;
 import dcel.HalfEdge;
-import dcel.RawDCEL;
+import dcel.RawManip;
 import exceptions.DataException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
@@ -150,7 +150,7 @@ public class iGame extends PackExtender {
 			oldV=p;
 		if (packData.nghb(p,t)>=0) {
 			HalfEdge edge=packData.packDCEL.findHalfEdge(p,t);
-			int rslt=RawDCEL.meldEdge_raw(packData.packDCEL,edge);
+			int rslt=RawManip.meldEdge_raw(packData.packDCEL,edge);
 			if (rslt<=0) 
 				return -1;
 			packData.packDCEL.fixDCEL_raw(packData);
@@ -185,7 +185,7 @@ public class iGame extends PackExtender {
 		if (edge==null || 
 			(packData.isBdry(v) && packData.isBdry(u)))
 			return 0;
-		int rslt=RawDCEL.meldEdge_raw(packData.packDCEL,edge);
+		int rslt=RawManip.meldEdge_raw(packData.packDCEL,edge);
 		if (rslt!=0)
 			packData.packDCEL.fixDCEL_raw(packData);
 		return rslt;

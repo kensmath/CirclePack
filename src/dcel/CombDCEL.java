@@ -28,7 +28,7 @@ import util.StringUtil;
  * The "*_raw" methods typically work just with combinatorics
  * (no rad/cents, little or no dependence on PackData parent).
  * The calling routines do further processing, generally calling
- * 'd_FillInside' and then 'attachDCEL' to the packing. If red 
+ * 'fillInside' and then 'attachDCEL' to the packing. If red 
  * chain cannot be modified, then 'redChain' is set to null and
  * calling routine would run 'redchain_by_edge'. See 'fixDCEL_raw'.
  * 
@@ -49,7 +49,7 @@ public class CombDCEL {
 	public static PackDCEL extractDCEL(PackDCEL pdcel,HalfLink hlink,HalfEdge alphaEdge) {
 		try {
 			CombDCEL.redchain_by_edge(pdcel,hlink,alphaEdge,false);
-			CombDCEL.d_FillInside(pdcel);
+			CombDCEL.fillInside(pdcel);
 			// DCELdebug.printRedChain(pdcel.redChain);
 		} catch (Exception ex) {
 			throw new DCELException(ex.getMessage());
@@ -63,7 +63,7 @@ public class CombDCEL {
 	 * Bouquet satisfies usual conventions: counterclockwise order, 
 	 * indexed contiguously from 1, bdry/interior flower 
 	 * open/closed, resp. Calling routine builds red chain, does
-	 * 'd_FillInside' and 'attachDCEL'.
+	 * 'fillInside' and 'attachDCEL'.
 	 * @param bouquet int[][]
 	 * @return PackDCEL
 	 */
@@ -189,8 +189,8 @@ public class CombDCEL {
 			Vertex vert=vertices[v];
 			if (vert.bdryFlag==1) {
 				HalfEdge he=heArrays[v][0];
-				he.twin.face=new Face(-1);
-				he.twin.next.face=new Face(-1);
+				he.twin.face=new DcelFace(-1);
+				he.twin.next.face=new DcelFace(-1);
 			}
 		}
 		
@@ -252,7 +252,7 @@ public class CombDCEL {
 	 * 'finishRedChain', which organizes vertex indexing and
 	 * builds 'oldNew'. See more details there.
 	 * After 'finishRedChain', the calling routine should call
-	 * 'd_FillInside' to complete processing.  
+	 * 'fillInside' to complete processing.  
 	 * The 'prune' flag true means every bdry vertex must have an 
 	 * interior neighbor; this enters just one spot in the code.
 	 * @param pdcel PackDCEL
@@ -351,11 +351,11 @@ public class CombDCEL {
 		
 		// ============== start redchain using alpha ================
 		HalfEdge he=pdcel.alpha;
-		pdcel.redChain=new RedHEdge(he);
-		RedHEdge rtrace=pdcel.redChain;
+		pdcel.redChain=new RedEdge(he);
+		RedEdge rtrace=pdcel.redChain;
 		do {
 			he=he.next;
-			pdcel.redChain.nextRed=new RedHEdge(he);
+			pdcel.redChain.nextRed=new RedEdge(he);
 			pdcel.redChain.nextRed.prevRed=pdcel.redChain;
 			pdcel.redChain=pdcel.redChain.nextRed;
 		} while(he.next!=pdcel.alpha);
@@ -378,7 +378,7 @@ public class CombDCEL {
 		
 		// loop through red chain as long as we keep adding faces
 		//    or collapsing the redchain. \\ debug=true;
-		RedHEdge currRed=null;
+		RedEdge currRed=null;
 		boolean hit = true; // true if we added a face or collapsed an edge
 		boolean redisDone=false; // totally done?
 		int redN=0;
@@ -387,7 +387,7 @@ public class CombDCEL {
 
 			// current count of red chain as safety stop mechanism
 			redN=0;
-			RedHEdge re=pdcel.redChain;
+			RedEdge re=pdcel.redChain;
 			do {
 				redN++;
 				re=re.nextRed;
@@ -460,7 +460,7 @@ public class CombDCEL {
 					//    close up. Otherwise, following code tries to 
 					//    add one cclw face.
 					boolean canclose=false;
-					RedHEdge redge=null;
+					RedEdge redge=null;
 					HalfEdge spktrace=upspoke;
 					if (vstat[v]==1) {
 						redge=isMyEdge(pdcel.redChain,spktrace);
@@ -475,11 +475,11 @@ public class CombDCEL {
 					}
 						
 					// now we can close up or we're ready to fall through
-					RedHEdge cclw=currRed.prevRed.prevRed;
+					RedEdge cclw=currRed.prevRed.prevRed;
 					if (canclose) { // yes, enclose v
 						spktrace=upspoke;
 						while (spktrace!=downspoke) { // add a new link
-							cclw.nextRed=new RedHEdge(spktrace.next);
+							cclw.nextRed=new RedEdge(spktrace.next);
 							cclw.nextRed.prevRed=cclw;
 							
 /* debugging							
@@ -539,8 +539,8 @@ public class CombDCEL {
 						
 						// we add cclw face, bump out redchain
 						if (OK) {
-							RedHEdge red1=new RedHEdge(upspoke.next);
-							RedHEdge red2=new RedHEdge(upspoke.prev);
+							RedEdge red1=new RedEdge(upspoke.next);
+							RedEdge red2=new RedEdge(upspoke.prev);
 							cclw.nextRed=red1;
 						
 							if (debug) {
@@ -611,7 +611,7 @@ public class CombDCEL {
 						pdcel.redChain=rtrace.prevRed;
 						
 					}
-					RedHEdge rhold=rtrace.prevRed;
+					RedEdge rhold=rtrace.prevRed;
 					rtrace.myEdge.myRedEdge=null;
 					rtrace.nextRed.myEdge.myRedEdge=null;
 					rtrace.prevRed.nextRed=rtrace.nextRed.nextRed;
@@ -655,7 +655,7 @@ public class CombDCEL {
 	 * @return int, new vertCount
 	 */
 	public static int finishRedChain(PackDCEL pdcel,
-			RedHEdge redchain) {
+			RedEdge redchain) {
 		
 		int vertcount=pdcel.vertCount; 
 		boolean debug=false; // debug=true;
@@ -664,7 +664,7 @@ public class CombDCEL {
 		// ============ set 'myRedEdge' pointers ================
 		
 		// ensure 'myRedEdge's are set and consistent
-		RedHEdge nxtre=redchain;
+		RedEdge nxtre=redchain;
 		do {
 			nxtre.myEdge.setRedEdge(nxtre);
 			nxtre=nxtre.nextRed;
@@ -679,7 +679,7 @@ public class CombDCEL {
 		
 		// redchain vertices
 		int[] vstat=new int[vertcount+1];
-		RedHEdge rtrace=redchain;
+		RedEdge rtrace=redchain;
 		do {
 			vstat[rtrace.myEdge.origin.vertIndx]=-1;
 			rtrace=rtrace.nextRed;
@@ -752,7 +752,7 @@ public class CombDCEL {
 			if (nxtre.twinRed==null) {
 				// does twin edge also red and not forbidden?
 				HalfEdge ctwin=nxtre.myEdge.twin;
-				RedHEdge crossRed=ctwin.getRedEdge();
+				RedEdge crossRed=ctwin.getRedEdge();
 				if (debug) {
 					System.out.println("twinRed is null: twin eutil="+
 							ctwin.eutil);
@@ -765,7 +765,7 @@ public class CombDCEL {
 					crossRed.twinRed=nxtre;
 				}
 				if (nxtre.twinRed==null) { // must be bdry
-					nxtre.myEdge.twin.face=new Face(-1);
+					nxtre.myEdge.twin.face=new DcelFace(-1);
 					nxtre.myEdge.twin.face.edge=nxtre.myEdge.twin;
 				}
 			}
@@ -787,8 +787,8 @@ public class CombDCEL {
 				if (pdcel.vertices[v].bdryFlag==0)
 					redV.closed=true;
 				else redV.closed=false;
-				redV.redSpoke=new RedHEdge[redV.num+1];
-				redV.inSpoke=new RedHEdge[redV.num+1];
+				redV.redSpoke=new RedEdge[redV.num+1];
+				redV.inSpoke=new RedEdge[redV.num+1];
 				rtrace.myEdge.origin=redV;
 				pdcel.vertices[v]=redV;
 			}
@@ -1036,7 +1036,7 @@ public class CombDCEL {
 		int count=0; 
 		
 		// first, move 'redChain' if part of blue face
-		RedHEdge rtrace=pdcel.redChain;
+		RedEdge rtrace=pdcel.redChain;
 		if (rtrace.myEdge.next==rtrace.nextRed.myEdge) // first edge?
 			pdcel.redChain=rtrace.nextRed.nextRed;
 		else if (rtrace.myEdge.prev==rtrace.prevRed.myEdge) // second edge?
@@ -1067,8 +1067,8 @@ public class CombDCEL {
 					continue INNER_LOOP;
 				}
 
-				RedHEdge tw1=rtrace.twinRed;
-				RedHEdge tw2=rtrace.nextRed.twinRed;
+				RedEdge tw1=rtrace.twinRed;
+				RedEdge tw2=rtrace.nextRed.twinRed;
 
 				// no twin reds? skip
 				if (tw1==null && tw2==null) {
@@ -1080,7 +1080,7 @@ public class CombDCEL {
 				//   twins as well: make 'shortcut' into a red edge
 				if (tw2!=null && tw1!=null && tw2.nextRed==tw1) {
 					Vertex vert=rtrace.nextRed.myEdge.origin;
-					RedHEdge rhold=rtrace.nextRed;
+					RedEdge rhold=rtrace.nextRed;
 					
 					// will orphan tw1; tip vert will not be red
 					if (tw1==pdcel.redChain)
@@ -1142,7 +1142,7 @@ public class CombDCEL {
 	 * @param pdcel
 	 * @return PackDCEL
 	 */
-	public static void d_FillInside(PackDCEL pdcel) {
+	public static void fillInside(PackDCEL pdcel) {
 		boolean debug=false; // debug=true;
 		// NOTE about debugging: Many debug routines depend on
 		//      original vertex indices, which might be found in
@@ -1169,7 +1169,7 @@ public class CombDCEL {
 		
 		if (pdcel.alpha==null) 
 			throw new CombException(
-					"'alpha' is missing and 'd_FillInside' failed to set it");
+					"'alpha' is missing and 'fillInside' failed to set it");
 		
 		// use 'HalfEdge.eutil' to keep track of edges hit; this
 		//   should be used in initializing interior edges.
@@ -1187,11 +1187,11 @@ public class CombDCEL {
 			} while(trace!=edge && safety>0);
 			if (safety==0)
 				throw new CombException(
-						"safetied out: 'd_FillInside', edge "+edge);
+						"safetied out: 'fillInside', edge "+edge);
 		}
 		
 		// zero out 'RedHEdge.redutil'
-		RedHEdge rtrace=pdcel.redChain; // DCELdebug.printRedChain(pdcel.redChain);
+		RedEdge rtrace=pdcel.redChain; // DCELdebug.printRedChain(pdcel.redChain);
 		if (rtrace!=null) { // not spherical case
 			int safety=2*pdcel.vertCount+100;
 			do {
@@ -1301,7 +1301,7 @@ public class CombDCEL {
 		if (pdcel.redChain!=null) {
 			// Set 'redChain' to one already laid; typically, no change
 			rtrace=pdcel.redChain;
-			RedHEdge hitred=null;
+			RedEdge hitred=null;
 			do {
 				if (rtrace.myEdge.eutil!=0)
 					hitred=rtrace;
@@ -1316,7 +1316,7 @@ public class CombDCEL {
 			//   faces on left of redchain
 			rtrace=pdcel.redChain;
 			do {
-				RedHEdge nxred=rtrace.nextRed;
+				RedEdge nxred=rtrace.nextRed;
 				HalfEdge he=rtrace.myEdge;
 				do {
 					if (he.eutil==0) {
@@ -1353,9 +1353,9 @@ public class CombDCEL {
 		//    * find first face that places a 'RedVertex'; this will be 'redChain'
 		ArrayList<HalfEdge> tmpEdges=new ArrayList<HalfEdge>();
 		tmpEdges.add(null); // null in first spot
-		ArrayList<Face> tmpFaceList=new ArrayList<Face>();
+		ArrayList<DcelFace> tmpFaceList=new ArrayList<DcelFace>();
 		tmpFaceList.add(null); // null in first spot
-		RedHEdge newRedChain=null;
+		RedEdge newRedChain=null;
 		int ftick=0;
 		int etick=0;
 
@@ -1370,7 +1370,7 @@ public class CombDCEL {
 			HalfEdge hfe=oit.next();
 			hfe.edgeIndx=++etick;
 			tmpEdges.add(hfe);
-			Face newface=new Face(++ftick);
+			DcelFace newface=new DcelFace(++ftick);
 			hfe.face=newface;
 			newface.edge=hfe;
 			tmpFaceList.add(newface);
@@ -1457,7 +1457,7 @@ public class CombDCEL {
 			//       many) has already been hit
 			//     * search for appropriate 'redChain' start. 
 			else {
-				RedHEdge redge=nextRedEdge(sea);
+				RedEdge redge=nextRedEdge(sea);
 				if (redge.redutil==0) {
 					redge.redutil=1;
 					count_vhits++;
@@ -1493,7 +1493,7 @@ public class CombDCEL {
 						
 						boolean alreadyhit=false;
 						if (oppVert.redFlag) {
-							RedHEdge nre=nextRedEdge(sea.twin.next.next);
+							RedEdge nre=nextRedEdge(sea.twin.next.next);
 							if (nre.redutil==1) // already plotted?
 								alreadyhit=true;
 							nre.redutil=1; // in any case, will be plotted
@@ -1544,13 +1544,13 @@ public class CombDCEL {
 		
 		pdcel.sideStarts=null;
 		pdcel.pairLink=null;
-		ArrayList<RedHEdge> bdryStarts=null;
+		ArrayList<RedEdge> bdryStarts=null;
 		
 		// not a sphere?
 		if (pdcel.redChain!=null) {
 			
 			// zero-out 'mobIndx'
-			RedHEdge nxtred=pdcel.redChain;
+			RedEdge nxtred=pdcel.redChain;
 			rtrace=nxtred;
 			do {
 				rtrace.mobIndx=0;
@@ -1558,11 +1558,11 @@ public class CombDCEL {
 			} while(rtrace!=pdcel.redChain);
 			
 			// ======== Catalog side pairings, free sides, create ideal faces ========
-			pdcel.sideStarts=new ArrayList<RedHEdge>();
-			bdryStarts=new ArrayList<RedHEdge>();
+			pdcel.sideStarts=new ArrayList<RedEdge>();
+			bdryStarts=new ArrayList<RedEdge>();
 			int sidecount=0; 
 			int safety=1000;
-			RedHEdge stopEdge=null;
+			RedEdge stopEdge=null;
 			do {
 				// see if this is unpasted redChain edge, hence a free side.
 				if (nxtred.twinRed==null) {
@@ -1594,7 +1594,7 @@ public class CombDCEL {
 					}
 						
 					// else record in 'bdryStarts' and 'sideStarts'
-					RedHEdge freeStart=rtrace.nextRed;
+					RedEdge freeStart=rtrace.nextRed;
 					if (stopEdge==null)
 						stopEdge=freeStart;
 					pdcel.idealFaceCount++;
@@ -1641,7 +1641,7 @@ public class CombDCEL {
 						rtrace.mobIndx=sideIndx;
 					
 						// first look upstream to find start
-						RedHEdge twintrace=rtrace.twinRed;
+						RedEdge twintrace=rtrace.twinRed;
 						while (rtrace.prevRed.twinRed==twintrace.nextRed && 
 							twintrace.nextRed.twinRed==rtrace.prevRed) {
 							rtrace=rtrace.prevRed;
@@ -1701,7 +1701,7 @@ public class CombDCEL {
 		tmpEdges=null;
 		
 		// (2) Faces: --------------------------------------------------------
-		pdcel.faces=new Face[ftick+1];
+		pdcel.faces=new DcelFace[ftick+1];
 		for (int f=1;f<=ftick;f++) {
 			pdcel.faces[f]=tmpFaceList.get(f); // pdcel.tmpFaceList.size();
 		}
@@ -1710,18 +1710,18 @@ public class CombDCEL {
 		// (3) Ideal faces: --------------------------------------------------
 		pdcel.idealFaceCount=0;
 		if (bdryStarts!=null && bdryStarts.size()>0) {
-			ArrayList<Face> tmpIdealFaces=new ArrayList<Face>(0);
-			Iterator<RedHEdge> rit=bdryStarts.iterator();
+			ArrayList<DcelFace> tmpIdealFaces=new ArrayList<DcelFace>(0);
+			Iterator<RedEdge> rit=bdryStarts.iterator();
 			int idtick=0;
 			while (rit.hasNext()) {
-				RedHEdge redge=rit.next();
+				RedEdge redge=rit.next();
 				HalfEdge he=redge.myEdge.twin;
 				if (he.face!=null) { // not in bdry
 					continue;
 				}
 				
 				// is this side already handled?
-				Face newface=new Face();
+				DcelFace newface=new DcelFace();
 				newface.faceIndx=-(++idtick);
 				newface.edge=redge.myEdge.twin;
 				do {
@@ -1731,7 +1731,7 @@ public class CombDCEL {
 				tmpIdealFaces.add(newface);
 			}
 			pdcel.idealFaceCount=idtick;
-			pdcel.idealFaces=new Face[idtick+1];
+			pdcel.idealFaces=new DcelFace[idtick+1];
 			for (int j=0;j<idtick;j++) {
 				pdcel.idealFaces[j+1]=tmpIdealFaces.get(j);
 			}
@@ -1745,21 +1745,21 @@ public class CombDCEL {
 
 		// Arrange the side pairings in order of 'sideStarts'
 		if (pdcel.sideStarts!=null) {
-			Iterator<RedHEdge> rit=pdcel.sideStarts.iterator();
+			Iterator<RedEdge> rit=pdcel.sideStarts.iterator();
 			int sptick=0;
-			pdcel.pairLink=new D_PairLink();
+			pdcel.pairLink=new PairLink();
 			pdcel.pairLink.add(null); // first is null
 			EdgeLink oldnew=new EdgeLink();
 			while (rit.hasNext()) {
-				RedHEdge rstart=rit.next();
+				RedEdge rstart=rit.next();
 				
-				D_SideData sideData=new D_SideData();
+				SideData sideData=new SideData();
 				sideData.spIndex=++sptick; // indexed from 1
 				oldnew.add(new EdgeSimple(rstart.mobIndx,sptick));
 				sideData.startEdge=rstart;
 
 				// if paired, find the end
-				RedHEdge rtrc=rstart;
+				RedEdge rtrc=rstart;
 				if (rstart.twinRed!=null) {
 					while (rtrc.twinRed!=null &&
 							rtrc.nextRed==rtrc.twinRed.prevRed.twinRed) {
@@ -1779,17 +1779,17 @@ public class CombDCEL {
 			// find and label the pairings and free sides
 			int pairCount=0;
 			int freeCount=1;
-			Iterator<D_SideData> pdpit=pdcel.pairLink.iterator();
+			Iterator<SideData> pdpit=pdcel.pairLink.iterator();
 			pdpit.next(); // flush null entry 
 			while(pdpit.hasNext()) {
-				D_SideData sdata=pdpit.next();
+				SideData sdata=pdpit.next();
 				
 				// a paired side
 				if (sdata.startEdge.twinRed!=null) {
 					int oldindx=oldnew.findV(sdata.spIndex);
 					if (oldindx>0) {
 						int mate=oldnew.findW(-oldindx);
-						D_SideData oppData=pdcel.pairLink.get(mate);
+						SideData oppData=pdcel.pairLink.get(mate);
 						sdata.mateIndex=oppData.spIndex;
 						oppData.mateIndex=sdata.spIndex;
 						char c=(char)('a'+pairCount);
@@ -1839,7 +1839,7 @@ public class CombDCEL {
 		if (hlink==null)
 			hlink=new HalfLink();
 		if (pdcel.redChain!=null) {
-			RedHEdge rtrace=pdcel.redChain;
+			RedEdge rtrace=pdcel.redChain;
 			do {
 				hlink.add(rtrace.myEdge);
 				hlink.add(rtrace.myEdge.twin);
@@ -1883,11 +1883,11 @@ public class CombDCEL {
 			Iterator<Integer> cis=currf.iterator();
 			while (cis.hasNext()) {
 				int f=cis.next(); // this face should be done
-				Face face=pdcel.faces[f];
+				DcelFace face=pdcel.faces[f];
 				HalfEdge he=face.edge;
 				do {
 					if (he.twin.eutil==0) { // not forbidden, not handled
-						Face newface=he.twin.face;
+						DcelFace newface=he.twin.face;
 						partialOrder.add(he.twin);
 						if (newface.edge.eutil>=0) 
 							newface.edge.eutil=1;
@@ -2066,7 +2066,7 @@ public class CombDCEL {
 	 * with DCEL renumbering or error with vData
 	 * shifting.
 	 */
-	public static int d_reNumber(PackDCEL pdc) {
+	public static int reNumber(PackDCEL pdc) {
 	
 		PackDCEL pdcel=CombDCEL.cloneDCEL(pdc);
 		
@@ -2105,7 +2105,7 @@ public class CombDCEL {
 		
 		// travel red chain to find the rest
 		if (pdcel.redChain!=null) {
-			RedHEdge rtrace=pdcel.redChain;
+			RedEdge rtrace=pdcel.redChain;
 			do {
 				Vertex vert=rtrace.myEdge.origin;
 				int oldv=vert.vertIndx;
@@ -2150,7 +2150,7 @@ public class CombDCEL {
 	 * @param edge HalfEdge
 	 * @return RedHEdge or null 
 	 */
-	public static RedHEdge nextRedEdge(HalfEdge edge) {
+	public static RedEdge nextRedEdge(HalfEdge edge) {
 		if (!edge.origin.redFlag)
 			return null;
 		if (edge.myRedEdge!=null)
@@ -2205,7 +2205,7 @@ public class CombDCEL {
 	 * @param rededge RedHEdge
 	 * @return boolean
 	 */
-	public static boolean isSphere(int[] keepv,RedHEdge rededge) {
+	public static boolean isSphere(int[] keepv,RedEdge rededge) {
 		if (rededge.nextRed!=rededge.prevRed) 
 			return false;
 		int v=rededge.myEdge.origin.vertIndx;
@@ -2221,10 +2221,10 @@ public class CombDCEL {
 	 * @param edge HalfEdge
 	 * @return RedHEdge or null
 	 */
-	public static RedHEdge isMyEdge(RedHEdge redchain,HalfEdge edge) {
+	public static RedEdge isMyEdge(RedEdge redchain,HalfEdge edge) {
 		if (redchain==null)
 			return null;
-		RedHEdge rtrace=redchain;
+		RedEdge rtrace=redchain;
 		do {
 			if (rtrace.myEdge==edge)
 				return rtrace;
@@ -2282,7 +2282,7 @@ public class CombDCEL {
 				seedstop[he.twin.origin.vertIndx]=-1;
 			}
 		}
-		return RawDCEL.markGenerations(pdcel, seedstop);
+		return RawManip.markGenerations(pdcel, seedstop);
 	}
 	
 	/**
@@ -2359,7 +2359,7 @@ public class CombDCEL {
 	 * @param v int
 	 * @return PackDCEL
 	 */
-	public static PackDCEL d_puncture_vert(PackDCEL pdcel,int v) {
+	public static PackDCEL puncture_vert(PackDCEL pdcel,int v) {
 		// set appropriate 'seed' if 'alpha' is a nghb of 'v'
 		int seed=-1;
 		int alp=pdcel.alpha.origin.vertIndx;
@@ -2397,13 +2397,13 @@ public class CombDCEL {
 			baseEdge=pdcel.vertices[seed].halfedge;
 			strbld.append(" -v "+Integer.toString(seed));
 		}
-		HalfLink hlink=d_CookieData(pdcel.p,strbld.toString());
+		HalfLink hlink=cookieData(pdcel.p,strbld.toString());
 	    return CombDCEL.extractDCEL(pdcel,hlink,baseEdge);
 	}
 
-	public static HalfLink d_CookieData(PackData p,String str) {
+	public static HalfLink cookieData(PackData p,String str) {
 		Vector<Vector<String>> flagSegs=StringUtil.flagSeg(str);
-		return d_CookieData(p,flagSegs);
+		return cookieData(p,flagSegs);
 	}
 	
 	/**
@@ -2445,7 +2445,7 @@ public class CombDCEL {
 	 * @param flags Vector<Vector<String>>; may be null
 	 * @return HalfLink, forbidden edges
 	 */
-	public static HalfLink d_CookieData(PackData p,
+	public static HalfLink cookieData(PackData p,
 			Vector<Vector<String>> flags) {
 		boolean debug=false;
 		PackDCEL pdcel=p.packDCEL; 
@@ -2555,7 +2555,7 @@ public class CombDCEL {
 			hlink.separatingLinks(pdcel,vlink,pdcel.alpha.origin.vertIndx);
 			// add any missing bdry edges
 			for (int f=1;f<=pdcel.idealFaceCount;f++) {
-				Face idealf=pdcel.idealFaces[f];
+				DcelFace idealf=pdcel.idealFaces[f];
 				HalfEdge he=idealf.edge;
 				do {
 					if (eutil[he.edgeIndx]==0) 
@@ -2591,7 +2591,7 @@ public class CombDCEL {
 		if (pdcel.redChain==null)
 			throw new CombException("usage: 'prune' requires a red chain");
 		HalfLink hlink=new HalfLink();
-		RedHEdge rtrace=pdcel.redChain;
+		RedEdge rtrace=pdcel.redChain;
 		do {
 			if (pdcel.isBdryEdge(rtrace.myEdge))
 				hlink.add(rtrace.myEdge);
@@ -2624,7 +2624,7 @@ public class CombDCEL {
 		
 		// make sure there's enough space
 		int tick=0;
-		RedHEdge rtrace=pdcel.redChain;
+		RedEdge rtrace=pdcel.redChain;
 		do {
 			tick++;
 			rtrace=rtrace.nextRed;
@@ -2658,8 +2658,8 @@ public class CombDCEL {
 	 * @param f int
 	 * @return PackDCEL
 	 */
-	public static PackDCEL d_puncture_face(PackDCEL pdcel,int f) {
-		Face face=pdcel.faces[f];
+	public static PackDCEL puncture_face(PackDCEL pdcel,int f) {
+		DcelFace face=pdcel.faces[f];
 		HalfLink hlink=new HalfLink();
 		HalfEdge he=face.edge;
 		hlink.add(he);
@@ -2679,7 +2679,7 @@ public class CombDCEL {
 	 * @param segment boolean
 	 * @return PackDCEL
 	 */
-	public static PackDCEL d_double(PackDCEL pdc,NodeLink blist,
+	public static PackDCEL doubleDCEL(PackDCEL pdc,NodeLink blist,
 			boolean segment) {
 	
 		try {
@@ -2691,14 +2691,14 @@ public class CombDCEL {
 			if (segment) {
 				int n=blist.size()-1; // number of edges
 				int v=blist.getLast(); // choose last to be clw
-				PackDCEL newpdcel=CombDCEL.d_adjoin(pdc1, pdc2,v,v,n);
+				PackDCEL newpdcel=CombDCEL.adjoin(pdc1, pdc2,v,v,n);
 				return newpdcel; 
 			}			
 		
 			// first adjoins two, the rest are self-adjoins 
 			int v=blist.remove(0); 
 			int shift=pdc1.vertCount; // will be added to indices of pdc2 
-			PackDCEL pdcel=CombDCEL.d_adjoin(pdc1, pdc2, v, v, -1);
+			PackDCEL pdcel=CombDCEL.adjoin(pdc1, pdc2, v, v, -1);
 			
 			// Establish 'EdgeLink' for new indices after first adjoin
 			EdgeLink indxlink=new EdgeLink();
@@ -2716,7 +2716,7 @@ public class CombDCEL {
 				
 				// next adjoin
 				EdgeSimple nextid=indxlink.remove(0); 	
-				pdcel=CombDCEL.d_adjoin(pdcel,pdcel,nextid.v,nextid.w,-1);
+				pdcel=CombDCEL.adjoin(pdcel,pdcel,nextid.v,nextid.w,-1);
 				
 				// readjust remaining indices
 				Iterator<EdgeSimple> eis=indxlink.iterator();
@@ -2742,7 +2742,7 @@ public class CombDCEL {
 	 * its orientation in place. We clone all the edges, establish 
 	 * prev, next, twins, redchain, halfedges, etc., based on 
 	 * edge indices. We keep faces and vertices, reverse the red 
-	 * chain. Complete with 'd_FillInside' command. 
+	 * chain. Complete with 'fillInside' command. 
 	 * Result remains in 'pdc' 
 	 * @param pdc PackDcel
 	 */
@@ -2776,7 +2776,7 @@ public class CombDCEL {
 			he.next=edges[orighe.twin.prev.twin.edgeIndx];
 			he.prev=edges[orighe.twin.next.twin.edgeIndx];
 			if (orighe.twin.face.faceIndx<=0) // outer bdry edge?
-				he.face=new Face(-1);
+				he.face=new DcelFace(-1);
 		}
 
 		// reset 'alpha' 'gamma'
@@ -2789,14 +2789,14 @@ public class CombDCEL {
 		if (pdc.redChain!=null) {
 			// first we index (from 0) using 'redutil'
 			int rCount=0;
-			RedHEdge rtrace=pdc.redChain;
+			RedEdge rtrace=pdc.redChain;
 			do {
 				rtrace.redutil=rCount++;
 				rtrace=rtrace.nextRed;
 			} while (rtrace!=pdc.redChain);
 			
 			// store array of red and their 'myEdge's
-			RedHEdge[] rededges=new RedHEdge[rCount];
+			RedEdge[] rededges=new RedEdge[rCount];
 			int[] myedges=new int[rCount];
 			rtrace=pdc.redChain;
 			do {
@@ -2806,8 +2806,8 @@ public class CombDCEL {
 			} while(rtrace!=pdc.redChain);
 		
 			// build reverse redchain, 'twinRed's set later
-			RedHEdge newRedChain=rededges[rCount-1];
-			RedHEdge res;
+			RedEdge newRedChain=rededges[rCount-1];
+			RedEdge res;
 			for (int r=0;r<rCount;r++) {
 				res=rededges[r];
 				res.nextRed=rededges[(r-1+rCount)%rCount];
@@ -2823,7 +2823,7 @@ public class CombDCEL {
 			
 			// look for twinning
 			rtrace=pdc.redChain;
-			RedHEdge rt;
+			RedEdge rt;
 			do {
 				if (rtrace.twinRed==null &&
 						(rt=rtrace.myEdge.twin.myRedEdge)!=null) {
@@ -2837,7 +2837,7 @@ public class CombDCEL {
 		// wrap up
 		pdc.edges=edges;
 		pdc.triData=null;
-		CombDCEL.d_FillInside(pdc);
+		CombDCEL.fillInside(pdc);
 	}
 	  
 	/**
@@ -2890,8 +2890,8 @@ public class CombDCEL {
     	
     	// note: there may be no faces/idealfaces
     	if (pdc.faces!=null && pdc.faceCount>0) {
-    		pdcel.faces=new Face[pdc.faceCount+1];
-    		pdcel.idealFaces=new Face[pdc.idealFaceCount+1];
+    		pdcel.faces=new DcelFace[pdc.faceCount+1];
+    		pdcel.idealFaces=new DcelFace[pdc.idealFaceCount+1];
     		for (int f=1;f<=pdc.faceCount;f++) {
     			pdcel.faces[f]=pdc.faces[f].clone();
     			pdcel.faces[f].edge=pdcel.edges[pdc.faces[f].edge.edgeIndx];
@@ -2915,17 +2915,17 @@ public class CombDCEL {
     	//   indexed, so 'redutil' will be tmp index (from 1)
     	int redcount=0;
     	if (pdc.redChain!=null) {
-    		RedHEdge rtrace=pdc.redChain;
+    		RedEdge rtrace=pdc.redChain;
     		do {
     			redcount++;
     			rtrace=rtrace.nextRed;
     		} while(rtrace!=pdc.redChain);
     	}
-    	RedHEdge[] newRedEdges=null;
+    	RedEdge[] newRedEdges=null;
     	if (redcount>0) {
-    		newRedEdges=new RedHEdge[redcount+1];
+    		newRedEdges=new RedEdge[redcount+1];
     		int rtick=0;
-    		RedHEdge oldrtrace=pdc.redChain;
+    		RedEdge oldrtrace=pdc.redChain;
     		do {
     			newRedEdges[++rtick]=oldrtrace.clone();
     			// set index, store in both old and new 'redutil'
@@ -2940,7 +2940,7 @@ public class CombDCEL {
     	if (pdc.redChain!=null) {
     		pdcel.redChain=newRedEdges[pdc.redChain.redutil];
     		for (int j=1;j<=redcount;j++) {
-    			RedHEdge reg=newRedEdges[j];
+    			RedEdge reg=newRedEdges[j];
     			reg.nextRed=newRedEdges[reg.nextRed.redutil];
     			reg.prevRed=newRedEdges[reg.prevRed.redutil];
     			if (reg.twinRed!=null) 
@@ -2964,8 +2964,8 @@ public class CombDCEL {
     		}
     	}
     	if (pdc.sideStarts!=null) {
-    		Iterator<RedHEdge> ssis=pdc.sideStarts.iterator();
-    		pdcel.sideStarts=new ArrayList<RedHEdge>();
+    		Iterator<RedEdge> ssis=pdc.sideStarts.iterator();
+    		pdcel.sideStarts=new ArrayList<RedEdge>();
     		while (ssis.hasNext()) {
     			pdcel.sideStarts.add(newRedEdges[ssis.next().redutil]);
     		}
@@ -2981,14 +2981,14 @@ public class CombDCEL {
     		pdcel.gamma=pdcel.edges[pdc.gamma.edgeIndx];
     	
     	if (pdc.pairLink!=null && pdc.pairLink.size()>1) {
-    		pdcel.pairLink=new D_PairLink();
-    		Iterator<D_SideData> pis=pdc.pairLink.iterator();
+    		pdcel.pairLink=new PairLink();
+    		Iterator<SideData> pis=pdc.pairLink.iterator();
     		pis.next(); // flush first null entry
     		pdcel.pairLink.add(null); // first null entry in new
     		while (pis.hasNext()) {
-    			RedHEdge rhe=null;
-    			D_SideData old_sd=pis.next();
-    			D_SideData sd=old_sd.clone();
+    			RedEdge rhe=null;
+    			SideData old_sd=pis.next();
+    			SideData sd=old_sd.clone();
 
     			// fix pointers
     			if ((rhe=sd.startEdge)!=null)
@@ -3072,8 +3072,8 @@ public class CombDCEL {
 		}
 
 		// rotate everything by J
-		RedHEdge[] tmpRedSpoke = new RedHEdge[num + 1];
-		RedHEdge[] tmpInSpoke = new RedHEdge[num + 1];
+		RedEdge[] tmpRedSpoke = new RedEdge[num + 1];
+		RedEdge[] tmpInSpoke = new RedEdge[num + 1];
 		for (int j = 0; j < num; j++) {
 			tmpRedSpoke[j] = rV.redSpoke[(j + J) % num];
 			tmpInSpoke[j] = rV.inSpoke[(j + J) % num];
@@ -3167,7 +3167,7 @@ public class CombDCEL {
 				if (prV.redSpoke[w]!=null) {
 					// replace last of this fan
 					HalfEdge new_w = new HalfEdge();
-					new_w.face = new Face();
+					new_w.face = new DcelFace();
 					new_w.face.edge = new_w;
 					new_w.origin = newV;
 					prV.inSpoke[w].myEdge.twin = new_w;
@@ -3198,7 +3198,7 @@ public class CombDCEL {
 				if (prV.redSpoke[w]!=null) {
 					// replace last of this fan
 					HalfEdge new_w = new HalfEdge();
-					new_w.face = new Face();
+					new_w.face = new DcelFace();
 					new_w.face.edge = new_w;
 					new_w.origin = newV;
 					prV.inSpoke[w].myEdge.twin = new_w;
@@ -3231,7 +3231,7 @@ public class CombDCEL {
 	   * both pdc1/2 have intact red chains, try to meld them.
 	   * 
 	   * Note: if n==1, then result may have disconnected interior,
-	   * and 'd_FillInside' will not catalog all of the complex.
+	   * and 'fillInside' will not catalog all of the complex.
 	   * 
 	   * Note: If n<0, identify the full bdry components 
 	   * (they must be the same length).
@@ -3252,7 +3252,7 @@ public class CombDCEL {
 	   * @param n int, number of edges (or negative)
 	   * @return modified 'PackDCEL' or null or 'CombException' on error
 	   */
-	  public static PackDCEL d_adjoin(PackDCEL pdc1,PackDCEL pdc2,
+	  public static PackDCEL adjoin(PackDCEL pdc1,PackDCEL pdc2,
 			  int v1,int v2, int n) {
 		  
 		  // 'he1/2' to be identified: clw from 'v1', cclw from 'v2'
@@ -3260,8 +3260,8 @@ public class CombDCEL {
 		  HalfEdge he2=pdc2.vertices[v2].halfedge; // DCELdebug.printBouquet(pdc2);
 
 		  // save some red edge // DCELdebug.printRedChain(pdc1.redChain);
-		  RedHEdge red1=he1.myRedEdge;
-		  RedHEdge red2=he2.myRedEdge;
+		  RedEdge red1=he1.myRedEdge;
+		  RedEdge red2=he2.myRedEdge;
 		  
 //		  if (red1==null || red2==null)
 //			  throw new CombException("edges should hare red edges");
@@ -3535,7 +3535,7 @@ public class CombDCEL {
 		  int count=0;
 		  while (hlink.size()>0) {
 			  HalfEdge he=hlink.remove(0);
-			  HalfEdge new_edge=RawDCEL.flipEdge_raw(pdcel,he);
+			  HalfEdge new_edge=RawManip.flipEdge_raw(pdcel,he);
 			  
 			  // success?
 			  if (new_edge==null) {
@@ -3573,9 +3573,9 @@ public class CombDCEL {
 		  if (hedge.myRedEdge!=null || hedge.twin.myRedEdge!=null) { // in redchain
 			  redProblem=true;
 		  }
-		  Face leftf=hedge.face;
+		  DcelFace leftf=hedge.face;
 		  leftf.edge=hedge;
-		  Face rightf=hedge.twin.face;
+		  DcelFace rightf=hedge.twin.face;
 		  rightf.edge=hedge.twin;
 		  Vertex leftv=hedge.next.next.origin;
 		  Vertex rightv=hedge.twin.next.next.origin;
@@ -3622,17 +3622,17 @@ public class CombDCEL {
 	   * chain with just two and returns the linked list: 
 	   * CAUTION: 'myEdges' are set, but not 'myRedEdge's,
 	   * in order that old data can be cleared out on return. 
-	   * The calling routine must also call 'd_FillInside', 
+	   * The calling routine must also call 'fillInside', 
 	   * repack, layout, etc. (see former 'ProjStruct.torus4layout')
 	   * @param pdcel PackDCEL
 	   * @return RedHEdge, linked list
 	   */
-	  public static RedHEdge torus4Sides(PackDCEL pdcel) {
+	  public static RedEdge torus4Sides(PackDCEL pdcel) {
 
 		  try {
 			  if (pdcel.redChain==null) {
 				  CombDCEL.redchain_by_edge(pdcel, null, null, false);
-				  CombDCEL.d_FillInside(pdcel); // need 'pairLink'
+				  CombDCEL.fillInside(pdcel); // need 'pairLink'
 			  }
 		  } catch (Exception ex) {
 			  throw new CombException("Failed to find or build a red "+
@@ -3678,16 +3678,16 @@ public class CombDCEL {
 		  HalfLink cutPath=PathDCEL.getCutPath(pdcel,path,seededge);
 
 		  // Form new red chain: path:cutPath:path-:cutPath-
-		  RedHEdge newChain=new RedHEdge(seededge);
-		  RedHEdge newR=newChain;
+		  RedEdge newChain=new RedEdge(seededge);
+		  RedEdge newR=newChain;
 		  
 		  his=path.iterator();
 		  his.next(); // already got 'seededge'
-		  RedHEdge pastR;
+		  RedEdge pastR;
 		  while (his.hasNext()) {
 			  pastR=newR;
 			  HalfEdge he=his.next();
-			  newR=new RedHEdge(he);
+			  newR=new RedEdge(he);
 			  pastR.nextRed=newR;
 			  newR.prevRed=pastR;
 		  }
@@ -3697,7 +3697,7 @@ public class CombDCEL {
 		  while (his.hasNext()) {
 			  pastR=newR;
 			  HalfEdge he=his.next();
-			  newR=new RedHEdge(he);
+			  newR=new RedEdge(he);
 			  pastR.nextRed=newR;
 			  newR.prevRed=pastR;
 		  }
@@ -3708,7 +3708,7 @@ public class CombDCEL {
 		  while (his.hasNext()) {
 			  pastR=newR;
 			  HalfEdge he=his.next().twin;
-			  newR=new RedHEdge(he);
+			  newR=new RedEdge(he);
 			  pastR.nextRed=newR;
 			  newR.prevRed=pastR;
 		  }
@@ -3719,7 +3719,7 @@ public class CombDCEL {
 		  while (his.hasNext()) {
 			  pastR=newR;
 			  HalfEdge he=his.next().twin;
-			  newR=new RedHEdge(he);
+			  newR=new RedEdge(he);
 			  pastR.nextRed=newR;
 			  newR.prevRed=pastR;
 		  }
@@ -3796,8 +3796,8 @@ public class CombDCEL {
 					" would have only two nghbs");
 		}
 		
-		RedHEdge redout=outedge.myRedEdge;
-		RedHEdge redin=inedge.myRedEdge;
+		RedEdge redout=outedge.myRedEdge;
+		RedEdge redin=inedge.myRedEdge;
 		
 		// 3-edge bdry component? would leave a loop
 		if (outedge.twin.prev.origin==inedge.origin) 
@@ -3832,8 +3832,8 @@ public class CombDCEL {
 			}
 			
 			// else, red chain is shrunk in one or other direction
-			RedHEdge upred; // set in case of further red shrinkage
-			RedHEdge downred;
+			RedEdge upred; // set in case of further red shrinkage
+			RedEdge downred;
 			if (redout.prevRed==redin) { // remove 'vert' from red chain
 				if (pdcel.redChain==redout || pdcel.redChain==redin)
 					pdcel.redChain=redout.nextRed;
@@ -3881,8 +3881,8 @@ public class CombDCEL {
 		if (outedge.twin.prev.origin==inedge.twin.next.twin.origin) {
 			HalfEdge pre_edge=inedge.twin.next.twin;
 			HalfEdge post_edge=outedge.twin.prev.twin;
-			RedHEdge pre_red=pre_edge.myRedEdge;
-			RedHEdge post_red=post_edge.myRedEdge;
+			RedEdge pre_red=pre_edge.myRedEdge;
+			RedEdge post_red=post_edge.myRedEdge;
 			Vertex oppVert=pre_edge.origin;
 			Vertex leftVert=outedge.twin.origin;
 			Vertex rightVert=inedge.origin;
@@ -3925,8 +3925,8 @@ public class CombDCEL {
 			
 			// check for red contraction at 'vert' and/or 'oppVert'
 			//   and subsequent possible contraction
-			RedHEdge upred=redout.prevRed; 
-			RedHEdge downred=redin.nextRed;
+			RedEdge upred=redout.prevRed; 
+			RedEdge downred=redin.nextRed;
 			if (redout.prevRed==redin) { // remove 'vert' from red chain
 				if (pdcel.redChain==redout || pdcel.redChain==redin)
 					pdcel.redChain=redout.nextRed;
@@ -4254,7 +4254,7 @@ public class CombDCEL {
 		  lastEnd=hlink.getLast().twin.origin.vertIndx;
 //		  if (startV.bdryFlag==0 && endV.bdryFlag==0) {
 			  redchain_by_edge(pdcel,hlink,pdcel.alpha,false);
-			  d_FillInside(pdcel);
+			  fillInside(pdcel);
 			  int[] ans=new int[2];
 			  ans[0]=firstEnd;
 			  ans[1]=lastEnd;
@@ -4334,8 +4334,8 @@ public class CombDCEL {
  * @author kstephe2, 8/2020
  */
 class PreRedVertex extends Vertex {
-	public RedHEdge[] redSpoke;    // outgoing 'RedHEdge'
-	public RedHEdge[] inSpoke;     // incoming 'RedHEdge'
+	public RedEdge[] redSpoke;    // outgoing 'RedHEdge'
+	public RedEdge[] inSpoke;     // incoming 'RedHEdge'
 	public int num;
 	boolean closed;   // if true, then original flower was closed
 	

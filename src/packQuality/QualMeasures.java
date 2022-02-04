@@ -191,8 +191,6 @@ public class QualMeasures {
 		Iterator<Integer> flist=facelist.iterator();
 		while (flist.hasNext()) {
 			int face=flist.next();
-			if (p.getFacePlotFlag(face)<=0)
-				break;
 			int[] verts=p.getFaceVerts(face);
 			for (int i=0;i<3;i++) {
 				int v1=verts[i];
@@ -201,7 +199,6 @@ public class QualMeasures {
 					if ((elength=edge_length(p,v1,v2))>=0.0
 							&& (dlength=desired_length(p,v1,v2))>0.0
 							&& ((quo=elength/dlength)>crit || quo<recip)) {
-						p.setFacePlotFlag(face,0);
 						count++;
 						i=3; // break out of for loop
 					}

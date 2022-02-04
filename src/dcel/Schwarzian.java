@@ -42,7 +42,7 @@ import util.TriAspect;
  * 
  * @author kens, January 2020
  */
-public class D_Schwarzian {
+public class Schwarzian {
 
 	
 	/**
@@ -102,7 +102,7 @@ public class D_Schwarzian {
 						// now get the schwarzian using the radii
 						try {
 							double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
-							double schn=D_Schwarzian.rad_to_schwarzian(rad,
+							double schn=Schwarzian.rad_to_schwarzian(rad,
 									ivd,p.hes);
 							edge.setSchwarzian(schn);
 							count++;
@@ -119,7 +119,7 @@ public class D_Schwarzian {
 						
 						// now get the schwarzian using the radii
 						try {
-							double schn=D_Schwarzian.cents_to_schwarzian(
+							double schn=Schwarzian.cents_to_schwarzian(
 									cents,p.hes);
 							edge.setSchwarzian(schn);
 							count++;
@@ -137,11 +137,11 @@ public class D_Schwarzian {
 		Mobius[] sideMobs=new Mobius[S+1];
 		for (int j=1;j<=S;j++) {
 			sideMobs[j]=new Mobius(); // default to identity
-			D_SideData sd=pdcel.pairLink.get(j);
+			SideData sd=pdcel.pairLink.get(j);
 			if (sd.mateIndex>=0) { // has mate
 				if (Mobius.frobeniusNorm(sd.mob)>.0001)
 					sideMobs[j]=sd.mob;
-				RedHEdge rtrace=sd.startEdge;
+				RedEdge rtrace=sd.startEdge;
 				do {
 					if (rtrace.myEdge.eutil>0)
 						rtrace.myEdge.eutil=j;
@@ -166,7 +166,7 @@ public class D_Schwarzian {
 					// now get the schwarzian using the radii
 					try {
 						double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
-						double schn=D_Schwarzian.rad_to_schwarzian(
+						double schn=Schwarzian.rad_to_schwarzian(
 								rad,ivd,p.hes);
 						edge.setSchwarzian(schn);
 						count++;
@@ -183,7 +183,7 @@ public class D_Schwarzian {
 					
 					// now get the schwarzian using the radii
 					try {
-						double schn=D_Schwarzian.cents_to_schwarzian(
+						double schn=Schwarzian.cents_to_schwarzian(
 								cents,p.hes);
 						edge.setSchwarzian(schn);
 						count++;
@@ -208,7 +208,7 @@ public class D_Schwarzian {
 					// now get the schwarzian using the radii
 					try {
 						double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
-						double schn=D_Schwarzian.rad_to_schwarzian(
+						double schn=Schwarzian.rad_to_schwarzian(
 								rad,ivd,p.hes);
 						edge.setSchwarzian(schn);
 						count++;
@@ -225,7 +225,7 @@ public class D_Schwarzian {
 					
 					// now get the schwarzian using the radii
 					try {
-						double schn=D_Schwarzian.cents_to_schwarzian(
+						double schn=Schwarzian.cents_to_schwarzian(
 								cents,p.hes);
 						edge.setSchwarzian(schn);
 						count++;
@@ -297,7 +297,7 @@ public class D_Schwarzian {
 				CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
 				tanPts[0],tanPts[1],tanPts[2],0,hes);
 
-		Mobius dMob = D_Schwarzian.getMobDeriv(fbase,gbase,0,0);
+		Mobius dMob = Schwarzian.getMobDeriv(fbase,gbase,0,0);
 		return dMob.c.x;
 	}
 	
@@ -370,7 +370,7 @@ public class D_Schwarzian {
 				CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
 				tanPts[0],tanPts[1],tanPts[2],0,hes);
 
-		Mobius dMob = D_Schwarzian.getMobDeriv(fbase,gbase,0,0);
+		Mobius dMob = Schwarzian.getMobDeriv(fbase,gbase,0,0);
 		if (Math.abs(dMob.c.y)>.001) {
 			throw new DataException("error: Schwarzian is not real");
 		}
@@ -690,7 +690,7 @@ public class D_Schwarzian {
 	public static TriAspect []DualTriData(PackData p) {
 		TriAspect []triasp=new TriAspect[p.faceCount+1];
 		for (int f=1;f<=p.faceCount;f++) {
-			dcel.Face face=p.packDCEL.faces[f];
+			dcel.DcelFace face=p.packDCEL.faces[f];
 			triasp[f]=new TriAspect(p.hes);
 			
 			HalfEdge he=face.edge;

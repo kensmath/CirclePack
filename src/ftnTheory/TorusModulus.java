@@ -3,7 +3,7 @@ package ftnTheory;
 import java.util.Iterator;
 
 import complex.Complex;
-import dcel.D_SideData;
+import dcel.SideData;
 import math.Mobius;
 import packing.PackData;
 
@@ -50,8 +50,8 @@ public class TorusModulus {
 	  Mobius mob;
 
 	  // Compute array of values mob.a/mob.b for the side-pairings.
-	  Iterator<D_SideData> pdpl=p.packDCEL.pairLink.iterator();
-	  D_SideData epair=null;
+	  Iterator<SideData> pdpl=p.packDCEL.pairLink.iterator();
+	  SideData epair=null;
 	  epair=pdpl.next(); // first slot is empty
 	  int j=1;
 	  while(pdpl.hasNext()) {
@@ -76,7 +76,7 @@ public class TorusModulus {
 		  // if affine, take logarithm
 		  if (mob.apply(Z[0]).abs()>.5) {
 			  for(int k=1;k<=4;k++) {
-				  D_SideData sd=p.packDCEL.pairLink.get(k);
+				  SideData sd=p.packDCEL.pairLink.get(k);
 				  W[j]=sd.startEdge.getCenter();
 			  }
 		  }

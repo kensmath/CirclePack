@@ -649,7 +649,7 @@ public class RationalMap extends PackExtender {
 		}
 		if (safety<=0 || next==es1.endV) 
 			return 0;
-		domainPack.packDCEL=CombDCEL.d_adjoin(domainPack.packDCEL,
+		domainPack.packDCEL=CombDCEL.adjoin(domainPack.packDCEL,
 				domainPack.packDCEL, es1.startV,es2.endV,length);
 		domainPack.vertexMap=domainPack.packDCEL.oldNew;
 		domainPack.packDCEL.fixDCEL_raw(domainPack);
@@ -717,7 +717,7 @@ public class RationalMap extends PackExtender {
 		}
 		
 		// do the 'adjoin'
-		domainPack.packDCEL=CombDCEL.d_adjoin(domainPack.packDCEL,
+		domainPack.packDCEL=CombDCEL.adjoin(domainPack.packDCEL,
 				slitPack.packDCEL, es.startV,tES.endV,length);
 		VertexMap holdvm=domainPack.packDCEL.oldNew;
 		domainPack.packDCEL.fixDCEL_raw(domainPack);

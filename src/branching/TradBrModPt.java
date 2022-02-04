@@ -8,7 +8,7 @@ import java.util.Vector;
 import canvasses.DisplayParser;
 import circlePack.PackControl;
 import dcel.HalfEdge;
-import dcel.RawDCEL;
+import dcel.RawManip;
 import dcel.Vertex;
 import ftnTheory.GenModBranching;
 import listManip.HalfLink;
@@ -49,7 +49,7 @@ public class TradBrModPt extends GenBrModPt {
 	// modify 'packData'
 	public int modifyPackData() {
 		eventHorizon=myEdge.origin.getOuterEdges();
-		myHoloBorder=RawDCEL.leftsideLink(pdc,eventHorizon);
+		myHoloBorder=RawManip.leftsideLink(pdc,eventHorizon);
 		myExclusions=new ArrayList<Vertex>();
 		Iterator<HalfEdge> vis=eventHorizon.iterator();
 		HalfEdge starthe=null;

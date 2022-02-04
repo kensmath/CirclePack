@@ -8,7 +8,7 @@ import java.util.Vector;
 import canvasses.DisplayParser;
 import circlePack.PackControl;
 import dcel.HalfEdge;
-import dcel.RawDCEL;
+import dcel.RawManip;
 import dcel.Vertex;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -130,18 +130,18 @@ public class SingBrModPt extends GenBrModPt {
 		}
 
 		// create 'vanishing'
-		int van=RawDCEL.addBary_raw(pdc,faceEdge[0],false);
+		int van=RawManip.addBary_raw(pdc,faceEdge[0],false);
 		vanishing=pdc.vertices[van];
 		
 		// successively split 'faceEdge's
 		for (int j=0;j<3;j++) {
-			RawDCEL.splitEdge_raw(pdc,faceEdge[j]);
+			RawManip.splitEdge_raw(pdc,faceEdge[j]);
 			guide[(j+2)%3]=faceEdge[j].twin.origin;
 			secondEdge[(j+1)%3]=faceEdge[j].twin.prev.twin.prev;
 		}
 		
 		// get encircling link for local holonomy   
-		myHoloBorder=RawDCEL.leftsideLink(pdc,eventHorizon);
+		myHoloBorder=RawManip.leftsideLink(pdc,eventHorizon);
 		myHoloBorder.add(0,eventHorizon.get(0));
 		
 		// add 'myHoloBorder' to 'layoutAddons'

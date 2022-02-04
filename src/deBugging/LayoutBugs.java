@@ -5,8 +5,8 @@ import java.io.File;
 import java.util.Iterator;
 
 import allMains.CirclePack;
-import dcel.D_PairLink;
-import dcel.D_SideData;
+import dcel.PairLink;
+import dcel.SideData;
 import dcel.PackDCEL;
 import input.CPFileManager;
 import komplex.EdgeSimple;
@@ -54,7 +54,7 @@ public class LayoutBugs {
 		  try {
 			  dbw.write("Dcel faces in order of 'dcel.faces' vector.\n");;
 			  for (int f=1;f<=dcel.faceCount;f++) {
-				  dcel.Face face=dcel.faces[f];
+				  dcel.DcelFace face=dcel.faces[f];
 				  int[] verts=face.getVerts();
 				  dbw.write("\nFace "+face.faceIndx+": <");
 				  int s=verts.length;
@@ -65,7 +65,7 @@ public class LayoutBugs {
 			  }
 			  dbw.write("\n\nDecel ideal faces in order of 'dcel.idealFaces' vector.\n");
 			  for (int k=1;k<=dcel.idealFaceCount;k++) {
-				  dcel.Face face=dcel.idealFaces[k];
+				  dcel.DcelFace face=dcel.idealFaces[k];
 				  int[] verts=face.getVerts();
 				  dbw.write("\nidealFace "+face.faceIndx+": <");
 				  int s=verts.length;

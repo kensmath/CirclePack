@@ -10,7 +10,7 @@ import allMains.CirclePack;
 import baryStuff.BaryPoint;
 import circlePack.PackControl;
 import complex.Complex;
-import dcel.D_SideData;
+import dcel.SideData;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
 import exceptions.ParserException;
@@ -514,7 +514,7 @@ public class DisplayParser {
 						if (flist !=null && flist.size()>0) {
 							Iterator<Integer> fis=flist.iterator();
 							while(fis.hasNext()) {
-								dcel.Face face=p.packDCEL.faces[fis.next()];
+								dcel.DcelFace face=p.packDCEL.faces[fis.next()];
 								Complex[] pts=p.face_hull(face);
 								int n=pts.length;
 
@@ -604,7 +604,7 @@ public class DisplayParser {
 				while (flist.hasNext()) {
 					f = (Integer) flist.next();
 					if (f>0 && f<=p.faceCount) {
-						dcel.Face face=p.packDCEL.faces[f];
+						dcel.DcelFace face=p.packDCEL.faces[f];
 						Complex []pts=p.packDCEL.getFaceCorners(face);
 						if (!dispFlags.colorIsSet)
 							dispFlags.setColor(p.getFaceColor(f));
@@ -756,11 +756,11 @@ public class DisplayParser {
 					n = (Integer) indices.get(j);
 
 					if (pdcel!=null) {
-						D_SideData sdata=pdcel.pairLink.get(n);
+						SideData sdata=pdcel.pairLink.get(n);
 						count +=pdcel.d_draw_bdry_seg(n, do_label, do_circle, sdata.color, thickness);
 					}
 					else {
-						D_SideData epair = p.getSidePairs().get(n);
+						SideData epair = p.getSidePairs().get(n);
 						count += p.sa_draw_bdry_seg(n, do_label, do_circle,
 							epair.color, thickness);
 					}
@@ -768,14 +768,14 @@ public class DisplayParser {
 					if (do_mate) {
 						// do the paired edge?
 						if (pdcel!=null) {
-							D_SideData sdata=pdcel.pairLink.get(n);
+							SideData sdata=pdcel.pairLink.get(n);
 							if (sdata.mateIndex>0) {
 								count +=pdcel.d_draw_bdry_seg(sdata.mateIndex, 
 										do_label, do_circle, sdata.color, thickness);
 							}
 						}
 						else {
-							D_SideData ep = p.getSidePairs().get(n);
+							SideData ep = p.getSidePairs().get(n);
 							if ((k = ep.mateIndex) >= 0)
 							count+=p.sa_draw_bdry_seg(k, do_label, do_circle,
 									ep.color, thickness);

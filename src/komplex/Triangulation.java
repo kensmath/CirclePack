@@ -101,22 +101,22 @@ public class Triangulation {
 	    }
 	  
 		// ===== generate temporary 'KData' array from Triangulation
-		KData []kdata=null;
-		int []ans=new int[2];
+		TmpVert[] tmpVert=null;
+		int[] ans=new int[2];
 		try {
-			kdata=parse_triangles(Tri,starter,ans);
+			tmpVert=parse_triangles(Tri,starter,ans);
 		} catch (Exception ex) {
 			throw new CombException("try_to_pack error: "+ex.getMessage());
 		}
-		if (kdata==null || ans[0]<3) {
+		if (tmpVert==null || ans[0]<3) {
 			CirclePack.cpb.errMsg("tri_to_pack failed");
 			return null;
 		}
 		
 		// ========== create bouquet from KData array
-		int[][] bouquet=new int[kdata.length+1][];
+		int[][] bouquet=new int[tmpVert.length+1][];
 		for (int v=1;v<=ans[0];v++) {
-			bouquet[v]=kdata[v].flower;
+			bouquet[v]=tmpVert[v].flower;
 		}
 	  
 		// =========== create the packing itself
@@ -125,14 +125,14 @@ public class Triangulation {
 		pdcel.fixDCEL_raw(p);
 		p.hes=hes;
 		for (int v=1;v<=p.nodeCount;v++) {
-			p.vData[v].mark=kdata[v].mark; // original index in triangulation
+			p.packDCEL.vertices[v].mark=tmpVert[v].mark; // original index in triangulation
 		}
 	  
 		// Record the node locations and vert colors from Tri, 
 		//   if they exist (orig indices stored in 'mark').
 		if (Tri.nodes!=null) {
 			for (int i=1;i<=p.nodeCount;i++) {
-				int j=p.vData[i].mark;
+				int j=p.packDCEL.vertices[i].mark;
 				if (hes<=0) {
 					p.setCenter(i,new Complex(Tri.nodes[j].x,Tri.nodes[j].y));
 				}
@@ -234,7 +234,7 @@ public class Triangulation {
 	 * 	ans[0]=nodecount. 
 	 * @return KData[], null on error. Original indices stored in 'mark'
 	*/
-	public static KData[] parse_triangles(Triangulation T, 
+	public static TmpVert[] parse_triangles(Triangulation T, 
 			int start, int[] ans)
 			throws DataException {
 
@@ -332,9 +332,9 @@ public class Triangulation {
 		}
 
 		// create K_data (but will adjust it later)
-		KData[] pK = new KData[top + 1];
+		TmpVert[] pK = new TmpVert[top + 1];
 		for (int i = 1; i <= top; i++)
-			pK[i] = new KData();
+			pK[i] = new TmpVert();
 
 		// Here we build flowers for the vertices. Begin with first vertex 
 		//   of 'start' face. For each petal w added to its flower, if w is not already processed, its utilFlag shows the
@@ -533,18 +533,18 @@ public class Triangulation {
 		ans[0] = click;
 
 		// create the final K_data
-		KData[] packK = new KData[ans[0] + 1];
+		TmpVert[] tmpVert = new TmpVert[ans[0] + 1];
 		for (int i = bottom; i <= top; i++) {
 			int n = re_indx[i];
 			if (n != 0) {
 				// save former index in 'mark' for use on return.
-				packK[n] = pK[i];
-				packK[n].mark = i;
-				for (int j = 0; j <= packK[n].num; j++)
-					packK[n].flower[j] = re_indx[packK[n].flower[j]];
+				tmpVert[n] = pK[i];
+				tmpVert[n].mark = i;
+				for (int j = 0; j <= tmpVert[n].num; j++)
+					tmpVert[n].flower[j] = re_indx[tmpVert[n].flower[j]];
 			}
 		}
-		return packK;
+		return tmpVert;
 	}
 
 	/**
@@ -1312,7 +1312,7 @@ public class Triangulation {
 		
 		// Now the processing to prune this; create and work with DCEL data
 		int[] ans=new int[2];
-		KData[] kData=Triangulation.parse_triangles(Tri,0,ans);
+		TmpVert[] tmpVert=Triangulation.parse_triangles(Tri,0,ans);
 		int nodecount=ans[0];
 		if (nodecount<=2)
 			throw new DataException("DCEL: parse_triangles came up short");
@@ -1320,7 +1320,7 @@ public class Triangulation {
 		// get the bouquet of flowers
 		int [][]bouquet=new int[nodecount+1][];
 		for (int v=1;v<=nodecount;v++) 
-			bouquet[v]=kData[v].flower;
+			bouquet[v]=tmpVert[v].flower;
 
 		PackDCEL pdc=CombDCEL.getRawDCEL(bouquet);
 		PackDCEL myDCEL=CombDCEL.extractDCEL(pdc,null,pdc.alpha);
@@ -1343,7 +1343,7 @@ public class Triangulation {
 
 		// determine which faces have centroids in Gamma; these are included
 		Complex firstC = null;
-		dcel.Face firstFace=null;
+		dcel.DcelFace firstFace=null;
 		int[] facestat = new int[facecount + 1]; // 1=included
 
 		for (int j = 1; j <= facecount; j++) {
@@ -1369,7 +1369,7 @@ public class Triangulation {
 				Iterator<HalfEdge> eit=edges.iterator();
 				while (eit.hasNext()) {
 					HalfEdge he=eit.next();
-					dcel.Face oppface = he.twin.face;
+					dcel.DcelFace oppface = he.twin.face;
 					if (Math.abs(oppface.faceIndx) > facecount || facestat[Math.abs(oppface.faceIndx)] == 0)
 						putbdry.add(he);
 				}
@@ -1449,8 +1449,8 @@ public class Triangulation {
 			firstFace=myDCEL.faces[startindx];
 			
 		// cycle through adding faces to 'firstFace'
-		Vector<dcel.Face> nextF=new Vector<dcel.Face>();
-		Vector<dcel.Face> currF=nextF;
+		Vector<dcel.DcelFace> nextF=new Vector<dcel.DcelFace>();
+		Vector<dcel.DcelFace> currF=nextF;
 		nextF.add(firstFace);
 		int[] newfaces = new int[myDCEL.faceCount+1];
 		newfaces[Math.abs(firstFace.faceIndx)]=1;
@@ -1458,9 +1458,9 @@ public class Triangulation {
 		tick=0;
 		while(nextF.size()>0) {
 			currF=nextF;
-			nextF=new Vector<dcel.Face>();
+			nextF=new Vector<dcel.DcelFace>();
 			while (currF.size()>0) {
-				dcel.Face currface=currF.remove(0);
+				dcel.DcelFace currface=currF.remove(0);
 				HalfLink edges=currface.getEdges();
 				Iterator<HalfEdge> eit=edges.iterator();
 				while (eit.hasNext()) {
@@ -1521,7 +1521,7 @@ public class Triangulation {
 				int[] findx = new int[sz];
 				for (int k = 0; k < sz; k++)
 					findx[k] = vertvec.get(k);
-				zzTri.faces[++tick]=new Face();
+				zzTri.faces[++tick]=new Face(3);
 				zzTri.faces[tick].vert = findx;
 			}
 		}
@@ -1660,7 +1660,7 @@ class TmpVert {
 	public TmpVert() {
 	}
 }		
-
+ 
 class TmpFace {
 	int face;        // index of this face
 	int bary;        // index of barycenter

@@ -7,12 +7,12 @@ import exceptions.CombException;
 import packing.PackData;
 
 /**
- * Linked list of 'D_SideData' objects; these contain data 
+ * Linked list of 'SideData' objects; these contain data 
  * on side-pairings and non-pairing border segments for 
  * non-simply connected complexes with dcel structures.
  * @author kens
  */
-public class D_PairLink extends LinkedList<D_SideData> {
+public class PairLink extends LinkedList<SideData> {
 
 	private static final long 
 	serialVersionUID = 1L;
@@ -20,7 +20,7 @@ public class D_PairLink extends LinkedList<D_SideData> {
 	PackData packData;
 	
 	// Constructors
-	public D_PairLink() {
+	public PairLink() {
 		super();
 	}
 
@@ -29,15 +29,15 @@ public class D_PairLink extends LinkedList<D_SideData> {
 	 * is a mate to 'sideDes'. Match involves 'startEdge' of one equal
 	 * to 'endEdge' of other and vice verse. Return -1 if not found; may
 	 * indicate an error.
-	 * @param pairLink D_PairLink, list of side pairings
-	 * @param sideDes D_SideData
+	 * @param pairLink PairLink, list of side pairings
+	 * @param sideDes SideData
 	 * @return index of mate to sideDes, -1 if none found
 	 */
-	public static int find_mate(D_PairLink pairLink,D_SideData sideDes) {
+	public static int find_mate(PairLink pairLink,SideData sideDes) {
 		 int indx=0;
-		 Iterator<D_SideData> plink=pairLink.iterator();
+		 Iterator<SideData> plink=pairLink.iterator();
 		 while (plink.hasNext()) {
-			 D_SideData ep=(D_SideData)plink.next();
+			 SideData ep=(SideData)plink.next();
 			 if (sideDes.startEdge.twinRed==ep.endEdge
 					 && ep.startEdge.twinRed==sideDes.endEdge)
 				 return indx;
@@ -47,17 +47,17 @@ public class D_PairLink extends LinkedList<D_SideData> {
 	}
 	 
 	/**
-	 * Find 'D_SideData' with given label.
+	 * Find 'SideData' with given label.
 	 * @param labelStr 
-	 * @return D_SideData, or null if not found
+	 * @return SideData, or null if not found
 	 */
-	public static D_SideData findLabeled(D_PairLink pairLink,
+	public static SideData findLabeled(PairLink pairLink,
 			String labelStr) {
 		if (pairLink==null || pairLink.size()==0) return null;
-		Iterator<D_SideData> sides=pairLink.iterator();
-		D_SideData edge=null;
+		Iterator<SideData> sides=pairLink.iterator();
+		SideData edge=null;
 		while (sides.hasNext()) {
-			edge=(D_SideData)sides.next();
+			edge=(SideData)sides.next();
 			if (edge.label.equals(labelStr)) return edge;
 		}
 		return null;
@@ -71,10 +71,10 @@ public class D_PairLink extends LinkedList<D_SideData> {
 		int count=0;
 		if (this.size()<2)
 			return 0;
-		Iterator<D_SideData> sides=iterator();
-		D_SideData edge=sides.next(); // first is null
+		Iterator<SideData> sides=iterator();
+		SideData edge=sides.next(); // first is null
 		while (sides.hasNext()) {
-			edge=(D_SideData)sides.next();
+			edge=(SideData)sides.next();
 			if (edge.mateIndex>0)
 				count++;
 		}
@@ -87,14 +87,14 @@ public class D_PairLink extends LinkedList<D_SideData> {
 	/**
 	 * Get the nth side-pairing.
 	 * @param n int
-	 * @return D_SideData, null if doesn't exist
+	 * @return SideData, null if doesn't exist
 	 */
-	public D_SideData getPair(int n) {
+	public SideData getPair(int n) {
 		if (n<=0)
 			return null;
 		int tick=0;
-		Iterator<D_SideData> sides=iterator();
-		D_SideData edge=null;
+		Iterator<SideData> sides=iterator();
+		SideData edge=null;
 		while (sides.hasNext() && tick<n) {
 			edge=sides.next();
 			if (edge.mateIndex>0 && edge.mateIndex>edge.spIndex)

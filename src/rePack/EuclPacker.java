@@ -5,19 +5,18 @@ import java.util.Iterator;
 
 import JNI.JNIinit;
 import allMains.CirclePack;
-import dcel.Face;
+import dcel.DcelFace;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.Vertex;
+import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.PackingException;
 import exceptions.ParserException;
-import ftnTheory.D_ProjStruct;
+import ftnTheory.ProjStruct;
 import input.CommandStrParser;
-import komplex.KData;
 import listManip.NodeLink;
 import packing.PackData;
-import packing.RData;
 import util.TriData;
 
 /**
@@ -25,11 +24,12 @@ import util.TriData;
  * @author kstephe2 1/2021
  *
  */
-public class d_EuclPacker extends RePacker {
+public class EuclPacker extends RePacker {
 	
     // Constructors
-    public d_EuclPacker(PackData pd,int pass_limit) { 
+    public EuclPacker(PackData pd,int pass_limit) { 
     	p=pd;
+    	pdcel=p.packDCEL;
 		oldReliable=false;
     	if (pass_limit<0) 
     		passLimit=PASSLIMIT;
@@ -37,7 +37,7 @@ public class d_EuclPacker extends RePacker {
 			passLimit=pass_limit;
 		status=load(); 
 		if (status!=LOADED) 
-			throw new PackingException("'d_EuclPacker' failed to load");
+			throw new PackingException("'EuclPacker' failed to load");
 		totalPasses=0;
 		localPasses=0;
 		R1=new double[p.nodeCount+1];
@@ -63,7 +63,7 @@ public class d_EuclPacker extends RePacker {
     		return FAILURE;
     	
     	// load the 'TriData'; true if inv distances involved
-   		oldReliable=triDataLoad();
+   		oldReliable=prepData();
    		
     	return LOADED; 
     }
@@ -86,8 +86,8 @@ public class d_EuclPacker extends RePacker {
     		// for reds, need to find red edges
     		//    
     		if (vert.redFlag) { 
-    			ArrayList<Face> facelist=vert.getFaceFlower();
-    			Iterator<Face> fist=facelist.iterator();
+    			ArrayList<DcelFace> facelist=vert.getFaceFlower();
+    			Iterator<DcelFace> fist=facelist.iterator();
     			while(fist.hasNext()) {
     				int f=fist.next().faceIndx;
     				if (f>0) {
@@ -95,14 +95,15 @@ public class d_EuclPacker extends RePacker {
     					int j=trid.vertIndex(v);
     					HalfEdge he=trid.getHalfEdge(j);
     					pdcel.setRad4Edge(he,trid.radii[j]);
-    					p.vData[v].rad=trid.radii[j];
+    					p.packDCEL.vertices[v].rad=trid.radii[j];
     				}
     			}
     		}
     		else {
-    			int findx=p.vData[v].findices[0];
-    			int vindx=p.vData[v].myIndices[0];
-    			p.setRadius(v,pdcel.triData[findx].radii[vindx]);
+    			TriData vtd=pdcel.triData[
+    			        pdcel.vertices[v].halfedge.face.faceIndx];
+    			int vindx=vtd.vertIndex(v);
+    			p.setRadius(v,vtd.radii[vindx]);
     		}
     	}
     	p.fillcurves();
@@ -172,14 +173,14 @@ public class d_EuclPacker extends RePacker {
 	try {
 	    for (int j=0;j<aimnum;j++) {
 	    	int v = index[j];
-	    	double faim = p.vData[v].aim;         // get target sum 
+	    	double faim = p.packDCEL.vertices[v].aim;         // get target sum 
 	    	double r = getTriRadius(v);            // get present label
 
 	    	// compute anglesum (using local data)
 	    	double fbest=compTriCurv(v,r);
 
 	    	// use the model to predict the next value 
-	    	int N = 2*p.vData[v].num;
+	    	int N = 2*vNum[v];
 	    	double del = Math.sin(faim/N);
 	    	double bet = Math.sin(fbest/N);
 	    	double r2 = r*bet*(1-del)/(del*(1-bet));
@@ -187,7 +188,7 @@ public class d_EuclPacker extends RePacker {
 	    	if (r2<0) 
 	    		throw new PackingException();
 	    	setTriRadius(v,r2);
-	    	p.vData[v].curv = fbest;  // store new angle sum
+	    	p.packDCEL.vertices[v].curv = fbest;  // store new angle sum
 	    	fbest -= faim;
 	    	accumErr2 += fbest*fbest;   // accum abs error 
 	    }
@@ -228,14 +229,14 @@ public class d_EuclPacker extends RePacker {
 	    	for (int j=0;j<aimnum;j++) {
 	  		  
 	            int v = index[j];   // point to active node
-	            faim = p.vData[v].aim; // get target sum 
+	            faim = p.packDCEL.vertices[v].aim; // get target sum 
 	            double ra = getTriRadius(v);    // get present label
 	            
 		    	// compute anglesum inline (using local data)
 		    	fbest=compTriCurv(v,ra);
 	            
 	            // use the model to predict the next value 
-	            int N = 2*p.vData[v].num;
+	            int N = 2*vNum[v];
 	            double del = Math.sin(faim/N);
 	            double bet = Math.sin(fbest/N);
 	            double r2 = ra*bet*(1-del)/(del*(1-bet));
@@ -243,7 +244,7 @@ public class d_EuclPacker extends RePacker {
 	            if (r2<0) 
 	            	throw new PackingException();
 	            setTriRadius(v,r2);
-	            p.vData[v].curv = fbest;       // store new angle sum
+	            p.packDCEL.vertices[v].curv = fbest;       // store new angle sum
 	            fbest -= faim;
 	            c1 += fbest*fbest;   // accum abs error 
 	    	}
@@ -328,14 +329,14 @@ public class d_EuclPacker extends RePacker {
 	    for (int j=0;j<aimnum;j++) {
 			int v = index[j];
 
-	        faim = p.vData[v].aim; // get target sum 
+	        faim = p.packDCEL.vertices[v].aim; // get target sum 
 	        double rc = getTriRadius(v);    // get present label
 	        
 	    	// compute anglesum inline (using local data)
 	        fbest=compTriCurv(v,rc);
 
 	        // use the model to predict the next value
-	        int N = 2*p.vData[v].num;
+	        int N = 2*vNum[v];
 			// set up for model 
 
 			double del = Math.sin(faim/N);
@@ -346,7 +347,7 @@ public class d_EuclPacker extends RePacker {
 	        if (r2<0) 
 	        	throw new PackingException();
 	        setTriRadius(v,r2);
-	        p.vData[v].curv = fbest;       /* store new angle sum */
+	        p.packDCEL.vertices[v].curv = fbest;       /* store new angle sum */
 	        fbest -= faim;
 	        accumErr2 += fbest*fbest;   /* accum abs error */
 	    }
@@ -542,7 +543,7 @@ public class d_EuclPacker extends RePacker {
 		for (int v=1;v<=p.nodeCount;v++) {
 			if (p.getAim(v)>0) { //   p.getAim(j)>0) {
 				inDex[aimnum++]=v;
-				double curv=D_ProjStruct.labelAngSum(p,pdcel.triData,v,1.0)[0];
+				double curv=ProjStruct.labelAngSum(p,pdcel.triData,v,1.0)[0];
 				double err=curv-p.getAim(v);
 				accum += (err<0) ? (-err) : err;
 			}
@@ -556,17 +557,17 @@ public class d_EuclPacker extends RePacker {
 		while ((cut > RePacker.RP_TOLER && count<passes)) {
 			for (int j=0;j<aimnum;j++) {
 				int v=inDex[j];
-				double asum=D_ProjStruct.labelAngSum(p,pdcel.triData,v,1.0)[0];
+				double asum=ProjStruct.labelAngSum(p,pdcel.triData,v,1.0)[0];
         	  double aim=pdcel.p.getAim(v);
         	  int num=p.countFaces(v);
-        	  double factor=d_EuclPacker.uniFactor(num, asum, aim);
-        	  D_ProjStruct.adjustLabel(p,pdcel.triData,v,factor);
+        	  double factor=EuclPacker.uniFactor(num, asum, aim);
+        	  ProjStruct.adjustLabel(p,pdcel.triData,v,factor);
     	  }
 
           accum=0;
           for (int j=0;j<aimnum;j++) {
         	  int v=inDex[j];
-        	  double curv=D_ProjStruct.labelAngSum(p,pdcel.triData,v,1.0)[0];
+        	  double curv=ProjStruct.labelAngSum(p,pdcel.triData,v,1.0)[0];
         	  double err=curv-p.getAim(v);
         	  accum += (err<0) ? (-err) : err;
           }

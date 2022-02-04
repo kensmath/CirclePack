@@ -135,7 +135,8 @@ public class StringUtil {
 		str=str.substring(a+1,b);
 		str=str.replace(',',' '); // turn comma into whitespace
 		String par_str[]=str.split("\\s+");
-		if (par_str.length!=2) return null;
+		if (par_str.length!=2) 
+			return null;
 		return par_str;
 	}
 	

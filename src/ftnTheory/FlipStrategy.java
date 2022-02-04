@@ -5,7 +5,7 @@ import java.util.Random;
 import java.util.Vector;
 
 import dcel.HalfEdge;
-import dcel.RawDCEL;
+import dcel.RawManip;
 import exceptions.CombException;
 import exceptions.DataException;
 import komplex.EdgeSimple;
@@ -114,7 +114,7 @@ public class FlipStrategy extends PackExtender {
 			if (baseEdge==null)
 				return 0;
 			
-			HalfEdge[] ans=RawDCEL.flipAdvance_raw(packData.packDCEL,baseEdge);
+			HalfEdge[] ans=RawManip.flipAdvance_raw(packData.packDCEL,baseEdge);
 			if (ans==null)
 				return 0;
 			baseEdge=ans[0]; // the new hedge

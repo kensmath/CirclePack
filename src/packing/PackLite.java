@@ -7,7 +7,7 @@ import complex.Complex;
 import dcel.CombDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RedHEdge;
+import dcel.RedEdge;
 import dcel.Vertex;
 import exceptions.DataException;
 import exceptions.MiscException;
@@ -171,7 +171,7 @@ public class PackLite {
 		
 		if (p.packDCEL.redChain==null) { // sphere?
 			gam=p.antipodal_vert(alp);
-			dcel.Face fauxface=p.packDCEL.vertices[gam].halfedge.face;
+			dcel.DcelFace fauxface=p.packDCEL.vertices[gam].halfedge.face;
 			p.puncture_face(fauxface.faceIndx);
 		}
 
@@ -223,7 +223,7 @@ public class PackLite {
 		intVertCount=newIndx;
 		
 		// now the cclw bdry
-		RedHEdge rtrace=p.packDCEL.redChain;
+		RedEdge rtrace=p.packDCEL.redChain;
 		do {
 			int w=rtrace.myEdge.origin.vertIndx;
 			newIndices[w]=++newIndx;

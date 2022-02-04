@@ -8,13 +8,12 @@ import java.util.Vector;
 import allMains.CPBase;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.D_SideData;
+import dcel.SideData;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RedHEdge;
+import dcel.RedEdge;
 import dcel.Vertex;
 import exceptions.CombException;
-import exceptions.DCELException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
 import packQuality.QualMeasures;
@@ -478,7 +477,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				}
 				else { 
 					for (int i=1;i<=packData.getBdryCompCount();i++) {
-						dcel.Face iface=pdc.idealFaces[i];
+						dcel.DcelFace iface=pdc.idealFaces[i];
 						HalfLink hlink=iface.getEdges();
 						if (hlink!=null) {
 							count+=hlink.size();
@@ -547,12 +546,12 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			  } while (its.hasNext()); // eating rest of 'items'
 
 			  // now to traverse the 'RedEdge's in chosen segments
-			  Iterator<D_SideData> sp=packData.packDCEL.pairLink.iterator();
-			  D_SideData ep=sp.next(); // first is null
-			  RedHEdge rlst=null;
+			  Iterator<SideData> sp=packData.packDCEL.pairLink.iterator();
+			  SideData ep=sp.next(); // first is null
+			  RedEdge rlst=null;
 			  int tick=0;
 			  while (sp.hasNext()) {
-				  ep=(D_SideData)sp.next();
+				  ep=(SideData)sp.next();
 				  if (tag[tick++]) { // yes, do this one
 					  rlst=ep.startEdge;
 					  add(ep.startEdge.myEdge);
@@ -745,7 +744,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 					if (facelist==null || facelist.size()==0) break;
 					Iterator<Integer> flist=facelist.iterator();
 					while (flist.hasNext()) {
-						dcel.Face face=packData.packDCEL.faces[(Integer)flist.next()];
+						dcel.DcelFace face=packData.packDCEL.faces[(Integer)flist.next()];
 						HalfEdge fedge=face.edge;
 						add(fedge);
 						HalfEdge he=fedge;
@@ -1074,7 +1073,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	public static HalfLink HoloHalfLink(PackDCEL pdcel,int sideIndx) {
 		
 		HalfLink hlink=new HalfLink();
-		RedHEdge rtrace=pdcel.redChain;
+		RedEdge rtrace=pdcel.redChain;
 		boolean debug=false; // debug=true;
 		
 		// for whole red chain, we don't include any red edges
@@ -1103,7 +1102,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		if (pdcel.pairLink==null || sideIndx>=pdcel.pairLink.size()) 
 			throw new CombException(
 				"packing does not side with index "+sideIndx);
-		D_SideData sdata=pdcel.pairLink.get(sideIndx);
+		SideData sdata=pdcel.pairLink.get(sideIndx);
 		rtrace=sdata.startEdge;
 		HalfEdge he=rtrace.myEdge;
 		hlink.add(he);
@@ -1164,7 +1163,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		//   eliminate detours.     
 		
 		// zero out 'redutil'
-		RedHEdge rtr=pdcel.redChain;
+		RedEdge rtr=pdcel.redChain;
 		do {
 			rtr.redutil=0;
 			rtr=rtr.nextRed;
@@ -1774,9 +1773,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	 * @return HalfLink list of specified edges
 	 */
 	public static HalfLink edgeSpecs(PackData p, Vector<SelectSpec> specs) {
-		if (p.packDCEL == null) {
-			throw new DCELException("'edgeSpecs' require a DCEL structure");
-		}
+
 		if (specs == null || specs.size() == 0)
 			return null;
 		SelectSpec sp = null;

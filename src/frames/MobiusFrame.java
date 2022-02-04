@@ -17,7 +17,7 @@ import javax.swing.WindowConstants;
 
 import allMains.CirclePack;
 import circlePack.PackControl;
-import dcel.D_SideData;
+import dcel.SideData;
 import dcel.PackDCEL;
 import exceptions.ParserException;
 import handlers.MOBIUSHandler;
@@ -117,10 +117,10 @@ public class MobiusFrame extends JFrame implements ActionListener {
 		if (pdcel.redChain==null || pdcel.pairLink==null ||
 				pdcel.pairLink.size()<2)
 			return 0;
-		Iterator<D_SideData> sides=pdcel.pairLink.iterator();
-		D_SideData sd=sides.next(); // first spot empty
+		Iterator<SideData> sides=pdcel.pairLink.iterator();
+		SideData sd=sides.next(); // first spot empty
 		while (sides.hasNext()) {
-			sd=(D_SideData)sides.next();
+			sd=(SideData)sides.next();
 			// yes, this is part of a side-pairing, add its tool 
 			if (sd.label!=null && sd.mateIndex>0) {
 				String letterIcon=new String("mobius/mob_"+sd.label+".png");

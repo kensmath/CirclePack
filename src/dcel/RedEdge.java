@@ -17,11 +17,11 @@ import util.TriAspect;
  * @author kstephe2, 7/2020
  *
  */
-public class RedHEdge {
+public class RedEdge {
 	public HalfEdge myEdge;  // hold original info on edge
-	public RedHEdge nextRed;
-	public RedHEdge prevRed;
-	public RedHEdge twinRed; // across a red edge
+	public RedEdge nextRed;
+	public RedEdge prevRed;
+	public RedEdge twinRed; // across a red edge
 	public int mobIndx;      // index into sidepair Mobius maps
 	
 	// The 'origin' for this red edge may have several other red edges
@@ -32,7 +32,7 @@ public class RedHEdge {
 	public int redutil; // for temporary use only
 
 	// Constructor
-	public RedHEdge(HalfEdge he) {
+	public RedEdge(HalfEdge he) {
 		myEdge=he;
 		nextRed=null;
 		prevRed=null;
@@ -109,8 +109,8 @@ public class RedHEdge {
 	 * clone: CAUTION: pointers may be in conflict or outdated.
 	 * @return new RedHEdge
 	 */
-	public RedHEdge clone() {
-		RedHEdge rhe=new RedHEdge(this.myEdge);
+	public RedEdge clone() {
+		RedEdge rhe=new RedEdge(this.myEdge);
 		rhe.nextRed=nextRed;
 		rhe.prevRed=prevRed;
 		rhe.twinRed=twinRed;

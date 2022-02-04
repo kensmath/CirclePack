@@ -4,7 +4,6 @@ import java.util.Iterator;
 
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
 import geometry.CommonMath;
@@ -62,7 +61,7 @@ public class TriData {
 		}
 	}
 
-	public TriData(PackDCEL pdcel,dcel.Face fce) {
+	public TriData(PackDCEL pdcel,dcel.DcelFace fce) {
 		this(pdcel);
 		baseEdge=fce.edge;
 		face=baseEdge.face.faceIndx; 
@@ -247,7 +246,7 @@ public class TriData {
 	 * Return angle at v=vert[j] using 'radii', except radius 
 	 * at v itself is its current radius multiplied by 'factor'. 
 	 * @param j int
-	 * @param rad double
+	 * @param factor double
 	 * @return double
 	 */
 	public double compFactorAngle(int j,double factor) {
@@ -279,7 +278,7 @@ public class TriData {
     	PackDCEL pdcel=p.packDCEL;
     	if (pdcel.triData==null || 
     			pdcel.triData.length<(pdcel.faceCount+1)) 
-    		throw new ParserException("no 'triData' allocated");
+    		throw new ParserException("'triData' allocation problem");
     	if (vlist==null || vlist.size()==0)
     		vlist=new NodeLink(p,"a");
     	Iterator<Integer> vis=vlist.iterator();
@@ -303,12 +302,13 @@ public class TriData {
     		}
     		else { // store from first face containing v
     			int v=vert.vertIndx;
-    			int findx=pdcel.p.vData[v].findices[0];
-    			int vindx=pdcel.p.vData[v].myIndices[0];
+    			dcel.DcelFace face=pdcel.vertices[v].halfedge.face;
+    			TriData vtd=pdcel.triData[face.faceIndx];
+    			int vindx=vtd.vertIndex(v);
     			if (mode==2)
-    				p.setRadius(v,pdcel.triData[findx].labels[vindx]);
+    				p.setRadius(v,vtd.labels[vindx]);
     			else
-    				p.setRadius(v,pdcel.triData[findx].radii[vindx]);
+    				p.setRadius(v,vtd.radii[vindx]);
     		}
     		count++;
     	}

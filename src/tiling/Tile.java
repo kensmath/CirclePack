@@ -7,8 +7,8 @@ import java.util.Vector;
 
 import dcel.CombDCEL;
 import dcel.PackDCEL;
-import dcel.RawDCEL;
-import dcel.RedHEdge;
+import dcel.RawManip;
+import dcel.RedEdge;
 import exceptions.CombException;
 import exceptions.DataException;
 import komplex.EdgeSimple;
@@ -96,7 +96,7 @@ public class Tile extends Face {
 	
 	// Constructors
 	public Tile(PackData p,TileData tdparent,int vCount) {
-		super(p,vCount);
+		super(vCount);
 		TDparent=tdparent;
 		baryVert=-1; // depends on packing
 		augVertCount=-1;
@@ -142,7 +142,7 @@ public class Tile extends Face {
 			if(vertCount<3)
 				throw new DataException(
 						"unigons/digons not allowed in tile mode 1");
-			PackData p=dcel.DcelCreation.seed(vertCount,0);
+			PackData p=packing.PackCreation.seed(vertCount,0);
 			p.tileData=new TileData(1,1);
 			Tile tile=new Tile(p.tileData,vertCount);
 			tile.tileType=tileType;
@@ -163,7 +163,7 @@ public class Tile extends Face {
 		if (mode==2) { // edge barycenters added
 			if(vertCount<2)
 				throw new DataException("unigons not allowed in tile mode 2");
-			PackData p=dcel.DcelCreation.seed(2*vertCount,0);
+			PackData p=packing.PackCreation.seed(2*vertCount,0);
 			p.tileData=new TileData(1,2);
 			Tile tile=new Tile(p.tileData,vertCount);
 			tile.tileType=tileType;
@@ -255,8 +255,8 @@ public class Tile extends Face {
 		// general n-gon case, n>=2
 		PackDCEL pdcel=CombDCEL.seed_raw(2*vertCount);
 		CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha, false);
-		CombDCEL.d_FillInside(pdcel);
-		ArrayList<Integer> barycents=RawDCEL.hexBaryRefine_raw(pdcel, true);
+		CombDCEL.fillInside(pdcel);
+		ArrayList<Integer> barycents=RawManip.hexBaryRefine_raw(pdcel, true);
 		
 		PackData p=new PackData(null);
 		pdcel.fixDCEL_raw(p);
@@ -284,7 +284,7 @@ public class Tile extends Face {
 		tile.augVertCount=4*vertCount;
 		tile.augVert=new int[tile.augVertCount];
 		int tick=0;
-		RedHEdge rtrace=p.packDCEL.redChain;
+		RedEdge rtrace=p.packDCEL.redChain;
 		do {
 			tile.augVert[tick++]=rtrace.myEdge.origin.vertIndx;
 			rtrace=rtrace.nextRed;

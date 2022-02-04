@@ -8,7 +8,7 @@ import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
 import dcel.HalfEdge;
-import dcel.RedHEdge;
+import dcel.RedEdge;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -748,7 +748,7 @@ public class QueryParser {
 						exception_words="?Redchain usage: appears to be empty";
 						throw new CombException("");
 					}
-					RedHEdge rtrace=p.packDCEL.redChain;
+					RedEdge rtrace=p.packDCEL.redChain;
 					int click=0;
 					do {
 						ans.append(" <"+rtrace.myEdge+">");

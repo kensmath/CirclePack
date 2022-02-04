@@ -236,7 +236,7 @@ public class TileBuilder {
 							
 							PackData newp = otile.singleCanonical(3);
 							int w=newp.tileData.myTiles[1].vert[j];
-							masterPack.packDCEL=CombDCEL.d_adjoin(
+							masterPack.packDCEL=CombDCEL.adjoin(
 									masterPack.packDCEL,newp.packDCEL, v,w,4);
 							masterPack.vertexMap=masterPack.packDCEL.oldNew;
 							
@@ -359,7 +359,7 @@ public class TileBuilder {
 						v = w;
 					if (debugPass>=0)
 						System.out.println("Adjoin v = "+v+" to "+w);
-					masterPack.packDCEL=CombDCEL.d_adjoin(
+					masterPack.packDCEL=CombDCEL.adjoin(
 							masterPack.packDCEL,masterPack.packDCEL, v, w, 4);
 					masterPack.vertexMap=masterPack.packDCEL.oldNew;
 					updateTileVerts(growTD, masterPack.vertexMap);
@@ -824,7 +824,7 @@ public class TileBuilder {
 //System.out.println(" attach slit: (tile,edge)=("+otile.tileFlower[e][0]+
 // " "+otile.tileFlower[e][1]+")");
 
-						masterPack.packDCEL=CombDCEL.d_adjoin(
+						masterPack.packDCEL=CombDCEL.adjoin(
 								masterPack.packDCEL,
 								masterPack.packDCEL, v, v, 4);
 						masterPack.vertexMap=masterPack.packDCEL.oldNew;
@@ -880,7 +880,7 @@ public class TileBuilder {
 						// 'adjoin' is complicated. If ends already match in 'tile'
 						//   then just usual adjoin
 						if (tile.vert[e]==v) {
-							masterPack.packDCEL=CombDCEL.d_adjoin(
+							masterPack.packDCEL=CombDCEL.adjoin(
 									masterPack.packDCEL,newp.packDCEL, v,w,4);
 							masterPack.vertexMap=masterPack.packDCEL.oldNew;
 							// fix the new tile data
@@ -897,7 +897,7 @@ public class TileBuilder {
 							//   (2) then zip last edge: update growTD
 							// this will become tip of final slit
 							int tip=newp.tileData.myTiles[1].augVert[3];
-							masterPack.packDCEL=CombDCEL.d_adjoin(
+							masterPack.packDCEL=CombDCEL.adjoin(
 									masterPack.packDCEL,newp.packDCEL, v,w,3);
 							masterPack.vertexMap=masterPack.packDCEL.oldNew;
 							tip=masterPack.vertexMap.findW(tip);
@@ -909,7 +909,7 @@ public class TileBuilder {
 								throw new ParserException("failed in loop work to copy tileFlower");
 							growTD.myTiles[t].tileIndex = 1;
 							tileAdded[t] = 1;
-							masterPack.packDCEL=CombDCEL.d_adjoin(
+							masterPack.packDCEL=CombDCEL.adjoin(
 									masterPack.packDCEL,masterPack.packDCEL,tip,tip,1);
 							masterPack.vertexMap=masterPack.packDCEL.oldNew;
 							updateTileVerts(growTD,masterPack.vertexMap);

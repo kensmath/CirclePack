@@ -5,14 +5,14 @@ import java.util.Iterator;
 import JNI.JNIinit;
 import allMains.CirclePack;
 import complex.Complex;
-import dcel.Face;
+import dcel.DcelFace;
 import dcel.HalfEdge;
+import dcel.Vertex;
 import exceptions.PackingException;
 import geometry.CircleSimple;
 import geometry.EuclMath;
 import geometry.NSpole;
 import geometry.SphericalMath;
-import komplex.EdgeSimple;
 import math.Mobius;
 import packing.PackData;
 import util.TriData;
@@ -27,20 +27,20 @@ import util.TriData;
  * @author kens 1/2021
  *
  */
-public class d_SphPacker extends RePacker {
+public class SphPacker extends RePacker {
 	
     public static final int SPH_GOPACK_THRESHOLD=501;  // for smaller packs, default to Java
     public static final double MPI2=2.0*Math.PI;
 
 	// Constructor
-	public d_SphPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
+	public SphPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
     	p=pd;
     	pdcel=p.packDCEL;
     	if (pass_limit<0) passLimit=PASSLIMIT;
 		else passLimit=pass_limit;
 		status=load(); 
 		if (status!=LOADED) 
-			throw new PackingException("'d_SphPacker' failed to load");
+			throw new PackingException("'SphPacker' failed to load");
 		totalPasses=0;
 		localPasses=0;
 		R1=new double[p.nodeCount+1];
@@ -86,13 +86,14 @@ public class d_SphPacker extends RePacker {
 		
 		HalfEdge lastedge=pdcel.layoutOrder.removeLast();
 		int lastface=lastedge.face.faceIndx;
-		Face outface=pdcel.faces[lastface];
+		DcelFace outface=pdcel.faces[lastface];
 		int[] bdryVerts=outface.getVerts();
 		pdcel.layoutOrder.add(lastedge.next.twin.next); // new last edge
 		
 		// set up 'TriData
 		pdcel.triData=null;
-		oldReliable=triDataLoad(); // not yet used
+		oldReliable=prepData(); // not yet used
+
 		for (int j=1;j<=pdcel.faceCount;j++) {
 			TriData td=pdcel.triData[j];
 			td.hes=0; // treat as euclidean
@@ -121,7 +122,8 @@ public class d_SphPacker extends RePacker {
 		
 		// gather radii (held only in 'triDAta')
 		for (int v=1;v<=pdcel.vertCount;v++) {
-			radii[v]=pdcel.triData[p.vData[v].findices[0]].radii[p.vData[v].myIndices[0]];
+			radii[v]=pdcel.triData[findices[v][0]].
+					radii[vindices[v][0]];
 		}
 		
 		// find and lay out first face
@@ -194,9 +196,10 @@ public class d_SphPacker extends RePacker {
 			cS=SphericalMath.e_to_s_data(z[v],radii[v]);
 			// apply normalizing
 		    Mobius.mobius_of_circle(rotMob,1,cS.center,cS.rad,cS,oriented);
-			p.vData[v].center=cS.center;
-			p.vData[v].rad=cS.rad;
-			p.vData[v].curv=MPI2;
+		    Vertex vert=p.packDCEL.vertices[v];
+			vert.center=cS.center;
+			vert.rad=cS.rad;
+			vert.curv=MPI2;
 		}
 	}
 	
@@ -249,7 +252,7 @@ public class d_SphPacker extends RePacker {
 				double fbest = compTriCurv(v, r);
 
 				// use the model to predict the next value
-				int N = 2 * p.vData[v].num;
+				int N = 2*vNum[v];
 				double del = Math.sin(faim / N);
 				double bet = Math.sin(fbest / N);
 				double r2 = r * bet * (1 - del) / (del * (1 - bet));
@@ -305,7 +308,7 @@ public class d_SphPacker extends RePacker {
 					fbest = compTriCurv(v, ra);
 
 					// use the model to predict the next value
-					int N = 2 * p.vData[v].num;
+					int N = 2*vNum[v];
 					double del = Math.sin(faim / N);
 					double bet = Math.sin(fbest / N);
 					double r2 = ra * bet * (1 - del) / (del * (1 - bet));
@@ -401,7 +404,7 @@ public class d_SphPacker extends RePacker {
 				fbest = compTriCurv(v, rc);
 
 				// use the model to predict the next value
-				int N = 2 * p.vData[v].num;
+				int N = 2*vNum[v];
 				// set up for model
 
 				double del = Math.sin(faim / N);

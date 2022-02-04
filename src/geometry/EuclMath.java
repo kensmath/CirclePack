@@ -6,7 +6,7 @@ import allMains.CPBase;
 import baryStuff.BaryPoint;
 import complex.Complex;
 import dcel.PackDCEL;
-import dcel.RedHEdge;
+import dcel.RedEdge;
 import exceptions.DataException;
 import math.Mobius;
 import math.Point3D;
@@ -809,12 +809,12 @@ public class EuclMath{
 		if (Mobius.frobeniusNorm(mob)>Mobius.MOB_TOLER) {
 			// directly adjust in 'vData'
 			for (int v = 1; v <= pdcel.vertCount; v++) {
-				Complex z = pdcel.p.vData[v].center;
-				pdcel.p.vData[v].center = mob.apply(z);
+				Complex z = pdcel.vertices[v].center;
+				pdcel.vertices[v].center = mob.apply(z);
 			}
 			// directly adjust in red chain
 			if (pdcel.redChain != null) {
-				RedHEdge rtrace = pdcel.redChain;
+				RedEdge rtrace = pdcel.redChain;
 				do {
 					rtrace.setCenter(mob.apply(rtrace.getCenter()));
 					rtrace = rtrace.nextRed;

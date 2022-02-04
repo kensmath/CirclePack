@@ -7,11 +7,11 @@ import java.util.Iterator;
 
 import allMains.CPBase;
 import complex.Complex;
-import dcel.D_SideData;
-import dcel.Face;
+import dcel.SideData;
+import dcel.DcelFace;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RedHEdge;
+import dcel.RedEdge;
 import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.DCELException;
@@ -110,7 +110,7 @@ public class DCELdebug {
 	public static void redindx(PackDCEL pdcel) {
 		int safety=1000;
 		boolean bug=false;
-		RedHEdge rtrace=pdcel.redChain;
+		RedEdge rtrace=pdcel.redChain;
 		System.err.println("start 'redindx' check.");
 		do {
 			safety--;
@@ -241,20 +241,20 @@ public class DCELdebug {
 	}
 	
 	
-	public static int redConsistency(RedHEdge redchain) {
+	public static int redConsistency(RedEdge redchain) {
 		int count=0;
 		if (redchain==null) {
 			System.err.println(" redConsistency failed: no 'redchain' given");
 			return 0;
 		}
 		
-		RedHEdge rhe=redchain;
+		RedEdge rhe=redchain;
 		System.out.println("redConsistency check: first edge "+rhe.myEdge);
 		int safety=3000;
 		do {
 			safety--;
 			if (rhe.twinRed!=null) {
-				RedHEdge rtwin=rhe.twinRed;
+				RedEdge rtwin=rhe.twinRed;
 				if (rtwin.twinRed!=rhe) {
 					System.err.println("   twinRed's don't point to one another, edge "+rhe.myEdge);
 					count++;
@@ -386,7 +386,7 @@ public class DCELdebug {
 				dbw.write("    There is no 'redChain'\n");
 			else {
 				dbw.write(thisRedEdge(pdcel.redChain).toString());
-				RedHEdge rtrace=pdcel.redChain.nextRed;
+				RedEdge rtrace=pdcel.redChain.nextRed;
 				while (rtrace!=pdcel.redChain && count<100) {
 					dbw.write(thisRedEdge(rtrace).toString());
 					rtrace=rtrace.nextRed;
@@ -440,10 +440,10 @@ public class DCELdebug {
 		} while (he!=vert.halfedge);
 	}
 
-	public static void drawEdgeFace(PackDCEL pdcel,ArrayList<Face> facelist) {
-		Iterator<Face> fit=facelist.iterator();
+	public static void drawEdgeFace(PackDCEL pdcel,ArrayList<DcelFace> facelist) {
+		Iterator<DcelFace> fit=facelist.iterator();
 		while (fit.hasNext()) {
-			Face f=fit.next();
+			DcelFace f=fit.next();
 			EdgeSimple es=new EdgeSimple(f.edge.origin.vertIndx,f.edge.twin.origin.vertIndx);
 			if (pdcel.oldNew!=null) {
 				es.v=pdcel.oldNew.findV(es.v);
@@ -539,10 +539,10 @@ public class DCELdebug {
 	 * @param p
 	 * @param redge
 	 */
-	public static void drawTmpRedChain(PackData p,RedHEdge redge) {
+	public static void drawTmpRedChain(PackData p,RedEdge redge) {
 		if (p==null)
 			return;
-		RedHEdge rtrace=redge;
+		RedEdge rtrace=redge;
 		do {
 			Complex z0=p.getCenter(rtrace.myEdge.origin.vertIndx);
 			Complex z1=p.getCenter(rtrace.myEdge.twin.origin.vertIndx);
@@ -560,8 +560,8 @@ public class DCELdebug {
 	 * @param p PackData
 	 * @param redge RedHEdge
 	 */
-	public static void drawRedChain(PackData p,RedHEdge redge) {
-		RedHEdge rtrace=redge;
+	public static void drawRedChain(PackData p,RedEdge redge) {
+		RedEdge rtrace=redge;
 		do {
 			drawRedEdge(p,rtrace);
 //System.out.println(" red edge "+rtrace.myEdge);
@@ -584,7 +584,7 @@ public class DCELdebug {
 	 * @param p PackData
 	 * @param redge RedHEdge
 	 */
-	public static void drawRedEdge(PackData p,RedHEdge redge) {
+	public static void drawRedEdge(PackData p,RedEdge redge) {
 		Complex z0=redge.getCenter();
 		Complex z1=redge.nextRed.getCenter();
 		DispFlags dflags=new DispFlags("c195t4");
@@ -592,10 +592,10 @@ public class DCELdebug {
 		p.cpScreen.rePaintAll();
 	}
 
-	public static void printRedChain(RedHEdge redge,VertexMap vmap) {
+	public static void printRedChain(RedEdge redge,VertexMap vmap) {
 		StringBuilder sb=new StringBuilder("vertices are:\n");
 		StringBuilder sbold=new StringBuilder("old indices:\n");
-		RedHEdge nxtre=redge;
+		RedEdge nxtre=redge;
 		int safety=1000;
 		do {
 			safety--;
@@ -614,7 +614,7 @@ public class DCELdebug {
 			System.out.println(sbold.toString());
 	}
 	
-	public static void printRedChain(RedHEdge redge) {
+	public static void printRedChain(RedEdge redge) {
 		printRedChain(redge,null);
 	}
 	
@@ -623,7 +623,7 @@ public class DCELdebug {
 		
 		// redchain and twinRed's
 		strbld.append("  RedChain/twinRed: \n");
-		RedHEdge rtrace=pdcel.redChain;
+		RedEdge rtrace=pdcel.redChain;
 		do {
 			try {
 				if (rtrace.twinRed!=null)
@@ -643,10 +643,10 @@ public class DCELdebug {
 		// do by side pairs
 		if (pdcel.pairLink!=null && pdcel.pairLink.size()>0) {
 			strbld.append("Side pairs:\n");
-			Iterator<D_SideData> sit=pdcel.pairLink.iterator();
+			Iterator<SideData> sit=pdcel.pairLink.iterator();
 			sit.next(); // first is null
 			while (sit.hasNext()) {
-				D_SideData sdata=sit.next();
+				SideData sdata=sit.next();
 				if (sdata==null)
 					continue;
 				try {
@@ -687,8 +687,8 @@ public class DCELdebug {
 		}
 	}
 	
-	public static void RedOriginProblem(RedHEdge redge) {
-		RedHEdge re=redge;
+	public static void RedOriginProblem(RedEdge redge) {
+		RedEdge re=redge;
 		System.out.println("Comparing red edge origin' to red edge prev.twin origin:");
 		int safety=100;
 		do {
@@ -798,10 +798,10 @@ public class DCELdebug {
 	 * print the edge ends around the redChain using 'myEdge' and its twin
 	 * @param redge RedHEdge
 	 */
-	public static void redChainEnds(RedHEdge redge) {
+	public static void redChainEnds(RedEdge redge) {
 		int safety=1000;
 		System.out.println("Here are ends of 'redChain' edges: ");
-		RedHEdge nxtre=redge;
+		RedEdge nxtre=redge;
 		do {
 			if (nxtre.twinRed!=null) {
 				System.out.println("   <"+nxtre.myEdge.origin.vertIndx+
@@ -844,13 +844,13 @@ public class DCELdebug {
 				"); Face.halfedge ("+edge.face.edge.hashCode()+")\n");
 	}
 	
-	public static StringBuilder thisRedEdge(RedHEdge redge) {
+	public static StringBuilder thisRedEdge(RedEdge redge) {
 		return new StringBuilder("This is 'RedHEdge', myEdge index "+redge.myEdge.edgeIndx+": nextRed ("+redge.nextRed.hashCode()+
 				"); prevRed ("+redge.prevRed.hashCode()+")\n");
 
 	}
 	
-	public static StringBuilder thisFace(Face face) {
+	public static StringBuilder thisFace(DcelFace face) {
 		StringBuilder sb= new StringBuilder("Face ("+face.hashCode()+"); faceIndx "+face.faceIndx+
 				"; edge ("+face.edge.hashCode()+"); face.edge.face ("+face.edge.face.hashCode()+")");
 		sb.append("\n     corner indices are: ");

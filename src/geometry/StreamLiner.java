@@ -56,7 +56,7 @@ public class StreamLiner {
 		FaceLink flk=basePack.tri_search(pt);
 		if (flk==null || flk.size()==0)
 			return null;
-		dcel.Face face=basePack.packDCEL.faces[flk.get(0)];
+		dcel.DcelFace face=basePack.packDCEL.faces[flk.get(0)];
 		int[] vert=face.getVerts();
 		Complex v0=basePack.getCenter(vert[0]);
 		Complex v1=basePack.getCenter(vert[1]);
@@ -114,7 +114,7 @@ public class StreamLiner {
 		Complex grad=new Complex(-normals[spt.face].x,-normals[spt.face].y);
 		if (!uphill) 
 			grad=grad.times(-1.0);
-		dcel.Face face=basePack.packDCEL.faces[spt.face];
+		dcel.DcelFace face=basePack.packDCEL.faces[spt.face];
 		int[] vert=face.getVerts();
 		
 		Complex vec=BaryPoint.vec2simplex(grad,basePack.getCenter(vert[0]),
@@ -147,7 +147,7 @@ public class StreamLiner {
 //		}
 		normals=new Point3D[basePack.faceCount+1];
 		for (int f=1;f<=basePack.faceCount;f++) {
-			dcel.Face face=basePack.packDCEL.faces[f];
+			dcel.DcelFace face=basePack.packDCEL.faces[f];
 			int[] v=face.getVerts();
 			Complex z0=basePack.getCenter(v[0]);
 			Complex z1=basePack.getCenter(v[1]);
@@ -289,7 +289,7 @@ public class StreamLiner {
 		
 		// on edge? 
 		if (ins>10) {
-			dcel.Face face=basePack.packDCEL.faces[inpt.face];
+			dcel.DcelFace face=basePack.packDCEL.faces[inpt.face];
 			int []vert=face.getVerts();
 			int v=-1;
 			int w=-1;

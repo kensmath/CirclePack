@@ -6,8 +6,8 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
 import complex.MathComplex;
-import dcel.D_Schwarzian;
-import dcel.RedHEdge;
+import dcel.Schwarzian;
+import dcel.RedEdge;
 import exceptions.DataException;
 import exceptions.MobException;
 import exceptions.ParserException;
@@ -1246,13 +1246,13 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		int count=0;
 		for (int v=1;v<=p.nodeCount;v++) {
 			CircleSimple csOut=new CircleSimple();
-			mobius_of_circle(mob,p.hes,p.vData[v].center,
-					p.vData[v].rad,csOut,true);
-			p.vData[v].center=csOut.center;
-			p.vData[v].rad=csOut.rad;
+			mobius_of_circle(mob,p.hes,p.packDCEL.vertices[v].center,
+					p.packDCEL.vertices[v].rad,csOut,true);
+			p.packDCEL.vertices[v].center=csOut.center;
+			p.packDCEL.vertices[v].rad=csOut.rad;
 			count++;
 		}
-		RedHEdge rtrace=p.packDCEL.redChain;
+		RedEdge rtrace=p.packDCEL.redChain;
 		do {
 			CircleSimple csOut=new CircleSimple();
 			mobius_of_circle(mob,p.hes,rtrace.getCenter(),
@@ -1871,8 +1871,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 */
 	public void debugMob(SchwarzMap schwarzMap, int f, int v, int w) {
 		System.out.println("Face "+f+": First circle "+v);
-		D_Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.getRadius(v),schwarzMap.packData.getCenter(v));
+		Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.getRadius(v),schwarzMap.packData.getCenter(v));
 		System.out.println("Second circle "+w);
-		D_Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.getRadius(w),schwarzMap.packData.getCenter(w));
+		Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.getRadius(w),schwarzMap.packData.getCenter(w));
 	}
 }

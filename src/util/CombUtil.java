@@ -1,7 +1,6 @@
 package util;
 
 import dcel.HalfEdge;
-import komplex.KData;
 import packing.PackData;
 
 /**

@@ -3,7 +3,7 @@ import baryStuff.BaryPoint;
 import complex.Complex;
 import complex.MathComplex;
 import dcel.PackDCEL;
-import dcel.RedHEdge;
+import dcel.RedEdge;
 import exceptions.DataException;
 import exceptions.LayoutException;
 import exceptions.MobException;
@@ -1028,20 +1028,20 @@ public static CircleSimple h_compcenter(Complex z0,Complex z1,
 		if (Mobius.frobeniusNorm(mob)>Mobius.MOB_TOLER) {
 			// directly adjust in 'vData'
 			for (int v = 1; v <= pdcel.vertCount; v++) {
-				Complex z = pdcel.p.vData[v].center;
+				Complex z = pdcel.vertices[v].center;
 				Complex newz= mob.apply(z);
-				pdcel.p.vData[v].center =newz;
+				pdcel.vertices[v].center =newz;
 				
 				// if horocycle, adjust radius as well
-				double radius=pdcel.p.vData[v].rad;
+				double radius=pdcel.vertices[v].rad;
 				if (radius<0) {
 					double newr=horoEuclRad(mob,z,-radius);
-					pdcel.p.vData[v].rad=-newr;
+					pdcel.vertices[v].rad=-newr;
 				}
 			}
 			// directly adjust in red chain
 			if (pdcel.redChain != null) {
-				RedHEdge rtrace = pdcel.redChain;
+				RedEdge rtrace = pdcel.redChain;
 				do {
 					Complex z = rtrace.getCenter();
 					Complex newz= mob.apply(z);

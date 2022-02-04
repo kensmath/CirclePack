@@ -8,7 +8,7 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
-import dcel.D_SideData;
+import dcel.SideData;
 import dcel.HalfEdge;
 import exceptions.ParserException;
 import geometry.CircleSimple;
@@ -256,7 +256,7 @@ public class PostParser {
 					// handle first face circles (without adjusting centers)
 					if (c == 'C' || c == 'B') {
 						first_face = p.firstFace;
-						dcel.Face face = hlink.get(0).face;
+						dcel.DcelFace face = hlink.get(0).face;
 						int[] verts=face.getVerts();
 						for (int i = 0; i < 3; i++) {
 							v = verts[i];
@@ -268,14 +268,14 @@ public class PostParser {
 									pF.postCircle(p.hes, z, p.getRadius(v), tx);
 								} else {
 									if (!dispFlags.colBorder)
-										col = p.vData[v].color;
+										col = p.packDCEL.vertices[v].color;
 									pF.postColorCircle(p.hes, z,
 											p.getRadius(v), col, tx);
 								}
 							} 
 							else {
 								if (!dispFlags.colorIsSet)
-									col = p.vData[v].color;
+									col = p.packDCEL.vertices[v].color;
 								if (!dispFlags.colBorder)
 									pF.postCircle(p.hes, z, p.getRadius(v), tx);
 								else
@@ -336,10 +336,10 @@ public class PostParser {
 						else
 							// use recorded color
 							pF.postColorCircle(p.hes, z, p.getRadius(v),
-									p.vData[v].color, tx);
+									p.packDCEL.vertices[v].color, tx);
 					} else {
 						if (!dispFlags.colorIsSet) // none set? use recorded color
-							col = p.vData[v].color;
+							col = p.packDCEL.vertices[v].color;
 						if (!dispFlags.colBorder)
 							pF.postFilledCircle(p.hes, z, p.getRadius(v), col,tx);
 						else
@@ -475,7 +475,7 @@ public class PostParser {
 					while (vlist.hasNext()) {
 						v = (Integer) vlist.next();
 						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.vData[v].color);
+							dispFlags.setColor(p.packDCEL.vertices[v].color);
 						int num = p.countFaces(v);
 						int[] faceFlower=p.getFaceFlower(v);
 						Complex[] fanCenters = new Complex[num
@@ -634,7 +634,7 @@ public class PostParser {
 
 				Iterator<Integer> flist = faceLink.iterator();
 				while (flist.hasNext()) {
-					dcel.Face face=p.packDCEL.faces[flist.next()];
+					dcel.DcelFace face=p.packDCEL.faces[flist.next()];
 					int[] verts=face.getVerts();
 					Complex []Z=new Complex[3];
 					for (int j=0;j<3;j++) {
@@ -718,11 +718,11 @@ public class PostParser {
 				int n, k;
 				for (int j = 0; j < verts.size(); j++) {
 					n = (Integer) verts.get(j);
-					D_SideData epair = p.getSidePairs().get(n);
+					SideData epair = p.getSidePairs().get(n);
 					count += p.post_bdry_seg(pF, n, do_label, do_circle,
 							epair.color, tx);
 					if (do_mate) { // do paired edge?
-						D_SideData ep =p.getSidePairs().get(n);
+						SideData ep =p.getSidePairs().get(n);
 						if ((k = ep.mateIndex) >= 0)
 							p.post_bdry_seg(pF, k, do_label, do_circle,
 									epair.color, tx);
@@ -758,7 +758,7 @@ public class PostParser {
 					if (p.hes <= 0 || front) {
 						if (dispFlags.colBorder) {
 							if (!dispFlags.colorIsSet)
-								dispFlags.setColor(p.vData[v].color);
+								dispFlags.setColor(p.packDCEL.vertices[v].color);
 							pF.postColorTrinket(z, diam, dispFlags.getColor());
 						} else
 							pF.postTrinket(z, diam); // background

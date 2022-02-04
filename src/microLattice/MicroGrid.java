@@ -16,7 +16,7 @@ import circlePack.PackControl;
 import complex.Complex;
 import dcel.CombDCEL;
 import dcel.PackDCEL;
-import dcel.RawDCEL;
+import dcel.RawManip;
 import exceptions.CombException;
 import exceptions.InOutException;
 import exceptions.ParserException;
@@ -1019,7 +1019,7 @@ public class MicroGrid extends PackExtender {
 			CPBase.ClosedPath=tmpTrim;
 			
 			// now, 'cookie' based on closed path
-  		  	HalfLink hlink=CombDCEL.d_CookieData(qPack,
+  		  	HalfLink hlink=CombDCEL.cookieData(qPack,
   		  			(Vector<Vector<String>>)null);
 		  
   		  	// cookie out by forming new red chain
@@ -2362,8 +2362,8 @@ public class MicroGrid extends PackExtender {
 			
 			// for marked faces, add a new circle, center at average
 			if (marked) {
-				dcel.Face face=q.packDCEL.faces[f];
-				int newval=RawDCEL.addBary_raw(q.packDCEL,face.edge,false);
+				dcel.DcelFace face=q.packDCEL.faces[f];
+				int newval=RawManip.addBary_raw(q.packDCEL,face.edge,false);
 				Complex[] pts=q.packDCEL.getFaceCorners(face);
 				Complex bcent=pts[0].add(pts[1].add(pts[2])).divide(3.0);
 				double brad=(radii[0]+radii[1]+radii[2])/6.0; // half the average

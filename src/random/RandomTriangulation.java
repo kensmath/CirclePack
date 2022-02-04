@@ -562,7 +562,7 @@ public class RandomTriangulation {
 			u=face.vert[1];
 			w=face.vert[2];
 			if (v<=N && u<=N && w<=N) { // keep this face 
-				newTri.faces[++count]=new Face();
+				newTri.faces[++count]=new Face(3);
 				newTri.faces[count].vert=new int[3];
 				newTri.faces[count].vert[0]=v;
 				newTri.faces[count].vert[1]=u;

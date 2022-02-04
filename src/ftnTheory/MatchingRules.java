@@ -2,8 +2,8 @@ package ftnTheory;
 
 import java.util.Vector;
 
-import dcel.DcelCreation;
-import dcel.RawDCEL;
+import dcel.RawManip;
+import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
 
@@ -68,9 +68,9 @@ public class MatchingRules extends PackExtender {
 		public TileType(int type,int N) {
 				
 			// N seed, bdry 1,2,..,N
-			tile=DcelCreation.seed(N,0);
-			RawDCEL.swapNodes_raw(tile.packDCEL,N+1,1);
-			RawDCEL.hexBaryRefine_raw(tile.packDCEL,true);
+			tile=PackCreation.seed(N,0);
+			RawManip.swapNodes_raw(tile.packDCEL,N+1,1);
+			RawManip.hexBaryRefine_raw(tile.packDCEL,true);
 		}
 	}
 		

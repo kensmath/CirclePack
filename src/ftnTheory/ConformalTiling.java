@@ -12,7 +12,7 @@ import complex.Complex;
 import dcel.CombDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RawDCEL;
+import dcel.RawManip;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DataException;
@@ -1794,12 +1794,12 @@ public class ConformalTiling extends PackExtender {
 				newPD.setVertMark(w,2);
 				HalfEdge he=newPD.packDCEL.findHalfEdge(v,w);
 				if (he!=null) {
-					RawDCEL.splitEdge_raw(newPD.packDCEL,he);
+					RawManip.splitEdge_raw(newPD.packDCEL,he);
 					int v1=newPD.packDCEL.vertCount;
 					newPD.setVertMark(v1,4);
 					// then add a second
 					he=newPD.packDCEL.findHalfEdge(v,v1);
-					RawDCEL.splitEdge_raw(newPD.packDCEL,he);
+					RawManip.splitEdge_raw(newPD.packDCEL,he);
 					int v2=newPD.packDCEL.vertCount; 
 					newPD.setVertMark(v2,3);
 				}
@@ -2837,7 +2837,7 @@ public class ConformalTiling extends PackExtender {
 							debug=false;
 						} // return null;
 						
-						PackDCEL pdcel=CombDCEL.d_adjoin(pdc1, pdc2, v, w, n);
+						PackDCEL pdcel=CombDCEL.adjoin(pdc1, pdc2, v, w, n);
 						p.vertexMap=pdcel.oldNew;
 						pdcel.fixDCEL_raw(null);
 						

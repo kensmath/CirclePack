@@ -43,7 +43,7 @@ public class DualTri {
 		setInCirclePts();
 	}
 	
-	public DualTri(PackDCEL pdcel,dcel.Face face) {
+	public DualTri(PackDCEL pdcel,dcel.DcelFace face) {
 		super();
 		HalfEdge he=face.edge; // based on face edges
 		hes=pdcel.p.hes;

@@ -9,7 +9,7 @@ import allMains.CirclePack;
 import canvasses.DisplayParser;
 import circlePack.PackControl;
 import dcel.HalfEdge;
-import dcel.RawDCEL;
+import dcel.RawManip;
 import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.DataException;
@@ -132,10 +132,10 @@ public class ChapBrModPt extends GenBrModPt {
 	
 	// **** abstract methods *************
 	public void dismantle() {
-		RawDCEL.meldEdge_raw(pdc,sisterEdge);
-		RawDCEL.meldEdge_raw(pdc,chapEdge[2]);
-		RawDCEL.meldEdge_raw(pdc,chapEdge[1]);
-		RawDCEL.meldEdge_raw(pdc,sisterEdge);
+		RawManip.meldEdge_raw(pdc,sisterEdge);
+		RawManip.meldEdge_raw(pdc,chapEdge[2]);
+		RawManip.meldEdge_raw(pdc,chapEdge[1]);
+		RawManip.meldEdge_raw(pdc,sisterEdge);
 		return;
 	}
 	
@@ -291,7 +291,7 @@ public class ChapBrModPt extends GenBrModPt {
 		overEdge=new HalfEdge[3];
 		compEdge=new HalfEdge[3];
 		chap=new Vertex[3];
-		sisterEdge=RawDCEL.splitFlower_raw(pdc,jumpEdge[1],
+		sisterEdge=RawManip.splitFlower_raw(pdc,jumpEdge[1],
 				jumpEdge[2]);
 		sister2=pdc.vertices[pdc.vertCount]; 
 		// deBugging.DCELdebug.vertConsistency(pdc,myIndex);
@@ -299,7 +299,7 @@ public class ChapBrModPt extends GenBrModPt {
 		// create chaperone 1, to allow jump1 to separate from 'myIndex'
 		tmphe=pdc.findHalfEdge(new EdgeSimple(
 				myIndex,jumpCircle[1]));
-		chapEdge[1]=RawDCEL.splitEdge_raw(pdc,tmphe);
+		chapEdge[1]=RawManip.splitEdge_raw(pdc,tmphe);
 		chap[1]=chapEdge[1].twin.origin;
 		overEdge[1]=chapEdge[1].twin.prev.twin;
 		compEdge[1]=overEdge[1].prev.twin;
@@ -307,17 +307,17 @@ public class ChapBrModPt extends GenBrModPt {
 		// create chaperone 2, to allow jump2 to separate from 'sister2'
 		tmphe=pdc.findHalfEdge(new EdgeSimple(
 				sister2.vertIndx,jumpCircle[2]));
-		chapEdge[2]=RawDCEL.splitEdge_raw(pdc,tmphe);
+		chapEdge[2]=RawManip.splitEdge_raw(pdc,tmphe);
 		chap[2]=chapEdge[2].twin.origin;
 		overEdge[2]=chapEdge[2].twin.prev.twin;
 		compEdge[2]=overEdge[2].prev.twin;
 		
 		// create newBrPt
-		RawDCEL.splitEdge_raw(pdc,sisterEdge);
+		RawManip.splitEdge_raw(pdc,sisterEdge);
 		newBrSpot=sisterEdge.twin.origin;
 
 		// get encircling link for local holonomy   
-		myHoloBorder=RawDCEL.leftsideLink(pdc,eventHorizon);
+		myHoloBorder=RawManip.leftsideLink(pdc,eventHorizon);
 		myHoloBorder.add(0,eventHorizon.get(0));
 		
 		// add 'myHoloBorder' plus edge to pick up 'newBrSpot'

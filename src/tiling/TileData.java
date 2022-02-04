@@ -8,7 +8,7 @@ import allMains.CirclePack;
 import dcel.CombDCEL;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RawDCEL;
+import dcel.RawManip;
 import dcel.Vertex;
 import deBugging.DebugHelp;
 import exceptions.CombException;
@@ -607,7 +607,7 @@ public class TileData {
 					w=tile.vert[j];
 				HalfEdge he=newPD.packDCEL.findHalfEdge(v, w);
 				if (he!=null) 
-					RawDCEL.splitEdge_raw(newPD.packDCEL,he); 
+					RawManip.splitEdge_raw(newPD.packDCEL,he); 
 				else {  // old edge; already split
 //					DCELdebug.printBouquet(newPD.packDCEL);
 					continue;
@@ -647,7 +647,7 @@ public class TileData {
 		//   as they are created, indexed from 1 by using the index
 		//   of the barycenter circle and subtracting 'bcbase'.
 		workingTD.wgTileCount=newPD.faceCount;
-		RawDCEL.hexBaryRefine_raw(newPD.packDCEL,true);
+		RawManip.hexBaryRefine_raw(newPD.packDCEL,true);
 		newPD.packDCEL.fixDCEL_raw(newPD);
 		int bcbase=newPD.nodeCount-workingTD.wgTileCount;
 		// indexed from 1 to wgTileCount

@@ -1,38 +1,61 @@
 package dcel;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import complex.Complex;
 import exceptions.CombException;
 import exceptions.DCELException;
+import geometry.CircleSimple;
 import listManip.HalfLink;
+import util.ColorUtil;
 
 /** 
- * DCEL Vertex only contains combinatorial data; center/rad data are
- * elsewhere, in 'VData's and 'RedHEdge's. The 'vertIndx'  
- * typically aligns with the index in 'PackData'. If this is a 
- * boundary vertex, then its halfedge should be downstream 
- * (counterclockwise) boundary edge. 'redFlag' indicates vertex
- * is in the red chain; 'spokes' is only used during red chain 
- * processing.
+ * DCEL Vertex contains combinatorial, geometric, and other
+ * miscellaneous data. Center information may be overridden
+ * by data in 'RedHEdge's. If this is a boundary vertex, 
+ * its halfedge should be the downstream (cclw) boundary edge. 
+ * 'redFlag' indicates vertex is in the red chain; 'spokes' is 
+ * only used during red chain processing.
  * @author kstephe2, starting in 2016
  *
  */
 public class Vertex {
 	
+	// combinatoric
 	public HalfEdge halfedge;	// a halfedge pointing away from this vert
 	public int vertIndx;		// index from associated 'PackData'
 	public int bdryFlag;		// 0 for interior, 1 for boundary
-	public boolean redFlag;		// is this a vertex along the red chain? 
+	public boolean redFlag;		// is this a vertex along the red chain?
 	
-	public int vutil;			// temporary data only
-	public HalfEdge[] spokes;	// outgoing spokes -- only during processing
+	// geometric
+	public Complex center;	// center as complex number 
+	public double rad;		// radius of circle (note: x-radius form in hyp case
+							//    namely, x=1-exp(-2h) for hyp radius h finite; 
+							//    for h infinite (horocycle) stores negative of 
+							//    eucl radius (if computed) for plotting convenience.
+							//    (x_radius, x_radii, x_rad, x-radius, x-radii, x-rad)
+	public double aim;		// desired angle sum at this vertex (actual angle, not divided by Pi)
+	public double curv;	    // angle sum at this vertex. 
+
+	// other
+	public Color color;
+	public int mark;
+	public int plotFlag;	// often OBE
+	
+	// for temporary data during some processing
+	public int vutil;
+	public HalfEdge[] spokes;
 	
 	public Vertex() {
 		halfedge=null;
-		vertIndx=-0;
+		vertIndx=-1;
 		redFlag=false;
 		spokes=null;
+		center=new Complex(0.0);
+		rad=.05;
+		color=ColorUtil.getFGColor();
 	}
 	
 	public Vertex(int v) {
@@ -279,8 +302,8 @@ public class Vertex {
 	 * know.
 	 * @return ArrayList<Face> or null on error
 	 */
-	public ArrayList<Face> getFaceFlower() {
-		ArrayList<Face> fflower=new ArrayList<Face>();
+	public ArrayList<DcelFace> getFaceFlower() {
+		ArrayList<DcelFace> fflower=new ArrayList<DcelFace>();
 		HalfEdge nxtedge=halfedge;
 		do {
 			fflower.add(nxtedge.face);
@@ -296,6 +319,34 @@ public class Vertex {
 		return halfedge.next.twin.origin.vertIndx;
 	}
 
+	/**
+	 * set clone of 'col'
+	 * @param col Color
+	 */
+	public void setColor(Color col) {
+		if (col==null)
+			color=null;
+		else
+			color=ColorUtil.cloneMe(col);
+	}
+	
+	/**
+	 * get clone of color
+	 * @return new Color
+	 */
+	public Color getColor() {
+		return ColorUtil.cloneMe(color);
+	}
+	
+	/**
+	 * Get circle data
+	 * @return CircleSimple
+	 */
+	public CircleSimple getCircleSimple() {
+		return new CircleSimple(center,rad);
+	}
+
+	
 	public String toString() {
 		return new String(""+vertIndx);
 	}
@@ -309,8 +360,28 @@ public class Vertex {
 		nv.halfedge=halfedge;
 		nv.bdryFlag=bdryFlag;
 		nv.redFlag=redFlag;
+		nv.center=new Complex(center);
+		nv.rad=rad;
+		nv.aim=aim;
+		nv.color=ColorUtil.cloneMe(color);
+		nv.mark=mark;
+		nv.curv=curv;
+		nv.plotFlag=plotFlag;
 		nv.vutil=vutil;
 		return nv;
+	}
+	
+	/**
+	 * Copy data to 'this' from 'sourceV'
+	 * @param sourceV Vertex
+	 */
+	public void cloneData(Vertex sourceV) {
+		center=new Complex(sourceV.center);
+		rad=sourceV.rad;
+		aim=sourceV.aim;
+		curv=sourceV.curv;
+		mark=sourceV.mark;
+		color=ColorUtil.cloneMe(sourceV.color);
 	}
 
 }

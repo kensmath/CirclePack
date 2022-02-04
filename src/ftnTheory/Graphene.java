@@ -8,10 +8,9 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.DcelCreation;
 import dcel.HalfEdge;
-import dcel.RawDCEL;
-import dcel.RedHEdge;
+import dcel.RawManip;
+import dcel.RedEdge;
 import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.ParserException;
@@ -23,6 +22,7 @@ import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
+import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
@@ -976,7 +976,7 @@ public class Graphene extends PackExtender {
 		case 0: // close flower by identifying
 		{
 			int origv=packData.getFirstPetal(v);
-			CombDCEL.d_adjoin(packData.packDCEL,packData.packDCEL,v,v,1);
+			CombDCEL.adjoin(packData.packDCEL,packData.packDCEL,v,v,1);
 			
 			// fix up numbering
 			newIndx=packData.packDCEL.oldNew.findW(origv);
@@ -1128,7 +1128,7 @@ public class Graphene extends PackExtender {
 	public int stitchStart(int n,double phi1,double phi2,int startMode) {
 
 		// build hex to cut half planes from
-		PackData basePack=DcelCreation.hexBuild(n);
+		PackData basePack=PackCreation.hexBuild(n);
 		basePack.set_rad_default();
 		basePack.packDCEL.layoutPacking();
 		double ctr=basePack.getCenter(basePack.nodeCount).abs();
@@ -1160,7 +1160,7 @@ public class Graphene extends PackExtender {
   	  	default: // (currently the only)
   	  	{
   	  	  	// adjoin at alpha's and one vert either side
-  	  		CombDCEL.d_adjoin(stitchBase.packDCEL,
+  	  		CombDCEL.adjoin(stitchBase.packDCEL,
   	  				rightPack.packDCEL,v,rw,2);
   	  		stitchBase.packDCEL.fixDCEL_raw(stitchBase);
   	  	  	
@@ -1337,7 +1337,7 @@ public class Graphene extends PackExtender {
   	  			// find bdry closest to the origin; may be origin 1  	  		
   	  			double mindist=1000000.0;
   	  			int minIndx=-1;
-  	  			RedHEdge rtrace=newPack.packDCEL.redChain;
+  	  			RedEdge rtrace=newPack.packDCEL.redChain;
   	  			do {
   	  				int w=rtrace.myEdge.origin.vertIndx;
   	  				dist=newPack.getCenter(w).abs();
@@ -1351,7 +1351,7 @@ public class Graphene extends PackExtender {
   	  				throw new CombException("no bdry vertex near the origin?");
   	  			}
   	  			if (minIndx!=1) {
-  	  				RawDCEL.swapNodes_raw(newPack.packDCEL,1,minIndx);
+  	  				RawManip.swapNodes_raw(newPack.packDCEL,1,minIndx);
   	  			}
   	  		}
 		}
@@ -1457,7 +1457,7 @@ public class Graphene extends PackExtender {
 	 * edge[(j+1)%3] is the edge opposite vert[j].
 	 */
 	class CarbonEnergy {
-		dcel.Face face;  //  
+		dcel.DcelFace face;  //  
 		
 		
 		
@@ -1515,7 +1515,7 @@ public class Graphene extends PackExtender {
 				CircleSimple cs=CommonMath.tri_incircle(Z[0],Z[1],Z[2],0);
 				bondLengths[j]=cs.rad;
 				int opface=packData.face_opposite(faceIndx,verts[j]);
-				dcel.Face face_opp=packData.packDCEL.faces[opface];
+				dcel.DcelFace face_opp=packData.packDCEL.faces[opface];
 				if (face_opp.faceIndx<=0) // bdry edge
 					bondLengths[j] *= 2.0;
 				else {

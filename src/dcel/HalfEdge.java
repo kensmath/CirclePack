@@ -21,12 +21,12 @@ public class HalfEdge {
 
 	public Vertex origin;
 	public HalfEdge twin;
-	public Face face;
+	public DcelFace face;
 	public HalfEdge next;
 	public HalfEdge prev;
 	public int edgeIndx;
 	public int mark;
-	public RedHEdge myRedEdge; // set when finishing up construction.
+	public RedEdge myRedEdge; // set when finishing up construction.
 	
 	// TODO: figure out how to transfer this info as edges change.
 	double invDist;  // inversive distance assigned, default 1.0 (tangency)
@@ -220,7 +220,7 @@ public class HalfEdge {
 		return null;
 	}
 	
-	public RedHEdge getRedEdge() {
+	public RedEdge getRedEdge() {
 		return myRedEdge;
 	}
 	
@@ -228,7 +228,7 @@ public class HalfEdge {
 	 * set the 'myRedEdge' pointer 
 	 * @param redE
 	 */
-	public void setRedEdge(RedHEdge redE) {
+	public void setRedEdge(RedEdge redE) {
 		myRedEdge=redE;
 	}
 	

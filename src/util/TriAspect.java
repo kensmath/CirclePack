@@ -2,7 +2,7 @@ package util;
 
 import allMains.CPBase;
 import complex.Complex;
-import dcel.Face;
+import dcel.DcelFace;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
 import geometry.CircleSimple;
@@ -87,7 +87,7 @@ public class TriAspect extends TriData {
 		}
 	}
 	
-	public TriAspect(PackDCEL pdcel,dcel.Face face) {
+	public TriAspect(PackDCEL pdcel,dcel.DcelFace face) {
 		super(pdcel,face);
 		center=new Complex[3];
 		HalfEdge he=face.edge;

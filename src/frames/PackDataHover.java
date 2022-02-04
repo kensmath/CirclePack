@@ -432,7 +432,7 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 		// set index field
 		faceChoice.setText(Integer.toString(f));
 
-		dcel.Face face=p.packDCEL.faces[f];
+		dcel.DcelFace face=p.packDCEL.faces[f];
 		int[] verts=face.getVerts();
 
 		// list corner vertices

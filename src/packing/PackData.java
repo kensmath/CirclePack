@@ -23,13 +23,12 @@ import circlePack.PackControl;
 import complex.Complex;
 import complex.MathComplex;
 import dcel.CombDCEL;
-import dcel.D_PairLink;
-import dcel.D_SideData;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RawDCEL;
-import dcel.RedHEdge;
-import dcel.VData;
+import dcel.PairLink;
+import dcel.RawManip;
+import dcel.RedEdge;
+import dcel.SideData;
 import dcel.Vertex;
 import deBugging.DCELdebug;
 import exceptions.CombException;
@@ -46,7 +45,6 @@ import geometry.SphericalMath;
 import komplex.DualTri;
 import komplex.EdgeSimple;
 import komplex.Face;
-import komplex.KData;
 import komplex.Triangulation;
 import listManip.BaryCoordLink;
 import listManip.BaryLink;
@@ -66,9 +64,9 @@ import math.Point3D;
 import microLattice.Smoother;
 import panels.CPScreen;
 import posting.PostFactory;
+import rePack.EuclPacker;
+import rePack.HypPacker;
 import rePack.RePacker;
-import rePack.d_EuclPacker;
-import rePack.d_HypPacker;
 import tiling.Tile;
 import tiling.TileData;
 import util.ColorUtil;
@@ -115,7 +113,6 @@ public class PackData{
     static int MAX_COMPONENTS=20;
 
 	// Main data vectors
-	public VData vData[];   // instantiated only with packDCEL
 	public Vector<PackExtender> packExtensions;  // vector of extensions
 	public TileData tileData; // for associated tilings 
 	
@@ -202,7 +199,6 @@ public class PackData{
     	vertexMap=null;
     	colorIndx=0;
     	smoother=null;
-    	vData=null;
     }
     
     /**
@@ -268,90 +264,6 @@ public class PackData{
 				new_vs[v]=pdcel.vertices[v];
 			pdcel.vertices=new_vs;
 		}
-
-		// save old data
-    	VData[] oldVData=new VData[origNodeCount+1];
-		for (int ov=1;ov<=origNodeCount;ov++) 
-			oldVData[ov]=vData[ov];
-		
-		// allocate new 'vData'
-		vData=new VData[sizeLimit+1];
-		for (int v=1;v<=sizeLimit;v++) 
-			vData[v]=new VData();
-		
-		// translation? make more efficient
-		int[] oNew=null;
-		if (pdcel.oldNew!=null && pdcel.oldNew.size()>0) {
-			oNew=new int[nodeCount+1];
-    		Iterator<EdgeSimple> nost=pdcel.oldNew.iterator();
-    		while (nost.hasNext()) {
-    			EdgeSimple es=nost.next();
-    			oNew[es.w]=es.v;
-    		}
-		}
-
-		// note: 'nodeCount' may be larger than 'origNodeCount'
-		for (int v=1;v<=nodeCount;v++) { // 'v' is "new" index
-			
-// debugging
-//			System.out.println("attach v "+v);
-			
-			Vertex vert=pdcel.vertices[v];
-			HalfEdge he=vert.halfedge;
-   			int oldv=v;
-   			int w=0;
-   			if (oNew!=null && (w=oNew[v])>0) 
-   				oldv=w;
-   			// if there is existing data, copy it
-   			if (oldv<=origNodeCount) {
-   				Complex z=new Complex(0.0);
-   				double rad=0.05;
-   				try {
-   					z=oldVData[oldv].center;
-   					rad=oldVData[oldv].rad;
-   			
-   					// need to store in any 'RedHEdge's from this vertex
-   					if (vert.redFlag) {
-   						HalfEdge trace=he.prev.twin;
-   						do {
-   							if(trace.myRedEdge!=null) {
-   								trace.myRedEdge.setCenter(z);
-   								trace.myRedEdge.setRadius(rad);
-   							}
-   							trace=trace.prev.twin;
-   						} while (trace!=he);
-   					}
-   				} catch(Exception ex) {}
-				pdcel.setVertData(he, new CircleSimple(z,rad));
-				vData[v].setBdryFlag(vert.bdryFlag);
-				vData[v].color=oldVData[oldv].color;
-				vData[v].mark=oldVData[oldv].mark;
-				
-				// try to keep aim; but may swap int/bdry
-				vData[v].aim=oldVData[oldv].aim;
-				if (oldVData[oldv].getBdryFlag()!=0 && vert.bdryFlag==0)
-					vData[v].aim=2.0*Math.PI;
-				else if (oldVData[oldv].getBdryFlag()==0 && vert.bdryFlag!=0)
-					vData[v].aim=-.1;
-
-   			}
-   			else {
-    			if (vert.isBdry()) { 
-    				vData[v].setBdryFlag(1);
-    				vData[v].aim=-0.1;
-    			}
-    			else {
-    				vData[v].setBdryFlag(0);
-					vData[v].aim=2.0*Math.PI;
-    			}
-   			}
-			pdcel.setVDataIndices(v);
-    	}
-
-		// TODO: convert lists before killing 'oldNew'??  
-		pdcel.oldNew=null;
-		
-//    	set_aim_default(); // I'm using old aims
 		
     	fillcurves();
     	if (pdcel.gamma==null)
@@ -795,7 +707,7 @@ public class PackData{
                 			}
                 			else {
                 				try {
-                					face=new Face();
+                					face=new Face(3);
                 					face.vert[0]=Integer.parseInt((String)tok.nextToken());
                 					face.vert[1]=Integer.parseInt((String)tok.nextToken());
                 					face.vert[2]=Integer.parseInt((String)tok.nextToken());
@@ -1091,6 +1003,7 @@ public class PackData{
 //           		}
                     
                     // OBE; don't use this 
+/*                    
                     else if(mainTok.equals("FACE_PLOT_FLAGS:") && !newPacking){
                         state = PackState.FACE_PLOT_FLAGS;
                   		while (state==PackState.FACE_PLOT_FLAGS 
@@ -1117,6 +1030,8 @@ public class PackData{
                 		}
                         flags |= 01000;
                     }
+*/
+                    
                     else if(mainTok.equals("SELECT_RADII:") && !newPacking) {
                     	// only for CHECKCOUNT cases
                         state = PackState.SELECT_RADII;
@@ -1885,8 +1800,7 @@ public class PackData{
 
     /**
      * Enlarge (or reduce) pack data space, increments of 1000.
-     * Free old space, allocate space for KData, RData, VData
-     * (and possibly expand 'packDCEL.vertices')
+     * Free old space, allocate space for 'vertices'.
      * Size is stored in 'sizeLimit'.
      * @param new_size int (often current 'sizeLimit')
      * @param keepit boolean: true, adjust size of current pack,
@@ -1904,24 +1818,14 @@ public class PackData{
             return 1; 
         }
         sizeLimit=size; // to keep track of space already allocated
-        VData []newV = new VData[sizeLimit+1];
         
         if (keepit) { // transfer the old data, allocate expansion space
-            for (int v=1;v<=nodeCount;v++) {
-               	newV[v]=vData[v];
-            }
-            for (int v=nodeCount+1;v<sizeLimit+1;v++) {
-               	newV[v]=new VData();
-            }
            	Vertex[] new_vertices=new Vertex[sizeLimit+1];
            	for (int v=1;v<=packDCEL.vertCount;v++)
            		new_vertices[v]=packDCEL.vertices[v];
         }
         else{ 
             // empty out pack and reset 
-            for(int v = 0; v < sizeLimit+1; v++) {
-               	newV[v]=new VData();
-            }
             xyzpoint=null;
             status=false;
             nodeCount=0;
@@ -1932,7 +1836,6 @@ public class PackData{
            	packDCEL.p=this;
            	packDCEL.vertices=new Vertex[sizeLimit+1];
         }
-       	vData=newV;
         return 1;
     } 
     
@@ -2116,7 +2019,7 @@ public class PackData{
 	 */
 	public double getAim(int v) {
 		try {
-			return vData[v].aim;
+			return packDCEL.vertices[v].aim;
 		} catch(Exception ex) {
 			throw new DataException("error in getting 'aim' for v = "+v);
 		}
@@ -2129,7 +2032,7 @@ public class PackData{
 	 * @param aim double
 	 */
 	public void setAim(int v,double aim) {
-		vData[v].aim=aim;
+		packDCEL.vertices[v].aim=aim;
 	}
 	
 	/**
@@ -2158,7 +2061,7 @@ public class PackData{
 	 */
 	public double getCurv(int v) {
 		try {
-			return vData[v].curv;
+			return packDCEL.vertices[v].curv;
 		} catch(Exception ex) {
 			throw new DataException("error in getting 'curv' for v = "+v);
 		}
@@ -2171,7 +2074,7 @@ public class PackData{
 	 * @param aim double
 	 */
 	public void setCurv(int v,double curv) {
-		vData[v].curv=curv;
+		packDCEL.vertices[v].curv=curv;
 	}
 	
 	/**
@@ -2181,11 +2084,11 @@ public class PackData{
 	 * @return int (should be 0 or 1)
 	 */
 	public int getBdryFlag(int v) {
-		return vData[v].getBdryFlag();
+		return packDCEL.vertices[v].bdryFlag;
 	}
 	
 	public void setBdryFlag(int v,int flag) {
-		vData[v].setBdryFlag(flag);
+		packDCEL.vertices[v].bdryFlag=flag;
 	}
 	
 	/**
@@ -2252,7 +2155,7 @@ public class PackData{
 		if (f<=0)
 			return null;
 		Complex[] corners=new Complex[3];
-		dcel.Face dface=packDCEL.faces[f];
+		dcel.DcelFace dface=packDCEL.faces[f];
 		HalfEdge he=dface.edge;
 		for (int j=0;j<3;j++) {
 			corners[j]=packDCEL.getVertCenter(he);
@@ -2411,7 +2314,7 @@ public class PackData{
 	 * @return CircleSimple
 	 */
 	public CircleSimple getCircleSimple(int v) {
-		return new CircleSimple(vData[v].center,vData[v].rad);
+		return new CircleSimple(packDCEL.vertices[v].center,packDCEL.vertices[v].rad);
 	}
 	
 	/** 
@@ -2420,8 +2323,8 @@ public class PackData{
 	 * @param cS CircleSimple
 	 */
 	public void setCircleSimple(int v,CircleSimple cS) {
-		vData[v].center=cS.center;
-		vData[v].rad=cS.rad;
+		packDCEL.vertices[v].center=cS.center;
+		packDCEL.vertices[v].rad=cS.rad;
 	}
 	
 	/**
@@ -2486,7 +2389,7 @@ public class PackData{
 	 * @return new Color
 	 */
 	public Color getCircleColor(int v) {
-		return vData[v].getColor();
+		return packDCEL.vertices[v].getColor();
 	}
 	
 	/**
@@ -2496,7 +2399,7 @@ public class PackData{
 	 */
 	public void setCircleColor(int v,Color color) {
 		try {
-			vData[v].setColor(color);
+			packDCEL.vertices[v].setColor(color);
 		} catch(Exception ex) {}
 	}
 	
@@ -2515,37 +2418,21 @@ public class PackData{
 	public void setEdgeUtil(int e,int m) {
 		packDCEL.edges[e].eutil=m;
 	}
-
+	
 	public int getVertMark(int v) {
-		return vData[v].mark;
+		return packDCEL.vertices[v].mark;
 	}
 	
 	public void setVertMark(int v,int m) {
-		vData[v].mark=m;
+		packDCEL.vertices[v].mark=m;
 	}
 	
 	public int getPlotFlag(int v) {
-		return vData[v].plotFlag;
-	}
-	
-	public void setQualFlag(int v,int m) {
-		vData[v].qualFlag=m;
-	}
-	
-	public int getFacePlotFlag(int f) {
-		return packDCEL.faces[f].plotFlag;
-	}
-	
-	public void setFacePlotFlag(int f,int m) {
-		packDCEL.faces[f].plotFlag=m;
-	}
-	
-	public int getQualFlag(int v) {
-		return vData[v].qualFlag;
+		return packDCEL.vertices[v].plotFlag;
 	}
 	
 	public void setPlotFlag(int v,int m) {
-		vData[v].plotFlag=m;
+		packDCEL.vertices[v].plotFlag=m;
 	}
 	
 	public int getFaceMark(int f) {
@@ -2710,13 +2597,13 @@ public class PackData{
 					spoke.myRedEdge.prevRed.myEdge!=upstream)
 				simple=false;
 		}
-		ArrayList<dcel.Face> faceflower=vert.getFaceFlower();
-		Iterator<dcel.Face> fis=faceflower.iterator();
+		ArrayList<dcel.DcelFace> faceflower=vert.getFaceFlower();
+		Iterator<dcel.DcelFace> fis=faceflower.iterator();
 		
 		// use faces as already placed
 		if (simple) {			
 			while(fis.hasNext()) {
-				dcel.Face face=fis.next();
+				dcel.DcelFace face=fis.next();
 				if (face.faceIndx>=0)
 					zs.add(packDCEL.getFaceIncircle(face).center);
 			}
@@ -2831,7 +2718,7 @@ public class PackData{
 	 * @param face Face
 	 * @return Complex[], non-closed array
 	 */
-	public Complex[] face_hull(dcel.Face face) {
+	public Complex[] face_hull(dcel.DcelFace face) {
 		ArrayList<Complex> zs=new ArrayList<Complex>();
 		HalfEdge he=face.edge;
 		do {
@@ -2857,7 +2744,7 @@ public class PackData{
 	 */
 	public Complex[] corners_face(int f) {
 		ArrayList<Complex> zs=new ArrayList<Complex>();
-		dcel.Face face=packDCEL.faces[f];
+		dcel.DcelFace face=packDCEL.faces[f];
 
 		HalfEdge he=face.edge;
 		do {
@@ -3039,7 +2926,7 @@ public class PackData{
 	 * @return int, face index or -1 on error
 	 */
 	public int face_opposite(int f,int v) {
-		dcel.Face face =packDCEL.faces[f];
+		dcel.DcelFace face =packDCEL.faces[f];
 		return face.faceOpposite(v).faceIndx;
 	}
 	
@@ -3051,7 +2938,7 @@ public class PackData{
 	 * @return int f, else return 0. 
 	 */
 	public int what_face(int a,int b,int c) {
-		dcel.Face fce=packDCEL.whatFace(a, b, c);
+		dcel.DcelFace fce=packDCEL.whatFace(a, b, c);
 		if (fce==null)
 			return 0;
 		return fce.faceIndx;
@@ -3293,7 +3180,7 @@ public class PackData{
 	 * @return EdgeSimple, null on failure
 	 */
 	public EdgeSimple getCommonEdge(int v, int w) {
-		HalfEdge he=RawDCEL.getCommonEdge(packDCEL, v, w);
+		HalfEdge he=RawManip.getCommonEdge(packDCEL, v, w);
 		return HalfEdge.getEdgeSimple(he);
 	}
 		
@@ -4320,25 +4207,25 @@ public class PackData{
 					}
 				file.write("\n (done)\n\n");
 			}
-			flag = 0;
-			for (int i = 1; (i <= faceCount && flag == 0); i++)
-				if (getFacePlotFlag(i) <= 0)
-					flag++;
-			if (flag > 0) { // got some nondefault face plot_flags
-				file.write("FACE_PLOT_FLAGS: \n");
-				int j = 0;
-				for (int i = 1; i <= faceCount; i++)
-					if (getFacePlotFlag(i) <= 0) {
-						int[] verts=packDCEL.faces[i].getVerts();
-						file.write(" " + verts[0] + " "
-								+ verts[1] + " " + verts[2]
-								+ "   " + getFacePlotFlag(i));
-						j++;
-						if ((j % 3) == 0)
-							file.write("\n");
-					}
-				file.write("\n (done)\n\n");
-			}
+//			flag = 0;
+//			for (int i = 1; (i <= faceCount && flag == 0); i++)
+//				if (getFacePlotFlag(i) <= 0)
+//					flag++;
+//			if (flag > 0) { // got some nondefault face plot_flags
+//				file.write("FACE_PLOT_FLAGS: \n");
+//				int j = 0;
+//				for (int i = 1; i <= faceCount; i++)
+//					if (getFacePlotFlag(i) <= 0) {
+//						int[] verts=packDCEL.faces[i].getVerts();
+//						file.write(" " + verts[0] + " "
+//								+ verts[1] + " " + verts[2]
+//								+ "   " + getFacePlotFlag(i));
+//						j++;
+//						if ((j % 3) == 0)
+//							file.write("\n");
+//					}
+//				file.write("\n (done)\n\n");
+//			}
 		}
 		if ((act & 02000) == 02000 && xyzpoint != null) { // xyz data
 			file.write("POINTS: " + nodeCount + "\n");
@@ -4628,9 +4515,9 @@ public class PackData{
 		
 		if (packDCEL.pairLink==null || packDCEL.pairLink.size()<2)
 			return null;
-		Iterator<D_SideData> sides=packDCEL.pairLink.iterator();
+		Iterator<SideData> sides=packDCEL.pairLink.iterator();
 		sides.next(); // first is null
-		D_SideData ep=null;
+		SideData ep=null;
 		while (sides.hasNext()) {
 			ep=sides.next();
 			if (ep.label.equals(tmpLabel) && ep.mob!=null)
@@ -4670,7 +4557,7 @@ public class PackData{
 
 		try {
 			if (hes < 0) { // hyp
-				d_HypPacker h_packer=new d_HypPacker(this,passes);
+				HypPacker h_packer=new HypPacker(this,passes);
 				oldRel=oldRel || h_packer.oldReliable;
 				int ans=0;
 				if (!oldRel) {
@@ -4691,7 +4578,7 @@ public class PackData{
 				return 0;
 			}
 			else  { // eucl
-				d_EuclPacker e_packer=new d_EuclPacker(this,passes);
+				EuclPacker e_packer=new EuclPacker(this,passes);
 				oldRel=oldRel || e_packer.oldReliable;
 				int ans=0;
 				if (!oldRel) {
@@ -4840,7 +4727,7 @@ public class PackData{
 		}
 		int v2 = getLastPetal(v); // upstream nghb
 		
-		Vertex vert=RawDCEL.addVert_raw(packDCEL,v);
+		Vertex vert=RawManip.addVert_raw(packDCEL,v);
 		if (vert==null)
 			throw new CombException("failed 'add_vert'");
 		setRadius(vert.vertIndx,getRadius(vert.vutil));
@@ -4882,7 +4769,7 @@ public class PackData{
 		
 		if (getRadius(v1) <= 0) // avoid infinity hyp rad
 			setRadius(v1, 0.1);
-		int ans=RawDCEL.enfold_raw(packDCEL,v1);
+		int ans=RawManip.enfold_raw(packDCEL,v1);
 		if (ans<=0)
 			throw new CombException("dcel enfold failed in 'enfold'");
 		packDCEL.fixDCEL_raw(this);
@@ -4989,11 +4876,11 @@ public class PackData{
 
 			int origcount=packDCEL.vertCount;
 			// generate combinatoric
-			int ans= RawDCEL.baryBox_raw(packDCEL,v1,v2);
+			int ans= RawManip.baryBox_raw(packDCEL,v1,v2);
 			if (ans==0)
 				return 0;
 			// TODO: too difficult to set radii
-			CombDCEL.d_FillInside(packDCEL);
+			CombDCEL.fillInside(packDCEL);
 			return attachDCEL(packDCEL);
 		}
 		return 1;
@@ -5226,7 +5113,7 @@ public class PackData{
 		  Iterator<HalfEdge> his=hlink.iterator();
 		  while (his.hasNext()) {
 			  HalfEdge he=his.next().twin.prev;
-			  if (RawDCEL.flipEdge_raw(packDCEL,he)==null) {
+			  if (RawManip.flipEdge_raw(packDCEL,he)==null) {
 				  count *=-1;
 				  break;
 			  }
@@ -5251,7 +5138,7 @@ public class PackData{
 		  Iterator<EdgeSimple> fis=fliplist.iterator();
 		  while (fis.hasNext()) {
 			  HalfEdge he=pdc.findHalfEdge(fis.next());
-			  HalfEdge newhe=RawDCEL.flipEdge_raw(pdc,he);
+			  HalfEdge newhe=RawManip.flipEdge_raw(pdc,he);
 			  if (newhe!=null)
 				  count ++;
 		  }
@@ -5593,7 +5480,7 @@ public class PackData{
    		int origCount=nodeCount;
    		int v;
    		while(vlist.hasNext() && isBdry((v=(Integer)vlist.next()))) {
-	    	int loccount=RawDCEL.addIdeal_raw(packDCEL, v, v);
+	    	int loccount=RawManip.addIdeal_raw(packDCEL, v, v);
 	    	if (loccount==0) 
 	    		throw new CombException("add failed");
 	    	count++;
@@ -5665,7 +5552,7 @@ public class PackData{
 
   		try { 
   			packDCEL.redChain=null;
-  			RawDCEL.addBary_raw(packDCEL,packDCEL.idealFaces[1].edge,false);
+  			RawManip.addBary_raw(packDCEL,packDCEL.idealFaces[1].edge,false);
   		} catch(Exception ex) {
   			throw new CombException("'proj' dcel error");
   		}
@@ -6627,17 +6514,14 @@ public class PackData{
 		  p.activeNode=activeNode;
 		  p.packExtensions=new Vector<PackExtender>(2); // old are lost
 
-		  RedHEdge oldred=packDCEL.redChain;
+		  RedEdge oldred=packDCEL.redChain;
 		  PackDCEL pdcel=CombDCEL.cloneDCEL(packDCEL);
 		  pdcel.fixDCEL_raw(p);
-		  p.vData=new VData[sizeLimit+1];
-		  for (int v=1;v<=nodeCount;v++) 
-			  p.vData[v]=vData[v].clone(); // this.getCenter(v);
 			  
 		  // typically, if not a sphere, will have redChain
 		  if (oldred!=null) {
-			  RedHEdge newred=pdcel.redChain;
-			  RedHEdge rhe=newred;
+			  RedEdge newred=pdcel.redChain;
+			  RedEdge rhe=newred;
 			  do {
 				  rhe.setCenter(oldred.getCenter());
 				  rhe.setRadius(oldred.getRadius());
@@ -7107,7 +6991,7 @@ public class PackData{
 	   * @return 1 on success, 0 if not suitable
 	   */
 	  public int puncture_vert(int v) {
-		  PackDCEL newDCEL=CombDCEL.d_puncture_vert(packDCEL, v);
+		  PackDCEL newDCEL=CombDCEL.puncture_vert(packDCEL, v);
 		  if (newDCEL==null) {
 			  throw new DCELException("DCEL puncture for "+v+" failed");
 		  }
@@ -7128,7 +7012,7 @@ public class PackData{
 	  public int puncture_face(int f) {
 		  if (f<1 || f>faceCount)
 			  return 0;
-		  PackDCEL newDCEL=CombDCEL.d_puncture_face(packDCEL, f);
+		  PackDCEL newDCEL=CombDCEL.puncture_face(packDCEL, f);
 		  if (newDCEL==null) {
 			  throw new DCELException("DCEL puncturing face "+f+" failed");
 		  }
@@ -7143,7 +7027,7 @@ public class PackData{
 	   * overlaps, schwarzians to new edges. Return 0 on failure.
 	  */
 	  public int hex_refine() {
-		  RawDCEL.hexBaryRefine_raw(packDCEL,false);
+		  RawManip.hexBaryRefine_raw(packDCEL,false);
 		  VertexMap vrads=packDCEL.reapVUtil();
 		  packDCEL.fixDCEL_raw(this);
 
@@ -7328,7 +7212,7 @@ public class PackData{
 				setRadius(i,sc.rad);
 			}
 			if (packDCEL.redChain != null) {
-				RedHEdge rtrace = packDCEL.redChain;
+				RedEdge rtrace = packDCEL.redChain;
 				do {
 					sc = HyperbolicMath.h_to_e_data(rtrace.getCenter(),
 							rtrace.getRadius());
@@ -7363,11 +7247,11 @@ public class PackData{
 		  Mobius mob=Mobius.rotation(ang/Math.PI);
 		  if (hes>0) { // sphere
 			  for (int v=1;v<=nodeCount;v++) {
-				  Complex z=vData[v].center;
-				  vData[v].center=new Complex(z.x+ang,z.y);
+				  Complex z=packDCEL.vertices[v].center;
+				  packDCEL.vertices[v].center=new Complex(z.x+ang,z.y);
 			  }
 			  if (packDCEL.redChain!=null) {
-				  RedHEdge rtrace=packDCEL.redChain;
+				  RedEdge rtrace=packDCEL.redChain;
 				  do {
 					  Complex z=rtrace.getCenter();
 					  if (z!=null)
@@ -7380,9 +7264,9 @@ public class PackData{
 			  
 		  // hyp/eucl
 		  for (int v=1;v<=nodeCount;v++) 
-			  vData[v].center=mob.apply(vData[v].center);
+			  packDCEL.vertices[v].center=mob.apply(packDCEL.vertices[v].center);
 		  if (packDCEL.redChain!=null) {
-			  RedHEdge rtrace=packDCEL.redChain;
+			  RedEdge rtrace=packDCEL.redChain;
 			  do {
 				  Complex z=rtrace.getCenter();
 				  if (z!=null)
@@ -7439,10 +7323,10 @@ public class PackData{
 			  pdc2=pdc1;
 			  
 		  // here's the main call.
-		  PackDCEL newDCEL=CombDCEL.d_adjoin(pdc1, pdc2, v1, v2, n);
+		  PackDCEL newDCEL=CombDCEL.adjoin(pdc1, pdc2, v1, v2, n);
 		  VertexMap oldnew=newDCEL.oldNew;
 		  CombDCEL.redchain_by_edge(newDCEL, null, null, selfadjoin);
-		  CombDCEL.d_FillInside(newDCEL);
+		  CombDCEL.fillInside(newDCEL);
 		  newDCEL.oldNew=oldnew;
 		  newPack=new PackData(null);
 		  newPack.attachDCEL(newDCEL);
@@ -7451,43 +7335,34 @@ public class PackData{
 			  
 		  if (debug) // debug=true;
 			   DCELdebug.printRedChain(pdcel.redChain);
-			  
-   		  // Set up 'VData' (at original size) 
-   		  VData[] newV=new VData[p1.sizeLimit+1];
-    		  
-   		  // copy the 'p1' info?
+
+		  // copy the 'p1' info?
    		  if (selfadjoin) 
    			  for (int v=1;v<=pdcel.vertCount;v++) {
-   				  newV[v]=p1.vData[v].clone();
-   				  newV[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
+   				  pdcel.vertices[v].cloneData(pdc1.vertices[v]);
    			  }
    		  else {
    			  // all 'p1' vertices should still be there, same indices
    			  for (int v=1;v<=p1.nodeCount;v++) {
-   				  newV[v]=p1.vData[v].clone();
-   				  newV[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
+   				  pdcel.vertices[v].cloneData(pdc1.vertices[v]);
    			  }
    			  // rest are from 'p2'.
    			  for (int v=p1.nodeCount+1;v<=pdcel.vertCount;v++) {
-   				  newV[v]=new VData();
+   				  Vertex vert=newPack.packDCEL.vertices[v];
    				  // 'old2v' is original index in 'qackData'
    				  int old2v=newPack.vertexMap.findV(v); 
-//System.out.println("<old2v,v>=<"+old2v+","+v+">");    				  
-   				  newV[v].rad=p2.getRadius(old2v);
-   				  newV[v].center=p2.getCenter(old2v);
-   				  newV[v].aim=p2.getAim(old2v);
-   				  newV[v].setBdryFlag(pdcel.vertices[v].bdryFlag);
+//System.out.println("<old2v,v>=<"+old2v+","+v+">");    	
+   				  vert.cloneData(pdc2.vertices[old2v]);
    			  }
    		  }
-   		  newPack.vData=newV;
     		  
    		  // get red cent/rad from vData
    		  if (pdcel.redChain!=null) {
-   			  RedHEdge rtrace=pdcel.redChain;
+   			  RedEdge rtrace=pdcel.redChain;
    			  do {
    				  int v=rtrace.myEdge.origin.vertIndx;
-   				  rtrace.setCenter(new Complex(newPack.vData[v].center));
-   				  rtrace.setRadius(newPack.vData[v].rad);
+   				  rtrace.setCenter(new Complex(newPack.packDCEL.vertices[v].center));
+   				  rtrace.setRadius(newPack.packDCEL.vertices[v].rad);
    				  rtrace=rtrace.nextRed;
    			  } while (rtrace!=pdcel.redChain);
    		  }
@@ -7740,7 +7615,7 @@ public class PackData{
 	  public EdgeSimple reDualEdge(int f,int g) {
 		  if (f<1 || g<1 || f>faceCount || g>faceCount)
 			  return null;
-		  dcel.Face fface=packDCEL.faces[f];
+		  dcel.DcelFace fface=packDCEL.faces[f];
 		  HalfEdge he=fface.faceNghb(packDCEL.faces[g]);
 		  if (he==null)
 			  return null;
@@ -7858,7 +7733,7 @@ public class PackData{
 				setCenter(i,getCenter(i).times(-1.0));
 			}
 			if (packDCEL.redChain != null) { // adjust centers in red list
-				RedHEdge rtrace=packDCEL.redChain;
+				RedEdge rtrace=packDCEL.redChain;
 				do {
 					double radius=-(rtrace.getRadius());
 					// again, catch horocycles
@@ -7897,7 +7772,7 @@ public class PackData{
 				setCenter(i,zc);
 			}
 			if (packDCEL.redChain != null) {
-				RedHEdge rtrace=packDCEL.redChain;
+				RedEdge rtrace=packDCEL.redChain;
 				do {
 					rtrace.setCenter(rtrace.getCenter().minus(ctr));
 					rtrace = rtrace.nextRed;
@@ -8646,8 +8521,8 @@ public class PackData{
 	 * @return int, 0 on error
 	*/
 	public int sa_draw_bdry_seg_num(int n) {
-		RedHEdge rtrace=null;
-	    D_SideData epair=null;
+		RedEdge rtrace=null;
+	    SideData epair=null;
 	    if (packDCEL.pairLink==null || n<0 || n>=packDCEL.pairLink.size() 
 	    		|| (epair=packDCEL.pairLink.get(n))==null
 	    		|| (rtrace=epair.startEdge)==null) 
@@ -8668,8 +8543,8 @@ public class PackData{
 	 * @return int, 0 on error
 	*/
 	public int post_bdry_seg_num(PostFactory pF,int n) {
-		RedHEdge trace=null;
-	    D_SideData epair=null;
+		RedEdge trace=null;
+	    SideData epair=null;
 	    if (packDCEL.pairLink==null || n<0 || n>=packDCEL.pairLink.size() 
 	    		|| (epair=packDCEL.pairLink.get(n))==null
 	    		|| (trace=epair.startEdge)==null) 
@@ -8696,14 +8571,14 @@ public class PackData{
 	 */
 	public int sa_draw_bdry_seg(int n,boolean do_label,boolean do_circle,
 			Color ecol,int thickness) {
-	  D_SideData epair=null;
+	  SideData epair=null;
 	  
 	  if (packDCEL.pairLink==null || n<0 || n>=packDCEL.pairLink.size() 
 			  || (epair=packDCEL.pairLink.get(n))==null
 			  || epair.startEdge==null) 
 		  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
 		  return 0;
-	  RedHEdge rtrace=epair.startEdge;
+	  RedEdge rtrace=epair.startEdge;
 	  int old_thickness=cpScreen.getLineThickness();
 
 	  DispFlags dflags=new DispFlags(""); 
@@ -8759,14 +8634,14 @@ public class PackData{
 	 */
 	public int post_bdry_seg(PostFactory pF,int n,boolean do_label,
 			boolean do_circle,Color ecol,double tx) {
-		  D_SideData epair=null;
+		  SideData epair=null;
 		  
 		  if (packDCEL.pairLink==null || n<0 || n>=packDCEL.pairLink.size() 
 				  || (epair=packDCEL.pairLink.get(n))==null
 				  || epair.startEdge==null) 
 			  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
 			  return 0;
-		  RedHEdge rtrace=epair.startEdge;
+		  RedEdge rtrace=epair.startEdge;
 		  int old_thickness=cpScreen.getLineThickness();
 
 		  DispFlags dflags=new DispFlags(""); 
@@ -9281,7 +9156,7 @@ public class PackData{
 		
 		// build triangles
 		for (int f=1;f<=Tri.faceCount;f++) {
-			dcel.Face face=packDCEL.faces[f];
+			dcel.DcelFace face=packDCEL.faces[f];
 			int[] vert=face.getVerts();
 			Tri.faces[f]=new komplex.Face(vert.length);
 			Tri.faces[f].vert=vert;
@@ -9435,11 +9310,11 @@ public class PackData{
 		  return randPack;
 	}
 	
-	public void setSidePairs(D_PairLink plink) {
+	public void setSidePairs(PairLink plink) {
 		packDCEL.pairLink=plink;
 	}
 	
-	public D_PairLink getSidePairs() {
+	public PairLink getSidePairs() {
 		return packDCEL.pairLink;
 	}
 	
@@ -9452,7 +9327,7 @@ public class PackData{
 		if (packDCEL.pairLink!=null || packDCEL.pairLink.countPairs()==0)
 			return null;
 		for (int j=1;j<packDCEL.pairLink.size();j++) {
-			D_SideData sidd=packDCEL.pairLink.get(j);
+			SideData sidd=packDCEL.pairLink.get(j);
 			if (sidd.mateIndex>sidd.spIndex)
 				indices.add(sidd.spIndex);
 		}

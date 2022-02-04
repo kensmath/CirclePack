@@ -12,7 +12,7 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
 import dcel.HalfEdge;
-import dcel.RedHEdge;
+import dcel.RedEdge;
 import exceptions.InOutException;
 import exceptions.ParserException;
 import geometry.CircleSimple;
@@ -117,7 +117,7 @@ public class AffinePack extends PackExtender {
 		double EL=0.0;
 		double L=0.0;
 		
-		D_ProjStruct.setEffective(p,asp);
+		ProjStruct.setEffective(p,asp);
 		
 		NodeLink vlist = null;
 		vlist=new NodeLink(p,"b(1,2)");
@@ -176,7 +176,7 @@ public class AffinePack extends PackExtender {
 		double EL=0.0;
 		double L=0.0;
 		
-		D_ProjStruct.setEffective(p,asp);
+		ProjStruct.setEffective(p,asp);
 		
 		NodeLink vlist = null;
 		vlist=new NodeLink(p,"b(3,4)");
@@ -234,7 +234,7 @@ public class AffinePack extends PackExtender {
 		double EL=0.0;
 		double L=0.0;
 		
-		D_ProjStruct.setEffective(p,asp);
+		ProjStruct.setEffective(p,asp);
 		
 		NodeLink vlist = null;
 		vlist=new NodeLink(p,"b(2,3)");
@@ -292,7 +292,7 @@ public class AffinePack extends PackExtender {
 		double EL=0.0;
 		double L=0.0;
 		
-		D_ProjStruct.setEffective(p,asp);
+		ProjStruct.setEffective(p,asp);
 		
 		NodeLink vlist = null;
 		vlist=new NodeLink(p,"b(4,1)");
@@ -347,7 +347,7 @@ public class AffinePack extends PackExtender {
 	 */
 	public static int AdjBd(PackData p, TriAspect[] asp){
 		
-		D_ProjStruct.setEffective(p,asp);
+		ProjStruct.setEffective(p,asp);
 		
 		//edge12
 		
@@ -849,7 +849,7 @@ public class AffinePack extends PackExtender {
 	 */
 	public static int adjBd(PackData p, TriAspect[] asp){
 		
-		D_ProjStruct.setEffective(p,asp);
+		ProjStruct.setEffective(p,asp);
 		
 		//edge12
 		
@@ -1386,7 +1386,7 @@ public class AffinePack extends PackExtender {
 //					t=(2+del)/(10*del);
 					// del>1 and 0.1<t<0.3
 					edgeAdjust(p,new EdgeSimple (e[v],ee[v]),t,aspts);
-					D_ProjStruct.sideRiffle(p, aspts, 20, null);
+					ProjStruct.sideRiffle(p, aspts, 20, null);
 					N++;
 					}
 			}
@@ -1500,7 +1500,7 @@ public class AffinePack extends PackExtender {
 		// compute initial curvatures
 		for (int j = 0; j < aimNum; j++) {
 			v = inDex[j];
-			curv[v] = D_ProjStruct.angSumSide(p, v, 1.0,aspts);
+			curv[v] = ProjStruct.angSumSide(p, v, 1.0,aspts);
 		}
 
 		// set cutoff value
@@ -1516,15 +1516,15 @@ public class AffinePack extends PackExtender {
 		// now cycle through adjustments --- riffle
 			for (int j = 0; j < aimNum; j++) {
 				v = inDex[j];
-				curv[v] = D_ProjStruct.angSumSide(p, v,1.0,aspts);
+				curv[v] = ProjStruct.angSumSide(p, v,1.0,aspts);
 				verr = curv[v] - p.getAim(v);
 
 				// find/apply factor to radius or sides at v
 				if (Math.abs(verr) > cut) {
-					double sideFactor = D_ProjStruct.sideCalc(p,v, p.getAim(v), 5,
+					double sideFactor = ProjStruct.sideCalc(p,v, p.getAim(v), 5,
 							aspts);
-					D_ProjStruct.adjustSides(p,v, sideFactor,aspts);
-					curv[v] = D_ProjStruct.angSumSide(p, v,1.0, aspts);
+					ProjStruct.adjustSides(p,v, sideFactor,aspts);
+					curv[v] = ProjStruct.angSumSide(p, v,1.0, aspts);
 				}
 			}
 
@@ -2044,7 +2044,7 @@ public class AffinePack extends PackExtender {
 				double B=Math.exp(grid[1]+(grid[3]-grid[1])*j/N);
 				
 				// set affine data
-				boolean result = D_ProjStruct.affineSet(packData,aspects,A, B);
+				boolean result = ProjStruct.affineSet(packData,aspects,A, B);
 				if (!result) {
 					msg("affine has failed for A, B = "+A+","+B);
 					okay=false;
@@ -2053,7 +2053,7 @@ public class AffinePack extends PackExtender {
 				
 				// do affpack
 				NodeLink vlink=new NodeLink(packData,"a");
-				int count = D_ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
+				int count = ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
 				if (count < 0) {
 					msg("affpack seems to have failed");
 					okay=false;
@@ -2061,7 +2061,7 @@ public class AffinePack extends PackExtender {
 				}
 				
 				// gather torus data
-				TorusData torusData=D_ProjStruct.getTorusData(packData,true);
+				TorusData torusData=ProjStruct.getTorusData(packData,true);
 				if (torusData==null) {
 					msg("failed to get torus data");
 					okay=false;
@@ -2070,7 +2070,7 @@ public class AffinePack extends PackExtender {
 				
 				// on last run, center the data
 				if (i==N && j==N) {
-					RedHEdge rtrace=packData.packDCEL.redChain;
+					RedEdge rtrace=packData.packDCEL.redChain;
 					double rad=rtrace.getRadius();
 					Complex cent=rtrace.getCenter();
 					int safety=packData.faceCount+1;
@@ -2134,7 +2134,7 @@ public class AffinePack extends PackExtender {
 			} catch (Exception ex){}
 			Vector<Double> data=new Vector<Double>(packData.nodeCount);
 			for (int v=1;v<=packData.nodeCount;v++) 
-				data.add(v,D_ProjStruct.weakConError(packData,aspects,v));
+				data.add(v,ProjStruct.weakConError(packData,aspects,v));
 			Vector<Color> colIndices=ColorUtil.blue_red_diff_ramp_Color(data);
 
 			for (int v=1;v<=packData.nodeCount;v++) {
@@ -2173,7 +2173,7 @@ public class AffinePack extends PackExtender {
 				throw new ParserException("usage: riffle {m}: 1=ang sum, 2=weak, 3=effective, 4=side");
 			}
 			if (mode==1 || mode == 2) { // ang sum or weak
-				int count = D_ProjStruct.vertRiffle(packData, aspects,mode,PASSES,vlink);
+				int count = ProjStruct.vertRiffle(packData, aspects,mode,PASSES,vlink);
 				if (count < 0) {
 					Oops("riffle for aims seems to have failed");
 					return 0;
@@ -2338,12 +2338,12 @@ public class AffinePack extends PackExtender {
 					double B=Bdata[b];
 					
 					// set affine parameters
-					boolean result = D_ProjStruct.affineSet(packData,aspects,A, B);
+					boolean result = ProjStruct.affineSet(packData,aspects,A, B);
 					if (!result)
 						Oops("affine has failed in 'matdat', A="+A+", B="+B);
 					
 					// repack
-					int count = D_ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
+					int count = ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
 					if (count < 0)
 						Oops("affpack seems to have failed in 'matdat'");
 						
@@ -2352,7 +2352,7 @@ public class AffinePack extends PackExtender {
 //					ProjStruct.treeLayout(packData,dTree,aspects);
 					
 					// compute data
-					TorusData tD=D_ProjStruct.getTorusData(packData,false);
+					TorusData tD=ProjStruct.getTorusData(packData,false);
 					if (tD==null) 
 						Oops("failed to compute 'TorusData' in 'matdat'");
 					
@@ -2526,7 +2526,7 @@ public class AffinePack extends PackExtender {
 				vlink=new NodeLink(packData,"a");
 			}
 			
-			int count = D_ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
+			int count = ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
 			if (count < 0) {
 				Oops("affpack seems to have failed");
 				return 0;
@@ -2563,7 +2563,7 @@ public class AffinePack extends PackExtender {
 			} catch (Exception ex) {
 			}
 
-			boolean result = D_ProjStruct.affineSet(packData,aspects,A, B);
+			boolean result = ProjStruct.affineSet(packData,aspects,A, B);
 			if (!result)
 				Oops("affine has failed");
 			msg("Affine data set: A = " + A + " B = " + B);
@@ -2699,7 +2699,7 @@ public class AffinePack extends PackExtender {
 					switch(c) {
 					case 'r':  { // use current radii
 						while (flt.hasNext()) {
-							dcel.Face face=packData.packDCEL.faces[flt.next()];
+							dcel.DcelFace face=packData.packDCEL.faces[flt.next()];
 							int[] verts=face.getVerts();
 							for (int j = 0; j < 3; j++)
 								aspects[face.faceIndx].labels[j]=
@@ -2765,7 +2765,7 @@ public class AffinePack extends PackExtender {
 			}
 			
 			// riffle side lengths to get target angle sums
-			int its=D_ProjStruct.sideRiffle(packData,aspects,2000,vlink);
+			int its=ProjStruct.sideRiffle(packData,aspects,2000,vlink);
 			msg("'sideRif' iterations: "+its);
 			
 			
