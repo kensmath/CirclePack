@@ -65,7 +65,7 @@ import util.UtilPacket;
  *
  */
 public class PackDCEL {
-	
+	public int sizeLimit;
 	public PackData p;
 
 	public int vertCount;		// number of vertices (eventually sync'ed with nodeCount)
@@ -102,6 +102,7 @@ public class PackDCEL {
 	
 	// Constructor(s)
 	public PackDCEL() { // naked shell
+		sizeLimit=1000;
 		p=null;
 		vertCount=0;
 		vertices=null;
@@ -118,6 +119,21 @@ public class PackDCEL {
 		redChain=null;
 		debug=false;
 	}
+
+/*	
+    if (keepit && size==sizeLimit) { 
+    	if (packDCEL.vertices.length<sizeLimit+1) {
+    		packDCEL.alloc_vert_space(sizeLimit,keepit);
+    	}
+        return 1; 
+    }
+    
+    if (keepit) { // transfer the old data, allocate expansion space
+       	Vertex[] new_vertices=new Vertex[sizeLimit+1];
+       	for (int v=1;v<=packDCEL.vertCount;v++)
+       		new_vertices[v]=packDCEL.vertices[v];
+    }
+*/    
 	
 	/**
 	 * Just call 'fixDCEL_raw' with 'prune' false. 
@@ -181,13 +197,13 @@ public class PackDCEL {
 	 * @return int size
 	 */
 	public int alloc_vert_space(int new_size,boolean keepit) {
-        int size=((int)((new_size-1)/1000))*1000+1000;
-		Vertex[] new_vs=new Vertex[size+1];
+        sizeLimit=((int)((new_size-1)/1000))*1000+1000;
+		Vertex[] new_vs=new Vertex[sizeLimit+1];
 		if (keepit)
 			for (int j=1;j<=vertCount;j++) 
 				new_vs[j]=vertices[j];
 		vertices=new_vs;
-		return size;
+		return sizeLimit;
 	}
 	/**
 	 * Create and populate 'triData[]'. This loads 'radii', 

@@ -117,7 +117,6 @@ public class BrooksQuad extends PackExtender {
 //		B+", R="+R+". Plug is "+P);
 
 		int dum;
-		if (P+1>packData.sizeLimit) packData.alloc_pack_space(P+1,true);
 		if (v_mode==0) // beginning sequence of vertical flips? 
 			v_flips=0;
 		Color cLrCode=ColorUtil.coLor(149);
@@ -178,7 +177,6 @@ public class BrooksQuad extends PackExtender {
 //				B+", R="+R+". Plug is "+P);
 
 		int dum;
-		if (P+1>packData.sizeLimit) packData.alloc_pack_space(P+1,true);
 		Color cLrCode=ColorUtil.coLor(49);
 		
 		if (h_mode==0) // beginning sequence of horizontal flips?

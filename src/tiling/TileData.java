@@ -149,7 +149,7 @@ public class TileData {
 		boolean seemsOK=true;
 		if (td==null || td.myTiles==null)
 			return null;
-		newPack.alloc_pack_space(td.tileCount+100,false);
+		newPack.packDCEL.alloc_vert_space(td.tileCount+100,false);
 		newPack.nodeCount=td.tileCount;
 		int[][] bouquet=new int[td.tileCount+1][];
 		for (int t=1;(t<=td.tileCount && seemsOK);t++) {

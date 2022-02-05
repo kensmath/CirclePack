@@ -4290,12 +4290,8 @@ public class CommandStrParser {
     	  items=flagSegs.elementAt(0); // should be only one segment
    		  EdgeLink edgeLink=new EdgeLink(packData,items);
    		  
-   		  if (edgeLink==null || edgeLink.size()==0) return 0;
-   		  if ((node=packData.nodeCount+edgeLink.size()+1) > (packData.sizeLimit)
-   				  && packData.alloc_pack_space(node,true)==0 ) {
-   			  throw new DataException("Space allocation problem with adding vertices to edges.");
-   		  }
-
+   		  if (edgeLink==null || edgeLink.size()==0) 
+   			  return 0;
    		  Iterator<EdgeSimple> elst=edgeLink.iterator();
    		  while (elst.hasNext()) {
    			  EdgeSimple edge=elst.next();
@@ -4996,12 +4992,6 @@ public class CommandStrParser {
 	    		  return 0;
 	    	  }
 	   		  NodeLink nodeLink=new NodeLink(packData,items);
-
-   			  if ((packData.nodeCount + nodeLink.size()) > (packData.sizeLimit)
-   					&& packData.alloc_pack_space(packData.nodeCount+1,
-   							true) == 0) 
-   				  throw new CombException("Pack space allocation failure");
-   			
    			  EdgeLink newV=new EdgeLink();
 	   		  Iterator<Integer> vlist=nodeLink.iterator();
 			  int origVCount=packData.packDCEL.vertCount;

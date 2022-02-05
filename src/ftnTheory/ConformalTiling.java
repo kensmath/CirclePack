@@ -1769,7 +1769,7 @@ public class ConformalTiling extends PackExtender {
 		int ecount=0;
 		for (int t=1;t<=td.tileCount;t++)
 			ecount+=td.myTiles[t].vertCount;
-		newPD.alloc_pack_space(newPD.nodeCount+2*ecount,true);
+		newPD.packDCEL.alloc_vert_space(newPD.nodeCount+2*ecount,true);
 		newPD.tileData=td.copyMyTileData();
 		
 		// clear 'mark's

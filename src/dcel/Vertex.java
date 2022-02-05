@@ -48,7 +48,8 @@ public class Vertex {
 	public int vutil;
 	public HalfEdge[] spokes;
 	
-	public Vertex() {
+	public Vertex(int v) {
+		vertIndx=v;
 		halfedge=null;
 		vertIndx=-1;
 		redFlag=false;
@@ -56,11 +57,6 @@ public class Vertex {
 		center=new Complex(0.0);
 		rad=.05;
 		color=ColorUtil.getFGColor();
-	}
-	
-	public Vertex(int v) {
-		this();
-		vertIndx=v;
 	}
 
 	/**

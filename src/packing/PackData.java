@@ -185,10 +185,13 @@ public class PackData{
     public PackData(CPScreen parentScreen){
         cpScreen = parentScreen;
         // Note: creating new speculative PackData sets, use 'null' CPScreen until finished. 
-        if (cpScreen !=null) packNum = cpScreen.getPackNum();
-        else packNum=CPBase.NUM_PACKS; // temporary number
+        if (cpScreen !=null) 
+        	packNum = cpScreen.getPackNum();
+        else 
+        	packNum=CPBase.NUM_PACKS; // temporary number
+        packDCEL=new PackDCEL();
+        packDCEL.p=this;
     	xyzpoint=null;
-    	alloc_pack_space(500,false);
     	packExtensions=new Vector<PackExtender>(2);
     	tileData=null;
     	this.fileName="Empty";
@@ -235,9 +238,6 @@ public class PackData{
      */
     public int attachDCEL(PackDCEL pdcel) {
 
-    	if (pdcel.vertCount>nodeCount)
-    		alloc_pack_space(pdcel.vertCount+10,true);
-    	
     	packDCEL=pdcel;
     	pdcel.p=this;
     	int origNodeCount=nodeCount;
@@ -376,7 +376,7 @@ public class PackData{
                            // TODO: error message 
                         	return 0;
                         }
-                        alloc_pack_space(intdata,false);
+                        reset_pack_space(intdata);
                         nodeCount = intdata;
                         tileData=null;
                         state = PackState.NODECOUNT;
@@ -417,7 +417,7 @@ public class PackData{
                            // TODO: error message 
                         	return 0;
                         }
-                        alloc_pack_space(intdata,false);
+                        reset_pack_space(intdata);
                         tileData=new TileData(this,intdata,3); // default to tile mode 3
                         nodeCount=0; // this should be updated with FLOWERS processing
                         state = PackState.TILECOUNT;
@@ -432,7 +432,7 @@ public class PackData{
                             flashError("Error in TRIANGULATION data: less than 3 faces");
                         	return 0;
                         }
-                        alloc_pack_space(intdata,false);
+                        reset_pack_space(intdata);
                         nodeCount = intdata;
                         tileData=null;
                     	state=PackState.TRIANGULATION;
@@ -1799,75 +1799,46 @@ public class PackData{
     }
 
     /**
-     * Enlarge (or reduce) pack data space, increments of 1000.
-     * Free old space, allocate space for 'vertices'.
-     * Size is stored in 'sizeLimit'.
+     * Reset pack data space and set PackDCEL.sizeLimit.
      * @param new_size int (often current 'sizeLimit')
-     * @param keepit boolean: true, adjust size of current pack,
-     *   else a new pack.
      * @return 1
      */
-    public int alloc_pack_space(int new_size,boolean keepit) {
-        int size=((int)((new_size-1)/1000))*1000+1000;
-        
-        // almost no action needed? 'vertices' may be too small
-        if (keepit && size==sizeLimit) { 
-        	if (packDCEL.vertices.length<sizeLimit+1) {
-        		packDCEL.alloc_vert_space(sizeLimit,keepit);
-        	}
-            return 1; 
-        }
-        sizeLimit=size; // to keep track of space already allocated
-        
-        if (keepit) { // transfer the old data, allocate expansion space
-           	Vertex[] new_vertices=new Vertex[sizeLimit+1];
-           	for (int v=1;v<=packDCEL.vertCount;v++)
-           		new_vertices[v]=packDCEL.vertices[v];
-        }
-        else{ 
-            // empty out pack and reset 
-            xyzpoint=null;
-            status=false;
-            nodeCount=0;
-            status=false;
-            fileName = "";
-            tileData=null;
-           	packDCEL=new PackDCEL();
-           	packDCEL.p=this;
-           	packDCEL.vertices=new Vertex[sizeLimit+1];
-        }
-        return 1;
-    } 
-    
-    /**
-     * Allocate new space for 5000 vertices
-     * @return 1 on success
-     */
-    public int alloc_pack_space() {
-    	return alloc_pack_space(5000,false);
+    public int reset_pack_space(int new_size) {
+        xyzpoint=null;
+        status=false;
+        nodeCount=0;
+        status=false;
+        fileName = "";
+        tileData=null;
+       	packDCEL=new PackDCEL();
+       	packDCEL.p=this;
+       	packDCEL.sizeLimit=((int)((new_size-1)/1000))*1000+1000;
+       	packDCEL.vertices=new Vertex[sizeLimit+1];
+       	return 1;
     }
 
-    /* Drawing flag scheme: flags indicate drawing instructions
-       for objects -- circles/lines/faces. Bits set as follows:
-       1  -  draw object?
-       2  -  fill? (4 and 16 imply 2, also)
-       4  -  off = foreground, on = background 
-       (applies to interior, not border, overriden by bit 16)
-       8  -  border color? (default=foreground, else recorded color)
-       16 -  interior color? (default set by bit 4, on -- recorded color)
-       32 -  display label?
+    /*
+     *  Drawing flag scheme: flags indicate drawing instructions
+     *  for objects -- circles/lines/faces. Bits set as follows:
+     *  1  -  draw object?
+     *  2  -  fill? (4 and 16 imply 2, also)
+     *  4  -  off = foreground, on = background 
+     *  (applies to interior, not border, overriden by bit 16)
+     *  8  -  border color? (default=foreground, else recorded color)
+     *  16 -  interior color? (default set by bit 4, on -- recorded color)
+     *  32 -  display label?
        
-       Eg.  flag=3: filled object, in foreground
-       flag=9: open object, border in (recorded) color
-       (for 'edge', this gives colored edge)
-       flag=19: filled in color, border in foreground
-       flag=27: filled, border and interior in color
-       flag=15: filled with background, border in color
-       flag=32: label only (face or circle)
+     *  Eg.  flag=3: filled object, in foreground
+     *  flag=9: open object, border in (recorded) color
+     *  (for 'edge', this gives colored edge)
+     *  flag=19: filled in color, border in foreground
+     *  flag=27: filled, border and interior in color
+     *  flag=15: filled with background, border in color
+     *  flag=32: label only (face or circle)
        
-       Normally, flag for each type of object; often passed on to
-       subroutine, so may need color code with it:
-       Eg. (cflag, ccol, ecol) for circle flag, int color, border color.
+     *  Normally, flag for each type of object; often passed on to
+     *  subroutine, so may need color code with it:
+     *  Eg. (cflag, ccol, ecol) for circle flag, int color, border color.
     */
   
     /** 
@@ -4719,8 +4690,8 @@ public class PackData{
 			return 0;
 		int node=nodeCount+1; // new index
 		node=packDCEL.vertCount+1;
-		if (node > (sizeLimit)
-				&& alloc_pack_space(node, true) == 0) 
+		if (node > (packDCEL.sizeLimit)
+				&& packDCEL.alloc_vert_space(node, true) == 0) 
 			throw new CombException("Pack space allocation failure");
 		if (getRadius(v) <= 0) { // avoid infinite hyp rad
 			setRadius(v,.1);
@@ -6503,7 +6474,7 @@ public class PackData{
 	  */
 	  public PackData copyPackTo(boolean keepTD) {
 		  PackData p=new PackData(null);
-		  p.alloc_pack_space((nodeCount + 1),false);
+		  p.reset_pack_space((nodeCount + 1));
 		  p.nodeCount=nodeCount;
 		  p.faceCount=faceCount;
 		  p.hes=hes;
@@ -7304,7 +7275,7 @@ public class PackData{
 			  selfadjoin=true;
 		  else { // make enough space
 			  int sze = p1.nodeCount+p2.nodeCount+10;
-    		  p1.alloc_pack_space(sze,true);
+    		  p1.packDCEL.alloc_vert_space(sze,true);
 		  }
 		  
 		  // minimal legality test; later calls check further

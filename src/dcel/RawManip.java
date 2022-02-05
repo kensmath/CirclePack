@@ -186,8 +186,8 @@ public class RawManip {
 	public static HalfEdge splitEdge_raw(PackDCEL pdcel,HalfEdge edge) {
 		
 		// make room
-		if (pdcel.vertCount+1>=pdcel.p.sizeLimit)
-			pdcel.p.alloc_pack_space(pdcel.vertCount+11,true);
+		if (pdcel.vertCount+1>=pdcel.sizeLimit)
+			pdcel.alloc_vert_space(pdcel.vertCount+11,true);
 	
 		// If bdry, ensure it is cclw edge, set 'twinIdeal'
 		HalfEdge he=edge;
@@ -339,8 +339,8 @@ public class RawManip {
 			throw new ParserException("Given 'uedge' should be interior");
 
 		// make room
-		if (pdcel.vertCount+1>=pdcel.p.sizeLimit)
-			pdcel.p.alloc_pack_space(pdcel.vertCount+11,true);
+		if (pdcel.vertCount+1>=pdcel.sizeLimit)
+			pdcel.alloc_vert_space(pdcel.vertCount+11,true);
 
 		Vertex V=uedge.origin;
 		HalfLink spks=null;
@@ -948,8 +948,8 @@ public class RawManip {
 		  
 		  // make room
 		  int node=pdcel.vertCount+1; // new index 
-		  if (node>=pdcel.p.sizeLimit)
-			  pdcel.p.alloc_pack_space(node+10,true);
+		  if (node>=pdcel.sizeLimit)
+			  pdcel.alloc_vert_space(node+10,true);
 		  
 		  HalfLink hlink=HalfLink.nextLink(pdcel,edge);
 		  if (hlink==null || hlink.size()<=2)
@@ -1261,8 +1261,8 @@ public class RawManip {
 			if (e_count == 0)
 				throw new CombException("verts " + v1 + " and " + v2 + " are not " + "on the same component");
 			int nodes = pdcel.vertCount + 2 * e_count;
-			if (nodes > pdcel.p.sizeLimit)
-				pdcel.p.alloc_pack_space(nodes + 10, true);
+			if (nodes > pdcel.sizeLimit)
+				pdcel.alloc_vert_space(nodes + 10, true);
 
 			// place a "square" 'Face' next to each bdry
 			// if we close up, shift v1 cclw as stop signal
