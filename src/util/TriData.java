@@ -99,7 +99,7 @@ public class TriData {
 	 * Upload radii to parent packing. Note: record only for edges
 	 * associated with this face, since the same vertex may get 
 	 * different radii for other faces (e.g., as recorded in 
-	 * appropriate 'RedHEdge's). 
+	 * appropriate 'RedEdge's). 
 	 * @param pdcel PackDCEL 
 	 */
 	public void uploadRadii(PackDCEL pdcel) {
@@ -263,12 +263,12 @@ public class TriData {
      * We may want to move local 'radii' or 'labels' (typically 
      * labels are only for eucl case) stored in 'PackDCEL.triData'
      * to the radii of the parent packing. Modes are: 
-     *   1 to use local 'radii', 
-     *   2 to use 'labels' 
+     *   1: use local 'radii', 
+     *   2: use 'labels' 
      * Some vertices will have different labels in different 
      * faces; the DCEL structure expects this for red vertices.
-     * For other vertices, 'vData' get the value in the first
-     * face containing that vertex Recompute curvatures.
+     * For other vertices, 'Vertex' get the value in the first
+     * face containing that vertex. Recompute curvatures.
      * @param p PackData
      * @param vlist NodeLink
      * @param mode int

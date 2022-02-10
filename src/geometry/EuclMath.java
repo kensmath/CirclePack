@@ -807,7 +807,7 @@ public class EuclMath{
 	public static Mobius e_norm_pack(PackDCEL pdcel,Complex a,Complex g) {
 		Mobius mob=Mobius.mobNormPlane(a,g);
 		if (Mobius.frobeniusNorm(mob)>Mobius.MOB_TOLER) {
-			// directly adjust in 'vData'
+			// directly adjust in 'Vertex'
 			for (int v = 1; v <= pdcel.vertCount; v++) {
 				Complex z = pdcel.vertices[v].center;
 				pdcel.vertices[v].center = mob.apply(z);

@@ -23,9 +23,9 @@ import util.ColorUtil;
  * 
  * Caution: 'mob' element can easily be out of date. Likewise, the 
  * 'center' information on the circles along the red chain are kept
- * in the 'RedHEdge's, and these are updated during 'layout'
+ * in the 'RedEdge's, and these are updated during 'layout'
  * operations. To update 'mob' one generally has to start by updating
- * the 'RedHEdge's.
+ * the 'RedEdge's.
  * @author kens
  */
 public class SideData {
@@ -34,8 +34,8 @@ public class SideData {
 	public int spIndex;       // index in 'PairLink' linked list 
 							  //   (indexed from 1)
 	public int mateIndex;     // 'spIndex' of paired side (-1 if no mate)
-	public RedEdge startEdge; // the first 'RedHEdge' of this "side"
-	public RedEdge endEdge;   // the final 'RedHEdge' of this "side"
+	public RedEdge startEdge; // the first 'RedEdge' of this "side"
+	public RedEdge endEdge;   // the final 'RedEdge' of this "side"
 	public Mobius mob;        // Mobius transform when side is paired: map
 							  //   of paired edge TO this edge 
 							  //   (TODO: for spherical) 
@@ -147,10 +147,10 @@ public class SideData {
     
     /**
      * Search 'PairLink' to find the 'SideData' for the 
-     * "side" of the complex which contains 'RedHEdge' redge
+     * "side" of the complex which contains 'RedEdge' redge
      * return null on failure. 
      * @param pairLink PairLink
-     * @param redge RedHEdge
+     * @param redge RedEdge
      * @return 'SideData' of containing side or null on failure
      */
     public static SideData which_side(PairLink pairLink,RedEdge redge) {

@@ -393,7 +393,7 @@ public class CombDCEL {
 				re=re.nextRed;
 			} while(re!=pdcel.redChain);
 
-			// look at 'redN'+1 successive 'RedHEdge's 
+			// look at 'redN'+1 successive 'RedEdge's 
 			for (int N=0;(N<=redN && !redisDone);N++) {
 				currRed = pdcel.redChain;
 				pdcel.redChain = currRed.nextRed; // set up pointer for next pass
@@ -639,7 +639,7 @@ public class CombDCEL {
 	 * sometimes we wish to prescribe a red chain (as with 
 	 * 1-tori), and this processes a proposed red chain.
 	 * CAUTION: Be sure to run 'wipeRedChain', tossing old
-	 * 'RedHEdge's, reset 'Vertex.redFlag's, also check 
+	 * 'RedEdge's, reset 'Vertex.redFlag's, also check 
 	 * 'HalfEdge.eutil'. (if 'eutil' is negative, then we
 	 * don't allow that edge to be red-twinned.)
 	 * Here preRedVertices are created and processed (to form new
@@ -651,12 +651,11 @@ public class CombDCEL {
 	 * a changed index for original v or index for a new vertex
 	 * originating from original v.
 	 * @param pdcel PackDCEL
-	 * @param redchain RedHEdge
+	 * @param redchain RedEdge
 	 * @return int, new vertCount
 	 */
 	public static int finishRedChain(PackDCEL pdcel,
 			RedEdge redchain) {
-		
 		int vertcount=pdcel.vertCount; 
 		boolean debug=false; // debug=true;
 		// DCELdebug.printRedChain(pdcel.redChain);
@@ -786,10 +785,12 @@ public class CombDCEL {
 				redV.halfedge.origin=redV;
 				if (pdcel.vertices[v].bdryFlag==0)
 					redV.closed=true;
-				else redV.closed=false;
+				else 
+					redV.closed=false;
 				redV.redSpoke=new RedEdge[redV.num+1];
 				redV.inSpoke=new RedEdge[redV.num+1];
 				rtrace.myEdge.origin=redV;
+				redV.cloneData(pdcel.vertices[v]); // copy cent/rad/aim etc.
 				pdcel.vertices[v]=redV;
 			}
 			rtrace=rtrace.nextRed;
@@ -823,7 +824,7 @@ public class CombDCEL {
 
 		// =========== process to get 'RedVertex's =============
 		
-		// The 'redChain' of 'RedHEdge's has not changed, but some of
+		// The 'redChain' of 'RedEdge's has not changed, but some of
 		//   the 'Vertex's it passes through will be new as we
 		//   process the 'PreRedVertex's.
 		// Pass through the redChain. When you encounter a 'PreRedVertex', 
@@ -1190,7 +1191,7 @@ public class CombDCEL {
 						"safetied out: 'fillInside', edge "+edge);
 		}
 		
-		// zero out 'RedHEdge.redutil'
+		// zero out 'RedEdge.redutil'
 		RedEdge rtrace=pdcel.redChain; // DCELdebug.printRedChain(pdcel.redChain);
 		if (rtrace!=null) { // not spherical case
 			int safety=2*pdcel.vertCount+100;
@@ -1307,9 +1308,7 @@ public class CombDCEL {
 					hitred=rtrace;
 				rtrace=rtrace.nextRed;
 			} while (hitred==null && rtrace!=pdcel.redChain);
-			if (hitred==null)
-				throw new CombException("Failure: no red edge is laid out");
-			else
+			if (hitred!=null)
 				pdcel.redChain=hitred;
 		
 			// Circulate clw around terminal red edge vertex to get all 
@@ -1409,7 +1408,7 @@ public class CombDCEL {
 		// (2) Second pass is to determine layout order by ensuring
 		//     all vertices get laid out, including 'RedVertex's, 
 		//     which may get multiple locations, and to set 'redChain'
-		//     to a proper first 'RedHEdge'.
+		//     to a proper first 'RedEdge'.
 		boolean[] fhits=new boolean[ftick+1];
 		pdcel.alpha.origin.vutil=1;
 		pdcel.alpha.twin.origin.vutil=1;
@@ -1473,7 +1472,7 @@ public class CombDCEL {
 				}
 			
 				// search for appropriate 'redChain' start: find first 'RedVertex'
-				//   encountered and then add clw faces to the first 'RedHEdge'.
+				//   encountered and then add clw faces to the first 'RedEdge'.
 				// TODO: this may be first edge of "blue" face. May want to avoid
 				//   this. 
 				if (newRedChain==null) { 
@@ -2138,17 +2137,17 @@ public class CombDCEL {
 		if (newverts[0]!=null)
 			throw new CombException("'d_reNumber' failed to get at least one vertex");
 
-		int rslt=hold_pd.attachDCEL(pdcel); // this reshuffles 'vData' entries
+		int rslt=hold_pd.attachDCEL(pdcel); 
 		hold_pd.vertexMap=pdcel.oldNew;
 		return rslt;
 	}
 		
 	/**
 	 * Given a 'HalfEdge', check if origin is 'RedVertex'. If so,
-	 * return the next clw 'RedHEdge' (possibly itself). If not,
+	 * return the next clw 'RedEdge' (possibly itself). If not,
 	 * return null;
 	 * @param edge HalfEdge
-	 * @return RedHEdge or null 
+	 * @return RedEdge or null 
 	 */
 	public static RedEdge nextRedEdge(HalfEdge edge) {
 		if (!edge.origin.redFlag)
@@ -2202,7 +2201,7 @@ public class CombDCEL {
 	 * end or other is a keeper. This must be a sphere (possibly
 	 * with one non-keeper).  
 	 * @param keepv int[]
-	 * @param rededge RedHEdge
+	 * @param rededge RedEdge
 	 * @return boolean
 	 */
 	public static boolean isSphere(int[] keepv,RedEdge rededge) {
@@ -2216,10 +2215,10 @@ public class CombDCEL {
 	}
 	
 	/**
-	 * Find 'RedHEdge' from redChain whose 'myEdge' is equal to given 'edge'
-	 * @param redchain RedHEdge
+	 * Find 'RedEdge' from redChain whose 'myEdge' is equal to given 'edge'
+	 * @param redchain RedEdge
 	 * @param edge HalfEdge
-	 * @return RedHEdge or null
+	 * @return RedEdge or null
 	 */
 	public static RedEdge isMyEdge(RedEdge redchain,HalfEdge edge) {
 		if (redchain==null)
@@ -3115,6 +3114,7 @@ public class CombDCEL {
 		//   (i.e. all red edges are paired and pasted) 
 		if (prV.closed && CombDCEL.rotateMe(prV)==0) { 
 			Vertex newV = new Vertex(prV.vertIndx); // this is parent's index
+			newV.cloneData(prV);
 			newV.redFlag=true;
 			newV.bdryFlag=0;
 			newV.halfedge=prV.redSpoke[0].myEdge;
@@ -3159,6 +3159,7 @@ public class CombDCEL {
 				// replace the last spoke in this fan by a new twin 
 				// for the 'inSpoke' (prev/next readjusted later)
 				Vertex newV = new Vertex(prV.vertIndx);
+				newV.cloneData(prV);
 				newV.redFlag=true;
 				newV.halfedge=prV.redSpoke[v].myEdge;
 				prV.redSpoke[v].myEdge.origin=newV;
@@ -3625,7 +3626,7 @@ public class CombDCEL {
 	   * The calling routine must also call 'fillInside', 
 	   * repack, layout, etc. (see former 'ProjStruct.torus4layout')
 	   * @param pdcel PackDCEL
-	   * @return RedHEdge, linked list
+	   * @return RedEdge, linked list
 	   */
 	  public static RedEdge torus4Sides(PackDCEL pdcel) {
 
@@ -4279,7 +4280,7 @@ public class CombDCEL {
 			  }
 			  
 			  // do the next slit
-			  int[] VW=RawDCEL.slitVW(pdcel, he);
+			  int[] VW=RawManip.slitVW(pdcel, he);
 			  if (VW==null)
 				  throw new CombException("Something wrong during 'slit' of "+
 						  "edge "+he);
@@ -4309,7 +4310,7 @@ public class CombDCEL {
 			  
 			  // if 'w' is not cloned, need to set approp center/rad
 			  else if (VW[1]==0) {
-				  RedHEdge w_red=pdcel.vertices[w].halfedge.myRedEdge;
+				  RedEdge w_red=pdcel.vertices[w].halfedge.myRedEdge;
 				  w_red.center=new Complex(pdcel.p.vData[w].center);
 				  w_red.rad=pdcel.p.vData[w].rad;
 			  }
@@ -4325,6 +4326,141 @@ public class CombDCEL {
 		  return ans;
 */
 	  }
+
+	  /**
+	   * Add a layer of nodes to bdry segment from vertex v1 to v2. 
+	   * Three modes:
+	   * 
+	   * TENT: add one-on-one layer, a new bdry vert for each edge 
+	   * between v1 and v2. Unless v1==v2, v1 and v2 remain as 
+	   * bdry vertices.
+	   * 
+	   * DEGREE: add nghb's to make verts from v1 to v2 (inclusive) 
+	   * interior with degree d. Note that v1 gets at least one new
+	   * nghb, so this could exceed degree d. If v1==v2 or v1 is 
+	   * nghb of v2, do whole bdry component.
+	   * 
+	   * DUPLICATE: attach "square" face with bary center to 
+	   * each edge between v1 and v2. Unless v1==v2, v1 and v2 
+	   * remain on bdry.
+	   * 
+	   * Set centers and radii of new vertices based on reference
+	   * vertices.
+	   * 
+	   * Calling routine checks v1,v2 and updates combinatorics.
+	   * 
+	   * @param pdcel  PackDCEL
+	   * @param mode   int, how to add: 0=TENT, 1=DEGREE, 2=DUPLICATE
+	   * @param degree int
+	   * @param v1     int, start bdry vert
+	   * @param v2     int, end bdry vert
+	   * @return int, count of added vertices
+	   */
+	  public static int addlayer(PackDCEL pdcel, int mode, 
+			  int deg, int v1, int v2) {
+		  if (!pdcel.p.onSameBdryComp(v1,v2)) 
+			  throw new CombException(
+					  v1+" and "+v2+" are not on the same bdry component");
+
+		  // modes
+		  int TENT = 0;
+		  int DEGREE = 1;
+		  int DUPLICATE = 2;
+
+		  int count = 0;
+		  HalfLink addedEdges=new HalfLink();
+		  HalfEdge edge = pdcel.vertices[v1].halfedge.twin;
+		  if (mode == TENT) {
+			  // int lastv=pdcel.vertices[v2].halfedge.twin.next.twin.origin.vertIndx;
+			  
+			  // tent over first edge
+			  Vertex newV=RawManip.addVert_raw(pdcel,edge);
+			  addedEdges.add(edge);
+			  int nextv=edge.origin.vertIndx;
+			  while (nextv != v2) {
+				  edge = pdcel.vertices[nextv].halfedge.twin;
+				  newV=RawManip.addVert_raw(pdcel,edge);
+				  if (newV==null)
+					  throw new CombException("failed to add tent to "+edge);
+				  addedEdges.add(edge);
+				  RawManip.enfold_raw(pdcel,nextv);
+				  nextv=edge.origin.vertIndx;
+				  count++;
+			  }
+			  if (v1 == v2) {
+				  RawManip.enfold_raw(pdcel, v1);
+				  count++;
+			  }
+		  }
+		  else if (mode == DEGREE) {
+			  int origCount=pdcel.vertCount;
+			  Vertex vert = pdcel.vertices[v1];
+			  if (v2 == v1) // move v2 upstream from v1
+				  v2 = vert.halfedge.twin.next.twin.origin.vertIndx;
+			  int v = v1;
+			  int nextv = v;
+
+			  // always add new nghb upstream of v1
+			  edge=pdcel.vertices[v].halfedge.twin.next;
+			  if (RawManip.addVert_raw(pdcel, edge)==null)
+				  return 0;
+			  addedEdges.add(edge);
+			  count++;
+
+			  // go until you finish v2
+			  do {
+				  v = nextv; // get 'v' and downstream bdry nghb 'nextv'
+				  nextv = pdcel.vertices[v].halfedge.twin.origin.vertIndx;
+				  int need = deg - pdcel.countPetals(v);
+				  for (int i = 1; i <= need; i++) {
+					  edge=pdcel.vertices[v].halfedge.twin.next;
+					  if (RawManip.addVert_raw(pdcel,edge)==null)
+						  return count;
+					  addedEdges.add(edge);
+					  count++;
+				  }
+				  RawManip.enfold_raw(pdcel,v);
+			  } while (nextv<=origCount);
+		  }
+		  else if (mode == DUPLICATE) { // DCELdebug.redConsistency(pdcel);
+			  
+			  // if doing full bdry, stop before last box
+			  boolean close=(v1==v2);
+			  if (close)
+				  v2=edge.next.twin.origin.vertIndx;
+			  
+			  int v=edge.origin.vertIndx;
+			  
+			  // add full box to 'edge'
+			  RawManip.addBox_raw(pdcel,edge,true);
+ 			  addedEdges.add(edge);
+ 			  addedEdges.add(edge.next.twin);
+ 			  addedEdges.add(edge.prev.twin);
+ 			  count++;
+ 			  while (v!=v2) {
+ 				  edge=pdcel.vertices[v].halfedge.twin;
+ 				  v=edge.origin.vertIndx;
+ 				  RawManip.addBox_raw(pdcel,edge,false);
+ 	 			  addedEdges.add(edge);
+ 	 			  addedEdges.add(edge.next.twin.prev.twin);
+ 	 			  count++;
+ 			  }
+ 			  
+ 			  // closed?
+ 			  if (close) {
+ 				  edge=pdcel.vertices[v].halfedge.twin;
+ 				  RawManip.addVert_raw(pdcel,edge);
+ 	 			  addedEdges.add(edge);
+ 	 			  RawManip.enfold_raw(pdcel,edge.origin.vertIndx);
+ 	 			  RawManip.enfold_raw(pdcel,edge.twin.origin.vertIndx);
+ 				  count++;
+ 			  }
+		  }
+		  if (count>0) { // store successive new cent/rad
+			  pdcel.addedVertData(addedEdges);
+		  }
+		  return count;
+	  }
 	  
 } // end of 'CombDCEL'
 
@@ -4334,8 +4470,8 @@ public class CombDCEL {
  * @author kstephe2, 8/2020
  */
 class PreRedVertex extends Vertex {
-	public RedEdge[] redSpoke;    // outgoing 'RedHEdge'
-	public RedEdge[] inSpoke;     // incoming 'RedHEdge'
+	public RedEdge[] redSpoke;    // outgoing 'RedEdge'
+	public RedEdge[] inSpoke;     // incoming 'RedEdge'
 	public int num;
 	boolean closed;   // if true, then original flower was closed
 	

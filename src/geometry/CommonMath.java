@@ -40,7 +40,8 @@ public class CommonMath {
 	 * @param hes int
 	 * @return int, 0 on layout error, circle data given in CircleSimple's
 	*/
-	public static int placeOneFace(CircleSimple sC0,CircleSimple sC1,CircleSimple sC2,int hes) {
+	public static int placeOneFace(CircleSimple sC0,CircleSimple sC1,
+			CircleSimple sC2,int hes) {
 		double[] invD= {1.0,1.0,1.0};
 		return placeOneFace(sC0,sC1,sC2,invD,hes);
 	}
@@ -61,7 +62,8 @@ public class CommonMath {
 	 * @param hes int
 	 * @return int, 0 on layout error, circle data given in CircleSimple's
 	*/
-	public static int placeOneFace(CircleSimple sC0,CircleSimple sC1,CircleSimple sC2,
+	public static int placeOneFace(CircleSimple sC0,CircleSimple sC1,
+			CircleSimple sC2,
 			double[] invDist,int hes) {
 
 	  // first is always at origin
@@ -108,6 +110,28 @@ public class CommonMath {
 	  return sC.flag;  // in case there's an error
 	}
 	
+	/**
+	 * Given oriented edge, compute data for opposite vertex
+	 * from naive data (i.e., data held in vertices at end 
+	 * of 'hedge' and edge itself, disregarding red edge data).
+	 * @param hedge HalfEdge
+	 * @return CircleSimple, null on failure
+	 */
+	public static CircleSimple naiveData(HalfEdge hedge,int hes) {
+		if (hedge==null || (hedge.face!=null && hedge.face.faceIndx<0))
+			return null;
+		Vertex v1=hedge.origin;
+		Vertex v2=hedge.twin.origin;
+		Vertex v3=hedge.prev.origin;
+		Complex z1=v1.center;
+		double r1=v1.rad;
+		Complex z2=v2.center;
+		double r2=v2.rad;
+		CircleSimple cs=CommonMath.comp_any_center(z1,z2,r1,r2,v3.rad,
+				hedge.getInvDist(),1.0,1.0,hes);
+		return cs;
+	}
+
 	public static CircleSimple comp_any_center(CircleSimple cs1,
 			CircleSimple cs2,double r3,double o1,double o2,double o3,int hes) {
 		return comp_any_center(cs1.center,cs2.center,cs1.rad,cs2.rad,

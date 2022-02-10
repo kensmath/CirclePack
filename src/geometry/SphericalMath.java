@@ -147,7 +147,7 @@ public class SphericalMath{
 	  int count=0;
 	  Mobius mob=Mobius.rigidAlphaGamma(a, g);
 	  if (Mobius.frobeniusNorm(mob)>.0001) {
-		  // directly adjust in 'vData'
+		  // directly adjust in 'Vertex'
 		  for (int v=1;v<=pdcel.vertCount;v++) {
 			  Complex z=pdcel.vertices[v].center;
 			  pdcel.vertices[v].center=mob.apply_2_s_pt(z);

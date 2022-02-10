@@ -411,8 +411,8 @@ public class ComplexAnalysis extends PackExtender {
 				data.add(Double.valueOf(laplace[v]));
 			Vector<Integer> colors=new Vector<Integer>(packData.nodeCount);
 			colors=ColorUtil.blue_red_diff_ramp(data);
-			
-			// record in 'rData' of 'packData'
+
+			// record in face
 			for (int v=1;v<=packData.nodeCount;v++)
 				packData.setFaceColor(v,ColorUtil.coLor((int)colors.get(v-1)));
 			

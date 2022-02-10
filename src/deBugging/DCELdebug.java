@@ -558,7 +558,7 @@ public class DCELdebug {
 	 * Draw whole redChain starting at redge; this uses newly
 	 * stored centers, not the parent packing
 	 * @param p PackData
-	 * @param redge RedHEdge
+	 * @param redge RedEdge
 	 */
 	public static void drawRedChain(PackData p,RedEdge redge) {
 		RedEdge rtrace=redge;
@@ -582,7 +582,7 @@ public class DCELdebug {
 	/**
 	 * Given a red edge, draw it in red on packing p's screen
 	 * @param p PackData
-	 * @param redge RedHEdge
+	 * @param redge RedEdge
 	 */
 	public static void drawRedEdge(PackData p,RedEdge redge) {
 		Complex z0=redge.getCenter();
@@ -796,7 +796,7 @@ public class DCELdebug {
 	
 	/**
 	 * print the edge ends around the redChain using 'myEdge' and its twin
-	 * @param redge RedHEdge
+	 * @param redge RedEdge
 	 */
 	public static void redChainEnds(RedEdge redge) {
 		int safety=1000;
@@ -845,7 +845,7 @@ public class DCELdebug {
 	}
 	
 	public static StringBuilder thisRedEdge(RedEdge redge) {
-		return new StringBuilder("This is 'RedHEdge', myEdge index "+redge.myEdge.edgeIndx+": nextRed ("+redge.nextRed.hashCode()+
+		return new StringBuilder("This is 'RedEdge', myEdge index "+redge.myEdge.edgeIndx+": nextRed ("+redge.nextRed.hashCode()+
 				"); prevRed ("+redge.prevRed.hashCode()+")\n");
 
 	}

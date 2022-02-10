@@ -82,6 +82,7 @@ import ftnTheory.WeldManager;
 import ftnTheory.WordWalker;
 import ftnTheory.iGame;
 import geometry.CircleSimple;
+import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.NSpole;
@@ -561,7 +562,8 @@ public class CommandStrParser {
 			  cmd.startsWith("Read")) { // read a packing file
 		  // in script with 'infile' or flag '-s'
 		  int sz=items.size();
-		  if (sz==0) return 0;
+		  if (sz==0) 
+			  return 0;
     	  boolean script_flag=false;
     	  if (cmd.charAt(0)=='i') 
     		  script_flag=true;
@@ -4286,7 +4288,6 @@ public class CommandStrParser {
 	  
 	  // ========= split_edge ==============
 	  if (cmd.startsWith("split_edg")) {
-		  int node=0;
     	  items=flagSegs.elementAt(0); // should be only one segment
    		  EdgeLink edgeLink=new EdgeLink(packData,items);
    		  
@@ -4300,6 +4301,7 @@ public class CommandStrParser {
 				  CirclePack.cpb.errMsg(
 						  "{"+edge.v+" "+edge.w+"} is not an edge");
 			  else {
+				  // TODO: have to update this routine
 				  RawManip.splitEdge_raw(packData.packDCEL,he);
 				  packData.packDCEL.fixDCEL_raw(packData);
 				  count++;
@@ -4371,7 +4373,7 @@ public class CommandStrParser {
 		  ArrayList<HalfLink> hllist=
 				  RawManip.islandSurround(packData.packDCEL,beach);
 		  if (hllist==null) {
-			  CirclePack.cpb.errMsg("RawDCEL.islandSurround failed");
+			  CirclePack.cpb.errMsg("RawManip.islandSurround failed");
 			  return 0;
 		  }
 		  Iterator<HalfLink> his=hllist.iterator();
@@ -4991,26 +4993,24 @@ public class CommandStrParser {
 	    	  } catch(Exception ex) {
 	    		  return 0;
 	    	  }
+	    	  HalfLink addedEdges=new HalfLink(); // for setting cent/rad
 	   		  NodeLink nodeLink=new NodeLink(packData,items);
-   			  EdgeLink newV=new EdgeLink();
 	   		  Iterator<Integer> vlist=nodeLink.iterator();
-			  int origVCount=packData.packDCEL.vertCount;
    	   		  while (vlist.hasNext()) {
-   	   			  int w=vlist.next();
-   	   			  Vertex vert=RawManip.addVert_raw(packData.packDCEL,w);
+   	   			  Vertex V=packData.packDCEL.vertices[vlist.next()];
+   	   			  if (V.bdryFlag==0) 
+   	   				  continue;
+   	   			  HalfEdge he=V.halfedge.twin.next;
+   	   			  Vertex vert=RawManip.addVert_raw(packData.packDCEL,he);
    	   			  if (vert!=null) {
    	   				  count++;
-   	   				  newV.add(new EdgeSimple(vert.vertIndx,w));
+   	   				  addedEdges.add(he);
    	   			  }
   	   		  }
-	 		  // process 
+	 		  // process new edges to set cent/rad
    	   		  if (count>0) {
-	   		  	  packData.packDCEL.fixDCEL_raw(packData);
-	   			  Iterator<EdgeSimple> eit=newV.iterator();
-	   			  while (eit.hasNext()) {
-	   				  EdgeSimple es=eit.next();
-	   				  packData.setRadius(es.v,packData.getRadius(es.w));
-	   			  }
+   	   			  packData.packDCEL.addedVertData(addedEdges);
+   	   			  packData.packDCEL.fixDCEL_raw(packData);
 	   		  }
 	   		  return count;
 	      }
@@ -5222,14 +5222,10 @@ public class CommandStrParser {
 
    			  int ans;
    			  PackDCEL pdcel=packData.packDCEL;
-   			  pdcel.zeroVUtil();
-   			  ans= RawManip.addlayer_raw(pdcel,mode,degree,v1,v2);
+   			  ans= CombDCEL.addlayer(pdcel,mode,degree,v1,v2);
    			  if (ans<=0)
    				  return 0;
-   			  VertexMap vmap=pdcel.reapVUtil();
    			  pdcel.fixDCEL_raw(packData);
-   			  pdcel.modRadCents(vmap);
-   			  // TODO: should compute new center based on its base edge.
    			  return ans;
 	      }
 	      
@@ -5313,13 +5309,10 @@ public class CommandStrParser {
 			  PackDCEL pdcel=packData.packDCEL;
 			  if (!b_flag) { // just one boundary component
 				  for (int n=1;n<=numGens;n++) {
-					  pdcel.zeroVUtil();
 					  v1=v2=pdcel.idealFaces[1].edge.origin.vertIndx;
-					  count += RawManip.addlayer_raw(pdcel,
+					  count += CombDCEL.addlayer(pdcel,
 							  mode, degree, v1, v2);
-					  VertexMap vmap=pdcel.reapVUtil();
 					  pdcel.fixDCEL_raw(packData);
-					  pdcel.modRadCents(vmap);
 				  }
 			  }
 			  // Note: have to adjust v1, v2 each time 
@@ -5329,14 +5322,11 @@ public class CommandStrParser {
 				  while (Bverts.hasNext()) {
 					  int b=(Integer)Bverts.next();
 					  for (int n=1;n<=numGens;n++) {
-						  pdcel.zeroVUtil();
 						  v1=v2=pdcel.idealFaces[b].
 								  edge.origin.vertIndx;
-						  count += RawManip.addlayer_raw(pdcel,
+						  count += CombDCEL.addlayer(pdcel,
 								  mode, degree, v1, v2);
-						  VertexMap vmap=pdcel.reapVUtil();
 						  pdcel.fixDCEL_raw(packData);
-						  pdcel.modRadCents(vmap);
 					  }
 				  }
 			  }
@@ -5411,6 +5401,7 @@ public class CommandStrParser {
     				  packData.packDCEL,hlink,
     				  packData.packDCEL.alpha,true);
 	    	  packData.packDCEL.fixDCEL_raw(packData);
+    		  packData.set_aim_default();
    			  return packData.packDCEL.vertCount;
 	      }
 		  
@@ -6136,7 +6127,7 @@ public class CommandStrParser {
     		  pdans.fixDCEL_raw(packData);
     		  packData.vertexMap=vmap;
 	    		  
-    		  // duplicate radii (from 'vData' only, ignore centers);
+    		  // duplicate radii (ignore centers);
     		  if (packData.vertexMap!=null) {
     			  for (int v=origVC+1;v<=packData.packDCEL.vertCount;v++) {
     				  int orig_v=packData.vertexMap.findW(v);
@@ -6282,8 +6273,10 @@ public class CommandStrParser {
 	    	  NodeLink vertlist=new NodeLink(packData,items);
 	    	  Iterator<Integer> vlist=vertlist.iterator();
     		  while (vlist.hasNext()) {
-    			  int vert=(Integer)vlist.next();
-    			  if (packData.isBdry(vert)) {
+    			  Vertex vert=packData.packDCEL.vertices[vlist.next()];
+    			  int v=vert.vertIndx;
+    			  if (vert.isBdry()) {
+    				  int num=packData.countFaces(v);
     				  int n=N;
     				  
     				  // reset n to get total degree N
@@ -6292,7 +6285,7 @@ public class CommandStrParser {
     						  throw new ParserException("max degree limit "+
     								  PackData.MAX_PETALS);
     					  }
-    					  n=N-(packData.countFaces(vert)+1);
+    					  n=N-(num+1);
     					  if (n<0) {
     						  overCount++;
     						  n=0;
@@ -6301,19 +6294,30 @@ public class CommandStrParser {
     				  
     				  // else adding n circles (up to limit)
     				  else {
-    					  int m=PackData.MAX_PETALS-
-    							  packData.countFaces(vert)-1;
+    					  int m=PackData.MAX_PETALS-num-1;
 	    				  n=(n<m)? n:m;
     				  }
 
     				  // add the n circles and close up
-    				  for (int i=1;i<=n;i++) 
-    					  packData.add_vert(vert);
-    				  packData.enfold(vert);
+    				  HalfLink addedEdges=new HalfLink();
+    				  int tick=0;
+    				  for (int i=1;i<=n;i++) {
+    					  HalfEdge he=vert.halfedge.twin.next;
+    					  Vertex newV=RawManip.addVert_raw(packData.packDCEL,he);
+    					  if (newV==null)
+    						  throw new CombException("failure in adding edge to "+
+    								  vert.vertIndx);
+    					  addedEdges.add(he);
+    					  tick++;
+    				  }
+    				  if (tick>0) { // set successive cent/rad
+    					  packData.packDCEL.addedVertData(addedEdges);
+    				  }
+    				  packData.enfold(v); // this call does fixDCEL_raw
     				  Complex z=packData.getCenter(
-    						  packData.getFirstPetal(vert));
+    						  packData.getFirstPetal(v));
     				  Complex w=packData.getCenter(
-    						  packData.getLastPetal(vert));
+    						  packData.getLastPetal(v));
     				  cpS.drawEdge(z,w,new DispFlags(null));
     				  count++;
     			  }
@@ -9514,9 +9518,12 @@ public class CommandStrParser {
 	    				  throw new ParserException("check usage");
 	    			  }
 	    			  double rad=Double.parseDouble(items.elementAt(0));
-	    			  if (packData.hes>=0 && rad<=0.0) {
-	    				  throw new DataException("radius can be negative "+
+	    			  if (rad<=0.0) {
+	    				  if (packData.hes>=0)
+	    					  throw new DataException("radius can be negative "+
 	    						  "only in the hyperbolic setting.");
+	    				  else 
+	    					  rad=9.0; // essentially infinite.
 	    			  }
 	    			  items.remove(0);
 	    			  nodeLink=new NodeLink(packData,items);

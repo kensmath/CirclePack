@@ -7,7 +7,7 @@ import util.TriAspect;
 /**
  * After processing a dcel (see 'CombDCEL.redcookie'), there is, except
  * in the case of a topological sphere, a 'redChain', which is a closed
- * linked list of 'RedHEdge's surrounding a simply connected patch of
+ * linked list of 'RedEdge's surrounding a simply connected patch of
  * interior faces. In non-simply connected cases, segments of red edges
  * may be identified. Outside the redChain are one or more ideal faces.
  * NOTE: the dcel structure still lies with the 'HalfEdge's via 'myEdge'.
@@ -38,8 +38,8 @@ public class RedEdge {
 		prevRed=null;
 		nextRed=null;
 		mobIndx=0;
-		center=new Complex(0.0);
-		rad=.5;
+		center=new Complex(he.origin.center);
+		rad=he.origin.rad;
 		redutil=0;
 		// set 'redutil' if ideal face is across myEdge;
 		//    this is used in 'd_redChainBuilder'
@@ -89,7 +89,8 @@ public class RedEdge {
 
 	/**
 	 * Return center/rad data specific to the red edge.
-	 * Note: see 'PackData.getCircleSimple' for data from 'vData'. 
+	 * Note: see 'PackData.getCircleSimple' for data from
+	 * 'Vertex'. 
 	 * @return CircleSimple
 	 */
 	public CircleSimple getCircleSimple() {
@@ -107,7 +108,7 @@ public class RedEdge {
 	
 	/**
 	 * clone: CAUTION: pointers may be in conflict or outdated.
-	 * @return new RedHEdge
+	 * @return new RedEdge
 	 */
 	public RedEdge clone() {
 		RedEdge rhe=new RedEdge(this.myEdge);

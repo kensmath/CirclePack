@@ -76,7 +76,7 @@ public class PackDCEL {
 	
 	// important objects: vertices is key, edges/faces/idealFaces more ephemeral
 	public Vertex[] vertices; // indexed from 1
-	public HalfEdge[] edges;  // indexed from 1; some have pointers to 'RedHEdge's
+	public HalfEdge[] edges;  // indexed from 1; some have pointers to 'RedEdge's
 	public DcelFace[] faces;      // indexed from 1
 	public DcelFace[] idealFaces; // indexed from 1 (but 'faceIndx' is the negative of the index)
 	// note edges and faces are subject to change with new layout
@@ -102,7 +102,7 @@ public class PackDCEL {
 	
 	// Constructor(s)
 	public PackDCEL() { // naked shell
-		sizeLimit=1000;
+		sizeLimit=alloc_vert_space(1000,false);
 		p=null;
 		vertCount=0;
 		vertices=null;
@@ -622,7 +622,7 @@ public class PackDCEL {
 	 * Use 'layoutOrder' to compute the packing centers, 
 	 * laying base face first, then the rest. Note that 
 	 * some circles get laid down more than once, so last 
-	 * position is what is stored in 'vData' for now. 
+	 * position is what is stored in 'Vertex' for now. 
 	 * This also rotates the packing to put gamma on the 
 	 * positive y-axis and it updates the side-pairing maps.
 	 * TODO: for more accuracy, average all computations of 
@@ -1058,8 +1058,8 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Directly count the petals. (Useful when processing
-	 * has not updated 'vData'.)
+	 * Directly count the distinct petals. (Don't recount first
+	 * for closed flower)
 	 * @param v int
 	 * @return
 	 */
@@ -1088,6 +1088,33 @@ public class PackDCEL {
 			count++;
 		} while (he!=vert.halfedge && 
 				(he.twin.face==null || he.twin.face.faceIndx>=0));
+		return count;
+	}
+	
+
+	/**
+	 * Return count of bdry verts from v1 to v2 (inclusive) if v1/v2 are
+	 * on the same bdry component; otherwise 0.
+	 * @param v1 int
+	 * @param v2 int
+	 * @return int
+	 */
+	public int verts_share_bdry(int v1,int v2) {
+		if (v1<1 || v1>vertCount || v2<1 || v2>vertCount
+			|| !isBdry(v1) || !isBdry(v2))
+			return 0;
+		int count=1;
+		HalfEdge he=vertices[v2].halfedge.twin.next;
+		if (v1==v2)
+			return he.face.getNum();
+		int safety=he.face.getNum()+1;
+		do {
+			count++;
+			he=he.next;
+			safety--;
+		} while (he.origin.vertIndx!=v1 && safety>0);
+		if (safety==0) // not on same bdry segment
+			return 0;
 		return count;
 	}
 	
@@ -1292,12 +1319,12 @@ public class PackDCEL {
 	/**
 	 * Find the official rad/cent for the origin of the 
 	 * given 'HalfEdge'. If the origin is 'RedVertex', 
-	 * then look clw for first 'RedHEdge'. If normal 
+	 * then look clw for first 'RedEdge'. If normal 
 	 * 'Vertex', then data is stored in 'PackData.vData'. 
 	 * @return CircleSimple
 	 */
 	public CircleSimple getVertData(HalfEdge edge) {
-		// is itself a 'RedHEdge'?
+		// is itself a 'RedEdge'?
 		if (edge.myRedEdge!=null)
 			return edge.myRedEdge.getData();
 		Vertex vert=edge.origin;
@@ -1321,20 +1348,20 @@ public class PackDCEL {
 	
 	/**
 	 * Get the radius of 'edge.origin' appropriate to this 'edge';
-	 * e.g., it may be stored with a red edge. Get its internal 
-	 * form (i.e., x-rad for hyp case).
-	 * @param edge
-	 * @return
+	 * e.g., it may be stored with nearest clw red edge. 
+	 * Get its internal form (i.e., x-rad for hyp case).
+	 * @param edge HalfEdge
+	 * @return double
 	 */
 	public double getVertRadius(HalfEdge edge) {
-		// is itself a 'RedHEdge'? Note, also set in 'PackData'
+		// is itself a 'RedEdge'? 
 		if (edge.myRedEdge!=null) {
 			return edge.myRedEdge.getRadius();
 		}
 
 		Vertex vert=edge.origin;
 		
-		// is a normal 'Vertex'? set in 'PackData'
+		// is a normal 'Vertex'? 
 		if (!vert.redFlag) {
 			return vert.rad;
 		}
@@ -1347,16 +1374,16 @@ public class PackDCEL {
 				return he.myRedEdge.getRadius();
 			}
 		} while (he!=edge);
-		throw new DCELException("didn't find any 'RedHEdge' for this 'Vertex'");
+		throw new DCELException("didn't find any 'RedEdge' for this 'Vertex'");
 	}
 	
 	/**
-	 * Get appropriate center
+	 * Get appropriate center, perhaps in nearest clw red edge.
 	 * @param edge HalfEdge
 	 * @return new Complex
 	 */
 	public Complex getVertCenter(HalfEdge edge) {
-		// is itself a 'RedHEdge'? Note, also set in 'PackData'
+		// is itself a 'RedEdge'? Note, also set in 'PackData'
 		if (edge.myRedEdge!=null) {
 			return edge.myRedEdge.getCenter();
 		}
@@ -1376,7 +1403,7 @@ public class PackDCEL {
 				return he.myRedEdge.getCenter();
 			}
 		} while (he!=edge);
-		throw new DCELException("didn't find any 'RedHEdge' for this 'Vertex'");
+		throw new DCELException("didn't find any 'RedEdge' for this 'Vertex'");
 	}
 	
 	public CircleSimple getCircleSimple(HalfEdge he) {
@@ -1384,9 +1411,8 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Set vert's center in all locations; that is, in 
-	 * 'vData', 'rData' (for backup), and in any associated 
-	 * 'RedHEdges' for this v. (Compare with 'setCent4Edge' which 
+	 * Set vert's center in all locations and in any associated 
+	 * 'RedEdges' for this v. (Compare with 'setCent4Edge' which 
 	 * only set's the value associated with one edge.)
 	 * @param v int
 	 * @param z Complex
@@ -1408,10 +1434,9 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Set the center for 'origin' in 'vData' and 
-	 * appropriate 'RedHEdge's if a 'RedVertex'. Center
-	 * may differ in 'RedHEdge's. (see 'setVertCenter',
-	 * to set center in all locations.)
+	 * Set the center for 'origin' and appropriate 'RedEdge's 
+	 * (if a 'RedVertex'). Center may differ in 'RedEdge's. 
+	 * (see 'setVertCenter', to set center in all locations.)
 	 * Note: I no longer set rData[].center.
 	 * @param edge HalfEdge
 	 * @param z Complex
@@ -1441,11 +1466,10 @@ public class PackDCEL {
 	}
 
 	/**
-	 * Set vert's radius (hyp: in its internal x-rad form) in all 
-	 * locations; i.e., in 'vData', 'rData' (for backup), and in
-	 * any associated 'RedHEdges' for this v. (Compare with
-	 * 'setRad4Edge' which only set's the value associated
-	 * with one edge.)
+	 * Set vert's radius (hyp: in its internal x-rad form) 
+	 * in all locations; i.e., in 'Vertex' and in red edge
+	 * for any with this origin. (Compare with 'setRad4Edge' 
+	 * which only sets it for one associated red edge.)
 	 * @param v int
 	 * @param rad double
 	 */
@@ -1463,7 +1487,8 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Set the radius (in its internal form x-rad for hyp case);
+	 * Set the radius (in its internal form x-rad for hyp case)
+	 * in 'Vertex' and nearest clw red edge, if there is one.
 	 * (Compare with 'setVertRadii' which sets this radius in all
 	 * occurrences of its origin vertex.)
 	 * @param edge HalfEdge
@@ -1509,9 +1534,29 @@ public class PackDCEL {
 	}
 	
 	/**
+	 * When new vertices are created, e.g., from "add_cir",
+	 * we accumulate associated edges in order. Their should
+	 * already have radii, so we set an approximate center by
+	 * using it along with data from the edge.
+	 * @param hlink HalfLink
+	 * @return count
+	 */
+	public int addedVertData(HalfLink hlink) {
+		int count=0;
+		Iterator<HalfEdge> his=hlink.iterator();
+		while (his.hasNext()) {
+			HalfEdge he=his.next();
+			CircleSimple cs=CommonMath.naiveData(he,p.hes);
+			setCent4Edge(he.prev,cs.center);
+			setRad4Edge(he.prev,cs.rad);
+		}
+		return count;
+	}
+	
+	/**
 	 * set center and radius (in its internal form);
 	 * this sets data only for the given edge, so for
-	 * 'RedVertex' it stores in the appropriate 'RedHEdge'.
+	 * 'RedVertex' it stores in the appropriate 'RedEdge'.
 	 * @param edge HalfEdge
 	 * @param cS CircleSimple
 	 */
@@ -1538,7 +1583,20 @@ public class PackDCEL {
 		} while(nxtedge!=v.halfedge);
 		return null;
 	}
-		
+	
+	/**
+	 * Is this a boundary vertex? Depends on bdry edges
+	 * being identified with 'faceIndx'<0.
+	 * @param v int
+	 * @return boolean
+	 */
+	public boolean isBdry(int v) {
+		HalfEdge he=vertices[v].halfedge;
+		if (he.twin.face!=null && he.twin.face.faceIndx<0)
+			return true;
+		return false;
+	}
+	
 	/**
 	 * boundary edge? Depends on face existing and
 	 * having negative index, indicating ideal face.
@@ -2177,7 +2235,7 @@ public class PackDCEL {
 	}
 
 	/**
-	 * Reset all 'vutil' to zero. Some 'RawDCEL' routines,
+	 * Reset all 'vutil' to zero. Some 'RawManip' routines,
 	 * e.g., use 'vutil' to feed back reference indices. 
 	 */
 	public void zeroVUtil() {
@@ -2215,33 +2273,6 @@ public class PackDCEL {
 		if (vmap.size()==0)
 			return null;
 		return vmap;
-	}
-	
-	/**
-	 * The given 'VertexMap' containing <vert,ref> indices, 
-	 * copy rad/center to 'vert' from 'ref' vertex. 
-	 * @param vmap VertexMap
-	 * @return count, 0 on failure
-	 */
-	public int modRadCents(VertexMap vmap) {
-		if (this.p==null)
-			return 0;
-		
-		int count=0;
-		Iterator<EdgeSimple> vis=vmap.iterator();
-		while(vis.hasNext()) {
-			EdgeSimple vertref=vis.next();
-			if (vertref.v>0 && vertref.w>0) {
-				try {
-					p.setRadius(vertref.v,p.getRadius(vertref.w));
-					p.setCenter(vertref.v,p.getCenter(vertref.w));
-					count++;
-				} catch(Exception ex) {
-					throw new CombException("'modRadCents' usage error");
-				}
-			}
-		}
-		return count;
 	}
 	
 	/**

@@ -14,7 +14,7 @@ import util.ColorUtil;
 /** 
  * DCEL Vertex contains combinatorial, geometric, and other
  * miscellaneous data. Center information may be overridden
- * by data in 'RedHEdge's. If this is a boundary vertex, 
+ * by data in 'RedEdge's. If this is a boundary vertex, 
  * its halfedge should be the downstream (cclw) boundary edge. 
  * 'redFlag' indicates vertex is in the red chain; 'spokes' is 
  * only used during red chain processing.
@@ -44,18 +44,17 @@ public class Vertex {
 	public int mark;
 	public int plotFlag;	// often OBE
 	
-	// for temporary data during some processing
+	// for temporary data during various processing
 	public int vutil;
 	public HalfEdge[] spokes;
 	
 	public Vertex(int v) {
 		vertIndx=v;
 		halfedge=null;
-		vertIndx=-1;
 		redFlag=false;
 		spokes=null;
 		center=new Complex(0.0);
-		rad=.05;
+		rad=.49;
 		color=ColorUtil.getFGColor();
 	}
 

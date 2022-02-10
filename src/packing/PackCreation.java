@@ -94,9 +94,11 @@ public class PackCreation {
 		// start with usual hex flower, make base 3x3 parallelogram
 		PackData workPack=PackCreation.seed(6, 0);
 		PackDCEL pdcel=workPack.packDCEL;
-		RawManip.addVert_raw(pdcel,5);
-		RawManip.addVert_raw(pdcel,2);
-		// Note: "pointy" verts: 
+		HalfEdge he=pdcel.findHalfEdge(new EdgeSimple(5,4));
+		RawManip.addVert_raw(pdcel,he);
+		he=pdcel.findHalfEdge(new EdgeSimple(2,7));
+		RawManip.addVert_raw(pdcel,he);
+		// Note: "pointy" verts are the new ones: 
 		//    top right = nodeCount, bottom left = nodeCount-1. 
 		int top=pdcel.vertCount;
 		int bottom=pdcel.vertCount-1;
@@ -106,12 +108,14 @@ public class PackCreation {
 		while (sz<mn) {
 			int w=workPack.getLastPetal(top);
 			int v=workPack.getFirstPetal(bottom);
-			workPack.add_layer(1,6,v,w);
+			CombDCEL.addlayer(workPack.packDCEL,1,6,v,w);
 			
 			// add the new pointy ends
-			RawManip.addVert_raw(pdcel,top+1); // new bottom
+			he=pdcel.vertices[top+1].halfedge.twin.next;
+			RawManip.addVert_raw(pdcel,he); // new bottom
 			bottom=pdcel.vertCount;
-			RawManip.addVert_raw(pdcel,top); // new top
+			he=pdcel.vertices[top].halfedge.twin.next;
+			RawManip.addVert_raw(pdcel,he); // new top
 			top=pdcel.vertCount;
 			sz++;
 		}
@@ -124,8 +128,9 @@ public class PackCreation {
 			for (int j=2;j<mn;j++) {
 				w=workPack.getLastPetal(w);
 			}
-			workPack.add_layer(1,6,w,th);
-			RawManip.addVert_raw(pdcel,top); // new pointy top
+			CombDCEL.addlayer(workPack.packDCEL,1,6,w,th);
+			he=pdcel.vertices[top].halfedge.twin.next;
+			RawManip.addVert_raw(pdcel,he); // new pointy top
 			top=pdcel.vertCount;
 			tick++;
 		}
@@ -172,7 +177,7 @@ public class PackCreation {
 		CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha, false);
 		for (int k = 2; k <= n; k++) {
 			int m = pdcel.vertCount;
-			int ans = RawManip.addlayer_raw(pdcel, 1, 6, m, m);
+			int ans = CombDCEL.addlayer(pdcel, 1, 6, m, m);
 			if (ans <= 0)
 				return null;
 		}

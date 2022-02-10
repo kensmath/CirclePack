@@ -127,7 +127,6 @@ public class PackData{
     public int hes;           // curvature of ambient geometry,-1=hyp,0=eucl,1=sph 
     public boolean status;    // false when pack is empty
 	public String fileName;   // filename when file was read/written
-    public int sizeLimit;     // current max number of nodes without reallocating
     int alpha;         // index of alpha node (origin)
     public int beta;          // OBE, not used now
     int gamma;         // index of node to be plotted on positive y-axis
@@ -216,14 +215,7 @@ public class PackData{
     }
     
     /**
-     * Attach a new or modified DCEL structure for this packing and 
-     * sync the associated 'vData[]'. If this is an existing packing 
-     * and the dcel structure is just created, then populate the new 
-     * 'vData' using existing 'rData', with 'pdcel.oldNew' to 
-     * translate indices. If this is a modified dcel (for example,
-     * if a new structure was cookied from the original), then go to
-     * the existing 'vData' to populate the new 'vData', using
-     * 'pdcel.oldNew'.
+     * Attach a new or modified DCEL structure for this packing. 
      * 
      * NOTE: on leaving, 'pdcel.oldNew' is set to null. Calling 
      * routine needs to save it first and reinstall if needed. 
@@ -240,7 +232,6 @@ public class PackData{
 
     	packDCEL=pdcel;
     	pdcel.p=this;
-    	int origNodeCount=nodeCount;
     	if (pdcel.alpha==null)
     		pdcel.setAlpha(0,null,true);
    		alpha=pdcel.alpha.origin.vertIndx;
@@ -257,9 +248,10 @@ public class PackData{
 		intrinsicGeom=PackData.getIntrinsicGeom(this);
     	fileName=StringUtil.dc2name(fileName);
     	
+    	// TODO: move 
 		// may need to expand 'vertices' to sizeLimit
-		if (pdcel.vertices.length<sizeLimit+1) {
-			Vertex[] new_vs=new Vertex[sizeLimit+1];
+		if (pdcel.vertices.length<pdcel.sizeLimit+1) {
+			Vertex[] new_vs=new Vertex[pdcel.sizeLimit+1];
 			for (int v=1;v<=pdcel.vertCount;v++)
 				new_vs[v]=pdcel.vertices[v];
 			pdcel.vertices=new_vs;
@@ -769,7 +761,6 @@ public class PackData{
     				this.intrinsicGeom=newPack.intrinsicGeom;
     				this.alpha=newPack.alpha;
     				this.gamma=newPack.gamma;
-    				this.sizeLimit=newPack.sizeLimit;
     				this.vertexMap=null;
     				this.xyzpoint=null;
     				this.vlist=null;
@@ -1813,7 +1804,7 @@ public class PackData{
        	packDCEL=new PackDCEL();
        	packDCEL.p=this;
        	packDCEL.sizeLimit=((int)((new_size-1)/1000))*1000+1000;
-       	packDCEL.vertices=new Vertex[sizeLimit+1];
+       	packDCEL.vertices=new Vertex[packDCEL.sizeLimit+1];
        	return 1;
     }
 
@@ -1984,21 +1975,16 @@ public class PackData{
 	}
 	
 	/**
-	 * 'aim' from 'vData', if available, else from 'rData'
+	 * 'aim' from 'Vertex'
 	 * @param v int
 	 * @return double
 	 */
 	public double getAim(int v) {
-		try {
-			return packDCEL.vertices[v].aim;
-		} catch(Exception ex) {
-			throw new DataException("error in getting 'aim' for v = "+v);
-		}
+		return packDCEL.vertices[v].aim;
 	}
 	
 	/** 
-	 * Store 'aim' in 'vData'
-	 * TODO: might eliminate this call
+	 * Store 'aim' in 'Vertex'
 	 * @param v int
 	 * @param aim double
 	 */
@@ -2026,20 +2012,16 @@ public class PackData{
 	}
 	
 	/**
-	 * 'curv' from 'vData'
+	 * 'curv' from 'Vertex'
 	 * @param v int
 	 * @return double
 	 */
 	public double getCurv(int v) {
-		try {
-			return packDCEL.vertices[v].curv;
-		} catch(Exception ex) {
-			throw new DataException("error in getting 'curv' for v = "+v);
-		}
+		return packDCEL.vertices[v].curv;
 	}
 	
 	/** 
-	 * Store 'curv' in 'vData'
+	 * Store 'curv' in 'Vertex'
 	 * TODO: might eliminate this call
 	 * @param v int
 	 * @param aim double
@@ -2069,10 +2051,7 @@ public class PackData{
 	 * @return boolean
 	 */
 	public boolean isBdry(int v) {
-		HalfEdge he=packDCEL.vertices[v].halfedge;
-		if (he.twin.face!=null && he.twin.face.faceIndx<0)
-			return true;
-		return false;
+		return packDCEL.isBdry(v);
 	}
 	
 	/**
@@ -2278,8 +2257,8 @@ public class PackData{
 	}
 	
 	/**
-	 * Get center/radius from 'vData' in 'CircleSimple' form.
-	 * Note: see 'RedHEdge.getCircleSimple' to get the data
+	 * Get center/radius from 'Vertex' in 'CircleSimple' form.
+	 * Note: see 'RedEdge.getCircleSimple' to get the data
 	 * from a red edge.
 	 * @param v int
 	 * @return CircleSimple
@@ -2289,7 +2268,7 @@ public class PackData{
 	}
 	
 	/** 
-	 * Set data only in 'vData'. See 'RedHEdge.setCircleSimple'
+	 * Set data only in 'Vertex'. See 'RedEdge.setCircleSimple'
 	 * to set data in a red edge. 
 	 * @param cS CircleSimple
 	 */
@@ -2299,7 +2278,7 @@ public class PackData{
 	}
 	
 	/**
-	 * Enter center (x,y) in rData
+	 * Enter center (x,y)
 	 * @param v int
 	 * @param x double
 	 * @param y double
@@ -2316,9 +2295,6 @@ public class PackData{
 	 * @param z Complex
 	 */
 	public void setCenter(int v,Complex z) {
-		if (v<1 || v>nodeCount) 
-			return;
-		
 		// TODO: somewhere, have to do checks in hyp/sph
 		//    cases. Problem we might be in the midst of 
 		//    changing geometry.
@@ -2472,7 +2448,7 @@ public class PackData{
 	 * internal form; i.e., in hyp case, 'r' should already 
 	 * be in x_radius form. If it needs to be converted, call
 	 * 'setRadiusActual'.)
-	 * e.g., in 'RedHEdge's.)
+	 * e.g., in 'RedEdge's.)
 	 * @param v int
 	 * @param r double
 	 */
@@ -3039,32 +3015,6 @@ public class PackData{
 	    ans[1]=he.next.next.origin.vertIndx;
    		return ans; 
 	} 
-
-	/**
-	 * Return count of bdry verts from v1 to v2 (inclusive) if v1/v2 are
-	 * on the same bdry component; otherwise 0.
-	 * @param v1 int
-	 * @param v2 int
-	 * @return int
-	 */
-	public int verts_share_bdry(int v1,int v2) {
-		int count=1;
-		if (!status || v1<1 || v1>nodeCount || v2<1 || v2>nodeCount
-			|| !isBdry(v1) || !isBdry(v2))
-			return 0;
-		HalfEdge he=packDCEL.vertices[v2].halfedge.twin.next;
-		if (v1==v2)
-			return he.face.getNum();
-		int safety=he.face.getNum()+1;
-		do {
-			count++;
-			he=he.next;
-			safety--;
-		} while (he.origin.vertIndx!=v1 && safety>0);
-		if (safety==0) // not on same bdry segment
-			return 0;
-		return count;
-	}
 	
 	/**
 	 * Find the tangency point between the circles of given edge.
@@ -4677,56 +4627,6 @@ public class PackData{
 		return 1;
 	}
 
-	/** 
-	 * Checks that v is boundary vertex, then adds circle
-	 * nghb'ing v and its clockwise bdry neighbor. Local data is
-	 * updated, but calling routine must update for colors,
-	 * radii, centers, etc.
-	 * @param v int
-	 * @return int, 0 on error.
-	 */
-	public int add_vert(int v) throws CombException {
-		if (v < 1 || v > nodeCount || !isBdry(v))
-			return 0;
-		int node=nodeCount+1; // new index
-		node=packDCEL.vertCount+1;
-		if (node > (packDCEL.sizeLimit)
-				&& packDCEL.alloc_vert_space(node, true) == 0) 
-			throw new CombException("Pack space allocation failure");
-		if (getRadius(v) <= 0) { // avoid infinite hyp rad
-			setRadius(v,.1);
-		}
-		int v2 = getLastPetal(v); // upstream nghb
-		
-		Vertex vert=RawManip.addVert_raw(packDCEL,v);
-		if (vert==null)
-			throw new CombException("failed 'add_vert'");
-		setRadius(vert.vertIndx,getRadius(vert.vutil));
-		packDCEL.fixDCEL_raw(this);
-	
-		setCircleColor(node,ColorUtil.getFGColor());
-		setRadius(node,getRadius(v));
-		CircleSimple sc = CommonMath.comp_any_center(getCenter(v),
-				getCenter(v2), getRadius(v),getRadius(v2), getRadius(node),
-				hes);
-		sc.save(this, node);
-
-		// fix affected curvatures
-		UtilPacket utilp = new UtilPacket();
-		CommonMath.get_anglesum(this,node, getRadius(node), utilp);
-		setCurv(node,utilp.value);
-		CommonMath.get_anglesum(this,v, getRadius(v), utilp);
-		setCurv(v,utilp.value);
-		CommonMath.get_anglesum(this,v2, getRadius(v2), utilp);
-		setCurv(v2,utilp.value);
-
-		// set defualt aims
-		setAim(node,-1.0);
-		setAim(v,-1.0);
-		setAim(v2,-1.0);
-		return 1;
-	}
-
 	/**
 	 * v1 must be boundary vertex; enfold links nghbs v2 
 	 * (cclw) to v3 (clw), making v1 interior. Local data 
@@ -4744,116 +4644,6 @@ public class PackData{
 		if (ans<=0)
 			throw new CombException("dcel enfold failed in 'enfold'");
 		packDCEL.fixDCEL_raw(this);
-		return 1;
-	}
-
-	/** 
-	 * Add a layer of nodes to bdry segment from vertex v1 to v2.
-	 * Three modes:
-	 * 
-	 * TENT: add one-on-one layer, a new bdry vert for 
-	 *   each edge between v1 and v2. Unless v1==v2, 
-	 *   v1 and v2 remain as bdry vertices.
-	 *   
-	 * DEGREE: add nghb's to make vertices from v1 to v2,
-	 *   inclusive, interior with degree d. However, no edge
-	 *   should connect existing bdry vertices. If v1==v2 or
-	 *   v1 is nghb of v2, do whole bdry component.
-	 *   
-	 * DUPLICATE: attach "square" face with bary center 
-	 *   to each edge between v1 and v2. Unless v1==v2, 
-	 *   v1 and v2 remain on bdry.
-	 *   
-	 * Calling routine updates combinatorics.
-	 * @param mode int, how to add: 0=TENT, 1=DEGREE, 2=DUPLICATE
-	 * @param degree int
-	 * @param v1 int, start bdry vert
-	 * @param v2 int, end bdry vert
-	 * @return int, count of added vertices 
-	 */
-	public int add_layer(int mode, int degree, int v1, int v2) {
-		int count = 0;
-
-		// modes
-		int TENT = 0;
-		int DEGREE = 1;
-		int DUPLICATE = 2;
-		
-		int edge_count=verts_share_bdry(v1, v2);
-		if (v1 < 1 || v1 > nodeCount || v2 < 1 || v2 > nodeCount
-				|| !isBdry(v1) || edge_count==0) {
-			CirclePack.cpb
-					.errMsg("add_layer: vertices must be on same boundary component");
-			return 0;
-		}
-
-		if (mode == TENT) {
-			// first new circle
-			int vert = getFirstPetal(v1);
-			count += add_vert(vert);
-
-			// cycle until reaching v2
-			while (vert != v2 && isBdry(vert)) {
-				count += add_vert(vert);
-				enfold(vert);
-				vert = getFirstPetal(vert);
-			}
-			if (vert != v2) { //
-				throw new CombException(
-						"add_layer: encountered non-boundary vertex " + vert);
-			}
-			if (vert == v1)
-				enfold(vert); // full bdry
-			return count;
-		}
-
-		// add to get degree d; every circle, v1 to v2 inclusive,
-		// must get at least one new neighbor; we never just enclose
-		// since that identifies two circles of the original bdry.
-		// (Of course, the new circle may have been added already in
-		// a previous step.) TODO: with more work, can probably choose
-		// starting point to avoid overage.
-		else if (mode == DEGREE) {
-			if (v2 == v1)
-				v2 = getLastPetal(v2);
-			int vert = v1;
-			int nextvert = getFirstPetal(vert);
-
-			// new circle shared with upstream nghb.
-			count += add_vert(vert); 
-			// go until you get to v2
-			while (vert != v2) {
-				int need=degree-countPetals(vert);
-				for (int i = 1; i <= need; i++)
-					count += add_vert(vert);
-				enfold(vert);
-				vert = nextvert;
-				nextvert = getFirstPetal(vert);
-				if (vert == v1)
-					throw new CombException("Error in tracing the boundary: "
-						+ "hit " + v1 + " before " + v2);
-			}
-
-			// now do v2 itself
-			if (vert == v2) {
-				int need=degree-countPetals(vert);
-				for (int i = 1; i <= need; i++)
-					count += add_vert(vert);
-				enfold(vert);
-			}
-			return count;
-		}
-		else if (mode == DUPLICATE) {
-
-			int origcount=packDCEL.vertCount;
-			// generate combinatoric
-			int ans= RawManip.baryBox_raw(packDCEL,v1,v2);
-			if (ans==0)
-				return 0;
-			// TODO: too difficult to set radii
-			CombDCEL.fillInside(packDCEL);
-			return attachDCEL(packDCEL);
-		}
 		return 1;
 	}
 
@@ -5190,13 +4980,14 @@ public class PackData{
 	  
 	  /** 
 	   * Determine generation of vertices starting from given seeds.
-	   * If 'mark' is true, store in 'vData[].mark', else just 
+	   * If 'mark' is true, store in 'Vertex.mark', else just 
 	   * return the index of the last vertex. 'utilFlag' 
 	   * is used to pass seed info to 'label_generations'.
 	   * @param mx int, if mx>0, stop at generation mx.
 	   * @param seedlist NodeLink, list defined as first generation (1)
-	   * @param mark boolean, if true, store as 'mark in 'kData' or 'vData'
-	   * @return int, index of last_vert (first encountered in max generation), 0 on error
+	   * @param mark boolean, if true, store as 'mark in 'Vertex'.
+	   * @return int, index of last_vert (first encountered in max 
+	   *   generation), 0 on error
 	   */
 	public int gen_mark(NodeLink seedlist, int mx, boolean mark) {
 		int[] list;
@@ -5422,7 +5213,6 @@ public class PackData{
     				he=he.prev.twin; // cclw
     			} while (he!=vert.halfedge);
     		}
-	    		// set in 'vData'
    			CircleSimple circle=getCircleSimple(vert.vertIndx);
    			count += Mobius.mobius_of_circle(Mob,hes,circle,
    		 	  	       sc,oriented);

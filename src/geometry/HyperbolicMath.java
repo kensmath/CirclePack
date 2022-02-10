@@ -1026,7 +1026,7 @@ public static CircleSimple h_compcenter(Complex z0,Complex z1,
 			throw new DataException("'a' is too close to unit circle");
 		Mobius mob=Mobius.mobNormDisc(a,g);
 		if (Mobius.frobeniusNorm(mob)>Mobius.MOB_TOLER) {
-			// directly adjust in 'vData'
+			// directly adjust in 'Vertex'
 			for (int v = 1; v <= pdcel.vertCount; v++) {
 				Complex z = pdcel.vertices[v].center;
 				Complex newz= mob.apply(z);

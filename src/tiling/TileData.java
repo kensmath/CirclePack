@@ -984,10 +984,10 @@ public class TileData {
 	
 	/**
 	 * TODO: not used currently, needs to be checked
-	 * Using provisional 'nodeCount' and 'kData' information already
-	 * in place, tiling information by finding closed loops of vertices 
-	 * defining the tiles. (Triangles are included like any other tiles.)  
-
+	 * Using provisional 'nodeCount' and 'HalfEdge's already
+	 * in place, decern tiling information by finding closed 
+	 * loops of vertices defining the tiles. (Triangles are 
+	 * included like any other tiles.)  
 	 * @return int, count of tiles (including triangles) stored in 'tiles'
 	 */
 	public int identifyTiles() {
@@ -1150,7 +1150,7 @@ public class TileData {
 		int []util=new int[p.nodeCount+1]; // p.vlist=vlist;
 		
 		TileData td=new TileData(0,1); // default to coarsest mode
-		td.myTiles=new Tile[p.sizeLimit+1];
+		td.myTiles=new Tile[p.packDCEL.sizeLimit+1];
 
 		Iterator<Integer> vlt=vlist.iterator();
 		int stop=0;
