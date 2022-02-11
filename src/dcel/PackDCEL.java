@@ -2257,25 +2257,6 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Look for positive 'Vertex.vutil' entries to find index
-	 * references; return 'VertexMap' <v,vutil>. E.g. may be 
-	 * "old-new" pairings, or "new-reference", etc. Normally
-	 * independent of 'pdcel.oldNew'.
-	 * @return VertexMap (v,vutil), null on nothing found
-	 */
-	public VertexMap reapVUtil() {
-		VertexMap vmap=new VertexMap();
-		for (int v=1;v<=vertCount;v++) { 
-			Vertex vert=vertices[v];
-			if (vert.vutil>0)
-				vmap.add(new EdgeSimple(v,vert.vutil));
-		}
-		if (vmap.size()==0)
-			return null;
-		return vmap;
-	}
-	
-	/**
 	 * Update the side-pairing maps.
 	 * @return 0 if 'redChain' or 'pairLink' doesn't exist
 	 */

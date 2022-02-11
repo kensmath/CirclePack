@@ -156,6 +156,11 @@ public abstract class CPBase {
 	public static Color defaultCircleColor;
 	public static Color defaultFillColor; // basic fill color
 
+	// modes for add_gen, add_lay
+	public static final int TENT=0;
+	public static final int DEGREE=1;
+	public static final int DUPLICATE=2;
+	
 	// These are the recognized 'tool types' prefixes for creating MyTool's, 
 	//   editors, lists of icons, etc. There may be additional characters
 	//   needed to form keys for 'hashedTools'.

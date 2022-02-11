@@ -4362,15 +4362,10 @@ public class CombDCEL {
 			  throw new CombException(
 					  v1+" and "+v2+" are not on the same bdry component");
 
-		  // modes
-		  int TENT = 0;
-		  int DEGREE = 1;
-		  int DUPLICATE = 2;
-
 		  int count = 0;
 		  HalfLink addedEdges=new HalfLink();
 		  HalfEdge edge = pdcel.vertices[v1].halfedge.twin;
-		  if (mode == TENT) {
+		  if (mode == CPBase.TENT) {
 			  // int lastv=pdcel.vertices[v2].halfedge.twin.next.twin.origin.vertIndx;
 			  
 			  // tent over first edge
@@ -4392,7 +4387,7 @@ public class CombDCEL {
 				  count++;
 			  }
 		  }
-		  else if (mode == DEGREE) {
+		  else if (mode == CPBase.DEGREE) {
 			  int origCount=pdcel.vertCount;
 			  Vertex vert = pdcel.vertices[v1];
 			  if (v2 == v1) // move v2 upstream from v1
@@ -4400,7 +4395,7 @@ public class CombDCEL {
 			  int v = v1;
 			  int nextv = v;
 
-			  // always add new nghb upstream of v1
+			  // start with tent over clw edge 
 			  edge=pdcel.vertices[v].halfedge.twin.next;
 			  if (RawManip.addVert_raw(pdcel, edge)==null)
 				  return 0;
@@ -4420,9 +4415,9 @@ public class CombDCEL {
 					  count++;
 				  }
 				  RawManip.enfold_raw(pdcel,v);
-			  } while (nextv<=origCount);
+			  } while (nextv<=origCount && v!=v2 && pdcel.redChain!=null);
 		  }
-		  else if (mode == DUPLICATE) { // DCELdebug.redConsistency(pdcel);
+		  else if (mode == CPBase.DUPLICATE) { // DCELdebug.redConsistency(pdcel);
 			  
 			  // if doing full bdry, stop before last box
 			  boolean close=(v1==v2);
@@ -4449,10 +4444,11 @@ public class CombDCEL {
  			  // closed?
  			  if (close) {
  				  edge=pdcel.vertices[v].halfedge.twin;
- 				  RawManip.addVert_raw(pdcel,edge);
+ 				  Vertex baryV=RawManip.addVert_raw(pdcel,edge);
  	 			  addedEdges.add(edge);
  	 			  RawManip.enfold_raw(pdcel,edge.origin.vertIndx);
  	 			  RawManip.enfold_raw(pdcel,edge.twin.origin.vertIndx);
+ 	 			  RawManip.enfold_raw(pdcel,baryV.vertIndx);
  				  count++;
  			  }
 		  }

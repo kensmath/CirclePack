@@ -82,7 +82,6 @@ import ftnTheory.WeldManager;
 import ftnTheory.WordWalker;
 import ftnTheory.iGame;
 import geometry.CircleSimple;
-import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.NSpole;
@@ -154,7 +153,7 @@ public class CommandStrParser {
   public static PostFactory pF; // 'PostFactory' updated externally.
   // TODO: make pF safer for threads
   public static final double LAYOUT_THRESHOLD=.00001; // for layouts based on quality
-  
+
   /**
    * Send on to 'jexecute' using active packing.
    * @param s, command string (see limitations)
@@ -4884,7 +4883,7 @@ public class CommandStrParser {
   	  				} // end of switch
 	    	  }
 	    	  
-	    	  // in vertex mode?? (default, look for further flags
+	    	  // in vertex mode?? (default, look for further flags)
 	    	  if (addVert) {
 	    		  try {
 	    			  int v,w;
@@ -5141,12 +5140,7 @@ public class CommandStrParser {
 	            
 	      // =============== add_layer
 	      else if (cmd.startsWith("add_lay")) {
-	    	  // modes
-	    	  int TENT=0;
-	    	  int DEGREE=1;
-	    	  int DUPLICATE=2;
-	    	  
-	    	  int mode=TENT; // default
+	    	  int mode=CPBase.TENT; // default
 	    	  int degree=3; // default
 	    	  int v1,v2;
 	    	  
@@ -5161,17 +5155,16 @@ public class CommandStrParser {
 	      		  char c=items.elementAt(0).charAt(1);
 	      		  items.remove(0);
 	      		  
-	   			  switch(c) {
-	   			  
 	   			  // Two flags; process rest in following
+	      		  switch(c) {
 	   			  case 't': // 
 	   			  {
-	   				  mode=TENT;
+	   				  mode=CPBase.TENT;
 	   				  break;
 	   			  }
 	   			  case 'd': // 
 	   			  {
-	   				  mode=DUPLICATE;
+	   				  mode=CPBase.DUPLICATE;
 	   				  break;
 	   			  }
 	   			  default:
@@ -5183,15 +5176,15 @@ public class CommandStrParser {
 	      	  
 	      	  // no flag and three numbers, should be 'N v w' form
 	      	  else if (items.size()==3)
-	      		  mode=DEGREE;
+	      		  mode=CPBase.DEGREE;
 	      	  
 	   		  // TENT/DUPLICATE modes take 2 arguments, v1 v2; 
 	      	  //    DEGREE has <d> also (at end)
-	   		  if ((mode==DEGREE && items.size()!=3) || 
-	   				  (mode!=DEGREE && items.size()!=2)) {
+	   		  if ((mode==CPBase.DEGREE && items.size()!=3) || 
+	   				  (mode!=CPBase.DEGREE && items.size()!=2)) {
 	   			  throw new DataException("usage: -[dt] {d} v1 v2.");
 	   		  }
-	   		  if (mode==DEGREE) {
+	   		  if (mode==CPBase.DEGREE) {
 	   			  try {
 	   				 degree=Integer.parseInt(items.elementAt(0));
 	   				 if (degree<4 || degree>PackData.MAX_PETALS) {
@@ -5216,13 +5209,8 @@ public class CommandStrParser {
 	   			  throw new CombException(cex.getMessage());
 	   		  }
 
-   			  if (!packData.isBdry(v1) || !packData.isBdry(v2))
-   				  throw new ParserException("One of "+v1+" or "+
-   						  v2+" is not a boundary vertex");
-
-   			  int ans;
    			  PackDCEL pdcel=packData.packDCEL;
-   			  ans= CombDCEL.addlayer(pdcel,mode,degree,v1,v2);
+  			  int ans= CombDCEL.addlayer(pdcel,mode,degree,v1,v2);
    			  if (ans<=0)
    				  return 0;
    			  pdcel.fixDCEL_raw(packData);
@@ -5231,12 +5219,7 @@ public class CommandStrParser {
 	      
 	      // =============== add_gen
 	      else if (cmd.startsWith("add_gen")) {
-	    	  // modes
-	    	  int TENT=0;
-	    	  int DEGREE=1;
-	    	  int DUPLICATE=2;
-	    	  
-	    	  int mode=TENT; // default
+	    	  int mode=CPBase.TENT; // default
 	    	  int degree=6;
 	    	  int numGens=1; // default
 	    	  NodeLink bdrylist=null;
@@ -5253,10 +5236,10 @@ public class CommandStrParser {
 	    		  numGens=Integer.parseInt(items.remove(0));
 	    		  if (items.size()>0) {
 	    			  degree=Integer.parseInt(items.get(0));
-	    			  mode=DEGREE;
+	    			  mode=CPBase.DEGREE;
 	    		  }
 	    		  else
-	    			  mode=TENT;
+	    			  mode=CPBase.TENT;
 	    	  
 	    		  // checked for/handled -b flag (must be last flag)
 	    		  int lastf=flagSegs.size()-1;
@@ -5279,12 +5262,11 @@ public class CommandStrParser {
 	    			  char c=items.get(0).charAt(1);
 	    			  items.remove(0);
 
-	    			  switch(c) {
-	   			  
 	    			  // Two flags; process rest in following
+	    			  switch(c) {
 	    			  case 'd':  
 	    			  {
-	    				  mode=DUPLICATE;
+	    				  mode=CPBase.DUPLICATE;
 	    				  break;
 	    			  }
 	    			  case 'b': // already handled
@@ -5293,7 +5275,7 @@ public class CommandStrParser {
 	    			  }
 	    			  default:
 	    			  {
-	    				  mode=TENT;
+	    				  mode=CPBase.TENT;
 	    			  }
 	    			  } // end of flag switch
 	    		  }
@@ -5357,21 +5339,12 @@ public class CommandStrParser {
 	      
 	      // =========== bary_refine =======
 	      else if (cmd.startsWith("bary_refine")) {
-    		  int origCount=packData.nodeCount;
     		  ArrayList<Integer> a=RawManip.hexBaryRefine_raw(
     				  packData.packDCEL,true);
     		  if (a==null)
     			  return 0;
-    		  VertexMap oldnew=packData.packDCEL.reapVUtil();
     		  packData.packDCEL.fixDCEL_raw(packData);
-	    		  
-    		  // set new verts radii based on 'vutil' reference vert.
-    		  for (int w=origCount+1;w<=packData.nodeCount;w++) {
-    			  int v=oldnew.findV(w);
-    			  if (v!=0 && v<=packData.nodeCount && w!=v) { 
-    				  packData.setRadius(w,packData.getRadius(v));
-    			  }
-    		  }
+    		  // DCELdebug.printRedChain(packData.packDCEL.redChain);
 	    	  CirclePack.cpb.msg("Packing p"+packData.packNum+" has "+
 	    			  "been barycentrically refined");
     		  return 1;

@@ -8,7 +8,6 @@ import complex.Complex;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
-import exceptions.DataException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
 import listManip.HalfLink;
@@ -29,38 +28,20 @@ import listManip.VertexMap;
  * since this data is generally outdated.
  * 
  * Typical process: 
- *   (1) calling routine may 'zeroVUtil'/'zeroEUtil' to zero 
- *   	 'vutil'/'eutil' entries.
+ *   (1) calling routine may 'zeroEUtil' to zero 'eutil'.
  *   (2) calling routine runs '*_raw' method to modify the dcel 
  *   	 structure.
  *   (3) the '*_raw' routine should ensure 'vertices' and 
- *       'vertCount' are updated and space is allocated. If 
+ *       'vertCount' are updated and space is allocated and
+ *       ideal faces are created and give negative index. If 
  *       red chain could not be safely modified in '*_raw', 
  *       then set 'redChain' null. 
- *   (4) the '*_raw' routine may use 'Vertex.vutil' to reference
- *   	 some vert index or index of "parent" circle, etc. 
- *   (5) calling routine can use 'reapVUtil' to create a 
- *   	 'VertexMap', which is often "<new,reference>" 
- *   	 pairing; given 'new' index with 'reference' pointing 
- *   	 to location of useful data from the parent packing. 
- *   	 Caution: 'FillInside' resets 'vutil', so this 
- *       'VertexMap' must be captured when first available.
- *   (6) calling routine runs 'fixDCEL_raw', which computes red
+ *   (4) for any new vertices, preliminary data (cent/rad/aim, etc.)
+ *       are typically set from appropriat reference vert. 
+ *   (5) calling routine runs 'fixDCEL_raw', which computes red
  *   	 chain (if needed) and calls 'FillInside' and 'attachDCEL'.
- *   (7) calling routine runs 'modRadCents' with 'VertexMap' saved
- *   	 by 'readVUtil' to copy appropriate rad and/or centers 
- *       (often centers aren't worth keeping).
- *   
- * One of challenges is keeping track of old-new indices. One
- * method is described above, for example, when a new layer of
- * vertices is added. Processing is like this:
- *   + run 'zeroVUtil' to initialize
- *   + run '*_raw'
- *   + catch VertexMap with 'readVUil' from '.vutil' info.
- *   + run 'fixDCEL_raw'
- *   + run 'modRadCents' to copy data from reference vertex.
- *   
- * In other case, '*_raw' may store info in 'PackDCEL.oldNew'. 
+ *
+ * Sometimes '*_raw' may store info in 'PackDCEL.oldNew'. 
  * Many raw routines can be repeated several times before 
  * 'fixDCEL_raw' is needed. I'm going to try this approach:
  * 
@@ -838,19 +819,29 @@ public class RawManip {
 		  HalfEdge twin_next=in_edge.twin.next;
 		  DcelFace ideal=out_edge.twin.face;
 		  
-		  // check if bdry component has just two edges
-		  //   between the same vertices: make them twins,
-		  //   toss one, reconnect, and toss the red chain.
+		  // check if bdry component has just two edges:
+		  //   toss 'oldedge', reconnect, and toss the red chain.
 		  if (out_edge.twin.next.next==out_edge.twin) {
-			  HalfEdge newtwin=out_edge.twin.next;
-			  out_edge.twin=newtwin;
-			  newtwin.twin=out_edge;
-			  out_edge.origin.bdryFlag=0;
-			  out_edge.origin.redFlag=false;
-			  out_edge.origin.aim=2.0*Math.PI;
-			  out_edge.next.origin.bdryFlag=0;
-			  out_edge.next.origin.redFlag=false;
-			  out_edge.next.origin.aim=2.0*Math.PI;
+
+			  Vertex wert=out_edge.twin.origin;
+			  if (wert.halfedge==in_edge)
+				  wert.halfedge=out_edge.twin;
+			  
+			  // save connections so we can orphan 'in_edge'
+			  HalfEdge oldnxt=in_edge.next;
+			  HalfEdge oldprev=in_edge.prev;
+			  
+			  out_edge.twin.next=oldnxt;
+			  oldnxt.prev=out_edge.twin;
+			  
+			  out_edge.twin.prev=oldprev;
+			  oldprev.next=out_edge.twin;
+			  
+			  out_edge.twin.face=in_edge.face;
+			  
+			  vert.bdryFlag=wert.bdryFlag=0;
+			  vert.redFlag=wert.redFlag=false;
+			  vert.aim=wert.aim=2.0*Math.PI;
 			  pdcel.redChain=null;
 			  pdcel.triData=null;
 			  return 2;
@@ -1228,7 +1219,7 @@ public class RawManip {
 		  leftV.rad=edge.origin.rad;
 		  
 		  // if full, add second vertex
-		  if (!fullbox) { 
+		  if (fullbox) { 
 			  HalfEdge rightleg=edge.next.twin;
 			  Vertex rightV=RawManip.addVert_raw(pdcel,rightleg);
 			  rightV.rad=edge.twin.origin.rad;
@@ -1820,163 +1811,6 @@ public class RawManip {
 		  pdcel.triData=null;
 		  return new_edge;
 	  }
-	  
-	  /**
-	   * Slit open on given 'HalfEdge' <v,w> if one or both
-	   * of v and w is bdry. A clone is made for v (and/or w)
-	   * if it is a boundary vertex, which may disconnect the
-	   * interior, so in 'redchain_by_edge', just the portion
-	   * containing 'alpha' would survive. Typically, however,
-	   * just one is a boundary. In this case, the final cclw order is 
-	   * {clone_of_b, a, b} in order and we try to salvage 
-	   * the red chain. Return the clone index (or indices), so
-	   * the calling routine can set data.
-	   * @param pdcel PackDCEL
-	   * @param edge HalfEdge
-	   * @return int[2] with one or two new indices
-	   */
-	  public static int[] slitVW(PackDCEL pdcel,HalfEdge edge) {
-		  
-		  if (edge.isBdry())
-			  throw new DataException(
-					  "usage: slit, <v,w> can't be a bdry edge");
-		  boolean swap_vw=false;
-		  if (edge.twin.origin.bdryFlag>0) {
-			  if (edge.origin.bdryFlag==0) {
-				  swap_vw=true;
-				  edge=edge.twin;
-			  }
-		  }
-		  else if (edge.origin.bdryFlag==0)
-			  throw new DataException(
-					  "usage: slit v w; at least one must be bdry");
-		  
-		  // move 'alpha', if necessary
-		  NodeLink vlink=new NodeLink();
-		  vlink.add(edge.origin.vertIndx);
-		  vlink.add(edge.twin.origin.vertIndx);
-		  pdcel.setAlpha(0,vlink,false); // don't redo combinatorics
-
-		  // hold some data
-		  HalfEdge origtwin=edge.twin;
-		  Vertex edgeOrigin=edge.origin;
-		  Vertex edgeTwinOrigin=edge.twin.origin;
-		  HalfEdge outedge_v=edge.origin.halfedge;
-		  HalfEdge inedge_v=outedge_v.twin.next.twin;
-		  
-		  // create and install a clone for 'v' as origin of 'edge'
-		  Vertex newV=new Vertex(++pdcel.vertCount);
-		  pdcel.vertices[newV.vertIndx]=newV;
-		  newV.bdryFlag=1;
-		  newV.halfedge=edge;
-		  edge.origin=newV;
-		  HalfEdge he=edge;
-		  while (he.face==null || he.face.faceIndx>=0) {
-			  he=he.prev.twin; // cclw
-			  he.origin=newV;
-		  }
-
-		  // new twin for 'edge', fix up this side of slit
-		  HalfEdge wv=new HalfEdge(edge.twin.origin);
-		  wv.twin=edge;
-		  edge.twin=wv;
-
-		  wv.next=inedge_v.twin;
-		  inedge_v.twin.prev=wv;
-		  wv.face=inedge_v.twin.face;
-
-		  // new version of edge, fix up other side of slit
-		  HalfEdge newvw=new HalfEdge(edgeOrigin);
-		  newvw.twin=origtwin;
-		  origtwin.twin=newvw;
-		  newvw.face=outedge_v.twin.face;
-		  
-		  newvw.prev=outedge_v.twin;
-		  outedge_v.twin.next=newvw;
-
-		  // if both are bdry: build new vert/twin for w, too
-		  if (edge.twin.origin.bdryFlag>0) {
-			  
-			  pdcel.redChain=null; // may disconnect interior
-			  
-			  HalfEdge outedge_w=edge.twin.origin.halfedge;
-			  HalfEdge inedge_w=outedge_w.twin.next.twin;
-			  
-			  wv.prev=outedge_w.twin;
-			  outedge_w.twin.next=wv;
-			  
-			  newvw.next=inedge_w.twin;
-			  inedge_w.twin.prev=newvw;
-
-			  Vertex newW=new Vertex(++pdcel.vertCount);
-			  pdcel.vertices[newW.vertIndx]=newW;
-			  newW.bdryFlag=1;
-			  he=origtwin;
-			  while (he.face==null || he.face.faceIndx>=0) {
-				  he.origin=newW;
-				  he=he.prev.twin; // cclw
-			  }
-			  
-			  int[] ans=new int[2];
-			  ans[0]=newV.vertIndx;
-			  ans[1]=newW.vertIndx;
-			  
-			  pdcel.triData=null;
-			  return ans;
-		  }
-
-		  // reaching here, w must be interior
-		  wv.prev=newvw;
-		  newvw.next=wv;
-		  edgeTwinOrigin.bdryFlag=1;
-		  edgeTwinOrigin.halfedge=origtwin;
-		  
-		  // fix red chain; typically, 'edge' is not red // DCELdebug.printRedChain(pdcel.redChain);
-		  if (edge.myRedEdge!=null) {
-			  RedEdge redtwin=edge.myRedEdge.twinRed;
-			  if (redtwin==null) {
-				  CirclePack.cpb.errMsg("slit: problems with red chain");
-				  pdcel.redChain=null;
-			  }
-
-			  // just separate the twins
-			  edge.myRedEdge.twinRed=null;
-			  redtwin.twinRed=null;
-			  edgeTwinOrigin.redFlag=true;
-		  }
-		  else {
-			  RedEdge next_v_red=inedge_v.myRedEdge.nextRed;
-			  RedEdge edge_red=new RedEdge(edge);
-			  edge.myRedEdge=edge_red;
-			  edge_red.center=new Complex(next_v_red.center);
-			  edge_red.rad=next_v_red.rad;
-			  
-			  RedEdge twin_red=new RedEdge(origtwin);
-			  origtwin.myRedEdge=twin_red;
-			  // set center/rad on return
-			  
-			  edge_red.prevRed=inedge_v.myRedEdge;
-			  inedge_v.myRedEdge.nextRed=edge_red;
-			  
-			  edge_red.nextRed=twin_red;
-			  twin_red.prevRed=edge_red;
-			  
-			  twin_red.nextRed=outedge_v.myRedEdge;
-			  outedge_v.myRedEdge.prevRed=twin_red;
-
-			  newV.redFlag=true;
-			  edgeTwinOrigin.redFlag=true;
-		  }
-		  
-		  int[] ans=new int[2];
-		  if (swap_vw)
-			  ans[1]=newV.vertIndx;
-		  else
-			  ans[0]=newV.vertIndx;
-		  
-		  pdcel.triData=null;
-		  return ans;
-	  }
 
 	  /**
 	   * Either hex or bary refine the given DCEL. Start either
@@ -2017,19 +1851,8 @@ public class RawManip {
 			int newsz=pdcel.vertCount+pdcel.edgeCount;
 			if (baryFlag)
 				newsz += pdcel.faceCount;
-			if (newsz>pdcel.vertices.length) {
-		        int size=((int)((newsz-1)/1000))*1000+1000;
-
-        		// copy 'vertices' and expand its size
-        		Vertex[] new_vs=new Vertex[size+1];
-        		for (int j=1;j<=pdcel.vertCount;j++) 
-        			new_vs[j]=pdcel.vertices[j];
-        		pdcel.vertices=new_vs;
-			}
-			
-			// inherited 'vutil' refers to original vert index
-			for (int v = 1; v <= pdcel.vertCount; v++)
-				pdcel.vertices[v].vutil = v;
+			if (newsz>pdcel.sizeLimit) 
+		        pdcel.alloc_vert_space(newsz+2,true);
 
 			// 'eutil' flags:
 			// 0 means untouched yet
@@ -2040,8 +1863,8 @@ public class RawManip {
 			// we loop through the original vertices, and
 			// for each vert loop through its faces,
 			// splitting its edges (and also their twins),
-			// then adding its new interior, depending on
-			// hex or bary process
+			// then adding its new interior faces, and
+			// vertices (depending on hex or bary process)
 			int origVertCount = pdcel.vertCount;
 			HalfEdge newEdge;
 			HalfEdge n_base, n_newEdge, n_newTwin;
@@ -2111,16 +1934,27 @@ public class RawManip {
 						n_newEdge.eutil = 1;
 						n_newEdge.invDist = n_base.invDist;
 						n_newEdge.schwarzian = n_base.schwarzian;
+						n_newEdge.face=n_base.face;
 						n_newTwin = new HalfEdge();
 						n_newTwin.eutil = 1;
 						n_newTwin.invDist = n_base.invDist;
 						n_newTwin.schwarzian = n_base.schwarzian;
+						n_newTwin.face=n_base.twin.face;
 
-						// new vertex
+						// new vert; cent/rad = end averages; bdry?
 						n_midVert = new Vertex(++pdcel.vertCount);
+						n_midVert.rad=(n_base.origin.rad+n_base_tw.origin.rad)/2.0;
+						n_midVert.center=(n_base.origin.center.add(
+								n_base_tw.origin.center).times(.5));
+						// bdry edge?
+						if (n_base.twin.face!=null && n_base.twin.face.faceIndx<0) {
+							n_midVert.bdryFlag=1;
+							n_midVert.aim=Math.PI;
+						}
+						else
+							n_midVert.aim=2.0*Math.PI;
 						pdcel.vertices[pdcel.vertCount] = n_midVert;
 						n_midVert.halfedge = n_newEdge;
-						n_midVert.vutil = n_base.origin.vutil;
 						n_newEdge.origin = n_midVert;
 						n_newTwin.origin = n_midVert;
 						if (redge!=null || tredge!=null)
@@ -2208,16 +2042,26 @@ public class RawManip {
 							n_newEdge.eutil = 1;
 							n_newEdge.invDist = n_base.invDist;
 							n_newEdge.schwarzian = n_base.schwarzian;
+							n_newEdge.face=n_base.face;
 							n_newTwin = new HalfEdge();
 							n_newTwin.eutil = 1;
 							n_newTwin.invDist = n_base.invDist;
 							n_newTwin.schwarzian = n_base.schwarzian;
+							n_newTwin.face=n_base.twin.face;
 
 							// new vertex
 							n_midVert = new Vertex(++pdcel.vertCount);
+							n_midVert.rad=(n_base.origin.rad+n_base_tw.origin.rad)/2.0;
+							n_midVert.center=(n_base.origin.center.add(
+									n_base_tw.origin.center).times(.5));
+							// bdry edge?
+							if (n_base.twin.face!=null && n_base.twin.face.faceIndx<0) {
+								n_midVert.bdryFlag=1;
+								n_midVert.aim=Math.PI;
+							}
+							else n_midVert.aim=2.0*Math.PI;
 							pdcel.vertices[pdcel.vertCount] = n_midVert;
 							n_midVert.halfedge = n_newEdge;
-							n_midVert.vutil = n_base.origin.vutil;
 							n_newEdge.origin = n_midVert;
 							n_newTwin.origin = n_midVert;
 							if (redge!=null || tredge!=null)
@@ -2312,14 +2156,15 @@ public class RawManip {
 						}
 					}
 						
-					// bary refining is done after all sides are split
+					// bary refining goes on after all sides are split
 					else { 
 							
-						// new vertex
+						// new bary center vertex
 						Vertex baryCent=new Vertex(++pdcel.vertCount);
 						barycents.add(pdcel.vertCount); 
 						pdcel.vertices[pdcel.vertCount]=baryCent;
-						baryCent.vutil=spoke.origin.vertIndx;
+						baryCent.cloneData(spoke.origin);
+						baryCent.aim=2.0*Math.PI;
 							
 						// create first new edges
 						HalfEdge new_in=new HalfEdge(spoke.origin);
@@ -2505,52 +2350,36 @@ public class RawManip {
 			HalfEdge vedge=pdcel.vertices[v].halfedge;
 			if (vedge.twin.prev.twin==vedge.twin.next.twin)
 				throw new CombException("bdry component has just two edges");
-			HalfEdge nextedge=vedge.twin.prev.twin;
-//			HalfEdge prevedge=vedge.twin.next.twin;
+			HalfEdge clwedge=vedge.twin.prev;
 			  
-			// tent over 'vedge'; 'vertCount', 'vertices' should be updated
-			RawManip.addVert_raw(pdcel,nextedge);
+			// first tent over 'vedge' to get the new vertex
+			Vertex newV=RawManip.addVert_raw(pdcel,vedge.twin);
+			newV.cloneData(vedge.origin);
 			int count=2;
 			  
-			// now proceed cclw enfolding vertices
-			int u=0;
-			while ((u=nextedge.origin.vertIndx)!=w && u!=v &&
-					pdcel.redChain!=null) {
-				nextedge=nextedge.twin.prev.twin;
+			// proceed cclw enfolding vertices until red chain is null
+			int u=clwedge.twin.origin.vertIndx;
+			while (u!=w && u!=v && pdcel.redChain!=null) {
+				clwedge=clwedge.prev;
 				
 // debugging				
-				DCELdebug.printRedChain(pdcel.redChain);
+//				DCELdebug.printRedChain(pdcel.redChain);
+//				System.out.println("clwedge="+clwedge+" and u="+u);
 				
-				RawManip.enfold_raw(pdcel,u); 
+				RawManip.enfold_raw(pdcel,u);
+				u=clwedge.twin.origin.vertIndx;
 				count++;
 				if (debug)
 					DCELdebug.redConsistency(pdcel.redChain);
 			} 
+			if (pdcel.redChain==null) { // have closed up
+				newV.bdryFlag=0;
+				newV.redFlag=false;
+				newV.aim=2.0*Math.PI;
+			}
 			return count;
 		}
-		
-		/**
-		 * Search 'redChain' for first bdry edge, then add ideal
-		 * vertex to that whole bdry component. This is generally
-		 * called when there is just one bdry component.
-		 * @param pdcel PackDCEL
-		 * @return int, count of edgepairs added, 0 on error 
-		 * 	(e.g., no 'redChain' or bdry)
-		 */
-		public static int addIdeal_raw(PackDCEL pdcel) {
-			if (pdcel.redChain==null)
-				return 0;
-			RedEdge rtrace=pdcel.redChain;
-			HalfEdge he=rtrace.myEdge;
-			do {
-				int v=he.origin.vertIndx;
-				if (he.twin.face!=null && he.twin.face.faceIndx<0)
-					return addIdeal_raw(pdcel,v,v);
-				rtrace=rtrace.nextRed;
-			} while (rtrace!=pdcel.redChain);
-			
-			return 0;	
-		}
+
 			  
 	/**
 	 * If ideal face 'f' has precisely three edges, then 

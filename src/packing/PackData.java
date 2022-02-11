@@ -5262,7 +5262,6 @@ public class PackData{
 	    }
 	    xyzpoint=null;
 	    set_aim_default();
-	    fillcurves();
 	    return count;
 	  }
 
@@ -6789,18 +6788,8 @@ public class PackData{
 	  */
 	  public int hex_refine() {
 		  RawManip.hexBaryRefine_raw(packDCEL,false);
-		  VertexMap vrads=packDCEL.reapVUtil();
+		  // DCELdebug.printRedChain(packDCEL.redChain);
 		  packDCEL.fixDCEL_raw(this);
-
-		  Iterator<EdgeSimple> vis=vrads.iterator();
-		  while (vis.hasNext()) {
-			  EdgeSimple edge=vis.next();
-			  if (edge.v!=0 && edge.v!=edge.w) { 
-				  setRadius(edge.v,getRadius(edge.w));
-				  setCenter(edge.v,getCenter(edge.w));
-			  }
-		  }
-		  fillcurves();
 		  return 1; 
 	  }
 
