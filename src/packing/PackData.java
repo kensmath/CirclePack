@@ -542,7 +542,7 @@ public class PackData{
                    					return -1;
                    				}
                    				pdc.redChain=null;
-                   				pdc.fixDCEL_raw(this);
+                   				pdc.fixDCEL(this);
                    				if (pdc.oldNew!=null && pdc.oldNew.size()>0) {
                						readOldNew=new int[pdc.vertCount+1];
                    					Iterator<EdgeSimple> vmp=pdc.oldNew.iterator();
@@ -737,7 +737,7 @@ public class PackData{
                        	this.packExtensions=new Vector<PackExtender>(2);
                        	
                        	// fix up 
-                       	pdata.packDCEL.fixDCEL_raw(this);
+                       	pdata.packDCEL.fixDCEL(this);
                        	this.set_aim_default();
                        	gotFlowers=true;
                        	break;
@@ -785,8 +785,8 @@ public class PackData{
             return -1;
         }
 
-        // Now, search for the rest of the data (have to allow picking up GEOM, 
-        //    ABG, PACKNAME here too). 
+        // Now, search for the rest of the data (have to allow 
+        //   picking up GEOM,ABG, PACKNAME here too). 
         try {
         	boolean foundEnd=false;
         	while((line=StringUtil.ourNextLine(fp))!=null) {
@@ -858,6 +858,7 @@ public class PackData{
                     	else flags |= 0010;
                     }
                     else if (mainTok.equals("CENTERS:")) {
+                    	// DCELdebug.rededgecenters(packDCEL);
                     	vert=1;
                     	// data must start on new line; read all or until error.
                     	try {
@@ -865,12 +866,12 @@ public class PackData{
                     			StringTokenizer loctok = new StringTokenizer(line);
                     			x=Double.parseDouble(loctok.nextToken());
                     			y=Double.parseDouble(loctok.nextToken());
-                    			setCenter(rON(vert),x,y);
+                				packDCEL.setVertCenter(rON(vert),new Complex(x,y));
                     			vert++;
                     			while (vert<=nodeCount && loctok.hasMoreElements()) {
                     				x=Double.parseDouble(loctok.nextToken());
                     				y=Double.parseDouble(loctok.nextToken());
-                    				setCenter(rON(vert),x,y);
+                    				packDCEL.setVertCenter(rON(vert),new Complex(x,y));
                     				vert++;
                     			}
                     		}
@@ -1778,7 +1779,7 @@ public class PackData{
     }
     
     /**
-     * translation needed when dcel reading, "BOUQUET". 
+     * translation needed when reading "BOUQUET". 
      * @param old_v int
      * @return int
      */
@@ -3956,6 +3957,10 @@ public class PackData{
 				file.write("PACKNAME: " + fileName + "\n");
 			file.write("BOUQUET: ");
 			for (int n = 1; n <= nodeCount; n++) {
+				
+// debugging
+				System.err.println("next vert is "+n);
+				
 				file.write("\n" + n + " " + countFaces(n) + "  ");
 				int[] gfl=getFlower(n);
 				for (int i = 0; i <= countFaces(n); i++)
@@ -4643,7 +4648,7 @@ public class PackData{
 		int ans=RawManip.enfold_raw(packDCEL,v1);
 		if (ans<=0)
 			throw new CombException("dcel enfold failed in 'enfold'");
-		packDCEL.fixDCEL_raw(this);
+		packDCEL.fixDCEL(this);
 		return 1;
 	}
 
@@ -4881,7 +4886,7 @@ public class PackData{
 			  count++;
 		  }
 		  if (count!=0)
-			  packDCEL.fixDCEL_raw(this);
+			  packDCEL.fixDCEL(this);
 		  return count;
 	  }
 	  
@@ -4904,7 +4909,7 @@ public class PackData{
 				  count ++;
 		  }
 		  if (count>0) 
-			  pdc.fixDCEL_raw(this);
+			  pdc.fixDCEL(this);
 		  return count;
 	  }
 	  
@@ -5024,15 +5029,15 @@ public class PackData{
 	  }
 
 	  /**
-	   * Return N "antipodal" vertices, starting with given list.
-	   * That is, given {v1, v2, ...} as first, inductively choose 
-	   * some vj which is furthest comb distance from all previous
-	   * (namely, last encountered with max distance) until 
-	   * we have N.
+	   * Return N successive "antipodal" vertices, starting with 
+	   * given list 'ants'. That is, having reached list 
+	   * {v1, v2, ..., vj}, inductively the next so it is 
+	   * the furthest combinatorial distance from predecessors
+	   * until we have N in the list.
 	   * @param ants NodeLink; if empty, start with max vert index.
-	   * @param N int, number we want, (including ants)
-	   * @return NodeLink, v1,...,vn; null on error.
-	   * NOTE: if ants has N elements, return these.
+	   * @param N int, number we want in list, (including 'ants')
+	   * @return NodeLink, v1,...,vN; null on error.
+	   * NOTE: if 'ants' has N or more elements, return these.
 	   */
 	  public NodeLink antipodal_verts(NodeLink ants,int N) {
 		  if (N<1)
@@ -5048,9 +5053,7 @@ public class PackData{
 			  ants=new NodeLink(this,nodeCount);
 		  }
 
-		  for (int j=1;j<=nodeCount;j++) {
-			  setVertUtil(j,0);
-		  }
+		  packDCEL.zeroEUtil();
 
 		  // start with what we were given
 		  for (int j=0;j<ants.size();j++) {
@@ -5251,7 +5254,7 @@ public class PackData{
     		return 0;
     		
     	// fix combinatorics
-	    packDCEL.fixDCEL_raw(this);
+	    packDCEL.fixDCEL(this);
 	    	
 	    // if a sphere, set cent/rad of new vertices
 	    if (hes>0) {
@@ -5316,7 +5319,7 @@ public class PackData{
   		} catch(Exception ex) {
   			throw new CombException("'proj' dcel error");
   		}
-  		packDCEL.fixDCEL_raw(this);
+  		packDCEL.fixDCEL(this);
 
 	    setCenter(nodeCount,new Complex(0.0,Math.PI));
 	    setRadius(nodeCount,Math.asin(2.0*lam/(1.0+lam*lam)));
@@ -6276,7 +6279,7 @@ public class PackData{
 
 		  RedEdge oldred=packDCEL.redChain;
 		  PackDCEL pdcel=CombDCEL.cloneDCEL(packDCEL);
-		  pdcel.fixDCEL_raw(p);
+		  pdcel.fixDCEL(p);
 			  
 		  // typically, if not a sphere, will have redChain
 		  if (oldred!=null) {
@@ -6789,7 +6792,7 @@ public class PackData{
 	  public int hex_refine() {
 		  RawManip.hexBaryRefine_raw(packDCEL,false);
 		  // DCELdebug.printRedChain(packDCEL.redChain);
-		  packDCEL.fixDCEL_raw(this);
+		  packDCEL.fixDCEL(this);
 		  return 1; 
 	  }
 
@@ -7465,11 +7468,12 @@ public class PackData{
 						+ "close to or beyond the ideal boundary.");
 				return 0;
 			}
-			for (int i = 1; i <= nodeCount; i++) {
+			for (int v = 1; v <= nodeCount; v++) {
+				Vertex vert=packDCEL.vertices[v];
 				// catch horocycles to modify their radii
-				double radius = (-1)*getRadius(i);
+				double radius = (-1)*vert.rad;
 				if (radius > 0) { // yes, a horocycle
-					z1 = getCenter(i);
+					z1 = vert.center;
 					z2 = z1.times(1.0 - 2.0 * radius);
 					z3.x = (1 - radius) * z1.x - radius * z1.y;
 					z3.y = (1 - radius) * z1.y + radius * z1.x;
@@ -7477,10 +7481,9 @@ public class PackData{
 					z2 = Mobius.mob_trans(z2, ctr);
 					z3 = Mobius.mob_trans(z3, ctr);
 					CircleSimple sc = EuclMath.circle_3(z1, z2, z3);
-					setRadius(i,(-sc.rad));
+					vert.rad=-sc.rad;
 				}
-				setCenter(i,Mobius.mob_trans(getCenter(i), ctr));
-				setCenter(i,getCenter(i).times(-1.0));
+				vert.center=Mobius.mob_trans(vert.center, ctr).times(-1.0);
 			}
 			if (packDCEL.redChain != null) { // adjust centers in red list
 				RedEdge rtrace=packDCEL.redChain;
@@ -7503,23 +7506,21 @@ public class PackData{
 					rtrace = rtrace.nextRed;
 				} while (rtrace!=packDCEL.redChain);
 			}
-			if (packDCEL.pairLink!= null)
-				// fix side-pairing mobius transforms also
-				packDCEL.updatePairMob();
-			return 1;
 		} 
+		
+		// TODO: what's to happen in the case of the sphere?
+		//    (Note; there may still be red chain)
 		else if (hes>0) { // sph
 			Matrix3D m3d=Matrix3D.rigid2North(ctr);
-			for (int i = 1; i <= nodeCount; i++) {
-				Point3D pt=Matrix3D.times(m3d,new Point3D(getCenter(i))); // pt.norm();
-				setCenter(i,Point3D.p3D_2_sph(pt)); // pt.norm();
+			for (int v = 1; v <= nodeCount; v++) {
+				Point3D pt=Matrix3D.times(m3d,new Point3D(getCenter(v)));
+				setCenter(v,Point3D.p3D_2_sph(pt)); // pt.norm();
 			}
-			return 1;
 		}
 		else { // eucl
-			for (int i = 1; i <= nodeCount; i++) {
-				Complex zc=getCenter(i).minus(ctr);
-				setCenter(i,zc);
+			for (int v = 1; v <= nodeCount; v++) {
+				packDCEL.vertices[v].center=
+						packDCEL.vertices[v].center.minus(ctr);
 			}
 			if (packDCEL.redChain != null) {
 				RedEdge rtrace=packDCEL.redChain;
@@ -7528,11 +7529,11 @@ public class PackData{
 					rtrace = rtrace.nextRed;
 				} while (rtrace!=packDCEL.redChain);
 			}
-			if (packDCEL.pairLink != null)
-				// fix side-pairing mobius transforms also
-				packDCEL.updatePairMob();
-			return 1;
 		}
+		if (packDCEL.pairLink != null)
+			// fix side-pairing mobius transforms also
+			packDCEL.updatePairMob();
+		return 1;
 	}
 	
 	/** 

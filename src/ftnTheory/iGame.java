@@ -153,7 +153,7 @@ public class iGame extends PackExtender {
 			int rslt=RawManip.meldEdge_raw(packData.packDCEL,edge);
 			if (rslt<=0) 
 				return -1;
-			packData.packDCEL.fixDCEL_raw(packData);
+			packData.packDCEL.fixDCEL(packData);
 			packData.fillcurves();
 			
 			// which vertex survives?
@@ -187,7 +187,7 @@ public class iGame extends PackExtender {
 			return 0;
 		int rslt=RawManip.meldEdge_raw(packData.packDCEL,edge);
 		if (rslt!=0)
-			packData.packDCEL.fixDCEL_raw(packData);
+			packData.packDCEL.fixDCEL(packData);
 		return rslt;
 	}
 	

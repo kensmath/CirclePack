@@ -30,7 +30,7 @@ import util.StringUtil;
  * The calling routines do further processing, generally calling
  * 'fillInside' and then 'attachDCEL' to the packing. If red 
  * chain cannot be modified, then 'redChain' is set to null and
- * calling routine would run 'redchain_by_edge'. See 'fixDCEL_raw'.
+ * calling routine would run 'redchain_by_edge'. See 'fixDCEL'.
  * 
  * TODO: Routines are gathered from earlier work, so all needs careful 
  * debugging. 
@@ -50,6 +50,18 @@ public class CombDCEL {
 		try {
 			CombDCEL.redchain_by_edge(pdcel,hlink,alphaEdge,false);
 			CombDCEL.fillInside(pdcel);
+			
+			// reset bdry 'aim's
+			if (pdcel.redChain!=null) {
+				RedEdge rtrace=pdcel.redChain;
+				do {
+					Vertex vert=rtrace.myEdge.origin;
+					if (vert.bdryFlag==1)
+						vert.aim=-1.0;
+					rtrace=rtrace.nextRed;
+				} while(rtrace!=pdcel.redChain);
+			}
+			
 			// DCELdebug.printRedChain(pdcel.redChain);
 		} catch (Exception ex) {
 			throw new DCELException(ex.getMessage());
@@ -2581,7 +2593,7 @@ public class CombDCEL {
 	 * that every bdry vertex has an interior neighbor. 
 	 * We simply cookie with halfLink as the current 
 	 * red chain and 'prune'=true. Calling routine should
-	 * 'fixDCEL_raw'.
+	 * 'fixDCEL'.
 	 * @param pdcel PackDCEL
 	 * @return int, count of adjustments made (may be zero)
 	 */
@@ -3734,29 +3746,6 @@ public class CombDCEL {
 		  
 		  return newChain;
 	  }
-		  
-	  /**
-	   * Create a new PackDCEL seed with n petals
-	   * @param n int
-	   * @return PackDCEL
-	   */
-	  public static PackDCEL seed_raw(int n) {
-		  if (n<3 || n>1000) 
-			  throw new ParserException("'seed' is limited "+
-					  "to degree between 3 and 1000");
-		  int[][] bouquet=new int[n+2][];
-		  bouquet[1]=new int[n+1];
-		  for (int j=0;j<n;j++)
-			  bouquet[1][j]=j+2;
-		  bouquet[1][n]=bouquet[1][0]; // close up
-		  for (int k=0;k<n;k++) {
-			  bouquet[k+2]=new int [3];
-			  bouquet[k+2][0]=(k+1)%n+2;
-			  bouquet[k+2][1]=1;
-			  bouquet[k+2][2]=((k+n)-1)%n+2;
-		  }
-		  return getRawDCEL(bouquet,1);
-	  }
 
 	/**
 	 * Modify 'pdcel' by zipping together the two bdry edges 
@@ -4317,7 +4306,7 @@ public class CombDCEL {
 		  }
 		  
 		  // wrap up combinatorics
-		  pdcel.fixDCEL_raw(pdcel.p);
+		  pdcel.fixDCEL(pdcel.p);
 
 		  // return ends of new bdry segment
 		  int[] ans=new int[2];

@@ -178,7 +178,7 @@ public class GridMethods {
 		
 		int alphaIndx=m2v[n][n];
 		PackDCEL newDCEL=CombDCEL.getRawDCEL(bouquet,alphaIndx);
-		newDCEL.fixDCEL_raw(newPack);
+		newDCEL.fixDCEL(newPack);
 		int n2n=(int)(n/2);
 		newPack.setGamma(m2v[n-n2n][n+n2n]);
 

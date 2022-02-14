@@ -122,7 +122,7 @@ public class Triangulation {
 		// =========== create the packing itself
 		PackData p=new PackData((CPScreen)null);
 		PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet);
-		pdcel.fixDCEL_raw(p);
+		pdcel.fixDCEL(p);
 		p.hes=hes;
 		for (int v=1;v<=p.nodeCount;v++) {
 			p.packDCEL.vertices[v].mark=tmpVert[v].mark; // original index in triangulation

@@ -179,7 +179,7 @@ public class PackLite {
 		int rslt=CombDCEL.pruneDCEL(p.packDCEL);
 		packData.vertexMap=null;
 		if (rslt>0) { 
-			p.packDCEL.fixDCEL_raw(p);
+			p.packDCEL.fixDCEL(p);
 			packData.vertexMap=p.packDCEL.oldNew;
 			alp=p.packDCEL.alpha.origin.vertIndx;
 			gam=p.packDCEL.redChain.myEdge.origin.vertIndx;
@@ -380,7 +380,7 @@ public class PackLite {
 
 		PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet);
 		PackData p = new PackData((CPScreen) null);
-		pdcel.fixDCEL_raw(p);
+		pdcel.fixDCEL(p);
 		p.hes = parent.hes;
 		p.setAlpha(indx[1]);
 		p.setGamma(indx[intVertCount+1]);

@@ -119,7 +119,7 @@ public class FlipStrategy extends PackExtender {
 				return 0;
 			baseEdge=ans[0]; // the new hedge
 			if (ans[1]!=null) { // there was a flip
-				packData.packDCEL.fixDCEL_raw(packData);
+				packData.packDCEL.fixDCEL(packData);
 				return 1;
 			}
 			else // only advanced

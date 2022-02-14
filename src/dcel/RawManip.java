@@ -38,12 +38,12 @@ import listManip.VertexMap;
  *       then set 'redChain' null. 
  *   (4) for any new vertices, preliminary data (cent/rad/aim, etc.)
  *       are typically set from appropriat reference vert. 
- *   (5) calling routine runs 'fixDCEL_raw', which computes red
+ *   (5) calling routine runs 'fixDCEL', which computes red
  *   	 chain (if needed) and calls 'FillInside' and 'attachDCEL'.
  *
  * Sometimes '*_raw' may store info in 'PackDCEL.oldNew'. 
  * Many raw routines can be repeated several times before 
- * 'fixDCEL_raw' is needed. I'm going to try this approach:
+ * 'fixDCEL' is needed. I'm going to try this approach:
  * 
  *   (a) Before the first '*_raw' call, set 
  *       'packDCEL.oldNew' null.
@@ -64,6 +64,30 @@ import listManip.VertexMap;
  */
 public class RawManip {
 	
+	  
+	/**
+	 * Create a new PackDCEL seed with n petals
+	 * @param n int
+	 * @return PackDCEL
+	 */
+	public static PackDCEL seed_raw(int n) {
+		if (n<3 || n>1000) 
+			throw new ParserException("'seed' is limited "+
+					"to degree between 3 and 1000");
+		int[][] bouquet=new int[n+2][];
+		bouquet[1]=new int[n+1];
+		for (int j=0;j<n;j++)
+			bouquet[1][j]=j+2;
+		bouquet[1][n]=bouquet[1][0]; // close up
+		for (int k=0;k<n;k++) {
+			bouquet[k+2]=new int [3];
+			bouquet[k+2][0]=(k+1)%n+2;
+			bouquet[k+2][1]=1;
+			bouquet[k+2][2]=((k+n)-1)%n+2;
+		}
+		return CombDCEL.getRawDCEL(bouquet,1);
+	}
+
 	/**
 	 * General "generational" marking routine.
 	 * 'seedstop' entries >0 for "seed" set, <0 for
@@ -178,7 +202,9 @@ public class RawManip {
 		if (he.twin.face!=null && he.twin.face.faceIndx<=0)
 			bdryCase=true;
 				
-		// hold some edges
+		// hold some info
+		Vertex vert=he.origin;
+		Vertex wert=he.twin.origin;
 		HalfEdge he_next=he.next;
 		HalfEdge he_prev=he.prev;
 		HalfEdge he_twin=he.twin;
@@ -198,6 +224,14 @@ public class RawManip {
 
 		// new vertex
 		Vertex midVert = new Vertex(++pdcel.vertCount);
+		if (bdryCase) {
+			midVert.bdryFlag=1;
+			midVert.aim=Math.PI;
+		}
+		else
+			midVert.aim=2.0*Math.PI;
+		midVert.rad=(vert.rad+wert.rad)/2.0;
+		midVert.center=vert.center.add(wert.center).times(.05);
 		pdcel.vertices[pdcel.vertCount] = midVert;
 		midVert.halfedge = newEdge;
 		newEdge.origin = midVert;
@@ -239,7 +273,8 @@ public class RawManip {
 			midVert.redFlag=true;
 			RedEdge new_redge=new RedEdge(newEdge);
 			newEdge.myRedEdge=new_redge;
-			new_redge.rad=redge.rad;
+			new_redge.rad=midVert.rad;
+			new_redge.center=new Complex(midVert.center);
 			
 			new_redge.nextRed=redge.nextRed;
 			redge.nextRed.prevRed=new_redge;
@@ -250,7 +285,6 @@ public class RawManip {
 		
 		// handle right side
 		if (!bdryCase) {
-			midVert.bdryFlag=1;
 			oppV=he_twin.next.next.origin;
 			HalfEdge rightedge=new HalfEdge(midVert);
 			rightedge.twin=new HalfEdge(oppV);
@@ -272,6 +306,8 @@ public class RawManip {
 			if (tredge!=null) {
 				RedEdge new_redge=new RedEdge(newTwin);
 				newTwin.myRedEdge=new_redge;
+				new_redge.rad=tredge.rad;
+				new_redge.center=new Complex(tredge.center);
 				
 				new_redge.nextRed=tredge.nextRed;
 				tredge.nextRed.prevRed=new_redge;
@@ -346,8 +382,7 @@ public class RawManip {
 			// new stuff: vert, bdry edge, twins, and maybe red edge
 			Vertex newV=new Vertex(++pdcel.vertCount);
 			pdcel.vertices[pdcel.vertCount]=newV;
-			newV.vutil=V.vertIndx;
-			newV.aim=-1.0;
+			newV.cloneData(V);
 			newV.bdryFlag=1;
 			newV.redFlag=true;
 
@@ -439,6 +474,7 @@ public class RawManip {
 		// create newV and fix spokes
 		Vertex newV=new Vertex(++pdcel.vertCount);
 		pdcel.vertices[pdcel.vertCount]=newV;
+		newV.cloneData(V);
 		if (uedge.prev.twin!=wedge) {
 			HalfEdge he=uedge.prev.twin;
 			do {
@@ -447,8 +483,6 @@ public class RawManip {
 			} while (he!=wedge);
 		}
 		V.halfedge=wedge;
-		newV.vutil=V.vertIndx;
-		newV.aim=2.0*Math.PI;
 		
 		// deBugging.DCELdebug.vertConsistency(pdcel,V.vertIndx);
 
@@ -815,29 +849,30 @@ public class RawManip {
 		  Vertex vert=pdcel.vertices[v];
 		  HalfEdge out_edge=vert.halfedge;
 		  HalfEdge in_edge=out_edge.twin.next.twin;
-		  HalfEdge twin_prev=out_edge.twin.prev;
+		  HalfEdge bdryedge=out_edge.twin;
+		  HalfEdge twin_prev=bdryedge.prev;
 		  HalfEdge twin_next=in_edge.twin.next;
-		  DcelFace ideal=out_edge.twin.face;
+		  DcelFace ideal=bdryedge.face;
 		  
 		  // check if bdry component has just two edges:
 		  //   toss 'oldedge', reconnect, and toss the red chain.
-		  if (out_edge.twin.next.next==out_edge.twin) {
+		  if (bdryedge.next.next==bdryedge) {
 
-			  Vertex wert=out_edge.twin.origin;
+			  Vertex wert=bdryedge.origin;
 			  if (wert.halfedge==in_edge)
-				  wert.halfedge=out_edge.twin;
+				  wert.halfedge=bdryedge;
 			  
 			  // save connections so we can orphan 'in_edge'
 			  HalfEdge oldnxt=in_edge.next;
 			  HalfEdge oldprev=in_edge.prev;
 			  
-			  out_edge.twin.next=oldnxt;
-			  oldnxt.prev=out_edge.twin;
+			  bdryedge.next=oldnxt;
+			  oldnxt.prev=bdryedge;
 			  
-			  out_edge.twin.prev=oldprev;
-			  oldprev.next=out_edge.twin;
+			  bdryedge.prev=oldprev;
+			  oldprev.next=bdryedge;
 			  
-			  out_edge.twin.face=in_edge.face;
+			  bdryedge.face=in_edge.face;
 			  
 			  vert.bdryFlag=wert.bdryFlag=0;
 			  vert.redFlag=wert.redFlag=false;
@@ -848,21 +883,19 @@ public class RawManip {
 		  }
 		  // check if the bdry has just three edges: create
 		  //    a new common face, toss red chain
-		  if (out_edge.twin.next.next.next==out_edge.twin) {
-			  DcelFace dface=new DcelFace();;
-			  out_edge.twin.face=dface;
-			  out_edge.twin.face.edge=out_edge.twin;
-			  out_edge.twin.next.face=dface;
-			  out_edge.twin.next.next.face=dface;
+		  if (bdryedge.next.next.next==bdryedge) {
+			  DcelFace dface=new DcelFace();
+			  Vertex wert=bdryedge.origin;
+			  Vertex uert=bdryedge.prev.origin;
+			  bdryedge.face=dface;
+			  bdryedge.face.edge=bdryedge;
+			  bdryedge.next.face=dface;
+			  bdryedge.next.next.face=dface;
 			  out_edge.next.origin.bdryFlag=0;
 			  out_edge.next.origin.redFlag=false;
-			  out_edge.origin.aim=2.0*Math.PI;
-			  out_edge.next.origin.bdryFlag=0;
-			  out_edge.next.origin.redFlag=false;
-			  out_edge.next.origin.aim=2.0*Math.PI;
-			  out_edge.next.next.origin.bdryFlag=0;
-			  out_edge.next.next.origin.redFlag=false;
-			  out_edge.next.next.origin.aim=2.0*Math.PI;
+			  vert.aim=wert.aim=uert.aim=2.0*Math.PI;
+			  vert.bdryFlag=wert.bdryFlag=uert.bdryFlag=0;
+			  vert.redFlag=wert.redFlag=uert.redFlag=false;
 			  pdcel.redChain=null;
 			  pdcel.triData=null;
 			  return 3;

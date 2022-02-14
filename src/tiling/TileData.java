@@ -175,7 +175,7 @@ public class TileData {
 			throw new CombException("");
 		}
 		PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet);
-		pdcel.fixDCEL_raw(newPack);
+		pdcel.fixDCEL(newPack);
 		newPack.status=true;
 		
 		// all radii to .5
@@ -409,7 +409,7 @@ public class TileData {
 			throw new CombException(
 					"Failed to create using 'bouquet'");
 		PackData thePack=new PackData(null);
-		pdcel.fixDCEL_raw(thePack);
+		pdcel.fixDCEL(thePack);
 		thePack.status=true;
 		
 		// duplicate tile data, but duals, quads, wgTiles, and 
@@ -614,7 +614,7 @@ public class TileData {
 				}
 			}
 		}
-		newPD.packDCEL.fixDCEL_raw(newPD); 
+		newPD.packDCEL.fixDCEL(newPD); 
 		// DCELdebug.printBouquet(newPD.packDCEL);
 
 		// set marks: 1=barycenters, 2=tile verts, 3=new vertices
@@ -648,7 +648,7 @@ public class TileData {
 		//   of the barycenter circle and subtracting 'bcbase'.
 		workingTD.wgTileCount=newPD.faceCount;
 		RawManip.hexBaryRefine_raw(newPD.packDCEL,true);
-		newPD.packDCEL.fixDCEL_raw(newPD);
+		newPD.packDCEL.fixDCEL(newPD);
 		int bcbase=newPD.nodeCount-workingTD.wgTileCount;
 		// indexed from 1 to wgTileCount
 		workingTD.wgTiles=new Tile[workingTD.wgTileCount+1];

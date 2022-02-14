@@ -136,11 +136,11 @@ public class PackDCEL {
 */    
 	
 	/**
-	 * Just call 'fixDCEL_raw' with 'prune' false. 
+	 * Just call 'fixDCEL' with 'prune' false. 
 	 * @param p PackData
 	 */
-	public void fixDCEL_raw(PackData p) {
-		fixDCEL_raw(p,false);
+	public void fixDCEL(PackData p) {
+		fixDCEL(p,false);
 	}
 	
 	/**
@@ -160,16 +160,16 @@ public class PackDCEL {
 	 * @param p PackData
 	 * @param prune boolean
 	 */
-	public void fixDCEL_raw(PackData p,boolean prune) {
+	public void fixDCEL(PackData p,boolean prune) {
 		if (p==null)
 			p=this.p;
 		try {
 		  // may need new red chain
 		  if (redChain==null) {
 			  CombDCEL.redchain_by_edge(this, null, this.alpha,prune);
-		  } // DCELdebug.printRedChain(redChain);
-		  
-		  // redChain should now exist, but can be in error, so take two trys
+		  } // DCELdebug.rededgecenters(this);
+		  // redChain should now exist, but can be in error, so take 
+		  //     two trys
 		  try {
 			  CombDCEL.fillInside(this); // p.getCenter(300);
 		  }
@@ -560,7 +560,7 @@ public class PackDCEL {
 
 	/** 
 	 * Return integer array with the generations of verts, 
-	 * generation "1" being those v with 'VData[].vutil' 
+	 * generation "1" being those v with 'vutil' 
 	 * non-zero. Additional info is returned via 'uP'.  
 	 * @param max int, if max>0, stop at last with gen = max.
 	 * @param uP UtilPacket; instantiated by calling routine: 
@@ -606,8 +606,8 @@ public class PackDCEL {
 						last_vert=w;
 						genlist.add(w);
 						hits=true;
-						he=he.prev.twin; // cclw
-					} 
+					}
+					he=he.prev.twin; // cclw
 				} while (he!=vert.halfedge);
 			} while (vertlist.size() > 0);
 			gen_count++;
@@ -796,7 +796,9 @@ public class PackDCEL {
 	public int d_draw_bdry_seg(int n,boolean do_label,boolean do_circle,
 			Color ecol,int thickness) {
 		SideData epair=null;
-		boolean debug=false;
+		
+// debugging		
+		boolean debug=true; // false;
 	  
 		if (pairLink==null || n<1 || n>pairLink.size() 
 				|| (epair=(SideData)pairLink.get(n))==null

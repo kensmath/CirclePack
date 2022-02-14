@@ -1037,7 +1037,7 @@ public class Graphene extends PackExtender {
 		int count=0;
 		try {
 			// combinatorics, aims
-			packData.packDCEL.fixDCEL_raw(packData);
+			packData.packDCEL.fixDCEL(packData);
 			packData.set_aim_default();
 			
 			// set boundary, pole radii
@@ -1162,7 +1162,7 @@ public class Graphene extends PackExtender {
   	  	  	// adjoin at alpha's and one vert either side
   	  		CombDCEL.adjoin(stitchBase.packDCEL,
   	  				rightPack.packDCEL,v,rw,2);
-  	  		stitchBase.packDCEL.fixDCEL_raw(stitchBase);
+  	  		stitchBase.packDCEL.fixDCEL(stitchBase);
   	  	  	
   	  	  	// these shouldn't have changed indices
   	  	  	northpole=v;
@@ -1177,7 +1177,7 @@ public class Graphene extends PackExtender {
   	  	northpole=2;
   	  	southpole=3;
   	  	
-  	  	stitchBase.packDCEL.fixDCEL_raw(stitchBase);
+  	  	stitchBase.packDCEL.fixDCEL(stitchBase);
   	  	stitchBase.setAlpha(1);
   	  	stitchBase.setGamma(2);
   	  	cpCommand(stitchBase,"set_rad .075 a");
@@ -1328,7 +1328,7 @@ public class Graphene extends PackExtender {
 		CombDCEL.redchain_by_edge(
 				  newPack.packDCEL,hlink,
 				  newPack.packDCEL.alpha,true);
-		newPack.packDCEL.fixDCEL_raw(newPack);
+		newPack.packDCEL.fixDCEL(newPack);
   	  	
   	  	// do we need to find an appropriate bdry vert?
 		if (!is1good) {

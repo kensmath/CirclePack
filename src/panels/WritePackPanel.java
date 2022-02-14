@@ -359,7 +359,7 @@ public class WritePackPanel extends javax.swing.JPanel {
 				tileBox = new JCheckBox();
 				jPanel3.add(tileBox);
 				tileBox.setText("Tiling");
-				tileBox.setSelected(true);
+				tileBox.setSelected(false);
 			}
 		}
 		return jPanel3;

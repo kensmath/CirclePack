@@ -148,7 +148,7 @@ public class BrooksQuad extends PackExtender {
 		packData.packDCEL.vertices[pnc-1]=newv;
 
 		// process and attach 
-		packData.packDCEL.fixDCEL_raw(packData);
+		packData.packDCEL.fixDCEL(packData);
 
 		// set the colors
 		packData.setCircleColor(packData.nodeCount-1,
@@ -207,7 +207,7 @@ public class BrooksQuad extends PackExtender {
 		packData.packDCEL.vertices[pnc]=oldP;
 		packData.packDCEL.vertices[pnc-1]=newv;
 
-		packData.packDCEL.fixDCEL_raw(packData);
+		packData.packDCEL.fixDCEL(packData);
 
 		// set the colors
 		packData.setCircleColor(packData.nodeCount-1,

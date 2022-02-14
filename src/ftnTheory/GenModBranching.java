@@ -709,7 +709,7 @@ public class GenModBranching extends PackExtender {
 		}
 		
 		// update the packing/dcel first
-		packData.packDCEL.fixDCEL_raw(packData);
+		packData.packDCEL.fixDCEL(packData);
 
 		// first get the layout circumventing the branch points
 		HalfLink outerOrder=CombDCEL.partialTree(packData.packDCEL,

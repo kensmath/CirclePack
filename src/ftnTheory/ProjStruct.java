@@ -918,7 +918,7 @@ public class ProjStruct extends PackExtender {
 			double A,double B) {
 		if (p.getSidePairs().size()>5) { // want just 2 side-pairings
 			CombDCEL.torus4Sides(p.packDCEL);
-			p.packDCEL.fixDCEL_raw(p);
+			p.packDCEL.fixDCEL(p);
 		}
 		if (p.getSidePairs().size()!=5) {
 			throw new CombException("failed to layout 2-side paired edges");

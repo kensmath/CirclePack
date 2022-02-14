@@ -142,7 +142,7 @@ public class BeltramiFlips extends PackExtender {
 				throw new ParserException("Problem with 'goOrder'");
 			}
 			if (count>0) {
-				packData.packDCEL.fixDCEL_raw(packData);
+				packData.packDCEL.fixDCEL(packData);
 				// resort the edges
 				double []iln=sortEdges();
 				CirclePack.cpb.msg(iln[0]+" illegal edges, norm "+iln[1]);
@@ -336,7 +336,7 @@ public class BeltramiFlips extends PackExtender {
 			HalfEdge newhe=RawManip.flipEdge_raw(packData.packDCEL, null);
 			if (newhe==null)
 				return 0;
-			packData.packDCEL.fixDCEL_raw(packData);
+			packData.packDCEL.fixDCEL(packData);
 			return 1;
 		} 
 		return 0;

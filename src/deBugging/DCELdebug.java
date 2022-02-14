@@ -31,6 +31,16 @@ public class DCELdebug {
 	static File tmpdir=new File(System.getProperty("java.io.tmpdir"));
 	static int rankStamp=1; // progressive number to distinguish file instances
 	
+	public static void rededgecenters(PackDCEL pdcel) {
+		if (pdcel.redChain==null) 
+			return;
+		RedEdge rtrace=pdcel.redChain;
+		do {
+			System.out.println(" rededge "+rtrace+" center is "+rtrace.getCenter());
+			rtrace=rtrace.nextRed;
+		} while(rtrace!=pdcel.redChain);
+	}
+	
 	public static void listRedThings(PackDCEL pdcel) {
 		int safety=1000;
 		

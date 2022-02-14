@@ -1026,7 +1026,7 @@ public class MicroGrid extends PackExtender {
   		  	CombDCEL.redchain_by_edge(
   		  			qPack.packDCEL,hlink,
   		  			qPack.packDCEL.alpha,true);
-  		  	qPack.packDCEL.fixDCEL_raw(qPack);
+  		  	qPack.packDCEL.fixDCEL(qPack);
 			CirclePack.cpb.swapPackData(qPack,1,true);
 	    	
     		CPBase.ClosedPath=holdPath;
@@ -2375,7 +2375,7 @@ public class MicroGrid extends PackExtender {
 			}
 		} // end of for loop on f
 		
-		q.packDCEL.fixDCEL_raw(q);
+		q.packDCEL.fixDCEL(q);
 		return count;
 	}
 	

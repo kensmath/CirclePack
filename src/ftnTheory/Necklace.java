@@ -207,7 +207,7 @@ public class Necklace extends PackExtender {
 			// ------------------ now, do the adjoin 
 			topPack.packDCEL=CombDCEL.adjoin(topPack.packDCEL,
 					bottomPack.packDCEL,vtop,vbottom,length);
-			topPack.packDCEL.fixDCEL_raw(topPack);
+			topPack.packDCEL.fixDCEL(topPack);
 			
 			// save the resulting packing as the parent packing
 			int pnum=packData.packNum;
@@ -316,7 +316,7 @@ System.err.println("starting bottomHemi:");
 
 			topHemi.packDCEL=CombDCEL.adjoin(topHemi.packDCEL,
 					bottomHemi.packDCEL,2,b,N*2);
-			topHemi.packDCEL.fixDCEL_raw(topHemi);
+			topHemi.packDCEL.fixDCEL(topHemi);
 
 			cpCommand(topHemi,"max_pack");
 			
@@ -443,7 +443,7 @@ System.err.println("starting bottomHemi:");
 //System.err.println("adjoining right");
 			myPacking.packDCEL=CombDCEL.adjoin(myPacking.packDCEL,
 					rightPack.packDCEL,2,rightIndx,2);
-			myPacking.packDCEL.fixDCEL_raw(myPacking);
+			myPacking.packDCEL.fixDCEL(myPacking);
 			
 			// save original index info
 			Iterator<EdgeSimple> vM=rightPack.vertexMap.iterator();
@@ -471,7 +471,7 @@ System.err.println("starting bottomHemi:");
 
 			myPacking.packDCEL=CombDCEL.adjoin(myPacking.packDCEL,
 					leftPack.packDCEL,6,leftIndx,2);
-			myPacking.packDCEL.fixDCEL_raw(myPacking);
+			myPacking.packDCEL.fixDCEL(myPacking);
 
 			// save original index infor
 			Iterator<EdgeSimple> vM=leftPack.vertexMap.iterator();

@@ -467,7 +467,7 @@ public class WeldManager extends PackExtender {
 		if (ans<=0)
 			CirclePack.cpb.errMsg("unweld: failed to get red chain");
 
-		q.packDCEL.fixDCEL_raw(q);
+		q.packDCEL.fixDCEL(q);
 		return q;
 	}		
 
@@ -932,7 +932,7 @@ public class WeldManager extends PackExtender {
 
 			p.packDCEL=CombDCEL.adjoin(p.packDCEL,
 				q.packDCEL, v_orig, w_orig, count);
-			p.packDCEL.fixDCEL_raw(p);
+			p.packDCEL.fixDCEL(p);
 				// TODO: note that 'adjoin' pastes p clockwise, q
 				//   counterclockwise; no problem for full bdry, but 
 				//   with partial bdry's, have to do something else.
@@ -991,7 +991,7 @@ public class WeldManager extends PackExtender {
 			return 0;
 		}
 		
-		p.packDCEL.fixDCEL_raw(p);
+		p.packDCEL.fixDCEL(p);
 		return p.nodeCount;
 
 	}

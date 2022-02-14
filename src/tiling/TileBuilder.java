@@ -247,7 +247,7 @@ public class TileBuilder {
 							}
 							
 							tileAdded[t] = 1;
-							masterPack.packDCEL.fixDCEL_raw(masterPack);
+							masterPack.packDCEL.fixDCEL(masterPack);
 
 							// fix the new tile's data
 							updateTileVerts(newp.tileData,masterPack.vertexMap);
@@ -828,7 +828,7 @@ public class TileBuilder {
 								masterPack.packDCEL,
 								masterPack.packDCEL, v, v, 4);
 						masterPack.vertexMap=masterPack.packDCEL.oldNew;
-						masterPack.packDCEL.fixDCEL_raw(masterPack);
+						masterPack.packDCEL.fixDCEL(masterPack);
 						
 						// pasted to self, so fix the tile data
 						updateTileVerts(growTD, masterPack.vertexMap);

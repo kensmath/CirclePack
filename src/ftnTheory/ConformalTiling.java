@@ -1806,7 +1806,7 @@ public class ConformalTiling extends PackExtender {
 			}
 		}
 		
-		newPD.packDCEL.fixDCEL_raw(newPD);
+		newPD.packDCEL.fixDCEL(newPD);
 		return newPD;
 	}
 	
@@ -2829,9 +2829,9 @@ public class ConformalTiling extends PackExtender {
 						if (debug) {
 							DCELdebug.printRedChain(pdc1.redChain);
 							DCELdebug.printRedChain(pdc2.redChain);
-							pdc1.fixDCEL_raw(CPBase.packings[1]);
+							pdc1.fixDCEL(CPBase.packings[1]);
 							CPBase.packings[1].attachDCEL(pdc1);
-							pdc2.fixDCEL_raw(CPBase.packings[2]);
+							pdc2.fixDCEL(CPBase.packings[2]);
 							CPBase.packings[2].attachDCEL(pdc2);
 
 							debug=false;
@@ -2839,7 +2839,7 @@ public class ConformalTiling extends PackExtender {
 						
 						PackDCEL pdcel=CombDCEL.adjoin(pdc1, pdc2, v, w, n);
 						p.vertexMap=pdcel.oldNew;
-						pdcel.fixDCEL_raw(null);
+						pdcel.fixDCEL(null);
 						
 // debugging				
 						if (debug) { // debug=true;
@@ -2875,7 +2875,7 @@ public class ConformalTiling extends PackExtender {
 		} // end of while on 'next'
 		
 		// attach updated 'tData'
-		p.packDCEL.fixDCEL_raw(p);
+		p.packDCEL.fixDCEL(p);
 		p.tileData=tData;
 		return p;
 	}

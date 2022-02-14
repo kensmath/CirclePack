@@ -652,7 +652,7 @@ public class RationalMap extends PackExtender {
 		domainPack.packDCEL=CombDCEL.adjoin(domainPack.packDCEL,
 				domainPack.packDCEL, es1.startV,es2.endV,length);
 		domainPack.vertexMap=domainPack.packDCEL.oldNew;
-		domainPack.packDCEL.fixDCEL_raw(domainPack);
+		domainPack.packDCEL.fixDCEL(domainPack);
 		
 		// remove these 'EdgeSeg's from 'masterESlist'
 		masterESlist.remove((EdgeSeg)es1);
@@ -720,7 +720,7 @@ public class RationalMap extends PackExtender {
 		domainPack.packDCEL=CombDCEL.adjoin(domainPack.packDCEL,
 				slitPack.packDCEL, es.startV,tES.endV,length);
 		VertexMap holdvm=domainPack.packDCEL.oldNew;
-		domainPack.packDCEL.fixDCEL_raw(domainPack);
+		domainPack.packDCEL.fixDCEL(domainPack);
 		domainPack.vertexMap=holdvm;
 		
 		// must remove the 'EdgeSeg' from 'masterESlist'

@@ -51,7 +51,7 @@ public class PackCreation {
 	
 		PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet);
 		pdcel.redChain=null;
-		pdcel.fixDCEL_raw(p);
+		pdcel.fixDCEL(p);
 		p.hes=1;
 	
 		// When all radii are equal, every face is equilateral 
@@ -155,7 +155,7 @@ public class PackCreation {
 			pdcel=CombDCEL.adjoin(pdcel,pdcel,top,bottom,mx);
 		}
 		
-		pdcel.fixDCEL_raw(workPack);
+		pdcel.fixDCEL(workPack);
 		return workPack;
 	}
 
@@ -171,7 +171,7 @@ public class PackCreation {
 		if (n == 0)
 			n = 1;
 		double rad = 1.0 / (2.0 * n);
-		PackDCEL pdcel = CombDCEL.seed_raw(6);
+		PackDCEL pdcel = RawManip.seed_raw(6);
 		PackData p = new PackData(null);
 		pdcel.p = p;
 		CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha, false);
@@ -186,7 +186,7 @@ public class PackCreation {
 		if (debug)
 			DCELdebug.printRedChain(pdcel.redChain);
 
-		pdcel.fixDCEL_raw(p);
+		pdcel.fixDCEL(p);
 		for (int v = 1; v <= p.nodeCount; v++)
 			p.setRadius(v, rad);
 		return p;
@@ -203,10 +203,10 @@ public class PackCreation {
 	public static PackData seed(int n,int heS) {
 		if (n<3)
 			throw new ParserException("'seed' usage: n must be at least 3");
-		PackDCEL pdcel=CombDCEL.seed_raw(n);
+		PackDCEL pdcel=RawManip.seed_raw(n);
 		pdcel.gamma=pdcel.alpha.twin;
 		PackData p=new PackData(null);
-		pdcel.fixDCEL_raw(p);
+		pdcel.fixDCEL(p);
 		p.activeNode=pdcel.alpha.origin.vertIndx;
 		p.set_aim_default();
 		
@@ -484,7 +484,7 @@ public class PackCreation {
 		// adjoin 2
 		triPent.packDCEL=CombDCEL.adjoin(triPent.packDCEL,
 				p.packDCEL,1,1,sidelength);
-		triPent.packDCEL.fixDCEL_raw(triPent);
+		triPent.packDCEL.fixDCEL(triPent);
 		triPent.vertexMap=triPent.packDCEL.oldNew;
 		int newv=triPent.vertexMap.findW(3);
 		triPent.swap_nodes(newv,7);
@@ -496,7 +496,7 @@ public class PackCreation {
 		// adjoin 3
 		triPent.packDCEL=CombDCEL.adjoin(triPent.packDCEL,
 				p.packDCEL,7,1,2*sidelength);
-		triPent.packDCEL.fixDCEL_raw(triPent);
+		triPent.packDCEL.fixDCEL(triPent);
 		triPent.vertexMap=triPent.packDCEL.oldNew;
 		int new5=triPent.vertexMap.findW(4);
 		int new6=triPent.vertexMap.findW(5);
@@ -523,7 +523,7 @@ public class PackCreation {
 		// adjoin 2
 		triPent.packDCEL=CombDCEL.adjoin(triPent.packDCEL,
 				p.packDCEL,5,1,sidelength);
-		triPent.packDCEL.fixDCEL_raw(triPent);
+		triPent.packDCEL.fixDCEL(triPent);
 		triPent.vertexMap=triPent.packDCEL.oldNew;
 		
 		boolean debug=false; // debug=true;
@@ -542,7 +542,7 @@ public class PackCreation {
 		// adjoin 3
 		triPent.packDCEL=CombDCEL.adjoin(triPent.packDCEL,
 				p.packDCEL,newCorner,1,sidelength);
-		triPent.packDCEL.fixDCEL_raw(triPent);
+		triPent.packDCEL.fixDCEL(triPent);
 		triPent.vertexMap=triPent.packDCEL.oldNew;
 		if (debug) {
 			Iterator<EdgeSimple> tPit=triPent.vertexMap.iterator();
@@ -559,7 +559,7 @@ public class PackCreation {
 		// adjoin 4
 		triPent.packDCEL=CombDCEL.adjoin(triPent.packDCEL,
 				p.packDCEL,newGamma,1,2*sidelength);
-		triPent.packDCEL.fixDCEL_raw(triPent);
+		triPent.packDCEL.fixDCEL(triPent);
 		triPent.vertexMap=triPent.packDCEL.oldNew;
 		if (debug) {
 			Iterator<EdgeSimple> tPit=triPent.vertexMap.iterator();
@@ -639,7 +639,7 @@ public class PackCreation {
 		newv=base.vertexMap.findW(4);
 		pdcel.swapNodes(newv,4);
 		
-		base.packDCEL.fixDCEL_raw(base);
+		base.packDCEL.fixDCEL(base);
 		return base;
 	}
 
@@ -710,7 +710,7 @@ public class PackCreation {
 			int new3=heap.vertexMap.findW(3);
 			pdcel.swapNodes(new3,3);
 			pdcel.swapNodes(new4,4);
-			pdcel.fixDCEL_raw(heap);
+			pdcel.fixDCEL(heap);
 			generation++;
 		}
 		
@@ -881,7 +881,7 @@ public class PackCreation {
 		pdcel.swapNodes(new4,4);
 		pdcel.swapNodes(new5,1);
 
-		pdcel.fixDCEL_raw(newPack);
+		pdcel.fixDCEL(newPack);
 		return newPack;
 	}
 	
@@ -907,7 +907,7 @@ public class PackCreation {
 		int v1=blink.get(i);
 		p1.packDCEL=CombDCEL.adjoin(p1.packDCEL,
 				p2.packDCEL,v1,v2,n);
-		p1.packDCEL.fixDCEL_raw(p1);
+		p1.packDCEL.fixDCEL(p1);
 		
 		int centerV=p1.vertexMap.findW(1);
 
@@ -954,7 +954,7 @@ public class PackCreation {
 	 * @return PackDCEL
 	 */
 	public static PackDCEL pentagonal_dcel(int gens) {
-		PackDCEL base=CombDCEL.seed_raw(5);
+		PackDCEL base=RawManip.seed_raw(5);
 		RawManip.swapNodes_raw(base,1,6);
 		CombDCEL.redchain_by_edge(base, null,null,false);
 		CombDCEL.fillInside(base);
@@ -1312,7 +1312,7 @@ public class PackCreation {
 		
 		PackDCEL newDCEL=CombDCEL.getRawDCEL(bouquet,alp);
 		PackData p=new PackData(null);
-		newDCEL.fixDCEL_raw(p);
+		newDCEL.fixDCEL(p);
 		p.set_aim_default();
 		p.setAlpha(alp);
 		p.setGamma(gam);
@@ -1362,7 +1362,7 @@ public class PackCreation {
 		pdcel.setAlpha(3*e+h+1, null,false);
 		growWheel.vlist=new NodeLink();
 		growWheel.vlist.add(3*e+h+1); // list center verts of tiles added
-		pdcel.fixDCEL_raw(growWheel);
+		pdcel.fixDCEL(growWheel);
 		growWheel.elist=new EdgeLink(growWheel,"b");
 		
 		// mark the boundary
@@ -1395,7 +1395,7 @@ public class PackCreation {
 			PackData tempPack=growWheel.copyPackTo();
 			PackData tempReverse=growWheel.copyPackTo();
 			PackDCEL tmpdcel=tempReverse.packDCEL.reverseOrientation();
-			tmpdcel.fixDCEL_raw(tempReverse);
+			tmpdcel.fixDCEL(tempReverse);
 			
 			tempPack.vlist=growWheel.vlist.makeCopy();
 			tempReverse.vlist=growWheel.vlist.makeCopy();
@@ -1500,7 +1500,7 @@ public class PackCreation {
 			
 			// new generation is reverse oriented
 			growWheel.packDCEL.reverseOrientation();
-			pdcel.fixDCEL_raw(growWheel);
+			pdcel.fixDCEL(growWheel);
 
 			generation++;
 
@@ -1575,7 +1575,7 @@ public class PackCreation {
 		growWheel.vlist.add(3*e+h+1); // list center verts of tiles added
 		pdcel.swapNodes(1+e,2);
 		pdcel.swapNodes(1+e+h,3);
-		pdcel.fixDCEL_raw(growWheel);
+		pdcel.fixDCEL(growWheel);
 		growWheel.elist=new EdgeLink(growWheel,"b");
 		
 		// mark the boundary
@@ -1608,7 +1608,7 @@ public class PackCreation {
 			PackData tempPack=growWheel.copyPackTo();
 			PackData tempReverse=growWheel.copyPackTo();
 			PackDCEL tmpdcel=tempReverse.packDCEL.reverseOrientation();
-			tmpdcel.fixDCEL_raw(tempReverse);
+			tmpdcel.fixDCEL(tempReverse);
 			
 			tempPack.vlist=growWheel.vlist.makeCopy();
 			tempReverse.vlist=growWheel.vlist.makeCopy();
@@ -1713,7 +1713,7 @@ public class PackCreation {
 			
 			// new generation is reverse oriented
 			growWheel.packDCEL.reverseOrientation();
-			pdcel.fixDCEL_raw(growWheel);
+			pdcel.fixDCEL(growWheel);
 
 			generation++;
 
@@ -2347,7 +2347,7 @@ public class PackCreation {
 		PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet,1);
 		PackData newPack=new PackData(null);
 		newPack.hes=hees;
-		pdcel.fixDCEL_raw(newPack);
+		pdcel.fixDCEL(newPack);
 		
 		// mark the vertices 1,2,3 for A,B,C, resp.
 		for (int v=1;v<=newPack.nodeCount;v++) {

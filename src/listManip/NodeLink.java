@@ -382,18 +382,24 @@ public class NodeLink extends LinkedList<Integer> {
 					if (bdrycomp==null || bdrycomp.size()==0 || bdrycomp.containsV(last)<0)
 						throw new CombException("vertices "+first+" and "+last+" are not "+
 								"on the same bdry component");
-					Iterator<Integer> bdst=bdrycomp.iterator();
-					int w=first;
-					while (bdst.hasNext()) {
-						w=bdst.next();
-						if (w==last)
-							break;
-						add(w);
-						count++;
+					if (first!=last) {
+						Iterator<Integer> bdst=bdrycomp.iterator();
+						int w=first;
+						while (bdst.hasNext()) {
+							w=bdst.next();
+							if (w==last)
+								break;
+							add(w);
+							count++;
+						}
+						if (w==last) {
+							add(w);
+							count++;
+						}
 					}
-					if (w==last) {
-						add(w);
-						count++;
+					else {
+						abutMore(bdrycomp);
+						count +=bdrycomp.size();
 					}
 				}
 				if (pair_str==null || bad) { // whole boundary

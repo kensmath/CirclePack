@@ -298,7 +298,7 @@ public class JammedPack extends PackExtender {
 			}
 			
 			// fix the packing
-			packData.packDCEL.fixDCEL_raw(packData);
+			packData.packDCEL.fixDCEL(packData);
 			cpCommand("pave "+bary); // repave
 				
 			// prepare in case of 'undo'
@@ -360,7 +360,7 @@ public class JammedPack extends PackExtender {
 				packData.tileData=null;
 				int bary=RawManip.rmEdge_raw(packData.packDCEL,edge);
 				if (bary>0) {
-					packData.packDCEL.fixDCEL_raw(packData);
+					packData.packDCEL.fixDCEL(packData);
 					cpCommand("pave "+bary); // repave
 					addrmPack=packData.copyPackTo();
 					count += 1;

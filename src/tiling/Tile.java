@@ -213,7 +213,7 @@ public class Tile extends Face {
 			
 			PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet,1);
 			PackData p=new PackData(null);
-			pdcel.fixDCEL_raw(p);
+			pdcel.fixDCEL(p);
 			p.setGamma(2);
 			p.activeNode=1;
 			p.hes=0;
@@ -253,13 +253,13 @@ public class Tile extends Face {
 		}
 		
 		// general n-gon case, n>=2
-		PackDCEL pdcel=CombDCEL.seed_raw(2*vertCount);
+		PackDCEL pdcel=RawManip.seed_raw(2*vertCount);
 		CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha, false);
 		CombDCEL.fillInside(pdcel);
 		ArrayList<Integer> barycents=RawManip.hexBaryRefine_raw(pdcel, true);
 		
 		PackData p=new PackData(null);
-		pdcel.fixDCEL_raw(p);
+		pdcel.fixDCEL(p);
 		
 		// mark various vertices
 		p.setVertMark(1,1);
