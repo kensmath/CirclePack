@@ -10,9 +10,10 @@ import allMains.CirclePack;
 import baryStuff.BaryPoint;
 import circlePack.PackControl;
 import complex.Complex;
-import dcel.SideData;
+import dcel.DcelFace;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
+import dcel.SideData;
 import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.EuclMath;
@@ -254,7 +255,6 @@ public class DisplayParser {
 			} // end of 'b'
 			case 'g': // draw 'ClosedPath'; use color/thickness, default, blue/3
 			{
-				Color holdcolor = null;
 				if (CPBase.ClosedPath == null)
 					break;
 				// default to larger thickness (if not overridden)
@@ -263,9 +263,9 @@ public class DisplayParser {
 					cpScreen.setLineThickness(3);
 				}
 				// default color, may be overridden below
+				Color holdcolor = cpScreen.imageContextReal.getColor();
 				cpScreen.imageContextReal.setColor(Color.BLUE);
 				if (dispFlags.colorIsSet) { // if specified
-					holdcolor = cpScreen.imageContextReal.getColor();
 					cpScreen.imageContextReal.setColor(dispFlags.getColor());
 					cpScreen.drawPath(CPBase.ClosedPath);
 					cpScreen.imageContextReal.setColor(holdcolor);
@@ -273,29 +273,55 @@ public class DisplayParser {
 				else {
 					cpScreen.drawPath(CPBase.ClosedPath);
 				}
+				cpScreen.imageContextReal.setColor(holdcolor);
+				if (thickhold>=0)
+					cpScreen.setLineThickness(thickhold);
 				count++;
 				break;
 			} // end of 'g'
 			
-			// show recomputed faces and/or circles in given face order;
-			//   if no list is given, then default to drawing order.
-			// NOTE: this may change stored centers
+			// show recomputed faces and/or circles in given 
+			//   face order; no list defaults to drawing order.
+			//   Intention is to lay out subsequent faces based
+			//   on earlier faces in this list (if such exists).
+			// NOTE: this may change stored centers.
 			case 'B': // both faces and circles
 			case 'C': // circles
 			case 'F': // faces
 			{
-
-				// a second 'F' indicates that layout uses redChain data
-				boolean useRed=false;
-				if (sub_cmd.length()>0 && sub_cmd.startsWith("F"))
-					useRed=true;
 				HalfLink hlink=null;
 				if (items.size() == 0) { // default to drawing order (plus stragglers 
 										 // (i.e., not needed in drawing order)) 
 					hlink=p.packDCEL.fullOrder;
 				}
-				else { // there is a given list
-					hlink=new HalfLink(p,items);
+				else { // there is a given list of face indices
+					try {
+					hlink=new HalfLink();
+					p.packDCEL.zeroFUtil();
+					FaceLink flink=new FaceLink(p,items);
+					Iterator<Integer> fis=flink.iterator();
+					while (fis.hasNext()) {
+						DcelFace face=p.packDCEL.faces[fis.next()];
+						HalfEdge he=face.edge;
+						
+						// some nghb face already laid out? If so,
+						//   add shared edge to 'hlink'.
+						boolean hit=false;
+						do {
+							DcelFace oppface=he.twin.face;
+							if (oppface.faceIndx>=0 && oppface.futil!=0) {
+								hlink.add(he);
+								he.face.futil=1;
+								hit=true;
+							}
+							he=he.next;
+						} while (!hit && he!=face.edge);
+						if (!hit) {
+							hlink.add(face.edge);
+							face.futil=1;
+						}
+					}
+					} catch(Exception ex) {}
 				}
 				if (hlink==null || hlink.size()==0)
 					break;

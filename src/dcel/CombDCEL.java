@@ -376,7 +376,7 @@ public class CombDCEL {
 		rtrace.prevRed=pdcel.redChain;
 		pdcel.redChain=pdcel.redChain.nextRed;
 		
-		if (debug) { // debug=true;
+		if (debug) { // debug=true; DCELdebug.printRedChain(pdcel.redChain);
 			DCELdebug.drawTmpRedChain(pdcel.p,pdcel.redChain);
 		}
 
@@ -714,6 +714,12 @@ public class CombDCEL {
 			}
 			rtrace=rtrace.nextRed;
 		} while (rtrace!=redchain); // DCELdebug.printRedChain(redchain);
+		
+		// very rarely, 'nextv' could be empty. The put alpha in it
+		if (nextv==null || nextv.size()==0) {
+			nextv.add(pdcel.alpha.origin.vertIndx);
+			vstat[pdcel.alpha.origin.vertIndx]=1;
+		}
 
 		// use two-list procedure to mark all interiors as 1.
 		//   watch for boundary verts, which would indicate error
@@ -2183,13 +2189,12 @@ public class CombDCEL {
 	 * @return int, -1 on error
 	 */
 	public static int nghb(int[][] bouq,int v, int w) {
-		int len = bouq.length - 1;
-		if (v < 1 || v > len || w < 1 || w > len)
-			return -1;
-		int[] flower = bouq[v];
-		for (int j = 0; j < flower.length; j++)
-			if (flower[j] == w)
-				return j;
+		try {
+			int[] flower = bouq[v];
+			for (int j = 0; j < flower.length; j++)
+				if (flower[j] == w)
+					return j;
+		} catch(Exception ex) {}
 		return -1;
 	}
 	
@@ -2750,11 +2755,10 @@ public class CombDCEL {
 	
 	/**
 	 * Given 'pdc' (sometimes a clone of original DCEL), reverse
-	 * its orientation in place. We clone all the edges, establish 
-	 * prev, next, twins, redchain, halfedges, etc., based on 
-	 * edge indices. We keep faces and vertices, reverse the red 
-	 * chain. Complete with 'fillInside' command. 
-	 * Result remains in 'pdc' 
+	 * its orientation: clone all edges, establish prev, next, 
+	 * twins, reverse redchain, adjust faces, keep vertices but 
+	 * adjust bdry halfedges, reflect centers in imaginary axis. 
+	 * Complete with 'fillInside' command. Result remains in 'pdc' 
 	 * @param pdc PackDcel
 	 */
 	public static void reorient(PackDCEL pdc) {
@@ -2764,7 +2768,6 @@ public class CombDCEL {
 		for (int e=1;e<=pdc.edgeCount;e++) {
 			pdc.edges[e].edgeIndx=e; // make sure indices are aligned
 			edges[e]=new HalfEdge(pdc.edges[e].origin);
-			pdc.edges[e].origin=null;  // to mark as defunct
 			edges[e].edgeIndx=e;
 		}
 		
@@ -2777,6 +2780,7 @@ public class CombDCEL {
 			}
 			else 
 				vert.halfedge=edges[vert.halfedge.edgeIndx];
+			vert.center.x=-1.0*vert.center.x; // reflect in y-axis
 		}
 		
 		// set edge pointers
@@ -2804,6 +2808,7 @@ public class CombDCEL {
 			do {
 				rtrace.redutil=rCount++;
 				rtrace=rtrace.nextRed;
+				rtrace.center.x=-1.0*rtrace.center.x;
 			} while (rtrace!=pdc.redChain);
 			
 			// store array of red and their 'myEdge's
@@ -2986,10 +2991,14 @@ public class CombDCEL {
     	if (pdc.oldNew!=null && pdc.oldNew.size()>0) 
     		pdcel.oldNew=pdc.oldNew.clone();
     	
-    	if (pdc.alpha!=null && pdc.alpha.edgeIndx>0)
-    		pdcel.alpha=pdcel.edges[pdc.alpha.edgeIndx];
-    	if (pdc.gamma!=null && pdc.gamma.edgeIndx>0)
-    		pdcel.gamma=pdcel.edges[pdc.gamma.edgeIndx];
+    	int alp=0;
+    	if (pdc.alpha!=null)
+    		alp=pdc.alpha.origin.vertIndx;
+    	pdcel.setAlpha(alp, null, false);
+    	int gam=0;
+    	if (pdc.gamma!=null)
+    		gam=pdc.gamma.origin.vertIndx;
+    	pdcel.setGamma(gam);
     	
     	if (pdc.pairLink!=null && pdc.pairLink.size()>1) {
     		pdcel.pairLink=new PairLink();

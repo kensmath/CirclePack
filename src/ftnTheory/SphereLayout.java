@@ -1,9 +1,5 @@
 package ftnTheory;
 
-import geometry.HyperbolicMath;
-import geometry.SphericalMath;
-import input.CPFileManager;
-
 import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -11,19 +7,21 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.Vector;
 
+import allMains.CPBase;
+import allMains.CirclePack;
+import exceptions.DataException;
+import exceptions.InOutException;
+import exceptions.ParserException;
+import geometry.HyperbolicMath;
+import geometry.SphericalMath;
+import input.CPFileManager;
 import listManip.NodeLink;
 import math.Point3D;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
+import packing.ReadWrite;
 import util.CmdStruct;
 import util.ColorUtil;
-import allMains.CPBase;
-import allMains.CirclePack;
-import dcel.HalfEdge;
-import exceptions.DataException;
-import exceptions.InOutException;
-import exceptions.ParserException;
 
 /**
  * Alternate procedure for laying out spherical circle packings:
@@ -224,7 +222,7 @@ public class SphereLayout extends PackExtender {
 					try {
 						BufferedReader fp=
 							CPFileManager.openReadFP(dir,fname,false);
-						int flags=puncturedPack[n].readpack(fp,fname);
+						int flags=ReadWrite.readpack(fp,puncturedPack[n],fname);
 						// need combinatorics and radii at a minimum
 						if (flags<=0 || (flags & 00011)!=00011) 
 							gotThem=false;
@@ -261,8 +259,8 @@ public class SphereLayout extends PackExtender {
 						fname = new String("SL_pack" + b + ".p");
 						BufferedWriter fp = CPFileManager.openWriteFP(dir,
 								false, fname, false);
-						try {
-							puncturedPack[b].writePack(fp, 0017, false); // cgri options
+						try { // cgri options
+							ReadWrite.writePack(fp,puncturedPack[b],0017,false); 
 						} catch (Exception ex) {
 							throw new InOutException("write of 'wP' failed");
 						}

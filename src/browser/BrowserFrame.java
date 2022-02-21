@@ -1,9 +1,5 @@
 package browser;
 
-import input.CommandStrParser;
-import input.TrafficCenter;
-import interfaces.IMessenger;
-
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.EventQueue;
@@ -40,12 +36,17 @@ import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.text.Document;
 
-import previewimage.PreviewImageHyperlinkListener;
-import util.MemComboBox;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import exceptions.ParserException;
+import input.CommandStrParser;
+import input.TrafficCenter;
+import interfaces.IMessenger;
+import packing.PackData;
+import packing.ReadWrite;
+import previewimage.PreviewImageHyperlinkListener;
+import util.MemComboBox;
 
 /**
  * BrowserFrame is a simple web browser. It has integrated functionality
@@ -460,8 +461,10 @@ public class BrowserFrame extends JFrame implements ActionListener {
 					// We don't need to thread opening a local file.
 					try {
 						BufferedReader bufferedReader = new BufferedReader(new FileReader(enteredUrl.getFile()));
-						if (enteredUrl.getFile().toLowerCase().endsWith(".p")) TrafficCenter.cmdGUI("cleanse");
-						CirclePack.cpb.getActivePackData().readpack(bufferedReader, enteredUrl.getFile());
+						if (enteredUrl.getFile().toLowerCase().endsWith(".p")) 
+							TrafficCenter.cmdGUI("cleanse");
+						PackData tmppd=CirclePack.cpb.getActivePackData();
+						ReadWrite.readpack(bufferedReader,tmppd,enteredUrl.getFile());
 						if (CirclePack.cpb.getActivePackData().getDispOptions != null)
 							CommandStrParser.jexecute(CirclePack.cpb.getActivePackData(), "disp -wr");
 						else TrafficCenter.cmdGUI("disp -w -c");
@@ -520,7 +523,8 @@ public class BrowserFrame extends JFrame implements ActionListener {
 							EventQueue.invokeLater(new Runnable() {
 								public void run() {
 									if (localPackingFile.toString().toLowerCase().endsWith(".p")) TrafficCenter.cmdGUI("cleanse");
-									CirclePack.cpb.getActivePackData().readpack(bufferedReader, localPackingFile.toString());
+									PackData tmppd=CirclePack.cpb.getActivePackData();
+									ReadWrite.readpack(bufferedReader,tmppd,localPackingFile.toString());
 									if (CirclePack.cpb.getActivePackData().getDispOptions != null)
 										CommandStrParser.jexecute(CirclePack.cpb.getActivePackData(), "disp -wr");
 									else TrafficCenter.cmdGUI("disp -w -c");

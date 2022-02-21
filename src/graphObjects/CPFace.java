@@ -229,6 +229,8 @@ public class CPFace extends Complex {
 			if (draw) { 
 				if (bcolor!=null)
 					g2.setColor(bcolor);
+				else
+					g2.setColor(holdColor);
 				g2.draw(path);
 			}
 		}

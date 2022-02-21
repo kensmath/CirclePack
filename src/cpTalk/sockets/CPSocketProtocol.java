@@ -7,6 +7,8 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import input.CommandStrParser;
 import input.SocketSource;
+import packing.PackData;
+import packing.ReadWrite;
 
 /**
  * This processes incoming strings to CirclePack from a socket. 
@@ -50,7 +52,8 @@ public class CPSocketProtocol {
 
     	// request for CirclePack to read a packing from client
     	else if (theInput.equalsIgnoreCase("PutPack")) {
-    		CirclePack.cpb.getActivePackData().readpack(socketSource.in, "inputStream");
+    		PackData tmppd=CirclePack.cpb.getActivePackData();
+    		ReadWrite.readpack(socketSource.in,tmppd,"inputStream");
     		if (CirclePack.cpb.getActivePackData().getDispOptions!=null)
     			CommandStrParser.jexecute(CirclePack.cpb.getActivePackData(),"disp -wr");
     		theOutput = "read Packing succesful";
@@ -61,7 +64,8 @@ public class CPSocketProtocol {
     			BufferedWriter packout = new BufferedWriter(
     				new OutputStreamWriter(socketSource.socket.getOutputStream()));
     			// 95 says that we want to write the flowers, radii and centers
-    			CirclePack.cpb.getActivePackData().writePack(packout, 95, false);
+    			PackData tmppd=CirclePack.cpb.getActivePackData();
+    			ReadWrite.writePack(packout,tmppd,95,false);
     			theOutput = "send packing successful";
     		} catch(Exception ex) {
     			CirclePack.cpb.errMsg("error in sending packing to socket");

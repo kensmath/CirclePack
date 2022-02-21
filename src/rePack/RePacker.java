@@ -52,7 +52,7 @@ public abstract class RePacker {
 	// for smaller packs, default to Java
 	public static final int GOPACK_THRESHOLD=501; 
 
-	public static int MAX_ALLOWABLE_BAD_CUTS=300;
+	public static int MAX_ALLOWABLE_BAD_CUTS=100;
 	public static double RP_TOLER=.00000000001;
 	public static double RP_OKERR=.000000001; 
 	public static int PASSLIMIT=1000;    // default upper bound, may be changed

@@ -995,6 +995,12 @@ public class RawManip {
 	  public static int addBary_raw(PackDCEL pdcel,
 			  HalfEdge edge,boolean multi_bary) {
 
+// debugging
+//		  if (edge.origin.vertIndx==11 || 
+//				  edge.twin.origin.vertIndx==11) {
+//			  System.out.println(" edge "+edge);
+//		  }
+		  
 		  boolean ideal=false;
 		  if (edge.face.faceIndx<0) {
 			  pdcel.redChain=null;

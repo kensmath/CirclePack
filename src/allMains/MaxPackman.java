@@ -1,14 +1,14 @@
 package allMains;
 
-import input.CPFileManager;
-import input.CommandStrParser;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 
-import packing.PackData;
 import JNI.JNIinit;
+import input.CPFileManager;
+import input.CommandStrParser;
+import packing.PackData;
+import packing.ReadWrite;
 
 /**
  * A standalone package for computing maximal packings using Java
@@ -41,7 +41,7 @@ public class MaxPackman {
 			dir=new File(HomeDirectory+File.separator+file.getParent());
 			name=file.getName();
 			BufferedReader fp=CPFileManager.openReadFP(dir,name,false);
-			packData.readpack(fp, name);
+			ReadWrite.readpack(fp,packData,name);
 			fp.close();
 		} catch(Exception ex) {
 			System.err.println("failed to read '"+name+"'; error: "+ex.getMessage());
@@ -75,7 +75,7 @@ public class MaxPackman {
 		// write the maximal packing
 		BufferedWriter fpout=CPFileManager.openWriteFP(dir,false,outname,false);
 		try {
-			packData.writePack(fpout,0017,false);
+			ReadWrite.writePack(fpout,packData,0017,false);
 			fpout.flush();
 			fpout.close();
 		} catch (Exception ex) {

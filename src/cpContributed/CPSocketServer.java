@@ -12,6 +12,8 @@ import allMains.CPBase;
 import allMains.CirclePack;
 //import cpTalk.sockets.CPSocketProtocol;
 import input.CommandStrParser;
+import packing.PackData;
+import packing.ReadWrite;
 
 /**
  * 
@@ -52,7 +54,8 @@ public class CPSocketServer extends Thread {
 		    	}
 		    	else if (inputLine.equalsIgnoreCase("SendPack"))
 		    	{// we receive a packing from the client
-		    		CirclePack.cpb.getActivePackData().readpack(in, "inputStream");
+		    		PackData tmppd=CirclePack.cpb.getActivePackData();
+		    		ReadWrite.readpack(in,tmppd,"inputStream");
 		    		if (CirclePack.cpb.getActivePackData().getDispOptions!=null)
 		    			CommandStrParser.jexecute(CirclePack.cpb.getActivePackData(),"disp -wr");
 		    		outputLine = "read Packing succesful";
@@ -62,7 +65,8 @@ public class CPSocketServer extends Thread {
 		    		BufferedWriter packout = new BufferedWriter(
 		    				new OutputStreamWriter(socket.getOutputStream()));
 		    		// 95 says that we want to write the flowers, radii and centers
-		    		CirclePack.cpb.getActivePackData().writePack(packout, 95, false);
+		    		PackData tmppd=CirclePack.cpb.getActivePackData();
+		    		ReadWrite.writePack(packout,tmppd,95,false);
 		    		outputLine = "send Packing succesful";
 		    	}
 		    	else if (inputLine.equalsIgnoreCase("quit") || inputLine.equalsIgnoreCase("exit"))

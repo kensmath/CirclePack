@@ -327,9 +327,9 @@ public class SphPacker extends RePacker {
 					key = 1;
 					numBadCuts++;
 				}
-				if (numBadCuts > MAX_ALLOWABLE_BAD_CUTS) {
-					throw new PackingException();
-				}
+				if (numBadCuts > MAX_ALLOWABLE_BAD_CUTS) 
+					throw new PackingException(
+							"exceeded MAX_ALLOWABLE_BAD_CUTS");
 			} while (factor >= 1.0);
 
 			if (cntBadCuts == 0) {

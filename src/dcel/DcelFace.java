@@ -25,7 +25,7 @@ public class DcelFace {
 	public int faceIndx;  // utility index for this face
 	public Color color;
 	public int mark;
-	public int util;
+	public int futil;
 	
 	// Constructor(s)
 	public DcelFace() {

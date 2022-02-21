@@ -10,6 +10,7 @@ import exceptions.InOutException;
 import input.CPFileManager;
 import math.Mobius;
 import packing.PackData;
+import packing.ReadWrite;
 import tiling.Tile;
 import tiling.TileData;
 
@@ -106,7 +107,7 @@ public class DebugHelp {
 		BufferedWriter fp = CPFileManager.openWriteFP(tmpdir,
 				false, fname, false);
 		try {
-			p.writePack(fp, 0017, false); 
+			ReadWrite.writePack(fp,p,0017,false); 
 			fp.flush();
 			fp.close();
 		} catch (Exception ex) {

@@ -850,8 +850,6 @@ points with nghbs</opt>
 </options>
 
 <options heading="Specialized Options">
-	<opt flag="-BF -CF -FF"> extend '-[BCF]' but for red chain objects
-	the centers/radii stored in the red chain are used.</opt>
 	<opt flag="-ee {v w..}"> extended edges; travel thru up to 16 hex
 			vertices from v to w (for hex_refined packs). </opt>
 	<opt flag="-gi"> draw path and the circles inside it</opt>
@@ -1438,10 +1436,11 @@ the face furthest from the boundary faces</instance>
 </seealso>
 </command>
 
-<command cmd="get_data" flags="-q{q} [-t] {flag} {v..}">
-<description>Specified, perhaps multiple, types of data, each
-	associated with a list of vertices/faces/edges of the 
-	active pack is copied from pack q to the active packing. 
+<command cmd="get_data" flags="-q{q} [-t] {flag} {..}">
+<description>Copy data from pack q to the active packing. 
+    There are (perhaps multiple) specifications, each 
+    with a list of vertices/faces/edges. 
+    
 	If the -t flag is set it must be first and the active 
 	packing must have a 'vertex_map'; then the data for 
 	verts/faces/edges in the active	pack is replaced by 
@@ -1496,7 +1495,7 @@ the face furthest from the boundary faces</instance>
 	q --> r --> p. A caveat: the maps may not have full 
 	range or domain and results can be non-unique or 
 	ambiguous.
-
+</description>
 <options heading="Data specification flags">
 <opt flag="-t"> translate (see above); must occur first after '-q2'</opt>
 <opt flag="-r"> radii (same as '-cr')</opt>
@@ -1515,7 +1514,7 @@ the face furthest from the boundary faces</instance>
 <opt flag="-e[mcsi]"> multiple specifications (same edge list)</opt>
 <opt flag="-v -V"> vertex_map (see above); these occur alone</opt>
 </options> 
-</description>
+
 <examples>
 <instance text="get_data -q2 -t -crz b">Copy (translated) centers
 	and radii from p2 for all bdry vertices of the active pack.</instance>

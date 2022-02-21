@@ -174,6 +174,7 @@ public class PackCreation {
 		PackDCEL pdcel = RawManip.seed_raw(6);
 		PackData p = new PackData(null);
 		pdcel.p = p;
+		pdcel.fixDCEL(p);
 		CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha, false);
 		for (int k = 2; k <= n; k++) {
 			int m = pdcel.vertCount;
@@ -1372,7 +1373,7 @@ public class PackCreation {
 		}
 		
 // debugging
-		DCELdebug.printBouquet(pdcel);
+//		DCELdebug.printBouquet(pdcel);
 		
 		// want to mark the smallest level "core" (middle triangle)
 		//    with -1 and it's rotated neighbor with -2;
@@ -1585,7 +1586,7 @@ public class PackCreation {
 		}
 		
 // debugging
-		DCELdebug.printBouquet(pdcel);
+//		DCELdebug.printBouquet(pdcel);
 		
 		// want to mark the smallest level "core" (middle triangle)
 		//    with -1 and it's rotated neighbor with -2;

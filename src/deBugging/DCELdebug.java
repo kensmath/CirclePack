@@ -112,6 +112,22 @@ public class DCELdebug {
 					"; ehits="+ehits+"; fhits="+fhits);
 	}
 	
+	/**
+	 * print those edges from 'vlist' that don't have faces.
+	 * @param pdcel PackDCEL
+	 * @param vlist NodeLink
+	 */
+	public static void missingFaces(PackDCEL pdcel,NodeLink vlist) {
+		if (vlist==null || vlist.size()==0)
+			return;
+		HalfLink hlink=HalfLink.getSpokes(pdcel, vlist);
+		Iterator<HalfEdge> his=hlink.iterator();
+		while (his.hasNext()) {
+			HalfEdge he=his.next();
+			if (he.face==null) 
+				System.err.println("no face for edge "+he);
+		}
+	}
 	
 	/**
 	 * Compare 'myEdge' to 'edges' entry with same index.

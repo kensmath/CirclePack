@@ -261,7 +261,7 @@ public class WritePackPanel extends javax.swing.JPanel {
 			File theFile;
 			if ((theFile=FileDialogs.loadDialog(FileDialogs.ADD2SCRIPT,false))!=null) {
 	    		try {
-	    			TrafficCenter.cmdGUI("Write "+flags+"s "+theFile);
+	    			TrafficCenter.cmdGUI("Write "+flags+" "+theFile);
 	    		} catch (Exception ex) {return 0;}
 	    		PackControl.scriptManager.includeNewFile(theFile.getName());
 	    		PackControl.scriptManager.redisplayCPdataSB();

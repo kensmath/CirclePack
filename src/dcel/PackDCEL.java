@@ -179,7 +179,7 @@ public class PackDCEL {
 			  redChain=null;
 			  CombDCEL.redchain_by_edge(this, null, this.alpha,prune);
 			  CombDCEL.fillInside(this); // p.getCenter(300);
-		  }
+		  } // p.packDCEL.findHalfEdge(11,2).face;
 
 		  if (p!=null)
 			  p.attachDCEL(this);
@@ -798,7 +798,7 @@ public class PackDCEL {
 		SideData epair=null;
 		
 // debugging		
-		boolean debug=true; // false;
+		boolean debug=false; // true;
 	  
 		if (pairLink==null || n<1 || n>pairLink.size() 
 				|| (epair=(SideData)pairLink.get(n))==null
@@ -1293,7 +1293,13 @@ public class PackDCEL {
 	public double getVertAngSum(Vertex vert,double rad) {
 		double angsum=0.0;
 		HalfEdge he=vert.halfedge;
+		
 		do {
+			
+// debugging
+			if (he.face==null)
+				throw new CombException(" angle sum: face null for "+he);
+			
 			if (he.face.faceIndx>0)
 				angsum+=getEdgeAngle(he,rad);
 			he=he.prev.twin;
@@ -2243,6 +2249,14 @@ public class PackDCEL {
 	public void zeroVUtil() {
 		for (int v=1;v<=vertCount;v++) 
 			vertices[v].vutil=0;
+	}
+
+	/**
+	 * Reset all 'futil' to zero.
+	 */
+	public void zeroFUtil() {
+		for (int f=1;f<=faceCount;f++)
+			faces[f].futil=0;
 	}
 	
 	/**

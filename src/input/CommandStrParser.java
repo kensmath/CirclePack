@@ -110,6 +110,7 @@ import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
 import packing.PackMethods;
+import packing.ReadWrite;
 import panels.CPScreen;
 import panels.ImagePanel;
 import panels.OutPanel;
@@ -591,7 +592,7 @@ public class CommandStrParser {
 					throw new InOutException("failed to open " + filename
 							+ ", directory " + dir.toString());
 				}
-				int rslt = packData.readpack(fp, filename); 
+				int rslt = ReadWrite.readpack(fp,packData,filename); 
 				// DCELdebug.rededgecenters(packData.packDCEL);
 				if (rslt > 0) {
 					fp.close();
@@ -742,7 +743,6 @@ public class CommandStrParser {
 	    	  // one seg: p1 p2 v1 v2 n or p1 p2 v1 v2 (v1 w)
 	    	  int pnum1=Integer.parseInt((String)items.get(0));
 	    	  int pnum2=Integer.parseInt((String)items.get(1));
-	    	  int offset=0;
 
 	    	  if (pnum1<0 || pnum1>=CPBase.NUM_PACKS 
 	    			  || !CPBase.cpScreens[pnum1].getPackData().status 
@@ -4661,7 +4661,7 @@ public class CommandStrParser {
     				  file.toString()+"' for writing");
     	  try {
     		  int act=020000;
-    		  packData.writePack(fp,act,script_flag);
+    		  ReadWrite.writePack(fp,packData,act,script_flag);
     	  } catch (Exception ex) {
     		  throw new InOutException("write tiling failed: "+
     				  ex.getMessage());
@@ -5103,6 +5103,15 @@ public class CommandStrParser {
 	   		  while (flist.hasNext()) {
 	   			  f=(Integer)flist.next();
 	   			  dcel.DcelFace face=packData.packDCEL.faces[f];
+	   			  
+// debugging
+//	   			  HalfEdge hef=face.edge;
+//	   			  if (hef.origin.vertIndx==11 || 
+//	   					  hef.next.origin.vertIndx==11 ||
+//	   					  hef.next.next.origin.vertIndx==11)
+//	   				  System.out.println("face "+f+", "+face);
+	   			  
+	   			  
 	   			  if (xdup[f]==0) {
 	   				  int ans;
    					  ans=RawManip.addBary_raw(
@@ -5448,8 +5457,6 @@ public class CommandStrParser {
 	    			  return 1; // same packing
 	    		  PackData tmpPD=packData.copyPackTo();
 	    		  CirclePack.cpb.swapPackData(tmpPD,qnum,false);
-	    		  tmpPD.setName(packData.fileName);
-//	    		  packData=cps.getPackData(); 
 	    		  return 1;
 	    	  } catch (Exception ex) {
 	    		  throw new ParserException("copy failed: "+ex.getMessage());
@@ -5799,217 +5806,6 @@ public class CommandStrParser {
 			}
 */
 
-			// ========= DCEL <stuff> ==========
-			
-			// TODO: this is experimental related to DCEL combinatorics
-			if (cmd.startsWith("DCE")) {
-				
-				// have to pull off the dcel command and maintain the rest
-				if (flagSegs==null || flagSegs.size()==0) // nothing?
-					return 0;
-				items=(Vector<String>)flagSegs.get(0);
-				String str=items.remove(0);
-				if (items.size()==0) { // get next items
-					flagSegs.remove(0);
-					if (flagSegs.size()>0)
-						items=flagSegs.get(0);
-				}
-				
-				// Create
-				if (str.contains("clone")) {
-					int qnum= StringUtil.qFlagParse(items.remove(0));
-					
-					// 'vlist' of non-keepers defaults to empty
-					NodeLink vlist=null;
-					if (items.size()>0) // non-keepers
-						vlist=new NodeLink(packData,items);
-
-					// Now three situations: 'vlist' takes 
-					//    precedence over 'poisonVerts'
-					PackDCEL raw=CombDCEL.getRawDCEL(packData);
-					raw.p=packData;
-					PackDCEL pdcel=null;
-					HalfLink hlink=null;
-					if (vlist!=null && vlist.size()>0) {
-						CPBase.Vlink=vlist;
-						String nstr="-n Vlist";
-						hlink=CombDCEL.cookieData(packData,nstr);
-					}
-					pdcel=CombDCEL.extractDCEL(raw,hlink,raw.alpha);
-					
-					PackData p=new PackData(null);
-					pdcel.fixDCEL(p);
-					CirclePack.cpb.swapPackData(p,qnum,false);
-					pdcel.layoutPacking();
-					p.fillcurves();
-					p.set_aim_default();
-					return 1;
-				}
-				
-				else if (str.contains("reorie")) {
-					CombDCEL.reorient(packData.packDCEL);
-					return 1;
-				}
-				
-				// keep redchain, reprocess interior with/w.o. 
-				//    blueshift option
-				else if (str.contains("refil")) {
-					CombDCEL.fillInside(packData.packDCEL);
-				}
-				
-				// show redChain edges and their twinRed,
-				//    show starts/stops of sides
-				else if (str.contains("reddebug")) {
-					DCELdebug.redChainDetail(packData.packDCEL);
-					return 1;
-				}
-				else if (str.contains("export")) {
-					// what packing? default to current
-					int qnum=packData.packNum;
-					if (items!=null && items.size()>0) {
-						qnum= StringUtil.qFlagParse(items.get(0));
-						// no '-q{q}' flag
-						if (qnum==-1 || qnum>=CPBase.NUM_PACKS) 
-							qnum=packData.packNum; // replace existing packing
-						else
-							items.remove(0);
-					}
-					
-					PackData pdata=new PackData(null);
-					packData.packDCEL.fixDCEL(pdata);
-					pdata.set_aim_default();
-					return CirclePack.cpb.swapPackData(pdata,qnum,false);
-				}
-				else if (str.contains("redcook")) {
-					if (items==null || items.size()==0) 
-						return 0;
-					int qnum= StringUtil.qFlagParse(items.get(0));
-					if (qnum==-1 || qnum>=CPBase.NUM_PACKS) // no '-q{q}' flag
-						qnum=packData.packNum; // replace existing packing
-					else
-						items.remove(0);
-					
-					// find desired vertices, default to all
-					NodeLink vlink=new NodeLink(packData,items);
-					if (vlink==null || vlink.size()==0)
-						vlink=new NodeLink(packData,"a");
-					
-					// create new 'PackDCEL'
-					PackDCEL tmpdcel=packData.packDCEL.redCookie(vlink);
-					if (tmpdcel==null || tmpdcel.vertCount==0) {
-						CirclePack.cpb.errMsg("'redCookie' failed "+
-								"to produce DCEL");
-						return 0;
-					}
-					
-					// convert to a new packing
-					PackData tmppack=new PackData(null);
-					tmpdcel.fixDCEL(tmppack);
-					tmppack.setCombinatorics();
-					tmppack.set_aim_default();
-					return CirclePack.cpb.swapPackData(tmppack,qnum,false);
-				}
-				else if (str.contains("write")) {
-					int len;
-					String fname = null;
-					String flagstr = null;
-					boolean append_flag = false;
-					boolean script_flag = false;
-
-					boolean faulty = false;
-					try { // should have just one flag string
-						if (!StringUtil.isFlag(flagstr = 
-								items.firstElement())) {
-							// take as filename (may have blanks)
-							fname = StringUtil.reconItem(items); 
-							flagstr = null;
-						} 
-						else if (items.size() == 1)
-							faulty = true; // flags, but no filename
-						else {
-							items.remove(0); // held in 'flagstr'
-							fname = StringUtil.reconItem(items); 
-							// take as filename (may have blanks)
-						}
-					} catch (Exception ex) {
-						throw new InOutException(
-								"check usage: " + ex.getMessage());
-					}
-					if (faulty) {
-						throw new ParserException(
-								"check usage: [-<flags>] <filename>");
-					}
-
-					if (flagstr != null && flagstr.length() > 0 && 
-							StringUtil.isFlag(flagstr)) {
-						flagstr = flagstr.substring(1);
-						len = flagstr.length();
-
-						// "s" to go
-						if (len == 1 && flagstr.equalsIgnoreCase("s")) {
-							if (cmd.charAt(0) == 'W') {
-								CirclePack.cpb.myErrorMsg(
-										"Can't 'Write' (cap 'W') to script");
-								return 0;
-							}
-							script_flag = true;
-						}
-
-						else if (flagstr != null) {
-							for (int j = 0; j < len; j++) {
-								switch (flagstr.charAt(j)) {
-								case 'A': {
-									append_flag = true;
-									break;
-								}
-								case 's': { // write to the script file
-									if (cmd.charAt(0) == 'W') {
-										CirclePack.cpb.myErrorMsg(
-												"Can't 'Write' (cap 'W') to script");
-										return 0;
-									}
-									script_flag = true;
-									break;
-								}
-								} // end of flag parsing switch
-							} // end of for
-						} // end of flag parsing
-					}
-
-					File dir = CPFileManager.PackingDirectory;
-					if (cmd.charAt(0) == 'W') { // use given directory
-						if (fname.startsWith("~/")) {
-							fname = new String(
-								CPFileManager.HomeDirectory + 
-								File.separator + fname.substring(2).trim());
-						}
-						dir = new File(fname);
-						fname = dir.getName();
-						dir = new File(dir.getParent());
-					}
-					BufferedWriter fp = CPFileManager.openWriteFP(dir,
-							append_flag, fname, script_flag);
-					try {
-						if (str.contains("_dual")) {
-							packData.writeDCEL(fp, true);
-						}
-						else 
-							packData.writeDCEL(fp, false); 
-					} catch (Exception ex) {
-						throw new InOutException("write failed");
-					}
-					if (script_flag) { // include in script
-						CPBase.scriptManager.includeNewFile(fname);
-						CirclePack.cpb.msg("Wrote packing " + fname + 
-								" to the script");
-						return 1;
-					}
-					CirclePack.cpb.msg("Wrote packing to " + 
-							dir.getPath() + File.separator + fname);
-					return 1;
-				} // end of 'write'
-			} // end of 'DCEL' calls
-		  
 	      // ========= doyle_point ========
 	      if (cmd.startsWith("doyle_point")) {
 	    	  items=(Vector<String>)flagSegs.get(0);
@@ -6231,6 +6027,12 @@ public class CommandStrParser {
 		  if (cmd.startsWith("enclose")) {
 			  boolean totalFlag=false;
 	    	  items=(Vector<String>)flagSegs.get(0); // data: -[t] n {v..}
+	    	  
+	    	  // easy to make error
+	    	  if (items.size()==1) {
+	    		  packData.flashError("usage: enclose -[t] n {v..}");
+	    		  return 0;
+	    	  }
 	    	  if (StringUtil.isFlag(items.get(0))) {
 	    		  if (!items.get(0).equals("-t"))
 	    			  throw new ParserException("illegal flag");
@@ -6402,9 +6204,42 @@ public class CommandStrParser {
 	    			  return rslt;
 	    		  }
 */	    		  
+	    	  // one random, try up to 20 times 
+	    	  if (fstr.contentEquals("r")) { 
+	        	  Random rand=new Random();
+	        	  int safety=20;
+	        	  while (safety>0) {
+	        		  int v=Math.abs((
+	        				  rand.nextInt())%(packData.nodeCount))+1;
+ 	        		  // if boundary, try for next interior
+	        		  if (packData.isBdry(v)) { 
+	        			  int j=1;
+	        			  while (j<=packData.nodeCount  
+	   						  && packData.isBdry(
+	   								  (v=(v+j)%(packData.nodeCount)+1)))
+	        				  j++;
+	        			  if (packData.isBdry(v)) 
+	        				  return 0; // didn't find interior vert
+	        		  }
+	        		  HalfLink spokes=packData.packDCEL.
+	        				  vertices[v].getSpokes(null);
+	        		  int num=spokes.size();
+	        		  // pick a random spoke
+	        		  HalfEdge he=spokes.get(Math.abs((rand.nextInt())%(num)));
+	        		  
+	        		  // try to flip
+	   				  if (RawManip.flipEdge_raw(packData.packDCEL,he)!=null) {
+		   				  packData.packDCEL.fixDCEL(packData);
+		   				  return 1;
+	   				  }
+	        	  }
+	        	  return 0;
+	    	  }
 
 	    	  // For remaining cases, just build 'elink' of edges to flip, .
 	   		  EdgeLink elink=new EdgeLink();
+	   		  if (items.size()==0)
+	   			  return 0;
 	   		  EdgeLink origLink=new EdgeLink(packData,items);
 	   		  if (origLink==null || origLink.size()==0)
 	   			  return 0;
@@ -6438,30 +6273,6 @@ public class CommandStrParser {
 		   				  w=packData.getPetal(edge.v,indx-1);
 	   				  elink.add(new EdgeSimple(edge.v,w));
 	    		  }
-	    	  }
-	    	  // one random, try up to 20 times 
-	    	  else if (fstr.contentEquals("r")) { 
-	        	  Random rand=new Random();
-	        	  int safety=20;
-	        	  boolean didflip=false;
-	        	  while (safety>0 && !didflip) {
-	        		  int v=Math.abs((
-	        				  rand.nextInt())%(packData.nodeCount))+1;
- 	        		  // if boundary, try more indices
-	        		  if (packData.isBdry(v)) { 
-	        			  int j=1;
-	        			  while (j<=packData.nodeCount  
-	   						  && packData.isBdry(
-	   								  (v=(v+j)%(packData.nodeCount)+1)))
-	        				  j++;
-	        			  if (packData.isBdry(v)) 
-	        				  return 0; // didn't find interior vert
-	        		  }
-	        		  int[] flower=packData.getFlower(v);
-	        		  int num=packData.countFaces(v);
-	        		  int w=flower[Math.abs((rand.nextInt())%(num))];
-	   				  elink.add(new EdgeSimple(v,w));
-	        	  }
 	    	  }
 	    	  
 	    	  // reaching here, just flip edges in the list
@@ -8673,8 +8484,9 @@ public class CommandStrParser {
 	      
 	      // ========= reorient =======
 	      else if (cmd.startsWith("reorie")) {
-    		  PackDCEL pdcel=packData.packDCEL.reverseOrientation();
-    		  return packData.attachDCEL(pdcel);
+	    	  CombDCEL.reorient(packData.packDCEL);
+	    	  packData.packDCEL.fixDCEL(packData);
+	    	  return packData.packDCEL.vertCount;
 	      }
 		  break;
 	  } // end of 'r' and 'R'
@@ -10409,8 +10221,8 @@ public class CommandStrParser {
 	      	  }
 	      	  
 	      	  BufferedWriter fp=CPFileManager.openWriteFP(dir,append_flag,fname,script_flag);
-	      	  try {
-	      		  packData.writePack(fp,act,false); // (00017 & 00004)==00004;
+	      	  try { // (00017 & 00004)==00004;
+	      		  ReadWrite.writePack(fp,packData,act,false);
 	      	  } catch(Exception ex) {
 	      		  throw new InOutException("write failed");
 	      	  }

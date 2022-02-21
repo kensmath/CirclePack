@@ -38,8 +38,14 @@ public class RedEdge {
 		prevRed=null;
 		nextRed=null;
 		mobIndx=0;
-		center=new Complex(he.origin.center);
-		rad=he.origin.rad;
+		if (he.origin!=null) {
+			center=new Complex(he.origin.center);
+			rad=he.origin.rad;
+		}
+		else {
+			center=new Complex(0.0);
+			rad=.04;
+		}
 		redutil=0;
 		// set 'redutil' if ideal face is across myEdge;
 		//    this is used in 'd_redChainBuilder'

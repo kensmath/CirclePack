@@ -708,31 +708,33 @@ public class HalfLink extends LinkedList<HalfEdge> {
 					if (str.length()>2 && str.charAt(2)=='w') {
 						bothvw=true;
 					}
-					
 					NodeLink vertlist=new NodeLink(packData,items);
 					its=null; // eat rest of items
-					if (vertlist==null || vertlist.size()==0) break;
-
-					Iterator<Integer> vlist=vertlist.iterator();
-					// Searching vertlist is too slow; create temp data array.
-					int []vs=new int[packData.nodeCount+1];
-					int v;
-					while (vlist.hasNext()) {
-						v=(Integer)vlist.next();
-						vs[v]=1;
+					if (vertlist==null || vertlist.size()==0) 
+						break;
+					HalfLink hlk=HalfLink.getSpokes(packData.packDCEL,vertlist);
+					if (hlk==null)
+						break;
+					if (!bothvw) {
+						count+=hlk.size();
+						this.abutMore(hlk);
+						break;
 					}
-					vlist=vertlist.iterator();
-					while (vlist.hasNext()) {
-						v=(Integer)vlist.next();
-						HalfLink arylst=packData.packDCEL.vertices[v].getEdgeFlower();
-						Iterator<HalfEdge> ait=arylst.iterator();
-						while (ait.hasNext()) {
-							HalfEdge he=ait.next();
-							int w=he.twin.origin.vertIndx;
-							if (!bothvw || (v<w && vs[w]==1)) {
-								add(he);
-								count++;
-							}
+
+					// Searching vertlist is too slow; create temp data array.
+					Iterator<Integer> vlist=vertlist.iterator();
+					int []vs=new int[packData.nodeCount+1];
+					while (vlist.hasNext()) 
+						vs[vlist.next()]=1;
+
+					Iterator<HalfEdge> his=hlk.iterator();
+					while (his.hasNext()) {
+						HalfEdge he=his.next();
+						int v=he.origin.vertIndx;
+						int w=he.twin.origin.vertIndx;
+						if (vs[w]==1 && v<w) {
+							this.add(he);
+							count++;
 						}
 					}
 					break;
@@ -1735,6 +1737,26 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		if (W == 0)
 			W = w;
 		return new EdgeSimple(v,w);
+	}
+	
+	/**
+	 * Return all outward spokes from the given vertices.
+	 * @param pdcel PackDCEL
+	 * @param vlist NodeLink
+	 * @return HalfLink, null on error or empty
+	 */
+	public static HalfLink getSpokes(PackDCEL pdcel,NodeLink vlist) {
+		if (vlist==null || vlist.size()==0)
+			return null;
+		HalfLink hlink=new HalfLink();
+		Iterator<Integer> vis=vlist.iterator();
+		while (vis.hasNext()) {
+			Vertex vert=pdcel.vertices[vis.next()];
+			hlink.abutMore(vert.getSpokes(null));
+		}
+		if (hlink.size()==0)
+			return null;
+		return hlink;
 	}
 	
 	/**
