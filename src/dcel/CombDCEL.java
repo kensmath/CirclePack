@@ -3186,6 +3186,7 @@ public class CombDCEL {
 				prV.redSpoke[v].myEdge.origin=newV;
 				newV.spokes = new HalfEdge[w-v + 1];
 				newV.bdryFlag = 1;
+				newV.aim=-.1;
 				if (prV.redSpoke[w]!=null) {
 					// replace last of this fan
 					HalfEdge new_w = new HalfEdge();
@@ -3994,6 +3995,7 @@ public class CombDCEL {
 	
 		// zip base becomes interior
 		vert.bdryFlag=0;
+		vert.aim=2.0*Math.PI;
 		
 		// identify
 		outedge.twin=inedge;
@@ -4183,20 +4185,19 @@ public class CombDCEL {
 	}
 	  
 	/**
-	 * Slit open along given edges: edges must form a
-	 * chain. Start and/or end may be boundary, rest 
-	 * must be interior. If start and end are interior,
-	 * use 'cookie' method. 
-	 * User can find new bdry segment, namely oriented
-	 * bdry from returned {firstEnd,lastEnd}.
-	 * 'pdcel.oldNew' contains {old,new} index pairs.
+	 * Slit open along given edges via 'cookie' method.
+	 * 'hlink' must form a chain; start and/or end may 
+	 * be boundary, rest must be interior. If the complex 
+	 * is disconnected, the surviving portion is determined
+	 * by 'pdcel.alpha'. The new bdry segment is the 
+	 * oriented bdry from returned {firstEnd,lastEnd}.
 	 * Errors may damage pdcel.
 	 * @param pdcel PackDCEL
 	 * @param hlink HalfLink
-	 * @return int[2], int[0]={first,last} indices.
+	 * @return int[2]={first,last}, null on error
 	 */
 	public static int[] slitComplex(PackDCEL pdcel,HalfLink hlink) {
-		  if (hlink==null || hlink.size()==0 || pdcel.p==null)
+		  if (hlink==null || hlink.isEmpty() || pdcel.p==null)
 			  return null;
 		  
 		  // check conditions and linkage
@@ -4231,19 +4232,11 @@ public class CombDCEL {
 		  int firstEnd=-1;
 		  int lastEnd=-1;
 		  
-		  // for clones, 'vutil' will show original vert
-		  for (int v=1;v<=pdcel.vertCount;v++)
-			  pdcel.vertices[v].vutil=v;
-
 		  // if start is interior, end bdry, then reverse chain
 		  if (startV.bdryFlag==0 && endV.bdryFlag!=0) {
 			  hlink=HalfLink.reverseLink(hlink);
 			  hlink=HalfLink.reverseElements(hlink);
 		  }
-		  
-		  // move 'alpha' if necessary
-//		  pdcel.setAlpha(0,verts, false); 
-//		               DCELdebug.printRedChain(pdcel.redChain);
 
 		  // proceed via "cookie" approach?
 		  startV=hlink.get(0).origin;
@@ -4251,79 +4244,13 @@ public class CombDCEL {
 		  if (startV.bdryFlag>0)
 			  firstEnd=pdcel.vertCount+1; // this will be the clone's index
 		  lastEnd=hlink.getLast().twin.origin.vertIndx;
-//		  if (startV.bdryFlag==0 && endV.bdryFlag==0) {
-			  redchain_by_edge(pdcel,hlink,pdcel.alpha,false);
-			  fillInside(pdcel);
-			  int[] ans=new int[2];
-			  ans[0]=firstEnd;
-			  ans[1]=lastEnd;
-			  return ans;
-//		  }
-/*		  
-		  // open up edge-by-edge
-		  VertexMap vmap=new VertexMap();
-		  HalfEdge lastEdge=hlink.getLast(); // to know when to stop
-		  his=hlink.iterator();
-		  int count=0;
-		  firstEnd=pdcel.vertCount+1; // new number when 
-		  boolean done=false;
-		  while (his.hasNext() && !done) {
-			  he=his.next();
-			  int v=he.origin.vertIndx;
-			  int w=he.next.origin.vertIndx;
-			  if (he.next.origin.bdryFlag>0 && he!=lastEdge) {
-				  CirclePack.cpb.errMsg("'slit' finishing early "+
-						  "stopped due to reaching bdry");
-				  done=true; // stop after processing this edge
-			  }
-			  
-			  // do the next slit
-			  int[] VW=RawManip.slitVW(pdcel, he);
-			  if (VW==null)
-				  throw new CombException("Something wrong during 'slit' of "+
-						  "edge "+he);
-			  count++;
-			  lastEnd=w;
-			  
-			  // there's a clone of 'v'
-			  pdcel.vertices[VW[0]].vutil=v;
-// System.out.println("VW[0]="+VW[0]+" and v="+v);			  
-			  vmap.add(new EdgeSimple(VW[0],v));
-			  pdcel.p.vData[VW[0]].center=new Complex(pdcel.p.vData[v].center);
-			  pdcel.p.vData[VW[0]].rad=pdcel.p.vData[v].rad;
-			  pdcel.p.vData[VW[0]].aim=-1.0;
-			  pdcel.p.vData[VW[0]].color=ColorUtil.cloneMe(pdcel.p.vData[v].color);
-			  
-			  // there may be a clone of 'w', but only for 'lastEdge'
-			  if (he==lastEdge && VW[1]!=0) {
-				  pdcel.redChain=null; // must have reached bdry
-				  pdcel.vertices[VW[1]].vutil=w;
-				  vmap.add(new EdgeSimple(VW[1],w));
-				  pdcel.p.vData[VW[1]].center=new Complex(pdcel.p.vData[w].center);
-				  pdcel.p.vData[VW[1]].rad=pdcel.p.vData[w].rad;
-				  pdcel.p.vData[VW[1]].aim=-1.0;
-				  pdcel.p.vData[VW[1]].color=ColorUtil.cloneMe(pdcel.p.vData[w].color);
-				  
-			  }
-			  
-			  // if 'w' is not cloned, need to set approp center/rad
-			  else if (VW[1]==0) {
-				  RedEdge w_red=pdcel.vertices[w].halfedge.myRedEdge;
-				  w_red.center=new Complex(pdcel.p.vData[w].center);
-				  w_red.rad=pdcel.p.vData[w].rad;
-			  }
-		  }
-		  
-		  // wrap up combinatorics
-		  pdcel.fixDCEL(pdcel.p);
-
-		  // return ends of new bdry segment
+		  redchain_by_edge(pdcel,hlink,pdcel.alpha,false);
+		  fillInside(pdcel);
 		  int[] ans=new int[2];
-		  ans[0]=firstEnd; // should be index of first new cloned vert
+		  ans[0]=firstEnd;
 		  ans[1]=lastEnd;
 		  return ans;
-*/
-	  }
+	}
 
 	  /**
 	   * Add a layer of nodes to bdry segment from vertex v1 to v2. 
