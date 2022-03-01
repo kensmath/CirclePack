@@ -380,9 +380,6 @@ public class DisplayParser {
 				while (vlist.hasNext()) {
 					v = (Integer) vlist.next();
 					if (v>0 && v<=p.nodeCount) {
-// debugging					
-//					System.out.println("vert "+v);
-					
 						z = p.getCenter(v);
 
 						// color? label?

@@ -144,14 +144,12 @@ public class SphericalMath{
    * @return the Mobius applied
    */
   public static Mobius s_norm_pack(PackDCEL pdcel,Complex a,Complex g) {
-	  int count=0;
 	  Mobius mob=Mobius.rigidAlphaGamma(a, g);
 	  if (Mobius.frobeniusNorm(mob)>.0001) {
 		  // directly adjust in 'Vertex'
 		  for (int v=1;v<=pdcel.vertCount;v++) {
 			  Complex z=pdcel.vertices[v].center;
 			  pdcel.vertices[v].center=mob.apply_2_s_pt(z);
-			  count++;
 		  }
 		  // directly adjust in red chain
 		  if (pdcel.redChain!=null) {
@@ -213,7 +211,7 @@ public class SphericalMath{
    */
 	public static CircleSimple sph_tri_incircle(
 			Complex z0,Complex z1,Complex z2) {
-
+		
 		// edge lengths
 		double a=s_dist(z2,z1);
 		double b=s_dist(z0,z2);
@@ -228,15 +226,18 @@ public class SphericalMath{
 		Complex t01=sph_tangency(z0,z1,r0,r1);
 		Complex t12=sph_tangency(z1,z2,r1,r2);
 		Complex t20=sph_tangency(z2,z0,r2,r0);
-		
-		return circle_3_sph(t01,t12,t20);
+
+		CircleSimple cs=circle_3_sph(t01,t12,t20);
+		return cs;
 	}
 	
 	/** 
 	 * Given three points on the sph, find the sph center/rad
 	 * for the circle containing them; choose center to get
 	 * proper orientation {A, B, C}.
-	 * @param A, B, C, Complex sph points
+	 * @param A Complex; sph points (theta,phi)
+	 * @param B Complex
+	 * @param C Complex
 	 * @return CircleSimple with spherical data
 	 */
 	public static CircleSimple circle_3_sph(Complex A,Complex B,Complex C) {
@@ -245,59 +246,7 @@ public class SphericalMath{
 		Point3D b=new Point3D(B);
 		Point3D c=new Point3D(C);
 
-		// use 3D edges to get o.n. {X,Y,Z} system: triangle in X,Y-plane
-		Point3D AB = new Point3D(b.x-a.x,b.y-a.y,b.z-a.z);
-		Point3D X=AB.divide(AB.norm()); 
-		Point3D AC = new Point3D(c.x-a.x,c.y-a.y,c.z-a.z);
-		Point3D Z= Point3D.CrossProduct(X,AC);
-		Z=Z.divide(Z.norm());
-//		Point3D BC = new Point3D(c.x-b.x,c.y-b.y,c.z-b.z);
-		Point3D Y= Point3D.CrossProduct(Z,X);
-		
-		// XYZ-coords: point z1 = {0,0,0}, z2={|AB|,0,0}, z3={(AC,X),(AC,Y),0}
-		Complex z1=new Complex(0.0);
-		Complex z2=new Complex(AB.norm());
-		Complex z3=new Complex(Point3D.DotProduct(AC,X),Point3D.DotProduct(AC,Y));
-		CircleSimple sc=EuclMath.circle_3(z1, z2, z3);
-		Complex cent=sc.center;
-		Point3D affineCenter= Point3D.vectorSum(a,
-				Point3D.vectorSum(X.times(cent.x),Y.times(cent.y)));
-		
-		// results:
-		CircleSimple resultSC=new CircleSimple();
-		resultSC.center=Z.getAsSphPoint();
-		// ====== Consider situations:
-		// essentially at origin?
-		if (affineCenter.norm()<.001) { 
-			resultSC.rad=Math.PI/2.0;
-		}
-		// average distances to given points
-		else {
-			resultSC.rad=(s_dist(resultSC.center,A)+s_dist(resultSC.center,B)+
-				s_dist(resultSC.center,C))/3.0;
-			if (Point3D.DotProduct(Z,affineCenter)<0) {
-				resultSC.rad = Math.PI-resultSC.rad;
-			}
-		}
-		return resultSC;
-	}
-	
-	/** 
-	 * Given three points on the sph, find the sph center/rad
-	 * for the circle containing them; choose center to get
-	 * proper orientation {A, B, C}.
-	 * @param A Complex; sph points
-	 * @param B Complex
-	 * @param C Complex
-	 * @return CircleSimple with spherical data
-	 */
-	public static CircleSimple circle_3_sph_planB(Complex A,Complex B,Complex C) {
-		// 3D points
-		Point3D a=new Point3D(A);
-		Point3D b=new Point3D(B);
-		Point3D c=new Point3D(C);
-
-		// use 3D edges to get o.n. {X,Y,Z} system: triangle in X,Y-plane
+		// cross product for normal to plane containing the points
 		Point3D AB = new Point3D(b.x-a.x,b.y-a.y,b.z-a.z);
 		Point3D AC = new Point3D(c.x-a.x,c.y-a.y,c.z-a.z);
 		Point3D Z= Point3D.CrossProduct(AB,AC);
@@ -866,7 +815,7 @@ public static double vec_norm(double X[]){
       }
       
       // find the circle through the 3 spherical points
-      CircleSimple cS=circle_3_sph_planB(spts[0],spts[1],spts[2]);
+      CircleSimple cS=circle_3_sph(spts[0],spts[1],spts[2]);
 
       return cS;
   }

@@ -326,4 +326,8 @@ public class Point3D {
 	  return new Complex(Math.atan2(pt.y,pt.x),Math.acos(pt.z/pt.norm()));	
   } 
   
+  public String toString() {
+	  return new String("["+x+","+y+","+z+"]");
+  }
+  
 }

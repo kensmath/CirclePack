@@ -502,30 +502,33 @@ public class CPScreen extends JPanel implements	MouseListener {
 	/**
 	 * Draw face using 'DispFlags' for color, thickness, label, etc.
 	 * (Radii are only needed in labeling in hyperbolic case.)
+	 * @param z0 Complex
 	 * @param z1 Complex
 	 * @param z2 Complex
-	 * @param z3 Complex
+	 * @param r0 double
 	 * @param r1 double
 	 * @param r2 double
-	 * @param r3 double
 	 * @param dflags DispFlags
 	 */
-	public void drawFace(Complex z1,Complex z2,Complex z3,
-			Double r1,Double r2,Double r3,DispFlags dflags) {
+	public void drawFace(Complex z0,Complex z1,Complex z2,
+			Double r0,Double r1,Double r2,DispFlags dflags) {
+
+// debugging
+//	.out.println("actual centers: "+z0+" "+z1+" "+z2);
 	
 		try {
 			if (packData.hes > 0) {
+				z0 = sphView.toApparentSph(z0);
 				z1 = sphView.toApparentSph(z1);
 				z2 = sphView.toApparentSph(z2);
-				z3 = sphView.toApparentSph(z3);
 			}
 			double[] cnrs = new double[6];
-			cnrs[0] = z1.x;
-			cnrs[1] = z1.y;
-			cnrs[2] = z2.x;
-			cnrs[3] = z2.y;
-			cnrs[4] = z3.x;
-			cnrs[5] = z3.y;
+			cnrs[0] = z0.x;
+			cnrs[1] = z0.y;
+			cnrs[2] = z1.x;
+			cnrs[3] = z1.y;
+			cnrs[4] = z2.x;
+			cnrs[5] = z2.y;
 			face.setData(3, cnrs);
 			
 			Color fcolor=null;
@@ -549,11 +552,12 @@ public class CPScreen extends JPanel implements	MouseListener {
 			if (dflags.label && dflags.getLabel()!= null) {
 				CircleSimple sc=null;
 				if (packData.hes<0)
-					sc=HyperbolicMath.hyp_tang_incircle(z1,z2,z3,r1,r2,r3);
+					sc=HyperbolicMath.hyp_tang_incircle(z0,z1,z2,r0,r1,r2);
 //					sc=HyperbolicMath.hyp_tri_incircle(z1,z2,z3);
-				else if (packData.hes>0)
-					  sc=SphericalMath.sph_tri_incircle(z1,z2,z3);
-				else sc=EuclMath.eucl_tri_incircle(z1,z2,z3);
+				else if (packData.hes>0) 
+					sc=SphericalMath.sph_tri_incircle(z0,z1,z2);
+				else 
+					sc=EuclMath.eucl_tri_incircle(z0,z1,z2);
 				Complex z=sc.center;
 				if (packData.hes <= 0 || Math.cos(z.x) >= 0) {
 					if (packData.hes > 0)

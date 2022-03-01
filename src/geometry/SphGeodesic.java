@@ -108,7 +108,7 @@ public class SphGeodesic{
 		   			horizonEnd=true;
 		   		}
 		    }
-		    // else, geodesic must be an arc of a circle
+		    // else, geodesic must be an arc of a great circle
 		    else { 
 		    	// n essentially equal to its projection N in yz-plane.
 			    double modN=Math.sqrt(n.y*n.y+n.z*n.z);
@@ -130,7 +130,7 @@ public class SphGeodesic{
 			    		z1=pt.projToHorizon();
 			    		horizonStart=true;
 			    	}
-			    	else if (z2Status==ON_BACK) { // ends on back
+			    	if (z2Status==ON_BACK) { // ends on back
 			    		pt=new Point3D(0,Nz,-Ny);
 			    		z2=pt.projToHorizon();
 			    		horizonEnd=true;

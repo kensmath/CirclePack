@@ -3980,7 +3980,8 @@ public class CombDCEL {
 		downstream.twin.next=upstream.twin;
 		upstream.twin.prev=downstream.twin;
 		savevert.halfedge=downstream;
-	
+
+		
 		// reset origin for spokes of vertex being orphaned
 		HalfEdge he=redout.nextRed.myEdge;
 		Vertex xvert=he.origin;

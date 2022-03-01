@@ -16,7 +16,6 @@ import geometry.SphGeodesic;
 import geometry.SphericalMath;
 import math.Point3D;
 import panels.CPScreen;
-import posting.PostFactory;
 import util.ColorUtil;
 
 /**
@@ -207,10 +206,22 @@ public class CPFace extends Complex {
 	 * @param g2 Graphic2D
 	 * @return int: 0 implies on front or sphere is opaque; don't have to call
 	 * again for back. -1 means you should call for drawing on back.
+	 * @throws DrawingException 
 	 */
-	public int sphDrawIt(boolean draw,Color bcolor,boolean fill,Color fcolor,Graphics2D g2) 
-	throws DrawingException {
-		int j=PostFactory.sphClosedPath(path,corners,parent);
+	public int sphDrawIt(boolean draw,Color bcolor,boolean fill,
+			Color fcolor,Graphics2D g2) throws DrawingException { 
+		boolean debug=false;
+
+		if (debug) { // debug=true;
+			StringBuilder strbld=new StringBuilder("corners=[");
+			for (int k=0;k<3;k++) {
+				strbld.append(corners[2*k]+" "+corners[2*k+1]+";");
+			}
+			strbld.append("];");
+			System.out.println(strbld.toString());
+		}
+		
+		int j=CPFace.sphClosedPath(path,corners,parent);
 		// all on back?
 //		if (j<0) return -1;
 		
@@ -225,6 +236,7 @@ public class CPFace extends Complex {
 				if (fcolor!=null)
 					g2.setColor(fcolor);
 				g2.fill(path);
+				
 			}
 			if (draw) { 
 				if (bcolor!=null)
@@ -248,7 +260,7 @@ public class CPFace extends Complex {
 			cnrs[2*i]=Math.PI-corners[2*(N-1-i)];
 			cnrs[2*i+1]=corners[2*(N-1-i)+1];
 		}
-		j=PostFactory.sphClosedPath(path,cnrs,parent);
+		j=CPFace.sphClosedPath(path,cnrs,parent);
 		if (j<0 || !path.intersects(g2.getClipBounds()))  // view test
 			return 1;
 		path.closePath();
@@ -269,6 +281,294 @@ public class CPFace extends Complex {
 		if (holdColor!=null)
 			g2.setColor(holdColor);
 		return 1;
+	}		
+
+	/**
+	 * This adds a visible closed spherical polygon to 'gpath'.
+	 *  
+	 * Return 0 if everything is on front (i.e., one needn't do back); 
+	 * Return 1 if horizon segments were added; 
+	 * Return -1 if everything is on the back.
+	 * 
+	 * When the curve crosses beyond the horizon and then comes back,
+	 * the counterclockwise arc of the horizon is included. NOTE: for
+	 * complicated curves may give visually incorrect results
+	 * when 'filled'; should be okay for convex curves.
+	 * 
+	 * @param gpath, instantiated Path2D.Double
+	 * @param []crns, double[]; corners x=theta, y=phi
+	 * @param N, int, number of corners
+	 * @return 1 if path was augmented, -1 if path is all on back, 
+	 *   return 0 if everything is on the front.
+	 * TODO: have to handle huge faces, with interior containing hemisphere.
+	 *   May have to fill in hemisphere, or build annular region, e.g., between
+	 *   triangle and unit circle.
+	 * @throws DrawingException 
+	 */
+	public static int sphClosedPath(Path2D.Double gpath,
+			double []crns,CPScreen cpS) throws DrawingException {
+		int N=(int)(crns.length/2);
+		
+		// Cheap check: are all points invisible? Just check x-coords
+		boolean hit=false;
+		for (int j=0;(j<N && !hit);j++)
+			if (Math.cos(crns[2*j])>0.0) 
+				hit=true;
+		if (!hit) 
+			return -1; // nothing on front
+		
+		Point3D []pts=new Point3D[N];
+		for (int j=0;j<N;j++)
+			pts[j]=new Point3D(crns[2*j],crns[2*j+1]);
+		
+		boolean debug=false;
+		if (debug) { // debug=true;
+			StringBuilder strbld=new StringBuilder("pts = ");
+			strbld.append(pts[0]+"\n"+pts[1]+"\n"+pts[2]+"\n");
+			System.out.println(strbld.toString());
+		}
+		
+		SphGeodesic[] sg=new SphGeodesic[N];
+		hit=false;
+		boolean allFront=true;
+		boolean allHorizon=true;
+		int firstX=-1;
+		for (int j=N-1;j>=0;j--) {
+			sg[j]=new SphGeodesic(pts[j],pts[(j+1)%N]);
+			if (sg[j].isVisible()) {
+				hit=true;
+				firstX=j;
+				if (sg[j].hitHorizon())
+					allFront=false;
+				if (sg[j].followHorizon()!=1) { // not horizon or clockwise
+					allHorizon=false;
+				}
+			}
+		}
+		if (!hit) 
+			return -1; // nothing on front
+		
+		// everything on front or around horizon (counterclockwise)
+		if (allFront || allHorizon) {
+			CPEdge.sphCreateEdge(gpath, sg[0], cpS);
+			for (int i=1;i<N;i++) 
+				CPEdge.sphCreateEdge(gpath, sg[i], cpS);
+			return 0; // tells calling routine that there's nothing on back
+		}
+		if (firstX<0) 
+			throw new DrawingException("Didn't find visible geodesic");
+
+		SphGeodesic firstSG=sg[firstX];
+		SphGeodesic nextSG=firstSG;
+		Complex toBackSpot=null;
+		int i=firstX;
+		
+		// on each reentry, nextSG is visible but not yet added to path
+		while (nextSG.isVisible() && i<N) {
+			toBackSpot=null;
+
+			// add geodesics until you get 'horizonEnd' (they should be visible)
+			while (i<(N-1) && !nextSG.horizonEnd) {
+				CPEdge.sphCreateEdge(gpath, nextSG, cpS);
+				i++;
+				nextSG=sg[i];
+			}
+			
+			// if it went beyond horizon, add this segment and record exit spot
+			if (nextSG.horizonEnd) {
+				toBackSpot=SphericalMath.sphToVisualPlane(nextSG.z2);
+				// TODO: Oops, can't use Path2D, as these are pixel based.
+				CPEdge.sphCreateEdge(gpath, nextSG, cpS);
+			}
+
+			// if last segment, have to finish up or catch error
+			if (i==(N-1)) {
+				i=N; // kick out
+				if (toBackSpot!=null) { // already drawn, just close up
+					if (!firstSG.horizonStart)
+						throw new DrawingException("path not closed");
+					// close up with arc of horizon
+					double a2=SphericalMath.sphToVisualPlane(firstSG.z1).arg();
+					double extent=rad2deg*MathComplex.radAngDiff(toBackSpot.arg(),a2);
+					if (extent>.0001) {
+						gpath.append((Shape)new Arc2D.Double(cpS.toPixX(-1.0),
+								cpS.toPixY(1.0),2.0*cpS.pixFactor,2.0*cpS.pixFactor,
+								rad2deg*toBackSpot.arg(),extent,Arc2D.OPEN),true);
+					}
+				}
+				else // on front, should close, add it
+					CPEdge.sphCreateEdge(gpath, nextSG, cpS);
+			}
+			
+			// after this, toBackSpot is set
+
+			// get next segment if there is one
+			if (i<(N-1)) {
+				i++;
+				nextSG=sg[i];
+			}
+			
+			// ignore geodesics until one becomes visible
+			while (i<(N-1) && !nextSG.isVisible()) {
+				i++;
+				nextSG=sg[i];
+			}
+
+			// now have last segment
+			if (i==(N-1)) {
+				i=N; // kick out
+				if (!nextSG.isVisible()) {
+					if (!firstSG.horizonStart)
+						throw new DrawingException("never got back from the back");
+					// put in final arc of horizon
+					double a2=SphericalMath.sphToVisualPlane(firstSG.z1).arg();
+					double extent=rad2deg*MathComplex.radAngDiff(toBackSpot.arg(),a2);
+					if (extent>.0001) {
+						gpath.append((Shape)new Arc2D.Double(cpS.toPixX(-1.0),
+							cpS.toPixY(1.0),2.0*cpS.pixFactor,2.0*cpS.pixFactor,
+							rad2deg*toBackSpot.arg(),extent,Arc2D.OPEN),true);
+					}
+				}
+				else { // visible, must have come from the back
+					// fill in arc first
+					double a2=SphericalMath.sphToVisualPlane(nextSG.z1).arg();
+					double extent=rad2deg*MathComplex.radAngDiff(toBackSpot.arg(),a2);
+					if (extent>.0001) {
+						gpath.append((Shape)new Arc2D.Double(cpS.toPixX(-1.0),
+								cpS.toPixY(1.0),2.0*cpS.pixFactor,2.0*cpS.pixFactor,
+								rad2deg*toBackSpot.arg(),extent,Arc2D.OPEN),true);
+					}
+					// draw the last arc itself
+					CPEdge.sphCreateEdge(gpath, nextSG, cpS);
+				}
+			}
+			else if (i<N) { // have to add arc (only)
+				double a2=SphericalMath.sphToVisualPlane(nextSG.z1).arg();
+				double extent=rad2deg*MathComplex.radAngDiff(toBackSpot.arg(),a2);
+				if (extent>.0001) {
+					gpath.append((Shape)new Arc2D.Double(cpS.toPixX(-1.0),
+							cpS.toPixY(1.0),2.0*cpS.pixFactor,2.0*cpS.pixFactor,
+							rad2deg*toBackSpot.arg(),extent,Arc2D.OPEN),true);
+				}
+			}
+		} // end of while	
+//		gpath.closePath();
+		return 1;
+	}		
+	
+	/**
+	 * Returns visible segments of sph polygon as array of
+	 * Path2D.Double, for use, eg, when drawing polygon bdry.
+	 * (Compare to 'sphClosedPath' which adds segments of 
+	 * horizon and also puts results in 'gpath'.)
+	 * 
+	 * @param []crns, double[], corners x,y (length is 2*N)
+	 * @param N, int, number of corners
+	 * @return Vector<Path2D.Double>, length 0 if nothing visible.
+	 * If length=1, then entire polygon is visible, but calling 
+	 * routine must decide whether to close the path.
+	 */
+	public static Vector<Path2D.Double> sphPolyBdry(double []crns,int N,CPScreen cpS) 
+	throws DrawingException {
+		
+		Vector<Path2D.Double> paths=new Vector<Path2D.Double>();
+		
+		// Cheap check: are all points invisible? Just check x-coords
+		boolean hit=false;
+		for (int j=0;(j<N && !hit);j++)
+			if (Math.cos(crns[2*j])>0.0) hit=true;
+		if (!hit) return paths; // nothing on front
+		
+		Point3D []pts=new Point3D[N];
+		for (int j=0;j<N;j++)
+			pts[j]=new Point3D(crns[2*j],crns[2*j+1]);
+		
+		SphGeodesic[] sg=new SphGeodesic[N];
+		hit=false;
+		boolean allFront=true;
+		boolean allHorizon=true;
+		int firstX=-1;
+		for (int j=N-1;j>=0;j--) {
+			sg[j]=new SphGeodesic(pts[j],pts[(j+1)%N]);
+			if (sg[j].isVisible()) {
+				hit=true;
+				firstX=j;
+				if (sg[j].hitHorizon())
+					allFront=false;
+				if (sg[j].followHorizon()!=1) { // not horizon or clockwise
+					allHorizon=false;
+				}
+			}
+		}
+		if (!hit) return paths; // nothing on front
+		
+		// everything on front or around horizon (counterclockwise)
+		if (allFront || allHorizon) {
+			Path2D.Double oneseg=new Path2D.Double();
+			CPEdge.sphCreateEdge(oneseg, sg[0], cpS);
+			for (int i=1;i<N;i++) 
+				CPEdge.sphCreateEdge(oneseg, sg[i], cpS);
+			// Note, we don't close up
+			paths.add(oneseg);
+			return paths; // signals calling routine that there's nothing on back
+		}
+		
+		if (firstX<0) 
+			throw new DrawingException("Didn't find visible geodesic");
+
+		SphGeodesic firstSG=sg[firstX];
+		SphGeodesic nextSG=firstSG;
+		int i=firstX;
+		
+		boolean needNew=true;
+		Path2D.Double newseg=new Path2D.Double();
+		
+		// on each reentry, nextSG is visible but not yet added to path
+		while (nextSG.isVisible() && i<N) {
+			if (needNew) {
+				newseg=new Path2D.Double();
+				needNew=false;
+			}
+
+			// add geodesics until you get 'horizonEnd' (they should be visible)
+			while (i<(N-1) && !nextSG.horizonEnd) {
+				CPEdge.sphCreateEdge(newseg, nextSG, cpS);
+				i++;
+				nextSG=sg[i];
+			}
+			
+			// if it went beyond horizon, store this path
+			if (nextSG.horizonEnd) {
+				paths.add(newseg);
+				needNew=true;
+			}
+
+			// get next segment if there is one
+			if (i<(N-1)) {
+				i++;
+				nextSG=sg[i];
+			}
+			
+			// ignore geodesics until one becomes visible
+			while (i<(N-1) && !nextSG.isVisible()) {
+				i++;
+				nextSG=sg[i];
+			}
+
+			// now have last segment
+			if (i==(N-1)) {
+				i=N; // kick out
+				if (!nextSG.isVisible()) {
+					return paths;
+				}
+				else { // visible, must have come from the back
+					newseg=new Path2D.Double();
+					CPEdge.sphCreateEdge(newseg, nextSG, cpS);
+					paths.add(newseg);
+				}
+			}
+		} // end of while	
+		return paths;
 	}		
 	
 	/**
