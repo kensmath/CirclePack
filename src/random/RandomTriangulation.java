@@ -13,7 +13,9 @@ import java.util.Vector;
 
 import JNI.DelaunayBuilder;
 import JNI.DelaunayData;
+import JNI.ProcessDelaunay;
 import allMains.CirclePack;
+import combinatorics.komplex.Face;
 import complex.Complex;
 import dcel.CombDCEL;
 import exceptions.CombException;
@@ -21,7 +23,6 @@ import exceptions.DataException;
 import exceptions.InOutException;
 import geometry.SphericalMath;
 import komplex.EdgeSimple;
-import komplex.Face;
 import komplex.Triangulation;
 import listManip.EdgeLink;
 import math.Point3D;
@@ -163,8 +164,10 @@ public class RandomTriangulation {
 	  Vector<Complex> Z_bdry=new Vector<Complex>(0);
 	  
 	  Random random=new Random();
-	  if (debug_flag) random.setSeed(1); // specific seed only when debugging (?? I think)
-	  if (N<12) N=12;
+	  if (debug_flag) 
+		  random.setSeed(1); // specific seed only when debugging (?? I think)
+	  if (N<12) 
+		  N=12;
 	  bdryN=(int)(4.0*Math.sqrt((double)N)); // usual number of added vertices
 
 	  // setup depending on situation.
@@ -364,7 +367,7 @@ public class RandomTriangulation {
 	  try {
 		  dData=new DelaunayData(hes,Z_list,elink);
 		  try {
-			  dData = new DelaunayBuilder().apply(dData);
+			  ProcessDelaunay.sphDelaunay(dData);
 		  } catch (Exception ex) {
 			  CirclePack.cpb.errMsg("'DelaunayBuilder' DelaunayException occurred: "+ex.getMessage());
 			  return null;
@@ -496,6 +499,9 @@ public class RandomTriangulation {
 		DelaunayData dData=null;
 		try {
 			dData=new DelaunayData(0,Z_list,elink);
+			
+			// TODO: need new code
+			
 			dData=new DelaunayBuilder().apply(dData);
 		} catch (Exception ex) {
 			CirclePack.cpb.errMsg("randomHypTriangulation failed: "+ex.getMessage());

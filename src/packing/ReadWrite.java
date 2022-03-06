@@ -14,6 +14,7 @@ import baryStuff.BaryPacket;
 import baryStuff.BaryPoint;
 import baryStuff.BaryPtData;
 import circlePack.PackControl;
+import combinatorics.komplex.Face;
 import complex.Complex;
 import dcel.CombDCEL;
 import dcel.HalfEdge;
@@ -22,7 +23,6 @@ import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
 import komplex.EdgeSimple;
-import komplex.Face;
 import komplex.Triangulation;
 import listManip.BaryCoordLink;
 import listManip.EdgeLink;
@@ -188,19 +188,9 @@ public class ReadWrite {
 						p.nodeCount = 0; // this should be updated with FLOWERS processing
 						state = PackState.TILECOUNT;
 					} else if (mainTok.startsWith("TRIANGULATION")) {
+						state = PackState.TRIANGULATION;
 						flags |= 0001;
 						newPacking = true;
-						p.fileName = "";
-						p.hes = 0;
-						int intdata = Integer.parseInt(tok.nextToken());
-						if (intdata < 3) {
-							p.flashError("Error in TRIANGULATION data: less than 3 faces");
-							return 0;
-						}
-						p.reset_pack_space(intdata);
-						p.nodeCount = intdata;
-						p.tileData = null;
-						state = PackState.TRIANGULATION;
 						break;
 					} else if (mainTok.equals("NEUTRAL:")) {
 						state = PackState.NEUTRAL;
@@ -215,13 +205,15 @@ public class ReadWrite {
 							break;
 						}
 						tok = new StringTokenizer(line);
-						if (tok.countTokens() < 3)
+						
+						// check if looks like a triangulation
+						if (tok.countTokens() < 3) // does not
 							break;
 						state = PackState.TRIANGULATION;
 						while (tok.hasMoreTokens()) {
 							tok.nextToken();
 						}
-						fp.reset();
+						fp.reset(); // to restore first line
 						newPacking = true;
 						flags |= 0001;
 						break;
@@ -507,7 +499,8 @@ public class ReadWrite {
 						// create PackData
 						PackData pdata = Triangulation.tri_to_Complex(tri, 0);
 						if (pdata == null)
-							throw new CombException("Failed while reading TRIANGULATION");
+							throw new CombException(
+									"Failed while reading TRIANGULATION");
 
 						// success: other settings, toss old data
 						p.status = true;

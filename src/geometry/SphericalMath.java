@@ -320,14 +320,24 @@ public class SphericalMath{
    * @param sph_z Complex, spherical coords (theta,phi)
    * @return double[3]
    */
-  public static double[] s_pt_to_vec(Complex sph_z){
-    double[] V = new double[3];
-    double s=Math.sin(sph_z.y);
-    V[0] = s * Math.cos(sph_z.x);
-    V[1] = s * Math.sin(sph_z.x);
-    V[2] = Math.cos(sph_z.y);
+  public static double[] s_pt_to_vec(Complex sph_z) {
+	    double[] V = new double[3];
+	    double s=Math.sin(sph_z.y);
+	    V[0] = s * Math.cos(sph_z.x);
+	    V[1] = s * Math.sin(sph_z.x);
+	    V[2] = Math.cos(sph_z.y);
 
-    return V;
+	    return V;
+  }
+  
+  public static double[] s_pt_to_vec(double x,double y) {
+	    double[] V = new double[3];
+	    double s=Math.sin(y);
+	    V[0] = s * Math.cos(x);
+	    V[1] = s * Math.sin(x);
+	    V[2] = Math.cos(y);
+
+	    return V;
   }
   
   /**

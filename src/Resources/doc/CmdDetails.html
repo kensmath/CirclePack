@@ -933,9 +933,6 @@ points with nghbs</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Specialized Options:</strong>
 <blockquote>
 <table>
-<tr><td width="25%" valign="top">-BF -CF -FF</td>
-<td width="65%" align="left"> extend '-[BCF]' but for red chain objects
-	the centers/radii stored in the red chain are used.</td></tr>
 <tr><td width="25%" valign="top">-ee {v w..}</td>
 <td width="65%" align="left"> extended edges; travel thru up to 16 hex
 			vertices from v to w (for hex_refined packs). </td></tr>
@@ -1494,11 +1491,12 @@ the face furthest from the boundary faces</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="project">project</a>&nbsp;&nbsp; 
 <br/><br/>
-<font size="+1" color="blue"><strong><a name="get_data">get_data</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-q{q} [-t] {flag} {v..}&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="get_data">get_data</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-q{q} [-t] {flag} {..}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Specified, perhaps multiple, types of data, each
-	associated with a list of vertices/faces/edges of the 
-	active pack is copied from pack q to the active packing. 
+<strong>Description: </strong>Copy data from pack q to the active packing. 
+    There are (perhaps multiple) specifications, each 
+    with a list of vertices/faces/edges. 
+    
 	If the -t flag is set it must be first and the active 
 	packing must have a 'vertex_map'; then the data for 
 	verts/faces/edges in the active	pack is replaced by 
@@ -1553,8 +1551,43 @@ the face furthest from the boundary faces</td></tr>
 	q --> r --> p. A caveat: the maps may not have full 
 	range or domain and results can be non-unique or 
 	ambiguous.
-
 </blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Data specification flags:</strong>
+<blockquote>
+<table>
+<tr><td width="25%" valign="top">-t</td>
+<td width="65%" align="left"> translate (see above); must occur first after '-q2'</td></tr>
+<tr><td width="25%" valign="top">-r</td>
+<td width="65%" align="left"> radii (same as '-cr')</td></tr>
+<tr><td width="25%" valign="top">-z</td>
+<td width="65%" align="left"> centers (same as '-cz')</td></tr>
+<tr><td width="25%" valign="top">-a</td>
+<td width="65%" align="left"> aims (same as '-ca')</td></tr>
+<tr><td width="25%" valign="top">-cc</td>
+<td width="65%" align="left"> circle colors</td></tr>
+<tr><td width="25%" valign="top">-cm</td>
+<td width="65%" align="left"> circle 'mark's</td></tr>
+<tr><td width="25%" valign="top">-c[rzmca]</td>
+<td width="65%" align="left"> multiple specifications (same vertex list)</td></tr>
+<tr><td width="25%" valign="top">-fc</td>
+<td width="65%" align="left"> face colors</td></tr>
+<tr><td width="25%" valign="top">-fm</td>
+<td width="65%" align="left"> face 'mark's</td></tr>
+<tr><td width="25%" valign="top">-f[mc]</td>
+<td width="65%" align="left"> mutilple specifications (same face list)</td></tr>
+<tr><td width="25%" valign="top">-em</td>
+<td width="65%" align="left"> edge 'mark's</td></tr>
+<tr><td width="25%" valign="top">-ec</td>
+<td width="65%" align="left"> edge color</td></tr>
+<tr><td width="25%" valign="top">-es</td>
+<td width="65%" align="left"> schwarzians (for edges)</td></tr>
+<tr><td width="25%" valign="top">-ei</td>
+<td width="65%" align="left"> inversive distances (for edges)</td></tr>
+<tr><td width="25%" valign="top">-e[mcsi]</td>
+<td width="65%" align="left"> multiple specifications (same edge list)</td></tr>
+<tr><td width="25%" valign="top">-v -V</td>
+<td width="65%" align="left"> vertex_map (see above); these occur alone</td></tr>
+</table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>

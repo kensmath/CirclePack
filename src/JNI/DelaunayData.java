@@ -5,8 +5,8 @@ import geometry.SphericalMath;
 import java.util.Iterator;
 import java.util.Vector;
 
+import combinatorics.komplex.Face;
 import komplex.EdgeSimple;
-import komplex.Face;
 import komplex.Triangulation;
 import listManip.EdgeLink;
 import math.Point3D;
@@ -25,17 +25,17 @@ public class DelaunayData {
 
 	// point info
 	public int pointCount;		// number of nodes of point set
-	public double []ptX;
-	public double []ptY;
+	public double[] ptX;
+	public double[] ptY;
 	
 	// bdry info if there's a boundary; note, it must close up
 	public int bdryCount;	// edge count of closed bdry 
-	public int []edgeV;		// indices of bdry edge starts
-	public int []edgeW;     // bdry edge ends
+	public int[] edgeV;		// indices of bdry edge starts
+	public int[] edgeW;     // bdry edge ends
 	
 	// face information
 	public int myfaceCount;	// number of faces on return
-	public int []triLite;	// linearized array of face indices; 
+	public int[] triLite;	// linearized array of face indices; 
 							// for face f use indices {3*f, 3*f+1, 3*f+2}
 	
 	// constructor(s)

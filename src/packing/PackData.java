@@ -15,6 +15,7 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import baryStuff.BaryPtData;
 import circlePack.PackControl;
+import combinatorics.komplex.Face;
 import complex.Complex;
 import complex.MathComplex;
 import dcel.CombDCEL;
@@ -38,7 +39,6 @@ import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import komplex.DualTri;
 import komplex.EdgeSimple;
-import komplex.Face;
 import komplex.Triangulation;
 import listManip.BaryCoordLink;
 import listManip.BaryLink;
@@ -6786,7 +6786,7 @@ public class PackData{
 		for (int f=1;f<=Tri.faceCount;f++) {
 			dcel.DcelFace face=packDCEL.faces[f];
 			int[] vert=face.getVerts();
-			Tri.faces[f]=new komplex.Face(vert.length);
+			Tri.faces[f]=new combinatorics.komplex.Face(vert.length);
 			Tri.faces[f].vert=vert;
 		}
 		

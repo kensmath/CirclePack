@@ -9,8 +9,9 @@ import java.util.Vector;
 
 import JNI.DelaunayBuilder;
 import JNI.DelaunayData;
-import JNI.JNIinit;
+import JNI.ProcessDelaunay;
 import allMains.CirclePack;
+import combinatorics.komplex.Face;
 import complex.Complex;
 import dcel.CombDCEL;
 import dcel.HalfEdge;
@@ -68,8 +69,8 @@ public class Triangulation {
 	 * @return PackData, null on failure
 	 */
 	public static PackData tri_to_Complex(Triangulation Tri,int hes) {
-		if (Tri==null || Tri.faceCount<1) return null;
-
+		if (Tri==null || Tri.faceCount<1) 
+			return null;
 	    int n0=1;
     	double min0=10000.0;
     	double dist=0.0;
@@ -100,7 +101,7 @@ public class Triangulation {
 	    	}
 	    }
 	  
-		// ===== generate temporary 'KData' array from Triangulation
+		// ===== generate temporary 'TmpVert' array from Triangulation
 		TmpVert[] tmpVert=null;
 		int[] ans=new int[2];
 		try {
@@ -114,7 +115,7 @@ public class Triangulation {
 		}
 		
 		// ========== create bouquet from KData array
-		int[][] bouquet=new int[tmpVert.length+1][];
+		int[][] bouquet=new int[tmpVert.length][];
 		for (int v=1;v<=ans[0];v++) {
 			bouquet[v]=tmpVert[v].flower;
 		}
@@ -218,11 +219,11 @@ public class Triangulation {
 	 * to salvage bad data --- just throw 'DataException'.
 	 * 
 	 * Do a number of adjustments: adjust indices to start at 1,
-	 * run contiguously; original indices stored in 'KData.mark'.
+	 * run contiguously; original indices stored in 'TmpVert.mark'.
 	 * Make face orientations consistent, etc. 
 	 * 
-	 * Return pointer to new 'KData', which calling program 
-	 * can use to generate a bouquet new packing; 
+	 * Return pointer to new 'TmpVert', which calling program 
+	 * can use to generate a bouquet for the new packing; 
 	 * 'DataException' on error. ans[0] gives nodecount. 
 	 * 
 	 * TODO: weakness = connected set of faces, so may throw 
@@ -232,7 +233,7 @@ public class Triangulation {
 	 * @param start int, index of first face
 	 * @param []ans int[], instantiated by calling routine to get data: 
 	 * 	ans[0]=nodecount. 
-	 * @return KData[], null on error. Original indices stored in 'mark'
+	 * @return TmpVert[], null on error. Original indices stored in 'mark'
 	*/
 	public static TmpVert[] parse_triangles(Triangulation T, 
 			int start, int[] ans)
@@ -1174,10 +1175,7 @@ public class Triangulation {
 	 */
 	public static Triangulation pts2triangulation(int hes,Vector<Complex> pts) {
 		
-		  if (!JNIinit.DelaunayStatus()) {
-			  throw new JNIException("'delaunay' requires the 'HeavyC' library, which is not installed");
-		  }
-
+		// load data
 		DelaunayData dData=new DelaunayData(hes,pts);
 		int N=dData.pointCount;
 		dData.ptX=new double[N+1];
@@ -1186,14 +1184,26 @@ public class Triangulation {
 			Complex pz=pts.get(i);
 			dData.ptX[i+1]=pz.x;
 			dData.ptY[i+1]=pz.y;
-		  }
+		}
+		
+		// try processBuilder calls
+		int tick=-1;
 		try {
-			  dData=new DelaunayBuilder().apply(dData);
+			if (hes>0) {
+				tick=ProcessDelaunay.sphDelaunay(dData);
+			}
+			else {
+			// TODO: need new code
+				dData=new DelaunayBuilder().apply(dData);
+			}
 		} catch (Exception ex) {
 			  ex.printStackTrace();
-			  throw new JNIException("Problem calling library 'DelaunayBuild'");
+			  throw new JNIException("Problem creating Delaunay");
 		}
 
+		if (tick<=0)
+			throw new JNIException("Problems with Delaunay creation");
+		
 		return dData.getTriangulation();
 	}
 	

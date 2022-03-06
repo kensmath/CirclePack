@@ -18,7 +18,8 @@ import java.io.InputStream;
 public class NativeLib
 {
 
-	public static String writeLibrary(String path, String libname) throws IOException
+	public static String writeLibrary(String path, String libname) 
+			throws IOException
 	{
 		/* Gets the name of the platform dependent library */
 		libname = System.mapLibraryName(libname);

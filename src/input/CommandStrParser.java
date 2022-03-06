@@ -21,6 +21,7 @@ import javax.swing.JFrame;
 import JNI.DelaunayBuilder;
 import JNI.DelaunayData;
 import JNI.JNIinit;
+import JNI.ProcessDelaunay;
 import allMains.CPBase;
 import allMains.CirclePack;
 import canvasses.ActiveWrapper;
@@ -29,6 +30,7 @@ import canvasses.DisplayParser;
 import canvasses.MainFrame;
 import canvasses.MyCanvasMode;
 import circlePack.PackControl;
+import combinatorics.komplex.Face;
 import complex.Complex;
 import complex.MathComplex;
 import cpContributed.BoundaryValueProblems;
@@ -88,7 +90,6 @@ import geometry.NSpole;
 import geometry.SphericalMath;
 import komplex.EdgeSimple;
 import komplex.Embedder;
-import komplex.Face;
 import komplex.HexPaths;
 import komplex.Triangulation;
 import listManip.BaryCoordLink;
@@ -3084,12 +3085,6 @@ public class CommandStrParser {
 				  throw new ParserException("failed to read points");
 			  if (uP.rtnFlag!=0)
 				  throw new ParserException("Points are not in unit square");
- 			  // put data in vectors for native calls
- 			  // NOTE: nodes indexed from 1
-//			  int N=uP.z_vec.size();
-// 			  double []xx=new double[N+1];
-// 			  double []yy=new double[N+1];
-//			  Point3D []nodes=new Point3D[N+1];
 			  int hes=0;
 			  if (uP.rtnFlag==3) // points should be (theta,phi)
 				  hes=1; 
@@ -3097,7 +3092,7 @@ public class CommandStrParser {
 			  DelaunayData dData=null;
 			  try {
 				  dData=new DelaunayData(hes,uP.z_vec);
-				  dData=new DelaunayBuilder().apply(dData);
+				  ProcessDelaunay.sphDelaunay(dData);
 			  } catch (Exception ex) {
 				  CirclePack.cpb.errMsg("randomHypTriangulation failed: "
 						  +ex.getMessage());
@@ -3133,9 +3128,6 @@ public class CommandStrParser {
 		  
 		  // =========== rand_tri =========
 		  if (cmd.startsWith("rand_tri") || cmd.startsWith("random_tri")) {
-			  if (!JNIinit.DelaunayStatus()) {
-				  throw new JNIException("call requires the 'DelaunayBuild' C++ library.");
-			  }
 			  boolean seed1=false; // true for debug so random seed is not called
 			  int randN=200;
 			  int heS=0; // default geometry to set
@@ -3158,9 +3150,11 @@ public class CommandStrParser {
 						  seed1=true;
 						  items.remove(0);
 					  }
-					  if (items.size()>0) newFS.add(items);
+					  if (items.size()>0) 
+						  newFS.add(items);
 				  }
-				  if (newFS.size()==0) newFS=null;
+				  if (newFS.size()==0) 
+					  newFS=null;
 			  }
 			  
 			  // now we've removed any -d flags; check for others

@@ -2,8 +2,8 @@ package JNI;
 
 /** 
  * This initiates calls to C/C++ libraries, updated in 2015, which
- * service calls for random triangulations using 'triangle' and 'qhull'
- * anf for sparse matrix computation using 'umfpack' and related 
+ * services calls for random triangulations using 'triangle' and 'qhull'
+ * and for sparse matrix computation using 'umfpack' and related 
  * libraries for implementing Orick's packing algorithm.
  * 
  * Here we try to load the libraries and set flags indicating

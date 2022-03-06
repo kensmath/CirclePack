@@ -40,10 +40,13 @@ import variables.VarControl;
  * flexibility (i.e., 'msg()'), sets up the key general 
  * variables, the packing data objects, and models for data
  * managers, etc. Not all needed in every case; in particular,
- * I am working toward a "standalone" version and a full
- * GUI version.
+ * I am working toward a "standalone" version along with the
+ * usual GUI version.
  */
 public abstract class CPBase {
+	
+	// directory for codes such as 'triangle', 'qhull'
+	public static File LibDirectory=new File(System.getProperty("java.io.tmpdir"));
 	
 	// Some useful constants, objects
 	public static final double sqrt3=Math.sqrt(3);           // sqrt{3}

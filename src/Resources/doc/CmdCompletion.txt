@@ -72,7 +72,7 @@ gen_cut {v} {n}
 gen_islands {v..} 
 gen_mark [option] {v} 
 geom_to_[ehs] [option] 
-get_data -q{q} [-t] {flag} {v..} 
+get_data -q{q} [-t] {flag} {..} 
 get_xyz [options] 
 GOpack [-v {v..}] -[ghqrsx] -[b{f}] -[c{n}] 
 h_dist z.re z.re w.re w.im 

@@ -2605,7 +2605,7 @@ public class CombDCEL {
 	public static int pruneDCEL(PackDCEL pdcel) {
 		int vcount=pdcel.vertCount;
 		if (pdcel.redChain==null)
-			throw new CombException("usage: 'prune' requires a red chain");
+			return 0;
 		HalfLink hlink=new HalfLink();
 		RedEdge rtrace=pdcel.redChain;
 		do {
