@@ -1224,10 +1224,7 @@ public class PackData{
 	 * @return Complex[2], null on failure
 	 */
 	public Complex[] ends_dual_edge(EdgeSimple edge) {
-		EdgeSimple dedge=packDCEL.dualEdge_to_Edge(edge); 
-		int v=dedge.v;
-		int w=dedge.w;
-		HalfEdge hedge=packDCEL.findHalfEdge(dedge);
+		HalfEdge hedge=packDCEL.dualEdge_to_halfedge(edge);
 		// incircle of f
 		CircleSimple cSf= CommonMath.tri_incircle(
 				packDCEL.getVertCenter(hedge),
@@ -5442,13 +5439,14 @@ public class PackData{
 	 */
 	public static TriAspect[] getTriAspects(PackData p) {
 		PackDCEL pdcel=p.packDCEL;
-		int count=0; 
+		int count=1; 
 		boolean ivds=p.haveInvDistances();
 		boolean schws=p.haveSchwarzians();
 		TriAspect[] aspect=new TriAspect[p.faceCount+1];
 		
 		// assume first face is in place
-		int next_face=pdcel.alpha.face.faceIndx;
+		HalfEdge he=pdcel.fullOrder.get(0); // should be 'alpha'
+		int next_face=he.face.faceIndx;
 		int last_face=next_face;
 		int[] mv=pdcel.faces[next_face].getVerts();
 		aspect[next_face]=new TriAspect(p.hes);
@@ -5464,7 +5462,7 @@ public class PackData{
 		aspect[next_face].setRadius(p.getRadius(mv[2]),2);
 		
 		if (ivds || schws) {
-			HalfEdge he=pdcel.alpha;
+			he=pdcel.fullOrder.get(0);
 			int tick=0;
 			do {
 				if (ivds)
@@ -5486,7 +5484,7 @@ public class PackData{
 			aspect[next_face].tanPts[j]=new Complex(dtri.TangPts[j]);
 
 		Iterator<HalfEdge> elist = p.packDCEL.fullOrder.iterator();
-		elist.next(); // flush the 'alpha' entry
+		elist.next(); // first entry already used
 		while (elist.hasNext()) {
 			HalfEdge edge = elist.next();
 			last_face=edge.twin.face.faceIndx;
@@ -5502,7 +5500,7 @@ public class PackData{
 
 			// store any inv distances or schwarzians
 			if (ivds || schws) {
-				HalfEdge he=edge.face.edge;
+				he=edge.face.edge;
 				int tick=0;
 				do {
 					if (ivds)
@@ -5525,15 +5523,15 @@ public class PackData{
 					aspect[last_face].getRadius(last_indx),next_indx);
 			// get data for other end of 'edge'
 			aspect[next_face].setCenter( // other end of 'edge'
-					aspect[last_face].getCenter((last_indx+1)%3),
-					(next_indx+2)%3);
-			aspect[next_face].setRadius(
-					aspect[last_face].getRadius((last_indx+1)%3),
-					(next_indx+2)%3);
-			// get radius for opposite vertex, compute center
+					aspect[last_face].getCenter((last_indx+2)%3),
+					(next_indx+1)%3);
 			aspect[next_face].setRadius(
 					aspect[last_face].getRadius((last_indx+2)%3),
 					(next_indx+1)%3);
+			// get radius for opposite vertex, compute center
+			aspect[next_face].setRadius(
+					aspect[last_face].getRadius((last_indx+1)%3),
+					(next_indx+2)%3);
 
 			// compute new center for aspect for next_face
 			CircleSimple sc;
@@ -5552,7 +5550,7 @@ public class PackData{
 			else {
 				sc = CommonMath.comp_any_center(zv,zw,rv,rw,ropp,p.hes);
 			}
-			aspect[next_indx].setCenter(sc.center,(next_indx+2)%3);
+			aspect[next_face].setCenter(sc.center,(next_indx+2)%3);
 			
 			// compute/store the tangency points
 			dtri=new DualTri(
@@ -6873,7 +6871,7 @@ public class PackData{
 	 * original packing's boundary vertices, at their current 
 	 * locations.
 	 *
-	 * TODO: Extend to cutting out a top disc, 
+	 * TODO: Extend to cutting out a topological disc, 
 	 * retriangulating it and pasting new triangulation back 
 	 * in. Would be fun to alternate: cut, Delaunary 
 	 * triangulate, pack, layout, repeat.

@@ -2,7 +2,6 @@ package util;
 
 import allMains.CPBase;
 import complex.Complex;
-import dcel.DcelFace;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
 import geometry.CircleSimple;
@@ -14,10 +13,10 @@ import komplex.DualTri;
 import math.Mobius;
 
 /**
- * Utility class holding geometric info localized to 
- * (triangular only) faces of some parent circle packing. 
- * Used, e.g., with projective and affine structures and with 
- * discrete Schwarzians. Geometry depends on parent packing.
+ * Utility class holding geometric info localized to triangular
+ * faces of some parent circle packing. Used, e.g., with 
+ * projective and affine structures and with discrete 
+ * Schwarzians. Geometry depends on parent packing.
  * 
  * TODO: some routines assume eucl data; trying to update as needed
  * 
@@ -37,14 +36,18 @@ import math.Mobius;
  * outside of the redChain). Their local radii may be kept 
  * here in 'labels' or 'radii'.
  * 
- * For use with Schwarzian derivative, we store Mobius of an
- * equilateral face to this face. The "base" equilateral face
- * is formed by tangent triple of eucl circles of radius 
- * sqrt(3), symmetric w.r.t. the origin, and with tangency 
- * points at the cube roots of unity (which are also the 
- * outward unit normals of the 0, 1, 2 edges, resp. Also, 
- * circle centers are center[0]=1-sqrt(3)i, 
- * center[1]=1+sqrt(3)i, center[2]=-2.
+ * For use with Schwarzian derivative, we store the Mobius
+ * which maps the "base equilateral" face to this face. 
+ * 
+ * NOTE: The "base equilateral" face is formed by tangent 
+ * triple of eucl circles of radius sqrt(3), symmetric 
+ * w.r.t. the origin, and with tangency points at the cube 
+ * roots of unity (which are also the outward unit normals 
+ * of the 0, 1, 2 edges, resp.)
+ * The circle centers are:
+ *    center[0]=1-sqrt(3)i, 
+ *    center[1]=1+sqrt(3)i, 
+ *    center[2]=-2.
  *  
  * @author kens
  */
@@ -82,9 +85,6 @@ public class TriAspect extends TriData {
 		need_update=true;
 		allocCenters();
 		schwarzian=new double[3];
-		for (int j=0;j<3;j++) {
-			schwarzian[j]=0.0;
-		}
 	}
 	
 	public TriAspect(PackDCEL pdcel,dcel.DcelFace face) {
@@ -189,17 +189,14 @@ public class TriAspect extends TriData {
 	}
 	
 	public Complex getTangPt(int j) {
-		Complex ctr = null;
 		if (hes < 0)
-			ctr = HyperbolicMath.hyp_tangency(center[j],center[(j+1)%3],
+			return HyperbolicMath.hyp_tangency(center[j],center[(j+1)%3],
 					radii[j],radii[(j+1)%3]);
-		else if (hes > 0)
-			ctr = SphericalMath.sph_tangency(center[j],center[(j+1)%3],
+		if (hes > 0)
+			return SphericalMath.sph_tangency(center[j],center[(j+1)%3],
 					radii[j],radii[(j+1)%3]);
-		else
-			ctr = EuclMath.eucl_tangency(center[j],center[(j+1)%3],
+		return EuclMath.eucl_tangency(center[j],center[(j+1)%3],
 					radii[j],radii[(j+1)%3]);
-		return ctr;
 	}
 	
 	public CircleSimple compIncircle() {
@@ -208,7 +205,7 @@ public class TriAspect extends TriData {
 
 	/**
 	 * Compute 'baseMobius' based on current 'tanPts'. This is
-	 * Mobius mapping FROM base equilateral TO this face. 
+	 * Mobius mapping FROM "base equilateral" TO this face. 
 	 */
 	public void setBaseMob() {
 		Complex rt3=new Complex(-.5,CPBase.sqrt3by2);
@@ -218,7 +215,7 @@ public class TriAspect extends TriData {
 		
 	/**
 	 * Compute/store "tangency" points based on current
-	 * centers. Actually these are points here the incircle
+	 * centers. Actually these are points where the incircle
 	 * of the triangle formed by the centers hits the edges.
 	 * (These points are conformally invariant under mobius
 	 * mob IF the centers are mapped as centers, i.e., 
@@ -289,12 +286,12 @@ public class TriAspect extends TriData {
 	/**
 	 * Utility routine: only use 'TriAspect' to hold rad/cent data.
 	 * Create a baseEquilateral in geometry 'hes'. In eucl and spherical 
-	 * case, the edge tangency points are at the cube roots of unit 
+	 * case, the edge tangency points are at the cube roots of unity
 	 * on the unit circle, with the 0th edge tangency point at z=1. 
 	 * In hyp case, shrink this down by euclidean factor .05.
 	 * @return TriAspect, null on error
 	 */
-	public static TriAspect baseEquilaterl(int hes) {
+	public static TriAspect baseEquilateral(int hes) {
 		TriAspect tri=new TriAspect(hes);
 		CircleSimple cS=new CircleSimple();
 		for (int j=0;j<3;j++) {
@@ -340,7 +337,7 @@ public class TriAspect extends TriData {
 					acrossTri.center[(windx+1)%3],acrossTri.labels[(windx+1)%3],
 					acrossTri.center[windx],acrossTri.labels[windx],
 					hes,acrossTri.hes);
-		if (mode==3) {
+		if (mode==3) { // use sidelengths
 			if (hes==0 && acrossTri.hes==0) {
 				double factor=acrossTri.sides[windx]/sides[indx];
 				Mobius mob=new Mobius();
@@ -358,7 +355,7 @@ public class TriAspect extends TriData {
 			return new Mobius();
 		}
 
-		// else assume mode==1
+		// else assume mode==1, use radii
 		return Mobius.mob_MatchCircles(center[indx], radii[indx],
 				center[(indx+1)%3], radii[(indx+1)%3],
 				acrossTri.center[(windx+1)%3],acrossTri.radii[(windx+1)%3],
@@ -369,7 +366,7 @@ public class TriAspect extends TriData {
 	
 	/**
 	 * Apply a Mobius transformation to my centers/radii.
-	 * Note: other data, eg. labels, sides, tangPts, are not ajusted
+	 * Note: other data, eg. labels, sides, tangPts, are NOT adjusted
 	 * @param mob Mobius
 	 */
 	public void mobiusMe(Mobius mob) {

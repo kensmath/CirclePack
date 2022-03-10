@@ -22,7 +22,6 @@ import input.CPFileManager;
 import komplex.DualTri;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
-import listManip.GraphLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
 import math.Mobius;
@@ -35,25 +34,28 @@ import util.TriAspect;
 import widgets.RadiiSliders;
 
 /** 
- * This is code for exploring discrete Schwarzian derivatives, 
- * following up on ideas in Gerald Orick's thesis. Note, however, that
- * I have started mainlining a slightly different notion, one identifying
- * faces with the "base equilateral". I expect to use this to replace
- * Orick's original approach, at which time I will revamp this 
- * PackExtender. In the meantime, I'm moving many methods to 
- * "packing.schwarzian". (This extender was originally called
- * "Schwarzian.java", "SZ".)
+ * This is code for exploring discrete Schwarzian derivatives.
+ * One goal is to handle packings on the sphere, another is to
+ * study projective structures on Riemann surfaces. 
+ * Motivated by Gerald Orick's thesis, I am pursuing a 
+ * slightly different notion, one identifying faces with the 
+ * "base equilateral", which is centered at the origin and
+ * has its edge midpoints at the cube roots of unity.
+ * (This extender was originally called "Schwarzian.java", "SZ".)
  * 
- * The original idea concerned maps between tangency circle packings 
+ * The concern is with maps between tangency circle packings 
  * sharing the same combinatorics. Mechanics involve the "dual" 
  * triangles, one for each face, formed by its 3 tangency points, 
- * enclosing the interstice and inscribed in the dual circle for the face. 
+ * enclosing the interstice and inscribed in the dual circle for 
+ * the face. 
  * 
  * A "circle packing quadrangle" refers to two faces sharing edge e. 
- * Given map phi:P --> P', for each face f and F=phi(f), M(f) is the
- * "face Mobius map" of f onto F identifying corresponding tangency 
- * points. These maps were used by He/Schramm to define maps between 
- * circle packings and prove convergence results. 
+ * Given map phi:P --> P' between circle packings, for each face 
+ * f and F=phi(f), M(f) is the "face Mobius map" of f onto F which
+ * identifies corresponding tangency points. These face mappings 
+ * were pieced together, along with extensions to the interstices,
+ * by He/Schramm to define point mappings between circle packing
+ * carriers and use to prove convergence results. 
  * 
  * **** CONVENTION: Given directed edge <v,w> shared by faces f and g, we
  * reverse Orick's convention and let f be the face on the LEFT of <v,w>,
@@ -90,7 +92,7 @@ import widgets.RadiiSliders;
  * TODO: fix 'layOrder' so that its 'HalfEdge's are from the correct
  * PackDCEL.
  * 
- * @author kens, November 2018
+ * @author kens, November 2018; more work 3/2022.
  * */
 public class SchwarzMap extends PackExtender {
 	
@@ -137,22 +139,15 @@ public class SchwarzMap extends PackExtender {
 
 			// copy from "s_map"
 
-			if (!packData.haveSchwarzians()) {
-				CirclePack.cpb.errMsg("seems 'packData' doesn't "+
-						"have 'schwarzian's set");
-				return 0;
-			}
 			PackData qData=packData;
 			DispFlags cirFlags=null;
 			DispFlags faceFlags=null;
-			GraphLink graph=null;
 			int qnum=packData.packNum; // default to this packing itself
 			
 			// normally there's a -q{} flag; it has to be first
 			if (flagSegs!=null && flagSegs.size()>0) {
 				items=flagSegs.get(0);
-				if (items!=null && items.size()>0 && 
-						items.get(0).startsWith("-q")) {
+				if (!items.isEmpty() &&	items.get(0).startsWith("-q")) {
 					if ((qnum=StringUtil.qFlagParse(items.get(0)))>=0) {
 						items.remove(0);
 						flagSegs.remove(0);
@@ -176,6 +171,7 @@ public class SchwarzMap extends PackExtender {
 					}
 					else
 						Oops("failed to parse '-q' flag");
+					
 					if (flagSegs.size()>0 && items.size()>0) { 
 						Oops("There shouldn't be items left if "+
 								"there are more segments");
@@ -210,13 +206,15 @@ public class SchwarzMap extends PackExtender {
 					}
 				}
 
-				// Now look for list of face pairs
+				// get list of face pairs, convert to HalfLink of edges
 				if (items.size()>0) {
-					layOrder=new HalfLink(packData,items);
+					HalfLink hlink=HalfLink.glist_to_hlink(packData,items);
+					if (hlink.size()>0)
+						layOrder=hlink;
 				}
 			} // done with flags
 			
-			// default to full 'layoutOrder'
+			// default to 'layoutOrder'
 			if (layOrder==null || layOrder.size()==0)
 				layOrder=packData.packDCEL.layoutOrder;
 			
@@ -231,23 +229,22 @@ public class SchwarzMap extends PackExtender {
 			
 			// Do we need to place the first face?
 			// TODO: for now, always layout first edge
-			EdgeSimple edge=graph.get(0);
 			HalfEdge leadedge=layOrder.get(0);
 			packData.packDCEL.placeFirstEdge(leadedge);
 			int baseface=leadedge.face.faceIndx;
 			int count=0;
 			
 			// If we need to place the base face, we make 
-			//   it a 'baseEquilateral', as used in 'Schwarzian.java'.
+			//   it a 'baseEquilateral', as in 'Schwarzian.java'.
 			if (baseface>0) {
-				TriAspect tri=TriAspect.baseEquilaterl(qData.hes);
+				TriAspect tri=TriAspect.baseEquilateral(qData.hes);
 				TriAspect myTri=rangeTri[baseface];
 				for (int j=0;j<3;j++) {
 					myTri.setRadius(tri.getRadius(j), j);
 					myTri.setCenter(tri.getCenter(j), j);
 					
 					// put in qData as well (though may be changed later)\
-					// TODO: here and later, put new data in redchain, 
+					// TODO: here and later, put new data in red chain, 
 					//   if appropriate
 					qData.setRadius(myTri.vert[j],myTri.getRadius(j));
 					qData.setCenter(myTri.vert[j],myTri.getCenter(j));
@@ -271,7 +268,7 @@ public class SchwarzMap extends PackExtender {
 				hitfaces[baseface]=1;
 				count=1;
 			}
-			// Now proceed through 'graph', propogating from face to face.
+			// Now proceed through 'graph', propagating from face to face.
 			// Note: each 'TriAspect' has rad/center and data for a given 
 			//   circle may differ as the layout progresses. Nevertheless, 
 			//   we use the latest rad/cent into qData
@@ -361,9 +358,9 @@ public class SchwarzMap extends PackExtender {
 			
 			// get desired dual edges, default to dTree
 			HalfLink layOrder=null;
-			if (items.size()>0)
-				layOrder=new HalfLink(packData,items);
-			else 
+			if (items.size()>0) 
+				layOrder=HalfLink.glist_to_hlink(packData,items);
+			if (layOrder==null)
 				layOrder=packData.packDCEL.layoutOrder;
 			
 			// Do we need to place the first face? Only if
@@ -424,13 +421,15 @@ public class SchwarzMap extends PackExtender {
 			} catch (Exception ex) {
 				Oops("usage: s_inc {x} {f g ...}");
 			}
-			GraphLink glk=new GraphLink(packData,items);
-			Iterator<EdgeSimple> gls=glk.iterator();
-			while(gls.hasNext()) {
-				EdgeSimple dedge=gls.next();
-			
-				// TODO: finish coding this
+			int count=0;
+			HalfLink hlink=HalfLink.glist_to_hlink(packData,items);
+			Iterator<HalfEdge> his=hlink.iterator();
+			while(his.hasNext()) {
+				HalfEdge he=his.next();
+				he.setSchwarzian(factor*he.getSchwarzian());
+				count++;
 			}
+			return count;
 		}
 
 		// ======= s_set ============
@@ -562,7 +561,6 @@ public class SchwarzMap extends PackExtender {
 			DispFlags oldFlags=new DispFlags("cc241t6"); 
 			// green range circles for new g
 			DispFlags newFlags=new DispFlags("cc218t2"); 
-			GraphLink graph=null;
 			
 			// should be at most one item: look for -q{} flag to designate 
 			//   image packing first, then display flags for color, 
@@ -610,7 +608,7 @@ public class SchwarzMap extends PackExtender {
 				// Now look for list of face pairs; 
 				//    default is spanning tree
 				if (items.size()>0) {
-					layOrder=new HalfLink(qData,items);
+					layOrder=HalfLink.glist_to_hlink(qData,items);
 				}
 			}
 			
@@ -982,9 +980,9 @@ public class SchwarzMap extends PackExtender {
 			
 			// Now check 'pd' for 'AffinePack' (first) or 'ProjStruct'
 			//    extender; if there, try to use its 'aspects' data.
-			TriAspect []ourTri=null;
+			TriAspect[] ourTri=null;
 			boolean hitap=false;
-			TriAspect []aspect=null;
+			TriAspect[] aspect=null;
 			Iterator<PackExtender> pXs=pd.packExtensions.iterator();
 			while (pXs.hasNext() && !hitap) {
 				PackExtender pe=(PackExtender)pXs.next();
@@ -1022,7 +1020,7 @@ public class SchwarzMap extends PackExtender {
 				}
 			}
 			
-			// else create 'TriAspect's from scratch using dual tree.
+			// else create 'TriAspect's from scratch.
 			else {
 				ourTri=PackData.getTriAspects(pd);
 			}
@@ -1448,7 +1446,7 @@ public class SchwarzMap extends PackExtender {
 				asp[gtri].setCenter(asp[ftri].getCenter((j+1)%3),(J+2)%3);
 			}
 			
-			// compute map from base equilateral
+			// compute map from "base equilateral"
 			Mobius bm_f=Mobius.mob_xyzXYZ(
 					CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
 					asp[ftri].tanPts[0],asp[ftri].tanPts[1],asp[ftri].tanPts[2],
@@ -1492,7 +1490,7 @@ public class SchwarzMap extends PackExtender {
 				"Compute and store Schwarzians; "+
 				"call 'set_range' using current packing if necessary"));
 		cmdStruct.add(new CmdStruct("get","{v w ..}",null,
-				"Compute Schwarzian "+
+				"Compute Schwarzians "+
 				"for designated edges"));
 		cmdStruct.add(new CmdStruct("get_tree",null,null,
 				"copy spanning tree into 'glist'"));

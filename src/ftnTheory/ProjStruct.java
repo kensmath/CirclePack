@@ -477,7 +477,6 @@ public class ProjStruct extends PackExtender {
 		}
 		
 		// ========== equiSides ==========
-		
 		else if (cmd.startsWith("equiSid")) {
 			for (int f=1;f<=packData.faceCount;f++) {
 				for (int j=0;j<3;j++)

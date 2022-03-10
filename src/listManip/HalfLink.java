@@ -1783,6 +1783,25 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			return null;
 		return hlink;
 	}
+	
+	/**
+	 * Expect items to specify a GraphLink of dual edges <f,g>;
+	 * convert to associated halfedges <v,w>; so f is on left
+	 * side of <v,w>, g is on right.
+	 * @param p PackData
+	 * @param items Vector<String>
+	 * @return HalfLink, null if empty
+	 */
+	public static HalfLink glist_to_hlink(PackData p,Vector<String> items) {
+		GraphLink glink=new GraphLink(p,items);
+		HalfLink hlink=new HalfLink();
+		Iterator<EdgeSimple> gis=glink.iterator();
+		while (gis.hasNext()) 
+			hlink.add(p.packDCEL.dualEdge_to_halfedge(gis.next()));
+		if (hlink.size()>0)
+			return hlink;
+		return null;
+	}
 		
 	/**
 	 * Make up list by looking through SetBuilder specs 

@@ -7,7 +7,6 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import exceptions.CombException;
-import exceptions.DataException;
 import komplex.DualGraph;
 import komplex.EdgeSimple;
 import komplex.GraphSimple;
@@ -392,11 +391,13 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 	public boolean add(int f, int g) {
 		EdgeSimple edge=new EdgeSimple(f,g);
 		if (g==0) {
-			if (f==0) return false;
+			if (f==0) 
+				return false;
 			return add(edge);
 		}
 		if (f==0) {
-			if (g==0) return false;
+			if (g==0) 
+				return false;
 			return add(new EdgeSimple(0,g));
 		}
 		return add(new EdgeSimple(f,g));
@@ -418,12 +419,11 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 	 * @return int count
 	 */
 	public int addDualLinks(Vector<String> items) {
-		if (packData==null) return -1;
-
+		if (packData==null) 
+			return -1;
 		int count=0;
 
 		Iterator<String> its=items.iterator();
-		
 		while (its!=null && its.hasNext()) {
 
 			/* =============== here's the work ==================

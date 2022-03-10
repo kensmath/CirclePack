@@ -105,7 +105,7 @@ public class SchwarzSliders extends SliderFrame {
 		}
 
 		// create as 'TriAspect', then transfer to 'packData'
-		TriAspect tri=TriAspect.baseEquilaterl(packData.hes);
+		TriAspect tri=TriAspect.baseEquilateral(packData.hes);
 		int[] verts=packData.getFaceVerts(root);
 		for (int j=0;j<3;j++) {
 			packData.setRadius(verts[j],tri.getRadius(j));

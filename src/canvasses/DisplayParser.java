@@ -477,11 +477,8 @@ public class DisplayParser {
 						
 						if (c=='G') { // treat Glink as dual edges
 							Iterator<EdgeSimple> dedges = CPBase.Glink.iterator();
-							while (dedges.hasNext()) {
-								EdgeSimple es = (EdgeSimple) dedges.next();
-								es=pdcel.edge_to_dualEdge(es);
-								hlink.add(pdcel.findHalfEdge(es));
-							}
+							while (dedges.hasNext()) 
+								hlink.add(pdcel.dualEdge_to_halfedge(dedges.next()));
 						}
 						else {
 							if (items!=null && items.size()>0) {
@@ -489,11 +486,8 @@ public class DisplayParser {
 								if (dualedges!=null && dualedges.size()>0) {
 									hlink=new HalfLink(p);
 									Iterator<EdgeSimple> gits=dualedges.iterator();
-									while (gits.hasNext()) {
-										EdgeSimple es=gits.next();
-										es=pdcel.edge_to_dualEdge(es);
-										hlink.add(pdcel.findHalfEdge(es));
-									}
+									while (gits.hasNext()) 
+										hlink.add(pdcel.dualEdge_to_halfedge(gits.next()));
 								}
 							}
 							

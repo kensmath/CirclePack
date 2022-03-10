@@ -1136,41 +1136,26 @@ public class PackDCEL {
 		}
 		return bdryedges;
 	}
-	
+
 	/**
 	 * Given directed dual <f,g> between faces, return 
-	 * directed edge <v,w>; edge <v,w> is cclw to <f,g>. 
+	 * halfedge <v,w> which is cclw to <f,g>; so f is 
+	 * on the left of <v,w>, g is on the right.
 	 * @param dedge EdgeSimple
-	 * @return EdgeSimple, null on failure
+	 * @return HalfEdge, null on failure
 	 */
-	public EdgeSimple dualEdge_to_Edge(EdgeSimple dedge) {
+	public HalfEdge dualEdge_to_halfedge(EdgeSimple dedge) {
 		int f=dedge.v;
 		int g=dedge.w;
 		HalfEdge edge=faces[f].edge;
-		if (edge.twin.face.faceIndx==g) {
-			return new EdgeSimple(edge.origin.vertIndx,edge.twin.origin.vertIndx);
-		}
-		HalfEdge trace=edge;
 		do {
-			trace=edge.next;
-			if (trace.twin.origin.vertIndx==g) 
-				return new EdgeSimple(trace.origin.vertIndx,trace.twin.origin.vertIndx);
-			trace=trace.next;
-		} while (trace!=edge);
+			if (edge.twin.face.faceIndx==g) 
+				return edge;
+			edge=edge.next;	
+		} while (edge!=faces[f].edge);
 		
-		// reaching here, found no dual
+		// reaching here, found edge with g across
 		return null;
-	}
-	
-	/**
-	 * Given directed edge <v,w>, return directed edge <f,g> 
-	 * between faces; note that <f,g> is clw from <v,w>.
-	 * @param dedge EdgeSimple
-	 * @return EdgeSimple, null on failure
-	 */
-	public EdgeSimple edge_to_dualEdge(EdgeSimple dedge) {
-		HalfEdge edge=findHalfEdge(dedge);
-		return new EdgeSimple(edge.face.faceIndx,edge.twin.face.faceIndx);
 	}
 	
 	/**

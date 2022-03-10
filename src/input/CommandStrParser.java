@@ -18,7 +18,6 @@ import java.util.Vector;
 
 import javax.swing.JFrame;
 
-import JNI.DelaunayBuilder;
 import JNI.DelaunayData;
 import JNI.JNIinit;
 import JNI.ProcessDelaunay;
@@ -42,7 +41,6 @@ import dcel.RawManip;
 import dcel.RedEdge;
 import dcel.Schwarzian;
 import dcel.Vertex;
-import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.DataException;
@@ -3157,7 +3155,7 @@ public class CommandStrParser {
 					  newFS=null;
 			  }
 			  
-			  // now we've removed any -d flags; check for others
+			  // having removed any -d flag, check for others
 			  flagSegs=newFS;
 			  if (flagSegs!=null && flagSegs.size()>0) {
 				  Iterator<Vector<String>> its=flagSegs.iterator();
@@ -3182,7 +3180,8 @@ public class CommandStrParser {
 						  }
 						  case 'g': // using a path: either default or 'filename'
 						  {
-							  if (CPBase.ClosedPath!=null) Gamma=CPBase.ClosedPath;
+							  if (CPBase.ClosedPath!=null) 
+								  Gamma=CPBase.ClosedPath;
 							  try {
 								  if (str.length()>2 && str.charAt(2)=='s') // from script
 									  Gamma=PathManager.readpath(StringUtil.reconItem(items),true); 
@@ -3241,7 +3240,8 @@ public class CommandStrParser {
 						  case 'Z': // zigzag method
 						  {
 							  if (CPBase.ClosedPath==null)
-								  throw new ParserException("usage: there must be a current path");
+								  throw new ParserException(
+										  "usage: there must be a current path");
 							  int n=200;
 							  try {
 								  n=Integer.parseInt((String)items.get(0));
@@ -3258,17 +3258,21 @@ public class CommandStrParser {
 			  } // end of checking flags
 			  
 			  PackData randPack=null;
-			  if (heS<=0 && aspect<=0 && Tau==null && Gamma==null) { // default case
-				  if ((randPack=RandomTriangulation.randomHypKomplex(randN,seed1))==null) {
-					  throw new CombException("Random disc packing has failed");
+			  // default case?
+			  if (heS<=0 && aspect<=0 && Tau==null && Gamma==null) {
+				  randPack=RandomTriangulation.randomHypKomplex(randN,seed1);
+				  if (randPack==null) {
+					  throw new CombException(
+							  "Random disc packing has failed");
 				  }
 				  heS=-1;
 			  }
 			  else {
-//				System.out.println("RANDTRI: into random_Tri");
+// debugging				  
+				  System.out.println("RANDTRI: into random_Tri");
 				  
-				  // TODO: when Gamma is given, should use "constrained" Delaunay so that bdry
-				  //       edges are edges in the triangulation.
+				  // TODO: when Gamma is given, should use "constrained" 
+				  //   Delaunay so that bdry edges are edges in the triangulation.
 				  Triangulation Tri=RandomTriangulation.random_Triangulation(randN,seed1,
 						  heS,aspect,Gamma,Tau);
 				  if (Tri==null) {
@@ -8976,7 +8980,7 @@ public class CommandStrParser {
     			  HalfLink clink=null; // those done using current layout
     			  HalfLink rlink=null; // those done using current radii only
 
-	    		  // no arguments, set all to current values based on radii
+	    		  // no arguments, set all to values based on current radii
     			  if (flagSegs==null || flagSegs.size()==0 || 
     					  flagSegs.get(0).size()==0) 
     				  rlink=new HalfLink(packData,"a");
@@ -9006,8 +9010,8 @@ public class CommandStrParser {
     				  } // end of reading option
     			  }
     				
-    			  // if method is not flagged, then use 
-    			  //    given values for designated edges
+    			  // if method is not to be computed, then set the
+    			  //    specified value for the designated edges
     			  if (flagSegs!=null && flagSegs.size()>0 && 
     					  (items=flagSegs.get(0)).size()>0
     					  && clink==null && rlink==null) {
@@ -9038,11 +9042,11 @@ public class CommandStrParser {
     				  return count;
     			  }
     			  
-    			  if (clink!=null) {
-    				  count += Schwarzian.set_rad_or_cents(packData, clink,2);
+    			  if (clink!=null) { // use current layout
+    				  count += Schwarzian.comp_schwarz(packData, clink,2);
 	    		  }
-    			  if (rlink!=null) {
-    				  count += Schwarzian.set_rad_or_cents(packData, rlink,1);
+    			  if (rlink!=null) { // use current radii
+    				  count += Schwarzian.comp_schwarz(packData, rlink,1);
 	    		  }
 	    		  
     			  return count;

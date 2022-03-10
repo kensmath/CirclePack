@@ -25,26 +25,25 @@ import util.TriAspect;
 
 /**
  * These are static routines for working with discrete Schwarzian 
- * derivatives. Here schwarzians are associated with a packing 
+ * derivatives. Here schwarzians are associated with tangency packings 
  * based on identification of faces with the "base equilateral"; 
  * namely, the tangent triple of circles of radius sqrt(3), 
  * symmetric w.r.t. the origin, and having its first edge 
  * vertical through z=1. See "ftnTheory.SchwarzMap.java"
  * for related work in the setting of maps, which is based on 
- * the original notions of Gerald Orick in his thesis.
+ * the original notions in Gerald Orick's thesis.
  * 
  * Here we work with parameters associated with edges in 
  * packing complexes, the "real" schwarzians. These are stored in 
  * in 'HalfEdge.schwarzian', defaulting to 0.0. The methods here 
  * are for creating, analyzing, manipulating this data. To start 
- * we restrict to tangency packing, and some routines do not apply 
+ * we restrict to tangency packings, and some routines do not apply 
  * in the hyperbolic setting since layouts can leave the disc. 
  * 
  * @author kens, January 2020
  */
 public class Schwarzian {
 
-	
 	/**
 	 * Compute real schwarzians for give interior edges based 
 	 * only on radii (mode=1) or on centers (mode=2). 
@@ -62,7 +61,7 @@ public class Schwarzian {
 	 * @param mode int, 1=radii, 2=centers
 	 * @return count, 0 on error
 	 */
-	public static int set_rad_or_cents(PackData p,HalfLink hlink,int mode) {
+	public static int comp_schwarz(PackData p,HalfLink hlink,int mode) {
 		PackDCEL pdcel=p.packDCEL;
 		int count=0;
 		if (hlink==null || hlink.size()==0) // default to all
@@ -117,7 +116,7 @@ public class Schwarzian {
 						cents[2]=pdcel.getVertCenter(edge.next.next);
 						cents[3]=pdcel.getVertCenter(edge.twin.prev);
 						
-						// now get the schwarzian using the radii
+						// now get the schwarzian using the centers
 						try {
 							double schn=Schwarzian.cents_to_schwarzian(
 									cents,p.hes);
@@ -181,7 +180,7 @@ public class Schwarzian {
 					cents[2]=pdcel.getVertCenter(edge.next.next);
 					cents[3]=pdcel.getVertCenter(edge.twin.prev);
 					
-					// now get the schwarzian using the radii
+					// now get the schwarzian using the centers
 					try {
 						double schn=Schwarzian.cents_to_schwarzian(
 								cents,p.hes);
@@ -223,7 +222,7 @@ public class Schwarzian {
 					cents[2]=pdcel.getVertCenter(edge.next.next);
 					cents[3]=csout.center;
 					
-					// now get the schwarzian using the radii
+					// now get the schwarzian using the centers
 					try {
 						double schn=Schwarzian.cents_to_schwarzian(
 								cents,p.hes);
@@ -479,11 +478,8 @@ public class Schwarzian {
 	}
 	
 	/**
-	 * Compute Mobius transformation from base equilateral 
-	 * face for 'edge'. (The "base" refers to eucl 
-	 * equilateral triangle symmetric about origin with 
-	 * tangency points the cube roots of unity; 1 is the 
-	 * tangency point of the first edge.)
+	 * Compute Mobius trans mapping "base equilateral" 
+	 * to the face associated with 'edge'. 
 	 * @param p CirclePack
 	 * @param edge HalfEdge
 	 * @return Mobius
