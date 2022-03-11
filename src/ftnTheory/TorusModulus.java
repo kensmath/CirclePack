@@ -18,7 +18,7 @@ public class TorusModulus {
 	 * error. flag = 1 on apparent success. Computation involves 
 	 * applying inversions in unit circle and translations by +-1 
 	 * until 'tau' is in the fundamental domain of moduli space 
-	 * (namely, tau.x in [-1,1] and |tau| >=1).
+	 * (namely, tau.x in [-1/2,1/2] and |tau| >=1).
 	 * 
 	 * TODO: start including affine tori.
 	*/

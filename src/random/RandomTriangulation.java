@@ -11,7 +11,6 @@ import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
-import JNI.DelaunayBuilder;
 import JNI.DelaunayData;
 import JNI.ProcessDelaunay;
 import allMains.CirclePack;
@@ -21,6 +20,7 @@ import dcel.CombDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
+import ftnTheory.TorusModulus;
 import geometry.SphericalMath;
 import komplex.EdgeSimple;
 import komplex.Triangulation;
@@ -35,16 +35,17 @@ public class RandomTriangulation {
 	public static boolean setSeed=false; // for debugging, set seed=(long)1
 	
 	/**
-	 * Distribute M random points along (a polygonal approximation to) the given
-	 * Path2D.Double, return a Complex vector of the points, or null on error.
+	 * Distribute M random ordered points along (a polygonal approximation 
+	 * to) the given Path2D.Double, return a Complex vector of the points, 
+	 * or null on error.
 	 * 
 	 * Points start with path(0). Choose M consecutive random values from
-	 * uniform distribution on [0,1], accumulate the lengths and scale to length
-	 * of gpath. (The Mth point is not used, but ensures random spacing with
-	 * regard to the path's endpoint.)
+	 * uniform distribution on [0,1], accumulate the lengths and scale to 
+	 * length of gpath. (The Mth point is not used, but ensures random 
+	 * spacing with regard to the path's endpoint.)
 	 * 
-	 * Note: 'arclength' along gpath is used for positioning the Complex points;
-	 * it starts with index 0 and last point is index M-1.
+	 * Note: 'arclength' along gpath is used for positioning the Complex 
+	 * points; it starts with index 0 and last point is index M-1.
 	 * 
 	 * Throw DataException on error.
 	 */
@@ -53,10 +54,12 @@ public class RandomTriangulation {
 		return rand_bdry_pts(gpath,M,setSeed);
 	}
 	
-	public static Complex[] rand_bdry_pts(Path2D.Double gpath, int M,boolean sS)
+	public static Complex[] rand_bdry_pts(Path2D.Double gpath,
+			int M,boolean sS)
 			throws DataException {
 		setSeed=sS;
-		// need length and polynomial approx of Gamma (should be just one component)
+		// need length and polynomial approx of Gamma (should be 
+		//    just one component)
 		double flatness = PathUtil.gpExtent(gpath) * PathUtil.FLAT_FACTOR;
 		double length = PathUtil.gpLength(gpath, flatness);
 		Vector<Complex> poly;
@@ -72,7 +75,8 @@ public class RandomTriangulation {
 
 		// find M random ordered arclength param spots in [0,length]
 		Random CPrand = new Random();
-		if (setSeed) CPrand.setSeed((long)1);
+		if (setSeed) // for debugging
+			CPrand.setSeed((long)1);
 		double[] arc_spots = new double[M];
 		for (int j = 0; j < M; j++) {
 			arc_spots[j] = CPrand.nextDouble()*length;
@@ -213,19 +217,7 @@ public class RandomTriangulation {
 		  //   domain for the moduli space of 1-tori: hence, its
 		  //   real part is between -.5 and .5, and outside the 
 		  //   unit disc.
-		  Tau.x=Tau.x-Math.floor(Tau.x)-Math.floor(2*(Tau.x-Math.floor(Tau.x)));
-		  int hit=1;
-		  int count=0;
-		  Complex m_one=new Complex(1.0);
-		  while (hit!=0 && count < 100) {
-			  hit=0;
-			  if (Tau.y<Math.sqrt(1.0-Tau.x*Tau.x)) {
-				  hit=1;
-				  Tau=m_one.divide(Tau);
-				  Tau.x=Tau.x-Math.floor(Tau.x)-Math.floor(2*(Tau.x-Math.floor(Tau.x)));
-			  }
-			  count++;
-		  }
+		  Tau=TorusModulus.Teich2Tau(Tau);
 		  
 		  // create Gamma as fundamental parallelogram in unit disc;
 		  //   translate/scale so center is at origin, result is
@@ -440,16 +432,17 @@ public class RandomTriangulation {
 	}
 
 	/**
-	 * Given a polygon (non-closed list of corners), use a Poisson Point process
-	 * to choose N points inside, and use these along with the given 
-	 * vertices defining the polygon (no additional vertices added along
-	 * the boundary) to form a Delaunay triangulation. 
+	 * Given a polygon (non-closed list of corners), use a Poisson 
+	 * Point process to choose N points inside, and use these along 
+	 * with the given vertices defining the polygon (no additional 
+	 * vertices added along the boundary) to form a Delaunay 
+	 * triangulation. 
 	 * @param N int, N>=4
 	 * @param sS boolean, setSeed flag, not used yet
 	 * @param poly Complex[], list of corners, not closed (close it here)
 	 * @return Triangulation or null on error
 	 */
-	public static Triangulation randomPolyPts(int N,boolean sS,Complex []poly) {
+	public static Triangulation randomPolyPts(int N,boolean sS,Complex[] poly) {
 		setSeed=sS; // not sure this does anything yet
 		if (N<4 || poly==null || poly.length<3) 
 			return null;
@@ -484,7 +477,8 @@ public class RandomTriangulation {
 			safety++;
 		}
 		if (hits<=N) {
-			CirclePack.cpb.myErrorMsg("randomPolyPts: failed to get "+N+" points inside polygon.");
+			CirclePack.cpb.myErrorMsg(
+					"randomPolyPts: failed to get "+N+" points inside polygon.");
 			return null;
 		}
 
@@ -505,17 +499,13 @@ public class RandomTriangulation {
 		DelaunayData dData=null;
 		try {
 			dData=new DelaunayData(0,Z_list,elink);
-			
-			// TODO: need new code
-			
-			dData=new DelaunayBuilder().apply(dData);
+			ProcessDelaunay.planeDelaunay(dData);
 		} catch (Exception ex) {
 			CirclePack.cpb.errMsg("randomHypTriangulation failed: "+ex.getMessage());
 			return null;
 		}
 		  
 		// ============= create the triangulation
-		  
 		return dData.getTriangulation();
 	}
 	
@@ -652,7 +642,7 @@ public class RandomTriangulation {
      * the unit square [0 1]x[0 1]. We must infer the form of the data:
      * 
      * (1) format for plane (2D) or sphere (3D):
-     *     3 {text} (input format for 'qhull' programs; this line may not be present)
+     *     3 {text} (input format for 'qhull'; this line may not be present)
      *     n (this line may not be present)
      *     x1 y1 (z1)
      *     ...
@@ -664,11 +654,11 @@ public class RandomTriangulation {
      *     ...
      *     n: xn yn zn 
      *    
-     * (3) 2D data in unit square: keyword UNIT_SQUARE: then points x y, (for now) 
-     *     just one per line.
+     * (3) 2D data in unit square: keyword UNIT_SQUARE: then points x y, 
+     *     (for now) just one per line.
      * 
-     * 'rtnFlag' = 1 (unit square), 2=2D, 3=3D; in 3D case, the points are projected
-     * to the unit sphere and have (theta,phi) form.
+     * 'rtnFlag' = 1 (unit square), 2=2D, 3=3D; in 3D case, the points 
+     * are projected to the unit sphere and put in (theta,phi) form.
      * 
      * @param fp open BufferedReader
      * @param uP, UtilPacket: contains vector of points, rtnFlag for type,

@@ -3081,8 +3081,6 @@ public class CommandStrParser {
 			  RandomTriangulation.readPoints(fp,uP);
 			  if (uP.errval<0)
 				  throw new ParserException("failed to read points");
-			  if (uP.rtnFlag!=0)
-				  throw new ParserException("Points are not in unit square");
 			  int hes=0;
 			  if (uP.rtnFlag==3) // points should be (theta,phi)
 				  hes=1; 
@@ -3090,7 +3088,10 @@ public class CommandStrParser {
 			  DelaunayData dData=null;
 			  try {
 				  dData=new DelaunayData(hes,uP.z_vec);
-				  ProcessDelaunay.sphDelaunay(dData);
+				  if (hes>0)
+					  ProcessDelaunay.sphDelaunay(dData);
+				  else
+					  ProcessDelaunay.planeDelaunay(dData);
 			  } catch (Exception ex) {
 				  CirclePack.cpb.errMsg("randomHypTriangulation failed: "
 						  +ex.getMessage());
@@ -3114,13 +3115,8 @@ public class CommandStrParser {
 			  packData.hes=heS;
 			  packData.chooseAlpha();
 			  packData.chooseGamma();
-			  packData.setCombinatorics();
 			  packData.set_aim_default();
 			  packData.set_rad_default();
-
-// OBE???
-//			  for (int v=1;v<=packData.nodeCount;v++) 
-//				  packData.kData[v].plotFlag=1;
 			  return packData.nodeCount;
 		  }
 		  
@@ -3269,7 +3265,7 @@ public class CommandStrParser {
 			  }
 			  else {
 // debugging				  
-				  System.out.println("RANDTRI: into random_Tri");
+//				  System.out.println("RANDTRI: into random_Tri");
 				  
 				  // TODO: when Gamma is given, should use "constrained" 
 				  //   Delaunay so that bdry edges are edges in the triangulation.
@@ -7358,6 +7354,8 @@ public class CommandStrParser {
 	    		  packData.set_aim_default(); // Orick's code, if available
 	    		  EuclPacker e_packer=new EuclPacker(packData,-1);
 	    		  count=e_packer.genericRePack(cycles);
+	    		  if (count>0)
+	    			  e_packer.reapResults();
 				  packData.fillcurves();
 				  packData.packDCEL.layoutPacking();
 	    	  }

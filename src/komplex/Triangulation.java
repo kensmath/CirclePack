@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
-import JNI.DelaunayBuilder;
 import JNI.DelaunayData;
 import JNI.ProcessDelaunay;
 import allMains.CirclePack;
@@ -1177,14 +1176,6 @@ public class Triangulation {
 		
 		// load data
 		DelaunayData dData=new DelaunayData(hes,pts);
-		int N=dData.pointCount;
-		dData.ptX=new double[N+1];
-		dData.ptY=new double[N+1];
-		for (int i=0;i<N;i++) { // indexed from 1
-			Complex pz=pts.get(i);
-			dData.ptX[i+1]=pz.x;
-			dData.ptY[i+1]=pz.y;
-		}
 		
 		// try processBuilder calls
 		int tick=-1;
@@ -1193,8 +1184,7 @@ public class Triangulation {
 				tick=ProcessDelaunay.sphDelaunay(dData);
 			}
 			else {
-			// TODO: need new code
-				dData=new DelaunayBuilder().apply(dData);
+				tick=ProcessDelaunay.planeDelaunay(dData);
 			}
 		} catch (Exception ex) {
 			  ex.printStackTrace();

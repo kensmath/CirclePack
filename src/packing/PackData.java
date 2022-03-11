@@ -11,6 +11,7 @@ import java.util.Vector;
 
 import JNI.DelaunayBuilder;
 import JNI.DelaunayData;
+import JNI.ProcessDelaunay;
 import allMains.CPBase;
 import allMains.CirclePack;
 import baryStuff.BaryPtData;
@@ -6878,62 +6879,77 @@ public class PackData{
 	 * 
 	 * TODO: This has not been thoroughly debugged.
 	 * 
-	 * @param p PackData, initial packing --- must be topological disc 
-	 * @param chosen NodeLink, verts to include in the new packing 
+	 * @param p PackData, initial packing
+	 * @param chosen NodeLink, verts to include, along with bdry
 	 * @return PackData, vertexMap contains {orig,new} matchings.
 	 */
 	public static PackData sampledSubPack(PackData p,NodeLink chosen) {
-		  if (p.getBdryCompCount()!=1) {
-			  throw new ParserException(
-					  "packing must have one and only one bdry component");
-		  }
-		  // create DelaunayData
-		  DelaunayData dData=new DelaunayData();
-		  dData.geometry=0;
-		  dData.pointCount=chosen.size();
-		  dData.ptX=new double[dData.pointCount+1];
-		  dData.ptY=new double[dData.pointCount+1];
+		if (p.hes>0) {
+			CirclePack.cpb.errMsg("'sampledSubPack' cannot be called "
+					+ "for spherical packings");
+			return null;
+		}
+
+		// get full list, chosen plus bdry
+		int[] vhits=new int[p.nodeCount+1];
+		Iterator<Integer> vlst=chosen.iterator();
+		while (vlst.hasNext()) 
+			vhits[vlst.next()]=1;
+		NodeLink bdry=new NodeLink(p,"b");
+		Iterator<Integer> bis=bdry.iterator();
+		while (bis.hasNext()) 
+			vhits[bis.next()]=1;
+
+		NodeLink thechosen=new NodeLink(p);
+		for (int v=1;v<=p.nodeCount;v++) 
+			if (vhits[v]!=0)
+				thechosen.add(v);
+		
+		// create DelaunayData
+		DelaunayData dData=new DelaunayData();
+		dData.geometry=0; // treat as euclidean
+		dData.pointCount=thechosen.size();
+		dData.ptX=new double[dData.pointCount+1];
+		dData.ptY=new double[dData.pointCount+1];
 		  
-		  // must associate original and new indices
-		  p.vertexMap=new VertexMap();
+		// must associate old/new indices
+		VertexMap vmap=new VertexMap();
 		  
-		  Iterator<Integer> vlst=chosen.iterator();
-		  int v;
-		  int hit=1;  // previous code suggests numbering from 1
-		  while (vlst.hasNext()) {
-			  v=vlst.next();
-			  Complex pz=p.getCenter(v);
-			  dData.ptX[hit]=pz.x;
-			  dData.ptY[hit]=pz.y;
-			  p.vertexMap.add(new EdgeSimple(v,hit)); // {original,new}
-			  hit++;
-		  }
+		vlst=thechosen.iterator();
+		int v;
+		int hit=1;  // previous code suggests numbering from 1
+		while (vlst.hasNext()) {
+			v=vlst.next();
+			Complex pz=p.getCenter(v);
+			dData.ptX[hit]=pz.x;
+			dData.ptY[hit]=pz.y;
+			vmap.add(new EdgeSimple(v,hit)); // {original,new}
+			hit++;
+		}
 		  
-		  // get edge information
-		  EdgeLink bdrylist=new EdgeLink(p,"b");
-		  dData.edgeV=null;
-		  dData.edgeW=null;
-		  if (bdrylist!=null) { 
-			  dData.bdryCount=bdrylist.size();
-			  dData.edgeV=new int[dData.bdryCount];
-			  dData.edgeW=new int[dData.bdryCount];
-			  Iterator<EdgeSimple> eit=bdrylist.iterator();
-			  int hits=0;
-			  while (eit.hasNext()) {
-				  EdgeSimple edge=(EdgeSimple)eit.next();
-				  dData.edgeV[hits]=p.vertexMap.findW(edge.v);
-				  dData.edgeW[hits]=p.vertexMap.findW(edge.w);
-				  hits++;
-			  }
-		  }
+		// get edge information
+		EdgeLink bdrylist=new EdgeLink(p,"b");
+		dData.edgeV=null;
+		dData.edgeW=null;
+		if (bdrylist!=null) { 
+			dData.bdryCount=bdrylist.size();
+			dData.edgeV=new int[dData.bdryCount];
+			dData.edgeW=new int[dData.bdryCount];
+			Iterator<EdgeSimple> eit=bdrylist.iterator();
+			int hits=0;
+			while (eit.hasNext()) {
+				EdgeSimple edge=(EdgeSimple)eit.next();
+				dData.edgeV[hits]=vmap.findW(edge.v);
+				dData.edgeW[hits]=vmap.findW(edge.w);
+				hits++;
+			}
+		}
 		  
-		  dData=new DelaunayBuilder().apply(dData);
-		  Triangulation Tri = dData.getTriangulation();
-		  PackData randPack=Triangulation.tri_to_Complex(Tri,dData.geometry);
-		  randPack.fileName=new String("resampled"+dData.pointCount);
-		  for (int vv=1;vv<=randPack.nodeCount;vv++) 
-			  randPack.setPlotFlag(vv,1);
-		  return randPack;
+		ProcessDelaunay.planeDelaunay(dData);
+		Triangulation Tri = dData.getTriangulation();
+		PackData samplePack=Triangulation.tri_to_Complex(Tri,dData.geometry);
+		samplePack.fileName=new String("resampled"+dData.pointCount);
+		return samplePack;
 	}
 	
 	public void setSidePairs(PairLink plink) {

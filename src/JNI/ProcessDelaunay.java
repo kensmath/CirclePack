@@ -122,7 +122,6 @@ public class ProcessDelaunay {
 		return deldata.myfaceCount;
 	}
 
-
 	/**
 	 * For the plane, the data has points and possibly segments 
 	 * defining a planar straight line graph; that is, a *.node file
