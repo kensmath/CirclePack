@@ -129,25 +129,30 @@ class RunCirclePack
 		System.out.println(pb.environment().get("LD_LIBRARY_PATH"));
 		
 		//AF>>>//
-		/* Rewrote the code below to fix the freezing issue. When we start a process,
-		 * we're responsible for its standard streams (output, error, and input).
-		 * Depending on the specific system, these streams have limited buffer sizes.
-		 * In the original code, standard error isn't handled. The buffer would
-		 * eventually fill, and the next time CirclePack attempted to write to
-		 * standard error, the call would hang until whoever is on the other end
-		 * of the stream got around to handling it. This is us, and we never did
-		 * so. Killing the launcher probably handed control of the streams over to
-		 * the JVM or OS, which promptly flushed the buffers and kept them clear,
-		 * allowing CirclePack to continue.
+		/* Rewrote the code below to fix the freezing issue. 
+		 * When we start a process, we're responsible for its 
+		 * standard streams (output, error, and input). Depending 
+		 * on the specific system, these streams have limited 
+		 * buffer sizes. In the original code, standard error 
+		 * isn't handled. The buffer would eventually fill, and 
+		 * the next time CirclePack attempted to write to standard 
+		 * error, the call would hang until whoever is on the 
+		 * other end of the stream got around to handling it. 
+		 * This is us, and we never did so. Killing the launcher 
+		 * probably handed control of the streams over to the 
+		 * JVM or OS, which promptly flushed the buffers and kept 
+		 * them clear, allowing CirclePack to continue.
 		 * 
-		 * In the new code, I spin two threads which forward the streams appropriately.
-		 * Threading is necessary to avoid certain deadlock conditions, like standard
-		 * output filling up while we're waiting to read from standard error.
+		 * In the new code, I spin two threads which forward the 
+		 * streams appropriately. Threading is necessary to avoid 
+		 * certain deadlock conditions, like standard output 
+		 * filling up while we're waiting to read from standard error.
 		 * 
-		 * Java 1.7 has methods to handle this redirection built-in, so we could do all
-		 * of this in two lines, but 1.7 is cutting-edge and the feature is relatively
-		 * minor so I just did it "by hand" to avoid compatibility issues for users
-		 * with older JVMs.
+		 * Java 1.7 has methods to handle this redirection built-in, 
+		 * so we could do all of this in two lines, but 1.7 is 
+		 * cutting-edge and the feature is relatively minor so I 
+		 * just did it "by hand" to avoid compatibility issues for 
+		 * users with older JVMs.
 		/*
         System.out.println("Waiting on process");    
 		//p.waitFor();
@@ -165,19 +170,23 @@ class RunCirclePack
 		System.out.println("RunCirclePack: Spinning standard output and error forwarding threads.");
 		
 		// Get CirclePack's standard output and error as something we can read from.
-		final BufferedReader circlePackOut = new BufferedReader(new InputStreamReader(p.getInputStream()));
-		final BufferedReader circlePackErr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+		final BufferedReader circlePackOut = 
+				new BufferedReader(new InputStreamReader(p.getInputStream()));
+		final BufferedReader circlePackErr = 
+				new BufferedReader(new InputStreamReader(p.getErrorStream()));
 		
-		// Create threads that forward CirclePack's standard output and error to this
-		// launcher's standard output and error.
+		// Create threads that forward CirclePack's standard output and 
+		// error to this launcher's standard output and error.
 		Thread outputForwarder = new Thread() {
 			public void run() {
 				String line;
 				try {
-					while ((line = circlePackOut.readLine()) != null) System.out.println(line);
+					while ((line = circlePackOut.readLine()) != null) 
+						System.out.println(line);
 					circlePackOut.close();
 				} catch (IOException e) {
-					System.err.println("RunCirclePack: Error forwarding standard output. Standard output will no longer be forwarded.");
+					System.err.println(
+							"RunCirclePack: Error forwarding standard output. Standard output will no longer be forwarded.");
 				}
 			}
 		};
@@ -185,7 +194,8 @@ class RunCirclePack
 			public void run() {
 				String line;
 				try {
-					while ((line = circlePackErr.readLine()) != null) System.err.println(line);
+					while ((line = circlePackErr.readLine()) != null) 
+						System.err.println(line);
 					circlePackErr.close();
 				} catch (IOException e) {
 					System.err.println("RunCirclePack: Error forwarding standard error. Standard error will no longer be forwarded.");
@@ -201,8 +211,9 @@ class RunCirclePack
 		outputForwarder.join();
 		errorForwarder.join();
 		
-		// The threads may have finished due to IO failure rather than program termination. Just in case,
-		// we'll wait on the CirclePack process to complete.
+		// The threads may have finished due to IO failure rather than 
+		// program termination. Just in case, we'll wait on the 
+		// CirclePack process to complete.
 		p.waitFor();
         //<<<AF//
 	}

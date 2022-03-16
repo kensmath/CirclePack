@@ -309,7 +309,7 @@ public class CombDCEL {
 			// 'eutil's identify forbidden/bdry edges
 			HalfEdge edge=vtx.halfedge;
 			HalfEdge he=edge;
-			int safety=1000;
+			int safety=1010;
 			do {
 				safety--;
 				he.myRedEdge=null; // toss old red edge pointers
@@ -599,10 +599,6 @@ public class CombDCEL {
 			} while (rtrace!=pdcel.redChain);
 
 			rtrace=pdcel.redChain;
-			
-// debugging
-//			System.out.println("edge "+rtrace.myEdge);
-			
 			do {
 				redN--;
 				// if backtrack with nextRed
@@ -1197,7 +1193,7 @@ public class CombDCEL {
 			HalfEdge edge=pdcel.vertices[v].halfedge; 
 			// DCELdebug.edgeFlowerUtils(pdcel,pdcel.vertices[17]);
 			HalfEdge trace=edge;
-			int safety=1000;
+			int safety=1010;
 			do {
 				trace.eutil=0;
 				trace.twin.eutil=0;

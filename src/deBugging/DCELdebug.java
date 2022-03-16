@@ -622,7 +622,7 @@ public class DCELdebug {
 		StringBuilder sb=new StringBuilder("vertices are:\n");
 		StringBuilder sbold=new StringBuilder("old indices:\n");
 		RedEdge nxtre=redge;
-		int safety=1000;
+		int safety=1010;
 		do {
 			safety--;
 			sb.append(" -> "+nxtre.myEdge.origin.vertIndx);

@@ -118,7 +118,7 @@ path_to_elist
 pave {v} 
 pdata 
 perp_pack [k] 
-perron -[udUD] -[noC] {n} 
+perron -[udUD] {n} 
 polypack -[o] {w ..} 
 post [options] 
 pre_cookie 

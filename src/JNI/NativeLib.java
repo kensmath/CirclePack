@@ -6,11 +6,16 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * This code is needed for cross-platform access to the C/C++ libraries. 
- * Various versions of the libraries are compiled.
- * At runtime the libraries appropriate to the operating system and
- * computer are stored in temporary directories and the system is told
- * where to find them.
+ * This code was needed for cross-platform access to the C/C++ 
+ * libraries when I was using JNI (Java Native Interface) calls. 
+ * As of 3/2022 I've moved towards calls via 'ProcessBuilder'
+ * and using in/output files. 
+ * 
+ * Various versions of the libraries were compiled in the past.
+ * This may still be necessary, but is currently beyond my
+ * abilities. At runtime the libraries appropriate to the 
+ * operating system and computer should be stored in temporary 
+ * directories and the system told where to find them.
  * 
  * @author Chris Brumgard
  *

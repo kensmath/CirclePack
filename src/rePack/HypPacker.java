@@ -1,8 +1,6 @@
 package rePack;
 
-import JNI.JNIinit;
 import allMains.CirclePack;
-import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.PackingException;
 import geometry.HyperbolicMath;
@@ -403,30 +401,29 @@ public class HypPacker extends RePacker {
 	
 	/**
 	 * Generic call; computes both radii and centers (use 'repack' if
-	 * you want centers only). Depending on 'useSparseC', use Java or Orick's  
-	 * method, which by its nature computes radii and centers in unison. 
+	 * you want radii only). 
 	 * @param cycles, int, limit on recompute cycles; no effect in Orick's method
 	 * @return int; may be number of cycles used.
 	 */
 	public int maxPack(int cycles) {
 		int count=0;
-		if (!useSparseC) {
-			try {
-				count=genericRePack(cycles);
-				if (count!=0)
-					reapResults();
-				p.fillcurves();
-				p.packDCEL.layoutPacking();
-			} catch (Exception ex) {
-				throw new PackingException("error in Java DCEL repack computation"); 
-			}
+		try {
+			count=genericRePack(cycles);
+			if (count!=0)
+				reapResults();
+			p.fillcurves();
+			p.packDCEL.layoutPacking();
+		} catch (Exception ex) {
+			throw new PackingException("error in Java DCEL repack computation"); 
 		}
-		else { // use GOpack
-			count=maxPackC();
-			// normalize to put alpha at the origin, gamma on imaginary axis.
-			p.center_point(p.getCenter(p.getAlpha()));
-			p.rotate((-1.0)*p.getCenter(p.getGamma()).arg()+Math.PI/2.0);
-		}
+
+		// TODO: in future, want GOpack option
+//		else { // use GOpack
+//			count=maxPackC();
+//			    normalize to put alpha at the origin, gamma on imaginary axis.
+//			p.center_point(p.getCenter(p.getAlpha()));
+//			p.rotate((-1.0)*p.getCenter(p.getGamma()).arg()+Math.PI/2.0);
+//		}
 		return count;
 	}
 	
@@ -894,19 +891,5 @@ public class HypPacker extends RePacker {
         	p.setRadius(inDex[j],1.0-rad[inDex[j]]);
     	return results;
     }
-    
-    // not yet implemented
-    public void setSparseC(boolean useC) {
-		useSparseC=false;
-		if (useC) { // requested to use GOpacker routines if possible
-			if (p.nodeCount<GOPACK_THRESHOLD) { // for smaller packing, use Java
-				useSparseC=false;
-				return;
-			}
-			if (JNIinit.SparseStatus())
-				useSparseC=true;
-		}
-		return;
-	}
 
 }

@@ -9,7 +9,6 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.Vector;
 
-import JNI.JNIinit;
 import allMains.CPBase;
 import allMains.CirclePack;
 import cpTalk.sockets.CPMultiServer;
@@ -99,27 +98,6 @@ public class ShellControl extends CPBase {
 		}
 
 		preferences = new CPPreferences(); // pref stuff set here
-
-		// Init 'genericMain' C code for JNI calls to 'HeavyC_lib'
-		// TODO: how to catch exception if C calls fail in the native library
-		if (CPBase.attachCcode) {
-			try {
-//				System.out.println(System.getProperty("java.library.path"));
-//				java.io.File f=new File(System.getProperty("java.library.path")+
-//						File.separatorChar + "libHeavyC_lib.so");
-//				System.out.println(System.getenv().toString());
-
-				new JNIinit(); // try to start 'DelaunayBuild', 'SolverFunction' libs
-
-			} catch (Exception ex) {
-				System.err.println("Exception starting some shared C library;"
-						+ " this does not necessarily affect the use of 'CirclePack'");
-				System.err.println("System java library path is :" + System.getProperty("java.library.path"));
-			} catch (Error e) {
-				System.err.println("Error in starting some shared C library;"
-						+ " this does not necessarily affect the use of 'CirclePack'");
-			}
-		}
 
 		// Create the packing data memory storage areas
 		packings=new PackData[NUM_PACKS];

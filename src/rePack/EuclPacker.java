@@ -3,13 +3,11 @@ package rePack;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import JNI.JNIinit;
 import allMains.CirclePack;
 import dcel.DcelFace;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.Vertex;
-import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.PackingException;
 import exceptions.ParserException;
@@ -595,14 +593,15 @@ public class EuclPacker extends RePacker {
     		if (!p.isBdry(crns.get(i)))
     			throw new DataException("corners must be bdry vertices");
     	}
-    	int v=crns.get(1); // last 
+    	int v=crns.get(1); // second
     	int w=crns.get(0); // first
 
     	CommandStrParser.jexecute(p,"geom_to_e");
   	  	p.set_aim_default();
   	  	
-  	  	// use traditional java packing routine calls
-  	  	if (!okayC || p.nodeCount<GOPACK_THRESHOLD || !JNIinit.SparseStatus()) {
+  	  	// use traditional java packing routine calls; 
+  	  	// Note that old C calls are no longer used 
+  	  	if (!okayC || p.nodeCount<GOPACK_THRESHOLD) {
   	  		
   	  		// set the aims
   	  	  	CommandStrParser.jexecute(p,"set_aim 1.0 b");
@@ -910,19 +909,6 @@ public class EuclPacker extends RePacker {
 			results[1] = Math.sqrt(discrepency);
 		results[3] = sqError;
 		return results;
-	}
-
-	public void setSparseC(boolean useC) {
-		useSparseC=false;
-		if (useC) { // requested to use GOpacker routines if possible
-			if (p.nodeCount<GOPACK_THRESHOLD) { // for smaller packing, use Java
-				useSparseC=false;
-				return;
-			}
-			if (JNIinit.SparseStatus())
-				useSparseC=true;
-		}
-		return;
 	}
 	
 	/**

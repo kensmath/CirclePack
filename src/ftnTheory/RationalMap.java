@@ -300,9 +300,8 @@ public class RationalMap extends PackExtender {
 				pdcel.layoutPacking();
 				
 // debugging, copy into pack[2]				
-			PackData debugPack=slitPack.copyPackTo();
-			CirclePack.cpb.swapPackData(debugPack, 2, false);
-
+//			PackData debugPack=slitPack.copyPackTo();
+//			CirclePack.cpb.swapPackData(debugPack, 2, false);
 			
 			} catch(Exception ex) {
 				rmState=ERROR;

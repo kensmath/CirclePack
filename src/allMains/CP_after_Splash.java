@@ -27,9 +27,6 @@ public class CP_after_Splash {
 					CPBase.initialScript=args[j+1];
 					j++;
 				}
-				else if (args[j].equals("-no_C")) { // don't try to attach C libraries
-					CPBase.attachCcode=false;
-				}
 				else if (args[j].equals("-socket")) { // want a command socket 
 					CPBase.socketActive=true;
 					int prt=3736;

@@ -294,7 +294,8 @@ public class FunctionHover extends HoverPanel {
      */
     public Complex getFtnValue(Complex z) {
     	try {
-    		com.jimrolf.complex.Complex w=ftnField.parser.evalFunc(new com.jimrolf.complex.Complex(z.x,z.y));
+    		com.jimrolf.complex.Complex w=
+    				ftnField.parser.evalFunc(new com.jimrolf.complex.Complex(z.x,z.y));
     		return new Complex(w.re(),w.im());
     	} catch (Exception ex) {
     		throw new DataException("Ftn Panel error: "+ex.getMessage());

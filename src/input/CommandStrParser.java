@@ -19,7 +19,6 @@ import java.util.Vector;
 import javax.swing.JFrame;
 
 import JNI.DelaunayData;
-import JNI.JNIinit;
 import JNI.ProcessDelaunay;
 import allMains.CPBase;
 import allMains.CirclePack;
@@ -45,7 +44,6 @@ import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.DataException;
 import exceptions.InOutException;
-import exceptions.JNIException;
 import exceptions.MobException;
 import exceptions.ParserException;
 import exceptions.VarException;
@@ -1353,10 +1351,6 @@ public class CommandStrParser {
 			  UtilPacket uP=new UtilPacket();
 			  int geom=100; // intended geometry
 			  
-			  if (!JNIinit.DelaunayStatus()) {
-				  throw new JNIException("'delaunay' requires the 'DelaunayBuild' library, which is not installed");
-			  }
-			  
 			  // check for flags
 			  Iterator<Vector<String>> fseg=flagSegs.iterator();
 			  while (fseg.hasNext()) {
@@ -2053,13 +2047,11 @@ public class CommandStrParser {
 	  case 'g': // fall through
 	  case 'G': 
 	  {
+		  // NOTE: this is not operational now (3/2022), as the JNI 
+		  //       calls to C code have been removed.
+		  
 		  // flags: s=start, r=restart, c=continue, g=get rad/cent, q=quality
 		  if (cmd.startsWith("GOpack")) {
-			  
-			  if (!JNIinit.SparseStatus()) {
-				  CirclePack.cpb.errMsg("Don't use 'GOpack': C++ library for sparse matrix operations not available");
-			  	  return 0;
-			  }
 			  count=0;
 			  GOpacker goPack;
 			  
@@ -2090,8 +2082,10 @@ public class CommandStrParser {
 			  boolean gotflag=false; // some flags are exclusive
 			  
 			  // start the persistent 'RePacker' if not already running
-			  if (packData.rePacker==null || !(packData.rePacker instanceof GOpacker) ||
-					  packData.rePacker.p==null || packData.rePacker.p!= packData ||
+			  if (packData.rePacker==null || 
+					  !(packData.rePacker instanceof GOpacker) ||
+					  packData.rePacker.p==null || 
+					  packData.rePacker.p!= packData ||
 					  packData.nodeCount!=((GOpacker)packData.rePacker).getOrigNodeCount()) {  
 				  goPack=new GOpacker(packData,passes);
 			  	  packData.rePacker=goPack;
@@ -2928,8 +2922,7 @@ public class CommandStrParser {
 	    				  "to eucl/hyp packings without overlaps");
 	    		  return 0;
 	    	  }
-	    	  
-	    	  boolean SparseC=true;
+
 	    	  int passes=2000;
     		  int direction=0;
 	    	  items=null;
@@ -2961,12 +2954,6 @@ public class CommandStrParser {
 	    				  direction=2;
 	    				  break;
 	    			  }
-	    			  case 'n': // -noC flag? use Java code
-	    			  {
-	    				  if(str.contains("noC"))
-	    					  SparseC=false;
-	    				  break;
-	    			  }
 	    			  } // end of switch
 	    		  }
 			  }
@@ -2978,29 +2965,14 @@ public class CommandStrParser {
 	    		  passes=2000;
 	    	  }
 
-	    	  // use C++ code?
-	    	  if (!JNIinit.SparseStatus())
-	    			  SparseC=false;
-	    	  
 	    	  double []perronResults=new double[4];
-	    	  
-	    	  // TODP: have not yet implemented C++ code
-	    	  SparseC=false; 
 
-	    	  if (packData.hes<0) {
-	    		  if (SparseC) {
-	    			  
-	    		  }
-	    		  else
-	    			  perronResults=HypPacker.hypPerron(packData,direction, passes);
-	    	  }
-	    	  else { 
-	    		  if (SparseC) {
-	    			  
-	    		  }
-	    		  else 
-	    			  perronResults=EuclPacker.euclPerron(packData,direction, passes);
-	    	  }
+
+	    	  if (packData.hes<0) 
+    			  perronResults=HypPacker.hypPerron(packData,direction, passes);
+
+	    	  else 
+    			  perronResults=EuclPacker.euclPerron(packData,direction, passes);
 	    	  
 	    	  if (perronResults[0]<0) {
 	    		  CirclePack.cpb.errMsg("Perron failed: deficiencies: \n"+
@@ -3264,11 +3236,6 @@ public class CommandStrParser {
 				  heS=-1;
 			  }
 			  else {
-// debugging				  
-//				  System.out.println("RANDTRI: into random_Tri");
-				  
-				  // TODO: when Gamma is given, should use "constrained" 
-				  //   Delaunay so that bdry edges are edges in the triangulation.
 				  Triangulation Tri=RandomTriangulation.random_Triangulation(randN,seed1,
 						  heS,aspect,Gamma,Tau);
 				  if (Tri==null) {
@@ -3331,9 +3298,6 @@ public class CommandStrParser {
 		  
 		  // =========== random_pack =======
 		  if (cmd.startsWith("random_pack")) { // random hyperbolic packing
-			  if (!JNIinit.DelaunayStatus()) {
-				  throw new JNIException("requires the 'DelaunayBuild' C library, which is not loaded");
-			  }
 			  boolean seed1=false;
 			  int randN=200;
 			  try { // see if count is given
@@ -3520,6 +3484,10 @@ public class CommandStrParser {
 	   		  	  		n=Double.valueOf(items.get(item_index)).intValue();
 	   		  	  		if (n<3)
 	   		  	  			n=3;
+	   		  	  		if (n>1000) {
+	   		  	  			throw new ParserException(
+	   		  	  					"'seed' petal count limited to 1000");
+	   		  	  		}
 	   		  	  	} catch (Exception ex) {n=6;}
 	   		  	  }
 	     	  } // end of while
@@ -8293,12 +8261,6 @@ public class CommandStrParser {
 		    			  } catch(Exception ex) { }
 		    			  break;
 		    		  }	
-	    			  case 'n': // 'noC' means not to use C libraries
-	    			  {
-	    				  if (str.contains("noC"))
-	    					  use_C=false;
-	    				  break;
-	    			  }
 	    			  // TODO: need to implement other packing routines and put
 	    			  //   in the options here, e.g., 't' (which should be default for
 	    			  //   inversive distance cases.)

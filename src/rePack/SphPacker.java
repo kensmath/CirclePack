@@ -2,7 +2,6 @@ package rePack;
 
 import java.util.Iterator;
 
-import JNI.JNIinit;
 import allMains.CirclePack;
 import complex.Complex;
 import dcel.DcelFace;
@@ -52,19 +51,6 @@ public class SphPacker extends RePacker {
 	 */
 	public int reStartRiffle(int passNum) {return 1;}
 	public double l2quality(double crit) {return 1;}
-	
-	public void setSparseC(boolean useC) {
-		useSparseC=false;
-		if (useC) { // requested to use GOpacker routines if possible
-			if (p.nodeCount<SPH_GOPACK_THRESHOLD) { // for smaller packing, use Java
-				useSparseC=false;
-				return;
-			}
-			if (JNIinit.SparseStatus())
-				useSparseC=true;
-		}
-		return;
-	}
 
 	/**
 	 * Load 'TriData' with euclidean data after choosing

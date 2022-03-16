@@ -1,6 +1,9 @@
 package JNI;
 
 /**
+ * OBE: As of 3/2022 the JNI calls to C code have been deleted.
+ * This container might be used in the future.
+ * 
  * Data container for linear system sparse matrix calls.
  * The native code, such as C++, is given access to this
  * when asked to solving a linear system via UMFPACK. The

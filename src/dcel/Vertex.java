@@ -172,7 +172,7 @@ public class Vertex {
 	public int[] getFlower(boolean closeInt) {
 		ArrayList<Integer> vlist=new ArrayList<Integer>();
 		HalfEdge he=halfedge;
-		int safety=1000;
+		int safety=1010;
 		do {
 			vlist.add(he.twin.origin.vertIndx);
 			he=he.prev.twin;
@@ -249,7 +249,7 @@ public class Vertex {
 		// add spokes including 'start', up to, not including 'stop'
 		HalfLink eflower=new HalfLink();
 		HalfEdge nxtedge=start;
-		int safety=1000;
+		int safety=1010;
 		do {
 			eflower.add(nxtedge);
 			nxtedge=nxtedge.prev.twin;

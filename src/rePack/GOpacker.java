@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.Vector;
 
 import JNI.SolverData;
-import JNI.SolverFunction;
 import allMains.CirclePack;
 import complex.Complex;
 import exceptions.CombException;
@@ -22,13 +21,22 @@ import packing.PackData;
 import packing.PackLite;
 
 /**
- * This is intended to provide an implementation through java of 
- * Gerald Orick's method for computing circle packings via
- * an iterative routine using Tutte embeddings. These are being 
- * moved from matlab and C++ to mainly java, with calls to C++ sparse
- * matrix routines. (I can't seem to find a good java routine;
- * e.g., it appears that la4j is more about compact storage; it doesn't 
- * use the sparseness in solving systems.)
+ * NOTE: We no longer call this code because we don't have
+ * access to sparse matrix computations. 
+ * 
+ * This is intended in the future to provide an implementation 
+ * through java of Gerald Orick's method for computing circle 
+ * packings via an iterative routine using Tutte embeddings 
+ * (currently implemented only in GOPack package for Matlab).
+ * 
+ * Originally, the plan was to implement these methods in C and then
+ * make JNI calls. However, as of 3/2022, I've pulled all the JNI
+ * stuff. If we can implement in C, the plan now would be to transfer
+ * data in files and use ProcessBuilder to execute. I would hope to
+ * implement the GOPack methods in Java, but I can't find good 
+ * java sparce matric routines. (Caution: it appears that things
+ * like "la4j", for example, are more about compact storage and 
+ * doesn't implement sparseness in solving systems.)
  * 
  * When this class is instantiated, 'load' creates various 
  * persistent data objects. A key design feature is creation on
@@ -57,8 +65,8 @@ import packing.PackLite;
  * * 'restartRiffle' sets radii to current values from myPLite.
  * * 'continueRiffle' continues with 'localradii' (even if the
  *   packing data has been updated).
- * * 'quality' returns L2 error in abstract (i.e., computed from radii,
- *   versus embedded (which is from Tutte-type layout).
+ * * 'quality' returns L2 error in abstract (i.e., computed from 
+ *   radii, versus embedded (which is from Tutte-type layout).
  * * 'reapRadii' puts 'localradii' and 'localcenters' into the myPLite
  * 
  * @author kstephe2, January 2014
@@ -120,7 +128,7 @@ public class GOpacker extends RePacker {
 	}
 	
 	public GOpacker(PackData pd,int pass_limit) { // default: max pack 
-		super(pd,pass_limit,true);
+		super(pd,pass_limit);
 		passes=pass_limit;
 		errtol=.001;
 		realLoad(null);
@@ -128,12 +136,10 @@ public class GOpacker extends RePacker {
 	}
 	
 	public GOpacker(PackData pd,NodeLink vint) { // specify interior
-		super(pd,30,true);
+		super(pd,30);
 		setMode(0); // NOT_YET_SET;
 		realLoad(vint);
 	}
-
-	public void setSparseC(boolean useC) {}; // not applicable for GOpacker
 	
 	/**
 	 * fake, do-nothing 'RePacker' abstract method. Have to make the 'realLoad' call
@@ -466,7 +472,8 @@ public class GOpacker extends RePacker {
 	public int getTutteCenters(SolverData sD) {
 
 		try {
-			sData = new SolverFunction().apply(sData);
+// OBE: as of 3/2022 have deleted all the former JNI stuff			
+//			sData = new SolverFunction().apply(sData);
 		} catch (Exception ex) {
 			CirclePack.cpb.errMsg("SolverFunction UMFpackException occurred: "+ex.getMessage());
 			return 0;

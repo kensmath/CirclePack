@@ -23,7 +23,7 @@ import panels.CPScreen;
  * intended for efficient communication between processors, 
  * or to repack a portion of a larger packing. However, I have
  * now removed the read/write commands and methods. The purpose
- * now is to prepare data for 'GoPacker' by re-indexing 
+ * now is to prepare data for 'GOPacker' by re-indexing 
  * vertices in a way suitable to its sparse-matrix computations: 
  * interior first, bdry last in cclw order. For spherical case, 
  * last 3 go with a face in clw order as faux bdry.

@@ -2495,7 +2495,7 @@ with the 'pentagonal' cases among the 'create' options.
 </command>
 
 
-<command cmd="perron" flags="-[udUD] -[noC] {n}">
+<command cmd="perron" flags="-[udUD] {n}">
 <description> (Technical) Apply directed 'Perron' packing algorithms in  
 	hyperbolic or euclidean cases without overlaps, n passes. This is
 	not intended for speed, but rather to assure monotonicity of radii.
@@ -2523,7 +2523,6 @@ with the 'pentagonal' cases among the 'create' options.
 	<opt flag='U'> up then down Perron</opt> 
 	<opt flag='d'> downward (only) Perron</opt> 
 	<opt flag='D'> down then up Perron</opt>
-	<opt flag="-noC"> use Java routines, don't call C/C++ library</opt>
 </options> 
 </command>	 
 
@@ -2995,7 +2994,6 @@ script and append it to 'ClosedPath'.</instance>
 	<opt flag="-v {v..}"> repack only specified circles </opt>
 	<opt flag="-o">  repack using "old-reliable", but slower, routines (default to this in presence of 
 		nontrivial inversive distances)</opt>
-	<opt flag="-noC"> use Java routines, don't call C/C++ libraries (e.g. Orick's algorithm)</opt>
 </options>		
 
 	NOTE: There is currently no way to interrupt a repack computation
@@ -3222,10 +3220,11 @@ thickness 3</instance>
 <command cmd="seed" flags="[-q] [n]">
 <description>
 	This replaces the active pack by a single "flower" consisting of a
-	central circle and n (>=3) "petals".  The canvas is automatically
-	displayed unless flag -q is specified. Default is n=6.  
-	CAUTION: No confirmation is requested for command-line arguments, 
-	so original data in active pack will be lost.
+	central circle and n (>=3) "petals". (Limit is 1000 petals.)
+	The canvas is automatically displayed unless flag -q is specified. 
+	Default is n=6.	CAUTION: No confirmation is requested for 
+	command-line arguments,	so original data in active pack will 
+	be lost.
 </description>
 </command>
 

@@ -9,7 +9,6 @@ import java.util.LinkedList;
 import java.util.Random;
 import java.util.Vector;
 
-import JNI.DelaunayBuilder;
 import JNI.DelaunayData;
 import JNI.ProcessDelaunay;
 import allMains.CPBase;

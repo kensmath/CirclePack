@@ -72,7 +72,7 @@ public abstract class CPBase {
 	
 	// ------------- generic stuff
 	public static String directory="~";
-	public static boolean attachCcode=true; 
+	public static boolean attachCcode=true; // as of 3/22 no longer trying this 
 	public static String initialScript=null;
 	public static CPBase sharedinstance=null;
 	public static File XinfoFile = null; // hold help info for 'PackExtender's

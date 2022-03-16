@@ -1,17 +1,9 @@
 package rePack;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-
-import JNI.JNIinit;
 import allMains.CPBase;
 import allMains.CirclePack;
-import dcel.DcelFace;
 import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.Vertex;
-import exceptions.CombException;
-import exceptions.DCELException;
 import exceptions.PackingException;
 import listManip.EdgeLink;
 import listManip.FaceLink;
@@ -34,6 +26,13 @@ import util.UtilPacket;
  * Typically, 'RePack' objects are released after the computation. 
  * However, may be able to keep it as long as we check that combinatorics
  * don't change. 
+ * 
+ * NOTE: as of 3/2022, I've pulled the attempts to use calls to C
+ * programs. In particular, we as yet have no way to call Orick's 
+ * GOPack algorithm (though it is implemented in matlab). When this
+ * is available, we will need criteria/options for using it in place
+ * of current java code. 
+ * 
  * @author kens
  */
 public abstract class RePacker {
@@ -74,8 +73,6 @@ public abstract class RePacker {
 	public int passLimit;
 	public int totalPasses;		// cumulative since creation of this repacker
 	public int localPasses;		// during this run.
-	
-    boolean useSparseC;  // if true, use 'SolverFunction' lib when available and applicable
 
 	// main data
 	public RData[] rdata;
@@ -114,7 +111,7 @@ public abstract class RePacker {
 	public RePacker() {
 	}
 	
-	public RePacker(PackData pd,int pass_limit,boolean useC) {
+	public RePacker(PackData pd,int pass_limit) {
 		p=pd;
 		if (pass_limit<0) passLimit=PASSLIMIT;
 		else passLimit=pass_limit;
@@ -126,18 +123,13 @@ public abstract class RePacker {
 			R2=new double[p.nodeCount+1];
 		}
 		utilPacket=new UtilPacket();
-		setSparseC(useC);
 	}
 	
 	// use default number of iterations
-	public RePacker(PackData pd,boolean useC) { 
-		this(pd,CPBase.RIFFLE_COUNT,useC);
+	public RePacker(PackData pd) { 
+		this(pd,CPBase.RIFFLE_COUNT);
 	}
 	
-	public RePacker(PackData pd) { // use default number of iterations
-		this(pd,CPBase.RIFFLE_COUNT,true);
-	}
-
 	// abstract methods -- these must be implemented in derived classes
 	public abstract int load(); // load initial data into local storage
 	
@@ -183,57 +175,6 @@ public abstract class RePacker {
 	 */
 	public abstract void reapResults();
 	
-	/**
-	 * Determine whether SolverFunction lib is available/appropriate/requested.
-	 * NOTE: In repacking, GOpacker has code for Orick's methods, but also
-	 * the stand-alone super-step code (parallel to the Java code)
-	 * @param useC, true, then use the library if available
-	 */
-	public abstract void setSparseC(boolean useC);
-
-	/**
-	 * Check if GOpacker is appropriate. 'useC' is set
-	 * in 'setSparseC' and means SolverFunction routines are available.
-	 * @param useC, boolean; true = allow use of GOpacker if appropriate
-	 * @return boolean
-	 */
-	public boolean useSparseC(boolean useC) {
-		if (useC) { // requested to use 'SolverFunction' C lib routines if possible
-			if (p.haveInvDistances()) {
-//				CirclePack.cpb.msg("'SolverFunction' libs not used with inv. distances.");
-				return false;
-			}
-			if (p.euler!=1 || p.genus!=0) {
-//				CirclePack.cpb.msg("'SolverFunction' libs not applicable to multi-connected cases; "+
-//						"use Java repack routines");
-				return false;
-			}
-			if (!JNIinit.SparseStatus()) {
-//				CirclePack.cpb.msg("'SolverFunction' lib is not available; use Java repack routines");
-				return false;
-			}
-
-			// check for non-default aims
-			boolean hit=false;
-			for (int i=1;(!hit && i<=p.nodeCount);i++) {
-				if (p.isBdry(i)) {
-					if (p.getAim(i)>0.0)	
-						hit=true;
-				}
-				else if (Math.abs(p.getAim(i)-mp2)>.00000001) 
-					hit=true;
-			}
-			// encountered non-default aims, use Java routines
-			if (hit) 
-				return false;
-			
-			// seems we can go ahead based on general criteria
-			return true;
-		}
-		else // said 'no' to using GOpacker
-			return false;
-	}
-
 	/**
 	 * Generic 'repack' call is for the (now) classical "riffle" 
 	 * methods, typically with supersteps, etc. Originally in C,
