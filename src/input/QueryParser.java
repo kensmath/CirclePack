@@ -13,10 +13,8 @@ import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
 import ftnTheory.PointEnergies;
-import geometry.EuclMath;
 import input.CommandStrParser.Energy;
 import komplex.EdgeSimple;
-import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
@@ -582,7 +580,7 @@ public class QueryParser {
 						exception_words="?f(z) usage: 'x [y]' for complex argument";
 						throw new ParserException("");
 					}
-					Complex w=PackControl.functionPanel.getFtnValue(new Complex(x,y));
+					Complex w=CirclePack.cpb.getFtnValue(new Complex(x,y));
 					if (Math.abs(y)<CPBase.GENERIC_TOLER) // if real, suppress the y
 						ans.append(Double.toString(w.x));
 					else 
@@ -603,7 +601,7 @@ public class QueryParser {
 						exception_words="?gam(t) usage: 't' for real argument";
 						throw new ParserException("");
 					}
-					Complex w=PackControl.functionPanel.getParamValue(t);
+					Complex w=CirclePack.cpb.getParamValue(t);
 					ans.append(new String(w.x+" "+w.y));
 					gotone=true;
 				}

@@ -9,6 +9,9 @@ import java.awt.geom.Rectangle2D;
 import java.util.Iterator;
 import java.util.Vector;
 
+import com.jimrolf.functionparser.FunctionParser;
+
+import allMains.CirclePack;
 import complex.Complex;
 
 /**
@@ -265,6 +268,53 @@ public class PathUtil {
 		return path;
 	}
 	
+	/**
+     * Create a Path2D.Double in the complex plane by parsing 
+     * the complex function described in 'path_text' in terms of
+     * real variable 't' for t in [0,1]. Default to 'N' points.
+     * description using real variable 't' for t in [0,1]. 
+     * @param path_text String
+     * @param N int
+     * @return Path2D.Double, null on error
+     */
+    public static Path2D.Double path_from_text(String path_text,int N) {
+    	if (path_text==null || path_text.length()==0)
+    		return null;
+		Path2D.Double closedPath=new Path2D.Double();
+		FunctionParser utilParser=new FunctionParser();
+		utilParser.setComplex(true);
+		utilParser.removeVariable("x");
+		utilParser.setVariable("t");
+		utilParser.parseExpression(path_text);
+		if (utilParser.funcHasError()) {
+			CirclePack.cpb.errMsg("Path description could not be parsed");
+			return null;
+		}
+		if (N<10)
+			N=10;
+		// create path, 200 segments
+		try {
+			for (int i=0;i<=N;i++) {
+				com.jimrolf.complex.Complex z=
+					new com.jimrolf.complex.Complex(((double)(i))/(double)N,0.0);
+				com.jimrolf.complex.Complex w=utilParser.evalFunc(z);
+				if (i==0)
+					closedPath.moveTo(w.re(),w.im());
+				else
+					closedPath.lineTo(w.re(),w.im());
+			}
+			closedPath.closePath();
+		} catch (Exception ex) {
+			CirclePack.cpb.errMsg("Failed creation of closed path");
+			return null;
+		}
+    	return closedPath;
+    }
+	
+    public static Path2D.Double path_from_text(String path_text) {
+    	return path_from_text(path_text,200);
+    }
+    
 	/**
 	 * Return the point on the (flattened) path which is closest to
 	 * the given point z.

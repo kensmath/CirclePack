@@ -1,24 +1,21 @@
 package cpContributed;
 
-import packing.PackData;
-import packing.PackExtender;
-import util.CmdStruct;
-
-import circlePack.PackControl;
-import complex.Complex;
-
-import java.util.Iterator;
-import java.util.Vector;
-
-import allMains.CirclePack;
-
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Toolkit;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.awt.Dimension;
+import java.util.Iterator;
+import java.util.Vector;
+
+import allMains.CirclePack;
+import circlePack.PackControl;
+import complex.Complex;
+import packing.PackData;
+import packing.PackExtender;
+import util.CmdStruct;
 
 public class HilbertTransform extends PackExtender 
 {
@@ -147,18 +144,19 @@ public class HilbertTransform extends PackExtender
 			
 			// replace the variable t with z if necessary
 			String temp_fct = fct;
-			if (var.compareTo("t") == 0)
-			{
-				temp_fct = temp_fct.replaceAll("t", "z");
-			}
+			// OBE: I'm using 't' as variable for path now (3/2022)
+//			if (var.compareTo("t") == 0) 
+//			{
+//				temp_fct = temp_fct.replaceAll("t", "z");
+//			}
 			
 			// modify the radii of the boundary circles
-			PackControl.functionPanel.setFunctionText(temp_fct);
+			PackControl.newftnFrame.setFunctionText(temp_fct);
 			Complex val;
 			//values_fct = new double[sz_bndry];
 			for(int k = 0; k < sz_bndry; k++)
 			{
-				val = PackControl.functionPanel.getFtnValue(cz_hyper[k]);
+				val = CirclePack.cpb.getFtnValue(cz_hyper[k]);
 				double krad=newPack.getRadius(k);
 				newPack.setRadius(bndry[k],krad* Math.exp(lambda * val.real()));
 				values_fct[k] = val.real();

@@ -9,9 +9,12 @@ import java.util.Hashtable;
 import java.util.Random;
 import java.util.Vector;
 
+import com.jimrolf.functionparser.FunctionParser;
+
 import circlePack.RunProgress;
 import complex.Complex;
 import cpTalk.sockets.CPMultiServer;
+import exceptions.DataException;
 import input.CPFileManager;
 import input.SocketSource;
 import input.TrafficCenter;
@@ -112,6 +115,12 @@ public abstract class CPBase {
 	public static Mobius Mob; // Global Mobius transformation
 	public static int debugID; // for labeling debug files
 	
+	// holds global function and parameter function descriptions
+	public StringBuilder FtnSpecification; 
+	public StringBuilder ParamSpecification;
+	public FunctionParser FtnParser;
+	public FunctionParser ParamParser;
+	
 	// Managers for various functions; 
 	public static CPFileManager fileManager;  // directories, opening for read/write, etc.
 	public static PostManager postManager;    // PostScript file manager
@@ -210,7 +219,76 @@ public abstract class CPBase {
 		debugID= new Random().nextInt(32000);
 		hashedTools = new Hashtable<String,MyTool>(100);
 		varControl = new VarControl();
+		
+		// initiate expression parsers
+		FtnParser=new FunctionParser();
+		FtnParser.setComplex(true);
+		FtnParser.removeVariable("x");
+		FtnParser.setVariable("z");
+		ParamParser=new FunctionParser();
+		ParamParser.setComplex(true); // even though argument t is double
+		ParamParser.removeVariable("x");
+		ParamParser.setVariable("t");
+		// start with identity 
+		FtnSpecification=new StringBuilder("z"); 
+		ParamSpecification=new StringBuilder("t");
 
+	}
+	
+	public boolean setFtnSpec(String ftnstr) {
+		  this.FtnSpecification=new StringBuilder(ftnstr);
+		  this.FtnParser.parseExpression(
+				  this.FtnSpecification.toString());
+		  if (this.FtnParser.funcHasError()) {
+			  return false;
+		  }
+		  return true;
+	}
+	
+
+    /**
+     * The parser treats 'z' as denoting a complex variable. 
+     * This tells parser to set z to a specific value and evaluate 
+     * the function.
+     * @param z, Complex
+     * @return Complex
+     */
+    public Complex getFtnValue(Complex z) {
+    	try {
+    		com.jimrolf.complex.Complex w=CirclePack.cpb.
+    				FtnParser.evalFunc(new com.jimrolf.complex.Complex(z.x,z.y));
+    		return new Complex(w.re(),w.im());
+    	} catch (Exception ex) {
+    		throw new DataException("Function Parser error: "+ex.getMessage());
+    	}
+    }
+    
+    /**
+     * TODO: have to figure out how to designate variable character 't'
+     * 
+     * The parser treats 't' as denoting a double variable. 
+     * This tells parser to set t to a specific value and evaluate 
+     * the parameter expression.
+     */
+    public Complex getParamValue(double t) {
+    	try {
+    		com.jimrolf.complex.Complex w=CirclePack.cpb.ParamParser.evalFunc(
+    				new com.jimrolf.complex.Complex(t,0.0));
+    		return new Complex(w.re(),w.im());
+    	} catch (Exception ex) {
+    		throw new DataException("Path evaluation error: "+ex.getMessage());
+    	}
+    }
+    
+	public boolean setParamSpec(String paramstr) {
+		  this.ParamSpecification=new StringBuilder(paramstr);
+		  this.ParamParser.parseExpression(
+				  this.ParamSpecification.toString());
+		  if (this.ParamParser.funcHasError()) {
+			  return false;
+		  }
+		  return true;
+		
 	}
 
 	/**

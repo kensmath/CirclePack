@@ -7,7 +7,6 @@ import java.util.Random;
 import java.util.Vector;
 
 import allMains.CirclePack;
-import circlePack.PackControl;
 import complex.Complex;
 import dcel.HalfEdge;
 import dcel.RawManip;
@@ -379,7 +378,7 @@ public class BeltramiFlips extends PackExtender {
 	 */
 	public Complex getCoefficient(Complex z) {
 		try {
-			Complex ans=PackControl.functionPanel.getFtnValue(z);
+			Complex ans=CirclePack.cpb.getFtnValue(z);
 			return ans;
 		} catch (Exception ex) {
 			System.err.println("error in 'getFtnValue'");

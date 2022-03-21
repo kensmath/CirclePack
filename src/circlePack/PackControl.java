@@ -43,6 +43,7 @@ import canvasses.CursorCtrl;
 import canvasses.MainFrame;
 import cpTalk.sockets.CPMultiServer;
 import frames.AboutFrame;
+import frames.FtnFrame;
 import frames.FunctionHover;
 import frames.HelpHover;
 import frames.HoverPanel;
@@ -174,6 +175,7 @@ FocusListener {
 	public static MobiusFrame mobiusFrame;
 	public static FunctionHover functionPanel;
 	public static BrowserFrame browserFrame;
+	public static FtnFrame newftnFrame;
 	public static OutputFrame outputFrame;
 	public static TabbedPackDataHover packDataHover; 
 	public static ScreenCtrlFrame screenCtrlFrame;
@@ -607,6 +609,11 @@ FocusListener {
 		browserFrame = new BrowserFrame(messenger, historyFile);
 		browserFrame.setLocation(ptX, ptY + ControlDim2.height + 90);
 		browserFrame.setVisible(browserStart);
+		
+		newftnFrame=new FtnFrame();
+		newftnFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		newftnFrame.setLocation(ptX,ptY+ControlDim2.height+20);
+		newftnFrame.setVisible(false);
 
 		outputFrame=new OutputFrame();
 		outputFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
@@ -661,7 +668,8 @@ FocusListener {
 
 		// Button to bring up Browser
 		JButton wwwButton=new JButton("Browser");
-		wwwButton.setFont(new Font(wwwButton.getFont().toString(),Font.ROMAN_BASELINE+Font.BOLD,10));
+		wwwButton.setFont(new Font(wwwButton.getFont().toString(),
+				Font.ROMAN_BASELINE+Font.BOLD,10));
 		wwwButton.setToolTipText("Open/Close web browser window");
 		wwwButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -672,21 +680,20 @@ FocusListener {
 			}
 		});
 		
-		// Button to bring up function frame
-		JButton ftnButton=new JButton("Function");
-		ftnButton.setFont(new Font(ftnButton.getFont().toString(),Font.ROMAN_BASELINE+Font.BOLD,10));
-		functionPanel=new FunctionHover();
-		ftnButton.addMouseListener(functionPanel);
-		ftnButton.addActionListener(new ActionListener() {
+		// TODO: toss hoverframe, revert to simple frame
+		JButton newftnButton=new JButton("Function");
+		newftnButton.setFont(new Font(newftnButton.getFont().toString(),
+				Font.ROMAN_BASELINE+Font.BOLD,10));
+		newftnButton.setToolTipText("Open/Close the 'function' window");
+		newftnButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (functionPanel.isLocked()) {
-					functionPanel.lockedFrame.setVisible(false);
-					functionPanel.loadHover();
-					functionPanel.locked=false;
-				}
+				if (newftnFrame.isVisible()) 
+					newftnFrame.setVisible(false); 
 				else {
-					functionPanel.lockframe();
+					newftnFrame.setVisible(true);
+					newftnFrame.setState(Frame.NORMAL);
 				}
+					
 			}
 		});
 		
@@ -735,7 +742,7 @@ FocusListener {
 		JPanel callStack=new JPanel(new GridLayout(1,6));
 		callStack.add(msgButton);
 		callStack.add(mobButton);
-		callStack.add(ftnButton);
+		callStack.add(newftnButton);
 		callStack.add(configButton);
 		callStack.add(wwwButton);
 //		callStack.add(pairButton);

@@ -3763,12 +3763,12 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 <command cmd="set_path_text" flags="{text}">
 <description>
 	CirclePack can store a parameterized curve description in
-	the "Function" frame using a real variable z in [0,1]; 
-	(use of 'z'	is required). The "Set Closed Path" button
+	the "Function" frame using a real variable t in [0,1]; 
+	(use of 't'	is required). The "Set Closed Path" button
 	will store the closed path using this description.
 </description>
 <examples>
-<instance text="set_path+text (1+exp(i*pi*2.0*z))^2">
+<instance text="set_path+text (1+exp(i*pi*2.0*t))^2">
 </instance>
 </examples>
 <seealso>

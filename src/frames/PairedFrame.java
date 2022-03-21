@@ -84,7 +84,7 @@ public class PairedFrame extends JFrame implements ActionListener {
 	static CPIcon teleNO=new CPIcon("/GUI/teleNO.png");
 	static CPIcon teleYES=new CPIcon("/GUI/teleYES.png");
 
-	static String []pstrs={"P0","P1","P2"};
+	static String[] pstrs={"P0","P1","P2"};
 	
 	// Constructor
 	public PairedFrame(int dnum,int rnum) {

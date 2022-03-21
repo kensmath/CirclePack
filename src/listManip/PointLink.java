@@ -174,7 +174,7 @@ public class PointLink extends LinkedList<Complex> {
 			switch(a) {
 			case 'f': // run string through 'function', if defined in function window
 			{
-				if (PackControl.functionPanel.ftnField.getText().trim().length()==0) {
+				if (PackControl.newftnFrame.ftnField.getText().trim().length()==0) {
 					CirclePack.cpb.errMsg("'Function' frame is not set");
 					return 0;
 				}
@@ -182,7 +182,7 @@ public class PointLink extends LinkedList<Complex> {
 				Iterator<Complex> pts=ptlink.iterator();
 				while (pts.hasNext()) {
 					try {
-						if (add(PackControl.functionPanel.getFtnValue(pts.next())))
+						if (add(CirclePack.cpb.getFtnValue(pts.next())))
 							count++;
 					} catch (Exception ex) {}
 				}
@@ -191,7 +191,7 @@ public class PointLink extends LinkedList<Complex> {
 			case 'g': // run string through 'parameter path', 
 						//  if defined in function window
 			{
-				if (PackControl.functionPanel.paramField.getText().trim().length()==0) {
+				if (PackControl.newftnFrame.paramField.getText().trim().length()==0) {
 					CirclePack.cpb.errMsg("'Parameter' field in Function Frame is not set");
 					return 0;
 				}
@@ -199,7 +199,7 @@ public class PointLink extends LinkedList<Complex> {
 				Iterator<Complex> pts=ptlink.iterator();
 				while (pts.hasNext()) {
 					try {
-						if (add(PackControl.functionPanel.getParamValue(pts.next().x)))
+						if (add(CirclePack.cpb.getParamValue(pts.next().x)))
 							count++;
 					} catch (Exception ex) {}
 				}

@@ -29,7 +29,7 @@ public class FunctionHover extends HoverPanel {
 	serialVersionUID = 1L;
 	
 	static int WIDE=500;
-	static int HIGH=200;
+	static int HIGH=280;
 	
 	// utility function panel
     public JPanel ftnPanel;
@@ -82,7 +82,7 @@ public class FunctionHover extends HoverPanel {
 				new LineBorder(new java.awt.Color(104,226,9), 1, true),
 				"Utility function of (complex) 'z'",
 				TitledBorder.LEADING, TitledBorder.TOP));
-		ftnPanel.setPreferredSize(new Dimension(WIDE,70));
+		ftnPanel.setPreferredSize(new Dimension(WIDE,170)); // ?? 70 ??
 		ftnPanel.setToolTipText(null);
 		
 		ftnField = new FunctionField();
@@ -98,7 +98,7 @@ public class FunctionHover extends HoverPanel {
 		
 		fcb = new ComplexFunctionChoiceBox();
 		fcb.addActionListener(new FtnBox_actionAdapter(this));
-		fcb.setPreferredSize(new Dimension(220,22));
+		fcb.setPreferredSize(new Dimension(220,22)); // ?? 22 ??
 
 		lowerFtnPanel.add(fcb);
 			
@@ -107,9 +107,9 @@ public class FunctionHover extends HoverPanel {
 		paramPanel.setLayout(new BoxLayout(paramPanel,BoxLayout.Y_AXIS));
 		paramPanel.setBorder(BorderFactory.createTitledBorder(
 				new LineBorder(new java.awt.Color(128,191,239), 1, true),
-				"Utility Path, real z in [0,1]", TitledBorder.LEADING,
+				"Utility Path, real t in [0,1]", TitledBorder.LEADING,
 				TitledBorder.TOP));
-		paramPanel.setPreferredSize(new Dimension(WIDE,70));
+		paramPanel.setPreferredSize(new Dimension(WIDE,170)); // ?? 70 ??
 		
 		paramField = new FunctionField();
 		paramField.setText("");
@@ -122,7 +122,7 @@ public class FunctionHover extends HoverPanel {
 		lowerParamPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
 		ppfb = new ComplexFunctionChoiceBox();
 		ppfb.addActionListener(new ParamBox_actionAdapter(this));
-		ppfb.setPreferredSize(new Dimension(220,22));
+		ppfb.setPreferredSize(new Dimension(220,22)); // ?? 22 ??
 		
 		lowerParamPanel.add(ppfb);
 		pathButton = new JButton();
@@ -145,7 +145,7 @@ public class FunctionHover extends HoverPanel {
 //		paramPanel.setPreferredSize(new Dimension(WIDE,40));
 		this.add(ftnPanel);
 		this.add(paramPanel);
-		hoverFrame.setPreferredSize(new Dimension(WIDE,100));
+//		hoverFrame.setPreferredSize(new Dimension(WIDE,100)); // ?? 100 ??
 		hoverFrame.add(this);
 	}
 	
@@ -162,7 +162,7 @@ public class FunctionHover extends HoverPanel {
 		paramPanel.add(lowerParamPanel);
 		this.add(ftnPanel);
 		this.add(paramPanel);
-		lockedFrame.setPreferredSize(new Dimension(WIDE,170));
+//		lockedFrame.setPreferredSize(new Dimension(WIDE,170)); // ?? 70 ??
 	}
 	
 	/**
@@ -172,7 +172,7 @@ public class FunctionHover extends HoverPanel {
      */
     public void ftn_actionPerformed(ActionEvent e) {
     	ftnField.setBackground(Color.white);
-    	if (ftnField.hasError()) {
+    	if (!setFunctionText(e.getActionCommand())) {
     		CirclePack.cpb.myErrorMsg("Function parser error.");
     	}
     }
@@ -188,8 +188,8 @@ public class FunctionHover extends HoverPanel {
      */
     public void param_actionPerformed(ActionEvent e) {
     	paramField.setBackground(Color.white);
-    	if (paramField.hasError()) {
-    		CirclePack.cpb.myErrorMsg("Function parser error.");
+    	if (!setPathText((String)e.getActionCommand())) {
+    		CirclePack.cpb.myErrorMsg("Path parser error.");
     	}
     }
 	
@@ -205,10 +205,11 @@ public class FunctionHover extends HoverPanel {
      */
     public boolean setFunctionText(String ftn) { 
     	ftnField.setText(ftn);
-    	ftnField.setBackground(Color.white);
-    	if (ftnField.hasError()) {
-    		throw new ParserException("Given function string has error");
+    	if (!CirclePack.cpb.setFtnSpec(ftn)) {
+        	ftnField.setBackground(Color.yellow);
+        	return false;
     	}
+       	ftnField.setBackground(Color.white);
 		return true;
     }
     
@@ -220,10 +221,11 @@ public class FunctionHover extends HoverPanel {
      */
     public boolean setPathText(String ftn) { 
     	paramField.setText(ftn);
-    	paramField.setBackground(Color.white);
-    	if (paramField.hasError()) {
-    		throw new ParserException("Given 'path' string has error");
+    	if (!CirclePack.cpb.setParamSpec(ftn)) {
+    		paramField.setBackground(Color.yellow);
+    		return false;
     	}
+    	paramField.setBackground(Color.white);
 		return true;
     }
 
@@ -262,7 +264,8 @@ public class FunctionHover extends HoverPanel {
 			}
 			closedPath.closePath();
 		} catch (Exception ex) {
-			throw new ParserException("Failed to parse path description");
+			CirclePack.cpb.errMsg("Failed to parse path description");
+			return null;
 		}
     	return closedPath;
     }
@@ -311,10 +314,11 @@ public class FunctionHover extends HoverPanel {
      */
     public Complex getParamValue(double t) {
     	try {
-    		com.jimrolf.complex.Complex w=ftnField.parser.evalFunc(new com.jimrolf.complex.Complex(t,0.0));
+    		com.jimrolf.complex.Complex w=CirclePack.cpb.ParamParser.evalFunc(
+    				new com.jimrolf.complex.Complex(t,0.0));
     		return new Complex(w.re(),w.im());
     	} catch (Exception ex) {
-    		throw new DataException("Ftn Panel error: "+ex.getMessage());
+    		throw new DataException("Path evaluation error: "+ex.getMessage());
     	}
     }
     

@@ -910,7 +910,7 @@ public class CommandStrParser {
 	      }
 	      
 		  // ========== close ===========
-		  if (cmd.startsWith("close")) {
+		  if (cmd.startsWith("close") && CPBase.GUImode!=0) {
 			  // default to 'advanced' 
 			  if (items==null || items.size()==0) {
 				  if (PackControl.anybodyOpen()>=2)
@@ -966,10 +966,7 @@ public class CommandStrParser {
 					  }
 				  }
 				  else if (windStr.startsWith("fun")) {
-					  if (PackControl.functionPanel.isLocked()) {
-						  PackControl.functionPanel.loadHover();
-						  PackControl.functionPanel.lockedFrame.setVisible(false);
-					  }
+					  PackControl.newftnFrame.setVisible(false);
 				  }
 				  else if (windStr.startsWith("mob")) {
 					  PackControl.mobiusFrame.setVisible(false);
@@ -1395,9 +1392,7 @@ public class CommandStrParser {
 							  pts=new Vector<Complex>(packData.nodeCount+1);
 							  for (int v=1;v<=packData.nodeCount;v++) { 
 								  if (str.contains("m")) {
-									  if (PackControl.functionPanel.ftnField.getText().trim().length()==0)
-										  throw new ParserException("No specification in function frame");
-									  pts.add(PackControl.functionPanel.getFtnValue(packData.getCenter(v)));
+									  pts.add(CirclePack.cpb.getFtnValue(packData.getCenter(v)));
 								  }
 								  else
 									  pts.add(packData.getCenter(v));
@@ -2015,6 +2010,44 @@ public class CommandStrParser {
 	    	  return 0;
 	      }
 	      
+	      // ============ evalp ============
+	      else if (cmd.startsWith("evalp")) {
+	    	  if (flagSegs==null || flagSegs.size()==0)
+	    		  throw new ParserException("usage: evalp <t>, expects double argument");
+	    	  double t;
+	    	  try {
+	    		  t=Double.parseDouble(flagSegs.get(0).get(0));
+	    	  } catch(Exception ex) {
+	    		  throw new ParserException("usage: evalp <t> failed");
+	    	  }
+	    	  com.jimrolf.complex.Complex jrz=new com.jimrolf.complex.Complex(t,0.0);
+	    	  com.jimrolf.complex.Complex jrw=
+	    			  CirclePack.cpb.ParamParser.evalFunc(jrz);
+	    	  Complex w=new Complex(jrw.re(),jrw.im());
+	    	  CirclePack.cpb.msg("Path value at t="+t+" is "+w.toString());
+	    	  return 1;
+	      }
+	      
+	      // ========== eval ===================
+	      else if (cmd.startsWith("eval")) {
+	    	  if (flagSegs==null || flagSegs.size()==0)
+	    		  throw new ParserException("usage: eval <z>, expects complex argument");
+	    	  String zstr=StringUtil.reconItem(flagSegs.get(0));
+	    	  Complex z=Complex.string2Complex(zstr);
+	    	  com.jimrolf.complex.Complex jrz=
+	    			  new com.jimrolf.complex.Complex(z.x,z.y);
+	    	  com.jimrolf.complex.Complex jrw=
+	    			  CirclePack.cpb.FtnParser.evalFunc(jrz);
+	    	  if (jrw==null) {
+	    		  CirclePack.cpb.errMsg(
+	    				  "evaluation failed, check function specification");
+	    		  return 0;
+	    	  }
+	    	  Complex w=new Complex(jrw.re(),jrw.im());
+	    	  CirclePack.cpb.msg("Function value at z="+z.toString()+" is "+w.toString());
+	    	  return 1;
+	      }
+	      
 	      break;
 	  } // end of 'e'
 	  case 'f':
@@ -2047,11 +2080,17 @@ public class CommandStrParser {
 	  case 'g': // fall through
 	  case 'G': 
 	  {
+		  
+	      // =========== get_func ===========
+	      if (cmd.startsWith("get_fun")) {
+	    	  CirclePack.cpb.msg("Function expression: "+CirclePack.cpb.FtnSpecification.toString()+"\n");
+	    	  CirclePack.cpb.msg("Parametric expression: "+CirclePack.cpb.ParamSpecification.toString()+"\n");
+	      }
+	      
 		  // NOTE: this is not operational now (3/2022), as the JNI 
 		  //       calls to C code have been removed.
-		  
 		  // flags: s=start, r=restart, c=continue, g=get rad/cent, q=quality
-		  if (cmd.startsWith("GOpack")) {
+		  else if (cmd.startsWith("GOpack")) {
 			  count=0;
 			  GOpacker goPack;
 			  
@@ -2753,7 +2792,7 @@ public class CommandStrParser {
 	  case 'o':
 	  {
 		  // ========== open ===========
-		  if (cmd.startsWith("open")) {
+		  if (cmd.startsWith("open") && CPBase.GUImode!=0) {
 			  // default to 'active' 
 			  if (items==null || items.size()==0) {
 				  PackControl.mapCanvasAction(true);
@@ -2811,13 +2850,8 @@ public class CommandStrParser {
 					  }
 				  }
 				  else if (windStr.startsWith("fun")) {
-					  if (PackControl.functionPanel.isLocked() && 
-							  PackControl.functionPanel.lockedFrame.getState() == JFrame.ICONIFIED)
-						  	PackControl.functionPanel.lockedFrame.setState(Frame.NORMAL);
-					  else {
-						  PackControl.functionPanel.lockframe();
-						  PackControl.functionPanel.locked = true;
-					  }
+					  PackControl.newftnFrame.setVisible(true);
+					  PackControl.newftnFrame.setState(Frame.NORMAL);
 				  }
 				  else if (windStr.startsWith("mob")) {
 					  PackControl.mobiusFrame.setVisible(true);
@@ -3509,7 +3543,7 @@ public class CommandStrParser {
 		  // ========= set =========
 	      if (cmd.startsWith("set_")) {
 	    	  cmd=cmd.substring(4);
-	    	  
+
 	    	  // ========= set_accur =========
 	    	  if (cmd.startsWith("accur")) {
 	    		  double accur=StringUtil.getOneDouble(flagSegs);
@@ -3559,8 +3593,8 @@ public class CommandStrParser {
     				|| blist==null || blist.size()<=0) {
     			  throw new ParserException("need two appropriate packings.");
     		  }
-    		  if (PackControl.functionPanel.ftnField.hasError()) {
-    			  throw new ParserException("a valid function is needed in 'Function' tab.");
+    		  if (CirclePack.cpb.FtnParser.funcHasError()) {
+    			  throw new ParserException("function specification is not valid");
     		  }
     		  Iterator<Integer> bl=blist.iterator();
     		  int v;
@@ -3574,7 +3608,7 @@ public class CommandStrParser {
     				  ctr=sc.center;
     				  rad=sc.rad;
     			  }
-    			  Complex w=PackControl.functionPanel.getFtnValue(ctr);
+    			  Complex w=CirclePack.cpb.getFtnValue(ctr);
     			  p2.setRadius(v,w.abs()*rad);
     			  count++;
     		  }
@@ -3612,6 +3646,7 @@ public class CommandStrParser {
     		 return 1;
     	  }
     	  
+
     	  // ========= set_mobius (set_Mobius) ==============
     	  if (cmd.trim().equalsIgnoreCase("mobius")) {
     		  Mobius mob=null;
@@ -3863,30 +3898,42 @@ public class CommandStrParser {
           }
     	  
     	  // ========= set_function_text ===============
-          if (cmd.startsWith("func") || cmd.startsWith("ftn")) {
-        	  String functiontext=StringUtil.reconstitute(flagSegs);
-      		  if (PackControl.functionPanel.setFunctionText(functiontext))
-      			  return 1;
-      		  return 0;
+          if (cmd.startsWith("fun") || cmd.startsWith("ftn")) {
+        	  String ftntext=StringUtil.reconstitute(flagSegs);
+        	  if (!CirclePack.cpb.setFtnSpec(ftntext)) {
+   				  throw new ParserException(
+   						  "Error in function expression: "+
+   								  CirclePack.cpb.FtnParser.getFuncErrorInfo());
+        	  }
+      		  if (CPBase.GUImode!=0) 
+      			  PackControl.newftnFrame.setFunctionText(ftntext);
+      		  return 1;
           }
     	  
     	  // ========= set_path_text ===============
           if (cmd.startsWith("path_tex")) {
         	  String pathtext=StringUtil.reconstitute(flagSegs);
-      		  if (PackControl.functionPanel.setPathText(pathtext))
-      			  return 1;
-      		  return 0;
+      		  if (!CirclePack.cpb.setParamSpec(pathtext)) {
+   				  throw new ParserException(
+   						  "Error in path expression: "+
+   								  CirclePack.cpb.ParamParser.getFuncErrorInfo());
+      		  }
+      		  if (CPBase.GUImode!=0) 
+      			  PackControl.newftnFrame.setPathText(pathtext);
+      		  return 1;
           }
           
 	      // ======== set_path ===============
 	      else if (cmd.startsWith("path")) {
-	    	  // no optional string? use Function panel "Path" string
-	    	  String ftnstr=PackControl.functionPanel.paramField.getText();
-			  if (flagSegs!=null && flagSegs.size()!=0) {
-				  String tmpstr=StringUtil.reconstitute(flagSegs);
-				  ftnstr=StringUtil.varSub(tmpstr);
-			  }
-			  CPBase.ClosedPath=PackControl.functionPanel.setClosedPath(ftnstr);
+	    	  // no optional string? use Function panel "Utility Path" string
+	    	  String ftnstr;
+			  if (flagSegs!=null && flagSegs.size()!=0) 
+				  ftnstr=StringUtil.reconstitute(flagSegs);
+			  else 
+				  ftnstr=CirclePack.cpb.ParamParser.getFuncInput();
+			  Path2D.Double newpath=PathUtil.path_from_text(ftnstr);
+			  if (newpath!=null)
+				  CPBase.ClosedPath=newpath;
 			  return 1;
 	      }
 	          	  
@@ -9335,7 +9382,7 @@ public class CommandStrParser {
 	    		  case 'f': // fall through use mapping: center --> "Function Frame" value
 	    		  case 'm': // deprecated
 	    		  {
-	    			  if (PackControl.functionPanel.ftnField.getText().trim().length()==0) {
+	    			  if (PackControl.newftnFrame.ftnField.getText().trim().length()==0) {
 	    				  CirclePack.cpb.errMsg("'Function' frame is not set");
 	    				  return 0;
 	    			  }
@@ -9350,7 +9397,7 @@ public class CommandStrParser {
 	    				  // convert to complex to pass to function
 	    				  if (packData.hes>0)  
 	    					  z=SphericalMath.s_pt_to_plane(z);
-	    				  Complex w=PackControl.functionPanel.getFtnValue(z);
+	    				  Complex w=CirclePack.cpb.getFtnValue(z);
 	    				  if (packData.hes>0) // back to sphere
 	    					  w=SphericalMath.proj_pt_to_sph(w);
 	    				  packData.setCenter(v,w);

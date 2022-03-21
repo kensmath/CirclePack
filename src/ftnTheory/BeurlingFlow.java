@@ -3,14 +3,13 @@ package ftnTheory;
 import java.util.Iterator;
 import java.util.Vector;
 
+import allMains.CPBase;
+import allMains.CirclePack;
+import complex.Complex;
 import packing.PackData;
 import packing.PackExtender;
 import panels.CPScreen;
 import util.CmdStruct;
-import allMains.CPBase;
-import circlePack.PackControl;
-
-import complex.Complex;
 /**
  * Routine for experimenting with the Beurling-Riemann Mapping 
  * Theorem. (An earlier version was 'Beurling_flow.java'.)
@@ -158,7 +157,7 @@ public class BeurlingFlow extends PackExtender {
 			ans=2-(z.abs()-1)*(z.abs()-1);
 		}
 		else { // use 'Function' tab in main GUI.
-			ans=PackControl.functionPanel.getFtnValue(z).abs();
+			ans=CirclePack.cpb.getFtnValue(z).abs();
 		}
 	
 		return ans;

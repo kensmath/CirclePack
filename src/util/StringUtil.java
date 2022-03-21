@@ -558,7 +558,7 @@ public class StringUtil {
 			if ((k=nxtstr.indexOf(c))>=0) {
 				
 				// if no later ce in same string, look downstream to complete
-				if (nxtstr.length()==k+1 || nxtstr.substring(k+1).indexOf(ce,k)<0) { 
+				if (nxtstr.length()==k+1 || nxtstr.substring(k+1).indexOf(ce,0)<0) { 
 					fixed=false;
 					int m=n+1;
 					while(m<invec.size()) {

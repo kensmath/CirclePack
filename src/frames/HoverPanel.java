@@ -69,7 +69,7 @@ public class HoverPanel extends JPanel implements MouseListener {
 		
 		hoverFrame = new JFrame();
 		hoverFrame.setLocation(XLoc,YLoc);
-		hoverFrame.setResizable(false);
+		hoverFrame.setResizable(true); // ?? false ??
 		hoverFrame.setPreferredSize(new Dimension(myWidth,myHeight));
 		hoverFrame.setUndecorated(true);
 		hoverFrame.setVisible(false);	
