@@ -44,7 +44,6 @@ import canvasses.MainFrame;
 import cpTalk.sockets.CPMultiServer;
 import frames.AboutFrame;
 import frames.FtnFrame;
-import frames.FunctionHover;
 import frames.HelpHover;
 import frames.HoverPanel;
 import frames.MessageHover;
@@ -173,7 +172,6 @@ FocusListener {
 	public static HelpHover helpHover;
 	public static ScriptHover scriptHover;
 	public static MobiusFrame mobiusFrame;
-	public static FunctionHover functionPanel;
 	public static BrowserFrame browserFrame;
 	public static FtnFrame newftnFrame;
 	public static OutputFrame outputFrame;

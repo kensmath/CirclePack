@@ -1,13 +1,14 @@
-package util;
+package dataObject;
 
 import allMains.CirclePack;
 
 /**
  * A 'DataObject' packages information for use, eg., by 'output'.
+ * As of 3/2022, I don't think this is used. 
  * @author kens
  *
  */
-public class DataObject {
+public class DataItem {
 	
 	public enum DataCategory {VERTEX,FACE,EDGE,LITERAL,NULL} 
 	public enum DataType {CIR_INDEX,CIR_FLOWER,CIR_CENTER,CIR_XYZ,ANGLE_SUM,ANGLE_TARGET,
@@ -18,17 +19,17 @@ public class DataObject {
 	DataCategory category;
 	DataType type;
 	String literal;
-	DataObject next;
+	DataItem next;
 
 	// Constructor
-	public DataObject(String datastr) {
+	public DataItem(String datastr) {
 		data_obj_parse(datastr);
 		next=null;
 	}
 	
-	public DataObject(String datastr,DataObject current) {
+	public DataItem(String datastr,DataItem current) {
 		this(datastr);
-		DataObject hold=current.next;
+		DataItem hold=current.next;
 		current.next=this;
 		this.next=hold;
 	}
