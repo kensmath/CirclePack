@@ -11,7 +11,7 @@ import javax.swing.JButton;
 import javax.swing.JPanel;
 
 import allMains.CirclePack;
-import dcel.HalfEdge;
+import combinatorics.komplex.HalfEdge;
 import exceptions.ParserException;
 import input.CommandStrParser;
 import listManip.HalfLink;

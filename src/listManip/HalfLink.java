@@ -6,13 +6,13 @@ import java.util.Random;
 import java.util.Vector;
 
 import allMains.CPBase;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
 import dcel.CombDCEL;
 import dcel.SideData;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RedEdge;
-import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
@@ -477,7 +477,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				}
 				else { 
 					for (int i=1;i<=packData.getBdryCompCount();i++) {
-						dcel.DcelFace iface=pdc.idealFaces[i];
+						combinatorics.komplex.DcelFace iface=pdc.idealFaces[i];
 						HalfLink hlink=iface.getEdges();
 						if (hlink!=null) {
 							count+=hlink.size();
@@ -746,7 +746,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 					if (facelist==null || facelist.size()==0) break;
 					Iterator<Integer> flist=facelist.iterator();
 					while (flist.hasNext()) {
-						dcel.DcelFace face=packData.packDCEL.faces[(Integer)flist.next()];
+						combinatorics.komplex.DcelFace face=packData.packDCEL.faces[(Integer)flist.next()];
 						HalfEdge fedge=face.edge;
 						add(fedge);
 						HalfEdge he=fedge;

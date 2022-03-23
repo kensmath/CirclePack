@@ -2362,7 +2362,7 @@ public class MicroGrid extends PackExtender {
 			
 			// for marked faces, add a new circle, center at average
 			if (marked) {
-				dcel.DcelFace face=q.packDCEL.faces[f];
+				combinatorics.komplex.DcelFace face=q.packDCEL.faces[f];
 				int newval=RawManip.addBary_raw(q.packDCEL,face.edge,false);
 				Complex[] pts=q.packDCEL.getFaceCorners(face);
 				Complex bcent=pts[0].add(pts[1].add(pts[2])).divide(3.0);

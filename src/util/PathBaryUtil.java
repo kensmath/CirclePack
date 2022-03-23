@@ -6,8 +6,8 @@ import java.util.Vector;
 
 import baryStuff.BaryPacket;
 import baryStuff.BaryPoint;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import dcel.HalfEdge;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;

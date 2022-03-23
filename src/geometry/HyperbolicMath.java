@@ -1,9 +1,9 @@
 package geometry;
 import baryStuff.BaryPoint;
+import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import complex.MathComplex;
 import dcel.PackDCEL;
-import dcel.RedEdge;
 import exceptions.DataException;
 import exceptions.LayoutException;
 import exceptions.MobException;

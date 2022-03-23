@@ -6,13 +6,13 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import allMains.CPBase;
+import combinatorics.komplex.DcelFace;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
 import dcel.SideData;
-import dcel.DcelFace;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RedEdge;
-import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.DCELException;
 import input.CPFileManager;
@@ -846,7 +846,7 @@ public class DCELdebug {
 		}
 	}
 	
-	public static void halfedgeends(PackDCEL pdcel,dcel.HalfEdge edge) {
+	public static void halfedgeends(PackDCEL pdcel,combinatorics.komplex.HalfEdge edge) {
 		System.out.println(" ("+edge.origin.vertIndx+","+edge.twin.origin.vertIndx+") ");
 	}
 	

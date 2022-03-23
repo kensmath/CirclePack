@@ -3,8 +3,8 @@ package packQuality;
 import java.util.Iterator;
 
 import allMains.CPBase;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import dcel.HalfEdge;
 import exceptions.DataException;
 import geometry.CircleSimple;
 import geometry.CommonMath;

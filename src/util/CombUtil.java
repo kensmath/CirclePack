@@ -1,6 +1,6 @@
 package util;
 
-import dcel.HalfEdge;
+import combinatorics.komplex.HalfEdge;
 import packing.PackData;
 
 /**

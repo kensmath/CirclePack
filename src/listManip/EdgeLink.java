@@ -6,13 +6,13 @@ import java.util.Random;
 import java.util.Vector;
 
 import allMains.CPBase;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
 import dcel.CombDCEL;
 import dcel.SideData;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RedEdge;
-import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;

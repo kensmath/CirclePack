@@ -1,4 +1,4 @@
-package dcel;
+package combinatorics.komplex;
 
 import java.awt.Color;
 import java.util.ArrayList;

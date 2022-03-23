@@ -151,7 +151,7 @@ public class CurvFlow extends PackExtender {
 			if (flink!=null && flink.size()>0) {
 				Iterator<Integer> flst=flink.iterator();
 				while (flst.hasNext()) {
-					dcel.DcelFace face=packData.packDCEL.faces[flst.next()];
+					combinatorics.komplex.DcelFace face=packData.packDCEL.faces[flst.next()];
 					int[] vert=face.getVerts();
 					// put face barycenter in the list
 					zlink.add(EuclMath.eucl_tri_center(

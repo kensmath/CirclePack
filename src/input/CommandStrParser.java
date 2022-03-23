@@ -29,17 +29,17 @@ import canvasses.MainFrame;
 import canvasses.MyCanvasMode;
 import circlePack.PackControl;
 import combinatorics.komplex.Face;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
 import complex.MathComplex;
 import cpContributed.BoundaryValueProblems;
 import cpContributed.CurvFlow;
 import dcel.CombDCEL;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RawManip;
-import dcel.RedEdge;
 import dcel.Schwarzian;
-import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.DataException;
@@ -447,7 +447,7 @@ public class CommandStrParser {
 		  PackDCEL pDCEL = CombDCEL.getRawDCEL(bouquet);
 		  int origVCount=pDCEL.vertCount;
 		  FaceLink allfaces=new FaceLink();
-		  ArrayList<dcel.DcelFace> farray=new ArrayList<dcel.DcelFace>(); 
+		  ArrayList<combinatorics.komplex.DcelFace> farray=new ArrayList<combinatorics.komplex.DcelFace>(); 
 		  for (int f=1;f<=pDCEL.intFaceCount;f++) 
 			  farray.add(pDCEL.faces[f]);
 		  if (pDCEL==null || RawManip.addBaryCents_raw(pDCEL,farray)==0) {
@@ -3343,7 +3343,8 @@ public class CommandStrParser {
 					  str=items.get(0);
 				  }
 				  randN=Integer.parseInt(str);
-				  if (randN<4) randN=200;
+				  if (randN<4) 
+					  randN=200;
 			  } catch (Exception ex) {
 				  randN=200;
 			  }
@@ -3351,7 +3352,8 @@ public class CommandStrParser {
 			  PackData randPack=null;
 			  for (int j=0;j<12;j++) {
 				  try {
-					  if ((randPack=RandomTriangulation.randomHypKomplex(randN,seed1))!=null) {
+					  if ((randPack=RandomTriangulation.randomHypKomplex(
+							  randN,seed1))!=null) {
 			  
 						  // choose alpha far from boundary
 						  int da=randPack.gen_mark(new NodeLink(randPack,"b"),-1,false);
@@ -3362,6 +3364,7 @@ public class CommandStrParser {
 						  int pnum=packData.packNum;
 						  CirclePack.cpb.swapPackData(randPack,pnum,false);
 						  packData=randPack;
+						  packData.packDCEL.fixDCEL(packData);
 						  jexecute(packData,"max_pack 2000");
 
 						  CirclePack.cpb.msg("Created a random packing in the disc with "+packData.nodeCount
@@ -4975,8 +4978,8 @@ public class CommandStrParser {
 	    	  while (vlst.hasNext()) {
 	    		  Vertex vert=packData.packDCEL.vertices[vlst.next()];
 	    		  if (vert.bdryFlag!=0) {
-	    			  dcel.DcelFace newface=
-	    					  new dcel.DcelFace(packData.packDCEL.faceCount+1);
+	    			  combinatorics.komplex.DcelFace newface=
+	    					  new combinatorics.komplex.DcelFace(packData.packDCEL.faceCount+1);
 	    			  HalfEdge he=vert.halfedge.twin;
 	    			  newface.edge=he;
 	    			  if (he.next.next.next==he) {
@@ -5111,7 +5114,7 @@ public class CommandStrParser {
 
 	   		  while (flist.hasNext()) {
 	   			  f=(Integer)flist.next();
-	   			  dcel.DcelFace face=packData.packDCEL.faces[f];
+	   			  combinatorics.komplex.DcelFace face=packData.packDCEL.faces[f];
 	   			  
 // debugging
 //	   			  HalfEdge hef=face.edge;
@@ -6696,8 +6699,8 @@ public class CommandStrParser {
 	    	  
 	    		  // convert to corresponding 'HalfLink'
 	    		  Iterator<Integer> fis=facelist.iterator();
-	    		  dcel.DcelFace currF=packData.packDCEL.faces[fis.next()];
-	    		  dcel.DcelFace nextF=packData.packDCEL.faces[fis.next()];
+	    		  combinatorics.komplex.DcelFace currF=packData.packDCEL.faces[fis.next()];
+	    		  combinatorics.komplex.DcelFace nextF=packData.packDCEL.faces[fis.next()];
 	    		  HalfEdge he=currF.faceNghb(nextF);
 	    		  if (he==null) {
 	    			  throw new ParserException("first two faces not contiguous");
@@ -6720,8 +6723,8 @@ public class CommandStrParser {
 	    		  throw new ParserException(
 	    				  "usage holonomy: failed to get HalfLink");
 	    	  }
-	    	  dcel.DcelFace firstF=hlink.getFirst().face;
-	    	  dcel.DcelFace lastF=hlink.getLast().face;
+	    	  combinatorics.komplex.DcelFace firstF=hlink.getFirst().face;
+	    	  combinatorics.komplex.DcelFace lastF=hlink.getLast().face;
 	    	  if (firstF==null || lastF==null || firstF!=lastF)
 	    		  throw new ParserException(
 	    				  "usage holonomy: list doesn't have same face first and last");

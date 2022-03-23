@@ -2,8 +2,8 @@ package util;
 
 import allMains.CPBase;
 import circlePack.PackControl;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import dcel.HalfEdge;
 import geometry.CircleSimple;
 import geometry.HyperbolicMath;
 import packing.PackData;

@@ -9,8 +9,8 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import dcel.HalfEdge;
 import dcel.Schwarzian;
 import exceptions.DataException;
 import exceptions.MiscException;
@@ -760,8 +760,8 @@ public class SchwarzMap extends PackExtender {
 				int gfindx=packData.face_nghb(f,g);
 				
 				// using 'alignMe'
-				dcel.DcelFace gface=packData.packDCEL.faces[g];
-				dcel.DcelFace fface=packData.packDCEL.faces[f];
+				combinatorics.komplex.DcelFace gface=packData.packDCEL.faces[g];
+				combinatorics.komplex.DcelFace fface=packData.packDCEL.faces[f];
 				HalfEdge hedge=gface.faceNghb(fface);
 				int mode=1; // use 'radii'
 				Mobius aligng=domainTri[g].alignMe(domainTri[f],hedge,mode);

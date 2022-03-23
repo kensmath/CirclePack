@@ -4,8 +4,8 @@ import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RawManip;
 import komplex.EdgeSimple;

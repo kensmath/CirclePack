@@ -8,6 +8,10 @@ import java.util.Iterator;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import combinatorics.komplex.DcelFace;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
 import deBugging.DCELdebug;
 import exceptions.CombException;
@@ -772,8 +776,8 @@ public class PackDCEL {
 				CircleSimple sc=CommonMath.comp_any_center(
 		    		getCircleSimple(he.next),getCircleSimple(he),
 		    		getVertRadius(he.twin.next.next),
-		    		he.twin.next.invDist,he.twin.next.next.invDist,
-		    		he.twin.invDist,p.hes);
+		    		he.twin.next.getInvDist(),he.twin.next.next.getInvDist(),
+		    		he.twin.getInvDist(),p.hes);
 				setCent4Edge(he.twin.next.next, sc.center);
 				if (sc.rad<0) // horocycle?
 					setRad4Edge(he.twin.next.next,sc.rad);
@@ -1197,8 +1201,8 @@ public class PackDCEL {
 		//   using centers radii of shared edge.
 		double r3=getVertRadius(he.twin.next.next);
 		CircleSimple cs3=CommonMath.comp_any_center(cs1,cs2,r3,
-				he.twin.schwarzian,he.twin.next.schwarzian,
-				he.twin.next.next.schwarzian,p.hes);
+				he.twin.getSchwarzian(),he.twin.next.getSchwarzian(),
+				he.twin.next.next.getSchwarzian(),p.hes);
 		pts[0]=CommonMath.circle3Incircle(cs1, cs2, cs3,p.hes).center;
 		
 		return pts;
@@ -1261,9 +1265,9 @@ public class PackDCEL {
 			r0=getVertRadius(edge);
 		double r1=getVertRadius(edge.next);
 		double r2=getVertRadius(edge.prev);
-		double ivd0=edge.invDist;
-		double ivd1=edge.next.invDist;
-		double ivd2=edge.prev.invDist;
+		double ivd0=edge.getInvDist();
+		double ivd1=edge.next.getInvDist();
+		double ivd2=edge.prev.getInvDist();
 		return CommonMath.get_face_angle(r0, r1, r2, ivd0, ivd1, ivd2, p.hes);
 	}
 	
@@ -1421,7 +1425,7 @@ public class PackDCEL {
 		HalfEdge he=vert.halfedge;
 		do {
 			if (he.myRedEdge!=null)
-				he.myRedEdge.center=new Complex(z);
+				he.myRedEdge.setCenter(new Complex(z));
 			he=he.prev.twin;
 		} while (he!=vert.halfedge);
 	}
@@ -1473,7 +1477,7 @@ public class PackDCEL {
 			HalfEdge he=vert.halfedge;
 			do {
 				if (he.myRedEdge!=null)
-					he.myRedEdge.rad=rad;
+					he.myRedEdge.setRadius(rad);
 				he=he.prev.twin;
 			} while (he!=vert.halfedge);
 		}
@@ -1521,7 +1525,7 @@ public class PackDCEL {
 		}
 		RedEdge rtrace=redChain;
 		do {
-			rtrace.rad *=factor;
+			rtrace.setRadius(rtrace.getRadius()*factor);
 			rtrace=rtrace.nextRed;
 		} while(rtrace!=redChain);
 	}
@@ -1652,7 +1656,7 @@ public class PackDCEL {
 	 * @param w int
 	 * @return dcel.Face or null on failure
 	 */
-	public dcel.DcelFace findFace(int v, int w) {
+	public combinatorics.komplex.DcelFace findFace(int v, int w) {
 		HalfEdge he=findHalfEdge(new EdgeSimple(v,w));
 		if (he!=null)
 			return he.face;

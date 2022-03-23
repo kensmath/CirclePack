@@ -11,9 +11,9 @@ import JNI.DelaunayData;
 import JNI.ProcessDelaunay;
 import allMains.CirclePack;
 import combinatorics.komplex.Face;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
@@ -1343,7 +1343,7 @@ public class Triangulation {
 
 		// determine which faces have centroids in Gamma; these are included
 		Complex firstC = null;
-		dcel.DcelFace firstFace=null;
+		combinatorics.komplex.DcelFace firstFace=null;
 		int[] facestat = new int[facecount + 1]; // 1=included
 
 		for (int j = 1; j <= facecount; j++) {
@@ -1369,7 +1369,7 @@ public class Triangulation {
 				Iterator<HalfEdge> eit=edges.iterator();
 				while (eit.hasNext()) {
 					HalfEdge he=eit.next();
-					dcel.DcelFace oppface = he.twin.face;
+					combinatorics.komplex.DcelFace oppface = he.twin.face;
 					if (Math.abs(oppface.faceIndx) > facecount || facestat[Math.abs(oppface.faceIndx)] == 0)
 						putbdry.add(he);
 				}
@@ -1449,8 +1449,8 @@ public class Triangulation {
 			firstFace=myDCEL.faces[startindx];
 			
 		// cycle through adding faces to 'firstFace'
-		Vector<dcel.DcelFace> nextF=new Vector<dcel.DcelFace>();
-		Vector<dcel.DcelFace> currF=nextF;
+		Vector<combinatorics.komplex.DcelFace> nextF=new Vector<combinatorics.komplex.DcelFace>();
+		Vector<combinatorics.komplex.DcelFace> currF=nextF;
 		nextF.add(firstFace);
 		int[] newfaces = new int[myDCEL.faceCount+1];
 		newfaces[Math.abs(firstFace.faceIndx)]=1;
@@ -1458,9 +1458,9 @@ public class Triangulation {
 		tick=0;
 		while(nextF.size()>0) {
 			currF=nextF;
-			nextF=new Vector<dcel.DcelFace>();
+			nextF=new Vector<combinatorics.komplex.DcelFace>();
 			while (currF.size()>0) {
-				dcel.DcelFace currface=currF.remove(0);
+				combinatorics.komplex.DcelFace currface=currF.remove(0);
 				HalfLink edges=currface.getEdges();
 				Iterator<HalfEdge> eit=edges.iterator();
 				while (eit.hasNext()) {

@@ -27,7 +27,7 @@ import javax.swing.event.ChangeListener;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
-import dcel.HalfEdge;
+import combinatorics.komplex.HalfEdge;
 import input.CommandStrParser;
 import listManip.HalfLink;
 import packing.PackData;

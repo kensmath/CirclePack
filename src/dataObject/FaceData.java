@@ -1,6 +1,6 @@
 package dataObject;
 
-import dcel.DcelFace;
+import combinatorics.komplex.DcelFace;
 import dcel.PackDCEL;
 import exceptions.ParserException;
 import packing.PackData;
@@ -30,9 +30,11 @@ public class FaceData {
 				throw new ParserException("ideal face index out of range");
 			face=pdcel.idealFaces[iindx];
 		}
-		else {
+		else if (findx>0 && findx<=p.faceCount) {
 			face=pdcel.faces[findx];
 		}
+		else 
+			face=pdcel.faces[1];
 		int[] verts=face.getVerts();
 		StringBuilder fbld=new StringBuilder();
 		int vlength=verts.length;

@@ -3,7 +3,7 @@ package branching;
 import java.util.Iterator;
 import java.util.Vector;
 
-import dcel.HalfEdge;
+import combinatorics.komplex.HalfEdge;
 import exceptions.ParserException;
 import ftnTheory.GenModBranching;
 import komplex.EdgeSimple;

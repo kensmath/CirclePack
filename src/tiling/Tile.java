@@ -6,10 +6,10 @@ import java.util.Iterator;
 import java.util.Vector;
 
 import combinatorics.komplex.Face;
+import combinatorics.komplex.RedEdge;
 import dcel.CombDCEL;
 import dcel.PackDCEL;
 import dcel.RawManip;
-import dcel.RedEdge;
 import exceptions.CombException;
 import exceptions.DataException;
 import komplex.EdgeSimple;

@@ -9,9 +9,9 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import baryStuff.BaryPoint;
 import circlePack.PackControl;
+import combinatorics.komplex.DcelFace;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import dcel.DcelFace;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.SideData;
 import exceptions.ParserException;
@@ -531,7 +531,7 @@ public class DisplayParser {
 						if (flist !=null && flist.size()>0) {
 							Iterator<Integer> fis=flist.iterator();
 							while(fis.hasNext()) {
-								dcel.DcelFace face=p.packDCEL.faces[fis.next()];
+								combinatorics.komplex.DcelFace face=p.packDCEL.faces[fis.next()];
 								Complex[] pts=p.face_hull(face);
 								int n=pts.length;
 
@@ -621,7 +621,7 @@ public class DisplayParser {
 				while (flist.hasNext()) {
 					f = (Integer) flist.next();
 					if (f>0 && f<=p.faceCount) {
-						dcel.DcelFace face=p.packDCEL.faces[f];
+						combinatorics.komplex.DcelFace face=p.packDCEL.faces[f];
 						Complex []pts=p.packDCEL.getFaceCorners(face);
 						if (!dispFlags.colorIsSet)
 							dispFlags.setColor(p.getFaceColor(f));

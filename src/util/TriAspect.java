@@ -1,8 +1,8 @@
 package util;
 
 import allMains.CPBase;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
 import geometry.CircleSimple;
 import geometry.CommonMath;
@@ -87,7 +87,7 @@ public class TriAspect extends TriData {
 		schwarzian=new double[3];
 	}
 	
-	public TriAspect(PackDCEL pdcel,dcel.DcelFace face) {
+	public TriAspect(PackDCEL pdcel,combinatorics.komplex.DcelFace face) {
 		super(pdcel,face);
 		center=new Complex[3];
 		HalfEdge he=face.edge;

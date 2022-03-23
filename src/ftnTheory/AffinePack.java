@@ -10,9 +10,9 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
 import complex.Complex;
-import dcel.HalfEdge;
-import dcel.RedEdge;
 import exceptions.InOutException;
 import exceptions.ParserException;
 import geometry.CircleSimple;
@@ -2699,7 +2699,7 @@ public class AffinePack extends PackExtender {
 					switch(c) {
 					case 'r':  { // use current radii
 						while (flt.hasNext()) {
-							dcel.DcelFace face=packData.packDCEL.faces[flt.next()];
+							combinatorics.komplex.DcelFace face=packData.packDCEL.faces[flt.next()];
 							int[] verts=face.getVerts();
 							for (int j = 0; j < 3; j++)
 								aspects[face.faceIndx].labels[j]=

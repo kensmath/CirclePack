@@ -4,6 +4,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import allMains.CirclePack;
+import combinatorics.komplex.DcelFace;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
 import deBugging.DCELdebug;
 import exceptions.CombException;
@@ -215,12 +219,12 @@ public class RawManip {
 
 		// create new edges to split 'edge'
 		HalfEdge newEdge = new HalfEdge();
-		newEdge.invDist = he.invDist;
-		newEdge.schwarzian = he.schwarzian;
+		newEdge.setInvDist(he.getInvDist());
+		newEdge.setSchwarzian(he.getSchwarzian());
 		HalfEdge newTwin = new HalfEdge();
 		newTwin.face=he_twin.face; // in case this face is ideal
-		newTwin.invDist = he.invDist;
-		newTwin.schwarzian = he.schwarzian;
+		newTwin.setInvDist(he.getInvDist());
+		newTwin.setSchwarzian(he.getSchwarzian());
 
 		// new vertex
 		Vertex midVert = new Vertex(++pdcel.vertCount);
@@ -273,8 +277,8 @@ public class RawManip {
 			midVert.redFlag=true;
 			RedEdge new_redge=new RedEdge(newEdge);
 			newEdge.myRedEdge=new_redge;
-			new_redge.rad=midVert.rad;
-			new_redge.center=new Complex(midVert.center);
+			new_redge.setRadius(midVert.rad);
+			new_redge.setCenter(new Complex(midVert.center));
 			
 			new_redge.nextRed=redge.nextRed;
 			redge.nextRed.prevRed=new_redge;
@@ -306,8 +310,8 @@ public class RawManip {
 			if (tredge!=null) {
 				RedEdge new_redge=new RedEdge(newTwin);
 				newTwin.myRedEdge=new_redge;
-				new_redge.rad=tredge.rad;
-				new_redge.center=new Complex(tredge.center);
+				new_redge.setRadius(tredge.getRadius());
+				new_redge.setCenter(new Complex(tredge.getCenter()));
 				
 				new_redge.nextRed=tredge.nextRed;
 				tredge.nextRed.prevRed=new_redge;
@@ -363,7 +367,7 @@ public class RawManip {
 		if (wedge==null) {
 			double rad=.045;
 			if (V.halfedge.myRedEdge!=null)
-				rad=V.halfedge.myRedEdge.rad;
+				rad=V.halfedge.myRedEdge.getRadius();
 			
 			// hold some info
 			spks=V.getSpokes(V.halfedge);
@@ -400,7 +404,7 @@ public class RawManip {
 			if (pdcel.redChain!=null) {
 				newred=new RedEdge(newbdry);
 				newbdry.myRedEdge=newred;
-				newred.rad=rad;
+				newred.setRadius(rad);
 
 				newred.nextRed=red_out;
 				red_out.prevRed=newred;
@@ -1207,13 +1211,13 @@ public class RawManip {
 
 			  RedEdge red1=new RedEdge(e1);
 			  e1.myRedEdge=red1;
-			  red1.center=new Complex(base_red.center);
-			  red1.rad=base_red.rad;
+			  red1.setCenter(new Complex(base_red.getCenter()));
+			  red1.setRadius(base_red.getRadius());
 			  RedEdge red2=new RedEdge(e2);
 			  e2.myRedEdge=red2;
 			  // just to set something
-			  red2.center=new Complex(base_red.center); 
-			  red2.rad=base_red.rad;
+			  red2.setCenter(new Complex(base_red.getCenter())); 
+			  red2.setRadius(base_red.getRadius());
 
 			  red1.prevRed=base_red.prevRed;
 			  base_red.prevRed.nextRed=red1;
@@ -1311,7 +1315,7 @@ public class RawManip {
 		  HalfEdge base_twin = twin_prev.next;
 		  HalfEdge twin_next = base_twin.next;
 
-		  dcel.DcelFace outFace = base_twin.face;
+		  combinatorics.komplex.DcelFace outFace = base_twin.face;
 		  Vertex lastV = base_twin.origin;
 		  Vertex nextV = twin_next.origin;
 
@@ -1363,7 +1367,7 @@ public class RawManip {
 		  v_right.halfedge = top;
 		  HalfEdge top_tw = new HalfEdge(v_left);
 		  top_tw.face = outFace;
-		  dcel.DcelFace new_face = new dcel.DcelFace(pdcel.vertCount);
+		  combinatorics.komplex.DcelFace new_face = new combinatorics.komplex.DcelFace(pdcel.vertCount);
 		  top.face = new_face;
 		  count++;
 
@@ -1464,7 +1468,7 @@ public class RawManip {
 			  v_right.halfedge = top;
 			  top_tw = new HalfEdge(v_left);
 			  top_tw.face = outFace;
-			  new_face = new dcel.DcelFace(pdcel.vertCount);
+			  new_face = new combinatorics.komplex.DcelFace(pdcel.vertCount);
 			  top.face = new_face;
 			  count++;
 
@@ -1556,7 +1560,7 @@ public class RawManip {
 			  v_right.halfedge = top;
 			  top_tw = new HalfEdge(v_left);
 			  top_tw.face = outFace;
-			  new_face = new dcel.DcelFace(pdcel.vertCount + 1);
+			  new_face = new combinatorics.komplex.DcelFace(pdcel.vertCount + 1);
 			  top.face = new_face;
 			  count++;
 
@@ -1971,13 +1975,13 @@ public class RawManip {
 						// two new edges
 						n_newEdge = new HalfEdge();
 						n_newEdge.eutil = 1;
-						n_newEdge.invDist = n_base.invDist;
-						n_newEdge.schwarzian = n_base.schwarzian;
+						n_newEdge.setInvDist(n_base.getInvDist());
+						n_newEdge.setSchwarzian(n_base.getSchwarzian());
 						n_newEdge.face=n_base.face;
 						n_newTwin = new HalfEdge();
 						n_newTwin.eutil = 1;
-						n_newTwin.invDist = n_base.invDist;
-						n_newTwin.schwarzian = n_base.schwarzian;
+						n_newTwin.setInvDist(n_base.getInvDist());
+						n_newTwin.setSchwarzian(n_base.getSchwarzian());
 						n_newTwin.face=n_base.twin.face;
 
 						// new vert; cent/rad = end averages; bdry?
@@ -2079,13 +2083,13 @@ public class RawManip {
 							// two new edges
 							n_newEdge = new HalfEdge();
 							n_newEdge.eutil = 1;
-							n_newEdge.invDist = n_base.invDist;
-							n_newEdge.schwarzian = n_base.schwarzian;
+							n_newEdge.setInvDist(n_base.getInvDist());
+							n_newEdge.setSchwarzian(n_base.getSchwarzian());
 							n_newEdge.face=n_base.face;
 							n_newTwin = new HalfEdge();
 							n_newTwin.eutil = 1;
-							n_newTwin.invDist = n_base.invDist;
-							n_newTwin.schwarzian = n_base.schwarzian;
+							n_newTwin.setInvDist(n_base.getInvDist());
+							n_newTwin.setSchwarzian(n_base.getSchwarzian());
 							n_newTwin.face=n_base.twin.face;
 
 							// new vertex
@@ -2759,8 +2763,8 @@ public class RawManip {
 					RedEdge newred=new RedEdge(opp);
 					
 					// transfer data for 'oppV'
-					newred.rad=prered.rad;
-					newred.center=prered.center;
+					newred.setRadius(prered.getRadius());
+					newred.setCenter(prered.getCenter());
 					
 					opp.myRedEdge=newred;
 					opp.origin.halfedge=opp;
@@ -2984,7 +2988,7 @@ public class RawManip {
 				}
 
 				// orphan w
-				if (pdcel.alpha.invDist == wend.vertIndx)
+				if (pdcel.alpha.getInvDist() == wend.vertIndx)
 					pdcel.alpha = null;
 				HalfEdge side1 = edge.next.twin;
 				HalfEdge side2 = edge.twin.prev.twin;

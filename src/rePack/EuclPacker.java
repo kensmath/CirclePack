@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import allMains.CirclePack;
-import dcel.DcelFace;
-import dcel.HalfEdge;
+import combinatorics.komplex.DcelFace;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
 import dcel.PackDCEL;
-import dcel.Vertex;
 import exceptions.DataException;
 import exceptions.PackingException;
 import exceptions.ParserException;

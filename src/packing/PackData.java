@@ -16,16 +16,16 @@ import allMains.CirclePack;
 import baryStuff.BaryPtData;
 import circlePack.PackControl;
 import combinatorics.komplex.Face;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
 import complex.MathComplex;
 import dcel.CombDCEL;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.PairLink;
 import dcel.RawManip;
-import dcel.RedEdge;
 import dcel.SideData;
-import dcel.Vertex;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
@@ -561,7 +561,7 @@ public class PackData{
 		if (f<=0)
 			return null;
 		Complex[] corners=new Complex[3];
-		dcel.DcelFace dface=packDCEL.faces[f];
+		combinatorics.komplex.DcelFace dface=packDCEL.faces[f];
 		HalfEdge he=dface.edge;
 		for (int j=0;j<3;j++) {
 			corners[j]=packDCEL.getVertCenter(he);
@@ -1000,13 +1000,13 @@ public class PackData{
 					spoke.myRedEdge.prevRed.myEdge!=upstream)
 				simple=false;
 		}
-		ArrayList<dcel.DcelFace> faceflower=vert.getFaceFlower();
-		Iterator<dcel.DcelFace> fis=faceflower.iterator();
+		ArrayList<combinatorics.komplex.DcelFace> faceflower=vert.getFaceFlower();
+		Iterator<combinatorics.komplex.DcelFace> fis=faceflower.iterator();
 		
 		// use faces as already placed
 		if (simple) {			
 			while(fis.hasNext()) {
-				dcel.DcelFace face=fis.next();
+				combinatorics.komplex.DcelFace face=fis.next();
 				if (face.faceIndx>=0)
 					zs.add(packDCEL.getFaceIncircle(face).center);
 			}
@@ -1121,7 +1121,7 @@ public class PackData{
 	 * @param face Face
 	 * @return Complex[], non-closed array
 	 */
-	public Complex[] face_hull(dcel.DcelFace face) {
+	public Complex[] face_hull(combinatorics.komplex.DcelFace face) {
 		ArrayList<Complex> zs=new ArrayList<Complex>();
 		HalfEdge he=face.edge;
 		do {
@@ -1147,7 +1147,7 @@ public class PackData{
 	 */
 	public Complex[] corners_face(int f) {
 		ArrayList<Complex> zs=new ArrayList<Complex>();
-		dcel.DcelFace face=packDCEL.faces[f];
+		combinatorics.komplex.DcelFace face=packDCEL.faces[f];
 
 		HalfEdge he=face.edge;
 		do {
@@ -1326,7 +1326,7 @@ public class PackData{
 	 * @return int, face index or -1 on error
 	 */
 	public int face_opposite(int f,int v) {
-		dcel.DcelFace face =packDCEL.faces[f];
+		combinatorics.komplex.DcelFace face =packDCEL.faces[f];
 		return face.faceOpposite(v).faceIndx;
 	}
 	
@@ -1338,7 +1338,7 @@ public class PackData{
 	 * @return int f, else return 0. 
 	 */
 	public int what_face(int a,int b,int c) {
-		dcel.DcelFace fce=packDCEL.whatFace(a, b, c);
+		combinatorics.komplex.DcelFace fce=packDCEL.whatFace(a, b, c);
 		if (fce==null)
 			return 0;
 		return fce.faceIndx;
@@ -5248,7 +5248,7 @@ public class PackData{
 	  public EdgeSimple reDualEdge(int f,int g) {
 		  if (f<1 || g<1 || f>faceCount || g>faceCount)
 			  return null;
-		  dcel.DcelFace fface=packDCEL.faces[f];
+		  combinatorics.komplex.DcelFace fface=packDCEL.faces[f];
 		  HalfEdge he=fface.faceNghb(packDCEL.faces[g]);
 		  if (he==null)
 			  return null;
@@ -6782,7 +6782,7 @@ public class PackData{
 		
 		// build triangles
 		for (int f=1;f<=Tri.faceCount;f++) {
-			dcel.DcelFace face=packDCEL.faces[f];
+			combinatorics.komplex.DcelFace face=packDCEL.faces[f];
 			int[] vert=face.getVerts();
 			Tri.faces[f]=new combinatorics.komplex.Face(vert.length);
 			Tri.faces[f].vert=vert;

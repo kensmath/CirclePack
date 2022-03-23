@@ -19,8 +19,8 @@ import javax.swing.border.TitledBorder;
 
 import allMains.CirclePack;
 import circlePack.PackControl;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import dcel.HalfEdge;
 import listManip.FaceLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
@@ -432,7 +432,7 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 		// set index field
 		faceChoice.setText(Integer.toString(f));
 
-		dcel.DcelFace face=p.packDCEL.faces[f];
+		combinatorics.komplex.DcelFace face=p.packDCEL.faces[f];
 		int[] verts=face.getVerts();
 
 		// list corner vertices

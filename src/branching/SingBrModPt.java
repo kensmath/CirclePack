@@ -7,9 +7,9 @@ import java.util.Vector;
 
 import canvasses.DisplayParser;
 import circlePack.PackControl;
-import dcel.HalfEdge;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
 import dcel.RawManip;
-import dcel.Vertex;
 import exceptions.DataException;
 import exceptions.ParserException;
 import ftnTheory.GenModBranching;
@@ -149,7 +149,7 @@ public class SingBrModPt extends GenBrModPt {
 		layoutAddons.abutMore(myHoloBorder);
 
 		// record exclusions
-		myExclusions=new ArrayList<dcel.Vertex>();
+		myExclusions=new ArrayList<combinatorics.komplex.Vertex>();
 		Iterator<HalfEdge> eis=eventHorizon.iterator();
 		while (eis.hasNext()) {
 			myExclusions.add(eis.next().origin);

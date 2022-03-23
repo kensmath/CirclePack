@@ -3,9 +3,9 @@ package tiling;
 import java.util.Iterator;
 
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
 import dcel.CombDCEL;
-import dcel.HalfEdge;
-import dcel.Vertex;
 import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.ParserException;

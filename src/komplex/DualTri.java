@@ -1,9 +1,8 @@
 package komplex;
 
 import math.Mobius;
-
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
 import exceptions.DataException;
 import geometry.CommonMath;
@@ -43,7 +42,7 @@ public class DualTri {
 		setInCirclePts();
 	}
 	
-	public DualTri(PackDCEL pdcel,dcel.DcelFace face) {
+	public DualTri(PackDCEL pdcel,combinatorics.komplex.DcelFace face) {
 		super();
 		HalfEdge he=face.edge; // based on face edges
 		hes=pdcel.p.hes;

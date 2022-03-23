@@ -3,9 +3,9 @@ package branching;
 import java.util.ArrayList;
 import java.util.Vector;
 
-import dcel.HalfEdge;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
 import dcel.PackDCEL;
-import dcel.Vertex;
 import ftnTheory.GenModBranching;
 import listManip.HalfLink;
 import math.Mobius;

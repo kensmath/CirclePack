@@ -3,12 +3,12 @@ package packing;
 import java.util.Iterator;
 
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.RedEdge;
-import dcel.Vertex;
 import exceptions.DataException;
 import exceptions.MiscException;
 import komplex.EdgeSimple;
@@ -171,7 +171,7 @@ public class PackLite {
 		
 		if (p.packDCEL.redChain==null) { // sphere?
 			gam=p.antipodal_vert(alp);
-			dcel.DcelFace fauxface=p.packDCEL.vertices[gam].halfedge.face;
+			combinatorics.komplex.DcelFace fauxface=p.packDCEL.vertices[gam].halfedge.face;
 			p.puncture_face(fauxface.faceIndx);
 		}
 

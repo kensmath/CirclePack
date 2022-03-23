@@ -4,8 +4,8 @@ import java.awt.Color;
 import java.util.Vector;
 
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import dcel.HalfEdge;
 import dcel.RawManip;
 import exceptions.DataException;
 import exceptions.ParserException;

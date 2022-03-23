@@ -5,9 +5,9 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
-import dcel.HalfEdge;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
 import dcel.RawManip;
-import dcel.Vertex;
 import komplex.EdgeSimple;
 import math.Mobius;
 import packing.PackCreation;

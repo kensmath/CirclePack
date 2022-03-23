@@ -7,9 +7,9 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
 import dcel.SideData;
-import dcel.HalfEdge;
 import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.CommonMath;
@@ -256,7 +256,7 @@ public class PostParser {
 					// handle first face circles (without adjusting centers)
 					if (c == 'C' || c == 'B') {
 						first_face = p.firstFace;
-						dcel.DcelFace face = hlink.get(0).face;
+						combinatorics.komplex.DcelFace face = hlink.get(0).face;
 						int[] verts=face.getVerts();
 						for (int i = 0; i < 3; i++) {
 							v = verts[i];
@@ -634,7 +634,7 @@ public class PostParser {
 
 				Iterator<Integer> flist = faceLink.iterator();
 				while (flist.hasNext()) {
-					dcel.DcelFace face=p.packDCEL.faces[flist.next()];
+					combinatorics.komplex.DcelFace face=p.packDCEL.faces[flist.next()];
 					int[] verts=face.getVerts();
 					Complex []Z=new Complex[3];
 					for (int j=0;j<3;j++) {

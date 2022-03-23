@@ -2,7 +2,7 @@ package rePack;
 
 import allMains.CPBase;
 import allMains.CirclePack;
-import dcel.HalfEdge;
+import combinatorics.komplex.HalfEdge;
 import dcel.PackDCEL;
 import exceptions.PackingException;
 import listManip.EdgeLink;

@@ -7,9 +7,9 @@ import java.util.Vector;
 
 import canvasses.DisplayParser;
 import circlePack.PackControl;
-import dcel.HalfEdge;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
 import dcel.RawManip;
-import dcel.Vertex;
 import ftnTheory.GenModBranching;
 import listManip.HalfLink;
 import math.Mobius;

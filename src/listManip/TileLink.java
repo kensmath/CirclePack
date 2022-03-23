@@ -492,15 +492,11 @@ public class TileLink extends LinkedList<Integer> {
 	 * @return 0 on failure
 	 */
 	public static int grab_one_tile(TileData td,Vector<Vector<String>> flagsegs) {
-		try {
-			Vector<String> its=(Vector<String>)flagsegs.get(0);
-			TileLink tlk=new TileLink(td,its);
-			return tlk.getFirst();
-		} catch (Exception ex) {
+		if (flagsegs==null || flagsegs.size()==0)
 			return 0;
-		}
+		return grab_one_tile(td,StringUtil.reconItem(flagsegs.get(0)));
 	}
-	
+
 	/**
 	 * Is 't' an entry?
 	 * @param t int
@@ -512,7 +508,6 @@ public class TileLink extends LinkedList<Integer> {
 				return j;
 		return -1;
 	}
-	
 
 	/**
 	 * Make up list by looking through SetBuilder specs 

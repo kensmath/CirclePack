@@ -10,10 +10,10 @@ import branching.ChapBrModPt;
 import branching.GenBrModPt;
 import branching.SingBrModPt;
 import branching.TradBrModPt;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.HalfEdge;
-import dcel.Vertex;
 import exceptions.DataException;
 import exceptions.ParserException;
 import geometry.HyperbolicMath;
@@ -563,7 +563,7 @@ public class GenModBranching extends PackExtender {
 				throw new ParserException("singular face missing or inappropriate");
 			
 			// match again 'exclusions'.
-			dcel.DcelFace singFace=packData.packDCEL.faces[getF];
+			combinatorics.komplex.DcelFace singFace=packData.packDCEL.faces[getF];
 			HalfEdge he=singFace.edge;
 			boolean hitx=false;
 			do {
@@ -758,7 +758,7 @@ public class GenModBranching extends PackExtender {
 			GenBrModPt gbp=bps.next();
 			if (gbp!=null && gbp.myType==type) {
 				if (type==GenBrModPt.SINGULAR) {
-					dcel.DcelFace face=packData.packDCEL.faces[j];
+					combinatorics.komplex.DcelFace face=packData.packDCEL.faces[j];
 					HalfEdge he=face.edge;
 					do {
 						if (he==gbp.myEdge) {

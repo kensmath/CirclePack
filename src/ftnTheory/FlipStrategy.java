@@ -4,7 +4,7 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.Vector;
 
-import dcel.HalfEdge;
+import combinatorics.komplex.HalfEdge;
 import dcel.RawManip;
 import exceptions.CombException;
 import exceptions.DataException;

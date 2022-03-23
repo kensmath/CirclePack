@@ -165,7 +165,7 @@ public class BaryLink extends LinkedList<BaryPoint> {
 					Iterator<Integer> fcs=faces.iterator();
 					while (fcs.hasNext()) {
 						int f=fcs.next();
-						dcel.DcelFace face=packData.packDCEL.faces[f];
+						combinatorics.komplex.DcelFace face=packData.packDCEL.faces[f];
 						Complex []m=new Complex[3];
 						
 						// find tangency points (m[j] opposite to w[j]) 

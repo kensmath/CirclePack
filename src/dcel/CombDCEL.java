@@ -6,6 +6,11 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import combinatorics.komplex.DcelFace;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
+import combinatorics.komplex.Vertex;
+import complex.Complex;
 import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
@@ -20,6 +25,7 @@ import listManip.VertexMap;
 import packing.PackData;
 import panels.PathManager;
 import util.ColorUtil;
+import util.PathUtil;
 import util.StringUtil;
 
 /**
@@ -2804,7 +2810,9 @@ public class CombDCEL {
 			do {
 				rtrace.redutil=rCount++;
 				rtrace=rtrace.nextRed;
-				rtrace.center.x=-1.0*rtrace.center.x;
+				Complex z=rtrace.getCenter();
+				z.x=-1.0*z.x;
+				rtrace.setCenter(z);
 			} while (rtrace!=pdc.redChain);
 			
 			// store array of red and their 'myEdge's
@@ -3659,7 +3667,7 @@ public class CombDCEL {
 		  }
 
 		  // From red chain, get short closed non-separating path
-		  HalfLink path=PathDCEL.getNonSeparating(pdcel);
+		  HalfLink path=PathUtil.getNonSeparating(pdcel);
 		  
 		  // now choose 'seededge': want edge of 'path' whose
 		  //   origin has high degree and verts to left/right
@@ -3694,7 +3702,7 @@ public class CombDCEL {
 
 		  // get 'cutPath' starting and ending at 'seededge.origin'
 		  //   and otherwise disjoint from 'path'.
-		  HalfLink cutPath=PathDCEL.getCutPath(pdcel,path,seededge);
+		  HalfLink cutPath=PathUtil.getCutPath(pdcel,path,seededge);
 
 		  // Form new red chain: path:cutPath:path-:cutPath-
 		  RedEdge newChain=new RedEdge(seededge);

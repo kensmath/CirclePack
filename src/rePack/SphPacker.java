@@ -3,10 +3,10 @@ package rePack;
 import java.util.Iterator;
 
 import allMains.CirclePack;
+import combinatorics.komplex.DcelFace;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
-import dcel.DcelFace;
-import dcel.HalfEdge;
-import dcel.Vertex;
 import exceptions.PackingException;
 import geometry.CircleSimple;
 import geometry.EuclMath;

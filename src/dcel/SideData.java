@@ -3,6 +3,7 @@ package dcel;
 import java.awt.Color;
 import java.util.Iterator;
 
+import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import listManip.HalfLink;
 import math.Mobius;
@@ -88,10 +89,10 @@ public class SideData {
     public int set_sp_Mobius() {
     	if (mateIndex<0) 
     		return 0; // this is a "border" side
-    	Complex A=startEdge.center;
-    	Complex a=startEdge.twinRed.nextRed.center;
-    	Complex B=endEdge.nextRed.center;
-    	Complex b=endEdge.twinRed.center;
+    	Complex A=startEdge.getCenter();
+    	Complex a=startEdge.twinRed.nextRed.getCenter();
+    	Complex B=endEdge.nextRed.getCenter();
+    	Complex b=endEdge.twinRed.getCenter();
     	
     	mob=new Mobius(); // start with identity
     	mobErr=0.0;
@@ -116,8 +117,8 @@ public class SideData {
     			etrace=startEdge;
     			for (int i=0;i<=(int)(count/2);i++)
     				etrace=etrace.nextRed;
-    	    	Complex C=etrace.center;
-    	    	Complex c=etrace.twinRed.nextRed.center;
+    	    	Complex C=etrace.getCenter();
+    	    	Complex c=etrace.twinRed.nextRed.getCenter();
 
     	    	if (c.abs()>=Mobius.MOD1 || C.abs()>=Mobius.MOD1)
     	    		return 0; // didn't get matching centers or one/both these

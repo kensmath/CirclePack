@@ -8,11 +8,11 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
 import complex.Complex;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RawManip;
-import dcel.RedEdge;
 import dcel.SideData;
 import exceptions.CombException;
 import exceptions.DataException;
@@ -217,7 +217,7 @@ public class FaceLink extends LinkedList<Integer> {
 					Iterator<HalfEdge> his=hlink.iterator();
 					while (his.hasNext()) {
 						HalfEdge he=his.next();
-						dcel.DcelFace face=he.face;
+						combinatorics.komplex.DcelFace face=he.face;
 						if (face!=null) {
 							add(face.faceIndx);
 							count++;
@@ -1117,9 +1117,9 @@ public class FaceLink extends LinkedList<Integer> {
 			return null;
 		HalfLink hlink=new HalfLink();
 		Iterator<Integer> fit=this.iterator();
-		dcel.DcelFace nextface=pdcel.faces[fit.next()];
+		combinatorics.komplex.DcelFace nextface=pdcel.faces[fit.next()];
 		hlink.add(nextface.edge);
-		dcel.DcelFace lastface=nextface;
+		combinatorics.komplex.DcelFace lastface=nextface;
 		while(fit.hasNext()) {
 			lastface=nextface;
 			nextface=pdcel.faces[fit.next()];

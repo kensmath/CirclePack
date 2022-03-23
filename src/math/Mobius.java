@@ -4,10 +4,10 @@ import java.awt.geom.PathIterator;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import complex.MathComplex;
 import dcel.Schwarzian;
-import dcel.RedEdge;
 import exceptions.DataException;
 import exceptions.MobException;
 import exceptions.ParserException;

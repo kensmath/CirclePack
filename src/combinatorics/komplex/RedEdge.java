@@ -1,4 +1,4 @@
-package dcel;
+package combinatorics.komplex;
 
 import complex.Complex;
 import geometry.CircleSimple;

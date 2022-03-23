@@ -54,7 +54,7 @@ public class LayoutBugs {
 		  try {
 			  dbw.write("Dcel faces in order of 'dcel.faces' vector.\n");;
 			  for (int f=1;f<=dcel.faceCount;f++) {
-				  dcel.DcelFace face=dcel.faces[f];
+				  combinatorics.komplex.DcelFace face=dcel.faces[f];
 				  int[] verts=face.getVerts();
 				  dbw.write("\nFace "+face.faceIndx+": <");
 				  int s=verts.length;
@@ -65,7 +65,7 @@ public class LayoutBugs {
 			  }
 			  dbw.write("\n\nDecel ideal faces in order of 'dcel.idealFaces' vector.\n");
 			  for (int k=1;k<=dcel.idealFaceCount;k++) {
-				  dcel.DcelFace face=dcel.idealFaces[k];
+				  combinatorics.komplex.DcelFace face=dcel.idealFaces[k];
 				  int[] verts=face.getVerts();
 				  dbw.write("\nidealFace "+face.faceIndx+": <");
 				  int s=verts.length;

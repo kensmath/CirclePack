@@ -1,7 +1,7 @@
 package dataObject;
 
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import dcel.HalfEdge;
 import exceptions.ParserException;
 import packQuality.QualMeasures;
 import packing.PackData;
@@ -33,6 +33,8 @@ public class EdgeData {
 		hedge=he;
 		int ev=he.origin.vertIndx;
 		int ew=he.twin.origin.vertIndx;
+		if (ev<=0 || ev>p.nodeCount || ew<=0 || ew>p.nodeCount)
+			throw new ParserException("improper end points");
 		edgeStr=new String(ev+" "+ew);
 		invDist=he.getInvDist();
 		schwarzian=he.getSchwarzian();

@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.Vertex;
 import exceptions.DataException;
 import listManip.HalfLink;
 import math.CirMatrix;

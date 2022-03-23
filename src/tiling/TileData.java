@@ -5,11 +5,11 @@ import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
 import dcel.CombDCEL;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RawManip;
-import dcel.Vertex;
 import deBugging.DebugHelp;
 import exceptions.CombException;
 import komplex.EdgeSimple;
@@ -1093,7 +1093,7 @@ public class TileData {
 		
 		// track flowers we use, note the petals 
 		NodeLink finalList=new NodeLink(p);
-		int []util=new int[p.nodeCount+1]; // 0=open, 1=used, -1=in next
+		int []util=new int[p.nodeCount+1]; // 0=open, 1=used, -1=excluded
 		
 		// cycle between two lists
 		NodeLink curr=null;
@@ -1107,7 +1107,7 @@ public class TileData {
 			while (cl.hasNext() && safety>0) {
 				safety--;
 				int v=cl.next();
-				if (util[v]<=0 && !p.isBdry(v)) {
+				if (util[v]==0 && !p.isBdry(v)) {
 					// want this v
 					finalList.add(v);
 					util[v]=1;
@@ -1117,11 +1117,12 @@ public class TileData {
 					Iterator<HalfEdge> ois=outlink.iterator();
 					while (ois.hasNext()) {
 						HalfEdge he=ois.next();
+						// petal is excluded
+						util[he.origin.vertIndx]=-1;
+						// opposite vert may be put in next
 						int a=he.twin.next.twin.origin.vertIndx;
-						if (a>0 && util[a]==0 && !p.isBdry(a)) {
+						if (a>0 && util[a]==0 && !p.isBdry(a)) 
 							next.add(a);
-							util[a]=-1;
-						}
 					}
 				}
 			} // end of inner while

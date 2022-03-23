@@ -7,13 +7,13 @@ import java.util.LinkedList;
 import java.util.Random;
 
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import complex.MathComplex;
 import dcel.CombDCEL;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
 import dcel.RawManip;
-import dcel.RedEdge;
 import deBugging.DCELdebug;
 import deBugging.DebugHelp;
 import exceptions.CombException;
@@ -2426,7 +2426,7 @@ public class PackCreation {
 		
 		// set face colors blue/red oriented/reverse-oriented
 		for (int f=1;f<=newPack.faceCount;f++) {
-			dcel.DcelFace face=newPack.packDCEL.faces[f];
+			combinatorics.komplex.DcelFace face=newPack.packDCEL.faces[f];
 			HalfEdge he=face.edge;
 			int a=newPack.getVertMark(he.origin.vertIndx);
 			int b=newPack.getVertMark(he.twin.origin.vertIndx);

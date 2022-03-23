@@ -2,7 +2,7 @@ package util;
 
 import java.util.Iterator;
 
-import dcel.HalfEdge;
+import combinatorics.komplex.HalfEdge;
 import dcel.PackDCEL;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -61,7 +61,7 @@ public class TriData {
 		}
 	}
 
-	public TriData(PackDCEL pdcel,dcel.DcelFace fce) {
+	public TriData(PackDCEL pdcel,combinatorics.komplex.DcelFace fce) {
 		this(pdcel);
 		baseEdge=fce.edge;
 		face=baseEdge.face.faceIndx; 
@@ -284,7 +284,7 @@ public class TriData {
     	Iterator<Integer> vis=vlist.iterator();
     	int count=0;
     	while (vis.hasNext()) {
-    		dcel.Vertex vert=pdcel.vertices[vis.next()];
+    		combinatorics.komplex.Vertex vert=pdcel.vertices[vis.next()];
     		if (vert.redFlag) {
     			HalfLink spokes=vert.getEdgeFlower();
     			Iterator<HalfEdge> sis=spokes.iterator();
@@ -302,7 +302,7 @@ public class TriData {
     		}
     		else { // store from first face containing v
     			int v=vert.vertIndx;
-    			dcel.DcelFace face=pdcel.vertices[v].halfedge.face;
+    			combinatorics.komplex.DcelFace face=pdcel.vertices[v].halfedge.face;
     			TriData vtd=pdcel.triData[face.faceIndx];
     			int vindx=vtd.vertIndex(v);
     			if (mode==2)

@@ -10,11 +10,11 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.HalfEdge;
 import dcel.PackDCEL;
-import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;

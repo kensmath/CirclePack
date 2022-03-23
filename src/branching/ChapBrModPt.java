@@ -8,9 +8,9 @@ import java.util.Vector;
 import allMains.CirclePack;
 import canvasses.DisplayParser;
 import circlePack.PackControl;
-import dcel.HalfEdge;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
 import dcel.RawManip;
-import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -326,7 +326,7 @@ public class ChapBrModPt extends GenBrModPt {
 		layoutAddons.add(preJump[1].prev.twin);
 
 		// record exclusions
-		myExclusions=new ArrayList<dcel.Vertex>();
+		myExclusions=new ArrayList<combinatorics.komplex.Vertex>();
 		Iterator<HalfEdge> eis=eventHorizon.iterator();
 		while (eis.hasNext()) {
 			myExclusions.add(eis.next().origin);

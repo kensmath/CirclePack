@@ -6,9 +6,13 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
 import complex.Complex;
-import dcel.HalfEdge;
-import dcel.RedEdge;
+import dataObject.EdgeData;
+import dataObject.FaceData;
+import dataObject.NodeData;
+import dataObject.TileData;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -23,7 +27,6 @@ import math.Matrix3D;
 import math.Mobius;
 import packing.PackData;
 import util.CallPacket;
-import util.ColorUtil;
 import util.StringUtil;
 import util.ViewBox;
 
@@ -430,7 +433,7 @@ public class QueryParser {
 					v=NodeLink.grab_one_vert(p,flagSegs);
 					if (v!=0) {
 						ans.append(Double.toString(p.getCurv(v)/Math.PI));
-						if (forMsg)
+						if (forMsg) 
 							words.append("v"+v+": ");
 						gotone=true;
 					}
@@ -440,8 +443,9 @@ public class QueryParser {
 					NodeLink vlist=new NodeLink(p,items);
 					if (vlist!=null) {
 						ans.append(p.gen_mark(vlist,-1,false));
-						if (forMsg) 
+						if (forMsg) { 
 							words.append("(furthest away): ");
+						}
 						gotone=true;
 					}
 				}
@@ -538,6 +542,20 @@ public class QueryParser {
 					ans.append(energy);
 					gotone=true;
 				}
+				else if(query.startsWith("edge")) {
+					forMsg=true; // only do this as a message
+					HalfEdge he=HalfLink.grab_one_edge(p,
+							StringUtil.reconItem(items));
+					if (he!=null) {
+						EdgeData eData=new EdgeData(p,he);
+						words.append("p"+p.packNum+"; edge ("+eData.edgeStr+
+								"); inv distance="+eData.invDist+
+								"; Schwarzian="+eData.schwarzian+"; edgelength="+
+								eData.edgelength+"; intended edgelength="+
+								eData.intended);
+						return words.toString();
+					}
+				}
 				break;
 			} // end of 'e'
 			
@@ -568,7 +586,7 @@ public class QueryParser {
 				}
 				
 				// return f(z)
-				if (query.startsWith("f(z)")) {
+				else if (query.startsWith("f(z)")) {
 					double x=0;
 					double y=0;
 					try { // one (real) or two (complex)
@@ -586,6 +604,23 @@ public class QueryParser {
 					else 
 						ans.append(new String(w.x+" "+w.y));
 					gotone=true;
+				}
+				
+				// face data
+				else if (query.startsWith("face")) {
+					forMsg=true; // only do this as a message
+					FaceData fData;
+					try { // one integer
+						int f=Integer.parseInt(items.get(0));
+						fData=new FaceData(p,f);
+					} catch (Exception ex) {
+						exception_words="?face <f> needs 'f'";
+						throw new ParserException("");
+					}
+					words.append("p"+p.packNum+"; face "+fData.findx+
+							"; vertices={"+fData.vertsStr+"}; colorcode="+
+							fData.colorCode+"; mark="+fData.mark);
+					return words.toString();
 				}
 				break;
 			} // end of 'f'
@@ -865,6 +900,21 @@ public class QueryParser {
 				break;
 			} // end of 's'
 			
+			
+			case 't': { // ----------------------------------------
+				if (query.startsWith("tile") && p.tileData!=null) {
+					forMsg=true; // only do this as a message
+					int t=TileLink.grab_one_tile(p.tileData,StringUtil.reconItem(items));
+		  	      	TileData tData=new TileData(p,t);
+		  	      	words.append("p"+p.packNum+"; tile indx="+tData.tindx+
+		  	      			"; degree="+tData.degree+"; tileflower={"+
+		  	      			tData.nghbStr+"}; mark="+tData.mark+
+		  	      			"; colorCode="+tData.colorCode);
+		  	      	return words.toString();
+				}
+				break;
+			}
+			
 			case 'v': { // --------------------------------------------------------
 
 				if (query.startsWith("vertexMap")) {
@@ -886,29 +936,17 @@ public class QueryParser {
 				}
 				
 				// vert info
-				else if (query.startsWith("vertInfo")) {
+				else if (query.startsWith("vert")) {
 					forMsg=true; // only do this as a message
-		  	      	vertlist=new NodeLink(p,items);
-		  	      	int N=vertlist.size();
-		  	      	Iterator<Integer> vlist=vertlist.iterator();
-		  	      	int count=0;
-		  	      	while (vlist.hasNext() && count<5) {
-		  	      		v=(Integer)vlist.next();
-		  	      		words.append("\n vert#"+v+", p"+p.packNum+": rad="+p.getActualRadius(v)+
-		  	      				", center=("+p.getCenter(v).x+","+p.getCenter(v).y+")"+
-		  	      				", ang sum="+p.getCurv(v)/Math.PI+
-		  	      				" Pi, aim="+p.getAim(v)/Math.PI+
-		  	      				" Pi, boundaryFlag="+p.getBdryFlag(v)+
-		  	      				", star="+p.countFaces(v)+
-		  	      				", mark="+p.getVertMark(v)+
-		  	      				", plotFlag="+p.getPlotFlag(v)+", color="+
-		  	      				ColorUtil.col_to_table(p.getCircleColor(v)));
-		  	      		count++;
-		  	      	}
-		  	      	if (count<N) {
-		  	      		words.append(" ... ");
-		  	      	}
-	  	      		gotone=true;
+					v=NodeLink.grab_one_vert(p,StringUtil.reconItem(items));
+	  	      		NodeData vData=new NodeData(p,v);
+	  	      		words.append("p"+p.packNum+"; vert="+vData.vindx+
+	  	      				"; rad="+vData.rad+"; center=("+vData.center+
+	  	      				"); flower={"+vData.flowerStr+"}; sum="+
+	  	      				vData.angsum/Math.PI+" Pi; aim="+vData.aim/Math.PI+
+	  	      				" Pi; boundary?="+vData.bdryflag+
+	  	      				"; degree="+vData.degree+"; mark="+vData.mark+
+	  	      				"; colorCode="+vData.colorCode);
 		  	      	return words.toString();
 				}
 				break;

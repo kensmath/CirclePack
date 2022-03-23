@@ -21,12 +21,12 @@ import javax.swing.border.TitledBorder;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
 import dataObject.EdgeData;
 import dataObject.FaceData;
 import dataObject.NodeData;
 import dataObject.TileData;
-import dcel.HalfEdge;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;

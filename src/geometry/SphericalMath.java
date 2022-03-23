@@ -1,9 +1,9 @@
 package geometry;
 import allMains.CPBase;
 import baryStuff.BaryPoint;
+import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import dcel.PackDCEL;
-import dcel.RedEdge;
 import math.Mobius;
 import math.Point3D;
 import packing.PackData;

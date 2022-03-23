@@ -1,8 +1,8 @@
 package dataObject;
 
+import combinatorics.komplex.Vertex;
 import complex.Complex;
 import dcel.PackDCEL;
-import dcel.Vertex;
 import packing.PackData;
 import util.ColorUtil;
 
@@ -30,6 +30,8 @@ public class NodeData {
 		PackDCEL pdcel=p.packDCEL;
 		vindx=indx;
 		int v=vindx;
+		if (v<=0 || v>p.nodeCount)
+			v=1;
 		degree=p.countFaces(v);
 		Vertex vert=pdcel.vertices[v];
 		StringBuilder flowerBuilder = new StringBuilder();
@@ -39,6 +41,7 @@ public class NodeData {
 			if (i < (flwr.length-1)) 
 				flowerBuilder.append(" ");
 		}
+		flowerStr=flowerBuilder.toString();
 		bdryflag=vert.isBdry();
 		colorCode=ColorUtil.col_to_table(vert.getColor());
 		mark=vert.mark;

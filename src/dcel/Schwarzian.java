@@ -6,6 +6,8 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import exceptions.DataException;
 import geometry.CircleSimple;
@@ -259,8 +261,8 @@ public class Schwarzian {
 		int tick=0;
 		do {
 			rads[tick]=p.packDCEL.getVertRadius(he);
-			invDist[(tick+2)%3]=he.invDist;
-			invDist[(tick+2)%3+3]=htw.invDist;
+			invDist[(tick+2)%3]=he.getInvDist();
+			invDist[(tick+2)%3+3]=htw.getInvDist();
 			he=he.next;
 			htw=htw.next;
 			tick++;
@@ -686,7 +688,7 @@ public class Schwarzian {
 	public static TriAspect []DualTriData(PackData p) {
 		TriAspect []triasp=new TriAspect[p.faceCount+1];
 		for (int f=1;f<=p.faceCount;f++) {
-			dcel.DcelFace face=p.packDCEL.faces[f];
+			combinatorics.komplex.DcelFace face=p.packDCEL.faces[f];
 			triasp[f]=new TriAspect(p.hes);
 			
 			HalfEdge he=face.edge;

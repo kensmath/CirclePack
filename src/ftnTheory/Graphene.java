@@ -6,12 +6,12 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.HalfEdge;
 import dcel.RawManip;
-import dcel.RedEdge;
-import dcel.Vertex;
 import exceptions.CombException;
 import exceptions.ParserException;
 import geometry.CircleSimple;
@@ -1457,7 +1457,7 @@ public class Graphene extends PackExtender {
 	 * edge[(j+1)%3] is the edge opposite vert[j].
 	 */
 	class CarbonEnergy {
-		dcel.DcelFace face;  //  
+		combinatorics.komplex.DcelFace face;  //  
 		
 		
 		
@@ -1515,7 +1515,7 @@ public class Graphene extends PackExtender {
 				CircleSimple cs=CommonMath.tri_incircle(Z[0],Z[1],Z[2],0);
 				bondLengths[j]=cs.rad;
 				int opface=packData.face_opposite(faceIndx,verts[j]);
-				dcel.DcelFace face_opp=packData.packDCEL.faces[opface];
+				combinatorics.komplex.DcelFace face_opp=packData.packDCEL.faces[opface];
 				if (face_opp.faceIndx<=0) // bdry edge
 					bondLengths[j] *= 2.0;
 				else {

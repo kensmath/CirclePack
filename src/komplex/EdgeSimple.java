@@ -1,6 +1,6 @@
 package komplex;
 
-import dcel.HalfEdge;
+import combinatorics.komplex.HalfEdge;
 
 /**
  * Simply an ordered pair (v,w) of vertices for use in, eg, EdgeLink.java.
