@@ -5049,8 +5049,12 @@ a negative value means this vertex is not adjusted during repacking</opt>
 <opt flag="?screen">		  report screen size, then can use 'set_screen -b ....'</opt>
 <opt flag="?socket">		  was CirclePack started with a socket for command input? 
 								If yes, this gives the host and port number</opt>
-<opt flag="*list*">			  for vlist, elist, flist or Vlist, Elist, Flist</opt>
+<opt flag="?*list*">		  for vlist, elist, flist or Vlist, Elist, Flist</opt>
 <opt flag="?_*">			  report the value of a variable</opt>
+<opt flag="?vert {v}">		  Accumulated data: cent/rad, mark, flower, etc</opt>
+<opt flag="?face {f}">        Accumulated data: vertices, color, etc</opt> 
+<opt flag="?edge {v w}">      Accumulated data: ends, length, etc</opt>
+<opt flag="?tile {t}">        Accumulated data: degree, color, mark, etc</opt>
 
 <comment>(Many options are not yet implemented (ask Ken if you need
 these or other functionality).

@@ -674,7 +674,7 @@ public class QueryParser {
 							Mobius mb=p.namedSidePair(label);
 							if (mb!=null) {
 								StringBuilder mobwords=mb.mob2String();
-								mobwords.insert(0,new String("Mobius '"+label+":"+System.lineSeparator()+" "));
+								mobwords.insert(0,new String("Mobius '"+label+"':"+System.lineSeparator()+" "));
 								words.append(mobwords.toString());
 								gotone=true;
 							}

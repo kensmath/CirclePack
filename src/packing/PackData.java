@@ -15,6 +15,7 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import baryStuff.BaryPtData;
 import circlePack.PackControl;
+import combinatorics.komplex.DcelFace;
 import combinatorics.komplex.Face;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.RedEdge;
@@ -5439,6 +5440,24 @@ public class PackData{
 	 */
 	public static TriAspect[] getTriAspects(PackData p) {
 		PackDCEL pdcel=p.packDCEL;
+		TriAspect[] aspect=new TriAspect[p.faceCount+1];
+		Iterator<HalfEdge> his=pdcel.fullOrder.iterator();
+		int count=0;
+		while (his.hasNext()) {
+			DcelFace face=his.next().face;
+			TriAspect ta=aspect[face.faceIndx]=new TriAspect(pdcel,face);
+			// compute/store the tangency points
+			DualTri dtri=new DualTri(
+					ta.getCenter(0),
+					ta.getCenter(1),
+					ta.getCenter(2),p.hes);
+			ta.tanPts=new Complex[3];
+			for (int j=0;j<3;j++)
+				ta.tanPts[j]=new Complex(dtri.TangPts[j]);
+			count++;
+		}
+
+/* OBE???		
 		int count=1; 
 		boolean ivds=p.haveInvDistances();
 		boolean schws=p.haveSchwarzians();
@@ -5450,7 +5469,7 @@ public class PackData{
 		int last_face=next_face;
 		int[] mv=pdcel.faces[next_face].getVerts();
 		aspect[next_face]=new TriAspect(p.hes);
-		aspect[next_face].face=next_face;
+		aspect[next_face].faceIndx=next_face;
 		aspect[next_face].vert=mv;
 		aspect[next_face].allocCenters();
 		
@@ -5492,7 +5511,7 @@ public class PackData{
 				
 			// create TriAspect 
 			aspect[next_face]=new TriAspect(p.hes);
-			aspect[next_face].face=next_face;
+			aspect[next_face].faceIndx=next_face;
 			mv=pdcel.faces[next_face].getVerts();
 			aspect[next_face].vert=mv;
 			aspect[next_face].allocCenters();
@@ -5563,6 +5582,8 @@ public class PackData{
 			
 			count++;
 		} // end of while through edgelist
+*/		
+		
 		if (count!=p.faceCount) {
 			throw new CombException(
 					"didn't get all faces in building 'TriAspect'");

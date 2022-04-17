@@ -140,7 +140,19 @@ public class PackDCEL {
 */    
 	
 	/**
-	 * Just call 'fixDCEL' with 'prune' false. 
+	 * Cleanup routine: needed because '*_raw' routines 
+	 * modify dcel structure w/o complete update: 'vertCount', 
+	 * 'vertices', edge connectivity should be in tact and 
+	 * often 'redChain' is in tact. The calling routine 
+	 * should already have done things like cents/radii. 
+	 * If the red chain was broken, the calling routine 
+	 * should set 'redChain'=null so that 'redchain_by_edge' is
+	 * called. Faces may be outdated or non-existent, 
+	 * 'edges', 'faces', counts, etc. need updating, 
+	 * so 'fillInside' is called. Also, need to 'attach' 
+	 * to a packing (usually the current parent) or not 
+	 * if packing is null. This call does not "prune" the
+	 * complex.
 	 * @param p PackData
 	 */
 	public void fixDCEL(PackData p) {
@@ -148,19 +160,19 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Cleanup routine: '*_raw' routines modify dcel 
-	 * structure w/o complete update: 'vertCount', 
-	 * 'vertices', edge connectivity should be in 
-	 * tact and often 'redChain' is in tact. The
-	 * calling routine should already have done 
-	 * things like cents/radii. If the red chain
-	 * was broken, the calling routine should set
-	 * 'redChain'=null so that 'redchain_by_edge' is
-	 * called. Faces may be outdated or
-	 * non-existent, 'edges', 'faces', counts, etc. 
-	 * need updating, so 'fillInside' is called. 
-	 * Also, need to 'attach' to a packing (usually 
-	 * the current parent) or not if packing is null.
+	 * Cleanup routine: needed because '*_raw' routines 
+	 * modify dcel structure w/o complete update: 'vertCount', 
+	 * 'vertices', edge connectivity should be in tact and 
+	 * often 'redChain' is in tact. The calling routine 
+	 * should already have done things like cents/radii. 
+	 * If the red chain was broken, the calling routine 
+	 * should set 'redChain'=null so that 'redchain_by_edge' is
+	 * called. Faces may be outdated or non-existent, 
+	 * 'edges', 'faces', counts, etc. need updating, 
+	 * so 'fillInside' is called. Also, need to 'attach' 
+	 * to a packing (usually the current parent) or not 
+	 * if packing is null. If 'prune' is set, then vertices
+	 * without interior nghbs are prunned. 
 	 * @param p PackData
 	 * @param prune boolean
 	 */

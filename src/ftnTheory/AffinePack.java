@@ -94,7 +94,7 @@ public class AffinePack extends PackExtender {
 			aspects[f]=new TriAspect(packData.hes);
 			TriAspect tas=aspects[f];
 			tas.baseEdge=pdc.faces[f].edge;
-			tas.face=tas.baseEdge.face.faceIndx;
+			tas.faceIndx=tas.baseEdge.face.faceIndx;
 			int[] verts=packData.packDCEL.faces[f].getVerts();
 			for (int j=0;j<3;j++) {
 				int v=verts[j];
@@ -1620,44 +1620,44 @@ public class AffinePack extends PackExtender {
 			nearK2=asp[nearF2].vertIndex(w);
 		
 		// scale sides to make shared edge length 1
-		double delt1=1.0/asp[f_right].sides[(j1+2)%3];
-		double delt2=1.0/asp[f_left].sides[(j2+2)%3];
+		double delt1=1.0/asp[f_right].sidelengths[(j1+2)%3];
+		double delt2=1.0/asp[f_left].sidelengths[(j2+2)%3];
 		for (int j=0;j<3;j++){
-			asp[f_right].sides[(j1+j)%3] *=delt1;
-			asp[f_left].sides[(j2+j)%3] *=delt2;
+			asp[f_right].sidelengths[(j1+j)%3] *=delt1;
+			asp[f_left].sidelengths[(j2+j)%3] *=delt2;
 		}
 		
 		// scale near triangle sides to agree with near f1, near f2
 		if (nearF1>0){
-		double gamm1=asp[f_right].sides[j1]/asp[nearF1].sides[(nearK1+2)%3];
+		double gamm1=asp[f_right].sidelengths[j1]/asp[nearF1].sidelengths[(nearK1+2)%3];
 		for (int j=0;j<3;j++){
-				asp[nearF1].sides[(nearK1+j)%3] *=gamm1;
+				asp[nearF1].sidelengths[(nearK1+j)%3] *=gamm1;
 			}
 		}
 		if (nearF2>0){
-			double gamm2=asp[f_left].sides[j2]/asp[nearF2].sides[(nearK2+2)%3];
+			double gamm2=asp[f_left].sidelengths[j2]/asp[nearF2].sidelengths[(nearK2+2)%3];
 			for (int j=0;j<3;j++){
-					asp[nearF2].sides[(nearK2+j)%3] *=gamm2;
+					asp[nearF2].sidelengths[(nearK2+j)%3] *=gamm2;
 				}
 			}
 		
 		// scale opp triangle sides to agree with opp f1, opp f2
 		if (oppF1>0){
-			double beta1=asp[f_right].sides[(j1+1)%3]/asp[oppF1].sides[oppK1];
+			double beta1=asp[f_right].sidelengths[(j1+1)%3]/asp[oppF1].sidelengths[oppK1];
 			for (int j=0;j<3;j++){
-				asp[oppF1].sides[(oppK1+j)%3] *=beta1;
+				asp[oppF1].sidelengths[(oppK1+j)%3] *=beta1;
 				}
 			}
 		if (oppF2>0){
-			double beta2=asp[f_left].sides[(j2+1)%3]/asp[oppF2].sides[oppK2];
+			double beta2=asp[f_left].sidelengths[(j2+1)%3]/asp[oppF2].sidelengths[oppK2];
 			for (int j=0;j<3;j++){
-				asp[oppF2].sides[(oppK2+j)%3] *=beta2;
+				asp[oppF2].sidelengths[(oppK2+j)%3] *=beta2;
 				}
 			}
 		
 		// compute radii: R1/S1 are near/opp of 'v'
-		R1=(.5)*(asp[f_right].sides[j1]+asp[f_right].sides[(j1+2)%3]-asp[f_right].sides[(j1+1)%3]);
-		S2=(.5)*(asp[f_left].sides[(j2+1)%3]+asp[f_left].sides[(j2+2)%3]-asp[f_left].sides[j2]);
+		R1=(.5)*(asp[f_right].sidelengths[j1]+asp[f_right].sidelengths[(j1+2)%3]-asp[f_right].sidelengths[(j1+1)%3]);
+		S2=(.5)*(asp[f_left].sidelengths[(j2+1)%3]+asp[f_left].sidelengths[(j2+2)%3]-asp[f_left].sidelengths[j2]);
 		
 		// Case 1: R1<S2 (need R1, R2 to inc)
 		if (R1<S2){
@@ -1666,28 +1666,28 @@ public class AffinePack extends PackExtender {
 			double E=(.5)*Math.abs(S2-R1);
 			
 			// quantities involving R1 
-			double O1=asp[f_right].sides[(j1+1)%3];
-			double N1=asp[f_right].sides[(j1+1)%3];
-			double T1=(.5)*(1.0-Math.abs(asp[f_right].sides[j1]-asp[f_right].sides[(j1+1)%3]));
+			double O1=asp[f_right].sidelengths[(j1+1)%3];
+			double N1=asp[f_right].sidelengths[(j1+1)%3];
+			double T1=(.5)*(1.0-Math.abs(asp[f_right].sidelengths[j1]-asp[f_right].sidelengths[(j1+1)%3]));
 			if (oppF1>0)
-				O1=asp[oppF1].sides[oppK1]-Math.abs(asp[oppF1].sides[(oppK1+1)%3]-asp[oppF1].sides[(oppK1+2)%3]);
+				O1=asp[oppF1].sidelengths[oppK1]-Math.abs(asp[oppF1].sidelengths[(oppK1+1)%3]-asp[oppF1].sidelengths[(oppK1+2)%3]);
 			if (nearF1>0)
-				N1=asp[nearF1].sides[(nearK1+1)%3]+asp[nearF1].sides[nearK1]-asp[nearF1].sides[(nearK1+2)%3];
+				N1=asp[nearF1].sidelengths[(nearK1+1)%3]+asp[nearF1].sidelengths[nearK1]-asp[nearF1].sidelengths[(nearK1+2)%3];
 			
 			// quantities involving R2 
-			double O2=asp[f_left].sides[(j2+1)%3];
-			double N2=asp[f_left].sides[(j2+1)%3];
-			double T2=(.5)*(1.0-Math.abs(asp[f_left].sides[j2]-asp[f_left].sides[(j2+1)%3]));
+			double O2=asp[f_left].sidelengths[(j2+1)%3];
+			double N2=asp[f_left].sidelengths[(j2+1)%3];
+			double T2=(.5)*(1.0-Math.abs(asp[f_left].sidelengths[j2]-asp[f_left].sidelengths[(j2+1)%3]));
 			if (oppF2>0)
-				O2=asp[oppF2].sides[oppK2]-Math.abs(asp[oppF2].sides[(oppK2+1)%3]-asp[oppF2].sides[(oppK2+2)%3]);
+				O2=asp[oppF2].sidelengths[oppK2]-Math.abs(asp[oppF2].sidelengths[(oppK2+1)%3]-asp[oppF2].sidelengths[(oppK2+2)%3]);
 			if (nearF2>0)
-				N2=asp[nearF2].sides[(nearK2+1)%3]+asp[nearF2].sides[nearK2]-asp[nearF2].sides[(nearK2+2)%3];
+				N2=asp[nearF2].sidelengths[(nearK2+1)%3]+asp[nearF2].sidelengths[nearK2]-asp[nearF2].sidelengths[(nearK2+2)%3];
 			
 			// set upper bound on adjustments affecting R1
-			double M1=Math.min(asp[f_right].sides[(j1+1)%3], Math.min(T1, Math.min(O1, N1)));
+			double M1=Math.min(asp[f_right].sidelengths[(j1+1)%3], Math.min(T1, Math.min(O1, N1)));
 			
 			// set upper bound on adjustments affecting R2
-			double M2=Math.min(asp[f_left].sides[(j2+1)%3], Math.min(T2, Math.min(O2, N2)));
+			double M2=Math.min(asp[f_left].sidelengths[(j2+1)%3], Math.min(T2, Math.min(O2, N2)));
 			
 			// joint upper bound
 			double M3=Math.min(M1, M2);
@@ -1697,20 +1697,20 @@ public class AffinePack extends PackExtender {
 			
 			// adjustments (as ratio of an extreme adjustment)
 			double eps=(.5)*t*M;
-			asp[f_right].sides[(j1+1)%3] -=eps;
-			asp[f_right].sides[j1] +=eps;
-			asp[f_left].sides[(j2+1)%3] -=eps;
-			asp[f_left].sides[j2] +=eps;
+			asp[f_right].sidelengths[(j1+1)%3] -=eps;
+			asp[f_right].sidelengths[j1] +=eps;
+			asp[f_left].sidelengths[(j2+1)%3] -=eps;
+			asp[f_left].sidelengths[j2] +=eps;
 			
 			if (oppF1>0) 
-				asp[oppF1].sides[oppK1]=asp[f_right].sides[(j1+1)%3];
+				asp[oppF1].sidelengths[oppK1]=asp[f_right].sidelengths[(j1+1)%3];
 			if (nearF1>0)
-				asp[nearF1].sides[(nearK1+2)%3]=asp[f_right].sides[j1];
+				asp[nearF1].sidelengths[(nearK1+2)%3]=asp[f_right].sidelengths[j1];
 			
 			if (oppF2>0) 
-				asp[oppF2].sides[oppK2]=asp[f_left].sides[(j2+1)%3];
+				asp[oppF2].sidelengths[oppK2]=asp[f_left].sidelengths[(j2+1)%3];
 			if (nearF2>0)
-				asp[nearF2].sides[(nearK2+2)%3]=asp[f_left].sides[j2];
+				asp[nearF2].sidelengths[(nearK2+2)%3]=asp[f_left].sidelengths[j2];
 		}
 		
 		// Case 2: need S1, S2 inc
@@ -1720,28 +1720,28 @@ public class AffinePack extends PackExtender {
 			double E=(.5)*Math.abs(S2-R1);
 			
 			// quantities involving S1
-			double O1=asp[f_right].sides[j1];
-			double N1=asp[f_right].sides[j1];
-			double T1=(.5)*(1.0-Math.abs(asp[f_right].sides[j1]-asp[f_right].sides[(j1+1)%3]));
+			double O1=asp[f_right].sidelengths[j1];
+			double N1=asp[f_right].sidelengths[j1];
+			double T1=(.5)*(1.0-Math.abs(asp[f_right].sidelengths[j1]-asp[f_right].sidelengths[(j1+1)%3]));
 			if (nearF1>0)
-				O1=asp[nearF1].sides[(nearK1+2)%3]-Math.abs(asp[nearF1].sides[(nearK1+1)%3]-asp[nearF1].sides[nearK1]);
+				O1=asp[nearF1].sidelengths[(nearK1+2)%3]-Math.abs(asp[nearF1].sidelengths[(nearK1+1)%3]-asp[nearF1].sidelengths[nearK1]);
 			if (oppF1>0)
-				N1=asp[oppF1].sides[(oppK1+1)%3]+asp[oppF1].sides[(oppK1+2)%3]-asp[oppF1].sides[oppK1];
+				N1=asp[oppF1].sidelengths[(oppK1+1)%3]+asp[oppF1].sidelengths[(oppK1+2)%3]-asp[oppF1].sidelengths[oppK1];
 			
 			// quantities involving S2
-			double O2=asp[f_left].sides[j2];
-			double N2=asp[f_left].sides[j2];
-			double T2=(.5)*(1.0-Math.abs(asp[f_left].sides[j2]-asp[f_left].sides[(j2+1)%3]));
+			double O2=asp[f_left].sidelengths[j2];
+			double N2=asp[f_left].sidelengths[j2];
+			double T2=(.5)*(1.0-Math.abs(asp[f_left].sidelengths[j2]-asp[f_left].sidelengths[(j2+1)%3]));
 			if (nearF2>0)
-				O2=asp[nearF2].sides[(nearK2+2)%3]-Math.abs(asp[nearF2].sides[(nearK2+1)%3]-asp[nearF2].sides[nearK2]);
+				O2=asp[nearF2].sidelengths[(nearK2+2)%3]-Math.abs(asp[nearF2].sidelengths[(nearK2+1)%3]-asp[nearF2].sidelengths[nearK2]);
 			if (oppF2>0)
-				N2=asp[oppF2].sides[(oppK2+1)%3]+asp[oppF2].sides[(oppK2+2)%3]-asp[oppF2].sides[oppK2];
+				N2=asp[oppF2].sidelengths[(oppK2+1)%3]+asp[oppF2].sidelengths[(oppK2+2)%3]-asp[oppF2].sidelengths[oppK2];
 			
 			// upper bound on adjustments affecting S1
-			double M1=Math.min(asp[f_right].sides[j1], Math.min(T1, Math.min(O1, N1)));
+			double M1=Math.min(asp[f_right].sidelengths[j1], Math.min(T1, Math.min(O1, N1)));
 			
 			// upper bound on adjustments affecting S2
-			double M2=Math.min(asp[f_left].sides[j2], Math.min(T2, Math.min(O2, N2)));
+			double M2=Math.min(asp[f_left].sidelengths[j2], Math.min(T2, Math.min(O2, N2)));
 			
 			// joint upper bound
 			double M3=Math.min(M1, M2);
@@ -1751,20 +1751,20 @@ public class AffinePack extends PackExtender {
 			
 			//adjustments 
 			double eps=(.5)*t*M;
-			asp[f_right].sides[j1] -=eps;
-			asp[f_right].sides[(j1+1)%3] +=eps;
-			asp[f_left].sides[j2] -=eps;
-			asp[f_left].sides[(j2+1)%3] +=eps;
+			asp[f_right].sidelengths[j1] -=eps;
+			asp[f_right].sidelengths[(j1+1)%3] +=eps;
+			asp[f_left].sidelengths[j2] -=eps;
+			asp[f_left].sidelengths[(j2+1)%3] +=eps;
 			
 			if (nearF1>0)
-				asp[nearF1].sides[(nearK1+2)%3]=asp[f_right].sides[j1];
+				asp[nearF1].sidelengths[(nearK1+2)%3]=asp[f_right].sidelengths[j1];
 			if (oppF1>0) 
-				asp[oppF1].sides[oppK1]=asp[f_right].sides[(j1+1)%3];
+				asp[oppF1].sidelengths[oppK1]=asp[f_right].sidelengths[(j1+1)%3];
 			
 			if (nearF2>0)
-				asp[nearF2].sides[(nearK2+2)%3]=asp[f_left].sides[j2];
+				asp[nearF2].sidelengths[(nearK2+2)%3]=asp[f_left].sidelengths[j2];
 			if (oppF2>0) 
-				asp[oppF2].sides[oppK2]=asp[f_left].sides[(j2+1)%3];
+				asp[oppF2].sidelengths[oppK2]=asp[f_left].sidelengths[(j2+1)%3];
 		}
 		
 		return 1;
@@ -1973,8 +1973,8 @@ public class AffinePack extends PackExtender {
 		for (int j=0;j<p.countFaces(v);j++) {
 			int ff=faceFlower[j];
 			int k=asp[ff].vertIndex(v);
-			rtio *= asp[ff].sides[(k+2)%3]; // left sidelength
-			rtio /= asp[ff].sides[k]; // right sidelength
+			rtio *= asp[ff].sidelengths[(k+2)%3]; // left sidelength
+			rtio /= asp[ff].sidelengths[k]; // right sidelength
 		}
 		return rtio;
 	}

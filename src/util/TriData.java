@@ -13,12 +13,12 @@ import packing.PackData;
 
 /**
  * Utility class holding fundamental geometric data needed for
- * repacking computations, localized to (triangular only) face 
- * of some parent complex. Typically, this is temporary storage
- * during repack computations and is NOT routinely maintained.
+ * repacking and other computations, localized to (triangular 
+ * only) face of some parent complex. Typically used for temporary
+ * purposes, so NOT routinely maintained.
  * 
  * The derived class 'TriAspects' has been used in additional
- * situtaions.e.g., with projective and affine structures and 
+ * situations.e.g., with projective and affine structures and 
  * with discrete Schwarzians. 'labels' are typically of use only
  * in the eucl setting and are treated as homogeneous radii --
  * that is, only their ratios are important. 
@@ -30,7 +30,7 @@ public class TriData {
 	public PackDCEL pdc;  // parent DCEL
 	
 	public int hes;      // geometry, passed on creation from parent packing
-	public int face;     // TODO: get rid of index of this face
+	public int faceIndx;     // TODO: get rid of index of this face
 	public HalfEdge baseEdge;  
 	
 	// triples of data
@@ -41,7 +41,7 @@ public class TriData {
 	// TODO: Rejigger: changing so edge data [i] is for edge whose
 	//       origin is vertex i.
 	// Caution: edge data [i] entry is for edge OPPOSITE to vertex i.
-	double[] invDist;    // inversive distance: null if none non-trivial
+	double[] invDist;    // inversive distance: null if no non-trivial
 	
 	// constructor(s)
 	public TriData() {
@@ -51,20 +51,23 @@ public class TriData {
 	public TriData(PackDCEL pdcel) { // default euclidean
 		pdc=pdcel;
 		hes=0;
-		invDist=null; // only allocate when needed
 		if (pdc!=null && pdc.p!=null)
 			hes=pdc.p.hes;
+		faceIndx=0;
+		baseEdge=null;
+		invDist=null; // only allocate when needed
 		vert=new int[3];
 		radii=new double[3];
 		for (int j=0;j<3;j++) {
 			radii[j]=.05;
 		}
+		labels=null;
 	}
 
 	public TriData(PackDCEL pdcel,combinatorics.komplex.DcelFace fce) {
 		this(pdcel);
 		baseEdge=fce.edge;
-		face=baseEdge.face.faceIndx; 
+		faceIndx=baseEdge.face.faceIndx; 
 		try {
 			hes=pdcel.p.hes;
 			int j=0;
@@ -72,7 +75,7 @@ public class TriData {
 			do {
 				vert[j]=he.origin.vertIndx;
 				radii[j]=pdc.getVertRadius(he);
-				if (hes==0) {
+				if (hes==0) { // in eucl case, default to radii
 					if (labels==null) {
 						labels=new double[3];
 					}
@@ -85,13 +88,13 @@ public class TriData {
 						invDist=new double[3];
 						invDist[0]=invDist[1]=invDist[2]=1.0;
 					}
-					setInvDist(j,ivd); // store
+					setInvDist(j,ivd); // store this one
 				}
 				j++;
 				he=he.next;
 			} while (j<3);
 		} catch(Exception ex) {
-			throw new DataException("error building 'TriData' for face f="+face);
+			throw new DataException("error building 'TriData' for face f="+faceIndx);
 		}
 	}
 	

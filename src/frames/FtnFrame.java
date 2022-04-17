@@ -92,7 +92,7 @@ public class FtnFrame extends JFrame {
 		ftnField.setText("");
 		ftnField.setBackground(Color.white);
 		ftnField.setColumns(40);
-		ftnField.addActionListener(new newFtnPanel_actionAdapter(this));
+		ftnField.addActionListener(new FtnPanel_actionAdapter(this));
 		ftnField.setComplexFunc(true);
 		ftnField.setErrorColor(Color.yellow);
 		ftnPanel.add(ftnField);
@@ -133,7 +133,7 @@ public class FtnFrame extends JFrame {
 		paramField.setText("");
 		paramField.setBackground(Color.white);
 		paramField.setColumns(40);
-		paramField.addActionListener(new newParamPanel_actionAdapter(this));
+		paramField.addActionListener(new ParamPanel_actionAdapter(this));
 		paramField.setComplexFunc(true);
 		paramField.setErrorColor(Color.yellow);
 		paramPanel.add(paramField);
@@ -223,19 +223,6 @@ public class FtnFrame extends JFrame {
 		return pathAction;
 	}
 	
-//	public void actionPerformed(ActionEvent e) {
-//		String command = e.getActionCommand();
-//		try {
-//			if (!command.equals("?????")) { 
-//			}
-//			else if (command.equals("?????")) {
-//			}
-//		} catch(Exception ex) {
-//				throw new ParserException("function evaluation failed: "+
-//						ex.getMessage());
-//		}
-//	}
-	
 	/**
      * When ENTER key is hit, this processes the expression in the 
      * paramField, changing background to yellow if it's in error.
@@ -279,10 +266,10 @@ public class FtnFrame extends JFrame {
      
 }
 	
-class newFtnPanel_actionAdapter implements java.awt.event.ActionListener {
+class FtnPanel_actionAdapter implements java.awt.event.ActionListener {
 	FtnFrame adaptee;
 
-	public newFtnPanel_actionAdapter(FtnFrame adaptee) {
+	public FtnPanel_actionAdapter(FtnFrame adaptee) {
 		this.adaptee = adaptee;
 	}
 	public void actionPerformed(ActionEvent e) {
@@ -290,9 +277,9 @@ class newFtnPanel_actionAdapter implements java.awt.event.ActionListener {
 	}
 }
 
-class newParamPanel_actionAdapter implements java.awt.event.ActionListener {
+class ParamPanel_actionAdapter implements java.awt.event.ActionListener {
 	  FtnFrame adaptee;
-	  public newParamPanel_actionAdapter(FtnFrame adaptee) {
+	  public ParamPanel_actionAdapter(FtnFrame adaptee) {
 		  this.adaptee = adaptee;
 	  }
 	  public void actionPerformed(ActionEvent e) {

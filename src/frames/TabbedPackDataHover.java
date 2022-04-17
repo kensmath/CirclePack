@@ -417,14 +417,6 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		faceMarkField.setEditable(true);
 		faceMarkField.setActionCommand("face_mark");
 		faceMarkField.addActionListener(this);
-		
-//		nextField = new IntegerField("Next");
-//		nextField.setEditable(false);
-//		nextRedField = new IntegerField("Next Red");
-//		nextRedField.setEditable(false);
-//		redCheckBox = new JCheckBox();
-//		redCheckBox.setFont(redCheckBox.getFont().deriveFont(Font.PLAIN, 10.0F));
-//		redCheckBox.setText("Red");
 
 		JPanel facePanelRowTwo = new JPanel();
 		facePanelRowTwo.setLayout(new BoxLayout(facePanelRowTwo,
@@ -435,11 +427,6 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		facePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		facePanelRowTwo.add(faceColorField);
 		facePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
-//		facePanelRowTwo.add(nextField);
-//		facePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
-//		facePanelRowTwo.add(nextRedField);
-//		facePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
-//		facePanelRowTwo.add(redCheckBox);
 		facePanelRowTwo.add(Box.createHorizontalStrut(SPACER_WIDTH));
 		facePanelRowTwo.add(faceMarkField);
 

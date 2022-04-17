@@ -10,6 +10,7 @@ import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import exceptions.DataException;
+import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.CommonMath;
 import geometry.SphericalMath;
@@ -53,11 +54,12 @@ public class Schwarzian {
 	 * and compute the schwarzian. 
 	 * 
 	 * Multi-connected cases are much more complicated for 
-	 * some edegs; we must assume here that we have updated 
+	 * some edges; we must assume here that we have updated 
 	 * the 'RedChain', 'sidePairs', and Mobius maps. Edges fall
 	 * into three categories: outer edges of the 'RedChain' faces, 
-	 * successive edges between 'RedChain' faces, and remaining 
-	 * 'interior' edges. (As an example, keep affine tori in mind.)
+	 * interior edges between successive 'RedChain' faces, and 
+	 * remaining 'interior' edges. (As an example, keep affine 
+	 * tori in mind.)
 	 * @param p PackData
 	 * @param hlink HalfLink, default to all (Note, edges, not dual edges)
 	 * @param mode int, 1=radii, 2=centers
@@ -102,9 +104,7 @@ public class Schwarzian {
 
 						// now get the schwarzian using the radii
 						try {
-							double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
-							double schn=Schwarzian.rad_to_schwarzian(rad,
-									ivd,p.hes);
+							double schn=Schwarzian.rad_to_schwarzian(rad,p.hes);
 							edge.setSchwarzian(schn);
 							count++;
 						} catch (DataException dex) {
@@ -166,9 +166,7 @@ public class Schwarzian {
 
 					// now get the schwarzian using the radii
 					try {
-						double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
-						double schn=Schwarzian.rad_to_schwarzian(
-								rad,ivd,p.hes);
+						double schn=Schwarzian.rad_to_schwarzian(rad,p.hes);
 						edge.setSchwarzian(schn);
 						count++;
 					} catch (DataException dex) {
@@ -208,9 +206,7 @@ public class Schwarzian {
 
 					// now get the schwarzian using the radii
 					try {
-						double[] ivd= {1.0,1.0,1.0,1.0,1.0,1.0};
-						double schn=Schwarzian.rad_to_schwarzian(
-								rad,ivd,p.hes);
+						double schn=Schwarzian.rad_to_schwarzian(rad,p.hes);
 						edge.setSchwarzian(schn);
 						count++;
 					} catch (DataException dex) {
@@ -239,38 +235,6 @@ public class Schwarzian {
 		return count;
 	}
 
-	public static double cents_to_schwarzian(PackData p,HalfEdge edge) {
-		if (edge.isBdry())
-			return 1.0;
-		Complex[] cents=new Complex[4];
-		HalfEdge he=edge;
-		int tick=0;
-		do {
-			cents[tick++]=p.packDCEL.getVertCenter(he);
-			he=he.next;
-		} while (tick<=3);
-		cents[4]=p.packDCEL.getVertCenter(edge.twin.next.next);
-		return cents_to_schwarzian(cents,p.hes);
-	}
-	
-	public static double rads_to_schwarzian(PackData p,HalfEdge edge) {
-		double[] rads=new double[4];
-		double[] invDist=new double[6];
-		HalfEdge he=edge;
-		HalfEdge htw=edge.twin;
-		int tick=0;
-		do {
-			rads[tick]=p.packDCEL.getVertRadius(he);
-			invDist[(tick+2)%3]=he.getInvDist();
-			invDist[(tick+2)%3+3]=htw.getInvDist();
-			he=he.next;
-			htw=htw.next;
-			tick++;
-		} while (tick<=3);
-		rads[4]=p.packDCEL.getVertRadius(edge.twin.next.next);
-		return rad_to_schwarzian(rads,invDist,p.hes);
-	}
-	
 	/**
 	 * Given centers for oriented face <v,w,u>, center for a in 
 	 * oriented face <w,v,a>, and geometry, find schwarzian for <v,w>.
@@ -302,20 +266,29 @@ public class Schwarzian {
 		return dMob.c.x;
 	}
 	
+	public static double cents_to_schwarzian(PackData p,HalfEdge edge) {
+		if (edge.isBdry())
+			return 1.0;
+		Complex[] cents=new Complex[4];
+		HalfEdge he=edge;
+		int tick=0;
+		do {
+			cents[tick++]=p.packDCEL.getVertCenter(he);
+			he=he.next;
+		} while (tick<=3);
+		cents[4]=p.packDCEL.getVertCenter(edge.twin.next.next);
+		return cents_to_schwarzian(cents,p.hes);
+	}
+	
 	/**
-	 * Given radii (r0,r1,r2) for oriented face <v,w,u>,
-	 * radius r4 for a in the oriented face <w,v,a>, and
-	 * inversive distances invDist for the five edges, 
-	 * and geometry, find edge schwarzian for <v,w>
+	 * Given radii (r0,r1,r2) for oriented face {v,w,u},
+	 * radius r4 for a in the oriented face {w,v,a}, and
+	 * the geometry, find edge schwarzian for {v,w}
 	 * @param rad double[4]
-	 * @param invDist double[6]: first 3 for <v,w,u>, second 3
-	 *                           for <w,v,a>, usual conventions
 	 * @param hes int, geometry
 	 * @return double
-	 * @throws DataException
 	 */
-	public static double rad_to_schwarzian(double[] rad,
-			double[] invDist,int hes) {
+	public static double rad_to_schwarzian(double[] rad,int hes) {
 		CircleSimple[] sC=new CircleSimple[4];
 		for (int i=0;i<4;i++) {
 			sC[i]=new CircleSimple();
@@ -326,10 +299,7 @@ public class Schwarzian {
 		Complex []Z=new Complex[4];
 		
 		// find centers for face f <v,w,u>
-		double[] ivd= new double[3];
-		ivd[0]=invDist[0];
-		ivd[1]=invDist[1];
-		ivd[2]=invDist[2];
+		double[] ivd= {1.0,1.0,1.0}; // tangency packings only
 		int ans=CommonMath.placeOneFace(sC[0],sC[1],sC[2],ivd,hes);
 		if (ans<0) {
 			throw new DataException(
@@ -340,10 +310,6 @@ public class Schwarzian {
 		Z[2]=new Complex(sC[2].center);
 		
 		// find center for a in <w,v,a>
-		ivd=new double[3];
-		ivd[0]=invDist[3];
-		ivd[1]=invDist[4];
-		ivd[2]=invDist[5];
 		sC[3]=CommonMath.comp_any_center(sC[1].center,
 				sC[0].center,sC[1].rad,sC[0].rad,
 				rad[3],ivd[0],ivd[1],ivd[2], hes);
@@ -353,18 +319,18 @@ public class Schwarzian {
 		// compute the face tangency points, then face mobius, i.e.,
 		//    the mobius maps FROM the base equilateral to the face
 		DualTri dtri=new DualTri(Z[0],Z[1],Z[2],hes); // <v,w,u>
+		if (dtri.TangPts==null)
+			throw new DataException("'rad_to_schwarzian' failed to get 'dri'");
 		Complex []tanPts=new Complex[3];
-		for (int j=0;j<3;j++) {
-			if (dtri.TangPts==null || dtri.TangPts[j]==null) {
-				System.out.println("stop here");
-			}
+		for (int j=0;j<3;j++) 
 			tanPts[j]=new Complex(dtri.TangPts[j]);
-		}
 		Mobius fbase=Mobius.mob_xyzXYZ(
 				CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
 				tanPts[0],tanPts[1],tanPts[2],0,hes);
 		
 		dtri=new DualTri(Z[1],Z[0],Z[3],hes); // <w,v,a>
+		if (dtri.TangPts==null)
+			throw new DataException("'rad_to_schwarzian' failed with second 'dri'");
 		for (int j=0;j<3;j++)
 			tanPts[j]=new Complex(dtri.TangPts[j]);
 		Mobius gbase=Mobius.mob_xyzXYZ(
@@ -378,14 +344,31 @@ public class Schwarzian {
 		return dMob.c.x;
 	}
 
+	public static double rads_to_schwarzian(PackData p,HalfEdge edge) {
+		double[] rads=new double[4];
+		HalfEdge he=edge;
+		HalfEdge htw=edge.twin;
+		int tick=0;
+		do {
+			rads[tick]=p.packDCEL.getVertRadius(he);
+			he=he.next;
+			htw=htw.next;
+			tick++;
+		} while (tick<=3);
+		rads[3]=p.packDCEL.getVertRadius(edge.twin.next.next);
+		return rad_to_schwarzian(rads,p.hes);
+	}
+	
 	/**
 	 * Compute Mobius derivative mobDeriv = mu_g^{-1}*mu_f 
 	 * via 'baseMobius's, ensuring that trace=+2, det=1.
-	 * The fixed point is 1. Schwarzian is s, mobDiv form is
-	 *    [1 + s, -s;s, 1-s]
+	 * The fixed point is 1, the outward normal is 1, the
+	 * Schwarzian is s, so the complex Schwarzian derivative
+	 * is sigma=s, and the mobDiv form is
+	 *    [1 + s, -s^2;s, 1-s]
 	 * Calling routine must insure g aligned with f before 
-	 * computing the baseMobius maps 'bm_g' and 'bm_f' (maps from 
-	 * the base equilateral to f and g). 
+	 * computing the baseMobius maps 'bm_g' and 'bm_f' (maps 
+	 * FROM the base equilateral TO f and g). 
 	 * @param bm_f Mobius
 	 * @param bm_g Mobius
 	 * @param indx_f int, index of shared edge in f
@@ -438,10 +421,9 @@ public class Schwarzian {
 	}
 
 	/**
-	 * Given a face 'f' in geometry 'hes' and schwarzian 's' across
-	 * edge j of f, find the circle across that edge. All we need about f 
-	 * is the mobius 'mob_f' from the base equilateral to f and j for the 
-	 * shared edge.
+	 * Find the circle across the 'j' edge of the target face f
+	 * if the schwarzian is 's' and 'bm_f' is the Mobius FROM the 
+	 * base equilateral TO the target face.
 	 * @param s double, schwarzian
 	 * @param j int, index of shared edge
 	 * @param bm_f Mbbius, map from base to f
@@ -450,17 +432,28 @@ public class Schwarzian {
 	 */
 	public static CircleSimple getThirdCircle(double s,
 			int j,Mobius bm_f,int hes) {
+		
+		// dMob_inv(C_b) would give the new fourth circle 
+		// across vertical edge of the base equilateral
 		Mobius dMob_inv=new Mobius(new Complex(1-s),new Complex(s),
 				new Complex(-s),new Complex(1+s));
-		Mobius pre_f=new Mobius(CPBase.omega3[j],
-				new Complex(0.0),new Complex(0.0),new Complex(1.0));
-		
-		Mobius mu_g=(Mobius)bm_f.rmult(pre_f);
-		mu_g=(Mobius)mu_g.rmult(dMob_inv);
+		// pre_f rotates it across the edge that bm_f takes to j
+		Mobius pre_f=new Mobius();
+		if (j==2)
+			pre_f=new Mobius(CPBase.omega3[2],
+					new Complex(0.0),new Complex(0.0),new Complex(1.0));
+		else if (j==1)
+			pre_f=new Mobius(CPBase.omega3[1],
+					new Complex(0.0),new Complex(0.0),new Complex(1.0));
+		// bm_f carries base equilateral plus new circle to target location
+		Mobius M=(Mobius)dMob_inv.lmult(pre_f).lmult(bm_f);
 
+		// this is the fourth circle in the base equilateral
 		CirMatrix circle3=new CirMatrix(new Complex(4.0),
 				CPBase.sqrt3by2*2.0);
-		CirMatrix outCM=CirMatrix.applyTransform(mu_g,circle3,true);
+		
+		// apply M to get the target circle
+		CirMatrix outCM=CirMatrix.applyTransform(M,circle3,true);
 		
 		boolean debug=false; // debug=true;
 		if (debug) {// debug=true;
@@ -471,7 +464,7 @@ public class Schwarzian {
 			System.out.println("tmpcm eucl  z/r: "+cS.center+" "+cS.rad);
 //			deBugging.DebugHelp.mob4matlab("dMob_inv",dMob_inv);
 //			deBugging.DebugHelp.mob4matlab("pre_f", pre_f);
-			deBugging.DebugHelp.mob4matlab("mu_g", mu_g);
+			deBugging.DebugHelp.mob4matlab("M", M);
 			cS=CommonMath.cirMatrix_to_geom(outCM,0);
 			System.out.println("outCM eucl z/r: "+cS.center+" "+cS.rad);
 		}
@@ -480,13 +473,13 @@ public class Schwarzian {
 	}
 	
 	/**
-	 * Compute Mobius trans mapping "base equilateral" 
-	 * to the face associated with 'edge'. 
+	 * Compute Mobius mapping FROM "base equilateral" TO the 
+	 * face associated with 'edge'. 
 	 * @param p CirclePack
 	 * @param edge HalfEdge
 	 * @return Mobius
 	 */
-	public static Mobius faceBaseMob(PackData p,HalfEdge edge) {
+	public static Mobius base2faceMob(PackData p,HalfEdge edge) {
 		if (edge.face!=null && edge.face.faceIndx<0)
 			return new Mobius();
 		Complex[] Z=new Complex[3];
@@ -533,6 +526,68 @@ public class Schwarzian {
 		return tmpMob;
 	}
 	
+	/**
+	 * Compute 'TriAspect' data for face g across 'edge' from 
+	 * data for face 'ftri'. Copy cent/rad of the shared circles
+	 * to g, then compute/store the third circle of g using 's', 
+	 * the 'schwarzian' for 'edge'. Assume 'tanPts' of 'ftri' 
+	 * are already set and update the 'tanPts' of the new face.
+	 * mode=1 use 'radii', mode=2 use 'labels' for the circles.
+	 * Calling routine gets center/radius from 'asp'.
+	 * @param asp TriAspect[]
+	 * @param ftri int
+	 * @param edge HalfEdge
+	 * @param s double, schwarzian
+	 * @param mode int, 
+	 * @param hes int, geometry
+	 * @return index of computed circle in '', -1 on error
+	 */
+	public static int propogate(TriAspect[] asp,int ftri,HalfEdge edge,
+			double s,int mode,int hes) {
+		int j=asp[ftri].edgeIndex(edge);
+		if (j<0)
+			throw new ParserException(
+					"TriAspect does not contain given HalfEdge "+edge);
+		int gtri=edge.twin.face.faceIndx;
+		int J=asp[gtri].edgeIndex(edge.twin.next);
+		// so j, j+1 in ftri correspond to J, J-1 in gtri
+		try {
+			
+			if (mode==2) { // copy over shared labels/cents:
+				asp[gtri].setLabel(asp[ftri].getLabel(j),J);
+				asp[gtri].setLabel(asp[ftri].getLabel((j+1)%3),(J+2)%3);
+				asp[gtri].setCenter(asp[ftri].getCenter(j),J);
+				asp[gtri].setCenter(asp[ftri].getCenter((j+1)%3),(J+2)%3);
+			}
+			else { // default
+				asp[gtri].setRadius(asp[ftri].getRadius(j),J);
+				asp[gtri].setRadius(asp[ftri].getRadius((j+1)%3),(J+2)%3);
+				asp[gtri].setCenter(asp[ftri].getCenter(j),J);
+				asp[gtri].setCenter(asp[ftri].getCenter((j+1)%3),(J+2)%3);
+			}
+			
+			// compute map FROM "base equilateral"
+			Mobius bm_f=Mobius.mob_xyzXYZ(
+					CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
+					asp[ftri].tanPts[0],asp[ftri].tanPts[1],
+					asp[ftri].tanPts[2],
+					0,asp[ftri].hes);
+			
+			// compute the target circle
+			CircleSimple sC=Schwarzian.getThirdCircle(s,j,bm_f,asp[ftri].hes);
+			asp[gtri].setRadius(sC.rad, (J+1)%3);
+			asp[gtri].setCenter(sC.center, (J+1)%3);
+			
+			// reset 'tanPts' (which only depend on centers) 
+			asp[gtri].setTanPts();
+			
+		} catch (Exception ex) {
+			throw new DataException("propogate via schwarzian problem.");
+		}
+		
+		return J;
+	}
+		
 	/**
 	 * Develop various schemes to help understand schwarzians: e.g., 
 	 * draw circles with color blue-to-red based on sum of 
@@ -670,45 +725,6 @@ public class Schwarzian {
 		Mobius.mobius_of_circle(mob, hes, z, r, sC, false);
 		System.out.println("  domain z and r: "+z.toString()+" "+r+
 				"   range z and r: "+sC.center.toString()+" "+sC.rad);
-	}
-
-	/**
-	 * TODO: is this a duplicate of some other routine?
-	 * 
-	 * Create TriAspects for packing p; generally this is only done
-	 * if TriAspects are not available in an active 'AffinePack' or 
-	 * 'ProjStruct' packextender. The resulting dual triangles have 
-	 * tanPts[j] = tangency point of edge (j,(j+1)%3). 
-	 * 
-	 * TODO: If p is not simply connected, centers for some faces will 
-	 * be in the wrong place. Should process like in p.layoutTree.
-	 * @param p PackData
-	 * @return TriAspect[]
-	 */
-	public static TriAspect []DualTriData(PackData p) {
-		TriAspect []triasp=new TriAspect[p.faceCount+1];
-		for (int f=1;f<=p.faceCount;f++) {
-			combinatorics.komplex.DcelFace face=p.packDCEL.faces[f];
-			triasp[f]=new TriAspect(p.hes);
-			
-			HalfEdge he=face.edge;
-			
-			triasp[f].vert=face.getVerts();
-			DualTri dtri=new DualTri(
-				p.packDCEL.getVertCenter(he),
-			    p.packDCEL.getVertCenter(he.next),
-			    p.packDCEL.getVertCenter(he.next.next),p.hes);
-			
-			triasp[f].tanPts=new Complex[3];
-			int j=0;
-			do {
-				triasp[f].setCenter(p.packDCEL.getVertCenter(he),j);
-				triasp[f].tanPts[j]=dtri.getTP(j);
-				j++;
-				he=he.next;
-			} while (he!=face.edge);
-		}
-		return triasp;
 	}
 
 }

@@ -480,7 +480,7 @@ public class ProjStruct extends PackExtender {
 		else if (cmd.startsWith("equiSid")) {
 			for (int f=1;f<=packData.faceCount;f++) {
 				for (int j=0;j<3;j++)
-					aspects[f].sides[j]=1.0;
+					aspects[f].sidelengths[j]=1.0;
 			}
 			return 1;
 		}
@@ -763,8 +763,8 @@ public class ProjStruct extends PackExtender {
 		for (int j=0;j<faceFlower.length;j++) {
 			int ff=faceFlower[j];
 			int k=aspects[ff].vertIndex(v);
-			rtio *= aspects[ff].sides[(k+2)%3]; // left sidelength
-			rtio /= aspects[ff].sides[k]; // right sidelength
+			rtio *= aspects[ff].sidelengths[(k+2)%3]; // left sidelength
+			rtio /= aspects[ff].sidelengths[k]; // right sidelength
 		}
 		return rtio;
 	}	
@@ -1018,8 +1018,8 @@ public class ProjStruct extends PackExtender {
 		for (int j=0;j<p.countFaces(v);j++) {
 			int f=faceFlower[j];
 			int k=asp[f].vertIndex(v);
-			asp[f].sides[k] *=factor;
-			asp[f].sides[(k+2)%3] *=factor;
+			asp[f].sidelengths[k] *=factor;
+			asp[f].sidelengths[(k+2)%3] *=factor;
 		}
 		return 1;
 	}
@@ -1366,9 +1366,9 @@ public class ProjStruct extends PackExtender {
 		for (int j=0;j<faceFlower.length;j++) {
 			int f=faceFlower[j];
 			int k=asps[f].vertIndex(v);
-			double s0=factor*asps[f].sides[k];
-			double s1=asps[f].sides[(k+1)%3];
-			double s2=factor*asps[f].sides[(k+2)%3];
+			double s0=factor*asps[f].sidelengths[k];
+			double s1=asps[f].sidelengths[(k+1)%3];
+			double s2=factor*asps[f].sidelengths[(k+2)%3];
 			angsum += Math.acos((s0*s0+s2*s2-s1*s1)/(2.0*s0*s2));
 		}
 		return angsum;
@@ -1432,7 +1432,7 @@ public class ProjStruct extends PackExtender {
 			asp[f]=new TriAspect(p.hes);
 			TriAspect tas=asp[f];
 			tas.baseEdge=p.packDCEL.faces[f].edge;
-			tas.face=tas.baseEdge.face.faceIndx;
+			tas.faceIndx=tas.baseEdge.face.faceIndx;
 			tas.vert=p.packDCEL.faces[f].getVerts();
 			HalfEdge he=tas.baseEdge;
 			int tick=0;
@@ -1543,9 +1543,9 @@ public class ProjStruct extends PackExtender {
 		for (int j=0;j<faceFlower.length;j++) {
 			int f=faceFlower[j];
 			int k=asps[f].vertIndex(v);
-			double rSide=asps[f].sides[k];
-			double lSide=asps[f].sides[(k+2)%3];
-			double oppSide=asps[f].sides[(k+1)%3];
+			double rSide=asps[f].sidelengths[k];
+			double lSide=asps[f].sidelengths[(k+2)%3];
+			double oppSide=asps[f].sidelengths[(k+1)%3];
 			if ((rSide+lSide)<oppSide || oppSide<Math.abs(rSide-lSide))
 				throw new DataException(
 						"Triangle inequality fails for face "+f);
@@ -1799,9 +1799,9 @@ public class ProjStruct extends PackExtender {
 		if (mode==5) { // side lengths
 			// scale all g's side lengths so that at J is f's at j
 			//  (we assume other end side length will also agree)
-			double scale=asps[f].sides[j]/asps[g].sides[J];
+			double scale=asps[f].sidelengths[j]/asps[g].sidelengths[J];
 			for (int k=0;k<3;k++)
-				asps[g].sides[k] *=scale;
+				asps[g].sidelengths[k] *=scale;
 			asps[g].sides2Labels();
 			
 			// now compute remaining center 
@@ -1928,18 +1928,18 @@ public class ProjStruct extends PackExtender {
 		TriAspect first_asp=aspList.get(0);
 		Iterator<TriAspect> aspit=aspList.iterator();
 		TriAspect asp=first_asp;
-		int past_face=asp.face;
-		int next_face=asp.face;
+		int past_face=asp.faceIndx;
+		int next_face=asp.faceIndx;
 		boolean firstasp=true; // for first face, may draw all circles
 		if (!drawfirst) { // skip the first one
 			asp=aspit.next();
-			next_face=asp.face;
+			next_face=asp.faceIndx;
 			firstasp=false;
 		}
 		while (aspit.hasNext()) {
 			asp=aspit.next();
 			past_face=next_face;
-			next_face=asp.face;
+			next_face=asp.faceIndx;
 			int j=p.face_nghb(past_face,next_face);
 			if (j<0) 
 				j=0;
@@ -1952,9 +1952,9 @@ public class ProjStruct extends PackExtender {
 			if (faceDo) { // draw the faces
 				if (!faceFlags.colorIsSet && 
 						(faceFlags.fill || faceFlags.colBorder))
-					faceFlags.setColor(p.getFaceColor(asp.face));
+					faceFlags.setColor(p.getFaceColor(asp.faceIndx));
 				if (faceFlags.label)
-					faceFlags.setLabel(Integer.toString(asp.face));
+					faceFlags.setLabel(Integer.toString(asp.faceIndx));
 				p.cpScreen.drawFace(c0, c1, c2,null,null,null,faceFlags);
 				count++;
 			}

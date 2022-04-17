@@ -20,15 +20,15 @@ import math.Mobius;
  * 
  * TODO: some routines assume eucl data; trying to update as needed
  * 
- * Vector 'labels' typically represents radii localized to this face, 
+ * Vector 'labels' typically represent radii localized to this face, 
  * often (but not automatically) in eucl case, are represented as
  * homogeneous coords r0:r1:r2. In some cases these are, in fact, 
  * radii and will be used (e.g. to set the 'rad' entry in redChain 
  * faces), but often are local only (hence, the same vertex v might 
  * have different labels in different faces).
  * 
- * Likewise, 'sides' typically represents edge lengths, often in
- * eucl case, in homogeneous coordinates; note that given the
+ * Likewise, 'sidelengths' typically represents edge lengths, often in
+ * eucl case in homogeneous coordinates; note that given the
  * array 'vert' of vertex indices, 
  *    sides[j]=length of edge <vert[j],vert[(j+1)%3]>
  *  
@@ -59,7 +59,7 @@ public class TriAspect extends TriData {
 	public Complex[] center;    // centers of circles
 	public double[] schwarzian; // signed scalar coeffs for schwarzian 
 	public Complex[] tanPts;  // tangency points, if saved
-	public double[] sides; // edge lengths, [j] = <v[j],v[j+1]>
+	public double[] sidelengths; // edge lengths, [j] = <v[j],v[j+1]>
 	
 	// Base data is determined by centers and radii and relate the actual 
 	//   face to the "base" equilateral. 
@@ -79,7 +79,7 @@ public class TriAspect extends TriData {
 		hes=geom;
 		tanPts=null;
 		labels=new double[3];
-		sides=new double[3];
+		sidelengths=new double[3];
 		baseMobius=new Mobius();
 		baseSchwarz=new double[3];
 		need_update=true;
@@ -90,27 +90,26 @@ public class TriAspect extends TriData {
 	public TriAspect(PackDCEL pdcel,combinatorics.komplex.DcelFace face) {
 		super(pdcel,face);
 		center=new Complex[3];
-		HalfEdge he=face.edge;
-		center[0]=pdcel.getVertCenter(he);
-		center[1]=pdcel.getVertCenter(he.next);
-		center[2]=pdcel.getVertCenter(he.next.next);
+		center[0]=pdcel.getVertCenter(baseEdge);
+		center[1]=pdcel.getVertCenter(baseEdge.next);
+		center[2]=pdcel.getVertCenter(baseEdge.next.next);
 		invDist=new double[3];
-		invDist[0]=he.getInvDist();
-		invDist[1]=he.next.getInvDist();
-		invDist[2]=he.next.next.getInvDist();
+		invDist[0]=baseEdge.getInvDist();
+		invDist[1]=baseEdge.next.getInvDist();
+		invDist[2]=baseEdge.next.next.getInvDist();
 	}
 	
 	// clone
 	public TriAspect(TriAspect asp) {
 		this(asp.hes);
 		baseEdge=asp.baseEdge; // note: same object
-		face=baseEdge.face.faceIndx;
+		faceIndx=baseEdge.face.faceIndx;
 		for (int j=0;j<3;j++) {
 			vert[j]=asp.vert[j];
 			center[j]=asp.getCenter(j);
 			radii[j]=asp.getRadius(j);
 			labels[j]=asp.labels[j];
-			sides[j]=asp.sides[j];
+			sidelengths[j]=asp.sidelengths[j];
 			setInvDist(j,asp.getInvDist(j));
 			schwarzian[j]=asp.schwarzian[j];
 		}
@@ -339,7 +338,7 @@ public class TriAspect extends TriData {
 					hes,acrossTri.hes);
 		if (mode==3) { // use sidelengths
 			if (hes==0 && acrossTri.hes==0) {
-				double factor=acrossTri.sides[windx]/sides[indx];
+				double factor=acrossTri.sidelengths[windx]/sidelengths[indx];
 				Mobius mob=new Mobius();
 				mob.a=new Complex(factor);
 				mobiusMe(mob);
@@ -467,7 +466,7 @@ public class TriAspect extends TriData {
 			return;
 		}
 		for (int j=0;j<3;j++) 
-			sides[j]=tmp[j];
+			sidelengths[j]=tmp[j];
 	}
 	
 	/**
@@ -479,7 +478,7 @@ public class TriAspect extends TriData {
 	 */
 	public void sides2Labels() {
 		for (int j=0;j<3;j++) 
-			labels[j]=(0.5)*(sides[j]+sides[(j+2)%3]-sides[(j+1)%3]);
+			labels[j]=(0.5)*(sidelengths[j]+sidelengths[(j+2)%3]-sidelengths[(j+1)%3]);
 	}
 	
 	/**
@@ -488,7 +487,7 @@ public class TriAspect extends TriData {
 	 */
 	public void labels2Sides() {
 		for (int j=0;j<3;j++)
-			sides[j]=EuclMath.e_ivd_length(labels[j],labels[(j+1)%3],
+			sidelengths[j]=EuclMath.e_ivd_length(labels[j],labels[(j+1)%3],
 					getInvDist(j));
 	}
 	

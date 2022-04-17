@@ -40,6 +40,7 @@ import dcel.CombDCEL;
 import dcel.PackDCEL;
 import dcel.RawManip;
 import dcel.Schwarzian;
+import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.DataException;
@@ -128,6 +129,7 @@ import util.PathUtil;
 import util.ResultPacket;
 import util.SphView;
 import util.StringUtil;
+import util.TriAspect;
 import util.UtilPacket;
 import util.ViewBox;
 import widgets.CreateSliderFrame;
@@ -292,7 +294,8 @@ public class CommandStrParser {
 
 		  boolean debug=false;
 		  int sz=items.size();
-		  if (sz==0) return 0;
+		  if (sz==0) 
+			  return 0;
 
 		  // first, get the edges
     	  // file name should be last in last flag segment
@@ -340,7 +343,7 @@ public class CommandStrParser {
 		  
 		  // TODO: should allow file to be a list of pairs forming the edges
 
-		  // first, get the number of vertices
+		  // get the number of vertices
 		  String line=StringUtil.ourNextLine(fp);
 		  StringTokenizer tok = new StringTokenizer(line);
 		  int tc=tok.countTokens();
@@ -443,23 +446,33 @@ public class CommandStrParser {
 				  }
 			  }
 		  }
-		  
+
+		  // create pDCEL and a new 'PackData' from it
 		  PackDCEL pDCEL = CombDCEL.getRawDCEL(bouquet);
-		  int origVCount=pDCEL.vertCount;
-		  FaceLink allfaces=new FaceLink();
-		  ArrayList<combinatorics.komplex.DcelFace> farray=new ArrayList<combinatorics.komplex.DcelFace>(); 
-		  for (int f=1;f<=pDCEL.intFaceCount;f++) 
-			  farray.add(pDCEL.faces[f]);
-		  if (pDCEL==null || RawManip.addBaryCents_raw(pDCEL,farray)==0) {
-			  CirclePack.cpb.myErrorMsg("Failed to get initial DCEL, "+
-					  "or failed to add barycenters to faces");
-			  return 0;
-		  }
-
-		  // create a new 'PackData' from pDCEL
-
 		  PackData newPack=new PackData(null);
 		  pDCEL.fixDCEL(newPack);
+		  newPack.set_aim_default();
+		  int origVCount=pDCEL.vertCount;
+
+// debugging: 
+		  // read_CT was specialized for working with Varda Hagh
+		  // and should be moved to a flagged option in normal reading
+		  
+		  // add a barycenter to every face (with triangular or not)
+		  if (!debug) { // to avoid barycenter, debug=true;
+			  ArrayList<combinatorics.komplex.DcelFace> farray=
+					  new ArrayList<combinatorics.komplex.DcelFace>(); 
+			  for (int f=1;f<=pDCEL.intFaceCount;f++) 
+				  farray.add(pDCEL.faces[f]); 
+			  int ans=RawManip.addBaryCents_raw(pDCEL,farray);
+			  if (pDCEL==null || ans==0) {
+				  CirclePack.cpb.myErrorMsg("Failed to get initial DCEL, "+
+						  "or failed to add barycenters to faces");
+				  return 0;
+			  }
+			  newPack.packDCEL.fixDCEL(newPack);
+		  }
+		  
 		  if (newPack!=null && newPack.status==true && newPack.nodeCount>3) {
 			  CirclePack.cpb.msg("Have replaced packing with new "+
 					  "one derived from '"+filename+"'.");
@@ -467,6 +480,8 @@ public class CommandStrParser {
 			  CirclePack.cpb.swapPackData(newPack,pnum,false);
 			  packData=newPack;
 			  count=packData.nodeCount;
+			  if (debug)
+				  return count;
 			  
 			  try {
 				  for (int i=1;i<=origVCount;i++)
@@ -483,7 +498,7 @@ public class CommandStrParser {
     		  }
     		  td.packData=packData;
     		  packData.tileData=td;
-    		  CommandStrParser.jexecute(packData,"layout -F");
+//    		  CommandStrParser.jexecute(packData,"layout -F");
     		  packData.set_aim_default();
     		  
     		  // if -q{n} flag was set, also create simple circle packing in pn.
@@ -500,7 +515,7 @@ public class CommandStrParser {
     				  CirclePack.cpb.errMsg("The companion 'simple' packing in p"+simplepack+" has failed; "+
     						  "the tiling dual must be trivalent for this to work.");
     			  }
-    		  }
+    		  } 
 			  return count;
 		  }
 
@@ -4396,11 +4411,58 @@ public class CommandStrParser {
 		  return 1;
 	  }
 	  
+	  // Propogate across and edge based on intrinsic Schwarzian
+	  else if (cmd.startsWith("T_s_prop")) {
+		  items=flagSegs.get(0);
+		  double s=0;
+		  HalfEdge he=null;
+		  try {
+			  s=Double.parseDouble(items.remove(0));
+			  he=HalfLink.grab_one_edge(packData,flagSegs);
+		  } catch(Exception ex) {
+			  CirclePack.cpb.errMsg("usage: T_s_prop <s> <halfedge>");
+			  return 0;
+		  }
+		  if (he==null || he.face.faceIndx<0) {
+			  CirclePack.cpb.errMsg("T_s_prop needs an interior edge");
+			  return 0;
+		  }
+		  
+		  // get the 'TriAspect's
+		  TriAspect[] aspects=PackData.getTriAspects(packData);
+		  Schwarzian.propogate(aspects, he.face.faceIndx, he, s, 1,0);
+		  int gface=he.twin.face.faceIndx;
+		  int oppV=he.twin.prev.origin.vertIndx;
+		  int j=aspects[gface].vertIndex(oppV);
+		  Complex oppCenter=aspects[gface].getCenter(j);
+		  packData.setCenter(oppV, oppCenter);
+		  packData.setRadius(oppV,aspects[gface].getRadius(j));
+		  return 1;
+	  }
+	  
 	  // ========= layout =============
 	  else if (cmd.startsWith("T_layout")) {
 		  
 	  }
 
+	  //
+	  else if (cmd.startsWith("T_bary")) {
+		  int origNodeCount=packData.nodeCount;
+		  ArrayList<combinatorics.komplex.DcelFace> farray=
+				  new ArrayList<combinatorics.komplex.DcelFace>(); 
+		  for (int f=1;f<=packData.packDCEL.intFaceCount;f++) 
+			  farray.add(packData.packDCEL.faces[f]);
+		  int ans=RawManip.addBaryCents_raw(packData.packDCEL,farray);
+		  if (ans==0) {
+			  CirclePack.cpb.myErrorMsg("Failed to add barycenters to faces");
+			  return 0;
+		  }  
+		  packData.packDCEL.fixDCEL(packData);
+		  for (int j=origNodeCount+1;j<=packData.nodeCount;j++)
+			  packData.setAim(j,2.0*Math.PI);
+		  return ans;
+	  }
+	  
 	  break;
   } // end of 'T'
   case 't':
@@ -6890,7 +6952,6 @@ public class CommandStrParser {
 	    	  Iterator<Vector<String>> its=flagSegs.iterator();
 	    	  String str=null;
 	    	  boolean tflag=false;
-	    	  Face []newfaces=null;
 	    	  while (its.hasNext()) {
 	    		  items=(Vector<String>)its.next();
 	    		  str=(String)items.remove(0);
@@ -6904,6 +6965,7 @@ public class CommandStrParser {
 	    		  case 'c': // compute center:
 	    		  {
     				  pdc.layoutPacking();
+    				  count++;
 	    			  break;
 	    		  }
 	    		  case 'd': // 'd [v]' layout by drawing order, normalize, report

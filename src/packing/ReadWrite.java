@@ -48,15 +48,16 @@ public class ReadWrite {
 	public static int[] readOldNew;
 
 	/**
-	 * Read new circle packing (or data for existing packing) into this packing from
-	 * an open file. Return 0 on error. Key "NODECOUNT:" and "TRIANTULATION:"
-	 * indicates new packings, in which case basic combinatorics are read;
-	 * "CHECKCOUNT:" indicates data for current packing; "TILECOUNT:" indicates
-	 * tiling information (tiles and their surrounding vertex indices).
-	 * "TRIANGULATION:" indicates triples forming faces. New packing in 'Lite' form
-	 * starts with magic number 1234321.
+	 * Read new circle packing (or data for existing packing) into pack
+	 * 'p' from an open file. Return 0 on error. Key "NODECOUNT:" or 
+	 * "TRIANTULATION:" indicates new packing, in which case basic 
+	 * combinatorics are read; "CHECKCOUNT:" indicates data for 'p'; 
+	 * "TILECOUNT:" indicates tiling information (tiles and their 
+	 * surrounding vertex indices);* "TRIANGULATION:" indicates 
+	 * triples forming faces. (OBE: New packing in 'Lite' form
+	 * starts with magic number 1234321.)
 	 * 
-	 * @return bit-coding for what was read as follows:
+	 * @return bit-coded integer for what was read as follows:
 	 * 
 	 *         1: 00001 basic combinatorics (new pack) 2: 00002 geometry 3: 00004
 	 *         non-default inv_dist & aimsinv_dist
@@ -92,16 +93,16 @@ public class ReadWrite {
 	 *         checkcount <= nodeCount, then FLOWER info could be inconsistent with
 	 *         the packing.
 	 * 
-	 *         NEUTRAL is for data that doesn't depend on nodecount match.
+	 *         NEUTRAL is for data that doesn't depend on nodeCount match.
 	 * 
-	 *         4/2021: distinguishing dcel ("BOUQUET:" vs. "FLOWERS:"): Processing
-	 *         dcel structure changes vertex indices, so we use 'readOldNew[]' and
-	 *         call 'rON' to read data based on old indices into appropriate new
-	 *         indices.
-	 * @param fp BufferedReader (open)
-	 * @param p PackData
+	 *         4/2021: Processing dcel structure changes vertex indices, so 
+	 *         we use 'readOldNew[]' and call 'rON' to read data based on 
+	 *         old indices into appropriate new indices.
+	 *         
+	 * @param fp BufferedReader, (opened by calling routine)
+	 * @param p PackData, (instantiated by calling routine)
 	 * @param filename String
-	 * @return int 'flags' encodes what was read, -1 or 0 on error
+	 * @return int 'flags' bit-encodes what was read, -1 or 0 on error
 	 */
 	public static int readpack(BufferedReader fp,
 			PackData p,String filename) {
