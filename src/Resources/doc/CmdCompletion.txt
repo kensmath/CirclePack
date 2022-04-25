@@ -267,6 +267,10 @@ zip n v
 ?schwarz {v w} 
 ?mark -[vft] {.} 
 ?rad {v} 
+?vert {v} 
+?face {f} 
+?edge {v w} 
+?tile {t} 
 #XY 
 [{script cmd}] 
 {..cmd..} 

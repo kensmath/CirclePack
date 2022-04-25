@@ -141,7 +141,7 @@ public class SingBrModPt extends GenBrModPt {
 		}
 		
 		// get encircling link for local holonomy   
-		myHoloBorder=RawManip.leftsideLink(pdc,eventHorizon);
+		myHoloBorder=HalfLink.leftsideLink(pdc,eventHorizon);
 		myHoloBorder.add(0,eventHorizon.get(0));
 		
 		// add 'myHoloBorder' to 'layoutAddons'

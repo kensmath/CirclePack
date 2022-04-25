@@ -295,7 +295,7 @@ public class Tile extends Face {
 	}
 	
 	/**
-	 * Get closed linked list of border vertices: if not augmented, 
+	 * Get closed list of border vertices: if not augmented, 
 	 * just list of corner vertices.
 	 * 
 	 * @return NodeLink, null on error

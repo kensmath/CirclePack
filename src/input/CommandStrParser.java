@@ -28,7 +28,6 @@ import canvasses.DisplayParser;
 import canvasses.MainFrame;
 import canvasses.MyCanvasMode;
 import circlePack.PackControl;
-import combinatorics.komplex.Face;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.RedEdge;
 import combinatorics.komplex.Vertex;
@@ -40,7 +39,6 @@ import dcel.CombDCEL;
 import dcel.PackDCEL;
 import dcel.RawManip;
 import dcel.Schwarzian;
-import deBugging.DCELdebug;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.DataException;
@@ -134,6 +132,7 @@ import util.UtilPacket;
 import util.ViewBox;
 import widgets.CreateSliderFrame;
 import widgets.SliderFrame;
+import workshops.LayoutShop;
 
 /**
  * This class handles parsing of individual commands for CirclePack.
@@ -7077,7 +7076,8 @@ public class CommandStrParser {
 	    						  "faces were provided.");
 	    				  break;
 	    			  }
-    				  count +=pdc.layoutFaceList(facelist);
+    				  count +=LayoutShop.
+    						  layoutFaceList(pdc,facelist,packData.hes);
 	    			  break;
 	    		  }
 	    		  case 's': // recompute angle sums

@@ -982,8 +982,9 @@ public class PackData{
 	/**
 	 * Return non-closed list of corners for dual face for v,
 	 * mainly centers of faces. For bdry v, add the partial 
-	 * edges ending at the tang pts of the two bdry edges. For v red, assume initial face is
-	 * in place, but the proceed face-by-face.
+	 * edges ending at the tang pts of the two bdry edges. For v 
+	 * red, assume initial face is in place, but the proceed 
+	 * face-by-face.
 	 * @param v int
 	 * @return Complex[]
 	 */

@@ -2,6 +2,7 @@ package canvasses;
 
 import java.awt.Color;
 import java.awt.geom.Path2D;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
@@ -35,6 +36,7 @@ import tiling.Tile;
 import util.DispFlags;
 import util.PathBaryUtil;
 import util.StringUtil;
+import workshops.LayoutShop;
 
 /**
  * This static code parses the vector of display flag segments 
@@ -809,20 +811,29 @@ public class DisplayParser {
 				if (vertlist.getFirst()!=vertlist.getLast())
 					vertlist.add(vertlist.getFirst());
 				
+// debugging: try new layout version:
+				HalfLink hlink=HalfLink.verts2edges(p.packDCEL,vertlist,false);
+				ArrayList<Complex> Zlist=
+						LayoutShop.layoutPolygon(p.packDCEL, hlink,p.hes);
+				int lnum=Zlist.size();
+				
 				// now find comb geodesic, create corner list
-				EdgeLink elist=
-					EdgeLink.verts2edges(p.packDCEL,vertlist,false);
-				int lnum=elist.size();
+//				EdgeLink elist=
+//					EdgeLink.verts2edges(p.packDCEL,vertlist,false);
+//				int lnum=elist.size();
 				double[] corners = new double[2 * (lnum+1)];
 				int tick=0;
-				z=p.getCenter(((EdgeSimple)elist.get(0)).v);
 				corners[tick*2]=z.x;
 				corners[tick*2+1]=z.y;
-				Iterator<EdgeSimple> el=elist.iterator();
-				EdgeSimple edge=null;
-				while (el.hasNext()) {
-					edge=el.next();
-					z=p.getCenter(edge.w);
+//				Iterator<EdgeSimple> el=elist.iterator();
+//				EdgeSimple edge=el.next();
+//				z=p.getCenter(edge.v);
+//				while (el.hasNext()) {
+//					edge=el.next();
+//					z=p.getCenter(edge.w);
+				Iterator<Complex> zl=Zlist.iterator();
+				while (zl.hasNext()) {
+					z=zl.next();
 					corners[tick*2]=z.x;
 					corners[tick*2+1]=z.y;
 					tick++;
@@ -914,19 +925,29 @@ public class DisplayParser {
 							
 							// get list of tile border and make axis-extended edgelist
 							NodeLink cornlist=tile.tileBorderLink();
-							EdgeLink tedgelist=
-								EdgeLink.verts2edges(p.packDCEL,cornlist,true);
-							Iterator<EdgeSimple> tel=tedgelist.iterator();
-							EdgeSimple edge=null;
-							int lnum=tedgelist.size();
-							double[] corners = new double[2 * (lnum+1)];
-							z=p.getCenter(((EdgeSimple)tedgelist.get(0)).v);
-							corners[0]=z.x;
-							corners[1]=z.y;
-							int tick=1;
-							while (tel.hasNext()) {
-								edge=tel.next();
-								z=p.getCenter(edge.w);
+							
+// debugging
+							HalfLink halfedges=
+									HalfLink.verts2edges(p.packDCEL,cornlist,true);
+//							EdgeLink tedgelist=
+//								EdgeLink.verts2edges(p.packDCEL,cornlist,true);
+//							Iterator<EdgeSimple> tel=tedgelist.iterator();
+//							EdgeSimple edge=null;
+//							int lnum=tedgelist.size();
+							ArrayList<Complex> Zlist=
+									LayoutShop.layoutPolygon(p.packDCEL,halfedges,p.hes);
+							int lnum=Zlist.size();
+							double[] corners = new double[2 * Zlist.size()];
+//							z=p.getCenter(((EdgeSimple)tedgelist.get(0)).v);
+//							corners[0]=z.x;
+//							corners[1]=z.y;
+//							int tick=1;
+							Iterator<Complex> zel=Zlist.iterator();
+							int tick=0;
+							while (zel.hasNext()) {
+//								edge=tel.next();
+//								z=p.getCenter(edge.w);
+								z=zel.next();
 								corners[tick*2]=z.x;
 								corners[tick*2+1]=z.y;
 								tick++;
@@ -940,7 +961,13 @@ public class DisplayParser {
 								PackControl.canvasRedrawer.paintMyCanvasses(p,false);
 
 							if (dispFlags.label) { // put at approximate center
-								Complex wc=null;
+								Complex wc=new Complex(0.0);
+								zel=Zlist.iterator();
+								while (zel.hasNext()) 
+									wc.add(zel.next());
+								wc.divide(lnum);
+
+/*								
 								// if there is a 'baryVert', use its center
 								int bv=tile.baryVert;
 								if (bv>0 && bv<=p.nodeCount) {
@@ -979,18 +1006,17 @@ public class DisplayParser {
 										wc=wc.divide((double)tile.vertCount);
 									}
 								}
-								
+*/								
 //								Complex wc=new Complex(0.0);
 //								for (int vj=0;vj<tile.vertCount;vj++)
 //									wc = wc.add(p.rData[tile.vert[vj]].center);
 //								wc=wc.divide((double)tile.vertCount);
-
 								cpScreen.drawIndex(wc,tile.tileIndex, 1);
 								count++;
 							} // end of label display
 							
-							count++;
-						} 
+//							count++;
+						}
 					} // end of while
 				} // done with tiles
 				break;

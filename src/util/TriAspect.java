@@ -1,6 +1,7 @@
 package util;
 
 import allMains.CPBase;
+import combinatorics.komplex.DcelFace;
 import combinatorics.komplex.HalfEdge;
 import complex.Complex;
 import dcel.PackDCEL;
@@ -87,7 +88,7 @@ public class TriAspect extends TriData {
 		schwarzian=new double[3];
 	}
 	
-	public TriAspect(PackDCEL pdcel,combinatorics.komplex.DcelFace face) {
+	public TriAspect(PackDCEL pdcel,DcelFace face) {
 		super(pdcel,face);
 		center=new Complex[3];
 		center[0]=pdcel.getVertCenter(baseEdge);
@@ -229,7 +230,7 @@ public class TriAspect extends TriData {
 	
 	/**
 	 * Return index of initial vertex of first shared edge 
-	 * of 'this' with 'ntri', it it exists.
+	 * of 'this' with 'ntri', if it exists.
 	 * @param ntri TriAspect
 	 * @return int index, -1 on failure
 	 */

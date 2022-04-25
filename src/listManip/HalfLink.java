@@ -26,7 +26,7 @@ import util.StringUtil;
 import util.UtilPacket;
 
 /**
- * Linked list for 'HalfEdge's for DCEL sturctures.
+ * Linked list for 'HalfEdge's for DCEL structures.
  * @author kens, September 2020
  *
  */
@@ -1782,6 +1782,147 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		if (safety==0)
 			return null;
 		return hlink;
+	}
+	
+	/**
+	 * Build the 'HalfLink' whose faces define the contiguous
+	 * chain of faces to the left of 'hlink'; used, e.g., for 
+	 * holonomy or layout purposes. 
+	 * 
+	 * Begin with the first edge of 'hlink', then proceed with 
+	 * halfedges inward from the left into the end of successive
+	 * edges of 'hlink'. Continue only as long as the edges of 
+	 * 'hlink' remain contiguous, the incoming edges are not in
+	 * 'hlink', and we don't encounter an incoming edge whose 
+	 * face is ideal. 
+	 *  + If 'hlink' is not closed, then we end with the last clw
+	 *    incoming edge of the last halfedge's origin. Thus, the
+	 *    contiguous faces of the resulting HalfLink start with 
+	 *    the face for the first edge of 'hlink' and end with
+	 *    the face for the last edge of 'hlink'. 
+	 *  + If 'hlink' is closed, then we end with the last 
+	 *    clw incoming edge at the origin of the first halfedge.
+	 *    So the contiguous faces of the resulting HalfLink 
+	 *    start and end with the face for the first edge of 
+	 *    'hlink'.  
+	 *    
+	 * The user will have to determine how to specify 'hlink'
+	 * depending on how the resulting HalfLink will be used.
+	 *  
+	 * @param pdcel PackDCEL
+	 * @param hlink HalfLink, should be contiguous, may be closed
+	 * @return HalfLink, may be null or empty
+	 */
+	public static HalfLink leftsideLink(PackDCEL pdcel,HalfLink hlink) {
+		if (hlink==null || hlink.size()==0)
+			return null;
+		boolean closed=false;
+		
+		// save first/last
+		HalfEdge firsthe=hlink.getFirst();
+		HalfEdge lasthe=hlink.getLast();
+
+		// if just one edge in list
+		HalfLink outlink=new HalfLink();
+		outlink.add(firsthe); // single face left of this edge
+		if (hlink.size()==1) 
+			return outlink;
+
+		// note if closed, make sure first edge does not repeat at end
+		if (lasthe.twin.origin==firsthe.origin) // yes, closes up 
+			closed=true;
+		else if (lasthe==firsthe) { 
+			closed=true;
+			hlink.removeLast();
+			lasthe=hlink.getLast();
+		}
+		 
+		Iterator<HalfEdge> his=hlink.iterator();
+		HalfEdge currhe=his.next();
+		HalfEdge nexthe=currhe;
+		while (his.hasNext()) {
+			  currhe=nexthe;
+			  nexthe=his.next();
+			  
+			  // not contiguous?
+			  if (currhe.twin.origin!=nexthe.origin) {
+				  return outlink;
+			  }
+			  
+			  HalfEdge he=currhe.next.twin;
+			  while (he!=nexthe.twin) {
+				  
+				  // hit an ideal face?
+				  if (he.face!=null && he.face.faceIndx<0) 
+					  return outlink;
+				  
+				  outlink.add(he);
+				  he=he.next.twin; // clw
+			  }
+		}
+		if (closed && nexthe==lasthe) {
+			HalfEdge he=nexthe.next.twin;
+			while (he!=firsthe.twin) {
+				  
+				// hit an ideal face?
+				if (he.face!=null && he.face.faceIndx<0) 
+					return outlink;
+				  
+				outlink.add(he);
+				he=he.next.twin; // clw
+			}
+		}
+		return outlink;
+	}
+	
+	
+	/**
+	 * Given a vertex list, convert it (to the extent possible) to 
+	 * an edge list. If 'extended' flag true, do "hex-extended" 
+	 * edges, which pass through interior vertices so same number 
+	 * of edges are on each side. See 'axis_extend' call. 
+	 * Else, convert to edge geodesic.
+	 * TODO: do I really mean "hex" extend, or more general axis
+	 *       extend?
+	 * @param pdcel PackDCEL
+	 * @param vlist NodeLink
+	 * @param hexflag boolean, true, hex extend
+	 * @return HalfLink, possibly empty or null
+	 */
+	public static HalfLink verts2edges(PackDCEL pdcel,
+			NodeLink vertlist,boolean hexflag) {
+		HalfLink ans=new HalfLink();
+		if (vertlist==null || vertlist.size()==0) 
+			return ans;
+		Iterator<Integer> vlist=vertlist.iterator();
+		int endv=(Integer)vlist.next();
+		while (vlist.hasNext()) {
+			int nextv=(Integer)vlist.next();
+			// eat any duplicates of 'endv'
+			while (vlist.hasNext() && nextv==endv) {
+				nextv=(Integer)vlist.next();
+			}
+			if (nextv!=endv) {
+				HalfEdge ee;
+				if (hexflag) { // look for/use axis-extended edges
+					ee=pdcel.findHalfEdge(endv,nextv);
+					if (ee!=null)
+						ans.add(ee);
+					else {
+						Vertex basevert=pdcel.vertices[endv];
+						HalfLink hlink=
+							CombDCEL.shootExtended(basevert,nextv,16,hexflag);
+						if (hlink!=null && hlink.size()>0) 
+							ans.abutMore(hlink);
+					}
+				}
+				else if ((ee=pdcel.findHalfEdge(endv,nextv))!=null) {
+					ans.add(ee);
+				}
+				endv=nextv;
+			}
+		} // end of while
+		return ans;
 	}
 	
 	/**

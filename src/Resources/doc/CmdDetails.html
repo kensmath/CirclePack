@@ -3414,10 +3414,11 @@ thickness 3</td></tr>
 <blockquote>
 <strong>Description: </strong>
 	This replaces the active pack by a single "flower" consisting of a
-	central circle and n (>=3) "petals".  The canvas is automatically
-	displayed unless flag -q is specified. Default is n=6.  
-	CAUTION: No confirmation is requested for command-line arguments, 
-	so original data in active pack will be lost.
+	central circle and n (>=3) "petals". (Limit is 1000 petals.)
+	The canvas is automatically displayed unless flag -q is specified. 
+	Default is n=6.	CAUTION: No confirmation is requested for 
+	command-line arguments,	so original data in active pack will 
+	be lost.
 </blockquote>
 <font size="+1" color="blue"><strong><a name="set_accur">set_accur</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{x}&nbsp;&nbsp; </font>
 <blockquote>
@@ -4019,14 +4020,14 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 <blockquote>
 <strong>Description: </strong>
 	CirclePack can store a parameterized curve description in
-	the "Function" frame using a real variable z in [0,1]; 
-	(use of 'z'	is required). The "Set Closed Path" button
+	the "Function" frame using a real variable t in [0,1]; 
+	(use of 't'	is required). The "Set Closed Path" button
 	will store the closed path using this description.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_path+text (1+exp(i*pi*2.0*z))^2</font></td>
+<tr><td width="30%"><font color="blue">set_path+text (1+exp(i*pi*2.0*t))^2</font></td>
 <td width="68%">
 </td></tr>
 </table></blockquote>
@@ -5404,10 +5405,18 @@ a negative value means this vertex is not adjusted during repacking</td></tr>
 <tr><td width="25%" valign="top">?socket</td>
 <td width="65%" align="left">		  was CirclePack started with a socket for command input? 
 								If yes, this gives the host and port number</td></tr>
-<tr><td width="25%" valign="top">*list*</td>
-<td width="65%" align="left">			  for vlist, elist, flist or Vlist, Elist, Flist</td></tr>
+<tr><td width="25%" valign="top">?*list*</td>
+<td width="65%" align="left">		  for vlist, elist, flist or Vlist, Elist, Flist</td></tr>
 <tr><td width="25%" valign="top">?_*</td>
 <td width="65%" align="left">			  report the value of a variable</td></tr>
+<tr><td width="25%" valign="top">?vert {v}</td>
+<td width="65%" align="left">		  Accumulated data: cent/rad, mark, flower, etc</td></tr>
+<tr><td width="25%" valign="top">?face {f}</td>
+<td width="65%" align="left">        Accumulated data: vertices, color, etc</td></tr>
+<tr><td width="25%" valign="top">?edge {v w}</td>
+<td width="65%" align="left">      Accumulated data: ends, length, etc</td></tr>
+<tr><td width="25%" valign="top">?tile {t}</td>
+<td width="65%" align="left">        Accumulated data: degree, color, mark, etc</td></tr>
 (Many options are not yet implemented (ask Ken if you need
 these or other functionality).
 	     

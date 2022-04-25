@@ -317,7 +317,7 @@ public class ChapBrModPt extends GenBrModPt {
 		newBrSpot=sisterEdge.twin.origin;
 
 		// get encircling link for local holonomy   
-		myHoloBorder=RawManip.leftsideLink(pdc,eventHorizon);
+		myHoloBorder=HalfLink.leftsideLink(pdc,eventHorizon);
 		myHoloBorder.add(0,eventHorizon.get(0));
 		
 		// add 'myHoloBorder' plus edge to pick up 'newBrSpot'

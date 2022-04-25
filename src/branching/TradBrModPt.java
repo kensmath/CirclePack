@@ -49,7 +49,8 @@ public class TradBrModPt extends GenBrModPt {
 	// modify 'packData'
 	public int modifyPackData() {
 		eventHorizon=myEdge.origin.getOuterEdges();
-		myHoloBorder=RawManip.leftsideLink(pdc,eventHorizon);
+		myHoloBorder=HalfLink.leftsideLink(pdc,eventHorizon);
+		myHoloBorder.add(0,eventHorizon.get(0));
 		myExclusions=new ArrayList<Vertex>();
 		Iterator<HalfEdge> vis=eventHorizon.iterator();
 		HalfEdge starthe=null;

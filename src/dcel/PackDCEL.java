@@ -757,49 +757,7 @@ public class PackDCEL {
 	    }
 	    return count;
 	}
-	
-	/**
-	 * Recompute centers along list of faces; only do contiguous
-	 * faces, and assume first is already in place. 
-	 * @param facelist FaceLink
-	 * @return int last face index, 0 on failure
-	 */
-	public int layoutFaceList(FaceLink facelist) {
-		if (facelist==null || facelist.size()==0)
-			return 0;
-		int count=0;
-		Iterator<Integer> fis=facelist.iterator();
-		DcelFace last_face=faces[fis.next()];
-		while (fis.hasNext()) {
-			int g=fis.next(); // next face
-			DcelFace next_face=faces[g];
-			HalfEdge he=last_face.faceNghb(next_face).twin;
-			
-			// shuck non-neighbors
-			while (he==null && fis.hasNext()) {
-				next_face=faces[fis.next()];
-				he=last_face.faceNghb(next_face);
-			}
-			
-			// note order: we use centers for 'he' as an edge 
-			//    of 'last_face', so 'he.twin' is the base in 
-			//    the next face.
-			if (he!=null) {
-				CircleSimple sc=CommonMath.comp_any_center(
-		    		getCircleSimple(he.next),getCircleSimple(he),
-		    		getVertRadius(he.twin.next.next),
-		    		he.twin.next.getInvDist(),he.twin.next.next.getInvDist(),
-		    		he.twin.getInvDist(),p.hes);
-				setCent4Edge(he.twin.next.next, sc.center);
-				if (sc.rad<0) // horocycle?
-					setRad4Edge(he.twin.next.next,sc.rad);
-				count++;
-			}
-		} // end of while
 
-		return last_face.faceIndx;
-	}
-	
 	/** 
 	 * Draw an edge-pairing boundary segment.
 	 * @param n int, index of side-pair (indices start at 1)

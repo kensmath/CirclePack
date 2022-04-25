@@ -449,15 +449,18 @@ public class FaceLink extends LinkedList<Integer> {
 				if (packData.packDCEL.redChain==null) 
 					break;
 
-				if (str.length()>1 && str.charAt(1)=='a') { 
+				// full red chain?
+				if ((str.length()>1 && str.charAt(1)=='a') || 
+						!its.hasNext() || items.get(0).startsWith("a")) { 
 					HalfLink hlink=new HalfLink();
 					RedEdge rtrace=packData.packDCEL.redChain;
 					do {
 						hlink.add(rtrace.myEdge);
 						rtrace=rtrace.nextRed;
 					} while(rtrace!=packData.packDCEL.redChain);
-					HalfLink leftlink=RawManip.leftsideLink(
+					HalfLink leftlink=HalfLink.leftsideLink(
 							packData.packDCEL,hlink);
+					leftlink.removeLast(); // don't repeat the first face
 					Iterator<HalfEdge> lis=leftlink.iterator();
 					while (lis.hasNext()) {
 						add(lis.next().face.faceIndx);
@@ -466,56 +469,46 @@ public class FaceLink extends LinkedList<Integer> {
 					break;
 				}
 				
-				// traditional
-				
-				// otherwise, select by given 'side' indices: absorbs rest of 'items'.
-				  int numSides=-1;
-				  if (packData.getSidePairs()==null || (numSides=packData.getSidePairs().size())==0) {
-					  while (its.hasNext()); // flush rest of items
-					  break;
-				  }
-				  boolean []tag=new boolean[numSides];
-				  for (int i=0;i<numSides;i++) tag[i]=false;
-				  if (!its.hasNext()) { // default to 'all'
-					  for (int i=0;i<numSides;i++) 
-						  tag[i]=true;
-				  }
-				  else do {
-					  String itstr=(String)its.next();
-					  if (itstr.startsWith("a"))
-						  for (int i=0;i<numSides;i++) tag[i]=true;
-					  else {
-						  try {
-							  int n=MathUtil.MyInteger(itstr);
-							  if (n>=0 && n<numSides) 
-								  tag[n]=true;
-						  } catch (NumberFormatException nfx) {}
-					  }
-				  } while (its.hasNext());
+				// otherwise, select by given 'side' indices: 
+				//    absorbs rest of 'items'.
+				int numSides=-1;
+				if (packData.getSidePairs()==null || 
+						(numSides=packData.getSidePairs().size())==0) {
+					while (its.hasNext()); // flush rest of items
+					break;
+				}
+				boolean[] tag=new boolean[numSides];
+				for (int i=0;i<numSides;i++) 
+					tag[i]=false;
+				do {
+					String itstr=(String)its.next();
+					try {
+						int n=MathUtil.MyInteger(itstr);
+						if (n>=0 && n<numSides) 
+							tag[n]=true;
+					} catch (NumberFormatException nfx) {}
+				} while (its.hasNext());
 
-				  // now to get the chosen segments
-				  // NOTE: some faces between end of one segment and
-				  //       start of next are not picked up.
-				  Iterator<SideData> sp=packData.getSidePairs().iterator();
-				  SideData ep=null;
-				  RedEdge rlst=null;
-				  int tick=0;
-				  while (sp.hasNext()) {
-					  ep=(SideData)sp.next();
-					  if (tag[tick++]) { // yes, do this one
-						  HalfLink sidelink=ep.sideHalfLink();
-						  HalfLink leftlink=RawManip.leftsideLink(
-								  packData.packDCEL,sidelink);
-						  add(ep.startEdge.myEdge.face.faceIndx);
-						  count++;
-						  Iterator<HalfEdge> lis=leftlink.iterator();
-						  while (lis.hasNext()) {
-							  add(lis.next().face.faceIndx);
-							  count++;
-						  }
-					  }
-				  }
-				  break;
+				// now to get the chosen segments
+				// NOTE: some faces between end of one segment and
+				//       start of next are not picked up.
+				Iterator<SideData> sp=packData.getSidePairs().iterator();
+				SideData ep=null;
+				int tick=0;
+				while (sp.hasNext()) {
+					ep=(SideData)sp.next();
+					if (tag[tick++]) { // yes, do this one
+						HalfLink sidelink=ep.sideHalfLink();
+						HalfLink leftlink=HalfLink.leftsideLink(
+								packData.packDCEL,sidelink);
+						Iterator<HalfEdge> lis=leftlink.iterator();
+						while (lis.hasNext()) {
+							add(lis.next().face.faceIndx);
+							count++;
+						}
+					}
+				}
+				break;
 			}
 			case 'I': // incident to vertices/faces/edges; redundancies avoided
 			{
