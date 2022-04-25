@@ -11,18 +11,21 @@ public class TorusModulus {
 
 	/** 
 	 * Computes the 'modulus' of a torus based on its already 
-	 * computed side pairings. Return double[3]: [0]=x, [1]=y, 
-	 * for 'tau' and [2] = 'flag'. flag = -1 if not a torus by 
-	 * topology or by number of side-pairings. 
-	 * flag = -2 if side-pairings are not computed. flag=0 on 
-	 * error. flag = 1 on apparent success. Computation involves 
-	 * applying inversions in unit circle and translations by +-1 
-	 * until 'tau' is in the fundamental domain of moduli space 
-	 * (namely, tau.x in [-1/2,1/2] and |tau| >=1).
-	 * 
-	 * TODO: start including affine tori.
+	 * computed side pairings. Return double[3]: 
+	 *   + [0]=x, 
+	 *   + [1]=y,
+	 *   + [3]=flag: -1 means not a torus by
+	 *                  topology or by number of side-pairings. 
+	 * 				 -2 if side-pairings are not computed. 
+	 * 				 0  means an error occurred
+	 *  			 1  apparent success. 
+	 * Computation involves applying inversions in unit circle 
+	 * and translations by +-1 until 'tau' is in the fundamental 
+	 * domain of moduli space (namely, tau.x in [-1/2,1/2] and |tau| >=1).
+	 * @param p PackData
+	 * @return double[3] 
 	*/
-	public static double []torus_tau(PackData p) {
+	public static double[] torus_tau(PackData p) {
 	  double []ans=new double[3];
 
 	  // Determine if this is a torus. 
@@ -36,7 +39,7 @@ public class TorusModulus {
 		  return ans;
 	  }
 	  
-	  // has the right
+	  // check number of sides
 	  int N=p.packDCEL.pairLink.size()-1;
 	  if (N!=4 && N!=6) {
 		  ans[2]=-1.0;
@@ -47,17 +50,17 @@ public class TorusModulus {
 	  
 	  Complex r1,r12,r2,r22,r3,r32,w;  
 	  Complex []W=new Complex[7];
-	  Mobius mob;
 
 	  // Compute array of values mob.a/mob.b for the side-pairings.
 	  Iterator<SideData> pdpl=p.packDCEL.pairLink.iterator();
 	  SideData epair=null;
 	  epair=pdpl.next(); // first slot is empty
 	  int j=1;
+	  Mobius mob;
 	  while(pdpl.hasNext()) {
 		  epair=pdpl.next();
 	      mob=epair.mob;
-	      if (Math.abs(mob.a.abs()-1.0)>.0001)
+	      if (Math.abs(mob.a.abs()-1.0)>.0001) // scaling!=1.0
 	    	  affine=true;
 	      W[j]=mob.b.divide(mob.a);
 	      j++;
@@ -70,7 +73,7 @@ public class TorusModulus {
 		  Z[1]=W[2];
 		  Z[2]=W[3];
 		  Z[3]=W[4];
-		  mob=Mobius.mob_NormQuad(Z);
+		  mob=Mobius.mob_NormQuad(Z); // normalize only in affine case
 		  Mobius.mobiusDirect(p,mob);
 		  
 		  // if affine, take logarithm
@@ -93,17 +96,18 @@ public class TorusModulus {
 
 	  // get initial tau in upper half plane
 	  
-	  if (r1.y>0) w=r1;
-	  
-	  else if (r12.y>0) w=r12;
-	  
-	  else if (r2.y>0) w=r2;
-	  
-	  else if (r22.y>0) w=r22;
-	  
-	  else if (r3.y>0) w=r3;
-	  
-	  else if (r32.y>0) w=r32;
+	  if (r1.y>0) 
+		  w=r1;
+	  else if (r12.y>0) 
+		  w=r12;
+	  else if (r2.y>0) 
+		  w=r2;
+	  else if (r22.y>0) 
+		  w=r22;
+	  else if (r3.y>0) 
+		  w=r3;
+	  else if (r32.y>0) 
+		  w=r32;
 	  
 	  else { // error
 	      ans[2]=0.0;

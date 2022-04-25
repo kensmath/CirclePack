@@ -638,9 +638,9 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 * Intended mainly for normalizing affine tori. Given the
 	 * cclw list 'Z' of four corners (typically 4 locations of
 	 * a common vertex), find Mobius that puts it in normalized
-	 * position: If a parallelogram, put z1 at origin, z2 at 1. 
+	 * position: If a parallelogram, put Z[0] at origin, Z[1] at 1. 
 	 * Else, arrange so side pairing maps are z -> az, z -> bz 
-	 * and so z1 is at 1.
+	 * and so Z[1] is at 1.
 	 * @param Z Complex[]
 	 * @return Mobius
 	 */
@@ -660,8 +660,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		}
 		
 		// side-pairings are linear:
-		//    z1 -> z4 and z2 -> z3
-		//    z1 -> z2 and z4 -> z3
+		//    z0 -> z3 and z1 -> z2
+		//    z0 -> z1 and z3 -> z2
 		// where 'fixed' is common fixed point, so mob(z)=az+b, 
 		// where b=fixed/(fixed-Z[0]) and a= 1/(Z[0]-fixed)
 		Complex numtor=Z[0].times(Z[2]).minus(Z[1].times(Z[3]));
@@ -1237,7 +1237,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	
 	/**
 	 * Apply a Mobius directly to adjust radii/centers of
-	 * a given packing
+	 * the given packing, including red radii/centers.
 	 * @param p PackData
 	 * @param mob Mobius
 	 * @return count

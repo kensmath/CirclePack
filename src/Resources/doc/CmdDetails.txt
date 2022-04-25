@@ -2227,12 +2227,13 @@ two side-pairings</opt>
 <opt flag="-a x"> scale so total euclidean area is x</opt>
 <opt flag="-c v r"> scale so vert v gets radius r</opt>
 <opt flag="-e q v w">  scale so vert v has radius of vert w in pack q</opt>
-<opt flag="-u v"> scale so eucl center of vert v is on unit circle </opt>
-<opt flag="-U"> scale (down only) to fit eucl packing into the unit disc </opt>
 <opt flag="-h v w"> rotate so vector v to w is horizontal (left to right)</opt>
 <opt flag="-i v"> scale/rotate to put vertex v at z=i (asuming v is
 		not centered at the origin)</opt>
-<opt flag="-t v1 v2 z1 z2"> linear transformation putting vi at zi</opt>		
+<opt flag="-m v1 v2 z1 z2"> linear transformation putting vi at zi</opt>
+<opt flag="-t"> for torus only: put in normalized position, report tau</opt>		
+<opt flag="-u v"> scale so eucl center of vert v is on unit circle </opt>
+<opt flag="-U"> scale (down only) to fit eucl packing into the unit disc </opt>
 </options>
 <seealso>
 <see>rotate</see>

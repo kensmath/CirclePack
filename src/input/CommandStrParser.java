@@ -39,6 +39,7 @@ import dcel.CombDCEL;
 import dcel.PackDCEL;
 import dcel.RawManip;
 import dcel.Schwarzian;
+import dcel.SideData;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.DataException;
@@ -4530,7 +4531,7 @@ public class CommandStrParser {
 	  
 	  // ========= torus_t ========
 	  if (cmd.startsWith("torus_t")) {
-		  double []tor=TorusModulus.torus_tau(packData);
+		  double[] tor=TorusModulus.torus_tau(packData);
 		  if (tor!=null && tor[2]>0) {
 			  
 			  // display both 'tau' and '1/tau'
@@ -7486,12 +7487,15 @@ public class CommandStrParser {
 	  {
 	      // =========== norm_scale ========
 	      /* normalize eucl packing using one (only) of these options. 
-	      e: radius of v in p equals radius of w in q.
-	      a: specified eucl area
-	      u: designated vert on unit circle 
+	      a: scale specified eucl area
 	      c: designated vert to prescribed radius
+	      e: radius of v in p equals radius of w in q.
 	      h: rotate so designated verts in horizontal line
 	      i: scale/rotate to center designated vert at z=i.
+	      m: apply trans. locating u,v at z1 z2
+	      t: torus: normalize fundamental domain, report tau.
+	      u: designated vert on unit circle 
+	      U: scale down (only) to fit packing in unit disc
 	      Return 0 on error. */
 	      // TODO: might be better organized
 	      if (cmd.startsWith("norm_scale")) {
@@ -7517,37 +7521,6 @@ public class CommandStrParser {
 	    			  if (!factor.isNaN())
 	    				  return packData.eucl_scale(factor);
 	    		  }
-	    		  case 'u': // designated vert on unit circle 
-	    		  {
-	    			  int v=NodeLink.grab_one_vert(packData,(String)items.get(0));
-	    			  double ctr=packData.getCenter(v).abs();
-	    			  // if already good, don't bother, close enough
-	    			  if (Math.abs(ctr-1.0) < PackData.OKERR) 
-	    				  return 1;
-	    			  // if ctr is to close to zero, abort
-	    			  if (ctr<.001)
-	    				  return 0;
-	    			  double factor=1.0/ctr;
-	    			  return packData.eucl_scale(factor);
-	    		  }
-	    		  case 'U': // scale (down, only) eucl packing to fit in unit disc, 
-	    		  {
-	    			  if (packData.hes!=0) 
-	    				  return 0;
-	    			  double max=0;
-	    			  NodeLink blist=new NodeLink(packData,"b");
-	    			  Iterator<Integer> bl=blist.iterator();
-	    			  while (bl.hasNext()) {
-	    				  int v=bl.next();
-	    				  double dist=packData.getCenter(v).abs()+packData.getRadius(v);
-	    				  max=(dist>max) ? dist:max;
-	    			  }
-	    			  // scale down
-	    			  if (max>.999) {
-	    				  return jexecute(packData,"scale "+1.0/max);
-	    			  }
-	    			  return 1; // don't scale, but don't fail (nice rhyme!)
-	    		  }
 	    		  case 'c': // scale to give v the prescribed radius
 	    		  {
 	    			  int v=NodeLink.grab_one_vert(packData,(String)items.get(0));
@@ -7555,6 +7528,23 @@ public class CommandStrParser {
 	    			  double factor=rad/packData.getRadius(v);
 	    			  return packData.eucl_scale(factor);
 	    		  }
+	    		  case 'e': // scale so vertex v has same radius as vert w in pack q
+	    			  // data in the form 'q v w'.
+	    		  {
+	    			  int q=Integer.parseInt((String)items.remove(0));
+	    			  if (q<0 || q>=CPBase.NUM_PACKS 
+	    					  || !CPBase.cpScreens[q].getPackData().status) 
+	    				  throw new ParserException("pack q not valid");
+	    			  NodeLink vertlist=new NodeLink(packData,items);
+	    			  int v=(Integer)vertlist.get(0);
+	    			  double rad=packData.getRadius(v);
+	    			  int w=(Integer)vertlist.get(1);
+	    			  PackData qackData=CPBase.cpScreens[q].getPackData();
+	    			  if (w>qackData.nodeCount || rad<PackData.OKERR) 
+	    				  throw new ParserException("problem with 'w'");
+	    			  double factor=qackData.getRadius(w)/rad;
+	    			  return packData.eucl_scale(factor);
+	    		  }	  
 	    		  case 'h': // v --> w horizontal, left to right
 	    		  {
 	    			  NodeLink vertlist=new NodeLink(packData,items);
@@ -7576,25 +7566,39 @@ public class CommandStrParser {
 	    			  packData.rotate(ang);
 	    			  return (packData.eucl_scale(factor));
 	    		  }
-	    		  case 'e': // scale so vertex v has same radius as vert w in pack q
-	    			  // data in the form 'q v w'.
+	    		  case 'u': // designated vert on unit circle 
 	    		  {
-	    			  int q=Integer.parseInt((String)items.remove(0));
-	    			  if (q<0 || q>=CPBase.NUM_PACKS 
-	    					  || !CPBase.cpScreens[q].getPackData().status) 
-	    				  throw new ParserException("pack q not valid");
-	    			  NodeLink vertlist=new NodeLink(packData,items);
-	    			  int v=(Integer)vertlist.get(0);
-	    			  double rad=packData.getRadius(v);
-	    			  int w=(Integer)vertlist.get(1);
-	    			  PackData qackData=CPBase.cpScreens[q].getPackData();
-	    			  if (w>qackData.nodeCount || rad<PackData.OKERR) 
-	    				  throw new ParserException("problem with 'w'");
-	    			  double factor=qackData.getRadius(w)/rad;
+	    			  int v=NodeLink.grab_one_vert(packData,(String)items.get(0));
+	    			  double ctr=packData.getCenter(v).abs();
+	    			  // if already good, don't bother, close enough
+	    			  if (Math.abs(ctr-1.0) < PackData.OKERR) 
+	    				  return 1;
+	    			  // if ctr is to close to zero, abort
+	    			  if (ctr<.001)
+	    				  return 0;
+	    			  double factor=1.0/ctr;
 	    			  return packData.eucl_scale(factor);
-	    		  }	  
-	    		  case 't': // u v z1 z2 apply linear transformation to center
-	    			  // circles for u v at z1 z2
+	    		  }
+	    		  case 'U': // scale (down, only) to fit in unit disc, 
+	    		  {
+	    			  if (packData.hes!=0) 
+	    				  return 0;
+	    			  double max=0;
+	    			  NodeLink blist=new NodeLink(packData,"b");
+	    			  Iterator<Integer> bl=blist.iterator();
+	    			  while (bl.hasNext()) {
+	    				  int v=bl.next();
+	    				  double dist=packData.getCenter(v).abs()+packData.getRadius(v);
+	    				  max=(dist>max) ? dist:max;
+	    			  }
+	    			  // scale down
+	    			  if (max>.999) {
+	    				  return jexecute(packData,"scale "+1.0/max);
+	    			  }
+	    			  return 1; // don't scale, but don't fail (nice rhyme!)
+	    		  }
+	    		  case 'm': // [u v x1 y1 x2 y2] given, apply linear trans 
+	    			  // to center u v at z1 z2.
 	    		  {
 	    			  int u=1;
 	    			  int v=1;
@@ -7621,8 +7625,42 @@ public class CommandStrParser {
 	    			  }
 	    			  
 	    			  // apply this mobius to the packing
-	    			  return (packData.apply_Mobius(mymob,new NodeLink(packData,"a")));
+	    			  return (packData.apply_Mobius(mymob,
+	    					  new NodeLink(packData,"a")));
 	    		  }
+	    		  case 't': // normalize a torus and report tau
+	    		  {
+    				  if (packData.getBdryCompCount()>0 || 
+    						  packData.genus!=1)
+    					  throw new ParserException("usage: "
+    							  +"norm_scale -t only applies to"
+    							  + "tori");
+	    				  
+    				  // arrange two-side pairings only
+    				  CommandStrParser.jexecute(packData,"newRed -t");
+    				  
+    				  Iterator<SideData> pdpl=
+    						  packData.packDCEL.pairLink.iterator();
+    				  SideData epair=null;
+    				  epair=pdpl.next(); // first slot is empty
+    				  Complex[] W=new Complex[4];
+    				  int j=0;
+    				  while(pdpl.hasNext()) {
+    					  epair=pdpl.next();
+    					  W[j]=epair.startEdge.getCenter();
+    					  j++;
+    				  }
+    				  
+    				  // normalize
+    				  Mobius mob=Mobius.mob_NormQuad(W);
+    				  Mobius.mobiusDirect(packData,mob);
+    				  
+    				  // report 'tau', the center of the last side
+    				  epair=packData.packDCEL.pairLink.get(4);
+    				  CirclePack.cpb.msg("In normalized torus, "
+    				  		+ " tau = "+epair.startEdge.getCenter());
+    				  return 1;
+    			  }
 	    		  } // end of switch
 	    	  } catch (Exception ex) {
 	    		  throw new ParserException("No flags found");
