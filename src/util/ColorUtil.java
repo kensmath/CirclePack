@@ -1,15 +1,15 @@
 package util;
 
 import java.awt.Color;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
 import packing.PackData;
-import panels.CPScreen;
 
 /**
  * This handles various color-handling utilities, such as the creation 
- * of 'washed-out' colors, selection from a pallet of "distinct" colors,
+ * of 'washed-out' colors, selection from a palette of "distinct" colors,
  * colors associated with complex arguments (a la Wegert), etc. 
  * @author kens
  *
@@ -330,49 +330,62 @@ public class ColorUtil {
 	}
 	
 	/**
-	 * Given vector of doubles, create blue ramp for negative values,
-	 * red ramp for positive values: more negative = more blue (down
-	 * to 5), more positive = more red (up to 195). Closer to 0,
-	 * color closer to white.
-	 * 
-	 * @param data Vector of Double
-	 * @return Vector of Integer in same order
+	 * Given vector of doubles, create vector of graduated color codes
+	 * for a balanced blue-to-red ramp; more negative = more blue (down to 1), 
+	 * more positive = more red (up to 199). Zero is white. 
+	 * Balanced means equal numerical gradations on blue and red sides,
+	 * regardless of comparison of min and max. Note: there might be no 
+	 * negatives, etc.
+	 * @param data ArrayList<Double>
+	 * @return ArrayList<Integer> in same order
 	 */
-	public static Vector<Integer> blue_red_diff_ramp(Vector<Double> data) {
-		if (data==null || data.size()==0) return null;
-		Vector<Integer> output=new Vector<Integer>(data.size());
-		// determine most negative, most positive for scaling purposes
+	public static ArrayList<Integer> blue_red_color_ramp(ArrayList<Double> data) {
+		if (data==null || data.size()==0) 
+			return null;
+		ArrayList<Integer> output=new ArrayList<Integer>(data.size());
+		// determine most negative, most positive
 		double miN=0.0;
 		double maX=0.0;
 	    for (int i=0;i<data.size();i++) {
 	    	double dta=data.get(i);
 	    	miN = (dta<miN) ? dta : miN;
 	    	maX = (dta>maX) ? dta : maX;
-	    } 
+	    }
+	    
+	    // balance these
+	    double range=maX;
+	    double miNabs=Math.abs(miN);
+	    range=(miNabs>maX) ? miNabs : range;
+	    maX=range;
+	    miN=-range;
+	    
+	    // set output
 		for (int i=0;i<data.size();i++) {
 	    	double dta=data.get(i);
 	    	if (dta==0)
 	    		output.add(Integer.valueOf(100)); // white
 	    	else if (dta<0) 
-	    		output.add(Integer.valueOf((int)(100.0-95.0*(dta/miN))));
+	    		output.add(Integer.valueOf((int)(100.0-99.0*(dta/miN))));
 	    	else 
-	    		output.add(Integer.valueOf((int)(100.0+95.0*(dta/maX))));
+	    		output.add(Integer.valueOf((int)(100.0+99.0*(dta/maX))));
 		}
 
 		return output;
 	}
 	
 	/**
-	 * Given vector of doubles, create blue ramp for negative values,
-	 * red ramp for positive values: more negative = more blue (down
-	 * to 5), more positive = more red (up to 195). Closer to 0,
-	 * color closer to white.
-	 * 
+	 * Given vector of doubles, return parallel vector of 'Color'
+	 * objects, blue ramp for negative values, red ramp for positive: 
+	 * more negative = more blue (down to 1), more positive = more 
+	 * red (up to 199). Closer to 0, color closer to white. Note this 
+	 * is not "balanced", so numerical gradations may differ on blue 
+	 * and red sides. See 'blue_red_color_ramp' for balance.
 	 * @param data Vector of Double
 	 * @return Vector of Color objects in same order
 	 */
 	public static Vector<Color> blue_red_diff_ramp_Color(Vector<Double> data) {
-		if (data==null || data.size()==0) return null;
+		if (data==null || data.size()==0) 
+			return null;
 		Vector<Color> output=new Vector<Color>(data.size());
 		// determine most negative, most positive for scaling purposes
 		double miN=0.0;
@@ -385,11 +398,14 @@ public class ColorUtil {
 		for (int i=0;i<data.size();i++) {
 	    	double dta=data.get(i);
 	    	if (dta==0)
-	    		output.add(ColorUtil.coLor(Integer.valueOf(100))); // white
+	    		output.add(ColorUtil.coLor(
+	    				Integer.valueOf(100))); // white
 	    	else if (dta<0) 
-	    		output.add(ColorUtil.coLor(Integer.valueOf((int)(100.0-95.0*(dta/miN)))));
+	    		output.add(ColorUtil.coLor(
+	    				Integer.valueOf((int)(100.0-95.0*(dta/miN)))));
 	    	else 
-	    		output.add(ColorUtil.coLor(Integer.valueOf((int)(100.0+95.0*(dta/maX)))));
+	    		output.add(ColorUtil.coLor(
+	    				Integer.valueOf((int)(100.0+95.0*(dta/maX)))));
 		}
 
 		return output;

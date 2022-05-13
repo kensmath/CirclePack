@@ -3,7 +3,9 @@ package dcel;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import combinatorics.komplex.RedEdge;
 import exceptions.CombException;
+import math.Mobius;
 import packing.PackData;
 
 /**
@@ -53,12 +55,14 @@ public class PairLink extends LinkedList<SideData> {
 	 */
 	public static SideData findLabeled(PairLink pairLink,
 			String labelStr) {
-		if (pairLink==null || pairLink.size()==0) return null;
+		if (pairLink==null || pairLink.size()==0) 
+			return null;
 		Iterator<SideData> sides=pairLink.iterator();
 		SideData edge=null;
 		while (sides.hasNext()) {
 			edge=(SideData)sides.next();
-			if (edge.label.equals(labelStr)) return edge;
+			if (edge.label.equals(labelStr)) 
+				return edge;
 		}
 		return null;
 	}
@@ -103,6 +107,32 @@ public class PairLink extends LinkedList<SideData> {
 		if (tick==n)
 			return edge;
 		return null;
+	}
+	
+	/**
+	 * Given RedEdge 'redge', find its side and return the Mobius
+	 * mapping 'redge.twinred' to 'redge'.
+	 * @param redge RedEdge
+	 * @return Mobius, identity on error or not found
+	 */
+	public Mobius mob4redtwin(RedEdge redge) {
+		
+		Iterator<SideData> sides=this.iterator();
+		SideData mySd=null;
+		while (sides.hasNext() && mySd==null) {
+			SideData sd=sides.next();
+			RedEdge rtrace=sd.startEdge;
+			while (mySd==null && rtrace!=sd.endEdge) {
+				if (rtrace==redge)
+					mySd=sd;
+				rtrace=rtrace.nextRed;
+			} 
+		}
+			
+		if (mySd==null)
+			return new Mobius(); // identity
+		
+		return mySd.mob;
 	}
 	
 }

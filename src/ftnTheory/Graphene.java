@@ -1,6 +1,7 @@
 package ftnTheory;
 
 import java.awt.Color;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
@@ -61,7 +62,7 @@ import util.UtilPacket;
 
 public class Graphene extends PackExtender {
 
-	Vector<Integer> colorVec; // color by vertices
+	ArrayList<Integer> colorVec; // color by vertices
 	
 	// store bond lengths, angles, energies, colors in vector
 	Vector<CarbonEnergy> carbonEnergies;
@@ -113,7 +114,7 @@ public class Graphene extends PackExtender {
 		angleParam=25;
 		planarParam=100; // 
 		
-		colorVec=new Vector<Integer>(packData.nodeCount+1);
+		colorVec=new ArrayList<Integer>(packData.nodeCount+1);
 		uPkt=new UtilPacket();
 		createCarbons();
 		
@@ -696,14 +697,14 @@ public class Graphene extends PackExtender {
 	 */
 	public double totalEnergy() {
 		double TE=0.0;
-		Vector<Double> vertEnergy=new Vector<Double>(packData.nodeCount+1);
+		ArrayList<Double> vertEnergy=new ArrayList<Double>(packData.nodeCount+1);
 		vertEnergy.add(0,null);
 		for (int v=1;v<=packData.nodeCount;v++) {
 			double rE=ringEnergy(v);
 			vertEnergy.add(Double.valueOf(rE));
 			TE+=rE;
 		}
-		colorVec=ColorUtil.blue_red_diff_ramp(vertEnergy);
+		colorVec=ColorUtil.blue_red_color_ramp(vertEnergy);
 		return TE;
 	}
 	

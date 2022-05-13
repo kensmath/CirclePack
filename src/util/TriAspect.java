@@ -56,7 +56,7 @@ public class TriAspect extends TriData {
 	
 	boolean need_update; // signal when data changes require update
 	
-	// various triples of data (other data in 'TriData' super)
+	// various triples of data (other data in 'TriData' super, eg. radii)
 	public Complex[] center;    // centers of circles
 	public double[] schwarzian; // signed scalar coeffs for schwarzian 
 	public Complex[] tanPts;  // tangency points, if saved
@@ -180,12 +180,17 @@ public class TriAspect extends TriData {
 	/**
 	 * Compute the circle opposite edge (j,j+1).
 	 * @param j int
+	 * @param useLabels boolean
 	 * @return CircleSimple
 	 */
-	public CircleSimple compOppCircle(int j) {
+	public CircleSimple compOppCircle(int j,boolean useLabels) {
+		if (useLabels)
+			return CommonMath.comp_any_center(center[j],
+					center[(j+1)%3],labels[j],labels[(j+1)%3],labels[(j+2)%3],
+					invDist[j],invDist[(j+1)%3],invDist[(j+2)%3],hes);
 		return CommonMath.comp_any_center(center[j],
-				center[(j+1)%3],radii[j],radii[(j+1)%3],radii[(j+2)%3],
-				invDist[j],invDist[(j+1)%3],invDist[(j+2)%3],hes);
+					center[(j+1)%3],radii[j],radii[(j+1)%3],radii[(j+2)%3],
+					invDist[j],invDist[(j+1)%3],invDist[(j+2)%3],hes);
 	}
 	
 	public Complex getTangPt(int j) {
@@ -211,6 +216,19 @@ public class TriAspect extends TriData {
 		Complex rt3=new Complex(-.5,CPBase.sqrt3by2);
 		baseMobius=Mobius.mob_xyzXYZ(new Complex(1.0),rt3,rt3.conj(),
 				tanPts[0],tanPts[1],tanPts[2],0,hes);
+	}
+
+	/**
+	 * Copy cent/radii by edge to pdcel
+	 * @param pdcel PackDCEL
+	 */
+	public void data2pdcel(PackDCEL pdcel) {
+		HalfEdge he=baseEdge;
+		for (int j=0;j<3;j++) {
+			pdcel.setCent4Edge(he,center[j]);
+			pdcel.setRad4Edge(he,radii[j]);
+			he=he.next;
+		}
 	}
 		
 	/**

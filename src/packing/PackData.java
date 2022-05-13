@@ -786,6 +786,24 @@ public class PackData{
 	public void setFaceColor(int f,Color color) {
 		packDCEL.faces[f].setColor(color);
 	}
+
+	/**
+	 * Get clone of edge color
+	 * @param he HalfEdge
+	 * @return new Color
+	 */
+	public Color getEdgeColor(HalfEdge he) {
+		return he.getColor();
+	}
+	
+	/**
+	 * set color to clone of 'color'
+	 * @param he HalfEdge
+	 * @param color Color
+	 */
+	public void setEdgeColor(HalfEdge he,Color color) {
+		he.setColor(color);
+	}
 	
 	/**
 	 * get clone of circle color
@@ -1033,7 +1051,7 @@ public class PackData{
 				CircleSimple cs=tri.getFaceIncircle();
 				zs.add(cs.center);
 				he=he.prev.twin;
-				tri=PackDCEL.analContinue(packDCEL,he.twin,tri);
+				tri=workshops.LayoutShop.analContinue(packDCEL,he.twin,tri,false);
 			} while (tri!=null && he!=vert.halfedge);
 
 			// for bdry, include v itself, and bdry tangency points
@@ -1101,7 +1119,7 @@ public class PackData{
 				CircleSimple c2=new CircleSimple(tri.center[(j+2)%3],tri.radii[(j+2)%3]);
 				zs.add(CommonMath.genTangPoint(c1,c2,hes));
 				he=he.prev.twin;
-				tri=PackDCEL.analContinue(packDCEL,he.twin,tri);
+				tri=workshops.LayoutShop.analContinue(packDCEL,he.twin,tri,false);
 			} while (tri!=null && he!=vert.halfedge);
 		}			
 
@@ -1171,7 +1189,7 @@ public class PackData{
 	 * polygonal region defined as union of v's faces (include
 	 * center of v itself if bdry). If v is red, we treat its 
 	 * first face as in place, but successively recompute the 
-	 * remaining faces.
+	 * remaining faces based on radii.
 	 * @param v int
 	 * @return Complex[], non-closed array 
 	 */
@@ -1203,7 +1221,7 @@ public class PackData{
 				int j=tri.edgeIndex(spoke);
 				zs.add(tri.center[(j+2)%3]);
 				spoke=spoke.prev.twin;
-				tri=PackDCEL.analContinue(packDCEL,spoke.twin,tri);
+				tri=workshops.LayoutShop.analContinue(packDCEL,spoke.twin,tri,false);
 			} while (tri!=null && spoke!=vert.halfedge);
 		}
 
@@ -1220,7 +1238,7 @@ public class PackData{
 
 	/**
 	 * Return complex locations of ends of dual edge <f,g>.
-	 * If the edge between in red, we do a faux layout of g
+	 * If the edge between is red, we do a faux layout of g
 	 * to get its incircle.
 	 * @param edge EdgeSimple
 	 * @return Complex[2], null on failure
@@ -1235,8 +1253,13 @@ public class PackData{
 		// incircle of g
 		CircleSimple cSg=null;
 		if (hedge.myRedEdge!=null) {
-			// set up tmp 'TriAspect'
-			TriAspect tri_g=PackDCEL.analContinue(packDCEL,hedge);
+			// set up tmp 'TriAspect' for g to compute incircle
+			TriAspect tri_g=new TriAspect(hes);
+			tri_g.setCircleData(0,packDCEL.getVertData(hedge.next));
+			tri_g.setCircleData(1,packDCEL.getVertData(hedge));
+			double rad=packDCEL.getVertRadius(hedge.twin.prev);
+			tri_g.setRadius(rad,2);
+			tri_g.setCircleData(2,tri_g.compOppCircle(0,false));
 			cSg=tri_g.compIncircle();
 		}
 		else {
@@ -2649,6 +2672,25 @@ public class PackData{
 	  /**
 	   * Intended (not actual) edge length from v to w, using invDist
 	   * if that is set. This is not well defined in the sphere.
+	   * @param he HalfEdge
+	   * @return double, -1 on error (e.g., if geometry is spherical)
+	   */
+	  public double intendedEdgeLength(HalfEdge he) {
+		  if (hes>0) { // spherical: not-well defined
+			  return -1;
+		  }
+		  double rv=packDCEL.getVertRadius(he);
+		  double rw=packDCEL.getVertRadius(he.next);
+		  double t=he.getInvDist();
+		  if (hes<0) { // hyperbolic
+			  return HyperbolicMath.h_ivd_length(rv,rw,t);
+		  }
+		  return EuclMath.e_ivd_length(rv,rw,t);
+	  }
+
+	  /**
+	   * Intended (not actual) edge length from v to w, using invDist
+	   * if that is set. This is not well defined in the sphere.
 	   * @param v int
 	   * @param w int
 	   * @return double, -1 on error (e.g., if geometry is spherical)
@@ -2668,6 +2710,24 @@ public class PackData{
 
 	  /**
 	   * Distance between centers (actual edge length). Compare
+	   * to 'intendedEdgeLength'
+	   * @param hedge HalfEdge
+	   * @return double
+	   */
+	  public double edgeLength(HalfEdge hedge) {
+		  Complex zv=packDCEL.getVertCenter(hedge);
+		  Complex zw=packDCEL.getVertCenter(hedge.next);
+		  if (hes>0) { // spherical: not-well defined
+			  return SphericalMath.s_dist(zv, zw);
+		  }
+		  if (hes<0) { // hyperbolic
+			  return HyperbolicMath.h_dist(zv,zw);
+		  }
+		  return zv.minus(zw).abs();
+	  }
+	  
+	  /**
+	   * OBE: Distance between centers (actual edge length). Compare
 	   * to 'intendedEdgeLength'
 	   * @param v int
 	   * @param w int
@@ -3572,7 +3632,8 @@ public class PackData{
 							  "area comparision only if  both hyp "+
 							  "or both eucl.");
 				  }
-				  if (hes<0) return ColorCoding.h_compare_area(this,qackData);
+				  if (hes<0) 
+					  return ColorCoding.h_compare_area(this,qackData);
 				  return ColorCoding.e_compare_area(this,qackData);
 			  }
 		  }
@@ -3678,6 +3739,88 @@ public class PackData{
 			  setFaceColor(f,ColorUtil.cloneMe(ColorUtil.coLor(coLor)));
 			  count++;
 		  }
+		  return count;
+	  }
+	  
+	  /**
+	   * Set the 'color' of edges
+	   * @param flagSegs Vector<Vector<String>>
+	   * @return int count
+	   */
+	  public int color_edges(Vector<Vector<String>> flagSegs) {
+		  Vector<String>items=(Vector<String>)flagSegs.get(0);
+		  String str=(String)items.remove(0); // throw out, but held in 'str'
+		  HalfLink edgelist=new HalfLink(this,items);
+		  
+		  // first, have to check for various letter codes:
+		  //   r reset all to foreground
+		  //   z (blue-red gradation based on schwarzian)
+		  //   s/S (spread of colors for distinctness)
+
+		  char c=str.charAt(0);
+		  int count=0;
+		  switch(c){
+		  case 's':
+		  case 'S': // one color for the whole list
+		  {
+			  Iterator<HalfEdge> his=edgelist.iterator();
+			  count=colorIndx;
+			  Color cLr=ColorUtil.getBGColor();
+			  count=(int)(Math.random()*16);
+			  if (str.length()>1 && str.charAt(1)=='0') { // start at 0
+				  count=0;
+				  colorIndx=0;
+			  }
+			  if (c=='S') {
+				  cLr=ColorUtil.spreadColor(count%16);
+			  }
+			  while(his.hasNext()) {
+				  HalfEdge he=his.next();
+				  if (c=='S') 
+					  setEdgeColor(he,ColorUtil.cloneMe(cLr));
+				  else 
+					  setEdgeColor(he,ColorUtil.spreadColor(count%16));
+				  count++;
+			  }
+			  colorIndx=count;
+			  return count;
+		  }
+		  case 'r':
+		  {
+			  Iterator<HalfEdge> his=edgelist.iterator();
+			  while (his.hasNext()) {
+				  HalfEdge he=his.next();
+				  setEdgeColor(he,ColorUtil.FG_Color);
+				  count++;
+			  }
+			  return count;
+		  }
+		  case 'z': // schwarzians
+		  {
+			  // first have to set blue_red ramp entries based
+			  //    on all interior edges.
+			  HalfLink hlink=new HalfLink(this,"i");
+			  ArrayList<Double> data=new ArrayList<Double>();
+			  Iterator<HalfEdge> his=hlink.iterator();
+			  while (his.hasNext()) 
+				  data.add(his.next().getSchwarzian());
+			  ArrayList<Integer> codes=ColorUtil.blue_red_color_ramp(data);
+			  
+			  // Now color edgelist
+			  his=edgelist.iterator();
+			  while(his.hasNext()) {
+				  HalfEdge he=his.next();
+				  int index=hlink.indexOf(he);
+				  if (index>=0) {
+					  int k=codes.get(index);
+					  he.setColor(ColorUtil.coLor(k));
+				  }
+				  count++;
+			  }
+			  return count;
+		  }
+		  } // end of switch
+		  
 		  return count;
 	  }
 
@@ -5701,10 +5844,6 @@ public class PackData{
 		}
 		int count=0;
 		
-		// TODO: we parse in a new way for DCEL case;
-		//       must come back later if we want to update
-		//       the traditional parsing.
-		
 		// 'flagSeg's as with commands: process in succession
 		
 		// circle-related (followed by {v..})
@@ -5715,7 +5854,7 @@ public class PackData{
 		
 		// face-related (followed by {f..})
 		//  * -f[mc]  mark and/or color
-		// NOTE: use face's vert triples rather than indices.
+		//  NOTE: use face's vert triples rather than indices.
 		
 		// edge-related (followed by {v w..})
 		//  * -e[mcis]  mark, color, inv distance, and/or schwarzian

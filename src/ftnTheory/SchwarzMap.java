@@ -12,7 +12,6 @@ import allMains.CirclePack;
 import combinatorics.komplex.DcelFace;
 import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import dcel.Schwarzian;
 import exceptions.DataException;
 import exceptions.MiscException;
 import exceptions.ParserException;
@@ -38,31 +37,26 @@ import widgets.RadiiSliders;
  * This is code for exploring discrete Schwarzian derivatives.
  * One goal is to handle packings on the sphere, another is to
  * study projective structures on more general Riemann surfaces. 
- * Motivated by Gerald Orick's thesis, I am pursuing a 
- * slightly different notion, one identifying the "base 
- * equilateral" with each face. The normalized equilateras is 
- * centered at the origin and has its edge midpoints at the cube 
- * roots of unity.
+ * Motivated by Gerald Orick's thesis, I am pursuing a slightly
+ * modified version of his "directed Mobius edge derivative"
+ * along with an "intrinsic" schwarzian associated with maps
+ * from a standardized "base equilateral" setting. 
  * 
  * The concern is with maps between tangency circle packings 
- * sharing the same combinatorics. Mechanics involve the "dual" 
- * triangles, one for each face, formed by its 3 tangency points, 
- * which encloses the interstice and is inscribed in the dual 
- * circle for the face. 
- * 
- * A "circle packing quadrangle" refers to two faces sharing edge e. 
- * Given map phi:P --> P' between circle packings, for each face 
- * f and f'=phi(f), M(f) is the "face Mobius map" of f onto f' which
- * identifies corresponding tangency points. These face mappings 
- * were pieced together, along with extensions to circle interiors,
+ * sharing the same combinatorics. A "circle packing quadrangle" 
+ * refers to two faces sharing an edge e. Given map phi:P --> P' 
+ * between circle packings, for each face f and f'=phi(f), M(f) 
+ * is the "face Mobius map" of f onto f' which identifies 
+ * corresponding tangency points. (These face mappings were 
+ * pieced together, along with extensions to circle interiors,
  * by He/Schramm to define point mappings between circle packing
- * carriers and was use to prove convergence results. 
+ * carriers and was used to prove convergence results.) 
  * 
  * **** CONVENTION: Given directed edge {v,w} shared by faces f and g, 
  * we reverse Orick's convention and let f be the face on the LEFT of 
  * {v,w}, g the face on the RIGHT. Note that the ordered pair {f,g} is 
  * the "dual" edge to {v,w} and geometrically ends up clockwise 
- * perpendicular to {v,w}.
+ * perpendicular to {v,w}, so it points out of f.
  * 
  * For each interior edge e sharing faces f and g, define the "directed 
  * Mobius edge derivative" by dM(e)=M(g)^{-1}.M(f). This is invariant: 
@@ -70,31 +64,36 @@ import widgets.RadiiSliders;
  * 
  * The Mobius maps dM(e) fix the tangency point within e and are always 
  * parabolic, and we normalize so trace(dM(e))=2 and det(dM(e))=1. If
- * dM(e) ~ [a b | c d], then the complex entry c is the "(complex) discrete
+ * dM(e) ~ [a b | c d], then the complex entry c is the "(complex discrete)
  * Schwarzian" as defined by Orick. More precisely, if z is the tangency
  * point in the edge e then dM(e) has the form
  *      dM(e)= [1 + c*z,-c*z^2; c, 1-c*z]
  * Moreover, c = s*i*conj(delta), where delta = exp{i theta} gives the
  * direction of the directed edge e and s is some real scalar. If
  * eta is the normal to e directed outward from f (so eta=-i*delta),
- * then c=s*conj(eta).
+ * then c=s*conj(eta). Note that the complex schwarzian for -e is -c.
+ * (The real number s is distinct from the intrinsic schwarzian we 
+ * generally work with (see below)
  * 
- * TODO: In my writeup, I want to change conventions, so we make
- * eta the outward normal from f. Then sigma(e), the complex Schwarzian 
- * derivative for e, is sigma=s*conj(eta), where s is the real
- * Schwarzian derivative for e. Note that for -e, sigma just changes 
- * sign, but the real schwarzian s is unchanged.
+ * In contrast to complex schwarzians related to mappings between
+ * two packings, I am introducing intrinsic schwarzians associated 
+ * with edges of a single tangency packing P. The "schwarzian" 
+ * element of an edge of P is this intrinsic schwarzian, a real 
+ * number based on a map from a "base equilateral". The normalized 
+ * equilateral is centered at the origin and has its edge 
+ * midpoints at the cube roots of unity.
  * 
- * We have two types of schwarzians. This PackExtender stores data 
- * for both domain and range packing, each having a 'TriAspect'
- * for each face: domain data stored on initiation (or adjusted 
- * later), range data stored on demand. Given {f,g} in domain
- * and {F,G} in range, we have stored the schwarzians for the map
- * in 'TriAspect.sch_coeff'. So the range packing is Mobius image 
- * of domain packing iff all 'sch_coeff' are zero.
+ * This extender is about the mapping case and we store data for 
+ * both domain and range packing, each having a 'TriAspect' for 
+ * each face: domain data stored on initiation (or adjusted later), 
+ * range data stored on demand. Given {f,g} in domain and {F,G} 
+ * in range, we have stored the complex schwarzians for the map 
+ * in 'TriAspect.sch_coeff'. Thus the range packing is a global 
+ * Mobius image of domain packing iff all 'sch_coeff' are zero
+ * iff all intrinsic schwarzians are zero.
  * 
- * TODO: fix 'layOrder' so that its 'HalfEdge's are from the correct
- * PackDCEL.
+ * TODO: fix 'layOrder' so that its 'HalfEdge's are from the 
+ * correct PackDCEL.
  * 
  * @author kens, November 2018; more work 3/2022.
  * */
@@ -122,8 +121,9 @@ public class SchwarzMap extends PackExtender {
 		}
 		// default: look at 'set_domain' call
 		domainTri=PackData.getTriAspects(packData);
-		// could change: look at 'set_range' call
+		// default, but normally changed: look at 'set_range' call
 		rangeTri=PackData.getTriAspects(packData);
+		rangePackNum=packData.packNum;
 		// may be reset when rangeTri is filled.
 		rangeHes=packData.hes; 
 
@@ -272,26 +272,23 @@ public class SchwarzMap extends PackExtender {
 				hitfaces[baseface]=1;
 				count=1;
 			}
-			// Now proceed through the ordered, propagating from face 
-			// to face. Note: each 'TriAspect' has rad/center and data 
-			// for a given circle may differ as the layout progresses. 
-			// Nevertheless, we store the latest rad/cent into qData
+			
+			// proceed, propagating from face to face. 
+			// Note: each 'TriAspect' has rad/center and data 
+			// for a given circle that may differ as the layout 
+			// progresses. Nevertheless, we store latest rad/cent 
+			// into qData
 			Iterator<HalfEdge> lit=layOrder.iterator();
 			lit.next(); // skip first, already laid
 			while (lit.hasNext()) {
 				HalfEdge he=lit.next();
+				int g=he.face.faceIndx;
+				int f=he.twin.face.faceIndx;
 				double s=he.getSchwarzian();
-				int f=he.face.faceIndx; // should already have its data
-				int g=he.twin.face.faceIndx;
-				int mode=1; // use 'radii'
-				Schwarzian.propogate(rangeTri,f,he,s,mode,qData.hes);
-				
-				int[] verts=rangeTri[g].vert;
-				for (int jj=0;jj<3;jj++) {
-					qData.setRadius(verts[jj],rangeTri[g].getRadius(jj));
-					qData.setCenter(verts[jj],
-							new Complex(rangeTri[g].getCenter(jj)));
-				}
+				int mode=1; // use 'radii' not 'labels'
+		    	int ans=-1;
+	    		ans= workshops.LayoutShop.schwPropogate(rangeTri[f],rangeTri[g],
+					he.twin,s,1);
 				
 				// Now, draw this face using 'TriAspect' data
 				int J=(rangeTri[g].edgeIndex(he.twin)+1)%3;
@@ -360,7 +357,7 @@ public class SchwarzMap extends PackExtender {
 				}
 			}
 			
-			// get desired dual edges, default to dTree
+			// get desired dual edges, default to layoutOrder
 			HalfLink layOrder=null;
 			if (items.size()>0) 
 				layOrder=HalfLink.glist_to_hlink(packData,items);
@@ -1338,8 +1335,8 @@ public class SchwarzMap extends PackExtender {
 	}
 	
 	/**
-	 * Store a new schwarzian coefficient for oriented edge <v,w> 
-	 * and its negative for <w,v>; also set associated MobDeriv's.
+	 * Store a new schwarzian for oriented edge <v,w> and <w,v>; 
+	 * also set associated MobDeriv's.
 	 * Note that faces f/g are left/right of <v,w>, respectively.
 	 * @param v int
 	 * @param w int
@@ -1359,22 +1356,7 @@ public class SchwarzMap extends PackExtender {
         int jf=ftri.vertIndex(v);
         ftri.schwarzian[jf]=s_coeff;
         int jg=gtri.vertIndex(w);
-        gtri.schwarzian[jg]=-1.0*s_coeff;
-    
-        // store the Mobius edge derivatives for f and g
-        Mobius mobf=new Mobius();
-        Complex tpt=ftri.tanPts[jf];
-        Complex vw_perp=ftri.getCenter((jf+1)%3).minus(
-        		ftri.getCenter(jf)).times(new Complex(0,1));
-        vw_perp=vw_perp.divide(vw_perp.abs());
-        Complex c=vw_perp.conj().times(s_coeff);
-        mobf.a=c.times(tpt).add(new Complex(1,0));
-        mobf.b=c.times(tpt).times(tpt).times(-1.0);
-        mobf.c=new Complex(c);
-        mobf.d=c.times(tpt).times(-1.0);
-	
-        ftri.MobDeriv[jf]=mobf;
-        gtri.MobDeriv[jg]=(Mobius) mobf.inverse();
+        gtri.schwarzian[jg]=s_coeff;
         return true;
 	}
 	
@@ -1412,64 +1394,61 @@ public class SchwarzMap extends PackExtender {
 	 */
 	public void initCmdStruct() {
 		super.initCmdStruct();
-		cmdStruct.add(new CmdStruct(
-				"radS","{v..}",null,
-				"Create and display a widget for adjusting radii"));
-		cmdStruct.add(new CmdStruct(
-				"put","[-q{n} [{v w .. }]",null,
-				"Put rangeTri radii/centers into packing {n} "+
-						"(default to image). First check "+
-				"p{n} geometry and combinatorics. Determine "+
-						"for edges (default to 'layOrder' tree)"));
-		cmdStruct.add(new CmdStruct(
-				"set_domain","[-q{}]",null,
-				"Fill 'domainTri' data; default to this packing"));
-		cmdStruct.add(new CmdStruct(
-				"set_range","[-q{}]",null,
-				"Fill 'rangeTri' data; default to this packing"));
-		cmdStruct.add(new CmdStruct(
-				"go",null,null,
-				"Compute and store Schwarzians; "+
-				"call 'set_range' using current packing if necessary"));
-		cmdStruct.add(new CmdStruct(
-				"get","{v w ..}",null,
-				"Compute Schwarzians "+
-				"for designated edges"));
-		cmdStruct.add(new CmdStruct(
-				"get_tree",null,null,
-				"copy spanning tree into 'glist'"));
-		cmdStruct.add(new CmdStruct(
-				"s_load","<filename>",null,
-				"Read Schwarzian "+
-				"derivates from a file into 'rangeTri'"));
-		cmdStruct.add(new CmdStruct(
-				"s_map","-q{q} [{v w ..}]",null,
-				"Use Schwarzians stored in 'rangeTri' to successively "+
-				"insert radii and centers into 'rangeTri'. Edges "+
-				"{v,w} are given: default to 'layOrder'."+
-				"New faces are laid out in q canvas. "));
-		cmdStruct.add(new CmdStruct(
-				"s_out","-[fa] <filename>",null,
-				"Write Schwarzian "+
-				"scalars to file: f g  sch_coeff"));
-		cmdStruct.add(new CmdStruct(
-				"s_set","{v w s ...}",null,
-				"Set the Schwarzian scalar for oriented edge v,w "+
-				"to 's' (and w,v to -s)"));
-		cmdStruct.add(new CmdStruct(
-				"s_inc","x {f g ..}",null,
-				"Increment schwarzian by factor x for given dual edges"));
-		cmdStruct.add(new CmdStruct(
-				"output","-[fa] <filename>",null,
-				"Write dM data to matlab-style file: 'v w tangPt dM'"));
-		cmdStruct.add(new CmdStruct(
-				"field",null,null,
-				"display vector field of Schwarzian derivatives, "+
-				"color/length encoded."));
-		cmdStruct.add(new CmdStruct(
-				"s_layout","[-d{flags}] {v w ...}",
-				null,"Us the schwarzians stored with the domain "+
-				"packing to compute/layout faces for edge "+
-				"{v,w}, placing data in the domain's 'TriAspect's."));
+		cmdStruct.add(new CmdStruct("radS",
+				"{v..}",null,"Create and display a widget for "
+						+ "adjusting radii"));
+		cmdStruct.add(new CmdStruct("put",
+				"[-q{n} [{v w .. }]",null,"Put rangeTri "
+						+ "radii/centers into packing {n} "
+						+ "(default to image). First check "
+						+ "p{n} geometry and combinatorics. Determine "
+						+ "for edges (default to 'layOrder' tree)"));
+		cmdStruct.add(new CmdStruct("set_domain",
+				"[-q{}]",null,"Fill 'domainTri' data; default to "
+						+ "this packing"));
+		cmdStruct.add(new CmdStruct("set_range",
+				"[-q{}]",null,"Fill 'rangeTri' data; default "
+						+ "to this packing"));
+		cmdStruct.add(new CmdStruct("go",
+				null,null,"Compute and store Schwarzians; "
+						+ "call 'set_range' using current packing if "
+						+ "necessary"));
+		cmdStruct.add(new CmdStruct("get",
+				"{v w ..}",null,"Compute Schwarzians "
+						+ "for designated edges"));
+		cmdStruct.add(new CmdStruct("get_tree",
+				null,null,"copy spanning tree into 'glist'"));
+		cmdStruct.add(new CmdStruct("s_load",
+				"<filename>",null,"Read Schwarzians "
+						+ "from a file into 'rangeTri'"));
+		cmdStruct.add(new CmdStruct("s_map",
+				"-q{q} [{v w ..}]",null,"Use Schwarzians stored in "
+						+ "'rangeTri' to successively insert radii "
+						+ "and centers into 'rangeTri'. Edges {v,w} "
+						+ "are given: default to 'layOrder'. New "
+						+ "faces are laid out in q canvas. "));
+		cmdStruct.add(new CmdStruct("s_out",
+				"-[fa] <filename>",null,"Write Schwarzians to "
+						+ "file: f g  <sch_coeff>"));
+		cmdStruct.add(new CmdStruct("s_set",
+				"{v w s ...}",null,"Set Schwarzians to 's' for "
+						+ "oriented edges (v,w) and (w,v)"));
+		cmdStruct.add(new CmdStruct("s_inc",
+				"x {f g ..}",null,"Increment schwarzian by factor "
+						+ "x for given dual edges"));
+		cmdStruct.add(new CmdStruct("output",
+				"-[fa] <filename>",null,"Write dM data to matlab-style "
+						+ "file: 'v w tangPt dM'"));
+		cmdStruct.add(new CmdStruct("field",
+				null,null,"display vector field of Schwarzian derivatives, "
+						+ "color/length encoded."));
+		cmdStruct.add(new CmdStruct("s_layout",
+				"[-d{flags}] {v w ...}",null,"Us the schwarzians stored "
+						+ "with the domain packing to compute/layout "
+						+ "faces for edge {v,w}, placing data in the "
+						+ "domain's 'TriAspect's."));
+		cmdStruct.add(new CmdStruct("ratio_color",
+				null,null,"Color domain interior edges based on ratio "
+						+ "s'/s, range schwarzian/domain schwarzian"));
 	}
 }

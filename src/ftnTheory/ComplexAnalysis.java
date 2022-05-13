@@ -1,5 +1,6 @@
 package ftnTheory;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
@@ -16,7 +17,6 @@ import komplex.DualTri;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
-import listManip.HalfLink;
 import listManip.NodeLink;
 import math.Mobius;
 import math.group.GroupElement;
@@ -406,11 +406,11 @@ public class ComplexAnalysis extends PackExtender {
 			for (int v=1;v<=packData.nodeCount;v++) 
 				logr[v]=Math.log(rangeData.getRadius(v))-Math.log(domainData.getRadius(v));
 			laplace=LaplaceIt(logr);
-			Vector<Double> data=new Vector<Double>(packData.nodeCount);
+			ArrayList<Double> data=new ArrayList<Double>(packData.nodeCount);
 			for (int v=1;v<=packData.nodeCount;v++)
 				data.add(Double.valueOf(laplace[v]));
-			Vector<Integer> colors=new Vector<Integer>(packData.nodeCount);
-			colors=ColorUtil.blue_red_diff_ramp(data);
+			ArrayList<Integer> colors=new ArrayList<Integer>(packData.nodeCount);
+			colors=ColorUtil.blue_red_color_ramp(data);
 
 			// record in face
 			for (int v=1;v<=packData.nodeCount;v++)

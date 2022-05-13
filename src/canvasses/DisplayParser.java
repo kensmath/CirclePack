@@ -286,12 +286,18 @@ public class DisplayParser {
 			//   face order; no list defaults to drawing order.
 			//   Intention is to lay out subsequent faces based
 			//   on earlier faces in this list (if such exists).
+			//   char 's' (e.g., 'Cs') means use schwarzians.
 			// NOTE: this may change stored centers.
 			case 'B': // both faces and circles
 			case 'C': // circles
 			case 'F': // faces
 			{
+				boolean useSchw=false;
 				HalfLink hlink=null;
+				
+				if (sub_cmd.startsWith("s")) // use schwarzians, not radii
+					useSchw=true;
+				
 				if (items.size() == 0) { // default to drawing order (plus stragglers 
 										 // (i.e., not needed in drawing order)) 
 					hlink=p.packDCEL.fullOrder;
@@ -360,15 +366,15 @@ public class DisplayParser {
 				// now proceed with layout
 				if (c == 'F') {
 					count += p.packDCEL.layoutFactory(null, 
-							hlink,dispFlags,null,true,firstFace,-1.0);
+							hlink,dispFlags,null,true,firstFace,useSchw,-1.0);
 				} 
 				else if (c == 'C') {
 					count += p.packDCEL.layoutFactory(null,
-							hlink,null,dispFlags,true,firstFace,-1.0);
+							hlink,null,dispFlags,true,firstFace,useSchw,-1.0);
 				}
 				else if (c == 'B') { // we have only one color we can use
 					count += p.packDCEL.layoutFactory(null,
-							hlink,dispFlags,dispFlags,true,firstFace,-1.0);
+							hlink,dispFlags,dispFlags,true,firstFace,useSchw,-1.0);
 				}
 				break;
 			} // done with C/B/F
@@ -594,6 +600,8 @@ public class DisplayParser {
 						Complex []pts=new Complex[2];
 						pts[0]=p.getCenter(edge.origin.vertIndx);
 						pts[1]=p.getCenter(edge.twin.origin.vertIndx);
+						if (dispFlags.fill)
+							dispFlags.setColor(edge.getColor());
 						cpScreen.drawEdge(pts[0],pts[1],dispFlags);
 						count++; // cpScreen.rePaintAll();
 					}

@@ -776,6 +776,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 				EdgeData eData=new EdgeData(packData,he);
 				edgeChoiceField.setText(eData.edgeStr);
 				invDistanceField.setValue(eData.invDist);
+				schwarzianField.setValue(eData.schwarzian);
 				edgeLengthField.setValue(eData.edgelength);
 				edgeIntendField.setValue(eData.intended);
 				if (eData.isRed)

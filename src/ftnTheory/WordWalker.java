@@ -53,6 +53,8 @@ public class WordWalker extends PackExtender {
 		// draw facelist, imprinting first and last
 		
 		if (cmd.startsWith("mtrek")) {
+			boolean useSchw=false;
+			// TODO: may want option to use schwarzians
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				FaceLink facelink=new FaceLink(packData,items);
@@ -70,7 +72,8 @@ public class WordWalker extends PackExtender {
 						codes[1]=null;
 						codes[2]=null;
 						DispFlags dflags=new DispFlags(null);
-						pdcel.layoutFactory(null,hlink,dflags,null,true,false,-1.0);
+						pdcel.layoutFactory(null,hlink,dflags,null,
+								true,false,useSchw,-1.0);
 						count++;
 					}
 					imprintFace(lastface);

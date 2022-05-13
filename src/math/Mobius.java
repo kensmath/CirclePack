@@ -165,7 +165,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/**
-	 * Normalize 'this' Mobius so that ad-bc=1.
+	 * Normalize 'this' Mobius so that ad-bc=1 and real(trace)>=0.
 	 *  
 	 * TODO: what happens if 'this' is orientation reversing?
 	 */
@@ -173,13 +173,21 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		Complex dett = det();
 		if (dett.abs() < .000000001)
 			throw new MobException("Mobius: det too small to trust");
-		if (dett.sub(new Complex(1.0)).abs() < .0000001)
-			return; // already okay
-		Complex detSqrt = dett.sqrt().reciprocal();
-		a = a.times(detSqrt);
-		b = b.times(detSqrt);
-		c = c.times(detSqrt);
-		d = d.times(detSqrt);
+		if (dett.sub(new Complex(1.0)).abs() > .0000001) {
+			Complex detSqrt = dett.sqrt().reciprocal();
+			a = a.times(detSqrt);
+			b = b.times(detSqrt);
+			c = c.times(detSqrt);
+			d = d.times(detSqrt);
+		}
+		// ensure trace.x is positive
+		Complex tc=a.plus(d);
+		if (tc.x<0.0) {
+			a=a.times(-1.0);
+			b=b.times(-1.0);
+			c=c.times(-1.0);
+			d=d.times(-1.0);
+		}
 	}
 
 	/**
@@ -436,10 +444,10 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/**
-	 * Create Mobius (det=1) mapping complexes {a,b,c} to {0, 1, infty}, resp. 
-	 * General form is [b-c -a(b-c); b-a -c(b-a)], with special cases if
-	 * a, b, or c is infinity. Return null on failure or roundoff problems,
-	 * e.g., a and b too close. 
+	 * Create normalized Mobius (det=1) mapping complexes {a,b,c} 
+	 * to {0, 1, infty}, resp. General form is [b-c -a(b-c); b-a -c(b-a)], 
+	 * with special cases if a, b, or c is infinity. Return null on 
+	 * failure or roundoff problems, e.g., a and b too close. 
 	 * TODO: Need to clean up, perhaps allow null
 	 * arguments for infinity.
 	 * 
@@ -695,7 +703,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/**
-	 * Create Mobius mapping Complex pts x,y,z to X,Y,Z resp. 
+	 * Create normalized Mobius mapping Complex pts x,y,z to X,Y,Z resp. 
 	 * (Depends on the two geometries; for sphere, points must be
 	 * stereo projected to the plane.)
 	 * @param x Complex
@@ -723,7 +731,11 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		Mobius m = Mobius.standard3Point(x, y, z);
 		Mobius M = Mobius.standard3Point(X, Y, Z);
 		GroupElement MInverse = (GroupElement) M.inverse();
-		return (Mobius) m.lmult(MInverse);
+		
+		// normalize
+		Mobius outmob=(Mobius)m.lmult(MInverse);
+		outmob.normalize();
+		return outmob;
 	}
 
 	/**

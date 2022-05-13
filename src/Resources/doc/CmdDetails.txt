@@ -510,15 +510,15 @@ center from the origin (when |z| is non-zero).
 </seealso>
 </command>
 
-<command cmd="color" flags="-[cf] [options]">
-<description>Color specifications affect the display of filled circles "-c", 
-	faces "-f", or tiles only -- "-T" "-D" "-Q" for tiles, dual tiles, quad tiles.
+<command cmd="color" flags="-[cfe] [options]">
+<description>Color specifications affect the display of filled 
+	circles, faces, edges, or tiles only -- "-T" "-D" "-Q" for 
+	tiles, dual tiles, quad tiles.
 </description>
 <options> (one only)
-	<opt flag="bg {i..}"> background color for selected indices 
-(faces or circles)</opt>
+	<opt flag="bg {i..}"> background color for selected objects</opt>
 	<opt flag="fg {i..}"> foreground color</opt>
-	<opt flag="{c} c {i..}"> is a color code (in [0,39]), blue 
+	<opt flag="{c} c {i..}"> c is a color code (in [0,39]), blue 
 to red ramp</opt>
 	<opt flag="p{p} {i..}"> copies colors from pack p 
 (deprecated: '-p')</opt>
@@ -537,30 +537,36 @@ among 16 distinct colors starting at random point</opt>
 	<opt flag="s0 {i..}"> same as 's', but start at 0 point</opt> 
 	<opt flag="S0 {i..}"> same as 'S', but start at 0 point</opt> 
 	<opt flag="-k {x}"> (not currently implemented) 
-(circles only) blue-red, compare model curvature to x.</opt>
+         (circles only) blue-red, compare model curvature to x.</opt>
 	<opt flag="x {f..}"> (faces) compare 3D/2D eucl area (if 'xyz' data exists).</opt>
 	<opt flag="v {f..}"> (faces) use vertex colors: majority wins, 
-else first vert's color. (deprecated: '-v')</opt>
+		 else first vert's color. (deprecated: '-v')</opt>
 	<opt flag="v {t..}"> (tiles) use color assigned to baryVert vertex</opt>
 	<opt flag="qc [options] -m {x} {f..}">  (faces only)
-		red color ramp for faces based on quasiconformal 
-		dilatation of some map. (All computations are done using
-		euclidean data.) -m {x} sets ceiling x on
-		dilatations; those above x will be dark blue,
-		those in [1,x) will be increasingly red, those that 
-		cannot be computed for some reason will be black.
+		 red color ramp for faces based on quasiconformal 
+		 dilatation of some map. (All computations are done using
+		 euclidean data.) -m {x} sets ceiling x on
+		 dilatations; those above x will be dark blue,
+		 those in [1,x) will be increasingly red, those that 
+		 cannot be computed for some reason will be black.
 	   options:
 		-q{p}  comparison to packing p.
 		-[ns] {name} comparison to a file with xyz coords.
 		        -n for file, -s for data in the current script file.
 		-x      comparison to xyz data stored as part of the 
 			packing data.</opt>
-	<opt> flag="a {v..}"> (circles/faces) 'ArgWheel'; based on argument of
-		center or incenter.</opt>
+	<opt flag="a {v..}"> (circles/faces) 'ArgWheel'; based on complex 
+	      argument of center or incenter.</opt>
+	<opt flag="z {v w ...}"> (edges only) based on schwarzian</opt>
+	<opt flag="r"> (edge only) reset all to foreground</opt>
 </options>
 <examples>
-<instance text="color -f qc q1 -m 1.5 a">color by quasiconformal dilatation, compared to p1</instance>
-<instance text="color -D d a">color dual tiles based on number of edges (if dual tiling exists).</instance> 
+<instance text="color -f qc q1 -m 1.5 a">color by 
+quasiconformal dilatation, compared to p1</instance>
+<instance text="color -D d a">color 
+dual tiles based on number of edges (if dual tiling exists).</instance> 
+<instance text="color -e z a">color all interior edges base on their 
+schwarzians</instance> 
 </examples>
 </command>
 		 
@@ -3942,24 +3948,22 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 </command>
 
 
-<command cmd="set_schwarzian" flags="-[cr{x}] {v w ...}]">
+<command cmd="set_schwarzian" flags="-[x] {v w ...}]">
 <description>
-	Compute and store the real schwarzians for given edges, 
+	Compute and store the intrinsic schwarzians for given edges, 
 	defaulting to 'all'. See 'Schwarzian.java' for more details
-	and the PackExtender 'SchwarzMap.java' for related methods. 
-	The schwarzian here is based on 'baseMobius' transforms and 
-	with the dual spanning tree can be used	to layout a packing 
-	determined up to Mobius	transformation by the layout of the 
-	first face.	(Layout works in spherical or euclidean geometry, 
-	but not	hyperbolic.) Flags may specify use of current radii
-	(default) or current centers to compute the schwarzians, 
-	or a value x may be	specified for one or more given edges. 
-	This call will allocate	schwarzian storage space if not 
-	already set.
+	and the PackExtender 'SchwarzMap.java' for related methods.
+	If double x is given, then set specified schwarzians to x. 
+	Else compute the schwarzians using current radii. This 
+	"intrinsic" schwarzian is based on 'baseMobius' transforms and 
+	with layoutOrder can be used to layout a packing determined 
+	up to Mobius transformation by the layout of the first face. 
+	(Layout works in spherical or euclidean geometry, but not 
+	hyperbolic.) 
 </description>
 <options>
-<opt flag="-r {v w ...}"> schwarzians based on existing layout radii (default)</opt>
-<opt flag="-c {v w ...}"> schwarzians based on existing layout centers</opt>
+<opt flag="{v w ...}"> Set based on current radii.
+<opt flag="-s {x} {v w ...}"> schwarzians set to double value x</opt>
 </options>
 <seealso>
 <see>dual_layout</see>

@@ -483,8 +483,29 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				}
 				break;
 			}
+			
+			case 'i':
+			{
+				for (int v=1;v<=packData.nodeCount;v++) {
+					Vertex vert=packData.packDCEL.vertices[v];
+					HalfLink spokes=vert.getSpokes(null);
+					Iterator<HalfEdge> sis=spokes.iterator();
+					while (sis.hasNext()) {
+						HalfEdge he=sis.next();
+						if (!he.isBdry()) {
+							int vv=he.origin.vertIndx;
+							int ww=he.next.origin.vertIndx;
+							if (vv<ww)
+								add(new EdgeSimple(vv,ww));
+							count++;
+						}
+					}
+				}
+				break;
+			}
+			
 
-			// bdry; check for braces (a,b)
+			// bdry; check for braces (a,b): edges from vert a to vert b
 			case 'b':
 			{
 				int next;

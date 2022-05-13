@@ -3,6 +3,7 @@ package ftnTheory;
 import java.awt.Color;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Vector;
@@ -10,15 +11,14 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
-import combinatorics.komplex.Face;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import dcel.CombDCEL;
+import dcel.PackDCEL;
 import dcel.PairLink;
 import dcel.Schwarzian;
 import dcel.SideData;
-import dcel.PackDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
@@ -499,7 +499,7 @@ public class ProjStruct extends PackExtender {
 			// TODO: we can now use 'HalfEdge.color'.
 			
 			// store data for qualifying edges in vector
-			Vector<Double> edata=new Vector<Double>();
+			ArrayList<Double> edata=new ArrayList<Double>();
 			for (int v=1;v<=packData.nodeCount;v++) {
 				HalfLink spokes=packData.packDCEL.vertices[v].getEdgeFlower();
 				Iterator<HalfEdge> sis=spokes.iterator();
@@ -512,7 +512,7 @@ public class ProjStruct extends PackExtender {
 				}
 			}
 			
-			Vector<Integer> ccodes=ColorUtil.blue_red_diff_ramp(edata);
+			ArrayList<Integer> ccodes=ColorUtil.blue_red_color_ramp(edata);
 			
 			// draw (same order)
 			int spot=0;

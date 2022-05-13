@@ -21,6 +21,7 @@ import javax.swing.LayoutStyle;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
 import exceptions.ParserException;
 import geometry.CircleSimple;
@@ -60,7 +61,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		VERT_AIM,VERT_DEG,VERT_COLOR,VERT_RADII,VERTEX_MAP,VERT_XYZ,VERT_FLOWER,
 		FACE_INDEX,FACE_CORNERS,PAVER_CORNERS,FACE_COLOR,FACE_AREA,FACE_VERTICES,
 		EDGE_INDICES,EDGE_COLOR,EDGE_LENGTH,EDGE_INT_LENGTH,EDGE_DUAL_CENTERS,
-		EDGE_DUAL_INDICES,SHARP_PQ,FACE_DUAL_RADII,FACE_DUAL_CENTER,
+		EDGE_DUAL_INDICES,EDGE_SCHW,SHARP_PQ,FACE_DUAL_RADII,FACE_DUAL_CENTER,
 		CALL_PACKET,NULL,MOBIUS_LABELS}
 		
 	private JLabel preLabel;
@@ -583,38 +584,43 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 									       
 		public static int print_edge_obj(PackData p,
 				BufferedWriter fp,dataCode code,int v,int w) {
+			HalfEdge he=p.packDCEL.findHalfEdge(new EdgeSimple(v,w));
 
 			try {
-		  if (code==dataCode.EDGE_COLOR) { // color
-			  // TODO: don't yet have color stored for edges
-			  CirclePack.cpb.myErrorMsg("output: edges don't yet have recorded colors");
-			  return 1;
-		  }
-		  if (code==dataCode.EDGE_LENGTH) { // actual length (based on centers)
-			    fp.write(p.edgeLength(v, w)+" ");
+				if (code==dataCode.EDGE_COLOR) {
+					Color col=p.getEdgeColor(he);
+					fp.write(col.getRed()+" "+col.getGreen()+" "+col.getBlue()+" ");
+					return 1;
+				}
+				if (code==dataCode.EDGE_SCHW) { // schwarzian
+					fp.write(he.getSchwarzian()+" ");
+					return 1;
+				}
+				if (code==dataCode.EDGE_LENGTH) { // actual length (based on centers)
+					fp.write(p.edgeLength(he)+" ");
 			    return 1;
-			  }
-		  if (code==dataCode.EDGE_INT_LENGTH) { // intended length (based on radii/overlaps)
-			    fp.write(p.intendedEdgeLength(v, w)+" ");
-			    return 1;
-			  }
-		  if (code==dataCode.EDGE_INDICES) { // length (based on radii/overlaps)
-			    fp.write(v+" "+w+" ");
-			    return 1;
-			  }
-		  if (code==dataCode.EDGE_DUAL_CENTERS) { // centers of dual edgea
-			  Complex []pts=p.ends_dual_edge(new EdgeSimple(v,w));
-			  fp.write(pts[0].x+" "+pts[0].y+"  "+pts[1].x+" "+pts[1].y);
-			  return 1;
-		  }
-		  if (code==dataCode.EDGE_DUAL_INDICES) { // face indices for dual edges
-			  int []lf=p.left_face(v,w);
-			  int []rf=p.left_face(w,v);
-			  if (lf[0]==0 || rf[0]==0) return 0;
-			  fp.write(lf[0]+" "+rf[0]);
-			  return 1;
-		  }
-		  
+				}
+				if (code==dataCode.EDGE_INT_LENGTH) { // intended length (based on radii/overlaps)
+					fp.write(p.intendedEdgeLength(he)+" ");
+					return 1;
+				}
+				if (code==dataCode.EDGE_INDICES) { // end indices
+					fp.write(he.origin.vertIndx+" "+he.twin.origin.vertIndx+" ");
+					return 1;
+				}
+				if (code==dataCode.EDGE_DUAL_CENTERS) { // centers of dual edgea
+					Complex []pts=p.ends_dual_edge(new EdgeSimple(v,w));
+					fp.write(pts[0].x+" "+pts[0].y+"  "+pts[1].x+" "+pts[1].y);
+					return 1;
+				}
+				if (code==dataCode.EDGE_DUAL_INDICES) { // face indices for dual edges
+					int []lf=p.left_face(v,w);
+					int []rf=p.left_face(w,v);
+					if (lf[0]==0 || rf[0]==0) 
+						return 0;
+					fp.write(lf[0]+" "+rf[0]);
+					return 1;
+				}
 			} catch (Exception ex) {}
 		  return 0;
 		} 
@@ -624,7 +630,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		 * set based on the types of objects selected: vertices, faces,
 		 * edges, and a few others. There may be more than one 'DataObj' 
 		 * specified. E.g, if Vfe==1 for vertices, we might want both 
-		 * centers and radii. There may also we 'DataObj's for literals.
+		 * centers and radii. There may also be 'DataObj's for literals.
 		 * @param fp BufferedWriter
 		 * @param p PackData
 		 * @param loopstr String, specifying vertices, edges, faces, or other
@@ -805,17 +811,17 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 	    	dobj.vfe=2;
 	    	if (datastr.equals("FI")) 
 	    		dobj.code=dataCode.FACE_INDEX;
-	    	if (datastr.equals("FZ")) 
+	    	else if (datastr.equals("FZ")) 
 	    		dobj.code=dataCode.FACE_CORNERS;
-	    	if (datastr.equals("FC")) 
+	    	else if (datastr.equals("FC")) 
 	    		dobj.code=dataCode.FACE_COLOR;
-	    	if (datastr.equals("FA")) 
+	    	else if (datastr.equals("FA")) 
 	    		dobj.code=dataCode.FACE_AREA;
-	    	if (datastr.equals("FV")) 
+	    	else if (datastr.equals("FV")) 
 	    		dobj.code=dataCode.FACE_VERTICES;
-			if (datastr.equals("FDR"))
+	    	else if (datastr.equals("FDR"))
 				dobj.code=dataCode.FACE_DUAL_RADII;
-			if (datastr.equals("FDZ"))
+	    	else if (datastr.equals("FDZ"))
 				dobj.code=dataCode.FACE_DUAL_CENTER;
 	    	break;
 	    }
@@ -824,15 +830,17 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 	    	dobj.vfe=3;
 	    	if (datastr.equals("EC")) 
 	    		dobj.code=dataCode.EDGE_COLOR;
-	    	if (datastr.equals("EL")) 
+	    	else if (datastr.equals("ES")) 
+	    		dobj.code=dataCode.EDGE_SCHW;
+	    	else if (datastr.equals("EL")) 
 	    		dobj.code=dataCode.EDGE_LENGTH;
-	    	if (datastr.equals("ER"))
+	    	else if (datastr.equals("ER"))
 	    		dobj.code=dataCode.EDGE_INT_LENGTH;
-	    	if (datastr.equals("EI")) 
+	    	else if (datastr.equals("EI")) 
 	    		dobj.code=dataCode.EDGE_INDICES;
-	    	if (datastr.equals("EDZ"))
+	    	else if (datastr.equals("EDZ"))
 	    		dobj.code=dataCode.EDGE_DUAL_CENTERS;
-	    	if (datastr.equals("EDI"))
+	    	else if (datastr.equals("EDI"))
 	    		dobj.code=dataCode.EDGE_DUAL_INDICES;
 	    	break;
 	    }
@@ -940,7 +948,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		item.setActionCommand(" VC ");
 		jpm.add(item);
 		
-		item=new JMenuItem("VSpq -- sharp functon");
+		item=new JMenuItem("VSpq -- sharp function");
 		item.addActionListener(this);
 		item.setActionCommand(" VSpq ");
 		jpm.add(item);
@@ -1000,7 +1008,12 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		item.setActionCommand(" EC ");
 		jpm.add(item);
 		
-		item=new JMenuItem("EL -- actualy lengths");
+		item=new JMenuItem("ES -- schwarzian");
+		item.addActionListener(this);
+		item.setActionCommand(" ES ");
+		jpm.add(item);
+		
+		item=new JMenuItem("EL -- actual lengths");
 		item.addActionListener(this);
 		item.setActionCommand(" EL ");
 		jpm.add(item);

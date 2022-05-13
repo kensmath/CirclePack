@@ -249,8 +249,12 @@ public class PostParser {
 				HalfLink hlink=null;
 				FaceLink facelist = null;
 				int first_face = 0;
+				boolean useSchw=false;
 				// no list? default to drawing order (plus stragglers)
 				if (items.size() == 0) {
+					if (StringUtil.isFlag(items.get(0)) && 
+							items.get(0).startsWith("-s"))
+						useSchw=true;
 					hlink=p.packDCEL.fullOrder;
 					facelist = new FaceLink(p, "Fs");
 					// handle first face circles (without adjusting centers)
@@ -302,13 +306,13 @@ public class PostParser {
 				// now proceed with layout
 				if (c == 'F') {
 					count += p.packDCEL.layoutFactory(pF,hlink,dispFlags,
-							null,true,false,tx);
+							null,true,false,useSchw,tx);
 				} else if (c == 'C') {
 					count += p.packDCEL.layoutFactory(pF,hlink,null,
-							dispFlags,true,false,tx);
+							dispFlags,true,false,useSchw,tx);
 				} else if (c == 'B') { // we have only one color we can use
 					count += p.packDCEL.layoutFactory(pF,hlink,dispFlags,
-							dispFlags,true,false,tx);
+							dispFlags,true,false,useSchw,tx);
 				}
 				break;
 			}

@@ -2005,7 +2005,7 @@ public class CommandStrParser {
 	    			  }
 	    		  }
 
-	    		  if(px.running) {
+	    		  if(px!=null && px.running) {
 	    			  CirclePack.cpb.msg("Pack "+packData.packNum+
 	    					  ": started "+px.extensionAbbrev+" extender");
 	    			  px.StartUpMsg();
@@ -4411,7 +4411,7 @@ public class CommandStrParser {
 		  return 1;
 	  }
 	  
-	  // Propogate across and edge based on intrinsic Schwarzian
+	  // Propogate across an edge based on intrinsic Schwarzian
 	  else if (cmd.startsWith("T_s_prop")) {
 		  items=flagSegs.get(0);
 		  double s=0;
@@ -4428,15 +4428,20 @@ public class CommandStrParser {
 			  return 0;
 		  }
 		  
-		  // get the 'TriAspect's
-		  TriAspect[] aspects=PackData.getTriAspects(packData);
-		  Schwarzian.propogate(aspects, he.face.faceIndx, he, s, 1,0);
-		  int gface=he.twin.face.faceIndx;
+		  // get the 'TriAspect
+		  TriAspect ftri=new TriAspect(packData.packDCEL,he.face);
+		  TriAspect gtri=new TriAspect(packData.packDCEL,he.twin.face);
+		  int ans=workshops.LayoutShop.schwPropogate(ftri,gtri,he,s,1);
+		  if (ans<0)
+			  return 0;
+		  
+		  // store results
 		  int oppV=he.twin.prev.origin.vertIndx;
-		  int j=aspects[gface].vertIndex(oppV);
-		  Complex oppCenter=aspects[gface].getCenter(j);
-		  packData.setCenter(oppV, oppCenter);
-		  packData.setRadius(oppV,aspects[gface].getRadius(j));
+		  int j=gtri.vertIndex(oppV);
+		  Complex oppCenter=gtri.getCenter(j);
+		  double oppRad=gtri.getRadius(j);
+		  packData.packDCEL.setCent4Edge(he.twin.prev, oppCenter);
+		  packData.packDCEL.setRad4Edge(he.twin.prev, oppRad);
 		  return 1;
 	  }
 	  
@@ -5541,7 +5546,14 @@ public class CommandStrParser {
 		  else if (cmd.startsWith("color")) {
 			  items=(Vector<String>)flagSegs.elementAt(0);
 			  String str=(String)items.elementAt(0);
-			  // faces or circles?
+			  // circles, faces, edges, tiles?
+			  if (str.startsWith("-c") || str.startsWith("-v")) {
+				  items.remove(0);
+				  if (items.size()==0)
+					  flagSegs.remove(0);
+				  packData.color_circles(flagSegs);
+				  return 1;
+			  }
 			  if(str.startsWith("-f")) {
 				  items.remove(0);
 				  if (items.size()==0)
@@ -5549,11 +5561,11 @@ public class CommandStrParser {
 				  packData.color_faces(flagSegs);
 				  return 1;
 			  }
-			  if (str.startsWith("-c") || str.startsWith("-v")) {
+			  if(str.startsWith("-e")) {
 				  items.remove(0);
 				  if (items.size()==0)
 					  flagSegs.remove(0);
-				  packData.color_circles(flagSegs);
+				  packData.color_edges(flagSegs);
 				  return 1;
 			  }
 			  if (str.startsWith("-T") || str.startsWith("-D") || 
@@ -6941,12 +6953,32 @@ public class CommandStrParser {
 	       */
 		  else if (cmd.startsWith("layout")) {
 			  PackDCEL pdc=packData.packDCEL;
-
+			  boolean useSchw=false; 
+			  
 			  // most typical call
 	    	  if (flagSegs.size()==0) {
 	    		  pdc.layoutPacking();
 	    		  packData.fillcurves();
 	    		  return 1;
+	    	  }
+
+	    	  // first flag is "-s" indicates use schwarzians for layouts
+	    	  items=flagSegs.get(0);
+	    	  if (items.get(0).startsWith("-s")) {
+				  if (packData.hes<0) {
+					  CirclePack.cpb.errMsg("Can't use schwarzians for "
+					  		+ "layout in the hyperbolic setting");
+					  return 0;
+				  }
+	    		  items.remove(0);
+	    		  useSchw=true;
+	    		  if (items.size()==0) {
+	    			  flagSegs.remove(0);
+	    			  if (flagSegs.size()==0) {
+	    				  pdc.layoutPacking(useSchw);
+	    				  return 1;
+	    			  }
+	    		  }
 	    	  }
 
 	    	  Iterator<Vector<String>> its=flagSegs.iterator();
@@ -6964,7 +6996,7 @@ public class CommandStrParser {
 	    		  }
 	    		  case 'c': // compute center:
 	    		  {
-    				  pdc.layoutPacking();
+    				  pdc.layoutPacking(useSchw);
     				  count++;
 	    			  break;
 	    		  }
@@ -6993,13 +7025,13 @@ public class CommandStrParser {
 	    					  throw new CombException("torus 4-sided layout failed");
 	    				  }
 	    				  CombDCEL.fillInside(pdc);
-	    				  pdc.layoutPacking();
+	    				  pdc.layoutPacking(useSchw);
 	    				  break;
 	    			  }
 	    			  else { // 'd' with optional vert whose locations to report
 	    				  str=(String)items.get(0);
 	    				  int v=NodeLink.grab_one_vert(packData,str);
-	    				  pdc.layoutReport(v,true,false);
+	    				  pdc.layoutReport(v,true,false,useSchw);
 	    				  count++;
 	    				  break;
 	    			  }
@@ -7025,14 +7057,14 @@ public class CommandStrParser {
 	    				
 	    	    	  CombDCEL.finishRedChain(pdc,pdc.redChain);
 	    	    	  packData.packDCEL.fixDCEL(packData);
-	    	    	  packData.packDCEL.layoutPacking();	
+	    	    	  packData.packDCEL.layoutPacking(useSchw);	
 	    	    	  break;
 	    		  }
 	    		  case 'F': // redo combinatorics, reset aims/curv
 	    		  {
     				  pdc.redChain=null;
     				  pdc.fixDCEL(packData);
-    				  pdc.layoutPacking();
+    				  pdc.layoutPacking(useSchw);
 	    			  
 	    			  // TODO: some traditional pflag options 
 	    			  //    aren't implemented in DCEL version yet
@@ -7041,7 +7073,9 @@ public class CommandStrParser {
 	    			  packData.set_aim_default();
 	    			  return 1;
 	    		  }
-	    			/*    		  case 'h': // drawing order via hex_walk routine
+	    		  
+/*  TODO: update 
+  		  		  case 'h': // drawing order via hex_walk routine
 	    		  {
 	    			  int v=0,w=0,n=1;
 	    			  try {
@@ -7078,14 +7112,16 @@ public class CommandStrParser {
 	    				  break;
 	    			  }
     				  count +=LayoutShop.
-    						  layoutFaceList(pdc,facelist,packData.hes);
+    						  layoutFaceList(pdc,facelist,packData.hes,useSchw);
 	    			  break;
 	    		  }
-	    		  case 's': // recompute angle sums
+	    		  case 's': // lay out using schwarzians
 	    		  {
-	    			  packData.fillcurves();
-	    			  count++;
-	    			  break;
+	    			  useSchw=true;
+		    		  pdc.layoutPacking(useSchw);
+		    		  packData.fillcurves();
+		    		  count++;
+		    		  break;
 	    		  }
 	    		  case 'T': // tailored (falls through to 't')
 	    		  {
@@ -7117,7 +7153,7 @@ public class CommandStrParser {
 	    	  }  // end of while
 	    	  return count;
 	    	  
-			  // traditional
+			  // TODO: reintroduce these options in DCEL setting??
 //	    	  double crit=LAYOUT_THRESHOLD;
 	    	  // Options for computing center of v:
 	    	  //   opt=1: use only one pair of contiguous neighbors, 
@@ -7497,7 +7533,6 @@ public class CommandStrParser {
 	      u: designated vert on unit circle 
 	      U: scale down (only) to fit packing in unit disc
 	      Return 0 on error. */
-	      // TODO: might be better organized
 	      if (cmd.startsWith("norm_scale")) {
 	    	  if (packData.hes!=0) {
 	    		  CirclePack.cpb.errMsg("'norm_scale' applies only to euclidean packings");
@@ -9087,51 +9122,37 @@ public class CommandStrParser {
 	    	  
 	    	  // ========= set_schwarzians ==========
 	    	  if (cmd.startsWith("sch")) { 
-    			  HalfLink clink=null; // those done using current layout
-    			  HalfLink rlink=null; // those done using current radii only
+    			  HalfLink hlink=null; 
+    			  boolean givenx=false; 
+    			  double sch_value=0.0;
 
-	    		  // no arguments, set all to values based on current radii
     			  if (flagSegs==null || flagSegs.size()==0 || 
-    					  flagSegs.get(0).size()==0) 
-    				  rlink=new HalfLink(packData,"a");
-    			  else if ((items=flagSegs.get(0)).size()!=0 && 
-    					  StringUtil.isFlag(items.get(0))) {
-    				  Iterator<Vector<String>> its=flagSegs.iterator();
-    				  while (its.hasNext()) {
-    					  items=flagSegs.remove(0);
-    					  String str=items.get(0);
-    					  if (StringUtil.isFlag(str)) {
-    						  items.remove(0);
-    						  char c=str.charAt(1);
-    						  switch(c) {
-    						  case 'r': // use current radii
-    						  {
-    							  rlink=new HalfLink(packData,items); // default to all
-    							  break;
-    						  }
-    						  default: // use current layout
-    						  {
-    							  clink=new HalfLink(packData,items); // default to all
-    						  }
-    						  } // end of switch
-    					  }
-    					  else // default to all using current layout
-    						  clink=new HalfLink(packData,items);
-    				  } // end of reading option
+    					  flagSegs.get(0).size()==0) {
+    				  hlink=new HalfLink(packData,"a");
     			  }
-    				
-    			  // if method is not to be computed, then set the
-    			  //    specified value for the designated edges
-    			  if (flagSegs!=null && flagSegs.size()>0 && 
-    					  (items=flagSegs.get(0)).size()>0
-    					  && clink==null && rlink==null) {
-    				  double sch_value=0.0;
-    				  try {
-    					  sch_value=Double.parseDouble(items.remove(0));
-    				  } catch (Exception ex) {
-    					  throw new InOutException("usage: set_sch x {v w ...}");
+    			  else {
+    				  items=flagSegs.remove(0);
+    				  if (StringUtil.isFlag(items.get(0))) {
+    					  if (items.get(0).startsWith("-s")) {
+    						  items.remove(0);
+    						  try {
+    		   					  sch_value=Double.parseDouble(items.get(0));
+    		   					  givenx=true;
+    		   					  items.remove(0);
+    		   				  } catch (Exception ex) {
+    		   					  throw new ParserException("usage: set_schw -s {x} {v w ..}");
+    		   				  }
+    					  }
+    					  else
+    						  throw new ParserException("usage: set_schw -s ..");
     				  }
-    				  HalfLink hlink=new HalfLink(packData,items);
+    				  if (items.size()==0)
+        				  hlink=new HalfLink(packData,"a");
+    				  else
+        				  hlink=new HalfLink(packData,items);
+    			  }
+    			  
+    			  if (givenx) {
     				  if (hlink==null || hlink.size()==0)
     					  return count;
     				  
@@ -9139,10 +9160,14 @@ public class CommandStrParser {
     				  while (his.hasNext()) {
     					  try {
     						  HalfEdge edge=his.next();
-    						  if (edge.isBdry()) 
+    						  if (edge.isBdry()) {
     							  edge.setSchwarzian(0.0);
-    						  else
+    							  edge.twin.setSchwarzian(0.0);
+    						  }
+    						  else {
     							  edge.setSchwarzian(sch_value);
+    							  edge.twin.setSchwarzian(sch_value);
+    						  }
 							  count++;
     					  } catch (Exception ex) {
     						  throw new DataException("error in set_schwarz: "+
@@ -9152,14 +9177,8 @@ public class CommandStrParser {
     				  return count;
     			  }
     			  
-    			  if (clink!=null) { // use current layout
-    				  count += Schwarzian.comp_schwarz(packData, clink,2);
-	    		  }
-    			  if (rlink!=null) { // use current radii
-    				  count += Schwarzian.comp_schwarz(packData, rlink,1);
-	    		  }
-	    		  
-    			  return count;
+    			  // else set to current
+   				  return Schwarzian.comp_schwarz(packData, hlink);
 	    	  }
 
 	    	  // ========= set_invdist  ========

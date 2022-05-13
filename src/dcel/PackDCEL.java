@@ -25,7 +25,6 @@ import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import input.CPFileManager;
 import komplex.EdgeSimple;
-import listManip.FaceLink;
 import listManip.GraphLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
@@ -448,7 +447,7 @@ public class PackDCEL {
 
 	/**
 	 * Place a 'HalfEdge' so 'origin' is at z=0 and other
-	 * end is on the positive real axis. Store the centers. 
+	 * end is on the positive imaginary axis. Store the centers. 
 	 * @param edge HalfEdge
 	 */
 	public void placeFirstEdge(HalfEdge edge) {
@@ -458,7 +457,7 @@ public class PackDCEL {
 		double invd=edge.getInvDist();
 		double dist=CommonMath.ivd_edge_length(r0,r1,invd,p.hes);
 		if (p.hes>0) // sph
-			setCent4Edge(edge.next,new Complex(0.0,dist));
+			setCent4Edge(edge.next,new Complex(Math.PI/2.0,dist));
 		else if (p.hes<0){ // hyp
 			if (dist<0) { // horocycle?
 				dist=1;
@@ -473,10 +472,10 @@ public class PackDCEL {
 				double expdist=Math.exp(dist);
 				dist=(expdist-1.0)/(expdist+1.0);
 			}
-			setCent4Edge(edge.next,new Complex(dist,0.0));
+			setCent4Edge(edge.next,new Complex(0.0,dist));
 		}
 		else // eucl
-			setCent4Edge(edge.next,new Complex(dist,0.0));
+			setCent4Edge(edge.next,new Complex(0.0,dist));
 		return;
 	}
 	
@@ -498,82 +497,6 @@ public class PackDCEL {
 		return sC;
 	}
 	
-	/**
-	 * Compute/store centers for 'edge.face' g from the opposed 
-	 * 'edge.twin.face' f. That is, using cent/rad for ends
-	 * from f, compute center opposite 'edge' in g, then 
-	 * store all 3 cents for g. Note: if 'edge.myRedEdge' is 
-	 * not null, this will update the centers stored for both 
-	 * red vertices at the ends of 'edge'. 
-	 * if 'edge' has bdry twin, then use its own end centers.
-	 * @param edge HalfEdge
-	 * @return int, 0, 1 or 3 centers set.
-	 */
-	public int d_faceXedge(HalfEdge edge) {
-		if (edge.face!=null && edge.face.faceIndx<0) // 
-			return 0;
-		
-		// on bdry? compute data for opposite circle
-		if (edge.twin.face!=null && edge.twin.face.faceIndx<0) {
-			TriAspect tri_g=new TriAspect(this,edge.face);
-			CircleSimple cs=tri_g.compOppCircle(tri_g.edgeIndex(edge));
-			setVertData(edge.next.next,cs);
-			return 1;
-		}
-
-		TriAspect tri_f=new TriAspect(this,edge.twin.face);
-		TriAspect tri_g=analContinue(this,edge.twin,tri_f);
-		int j=tri_g.edgeIndex(edge);
-		setCent4Edge(edge.next.next,tri_g.center[(j+2)%3]);
-		if (edge.myRedEdge!=null) {
-			setCent4Edge(edge,tri_g.center[j]);
-			setCent4Edge(edge.next,tri_g.center[(j+1)%3]);
-			return 3;
-		}
-		return 1;
-	}
-	
-	/**
-	 * Given HalfEdge (v,w) with faces f and g (left/right
-	 * resp.), assuming f is in place, compute the center 
-	 * of vert opposite (w,v) in face g using centers for 
-	 * v/w from f and usual radius. 
-	 * @param pdcel PackDCEL
-	 * @param hedge HalfEdge, with f on left
-	 * @return TriAspect, null if hedge is bdry
-	 */
-	public static TriAspect analContinue(PackDCEL pdcel,HalfEdge hedge) {
-		if (hedge.isBdry())
-			return null;
-		// set up tmp 'TriAspect'
-		TriAspect tri_f=new TriAspect(pdcel,hedge.face);
-		return analContinue(pdcel,hedge,tri_f);
-	}
-	
-	/**
-	 * Given HalfEdge (v,w) with faces f and g (left/right
-	 * resp.), assuming f data is in 'tri_f', compute the center 
-	 * of vert opposite (w,v) in face g using centers for 
-	 * v/w from f and usual radius. 
-	 * @param pdcel PackDCEL
-	 * @param hedge HalfEdge, with f on left
-	 * @param tri_f TriAspect, data for f
-	 * @return TriAspect, null if hedge is bdry
-	 */
-	public static TriAspect analContinue(PackDCEL pdcel,HalfEdge hedge,
-			TriAspect tri_f) {
-		TriAspect tri_g=new TriAspect(pdcel,hedge.twin.face);
-		int fv=tri_f.vertIndex(hedge.origin.vertIndx);
-		int fw=tri_f.vertIndex(hedge.twin.origin.vertIndx);
-		int j=tri_g.vertIndex(hedge.twin.origin.vertIndx);
-		tri_g.setCircleData(j,tri_f.getCircleData(fw));
-		int k=tri_g.vertIndex(hedge.origin.vertIndx);
-		tri_g.setCircleData(k,tri_f.getCircleData(fv));
-		tri_g.setCircleData((k+1)%3,tri_g.compOppCircle(j));
-		return tri_g;
-	}
-	
-
 	/** 
 	 * Return integer array with the generations of verts, 
 	 * generation "1" being those v with 'vutil' 
@@ -632,46 +555,98 @@ public class PackDCEL {
 		uP.value = (double) count;
 		return final_list;
 	}
-	  
 	
 	/**
-	 * Use 'layoutOrder' to compute the packing centers, 
-	 * laying base face first, then the rest. Note that 
-	 * some circles get laid down more than once, so last 
-	 * position is what is stored in 'Vertex' for now. 
-	 * This also rotates the packing to put gamma on the 
-	 * positive y-axis and it updates the side-pairing maps.
-	 * TODO: for more accuracy, average all computations of 
-	 * center that are available: 
-	 * Idea: make all centers null so we can see which are set.
-	 * @return count
+	 * Use 'layoutOrder' and radii to recompute all centers.
+	 * @return int count
 	 */
 	public int layoutPacking() {
-		boolean debug=false; // debug=true;
+		return layoutPacking(false);
+	}
+	  
+	/**
+	 * Use 'layoutOrder' to compute the packing centers, laying
+	 * the first (generally 'alpha') edge in normalized position, 
+	 * then computing the rest. Some circles get laid down more 
+	 * than once and center/radii are stored in 'Vertex' and 'RedEdge',
+	 * if appropriate. Layout can be based on radii or (in tangency 
+	 * setting) using schwarzians. After layout, positions are 
+	 * rotated to put end of first edge on the positive y-axis and 
+	 * any side-pairing maps are updated.
+	 * Note: this command modifies the recorded centers.
+	 * 	 * 
+	 * TODO: for more accuracy, average all computations of 
+	 * center using all laid out faces that are available:
+	 * complicated by need to mark faces that have been laid
+	 * out so the right data is used.
+	 *
+	 * @param useSchw boolean
+	 * @return int count
+	 */
+	public int layoutPacking(boolean useSchw) {
 	    int count=1;
-		
-	    placeFirstEdge(alpha);
-		
-		// debug=true;
-		if (debug) {
-			DCELdebug.drawEFC(this,alpha);
-//			StringBuilder strbld=new StringBuilder("disp -c "+
-//					face.edge.origin.vertIndx+" "+
-//					face.edge.twin.origin.vertIndx);
-//			CommandStrParser.jexecute(p,strbld.toString());
-			p.cpScreen.rePaintAll();
+	    HalfEdge firsthe=layoutOrder.get(0);
+	    boolean debug=false;
+	    int prev_g=-1;
+	    
+	    // first face
+	    placeFirstEdge(firsthe); // from 0 to point on positive y-axis 
+	    CircleSimple cs=d_compOppCenter(firsthe);
+	    setCent4Edge(firsthe.prev, cs.center);
+	    
+		if (debug) {// debug=true;
+			DCELdebug.drawEFC(this,firsthe);
 		}
+	    
+	    TriAspect ftri=null;
+	    TriAspect gtri=null;
+	    if (useSchw) {
+	    	gtri=new TriAspect(this,firsthe.face);
+	    	prev_g=firsthe.face.faceIndx;
+	    }
 	    
 	    // now layout face-by-face
 		Iterator<HalfEdge> hit=layoutOrder.iterator();
+		hit.next(); // remove first, already laid out
 	    while (hit.hasNext()) {
-	    	this.d_faceXedge(hit.next());
-		    count++;
+	    	HalfEdge he=hit.next();
+	    	
+// debugging
+//	    	System.out.println("he="+he);
+	    	
+	    	if (!useSchw) {
+	    		cs=d_compOppCenter(he);
+	    		setCent4Edge(he.prev,cs.center);
+	    	}
+	    	else {
+	    		if (he.twin.face.faceIndx==prev_g)
+	    			ftri=gtri; // reuse this data
+	    		else
+	    			ftri=new TriAspect(this,he.twin.face);
+	    		gtri=new TriAspect(this,he.face);
+	    		prev_g=gtri.faceIndx;
+	    		int ans=-1;
+	    		ans= workshops.LayoutShop.schwPropogate(ftri,gtri,he.twin,
+	    				he.getSchwarzian(),1);
+	    	
+	    		// get new data
+	    		if (ans>=0) {
+	    			gtri.data2pdcel(this);
+	    			count++;
+
+	    			if (debug) {// debug=true;
+	    				DCELdebug.drawEFC(this,he);
+	    			}
+	    			
+// debugging	    			
+//	    			int v=he.prev.origin.vertIndx;
+//		    		System.out.println("v="+v+" to z="+gtri.getCenter(
+//	    				gtri.vertIndex(v)));
+		    		
+	    		}
+	    	}
 	    }
 
-	    double ang=-getVertCenter(gamma).arg()+Math.PI/2.0;
-	    if (!debug)
-	    	p.rotate(ang); // usual normalization
 		updatePairMob();
 	    return count;
 	}
@@ -681,56 +656,97 @@ public class PackDCEL {
 	 * but if 'v' is valid vertex, then report its placements,
 	 * which may be more than one. Option to recompute first 
 	 * face or leave it in current location. Option to apply 
-	 * usual alpha/gamma normalization. 
+	 * usual alpha/gamma normalization. Option to use schwarzian
+	 * instead of radii.
 	 * Note: this command modifies the recorded centers.
 	 * @param v int, vert index (<=0 for none)
 	 * @param place_first boolean, if true place the first face
 	 * @param norm boolean, true then do usual alpha/gamma normalization
+	 * @param useSchw boolean, use schwarzians to propogate, not radii
 	 * @return int, 0 on error 
 	*/
-	public int layoutReport(int v, boolean place_first, boolean norm) {
+	public int layoutReport(int v,
+			boolean place_first,boolean norm,boolean useSchw) {
 	    int count=1;
-		int vflag = 1;
 		Vertex V=null;
-
-		PointLink centlist = null;
+	    HalfEdge firsthe=layoutOrder.get(0);
+	    boolean debug=false;
+	    int prev_g=-1;
+	    TriAspect gtri=null;
+	    CircleSimple cs=null;
+	    
+		PointLink centlist = new PointLink();
 		if (v > 0 && v <= vertCount)
 			V=vertices[v];
 		
-		Iterator<HalfEdge> hit=layoutOrder.iterator();
 		if (place_first) { 
-			placeFirstEdge(alpha);
-			if (V!=null) { // may involve 'v'
-				int[] verts=alpha.face.getVerts();
+			placeFirstEdge(firsthe);
+		    cs=d_compOppCenter(firsthe);
+		    setCent4Edge(firsthe.prev, cs.center);
+			if (useSchw) {
+				gtri=new TriAspect(this,firsthe.face);
+			    prev_g=firsthe.face.faceIndx;
+			}
+		    
+			if (debug) {// debug=true;
+				DCELdebug.drawEFC(this,firsthe);
+			}
+			
+			if (V!=null) { // first face may involve 'v'
+				int[] verts=firsthe.face.getVerts();
 				HalfEdge vhe=null;
 				if (v==verts[0])
-					vhe=alpha;
+					vhe=firsthe;
 				else if (v==verts[1])
-					vhe=alpha.next;
+					vhe=firsthe.next;
 				else if (v==verts[2])
-					vhe=alpha.next.next;
+					vhe=firsthe.next.next;
 				centlist.add(getVertCenter(vhe));
 			}
 		}
-		
-		if (debug) {// debug=true;
-			DCELdebug.drawEFC(this,alpha);
-//			StringBuilder strbld=new StringBuilder("disp -c "+
-//					face.edge.origin.vertIndx+" "+
-//					face.edge.twin.origin.vertIndx);
-//			CommandStrParser.jexecute(p,strbld.toString());
-			p.cpScreen.rePaintAll();
-		}
 	    
 	    // now layout face-by-face
+		Iterator<HalfEdge> hit=layoutOrder.iterator();
+		hit.next(); // toss first, already handled
+	    TriAspect ftri=null;
 	    while (hit.hasNext()) {
 	    	HalfEdge he=hit.next();
-	    	this.d_faceXedge(he);
-	    	if (V!=null && V==he.next.next.origin) { // add new location
-	    		centlist.add(getVertCenter(he.next.next));
+	    	
+	    	
+	    	if (!useSchw) {
+	    		cs=d_compOppCenter(he);
+	    		setCent4Edge(he.prev,cs.center);
 	    	}
-		    count++;
-	    }
+	    	else {
+	    		if (he.twin.face.faceIndx==prev_g)
+	    			ftri=gtri; // reuse this data
+	    		else
+	    			ftri=new TriAspect(this,he.twin.face);
+	    		gtri=new TriAspect(this,he.face);
+	    		prev_g=gtri.faceIndx;
+	    		int ans=-1;
+	    		ans= workshops.LayoutShop.schwPropogate(ftri,gtri,he.twin,
+	    				he.getSchwarzian(),1);
+		    	if (V!=null && V==he.next.next.origin) // add new location
+		    		centlist.add(getVertCenter(he.next.next));
+	    	
+	    		// get new data
+	    		if (ans>=0) {
+	    			gtri.data2pdcel(this);
+	    			count++;
+
+	    			if (debug) {// debug=true;
+	    				DCELdebug.drawEFC(this,he);
+	    			}
+	    			
+// debugging	    			
+//	    			int v=he.prev.origin.vertIndx;
+//		    		System.out.println("v="+v+" to z="+gtri.getCenter(
+//	    				gtri.vertIndex(v)));
+		    		
+	    		}
+	    	}
+	    } // end of while
 
 	    if (norm) {
 	    	Mobius mob=new Mobius();
@@ -1112,9 +1128,9 @@ public class PackDCEL {
 	}
 
 	/**
-	 * Given directed dual <f,g> between faces, return 
-	 * halfedge <v,w> which is cclw to <f,g>; so f is 
-	 * on the left of <v,w>, g is on the right.
+	 * Given directed dual (f,g) between faces, return 
+	 * halfedge (v,w) which is cclw to (f,g); so f is 
+	 * on the left of (v,w), g is on the right.
 	 * @param dedge EdgeSimple
 	 * @return HalfEdge, null on failure
 	 */
@@ -1133,14 +1149,14 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Given HalfEdge <v,w>, return ordered ends, g then f,
-	 * of dual edge <f,g>. CAUTION: f is to left of <v,w>, g 
-	 * to right, so result goes from right to left across <v,w>.
-	 * Return null if f an ideal face. If <v,w> is a oriented 
+	 * Given HalfEdge (v,w), return ordered ends, g then f,
+	 * of dual edge (f,g). CAUTION: f is to left of (v,w), g 
+	 * to right, so result goes from right to left across (v,w).
+	 * Return null if f an ideal face. If (v,w) is a oriented 
 	 * bdry edge (red w/o 'twinRed') then go from point on 
-	 * edge <v,w> to center of f. Else if <v,w> is red
+	 * edge (v,w) to center of f. Else if (v,w) is red
 	 * with 'twinRed', then compute location g would have if it
-	 * shared edge <v,w> with f and go from g to f. 
+	 * shared edge (v,w) with f and go from g to f. 
 	 * @param he HalfEdge
 	 * @return Complex[2] or null
 	 */
@@ -1401,15 +1417,48 @@ public class PackDCEL {
 	}
 	
 	/**
+	 * Set cent/rad for 'origin' and appropriate 'RedEdge's 
+	 * (if a 'RedVertex'). Data for a vert may differ in 
+	 * different 'RedEdge's having that vert. 
+	 * @param edge HalfEdge
+	 * @param cs CircleSimple
+	 */
+	public void setCircle4Edge(HalfEdge edge,CircleSimple cs) {
+		if (p.hes<0) { // check if appropriate for disc
+			double absz=cs.center.abs();
+			if (absz>1.000000001) // outside disc?
+				cs.center=cs.center.divide(absz+.00000001); // pull in
+		}
+
+		Vertex vert=edge.origin;
+		vert.center=new Complex(cs.center);
+		vert.rad=cs.rad;
+
+		// a normal 'Vertex'? 
+		if (!vert.redFlag) {
+			return;
+		}
+
+		// else, go clw to reach a spoke that has 'myRedEdge'
+		HalfEdge he=edge;   // he=edge;
+		while (he.myRedEdge==null) {
+			he=he.twin.next;
+		}
+		he.myRedEdge.setCenter(cs.center);
+		he.myRedEdge.setRadius(cs.rad);
+		return;
+	}
+	
+	/**
 	 * Set the center for 'origin' and appropriate 'RedEdge's 
-	 * (if a 'RedVertex'). Center may differ in 'RedEdge's. 
+	 * (if a 'RedVertex'). Center for a vert may differ in 
+	 * different 'RedEdge's having that vert. 
 	 * (see 'setVertCenter', to set center in all locations.)
-	 * Note: I no longer set rData[].center.
 	 * @param edge HalfEdge
 	 * @param z Complex
 	 */
 	public void setCent4Edge(HalfEdge edge,Complex z) {
-		if (p.hes<0) { // check is appropriate for disc
+		if (p.hes<0) { // check if appropriate for disc
 			double absz=z.abs();
 			if (absz>1.000000001) // outside disc?
 				z=z.divide(absz+.00000001); // pull in
@@ -1633,25 +1682,27 @@ public class PackDCEL {
 		return null;
 	}
 
-	public int layoutFactory(HalfLink heTree,boolean fix,boolean placeFirst) {
-		return layoutFactory(null,heTree,null,null,fix,placeFirst,-1.0);
+	public int layoutFactory(HalfLink heTree,
+			boolean fix,boolean placeFirst,boolean useSchw) {
+		return layoutFactory(null,heTree,null,null,fix,placeFirst,useSchw,-1.0);
 	}
 
 	/** 
 	 * Recompute, draw, and/or post circles and/or faces along a
-	 * specified HalfLink. (replaces old 'PackData.layout_facelist')
+	 * specified HalfLink.
 	 * @param pF PostFactory
 	 * @param heTree HalfLink
 	 * @param faceFlags DispFlags, may be null
 	 * @param circFlags DispFlags, may be null
-	 * @param fix boolean
+	 * @param fix boolean, store the new centers
 	 * @param placeFirst boolean: true: place anew; false, assume 2 verts in place
+	 * @param useSchw boolean: true use schwarzians than radii
 	 * @param tx double, only used for postscript output
 	 * @return int count 
 	 */
 	public int layoutFactory(PostFactory pF,HalfLink heTree,
 			DispFlags faceFlags,DispFlags circFlags,boolean fix,
-			boolean placeFirst,double tx) {
+			boolean placeFirst,boolean useSchw,double tx) {
 
 		boolean debug=false;
 		if (debug) { // debug=true;
@@ -1678,12 +1729,18 @@ public class PackDCEL {
 		
 		// handle root first
 		HalfEdge he=heTree.getFirst();
-		if (placeFirst) { // place in standard position 
+		if (placeFirst) { // place in standard position, 0, imaginary axis 
 			placeFirstEdge(he);
 		}
-		else if (fix) { // assume 'he' ends are already in place
-			CircleSimple cS=d_compOppCenter(he);
-			setVertData(he.next.next,cS);
+		CircleSimple cs=d_compOppCenter(he);
+		if (fix) { // assume 'he' ends are already in place
+			setCent4Edge(he.prev,cs.center);
+		}
+		TriAspect gtri=null;
+		int prev_g=-1;
+		if (useSchw) {
+			gtri=new TriAspect(this,he.face);
+			prev_g=he.face.faceIndx;
 		}
 			
 		myCenters[0]=getVertCenter(he);
@@ -1727,11 +1784,33 @@ public class PackDCEL {
 		// now go through the rest of the tree
 		Iterator<HalfEdge> hest = heTree.iterator();
 		hest.next(); // ditch the first, already handled
-		
+		TriAspect ftri=null;
 		while (hest.hasNext()) {
 			he = hest.next();  // normally, this edge is already in place
+
 			if (fix) {
-				d_faceXedge(he);
+				if (!useSchw) {
+					cs=d_compOppCenter(he);
+					setCent4Edge(he.prev,cs.center);
+				}
+				
+				else {
+					if (he.twin.face.faceIndx==prev_g)
+						ftri=gtri; // reuse this data
+					else
+						ftri=new TriAspect(this,he.twin.face);
+					gtri=new TriAspect(this,he.face);
+					prev_g=gtri.faceIndx;
+					int ans=-1;
+					ans = workshops.LayoutShop.radPropogate(ftri,gtri,he.twin,
+							getVertRadius(he.prev),1);
+		    	
+					// get new data
+					if (ans>=0) {
+						gtri.data2pdcel(this);
+						count++;
+					}
+				}
 			}
 			
 			if (faceDo || circDo || pF!=null) {
