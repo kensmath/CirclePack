@@ -1676,6 +1676,7 @@ public class ReadWrite {
 			if (!append)
 				file.write("END\n");
 			file.flush();
+			file.close();
 			return p.tileData.tileCount;
 		}
 
@@ -1707,6 +1708,7 @@ public class ReadWrite {
 			}			
 			file.write("\nEND\n");
 			file.flush();
+			file.close();
 			return p.nodeCount;
 		}
 
@@ -2102,6 +2104,7 @@ public class ReadWrite {
 		if (!append)
 			file.write("END\n");
 		file.flush();
+		file.close();
 		return 1;
 	}
 		

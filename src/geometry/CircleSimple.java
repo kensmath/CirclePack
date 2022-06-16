@@ -5,19 +5,28 @@ import packing.PackData;
 import complex.Complex;
 
 /**
- * Basic, simple circle, mainly for transferring data 
- * in/out of methods. Note: geometry is NOT specified. 
- * May us 'flag' to codes for interpreting output/input. 
+ * Basic, simple circle, mainly for transferring data in/out 
+ * of methods. Note: geometry is NOT specified. May use 'flag' 
+ * to codes for interpreting output/input. 
  * Normally, 
  *     flag=-1 on error, flag=1 on success, flag=0 neutral. 
  * Other options may be agreed in particular calls.
  * lineFlag:
  *     false: regular circles (rad<0 means outside)
- *     true: center is normal vector towards interior, rad = signed distance from origin
+ *     true: center is unit normal vector towards interior 
+ *           times CPBase.FAUX_RAD, while -rad is FAUX_RAD plus
+ *           signed distance from origin (so if rad>FAUX_RAD,
+ *           then origin is "interior" and line is shifted by
+ *           vector -rad*unit normal.)
+ * NOTE: 'lineflag' is only used in eucl setting; it is NOT set 
+ * in spherical geometry for circles through infinity.
+ * 
+ * @author kens
 */
 public class CircleSimple{
 	public int flag;          // utility flag
-	public boolean lineFlag;  // +-1, regular (inside/outside), 0 line
+	public boolean lineFlag;  // true if a line: then center is
+							  // unit normal, rad = shift from origin
 	public Complex center;
 	public double rad;
 

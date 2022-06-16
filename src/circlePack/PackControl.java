@@ -198,6 +198,7 @@ FocusListener {
 		AdvancedMode=true; // default to 'advanced' mode (so 'frame' shows)
 		prefFrame=null; // only when called
 		NUM_PACKS=3; // number of packings to maintain
+		FAUX_RAD=20000;
 		cpTimer=new CPTimer();
 		defaultCPIcon=new CPIcon("GUI/default_icon.jpg");
 	}

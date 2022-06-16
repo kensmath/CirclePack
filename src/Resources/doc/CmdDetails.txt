@@ -810,15 +810,19 @@ points with nghbs</opt>
 	<opt flag="-nf {f..}"> label faces</opt>
 	<opt flag="-B"> all faces and circles, recomp'd by drawing order</opt>
 	<opt flag="-C"> all circles, recomp'd by drawing order </opt>
-	<opt flag="-D"> all dual faces, recomp'd by drawing order (eucl only)</opt>
-    <opt flag="-F {f..}"> ``chained'' faces, recomp'd in order</opt>
+	<opt flag="-D"> all dual faces, recomputed by drawing order (eucl only)</opt>
+    <opt flag="-F {f..}"> ``chained'' faces, recompute centers in order</opt>
+	<opt flag="-Bs"> all faces and circles, recomp'd by drawing order using schwarzians</opt>
+	<opt flag="-Cs"> all circles, recompute center by drawing order using schwarzians </opt>
+    <opt flag="-Fs {f..}"> ``chained'' faces, recompute centers in 
+    	order using schwarzians</opt>
 	<opt flag="-P {v..}"> 'pavers' (polygon formed by face flower) recomp'd by drawing order 
 	(eucl only)</opt>
     <opt flag="-b"> draw bary-coord defined paths, generally grid lines (eucl only)</opt>
     <opt flag="-bs"> draw bary-coord defined paths, generally stream lines (eucl only)</opt>
 	<opt flag="-bc{n}"> ditto, but in color with index n</opt>
 	<opt flag="-g"> display current "path" (if available) in 
-	thicker blue</opt>
+		thicker blue</opt>
 	<opt flag="-gc{n}"> ditto, but in color with index n</opt>
 	<opt flag="-q{p}"> display on pack p' canvas (may be geometry conflict)</opt>
 	<opt flag="-r"> reset screen parameters to defaults </opt>
@@ -3028,7 +3032,13 @@ script and append it to 'ClosedPath'.</instance>
 <description>
 	Convenience command for 'repack', 'layout', and 'disp -wr'
 </description>
-</command>	
+</command>
+
+<command cmd="rlsd">
+<description>
+	Convenience command for 'repack', 'layout' using schwarzians, and 'disp -wr'
+</description>
+</command>
 
 <command cmd="rm_bary" flags="{v..}">
 <description>
@@ -3154,6 +3164,33 @@ script and append it to 'ClosedPath'.</instance>
 	Infinite hyperbolic radii treated as radius 10.0.
 </description>	
 </command>
+
+<command cmd="sch_data" flags="[d] [-rc] N -a {filename}">
+<description>
+	For single d-flower, append N lines to
+	'filename', wach a string of d reals which are the 
+	schwarzians for the spokes of a d-flower repacked with 
+	random boundary radii in range [.33333, 3.0]. 
+	The "-r" flag says to replace d in each of the N runs with a
+	random integer in range [3,15]. The "-c" flag says to 
+	randomly set the center's radius along with the petals.
+	Our aim is data for studying packing criteria for Schwarzians
+	of single flowers. This is subtle. The Schwarzians could be
+	associated with center and petal radii, but the flower does
+	not close up (e.g. use "-c" flag for examples).
+</description>
+<options>
+<opt flag="-r"> randomize the degree d of the flower, d in [3,15]</opt>
+<opt flag="-c"> randomize the center's radius along with the petals</opt>
+</options>
+<examples>
+<instance test="sch_data 6 1000 -a hex_sch.data"> Store 1000 random
+hex flower schwarzians</instance>
+<instance test="sch_data -rc 1000 -a hex_sch.data"> Store 1000 random
+flower schwarzians with random degrees and random central radii</instance>
+</examples>
+</command>
+
 
 <command cmd="sch_report" flags="-[[ce]{flags}] {..}">
 <description>

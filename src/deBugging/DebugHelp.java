@@ -108,8 +108,6 @@ public class DebugHelp {
 				false, fname, false);
 		try {
 			ReadWrite.writePack(fp,p,0017,false); 
-			fp.flush();
-			fp.close();
 		} catch (Exception ex) {
 			throw new InOutException("debugPackWrite failed");
 		}

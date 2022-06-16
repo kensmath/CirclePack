@@ -15,6 +15,7 @@ import circlePack.RunProgress;
 import complex.Complex;
 import cpTalk.sockets.CPMultiServer;
 import exceptions.DataException;
+import geometry.CircleSimple;
 import input.CPFileManager;
 import input.SocketSource;
 import input.TrafficCenter;
@@ -51,12 +52,14 @@ public abstract class CPBase {
 	// directory for codes such as 'triangle', 'qhull'
 	public static File LibDirectory=new File(System.getProperty("java.io.tmpdir"));
 	
-	// Some useful constants, objects
+	// Some useful stuff for schwarzian work
 	public static final double sqrt3=Math.sqrt(3);           // sqrt{3}
 	public static final double sqrt3by2=Math.sqrt(3)/2.0;    // sqrt{3}/2
 	// 3rd roots of unity; unit normals to base equilateral triangle edges
 	public static final Complex []omega3= 
 		{new Complex(1.0),new Complex(-.5,CPBase.sqrt3by2),new Complex(-.5,-CPBase.sqrt3by2)};
+	public static CircleSimple C_b=
+			new CircleSimple(new Complex(4-Math.sqrt(3)),Math.sqrt(3));
 	
 	// abstract methods that must be implemented by derived classes
 	public abstract void myMsg(String str); // generic message
@@ -89,6 +92,7 @@ public abstract class CPBase {
 	//   (see also 'PackData.OKERR' and 'PackData.TOLER'.)
 	public static final double GENERIC_TOLER=.0000000001;   
 	public static int NUM_PACKS;
+	public static double FAUX_RAD; // eucl rad for circles through infinity
 	public static File CPprefFile;
 
 	// static, should (eventually) be adjustable in preferences;

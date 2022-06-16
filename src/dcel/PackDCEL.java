@@ -646,6 +646,27 @@ public class PackDCEL {
 	    		}
 	    	}
 	    }
+	    
+	    // rotate so gamma is on positive y-axis
+	    if (gamma!=null) {
+	    	try {
+	    		double gammaarg=getVertCenter(gamma).arg();
+	    		Complex rot=new Complex(0,Math.PI/2.0-gammaarg).exp();
+	    		
+	    		if (Math.abs(gammaarg-Math.PI/2.0)>.001) {
+	    			for (int v=1;v<=vertCount;v++) 
+	    				vertices[v].center.times(rot);
+	    			if (redChain!=null) {
+	    				RedEdge rtrace=redChain;
+	    				do {
+	    					rtrace.setCenter(rtrace.getCenter().times(rot));
+	    					rtrace=rtrace.nextRed;
+	    				} while (rtrace!=redChain);
+	    			}
+	    		}
+	    	} catch (Exception ex) {}
+	    			
+	    }
 
 		updatePairMob();
 	    return count;

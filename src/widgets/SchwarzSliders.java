@@ -49,7 +49,7 @@ public class SchwarzSliders extends SliderFrame {
 		sliderCount=hedges.size();
 		setTitle("Schwarzians for p"+packData.packNum);
 		setHelpText(new StringBuilder("These sliders control selected edge "
-				+ "real schwarzians. The user can specify two active command "
+				+ "intrinsic schwarzians. The user can specify two active command "
 				+ "strings, marked 'change cmd' and 'motion cmd'. When checked to "
 				+ "activate, the associated command string will be executed "
 				+ "when the mouse changes a slider value or enters a slider's label, "
@@ -69,7 +69,7 @@ public class SchwarzSliders extends SliderFrame {
 		button.setPreferredSize(new Dimension(95,20));
 			
 		rootField=new intNumField("",4);
-		rootField.setField(-1);
+		rootField.setField(1); // default to face 1
 			
 		button.addActionListener(new ActionListener() {
 		    @Override
@@ -100,7 +100,7 @@ public class SchwarzSliders extends SliderFrame {
 	 */
 	public int rootAction() {
 		if (root<=0 || root>packData.faceCount) {
-			CirclePack.cpb.errMsg("slider usage: no 'root' specified");
+			CirclePack.cpb.errMsg("slider usage: specify a valid 'root'");
 			return 0;
 		}
 
@@ -112,7 +112,7 @@ public class SchwarzSliders extends SliderFrame {
 			packData.setCenter(verts[j],tri.getCenter(j));
 		}
 		
-		// display the roor face
+		// display the root face
 		return cpCommand("disp -w -ffc90 "+root); 
 	}
 

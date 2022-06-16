@@ -1,8 +1,11 @@
 package math;
 
+import allMains.CPBase;
+import allMains.CirclePack;
 import complex.Complex;
 import exceptions.MiscException;
 import geometry.CircleSimple;
+import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 
 /**
@@ -11,40 +14,60 @@ import geometry.SphericalMath;
  * this form can be manipulated via compositions with Mobius
  * transformations. See, e.g., 'mobius_of_circle'.
  * 
- * Math: 
+ * Note: or purposes of drawing, all straight lines are 
+ * stored in 'CircleSimple' objects as very large circles,
+ * but with 'lineflag' true: the center is FAUX_RAD times 
+ * the unit normal pointing to the interior, radius is 
+ * adjusted to give proper distance from the origin. 
+ * 
+ * -------------------------------
+ * Math of 'CirMatrix':
  * 
  * * Straight line a*x+b*y+c=0 can be rewritten using B=(a-i*b)/2 as  
  *         B*z+conj(B)*conj(z)+c=0
+ *   We can normalize by replacing (a,b) by (a,b)/sqrt(a^2+b^2)
+ *   and c by c/sqrt(a^2+b^2), so |B|=1/2. 
  * 
  * * Circle with center z0, radius r is (z-z0)*conj(z-z0)=r^2.
- *   This can be written using B=conj(-z0) and g=z0*conj(z0)-r^2 as
- *         z*conj(z)+B*z+conj(B)*conj(z)+g=0
+ *   This can be written using B=-conj(z0) and g=z0*conj(z0)-r^2 as
+ *         z*conj(z)+B*z+conj(B)*conj(z)+g=0.
  * 
- * * Both together: A*z*conj(z)+B*z+conj(B)*conj(z)+g=0 where A=1 for circle
+ * * Both together: A*z*conj(z)+B*z+conj(B)*conj(z)+g=0 where A=+-1 
+ *   for circle, a=0 for line.
  * 
- * So we represent circle, center z0, radius r as [a,b;c,d] where
+ * So we represent all circles/lines by matrix M=[a,b;c,d], with
+ * entry a is +-1 or 0.
  * 
-   * entry a: always real
-   *   0 ==> straight line (goes through S pole)
-   *   +1 ==> normal circle (interior inside circle)
-   * entry b:
-   *   -conj(z0)
-   * entry c:
-   *   -z0
-   * entry d: always real
-   *   |z0|^2 - r^2 (real); 0 ==> goes through origin
-   *   
-   * Conventions on inside/outside: 
-   *    a=1, inside of normal circle, note det = -r*r
-   *    a=-1, outside (normal circle but with entries multiplied by -1)
-   *    a=0 is line, conj(b) has unit length, points towards interior, -2*d is
-   *        signed translation distance in direction of conj(b).
-   *        d=0, through origin
-   *    	d>0, origin is interior
-   *        d<0, origin is exterior
-   * These are not automatic, code has to keep track case-by-case and
-   * adjust the matrix.   
-   * 
+ * When a=+-1:
+ *  +1 ==> normal circle (interior inside circle)
+ * 		entry b: -conj(z0)
+ * 		entry c: -z0 = conj(b)  (hence hermitian)
+ * 		entry d: always real = |z0|^2 - r^2 (real); 
+ * 				 0 ==> circle goes through origin
+ *	Conventions on inside/outside: 
+ *      a=1,  inside of normal circle, note det = -r*r
+ *	    a=-1, outside (normal circle but with entries 
+ *    	      multiplied by -1)
+ *    
+ * When a=0:
+ *   This means circle is a line through infinity.
+ *   
+ *   Normalization first: multiply all entries by 1/|b| so
+ *      that cross diagonal entries have magnitude 1.
+ *      Thus, get into form [0 B; conj(B) d] with |B|=1.
+ *   
+ *   Now:
+ *   	n = conj(B) is a unit normal to the line.
+ *   
+ *   Conventions on inside/outside:
+ *      n points towards "interior" of the circle
+ *      -d*n/2 is a point on the line, thus 
+ *           d=0: line goes through the origin
+ *           d>0: origin is on the interior
+ *           d<0: origin is exterior
+ * (These are not automatic, code has to keep track case-by-case and
+ * adjust the matrix.)   
+ * 
  * @author kens
  *
  */
@@ -57,12 +80,25 @@ public class CirMatrix extends Mobius {
 		super(); // start identity matrix
 	}
 	
-	// for eucl data
-	public CirMatrix(Complex z,double r) { // for interior eucl circle
-		super(); // a already set to 1.0
-		this.b=z.conj().times(-1.0);
-		this.c=z.times(-1.0);
-		this.d=new Complex((double)z.absSq()-r*r);
+	// for eucl circle (or straight line if 'lineflag' true)
+	public CirMatrix(CircleSimple cs) { 
+		super(); // a=1.0
+		Complex cent=new Complex(cs.center);
+		double rad=cs.rad;
+		if (cs.lineFlag) {
+			Complex unitnormal=cent.divide(CPBase.FAUX_RAD);
+			// diff > 0 means origin is "interior"
+			double diff=2.0*(rad-CPBase.FAUX_RAD);
+			this.a=new Complex(0.0);
+			this.b=unitnormal.conj();
+			this.c=unitnormal;
+			this.d=new Complex(-diff);
+		}
+		else {
+			this.b=cent.conj().times(-1.0);
+			this.c=cent.times(-1.0);
+			this.d=new Complex((double)cent.absSq()-rad*rad);
+		}
 	}
 	
 	// clone
@@ -90,9 +126,32 @@ public class CirMatrix extends Mobius {
 	 * @return CirMatrix
 	 */
 	public static CirMatrix applyTransform(Mobius M, CirMatrix C, boolean oriented) {
+		// get working Mobius
 		Mobius MM=M.cloneMe();
 		if (!oriented) // want M^{-1}?
 			MM=(Mobius)MM.inverse();
+		boolean outsideC=false; // disc is outside incoming C
+		Complex pt=new Complex(0.0);
+		
+		// get working CirMatrix CC as normal circle (or straight line)
+		//   and find reference pt "inside"
+		CirMatrix CC=new CirMatrix();
+		CC.a=new Complex(C.a);
+		CC.b=new Complex(C.b);
+		CC.c=new Complex(C.c);
+		CC.d=new Complex(C.d);
+		
+		if (C.a.x==-1) { // outside of original circle
+			outsideC=true;
+			CC.a=CC.a.times(-1.0);
+			CC.b=CC.b.times(-1.0);
+			CC.c=CC.c.times(-1.0);
+			CC.d=CC.d.times(-1.0);
+		}
+		if (C.a.x==0) { // original is a line
+			pt=C.c.times(Math.abs(C.d.x)*20); // move in direction of normal 
+		}
+		else pt=CC.c.times(-1.0);
 
 		// define G=MM^(-1) * det(MM)
 		Mobius G = new Mobius(); 
@@ -101,12 +160,13 @@ public class CirMatrix extends Mobius {
 		G.c = MM.c.times(-1.0);
 		G.d = new Complex(MM.a);
 
-		// compute G^{t}*C: do NOT use usual matrix 'rmult/lmult': then normalize
+		// compute G^{t}*C: do NOT use usual matrix 'rmult/lmult': 
+		//    then normalize
 		CirMatrix tmpC=new CirMatrix();
-		tmpC.a=(G.a.times(C.a)).plus(G.c.times(C.c));
-		tmpC.b=(G.a.times(C.b)).plus(G.c.times(C.d));
-		tmpC.c=(G.b.times(C.a)).plus(G.d.times(C.c));
-		tmpC.d=(G.b.times(C.b)).plus(G.d.times(C.d));
+		tmpC.a=(G.a.times(CC.a)).plus(G.c.times(CC.c));
+		tmpC.b=(G.a.times(CC.b)).plus(G.c.times(CC.d));
+		tmpC.c=(G.b.times(CC.a)).plus(G.d.times(CC.c));
+		tmpC.d=(G.b.times(CC.b)).plus(G.d.times(CC.d));
 		
 		// compute tmpC*conj(G)
 		G.conj();
@@ -116,66 +176,43 @@ public class CirMatrix extends Mobius {
 		outC.c=(tmpC.c.times(G.a)).plus(tmpC.d.times(G.c));
 		outC.d=(tmpC.c.times(G.b)).plus(tmpC.d.times(G.d));
 		
-		// basic normalization
-		if (outC.a.abs()<CM_TOLER) // straight (within tolerance)?
+		// due to round off, have to identify lines, then normalize
+		if (outC.a.abs()<.0001) {
 			outC.a=new Complex(0.0);
+			double divisor=outC.c.abs();
+			outC.b=outC.b.divide(divisor);
+			outC.c=outC.c.divide(divisor);
+			outC.d=new Complex(outC.d.divide(divisor).x); // should be real
+		}
 		
-		 // this is a regular circle with a = +1
-		else {
-			Complex scalar=outC.a.reciprocal();
+		// else should be a regular circle; normalize for roundoff 
+		//     and to insure a = +1
+		else {Complex scalar=outC.a.reciprocal();
 			outC.a=new Complex(1.0);
 			outC.b=outC.b.times(scalar);
 			outC.c=outC.c.times(scalar);
 			outC.d=outC.d.times(scalar);
-		} 
-		
-		// See if center of input circle C is inside outC.
-		//   Note: -(C.c)*(C.a.x)=z0 is the center of eucl circle C
-		//   (whether C.a=+-1). 
-		if (C.a.abs()>CM_TOLER) {
-			double cent_inside=pt_inside(outC,MM.apply(C.c.times(-1.0*C.a.x)));
-			if (cent_inside*C.a.x<0.0) { // put on same side if both are circles
-				outC.a=outC.a.times(-1.0);
-				outC.b=outC.b.times(-1.0); // cent_inside=1.0;
-				outC.c=outC.c.times(-1.0);
-				outC.d=outC.d.times(-1.0);
-			}
-			return outC;
 		}
 		
-		// else C is a line
-		
-		// is outC a regular circle? reverse procedure above
-		if (outC.a.x!=0) {
-			Complex inv_cent=((Mobius)(MM.inverse())).apply(outC.b.conj());
-			double cent_inside=pt_inside(C,inv_cent);
-			if (cent_inside<0.0) { // put on same side if both are circles
-				outC.a=outC.a.times(-1.0);
-				outC.b=outC.b.times(-1.0);
-				outC.c=outC.c.times(-1.0);
-				outC.d=outC.d.times(-1.0);
-			}
-			return outC;
-		}
-		
-		// else outC is also a line
-		// translation length -2*C.d in direction of conj(C.b).
-		double trans=-2.0*C.d.x;
-		Complex ptinC=C.b.conj().times(1+trans); // point inside C.
-		Complex ptoutC=MM.apply(ptinC); // image point inside outC
-		// compare dot product conj(outC.b).ptoutC to 
-		if (outC.b.x*ptoutC.x-outC.b.y*ptoutC.y<(-2.0*outC.d.x)) {
+		// See if reference point for CC is mapped inside outC
+		//   and adjust accordingly. If it's inside outC but 
+		//   but 'outsideC' is set, of if outC is a line and 
+		//   pt is not inside, then multiply by -1. 
+		int cent_inside=pt_inside(outC,MM.apply(pt));
+		if ((cent_inside==1 && outsideC) || 
+				cent_inside==-1 && outC.a.x==0) { // put on same side of both
 			outC.a=outC.a.times(-1.0);
-			outC.b=outC.b.times(-1.0);
+			outC.b=outC.b.times(-1.0); // cent_inside=1.0;
 			outC.c=outC.c.times(-1.0);
 			outC.d=outC.d.times(-1.0);
 		}
+
 		return outC;
 	}
 
 	/**
-	 * Create 2x2 matrix representation of circle given sph radius/center;
-	 * normalize for inside/outside conventions.
+	 * Create 2x2 matrix representation of circle given sph 
+	 * radius/center; normalize for inside/outside conventions.
 	 * 
 	 * @param center Complex, (theta,phi) form
 	 * @param rad double
@@ -238,157 +275,128 @@ public class CirMatrix extends Mobius {
 	 * @param pt Complex 
 	 * @return double: >0 for inside, 0 for on, <0 for outside
 	 */
-	public static double pt_inside(CirMatrix C,Complex pt) {
+	public static int pt_inside(CirMatrix C,Complex pt) {
 		
 		if (Double.isNaN(pt.x) || Double.isNaN(pt.y))
 			pt.x=pt.y=1000000000.0;
-		
-		if (Math.abs(C.a.abs()-1.0)>.000000000001) 
+
+		if (C.a.abs()!=0 && Math.abs(C.a.abs()-1.0)>.000000000001) 
 			throw new MiscException("'C' does not seem to be normalized.");
 
-		double ans=1.0;
+		int ans=1;
 		
 		// regular circle? C.a=+-1
 		if (C.a.abs()>CM_TOLER) {
 			double rad=Math.sqrt(C.a.x*(C.b.absSq()-C.d.x));
 			if (pt.abs()>100000000.0)
-				ans=-1.0;
+				ans=-1;
 			else {
 				double dist=pt.add(C.b.conj()).abs();
 				if (dist>(rad+CM_TOLER)) // outside
-					ans=-1.0;
+					ans=-1;
 				else if (dist>(rad-CM_TOLER)) // on
-					ans=0.0;
+					ans=0;
 			}
 			return (int)(C.a.x*ans); // swap if C bounds its outside
 		}
 		
-		// line? conj(C.b) points into interior, so see if vector
+		// line? C.c is unit normal into interior, so see if vector
 		//    to point has dot product with it which is > +1
 		if (pt.abs()>10000000.0)
-			return 0;
-		double dot=pt.x*C.b.x-pt.y*C.b.y;
-		double transdist=-2.0*C.d.x;
+			return 0; // infinity is on the line
+		double dot=pt.x*C.c.x+pt.y*C.c.y;
+		double transdist=-C.d.x/2.0;
 		if (dot<transdist-CM_TOLER) // outside
-			ans=-1.0;
+			ans=-1;
 		else if (dot<transdist+CM_TOLER) // on the line
-			ans=0.0;
+			ans=0;
 		return ans;
 	}
-	
-	/** Normalize so a is 1, -1, or 0
-	 * @param C CirMatrix
-	 * @return CirMatrix
-	 */
-	public static CirMatrix normalize(CirMatrix C) {
-		
-		// already okay?
-		if (C.a.y==0 && (C.a.x==1 || C.a.x==-1 || C.a.x==0))
-			return C;
-		
-		// else if a ~ 0, set a=0 and return
-		if (C.a.abs()<CM_TOLER) {
-			C.a=new Complex(0.0);
-			return C;
-		}
-		
-		double denom=1.0/C.a.abs();
-		C.b =C.b.times(denom);
-		C.d =C.c.times(denom);
-		C.d =C.d.times(denom);
-		
-		if (C.a.minus(-1.0).abs()<.5) // intended to be -1?
-			C.a=new Complex(-1.0);
-		else
-			C.a=new Complex(1.0);
-		return C;
-	}
-	
+
 	/**
-	 * Return euclidean data for inner/outer circle or line. Assume
-	 * that C.a is +-1 or 0.
-	 * @param C CirMatrix
-	 * @return CircleSimple, null on error
+	 * Convert 'CirMatrix' to 'CircleSimple' in requested geometry.
+	 * If a straight line in eucl case: set lineflag, multiply 
+	 * conj(b) by FAUX_RAD for 'center', and set 'rad' to 
+	 * FAUX_RAD+d/2. 
+	 * @param CC CirMatrix, 2x2 representation of a circle
+	 * @param hes int, geometry
+	 * @return CircleSimple, null on error (e.g. improper hyp case)
 	 */
-	public static CircleSimple cirMatrix2eucl(CirMatrix C) {
-		if (C==null)
-			return null;
-		CirMatrix CC=normalize(C); // a should be +-1 or 0
+	public static CircleSimple cirMatrix_to_geom(CirMatrix CC,int hes) {
 		if (CC==null)
 			return null;
-		CircleSimple sp=new CircleSimple();
-		if (CC.a.x==0 && CC.a.y==0) {
-			sp.lineFlag=true;
-			sp.center=CC.b.conj();  // unit normal toward interior
-			sp.rad=-2.0*CC.d.x;     // signed distance from origin
-			return sp;
-		}
-		sp.center=CC.c.times(-1.0*CC.a.x); // a=-1 for outside case 
-		double reald=CC.d.x*CC.a.x; // throw out any imaginary part
-		sp.rad=Math.sqrt(sp.center.absSq()-reald)*CC.a.x;
-		return sp;
-	}
-
-	/**
-	 * Given 2x2 matrix form of circle satisfying all our conventions, 
-	 * find sph radius/center. See the conventions about inside/outside, 
-	 * signs, etc.
-	 * 
-	 * @param C CirMatrix, 
-	 * @return CircleSimple, null on error
-	 */
-	public static CircleSimple cirMatrix2sph(CirMatrix C) {
-		if (C==null)
+		CircleSimple outCS=new CircleSimple();
+		
+		// typical data (recall, a.x=-1 ==> all entries were multiplied by -1)
+		Complex ecent=CC.c.times(-1.0*CC.a.x); // c entry is -center
+		double reald=CC.d.x*CC.a.x; // throw out any extraneous imaginary part
+		double rsq=ecent.absSq()-reald; // rad^2
+		if (CC.a.x!=0 && rsq<=0) {
+			CirclePack.cpb.errMsg("error in a 'CirMatrix'");
 			return null;
-		CirMatrix CC=normalize(C); // a should be +-1 or 0
+		}
+		// positive eucl radius
+		double erad=Math.sqrt(rsq); 
 
-		CircleSimple sp=new CircleSimple();
-		// circle is a straight line (goes through south pole)
-		if (CC.a.abs() < CM_TOLER) {
+		// sph case, radius/center. See the conventions about inside/outside, 
+		if (hes>0) {
+			// circle is a straight line (goes through south pole)
+			if (CC.a.abs() < CirMatrix.CM_TOLER) {
+				// through origin? Hence a hemisphere
+				if (CC.d.abs() < CirMatrix.CM_TOLER) {
+					outCS.center.y = outCS.rad = Math.PI / 2.0;
+					outCS.center.x=CC.b.conj().arg();
+					return outCS;
+				} 
 
-			// through origin? Hence a hemisphere
-			if (CC.d.abs() < CM_TOLER) {
-				sp.center.y = sp.rad = Math.PI / 2.0;
-				sp.center.x=C.b.conj().arg();
-				return sp;
-			} 
+				// straight line, but NOT through origin
+				double R=CC.d.abs(); // distance to origin
+				double theta=Math.atan2(-1.0*CC.b.y,CC.b.x);
+				double atn=Math.atan(R);
+				double rho=Math.PI/2.0-atn; 
+				if (CC.d.x<0) // encloses origin (north pole)?
+					rho+=2.0*atn;
+				outCS.rad=rho;
+				outCS.center=new Complex(theta,Math.PI-rho);
 
-			// straight line, but NOT through origin
-			double R=C.d.abs(); // distance to origin
-			double theta=Math.atan2(-1.0*C.b.y,C.b.x);
-			double atn=Math.atan(R);
-			double rho=Math.PI/2.0-atn; 
-			if (C.d.x<0) // encloses origin (north pole)?
-				rho+=2.0*atn;
-			sp.rad=rho;
-			sp.center=new Complex(theta,Math.PI-rho);
+				return outCS;
+			} // end of 'straight line' cases
 
-			return sp;
-		} // end of 'straight line' cases
-
-		// else a circle
-		boolean outside=false;
-		if (C.a.x<0) { // want outside
-			outside=true;
-			C.a=C.a.times(-1.0);
-			C.b=C.b.times(-1.0);
-			C.c=C.c.times(-1.0);
-			C.d=C.d.times(-1.0);
+			// else a circle
+			CircleSimple sc=SphericalMath.e_to_s_data(ecent, erad);
+			outCS.center=sc.center;
+			outCS.rad=sc.rad;
+			if (CC.a.x<0) { // want outside of euclidean circle
+				outCS.center=SphericalMath.getAntipodal(sc.center);
+				outCS.rad=Math.PI-sc.rad;
+			}
+			return outCS;
+		} // done with sph
+		
+		// hyp case: return null if circle is not in unit disc
+		if (hes<0) { 
+			if (CC.a.x<=0) { // straight line or outside
+				CirclePack.cpb.errMsg("Improper hyp conversion of 'CirMatrix'");
+				return null;
+			}
+			if (ecent.abs()+erad>1.0) // not in disc
+				return null;
+			
+			return HyperbolicMath.e_to_h_data(ecent, erad);
 		}
 		
-		// find euclidean data
-		Complex z=C.c.times(-1.0);
-		double erad = Math.sqrt(z.absSq() - C.d.x); // C.d should be real
-		
-		// convert
-		CircleSimple sc=SphericalMath.e_to_s_data(z, erad);
-		sp.center=sc.center;
-		sp.rad=sc.rad;
-		if (outside) {
-			sp.center=SphericalMath.getAntipodal(sc.center);
-			sp.rad=Math.PI-sc.rad;
+		// else eucl; watch for line
+		if (CC.a.x==0) { // yes, is a line
+			outCS.lineFlag=true;
+			Complex unitnormal=CC.c;
+			outCS.center=unitnormal.times(CPBase.FAUX_RAD);  // unit normal toward interior
+			
+			outCS.rad=CPBase.FAUX_RAD+(CC.d.x/2.0); // FAUX_RAD - signed distance from origin
+			return outCS;
 		}
-		return sp;
+		outCS.center=ecent; 
+		outCS.rad=erad*CC.a.x; // may be negative if a=-1
+		return outCS;
 	}
 	
 }

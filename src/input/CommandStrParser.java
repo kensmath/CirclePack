@@ -3407,12 +3407,145 @@ public class CommandStrParser {
 			  return 1;
 		  }
 		  
+		  // =========== rlsd =======
+		  else if (cmd.startsWith("rlsd")) { // repack, layout, disp
+			  if (packData.hes<0) {
+				  CirclePack.cpb.errMsg("Layout using schwarzians is not "
+				  		+ "yet allowed in the hyp setting");
+				  return 0;
+			  }
+			  jexecute(packData,"repack");
+			  jexecute(packData,"set_sch");
+			  jexecute(packData,"layout -s");
+			  jexecute(packData,"disp -wr");
+			  return 1;
+		  }
+		  
 	      break;
 	  } // end of 'r' and 'R'
 	  case 's':
 	  {
+		  
+		  // ============== sch_data ============
+		  if (cmd.startsWith("sch_data")) {
+			  
+	    	  if (flagSegs==null || flagSegs.size()==0) {
+	    		  CirclePack.cpb.errMsg("usage: sch_data d N -f <filename>");
+	    		  return 0;
+	    	  }
+	    	  boolean randdegree=false;
+	    	  boolean randcenter=false;
+	    	  Random random=null;
+	    	  
+	    	  StringBuilder header=
+	    			  new StringBuilder(StringUtil.reconstitute(flagSegs));
+	    	  
+	    	  // get filename first
+	    	  if (!StringUtil.ckTrailingFileName(flagSegs)) {
+	    		  CirclePack.cpb.errMsg("sch_data: missing the file name");
+	    		  return 0;
+	    	  }
+	    	  StringBuilder strbuf=new StringBuilder("");
+	    	  int code=CPFileManager.trailingFile(flagSegs, strbuf);
+	    	  File file=new File(strbuf.toString());
+	    	  boolean append=false;
+	    	  if ((code & 02) == 02) // append
+	    		  append=true;
+	    	  BufferedWriter fp=CPFileManager.openWriteFP(
+	    			  (File)CPFileManager.PackingDirectory,append,
+	    			  file.getName(),false);
+
+	    	  items=flagSegs.get(0);
+	    	  int d=6;
+	    	  
+	    	  // catch randomize flag
+	    	  if (StringUtil.isFlag(items.get(0))) {
+	    		  if (items.get(0).contains("r")) {
+	    			  randdegree=true;
+	    			  random=new Random();
+	    		  }
+	    		  if (items.get(0).contains("c")) {
+	    			  randcenter=true;
+	    		  }
+	    	  }
+	    	  
+	    	  // else d format
+	    	  else {
+	    		  try {
+	    			  d=Integer.parseInt(items.get(0));
+	    		  } catch(Exception ex) {
+	    			  CirclePack.cpb.errMsg("usage: sch_data d ...");
+	    			  return 0;
+	    		  }
+	    		  if (d<3) {
+	    			  CirclePack.cpb.errMsg("usage: sch_data d>=3");
+	    			  return 0;
+	    		  }
+	    	  }
+
+	    	  // get N
+	    	  int N=0;
+    		  try {
+    			  N=Integer.parseInt(items.get(1));
+    		  } catch (Exception ex) {
+    			  N=0;
+    		  }
+    		  if (N==0) {
+    			  CirclePack.cpb.errMsg("usage: sch_data deg N");
+	    		  N=12; 
+    		  }
+	    	  
+    		  // put in header
+    		  try {
+    			  fp.write(header.toString());
+    			  fp.write("\n\n");
+    		  } catch(Exception ex) {}
+    		  
+	    	  // run the trials on temp packing
+    		  PackData tmpPack=new PackData(null);
+    		  if (!randdegree)
+    			  jexecute(tmpPack,"seed "+d);
+    		  for (int n=1;n<=N;n++) {
+    			  if (randdegree) { // reset d in [3,15]
+    				  d=util.DegreeDistribution.getRandDegree();
+    				  tmpPack=PackCreation.seed(d,0);
+    			  }
+    				  
+    			  jexecute(tmpPack,"set_rand -.3 3.0 b");
+    			  if (!randcenter)
+    				  jexecute(tmpPack,"repack");
+    			  jexecute(tmpPack,"set_sch");
+	    	  
+    			  HalfEdge he=tmpPack.packDCEL.vertices[1].halfedge;
+    			  try {
+    				  do {
+    					  fp.write(he.getSchwarzian()+"  ");
+    					  he=he.prev.twin; // cclw
+    				  } while (he!=tmpPack.packDCEL.vertices[1].halfedge);
+    				  fp.write("\n\n");
+    			  } catch (Exception ex) {}
+    			  count++;
+    		  }
+    		  try {
+    			  fp.flush();
+    			  fp.close();
+    		  } catch(Exception ex) {
+    			  try{
+    				  fp.flush();
+    				  fp.close();
+    			  } catch(Exception iox) {}
+    			  throw new InOutException("failed writing sch_data file");
+    		  }
+
+	    	  CirclePack.cpb.msg("Wrote schwarzian data to "+
+	    			  CPFileManager.PackingDirectory+File.separator+
+		    		  file.getName());
+
+	    	  return count;
+		  }
+		  
 	      // ============== screendump ============
-	      if (cmd.startsWith("screend")) {
+		  else if (cmd.startsWith("screend")) {
 	    	  boolean doCanvas=true;
 	    	  
 	    	  // if a flag(s) is given, then don't do a screendump, must call again
@@ -4389,6 +4522,7 @@ public class CommandStrParser {
   } // end of 's'
   case 'T': // "test" routines, meant to be temporary, developmental
   {
+	  	  
 	  // ======= T_islandSurround ====
 	  if (cmd.startsWith("T_isl")) {
 		  NodeLink beach=null;
@@ -4668,6 +4802,7 @@ public class CommandStrParser {
 					  fp.append(fhits[edge.v]+" "+fhits[edge.w]+"\n");
 				  }
 				  
+				  fp.flush();
 				  fp.close();
 				  count++;
 			  }
@@ -6484,7 +6619,8 @@ public class CommandStrParser {
 	      // =========== gamma ============
 	      if (cmd.startsWith("gamma")) {
 	    	  int a=NodeLink.grab_one_vert(packData,flagSegs);
-    		  return packData.packDCEL.setGamma(a);
+    		  packData.packDCEL.setGamma(a);
+    		  return packData.packDCEL.layoutPacking();
 	      }
 	      
 	      // ========= gen_cut =========

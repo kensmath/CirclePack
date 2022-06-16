@@ -546,7 +546,7 @@ public class TrafficCenter {
 				} catch (JNIException jni) {
 					errMsg = new String("JNIException: "+jni.getMessage());
 				} catch (Exception ex) {
-					errMsg = new String("Exception: " // in " + cmds[j] + ": "
+					errMsg = new String("Exception: in " + cmds[j] + ": "
 							+ ex.getMessage() + "; ");
 				}
 				if (errMsg != null || count == 0) {

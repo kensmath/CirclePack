@@ -28,9 +28,9 @@ import math.Mobius;
  * faces), but often are local only (hence, the same vertex v might 
  * have different labels in different faces).
  * 
- * Likewise, 'sidelengths' typically represents edge lengths, often in
- * eucl case in homogeneous coordinates; note that given the
- * array 'vert' of vertex indices, 
+ * Likewise, 'sidelengths' typically represents edge lengths, 
+ * often in eucl case in homogeneous coordinates; note that 
+ * given the array 'vert' of vertex indices, 
  *    sides[j]=length of edge <vert[j],vert[(j+1)%3]>
  *  
  * We also keep track of which vertices are 'red' (on the
@@ -38,7 +38,7 @@ import math.Mobius;
  * here in 'labels' or 'radii'.
  * 
  * For use with Schwarzian derivative, we store the Mobius
- * which maps the "base equilateral" face to this face. 
+ * map FROM the "base equilateral" to this face. 
  * 
  * NOTE: The "base equilateral" face is formed by tangent 
  * triple of eucl circles of radius sqrt(3), symmetric 
@@ -65,10 +65,10 @@ public class TriAspect extends TriData {
 	// Base data is determined by centers and radii and relate the actual 
 	//   face to the "base" equilateral. 
 	public Mobius baseMobius; 
-	public double []baseSchwarz;  
+	public double[] baseSchwarz;  
 	
 	// store data for use in, e.g., 'Schwarzian.java'
-	public Mobius []MobDeriv; // directed edge Mobius derivative
+	public Mobius[] MobDeriv; // directed edge Mobius derivative
 	
 	// constructor(s)
 	public TriAspect() { // default euclidean
@@ -82,7 +82,6 @@ public class TriAspect extends TriData {
 		labels=new double[3];
 		sidelengths=new double[3];
 		baseMobius=new Mobius();
-		baseSchwarz=new double[3];
 		need_update=true;
 		allocCenters();
 		schwarzian=new double[3];
@@ -114,15 +113,12 @@ public class TriAspect extends TriData {
 			setInvDist(j,asp.getInvDist(j));
 			schwarzian[j]=asp.schwarzian[j];
 		}
-		if (asp.baseMobius!=null) {
+		
+		if (asp.baseMobius!=null) 
 			baseMobius=new Mobius(asp.baseMobius);
-			for (int j=0;j<3;j++)
-				baseSchwarz[j]=asp.baseSchwarz[j];
-		}
-		else {
+		else 
 			baseMobius=new Mobius();
-			baseSchwarz=new double[3];
-		}
+
 		if (asp.MobDeriv!=null) {
 			MobDeriv = new Mobius[3];
 			for (int j=0;j<3;j++) 
@@ -209,16 +205,6 @@ public class TriAspect extends TriData {
 	}
 
 	/**
-	 * Compute 'baseMobius' based on current 'tanPts'. This is
-	 * Mobius mapping FROM "base equilateral" TO this face. 
-	 */
-	public void setBaseMob() {
-		Complex rt3=new Complex(-.5,CPBase.sqrt3by2);
-		baseMobius=Mobius.mob_xyzXYZ(new Complex(1.0),rt3,rt3.conj(),
-				tanPts[0],tanPts[1],tanPts[2],0,hes);
-	}
-
-	/**
 	 * Copy cent/radii by edge to pdcel
 	 * @param pdcel PackDCEL
 	 */
@@ -236,7 +222,7 @@ public class TriAspect extends TriData {
 	 * centers. Actually these are points where the incircle
 	 * of the triangle formed by the centers hits the edges.
 	 * (These points are conformally invariant under mobius
-	 * mob IF the centers are mapped as centers, i.e., 
+	 * mob, unlike the centers themselves. i.e., 
 	 * apply mob to circles and use the new centers.)
 	 */
 	public void setTanPts() {

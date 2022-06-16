@@ -13,6 +13,7 @@ import exceptions.MobException;
 import exceptions.ParserException;
 import ftnTheory.SchwarzMap;
 import geometry.CircleSimple;
+import geometry.CommonMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import math.group.ComplexTransformation;
@@ -311,8 +312,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	
 	
 	public String toString() {
-		// return a.toString() + "\t" + b.toString() + "\n" + c.toString() +
-		// "\t" + d.toString() + "\n";
+		// return a.toString() + "   " + b.toString() + "   " + c.toString() +
+		// "   " + d.toString() + "\n";
 		return a.toString3() + " " + b.toString3() + " " + c.toString3() + " "
 				+ d.toString3() + " ";
 
@@ -1316,6 +1317,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 */
 	public static int mobius_of_circle(Mobius mob, int hes, 
 			CircleSimple csIn,CircleSimple csOut, boolean oriented) {
+		
 		Complex z=csIn.center;
 		double r=csIn.rad;
 		double tmpr;
@@ -1327,10 +1329,10 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			tmpz = new Complex(sc.center);
 			tmpr = sc.rad;
 			
-			CirMatrix C=new CirMatrix(tmpz,tmpr);
+			CirMatrix C=new CirMatrix(new CircleSimple(tmpz,tmpr));
 			CirMatrix CC=CirMatrix.applyTransform(mob,C,oriented);
 
-			sc=CirMatrix.cirMatrix2eucl(CC);
+			sc=CirMatrix.cirMatrix_to_geom(CC,0);
 			if (sc==null)
 				return 0;
 			
@@ -1354,7 +1356,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			}
 			CirMatrix C =CirMatrix.sph2CirMatrix(z, r);
 			CirMatrix CC = CirMatrix.applyTransform(mob, C, oriented);
-			sc=CirMatrix.cirMatrix2sph(CC);
+			sc=CirMatrix.cirMatrix_to_geom(CC,1);
 			if (Double.isNaN(csOut.center.x) || Double.isNaN(csOut.center.y)) {
 				sc.center = mob.apply(z);
 				/* fixup: see above */
@@ -1367,11 +1369,12 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			csOut.center=new Complex(sc.center);
 			csOut.rad=sc.rad;
 			return 1;
-		} else { // euclidean
-			CirMatrix C=new CirMatrix(z,r);
+		} 
+		else { // euclidean
+			CirMatrix C=new CirMatrix(csIn);
 			CirMatrix CC=CirMatrix.applyTransform(mob,C,oriented);
 
-			CircleSimple scl=CirMatrix.cirMatrix2eucl(CC);
+			CircleSimple scl=CirMatrix.cirMatrix_to_geom(CC,0);
 			csOut.center=new Complex(scl.center);
 			csOut.rad=scl.rad;
 			return 1;

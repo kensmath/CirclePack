@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.Vector;
 
+import allMains.CirclePack;
 import complex.Complex;
 import exceptions.ParserException;
 import input.CPFileManager;
@@ -195,7 +196,8 @@ public class Percolation extends PackExtender {
 			} catch (Exception iox) {
 				return 0;
 			}
-			
+			CirclePack.cpb.msg("Wrote percolation data to "+file.getName()+"' in "+
+					CPFileManager.PackingDirectory);
 			return 1;
 		}
 		

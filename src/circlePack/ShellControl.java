@@ -45,6 +45,7 @@ public class ShellControl extends CPBase {
 		socketSources=new Vector<SocketSource>();
 		
 		NUM_PACKS=3; // number of packings to maintain
+		FAUX_RAD=20000;
 		cpTimer=new CPTimer();
 	}
 	

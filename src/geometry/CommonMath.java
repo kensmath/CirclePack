@@ -1,15 +1,11 @@
 package geometry;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-
+import allMains.CPBase;
 import allMains.CirclePack;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.Vertex;
 import complex.Complex;
-import dcel.PackDCEL;
 import exceptions.DataException;
-import listManip.HalfLink;
 import math.CirMatrix;
 import math.Mobius;
 import packing.PackData;
@@ -293,89 +289,6 @@ public class CommonMath {
 			return EuclMath.e_ivd_length(r1, r2, ivd);
 	}
 
-	/**
-	 * Convert 'CirMatrix' to 'CircleSimple' in requested geometry. 
-	 * @param cM CirMatrix, 2x2 representation of a circle
-	 * @param hes int, geometry
-	 * @return CircleSimple, null on error (e.g. improper hyp case)
-	 */
-	public static CircleSimple cirMatrix_to_geom(CirMatrix cM,int hes) {
-		if (cM==null)
-			return null;
-		CircleSimple outCS=new CircleSimple();
-		CirMatrix CC=CirMatrix.normalize(cM); // a should be +-1 or 0
-		
-		// typical data (recall, a.x=-1 ==> all entries were multiplied by -1)
-		Complex ecent=CC.c.times(-1.0*CC.a.x); // c entry is -center
-		double reald=CC.d.x*CC.a.x; // throw out any extraneous imaginary part
-		double rsq=ecent.absSq()-reald;
-		if (rsq<=0) {
-			CirclePack.cpb.errMsg("error in a 'CirMatrix'");
-			return null;
-		}
-		// positive eucl radius
-		double erad=Math.sqrt(rsq); 
-
-		// sph case, radius/center. See the conventions about inside/outside, 
-		if (hes>0) {
-			// circle is a straight line (goes through south pole)
-			if (CC.a.abs() < CirMatrix.CM_TOLER) {
-				// through origin? Hence a hemisphere
-				if (CC.d.abs() < CirMatrix.CM_TOLER) {
-					outCS.center.y = outCS.rad = Math.PI / 2.0;
-					outCS.center.x=CC.b.conj().arg();
-					return outCS;
-				} 
-
-				// straight line, but NOT through origin
-				double R=CC.d.abs(); // distance to origin
-				double theta=Math.atan2(-1.0*CC.b.y,CC.b.x);
-				double atn=Math.atan(R);
-				double rho=Math.PI/2.0-atn; 
-				if (CC.d.x<0) // encloses origin (north pole)?
-					rho+=2.0*atn;
-				outCS.rad=rho;
-				outCS.center=new Complex(theta,Math.PI-rho);
-
-				return outCS;
-			} // end of 'straight line' cases
-
-			// else a circle
-			CircleSimple sc=SphericalMath.e_to_s_data(ecent, erad);
-			outCS.center=sc.center;
-			outCS.rad=sc.rad;
-			if (CC.a.x<0) { // want outside of euclidean circle
-				outCS.center=SphericalMath.getAntipodal(sc.center);
-				outCS.rad=Math.PI-sc.rad;
-			}
-			return outCS;
-		} // done with sph
-		
-		// hyp case: return null if circle is not in unit disc
-		if (hes<0) { 
-			if (CC.a.x<=0) { // straight line or outside
-				CirclePack.cpb.errMsg("Improper hyp conversion of 'CirMatrix'");
-				return null;
-			}
-			if (ecent.abs()+erad>1.0) // not in disc
-				return null;
-			
-			return HyperbolicMath.e_to_h_data(ecent, erad);
-		}
-		
-		// else eucl; watch for line
-		if (CC.a.x==0 && CC.a.y==0) { // yes, is a line
-			outCS.lineFlag=true;
-			outCS.center=CC.b.conj();  // unit normal toward interior
-			outCS.rad=-2.0*CC.d.x;     // signed distance from origin
-			return outCS;
-		}
-		outCS.center=ecent; 
-		outCS.rad=erad*CC.a.x; // may be negative if a=-1
-		return outCS;
-		
-	}
-	
 	/**
 	 * Compute angle at v0 in mutually tangent triple of circles with
 	 * given radii. Assume tangency. x-radii in hyp case.

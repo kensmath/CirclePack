@@ -11,7 +11,6 @@ import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import exceptions.DataException;
 import exceptions.MobException;
-import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.CommonMath;
 import geometry.SphericalMath;
@@ -25,7 +24,6 @@ import packing.PackData;
 import util.ColorUtil;
 import util.DispFlags;
 import util.StringUtil;
-import util.TriAspect;
 
 /**
  * These are static routines for working with discrete Schwarzian 
@@ -401,8 +399,9 @@ public class Schwarzian {
 		Mobius M=(Mobius)dMob_inv.lmult(pre_f).lmult(bm_f);
 
 		// this is the fourth circle in the base equilateral
-		CirMatrix circle3=new CirMatrix(new Complex(4.0),
-				CPBase.sqrt3by2*2.0);
+		CircleSimple cb=
+				new CircleSimple(new Complex(4.0),CPBase.sqrt3by2*2.0);
+		CirMatrix circle3=new CirMatrix(cb);
 		
 		// apply M to get the target circle
 		CirMatrix outCM=CirMatrix.applyTransform(M,circle3,true);
@@ -412,16 +411,16 @@ public class Schwarzian {
 			Mobius tmpm=(Mobius)pre_f.rmult(dMob_inv);
 			deBugging.DebugHelp.mob4matlab("pre_f(dMob_inv)",tmpm);
 			CirMatrix tmpcm=CirMatrix.applyTransform(tmpm,circle3,true);
-			CircleSimple cS=CommonMath.cirMatrix_to_geom(tmpcm, 0);
+			CircleSimple cS=CirMatrix.cirMatrix_to_geom(tmpcm, 0);
 			System.out.println("tmpcm eucl  z/r: "+cS.center+" "+cS.rad);
 //			deBugging.DebugHelp.mob4matlab("dMob_inv",dMob_inv);
 //			deBugging.DebugHelp.mob4matlab("pre_f", pre_f);
 			deBugging.DebugHelp.mob4matlab("M", M);
-			cS=CommonMath.cirMatrix_to_geom(outCM,0);
+			cS=CirMatrix.cirMatrix_to_geom(outCM,0);
 			System.out.println("outCM eucl z/r: "+cS.center+" "+cS.rad);
 		}
 
-		return CommonMath.cirMatrix_to_geom(outCM, hes);
+		return CirMatrix.cirMatrix_to_geom(outCM, hes);
 	}
 	
 	/**

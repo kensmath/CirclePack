@@ -12,6 +12,7 @@ import allMains.CirclePack;
 import combinatorics.komplex.DcelFace;
 import combinatorics.komplex.HalfEdge;
 import complex.Complex;
+import dcel.Schwarzian;
 import exceptions.DataException;
 import exceptions.MiscException;
 import exceptions.ParserException;
@@ -19,7 +20,6 @@ import geometry.CircleSimple;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import input.CPFileManager;
-import komplex.DualTri;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.HalfLink;
@@ -32,6 +32,7 @@ import util.DispFlags;
 import util.StringUtil;
 import util.TriAspect;
 import widgets.RadiiSliders;
+import widgets.SchwarzSliders;
 
 /** 
  * This is code for exploring discrete Schwarzian derivatives.
@@ -40,7 +41,7 @@ import widgets.RadiiSliders;
  * Motivated by Gerald Orick's thesis, I am pursuing a slightly
  * modified version of his "directed Mobius edge derivative"
  * along with an "intrinsic" schwarzian associated with maps
- * from a standardized "base equilateral" setting. 
+ * from a standardized "base equilateral". 
  * 
  * The concern is with maps between tangency circle packings 
  * sharing the same combinatorics. A "circle packing quadrangle" 
@@ -72,25 +73,34 @@ import widgets.RadiiSliders;
  * direction of the directed edge e and s is some real scalar. If
  * eta is the normal to e directed outward from f (so eta=-i*delta),
  * then c=s*conj(eta). Note that the complex schwarzian for -e is -c.
- * (The real number s is distinct from the intrinsic schwarzian we 
- * generally work with (see below)
+ * (This real number s is distinct from the intrinsic schwarzian we 
+ * generally work with;see below.) 
  * 
  * In contrast to complex schwarzians related to mappings between
- * two packings, I am introducing intrinsic schwarzians associated 
- * with edges of a single tangency packing P. The "schwarzian" 
+ * TWO packings, I am introducing intrinsic schwarzians associated 
+ * with edges of a SINGLE tangency packing P. The "schwarzian" 
  * element of an edge of P is this intrinsic schwarzian, a real 
- * number based on a map from a "base equilateral". The normalized 
+ * number based on maps from a "base equilateral". This base
  * equilateral is centered at the origin and has its edge 
  * midpoints at the cube roots of unity.
+ * 
+ * One of our main goals is to understand conditions on those
+ * assignments of schwarzians which correspond to circle packings.
+ * Also, to understand the relationship between the intrinsic
+ * schwarzians of P and P' when considering a mapping. See
+ * 'schwarzian.java'. 
  * 
  * This extender is about the mapping case and we store data for 
  * both domain and range packing, each having a 'TriAspect' for 
  * each face: domain data stored on initiation (or adjusted later), 
  * range data stored on demand. Given {f,g} in domain and {F,G} 
- * in range, we have stored the complex schwarzians for the map 
- * in 'TriAspect.sch_coeff'. Thus the range packing is a global 
- * Mobius image of domain packing iff all 'sch_coeff' are zero
- * iff all intrinsic schwarzians are zero.
+ * in range, we have stored the complex schwarzian for the map 
+ * in 'domainTri.mobDeriv[.]'. The intrinsic schwarzians are
+ * stored locally in each TriAspect 'schwarzian' and are only moved
+ * to 'DcelFace.schwarzian' in the packing when requested. Note
+ * that the range packing is a global Mobius image of domain 
+ * packing iff all 'mobDeriv' are zero iff all intrinsic 
+ * schwarzians are zero.
  * 
  * TODO: fix 'layOrder' so that its 'HalfEdge's are from the 
  * correct PackDCEL.
@@ -99,13 +109,17 @@ import widgets.RadiiSliders;
  * */
 public class SchwarzMap extends PackExtender {
 	
-	public TriAspect []domainTri; // domain faces; 'MobDeriv's stored here
-	public TriAspect []rangeTri;  // created with 'set_range' or filled by 'go'
+	public TriAspect[] domainTri; // domain faces
+	public TriAspect[] rangeTri;  // created with 'set_range' or filled by 'go'
 	public int rangeHes;          // range geometry
 	public int rangePackNum;
+
+	public Mobius[] mobDerivs;    // edge Mobius derivatives by edge index
+	
 	public HalfLink layOrder;  // drawing order, default to full 'layoutOrder' 
 	
-	public RadiiSliders radSliders; // for opening a slider window
+	public RadiiSliders radSliders; // for opening radius slider window
+	public SchwarzSliders schSliders; // for opening schwarzian slider window
 
 	// Constructor
 	public SchwarzMap(PackData p) {
@@ -120,15 +134,14 @@ public class SchwarzMap extends PackExtender {
 			packData.packExtensions.add(this);
 		}
 		// default: look at 'set_domain' call
-		domainTri=PackData.getTriAspects(packData);
-		// default, but normally changed: look at 'set_range' call
-		rangeTri=PackData.getTriAspects(packData);
+		domainTri=setupTri(packData);
+		Schwarzian.comp_schwarz(packData,new HalfLink(packData,"i"));
+		
+		// range default: look at 'set_range' call
+		rangeTri=setupTri(packData);
 		rangePackNum=packData.packNum;
 		// may be reset when rangeTri is filled.
 		rangeHes=packData.hes; 
-
-		// compute/store the 'schwarzian's for 'packData'
-		cpCommand(packData,"set_sch"); 
 	}
 	
 	/**
@@ -313,17 +326,34 @@ public class SchwarzMap extends PackExtender {
 
 		// ======= open radSlider ============
 		else if (cmd.startsWith("radS")) {
+			PackData qData=CPBase.packings[rangePackNum];
 			NodeLink wlist;
 			try {
 				items=flagSegs.get(0);
-				wlist=new NodeLink(packData,items);
+				wlist=new NodeLink(qData,items);
 			} catch(Exception ex) {
-				wlist=new NodeLink(packData,"a");
+				wlist=new NodeLink(qData,"a");
 			}
-			radSliders=new RadiiSliders(packData,"","",wlist);
-			if (radSliders==null)
+			qData.radiiSliders=new RadiiSliders(qData,"","",wlist);
+			if (qData.radiiSliders==null)
 				return 0;
-			radSliders.setVisible(true);
+			qData.radiiSliders.setVisible(true);
+		}
+		
+		// ======= open schSlider ============
+		else if (cmd.startsWith("schS")) {
+			PackData qData=CPBase.packings[rangePackNum];
+			HalfLink hlink=null;
+			try {
+				items=flagSegs.get(0);
+				hlink=new HalfLink(qData,items);
+			} catch(Exception ex) {
+				hlink=new HalfLink(qData,"i");
+			}
+			qData.schwarzSliders=new SchwarzSliders(qData,"","",hlink);
+			if (qData.schwarzSliders==null)
+				return 0;
+			qData.schwarzSliders.setVisible(true);
 		}
 
 		// ======= put ===========
@@ -448,7 +478,7 @@ public class SchwarzMap extends PackExtender {
 					v=Integer.parseInt(items.remove(0));
 					w=Integer.parseInt(items.remove(0));
 					s_coeff=Double.parseDouble(items.remove(0));
-					if (!set_s_coeff(v,w,s_coeff)) 
+					if (!setTriSchwarzians(v,w,s_coeff)) 
 						return 0;
 					tick++;
 				} catch (Exception ex) {
@@ -527,7 +557,7 @@ public class SchwarzMap extends PackExtender {
                     } catch (Exception ex) {
                     	break;
                     }
-                    if (!set_s_coeff(v,w,s_coeff)) 
+                    if (!setTriSchwarzians(v,w,s_coeff)) 
 						break;
                     count++;
                 } // done with this line
@@ -958,9 +988,6 @@ public class SchwarzMap extends PackExtender {
 		}
 		
 		// ======== set_domain/range ===========
-		// TODO: 7/2020. I'm not adjusting this right now, 
-		//     because I'm moving to implement for real 
-		//     schwarzians for domain packing. 
 		else if (cmd.startsWith("set_domain") || 
 				cmd.startsWith("set_range")) {
 			PackData pd=packData;
@@ -973,61 +1000,20 @@ public class SchwarzMap extends PackExtender {
 				}
 			}
 			
-			// Now check 'pd' for 'AffinePack' (first) or 'ProjStruct'
-			//    extender; if there, try to use its 'aspects' data.
-			TriAspect[] ourTri=null;
-			boolean hitap=false;
-			TriAspect[] aspect=null;
-			Iterator<PackExtender> pXs=pd.packExtensions.iterator();
-			while (pXs.hasNext() && !hitap) {
-				PackExtender pe=(PackExtender)pXs.next();
-				if (pe.extensionAbbrev.equalsIgnoreCase("ap")) {
-					AffinePack afpex=(AffinePack)pe;
-					if (afpex.aspects!=null && 
-							afpex.aspects.length==packData.faceCount+1) { 
-						aspect=afpex.aspects;
-						hitap=true;
-					}
-				}
-				
-				// only look for 'ProjStruct' if as yet no 'AffinePack'.
-				if (!hitap && pe.extensionAbbrev.equalsIgnoreCase("ps")) {
-					ProjStruct pspex=(ProjStruct)pe;
-					if (pspex.aspects!=null && pspex.aspects.length==
-							pd.faceCount+1) { 
-						aspect=pspex.aspects;
-					}
-				}
-			}
-			
-			// If already exists, update tangency points
-			if (aspect!=null) { // create and fill ourTri
-				ourTri=new TriAspect[pd.faceCount+1];
-				for (int f=1;f<=pd.faceCount;f++) {
-					ourTri[f]=new TriAspect(aspect[f]);
-					DualTri dtri=new DualTri(
-						aspect[f].getCenter(0),
-						aspect[f].getCenter(1),
-						aspect[f].getCenter(2),pd.hes);
-					ourTri[f].tanPts=new Complex[3];
-					for (int j=0;j<3;j++)
-						ourTri[f].tanPts[j]=new Complex(dtri.TangPts[j]);
-				}
-			}
-			
-			// else create 'TriAspect's from scratch.
-			else {
-				ourTri=PackData.getTriAspects(pd);
-			}
-			
-			// which is it?
+			// initiate the TriAspects (or get from an extender)
+			TriAspect[] ourTri=setupTri(pd);
+
+			// which is it, domain or range?
 			if (cmd.startsWith("set_d"))
 				domainTri=ourTri;
 			else {
 				rangeTri=ourTri;
 				rangeHes=pd.hes;
 			}
-			
+						
+			// update intrinsic schwarzians
+			Schwarzian.comp_schwarz(pd,new HalfLink(pd,"i"));
+
 			return 1;
 		}
 		
@@ -1335,15 +1321,15 @@ public class SchwarzMap extends PackExtender {
 	}
 	
 	/**
-	 * Store a new schwarzian for oriented edge <v,w> and <w,v>; 
-	 * also set associated MobDeriv's.
-	 * Note that faces f/g are left/right of <v,w>, respectively.
+	 * Store schwarzian for oriented edge <v,w> and <w,v> in
+	 * their face TriAspect's. Note that faces f/g are 
+	 * left/right of <v,w>, resp.
 	 * @param v int
 	 * @param w int
-	 * @param s_coeff double
+	 * @param schw double
 	 * @return boolean, false on failure
 	 */
-	public boolean set_s_coeff(int v,int w,double s_coeff) {
+	public boolean setTriSchwarzians(int v,int w,double schw) {
 		HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
 		if (he==null)
 			return false;
@@ -1354,9 +1340,9 @@ public class SchwarzMap extends PackExtender {
         TriAspect ftri=domainTri[f];
         TriAspect gtri=domainTri[g];		
         int jf=ftri.vertIndex(v);
-        ftri.schwarzian[jf]=s_coeff;
+        ftri.schwarzian[jf]=schw;
         int jg=gtri.vertIndex(w);
-        gtri.schwarzian[jg]=s_coeff;
+        gtri.schwarzian[jg]=schw;
         return true;
 	}
 	
@@ -1389,6 +1375,27 @@ public class SchwarzMap extends PackExtender {
 		return faceMobs;
 	}
 
+	/**
+	 * Get 'TriAspect's for given packing so tanPts are updated
+	 * and 'baseMobius' are computed.
+	 * @param pd PackData
+	 * @return TriAspet[]
+	 */
+	public TriAspect[] setupTri(PackData pd) {
+	
+		TriAspect[] ourTri=PackData.getTriAspects(pd);
+		
+		// set Mobius maps FROM "base equilateral" to faces
+		for (int f=1;f<=pd.faceCount;f++) {
+			ourTri[f].baseMobius=Mobius.mob_xyzXYZ(
+					CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
+					ourTri[f].tanPts[0],ourTri[f].tanPts[1],ourTri[f].tanPts[2],
+					0,pd.hes);
+		}
+		
+		return ourTri;
+	}
+
 	/** 
 	 * Override method for cataloging command structures
 	 */
@@ -1397,6 +1404,9 @@ public class SchwarzMap extends PackExtender {
 		cmdStruct.add(new CmdStruct("radS",
 				"{v..}",null,"Create and display a widget for "
 						+ "adjusting radii"));
+		cmdStruct.add(new CmdStruct("schS",
+				"{v w ..}",null,"Create and display a widget for "
+						+ "adjusting selected schwarzians"));
 		cmdStruct.add(new CmdStruct("put",
 				"[-q{n} [{v w .. }]",null,"Put rangeTri "
 						+ "radii/centers into packing {n} "

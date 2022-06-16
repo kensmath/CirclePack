@@ -2281,6 +2281,7 @@ public class AffinePack extends PackExtender {
 			
 			try {
 				fp.append(strBuild.toString());
+				fp.flush();
 				fp.close();
 				CirclePack.cpb.msg("Wrote '"+file.getName()+"' to "+
 						CPFileManager.PackingDirectory);

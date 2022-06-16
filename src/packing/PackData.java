@@ -5577,8 +5577,8 @@ public class PackData{
 
 	/** 
 	 * Create 'TriAspect' face data, which contains data face-by-face
-	 * for use, e.g., in 'Schwarzian' and 'ProjStruct'. This does not
-	 * change data in the packing itself.
+	 * for use, e.g., in 'Schwarzian' and 'ProjStruct'. Set the tanPts.
+	 * This does not change data in the packing itself.
 	 * @param p PackData
 	 * @return int count 
 	 */
