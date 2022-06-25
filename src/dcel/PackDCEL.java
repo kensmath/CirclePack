@@ -655,7 +655,7 @@ public class PackDCEL {
 	    		
 	    		if (Math.abs(gammaarg-Math.PI/2.0)>.001) {
 	    			for (int v=1;v<=vertCount;v++) 
-	    				vertices[v].center.times(rot);
+	    				vertices[v].center=vertices[v].center.times(rot);
 	    			if (redChain!=null) {
 	    				RedEdge rtrace=redChain;
 	    				do {

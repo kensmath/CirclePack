@@ -864,19 +864,6 @@ public class QueryParser {
 						words.append(" is ");
 					gotone=true;
 				}
-				else if (query.startsWith("schw")) {
-					HalfEdge edge=HalfLink.grab_one_edge(p, flagSegs);
-					if (edge!=null) {
-						try {
-							ans.append(String.format("%.6f",edge.getSchwarzian()));
-						} catch (Exception ex) {
-							throw new DataException("");
-						}
-						if (forMsg) 
-							words.append(" <v,w>"+edge);
-						gotone=true;
-					}
-				}
 				else if (query.startsWith("sch_flo")) { // add schwarzians around a vertex
 					int vv=NodeLink.grab_one_vert(p,flagSegs);
 					if (vv!=0) {
@@ -896,6 +883,24 @@ public class QueryParser {
 							words.append(" for vert "+vv);
 						gotone=true;
 					}	
+				}
+				else if (query.startsWith("sch")) {
+					HalfLink hlink=new HalfLink(p,flagSegs.get(0));
+					int tick=0;
+					Iterator<HalfEdge> his=hlink.iterator();
+					while (tick<10 && his.hasNext()) {
+						HalfEdge edge=his.next();
+						if (edge!=null) {
+							try {
+								ans.append(String.format(" %.6f ",edge.getSchwarzian()));
+							} catch (Exception ex) {
+								throw new DataException("");
+							}
+							if (forMsg) 
+								words.append(" <v,w>"+edge);
+							gotone=true;
+						}
+					}
 				}
 				break;
 			} // end of 's'

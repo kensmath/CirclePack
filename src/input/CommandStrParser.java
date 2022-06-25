@@ -9592,7 +9592,7 @@ public class CommandStrParser {
 	    	  }
 	    	  
 	    	  // ========= set_center ==========
-	    	  if (cmd.startsWith("center")) {
+	    	  if (cmd.startsWith("cent")) {
 	    		  if (flagSegs==null || flagSegs.size()==0 ||
 	    				  (items=flagSegs.elementAt(0)).size()==0) {
 	    			  throw new ParserException("check usage: [XY] -[fx] {v..}");
