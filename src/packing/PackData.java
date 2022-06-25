@@ -122,9 +122,6 @@ public class PackData{
     public int hes;           // curvature of ambient geometry,-1=hyp,0=eucl,1=sph 
     public boolean status;    // false when pack is empty
 	public String fileName;   // filename when file was read/written
-    int alpha;         // index of alpha node (origin)
-    public int beta;          // OBE, not used now
-    int gamma;         // index of node to be plotted on positive y-axis
     public int euler;   	  // Euler characteristic
     public int genus;         // genus of complex. Euler+#bdry=2-2g, g=(2-Euler-#bdy)/2 
     public int intrinsicGeom; // intrinsic geometry (due to combinatorics only)
@@ -229,10 +226,8 @@ public class PackData{
     	pdcel.p=this;
     	if (pdcel.alpha==null)
     		pdcel.setAlpha(0,null,true);
-   		alpha=pdcel.alpha.origin.vertIndx;
     	if (pdcel.gamma==null)
-    		gamma=pdcel.setGamma(0);
-    	gamma=pdcel.gamma.origin.vertIndx;
+    		pdcel.setGamma(0);
     	firstFace=pdcel.alpha.face.faceIndx;
 		
     	// set some counts
@@ -312,25 +307,6 @@ public class PackData{
     } 
     
     /**
-     * Only used to avoid 'setAlpha' calls which loop
-     * between 'PackData' and 'PackDCEL'. 
-     * @param v int
-     */
-    public void directAlpha(int v) {
-    	alpha=v;
-    }
-    
-    /**
-     * Only used to avoid 'setGamma' calls which loop
-     * between 'PackData' and 'PackDCEL'. Sometimes used
-     * if no 'PackDCEL' is involved.
-     * @param w int
-     */
-    public void directGamma(int w) {
-    	gamma=w;
-    }
-
-    /**
      * Set prescribed 'alpha' vertex; must be interior. Move 'gamma' 
      * if necessary. Face drawing order is automatically recomputed.
      * @param v int, preferred or 0
@@ -348,7 +324,7 @@ public class PackData{
      * @return 1 on success, 0 on failure
      */
     public int setGamma(int i) {
-        if (status && i>0 && i<= nodeCount && i != alpha)
+        if (status && i>0 && i<= nodeCount && i != packDCEL.alpha.origin.vertIndx)
        		return packDCEL.setGamma(i);
         return 0;
     } 
@@ -373,31 +349,17 @@ public class PackData{
 	}
 
 	/** 
-	 * I make 'alpha' private for debugging
 	 * @return int
 	 */
 	public int getAlpha() {
-		if (packDCEL.alpha!=null) {
-			int alp=packDCEL.alpha.origin.vertIndx;
-			if (alp>0 && alp<=packDCEL.vertCount)
-				directAlpha(alp); // update 'this.alpha' 
-			return alp;
-		}
-		return this.alpha;
+		return packDCEL.alpha.origin.vertIndx;
 	}
 	
 	/** 
-	 * I make 'gamma' private for debugging
 	 * @return int
 	 */
 	public int getGamma() {
-		if (packDCEL.gamma!=null) {
-			int gam=packDCEL.gamma.origin.vertIndx;
-			if (gam>0 && gam<=packDCEL.vertCount)
-				directGamma(gam); // update 'this.gamma' 
-			return gam;
-		}
-		return this.gamma;
+		return packDCEL.gamma.origin.vertIndx;
 	}
 	
 	/**
@@ -416,7 +378,7 @@ public class PackData{
 		temp += "Intrinsic geometry: " + intToGeometry(intrinsicGeom) + "\n";
 		temp += "Genus: " + genus + "\n";
 		temp += "Euler charasteric: " + euler + "\n";
-		temp += "Alpha: " + alpha + "\n";
+		temp += "Alpha: " + packDCEL.alpha.origin.vertIndx + "\n";
 		return temp;
 	}
 
@@ -2498,7 +2460,8 @@ public class PackData{
 		if (hes<0)
 			return 1; // hyp already
 		if (hes == 0) { // eucl
-			double mx = getCenter(alpha).abs() + getRadius(alpha);
+			double mx = packDCEL.getVertCenter(packDCEL.alpha).abs()+
+					packDCEL.getVertRadius(packDCEL.alpha);
 			for (int v = 1; v <= nodeCount; v++) { // translate, set scale
 													// factor
 			// System.out.println("vert v"+v);
@@ -3264,7 +3227,7 @@ public class PackData{
 	        ratio=0.0;
 	    }
 	    else if (ratio>0.0 && ratio<=1.0){ // have ratio instead
-	        lam=1.0/Math.sqrt(getRadius(alpha));
+	        lam=1.0/Math.sqrt(packDCEL.getVertRadius(packDCEL.alpha));
 	        factor=new Complex(lam,0);
 	        E=0;
 	    }
@@ -3290,9 +3253,10 @@ public class PackData{
 	    if (ratio>0.0 && Math.abs(ratio-1.0)>Mobius.MOB_TOLER) {
 	        // adjust for specified ratio when on sphere 
 	        factor=new Complex(0.0);
-	        Mobius Mob=Mobius.NS_mobius(getCenter(alpha),getCenter(nodeCount),
-	  	      MathComplex.ID,getRadius(alpha),getRadius(nodeCount),0.0,
-	  	      ratio);
+	        Mobius Mob=Mobius.NS_mobius(packDCEL.getVertCenter(packDCEL.alpha),
+	        		getCenter(nodeCount),MathComplex.ID,
+	        		packDCEL.getVertRadius(packDCEL.alpha),
+	        		getRadius(nodeCount),0.0,ratio);
 	        vlist=new NodeLink(this,"a");
 	        apply_Mobius(Mob,vlist);
 	    }
@@ -6754,7 +6718,8 @@ public class PackData{
 	      fp.write("];\n\n");
 	      fp.write("pause %% press any key to get exit distribution "+
 		      "function of exit probabilities.\n");
-	      fp.write("dist=zeros("+nodes+");dist("+alpha+")=1\n");
+	      fp.write("dist=zeros("+nodes+");dist("+
+		      packDCEL.alpha.origin.vertIndx+")=1\n");
 	      fp.write("equib=T^10000*dist\n");
 	      fp.write("Acum(1)=equib(Bdry(1));\n");
 	      fp.write("for i=2:size(Bdry,2),\n");

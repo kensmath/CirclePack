@@ -111,7 +111,15 @@ public class ClientToCP implements Runnable
                             	isRadii = false;
                             	isCenter = false;
                 			}
-                			else if (actToken.equals("ALPHA/BETA/GAMMA:"))
+                			else if (actToken.equals("ALPHA/GAMMA:"))
+                			{
+                				isNodecount = false;
+                				isAlphaBetaGamma = true;
+                            	isFlower = false;
+                            	isRadii = false;
+                            	isCenter = false;
+                			}
+                			else if (actToken.equals("ALPHA/BETA/GAMMA:")) // old version
                 			{
                 				isNodecount = false;
                 				isAlphaBetaGamma = true;
@@ -231,8 +239,8 @@ public class ClientToCP implements Runnable
             out.println("PutPack");
             out.println("NODECOUNT: " + Integer.toString(num_vert));
             out.println("GEONETRY: euclidean");
-            out.println("ALPHA/BETA/GAMMA: " + Integer.toString(alpha) + " " + 
-            		Integer.toString(beta) + " " + Integer.toString(gamma));
+            out.println("ALPHA/GAMMA: " + Integer.toString(alpha) + " " + 
+            		Integer.toString(gamma));
             out.println("FLOWERS:");
             for(int i = 0; i < num_vert; i++)
             {

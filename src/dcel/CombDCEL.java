@@ -1181,8 +1181,6 @@ public class CombDCEL {
 					HalfEdge he=sis.next();
 					if (he.myRedEdge==null && he.twin.myRedEdge==null) {
 						pdcel.alpha=he;
-						if (pdcel.p!=null) 
-							pdcel.p.directAlpha(he.origin.vertIndx);
 					}
 				}
 			}
@@ -2490,7 +2488,6 @@ public class CombDCEL {
 						throw new ParserException(
 								"cookie crumbled: chosen seed "+alp+
 								"is not interior");
-					p.directAlpha(alp);
 					pdcel.alpha=pdcel.vertices[alp].halfedge;
 					items.remove(1);
 					items.remove(0);

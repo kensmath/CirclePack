@@ -166,7 +166,7 @@ public class PackLite {
 		// work with copy so 'packData' doesn't get changed
 		PackData p=packData.copyPackTo();
 		p.setAlpha(alp);
-		alp=p.alpha;
+		alp=p.packDCEL.alpha.origin.vertIndx;
 		int gam=0;
 		
 		if (p.packDCEL.redChain==null) { // sphere?

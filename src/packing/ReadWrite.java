@@ -257,10 +257,17 @@ public class ReadWrite {
 								p.hes = 1;
 							} // spherical
 						}
-					} else if (mainTok.equals("ALPHA/BETA/GAMMA:")) {
+					} else if (mainTok.equals("ALPHA/GAMMA:")) {
 						try {
 							newAlpha = Integer.parseInt(tok.nextToken());
-							p.beta = Integer.parseInt(tok.nextToken());
+							newGamma = Integer.parseInt(tok.nextToken());
+						} catch (Exception ex) {
+							continue;
+						}
+					} else if (mainTok.equals("ALPHA/BETA/GAMMA:")) { // old version
+						try {
+							newAlpha = Integer.parseInt(tok.nextToken());
+							int obe = Integer.parseInt(tok.nextToken());
 							newGamma = Integer.parseInt(tok.nextToken());
 						} catch (Exception ex) {
 							continue;
@@ -307,7 +314,7 @@ public class ReadWrite {
 								PackDCEL pdc;
 								int tmpAlpha = newAlpha;
 								if (tmpAlpha == -1)
-									tmpAlpha = p.alpha;
+									tmpAlpha = p.packDCEL.alpha.origin.vertIndx;
 								if ((pdc = CombDCEL.getRawDCEL(bouquet, tmpAlpha)) == null) {
 									p.flashError("Problem reading DCEL data");
 									return -1;
@@ -539,8 +546,6 @@ public class ReadWrite {
 					p.nodeCount = newPack.nodeCount;
 					p.hes = newPack.hes;
 					p.intrinsicGeom = newPack.intrinsicGeom;
-					p.alpha = newPack.alpha;
-					p.gamma = newPack.gamma;
 					p.vertexMap = null;
 					p.xyzpoint = null;
 					p.vlist = null;
@@ -593,10 +598,17 @@ public class ReadWrite {
 								p.hes = 1;
 							} // spherical
 						}
-					} else if (mainTok.equals("ALPHA/BETA/GAMMA:")) {
+					} else if (mainTok.equals("ALPHA/GAMMA:")) {
 						try {
 							newAlpha = Integer.parseInt(tok.nextToken());
-							p.beta = Integer.parseInt(tok.nextToken());
+							newGamma = Integer.parseInt(tok.nextToken());
+						} catch (Exception ex) {
+							continue;
+						}
+					} else if (mainTok.equals("ALPHA/BETA/GAMMA:")) { // old version
+						try {
+							newAlpha = Integer.parseInt(tok.nextToken());
+							int obe = Integer.parseInt(tok.nextToken());
 							newGamma = Integer.parseInt(tok.nextToken());
 						} catch (Exception ex) {
 							continue;
@@ -1736,8 +1748,8 @@ public class ReadWrite {
 				file.write("euclidean\n");
 		}
 		if ((act & 0001) == 0001) {
-			file.write("ALPHA/BETA/GAMMA:  " + p.alpha + " " + p.beta + " " + p.gamma
-					+ "\n");
+			file.write("ALPHA/GAMMA:  " + p.packDCEL.alpha.origin.vertIndx +
+					" " + " " + p.packDCEL.gamma.origin.vertIndx + "\n");
 			if (p.fileName.length() > 0)
 				file.write("PACKNAME: " + p.fileName + "\n");
 			file.write("BOUQUET: ");

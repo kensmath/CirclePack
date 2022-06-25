@@ -2222,11 +2222,6 @@ public class PackDCEL {
 		vertices[v]=holdw;
 		
 		// swap 'VData' and all data with it, aims, rad, centers, etc.
-		if (p!=null) {
-			p.directAlpha(alpha.origin.vertIndx);
-			p.directGamma(gamma.origin.vertIndx);
-		}
-		
 		// fix up if there parent has TileData
 		if (p.tileData != null && p.tileData.tileCount > 0) {
 			for (int j = 1; j <= p.tileData.tileCount; j++) {
@@ -2395,10 +2390,6 @@ public class PackDCEL {
 			if (myTry!=null) { // myTry should be 'alpha'
 				if (gamma==myTry)
 					gamma=myTry.twin;
-				if (p!=null) {
-					p.directAlpha(alpha.origin.vertIndx);
-					p.directGamma(gamma.origin.vertIndx);
-				}
 				return myTry.origin.vertIndx;
 			}
 			if (nlink==null) { // 'myTry' first edge with int ends
@@ -2434,7 +2425,6 @@ public class PackDCEL {
 		if (myTry!=alpha) {
 			alpha=myTry;
 			if (p!=null) {
-				p.directAlpha(alpha.origin.vertIndx);
 				if (recomb)  // adjust combinatorics
 					CombDCEL.fillInside(p.packDCEL);
 			}
@@ -2442,8 +2432,6 @@ public class PackDCEL {
 		
 		if (gamma==alpha) {
 			gamma=alpha.twin;
-			if (p!=null)
-				p.directGamma(gamma.origin.vertIndx);
 		}
 		return myTry.origin.vertIndx;
 	}
@@ -2461,11 +2449,8 @@ public class PackDCEL {
     	if (alpha==null)
     		setAlpha(0,null,false); // don't call 'fillInside'
         if (v<=0 || v>vertCount) {
-        	if (gamma==null) {
+        	if (gamma==null)
         		gamma=alpha.twin;
-        		if (p!=null)
-        			p.directGamma(gamma.origin.vertIndx);
-        	}
         	return 1;
         }
 		Vertex vertex =vertices[v];
@@ -2475,8 +2460,6 @@ public class PackDCEL {
 			return 0;
 		}
 		gamma=vertex.halfedge;
-		if (p!=null)
-			p.directGamma(gamma.origin.vertIndx);
         return gamma.origin.vertIndx;
     } 
     

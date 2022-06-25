@@ -434,7 +434,7 @@ public class PackCreation {
 		// -------------- fix up the packing -----------------------
 		
 		// temporary alpha
-		myPacking.directAlpha(1);
+		myPacking.setAlpha(1);
 		
 		// gamma points to middle vertex of bdry edge in first face
  		myPacking.setGamma(myPacking.getFlower(1)[gamma_indx]);
@@ -505,7 +505,6 @@ public class PackCreation {
 		triPent.swap_nodes(new6,6);
 		triPent.swap_nodes(new5,10); // put 10 at center
 		
-		triPent.directAlpha(10);
 		triPent.setGamma(7);
 		
 		return triPent;

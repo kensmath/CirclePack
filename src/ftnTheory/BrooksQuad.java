@@ -96,7 +96,7 @@ public class BrooksQuad extends PackExtender {
 		}
 		packData.setCircleColor(5,ColorUtil.getBGColor());
 		packData.setAlpha(5);
-		packData.directGamma(1);
+		packData.setGamma(1);
 		packData.set_aim_default();
 		normalize();
 		cpCommand("set_screen -d");

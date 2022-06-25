@@ -36,19 +36,19 @@ public class Exponential {
 		int[] util=new int[p.nodeCount+1];
 
 		CircleSimple sc;
-		int alpha=p.getAlpha();
-		int[] flower=p.getFlower(alpha); // just need first two
+		int alp=p.getAlpha();
+		int[] flower=p.getFlower(alp); // just need first two
 		
 		// alpha the unit circle
-		p.setCenter(alpha, new Complex(0.0));
-		p.setRadius(alpha,1.0);
-		util[alpha]=1;
+		p.setCenter(alp, new Complex(0.0));
+		p.setRadius(alp,1.0);
+		util[alp]=1;
 		
 		// tangent nghbs
 		p.setCenter(flower[0],1.0+a,0.0);
 		p.setRadius(flower[0],a);
 		util[flower[0]]=1;
-		Complex z1=p.getCenter(alpha);
+		Complex z1=p.getCenter(alp);
 		Complex z2=p.getCenter(flower[0]);
 		sc=EuclMath.e_compcenter(z1,z2,1.0,a,b);
 		p.setCenter(flower[1],new Complex(sc.center));

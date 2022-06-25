@@ -1,6 +1,6 @@
 NODECOUNT:   257
 
-ALPHA/BETA/GAMMA:   257  226  2
+ALPHA/GAMMA:   257  2
 
 GEOMETRY:   euclidean
 
