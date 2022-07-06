@@ -82,7 +82,7 @@ public class ShellControl extends CPBase {
 //				writer.newLine();
 					writer.write("WEB_URL_FILE web_URLs/");
 					writer.newLine();
-					writer.write("XMD_URL_FILE xmd_URLs/");
+					writer.write("SCRIPT_URL_FILE script_URLs/");
 					writer.newLine();
 					writer.write("ACTIVE_CANVAS_SIZE 650");
 					writer.newLine();

@@ -782,12 +782,11 @@ public static double vec_norm(double X[]){
       Complex sz=new Complex(0.0); // will be sph center
       double []P3=new double[3]; // 3D point on sphere
 
-      double nsq=ez.absSq();
       double rr=Math.abs(er); // note, r negative handled later
       
       // if er too small, project center, set sr=er unchanged.
       if (rr<S_TOLER) {
-    	  double denom=nsq+1.0;
+    	  double denom=ez.absSq()+1.0;
     	  P3[0]=(2*ez.x)/denom;
     	  P3[1]=(2*ez.y)/denom;
     	  P3[2]=(2.0-denom)/denom;

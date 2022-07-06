@@ -146,7 +146,6 @@ public class PackData{
     
     // combinatoric 
     public int[] bdryStarts;  // indices for verts starting the bdry components (indexed from 1) 
-    public int firstFace;     // index of first face in plotting order
     public int packNum;		// lies between 0 and CPBase.NUM_PACKS-1  
 
     // utility variables passing info in methods -- use immediately after method call!
@@ -163,8 +162,6 @@ public class PackData{
     public AngSumSliders angSumSliders;
     
     public Smoother smoother;    // 6/2020. add a smoother
-    
-    int[] readOldNew;     // used in 'readpack' for DCEL translation
     
     public PackData(int packnum) {
     	this(null);
@@ -228,7 +225,6 @@ public class PackData{
     		pdcel.setAlpha(0,null,true);
     	if (pdcel.gamma==null)
     		pdcel.setGamma(0);
-    	firstFace=pdcel.alpha.face.faceIndx;
 		
     	// set some counts
 		nodeCount=pdcel.vertCount;

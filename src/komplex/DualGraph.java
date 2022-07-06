@@ -47,7 +47,7 @@ public class DualGraph {
 	public static GraphLink buildDualGraph(PackData p,int startface,EdgeLink poison) {
 		GraphLink dlink=new GraphLink();
 		if (startface<=0 || startface>p.faceCount)
-			startface=p.firstFace;
+			startface=p.packDCEL.alpha.face.faceIndx;
 		if (startface==0) // default to 1
 			startface=1;
 		int startvert=p.packDCEL.faces[startface].getVerts()[0];

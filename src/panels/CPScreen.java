@@ -54,7 +54,12 @@ import util.ViewBox;
 /**
  * This class maintains 'packImage', an image buffer, and knows 
  * how to draw lines, circles, polygons, etc., maintain info on 
- * colors, real world coords, graphics, mouse, drop, menu events.
+ * colors, real world coords, graphics.
+ * 
+ * In process of splitting off GUI functions like mouse, drop, and
+ * menu events, but leaving buffered image here for use with either
+ * GUI version or standalone version. Things marked "GUI" will
+ * eventually be moved elsewhere.
  * 
  * In 'CirclePack', we have 'PackData' for a circle packing associated
  * with this CPScreen (in fact, packData is created in this constructor).
@@ -64,8 +69,11 @@ import util.ViewBox;
  * circles/faces, opacity. Geometry will be kept in PackData, 
  * 
  * CirclePack will have 'NUM_PACKS' (currently 3) CPScreen's, each 
- * managing one small canvas, and it tracks which is 'active' --- its 
- * image is used in the large canvas as well (see 'ActiveScreen'). 
+ * managing one buffered image, and it tracks which is 'active'.
+ * 
+ * In the GUI version, the buffered image is used in the large 
+ * canvas as well the small images in the control window 
+ * (see 'ActiveScreen'). 
  * @author kens
  */
 
@@ -87,12 +95,12 @@ public class CPScreen extends JPanel implements	MouseListener {
 	public String customPS; 
 
 	public PackData packData;
-	int screenNum; // normally alligns with packData.packNum
+	int screenNum; // normally aligns with packData.packNum
 	
 	// instance variables
 	public DispOptions dispOptions;
 	public PostOptions postOptions;
-	public DataFormater dataFormater;
+	public DataFormater dataFormater; // for 'output' operation
 	public double XMin;
 	public double YMin;
 	public double XMax;
@@ -100,11 +108,6 @@ public class CPScreen extends JPanel implements	MouseListener {
 	public double XWidth;
 	public double YHeight;
 	public double pixFactor; // pixels per real world unit
-	public AffineTransform trans2pix; // keep updated for real-to-pix
-	public int pixXMin;
-	public int pixYMin;
-    public int pixWidth=PackControl.getActiveCanvasSize();
-    public int pixHeight=PackControl.getActiveCanvasSize();
     public Stroke defaultStroke; // for axis, unit sph/disc, etc.
     public Stroke stroke;
     public Rectangle2D.Double canvasRect; // for drawing screen background
@@ -130,7 +133,13 @@ public class CPScreen extends JPanel implements	MouseListener {
 	// utility: holds data until restored
 	private Color tmpcolor; 
 	private int tmpthick;
-	
+
+	// GUI ????
+	public AffineTransform trans2pix; // keep updated for real-to-pix
+	public int pixXMin;
+	public int pixYMin;
+    public int pixWidth=PackControl.getActiveCanvasSize();
+    public int pixHeight=PackControl.getActiveCanvasSize();
     static String []geomAbbrev={" (hyp)"," (eucl)"," (sph)"};  
     
 	// Constructors    
@@ -143,10 +152,12 @@ public class CPScreen extends JPanel implements	MouseListener {
 		if (screennum<0 || screennum>=CPBase.NUM_PACKS) 
 			screennum=0;
 		screenNum=screennum;
+		customPS=null;
+		
+		// GUI
 		this.setFocusable(true);
 		this.setBorder(new LineBorder(Color.BLACK,2,false));
 		this.addMouseListener(this);
-		customPS=null;
 
 		// prepare for graphing
 		realBox=new ViewBox();
@@ -168,13 +179,15 @@ public class CPScreen extends JPanel implements	MouseListener {
 		dispOptions=new DispOptions(this);
 		postOptions=new PostOptions(this);
 		dataFormater=new DataFormater();
-		new DropTarget(this,new ToolDropListener(this,screenNum,false));
-		
 		// create memory buffered image
 		packImage = resetCanvasSize(PackControl.getActiveCanvasSize(),
 				PackControl.getActiveCanvasSize());
 
 		reset(true);
+		
+		// GUI
+		new DropTarget(this,new ToolDropListener(this,screenNum,false));
+
 	}
 	
 	public void reset() {
@@ -200,6 +213,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 		dispOptions.reset();
 		fillColor=CPBase.defaultFillColor;
 		imageContextReal.setColor(CPBase.defaultCircleColor);
+		
+		// GUI
 		// reset disp_text in "Screen" panel
         // if this is active, reset current settings
 		if (!startup) { 
@@ -210,6 +225,7 @@ public class CPScreen extends JPanel implements	MouseListener {
 				PackControl.screenCtrlFrame.displayPanel.setFlagBox(false);
 			}
 		}
+		
         // reset to default screen
         update(2); 
 	}
@@ -269,6 +285,7 @@ public class CPScreen extends JPanel implements	MouseListener {
     	}
 	}
     
+	// GUI
 	// Some mouse events may first be picked off by parents of this CPScreen
 	public void mouseReleased(MouseEvent e) {
 		if (e.getClickCount() >= 2) { // double click to change active packing
@@ -512,10 +529,6 @@ public class CPScreen extends JPanel implements	MouseListener {
 	 */
 	public void drawFace(Complex z0,Complex z1,Complex z2,
 			Double r0,Double r1,Double r2,DispFlags dflags) {
-
-// debugging
-//	.out.println("actual centers: "+z0+" "+z1+" "+z2);
-	
 		try {
 			if (packData.hes > 0) {
 				z0 = sphView.toApparentSph(z0);
@@ -775,9 +788,9 @@ public class CPScreen extends JPanel implements	MouseListener {
 		return count;
 	}
      
-
-	
 	/**
+	 * GUI stuff
+	 * 
 	 * Draw X axis on 'activeScreen'. Draw directly in canvas 
 	 * after the image buffer has been put in. 
 	 * DISP_CHOICE -- have to adjust yPos, k1, k2 if image buffer 
@@ -812,6 +825,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 	}
 
 	/**
+	 * GUI stuff
+	 * 
 	 * Draw Y axis on 'activeScreen'. Draw directly in canvas 
 	 * after the image buffer has been put in. 
 	 * DISP_CHOICE -- have to adjust xPos, k1, k2 if image buffer 
@@ -842,6 +857,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 	}
 	
 	/**
+	 * GUI stuff
+	 * 
 	 * Call for repaint of canvas and small canvas.
 	 */
 	public void rePaintAll() {
@@ -849,6 +866,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 	}
 
 	/**
+	 * GUI stuff
+	 * 
 	 * CPScreen directly manages only the small canvass. For more
 	 * see 'PackControl.canvasReDrawManager.paintCanvasses'.
 	 * Catch repaints to:
@@ -875,6 +894,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 	}
 	
 	/**
+	 * GUI stuff
+	 * 
 	 * Replace the 'packData' for this screen; clean out any
 	 * 'SliderFrame' objects.
 	 * @param p
@@ -906,6 +927,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 	}
 	
 	/**
+	 * GUI stuff
+	 * 
 	 * Update displayed Xtender tools (if any) for this packing
 	 */
 	public void updateXtenders() {
@@ -937,6 +960,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 	}
 
 	/**
+	 * GUI stuff
+	 * 
 	 * Give string for geometry to label canvas
 	 * @return
 	 */
@@ -958,6 +983,8 @@ public class CPScreen extends JPanel implements	MouseListener {
 	
 
 	/**
+	 * GUI stuff
+	 * 
 	 * Update small canvas pack label using 'packData.fileName'.
 	 */
 	public void setPackName() {

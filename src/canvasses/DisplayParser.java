@@ -1023,7 +1023,7 @@ public class DisplayParser {
 								count++;
 							} // end of label display
 							
-//							count++;
+							count++;
 						}
 					} // end of while
 				} // done with tiles

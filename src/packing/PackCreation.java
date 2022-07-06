@@ -190,6 +190,7 @@ public class PackCreation {
 		pdcel.fixDCEL(p);
 		for (int v = 1; v <= p.nodeCount; v++)
 			p.setRadius(v, rad);
+		p.set_aim_default();
 		return p;
 	}
 

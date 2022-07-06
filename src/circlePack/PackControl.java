@@ -236,11 +236,9 @@ FocusListener {
 					writer.newLine();
 					writer.write("PRINT_COMMAND lpr");
 					writer.newLine();
-//				writer.write("POSTSCRIPT_VIEWER gv");
-//				writer.newLine();
 					writer.write("WEB_URL_FILE web_URLs");
 					writer.newLine();
-					writer.write("XMD_URL_FILE xmd_URLs");
+					writer.write("SCRIPT_URL_FILE script_URLs"); 
 					writer.newLine();
 					writer.write("ACTIVE_CANVAS_SIZE 650");
 					writer.newLine();
@@ -1138,8 +1136,8 @@ FocusListener {
 				File scriptFile;
 				if ((scriptFile = FileDialogs.saveDialog(FileDialogs.SCRIPT, true)) != null) {
 					scriptManager.tnWriter.Write_from_TN(scriptFile);
-					if (scriptFile.getName().equals("new_script.xmd")) {
-						CirclePack.cpb.errMsg("Not allowed to save as \"new_script.xmd\".");
+					if (scriptFile.getName().startsWith("new_script.")) {
+						CirclePack.cpb.errMsg("Not allowed to save as \"new_script.*\".");
 						return;
 					}
 					

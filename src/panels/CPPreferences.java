@@ -53,7 +53,7 @@ private static final long
   private JTextField extenderDirText;  
   private JTextField gvCmdText;
   private JTextField webURLField;
-  private JTextField xmdURLField;
+  private JTextField scriptURLField;
   private JTextField cmdHistoryFile;
   private JTextField printCmdText;
   private JTextField canvasSizeText;
@@ -92,8 +92,8 @@ private static final long
     extenderDirText.setToolTipText("directory for 'PackExtender' inherited Java class files");
     webURLField= new JTextField(CPBase.WEB_URL_FILE,20);
     webURLField.setToolTipText("file containing most recently visited URLs");
-    xmdURLField= new JTextField(CPBase.XMD_URL_FILE,20);
-    xmdURLField.setToolTipText("file containing most recently loaded scripts");
+    scriptURLField= new JTextField(CPBase.SCRIPT_URL_FILE,20);
+    scriptURLField.setToolTipText("file containing most recently loaded scripts");
     canvasSizeText=new JTextField(CPBase.ACTIVE_CANVAS_SIZE,10);
     canvasSizeText.setToolTipText("Main packing canvas size, 200 to 1200 pixels");
     pairSizeText=new JTextField(CPBase.PAIR_CANVAS_SIZE,10);
@@ -183,11 +183,11 @@ private static final long
             	if (ff==null) ff=new File(CPFileManager.HomeDirectory,CPBase.WEB_URL_FILE);
             	webURLField.setText(ff.toString());
             }
-            else if (keyword.equals("XMD_URL_FILE")) {
-            	CPBase.XMD_URL_FILE=value.toString().trim();
-            	File ff=adjustFileHome(CPBase.XMD_URL_FILE);
-            	if (ff==null) ff=new File(CPFileManager.HomeDirectory,CPBase.XMD_URL_FILE);
-            	xmdURLField.setText(ff.toString());
+            else if (keyword.equals("SCRIPT_URL_FILE")) {
+            	CPBase.SCRIPT_URL_FILE=value.toString().trim();
+            	File ff=adjustFileHome(CPBase.SCRIPT_URL_FILE);
+            	if (ff==null) ff=new File(CPFileManager.HomeDirectory,CPBase.SCRIPT_URL_FILE);
+            	scriptURLField.setText(ff.toString());
             }
             else if(keyword.equals("PRINT_COMMAND")){
             	CPBase.PRINT_COMMAND=value.toString().trim()+" ";
@@ -338,7 +338,7 @@ private static final long
     panel = new JPanel();
     label = new JLabel("CMD_URL_FILE");
     panel.add(label);
-    panel.add(xmdURLField);
+    panel.add(scriptURLField);
     mainPanel.add(panel);
 
     panel = new JPanel();
@@ -403,7 +403,7 @@ private static final long
 		  writer.newLine();
 		  writer.write("WEB_URL_FILE "+webURLField.getText());
 		  writer.newLine();
-		  writer.write("XMD_URL_FILE "+xmdURLField.getText());
+		  writer.write("SCRIPT_URL_FILE "+scriptURLField.getText());
 		  writer.newLine();	
 		  writer.write("ACTIVE_CANVAS_SIZE "+canvasSizeText.getText());
 		  writer.newLine();	
@@ -520,7 +520,7 @@ private static final long
   }
 
   public String getCmdURLfile() {
-	  return xmdURLField.getText().trim();
+	  return scriptURLField.getText().trim();
   }
 
   public String getCmdHistoryFile() {
@@ -532,7 +532,7 @@ private static final long
   }
 
   public void setCmdURLfile(String webFile) {
-	  xmdURLField.setText(webFile);
+	  scriptURLField.setText(webFile);
   }
 
   public boolean getDisplayToolTips(){

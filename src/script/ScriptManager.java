@@ -817,7 +817,7 @@ public class ScriptManager implements ActionListener {
 		 File f=null;
 		 try {
 			 f = new File(System.getProperty("java.io.tmpdir"),
-					 new String("new_script.xmd"));
+					 new String("new_script.cps"));
 			 f.deleteOnExit();
 
 			 BufferedWriter writer = new BufferedWriter(new FileWriter(f));
@@ -1085,7 +1085,7 @@ public class ScriptManager implements ActionListener {
 
 	 /**
 	  * Use: Loads script 'name' from file or from the web; if 'keepName'
-	  * true, adds name to the 'xmd_URLs' file. Attempt to set stackScroll
+	  * true, adds name to the 'script_URLs' file. Attempt to set stackScroll
 	  * bar in the right spot.
 	  * @param name String, may be temp name (e.g., loaded from web)
 	  * @param oridName String, name to save under

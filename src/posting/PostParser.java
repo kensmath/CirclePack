@@ -259,7 +259,7 @@ public class PostParser {
 					facelist = new FaceLink(p, "Fs");
 					// handle first face circles (without adjusting centers)
 					if (c == 'C' || c == 'B') {
-						first_face = p.firstFace;
+						first_face = p.packDCEL.alpha.face.faceIndx;
 						combinatorics.komplex.DcelFace face = hlink.get(0).face;
 						int[] verts=face.getVerts();
 						for (int i = 0; i < 3; i++) {

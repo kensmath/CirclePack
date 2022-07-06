@@ -150,7 +150,7 @@ public abstract class CPBase {
 	public static String PRINT_COMMAND="lpr ";
 	public static String POSTSCRIPT_VIEWER="gv ";
 	public static String WEB_URL_FILE="web_URLs/";
-	public static String XMD_URL_FILE="xmd_URLs/";
+	public static String SCRIPT_URL_FILE="script_URLs/";
 	public static String ACTIVE_CANVAS_SIZE="650";
 	public static String PAIR_CANVAS_SIZE="400";
 	public static String FONT_INCREMENT="0";

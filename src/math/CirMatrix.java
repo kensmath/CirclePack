@@ -130,7 +130,7 @@ public class CirMatrix extends Mobius {
 		Mobius MM=M.cloneMe();
 		if (!oriented) // want M^{-1}?
 			MM=(Mobius)MM.inverse();
-		boolean outsideC=false; // disc is outside incoming C
+		boolean outsideC=false; // disc is outside of incoming C
 		Complex pt=new Complex(0.0);
 		
 		// get working CirMatrix CC as normal circle (or straight line)
@@ -198,9 +198,10 @@ public class CirMatrix extends Mobius {
 		//   and adjust accordingly. If it's inside outC but 
 		//   but 'outsideC' is set, of if outC is a line and 
 		//   pt is not inside, then multiply by -1. 
-		int cent_inside=pt_inside(outC,MM.apply(pt));
+		Complex MMpt=MM.apply(pt); // outC.getCenter();
+		int cent_inside=pt_inside(outC,MMpt); // outC.getRadius();
 		if ((cent_inside==1 && outsideC) || 
-				cent_inside==-1 && outC.a.x==0) { // put on same side of both
+				cent_inside==-1) { // && outC.a.x==0) { // put on same side of both
 			outC.a=outC.a.times(-1.0);
 			outC.b=outC.b.times(-1.0); // cent_inside=1.0;
 			outC.c=outC.c.times(-1.0);
@@ -291,7 +292,7 @@ public class CirMatrix extends Mobius {
 			if (pt.abs()>100000000.0)
 				ans=-1;
 			else {
-				double dist=pt.add(C.b.conj()).abs();
+				double dist=pt.add(C.c).abs(); // C.c= -center
 				if (dist>(rad+CM_TOLER)) // outside
 					ans=-1;
 				else if (dist>(rad-CM_TOLER)) // on
@@ -327,9 +328,13 @@ public class CirMatrix extends Mobius {
 			return null;
 		CircleSimple outCS=new CircleSimple();
 		
-		// typical data (recall, a.x=-1 ==> all entries were multiplied by -1)
-		Complex ecent=CC.c.times(-1.0*CC.a.x); // c entry is -center
-		double reald=CC.d.x*CC.a.x; // throw out any extraneous imaginary part
+		// typical data
+		Complex ecent=CC.c.times(-1.0);  // c entry is -center
+		double reald=CC.d.x; // throw out any extraneous imaginary part
+		if (CC.a.x<.5) { // a.x=-1 ==> all entries were multiplied by -1 
+			ecent=ecent.times(-1.0);
+			reald *=-1.0;
+		} 
 		double rsq=ecent.absSq()-reald; // rad^2
 		if (CC.a.x!=0 && rsq<=0) {
 			CirclePack.cpb.errMsg("error in a 'CirMatrix'");
@@ -397,6 +402,36 @@ public class CirMatrix extends Mobius {
 		outCS.center=ecent; 
 		outCS.rad=erad*CC.a.x; // may be negative if a=-1
 		return outCS;
+	}
+	
+	/**
+	 * If a.x==0, this is a straight line and we use large
+	 * circle using FAUX_RAD. Also, recall, a.x=-1 ==> all 
+	 * entries were multiplied by -1.
+	 * @return double
+	 */
+	public double getRadius() {
+		Complex ecent=c.times(-1.0*a.x); // c entry is -center
+		double reald=d.x*a.x; // throw out any extraneous imaginary part
+		double radius=Math.sqrt(ecent.absSq()-reald); // rad^2
+		if (a.x==0) {
+			// FAUX_RAD - signed distance from origin
+			radius=CPBase.FAUX_RAD+(d.x/2.0); 
+		}
+		return radius;
+	}
+	
+	/**
+	 * If a.x==0, this is a straight line and we use a fake
+	 * center FAUX_RAD distance out. Also, recall, a.x=-1 ==> all 
+	 * entries were multiplied by -1.  
+	 * @return
+	 */
+	public Complex getCenter() {
+		Complex center=c.times(-1.0*a.x);
+		if (a.x==0) 
+			center=c.times(CPBase.FAUX_RAD);  // unit normal toward interior
+		return center;
 	}
 	
 }

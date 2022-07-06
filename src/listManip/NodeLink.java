@@ -406,7 +406,7 @@ public class NodeLink extends LinkedList<Integer> {
 					for (int f=1;f<=pdcel.idealFaceCount;f++) {
 						DcelFace idealface=pdcel.idealFaces[f];
 						int[] vs=idealface.getVerts();
-						for (int i=0;i<vs.length;i++)
+						for (int i=vs.length-1;i>=0;i--)
 							add(vs[i]);
 					}
 				}

@@ -89,11 +89,11 @@ public class ScriptLoader {
 		}
 
 		// if appropriate, reset 'scriptDirectory'
-		// TODO: past (?) problem: resets based on default loading of 'new_script.xmd'
+		// TODO: past (?) problem: resets based on default loading of 'new_script.cps'
 		if (url.getProtocol().equals("file")) { 
 			String cpath=url.getPath();
 			int k=cpath.lastIndexOf('/');
-			if (!cpath.contains("new_script.xmd") && k>0) {
+			if (!cpath.contains("new_script.cps") && k>0) {
 				// change if it is not just /tmp
 				if (!cpath.substring(0,k).startsWith(System.getProperty("java.io.tmpdir")))  
 					CPFileManager.ScriptDirectory =new File(cpath.substring(0,k));

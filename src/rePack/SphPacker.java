@@ -12,6 +12,7 @@ import geometry.CircleSimple;
 import geometry.EuclMath;
 import geometry.NSpole;
 import geometry.SphericalMath;
+import math.CirMatrix;
 import math.Mobius;
 import packing.PackData;
 import util.TriData;
@@ -35,7 +36,8 @@ public class SphPacker extends RePacker {
 	public SphPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
     	p=pd;
     	pdcel=p.packDCEL;
-    	if (pass_limit<0) passLimit=PASSLIMIT;
+    	if (pass_limit<0) 
+    		passLimit=PASSLIMIT;
 		else passLimit=pass_limit;
 		status=load(); 
 		if (status!=LOADED) 
@@ -64,7 +66,7 @@ public class SphPacker extends RePacker {
 		//   circle, so we use this as our face. However, because
 		//   of orientation, we also need to replace this in
 		//   'layoutOrder' with another edge that can lay out
-		//   this last circle. So we move to the next face.
+		//   this last circle.
 		
 		// TODO: case not covered here is when overlaps exist
 		//   for the last face and sum to pi/2 or more: this
@@ -88,7 +90,7 @@ public class SphPacker extends RePacker {
 		}
 		TriData outer=pdcel.triData[lastface];
 		for (int k=0;k<3;k++) 
-			setTriRadius(bdryVerts[k],1.0);
+			setTriRadius(bdryVerts[k],1.0); // faux bdry radii set to 1
 		aimnum=pdcel.vertCount-3;
 		
 		// identify the radii that can be adjusted
@@ -113,15 +115,15 @@ public class SphPacker extends RePacker {
 		}
 		
 		// find and lay out first face
-		HalfEdge he=pdcel.layoutOrder.getFirst();
+		HalfEdge he=pdcel.layoutOrder.getFirst(); 
 		int alph=he.origin.vertIndx;
-		int v1=he.next.origin.vertIndx;
+		int gam=he.next.origin.vertIndx;
 		int v2=he.next.next.origin.vertIndx;
 		z[alph]=new Complex(0.0);
-		double dist=EuclMath.e_ivd_length(radii[alph], radii[v1], he.getInvDist());
-		z[v1]=new Complex(dist,0.0);
-		CircleSimple cS=EuclMath.e_compcenter(z[alph],z[v1],
-				radii[alph],radii[v1],radii[v2],
+		double dist=EuclMath.e_ivd_length(radii[alph], radii[gam], he.getInvDist());
+		z[gam]=new Complex(dist,0.0);
+		CircleSimple cS=EuclMath.e_compcenter(z[alph],z[gam],
+				radii[alph],radii[gam],radii[v2],
 				he.next.getInvDist(),he.next.next.getInvDist(),he.getInvDist());
 		z[v2]=cS.center;
 
@@ -135,10 +137,10 @@ public class SphPacker extends RePacker {
 		while(heis.hasNext()) {
 			he=heis.next();
 			int v0=he.origin.vertIndx;
-			v1=he.next.origin.vertIndx;
+			gam=he.next.origin.vertIndx;
 			v2=he.next.next.origin.vertIndx;
-			cS=EuclMath.e_compcenter(z[v0],z[v1],
-					radii[v0],radii[v1],radii[v2],
+			cS=EuclMath.e_compcenter(z[v0],z[gam],
+					radii[v0],radii[gam],radii[v2],
 					he.next.getInvDist(),he.next.next.getInvDist(),he.getInvDist());
 			z[v2]=cS.center;
 		}
@@ -155,7 +157,7 @@ public class SphPacker extends RePacker {
 		// compute and apply the mobius
 		Mobius mob=NSpole.sphNormalizer(pts,20,false,false);
 		if (mob==null) 
-			throw new PackingException("sph decel case: failed to get mobius");
+			throw new PackingException("sph dcel case: failed to get mobius");
 
 		// this is still euclidean (since mobius is linear)
 		double factor=mob.a.divide(mob.d).abs();
@@ -170,18 +172,32 @@ public class SphPacker extends RePacker {
 		}
 		
 		// find normalizing mobius
-		int gam=p.packDCEL.alpha.next.origin.vertIndx;
 		if (p.packDCEL.gamma!=null)
 			gam=p.packDCEL.gamma.origin.vertIndx;
+		
 		Mobius rotMob=Mobius.rigidAlphaGamma(z[alph],z[gam]);
 
 		// convert to spherical and save
 		boolean oriented=true;
 		for (int v=1;v<=pdcel.vertCount;v++) {
-			// convert to sphere
-			cS=SphericalMath.e_to_s_data(z[v],radii[v]);
-			// apply normalizing
-		    Mobius.mobius_of_circle(rotMob,1,cS.center,cS.rad,cS,oriented);
+			CirMatrix C =new CirMatrix(new CircleSimple(z[v],radii[v]));
+			CirMatrix CC = CirMatrix.applyTransform(rotMob, C, oriented);
+			cS=CirMatrix.cirMatrix_to_geom(CC,1); 
+			
+			if (debug) { // debug=true;
+				System.out.println("C radius = "+C.getRadius());
+				System.out.println("CC radius = "+CC.getRadius()); // CC.getCenter();
+				System.out.println(" ");
+				System.out.println("rotMob = "+rotMob);
+				System.out.println("C = "+C);
+				System.out.println("CC = "+CC);
+				System.out.println(" ");
+				System.out.println("z[alph]="+z[alph]+"  z[gam]="+z[gam]);
+				System.out.println("z[7]="+z[v]+"  radii[7]="+radii[7]);
+				System.out.println("dist between ="+z[alph].minus(z[v]).abs());
+				debug=false;
+			}
+			
 		    Vertex vert=p.packDCEL.vertices[v];
 			vert.center=cS.center;
 			vert.rad=cS.rad;

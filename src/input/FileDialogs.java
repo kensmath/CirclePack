@@ -189,10 +189,11 @@ public class FileDialogs {
 			if (actStr==null) actionStr="Save AboutImage";
 			dbox.setCurrentDirectory(CPFileManager.ImageDirectory);
 			
-			// get the script name (without .xmd)
+			// get the script name (without .cps (or .xmd))
 			String sName=null;
 			int k=PackControl.scriptManager.scriptName.indexOf(".");
-			if (k<0) k=PackControl.scriptManager.scriptName.length();
+			if (k<0) 
+				k=PackControl.scriptManager.scriptName.length();
 			sName=PackControl.scriptManager.scriptName.substring(0,k);
 			dbox.setSelectedFile(new File(CPFileManager.PackingDirectory+File.separator+
 					sName+".jpg")); 
@@ -266,6 +267,7 @@ public class FileDialogs {
 		public boolean accept(File f) {
 			return f.getName().toLowerCase().endsWith(".cmd")
 					|| f.getName().toLowerCase().endsWith(".xmd")
+					|| f.getName().toLowerCase().endsWith(".cps")
 					|| f.isDirectory();
 		}
 		public String getDescription() {

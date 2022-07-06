@@ -196,7 +196,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		try {
 			file.createNewFile(); // finds or creates 
 		} catch (IOException iox) {
-			CirclePack.cpb.errMsg("failed to open xmd file");
+			CirclePack.cpb.errMsg("failed to open xmd (or cps) file");
 		}
 		urlComboBox = new MemComboBox(file);
 		urlComboBox.addActionListener(this);
@@ -337,7 +337,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 	 * * -1 for something already loaded
 	 * * 1 for web page (goes into list)
 	 * * 2 for directory (goes into list)
-	 * * 3 for *.xmd script
+	 * * 3 for *.xmd script or *.cps script
 	 * * 4 for packing
 	 * @param url a <code>String</code> representation of the URL to load
 	 * @return int
@@ -360,8 +360,9 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 		activityIndicator.setIndeterminate(true);
 
-		// ================== If the URL is an XMD script:
-		if (enteredUrl.getFile().toLowerCase().endsWith(".xmd")) {
+		// ================== If the URL is an CPS (or XMD) script:
+		if (enteredUrl.getFile().toLowerCase().endsWith(".xmd") ||
+				enteredUrl.getFile().toLowerCase().endsWith(".cps")) {
 			// If the URL is a file URL:
 			if (enteredUrl.getProtocol().toLowerCase().equals("file")) {
 				// Since this is a local file, there is no need to thread.
@@ -444,7 +445,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 				activityIndicator.setIndeterminate(false);
 				return 3;
 			}
-		} // end of processing for *.xmd files
+		} // end of processing for *.cps (or *.xmd) files
 
 		// ================= If the URL is a P, Q, or PL packing file:
 		if (enteredUrl.getFile().toLowerCase().endsWith(".p") || 
