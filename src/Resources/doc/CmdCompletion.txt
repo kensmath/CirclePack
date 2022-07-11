@@ -28,7 +28,7 @@ cir_invert [-u] {v} {w}
 Cleanse 
 cleanse 
 close [window list] 
-color -[cf] [options] 
+color -[cfe] [options] 
 cookie [option] {v..} 
 copy {p} 
 count -[vef] {..} 
@@ -145,6 +145,7 @@ red_from_elist
 repack [options] [k] 
 ring {v..} 
 rld 
+rlsd 
 rm_bary {v..} 
 rm_cir {v..} 
 rm_edge [option] {v w..} 
@@ -153,6 +154,7 @@ rotate {a}
 scale [t] 
 scale_aims x {v..} 
 scale_rad -q{p} x {v..} 
+sch_data [d] [-rc] N -a {filename} 
 sch_report -[[ce]{flags}] {..} 
 screendump [-m -d -b -n] 
 script [filename] 
@@ -195,7 +197,7 @@ set_ps {name}
 set_rad [options] [{r v..}] 
 set_ratio p0 p1 
 set_random [options] {v..} 
-set_schwarzian -[cr{x}] {v w ...}] 
+set_schwarzian -[x] {v w ...}] 
 set_screen [options] 
 set_sphere_view [options] {a b c} (abbrev: set_sv) 
 set_sph_opacity {t} 

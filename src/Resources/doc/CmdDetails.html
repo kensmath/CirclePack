@@ -508,21 +508,21 @@ center from the origin (when |z| is non-zero).
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="open">open</a>&nbsp;&nbsp; <a href="Map">Map</a>&nbsp;&nbsp; 
 <br/><br/>
-<font size="+1" color="blue"><strong><a name="color">color</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[cf] [options]&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="color">color</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[cfe] [options]&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Color specifications affect the display of filled circles "-c", 
-	faces "-f", or tiles only -- "-T" "-D" "-Q" for tiles, dual tiles, quad tiles.
+<strong>Description: </strong>Color specifications affect the display of filled 
+	circles, faces, edges, or tiles only -- "-T" "-D" "-Q" for 
+	tiles, dual tiles, quad tiles.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
 <table>
 <tr><td width="25%" valign="top">bg {i..}</td>
-<td width="65%" align="left"> background color for selected indices 
-(faces or circles)</td></tr>
+<td width="65%" align="left"> background color for selected objects</td></tr>
 <tr><td width="25%" valign="top">fg {i..}</td>
 <td width="65%" align="left"> foreground color</td></tr>
 <tr><td width="25%" valign="top">{c} c {i..}</td>
-<td width="65%" align="left"> is a color code (in [0,39]), blue 
+<td width="65%" align="left"> c is a color code (in [0,39]), blue 
 to red ramp</td></tr>
 <tr><td width="25%" valign="top">p{p} {i..}</td>
 <td width="65%" align="left"> copies colors from pack p 
@@ -552,36 +552,48 @@ among 16 distinct colors starting at random point</td></tr>
 <td width="65%" align="left"> same as 'S', but start at 0 point</td></tr>
 <tr><td width="25%" valign="top">-k {x}</td>
 <td width="65%" align="left"> (not currently implemented) 
-(circles only) blue-red, compare model curvature to x.</td></tr>
+         (circles only) blue-red, compare model curvature to x.</td></tr>
 <tr><td width="25%" valign="top">x {f..}</td>
 <td width="65%" align="left"> (faces) compare 3D/2D eucl area (if 'xyz' data exists).</td></tr>
 <tr><td width="25%" valign="top">v {f..}</td>
 <td width="65%" align="left"> (faces) use vertex colors: majority wins, 
-else first vert's color. (deprecated: '-v')</td></tr>
+		 else first vert's color. (deprecated: '-v')</td></tr>
 <tr><td width="25%" valign="top">v {t..}</td>
 <td width="65%" align="left"> (tiles) use color assigned to baryVert vertex</td></tr>
 <tr><td width="25%" valign="top">qc [options] -m {x} {f..}</td>
 <td width="65%" align="left">  (faces only)
-		red color ramp for faces based on quasiconformal 
-		dilatation of some map. (All computations are done using
-		euclidean data.) -m {x} sets ceiling x on
-		dilatations; those above x will be dark blue,
-		those in [1,x) will be increasingly red, those that 
-		cannot be computed for some reason will be black.
+		 red color ramp for faces based on quasiconformal 
+		 dilatation of some map. (All computations are done using
+		 euclidean data.) -m {x} sets ceiling x on
+		 dilatations; those above x will be dark blue,
+		 those in [1,x) will be increasingly red, those that 
+		 cannot be computed for some reason will be black.
 	   options:
 		-q{p}  comparison to packing p.
 		-[ns] {name} comparison to a file with xyz coords.
 		        -n for file, -s for data in the current script file.
 		-x      comparison to xyz data stored as part of the 
 			packing data.</td></tr>
+<tr><td width="25%" valign="top">a {v..}</td>
+<td width="65%" align="left"> (circles/faces) 'ArgWheel'; based on complex 
+	      argument of center or incenter.</td></tr>
+<tr><td width="25%" valign="top">z {v w ...}</td>
+<td width="65%" align="left"> (edges only) based on schwarzian</td></tr>
+<tr><td width="25%" valign="top">r</td>
+<td width="65%" align="left"> (edge only) reset all to foreground</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
 <tr><td width="30%"><font color="blue">color -f qc q1 -m 1.5 a</font></td>
-<td width="68%">color by quasiconformal dilatation, compared to p1</td></tr>
+<td width="68%">color by 
+quasiconformal dilatation, compared to p1</td></tr>
 <tr><td width="30%"><font color="blue">color -D d a</font></td>
-<td width="68%">color dual tiles based on number of edges (if dual tiling exists).</td></tr>
+<td width="68%">color 
+dual tiles based on number of edges (if dual tiling exists).</td></tr>
+<tr><td width="30%"><font color="blue">color -e z a</font></td>
+<td width="68%">color all interior edges base on their 
+schwarzians</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="cookie">cookie</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[option] {v..}&nbsp;&nbsp; </font>
 <blockquote>
@@ -864,9 +876,16 @@ points with nghbs</td></tr>
 <tr><td width="25%" valign="top">-C</td>
 <td width="65%" align="left"> all circles, recomp'd by drawing order </td></tr>
 <tr><td width="25%" valign="top">-D</td>
-<td width="65%" align="left"> all dual faces, recomp'd by drawing order (eucl only)</td></tr>
+<td width="65%" align="left"> all dual faces, recomputed by drawing order (eucl only)</td></tr>
 <tr><td width="25%" valign="top">-F {f..}</td>
-<td width="65%" align="left"> ``chained'' faces, recomp'd in order</td></tr>
+<td width="65%" align="left"> ``chained'' faces, recompute centers in order</td></tr>
+<tr><td width="25%" valign="top">-Bs</td>
+<td width="65%" align="left"> all faces and circles, recomp'd by drawing order using schwarzians</td></tr>
+<tr><td width="25%" valign="top">-Cs</td>
+<td width="65%" align="left"> all circles, recompute center by drawing order using schwarzians </td></tr>
+<tr><td width="25%" valign="top">-Fs {f..}</td>
+<td width="65%" align="left"> ``chained'' faces, recompute centers in 
+    	order using schwarzians</td></tr>
 <tr><td width="25%" valign="top">-P {v..}</td>
 <td width="65%" align="left"> 'pavers' (polygon formed by face flower) recomp'd by drawing order 
 	(eucl only)</td></tr>
@@ -878,7 +897,7 @@ points with nghbs</td></tr>
 <td width="65%" align="left"> ditto, but in color with index n</td></tr>
 <tr><td width="25%" valign="top">-g</td>
 <td width="65%" align="left"> display current "path" (if available) in 
-	thicker blue</td></tr>
+		thicker blue</td></tr>
 <tr><td width="25%" valign="top">-gc{n}</td>
 <td width="65%" align="left"> ditto, but in color with index n</td></tr>
 <tr><td width="25%" valign="top">-q{p}</td>
@@ -3217,6 +3236,11 @@ script and append it to 'ClosedPath'.</td></tr>
 <strong>Description: </strong>
 	Convenience command for 'repack', 'layout', and 'disp -wr'
 </blockquote>
+<font size="+1" color="blue"><strong><a name="rlsd">rlsd</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
+<blockquote>
+<strong>Description: </strong>
+	Convenience command for 'repack', 'layout' using schwarzians, and 'disp -wr'
+</blockquote>
 <font size="+1" color="blue"><strong><a name="rm_bary">rm_bary</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
@@ -3328,6 +3352,39 @@ script and append it to 'ClosedPath'.</td></tr>
 	    rad_p(v)=rad_p(v) + x*[rad_q(v)-rad_p(v)].
 	Infinite hyperbolic radii treated as radius 10.0.
 </blockquote>
+<font size="+1" color="blue"><strong><a name="sch_data">sch_data</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[d] [-rc] N -a {filename}&nbsp;&nbsp; </font>
+<blockquote>
+<strong>Description: </strong>
+	For single d-flower, append N lines to
+	'filename', wach a string of d reals which are the 
+	schwarzians for the spokes of a d-flower repacked with 
+	random boundary radii in range [.33333, 3.0]. 
+	The "-r" flag says to replace d in each of the N runs with a
+	random integer in range [3,15]. The "-c" flag says to 
+	randomly set the center's radius along with the petals.
+	Our aim is data for studying packing criteria for Schwarzians
+	of single flowers. This is subtle. The Schwarzians could be
+	associated with center and petal radii, but the flower does
+	not close up (e.g. use "-c" flag for examples).
+</blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
+<blockquote>
+<table>
+<tr><td width="25%" valign="top">-r</td>
+<td width="65%" align="left"> randomize the degree d of the flower, d in [3,15]</td></tr>
+<tr><td width="25%" valign="top">-c</td>
+<td width="65%" align="left"> randomize the center's radius along with the petals</td></tr>
+</table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
+<blockquote>
+<table>
+<tr><td width="30%"></td>
+<td width="68%"> Store 1000 random
+hex flower schwarzians</td></tr>
+<tr><td width="30%"></td>
+<td width="68%"> Store 1000 random
+flower schwarzians with random degrees and random central radii</td></tr>
+</table></blockquote>
 <font size="+1" color="blue"><strong><a name="sch_report">sch_report</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[[ce]{flags}] {..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
@@ -4209,29 +4266,27 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="adjust_rad">adjust_rad</a>&nbsp;&nbsp; <a href="set_rad">set_rad</a>&nbsp;&nbsp; 
 <br/><br/>
-<font size="+1" color="blue"><strong><a name="set_schwarzian">set_schwarzian</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[cr{x}] {v w ...}]&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="set_schwarzian">set_schwarzian</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[x] {v w ...}]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
-	Compute and store the real schwarzians for given edges, 
+	Compute and store the intrinsic schwarzians for given edges, 
 	defaulting to 'all'. See 'Schwarzian.java' for more details
-	and the PackExtender 'SchwarzMap.java' for related methods. 
-	The schwarzian here is based on 'baseMobius' transforms and 
-	with the dual spanning tree can be used	to layout a packing 
-	determined up to Mobius	transformation by the layout of the 
-	first face.	(Layout works in spherical or euclidean geometry, 
-	but not	hyperbolic.) Flags may specify use of current radii
-	(default) or current centers to compute the schwarzians, 
-	or a value x may be	specified for one or more given edges. 
-	This call will allocate	schwarzian storage space if not 
-	already set.
+	and the PackExtender 'SchwarzMap.java' for related methods.
+	If double x is given, then set specified schwarzians to x. 
+	Else compute the schwarzians using current radii. This 
+	"intrinsic" schwarzian is based on 'baseMobius' transforms and 
+	with layoutOrder can be used to layout a packing determined 
+	up to Mobius transformation by the layout of the first face. 
+	(Layout works in spherical or euclidean geometry, but not 
+	hyperbolic.) 
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
 <table>
-<tr><td width="25%" valign="top">-r {v w ...}</td>
-<td width="65%" align="left"> schwarzians based on existing layout radii (default)</td></tr>
-<tr><td width="25%" valign="top">-c {v w ...}</td>
-<td width="65%" align="left"> schwarzians based on existing layout centers</td></tr>
+<tr><td width="25%" valign="top">{v w ...}</td>
+<td width="65%" align="left"> Set based on current radii.</td></tr>
+<tr><td width="25%" valign="top">-s {x} {v w ...}</td>
+<td width="65%" align="left"> schwarzians set to double value x</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="dual_layout">dual_layout</a>&nbsp;&nbsp; <a href="sch_report">sch_report</a>&nbsp;&nbsp; 

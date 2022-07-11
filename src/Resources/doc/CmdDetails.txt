@@ -3999,7 +3999,7 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 	hyperbolic.) 
 </description>
 <options>
-<opt flag="{v w ...}"> Set based on current radii.
+<opt flag="{v w ...}"> Set based on current radii.</opt>
 <opt flag="-s {x} {v w ...}"> schwarzians set to double value x</opt>
 </options>
 <seealso>
