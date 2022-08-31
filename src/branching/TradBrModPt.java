@@ -107,7 +107,7 @@ public class TradBrModPt extends GenBrModPt {
 		} // end of while
 
 		// pass rest of display commands to 'super'
-		n+=DisplayParser.dispParse(p,p.cpScreen,flagSegs);
+		n+=DisplayParser.dispParse(p,p.cpDrawing,flagSegs);
 		if (n!=0)
 			PackControl.canvasRedrawer.paintMyCanvasses(p,false); 
 		return n;	

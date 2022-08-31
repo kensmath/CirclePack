@@ -3,9 +3,9 @@ package ftnTheory;
 import java.util.Vector;
 
 import listManip.NodeLink;
+import packing.CPdrawing;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 import allMains.CPBase;
 import allMains.CirclePack;

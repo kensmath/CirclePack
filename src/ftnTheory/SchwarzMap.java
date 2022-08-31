@@ -172,7 +172,7 @@ public class SchwarzMap extends PackExtender {
 						// minimal compatibility check or hyp check:
 						//   default is copy of packData
 						if (qnum!=packData.packNum) {
-							qData=CPBase.cpScreens[qnum].getPackData();
+							qData=CPBase.cpDrawing[qnum].getPackData();
 							if ((qData.faceCount!=packData.faceCount) || 
 									qData.hes<0) {
 								CirclePack.cpb.msg("Copy domain packing "+
@@ -271,16 +271,16 @@ public class SchwarzMap extends PackExtender {
 				// Draw  using 'TriAspect' data
 				if (cirFlags!=null)
 					for (int j=0;j<3;j++) {
-						qData.cpScreen.drawCircle(
+						qData.cpDrawing.drawCircle(
 							myTri.getCenter(j), myTri.getRadius(j),
 							cirFlags);
 					}
 				if (faceFlags!=null) 
-					qData.cpScreen.drawFace(myTri.getCenter(0),
+					qData.cpDrawing.drawFace(myTri.getCenter(0),
 							myTri.getCenter(1),myTri.getCenter(2),
 							myTri.getRadius(0),myTri.getRadius(1),
 							myTri.getRadius(2),faceFlags);
-				qData.cpScreen.repaint();
+				qData.cpDrawing.repaint();
 				
 				hitfaces[baseface]=1;
 				count=1;
@@ -306,17 +306,17 @@ public class SchwarzMap extends PackExtender {
 				// Now, draw this face using 'TriAspect' data
 				int J=(rangeTri[g].edgeIndex(he.twin)+1)%3;
 				if (cirFlags!=null)  
-					qData.cpScreen.drawCircle(
+					qData.cpDrawing.drawCircle(
 							rangeTri[g].getCenter(J),
 							rangeTri[g].getRadius(J), cirFlags);
 				if (faceFlags!=null) 
-					qData.cpScreen.drawFace(rangeTri[g].getCenter(0),
+					qData.cpDrawing.drawFace(rangeTri[g].getCenter(0),
 							rangeTri[g].getCenter(1),
 							rangeTri[g].getCenter(2),
 							rangeTri[g].getRadius(0),
 							rangeTri[g].getRadius(1),
 							rangeTri[g].getRadius(2),faceFlags);
-				qData.cpScreen.repaint();
+				qData.cpDrawing.repaint();
 				
 				hitfaces[g]=1;
 				count++;
@@ -368,7 +368,7 @@ public class SchwarzMap extends PackExtender {
 					//   that packing is same and not hyperbolic; 
 					//   else copy packData into qdata.
 					if (qnum!=packData.packNum) {
-						qData=CPBase.cpScreens[qnum].getPackData();
+						qData=CPBase.cpDrawing[qnum].getPackData();
 						if ((qData.faceCount!=packData.faceCount) || 
 								qData.hes<0) {
 							CirclePack.cpb.msg("Copy domain packing "+
@@ -377,7 +377,7 @@ public class SchwarzMap extends PackExtender {
 								"not match nodeCount. "+
 								"Convert to spherical.");
 							cpCommand(packData,"copy "+qnum);
-							qData=CPBase.cpScreens[qnum].getPackData();
+							qData=CPBase.cpDrawing[qnum].getPackData();
 							qData.setCombinatorics();
 							// make range spherical
 							cpCommand(qData,"geom_to_s"); 
@@ -599,7 +599,7 @@ public class SchwarzMap extends PackExtender {
 					//   back in packData). Minimal check that packing is 
 					//   same, not hyp; else copy packData into qdata.
 					if (qnum!=packData.packNum) {
-						qData=CPBase.cpScreens[qnum].getPackData();
+						qData=CPBase.cpDrawing[qnum].getPackData();
 						if ((qData.faceCount!=packData.faceCount) || 
 								qData.hes<0) {
 							CirclePack.cpb.msg("Copy domain packing into "+
@@ -618,14 +618,14 @@ public class SchwarzMap extends PackExtender {
 				if (items.size()>0 || flagSegs.size()>0) {
 					if (items.size()>0)
 						dispFlags=new DispFlags(items.remove(0),
-								qData.cpScreen.fillOpacity);
+								qData.cpDrawing.fillOpacity);
 					// only other flag should be display (can go without flag)
 					else { 
 						items=flagSegs.get(0);
 						if (StringUtil.isFlag(items.get(0))) {
 							items.remove(0);
 							dispFlags=new DispFlags(items.get(0),
-									qData.cpScreen.fillOpacity);
+									qData.cpDrawing.fillOpacity);
 						}
 					}
 				}
@@ -690,12 +690,12 @@ public class SchwarzMap extends PackExtender {
 						mytri.setRadius(sC.rad,j);
 					}
 					if (debug) {
-						qData.cpScreen.drawFace(mytri.getCenter(0),
+						qData.cpDrawing.drawFace(mytri.getCenter(0),
 								mytri.getCenter(1),mytri.getCenter(2),
 								mytri.getRadius(0),
 								mytri.getRadius(1),
 								mytri.getRadius(2),dispFlags);
-						qData.cpScreen.repaint();
+						qData.cpDrawing.repaint();
 					}
 				}
 				
@@ -748,22 +748,22 @@ public class SchwarzMap extends PackExtender {
 				// Draw
 				if (dispFlags.label)
 					dispFlags.setLabel(Integer.toString(baseface));
-				qData.cpScreen.drawFace(mytri.getCenter(0),
+				qData.cpDrawing.drawFace(mytri.getCenter(0),
 						mytri.getCenter(1),mytri.getCenter(2),
 						mytri.getRadius(0),mytri.getRadius(1),
 						mytri.getRadius(2),dispFlags);
-				qData.cpScreen.repaint();
+				qData.cpDrawing.repaint();
 				count=1;
 				
 				// debug?
 				if (debug) {
-					packData.cpScreen.drawFace(domainTri[baseface].getCenter(0),
+					packData.cpDrawing.drawFace(domainTri[baseface].getCenter(0),
 							domainTri[baseface].getCenter(1),
 							domainTri[baseface].getCenter(2),
 							domainTri[baseface].getRadius(0),
 							domainTri[baseface].getRadius(1),
 							domainTri[baseface].getRadius(2),dispFlags);
-					packData.cpScreen.repaint();
+					packData.cpDrawing.repaint();
 				}
 				
 			}
@@ -804,16 +804,16 @@ public class SchwarzMap extends PackExtender {
 				
 				// draw
 				if (debug) { // draw shared circles in range faces
-					qData.cpScreen.drawCircle(rangeTri[f].getCenter(fgindx),
+					qData.cpDrawing.drawCircle(rangeTri[f].getCenter(fgindx),
 							rangeTri[f].getRadius(fgindx),oldFlags);
-					qData.cpScreen.drawCircle(rangeTri[f].getCenter((fgindx+1)%3),
+					qData.cpDrawing.drawCircle(rangeTri[f].getCenter((fgindx+1)%3),
 							rangeTri[f].getRadius((fgindx+1)%3),oldFlags);
-					qData.cpScreen.repaint();
-					qData.cpScreen.drawCircle(gtri.getCenter(gfindx),
+					qData.cpDrawing.repaint();
+					qData.cpDrawing.drawCircle(gtri.getCenter(gfindx),
 							gtri.getRadius(gfindx),newFlags);
-					qData.cpScreen.drawCircle(gtri.getCenter((gfindx+1)%3),
+					qData.cpDrawing.drawCircle(gtri.getCenter((gfindx+1)%3),
 							gtri.getRadius((gfindx+1)%3),newFlags);
-					qData.cpScreen.repaint();
+					qData.cpDrawing.repaint();
 				}
 
 				// ----------- set to compute final circle for rangeTri[g] -----
@@ -862,19 +862,19 @@ public class SchwarzMap extends PackExtender {
 				gtri.setRadius(r,(gfindx+2)%3);
 				
 				if (debug) { // draw the new circle
-					qData.cpScreen.drawCircle(gtri.getCenter((gfindx+2)%3),
+					qData.cpDrawing.drawCircle(gtri.getCenter((gfindx+2)%3),
 							gtri.getRadius((gfindx+2)%3),newFlags);
-					qData.cpScreen.repaint();
+					qData.cpDrawing.repaint();
 				}
 				
 				// Now, draw this face
 				if (dispFlags.label)
 					dispFlags.setLabel(Integer.toString(g));
-				qData.cpScreen.drawFace(gtri.getCenter(0),
+				qData.cpDrawing.drawFace(gtri.getCenter(0),
 						gtri.getCenter(1),gtri.getCenter(2),
 						gtri.getRadius(0),gtri.getRadius(1),
 						gtri.getRadius(2),dispFlags);
-				qData.cpScreen.repaint();
+				qData.cpDrawing.repaint();
 				count++;
 			} // end of while through dTree
 			return count;
@@ -995,7 +995,7 @@ public class SchwarzMap extends PackExtender {
 				items=flagSegs.get(0);
 				int qnum=StringUtil.qItemParse(items);
 				if (qnum>=0) {
-					pd=CPBase.cpScreens[qnum].getPackData();
+					pd=CPBase.cpDrawing[qnum].getPackData();
 					rangePackNum=pd.packNum;
 				}
 			}

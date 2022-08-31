@@ -196,7 +196,7 @@ public class TrafficCenter {
 					System.out.println("new 'for' loop thread");
 					System.out.flush();
 				}
-				forWrapper(CPBase.cpScreens[packnum].getPackData(),wholeStr.toString(),mcs);
+				forWrapper(CPBase.cpDrawing[packnum].getPackData(),wholeStr.toString(),mcs);
 				cmdCount++;
 				break; // to break out of 'for' loop on cmd[j]
 			} // end of 'for' catch
@@ -206,7 +206,7 @@ public class TrafficCenter {
 				StringBuilder wholeStr=new StringBuilder(cmds[j]+";");
 				for (int J=j+1;J<cmds.length;J++)
 					wholeStr.append(cmds[J]+";");
-				int cmdadd=ifThenWrapper(CPBase.cpScreens[packnum].getPackData(),wholeStr.toString(),mcs,rP);
+				int cmdadd=ifThenWrapper(CPBase.cpDrawing[packnum].getPackData(),wholeStr.toString(),mcs,rP);
 				if (rP.interrupt) {
 					rP.msgs=new String("'IF' failed");
 					rP.cmdCount=cmdCount+cmdadd;
@@ -336,7 +336,7 @@ public class TrafficCenter {
 			//   'lastCmd' will remain unchanged, so !! can be used again.
 			if (cmds[j].charAt(0)=='!' && cmds[j].charAt(1)=='!') {
 				String redoCmd = new String(lastCmd);
-				ResultPacket rsP=new ResultPacket(CPBase.cpScreens[newpnum].getPackData(),redoCmd);
+				ResultPacket rsP=new ResultPacket(CPBase.cpDrawing[newpnum].getPackData(),redoCmd);
 				parseCmdSeq(rP,0,mcs);
 				int repeat_count=rsP.cmdCount;
 				lastCmd = new String(redoCmd);
@@ -396,7 +396,7 @@ public class TrafficCenter {
 				}
 
 				// here's recursive call
-				ResultPacket uP=new ResultPacket(CPBase.cpScreens[newpnum].getPackData(),brktcmd);
+				ResultPacket uP=new ResultPacket(CPBase.cpDrawing[newpnum].getPackData(),brktcmd);
 				uP.memoryFlag=rP.memoryFlag;
 				parseCmdSeq(uP,depth+1,mcs);
 				if (uP.errorMsgs!=null && uP.errorMsgs.trim().length()>0)
@@ -424,7 +424,7 @@ public class TrafficCenter {
 				PackExtender pXdr = null;
 				if (cmdcontent != null
 						&& cmdcontent[1].length() > 0
-						&& (pXdr = CPBase.cpScreens[newpnum].getPackData()
+						&& (pXdr = CPBase.cpDrawing[newpnum].getPackData()
 								.findXbyAbbrev(cmdcontent[0])) != null) {
 					int k = cmdcontent[1].indexOf(' ');
 					String cmd = null;
@@ -505,9 +505,9 @@ public class TrafficCenter {
 				try {
 					if (!valueCall) // this is the typical situation
 						count = CommandStrParser.jexecute(
-								CPBase.cpScreens[newpnum].getPackData(), cmds[j]);
+								CPBase.cpDrawing[newpnum].getPackData(), cmds[j]);
 					else { // this puts resulting value in 'CPcallPacket'
-						CPBase.CPcallPacket=CommandStrParser.valueExecute(CPBase.cpScreens[newpnum].getPackData(), cmds[j]);
+						CPBase.CPcallPacket=CommandStrParser.valueExecute(CPBase.cpDrawing[newpnum].getPackData(), cmds[j]);
 						if (CPBase.CPcallPacket==null || CPBase.CPcallPacket.error) {
 							rP.errorMsgs = new String("value computation, {..cmd..} failed");
 							rP.cmdCount=-cmdCount;

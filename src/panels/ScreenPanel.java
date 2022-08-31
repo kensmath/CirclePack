@@ -16,6 +16,7 @@ import javax.swing.event.ChangeListener;
 
 import allMains.CPBase;
 import circlePack.PackControl;
+import packing.CPdrawing;
 
 public class ScreenPanel extends JPanel implements ChangeListener {
 
@@ -72,7 +73,7 @@ public class ScreenPanel extends JPanel implements ChangeListener {
 					fillOpacitySlider.setMaximum(255);
 					fillOpacitySlider.setToolTipText("Fill opacity: larger = denser colors");
 					fillOpacitySlider.setValueIsAdjusting(true);
-					fillOpacitySlider.setValue(CPBase.cpScreens[0].getFillOpacity());
+					fillOpacitySlider.setValue(CPBase.cpDrawing[0].getFillOpacity());
 					fillOpacitySlider.setMajorTickSpacing(25);
 					fillOpacitySlider.setPaintTicks(true);
 					fillOpacitySlider.setSize(190, 32);
@@ -84,7 +85,7 @@ public class ScreenPanel extends JPanel implements ChangeListener {
 					sphOpacitySlider.setMaximum(255);
 					sphOpacitySlider.setToolTipText("Sphere opacity: smaller lets back show through");
 					sphOpacitySlider.setValueIsAdjusting(true);
-					sphOpacitySlider.setValue(CPBase.cpScreens[0].getSphereOpacity());
+					sphOpacitySlider.setValue(CPBase.cpDrawing[0].getSphereOpacity());
 					sphOpacitySlider.setMajorTickSpacing(25);
 					sphOpacitySlider.setPaintTicks(true);
 					sphOpacitySlider.setSize(190, 32);
@@ -255,11 +256,11 @@ public class ScreenPanel extends JPanel implements ChangeListener {
 	}
 	
 	/**
-	 * Values for the sliders are maintained in CPScreen;
+	 * Values for the sliders are maintained in CPDrawing;
 	 * this sets them, e.g., when active screen is changed.
 	 */
 	public void setSliders() {
-		CPScreen aP=PackControl.getActiveCPScreen();
+		CPdrawing aP=PackControl.getActiveCPDrawing();
 		
 		setLine(aP.getLineThickness());
 		setFillOp(aP.getFillOpacity());
@@ -275,7 +276,7 @@ public class ScreenPanel extends JPanel implements ChangeListener {
 				serialVersionUID = 1L;
 
 				public void actionPerformed(ActionEvent evt) {
-					CPScreen aP=PackControl.getActiveCPScreen();
+					CPdrawing aP=PackControl.getActiveCPDrawing();
 					aP.setLineThickness(CPBase.DEFAULT_LINETHICKNESS);
 					aP.setFillOpacity(CPBase.DEFAULT_FILL_OPACITY);
 					aP.setSphereOpacity(CPBase.DEFAULT_SPHERE_OPACITY);
@@ -295,8 +296,8 @@ public class ScreenPanel extends JPanel implements ChangeListener {
 				serialVersionUID = 1L;
 
 				public void actionPerformed(ActionEvent evt) {
-					if (aliasCkBox.isSelected()) PackControl.getActiveCPScreen().setAntialiasing(true);
-					else PackControl.getActiveCPScreen().setAntialiasing(false);
+					if (aliasCkBox.isSelected()) PackControl.getActiveCPDrawing().setAntialiasing(true);
+					else PackControl.getActiveCPDrawing().setAntialiasing(false);
 				}
 			};
 		}
@@ -314,7 +315,7 @@ public class ScreenPanel extends JPanel implements ChangeListener {
 		String name = ((Component) e.getSource()).getName();
 		JSlider slider = (JSlider) e.getSource();
 
-		CPScreen aP=PackControl.getActiveCPScreen();
+		CPdrawing aP=PackControl.getActiveCPDrawing();
 
 		if (name.equals("Line Thickness")) {
 			int value = slider.getValue();

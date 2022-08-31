@@ -340,13 +340,13 @@ public class SingBrModPt extends GenBrModPt {
 				
 				// found something? display on parent canvas
 				if (pulloff.length()>0) {
-					n=DisplayParser.dispParse(p,p.cpScreen,
+					n=DisplayParser.dispParse(p,p.cpDrawing,
 							StringUtil.flagSeg(pulloff.toString()));
 				}
 			}
 		} // end of loop through items
 
-		n+=DisplayParser.dispParse(p,p.cpScreen,newFlagSegs);
+		n+=DisplayParser.dispParse(p,p.cpDrawing,newFlagSegs);
 			
 		if (n!=0)
 			PackControl.canvasRedrawer.paintMyCanvasses(p,false); 

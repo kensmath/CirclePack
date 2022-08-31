@@ -815,13 +815,13 @@ public class PackDCEL {
 				|| (epair=(SideData)pairLink.get(n))==null
 				|| epair.startEdge==null)  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
 			return 0;
-		int old_thickness=p.cpScreen.getLineThickness();
+		int old_thickness=p.cpDrawing.getLineThickness();
 
 		RedEdge rtrace=epair.startEdge;
 		Complex w_cent=new Complex(getVertCenter(rtrace.myEdge));
 		double rad_w=getVertRadius(rtrace.myEdge);
 		if (do_label) // label first circle with side indx
-			p.cpScreen.drawIndex(w_cent,n,1);
+			p.cpDrawing.drawIndex(w_cent,n,1);
 		DispFlags dflags=new DispFlags(""); // System.out.println("v_indx="+v_indx+", wyd_w center.x "+wyd_w.center.x+" and hash "+wyd_w.hashCode());
 		if (do_circle) { // handle draw/label for first circle
 			int w_indx=rtrace.myEdge.origin.vertIndx;
@@ -829,21 +829,21 @@ public class PackDCEL {
 				dflags.label=true;
 				dflags.setLabel(Integer.toString(w_indx));
 			}
-			p.cpScreen.drawCircle(w_cent,rad_w,dflags);
+			p.cpDrawing.drawCircle(w_cent,rad_w,dflags);
 		}
 		Complex v_cent=null;
 		do {
 			rtrace=rtrace.nextRed;
 			v_cent=w_cent;
 			w_cent=new Complex(getVertCenter(rtrace.myEdge));
-			p.cpScreen.setLineThickness(thickness);
+			p.cpDrawing.setLineThickness(thickness);
 			int w_indx=rtrace.myEdge.origin.vertIndx;
 			DispFlags df=new DispFlags(null);
 			df.setColor(ecol);
-			p.cpScreen.drawEdge(v_cent,w_cent,df);
+			p.cpDrawing.drawEdge(v_cent,w_cent,df);
 			
 			if (debug) { // debug=true;
-				p.cpScreen.rePaintAll();
+				p.cpDrawing.rePaintAll();
 			}
 			
 			if (do_circle) { 
@@ -851,12 +851,12 @@ public class PackDCEL {
 					dflags.label=true;
 					dflags.setLabel(Integer.toString(w_indx));
 				}
-				p.cpScreen.setLineThickness(old_thickness);
-				p.cpScreen.drawCircle(w_cent,getVertRadius(rtrace.myEdge),dflags);
-				p.cpScreen.setLineThickness(thickness);
+				p.cpDrawing.setLineThickness(old_thickness);
+				p.cpDrawing.drawCircle(w_cent,getVertRadius(rtrace.myEdge),dflags);
+				p.cpDrawing.setLineThickness(thickness);
 			}
 	    } while (rtrace!=epair.endEdge.nextRed);
-		p.cpScreen.setLineThickness(old_thickness);
+		p.cpDrawing.setLineThickness(old_thickness);
 		return 1;
 	}
 
@@ -1777,11 +1777,11 @@ public class PackDCEL {
 				faceFlags.setColor(p.getFaceColor(he.face.faceIndx));
 			if (faceFlags.label)
 				faceFlags.setLabel(Integer.toString(he.face.faceIndx));
-			p.cpScreen.drawFace(myCenters[0],myCenters[1],myCenters[2],
+			p.cpDrawing.drawFace(myCenters[0],myCenters[1],myCenters[2],
 					myRadii[0],myRadii[1],myRadii[2],faceFlags);
 			
 			if (debug)  // debug=true;
-				p.cpScreen.rePaintAll();
+				p.cpDrawing.rePaintAll();
 		}  
 			
 		if (circDo && pF==null) { // also draw the circles
@@ -1790,14 +1790,14 @@ public class PackDCEL {
 				circFlags.setColor(p.getCircleColor(he.next.next.origin.vertIndx));
 			if (circFlags.label)
 				circFlags.setLabel(Integer.toString(he.origin.vertIndx));
-			p.cpScreen.drawCircle(myCenters[0],myRadii[0],circFlags);
+			p.cpDrawing.drawCircle(myCenters[0],myRadii[0],circFlags);
 			if (circFlags.label)
 				circFlags.setLabel(Integer.toString(he.next.origin.vertIndx));
-			p.cpScreen.drawCircle(myCenters[1],myRadii[1],circFlags);
+			p.cpDrawing.drawCircle(myCenters[1],myRadii[1],circFlags);
 			if (circFlags.label)
 				circFlags.setLabel(Integer.toString(he.next.next.origin.vertIndx));
-			p.cpScreen.drawCircle(myCenters[2],myRadii[2],circFlags);
-			if (debug) p.cpScreen.rePaintAll(); 
+			p.cpDrawing.drawCircle(myCenters[2],myRadii[2],circFlags);
+			if (debug) p.cpDrawing.rePaintAll(); 
 		}
 		
 		// TODO: if pF!=null, need to layout the first face and/or circles
@@ -1849,9 +1849,9 @@ public class PackDCEL {
 						faceFlags.setColor(p.getFaceColor(he.face.faceIndx));
 					if (faceFlags.label)
 						faceFlags.setLabel(Integer.toString(he.face.faceIndx));
-					p.cpScreen.drawFace(myCenters[0],myCenters[1],myCenters[2],
+					p.cpDrawing.drawFace(myCenters[0],myCenters[1],myCenters[2],
 							myRadii[0],myRadii[1],myRadii[2],faceFlags);
-					if (debug) p.cpScreen.rePaintAll();
+					if (debug) p.cpDrawing.rePaintAll();
 				} 
 				
 				if (circDo && pF==null) { // also draw the circles
@@ -1860,18 +1860,18 @@ public class PackDCEL {
 						circFlags.setColor(p.getCircleColor(he.next.next.origin.vertIndx));
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(he.next.next.origin.vertIndx));
-					p.cpScreen.drawCircle(myCenters[2],myRadii[2],circFlags);
-					if (debug) p.cpScreen.rePaintAll();
+					p.cpDrawing.drawCircle(myCenters[2],myRadii[2],circFlags);
+					if (debug) p.cpDrawing.rePaintAll();
 				}
 				
 				// postscript
 				if (pF!=null) {
 					if (p.hes>0) { // post routines don't know how to convert
-						myCenters[0]=new Complex(p.cpScreen.
+						myCenters[0]=new Complex(p.cpDrawing.
 							sphView.toApparentSph(myCenters[0]));
-						myCenters[1]=new Complex(p.cpScreen.
+						myCenters[1]=new Complex(p.cpDrawing.
 							sphView.toApparentSph(myCenters[1]));
-						myCenters[2]=new Complex(p.cpScreen.
+						myCenters[2]=new Complex(p.cpDrawing.
 							sphView.toApparentSph(myCenters[2]));
 					}
 
@@ -1897,7 +1897,7 @@ public class PackDCEL {
 						if (faceFlags.label) { // label the face
 							Complex z=getFaceCenter(faces[he.face.faceIndx]).center;
 							if (p.hes>0) {
-								z=p.cpScreen.sphView.toApparentSph(z);
+								z=p.cpDrawing.sphView.toApparentSph(z);
 								if(Math.cos(z.x)>=0.0) {
 									z=util.SphView.s_pt_to_visual_plane(z);
 									pF.postIndex(z,he.face.faceIndx);
@@ -1928,7 +1928,7 @@ public class PackDCEL {
 						}
 						if (circFlags.label) { // label the circle
 							if (p.hes>0) {
-								Complex z=p.cpScreen.sphView.
+								Complex z=p.cpDrawing.sphView.
 									toApparentSph(myCenters[2]);
 								if(Math.cos(z.x)>=0.0) {
 									z=util.SphView.s_pt_to_visual_plane(z);
@@ -1942,7 +1942,7 @@ public class PackDCEL {
 			}
 			count++;
 		} // end of while through trees
-//		p.cpScreen.rePaintAll();
+//		p.cpDrawing.rePaintAll();
 		return count;
 	}
 	

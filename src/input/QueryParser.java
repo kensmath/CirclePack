@@ -833,15 +833,15 @@ public class QueryParser {
 				// screen dimensions
 				else if (query.startsWith("screen")) {
 					forMsg=true;
-					ViewBox vB=p.cpScreen.realBox;
+					ViewBox vB=p.cpDrawing.realBox;
 					words=new StringBuilder("Screen for p"+p.packNum+":");
 						words.append(System.lineSeparator());
 						words.append(" \r\nset_screen -b "+String.format("%." + 4 + "e", vB.lz.x)+" "+
 							String.format("%." + 4 + "e", vB.lz.y)+" "+
 							String.format("%." + 4 + "e", vB.rz.x)+" "+
 							String.format("%." + 4 + "e", vB.rz.y));
-					if (p.hes>0 && p.cpScreen.sphView.viewMatrix!=null) {
-						Matrix3D m=p.cpScreen.sphView.viewMatrix;
+					if (p.hes>0 && p.cpDrawing.sphView.viewMatrix!=null) {
+						Matrix3D m=p.cpDrawing.sphView.viewMatrix;
 						words.append(String.format("%n","")+"               set_sv -t "+
 								String.format("%." + 4 + "e", m.m00)+"  "+
 								String.format("%." + 4 + "e", m.m01)+"  "+

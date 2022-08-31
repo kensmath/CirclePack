@@ -2,6 +2,7 @@ package posting;
 
 import input.CPFileManager;
 import input.CommandStrParser;
+import packing.CPdrawing;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -12,7 +13,6 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Random;
 
-import panels.CPScreen;
 import allMains.CPBase;
 import circlePack.PackControl;
 import exceptions.InOutException;
@@ -70,19 +70,19 @@ public class PostManager {
 	 *    1 = open the file (previous contents discarded!)
 	 *    2 = insert in file after specified text (open if necessary)
 	 *    3 = append to file as new page (open if necessary) 
-	 * @param cpScreen
+	 * @param cpDrawing
    	 * @param mode: 1,2,3 
-	 * @param psFilename filename (if null, use 'cpScreen.customPS')
+	 * @param psFilename filename (if null, use 'cpDrawing.customPS')
 	 * @param targStr target string when inserting
 	 * @return int
 	 * @throws InOutException
 	 */
-	public int open_psfile(CPScreen cpScreen,int mode,String psFilename,String targStr) {
+	public int open_psfile(CPdrawing cpDrawing,int mode,String psFilename,String targStr) {
 
 		// choose ultimate file name for use when creating the final postscript
 		if (psFilename==null) { // none given? use default
-			if (cpScreen.customPS==null) postFilename=new String(CPScreen.customGlobal);
-			else postFilename=new String(cpScreen.customPS);
+			if (cpDrawing.customPS==null) postFilename=new String(CPdrawing.customGlobal);
+			else postFilename=new String(cpDrawing.customPS);
 		}
 		else postFilename=psFilename;
 		if (!postFilename.endsWith(".ps")) // user may forget .ps
@@ -126,14 +126,14 @@ public class PostManager {
 	/**
 	 * This wraps up the postscript file: 
 	 * a) put in preample stuff, including size info
-	 *    NOTE: size info depends on cpScreen data at time file is completed
+	 *    NOTE: size info depends on cpDrawing data at time file is completed
 	 *       instead of when it was started.
 	 * b) include the accumulated postscript in 'bodyFile'
 	 * c) put in the trailer, including any text at the bottom.
 	 *  
 	 * Reset everything
 	*/
-	public int close_psfile(CPScreen cps) {
+	public int close_psfile(CPdrawing cpd) {
 	  if (!isOpen()) // writer to 'bodyFile' is not open 
 		  return 0;
 	  try {
@@ -150,7 +150,7 @@ public class PostManager {
 		  BufferedWriter finalPS=new BufferedWriter(new FileWriter(psUltimateFile));
 		  
 		  // preamble text
-		  preAmble(finalPS,cps);
+		  preAmble(finalPS,cpd);
 		  
 		  // main body
 		  File bodyFile = new File( System.getProperty("java.io.tmpdir"),
@@ -181,13 +181,13 @@ public class PostManager {
 	  return 1;
 	} 
 
-	public void preAmble(BufferedWriter bw, CPScreen cpScreen) throws IOException {
+	public void preAmble(BufferedWriter bw, CPdrawing cpDrawing) throws IOException {
 		/* -------- preamble: standard eps-type header info -------------- */
 	    bw.write("%!PS-Adobe-2.0 EPSF-2.0\n%%Title: "+postFilename+"\n");
 	    bw.write("%%Creator: "+PackControl.CPVersion+
 		     "\n%%CreationDate: "+new Date().toString()+"\n");
 	    bw.write("%%For: "+System.getProperty("user.name")+"\n%%Orientation: Portrait\n");
-	    post_size_settings(bw,cpScreen,1); // BoundingBox
+	    post_size_settings(bw,cpDrawing,1); // BoundingBox
 	    bw.write("%%Pages: 1\n%%BeginSetup\n%%EndSetup\n%%"+
 		    "Magnification: 1.0000\n%%EndComments\n");
 	    bw.write("\n% CirclePack dictionary ================\n");
@@ -235,8 +235,8 @@ public class PostManager {
 	    bw.write("\n%%Page: "+1+" "+1+"\nCPdict begin\ngsave\n");
 	    bw.write("   72 72 sc % inches\n   "+4.25+" "+5.5+" tr\n"+
 	    "   1 slc  1 slj\n");
-	    post_size_settings(bw,cpScreen,6); // BoundingBox, size info, clip window
-	    if (cpScreen.getGeom()!=0) // sph/hyp case: draw sphere/disc first
+	    post_size_settings(bw,cpDrawing,6); // BoundingBox, size info, clip window
+	    if (cpDrawing.getGeom()!=0) // sph/hyp case: draw sphere/disc first
 	    	bw.write("n 0 0 1 c\n\n");
 	}
 
@@ -245,7 +245,7 @@ public class PostManager {
 	 *        1 = BoundingBox; 2 = size info; 4 = clip window.
 	 * Typically open with mode=6.
 	 */
-	public int post_size_settings(BufferedWriter bw,CPScreen cpScreen,int mode) 
+	public int post_size_settings(BufferedWriter bw,CPdrawing cpDrawing,int mode) 
 	throws IOException {
 	      double size=(double)CPBase.DEFAULT_PS_PAGE_SIZE;
 	      if((mode & 1)==1) { // BoundingBox 
@@ -259,11 +259,11 @@ public class PostManager {
 	      }
 	      if ((mode & 2)==2) { // basic size info 
 	          bw.write("% ---------- pack size settings\n");
-	          double factor= size/(cpScreen.XWidth);
+	          double factor= size/(cpDrawing.XWidth);
 	          /* -------- scaling/translation for screen */
 	          bw.write("     "+factor+" "+(double)((1.01)*factor)+" sc \n     "+
-	    	       (double)(-(cpScreen.realBox.lz.x+cpScreen.realBox.rz.x)/2.0)+" "+
-	    	       (double)(-(cpScreen.realBox.lz.y+cpScreen.realBox.rz.y)/2.0)+" tr\n");
+	    	       (double)(-(cpDrawing.realBox.lz.x+cpDrawing.realBox.rz.x)/2.0)+" "+
+	    	       (double)(-(cpDrawing.realBox.lz.y+cpDrawing.realBox.rz.y)/2.0)+" tr\n");
 	          /*  -------- define 'ourlinewidth' at 1 point */
 	          bw.write("      /ourlinewidth\n      { 72 div "+factor+" div "+
 	        		  ps_linewidth+" mul setlinewidth}  def\n");
@@ -285,10 +285,10 @@ public class PostManager {
 	      if ((mode & 4)==4) /* clip window */
 	        {
 	    /* ----- now scaled based on screens size and desired output size */
-	    	  double lx=cpScreen.realBox.lz.x;
-	    	  double ly=cpScreen.realBox.lz.y;
-	    	  double rx=cpScreen.realBox.rz.x;
-	    	  double ry=cpScreen.realBox.rz.y;
+	    	  double lx=cpDrawing.realBox.lz.x;
+	    	  double ly=cpDrawing.realBox.lz.y;
+	    	  double rx=cpDrawing.realBox.rz.x;
+	    	  double ry=cpDrawing.realBox.rz.y;
 	          bw.write("n\n"+lx+" "+ry+" m\n"+lx+" "+ly+" l\n"+rx+" "+ly+" l\n"+
 	    	       rx+" "+ry+" l\ncp\n%gs s gr\nclip\nn\n"); // clip box
 	        }

@@ -71,8 +71,8 @@ import input.CPFileManager;
 import input.FileDialogs;
 import mytools.MyTool;
 import mytools.MyToolEditor;
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
 import util.StringUtil;
 
 public class ScriptManager implements ActionListener {
@@ -1300,7 +1300,7 @@ public class ScriptManager implements ActionListener {
 		 Component myComp=e.getComponent();
 		 if (cmd==null || !(myComp instanceof ActiveWrapper)) return;
 		 ActiveWrapper aWrapper=(ActiveWrapper)myComp;
-		 CPScreen cpS=aWrapper.getCPScreen();
+		 CPdrawing cpS=aWrapper.getCPDrawing();
 		 PackData thePack=cpS.getPackData();
 
 		 // check command for variables '#..': Currently check only ' #XY'

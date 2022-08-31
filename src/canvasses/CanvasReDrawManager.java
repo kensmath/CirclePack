@@ -2,8 +2,8 @@ package canvasses;
 
 import allMains.CPBase;
 import circlePack.PackControl;
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
 
 /**
  * I need a manager for canvas repaint events: which packings are showing
@@ -51,8 +51,8 @@ public class CanvasReDrawManager {
 		changeActive(p.packNum);
 	}
 	
-	public void changeActive(CPScreen cps) {
-		changeActive(cps.getPackData().packNum);
+	public void changeActive(CPdrawing cpd) {
+		changeActive(cpd.getPackData().packNum);
 	}
 	
 	// After initiation, only called through ComboBox action
@@ -92,7 +92,7 @@ public class CanvasReDrawManager {
 				PackControl.mapPairFrame.rangeScreen.repaint();
 			}
 		}
-		PackControl.cpScreens[pnum].repaint();
+		PackControl.cpDrawing[pnum].repaint();
 	}
 	
 	/**
@@ -106,11 +106,11 @@ public class CanvasReDrawManager {
 	
 	/**
 	 * Paint all canvasses (or active only) for given packing
-	 * @param cps @see CPScreen
+	 * @param cpd @see CPDrawing
 	 * @param aO boolean: yes means active pack only 
 	 */
-	public void paintMyCanvasses(CPScreen cps,boolean aO) {
-		paintMyCanvasses(cps.getPackNum(),aO);
+	public void paintMyCanvasses(CPdrawing cpd,boolean aO) {
+		paintMyCanvasses(cpd.getPackNum(),aO);
 	}
 	
 }

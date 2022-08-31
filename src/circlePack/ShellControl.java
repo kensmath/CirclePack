@@ -19,10 +19,9 @@ import panels.CPPreferences;
 import util.CPTimer;
 
 /**
- * Need a standalone version of CirclePack, to be run from a shell or remotely.
- * Not sure yet whether there should be any image capability, e.g. for
- * an output jpg. If yes, need to restructure current 'CPScreen' to
- * separate backplane drawing from GUI stuff.
+ * Need a standalone version of CirclePack, to be run from a shell 
+ * or remotely. It will still generate images in a backing plane
+ * so it can generate an output jpg. 
  * 
  * @author kens, May 2019
  *
@@ -30,16 +29,14 @@ import util.CPTimer;
 
 public class ShellControl extends CPBase {
 	
-	static Date date=new Date();
 	public static String CPVersion= new String("CirclePack, "+circlePack.Version.version+", "+
-			DateFormat.getDateInstance(DateFormat.MEDIUM).format(date));
+			DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date()));
 	public static CPTimer cpTimer; // for crude timings
 	public static CPPreferences preferences; // user preferences
 
 	// Constructor
 	public ShellControl() {
 		socketActive=true;  // means that socket server will be started
-		cpSocketPort=3736;
 		cpSocketHost=null;
 		cpMultiServer=null;
 		socketSources=new Vector<SocketSource>();
@@ -78,8 +75,6 @@ public class ShellControl extends CPBase {
 					writer.newLine();
 					writer.write("PRINT_COMMAND lpr");
 					writer.newLine();
-//				writer.write("POSTSCRIPT_VIEWER gv");
-//				writer.newLine();
 					writer.write("WEB_URL_FILE web_URLs/");
 					writer.newLine();
 					writer.write("SCRIPT_URL_FILE script_URLs/");
@@ -107,18 +102,11 @@ public class ShellControl extends CPBase {
 		}
 
 		// TODO: If we needed an image to use, we would instantiate it here
-
 		runSpinner=new ShellSpinner();
 	}
 	
-	// ================== abstract methods required by CPBase =============
+	// ============= abstract methods required by CPBase =============
 
-	/** do not instantiate 'frame'
-	 */
-	public boolean startHead() {
-		return false;
-	}
-		
 	/**
 	 * @param msgstr String
 	 */
@@ -161,6 +149,7 @@ public class ShellControl extends CPBase {
 	 * @param p PackData
 	 * @param pnum int
 	 * @param keepX boolean, keep current extenders
+	 * @return -1 on error, else nodeCount
 	 */
 	public int swapPackData(PackData p,int pnum,boolean keepX) {
 		if (p==null)
@@ -173,16 +162,21 @@ public class ShellControl extends CPBase {
 				p.packExtensions.get(x).packData=p;
 		}
 		
-//		CPBase.packings[pnum].cpScreen=null; // detach from cpScreen
-//		p.cpScreen=CPBase.cpScreens[pnum]; 
-//		p.cpScreen.setPackData(p);
+//		CPBase.packings[pnum].cpDrawing=null; // detach from cpDrawing
+//		p.cpDrawing=CPBase.cpDrawing[pnum]; 
+//		p.cpDrawing.setPackData(p);
 		
 		CPBase.packings[pnum]=p; 
 		return p.nodeCount;
 	}
-			
+	
 	// done with abstract methods
+	
+	// TODO: adjust active pack mechanisms
+	public static void switchActivePack(int k) {
 		
+	}
+			
 	/** 
 	 * Open a command socket at a given port, local host.
 	 * In future, may change host, may search for unused port,

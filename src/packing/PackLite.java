@@ -15,7 +15,6 @@ import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.HalfLink;
 import listManip.VertexMap;
-import panels.CPScreen;
 
 /**
  * PackLite simply holds packing data in compressed and highly
@@ -379,7 +378,7 @@ public class PackLite {
 		}
 
 		PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet);
-		PackData p = new PackData((CPScreen) null);
+		PackData p = new PackData((CPdrawing) null);
 		pdcel.fixDCEL(p);
 		p.hes = parent.hes;
 		p.setAlpha(indx[1]);

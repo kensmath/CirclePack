@@ -550,11 +550,11 @@ public class Schwarzian {
 							dflags.setColor(p.getCircleColor(v));
 						if (dflags.label)
 							dflags.setLabel(Integer.toString(v));
-						p.cpScreen.drawCircle(p.getCenter(v),
+						p.cpDrawing.drawCircle(p.getCenter(v),
 								p.getRadius(v),dflags);
 						count++;
 					}
-					p.cpScreen.repaint();
+					p.cpDrawing.repaint();
 				}
 				break;
 			}
@@ -585,14 +585,14 @@ public class Schwarzian {
 								dflags.setColor(e_color.remove(0));
 								if (dflags.thickness==0)
 									dflags.thickness=5;
-								p.cpScreen.drawEdge(p.getCenter(v),
+								p.cpDrawing.drawEdge(p.getCenter(v),
 										p.getCenter(w), dflags);
 								count++;
 							}
 						}
 					}
 				}
-				p.cpScreen.repaint();
+				p.cpDrawing.repaint();
 				break;
 			}
 			} // end of switch

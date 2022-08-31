@@ -367,9 +367,9 @@ public class TileLink extends LinkedList<Integer> {
 				try {	// use those marked in another packing? pack[q]?
 					int qnum;
 					if (str.contains("q") && (qnum=Integer.parseInt(str.substring(str.length()-2)))>=0
-							&& qnum<3 && PackControl.cpScreens[qnum].getPackData().status
-							&& PackControl.cpScreens[qnum].getPackData().tileData!=null) {
-						qackTD=PackControl.cpScreens[qnum].getPackData().tileData;
+							&& qnum<3 && PackControl.cpDrawing[qnum].getPackData().status
+							&& PackControl.cpDrawing[qnum].getPackData().tileData!=null) {
+						qackTD=PackControl.cpDrawing[qnum].getPackData().tileData;
 					}
 					if (qackTD==null || (qtilecount=qackTD.tileCount)<=0)
 						return count;

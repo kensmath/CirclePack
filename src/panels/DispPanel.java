@@ -94,7 +94,7 @@ public class DispPanel extends javax.swing.JPanel implements ActionListener {
 	public void actionPerformed(ActionEvent e){
 	 	String command = e.getActionCommand();
 	  	if (command.equals("reset")) {
-	  		PackControl.getActiveCPScreen().dispOptions.reset();
+	  		PackControl.getActiveCPDrawing().dispOptions.reset();
 	  		flagField.setText("");
 	  		update(CirclePack.cpb.getActivePackNum(),CirclePack.cpb.getActivePackNum());
 	  	}
@@ -114,7 +114,7 @@ public class DispPanel extends javax.swing.JPanel implements ActionListener {
 	  		Object obj=e.getSource();
 	  		if (obj instanceof JCheckBox) {
   			  JCheckBox box=(JCheckBox)e.getSource();
-  			  PackControl.getActiveCPScreen().dispOptions.setOnOff(command,box.isSelected());
+  			  PackControl.getActiveCPDrawing().dispOptions.setOnOff(command,box.isSelected());
 	  		}
 	  	}
 	}
@@ -242,12 +242,12 @@ public class DispPanel extends javax.swing.JPanel implements ActionListener {
 	 */
 	public void update(int old_pnum,int new_pnum) {
 		// store current data for old_pnum
-		PackControl.cpScreens[old_pnum].dispOptions.storeTailored(flagField.getText());
-		PackControl.cpScreens[old_pnum].dispOptions.usetext=FlagBox.isSelected();
+		PackControl.cpDrawing[old_pnum].dispOptions.storeTailored(flagField.getText());
+		PackControl.cpDrawing[old_pnum].dispOptions.usetext=FlagBox.isSelected();
 		
 		// get/set new data
-		flagField.setText(PackControl.cpScreens[new_pnum].dispOptions.tailored);
-		Boolean[] bools= PackControl.cpScreens[new_pnum].dispOptions.getSavedStates();
+		flagField.setText(PackControl.cpDrawing[new_pnum].dispOptions.tailored);
+		Boolean[] bools= PackControl.cpDrawing[new_pnum].dispOptions.getSavedStates();
 		cirBox.setSelected(bools[0].booleanValue());
 		circcolorBox.setSelected(bools[1].booleanValue());
 		cirfillBox.setSelected(bools[2].booleanValue());

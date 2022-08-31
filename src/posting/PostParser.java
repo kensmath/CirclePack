@@ -23,8 +23,8 @@ import listManip.GraphLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.TileLink;
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
 import tiling.Tile;
 import util.ColorUtil;
 import util.DispFlags;
@@ -50,7 +50,7 @@ public class PostParser {
 		if (flagSegs==null || flagSegs.size()==0)
 			return 0;
 		int count=0;
-		CPScreen cpScreen=p.cpScreen;
+		CPdrawing cpDrawing=p.cpDrawing;
 
 		// iterate through successive flag segments.
 		Iterator<Vector<String>> its=flagSegs.iterator();
@@ -83,7 +83,7 @@ public class PostParser {
 							if (p.hes <= 0) {
 								pF.postIndex(tri_cent, f);
 							} else {
-								tri_cent = cpScreen.sphView
+								tri_cent = cpDrawing.sphView
 										.toApparentSph(tri_cent);
 								if (Math.cos(tri_cent.x) >= 0) // sphere; on
 																// front?
@@ -99,7 +99,7 @@ public class PostParser {
 							v = (Integer) nl.next();
 							Complex pt = p.getCenter(v);
 							if (p.hes > 0) {
-								pt = cpScreen.sphView.toApparentSph(pt);
+								pt = cpDrawing.sphView.toApparentSph(pt);
 								if (Math.cos(pt.x) >= 0.0) {
 									pt = SphView.s_pt_to_visual_plane(pt);
 									pF.postIndex(pt, v);
@@ -164,7 +164,7 @@ public class PostParser {
 				}
 			}
 			  
-			DispFlags dispFlags=new DispFlags(sub_cmd,p.cpScreen.fillOpacity);
+			DispFlags dispFlags=new DispFlags(sub_cmd,p.cpDrawing.fillOpacity);
 
 			// was a thickness factor specified? set 'tx'
 			if (dispFlags.thickness>0) {
@@ -266,7 +266,7 @@ public class PostParser {
 							v = verts[i];
 							z = p.getCenter(v);
 							if (p.hes > 0)
-								z = cpScreen.sphView.toApparentSph(z);
+								z = cpDrawing.sphView.toApparentSph(z);
 							if (!dispFlags.fill) { // not filled
 								if (!dispFlags.colBorder) {
 									pF.postCircle(p.hes, z, p.getRadius(v), tx);
@@ -329,7 +329,7 @@ public class PostParser {
 
 					// Note: unlike display calls, convert sph center here
 					if (p.hes > 0)
-						z = cpScreen.sphView.toApparentSph(z);
+						z = cpDrawing.sphView.toApparentSph(z);
 
 					if (!dispFlags.fill) {
 						if (!dispFlags.colBorder)
@@ -359,7 +359,7 @@ public class PostParser {
 						v = (Integer) vlist.next();
 						Complex pt = p.getCenter(v);
 						if (p.hes > 0) {
-							pt = cpScreen.sphView.toApparentSph(pt);
+							pt = cpDrawing.sphView.toApparentSph(pt);
 							if (Math.cos(pt.x) >= 0.0) {
 								pt = SphView.s_pt_to_visual_plane(pt);
 								pF.postIndex(pt, v);
@@ -386,8 +386,8 @@ public class PostParser {
 							z = p.getFaceCenter(edge.v);
 							Complex w = p.getFaceCenter(edge.w);
 							if (p.hes > 0) {
-								z = cpScreen.sphView.toApparentSph(z);
-								w = cpScreen.sphView.toApparentSph(w);
+								z = cpDrawing.sphView.toApparentSph(z);
+								w = cpDrawing.sphView.toApparentSph(w);
 							}
 							if (!dispFlags.colorIsSet)
 								pF.postEdge(p.hes, z, w, tx);
@@ -404,7 +404,7 @@ public class PostParser {
 					// record 'mark' for trinket 0
 					pF.post_shape(0);
 					// for scaling trinkets
-					double diam = 5 / cpScreen.pixFactor;
+					double diam = 5 / cpDrawing.pixFactor;
 
 					HalfLink hlist = new HalfLink(p, items);
 					if (hlist != null && hlist.size() > 0) {
@@ -416,7 +416,7 @@ public class PostParser {
 							if (ctr == null)
 								break;
 							if (p.hes > 0) {
-								ctr = cpScreen.sphView.toApparentSph(ctr);
+								ctr = cpDrawing.sphView.toApparentSph(ctr);
 								if (Math.cos(ctr.x) >= 0) { // sphere; on front?
 									double x = Math.sin(ctr.y)
 											* Math.sin(ctr.x);
@@ -447,7 +447,7 @@ public class PostParser {
 						CircleSimple sc = p.faceIncircle(f);
 						z = sc.center;
 						if (p.hes > 0)
-							z = cpScreen.sphView.toApparentSph(z);
+							z = cpDrawing.sphView.toApparentSph(z);
 						if (!dispFlags.fill) {
 							if (!dispFlags.colBorder)
 								pF.postCircle(p.hes, z, sc.rad, tx);
@@ -488,14 +488,14 @@ public class PostParser {
 							int ff = faceFlower[j];
 							z = new Complex(p.faceIncircle(ff).center);
 							if (p.hes > 0)
-								z = cpScreen.sphView.toApparentSph(z);
+								z = cpDrawing.sphView.toApparentSph(z);
 							fanCenters[j] = z;
 						}
 						// for bdry v, add v to list
 						if (p.isBdry(v)) {
 							z = p.getCenter(v);
 							if (p.hes > 0)
-								z = cpScreen.sphView.toApparentSph(z);
+								z = cpDrawing.sphView.toApparentSph(z);
 							fanCenters[num] = z;
 						}
 
@@ -533,7 +533,7 @@ public class PostParser {
 						if (dispFlags.label) {
 							z = p.getCenter(v);
 							if (p.hes > 0)
-								z = cpScreen.sphView.toApparentSph(z);
+								z = cpDrawing.sphView.toApparentSph(z);
 							pF.postIndex(z, v);
 						}
 						count++;
@@ -561,9 +561,9 @@ public class PostParser {
 						Z[1] = new Complex(dtri.TangPts[1]);
 						Z[2] = new Complex(dtri.TangPts[2]);
 						if (p.hes > 0) {
-							Z[0] = cpScreen.sphView.toApparentSph(Z[0]);
-							Z[1] = cpScreen.sphView.toApparentSph(Z[1]);
-							Z[2] = cpScreen.sphView.toApparentSph(Z[2]);
+							Z[0] = cpDrawing.sphView.toApparentSph(Z[0]);
+							Z[1] = cpDrawing.sphView.toApparentSph(Z[1]);
+							Z[2] = cpDrawing.sphView.toApparentSph(Z[2]);
 						}
 						
 						// set face/bdry colors
@@ -588,7 +588,7 @@ public class PostParser {
 									dtri.TangPts[0], dtri.TangPts[1],
 									dtri.TangPts[2],p.hes);
 							if (p.hes > 0)
-								cent = cpScreen.sphView.toApparentSph(cent);
+								cent = cpDrawing.sphView.toApparentSph(cent);
 							pF.postIndex(cent, f);
 						}
 						count++;
@@ -617,8 +617,8 @@ public class PostParser {
 						Complex c1 = p.getCenter(edge.v);
 						Complex c2 = p.getCenter(edge.w);
 						if (p.hes > 0) {
-							c1 = cpScreen.sphView.toApparentSph(c1);
-							c2 = cpScreen.sphView.toApparentSph(c2);
+							c1 = cpDrawing.sphView.toApparentSph(c1);
+							c2 = cpDrawing.sphView.toApparentSph(c2);
 						}
 						if (dispFlags.colBorder)
 							pF.postColorEdge(p.hes, c1, c2, dispFlags.getColor(), tx);
@@ -644,7 +644,7 @@ public class PostParser {
 					for (int j=0;j<3;j++) {
 						Z[j] = p.getCenter(verts[j]);
 						if (p.hes > 0) 
-							Z[j] = cpScreen.sphView.toApparentSph(Z[j]);
+							Z[j] = cpDrawing.sphView.toApparentSph(Z[j]);
 					}
 					// set face/bdry colors
 					Color fcolor=null;
@@ -673,7 +673,7 @@ public class PostParser {
 						if (p.hes <= 0) {
 							pF.postIndex(tri_cent, f);
 						} else {
-							tri_cent = cpScreen.sphView.toApparentSph(tri_cent);
+							tri_cent = cpDrawing.sphView.toApparentSph(tri_cent);
 							if (Math.cos(tri_cent.x) >= 0) // sphere; on front?
 								pF.postIndex(
 										SphView.s_pt_to_visual_plane(tri_cent),f);
@@ -745,7 +745,7 @@ public class PostParser {
 				// record 'mark' definition in the PostScript file
 				pF.post_shape(trinket);
 				// for scaling trinkets
-				double diam = 5 / cpScreen.pixFactor;
+				double diam = 5 / cpDrawing.pixFactor;
 
 				Iterator<Integer> vit = nodeLink.iterator();
 				while (vit.hasNext()) {
@@ -753,7 +753,7 @@ public class PostParser {
 					z = p.getCenter(v);
 					boolean front = true;
 					if (p.hes > 0) { // move z to visual plane
-						z = cpScreen.sphView.toApparentSph(z);
+						z = cpDrawing.sphView.toApparentSph(z);
 						if (Math.cos(z.x) < 0)
 							front = false; // on back
 						else
@@ -824,7 +824,7 @@ public class PostParser {
 								int vv=edge.v;
 								Z[tick]=p.getCenter(vv);
 								if (p.hes>0)
-									Z[tick]=p.cpScreen.sphView.toApparentSph(Z[tick]);
+									Z[tick]=p.cpDrawing.sphView.toApparentSph(Z[tick]);
 								tick++;
 							}
 							pF.post_Poly(p.hes, Z, fcolor, bcolor, tx);
@@ -875,7 +875,7 @@ public class PostParser {
 //									wc = wc.add(p.rData[tile.vert[vj]].center);
 //								wc=wc.divide((double)tile.vertCount);
 
-								cpScreen.drawIndex(wc,tile.tileIndex, 1);
+								cpDrawing.drawIndex(wc,tile.tileIndex, 1);
 								count++;
 							} // end of label display
 							
@@ -889,7 +889,7 @@ public class PostParser {
 			{
 				z = new Complex(0.0);
 				if (p.hes > 0)
-					z = cpScreen.sphView.toApparentSph(z);
+					z = cpDrawing.sphView.toApparentSph(z);
 				pF.postUnitCircle(p.hes, z);
 				break;
 			}

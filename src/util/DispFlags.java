@@ -29,7 +29,7 @@ public class DispFlags {
 	private Color color; 		// color (set later, if !colorIsSet)
 	public Integer thickness;	// line thickness
 	public Integer depth;		// depth for subdivision tilings
-	public Integer fillOpacity; // may be null --- set from CPScreen for 'fill' operations  
+	public Integer fillOpacity; // may be null --- set from CPDrawing for 'fill' operations  
 	
 	// Constructor(s)
 	public DispFlags() {

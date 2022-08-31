@@ -20,9 +20,9 @@ import listManip.FaceLink;
 import listManip.NodeLink;
 import math.Mobius;
 import math.group.GroupElement;
+import packing.CPdrawing;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.DispFlags;
@@ -175,7 +175,7 @@ public class ComplexAnalysis extends PackExtender {
 		//   window using 'faceMobs' (full, numerators, or denominators).
 		if (cmd.startsWith("ddtr")) {
 			int count=0;
-			CPScreen cpScreen=packData.cpScreen; // default
+			CPdrawing cpDrawing=packData.cpDrawing; // default
 			boolean dots=false;
 			FaceLink facelist=null;
 			DispFlags dflags=null;
@@ -198,7 +198,7 @@ public class ComplexAnalysis extends PackExtender {
 						{
 							if ((qnum=StringUtil.qFlagParse(str))<0)
 								qnum=packData.packNum;
-							cpScreen=CPBase.cpScreens[qnum];
+							cpDrawing=CPBase.cpDrawing[qnum];
 							break;
 						}
 						case 'n': // numerator: if Mob=[a b;c d], then use az+b
@@ -266,7 +266,7 @@ public class ComplexAnalysis extends PackExtender {
 			while (flist.hasNext()) {
 				int f=flist.next();
 				count++;
-				int hes=cpScreen.getGeom(); // use geom of target screen
+				int hes=cpDrawing.getGeom(); // use geom of target screen
 				Complex []tps=new Complex[3]; 
 				for (int j=0;j<3;j++) {
 					tps[j]=domTPs[f].getTP(j);
@@ -302,9 +302,9 @@ public class ComplexAnalysis extends PackExtender {
 				// draw dots at tangency points?
 				if (dots) {
 					DispFlags tmpflags=new DispFlags("");
-					cpScreen.drawTrinket(0,tps[0],tmpflags);
-					cpScreen.drawTrinket(0,tps[1],tmpflags);
-					cpScreen.drawTrinket(0,tps[2],tmpflags);
+					cpDrawing.drawTrinket(0,tps[0],tmpflags);
+					cpDrawing.drawTrinket(0,tps[1],tmpflags);
+					cpDrawing.drawTrinket(0,tps[2],tmpflags);
 				}
 				
 				// actually draw the triangles
@@ -312,12 +312,12 @@ public class ComplexAnalysis extends PackExtender {
 					dflags.setColor(domainData.getFaceColor(f));
 				if (dflags.label)
 					dflags.setLabel(Integer.toString(f));
-				cpScreen.drawFace(tps[0],tps[1],tps[2],null,null,null,dflags);
+				cpDrawing.drawFace(tps[0],tps[1],tps[2],null,null,null,dflags);
 				count++;
 			} // end of while
 
 			// repaint the canvas
-			CPBase.cpScreens[qnum].repaint();
+			CPBase.cpDrawing[qnum].repaint();
 			return count;
 		}
 		
@@ -355,11 +355,11 @@ public class ComplexAnalysis extends PackExtender {
 				Oops("perhaps 'set_div' first?");
 			
 			// what packing to apply to? default to active
-			PackData toPack=CPBase.cpScreens[PackControl.activeFrame.getActivePackNum()].getPackData();
+			PackData toPack=CPBase.cpDrawing[PackControl.activeFrame.getActivePackNum()].getPackData();
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
-				toPack=CPBase.cpScreens[pnum].getPackData();
+				toPack=CPBase.cpDrawing[pnum].getPackData();
 			} catch(Exception ex) {}
 
 			// set up complex ftn vector and interpolator
@@ -442,7 +442,7 @@ public class ComplexAnalysis extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
-				CPScreen cpS=CPBase.cpScreens[pnum];
+				CPdrawing cpS=CPBase.cpDrawing[pnum];
 				if (cpS.getPackData().nodeCount!=domainData.nodeCount) {
 					errorMsg("getDom: range packing complex must match domain");
 					return 0;
@@ -471,7 +471,7 @@ public class ComplexAnalysis extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
-				CPScreen cpS=CPBase.cpScreens[pnum];
+				CPdrawing cpS=CPBase.cpDrawing[pnum];
 				if (cpS.getPackData().nodeCount!=domainData.nodeCount) {
 					errorMsg("getRan: range packing complex must match domain");
 					return 0;

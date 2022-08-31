@@ -13,8 +13,8 @@ import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.SideData;
 import dcel.PackDCEL;
+import dcel.SideData;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
@@ -488,8 +488,8 @@ public class NodeLink extends LinkedList<Integer> {
 				try {	// use those marked in another packing? pack[q]?
 					int qnum;
 					if (str.contains("q") && (qnum=Integer.parseInt(str.substring(str.length()-2)))>=0
-							&& qnum<3 && PackControl.cpScreens[qnum].getPackData().status) {
-						qackData=PackControl.cpScreens[qnum].getPackData();
+							&& qnum<3 && PackControl.cpDrawing[qnum].getPackData().status) {
+						qackData=PackControl.cpDrawing[qnum].getPackData();
 					}
 				} catch(Exception ex) {}
 				for (int v=1;v<=nodecount;v++)
@@ -1031,7 +1031,7 @@ public class NodeLink extends LinkedList<Integer> {
 							Double.parseDouble((String)its.next()));
 					if (packData.hes>0 && str.charAt(0)=='z') {
 						z=SphView.visual_plane_to_s_pt(z);
-						z=packData.cpScreen.sphView.toRealSph(z);
+						z=packData.cpDrawing.sphView.toRealSph(z);
 					}
 					NodeLink zsearch=packData.cir_search(z);
 					Iterator<Integer> nl=zsearch.iterator();

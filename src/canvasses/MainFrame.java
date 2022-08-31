@@ -37,8 +37,8 @@ import handlers.MYTOOLHandler;
 import images.OwlSpinner;
 import input.TrafficCenter;
 import listeners.ACTIVEListener;
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
 import panels.LocatorPanel;
 
 /**
@@ -62,9 +62,9 @@ import panels.LocatorPanel;
  * 
  * There two options for adjusting:
  * 
- * 2a. Change 'packImage' buffer sizes (for all CPScreen's) 
+ * 2a. Change 'packImage' buffer sizes (for all CPDrawing's) 
  * to match 'activeScreen' size. This requires call to 
- * 'CPScreen.resetCanvasSize()', which copies 'packImage' to
+ * 'CPDrawing.resetCanvasSize()', which copies 'packImage' to
  * new buffer, etc.. Also have to adjust 'pixWidth' etc.
  * Displays do not look good when small because of pixelation.
  * 
@@ -73,7 +73,7 @@ import panels.LocatorPanel;
  * have to keep 'ActiveWrapper.displayWidth/Height' updated, and
  * 'adjustPt' routine to coordinate mouse clicks with the pixels.
  * Also, would need to adjust font size. Displays look nice, but
- * repaints are too slow. Also, have to adjust 'CPScreen.drawX/YAxis'
+ * repaints are too slow. Also, have to adjust 'CPDrawing.drawX/YAxis'
  * to get the axes right.  
  *
  */
@@ -92,8 +92,8 @@ public class MainFrame extends JFrame {
 	// JMenuBar, 
 	public JMenuBar mBar; 
 	
-	// keeping track of current associated 'CPScreen' (and its 'PackData')
-	public CPScreen cpScreen;
+	// keeping track of current associated 'CPDrawing' (and its 'PackData')
+	public CPdrawing cpDrawing;
 
 	public ACTIVEHandler mainToolHandler;
 	public ActiveWrapper activeScreen;
@@ -111,12 +111,12 @@ public class MainFrame extends JFrame {
 	/**
 	 * Create the principal canvas of an application, used for
 	 * displaying circle packings.
-	 * @param cps, CPScreen
+	 * @param cpd, CPDrawing
 	 * @param File mainMyT, for loading main toolbar on top
 	 */
-	public MainFrame(CPScreen cps,File mytFile,File cursorFile) {
+	public MainFrame(CPdrawing cpd,File mytFile,File cursorFile) {
 		setJMenuBar((mBar=new CPMenuBar()));
-		cpScreen=cps;
+		cpDrawing=cpd;
 		mainMytFile=mytFile;
 		mainCursorFile=cursorFile;
 
@@ -173,12 +173,12 @@ public class MainFrame extends JFrame {
 		add(activeScreen);
 
 		// need to adjust stored image areas?
-		int curwide=CPBase.cpScreens[0].packImage.getWidth();
-		int curhigh=CPBase.cpScreens[0].packImage.getHeight();
+		int curwide=CPBase.cpDrawing[0].packImage.getWidth();
+		int curhigh=CPBase.cpDrawing[0].packImage.getHeight();
 		if (cwide!=curwide || chigh!=curhigh) {
 			for (int i=0;i<CPBase.NUM_PACKS;i++) {
-				CPBase.cpScreens[i].packImage=
-					CPBase.cpScreens[i].resetCanvasSize(cwide,chigh);
+				CPBase.cpDrawing[i].packImage=
+					CPBase.cpDrawing[i].resetCanvasSize(cwide,chigh);
 			}
 		}
 
@@ -318,11 +318,11 @@ public class MainFrame extends JFrame {
 	 * create the panel containing the canvas itself
 	 */
 	public void createActiveScreen() {
-		activeScreen = new ActiveWrapper(mainMytFile,CPBase.cpScreens[0]);  
+		activeScreen = new ActiveWrapper(mainMytFile,CPBase.cpDrawing[0]);  
 		activeScreen.setBorder(new LineBorder(Color.blue,2,false));
 		// Note: the canvas itself if drop target to get correct coords.
 		new DropTarget(activeScreen,
-				new ToolDropListener(activeScreen,cpScreen.getPackNum(),true));
+				new ToolDropListener(activeScreen,cpDrawing.getPackNum(),true));
 	}	
 	
 	public void removeScriptTools() {
@@ -339,25 +339,25 @@ public class MainFrame extends JFrame {
 	
 	/**
 	 * Return the active screen
-	 * @return 'CPScreen'
+	 * @return 'CPDrawing'
 	 */
-	public CPScreen getCPScreen() {
-		return activeScreen.getCPScreen();
+	public CPdrawing getCPDrawing() {
+		return activeScreen.getCPDrawing();
 	}
 	
 	/**
-	 * Set/change the 'CPScreen' associated with this 'ActiveFrame' 
+	 * Set/change the 'CPDrawing' associated with this 'ActiveFrame' 
 	 */
-	public void setCPScreen(CPScreen cps) {
-		activeScreen.setCPScreen(cps);
+	public void setCPDrawing(CPdrawing cpd) {
+		activeScreen.setCPDrawing(cpd);
 	}
 	
 	/**
-	 * Which 'PackData' is currently associated? It's help by 'CPScreen'
+	 * Which 'PackData' is currently associated? It's help by 'CPDrawing'
 	 * @return PackData
 	 */
 	public PackData getPackData() {
-		return activeScreen.getCPScreen().getPackData();
+		return activeScreen.getCPDrawing().getPackData();
 	}
 	
 	/**
@@ -365,7 +365,7 @@ public class MainFrame extends JFrame {
 	 * @return int
 	 */
 	public int getActivePackNum() {
-		return activeScreen.getCPScreen().getPackNum();
+		return activeScreen.getCPDrawing().getPackNum();
 	}
 
 	/**
@@ -374,7 +374,7 @@ public class MainFrame extends JFrame {
 	 */
 	public void reDisplay() {
 		activeScreen.repaint();
-		activeScreen.getCPScreen().repaint(); // draw any other canvasses, as well.
+		activeScreen.getCPDrawing().repaint(); // draw any other canvasses, as well.
 	}
 	
 	/**

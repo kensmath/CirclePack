@@ -12,7 +12,6 @@ import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import dcel.PackDCEL;
-import dcel.RawManip;
 import dcel.SideData;
 import exceptions.CombException;
 import exceptions.DataException;
@@ -370,8 +369,8 @@ public class FaceLink extends LinkedList<Integer> {
 				try {	// use those marked in another packing? pack[q]?
 					int qnum;
 					if (str.contains("q") && (qnum=Integer.parseInt(str.substring(str.length()-2)))>=0
-							&& qnum<3 && PackControl.cpScreens[qnum].getPackData().status) {
-						qackData=PackControl.cpScreens[qnum].getPackData();
+							&& qnum<3 && PackControl.cpDrawing[qnum].getPackData().status) {
+						qackData=PackControl.cpDrawing[qnum].getPackData();
 					}
 				} catch(Exception ex) {}
 				for (int f=1;f<=facecount;f++)
@@ -674,7 +673,7 @@ public class FaceLink extends LinkedList<Integer> {
 						Complex zz=zl.next();
 						if (packData.hes>0 && str.charAt(0)=='z') {
 							zz=SphView.visual_plane_to_s_pt(zz);
-							zz=packData.cpScreen.sphView.toRealSph(zz);
+							zz=packData.cpDrawing.sphView.toRealSph(zz);
 						}
 						FaceLink zsearch=packData.tri_search(zz);
 						Iterator<Integer> nl=zsearch.iterator();

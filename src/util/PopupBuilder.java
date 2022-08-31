@@ -131,7 +131,7 @@ public class PopupBuilder extends JPopupMenu {
 			if (actN==n2c.Num) {
 				try {
 					CPBase.trafficCenter.parseWrapper(n2c.actionCmd,
-							parentWrapper.getCPScreen().getPackData(),false,true,0,null);
+							parentWrapper.getCPDrawing().getPackData(),false,true,0,null);
 					n=ncVector.size(); // kick out
 				} catch (Exception ex) {
 					throw new ParserException("popup menu error: "+ex.getMessage());

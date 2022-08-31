@@ -28,7 +28,7 @@ public class TileColoring extends PackExtender {
 	int colorHit;    // increment in intensity for each hit
 	int depth;       // depth of tiles as given in history file
 	String histFile; // name of the history file
-	String postFile; // name of output file (default to 'CPScreen.customPS')
+	String postFile; // name of output file (default to 'CPDrawing.customPS')
 	Vector<TileInfo> tiles;  // vector of 'TileInfo' information
 	
 	final int ERROR=0;
@@ -57,7 +57,7 @@ public class TileColoring extends PackExtender {
 		}
 		colorHit=30; // default
 		tcState=INITIAL;
-		postFile=packData.cpScreen.customPS;
+		postFile=packData.cpDrawing.customPS;
 	}
 	
 	public int cmdParser(String cmd,Vector<Vector<String>> flagSegs) {
@@ -190,7 +190,7 @@ public class TileColoring extends PackExtender {
 			}
 			try {
 				cpCommand("set_screen -a");
-				DispFlags dflags=new DispFlags("ff",packData.cpScreen.fillOpacity);
+				DispFlags dflags=new DispFlags("ff",packData.cpDrawing.fillOpacity);
 				for (int i=0;i<tiles.size();i++) {
 					TileInfo td=tiles.get(i);
 					int v=td.vert;
@@ -201,23 +201,23 @@ public class TileColoring extends PackExtender {
 					for (int j=0;j<num;j++) {
 						Complex Z=packData.getCenter(flower[j]);
 						if (packData.hes>0)
-							Z=cpScreen.sphView.toApparentSph(Z);
+							Z=cpDrawing.sphView.toApparentSph(Z);
 						crnr[2*j]=Z.x;
 						crnr[2*j+1]=Z.y;
 					}
 					if (packData.isBdry(v)) { // need extra points
 						Complex Z=packData.getCenter(flower[num]);
 						if (packData.hes>0)
-							Z=cpScreen.sphView.toApparentSph(Z);
+							Z=cpDrawing.sphView.toApparentSph(Z);
 						crnr[2*num]=Z.x;
 						crnr[2*num+1]=Z.y;
 					}
 					
 					// TODO: something wrong? this should be going to postscript.
 					dflags.setColor(new Color(255-td.red,255-td.green,255-td.blue));
-					cpScreen.drawClosedPoly(N,crnr,dflags);
+					cpDrawing.drawClosedPoly(N,crnr,dflags);
 				}
-				CPBase.postManager.close_psfile(cpScreen);
+				CPBase.postManager.close_psfile(cpDrawing);
 				msg("TileColoring: PostScript image saved in "+postFile);
 			} catch (Exception ex) {
 				throw new InOutException("problem in creating the PostScript file: "+ex.getMessage());
@@ -230,7 +230,7 @@ public class TileColoring extends PackExtender {
 				return 0;
 			}
 			try {
-				CPBase.postManager.open_psfile(packData.cpScreen,1,postFile,null);
+				CPBase.postManager.open_psfile(packData.cpDrawing,1,postFile,null);
 			} catch (Exception ex) {
 				errorMsg("error in opening "+postFile+" for PostScript output");
 				return 0;
@@ -253,7 +253,7 @@ public class TileColoring extends PackExtender {
 					CPBase.postManager.pF.postFilledPoly(packData.hes,N,Z,
 							new Color(255-td.red,255-td.green,255-td.blue));
 				}
-				CPBase.postManager.close_psfile(cpScreen);
+				CPBase.postManager.close_psfile(cpDrawing);
 				msg("TileColoring: PostScript image saved in "+postFile);
 			} catch (Exception ex) {
 				throw new InOutException("problem in creating the PostScript file: "+ex.getMessage());

@@ -438,7 +438,7 @@ public class ConformalTiling extends PackExtender {
 					if (str.startsWith("-")) { // display flags
 						items.remove(0); // toss the flags
 						str.substring(1);
-						dispFlags=new DispFlags(str,cpScreen.fillOpacity);
+						dispFlags=new DispFlags(str,cpDrawing.fillOpacity);
 					}
 					
 					// remaining should only be 
@@ -477,7 +477,7 @@ public class ConformalTiling extends PackExtender {
 			topbase[0]=new Complex(toprule.stdCorners[0]);
 			topbase[1]=new Complex(toprule.stdCorners[1]);
 			
-			// tmp screen size: put in cpScreen, then reset later
+			// tmp screen size: put in cpDrawing, then reset later
 			double minx=0.0;
 			double maxx=1.0;
 			double miny=0.0;
@@ -496,10 +496,10 @@ public class ConformalTiling extends PackExtender {
 			Complex lz=new Complex(minx-margin,miny-margin);
 			Complex rz=new Complex(minx+len+margin,miny+len+margin);
 			
-			ViewBox holdVB=packData.cpScreen.realBox;
+			ViewBox holdVB=packData.cpDrawing.realBox;
 			ViewBox tmpVB=new ViewBox();
 			tmpVB.setView(lz, rz);
-			packData.cpScreen.realBox=tmpVB;
+			packData.cpDrawing.realBox=tmpVB;
 			
 			// go to depth of current subdivision grading
 			int depth=0;
@@ -532,7 +532,7 @@ public class ConformalTiling extends PackExtender {
 
 	      	CommandStrParser.jexecute(packData,new String("post -x"));
 	      	CirclePack.cpb.msg("posted eucl tiling to "+fname);
-	      	packData.cpScreen.realBox=holdVB; // reset the original realBox
+	      	packData.cpDrawing.realBox=holdVB; // reset the original realBox
       			      	
 	      	return count;
 		}
@@ -1464,7 +1464,7 @@ public class ConformalTiling extends PackExtender {
 							count += cpCommand(packData,"disp -s"+df.reconstitute()+" "+
 						flwr.toString());
 						if (df.label) { // want label
-							packData.cpScreen.drawIndex(packData.getCenter(tile.baryVert),
+							packData.cpDrawing.drawIndex(packData.getCenter(tile.baryVert),
 									tile.tileIndex, 1);
 						}
 					}
@@ -2300,7 +2300,7 @@ public class ConformalTiling extends PackExtender {
 		}
 		count++;
 		
-		packData.cpScreen.drawClosedPoly(n,stdC,dflags);
+		packData.cpDrawing.drawClosedPoly(n,stdC,dflags);
 		if (tile.myTileData!=null) {
 			for (int t=1;t<=tile.myTileData.tileCount;t++) {
 				Tile mytile=tile.myTileData.myTiles[t];

@@ -3,9 +3,9 @@ package ftnTheory;
 import java.util.Vector;
 
 import listManip.PathLink;
+import packing.CPdrawing;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.PathUtil;
 import allMains.CPBase;
 import allMains.CirclePack;
@@ -73,7 +73,7 @@ public class ShapeShifter extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.cpScreens[pnum];
+				CPdrawing cpS=CPBase.cpDrawing[pnum];
 				if (cpS.getPackData().nodeCount!=baseData.nodeCount) {
 					errorMsg("getDom: range packing complex must match domain");
 					return 0;

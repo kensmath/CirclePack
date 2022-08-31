@@ -200,14 +200,14 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 	 * Get output info from the active packing's DataFormater
 	 */
 	public void update(int old_pnum) {
-		if (old_pnum==PackControl.getActiveCPScreen().getPackNum()) 
+		if (old_pnum==PackControl.getActiveCPDrawing().getPackNum()) 
 			return;
 		// save the old
-		PackControl.cpScreens[old_pnum].dataFormater.update(
+		PackControl.cpDrawing[old_pnum].dataFormater.update(
 			preField.getText(),dataField.getText(),objField.getText(),
 			suffField.getText());
 		// bring in new
-		DataFormater dFmt=PackControl.getActiveCPScreen().dataFormater;
+		DataFormater dFmt=PackControl.getActiveCPDrawing().dataFormater;
 		preField.setText(dFmt.prefixText);
 		suffField.setText(dFmt.suffixText);
 		dataField.setText(dFmt.dataTypes);
@@ -797,8 +797,8 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 				try {
 					int pnum=Integer.parseInt(datastr.substring(2,3));
 					int qnum=Integer.parseInt(datastr.substring(3,4));
-					pData=PackControl.cpScreens[pnum].getPackData();
-					qData=PackControl.cpScreens[qnum].getPackData();
+					pData=PackControl.cpDrawing[pnum].getPackData();
+					qData=PackControl.cpDrawing[qnum].getPackData();
 				} catch (Exception ex) {
 					throw new ParserException("error: output: bad 'VS' perscription");
 				}

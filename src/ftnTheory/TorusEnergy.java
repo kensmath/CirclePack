@@ -7,9 +7,9 @@ import allMains.CirclePack;
 import geometry.EuclMath;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
+import packing.CPdrawing;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 
 public class TorusEnergy extends PackExtender {

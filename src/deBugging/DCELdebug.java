@@ -22,8 +22,8 @@ import listManip.GraphLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
 import util.DispFlags;
 
 public class DCELdebug {
@@ -488,12 +488,12 @@ public class DCELdebug {
 	 */
 	public static void drawEFC(PackDCEL pdcel,HalfEdge hfe) {
 		drawEdgeFace(pdcel,hfe);
-		CPScreen cps=pdcel.p.cpScreen;
+		CPdrawing cpd=pdcel.p.cpDrawing;
 		HalfEdge he=hfe;
 		int safety=100;
 		do {
-			cps.drawCircle(pdcel.getVertData(he),null);
-			cps.rePaintAll();
+			cpd.drawCircle(pdcel.getVertData(he),null);
+			cpd.rePaintAll();
 			he=he.next;
 			safety--;
 		} while (he!=hfe && safety>0);
@@ -511,9 +511,9 @@ public class DCELdebug {
 		Complex z1=pdcel.getVertCenter(hfe);
 		Complex z2=pdcel.getVertCenter(hfe.next);
 		DispFlags dispflags=new DispFlags("t5c5");
-		pdcel.p.cpScreen.drawEdge(z1,z2,dispflags);
+		pdcel.p.cpDrawing.drawEdge(z1,z2,dispflags);
 		CommandStrParser.jexecute(pdcel.p,"disp -ffc120 "+hfe.face.faceIndx);
-		pdcel.p.cpScreen.rePaintAll();
+		pdcel.p.cpDrawing.rePaintAll();
 	}
 
 	/**
@@ -530,17 +530,17 @@ public class DCELdebug {
 			strbld.append(" -ffc120 "+ans[0]);
 		}
 		CommandStrParser.jexecute(p,strbld.toString());
-		p.cpScreen.rePaintAll();
+		p.cpDrawing.rePaintAll();
 	}
 	
-	public static void drawEuclCircles(CPScreen cps,Complex[] Z,double[] R) {
-		cps.clearCanvas(true);
+	public static void drawEuclCircles(CPdrawing cpd,Complex[] Z,double[] R) {
+		cpd.clearCanvas(true);
 		int len=Z.length-1;
 		for (int v=1;v<=len;v++) {
-			cps.drawCircle(Z[v],R[v],new DispFlags());
-			cps.drawIndex(Z[v],v,1);
+			cpd.drawCircle(Z[v],R[v],new DispFlags());
+			cpd.drawIndex(Z[v],v,1);
 		}
-		cps.rePaintAll();
+		cpd.rePaintAll();
 	}
 	
 	/**
@@ -555,9 +555,9 @@ public class DCELdebug {
 			Complex z=p.getCenter(he.origin.vertIndx);
 			Complex w=p.getCenter(he.next.origin.vertIndx);
 			DispFlags dflags=new DispFlags("c195t4");
-			p.cpScreen.drawEdge(z, w, dflags);
+			p.cpDrawing.drawEdge(z, w, dflags);
 		}
-		p.cpScreen.rePaintAll();
+		p.cpDrawing.rePaintAll();
 	}
 
 	/**
@@ -573,8 +573,8 @@ public class DCELdebug {
 			Complex z0=p.getCenter(rtrace.myEdge.origin.vertIndx);
 			Complex z1=p.getCenter(rtrace.myEdge.twin.origin.vertIndx);
 			DispFlags dflags=new DispFlags("c195t4");
-			p.cpScreen.drawEdge(z0, z1, dflags);
-			p.cpScreen.rePaintAll();
+			p.cpDrawing.drawEdge(z0, z1, dflags);
+			p.cpDrawing.rePaintAll();
 			rtrace=rtrace.nextRed;
 		} while (rtrace!=null && rtrace!=redge);
 		
@@ -614,8 +614,8 @@ public class DCELdebug {
 		Complex z0=redge.getCenter();
 		Complex z1=redge.nextRed.getCenter();
 		DispFlags dflags=new DispFlags("c195t4");
-		p.cpScreen.drawEdge(z0, z1, dflags);
-		p.cpScreen.rePaintAll();
+		p.cpDrawing.drawEdge(z0, z1, dflags);
+		p.cpDrawing.rePaintAll();
 	}
 
 	public static void printRedChain(RedEdge redge,VertexMap vmap) {

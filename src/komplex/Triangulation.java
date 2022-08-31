@@ -23,8 +23,8 @@ import listManip.GraphLink;
 import listManip.HalfLink;
 import listManip.VertexMap;
 import math.Point3D;
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
 import util.ColorUtil;
 import util.StringUtil;
 
@@ -120,7 +120,7 @@ public class Triangulation {
 		}
 	  
 		// =========== create the packing itself
-		PackData p=new PackData((CPScreen)null);
+		PackData p=new PackData((CPdrawing)null);
 		PackDCEL pdcel=CombDCEL.getRawDCEL(bouquet);
 		pdcel.fixDCEL(p);
 		p.hes=hes;

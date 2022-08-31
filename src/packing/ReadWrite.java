@@ -313,8 +313,9 @@ public class ReadWrite {
 
 								PackDCEL pdc;
 								int tmpAlpha = newAlpha;
-								if (tmpAlpha == -1)
-									tmpAlpha = p.packDCEL.alpha.origin.vertIndx;
+								if (tmpAlpha == -1) {
+									tmpAlpha=1; // just need something
+								}
 								if ((pdc = CombDCEL.getRawDCEL(bouquet, tmpAlpha)) == null) {
 									p.flashError("Problem reading DCEL data");
 									return -1;
@@ -1497,11 +1498,11 @@ public class ReadWrite {
 		// this was a CHECKCOUNT file, return
 		if (!newPacking) {
 			if (p.getDispOptions != null) {
-				p.cpScreen.dispOptions.usetext = true;
-				p.cpScreen.dispOptions.tailored = p.getDispOptions;
+				p.cpDrawing.dispOptions.usetext = true;
+				p.cpDrawing.dispOptions.tailored = p.getDispOptions;
 				if (p.packNum == CirclePack.cpb.getActivePackNum()) {
 					PackControl.screenCtrlFrame.displayPanel.
-						flagField.setText(p.cpScreen.dispOptions.tailored);
+						flagField.setText(p.cpDrawing.dispOptions.tailored);
 					PackControl.screenCtrlFrame.displayPanel.setFlagBox(true);
 				}
 			}
@@ -1566,14 +1567,14 @@ public class ReadWrite {
 
 		// TODO: set pack name and put it on label?
 
-		if (p.cpScreen != null) {
-			p.cpScreen.reset();
+		if (p.cpDrawing != null) {
+			p.cpDrawing.reset();
 			if (p.getDispOptions != null) {
-				p.cpScreen.dispOptions.usetext = true;
-				p.cpScreen.dispOptions.tailored = p.getDispOptions;
+				p.cpDrawing.dispOptions.usetext = true;
+				p.cpDrawing.dispOptions.tailored = p.getDispOptions;
 				if (p.packNum == CirclePack.cpb.getActivePackNum()) {
 					PackControl.screenCtrlFrame.displayPanel.
-						flagField.setText(p.cpScreen.dispOptions.tailored);
+						flagField.setText(p.cpDrawing.dispOptions.tailored);
 					PackControl.screenCtrlFrame.displayPanel.setFlagBox(true);
 				}
 			}
@@ -2111,7 +2112,7 @@ public class ReadWrite {
 		}
 		if ((act & 040000) == 040000) { // display flags
 			file.write("DISP_FLAGS:\n");
-			file.write("Disp "+p.cpScreen.dispOptions.toString()+"\n");
+			file.write("Disp "+p.cpDrawing.dispOptions.toString()+"\n");
 		}		
 		if (!append)
 			file.write("END\n");

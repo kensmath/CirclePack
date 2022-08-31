@@ -152,14 +152,14 @@ public class SetBuilderParser {
 				// expect integer
 				pnum=Integer.parseInt(left.substring(j+2,j+3));
 				if (pnum<0 || pnum>=CPBase.NUM_PACKS 
-						|| !PackControl.cpScreens[pnum].getPackData().status)
+						|| !PackControl.cpDrawing[pnum].getPackData().status)
 					throw new ParserException();
 			} catch (Exception ex) {
 				errMsg=new String("Malformed '-p{p}' pack or pack is empty");
 				throw new ParserException();
 			}
 			// change to this packing
-			packData=PackControl.cpScreens[pnum].getPackData(); 
+			packData=PackControl.cpDrawing[pnum].getPackData(); 
 		}
 		
 		// Done with left; now work on 'right' string

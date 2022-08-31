@@ -1066,7 +1066,7 @@ public class WeldManager extends PackExtender {
 		  			case 'q': // get receiving pack
 		  			{
 		  				try {
-		  					p2=PackControl.cpScreens[StringUtil.
+		  					p2=PackControl.cpDrawing[StringUtil.
 		  					         qFlagParse(str)].getPackData();
 		  				} catch (Exception ex) {
 		  					throw new ParserException("Indicated weld partner "+
@@ -1162,7 +1162,7 @@ public class WeldManager extends PackExtender {
 		  			{
 		  				try {
 		  					qnum=StringUtil.qFlagParse(str);
-		  					p2=CPBase.cpScreens[qnum].getPackData().copyPackTo();
+		  					p2=CPBase.cpDrawing[qnum].getPackData().copyPackTo();
 		  				} catch (Exception ex) {
 		  					throw new ParserException("Indicated weld partner "+
 		  							"pack is not valid");

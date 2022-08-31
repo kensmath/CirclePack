@@ -21,8 +21,8 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
 import util.UtilPacket;
 import allMains.CirclePack;
 
@@ -31,7 +31,7 @@ public class SphWidget extends JFrame implements ActionListener {
 	private static final long 
 	serialVersionUID = 1L;
 
-	CPScreen cpScreen;
+	CPdrawing cpDrawing;
 	PackData packData;
 	
 	public static final int BAR_FOOTPRINT=25; // horizontal footprint of each bar

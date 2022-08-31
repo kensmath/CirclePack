@@ -423,7 +423,7 @@ public class PostPanel extends JPanel implements ActionListener {
 	 		if (jpgFileName==null) return;
 	 	    try {
 	 	        File file = new File(CPFileManager.ImageDirectory,jpgFileName[1]);
-	 	        ImageIO.write(PackControl.getActiveCPScreen().packImage, "jpg", file);
+	 	        ImageIO.write(PackControl.getActiveCPDrawing().packImage, "jpg", file);
 	 	    } catch (Exception exc) {
 	 	    	return;
 	 	    }
@@ -554,9 +554,9 @@ public class PostPanel extends JPanel implements ActionListener {
 	 * Get postscript options from the active packing's postOptions 
 	 */
 	public void update(int old_pnum) {
-		PackControl.cpScreens[old_pnum].postOptions.storeTailored(flagField.getText());
-		flagField.setText(PackControl.getActiveCPScreen().postOptions.tailored);
-		Boolean[] bools= PackControl.getActiveCPScreen().postOptions.getSavedStates();
+		PackControl.cpDrawing[old_pnum].postOptions.storeTailored(flagField.getText());
+		flagField.setText(PackControl.getActiveCPDrawing().postOptions.tailored);
+		Boolean[] bools= PackControl.getActiveCPDrawing().postOptions.getSavedStates();
 		cirBox.setSelected(bools[0].booleanValue());
 		circcolorBox.setSelected(bools[1].booleanValue());
 		cirfillBox.setSelected(bools[2].booleanValue());

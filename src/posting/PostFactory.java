@@ -18,7 +18,7 @@ import geometry.SphGeodesic;
 import geometry.SphericalMath;
 import graphObjects.CPEdge;
 import math.Point3D;
-import panels.CPScreen;
+import packing.CPdrawing;
 import tiling.SubdivisionRules;
 import tiling.TileRule;
 import util.ColorUtil;
@@ -470,7 +470,7 @@ public class PostFactory {
 	 * If length=1, then entire polygon is visible, but calling 
 	 * routine must decide whether to close the path.
 	 */
-	public static Vector<Path2D.Double> sphPolyBdry(double []crns,int N,CPScreen cpS) 
+	public static Vector<Path2D.Double> sphPolyBdry(double []crns,int N,CPdrawing cpS) 
 	throws DrawingException {
 		
 		Vector<Path2D.Double> paths=new Vector<Path2D.Double>();
@@ -707,7 +707,7 @@ public class PostFactory {
 	 * already defined (see 'post_shape'), also assume z is in visual plane 
 	 * (e.g., in sph case). 'diam' is for scaling (shapes are roughly 2) 
 	 * @param z, Complex in visual plane
-	 * @param diam, double, typically 5/cpScreen.pixFactor. 
+	 * @param diam, double, typically 5/cpDrawing.pixFactor. 
 	 */
 	public void postTrinket(Complex z,double diam) {
 		postColorTrinket(z,diam,ColorUtil.BG_Color);
@@ -727,7 +727,7 @@ public class PostFactory {
 	 * already defined (see 'post_shape'), also assume z is in visual plane 
 	 * (e.g., in sph case). 'diam' is for scaling (shapes are roughly 2) 
 	 * @param z, Complex in visual plane
-	 * @param diam, double, typically 5/cpScreen.pixFactor. 
+	 * @param diam, double, typically 5/cpDrawing.pixFactor. 
 	 */
 	public void postColorTrinket(Complex z,double diam,Color color) {
 		try {

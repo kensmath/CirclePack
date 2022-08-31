@@ -171,15 +171,15 @@ public class RiemHilbert extends PackExtender {
 		Iterator<Integer> vlist=vertlist.iterator();
 		RH_curve rc=null;
 		int v;
-		int orig_thickness=packData.cpScreen.linethickness;
-		packData.cpScreen.setLineThickness(THICKNESS);
+		int orig_thickness=packData.cpDrawing.linethickness;
+		packData.cpDrawing.setLineThickness(THICKNESS);
 		while(vlist.hasNext()) {
 			v=(Integer)vlist.next();
 			rc=curveForVert(v);
-			rc.drawMe(packData.cpScreen);
+			rc.drawMe(packData.cpDrawing);
 			count++;
 		}
-		packData.cpScreen.setLineThickness(orig_thickness);
+		packData.cpDrawing.setLineThickness(orig_thickness);
 		PackControl.activeFrame.activeScreen.repaint();
 		return count;
 	}
@@ -365,8 +365,8 @@ public class RiemHilbert extends PackExtender {
 			int v;
 			Color col;
 			double sdist, rad;
-			int old_thickness=packData.cpScreen.linethickness;
-			packData.cpScreen.setLineThickness(THICKNESS);
+			int old_thickness=packData.cpDrawing.linethickness;
+			packData.cpDrawing.setLineThickness(THICKNESS);
 			DispFlags dflags=new DispFlags("fc");
 			while (vlist.hasNext()) {
 				v = (Integer) vlist.next();
@@ -389,7 +389,7 @@ public class RiemHilbert extends PackExtender {
 
 				// do the fill first
 				dflags.setColor(col);
-				packData.cpScreen.drawCircle(packData.getCenter(v),
+				packData.cpDrawing.drawCircle(packData.getCenter(v),
 						packData.getRadius(v), dflags);
 				
 				// change color for the bdry
@@ -397,11 +397,11 @@ public class RiemHilbert extends PackExtender {
 				dflags.fill=false;
 				dflags.draw=true;
 				dflags.colBorder=true;
-				packData.cpScreen.drawCircle(packData.getCenter(v),
+				packData.cpDrawing.drawCircle(packData.getCenter(v),
 						packData.getRadius(v), dflags);
 				count++;
 			}
-			packData.cpScreen.setLineThickness(old_thickness);
+			packData.cpDrawing.setLineThickness(old_thickness);
 			PackControl.activeFrame.activeScreen.repaint();
 		} catch (Exception ex) {
 		}

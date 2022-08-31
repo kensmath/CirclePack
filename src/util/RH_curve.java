@@ -6,9 +6,8 @@ import java.awt.geom.Path2D;
 import java.util.Iterator;
 import java.util.Vector;
 
-import panels.CPScreen;
-
 import complex.Complex;
+import packing.CPdrawing;
 
 /**
  * 'RH' refers to 'Riemann-Hilbert'. This class stores "restriction"
@@ -73,13 +72,13 @@ public class RH_curve {
 		return rhc;
 	}
 	
-	public void drawMe(CPScreen cps) {
+	public void drawMe(CPdrawing cpd) {
 		DispFlags dflags=new DispFlags("cfg");
 		if (isCircle) 
-			cps.drawCircle(center,rad,dflags);
+			cpd.drawCircle(center,rad,dflags);
 		else 
-			cps.drawShape((Shape)restCurve,color,
-				cps.imageContextReal.getStroke());
+			cpd.drawShape((Shape)restCurve,color,
+				cpd.imageContextReal.getStroke());
 	}
  
 }

@@ -16,8 +16,8 @@ public class Erf_function {
 	 * Domain packing p (normally univalent) is copied into 
 	 * new packing and each bdry radius is set to e^{z^n}*r, 
 	 * where r,z are radius, center in p. 
-	 * Return pointer to packData, with 'CPScreen' set to null.
-	 * Calling routine sets 'cpScreen' and installs new packing.
+	 * Return pointer to packData, with 'CP' set to null.
+	 * Calling routine sets 'cpDrawing' and installs new packing.
 	 * @param p domain 'PackData'
 	 * @return 'PackData', null on error.
 	*/

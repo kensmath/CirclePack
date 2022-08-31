@@ -29,7 +29,7 @@ public class PairWrapper extends ActiveWrapper {
 	// Constructor
 	public PairWrapper(File myToolFile,int cT) {
 		// cheap trick: 'callerType' used as packnum on startup
-		super(myToolFile,CPBase.cpScreens[cT]); 
+		super(myToolFile,CPBase.cpDrawing[cT]); 
 		callerType=cT;
 	}
 	
@@ -42,16 +42,16 @@ public class PairWrapper extends ActiveWrapper {
 	}
 	
 	private void getSource() {
-		if (callerType==LEFTCANVAS) cpScreen=PackControl.mapPairFrame.getDomainCPS();
-		else this.cpScreen=PackControl.mapPairFrame.getRangeCPS();
+		if (callerType==LEFTCANVAS) cpDrawing=PackControl.mapPairFrame.getDomainCPS();
+		else this.cpDrawing=PackControl.mapPairFrame.getRangeCPS();
 	}
 
 	/**
-	 * Throw in correct 'CPScreen' image
+	 * Throw in correct 'CPDrawing' image
 	 */
 	public void paintComponent(Graphics g) {
 		getSource();
-		g.drawImage(cpScreen.packImage.getScaledInstance(getWidth(),getHeight(), 
+		g.drawImage(cpDrawing.packImage.getScaledInstance(getWidth(),getHeight(), 
 				Image.SCALE_SMOOTH),0,0,getWidth(),getWidth(),null);
 	}
 	
@@ -63,7 +63,7 @@ public class PairWrapper extends ActiveWrapper {
 				activeMode==defaultMode && mapFrame.otherExists(this) &&
 				(e.getButton()==MouseEvent.BUTTON1 
 						|| e.getButton()==MouseEvent.BUTTON2)) {
-			Point2D.Double pt2D=cpScreen.pt2RealPt(e.getPoint(),getWidth(),getHeight());
+			Point2D.Double pt2D=cpDrawing.pt2RealPt(e.getPoint(),getWidth(),getHeight());
 			if (e.getButton() == MouseEvent.BUTTON2 || (e.getButton() == MouseEvent.BUTTON1 &&
 					(e.getModifiersEx() & ActionEvent.CTRL_MASK)==
 					ActionEvent.CTRL_MASK)) 

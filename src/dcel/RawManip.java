@@ -1996,6 +1996,7 @@ public class RawManip {
 						}
 						else
 							n_midVert.aim=2.0*Math.PI;
+					    pdcel.alloc_vert_space(pdcel.vertCount+10,true);
 						pdcel.vertices[pdcel.vertCount] = n_midVert;
 						n_midVert.halfedge = n_newEdge;
 						n_newEdge.origin = n_midVert;

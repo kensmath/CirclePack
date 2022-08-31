@@ -41,8 +41,8 @@ import listManip.FaceLink;
 import listManip.NodeLink;
 import listeners.ACTIVEListener;
 import mytools.MyTool;
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
 import util.PopupBuilder;
 
 /**
@@ -66,8 +66,8 @@ public class PairedFrame extends JFrame implements ActionListener {
 	static int bottomHeight=44; // height of bottom panels with command line or user tools
 	
 	// various children
-	private static CPScreen domainCPS;
-	private static CPScreen rangeCPS;
+	private static CPdrawing domainCPS;
+	private static CPdrawing rangeCPS;
 	private JMenuBar pairBar;
 	public JPanel domTopPanel;
 	public JPanel ranTopPanel;
@@ -103,8 +103,8 @@ public class PairedFrame extends JFrame implements ActionListener {
 
 		addWindowListener(new WPAdapter());
 		setTitle("Mapping Window:  P"+dnum+"  P"+rnum);
-		domainCPS=CPBase.cpScreens[dnum];
-		rangeCPS=CPBase.cpScreens[rnum];
+		domainCPS=CPBase.cpDrawing[dnum];
+		rangeCPS=CPBase.cpDrawing[rnum];
 		PackControl.canvasRedrawer.changeDomain(dnum);
 		PackControl.canvasRedrawer.changeRange(rnum);
 		initGUI();
@@ -526,11 +526,11 @@ public class PairedFrame extends JFrame implements ActionListener {
 		return rangeCPS.getPackData();
 	}
 	
-	public CPScreen getDomainCPS() {
+	public CPdrawing getDomainCPS() {
 		return domainCPS;
 	}
 	
-	public CPScreen getRangeCPS() {
+	public CPdrawing getRangeCPS() {
 		return rangeCPS;
 	}
 	 
@@ -567,14 +567,14 @@ public class PairedFrame extends JFrame implements ActionListener {
 			JComboBox<?> cb = (JComboBox<?>)e.getSource();
 			int i=cb.getSelectedIndex();
 			if (cb==domainCB) {
-				domainCPS=CPBase.cpScreens[i];
+				domainCPS=CPBase.cpDrawing[i];
 				PackControl.canvasRedrawer.changeDomain(i);
 				colorBorders();
 				setTitle("Mapping Window:  P"+i+"  P"+getRangeNum());
 		  		domainScreen.repaint();
 			}
 			else if (cb==rangeCB) {
-				rangeCPS=CPBase.cpScreens[i];
+				rangeCPS=CPBase.cpDrawing[i];
 				PackControl.canvasRedrawer.changeRange(i);
 				colorBorders();
 				setTitle("Mapping Window:  P"+getDomainNum()+"  P"+i);

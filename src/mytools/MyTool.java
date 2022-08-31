@@ -31,7 +31,7 @@ import util.PopupBuilder;
  * 1. If tool is 'dropable', then execute by drag/drop on a canvas. 
  * 2. Otherwise, tool should be associated with an 'ActiveWrapper' 
  * canvas and uses its 'getScreen' method to find the associated 
- * 'CPScreen' to be used in 'jexecute' calls.
+ * 'CPDrawing' to be used in 'jexecute' calls.
  * 
  * MyTool's are also used in scripts.
  * @author kens
@@ -289,7 +289,7 @@ public class MyTool extends JButton {
 	 */
 	public void execute() { // apply to canvas packing or active packing
 		if (activeWrapper!=null) // tool created to apply to particular window
-			execute(activeWrapper.getCPScreen().getPackData());
+			execute(activeWrapper.getCPDrawing().getPackData());
 		else execute(CirclePack.cpb.getActivePackData());
 	}
 

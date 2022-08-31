@@ -11,7 +11,6 @@ import exceptions.PackingException;
 import geometry.CircleSimple;
 import geometry.EuclMath;
 import geometry.NSpole;
-import geometry.SphericalMath;
 import math.CirMatrix;
 import math.Mobius;
 import packing.PackData;
@@ -88,7 +87,6 @@ public class SphPacker extends RePacker {
 			for (int k=0;k<3;k++) 
 				td.radii[k]=.05; // TODO: might choose better initialization
 		}
-		TriData outer=pdcel.triData[lastface];
 		for (int k=0;k<3;k++) 
 			setTriRadius(bdryVerts[k],1.0); // faux bdry radii set to 1
 		aimnum=pdcel.vertCount-3;
@@ -129,7 +127,7 @@ public class SphPacker extends RePacker {
 
 		// debug=true;
 		if (debug) { 
-			deBugging.DCELdebug.drawEuclCircles(CirclePack.cpb.cpScreens[2], z, radii);
+			deBugging.DCELdebug.drawEuclCircles(CirclePack.cpb.cpDrawing[2], z, radii);
 		}
 
 		// lay out the rest of the eucl circles
@@ -168,7 +166,7 @@ public class SphPacker extends RePacker {
 		
 		// debug=true;
 		if (debug) { 
-			deBugging.DCELdebug.drawEuclCircles(CirclePack.cpb.cpScreens[2], z, radii);
+			deBugging.DCELdebug.drawEuclCircles(CirclePack.cpb.cpDrawing[2], z, radii);
 		}
 		
 		// find normalizing mobius

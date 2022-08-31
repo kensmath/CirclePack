@@ -9,7 +9,7 @@ import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.util.Vector;
 
-import panels.CPScreen;
+import packing.CPdrawing;
 import util.ColorUtil;
 
 /**
@@ -123,7 +123,7 @@ public class CPTrinket {
 //	private static Path2D.Double diamond;
 
 	// instance variables
-	private CPScreen parent;
+	private CPdrawing parent;
 
 	private int geometry; 
 
@@ -139,7 +139,7 @@ public class CPTrinket {
 		geometry=0;
 	}
 	
-	public void setParent(CPScreen par) {
+	public void setParent(CPdrawing par) {
 		parent=par;
 	}
 	

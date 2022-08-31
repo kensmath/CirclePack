@@ -354,7 +354,7 @@ public class ProjStruct extends PackExtender {
 					// do what's ordered
 					if (circs || facs) {
 						DispFlags dispFlags=new DispFlags(str.substring(2),
-								packData.cpScreen.fillOpacity); // cut out -?
+								packData.cpDrawing.fillOpacity); // cut out -?
 						FaceLink facelist;
 						if (items==null || items.size()==0) // do all
 							facelist = new FaceLink(packData, "F");
@@ -379,7 +379,7 @@ public class ProjStruct extends PackExtender {
 											dispFlags.setColor(packData.getCircleColor(v));
 										if (dispFlags.label)
 											dispFlags.setLabel(Integer.toString(v));
-										packData.cpScreen.drawCircle(z, rad,dispFlags);
+										packData.cpDrawing.drawCircle(z, rad,dispFlags);
 										count++;
 									}
 								}
@@ -389,7 +389,7 @@ public class ProjStruct extends PackExtender {
 										dispFlags.setColor(packData.getFaceColor(fnum));
 									if (dispFlags.label)
 										dispFlags.setLabel(Integer.toString(fnum));
-									packData.cpScreen.drawFace(tasp.getCenter(0),
+									packData.cpDrawing.drawFace(tasp.getCenter(0),
 											tasp.getCenter(1),tasp.getCenter(2),
 											null,null,null,dispFlags);
 									count++;
@@ -539,7 +539,7 @@ public class ProjStruct extends PackExtender {
 		else if (cmd.startsWith("Lface")) {
 			DispFlags dflags=new DispFlags("");
 			for (int f=1;f<=packData.faceCount;f++) {
-				packData.cpScreen.drawFace(aspects[f].getCenter(0),
+				packData.cpDrawing.drawFace(aspects[f].getCenter(0),
 						aspects[f].getCenter(1),
 						aspects[f].getCenter(2),null,null,null,dflags);
 			}
@@ -553,7 +553,7 @@ public class ProjStruct extends PackExtender {
 				CircleSimple sc=EuclMath.eucl_tri_incircle(aspects[f].getCenter(0),
 						aspects[f].getCenter(1),aspects[f].getCenter(2));
 				DispFlags dflags=new DispFlags("cc20");
-				packData.cpScreen.drawCircle(sc.center,sc.rad,dflags); // blue
+				packData.cpDrawing.drawCircle(sc.center,sc.rad,dflags); // blue
 			}
 			repaintMe();
 			return 1;
@@ -575,7 +575,7 @@ public class ProjStruct extends PackExtender {
 				Complex wc=sc.center;
 				DispFlags df=new DispFlags(null);
 				df.setColor(Color.green);
-				packData.cpScreen.drawEdge(vc,wc,df);
+				packData.cpDrawing.drawEdge(vc,wc,df);
 			}
 			repaintMe();
 			return 1;
@@ -715,7 +715,7 @@ public class ProjStruct extends PackExtender {
 					mxY = (pr>mxY) ? pr : mxY; 
 				}
 			cpCommand("set_screen -b "+mnX+" "+mnY+" "+mxX+" "+mxY);
-			packData.cpScreen.repaint();
+			packData.cpDrawing.repaint();
 			return 1;
 		}
 				
@@ -1794,7 +1794,7 @@ public class ProjStruct extends PackExtender {
 					faceFlags.setColor(p.getFaceColor(asp.faceIndx));
 				if (faceFlags.label)
 					faceFlags.setLabel(Integer.toString(asp.faceIndx));
-				p.cpScreen.drawFace(c0, c1, c2,null,null,null,faceFlags);
+				p.cpDrawing.drawFace(c0, c1, c2,null,null,null,faceFlags);
 				count++;
 			}
 			if (circDo) { // also draw the circles
@@ -1803,7 +1803,7 @@ public class ProjStruct extends PackExtender {
 					circFlags.setColor(p.getCircleColor(v2));
 				if (circFlags.label)
 					circFlags.setLabel(Integer.toString(v2));
-				p.cpScreen.drawCircle(c2,
+				p.cpDrawing.drawCircle(c2,
 						asp.labels[asp.vertIndex(v2)],circFlags);
 				count++;
 				if (drawfirst && firstasp) { // draw all circles of first face
@@ -1812,14 +1812,14 @@ public class ProjStruct extends PackExtender {
 						circFlags.setColor(p.getCircleColor(v0));
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(v0));
-					p.cpScreen.drawCircle(c0,asp.labels[asp.vertIndex(v0)],
+					p.cpDrawing.drawCircle(c0,asp.labels[asp.vertIndex(v0)],
 							circFlags);
 					if (!circFlags.colorIsSet && 
 							(circFlags.fill || circFlags.colBorder))
 						circFlags.setColor(p.getCircleColor(v1));
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(v1));
-					p.cpScreen.drawCircle(c1,
+					p.cpDrawing.drawCircle(c1,
 							asp.labels[asp.vertIndex(v1)],circFlags);
 					count++;
 				}

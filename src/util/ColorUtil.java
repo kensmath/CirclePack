@@ -221,7 +221,7 @@ public class ColorUtil {
 	 * Converts normal to "washed out" colors for use on back of the sphere 
 	 * when it is not completely opaque. 
 	 * @param color_in Color
-	 * @param lambda double, 'lambda' is typically 'cpScreen.sphereOpacity/255'.
+	 * @param lambda double, 'lambda' is typically 'cpDrawing.sphereOpacity/255'.
 	 * @return 'Color' with 'alpha' set.
 	 */
 	public static Color ColorWash(Color color_in,double lambda) {

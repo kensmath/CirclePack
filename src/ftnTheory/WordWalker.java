@@ -99,11 +99,11 @@ public class WordWalker extends PackExtender {
 		Complex cc=packData.getFaceCenter(f);
 		DispFlags dflags=new DispFlags("f");
 		dflags.setColor(ColorUtil.coLor(232));
-		packData.cpScreen.drawFace(c[0],c[1],cc,null,null,null,dflags);
+		packData.cpDrawing.drawFace(c[0],c[1],cc,null,null,null,dflags);
 		dflags.setColor(ColorUtil.coLor(218));
-		packData.cpScreen.drawFace(c[1],c[2],cc,null,null,null,dflags);
+		packData.cpDrawing.drawFace(c[1],c[2],cc,null,null,null,dflags);
 		dflags.setColor(ColorUtil.coLor(1));
-		packData.cpScreen.drawFace(c[2],c[0],cc,null,null,null,dflags);
+		packData.cpDrawing.drawFace(c[2],c[0],cc,null,null,null,dflags);
 	}
 	
 	public void helpInfo() {

@@ -13,7 +13,7 @@ import java.awt.geom.Point2D;
 import math.Matrix3D;
 import math.Point3D;
 import mytools.MyTool;
-import panels.CPScreen;
+import packing.CPdrawing;
 import util.ModeMenuItem;
 import allMains.CPBase;
 import allMains.CirclePack;
@@ -184,14 +184,14 @@ public class MyCanvasMode extends MyTool {
 			if (point==null) {
 				throw new ParserException("No 'point' for mode execution");
 			}
-			CPScreen cpS=aW.getCPScreen();
+			CPdrawing cpS=aW.getCPDrawing();
 			Dimension dim=aW.getSize();
 			Point2D.Double pt2D=cpS.pt2RealPt(point,dim.width,dim.height);
 			cmd=cmd.replace("#XY"," "+pt2D.x+" "+pt2D.y+" ");
 			cmd=cmd.replace("#xy"," "+pt2D.x+" "+pt2D.y+" ");
 		}
 		try {
-			ans=CPBase.trafficCenter.parseWrapper(cmd,aW.cpScreen.getPackData(),false,false,0,null);
+			ans=CPBase.trafficCenter.parseWrapper(cmd,aW.cpDrawing.getPackData(),false,false,0,null);
 		} catch (Exception ex) {
 			CirclePack.cpb.errMsg("myCursor execution failed");
 			return -1;
@@ -204,7 +204,7 @@ public class MyCanvasMode extends MyTool {
 	//    handStartX/Y becomes handX/Y
 	public static void rotate(ActiveWrapper aW) {
 		try {
-			CPScreen cpS=aW.getCPScreen();
+			CPdrawing cpS=aW.getCPDrawing();
 			ACTIVEHandler mH=aW.activeHandler;
 			Dimension dim=aW.getSize();
 			Point2D.Double pt1=cpS.pt2RealPt(new Point(mH.handStartX,mH.handStartY), dim.width,dim.height);
@@ -260,10 +260,10 @@ public class MyCanvasMode extends MyTool {
 			return;
 		}
 		Dimension dim=aW.getSize();
-		Point2D.Double pt=aW.cpScreen.pt2RealPt(point, dim.width,dim.height);
+		Point2D.Double pt=aW.cpDrawing.pt2RealPt(point, dim.width,dim.height);
 		int ans=0;
 		try {
-			ans=TrafficCenter.cmdGUI(aW.cpScreen.getPackData(),"locate -c " + pt.x + " " + pt.y);
+			ans=TrafficCenter.cmdGUI(aW.cpDrawing.getPackData(),"locate -c " + pt.x + " " + pt.y);
 		} catch (Exception ex) {return;}
 		if (ans>0) 
 			rePaint(aW);
@@ -280,11 +280,11 @@ public class MyCanvasMode extends MyTool {
 			return;
 		}
 		Dimension dim=aW.getSize();
-		Point2D.Double pt=aW.cpScreen.pt2RealPt(point, dim.width,dim.height);
+		Point2D.Double pt=aW.cpDrawing.pt2RealPt(point, dim.width,dim.height);
 		int ans=0;
 		try {
 			ans=TrafficCenter.cmdGUI(
-					aW.cpScreen.getPackData(),"locate -f " + pt.x + " " + pt.y);
+					aW.cpDrawing.getPackData(),"locate -f " + pt.x + " " + pt.y);
 		} catch (Exception ex) {return;}
 		if (ans>0) 
 			rePaint(aW);
@@ -321,7 +321,7 @@ public class MyCanvasMode extends MyTool {
 
 	public int dragged(ActiveWrapper aW,MouseEvent e) {
 		if (!handy) return 0;
-		CPScreen cpS=aW.getCPScreen();
+		CPdrawing cpS=aW.getCPDrawing();
 		ACTIVEHandler mH=aW.activeHandler;
 		Point point=e.getPoint();
 		if (cpS.getGeom()>0) { // sphere
@@ -353,7 +353,7 @@ public class MyCanvasMode extends MyTool {
 	 * @param aW
 	 */
 	public void rePaint(ActiveWrapper aW) {
-		PackControl.canvasRedrawer.paintMyCanvasses(aW.cpScreen,false);
+		PackControl.canvasRedrawer.paintMyCanvasses(aW.cpDrawing,false);
 	}
 
 }

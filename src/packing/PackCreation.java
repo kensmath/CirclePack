@@ -195,7 +195,7 @@ public class PackCreation {
 	}
 
 	/** 
-	 * Create a 'seed' packing from scratch (with CPScreen=null)
+	 * Create a 'seed' packing from scratch (with CPDrawing=null)
 	 * NOTE: 'PackData.seed' call does the same, but within existing
 	 * PackData object.
 	 * @param n int, number of petals

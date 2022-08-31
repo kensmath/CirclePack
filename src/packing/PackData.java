@@ -57,7 +57,6 @@ import math.Matrix3D;
 import math.Mobius;
 import math.Point3D;
 import microLattice.Smoother;
-import panels.CPScreen;
 import posting.PostFactory;
 import rePack.EuclPacker;
 import rePack.HypPacker;
@@ -79,7 +78,7 @@ import widgets.SchwarzSliders;
 
 /**
  * This is the fundamental data repository for a circle packing and is
- * associated with a CPScreen for display. This is a workhorse, with 
+ * associated with a CPDrawing for display. This is a workhorse, with 
  * methods for reading/writing, combinatorics, and manipulations.
  * @author kens, sometime last century
  *
@@ -153,7 +152,7 @@ public class PackData{
     public int util_B;
     public boolean util_bool;
 
-    public CPScreen cpScreen; // pointer to screen associated with this packdata 
+    public CPdrawing cpDrawing; // pointer to screen associated with this packdata 
     
     public String getDispOptions; // if not null, was set on readpack with 'DISP_FLAGS:'
     
@@ -170,11 +169,11 @@ public class PackData{
     }
     
     // Constructor
-    public PackData(CPScreen parentScreen){
-        cpScreen = parentScreen;
-        // Note: creating new speculative PackData sets, use 'null' CPScreen until finished. 
-        if (cpScreen !=null) 
-        	packNum = cpScreen.getPackNum();
+    public PackData(CPdrawing parentScreen){
+        cpDrawing = parentScreen;
+        // Note: creating new speculative PackData sets, use 'null' CPDrawing until finished. 
+        if (cpDrawing !=null) 
+        	packNum = cpDrawing.getPackNum();
         else 
         	packNum=CPBase.NUM_PACKS; // temporary number
         packDCEL=new PackDCEL();
@@ -332,8 +331,8 @@ public class PackData{
 		if (s!=null && (s=s.trim()).length()>0)
 			fileName = s;
 		else fileName="NoName";
-		if (cpScreen!=null)
-			cpScreen.setPackName(); // record in small canvas label
+		if (cpDrawing!=null)
+			cpDrawing.setPackName(); // record in small canvas label
 	}
 	
 	/** 
@@ -644,13 +643,13 @@ public class PackData{
 	}
 		
 	/**
-	 * Reset the geometry for the cpScreen graphic objects;
-	 * if 'cpScreen' is null, just return;
+	 * Reset the geometry for the cpDrawing graphic objects;
+	 * if 'cpDrawing' is null, just return;
 	 * @param hes int, 1,0, or -1
 	 */
 	public void setGeometry(int hes) {
-		if (cpScreen!=null) 
-			cpScreen.setGeometry(hes);
+		if (cpDrawing!=null) 
+			cpDrawing.setGeometry(hes);
 	}
 	
 	/**
@@ -2416,7 +2415,7 @@ public class PackData{
 	 * Convert this packing centers/radii to eucl, set geometry
 	 * to euclidean. In spherical case, some discs may be outside
 	 * their circles.
-	 * Note: does NOT adjust 'CPScreen' geometry.
+	 * Note: does NOT adjust 'CPDrawing' geometry.
 	 */ 
 	public int geom_to_e() {
 		if (hes == 0)
@@ -2449,7 +2448,7 @@ public class PackData{
 	 * Converts centers/radii to euclidean first, then 
 	 * scales packing to live in the unit disc and converts
 	 * to hyp center and s-radii. Sets hes=-1.
-	 * Note: does NOT adjust 'CPScreen' geometry. 
+	 * Note: does NOT adjust 'CPDrawing' geometry. 
 	 * @return 1 on success (or if already hyp).
 	 */
 	public int geom_to_h() {
@@ -2490,7 +2489,7 @@ public class PackData{
 	 * Converts packing to spherical, with alpha 
 	 * vertex at north pole. (Note: our stereographic 
 	 * projection puts 0 at the NORTH pole.)
-	 * Note: does NOT adjust 'CPScreen' geometry.
+	 * Note: does NOT adjust 'CPDrawing' geometry.
 	 * @return 1 
 	 */
 	public int geom_to_s() {
@@ -3381,7 +3380,7 @@ public class PackData{
 				  }
 			  }
 			  if (qnum>=0 && qnum<CPBase.NUM_PACKS) 
-				  qackData=PackControl.cpScreens[qnum].getPackData();
+				  qackData=PackControl.cpDrawing[qnum].getPackData();
 			  else 
 				  throw new ParserException("Specified pack numbe, "+qnum+", is out of range");
 			  if (hes!=qackData.hes) {
@@ -3417,7 +3416,7 @@ public class PackData{
 				  }
 			  }
 			  if (pnum>=0 && pnum<CPBase.NUM_PACKS) 
-				  qackData=PackControl.cpScreens[pnum].getPackData();
+				  qackData=PackControl.cpDrawing[pnum].getPackData();
 			  else throw new ParserException("Pack number, "+pnum+", is out of range");
 			  
 			  if (items!=null && items.size()>0)
@@ -3584,7 +3583,7 @@ public class PackData{
 					  }
 				  }
 				  if (qnum>=0 && qnum<CPBase.NUM_PACKS) 
-					  qackData=PackControl.cpScreens[qnum].getPackData();
+					  qackData=PackControl.cpDrawing[qnum].getPackData();
 				  else throw new ParserException("Pack number, "+qnum+
 						  ", out of range");
 				  if (hes!=qackData.hes) {
@@ -3614,7 +3613,7 @@ public class PackData{
 					  }
 				  }
 				  if (pnum>=0 && pnum<CPBase.NUM_PACKS) 
-					  qackData=PackControl.cpScreens[pnum].getPackData();
+					  qackData=PackControl.cpDrawing[pnum].getPackData();
 				  else throw new ParserException("Pack number, "+pnum+", out of range");
 
 				  facelist=new FaceLink(this,items);
@@ -3955,7 +3954,7 @@ public class PackData{
 					  }
 					  if (qnum<0 || qnum>=CPBase.NUM_PACKS)
 						  throw new ParserException();
-					  qackData=PackControl.cpScreens[qnum].getPackData();
+					  qackData=PackControl.cpDrawing[qnum].getPackData();
 					  break;
 				  }
 				  case 'm':
@@ -4253,11 +4252,11 @@ public class PackData{
 	  
 	  /** 
 	   * Copy this packing into a new 'PackData' having 
-	   * a null 'CPScreen' and 'packNum' of 3. 'PackExtender's 
+	   * a null 'CPDrawing' and 'packNum' of 3. 'PackExtender's 
 	   * are lost. If the new packing is to replace another, 
 	   * the calling routine must handle interchange; 
-	   * in particular, 'PackData' and 'CPScreen' point to 
-	   * one another, so 'cpScreen' and 'cpScreen.packData' 
+	   * in particular, 'PackData' and 'CPDrawing' point to 
+	   * one another, so 'cpDrawing' and 'cpDrawing.packData' 
 	   * may need to be reset. 
 	   * Combinatorics and drawing are set here. 
 	   * @return new PackData
@@ -4313,14 +4312,14 @@ public class PackData{
 		    if (circles) {
 		    	while (list.hasNext()) {
 		    		n=(Integer)list.next();
-		    		cpScreen.drawIndex(getCenter(n),n,msg_flag);
+		    		cpDrawing.drawIndex(getCenter(n),n,msg_flag);
 		    		count++;
 		    	}
 		    	return count;
 		    }
 		    while (list.hasNext()) {
 		    	n=(Integer)list.next();
-			    cpScreen.drawIndex(getFaceCenter(n),n,msg_flag);
+			    cpDrawing.drawIndex(getFaceCenter(n),n,msg_flag);
 			    count++;
 			}
 		    // last_index_global=v; ???
@@ -6175,14 +6174,14 @@ public class PackData{
 			Complex c2=getCenter(verts[2]);
 			DispFlags dflags=new DispFlags("f");
 			dflags.setColor(getFaceColor(face));
-			cpScreen.drawFace(c0,c1,c2,null,null,null,dflags);   
+			cpDrawing.drawFace(c0,c1,c2,null,null,null,dflags);   
 			// draw other packing
 			verts=q.packDCEL.faces[nface].getVerts();
 		    c0=q.getCenter(verts[0]);
 		    c1=q.getCenter(verts[1]);
 		    c2=q.getCenter(verts[2]);
 			dflags.setColor(q.getFaceColor(nface));
-		    q.cpScreen.drawFace(c0,c1,c2,null,null,null,dflags);
+		    q.cpDrawing.drawFace(c0,c1,c2,null,null,null,dflags);
 		}
 		return 1;
 	}
@@ -6211,7 +6210,7 @@ public class PackData{
 	    }
 	    
 	    boolean donep=false;
-	    DispFlags dispFlags=new DispFlags("f",cpScreen.fillOpacity);
+	    DispFlags dispFlags=new DispFlags("f",cpDrawing.fillOpacity);
 		if (nL!=null && nL.size()>0) {
 			int count=0;
 			Iterator<Integer> nli=nL.iterator();
@@ -6220,13 +6219,13 @@ public class PackData{
 				if (nv>0 && nv<=q.nodeCount) {
 					if (!donep) { // draw once for this packing
 						dispFlags.setColor(getCircleColor(v));
-						cpScreen.drawCircle(getCenter(v),getRadius(v),dispFlags);
+						cpDrawing.drawCircle(getCenter(v),getRadius(v),dispFlags);
 					}
 					donep=true;
 				}
 				if (nv<=q.nodeCount) { // draw all the translates 
 					dispFlags.setColor(q.getCircleColor(nv));
-					q.cpScreen.drawCircle(q.getCenter(nv),q.getRadius(nv),dispFlags);
+					q.cpDrawing.drawCircle(q.getCenter(nv),q.getRadius(nv),dispFlags);
 					count++;
 				}
 			}
@@ -6282,8 +6281,8 @@ public class PackData{
 	    	return 0;
 		Complex ctr=packDCEL.getVertCenter(rtrace.myEdge);
 		if (hes>0)
-			ctr=cpScreen.sphView.toApparentSph(ctr);
-	    cpScreen.drawIndex(ctr,n,1);
+			ctr=cpDrawing.sphView.toApparentSph(ctr);
+	    cpDrawing.drawIndex(ctr,n,1);
 	    return 1;
 	}
 	
@@ -6304,7 +6303,7 @@ public class PackData{
 	    	return 0;
 		Complex ctr=trace.getCenter();
 		if (hes>0) {
-			ctr=cpScreen.sphView.toApparentSph(ctr);
+			ctr=cpDrawing.sphView.toApparentSph(ctr);
 			if (Math.cos(ctr.x)>=0) 
 				pF.postIndex(ctr,n);
 		}
@@ -6332,10 +6331,10 @@ public class PackData{
 		  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
 		  return 0;
 	  RedEdge rtrace=epair.startEdge;
-	  int old_thickness=cpScreen.getLineThickness();
+	  int old_thickness=cpDrawing.getLineThickness();
 
 	  DispFlags dflags=new DispFlags(""); 
-      cpScreen.setLineThickness(thickness);
+      cpDrawing.setLineThickness(thickness);
 	  
 	  Complex w_cent=packDCEL.getVertCenter(rtrace.myEdge);
 	  do {
@@ -6344,25 +6343,25 @@ public class PackData{
 	      rtrace=rtrace.nextRed;
 	      w_cent=packDCEL.getVertCenter(rtrace.myEdge);
 	      if (do_circle) { // do v circle
-		      cpScreen.setLineThickness(old_thickness);
-	    	  cpScreen.drawCircle(v_cent,v_rad,dflags);
-	          cpScreen.setLineThickness(thickness);
+		      cpDrawing.setLineThickness(old_thickness);
+	    	  cpDrawing.drawCircle(v_cent,v_rad,dflags);
+	          cpDrawing.setLineThickness(thickness);
 	      }
 	      DispFlags df=new DispFlags(null); 
 	      df.setColor(ecol);
-	      cpScreen.drawEdge(v_cent,w_cent,df);
+	      cpDrawing.drawEdge(v_cent,w_cent,df);
 	  } while (rtrace!=epair.endEdge.nextRed);
 	  
 	  // last circle?
 	  if (do_circle) {
 		  w_cent=packDCEL.getVertCenter(rtrace.myEdge);
 		  double w_rad=packDCEL.getVertRadius(rtrace.myEdge);
-	      cpScreen.setLineThickness(old_thickness);
-    	  cpScreen.drawCircle(w_cent,w_rad,dflags);
-          cpScreen.setLineThickness(thickness);
+	      cpDrawing.setLineThickness(old_thickness);
+    	  cpDrawing.drawCircle(w_cent,w_rad,dflags);
+          cpDrawing.setLineThickness(thickness);
 	  }
 	  
-      cpScreen.setLineThickness(old_thickness);
+      cpDrawing.setLineThickness(old_thickness);
 	  if (do_label) 
 		  sa_draw_bdry_seg_num(n);
 	  return 1;
@@ -6389,7 +6388,7 @@ public class PackData{
 			  // epair.startEdge.hashCode();epair.startEdge.nextRed.hashCode();
 			  return 0;
 		  RedEdge rtrace=epair.startEdge;
-		  int old_thickness=cpScreen.getLineThickness();
+		  int old_thickness=cpDrawing.getLineThickness();
 
 		  DispFlags dflags=new DispFlags(""); 
 		  
@@ -6404,8 +6403,8 @@ public class PackData{
 		      w_indx=w_vert.vertIndx;
 		      w_cent=packDCEL.getVertCenter(rtrace.myEdge);
 		      if (hes>0) { 
-		    	  v_cent=cpScreen.sphView.toApparentSph(v_cent);
-		    	  w_cent=cpScreen.sphView.toApparentSph(w_cent);
+		    	  v_cent=cpDrawing.sphView.toApparentSph(v_cent);
+		    	  w_cent=cpDrawing.sphView.toApparentSph(w_cent);
 		      }
 		      if (do_circle) { // do v circle
 			      double v_rad=packDCEL.getVertRadius(rtrace.myEdge);
@@ -6418,12 +6417,12 @@ public class PackData{
 		  if (do_circle) {
 			  w_vert=rtrace.myEdge.origin;
 			  w_cent=packDCEL.getVertCenter(rtrace.myEdge);
-	    	  w_cent=cpScreen.sphView.toApparentSph(w_cent);
+	    	  w_cent=cpDrawing.sphView.toApparentSph(w_cent);
 			  double w_rad=packDCEL.getVertRadius(rtrace.myEdge);
 		      pF.postCircle(hes,w_cent,w_rad);
 		  }
 		  
-	      cpScreen.setLineThickness(old_thickness);
+	      cpDrawing.setLineThickness(old_thickness);
 		  if (do_label) 
 			  post_bdry_seg_num(pF,n);
 		  return 1;
@@ -7234,7 +7233,7 @@ public class PackData{
 		  
 		  String opts=null;
 //		  if (draw) opts=new String("-ff"); // draw the colored faces as we go
-//		  DispFlags dflags=new DispFlags(opts,p.cpScreen.fillOpacity);
+//		  DispFlags dflags=new DispFlags(opts,p.cpDrawing.fillOpacity);
 		  Mobius mob=new Mobius(); // initialize transformation 
 		  if (p.hes<0) // hyp
 			  mob=Mobius.auto_abAB(startZ[0],startZ[1],endZ[0],endZ[1]);

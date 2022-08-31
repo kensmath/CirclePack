@@ -458,7 +458,7 @@ public class ChapBrModPt extends GenBrModPt {
 				
 				// found something? display on parent canvas
 				if (pulloff.length()>0) {
-					n=DisplayParser.dispParse(p,p.cpScreen,StringUtil.flagSeg(pulloff.toString()));
+					n=DisplayParser.dispParse(p,p.cpDrawing,StringUtil.flagSeg(pulloff.toString()));
 				}
 				
 			}
@@ -477,7 +477,7 @@ public class ChapBrModPt extends GenBrModPt {
 				
 		} // end of loop through items
 
-		n+=DisplayParser.dispParse(p,p.cpScreen,newFlagSegs);
+		n+=DisplayParser.dispParse(p,p.cpDrawing,newFlagSegs);
 		if (n!=0)
 			PackControl.canvasRedrawer.paintMyCanvasses(p,false); 
 		return n;

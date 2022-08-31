@@ -5,6 +5,7 @@ import java.awt.Font;
 import java.awt.geom.Path2D;
 import java.io.File;
 import java.net.URL;
+import java.util.Date;
 import java.util.Hashtable;
 import java.util.Random;
 import java.util.Vector;
@@ -30,8 +31,9 @@ import listManip.PointLink;
 import listManip.TileLink;
 import math.Mobius;
 import mytools.MyTool;
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
+import panels.CPcanvas;
 import posting.PostManager;
 import script.ScriptManager;
 import util.CPTimer;
@@ -68,11 +70,12 @@ public abstract class CPBase {
 	public abstract PackData getActivePackData(); // which PackData is active?
 	public abstract int getActivePackNum(); // which pack
 	public abstract int swapPackData(PackData p,int pnum,boolean keepX); // change packings[pnum]
-
-	// main data container is 'packings', while 'cpScreens' hold 
+	
+	// main data container is 'packings', while 'cpDrawing's hold 
 	// backing plane for images, even in non-GUI situations.
 	public static PackData []packings; // 'PackData' instances
-	public static CPScreen []cpScreens; 
+	public static CPdrawing []cpDrawing;
+	public static CPcanvas []cpCanvas; // GUI panel
 
 	public static int GUImode; // 0=standalone, else GUI
 	
@@ -92,6 +95,7 @@ public abstract class CPBase {
 	//   (see also 'PackData.OKERR' and 'PackData.TOLER'.)
 	public static final double GENERIC_TOLER=.0000000001;   
 	public static int NUM_PACKS;
+	public static int activePackNum; // commands applied to this packing
 	public static double FAUX_RAD; // eucl rad for circles through infinity
 	public static File CPprefFile;
 
@@ -237,6 +241,7 @@ public abstract class CPBase {
 		FtnSpecification=new StringBuilder("z"); 
 		ParamSpecification=new StringBuilder("t");
 
+		activePackNum=0;
 	}
 	
 	public boolean setFtnSpec(String ftnstr) {
@@ -248,7 +253,6 @@ public abstract class CPBase {
 		  }
 		  return true;
 	}
-	
 
     /**
      * The parser treats 'z' as denoting a complex variable. 

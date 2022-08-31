@@ -1,8 +1,7 @@
 package util;
 
-import panels.CPScreen;
-
 import complex.Complex;
+import packing.CPdrawing;
 
 /**
  * This holds real world info on what a canvas is viewing, using 
@@ -13,7 +12,7 @@ import complex.Complex;
  */
 public class ViewBox {
 
-	CPScreen parent;    // parent canvas
+	CPdrawing parent;    // parent canvas
 	public double Aspect; // aspect ratio, length/height
 	public Complex lz;    // lower left corner
 	public Complex rz;    // upper right corner
@@ -23,8 +22,8 @@ public class ViewBox {
 		reset();
 	}
 
-	public void setParent(CPScreen cps) {
-		parent=cps;
+	public void setParent(CPdrawing cpd) {
+		parent=cpd;
 	}
 
 	public void reset() {

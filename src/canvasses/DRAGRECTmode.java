@@ -3,14 +3,13 @@ package canvasses;
 import handlers.ACTIVEHandler;
 import images.CPIcon;
 import input.TrafficCenter;
+import packing.CPdrawing;
 
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Point2D;
-
-import panels.CPScreen;
 
 import complex.Complex;
 
@@ -34,7 +33,7 @@ public class DRAGRECTmode extends MyCanvasMode {
 	}
 	
 	public void release3(ActiveWrapper aW,MouseEvent e) { 
-		CPScreen cpS=aW.getCPScreen();
+		CPdrawing cpS=aW.getCPDrawing();
 		ACTIVEHandler mH=aW.activeHandler;
 		if (mH.dragRect.width > 0) {
 			Dimension dim=aW.getSize();

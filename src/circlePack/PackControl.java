@@ -74,9 +74,10 @@ import listManip.PointLink;
 import listManip.TileLink;
 import math.Mobius;
 import mytools.MyTool;
+import packing.CPdrawing;
 import packing.PackData;
 import panels.CPPreferences;
-import panels.CPScreen;
+import panels.CPcanvas;
 import panels.SmallCanvasPanel;
 import posting.PostManager;
 import script.ScriptBundle;
@@ -102,9 +103,8 @@ FocusListener {
 	public static PairedFrame mapPairFrame=null;
 	public static HoverPanel controlPanel;
 	public static CanvasReDrawManager canvasRedrawer; // for repainting various canvasses
-	static Date date=new Date();
 	public static String CPVersion= new String("CirclePack, "+circlePack.Version.version+", "+
-			DateFormat.getDateInstance(DateFormat.MEDIUM).format(date));
+			DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date()));
 	public static boolean MapCanvasMode; // true: 'PairedFrame" shows, else 'MainFrame'
 	public static boolean AdvancedMode; // true: 'PackControl' open 
 	
@@ -189,7 +189,6 @@ FocusListener {
 	// Constructor
 	public PackControl() {
 		socketActive=true;  // means that socket server will be started
-		cpSocketPort=3736;
 		cpSocketHost=null;
 		cpMultiServer=null;
 		socketSources=new Vector<SocketSource>();
@@ -263,13 +262,15 @@ FocusListener {
 		}
 
 		// Create the packing data memory storage areas
-		cpScreens = new CPScreen[NUM_PACKS];
+		cpDrawing = new CPdrawing[NUM_PACKS];
+		cpCanvas=new CPcanvas[NUM_PACKS];
 		for (int i = 0; i < NUM_PACKS; i++) {
-			CPScreen cpS=cpScreens[i] = new CPScreen(i);
+			cpCanvas[i]=new CPcanvas(i); // needed for GUI
+			CPdrawing cpS=cpDrawing[i] = new CPdrawing(i);
 			
-			// crosslink 'PackData' and 'CPScreen'
+			// crosslink 'PackData' and 'CPDrawing'
 			cpS.packData=packings[i];
-			packings[i].cpScreen=cpS;
+			packings[i].cpDrawing=cpS;
 			
 			// prepare display objects
 			cpS.circle.setParent(cpS);
@@ -281,7 +282,7 @@ FocusListener {
 		}
 
 		// Create the screen thumbnail panel
-		smallCanvasPanel = new SmallCanvasPanel(cpScreens);
+		smallCanvasPanel = new SmallCanvasPanel(cpDrawing);
 
 		// Create the 'ShellManager' to handle history
 		shellManager = new ShellManager();
@@ -315,7 +316,7 @@ FocusListener {
 		basicMyTFile = CPFileManager.getMyTFile("basic.myt");
 
 		// Start the active canvas window (and listener for size changes?)
-		activeFrame = new MainFrame(cpScreens[0], mainMyTFile, mainCursorFile);
+		activeFrame = new MainFrame(cpDrawing[0], mainMyTFile, mainCursorFile);
 
 		// create the script stuff: manager, bar, frame, vertical bar
 		scriptManager = new ScriptManager();
@@ -380,7 +381,6 @@ FocusListener {
 		int high = frame.getHeight();
 		scriptHover.XLoc = ControlLocation.x;
 		scriptHover.YLoc = ControlLocation.y + high - 78;
-//		scriptFrame.setLocation(,ControlLocation.y+high-78);
 		vertScriptBar.scriptTools.add(scriptHover.scriptToolHandler.toolBar);
 		frame.setVisible(false);
 		resetDisplay(-1.0);
@@ -843,10 +843,10 @@ FocusListener {
 	
 	/**
 	 * Return pointer to currently active pack
-	 * @return CPScreen
+	 * @return CPDrawing
 	 */
-	public static CPScreen getActiveCPScreen() {
-		return activeFrame.getCPScreen();
+	public static CPdrawing getActiveCPDrawing() {
+		return activeFrame.getCPDrawing();
 	}
 
 	
@@ -924,7 +924,7 @@ FocusListener {
 		screenCtrlFrame.displayPanel.update(old_pack,packnum);
 		screenCtrlFrame.setTitle("CirclePack Screen Options, p"+packnum);
 		outputFrame.outPanel.update(old_pack);
-		activeFrame.setCPScreen(CPBase.cpScreens[packnum]);
+		activeFrame.setCPDrawing(CPBase.cpDrawing[packnum]);
 		activeFrame.activeScreen.setDefaultMode();
 		activeFrame.updateTitle();
 		activeFrame.activeScreen.repaint();
@@ -1060,7 +1060,7 @@ FocusListener {
 	/**
 	 * Replace 'packings[pnum]' with new packing; old packing
 	 * is generally orphaned. 
-	 * TODO: This replaced 'CPScreen.swapPackData' and there may
+	 * TODO: This replaced 'CPDrawing.swapPackData' and there may
 	 * be problems in some cases when 'packData' didn't have a
 	 * 'packNum'.
 	 * @param p PackData
@@ -1077,13 +1077,13 @@ FocusListener {
 			for (int x=0;x<p.packExtensions.size();x++)
 				p.packExtensions.get(x).packData=p;
 		}
-		CPBase.packings[pnum].cpScreen=null; // detach from cpScreen
+		CPBase.packings[pnum].cpDrawing=null; // detach from cpDrawing
 		
-		// install in 'packings' and handshake with 'cpScreens'
+		// install in 'packings' and handshake with 'cpDrawing's
 		p.packNum=pnum;
 		CPBase.packings[pnum]=p; 
-		p.cpScreen=CPBase.cpScreens[pnum]; 
-		p.cpScreen.setPackData(p);
+		p.cpDrawing=CPBase.cpDrawing[pnum]; 
+		p.cpDrawing.setPackData(p);
 		return p.nodeCount;
 	}
 	

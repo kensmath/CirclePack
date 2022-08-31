@@ -2,13 +2,13 @@ package canvasses;
 
 import handlers.ACTIVEHandler;
 import images.CPIcon;
+import packing.CPdrawing;
 
 import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 
-import panels.CPScreen;
 import allMains.CPBase;
 
 /**
@@ -31,7 +31,7 @@ public class PATHmode extends MyCanvasMode {
 	
 	// start or add to segment
 	public void pressed1(ActiveWrapper aW,MouseEvent e) { // override
-		CPScreen cpS=aW.getCPScreen();
+		CPdrawing cpS=aW.getCPDrawing();
 		ACTIVEHandler mH=aW.activeHandler;
 		Point point=e.getPoint();
 		Point2D.Double pt2D=(Point2D.Double)cpS.pt2RealPt(point,
@@ -57,7 +57,7 @@ public class PATHmode extends MyCanvasMode {
 		ACTIVEHandler mH=aW.activeHandler;
 		if (mH.polygonalPath!=null) {
 			mH.polygonalPath.closePath();
-			CPScreen cpS=aW.getCPScreen();
+			CPdrawing cpS=aW.getCPDrawing();
 			cpS.drawPath(mH.polygonalPath);
 			storeGlobalPath(aW);
 			mH.polygonalPath=null;
@@ -75,7 +75,7 @@ public class PATHmode extends MyCanvasMode {
 	public void released3(ActiveWrapper aW,MouseEvent e) {} // override
 	
 	public int dragged(ActiveWrapper aW,Point point) { // override
-		CPScreen cpS=aW.getCPScreen();
+		CPdrawing cpS=aW.getCPDrawing();
 		ACTIVEHandler mH=aW.activeHandler;
 		Point2D.Double pt2D=(Point2D.Double)cpS.pt2RealPt(point,
 				aW.getWidth(),aW.getHeight());

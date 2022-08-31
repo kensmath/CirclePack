@@ -15,7 +15,7 @@ import allMains.CPBase;
 import complex.Complex;
 import complex.MathComplex;
 import math.Point3D;
-import panels.CPScreen;
+import packing.CPdrawing;
 import util.ColorUtil;
 
 /**
@@ -63,7 +63,7 @@ public class CPCircle extends Complex {
 	private Color old_color;
 	
 	// instance variables
-	private CPScreen parent;
+	private CPdrawing parent;
 
 	private int geometry; 
 
@@ -99,7 +99,7 @@ public class CPCircle extends Complex {
 		extent=null;
 	}
 	
-	public void setParent(CPScreen par) {
+	public void setParent(CPdrawing par) {
 		parent=par;
 	}
 	
@@ -684,7 +684,7 @@ public class CPCircle extends Complex {
 	 * 0 if wholly on front.
 	 */
 	public static int ellCreateOnFront(Path2D.Double path,
-			Complex z,double r,boolean cp,CPScreen cpS) {
+			Complex z,double r,boolean cp,CPdrawing cpS) {
 
 		/**
 		 * Strategy: Compute circle 3D center C on the sphere;

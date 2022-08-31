@@ -30,8 +30,8 @@ import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.PointLink;
 import listManip.TileLink;
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
 import tiling.Tile;
 import util.DispFlags;
 import util.PathBaryUtil;
@@ -53,25 +53,25 @@ import workshops.LayoutShop;
 public class DisplayParser {
 	
 	/**
-	 * Display objects from packing p on its own @see CPScreen
+	 * Display objects from packing p on its own @see CPDrawing
 	 * based on flag segments given in 'flagSegs' 
 	 * @param p @see PackData
 	 * @param flagSegs
 	 * @return int, count of display actions
 	 */
 	public static int dispParse(PackData p, Vector<Vector<String>> flagSegs) {
-		return dispParse(p,p.cpScreen,flagSegs);
+		return dispParse(p,p.cpDrawing,flagSegs);
 	}
 	
 	/**
-	 * Display objects from packing p on designated @see CPScreen
+	 * Display objects from packing p on designated @see CPDrawing
 	 * based on flag segments given in 'flagSegs' 
 	 * @param p @see PackData
-	 * @param cpScreen @see CPScreen
+	 * @param cpDrawing @see CPDrawing
 	 * @param flagSegs
 	 * @return int, count of display actions
 	 */
-	public static int dispParse(PackData p, CPScreen cpScreen, Vector<Vector<String>> flagSegs) {
+	public static int dispParse(PackData p, CPdrawing cpDrawing, Vector<Vector<String>> flagSegs) {
 		if (flagSegs == null || flagSegs.size() == 0)
 			return 0;
 		int count = 0;
@@ -109,11 +109,11 @@ public class DisplayParser {
 												// of v
 							v = NodeLink
 									.grab_one_vert(p, (String) items.get(0));
-							cpScreen.drawStr(p.getCenter(v), (String) items
+							cpDrawing.drawStr(p.getCenter(v), (String) items
 									.get(1));
 							count++;
 						} else if (sc == 'z') { // -nl {x} {y} {str}
-							cpScreen.drawStr(new Complex(Double.parseDouble(
+							cpDrawing.drawStr(new Complex(Double.parseDouble(
 									(String) items.get(0)), Double.parseDouble(
 									(String) items.get(1))), (String) items
 									.get(2));
@@ -128,9 +128,9 @@ public class DisplayParser {
 				else if (c == 'x') { // set display/undisplay mode for coord
 										// axes
 					if (sub_cmd.length() > 0 && sub_cmd.charAt(0) == 'u')
-						cpScreen.setAxisMode(false);
+						cpDrawing.setAxisMode(false);
 					else
-						cpScreen.setAxisMode(true);
+						cpDrawing.setAxisMode(true);
 				}
 			} // done with 'n' and 'x'
 
@@ -177,7 +177,7 @@ public class DisplayParser {
 			}
 
 			// parse display flag string 
-			DispFlags dispFlags=new DispFlags(sub_cmd,cpScreen.fillOpacity);
+			DispFlags dispFlags=new DispFlags(sub_cmd,cpDrawing.fillOpacity);
 
 			/* ====== now go through numerous "disp" options ========= */
 
@@ -211,7 +211,7 @@ public class DisplayParser {
 								.divide(sides[j]).arg()*r2deg;
 						double rad = 0.5 * (lgths[j] - 
 								lgths[(j + 1) % 3] + lgths[(j + 2) % 3]);
-						cpScreen.drawArc(cent,rad,arg1,extent,dispFlags);
+						cpDrawing.drawArc(cent,rad,arg1,extent,dispFlags);
 						count++;
 					}
 				} // end of while
@@ -220,7 +220,7 @@ public class DisplayParser {
 			
 			case 'b': // bary-coord encoded paths, use color/thickness options
 			{
-				Color holdcolor = cpScreen.imageContextReal.getColor();
+				Color holdcolor = cpDrawing.imageContextReal.getColor();
 				Path2D.Double mypath = null;
 				
 				// default to gridlines
@@ -242,17 +242,17 @@ public class DisplayParser {
 					localPD.geom_to_e();
 				}
 				if (dispFlags.colorIsSet)  // if color was specified
-					cpScreen.imageContextReal.setColor(dispFlags.getColor());
+					cpDrawing.imageContextReal.setColor(dispFlags.getColor());
 				for (int j = 0; j < myLines.size(); j++) {
 					mypath = PathBaryUtil.baryLink2path(localPD, myLines.get(j));
 					if (mypath != null) {
-						cpScreen.drawPath(mypath);
+						cpDrawing.drawPath(mypath);
 						count++;
 					}
 				}
 				
 				// restore color
-				cpScreen.imageContextReal.setColor(holdcolor);
+				cpDrawing.imageContextReal.setColor(holdcolor);
 				break;
 			} // end of 'b'
 			case 'g': // draw 'ClosedPath'; use color/thickness, default, blue/3
@@ -261,23 +261,23 @@ public class DisplayParser {
 					break;
 				// default to larger thickness (if not overridden)
 				if (thickhold < 0) {
-					thickhold = cpScreen.getLineThickness();
-					cpScreen.setLineThickness(3);
+					thickhold = cpDrawing.getLineThickness();
+					cpDrawing.setLineThickness(3);
 				}
 				// default color, may be overridden below
-				Color holdcolor = cpScreen.imageContextReal.getColor();
-				cpScreen.imageContextReal.setColor(Color.BLUE);
+				Color holdcolor = cpDrawing.imageContextReal.getColor();
+				cpDrawing.imageContextReal.setColor(Color.BLUE);
 				if (dispFlags.colorIsSet) { // if specified
-					cpScreen.imageContextReal.setColor(dispFlags.getColor());
-					cpScreen.drawPath(CPBase.ClosedPath);
-					cpScreen.imageContextReal.setColor(holdcolor);
+					cpDrawing.imageContextReal.setColor(dispFlags.getColor());
+					cpDrawing.drawPath(CPBase.ClosedPath);
+					cpDrawing.imageContextReal.setColor(holdcolor);
 				}
 				else {
-					cpScreen.drawPath(CPBase.ClosedPath);
+					cpDrawing.drawPath(CPBase.ClosedPath);
 				}
-				cpScreen.imageContextReal.setColor(holdcolor);
+				cpDrawing.imageContextReal.setColor(holdcolor);
 				if (thickhold>=0)
-					cpScreen.setLineThickness(thickhold);
+					cpDrawing.setLineThickness(thickhold);
 				count++;
 				break;
 			} // end of 'g'
@@ -351,7 +351,7 @@ public class DisplayParser {
 					// label?
 					if (dispFlags.label) 
 						dispFlags.setLabel(Integer.toString(v));
-					cpScreen.drawCircle(p.getCenter(v), p.getRadius(v), dispFlags);
+					cpDrawing.drawCircle(p.getCenter(v), p.getRadius(v), dispFlags);
 					v=he.next.origin.vertIndx;
 					// set up color (there's only one)
 					if (!dispFlags.colorIsSet)
@@ -359,7 +359,7 @@ public class DisplayParser {
 					// label?
 					if (dispFlags.label) 
 						dispFlags.setLabel(Integer.toString(v));
-					cpScreen.drawCircle(p.getCenter(v), p.getRadius(v), dispFlags);
+					cpDrawing.drawCircle(p.getCenter(v), p.getRadius(v), dispFlags);
 					count++;
 				} // done with first two circles of first face
 
@@ -396,7 +396,7 @@ public class DisplayParser {
 						if (dispFlags.label)
 							dispFlags.setLabel(Integer.toString(v));
 
-						cpScreen.drawCircle(z,p.getRadius(v),dispFlags);
+						cpDrawing.drawCircle(z,p.getRadius(v),dispFlags);
 						count++;
 					}
 				}
@@ -432,7 +432,7 @@ public class DisplayParser {
 								dispFlags.setColor(p.getFaceColor(f));
 							if (dispFlags.label)
 								dispFlags.setLabel(Integer.toString(f));
-							cpScreen.drawCircle(theCircle.center,theCircle.rad, dispFlags);
+							cpDrawing.drawCircle(theCircle.center,theCircle.rad, dispFlags);
 							count++;
 						}
 						break;
@@ -458,7 +458,7 @@ public class DisplayParser {
 								dispFlags.setColor(p.getCircleColor(v));
 							if (dispFlags.label)
 								dispFlags.setLabel(Integer.toString(v));
-							cpScreen.drawClosedPoly(num,fanCenters,dispFlags);
+							cpDrawing.drawClosedPoly(num,fanCenters,dispFlags);
 							count++;
 						}
 						break;
@@ -471,7 +471,7 @@ public class DisplayParser {
 							HalfEdge he=pdcel.findHalfEdge(eits.next());
 							Complex[] pts=pdcel.getDualEdgeEnds(he);
 							if (pts!=null) {
-								cpScreen.drawEdge(pts[0],pts[1],dispFlags);
+								cpDrawing.drawEdge(pts[0],pts[1],dispFlags);
 								count++;
 							}
 						}
@@ -510,7 +510,7 @@ public class DisplayParser {
 						while (his.hasNext()) {
 							HalfEdge he=his.next();
 							Complex[] pts=pdcel.getDualEdgeEnds(he);
-							cpScreen.drawEdge(pts[0],pts[1],dispFlags);
+							cpDrawing.drawEdge(pts[0],pts[1],dispFlags);
 							count++;
 						}
 						break;
@@ -526,7 +526,7 @@ public class DisplayParser {
 								Complex ctr=p.tangencyPoint(edge);
 								if (ctr==null)
 									break;
-								cpScreen.drawTrinket(trinket,ctr, dispFlags);
+								cpDrawing.drawTrinket(trinket,ctr, dispFlags);
 								count++;
 							}
 						}
@@ -548,11 +548,11 @@ public class DisplayParser {
 									fanCenters[2*j]=pts[j].x;
 									fanCenters[2*j+1]=pts[j].y;
 								}
-								cpScreen.drawClosedPoly(n,fanCenters,dispFlags);
+								cpDrawing.drawClosedPoly(n,fanCenters,dispFlags);
 
 								if (dispFlags.label) {
 									int f=face.faceIndx;
-									cpScreen.drawIndex(
+									cpDrawing.drawIndex(
 											p.getFaceCenter(f),f,1);
 								}
 								count++;
@@ -572,7 +572,7 @@ public class DisplayParser {
 							Complex fz=p.getFaceCenter(f);
 							if (!dispFlags.colorIsSet)
 								dispFlags.setColor(p.getFaceColor(f));
-							cpScreen.drawTrinket(trinket,fz,dispFlags);
+							cpDrawing.drawTrinket(trinket,fz,dispFlags);
 							count++;
 						}
 					}
@@ -602,8 +602,8 @@ public class DisplayParser {
 						pts[1]=p.getCenter(edge.twin.origin.vertIndx);
 						if (dispFlags.fill)
 							dispFlags.setColor(edge.getColor());
-						cpScreen.drawEdge(pts[0],pts[1],dispFlags);
-						count++; // cpScreen.rePaintAll();
+						cpDrawing.drawEdge(pts[0],pts[1],dispFlags);
+						count++; // cpDrawing.rePaintAll();
 					}
 				}
 				break;
@@ -637,7 +637,7 @@ public class DisplayParser {
 							dispFlags.setColor(p.getFaceColor(f));
 						if (dispFlags.label)
 							dispFlags.setLabel(Integer.toString(f));
-						cpScreen.drawFace(pts[0],pts[1], pts[2], null, null, null, dispFlags);
+						cpDrawing.drawFace(pts[0],pts[1], pts[2], null, null, null, dispFlags);
 						if (circleToo) { // also, color circle this face is responsible for
 							int cirIndx=face.edge.next.next.origin.vertIndx;
 							if (!dispFlags.colorIsSet)
@@ -645,7 +645,7 @@ public class DisplayParser {
 							// suppress label
 							dispFlags.setLabel(null);
 					
-							cpScreen.drawCircle(pts[2],
+							cpDrawing.drawCircle(pts[2],
 									p.packDCEL.getVertRadius(face.edge.next.next),
 									dispFlags);
 						}
@@ -680,10 +680,10 @@ public class DisplayParser {
 						fanCenters[2*j]=pts[j].x;
 						fanCenters[2*j+1]=pts[j].y;
 					}
-					cpScreen.drawClosedPoly(n, fanCenters, dispFlags);
+					cpDrawing.drawClosedPoly(n, fanCenters, dispFlags);
 
 					if (dispFlags.label)
-						cpScreen.drawIndex(p.getCenter(v), v, 1);
+						cpDrawing.drawIndex(p.getCenter(v), v, 1);
 
 					count++;
 				}
@@ -715,10 +715,10 @@ public class DisplayParser {
 						fanCenters[2*j]=pts[j].x;
 						fanCenters[2*j+1]=pts[j].y;
 					}
-					cpScreen.drawClosedPoly(n, fanCenters, dispFlags);
+					cpDrawing.drawClosedPoly(n, fanCenters, dispFlags);
 
 					if (dispFlags.label)
-						cpScreen.drawIndex(p.getCenter(v), v, 1);
+						cpDrawing.drawIndex(p.getCenter(v), v, 1);
 
 					count++;
 				} // end of while on v
@@ -729,7 +729,7 @@ public class DisplayParser {
 			{
 				// TODO: should we allow color info override??
 
-				int thickness = cpScreen.getLineThickness();
+				int thickness = cpDrawing.getLineThickness();
 				if (thickness<4) thickness=4;
 
 				PackDCEL pdcel=p.packDCEL;
@@ -846,7 +846,7 @@ public class DisplayParser {
 					corners[tick*2+1]=z.y;
 					tick++;
 				}
-				cpScreen.drawClosedPoly(lnum,corners,dispFlags);
+				cpDrawing.drawClosedPoly(lnum,corners,dispFlags);
 				count++;
 				break;
 			}
@@ -865,7 +865,7 @@ public class DisplayParser {
 					Iterator<Complex> ptl=ptlink.iterator();
 					while (ptl.hasNext()) {
 						Complex ptz=ptl.next();
-						cpScreen.drawTrinket(trinket,ptz,dispFlags);
+						cpDrawing.drawTrinket(trinket,ptz,dispFlags);
 						count++;
 					}
 					break;
@@ -882,7 +882,7 @@ public class DisplayParser {
 									p.getCenter(vert[0]),
 									p.getCenter(vert[1]),
 									p.getCenter(vert[2]));
-							cpScreen.drawTrinket(trinket,z,dispFlags);
+							cpDrawing.drawTrinket(trinket,z,dispFlags);
 							count++;
 						}
 					}
@@ -900,7 +900,7 @@ public class DisplayParser {
 					z = p.getCenter(v);
 					if (!dispFlags.colorIsSet)
 						dispFlags.setColor(p.getCircleColor(v));
-					cpScreen.drawTrinket(trinket, z,dispFlags);
+					cpDrawing.drawTrinket(trinket, z,dispFlags);
 					count++;
 				}
 				break;
@@ -962,7 +962,7 @@ public class DisplayParser {
 							}
 							DispFlags tmpFlags=dispFlags.clone();
 							tmpFlags.label=false;
-							cpScreen.drawClosedPoly(lnum, corners, tmpFlags);
+							cpDrawing.drawClosedPoly(lnum, corners, tmpFlags);
 							
 							// debug=true;
 							if (debug) 
@@ -1019,7 +1019,7 @@ public class DisplayParser {
 //								for (int vj=0;vj<tile.vertCount;vj++)
 //									wc = wc.add(p.rData[tile.vert[vj]].center);
 //								wc=wc.divide((double)tile.vertCount);
-								cpScreen.drawIndex(wc,tile.tileIndex, 1);
+								cpDrawing.drawIndex(wc,tile.tileIndex, 1);
 								count++;
 							} // end of label display
 							
@@ -1035,7 +1035,7 @@ public class DisplayParser {
 				double rad=1.0;
 				if (p.hes > 0) 
 					rad=Math.PI/2.0;
-				cpScreen.drawCircle(cz, rad, dispFlags);
+				cpDrawing.drawCircle(cz, rad, dispFlags);
 				count++;
 				break;
 			}
@@ -1073,7 +1073,7 @@ public class DisplayParser {
 						else {
 							sc=EuclMath.circle_3(z0,z1,z2);
 						}
-						cpScreen.drawCircle(sc.center,sc.rad,dispFlags);
+						cpDrawing.drawCircle(sc.center,sc.rad,dispFlags);
 						count++;
 					}
 				}
@@ -1082,8 +1082,8 @@ public class DisplayParser {
 			} // end of main switch
 
 			// if thickness changed, reset it
-			if (thickhold >= 0 && cpScreen!=null)
-				cpScreen.setLineThickness(thickhold);
+			if (thickhold >= 0 && cpDrawing!=null)
+				cpDrawing.setLineThickness(thickhold);
 
 		} // end of while to process flag segments
 

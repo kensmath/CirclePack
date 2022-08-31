@@ -129,7 +129,7 @@ public class ImagePanel extends JPanel implements ActionListener, ImageObserver 
 	            return false;
 	        }
 			if (p!=null) // capture 'packImage' for this packing
-				bI=p.cpScreen.packImage;
+				bI=p.cpDrawing.packImage;
 			else { // capture Map frame 'pairPanel' of two packings
 				BufferedImage domPI=PackControl.mapPairFrame.getDomainCPS().packImage;
 				BufferedImage rangePI=PackControl.mapPairFrame.getRangeCPS().packImage;

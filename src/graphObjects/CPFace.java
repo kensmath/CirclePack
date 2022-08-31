@@ -15,7 +15,7 @@ import geometry.HypGeodesic;
 import geometry.SphGeodesic;
 import geometry.SphericalMath;
 import math.Point3D;
-import panels.CPScreen;
+import packing.CPdrawing;
 import util.ColorUtil;
 
 /**
@@ -37,7 +37,7 @@ public class CPFace extends Complex {
 	// persistent objects for re-use
 	public Path2D.Double path;
 
-	public CPScreen parent;
+	public CPdrawing parent;
 	private int geometry;
 
 	// parent sets colors in context, adjusts data, calls draw or fill.
@@ -54,7 +54,7 @@ public class CPFace extends Complex {
 		path=new Path2D.Double();
 	}
 
-	public void setParent(CPScreen par) {
+	public void setParent(CPdrawing par) {
 		parent = par;
 	}
 
@@ -306,7 +306,7 @@ public class CPFace extends Complex {
 	 * @throws DrawingException 
 	 */
 	public static int sphClosedPath(Path2D.Double gpath,
-			double []crns,CPScreen cpS) throws DrawingException {
+			double []crns,CPdrawing cpS) throws DrawingException {
 		int N=(int)(crns.length/2);
 		
 		// Cheap check: are all points invisible? Just check x-coords
@@ -468,7 +468,7 @@ public class CPFace extends Complex {
 	 * If length=1, then entire polygon is visible, but calling 
 	 * routine must decide whether to close the path.
 	 */
-	public static Vector<Path2D.Double> sphPolyBdry(double []crns,int N,CPScreen cpS) 
+	public static Vector<Path2D.Double> sphPolyBdry(double []crns,int N,CPdrawing cpS) 
 	throws DrawingException {
 		
 		Vector<Path2D.Double> paths=new Vector<Path2D.Double>();
@@ -575,10 +575,10 @@ public class CPFace extends Complex {
 	 * Append a hyperbolic geodesic segment to existing path
 	 * @param path, Path2D.Double
 	 * @param geo, HypGeodesic
-	 * @param cpS, CPScreen
+	 * @param cpS, CPDrawing
 	 */
 	public static void hypCreateEdge(Path2D.Double path,
-			HypGeodesic geo,CPScreen cpS) {
+			HypGeodesic geo,CPdrawing cpS) {
 		if (geo.lineFlag) {
 			path.append((Shape)new Line2D.Double(
 					cpS.toPixX(geo.z1.x),cpS.toPixY(geo.z1.y),
@@ -596,7 +596,7 @@ public class CPFace extends Complex {
 
 	
 	public static int hypCreateFace(Path2D.Double gpath,
-			double []cnrs,int N,boolean cp,int Nsteps,CPScreen cpS) 
+			double []cnrs,int N,boolean cp,int Nsteps,CPdrawing cpS) 
 	throws DrawingException {
 		// first edge
 		HypGeodesic geo = new HypGeodesic(

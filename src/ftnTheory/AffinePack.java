@@ -2643,7 +2643,7 @@ public class AffinePack extends PackExtender {
 		if (cmd.startsWith("Lface")) {
 			DispFlags dflags=new DispFlags("");
 			for (int f=1;f<=packData.faceCount;f++) {
-				packData.cpScreen.drawFace(aspects[f].getCenter(0),
+				packData.cpDrawing.drawFace(aspects[f].getCenter(0),
 						aspects[f].getCenter(1),aspects[f].getCenter(2),null,null,null,dflags);
 			}
 			repaintMe();
@@ -2667,7 +2667,7 @@ public class AffinePack extends PackExtender {
 					Complex wc=sc.center;
 					DispFlags df=new DispFlags(null);
 					df.setColor(Color.green);
-					packData.cpScreen.drawEdge(vc,wc,df);
+					packData.cpDrawing.drawEdge(vc,wc,df);
 				}
 			}
 			repaintMe();
@@ -2748,7 +2748,7 @@ public class AffinePack extends PackExtender {
 					mxY = ((pr=aspects[f].getCenter(j).y+aspects[f].labels[j])>mxY) ? pr : mxY; 
 				}
 			cpCommand("set_screen -b "+mnX+" "+mnY+" "+mxX+" "+mxY);
-			packData.cpScreen.repaint();
+			packData.cpDrawing.repaint();
 			return 1;
 		}
 		

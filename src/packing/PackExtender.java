@@ -22,7 +22,6 @@ import images.CPIcon;
 import input.CommandStrParser;
 import input.MyConsole;
 import mytools.MyTool;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.PopupBuilder;
 import util.UtilPacket;
@@ -46,7 +45,7 @@ import util.UtilPacket;
 public abstract class PackExtender {
 	public String extensionType; // 'PackExtender' type, e.g., RIEMANN-HILBERT
 	public String extensionAbbrev; // Abbreviation, e.g.,'RH','rh', used in commands
-	public CPScreen cpScreen;  // keep cpScreen because 'PackData' can get swapped out.
+	public CPdrawing cpDrawing;  // keep cpDrawing because 'PackData' can get swapped out.
 	public PackData packData;  // every 'PackExtender' is associated with a single packing
 	public PackDCEL pdc;       // convenience
 	public String iconName="GUI/Xtender.png";  // Extender icon in Resources/Icon
@@ -61,7 +60,7 @@ public abstract class PackExtender {
 	public PackExtender(PackData p) {
 		packData=p;
 		pdc=p.packDCEL;
-		cpScreen=p.cpScreen;
+		cpDrawing=p.cpDrawing;
 		running=false;
 		toolTip="No startup information provided on this PackExtender";
 		XtenderTool=null;
@@ -89,7 +88,7 @@ public abstract class PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.cpScreens[pnum];
+				CPdrawing cpS=CPBase.cpDrawing[pnum];
 				if (cpS!=null) {
 					PackData p=packData.copyPackTo();
 					return CirclePack.cpb.swapPackData(p, pnum, false);
@@ -124,14 +123,14 @@ public abstract class PackExtender {
 	public int swapPackData(PackData newPD) {
 		if (newPD==null)
 			return 0;
-		CPScreen holdcpS=packData.cpScreen;
+		CPdrawing holdcpS=packData.cpDrawing;
 		packData=newPD.copyPackTo();
 		packData.packExtensions=new Vector<PackExtender>(1);
 		packData.packExtensions.add(this);
 		pdc=newPD.packDCEL;
 		
 		// reconnect pack and screen
-		packData.cpScreen=holdcpS;
+		packData.cpDrawing=holdcpS;
 		holdcpS.setPackData(packData);
 		packData.packNum=holdcpS.getPackNum();
 		packData.setGeometry(packData.hes);

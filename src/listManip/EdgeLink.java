@@ -961,7 +961,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 							Double.parseDouble((String)its.next()));
 					if (packData.hes>0 && str.charAt(0)=='z') {
 						z=SphView.visual_plane_to_s_pt(z);
-						z=packData.cpScreen.sphView.toRealSph(z);
+						z=packData.cpDrawing.sphView.toRealSph(z);
 					}
 					EdgeLink zsearch=packData.edge_search(z);
 					Iterator<EdgeSimple> nl=zsearch.iterator();

@@ -2,7 +2,7 @@ package util;
 
 import allMains.CirclePack;
 import circlePack.PackControl;
-import panels.CPScreen;
+import packing.CPdrawing;
 
 /**
  * DispOptions simply holds the default display options for a given circle 
@@ -28,10 +28,10 @@ public class DispOptions {
 	public boolean path;
 	
 	public boolean usetext;
-	private CPScreen parent;
+	private CPdrawing parent;
 
 	// Constructor
-	public DispOptions(CPScreen par) {
+	public DispOptions(CPdrawing par) {
 		parent=par;
 		reset();
 	}

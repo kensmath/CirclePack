@@ -15,6 +15,7 @@ import javax.swing.border.LineBorder;
 import allMains.CPBase;
 import circlePack.PackControl;
 import exceptions.MiscException;
+import packing.CPdrawing;
 
 /**
  * Panel containing the three (or more??) small packing images
@@ -35,10 +36,10 @@ public class SmallCanvasPanel extends JPanel {
 	public JPanel []smallPanel;
 	public JPanel []cpInfo;
 	public JLabel []packName;
-	public CPScreen []ourScreens;
+	public CPdrawing []ourScreens;
 
 	// Constructor
-	public SmallCanvasPanel(CPScreen []screens) {
+	public SmallCanvasPanel(CPdrawing []screens) {
 		super();
 		ourScreens=screens;
 		smallPanel=new JPanel[CPBase.NUM_PACKS];

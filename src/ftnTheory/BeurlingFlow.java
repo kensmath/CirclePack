@@ -6,9 +6,9 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
+import packing.CPdrawing;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 /**
  * Routine for experimenting with the Beurling-Riemann Mapping 
@@ -57,11 +57,11 @@ public class BeurlingFlow extends PackExtender {
 		Vector<String> items=null;
 
 		if (cmd.startsWith("getDom")) { // get/reset domain pack
-			CPScreen cpS;
+			CPdrawing cpS;
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				cpS=CPBase.cpScreens[pnum];
+				cpS=CPBase.cpDrawing[pnum];
 				if (cpS.getPackData().nodeCount!=domainData.nodeCount) {
 					errorMsg("getDom: range complex must match domain");
 					return 0;

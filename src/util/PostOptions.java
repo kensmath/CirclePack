@@ -2,7 +2,7 @@ package util;
 
 import allMains.CirclePack;
 import circlePack.PackControl;
-import panels.CPScreen;
+import packing.CPdrawing;
 
 /**
  * PostOptions simply holds the default PostScript options for a given circle 
@@ -32,10 +32,10 @@ import panels.CPScreen;
 		public boolean jpg;
 
 		public boolean usetext;
-		private CPScreen parent;
+		private CPdrawing parent;
 
 		// Constructor
-		public PostOptions(CPScreen par) {
+		public PostOptions(CPdrawing par) {
 			parent=par;
 			reset();
 		}
