@@ -461,7 +461,6 @@ public class PackCreation {
  		myPacking.util_B=blueVert;
  		
 		// update; choose random face to center at origin
-		myPacking.setCombinatorics();
 		myPacking.setAlpha(rand.nextInt(n+1));
 		
 		// set default radii, aims, plot flags
@@ -660,7 +659,6 @@ public class PackCreation {
 		
 		pent.setAlpha(6);
 		pent.setGamma(1);
-		pent.setCombinatorics();
 		pent.set_aim_default();
 		for (int v=1;v<=pent.nodeCount;v++) {
 			if (pent.isBdry(v))

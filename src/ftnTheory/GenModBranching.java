@@ -243,7 +243,6 @@ public class GenModBranching extends PackExtender {
 				else if (fullWipe) {
 					branchPts=new Vector<GenBrModPt>(3);
 					branchPts.add((GenBrModPt)null);
-					packData.setCombinatorics();
 					packData.set_aim_default();
 				}
 				

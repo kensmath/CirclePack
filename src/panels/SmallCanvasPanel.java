@@ -112,7 +112,8 @@ public class SmallCanvasPanel extends JPanel {
 	 * Change active packing indicators, pack 'n' active.
 	 */
 	public void changeActive(int n) {
-		if (n<0 || n>=CPBase.NUM_PACKS) return;
+		if (n<0 || n>=CPBase.NUM_PACKS) 
+			return;
 		for (int i=0;i<CPBase.NUM_PACKS;i++) {
 			if (i==n) {
 				cpInfo[i].setBackground(actColor);

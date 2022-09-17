@@ -11,6 +11,8 @@ import util.RadIvdPacket;
 import util.UtilPacket;
 
 /** 
+ * Static routines for computations in spherical geometry
+ * 
  * The unit (Riemann) sphere is x^2 + y^2 + z^2 = 1 in 3-space. 
  * Spherical points are stored as complex numbers in usual polar
  * form (theta,phi), so theta is the angle measured from the 

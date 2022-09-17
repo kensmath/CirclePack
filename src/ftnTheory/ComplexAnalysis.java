@@ -355,7 +355,7 @@ public class ComplexAnalysis extends PackExtender {
 				Oops("perhaps 'set_div' first?");
 			
 			// what packing to apply to? default to active
-			PackData toPack=CPBase.cpDrawing[PackControl.activeFrame.getActivePackNum()].getPackData();
+			PackData toPack=CirclePack.cpb.getActivePackData();
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));

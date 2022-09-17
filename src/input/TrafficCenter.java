@@ -842,10 +842,9 @@ public class TrafficCenter {
 	
 	/**
 	 * Command that applies to the top level GUI -- as from menus and 
-	 * buttons. This run's in 'CirclePack's main thread, not the 
+	 * buttons. This runs in 'CirclePack's main thread, not the 
 	 * execution thread, and applies to the 'active' packing.
 	 * TODO: for efficiency, try to move some of these to direct action.
-	 * action.
 	 * @param cmd, single command
 	 * @return 
 	 */

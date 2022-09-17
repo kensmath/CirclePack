@@ -129,18 +129,12 @@ public class ShellControl extends CPBase {
 		System.err.println(msgstr);
 	}
 	
-	/*
-	 * TODO: have to fix this
-	 */
 	public PackData getActivePackData() {
-		return null;
+		return packings[activePackNum];
 	}
 	
-	/*
-	 * TODO: have to finish this
-	 */
 	public int getActivePackNum() {
-		return 0;
+		return activePackNum;
 	}
 	
 	/**
@@ -172,9 +166,11 @@ public class ShellControl extends CPBase {
 	
 	// done with abstract methods
 	
-	// TODO: adjust active pack mechanisms
-	public static void switchActivePack(int k) {
-		
+	public static void switchActivePack(int packnum) {
+		int old_pack = activePackNum;
+		if (packnum<0 || packnum>2 || old_pack==packnum) 
+			return;
+		activePackNum=packnum;
 	}
 			
 	/** 

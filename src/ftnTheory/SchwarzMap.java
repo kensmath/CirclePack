@@ -378,7 +378,6 @@ public class SchwarzMap extends PackExtender {
 								"Convert to spherical.");
 							cpCommand(packData,"copy "+qnum);
 							qData=CPBase.cpDrawing[qnum].getPackData();
-							qData.setCombinatorics();
 							// make range spherical
 							cpCommand(qData,"geom_to_s"); 
 						}

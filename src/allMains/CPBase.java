@@ -4,11 +4,13 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.geom.Path2D;
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
-import java.util.Date;
+import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Random;
 import java.util.Vector;
+import java.util.jar.JarEntry;
 
 import com.jimrolf.functionparser.FunctionParser;
 
@@ -16,6 +18,7 @@ import circlePack.RunProgress;
 import complex.Complex;
 import cpTalk.sockets.CPMultiServer;
 import exceptions.DataException;
+import exceptions.InOutException;
 import geometry.CircleSimple;
 import input.CPFileManager;
 import input.SocketSource;
@@ -215,10 +218,69 @@ public abstract class CPBase {
 		return null;
 	}
 	
+	
+	   /**
+     * Gets running jar file path.
+     * @return running jar file path.
+     */
+    private static File getCurrentJarFilePath() {
+        return new File(CPBase.class.getProtectionDomain().getCodeSource().getLocation().getPath());
+    }
+
+    /**
+     * Extracts exe files in cdeps/ to the destination directory. 
+     * E.g. qhull.exe and triangle.exe used for Delaunay triangulations
+     * @param destDir destination directory.
+     * @throws IOException if there's an i/o problem.
+     */
+    private static void extractExeFiles(String destDir) throws IOException {
+    	
+        java.util.jar.JarFile jar = new java.util.jar.JarFile(getCurrentJarFilePath());
+        Enumeration<JarEntry> enumEntries = jar.entries();
+        String entryName;
+        int tick=0;
+        while (enumEntries.hasMoreElements()) {
+        	tick++;
+
+            java.util.jar.JarEntry file = (java.util.jar.JarEntry) enumEntries.nextElement();
+            entryName = file.getName();
+            
+// debugging
+//System.out.println("entryName is "+entryName);
+
+            if ( (entryName != null) && (entryName.endsWith(".exe"))) {
+            	
+// debugging
+System.out.println("found; "+entryName);
+            	
+                java.io.File f = new java.io.File(destDir + java.io.File.separator + entryName);
+                if (file.isDirectory()) { // if its a directory, create it
+                    f.mkdir();
+                    continue;
+                }
+                java.io.InputStream is = jar.getInputStream(file); // get the input stream
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(f);
+                while (is.available() > 0) {  // write contents of 'is' to 'fos'
+                    fos.write(is.read());
+                }
+
+                fos.close();
+                is.close();                
+            }
+        }
+    }
+	
 	// Constructor
 	public CPBase() {
 		if( CPBase.sharedinstance==null )
 			CPBase.sharedinstance=this;
+		
+		// load *.exe files
+		try {
+			extractExeFiles(System.getProperty("java.io.tmpdir"));
+		} catch (IOException ioex) {
+			System.err.println("Failed to load exe files: "+ioex.getMessage());
+		}
 		
 		scriptManager=null;
 		defaultCircleColor = Color.BLACK;

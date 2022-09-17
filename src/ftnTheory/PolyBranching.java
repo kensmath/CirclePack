@@ -124,9 +124,11 @@ public class PolyBranching extends PackExtender {
 			}
 				
 			StringBuilder strb= new StringBuilder("Objective values: "+
-					"min is "+String.format("%.8e",objectives.get(best))+" at v="+branchVerts.get(best)+"\n");
+					"min is "+String.format("%.8e",objectives.get(best))+
+					" at v="+branchVerts.get(best)+"\n");
 			for (int j=0;j<branchVerts.size();j++) {
-				strb.append("  v "+branchVerts.get(j)+":  "+String.format("%.6e",objectives.get(j))+"\n");
+				strb.append("  v "+branchVerts.get(j)+":  "+
+						String.format("%.6e",objectives.get(j))+"\n");
 			}
 				
 			// report
@@ -156,7 +158,8 @@ public class PolyBranching extends PackExtender {
 			errorMsg("No branch points were specified in the 'aim's");
 			return;
 		}
-		StringBuilder strb=new StringBuilder("PolyBranching p"+packData.packNum+": vertices ");
+		StringBuilder strb=new StringBuilder("PolyBranching p"+
+				packData.packNum+": vertices ");
 		for (int j=0;j<cnt;j++) {
 			strb.append(" "+branchVerts.get(j));
 		}
@@ -166,8 +169,10 @@ public class PolyBranching extends PackExtender {
 	public void helpInfo() {
 		helpMsg("Info on PackExtender "+extensionAbbrev+" (Poly branching)");
 		helpMsg("Commands:\n"+
-				"  set_branching:  determine the branching from the parent packing\n"+
-				"  report:    compute the objective values and their minimum\n"+
+				"  set_branching:  determine the branching "+
+				"from the parent packing\n"+
+				"  report:    compute the objective values "+
+				"and their minimum\n"+
 				"  copy {n}   copy 'rangePack' to pack n\n");
 	}
 	

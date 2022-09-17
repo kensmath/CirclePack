@@ -1026,8 +1026,6 @@ public class WeldManager extends PackExtender {
 				q_count, weldmapfile,script_flag, opt_flag) == 0)
 			return 0;
 		if ((ans = weld(p, q, p_start_vert, q_start_vert, opt_flag)) > 0) {
-			p.setCombinatorics();
-			q.setCombinatorics();
 			p.fillcurves();
 			q.fillcurves();
 			p.set_aim_default();
@@ -1132,7 +1130,6 @@ public class WeldManager extends PackExtender {
 				}
 				p2.chooseAlpha();
 				p2.chooseGamma();
-				p2.setCombinatorics();
 				p2.set_aim_default();
 				p2.set_rad_default();
 

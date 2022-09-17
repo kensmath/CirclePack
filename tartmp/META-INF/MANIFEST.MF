@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+Built-By: kstephe2
+Main-Class: runCirclePack.RunCirclePack
+Class-Path: .
+

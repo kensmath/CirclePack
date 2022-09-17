@@ -916,9 +916,10 @@ FocusListener {
 	 * @param packnum int, 
 	 */
 	public static void switchActivePack(int packnum) {
-		int old_pack = activeFrame.getActivePackNum();
+		int old_pack = activePackNum;
 		if (packnum<0 || packnum>2 || old_pack==packnum) 
 			return;
+		activePackNum=packnum;
 		smallCanvasPanel.changeActive(packnum);
 		canvasRedrawer.changeActive(packnum);
 		screenCtrlFrame.displayPanel.update(old_pack,packnum);
@@ -935,7 +936,7 @@ FocusListener {
 		activeFrame.repaint();
 		
 		// AF: Send the new pack data to the pack info frame.
-		packDataHover.update(activeFrame.getPackData());
+		packDataHover.update(CirclePack.cpb.getActivePackData());
 	}
 	
 	/** 
@@ -1046,7 +1047,7 @@ FocusListener {
 	 * @return int
 	 */
 	public int getActivePackNum() {
-		return activeFrame.getActivePackNum();
+		return activePackNum;
 	}
 	
 	/**
@@ -1054,7 +1055,7 @@ FocusListener {
 	 * @return PackData
 	 */
 	public PackData getActivePackData() {
-		return activeFrame.getPackData();
+		return packings[activePackNum];
 	}
 
 	/**

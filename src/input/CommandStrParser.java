@@ -686,7 +686,6 @@ public class CommandStrParser {
 			  
 			  packData.chooseAlpha();
 			  packData.chooseGamma();
-			  packData.setCombinatorics();
 			  packData.set_aim_default();
 			  packData.set_rad_default();
 			  packData.activeNode = packData.getAlpha();
@@ -1461,7 +1460,7 @@ public class CommandStrParser {
 			  }
 			  
 			  N=pts.size();
-			  if (geom==1 && uP.rtnFlag==1) { // unit square pts? must put in (theta,phi) form
+			  if (geom==1 && uP.rtnFlag==1) { // unit square pts? put in (theta,phi) form
 				  for (int i=0;i<N;i++) {
 					  Complex pz=pts.get(i);
 					  pz.x=2.0*Math.PI*pz.x;
@@ -1483,7 +1482,6 @@ public class CommandStrParser {
 			  
 			  packData.chooseAlpha();
 			  packData.chooseGamma();
-			  packData.setCombinatorics();
 			  packData.set_aim_default();
 			  packData.set_rad_default();
 			  for (int v=1;v<=packData.nodeCount;v++) 

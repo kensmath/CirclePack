@@ -940,7 +940,8 @@ public class CPdrawing extends JPanel implements MouseListener {
 		for (int i=0;i<Xvec.size();i++) {
 			PackExtender pX=Xvec.get(i);
 			MyTool Xtool=pX.XtenderTool;
-			if (Xtool!=null) scp.cpInfo[pnum].add(Xtool);
+			if (Xtool!=null) 
+				scp.cpInfo[pnum].add(Xtool);
 		}
 		scp.cpInfo[pnum].revalidate();
 		scp.cpInfo[pnum].repaint();

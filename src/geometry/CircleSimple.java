@@ -12,7 +12,7 @@ import complex.Complex;
  *     flag=-1 on error, flag=1 on success, flag=0 neutral. 
  * Other options may be agreed in particular calls.
  * lineFlag:
- *     false: regular circles (rad<0 means outside)
+ *     false: regular circles (rad<0 means disc is the outside)
  *     true: center is unit normal vector towards interior 
  *           times CPBase.FAUX_RAD, while -rad is FAUX_RAD plus
  *           signed distance from origin (so if rad>FAUX_RAD,

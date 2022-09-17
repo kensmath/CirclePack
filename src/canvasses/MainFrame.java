@@ -222,7 +222,7 @@ public class MainFrame extends JFrame {
 	 * update title bar of 'activeFrame'
 	 */
 	public void updateTitle() {
-		int pnum=getActivePackNum();
+		int pnum=CirclePack.cpb.getActivePackNum();
 		setTitle("Active Packing p"+pnum+": "+
 				CPBase.packings[pnum].fileName);
 	}
@@ -352,22 +352,6 @@ public class MainFrame extends JFrame {
 		activeScreen.setCPDrawing(cpd);
 	}
 	
-	/**
-	 * Which 'PackData' is currently associated? It's help by 'CPDrawing'
-	 * @return PackData
-	 */
-	public PackData getPackData() {
-		return activeScreen.getCPDrawing().getPackData();
-	}
-	
-	/**
-	 * What is the active pack number?
-	 * @return int
-	 */
-	public int getActivePackNum() {
-		return activeScreen.getCPDrawing().getPackNum();
-	}
-
 	/**
 	 * This puts new image in the activeScreen and updates its 
 	 * small version.

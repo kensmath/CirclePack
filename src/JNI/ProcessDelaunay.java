@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import allMains.CPBase;
 import allMains.CirclePack;
 import exceptions.InOutException;
 import exceptions.JNIException;
@@ -48,8 +49,10 @@ public class ProcessDelaunay {
 
 		// TODO: settle on canonical directories, particularly so
 		// we can put the executables in the jar file
-		File dir = CPFileManager.HomeDirectory; // where temp files go
-		File codedir = CPFileManager.HomeDirectory; // where the code goes
+//		File dir = CPFileManager.HomeDirectory; // where temp files go
+//		File codedir = CPFileManager.HomeDirectory; // where the code goes
+		File dir = CPBase.LibDirectory; // where temp files go
+		File codedir = CPBase.LibDirectory; // where the code goes
 		// write data to "sphInput_id" file
 		File infile = new File(dir, "sphin_" + localID);
 		String outfilename = new String("sphout_" + localID);
@@ -170,8 +173,10 @@ public class ProcessDelaunay {
 
 		// TODO: settle on canonical directories, particularly so
 		//    we can put the executables in the jar file
-		File dir = CPFileManager.HomeDirectory; // where temp files go
-		File codedir = CPFileManager.HomeDirectory; // where the code goes
+//		File dir = CPFileManager.HomeDirectory; // where temp files go
+//		File codedir = CPFileManager.HomeDirectory; // where the code goes
+		File dir = CPBase.LibDirectory; // where temp files go
+		File codedir = CPBase.LibDirectory; // where the code goes
 		// write data to "plane_id" file, depending on data
 		String infilename;
 		if (!polyflag)
@@ -180,7 +185,7 @@ public class ProcessDelaunay {
 			infilename=new String("plane_"+localID+".poly");
 		File infile = new File(dir,infilename);
 		String outfilename = new String("plane_" + localID+".1.ele");
-		File outfile = new File(dir, outfilename);
+//		File outfile = new File(dir, outfilename);
 		BufferedWriter fpw=CPFileManager.openWriteFP(infile,false,false);
 		try {
 			fpw.write("# the points\n"+deldata.pointCount+" 2 0 0\n");

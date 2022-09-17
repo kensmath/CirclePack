@@ -215,7 +215,6 @@ public class Necklace extends PackExtender {
 			packData=topPack;
 			
 			// do some fixup
-			packData.setCombinatorics();
 			packData.setAlpha(topOrigin);
 			packData.vlist=pasteVerts;
 			
