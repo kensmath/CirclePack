@@ -200,6 +200,10 @@ FocusListener {
 		FAUX_RAD=20000;
 		cpTimer=new CPTimer();
 		defaultCPIcon=new CPIcon("GUI/default_icon.jpg");
+		
+    	System.out.println("temp directory is: "+System.getProperty("java.io.tmpdir"));
+    	System.out.println("user home directory is: "+System.getProperty("user.home"));
+
 	}
 	
 	/**
