@@ -288,20 +288,19 @@ public class Info2HTML {
 			dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
 			DocumentBuilder builder = dbf.newDocumentBuilder();
 			
-			
 			System.out.println("Checking parsing");
 			builder.parse(new ByteArrayInputStream(fp.toString().getBytes()));
-			//builder.parse(new ByteArrayInputStream(indxfp.toString().getBytes()));
-			//builder.parse(new ByteArrayInputStream(compfp.toString().getBytes()));
 			System.out.println("Done parsing");
 			System.out.println("after parsing, directory is: "+System.getProperty("user.dir"));
 
-			
-			File outfile=new File(System.getProperty("user.dir"),
-					"src"+
-					File.separator+"Resources"+
+			// TODO: for some reason, calls seem to fail if target files
+			//       don't already exist
+			File outfile=new File( System.getProperty("user.dir"),
+					"src"+File.separator+
+					"Resources"+
 					File.separatorChar+"doc"+
-					File.separatorChar+"CmdDetails.html");
+					File.separatorChar+
+					"CmdDetails.html");
 			if (!outfile.exists())
 				System.err.println("'CirclePack/src/Resources/doc/CmdDetails.html' doesn't see to exist");
 			
@@ -312,12 +311,12 @@ public class Info2HTML {
 	    	fw.flush();
 	    	fw.close();
 	    	
-	    	fw = new BufferedWriter(new FileWriter("CirclePack/src/Resources/doc/CmdIndex.html", false));
+	    	fw = new BufferedWriter(new FileWriter("src/Resources/doc/CmdIndex.html", false));
 	    	fw.write(indxfp.toString());
 	    	fw.flush();
 	    	fw.close();
 	    	
-	    	fw = new BufferedWriter(new FileWriter("CirclePack/src/Resources/doc/CmdCompletion.txt", false));
+	    	fw = new BufferedWriter(new FileWriter("src/Resources/doc/CmdCompletion.txt", false));
 	    	fw.write(compfp.toString());
 	    	fw.flush();
 	    	fw.close();
