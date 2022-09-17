@@ -56,7 +56,7 @@ public abstract class CPBase {
 	
 	// directory for codes such as 'triangle', 'qhull'
 	public static File LibDirectory=new File(System.getProperty("java.io.tmpdir"));
-	
+		
 	// Some useful stuff for schwarzian work
 	public static final double sqrt3=Math.sqrt(3);           // sqrt{3}
 	public static final double sqrt3by2=Math.sqrt(3)/2.0;    // sqrt{3}/2
@@ -235,6 +235,7 @@ public abstract class CPBase {
      */
     private static void extractExeFiles(String destDir) throws IOException {
     	
+
         java.util.jar.JarFile jar = new java.util.jar.JarFile(getCurrentJarFilePath());
         Enumeration<JarEntry> enumEntries = jar.entries();
         String entryName;
@@ -277,6 +278,7 @@ System.out.println("found; "+entryName);
 		
 		// load *.exe files
 		try {
+	    	System.out.println("temp directory is: "+System.getProperty("java.io.tmpdir"));
 			extractExeFiles(System.getProperty("java.io.tmpdir"));
 		} catch (IOException ioex) {
 			System.err.println("Failed to load exe files: "+ioex.getMessage());

@@ -297,13 +297,17 @@ public class Info2HTML {
 			System.out.println("after parsing, directory is: "+System.getProperty("user.dir"));
 
 			
-			File outfile=new File("CirclePack/src/Resources/doc/CmdDetails.html");
+			File outfile=new File(System.getProperty("user.dir"),
+					"src"+
+					File.separator+"Resources"+
+					File.separatorChar+"doc"+
+					File.separatorChar+"CmdDetails.html");
 			if (!outfile.exists())
 				System.err.println("'CirclePack/src/Resources/doc/CmdDetails.html' doesn't see to exist");
 			
 //			FileWriter fw = new FileWriter("CirclePack/src/Resources/doc/CmdDetails.html", false);
 			BufferedWriter fw = new BufferedWriter(
-					new FileWriter("CirclePack/src/Resources/doc/CmdDetails.html", false));
+					new FileWriter(outfile.getName(),false));
 	    	fw.write(fp.toString());
 	    	fw.flush();
 	    	fw.close();
@@ -348,14 +352,16 @@ public class Info2HTML {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 		
-		
-		// what is the current directory?
+		// what is the directory where java was run?
 		System.out.println("user directory is: "+System.getProperty("user.dir"));
 		
+		// what is the user's home directory?
+		System.out.println("user home directory is: "+System.getProperty("user.home"));
+		
 		// create new file
-		infofile=new File("CirclePack/src/Resources/doc/CmdDetails.txt");
+		infofile=new File(System.getProperty("user.dir")+"/src/Resources/doc/CmdDetails.txt");
+//		infofile=new File("CirclePack/src/Resources/doc/CmdDetails.txt");
 		if (!infofile.exists())
 			System.err.println("'"+infofile.toString()+"' doesn't seem to exist");
 			

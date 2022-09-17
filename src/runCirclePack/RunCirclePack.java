@@ -225,16 +225,16 @@ class RunCirclePack
 		Locale.setDefault(new Locale("en","US"));
 		
 		final String jarFilename = "cpcore.jar";
-	
-        System.out.println("Creating Temporary Directory");    
+
+		// the jar is run from a temporary directory
+        System.out.println("Creating Temporary Directory for the jar");    
 		String tempDir = createTemporaryDirectory();
-	
         System.out.println("Writing jar file to "+tempDir);    
 		writeJarFile(jarFilename, tempDir);
-	
         System.out.println("Launching CirclePack");    
 		launchCirclePark(tempDir, jarFilename, args);
 	
+		// toss when CirclePack is closed
         System.out.println("Deleting temporary files");    
 		deleteTemporaryDirectory(tempDir);
 	}
