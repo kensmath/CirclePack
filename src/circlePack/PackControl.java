@@ -188,6 +188,11 @@ FocusListener {
 	
 	// Constructor
 	public PackControl() {
+		
+// debugging
+CirclePack.cpb.msg("CPBase msg: enter PackControl");		
+System.out.println("enter PackControl");
+
 		socketActive=true;  // means that socket server will be started
 		cpSocketHost=null;
 		cpMultiServer=null;
@@ -198,9 +203,16 @@ FocusListener {
 		prefFrame=null; // only when called
 		NUM_PACKS=3; // number of packings to maintain
 		FAUX_RAD=20000;
+
+// debugging
+System.out.println("start CPTimer");
+
 		cpTimer=new CPTimer();
 		defaultCPIcon=new CPIcon("GUI/default_icon.jpg");
 		
+// debugging
+System.out.println("done with PackControl");
+
     	System.out.println("temp directory is: "+System.getProperty("java.io.tmpdir"));
     	System.out.println("user home directory is: "+System.getProperty("user.home"));
 

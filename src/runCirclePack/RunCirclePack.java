@@ -126,7 +126,7 @@ class RunCirclePack
         System.out.println("Starting process");    
 		Process p = pb.start();
 	
-		System.out.println(pb.environment().get("LD_LIBRARY_PATH"));
+//		System.out.println(pb.environment().get("LD_LIBRARY_PATH"));
 		
 		//AF>>>//
 		/* Rewrote the code below to fix the freezing issue. 
