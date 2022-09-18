@@ -295,12 +295,7 @@ public class Info2HTML {
 
 			// TODO: for some reason, calls seem to fail if target files
 			//       don't already exist
-			File outfile=new File( System.getProperty("user.dir"),
-					"src"+File.separator+
-					"Resources"+
-					File.separatorChar+"doc"+
-					File.separatorChar+
-					"CmdDetails.html");
+			File outfile=new File( System.getProperty("user.dir")+"/CirclePack/src/Resources/doc/CmdDetails.html");					
 			if (!outfile.exists())
 				System.err.println("'CirclePack/src/Resources/doc/CmdDetails.html' doesn't see to exist");
 			
@@ -311,12 +306,13 @@ public class Info2HTML {
 	    	fw.flush();
 	    	fw.close();
 	    	
-	    	fw = new BufferedWriter(new FileWriter("src/Resources/doc/CmdIndex.html", false));
+	    	fw = new BufferedWriter(new FileWriter(System.getProperty("user.dir")+"/CirclePack/src/Resources/doc/CmdIndex.html", false));
 	    	fw.write(indxfp.toString());
 	    	fw.flush();
 	    	fw.close();
 	    	
-	    	fw = new BufferedWriter(new FileWriter("src/Resources/doc/CmdCompletion.txt", false));
+	    	fw = new BufferedWriter(new FileWriter(System.getProperty("user.dir")+
+	    			"/CirclePack/src/Resources/doc/CmdCompletion.txt", false));
 	    	fw.write(compfp.toString());
 	    	fw.flush();
 	    	fw.close();
@@ -359,7 +355,7 @@ public class Info2HTML {
 		System.out.println("user home directory is: "+System.getProperty("user.home"));
 		
 		// create new file
-		infofile=new File(System.getProperty("user.dir")+"/src/Resources/doc/CmdDetails.txt");
+		infofile=new File(System.getProperty("user.dir")+"/CirclePack/src/Resources/doc/CmdDetails.txt");
 //		infofile=new File("CirclePack/src/Resources/doc/CmdDetails.txt");
 		if (!infofile.exists())
 			System.err.println("'"+infofile.toString()+"' doesn't seem to exist");
