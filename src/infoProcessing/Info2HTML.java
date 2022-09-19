@@ -348,15 +348,12 @@ public class Info2HTML {
 	 */
 	public static void main(String[] args) {
 		
-		// what is the directory where java was run?
+		// check some directories
 		System.out.println("user directory is: "+System.getProperty("user.dir"));
-		
-		// what is the user's home directory?
 		System.out.println("user home directory is: "+System.getProperty("user.home"));
 		
 		// create new file
 		infofile=new File(System.getProperty("user.dir")+"/CirclePack/src/Resources/doc/CmdDetails.txt");
-//		infofile=new File("CirclePack/src/Resources/doc/CmdDetails.txt");
 		if (!infofile.exists())
 			System.err.println("'"+infofile.toString()+"' doesn't seem to exist");
 			

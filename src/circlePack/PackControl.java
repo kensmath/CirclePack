@@ -190,7 +190,6 @@ FocusListener {
 	public PackControl() {
 		
 // debugging
-CirclePack.cpb.msg("CPBase msg: enter PackControl");		
 System.out.println("enter PackControl");
 
 		socketActive=true;  // means that socket server will be started
