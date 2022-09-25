@@ -10,6 +10,7 @@ import java.awt.event.WindowListener;
 import java.util.Iterator;
 import java.util.Vector;
 
+import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import complex.Complex;
@@ -35,8 +36,6 @@ public class HilbertTransform extends PackExtender
 	public HilbertTransform(PackData p) 
 	{
 		super(p);
-		// TODO Auto-generated constructor stub
-		
 		extensionType = "Hilbert_Transform";
 		extensionAbbrev = "HT";
 		toolTip = "'Hilbert Transform' for computing the Hilbert transform of a given function";
@@ -116,10 +115,12 @@ public class HilbertTransform extends PackExtender
 				}
 			}
 			
+			CirclePack.cpb.FtnSpecification=new StringBuilder(fct);
 			return 1;
 		}
 		
-		else if (cmd.startsWith("calc_Hilbert_transform") || cmd.startsWith("calc_HT"))
+		else if (cmd.startsWith("calc_Hilbert_transform")
+				|| cmd.startsWith("calc_HT"))
 		{
 			// calculate the Hilbert transform
 			// is there a lambda given?
@@ -142,18 +143,10 @@ public class HilbertTransform extends PackExtender
 			PackData newPack = packData.copyPackTo();
 			CirclePack.cpb.swapPackData(newPack, 1, false);
 			
-			// replace the variable t with z if necessary
-			String temp_fct = fct;
-			// OBE: I'm using 't' as variable for path now (3/2022)
-//			if (var.compareTo("t") == 0) 
-//			{
-//				temp_fct = temp_fct.replaceAll("t", "z");
-//			}
-			
 			// modify the radii of the boundary circles
-			PackControl.newftnFrame.setFunctionText(temp_fct);
+			if (CPBase.GUImode!=0)
+				PackControl.newftnFrame.setFunctionText();
 			Complex val;
-			//values_fct = new double[sz_bndry];
 			for(int k = 0; k < sz_bndry; k++)
 			{
 				val = CirclePack.cpb.getFtnValue(cz_hyper[k]);

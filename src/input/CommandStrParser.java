@@ -110,7 +110,7 @@ import packing.PackData;
 import packing.PackExtender;
 import packing.PackMethods;
 import packing.ReadWrite;
-import panels.ImagePanel;
+import panels.ScreenShotPanel;
 import panels.OutPanel;
 import panels.PathManager;
 import posting.PostFactory;
@@ -153,7 +153,7 @@ public class CommandStrParser {
 
   public static PostFactory pF; // 'PostFactory' updated externally.
   // TODO: make pF safer for threads
-  public static final double LAYOUT_THRESHOLD=.00001; // for layouts based on quality
+  public static final double LAYOUT_THRESHOLD=.00001; // layouts quality
 
   /**
    * Send on to 'jexecute' using active packing.
@@ -196,7 +196,8 @@ public class CommandStrParser {
 	  String cmd=null;
 
 	  if (cmdstr.contains("-p")) {
-		  throw new ParserException("'jexecute': '-p' flag should have been handled before the call");
+		  throw new ParserException("'jexecute': '-p' flag "
+		  		+ "should have been handled before the call");
 	  }
 
       // split off processing for query messages
@@ -226,7 +227,8 @@ public class CommandStrParser {
     		  CPdrawing cpd=CPBase.cpDrawing[i];
     		  // TODO: want to white out underlying canvas to avoid flashing
     		  if (pdata.status) {
-    			  pdata.packExtensions=new Vector<PackExtender>(2); // trash any extensions
+    			  // trash any extensions
+    			  pdata.packExtensions=new Vector<PackExtender>(2); 
     			  // put new packing in place
     			  PackData newP=CPBase.packings[i]=new PackData(i);
     			  newP.cpDrawing=CPBase.cpDrawing[i];
@@ -270,8 +272,10 @@ public class CommandStrParser {
 		  
 		  // reset all Main canvas size, hence all BufferedImage's
 		  if (cmd.charAt(3)=='S') {
-			  if (widehigh<PackControl.MinActiveSize) widehigh=PackControl.MinActiveSize;
-			  if (widehigh>PackControl.MaxActiveSize) widehigh=PackControl.MaxActiveSize;
+			  if (widehigh<PackControl.MinActiveSize) 
+				  widehigh=PackControl.MinActiveSize;
+			  if (widehigh>PackControl.MaxActiveSize) 
+				  widehigh=PackControl.MaxActiveSize;
 			  MainFrame.setCanvasDim(widehigh,widehigh);
 			  PackControl.activeFrame.layMeOut();
 			  return 1;
@@ -308,7 +312,8 @@ public class CommandStrParser {
 		  File dir=CPFileManager.PackingDirectory;
 		  if (cmd.charAt(0)=='R') {
 			  if (filename.startsWith("~/")) 
-				  filename=new String(CPFileManager.HomeDirectory+File.separator+filename.substring(2));
+				  filename=new String(CPFileManager.HomeDirectory+
+						  File.separator+filename.substring(2));
 			  dir=new File(filename);
 			  filename=dir.getName();
 			  dir=new File(dir.getParent());
@@ -318,7 +323,8 @@ public class CommandStrParser {
 		  //     create its simple packing in pack n (though this depends
 		  //     on the tiling's dual being trivalent).
     	  boolean script_flag=false;
-    	  int simplepack=-1; // if this is set to legal pack, store simple pack there
+    	  // if this is set to legal pack, store simple pack there
+    	  int simplepack=-1; 
     	  Iterator<Vector<String>> fseg=flagSegs.iterator();
 		  while (fseg.hasNext()) {
 			  try {
@@ -332,7 +338,8 @@ public class CommandStrParser {
 					  else if (str.startsWith("-q")) {
 						  int qnum=StringUtil.qFlagParse(str);
 						  if (qnum<0) {
-							  CirclePack.cpb.errMsg("Failed to create simple packing in 'read_CT'");
+							  CirclePack.cpb.errMsg("Failed to create "
+							  		+ "simple packing in 'read_CT'");
 						  }
 						  else
 							  simplepack=qnum;
@@ -413,7 +420,8 @@ public class CommandStrParser {
 //				  if (bouquet[indx][num-1]!=bouquet[indx][0])
 //					  bouquet[indx][num]=bouquet[indx][0]; 
 			  } catch (Exception ex) {
-				  CirclePack.cpb.myErrorMsg("Usage: read_CT form is 'CHECKCOUNT: <n>'");
+				  CirclePack.cpb.myErrorMsg("Usage: read_CT form "
+				  		+ "is 'CHECKCOUNT: <n>'");
 				  try {
 					  fp.close();
 				  } catch(Exception cex) {}
@@ -433,7 +441,7 @@ public class CommandStrParser {
 				  int []flower=bouquet[v];
 				  for (int j=0;j<flower.length;j++) {
 					  
-					  // get the face with edge <v,w>; keep if v is the smallest index
+					  // get face containing <v,w>; keep if v is smallest index
 					  int []fverts=PackDCEL.getFace(bouquet, v,flower[j]);
 					  int n=fverts.length;
 					  for (int k=0;k<n && fverts!=null;k++)
@@ -498,7 +506,8 @@ public class CommandStrParser {
 			  // 'pave' to get tilings
 			  TileData td=TileData.paveMe(packData,origVCount+1);
     		  if (td==null) {
-    			  CirclePack.cpb.errMsg("'pave' failed with new packing from 'read_CT'");
+    			  CirclePack.cpb.errMsg("'pave' failed with new "
+    			  		+ "packing from 'read_CT'");
     			  return 0;
     		  }
     		  td.packData=packData;
@@ -515,10 +524,13 @@ public class CommandStrParser {
         				  CirclePack.cpb.swapPackData(newPack,simplepack,false);
         			  }
         			  else
-            			  CirclePack.cpb.errMsg("failed to create simple packing for p"+simplepack+" in 'read_CT'");
+            			  CirclePack.cpb.errMsg("failed to create "
+            			  		+ "simple packing for p"+simplepack+" in 'read_CT'");
     			  } catch(CombException cex) {
-    				  CirclePack.cpb.errMsg("The companion 'simple' packing in p"+simplepack+" has failed; "+
-    						  "the tiling dual must be trivalent for this to work.");
+    				  CirclePack.cpb.errMsg("The companion 'simple' "
+    				  		+ "packing in p"+simplepack+" has failed; "
+    						+ "the tiling dual must be trivalent for "
+    						+ "this to work.");
     			  }
     		  } 
 			  return count;
@@ -554,7 +566,8 @@ public class CommandStrParser {
 		  File dir=CPFileManager.PackingDirectory;
 		  if (cmd.charAt(0)=='R') {
 			  if (filename.startsWith("~/")) 
-				  filename=new String(CPFileManager.HomeDirectory+File.separator+filename.substring(2));
+				  filename=new String(CPFileManager.
+						  HomeDirectory+File.separator+filename.substring(2));
 			  dir=new File(filename);
 			  filename=dir.getName();
 			  dir=new File(dir.getParent());
@@ -631,42 +644,19 @@ public class CommandStrParser {
 				}
 				// yes another failure?
 				if (tri==null) {
-					CirclePack.cpb.errMsg("Some failure in reading "+filename+" as a triangulation");
+					CirclePack.cpb.errMsg("Some failure in reading "+
+							filename+" as a triangulation");
 				}
 				
 				fp.close();
 				
 				if (tri!=null)
-					CirclePack.cpb.msg("Have read '" + filename+ "' as a triangulation");
+					CirclePack.cpb.msg("Have read '" + filename
+							+"' as a triangulation");
 				else {
 					throw new InOutException("failed to read " + filename
 						+ " as packing or triangulation. Check its format.");
 				}
-
-/* Old try to read as point set is fraught with potential problems, e.g. C library crash.
-
- 				if (tri == null) {
-					fp = CPFileManager.openReadFP(dir, filename, script_flag);
-					UtilPacket uP = new UtilPacket();
-					RandomTriangulation.readPoints(fp, uP);
-					fp.close();
-					if (uP.errval < 0)
-						throw new InOutException("failed to read " + filename
-								+ " as packing, triangulation, or point set");
-					if (uP.rtnFlag == 3)
-						hes = 1;
-					try {
-						tri=Triangulation.pts2triangulation(hes, uP.z_vec);
-					} catch (Exception ex) {
-						throw new InOutException("failed to read " + filename+ " as point set");
-					}
-					if (tri == null)
-						throw new InOutException("failed to read " + filename
-								+ " as packing, triangulation, or point set");
-					CirclePack.cpb.errMsg("read '" + filename
-							+ "' as a point set");
-				}
-*/				 
 			} catch (IOException iox) {
 				try {
 					if (fp != null)
@@ -714,7 +704,8 @@ public class CommandStrParser {
 				  else { // assume (x,y) is center in the plane (or disc)
 					  for (int i=1;i<=packData.nodeCount;i++) {
 						  if (tri.nodes[i]!=null) 
-							  packData.setCenter(i,new Complex(tri.nodes[i].x,tri.nodes[i].y));
+							  packData.setCenter(i,
+									  new Complex(tri.nodes[i].x,tri.nodes[i].y));
 					  }
 				  }
 			  }
@@ -765,7 +756,7 @@ public class CommandStrParser {
 	    			  || pnum2<0 || pnum2>=CPBase.NUM_PACKS 
 	    			  || !CPBase.cpDrawing[pnum2].getPackData().status) 
 	    		  throw new ParserException("illegal or inactive packings specified");
-	    	  packData=CPBase.cpDrawing[pnum1].getPackData(); // this is where the final pack will go
+	    	  packData=CPBase.cpDrawing[pnum1].getPackData(); // where the final pack will go
 	    	  PackData qackData=CPBase.cpDrawing[pnum2].getPackData();
 	    	  
 	    	  int v1=NodeLink.grab_one_vert(packData,(String)items.get(2));
@@ -893,7 +884,7 @@ public class CommandStrParser {
 				  
 				  // change script and packing directories, also
 				  File tryfile=new File(CPFileManager.CurrentDirectory,"scripts");
-				  if (tryfile.exists()) // if "scripts" exists under new directory, change to it 
+				  if (tryfile.exists()) // "scripts" in new directory? change to it 
 					  CPFileManager.ScriptDirectory=tryfile;
 				  tryfile=new File(CPFileManager.CurrentDirectory,"packings");
 				  if (tryfile.exists()) 
@@ -951,7 +942,8 @@ public class CommandStrParser {
 						  PackControl.activeFrame.setState(JFrame.ICONIFIED);
 					  }
 				  }
-				  else if (windStr.startsWith("pair") || windStr.startsWith("map")) { // dual screen mode
+				  else if (windStr.startsWith("pair") || 
+						  windStr.startsWith("map")) { // dual screen mode
 					  if (PackControl.mapPairFrame.isVisible()) {
 						  PackControl.mapPairFrame.setState(JFrame.ICONIFIED);
 					  }
@@ -1086,7 +1078,8 @@ public class CommandStrParser {
 			  }
 
 			  if (param<0)
-				  throw new ParserException("usage: create "+type+" [{n}], n must be non-negative");
+				  throw new ParserException("usage: create "+type+" [{n}], "
+				  		+ "n must be non-negative");
 			  
 			  PackData newPack=null;
 			  switch (mode) {
@@ -1098,7 +1091,8 @@ public class CommandStrParser {
 			  case 2: // hex/Hex
 			  {
 				  if (type.charAt(0)=='h' && param>100) {
-					  throw new DataException("Use 'Hex' (cap 'H') for more than 100 generations");
+					  throw new DataException("Use 'Hex' (cap 'H') for "
+					  		+ "more than 100 generations");
 				  }
 				  newPack=PackCreation.hexBuild(param);
 				  newPack.packDCEL.layoutPacking();
@@ -1107,7 +1101,8 @@ public class CommandStrParser {
 			  case 3: // square grid
 			  {
 				  if (type.charAt(0)=='s' && param>8) {
-					  throw new DataException("Use 'Sq_grid' (cap 'S') for more than 8 generations");
+					  throw new DataException("Use 'Sq_grid' (cap 'S') for "
+					  		+ "more than 8 generations");
 				  }
 				  newPack=PackCreation.squareGrid(param);
 				  break;
@@ -1286,7 +1281,8 @@ public class CommandStrParser {
 			  case 10: // pinwheel: end/hypotenuse lengths pinParam[0]/[1]; with 'TileData'
 			  {
 				  if (type.charAt(0)=='p' && param>8) {
-					  throw new DataException("Use 'Pinwheel' (cap 'P') for more than 8 generations");
+					  throw new DataException("Use 'Pinwheel' (cap 'P') for "
+					  		+ "more than 8 generations");
 				  }
 				  newPack=PackCreation.pinWheel(param,pinParam[0],pinParam[1]);
 				  break;
@@ -1294,7 +1290,8 @@ public class CommandStrParser {
 			  case 11: // fibonnacci 2D: W, H, X, width/height/base, with 'TileData'
 			  {
 				  if (type.charAt(0)=='f' && param>8) {
-					  throw new DataException("Use 'Fib2d' (cap 'F') for more than 8 generations");
+					  throw new DataException("Use 'Fib2d' (cap 'F') for "
+					  		+ "more than 8 generations");
 				  }
 				  int W=1;
 				  int H=1;
@@ -1379,7 +1376,8 @@ public class CommandStrParser {
 						  // -f and/or -s (script): read data from a file
 						  if (str.startsWith("-f") || str.startsWith("-s")) {
 							  if (cpack) 
-								  throw new ParserException("'f' and 's' flags conflict with 'c' flag");
+								  throw new ParserException("'f' and 's' flags "
+								  		+ "conflict with 'c' flag");
 							  items.remove(0); // look for filename
 							  fromFile=true;
 							  if (str.startsWith("-s"))
@@ -1403,7 +1401,8 @@ public class CommandStrParser {
 						  // from current packing
 						  else if (str.startsWith("-c")) { 
 							  if (fromFile) 
-								  throw new ParserException("'c' flag conflicts with 'f','s' flags");
+								  throw new ParserException("'c' flag "
+								  		+ "conflicts with 'f','s' flags");
 							  if (!packData.status)
 								  throw new ParserException("packing status is false");
 							  cpack=true;
@@ -1460,7 +1459,7 @@ public class CommandStrParser {
 			  }
 			  
 			  N=pts.size();
-			  if (geom==1 && uP.rtnFlag==1) { // unit square pts? put in (theta,phi) form
+			  if (geom==1 && uP.rtnFlag==1) { // unit square pts? (theta,phi) form
 				  for (int i=0;i<N;i++) {
 					  Complex pz=pts.get(i);
 					  pz.x=2.0*Math.PI*pz.x;
@@ -1511,9 +1510,11 @@ public class CommandStrParser {
 	    				  PackControl.scriptHover.stackScroll.getWidth()+" "+
 	    				  PackControl.scriptHover.stackScroll.getHeight());
 	    		  PackControl.scriptManager.cpScriptNode.debugSize();
-	    		  PackControl.scriptManager.debugLayoutRecurse(PackControl.scriptManager.cpScriptNode);
+	    		  PackControl.scriptManager.debugLayoutRecurse(
+	    				  PackControl.scriptManager.cpScriptNode);
 	    		  PackControl.scriptManager.cpDataNode.debugSize();
-	    		  PackControl.scriptManager.debugLayoutRecurse(PackControl.scriptManager.cpDataNode);
+	    		  PackControl.scriptManager.debugLayoutRecurse(
+	    				  PackControl.scriptManager.cpDataNode);
 	    		  System.err.println("end of stackbox info\n");
 	    		  return 1;
 	    	  }
@@ -1580,7 +1581,8 @@ public class CommandStrParser {
 	    		  else if (stg!=null && stg.startsWith("-x")) {
 	    			  items.remove(0);
 	    			  if (packData.packExtensions.size()==0) {
-	    				  CirclePack.cpb.myErrorMsg("Pack "+packData.packNum+" has no extensions");
+	    				  CirclePack.cpb.myErrorMsg("Pack "+
+	    						  packData.packNum+" has no extensions");
 	    				  return 1;
 	    			  }
 	    			  if (items.size()==0) { // kill all extensions
@@ -1628,7 +1630,8 @@ public class CommandStrParser {
 	    	  // ************ hard coded abbreviations ***********
 	    	  if (str!=null) {
 	    	  if (str.equalsIgnoreCase("bvp")) {
-			   	  if (!packData.status || packData.nodeCount==0) return 0;
+			   	  if (!packData.status || packData.nodeCount==0) 
+			   		  return 0;
 			   	  BoundaryValueProblems px=new BoundaryValueProblems(packData);
 			   	  if (px.running) {
 				   	  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1638,7 +1641,8 @@ public class CommandStrParser {
 				     }
 			  }
 	    	  else if (str.equalsIgnoreCase("bf")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  BeurlingFlow px=new BeurlingFlow(packData);
 	    		  if (px.running) {
 				   	  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1670,7 +1674,8 @@ public class CommandStrParser {
 	    					  items.get(1),items.get(2),script_flag);
 	    			  if (px.running) {
 	    				  CirclePack.cpb.msg("Pack "+packData.packNum+
-	    						  ": started "+px.extensionAbbrev+" extender, mode 1");
+	    						  ": started "+px.extensionAbbrev+
+	    						  " extender, mode 1");
 	    				  px.StartUpMsg();
 	    				  returnVal=1;
 	    			  }
@@ -1684,7 +1689,8 @@ public class CommandStrParser {
 	    					  CPBase.cpDrawing[qnum].getPackData(),null,script_flag);
 	    			  if (px.running) {
 	    				  CirclePack.cpb.msg("Pack "+packData.packNum+
-	    						  ": started "+px.extensionAbbrev+" extender, mode 2");
+	    						  ": started "+px.extensionAbbrev+
+	    						  " extender, mode 2");
 	    				  px.StartUpMsg();
 	    				  returnVal=1;
 	    			  }
@@ -1988,11 +1994,13 @@ public class CommandStrParser {
 	    			  try {
 	    	            @SuppressWarnings("unchecked")
 	    	            Class<PackExtender> extClass = (Class<PackExtender>)
-	    	            new circlePack.PackExtenderLoader().loadClass(extFile.getCanonicalPath());
+	    	            new circlePack.PackExtenderLoader().loadClass(extFile.
+	    	            		getCanonicalPath());
 	    	            
 	    	            // start the new class.
 	    	            // TODO: questions: how do I send an argument 'packData'?
-	    	            px= extClass.getConstructor(packing.PackData.class).newInstance(packData);
+	    	            px= extClass.getConstructor(packing.PackData.class).
+	    	            		newInstance(packData);
 	    			  } catch (IOException e) {
 	    				  e.printStackTrace();
 	    			  } catch (ClassNotFoundException e) {
@@ -2031,7 +2039,8 @@ public class CommandStrParser {
 	      // ============ evalp ============
 	      else if (cmd.startsWith("evalp")) {
 	    	  if (flagSegs==null || flagSegs.size()==0)
-	    		  throw new ParserException("usage: evalp <t>, expects double argument");
+	    		  throw new ParserException("usage: evalp <t>, "
+	    		  		+ "expects double argument");
 	    	  double t;
 	    	  try {
 	    		  t=Double.parseDouble(flagSegs.get(0).get(0));
@@ -2049,7 +2058,8 @@ public class CommandStrParser {
 	      // ========== eval ===================
 	      else if (cmd.startsWith("eval")) {
 	    	  if (flagSegs==null || flagSegs.size()==0)
-	    		  throw new ParserException("usage: eval <z>, expects complex argument");
+	    		  throw new ParserException("usage: eval <z>, "
+	    		  		+ "expects complex argument");
 	    	  String zstr=StringUtil.reconItem(flagSegs.get(0));
 	    	  Complex z=Complex.string2Complex(zstr);
 	    	  com.jimrolf.complex.Complex jrz=
@@ -2057,12 +2067,13 @@ public class CommandStrParser {
 	    	  com.jimrolf.complex.Complex jrw=
 	    			  CirclePack.cpb.FtnParser.evalFunc(jrz);
 	    	  if (jrw==null) {
-	    		  CirclePack.cpb.errMsg(
-	    				  "evaluation failed, check function specification");
+	    		  CirclePack.cpb.errMsg("evaluation failed, "
+	    		  		+ "check function specification");
 	    		  return 0;
 	    	  }
 	    	  Complex w=new Complex(jrw.re(),jrw.im());
-	    	  CirclePack.cpb.msg("Function value at z="+z.toString()+" is "+w.toString());
+	    	  CirclePack.cpb.msg("Function value at z="+z.toString()+
+	    			  " is "+w.toString());
 	    	  return 1;
 	      }
 	      
@@ -2083,13 +2094,15 @@ public class CommandStrParser {
 	    		  //       delays.
 	    		  while((line=StringUtil.ourNextLine(fp))!=null) {
 	    			  // apply commands to the active pack
-	    			  ResultPacket rP=new ResultPacket(CirclePack.cpb.getActivePackData(),line);
+	    			  ResultPacket rP=new ResultPacket(CirclePack.cpb.
+	    					  getActivePackData(),line);
 	    			  CPBase.trafficCenter.parseCmdSeq(rP,0,null);
 	    			  count+=Integer.valueOf(rP.cmdCount);
 	    		  }
 	    		  fp.close();
 			  } catch (Exception ex) {
-				  throw new ParserException("error in 'fexec' processing: "+ex.getMessage());
+				  throw new ParserException("error in 'fexec' processing: "+
+						  ex.getMessage());
 			  }
 	          return count;
 		  }
@@ -2101,8 +2114,10 @@ public class CommandStrParser {
 		  
 	      // =========== get_func ===========
 	      if (cmd.startsWith("get_fun")) {
-	    	  CirclePack.cpb.msg("Function expression: "+CirclePack.cpb.FtnSpecification.toString()+"\n");
-	    	  CirclePack.cpb.msg("Parametric expression: "+CirclePack.cpb.ParamSpecification.toString()+"\n");
+	    	  CirclePack.cpb.msg("Function expression: "+
+	    			  CirclePack.cpb.FtnSpecification.toString()+"\n");
+	    	  CirclePack.cpb.msg("Parametric expression: "+
+	    			  CirclePack.cpb.ParamSpecification.toString()+"\n");
 	      }
 	      
 		  // NOTE: this is not operational now (3/2022), as the JNI 
@@ -2123,7 +2138,8 @@ public class CommandStrParser {
 					  itms.remove(0);
 					  NodeLink v_int=new NodeLink(packData,itms);
 					  if (v_int==null || v_int.size()<1)
-						  throw new ParserException("GOpack usage: GOpack -v {v..}");
+						  throw new ParserException("GOpack usage: GOpack "
+						  		+ "-v {v..}");
 					  goPack=new GOpacker(packData,v_int);
 				  	  packData.rePacker=goPack;
 				  	  CirclePack.cpb.msg("GOpack started for subcomplex");
@@ -2143,7 +2159,8 @@ public class CommandStrParser {
 					  !(packData.rePacker instanceof GOpacker) ||
 					  packData.rePacker.p==null || 
 					  packData.rePacker.p!= packData ||
-					  packData.nodeCount!=((GOpacker)packData.rePacker).getOrigNodeCount()) {  
+					  packData.nodeCount!=((GOpacker)packData.rePacker).
+					  	getOrigNodeCount()) {  
 				  goPack=new GOpacker(packData,passes);
 			  	  packData.rePacker=goPack;
 			  }
@@ -2156,7 +2173,8 @@ public class CommandStrParser {
 			  // default: continue with whatever was going on
 			  if (flagSegs==null || flagSegs.size()==0) {
 				  int ct=goPack.continueRiffle(defaultPasses);
-				  CirclePack.cpb.msg("GOpacker: did "+ct+" passes, l2-error = "+goPack.myPLiteError);
+				  CirclePack.cpb.msg("GOpacker: did "+ct+
+						  " passes, l2-error = "+goPack.myPLiteError);
 				  return ct;
 			  }
 			  
@@ -2173,7 +2191,8 @@ public class CommandStrParser {
 					  case 'v': 
 					  {
 						  if (goPack.mode!=GOpacker.NOT_YET_SET) {
-							  CirclePack.cpb.msg("GOpack can set vertices only on initialization");
+							  CirclePack.cpb.msg("GOpack can set vertices "
+							  		+ "only on initialization");
 							  return 0;
 						  }
 						  
@@ -2183,7 +2202,8 @@ public class CommandStrParser {
 					  case 's':
 					  {
 						  goPack.startRiffle();
-						  CirclePack.cpb.msg("GOpack is initialized, constant radii, no cycles yet");
+						  CirclePack.cpb.msg("GOpack is initialized, "
+						  		+ "constant radii, no cycles yet");
 						  return 1;
 					  }
 					  
@@ -2198,7 +2218,8 @@ public class CommandStrParser {
 							  try {
 								  passes=Integer.parseInt(items.get(0));
 							  } catch (Exception ex) {
-								  throw new ParserException("GOpack usage: -n {n}, n iterations");
+								  throw new ParserException("GOpack usage: "
+								  		+ "-n {n}, n iterations");
 							  }
 						  }
 						  break;
@@ -2215,7 +2236,8 @@ public class CommandStrParser {
 							  try {
 								  passes=Integer.parseInt(items.get(0));
 							  } catch (Exception ex) {
-								  throw new ParserException("GOpack usage: -n {n}, n iterations");
+								  throw new ParserException("GOpack usage: "
+								  		+ "-n {n}, n iterations");
 							  }
 						  }
 						  break;
@@ -2232,14 +2254,16 @@ public class CommandStrParser {
 						  goPack.setMode(GOpacker.MAX_PACK); // default
 						  
 						  // Is this a sphere? then handled with a punctured face
-						  if (goPack.setSphBdry()>0) // these sets bdry rad/centers (if there are 3 bdry verts)
+						  // set bdry rad/centers (if there are 3 bdry verts)
+						  if (goPack.setSphBdry()>0) 
 							  goPack.setMode(GOpacker.FIXED_BDRY);
 							  
 						  if (items.size()>0) { // passes specified?
 							  try {
 								  passes=Integer.parseInt(items.get(0));
 							  } catch (Exception ex) {
-								  throw new ParserException("GOpack usage: -n {n}, n iterations");
+								  throw new ParserException("GOpack usage: "
+								  		+ "-n {n}, n iterations");
 							  }
 						  }
 						  break;
@@ -2251,7 +2275,8 @@ public class CommandStrParser {
 						  if (gotflag) // preempted?
 							  break;
 						  if (packData.hes!=0)
-							  throw new ParserException("GOpack usage: -h is only for euclidean packings");
+							  throw new ParserException("GOpack usage: "
+							  		+ "-h is only for euclidean packings");
 						  gotflag=true;
 						  gotc=c;
 						  goPack.setMode(GOpacker.FIXED_BDRY);
@@ -2260,19 +2285,23 @@ public class CommandStrParser {
 							  try {
 								  passes=Integer.parseInt(items.get(0));
 							  } catch (Exception ex) {
-								  throw new ParserException("GOpack usage: -n {n}, n iterations");
+								  throw new ParserException("GOpack usage: "
+								  		+ "-n {n}, n iterations");
 							  }
 						  }
 						  break;
 					  }
-					  // give 3 or more corners for polygonal packing; get 'passes' via -n flag
+					  // give 3 or more corners for polygonal packing; 
+					  //     get 'passes' via -n flag
 					  case 'b': 
 					  {
 						  int n=0;
 						  try {
 							  n=Integer.parseInt(str.substring(2));
 							  if (n<3)
-								  throw new ParserException("GOpack: usage -c {v1 v2 v3 ..}. Must be at least 3 corner verts");
+								  throw new ParserException("GOpack: usage "
+								  		+ "-c {v1 v2 v3 ..}. Must be at least 3 "
+								  		+ "corner verts");
 							  int []pCorners=new int[n];
 							  double []pAngles=null;
 							  int m=items.size();
@@ -2282,7 +2311,8 @@ public class CommandStrParser {
 								  if (crns!=null) {
 									  m=crns.size();
 									  if (m!=n)
-										  throw new ParserException("GOpack usage: corner specification error");
+										  throw new ParserException("GOpack usage: "
+										  		+ "corner specification error");
 									  for (int i=0;i<m;i++)
 										  pCorners[i]=crns.get(i);
 								  }
@@ -2294,10 +2324,12 @@ public class CommandStrParser {
 
 								  for (int i=0;i<n;i++) 
 									  pCorners[i]=Integer.parseInt(items.get(i));
-								  // read n corner interior angles theta/pi (default to pi-2pi/n)
+								  // read n corner interior angles theta/pi 
+								  //     (default to pi-2pi/n)
 								  if (m>n) {
 									  if (m<2*n)
-										  throw new ParserException("GOpack usage -c problem");
+										  throw new ParserException("GOpack usage "
+										  		+ "-c problem");
 									  pAngles=new double[n];
 									  for (int i=0;i<n;i++)
 										  pAngles[i]=Double.parseDouble(items.get(n+i));
@@ -2308,7 +2340,8 @@ public class CommandStrParser {
 							  count +=goPack.setCorners(pCorners,pAngles);
 							  
 						  } catch (Exception ex) {
-							  throw new ParserException("GOpack: usage -c, failure to read corner vert");
+							  throw new ParserException("GOpack: usage -c, "
+							  		+ "failure to read corner vert");
 						  }
 						  count++;
 						  break;
@@ -2328,7 +2361,8 @@ public class CommandStrParser {
 						  try {
 							  passes=Integer.parseInt(items.get(0));
 						  } catch (Exception ex) {
-							  throw new ParserException("GOpack usage: -n {n}, n iterations");
+							  throw new ParserException("GOpack usage: "
+							  		+ "-n {n}, n iterations");
 						  }
 						  count++;
 						  break;
@@ -2348,7 +2382,8 @@ public class CommandStrParser {
 					  {
 						  if (packData.rePacker!=null) {
 							  double results=goPack.l2quality(.001);
-							  CirclePack.cpb.msg("exiting 'GOpack', last quality reading: "+results);
+							  CirclePack.cpb.msg("exiting 'GOpack', last "
+							  		+ "quality reading: "+results);
 							  packData.rePacker=null;
 						  }
 						  return 1;
@@ -2380,13 +2415,15 @@ public class CommandStrParser {
 				  case 'r':
 				  {
 					  count+=goPack.reStartRiffle(passes);
-					  CirclePack.cpb.msg("GOpack restarted using data from the packing, "+count+" cycles");
+					  CirclePack.cpb.msg("GOpack restarted using data "
+					  		+ "from the packing, "+count+" cycles");
 					  break;
 				  }
 				  case 'm':
 				  {
 					  count+=goPack.continueRiffle(passes);
-					  CirclePack.cpb.msg("GOpack continued for max packing, "+count+" cycles");
+					  CirclePack.cpb.msg("GOpack continued for max packing, "+
+							  count+" cycles");
 					  break;
 				  }
 				  case 'c':
@@ -2398,7 +2435,8 @@ public class CommandStrParser {
 				  case 'h': // do harmonic layout
 				  {
 					  count += goPack.layoutCenters();
-					  CirclePack.cpb.msg("GOpack: harmonic layout of local 'centers' based on bdry and 'radii'");
+					  CirclePack.cpb.msg("GOpack: harmonic layout of local "
+					  		+ "'centers' based on bdry and 'radii'");
 					  break;
 				  }
 				  case 'l': // layout boundary only
@@ -2849,7 +2887,8 @@ public class CommandStrParser {
 				  }
 				  else if (windStr.startsWith("mes") || windStr.startsWith("msg")) {
 					  // if iconified, bring it up
-					  if (PackControl.msgHover.isLocked() && PackControl.msgHover.lockedFrame.getState() == JFrame.ICONIFIED)
+					  if (PackControl.msgHover.isLocked() && 
+							  PackControl.msgHover.lockedFrame.getState() == JFrame.ICONIFIED)
 						  PackControl.msgHover.lockedFrame.setState(Frame.NORMAL);
 					  PackControl.msgHover.lockframe();
 				  }
@@ -3591,7 +3630,7 @@ public class CommandStrParser {
 			    			  case 'n': // set slide counter (caution: may end up overwriting)
 			    			  {
 			    				  double nbr=Double.parseDouble(items.get(0));
-			    				  ImagePanel.imageCount=(int)Math.abs(nbr);
+			    				  ScreenShotPanel.imageCount=(int)Math.abs(nbr);
 			    				  break;
 			    			  }
 			    			  } // end of switch
@@ -3711,11 +3750,11 @@ public class CommandStrParser {
 	    	  	    	  
 	    	  // =========== set_dump_format =====
 	    	  if (cmd.startsWith("dump_")) {
-	    		  return PackControl.screenCtrlFrame.imagePanel.setIMG(items.get(0));
+	    		  return CirclePack.cpb.setIMG(items.get(0));
 	    	  }
 	      
 	    	  // =========== set_display == (full computer screen)
-	    	  if (cmd.startsWith("displ")) {
+	    	  if (cmd.startsWith("displ") && CPBase.GUImode!=0) {
 	    		  double fracMax=-1.0;
 	    		  try {
 	    			  
@@ -3779,7 +3818,8 @@ public class CommandStrParser {
     		  } catch(ParserException pex) {}
     		 if (n<0 || n>12) n=1; // 0-12 are values for LineThick slider in SupportFrame. 
     		 cpDrawing.setLineThickness(n+1);
-    		 PackControl.screenCtrlFrame.screenPanel.setLine(n+1);
+    		 if (CPBase.GUImode!=0)
+    			 PackControl.screenCtrlFrame.screenPanel.setLine(n+1);
     		 return 1;
     	  }
 	    	  
@@ -3990,20 +4030,24 @@ public class CommandStrParser {
         			  case 'f': // scale by given factor
         			  {
         				  try {
-        					  count += packData.cpDrawing.realBox.scaleView(Double.parseDouble(items.get(1)));
+        					  count += packData.cpDrawing.realBox.
+        							  scaleView(Double.parseDouble(items.get(1)));
         					  cpDrawing.update(2);
         				  } catch (NumberFormatException nfe) {
-        					  CirclePack.cpb.myErrorMsg("usage: set_screen -f <x>: "+nfe.getMessage());
+        					  CirclePack.cpb.myErrorMsg("usage: set_screen -f <x>: "+
+        							  nfe.getMessage());
         				  }
         				  break;
         			  }
         			  case 'i': // incremental moves (typically from mouse click)
         			  {
         				  try {
-        					  utilz=new Complex(Double.parseDouble(items.get(1)),Double.parseDouble(items.get(2)));
+        					  utilz=new Complex(Double.parseDouble(items.get(1)),
+        							  Double.parseDouble(items.get(2)));
         					  count +=vbox.transView(utilz);
         				  } catch (NumberFormatException nfe) {
-        					  CirclePack.cpb.myErrorMsg("usage: set_screen -i <x> <y>: "+nfe.getMessage());
+        					  CirclePack.cpb.myErrorMsg("usage: set_screen -i <x> <y>: "+
+        				  nfe.getMessage());
         				  }
         				  break;
         			  }
@@ -4013,10 +4057,12 @@ public class CommandStrParser {
         			  {  	
         				  try {
         					  double f=Double.parseDouble(items.get(1));
-        					  count += packData.cpDrawing.realBox.scaleView(f/vbox.getWidth());
+        					  count += packData.cpDrawing.realBox.
+        							  scaleView(f/vbox.getWidth());
         					  cpDrawing.update(2);
         				  } catch (NumberFormatException nfe) {
-        					  CirclePack.cpb.myErrorMsg("usage: set_screen -w(or h) <x>: "+nfe.getMessage());
+        					  CirclePack.cpb.myErrorMsg("usage: set_screen -w(or h) <x>: "+
+        							  nfe.getMessage());
         				  }
         				  break;
         			  }
@@ -4032,7 +4078,8 @@ public class CommandStrParser {
           }// done with 'set_screen' (with 'status' false)
     	  
     	  // ========= set_disp_flags =============
-          if (cmd.startsWith("disp_str") || cmd.startsWith("disp_fla") || cmd.startsWith("disp_text")) {
+          if (cmd.startsWith("disp_str") || cmd.startsWith("disp_fla") || 
+        		  cmd.startsWith("disp_text")) {
         	  /* CirclePack sends a string to put in DispOptions of 
         	   * designated packing; if this is the active pack, the 
         	   * string is displayed as dispText and checkbox is set.
@@ -4040,10 +4087,12 @@ public class CommandStrParser {
         	  // Reconstitute the string from flag segments, with 
         	  //    separating spaces
         	  String flagstr=StringUtil.reconstitute(flagSegs);
-        	  if (flagstr==null) return 0;
+        	  if (flagstr==null) 
+        		  return 0;
               cpDrawing.dispOptions.usetext=true;
               cpDrawing.dispOptions.tailored=flagstr;
-              if (packData.packNum==CirclePack.cpb.getActivePackNum()) {
+              if (CPBase.GUImode!=0 && 
+            		  packData.packNum==CirclePack.cpb.getActivePackNum()) {
             	  PackControl.screenCtrlFrame.displayPanel.flagField.setText(
             			  cpDrawing.dispOptions.tailored);
             	  PackControl.screenCtrlFrame.displayPanel.setFlagBox(true);
@@ -4059,8 +4108,11 @@ public class CommandStrParser {
    						  "Error in function expression: "+
    								  CirclePack.cpb.FtnParser.getFuncErrorInfo());
         	  }
+        	  else {
+        		  CirclePack.cpb.FtnSpecification=new StringBuilder(ftntext);
+        	  }
       		  if (CPBase.GUImode!=0) 
-      			  PackControl.newftnFrame.setFunctionText(ftntext);
+      			  PackControl.newftnFrame.setFunctionText();
       		  return 1;
           }
     	  
@@ -4072,8 +4124,11 @@ public class CommandStrParser {
    						  "Error in path expression: "+
    								  CirclePack.cpb.ParamParser.getFuncErrorInfo());
       		  }
+        	  else {
+        		  CirclePack.cpb.ParamSpecification=new StringBuilder(pathtext);
+        	  }
       		  if (CPBase.GUImode!=0) 
-      			  PackControl.newftnFrame.setPathText(pathtext);
+      			  PackControl.newftnFrame.setPathText();
       		  return 1;
           }
           
@@ -4111,7 +4166,8 @@ public class CommandStrParser {
         				  {
         					  mode=0;
         					  try{
-        						  cent=new Complex(Double.parseDouble(items.get(0)),Double.parseDouble(items.get(1)));
+        						  cent=new Complex(Double.parseDouble(items.get(0)),
+        								  Double.parseDouble(items.get(1)));
         						  rad=Double.parseDouble(items.get(2));
         					  } catch (Exception ex) {
         						  cent=new Complex(0.0);
@@ -4123,8 +4179,10 @@ public class CommandStrParser {
         				  {
         					  mode=1;
         					  try{
-        						  lowl=new Complex(Double.parseDouble(items.get(0)),Double.parseDouble(items.get(1)));
-        						  upr=new Complex(Double.parseDouble(items.get(2)),Double.parseDouble(items.get(3)));
+        						  lowl=new Complex(Double.parseDouble(items.get(0)),
+        								  Double.parseDouble(items.get(1)));
+        						  upr=new Complex(Double.parseDouble(items.get(2)),
+        								  Double.parseDouble(items.get(3)));
         					  } catch (Exception ex) {
         						  lowl=new Complex(-1.0,-1.0);
         						  upr=new Complex(1.0,1.0);
@@ -4136,7 +4194,8 @@ public class CommandStrParser {
         					  if (CPBase.ClosedPath==null)
         						  break;
         					  CPBase.gridLines=new Vector<BaryCoordLink>(2*lineCount+2);
-        					  CPBase.gridLines.addAll(PathBaryUtil.fromPath(packData,CPBase.ClosedPath));
+        					  CPBase.gridLines.addAll(PathBaryUtil.fromPath(packData,
+        							  CPBase.ClosedPath));
         					  return 1;
         				  }
         				  case 'N': // drop through
@@ -4678,16 +4737,19 @@ public class CommandStrParser {
 			  
 			  // display both 'tau' and '1/tau'
 			  CirclePack.cpb.msg("torus_tau: modulus = ("+
-					  String.format("%.6e",tor[0])+"+"+String.format("%.6e",tor[1])+"i)");
+					  String.format("%.6e",tor[0])+"+"+
+					  String.format("%.6e",tor[1])+"i)");
 			  Complex taurecip=new Complex(tor[0],tor[1]).reciprocal(); 
 			  CirclePack.cpb.msg("   (and 1/modulus = ("+
-					  String.format("%.6e",taurecip.x)+"+"+String.format("%.6e",taurecip.y)+"i))");
+					  String.format("%.6e",taurecip.x)+"+"+
+					  String.format("%.6e",taurecip.y)+"i))");
 			  return 1;
 		  }
 		  if (tor==null) 
 			  throw new ParserException("error found by torus_t");
 		  else if (Math.abs(tor[2]+1)<.4)
-			  throw new ParserException("perhaps not torus by topology or side-pairings");
+			  throw new ParserException("perhaps not torus "
+			  		+ "by topology or side-pairings");
 		  else if (Math.abs(tor[2]+2)<.4)
 			  throw new ParserException("side-pairings must be computed");
 	  }
@@ -5108,7 +5170,8 @@ public class CommandStrParser {
 	    			  Iterator<Vector<String>> nextFlag=flagSegs.iterator();
 		      	  
 	    			  // look for flags -b and/or -s first
-	    			  while (nextFlag.hasNext() && (items=nextFlag.next()).size()>0) {
+	    			  while (nextFlag.hasNext() && 
+	    					  (items=nextFlag.next()).size()>0) {
 	    				  str=(String)items.get(0);
 	    				  if (StringUtil.isFlag(str)) {
 	    					  items.remove(0);
@@ -5184,7 +5247,8 @@ public class CommandStrParser {
 	    		  Vertex vert=packData.packDCEL.vertices[vlst.next()];
 	    		  if (vert.bdryFlag!=0) {
 	    			  combinatorics.komplex.DcelFace newface=
-	    					  new combinatorics.komplex.DcelFace(packData.packDCEL.faceCount+1);
+	    					  new combinatorics.komplex.DcelFace(
+	    							  packData.packDCEL.faceCount+1);
 	    			  HalfEdge he=vert.halfedge.twin;
 	    			  newface.edge=he;
 	    			  if (he.next.next.next==he) {
@@ -7423,7 +7487,7 @@ public class CommandStrParser {
 	    	  while (its.hasNext()) {
 	    		  items=(Vector<String>)its.next();
 	    		  String str=(String)items.get(0);
-	    		  if (!StringUtil.isFlag(str)) { // can happen on first segment only; default to circles 
+	    		  if (!StringUtil.isFlag(str)) { // on first segment only; default to circles 
 	    			  NodeLink vlist=new NodeLink(packData,items);
 	    			  if (vlist==null || vlist.size()==0) return 0;
 	    			  Iterator<Integer> vl=vlist.iterator();
@@ -7683,10 +7747,10 @@ public class CommandStrParser {
 	    		  switch(str.charAt(1)) {
 
 	    		  case 'a': // scale to given area. 
-	    			  // TODO: is this only for euclidean?
 	    		  {
 	    			  double x=Double.parseDouble((String)items.get(0));
-	    			  if (x<PackData.OKERR) return 0;
+	    			  if (x<PackData.OKERR) 
+	    				  return 0;
 	    			  double area=0.0;
 	    			  for (int j=1;j<=packData.faceCount;j++) {
 	    			      area += packData.faceArea(j);
@@ -8010,17 +8074,14 @@ public class CommandStrParser {
     			  }
 	    	  }
 	    	  
-	    	  // convert to euclidean geometry
-//	    	  CommandStrParser.jexecute(packData,"geom_to_e");
-	    	  
-	    	  // create copy
+	    	  // create copy and double across bdry
 	    	  PackData holdPack=packData.copyPackTo();
 	    	  PackDCEL newpdcel=CombDCEL.doubleDCEL(holdPack.packDCEL,null,false);
 	    	  int antip=newpdcel.oldNew.findW(packData.getAlpha()+packData.nodeCount);
 	    	  newpdcel.fixDCEL(holdPack);
 	    	  holdPack.hes=1;
 	    	  
-	    	  // max_pack the copy
+	    	  // max_pack the this topological sphere
 	    	  int ans=0;
 	    	  if ((ans+=CommandStrParser.jexecute(holdPack,"max_pack "+cycles))==0) {
 	    		  CirclePack.cpb.errMsg("hum.. ran into packing problem with 'perp_pack'");
@@ -8116,9 +8177,9 @@ public class CommandStrParser {
 	      // ========== proj =============
 	      else if (cmd.startsWith("proj")) {
 	/*    	  Options (in order of precedence): 
-	    		   -e v   gives vert to go at 1 on equator.
-	    		   -m     compute a vertex furthest in generations from alpha and S
-	    		          and place it at 1 on equator.
+	    		   -e v   gives vert to place at 1 on equator.
+	    		   -m     compute a vertex furthest in generations from alpha 
+	    		   		  and S and place it at 1 on equator.
 	    		   -t x   dilation amount; sets ratio of spherical radii, alpha/S.
 	    		          default is "-t 1" (equal radii at N and S). */   	  
 	    	  if (packData.hes>=0 || packData.getBdryCompCount()!=1) {
@@ -8183,12 +8244,6 @@ public class CommandStrParser {
 	    		  } // done handling a given flagged segment
 	    	  } // end of while
 	    	  
-	    	  // still problems with NSpole
-//	    	  if (E==0) { // use NSpole (tangency mode)
-//	    		  NSpole.NSCentroid(packData,2);
-//	    		  return 1;
-//	    	  }
-	    	  
 	    	  return packData.proj_max_to_s(E,ratio);
 	      }
 	      
@@ -8248,7 +8303,8 @@ public class CommandStrParser {
 				  //  TODO: caution, this uses data from PSPanel, hence from 
 				  //    active pack
 				  if (CPBase.postManager.isOpen()) {
-					  jexecute(packData,PackControl.outputFrame.postPanel.createSuffix());
+					  jexecute(packData,PackControl.
+							  outputFrame.postPanel.createSuffix());
 				  }
 				  String cmdbuild=new String(PackControl.outputFrame.postPanel.
 							  createPrefix(new String("sel_post_"+packData.packNum))+
@@ -8395,8 +8451,6 @@ public class CommandStrParser {
 			  }
 			  
 	      } // end of 'post'
-	     
-	      
 	  
 		  break;
 	  } // end of 'p'
@@ -8530,8 +8584,17 @@ public class CommandStrParser {
 		  
 	      // =========== rotate ===========
 		  else if (cmd.startsWith("rotate")) {
-	    	  double x=StringUtil.getOneDouble(flagSegs);
-	    	  return packData.rotate(x*Math.PI);
+			  double x=0.0;
+			  try {
+				  x=StringUtil.getOneDouble(flagSegs);
+			  } catch(Exception ex) {
+				  CirclePack.cpb.errMsg("usage: rotate <x>, x a double");
+				  return 0;
+			  }
+			  // TODO: might revert to older, direct, more efficient method
+			  Mobius mob=Mobius.rotation(x);
+			  NodeLink vertlist=new NodeLink(packData,"a");
+	    	  return packData.apply_Mobius(mob,vertlist,true,true,true);
 	      }
 	      
 	      // ========== repack ============= 
@@ -8586,8 +8649,8 @@ public class CommandStrParser {
 		    			  break;
 		    		  }	
 	    			  // TODO: need to implement other packing routines and put
-	    			  //   in the options here, e.g., 't' (which should be default for
-	    			  //   inversive distance cases.)
+	    			  //   in the options here, e.g., 't' (which should be default 
+	    			  //   for inversive distance cases.)
 	    			  } // end of switch
 	    		  }
 	    		  else { // should be 'cycles' indicator
@@ -10226,7 +10289,8 @@ public class CommandStrParser {
 	    						  // TODO: do we need to check if on back?
 	    					  } 
 	    					  } catch (NumberFormatException nfe) {
-	    						  CirclePack.cpb.myErrorMsg("usage: set_screen -v <n>: "+nfe.getMessage());
+	    						  CirclePack.cpb.myErrorMsg("usage: set_screen -v <n>: "+
+	    								  nfe.getMessage());
 	    					  }
 	    				  }
 	    				      				  

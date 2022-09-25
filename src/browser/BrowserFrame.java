@@ -468,7 +468,8 @@ public class BrowserFrame extends JFrame implements ActionListener {
 						ReadWrite.readpack(bufferedReader,tmppd,enteredUrl.getFile());
 						if (CirclePack.cpb.getActivePackData().getDispOptions != null)
 							CommandStrParser.jexecute(CirclePack.cpb.getActivePackData(), "disp -wr");
-						else TrafficCenter.cmdGUI("disp -w -c");
+						else 
+							TrafficCenter.cmdGUI("disp -w -c");
 					} catch (FileNotFoundException e) {
 						// Notify CirclePack of the error.
 						this.messenger.sendErrorMessage("Failed to open " + enteredUrl + ".");

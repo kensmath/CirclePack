@@ -58,7 +58,7 @@ public class CPcanvas extends JPanel implements MouseListener {
 			default: return new String(" (sph)");
 		}
 	}
-
+	
 	/** 
 	 * Return the 'packData' pack index, or -1 if not set
 	 * @return int

@@ -55,7 +55,8 @@ import variables.VarControl;
 public abstract class CPBase {
 	
 	// directory for codes such as 'triangle', 'qhull'
-	public static File LibDirectory=new File(System.getProperty("java.io.tmpdir"));
+	public static File TempDirectory=new File(System.getProperty("java.io.tmpdir"));
+	public static File ScreenShotDirectory=new File(System.getProperty("java.io.tmpdir"));
 		
 	// Some useful stuff for schwarzian work
 	public static final double sqrt3=Math.sqrt(3);           // sqrt{3}
@@ -75,7 +76,7 @@ public abstract class CPBase {
 	public abstract int swapPackData(PackData p,int pnum,boolean keepX); // change packings[pnum]
 	
 	// main data container is 'packings', while 'cpDrawing's hold 
-	// backing plane for images, even in non-GUI situations.
+	// backing plane for images, even in non-GUI implementations.
 	public static PackData []packings; // 'PackData' instances
 	public static CPdrawing []cpDrawing;
 	public static CPcanvas []cpCanvas; // GUI panel
@@ -90,6 +91,7 @@ public abstract class CPBase {
 	public static File XinfoFile = null; // hold help info for 'PackExtender's
 	public static CPTimer cpTimer; // for crude timings
 	public static RunProgress runSpinner;  // progress indicator
+	public static String IMG="jpg"; // extension for screen shot images
 	
 	// ------------- debug: commands to strerr
 	public static boolean cmdDebug=false;
@@ -179,7 +181,7 @@ public abstract class CPBase {
 	public static Color defaultCircleColor;
 	public static Color defaultFillColor; // basic fill color
 
-	// modes for add_gen, add_lay
+	// modes for add_gen, add_layer calls
 	public static final int TENT=0;
 	public static final int DEGREE=1;
 	public static final int DUPLICATE=2;
@@ -218,8 +220,7 @@ public abstract class CPBase {
 		return null;
 	}
 	
-	
-	   /**
+	/**
      * Gets running jar file path.
      * @return running jar file path.
      */
@@ -235,7 +236,6 @@ public abstract class CPBase {
      */
     private static void extractExeFiles(String destDir) throws IOException {
     	
-
         java.util.jar.JarFile jar = new java.util.jar.JarFile(getCurrentJarFilePath());
         Enumeration<JarEntry> enumEntries = jar.entries();
         String entryName;
@@ -252,7 +252,7 @@ public abstract class CPBase {
             if ( (entryName != null) && (entryName.endsWith(".exe"))) {
             	
 // debugging
-System.out.println("found; "+entryName);
+// System.out.println("found; "+entryName);
             	
                 java.io.File f = new java.io.File(destDir + java.io.File.separator + entryName);
                 if (file.isDirectory()) { // if its a directory, create it
@@ -308,14 +308,61 @@ System.out.println("found; "+entryName);
 		activePackNum=0;
 	}
 	
+	/**
+	 * Set the screendump image format: choices are "jpg", "png",
+	 * "gif", "bmp", "wbmp".
+	 * @param img
+	 * @return 1 on success
+	 */
+	public int setIMG(String img) {
+		if (img.equalsIgnoreCase("JPG"))
+			IMG="jpg";
+		else if (img.equalsIgnoreCase("PNG"))
+			IMG="png";
+		else if (img.equalsIgnoreCase("GIF"))
+			IMG="gif";
+		else if (img.equalsIgnoreCase("BMP"))
+			IMG="bmp";
+		else if (img.equalsIgnoreCase("WBMP"))
+			IMG="wbmp";
+		else 
+			return 0;
+		return 1;
+	}
+	
+	/**
+	 * Put user function text in 'FtnSpecification' if it
+	 * parses correctly.
+	 * @param ftnstr
+	 * @return boolean, false for function parsing error
+	 */
 	public boolean setFtnSpec(String ftnstr) {
 		  this.FtnSpecification=new StringBuilder(ftnstr);
 		  this.FtnParser.parseExpression(
 				  this.FtnSpecification.toString());
 		  if (this.FtnParser.funcHasError()) {
+			  this.FtnSpecification=new StringBuilder();
 			  return false;
 		  }
 		  return true;
+	}
+
+    /**
+	 * Put user function text in 'ParamSpecification' if it
+	 * parses correctly.
+     * @param paramstr
+     * @return boolean, false on parsing error
+     */
+	public boolean setParamSpec(String paramstr) {
+		  this.ParamSpecification=new StringBuilder(paramstr);
+		  this.ParamParser.parseExpression(
+				  this.ParamSpecification.toString());
+		  if (this.ParamParser.funcHasError()) {
+			  this.ParamSpecification=new StringBuilder();
+			  return false;
+		  }
+		  return true;
+		
 	}
 
     /**
@@ -352,17 +399,6 @@ System.out.println("found; "+entryName);
     	}
     }
     
-	public boolean setParamSpec(String paramstr) {
-		  this.ParamSpecification=new StringBuilder(paramstr);
-		  this.ParamParser.parseExpression(
-				  this.ParamSpecification.toString());
-		  if (this.ParamParser.funcHasError()) {
-			  return false;
-		  }
-		  return true;
-		
-	}
-
 	/**
 	 * Call the subclass for generic message
 	 */

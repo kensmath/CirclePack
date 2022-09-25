@@ -112,7 +112,8 @@ public class SideData {
     				etrace=etrace.nextRed;
     			}
     			
-    			if (count<2) return 0; // side is too short
+    			if (count<2)  // side is too short
+    				return 0;
     			// move to center edge-pairing and use ends
     			etrace=startEdge;
     			for (int i=0;i<=(int)(count/2);i++)

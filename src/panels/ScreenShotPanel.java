@@ -40,17 +40,14 @@ import frames.AboutFrame;
 
 /**
  * Class for organizing screenshots; thumbnails, name, 
- * vectors of images in /tmp, etc.
+ * vectors of images in /tmp, etc. Image format is 'CPBase.IMG'.
  * @author kens
  *
  */
-public class ImagePanel extends JPanel implements ActionListener, ImageObserver {
+public class ScreenShotPanel extends JPanel implements ActionListener, ImageObserver {
 
 	private static final long 
 	serialVersionUID = 1L;
-	
-	// screendump format
-	static String IMG="jpg";
 	
 	static JTextField nameField;
 	static JTextField dirField;
@@ -65,7 +62,7 @@ public class ImagePanel extends JPanel implements ActionListener, ImageObserver 
 	// TODO: want 'gif' or 'jpg' options
 	
 	// Constructor
-	public ImagePanel() {
+	public ScreenShotPanel() {
 		super();
 		this.setLayout(new BorderLayout());
 		imageCount=0;
@@ -94,8 +91,8 @@ public class ImagePanel extends JPanel implements ActionListener, ImageObserver 
 	}
 
 	/**
-	 * Store the screen as a jpg
-	 * @param p @see PackData (null in case we want pair double screen)
+	 * Store the screen as a CPBase.IMG file (default jpg).
+	 * @param p PackData (null in case we want pair double screen)
 	 * @return boolean
 	 */
 	public boolean storeCPImage(PackData p) {
@@ -109,7 +106,7 @@ public class ImagePanel extends JPanel implements ActionListener, ImageObserver 
 			}
 		}
 		String tmpName=new String(prefix+File.separator+nameField.getText().trim()
-				+"-"+num+"."+IMG);
+				+"-"+num+"."+CPBase.IMG);
 		File locFile = new File(tmpName);
 		BufferedImage bI;
 		try {
@@ -147,7 +144,7 @@ public class ImagePanel extends JPanel implements ActionListener, ImageObserver 
 						rangePI.getWidth(),rangePI.getHeight(),null);
 			}
 			
-			ImageIO.write(bI,IMG,locFile);
+			ImageIO.write(bI,CPBase.IMG,locFile);
 		} catch (Exception ex) {
 			CirclePack.cpb.myErrorMsg("Screen dump to '"+tmpName+"' has failed.");
 			return false;
@@ -205,27 +202,6 @@ public class ImagePanel extends JPanel implements ActionListener, ImageObserver 
 		
 		return bMenu;
 	}
-	
-	/**
-	 * Set the screendump image format: choices are "jpg", "png",
-	 * "gif", "bmp", "wbmp".
-	 * @param img
-	 * @return 1 on success
-	 */
-	public int setIMG(String img) {
-		if (img.equalsIgnoreCase("JPG"))
-			IMG="jpg";
-		else if (img.equalsIgnoreCase("PNG"))
-			IMG="png";
-		else if (img.equalsIgnoreCase("GIF"))
-			IMG="gif";
-		else if (img.equalsIgnoreCase("BMP"))
-			IMG="bmp";
-		else if (img.equalsIgnoreCase("WBMP"))
-			IMG="wbmp";
-		else return 0;
-		return 1;
-	}
 
 	/**
 	 * Sets the JTextField to given directory
@@ -234,9 +210,6 @@ public class ImagePanel extends JPanel implements ActionListener, ImageObserver 
 	public void setDirectory(String dir) {
 		File getdir =new File(dir.trim());
 		dirField.setText(getdir.getPath());
-//		else
-//			dirField.setText(new String(System.getProperty("java.io.tmpdir")+
-//					File.separator+"cp_"+id+File.separator));
 	}
 	
 	/**
@@ -266,7 +239,7 @@ public class ImagePanel extends JPanel implements ActionListener, ImageObserver 
 			if (result == JOptionPane.YES_OPTION) {
 //				int tmp_id=new Random().nextInt(10000);
 //				String temp_name=new String("AboutImage"+tmp_id+"."+IMG);
-				String temp_name=new String("AboutImage."+IMG);
+				String temp_name=new String("AboutImage."+CPBase.IMG);
 				File temp=null;
 				try {
 	
@@ -288,7 +261,7 @@ public class ImagePanel extends JPanel implements ActionListener, ImageObserver 
 						scaleBufferedImage(img,AboutFrame.ICONWIDTH,AboutFrame.ICONHEIGHT);
 					
 					// write scaled image to temp
-					ImageIO.write(after,IMG,temp);
+					ImageIO.write(after,CPBase.IMG,temp);
 					
 					// store as About ImageIcon
 					CPBase.scriptManager.myScriptTag=new ImageIcon(after);

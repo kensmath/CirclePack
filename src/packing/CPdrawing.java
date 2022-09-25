@@ -253,7 +253,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 		update(2);
 		return bI;
 	}
-
+	
     /**
      * After a change in real or pixel screen size, update.
      * If option==1, then just change for translations.

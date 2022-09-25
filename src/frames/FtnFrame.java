@@ -173,14 +173,16 @@ public class FtnFrame extends JFrame {
 	}
  
     /**
-     * Can be called separately using 'set_ftn_text' to enter 
-     * and process a function. This does not evaluate it -- e.g., 
-     * there may be variables yet to be set.
-     * @param ftn
+     * User functions are stored in 'CPBase.FtnSpecification'.
+     * Can be changed with command 'set_ftn_text', which also
+     * checks validity. This call does not evaluate it -- 
+     * e.g., there may be variables yet to be set.
+     * @return boolean, false
      */
-    public boolean setFunctionText(String ftn) { 
-    	ftnField.setText(ftn);
-    	if (!CirclePack.cpb.setFtnSpec(ftn)) {
+    public boolean setFunctionText() { 
+    	String ftntext=CirclePack.cpb.FtnSpecification.toString();
+    	ftnField.setText(ftntext);
+    	if (!CirclePack.cpb.setFtnSpec(ftntext)) {
         	ftnField.setBackground(Color.yellow);
         	return false;
     	}
@@ -189,14 +191,16 @@ public class FtnFrame extends JFrame {
     }
     
     /**
-     * Can be called separately using 'set_path_text' to enter 
-     * and process a parameterized path. This does not evaluate it -- e.g., 
-     * there may be variables yet to be set.
-     * @param ftn
+     * User parameter function stored in 'CPBase.ParamSpecification'.
+     * Can be changed with command 'set_path_text', which also
+     * checks validity. This call does not evaluate it -- 
+     * e.g., there may be variables yet to be set.
+     * @return boolean, false on parse error
      */
-    public boolean setPathText(String ftn) { 
-    	paramField.setText(ftn);
-    	if (!CirclePack.cpb.setParamSpec(ftn)) {
+    public boolean setPathText() { 
+    	String ftntext=CirclePack.cpb.ParamSpecification.toString();
+    	paramField.setText(ftntext);
+    	if (!CirclePack.cpb.setParamSpec(ftntext)) {
     		paramField.setBackground(Color.yellow);
     		return false;
     	}

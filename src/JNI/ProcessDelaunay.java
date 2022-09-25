@@ -51,8 +51,8 @@ public class ProcessDelaunay {
 		// we can put the executables in the jar file
 //		File dir = CPFileManager.HomeDirectory; // where temp files go
 //		File codedir = CPFileManager.HomeDirectory; // where the code goes
-		File dir = CPBase.LibDirectory; // where temp files go
-		File codedir = CPBase.LibDirectory; // where the code goes
+		File dir = CPBase.TempDirectory; // where temp files go
+		File codedir = CPBase.TempDirectory; // where the code goes
 		// write data to "sphInput_id" file
 		File infile = new File(dir, "sphin_" + localID);
 		String outfilename = new String("sphout_" + localID);
@@ -175,8 +175,8 @@ public class ProcessDelaunay {
 		//    we can put the executables in the jar file
 //		File dir = CPFileManager.HomeDirectory; // where temp files go
 //		File codedir = CPFileManager.HomeDirectory; // where the code goes
-		File dir = CPBase.LibDirectory; // where temp files go
-		File codedir = CPBase.LibDirectory; // where the code goes
+		File dir = CPBase.TempDirectory; // where temp files go
+		File codedir = CPBase.TempDirectory; // where the code goes
 		// write data to "plane_id" file, depending on data
 		String infilename;
 		if (!polyflag)

@@ -2327,7 +2327,7 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Update the side-pairing maps.
+	 * Update the side-pairing maps using updated rededge centers.
 	 * @return 0 if 'redChain' or 'pairLink' doesn't exist
 	 */
 	public int updatePairMob() {

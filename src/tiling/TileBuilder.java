@@ -6,6 +6,7 @@ import allMains.CirclePack;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.Vertex;
 import dcel.CombDCEL;
+import deBugging.DCELdebug;
 import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.ParserException;
@@ -219,7 +220,7 @@ public class TileBuilder {
 			safety--;
 			
 			// look for unattached tile
-			for (int t=1;t<=origTD.tileCount;t++) {
+			for (int t=1;t<=origTD.tileCount;t++) {	
 				if (origTD.myTiles[t]!=null && tileAdded[t]==0) {
 					Tile otile=origTD.myTiles[t];
 					int ecount=otile.vertCount;
@@ -229,6 +230,9 @@ public class TileBuilder {
 								tileAdded[nghb]>0) {
 							
 							// OK, found one to paste this onto
+// debugging
+//System.out.println("t="+t+" is unattached");
+
 							Tile tile=growTD.myTiles[nghb];
 							int edge=otile.tileFlower[j][1];
 							int mcount=tile.vertCount;
@@ -236,6 +240,12 @@ public class TileBuilder {
 							
 							PackData newp = otile.singleCanonical(3);
 							int w=newp.tileData.myTiles[1].vert[j];
+							
+// debugging		
+//			System.out.println("adjoining with v="+v+" and w="+w);
+//			 DCELdebug.printRedChain(masterPack.packDCEL.redChain);
+//			 DCELdebug.printRedChain(newp.packDCEL.redChain);
+							
 							masterPack.packDCEL=CombDCEL.adjoin(
 									masterPack.packDCEL,newp.packDCEL, v,w,4);
 							masterPack.vertexMap=masterPack.packDCEL.oldNew;
@@ -248,7 +258,10 @@ public class TileBuilder {
 							
 							tileAdded[t] = 1;
 							masterPack.packDCEL.fixDCEL(masterPack);
-
+							
+// debugging							
+//			 DCELdebug.printRedChain(masterPack.packDCEL.redChain);
+							
 							// fix the new tile's data
 							updateTileVerts(newp.tileData,masterPack.vertexMap);
 							growTD.myTiles[t] = newp.tileData.myTiles[1];
@@ -265,13 +278,19 @@ public class TileBuilder {
 								boolean newslit=sewOneSlit();
 								boolean newunigon=swallowOneUnigon();
 								if (newslit || newunigon) {
+									
+// debugging							
+//			 DCELdebug.printRedChain(masterPack.packDCEL.redChain);
+																
 									keepup=true;
 								}
 							}
 										
 							if (debug) { // debug=true;
-								DebugHelp.debugPackWrite(newp,"addTilePack"+t+".p"); 
-								// DebugHelp.debugPackWrite(masterPack,"newMaster.p");
+								DebugHelp.debugPackWrite(newp,
+										"addTilePack"+t+".p"); 
+								// DebugHelp.debugPackWrite(masterPack,
+								//       "newMaster.p");
 								int ntc=growTD.myTiles[t].augVertCount;
 								StringBuilder strbld=new StringBuilder(
 										"tile "+t+" augverts:");
@@ -350,7 +369,8 @@ public class TileBuilder {
 //   myedge+") to ("+nghbindex+","+tile.tileFlower[myedge][1]+")\n");
 					int v = tile.vert[(myedge + 1) % ecount]; // upstream due to
 																// orientation
-					int w = growTD.myTiles[nghbindex].vert[tile.tileFlower[myedge][1]];
+					int w = growTD.myTiles[nghbindex].
+							vert[tile.tileFlower[myedge][1]];
 
 					// shouldn't happen, but do these edges share an endpoint?
 					if (v == w)
@@ -365,7 +385,8 @@ public class TileBuilder {
 					updateTileVerts(growTD, masterPack.vertexMap);
 
 					if (debugPass>0) {
-						DebugHelp.debugPackWrite(masterPack, "Master_"+debugPass+".p");
+						DebugHelp.debugPackWrite(masterPack, "Master_"+
+					debugPass+".p");
 						System.out.println("\nMaster_"+debugPass+".p");
 						for (int tt=1;tt<=growTD.tileCount;tt++) 
 							DebugHelp.debugTileVerts(growTD.myTiles[tt]);
@@ -379,7 +400,8 @@ public class TileBuilder {
 						boolean newslit = sewOneSlit();
 						boolean newunigon = swallowOneUnigon();
 						if (newslit && debugPass>0) {
-							DebugHelp.debugPackWrite(masterPack, "Master_"+debugPass+".p");
+							DebugHelp.debugPackWrite(masterPack, "Master_"+
+						debugPass+".p");
 							System.out.println("\nMaster_"+debugPass+".p");
 							for (int tt=1;tt<=growTD.tileCount;tt++) 
 								DebugHelp.debugTileVerts(growTD.myTiles[tt]);
@@ -801,7 +823,7 @@ public class TileBuilder {
 				int ecount = tile.vertCount;
 				for (int e = 0; e < ecount; e++) {
 
-					// debugging: the 2 edges that may be pasted 
+// debugging: the 2 edges that may be pasted 
 //					int ege=e;
 //					int crossege=otile.tileFlower[e][1];
 					

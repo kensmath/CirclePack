@@ -16,7 +16,7 @@ import allMains.CirclePack;
 import circlePack.PackControl;
 import input.TrafficCenter;
 import panels.DispPanel;
-import panels.ImagePanel;
+import panels.ScreenShotPanel;
 import panels.ScreenPanel;
 
 /**
@@ -37,7 +37,7 @@ public class ScreenCtrlFrame extends JFrame implements ActionListener {
 	JScrollPane dataTreeScrollPane;
 	public JTabbedPane tabbedPane;
 
-	public ImagePanel imagePanel;
+	public ScreenShotPanel imagePanel;
 	public DispPanel displayPanel;
 	public ScreenPanel screenPanel;
 
@@ -55,7 +55,7 @@ public class ScreenCtrlFrame extends JFrame implements ActionListener {
 		tabbedPane.add(displayPanel,"Display");
 		
 // ----- next is panel with thumbnail images
-		imagePanel=new ImagePanel();
+		imagePanel=new ScreenShotPanel();
 		tabbedPane.add(imagePanel,"ScreenShots");
 
 // ----- next is "Screen" panel

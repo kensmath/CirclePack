@@ -3100,7 +3100,7 @@ public class PackData{
 	  }
 	  
 	  /** 
-	   * Apply Mobius Mob (oriented), or inverse (!oriented) to
+	   * Apply Mobius Mob (oriented), else apply inverse to
 	   * specified list of circles. If 'red_flag' (default),
 	   * adjust selected red chain circle centers; if sp_flag is 
 	   * true (default), also recompute the side-pairing maps.
@@ -3119,7 +3119,6 @@ public class PackData{
 	  public int apply_Mobius(Mobius Mob,NodeLink vertlist,
 	  			boolean oriented,boolean red_flag,boolean sp_flag) {
 	    int count=0;
-	    Iterator<Integer> vlist=vertlist.iterator();
 	    CircleSimple sc=new CircleSimple(true);
 
     	Iterator<Integer> vis=vertlist.iterator();
@@ -3127,7 +3126,7 @@ public class PackData{
     		Vertex vert=packDCEL.vertices[vis.next()];
     		if (vert.redFlag) {
     			HalfEdge he=vert.halfedge;
-    			// just handle red edges from 'vert'
+    			// just handle red edges from this 'vert'
     			do {
     				if (he.myRedEdge!=null) {
     	    			CircleSimple circle=he.myRedEdge.getCircleSimple();
@@ -4976,42 +4975,15 @@ public class PackData{
 
 	  /**
 		 * Rotate pack p by given angle. Note that radii
-		 * don't change.
+		 * don't change. The redvert data and side pairing
+		 * data are updated as well.
 		 * @param ang double, in radians
 		 * @return 1
 		 */
 	  public int rotate(double ang) {
 		  Mobius mob=Mobius.rotation(ang/Math.PI);
-		  if (hes>0) { // sphere
-			  for (int v=1;v<=nodeCount;v++) {
-				  Complex z=packDCEL.vertices[v].center;
-				  packDCEL.vertices[v].center=new Complex(z.x+ang,z.y);
-			  }
-			  if (packDCEL.redChain!=null) {
-				  RedEdge rtrace=packDCEL.redChain;
-				  do {
-					  Complex z=rtrace.getCenter();
-					  if (z!=null)
-						  rtrace.setCenter(new Complex(z.x+ang,z.y));
-					  rtrace=rtrace.nextRed;
-				  } while(rtrace!=packDCEL.redChain);
-			  }
-			  return 1;
-		  }
-			  
-		  // hyp/eucl
-		  for (int v=1;v<=nodeCount;v++) 
-			  packDCEL.vertices[v].center=mob.apply(packDCEL.vertices[v].center);
-		  if (packDCEL.redChain!=null) {
-			  RedEdge rtrace=packDCEL.redChain;
-			  do {
-				  Complex z=rtrace.getCenter();
-				  if (z!=null)
-					  rtrace.setCenter(mob.apply(z));
-				  rtrace=rtrace.nextRed;
-			  } while(rtrace!=packDCEL.redChain);
-		  }
-		  return 1;
+		  NodeLink vertlist=new NodeLink("a");
+    	  return apply_Mobius(mob,vertlist,true,true,true);
 	  } 
 
 	  /**
