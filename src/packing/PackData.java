@@ -4982,7 +4982,7 @@ public class PackData{
 		 */
 	  public int rotate(double ang) {
 		  Mobius mob=Mobius.rotation(ang/Math.PI);
-		  NodeLink vertlist=new NodeLink("a");
+		  NodeLink vertlist=new NodeLink(this,"a");
     	  return apply_Mobius(mob,vertlist,true,true,true);
 	  } 
 

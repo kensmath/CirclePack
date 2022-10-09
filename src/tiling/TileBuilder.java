@@ -6,7 +6,6 @@ import allMains.CirclePack;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.Vertex;
 import dcel.CombDCEL;
-import deBugging.DCELdebug;
 import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.ParserException;
@@ -93,15 +92,16 @@ public class TileBuilder {
 	 * 
 	 * Strategy:
 	 * * we work purely from 'tileFlower' data, so we discard and 
-	 *   reconstitute all vert indices using 'tileflowers2verts'.
+	 *   reconstitute all vertex indices using 'tileflowers2verts'.
 	 *   
 	 * TODO: See if this first step can be avoided and we can
-	 *   restore the original indices for the verties of the
+	 *   restore the original indices for the vertices of the
 	 *   original tiles.
 	 *   
-	 * * We create a packing for each tile as needed: barycentrically 
-	 *   subdivided 2n-gon, recording original corner indices from 
-	 *   tile (tile_v,pack_v) in its 'VertexMap'.
+	 * * We create a packing for each tile as needed: this is a
+	 *   barycentrically subdivided 2n-gon, recording original 
+	 *   corner indices from tile (tile_v,pack_v) in its 'VertexMap'.
+	 *   Note that each tile side has 4 edges.
 	 * * the first tile is chosen as rootTile; we may need to make 
 	 *   some choice so we have an easy base.
 	 * * Each tile, including the first, is processed for slit-type 
@@ -195,7 +195,8 @@ public class TileBuilder {
 		boolean keepup=true;
 		while (keepup) {
 			keepup=false;
-			boolean newslit=sewOneSlit();
+			int slittip=check_for_slit();
+			boolean newslit=sewOneSlit(slittip);
 			boolean newunigon=swallowOneUnigon();
 			if (newslit || newunigon) {
 				keepup=true;
@@ -230,9 +231,6 @@ public class TileBuilder {
 								tileAdded[nghb]>0) {
 							
 							// OK, found one to paste this onto
-// debugging
-//System.out.println("t="+t+" is unattached");
-
 							Tile tile=growTD.myTiles[nghb];
 							int edge=otile.tileFlower[j][1];
 							int mcount=tile.vertCount;
@@ -242,9 +240,10 @@ public class TileBuilder {
 							int w=newp.tileData.myTiles[1].vert[j];
 							
 // debugging		
-//			System.out.println("adjoining with v="+v+" and w="+w);
-//			 DCELdebug.printRedChain(masterPack.packDCEL.redChain);
-//			 DCELdebug.printRedChain(newp.packDCEL.redChain);
+//		System.out.println("adjoining with v="+v+" and w="+w);
+//		DCELdebug.printRedChain(masterPack.packDCEL.redChain);
+//		DCELdebug.printRedChain(newp.packDCEL.redChain);
+//		DebugHelp.debugPackWrite(masterPack,"masterPack.p");
 							
 							masterPack.packDCEL=CombDCEL.adjoin(
 									masterPack.packDCEL,newp.packDCEL, v,w,4);
@@ -259,9 +258,6 @@ public class TileBuilder {
 							tileAdded[t] = 1;
 							masterPack.packDCEL.fixDCEL(masterPack);
 							
-// debugging							
-//			 DCELdebug.printRedChain(masterPack.packDCEL.redChain);
-							
 							// fix the new tile's data
 							updateTileVerts(newp.tileData,masterPack.vertexMap);
 							growTD.myTiles[t] = newp.tileData.myTiles[1];
@@ -275,15 +271,11 @@ public class TileBuilder {
 							keepup=true;
 							while (keepup) {
 								keepup=false;
-								boolean newslit=sewOneSlit();
+								int slittip=check_for_slit();
+								boolean newslit=sewOneSlit(slittip);
 								boolean newunigon=swallowOneUnigon();
-								if (newslit || newunigon) {
-									
-// debugging							
-//			 DCELdebug.printRedChain(masterPack.packDCEL.redChain);
-																
+								if (newslit || newunigon) 
 									keepup=true;
-								}
 							}
 										
 							if (debug) { // debug=true;
@@ -303,7 +295,7 @@ public class TileBuilder {
 						}
 					}
 				}
-			} // done with for for unattached files
+			} // done with latest unattached file
 		} // end of while to get unattached files
 			
 		if (safety<=0)
@@ -364,7 +356,7 @@ public class TileBuilder {
 				}
 
 				if (myedge>=0) {
-// debug
+// debugging
 //System.out.println("\n Paste ("+tile.tileIndex+","+
 //   myedge+") to ("+nghbindex+","+tile.tileFlower[myedge][1]+")\n");
 					int v = tile.vert[(myedge + 1) % ecount]; // upstream due to
@@ -397,7 +389,8 @@ public class TileBuilder {
 					keepup = true;
 					while (keepup) {
 						keepup = false;
-						boolean newslit = sewOneSlit();
+						int slittip=check_for_slit();
+						boolean newslit = sewOneSlit(slittip);
 						boolean newunigon = swallowOneUnigon();
 						if (newslit && debugPass>0) {
 							DebugHelp.debugPackWrite(masterPack, "Master_"+
@@ -480,7 +473,6 @@ public class TileBuilder {
 		for (int t=1;t<=p.tileData.tileCount;t++) {
 			Tile tile=p.tileData.myTiles[t];
 			int bv=tile.baryVert;
-			int num=p.countFaces(bv);
 			
 			// want 'halfedge' to be that going toward vert[0].
 			Vertex vert=p.packDCEL.vertices[bv];
@@ -775,7 +767,7 @@ public class TileBuilder {
 		for (int t=1;t<=td.tileCount;t++) {
 			Tile tile=td.myTiles[t];
 			if (tile==null)
-				break;
+				continue;
 			
 			// adjust vert
 			for (int j=0;j<tile.vertCount;j++) {
@@ -801,14 +793,14 @@ public class TileBuilder {
 	}
 	
 	/**
-	 * Look through masterPack for tile edges which are in the boundary,
-	 * contiguous, and are to be attached to one another. Sew up the slit 
-	 * and adjust accordingly. (So, we're looking for a tile vert which is
-	 * in the bdry, and tile edges on each side are to be identified according
-	 * to origTD.)
-	 * @return boolean, false if none sewn up
+	 * Look through masterPack for first instance of bdry
+	 * edges which are contiguous and to be attached to one 
+	 * another. (So, we're looking for a tile vert which is in 
+	 * the bdry, and tile edges on each side are to be 
+	 * identified according to origTD.)
+	 * @return int, index v of tip, 0 for failure.
 	 */
-	public boolean sewOneSlit() {
+	public int check_for_slit() {
 		
 		Tile tile=null;
 		Tile otile=null;
@@ -840,26 +832,31 @@ public class TileBuilder {
 					int nec = origTD.myTiles[nghb].vertCount;
 					int oe = (otile.tileFlower[e][1] + 1) % nec; // other end
 
-					if (tileAdded[nghb]>0 && v ==growTD.myTiles[nghb].vert[oe]) {
-
-// debug
-//System.out.println(" attach slit: (tile,edge)=("+otile.tileFlower[e][0]+
-// " "+otile.tileFlower[e][1]+")");
-
-						masterPack.packDCEL=CombDCEL.adjoin(
-								masterPack.packDCEL,
-								masterPack.packDCEL, v, v, 4);
-						masterPack.vertexMap=masterPack.packDCEL.oldNew;
-						masterPack.packDCEL.fixDCEL(masterPack);
-						
-						// pasted to self, so fix the tile data
-						updateTileVerts(growTD, masterPack.vertexMap);
-						return true;
-					}
-				}	
+					if (tileAdded[nghb]>0 && v ==growTD.myTiles[nghb].vert[oe])
+						return v;
+				}
 			}
 		}
-		
+		return 0;
+	}
+	
+	/**
+	 * Used 'check_for_slit' to locate tip of slit v to 
+	 * close up. Sew up the slit and adjust accordingly. 
+	 * @return boolean, false if none sewn up
+	 */
+	public boolean sewOneSlit(int v) {
+		if (v>0) {
+			masterPack.packDCEL=CombDCEL.adjoin(
+					masterPack.packDCEL,
+					masterPack.packDCEL, v, v, 4);
+			masterPack.vertexMap=masterPack.packDCEL.oldNew;
+			masterPack.packDCEL.fixDCEL(masterPack);
+						
+			// pasted to self, so fix the tile data
+			updateTileVerts(growTD, masterPack.vertexMap);
+			return true;
+		}
 		return false;
 	}
 

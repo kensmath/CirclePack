@@ -356,13 +356,21 @@ public class TrafficCenter {
 				if (!CPBase.scriptManager.isScriptLoaded()) {
 					String fe = new String(
 							"error: '[.]' call fails, no script is loaded");
-					rP.errorMsgs=rP.errorMsgs.concat(fe);
+					if (rP.errorMsgs==null)
+						rP.errorMsgs=fe;
+					else 
+						rP.errorMsgs=rP.errorMsgs.concat(fe);
 					rP.cmdCount=-cmdCount;
 					return;
 				}
 				int k = cmds[j].indexOf(']');
 				if (k < 0) {
-					rP.errorMsgs=rP.errorMsgs.concat("cmd format error in '[.]': right bracket missing");
+					String fe="cmd format error in '[.]': "
+							+ "right bracket missing";
+					if(rP.errorMsgs==null)
+						rP.errorMsgs=fe;
+					else
+						rP.errorMsgs=rP.errorMsgs.concat(fe);
 					rP.cmdCount=-cmdCount;
 					return;
 				}
@@ -375,7 +383,10 @@ public class TrafficCenter {
 								"Command parsing error: "
 										+ "recursive search depth for command replacement exceeded.");
 						PackControl.consoleCmd.dispConsoleMsg(fe);
-						rP.errorMsgs=rP.errorMsgs.concat(fe);
+						if (rP.errorMsgs==null)
+							rP.errorMsgs=fe;
+						else
+							rP.errorMsgs=rP.errorMsgs.concat(fe);
 						rP.cmdCount=-cmdCount;
 						return;
 					}
@@ -390,7 +401,10 @@ public class TrafficCenter {
 						String fe = new String("Named script command [" + key
 								+ "] not found");
 						PackControl.consoleCmd.dispConsoleMsg(fe);
-						rP.errorMsgs=rP.errorMsgs.concat(fe);
+						if (rP.errorMsgs==null)
+							rP.errorMsgs=fe;
+						else 
+							rP.errorMsgs=rP.errorMsgs.concat(fe);
 						return;
 					}
 				}
@@ -399,10 +413,18 @@ public class TrafficCenter {
 				ResultPacket uP=new ResultPacket(CPBase.cpDrawing[newpnum].getPackData(),brktcmd);
 				uP.memoryFlag=rP.memoryFlag;
 				parseCmdSeq(uP,depth+1,mcs);
-				if (uP.errorMsgs!=null && uP.errorMsgs.trim().length()>0)
-					rP.errorMsgs=rP.errorMsgs.concat(";"+uP.errorMsgs);
-				if (uP.msgs!=null && uP.msgs.trim().length()>0)
-					rP.msgs = rP.msgs.concat(";"+uP.msgs);
+				if (uP.errorMsgs!=null && uP.errorMsgs.trim().length()>0) {
+					if (rP.errorMsgs==null)
+						rP.errorMsgs=uP.msgs;
+					else
+						rP.errorMsgs=rP.errorMsgs.concat(";"+uP.errorMsgs);
+				}
+				if (uP.msgs!=null && uP.msgs.trim().length()>0) {
+					if (rP.msgs==null)
+						rP.msgs=uP.msgs;
+					else
+						rP.msgs = rP.msgs.concat(";"+uP.msgs);
+				}
 				cmdCount += uP.cmdCount; 
 				continue; // continue loop on cmds[j]
 			} // end of '[.]' catch
@@ -552,9 +574,10 @@ public class TrafficCenter {
 				if (errMsg != null || count == 0) {
 					cmdCount += count;
 					if (errMsg != null) {
-						if (rP.errorMsgs!=null)
-							rP.errorMsgs=rP.errorMsgs.concat(errMsg);
-						else rP.errorMsgs=new String(errMsg);
+						if (rP.errorMsgs==null)
+							rP.errorMsgs=errMsg;
+						else 
+							rP.errorMsgs.concat(errMsg);
 					}
 					rP.cmdCount=-cmdCount;
 					return;

@@ -98,20 +98,20 @@ public class DebugHelp {
 	}
 
 	/**
-	 * write pack data to /tmp/debugPack.p
+	 * write pack data to packing directory
 	 * @param p 
 	 * @param fname
 	 * @return String for msg.
 	 */
 	public static void debugPackWrite(PackData p,String fname) {
-		BufferedWriter fp = CPFileManager.openWriteFP(tmpdir,
-				false, fname, false);
+		File dir=CPFileManager.PackingDirectory;
+		BufferedWriter fp = CPFileManager.openWriteFP(dir,false, fname, false);
 		try {
 			ReadWrite.writePack(fp,p,0017,false); 
 		} catch (Exception ex) {
 			throw new InOutException("debugPackWrite failed");
 		}
-		CirclePack.cpb.msg("Wrote temp packing to "+fname+" in "+tmpdir.toString());
+		CirclePack.cpb.msg("Wrote temp packing to "+fname+" in "+dir.toString());
 	}
 	
 	/**

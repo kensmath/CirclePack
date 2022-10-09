@@ -202,6 +202,8 @@ public class ConformalTiling extends PackExtender {
 			int type=0;
 			try {
 				type=Integer.parseInt(flagSegs.remove(0).get(0));
+				if (type<4)
+					type=4; // this is the minimal type
 			} catch(Exception ex) {
 				errorMsg("usage: {t} [-d {x}] tile type 't', depth 'x'");
 				return 0;
