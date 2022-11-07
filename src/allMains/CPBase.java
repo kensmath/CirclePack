@@ -247,12 +247,12 @@ public abstract class CPBase {
             entryName = file.getName();
             
 // debugging
-//System.out.println("entryName is "+entryName);
+System.out.println("entryName is "+entryName);
 
             if ( (entryName != null) && (entryName.endsWith(".exe"))) {
             	
 // debugging
-// System.out.println("found; "+entryName);
+System.out.println("found; "+entryName);
             	
                 java.io.File f = new java.io.File(destDir + java.io.File.separator + entryName);
                 if (file.isDirectory()) { // if its a directory, create it

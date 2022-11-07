@@ -19,7 +19,7 @@ import util.StringUtil;
  * Static routines for creating Delaunay triangulations with
  * calls to 'qhull' (for the sphere) and 'triangle' for regions
  * in the plane. I'm using 'ProcessBuilder'.
- * The idea is to put the qhull executable in CPBase.LibDirectory when
+ * The idea is to put the qhull executable in CPBase.TempDirectory when
  * the program first loads. For a run, the data is placed into a 
  * 'DelaunayData' object, the code is run, and the output triangulation
  * is put back into 'DelaunayData'.

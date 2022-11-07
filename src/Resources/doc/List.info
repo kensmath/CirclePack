@@ -1,67 +1,71 @@
 Lists:
 CirclePack has an extensive set of list features for handling linked 
-lists of circle (i.e., vertices), edges, and faces. Some lists are 
-created explicitly by the user, either in direct commands or by using 
-the "List" tab of the SupportPanel area of the interface, while others 
-are created temporarily in interpreting commands. In these help 
+lists of circles (i.e., vertices), edges, faces, halfedges, 
+dual edges, tiles, and barycenters. Some lists are created explicitly 
+by the user, either in direct commands while others are created 
+temporarily in interpreting commands. In these help 
 files, command descriptions indicate user specifiable lists by {v..}, 
-{e..}, and {f..}. The syntax is described below. 
+{e..}, {f..}, and so forth. The syntax is described below. 
 
-Each packing in CirclePack has its own 'vlist', 'elist', 'flist',
-'glist', and 'hlist'. In addition, are generic 'Vlist', 'Elist', 
-'Flist', 'Glist', and 'Hlist', which can be used with any packing 
-(though each is processed before use to ensure the data is legal 
-for the packing to which it's being applied).
+Each packing in CirclePack has 'vlist', 'elist', 'flist', 'glist', 
+'blist', and 'hlist' tailored explicitly to it. In addition, are 
+general 'Vlist', 'Elist', 'Flist', 'Glist', 'Blist', and 'Hlist', 
+which can be used with any packing (though each is processed before 
+use to ensure the data is legal for the packing to which it's 
+being applied).
 
-Explicit list functions are 'set_*list' (attached to specific 
-packings) and 'set_*list' (e.g., 'set_Elist') (global).
+Explicit list functions are 'set_*list' (e.g. 'set_elist', attached
+to a specific packing) and 'set_*list' (e.g., 'set_Elist', global).
   
 List creation syntax:
-	a			'all' the objects (vertices, faces, or edges)
+	a			'all' the objects (vertices, faces, edges, etc.)
 	A			the packing 'alpha' vertex
 	A {f}		(faces only) alternating with given face (e.g., grey/white)
  	b			'boundary' objects
- 	c {x y} {v..}	for vertices, closest in list to z=x+iy,
- 				(takes first in list in case of ties)
+ 	c {x y} {v..}	for vertices, closest to the point z=x+iy
+ 				(takes first in case of ties)
  	d {..}		for edges, selects based on end and neighbor vert
- 				degrees: E.g. d 5 G6 L4 ? gives edges having one end 
+ 				degrees: E.g. "d 5 G6 L4 ?" gives edges having one end 
  				degree 5, other, degree greater than 6, one common 
  				neighbor degree less than 4, and other neighbor 
  				(if it exists) of any degree. If one of last two
 	 			entries is not '?', then only interior edges can
  				be selected. 
  	B			list with one vertex from each boundary component
-	D r v {n}  	all circles within distance r of 
+	D r v {n}	all circles within distance r of 
 	D r z {x y}	center of circle n (or of point (x,y)) 
 				(this 'D' structure must be last in the cmd string)
-	e {e..}		when specifying circles, this returns those along
-				hex-extended edges. For instance, if e0 is the edge
-				e0 = <v1, v2> and the complex is then changed with 
-				up to 16 calls to 'hex_refine', then edge e0 acquires 
-				new vertices between v1 and v2. The 'e' flag will 
-				return vertices from v1 to v2, including all (if any) 
-				intervening hex vertices.
 	e {v w ..}	when creating an edge list, this converts the given 
 				vertex list to edges to extent possible. For instance,
-				'e {1 5 12 7}' will return any of the edges <1,5>, 
-				<5,12>, and	<12 7> that exist.
-	ee {v w ..}	same as above, only admits axis-extended edges		
+				'e {1 5 12 7}' will return any of the legal edges 
+				<1,5> and <12 7>.
+	ee {v w ..}		this returns edges or circle along hex-extended 
+				edges. For instance, if e0 is the edge e0 = <v1, v2> 
+				and the complex is then changed with up to 16 calls 
+				to 'hex_refine', then edge e0 acquires new vertices 
+				between v1 and v2. The 'ee' call will return vertices 
+				from v1 to v2, including all (if any) intervening 
+				interior hex vertices.
+	ee {v w ..}	same as above, only admits axis-extended edges; meaning
+				those with the same number of verties on the left as
+				on the right		
 	eh {v w}	hex-extrapolated loop: v, w are interior hex (6-degree)
 		    	vertices. This returns a closed path of vertices along
 		    	a hex axis of interior vertices which starts and ends 
-		    	with v, passing through w, if one exists. (must 
+		    	with v, passing through w, if one exists. (v, w must 
 		    	be last entries in list)
 	elist (Elist)	will return edges from the current list
-	f {i ..}	when creating a circle list, this returns successive 
+	f {j ..}	when creating a circle list, this returns successive 
 				closed, oriented chains of circles defining the specified 
-				faces i.
+				faces j.
 				when creating an edge list, this returns the closed, 
-				oriented edge-path around faces i.
+				oriented edge-path around faces j.
 	flist (Flist)	will return faces from the current list
 	F (Fs)		faces only; list in drawing order. 's' indicates to
 				add stragglers (faces not needed in drawing order)
 	g			for circles, returns those inside current 'xy-path'.
-	g {v w}		for edges, returns combinatorial geodesic edgepath from v to w. 
+	g {v w}		for edges, returns combinatorial geodesic edgepath 
+				from v to w. 
 	G {(x,y)..}	(for vertices, edges or faces) returns the 
 				chain approximating the given polygonal path. Geometry for
 				path is that of the packing associated with the call.
@@ -116,7 +120,9 @@ List creation syntax:
 	R {j..}		for faces, returns the 'side' of 'red' chain faces given
 				by side index
 				for circles, same, but returns circles on the outside of
-				given side segments 			
+				given side segments 
+	s [n]		for 'hlist', halfedges forming side #n, or if n is not
+				legal side, then halfedges forming full red chain		
 	v			'active' circle (every pack has an active circle; it is 
 				designated by clicking l-mouse on the circle in the 
 				window)
