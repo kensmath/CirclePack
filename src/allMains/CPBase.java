@@ -222,16 +222,6 @@ public abstract class CPBase {
 		return null;
 	}
 	
-	/**
-     * Gets running jar file path.
-     * @return running jar file path.
-     */
-    private static File getCurrentJarFilePath() {
-        return new File(CPBase.class.getProtectionDomain().getCodeSource().getLocation().getPath());
-    }
-
-    /**
-  
 	// Constructor
 	public CPBase() {
 		if( CPBase.sharedinstance==null )
