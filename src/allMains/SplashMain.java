@@ -31,7 +31,8 @@ public class SplashMain {
 	 * @throws IOException 
 	 */
 	private void showSplashScreen()
-	throws InterruptedException, InvocationTargetException, IOException, java.net.URISyntaxException
+	throws InterruptedException, InvocationTargetException, 
+	IOException, java.net.URISyntaxException
 	{
 		// read in the image
                 
@@ -40,15 +41,14 @@ public class SplashMain {
 
 		BufferedImage image = null;
 		
-		if(inJar)
-		{
-			System.out.println("HERE");
+		if(inJar) {
+			System.out.println("inJar is true in SplashMain");
 			image = ImageIO.read(
 					getClass().getResourceAsStream(splashImageFilename)
 				);
 
-		}else
-		{
+		}
+		else {
 			String imageFilename=new String("bin"+splashImageFilename);
 			try {
 				image =  ImageIO.read(new File(imageFilename));

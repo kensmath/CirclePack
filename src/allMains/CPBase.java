@@ -3,8 +3,11 @@ package allMains;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.geom.Path2D;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.Hashtable;
@@ -18,7 +21,6 @@ import circlePack.RunProgress;
 import complex.Complex;
 import cpTalk.sockets.CPMultiServer;
 import exceptions.DataException;
-import exceptions.InOutException;
 import geometry.CircleSimple;
 import input.CPFileManager;
 import input.SocketSource;
@@ -229,59 +231,19 @@ public abstract class CPBase {
     }
 
     /**
-     * Extracts exe files in cdeps/ to the destination directory. 
-     * E.g. qhull.exe and triangle.exe used for Delaunay triangulations
-     * @param destDir destination directory.
-     * @throws IOException if there's an i/o problem.
-     */
-    private static void extractExeFiles(String destDir) throws IOException {
-    	
-        java.util.jar.JarFile jar = new java.util.jar.JarFile(getCurrentJarFilePath());
-        Enumeration<JarEntry> enumEntries = jar.entries();
-        String entryName;
-        int tick=0;
-        while (enumEntries.hasMoreElements()) {
-        	tick++;
-
-            java.util.jar.JarEntry file = (java.util.jar.JarEntry) enumEntries.nextElement();
-            entryName = file.getName();
-            
-// debugging
-System.out.println("entryName is "+entryName);
-
-            if ( (entryName != null) && (entryName.endsWith(".exe"))) {
-            	
-// debugging
-System.out.println("found; "+entryName);
-            	
-                java.io.File f = new java.io.File(destDir + java.io.File.separator + entryName);
-                if (file.isDirectory()) { // if its a directory, create it
-                    f.mkdir();
-                    continue;
-                }
-                java.io.InputStream is = jar.getInputStream(file); // get the input stream
-                java.io.FileOutputStream fos = new java.io.FileOutputStream(f);
-                while (is.available() > 0) {  // write contents of 'is' to 'fos'
-                    fos.write(is.read());
-                }
-
-                fos.close();
-                is.close();                
-            }
-        }
-    }
-	
+  
 	// Constructor
 	public CPBase() {
 		if( CPBase.sharedinstance==null )
 			CPBase.sharedinstance=this;
 		
-		// load *.exe files
-		try {
-	    	System.out.println("temp directory is: "+System.getProperty("java.io.tmpdir"));
-			extractExeFiles(System.getProperty("java.io.tmpdir"));
-		} catch (IOException ioex) {
-			System.err.println("Failed to load exe files: "+ioex.getMessage());
+		// load *.exe files into TempDirectory
+//	    System.out.println("temp directory is: "+System.getProperty("java.io.tmpdir"));
+		boolean goodtogo=
+				(extractExeFiles(System.getProperty("java.io.tmpdir"),"triangle.exe")
+						&& extractExeFiles(System.getProperty("java.io.tmpdir"),"qhull.exe"));
+		if (!goodtogo) {
+			System.err.println("Failed to load all the executables");
 		}
 		
 		scriptManager=null;
@@ -308,6 +270,40 @@ System.out.println("found; "+entryName);
 		activePackNum=0;
 	}
 	
+	/* Extracts files in Resources/executables to the TempDirectory. 
+     * E.g. qhull.exe and triangle.exe used for Delaunay triangulations.
+     * TODO: have to generate and load executables for other operating
+     * systems, e.g., mac.
+     * @param destDir destination directory.
+     * @param execName filename
+     * @return boolean
+     */
+    private boolean extractExeFiles(String destDir,String execName) {
+    	
+		InputStream ins=null;
+		try {
+			ins = getClass().getResourceAsStream("/Resources/executables/"+execName);
+			BufferedReader reader = new BufferedReader(new InputStreamReader(ins));
+		} catch (Exception ex) {
+			System.err.println("Didn't get InputStream for executables in 'CPBase'");
+			return false;
+		}
+		
+        try {
+            java.io.File f = new java.io.File(destDir + java.io.File.separator + execName);
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(f);
+        	while (ins.available() > 0) {  // write contents of 'ins' to 'fos'
+        		fos.write(ins.read());
+        	}
+        	fos.close();
+        } catch (Exception iox) {
+        	System.err.println("exception in writing an executable");
+        	return false;
+        }
+        
+        return true;
+    }
+
 	/**
 	 * Set the screendump image format: choices are "jpg", "png",
 	 * "gif", "bmp", "wbmp".

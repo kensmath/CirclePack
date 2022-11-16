@@ -45,8 +45,6 @@
             <fileset  dir="${basedir}/cdeps/" includes="**/*.jnilib"/>
         	<fileset  dir="${basedir}/cdeps/" includes="**/*.dylib"/>
         	<fileset  dir="${basedir}/src/" includes="Resources/**/*" />
-            <fileset dir="${basedir}/cdeps"      includes="qhull.exe" />
-            <fileset dir="${basedir}/cdeps"      includes="triangle.exe" />
             <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/commons-codec-1.5.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/Complex.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/Convert2.0.jar"/>
