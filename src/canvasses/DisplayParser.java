@@ -933,28 +933,15 @@ public class DisplayParser {
 							
 							// get list of tile border and make axis-extended edgelist
 							NodeLink cornlist=tile.tileBorderLink();
-							
-// debugging
 							HalfLink halfedges=
 									HalfLink.verts2edges(p.packDCEL,cornlist,true);
-//							EdgeLink tedgelist=
-//								EdgeLink.verts2edges(p.packDCEL,cornlist,true);
-//							Iterator<EdgeSimple> tel=tedgelist.iterator();
-//							EdgeSimple edge=null;
-//							int lnum=tedgelist.size();
 							ArrayList<Complex> Zlist=
 									LayoutShop.layoutPolygon(p.packDCEL,halfedges,p.hes);
 							int lnum=Zlist.size();
 							double[] corners = new double[2 * Zlist.size()];
-//							z=p.getCenter(((EdgeSimple)tedgelist.get(0)).v);
-//							corners[0]=z.x;
-//							corners[1]=z.y;
-//							int tick=1;
 							Iterator<Complex> zel=Zlist.iterator();
 							int tick=0;
 							while (zel.hasNext()) {
-//								edge=tel.next();
-//								z=p.getCenter(edge.w);
 								z=zel.next();
 								corners[tick*2]=z.x;
 								corners[tick*2+1]=z.y;
@@ -970,25 +957,19 @@ public class DisplayParser {
 
 							if (dispFlags.label) { // put at approximate center
 								Complex wc=new Complex(0.0);
-								zel=Zlist.iterator();
-								while (zel.hasNext()) 
-									wc.add(zel.next());
-								wc.divide(lnum);
 
-/*								
 								// if there is a 'baryVert', use its center
 								int bv=tile.baryVert;
 								if (bv>0 && bv<=p.nodeCount) {
 									wc=p.getCenter(tile.baryVert);
 								}
 								
-								// else use average of corner verts centers
-								else {
+								else { // use average of tile corner centers
 									Vector<Complex> cz=new Vector<Complex>(0);
 									for (int jj=0;jj<tile.vertCount;jj++) 
 										cz.add(p.getCenter(tile.vert[jj]));
 									
-									// for sphere, compute via vectors --- may end up at antipodal point 
+									// for sph, via vectors (may hit antipodal point) 
 									if (p.hes>0) {
 										double xc=0.0;
 										double yc=0.0;
@@ -1014,11 +995,7 @@ public class DisplayParser {
 										wc=wc.divide((double)tile.vertCount);
 									}
 								}
-*/								
-//								Complex wc=new Complex(0.0);
-//								for (int vj=0;vj<tile.vertCount;vj++)
-//									wc = wc.add(p.rData[tile.vert[vj]].center);
-//								wc=wc.divide((double)tile.vertCount);
+
 								cpDrawing.drawIndex(wc,tile.tileIndex, 1);
 								count++;
 							} // end of label display

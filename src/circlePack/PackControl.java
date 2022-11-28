@@ -190,7 +190,7 @@ FocusListener {
 	public PackControl() {
 		
 // debugging
-System.out.println("enter PackControl");
+//System.out.println("enter PackControl");
 
 		socketActive=true;  // means that socket server will be started
 		cpSocketHost=null;
@@ -204,16 +204,16 @@ System.out.println("enter PackControl");
 		FAUX_RAD=20000;
 
 // debugging
-System.out.println("start CPTimer");
+//System.out.println("start CPTimer");
 
 		cpTimer=new CPTimer();
 		defaultCPIcon=new CPIcon("GUI/default_icon.jpg");
 		
 // debugging
-System.out.println("done with PackControl");
+//System.out.println("done with PackControl");
 
-    	System.out.println("temp directory is: "+System.getProperty("java.io.tmpdir"));
-    	System.out.println("user home directory is: "+System.getProperty("user.home"));
+//    	System.out.println("temp directory is: "+System.getProperty("java.io.tmpdir"));
+//    	System.out.println("user home directory is: "+System.getProperty("user.home"));
 
 	}
 	
