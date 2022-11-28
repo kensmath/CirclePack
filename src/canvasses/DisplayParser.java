@@ -829,16 +829,14 @@ public class DisplayParser {
 //				EdgeLink elist=
 //					EdgeLink.verts2edges(p.packDCEL,vertlist,false);
 //				int lnum=elist.size();
-				double[] corners = new double[2 * (lnum+1)];
-				int tick=0;
-				corners[tick*2]=z.x;
-				corners[tick*2+1]=z.y;
 //				Iterator<EdgeSimple> el=elist.iterator();
 //				EdgeSimple edge=el.next();
 //				z=p.getCenter(edge.v);
 //				while (el.hasNext()) {
 //					edge=el.next();
 //					z=p.getCenter(edge.w);
+				double[] corners = new double[2 * (lnum+1)];
+				int tick=0;
 				Iterator<Complex> zl=Zlist.iterator();
 				while (zl.hasNext()) {
 					z=zl.next();
