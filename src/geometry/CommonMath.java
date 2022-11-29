@@ -1,12 +1,10 @@
 package geometry;
 
-import allMains.CPBase;
 import allMains.CirclePack;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.Vertex;
 import complex.Complex;
 import exceptions.DataException;
-import math.CirMatrix;
 import math.Mobius;
 import packing.PackData;
 import util.UtilPacket;
@@ -75,8 +73,6 @@ public class CommonMath {
 		  // next circle on positive axis
 		  double x1=sC1.rad;
 		  if (x1<=0) { // horocycle?
-			  double s0=HyperbolicMath.x_to_s_rad(x0);
-			  double e0=(1-s0)/(1+s0);
 			  double R=HyperbolicMath.h_horo_rad(x1,invDist[2]);
 			  sC1.center=new Complex(1.0);
 			  sC1.rad=-R; // negative of euclidean radius
