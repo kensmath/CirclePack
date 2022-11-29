@@ -19,7 +19,6 @@ import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.ParserException;
-import ftnTheory.GenModBranching;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
@@ -1516,8 +1515,8 @@ public class PackCreation {
 		growWheel.setAim(2,.5*Math.PI-growWheel.getAim(3)); // 0.463647609, 1.107148717794
 
 		// repack, layout
-		double crit=GenModBranching.LAYOUT_THRESHOLD;
-		int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
+//		double crit=GenModBranching.LAYOUT_THRESHOLD;
+//		int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
 		growWheel.fillcurves();
 		growWheel.repack_call(1000);
 		try {
@@ -1729,8 +1728,8 @@ public class PackCreation {
 		growWheel.setAim(2,.5*Math.PI-growWheel.getAim(3)); // 0.463647609, 1.107148717794
 
 		// repack, layout
-		double crit=GenModBranching.LAYOUT_THRESHOLD;
-		int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
+//		double crit=GenModBranching.LAYOUT_THRESHOLD;
+//		int opt=2; // 2=use all plotted neighbors, 1=use only those of one face 
 		growWheel.fillcurves();
 		growWheel.repack_call(1000);
 		try {
@@ -2374,7 +2373,6 @@ public class PackCreation {
 			
 			// from law of cosines: get lengths, then radii
 			for (int j=0;j<3;j++) {
-				int i=j;
 				int m=(j+1)%3;
 				int n=(j+2)%3;
 				len[j]=Math.acos(
