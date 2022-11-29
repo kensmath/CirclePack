@@ -295,7 +295,7 @@ public class LayoutShop {
 	 * @param fedge HalfEdge, edge of face f
 	 * @param s double, schwarzian
 	 * @param mode int, mode=2 use 'labels'
-	 * @return int, -1 on error
+	 * @return int, -1 on error, 1 on success
 	 */
 	public static int schwPropogate(TriAspect ftri,TriAspect gtri,
 			HalfEdge fedge,double s, int mode) {
@@ -335,7 +335,7 @@ public class LayoutShop {
 		else
 			gtri.setRadius(sC.rad,gopp);
 
-		return 0;
+		return 1;
 	}
 
 	/**

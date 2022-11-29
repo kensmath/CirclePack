@@ -527,7 +527,6 @@ public class HyperbolicMath{
 	 * @return double
 	 */
 	public static double h_area(RadIvdPacket riP) {
-		double[] ang = new double[3];
 		double[] cosang = new double[3];
 		for (int j = 0; j < 3; j++)
 			cosang[j] = h_comp_cos(riP.rad[j], riP.rad[(j + 1) % 3], riP.rad[(j + 2) % 3], riP.oivd[j],

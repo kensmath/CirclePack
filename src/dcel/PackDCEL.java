@@ -529,7 +529,6 @@ public class PackDCEL {
 			return null;
 
 		boolean hits = true;
-		int j=0;
 		while (hits && genlist.size() > 0 && (max <= 0 || gen_count <= max)) {
 			hits = false;
 			NodeLink vertlist = genlist; // process old list

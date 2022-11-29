@@ -301,25 +301,25 @@ public class SchwarzMap extends PackExtender {
 				int mode=1; // use 'radii' not 'labels'
 		    	int ans=-1;
 	    		ans= workshops.LayoutShop.schwPropogate(rangeTri[f],rangeTri[g],
-					he.twin,s,1);
-				
-				// Now, draw this face using 'TriAspect' data
-				int J=(rangeTri[g].edgeIndex(he.twin)+1)%3;
-				if (cirFlags!=null)  
-					qData.cpDrawing.drawCircle(
-							rangeTri[g].getCenter(J),
-							rangeTri[g].getRadius(J), cirFlags);
-				if (faceFlags!=null) 
-					qData.cpDrawing.drawFace(rangeTri[g].getCenter(0),
-							rangeTri[g].getCenter(1),
-							rangeTri[g].getCenter(2),
-							rangeTri[g].getRadius(0),
-							rangeTri[g].getRadius(1),
-							rangeTri[g].getRadius(2),faceFlags);
-				qData.cpDrawing.repaint();
-				
-				hitfaces[g]=1;
-				count++;
+					he.twin,s,mode);
+	    		if (ans>0) { // Now, draw this face using 'TriAspect' data
+					int J=(rangeTri[g].edgeIndex(he.twin)+1)%3;
+					if (cirFlags!=null)  
+						qData.cpDrawing.drawCircle(
+								rangeTri[g].getCenter(J),
+								rangeTri[g].getRadius(J), cirFlags);
+					if (faceFlags!=null) 
+						qData.cpDrawing.drawFace(rangeTri[g].getCenter(0),
+								rangeTri[g].getCenter(1),
+								rangeTri[g].getCenter(2),
+								rangeTri[g].getRadius(0),
+								rangeTri[g].getRadius(1),
+								rangeTri[g].getRadius(2),faceFlags);
+					qData.cpDrawing.repaint();
+					
+					hitfaces[g]=1;
+					count++;
+				}
 			} // end of while through dTree
 			return count;
 		}

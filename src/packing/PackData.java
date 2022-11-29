@@ -1387,7 +1387,6 @@ public class PackData{
 	 * @return int index or -1 on failure
 	*/
 	public int check_face(int f,int v,int w) {
-		int m=0;
 		HalfEdge he=packDCEL.findHalfEdge(v,w);
 		if (he==null || he.face.faceIndx!=f)
 			return -1;
@@ -1615,7 +1614,6 @@ public class PackData{
 	 * @return 0 on problem
 	 */
 	public int setCombinatorics() throws DCELException {
-		int ans=1;
 		// TODO: eventually, just return; but for debugging, keep this.
 		throw new DCELException("DCEL combinatorics are required.");
 	}
@@ -5005,8 +5003,6 @@ public class PackData{
 			  PackData p2,int v1,int v2,int n) {
 		  boolean debug=false;
 		  PackData newPack=null;
-		  PackData np1=null;
-		  PackData np2=null;
 
 		  boolean selfadjoin=false;
 		  if (p1==p2)
@@ -5147,7 +5143,6 @@ public class PackData{
 	   */
 	  public RadIvdPacket getRIpacket(int f) {
 		  RadIvdPacket rip=new RadIvdPacket();
-		  int[] fverts=getFaceVerts(f);
 		  HalfEdge he=packDCEL.faces[f].edge;
 		  int k=0;
 		  do {
@@ -5296,8 +5291,6 @@ public class PackData{
 	  public double dualLength(EdgeLink delist) {
 		  double totlen=0.0;
 		  Iterator<EdgeSimple> eit = delist.iterator();
-		  Complex z=null;
-		  Complex w=null;
 		  while (eit.hasNext()) {
 			  Complex[] pts=ends_dual_edge(eit.next());
 			  if (hes>0) {
@@ -6362,17 +6355,10 @@ public class PackData{
 		  RedEdge rtrace=epair.startEdge;
 		  int old_thickness=cpDrawing.getLineThickness();
 
-		  DispFlags dflags=new DispFlags(""); 
-		  
-	      Vertex w_vert=rtrace.myEdge.origin;
 		  Complex w_cent=packDCEL.getVertCenter(rtrace.myEdge);
-		  int w_indx=w_vert.vertIndx;
 		  do {
 		      Complex v_cent=w_cent;
-		      int v_indx=w_indx;
 		      rtrace=rtrace.nextRed;
-		      w_vert=rtrace.myEdge.origin;
-		      w_indx=w_vert.vertIndx;
 		      w_cent=packDCEL.getVertCenter(rtrace.myEdge);
 		      if (hes>0) { 
 		    	  v_cent=cpDrawing.sphView.toApparentSph(v_cent);
@@ -6387,7 +6373,6 @@ public class PackData{
 		  
 		  // last circle?
 		  if (do_circle) {
-			  w_vert=rtrace.myEdge.origin;
 			  w_cent=packDCEL.getVertCenter(rtrace.myEdge);
 	    	  w_cent=cpDrawing.sphView.toApparentSph(w_cent);
 			  double w_rad=packDCEL.getVertRadius(rtrace.myEdge);
@@ -7203,7 +7188,7 @@ public class PackData{
 			  endZ[2]=cs1.center;
 		  }
 		  
-		  String opts=null;
+//		  String opts=null;
 //		  if (draw) opts=new String("-ff"); // draw the colored faces as we go
 //		  DispFlags dflags=new DispFlags(opts,p.cpDrawing.fillOpacity);
 		  Mobius mob=new Mobius(); // initialize transformation 

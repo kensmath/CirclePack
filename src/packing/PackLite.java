@@ -44,7 +44,7 @@ import listManip.VertexMap;
  */
 public class PackLite {
 
-	private static final long serialVersionUID = 1L;
+//	private static final long serialVersionUID = 1L;
 
 	public PackData parent; 
 	public int hes; // geometry (generally inherited from parent)

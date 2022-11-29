@@ -1082,6 +1082,7 @@ FocusListener {
 	 * @param p PackData
 	 * @param pnum int
 	 * @param keepX boolean, keep current extenders
+	 * @return int, nodeCount, -1 on error
 	 */
 	public int swapPackData(PackData p,int pnum,boolean keepX) {
 		if (p==null)
