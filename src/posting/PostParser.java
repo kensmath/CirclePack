@@ -248,7 +248,6 @@ public class PostParser {
 			{
 				HalfLink hlink=null;
 				FaceLink facelist = null;
-				int first_face = 0;
 				boolean useSchw=false;
 				// no list? default to drawing order (plus stragglers)
 				if (items.size() == 0) {
@@ -259,7 +258,6 @@ public class PostParser {
 					facelist = new FaceLink(p, "Fs");
 					// handle first face circles (without adjusting centers)
 					if (c == 'C' || c == 'B') {
-						first_face = p.packDCEL.alpha.face.faceIndx;
 						combinatorics.komplex.DcelFace face = hlink.get(0).face;
 						int[] verts=face.getVerts();
 						for (int i = 0; i < 3; i++) {

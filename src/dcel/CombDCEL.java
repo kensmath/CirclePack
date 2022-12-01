@@ -1430,6 +1430,7 @@ public class CombDCEL {
 		boolean[] fhits=new boolean[ftick+1];
 		pdcel.alpha.origin.vutil=1;
 		pdcel.alpha.twin.origin.vutil=1;
+		@SuppressWarnings("unused")
 		int count_vhits=2;
 		
 		oit=orderEdges.iterator();

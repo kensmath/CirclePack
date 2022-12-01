@@ -267,7 +267,6 @@ public class ReadWrite {
 					} else if (mainTok.equals("ALPHA/BETA/GAMMA:")) { // old version
 						try {
 							newAlpha = Integer.parseInt(tok.nextToken());
-							int obe = Integer.parseInt(tok.nextToken());
 							newGamma = Integer.parseInt(tok.nextToken());
 						} catch (Exception ex) {
 							continue;
@@ -609,7 +608,6 @@ public class ReadWrite {
 					} else if (mainTok.equals("ALPHA/BETA/GAMMA:")) { // old version
 						try {
 							newAlpha = Integer.parseInt(tok.nextToken());
-							int obe = Integer.parseInt(tok.nextToken());
 							newGamma = Integer.parseInt(tok.nextToken());
 						} catch (Exception ex) {
 							continue;

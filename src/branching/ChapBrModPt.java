@@ -88,8 +88,6 @@ public class ChapBrModPt extends GenBrModPt {
 			throw new CombException(
 					"chaperone vert must be interior, degree at least 5");
 
-		int[] petals=p.getPetals(myIndex);
-		int num=petals.length;
 		int indx1=p.nghb(myIndex, w1);
 		int indx2=p.nghb(myIndex, w2);
 		if (indx1<0 || indx2<0)

@@ -6,7 +6,6 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
-import circlePack.PackControl;
 import complex.Complex;
 import exceptions.DataException;
 import exceptions.ParserException;

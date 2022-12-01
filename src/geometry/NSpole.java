@@ -4,9 +4,7 @@ import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CirclePack;
-import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import listManip.HalfLink;
 import listManip.NodeLink;
 import math.Mobius;
 import math.Point3D;

@@ -24,6 +24,7 @@ public class HilbertTransform extends PackExtender
 	private int sz_bndry; // how many boundary circles
 	private Complex[] cz_hyper; // hyperbolic centers of boundary circles
 	
+	@SuppressWarnings("unused")
 	private String var; // independent variable
 	private String fct; // function to be transformed
 	

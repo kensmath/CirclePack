@@ -803,8 +803,8 @@ public class CommandStrParser {
 	    	  newPack.packDCEL.fixDCEL(newPack);
 	    	  int ans=CirclePack.cpb.swapPackData(newPack,pnum1,true);
 
-			  return 1;
-	      } // e)nd of 'adjoin'
+			  return ans;
+	      } // end of 'adjoin'
 	      
 	      // =========== torpack ===========
 	      else if(cmd.startsWith("torpack")) {
@@ -1121,8 +1121,6 @@ public class CommandStrParser {
 				  }
 
 				  // later we reorder to put A,B,C in ascending order.
-				  // 'parity' is true if this does not change orientation.
-				  boolean parity=true; 
 				  double a,b,c;
 				  boolean jftn=false;
 				  if (items.size()==2)
@@ -3477,7 +3475,6 @@ public class CommandStrParser {
 	    	  }
 	    	  boolean randdegree=false;
 	    	  boolean randcenter=false;
-	    	  Random random=null;
 	    	  
 	    	  StringBuilder header=
 	    			  new StringBuilder(StringUtil.reconstitute(flagSegs));
@@ -3502,13 +3499,10 @@ public class CommandStrParser {
 	    	  
 	    	  // catch randomize flag
 	    	  if (StringUtil.isFlag(items.get(0))) {
-	    		  if (items.get(0).contains("r")) {
+	    		  if (items.get(0).contains("r"))
 	    			  randdegree=true;
-	    			  random=new Random();
-	    		  }
-	    		  if (items.get(0).contains("c")) {
+	    		  if (items.get(0).contains("c"))
 	    			  randcenter=true;
-	    		  }
 	    	  }
 	    	  
 	    	  // else d format
@@ -5364,7 +5358,6 @@ public class CommandStrParser {
 	    	  if (cmd.charAt(4)=='f') 
 	    		  baryOpt=false; 
 	    	  int f;
-	    	  int node=packData.nodeCount;
 	    	  
 	    	  // should be only one segment
 	    	  items=flagSegs.elementAt(0); 
@@ -5575,7 +5568,6 @@ public class CommandStrParser {
 	    		  throw new ParserException("usage: "+
 	    				  "add_gen {n} [{d}] [-dt] [-b {v..}]");
 	    	  }
-	    	  int origVCount=packData.nodeCount;
 	    	  
 	    	  // Finally, calls to addLayer for each boundary component
 			  int v1,v2;
@@ -5646,16 +5638,6 @@ public class CommandStrParser {
 		  
 	      // =========== cookie ===========
 	      if (cmd.startsWith("cookie")) {
-	    	  
-	    	  // catch '-Z' flag, if there, meaning "zigzag_cookie"
-	    	  // Note: this turned out to be useless, since it led
-	    	  //   too many bdry vertices w/o interior ngbhs.
-	    	  boolean zigzag=false;
-	    	  try {
-	    		  items=(Vector<String>)flagSegs.get(0);
-	  	          if (items.get(0).startsWith("-Z")) 
-	  	        	  zigzag=true;
-	    	  } catch(Exception ex) {}
 	    	  
     		  // identify forbidden edges (and possibly new 'alpha')
     		  HalfLink hlink=CombDCEL.cookieData(packData,flagSegs);
@@ -6454,7 +6436,6 @@ public class CommandStrParser {
 
     		  if (fstr.charAt(0)=='h') { 
     			  HalfLink hlink=new HalfLink(packData,flagSegs.get(0));
-    			  HalfEdge flipped=null;
     			  HalfEdge he=hlink.get(0); // only one edge
     			  HalfEdge[] fls=null;
     			  if (he!=null) { 
@@ -6470,7 +6451,7 @@ public class CommandStrParser {
    					  packData.elist.add(new EdgeSimple(fls[0]));
    					  
    					  // flipped edge as well?
-    				  if (fls!=null && (flipped=fls[1])!=null) { 
+    				  if (fls!=null && fls[1]!=null) { 
     	    			  pdc.fixDCEL(packData);
     	    			  return 1;
     	    		  }
@@ -9279,10 +9260,9 @@ public class CommandStrParser {
 	    		  if (iDist) { // adjust inversive distance
 	    			  HalfLink hlink=new HalfLink(packData,items);
 	    			  Iterator<HalfEdge> his=hlink.iterator();
-	    			  double value=1.0;
-	    			  int j;
 	    			  while (his.hasNext()) {
 	    				  HalfEdge he=his.next();
+		    			  double value=1.0;
 	    				  if (factor_flag) { // use a factor
 	    					  if (jiggle) {
 	    						  factor=Math.exp(randizer.nextGaussian()*pctg);
@@ -9419,7 +9399,6 @@ public class CommandStrParser {
 	    		  // look for a flag
 				  EdgeLink edgelist=new EdgeLink(packData,items);
     			  Iterator<EdgeSimple> eis=edgelist.iterator();
-	    		  EdgeSimple edge=null;
 				  
 				  // to default (tangency)
 	    		  if (str.startsWith("-d")) {

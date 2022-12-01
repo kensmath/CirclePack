@@ -88,7 +88,6 @@ public class QueryParser {
 			Vector<Vector<String>> flagSegs,boolean forMsg) {
 		StringBuilder ans=new StringBuilder(""); // result of the query alone
 		// some utility variables
-		NodeLink vertlist=null;
 	  	int v;
 		String firststr=null;
 		// by default,  to use if 'forMsg'

@@ -454,7 +454,7 @@ public abstract class MyToolHandler implements MouseListener {
 		// careful: these find first instances, even in subelements.
 		String name= tE.getAttribute("name");
 		String yesno=tE.getAttribute("dropable");
-		String needsC=tE.getAttribute("needsC");
+//		String needsC=tE.getAttribute("needsC");
 		String mnemonic=tE.getAttribute("mnemonic");
 		String tooltype=tE.getAttribute("type");
 		String handy=tE.getAttribute("handy");

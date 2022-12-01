@@ -365,7 +365,6 @@ public class NodeLink extends LinkedList<Integer> {
 			// bdry; check for parens
 			case 'b':
 			{
-				int next;
 				int first=1;
 				int last=vCount;
 				boolean bad=false;
@@ -668,9 +667,8 @@ public class NodeLink extends LinkedList<Integer> {
 					add(pdc.redChain.myEdge.origin.vertIndx); // close up
 						
 					// eat the rest of the stings
-					String itstr=null;
 					while (its.hasNext()) 
-						itstr=(String)its.next();
+						its.next();
 					break;
 				}
 					

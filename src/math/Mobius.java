@@ -13,7 +13,6 @@ import exceptions.MobException;
 import exceptions.ParserException;
 import ftnTheory.SchwarzMap;
 import geometry.CircleSimple;
-import geometry.CommonMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import math.group.ComplexTransformation;

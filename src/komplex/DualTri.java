@@ -1,14 +1,13 @@
 package komplex;
 
-import math.Mobius;
 import combinatorics.komplex.HalfEdge;
 import complex.Complex;
 import dcel.PackDCEL;
 import exceptions.DataException;
 import geometry.CommonMath;
-import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
+import math.Mobius;
 
 /**
  * A 'dual triangle' in a tangency packing is that formed by

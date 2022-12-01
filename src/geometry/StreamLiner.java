@@ -318,8 +318,6 @@ public class StreamLiner {
 			int face_l=inpt.face;
 			HalfEdge vwhe=basePack.packDCEL.findHalfEdge(new EdgeSimple(v,w));
 			int face_r=vwhe.twin.face.faceIndx;
-			int vw_indx=basePack.nghb(v, w);
-			int num=basePack.countFaces(v);
 			Complex vw_edge=basePack.getCenter(w).minus(basePack.getCenter(v));
 			
 			// have to decide if going left (this same face) or going right (neighboring

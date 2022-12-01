@@ -3,17 +3,12 @@ package allMains;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.geom.Path2D;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Random;
 import java.util.Vector;
-import java.util.jar.JarEntry;
 
 import com.jimrolf.functionparser.FunctionParser;
 
@@ -273,7 +268,6 @@ public abstract class CPBase {
 		InputStream ins=null;
 		try {
 			ins = getClass().getResourceAsStream("/Resources/executables/"+execName);
-			BufferedReader reader = new BufferedReader(new InputStreamReader(ins));
 		} catch (Exception ex) {
 			System.err.println("Didn't get InputStream for executables in 'CPBase'");
 			return false;

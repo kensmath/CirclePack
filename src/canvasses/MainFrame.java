@@ -38,7 +38,6 @@ import images.OwlSpinner;
 import input.TrafficCenter;
 import listeners.ACTIVEListener;
 import packing.CPdrawing;
-import packing.PackData;
 import panels.LocatorPanel;
 
 /**

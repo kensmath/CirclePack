@@ -9,7 +9,6 @@ import canvasses.DisplayParser;
 import circlePack.PackControl;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.Vertex;
-import dcel.RawManip;
 import ftnTheory.GenModBranching;
 import listManip.HalfLink;
 import math.Mobius;

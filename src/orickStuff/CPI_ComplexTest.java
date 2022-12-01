@@ -59,8 +59,7 @@ public class CPI_ComplexTest {
    
        int i;
        for (i=1; i<10; i++) {
-	   CPI_Ball3View view = new CPI_Ball3View();
-	   view.fgcolor = i*1.0/10;
+	   CPI_Ball3View.fgcolor = i*1.0/10;
 	   S.set(0.0, 0.0, 1.0, i*1.0/20);
 	   B.set(S.getTriangle());
 	   //B.print();
@@ -71,8 +70,7 @@ public class CPI_ComplexTest {
        cc.psplot();
 
        for (i=1; i<10; i++) {
-	   CPI_Ball3View view = new CPI_Ball3View();
-	   view.fgcolor = i*1.0/10;
+       CPI_Ball3View.fgcolor = i*1.0/10;
 	   S.set(1.0, 1.0, 1.0, i*1.0/20);
 	   B.set(S.getTriangle());
 	   //B.print();
@@ -85,7 +83,7 @@ public class CPI_ComplexTest {
        cc.psplot();
        int NNN = 10;
        for (i=0; i<NNN; i++) {
-	   view.bgcolor = view.fgcolor = i*1.0/NNN;
+    	   CPI_Ball3View.bgcolor = CPI_Ball3View.fgcolor = i*1.0/NNN;
 	   CPI_Vector3 V = new CPI_Vector3(0.0, 1.0, 0.0);
 	   CPI_Vector3 W = new CPI_Vector3(0.0, 1.0, 0.0);
 	   CPI_Vector3 a = new CPI_Vector3(i*1.0/NNN/2, 0.0, 0.0);
@@ -103,8 +101,7 @@ public class CPI_ComplexTest {
        CPI_Ball3Sector SS = new CPI_Ball3Sector(1.0, 0.0, 0.0, 0.25);
        view.skew();//zstd();
        for (i=0; i<NNN; i++) {
-	   CPI_Ball3View view = new CPI_Ball3View();
-	   view.fgcolor = i*1.0/NNN;
+	   CPI_Ball3View.fgcolor = i*1.0/NNN;
 	   S.set(SS);
 	   CPI_Vector3 a = new CPI_Vector3(i*1.0/NNN, 0.0, 0.0);
  	   S.getTriangle().psplot();
@@ -117,8 +114,7 @@ public class CPI_ComplexTest {
        cc.psplot();
        SS.set(0.0, 1.0, 0.0, 0.25);
        for (i=0; i<NNN; i++) {
-	   CPI_Ball3View view = new CPI_Ball3View();
-	   view.fgcolor = i*1.0/NNN;
+	   CPI_Ball3View.fgcolor = i*1.0/NNN;
 	   S.set(SS);
 	   CPI_Vector3 a = new CPI_Vector3(0.0, i*1.0/NNN, 0.0);
  	   S.psplot();
@@ -129,8 +125,7 @@ public class CPI_ComplexTest {
        cc.psplot();
        SS.set(0.0, 0.0, 1.0, 0.25);
        for (i=0; i<NNN; i++) {
-	   CPI_Ball3View view = new CPI_Ball3View();
-	   view.fgcolor = i*1.0/NNN;
+	   CPI_Ball3View.fgcolor = i*1.0/NNN;
 	   S.set(SS);
 	   CPI_Vector3 a = new CPI_Vector3(0.0, 0.0, i*1.0/NNN);
  	   S.psplot();
@@ -201,7 +196,7 @@ public class CPI_ComplexTest {
 		//S.psplot();
 	    }
 	}
-	view.fgcolor= view.bgcolor = 0.8;
+	CPI_Ball3View.fgcolor= CPI_Ball3View.bgcolor = 0.8;
 
 
 	for (j=1; j<2; j++) {
@@ -221,7 +216,7 @@ public class CPI_ComplexTest {
 	    a.print();
 	    a.print();
 	    
-	    view.fgcolor = view.bgcolor = 0.0;
+	    CPI_Ball3View.fgcolor = CPI_Ball3View.bgcolor = 0.0;
 	    for (i=0; i<ndx; i++) {
 		SA[i].mobius(a);
 		SA[i].psplot();
@@ -241,7 +236,7 @@ public class CPI_ComplexTest {
 
 	int i,j, NNN;
 	NNN = 20;
-	view.fgcolor= view.bgcolor = 0.8;
+	CPI_Ball3View.fgcolor= CPI_Ball3View.bgcolor = 0.8;
 	CPI_Ball3Sector[] SA = new CPI_Ball3Sector[(2*NNN+1)*(2*NNN+1)];
 	int ndx = 0;
 	CPI_Ball3Sector S = new CPI_Ball3Sector();
@@ -263,7 +258,7 @@ public class CPI_ComplexTest {
 		S.psplot();
 	    }
 	}
-	view.fgcolor= view.bgcolor = 0.8;
+	CPI_Ball3View.fgcolor= CPI_Ball3View.bgcolor = 0.8;
 
 
 	for (j=1; j<4; j++) {
@@ -277,7 +272,7 @@ public class CPI_ComplexTest {
 	    }
 	    CPI_Vector3 a = new CPI_Vector3(xs, ys, zs);
 	    a.div(1.0*ndx*1.61);
-	    view.fgcolor = view.bgcolor = 0.0;
+	    CPI_Ball3View.fgcolor = CPI_Ball3View.bgcolor = 0.0;
 	    for (i=0; i<ndx; i++) {
 		SA[i].mobius(a);
 	    }

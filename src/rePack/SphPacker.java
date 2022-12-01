@@ -2,6 +2,7 @@ package rePack;
 
 import java.util.Iterator;
 
+import allMains.CPBase;
 import allMains.CirclePack;
 import combinatorics.komplex.DcelFace;
 import combinatorics.komplex.HalfEdge;
@@ -127,7 +128,7 @@ public class SphPacker extends RePacker {
 
 		// debug=true;
 		if (debug) { 
-			deBugging.DCELdebug.drawEuclCircles(CirclePack.cpb.cpDrawing[2], z, radii);
+			deBugging.DCELdebug.drawEuclCircles(CPBase.cpDrawing[2], z, radii);
 		}
 
 		// lay out the rest of the eucl circles
@@ -166,7 +167,7 @@ public class SphPacker extends RePacker {
 		
 		// debug=true;
 		if (debug) { 
-			deBugging.DCELdebug.drawEuclCircles(CirclePack.cpb.cpDrawing[2], z, radii);
+			deBugging.DCELdebug.drawEuclCircles(CPBase.cpDrawing[2], z, radii);
 		}
 		
 		// find normalizing mobius

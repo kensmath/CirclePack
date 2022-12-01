@@ -41,7 +41,6 @@ import util.CmdStruct;
 import util.ColorUtil;
 import util.DispFlags;
 import util.StringUtil;
-import util.UtilPacket;
 import util.ViewBox;
 
 /**
@@ -739,7 +738,6 @@ public class ConformalTiling extends PackExtender {
 					for (int k=1;k<=indxdiff;k++) {
 						rad1=rad2;
 						rad2=packData.getRadius(flower[(ccwv_indx+k)%num]);
-						UtilPacket uP=new UtilPacket();
 						if (hes<0) { // hyp
 							angsum+=HyperbolicMath.h_comp_cos(vrad,rad1,rad2,1.0,1.0,1.0);
 						}
@@ -1587,6 +1585,7 @@ public class ConformalTiling extends PackExtender {
 			}
 			
 			PackData workPack=trilize(packData.tileData);
+			@SuppressWarnings("unused")
 			boolean put_bp=false;
 			try {
 				items=flagSegs.get(0);

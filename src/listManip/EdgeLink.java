@@ -11,20 +11,17 @@ import combinatorics.komplex.RedEdge;
 import combinatorics.komplex.Vertex;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.SideData;
 import dcel.PackDCEL;
+import dcel.SideData;
 import exceptions.CombException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
 import packQuality.QualMeasures;
 import packing.PackData;
-import util.FaceParam;
 import util.MathUtil;
 import util.PathInterpolator;
-import util.SelectSpec;
 import util.SphView;
 import util.StringUtil;
-import util.UtilPacket;
 
 /* fixup: might want an abstract parent class because of common methods:
  * However, I don't know how to do this with and still set the 'type' of elements.
@@ -275,7 +272,6 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 		if (packData==null) 
 			return -1;
 		int count=0;
-		int nodeCount=packData.nodeCount;
 		
 		// If a single numerical vertex is given, then
 		//   add it's 'halfedge' 

@@ -6,6 +6,7 @@ import java.util.Vector;
 
 import javax.swing.table.AbstractTableModel;
 
+import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import exceptions.DataException;
@@ -303,7 +304,7 @@ public class VarControl {
 
 				// underlying data has changed so listeners may be updated.
 				fireTableDataChanged();
-				if (CirclePack.cpb.GUImode>0)
+				if (CPBase.GUImode>0)
 					PackControl.packDataHover.sliderControlPanel.revalidate();
 			} else if (columnIndex == 1) {
 				// We want to change a value. Get the name of the variable 
@@ -350,7 +351,7 @@ public class VarControl {
 
 				// Mark that underlying data has changed so listeners may be updated.
 				fireTableDataChanged();
-				if (CirclePack.cpb.GUImode>0)
+				if (CPBase.GUImode>0)
 					PackControl.packDataHover.sliderControlPanel.revalidate();
 			}
 		}

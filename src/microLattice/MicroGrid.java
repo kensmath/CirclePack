@@ -892,6 +892,7 @@ public class MicroGrid extends PackExtender {
 		int count=0;
 		int level=-1;
 		Node node=null;
+		@SuppressWarnings("unused")
 		boolean debug=false;
 		
 		// ============= smooth =========

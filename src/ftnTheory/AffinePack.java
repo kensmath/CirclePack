@@ -2128,10 +2128,6 @@ public class AffinePack extends PackExtender {
 		
 		// ======= colorV =================
 		if (cmd.startsWith("colorV")) {
-			String mode="weak"; // default
-			try {
-				mode=flagSegs.get(0).get(0);
-			} catch (Exception ex){}
 			Vector<Double> data=new Vector<Double>(packData.nodeCount);
 			for (int v=1;v<=packData.nodeCount;v++) 
 				data.add(v,ProjStruct.weakConError(packData,aspects,v));

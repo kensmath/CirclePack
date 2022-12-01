@@ -6,7 +6,6 @@ import java.util.Vector;
 
 import allMains.CirclePack;
 import exceptions.DataException;
-import listManip.GraphLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
 import packing.PackData;

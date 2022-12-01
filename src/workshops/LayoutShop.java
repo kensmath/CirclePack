@@ -13,7 +13,6 @@ import dcel.Schwarzian;
 import exceptions.CombException;
 import exceptions.ParserException;
 import geometry.CircleSimple;
-import geometry.CommonMath;
 import listManip.FaceLink;
 import listManip.HalfLink;
 import math.Mobius;

@@ -1,24 +1,13 @@
 package ftnTheory;
 
-import java.io.BufferedWriter;
-import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CirclePack;
-import combinatorics.komplex.HalfEdge;
-import complex.Complex;
-import dcel.PackDCEL;
-import exceptions.DataException;
 import exceptions.ParserException;
 import geometry.CircleSimple;
-import geometry.CommonMath;
 import geometry.HyperbolicMath;
-import listManip.FaceLink;
-import listManip.HalfLink;
-import math.Mobius;
 import packing.PackData;
 import packing.PackExtender;
-import util.DispFlags;
 
 public class PolyBranching extends PackExtender {
 

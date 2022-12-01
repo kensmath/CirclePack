@@ -2,14 +2,13 @@ package ftnTheory;
 
 import java.util.Vector;
 
-import listManip.NodeLink;
-import packing.CPdrawing;
-import packing.PackData;
-import packing.PackExtender;
-import util.CmdStruct;
 import allMains.CPBase;
 import allMains.CirclePack;
 import exceptions.ParserException;
+import listManip.NodeLink;
+import packing.PackData;
+import packing.PackExtender;
+import util.CmdStruct;
 
 /**
  * This may be miss-named. The idea, suggested by Ed Crane, is to reduce

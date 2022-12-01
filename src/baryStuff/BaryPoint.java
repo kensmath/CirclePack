@@ -2,7 +2,6 @@ package baryStuff;
 
 import allMains.CPBase;
 import complex.Complex;
-import exceptions.DCELException;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import math.Point3D;

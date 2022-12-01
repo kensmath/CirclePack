@@ -851,7 +851,8 @@ public class ScriptManager implements ActionListener {
 	  * @param cpTN CPTreeNode
 	  */
 	 public void resetNextCmdNode(CPTreeNode cpTN) {
-		 if (rootNode==null) return;
+		 if (rootNode==null) 
+			 return;
 
 		 CPTreeNode firstCmdNode=null;
 		 Enumeration<TreeNode> tEnum=rootNode.preorderEnumeration();
@@ -1570,7 +1571,7 @@ public class ScriptManager implements ActionListener {
 			 // first search among script's file
 			 try {
 				 for (int j=includedFiles.size()-1;j>=0;j--) {
-					 IncludedFile iFile=(IncludedFile)includedFiles.get(j);
+					 IncludedFile iFile=includedFiles.get(j);
 					 if (iFile.origName.equals(tagname)) 
 						 url=new URL("file://"+iFile.tmpFile);
 				 }
@@ -1692,7 +1693,7 @@ public class ScriptManager implements ActionListener {
 		 File aboutFile=null;
 		 try {
 			 for (int j=includedFiles.size()-1;j>=0;j--) {
-				 IncludedFile iFile=(IncludedFile)includedFiles.get(j);
+				 IncludedFile iFile=includedFiles.get(j);
 				 if (iFile.origName.startsWith("AboutImage")) {
 					 aboutFile=iFile.tmpFile;
 					 if (aboutFile.exists())

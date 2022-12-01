@@ -7,7 +7,6 @@ import allMains.CirclePack;
 import geometry.EuclMath;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
-import packing.CPdrawing;
 import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;

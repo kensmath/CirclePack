@@ -1198,6 +1198,7 @@ public class WeldManager extends PackExtender {
 		
 		// ----------- unweld --------------
 		if (cmd.startsWith("unweld")) {
+			@SuppressWarnings("unused")
 			boolean wantInside=true;
 			EdgeLink elist=null;
 

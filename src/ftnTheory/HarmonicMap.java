@@ -1,8 +1,7 @@
 package ftnTheory;
 
-import packing.PackData;
-import packing.RData;
 import allMains.CirclePack;
+import packing.PackData;
 
 /** 
  * Routines for experimenting with harmonic mappings (and 

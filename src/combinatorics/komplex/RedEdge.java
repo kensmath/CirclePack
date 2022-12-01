@@ -2,7 +2,6 @@ package combinatorics.komplex;
 
 import complex.Complex;
 import geometry.CircleSimple;
-import util.TriAspect;
 
 /**
  * After processing a dcel (see 'CombDCEL.redcookie'), there is, except

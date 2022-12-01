@@ -6,8 +6,6 @@ import java.util.Vector;
 import combinatorics.komplex.HalfEdge;
 import exceptions.ParserException;
 import ftnTheory.GenModBranching;
-import komplex.EdgeSimple;
-import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.VertexMap;
 import math.Mobius;
