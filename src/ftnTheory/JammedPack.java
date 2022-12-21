@@ -366,7 +366,7 @@ public class JammedPack extends PackExtender {
 					count += 1;
 				}
 				else { // restore 
-					CirclePack.cpb.swapPackData(holdpack,pnum,true);
+					packData=CirclePack.cpb.swapPackData(holdpack,pnum,true);
 				}
 			} // end of while through the list of edges
 
@@ -382,8 +382,8 @@ public class JammedPack extends PackExtender {
 			if (flagSegs!=null && flagSegs.size()>0) { // call to use 'backpack'
 				if (backPack!=null) {
 					int pnum=packData.packNum;
-					CirclePack.cpb.swapPackData(backPack,pnum,true);
-					packData=backPack;
+					packData=CirclePack.cpb.swapPackData(backPack,pnum,true);
+					swapExtenderPD(packData);
 					addrmPack=null; // outdated
 					return packData.nodeCount;
 				}
@@ -394,13 +394,13 @@ public class JammedPack extends PackExtender {
 				// restore 'addrmPack' if available, else 'backpack' if available
 				int pnum=packData.packNum;
 				if (addrmPack!=null) { // leave 'backpack' in place
-					CirclePack.cpb.swapPackData(addrmPack,pnum,true);
-					packData=addrmPack;
+					packData=CirclePack.cpb.swapPackData(addrmPack,pnum,true);
+					swapExtenderPD(packData);
 					return packData.nodeCount;
 				}
 				if (backPack!=null) {
-					CirclePack.cpb.swapPackData(backPack,pnum,true);
-					packData=backPack;
+					packData=CirclePack.cpb.swapPackData(backPack,pnum,true);
+					swapExtenderPD(packData);
 					addrmPack=null; // outdated
 					return packData.nodeCount;
 				}

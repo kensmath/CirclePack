@@ -105,7 +105,7 @@ public class MobiusFrame extends JFrame implements ActionListener {
 	
 	/**
 	 * Put side-pair icons (for the active pack) on the sidepair toolbar.
-	 * @return 0 if there are no 'sidePairs' (or 'redChain' or 'firstRedEdge')
+	 * @return 0 if 'sidePairs' (or 'redChain' or 'firstRedEdge') is missing
 	 */
 	public int loadSidePairs() {
 		int count=0;
@@ -143,7 +143,7 @@ public class MobiusFrame extends JFrame implements ActionListener {
 	public void actionPerformed(ActionEvent e) {
 		String command = e.getActionCommand();
 		try {
-			if (!command.equals("reset")) 
+			if (command.equals("reset")) 
 				loadSidePairs();
 			else if (command.equals("layout_reset")) {
 				PackData p=CirclePack.cpb.getActivePackData();

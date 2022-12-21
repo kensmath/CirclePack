@@ -91,7 +91,7 @@ public abstract class PackExtender {
 				CPdrawing cpS=CPBase.cpDrawing[pnum];
 				if (cpS!=null) {
 					PackData p=packData.copyPackTo();
-					return CirclePack.cpb.swapPackData(p, pnum, false);
+					return CirclePack.cpb.swapPackData(p, pnum, false).nodeCount;
 				}
 			} catch (Exception ex) {}
 			return 0;
@@ -114,13 +114,13 @@ public abstract class PackExtender {
 	
 	/**
 	 * Replace 'this.packData' with a copy of 'newPD', including
-	 * a copyt of 'tileData'. Maintain 'this' as PackExtension, but 
+	 * a copy of 'tileData'. Maintain 'this' as PackExtension, but 
 	 * no others. Any particular PackExtender may have additional 
 	 * cleanup to do.
 	 * @param newPD PackData
 	 * @return NodeCount, 0 on error
 	 */
-	public int swapPackData(PackData newPD) {
+	public int swapExtenderPD(PackData newPD) {
 		if (newPD==null)
 			return 0;
 		CPdrawing holdcpS=packData.cpDrawing;

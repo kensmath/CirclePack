@@ -523,8 +523,10 @@ public class RationalMap extends PackExtender {
 		
 		// ============= dbs
 		if (cmd.startsWith("dbs")) { // debug info on current edge segments
-			if (displayES()==0)
+			if (displayES()==0) {
 				CirclePack.cpb.errMsg("Some problem among RM edge segments");
+				return 0;
+			}
 			return 1;
 		}
 

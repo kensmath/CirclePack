@@ -564,27 +564,33 @@ public class PackDCEL {
 	}
 	  
 	/**
-	 * Use 'layoutOrder' to compute the packing centers, laying
-	 * the first (generally 'alpha') edge in normalized position, 
-	 * then computing the rest. Some circles get laid down more 
-	 * than once and center/radii are stored in 'Vertex' and 'RedEdge',
-	 * if appropriate. Layout can be based on radii or (in tangency 
-	 * setting) using schwarzians. After layout, positions are 
-	 * rotated to put end of first edge on the positive y-axis and 
-	 * any side-pairing maps are updated.
+	 * Use 'fullOrder' to compute the packing centers, laying
+	 * the first (generally 'alpha') edge in normalized position
+	 * (namely, from 0 to point on positive y-axis). Then computing 
+	 * the rest. Some circles get laid down more than once (as
+	 * compared to using 'layoutOrder'), but this seems to avoid 
+	 * soe breakup in the layout. In multiply connected situations,
+	 * appropriate center/radii are stored in 'Vertex' and 'RedEdge'. 
+	 * Layout can be based on radii or (in tangency setting) using 
+	 * schwarzians. After layout, positions are rotated to put gamma
+	 * on the positive y-axis and any side-pairing maps are updated.
 	 * Note: this command modifies the recorded centers.
-	 * 	 * 
+	 * 	 
 	 * TODO: for more accuracy, average all computations of 
 	 * center using all laid out faces that are available:
 	 * complicated by need to mark faces that have been laid
-	 * out so the right data is used.
+	 * out so the right data is used. Using 'fullOrder' 
+	 * instea of 'layoutOrder' has some of these effects.
 	 *
 	 * @param useSchw boolean
 	 * @return int count
 	 */
 	public int layoutPacking(boolean useSchw) {
 	    int count=1;
-	    HalfEdge firsthe=layoutOrder.get(0);
+	    
+	    HalfLink order=fullOrder;
+	    
+	    HalfEdge firsthe=order.get(0);
 	    boolean debug=false;
 	    int prev_g=-1;
 	    
@@ -605,7 +611,7 @@ public class PackDCEL {
 	    }
 	    
 	    // now layout face-by-face
-		Iterator<HalfEdge> hit=layoutOrder.iterator();
+		Iterator<HalfEdge> hit=order.iterator();
 		hit.next(); // remove first, already laid out
 	    while (hit.hasNext()) {
 	    	HalfEdge he=hit.next();
@@ -617,7 +623,7 @@ public class PackDCEL {
 	    		cs=d_compOppCenter(he);
 	    		setCent4Edge(he.prev,cs.center);
 	    	}
-	    	else {
+	    	else { // use Schwarzian
 	    		if (he.twin.face.faceIndx==prev_g)
 	    			ftri=gtri; // reuse this data
 	    		else

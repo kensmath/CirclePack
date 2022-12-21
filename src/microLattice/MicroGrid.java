@@ -513,7 +513,8 @@ public class MicroGrid extends PackExtender {
 			v2micro[kv]=new int[2];
 
 		PackData newPack=GridMethods.hexByHand(microN,micro2v,v2micro);
-		swapPackData(newPack);
+		packData=CirclePack.cpb.swapPackData(newPack,packData.packNum,true);
+		swapExtenderPD(packData);
 
 		for (int v=1;v<=packData.nodeCount;v++) {
 			int flg=0;

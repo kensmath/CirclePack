@@ -285,7 +285,7 @@ public class GenModBranching extends PackExtender {
 				PackData newCopy=refPack.copyPackTo();
 				for (int v=1;v<=newCopy.nodeCount;v++)
 					newCopy.setPlotFlag(v, 1);
-				return CirclePack.cpb.swapPackData(newCopy,pnum,false);
+				return CirclePack.cpb.swapPackData(newCopy,pnum,false).nodeCount;
 			} catch (Exception ex) {
 				return 0;
 			}
@@ -1189,7 +1189,7 @@ public class GenModBranching extends PackExtender {
 		branchPts.add(null); // first spot empty
 		exclusions=new ArrayList<Vertex>();
 		PackData newCopy=refPack.copyPackTo();
-		CirclePack.cpb.swapPackData(newCopy,packData.packNum,true);
+		packData=CirclePack.cpb.swapPackData(newCopy,packData.packNum,true);
 		packData.set_aim_default();
 		packData.set_invD_default();
 	}

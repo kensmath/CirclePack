@@ -70,7 +70,7 @@ public abstract class CPBase {
 	public abstract void myDebugMsg(String str); // generic debug message
 	public abstract PackData getActivePackData(); // which PackData is active?
 	public abstract int getActivePackNum(); // which pack
-	public abstract int swapPackData(PackData p,int pnum,boolean keepX); // change packings[pnum]
+	public abstract PackData swapPackData(PackData p,int pnum,boolean keepX); // change packings[pnum]
 	
 	// main data container is 'packings', while 'cpDrawing's hold 
 	// backing plane for images, even in non-GUI implementations.

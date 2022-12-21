@@ -263,7 +263,7 @@ public class Graphene extends PackExtender {
 				// pack number
 				int pnum=Integer.parseInt((String)items.get(0));
 				PackData p=thePack.copyPackTo();
-				return CirclePack.cpb.swapPackData(p,pnum,false);
+				return CirclePack.cpb.swapPackData(p,pnum,false).nodeCount;
 			} catch (Exception ex) {}
 			return 0;
 		}
@@ -1228,8 +1228,7 @@ public class Graphene extends PackExtender {
 			
 	  	  	// copy to packData
 			int pnum=packData.packNum;
-			CirclePack.cpb.swapPackData(stitchBase,pnum,true);
-			packData=stitchBase;
+			packData=CirclePack.cpb.swapPackData(stitchBase,pnum,true);
 		}
 		
 		// no more?

@@ -490,8 +490,7 @@ public class CommandStrParser {
 			  CirclePack.cpb.msg("Have replaced packing with new "+
 					  "one derived from '"+filename+"'.");
 			  int pnum=packData.packNum;
-			  CirclePack.cpb.swapPackData(newPack,pnum,false);
-			  packData=newPack;
+			  packData=CirclePack.cpb.swapPackData(newPack,pnum,false);
 			  count=packData.nodeCount;
 			  if (debug)
 				  return count;
@@ -671,9 +670,7 @@ public class CommandStrParser {
 		  PackData pdata=Triangulation.tri_to_Complex(tri,hes);
 		  if (pdata!=null) {
 			  int pnum=packData.packNum;
-			  CirclePack.cpb.swapPackData(pdata,pnum,false);
-			  packData=pdata;
-			  
+			  packData=CirclePack.cpb.swapPackData(pdata,pnum,false);
 			  packData.chooseAlpha();
 			  packData.chooseGamma();
 			  packData.set_aim_default();
@@ -801,9 +798,8 @@ public class CommandStrParser {
 	    	  }
 	    	  
 	    	  newPack.packDCEL.fixDCEL(newPack);
-	    	  int ans=CirclePack.cpb.swapPackData(newPack,pnum1,true);
-
-			  return ans;
+	    	  packData=CirclePack.cpb.swapPackData(newPack,pnum1,true);
+			  return packData.nodeCount;
 	      } // end of 'adjoin'
 	      
 	      // =========== torpack ===========
@@ -1054,16 +1050,6 @@ public class CommandStrParser {
 				  else if (type.startsWith("dyadic")) {
 					  mode=9;
 				  }
-				  else if (type.startsWith("pin") || type.startsWith("Pin")) { // pinwheel
-					  mode=10;
-					  pinParam[0]=param; // use one we already have as backup
-					  try {
-						  pinParam[0]=Integer.parseInt(items.remove(0));
-						  pinParam[1]=Integer.parseInt(items.remove(0));
-					  } catch(Exception ex) {
-						  pinParam[1]=3;
-					  }
-				  }
 				  else if (type.startsWith("fib") || type.startsWith("Fib")) {
 					  mode=11;
 				  }
@@ -1276,15 +1262,6 @@ public class CommandStrParser {
 				  newPack=PackCreation.pentHypTiling(param);
 				  break;
 			  }
-			  case 10: // pinwheel: end/hypotenuse lengths pinParam[0]/[1]; with 'TileData'
-			  {
-				  if (type.charAt(0)=='p' && param>8) {
-					  throw new DataException("Use 'Pinwheel' (cap 'P') for "
-					  		+ "more than 8 generations");
-				  }
-				  newPack=PackCreation.pinWheel(param,pinParam[0],pinParam[1]);
-				  break;
-			  }
 			  case 11: // fibonnacci 2D: W, H, X, width/height/base, with 'TileData'
 			  {
 				  if (type.charAt(0)=='f' && param>8) {
@@ -1340,11 +1317,8 @@ public class CommandStrParser {
 			  
 			  newPack.status=true;
 			  int pnum=packData.packNum;
-			  CirclePack.cpb.swapPackData(newPack,pnum,false);
-			  packData=newPack;
-			  count=packData.nodeCount;
-
-			  return count;
+			  packData=CirclePack.cpb.swapPackData(newPack,pnum,false);
+			  return packData.nodeCount;
 		  }
 		  break;
 	  } // end of 'c'
@@ -1474,9 +1448,7 @@ public class CommandStrParser {
 			  // put new packing in place
 			  randPack.fileName=new String("Delaunay"+N);
 			  int pnum=packData.packNum;
-			  CirclePack.cpb.swapPackData(randPack,pnum,false);
-			  packData=randPack;
-			  
+			  packData=CirclePack.cpb.swapPackData(randPack,pnum,false);
 			  packData.chooseAlpha();
 			  packData.chooseGamma();
 			  packData.set_aim_default();
@@ -2483,7 +2455,7 @@ public class CommandStrParser {
 	    				  "p1 not all less than p0 or else p0 is not locally univalent\n");
 	    	  */
 	    	  
-	    	  // duplicate p0 in p2, then replace its RData by the new stuff
+	    	  // duplicate p0 in p2, then update centers/radii
 	    	  int holdPNum=packData.packNum;
 	    	  PackData tmpPD=Hp.copyPackTo();
 	    	  CirclePack.cpb.swapPackData(tmpPD,2,false);
@@ -2509,7 +2481,7 @@ public class CommandStrParser {
 	    		  return 0;
 	    	  }
 	    	  
-	    	  // duplicate p0 in p2, then replace its RData by the new stuff
+	    	  // duplicate p0 in p2, then update centers/redii
 	    	  int holdPNum=packData.packNum;
 	    	  PackData tmpPD=Hp.copyPackTo();
 	    	  CirclePack.cpb.swapPackData(tmpPD,2,false);
@@ -2831,8 +2803,7 @@ public class CommandStrParser {
 
 			  if (pdata!=null) {
 				  int pnum=packData.packNum;
-				  CirclePack.cpb.swapPackData(pdata,pnum,false);
-				  packData=pdata;
+				  packData=CirclePack.cpb.swapPackData(pdata,pnum,false);
 				  return 1;
 			  }
 			  return 0;
@@ -3170,9 +3141,7 @@ public class CommandStrParser {
 			  // put new packing in place
 			  randPack.fileName=new String(filename);
 			  int pnum=packData.packNum;
-			  CirclePack.cpb.swapPackData(randPack,pnum,false);
-			  packData=randPack;
-
+			  packData=CirclePack.cpb.swapPackData(randPack,pnum,false);
 			  packData.hes=heS;
 			  packData.chooseAlpha();
 			  packData.chooseGamma();
@@ -3348,8 +3317,7 @@ public class CommandStrParser {
 			  // put new packing in place
 			  randPack.fileName=new String("rand_pack");
 			  int pnum=packData.packNum;
-			  CirclePack.cpb.swapPackData(randPack,pnum,false);
-			  packData=randPack;
+			  packData=CirclePack.cpb.swapPackData(randPack,pnum,false);
 			  packData.hes=heS;
 			  
 			  // for rectangles, 1,2,3,4 are to be the corners
@@ -3417,8 +3385,7 @@ public class CommandStrParser {
 						  
 						  // put new packing in place
 						  int pnum=packData.packNum;
-						  CirclePack.cpb.swapPackData(randPack,pnum,false);
-						  packData=randPack;
+						  packData=CirclePack.cpb.swapPackData(randPack,pnum,false);
 						  packData.packDCEL.fixDCEL(packData);
 						  jexecute(packData,"max_pack 2000");
 
@@ -3718,8 +3685,7 @@ public class CommandStrParser {
 	     		  PackData newData=PackCreation.seed(n,hes);
 	     		  if (newData==null) 
 	     			  throw new CombException("seed has failed");
-	     		  CirclePack.cpb.swapPackData(newData,pnum,false);
-	     		  packData=newData;
+	     		  packData=CirclePack.cpb.swapPackData(newData,pnum,false);
 	     		  jexecute(packData,"disp -w -c");
 	     	  } catch(Exception ex) {
 	     		  throw new ParserException(" "+ex.getMessage());

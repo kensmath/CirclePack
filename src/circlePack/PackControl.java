@@ -1081,14 +1081,14 @@ FocusListener {
 	 * 'packNum'.
 	 * @param p PackData
 	 * @param pnum int
-	 * @param keepX boolean, keep current extenders
-	 * @return int, nodeCount, -1 on error
+	 * @param keepX boolean, transfer current extenders
+	 * @return p, null on error
 	 */
-	public int swapPackData(PackData p,int pnum,boolean keepX) {
+	public PackData swapPackData(PackData p,int pnum,boolean keepX) {
 		if (p==null)
-			return -1;
+			return p;
 		
-		// before replacing
+		// first, fix packData pointers in any packExtenders
 		if (keepX) {
 			p.packExtensions=packings[pnum].packExtensions;
 			for (int x=0;x<p.packExtensions.size();x++)
@@ -1101,7 +1101,7 @@ FocusListener {
 		CPBase.packings[pnum]=p; 
 		p.cpDrawing=CPBase.cpDrawing[pnum]; 
 		p.cpDrawing.setPackData(p);
-		return p.nodeCount;
+		return p;
 	}
 	
 	// done with abstract methods

@@ -426,11 +426,11 @@ public class ComplexAnalysis extends PackExtender {
 		}
 		
 		// ========== copy <pnum> 
-		if (cmd.startsWith("copy")) { // copy 'outputData' in some pack
+		if (cmd.startsWith("copy")) { // copy 'outputData' to some pack
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
-				return CirclePack.cpb.swapPackData(outputData, pnum,false);
+				return CirclePack.cpb.swapPackData(outputData, pnum,false).nodeCount;
 			} catch (Exception ex) {
 				return 0;
 			}

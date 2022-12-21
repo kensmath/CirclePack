@@ -88,8 +88,7 @@ public class BrooksQuad extends PackExtender {
 		PackData newData=PackCreation.seed(4,0);
 		if (newData==null)
 			Oops("Failed to build initial seed.");
-		CirclePack.cpb.swapPackData(newData,packData.packNum,true);
-		packData=newData;
+		packData=CirclePack.cpb.swapPackData(newData,packData.packNum,true);
 		RawManip.swapNodes_raw(packData.packDCEL,1,5);
 		for (int v=1;v<=4;v++) {
 			packData.setCircleColor(v,ColorUtil.coLor(208)); // line green

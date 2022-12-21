@@ -310,9 +310,9 @@ public class CurvFlow extends PackExtender {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
 				PackData p=domainData.copyPackTo();
-				int ans=CirclePack.cpb.swapPackData(p,pnum,false);
+				CirclePack.cpb.swapPackData(p,pnum,false);
 				msg("put 'domainPack' in pack p"+pnum);
-				return ans; 
+				return p.nodeCount; 
 			} catch (Exception ex) {}
 			return 0;
 		}

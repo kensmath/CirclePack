@@ -143,11 +143,11 @@ public class ShellControl extends CPBase {
 	 * @param p PackData
 	 * @param pnum int
 	 * @param keepX boolean, keep current extenders
-	 * @return -1 on error, else nodeCount
+	 * @return p, null on error
 	 */
-	public int swapPackData(PackData p,int pnum,boolean keepX) {
+	public PackData swapPackData(PackData p,int pnum,boolean keepX) {
 		if (p==null)
-			return -1;
+			return p;
 		
 		// before replacing, handle extension
 		if (keepX) { 
@@ -161,7 +161,7 @@ public class ShellControl extends CPBase {
 //		p.cpDrawing.setPackData(p);
 		
 		CPBase.packings[pnum]=p; 
-		return p.nodeCount;
+		return p;
 	}
 	
 	// done with abstract methods

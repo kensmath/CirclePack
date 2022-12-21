@@ -62,12 +62,14 @@ public class ShapeShifter extends PackExtender {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
 				CirclePack.cpb.swapPackData(baseData,pnum,false);
+				return 1;
 			} catch (Exception ex) {
 				return 0;
 			}
 		}	
 		if (cmd.startsWith("getPath")) { // convert ClosedPath
 			pathList=setPathList();
+			return 1;
 		}
 		if (cmd.startsWith("getDom")) { // get/reset domain pack
 			try {
@@ -87,7 +89,9 @@ public class ShapeShifter extends PackExtender {
 				}
 				if (rslt==0) {
 					errorMsg("SS: failed to convert new domain to euclidean");
+					return 0;
 				}
+				return 1;
 			} catch (Exception ex) {
 				return 0;
 			}

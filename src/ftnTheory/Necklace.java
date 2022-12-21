@@ -211,8 +211,7 @@ public class Necklace extends PackExtender {
 			
 			// save the resulting packing as the parent packing
 			int pnum=packData.packNum;
-			CirclePack.cpb.swapPackData(topPack,pnum,false);
-			packData=topPack;
+			packData=CirclePack.cpb.swapPackData(topPack,pnum,false);
 			
 			// do some fixup
 			packData.setAlpha(topOrigin);
@@ -321,8 +320,7 @@ System.err.println("starting bottomHemi:");
 			
 			// save the resulting packing as the parent packing
 			int pnum=packData.packNum;
-			CirclePack.cpb.swapPackData(topHemi,pnum,false);
-			packData=topHemi;
+			packData=CirclePack.cpb.swapPackData(topHemi,pnum,false);
 			return packData.nodeCount;
 		}
 

@@ -683,10 +683,6 @@ does not eliminate redundancies, as other counts do.)
 	3 generations of pent tiling centered on triple point</instance>
 	<instance text="create pent4 3"> 
 	3 generations of pent tiling centered on quad point</instance>
-	<instance text="create pin 5"> 
-	5 generations of Conway's pinwheel tiling, packed as a 
-	triangle (1 2 3), 1 = right angle, 2 = atan(2) = .35241638*Pi, 
-	3 = atan(1/2) = .1475836*Pi.</instance>
 	<instance text="create dyadic 6"> 
 	6 generations of Penrose's hyperbolic tiling (Carleson squares in the limit)</instance>
 	<instance text="create fib 5 6 3 2"> 

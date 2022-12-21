@@ -247,8 +247,7 @@ public class ConformalTiling extends PackExtender {
 			if (newData==null)
 				Oops("Failed to build initial seed.");
 			int pnum=packData.packNum;
-			CirclePack.cpb.swapPackData(newData,pnum,true);
-			packData=newData; // this may be redundant after the swap
+			packData=CirclePack.cpb.swapPackData(newData,pnum,true);
   		  	packData.tileData.myTiles[1].tileType=type;
   		  	
   		  	// now build subdivision tiling to depth, specified now in 'flgS'
@@ -909,13 +908,9 @@ public class ConformalTiling extends PackExtender {
 			else
 				deepestTD.gradedTileData=null;
 			
-			// Store in 'canonicalPack' and 'this.packData'
-			//   'canonicalPack' holds the full 'TileData' tree.
-			//   'this.packData' gets a 'barebones' copy of
-			//   the tiling data.
+			// Store in 'canonicalPack' with full 'TileData' tree.
 			newPD.tileData=null;
 			canonicalPack=newPD.copyPackTo();
-			swapPackData(canonicalPack); // copy in this.packData
 			canonicalPack.tileData=deepestTD;
 			deepestTD.packData=canonicalPack;
 			
@@ -926,7 +921,9 @@ public class ConformalTiling extends PackExtender {
 			else
 				msg("'canonicalPack' is set");
 			
-			// 'packData' gets a bare-bones copy of the deepest TileData
+			// 'this.packData' gets a bare-bones copy of the deepest TileData
+			packData=CirclePack.cpb.swapPackData(newPD,packData.packNum,false);
+			swapExtenderPD(packData);
 			packData.tileData=deepestTD.copyBareBones();
 			packData.tileData.packData=packData;
 
@@ -1109,8 +1106,8 @@ public class ConformalTiling extends PackExtender {
 							subdivRules.type2Size,mode);
 			cpCommand("write_til -f testTile.q");
 			canonicalPack=buildMode3(packData.tileData);
-			swapPackData(canonicalPack); // copy into packData
-//			packData.geom_to_e();
+			packData=CirclePack.cpb.swapPackData(canonicalPack,packData.packNum,false);
+			swapExtenderPD(packData); 
 			int N=subdivRules.type2Size.findW(tt+4); // types start at 4
 			cpCommand("geom_to_e");
 			cpCommand("set_aim 1.0 b");
@@ -1490,11 +1487,12 @@ public class ConformalTiling extends PackExtender {
 		else if (cmd.startsWith("get_can")) {
 			// copy 'canonicalPack' to 'packData'
 			if (canonicalPack==null) {
-				errorMsg("no 'canonicalPack'");
+				errorMsg("'canonicalPack' does not exist");
 				return 0;
 			}
 			
-			swapPackData(canonicalPack);
+			int pnum=packData.packNum;
+			packData=CirclePack.cpb.swapPackData(canonicalPack, pnum,true);
 			packData.tileData=canonicalPack.tileData.copyBareBones();
 			return packData.tileData.tileCount; 
 		}
@@ -1532,7 +1530,7 @@ public class ConformalTiling extends PackExtender {
 						// format "-d5" for depth 5.
 					{
 						if (canonicalPack.tileData==null)
-							Oops("'canonicalPack' has not 'tileData'");
+							Oops("'canonicalPack' has no 'tileData'");
 						int depth=0;
 						try {
 							depth=Integer.parseInt(str.substring(2)); 
@@ -1551,7 +1549,7 @@ public class ConformalTiling extends PackExtender {
 						PackData p=canonicalPack.copyPackTo();
 						p.tileData=holdTD;
 						canonicalPack.tileData=tmpTD;
-						return CirclePack.cpb.swapPackData(p,pnum,false);
+						return CirclePack.cpb.swapPackData(p,pnum,false).nodeCount;
 					}
 					} // end of switch
 				}
@@ -1559,7 +1557,7 @@ public class ConformalTiling extends PackExtender {
 				int pnum=Integer.parseInt((String)items.get(0));
 				PackData p=exportSrc.copyPackTo();
 				cpCommand(p,"max_pack");
-				return CirclePack.cpb.swapPackData(p,pnum,false);
+				return CirclePack.cpb.swapPackData(p,pnum,false).nodeCount;
 			} catch (Exception ex) {
 				Oops("'export' problems");
 			}
@@ -1592,7 +1590,7 @@ public class ConformalTiling extends PackExtender {
 				if (items.get(0).contains("x"))
 					put_bp=true;
 			} catch(Exception ex) {}
-			int ans=swapPackData(workPack);
+			int ans=swapExtenderPD(workPack); // did I mean 'swapPackData'?
 			if (ans<=0)
 				return 0;
 			canonicalPack=buildMode3(packData.tileData);
@@ -1614,7 +1612,8 @@ public class ConformalTiling extends PackExtender {
 					put_bp=true;
 			} catch(Exception ex) {}
 			PackData mydual=getMyDual(packData.tileData);
-			int ans=swapPackData(mydual);
+			packData=CirclePack.cpb.swapPackData(mydual,packData.packNum,true);
+			int ans=swapExtenderPD(packData);
 			if (ans<=0)
 				return 0;
 			if (put_bp) {
@@ -1686,10 +1685,7 @@ public class ConformalTiling extends PackExtender {
 			} // end of switch
 			
 			if (workPack!=null) {
-				int ans=swapPackData(workPack);
-				if (ans<=0)
-					throw new ParserException(
-							"failed in 'subdivide'");
+				packData=CirclePack.cpb.swapPackData(workPack,packData.packNum,true);
 				canonicalPack=packData.copyPackTo();
 				return canonicalPack.nodeCount; 
 			}

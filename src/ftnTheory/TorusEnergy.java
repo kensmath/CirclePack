@@ -159,8 +159,7 @@ public class TorusEnergy extends PackExtender {
 				double compEnergy=compareEnergy(edge.v,edge.w);
 				if (tmpPack!=null && (compEnergy<energy || Math.exp(-(compEnergy-energy)/temp)>cutoff)) {
 					int pnum=packData.packNum;
-					CirclePack.cpb.swapPackData(tmpPack,pnum,true);
-					packData=tmpPack;
+					packData=CirclePack.cpb.swapPackData(tmpPack,pnum,true);
 					hits++;
 				}
 				tick++;
