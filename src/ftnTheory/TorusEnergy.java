@@ -4,11 +4,13 @@ import java.util.Random;
 import java.util.Vector;
 
 import allMains.CirclePack;
+import exceptions.CombException;
 import geometry.EuclMath;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import packing.PackData;
 import packing.PackExtender;
+import packing.TorusData;
 import util.CmdStruct;
 
 public class TorusEnergy extends PackExtender {
@@ -24,13 +26,15 @@ public class TorusEnergy extends PackExtender {
 	boolean dispMode;   // if true, then redraw on 'reset'
 	double energy;      // current energy: sqrt(sum of edge lengths squared)
 	double cutoff;      // probability threshold for accepting switch energy-losing switch 
+	public TorusData torusData;
 	
 	public TorusEnergy(PackData p) {
 		super(p);
 		packData=p;
-		if (packData.getBdryCompCount()!=0 || packData.euler!=0 || packData.hes!=0) {
-			CirclePack.cpb.errMsg("Error starting 'TorusEnergy': packing must be a torus.");
-			return;
+		try {
+			torusData=new TorusData(p);
+		} catch (Exception ex) {
+			throw new CombException("Error 'TorusEnergy': 'TorusData' failed");
 		}
 		extensionType="TORUS ENERGY";
 		extensionAbbrev="TE";
@@ -78,9 +82,7 @@ public class TorusEnergy extends PackExtender {
 			}
 			
 			// Conformal modulus
-			double []tor=TorusModulus.torus_tau(packData);
-			double tau=(tor[0]>tor[1]) ? tor[0]:tor[1];
-			stbld.append("\n  Modulus = "+String.format("%.6f",tau)+". \n Degrees: ");
+			stbld.append("\n  Modulus = "+String.format("%.6f",torusData.tau)+". \n Degrees: ");
 
 			CirclePack.cpb.msg(stbld.toString());
 			return 1;

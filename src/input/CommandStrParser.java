@@ -40,7 +40,6 @@ import dcel.CombDCEL;
 import dcel.PackDCEL;
 import dcel.RawManip;
 import dcel.Schwarzian;
-import dcel.SideData;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.DataException;
@@ -76,7 +75,6 @@ import ftnTheory.SphereLayout;
 import ftnTheory.SpherePack;
 import ftnTheory.TileColoring;
 import ftnTheory.TorusEnergy;
-import ftnTheory.TorusModulus;
 import ftnTheory.WeldManager;
 import ftnTheory.WordWalker;
 import ftnTheory.iGame;
@@ -110,9 +108,10 @@ import packing.PackData;
 import packing.PackExtender;
 import packing.PackMethods;
 import packing.ReadWrite;
-import panels.ScreenShotPanel;
+import packing.TorusData;
 import panels.OutPanel;
 import panels.PathManager;
+import panels.ScreenShotPanel;
 import posting.PostFactory;
 import posting.PostParser;
 import random.RandomTriangulation;
@@ -1012,7 +1011,6 @@ public class CommandStrParser {
 		  else if (cmd.startsWith("create")) {
 			  int mode=1;
 			  int param=0;
-			  int []pinParam=new int[2];
 			  String type = null;
 			  try {
 				  type=items.remove(0);
@@ -4692,26 +4690,18 @@ public class CommandStrParser {
 	  
 	  // ========= torus_t ========
 	  if (cmd.startsWith("torus_t")) {
-		  double[] tor=TorusModulus.torus_tau(packData);
-		  if (tor!=null && tor[2]>0) {
-			  
-			  // display both 'tau' and '1/tau'
-			  CirclePack.cpb.msg("torus_tau: modulus = ("+
-					  String.format("%.6e",tor[0])+"+"+
-					  String.format("%.6e",tor[1])+"i)");
-			  Complex taurecip=new Complex(tor[0],tor[1]).reciprocal(); 
-			  CirclePack.cpb.msg("   (and 1/modulus = ("+
-					  String.format("%.6e",taurecip.x)+"+"+
-					  String.format("%.6e",taurecip.y)+"i))");
-			  return 1;
+		  TorusData torusData;
+		  try {
+			  torusData=new TorusData(packData);
+		  } catch (Exception ex) {
+			  throw new DataException("failed to get 'TorusData'");
 		  }
-		  if (tor==null) 
-			  throw new ParserException("error found by torus_t");
-		  else if (Math.abs(tor[2]+1)<.4)
-			  throw new ParserException("perhaps not torus "
-			  		+ "by topology or side-pairings");
-		  else if (Math.abs(tor[2]+2)<.4)
-			  throw new ParserException("side-pairings must be computed");
+
+		  // display both 'tau' and '1/tau'
+		  CirclePack.cpb.msg("torus_tau: modulus = "+torusData.tau);
+		  Complex taurecip=torusData.tau.reciprocal(); 
+		  CirclePack.cpb.msg("   (and 1/modulus = "+taurecip+")");
+		  return 1;
 	  }
 	  
 	  // ========= triG ===========
@@ -7815,35 +7805,19 @@ public class CommandStrParser {
 	    		  }
 	    		  case 't': // normalize a torus and report tau
 	    		  {
-    				  if (packData.getBdryCompCount()>0 || 
-    						  packData.genus!=1)
+	    			  TorusData torusData;
+	    			  try {
+	    				  torusData=new TorusData(packData);
+	    			  } catch (Exception ex) {
     					  throw new ParserException("usage: "
     							  +"norm_scale -t only applies to"
     							  + "tori");
-	    				  
-    				  // arrange two-side pairings only
-    				  CommandStrParser.jexecute(packData,"newRed -t");
+	    			  }
     				  
-    				  Iterator<SideData> pdpl=
-    						  packData.packDCEL.pairLink.iterator();
-    				  SideData epair=null;
-    				  epair=pdpl.next(); // first slot is empty
-    				  Complex[] W=new Complex[4];
-    				  int j=0;
-    				  while(pdpl.hasNext()) {
-    					  epair=pdpl.next();
-    					  W[j]=epair.startEdge.getCenter();
-    					  j++;
-    				  }
-    				  
-    				  // normalize
-    				  Mobius mob=Mobius.mob_NormQuad(W);
-    				  Mobius.mobiusDirect(packData,mob);
-    				  
-    				  // report 'tau', the center of the last side
-    				  epair=packData.packDCEL.pairLink.get(4);
-    				  CirclePack.cpb.msg("In normalized torus, "
-    				  		+ " tau = "+epair.startEdge.getCenter());
+    				  // report 'tau' and its reciprocal 
+	    			  CirclePack.cpb.msg("torus_tau: modulus = "+torusData.tau);
+	    			  Complex taurecip=torusData.tau.reciprocal(); 
+	    			  CirclePack.cpb.msg("   (and 1/modulus = "+taurecip+")");
     				  return 1;
     			  }
 	    		  } // end of switch

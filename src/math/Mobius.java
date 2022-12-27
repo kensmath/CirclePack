@@ -641,45 +641,6 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		
 		return mob;
 	}
-	
-	/**
-	 * Intended mainly for normalizing affine tori. Given the
-	 * cclw list 'Z' of four corners (typically 4 locations of
-	 * a common vertex), find Mobius that puts it in normalized
-	 * position: If a parallelogram, put Z[0] at origin, Z[1] at 1. 
-	 * Else, arrange so side pairing maps are z -> az, z -> bz 
-	 * and so Z[1] is at 1.
-	 * @param Z Complex[]
-	 * @return Mobius
-	 */
-	public static Mobius mob_NormQuad(Complex[] Z) {
-		if (Z.length!=4)
-			throw new ParserException("expected 4 centers");
-		Mobius mob=new Mobius();
-		
-		double A=Z[2].minus(Z[3]).abs()/Z[1].minus(Z[0]).abs();
-		double B=Z[2].minus(Z[1]).abs()/Z[3].minus(Z[0]).abs();
-		
-		// rectangle?
-		if (Math.abs(A-1.0)<.0000001 && Math.abs(B-1.0)<.0000001) {
-			mob.b=Z[0].times(-1.0);
-			mob.d=Z[1].minus(Z[0]);
-			return mob;
-		}
-		
-		// side-pairings are linear:
-		//    z0 -> z3 and z1 -> z2
-		//    z0 -> z1 and z3 -> z2
-		// where 'fixed' is common fixed point, so mob(z)=az+b, 
-		// where b=fixed/(fixed-Z[0]) and a= 1/(Z[0]-fixed)
-		Complex numtor=Z[0].times(Z[2]).minus(Z[1].times(Z[3]));
-		Complex denom=Z[0].add(Z[2]).minus(Z[1]).minus(Z[3]);
-		Complex fixed=numtor.minus(denom);
-		mob.a=new Complex(1.0).divide(Z[0].minus(fixed));
-		mob.b=fixed.divide(fixed.minus(Z[0]));
-
-		return mob;
-	}
 
 	/**
 	 * Find Mobius that maps centers of 3 circles of eucl packing p to 

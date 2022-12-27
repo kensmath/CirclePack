@@ -24,6 +24,7 @@ import listManip.FaceLink;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.PackExtender;
+import packing.TorusData;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.DispFlags;
@@ -2061,7 +2062,7 @@ public class AffinePack extends PackExtender {
 				}
 				
 				// gather torus data
-				TorusData torusData=ProjStruct.getTorusData(packData,true);
+				TorusData torusData=new TorusData(packData);
 				if (torusData==null) {
 					msg("failed to get torus data");
 					okay=false;
@@ -2349,7 +2350,7 @@ public class AffinePack extends PackExtender {
 //					ProjStruct.treeLayout(packData,dTree,aspects);
 					
 					// compute data
-					TorusData tD=ProjStruct.getTorusData(packData,false);
+					TorusData tD=new TorusData(packData);
 					if (tD==null) 
 						Oops("failed to compute 'TorusData' in 'matdat'");
 					
@@ -2358,10 +2359,10 @@ public class AffinePack extends PackExtender {
 					teich[a][b]=new Complex(tD.teich);
 					xrat[a][b]=new Complex(tD.x_ratio);
 					affC[a][b]=new Complex(tD.affCoeff);
-					z1[a][b]=new Complex(tD.cornerPts[0]);
-					z2[a][b]=new Complex(tD.cornerPts[1]);
-					z3[a][b]=new Complex(tD.cornerPts[2]);
-					z4[a][b]=new Complex(tD.cornerPts[3]);
+					z1[a][b]=new Complex(tD.cornerPts.get(1));
+					z2[a][b]=new Complex(tD.cornerPts.get(2));
+					z3[a][b]=new Complex(tD.cornerPts.get(3));
+					z4[a][b]=new Complex(tD.cornerPts.get(4));
 
 				} // end of for on b
 			} // end of for on a

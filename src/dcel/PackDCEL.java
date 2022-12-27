@@ -2333,7 +2333,8 @@ public class PackDCEL {
 	
 	/**
 	 * Update the side-pairing maps using updated rededge centers.
-	 * @return 0 if 'redChain' or 'pairLink' doesn't exist
+	 * @return 0 if 'redChain' or 'pairLink' doesn't exist or
+	 * a computation fails.
 	 */
 	public int updatePairMob() {
 		if (redChain==null || pairLink==null) 
@@ -2343,7 +2344,8 @@ public class PackDCEL {
 		dsis.next(); // first is null
 		while (dsis.hasNext()) {
 			SideData dsdata=dsis.next();
-			dsdata.set_sp_Mobius();
+			if (dsdata.set_sp_Mobius()==0)
+				return 0;
 		}
 		return 1;
 	}

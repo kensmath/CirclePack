@@ -4592,9 +4592,12 @@ of circles with that particular edge displayed.</instance>
 
 <command cmd="torus_t">
 <description>
- 	Computes the modulus of a packing for a 1-torus. It returns
- 	an error if the packing is not a combinatorial 1-torus or
- 	if no edge-pairings have been computed.
+ 	This returns an error if the packing is not	a combinatorial 
+ 	1-torus or if there are problems in the	computations.  
+ 	Otherwise, this will put the packing in normalized position
+ 	and compute and report the conformal modulus 'tau' and its
+ 	reciprocol. This applies to both flat tori and affine tori;
+ 	the radii and layout must be computed.
 </description>
 </command>
 

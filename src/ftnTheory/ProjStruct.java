@@ -15,8 +15,6 @@ import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.PackDCEL;
-import dcel.PairLink;
 import dcel.SideData;
 import exceptions.CombException;
 import exceptions.DataException;
@@ -29,9 +27,9 @@ import komplex.EdgeSimple;
 import listManip.FaceLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
-import math.Mobius;
 import packing.PackData;
 import packing.PackExtender;
+import packing.TorusData;
 import rePack.EuclPacker;
 import util.CmdStruct;
 import util.ColorUtil;
@@ -216,10 +214,12 @@ public class ProjStruct extends PackExtender {
 
 		// ======== TorusData =========
 		else if (cmd.startsWith("tD")) {
-			TorusData torusData=getTorusData();
-			if (torusData==null) 
-				throw new CombException("failed to compute 'TorusData'; "+
-						"is it in 2-sidepair form?");
+			TorusData torusData;
+			try {
+				torusData=new TorusData(packData);
+			} catch (Exception ex) {
+				throw new CombException("failed to instantiate 'TorusData'");
+			}
 
 			// print out torusData
 			try {
@@ -231,15 +231,17 @@ public class ProjStruct extends PackExtender {
 					CirclePack.cpb.msg("Affine Torus: corner vert = "+
 							torusData.cornerVert+", locations are:\n");
 				}
-				for (int j=0;j<4;j++) 
-					CirclePack.cpb.msg(torusData.cornerPts[j].toString());
+				for (int j=1;j<5;j++) 
+					CirclePack.cpb.msg(torusData.cornerPts.get(j).toString());
 				CirclePack.cpb.msg("Teich = "+torusData.teich.toString());
 				CirclePack.cpb.msg("tau = "+torusData.tau.toString());
 				CirclePack.cpb.msg("cross_ratio = "+torusData.x_ratio.toString());
 
 				if (!torusData.flat)
 					CirclePack.cpb.msg("Affine parameter 'c' = "+
-						torusData.affCoeff.toString());
+						torusData.affCoeff.toString()+
+						"; Teichmuller parameter 't' = "+
+						torusData.teich.toString());
 			} catch(Exception ex){}
 			return 1;
 		}
@@ -440,37 +442,6 @@ public class ProjStruct extends PackExtender {
 			} catch (Exception ex) {
 				throw new InOutException("labels_log output error");
 			}
-			return 1;
-		}
-		
-		// ======== TorusData =========
-		if (cmd.startsWith("tD")) {
-			TorusData torusData=getTorusData(packData,false);
-			if (torusData==null) 
-				throw new CombException("failed to compute 'TorusData'; "+
-						"is it in 2-sidepair form?");
-
-			// print out torusData
-			try {
-				if (torusData.flat) { 
-					CirclePack.cpb.msg("Flat Torus: corner vert = "+
-							torusData.cornerVert+", locations are:\n");
-					}
-				else {
-					CirclePack.cpb.msg("Affine Torus: corner vert = "+
-							torusData.cornerVert+", locations are:\n");
-				}
-				for (int j=0;j<4;j++) 
-					CirclePack.cpb.msg(torusData.cornerPts[j].toString());
-				CirclePack.cpb.msg("Teich = "+torusData.teich.toString());
-				CirclePack.cpb.msg("tau = "+torusData.tau.toString());
-				CirclePack.cpb.msg("cross_ratio = "+torusData.x_ratio.toString());
-
-				if (!torusData.flat)
-					CirclePack.cpb.msg("Affine parameter 'c' = "+
-						torusData.affCoeff.toString());
-			} catch(Exception ex){}
-			
 			return 1;
 		}
 		
@@ -1445,61 +1416,7 @@ public class ProjStruct extends PackExtender {
 		}
 		return asp;
 	}
-		
-	/**
-	 * Put a torus in normalized position and compute 
-	 * various data for 'TorusData' structure. Calling
-	 * routine should have arranged 2 side-pairings and 
-	 * repacked and laid out the affine packing.
-	 * @param p PackData 
-	 * @param writ boolean; false, don't write output messages.
-	 * @return TorusData object or null on error
-	 */
-	public static TorusData getTorusData(PackData p,boolean writ) {
-		TorusData torusData=new TorusData();
-		Complex[] Z=new Complex[4];
 
-		PairLink plink=p.packDCEL.pairLink;
-		if (plink==null || plink.size()!=5) 
-			throw new ParserException("torus appears to have no "+
-					"'pairLink' or there are not two side-pairings.");
-		for (int j=1;j<=4;j++) {
-			SideData sdata=plink.get(j);
-			Z[j-1]=sdata.startEdge.getCenter();
-		}
-		
-		// make sure the torus is normalized
-		Mobius mob=Mobius.mob_NormQuad(Z);
-		for (int j=0;j<4;j++)
-			Z[j]=mob.apply(Z[j]);
-		torusData.cornerPts=Z;
-		
-		torusData.x_ratio=torusData.cornerPts[0].minus(torusData.cornerPts[1]).
-				times(torusData.cornerPts[2].minus(torusData.cornerPts[3])).
-				divide(torusData.cornerPts[0].minus(torusData.cornerPts[3]).
-				times(torusData.cornerPts[2].minus(torusData.cornerPts[1])));
-				// cross-ratio (z1-z2)*(z3-z4)/((z1-z4)*(z3-z2))
-		
-		Mobius.mobiusDirect(p,mob);
-		
-		torusData.mean=new Complex(0.0);
-		for (int i=0;i<4;i++) {
-			torusData.mean.add(torusData.cornerPts[i].times(.25));
-		}
-
-		// compute Teichmuller parameter 'T' and the modulus 'tau'
-		//   and the affine parameter 'c' of Sass.
-		torusData.a=Math.log(torusData.cornerPts[1].abs());
-		torusData.M=Math.log(torusData.cornerPts[3].abs());
-		torusData.affCoeff=new Complex(torusData.a,torusData.b);
-		double x=(torusData.a*torusData.M+torusData.b*torusData.N)/torusData.affCoeff.absSq();
-		double y=(torusData.a*torusData.N-torusData.b*torusData.M)/torusData.affCoeff.absSq();
-		torusData.teich=new Complex(x,y);
-		torusData.tau=TorusModulus.Teich2Tau(torusData.teich);
-	
-		return torusData;
-	}
-	
 	/**
 	 * Given an interior edge <v,w> find log of ratio of
 	 * its t values: If f,g are the left/right faces,
@@ -1580,117 +1497,7 @@ public class ProjStruct extends PackExtender {
 		}
 		return 1;
 	}
-	
-	/**
-	 * Normalize an existing torus packing, update rad/cents,
-	 * update side pair mobius. 
-	 * @param p PackData
-	 * @return Mobius
-	 */
-	public static Mobius normalizeTorus(PackData p) {
-		PackDCEL pdcel=p.packDCEL;
-		Mobius mob=null;
-		if (pdcel.pairLink==null || pdcel.pairLink.size()!=5 ||
-				pdcel.idealFaceCount!=0 || p.genus!=1) {
-			CirclePack.cpb.msg("packing is not a 2-sidepair torus");
-			return null;
-		}
-		try {
-			Complex[] Z=new Complex[4];
-			for (int j=1;j<=4;j++) {
-				SideData sd=pdcel.pairLink.get(j);
-				Z[j-1]=sd.startEdge.getCenter();
-			}
-			
-			mob=Mobius.mob_NormQuad(Z);
-			Mobius.mobiusDirect(p,mob);
-			pdcel.updatePairMob();
-		} catch (Exception ex) {
-			CirclePack.cpb.errMsg("Error normalizing torus: msg "+ex.getMessage());
-			return null;
-		}
-		return mob;
-	}
-	
-	/**
-	 * Put a torus in normalized position and fill 'TorusData'
-	 * object. Calling routine must arranged 2 side-pairings 
-	 * and should have repacked and laid out the affine packing. 
-	 * @return TorusData object or null on error
-	 */
-	public TorusData getTorusData() {
-		TorusData torusData=new TorusData();
-		
-		// normalize and store new rad/cent, update mobius
-		Mobius mob=normalizeTorus(packData);
-		if (mob==null)
-			throw new ParserException("error processing this torus");
 
-		torusData.cornerPts=new Complex[4];
-		for (int j=1;j<=4;j++) {
-			SideData sdata=pdc.pairLink.get(j);
-			torusData.cornerPts[j-1]=sdata.startEdge.getCenter();
-		}
-		torusData.cornerVert=pdc.pairLink.get(1).startEdge.
-				myEdge.origin.vertIndx;
-		
-		// cross-ratio (z1-z2)*(z3-z4)/((z1-z4)*(z3-z2))
-		torusData.x_ratio=torusData.cornerPts[0].minus(torusData.cornerPts[1]).
-				times(torusData.cornerPts[2].minus(torusData.cornerPts[3])).
-				divide(torusData.cornerPts[0].minus(torusData.cornerPts[3]).
-				times(torusData.cornerPts[2].minus(torusData.cornerPts[1])));
-		
-		// for viewing purposes
-		torusData.mean=new Complex(0.0);
-		for (int i=0;i<4;i++) {
-			torusData.mean.add(torusData.cornerPts[i].times(.25));
-		}
-		
-		// is this a flat torus? (vs. affine)
-		if (torusData.cornerPts[0].abs()<.5) {
-			torusData.flat=true;
-			torusData.affCoeff=new Complex(0.0);
-			torusData.teich=torusData.cornerPts[3];
-			torusData.tau=TorusModulus.Teich2Tau(torusData.teich);
-			torusData.a=torusData.b=torusData.M=torusData.N=0.0;
-			return torusData;
-		}
-		
-		// else, affine: compute Teichmuller parameter 'T'
-		//   Sass affCoeff parameter c. Corners of affine 
-		//   fundamental domain are <1, exp(c), exp(cT+c), exp(T)>, 
-		//   which is image of parallelogram <0,1,T+1,T> under 
-		//   z -> exp(cz). Multi-valued nature of logs requires
-		//   finding change in argument along edges.
-		torusData.flat=false;
-		torusData.a=Math.log(torusData.cornerPts[1].abs());
-		torusData.b=0.0; // arg change along [z1,z2] edge
-		SideData sd=pdc.pairLink.get(1);
-		RedEdge rtrace=sd.startEdge;
-		do {
-			torusData.b += rtrace.nextRed.getCenter().
-					divide(rtrace.getCenter()).arg();
-			rtrace=rtrace.nextRed;
-		} while (rtrace!=sd.endEdge.nextRed);
-		
-		torusData.M=Math.log(torusData.cornerPts[3].abs());
-		torusData.N=0.0;  // arg change along [z1,z4] edge 
-		sd=pdc.pairLink.get(4);
-		rtrace=sd.startEdge;
-		do {
-			torusData.N -= rtrace.nextRed.getCenter().
-					divide(rtrace.getCenter()).arg();
-			rtrace=rtrace.nextRed;
-		} while (rtrace!=sd.endEdge.nextRed);
-
-		torusData.affCoeff=new Complex(torusData.a,torusData.b);
-		torusData.teich=new Complex(torusData.M,torusData.N).
-				divide(torusData.affCoeff);
-		torusData.tau=TorusModulus.Teich2Tau(torusData.teich);
-
-		return torusData;
-	}
-	
 	/**
 	 * Given a linked list of faces, find successive locations
 	 * and draw the faces, and/or circles. Idea is to have
@@ -1872,27 +1679,4 @@ public class ProjStruct extends PackExtender {
 
 	}
 	
-}
-
-/** 
- * Specialized class for accumulating torus data. Torus
- * may be flat or affine; these use different normalizations.
- * Torus must have been given layout in 2-sidepair form; 
- * side-pair Mobius maps are stored as usual.
- */
-class TorusData {
-	boolean flat;   // yes for regular torus, no for affine 
-	int cornerVert; // corner vertex
-	Complex []cornerPts; // four locations for single corner vertex
-	Complex x_ratio; // cross-ratio (z1-z2)*(z3-z4)/((z1-z4)*(z3-z2))
-	Complex mean;  // average of four corners --- for display use
-	Complex teich;  // Teichmuller parameter
-	Complex tau;    // conformal modulus
-	Complex affCoeff; // affine coefficient, 0.0 for flat
-	
-	// for affine case only
-	double a;   // log(|z2|)
-	double b;   // argument change on [z1 z2]
-	double M;   // log(|z4|)
-	double N;   // argument change on [z1,z4]
 }

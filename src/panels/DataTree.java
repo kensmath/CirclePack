@@ -194,7 +194,8 @@ public class DataTree extends JPanel {
 	}  
 
 	public static String setTopologyStr(PackData p) {
-		if (!p.status) return new String("pack is empty");
+		if (!p.status) 
+			return new String("pack is empty");
 		if (p.genus==0) { // genus zero 
 			if (p.getBdryCompCount()==0) // sphere 
 				return new String("sphere");

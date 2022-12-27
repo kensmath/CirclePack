@@ -20,13 +20,13 @@ import dcel.CombDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
-import ftnTheory.TorusModulus;
 import geometry.SphericalMath;
 import komplex.EdgeSimple;
 import komplex.Triangulation;
 import listManip.EdgeLink;
 import math.Point3D;
 import packing.PackData;
+import packing.TorusData;
 import util.PathUtil;
 import util.StringUtil;
 import util.UtilPacket;
@@ -217,7 +217,7 @@ public class RandomTriangulation {
 		  //   domain for the moduli space of 1-tori: hence, its
 		  //   real part is between -.5 and .5, and outside the 
 		  //   unit disc.
-		  Tau=TorusModulus.Teich2Tau(Tau);
+		  Tau=TorusData.Teich2Tau(Tau);
 		  
 		  // create Gamma as fundamental parallelogram in unit disc;
 		  //   translate/scale so center is at origin, result is
