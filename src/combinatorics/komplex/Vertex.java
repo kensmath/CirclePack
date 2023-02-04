@@ -222,12 +222,12 @@ public class Vertex {
 		while (spoke.myRedEdge==null) {
 			spoke=spoke.twin.next; // search clw
 		}
-		HalfEdge hold=spoke;
+		HalfEdge stopspoke=spoke.myRedEdge.prevRed.myEdge.twin;
 		do {
 			HalfEdge he=spoke.next;
 			hlink.add(he);
 			spoke=he.next.twin;
-		} while(spoke!=hold && spoke.myRedEdge==null);
+		} while(spoke!=stopspoke);
 		return hlink;
 	}
 	

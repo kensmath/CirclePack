@@ -160,8 +160,8 @@ public class PackCreation {
 	/**
 	 * Create a packing of hex generations, spiraling out. 
 	 * Calling routine to set radii/centers. (See also 
-	 * 'GridMethods.HexByHand' for a generating a uniform 
-	 * hex grid based on coord locations.) 
+	 * 'GridMethods.HexByHand' for generating a uniform 
+	 * hex grid based on coord locations instead of spiraling.) 
 	 * @param n int, number of generations (seed is 1 generation)
 	 * @return @see PackData
 	 */

@@ -1684,7 +1684,7 @@ System.out.println("length error ("+he.prev.origin.vertIndx+","+he.origin.vertIn
 	
 	/**
 	 * When new vertices are created, e.g., from "add_cir",
-	 * we accumulate associated edges in order. Their should
+	 * we accumulate associated edges in order. They should
 	 * already have radii, so we set an approximate center by
 	 * using it along with data from the edge.
 	 * @param hlink HalfLink

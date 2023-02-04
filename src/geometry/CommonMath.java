@@ -107,6 +107,7 @@ public class CommonMath {
 	 * from naive data (i.e., data held in vertices at end 
 	 * of 'hedge' and edge itself, disregarding red edge data).
 	 * @param hedge HalfEdge
+	 * @param hes int
 	 * @return CircleSimple, null on failure
 	 */
 	public static CircleSimple naiveData(HalfEdge hedge,int hes) {
