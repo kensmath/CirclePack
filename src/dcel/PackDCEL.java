@@ -85,8 +85,8 @@ public class PackDCEL {
 	// note edges and faces are subject to change with new layout
 
 	// final layout information 
-	public HalfLink fullOrder; // order for laying out all faces
 	public HalfLink layoutOrder; // order sufficient to set every center
+	public HalfLink stragglers; // faces not in layoutOrder
 	
 	public VertexMap oldNew;  // NEEDED FOR CIRCLEPACK {old,new}
 	public RedEdge redChain; // doubly-linked, cclw edges about a fundamental region
@@ -115,8 +115,8 @@ public class PackDCEL {
 		triData=null;
 		
 		// things to fill at end of dcel construction
-		fullOrder=null;
 		layoutOrder=null;
+		stragglers=null;
 
 		oldNew=null;
 		redChain=null;
@@ -493,8 +493,58 @@ public class PackDCEL {
 		double ov1=edge.prev.getInvDist();
 		double ov2=edge.getInvDist();
 		CircleSimple sC=CommonMath.comp_any_center(c0.center,
-			c1.center,c0.rad,c1.rad,c2.rad,ov0,ov1,ov2,p.hes);
+				c1.center,c0.rad,c1.rad,c2.rad,ov0,ov1,ov2,p.hes);
 		return sC;
+	}
+	
+	/**
+	 * Compute center of vert v opposite 'edge' in 'edge.face'.
+	 * Compute as average of locations based on all edges
+	 * opposite v whose other centers are already in place,
+	 * indicated by 'eutil>0' for twin. Set eutil=1 in all
+	 * faces used in the computation to indicate these edges
+	 * are okay to use in later computations.
+	 * @param edge HalfEdge
+	 * @return CircleSimple, null on failure
+	 */
+	public CircleSimple compAvgCenter(HalfEdge edge) {
+		Vertex vert=edge.next.next.origin;
+		
+		// calculate center opposite 'edge'
+		CircleSimple c0=getVertData(edge);
+		CircleSimple c1=getVertData(edge.next);
+		CircleSimple cv=getVertData(edge.next.next);
+		double ov0=edge.next.getInvDist();
+		double ov1=edge.next.next.getInvDist();
+		double ov2=edge.getInvDist();
+		CircleSimple sC=CommonMath.comp_any_center(c0.center,
+				c1.center,c0.rad,c1.rad,cv.rad,ov0,ov1,ov2,p.hes);
+		Complex accum=sC.center;
+		edge.eutil=edge.next.eutil=edge.next.next.eutil=1;
+		
+		// Now calculate using other opposite edges
+		HalfLink outers=vert.getOuterFan(edge);
+		int tick=1;
+		int n=outers.size();
+		for (int j=0;j<n;j++) {
+			HalfEdge he=outers.get(j);
+			// don't use red edge: too complicated to see if dependable
+			if (he.eutil==0 && he.twin.eutil!=0 && he.myRedEdge==null) {
+				c0=getVertData(he);
+				c1=getVertData(he.next);
+				CircleSimple c2=getVertData(he.next.next);
+				ov0=he.next.getInvDist();
+				ov1=he.next.next.getInvDist();
+				ov2=he.getInvDist();
+				sC=CommonMath.comp_any_center(c0.center,
+						c1.center,c0.rad,c1.rad,c2.rad,ov0,ov1,ov2,p.hes);
+				accum=accum.add(sC.center);
+				tick++;
+				he.eutil=he.next.eutil=he.next.next.eutil=1;
+			}
+		}
+		cv.center=accum.divide(tick);
+		return cv;
 	}
 	
 	/** 
@@ -556,46 +606,85 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Use 'layoutOrder' and radii to recompute all centers.
+	 * Use 'layoutOrder' and radii to recompute centers. 
+	 * Default to using 'layoutOrder' and not using Schwarzians.
+	 * However, in some case (e.g. for debugging), may use
+	 * other 'HalfLink' orders.
 	 * @return int count
 	 */
 	public int layoutPacking() {
-		return layoutPacking(false);
+		return layoutPacking(null,false,null);
+	}
+	
+	public int layoutPacking(HalfEdge firstHE) {
+		return layoutPacking(null,false,firstHE);
+	}
+	
+	public int layoutPacking(boolean useSchw) {
+		return layoutPacking(null,useSchw,null);
+	}
+	
+	public int layoutPacking(HalfLink hlink) {
+		return layoutPacking(hlink,false,null);
 	}
 	  
 	/**
-	 * Use 'fullOrder' to compute the packing centers, laying
-	 * the first (generally 'alpha') edge in normalized position
-	 * (namely, from 0 to point on positive y-axis). Then computing 
-	 * the rest. Some circles get laid down more than once (as
-	 * compared to using 'layoutOrder'), but this seems to avoid 
-	 * soe breakup in the layout. In multiply connected situations,
-	 * appropriate center/radii are stored in 'Vertex' and 'RedEdge'. 
+	 * Use 'hlink' (default to 'layoutOrder') to compute
+	 * centers, laying the first (generally 'alpha') edge 
+	 * in normalized position (namely, from 0 to point on 
+	 * positive y-axis). Then computing faces for successive
+	 * 'hlink' entries. Finally, rotate so 'gamma' is on
+	 * positive y-axis.
+	 * 
+	 * If 'hlink' is null, use 'layoutOrder', and compute 
+	 * successive centers as averages using all opposite 
+	 * edges which are already laid out. If 'hlink' is not 
+	 * null, successive center are computed only using the 
+	 * one face from 'hlink'. Some circles may get laid down 
+	 * more than once depending on 'hlink'.
+	 * 
+	 * If 'hlink' is null but 'firstHE' is not, then leave 
+	 * 'firstHE' fixed in current position and do full 
+	 * layout and do not rotate at end.
+	 *  
 	 * Layout can be based on radii or (in tangency setting) using 
-	 * schwarzians. After layout, positions are rotated to put gamma
-	 * on the positive y-axis and any side-pairing maps are updated.
+	 * schwarzians. Side-pairing maps are updated.
 	 * Note: this command modifies the recorded centers.
-	 * 	 
-	 * TODO: for more accuracy, average all computations of 
-	 * center using all laid out faces that are available:
-	 * complicated by need to mark faces that have been laid
-	 * out so the right data is used. Using 'fullOrder' 
-	 * instea of 'layoutOrder' has some of these effects.
-	 *
+	 * @param hlink HalfLink
 	 * @param useSchw boolean
+	 * @param firstRE HalfEdge
 	 * @return int count
 	 */
-	public int layoutPacking(boolean useSchw) {
+	public int layoutPacking(HalfLink hlink,boolean useSchw, HalfEdge firstHE) {
 	    int count=1;
+	    boolean face_only=false;
+	    boolean fixFirst=false;	    
+	    HalfEdge firsthe=null;
+	    HalfLink order=layoutOrder;
+
+	    if (hlink!=null) {
+	    	order=hlink;
+	    	face_only=true; // use only one face to layout
+		    firsthe=order.getFirst();
+	    }
+	    else if (firstHE!=null) {
+	    	fixFirst=true;
+	    	firsthe=firstHE;
+	    }
+	    else firsthe=order.getFirst();
 	    
-	    HalfLink order=fullOrder;
+	    // eutil>0 means we expect ends to be in proper relative locations.
+    	zeroEUtil();
 	    
-	    HalfEdge firsthe=order.get(0);
 	    boolean debug=false;
+//	    boolean debug=true;
 	    int prev_g=-1;
 	    
-	    // first face
-	    placeFirstEdge(firsthe); // from 0 to point on positive y-axis 
+	    // first face is that of given firstHE?
+	    if (!fixFirst) {
+	    	placeFirstEdge(firsthe); // from 0 to point on positive y-axis
+	    }
+	    firsthe.eutil=firsthe.next.eutil=firsthe.next.next.eutil=1;
 	    CircleSimple cs=d_compOppCenter(firsthe);
 	    setCent4Edge(firsthe.prev, cs.center);
 	    
@@ -618,12 +707,27 @@ public class PackDCEL {
 	    	
 // debugging
 //	    	System.out.println("he="+he);
+/*
+System.out.println("length error ("+he.origin.vertIndx+","+he.next.origin.vertIndx+") = "+
+  	((double)(he.origin.center.minus(he.next.origin.center).abs())-
+  	(he.origin.rad+he.next.origin.rad)));
+System.out.println("length error ("+he.next.origin.vertIndx+","+he.next.next.origin.vertIndx+") = "+
+  	(he.next.origin.center.minus(he.next.next.origin.center).abs()-
+  	(he.next.origin.rad+he.next.next.origin.rad)));
+System.out.println("length error ("+he.prev.origin.vertIndx+","+he.origin.vertIndx+") = "+
+  	(he.prev.origin.center.minus(he.origin.center).abs()-
+  	(he.prev.origin.rad+he.origin.rad)));
+*/  	
 	    	
 	    	if (!useSchw) {
-	    		cs=d_compOppCenter(he);
+	    		if (face_only)
+	    			cs=d_compOppCenter(he);
+	    		else 
+	    			cs=compAvgCenter(he);
 	    		setCent4Edge(he.prev,cs.center);
 	    	}
 	    	else { // use Schwarzian
+	    		// TODO: not yet using average of computed centers
 	    		if (he.twin.face.faceIndx==prev_g)
 	    			ftri=gtri; // reuse this data
 	    		else
@@ -639,21 +743,24 @@ public class PackDCEL {
 	    			gtri.data2pdcel(this);
 	    			count++;
 
-	    			if (debug) {// debug=true;
-	    				DCELdebug.drawEFC(this,he);
-	    			}
-	    			
 // debugging	    			
 //	    			int v=he.prev.origin.vertIndx;
 //		    		System.out.println("v="+v+" to z="+gtri.getCenter(
 //	    				gtri.vertIndex(v)));
 		    		
 	    		}
+	    		he.eutil=he.next.eutil=he.next.next.eutil=1;
 	    	}
+
+	    	if (debug) {// debug=true;
+				DCELdebug.drawEFC(this,he);
+			}
+
 	    }
 	    
-	    // rotate so gamma is on positive y-axis
-	    if (gamma!=null) {
+	    // if not leaving first edge in place, then we
+	    //    rotate so gamma is on positive y-axis
+	    if (!fixFirst && gamma!=null) {
 	    	try {
 	    		double gammaarg=getVertCenter(gamma).arg();
 	    		Complex rot=new Complex(0,Math.PI/2.0-gammaarg).exp();
@@ -1715,28 +1822,33 @@ public class PackDCEL {
 
 	/** 
 	 * Recompute, draw, and/or post circles and/or faces along a
-	 * specified HalfLink.
+	 * specified HalfLink. Typical call has 'heTree' null, in 
+	 * which case we redo the full 'layoutTree' using averaging
+	 * to compute centers. For faces we further draw and/or post 
+	 * the faces in 'stragglers'.
 	 * @param pF PostFactory
-	 * @param heTree HalfLink
+	 * @param heTree HalfLink, may be null
 	 * @param faceFlags DispFlags, may be null
 	 * @param circFlags DispFlags, may be null
 	 * @param fix boolean, store the new centers
 	 * @param placeFirst boolean: true: place anew; false, assume 2 verts in place
 	 * @param useSchw boolean: true use schwarzians than radii
-	 * @param tx double, only used for postscript output
+	 * @param tx double, thickness, only used for postscript output
 	 * @return int count 
 	 */
 	public int layoutFactory(PostFactory pF,HalfLink heTree,
 			DispFlags faceFlags,DispFlags circFlags,boolean fix,
 			boolean placeFirst,boolean useSchw,double tx) {
+		int count=0; 
 
+		// do we need to compute layout using 'layoutOrder'?
+		boolean doLayout=false; 
 		boolean debug=false;
 		if (debug) { // debug=true;
 			DCELdebug.drawRedChain(p,redChain);
 			DCELdebug.printRedChain(redChain);
 		}
 		
-		int count=0; // 
 		// not drawing anything? this just serves to redo layout
 		boolean faceDo=false;
 		if (faceFlags!=null && faceFlags.draw)
@@ -1745,23 +1857,39 @@ public class PackDCEL {
 		if (circFlags!=null && circFlags.draw)
 			circDo=true;
 		
-		// default to 'fullOrder'
-		if (heTree==null || heTree.size()==0)
-			heTree=fullOrder;
+		// default to full layout: may do layout first
+		if (heTree==null || heTree.size()==0) {
+			heTree=layoutOrder;
+			if (fix) {
+				doLayout=true;
+				if (placeFirst)
+					layoutPacking();
+				else // use first face in current location 
+					layoutPacking(layoutOrder.getFirst());
+			}
+			if (faceFlags!=null) {// pick up remaining faces
+				heTree=new HalfLink();
+				heTree.abutMore(layoutOrder);
+				heTree.abutMore(stragglers);
+			}
+		}
 		
 		int[] myVerts=new int[3];
 		double[] myRadii=new double[3];
 		Complex[] myCenters=new Complex[3];
 		
-		// handle root first
-		HalfEdge he=heTree.getFirst();
-		if (placeFirst) { // place in standard position, 0, imaginary axis 
-			placeFirstEdge(he);
+		// draw the first face and/or circles first
+		HalfEdge he=null;
+		he=heTree.getFirst();
+		if (!doLayout) {
+			if (placeFirst && fix) { // place in standard position, 0, imaginary axis 
+				placeFirstEdge(he);
+			}
+			if (fix) { // assume 'he' ends are already in place
+				setCent4Edge(he.prev,d_compOppCenter(he).center);
+			}
 		}
-		CircleSimple cs=d_compOppCenter(he);
-		if (fix) { // assume 'he' ends are already in place
-			setCent4Edge(he.prev,cs.center);
-		}
+		
 		TriAspect gtri=null;
 		int prev_g=-1;
 		if (useSchw) {
@@ -1769,6 +1897,7 @@ public class PackDCEL {
 			prev_g=he.face.faceIndx;
 		}
 			
+		// Note, could be old data if we didn't recompute first face
 		myCenters[0]=getVertCenter(he);
 		myCenters[1]=getVertCenter(he.next);
 		myCenters[2]=getVertCenter(he.next.next);
@@ -1776,7 +1905,7 @@ public class PackDCEL {
 		myRadii[1]=getVertRadius(he.next);
 		myRadii[2]=getVertRadius(he.next.next);
 			
-		if (faceDo && pF==null) { // draw the faces
+		if (faceDo && pF==null) { // draw the first face
 			if (!faceFlags.colorIsSet && 
 					(faceFlags.fill || faceFlags.colBorder)) 
 				faceFlags.setColor(p.getFaceColor(he.face.faceIndx));
@@ -1785,11 +1914,12 @@ public class PackDCEL {
 			p.cpDrawing.drawFace(myCenters[0],myCenters[1],myCenters[2],
 					myRadii[0],myRadii[1],myRadii[2],faceFlags);
 			
+			// may want to see them as laid out
 			if (debug)  // debug=true;
 				p.cpDrawing.rePaintAll();
 		}  
 			
-		if (circDo && pF==null) { // also draw the circles
+		if (circDo && pF==null) { // also draw the circles for first face
 			if (!circFlags.colorIsSet && 
 					(circFlags.fill || circFlags.colBorder)) 
 				circFlags.setColor(p.getCircleColor(he.next.next.origin.vertIndx));
@@ -1802,10 +1932,12 @@ public class PackDCEL {
 			if (circFlags.label)
 				circFlags.setLabel(Integer.toString(he.next.next.origin.vertIndx));
 			p.cpDrawing.drawCircle(myCenters[2],myRadii[2],circFlags);
-			if (debug) p.cpDrawing.rePaintAll(); 
+			
+			if (debug) 
+				p.cpDrawing.rePaintAll(); 
 		}
 		
-		// TODO: if pF!=null, need to layout the first face and/or circles
+		// TODO: if pF!=null, need to layout and post the first face and/or circles
 
 		// now go through the rest of the tree
 		Iterator<HalfEdge> hest = heTree.iterator();
@@ -1814,9 +1946,9 @@ public class PackDCEL {
 		while (hest.hasNext()) {
 			he = hest.next();  // normally, this edge is already in place
 
-			if (fix) {
+			if (fix && !doLayout) {
 				if (!useSchw) {
-					cs=d_compOppCenter(he);
+					CircleSimple cs=d_compOppCenter(he);
 					setCent4Edge(he.prev,cs.center);
 				}
 				
@@ -1841,6 +1973,7 @@ public class PackDCEL {
 			
 			if (faceDo || circDo || pF!=null) {
 				
+				// could be old data if we didn't recompute and store
 				myCenters[0]=getVertCenter(he);
 				myCenters[1]=getVertCenter(he.next);
 				myCenters[2]=getVertCenter(he.next.next);
@@ -1856,7 +1989,9 @@ public class PackDCEL {
 						faceFlags.setLabel(Integer.toString(he.face.faceIndx));
 					p.cpDrawing.drawFace(myCenters[0],myCenters[1],myCenters[2],
 							myRadii[0],myRadii[1],myRadii[2],faceFlags);
-					if (debug) p.cpDrawing.rePaintAll();
+					
+					if (debug) 
+						p.cpDrawing.rePaintAll();
 				} 
 				
 				if (circDo && pF==null) { // also draw the circles
@@ -1866,7 +2001,9 @@ public class PackDCEL {
 					if (circFlags.label)
 						circFlags.setLabel(Integer.toString(he.next.next.origin.vertIndx));
 					p.cpDrawing.drawCircle(myCenters[2],myRadii[2],circFlags);
-					if (debug) p.cpDrawing.rePaintAll();
+					
+					if (debug) 
+						p.cpDrawing.rePaintAll();
 				}
 				
 				// postscript
@@ -2444,9 +2581,9 @@ public class PackDCEL {
 	}
 	
     /**
-     * Set packing 'gamma' index; it's vertex generally 
-     * placed on y+ axis. Can't be 'alpha'.
-     * Note: we don't call 'fillInside'.
+     * Set packing 'gamma' halfedge; it's vertex generally 
+     * placed on y+ axis and can't be the origin of 'alpha'.
+     * Default is 'gamma=alpha.twin'.
      * @param v int, preference or 0
      * @return 1 on success, 0 on failure
      */
@@ -2464,6 +2601,7 @@ public class PackDCEL {
 		if (vertex==alpha.origin) { 
 			CirclePack.cpb.errMsg("'gamma' cannot be "+
 					"set to have the 'alpha' edge origin");
+			gamma=alpha.twin; // default
 			return 0;
 		}
 		gamma=vertex.halfedge;

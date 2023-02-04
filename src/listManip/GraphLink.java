@@ -442,41 +442,117 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 				count+=addDualLinks(CPBase.varControl.getValue(str));
 			}
 			
-			// check for '?list' first
+			// check for glist, elist, hlist, flist
 			else if (str.substring(1).startsWith("list")) {
 				GraphLink glink=null;
 				FaceLink flink=null;
-				
-				// glist or Glist
-				if ((str.startsWith("g") && (glink=packData.glist)!=null
-						&& glink.size()>0) ||
-						(str.startsWith("G") && (glink=CPBase.Glink)!=null
-								&& CPBase.Glink.size()>0)) {
+				EdgeLink elink=null;
+				HalfLink hlink=null;
+		
+				// what type of list?
+				if ((str.startsWith("e") && 
+						(elink=packData.elist)!=null && elink.size()>0) ||
+					(str.startsWith("E") && 
+						(elink=CPBase.Elink)!=null && CPBase.Elink.size()>0) || 
+					(str.startsWith("g") && 
+						(glink=packData.glist)!=null && glink.size()>0) ||
+					(str.startsWith("G") && 
+						(glink=CPBase.Glink)!=null && CPBase.Glink.size()>0) ||
+					(str.startsWith("h") &&
+						(hlink=packData.hlist)!=null && hlink.size()>0) ||
+					(str.startsWith("H") && 
+						(hlink=CPBase.Hlink)!=null && CPBase.Hlink.size()>0) ||
+					(str.startsWith("f") && 
+						(flink=packData.flist)!=null && flink.size()>0) ||
+					(str.startsWith("F") && 
+						(flink=CPBase.Flink)!=null &&	flink.size()>0)) {
+
+					String strdata=str.substring(5).trim(); // remove '?list'	
 					EdgeSimple edge=null;
 
+					// convert others to elink
+					if (hlink!=null) {
+						elink=new EdgeLink(hlink);
+						hlink=null;
+					}
+					else if (glink!=null) {
+						elink=new EdgeLink(glink);
+						glink=null;
+					}
+					else if (flink!=null) { // try to convert to dual edge list
+						
+						elink=new EdgeLink();
+						// find last face in current list
+						int lastf = 0;
+						if (this.size()>0 && (edge=this.getLast())!=null && 
+								edge.w>0 && edge.w<=packData.faceCount)
+							lastf=edge.w;
+						
+						// now go through list: if nextf is contiguous to lastf, 
+						//     add {lastf,nextf}, else add root {0,nextf}.
+						Iterator<Integer> flst=flink.iterator();
+						while (flst.hasNext()) {
+							int nextf=flst.next();
+							if (nextf>0 && nextf<=packData.faceCount) {
+								if (lastf>0) {
+									if (packData.face_nghb(lastf,nextf)>=0)
+										elink.add(new EdgeSimple(lastf,nextf));
+									else 
+										elink.add(new EdgeSimple(0,nextf));
+									lastf=nextf;
+									count++;
+								}
+								else {
+									elink.add(new EdgeSimple(0,nextf));
+									lastf=nextf;
+									count++;
+								}
+							}
+						} // end of 'while'
+					}
+
+					// check for parens listing range of indices 
+					int lsize=elink.size()-1;
+					int[] irange=StringUtil.get_int_range(strdata, 0,lsize);
+					if (irange!=null) {
+						int a=irange[0];
+						int b=(irange[1]>lsize) ? lsize : irange[1]; 
+						if (a==0 && elink.get(a).v==0) // first is a root
+								a=1;
+						if (b>=a) {
+							for (int j=a;j<=b;j++) {
+								edge=elink.get(j);
+								if (edge.v<=packData.faceCount && edge.w<=packData.faceCount) {
+									add(edge);
+									count++;
+								}
+							}
+						}
+					}
+					
 					// check for brackets first
-					String brst=StringUtil.brackets(str);
+					String brst=StringUtil.get_bracket_strings(str)[0];
 					if (brst!=null) {
 						if (brst.startsWith("r")) { // return first and move it to end
-							EdgeSimple edg=glink.getFirst();
+							EdgeSimple edg=elink.getFirst();
 							try {
 								if (edg.v==0) // root
-									glink.remove(0);
-								edg=glink.getFirst();
+									elink.remove(0);
+								edg=elink.getFirst();
 							} catch(Exception ex) {
 								edg=null;
 							}
 							if (edg!=null) {
-								glink.add(new EdgeSimple(edg)); // make copy at end
+								elink.add(new EdgeSimple(edg)); // copy to end
 							}
 						}
 						
 						// for 'r' or 'n', remove first and add it to 'this'
 						if (brst.startsWith("r") || brst.startsWith("n")) { // use up first
-							edge=(EdgeSimple)glink.remove(0);
+							edge=(EdgeSimple)elink.remove(0);
 							try {
 								if (edge.v==0) { // ignore a root, try next
-									edge=(EdgeSimple)glink.remove(0);
+									edge=(EdgeSimple)elink.remove(0);
 								}
 							} catch (Exception ex) {
 								edge=null;
@@ -487,7 +563,7 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 							}
 						}
 						else if (brst.startsWith("l")) { // last
-							edge=(EdgeSimple)glink.getLast();
+							edge=(EdgeSimple)elink.getLast();
 							if (edge.v<=packData.faceCount && edge.w<=packData.faceCount) {
 								add(edge);
 								count++;
@@ -496,10 +572,10 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 						else {
 							try{
 								int n=MathUtil.MyInteger(brst);
-								if (n==0 && glink.get(0).v==0) // don't add if a root
+								if (n==0 && elink.get(0).v==0) // don't add if a root
 									n=1; 
-								if (n>=0 && n<glink.size()) {
-									edge=(EdgeSimple)glink.get(n);
+								if (n>=0 && n<elink.size()) {
+									edge=(EdgeSimple)elink.get(n);
 									if (edge.v<=packData.faceCount && edge.w<=packData.faceCount) {
 										add(edge);
 										count++;
@@ -520,43 +596,9 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 							}
 						}
 					}
-				} // end of handling glist/Glist
-				
-				// flist or Flist --- convert to dual edges or roots as possible
-				else if (((str.startsWith("f") && (flink=packData.flist)!=null) ||
-						(str.startsWith("F") && (flink=CPBase.Flink)!=null)) &&
-						flink.size()>0) {
-					
-					// find last face in current list
-					int lastf = 0;
-					EdgeSimple edge=null;
-					if (this.size()>0 && (edge=this.getLast())!=null && 
-							edge.w>0 && edge.w<=packData.faceCount)
-						lastf=edge.w;
-					
-					// now go through list: if nextf is contiguous to lastf, 
-					//     add {lastf,nextf}, else add root {0,nextf}.
-					Iterator<Integer> flst=flink.iterator();
-					while (flst.hasNext()) {
-						int nextf=flst.next();
-						if (nextf>0 && nextf<=packData.faceCount) {
-							if (lastf>0) {
-								if (packData.face_nghb(lastf,nextf)>=0)
-									add(new EdgeSimple(lastf,nextf));
-								else 
-									add(new EdgeSimple(0,nextf));
-								lastf=nextf;
-								count++;
-							}
-							else {
-								add(new EdgeSimple(0,nextf));
-								lastf=nextf;
-								count++;
-							}
-						}
-					} // end of 'while'
-				}
-
+				} // end of handling '?list'
+				else // no appropriate list
+					return count;
 			}
 			
 			/* Now parse remaining options based on first character;

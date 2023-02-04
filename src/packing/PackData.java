@@ -233,8 +233,6 @@ public class PackData{
 		intrinsicGeom=PackData.getIntrinsicGeom(this);
     	fileName=StringUtil.dc2name(fileName);
      	fillcurves();
-    	if (pdcel.gamma==null)
-    		pdcel.gamma=pdcel.alpha.next;
     	return pdcel.vertCount;
     }
     
@@ -5509,7 +5507,9 @@ public class PackData{
 	public static TriAspect[] getTriAspects(PackData p) {
 		PackDCEL pdcel=p.packDCEL;
 		TriAspect[] aspect=new TriAspect[p.faceCount+1];
-		Iterator<HalfEdge> his=pdcel.fullOrder.iterator();
+		HalfLink hlink=pdcel.layoutOrder;
+		hlink.abutMore(pdcel.stragglers);
+		Iterator<HalfEdge> his=hlink.iterator();
 		int count=0;
 		while (his.hasNext()) {
 			DcelFace face=his.next().face;

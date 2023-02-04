@@ -41,6 +41,10 @@ public class DCELdebug {
 		} while(rtrace!=pdcel.redChain);
 	}
 	
+	/**
+	 * Prints our all red edges and vertices
+	 * @param pdcel
+	 */
 	public static void listRedThings(PackDCEL pdcel) {
 		int safety=1000;
 		
@@ -490,9 +494,11 @@ public class DCELdebug {
 		drawEdgeFace(pdcel,hfe);
 		CPdrawing cpd=pdcel.p.cpDrawing;
 		HalfEdge he=hfe;
+		DispFlags dflags=new DispFlags();
+		dflags.thickness=1;
 		int safety=100;
 		do {
-			cpd.drawCircle(pdcel.getVertData(he),null);
+			cpd.drawCircle(pdcel.getVertData(he),dflags);
 			cpd.rePaintAll();
 			he=he.next;
 			safety--;

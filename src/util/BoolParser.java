@@ -133,7 +133,7 @@ public class BoolParser {
 	 * Break given string (trimmed) into Vector of 'connective' and 
 	 * 'content' strings. Content strings may have four forms, '(..)',
 	 * '!(..)', or same but without parens. Note that with parens, there
-	 * may be connectives between that are cought in our recursion.
+	 * may be connectives between that are caught during our recursion.
 	 * @param fullStr String
 	 * @return Vector<String> or null, vector may be empty
 	 */
@@ -258,7 +258,7 @@ public class BoolParser {
 		
 		// interpret 'left' as object: Double or String
 		if (left.charAt(0)=='{') { // run a command and check for Double or Integer return
-			String []grpstr=StringUtil.getGroupedStr(new StringBuilder(left),'{');
+			String[] grpstr=StringUtil.getGroupedStr(new StringBuilder(left),'{');
 			if (grpstr[1]!=null && grpstr[1].length()>0)
 				throw new ParserException("'BoolParse': dangling string");
 			CallPacket cP=CommandStrParser.valueExecute(p,grpstr[0]);

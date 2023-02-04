@@ -3,8 +3,8 @@ package dataObject;
 import combinatorics.komplex.HalfEdge;
 import complex.Complex;
 import exceptions.ParserException;
-import packQuality.QualMeasures;
 import packing.PackData;
+import packing.QualMeasures;
 
 /**
  * Gathers data on an edge, as needed for inquiries or for

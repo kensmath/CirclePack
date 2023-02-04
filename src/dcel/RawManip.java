@@ -1023,6 +1023,7 @@ public class RawManip {
 		  
 		  Vertex newV=new Vertex(node); // this is the barycenter
 		  newV.redFlag=false;
+		  newV.aim=2.0*Math.PI;
 		  
 		  // create new spokes
 		  HalfEdge last_spoke=new HalfEdge(newV);

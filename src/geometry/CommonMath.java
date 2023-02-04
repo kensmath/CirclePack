@@ -132,7 +132,7 @@ public class CommonMath {
 	
 	/**
 	 * Compute third circle given two centers, radii, inv distances;
-	 * ivdj is edge <j,j+1>.
+	 * note 'ivdj' is for edge (j,j+1).
 	 * @param z0 Complex
 	 * @param z1 Complex
 	 * @param r0 double

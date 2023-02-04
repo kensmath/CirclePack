@@ -320,15 +320,22 @@ public class ReadWrite {
 									return -1;
 								}
 								pdc.redChain = null; // pdc.oldNew.size();
-								pdc.fixDCEL(p);
-								if (pdc.oldNew != null && pdc.oldNew.size() > 0) {
-									readOldNew = new int[maxv + 1];
-									Iterator<EdgeSimple> vmp = pdc.oldNew.iterator();
-									while (vmp.hasNext()) {
-										EdgeSimple edge = vmp.next();
-										readOldNew[edge.v] = edge.w;
+								
+								// catch problems with layout, e.g. redchain or fix 
+								try {
+									pdc.fixDCEL(p);
+									if (pdc.oldNew != null && pdc.oldNew.size() > 0) {
+										readOldNew = new int[maxv + 1];
+										Iterator<EdgeSimple> vmp = pdc.oldNew.iterator();
+										while (vmp.hasNext()) {
+											EdgeSimple edge = vmp.next();
+											readOldNew[edge.v] = edge.w;
+										}
 									}
+								} catch(Exception ex) {
+									p.flashError("problem with redchain or fixDCEL");
 								}
+
 								gotFlowers = true;
 							} catch (Exception ex) { // try to reset to previous line and proceed
 //	                    			try {fp.reset();} catch(IOException ioe) {

@@ -282,8 +282,11 @@ public class DisplayParser {
 				break;
 			} // end of 'g'
 			
-			// show recomputed faces and/or circles in given 
-			//   face order; no list defaults to drawing order.
+			// show recomputed faces and/or circles in given face 
+			//   (or halfedge) order. if items is null or empty, 
+			//   then default to 'layoutOrder' and recompute 
+			//   the full layout. ('stragglers' are included for 
+			//   'F' case). In some cases
 			//   Intention is to lay out subsequent faces based
 			//   on earlier faces in this list (if such exists).
 			//   char 's' (e.g., 'Cs') means use schwarzians.
@@ -298,11 +301,7 @@ public class DisplayParser {
 				if (sub_cmd.startsWith("s")) // use schwarzians, not radii
 					useSchw=true;
 				
-				if (items.size() == 0) { // default to drawing order (plus stragglers 
-										 // (i.e., not needed in drawing order)) 
-					hlink=p.packDCEL.fullOrder;
-				}
-				else { // there is a given list of face indices
+				if (items!=null && items.size()!=0) { 
 					try {
 					hlink=new HalfLink();
 					p.packDCEL.zeroFUtil();
@@ -332,18 +331,20 @@ public class DisplayParser {
 					} catch(Exception ex) {}
 				}
 				if (hlink==null || hlink.size()==0)
-					break;
+					hlink=null;
 				
 				// NOTE: We do NOT recompute the location for the first face
 				//   (unless it occurs again later in the list); to lay out
-				//   the first face, you do that separately, e.g. in layout.
+				//   the first face, do that separately, e.g. in 'layoutPacking'.
 				boolean firstFace=false;
 				
 				// When circles are indicated, we need to handle the first two 
 				//   of the first face separately here; the third is handled 
-				//   in layout_facelist call.
+				//   in layoutFactory call.
 				if (c == 'C' || c == 'B') {
-					HalfEdge he=hlink.getFirst();
+					HalfEdge he=p.packDCEL.layoutOrder.getFirst();
+					if (hlink!=null)
+						he=hlink.getFirst();
 					v=he.origin.vertIndx;
 					// set up color (there's only one)
 					if (!dispFlags.colorIsSet)

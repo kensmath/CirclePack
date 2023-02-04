@@ -146,7 +146,7 @@ public class TileLink extends LinkedList<Integer> {
 			if (str.length()==0)
 				str="a";
 			
-			if (str.startsWith("tlist") || str.startsWith("Tlist")) {
+			if (str.substring(1).startsWith("list")) {
 				int t;
 				TileLink tlink=null;
 				boolean ck=false;
@@ -157,8 +157,27 @@ public class TileLink extends LinkedList<Integer> {
 								&& CPBase.Tlink.size()>0)) {
 					if (str.startsWith("T")) // v legal tile for packData?
 						ck=true;
+					
+					String strdata=str.substring(5).trim(); // remove '?list'
+					
+					// check for parens listing range of indices 
+					int lsize=tlink.size()-1;
+					int[] irange=StringUtil.get_int_range(strdata, 0,lsize);
+					if (irange!=null) {
+						int a=irange[0];
+						int b=(irange[1]>lsize) ? lsize : irange[1]; 
+						for (int j=a;j<=b;j++) {
+							t=tlink.get(j);
+							if (ck && t>myTD.tileCount) {}
+							else {
+								add(t);
+								count++;
+							}
+						}
+					}
+					
 					// check for brackets first
-					String brst=StringUtil.brackets(str);
+					String brst=StringUtil.get_bracket_strings(str)[0];
 					if (brst!=null) {
 						if (brst.startsWith("r")) { // rotate list
 							tlink.add(tlink.getFirst());
@@ -213,6 +232,8 @@ public class TileLink extends LinkedList<Integer> {
 						}
 					}
 				}	
+				else // no appropriate list found
+					return count;
 			}
 			
 			/******************************************************
@@ -226,8 +247,8 @@ public class TileLink extends LinkedList<Integer> {
 			{
 				int first=1;
 				int last=myTD.tileCount;
-				String []pair_str=StringUtil.parens_parse(str); // get two strings
-				if (pair_str!=null) { // must have 2 strings
+				String []pair_str=StringUtil.get_paren_range(str); // get two strings
+				if (pair_str!=null && pair_str.length==2) { // must have 2 strings
 					int a,b;
 					if ((a=NodeLink.grab_one_vert(myTD.packData,pair_str[0]))!=0) first=a;
 					if ((b=NodeLink.grab_one_vert(myTD.packData,pair_str[1]))!=0) last=b;
@@ -441,7 +462,8 @@ public class TileLink extends LinkedList<Integer> {
 			case '{': // set-builder notation; reap results
 			{
 				SetBuilderParser sbp=new SetBuilderParser(myTD.packData,str,'t');
-				if (!sbp.isOkay()) return 0;
+				if (!sbp.isOkay()) 
+					return 0;
 				Vector<SelectSpec> specs=sbp.getSpecVector();
 				PackData qackData=sbp.packData;
 				TileLink nl=tileSpecs(qackData,specs);

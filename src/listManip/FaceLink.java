@@ -20,6 +20,7 @@ import geometry.EuclMath;
 import input.SetBuilderParser;
 import komplex.EdgeSimple;
 import packing.PackData;
+import packing.QualMeasures;
 import util.FaceParam;
 import util.MathUtil;
 import util.PathInterpolator;
@@ -116,7 +117,8 @@ public class FaceLink extends LinkedList<Integer> {
 	public int addFaceLinks(Vector<String> items) {
 		int count=0;
 		
-		if (packData==null) return -1;
+		if (packData==null) 
+			return -1;
 		int facecount=packData.faceCount;
 		
 		Iterator<String>its=items.iterator();
@@ -142,26 +144,64 @@ public class FaceLink extends LinkedList<Integer> {
 			// check for '?list' first
 			else if (str.substring(1).startsWith("list")) {
 				int f;
+				String[] b_string;
+				String brst;
 				FaceLink flink=null;
 				HalfLink hlink=null;
-				boolean ck=false;
+				boolean ck=false; // do we need to check that index is legal?
 				
-				// flist or Flist
-				if ((str.startsWith("f") && (flink=packData.flist)!=null
-						&& flink.size()>0) ||
-						(str.startsWith("F") && (flink=CPBase.Flink)!=null
-								&& CPBase.Flink.size()>0)) {
-					if (str.startsWith("F")) // v legal for packData?
+				// one of flist, Flist, hlist, 'Hlist'
+				if ((str.startsWith("f") && 
+						(flink=packData.flist)!=null && flink.size()>0) ||
+					(str.startsWith("F") && 
+						(flink=CPBase.Flink)!=null && CPBase.Flink.size()>0) ||
+					(str.startsWith("h") && 
+						(hlink=packData.hlist)!=null && hlink.size()>0) ||
+					(str.startsWith("H") && 
+						(hlink=CPBase.Hlink)!=null && hlink.size()>0) ) {
+
+					if (str.startsWith("F") || str.startsWith("H")) // legal for packData?
 						ck=true;
-					// check for brackets first
-					String brst=StringUtil.brackets(str);
-					if (brst!=null) {
-						if (brst.startsWith("r")) { // rotate list
+					
+					// convert hlink to flink, omitting ideal faces
+					if (hlink!=null) {
+						flink=new FaceLink();
+						Iterator<HalfEdge> hlst=hlink.iterator();
+						while (hlst.hasNext()) {
+							f=hlst.next().face.faceIndx;
+							if (f>0)
+								flink.add(f);
+						}
+					}
+					
+					String strdata=str.substring(5).trim(); // remove '?list'
+					
+					// check for parens listing range of indices 
+					int lsize=flink.size()-1;
+					int[] irange=StringUtil.get_int_range(strdata, 0,flink.size()-1);
+					if (irange!=null) {
+						int a=irange[0];
+						int b=(irange[1]>lsize) ? lsize : irange[1]; 
+						for (int j=a;j<=b;j++) {
+							f=flink.get(j);
+
+							// legal and not ideal
+							if (f<=0 || (ck && f>packData.faceCount)) {}
+							else {
+								add(f);
+								count++;
+							}
+						}
+					}
+					// else check for brackets
+					else if ((b_string=StringUtil.get_bracket_strings(strdata))!=null 
+							&& (brst=b_string[0])!=null) {
+						if (brst.startsWith("r")) { // rotate: copy first at end
 							flink.add(flink.getFirst());
 						}
 						if (brst.startsWith("r") 
-								|| brst.startsWith("n")) { // use up first
-							f=(Integer)flink.remove(0);
+								|| brst.startsWith("n")) { // use an remove first
+							f=(Integer)flink.removeFirst();
 							if (ck && f>packData.faceCount) {}
 							else { 
 								add(f);
@@ -176,7 +216,7 @@ public class FaceLink extends LinkedList<Integer> {
 								count++;
 							}
 						}						
-						else {
+						else { // else specified index
 							try{
 								int n=MathUtil.MyInteger(brst);
 								if (n>=0 && n<flink.size()) {
@@ -190,7 +230,7 @@ public class FaceLink extends LinkedList<Integer> {
 							} catch (NumberFormatException nfe) {}
 						}
 					}
-					// else just adjoin the lists
+					// else just adjoin the current list
 					else { 
 						if (!ck) {
 							int n=size();
@@ -209,20 +249,8 @@ public class FaceLink extends LinkedList<Integer> {
 						}
 					}
 				}
-				if ((str.startsWith("h") && (hlink=packData.hlist)!=null
-						&& hlink.size()>0) ||
-						(str.startsWith("H") && (hlink=CPBase.Hlink)!=null
-								&& CPBase.Hlink.size()>0)) {
-					Iterator<HalfEdge> his=hlink.iterator();
-					while (his.hasNext()) {
-						HalfEdge he=his.next();
-						combinatorics.komplex.DcelFace face=he.face;
-						if (face!=null) {
-							add(face.faceIndx);
-							count++;
-						}
-					}
-				}
+				else // no appropriate list
+					return count;
 			}
 
 			// For 'random', 2 steps: get edge list, then make selection
@@ -249,8 +277,8 @@ public class FaceLink extends LinkedList<Integer> {
 			{
 				int first=1;
 				int last=facecount;
-				String []pair_str=StringUtil.parens_parse(str); // get two strings
-				if (pair_str!=null) { // must have 2 strings
+				String []pair_str=StringUtil.get_paren_range(str); // get two strings
+				if (pair_str!=null && pair_str.length==2) { // must have 2 strings
 					int a,b;
 					if ((a=FaceLink.grab_one_face(packData,pair_str[0]))!=0) 
 						first=a;
@@ -443,6 +471,34 @@ public class FaceLink extends LinkedList<Integer> {
 //				}
 //				break;
 //			}
+			case 'q': // fall through
+			case 'Q': // quality: is rel vis err of some edge larger than 'crit'
+			{
+				double crit=0.01; // default
+		    	try {
+		    		double ct=Double.parseDouble((String)items.get(0));
+		    		crit=ct;
+		    		items.remove(0);
+		    	} catch(Exception ex) {}
+
+		    	FaceLink facelist=new FaceLink(packData,items); // default to all
+		    	Iterator<Integer> flst=facelist.iterator();
+		    	while (flst.hasNext()) {
+		    		double viserr=0;
+		    		int f=flst.next();
+		    		HalfEdge he=packData.packDCEL.faces[f].edge;
+		    		do {
+		    			double rve=QualMeasures.edge_rel_vis_err(packData,he);
+		    			viserr=(rve>viserr) ? rve:viserr;
+		    			he=he.next;
+		    		} while (he!=packData.packDCEL.faces[f].edge);
+		    		if (viserr>crit) {
+		    			add(f);
+		    			count++;
+		    		}
+		    	 }
+		    	 break;
+			}
 			case 'R': // faces from red chain,
 			{
 				if (packData.packDCEL.redChain==null) 
@@ -654,8 +710,10 @@ public class FaceLink extends LinkedList<Integer> {
 			{
 
 				HalfLink hlink=packData.packDCEL.layoutOrder;
-				if (str.length()>1 && str.charAt(1)=='s') 
-					hlink=packData.packDCEL.fullOrder; 
+				if (str.length()>1 && str.charAt(1)=='s') {
+					hlink=packData.packDCEL.layoutOrder;
+					hlink.abutMore(packData.packDCEL.stragglers);
+				}
 				Iterator<HalfEdge> heis=hlink.iterator();
 				while (heis.hasNext()) {
 					add(heis.next().face.faceIndx);

@@ -6,18 +6,19 @@ import java.util.Random;
 import java.util.Vector;
 
 import allMains.CPBase;
+import combinatorics.komplex.DcelFace;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.RedEdge;
 import combinatorics.komplex.Vertex;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.SideData;
 import dcel.PackDCEL;
+import dcel.SideData;
 import exceptions.CombException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
-import packQuality.QualMeasures;
 import packing.PackData;
+import packing.QualMeasures;
 import util.FaceParam;
 import util.MathUtil;
 import util.PathInterpolator;
@@ -89,11 +90,39 @@ public class HalfLink extends LinkedList<HalfEdge> {
 
 	/**
 	 * not necessarily extended edges
-	 * @param p
-	 * @param items
+	 * @param p PackData
+	 * @param items Vector<String>
 	 */
 	public HalfLink(PackData p,Vector<String> items) {
 		this(p,items,false);
+	}
+
+	/**
+	 * Convert 'EdgeLink' to (legal) 'HalfLink'.
+	 * @param elink
+	 */
+	public HalfLink(EdgeLink elink) {
+		EdgeSimple edge=null;
+		HalfEdge he=null;
+		Iterator<EdgeSimple> elst=elink.iterator();
+		while (elst.hasNext()) {
+			edge=elst.next();
+			if ((he=packData.packDCEL.findHalfEdge(edge))!=null)
+				add(he);
+		}
+	}
+
+	/**
+	 * Convert 'FaceLink' to 'HalfLink'.
+	 * @param p
+	 * @param flink
+	 */
+	public HalfLink(PackData p,FaceLink flink) {
+		Iterator<Integer> flst=flink.iterator();
+		while (flst.hasNext()) {
+			DcelFace face=p.packDCEL.faces[flst.next()];
+			add(face.edge);
+		}
 	}
 	
 	/**
@@ -214,7 +243,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	public int addHalfLink(String datastr,boolean xtd) {
 		Vector<String> items=StringUtil.string2vec(datastr,true);
 		return addHalfLink(items,xtd);
-	}
+	} // this.size();
 	
 	/**
 	 * Add links to this list (if it is associated with PackData).
@@ -252,172 +281,172 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			
 			// check for '?list' first
 			else if (str.substring(1).startsWith("list")) {
+				// three types possible, two have to convert to halfedges
 				EdgeLink elink=null;
 				GraphLink glink=null;
 				HalfLink hlink=null;
+				FaceLink flink=null;
 				
-				// elist or Elist
-				if ((str.startsWith("e") && (elink=packData.elist)!=null
-						&& elink.size()>0) ||
-						(str.startsWith("E") && (elink=CPBase.Elink)!=null
-								&& CPBase.Elink.size()>0)) {
-					EdgeSimple edge=null;
+				String[] b_string;
+				String brst;
+				
+				// check for variuus face or edge lists
+				if ((str.startsWith("e") && 
+						(elink=packData.elist)!=null && elink.size()>0) ||
+					(str.startsWith("E") && 
+						(elink=CPBase.Elink)!=null && elink.size()>0) || 
+					(str.startsWith("g") && 
+						(glink=packData.glist)!=null && glink.size()>0) ||
+					(str.startsWith("G") && 
+						(glink=CPBase.Glink)!=null && glink.size()>0) ||
+					(str.startsWith("h") &&
+						(hlink=packData.hlist)!=null && hlink.size()>0) ||
+					(str.startsWith("H") && 
+						(hlink=CPBase.Hlink)!=null && hlink.size()>0) ||
+					(str.startsWith("f") && 
+						(flink=packData.flist)!=null && flink.size()>0) ||
+					(str.startsWith("F") && 
+						(flink=CPBase.Flink)!=null && flink.size()>0)) {
+					
+					String strdata=str.substring(5).trim(); // remove '?list'
+					
+					// check for parens listing range of indices, (n) or (n m) 
+					EdgeSimple es=null;
+					HalfEdge he=null;
 
-					// check for brackets first
-					String brst=StringUtil.brackets(str);
-					if (brst!=null) {
-						if (brst.startsWith("r")) { // rotate list
-							elink.add(elink.getFirst());
-						}
-						if (brst.startsWith("r") 
-								|| brst.startsWith("n")) { // use up first
-							edge=(EdgeSimple)elink.remove(0);
-							if (edge.v<=packData.nodeCount && 
-									edge.w<=packData.nodeCount) {
-								add(packData.packDCEL.findHalfEdge(edge));
+					// check for parens listing range of indices
+					int lsize=0;
+					if (elink!=null)
+						lsize=elink.size()-1;
+					else if (glink!=null)
+						lsize=glink.size()-1;
+					else if (hlink!=null)
+						lsize=hlink.size()-1;
+					else if (flink!=null)
+						lsize=flink.size()-1;
+					int[] irange=StringUtil.get_int_range(strdata, 0,lsize);
+					if (irange!=null) {
+						int a=irange[0];
+						int b=(irange[1]>lsize) ? lsize : irange[1]; 
+						for (int j=a;j<=b;j++) {
+							if (elink!=null) 
+								es=elink.get(j);
+							else if (glink!=null)
+								es=glink.get(j);
+							else if (hlink!=null)
+								es=new EdgeSimple(hlink.get(j));
+							if ((he=packData.packDCEL.findHalfEdge(es))!=null) {
+								add(he);
 								count++;
 							}
 						}
-						if (brst.startsWith("l")) { // last
-							edge=(EdgeSimple)elink.getLast();
-							if (edge.v<=packData.nodeCount && 
-									edge.w<=packData.nodeCount) {
-								add(packData.packDCEL.findHalfEdge(edge));
+					}
+					
+					// else check for brackets
+					else if ((b_string=StringUtil.get_bracket_strings(strdata))!=null 
+							&& (brst=b_string[0])!=null) {
+						
+						// 'r' means rotate: first of 'this' is moved to the end, 
+						//     everyone bumps down
+						if (brst.startsWith("r")) { 
+							if (elink!=null)
+								elink.add(elink.getFirst());
+							else if (glink!=null)
+								glink.add(glink.getFirst());
+							else
+								hlink.add(hlink.getFirst());
+						}
+						if (brst.startsWith("r") || brst.startsWith("n")) { // add and use up first
+							if (elink!=null) 
+								es=elink.removeFirst();
+							else if (glink!=null)
+								es=glink.removeFirst();
+							else if (hlink!=null)
+								es=new EdgeSimple(hlink.removeFirst());
+							if ((he=packData.packDCEL.findHalfEdge(es))!=null) {
+								add(he);
 								count++;
 							}
 						}
-						else {
+						if (brst.startsWith("l")) { // get last
+							if (elink!=null) 
+								es=elink.getLast();
+							else if (glink!=null)
+								es=glink.getLast();
+							else if (hlink!=null)
+								es=new EdgeSimple(hlink.getLast());
+							if ((he=packData.packDCEL.findHalfEdge(es))!=null) {
+								add(he);
+								count++;
+							}
+						}						
+						else { // else specified index
 							try{
 								int n=MathUtil.MyInteger(brst);
-								if (n>=0 && n<elink.size()) {
-									edge=(EdgeSimple)elink.get(n);
-									if (edge.v<=packData.nodeCount && 
-											edge.w<=packData.nodeCount) {
-										add(packData.packDCEL.findHalfEdge(edge));
+								if (n>=0) {
+									if (elink!=null && n<elink.size()) 
+										es=elink.get(n);
+									else if (glink!=null && n<glink.size())
+										es=glink.get(n);
+									else if (hlink!=null && n<hlink.size())
+										es=new EdgeSimple(hlink.get(n));
+									if ((he=packData.packDCEL.findHalfEdge(es))!=null) {
+										add(he);
 										count++;
 									}
 								}
 							} catch (NumberFormatException nfe) {}
 						}
-					}
-					// else just adjoin the lists
-					else { 
-						Iterator<EdgeSimple> elst=elink.iterator();
-						while (elst.hasNext()) {
-							edge=(EdgeSimple)elst.next();
-							if (edge.v<=packData.nodeCount && 
-									edge.w<=packData.nodeCount) {
-								HalfEdge ehe=packData.packDCEL.findHalfEdge(edge);
-								if (ehe!=null)
-									add(ehe);
-								count++;
-							}
-						}
-					}
-				} // end of handling elist/Elist
-				
-				// glist or Glist
-				else if ((str.startsWith("g") && (glink=packData.glist)!=null
-						&& glink.size()>0) ||
-						(str.startsWith("G") && (glink=CPBase.Glink)!=null
-								&& CPBase.Glink.size()>0)) {
-					EdgeSimple edge=null;
+					}				
 
-					// check for brackets first
-					String brst=StringUtil.brackets(str);
-					if (brst!=null) {
-						if (brst.startsWith("r")) { // rotate list
-							glink.add(glink.getFirst());
-						}
-						if (brst.startsWith("r") 
-								|| brst.startsWith("n")) { // use up first
-							edge=(EdgeSimple)glink.remove(0);
-							if (edge.v<=packData.nodeCount && 
-									edge.w<=packData.nodeCount) {
-								add(packData.packDCEL.findHalfEdge(edge));
-								count++;
-							}
-						}
-						if (brst.startsWith("l")) { // last
-							edge=(EdgeSimple)glink.getLast();
-							if (edge.v<=packData.nodeCount && 
-									edge.w<=packData.nodeCount) {
-								add(packData.packDCEL.findHalfEdge(edge));
-								count++;
-							}
-						}
-						else {
-							try{
-								int n=MathUtil.MyInteger(brst);
-								if (n>=0 && n<glink.size()) {
-									edge=(EdgeSimple)glink.get(n);
-									if (edge.v<=packData.nodeCount && 
-											edge.w<=packData.nodeCount) {
-										add(packData.packDCEL.findHalfEdge(edge));
-										count++;
-									}
-								}
-							} catch (NumberFormatException nfe) {}
-						}
-					}
-					// else just adjoin the lists
-					else { 
-						Iterator<EdgeSimple> glst=glink.iterator();
-						while (glst.hasNext()) {
-							edge=(EdgeSimple)glst.next();
-							if (edge.v<=packData.nodeCount && 
-									edge.w<=packData.nodeCount) {
-								add(packData.packDCEL.findHalfEdge(edge));
-								count++;
-							}
-						}
-					}
-				} // end of handling glist/Glist
-
-				// hlist or Hlist
-				else if ((str.startsWith("h") && (hlink=packData.hlist)!=null
-						&& hlink.size()>0) ||
-						(str.startsWith("H") && (hlink=CPBase.Hlink)!=null
-								&& CPBase.Hlink.size()>0)) {
-				
-					// check for brackets first
-					String brst=StringUtil.brackets(str);
-					if (brst!=null) {
-						if (brst.startsWith("r")) { // rotate list
-							hlink.add(hlink.getFirst());
-						}
-						if (brst.startsWith("r") 
-								|| brst.startsWith("n")) { // use up first
-							add((HalfEdge)hlink.remove(0));
-							count++;
-						}
-						if (brst.startsWith("l")) { // last
-							add((HalfEdge)hlink.getLast());
-							count++;
-						}
-						else {
-							try{
-								int n=MathUtil.MyInteger(brst);
-								if (n>=0 && n<hlink.size()) {
-									add((HalfEdge)hlink.get(n));
+					// else just add all from the input list
+					else {
+						if (elink!=null) {
+							Iterator<EdgeSimple> elst=elink.iterator();
+							while (elst.hasNext()) {
+								es=(EdgeSimple)elst.next();
+								if ((he=packData.packDCEL.findHalfEdge(es))!=null) {
+									add(he);
 									count++;
 								}
-							} catch (NumberFormatException nfe) {}
+							}
+						}
+						else if (glink!=null) {
+							Iterator<EdgeSimple> elst=glink.iterator();
+							while (elst.hasNext()) {
+								es=(EdgeSimple)elst.next();
+								if ((he=packData.packDCEL.findHalfEdge(es))!=null) {
+									add(he);
+									count++;
+								}
+							}
+						}
+						else if (hlink!=null) {
+							Iterator<HalfEdge> hlst=hlink.iterator();
+							while (hlst.hasNext()) {
+								es=new EdgeSimple(hlst.next());
+								if ((he=packData.packDCEL.findHalfEdge(es))!=null) {
+									add(he);
+									count++;
+								}
+							}
+						}
+						else if (flink!=null) {
+							Iterator<Integer> flst=flink.iterator();
+							while (flst.hasNext()) {
+								int f=flst.next();
+								if (f>=0 && f<=packData.packDCEL.faceCount) {
+									add(packData.packDCEL.faces[f].edge);
+									count++;
+								}
+							}
 						}
 					}
-					// else just adjoin the lists
-					else { 
-						Iterator<HalfEdge> hlst=hlink.iterator();
-						while (hlst.hasNext()) {
-							add((HalfEdge)hlst.next());
-							count++;
-						}
-					}	
-				}
+					
+				} // end of handling various edge lists
 				
-				// list empty?
-				else 
-					return 0;
+				else // there was no valid list
+					return count;
 			} // end of "?list" search
 			
 			// ************* sort by first character ************* 
@@ -455,8 +484,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			{
 				HalfEdge firsthe=null;
 				HalfEdge lasthe=null;
-				String []pair_str=StringUtil.parens_parse(str); // two strings
-				if (pair_str!=null) { // got two strings
+				String []pair_str=StringUtil.get_paren_range(str); // two strings
+				if (pair_str!=null && pair_str.length==2) { // got two strings
 					int a,b;
 					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))==0
 						|| (b=NodeLink.grab_one_vert(packData,pair_str[1]))==0
@@ -487,9 +516,14 @@ public class HalfLink extends LinkedList<HalfEdge> {
 				}
 				break;
 			}
+			case 'F': // 'layoutOrder
+			{
+				count+=abutMore(packData.packDCEL.layoutOrder);
+				break;
+			}
 			case 'g': // TODO: combinatorial geodesic path from v to w
 			{
-				return count;
+				break;
 			}
 			case 'i': // interior
 			{

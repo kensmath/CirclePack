@@ -114,7 +114,7 @@ public class CreateSliderFrame {
 		// Note: for schwarzians, 'lastStr' should be half edges
 		else if (type == 1) { // schwarzians
 			if (lastStr.length() == 0)
-				hlist=p.packDCEL.fullOrder; // spanning tree
+				hlist=p.packDCEL.layoutOrder; // spanning tree
 			else
 				hlist = new HalfLink(p, lastStr);
 			if (hlist == null || hlist.size() == 0) {

@@ -1,4 +1,5 @@
 Lists:
+
 CirclePack has an extensive set of list features for handling linked 
 lists of circles (i.e., vertices), edges, faces, halfedges, 
 dual edges, tiles, and barycenters. Some lists are created explicitly 
@@ -7,15 +8,19 @@ temporarily in interpreting commands. In these help
 files, command descriptions indicate user specifiable lists by {v..}, 
 {e..}, {f..}, and so forth. The syntax is described below. 
 
-Each packing in CirclePack has 'vlist', 'elist', 'flist', 'glist', 
-'blist', and 'hlist' tailored explicitly to it. In addition, are 
-general 'Vlist', 'Elist', 'Flist', 'Glist', 'Blist', and 'Hlist', 
-which can be used with any packing (though each is processed before 
-use to ensure the data is legal for the packing to which it's 
-being applied).
+Each packing in CirclePack has its own 'vlist', 'elist', 'flist', 
+'glist', 'blist', and 'hlist', tailored explicitly to it. 
+In addition, there are general lists, 'Vlist', 'Elist', 'Flist', 
+'Glist', 'Blist', and 'Hlist', which can be used with any packing 
+(though each is processed before use to ensure the data is legal 
+for the packing to which it's being applied).
 
 Explicit list functions are 'set_*list' (e.g. 'set_elist', attached
-to a specific packing) and 'set_*list' (e.g., 'set_Elist', global).
+to a specific packing or 'set_Elist', global). Many specifications
+are given below. In addition, one can include lists themselves. For
+example, 'set_vlist vlist 2 5' will include the current vlist
+and add indices 2 and 5. Specialized syntax is described later in
+this file.   
   
 List creation syntax:
 	a			'all' the objects (vertices, faces, edges, etc.)
@@ -109,7 +114,7 @@ List creation syntax:
 				(or 'inversive distance') assigned
 	P			circles that are 'poison' or part of 'poison' edge;
 				or edges with both ends 'poison'
-	q {x} 		vert (or edge) with visual error worse than x (x defaults to .01)
+	Q {x} 		vert/edge/face with visual error worse than x (x defaults to .01)
 	M			the maximal circle index for the packing
 	r {..}		one random object (circle, face, or edge) from specified
 				list. 
@@ -122,7 +127,8 @@ List creation syntax:
 				for circles, same, but returns circles on the outside of
 				given side segments 
 	s [n]		for 'hlist', halfedges forming side #n, or if n is not
-				legal side, then halfedges forming full red chain		
+				legal side, then halfedges forming full red chain
+	tlist (Tlist)	will return tile indices from the current list
 	v			'active' circle (every pack has an active circle; it is 
 				designated by clicking l-mouse on the circle in the 
 				window)
@@ -150,8 +156,9 @@ thereby limiting action to indices in range n to m. For instance,
 "b(31 20)" will give vertices on the boundary starting with 31 and
 continuing counterclockwise, ending at 20.
 
-There is a special syntax for using the lists; note the lists are linked,
-so they have a well-defined order.
+There is a special syntax for using the lists; note the lists have 
+a well-defined order and one can use brackets [*] to specify 
+specific entries as follows:
 
   * vlist[{i}]	(where {i} indicates a numerical integer value) returns
   				the ith entry (if there is one). Note that the first
@@ -169,6 +176,13 @@ If an inappropriate entry is encountered in parsing such a
 list, the behavior is somewhat unpredictable; generally
 the list is closed with the last valid entry.
 
+Additional functionality is provided with paren (*) syntax.
+
+  * vlist(3 17)	This will return elements 3 to 17 from the list
+  
+  * vlist(17)	This will return elements 0 to 17 from the list 
+
+
 EXAMPLES: 
 
   * Command 'disp -c 4 5 b(7,12)' draws circles 4, 5, and all boundary 
@@ -176,8 +190,8 @@ EXAMPLES:
   	circle, this will likely draw all circles.
 	
   * Command 'set_elist e 23 5 12 Elist' will set the elist of the active
-  	packing to all legal edges among <23 5>, <5 12>, and those in the 
-  	general	'Elist'. 
+  	packing to all legal edges among <23 5>, <5 12>, and legel edges from
+  	the	general	'Elist'. 
   	
   * Command 'swap a M' will swap the index of the active vertex with
     that of the maximal index.

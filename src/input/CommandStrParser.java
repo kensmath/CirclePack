@@ -101,12 +101,12 @@ import math.Matrix3D;
 import math.Mobius;
 import microLattice.MicroGrid;
 import microLattice.Smoother;
-import packQuality.QualMeasures;
 import packing.CPdrawing;
 import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
 import packing.PackMethods;
+import packing.QualMeasures;
 import packing.ReadWrite;
 import packing.TorusData;
 import panels.OutPanel;
@@ -5335,12 +5335,14 @@ public class CommandStrParser {
 	   			  combinatorics.komplex.DcelFace face=packData.packDCEL.faces[f];
 	   			  
 // debugging
-//	   			  HalfEdge hef=face.edge;
-//	   			  if (hef.origin.vertIndx==11 || 
-//	   					  hef.next.origin.vertIndx==11 ||
-//	   					  hef.next.next.origin.vertIndx==11)
-//	   				  System.out.println("face "+f+", "+face);
-	   			  
+	   			  boolean debug=false;
+	   			  if (debug) { // debug=true;
+	   				  HalfEdge hef=face.edge;
+	   				  if (hef.origin.vertIndx==11 || 
+	   					  hef.next.origin.vertIndx==11 ||
+	   					  hef.next.next.origin.vertIndx==11)
+	   				  System.out.println("face "+f+", "+face);
+	   			  }
 	   			  
 	   			  if (xdup[f]==0) {
 	   				  int ans;
@@ -6530,7 +6532,7 @@ public class CommandStrParser {
 	    	  }
 	    	  FaceLink facelist=new FaceLink(packData,items);
 	    	  int hits=facelist.size();
-	    	  count=QualMeasures.face_error(packData,crit,facelist);
+	    	  count=QualMeasures.count_face_error(packData,crit,facelist);
 	    	  CirclePack.cpb.msg("face_error: found "+count+
 						 " poorly placed faces out of "+hits);
 	    	  return 1;  
@@ -7102,8 +7104,18 @@ public class CommandStrParser {
 	    		  return 1;
 	    	  }
 
-	    	  // first flag is "-s" indicates use schwarzians for layouts
 	    	  items=flagSegs.get(0);
+
+	    	  // not a flag? try to extract HalfLink
+	    	  if (items.get(0).length()>0 && !StringUtil.isFlag(items.get(0))) {
+	    		  int gc=0;
+	    		  HalfLink hlink=new HalfLink(packData,items.get(0));
+	    		  if (hlink!=null && hlink.size()>0)
+	    			  gc=pdc.layoutPacking(hlink); // return count
+	    		  return gc;
+	    	  }
+	    	  
+	    	  // first flag is "-s" indicates use schwarzians for layouts
 	    	  if (items.get(0).startsWith("-s")) {
 				  if (packData.hes<0) {
 					  CirclePack.cpb.errMsg("Can't use schwarzians for "
@@ -7872,7 +7884,6 @@ public class CommandStrParser {
 				
 	    	  CombDCEL.finishRedChain(packData.packDCEL,packData.packDCEL.redChain);
 	    	  packData.packDCEL.fixDCEL(packData);
-	    	  packData.packDCEL.layoutPacking();
 	    	  return 1;
 	      }
 	      break;
@@ -10956,7 +10967,7 @@ public static CallPacket valueExecute(PackData packData,
 	    				return rtnCp;
 	    			}
 	    			UtilPacket uP=new UtilPacket();
-	    			EdgeSimple worstedge=QualMeasures.rel_contact_error(packData, elt, uP);
+	    			EdgeSimple worstedge=QualMeasures.worst_rel_err(packData, elt, uP);
 	    			if (worstedge==null)
 	    				throw new DataException("exception in measuring visual error");
 					rtnCp.int_vec = new Vector<Integer>(2);

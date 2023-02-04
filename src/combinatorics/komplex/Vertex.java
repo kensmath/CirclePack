@@ -196,6 +196,42 @@ public class Vertex {
 	}
 	
 	/**
+	 * Return the ordered list of cclw outer edges of the flower
+	 * of v ('this' vertex) containing 'hedge'. If v is not
+	 * red, then this is the full cclw list of outer edges. If v
+	 * is red, this is the cclw segment of outer edges containing
+	 * 'hedge' stretching between the red edges meeting at v.
+	 * @param hedge HalfEdge, opposite edge of a face containing v
+	 * @return HalfLink
+	 */
+	public HalfLink getOuterFan(HalfEdge hedge) {
+		HalfLink hlink=new HalfLink();
+		HalfEdge spoke=hedge.prev; // a spoke
+		
+		// if not red
+		if (!redFlag) {
+			do {
+				HalfEdge he=spoke.next;
+				hlink.add(he);
+				spoke=he.next.twin;
+			} while(spoke!=hedge.prev);
+			return hlink;
+		}
+		
+		// if red, rotate clw until finding red edge
+		while (spoke.myRedEdge==null) {
+			spoke=spoke.twin.next; // search clw
+		}
+		HalfEdge hold=spoke;
+		do {
+			HalfEdge he=spoke.next;
+			hlink.add(he);
+			spoke=he.next.twin;
+		} while(spoke!=hold && spoke.myRedEdge==null);
+		return hlink;
+	}
+	
+	/**
 	 * Get cclw 'HalfEdge's, "spokes", out of this vertex
 	 * starting with 'start' ('halfedge' by default).
 	 * @param start HalfEdge (could be null)
@@ -264,8 +300,6 @@ public class Vertex {
 	 * Get cclw list of 'HalfEdge's surrounding the union of
 	 * faces incident to this 'Vertex', including edges 
 	 * surrounding any incident ideal face. List is open.
-	 * @param start HalfEdge, with this 
-	 * @param stop HalfEdge, with this
 	 * @return ArrayList<HalfEdge>, null if start==stop
 	 */
 	public HalfLink getOuterEdges() {

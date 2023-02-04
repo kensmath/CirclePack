@@ -475,7 +475,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 			
 			Color fcolor=null;
 			Color bcolor=null;
-			if (dflags.getColor()!=null) {
+			if (dflags!=null && dflags.getColor()!=null) {
 				if (dflags.fill)
 					fcolor=dflags.getFillColor();
 				if (dflags.draw && dflags.colBorder)
@@ -484,7 +484,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 			
 			// thickness?
 			tmpthick=-1;
-			if (dflags.thickness > 0) {
+			if (dflags!=null && dflags.thickness > 0) {
 				tmpthick = getLineThickness();
 				setLineThickness(dflags.thickness);
 			}
@@ -493,7 +493,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 			circle.drawIt(dflags.draw,bcolor,dflags.fill,fcolor);
 
 			// label?
-			if (dflags.label && dflags.getLabel()!= null) {
+			if (dflags!=null && dflags.label && dflags.getLabel()!= null) {
 
 				if (packData.hes <= 0 || Math.cos(z.x) >= 0) {
 					if (packData.hes > 0)

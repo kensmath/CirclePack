@@ -16,8 +16,8 @@ import dcel.SideData;
 import exceptions.CombException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
-import packQuality.QualMeasures;
 import packing.PackData;
+import packing.QualMeasures;
 import util.MathUtil;
 import util.PathInterpolator;
 import util.SphView;
@@ -51,7 +51,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	}
 	
 	/**
-	 * @param p @see PackData
+	 * @param p PackData
 	 * @param datastr String
 	 * @param xtd, boolean, yes for extended
 	 */
@@ -75,8 +75,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	
 	/**
 	 * Allow extended edges
-	 * @param p
-	 * @param items
+	 * @param p PackData
+	 * @param items Vector<String>
 	 * @param xtd, boolean, yes for extended
 	 */
 	public EdgeLink(PackData p,Vector<String> items,boolean xtd) {
@@ -93,7 +93,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 
 	/**
 	 * not necessarily extended edges
-	 * @param p
+	 * @param p PackData
 	 * @param items
 	 */
 	public EdgeLink(PackData p,Vector<String> items) {
@@ -102,10 +102,36 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	
 	/**
 	 * Not associated with any PackData
-	 * @param datastr
+	 * @param datastr String
 	 */
 	public EdgeLink(String datastr) {
 		this(null,datastr);
+	}
+	
+	/**
+	 * Convert 'HalfLink' to 'EdgeLink'
+	 * @param hlink HalfLink
+	 */
+	public EdgeLink(HalfLink hlink) {
+		HalfEdge he=null;
+		Iterator<HalfEdge> hlst=hlink.iterator();
+		while (hlst.hasNext()) {
+			he=hlst.next();
+			add(new EdgeSimple(he.origin.vertIndx,he.twin.origin.vertIndx));
+		}
+	}
+	
+	/**
+	 * Convert 'GraphLink' to 'EdgeLink'
+	 * @param glink GraphLink
+	 */
+	public EdgeLink(GraphLink glink) {
+		EdgeSimple edge=null;
+		Iterator<EdgeSimple> glst=glink.iterator();
+		while (glst.hasNext()) {
+			edge=(EdgeSimple)glst.next();
+			add(edge);
+		}
 	}
 	
 	/**
@@ -314,18 +340,54 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 			else if (str.substring(1).startsWith("list")) {
 				EdgeLink elink=null;
 				GraphLink glink=null;
+				HalfLink hlink=null;
 				
-				// elist or Elist
-				if ((str.startsWith("e") && (elink=packData.elist)!=null
-						&& elink.size()>0) ||
-						(str.startsWith("E") && (elink=CPBase.Elink)!=null
-								&& CPBase.Elink.size()>0)) {
-					EdgeSimple edge=null;
+				// should be elist, Elist, glist, Glist, hlist, Hist
+				if ((str.startsWith("e") && 
+						(elink=packData.elist)!=null && elink.size()>0) ||
+					(str.startsWith("E") && 
+						(elink=CPBase.Elink)!=null && CPBase.Elink.size()>0) || 
+					(str.startsWith("g") && 
+						(glink=packData.glist)!=null && glink.size()>0) ||
+					(str.startsWith("G") && 
+						(glink=CPBase.Glink)!=null && CPBase.Glink.size()>0) ||
+					(str.startsWith("h") &&
+						(hlink=packData.hlist)!=null && hlink.size()>0) ||
+					(str.startsWith("H") && 
+						(hlink=CPBase.Hlink)!=null && CPBase.Hlink.size()>0)) {
 
-					// check for brackets first
-					String brst=StringUtil.brackets(str);
+					String strdata=str.substring(5).trim(); // remove '?list'	
+
+					// convert others to elink
+					if (hlink!=null) {
+						elink=new EdgeLink(hlink);
+						hlink=null;
+					}
+					else if (glink!=null) {
+						elink=new EdgeLink(glink);
+						glink=null;
+					}
+					EdgeSimple edge=null;
+					
+					// check for parens listing range of indices
+					int lsize=elink.size()-1;
+					int[] irange=StringUtil.get_int_range(strdata, 0,lsize);
+					if (irange!=null) {
+						int a=irange[0];
+						int b=(irange[1]>lsize) ? lsize : irange[1]; 
+						for (int j=a;j<=b;j++) {
+							edge=elink.get(j);
+							if (edge.v<=packData.nodeCount && edge.w<=packData.nodeCount) {
+								add(edge);
+								count++;
+							}
+						}
+					}
+					
+					// check for brackets next
+					String brst=StringUtil.get_bracket_strings(str)[0];
 					if (brst!=null) {
-						if (brst.startsWith("r")) { // rotate list
+						if (brst.startsWith("r")) { // rotate: copy first to end
 							elink.add(elink.getFirst());
 						}
 						if (brst.startsWith("r") 
@@ -373,65 +435,9 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 							}
 						}
 					}
-				} // end of handling elist/Elist
-				
-				// glist or Glist
-				else if ((str.startsWith("g") && (glink=packData.glist)!=null
-						&& glink.size()>0) ||
-						(str.startsWith("G") && (glink=CPBase.Glink)!=null
-								&& CPBase.Glink.size()>0)) {
-					EdgeSimple edge=null;
-
-					// check for brackets first
-					String brst=StringUtil.brackets(str);
-					if (brst!=null) {
-						if (brst.startsWith("r")) { // rotate list
-							glink.add(glink.getFirst());
-						}
-						if (brst.startsWith("r") 
-								|| brst.startsWith("n")) { // use up first
-							edge=(EdgeSimple)glink.remove(0);
-							if (edge.v<=packData.nodeCount && 
-									edge.w<=packData.nodeCount) {
-									add(edge);
-									count++;
-							}
-						}
-						if (brst.startsWith("l")) { // last
-							edge=(EdgeSimple)glink.getLast();
-							if (edge.v<=packData.nodeCount && 
-									edge.w<=packData.nodeCount) {
-								add(edge);
-								count++;
-							}
-						}
-						else {
-							try{
-								int n=MathUtil.MyInteger(brst);
-								if (n>=0 && n<glink.size()) {
-									edge=(EdgeSimple)glink.get(n);
-									if (edge.v<=packData.nodeCount && 
-											edge.w<=packData.nodeCount) {
-										add(edge);
-										count++;
-									}
-								}
-							} catch (NumberFormatException nfe) {}
-						}
-					}
-					// else just adjoin the lists
-					else { 
-						Iterator<EdgeSimple> glst=glink.iterator();
-						while (glst.hasNext()) {
-							edge=(EdgeSimple)glst.next();
-							if (edge.v<=packData.nodeCount && 
-									edge.w<=packData.nodeCount) {
-								add(edge);
-								count++;
-							}
-						}
-					}
-				} // end of handling glist/Glist
+				} // end of handling list
+				else // no appropriate list
+					return count;
 			}
 			
 			// For 'random', 2 steps: get edge list, then make selection
@@ -507,8 +513,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				int next;
 				int first=1;
 				int last=packData.nodeCount;
-				String []pair_str=StringUtil.parens_parse(str); // get two strings
-				if (pair_str!=null) { // got two strings
+				String []pair_str=StringUtil.get_paren_range(str); // get two strings
+				if (pair_str!=null && pair_str.length==2) { // got two strings
 					int a,b;
 					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))==0
 							|| (b=NodeLink.grab_one_vert(packData,pair_str[1]))==0
@@ -998,7 +1004,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 				}
 				break;
 			}
-			case 'q': // quality: edges with visual error worse 
+			case 'q': // fall through
+			case 'Q': // quality: edges with visual error worse 
 					  //  than given number
 			{
 				double thresh=.01; // default threshold 

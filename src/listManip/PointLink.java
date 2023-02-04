@@ -6,6 +6,7 @@ import java.util.Random;
 import java.util.Vector;
 
 import packing.PackData;
+import util.MathUtil;
 import util.StringUtil;
 import allMains.CPBase;
 import allMains.CirclePack;
@@ -125,16 +126,70 @@ public class PointLink extends LinkedList<Complex> {
 			thereIsFlag=true;
 		}
 
-		if (str.startsWith("Zli")) {
-			abutMore(CPBase.Zlink);
-			return CPBase.Zlink.size();
+		// self call if str is a variable
+		if (str.startsWith("_")) {
+			count+=addPointLinks(CPBase.varControl.getValue(str));
 		}
-		else if (str.startsWith("zli")) {
-			if (packData==null)
-				throw new ParserException("no packdata with this 'zlist'");
-			if (packData.zlist==null)
-				return 0;
-			return abutMore(packData.zlist);
+
+		// look for 'zlist' or 'Zlist'
+		else if (str.substring(1).startsWith("list")) {
+			PointLink zlink=null;
+
+			if ((str.startsWith("zli") && 
+					(zlink=packData.zlist)!=null && zlink.size()>0) ||
+				(str.startsWith("Zli") && 
+					(zlink=CPBase.Zlink)!=null && zlink.size()>0)) {
+				String[] b_string;
+				String brst;
+				String strdata=str.substring(5).trim(); // remove '?list'
+			
+				// check for parens listing range of indices 
+				int lsize=zlink.size()-1;
+				int[] irange=StringUtil.get_int_range(strdata, 0,lsize);
+				if (irange!=null) {
+					int aa=irange[0];
+					int bb=(irange[1]>lsize) ? lsize : irange[1]; 
+					for (int j=aa;j<=bb;j++) {
+						add(zlink.get(j));
+						count++;
+					}
+				}
+			
+				// else check for brackets
+				else if ((b_string=StringUtil.get_bracket_strings(strdata))!=null 
+						&& (brst=b_string[0])!=null) {
+					if (brst.startsWith("r")) { // rotate: copy first at end
+						zlink.add(zlink.getFirst());
+					}
+					if (brst.startsWith("r") 
+							|| brst.startsWith("n")) { // use an remove first
+						Complex z=zlink.removeFirst();
+						add(z);
+						count++;
+					}
+					if (brst.startsWith("l")) { // last
+						add(zlink.getLast());
+						count++;
+					}						
+					else { // else specified index
+						try{
+							int n=MathUtil.MyInteger(brst);
+							if (n>=0 && n<zlink.size()) {
+								add(zlink.get(n));
+								count++;
+							}
+						} catch (NumberFormatException nfe) {}
+					}
+				}
+				// else just adjoin the current list
+				else { 
+					int n=size();
+					addAll(n,zlink);
+					count +=zlink.size();
+				}
+			}
+			else // no appropriate list found
+				return count;
 		}
 
 		if (!thereIsFlag && (items==null || items.size()==0)) // nothing to do?

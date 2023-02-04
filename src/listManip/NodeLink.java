@@ -22,8 +22,8 @@ import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import input.SetBuilderParser;
 import komplex.EdgeSimple;
-import packQuality.QualMeasures;
 import packing.PackData;
+import packing.QualMeasures;
 import panels.PathManager;
 import tiling.Tile;
 import util.MathUtil;
@@ -164,32 +164,158 @@ public class NodeLink extends LinkedList<Integer> {
 				int v;
 				NodeLink vlink=null;
 				EdgeLink elink=null;
+				HalfLink hlink=null;
+				GraphLink glink=null;
 				boolean ck=false;
 				
 				// vlist or Vlist
-				if ((str.startsWith("v") && (vlink=packData.vlist)!=null
-						&& vlink.size()>0) ||
-						(str.startsWith("V") && (vlink=CPBase.Vlink)!=null
-								&& CPBase.Vlink.size()>0)) {
-					if (str.startsWith("V")) // v legal for packData?
-						ck=true;
-					// check for brackets first
-					String brst=StringUtil.brackets(str);
-					if (brst!=null) {
-						if (brst.startsWith("r")) { // rotate list
-							vlink.add(vlink.getFirst());
+				if ((str.startsWith("v") && 
+						(vlink=packData.vlist)!=null && vlink.size()>0) ||
+					(str.startsWith("V") && 
+						(vlink=CPBase.Vlink)!=null && CPBase.Vlink.size()>0) ||
+					(str.startsWith("e") && 
+						(elink=packData.elist)!=null && elink.size()>0) ||
+					(str.startsWith("E") && 
+						(elink=CPBase.Elink)!=null && CPBase.Elink.size()>0) || 
+					(str.startsWith("g") && 
+						(glink=packData.glist)!=null && glink.size()>0) ||
+					(str.startsWith("G") && 
+						(glink=CPBase.Glink)!=null && CPBase.Glink.size()>0) ||
+					(str.startsWith("h") &&
+						(hlink=packData.hlist)!=null && hlink.size()>0) ||
+					(str.startsWith("H") && 
+						(hlink=CPBase.Hlink)!=null && CPBase.Hlink.size()>0)) {
+
+					if (str.startsWith("V") || str.startsWith("E") || 
+							str.startsWith("G") || str.startsWith("H")) 
+						ck=true; // must check for legality
+					String strdata=str.substring(5).trim(); // remove '?list'	
+
+					// if not vlink, then convert others to elink
+					if (vlink==null) {
+						if (hlink!=null) {
+							elink=new EdgeLink(hlink);
+							hlink=null;
 						}
-						if (brst.startsWith("r") 
-								|| brst.startsWith("n")) { // use up first
-							v=(Integer)vlink.remove(0);
-							if (ck && v>vCount) {}
-							else { 
-								add(v);
-								count++;
+						else if (glink!=null) {
+							elink=new EdgeLink(glink);
+							glink=null;
+						}
+					}
+					
+					// check for parens listing range of indices
+					int lsize=0;
+					if (vlink!=null)
+						lsize=vlink.size()-1;
+					else if (elink!=null)
+						lsize=elink.size()-1;
+					int[] irange=StringUtil.get_int_range(strdata, 0,lsize);
+					if (irange!=null) {
+						int a=irange[0];
+						int b=(irange[1]>lsize) ? lsize : irange[1]; 
+						if (vlink!=null) {
+							for (int j=a;j<=b;j++) {
+								v=vlink.get(j);
+								if (ck && v>packData.nodeCount) { }
+								else {
+									add(v);
+									count++;
+								}
+							}
+						}
+						// else have an elink
+						if (elink!=null) {
+							int lastV=0;
+							if (this.size()>0)
+								lastV=this.getLast();
+							EdgeSimple edge=null;
+							for (int j=a;j<=b;j++) {
+								edge=elink.get(j);
+								if (ck) {
+									if (edge.v<=vCount && edge.v!=lastV) {
+										lastV=edge.v;
+										add(lastV);
+										count++;
+									}
+									if (edge.w<=vCount && edge.w!=lastV) {
+										lastV=edge.w;
+										add(lastV);
+										count++;
+									}
+								}									
+								else { 
+									if (edge.v!=lastV) {
+										lastV=edge.v;
+										add(lastV);
+										count++;
+									}
+									if (edge.w!=lastV) {
+										lastV=edge.w;
+										add(lastV);
+										count++;
+									}
+								}
+							}
+						}
+					} // done with parentheses
+					
+					// check for brackets next
+					String brst=StringUtil.get_bracket_strings(strdata)[0];
+					if (brst!=null) {
+						if (brst.startsWith("r")) { // rotate: copy first to end
+							if (vlink!=null)
+								vlink.add(vlink.getFirst());
+							else
+								elink.add(elink.getFirst());
+						}
+						if (brst.startsWith("n")) { // use up first
+							if (vlink!=null) {
+								v=vlink.removeFirst();
+								if (v<=vCount) {
+									add(v);
+									count++;
+								}
+							}
+							else {
+								EdgeSimple edge=elink.removeFirst();
+								int lastV=this.getLast();
+								if (edge.v<=vCount && edge.v!=lastV) {
+									add(edge.v);
+									lastV=edge.v;
+									count++;
+								}
+								if (edge.w<=vCount && edge.w!=this.getLast()) {
+									add(edge.w);
+									lastV=edge.w;
+									count++;
+								}
 							}
 						}
 						if (brst.startsWith("l")) { // last
-							v=(Integer)vlink.getLast();
+							if (vlink!=null) {
+								v=vlink.getLast();
+								if (ck && v>vCount) {}
+								else { 
+									add(v);
+									count++;
+								}
+							}
+							else {
+								EdgeSimple edge=elink.getLast();
+								int lastV=this.getLast();
+								if (edge.v<=vCount && edge.v!=lastV) {
+									add(edge.v);
+									lastV=edge.v;
+									count++;
+								}
+								if (edge.w<=vCount && edge.w!=this.getLast()) {
+									add(edge.w);
+									lastV=edge.w;
+									count++;
+								}
+							}
+							
+							v=vlink.getLast();
 							if (ck && v>vCount) {}
 							else { 
 								add(v);
@@ -197,133 +323,77 @@ public class NodeLink extends LinkedList<Integer> {
 							}
 						}
 						else {
+							int n=0;
 							try{
-								int n=MathUtil.MyInteger(brst);
-								if (n>=0 && n<vlink.size()) {
-									v=vlink.get(n);
-									if (ck && v>vCount) {}
-									else { 
-										add(v);
-										count++;
-									} 
-								}
+								n=MathUtil.MyInteger(brst);
 							} catch (NumberFormatException nfe) {}
+							
+							if (vlink!=null && n>=0 && n<vlink.size()) {
+								v=vlink.get(n);
+								if (v>vCount) {}
+								else { 
+									add(v);
+									count++;
+								}
+							}
+							else if (n>=0 && n<elink.size()) {
+								EdgeSimple edge=elink.get(n);
+								int lastV=this.getLast();
+								if (edge.v<=vCount && edge.v!=lastV) {
+									add(edge.v);
+									lastV=edge.v;
+									count++;
+								}
+								if (edge.w<=vCount && edge.w!=this.getLast()) {
+									add(edge.w);
+									lastV=edge.w;
+									count++;
+								}
+							}
 						}
-					}
+					} // done with brackets
+					
 					// else just adjoin the lists
 					else { 
-						if (!ck) {
-							int n=size();
-							addAll(n,vlink);
-							count +=vlink.size();
+						if (vlink!=null) {
+							if (!ck) {
+								int n=size();
+								addAll(n,vlink);
+								count +=vlink.size();
+							}
+							else {
+								Iterator<Integer> vlst=vlink.iterator();
+								while (vlst.hasNext()) {
+									v=(Integer)vlst.next();
+									if (v<=vCount) {
+										add(v);
+										count++;
+									}
+								}
+							}
 						}
 						else {
-							Iterator<Integer> vlst=vlink.iterator();
-							while (vlst.hasNext()) {
-								v=(Integer)vlst.next();
-								if (v<=vCount) {
-									add(v);
+							Iterator<EdgeSimple> elst=elink.iterator();
+							while (elst.hasNext()) {
+								EdgeSimple edge=elst.next();
+								int lastV=this.getLast();
+								if (edge.v<=vCount && edge.v!=lastV) {
+									add(edge.v);
+									lastV=edge.v;
+									count++;
+								}
+								if (edge.w<=vCount && edge.w!=this.getLast()) {
+									add(edge.w);
+									lastV=edge.w;
 									count++;
 								}
 							}
 						}
 					}
 				}
-				
-				// elist or Elist
-				else if ((str.startsWith("e") && (elink=packData.elist)!=null
-						&& elink.size()>0) ||
-						(str.startsWith("E") && (elink=CPBase.Elink)!=null
-								&& CPBase.Elink.size()>0)) {
-					int lastV=0;
-					if (this.size()>0)
-						lastV=this.getLast();
-					EdgeSimple edge=null;
-					if (str.startsWith("E")) // v legal for packData?
-						ck=true;
-					// check for brackets first
-					String brst=StringUtil.brackets(str);
-					if (brst!=null) {
-						if (brst.startsWith("r")) { // rotate list
-							elink.add(elink.getFirst());
-						}
-						if (brst.startsWith("r") 
-								|| brst.startsWith("n")) { // use up first
-							edge=(EdgeSimple)elink.remove(0);
-							if (ck) {
-								if (edge.v<=vCount) {
-									add(edge.v);
-									count++;
-								}
-								if (edge.w<=vCount) {
-									add(edge.w);
-									count++;
-								}
-							}									
-							else { 
-								add(edge.v);
-								add(edge.w);
-								count +=2;
-							}
-						}
-						else {
-							try{
-								int n=MathUtil.MyInteger(brst);
-								if (n>=0 && n<elink.size()) {
-									edge=(EdgeSimple)elink.get(n);
-									if (ck) {
-										if (edge.v<=vCount) {
-											add(edge.v);
-											count++;
-										}
-										if (edge.w<=vCount) {
-											add(edge.w);
-											count++;
-										}
-									}									
-									else { 
-										add(edge.v);
-										add(edge.w);
-										count +=2;
-									}
-								}
-							} catch (NumberFormatException nfe) {}
-						}
-					}
-					// else just adjoin vertices in the edge list; don't
-					//    repeat v2 if (v1,v2) followed by (v2, v3)
-					else { 
-						Iterator<EdgeSimple> elst=elink.iterator();
-						while (elst.hasNext()) {
-							edge=(EdgeSimple)elst.next();
-							if (ck) {
-								if (edge.v<=vCount && edge.v!=lastV) {
-									lastV=edge.v;
-									add(lastV);
-									count++;
-								}
-								if (edge.w<=vCount && edge.w!=lastV) {
-									lastV=edge.w;
-									add(lastV);
-									count++;
-								}
-							}									
-							else { 
-								if (edge.v!=lastV) {
-									lastV=edge.v;
-									add(lastV);
-									count++;
-								}
-								if (edge.w!=lastV) {
-									lastV=edge.w;
-									add(lastV);
-									count++;
-								}
-							}
-						}
-					}
-				} // end of handling elist/Elist
-			} // done with 'list's
+				else // no appropriate list found
+					return count;
+			} // done with '?list' case
 			
 			// For 'random', 2 steps: get vert list, then make selection
 			else if (str.equals("r")) {
@@ -349,8 +419,8 @@ public class NodeLink extends LinkedList<Integer> {
 			{
 				int first=1;
 				int last=vCount;
-				String[] pair_str=StringUtil.parens_parse(str); // get two strings
-				if (pair_str!=null) { // must have 2 strings
+				String[] pair_str=StringUtil.get_paren_range(str); // get two strings
+				if (pair_str!=null && pair_str.length==2) { // must have 2 strings
 					int a,b;
 					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))!=0) first=a;
 					if ((b=NodeLink.grab_one_vert(packData,pair_str[1]))!=0) last=b;
@@ -368,8 +438,8 @@ public class NodeLink extends LinkedList<Integer> {
 				int first=1;
 				int last=vCount;
 				boolean bad=false;
-				String[] pair_str=StringUtil.parens_parse(str); // get two strings
-				if (pair_str!=null) { // must have 2 strings
+				String[] pair_str=StringUtil.get_paren_range(str); // get two strings
+				if (pair_str!=null && pair_str.length==2) { // must have 2 strings
 					int a,b;
 					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))!=0) 
 						first=a;
@@ -416,8 +486,8 @@ public class NodeLink extends LinkedList<Integer> {
 			{
 				int first=1;
 				int last=vCount;
-				String[] pair_str=StringUtil.parens_parse(str); // get two strings
-				if (pair_str!=null) {
+				String[] pair_str=StringUtil.get_paren_range(str);
+				if (pair_str!=null && pair_str.length==2) {  // get two strings
 					int a,b;
 					if ((a=NodeLink.grab_one_vert(packData,pair_str[0]))!=0) 
 						first=a;
@@ -792,7 +862,8 @@ public class NodeLink extends LinkedList<Integer> {
 				}
 				break;
 			}
-			case 'q': // quality: v's with worst visual error than given number
+			case 'q': // fall through
+			case 'Q': // quality: v's with worst visual error than given number
 			{
 				double thresh=.01; // default threshold 
 				try{
@@ -1080,7 +1151,8 @@ public class NodeLink extends LinkedList<Integer> {
 			case '{': // set-builder notation; reap results
 			{
 				SetBuilderParser sbp=new SetBuilderParser(packData,str,'c');
-				if (!sbp.isOkay()) return 0;
+				if (!sbp.isOkay()) 
+					return 0;
 				Vector<SelectSpec> specs=sbp.getSpecVector();
 				PackData qackData=sbp.packData;
 				NodeLink nl=circleSpecs(qackData,specs);

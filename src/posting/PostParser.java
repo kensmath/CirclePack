@@ -254,7 +254,8 @@ public class PostParser {
 					if (StringUtil.isFlag(items.get(0)) && 
 							items.get(0).startsWith("-s"))
 						useSchw=true;
-					hlink=p.packDCEL.fullOrder;
+					hlink=p.packDCEL.layoutOrder;
+					hlink.abutMore(p.packDCEL.stragglers);
 					facelist = new FaceLink(p, "Fs");
 					// handle first face circles (without adjusting centers)
 					if (c == 'C' || c == 'B') {

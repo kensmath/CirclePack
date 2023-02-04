@@ -49,7 +49,8 @@ public class HypPacker extends RePacker {
     				p.setRadius(i, 0.5);
     		}
     	}
-    	if (aimnum==0) return FAILURE; // nothing to repack
+    	if (aimnum==0) 
+    		return FAILURE; // nothing to repack
     	oldReliable=super.prepData();
 
     	return LOADED; 

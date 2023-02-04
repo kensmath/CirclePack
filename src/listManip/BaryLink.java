@@ -12,6 +12,7 @@ import geometry.CircleSimple;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import packing.PackData;
+import util.MathUtil;
 import util.StringUtil;
 
 /**
@@ -82,16 +83,63 @@ public class BaryLink extends LinkedList<BaryPoint> {
 			str=str.substring(1);
 		}
 		
-		if (str.contains("Bli")) {
-			abutMore(CPBase.Blink);
-			return CPBase.Blink.size();
-		}
-		else if (str.contains("bli")) {
-			if (packData==null) 
-				throw new ParserException(
-						"no packing associated with this BaryLink");
-			abutMore(packData.blist);
-			return packData.blist.size();
+		// check for Blink or blist
+		if (str.substring(1).startsWith("list")) {
+			BaryLink blink=null;
+
+			if ((str.contains("Bli") &&
+					(blink=CPBase.Blink)!=null && blink.size()>0) ||
+				(str.contains("Bli") &&
+					(blink=CPBase.Blink)!=null && blink.size()>0)) {
+
+				String[] b_string;
+				String brst;
+
+				String strdata=str.substring(5).trim(); // remove '?list'
+				
+				// check for parens listing range of indices 
+				int lsize=blink.size()-1;
+				int[] irange=StringUtil.get_int_range(strdata, 0,lsize);
+				if (irange!=null) {
+					int a=irange[0];
+					int b=(irange[1]>lsize) ? lsize : irange[1]; 
+					for (int j=a;j<=b;j++) {
+						add(blink.get(j));
+						count++;
+					}
+				}
+				// else check for brackets
+				else if ((b_string=StringUtil.get_bracket_strings(strdata))!=null 
+						&& (brst=b_string[0])!=null) {
+					if (brst.startsWith("r")) { // rotate: copy first at end
+						blink.add(blink.getFirst());
+					}
+					if (brst.startsWith("r") 
+							|| brst.startsWith("n")) { // use an remove first
+						add(blink.removeFirst());
+						count++;
+					}
+					if (brst.startsWith("l")) { // last
+						add(blink.getLast());
+						count++;
+					}						
+					else { // else specified index
+						try{
+							int n=MathUtil.MyInteger(brst);
+							if (n>=0 && n<blink.size()) {
+								add(blink.get(n));
+								count++;
+							}
+						} catch (NumberFormatException nfe) {}
+					}
+				}
+				else {
+					abutMore(CPBase.Blink);
+					return CPBase.Blink.size();
+				}
+			}
+			else // there was no appropriate list
+				return count;
 		}
 		
 		// If there is a flag, we get it, process, and return. 

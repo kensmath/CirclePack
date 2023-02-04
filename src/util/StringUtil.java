@@ -83,7 +83,7 @@ public class StringUtil {
 	 * @return String[2], string between, string after (trimmed, either possibly empty);
 	 * null on syntax error
 	 */
-	public static String []getGroupedStr(StringBuilder strbld,char c) {
+	public static String[] getGroupedStr(StringBuilder strbld,char c) {
 		
 		// check c first
 		char rc=')';
@@ -119,25 +119,72 @@ public class StringUtil {
 	
 	
 	/** 
-	 * Search str for occurrence of '(n,m)' or '(n m)' and return strings 
-	 * 'n' and 'm'; these are usually integers, but calling routine converts 
-	 * them. Return null on error. Careful that expressions with parens or 
-	 * curly brackets haven't been broken apart because of intervening space;
+	 * Search str for occurrence of one or more strings separated
+	 * by ',' or whitespace; e.g. '(s1)', '(s1,s2)' or '(s1 s2)'. 
+	 * Return strings, but calling routine handles processing, 
+	 * checking number and appropriateness, often integers or doubles. 
+	 * Return null on error. Careful that expressions hasn't been 
+	 * broken apart because of intervening space; 
 	 * see 'CommandStrParser.string2vec'.
-	 * @param str
-	 * @return
+	 * @param str String
+	 * @return String[], null on empty
 	 */
-	public static String[] parens_parse(String str) {
+	public static String[] get_paren_range(String str) {
 		int a,b;
 
-		if ((a=str.indexOf('('))==-1 || (b=str.indexOf(')'))==-1 || b<(a+3))
+		if ((a=str.indexOf('('))==-1 || (b=str.indexOf(')'))==-1 || b<(a+1))
 			return null;
 		str=str.substring(a+1,b);
 		str=str.replace(',',' '); // turn comma into whitespace
 		String par_str[]=str.split("\\s+");
-		if (par_str.length!=2) 
+		if (par_str.length==0) 
 			return null;
 		return par_str;
+	}
+	
+	/**
+	 * Parse integer range of form (n), (n,m), or (n m) in 'str'.
+	 * Results lie in [min, max]. If only one integer, then set 
+	 * first to min (typically 0). 
+	 * @param str String
+	 * @param min int
+	 * @param max int
+	 * @return int[2], null on error
+	 */
+	public static int[] get_int_range(String str,int min, int max) {
+		if (min>max) {
+			int hold=min;
+			min=max;
+			max=hold;
+		}
+		int first=min;
+		int last=max;
+		String[] parstrs=get_paren_range(str);
+		if (parstrs==null || parstrs.length>2 || parstrs.length==0) 
+			return null;
+		try {
+			last=Integer.parseInt(parstrs[0]);
+			if (parstrs.length==2) {
+				first=last;
+				int k=Integer.parseInt(parstrs[1]);
+				k=(k>max) ? max : k;
+				k=(k<first) ? first:k;
+				last=k;
+			}
+		} catch(NumberFormatException nex) {
+			return null;
+		}
+
+		if (last<first) {
+			int hold=last;
+			last=first;
+			first=hold;
+		}
+		
+		int[] ans=new int[2];
+		ans[0]=first;
+		ans[1]=last;
+		return ans; 
 	}
 	
 	/**
@@ -436,23 +483,44 @@ public class StringUtil {
 	}
 	
 	/**
-	 * Search for brackets '[n]', eg, vlist[4], flist[n], etc. Return 
-	 * the enclosed string, calling routine has to check whether it's 
-	 * the right type of return --- int, string, etc. Note: between 
-	 * brackets there can be no white space. Return null if error or
-	 * no brackets.
-	 * @param String str
-	 * @return String
+	 * Get bracketed strings, eg, as in vlist[4], flist[n], etc. 
+	 * Return array of strings split by whitespaces; calling routine 
+	 * must check the returned strings --- int, string, etc. Normally,
+	 * only the first string has been used. Return null if paired 
+	 * brackets not found or contain
+	 * only whitespace.
+	 * @param str String
+	 * @return String[]
 	 */
-	public static String brackets(String str) {
+	public static String[] get_bracket_strings(String str) {
 		int a,b;
 		if ((a=str.indexOf('['))==-1 || (b=str.indexOf(']'))==-1 || b<(a+2))
 			return null;
-		String bracket_str[]=str.substring(a+1,b).split("\\s+");
-		if (bracket_str==null || bracket_str.length>1) {
+		String[] bracket_str=str.substring(a+1,b).split("\\s+");
+		if (bracket_str==null) {
 			throw new ParserException("Illegal or empty brackets in string");
 		}
-		return bracket_str[0];
+		return bracket_str;
+	}
+	
+	/**
+	 * Get strings inside parens. Return array of strings split 
+	 * by whitespaces; calling routine must check the returned 
+	 * strings --- int, string, etc. Return null if paired parens 
+	 * not found or contain only whitespace.
+	 * @param str String
+	 * @return String[]
+	 */
+	public static String[] get_paren_strings(String str) {
+		int a,b;
+		str.trim();
+		if ((a=str.indexOf('('))==-1 || (b=str.indexOf(')'))==-1 || b<(a+2))
+			return null;
+		String[] paren_str=str.substring(a+1,b).split("\\s+");
+		if (paren_str==null) {
+			throw new ParserException("Illegal or empty parend in string");
+		}
+		return paren_str;
 	}
 	
 	/**
@@ -782,10 +850,10 @@ public class StringUtil {
 	  }
 	  
 	/**
-	 * This finds and trims string strictly between outermost curly braces '{string}',
-	 * null on syntax error, eg., mismatch, faulty nesting, etc. Returned string
-	 * may be empty; calling routine has to decide if that's okay.
-	 * 
+	 * This finds and trims string strictly between outermost curly 
+	 * braces '{string}', null on syntax error, eg., mismatch, faulty 
+	 * nesting, etc. Returned string may be empty; calling routine 
+	 * has to decide if that's okay.
 	 * @param orig_str String
 	 * @return String between '{' and '}', null on matching error
 	 */
