@@ -256,6 +256,7 @@ public class ProcessDelaunay {
 			for (int j=0;j<deldata.myfaceCount;j++) {
 				line = StringUtil.ourNextLine(fp);
 				loctok = new StringTokenizer(line);
+				Integer.parseInt((String)loctok.nextToken()); // toss face index
 				deldata.triLite[tick++]=
 						Integer.parseInt((String)loctok.nextToken());
 				deldata.triLite[tick++]=

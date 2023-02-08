@@ -577,7 +577,7 @@ public class SchwarzMap extends PackExtender {
 		else if (cmd.startsWith("s_map")) {
 			
 			// debugging the layouts
-			boolean debug=false;
+			boolean debug=false; // debug=true;
 
 			PackData qData=packData;
 			DispFlags dispFlags=new DispFlags("");

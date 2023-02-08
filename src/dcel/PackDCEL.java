@@ -921,7 +921,7 @@ System.out.println("length error ("+he.prev.origin.vertIndx+","+he.origin.vertIn
 		SideData epair=null;
 		
 // debugging		
-		boolean debug=false; // true;
+		boolean debug=false; // debug=true;
 	  
 		if (pairLink==null || n<1 || n>pairLink.size() 
 				|| (epair=(SideData)pairLink.get(n))==null

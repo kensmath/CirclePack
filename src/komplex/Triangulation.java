@@ -246,13 +246,18 @@ public class Triangulation {
 		if (start < 1 || start>N)
 			start = 1;
 
-		// debug info
-		/*
-		 * System.err.println("parse_triangles T faces"); for (int m=1;m<=N;m++)
-		 * { StringBuilder bfstr=new StringBuilder("T.face "+m+":   "); for (int
-		 * jj=0;jj<3;jj++) { bfstr.append(T.faces[m].vert[jj]+" "); }
-		 * bfstr.append("\n"); System.err.print(bfstr); }
-		 */
+// debugging
+/*		
+		System.err.println("parse_triangles T faces"); 
+		for (int m=1;m<=N;m++) {
+			StringBuilder bfstr=new StringBuilder("T.face "+m+":   "); 
+			for (int jj=0;jj<3;jj++)  
+				bfstr.append(T.faces[m].vert[jj]+" ");
+			bfstr.append("\n"); 
+			System.err.print(bfstr); 
+		}
+*/
+
 
 		// find smallest and largest of given node indices
 		int bottom=0;

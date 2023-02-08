@@ -46,14 +46,13 @@ public class RandomTriangulation {
 	 * 
 	 * Note: 'arclength' along gpath is used for positioning the Complex 
 	 * points; it starts with index 0 and last point is index M-1.
-	 * 
-	 * Throw DataException on error.
+	 * 	
+	 * @param gpath
+	 * @param M
+	 * @param sS
+	 * @return Comple[]
+	 * @throws DataException
 	 */
-	public static Complex[] rand_bdry_pts(Path2D.Double gpath, int M) {
-		setSeed=false;
-		return rand_bdry_pts(gpath,M,setSeed);
-	}
-	
 	public static Complex[] rand_bdry_pts(Path2D.Double gpath,
 			int M,boolean sS)
 			throws DataException {
@@ -285,7 +284,7 @@ public class RandomTriangulation {
 	  if (!torus_flag && Gamma!=null && !noBdryPts) { 
 		  Complex []bdry_points=null;
 	      try {
-	    	  bdry_points=RandomTriangulation.rand_bdry_pts(Gamma,bdryN);
+	    	  bdry_points=RandomTriangulation.rand_bdry_pts(Gamma,bdryN,debug_flag);
 	      } catch(DataException dex) {
 	    	  CirclePack.cpb.myErrorMsg("Random triangulation: error in "+
 			     "placing random points on region boundary.");

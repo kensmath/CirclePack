@@ -3371,7 +3371,7 @@ public class CommandStrParser {
 			  }
 			  
 			  PackData randPack=null;
-			  for (int j=0;j<12;j++) {
+			  for (int j=0;j<2;j++) { // debugging: 12;j++) {
 				  try {
 					  if ((randPack=RandomTriangulation.randomHypKomplex(
 							  randN,seed1))!=null) {

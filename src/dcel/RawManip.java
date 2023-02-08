@@ -537,7 +537,7 @@ public class RawManip {
 		new_mid.prev=wedge.twin;
 		
 		
-	      // deBugging.DCELdebug.vertConsistency(pdcel,newV.vertIndx);
+	    // deBugging.DCELdebug.vertConsistency(pdcel,newV.vertIndx);
 		
 		// **** most typical:
 		if (!V.redFlag) {

@@ -657,7 +657,7 @@ public class Schwarzian {
 	}
 
 	/**
-	 * For // debugging: print center of circle and of image 
+	 * For debugging: print center of circle and of image 
 	 * circle under a Mobius.
 	 * @param mob Mobius
 	 * @param hes int
