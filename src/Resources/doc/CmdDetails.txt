@@ -2789,11 +2789,16 @@ vertices</instance>
 </command>
 
 
-<command cmd="random_pack" flags="[options] N">
-<description>Instance of 'random_triangulation' below, region being the unit disc.
-	The only available option is '-d' for debugging. If N is missing, 
-	defaults to N=200.
+<command cmd="random_pack" flags="[-d] N">
+<description>Instance of 'random_triangulation' below, but with region 
+	being the unit disc. If N is missing, it defaults to N=200.
 </description>
+<options>
+	<opt flag="-d"> For debugging: recreates same data for given N</opt>
+</options>
+<seealso>
+	<see>random_triangulation</see>
+</seealso>	
 </command>
 
 <command cmd="random_triangulation" flags="[options]">
@@ -2822,6 +2827,9 @@ vertices</instance>
                we want a triangulation of a sphere.</opt>
 	NOTE: '-T' takes precedence over '-g' and '-g' over '-A'.
 </options>
+<seealso>
+	<see>random_pack</see>
+</seealso>	
 </command>				   
 
 <command cmd="read" flags="{filename}">

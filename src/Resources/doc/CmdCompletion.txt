@@ -130,7 +130,7 @@ pwd
 qc_dil -q{q} {f..} 
 quality -n -[ae {v..}] -[o {f..}] -[vr {e..}] 
 quit 
-random_pack [options] N 
+random_pack [-d] N 
 random_triangulation [options] 
 read {filename} 
 Read {filename} 
