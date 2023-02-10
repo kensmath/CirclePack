@@ -2829,7 +2829,7 @@ vertices</instance>
 </options>
 <seealso>
 	<see>random_pack</see>
-</seealso>	
+</seealso>
 </command>				   
 
 <command cmd="read" flags="{filename}">

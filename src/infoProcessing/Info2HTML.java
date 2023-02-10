@@ -291,36 +291,47 @@ public class Info2HTML {
 			System.out.println("Checking parsing");
 			builder.parse(new ByteArrayInputStream(fp.toString().getBytes()));
 			System.out.println("Done parsing");
-			System.out.println("after parsing, directory is: "+System.getProperty("user.dir"));
-
-			// TODO: for some reason, calls seem to fail if target files
-			//       don't already exist
-			File outfile=new File( System.getProperty("user.dir")+"/CirclePack/src/Resources/doc/CmdDetails.html");					
-			if (!outfile.exists())
-				System.err.println("'CirclePack/src/Resources/doc/CmdDetails.html' doesn't see to exist");
+//			System.out.println("after parsing, 'user.dir' is: "+System.getProperty("user.dir"));
 			
-//			FileWriter fw = new FileWriter("CirclePack/src/Resources/doc/CmdDetails.html", false);
+			// save 'CmdDetails.html'
+			File detailFile=new File( System.getProperty("user.dir")+
+					"/CirclePack/src/Resources/doc/CmdDetails.html");
 			BufferedWriter fw = new BufferedWriter(
-					new FileWriter(outfile.getName(),false));
+					new FileWriter(detailFile,false));
 	    	fw.write(fp.toString());
 	    	fw.flush();
 	    	fw.close();
-	    	
-	    	fw = new BufferedWriter(new FileWriter(System.getProperty("user.dir")+"/CirclePack/src/Resources/doc/CmdIndex.html", false));
+			if (!detailFile.exists()) {
+				System.err.println("seems we could not write to "+detailFile.getPath());
+			}
+			else 
+		    	System.out.println("   Have written: "+detailFile.getPath());
+
+			// save 'CmdIndex.html'
+			File indexFile=new File( System.getProperty("user.dir")+
+					"/CirclePack/src/Resources/doc/CmdIndex.html");					
+	    	fw = new BufferedWriter(new FileWriter(indexFile, false));
 	    	fw.write(indxfp.toString());
 	    	fw.flush();
 	    	fw.close();
-	    	
-	    	fw = new BufferedWriter(new FileWriter(System.getProperty("user.dir")+
-	    			"/CirclePack/src/Resources/doc/CmdCompletion.txt", false));
+			if (!indexFile.exists()) {
+				System.err.println("seems we could not write to "+indexFile.getPath());
+			}
+			else 
+		    	System.out.println("   Have written: "+indexFile.getPath());
+
+			// save "CmdCompletion.txt'
+			File completionFile=new File( System.getProperty("user.dir")+
+					"/CirclePack/src/Resources/doc/CmdCompletion.txt");
+	    	fw = new BufferedWriter(new FileWriter(completionFile, false));
 	    	fw.write(compfp.toString());
 	    	fw.flush();
 	    	fw.close();
-	    	System.out.println("Have written: "+
-	    			"\n   'CirclePack/src/Resources/doc/CmdDetails.html',"+
-	    			"\n   'CirclePack/src/Resources/doc/CmdIndex.html', and"+
-	    			"\n   'CirclePack/src/Resources/doc/CmdCompletion.txt'.");
-	    	
+			if (!completionFile.exists()) {
+				System.err.println("seems we could not write to "+completionFile.getPath());
+			}
+			else
+		    	System.out.println("   Have written: "+completionFile.getPath());
 
 		}catch(IOException e)
 		{
@@ -349,8 +360,8 @@ public class Info2HTML {
 	public static void main(String[] args) {
 		
 		// check some directories
-		System.out.println("user directory is: "+System.getProperty("user.dir"));
-		System.out.println("user home directory is: "+System.getProperty("user.home"));
+		System.out.println("Info2HTML: user.dir is "+System.getProperty("user.dir"));
+//		System.out.println("Info2HTML: user.home is "+System.getProperty("user.home"));
 		
 		// create new file
 		infofile=new File(System.getProperty("user.dir")+"/CirclePack/src/Resources/doc/CmdDetails.txt");

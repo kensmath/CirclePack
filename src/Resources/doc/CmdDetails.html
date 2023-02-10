@@ -725,11 +725,6 @@ does not eliminate redundancies, as other counts do.)
 <tr><td width="30%"><font color="blue">create pent4 3</font></td>
 <td width="68%"> 
 	3 generations of pent tiling centered on quad point</td></tr>
-<tr><td width="30%"><font color="blue">create pin 5</font></td>
-<td width="68%"> 
-	5 generations of Conway's pinwheel tiling, packed as a 
-	triangle (1 2 3), 1 = right angle, 2 = atan(2) = .35241638*Pi, 
-	3 = atan(1/2) = .1475836*Pi.</td></tr>
 <tr><td width="30%"><font color="blue">create dyadic 6</font></td>
 <td width="68%"> 
 	6 generations of Penrose's hyperbolic tiling (Carleson squares in the limit)</td></tr>
@@ -2993,12 +2988,20 @@ vertices</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="exit">exit</a>&nbsp;&nbsp; 
 <br/><br/>
-<font size="+1" color="blue"><strong><a name="random_pack">random_pack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options] N&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="random_pack">random_pack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-d] N&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Instance of 'random_triangulation' below, region being the unit disc.
-	The only available option is '-d' for debugging. If N is missing, 
-	defaults to N=200.
+<strong>Description: </strong>Instance of 'random_triangulation' below, but with region 
+	being the unit disc. If N is missing, it defaults to N=200.
 </blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
+<blockquote>
+<table>
+<tr><td width="25%" valign="top">-d</td>
+<td width="65%" align="left"> For debugging: recreates same data for given N</td></tr>
+</table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="random_triangulation">random_triangulation</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="random_triangulation">random_triangulation</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>Creates a random triangulation. For a region with boundary
@@ -3036,6 +3039,9 @@ vertices</td></tr>
 <td width="65%" align="left"> geometry. Not currently used: in future, if h>0, then
                we want a triangulation of a sphere.</td></tr>
 </table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="random_pack">random_pack</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="read">read</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{filename}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>This loads the designated file into the active pack. The
@@ -4930,9 +4936,12 @@ of circles with that particular edge displayed.</td></tr>
 <font size="+1" color="blue"><strong><a name="torus_t">torus_t</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
 <strong>Description: </strong>
- 	Computes the modulus of a packing for a 1-torus. It returns
- 	an error if the packing is not a combinatorial 1-torus or
- 	if no edge-pairings have been computed.
+ 	This returns an error if the packing is not	a combinatorial 
+ 	1-torus or if there are problems in the	computations.  
+ 	Otherwise, this will put the packing in normalized position
+ 	and compute and report the conformal modulus 'tau' and its
+ 	reciprocol. This applies to both flat tori and affine tori;
+ 	the radii and layout must be computed.
 </blockquote>
 <font size="+1" color="blue"><strong><a name="timer -[sx]">timer -[sx]</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
