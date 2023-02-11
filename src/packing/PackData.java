@@ -3433,29 +3433,22 @@ public class PackData{
 		  }
 		  int count=0;
 		  if (str.startsWith("s") || str.startsWith("S")) { // use 'spread' of colors
-			  count=(int)(Math.random()*16);
 			  Iterator<Integer> vlist=vertlist.iterator();
-			  Color cLr=ColorUtil.getBGColor();
-			  count=colorIndx;
 			  if (str.length()>1 && str.charAt(1)=='0') { // 's0' or 'S0', then count=0
-				  count=0;
 				  colorIndx=0;
 			  }
+			  Color cLr=ColorUtil.spreadColor(colorIndx++);
 			  boolean allc=false;
-			  if (str.startsWith("S")) { // random, but all the same
+			  if (str.startsWith("S")) // from spread, but all the same
 				  allc=true;
-				  cLr=ColorUtil.spreadColor(count%16);
-			  }
 			  while(vlist.hasNext()) {
-				  int v=(Integer)vlist.next();
+				  int v=vlist.next();
 				  if (allc) 
 					  setCircleColor(v,ColorUtil.cloneMe(cLr));
 				  else 
-					  setCircleColor(v,ColorUtil.spreadColor(count%16));
-				  count++;
+					  setCircleColor(v,ColorUtil.spreadColor(colorIndx++));
 			  }
-			  colorIndx=count; // save for next visit
-			  return count;
+			  return 1;
 		  }
 		  if (str.startsWith("d")) { // color based on degree
 			  // 6=white, 5=blue,7=red,
@@ -3627,27 +3620,22 @@ public class PackData{
 		  {
 			  facelist=new FaceLink(this,items);
 			  Iterator<Integer> flist=facelist.iterator();
-			  int f;
-			  count=colorIndx;
-			  Color cLr=ColorUtil.getBGColor();
-			  count=(int)(Math.random()*16);
-			  if (str.length()>1 && str.charAt(1)=='0') { // start at 0
-				  count=0;
+			  if (str.length()>1 && str.charAt(1)=='0') { // 's0' or 'S0', then count=0
 				  colorIndx=0;
 			  }
-			  if (c=='S') {
-				  cLr=ColorUtil.spreadColor(count%16);
+			  Color cLr=ColorUtil.spreadColor(colorIndx++);
+			  boolean allc=false;
+			  if (c=='S') { // from spread, but all the same
+				  allc=true;
 			  }
 			  while(flist.hasNext()) {
-				  f=(Integer)flist.next();
-				  if (c=='S') 
+				  int f=flist.next();
+				  if (allc) 
 					  setFaceColor(f,ColorUtil.cloneMe(cLr));
 				  else 
-					  setFaceColor(f,ColorUtil.spreadColor(count%16));
-				  count++;
+					  setFaceColor(f,ColorUtil.spreadColor(colorIndx++));
 			  }
-			  colorIndx=count;
-			  return count;
+			  return 1;
 		  }
 		  case 'x': // compare eucl face areas: 3D/2D
 		  {
@@ -3718,26 +3706,22 @@ public class PackData{
 		  case 'S': // one color for the whole list
 		  {
 			  Iterator<HalfEdge> his=edgelist.iterator();
-			  count=colorIndx;
-			  Color cLr=ColorUtil.getBGColor();
-			  count=(int)(Math.random()*16);
-			  if (str.length()>1 && str.charAt(1)=='0') { // start at 0
-				  count=0;
+			  if (str.length()>1 && str.charAt(1)=='0') { // 's0' or 'S0', then count=0
 				  colorIndx=0;
 			  }
-			  if (c=='S') {
-				  cLr=ColorUtil.spreadColor(count%16);
+			  Color cLr=ColorUtil.spreadColor(colorIndx++);
+			  boolean allc=false;
+			  if (c=='S') { // from spread, but all the same
+				  allc=true;
 			  }
 			  while(his.hasNext()) {
 				  HalfEdge he=his.next();
-				  if (c=='S') 
+				  if (allc) 
 					  setEdgeColor(he,ColorUtil.cloneMe(cLr));
 				  else 
-					  setEdgeColor(he,ColorUtil.spreadColor(count%16));
-				  count++;
+					  setEdgeColor(he,ColorUtil.spreadColor(colorIndx++));
 			  }
-			  colorIndx=count;
-			  return count;
+			  return 1;
 		  }
 		  case 'r':
 		  {
