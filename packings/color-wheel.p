@@ -591,4 +591,7 @@ CIRCLE_COLORS:
 256 0
 257 255 
 (done)
+
+DISP_FLAGS:
+-w -cfn
 END

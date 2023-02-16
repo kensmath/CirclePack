@@ -494,9 +494,10 @@ public class StringUtil {
 	 */
 	public static String[] get_bracket_strings(String str) {
 		int a,b;
+		String[] bracket_str= {null,null};
 		if ((a=str.indexOf('['))==-1 || (b=str.indexOf(']'))==-1 || b<(a+2))
-			return null;
-		String[] bracket_str=str.substring(a+1,b).split("\\s+");
+			return bracket_str;
+		bracket_str=str.substring(a+1,b).split("\\s+");
 		if (bracket_str==null) {
 			throw new ParserException("Illegal or empty brackets in string");
 		}

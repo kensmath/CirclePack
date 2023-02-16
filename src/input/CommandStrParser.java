@@ -6140,8 +6140,6 @@ public class CommandStrParser {
 	      // 'dISp' is used internally: just paint active, not secondary canvasses
 	      if (cmd.startsWith("dISp") || cmd.startsWith("disp")
 	    		  || cmd.startsWith("DISp") || cmd.startsWith("Disp")) {
-	    	  // DEBUG
-//	    	  System.err.println("'disp'");
 	    	  String setText=null;
 	    	  if (cmd.charAt(0)=='D')
 	    		  setText=StringUtil.reconstitute(flagSegs);
@@ -6151,7 +6149,7 @@ public class CommandStrParser {
 			  // No flag strings? use dispOptions 
 			  // (DisplayPanel (checkboxes or tailored string))
 			  if (flagSegs==null || flagSegs.size()==0) {
-				  String tmpstr=new String("disp "+cpS.dispOptions.toString());
+				  String tmpstr=new String("disp -wr");
 				  jexecute(packData,tmpstr);
 				  if (setText!=null && !dispLite) // record as display text?
 					  jexecute(packData,new String("set_disp_text "+setText));

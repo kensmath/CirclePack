@@ -447,7 +447,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 			}
 		} // end of processing for *.cps (or *.xmd) files
 
-		// ================= If the URL is a P, Q, or PL packing file:
+		// ================= If the URL is a .p or .q packing file:
 		if (enteredUrl.getFile().toLowerCase().endsWith(".p") || 
 				enteredUrl.getFile().toLowerCase().endsWith(".q") ||
 				enteredUrl.getFile().toLowerCase().endsWith(".pl")) {

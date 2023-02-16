@@ -267,6 +267,7 @@ public class ReadWrite {
 					} else if (mainTok.equals("ALPHA/BETA/GAMMA:")) { // old version
 						try {
 							newAlpha = Integer.parseInt(tok.nextToken());
+							int deadbeta=Integer.parseInt(tok.nextToken());
 							newGamma = Integer.parseInt(tok.nextToken());
 						} catch (Exception ex) {
 							continue;
@@ -769,14 +770,12 @@ public class ReadWrite {
 						// may start with "Disp" or "disp"
 						if (p.getDispOptions.startsWith("disp") || 
 								p.getDispOptions.startsWith("Disp")) {
-							int k = p.getDispOptions.indexOf(" ");
+							int k = p.getDispOptions.indexOf(" "); // find first space
 							p.getDispOptions = p.getDispOptions.substring(k).trim();
 						}
-						// else, first entry should be a flag
-						else if (!p.getDispOptions.startsWith("-"))
-							p.getDispOptions = null;
-
-						if (p.getDispOptions.length() == 0)
+						// else, first must be a flag
+						else if (p.getDispOptions==null || p.getDispOptions.length()==0 ||
+								!StringUtil.isFlag(p.getDispOptions))
 							p.getDispOptions = null;
 					}
 

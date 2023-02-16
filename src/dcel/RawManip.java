@@ -1986,7 +1986,7 @@ public class RawManip {
 						n_newTwin.face=n_base.twin.face;
 
 						// new vert; cent/rad = end averages; bdry?
-						n_midVert = new Vertex(++pdcel.vertCount);
+						n_midVert = new Vertex(pdcel.vertCount+1);
 						n_midVert.rad=(n_base.origin.rad+n_base_tw.origin.rad)/2.0;
 						n_midVert.center=(n_base.origin.center.add(
 								n_base_tw.origin.center).times(.5));
@@ -1998,6 +1998,7 @@ public class RawManip {
 						else
 							n_midVert.aim=2.0*Math.PI;
 					    pdcel.alloc_vert_space(pdcel.vertCount+10,true);
+					    pdcel.vertCount++;
 						pdcel.vertices[pdcel.vertCount] = n_midVert;
 						n_midVert.halfedge = n_newEdge;
 						n_newEdge.origin = n_midVert;
