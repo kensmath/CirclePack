@@ -8521,10 +8521,7 @@ public class CommandStrParser {
 				  CirclePack.cpb.errMsg("usage: rotate <x>, x a double");
 				  return 0;
 			  }
-			  // TODO: might revert to older, direct, more efficient method
-			  Mobius mob=Mobius.rotation(x);
-			  NodeLink vertlist=new NodeLink(packData,"a");
-	    	  return packData.apply_Mobius(mob,vertlist,true,true,true);
+	    	  return packData.rotate(x);
 	      }
 	      
 	      // ========== repack ============= 

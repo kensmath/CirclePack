@@ -3138,6 +3138,7 @@ public class PackData{
    		 	  	       sc,oriented);
 				setCircleSimple(vert.vertIndx,sc);
    			count++;
+   			System.out.println("c="+count);
     	}
     	
    		// update the side-pairing (not for spherical)
@@ -4940,11 +4941,32 @@ public class PackData{
 				} while (rtrace != packDCEL.redChain); 
 			}
 			fillcurves();
-		} else {   // deBugging.LayoutBugs.log_RedCenters(this);
+		} else if (hes>0) {   // deBugging.LayoutBugs.log_RedCenters(this);
 			Mobius Mob = new Mobius();
 			Mob.a.x = factor;
 			NodeLink vlist = new NodeLink(this, "a");
 			apply_Mobius(Mob, vlist);
+		}
+		else { // euclidean
+			for (int v=1;v<=nodeCount;v++) {
+				Vertex vert=packDCEL.vertices[v];
+				if (vert.redFlag) {
+					HalfEdge he=vert.halfedge;
+					// may be one or more red edges from this vert
+					do {
+						if (he.myRedEdge!=null) {
+							Complex cent=he.myRedEdge.getCenter();
+							he.myRedEdge.setCenter(cent.times(factor));
+							he.myRedEdge.setRadius(he.myRedEdge.getRadius()*factor);
+						}
+						he=he.prev.twin; // cclw
+					} while (he!=vert.halfedge);
+				}
+				else {
+					packDCEL.setVertCenter(v,vert.center.times(factor));
+					packDCEL.setVertRadii(v,packDCEL.getVertRadius(vert.halfedge)*factor);
+				}
+			}
 		}
 		if (hyp_out) {
 			CirclePack.cpb.msg("eucl_scale: hyperbolic "
@@ -4961,9 +4983,36 @@ public class PackData{
 		 * @return 1
 		 */
 	  public int rotate(double ang) {
-		  Mobius mob=Mobius.rotation(ang/Math.PI);
 		  NodeLink vertlist=new NodeLink(this,"a");
-    	  return apply_Mobius(mob,vertlist,true,true,true);
+		  if (hes>0) { // do sph case using Mobius 
+			  Mobius mob=Mobius.rotation(ang/Math.PI);
+			  return apply_Mobius(mob,vertlist,true,true,true);
+		  }
+		  // else directly rotate
+		  int count=0;
+		  Complex rot=new Complex(0,ang).exp();
+		  Iterator<Integer> vlst=vertlist.iterator();
+		  while (vlst.hasNext()) {
+			  int v=vlst.next();
+			  Vertex vert=packDCEL.vertices[v];
+			  if (vert.redFlag) {
+				  HalfEdge he=vert.halfedge;
+				  // may be one or more red edges from this vert
+				  do {
+					  if (he.myRedEdge!=null) {
+						  Complex cent=he.myRedEdge.getCenter();
+						  he.myRedEdge.setCenter(cent.times(rot));
+						  count++;
+					  }
+					  he=he.prev.twin; // cclw
+				  } while (he!=vert.halfedge);
+			  }
+			  else {
+				  packDCEL.setVertCenter(v,vert.center.times(rot));
+				  count++;
+			  }
+		  }
+		  return count;
 	  } 
 
 	  /**

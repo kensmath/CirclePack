@@ -2,8 +2,8 @@
 
 <title>CirclePack  'disp' commands</title></head>
 
-<body><center><h1><big><big>Structure of <em style="color:blue">CirclePack</em> 
-display commands</big></big></h1></center>
+<body><center><h1><big>Structure of <em style="color:blue">CirclePack</em> 
+display commands</big></h1></center>
 <p>
       The ability to display circles and other geometric objects in
       canvases is central to the power of <b style="color:blue"><em>CirclePack</em></b>. 
@@ -13,15 +13,10 @@ display commands</big></big></h1></center>
       canvases. The second illustrates more sophisticated actions which are available 
       in command lines and scripts.
 </p>
-<p>
 <center><big><b>disp -w -c</b>
-</big></center>
-</p>
-<p>      
+</big></center><br>
 <center><big><b>disp -w -cf a(1 10) -df b -gt5c40</b>
 </big></center>
-<p>
-
 <p>
 	The commands <b>disp</b> and 
 	<b>Disp</b> apply to the active packing's canvas or to a specified canvas 
@@ -36,47 +31,40 @@ display commands</big></big></h1></center>
     and finally a sequence of one or more "flag segments". The real action is in these 
     flag segments.
 </p>    
-<p></p>
   <center><h2>Flag Segment Structure</h2></center>
 
-<p>
 	The more complicated display command shown above has four flag 
 	segments, as grouped here:
-</p>      
+<p>
 	 <center><big><b>disp
 	 &nbsp;&nbsp;&nbsp;&nbsp;
     -w&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     -cf a(1 10)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
     -df b&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-gt5c40</b>
 </big></center>
-<p>
+</p>
 	We will describe each as illustrative of general construction principles. 
 	Each flag begins with a dash '<b>-</b>' followed by a letter indicating the action 
 	or the object type. 
-</p>
 <ul>
-    <li> <b>-w </b>: this wipes the canvas clean.</li>
-<p></p>
+<li> <b>-w </b>: this wipes the canvas clean.</li>
 <li> <b> -cf a(1 10)</b>:
 	the <b>c</b> indicates the objects are circles and attribute <b>f</b> means circles 
 	filled with their recorded colors. The list of which circles to draw is given 
 	next: in this case <b>a(1 10)</b> indicates all circles with indices from <b>1</b> 
 	to <b>10</b>, inclusive.</li>
-<p></p>
 <li> <b>-df b </b>: 
 	The <b>d</b> indicates dual objects and in this case the <b>df</b> indicates 
 	dual faces. (If there were a further <b>f</b>, that would indicate to draw them 
 	as filled.) The <b>b</b> gives the list of dual face indices, namely "boundary" 
 	dual faces in this case.</li>
-<p></p>
 <li><b>-gt5c40</b>: 
 	The <b>g</b> tells <b style="color:blue"><em>CirclePack</em></b> to draw its currently 
 	stored closed path. The <b>t</b> is a thickness attribute, setting to <b>5</b> in 
 	this case, and <b>c</b> is a color attribute, color code <b>40</b> (light blue) 
 	in this case.</li>
 </ul>
-  
-<p>
+
 	The specifications of lists used here are examples of the huge range available, 
 	as described in the <b style="color:blue">List Specs</b> tab in the 
 	<b style="color:blue">Help</b> window.
@@ -84,9 +72,8 @@ display commands</big></big></h1></center>
 	look for <b>disp</b> in the 
 	<b style="color:blue">Command Details</b> tab in the 
 	<b style="color:blue">Help</b> window.
-<p></p>
-  <center><h2>Attribute Encoding</h2></center>
 
+  <center><h2>Attribute Encoding</h2></center>
 <p>
 	The display attributes of an object follow the letter for the object with no
 	intervening spaces. They are specified with letters, and perhaps digits.  
@@ -101,7 +88,7 @@ display commands</big></big></h1></center>
 	boundary circles. (See the <b style="color:blue">List Specs</b> tab in the 
 	<b style="color:blue">Help</b> window.)
 </p>
-
+<p>
 We illustrate attributes with some typical examples:
 </p>
 <ul>
@@ -110,49 +97,46 @@ We illustrate attributes with some typical examples:
 	circles filled with foreground <b>fg</b> or background <b>bg</b> color. 
 	Typically, these are dark grey and white, respectively.
 </li>
-<p></p>
 <li>
 	<b>-ccbg</b>: this displays circles with the background
 	color; essentially this can make the circle disappear.
 </li> 
-<p></p>
 <li>
 	<b>-cfc5</b>: filled circles with color <b>5</b> (dark blue)
 </li> 
-<p></p>
 <li>
 	<b>-cc5t8</b>: circles with color <b>5</b> and thickness <b>8</b>. Thickness
 	can range from <b>0</b> (minimal) to <b>15</b>.
 </li>
-<p></p>
 <li>
 	<b>-t2ft3</b>: "trinket" of type <b>2</b> (a triangle) positioned at the
 	center of a circle, filled with the color of that circle. The <b>t3</b> determines the 
 	thickness (actually size); this grows rapidly, in this case the base size times <b>8</b> 
 	(<b>2</b> to the power <b>3</b>).
-	color 
 </li>	
 	</ul>
 	
-<p></p>
   <center><h2>Some Final Notes</h2></center>
-<p>
+
+The drawing actions specified by the flag segments of a display command
+are carried out in order first to last, and that order can make a difference 
+in outcome, as later drawing can obscure early drawing, depending on a 
+canvas's 'transparency' settings. 
+	
 <ul>
-<p></p>
 <li>
 	Recall that <b>Disp</b> creates a persistent display 
 	command; until superseded, redrawing of a canvas (as when it is moved by 
 	the mouse) will	reuse the specification. Persistent display commands can 
 	also we recalled or specified in the canvas's 
-	<b style="color:blue'>Screen -> Display Options</b> menu.
+	<b style="color:blue">Screen -> Display Options</b> menu.
+	
 </li>
-<p></p>
 <li>
 	The command <b>disp</b> (with no flags) or 
 	<b>disp -wr</b> will wipe the canvas and redraw using
 	the current persistent display command. 
 </li>
-<p></p>
 <li>
 	Colors use codes <b>0</b> (background) to <b>255</b>. Codes <b>1</b> to <b>200</b> 
 	are a spread from dark blue
@@ -160,22 +144,14 @@ We illustrate attributes with some typical examples:
 	mixture of additional
 	colors, with those from <b>232</b> to <b>248</b> being a nicely separated spread.
 </li>
-<p></p>
 <li>
 	Objects for packing <b>p</b> can be displayed on the screen of packing <b>q</b>. 
 	This is an example: <b>disp -p1 -q2 -f</b>.
 </li>
-<p></p>
-<li>
-	The drawing actions specified by the flag segments of a display command
-	are carried out in order first to last, and that order can make a difference 
-	in outcome, as later drawing can obscure early drawing, depending on a 
-	canvas's 'transparency' settings. 
-</li>
-<p></p>
 <li>
 	The <b>post</b> command for generating PostScript images of the canvases is
 	parallel to the <b>disp</b> command in nearly all features.
+</li>	
 </ul>
 
 </body>
