@@ -714,7 +714,8 @@ public class PackData{
 	}
 	
 	/**
-	 * Return center as a new 'Complex'.
+	 * Return center as a new 'Complex'; if v is red, this 
+	 * may be stored in nearest clw red edge.
 	 * @param v int
 	 * @return new Complex
 	 */
@@ -840,7 +841,8 @@ public class PackData{
 	}
 	
 	/**
-	 * Return the stored radius. This means in the hyp case,
+	 * Return the stored radius; if v is a red vertex, this may be
+	 * stored in a red edge. This means in the hyp case,
 	 * return the x-radius. (See 'getActualRadius' to instead
 	 * convert x-radius to actual hyp radius.).
 	 * @param v int
@@ -3092,13 +3094,12 @@ public class PackData{
 	   * @return int
 	   */
 	  public int apply_Mobius(Mobius Mob,NodeLink vertlist) {
-		  return apply_Mobius(Mob,vertlist,true,true,true);
+		  return apply_Mobius(Mob,vertlist,true,true);
 	  }
 	  
 	  /** 
-	   * Apply Mobius Mob (oriented), else apply inverse to
-	   * specified list of circles. If 'red_flag' (default),
-	   * adjust selected red chain circle centers; if sp_flag is 
+	   * Apply Mobius Mob (oriented) or inverse to specified 
+	   * list of circles in all occurrences; if sp_flag is 
 	   * true (default), also recompute the side-pairing maps.
 	   * For hyperbolic ideal circles, also adjust the negative
 	   * radius (which reflects euclidean radius of horocycle). 
@@ -3108,37 +3109,37 @@ public class PackData{
 	   * @param Mob Mobius
 	   * @param vertlist NodeLink
 	   * @param oriented boolean, false, use Mob^{-1}
-	   * @param red_flag boolean, true (default) => also adjust redchain centers
 	   * @param sp_flag boolean, true (default) => also adjust side-pairing maps
 	   * @return count of circles adjusted
 	  */
 	  public int apply_Mobius(Mobius Mob,NodeLink vertlist,
-	  			boolean oriented,boolean red_flag,boolean sp_flag) {
+	  			boolean oriented,boolean sp_flag) {
 	    int count=0;
 	    CircleSimple sc=new CircleSimple(true);
 
     	Iterator<Integer> vis=vertlist.iterator();
     	while (vis.hasNext()) {
     		Vertex vert=packDCEL.vertices[vis.next()];
+    		CircleSimple circle=getCircleSimple(vert.vertIndx);
+			count += Mobius.mobius_of_circle(Mob,hes,circle,
+		 	  	       sc,oriented);
+			setCircleSimple(vert.vertIndx,sc);
+
+			// vert also may occur in red edges
     		if (vert.redFlag) {
     			HalfEdge he=vert.halfedge;
     			// just handle red edges from this 'vert'
     			do {
     				if (he.myRedEdge!=null) {
-    	    			CircleSimple circle=he.myRedEdge.getCircleSimple();
+    	    			circle=he.myRedEdge.getCircleSimple();
     	    			count += Mobius.mobius_of_circle(Mob,hes,circle,
- 	    		 	  	       sc,oriented);
+  	    		 	  	       sc,oriented);
      					he.myRedEdge.setCircleSimple(sc);
     				}
     				he=he.prev.twin; // cclw
+    				count++;
     			} while (he!=vert.halfedge);
     		}
-   			CircleSimple circle=getCircleSimple(vert.vertIndx);
-   			count += Mobius.mobius_of_circle(Mob,hes,circle,
-   		 	  	       sc,oriented);
-				setCircleSimple(vert.vertIndx,sc);
-   			count++;
-   			System.out.println("c="+count);
     	}
     	
    		// update the side-pairing (not for spherical)
@@ -4910,23 +4911,25 @@ public class PackData{
 	}
 
 	  /**
-		 * "Euclidean" scaling is applied. In the hyperbolic case, some circles
-		 * could be forced outside unit disc, in which case they're pushed back
-		 * in as horocycles. In the spherical case, apply z->t*z.
+		 * "Euclidean" scaling is applied. In the hyperbolic case, 
+		 * some circles could be forced outside unit disc, in which 
+		 * case they're pushed back in as horocycles. 
+		 * 
+		 * TODO: what did this mean: "In the spherical case, apply z->t*z."
 		 */
 	  public int eucl_scale(double factor) {
 		CircleSimple sc = null;
 		boolean hyp_out = false;
 
 		if (hes < 0) { // hyp
-			for (int i = 1; i <= nodeCount; i++) {
-				sc = HyperbolicMath.h_to_e_data(getCircleSimple(i));
+			for (int v = 1; v <= nodeCount; v++) {
+				sc = HyperbolicMath.h_to_e_data(getCircleSimple(v));
 				sc = HyperbolicMath.e_to_h_data(sc.center.times(factor),
 						sc.rad*factor);
 				if (sc.flag == 0)
 					hyp_out = true; // circle was forced into disc
-				setCenter(i,sc.center);
-				setRadius(i,sc.rad);
+				setCenter(v,sc.center);
+				setRadius(v,sc.rad);
 			}
 			if (packDCEL.redChain != null) {
 				RedEdge rtrace = packDCEL.redChain;
@@ -4952,10 +4955,14 @@ public class PackData{
 				Vertex vert=packDCEL.vertices[v];
 				if (vert.redFlag) {
 					HalfEdge he=vert.halfedge;
-					// may be one or more red edges from this vert
+					Complex cent=new Complex(vert.center);
+					double rad=vert.rad;
+					vert.center=new Complex(cent.times(factor));
+					vert.rad *=factor;
+					// v may also be origin of one or more red edges
 					do {
 						if (he.myRedEdge!=null) {
-							Complex cent=he.myRedEdge.getCenter();
+							cent=he.myRedEdge.getCenter();
 							he.myRedEdge.setCenter(cent.times(factor));
 							he.myRedEdge.setRadius(he.myRedEdge.getRadius()*factor);
 						}
@@ -4986,7 +4993,7 @@ public class PackData{
 		  NodeLink vertlist=new NodeLink(this,"a");
 		  if (hes>0) { // do sph case using Mobius 
 			  Mobius mob=Mobius.rotation(ang/Math.PI);
-			  return apply_Mobius(mob,vertlist,true,true,true);
+			  return apply_Mobius(mob,vertlist,true,true);
 		  }
 		  // else directly rotate
 		  int count=0;
@@ -5520,7 +5527,8 @@ public class PackData{
 	 * Set given center for given vertices
 	 */
 	public int set_centers(Complex ctr,NodeLink vertlist) {
-	  if (vertlist==null || vertlist.size()==0) return 0;
+	  if (vertlist==null || vertlist.size()==0) 
+		  return 0;
 	  Iterator<Integer> vlist=vertlist.iterator();
 	  int v;
 	  while(vlist.hasNext()) {

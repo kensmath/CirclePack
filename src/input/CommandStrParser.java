@@ -5012,7 +5012,7 @@ public class CommandStrParser {
     	  }
     	  NodeLink vertlist=new NodeLink(packData,items);
     	  return packData.apply_Mobius(CPBase.Mob,
-    			  vertlist,oriented,true,do_pairs);
+    			  vertlist,oriented,do_pairs);
       }
       
 	  /* ================ main switch ============== */
@@ -6694,7 +6694,7 @@ public class CommandStrParser {
 	    			  	case 'l': // leave old radii, even with geom changes
 	    			  		{leave_flag=true;}
 	    			  } // end of flag switch
-	    		  } // done handling a given flagged segment
+	    		  } // done handling a given flag segment
 	    	  }
 	    	  
 	    	  if (leave_flag) {
@@ -6733,7 +6733,8 @@ public class CommandStrParser {
 	    	  
 	    	  packData.fillcurves();
 	    	  packData.setGeometry(packData.hes);
-	    	  if (cpS!=null) cpS.setPackName();
+	    	  if (cpS!=null) 
+	    		  cpS.setPackName();
 	    	  return 1;
 	      } 
 	      
@@ -7977,7 +7978,7 @@ public class CommandStrParser {
 	        	  throw new ParserException("usage: 'label' not "+
 	        			  "matched with pair_mob");
 			  return packData.apply_Mobius(mb,
-					  new NodeLink(packData,"a"),true,true,false);
+					  new NodeLink(packData,"a"),true,false);
 	      }
 	      
 	      // =========== perp_pack ==========
@@ -8521,7 +8522,7 @@ public class CommandStrParser {
 				  CirclePack.cpb.errMsg("usage: rotate <x>, x a double");
 				  return 0;
 			  }
-	    	  return packData.rotate(x);
+	    	  return packData.rotate(x*Math.PI);
 	      }
 	      
 	      // ========== repack ============= 

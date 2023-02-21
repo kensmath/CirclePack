@@ -643,13 +643,20 @@ public class PackDCEL {
 	 * one face from 'hlink'. Some circles may get laid down 
 	 * more than once depending on 'hlink'.
 	 * 
+	 * Note: When an angle sum at v is not a multiple of 2pi,
+	 * then using averages for circles around v can end up
+	 * jumbles, not forming any appropriate face. E.g., 'seed'
+	 * with wrong radii.
+	 * 
 	 * If 'hlink' is null but 'firstHE' is not, then leave 
 	 * 'firstHE' fixed in current position and do full 
 	 * layout and do not rotate at end.
 	 *  
 	 * Layout can be based on radii or (in tangency setting) using 
 	 * schwarzians. Side-pairing maps are updated.
+	 * 
 	 * Note: this command modifies the recorded centers.
+	 * 
 	 * @param hlink HalfLink
 	 * @param useSchw boolean
 	 * @param firstRE HalfEdge
@@ -1527,9 +1534,9 @@ System.out.println("length error ("+he.prev.origin.vertIndx+","+he.origin.vertIn
 	}
 	
 	/**
-	 * Set vert's center in all locations and in any associated 
-	 * 'RedEdges' for this v. (Compare with 'setCent4Edge' which 
-	 * only set's the value associated with one edge.)
+	 * Set center for v in all locations and in any associated 
+	 * 'RedEdges'. (Compare with 'setCent4Edge' which only set's 
+	 * the value associated with one edge.)
 	 * @param v int
 	 * @param z Complex
 	 */
@@ -1583,10 +1590,11 @@ System.out.println("length error ("+he.prev.origin.vertIndx+","+he.origin.vertIn
 	}
 	
 	/**
-	 * Set the center for 'origin' and appropriate 'RedEdge's 
-	 * (if a 'RedVertex'). Center for a vert may differ in 
-	 * different 'RedEdge's having that vert. 
-	 * (see 'setVertCenter', to set center in all locations.)
+	 * Set center for origin v of given 'edge'. If v is 
+	 * a 'RedVertex', then v's center is stored in first 
+	 * clw red edge; it may differ in other red edges with
+	 * origin v and may differ from Vertex.origin. 
+	 * (See 'setVertCenter', to set center in all locations.)
 	 * @param edge HalfEdge
 	 * @param z Complex
 	 */

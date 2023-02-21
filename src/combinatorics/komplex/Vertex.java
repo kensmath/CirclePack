@@ -374,7 +374,15 @@ public class Vertex {
 	public CircleSimple getCircleSimple() {
 		return new CircleSimple(center,rad);
 	}
-
+	
+	/**
+	 * Set center and radius
+	 * @param cS CircleSimple
+	 */
+	public void setCircleSimple(CircleSimple cS) {
+		center=cS.center;
+		rad=cS.rad;
+	}
 	
 	public String toString() {
 		return new String(""+vertIndx);

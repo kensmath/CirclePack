@@ -349,7 +349,7 @@ public class PostFactory {
 							postRGBsrgb(fcol)+" fill gr\n");
 				if (bcol!=null)
 					fp.write("gs "+poly_outline(hes,Z,false)+" "+
-							postRGBsrgb(bcol)+" s gr\n");
+							postRGBsrgb(bcol)+" s \n");
 				
 				fp.write(" gr\n\n"); // matched with gs for linewidth
 				return 1;
