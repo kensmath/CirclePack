@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <project default="all" name="Create Runnable Jar for Project CirclePack">
 
-    <target name="all" depends="clean,compile,cpjar,jar,source"/>
+    <target name="all" depends="clean,compile,cpjar,jar,source,lister"/>
 
     <target name="clean">
         <delete dir="build"/>
@@ -53,8 +53,8 @@
             <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/FunctionField.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/FunctionParser.jar"/>
             <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/xercesImpl.jar"/>
-	    <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/PackCircle.jar"/>
-	    <zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/la4j-0.4.9.jar"/>
+	    	<zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/PackCircle.jar"/>
+	    	<zipfileset excludes="META-INF/*.SF" src="${basedir}/jars/la4j-0.4.9.jar"/>
         </jar>
     </target>
 
@@ -79,13 +79,23 @@
                 <attribute name="Main-Class" value="runCirclePack.RunCirclePack"/>
                 <attribute name="Class-Path" value="."/>
             </manifest>
-	    <fileset dir="${basedir}/build" includes="runCirclePack/**" />
-            <fileset dir="${basedir}/"      includes="cpcore.jar" />
+	    	<fileset dir="${basedir}/build" includes="runCirclePack/**" />
+        	<fileset dir="${basedir}/"      includes="cpcore.jar" />
         </jar> 
     </target>
 
     <target name="run">
         <java jar="runCP.jar" fork="true" />
     </target>
-
+	
+	<target name="lister">
+    	<jar destfile="${basedir}/ScriptLister.jar" filesetmanifest="mergewithoutmain">
+	     	<manifest>
+	     		<attribute name="Built-By" value="${user.name}"/>
+	     		<attribute name="Main-Class" value="allMains.ScriptLister"/>
+	     		<attribute name="Class-Path" value="."/>
+	     	</manifest>
+			<fileset dir="${basedir}/build" includes="allMains/**"/>
+		</jar>
+	</target>		
 </project>

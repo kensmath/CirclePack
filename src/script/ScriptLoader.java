@@ -226,22 +226,28 @@ public class ScriptLoader {
 
 			int datatype=IncludedFile.RAW; // default
 			int count=0;
-			if (line.length()>indx+14 && line.substring(indx+1,indx+14).equalsIgnoreCase("circlepacking")) {
+			if (line.length()>indx+14 && line.substring(indx+1,indx+14).
+					equalsIgnoreCase("circlepacking")) {
 				datatype=IncludedFile.PACKING;
 			}
-			else if(line.length()>indx+5 && line.substring(indx+1,indx+5).equalsIgnoreCase("path")) {
+			else if(line.length()>indx+5 && line.substring(indx+1,indx+5).
+					equalsIgnoreCase("path")) {
 				datatype=IncludedFile.PATH;
 			}
-			else if(line.length()>indx+8 && line.substring(indx+1,indx+8).equalsIgnoreCase("xyzData")) {
+			else if(line.length()>indx+8 && line.substring(indx+1,indx+8).
+					equalsIgnoreCase("xyzData")) {
 				datatype=IncludedFile.XYZ;
 			}
-			else if (line.length()>indx+9 && line.substring(indx+1,indx+9).equalsIgnoreCase("commands")) {
+			else if (line.length()>indx+9 && line.substring(indx+1,indx+9).
+					equalsIgnoreCase("commands")) {
 				datatype=IncludedFile.CMDS;
 			}
-			else if (line.length()>indx+9 && line.substring(indx+1,indx+6).equalsIgnoreCase("image")) {
+			else if (line.length()>indx+9 && line.substring(indx+1,indx+6).
+					equalsIgnoreCase("image")) {
 				datatype=IncludedFile.IMAGE;
 			}
-			else if (line.length()>indx+14 && line.substring(indx+1,indx+11).equalsIgnoreCase("aboutimage")) {
+			else if (line.length()>indx+14 && line.substring(indx+1,indx+11).
+					equalsIgnoreCase("aboutimage")) {
 				datatype=IncludedFile.ABOUT_IMAGE;
 			}
 			
@@ -256,7 +262,8 @@ public class ScriptLoader {
 			
 			// transfer lines until another tagged line is encountered;
 			//   (last line should have 'END', but this isn't checked)
-			// TODO: don't know if '<' can occur in base64 encoded image file.
+			// Note: it appears that '<' and '>' cannot occur in base64 
+			//   encoded image files.
 			else { 
 				while ((line=reader.readLine().trim())!=null && !line.startsWith("<")) { 
 					tempWriter.println(line);
