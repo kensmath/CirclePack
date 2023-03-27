@@ -2583,7 +2583,7 @@ public class PackData{
 		if (ans == 0)
 			return 0;
 		
-		// Note: for DCEL,color/aim/mark are automatically swapped,
+		// Note: color/aim/mark are automatically swapped,
 		//    so 'keepFlags' actions will actually swap them back.
 		if ((keepFlags & 0001) == 0001) { // swap 'color'
 			Color holdcolor = getCircleColor(v);
@@ -2974,6 +2974,7 @@ public class PackData{
 		  }
 
 		  packDCEL.zeroEUtil();
+		  packDCEL.zeroVUtil();
 
 		  // start with what we were given
 		  for (int j=0;j<ants.size();j++) {
@@ -3227,7 +3228,7 @@ public class PackData{
 	    for (int j=1;j<=nodeCount;j++) { // scale, rotate
 	    	Complex zz=getCenter(j);
 	    	setCenter(j,zz.times(factor));
-	      setRadius(j,lam*getRadius(j));
+	    	setRadius(j,lam*getRadius(j));
 	    }
 	    geom_to_s(); // project to sphere 
   	  	setGeometry(1);
@@ -6258,11 +6259,21 @@ public class PackData{
 
 	/**
 	 * Return a pointer to 'PackExtender' if there is an existing one
-	 * with given 'extensionType' (ignoring case).
+	 * with given 'extensionType' (ignoring case). If 'xAbbre' is empty
+	 * return unique extender if there is one.
 	 * @param xAbbrev String 
 	 * @return 'PackExtender' or null.
 	 */
 	public PackExtender findXbyAbbrev(String xAbbrev) {
+		
+		// empty abbreviation
+		if (xAbbrev.length()==0) {
+			if(packExtensions.size()==1)
+				return packExtensions.get(0);
+			else
+				return null;
+		}
+		
 		Iterator<PackExtender> pXs=packExtensions.iterator();
 		while (pXs.hasNext()) {
 			PackExtender pext=pXs.next();

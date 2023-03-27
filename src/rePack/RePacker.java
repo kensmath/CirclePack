@@ -54,7 +54,7 @@ public abstract class RePacker {
 	public static int MAX_ALLOWABLE_BAD_CUTS=100;
 	public static double RP_TOLER=.00000000001;
 	public static double RP_OKERR=.000000001; 
-	public static int PASSLIMIT=1000;    // default upper bound, may be changed
+	public static int PASSLIMIT=2000;    // default upper bound, may be changed
 	
 	public PackData p;      // parent packing
 	public PackDCEL pdcel;  // prepare for DCEL version

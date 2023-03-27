@@ -2871,8 +2871,11 @@ public class CombDCEL {
 			PackDCEL pdc1=CombDCEL.cloneDCEL(pdc);
 			PackDCEL pdc2=CombDCEL.cloneDCEL(pdc);
 			CombDCEL.reorient(pdc2);
+			
+			if (blist==null || blist.size()==0)
+	    		  blist=new NodeLink(pdc.p,"B");
 
-			if (segment) {
+			else if (segment) {
 				int n=blist.size()-1; // number of edges
 				int v=blist.getLast(); // choose last to be clw
 				PackDCEL newpdcel=CombDCEL.adjoin(pdc1, pdc2,v,v,n);

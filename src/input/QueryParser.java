@@ -660,12 +660,58 @@ public class QueryParser {
 			
 			case 'm': {} // fall through
 			case 'M': {
-				
+
+				// vertex_map inverse
+				if (query.startsWith("map_i")) {
+					if (p.vertexMap==null) {
+						exception_words="?vertexMap usage: packing has no vertex map";
+						throw new ParserException("");
+					}
+					NodeLink vlist=new NodeLink(p,items);
+					int N=vlist.size();
+					int count=0;
+					Iterator<Integer> vlst=vlist.iterator();
+					while (vlst.hasNext() && ((!forMsg || count<12) || count<1000)) {
+						int w=vlst.next();
+						int vv=p.vertexMap.findV(w);
+						if (vv>0) {
+							ans.append("{"+vv+" , "+w+"} ");
+							count++;
+						}
+					}
+		  	      	if (count<N)
+		  	      		suffix=" ... ";
+					gotone=true;
+				}
+
+				// vertex_map
+				else if (query.startsWith("map")) {
+					if (p.vertexMap==null) {
+						exception_words="?vertexMap usage: packing has no vertex map";
+						throw new ParserException("");
+					}
+					NodeLink vlist=new NodeLink(p,items);
+					int N=vlist.size();
+					int count=0;
+					Iterator<Integer> vlst=vlist.iterator();
+					while (vlst.hasNext() && ((!forMsg || count<12) || count<1000)) {
+						int vv=vlst.next();
+						int w=p.vertexMap.findW(vv);
+						if (w>0) {
+							ans.append("{"+vv+" , "+w+"} ");
+							count++;
+						}
+					}
+		  	      	if (count<N)
+		  	      		suffix=" ... ";
+					gotone=true;
+				}
+
 				// Mobius
-				if (query.toLowerCase().startsWith("mob")) {
+				else if (query.toLowerCase().startsWith("mob")) {
 					forMsg=true;
 					
-					// side pairing of with some label?
+					// side pairing with some label?
 					if (items!=null && items.size()>0) {
 						Iterator<String> iit=items.iterator();
 						while (iit.hasNext()) {
@@ -920,27 +966,9 @@ public class QueryParser {
 			}
 			
 			case 'v': { // --------------------------------------------------------
-
-				if (query.startsWith("vertexMap")) {
-					if (p.vertexMap==null) {
-						exception_words="?vertexMap usage: packing has no vertex map";
-						throw new ParserException("");
-					}
-					int N=p.vertexMap.size();
-					Iterator<EdgeSimple> vm=p.vertexMap.iterator();
-					int count=0;
-					while (vm.hasNext() && (!forMsg || count<12) || count<1000) {
-						EdgeSimple edge=vm.next();
-						ans.append(edge.v+" "+edge.w+"  ");
-						count++;
-					}
-		  	      	if (count<N)
-		  	      		suffix=" ... ";
-					gotone=true;
-				}
 				
 				// vert info
-				else if (query.startsWith("vert")) {
+				if (query.startsWith("vert")) {
 					forMsg=true; // only do this as a message
 					v=NodeLink.grab_one_vert(p,StringUtil.reconItem(items));
 	  	      		NodeData vData=new NodeData(p,v);
@@ -1018,24 +1046,14 @@ public class QueryParser {
 //	  		  return jexecute(p,"extender ?");
 //	  	  }
 //	  	  if (query.startsWith("param")) {}
-//	  	  if (query.startsWith("flower")) {}
-//	  	  if (query.startsWith("ang_sum")) {}
-//	  	  if (query.startsWith("aim")) {}
-//	  	  if (query.startsWith("face")) {}
-//	  	  if (query.startsWith("over")) {}
 //	  	  if (query.startsWith("alt_rad")) {}
 //	  	  if (query.startsWith("kap")) {}
-//	  	  if (query.startsWith("antip")) {}
-//	  	  if (query.startsWith("screen")) {}
 //	  	  if (query.startsWith("pk_stat")) {}
 //	  	  if (query.startsWith("bdry_dist")) {}
-//	  	  if (query.startsWith("edge_p")) {}
 //	  	  if (query.startsWith("ratio_ftn")) {}
 //	  	  if (query.startsWith("conduct")) {}
 //	  	  if (query.startsWith("bdry_length")) {}
 //	  	  if (query.startsWith("script")) {}
-//	  	  if (query.startsWith("map_rev")) {}
-//	  	  if (query.startsWith("map")) {}
 
 	}
 	

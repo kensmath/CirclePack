@@ -273,6 +273,15 @@ zip n v
 ?face {f} 
 ?edge {v w} 
 ?tile {t} 
+?screen (data) 
+?kappa {v..} 
+?alt_rad {v..} 
+?ratio_ftn {p q} 
+?conductance {v..} 
+?remote processes 
+?bdry_length {v} 
+?script name 
+?map_rev {v} 
 #XY 
 [{script cmd}] 
 {..cmd..} 

@@ -103,7 +103,7 @@ public abstract class CPBase {
 
 	// static, should (eventually) be adjustable in preferences;
 	//   may not be needed in some programs.
-	public static int RIFFLE_COUNT=1000; // default iterations for repacking
+	public static int RIFFLE_COUNT=2000; // default iterations for repacking
 	public static int DEFAULT_GEOMETRY = -1;
 
 	// keep 'MyTool' objects in a hashtable

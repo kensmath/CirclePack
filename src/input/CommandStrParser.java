@@ -1665,7 +1665,8 @@ public class CommandStrParser {
 	    		  }
 			  }
 	    	  else if (str.equalsIgnoreCase("rh")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  PackExtender px=new RiemHilbert(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1675,7 +1676,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("gp")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  Graphene px=new Graphene(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1685,7 +1687,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("pb")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  PolyBranching px=new PolyBranching(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1695,7 +1698,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("tc")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  TileColoring px=new TileColoring(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1705,7 +1709,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("cf")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  CurvFlow px=new CurvFlow(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1715,7 +1720,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("ct")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  ConformalTiling px=new ConformalTiling(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1726,7 +1732,8 @@ public class CommandStrParser {
 
 	    	  }
 	    	  else if (str.equalsIgnoreCase("TE")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  TorusEnergy px=new TorusEnergy(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1736,7 +1743,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("JP")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  JammedPack px=new JammedPack(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1746,7 +1754,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("PR")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  Percolation px=new Percolation(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1755,8 +1764,9 @@ public class CommandStrParser {
 	    			  returnVal=1;
 		    	  }
 	    	  }
-	    	  else if (str.equalsIgnoreCase("mmc")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    	  else if (str.equalsIgnoreCase("mc") || str.equalsIgnoreCase("mmc")) {
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  MeanMove px=new MeanMove(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1766,7 +1776,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("ca")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  ComplexAnalysis px=new ComplexAnalysis(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1776,7 +1787,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("ps")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  ProjStruct px=new ProjStruct(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1786,7 +1798,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("ap") || str.equalsIgnoreCase("ss")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  AffinePack px=new AffinePack(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1796,7 +1809,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("sm")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  SchwarzMap px=new SchwarzMap(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1806,7 +1820,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("gb")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  GenModBranching px=new GenModBranching(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1816,7 +1831,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("nk")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  Necklace px=new Necklace(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1826,7 +1842,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("fs")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  FlipStrategy px=new FlipStrategy(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1836,7 +1853,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("IG")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  iGame px=new iGame(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1846,7 +1864,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("rm")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  RationalMap px=new RationalMap(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -1856,7 +1875,8 @@ public class CommandStrParser {
 		    	  }
 	    	  }
 	    	  else if (str.equalsIgnoreCase("sp")) {
-	    		  if (!packData.status || packData.nodeCount==0) return 0;
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
 	    		  SpherePack px=new SpherePack(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
@@ -5201,7 +5221,7 @@ public class CommandStrParser {
 	    							  packData.packDCEL.faceCount+1);
 	    			  HalfEdge he=vert.halfedge.twin;
 	    			  newface.edge=he;
-	    			  if (he.next.next.next==he) {
+	    			  if (he.next.next.next==he) { // 3-sided?
 	    				  do {
 	    					  he.face=newface;
 	    					  he.origin.bdryFlag=0;
@@ -6707,6 +6727,7 @@ public class CommandStrParser {
 	    	  case 'h': // to hyperbolic
 	    	  {
 	    		  packData.geom_to_h();
+	    		  packData.fillcurves();
 	    		  break;
 	    	  }
 	    	  case 's': // to spherical
@@ -6717,6 +6738,7 @@ public class CommandStrParser {
 	    	  case 'e': // to eucl
 	    	  {
 	    		  packData.geom_to_e();
+	    		  packData.fillcurves();
 	    		  break;
 	    	  }
 	    	  } // end of switch
@@ -6731,7 +6753,6 @@ public class CommandStrParser {
 				  }
 	    	  }
 	    	  
-	    	  packData.fillcurves();
 	    	  packData.setGeometry(packData.hes);
 	    	  if (cpS!=null) 
 	    		  cpS.setPackName();
@@ -7580,19 +7601,19 @@ public class CommandStrParser {
 	    		  
 	    		  // first entry a flags?
 	    		  if (StringUtil.isFlag(items.elementAt(0))) {
-	    			  if (packData.hes>0 && items.elementAt(0).equals("-r")) {
+	    			  if (packData.hes>0 && items.elementAt(0).equals("-v")) {
 		    			  puncture_v=NodeLink.grab_one_vert(packData,(String)items.get(1));
 		    			  if (puncture_v<1 || puncture_v>packData.nodeCount) {
 		    				  CirclePack.cpb.errMsg("improper puncture; ignored");
 		    				  puncture_v=-1;
 		    			  }
 	    			  }
-	    			  else if (items.elementAt(0).equals("-r"))
-	    				  CirclePack.cpb.errMsg("'-r' flag ignored; "+
+	    			  else if (items.elementAt(0).equals("-v"))
+	    				  CirclePack.cpb.errMsg("'-v' flag ignored; "+
 	    				  	"applies to spherical case only");
 	    		  }
 	    		  
-	    		  if (items.size()==1 || items.size()==3) { // last entry is [k]
+	    		  if (items.size()==1 || items.size()==3) { // last entry, cycles
 	    			  int k=Integer.parseInt(items.lastElement());
 	    			  if (k<1) cycles=1;
 	    			  else if (k>100000) cycles=100000;
@@ -7631,10 +7652,12 @@ public class CommandStrParser {
 	    		  packData.hes=1;
     			  packData.setGeometry(1);
 	    		  packData.set_aim_default();
-    			  SphPacker sphpack=new SphPacker(packData,cycles);
+    			  SphPacker sphpack=new SphPacker(packData,puncture_v,cycles);
     			  count=sphpack.maxPack(cycles);
+    			  sphpack.reapResults();
 	    	  }
-	    	  else return 0;
+	    	  else 
+	    		  return 0;
 	    	  if (CirclePack.cpb!=null)
 	    		  CirclePack.cpb.msg("max_pack: "+count+" repacking cycles");
 	    	  return count;
@@ -7989,9 +8012,9 @@ public class CommandStrParser {
 	    				  "applies in topological disc case.");
 	    		  return 0;
 	    	  }
-	    	  
+	    	  CommandStrParser.jexecute(packData,"geom_to_e");
 	      	  int cycles=CPBase.RIFFLE_COUNT;
-	    	  if (flagSegs!=null && (items=flagSegs.get(0))!=null) {
+	    	  if (flagSegs!=null && flagSegs.size()>0 && (items=flagSegs.get(0))!=null) {
     			  try {
     				  int k=Integer.parseInt(items.elementAt(0));
     				  if (k<1) 
@@ -8008,22 +8031,14 @@ public class CommandStrParser {
 	    	  // create copy and double across bdry
 	    	  PackData holdPack=packData.copyPackTo();
 	    	  PackDCEL newpdcel=CombDCEL.doubleDCEL(holdPack.packDCEL,null,false);
-	    	  int antip=newpdcel.oldNew.findW(packData.getAlpha()+packData.nodeCount);
+    		  int antip=newpdcel.oldNew.findW(packData.getAlpha());
 	    	  newpdcel.fixDCEL(holdPack);
-	    	  holdPack.hes=1;
-	    	  
-	    	  // max_pack the this topological sphere
+	    	  CommandStrParser.jexecute(holdPack,"geom_to_s");
+
+	    	  // max_pack this topological sphere; this normalizes also
 	    	  int ans=0;
-	    	  if ((ans+=CommandStrParser.jexecute(holdPack,"max_pack "+cycles))==0) {
+	    	  if ((ans+=CommandStrParser.jexecute(holdPack,"max_pack -v "+antip+" "+cycles))==0) {
 	    		  CirclePack.cpb.errMsg("hum.. ran into packing problem with 'perp_pack'");
-	    		  return 0;
-	    	  }
-	    	
-	    	  // normalize the copy
-	    	  StringBuilder strbld=new StringBuilder("NSPole "+
-	    			  holdPack.getAlpha()+" "+antip);
-	    	  if (CommandStrParser.jexecute(holdPack,strbld.toString())==0) {
-	    		  CirclePack.cpb.errMsg("hum.. ran into normalizing problem with 'perp_pack'");
 	    		  return 0;
 	    	  }
 	    	  
@@ -10387,12 +10402,14 @@ public class CommandStrParser {
 		      	  // get filename 
 		      	  StringBuilder strbld=new StringBuilder();
 		      	  int code=CPFileManager.trailingFile(flagSegs, strbld);
-		      	  if ((code | 02)==02) 
+		      	  if ((code & 02)==02) 
 		      		  append_flag=true;
-		      	  if ((code | 04)==04)
+		      	  if ((code & 04)==04)
 		      		  script_flag=true;
 		      	  File tmpdir=new File(strbld.toString().trim());
-		      	  fname=tmpdir.getName();
+		      	  fname=tmpdir.getName().trim();
+		      	  if (fname.length()==0)
+		      		  fname=packData.fileName;
 		      	  if (tmpdir.getParentFile()!=null) {
 		      		  if (cmd.startsWith("W"))  // use given directory
 		      			  dir=tmpdir.getParentFile();

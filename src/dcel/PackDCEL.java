@@ -2351,18 +2351,19 @@ System.out.println("length error ("+he.prev.origin.vertIndx+","+he.origin.vertIn
 	}
 	
 	/**
-	 * Swap vertices for 'v' and 'w'. This has minimal impact on the DCEL
-	 * structure, eg., drawing order, etc., but calling routine may
-	 * adjust various lists. Note that all the 'VData' info
-	 * goes along, 'aim', 'rad', etc., so if you didn't want to swap
-	 * this, the calling routine has to swap it back.
+	 * Swap vertices for 'v' and 'w'. This has minimal impact 
+	 * on the DCEL structure, eg., drawing order, etc., but 
+	 * calling routine may adjust various lists. Note that all 
+	 * the 'Vertex' info goes along, 'aim', 'rad', etc., so if 
+	 * you didn't want to swap this, the calling routine has 
+	 * to swap it back.
 	 * @param v int
 	 * @param w int
 	 * @return 1, 0 on failure
 	 */
 	public int swapNodes(int v,int w) {
 		if (v==w)
-			return 0;
+			return 1;
 		triData=null; // outdated
 		Vertex holdv=vertices[v];
 		Vertex holdw=vertices[w];
@@ -2371,9 +2372,9 @@ System.out.println("length error ("+he.prev.origin.vertIndx+","+he.origin.vertIn
 		vertices[w]=holdv;
 		vertices[v]=holdw;
 		
-		// swap 'VData' and all data with it, aims, rad, centers, etc.
+		// swap 'Vertex' and all data with it, aims, rad, centers, etc.
 		// fix up if there parent has TileData
-		if (p.tileData != null && p.tileData.tileCount > 0) {
+		if (p!=null && p.tileData != null && p.tileData.tileCount > 0) {
 			for (int j = 1; j <= p.tileData.tileCount; j++) {
 				Tile t = p.tileData.myTiles[j];
 				if (t == null)

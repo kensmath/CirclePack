@@ -197,7 +197,8 @@ public class StringUtil {
 	 *          and adjusted for any variable substitutions
 	 */
 	public static String []getXtender(String str) {
-		if (str==null || str.length()<5) return null;
+		if (str==null || str.length()<3) 
+			return null;
 		if (str.charAt(0)!='|') // must start with '|' 
 			return null; 
 		int k=str.indexOf('|',1);

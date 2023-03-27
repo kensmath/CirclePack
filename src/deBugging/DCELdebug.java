@@ -543,6 +543,9 @@ public class DCELdebug {
 		cpd.clearCanvas(true);
 		int len=Z.length-1;
 		for (int v=1;v<=len;v++) {
+			
+// debugging
+			System.out.println("v="+v);
 			cpd.drawCircle(Z[v],R[v],new DispFlags());
 			cpd.drawIndex(Z[v],v,1);
 		}

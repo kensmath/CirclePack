@@ -20,8 +20,10 @@ public class HypPacker extends RePacker {
     	p=pd;
     	pdcel=p.packDCEL;
 		oldReliable=false;
-    	if (pass_limit<0) passLimit=PASSLIMIT;
-		else passLimit=pass_limit;
+    	if (pass_limit<0) 
+    		passLimit=PASSLIMIT;
+		else 
+			passLimit=pass_limit;
 		status=load(); 
 		if (status!=LOADED) 
 			throw new PackingException("'HypPacker' failed to load");
@@ -37,8 +39,6 @@ public class HypPacker extends RePacker {
      * @return int - LOADED or FAILURE
      */
 	public int load() {
-	   	if ((pdcel=p.packDCEL)==null)
-    		throw new DataException("usage: d_repackers need DCEL");
 		aimnum = 0;
 		index = new int[p.nodeCount + 1];
     	for (int i=1;i<=p.nodeCount;i++) {
