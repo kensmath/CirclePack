@@ -113,16 +113,18 @@ public abstract class PackExtender {
 	}
 	
 	/**
-	 * Replace 'this.packData' with a copy of 'newPD', including
-	 * a copy of 'tileData'. Maintain 'this' as PackExtension, but 
-	 * no others. Any particular PackExtender may have additional 
-	 * cleanup to do.
+	 * Replace 'this.packData' and 'this.pdc' with data from 'newPD', 
+	 * (including possibly a copy of 'tileData'). Maintain 'this' as 
+	 * PackExtension, but discard others. 
+	 * Note: particular PackExtenders may need additional cleanup clean
+	 * up actions.
 	 * @param newPD PackData
-	 * @return NodeCount, 0 on error
+	 * @return int, packData.nodeCount, 0 on error
 	 */
 	public int swapExtenderPD(PackData newPD) {
 		if (newPD==null)
 			return 0;
+		
 		CPdrawing holdcpS=packData.cpDrawing;
 		packData=newPD.copyPackTo();
 		packData.packExtensions=new Vector<PackExtender>(1);
@@ -132,8 +134,8 @@ public abstract class PackExtender {
 		// reconnect pack and screen
 		packData.cpDrawing=holdcpS;
 		holdcpS.setPackData(packData);
-		packData.packNum=holdcpS.getPackNum();
-		packData.setGeometry(packData.hes);
+		packData.packNum=newPD.packNum;
+		packData.setGeometry(newPD.hes);
 
 		return packData.nodeCount;
 	}

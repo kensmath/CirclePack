@@ -499,7 +499,8 @@ public class DCELdebug {
 		int safety=100;
 		do {
 			cpd.drawCircle(pdcel.getVertData(he),dflags);
-			cpd.rePaintAll();
+			if (CPBase.GUImode!=0) 
+				cpd.rePaintAll();
 			he=he.next;
 			safety--;
 		} while (he!=hfe && safety>0);
@@ -519,7 +520,8 @@ public class DCELdebug {
 		DispFlags dispflags=new DispFlags("t5c5");
 		pdcel.p.cpDrawing.drawEdge(z1,z2,dispflags);
 		CommandStrParser.jexecute(pdcel.p,"disp -ffc120 "+hfe.face.faceIndx);
-		pdcel.p.cpDrawing.rePaintAll();
+		if (CPBase.GUImode!=0)
+			pdcel.p.cpDrawing.rePaintAll();
 	}
 
 	/**
@@ -536,7 +538,8 @@ public class DCELdebug {
 			strbld.append(" -ffc120 "+ans[0]);
 		}
 		CommandStrParser.jexecute(p,strbld.toString());
-		p.cpDrawing.rePaintAll();
+		if (CPBase.GUImode!=0)
+			p.cpDrawing.rePaintAll();
 	}
 	
 	public static void drawEuclCircles(CPdrawing cpd,Complex[] Z,double[] R) {
@@ -549,7 +552,8 @@ public class DCELdebug {
 			cpd.drawCircle(Z[v],R[v],new DispFlags());
 			cpd.drawIndex(Z[v],v,1);
 		}
-		cpd.rePaintAll();
+		if (CPBase.GUImode!=0)
+			cpd.rePaintAll();
 	}
 	
 	/**
@@ -566,7 +570,8 @@ public class DCELdebug {
 			DispFlags dflags=new DispFlags("c195t4");
 			p.cpDrawing.drawEdge(z, w, dflags);
 		}
-		p.cpDrawing.rePaintAll();
+		if (CPBase.GUImode!=0)
+			p.cpDrawing.rePaintAll();
 	}
 
 	/**
@@ -583,7 +588,8 @@ public class DCELdebug {
 			Complex z1=p.getCenter(rtrace.myEdge.twin.origin.vertIndx);
 			DispFlags dflags=new DispFlags("c195t4");
 			p.cpDrawing.drawEdge(z0, z1, dflags);
-			p.cpDrawing.rePaintAll();
+			if (CPBase.GUImode!=0)
+				p.cpDrawing.rePaintAll();
 			rtrace=rtrace.nextRed;
 		} while (rtrace!=null && rtrace!=redge);
 		
@@ -624,7 +630,8 @@ public class DCELdebug {
 		Complex z1=redge.nextRed.getCenter();
 		DispFlags dflags=new DispFlags("c195t4");
 		p.cpDrawing.drawEdge(z0, z1, dflags);
-		p.cpDrawing.rePaintAll();
+		if (CPBase.GUImode!=0)
+			p.cpDrawing.rePaintAll();
 	}
 
 	public static void printRedChain(RedEdge redge,VertexMap vmap) {

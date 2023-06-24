@@ -48,7 +48,8 @@ public class CPFace extends Complex {
 	public CPFace() {
 		N=3;
 		corners=new double[6];
-		for (int i=0;i<6;i++) corners[i]=0.0;
+		for (int i=0;i<6;i++) 
+			corners[i]=0.0;
 		x = y = 0.0;
 		geometry = 0;
 		path=new Path2D.Double();

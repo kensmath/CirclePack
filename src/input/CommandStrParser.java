@@ -190,7 +190,6 @@ public class CommandStrParser {
   public static int jexecute(PackData packData, String cmdstr) {
 	  if (cmdstr==null) 
 		  return 0;
-	  CPdrawing cpDrawing=packData.cpDrawing;
 	  int count=0;
 	  String cmd=null;
 
@@ -1571,7 +1570,7 @@ public class CommandStrParser {
 	    				  }
 	    			  }
 	    			  
-	    			  cpDrawing.updateXtenders();
+	    			  packData.cpDrawing.updateXtenders();
 	    			  return 1;
 	    		  }
 	    		  
@@ -1585,7 +1584,7 @@ public class CommandStrParser {
 	    					  px.killMe();
 	    				  }
 	    			  }
-	    			  cpDrawing.updateXtenders();
+	    			  packData.cpDrawing.updateXtenders();
 	    		  }
 	    		  
 	    		  // may be no flag, just the abbreviation
@@ -1970,7 +1969,7 @@ public class CommandStrParser {
 	    	  }
 	    	  
 	    	  if (returnVal==1)
-				  cpDrawing.updateXtenders();
+				  packData.cpDrawing.updateXtenders();
 
 	    	  } // end of hard-coded cases
 	    	  
@@ -2008,7 +2007,7 @@ public class CommandStrParser {
 	    			  CirclePack.cpb.msg("Pack "+packData.packNum+
 	    					  ": started "+px.extensionAbbrev+" extender");
 	    			  px.StartUpMsg();
-	    			  cpDrawing.updateXtenders();
+	    			  packData.cpDrawing.updateXtenders();
 	    			  returnVal=1;
 	    		  }
 	    	  }
@@ -2503,7 +2502,7 @@ public class CommandStrParser {
 	    	  int holdPNum=packData.packNum;
 	    	  PackData tmpPD=Hp.copyPackTo();
 	    	  CirclePack.cpb.swapPackData(tmpPD,2,false);
-			  if (holdPNum==2) 
+			  if (holdPNum==2)
 				  packData=CPBase.packings[2];
 
 	    	  // TODO: only want rad/center
@@ -2558,7 +2557,7 @@ public class CommandStrParser {
 						jexecute(packData,"disp -w");
 						jexecute(packData,"Read " + theFile);
 						packData.setName(theFile.getName());
-						cpDrawing.repaint();
+						packData.cpDrawing.repaint();
 					} catch (Exception ex) {
 						throw new ParserException("failed in loading file: "+ex.getMessage());
 					}
@@ -3795,7 +3794,7 @@ public class CommandStrParser {
     			  n=Integer.parseInt(str);
     		  } catch(ParserException pex) {}
     		 if (n<0 || n>12) n=1; // 0-12 are values for LineThick slider in SupportFrame. 
-    		 cpDrawing.setLineThickness(n+1);
+    		 packData.cpDrawing.setLineThickness(n+1);
     		 if (CPBase.GUImode!=0)
     			 PackControl.screenCtrlFrame.screenPanel.setLine(n+1);
     		 return 1;
@@ -3915,7 +3914,7 @@ public class CommandStrParser {
     				  char c=sub_cmd.charAt(1);
     				  items.remove(0);
     				  if (c=='d') { // default
-    					  cpDrawing.sphView.defaultView();
+    					  packData.cpDrawing.sphView.defaultView();
     					  return 1;
     				  }
     				  if (c=='t') { // set or set and update
@@ -3927,7 +3926,7 @@ public class CommandStrParser {
     								  Double.parseDouble(items.get(6)),Double.parseDouble(items.get(7)),
     								  Double.parseDouble(items.get(8)));
     						  if (!Matrix3D.isNaN(mat3d))
-    							  cpDrawing.sphView.viewMatrix=mat3d;
+    							  packData.cpDrawing.sphView.viewMatrix=mat3d;
     						  else return 0;
     					  } catch (Exception ex) {
     						  throw new ParserException("error setting 'viewMatrix'");
@@ -3935,12 +3934,12 @@ public class CommandStrParser {
     					  return 1;
     				  }
     				  if (c=='N') { // look directly at the origin, the north pole
-    					  cpDrawing.sphView.viewMatrix=
+    					  packData.cpDrawing.sphView.viewMatrix=
     							  Matrix3D.FromEulerAnglesXYZ(0.0,0.5*Math.PI,0.5*Math.PI);
     					  return 1;
     				  }
     				  else if (c=='S') { // look directly at infinity, the south pole
-    					  cpDrawing.sphView.viewMatrix=
+    					  packData.cpDrawing.sphView.viewMatrix=
     							  Matrix3D.FromEulerAnglesXYZ(0.0,-0.5*Math.PI,0.5*Math.PI);
     					  return 1;
     				  }
@@ -3955,10 +3954,10 @@ public class CommandStrParser {
     		  }
     		  Matrix3D trans=Matrix3D.FromEulerAnglesXYZ(xang,yang,zang);
     		  if (!Matrix3D.isNaN(trans)) {
-    			  if (inc_flag) cpDrawing.sphView.viewMatrix = 
-    				  Matrix3D.times(trans,cpDrawing.sphView.viewMatrix);
+    			  if (inc_flag) packData.cpDrawing.sphView.viewMatrix = 
+    				  Matrix3D.times(trans,packData.cpDrawing.sphView.viewMatrix);
     			  else 
-    				  cpDrawing.sphView.viewMatrix=trans;
+    				  packData.cpDrawing.sphView.viewMatrix=trans;
     			  return 1;
     		  }
 			  throw new DataException("nan error in setting 'sphView'");
@@ -3988,21 +3987,21 @@ public class CommandStrParser {
         				  try {
         					  for (int i=0;i<4;i++)
         						  corners[i]=Double.parseDouble(items.get(i+1));
-        					  cpDrawing.realBox.setView(new Complex(corners[0],corners[1]),
+        					  packData.cpDrawing.realBox.setView(new Complex(corners[0],corners[1]),
         							  new Complex(corners[2],corners[3]));
         				  } catch (Exception ex) {
         					  CirclePack.cpb.myErrorMsg("'"+cmd+"' parsing error.");
         					  return count;
         				  }
         				  count++;
-        				  cpDrawing.update(2);
+        				  packData.cpDrawing.update(2);
         				  break;
         			  }
         			  case 'd':	// default canvas size, sphView
         			  {
         				  vbox.reset();
         				  count++;
-        				  cpDrawing.update(2);
+        				  packData.cpDrawing.update(2);
         				  break;
         			  }
         			  case 'f': // scale by given factor
@@ -4010,7 +4009,7 @@ public class CommandStrParser {
         				  try {
         					  count += packData.cpDrawing.realBox.
         							  scaleView(Double.parseDouble(items.get(1)));
-        					  cpDrawing.update(2);
+        					  packData.cpDrawing.update(2);
         				  } catch (NumberFormatException nfe) {
         					  CirclePack.cpb.myErrorMsg("usage: set_screen -f <x>: "+
         							  nfe.getMessage());
@@ -4037,7 +4036,7 @@ public class CommandStrParser {
         					  double f=Double.parseDouble(items.get(1));
         					  count += packData.cpDrawing.realBox.
         							  scaleView(f/vbox.getWidth());
-        					  cpDrawing.update(2);
+        					  packData.cpDrawing.update(2);
         				  } catch (NumberFormatException nfe) {
         					  CirclePack.cpb.myErrorMsg("usage: set_screen -w(or h) <x>: "+
         							  nfe.getMessage());
@@ -4049,7 +4048,7 @@ public class CommandStrParser {
         		  else { // no flags? default to default screen
         			  vbox.reset();
         			  count++;
-        			  cpDrawing.update(2);
+        			  packData.cpDrawing.update(2);
         		  }
         	  } // end of while
     	  return count;
@@ -4067,12 +4066,12 @@ public class CommandStrParser {
         	  String flagstr=StringUtil.reconstitute(flagSegs);
         	  if (flagstr==null) 
         		  return 0;
-              cpDrawing.dispOptions.usetext=true;
-              cpDrawing.dispOptions.tailored=flagstr;
+              packData.cpDrawing.dispOptions.usetext=true;
+              packData.cpDrawing.dispOptions.tailored=flagstr;
               if (CPBase.GUImode!=0 && 
             		  packData.packNum==CirclePack.cpb.getActivePackNum()) {
             	  PackControl.screenCtrlFrame.displayPanel.flagField.setText(
-            			  cpDrawing.dispOptions.tailored);
+            			  packData.cpDrawing.dispOptions.tailored);
             	  PackControl.screenCtrlFrame.displayPanel.setFlagBox(true);
               }
               return 1;
@@ -4205,7 +4204,7 @@ public class CommandStrParser {
     	  // ========= set_custom =============
 	      if (cmd.startsWith("custom")) {
         	  try {
-        		  cpDrawing.customPS=(String)flagSegs.get(0).get(0);
+        		  packData.cpDrawing.customPS=(String)flagSegs.get(0).get(0);
         	  } catch(Exception ex) {
         		  throw new InOutException("set_custom failed;"+ex.getMessage());
         	  }
@@ -4220,7 +4219,7 @@ public class CommandStrParser {
         	  } catch(Exception ex) {
         		  CirclePack.cpb.errMsg("set_fill_opacity failed: "+ex.getMessage());
         	  }
-        	  cpDrawing.setFillOpacity(opacity);
+        	  packData.cpDrawing.setFillOpacity(opacity);
         	  return 1;
           }
 
@@ -4232,7 +4231,7 @@ public class CommandStrParser {
         	  } catch(Exception ex) {
         		  CirclePack.cpb.errMsg("set_sph_opacity failed: "+ex.getMessage());
         	  }
-        	  cpDrawing.setSphereOpacity(opacity);
+        	  packData.cpDrawing.setSphereOpacity(opacity);
         	  return 1;
           }	
           
@@ -4955,7 +4954,6 @@ public class CommandStrParser {
 	  Vector<String> items;
 	  if (!packData.status) 
 		  return 0;
-	  CPdrawing cpS=packData.cpDrawing;
 	  
 	  // ============ get_data/put_data ===========
       if (cmd.startsWith("get_data") || cmd.startsWith("put_data")) {
@@ -6180,9 +6178,9 @@ public class CommandStrParser {
 			  // -w should be first; -wr redraws and exits
 			  String fs=first_seg.get(0).toString().trim();
 			  if (fs.startsWith("-w")) {
-				  cpS.clearCanvas(false);
+				  packData.cpDrawing.clearCanvas(false);
 				  if (fs.startsWith("-wr")) {
-					  String tmpstr=cpS.dispOptions.toString().trim();
+					  String tmpstr=packData.cpDrawing.dispOptions.toString().trim();
 					  if (tmpstr.equals("-w"))
 						  return jexecute(packData,cmd+" ");
 					  // remove redund -w (or -wr)
@@ -6340,7 +6338,7 @@ public class CommandStrParser {
     						  packData.getFirstPetal(v));
     				  Complex w=packData.getCenter(
     						  packData.getLastPetal(v));
-    				  cpS.drawEdge(z,w,new DispFlags(null));
+    				  packData.cpDrawing.drawEdge(z,w,new DispFlags(null));
     				  count++;
     			  }
     		  } // end of while
@@ -6598,15 +6596,15 @@ public class CommandStrParser {
 	    			  rad=sc.rad;
 	    		  }
 	    		  else if (packData.hes>0) {
-	    			  z=cpS.sphView.toApparentSph(z);
+	    			  z=packData.cpDrawing.sphView.toApparentSph(z);
 	    			  // TODO: do we need to check if on back?
 	    		  }
 	    		  if (zoom) {
-	    			  count += cpS.realBox.setWidthHeight(2.0*rad*x);
+	    			  count += packData.cpDrawing.realBox.setWidthHeight(2.0*rad*x);
 	    		  }
 	    	  }
-	    	  count += cpS.realBox.focusView(z);//.times(-1.0));
-	    	  cpS.update(2);
+	    	  count += packData.cpDrawing.realBox.focusView(z);//.times(-1.0));
+	    	  packData.cpDrawing.update(2);
 	    	  try {
 	    		  jexecute(packData,"disp -wr");
 	    	  } catch (Exception ex) {}
@@ -6754,8 +6752,8 @@ public class CommandStrParser {
 	    	  }
 	    	  
 	    	  packData.setGeometry(packData.hes);
-	    	  if (cpS!=null) 
-	    		  cpS.setPackName();
+	    	  if (packData.cpDrawing!=null) 
+	    		  packData.cpDrawing.setPackName();
 	    	  return 1;
 	      } 
 	      
@@ -8307,7 +8305,7 @@ public class CommandStrParser {
 						  mode=2;
 					  }
 					  try {
-						  CPBase.postManager.open_psfile(cpS,mode,nmstr,insstr);
+						  CPBase.postManager.open_psfile(packData.cpDrawing,mode,nmstr,insstr);
 						  count++;
 					  } catch(InOutException iox) {
 						  throw new InOutException("opening failed: "+iox.getMessage());
@@ -8333,7 +8331,7 @@ public class CommandStrParser {
 						  }
 						  
 						  String hold=CPBase.postManager.psUltimateFile.getCanonicalPath();
-						  if (CPBase.postManager.close_psfile(cpS)>0) { 
+						  if (CPBase.postManager.close_psfile(packData.cpDrawing)>0) { 
 							  CirclePack.cpb.msg("post: saved PostScript in "+hold);
 						  }
 						  else 
@@ -10128,7 +10126,7 @@ public class CommandStrParser {
 	    			      if (maxw>hwid || maxh>hhgt) { // need to scale vbox up
 	    			    	  double factor=(maxw/hwid>maxh/hhgt) ? maxw/hwid : maxh/hhgt;
 	    			    	  vbox.scaleView(1.1*factor); // scale with a margin
-	    			    	  cpS.update(2);
+	    			    	  packData.cpDrawing.update(2);
 	    			      }
 	    			      count++;
 	    			      break;
@@ -10141,22 +10139,22 @@ public class CommandStrParser {
 	    				  try {
 	    					  for (int i=0;i<4;i++)
 	    						  corners[i]=Double.parseDouble(items.get(i+1));
-	    					  cpS.realBox.setView(new Complex(corners[0],corners[1]),
+	    					  packData.cpDrawing.realBox.setView(new Complex(corners[0],corners[1]),
 	    							  new Complex(corners[2],corners[3]));
 	    				  } catch (Exception ex) {
 	    					  CirclePack.cpb.myErrorMsg("'"+cmd+"' parsing error.");
 	    					  return count;
 	    				  }
 	    				  count++;
-	    				  cpS.update(2);
+	    				  packData.cpDrawing.update(2);
 	    				  break;
 	    			  }
 	    			  case 'd':	// default canvas size, sphView
 	    			  {
 	    				  vbox.reset();
 	    				  count++;
-	    				  cpS.update(2);
-	    				  cpS.sphView.defaultView();
+	    				  packData.cpDrawing.update(2);
+	    				  packData.cpDrawing.sphView.defaultView();
 	    				  break;
 	    			  }
 	    			  case 'f': // scale by given factor
@@ -10164,7 +10162,7 @@ public class CommandStrParser {
 	    				  try {
 	    					  count += packData.cpDrawing.realBox.
 	    							  scaleView(Double.parseDouble(items.get(1)));
-	    					  cpS.update(2);
+	    					  packData.cpDrawing.update(2);
 	    				  } catch (NumberFormatException nfe) {
 	    					  CirclePack.cpb.myErrorMsg("usage: set_screen "+
 	    							  "-f <x>: "+nfe.getMessage());
@@ -10190,8 +10188,8 @@ public class CommandStrParser {
 	    			  {  	
 	    				  try {
 	    					  double f=Double.parseDouble(items.get(1));
-	    					  count += cpS.realBox.scaleView(f/vbox.getWidth());
-	    					  cpS.update(2);
+	    					  count += packData.cpDrawing.realBox.scaleView(f/vbox.getWidth());
+	    					  packData.cpDrawing.update(2);
 	    				  } catch (NumberFormatException nfe) {
 	    					  CirclePack.cpb.myErrorMsg("usage: set_screen "+
 	    							  "-w(or h) <x>: "+nfe.getMessage());
@@ -10226,7 +10224,7 @@ public class CommandStrParser {
 	    						  utilz=sc.center;
 	    					  }
 	    					  else if (packData.hes>0) {
-	    						  utilz=cpS.sphView.toApparentSph(utilz);
+	    						  utilz=packData.cpDrawing.sphView.toApparentSph(utilz);
 	    						  // TODO: do we need to check if on back?
 	    					  } 
 	    					  } catch (NumberFormatException nfe) {
@@ -10245,12 +10243,12 @@ public class CommandStrParser {
 	    		  else { // no flags? default to default screen
     				  vbox.reset();
     				  count++;
-    				  cpS.update(2);
+    				  packData.cpDrawing.update(2);
 	    		  }
 	    	  } // end of while
 
 	    	  if (count>0) {
-	    		  cpS.repaint();
+	    		  packData.cpDrawing.repaint();
 	    	  }
 	    	  return count;
 	          } // done with 'set_screen'

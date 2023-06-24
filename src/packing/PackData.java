@@ -5005,7 +5005,7 @@ public class PackData{
 			  Vertex vert=packDCEL.vertices[v];
 			  if (vert.redFlag) {
 				  HalfEdge he=vert.halfedge;
-				  // may be one or more red edges from this vert
+				  // may red edges from vert with different centers
 				  do {
 					  if (he.myRedEdge!=null) {
 						  Complex cent=he.myRedEdge.getCenter();
@@ -5014,6 +5014,9 @@ public class PackData{
 					  }
 					  he=he.prev.twin; // cclw
 				  } while (he!=vert.halfedge);
+				  
+				  // also rotate 'Vertex.center'
+				  vert.center=new Complex(vert.center.times(rot));
 			  }
 			  else {
 				  packDCEL.setVertCenter(v,vert.center.times(rot));

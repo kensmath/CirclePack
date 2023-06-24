@@ -316,7 +316,8 @@ public class ComplexAnalysis extends PackExtender {
 			} // end of while
 
 			// repaint the canvas
-			CPBase.cpDrawing[qnum].repaint();
+			if (CPBase.GUImode!=0)
+				CPBase.cpDrawing[qnum].repaint();
 			return count;
 		}
 		

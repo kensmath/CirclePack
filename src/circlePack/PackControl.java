@@ -219,7 +219,7 @@ FocusListener {
 	
 	/**
 	 * This actually starts PackControl: initiate preferences,
-	 * start C libraries, create the pack[] vector of packings,
+	 * start C libraries, create packings[] vector of 'PackData's,
 	 * create the interfaces frames and windows, pack 'frame',
 	 * call initGUI, etc.
 	 */
@@ -283,7 +283,7 @@ FocusListener {
 			cpCanvas[i]=new CPcanvas(i); // needed for GUI
 			CPdrawing cpS=cpDrawing[i] = new CPdrawing(i);
 			
-			// crosslink 'PackData' and 'CPDrawing'
+			// 'PackData' and 'CPDrawing' must handshake
 			cpS.packData=packings[i];
 			packings[i].cpDrawing=cpS;
 			
@@ -1074,19 +1074,21 @@ FocusListener {
 	}
 
 	/**
-	 * Replace 'packings[pnum]' with new packing; old packing
-	 * is generally orphaned. 
+	 * Install packing 'p' in place of 'packings[pnum]'; former 
+	 * 'packings[pnum]' is generally orphaned. 
 	 * TODO: This replaced 'CPDrawing.swapPackData' and there may
 	 * be problems in some cases when 'packData' didn't have a
 	 * 'packNum'.
-	 * @param p PackData
+	 * @param p PackData, new data
 	 * @param pnum int
-	 * @param keepX boolean, transfer current extenders
+	 * @param keepX boolean, keep current 'packings[pnum]' extenders
 	 * @return p, null on error
 	 */
 	public PackData swapPackData(PackData p,int pnum,boolean keepX) {
-		if (p==null)
+		if (p==null || pnum<0 || pnum>=CPBase.NUM_PACKS) {
+			CirclePack.cpb.errMsg("packing null or has improper packing index");
 			return p;
+		}
 		
 		// first, fix packData pointers in any packExtenders
 		if (keepX) {

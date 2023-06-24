@@ -686,7 +686,7 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		 */
 		public void updateVertex(PackData p, boolean useActiveVertex) {
 			// If packData is null or empty just return.
-			if (p == null || !p.status) 
+			if (p == null || !p.status)  // p.packDCEL.vertices[2].center
 				return;
 
 			// Update for the current active or chosen vertex, 

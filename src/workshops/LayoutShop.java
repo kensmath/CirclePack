@@ -99,7 +99,8 @@ public class LayoutShop {
 //		Iterator<HalfEdge> llits=leftlink.iterator();
 		Iterator<TriAspect> tais = aspectlist.iterator();
 		while (his.hasNext()) {
-			int V = his.next().next.origin.vertIndx; // next vert to find
+			HalfEdge he=his.next();
+			int V = he.next.origin.vertIndx; // next vert to find
 			boolean hit = false;
 			while (tais.hasNext() && !hit) {
 				TriAspect triaspect = tais.next();
@@ -109,8 +110,10 @@ public class LayoutShop {
 					Zlist.add(triaspect.center[k]);
 				}
 			}
-			if (!hit)
-				throw new CombException("didn't find center for V in TriAspects");
+			if (!hit) {
+				throw new CombException("didn't find center for V = "+V+" in" +
+						"half edge "+he+" among TriAspects");
+			}
 		}
 
 		return Zlist;

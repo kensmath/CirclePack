@@ -921,9 +921,16 @@ public class ConformalTiling extends PackExtender {
 			else
 				msg("'canonicalPack' is set");
 			
+			// make a copy to replace 'this.packData' with only
+			//   this as extension
+			int pnum=packData.packNum;
+			swapExtenderPD(newPD);
+			
+			// put this in 'packings[pnum]'
+			CirclePack.cpb.swapPackData(packData,pnum,false);
+			packData.cpDrawing.setPackData(packData);
+			
 			// 'this.packData' gets a bare-bones copy of the deepest TileData
-			packData=CirclePack.cpb.swapPackData(newPD,packData.packNum,false);
-			swapExtenderPD(packData);
 			packData.tileData=deepestTD.copyBareBones();
 			packData.tileData.packData=packData;
 

@@ -214,7 +214,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 		// GUI
 		// reset disp_text in "Screen" panel
         // if this is active, reset current settings
-		if (!startup) { 
+		if (!startup && CPBase.GUImode!=0) { 
 			setPackName();
 			if (this==PackControl.getActiveCPDrawing()) { 
 				PackControl.screenCtrlFrame.screenPanel.resetSliders();

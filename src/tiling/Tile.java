@@ -281,6 +281,18 @@ public class Tile extends Face {
 		for (int j=0;j<vertCount;j++) {
 			tile.vert[j]=2+2*j;
 		}
+		
+		// get redChain to start at vert 2
+		if (p.packDCEL.redChain.myEdge.origin.vertIndx!=2) {
+			RedEdge tmhe=p.packDCEL.redChain.nextRed;
+			while (tmhe.myEdge.origin.vertIndx!=2 && tmhe!=p.packDCEL.redChain) {
+				tmhe=tmhe.nextRed;
+			}
+			if (tmhe.myEdge.origin.vertIndx!=2)
+				throw new CombException("redChain doesn't contain vert 2");
+			p.packDCEL.redChain=tmhe;
+		}
+		
 		tile.augVertCount=4*vertCount;
 		tile.augVert=new int[tile.augVertCount];
 		int tick=0;
