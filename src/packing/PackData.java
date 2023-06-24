@@ -4912,9 +4912,11 @@ public class PackData{
 	}
 
 	  /**
-		 * "Euclidean" scaling is applied. In the hyperbolic case, 
-		 * some circles could be forced outside unit disc, in which 
-		 * case they're pushed back in as horocycles. 
+		 * "Euclidean" scaling is applied to centers and radii, 
+		 * including data stored in red edges.
+		 * Note: in the hyperbolic case, some circles could be 
+		 * forced outside unit disc, in which case they're pushed 
+		 * back in as horocycles. 
 		 * 
 		 * TODO: what did this mean: "In the spherical case, apply z->t*z."
 		 */
@@ -4969,6 +4971,10 @@ public class PackData{
 						}
 						he=he.prev.twin; // cclw
 					} while (he!=vert.halfedge);
+					
+					// also store in 'Vertex'
+					vert.center=new Complex(vert.center.times(factor));
+					vert.rad=vert.rad*factor;
 				}
 				else {
 					packDCEL.setVertCenter(v,vert.center.times(factor));
