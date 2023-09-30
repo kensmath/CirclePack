@@ -2828,7 +2828,6 @@ public class ConformalTiling extends PackExtender {
 						PackDCEL pdc1=p.packDCEL;
 						PackDCEL pdc2=tilePack.packDCEL;
 						
-// debugging 	
 						boolean debug=false; // debug=true;
 						if (debug) {
 							DCELdebug.printRedChain(pdc1.redChain);
@@ -2845,7 +2844,6 @@ public class ConformalTiling extends PackExtender {
 						p.vertexMap=pdcel.oldNew;
 						pdcel.fixDCEL(null);
 						
-// debugging				
 						if (debug) { // debug=true;
 							CPBase.packings[2].attachDCEL(pdcel);
 							debug=false;

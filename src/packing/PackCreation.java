@@ -15,6 +15,7 @@ import dcel.CombDCEL;
 import dcel.PackDCEL;
 import dcel.RawManip;
 import deBugging.DCELdebug;
+import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.ParserException;
@@ -100,13 +101,26 @@ public class PackCreation {
 		//    top right = nodeCount, bottom left = nodeCount-1. 
 		int top=pdcel.vertCount;
 		int bottom=pdcel.vertCount-1;
-		
+
 		// Add mn-2 layers from bottom cclw to top
 		int sz=2; // start with the 2x2 already built
+
+		if (debug) { // debug=true;
+			StringBuilder stbld=new StringBuilder("layer_0_"+sz+".p");
+			pdcel.fixDCEL(workPack);
+			DebugHelp.debugPackWrite(workPack,stbld.toString());
+		}
+		
 		while (sz<mn) {
 			int w=workPack.getLastPetal(top);
 			int v=workPack.getFirstPetal(bottom);
 			CombDCEL.addlayer(workPack.packDCEL,1,6,v,w);
+			
+			if (debug) { // debug=true;
+				StringBuilder stbld=new StringBuilder("layer_1_"+sz+".p");
+				pdcel.fixDCEL(workPack);
+				DebugHelp.debugPackWrite(workPack,stbld.toString());
+			}
 			
 			// add the new pointy ends
 			he=pdcel.vertices[top+1].halfedge.twin.next;
@@ -115,6 +129,13 @@ public class PackCreation {
 			he=pdcel.vertices[top].halfedge.twin.next;
 			RawManip.addVert_raw(pdcel,he); // new top
 			top=pdcel.vertCount;
+			
+			if (debug) { // debug=true;
+				StringBuilder stbld=new StringBuilder("points_"+sz+".p");
+				pdcel.fixDCEL(workPack);
+				DebugHelp.debugPackWrite(workPack,stbld.toString());
+			}
+			
 			sz++;
 		}
 		
@@ -140,6 +161,13 @@ public class PackCreation {
 		for (int j=1;j<=mn;j++) {
 			topleft=workPack.getLastPetal(topleft);
 		}
+		
+		if (debug) { // debug=true;
+			StringBuilder stbld=new StringBuilder("finish"+sz+".p");
+			pdcel.fixDCEL(workPack);
+			DebugHelp.debugPackWrite(workPack,stbld.toString());
+			debug=false;
+		}
 	
 		if (!debug) { // debug=true;
 			// adjoin right edge to left edge for annulus
@@ -154,6 +182,7 @@ public class PackCreation {
 		}
 		
 		pdcel.fixDCEL(workPack);
+		workPack.set_aim_default();
 		return workPack;
 	}
 

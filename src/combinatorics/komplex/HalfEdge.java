@@ -291,8 +291,9 @@ public class HalfEdge {
 	}
 	
 	/**
-	 * return 1.0 unless 'invDist' differs by more than .000001
-	 * @return
+	 * return 1.0 unless 'invDist' differs from 1.0 by 
+	 * by more than .000001
+	 * @return double
 	 */
 	public double getInvDist() {
 		if (Math.abs(invDist-1.0)<.000001)

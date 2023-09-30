@@ -160,11 +160,20 @@ public class DcelFace {
 	
 	/**
 	 * Return counterclockwise (non-closed) array of vertex indices 
-	 * defining this (possibly ideal) face.
-	 * TODO: may want to start with particular vertex.
+	 * defining this (possibly ideal) face. 
 	 * @return int[]
 	 */
 	public int[] getVerts() {
+		return getVerts(0);
+	}
+	
+	/**
+	 * Return counterclockwise (non-closed) array of vertex indices 
+	 * defining this (possibly ideal) face. If v>o, start with v.
+	 * @param v integer, possibly 0 
+	 * @return int[], null if v>) and v is not a vertex
+	 */
+	public int[] getVerts(int v) {
 		ArrayList<Integer> vertlist=new ArrayList<Integer>();
 		HalfEdge nxtedge=edge;
 		int safety=10000;
@@ -180,6 +189,23 @@ public class DcelFace {
 		int tick=0;
 		while (vlst.hasNext()) {
 			ans[tick++]=(int)vlst.next();
+		}
+		
+		// check for v
+		if (v>0) {
+			int n=ans.length;
+			int hit=-1;
+			for (int j=0;j<n && (hit<0);j++) 
+				if (ans[j]==v)
+					hit=j;
+			if (hit==-1) 
+				return null;
+			if (hit>0) {
+				int[] newans=new int[n];
+				for (int j=0;j<n;j++)
+					newans[j]=ans[(j+hit)%n];
+				return newans;
+			}
 		}
 		return ans;
 	}

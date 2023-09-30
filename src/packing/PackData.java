@@ -232,7 +232,9 @@ public class PackData{
 		genus=(2-euler-pdcel.idealFaceCount)/2;
 		intrinsicGeom=PackData.getIntrinsicGeom(this);
     	fileName=StringUtil.dc2name(fileName);
-     	fillcurves();
+    	try {
+    		fillcurves();
+    	} catch(Exception ex) {}
     	return pdcel.vertCount;
     }
     
@@ -853,9 +855,10 @@ public class PackData{
 	}
 	  
 	/**
-	 * Store actual radius 'r' in internal form; only issue is hyp case,
-	 * when 'r' is the actual hyperbolic radius, and is converted 
-	 * to x_radius for rData. 
+	 * Store given radius 'r' in internal form. Only 
+	 * issue is in hyp case: when r>8.0, treat as horocycle,
+	 * when 'r' is the actual hyperbolic radius, 
+	 * it is converted to x_radius for storage.  
 	 * For numerical reasons, small hyp radii 'r' is converted 
 	 * to x=2*r*(2-r*(1-2*r/3)). (Recall x=1-exp(-2h)=1-s^2.)
 	 * @param v int
@@ -864,7 +867,9 @@ public class PackData{
 	public void setRadiusActual(int v,double r) {
 		double rad=r;
 		if(hes < 0) { // hyperbolic: store as x-radii
-			if(r > 0.0) {
+			if (r>8.0) // treat as horocycle, set neg eucl rad
+				rad=-.25; 
+			else if(r > 0.0) {
 				if(r > 0.0001) 
 					rad=1-Math.exp(-2.0*r);
 				else // for small values, use polynomial approximation
@@ -1647,7 +1652,6 @@ public class PackData{
 			setVertUtil(i,0);
 		boolean debug=false;
 		
-		// debugging
 		if (debug) { // debug=true;
 			for (int i=1;i<=nodeCount;i++) {
 				int[] flower=getFlower(i);
@@ -1978,16 +1982,16 @@ public class PackData{
 	        }
 	    }
 	    else {
-	        double o2=getInvDist(v,getFirstPetal(v));
+	        double ivd2=getInvDist(v,getFirstPetal(v));
 	        for (int k=1;k<=countFaces(v);k++) {
 	        	x1=x2;
-	        	double o1=o2;
+	        	double ivd0=ivd2;
 	        	int j1=j2;
 	        	j2=getPetal(v,k);
 	        	x2=getRadius(j2);
-	        	o2=getInvDist(v,getPetal(v,k));
+	        	ivd2=getInvDist(v,getPetal(v,k));
 	        	double ivd=getInvDist(j1,j2);
-	        	double cosang=HyperbolicMath.h_comp_cos(x, x1, x2,ivd,o2,o1);
+	        	double cosang=HyperbolicMath.h_comp_cos(x, x1, x2,ivd0,ivd,ivd2);
 	        	uP.value += Math.acos(cosang);
 	        }
 	    }
@@ -2761,7 +2765,7 @@ public class PackData{
 	  public double faceArea(int f) {
 		  RadIvdPacket rip=getRIpacket(f);
 		  if (hes<0)  // hyperbolic
-			  return HyperbolicMath.h_area(rip);
+			  return HyperbolicMath.h_area(this,f);
 		  if (hes>0) // spherical
 			  return SphericalMath.s_face_area(rip);
 		  return EuclMath.eArea(rip);
@@ -5185,7 +5189,8 @@ public class PackData{
 	  }
 	  
 	  /** 
-	   * Fill a 'RadIvdPacket' with data for this face.
+	   * Fill a 'RadIvdPacket' with data for this face. Note that
+	   * inversive distance k is that for edge <k,k+1>.
 	   * @param f int
 	   * @return new RadIvdPacket
 	   */
@@ -5195,7 +5200,8 @@ public class PackData{
 		  int k=0;
 		  do {
 			  rip.rad[k]=getRadius(he.origin.vertIndx);
-			  rip.oivd[k]=he.next.getInvDist();
+			  rip.ivd[k]=he.getInvDist();
+			  he=he.next;
 			  k++;
 		  } while(k<3);
 		  return rip;

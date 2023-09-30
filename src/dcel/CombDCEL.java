@@ -1159,7 +1159,7 @@ public class CombDCEL {
 	/**
 	 * Given a DCEL structure with an already processed 
 	 * red chain and 'vertices' updated, we process to 
-	 * create 'faces', 'edges', 'layoutOrder', 'fullOrder', etc. 
+	 * create 'faces', 'edges', 'layoutOrder', etc. 
 	 * This can be used when we modify the structure 
 	 * inside but can keep or modify the red chain, 
 	 * e.g., when flipping an edge, adding an edge, etc. 
@@ -1527,7 +1527,6 @@ public class CombDCEL {
 		// Use 'orderEdges' (which should be unchanged with redChain work): 
 		//    * index interior faces, 
 		//    * catalog and re-index all edges, face=by=face
-		//    * set 'FullOrder' of faces
 		//    * add faces to 'LayoutOrder' only if opposite vert not hit
 		//    * find first face that places a 'RedVertex'; this will be 
 		//      the packings 'redChain'

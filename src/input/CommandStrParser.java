@@ -3793,7 +3793,7 @@ public class CommandStrParser {
     			  String str=(String)items.get(0);
     			  n=Integer.parseInt(str);
     		  } catch(ParserException pex) {}
-    		 if (n<0 || n>12) n=1; // 0-12 are values for LineThick slider in SupportFrame. 
+    		 if (n<0 || n>24) n=1; // 0-25 are values for LineThick slider in ScreenPanel. 
     		 packData.cpDrawing.setLineThickness(n+1);
     		 if (CPBase.GUImode!=0)
     			 PackControl.screenCtrlFrame.screenPanel.setLine(n+1);
@@ -5352,7 +5352,6 @@ public class CommandStrParser {
 	   			  f=(Integer)flist.next();
 	   			  combinatorics.komplex.DcelFace face=packData.packDCEL.faces[f];
 	   			  
-// debugging
 	   			  boolean debug=false;
 	   			  if (debug) { // debug=true;
 	   				  HalfEdge hef=face.edge;
@@ -7628,11 +7627,11 @@ public class CommandStrParser {
 	    		  }
 	    		  packData.set_aim_default();
 	    		  try { // e.g., there may be no boundary vertices
-	    			  jexecute(packData,"set_rad 5.0 b");
+	    			  jexecute(packData,"set_rad 9.0 b");
 	    		  } catch (Exception ex) { } 
 	    		  
 	    		  HypPacker h_packer=new HypPacker(packData,-1);
-	    		  count=h_packer.maxPack(cycles);
+    			  count=h_packer.maxPack(cycles);
 	    	  }
 	    	  else if (packData.intrinsicGeom == 0) { // must be 1-torus 
 	    		  if (packData.hes !=0) {
@@ -7874,7 +7873,7 @@ public class CommandStrParser {
 	      else if (cmd.startsWith("newRe")) {
 	    	  if (flagSegs==null || flagSegs.size()==0)
 	    		  return 0;
-	    	  items=flagSegs.get(0);
+	    	  items=flagSegs.get(0); // DCELdebug.printRedChain(packData.packDCEL.recChain);
 	    	  RedEdge newRed=null;
 	    	  
 	    	  // torus: '-t' flag only
@@ -9324,7 +9323,7 @@ public class CommandStrParser {
 	    	  }
 
 	    	  // ========= set_invdist  ========
-	    	  if (cmd.startsWith("invdist")) {
+	    	  if (cmd.startsWith("invdis")) {
 	    		  
 	    		  // if no segments, error
 	    		  if (flagSegs==null || flagSegs.size()==0) { 

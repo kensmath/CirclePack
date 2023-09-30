@@ -49,20 +49,21 @@ public class ScreenCtrlFrame extends JFrame implements ActionListener {
 		setTitle("CirclePack Screen Options, p"+CirclePack.cpb.getActivePackNum());
 		tabbedPane = new JTabbedPane();
 
-// ----- next tab is "Display Options"
+// ---- top tab is "Display Options"
 		displayPanel = new DispPanel();
 		displayPanel.setToolTipText("default Display options");
-		tabbedPane.add(displayPanel,"Display");
 		
-// ----- next is panel with thumbnail images
+// ---- middle is panel with thumbnail images
 		imagePanel=new ScreenShotPanel();
-		tabbedPane.add(imagePanel,"ScreenShots");
+		imagePanel.setToolTipText("screen shots");
 
-// ----- next is "Screen" panel
+// ---- last is "Screen" panel
 		screenPanel=new ScreenPanel();
 		screenPanel.setToolTipText("Screen settings, opacity, lines, etc");
-		tabbedPane.add(screenPanel,"Screen");
 		
+		tabbedPane.add(displayPanel,"Display");
+		tabbedPane.add(imagePanel,"ScreenShots");
+		tabbedPane.add(screenPanel,"Screen");
 		this.add(tabbedPane);
 		
 	}

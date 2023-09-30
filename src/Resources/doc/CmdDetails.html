@@ -2127,12 +2127,12 @@ these packings and the corresponding object is displayed in both.
 	to v and w. Active pack and q must both be hyperbolic
 	or euclidean.
 </blockquote>
-<font size="+1" color="blue"><strong><a name="max_pack">max_pack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-r{v}] [k]&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="max_pack">max_pack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-v{v}] [k]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>Carry out the operations needed to move the packing to its
 	"intrinsic" geometry (the one where it's maximal packing
 	will live), reset its aims to default, repack, and layout. 
-	Note that you have to issue separate commands to display the 
+	Note that you must issue separate commands to display the 
 	results.
 
 	Hyperbolic case (most common): Boundary radii are set to 
@@ -2143,8 +2143,8 @@ these packings and the corresponding object is displayed in both.
 	Euclidean case: This only occurs when the packing's complex
 	triangulates a 1-torus.
 
-	Spherical case: Puncture, push down to the hyperbolic 
-	setting, repack, layout, then project back to the sphere. 
+	Spherical case: Puncture, max_pack in the hyperbolic 
+	setting, then project back to the sphere. 
 	The user can specify the puncture (default being the largest 
 	index circle); the original indexing is restored after the 
 	packing operations. The standard normalization puts the 3D
@@ -2154,31 +2154,33 @@ these packings and the corresponding object is displayed in both.
 	iterations 'cycles' is set too low), then projecting back 
 	to sphere largely invalidates the computations and one must
 	start over. It is recommended in these cases that puncturing, 
-	projection, repacking, layout, projecting back, etc. be 
-	carried out separately so the repacking is known to complete.)
+	projecting to the hyp setting, max packing and layout there, 
+	then projecting back and normalizing. be carried out separately 
+	so the repacking is known to complete.)
 
 	NOTE: Historically, max packings were computing by computing
 	the labels first, using Thurston's iterative algorithm, then
 	calling 'layout' to compute the centers. (See 'repack'.)
-	However, Gerald Orick has developed a routine, and this may
-	be called automatically depending on circumstances: 
-	In particular, if the C++ library 'HeavyC_lib' is link and
-	if the packing is large enough, the Orick's 'CPI' routines
-	will be called. These compute radii	and centers simultaneously. 
-	Due to use of sparse matrix calls, these routines are very, very 
-	fast, and although the radii are not as accurate (as was 
-	necessary when they were to	be used in 'layout'), the centers 
-	are much better --- avoiding breakups that could occur in large
-	packing 'layout's.	
+	However, Gerald Orick has developed a routine called GOPack
+	which is exceptionally fast and avoids layout problems for
+	very large packings. This is available as a Matlab code from
+	    www.github/kensmath/GOPack
+	GOPack computes radii and centers simultaneously, and due to
+	use of sparse matrix calls, is very, very fast. Although the 
+	radii are not as accurate (as is necessary when using 'layout'), 
+	the centers	are much better --- avoiding breakups that can
+	occur with 'layout' for large packings. It is hoped that the 
+	GOPack algorithm can eventually be incorporated directly or
+	as a C++ library call in CirclePack.
+		
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
 <table>
-<tr><td width="25%" valign="top">-r {v}</td>
-<td width="65%" align="left"> Spherical case, traditional packing method only: 
-     		this specifies the vertex to be punctured (and 
-     		temporarily adjusts 'alpha' to be a non-neighbor, 
-     		if necessary).</td></tr>
+<tr><td width="25%" valign="top">-v {v}</td>
+<td width="65%" align="left"> for spherical case this specifies the 
+     		vertex to be punctured (and	temporarily adjusts 
+     		'alpha' to be a non-neighbor, if necessary).</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="repack">repack</a>&nbsp;&nbsp; <a href="perp_pack">perp_pack</a>&nbsp;&nbsp; <a href="set_radii">set_radii</a>&nbsp;&nbsp; 
@@ -2637,18 +2639,18 @@ with the 'pentagonal' cases among the 'create' options.
 	this command updates it. There is also an "update" button in the frame
 	itself.
 </blockquote>
-<font size="+1" color="blue"><strong><a name="perp_pack">perp_pack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[k]&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="perp_pack">perp_pack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[n]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong> This packing routine applies only to combinatorial
     closed discs. This converts the packing to euclidean and 
     computes a univalent circle packing in the plane whose 
     boundary circles are perpendicular to the unit circle (their
-    centers are slighly outside the unit disc). The method involves
+    centers are slightly outside the unit disc). The method involves
     doubling the complex, repacking and normalizing on the sphere,
     projecting to the plane, and reaping the resulting radii and
     centers. Because the packing computation is on the sphere,
     one cannot repeatedly repack, so one may want to set a larger
-    'k' for the number of repack cycles.
+    'n' for the number of repack cycles.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="repack">repack</a>&nbsp;&nbsp; <a href="max_pack">max_pack</a>&nbsp;&nbsp; <a href="set_cycles">set_cycles</a>&nbsp;&nbsp; 
@@ -4894,19 +4896,20 @@ of circles with that particular edge displayed.</td></tr>
 	to have circles in a certain order; for instance, when comparing
 	two packings' radii. If there is 'vertex_map', first entries are
 	exchanged; entries in vlist and elist are exchanged, flist is lost.
-	If there are not flags, then data is left with the vertices (i.e.,
-	only the index is changed, data stays). With one or more options,
-	the 'color', 'mark', or 'aim' will move with the index.
+	If there are no flags, then data is left with the original circles 
+	(i.e., only the index is changed). With one or more options,
+	the 'color', 'mark', and/or 'aim' will move to the new circle
+	along with the index.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
 <table>
 <tr><td width="25%" valign="top">-c</td>
-<td width="65%" align="left"> Vertex color is swapped along with the index</td></tr>
+<td width="65%" align="left"> Vertex color moves to circle along with the index</td></tr>
 <tr><td width="25%" valign="top">-m</td>
-<td width="65%" align="left"> Vertex 'mark' is swapped along with the index</td></tr>
+<td width="65%" align="left"> Vertex 'mark' moves to circle along with the index</td></tr>
 <tr><td width="25%" valign="top">-a</td>
-<td width="65%" align="left"> Assigned 'aim' is swapped along with the index</td></tr>
+<td width="65%" align="left"> Assigned 'aim' moves to circle along with the index</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="test_repack">test_repack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options]&nbsp;&nbsp; </font>
 <blockquote>
@@ -5512,11 +5515,10 @@ a negative value means this vertex is not adjusted during repacking</td></tr>
 <td width="65%" align="left">	comb length of bdry components</td></tr>
 <tr><td width="25%" valign="top">?script name</td>
 <td width="65%" align="left">	Is script file named</td></tr>
-<tr><td width="25%" valign="top">?vertexMap</td>
-<td width="65%" align="left">		If there is a "vertex_map", what are
-					indices (up to 12) associated with list?</td></tr>
+<tr><td width="25%" valign="top">?map</td>
+<td width="65%" align="left">		If "vertex_map" exists, list pairs {v,w} (up to 12) for list?</td></tr>
 <tr><td width="25%" valign="top">?map_rev {v}</td>
-<td width="65%" align="left">   same, but return reverse association for
+<td width="65%" align="left">   same, but return reverse association {w,v} for
 				a single vertex</td></tr>
 <tr><td width="25%" valign="top">NOTE:</td>
 <td width="65%" align="left"> Many options are not yet implemented (ask Ken if you need

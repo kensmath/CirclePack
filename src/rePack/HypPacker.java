@@ -1,7 +1,6 @@
 package rePack;
 
 import allMains.CirclePack;
-import exceptions.DataException;
 import exceptions.PackingException;
 import geometry.HyperbolicMath;
 import packing.PackData;
@@ -238,7 +237,7 @@ public class HypPacker extends RePacker {
 						r = 0;
 					double sr = Math.sqrt(r);
 
-					// compute anglesum: ????? 
+					// compute angsum
 					double fbest=compTriCurv(v,x_rad);
 
 					// set up for model
@@ -401,21 +400,24 @@ public class HypPacker extends RePacker {
 	}
 	
 	/**
-	 * Generic call; computes both radii and centers (use 'repack' if
-	 * you want radii only). 
+	 * Generic call; computes both radii and centers (use 'repack' 
+	 * for radii only). 
 	 * @param cycles, int, limit on recompute cycles; no effect in Orick's method
 	 * @return int; may be number of cycles used.
 	 */
 	public int maxPack(int cycles) {
 		int count=0;
 		try {
-			count=genericRePack(cycles);
+  		  	if (oldReliable)
+  		  		count=d_oldReliable(cycles);
+  		  	else
+  		  		count=genericRePack(cycles);
 			if (count!=0)
 				reapResults();
 			p.fillcurves();
 			p.packDCEL.layoutPacking();
 		} catch (Exception ex) {
-			throw new PackingException("error in Java DCEL repack computation"); 
+			throw new PackingException("error in Java DCEL max_pack computation"); 
 		}
 
 		// TODO: in future, want GOpack option
@@ -454,6 +456,7 @@ public class HypPacker extends RePacker {
      * @return int count, -1 on error
      */
     public int d_oldReliable(int passes) {
+    	double toler=RP_TOLER;
       int count = 0;
       double accum=0.0;
       int N=5; // iterations in each radius comp
@@ -469,7 +472,12 @@ public class HypPacker extends RePacker {
     		  accum += (err<0) ? (-err) : err;
     	  }
       }
-      if (aimnum==0) return FAILURE; // nothing to repack
+      if (aimnum==0) 
+    	  return FAILURE; // nothing to repack
+      // With few adjustible radii, their adjustments may not be able
+      //    to meet anglesum tolerance.
+      if (aimnum<5)
+    	  toler=RP_TOLER*10000; 
       
       double recip=.333333/aimnum;
       double cut=accum*recip;
@@ -480,11 +488,12 @@ public class HypPacker extends RePacker {
     	  for (int j=0;j<aimnum;j++) {
     		  int v=inDex[j];
     		  r=getTriRadius(v);
+    		  double curv=compTriCurv(v,r);
     		  
-    		  if (Math.abs(compTriCurv(v,r)-p.getAim(v))>cut) {
-    			  rr=h_RadCalc(v,r,p.getAim(v),N);
+    		  if (Math.abs(curv-p.getAim(v))>cut) {
+    			  rr=h_RadCalc(v,r,p.getAim(v),curv,N);
     			  setTriRadius(v,rr);
-    		  }
+     		  }
           }
 
           accum=0;
@@ -496,7 +505,8 @@ public class HypPacker extends RePacker {
           cut=accum*recip;
         
           // show activity 
-          if ((count % 10)==0) repack_activity_msg();
+          if ((count % 10)==0) 
+        	  repack_activity_msg();
                 
           count++;
       } /* end of while */
@@ -510,18 +520,17 @@ public class HypPacker extends RePacker {
      * @param v int
      * @param r double
      * @param aim double
+     * @param curv double, initial angle sum
      * @param N int
      * @return double (radius)
      */
-    public double h_RadCalc(int v,double r, double aim,int N) {
+    public double h_RadCalc(int v,double r, double aim,double curv,int N) {
     	double lower=0.5;
   	  	double upper=0.5;
   	  	double factor=0.5;
   	  	double upcurv;
   	  	double lowcurv;
   	  	
-  	  	// compute initial curvature
-  	  	double curv=compTriCurv(v,r); 
   	    double bestcurv=lowcurv=upcurv=curv;
   	    
   	    // may hit upper/lower bounds on radius change

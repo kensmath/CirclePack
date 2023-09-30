@@ -97,7 +97,7 @@ public class EuclMath{
 	 */
 	public static double e_cos_overlap(double r0, double r1, double r2) {
 		double c=r1*r2;
-		return 1-2*c/(r0*r0+r0*(r1+r2)+c);
+		return 1-2*c/(r0*(r0+r1+r2)+c);
 	}
 	
 	/**
@@ -139,8 +139,8 @@ public class EuclMath{
 	 * @return double
 	 */
 	public static double eArea(RadIvdPacket rip) {
-		return eArea(rip.rad[0],rip.rad[1],rip.rad[1],
-				rip.oivd[0],rip.oivd[1],rip.oivd[1]);
+		return eArea(rip.rad[0],rip.rad[1],rip.rad[2],
+				rip.ivd[0],rip.ivd[1],rip.ivd[2]);
 	}
 	
 	 /**
@@ -438,6 +438,9 @@ public class EuclMath{
 	/**
 	 * Given centers/radii of two circles and rad of third, and 
 	 * inv distances oj of edge <j,j+1>, find eucl center of circle 3.
+	 * Use lengths of a, b, c of sides, with a the length between
+	 * known centers. Get angle theta between sides a and c by law of
+	 * cosines.
 	 * @param z0 Complex
 	 * @param z1 Complex
 	 * @param r0 double
@@ -450,21 +453,27 @@ public class EuclMath{
 	 */
 	public static CircleSimple e_compcenter(Complex z0,Complex z1,double r0,
 			double r1,double r2,double ivd0,double ivd1,double ivd2) {
-		double l0 = r0 * r0 + r1 * r1 + 2 * r0 * r1 * ivd0;
-		double l2 = r0 * r0 + (r2) * (r2) + 2 * r0 * (r2) * ivd2;
-		double l1 = r1 * r1 + (r2) * (r2) + 2 * r1 * (r2) * ivd1;
-		double ld = 0.5 * (l2 + l0 - l1);
+		// squared lengths of sides
+		double l0 = r0 * r0 + r1 * r1 + 2 * r0 * r1 * ivd0; // l0=a^2
+		double l1 = r1 * r1 + (r2) * (r2) + 2 * r1 * (r2) * ivd1; // l1=b^2
+		double l2 = r0 * r0 + (r2) * (r2) + 2 * r0 * (r2) * ivd2; // l2=c^2
+		 
+		double ld = 0.5 * (l2 + l0 - l1); // a c cos(theta)=(c^2+a^2-b^2)/2
 		if ((ld * ld) > (l2 * l0))
 			return new CircleSimple(false);
-		// ld/(2*sqrt(l2*l0)) = cos(angle)
-		Complex v = new Complex();
-		v.x = ld / Math.sqrt(l0);
-		v.y = Math.sqrt(l2 - v.x * v.x);
+
+		// drop perp to side a, get base, height G, H 
+		double B = ld / Math.sqrt(l0); // v.x= c cos(theta)
+		double H = Math.sqrt(l2 - B*B);
+		Complex v = new Complex(B,H);
+		
+		// if a were laid out along x-axis, v is vector to center
 		Complex w = z1.sub(z0);
 		double s = w.abs();
 		if (s < 1.0e-30)
 			return new CircleSimple(false);
 		w = w.times(1 / s);
+		// answer is z0+w*v
 		Complex z=new Complex((z0.x + w.x * v.x - w.y * v.y),
 				(z0.y + w.x * v.y + w.y * v.x));
 		return new CircleSimple(z, r2, 1);

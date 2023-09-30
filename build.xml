@@ -97,5 +97,6 @@
 	     	</manifest>
 			<fileset dir="${basedir}/build" includes="allMains/**"/>
 		</jar>
-	</target>		
+	</target>
+
 </project>

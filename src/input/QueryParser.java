@@ -6,6 +6,7 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
+import combinatorics.komplex.DcelFace;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.RedEdge;
 import complex.Complex;
@@ -17,6 +18,8 @@ import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
 import ftnTheory.PointEnergies;
+import geometry.CommonMath;
+import geometry.SphericalMath;
 import input.CommandStrParser.Energy;
 import komplex.EdgeSimple;
 import listManip.FaceLink;
@@ -63,19 +66,22 @@ public class QueryParser {
 	}
 	
 	/**
-	 * Return a String in response to a query. This may have three parts: 'words',
-	 * 'ans', and 'suffix'. 'ans' may represent a value, list, etc, and generally 
-	 * can be used as a variable value in commands (in string form). 
+	 * Return a String in response to a query. This may have 
+	 * three parts: 'words', 'ans', and 'suffix'. 'ans' may 
+	 * represent (in 'String' form) a value, list, etc, and 
+	 * generally can be used as a variable value in commands.
 	 * 
-	 * If 'forMsg' is true, query is intended as a message, so 'words' is prepended.
-	 * Note that 'words' defaults to "query (p*) = "; may want to change this if it
-	 * doesn't depend on the current packing (e.g., 'Vlist') 
+	 * If 'forMsg' is true, query is intended as a message, so 
+	 * 'words' is prepended. Note that 'words' defaults to 
+	 * "query (p*) = "; may want to change this if it doesn't 
+	 * depend on the current packing (e.g., '?Vlist'). 
 	 * 
-	 * Also, if 'forMsg', then some lists may be limited to 12 items, 
-	 * e.g. if vertex list is longer, put in '...' via a
-	 * 'suffix' string. Long strings are likewise truncated.
+	 * Also, if 'forMsg', then some lists may be limited 
+	 * to 12 items, e.g. if vertex list is longer, put in 
+	 * '...' via a 'suffix' string. Long strings are likewise 
+	 * truncated.
 	 * 
-	 * TODO: add functionality as needed 
+	 * TODO: add additional queries and functionality as needed 
 	 * 
 	 * @param query, String of '?<query>' type: the '?' is gone,
 	 *    string should have been trimmed already 
@@ -425,6 +431,83 @@ public class QueryParser {
 					v=NodeLink.grab_one_vert(p,flagSegs);
 					ans.append(Double.toString(p.getAim(v)/Math.PI));
 					gotone=true;
+				}
+				
+				// list all (non-ideal) face angles (NOT divided by PI) 
+				//   at given v. Assume packing is laid out so we can
+				//   return actual angles computed from centers,
+				//   along with angles computed from radii
+				else if (query.startsWith("angles_at")) {
+					v=NodeLink.grab_one_vert(p,flagSegs);
+					if (v!=0) {
+						words.append("vert "+v+", faces: ");
+						int[] fflower=p.getFaceFlower(v);
+						int n=fflower.length;
+						double angsum=0.0;
+						double intsum=0.0;
+						if (!p.packDCEL.vertices[v].isBdry())
+							n=n-1; // remove the repeat
+						for (int k=0;k<n;k++) {
+							DcelFace face=p.packDCEL.faces[fflower[k]];
+							int[] verts=face.getVerts(v);
+							
+							// Compute actual (i.e., based on centers)
+							Complex z0=p.getCenter(verts[0]);
+							Complex z1=p.getCenter(verts[1]);
+							Complex z2=p.getCenter(verts[2]);
+							double ang=0.0;
+							if (p.hes<0) { // hyperbolic
+								if (p.getRadius(verts[0])>0) {
+									Mobius mob=Mobius.mobNormDisc(z0,z1);
+									Complex newz2=mob.apply(z2); 
+									// mob.apply(z0);
+									// mob.apply(z1); 
+									// mob.apply(z2).arg();
+									double arg2=newz2.arg();
+									if (arg2<=0)
+										arg2+=2.0*Math.PI;
+									ang=arg2-Math.PI/2;
+								}
+							}
+							else if (p.hes==0) { // eucl
+								ang=z2.minus(z0).divide(z1.minus(z0)).arg();
+							}
+							else { // sph -- may be ambiguous, not checked
+								double[] tanvec1=SphericalMath.sph_tangent(z0,z1);
+								double[] tanvec2=SphericalMath.sph_tangent(z0,z2);
+								ang=Math.acos(SphericalMath.dot_prod(tanvec1, tanvec2));
+							}
+							angsum+=ang;
+							
+							// Compute intneded (i.e., based on radii)
+							
+							// find inv distances
+							HalfEdge he=face.edge;
+							HalfEdge startedge=null;
+							for (int j=0;j<3 && (startedge==null);j++) {
+								if (he.origin.vertIndx==v)
+									startedge=he;
+								he=he.next;
+							}
+							double ivd0=startedge.getInvDist();
+							double ivd1=startedge.next.getInvDist();
+							double ivd2=startedge.next.next.getInvDist();
+							double r0=p.getRadius(verts[0]);
+							double r1=p.getRadius(verts[1]);
+							double r2=p.getRadius(verts[2]);
+							double intang=CommonMath.get_face_angle(r0, r1, r2, ivd0,ivd1,ivd2,p.hes);
+							intsum +=intang;
+							
+							// insert results
+							words.append(face.faceIndx+",");
+							ans.append(ang+" ("+intang+")  ");
+							gotone=true;
+						} // end of if
+						words.append("; actual (intended) angles: ");
+						ans.append("; actual (intended) angle sum= "+angsum+" ("+intsum+")");
+					}
+					else
+						CirclePack.cpb.errMsg("Usage: ?angle_at {v}");
 				}
 				
 				// angle sum/pi (just one)

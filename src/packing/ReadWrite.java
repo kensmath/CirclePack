@@ -122,6 +122,7 @@ public class ReadWrite {
 		boolean gotFlowers = false;
 		boolean col_c_flag = false;
 		boolean col_f_flag = false;
+		boolean gotAims=false;
 		EdgeLink vertMarks = null; // holds optional marks
 //	        boolean dcelread=false; // true, dcel data, triggered by key "BOUQUET:"
 
@@ -848,7 +849,8 @@ public class ReadWrite {
 								state = PackState.INITIAL;
 							}
 						}
-						flags |= 00004;
+						flags |= 00004;// problem: code both for aims and inv dist
+						gotAims=true;
 					} else if (mainTok.equals("INV_DISTANCES:")) {
 						state = PackState.INV_DISTANCES;
 						while (state == PackState.INV_DISTANCES && (line = StringUtil.ourNextLine(fp)) != null) {
@@ -1551,7 +1553,7 @@ public class ReadWrite {
 			p.fillcurves();
 		}
 
-		if ((flags & 00004) != 00004) { // set default aims
+		if (!gotAims) { // need to set default aims
 			p.set_aim_default();
 		}
 

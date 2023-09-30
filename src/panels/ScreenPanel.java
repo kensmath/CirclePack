@@ -54,14 +54,14 @@ public class ScreenPanel extends JPanel implements ChangeListener {
 				sliderPanel.setLayout(jPanel2Layout);
 				{
 					lineSlider = new JSlider();
-					lineSlider.setToolTipText("Set line thickness, 1 to 12.");
+					lineSlider.setToolTipText("Set line thickness, 1 to 25.");
 					lineSlider.setName("Line Thickness");
 					lineSlider.setSnapToTicks(true);
 					lineSlider.setValueIsAdjusting(true);
-					lineSlider.setMaximum(12);
+					lineSlider.setMaximum(25);
 					lineSlider.setMinimum(1);
 					lineSlider.setValue(CPBase.DEFAULT_LINETHICKNESS);
-					lineSlider.setMajorTickSpacing(1);
+					lineSlider.setMajorTickSpacing(2);
 					lineSlider.setPaintTicks(true);
 					lineSlider.setSize(190, 32);
 					lineSlider.addChangeListener(this);

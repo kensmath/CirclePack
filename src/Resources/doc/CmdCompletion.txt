@@ -94,7 +94,7 @@ Map [ox] [p q [options]]
 map [options] {v..} 
 mark [options] 
 match -q{q} v w {V W} 
-max_pack [-r{v}] [k] 
+max_pack [-v{v}] [k] 
 meld_edge {v w ..} 
 mend {data} 
 migrate v w 
@@ -117,7 +117,7 @@ path_Mobius
 path_to_elist 
 pave {v} 
 pdata 
-perp_pack [k] 
+perp_pack [n] 
 perron -[udUD] {n} 
 polypack -[o] {w ..} 
 post [options] 

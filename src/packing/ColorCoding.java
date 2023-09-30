@@ -101,10 +101,8 @@ public class ColorCoding {
 	    double []areas_p=new double[node+1];
 	    double []areas_q=new double[node+1];
 	    for (int f=1;f<=node;f++) {
-	    	RadIvdPacket rip=p.getRIpacket(f);
-	        areas_p[f]=HyperbolicMath.h_area(rip);
-	        rip=q.getRIpacket(f);
-	        areas_q[f]=HyperbolicMath.h_area(rip);
+	        areas_p[f]=HyperbolicMath.h_area(p,f);
+	        areas_q[f]=HyperbolicMath.h_area(q,f);
 	        ratio=areas_q[f]/areas_p[f];
 	        if (ratio>b) b=ratio;
 	        if ((1.0/ratio)>b) b=1.0/ratio;

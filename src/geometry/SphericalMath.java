@@ -76,8 +76,8 @@ public class SphericalMath{
   
   /** 
    * Compute cosine of angle at the first circle in spherical
-   * triangle formed by triple. Increment flag on error: 
-   * r1+r2+r3>M_PI or denom zero. 
+   * triangle formed by triple of spherical radii. 
+   * Increment flag on error: r1+r2+r3>M_PI or denom zero. 
    * TODO: Is this okay if r1+r2+r3 > M_PI? 
   */
   public static double s_comp_cos(double r1,double r2,double r3) {
@@ -135,7 +135,8 @@ public class SphericalMath{
    * @return
    */
   public static double s_face_area(RadIvdPacket rip) {
-	  return s_area(rip.rad[0],rip.rad[1],rip.rad[2],rip.oivd[0],rip.oivd[1],rip.oivd[2]);
+	  return s_area(rip.rad[0],rip.rad[1],rip.rad[2],
+			  rip.ivd[0],rip.ivd[1],rip.ivd[2]);
   }
   
   /**
@@ -503,7 +504,7 @@ public static double vec_norm(double X[]){
    * Find center of third circle in ordered triple. Note: 
    * orientation is counterclockwise looking at sphere from outside.
    * ivdj is inv distance for edge <j,j+1>. 
-   * TODO: inv distances not yet used; there to parallel other geoms.
+   * TODO: inv distances not yet used; there just to parallel other geoms.
    * @param z0 Complex, (theta, phi)
    * @param z1 Complex
    * @param r0 double
@@ -609,8 +610,8 @@ public static double vec_norm(double X[]){
   }
 
   /** 
-   * Given pts on sphere, return ptr to unit length 3-vector in 
-   * tangent space of first, pointing toward second. Result is
+   * Given 2 points on sphere, return unit length 3-vector in 
+   * tangent space of first pt, pointing toward second. Result is
    * always a unit vector perp to the vector to the first point. 
    * Ambiguities: 
    *  + If pts are essentially equal or antipodal, result

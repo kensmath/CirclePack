@@ -234,8 +234,8 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Update 'triData', creating, if necessary. Return true 
-	 * if there are nontrivial inversive distances so we can set
+	 * Update or create 'triData'. Return true if there are 
+	 * nontrivial inversive distances so we can set
 	 * "oldReliable" flag in repacking.
 	 * @return boolean
 	 */
@@ -263,6 +263,8 @@ public class PackDCEL {
 					triData[f].setInvDist(j,ivd);
 					hit=true;
 				}
+				else 
+					triData[f].setInvDist(j,1.0);
 			}	
 		}
 		return hit;
@@ -451,8 +453,8 @@ public class PackDCEL {
 	 * @param edge HalfEdge
 	 */
 	public void placeFirstEdge(HalfEdge edge) {
-		double r0=getVertRadius(edge);
-		double r1=getVertRadius(edge.next);
+		double r0=getVertRadius(edge); // HyperbolicMath.x_to_h_rad(r0);
+		double r1=getVertRadius(edge.next); // HyperbolicMath.x_to_h_rad(r1);
 		setCent4Edge(edge,new Complex(0.0));
 		double invd=edge.getInvDist();
 		double dist=CommonMath.ivd_edge_length(r0,r1,invd,p.hes);
@@ -489,21 +491,21 @@ public class PackDCEL {
 		CircleSimple c0=getVertData(edge);
 		CircleSimple c1=getVertData(edge.next);
 		CircleSimple c2=getVertData(edge.next.next);
-		double ov0=edge.next.getInvDist();
-		double ov1=edge.prev.getInvDist();
-		double ov2=edge.getInvDist();
+		double ov0=edge.getInvDist(); // HyperbolicMath.x_to_h_rad(c2.rad);
+		double ov1=edge.next.getInvDist();
+		double ov2=edge.next.next.getInvDist();
 		CircleSimple sC=CommonMath.comp_any_center(c0.center,
 				c1.center,c0.rad,c1.rad,c2.rad,ov0,ov1,ov2,p.hes);
 		return sC;
 	}
 	
 	/**
-	 * Compute center of vert v opposite 'edge' in 'edge.face'.
-	 * Compute as average of locations based on all edges
-	 * opposite v whose other centers are already in place,
-	 * indicated by 'eutil>0' for twin. Set eutil=1 in all
-	 * faces used in the computation to indicate these edges
-	 * are okay to use in later computations.
+	 * Compute center of vert v opposite the given 'edge' 
+	 * in its face. Compute as average of locations based on 
+	 * all edges opposite v whose other centers are already in place,
+	 * indicated by 'eutil>0' for the edge's twin. Set 
+	 * eutil=1 in all faces used in the computation to indicate 
+	 * these edges are okay to use in later computations.
 	 * @param edge HalfEdge
 	 * @return CircleSimple, null on failure
 	 */
@@ -514,12 +516,13 @@ public class PackDCEL {
 		CircleSimple c0=getVertData(edge);
 		CircleSimple c1=getVertData(edge.next);
 		CircleSimple cv=getVertData(edge.next.next);
-		double ov0=edge.next.getInvDist();
-		double ov1=edge.next.next.getInvDist();
-		double ov2=edge.getInvDist();
+		double ov0=edge.getInvDist();
+		double ov1=edge.next.getInvDist();
+		double ov2=edge.next.next.getInvDist();
 		CircleSimple sC=CommonMath.comp_any_center(c0.center,
 				c1.center,c0.rad,c1.rad,cv.rad,ov0,ov1,ov2,p.hes);
-		Complex accum=sC.center;
+		Complex accumZ=sC.center;
+		double accumR=sC.rad;
 		edge.eutil=edge.next.eutil=edge.next.next.eutil=1;
 		
 		// Now calculate using other opposite edges
@@ -533,17 +536,19 @@ public class PackDCEL {
 				c0=getVertData(he);
 				c1=getVertData(he.next);
 				CircleSimple c2=getVertData(he.next.next);
-				ov0=he.next.getInvDist();
-				ov1=he.next.next.getInvDist();
-				ov2=he.getInvDist();
+				ov0=he.getInvDist();
+				ov1=he.next.getInvDist();
+				ov2=he.next.next.getInvDist();
 				sC=CommonMath.comp_any_center(c0.center,
 						c1.center,c0.rad,c1.rad,c2.rad,ov0,ov1,ov2,p.hes);
-				accum=accum.add(sC.center);
+				accumZ=accumZ.add(sC.center);
+				accumR += sC.rad;
 				tick++;
 				he.eutil=he.next.eutil=he.next.next.eutil=1;
 			}
 		}
-		cv.center=accum.divide(tick);
+		cv.center=accumZ.divide(tick);
+		cv.rad=accumR/tick;
 		return cv;
 	}
 	
@@ -694,6 +699,7 @@ public class PackDCEL {
 	    firsthe.eutil=firsthe.next.eutil=firsthe.next.next.eutil=1;
 	    CircleSimple cs=d_compOppCenter(firsthe);
 	    setCent4Edge(firsthe.prev, cs.center);
+	    setRad4Edge(firsthe.prev,cs.rad);
 	    
 		if (debug) {// debug=true;
 			DCELdebug.drawEFC(this,firsthe);
@@ -714,17 +720,6 @@ public class PackDCEL {
 	    	
 // debugging
 //	    	System.out.println("he="+he);
-/*
-System.out.println("length error ("+he.origin.vertIndx+","+he.next.origin.vertIndx+") = "+
-  	((double)(he.origin.center.minus(he.next.origin.center).abs())-
-  	(he.origin.rad+he.next.origin.rad)));
-System.out.println("length error ("+he.next.origin.vertIndx+","+he.next.next.origin.vertIndx+") = "+
-  	(he.next.origin.center.minus(he.next.next.origin.center).abs()-
-  	(he.next.origin.rad+he.next.next.origin.rad)));
-System.out.println("length error ("+he.prev.origin.vertIndx+","+he.origin.vertIndx+") = "+
-  	(he.prev.origin.center.minus(he.origin.center).abs()-
-  	(he.prev.origin.rad+he.origin.rad)));
-*/  	
 	    	
 	    	if (!useSchw) {
 	    		if (face_only)
@@ -732,6 +727,7 @@ System.out.println("length error ("+he.prev.origin.vertIndx+","+he.origin.vertIn
 	    		else 
 	    			cs=compAvgCenter(he);
 	    		setCent4Edge(he.prev,cs.center);
+	    		setRad4Edge(he.prev,cs.rad);
 	    	}
 	    	else { // use Schwarzian
 	    		// TODO: not yet using average of computed centers
@@ -749,12 +745,6 @@ System.out.println("length error ("+he.prev.origin.vertIndx+","+he.origin.vertIn
 	    		if (ans>=0) {
 	    			gtri.data2pdcel(this);
 	    			count++;
-
-// debugging	    			
-//	    			int v=he.prev.origin.vertIndx;
-//		    		System.out.println("v="+v+" to z="+gtri.getCenter(
-//	    				gtri.vertIndex(v)));
-		    		
 	    		}
 	    		he.eutil=he.next.eutil=he.next.next.eutil=1;
 	    	}
@@ -878,12 +868,6 @@ System.out.println("length error ("+he.prev.origin.vertIndx+","+he.origin.vertIn
 	    			if (debug) {// debug=true;
 	    				DCELdebug.drawEFC(this,he);
 	    			}
-	    			
-// debugging	    			
-//	    			int v=he.prev.origin.vertIndx;
-//		    		System.out.println("v="+v+" to z="+gtri.getCenter(
-//	    				gtri.vertIndex(v)));
-		    		
 	    		}
 	    	}
 	    } // end of while
@@ -1410,8 +1394,6 @@ System.out.println("length error ("+he.prev.origin.vertIndx+","+he.origin.vertIn
 		HalfEdge he=vert.halfedge;
 		
 		do {
-			
-// debugging
 			if (he.face==null)
 				throw new CombException(" angle sum: face null for "+he);
 			

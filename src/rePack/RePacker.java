@@ -75,9 +75,7 @@ public abstract class RePacker {
 	public int localPasses;		// during this run.
 
 	// main data
-	public RData[] rdata;
 	public int[] index;			// indices of adjustable radii
-	public TmpData[] kdata;     // locally copy of needed part of p.kData.
 
 	// holding area for list
 	NodeLink holdv=null;
@@ -113,8 +111,10 @@ public abstract class RePacker {
 	
 	public RePacker(PackData pd,int pass_limit) {
 		p=pd;
-		if (pass_limit<0) passLimit=PASSLIMIT;
-		else passLimit=pass_limit;
+		if (pass_limit<0) 
+			passLimit=PASSLIMIT;
+		else 
+			passLimit=pass_limit;
 		status=load();  
 		if (status==LOADED) {
 			totalPasses=0;
@@ -347,7 +347,8 @@ public abstract class RePacker {
     	double curv=0;
     	for (int j=0;j<findices[v].length;j++) {
     		int k=vindices[v][j];
-    		curv += pdcel.triData[findices[v][j]].compOneAngle(k,rad);
+    		double ang=pdcel.triData[findices[v][j]].compOneAngle(k,rad);
+    		curv += ang;
     	}
     	return curv;
     }
@@ -391,15 +392,4 @@ public abstract class RePacker {
     	}
     }
 
-}
-
-/**
- * Internal class: temporary storage of version of KData
- * @author kstephe2
- */
-class TmpData {
-	int num;
-	int []flower;
-	double []overlaps;
-	double []petallaps;   // list of overlaps between petals
 }

@@ -154,7 +154,7 @@ public class TriData {
 	}
 	
 	/**
-	 * Caution: invDist[j] is for edge <j,j+1>
+	 * Caution: invDist[j] is for edge (j,j+1)
 	 * @param j int
 	 * @return double, 1.0 if 'invDist' is null
 	 */
@@ -167,7 +167,7 @@ public class TriData {
 	}
 	
 	/**
-	 * Caution: invDist[j] is for edge opposite vertex j.
+	 * Caution: invDist[j] is for edge (j,j+1).
 	 * Note: this call may have no effect if 'sch' is 1.0.
 	 * @param j int
 	 * @param ivd double
@@ -178,7 +178,7 @@ public class TriData {
 			invDist[0]=invDist[1]=invDist[2]=1.0;
 			invDist[j]=ivd;
 		}
-		else 
+		else if (invDist!=null)
 			invDist[j]=ivd;
 	}
 	
@@ -214,7 +214,7 @@ public class TriData {
 	
 	/**
 	 * Return angle at vert[j] using current data. If 
-	 * 'invDist' exists, then invDist[j] is for edge <j,j+1>
+	 * 'invDist' exists, then invDist[j] is for edge (j,j+1)
 	 * @param j int
 	 * @return double
 	 */
@@ -231,16 +231,19 @@ public class TriData {
 	/**
 	 * Return angle at v=vert[j] using current data, but radius 
 	 * 'rad' at v itself. If 'invDist' exists, then invDist[j] is 
-	 * for edge <j,j+1>
+	 * for edge (j,j+1)
 	 * @param j int
 	 * @param rad double
 	 * @return double
 	 */
 	public double compOneAngle(int j,double rad) {
-		if (invDist!=null)
+		if (invDist!=null) {
+			double ivd0=getInvDist(j);
+			double ivd1=getInvDist((j+1)%3);
+			double ivd2=getInvDist((j+2)%3);
 			return CommonMath.get_face_angle(rad,radii[(j+1)%3],
-					radii[(j+2)%3],getInvDist(j),getInvDist((j+1)%3),
-					getInvDist((j+2)%3),hes);
+					radii[(j+2)%3],ivd0,ivd1,ivd2,hes);
+		}
 		return CommonMath.get_face_angle(rad,radii[(j+1)%3],
 				radii[(j+2)%3],hes);
 	}

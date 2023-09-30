@@ -156,7 +156,8 @@ public class CommonMath {
 	}
 	
 	/**
-	 * Compute third circle give two centers, radii, no overlaps
+	 * Compute third circle give two centers, radii. This is the
+	 * tangency case.
 	 * @param z0 Complex
 	 * @param z1 Complex
 	 * @param r0 double
@@ -295,7 +296,8 @@ public class CommonMath {
 	 * @param hes int, geometry
 	 * @return double, -1.0 on error
 	 */
-	public static double get_face_angle(double rad0,double rad1,double rad2,int hes)
+	public static double get_face_angle(double rad0,
+			double rad1,double rad2,int hes)
 			throws DataException {
 		double theCos=0.0;
 		if (hes<0) // hyp with x-radii
@@ -312,8 +314,9 @@ public class CommonMath {
 	}
 
 	/**
-	 * Compute angle at r0 in mutually tangent triple of circles with
-	 * given radii (x-radii in hyp case). 
+	 * Compute angle at r0 in triple of circles with
+	 * given radii (x-radii in hyp case) and inversive
+	 * distances (ivdj is for edge <j,j+1>.)
 	 * @param r0 double
 	 * @param r1 double
 	 * @param r2 double
@@ -325,12 +328,13 @@ public class CommonMath {
 	 * @throws DataException
 	 */
 	public static double get_face_angle(double r0,double r1,double r2,
-			double ivd0,double ivd1,double ivd2,int hes) throws DataException {
+			double ivd0,double ivd1,double ivd2,int hes) 
+					throws DataException {
 		double theCos=0.0;
 		if (hes<0) { // hyp 
 			theCos=HyperbolicMath.h_comp_cos(r0,r1,r2,ivd0,ivd1,ivd2);
 		}
-		else if (hes>0) { // sph
+		else if (hes>0) { // sph; not ready for inversive distances
 			theCos=SphericalMath.s_comp_cos(r0, r1, r2);
 		}
 		else { // eucl

@@ -10,7 +10,6 @@ import complex.MathComplex;
 import dcel.Schwarzian;
 import exceptions.DataException;
 import exceptions.MobException;
-import exceptions.ParserException;
 import ftnTheory.SchwarzMap;
 import geometry.CircleSimple;
 import geometry.HyperbolicMath;
@@ -701,7 +700,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 
 	/**
 	 * Convenience routine: return value of z under 
-	 * (a-z)/(1-z*conj(a)), which interchanges a and z.
+	 * (a-z)/(1-z*conj(a)), which interchanges a and 0.
 	 * @param z Complex
 	 * @param a Complex
 	 * @return Complex
@@ -712,8 +711,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 
 	/**
 	 * Convenience routine: return preimage of w under mobius 
-	 * of disc which maps a to zero and b to positive x-axis
-	 * 
+	 * of disc which maps a to origin and b to positive x-axis,
+	 * a must be interior, b can be anything not too close to a.
 	 * @param w Complex
 	 * @param a Complex
 	 * @param b Complex
@@ -733,7 +732,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 
 	/**
 	 * Find the mobius of the unit disc which maps a to the
-	 * origin and (if g not to close to a) rotates so g is
+	 * origin and (if g not too close to a) rotates so g is
 	 * on the positive imaginary axis.
 	 * @param a Complex
 	 * @param g Complex
@@ -743,7 +742,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		Mobius mob=new Mobius(); // identity
 		mob.a=new Complex(1.0);
 		mob.b=a.times(-1.0);
-		mob.c=a.conj();
+		mob.c=mob.b.conj();
 		mob.d=new Complex(1.0);
 		if (a.minus(g).abs()<MOB_TOLER)
 			return mob;
@@ -931,12 +930,14 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/**
-	 * Create automorphism of unit disc carrying a->A and b->B. Various
-	 * situations and possible exceptions; Must have |a|=1 and |A|=1
-	 * simultaneously (same for b and B). If |a|=1=|b|, then call trans_abAB If
-	 * a,b,A,B are interior points, technically, must have hyp_dist (a,b) =
-	 * hyp_dist (A,B). But this routine carries the geodesic through a,b to that
-	 * through A,B, with midpoint going to midpoint.
+	 * Create automorphism of unit disc carrying a->A and b->B. 
+	 * Various situations and possible exceptions; Must have 
+	 * |a|=1 and |A|=1 simultaneously (same for b and B). If 
+	 * not |a|=1=|b|, then call trans_abAB because a,b,A,B are 
+	 * interior points; technically, must have hyp_dist (a,b) =
+	 * hyp_dist (A,B). But this routine carries the geodesic 
+	 * through a,b to that through A,B, with midpoint going 
+	 * to midpoint.
 	 * 
 	 * @param a Complex
 	 * @param b Complex
@@ -1077,40 +1078,17 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 * @return Mobius
 	 */
 	public static Mobius standard_mob(Complex a, Complex b) throws MobException {
-
-		double arg, x, sp, sm, tp, tm;
-		Complex w, ex, exa, ac;
-		Mobius M = new Mobius();
-
 		if (a.abs()>MOD1)
 			throw new DataException("'a' is almost on the unit circle");
-		ac = a.conj();
-		w = ac.times(b);
-		w = new Complex(1.0 - w.x, -w.y);
-		if (w.abs() < MOB_TOLER) {
-			M.util = 1;
-			return M;
+		Mobius mob=new Mobius(new Complex(1.0),a.times(-1.0),
+				a.conj().times(-1.0),new Complex(1.0));
+		Complex w=mob.apply(b);
+		if (w.abs() < MOB_TOLER) { // b too close to a
+			mob.util = 1;
+			return mob;
 		}
-		w = b.sub(a).divide(w);
-		arg = (-1.0) * (w.arg());
-		ex = new Complex(0.0, arg);
-		ex = ex.exp();
-		x = w.abs();
-		sp = Math.sqrt(1 + x);
-		if ((tm = (1 - x)) < 0.0) {
-			M.util = 1;
-			return M;
-		}
-		sm = Math.sqrt(1 - x);
-		tp = sp + sm;
-		tm = sp - sm;
-		exa = ex.times(a);
-		M = new Mobius(
-				new Complex(ex.x * tp + ac.x * tm, ex.y * tp + ac.y * tm),
-				new Complex(-exa.x * tp - tm, -exa.y * tp), new Complex(-ex.x
-						* tm - ac.x * tp, -ex.y * tm - ac.y * tp), new Complex(
-						exa.x * tm + tp, exa.y * tm));
-		return M;
+		Complex ex=new Complex(0.0,-w.arg()).exp();
+		return (Mobius)mob.scale(ex);
 	}
 
 	/**
@@ -1263,17 +1241,21 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 
 	/**
 	 * Apply mobius ('oriented' true) or inverse ('oriented' false) 
-	 * to a single circle in specified geometry. Note that in 
-	 * eucl case, negative newr means use outside of circle; calling 
-	 * routine will handle this. Center/radius in specified 
-	 * geometry returned in 'CircleSimple'.
+	 * to a single circle. Both csIn and csOut are in the specified 
+	 * geometry.
+	 * Notes: 
+	 * + in eucl case, negative newr means use outside of circle; 
+	 *   calling routine must handle this.
+	 * + in hyp case, negative newr means horocycle, center should
+	 *   be on unit circle. 
+	 * + calling routine instantiates csOut to return results.
 	 * @param mob Mobius
 	 * @param hes int, geometry
 	 * @param z Complex, circle center
 	 * @param r double, circle radius
 	 * @param csOut CircleSimple; return results (instantiated by caller)
 	 * @param oriented boolean, if false, use Mob^{-1}
-	 * @return int, 0 on error; results in hes geom are in 'sC'
+	 * @return int, 0 on error; results in hes geom are in 'csOut'
 	 */
 	public static int mobius_of_circle(Mobius mob, int hes, 
 			CircleSimple csIn,CircleSimple csOut, boolean oriented) {

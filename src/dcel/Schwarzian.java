@@ -463,8 +463,6 @@ public class Schwarzian {
 				CPBase.omega3[1],CPBase.omega3[2],
 				tpts[0],tpts[1],tpts[2],0,p.hes);
 		
-// debugging			
-
 		boolean debug=false; // debug=true;
 		if (debug) {
 			Complex tp0=SphericalMath.proj_pt_to_sph(

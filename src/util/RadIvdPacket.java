@@ -1,7 +1,7 @@
 package util;
 
 /**
- * Utility class to hold radius and opposite side inversive distance
+ * Utility class to hold radius and edge inversive distance
  * data for a face, irrespective of geometry.
  * 
  * TODO: can probably use TriAspect for this now (2021)
@@ -10,11 +10,11 @@ package util;
   */
 public class RadIvdPacket {
 	public double[] rad;
-	public double[] oivd;
+	public double[] ivd;
 	
 	// Constructor
 	public RadIvdPacket() {
 		rad=new double[3];
-		oivd=new double[3];
+		ivd=new double[3];
 	}
 }
