@@ -91,8 +91,8 @@ import util.PopupBuilder;
  * 'PackControl' populates the principal JFrame 'CPBase.frame' for 
  * the CirclePack package.
  */
-public class PackControl extends CPBase implements MouseMotionListener, 
-FocusListener {
+public class PackControl extends CPBase implements 
+MouseMotionListener,FocusListener {
 
 	// get computer's display dimensions
 	public static Dimension displayDimension=Toolkit.getDefaultToolkit().getScreenSize();

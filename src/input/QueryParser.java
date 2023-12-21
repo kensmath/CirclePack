@@ -35,7 +35,8 @@ import util.ViewBox;
 
 public class QueryParser {
 	
-	public static int processQuery(PackData p,String queryStr,boolean forMsg) {
+	public static int processQuery(PackData p,
+			String queryStr,boolean forMsg) {
 		StringBuilder strbld=new StringBuilder(queryStr);
 		
 		// remove the '?'
@@ -1013,7 +1014,7 @@ public class QueryParser {
 					}	
 				}
 				else if (query.startsWith("sch")) {
-					HalfLink hlink=new HalfLink(p,flagSegs.get(0));
+					HalfLink hlink=new HalfLink(p,flagSegs.get(0).get(0));
 					int tick=0;
 					Iterator<HalfEdge> his=hlink.iterator();
 					while (tick<10 && his.hasNext()) {

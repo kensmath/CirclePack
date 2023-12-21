@@ -884,7 +884,7 @@ public class ReadWrite {
 						}
 						flags |= 0040;
 					}
-					// 'real' Schwarzian for edges, see 'Schwarzian.java'
+					// 'real' Schwarzian for edges, see 'dcel.Schwarzian.java'
 					// TODO: Have to adjust for dcel structures.
 					// data: v w schw
 					else if (mainTok.equals("SCHWARZIANS:")) {

@@ -67,7 +67,7 @@ public class TriAspect extends TriData {
 	public Mobius baseMobius; 
 	public double[] baseSchwarz;  
 	
-	// store data for use in, e.g., 'Schwarzian.java'
+	// store data for use in, e.g., 'dcel.schwarzian.java'
 	public Mobius[] MobDeriv; // directed edge Mobius derivative
 	
 	// constructor(s)

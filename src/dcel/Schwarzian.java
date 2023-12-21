@@ -35,19 +35,77 @@ import util.StringUtil;
  * for related work in the setting of maps based on the original 
  * notions in Gerald Orick's thesis.
  * 
- * Here we work with parameters associated with edges in 
- * packing complexes, the "intrinsic" schwarzians. These are stored in 
- * in 'HalfEdge.schwarzian', defaulting to 0.0. The methods here 
- * are for creating, analyzing, manipulating this data. To start 
- * we restrict to tangency packings, and some routines do not apply 
- * in the hyperbolic setting since layouts can leave the disc. 
+ * Here we also work with parameters associated with edges in 
+ * packing complexes, the "intrinsic" schwarzians. These are 
+ * stored in in 'HalfEdge.schwarzian', defaulting to 0.0. The 
+ * methods here are for creating, analyzing, manipulating this 
+ * data. To start we restrict to tangency packings, and some 
+ * routines do not apply in the hyperbolic setting since layouts 
+ * can leave the disc. The "normalized" presentation of a flower
+ * puts the center (index 1) as the upper half plane, its 
+ * halfedge neighbor c_1 as half plane y <= -2, and petal
+ * c_2 as tangent at 0, radius 1. 
  * 
  * @author kens, January 2020
  */
 public class Schwarzian {
+	
+	/**
+	 * Concerns intrinsic schwarzians in normalized flower
+	 * presentation.
+	 * 
+	 * Given schwarzian s for edge (C,c_1), return distance
+	 * t between the first and last petal tangency points to
+	 * upper half plane, which is C.
+	 * @param s double
+	 * @return double t
+	 */
+	public static double situationMax(double s) {
+		double t=2.0*Math.sqrt(3)*(1.0-s);
+		return t;
+	}
+	
+	/**
+	 * Concerns intrinsic schwarzians in normalized flower
+	 * presentation.
+	 * 
+	 * Given schwarzian s for edge (C,c_2), return distance X
+	 * between tangency points of c_2 and c_3, radius r of c_3. 
+	 * @param s double
+	 * @return double[2]: X,r
+	 */
+	public static double[] situationInitial(double s) {
+		double[] ans;
+		ans=new double[2];
+		ans[0]=2.0/(Math.sqrt(3)*(1.0-s));
+		ans[1]=(ans[0]*ans[0])/4.0;
+		return ans;
+	}
+	
+	/**
+	 * Concerns intrinsic schwarzians in normalized flower
+	 * presentation.
+	 * 
+	 * Given schwarzian s for generic situation, where circle
+	 * c_j has radius R and edge (C,c_j) has schwarzian s, 
+	 * nghb petal c_{j-1} has radius r, return displacement X
+	 * of tangency point and radius r of c_{j+1}.
+	 * @param s double
+	 * @return double[2]: X,r
+	 */
+	public static double[] situationGeneric(double s,double r,double R) {
+		double[] ans;
+		ans=new double[2];
+		double num=2.0*Math.sqrt(3)*(1.0-s)-2.0*Math.sqrt(R/r);
+		double denom=1.0/r-2.0*Math.sqrt(3/(r*R))*
+				(1.0-s)+3.0*(1.0-s)*(1.0-s)/R;
+		ans[0]=num/denom;
+		ans[1]=0.25*ans[0]*ans[0]/R;
+		return ans;
+	}
 
 	/**
-	 * Compute intrinsic schwarzians for give interior edges 
+	 * Compute intrinsic schwarzians for given interior edges 
 	 * based only on radii. For each edge, find the 4 radii 
 	 * involved, find the base Mobius transformations and 
 	 * compute the schwarzian. 
@@ -301,14 +359,15 @@ public class Schwarzian {
 	}
 	
 	/**
-	 * Compute intrinsic schwarzian for edge between f and g
-	 * via 'baseMobius's, ensuring that trace=+2, det=1. The
-	 * intrinsic schwarzian is the edge Mobius derivative of
+	 * Compute intrinsic schwarzian mobius transformation 
+	 * for edge between f and g via 'baseMobius's, ensuring 
+	 * that trace=+2, det=1. 
+	 * The intrinsic schwarzian is the edge Mobius derivative of
 	 * the map from the base equilaterals F G to f and g. So
 	 * The fixed point is 1, the outward normal is 1,
 	 * so the complex Schwarzian derivative is real s and
 	 * the Mobius we return has the form 
-	 *    [1 + s, -s^2;s, 1-s]
+	 *    inv(bm_g)*bm_f = [1 + s, -s;s, 1-s]
 	 * Calling routine must insure g aligned with f before 
 	 * computing the baseMobius maps 'bm_g' and 'bm_f' (maps 
 	 * FROM the base equilateral TO f and g). 
@@ -363,7 +422,7 @@ public class Schwarzian {
 		// return clean Mobius
 		Mobius outmob=new Mobius();
 		outmob.a=new Complex(1.0+s);
-		outmob.b=new Complex(-1.0*s*s);
+		outmob.b=new Complex(-1.0*s);
 		outmob.c=new Complex(s);
 		outmob.d=new Complex(1.0-s);
 		

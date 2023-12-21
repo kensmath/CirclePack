@@ -1162,7 +1162,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 * from real schwarzian 's'. Base equilateral is formed by 
 	 * tangent triple of radius sqrt(3), symmetric w.r.t. the 
 	 * origin, and with tangencies at third roots of unity. 
-	 * 'j' indicates the relevant edge, see 'Schwarzian.java'.
+	 * 'j' indicates the relevant edge, see 'dcel.Schwarzian.java'.
 	 *     mob = [1 + c*z,-c*z^2; c, 1-c*z], 
 	 * where z is the fixed point and c = s*i*conj(psi), where 
 	 * 'psi' is the unit vector in the direction of the oriented 

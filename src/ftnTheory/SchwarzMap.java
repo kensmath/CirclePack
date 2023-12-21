@@ -13,6 +13,7 @@ import combinatorics.komplex.DcelFace;
 import combinatorics.komplex.HalfEdge;
 import complex.Complex;
 import dcel.Schwarzian;
+import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.MiscException;
 import exceptions.ParserException;
@@ -25,9 +26,11 @@ import listManip.EdgeLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
 import math.Mobius;
+import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
+import util.ColorUtil;
 import util.DispFlags;
 import util.StringUtil;
 import util.TriAspect;
@@ -65,9 +68,9 @@ import widgets.SchwarzSliders;
  * 
  * The Mobius maps dM(e) fix the tangency point within e and are always 
  * parabolic, and we normalize so trace(dM(e))=2 and det(dM(e))=1. If
- * dM(e) ~ [a b | c d], then the complex entry c is the "(complex discrete)
- * Schwarzian" as defined by Orick. More precisely, if z is the tangency
- * point in the edge e then dM(e) has the form
+ * dM(e) ~ [a b | c d], then the complex entry c is the "(complex 
+ * discrete) Schwarzian" as defined by Orick. More precisely, if 
+ * z is the tangency point in the edge e then dM(e) has the form
  *      dM(e)= [1 + c*z,-c*z^2; c, 1-c*z]
  * Moreover, c = s*i*conj(delta), where delta = exp{i theta} gives the
  * direction of the directed edge e and s is some real scalar. If
@@ -80,27 +83,34 @@ import widgets.SchwarzSliders;
  * TWO packings, I am introducing intrinsic schwarzians associated 
  * with edges of a SINGLE tangency packing P. The "schwarzian" 
  * element of an edge of P is this intrinsic schwarzian, a real 
- * number based on maps from a "base equilateral". This base
- * equilateral is centered at the origin and has its edge 
- * midpoints at the cube roots of unity.
+ * number defined as above for maps from a "base equilateral". 
+ * This base equilateral is centered at the origin and has its edge 
+ * midpoints (tangency points of its circles) at the cube roots of 
+ * unity.
  * 
  * One of our main goals is to understand conditions on those
  * assignments of schwarzians which correspond to circle packings.
  * Also, to understand the relationship between the intrinsic
  * schwarzians of P and P' when considering a mapping. See
- * 'schwarzian.java'. 
+ * 'dcel.schwarzian.java'. 
  * 
- * This extender is about the mapping case and we store data for 
- * both domain and range packing, each having a 'TriAspect' for 
- * each face: domain data stored on initiation (or adjusted later), 
- * range data stored on demand. Given {f,g} in domain and {F,G} 
- * in range, we have stored the complex schwarzian for the map 
- * in 'domainTri.mobDeriv[.]'. The intrinsic schwarzians are
- * stored locally in each TriAspect 'schwarzian' and are only moved
- * to 'DcelFace.schwarzian' in the packing when requested. Note
- * that the range packing is a global Mobius image of domain 
- * packing iff all 'mobDeriv' are zero iff all intrinsic 
- * schwarzians are zero.
+ * This extender is mainly about the mapping case and we 
+ * store data for both domain and range packing, each having 
+ * a 'TriAspect' for each face: domain data stored on 
+ * initiation (or adjusted later), range data stored on 
+ * demand. Given {f,g} in domain and {F,G} in range, we 
+ * have stored the complex schwarzian for the map in 
+ * 'domainTri.mobDeriv[.]'. The intrinsic schwarzians are
+ * stored locally in each TriAspect 'schwarzian' and are 
+ * only moved to 'DcelFace.schwarzian' in the packing 
+ * when requested. Note that the range packing is a global 
+ * Mobius image of domain packing iff all 'mobDeriv' are 
+ * zero iff all intrinsic schwarzians are zero.
+ * 
+ * A second use of this extender is to experiment with
+ * flower layouts using intrinsic schwarzians: see 'flower'
+ * command and commands when 'flowerDegree' is positive.
+ * Note that indexing is ticklish.
  * 
  * TODO: fix 'layOrder' so that its 'HalfEdge's are from the 
  * correct PackDCEL.
@@ -120,7 +130,10 @@ public class SchwarzMap extends PackExtender {
 	
 	public RadiiSliders radSliders; // for opening radius slider window
 	public SchwarzSliders schSliders; // for opening schwarzian slider window
-
+	public int flowerDegree; // 0 if not in flower mode
+	public double[] schvector; // in flower mode, vector of schwarzians
+	public int[] petalticks; // which petals are in place
+	
 	// Constructor
 	public SchwarzMap(PackData p) {
 		super(p);
@@ -141,7 +154,10 @@ public class SchwarzMap extends PackExtender {
 		rangeTri=setupTri(packData);
 		rangePackNum=packData.packNum;
 		// may be reset when rangeTri is filled.
-		rangeHes=packData.hes; 
+		rangeHes=packData.hes;
+		
+		// are we working in flower mode?
+		flowerDegree=0;
 	}
 	
 	/**
@@ -150,9 +166,297 @@ public class SchwarzMap extends PackExtender {
 	public int cmdParser(String cmd, Vector<Vector<String>> flagSegs) {
 		Vector<String> items = null;
 		
+		// separate command options once in flower mode
+		if (flowerDegree>0 && cmd.startsWith("sch")) {
+			if (flagSegs==null || flagSegs.size()==0)
+				Oops("no 'sch' command strings given");
+			int fd=flowerDegree;
+			
+			int hit=0;
+			Iterator<Vector<String>> its=flagSegs.iterator();
+			while (its.hasNext()) {
+				items=its.next();
+				String str=items.get(0);
+				if (StringUtil.isFlag(str)) {
+					switch (str.charAt(1)) {
+					case 'c': // cycle the sequence of schwarzians
+					{
+						double hold=schvector[1];
+						for (int j=1;j<fd;j++)
+							schvector[j]=schvector[j+1];
+						schvector[fd]=hold;
+						hit++;
+						break;
+					}
+					case 'f': // full: layout using initial flowerDegree -3
+						// schwarzians, then compute the final 3 schwarzians.
+					{
+						double[] ts=new double[fd+1];
+						double[] rads=new double[fd+1];
+						ts[1]=0;
+						rads[2]=1.0;
+						
+						// compute c_3
+						double[] sit2=
+								Schwarzian.situationInitial(schvector[2]);
+						ts[3]=sit2[0];
+						rads[3]=sit2[1];
+						packData.packDCEL.setVertCenter(3,
+							new Complex(ts[3],-rads[3]));
+						packData.packDCEL.setVertRadii(3,rads[3]);
+						hit++;
+						
+						// lay out c_4 through c_{fd}
+						for (int j=4;j<=fd-1;j++) {
+							double t=packData.packDCEL.vertices[j-1].center.x;
+							double r=packData.packDCEL.vertices[j-2].rad;
+							double R=packData.packDCEL.vertices[j-1].rad;
+							double[] sit3=
+									Schwarzian.situationGeneric(schvector[j-1],r,R);
+							ts[j]=t+sit3[0];
+							rads[j]=sit3[1];
+							packData.packDCEL.setVertCenter(j,
+									new Complex(ts[j],-rads[j]));
+							packData.packDCEL.setVertRadii(j,rads[j]);
+							if (rads[j]>=1.0)
+								msg("Petal "+j+" has radius > 1; rad = "+rads[j]);
+							hit++;
+						}
+						
+						// place the last petal, forcing radius 1,
+						//    but see what computed value is first
+						double r=packData.packDCEL.vertices[fd-2].rad;
+						double R=packData.packDCEL.vertices[fd-1].rad;
+						double[] sit3=
+								Schwarzian.situationGeneric(schvector[fd-1],r,R);
+						if (Math.abs(1.0-sit3[1])>.01)
+							msg("Final petal computed radius is not 1; rad = "+sit3[1]);
+						
+						// force it to be 1
+						rads[fd]=1.0;
+						double delt=2.0*Math.sqrt(rads[fd-1]);
+						ts[fd]=ts[fd-1]+delt;
+						schvector[fd-1]=1.0-2.0/(CPBase.sqrt3*delt);
+						packData.packDCEL.setVertCenter(fd,
+								new Complex(ts[fd],-rads[fd]));
+						packData.packDCEL.setVertRadii(fd,rads[fd]);
+						
+						// compute s_{fd-1} based on previous radii, 
+						//   formula (R3)
+						R=rads[fd-1];
+						r=rads[fd-2];
+						schvector[fd-1]=1.0-(Math.sqrt(R*r)+Math.sqrt(R))/
+								(CPBase.sqrt3*Math.sqrt(r));
+						HalfEdge he=packData.packDCEL.
+								findHalfEdge(new EdgeSimple(fd+1,fd-1));
+						packData.setSchwarzian(he,schvector[fd-1]);
+						
+						// compute s_[fd] using delt; formula (S2)
+						schvector[fd]=1.0-2/(CPBase.sqrt3*delt);
+						he=packData.packDCEL.
+								findHalfEdge(new EdgeSimple(fd+1,fd));
+						packData.setSchwarzian(he,schvector[fd]);
+						
+						// compute s_1 using t_n; formula (S1)
+						schvector[1]=1.0-ts[fd]/(2*CPBase.sqrt3);
+						he=packData.packDCEL.
+								findHalfEdge(new EdgeSimple(fd+1,1));
+						packData.setSchwarzian(he,schvector[1]);
+
+						hit++;
+						break;
+					}
+					case 's': // vector of schwarzians;
+					{
+						items.remove(0);
+						int len=items.size();
+						if (len>flowerDegree) {
+							Oops("Too many schwarzians");
+						}
+						try { // Note: s_j is j entry
+							for (int j=1;j<=len;j++) {
+								schvector[j]=Double.parseDouble(items.get(j-1));
+								HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(flowerDegree+1,j));
+								packData.setSchwarzian(he,schvector[j]);
+								hit++;
+							}
+						} catch(Exception ex) {
+							throw new ParserException("problem reading schwarzian");
+						}
+						break;
+					}
+					case 'r': // 
+					{
+						petalticks=new int[flowerDegree+1]; // indexed from 1
+						petalticks[1]=petalticks[2]=1;
+						// set rest along real axis, radius .025
+						for (int v=3;v<=flowerDegree;v++) {
+							double x=(v-2)*.2;
+							packData.packDCEL.setVertCenter(v, new Complex(x));
+							packData.packDCEL.setVertRadii(v, .025);
+						}
+						hit++;
+						break;
+					}
+					case 'd': // use schwarzian s_j to draw next petal c_{j+1}   
+					{
+						// Note on indices: petals/schwarzians indexed from 1,
+						//    but vert indices start at 2 (center is vert 1). 
+						// The 'indx>=3' petal is the first not computed and
+						//    needs schvector[indx-1].
+						int vertindx=0;
+						int tick=3;
+						while (tick<=flowerDegree) {
+							if(petalticks[tick]==0) {
+								vertindx=tick;
+								break;
+							}
+							tick++;
+						}
+						if (vertindx==0) // didn't find petal to place
+							break;
+						
+						items.remove(0);
+						
+						// is preceeding schwarzian given? 
+						//    else try schvector[indx-1]; 
+						if(items.size()>0) {
+							try {
+								double sch=Double.parseDouble(items.get(0));
+								schvector[vertindx]=sch;
+							} catch(Exception ex) {
+								Oops("failed to get schwarzian");
+							}
+						}
+						
+						// compute new petal c_{vertindx}
+						if (vertindx==3) { // initial case for c_3
+							double[] sit2=
+								Schwarzian.situationInitial(schvector[vertindx-1]);
+							packData.packDCEL.setVertCenter(vertindx,
+									new Complex(sit2[0],-sit2[1]));
+							packData.packDCEL.setVertRadii(vertindx,sit2[1]);
+							petalticks[vertindx]=1;
+							hit++;
+						}
+						else if (vertindx<=flowerDegree) { // generic case
+							double t=packData.packDCEL.vertices[vertindx-1].center.x;
+							double r=packData.packDCEL.vertices[vertindx-2].rad;
+							double R=packData.packDCEL.vertices[vertindx-1].rad;
+							double[] sit3=
+									Schwarzian.situationGeneric(schvector[vertindx-1],r,R);
+							packData.packDCEL.setVertCenter(vertindx,
+									new Complex(t+sit3[0],-sit3[1]));
+							packData.packDCEL.setVertRadii(vertindx,sit3[1]);
+							petalticks[vertindx]=1;
+							hit++;
+						}
+						
+						// plot this new circle, Disp for circles up to this one
+						if (hit>0) {
+							cpCommand(packData,"disp -w -cf 1 2 3 -c a(4,"+vertindx+")");
+						}
+						break;
+					}
+					case 'm': // Place last petal based on s_1
+					{
+						int vertindx=flowerDegree;
+						double tn=Schwarzian.situationMax(schvector[1]); // petal c_1 schwarzian
+						packData.packDCEL.setVertCenter(vertindx,new Complex(tn,-1.0));
+						packData.packDCEL.setVertRadii(vertindx,1.0);
+						
+						// display in red
+						cpCommand(packData,"disp -cc190 "+ vertindx);
+						hit++;
+						break;
+					}
+					case 'l': // show schvector in copyable form
+					{
+						StringBuilder strbld=new StringBuilder();
+						for (int v=1;v<=fd;v++) 
+							strbld.append(schvector[v]+"  ");
+						msg("schwarzians: "+ strbld.toString());
+						hit++;
+						break;
+					}
+					case 'x': // exit flower mode
+					{
+						flowerDegree=0;
+						schvector=null;
+						petalticks=null;
+						hit++;
+						break;
+					}
+					} // end of switch
+				} // done with next flag
+			} // end of while
+			return hit;
+		} // end of commands while in flowerMode
+		
+		// ======= enter flower mode ============
+		else if (cmd.startsWith("flower")) {
+			flowerDegree=6; // intended degree, default to 6
+			int M=flowerDegree+1; // center's index
+			
+			if (flagSegs!=null && flagSegs.size()>0) {
+				String str=flagSegs.get(0).get(0);
+				try {
+					int n=Integer.parseInt(str);
+					if (n<3)
+						throw new ParserException();
+					flowerDegree=n;
+					M=flowerDegree+1;
+				}catch(Exception ex) {
+					Oops("didn't get legal degree, not in flower mode");
+				}
+			}
+			
+			// create new flower; for sake of indexing petals
+			//    as c_1,c_2, ...,c_n, we put max index at center
+			PackData newData=PackCreation.seed(flowerDegree,0);
+   		  	if (newData==null) 
+   		  		throw new CombException("seed has failed");
+   		  	packData=CirclePack.cpb.swapPackData(newData,packData.packNum,true);
+   		  	packData.swap_nodes(1,M);
+   		  	for (int j=1;j<flowerDegree;j++)
+   		  		packData.swap_nodes(j,j+1);
+   		  	
+   		  	cpCommand(packData,"disp -w");
+   			schvector=new double[flowerDegree+1]; // indexed from 1
+			petalticks=new int[flowerDegree+1]; // indexed from 1
+			petalticks[1]=petalticks[2]=1;
+			
+			// set normalized setup; 
+			packData.packDCEL.setVertCenter(M,
+					new Complex(1.8019377358e+00,1.7355349565e+04));
+			packData.packDCEL.setVertCenter(1,
+					new Complex(1.8019377359e+00,-1.7355349565e+04));
+			packData.packDCEL.setVertCenter(2,
+					new Complex(0.0,-1.0));
+			packData.packDCEL.setVertRadii(M,1.735534956e+04);
+			packData.packDCEL.setVertRadii(1,1.735334956e+04);
+			packData.packDCEL.setVertRadii(2,1.0);
+			
+			// set rest to center at origin, radius .025
+			for (int v=3;v<=flowerDegree;v++) {
+				double x=(v-1)*.2;
+				packData.packDCEL.setVertCenter(v, new Complex(x));
+				packData.packDCEL.setVertRadii(v, .025);
+			}
+			
+			// color
+			packData.setCircleColor(M,ColorUtil.cloneMe(ColorUtil.coLor(80)));
+			packData.setCircleColor(1,ColorUtil.cloneMe(ColorUtil.coLor(100)));
+			packData.setCircleColor(2,ColorUtil.cloneMe(ColorUtil.coLor(205)));
+			
+			cpCommand(packData,"Disp -w -c -cf "+M+" 1 2");
+			
+			return 1;
+		}
+		
 		// ======= s_layout =============
 		
-		if (cmd.startsWith("s_lay")) {
+		else if (cmd.startsWith("s_lay")) {
 
 			// copy from "s_map"
 
@@ -252,7 +556,7 @@ public class SchwarzMap extends PackExtender {
 			int count=0;
 			
 			// If we need to place the base face, we make 
-			//   it a 'baseEquilateral', as in 'Schwarzian.java'.
+			//   it a 'baseEquilateral', as in 'dcel.Schwarzian.java'.
 			if (baseface>0) {
 				TriAspect tri=TriAspect.baseEquilateral(qData.hes);
 				TriAspect myTri=rangeTri[baseface];
@@ -1400,6 +1704,12 @@ public class SchwarzMap extends PackExtender {
 	 */
 	public void initCmdStruct() {
 		super.initCmdStruct();
+		cmdStruct.add(new CmdStruct("flower","{n}",null,
+				"go into 'flower' mode, degree n"));
+		cmdStruct.add(new CmdStruct("sch","-[cdflmsx]",null,
+				"c=cycle list,d=compute next,f=full layout,"+
+						"l=list schwarzians,m=layout max petal,"+
+						"s=set schwarzians,x=exit 'flower' mode"));
 		cmdStruct.add(new CmdStruct("radS",
 				"{v..}",null,"Create and display a widget for "
 						+ "adjusting radii"));

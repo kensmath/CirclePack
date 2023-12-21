@@ -1060,7 +1060,7 @@ points with nghbs</td></tr>
 	a dual spanning tree. We assume f is in place and use the 
 	real schwarzian for the	common edge to place the opposite 
 	circle of g. This is used only in spherical or euclidean 
-	geometry. See 'Schwarzian.java' for details. Also, all vertex 
+	geometry. See 'dcel.schwarzian.java' for details. Also, all vertex 
 	angle sums (ie. 'curv')	are set to and new angles accumulate
 	at vertices as successive faces are laid out.
 	
@@ -2368,6 +2368,9 @@ two side-pairings</td></tr>
 		not centered at the origin)</td></tr>
 <tr><td width="25%" valign="top">-m v1 v2 z1 z2</td>
 <td width="65%" align="left"> linear transformation putting vi at zi</td></tr>
+<tr><td width="25%" valign="top">-s</td>
+<td width="65%" align="left"> special for Schwarzian flower study; move i to infty,
+		circles 1 upper half plane, 2 half plane (y.le.-2).</td></tr>
 <tr><td width="25%" valign="top">-t</td>
 <td width="65%" align="left"> for torus only: put in normalized position, report tau</td></tr>
 <tr><td width="25%" valign="top">-u v</td>
@@ -4278,7 +4281,7 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 <blockquote>
 <strong>Description: </strong>
 	Compute and store the intrinsic schwarzians for given edges, 
-	defaulting to 'all'. See 'Schwarzian.java' for more details
+	defaulting to 'all'. See 'dcel.schwarzian.java' for more details
 	and the PackExtender 'SchwarzMap.java' for related methods.
 	If double x is given, then set specified schwarzians to x. 
 	Else compute the schwarzians using current radii. This 

@@ -4961,24 +4961,19 @@ public class PackData{
 			for (int v=1;v<=nodeCount;v++) {
 				Vertex vert=packDCEL.vertices[v];
 				if (vert.redFlag) {
-					HalfEdge he=vert.halfedge;
-					Complex cent=new Complex(vert.center);
-					double rad=vert.rad;
-					vert.center=new Complex(cent.times(factor));
-					vert.rad *=factor;
+					// store in 'Vertex'
+					vert.center=new Complex(vert.center.times(factor));
+					vert.rad=vert.rad*factor;
+					
 					// v may also be origin of one or more red edges
+					HalfEdge he=vert.halfedge;
 					do {
 						if (he.myRedEdge!=null) {
-							cent=he.myRedEdge.getCenter();
-							he.myRedEdge.setCenter(cent.times(factor));
+							he.myRedEdge.setCenter(he.myRedEdge.getCenter().times(factor));
 							he.myRedEdge.setRadius(he.myRedEdge.getRadius()*factor);
 						}
 						he=he.prev.twin; // cclw
 					} while (he!=vert.halfedge);
-					
-					// also store in 'Vertex'
-					vert.center=new Complex(vert.center.times(factor));
-					vert.rad=vert.rad*factor;
 				}
 				else {
 					packDCEL.setVertCenter(v,vert.center.times(factor));
@@ -5555,9 +5550,10 @@ public class PackData{
 	}
 
 	/** 
-	 * Create 'TriAspect' face data, which contains data face-by-face
-	 * for use, e.g., in 'Schwarzian' and 'ProjStruct'. Set the tanPts.
-	 * This does not change data in the packing itself.
+	 * Create 'TriAspect' face data, which contains data 
+	 * face-by-face for use, e.g., in 'Schwarzian' and 
+	 * 'ProjStruct'. Set the tanPts. This does not change 
+	 * data in the packing itself.
 	 * @param p PackData
 	 * @return int count 
 	 */
@@ -5577,8 +5573,10 @@ public class PackData{
 					ta.getCenter(1),
 					ta.getCenter(2),p.hes);
 			ta.tanPts=new Complex[3];
-			for (int j=0;j<3;j++)
-				ta.tanPts[j]=new Complex(dtri.TangPts[j]);
+			if (dtri.TangPts!=null) {
+				for (int j=0;j<3;j++)
+					ta.tanPts[j]=new Complex(dtri.TangPts[j]);
+			}
 			count++;
 		}
 

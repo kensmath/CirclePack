@@ -5350,7 +5350,8 @@ public class CommandStrParser {
 
 	   		  while (flist.hasNext()) {
 	   			  f=(Integer)flist.next();
-	   			  combinatorics.komplex.DcelFace face=packData.packDCEL.faces[f];
+	   			  combinatorics.komplex.DcelFace 
+	   			  	face=packData.packDCEL.faces[f];
 	   			  
 	   			  boolean debug=false;
 	   			  if (debug) { // debug=true;
@@ -7114,7 +7115,7 @@ public class CommandStrParser {
 			  PackDCEL pdc=packData.packDCEL;
 			  boolean useSchw=false; 
 			  
-			  // most typical call
+			  // most typical call, no flags
 	    	  if (flagSegs.size()==0) {
 	    		  pdc.layoutPacking();
 	    		  packData.fillcurves();
@@ -7592,11 +7593,12 @@ public class CommandStrParser {
 	    	  //	max_pack [k], for k cycles
 	    	  //	max_pack -r {v}, sphere only, puncture at v.
 	    	  //    max_pack -r {v} [k], both
-	    		  
+	    		 
+	    	  if (flagSegs!=null && flagSegs.size()>0) {
 	    	  try {
 	    		  items=(Vector<String>)flagSegs.elementAt(0);
 	    		  
-	    		  // first entry a flags?
+	    		  // first entry a flag?
 	    		  if (StringUtil.isFlag(items.elementAt(0))) {
 	    			  if (packData.hes>0 && items.elementAt(0).equals("-v")) {
 		    			  puncture_v=NodeLink.grab_one_vert(packData,(String)items.get(1));
@@ -7617,6 +7619,7 @@ public class CommandStrParser {
 	    			  else cycles=k;
 	    		  }
 	    	  } catch(Exception ex) {}
+	    	  }
 
 	    	  if ((packData.intrinsicGeom==0 && 
 	    			  packData.packDCEL.idealFaceCount>0) || 
@@ -7700,6 +7703,7 @@ public class CommandStrParser {
 	      h: rotate so designated verts in horizontal line
 	      i: scale/rotate to center designated vert at z=i.
 	      m: apply trans. locating u,v at z1 z2
+	      s: special for Schwarzian, to normalize to half planes
 	      t: torus: normalize fundamental domain, report tau.
 	      u: designated vert on unit circle 
 	      U: scale down (only) to fit packing in unit disc
@@ -7833,6 +7837,28 @@ public class CommandStrParser {
 	    			  // apply this mobius to the packing
 	    			  return (packData.apply_Mobius(mymob,
 	    					  new NodeLink(packData,"a")));
+	    		  }
+	    		  case 's': // normalize for Schwarzian experiments
+	    		  {
+	    			  if (packData.hes!=0)
+	    		    	  CommandStrParser.jexecute(packData,"geom_to_e");
+	    	    	  CommandStrParser.jexecute(packData,"norm_scale -c 1 1.0");
+	    	    	  double r=packData.packDCEL.vertices[1].rad;
+	    	    	  double a=2*r/(1.0+r);
+	    	    	  Mobius smob=new Mobius(new Complex(0.0,-a),new Complex(a,0.0),
+	    	    			  new Complex(1.0),new Complex(0.0,-1.0));
+	    	    	  
+	    			  // apply this mobius to the packing
+	    	    	  packData.apply_Mobius(smob,new NodeLink(packData,"a"));
+
+	    	    	  // translate to put next petal at origin
+	    	    	  int j=packData.packDCEL.vertices[1].halfedge.next.twin.origin.vertIndx;
+	    	    	  double x=packData.packDCEL.vertices[j].center.x;
+	    	    	  smob=new Mobius(new Complex(1.0),new Complex(-x,0.0),
+	    	    			  new Complex(0.0),new Complex(1.0));
+	    			  int ans=packData.apply_Mobius(smob,
+	    					  new NodeLink(packData,"a"));
+	    			  return ans;
 	    		  }
 	    		  case 't': // normalize a torus and report tau
 	    		  {
@@ -8658,6 +8684,14 @@ public class CommandStrParser {
 
 			  else if (cmd.startsWith("cir")) { // "rm_circle"
 	    		  NodeLink vertlist=new NodeLink(packData,items);
+	    		  
+	    		  // is this just removing one barycenter??
+	    		  if (vertlist!=null && vertlist.size()==1) {
+	    			  Vertex vert=packData.packDCEL.vertices[vertlist.get(0)];
+	    			  if (!vert.isBdry() && vert.getNum()==3) {
+	    				  return CommandStrParser.jexecute(packData,"rm_bary "+vert.vertIndx);
+	    			  }
+	    		  }
 	    		  
     	    	  int origCount=packData.packDCEL.vertCount;
     	    	  HalfLink hlink=new HalfLink();

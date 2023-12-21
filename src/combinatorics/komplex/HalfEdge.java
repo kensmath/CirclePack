@@ -30,7 +30,7 @@ public class HalfEdge {
 	
 	// TODO: figure out how to transfer this info as edges change.
 	double invDist;  // inversive distance assigned, default 1.0 (tangency)
-	double schwarzian; // see 'Schwarzian.java'
+	double schwarzian; // see 'dcel.Schwarzian.java'
 	Color color;  // not used much yet.
 	
 	// for temporary use only
