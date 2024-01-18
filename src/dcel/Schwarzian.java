@@ -89,16 +89,15 @@ public class Schwarzian {
 	 * Given schwarzian s for generic situation, where circle
 	 * c_j has radius R and edge (C,c_j) has schwarzian s, 
 	 * nghb petal c_{j-1} has radius r, return displacement X
-	 * of tangency point and radius r of c_{j+1}.
+	 * of tangency point and radius of c_{j+1}.
 	 * @param s double
 	 * @return double[2]: X,r
 	 */
 	public static double[] situationGeneric(double s,double r,double R) {
 		double[] ans;
 		ans=new double[2];
-		double num=2.0*Math.sqrt(3)*(1.0-s)-2.0*Math.sqrt(R/r);
-		double denom=1.0/r-2.0*Math.sqrt(3/(r*R))*
-				(1.0-s)+3.0*(1.0-s)*(1.0-s)/R;
+		double num=2.0*R;
+		double denom=Math.sqrt(3)*(1.0-s)-Math.sqrt(R/r);
 		ans[0]=num/denom;
 		ans[1]=0.25*ans[0]*ans[0]/R;
 		return ans;

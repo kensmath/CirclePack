@@ -262,7 +262,7 @@ public class SchwarzMap extends PackExtender {
 						he=packData.packDCEL.
 								findHalfEdge(new EdgeSimple(fd+1,1));
 						packData.setSchwarzian(he,schvector[1]);
-
+						cpCommand(packData,"disp -wr");
 						hit++;
 						break;
 					}
@@ -295,13 +295,12 @@ public class SchwarzMap extends PackExtender {
 							packData.packDCEL.setVertCenter(v, new Complex(x));
 							packData.packDCEL.setVertRadii(v, .025);
 						}
+						cpCommand(packData,"disp -wr");
 						hit++;
 						break;
 					}
-					case 'd': // use schwarzian s_j to draw next petal c_{j+1}   
+					case 'n': // draw next {n} petals 
 					{
-						// Note on indices: petals/schwarzians indexed from 1,
-						//    but vert indices start at 2 (center is vert 1). 
 						// The 'indx>=3' petal is the first not computed and
 						//    needs schvector[indx-1].
 						int vertindx=0;
@@ -323,7 +322,7 @@ public class SchwarzMap extends PackExtender {
 						if(items.size()>0) {
 							try {
 								double sch=Double.parseDouble(items.get(0));
-								schvector[vertindx]=sch;
+								schvector[vertindx-1]=sch;
 							} catch(Exception ex) {
 								Oops("failed to get schwarzian");
 							}
@@ -354,7 +353,7 @@ public class SchwarzMap extends PackExtender {
 						
 						// plot this new circle, Disp for circles up to this one
 						if (hit>0) {
-							cpCommand(packData,"disp -w -cf 1 2 3 -c a(4,"+vertindx+")");
+							cpCommand(packData,"disp -wr");
 						}
 						break;
 					}
@@ -449,7 +448,11 @@ public class SchwarzMap extends PackExtender {
 			packData.setCircleColor(1,ColorUtil.cloneMe(ColorUtil.coLor(100)));
 			packData.setCircleColor(2,ColorUtil.cloneMe(ColorUtil.coLor(205)));
 			
-			cpCommand(packData,"Disp -w -c -cf "+M+" 1 2");
+			// set colors
+			cpCommand(packData,"color -c s a");
+			cpCommand(packData,"color -c 80 M");
+			cpCommand(packData,"color -c 100 1 2");
+			cpCommand(packData,"Disp -w -c 1 2 -cf a(3,100)");
 			
 			return 1;
 		}
@@ -1706,9 +1709,9 @@ public class SchwarzMap extends PackExtender {
 		super.initCmdStruct();
 		cmdStruct.add(new CmdStruct("flower","{n}",null,
 				"go into 'flower' mode, degree n"));
-		cmdStruct.add(new CmdStruct("sch","-[cdflmsx]",null,
-				"c=cycle list,d=compute next,f=full layout,"+
-						"l=list schwarzians,m=layout max petal,"+
+		cmdStruct.add(new CmdStruct("sch","-[cflmnsx]",null,
+				"c=cycle list,f=full layout,l=list schwarzians,"+
+						"m=layout max petal,n=compute next,"+
 						"s=set schwarzians,x=exit 'flower' mode"));
 		cmdStruct.add(new CmdStruct("radS",
 				"{v..}",null,"Create and display a widget for "
