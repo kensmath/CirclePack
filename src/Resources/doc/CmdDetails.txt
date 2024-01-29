@@ -3176,8 +3176,8 @@ script and append it to 'ClosedPath'.</instance>
 <command cmd="sch_data" flags="[d] [-rc] N -a {filename}">
 <description>
 	For single d-flower, append N lines to
-	'filename', wach a string of d reals which are the 
-	schwarzians for the spokes of a d-flower repacked with 
+	'filename', each a string of d reals which are the 
+	intrinsic schwarzians for the spokes of a d-flower repacked with 
 	random boundary radii in range [.33333, 3.0]. 
 	The "-r" flag says to replace d in each of the N runs with a
 	random integer in range [3,15]. The "-c" flag says to 

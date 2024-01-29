@@ -695,9 +695,11 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			try {
 				if (useActiveVertex) 
 					v = p.activeNode;
-				else 
-					v = NodeLink.grab_one_vert(p, vertexChoiceField.getText());
-
+				else {
+					try {
+						v = NodeLink.grab_one_vert(p, vertexChoiceField.getText());
+					} catch (Exception iex) {v=p.activeNode;}
+				}
 				// If the current vertex is invalid, use the first vertex.
 				if (v <= 0 || v > p.nodeCount) 
 					v = 1;
@@ -738,8 +740,10 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 
 			// Get the index of the chosen face or use first index
 			try {
-				int currentFace = FaceLink.grab_one_face(packData,
+				int currentFace =0;
+				try {currentFace= FaceLink.grab_one_face(packData,
 						faceChoiceField.getText());
+				} catch (Exception iex) {currentFace=0;}
 				if (currentFace==0) 
 					currentFace=1;
 				
@@ -766,8 +770,11 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 
 			// Get the chosen edge and test it for validity.
 			try {
-				EdgeSimple edge = EdgeLink.grab_one_edge(packData,
+				EdgeSimple edge=null;
+				try {
+					edge = EdgeLink.grab_one_edge(packData,
 						edgeChoiceField.getText());
+				} catch(Exception iex) {edge=null;}
 				if (edge == null) 
 					return;
 				HalfEdge he=packData.packDCEL.findHalfEdge(edge);
@@ -813,8 +820,10 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 			//    depending on the call signature.
 			int currentTile=1;
 			try {
-				currentTile = TileLink.grab_one_tile(packData.tileData,
+				try {
+					currentTile = TileLink.grab_one_tile(packData.tileData,
 						tileChoiceField.getText());
+				} catch (Exception iex) {currentTile=0;}
 
 				// If the current tile is invalid, use 1
 				if (currentTile <= 0 || currentTile > packData.tileData.tileCount) 

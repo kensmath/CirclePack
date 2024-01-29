@@ -69,8 +69,8 @@ public class Schwarzian {
 	 * Concerns intrinsic schwarzians in normalized flower
 	 * presentation.
 	 * 
-	 * Given schwarzian s for edge (C,c_2), return distance X
-	 * between tangency points of c_2 and c_3, radius r of c_3. 
+	 * Given schwarzian s for edge (C,c_1), return distance X
+	 * between 0 and tangency point of c_2, radius r of c_3. 
 	 * @param s double
 	 * @return double[2]: X,r
 	 */

@@ -188,26 +188,26 @@ public class SchwarzMap extends PackExtender {
 						hit++;
 						break;
 					}
-					case 'f': // full: layout using initial flowerDegree -3
+					case 'f': // full: layout using initial flowerDegree-3
 						// schwarzians, then compute the final 3 schwarzians.
 					{
-						double[] ts=new double[fd+1];
-						double[] rads=new double[fd+1];
+						double[] ts=new double[fd+1]; // tangency of petal
+						double[] rads=new double[fd+1]; // radius of petal
 						ts[1]=0;
-						rads[2]=1.0;
+						rads[1]=1.0; // radius of c_1 is 1
 						
-						// compute c_3
+						// compute c_2
 						double[] sit2=
-								Schwarzian.situationInitial(schvector[2]);
-						ts[3]=sit2[0];
-						rads[3]=sit2[1];
-						packData.packDCEL.setVertCenter(3,
-							new Complex(ts[3],-rads[3]));
-						packData.packDCEL.setVertRadii(3,rads[3]);
+								Schwarzian.situationInitial(schvector[1]);
+						ts[2]=sit2[0];
+						rads[2]=sit2[1];
+						packData.packDCEL.setVertCenter(2,
+							new Complex(ts[2],-rads[2]));
+						packData.packDCEL.setVertRadii(2,rads[2]);
 						hit++;
 						
-						// lay out c_4 through c_{fd}
-						for (int j=4;j<=fd-1;j++) {
+						// lay out c_3 through c_{fd-1}
+						for (int j=3;j<fd-1;j++) {
 							double t=packData.packDCEL.vertices[j-1].center.x;
 							double r=packData.packDCEL.vertices[j-2].rad;
 							double R=packData.packDCEL.vertices[j-1].rad;
@@ -223,45 +223,48 @@ public class SchwarzMap extends PackExtender {
 							hit++;
 						}
 						
-						// place the last petal, forcing radius 1,
-						//    but see what computed value is first
-						double r=packData.packDCEL.vertices[fd-2].rad;
-						double R=packData.packDCEL.vertices[fd-1].rad;
+						// place the last petal, c_{fd-1}, forcing radius 1,
+						double r=packData.packDCEL.vertices[fd-3].rad;
+						double R=packData.packDCEL.vertices[fd-2].rad;
+						
+						// sidetrack: see computed value first using s_{fd-2}
 						double[] sit3=
-								Schwarzian.situationGeneric(schvector[fd-1],r,R);
+								Schwarzian.situationGeneric(schvector[fd-2],r,R);
 						if (Math.abs(1.0-sit3[1])>.01)
 							msg("Final petal computed radius is not 1; rad = "+sit3[1]);
-						
-						// force it to be 1
-						rads[fd]=1.0;
-						double delt=2.0*Math.sqrt(rads[fd-1]);
-						ts[fd]=ts[fd-1]+delt;
-						schvector[fd-1]=1.0-2.0/(CPBase.sqrt3*delt);
-						packData.packDCEL.setVertCenter(fd,
-								new Complex(ts[fd],-rads[fd]));
-						packData.packDCEL.setVertRadii(fd,rads[fd]);
-						
-						// compute s_{fd-1} based on previous radii, 
+
+						// force rad of fd-1 to be 1; place c_{fd-2}
+						rads[fd-1]=1.0;
+						double delt=2.0*Math.sqrt(rads[fd-2]);
+						ts[fd-1]=ts[fd-2]+delt;
+						packData.packDCEL.setVertCenter(fd-1,
+								new Complex(ts[fd-1],-rads[fd-1]));
+						packData.packDCEL.setVertRadii(fd-1,1.0); // force rad 1
+
+						// compute s_{fd-2} based on previous radii, 
 						//   formula (R3)
-						R=rads[fd-1];
-						r=rads[fd-2];
-						schvector[fd-1]=1.0-(Math.sqrt(R*r)+Math.sqrt(R))/
+						r=rads[fd-3];
+						R=rads[fd-2];
+						schvector[fd-2]=1.0-(Math.sqrt(R*r)+Math.sqrt(R))/
 								(CPBase.sqrt3*Math.sqrt(r));
+						// store schwarzian in edge
 						HalfEdge he=packData.packDCEL.
+								findHalfEdge(new EdgeSimple(fd+1,fd-2));
+						packData.setSchwarzian(he,schvector[fd-2]);
+						
+						// compute s_[fd-1] using delt; formula (S2)
+						schvector[fd-1]=1.0-2/(CPBase.sqrt3*delt);
+						// store schwarzian in edge
+						he=packData.packDCEL.
 								findHalfEdge(new EdgeSimple(fd+1,fd-1));
 						packData.setSchwarzian(he,schvector[fd-1]);
 						
-						// compute s_[fd] using delt; formula (S2)
-						schvector[fd]=1.0-2/(CPBase.sqrt3*delt);
+						// compute s_{fd} using t_{fd-1}; formula (S1)
+						schvector[fd]=1.0-ts[fd-1]/(2*CPBase.sqrt3);
+						// store schwarzian in edge
 						he=packData.packDCEL.
 								findHalfEdge(new EdgeSimple(fd+1,fd));
 						packData.setSchwarzian(he,schvector[fd]);
-						
-						// compute s_1 using t_n; formula (S1)
-						schvector[1]=1.0-ts[fd]/(2*CPBase.sqrt3);
-						he=packData.packDCEL.
-								findHalfEdge(new EdgeSimple(fd+1,1));
-						packData.setSchwarzian(he,schvector[1]);
 						cpCommand(packData,"disp -wr");
 						hit++;
 						break;
@@ -425,19 +428,23 @@ public class SchwarzMap extends PackExtender {
 			petalticks=new int[flowerDegree+1]; // indexed from 1
 			petalticks[1]=petalticks[2]=1;
 			
-			// set normalized setup; 
+			// put in normalized setup; 
+			//   * center is upper half plane
+			//   * last petal, c_n is half plane {y<=-2*i}
+			//   * first petal, c_1 has radius 1, center -i
+			//   * remaining petals small, spread out along x-axis
 			packData.packDCEL.setVertCenter(M,
 					new Complex(1.8019377358e+00,1.7355349565e+04));
-			packData.packDCEL.setVertCenter(1,
+			packData.packDCEL.setVertCenter(flowerDegree,
 					new Complex(1.8019377359e+00,-1.7355349565e+04));
-			packData.packDCEL.setVertCenter(2,
+			packData.packDCEL.setVertCenter(1,
 					new Complex(0.0,-1.0));
 			packData.packDCEL.setVertRadii(M,1.735534956e+04);
-			packData.packDCEL.setVertRadii(1,1.735334956e+04);
-			packData.packDCEL.setVertRadii(2,1.0);
+			packData.packDCEL.setVertRadii(flowerDegree,1.735334956e+04);
+			packData.packDCEL.setVertRadii(1,1.0);
 			
 			// set rest to center at origin, radius .025
-			for (int v=3;v<=flowerDegree;v++) {
+			for (int v=2;v<flowerDegree;v++) {
 				double x=(v-1)*.2;
 				packData.packDCEL.setVertCenter(v, new Complex(x));
 				packData.packDCEL.setVertRadii(v, .025);
@@ -445,14 +452,16 @@ public class SchwarzMap extends PackExtender {
 			
 			// color
 			packData.setCircleColor(M,ColorUtil.cloneMe(ColorUtil.coLor(80)));
-			packData.setCircleColor(1,ColorUtil.cloneMe(ColorUtil.coLor(100)));
-			packData.setCircleColor(2,ColorUtil.cloneMe(ColorUtil.coLor(205)));
+			packData.setCircleColor(flowerDegree,ColorUtil.cloneMe(ColorUtil.coLor(100)));
+			packData.setCircleColor(1,ColorUtil.cloneMe(ColorUtil.coLor(205)));
 			
 			// set colors
 			cpCommand(packData,"color -c s a");
 			cpCommand(packData,"color -c 80 M");
-			cpCommand(packData,"color -c 100 1 2");
-			cpCommand(packData,"Disp -w -c 1 2 -cf a(3,100)");
+			cpCommand(packData,"color -c 100 "+flowerDegree+" 1");
+
+			// initial display
+			cpCommand(packData,"Disp -w -c "+flowerDegree+" 1 -cf a(2,100)");
 			
 			return 1;
 		}
