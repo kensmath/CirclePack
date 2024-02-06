@@ -11,7 +11,7 @@ import java.util.Iterator;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
-import util.GenPathUtil;
+import util.PathUtil;
 import util.StringUtil;
 import allMains.CPBase;
 import allMains.CirclePack;
@@ -142,9 +142,9 @@ public class PathManager {
 	  throws IOException {
 		    if (fp==null) return 0;
 		    fp.write("PATH:\n");
-			double flatness = GenPathUtil.gpExtent(gpath) * GenPathUtil.FLAT_FACTOR;
+			double flatness = PathUtil.gpExtent(gpath) * PathUtil.FLAT_FACTOR;
 			// get polynomial approximation 
-			Vector<Vector<Complex>> polyGamma = GenPathUtil.gpPolygon(gpath,
+			Vector<Vector<Complex>> polyGamma = PathUtil.gpPolygon(gpath,
 					flatness);
 			Iterator<Vector<Complex>> pvec=polyGamma.iterator();
 			while (pvec.hasNext()) {

@@ -52,22 +52,21 @@ public class CPI_Ball3Sector {
 	}
 
 	void psplot() {
-		CPI_Ball3View view = new CPI_Ball3View();
 
 		CPI_Vector3 Z = new CPI_Vector3(c);
 		Z.mul(Math.cos(r * Math.PI));
 
-		double color = view.fgcolor;
-		if (c.dot(view.N) < 0)
-			color = view.bgcolor;
+		double color = CPI_Ball3View.fgcolor;
+		if (c.dot(CPI_Ball3View.N) < 0)
+			color = CPI_Ball3View.bgcolor;
 		System.out.printf("gsave\n%f setgray\n", color);
 		System.out.printf("%f rotate\n",
-				Math.atan2(c.dot(view.V), c.dot(view.U)) * 180.0 / Math.PI);
+				Math.atan2(c.dot(CPI_Ball3View.V), c.dot(CPI_Ball3View.U)) * 180.0 / Math.PI);
 		System.out.printf(
 				"%f %f translate\n",
-				Math.sqrt(Z.dot(view.U) * Z.dot(view.U) + Z.dot(view.V)
-						* Z.dot(view.V)), 0.0);
-		System.out.printf("%f %f scale\n", Math.cos(c.arg(view.N)), 1.0);
+				Math.sqrt(Z.dot(CPI_Ball3View.U) * Z.dot(CPI_Ball3View.U) + Z.dot(CPI_Ball3View.V)
+						* Z.dot(CPI_Ball3View.V)), 0.0);
+		System.out.printf("%f %f scale\n", Math.cos(c.arg(CPI_Ball3View.N)), 1.0);
 
 		double rad;
 		rad = Math.sin(r * Math.PI);

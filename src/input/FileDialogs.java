@@ -171,8 +171,8 @@ public class FileDialogs {
 		}
 		case JPG: {
 			if (actStr==null) actionStr="Save JPG File";
-			dbox.setCurrentDirectory(new File(CPFileManager.PostScriptDirectory.getPath()));
-			dbox.setSelectedFile(new File(CPFileManager.PostScriptDirectory+File.separator+
+			dbox.setCurrentDirectory(new File(CPFileManager.ImageDirectory.getPath()));
+			dbox.setSelectedFile(new File(CPFileManager.ImageDirectory+File.separator+
 				"generic.jpg")); 
 			dbox.setFileFilter(new JPGFilter());
 			result = dbox.showDialog(
@@ -180,19 +180,20 @@ public class FileDialogs {
 			if (result == JFileChooser.APPROVE_OPTION) {
 				targetFile = dbox.getSelectedFile();
 				if (swDir)
-					CPFileManager.PostScriptDirectory=dbox.getCurrentDirectory();
+					CPFileManager.ImageDirectory=dbox.getCurrentDirectory();
 				return targetFile;
 			}
 			return null;
 		}
 		case ABOUT: {
 			if (actStr==null) actionStr="Save AboutImage";
-			dbox.setCurrentDirectory(CPFileManager.PostScriptDirectory);
+			dbox.setCurrentDirectory(CPFileManager.ImageDirectory);
 			
-			// get the script name (without .xmd)
+			// get the script name (without .cps (or .xmd))
 			String sName=null;
 			int k=PackControl.scriptManager.scriptName.indexOf(".");
-			if (k<0) k=PackControl.scriptManager.scriptName.length();
+			if (k<0) 
+				k=PackControl.scriptManager.scriptName.length();
 			sName=PackControl.scriptManager.scriptName.substring(0,k);
 			dbox.setSelectedFile(new File(CPFileManager.PackingDirectory+File.separator+
 					sName+".jpg")); 
@@ -202,14 +203,14 @@ public class FileDialogs {
 			if (result == JFileChooser.APPROVE_OPTION) {
 				targetFile = dbox.getSelectedFile();
 				if (swDir)
-					CPFileManager.PostScriptDirectory=dbox.getCurrentDirectory();
+					CPFileManager.ImageDirectory=dbox.getCurrentDirectory();
 				return targetFile;
 			}
 			return null;
 		}
 		case POSTSCRIPT: {
 			if (actStr==null) actionStr="Save PostScript file";
-			dbox.setCurrentDirectory(CPFileManager.PostScriptDirectory);
+			dbox.setCurrentDirectory(CPFileManager.ImageDirectory);
 			dbox.setSelectedFile(new File(CPFileManager.PackingDirectory+File.separator+
 					CirclePack.cpb.getActivePackData().getName())); 
 			dbox.setFileFilter(new PostScriptFilter());
@@ -218,7 +219,7 @@ public class FileDialogs {
 			if (result == JFileChooser.APPROVE_OPTION) {
 				targetFile = dbox.getSelectedFile();
 				if (swDir)
-					CPFileManager.PostScriptDirectory=dbox.getCurrentDirectory();
+					CPFileManager.ImageDirectory=dbox.getCurrentDirectory();
 				return targetFile;
 			}
 			return null;
@@ -227,7 +228,7 @@ public class FileDialogs {
 			if (actStr==null) actionStr="Save the packing";
 			dbox.setCurrentDirectory(CPFileManager.PackingDirectory);
 			dbox.setSelectedFile(new File(CPFileManager.PackingDirectory+File.separator+
-					CPBase.pack[CirclePack.cpb.getActivePackNum()].packData.fileName));
+					CPBase.cpDrawing[CirclePack.cpb.getActivePackNum()].getPackData().fileName));
 			dbox.setFileFilter(new PackingFilter());
 			result = dbox.showDialog(
 					(Component) PackControl.activeFrame,actionStr);
@@ -266,6 +267,7 @@ public class FileDialogs {
 		public boolean accept(File f) {
 			return f.getName().toLowerCase().endsWith(".cmd")
 					|| f.getName().toLowerCase().endsWith(".xmd")
+					|| f.getName().toLowerCase().endsWith(".cps")
 					|| f.isDirectory();
 		}
 		public String getDescription() {

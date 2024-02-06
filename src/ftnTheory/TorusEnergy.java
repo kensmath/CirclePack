@@ -4,12 +4,13 @@ import java.util.Random;
 import java.util.Vector;
 
 import allMains.CirclePack;
+import exceptions.CombException;
 import geometry.EuclMath;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
+import packing.TorusData;
 import util.CmdStruct;
 
 public class TorusEnergy extends PackExtender {
@@ -25,13 +26,15 @@ public class TorusEnergy extends PackExtender {
 	boolean dispMode;   // if true, then redraw on 'reset'
 	double energy;      // current energy: sqrt(sum of edge lengths squared)
 	double cutoff;      // probability threshold for accepting switch energy-losing switch 
+	public TorusData torusData;
 	
 	public TorusEnergy(PackData p) {
 		super(p);
 		packData=p;
-		if (packData.bdryCompCount!=0 || packData.euler!=0 || packData.hes!=0) {
-			CirclePack.cpb.errMsg("Error starting 'TorusEnergy': packing must be a torus.");
-			return;
+		try {
+			torusData=new TorusData(p);
+		} catch (Exception ex) {
+			throw new CombException("Error 'TorusEnergy': 'TorusData' failed");
 		}
 		extensionType="TORUS ENERGY";
 		extensionAbbrev="TE";
@@ -46,8 +49,8 @@ public class TorusEnergy extends PackExtender {
 		// create oriented edge list (will get shuffled)
 		edgeList=new EdgeLink(packData);
 		for (int v=1;v<=packData.nodeCount;v++) {
-			int []flower=packData.kData[v].flower;
-			for (int j=1;j<=packData.kData[v].num;j++)
+			int[] flower=packData.getFlower(v);
+			for (int j=1;j<=packData.countFaces(v);j++)
 				if (flower[j]>v)
 					edgeList.add(new EdgeSimple(v,flower[j]));
 		}
@@ -69,7 +72,7 @@ public class TorusEnergy extends PackExtender {
 			int top=0;
 			int []bin=new int[packData.nodeCount+1];
 			for (int v=1;v<=packData.nodeCount;v++) {
-				int num=packData.kData[v].num;
+				int num=packData.countFaces(v);
 				bin[num]=bin[num]+1;
 				top=(num>top)?num:top;
 			}
@@ -79,9 +82,7 @@ public class TorusEnergy extends PackExtender {
 			}
 			
 			// Conformal modulus
-			double []tor=TorusModulus.torus_tau(packData);
-			double tau=(tor[0]>tor[1]) ? tor[0]:tor[1];
-			stbld.append("\n  Modulus = "+String.format("%.6f",tau)+". \n Degrees: ");
+			stbld.append("\n  Modulus = "+String.format("%.6f",torusData.tau)+". \n Degrees: ");
 
 			CirclePack.cpb.msg(stbld.toString());
 			return 1;
@@ -159,9 +160,8 @@ public class TorusEnergy extends PackExtender {
 				EdgeSimple edge=edgeList.get(rand.nextInt(edgeList.size()));
 				double compEnergy=compareEnergy(edge.v,edge.w);
 				if (tmpPack!=null && (compEnergy<energy || Math.exp(-(compEnergy-energy)/temp)>cutoff)) {
-					CPScreen cps=packData.cpScreen;
-					cps.swapPackData(tmpPack,true);
-					packData=cps.packData;
+					int pnum=packData.packNum;
+					packData=CirclePack.cpb.swapPackData(tmpPack,pnum,true);
 					hits++;
 				}
 				tick++;
@@ -209,7 +209,7 @@ public class TorusEnergy extends PackExtender {
 		if (flag) {
 			packData.fillcurves(); 
 			try {
-				packData.comp_pack_centers(false,false,2,.0000001);
+				packData.packDCEL.layoutPacking(); 
 			} catch(Exception ex) {}
 			cpCommand("set_screen -a");
 			cpCommand("disp -wr");
@@ -234,9 +234,11 @@ public class TorusEnergy extends PackExtender {
 //		double [][]conductance=ComplexAnalysis.setConductances(p);
 		double groundLength=2.0*(TorusEnergy.mycon/Math.sqrt(p.faceCount));
 		for (int v=1;v<=p.nodeCount;v++) {
-			for (int j=0;j<p.kData[v].num;j++)
-				if (j>v) {
-					double len=groundLength-(p.rData[v].rad+p.rData[p.kData[v].flower[j]].rad);
+			int[] petals=p.packDCEL.vertices[v].getPetals();
+			for (int j=0;j<petals.length;j++)
+				if (petals[j]>v) {
+					double len=groundLength-(p.getRadius(v)+
+							p.getRadius(petals[j]));
 					erg += len*len;
 				}
 		}
@@ -250,54 +252,20 @@ public class TorusEnergy extends PackExtender {
 	public int normalize() {
 		double area=0;
 		for (int f=1;f<=packData.faceCount;f++) {
-			int []verts=packData.faces[f].vert;
+			int []verts=packData.packDCEL.faces[f].getVerts();
 		
 			// assume tangency
-			double r0=packData.rData[verts[0]].rad;
-			double r1=packData.rData[verts[1]].rad;
-			double r2=packData.rData[verts[2]].rad;
+			double r0=packData.getRadius(verts[0]);
+			double r1=packData.getRadius(verts[1]);
+			double r2=packData.getRadius(verts[2]);
 			area += EuclMath.eArea(r0,r1,r2,1.0,1.0,1.0);
 		}
 		double factor=Math.sqrt(area);
 		for (int v=1;v<=packData.nodeCount;v++) 
-			packData.rData[v].rad =packData.rData[v].rad/factor;
+			packData.setRadius(v,packData.getRadius(v)/factor);
 		return 1;
 	}
-	
-	/**
-	 * We call for an edge flip, but first we have to be ready
-	 * to readjust 'edgeList'.
-	 * @return 0 on error
-	 */
-	public int flipedge(int v,int w) {
-		if (v==w || v<1 || w<1 || v>packData.nodeCount || 
-				w>packData.nodeCount || packData.nghb(v, w)<0)
-			return 0;
-		
-		// common neighbors are 'a' and 'b'; make sure v < w and a < b
 
-		int indxvw=EdgeLink.getVW(edgeList,v,w);
-		if (indxvw<0)
-			return 0;
-		int a=packData.kData[w].flower[packData.nghb(w, v)+1];
-		int b=packData.kData[v].flower[packData.nghb(v,w)+1];
-		int rslt=cpCommand(packData,"flip "+v+" "+w);
-		if (rslt<=0)
-			return 0;
-		reset();
-		
-		// replace only edge by new edge
-		if (a>b) {
-			int hold=b;
-			b=a;
-			a=hold;
-		}
-		EdgeSimple ne=new EdgeSimple(a,b);
-		edgeList.remove(indxvw);
-		edgeList.add(indxvw,ne);
-		return 1;
-	}
-	
 	/**
 	 * Given an edge, copy the packing to 'tmpPack', flip the edge, repack/layout/normalize,
 	 * and return the resulting energy. Then one can decide whether to replace packData
@@ -313,7 +281,6 @@ public class TorusEnergy extends PackExtender {
 			tmpPack=null;
 			return -1.0;
 		}
-		tmpPack.setCombinatorics();
 		tmpPack.repack_call(1000,true,false); // use oldreliable
 //		tmpPack.fillcurves(); 
 //		try {

@@ -14,7 +14,7 @@ public class MatLabActions {
 
 //		double []degrees=new double[p.nodeCount];
 //		for (int v=1;v<=p.nodeCount;v++)
-//			degrees[v-1]=p.kData[v].num;
+//			degrees[v-1]=p.getNum(v);
 		
 		// have matlab class plot the histogram 
 //		try {

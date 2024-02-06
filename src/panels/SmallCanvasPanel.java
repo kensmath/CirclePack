@@ -15,6 +15,7 @@ import javax.swing.border.LineBorder;
 import allMains.CPBase;
 import circlePack.PackControl;
 import exceptions.MiscException;
+import packing.CPdrawing;
 
 /**
  * Panel containing the three (or more??) small packing images
@@ -35,12 +36,12 @@ public class SmallCanvasPanel extends JPanel {
 	public JPanel []smallPanel;
 	public JPanel []cpInfo;
 	public JLabel []packName;
-	public CPScreen []cpScreens;
+	public CPdrawing []ourScreens;
 
 	// Constructor
-	public SmallCanvasPanel(CPScreen []packs) {
+	public SmallCanvasPanel(CPdrawing []screens) {
 		super();
-		cpScreens=packs;
+		ourScreens=screens;
 		smallPanel=new JPanel[CPBase.NUM_PACKS];
 		cpInfo=new JPanel[CPBase.NUM_PACKS];
 		packName=new JLabel[CPBase.NUM_PACKS];
@@ -68,7 +69,7 @@ public class SmallCanvasPanel extends JPanel {
 		cpInfo[i]=new JPanel(new FlowLayout(FlowLayout.LEFT));
 		
 		smallPanel[i].add(cpInfo[i],BorderLayout.NORTH);
-		smallPanel[i].add(cpScreens[i],BorderLayout.CENTER);
+		smallPanel[i].add(ourScreens[i],BorderLayout.CENTER);
 		smallPanel[i].setBorder(new EmptyBorder(2,5,2,5));
 		
 		smallPanel[i].setPreferredSize(smallDim);
@@ -82,10 +83,10 @@ public class SmallCanvasPanel extends JPanel {
 		cpInfo[i].setPreferredSize(infoDim);
 		cpInfo[i].setBorder(new LineBorder(Color.BLACK,1,false));
 		
-		cpScreens[i].setPreferredSize(cpSDim);
-		cpScreens[i].setMaximumSize(cpSDim);
-		cpScreens[i].setMinimumSize(cpSDim);
-		cpScreens[i].setPreferredSize(cpSDim);
+		ourScreens[i].setPreferredSize(cpSDim);
+		ourScreens[i].setMaximumSize(cpSDim);
+		ourScreens[i].setMinimumSize(cpSDim);
+		ourScreens[i].setPreferredSize(cpSDim);
 		
 		packName[i]=new JLabel();
 		packName[i].setFont(new Font(packName[i].getFont().toString(),Font.ITALIC,9));
@@ -108,10 +109,11 @@ public class SmallCanvasPanel extends JPanel {
 	}
 	
 	/** 
-	 * Change active packing indicators
+	 * Change active packing indicators, pack 'n' active.
 	 */
 	public void changeActive(int n) {
-		if (n<0 || n>=CPBase.NUM_PACKS) return;
+		if (n<0 || n>=CPBase.NUM_PACKS) 
+			return;
 		for (int i=0;i<CPBase.NUM_PACKS;i++) {
 			if (i==n) {
 				cpInfo[i].setBackground(actColor);

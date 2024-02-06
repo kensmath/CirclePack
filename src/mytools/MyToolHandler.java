@@ -1,9 +1,5 @@
 package mytools;
 
-import handlers.ACTIVEHandler;
-import images.CPIcon;
-import input.FileDialogs;
-
 import java.awt.Point;
 import java.awt.datatransfer.Transferable;
 import java.awt.dnd.DnDConstants;
@@ -19,16 +15,11 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Vector;
 
-import listeners.MyToolListener;
-
 import org.apache.xerces.parsers.DOMParser;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import panels.MyToolBar;
-import util.PopupBuilder;
-import JNI.JNIinit;
 import allMains.CPBase;
 import allMains.CirclePack;
 import canvasses.MyCanvasMode;
@@ -39,6 +30,12 @@ import dragdrop.ToolTransferable;
 import frames.CmdToolEditor;
 import frames.MobiusToolEditor;
 import frames.ScriptToolEditor;
+import handlers.ACTIVEHandler;
+import images.CPIcon;
+import input.FileDialogs;
+import listeners.MyToolListener;
+import panels.MyToolBar;
+import util.PopupBuilder;
 
 /**
  * This is an abstract class for various 'handlers' for loading, 
@@ -212,6 +209,7 @@ public abstract class MyToolHandler implements MouseListener {
 			writer.write("</CP_ToolBox>\n");
 		  	writer.flush();
 		  	writer.close();
+		  	CirclePack.cpb.msg("Saved MyTools to "+file.toString());
 		} catch(IOException ioe) {
 			String errmsg=new String("Couldn't open '"+toolFile.toString()+"'");
 			PackControl.consoleCmd.dispConsoleMsg(errmsg);
@@ -456,7 +454,7 @@ public abstract class MyToolHandler implements MouseListener {
 		// careful: these find first instances, even in subelements.
 		String name= tE.getAttribute("name");
 		String yesno=tE.getAttribute("dropable");
-		String needsC=tE.getAttribute("needsC");
+//		String needsC=tE.getAttribute("needsC");
 		String mnemonic=tE.getAttribute("mnemonic");
 		String tooltype=tE.getAttribute("type");
 		String handy=tE.getAttribute("handy");
@@ -466,13 +464,6 @@ public abstract class MyToolHandler implements MouseListener {
 		String cmd2_text=getTextValue(tE,"cmd_m2");
 		String cmd3_text=getTextValue(tE,"cmd_m3");
 		String iconname=getTextValue(tE,"iconname");
-
-		// don't include if C library is not available
-		// TODO: may need to update now that 'DelaunayBuild' and 'SolverFunction' are
-		//   separate libraries.
-		if (needsC!=null && needsC.equals("yes") && 
-				!JNIinit.DelaunayStatus())
-			return;
 			
 		// elements initiating canvass 'modes'
 		String modename=getTextValue(tE,"modename");

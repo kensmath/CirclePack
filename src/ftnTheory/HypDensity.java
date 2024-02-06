@@ -2,14 +2,13 @@ package ftnTheory;
 
 import java.util.Vector;
 
-import listManip.NodeLink;
-import packing.PackData;
-import packing.PackExtender;
-import panels.CPScreen;
-import util.CmdStruct;
 import allMains.CPBase;
 import allMains.CirclePack;
 import exceptions.ParserException;
+import listManip.NodeLink;
+import packing.PackData;
+import packing.PackExtender;
+import util.CmdStruct;
 
 /**
  * This may be miss-named. The idea, suggested by Ed Crane, is to reduce
@@ -113,10 +112,7 @@ public class HypDensity extends PackExtender {
 				int pnum=Integer.parseInt((String)items.get(0));
 				if (pnum==packData.packNum)
 					return 0;
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					cpS.swapPackData(outputData,false);
-				}
+				CirclePack.cpb.swapPackData(outputData,pnum,false);
 			} catch (Exception ex) {
 				return 0;
 			}

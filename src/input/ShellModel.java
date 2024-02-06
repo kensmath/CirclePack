@@ -1,11 +1,8 @@
 package input;
 
-import java.io.BufferedWriter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
 
-import allMains.CPBase;
 import circlePack.PackControl;
 import frames.MessageHover;
 import util.ResultPacket;
@@ -86,7 +83,7 @@ public abstract class ShellModel {
 		if (cmd==null || cmd.length()==0)
 			return;
 		if (count!=null) {
-			int n=count.intValue();
+//			int n=count.intValue();
 //			if (n<0) 
 //				runHistory.append("> "+cmd+"    <font color=\"red\">["+n+"]</font><br>");
 //			else 

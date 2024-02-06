@@ -9,7 +9,8 @@ import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.util.Vector;
 
-import panels.CPScreen;
+import packing.CPdrawing;
+import util.ColorUtil;
 
 /**
  * Class for "trinket" images (all euclidean) for canvases, colored 
@@ -122,7 +123,7 @@ public class CPTrinket {
 //	private static Path2D.Double diamond;
 
 	// instance variables
-	private CPScreen parent;
+	private CPdrawing parent;
 
 	private int geometry; 
 
@@ -138,7 +139,7 @@ public class CPTrinket {
 		geometry=0;
 	}
 	
-	public void setParent(CPScreen par) {
+	public void setParent(CPdrawing par) {
 		parent=par;
 	}
 	
@@ -167,7 +168,7 @@ public class CPTrinket {
 		BufferedImage bufImage=new BufferedImage(side+1,side+1,BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g2d=bufImage.createGraphics();
 		if (colr==null)
-			colr=CPScreen.getFGColor();
+			colr=ColorUtil.getFGColor();
 		g2d.setColor(colr);
 		if (trink<0) trink=1;
 		else if (trink>=trinkets.size()) 

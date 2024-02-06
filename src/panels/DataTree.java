@@ -83,32 +83,53 @@ public class DataTree extends JPanel {
 		Hashtable<String,Hashtable<String,Vector<String>>> 
 		root = new Hashtable<String,Hashtable<String,Vector<String>>>(2);
 		Hashtable<String,Vector<String>> sub = new Hashtable<String,Vector<String>>(4);
-		if (!p.status || p.nodeCount==0) return null;
+		if (!p.status || p.nodeCount==0) 
+			return null;
 
 		Vector<String> v1 = new Vector<String>(4);
-		v1.add("Topology: " + setTopologyStr(p));
-		v1.add("Node/Face Count = " + p.nodeCount+" / "+p.faceCount);
-		v1.add("Genus/Euler = "+p.genus+" / "+p.euler);
-		v1.add("Alpha/Gamma Vertices = "+p.alpha+" / "+p.gamma);
 		double []curvErr=p.packCurvError();
-		v1.add("Total/Average angle error = "+
-				String.format("%.6e",curvErr[0])+" / "+
-				String.format("%.6e",curvErr[1]));
-		sub.put("Basic", v1);
+		if (p.packDCEL!=null) {
+			v1.add("Topology: " + setTopologyStr(p));
+			v1.add("Node/Face Count = " + p.nodeCount+" / "+p.faceCount);
+			v1.add("Genus/Euler = "+p.genus+" / "+p.euler);
+			v1.add("Alpha/Gamma vertices = "+p.packDCEL.alpha.origin.vertIndx+
+					" / "+p.packDCEL.gamma.origin.vertIndx);
+			v1.add("Total/Average angle error = "+
+					String.format("%.6e",curvErr[0])+" / "+
+					String.format("%.6e",curvErr[1]));
+			sub.put("Basic (with DCEL structure):", v1);
+		}
+		else {
+			v1.add("Topology: " + setTopologyStr(p));
+			v1.add("Node/Face Count = " + p.nodeCount+" / "+p.faceCount);
+			v1.add("Genus/Euler = "+p.genus+" / "+p.euler);
+			v1.add("Alpha/Gamma Vertices = "+p.getAlpha()+" / "+p.getGamma());
+			v1.add("Total/Average angle error = "+
+					String.format("%.6e",curvErr[0])+" / "+
+					String.format("%.6e",curvErr[1]));
+			sub.put("Basic", v1);
+		}
 
 		StringBuilder strbuf=null;
 		Vector<String> v2 = new Vector<String>(4);
 		// TODO: problem here that I haven't figured out.
 		try {
-			v2.add("Area = " + String.format("%.6e",p.complexArea()));
+			v2.add("Area = " + String.format("%.6e",p.carrierArea()));
 		} catch (Exception ex) {}
-
-		v2.add("First Face/BdryFace = " + p.firstFace+" / "+p.firstRedFace);
-		v2.add("Bdry Component Count = " + p.bdryCompCount);
-		if (p.bdryCompCount>0) {
-			strbuf=new StringBuilder(p.bdryStarts[1]);
-			for (int j=2;j<p.bdryCompCount;j++)
-				strbuf.append(" "+p.bdryStarts[j]);
+		
+		if (p.packDCEL.redChain==null) {
+			v2.add("First Face = "+p.packDCEL.layoutOrder.get(0).face.faceIndx);
+		}
+		else 
+			v2.add("First Face/BdryFace = " + 
+					p.packDCEL.layoutOrder.get(0).face.faceIndx+" / "+
+					p.packDCEL.redChain.myEdge.face.faceIndx);
+		int bcount=p.packDCEL.idealFaceCount;
+		v2.add("Bdry Component Count = " + bcount);
+		if (bcount>0) {
+			strbuf=new StringBuilder(p.packDCEL.idealFaces[1].edge.origin.vertIndx);
+			for (int j=2;j<bcount;j++)
+				strbuf.append(" "+p.packDCEL.idealFaces[j].edge.origin.vertIndx);
 			v2.add("Bdry Start verts = " +strbuf.toString());
 		}
 		sub.put("Technical", v2);
@@ -118,13 +139,20 @@ public class DataTree extends JPanel {
 		// lists
 		strbuf=new StringBuilder("vlist/elist/flist = ");
 		int cnt=0;
-		if (p.vlist!=null) cnt=p.vlist.size();
+		if (p.vlist!=null) 
+			cnt=p.vlist.size();
 		strbuf.append(cnt);
+		
 		cnt=0;
-		if (p.elist!=null) cnt=p.elist.size();
+		if (p.elist!=null) 
+			cnt=p.elist.size();
+		if (p.packDCEL!=null && p.hlist!=null) // for future use
+			cnt=p.hlist.size();
 		strbuf.append(" / "+cnt);
+		
 		cnt=0;
-		if (p.flist!=null) cnt=p.flist.size();
+		if (p.flist!=null) 
+			cnt=p.flist.size();
 		strbuf.append(" / "+cnt);
 		v3.add("List Counts: "+strbuf.toString());
 
@@ -133,7 +161,7 @@ public class DataTree extends JPanel {
 		int mx=1;
 		double avgdeg=0.0;
 		for (int j=1;j<=p.nodeCount;j++) {
-			int dg=p.kData[j].num+p.kData[j].bdryFlag;
+			int dg=p.countFaces(j)+p.getBdryFlag(j);
 			avgdeg +=dg;
 			mn=(dg<mn) ? dg : mn;
 			mx=(dg>mx) ? dg : mx;
@@ -141,7 +169,7 @@ public class DataTree extends JPanel {
 		avgdeg /=(double)p.nodeCount;
 		double std_dev=0.0;
 		for (int j=1;j<=p.nodeCount;j++) {
-			int dg=p.kData[j].num+p.kData[j].bdryFlag;
+			int dg=p.countFaces(j)+p.getBdryFlag(j);
 			double dev=(double)dg-avgdeg;
 			dev *=dev;
 			std_dev += dev;
@@ -153,10 +181,10 @@ public class DataTree extends JPanel {
 				String.format("%.6e",std_dev));
 
 		// inversive distances
-		if (p.overlapStatus) 
-			v3.add("Some inverse distances are set");
+		if (p.haveInvDistances()) 
+			v3.add("Some non-trivial inverse distances are set");
 		else 
-			v3.add("No inverse distances are set");
+			v3.add("No non-trivial inverse distances are set");
 
 		sub.put("Lists", v3);
 		String s = new String("Pack "+p.packNum+" Data");
@@ -166,18 +194,19 @@ public class DataTree extends JPanel {
 	}  
 
 	public static String setTopologyStr(PackData p) {
-		if (!p.status) return new String("pack is empty");
+		if (!p.status) 
+			return new String("pack is empty");
 		if (p.genus==0) { // genus zero 
-			if (p.bdryCompCount==0) // sphere 
+			if (p.getBdryCompCount()==0) // sphere 
 				return new String("sphere");
-			if (p.bdryCompCount==1) // disc 
+			if (p.getBdryCompCount()==1) // disc 
 				return new String("topological disc");
-			if (p.bdryCompCount==2) // annulus 
+			if (p.getBdryCompCount()==2) // annulus 
 				return new String("topological annulus");
 			else // n-connected, planar 
-				return new String("planar, "+p.bdryCompCount+"-connected");
+				return new String("planar, "+p.getBdryCompCount()+"-connected");
 		}
-		if (p.bdryCompCount==0) // n-torus 
+		if (p.getBdryCompCount()==0) // n-torus 
 			return new String("topological "+p.genus+"-torus");
 		else return new String("genus "+p.genus+", bordered");
 	}

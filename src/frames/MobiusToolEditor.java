@@ -201,10 +201,10 @@ public class MobiusToolEditor extends MyToolEditor {
 	}
 
 	public void reset_abcd() {
-		aField.setFields(new Complex(1.0));
-		bField.setFields(new Complex(0.0));
-		cField.setFields(new Complex(0.0));
-		dField.setFields(new Complex(1.0));
+		aField.setValue(new Complex(1.0));
+		bField.setValue(new Complex(0.0));
+		cField.setValue(new Complex(0.0));
+		dField.setValue(new Complex(1.0));
 	}
 	
 	public String formulateCmd() {
@@ -274,10 +274,10 @@ public class MobiusToolEditor extends MyToolEditor {
 		orientBox.setSelected(oriented);
 		
 		try {
-			aField.setFields(new Complex(parts.get(0),parts.get(1)));
-			bField.setFields(new Complex(parts.get(2),parts.get(3)));
-			cField.setFields(new Complex(parts.get(4),parts.get(5)));
-			dField.setFields(new Complex(parts.get(6),parts.get(7)));
+			aField.setValue(new Complex(parts.get(0),parts.get(1)));
+			bField.setValue(new Complex(parts.get(2),parts.get(3)));
+			cField.setValue(new Complex(parts.get(4),parts.get(5)));
+			dField.setValue(new Complex(parts.get(6),parts.get(7)));
 		} catch (NumberFormatException e) {
 			reset_abcd();
 			return;

@@ -1,6 +1,6 @@
 package util;
 
-import komplex.KData;
+import combinatorics.komplex.HalfEdge;
 import packing.PackData;
 
 /**
@@ -12,17 +12,23 @@ public class CombUtil {
 	
 	/**
 	 * If w is neighbor of v, return its index in the flower of v; else return -1.
-	 * @param p
-	 * @param v
-	 * @param w
-	 * @return
+	 * @param p PackData
+	 * @param v int
+	 * @param w int
+	 * @return int
 	 */
 	public int nghb(PackData p,int v,int w) {
-		KData []kData=p.kData;
-
-		if (v<1 || v>p.nodeCount || w<1 || w>p.nodeCount) return -1;
-		for (int j=0;j<=kData[v].num;j++)
-			if (kData[v].flower[j]==w) return j;
+		if (v<1 || v>p.nodeCount || w<1 || w>p.nodeCount) 
+			return -1;
+		HalfEdge hedge=p.packDCEL.vertices[v].halfedge;
+		HalfEdge he=hedge;
+		int tick=0;
+		do {
+			if (he.twin.origin.vertIndx==w)
+				return tick;
+			he=he.prev.twin;
+			tick++;
+		} while (he!=hedge);
 		return -1;
 	}
 

@@ -11,6 +11,36 @@ import exceptions.ParserException;
  * various static classes for string manipulations, parsing
  */
 public class StringUtil {
+
+	/**
+	 * Return a new String in which all occurances of substring
+	 * 'subOld' are replaced by substring 'subNew'.
+	 * @param origStr String
+	 * @param subOld String
+	 * @param subNew String
+	 * @return String, "" if origStr null or empty
+	 */
+	public static String replaceSubstring(String origStr,
+			String subOld, String subNew) {
+		if (origStr==null || origStr.length()==0)
+			return "";
+		if (subOld==null || subOld.length()==0 || subNew==null)
+			return origStr;
+		int k=subOld.length();
+		int m=subNew.length();
+		StringBuilder strbld=new StringBuilder(origStr);
+		int tick=0;
+		while (strbld.length()>tick) {
+			int n=strbld.indexOf(subOld,tick);
+			if (n>=0) {
+				strbld.delete(n, n+k);
+				strbld.insert(n,subNew);
+				tick=n+m;
+			}
+			else break;
+		}
+		return strbld.toString();
+	}
 	
 	/**
 	 * Given a string (normally a command string), search for and remove
@@ -45,7 +75,7 @@ public class StringUtil {
 	}
 	
 	/**
-	 * If trimmed string starts with character c (one of '(', '{', '[', or '<'), 
+	 * If trimmed string starts with character c (one of '(', '{', '[', '<', or '"'), 
 	 * then return the string properly between it and its matching closing 
 	 * character. Return null if nesting associated with c is inconsistent.
 	 * @param startstr String
@@ -53,7 +83,7 @@ public class StringUtil {
 	 * @return String[2], string between, string after (trimmed, either possibly empty);
 	 * null on syntax error
 	 */
-	public static String []getGroupedStr(StringBuilder strbld,char c) {
+	public static String[] getGroupedStr(StringBuilder strbld,char c) {
 		
 		// check c first
 		char rc=')';
@@ -61,6 +91,7 @@ public class StringUtil {
 		else if (c=='[') rc=']';
 		else if (c=='{') rc='}';
 		else if (c=='<') rc='>';
+		else if (c=='"') rc='"';
 		else return null;
 		
 		strbld.trimToSize();
@@ -88,24 +119,72 @@ public class StringUtil {
 	
 	
 	/** 
-	 * Search str for occurrence of '(n,m)' or '(n m)' and return strings 
-	 * 'n' and 'm'; these are usually integers, but calling routine converts 
-	 * them. Return null on error. Careful that expressions with parens or 
-	 * curly brackets haven't been broken apart because of intervening space;
+	 * Search str for occurrence of one or more strings separated
+	 * by ',' or whitespace; e.g. '(s1)', '(s1,s2)' or '(s1 s2)'. 
+	 * Return strings, but calling routine handles processing, 
+	 * checking number and appropriateness, often integers or doubles. 
+	 * Return null on error. Careful that expressions hasn't been 
+	 * broken apart because of intervening space; 
 	 * see 'CommandStrParser.string2vec'.
-	 * @param str
-	 * @return
+	 * @param str String
+	 * @return String[], null on empty
 	 */
-	public static String[] parens_parse(String str) {
+	public static String[] get_paren_range(String str) {
 		int a,b;
 
-		if ((a=str.indexOf('('))==-1 || (b=str.indexOf(')'))==-1 || b<(a+3))
+		if ((a=str.indexOf('('))==-1 || (b=str.indexOf(')'))==-1 || b<(a+1))
 			return null;
 		str=str.substring(a+1,b);
 		str=str.replace(',',' '); // turn comma into whitespace
 		String par_str[]=str.split("\\s+");
-		if (par_str.length!=2) return null;
+		if (par_str.length==0) 
+			return null;
 		return par_str;
+	}
+	
+	/**
+	 * Parse integer range of form (n), (n,m), or (n m) in 'str'.
+	 * Results lie in [min, max]. If only one integer, then set 
+	 * first to min (typically 0). 
+	 * @param str String
+	 * @param min int
+	 * @param max int
+	 * @return int[2], null on error
+	 */
+	public static int[] get_int_range(String str,int min, int max) {
+		if (min>max) {
+			int hold=min;
+			min=max;
+			max=hold;
+		}
+		int first=min;
+		int last=max;
+		String[] parstrs=get_paren_range(str);
+		if (parstrs==null || parstrs.length>2 || parstrs.length==0) 
+			return null;
+		try {
+			last=Integer.parseInt(parstrs[0]);
+			if (parstrs.length==2) {
+				first=last;
+				int k=Integer.parseInt(parstrs[1]);
+				k=(k>max) ? max : k;
+				k=(k<first) ? first:k;
+				last=k;
+			}
+		} catch(NumberFormatException nex) {
+			return null;
+		}
+
+		if (last<first) {
+			int hold=last;
+			last=first;
+			first=hold;
+		}
+		
+		int[] ans=new int[2];
+		ans[0]=first;
+		ans[1]=last;
+		return ans; 
 	}
 	
 	/**
@@ -118,7 +197,8 @@ public class StringUtil {
 	 *          and adjusted for any variable substitutions
 	 */
 	public static String []getXtender(String str) {
-		if (str==null || str.length()<5) return null;
+		if (str==null || str.length()<3) 
+			return null;
 		if (str.charAt(0)!='|') // must start with '|' 
 			return null; 
 		int k=str.indexOf('|',1);
@@ -404,23 +484,45 @@ public class StringUtil {
 	}
 	
 	/**
-	 * Search for brackets '[n]', eg, vlist[4], flist[n], etc. Return 
-	 * the enclosed string, calling routine has to check whether it's 
-	 * the right type of return --- int, string, etc. Note: between 
-	 * brackets there can be no white space. Return null if error or
-	 * no brackets.
-	 * @param String str
-	 * @return String
+	 * Get bracketed strings, eg, as in vlist[4], flist[n], etc. 
+	 * Return array of strings split by whitespaces; calling routine 
+	 * must check the returned strings --- int, string, etc. Normally,
+	 * only the first string has been used. Return null if paired 
+	 * brackets not found or contain
+	 * only whitespace.
+	 * @param str String
+	 * @return String[]
 	 */
-	public static String brackets(String str) {
+	public static String[] get_bracket_strings(String str) {
 		int a,b;
+		String[] bracket_str= {null,null};
 		if ((a=str.indexOf('['))==-1 || (b=str.indexOf(']'))==-1 || b<(a+2))
-			return null;
-		String bracket_str[]=str.substring(a+1,b).split("\\s+");
-		if (bracket_str==null || bracket_str.length>1) {
+			return bracket_str;
+		bracket_str=str.substring(a+1,b).split("\\s+");
+		if (bracket_str==null) {
 			throw new ParserException("Illegal or empty brackets in string");
 		}
-		return bracket_str[0];
+		return bracket_str;
+	}
+	
+	/**
+	 * Get strings inside parens. Return array of strings split 
+	 * by whitespaces; calling routine must check the returned 
+	 * strings --- int, string, etc. Return null if paired parens 
+	 * not found or contain only whitespace.
+	 * @param str String
+	 * @return String[]
+	 */
+	public static String[] get_paren_strings(String str) {
+		int a,b;
+		str.trim();
+		if ((a=str.indexOf('('))==-1 || (b=str.indexOf(')'))==-1 || b<(a+2))
+			return null;
+		String[] paren_str=str.substring(a+1,b).split("\\s+");
+		if (paren_str==null) {
+			throw new ParserException("Illegal or empty parend in string");
+		}
+		return paren_str;
 	}
 	
 	/**
@@ -482,87 +584,100 @@ public class StringUtil {
 		return true;
 	}
 
+	/**
+	 * In combination with 'string2vec', this consolidates strings between 
+	 * paired symbols which were inadvertently split up in processing: 
+	 * "()", "{}", and "\"\"". It is not sophisticated; slightly recursive,
+	 * but can't handle nested situations. 
+	 * @param invec Vector<String>
+	 * @param char c
+	 * @return Vector<String>, return original on error
+	 */
+	public static Vector<String> reattach(Vector<String> invec,char c) {
+
+		// what is matching symbol? 
+		char ce;
+		switch(c) {
+		case '(':
+		{
+			ce=')';
+			break;
+		}
+		case '{': 
+		{
+			ce='}';
+			break;
+		}
+		case '"':
+		{
+			ce='"';
+			break;
+		}
+		default:
+			return invec;
+		} // end of switch
+		
+		Vector<String> newvec= new Vector<String>(invec.size());
+		boolean fixed=true;
+		String nxtstr;
+		int k;
+		for (int n=0;n<invec.size();n++) {
+			nxtstr=(String)invec.get(n);
+			
+			// found c
+			if ((k=nxtstr.indexOf(c))>=0) {
+				
+				// if no later ce in same string, look downstream to complete
+				if (nxtstr.length()==k+1 || nxtstr.substring(k+1).indexOf(ce,0)<0) { 
+					fixed=false;
+					int m=n+1;
+					while(m<invec.size()) {
+						String ths=(String)invec.get(m);
+						if (ths.indexOf(ce)>=0) {
+							String remade=new String(nxtstr); // remade string; substrings with spaces
+							for (int j=n+1;j<=m;j++) 
+								remade=remade.concat(" "+(String)invec.get(j));
+							newvec.add(remade);
+							n=m; // set beyond vector spot we've used
+							m=invec.size(); // kick out of 'while'
+							fixed=true;
+						}
+						m++;
+					}
+					if (!fixed) {
+						throw new ParserException("Unmatched '"+c+"' in expression.");
+					}
+				}
+				else newvec.add(nxtstr);
+			}
+			else newvec.add(nxtstr);
+		}
+		return newvec;
+	}
+	
 	/** 
 	 * Utility to convert string into vector of substrings (by whitespace).
-	 * Return empty vector if nothing is found. 
+	 * Return empty vector if nothing is found. Reassemble substrings
+	 * occurring between matching parens, curly brackets, or double quotes
+	 * which are inadvertently separated in call to 'string2vec'.
 	 * (TODO: not very sophisticated; can't handle nesting, etc.)
 	 * @param str String
-	 * @param bfix boolean: true, reattach substrings inadvertently
-	 * broken between matching parents or curly brackets.
+	 * @param bfix boolean, true, then reattach
 	 * @return Vector<String>, empty on error or nothing found
 	 */
 	public static Vector<String> string2vec(String str,boolean bfix) {
-		  
-		// matching pairs of parens and of curly brackets.
+		
+		// first, split into vector of strings by whitespace
 		Vector<String> vec= string2vec(str);
-		if (!bfix || (!str.contains("(") && !str.contains("{"))) 
-			return (vec);
-		  
-		// put broken pairs back together.
-		Vector<String> newvec= new Vector<String>(vec.size());
-		boolean fixed=true;
-		  String nxt;
-		  int k;
-		  for (int n=0;n<vec.size();n++) {
-			  nxt=(String)vec.get(n);
-			  if ((k=nxt.indexOf('('))>=0) {
-				  if (nxt.length()==k+1 || !nxt.substring(k+1).contains(")")) { // look downstream to complete
-					  fixed=false;
-					  int m=n+1;
-					  while(m<vec.size()) {
-						  String ths=(String)vec.get(m);
-						  if (ths.contains(")")) {
-							  String remade=new String(nxt); // remade string; substrings with spaces
-							  for (int j=n+1;j<=m;j++) 
-								  remade=remade.concat(" "+(String)vec.get(j));
-							  newvec.add(remade);
-							  n=m; // set beyond vector spot we've used
-							  m=vec.size(); // kick out of 'while'
-							  fixed=true;
-						  }
-						  m++;
-					  }
-					  if (!fixed) {
-						  throw new ParserException("Unmatched '(' in expression.");
-					  }
-				  }
-				  else newvec.add(nxt);
-			  }
-			  else newvec.add(nxt);
-		  }
-		  vec=newvec;
-		  newvec=new Vector<String>(vec.size());
-		  	  
-		  // repeat same thing with '{' '}'
-		  for (int n=0;n<vec.size();n++) {
-			  nxt=(String)vec.get(n);
-			  if ((k=nxt.indexOf('{'))>=0) {
-				  if (nxt.length()==k+1 || !nxt.substring(k+1).contains("}")) { // look downstream to complete
-					  fixed=false;
-					  int m=n+1;
-					  while(m<vec.size()) {
-						  String ths=(String)vec.get(m);
-						  if (ths.contains("}")) {
-							  String remade=new String(nxt); // remade string; substrings with spaces
-							  for (int j=n+1;j<=m;j++) 
-								  remade=remade.concat(" "+(String)vec.get(j));
-							  newvec.add(remade);
-							  n=m; // set beyond vector spot we've used
-							  m=vec.size(); // kick out of 'while'
-							  fixed=true;
-						  }
-						  m++;
-					  }
-					  if (!fixed) {
-						  throw new ParserException("Unmatched '{' in expression.");
-					  }
-				  }
-				  else newvec.add(nxt);
-			  }
-			  else newvec.add(nxt);
-		  }
-		  return newvec;
-	  }
+
+		// Reattaching order: (), then {}, then finally "". 
+		if (bfix) {
+			Vector<String> new1=reattach(vec,'(');
+			Vector<String> new2=reattach(new1,'{');
+			return reattach(new2,'"');
+		}
+		return vec;
+	}		  
 		  
 	/** 
 	 * Utility to convert string into vector of substrings (by whitespace).
@@ -737,10 +852,10 @@ public class StringUtil {
 	  }
 	  
 	/**
-	 * This finds and trims string strictly between outermost curly braces '{string}',
-	 * null on syntax error, eg., mismatch, faulty nesting, etc. Returned string
-	 * may be empty; calling routine has to decide if that's okay.
-	 * 
+	 * This finds and trims string strictly between outermost curly 
+	 * braces '{string}', null on syntax error, eg., mismatch, faulty 
+	 * nesting, etc. Returned string may be empty; calling routine 
+	 * has to decide if that's okay.
 	 * @param orig_str String
 	 * @return String between '{' and '}', null on matching error
 	 */
@@ -769,16 +884,42 @@ public class StringUtil {
 		return null; // didn't find matching '{..}'
 	}
 	  
+	/**
+	 * Categorize a trimmed line as null or error (0), or first substring is 
+	 * non-digit (1), integer (2), or float (3)
+	 * @param line String (trimmed, no line break)
+	 * @return int: 0 (null or error), 1 (non-digit), 2 (integer), 3 (double)
+	 */
+	public static int lineType(String line) {
+		if (line==null) 
+			return 0;
+		char c1=line.charAt(0);
+		if (!java.lang.Character.isDigit(line.charAt(0)) && c1!='-')
+			return 1;
+		int k=line.indexOf(' ');
+		String str=line.substring(0,k);
+		try {
+			Integer.parseInt(str);
+			return 2;
+		} catch (Exception ex) {
+			try {
+				Double.parseDouble(str);
+				return 3;
+			} catch(Exception x) {}
+		}
+		return 0; // error
+	}
+
 	  /** 
 	   * Reconstitute (with separating spaces) a string from a vector of
 	   * vectors of strings. Return null if essentially empty.
-	   * @param segs
-	   * @return
+	   * @param segs Vector<Vector<String>>
+	   * @return String, trimmed, possibly empty
 	   */
 	  public static String reconstitute(Vector<Vector<String>> segs) {
 		  int count=0;
-		  String restring=new String("");
-		  if (segs==null)
+		  String restring="";
+		  if (segs==null || segs.size()==0)
 			  return restring;
     	  Iterator<Vector<String>> its=segs.iterator();
     	  while (its.hasNext()) {
@@ -788,7 +929,8 @@ public class StringUtil {
     			  count++;
     		  }
     	  }
-          if (count==0 || restring.trim().length()==0) return null;
+          if (count==0 || restring.trim().length()==0) 
+        	  return "";
           return restring;
 	  }
 	  
@@ -817,19 +959,248 @@ public class StringUtil {
 	  }
 	  
 	  /**
-	   * return first open and closed quoted substring.
-	   * @param instr
-	   * @return string, null on failure
+	   * For breaking incoming string into command segments. The
+	   * returned strings must be non-empty and lie between ';'s, 
+	   * but we keep quoted substrings in tact. So, e.g., a quoted 
+	   * substring may have ';'s which are shielded from the splitting 
+	   * operation. We also catch things like repeated ';'s, empty
+	   * commands; we 'trim' the command strings, but put a space 
+	   * before abutting a quoted string. This code is 
+	   * sensitive, so on some error, just abandon by returning null.
+	   * @param origStr StringBuilder
+	   * @return Vector<StringBuilder>, null on error
 	   */
-	  public static String getQuoted(String instr) {
-		  if (instr==null) return null;
-		  instr=instr.trim();
-		  int k;
-		  if ((k=instr.indexOf('"'))<0 || instr.length()<k+3) return null;
-		  instr=instr.substring(k+1);
-		  int first=instr.indexOf('"');
-		  if (first<=1) return null;
-		  return instr.substring(0,first);
+	  public static Vector<StringBuilder> cmdSplitter(StringBuilder origStr) {
+		  Vector<StringBuilder> cmdSegs=new Vector<StringBuilder>(0); 
+
+		  // break into alternating unquoted/quoted un-trimmed segments
+		  Vector<StringBuilder> q_segs=quoteAnalyzer(origStr);
+		  if (q_segs==null || q_segs.size()==1 || q_segs.get(0).charAt(0)=='"')
+			  return null;
+		  
+		  // build single command string in 'gotcmd' and add to 'cmdSegs' only
+		  //   when done.
+		  StringBuilder gotcmd=null;
+		  Iterator<StringBuilder> q_ls=q_segs.iterator(); // q_segs.get(3).toString()
+		  while (q_ls.hasNext()) {
+
+			  // get unquoted and quoted segments
+			  StringBuilder unquoted=q_ls.next();
+			  StringBuilder quoted=null;
+			  if (q_ls.hasNext()) {
+				  quoted=q_ls.next();
+			  }
+			  
+			  // break 'unquoted' into pieces so we can parse it
+			  Vector<StringBuilder> segsegs=StringUtil.semicolonSeparated(unquoted);
+			  
+			  // no more unquoted pieces, so wrap up what we have 
+			  if (segsegs==null || segsegs.size()==0) {
+				  if (quoted==null) {
+					  if (gotcmd!=null && gotcmd.length()>0)
+						  cmdSegs.add(gotcmd);
+					  if (cmdSegs.size()>0)
+						  return cmdSegs;
+				  }
+				  return null; // else error: e.g., empty unquoted before or between quoted 
+			  }
+			  
+			  // iterator over the pieces of 'unquoted'
+			  Iterator<StringBuilder> ssls=segsegs.iterator();
+			  while (ssls.hasNext()) {
+				  StringBuilder seg=ssls.next();
+				  int sc=seg.indexOf(";");
+				  
+				  // leading ';'? finish this command and get ready for next
+				  if (sc==0) {
+					  if (gotcmd!=null && gotcmd.length()>0) {
+						  cmdSegs.add(gotcmd);
+						  gotcmd=null;
+					  }
+					  seg.deleteCharAt(0);
+					  if (seg.length()>0) {
+						  sc=seg.indexOf(";");
+					  }
+				  }
+				  
+				  // ends with ';'
+				  if (sc>0) {
+					  if (gotcmd==null) { 
+						  cmdSegs.add(new StringBuilder(seg.substring(0,sc)));
+					  }
+					  else { // finish up a command in progress
+						  gotcmd.append(" ");
+						  gotcmd.append(new StringBuilder(seg.substring(0,sc)));
+						  cmdSegs.add(gotcmd);
+						  gotcmd=null;
+					  }
+					  continue;
+				  }
+
+				  // else we've got the last piece of the 'unquoted'
+				  if (gotcmd==null) 
+					  gotcmd=new StringBuilder(seg);
+				  else { // add to a command in progress
+					  gotcmd.append(" ");
+					  gotcmd.append(new StringBuilder(seg.substring(0)));
+				  }
+				  
+				  // are we all done?
+				  if (quoted==null) { 
+					  cmdSegs.add(gotcmd);
+					  return cmdSegs;
+				  }
+				  
+				  // add quoted 
+				  gotcmd.append(" ");
+				  gotcmd.append(quoted);
+			  } // end of while through pieces of unquoted
+		  } // done with while though q_segs
+
+		  // command still waiting to finish? close and add it in
+		  if (gotcmd!=null) 
+			  cmdSegs.add(gotcmd);
+		  
+		  // then done
+		  return cmdSegs;
+	  }
+	  
+	  /**
+	   * Break SpringBuilder into semicolon-separated non-empty segments. 
+	   * For segments ending with ';', remove the ';' to trim, then add it
+	   * back in so we can identify such segments. May also begin with a ';',
+	   * which (after clearing redundant ';' and whitespace) we include at
+	   * the beginning and calling routine must handle it.
+	   * @param inbld StringBuilder
+	   * @return Vector<StringBuilder>, null on error
+	   */
+	  public static Vector<StringBuilder> semicolonSeparated(StringBuilder inbld) {
+		  if (inbld.indexOf("\"")>=0) // error: should have no double quotes
+			  return null;
+		  char c;
+		  Vector<StringBuilder> ansvec=new Vector<StringBuilder>(0);
+		  
+		  int hit=0;
+		  int spot=0;
+		  boolean lead_semicolon=false;
+		  int N=inbld.length();
+		  while (spot<N) {
+			  // get rid of leading whitespace
+			  while (spot<N && Character.isWhitespace(inbld.charAt(spot)))
+				  spot++;
+			  if (spot==N)
+				  return ansvec;
+			  // note if there's a leading ';'
+			  if (inbld.charAt(spot)==';') {
+				  lead_semicolon=true;
+				  spot++;
+				  // eliminate subsequent redundant semicolons and whitespace
+				  while (spot<N &&
+						  ((c=inbld.charAt(spot))==';' || Character.isWhitespace(c)))
+					  spot++;
+			  }
+			  if (spot==N) { // nothing here, return 
+				  return ansvec;
+			  }
+			  
+			  // now look for subsequent ';'
+			  hit=inbld.indexOf(";",spot);
+			  if (hit>spot) { // string is non-empty, include the ending ';'
+				  StringBuilder tmpbld=new StringBuilder(inbld.substring(spot,hit).trim());
+				  tmpbld.append(";");
+				  if (lead_semicolon)
+					  tmpbld.insert(0, ";");
+				  spot=hit+1;
+			  }
+			  else { // must be last segment
+				  StringBuilder tmpbld=new StringBuilder(inbld.substring(spot).trim()); 
+				  if (lead_semicolon)
+					  tmpbld.insert(0, ";");
+				  if (tmpbld.length()>0)
+					  ansvec.add(tmpbld);
+				  return ansvec;
+			  }
+		  } // end of while
+		  return ansvec;
+	  }
+	  
+	  /**
+	   * Analyze at string with respect to substrings delineated
+	   * by double quotes, '"'. Note that we ignore escaped quotes, 
+	   * '\"', but accept '""' as delineating an empty string.
+	   * Note: nested quotes can lead to errors.
+	   * Return a vector of maximal substrings delineated by quotes
+	   * (and include the quotes themselves) or before/after/between 
+	   * those. 
+	   * Note: one should be able to reconstruct the full original 
+	   * by concatenating the strings of the returned vector, so we
+	   * do not trim. (e.g., if no quotes, get single original string in returned 
+	   * vector; so, e.g., we do not 'trim' the unquoted segments)
+	   * @param inbld StringBuilder
+	   * @return new Vector<StringBuilder>, null on error such as 
+	   * inconsistent use of quotes, e.g. odd number of quotes.
+	   */
+	  public static Vector<StringBuilder> quoteAnalyzer(StringBuilder inbld) {
+		  Vector<StringBuilder> vec=new Vector<StringBuilder>(0);
+		  
+		  // no '"' marks? return full string
+		  if (inbld.indexOf("\"")<0) {
+			  vec.add(new StringBuilder(inbld.toString()));
+			  return vec;
+		  }
+		  
+		  int n=inbld.length();
+		  Vector<Integer> spots=new Vector<Integer>(0);
+		  int spot=0;
+		  while ((spot=nextQuoteMark(inbld,spot))>=0) {
+			  spots.add(spot);
+			  spot++;
+		  }
+		  int lng=spots.size();
+		  if ((lng/2)*2!=lng) // not an even number of quotes 
+			  return null;
+		  Iterator<Integer> sit=spots.iterator();
+		  int startspot=sit.next();
+		  
+		  // may pick off a first unquoted segment
+		  if (startspot>0) { 
+			  vec.add(new StringBuilder(inbld.substring(0,startspot)));
+		  }
+
+		  int endspot=0;
+		  while(sit.hasNext()) {
+			  endspot=sit.next();
+			  // include the quotes, so we could reconstruct original string
+			  vec.add(new StringBuilder(inbld.substring(startspot,endspot+1)));
+			  if (sit.hasNext()) {
+				  startspot=sit.next();
+				  // include the segment up to the next quote
+				  vec.add(new StringBuilder(inbld.substring(endspot+1,startspot)));
+			  }
+			  else 
+				  break;
+		  }
+		  
+		  // pick up the last segment
+		  if ((endspot-1)<n) 
+			  vec.add(new StringBuilder(inbld.substring(endspot+1)));
+
+		  return vec;
+	  }
+	  
+	  /**
+	   * Return index of next '"' quote character 
+	   * TODO: may be a problem if quote is escaped.
+	   * @param strbld StringBuilder
+	   * @param indx int
+	   * @return index of next '"' symbol, starting with location 'indx'.
+	   * return -1 on error, empty string, no '"' found.
+	   */
+	  public static int nextQuoteMark(StringBuilder strbld,int indx) {
+		  int n=strbld.indexOf("\"",indx);
+		  if (n<0)
+			  return -1;
+		  return n; 
 	  }
 	  
 	  /**
@@ -858,8 +1229,10 @@ public class StringUtil {
 		  int k=0;
 		  // delete leading whitespace characters (<=' ')
 		  while (k<inbuffer.length()&& inbuffer.charAt(k)<=' ') k++; // means whitespace
-		  if (k>0 && k<inbuffer.length()) inbuffer.delete(0,k);
-		  if (inbuffer.length()==0) return null;
+		  if (k>0 && k<inbuffer.length()) 
+			  inbuffer.delete(0,k);
+		  if (inbuffer.length()==0) 
+			  return null;
 		  k=inbuffer.indexOf(" ");
 		  String ans=null;
 		  if (k<0) {
@@ -893,8 +1266,8 @@ public class StringUtil {
 	  }
 	  
 	  /**
-	   * Return the next non-empty line from file; return null if
-	   * end of file is reached, (this catches IOExceptions)
+	   * Return the next non-empty trimmed line from file; 
+	   * return null if end-of-file reached, catch IOExceptions.
 	   * @param reader BufferedReader
 	   * @return trimmed String or null
 	   */
@@ -1072,6 +1445,21 @@ public class StringUtil {
 		  }
 	  }
 
+	  /** Add "-dc" to packing name to indicate presence of DCEL
+	   * structure. If no name, return 'noname-dc'.
+	   * @param name String
+	   * @return new String
+	   */
+	  public static String dc2name(String name) {
+		  if (name==null || name.length()==0)
+			  return new String("noname-dc");
+		  if (name.contains("-dc"))
+			  return new String(name);
+		  StringBuilder strbld=new StringBuilder(name);
+		  strbld.append("-dc");
+		  return strbld.toString();
+	  }
+	  
 	/**
 	   * Check if flag sequence has filename-type flags as last sequence;
 	   * that is, last sequence starts with '-f', '-a', or '-s' for

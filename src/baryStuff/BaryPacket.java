@@ -31,10 +31,7 @@ public class BaryPacket {
 	}
 	
 	public BaryPacket(PackData p,int face) {
-		vert=new int[3];
-		vert[0]=p.faces[face].vert[0];
-		vert[1]=p.faces[face].vert[1];
-		vert[2]=p.faces[face].vert[2];
+		vert=p.getFaceVerts(face);
 		faceIndx=face;
 	}
 	
@@ -143,8 +140,8 @@ public class BaryPacket {
 	 * @return Complex or null on error
 	 */
 	public Complex getStartZ(PackData p) {
-		return (start.bPt2euclPt(p.rData[vert[0]].center,
-				p.rData[vert[1]].center,p.rData[vert[2]].center));
+		return (start.bPt2euclPt(p.getCenter(vert[0]),
+				p.getCenter(vert[1]),p.getCenter(vert[2])));
 	}
 	
 	/**
@@ -154,8 +151,8 @@ public class BaryPacket {
 	 * @return Complex or null on error
 	 */
 	public Complex getEndZ(PackData p) {
-		return (end.bPt2euclPt(p.rData[vert[0]].center,
-				p.rData[vert[1]].center,p.rData[vert[2]].center));
+		return (end.bPt2euclPt(p.getCenter(vert[0]),
+				p.getCenter(vert[1]),p.getCenter(vert[2])));
 	}
 	
 	/**

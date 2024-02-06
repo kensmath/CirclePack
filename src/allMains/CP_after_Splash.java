@@ -8,7 +8,7 @@ import circlePack.PackControl;
  * The 'main' here is called by 'SplashMain' after it displays
  * the splash screen. This class processes any command line 
  * arguments. 'CirclePack' is initiated in a static call, but
- * then 'initCirclePack' gets things going.
+ * then 'startCirclePack' gets things going.
  */
 public class CP_after_Splash {
 	
@@ -26,9 +26,6 @@ public class CP_after_Splash {
 				else if (args[j].startsWith("-scr") && args.length>j+1) {
 					CPBase.initialScript=args[j+1];
 					j++;
-				}
-				else if (args[j].equals("-no_C")) { // don't try to attach C libraries
-					CPBase.attachCcode=false;
 				}
 				else if (args[j].equals("-socket")) { // want a command socket 
 					CPBase.socketActive=true;

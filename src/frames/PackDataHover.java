@@ -19,18 +19,15 @@ import javax.swing.border.TitledBorder;
 
 import allMains.CirclePack;
 import circlePack.PackControl;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import komplex.EdgeSimple;
-import komplex.Face;
-import komplex.KData;
-import listManip.EdgeLink;
 import listManip.FaceLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
-import packQuality.QualMeasures;
 import packing.PackData;
-import packing.RData;
-import panels.CPScreen;
+import packing.QualMeasures;
 import panels.DataTree;
+import util.ColorUtil;
 import util.intNumField;
 import util.xNumField;
 import util.zNumField;
@@ -69,9 +66,7 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 	private JTextField flowerField;
 	private JLabel jLabel6;
 	private JLabel jLabel1;
-	private intNumField nextRedField;
 	private JCheckBox redCkBox;
-	private intNumField nextField;
 	private JCheckBox bdryCkBoxV;
 	private JTextField vertsField;
 	private intNumField colorFieldF;
@@ -251,10 +246,6 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 		redCkBox.setFont(new Font("TrueType",Font.PLAIN,10));
 		redCkBox.setText("Red?");
 		redCkBox.setPreferredSize(new Dimension(60,20));
-		nextField=new intNumField("Next",5);
-		nextField.setEditable(false);
-		nextRedField=new intNumField("Next red",5);
-		nextRedField.setEditable(false);
 		
 		// vertices
 		JPanel faceList=new JPanel(null);
@@ -271,8 +262,6 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 		
 		combArea.add(faceList);
 		combArea.add(colorFieldF);
-		combArea.add(nextField);
-		combArea.add(nextRedField);
 		combArea.add(redCkBox);
 
 		combArea.setBounds(5,fhigh,PackControl.ControlDim1.width/2+20,36);
@@ -384,7 +373,8 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 	 * @param useActiveVert, boolean: true, use packings active vert
 	 */
 	public void update_vert(PackData p,boolean useActive) {
-		if (p==null || !p.status) return;
+		if (p==null || !p.status) 
+			return;
 		int v=NodeLink.grab_one_vert(p,vertChoice.getText());
 		
 		// update for vertChoice, or use the pack active
@@ -400,66 +390,56 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 			return;
 		vertChoice.setText(Integer.toString(v));
 		
-		KData kdata=p.kData[v];
-		RData rdata=p.rData[v];
-		
 		// set radius
-		radField.setField(p.getRadius(v));
+		radField.setValue(p.getActualRadius(v));
 		
 		// set center
-		centerField.setFields(new Complex(rdata.center.x,rdata.center.y));
+		centerField.setValue(new Complex(p.getCenter(v)));
 		
 		// set aim
-		aimField.setField(rdata.aim/Math.PI);
+		aimField.setValue(p.getAim(v)/Math.PI);
 		
 		// set angle sum
-		angleSumField.setField(rdata.curv/Math.PI);
+		angleSumField.setValue(p.getCurv(v)/Math.PI);
 		
 		// bdry?
 		bdryCkBoxV.setSelected(false);
-		if (kdata.bdryFlag>0) bdryCkBoxV.setSelected(true);
+		if (p.getBdryFlag(v)>0) 
+			bdryCkBoxV.setSelected(true);
 		
 		// degree
-		degreeField.setField(kdata.num);
+		degreeField.setField(p.countFaces(v));
 		
 		// flower
-		StringBuilder flower=new StringBuilder();
-		for (int j=0;j<=kdata.num;j++)
-			flower.append(Integer.toString(kdata.flower[j])+" ");
-		flowerField.setText(flower.toString());
+		StringBuilder flowstr=new StringBuilder();
+		int[] flower=p.getFlower(v);
+		for (int j=0;j<flower.length;j++)
+			flowstr.append(Integer.toString(flower[j])+" ");
+		flowerField.setText(flowstr.toString());
 		
 		// color
 		// TODO: color_conversion task, need new GUI method
-		colorFieldV.setField(CPScreen.col_to_table(kdata.color));
+		colorFieldV.setField(ColorUtil.col_to_table(p.getCircleColor(v)));
 	}
 	
 	public void update_face(PackData p) {
-		if (p==null || !p.status) return;
+		if (p==null || !p.status) 
+			return;
 		int f=FaceLink.grab_one_face(p,faceChoice.getText());
-		if (f<=0) f=1;
+		if (f<=0) 
+			f=1;
 		
 		// set index field
 		faceChoice.setText(Integer.toString(f));
 
-		Face face=p.faces[f];
-		int []verts=face.vert;
-		
+		combinatorics.komplex.DcelFace face=p.packDCEL.faces[f];
+		int[] verts=face.getVerts();
 
 		// list corner vertices
 		vertsField.setText(verts[0]+" "+verts[1]+" "+verts[2]);
 		
 		// color?
-		colorFieldF.setField(CPScreen.col_to_table(face.color));
-		
-		// next face?
-		nextField.setField(face.nextFace);
-		
-		// red?
-		redCkBox.setSelected(false);
-		if (face.rwbFlag>0) {
-			redCkBox.setSelected(true);
-			nextRedField.setField(face.nextRed);
-		}
+		colorFieldF.setField(ColorUtil.col_to_table(face.color));
 	}
 
 	/**
@@ -467,22 +447,19 @@ public class PackDataHover extends HoverPanel implements ActionListener {
 	 * @param p
 	 */
 	public void update_edge(PackData p) {
-		if (p==null || !p.status) return;
-		EdgeSimple edge=EdgeLink.grab_one_edge(p,edgeChoice.getText());
-		int j=-1;
-		if (edge==null || (j=p.nghb(edge.v,edge.w))<0) 
+		if (p==null || !p.status) 
 			return;
-		double invDist=1.0;
-		if (p.overlapStatus) {
-			double iD=p.kData[edge.v].overlaps[j];
-			if (j>=0 && Math.abs(1.0-iD)>.0000001)
-				invDist=iD;
-		}
-		edgeChoice.setText(edge.v+" "+edge.w);
-		overlapField.setField(invDist);
+		HalfEdge edge=HalfLink.grab_one_edge(p,edgeChoice.getText());
+		if (edge==null)
+			return;
+		double invDist=edge.getInvDist();
+		int v=edge.origin.vertIndx;
+		int w=edge.twin.origin.vertIndx;
+		edgeChoice.setText(v+" "+w);
+		overlapField.setValue(invDist);
 		try {
-			double el=QualMeasures.edge_length(p,edge.v,edge.w);
-			edgelenField.setField(el);
+			double el=QualMeasures.edge_length(p,v,w);
+			edgelenField.setValue(el);
 		} catch (Exception ex) {}
 	}
 	

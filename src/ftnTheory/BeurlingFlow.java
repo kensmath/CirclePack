@@ -3,14 +3,13 @@ package ftnTheory;
 import java.util.Iterator;
 import java.util.Vector;
 
+import allMains.CPBase;
+import allMains.CirclePack;
+import complex.Complex;
+import packing.CPdrawing;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
-import allMains.CPBase;
-import circlePack.PackControl;
-
-import complex.Complex;
 /**
  * Routine for experimenting with the Beurling-Riemann Mapping 
  * Theorem. (An earlier version was 'Beurling_flow.java'.)
@@ -58,16 +57,16 @@ public class BeurlingFlow extends PackExtender {
 		Vector<String> items=null;
 
 		if (cmd.startsWith("getDom")) { // get/reset domain pack
-			CPScreen cpS;
+			CPdrawing cpS;
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				cpS=CPBase.pack[pnum];
-				if (cpS.packData.nodeCount!=domainData.nodeCount) {
+				cpS=CPBase.cpDrawing[pnum];
+				if (cpS.getPackData().nodeCount!=domainData.nodeCount) {
 					errorMsg("getDom: range complex must match domain");
 					return 0;
 				}
-				domainData=cpS.packData.copyPackTo();
+				domainData=cpS.getPackData().copyPackTo();
 			} catch (Exception ex) {
 				return 0;
 			}
@@ -158,7 +157,7 @@ public class BeurlingFlow extends PackExtender {
 			ans=2-(z.abs()-1)*(z.abs()-1);
 		}
 		else { // use 'Function' tab in main GUI.
-			ans=PackControl.functionPanel.getFtnValue(z).abs();
+			ans=CirclePack.cpb.getFtnValue(z).abs();
 		}
 	
 		return ans;
@@ -179,25 +178,26 @@ public class BeurlingFlow extends PackExtender {
 
 		// cycle through bdry pr 
 		for (int v=1;v<=packData.nodeCount;v++) {
-			if (packData.kData[v].bdryFlag!=0) {
-				z=packData.rData[v].center;
-				e_rad=domainData.rData[v].rad;
+			if (packData.isBdry(v)) {
+				z=packData.getCenter(v);
+				e_rad=domainData.getRadius(v);
 				CPhz=evaluate_h(z);
 	  
 				// Set the new radius 
 				if (xpnt!=1.0) CPhz=Math.exp(xpnt*Math.log(CPhz));
-				cur=packData.rData[v].rad/e_rad;
+				cur=packData.getRadius(v)/e_rad;
 				factor=Math.exp(t*Math.log(CPhz/cur));
+				double vrad=packData.getRadius(v);
 				if (option==1) {
-					if (factor>1.0) // increases only 
-						packData.rData[v].rad *= factor;
+					if (factor>1.0) // increases only
+						packData.setRadius(v,factor*vrad);
 				}
 				else if (option==2) {
 					if (factor<1.0) // decreases only 
-						packData.rData[v].rad *= factor;
+						packData.setRadius(v,factor*vrad);
 				}
 				else
-					packData.rData[v].rad *= factor;
+					packData.setRadius(v,factor*vrad);
 				count++;
 			}
 		} // end of for loop

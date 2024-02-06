@@ -2,56 +2,69 @@ package tiling;
 
 import java.util.Iterator;
 
+import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
+import dcel.CombDCEL;
+import deBugging.DebugHelp;
+import exceptions.CombException;
+import exceptions.ParserException;
 import listManip.EdgeLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
-import allMains.CirclePack;
-import deBugging.DebugHelp;
-import exceptions.CombException;
-import exceptions.ParserException;
 
 /**
- * TileBuilder is intended for building 'TileData' structures and their packings.
+ * TileBuilder is intended for building 'TileData' structures 
+ * and their packings.
  * 
- * NOTE: We assume our tiling is simply connected --- there are too many 
- * problems to consider for the multiply connected cases.
+ * NOTE: We assume our tiling is simply connected --- there are 
+ * too many problems to consider for the multiply connected cases.
  *  
- * Basic method here is build tile-by-tile so we can handle situations that
- * come up when applying subdivision rules, building dessins, fusion tilings, etc.
- * Namely, we need to handle unigons, digons, and various self-pastings.
+ * Basic method here is build tile-by-tile so we can handle 
+ * situations that come up when applying subdivision rules, 
+ * building dessins, fusion tilings, etc. Namely, we need to 
+ * handle unigons, digons, and various self-pastings.
  * 
- * For recursive use, we need to allow 'origTD' to have some "null" tiles:
- * E.g. 'origTD' may be a connected subset of tiles from a larger tiling, but
- * it keeps the original tile indices and inherits original 'myTiles' length.
+ * For recursive use, we need to allow 'origTD' to have some 
+ * "null" tiles: E.g. 'origTD' may be a connected subset of 
+ * tiles from a larger tiling, but it keeps the original tile 
+ * indices and inherits original 'myTiles' length.
  * 
- * Idea: start with rootTile and keep adding tiles. There are many complications.
- * E.g., a loop is an edge with same vertex at its ends, and to paste along a
- * loop in 'masterPack' requires special 'adjoin' method: do all but one of the 
- * sub-edge pastings with usual adjoin, fix up the packing, then do one last 
- * self-adjoin to close the last edge. However, this may require recursive 
- * calls so the stuff being adjoined, if not just a unigon, has already been
- * consolidated in a simply connected packing.
+ * Idea: start with rootTile and keep adding tiles. There are 
+ * many complications. E.g., a loop is an edge with same vertex 
+ * at its ends, and to paste along a loop in 'masterPack' 
+ * requires special 'adjoin' method: do all but one of the 
+ * sub-edge pastings with usual adjoin, fix up the packing, 
+ * then do one last self-adjoin to close the last edge. However, 
+ * this may require recursive calls so the stuff being adjoined, 
+ * if not just a unigon, has already been consolidated in a 
+ * simply connected packing.
  * 
  * Issues:
  *  * tiles may attach along edges with multiple vertices
- *  * tiles may attach to themselves (more than once, even) along edges or at vertices
- *  * two tiles may be attached along more than one, perhaps non-contiguous edges.
+ *  * tiles may attach to themselves (more than once, even) 
+ *    along edges or at vertices
+ *  * two tiles may be attached along more than one, perhaps 
+ *    non-contiguous edges.
  *  * tiles may be unigons or digons
  *  * tiles must have 'tileflower' data: 
- *  *    t=tile.tileflower[i][0] is the index of the tile across edge i (if t=0, this is
- *  *    a bdry edge) and tile.tileflower[i][1] is the index of the shared edge in t.
+ *  *    t=tile.tileflower[i][0] is the index of the tile 
+ *         across edge i (if t=0, this is a bdry edge) and 
+ *         tile.tileflower[i][1] is the index of the shared 
+ *         edge in t.
  *  
  * @author kstephe2, started November 2013, restarted 7/2014
  *
  */
 public class TileBuilder {
 	
-	PackData masterPack; // the packing we start and add to as we go
+	PackData masterPack; // packing we start and add to as we go
 	// incoming TileData, remains unchanged for reference
-	TileData origTD; // 'origTD.myTiles' should be of size 'origCount+1', but may have missing tiles
+	TileData origTD; // 'origTD.myTiles' should be size 'origCount+1', 
+					 // but may have missing tiles
 	int origCount;  // original count of tiles.
-	TileData growTD; // build new full tiles as we go along, keeping original 'tileIndex's
+	TileData growTD; // build new full tiles as we go; keep orig 'tileIndex's
 	int []tileAdded; // set when tile has been added to growTD
 	int []tileFull;  // set when tile's edges all pasted
 	
@@ -59,7 +72,7 @@ public class TileBuilder {
 	public TileBuilder(TileData td) {
 		masterPack=null;
 		origTD=td;
-		origCount=origTD.myTiles.length-1;
+		origCount=origTD.tileCount;
 		growTD=new TileData(origCount,td.builtMode);
 		
 		// keep track: tiles added, tiles full
@@ -68,31 +81,44 @@ public class TileBuilder {
 	}
 
 	/**
-	 * Build associated full barycentric complex for origTD: that is,
-	 * every n-tile is barycentrically subdivided to form 2n triangles, and
-	 * these are then barycentrically subdivided. (This is required, e.g., 
-	 * to handle unigons, digons, and slits.) Vertices get marks {1,2,3}
-	 * if they are, resp, baryVert, original corner, edge barycenter (
-	 * for Belyi map values {infty, 0,1}. Also, barycenter of each hex
-	 * face is marked -1.
+	 * Build associated full barycentric complex for origTD: 
+	 * that is, every n-tile is barycentrically subdivided to 
+	 * form 2n triangles, and these are then barycentrically 
+	 * subdivided. (This is required, e.g., to handle unigons, 
+	 * digons, and slits.) Vertices get marks {1,2,3} if they 
+	 * are, resp, baryVert, original corner, edge barycenter 
+	 * (for Belyi map values {infty, 0,1}). Also, barycenter 
+	 * of each hex face is marked -1.
 	 * 
 	 * Strategy:
-	 * * we work purely from 'tileFlower' data, so we discard and reconstitute
-	 *   all vert indices using 'tileflowers2verts'.
-	 * * We create a packing for each tile as needed: barycentrically subdivided
-	 *   2n-gon, recording original corner indices from tile (tile_v,pack_v) in 
-	 *   its 'VertexMap'.
-	 * * the first tile is chosen as rootTile; we may need to make some choice 
-	 *   so we have an easy base.
-	 * * Each tile, including the first, is processed for slit-type self-pastings,
-	 *   surrounded unigons, etc. (E.g. suppose an n-gon shares one edge with a unigon; then
-	 *   we create and paste in that unigon.) (we'll see what other circumstances show up)
-	 * * We have the growing 'masterPack'. We search through unpasted, non-bdry
-	 *   tile edges to find one which can be unambiguously pasted.
-	 * * We create the packing for a new tile (processed as above), paste it in, 
-	 *   then look for any self-pastings this may lead to for 'masterPack' itself.
-	 * * We past, adjust the 'VertexMap', and iterate until all tiles are in and all non-bdry
-	 *   tile edges are pasted.
+	 * * we work purely from 'tileFlower' data, so we discard and 
+	 *   reconstitute all vertex indices using 'tileflowers2verts'.
+	 *   
+	 * TODO: See if this first step can be avoided and we can
+	 *   restore the original indices for the vertices of the
+	 *   original tiles.
+	 *   
+	 * * We create a packing for each tile as needed: this is a
+	 *   barycentrically subdivided 2n-gon, recording original 
+	 *   corner indices from tile (tile_v,pack_v) in its 'VertexMap'.
+	 *   Note that each tile side has 4 edges.
+	 * * the first tile is chosen as rootTile; we may need to make 
+	 *   some choice so we have an easy base.
+	 * * Each tile, including the first, is processed for slit-type 
+	 *   self-pastings, surrounded unigons, etc. (E.g. suppose an 
+	 *   n-gon shares one edge with a unigon; then we create and paste 
+	 *   in that unigon.) (we'll see what other circumstances show up)
+	 * * We have the growing 'masterPack'. We search through unpasted, 
+	 *   non-bdry tile edges to find one which can be unambiguously pasted.
+	 * * We create the packing for a new tile (processed as above), 
+	 *   paste it in, then look for any self-pastings this may lead 
+	 *   to for 'masterPack' itself.
+	 * * We paste, adjust the 'VertexMap', and iterate until all tiles 
+	 *   are included and all non-bdry tile edges are pasted.
+	 * * We build 'dual', 'quad', and 'wg' tilings.
+	 * 
+	 * The resulting packing and its tile data should be the
+	 * full deal, builtMode=3.
 	 * @return PackData with attached TileData, null on error
 	 */
 	public PackData fullfromFlowers() {
@@ -100,15 +126,15 @@ public class TileBuilder {
 		boolean debug=false; // debug=true;
 		
 		// check that all tiles have 'tileFlower's
-		boolean gotflowers=true;
-		for (int t=1;(t<=origTD.tileCount && gotflowers);t++) {
+		boolean noflower=false;
+		for (int t=1;(t<=origTD.tileCount && !noflower);t++) {
 			Tile otile = origTD.myTiles[t];
 			if (otile.tileFlower==null)
-				gotflowers=false;
+				noflower=true;
 		}
-		
-		if (!gotflowers)
-			return null;
+		if (noflower) {
+			TileData.setTileFlowers(origTD); // DebugHelp.printtileflowers(origTD);
+		}
 
 		// throw out the original vertex indices and rebuild from flowers
 		for (int t=1;t<=origTD.tileCount;t++) {
@@ -119,25 +145,26 @@ public class TileBuilder {
 				otile.augVertCount=-1;
 			}
 		}
-		
 		try {
 			if (tileflowers2verts(origTD)<=0)
 				throw new CombException();
 		} catch (Exception ex) {
-			throw new CombException("'TileBuilder' could not create vertices from 'tileFlowers'");
+			throw new CombException(
+					"'TileBuilder' could not create vertices "+
+					"from 'tileFlowers'");
 		}
 		
-		// mark missing tiles as "done".
+		// mark missing tiles as "done". (e.g. disconnected tile)
 		for (int t=1;t<=origCount;t++)
 			if (origTD.myTiles[t]==null)
 				tileAdded[t]=1;
 		
 		// root tile to use: find first that exists.
 		int root=1;
-		while (root<origCount && tileAdded[root]==1) // find one that exists
+		while (root<origCount && tileAdded[root]==1) 
 			root++;
 
-		// now try to find first with at least 3 edges, else use original
+		// try to find first with at least 3 edges, else use original
 		int tmproot=-1;
 		while (tmproot<0 && root<origCount && tileAdded[root]==1) {
 			if (origTD.myTiles[root].vertCount>2)
@@ -165,15 +192,13 @@ public class TileBuilder {
 		tileAdded[root]=1;
 
 		// do any slit-sewing, unigon swallowing that's needed
-		masterPack.complex_count(true);
 		boolean keepup=true;
 		while (keepup) {
 			keepup=false;
-			keepup=false;
-			boolean newslit=sewOneSlit();
+			int slittip=check_for_slit();
+			boolean newslit=sewOneSlit(slittip);
 			boolean newunigon=swallowOneUnigon();
 			if (newslit || newunigon) {
-				masterPack.complex_count(true);
 				keepup=true;
 			}
 		}
@@ -181,13 +206,14 @@ public class TileBuilder {
 		if (debug) { // debug=true;
 //			DebugHelp.debugPackWrite(masterPack,"startPack"+root+".p");
 			int ntc=growTD.myTiles[root].augVertCount;
-			StringBuilder strbld=new StringBuilder("roottile "+root+": augverts:");
+			StringBuilder strbld=new StringBuilder(
+					"roottile "+root+": augverts:");
 			for (int jj=0;jj<ntc;jj++)
 				strbld.append(" "+growTD.myTiles[root].augVert[jj]);
 			System.out.println(strbld.toString());
 		}
 		
-		// main loop for unattached
+		// main loop for picking up unattached
 		boolean hit=true;
 		int safety=10000;
 		while (hit && safety>0) {
@@ -195,13 +221,14 @@ public class TileBuilder {
 			safety--;
 			
 			// look for unattached tile
-			for (int t=1;t<=origTD.tileCount;t++) {
+			for (int t=1;t<=origTD.tileCount;t++) {	
 				if (origTD.myTiles[t]!=null && tileAdded[t]==0) {
 					Tile otile=origTD.myTiles[t];
 					int ecount=otile.vertCount;
 					for (int j=0;(j<ecount && tileAdded[t]==0);j++) {
 						int nghb=0;
-						if ((nghb=otile.tileFlower[j][0])>0 && tileAdded[nghb]>0) {
+						if ((nghb=otile.tileFlower[j][0])>0 && 
+								tileAdded[nghb]>0) {
 							
 							// OK, found one to paste this onto
 							Tile tile=growTD.myTiles[nghb];
@@ -211,40 +238,54 @@ public class TileBuilder {
 							
 							PackData newp = otile.singleCanonical(3);
 							int w=newp.tileData.myTiles[1].vert[j];
-							if (masterPack.adjoin(newp, v,w,4) != 1)
-								throw new ParserException("didn't adjoin 'newp' correctly");
+							
+// debugging		
+//		System.out.println("adjoining with v="+v+" and w="+w);
+//		DCELdebug.printRedChain(masterPack.packDCEL.redChain);
+//		DCELdebug.printRedChain(newp.packDCEL.redChain);
+//		DebugHelp.debugPackWrite(masterPack,"masterPack.p");
+							
+							masterPack.packDCEL=CombDCEL.adjoin(
+									masterPack.packDCEL,newp.packDCEL, v,w,4);
+							masterPack.vertexMap=masterPack.packDCEL.oldNew;
 							
 							// transfer 'mark'
 							for (int k=1;k<=newp.nodeCount;k++) {
-								masterPack.kData[masterPack.vertexMap.findW(k)].mark=newp.kData[k].mark;
+								int newk=masterPack.vertexMap.findW(k);
+								masterPack.setVertMark(newk,newp.getVertMark(k));
 							}
 							
 							tileAdded[t] = 1;
-							masterPack.complex_count(true);
-
+							masterPack.packDCEL.fixDCEL(masterPack);
+							
 							// fix the new tile's data
 							updateTileVerts(newp.tileData,masterPack.vertexMap);
 							growTD.myTiles[t] = newp.tileData.myTiles[1];
 							if (copyFlowers(origTD.myTiles[t],growTD.myTiles[t])<=0)
-								throw new ParserException("failed to copy tileFlower");
+								throw new ParserException(
+										"failed to copy tileFlower");
 							growTD.myTiles[t].tileIndex = t;
 
-							// fix any slit-sewing, loop pasting that's needed on new masterPack
+							// fix any slit-sewing or loop pasting that's needed 
+							//    on new masterPack
 							keepup=true;
 							while (keepup) {
 								keepup=false;
-								boolean newslit=sewOneSlit();
+								int slittip=check_for_slit();
+								boolean newslit=sewOneSlit(slittip);
 								boolean newunigon=swallowOneUnigon();
-								if (newslit || newunigon) {
-									masterPack.complex_count(true);
+								if (newslit || newunigon) 
 									keepup=true;
-								}
 							}
 										
 							if (debug) { // debug=true;
-								DebugHelp.debugPackWrite(newp,"addTilePack"+t+".p"); // DebugHelp.debugPackWrite(masterPack,"newMaster.p");
+								DebugHelp.debugPackWrite(newp,
+										"addTilePack"+t+".p"); 
+								// DebugHelp.debugPackWrite(masterPack,
+								//       "newMaster.p");
 								int ntc=growTD.myTiles[t].augVertCount;
-								StringBuilder strbld=new StringBuilder("tile "+t+" augverts:");
+								StringBuilder strbld=new StringBuilder(
+										"tile "+t+" augverts:");
 								for (int jj=0;jj<ntc;jj++)
 									strbld.append(" "+growTD.myTiles[t].augVert[jj]);
 								System.out.println(strbld.toString());
@@ -254,11 +295,12 @@ public class TileBuilder {
 						}
 					}
 				}
-			} // done with for for unattached files
+			} // done with latest unattached file
 		} // end of while to get unattached files
 			
 		if (safety<=0)
-			throw new ParserException("ran through unattached safety fence in building growTD");
+			throw new ParserException(
+					"hit 'unattached' safety fence in building growTD");
 
 		// check for missing tiles and set 'hit' if there are unpasted edges
 		hit=false;
@@ -271,7 +313,7 @@ public class TileBuilder {
 			int ecount=tile.vertCount;
 			for (int j=0;(j<ecount && !hit);j++) {
 				int eb=tile.augVert[j*4+2];
-				if (tile.tileFlower[j][0]>0 && masterPack.kData[eb].bdryFlag>0)
+				if (tile.tileFlower[j][0]>0 && masterPack.isBdry(eb))
 					hit=true; // here's one that's not yet pasted
 			}
 		}
@@ -307,18 +349,20 @@ public class TileBuilder {
 				for (int j = 0; (j < ecount && myedge<0); j++) {
 					int eb = tile.augVert[j * 4 + 2];
 					if (tile.tileFlower[j][0] > 0
-							&& masterPack.kData[eb].bdryFlag > 0) {
+							&& masterPack.isBdry(eb)) {
 						nghbindex = tile.tileFlower[j][0];
 						myedge = j;
 					}
 				}
 
 				if (myedge>=0) {
-// debug
-//System.out.println("\n Paste ("+tile.tileIndex+","+myedge+") to ("+nghbindex+","+tile.tileFlower[myedge][1]+")\n");
+// debugging
+//System.out.println("\n Paste ("+tile.tileIndex+","+
+//   myedge+") to ("+nghbindex+","+tile.tileFlower[myedge][1]+")\n");
 					int v = tile.vert[(myedge + 1) % ecount]; // upstream due to
 																// orientation
-					int w = growTD.myTiles[nghbindex].vert[tile.tileFlower[myedge][1]];
+					int w = growTD.myTiles[nghbindex].
+							vert[tile.tileFlower[myedge][1]];
 
 					// shouldn't happen, but do these edges share an endpoint?
 					if (v == w)
@@ -327,13 +371,14 @@ public class TileBuilder {
 						v = w;
 					if (debugPass>=0)
 						System.out.println("Adjoin v = "+v+" to "+w);
-					if (masterPack.adjoin(masterPack, v, w, 4) != 1)
-						throw new ParserException(
-								"didn't adjoin 'masterPack' to itself for unpasted edge");
-					masterPack.complex_count(true);
+					masterPack.packDCEL=CombDCEL.adjoin(
+							masterPack.packDCEL,masterPack.packDCEL, v, w, 4);
+					masterPack.vertexMap=masterPack.packDCEL.oldNew;
 					updateTileVerts(growTD, masterPack.vertexMap);
+
 					if (debugPass>0) {
-						DebugHelp.debugPackWrite(masterPack, "Master_"+debugPass+".p");
+						DebugHelp.debugPackWrite(masterPack, "Master_"+
+					debugPass+".p");
 						System.out.println("\nMaster_"+debugPass+".p");
 						for (int tt=1;tt<=growTD.tileCount;tt++) 
 							DebugHelp.debugTileVerts(growTD.myTiles[tt]);
@@ -344,17 +389,18 @@ public class TileBuilder {
 					keepup = true;
 					while (keepup) {
 						keepup = false;
-						boolean newslit = sewOneSlit();
+						int slittip=check_for_slit();
+						boolean newslit = sewOneSlit(slittip);
 						boolean newunigon = swallowOneUnigon();
 						if (newslit && debugPass>0) {
-							DebugHelp.debugPackWrite(masterPack, "Master_"+debugPass+".p");
+							DebugHelp.debugPackWrite(masterPack, "Master_"+
+						debugPass+".p");
 							System.out.println("\nMaster_"+debugPass+".p");
 							for (int tt=1;tt<=growTD.tileCount;tt++) 
 								DebugHelp.debugTileVerts(growTD.myTiles[tt]);
 							debugPass++;
 						}
 						if (newslit || newunigon) {
-							masterPack.complex_count(true);
 							keepup = true;
 						}
 					}
@@ -382,23 +428,22 @@ public class TileBuilder {
 			DebugHelp.debugPackWrite(masterPack,"masterPack");
 		}
 		masterPack.set_aim_default();
-	    masterPack.complex_count(true);
-	    masterPack.facedraworder(false);
 	    masterPack.fillcurves();
 	    return masterPack;
 	}
 	
 	/**
-	 * Start with packing for barycentric subdivision of tiling. The packing has
-	 * 'tileData' and vertices are marked: 1 = tile baryVert, 2 = tile corner,
-	 * 3 = tile edge barycenter. Barycenters of hex-refined faces are marked -1.
-	 * All tiles have 'augVert's.
+	 * Start with packing for barycentric subdivision of tiling. 
+	 * The packing has 'tileData' and vertices are marked: 
+	 * 1 = tile baryVert, 2 = tile corner, 3 = tile edge barycenter. 
+	 * Barycenters of hex-refined faces are marked -1. All tiles 
+	 * have 'augVert's.
 	 * 
-	 * Here we build the 'dual', 'quad', and all the white and grey tilings. 
+	 * Here we build 'dual', 'quad', and all white/grey tilings. 
 	 * 
-	 * When done, should have the full 'canonicalPack' for 'ConformalTiling' extender
+	 * When done, should have the full 'canonicalPack' for 
+	 * 'ConformalTiling' extender
 	 * @param p PackData
-	 * @param mode int, tiling mode
 	 * @return int count of wgtiles
 	 */
 	public static int prepCanonical(PackData p) {
@@ -412,13 +457,12 @@ public class TileBuilder {
 		int qcount=0;
 		
 		for (int v=1;v<=p.nodeCount;v++) {
-			int mark=p.kData[v].mark;
+			int mark=p.getVertMark(v);
 			if (mark==2)
 				dcount++;
 			else if (mark==3)
 				qcount++;
 		}
-		p.complex_count(true);
 		
 		p.tileData.dualTileData=new TileData(dcount,p.tileData.builtMode);
 		p.tileData.quadTileData=new TileData(qcount,p.tileData.builtMode);
@@ -429,33 +473,25 @@ public class TileBuilder {
 		for (int t=1;t<=p.tileData.tileCount;t++) {
 			Tile tile=p.tileData.myTiles[t];
 			int bv=tile.baryVert;
-			int num=p.kData[bv].num;
-
-			// processing requries adjusting flower of baryVert so flower[0] 
-			// is in direction of vert[0]
-			// TODO: to handle dual tilings consistently, have to consider 
-			//       case that baryVert is on the boundary (and tile bdry 
-			//       goes through it. Best is vert[0] is required to be 
-			//       flower[0] in this case from the beginning.
-			int offset=-1;
-			int []myflower=p.kData[bv].flower;
-			for (int k=0;(k<num && offset<0);k++) {
-			int m=myflower[k];
-			if (p.kData[m].num==4 && p.nghb(m, tile.vert[0])>=0)
-					offset=k;
-			}
-			if (offset<0) {
-				throw new CombException("Tile "+t+" (center "+bv+") "+
-					"refined flower has some problem");
-			}
-			if (offset>0) {
-				int []newflower=new int[num+1];
-				for (int k=0;k<num;k++)
-					newflower[k]=p.kData[bv].flower[(k+offset)%num];
-				newflower[num]=newflower[0];
-				p.kData[bv].flower=newflower;
-			}
 			
+			// want 'halfedge' to be that going toward vert[0].
+			Vertex vert=p.packDCEL.vertices[bv];
+			HalfEdge he=vert.halfedge;
+			HalfEdge wanthe=null; // the edge we want
+			do {
+				HalfEdge left=he.next.twin.next;
+				HalfEdge right=he.twin.prev.twin.prev.twin;
+				if (left.twin.origin.vertIndx==tile.vert[0] && left==right) { 
+					wanthe=he;
+					break;
+				}
+				he=he.prev.twin; // cclw
+			} while (wanthe==null && he!=vert.halfedge);
+			if (wanthe==null)
+				throw new CombException("didn't find edge toward vert[0]");
+			vert.halfedge=wanthe;
+			int[] myflower=p.getFlower(bv);
+
 			tile.wgIndices=new int[2*tile.vertCount];
 			
 			// visit sectors of the tile in succession
@@ -466,12 +502,12 @@ public class TileBuilder {
 				wgtile.augVertCount=6;
 				wgtile.augVert=new int[6];
 				wgtile.mark=1; // positively oriented 
-				int baryV=p.kData[bv].flower[4*j+1]; // wgtile baryVert
+				int baryV=myflower[4*j+1]; // wgtile baryVert
 				wgtile.tileIndex=wgtick++;
-				p.kData[baryV].mark=-wgtile.tileIndex; // store neg of index in baryVert.mark
+				p.setVertMark(baryV,-wgtile.tileIndex); // store neg of index in baryVert.mark
 				tile.wgIndices[2*j]=wgtile.tileIndex; // point to wgTile index
 				p.tileData.wgTiles[wgtile.tileIndex]=wgtile; // put wgTile into master list
-				int []itsflower=p.kData[baryV].flower;
+				int[] itsflower=p.getFlower(baryV);
 				int indx=p.nghb(baryV,bv);
 				for (int k=0;k<3;k++) {	// wgtile's augVert[0] points to the tile baryVert
 					wgtile.vert[k]=wgtile.augVert[2*k]=itsflower[(indx+2*k)%6];
@@ -484,12 +520,12 @@ public class TileBuilder {
 				wgtile.augVertCount=6;
 				wgtile.augVert=new int[6];
 				wgtile.mark=-1; // negatively oriented 
-				baryV=p.kData[bv].flower[4*j+3]; // its barycenter
+				baryV=myflower[4*j+3]; // its barycenter
 				wgtile.tileIndex=wgtick++;
-				p.kData[baryV].mark=-wgtile.tileIndex; // store neg of index in baryVert.mark
+				p.setVertMark(baryV,-wgtile.tileIndex); // store neg of index in baryVert.mark
 				tile.wgIndices[2*j+1]=wgtile.tileIndex; // point to wgTile index
 				p.tileData.wgTiles[wgtile.tileIndex]=wgtile; // put wgTile into master list
-				itsflower=p.kData[baryV].flower;
+				itsflower=p.getFlower(baryV);
 				indx=p.nghb(baryV,bv);
 				for (int k=0;k<3;k++) {	// wgtile's augVert[0] points to the tile baryVert
 					wgtile.vert[k]=wgtile.augVert[2*k]=itsflower[(indx+2*k)%6];
@@ -506,12 +542,12 @@ public class TileBuilder {
 			for (int v=1;v<=p.nodeCount;v++) {
 
 				// dual tile for each original corner vertex
-				if (p.kData[v].mark==2) {
-					int num=p.kData[v].num;
-					int []flower=p.kData[v].flower;
+				if (p.getVertMark(v)==2) {
+					int num=p.countFaces(v);
+					int[] flower=p.getFlower(v);
 					
 					// bdry tile?
-					if (p.kData[v].bdryFlag>0) { // this is bdry tile
+					if (p.isBdry(v)) { // this is bdry tile
 						
 						// create the dual tile
 						Tile dtile=p.tileData.dualTileData.myTiles[dcount]= 
@@ -530,32 +566,37 @@ public class TileBuilder {
 						int tick=0; // counts wgTile's
 						// first: edge from bdry edge barycenter to first tile barycenter
 						int cv=flower[1];
+						int[] cvflower=p.getFlower(cv);
 						int myindx=p.nghb(cv,v);
-						vert[tick]=augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6];
-						augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
-						dtile.wgIndices[tick++]= -p.kData[cv].mark; // index is temp stored in 'mark'
+						vert[tick]=augvert[2*tick]=cvflower[(myindx+2)%6];
+						augvert[2*tick+1]=cvflower[(myindx+3)%6];
+						dtile.wgIndices[tick++]= -p.getVertMark(cv); // index is temp stored in 'mark'
 						
 						// then pairs of grey/white to get edges between tile barycenters
 						for (int i=1;i<(num/4);i++) {
 							cv=flower[4*i-1];
 							myindx=p.nghb(cv,v);
-							augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6]; 
-							augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
-							dtile.wgIndices[tick++]= -p.kData[cv].mark;
+							cvflower=p.getFlower(cv);
+							augvert[2*tick]=cvflower[(myindx+2)%6]; 
+							augvert[2*tick+1]=cvflower[(myindx+3)%6];
+							dtile.wgIndices[tick++]= -p.getVertMark(cv);
 							cv=flower[4*i+1];
 							myindx=p.nghb(cv,v);
-							vert[tick/2]=augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6];
-							augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
-							dtile.wgIndices[tick++]= -p.kData[cv].mark;
+							cvflower=p.getFlower(cv);
+							vert[tick/2]=augvert[2*tick]=cvflower[(myindx+2)%6];
+							augvert[2*tick+1]=cvflower[(myindx+3)%6];
+							dtile.wgIndices[tick++]= -p.getVertMark(cv);
 						}							
 						
 						// then finish
 						cv=flower[num-1];
 						myindx=p.nghb(cv,v);
-						augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6]; 
-						augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
-						dtile.wgIndices[tick++]= -p.kData[cv].mark;
-						vert[tick/2]=augvert[2*tick]=p.kData[cv].flower[(myindx+4)%6]; // last vert is edge barycenter
+						cvflower=p.getFlower(cv);
+						augvert[2*tick]=cvflower[(myindx+2)%6]; 
+						augvert[2*tick+1]=cvflower[(myindx+3)%6];
+						dtile.wgIndices[tick++]= -p.getVertMark(cv);
+						// last vert is edge barycenter
+						vert[tick/2]=augvert[2*tick]=cvflower[(myindx+4)%6];
 						
 						// finish with augmented boundary 
 						augvert[2*tick+1]=flower[num];
@@ -578,8 +619,8 @@ public class TileBuilder {
 						// find a grey tile barycenter to start
 						int gdir=-1;
 						for (int j=0;(j<num && gdir<0);j++) {
-							int cv=p.kData[v].flower[j];
-							int cmark=p.kData[cv].mark;
+							int cv=flower[j];
+							int cmark=p.getVertMark(cv);
 							if (cmark<0 && p.tileData.wgTiles[-cmark].mark==-1) // grey
 								gdir=j;
 						}
@@ -592,14 +633,16 @@ public class TileBuilder {
 							int ii=(gdir+i)%num;
 							int cv=flower[ii];
 							int myindx=p.nghb(cv,v);
-							vert[tick/2]=augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6];
-							augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
-							dtile.wgIndices[tick++]= -p.kData[cv].mark;
+							int[] cvflower=p.getFlower(cv);
+							vert[tick/2]=augvert[2*tick]=cvflower[(myindx+2)%6];
+							augvert[2*tick+1]=cvflower[(myindx+3)%6];
+							dtile.wgIndices[tick++]= -p.getVertMark(cv);
 							cv=flower[(ii+2)%num];
 							myindx=p.nghb(cv,v);
-							augvert[2*tick]=p.kData[cv].flower[(myindx+2)%6];
-							augvert[2*tick+1]=p.kData[cv].flower[(myindx+3)%6];
-							dtile.wgIndices[tick++]= -p.kData[cv].mark;
+							cvflower=p.getFlower(cv);
+							augvert[2*tick]=cvflower[(myindx+2)%6];
+							augvert[2*tick+1]=cvflower[(myindx+3)%6];
+							dtile.wgIndices[tick++]= -p.getVertMark(cv);
 						}							
 						p.tileData.dualTileData.myTiles[dcount].vert=vert;
 						p.tileData.dualTileData.myTiles[dcount].augVertCount=num;
@@ -621,7 +664,7 @@ public class TileBuilder {
 			qcount=1;
 			for (int v=1;v<=p.nodeCount;v++) {
 
-				if (p.kData[v].mark==3) { // v is edge barycenter
+				if (p.getVertMark(v)==3) { // v is edge barycenter
 
 					
 					// create the quad tile
@@ -629,33 +672,35 @@ public class TileBuilder {
 					//   on the bdry, edge barycenter is both corner and baryVert
 					Tile qtile=p.tileData.quadTileData.myTiles[qcount]= 
 							new Tile(p.tileData.quadTileData,4);
-					int []flower=p.kData[v].flower;
+					int[] flower=p.getFlower(v);
 					int []vert=new int[4];
 					int []augvert=new int[8];
 
-					if (p.kData[v].bdryFlag>0) { // bdry? 
+					if (p.isBdry(v)) { // bdry? 
 						qtile.wgIndices=new int[2];
 
 						// first is grey face
 						int cv=flower[1];
 						int myindx=p.nghb(cv,v);
+						int[] cvflower=p.getFlower(cv);
 						
 						// these go at end
-						augvert[6]=p.kData[cv].flower[myindx];
-						augvert[7]=p.kData[cv].flower[(myindx+1)%6];
+						augvert[6]=cvflower[myindx];
+						augvert[7]=cvflower[(myindx+1)%6];
 						
-						vert[0]=augvert[0]=p.kData[cv].flower[(myindx+2)%6];
-						augvert[1]=p.kData[cv].flower[(myindx+3)%6];
-						vert[1]=augvert[2]=p.kData[cv].flower[(myindx+4)%6];
-						qtile.wgIndices[0]= -p.kData[cv].mark;
+						vert[0]=augvert[0]=cvflower[(myindx+2)%6];
+						augvert[1]=cvflower[(myindx+3)%6];
+						vert[1]=augvert[2]=cvflower[(myindx+4)%6];
+						qtile.wgIndices[0]= -p.getVertMark(cv);
 						
 						// next is white
 						cv=flower[3];
 						myindx=p.nghb(cv,v);
-						augvert[3]=p.kData[cv].flower[(myindx+3)%6];
-						vert[2]=augvert[4]=p.kData[cv].flower[(myindx+4)%6];
-						augvert[5]=p.kData[cv].flower[(myindx+5)%6];
-						qtile.wgIndices[1]= -p.kData[cv].mark;
+						cvflower=p.getFlower(cv);
+						augvert[3]=cvflower[(myindx+3)%6];
+						vert[2]=augvert[4]=cvflower[(myindx+4)%6];
+						augvert[5]=cvflower[(myindx+5)%6];
+						qtile.wgIndices[1]= -p.getVertMark(cv);
 						vert[3]=v;
 
 						p.tileData.quadTileData.myTiles[qcount].vert=vert;
@@ -665,13 +710,13 @@ public class TileBuilder {
 					
 					else { // interior? num=4
 						qtile.wgIndices=new int[4];
-						int num=p.kData[v].num;
+						int num=p.countFaces(v);
 
 						// find a grey tile barycenter to start
 						int gdir=-1;
 						for (int j=0;(j<num && gdir<0);j++) {
-							int cv=p.kData[v].flower[j];
-							int mark=p.kData[cv].mark;
+							int cv=flower[j];
+							int mark=p.getVertMark(cv);
 							if (mark<0 && p.tileData.wgTiles[-mark].mark==-1) // grey
 								gdir=j;
 						}
@@ -681,9 +726,10 @@ public class TileBuilder {
 						for (int j=0;j<4;j++) {
 							int cv=flower[(gdir+2*j)%num];
 							int myindx=p.nghb(cv,v);
-							vert[j]=augvert[2*j]=p.kData[cv].flower[(myindx+2)%6];
-							augvert[2*j+1]=p.kData[cv].flower[(myindx+3)%6];
-							qtile.wgIndices[j]= -p.kData[cv].mark;
+							int[] cvflower=p.getFlower(cv);
+							vert[j]=augvert[2*j]=cvflower[(myindx+2)%6];
+							augvert[2*j+1]=cvflower[(myindx+3)%6];
+							qtile.wgIndices[j]= -p.getVertMark(cv);
 						}
 						
 						p.tileData.quadTileData.myTiles[qcount].vert=vert;
@@ -721,7 +767,7 @@ public class TileBuilder {
 		for (int t=1;t<=td.tileCount;t++) {
 			Tile tile=td.myTiles[t];
 			if (tile==null)
-				break;
+				continue;
 			
 			// adjust vert
 			for (int j=0;j<tile.vertCount;j++) {
@@ -747,14 +793,14 @@ public class TileBuilder {
 	}
 	
 	/**
-	 * Look through masterPack for tile edges which are in the boundary,
-	 * contiguous, and are to be attached to one another. Sew up the slit 
-	 * and adjust accordingly. (So, we're looking for a tile vert which is
-	 * in the bdry, and tile edges on each side are to be identified according
-	 * to origTD.)
-	 * @return boolean, false if none sewn up
+	 * Look through masterPack for first instance of bdry
+	 * edges which are contiguous and to be attached to one 
+	 * another. (So, we're looking for a tile vert which is in 
+	 * the bdry, and tile edges on each side are to be 
+	 * identified according to origTD.)
+	 * @return int, index v of tip, 0 for failure.
 	 */
-	public boolean sewOneSlit() {
+	public int check_for_slit() {
 		
 		Tile tile=null;
 		Tile otile=null;
@@ -763,12 +809,13 @@ public class TileBuilder {
 			tile=growTD.myTiles[t];
 			otile=null;
 		
-			if (tile!=null) { // this should imply corresponding origTD tile is not null
+			// this should imply corresponding origTD tile is not null
+			if (tile!=null) { 
 				otile=origTD.myTiles[tile.tileIndex];
 				int ecount = tile.vertCount;
 				for (int e = 0; e < ecount; e++) {
 
-					// debugging: the 2 edges that may be pasted 
+// debugging: the 2 edges that may be pasted 
 //					int ege=e;
 //					int crossege=otile.tileFlower[e][1];
 					
@@ -779,31 +826,37 @@ public class TileBuilder {
 					// 	skip if edge is not on bdry of tPack (check v and its nghb vv)
 					int vv=tile.augVert[4*e+1];
 
-					if (masterPack.kData[v].bdryFlag == 0 || masterPack.kData[vv].bdryFlag == 0) 
+					if (!masterPack.isBdry(v) || !masterPack.isBdry(vv)) 
 						continue;
 
 					int nec = origTD.myTiles[nghb].vertCount;
 					int oe = (otile.tileFlower[e][1] + 1) % nec; // other end
 
-					if (tileAdded[nghb]>0 && v ==growTD.myTiles[nghb].vert[oe]) {
-
-// debug
-//System.out.println(" attach slit: (tile,edge)=("+otile.tileFlower[e][0]+" "+otile.tileFlower[e][1]+")");
-
-						int rslt = masterPack.adjoin(masterPack, v, v, 4);
-						if (rslt != 1)
-							throw new ParserException("didn't sew slit correctly, tile "+ tile.tileIndex);
-						masterPack.complex_count(false);
-						
-						// pasted to self, so fix the tile data
-						updateTileVerts(growTD, masterPack.vertexMap);
-						
-						return true;
-					}
-				}	
+					if (tileAdded[nghb]>0 && v ==growTD.myTiles[nghb].vert[oe])
+						return v;
+				}
 			}
 		}
-		
+		return 0;
+	}
+	
+	/**
+	 * Used 'check_for_slit' to locate tip of slit v to 
+	 * close up. Sew up the slit and adjust accordingly. 
+	 * @return boolean, false if none sewn up
+	 */
+	public boolean sewOneSlit(int v) {
+		if (v>0) {
+			masterPack.packDCEL=CombDCEL.adjoin(
+					masterPack.packDCEL,
+					masterPack.packDCEL, v, v, 4);
+			masterPack.vertexMap=masterPack.packDCEL.oldNew;
+			masterPack.packDCEL.fixDCEL(masterPack);
+						
+			// pasted to self, so fix the tile data
+			updateTileVerts(growTD, masterPack.vertexMap);
+			return true;
+		}
 		return false;
 	}
 
@@ -829,7 +882,7 @@ public class TileBuilder {
 
 					// skip if edge barycenter vert is not on bdry of tPack
 					int eb = tile.augVert[4*e+2];
-					if (masterPack.kData[eb].bdryFlag != 0) 
+					if (masterPack.isBdry(eb)) 
 						continue;
 
 					// nghb invalid or already incorporated?
@@ -846,8 +899,9 @@ public class TileBuilder {
 						// 'adjoin' is complicated. If ends already match in 'tile'
 						//   then just usual adjoin
 						if (tile.vert[e]==v) {
-							if (masterPack.adjoin(newp, v,w,4) != 1)
-								throw new ParserException("didn't adjoin filled loop correctly");
+							masterPack.packDCEL=CombDCEL.adjoin(
+									masterPack.packDCEL,newp.packDCEL, v,w,4);
+							masterPack.vertexMap=masterPack.packDCEL.oldNew;
 							// fix the new tile data
 							updateTileVerts(newp.tileData,masterPack.vertexMap);
 							growTD.myTiles[t] = newp.tileData.myTiles[1];
@@ -857,11 +911,14 @@ public class TileBuilder {
 							tileAdded[t] = 1;
 						}
 						else { // must be done in two steps:
-							//   (1) adjoin along 3 edges only: update tile verts, add to growTD, transfer flowers, etc.
+							//   (1) adjoin along 3 edges only: update tile verts, 
+							//       add to growTD, transfer flowers, etc.
 							//   (2) then zip last edge: update growTD
-							int tip=newp.tileData.myTiles[1].augVert[3]; // will become tip of final slit
-							if (masterPack.adjoin(newp, v,w,3) != 1)
-								throw new ParserException("didn't adjoin a loop correctly");
+							// this will become tip of final slit
+							int tip=newp.tileData.myTiles[1].augVert[3];
+							masterPack.packDCEL=CombDCEL.adjoin(
+									masterPack.packDCEL,newp.packDCEL, v,w,3);
+							masterPack.vertexMap=masterPack.packDCEL.oldNew;
 							tip=masterPack.vertexMap.findW(tip);
 
 							// fix the new tile data
@@ -871,9 +928,9 @@ public class TileBuilder {
 								throw new ParserException("failed in loop work to copy tileFlower");
 							growTD.myTiles[t].tileIndex = 1;
 							tileAdded[t] = 1;
-							
-							if (masterPack.adjoin(masterPack,tip,tip,1)!=1)
-								throw new ParserException("didn't get last edge of adjoin on loop");
+							masterPack.packDCEL=CombDCEL.adjoin(
+									masterPack.packDCEL,masterPack.packDCEL,tip,tip,1);
+							masterPack.vertexMap=masterPack.packDCEL.oldNew;
 							updateTileVerts(growTD,masterPack.vertexMap);
 						}
 						return true;
@@ -881,7 +938,6 @@ public class TileBuilder {
 				}
 			}
 		}
-			
 		return false;
 	}
 	
@@ -908,8 +964,8 @@ public class TileBuilder {
 	}
 	
 	/**
-	 * Given a tile and edge of origTD, determine if the ends of the edge are 
-	 * the same vertex.
+	 * Given a tile and edge of origTD, determine if the ends 
+	 * of the edge are the same vertex.
 	 * @param tileIndex
 	 * @param edgeIndex
 	 * @return boolean, true if this edge is a loop
@@ -935,9 +991,9 @@ public class TileBuilder {
 	 *   * ans[1] = number of clockwise tile edges to paste
 	 *   * ans[2] = index in 't2.vert' where pasting starts
 	 *   * ans[3] = number of counterclockwise tile edges to paste.
-	 * Both t1 and t2 must have 'tileFlower's. (This follows 
-	 * routine follows the orientation convention of 'adjoin' 
-	 * operations, adjoining t2 to t1.)
+	 * Both t1 and t2 must have 'tileFlower's. (This routine
+	 * follows the orientation conventions of 'adjoin' when 
+	 * adjoining t2 to t1.)
 	 *   
 	 * Note that t1 and t2 may be the same tile, but we can handle
 	 * only the limited case of pasting associated with a single slit.
@@ -1060,17 +1116,19 @@ public class TileBuilder {
 		ans[3]=t1length;
 
 		return ans;
-		
 	}
 	
 	/**
-	 * This routine creates tile vertices based entirely on tileFlowers. 
-	 * In special cases, such as existence of uniqons, digons, slits, 
-	 * or self-pastings (e.g., perhaps non-simply connected surfaces), 
-	 * we must specify the tiling using 'tileFlower' information, as when 
-	 * it was read from a file with data in form 'TILEFLOWERS:'.
-	 * Return nodecount of vertex indices, -1 on failure (e.g., if 
-	 * 'tileflowers' are not set);
+	 * This routine adds tile vertices to tiles of 'td'
+	 * based entirely on 'td's tileFlowers. This accommodates
+	 * cases, such as existence of uniqons, digons, slits, 
+	 * or self-pastings (e.g., perhaps non-simply connected 
+	 * surfaces), where we must specify the tiling using 
+	 * 'tileFlower' information (as when it was read from a 
+	 * file with data in form 'TILEFLOWERS:'). 
+	 * 
+	 * Return nodecount, -1 on failure (e.g., if 'tileflowers' are 
+	 * not set in 'td');
 
 	 * @param td TileData
 	 * @return int, nodecount, -1 on error
@@ -1084,7 +1142,7 @@ public class TileBuilder {
 			Tile tile=td.myTiles[t];
 			if (tile.tileFlower==null)
 				return -1;
-			td.myTiles[t].vert=new int[tile.vertCount]; // throw out old indices
+			td.myTiles[t].vert=new int[tile.vertCount]; // toss old indices
 		}
 		
 		// process tile-by-tile, finishing all vertices of each
@@ -1097,7 +1155,6 @@ public class TileBuilder {
 		// Alternate between curr/next lists of tiles visited.
 		NodeLink next=new NodeLink();
 		NodeLink curr = new NodeLink();
-		
 		int tick = 1;
 		next.add(tick);
 		while (next.size() > 0) {
@@ -1134,8 +1191,7 @@ public class TileBuilder {
 									|| nghbtile.tileFlower[nghbedge][1] != myedge)
 								throw new CombException("faulty tile nghb relationship");
 
-							// here's the goal: set correct index in
-							// nghbtile.vert
+							// here's goal: set correct index in nghbtile.vert
 							nghbtile.vert[nghbedge] = vert;
 							// Is nghbtile a unigon? done
 							if (nghbcount == 1)
@@ -1164,8 +1220,7 @@ public class TileBuilder {
 										|| nghbtile.tileFlower[nghbedge][1] != myedge)
 									throw new CombException("faulty tile nghb relationship");
 
-								// here's the goal: set correct index in
-								// nghbtile.vert
+								// here's goal: set correct index in nghbtile.vert
 								nghbtile.vert[(nghbedge + 1) % nghbcount] = vert;
 
 								// Is nghbtile a unigon? done
@@ -1181,7 +1236,6 @@ public class TileBuilder {
 					doneTiles[tile.tileIndex] = 1;
 				}
 			} // end of while going through curr
-
 		} // done, 'next' is now empty
 
 		return tick-1;

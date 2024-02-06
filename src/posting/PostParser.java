@@ -7,26 +7,28 @@ import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
+import dcel.SideData;
 import exceptions.ParserException;
 import geometry.CircleSimple;
+import geometry.CommonMath;
 import geometry.SphericalMath;
-import komplex.AmbiguousZ;
 import komplex.DualTri;
-import komplex.EdgePair;
 import komplex.EdgeSimple;
-import komplex.Face;
 import listManip.BaryCoordLink;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.TileLink;
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
 import tiling.Tile;
+import util.ColorUtil;
 import util.DispFlags;
-import util.GenPathUtil;
+import util.PathBaryUtil;
 import util.PathUtil;
 import util.SphView;
 import util.StringUtil;
@@ -48,8 +50,7 @@ public class PostParser {
 		if (flagSegs==null || flagSegs.size()==0)
 			return 0;
 		int count=0;
-		CPScreen cpScreen=p.cpScreen;
-		AmbiguousZ []amb=AmbiguousZ.getAmbiguousZs(p);
+		CPdrawing cpDrawing=p.cpDrawing;
 
 		// iterate through successive flag segments.
 		Iterator<Vector<String>> its=flagSegs.iterator();
@@ -78,11 +79,11 @@ public class PostParser {
 						int f;
 						while (fl.hasNext()) {
 							f = (Integer) fl.next();
-							Complex tri_cent = p.face_center(f);
+							Complex tri_cent = p.getFaceCenter(f);
 							if (p.hes <= 0) {
 								pF.postIndex(tri_cent, f);
 							} else {
-								tri_cent = cpScreen.sphView
+								tri_cent = cpDrawing.sphView
 										.toApparentSph(tri_cent);
 								if (Math.cos(tri_cent.x) >= 0) // sphere; on
 																// front?
@@ -96,9 +97,9 @@ public class PostParser {
 						Iterator<Integer> nl = nodeLink.iterator();
 						while (nl.hasNext()) {
 							v = (Integer) nl.next();
-							Complex pt = p.rData[v].center;
+							Complex pt = p.getCenter(v);
 							if (p.hes > 0) {
-								pt = cpScreen.sphView.toApparentSph(pt);
+								pt = cpDrawing.sphView.toApparentSph(pt);
 								if (Math.cos(pt.x) >= 0.0) {
 									pt = SphView.s_pt_to_visual_plane(pt);
 									pF.postIndex(pt, v);
@@ -109,7 +110,7 @@ public class PostParser {
 						}
 					} else if (sc == 'l') { // -nl {v} {str} str at center of v
 						v = NodeLink.grab_one_vert(p, (String) items.get(0));
-						pF.postStr(p.rData[v].center, (String) items.get(1));
+						pF.postStr(p.getCenter(v), (String) items.get(1));
 						count++;
 					} else if (sc == 'z') { // -nl {x} {y} {str}
 						pF.postStr(new Complex(
@@ -136,7 +137,7 @@ public class PostParser {
 
 			// --------- now, watch for 'compactDispFlag' ---------------
 			// typical display flags involve optional color/thickness/fill
-			Color col = CPScreen.getFGColor();
+			Color col = ColorUtil.getFGColor();
 			Complex z = null;
 			double tx = -1.0; // thickness factor
 			char dualChar = 'e';
@@ -163,7 +164,7 @@ public class PostParser {
 				}
 			}
 			  
-			DispFlags dispFlags=new DispFlags(sub_cmd,p.cpScreen.fillOpacity);
+			DispFlags dispFlags=new DispFlags(sub_cmd,p.cpDrawing.fillOpacity);
 
 			// was a thickness factor specified? set 'tx'
 			if (dispFlags.thickness>0) {
@@ -180,20 +181,20 @@ public class PostParser {
 			{
 				if (p.hes != 0)
 					break;
-				int f;
+				
 				FaceLink faceLink = new FaceLink(p, items);
 				Iterator<Integer> flist = faceLink.iterator();
 				while (flist.hasNext()) {
-					f = (Integer) flist.next();
+					int[] verts=p.getFaceVerts(flist.next());
 					Complex[] sides = new Complex[3];
 					double[] lgths = new double[3];
 					for (int j = 0; j < 3; j++) {
-						sides[j] = p.rData[p.faces[f].vert[(j + 1) % 3]].center
-								.minus(p.rData[p.faces[f].vert[j]].center);
+						sides[j] = p.getCenter(verts[(j + 1) % 3])
+								.minus(p.getCenter(verts[j]));
 						lgths[j] = sides[j].abs();
 					}
 					for (int j = 0; j < 3; j++) {
-						Complex cent = p.rData[p.faces[f].vert[j]].center;
+						Complex cent = p.getCenter(verts[j]);
 						double arg1 = sides[j].arg();
 						double extent = sides[(j + 2) % 3].times(-1.0)
 								.divide(sides[j]).arg();
@@ -208,11 +209,11 @@ public class PostParser {
 			{
 				Vector<Vector<Complex>> paths = null;
 				if (CPBase.ClosedPath != null)
-					paths = GenPathUtil.gpPolygon(CPBase.ClosedPath);
+					paths = PathUtil.gpPolygon(CPBase.ClosedPath);
 				if (tx < 0.0)
 					tx = 2.0; // default is thicker
 				if (!dispFlags.colorIsSet)
-					col = CPScreen.coLor(1); // default to deep blue
+					col = ColorUtil.coLor(1); // default to deep blue
 				pF.postPath(paths, col, tx, true);
 				count++;
 				break;
@@ -231,53 +232,58 @@ public class PostParser {
 					// create paths from global vector Blink
 					Path2D.Double path = null;
 					for (int j = 0; j < myLines.size(); j++) {
-						path = PathUtil.baryLink2path(p, myLines.get(j));
+						path = PathBaryUtil.baryLink2path(p, myLines.get(j));
 						if (path != null) {
-							paths = GenPathUtil.gpPolygon(path);
-							pF.postPath(paths, CPScreen.coLor(1), tx, true);
+							paths = PathUtil.gpPolygon(path);
+							pF.postPath(paths, ColorUtil.coLor(1), tx, true);
 							count++;
 						}
 					}
 				}
 				break;
 			}
-			case 'B': // post both faces and circles in drawing order
-			case 'C':
+			case 'B': // post faces and circles recomputed in drawing order
+			case 'C': // post circles recomputed in drawing order
 			case 'F': // post faces recomputed in drawing order
 			{
+				HalfLink hlink=null;
 				FaceLink facelist = null;
-				int first_face = 0;
+				boolean useSchw=false;
 				// no list? default to drawing order (plus stragglers)
 				if (items.size() == 0) {
+					if (StringUtil.isFlag(items.get(0)) && 
+							items.get(0).startsWith("-s"))
+						useSchw=true;
+					hlink=p.packDCEL.layoutOrder;
+					hlink.abutMore(p.packDCEL.stragglers);
 					facelist = new FaceLink(p, "Fs");
 					// handle first face circles (without adjusting centers)
 					if (c == 'C' || c == 'B') {
-						first_face = p.firstFace;
-						int indx = p.faces[first_face].indexFlag;
-
-						Face face = p.faces[first_face];
+						combinatorics.komplex.DcelFace face = hlink.get(0).face;
+						int[] verts=face.getVerts();
 						for (int i = 0; i < 3; i++) {
-							v = face.vert[(indx + i) % 3];
-							z = new Complex(p.rData[v].center);
+							v = verts[i];
+							z = p.getCenter(v);
 							if (p.hes > 0)
-								z = cpScreen.sphView.toApparentSph(z);
+								z = cpDrawing.sphView.toApparentSph(z);
 							if (!dispFlags.fill) { // not filled
 								if (!dispFlags.colBorder) {
-									pF.postCircle(p.hes, z, p.rData[v].rad, tx);
+									pF.postCircle(p.hes, z, p.getRadius(v), tx);
 								} else {
 									if (!dispFlags.colBorder)
-										col = p.kData[v].color;
+										col = p.packDCEL.vertices[v].color;
 									pF.postColorCircle(p.hes, z,
-											p.rData[v].rad, col, tx);
+											p.getRadius(v), col, tx);
 								}
-							} else {
+							} 
+							else {
 								if (!dispFlags.colorIsSet)
-									col = p.kData[v].color;
+									col = p.packDCEL.vertices[v].color;
 								if (!dispFlags.colBorder)
-									pF.postCircle(p.hes, z, p.rData[v].rad, tx);
+									pF.postCircle(p.hes, z, p.getRadius(v), tx);
 								else
 									pF.postColorCircle(p.hes, z,
-											p.rData[v].rad, col, tx);
+											p.getRadius(v), col, tx);
 							}
 							if (dispFlags.label) { // label the face
 								if (p.hes > 0 && Math.cos(z.x) >= 0.0) {
@@ -289,20 +295,23 @@ public class PostParser {
 						} // end of for loop
 						count++;
 					} // done with first three circles
-				} else
-					// there is a list
+				} 
+				else {	// there is a list
 					facelist = new FaceLink(p, items);
+					hlink=facelist.getHalfLink(p.packDCEL);
+				}
+				
 
 				// now proceed with layout
 				if (c == 'F') {
-					count += p.layout_facelist(pF, facelist, dispFlags, null, true,
-							false, first_face, tx);
+					count += p.packDCEL.layoutFactory(pF,hlink,dispFlags,
+							null,true,false,useSchw,tx);
 				} else if (c == 'C') {
-					count += p.layout_facelist(pF, facelist, null, dispFlags, true,
-							false, first_face, tx);
+					count += p.packDCEL.layoutFactory(pF,hlink,null,
+							dispFlags,true,false,useSchw,tx);
 				} else if (c == 'B') { // we have only one color we can use
-					count += p.layout_facelist(pF, facelist, dispFlags,dispFlags,
-							true, false, first_face, tx);
+					count += p.packDCEL.layoutFactory(pF,hlink,dispFlags,
+							dispFlags,true,false,useSchw,tx);
 				}
 				break;
 			}
@@ -315,29 +324,29 @@ public class PostParser {
 				Iterator<Integer> vlist = nodeLink.iterator();
 				while (vlist.hasNext()) {
 					v = (Integer) vlist.next();
-					z = p.rData[v].center;
+					z = p.getCenter(v);
 
 					// Note: unlike display calls, convert sph center here
 					if (p.hes > 0)
-						z = cpScreen.sphView.toApparentSph(z);
+						z = cpDrawing.sphView.toApparentSph(z);
 
 					if (!dispFlags.fill) {
 						if (!dispFlags.colBorder)
-							pF.postCircle(p.hes, z, p.rData[v].rad, tx);
+							pF.postCircle(p.hes, z, p.getRadius(v), tx);
 						else if (dispFlags.colorIsSet) // use special color
-							pF.postColorCircle(p.hes, z, p.rData[v].rad, dispFlags.getColor(),
+							pF.postColorCircle(p.hes, z, p.getRadius(v), dispFlags.getColor(),
 									tx);
 						else
 							// use recorded color
-							pF.postColorCircle(p.hes, z, p.rData[v].rad,
-									p.kData[v].color, tx);
+							pF.postColorCircle(p.hes, z, p.getRadius(v),
+									p.packDCEL.vertices[v].color, tx);
 					} else {
 						if (!dispFlags.colorIsSet) // none set? use recorded color
-							col = p.kData[v].color;
+							col = p.packDCEL.vertices[v].color;
 						if (!dispFlags.colBorder)
-							pF.postFilledCircle(p.hes, z, p.rData[v].rad, col,tx);
+							pF.postFilledCircle(p.hes, z, p.getRadius(v), col,tx);
 						else
-							pF.postFilledColorCircle(p.hes, z, p.rData[v].rad,col, col, tx);
+							pF.postFilledColorCircle(p.hes, z, p.getRadius(v),col, col, tx);
 					}
 					count++;
 				}
@@ -347,9 +356,9 @@ public class PostParser {
 					vlist = nodeLink.iterator();
 					while (vlist.hasNext()) {
 						v = (Integer) vlist.next();
-						Complex pt = p.rData[v].center;
+						Complex pt = p.getCenter(v);
 						if (p.hes > 0) {
-							pt = cpScreen.sphView.toApparentSph(pt);
+							pt = cpDrawing.sphView.toApparentSph(pt);
 							if (Math.cos(pt.x) >= 0.0) {
 								pt = SphView.s_pt_to_visual_plane(pt);
 								pF.postIndex(pt, v);
@@ -373,11 +382,11 @@ public class PostParser {
 						Iterator<EdgeSimple> dedges = dualedges.iterator();
 						while (dedges.hasNext()) {
 							edge = (EdgeSimple) dedges.next();
-							z = p.face_center(edge.v);
-							Complex w = p.face_center(edge.w);
+							z = p.getFaceCenter(edge.v);
+							Complex w = p.getFaceCenter(edge.w);
 							if (p.hes > 0) {
-								z = cpScreen.sphView.toApparentSph(z);
-								w = cpScreen.sphView.toApparentSph(w);
+								z = cpDrawing.sphView.toApparentSph(z);
+								w = cpDrawing.sphView.toApparentSph(w);
 							}
 							if (!dispFlags.colorIsSet)
 								pF.postEdge(p.hes, z, w, tx);
@@ -394,19 +403,19 @@ public class PostParser {
 					// record 'mark' for trinket 0
 					pF.post_shape(0);
 					// for scaling trinkets
-					double diam = 5 / cpScreen.pixFactor;
+					double diam = 5 / cpDrawing.pixFactor;
 
-					EdgeLink elist = new EdgeLink(p, items);
-					if (elist != null && elist.size() > 0) {
-						EdgeSimple edge = null;
-						Iterator<EdgeSimple> edges = elist.iterator();
+					HalfLink hlist = new HalfLink(p, items);
+					if (hlist != null && hlist.size() > 0) {
+						HalfEdge edge = null;
+						Iterator<HalfEdge> edges = hlist.iterator();
 						while (edges.hasNext()) {
-							edge = (EdgeSimple) edges.next();
+							edge = (HalfEdge) edges.next();
 							Complex ctr = p.tangencyPoint(edge);
 							if (ctr == null)
 								break;
 							if (p.hes > 0) {
-								ctr = cpScreen.sphView.toApparentSph(ctr);
+								ctr = cpDrawing.sphView.toApparentSph(ctr);
 								if (Math.cos(ctr.x) >= 0) { // sphere; on front?
 									double x = Math.sin(ctr.y)
 											* Math.sin(ctr.x);
@@ -427,17 +436,17 @@ public class PostParser {
 				case 'c': // dual 'circles' indexed by faces
 				{
 					FaceLink faceLink = new FaceLink(p, items);
-					if (faceLink != null && faceLink.size() <= 0) // nothing in
-																	// list
+					// nothing in list?
+					if (faceLink != null && faceLink.size() <= 0) 
 						break;
 					Iterator<Integer> flist = faceLink.iterator();
 					int f;
 					while (flist.hasNext()) {
 						f = flist.next();
-						CircleSimple sc = p.faceIncircle(f,amb);
+						CircleSimple sc = p.faceIncircle(f);
 						z = sc.center;
 						if (p.hes > 0)
-							z = cpScreen.sphView.toApparentSph(z);
+							z = cpDrawing.sphView.toApparentSph(z);
 						if (!dispFlags.fill) {
 							if (!dispFlags.colBorder)
 								pF.postCircle(p.hes, z, sc.rad, tx);
@@ -469,27 +478,28 @@ public class PostParser {
 					while (vlist.hasNext()) {
 						v = (Integer) vlist.next();
 						if (!dispFlags.colorIsSet)
-							dispFlags.setColor(p.kData[v].color);
-						int num = p.kData[v].num;
+							dispFlags.setColor(p.packDCEL.vertices[v].color);
+						int num = p.countFaces(v);
+						int[] faceFlower=p.getFaceFlower(v);
 						Complex[] fanCenters = new Complex[num
-								+ p.kData[v].bdryFlag];
+								+ p.getBdryFlag(v)];
 						for (int j = 0; j < num; j++) {
-							int ff = p.kData[v].faceFlower[j];
-							z = new Complex(p.faceIncircle(ff,amb).center);
+							int ff = faceFlower[j];
+							z = new Complex(p.faceIncircle(ff).center);
 							if (p.hes > 0)
-								z = cpScreen.sphView.toApparentSph(z);
+								z = cpDrawing.sphView.toApparentSph(z);
 							fanCenters[j] = z;
 						}
 						// for bdry v, add v to list
-						if (p.kData[v].bdryFlag == 1) {
-							z = new Complex(p.rData[v].center);
+						if (p.isBdry(v)) {
+							z = p.getCenter(v);
 							if (p.hes > 0)
-								z = cpScreen.sphView.toApparentSph(z);
+								z = cpDrawing.sphView.toApparentSph(z);
 							fanCenters[num] = z;
 						}
 
 						if (!dispFlags.fill) {
-							if (p.kData[v].bdryFlag == 0) {
+							if (!p.isBdry(v)) {
 								if (!dispFlags.colorIsSet)
 									pF.postPoly(p.hes, num, fanCenters, tx);
 								else
@@ -511,18 +521,18 @@ public class PostParser {
 						} else { // filled
 							if (!dispFlags.colBorder)
 								pF.postFilledPoly(p.hes, num
-										+ p.kData[v].bdryFlag, fanCenters,
+										+ p.getBdryFlag(v), fanCenters,
 										dispFlags.getFillColor(), tx);
 							else
 								pF.postFilledColorPoly(p.hes, num
-										+ p.kData[v].bdryFlag, fanCenters,
+										+ p.getBdryFlag(v), fanCenters,
 										dispFlags.getFillColor(),dispFlags.getColor(), tx);
 						}
 
 						if (dispFlags.label) {
-							z = p.rData[v].center;
+							z = p.getCenter(v);
 							if (p.hes > 0)
-								z = cpScreen.sphView.toApparentSph(z);
+								z = cpDrawing.sphView.toApparentSph(z);
 							pF.postIndex(z, v);
 						}
 						count++;
@@ -541,18 +551,18 @@ public class PostParser {
 					int f;
 					while (flist.hasNext()) {
 						f = flist.next();
-						int[] vts = p.faces[f].vert;
-						DualTri dtri = new DualTri(p.hes,
-								p.rData[vts[0]].center, p.rData[vts[1]].center,
-								p.rData[vts[2]].center);
+						int[] vts = p.getFaceVerts(f);
+						DualTri dtri = new DualTri(
+								p.getCenter(vts[0]), p.getCenter(vts[1]),
+								p.getCenter(vts[2]),p.hes);
 						Complex []Z=new Complex[3];
 						Z[0] = new Complex(dtri.TangPts[0]);
 						Z[1] = new Complex(dtri.TangPts[1]);
 						Z[2] = new Complex(dtri.TangPts[2]);
 						if (p.hes > 0) {
-							Z[0] = cpScreen.sphView.toApparentSph(Z[0]);
-							Z[1] = cpScreen.sphView.toApparentSph(Z[1]);
-							Z[2] = cpScreen.sphView.toApparentSph(Z[2]);
+							Z[0] = cpDrawing.sphView.toApparentSph(Z[0]);
+							Z[1] = cpDrawing.sphView.toApparentSph(Z[1]);
+							Z[2] = cpDrawing.sphView.toApparentSph(Z[2]);
 						}
 						
 						// set face/bdry colors
@@ -567,17 +577,17 @@ public class PostParser {
 							if (dispFlags.colBorder)
 								bcolor=dispFlags.getColor();
 							else 
-								bcolor=CPScreen.getFGColor();
+								bcolor=ColorUtil.getFGColor();
 						}
 						pF.post_Poly(p.hes, Z, fcolor, bcolor, tx);
 
 						// may still want to display indices
 						if (dispFlags.label) {
-							Complex cent = PackData.face_center(p.hes,
+							Complex cent = CommonMath.tripleIncircle(
 									dtri.TangPts[0], dtri.TangPts[1],
-									dtri.TangPts[2]);
+									dtri.TangPts[2],p.hes);
 							if (p.hes > 0)
-								cent = cpScreen.sphView.toApparentSph(cent);
+								cent = cpDrawing.sphView.toApparentSph(cent);
 							pF.postIndex(cent, f);
 						}
 						count++;
@@ -603,11 +613,11 @@ public class PostParser {
 					EdgeSimple edge = null;
 					while (elist.hasNext()) {
 						edge = (EdgeSimple) elist.next();
-						Complex c1 = new Complex(p.rData[edge.v].center);
-						Complex c2 = new Complex(p.rData[edge.w].center);
+						Complex c1 = p.getCenter(edge.v);
+						Complex c2 = p.getCenter(edge.w);
 						if (p.hes > 0) {
-							c1 = cpScreen.sphView.toApparentSph(c1);
-							c2 = cpScreen.sphView.toApparentSph(c2);
+							c1 = cpDrawing.sphView.toApparentSph(c1);
+							c2 = cpDrawing.sphView.toApparentSph(c2);
 						}
 						if (dispFlags.colBorder)
 							pF.postColorEdge(p.hes, c1, c2, dispFlags.getColor(), tx);
@@ -627,29 +637,27 @@ public class PostParser {
 
 				Iterator<Integer> flist = faceLink.iterator();
 				while (flist.hasNext()) {
-					f = (Integer) flist.next();
+					combinatorics.komplex.DcelFace face=p.packDCEL.faces[flist.next()];
+					int[] verts=face.getVerts();
 					Complex []Z=new Complex[3];
-					Z[0] = new Complex(p.rData[p.faces[f].vert[0]].center);
-					Z[1] = new Complex(p.rData[p.faces[f].vert[1]].center);
-					Z[2] = new Complex(p.rData[p.faces[f].vert[2]].center);
-					if (p.hes > 0) {
-						Z[0] = cpScreen.sphView.toApparentSph(Z[0]);
-						Z[1] = cpScreen.sphView.toApparentSph(Z[1]);
-						Z[2] = cpScreen.sphView.toApparentSph(Z[2]);
+					for (int j=0;j<3;j++) {
+						Z[j] = p.getCenter(verts[j]);
+						if (p.hes > 0) 
+							Z[j] = cpDrawing.sphView.toApparentSph(Z[j]);
 					}
 					// set face/bdry colors
 					Color fcolor=null;
 					Color bcolor=null;
 					if (dispFlags.fill) {  
 						if (!dispFlags.colorIsSet) 
-							dispFlags.setColor(p.faces[f].color);
+							dispFlags.setColor(face.color);
 						fcolor=dispFlags.getFillColor();
 					}
 					if (dispFlags.draw) {
 						if (dispFlags.colBorder)
 							bcolor=dispFlags.getColor();
 						else 
-							bcolor=CPScreen.getFGColor();
+							bcolor=ColorUtil.getFGColor();
 					}
 					pF.post_Poly(p.hes, Z, fcolor, bcolor, tx);
 					count++;
@@ -660,11 +668,11 @@ public class PostParser {
 					flist = faceLink.iterator();
 					while (flist.hasNext()) {
 						f = (Integer) flist.next();
-						Complex tri_cent = p.face_center(f);
+						Complex tri_cent = p.getFaceCenter(f);
 						if (p.hes <= 0) {
 							pF.postIndex(tri_cent, f);
 						} else {
-							tri_cent = cpScreen.sphView.toApparentSph(tri_cent);
+							tri_cent = cpDrawing.sphView.toApparentSph(tri_cent);
 							if (Math.cos(tri_cent.x) >= 0) // sphere; on front?
 								pF.postIndex(
 										SphView.s_pt_to_visual_plane(tri_cent),f);
@@ -713,11 +721,11 @@ public class PostParser {
 				int n, k;
 				for (int j = 0; j < verts.size(); j++) {
 					n = (Integer) verts.get(j);
-					EdgePair epair = p.getSidePairs().get(n);
+					SideData epair = p.getSidePairs().get(n);
 					count += p.post_bdry_seg(pF, n, do_label, do_circle,
 							epair.color, tx);
 					if (do_mate) { // do paired edge?
-						EdgePair ep = (EdgePair) p.getSidePairs().get(n);
+						SideData ep =p.getSidePairs().get(n);
 						if ((k = ep.mateIndex) >= 0)
 							p.post_bdry_seg(pF, k, do_label, do_circle,
 									epair.color, tx);
@@ -736,15 +744,15 @@ public class PostParser {
 				// record 'mark' definition in the PostScript file
 				pF.post_shape(trinket);
 				// for scaling trinkets
-				double diam = 5 / cpScreen.pixFactor;
+				double diam = 5 / cpDrawing.pixFactor;
 
 				Iterator<Integer> vit = nodeLink.iterator();
 				while (vit.hasNext()) {
 					v = (Integer) vit.next();
-					z = p.rData[v].center;
+					z = p.getCenter(v);
 					boolean front = true;
 					if (p.hes > 0) { // move z to visual plane
-						z = cpScreen.sphView.toApparentSph(z);
+						z = cpDrawing.sphView.toApparentSph(z);
 						if (Math.cos(z.x) < 0)
 							front = false; // on back
 						else
@@ -753,7 +761,7 @@ public class PostParser {
 					if (p.hes <= 0 || front) {
 						if (dispFlags.colBorder) {
 							if (!dispFlags.colorIsSet)
-								dispFlags.setColor(p.kData[v].color);
+								dispFlags.setColor(p.packDCEL.vertices[v].color);
 							pF.postColorTrinket(z, diam, dispFlags.getColor());
 						} else
 							pF.postTrinket(z, diam); // background
@@ -789,7 +797,8 @@ public class PostParser {
 							
 							// get list of tile border and make axis-extended edgelist
 							NodeLink cornlist=tile.tileBorderLink();
-							EdgeLink tedgelist=EdgeLink.verts2edges(p,cornlist,true);
+							EdgeLink tedgelist=
+								EdgeLink.verts2edges(p.packDCEL,cornlist,true);
 							Iterator<EdgeSimple> tel=tedgelist.iterator();
 
 							// set face/bdry colors
@@ -804,7 +813,7 @@ public class PostParser {
 								if (dispFlags.colBorder)
 									bcolor=dispFlags.getColor();
 								else 
-									bcolor=CPScreen.getFGColor();
+									bcolor=ColorUtil.getFGColor();
 							}
 							
 							Complex []Z=new Complex[tedgelist.size()];
@@ -812,9 +821,9 @@ public class PostParser {
 							while (tel.hasNext()) {
 								EdgeSimple edge=tel.next();
 								int vv=edge.v;
-								Z[tick]=new Complex(p.rData[vv].center);
+								Z[tick]=p.getCenter(vv);
 								if (p.hes>0)
-									Z[tick]=p.cpScreen.sphView.toApparentSph(Z[tick]);
+									Z[tick]=p.cpDrawing.sphView.toApparentSph(Z[tick]);
 								tick++;
 							}
 							pF.post_Poly(p.hes, Z, fcolor, bcolor, tx);
@@ -824,14 +833,14 @@ public class PostParser {
 								// if there is a 'baryVert', use its center
 								int bv=tile.baryVert;
 								if (bv>0 && bv<=p.nodeCount) {
-									wc=p.rData[tile.baryVert].center;
+									wc=p.getCenter(tile.baryVert);
 								}
 								
 								// else use average of corner verts centers
 								else {
 									Vector<Complex> cz=new Vector<Complex>(0);
 									for (int jj=0;jj<tile.vertCount;jj++) 
-										cz.add(p.rData[tile.vert[jj]].center);
+										cz.add(p.getCenter(tile.vert[jj]));
 									
 									// for sphere, compute via vectors --- may end up at antipodal point 
 									if (p.hes>0) {
@@ -865,7 +874,7 @@ public class PostParser {
 //									wc = wc.add(p.rData[tile.vert[vj]].center);
 //								wc=wc.divide((double)tile.vertCount);
 
-								cpScreen.drawIndex(wc,tile.tileIndex, 1);
+								cpDrawing.drawIndex(wc,tile.tileIndex, 1);
 								count++;
 							} // end of label display
 							
@@ -879,7 +888,7 @@ public class PostParser {
 			{
 				z = new Complex(0.0);
 				if (p.hes > 0)
-					z = cpScreen.sphView.toApparentSph(z);
+					z = cpDrawing.sphView.toApparentSph(z);
 				pF.postUnitCircle(p.hes, z);
 				break;
 			}

@@ -7,14 +7,12 @@ import java.util.Vector;
 import input.CPFileManager;
 import packing.PackData;
 import packing.PackExtender;
+import packing.ReadWrite;
 import util.CmdStruct;
 import util.StringUtil;
 
 public class Surface3D extends PackExtender {
 
-	final double sqrt3=Math.sqrt(3.0);
-	final double sq32=sqrt3/2.0;
-	
 	public PackData basePack; // store for reference; we will be using 'this' for microgrid
 	public int gridGen;
 	
@@ -52,7 +50,7 @@ public class Surface3D extends PackExtender {
 			BufferedReader fp=CPFileManager.openReadFP(dir,name,script_flag);
 			if (fp==null)
 				Oops("failed to open file "+name+" in Surface3D");
-			basePack.readpack(fp, filename);
+			ReadWrite.readpack(fp,basePack,filename);
 			if (basePack.utilBary==null) 
 				Oops("failed to fill 'utilBary'");
 			

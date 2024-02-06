@@ -1,9 +1,5 @@
 package browser;
 
-import input.CommandStrParser;
-import input.TrafficCenter;
-import interfaces.IMessenger;
-
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.EventQueue;
@@ -40,12 +36,17 @@ import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.text.Document;
 
-import previewimage.PreviewImageHyperlinkListener;
-import util.MemComboBox;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import exceptions.ParserException;
+import input.CommandStrParser;
+import input.TrafficCenter;
+import interfaces.IMessenger;
+import packing.PackData;
+import packing.ReadWrite;
+import previewimage.PreviewImageHyperlinkListener;
+import util.MemComboBox;
 
 /**
  * BrowserFrame is a simple web browser. It has integrated functionality
@@ -195,7 +196,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		try {
 			file.createNewFile(); // finds or creates 
 		} catch (IOException iox) {
-			CirclePack.cpb.errMsg("failed to open xmd file");
+			CirclePack.cpb.errMsg("failed to open xmd (or cps) file");
 		}
 		urlComboBox = new MemComboBox(file);
 		urlComboBox.addActionListener(this);
@@ -336,7 +337,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 	 * * -1 for something already loaded
 	 * * 1 for web page (goes into list)
 	 * * 2 for directory (goes into list)
-	 * * 3 for *.xmd script
+	 * * 3 for *.xmd script or *.cps script
 	 * * 4 for packing
 	 * @param url a <code>String</code> representation of the URL to load
 	 * @return int
@@ -359,8 +360,9 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 		activityIndicator.setIndeterminate(true);
 
-		// ================== If the URL is an XMD script:
-		if (enteredUrl.getFile().toLowerCase().endsWith(".xmd")) {
+		// ================== If the URL is an CPS (or XMD) script:
+		if (enteredUrl.getFile().toLowerCase().endsWith(".xmd") ||
+				enteredUrl.getFile().toLowerCase().endsWith(".cps")) {
 			// If the URL is a file URL:
 			if (enteredUrl.getProtocol().toLowerCase().equals("file")) {
 				// Since this is a local file, there is no need to thread.
@@ -443,9 +445,9 @@ public class BrowserFrame extends JFrame implements ActionListener {
 				activityIndicator.setIndeterminate(false);
 				return 3;
 			}
-		} // end of processing for *.xmd files
+		} // end of processing for *.cps (or *.xmd) files
 
-		// ================= If the URL is a P, Q, or PL packing file:
+		// ================= If the URL is a .p or .q packing file:
 		if (enteredUrl.getFile().toLowerCase().endsWith(".p") || 
 				enteredUrl.getFile().toLowerCase().endsWith(".q") ||
 				enteredUrl.getFile().toLowerCase().endsWith(".pl")) {
@@ -460,11 +462,14 @@ public class BrowserFrame extends JFrame implements ActionListener {
 					// We don't need to thread opening a local file.
 					try {
 						BufferedReader bufferedReader = new BufferedReader(new FileReader(enteredUrl.getFile()));
-						if (enteredUrl.getFile().toLowerCase().endsWith(".p")) TrafficCenter.cmdGUI("cleanse");
-						CirclePack.cpb.getActivePackData().readpack(bufferedReader, enteredUrl.getFile());
+						if (enteredUrl.getFile().toLowerCase().endsWith(".p")) 
+							TrafficCenter.cmdGUI("cleanse");
+						PackData tmppd=CirclePack.cpb.getActivePackData();
+						ReadWrite.readpack(bufferedReader,tmppd,enteredUrl.getFile());
 						if (CirclePack.cpb.getActivePackData().getDispOptions != null)
 							CommandStrParser.jexecute(CirclePack.cpb.getActivePackData(), "disp -wr");
-						else TrafficCenter.cmdGUI("disp -w -c");
+						else 
+							TrafficCenter.cmdGUI("disp -w -c");
 					} catch (FileNotFoundException e) {
 						// Notify CirclePack of the error.
 						this.messenger.sendErrorMessage("Failed to open " + enteredUrl + ".");
@@ -520,7 +525,8 @@ public class BrowserFrame extends JFrame implements ActionListener {
 							EventQueue.invokeLater(new Runnable() {
 								public void run() {
 									if (localPackingFile.toString().toLowerCase().endsWith(".p")) TrafficCenter.cmdGUI("cleanse");
-									CirclePack.cpb.getActivePackData().readpack(bufferedReader, localPackingFile.toString());
+									PackData tmppd=CirclePack.cpb.getActivePackData();
+									ReadWrite.readpack(bufferedReader,tmppd,localPackingFile.toString());
 									if (CirclePack.cpb.getActivePackData().getDispOptions != null)
 										CommandStrParser.jexecute(CirclePack.cpb.getActivePackData(), "disp -wr");
 									else TrafficCenter.cmdGUI("disp -w -c");

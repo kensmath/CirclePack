@@ -21,13 +21,13 @@ import javax.swing.LayoutStyle;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
 import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.SphericalMath;
 import input.CPFileManager;
 import input.FileDialogs;
-import komplex.AmbiguousZ;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
@@ -37,7 +37,7 @@ import math.Point3D;
 import packing.PackData;
 import util.CallPacket;
 import util.DataFormater;
-import util.GenPathUtil;
+import util.PathUtil;
 import util.StringUtil;
 
 /**
@@ -61,7 +61,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		VERT_AIM,VERT_DEG,VERT_COLOR,VERT_RADII,VERTEX_MAP,VERT_XYZ,VERT_FLOWER,
 		FACE_INDEX,FACE_CORNERS,PAVER_CORNERS,FACE_COLOR,FACE_AREA,FACE_VERTICES,
 		EDGE_INDICES,EDGE_COLOR,EDGE_LENGTH,EDGE_INT_LENGTH,EDGE_DUAL_CENTERS,
-		EDGE_DUAL_INDICES,SHARP_PQ,FACE_DUAL_RADII,FACE_DUAL_CENTER,
+		EDGE_DUAL_INDICES,EDGE_SCHW,SHARP_PQ,FACE_DUAL_RADII,FACE_DUAL_CENTER,
 		CALL_PACKET,NULL,MOBIUS_LABELS}
 		
 	private JLabel preLabel;
@@ -200,14 +200,14 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 	 * Get output info from the active packing's DataFormater
 	 */
 	public void update(int old_pnum) {
-		if (old_pnum==PackControl.getActiveCPScreen().getPackNum()) 
+		if (old_pnum==PackControl.getActiveCPDrawing().getPackNum()) 
 			return;
 		// save the old
-		PackControl.pack[old_pnum].dataFormater.update(
+		PackControl.cpDrawing[old_pnum].dataFormater.update(
 			preField.getText(),dataField.getText(),objField.getText(),
 			suffField.getText());
 		// bring in new
-		DataFormater dFmt=PackControl.getActiveCPScreen().dataFormater;
+		DataFormater dFmt=PackControl.getActiveCPDrawing().dataFormater;
 		preField.setText(dFmt.prefixText);
 		suffField.setText(dFmt.suffixText);
 		dataField.setText(dFmt.dataTypes);
@@ -286,7 +286,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 					case 'P': 
 					{
 						if (thing.equals("PATH")) { // current path 
-							Vector<Vector<Complex>> path=GenPathUtil.gpPolygon(CPBase.ClosedPath);
+							Vector<Vector<Complex>> path=PathUtil.gpPolygon(CPBase.ClosedPath);
 							Iterator<Vector<Complex>> ZP=path.iterator();
 							while (ZP.hasNext()) {
 								Vector<Complex> loc_path=(Vector<Complex>)ZP.next();
@@ -443,7 +443,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 	}
 	
 	public static int print_vert_obj(PackData p,BufferedWriter fp,
-			dataCode code,int v,AmbiguousZ []amb) {
+			dataCode code,int v) {
 		  int w;
 		  Complex z=null;
 
@@ -454,30 +454,31 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		  }
 		  if (code==dataCode.VERT_FLOWER) {
 			  StringBuilder strbld=new StringBuilder("");
-			  for (int j=0;j<=p.kData[v].num+p.kData[v].bdryFlag;j++)
-				  strbld.append(p.kData[v].flower[j]+" ");
+			  int[] flower=p.getFlower(v);
+			  for (int j=0;j<flower.length;j++)
+				  strbld.append(flower[j]+" ");
 			  fp.write(strbld.toString());
 			  return 1;
 		  }
 		  if (code==dataCode.VERT_CENTER) {
-			  z=p.rData[v].center;
+			  z=p.getCenter(v);
 			  fp.write(z.x+" "+z.y+" ");
 			  return 1;
 		  }
 		  if (code==dataCode.VERT_CURV) {
-			  fp.write(p.rData[v].curv+" ");
+			  fp.write(p.getCurv(v)+" ");
 			  return 1;
 		  }
 		  if (code==dataCode.VERT_AIM) {
-		    fp.write(p.rData[v].aim+" ");
+		    fp.write(p.getAim(v)+" ");
 		    return 1;
 		  }
 		  if (code==dataCode.VERT_DEG) {
-			  fp.write(Integer.toString((p.kData[v].num+p.kData[v].bdryFlag))+" ");
+			  fp.write(Integer.toString((p.countFaces(v)+p.getBdryFlag(v)))+" ");
 			  return 1;
 		  }
 		  if (code==dataCode.VERT_COLOR) {
-			  Color col=p.kData[v].color;
+			  Color col=p.getCircleColor(v);
 			  fp.write(col.getRed()+" "+col.getGreen()+" "+col.getBlue()+" ");
 			  return 1;
 		  }
@@ -486,7 +487,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 			  return 1;
 		  }
 		  if (code==dataCode.VERT_RADII) {
-			  fp.write(p.rData[v].rad+" ");
+			  fp.write(p.getRadius(v)+" ");
 			  return 1;
 		  }
 		  if (code==dataCode.VERT_XYZ) {
@@ -502,22 +503,23 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 			  }
 			  
 			  else  if (p.hes>0) {
-				  xyz=SphericalMath.s_pt_to_vec(p.rData[v].center);
+				  xyz=SphericalMath.s_pt_to_vec(p.getCenter(v));
 			  }
 			  else { // eucl/hyp, just store flat data
 				  xyz=new double[3];
-				  xyz[0]=p.rData[v].center.x;
-				  xyz[1]=p.rData[v].center.y;
+				  xyz[0]=p.getCenter(v).x;
+				  xyz[1]=p.getCenter(v).y;
 				  xyz[2]=0.0;
 			  }
 			  
 			  fp.write(xyz[0]+" "+xyz[1]+" "+xyz[2]+" ");
 			  return 1;
 		  }
-		  if (code==dataCode.PAVER_CORNERS) { // a 'paver' is polygon formed by union
-			  // of faces containing a given vertex; we save the open list of polygon
-			  // corners. For boundary v, include corner at v itself.
-				Complex []pts=p.corners_paver(v,amb);
+		  if (code==dataCode.PAVER_CORNERS) { // a 'paver' is polygon 
+			  // formed by union of faces containing a given vertex; 
+			  // we save the open list of polygon corners. For 
+			  // boundary v, include corner at v itself.
+				Complex []pts=p.corners_paver(v); // non-closed list
 				int num=pts.length;
 				fp.write(pts[0].x+" "+pts[0].y+"i   ");
 				for (int j=1;j<num;j++) {
@@ -529,7 +531,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		  if (code==dataCode.SHARP_PQ) {
 		    double shp;
 		    if (pData.status && qData.status && v<qData.nodeCount) {
-		      shp=qData.getRadius(v)/pData.getRadius(v);
+		      shp=qData.getActualRadius(v)/pData.getActualRadius(v);
 		      fp.write(shp+" ");
 		      return 1;
 		    }
@@ -540,7 +542,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		} 
 	
 		public static int print_face_obj(PackData p,
-				BufferedWriter fp,dataCode code,int f,AmbiguousZ []amb) {
+				BufferedWriter fp,dataCode code,int f) {
 
 			try {
 		  if (code==dataCode.FACE_INDEX) { // face index
@@ -548,22 +550,22 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		    return 1;
 		  }
 		  if (code==dataCode.FACE_CORNERS) { // corner locations
-			  Complex []pts=p.corners_face(f, amb);
+			  Complex []pts=p.corners_face(f);
 			  fp.write(pts[0].x+" "+pts[0].y+"   "+pts[1].x+" "+pts[1].y+"   "+pts[2].x+" "+pts[2].y+"   ");
 			  return 1;
 		  }
 		  if (code==dataCode.FACE_DUAL_CENTER) {
-			  Complex z=p.faceIncircle(f,amb).center;
+			  Complex z=p.faceIncircle(f).center;
 			  fp.write(z.x+" "+z.y+" ");
 			  return 1;
 		  }
 		  if (code==dataCode.FACE_DUAL_RADII) {
-			  CircleSimple sc=p.faceIncircle(f,amb);
+			  CircleSimple sc=p.faceIncircle(f);
 			  fp.write(sc.rad+" ");
 			  return 1;
 		  }
 		  if (code==dataCode.FACE_COLOR) { // color 
-			  Color col=p.faces[f].color;
+			  Color col=p.getFaceColor(f);
 			  fp.write(col.getRed()+" "+col.getGreen()+" "+col.getBlue()+" ");
 			  return 1;
 		  }
@@ -572,7 +574,8 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		    return 1;
 		  }
 		  if (code==dataCode.FACE_VERTICES) { // indices of vertices
-			  fp.write(p.faces[f].vert[0]+" "+p.faces[f].vert[1]+" "+p.faces[f].vert[2]+" ");
+			  int[] verts=p.getFaceVerts(f);
+			  fp.write(verts[0]+" "+verts[1]+" "+verts[2]+" ");
 			  return 1;
 		  } 
 			} catch (Exception ex) {}
@@ -580,39 +583,44 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		} 
 									       
 		public static int print_edge_obj(PackData p,
-				BufferedWriter fp,dataCode code,int v,int w,AmbiguousZ []amb) {
+				BufferedWriter fp,dataCode code,int v,int w) {
+			HalfEdge he=p.packDCEL.findHalfEdge(new EdgeSimple(v,w));
 
 			try {
-		  if (code==dataCode.EDGE_COLOR) { // color
-			  // TODO: don't yet have color stored for edges
-			  CirclePack.cpb.myErrorMsg("output: edges don't yet have recorded colors");
-			  return 1;
-		  }
-		  if (code==dataCode.EDGE_LENGTH) { // actual length (based on centers)
-			    fp.write(p.edgeLength(v, w)+" ");
+				if (code==dataCode.EDGE_COLOR) {
+					Color col=p.getEdgeColor(he);
+					fp.write(col.getRed()+" "+col.getGreen()+" "+col.getBlue()+" ");
+					return 1;
+				}
+				if (code==dataCode.EDGE_SCHW) { // schwarzian
+					fp.write(he.getSchwarzian()+" ");
+					return 1;
+				}
+				if (code==dataCode.EDGE_LENGTH) { // actual length (based on centers)
+					fp.write(p.edgeLength(he)+" ");
 			    return 1;
-			  }
-		  if (code==dataCode.EDGE_INT_LENGTH) { // intended length (based on radii/overlaps)
-			    fp.write(p.intendedEdgeLength(v, w)+" ");
-			    return 1;
-			  }
-		  if (code==dataCode.EDGE_INDICES) { // length (based on radii/overlaps)
-			    fp.write(v+" "+w+" ");
-			    return 1;
-			  }
-		  if (code==dataCode.EDGE_DUAL_CENTERS) { // centers of dual edgea
-			  Complex []pts=p.ends_dual_edge(new EdgeSimple(v,w), amb);
-			  fp.write(pts[0].x+" "+pts[0].y+"  "+pts[1].x+" "+pts[1].y);
-			  return 1;
-		  }
-		  if (code==dataCode.EDGE_DUAL_INDICES) { // face indices for dual edges
-			  int []lf=p.left_face(v,w);
-			  int []rf=p.left_face(w,v);
-			  if (lf[0]==0 || rf[0]==0) return 0;
-			  fp.write(lf[0]+" "+rf[0]);
-			  return 1;
-		  }
-		  
+				}
+				if (code==dataCode.EDGE_INT_LENGTH) { // intended length (based on radii/overlaps)
+					fp.write(p.intendedEdgeLength(he)+" ");
+					return 1;
+				}
+				if (code==dataCode.EDGE_INDICES) { // end indices
+					fp.write(he.origin.vertIndx+" "+he.twin.origin.vertIndx+" ");
+					return 1;
+				}
+				if (code==dataCode.EDGE_DUAL_CENTERS) { // centers of dual edgea
+					Complex []pts=p.ends_dual_edge(new EdgeSimple(v,w));
+					fp.write(pts[0].x+" "+pts[0].y+"  "+pts[1].x+" "+pts[1].y);
+					return 1;
+				}
+				if (code==dataCode.EDGE_DUAL_INDICES) { // face indices for dual edges
+					int []lf=p.left_face(v,w);
+					int []rf=p.left_face(w,v);
+					if (lf[0]==0 || rf[0]==0) 
+						return 0;
+					fp.write(lf[0]+" "+rf[0]);
+					return 1;
+				}
 			} catch (Exception ex) {}
 		  return 0;
 		} 
@@ -620,9 +628,9 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		/**
 		 * Loop through data objects to print. Note, 'Vfe' has been
 		 * set based on the types of objects selected: vertices, faces,
-		 * edges, and a few others. There may be more than one 'DataObj' specified.
-		 * E.g, if Vfe==1 for vertices, we might want both centers and
-		 * radii. There may also we 'DataObj's for literals.
+		 * edges, and a few others. There may be more than one 'DataObj' 
+		 * specified. E.g, if Vfe==1 for vertices, we might want both 
+		 * centers and radii. There may also be 'DataObj's for literals.
 		 * @param fp BufferedWriter
 		 * @param p PackData
 		 * @param loopstr String, specifying vertices, edges, faces, or other
@@ -632,9 +640,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		public static int outputLoop(BufferedWriter fp,PackData p,
 				String loopstr,Vector<DataObj> dataobj) {
 			int count=0;
-			
-			AmbiguousZ []amb=AmbiguousZ.getAmbiguousZs(p);
-			
+
 			try {
 			// output calls for vertex indices? expect vert list
 		    if (Vfe==1) {
@@ -654,7 +660,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		    					fp.write(dtrace.spec);
 		    					count++;
 		    				}
-		    				else count+=print_vert_obj(p,fp,dtrace.code,v,amb);
+		    				else count+=print_vert_obj(p,fp,dtrace.code,v);
 		    			} 
 		    		} // done going through objects
 		    	} // done going through vertices
@@ -680,7 +686,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		    					count++;
 		    				}
 		    				else {
-		    					count+=print_face_obj(p,fp,dtrace.code,f,amb);
+		    					count+=print_face_obj(p,fp,dtrace.code,f);
 		    				}
 		    			} 
 		    		} // done going through objects
@@ -706,7 +712,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		    					fp.write(dtrace.spec);
 		    					count++;
 		    				}
-		    				else count+=print_edge_obj(p,fp,dtrace.code,edge.v,edge.w,amb);
+		    				else count+=print_edge_obj(p,fp,dtrace.code,edge.v,edge.w);
 		    			} 
 		    		} // done going through objects
 		    	} // done going through vertices
@@ -791,8 +797,8 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 				try {
 					int pnum=Integer.parseInt(datastr.substring(2,3));
 					int qnum=Integer.parseInt(datastr.substring(3,4));
-					pData=PackControl.pack[pnum].packData;
-					qData=PackControl.pack[qnum].packData;
+					pData=PackControl.cpDrawing[pnum].getPackData();
+					qData=PackControl.cpDrawing[qnum].getPackData();
 				} catch (Exception ex) {
 					throw new ParserException("error: output: bad 'VS' perscription");
 				}
@@ -805,17 +811,17 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 	    	dobj.vfe=2;
 	    	if (datastr.equals("FI")) 
 	    		dobj.code=dataCode.FACE_INDEX;
-	    	if (datastr.equals("FZ")) 
+	    	else if (datastr.equals("FZ")) 
 	    		dobj.code=dataCode.FACE_CORNERS;
-	    	if (datastr.equals("FC")) 
+	    	else if (datastr.equals("FC")) 
 	    		dobj.code=dataCode.FACE_COLOR;
-	    	if (datastr.equals("FA")) 
+	    	else if (datastr.equals("FA")) 
 	    		dobj.code=dataCode.FACE_AREA;
-	    	if (datastr.equals("FV")) 
+	    	else if (datastr.equals("FV")) 
 	    		dobj.code=dataCode.FACE_VERTICES;
-			if (datastr.equals("FDR"))
+	    	else if (datastr.equals("FDR"))
 				dobj.code=dataCode.FACE_DUAL_RADII;
-			if (datastr.equals("FDZ"))
+	    	else if (datastr.equals("FDZ"))
 				dobj.code=dataCode.FACE_DUAL_CENTER;
 	    	break;
 	    }
@@ -824,15 +830,17 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 	    	dobj.vfe=3;
 	    	if (datastr.equals("EC")) 
 	    		dobj.code=dataCode.EDGE_COLOR;
-	    	if (datastr.equals("EL")) 
+	    	else if (datastr.equals("ES")) 
+	    		dobj.code=dataCode.EDGE_SCHW;
+	    	else if (datastr.equals("EL")) 
 	    		dobj.code=dataCode.EDGE_LENGTH;
-	    	if (datastr.equals("ER"))
+	    	else if (datastr.equals("ER"))
 	    		dobj.code=dataCode.EDGE_INT_LENGTH;
-	    	if (datastr.equals("EI")) 
+	    	else if (datastr.equals("EI")) 
 	    		dobj.code=dataCode.EDGE_INDICES;
-	    	if (datastr.equals("EDZ"))
+	    	else if (datastr.equals("EDZ"))
 	    		dobj.code=dataCode.EDGE_DUAL_CENTERS;
-	    	if (datastr.equals("EDI"))
+	    	else if (datastr.equals("EDI"))
 	    		dobj.code=dataCode.EDGE_DUAL_INDICES;
 	    	break;
 	    }
@@ -940,7 +948,7 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		item.setActionCommand(" VC ");
 		jpm.add(item);
 		
-		item=new JMenuItem("VSpq -- sharp functon");
+		item=new JMenuItem("VSpq -- sharp function");
 		item.addActionListener(this);
 		item.setActionCommand(" VSpq ");
 		jpm.add(item);
@@ -1000,7 +1008,12 @@ public class OutPanel extends javax.swing.JPanel implements ActionListener {
 		item.setActionCommand(" EC ");
 		jpm.add(item);
 		
-		item=new JMenuItem("EL -- actualy lengths");
+		item=new JMenuItem("ES -- schwarzian");
+		item.addActionListener(this);
+		item.setActionCommand(" ES ");
+		jpm.add(item);
+		
+		item=new JMenuItem("EL -- actual lengths");
 		item.addActionListener(this);
 		item.setActionCommand(" EL ");
 		jpm.add(item);

@@ -41,8 +41,8 @@ import listManip.FaceLink;
 import listManip.NodeLink;
 import listeners.ACTIVEListener;
 import mytools.MyTool;
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
 import util.PopupBuilder;
 
 /**
@@ -66,8 +66,8 @@ public class PairedFrame extends JFrame implements ActionListener {
 	static int bottomHeight=44; // height of bottom panels with command line or user tools
 	
 	// various children
-	private static CPScreen domainCPS;
-	private static CPScreen rangeCPS;
+	private static CPdrawing domainCPS;
+	private static CPdrawing rangeCPS;
 	private JMenuBar pairBar;
 	public JPanel domTopPanel;
 	public JPanel ranTopPanel;
@@ -84,7 +84,7 @@ public class PairedFrame extends JFrame implements ActionListener {
 	static CPIcon teleNO=new CPIcon("/GUI/teleNO.png");
 	static CPIcon teleYES=new CPIcon("/GUI/teleYES.png");
 
-	static String []pstrs={"P0","P1","P2"};
+	static String[] pstrs={"P0","P1","P2"};
 	
 	// Constructor
 	public PairedFrame(int dnum,int rnum) {
@@ -103,8 +103,8 @@ public class PairedFrame extends JFrame implements ActionListener {
 
 		addWindowListener(new WPAdapter());
 		setTitle("Mapping Window:  P"+dnum+"  P"+rnum);
-		domainCPS=CPBase.pack[dnum];
-		rangeCPS=CPBase.pack[rnum];
+		domainCPS=CPBase.cpDrawing[dnum];
+		rangeCPS=CPBase.cpDrawing[rnum];
 		PackControl.canvasRedrawer.changeDomain(dnum);
 		PackControl.canvasRedrawer.changeRange(rnum);
 		initGUI();
@@ -131,7 +131,7 @@ public class PairedFrame extends JFrame implements ActionListener {
 		// this is a drop target, but the listener will have to update
 		//   with the current occupying packing.
 		new DropTarget(domainScreen,
-				new ToolDropListener(domainScreen,domainCPS.packData.packNum,true));
+				new ToolDropListener(domainScreen,domainCPS.getPackNum(),true));
 
 		// domain 'ActiveHandler' toolBar
 		final ACTIVEHandler domToolHandler=domainScreen.getToolHandler();
@@ -183,7 +183,7 @@ public class PairedFrame extends JFrame implements ActionListener {
 		// this is a drop target, but the listener will have to update
 		//   with the current occupying packing.
 		new DropTarget(rangeScreen,
-				new ToolDropListener(rangeScreen,rangeCPS.packData.packNum,true));
+				new ToolDropListener(rangeScreen,rangeCPS.getPackNum(),true));
 
 		// range 'ActiveHandler' toolBar
 		final ACTIVEHandler ranToolHandler=rangeScreen.getToolHandler();
@@ -372,11 +372,11 @@ public class PairedFrame extends JFrame implements ActionListener {
 	public void colorBorders() {
 //System.err.println("colorBorders");
 		int pnum=CirclePack.cpb.getActivePackNum();
-		if (pnum==domainCPS.packData.packNum)
+		if (pnum==domainCPS.getPackNum())
 			domainScreen.setBorder(new LineBorder(Color.green,3,false));
 		else
 			domainScreen.setBorder(new LineBorder(Color.gray,3,false));
-		if (pnum==rangeCPS.packData.packNum)
+		if (pnum==rangeCPS.getPackNum())
 			rangeScreen.setBorder(new LineBorder(Color.green,3,false));
 		else 
 			rangeScreen.setBorder(new LineBorder(Color.gray,3,false));
@@ -466,9 +466,9 @@ public class PairedFrame extends JFrame implements ActionListener {
 	public boolean otherExists(PairWrapper pW) {
 		int me=pwIsDomain(pW);
 		if (me==0)
-			return rangeCPS.packData.status;
+			return rangeCPS.getPackData().status;
 		if (me==1)
-			return domainCPS.packData.status;
+			return domainCPS.getPackData().status;
 		else return false;
 	}
 	
@@ -485,8 +485,8 @@ public class PairedFrame extends JFrame implements ActionListener {
 	 */
 	public void drawCall(PairWrapper pWrapper,boolean cf_flag,double x,double y) {
 		String zpt=new String("z "+x+" "+y);
-		PackData p=domainCPS.packData;
-		PackData q=rangeCPS.packData;
+		PackData p=domainCPS.getPackData();
+		PackData q=rangeCPS.getPackData();
 		if (pwIsDomain(pWrapper)!=0) { // else swap
 			PackData hold=q;
 			q=p;
@@ -519,27 +519,27 @@ public class PairedFrame extends JFrame implements ActionListener {
 	}
 	
 	public PackData getDomainPack() {
-		return domainCPS.packData;
+		return domainCPS.getPackData();
 	}
 	
 	public PackData getRangePack() {
-		return rangeCPS.packData;
+		return rangeCPS.getPackData();
 	}
 	
-	public CPScreen getDomainCPS() {
+	public CPdrawing getDomainCPS() {
 		return domainCPS;
 	}
 	
-	public CPScreen getRangeCPS() {
+	public CPdrawing getRangeCPS() {
 		return rangeCPS;
 	}
 	 
 	public int getDomainNum() {
-		return domainCPS.packData.packNum;
+		return domainCPS.getPackNum();
 	}
 	 
 	public int getRangeNum() {
-		return rangeCPS.packData.packNum;
+		return rangeCPS.getPackNum();
 	}
 
 	/** set 'tele' state: communicate actions between the
@@ -567,14 +567,14 @@ public class PairedFrame extends JFrame implements ActionListener {
 			JComboBox<?> cb = (JComboBox<?>)e.getSource();
 			int i=cb.getSelectedIndex();
 			if (cb==domainCB) {
-				domainCPS=CPBase.pack[i];
+				domainCPS=CPBase.cpDrawing[i];
 				PackControl.canvasRedrawer.changeDomain(i);
 				colorBorders();
 				setTitle("Mapping Window:  P"+i+"  P"+getRangeNum());
 		  		domainScreen.repaint();
 			}
 			else if (cb==rangeCB) {
-				rangeCPS=CPBase.pack[i];
+				rangeCPS=CPBase.cpDrawing[i];
 				PackControl.canvasRedrawer.changeRange(i);
 				colorBorders();
 				setTitle("Mapping Window:  P"+getDomainNum()+"  P"+i);

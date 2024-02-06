@@ -1,8 +1,7 @@
 package ftnTheory;
 
-import packing.PackData;
-import packing.RData;
 import allMains.CirclePack;
+import packing.PackData;
 
 /** 
  * Routines for experimenting with harmonic mappings (and 
@@ -39,45 +38,6 @@ public class HarmonicMap {
 	PackData H_pack;
 	PackData G_pack;
 	PackData F_pack;
-
-	/**
-	 * Given packings G and H (euclidean, same nodeCount), return 
-	 * a RData vector reflecting harmonic function F = H + conj(G). 
-	 * Return null on error.
-	 * @param Hp, PackData
-	 * @param Gp, PackData
-	 * @return RDate, null on error
-	 */
-	public static RData []h_g_bar(PackData Hp,PackData Gp) {
-		if (ck_size(Hp,Gp)==0) return null;
-		RData []rdata=new RData[Hp.nodeCount+1];
-		for (int j=1;j<=Hp.nodeCount;j++) {
-			rdata[j]=Hp.rData[j].clone();
-			rdata[j].center=Hp.rData[j].center.add(Gp.rData[j].center.conj());
-		}
-		return rdata;
-	}
-	
-	/**
-	 * Parallel to 'h_g_bar'
-	 * Given packings G and H (euclidean, same nodeCount), 
-	 * return a RData vector with centers reflecting the "sum" 
-	 * function F = H + G. Also, set radii as sum of H and G.
-	 * Return null on error.
-	 * @param Hp, PackData
-	 * @param Gp, PackData
-	 * @return RData, null on error
-	 */
-	public static RData []h_g_add(PackData Hp,PackData Gp) {
-		if (ck_size(Hp,Gp)==0) return null;
-		RData []rdata=new RData[Hp.nodeCount+1];
-		for (int j=1;j<=Hp.nodeCount;j++) {
-			rdata[j]=Hp.rData[j].clone();
-			rdata[j].center=Hp.rData[j].center.add(Gp.rData[j].center);
-			rdata[j].rad=Hp.rData[j].rad+Gp.rData[j].rad;
-		}
-		return rdata;
-	} 
 
 	/**
 	 * Check that Hp and Gp are euclidean and have the same nodeCount (assumed to

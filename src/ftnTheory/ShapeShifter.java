@@ -3,10 +3,10 @@ package ftnTheory;
 import java.util.Vector;
 
 import listManip.PathLink;
+import packing.CPdrawing;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
-import util.GenPathUtil;
+import util.PathUtil;
 import allMains.CPBase;
 import allMains.CirclePack;
 
@@ -61,27 +61,26 @@ public class ShapeShifter extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					cpS.swapPackData(baseData,false);
-				}
+				CirclePack.cpb.swapPackData(baseData,pnum,false);
+				return 1;
 			} catch (Exception ex) {
 				return 0;
 			}
 		}	
 		if (cmd.startsWith("getPath")) { // convert ClosedPath
 			pathList=setPathList();
+			return 1;
 		}
 		if (cmd.startsWith("getDom")) { // get/reset domain pack
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS.packData.nodeCount!=baseData.nodeCount) {
+				CPdrawing cpS=CPBase.cpDrawing[pnum];
+				if (cpS.getPackData().nodeCount!=baseData.nodeCount) {
 					errorMsg("getDom: range packing complex must match domain");
 					return 0;
 				}
-				baseData=cpS.packData.copyPackTo();
+				baseData=cpS.getPackData().copyPackTo();
 				int rslt;
 				try {
 					rslt=cpCommand(baseData,"geom_to_e");
@@ -90,7 +89,9 @@ public class ShapeShifter extends PackExtender {
 				}
 				if (rslt==0) {
 					errorMsg("SS: failed to convert new domain to euclidean");
+					return 0;
 				}
+				return 1;
 			} catch (Exception ex) {
 				return 0;
 			}
@@ -155,7 +156,7 @@ public class ShapeShifter extends PackExtender {
 	PathLink setPathList() {
 		if (CPBase.ClosedPath==null) return null;
 		Vector<Vector<Complex>> cpath=
-			GenPathUtil.gpPolygon(CPBase.ClosedPath);
+			PathUtil.gpPolygon(CPBase.ClosedPath);
 		if (cpath==null || cpath.size()==0) return null;
 		Vector<Complex> comp1=(Vector<Complex>)cpath.get(0);
 		PathLink plink=new PathLink();

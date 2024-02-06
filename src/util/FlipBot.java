@@ -7,7 +7,6 @@ import java.util.Vector;
 
 import komplex.EdgeSimple;
 import packing.PackData;
-import panels.CPScreen;
 import exceptions.CombException;
 import exceptions.ParserException;
 
@@ -52,7 +51,7 @@ public class FlipBot {
 	public FlipBot(PackData pd,String name) {
 		p=pd;
 		myName=new String(name);
-		bdryFlag=p.kData[homeVert].bdryFlag;
+		bdryFlag=p.getBdryFlag(homeVert);
 		previousHome=0; // no history at start
 		lastFlipped=null;
 		flipStrategy="default";
@@ -81,6 +80,7 @@ public class FlipBot {
 		//   * if deg <= 6, just move
 		//   * else choose randomly among largest edge energy if >= 2
 		noflip_count++;
+		int[] hflower=p.getFlower(homeVert);
 		if (flipStrategy.toLowerCase().startsWith("default")) {
 			if (homeDegree<=6)
 				return null;
@@ -95,28 +95,28 @@ public class FlipBot {
 			if (biggest.size()>1) {
 				J=biggest.get(new Random().nextInt(biggest.size()));
 			}
-			int V=p.kData[homeVert].flower[J];
+			int V=hflower[J];
 			
 			// return this edge for flipping
 			noflip_count=0;
 			return new EdgeSimple(homeVert,V);
 		}
 		if (flipStrategy.toLowerCase().startsWith("hhl")) {
-			int num=p.kData[homeVert].num;
+			int num=p.countFaces(homeVert);
 			if (num<7) { // just move
 				return null;
 			}
 			int pre=p.nghb(homeVert, previousHome);
 			if (pre<0) { // if problem, choose random petal index
 				Random rand=new Random();
-				pre=p.kData[homeVert].flower[rand.nextInt(num)];
+				pre=hflower[rand.nextInt(num)];
 			}
 			int j=(pre-4+num)%num;
 			
 			// return edge between hex axis and next vert to right
 			// TODO: careful, don't flip (home,previous)
 			noflip_count=0;
-			return new EdgeSimple(homeVert,p.kData[homeVert].flower[j]);
+			return new EdgeSimple(homeVert,hflower[j]);
 		}
 		
 		// Ian Francis idea (6/2014)
@@ -170,15 +170,16 @@ public class FlipBot {
 	 * return new 'homeVert', 0 if no move.
 	 */
 	public int chooseMove(int home, int previous, EdgeSimple newEdge) {
-		
+
+		int[] hflower=p.getFlower(homeVert);
 		if (moveStrategy.toLowerCase().startsWith("default")) {
 			
 			// there was a flip
 			if (newEdge!=null) {
 				
 				// find end's degrees (former left and right neighbors', resp.)
-				int deg_left=p.kData[newEdge.v].num+p.kData[newEdge.v].bdryFlag;
-				int deg_right=p.kData[newEdge.w].num+p.kData[newEdge.w].bdryFlag;
+				int deg_left=p.countFaces(newEdge.v)+p.getBdryFlag(newEdge.v);
+				int deg_right=p.countFaces(newEdge.w)+p.getBdryFlag(newEdge.w);
 				
 				// if we move, which way is best?
 				int best=newEdge.v;
@@ -188,7 +189,7 @@ public class FlipBot {
 					best=newEdge.w;
 
 				// don't move unless degree is higher than homeDegree
-				if (homeDegree>=p.kData[best].num+p.kData[best].bdryFlag)
+				if (homeDegree>=(p.countFaces(best)+p.getBdryFlag(best)))
 					return 0;
 				
 				// okay, this is the way to move
@@ -202,16 +203,16 @@ public class FlipBot {
 			int deg=bigpets.get(0);
 			if (petalDegrees[deg]>=homeDegree) {
 				int n=new Random().nextInt(bigpets.size());
-				return p.kData[homeVert].flower[n];
+				return hflower[n];
 			}
 			return 0;
 		}
 		
 		if (moveStrategy.toLowerCase().startsWith("hhl")) {
-			int num=p.kData[home].num;
+			int num=p.countFaces(home);
 			int pre=p.nghb(home, previous);
 			if (pre>=0)
-				return p.kData[homeVert].flower[(pre-3+num)%num];
+				return hflower[(pre-3+num)%num];
 			else
 				throw new CombException("in move, 'home' and 'previous' not neighbors");
 		}
@@ -229,8 +230,8 @@ public class FlipBot {
 				n=new Random().nextInt(cand.size());
 				return cand.get(n);
 			}
-			n=new Random().nextInt(p.kData[homeVert].num);
-			return p.kData[homeVert].flower[n];
+			n=new Random().nextInt(p.countFaces(homeVert));
+			return hflower[n];
 		}
 			
 		return 0;
@@ -251,12 +252,13 @@ public class FlipBot {
 	 */
 	public Vector<Integer> getCandidates(int mode) {
 		int tick=0;
+		int[] hflower=p.getFlower(homeVert);
 		
 		// all petal verts
 		if (mode==-1) {
 			Vector<Integer> ptls=new Vector<Integer>(0);
 			for (int j=0;j<homeDegree+bdryFlag;j++) {
-				ptls.add(p.kData[homeVert].flower[j]);
+				ptls.add(hflower[j]);
 			}
 			return ptls;
 		}
@@ -267,17 +269,17 @@ public class FlipBot {
 		if (mode==0) {
 			int big=0;
 			for (int j=0;j<=homeDegree;j++) {
-				int k=p.kData[homeVert].flower[j];
-				int nb=p.kData[k].num+p.kData[k].bdryFlag;
+				int k=hflower[j];
+				int nb=p.countFaces(k)+p.getBdryFlag(k);
 				big=(nb>big) ? nb : big; 
 			}
 			
 			Vector<Integer> bigpets=new Vector<Integer>(0);
 			for (int j=0;j<=homeDegree;j++) {
-				int k=p.kData[homeVert].flower[j];
-				int nb=p.kData[k].num+p.kData[k].bdryFlag;
+				int k=hflower[j];
+				int nb=p.countFaces(k)+p.getBdryFlag(k);
 				if (nb==big)
-					bigpets.add(p.kData[homeVert].flower[j]);
+					bigpets.add(hflower[j]);
 			}
 			return bigpets;		
 		}
@@ -292,7 +294,7 @@ public class FlipBot {
 				int lpd=petalDegrees[(j+1)%homeDegree];
 				int rpd=petalDegrees[j-1];
 				if (petalDegrees[j]==7 && lpd==6 && rpd==6) {
-					ans.add(p.kData[homeVert].flower[j]);
+					ans.add(hflower[j]);
 					tick++;
 				}
 			}
@@ -311,7 +313,7 @@ public class FlipBot {
 				int lpd=petalDegrees[(j+1)%homeDegree];
 				int rpd=petalDegrees[j-1];
 				if (petalDegrees[j]==6 && ((lpd==5 && rpd==6) || (lpd==6 && rpd==5))) {
-					ans.add(p.kData[homeVert].flower[j]);
+					ans.add(hflower[j]);
 					tick++;
 				}
 			}
@@ -330,7 +332,7 @@ public class FlipBot {
 				int lpd=petalDegrees[(j+1)%homeDegree];
 				int rpd=petalDegrees[j-1];
 				if (petalDegrees[j]==6 && ((lpd==4 && rpd==6) || (lpd==6 && rpd==4))) {
-					ans.add(p.kData[homeVert].flower[j]);
+					ans.add(hflower[j]);
 					tick++;
 				}
 			}
@@ -350,7 +352,7 @@ public class FlipBot {
 			Vector<Integer> verts=new Vector<Integer>();
 			Iterator<Integer> bgv=biggest.iterator();
 			while (bgv.hasNext())
-				verts.add(p.kData[homeVert].flower[bgv.next()]);
+				verts.add(hflower[bgv.next()]);
 			return verts;
 		}
 		
@@ -362,7 +364,7 @@ public class FlipBot {
 			Vector<Integer> verts=new Vector<Integer>();
 			Iterator<Integer> bgv=biggest.iterator();
 			while (bgv.hasNext())
-				verts.add(p.kData[homeVert].flower[bgv.next()]);
+				verts.add(hflower[bgv.next()]);
 			return verts;
 		}
 		
@@ -377,22 +379,23 @@ public class FlipBot {
 	public int update() {
 		
 		// am I on the boundary? This is 0 (no) or 1 (yes)
-		bdryFlag=p.kData[homeVert].bdryFlag;
+		bdryFlag=p.getBdryFlag(homeVert);
 
 		// my degree? ('num' faces; add 1 if a bdry vertex)
-		homeDegree=p.kData[homeVert].num+bdryFlag;
+		homeDegree=p.countFaces(homeVert)+bdryFlag;
+		int[] hflower=p.getFlower(homeVert);
 		
 		// my petals' degrees? 
-		petalDegrees=new int[p.kData[homeVert].num+1];
-		for (int j=0;j<=p.kData[homeVert].num;j++) {
-			int k=p.kData[homeVert].flower[j];
-			petalDegrees[j]=p.kData[k].num+p.kData[k].bdryFlag;
+		petalDegrees=new int[p.countFaces(homeVert)+1];
+		for (int j=0;j<=p.countFaces(homeVert);j++) {
+			int k=hflower[j];
+			petalDegrees[j]=p.countFaces(k)+p.getBdryFlag(k);
 		}
 
 		// petal 'energies'? (interior edges only) 
-		edgeEnergies=new int[p.kData[homeVert].num+1];
+		edgeEnergies=new int[p.countFaces(homeVert)+1];
 		edgeEnergies[0]=edgeEnergies[homeDegree]=0;
-		for (int j=1;j<p.kData[homeVert].num;j++) {
+		for (int j=1;j<p.countFaces(homeVert);j++) {
 			edgeEnergies[j]=
 				homeDegree+petalDegrees[j]-(petalDegrees[j-1]+petalDegrees[j+1]);
 		}
@@ -429,7 +432,8 @@ public class FlipBot {
 	 * @return int, vertex index
 	 */
 	public int moveRandom() {
-		return p.kData[homeVert].flower[new Random().nextInt(p.kData[homeVert].num)+1];
+		int j=new Random().nextInt(p.countFaces(homeVert))+1;
+		return p.getFlower(homeVert)[j];
 	}
 	
 	/**
@@ -564,7 +568,7 @@ public class FlipBot {
 	 * @param c
 	 */
 	public void setColor(int c) {
-		color=CPScreen.coLor(232+(c%16));
+		color=ColorUtil.coLor(232+(c%16));
 	}
 	
 	/**

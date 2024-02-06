@@ -5,13 +5,12 @@ import java.io.File;
 
 import JNI.SolverData;
 import allMains.CirclePack;
-import complex.Complex;
 import exceptions.DataException;
 import exceptions.InOutException;
-import geometry.CircleSimple;
 import input.CPFileManager;
 import math.Mobius;
 import packing.PackData;
+import packing.ReadWrite;
 import tiling.Tile;
 import tiling.TileData;
 
@@ -99,22 +98,20 @@ public class DebugHelp {
 	}
 
 	/**
-	 * write pack data to /tmp/debugPack.p
+	 * write pack data to packing directory
 	 * @param p 
 	 * @param fname
 	 * @return String for msg.
 	 */
 	public static void debugPackWrite(PackData p,String fname) {
-		BufferedWriter fp = CPFileManager.openWriteFP(tmpdir,
-				false, fname, false);
+		File dir=CPFileManager.PackingDirectory;
+		BufferedWriter fp = CPFileManager.openWriteFP(dir,false, fname, false);
 		try {
-			p.writePack(fp, 0017, false); 
-			fp.flush();
-			fp.close();
+			ReadWrite.writePack(fp,p,0017,false); 
 		} catch (Exception ex) {
 			throw new InOutException("debugPackWrite failed");
 		}
-		CirclePack.cpb.msg("Wrote temp packing to "+fname+" in "+tmpdir.toString());
+		CirclePack.cpb.msg("Wrote temp packing to "+fname+" in "+dir.toString());
 	}
 	
 	/**
@@ -159,4 +156,22 @@ public class DebugHelp {
 				mob.c+"   "+mob.d+"];\n");
 	}
 
+	public static void printtileflowers(TileData td) {
+		for (int t=1;t<=td.tileCount;t++) {
+			Tile tile=td.myTiles[t];
+			if (tile.tileFlower==null) {
+				System.out.println("tile "+t+" has no flower");
+				continue;
+			}
+			StringBuilder strbld=new StringBuilder("Tile "+t+": vertices ");
+			for (int j=0;j<tile.vertCount;j++)
+				strbld.append(" "+tile.vert[j]);
+			strbld.append("\n  tile flower: ");
+			for (int j=0;j<tile.vertCount;j++)
+				strbld.append(" "+tile.tileFlower[j][0]+" "+
+						tile.tileFlower[j][1]+"   ");
+			strbld.append("\n");
+			System.out.println(strbld.toString());
+		}
+	}
 }

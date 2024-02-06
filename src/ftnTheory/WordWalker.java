@@ -4,10 +4,12 @@ import java.util.Vector;
 
 import circlePack.PackControl;
 import complex.Complex;
+import dcel.PackDCEL;
 import listManip.FaceLink;
+import listManip.HalfLink;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
+import util.ColorUtil;
 import util.DispFlags;
 
 /**
@@ -51,6 +53,8 @@ public class WordWalker extends PackExtender {
 		// draw facelist, imprinting first and last
 		
 		if (cmd.startsWith("mtrek")) {
+			boolean useSchw=false;
+			// TODO: may want option to use schwarzians
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				FaceLink facelink=new FaceLink(packData,items);
@@ -59,13 +63,17 @@ public class WordWalker extends PackExtender {
 					int lastface=(int)facelink.get(facelink.size()-1);
 					imprintFace(firstface);
 					count++;
-					if (facelink.size()>1) {
+					HalfLink hlink=null;
+					PackDCEL pdcel=packData.packDCEL;
+					if (facelink.size()>1 && 
+							(hlink=facelink.getHalfLink(pdcel))!=null) {
 						Integer []codes=new Integer[3];
 						codes[0]=Integer.valueOf(1);
 						codes[1]=null;
 						codes[2]=null;
 						DispFlags dflags=new DispFlags(null);
-						packData.layout_facelist(null,facelink,dflags,null,true,false,firstface,-1.0);
+						pdcel.layoutFactory(null,hlink,dflags,null,
+								true,false,useSchw,-1.0);
 						count++;
 					}
 					imprintFace(lastface);
@@ -83,22 +91,19 @@ public class WordWalker extends PackExtender {
 	/**
 	 * Draw a face with special coloring: red, green, blue on the
 	 * 0-1, 1-2, 2-0 sectors, respectively.
-	 * @param face
+	 * @param f int
 	 */
-	public void imprintFace(int face) {
-		int []vert=packData.faces[face].vert;
-		Complex c0=packData.rData[vert[0]].center;
-		Complex c1=packData.rData[vert[1]].center;
-		Complex c2=packData.rData[vert[2]].center;
-		Complex cc=packData.face_center(face);
-		
+	public void imprintFace(int f) {
+		Complex[] c=new Complex[3];
+			c=packData.packDCEL.getFaceCorners(packData.packDCEL.faces[f]);
+		Complex cc=packData.getFaceCenter(f);
 		DispFlags dflags=new DispFlags("f");
-		dflags.setColor(CPScreen.coLor(232));
-		packData.cpScreen.drawFace(c0,c1,cc,null,null,null,dflags);
-		dflags.setColor(CPScreen.coLor(218));
-		packData.cpScreen.drawFace(c1,c2,cc,null,null,null,dflags);
-		dflags.setColor(CPScreen.coLor(1));
-		packData.cpScreen.drawFace(c2,c0,cc,null,null,null,dflags);
+		dflags.setColor(ColorUtil.coLor(232));
+		packData.cpDrawing.drawFace(c[0],c[1],cc,null,null,null,dflags);
+		dflags.setColor(ColorUtil.coLor(218));
+		packData.cpDrawing.drawFace(c[1],c[2],cc,null,null,null,dflags);
+		dflags.setColor(ColorUtil.coLor(1));
+		packData.cpDrawing.drawFace(c[2],c[0],cc,null,null,null,dflags);
 	}
 	
 	public void helpInfo() {

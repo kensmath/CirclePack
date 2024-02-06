@@ -168,7 +168,7 @@ public class DisplayBar extends JPanel implements MouseListener,
 					value = 4.0 * Math.PI;
 				else
 					value = 2.0 * Math.PI;
-				parent.packData.rData[vertNum].aim=value;
+				parent.packData.setAim(vertNum,value);
 				placePointer(value);
 			} 
 			else { // for radii

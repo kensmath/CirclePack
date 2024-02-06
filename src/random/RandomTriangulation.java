@@ -11,22 +11,23 @@ import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
-import JNI.DelaunayBuilder;
 import JNI.DelaunayData;
+import JNI.ProcessDelaunay;
 import allMains.CirclePack;
+import combinatorics.komplex.Face;
 import complex.Complex;
+import dcel.CombDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
 import geometry.SphericalMath;
-import komplex.CookieMonster;
 import komplex.EdgeSimple;
-import komplex.Face;
 import komplex.Triangulation;
 import listManip.EdgeLink;
 import math.Point3D;
 import packing.PackData;
-import util.GenPathUtil;
+import packing.TorusData;
+import util.PathUtil;
 import util.StringUtil;
 import util.UtilPacket;
 
@@ -34,32 +35,34 @@ public class RandomTriangulation {
 	public static boolean setSeed=false; // for debugging, set seed=(long)1
 	
 	/**
-	 * Distribute M random points along (a polygonal approximation to) the given
-	 * Path2D.Double, return a Complex vector of the points, or null on error.
+	 * Distribute M random ordered points along (a polygonal approximation 
+	 * to) the given Path2D.Double, return a Complex vector of the points, 
+	 * or null on error.
 	 * 
 	 * Points start with path(0). Choose M consecutive random values from
-	 * uniform distribution on [0,1], accumulate the lengths and scale to length
-	 * of gpath. (The Mth point is not used, but ensures random spacing with
-	 * regard to the path's endpoint.)
+	 * uniform distribution on [0,1], accumulate the lengths and scale to 
+	 * length of gpath. (The Mth point is not used, but ensures random 
+	 * spacing with regard to the path's endpoint.)
 	 * 
-	 * Note: 'arclength' along gpath is used for positioning the Complex points;
-	 * it starts with index 0 and last point is index M-1.
-	 * 
-	 * Throw DataException on error.
+	 * Note: 'arclength' along gpath is used for positioning the Complex 
+	 * points; it starts with index 0 and last point is index M-1.
+	 * 	
+	 * @param gpath
+	 * @param M
+	 * @param sS
+	 * @return Comple[]
+	 * @throws DataException
 	 */
-	public static Complex[] rand_bdry_pts(Path2D.Double gpath, int M) {
-		setSeed=false;
-		return rand_bdry_pts(gpath,M,setSeed);
-	}
-	
-	public static Complex[] rand_bdry_pts(Path2D.Double gpath, int M,boolean sS)
+	public static Complex[] rand_bdry_pts(Path2D.Double gpath,
+			int M,boolean sS)
 			throws DataException {
 		setSeed=sS;
-		// need length and polynomial approx of Gamma (should be just one component)
-		double flatness = GenPathUtil.gpExtent(gpath) * GenPathUtil.FLAT_FACTOR;
-		double length = GenPathUtil.gpLength(gpath, flatness);
+		// need length and polynomial approx of Gamma (should be 
+		//    just one component)
+		double flatness = PathUtil.gpExtent(gpath) * PathUtil.FLAT_FACTOR;
+		double length = PathUtil.gpLength(gpath, flatness);
 		Vector<Complex> poly;
-		Vector<Vector<Complex>> polyGamma = GenPathUtil.gpPolygon(gpath,
+		Vector<Vector<Complex>> polyGamma = PathUtil.gpPolygon(gpath,
 				flatness);
 		try {
 			poly = (Vector<Complex>) polyGamma.get(0);
@@ -71,7 +74,8 @@ public class RandomTriangulation {
 
 		// find M random ordered arclength param spots in [0,length]
 		Random CPrand = new Random();
-		if (setSeed) CPrand.setSeed((long)1);
+		if (setSeed) // for debugging
+			CPrand.setSeed((long)1);
 		double[] arc_spots = new double[M];
 		for (int j = 0; j < M; j++) {
 			arc_spots[j] = CPrand.nextDouble()*length;
@@ -112,34 +116,35 @@ public class RandomTriangulation {
 	 * Currently allow rectangles, 1-tori, regions bounded by curves, or
 	 * determined by geometry. 
 	 *
-	 * Want to convert these to packings, keeping not only the combinatorics,
-	 * but also the centers, so that we can generate postscript images, do
-	 * mappings, etc, based on the triangulation itself. Therefore, it is up 
-	 * to the user to apply further manipulations to the resulting packing. 
+	 * Want to convert these to packings, keeping not only the 
+	 * combinatorics, but also the centers, so that we can generate 
+	 * images, do mappings, etc, based on the triangulation itself. 
+	 * Therefore, it is up to the user to apply further manipulations to the resulting packing. 
 	 *
 	 * Arguments (parsed from command in calling routine):
 	 * 
-	 * (1) N number of interior vertices: in non-tori case, 4*sqrt(N) additional 
-	 *  vertices are added to the boundary of the region or rectangle.
-	 *  N<12 then set N=12.
+	 * (1) N number of interior vertices: in non-tori case, 4*sqrt(N) 
+	 *   additional vertices are added to the boundary of the region or 
+	 *   rectangle. If N<12 then set N=12. 
 	 *
-	 * (2) debug: if true, then don't use call random seed (though it may
-	 *  have been called elsewhere in CirclePack).
+	 * (2) debug: if true, then don't call random seed (though it may
+	 *   have been called elsewhere in CirclePack).
 	 *
-	 * (3) hes: geometry: if >0, we triangulate the sphere; this is done by
-	 * choosing points randomly in [0 1]x[0 1] and using theta = 2*Pi*x
-	 * and phi=acos(2*y-1)
+	 * (3) hes: geometry: if >0, we triangulate the sphere; choose 
+	 *   points randomly in [0 1]x[0 1] and use theta = 2*Pi*x
+	 *   and phi=acos(2*y-1)
 	 *
 	 * (4) Aspect: Random triangulation of rectangle of this aspect; this
 	 *   takes precedence over hex>0. If Aspect negative, use only interior
-	 *   points, do NOT create bdry points as well.
+	 *   points, do NOT create additional bdry points.
 	 *
 	 * (5) Gamma: Pathlist defining region.(if non-NULL, takes precedence 
 	 *   over Aspect. Can be on sphere, but don't yet know how
 	 * 	 (but Gamma always given in 2D cartesian coordinates).
 	 *
-	 * (6) Tau: random triangulation of torus with complex modulus Tau. If z 
-	 *   is non-zero, this takes precedence over hes, Gamma, and Aspect.
+	 * (6) Tau: random triangulation of torus with complex modulus Tau. 
+	 * 	 If z is non-zero, this takes precedence over hes, Gamma, and 
+	 *   Aspect.
 	 *
 	 * @param N int; minimum of 12 points
 	 * @param debug_flag boolean, set to get debug info
@@ -149,58 +154,81 @@ public class RandomTriangulation {
 	 * @param Tau Complex
 	 * @return 'PackData' or null on error
 	 */
-	public static Triangulation random_Triangulation(int N,boolean debug_flag,int hes,
-	       double Aspect,Path2D.Double Gamma,Complex Tau) {
+	public static Triangulation random_Triangulation(int N,
+			boolean debug_flag,int hes,
+			double Aspect,Path2D.Double Gamma,Complex Tau) {
+		Vector<Complex> Z_list=new Vector<Complex>(0);
+		Vector<Complex> Z_bdry=new Vector<Complex>(0);
+		DelaunayData dData=null;	  
+		Random random=new Random();
+		if (debug_flag) 
+			random.setSeed(1); // specific seed only when debugging
+		if (N<12) 
+			N=12;
+	  
+		// check for appropriate 'hes'
+		if (Tau!=null || Gamma!=null || Aspect!=0.0) {
+			hes=0;
+		}
+	  
+	  // ****** handle sphere first ***********
+	  // we can only do triangulation of full sphere --- 
+	  //   can't yet handle subregions. By Archimedes, 
+	  //   randomize with respect to spherical area by 
+	  //   choosing theta uniformly in [0,2pi) and z uniformly 
+	  //   in [-1,1] to give phi=acos(z).
+	  if (hes>0) {
+		  Z_bdry=null;
+		  if (debug_flag) random.setSeed(1); // for debugging
+		  for (int j=1;j<=N;j++) {
+			  Z_list.add(new Complex(2*Math.PI*random.nextDouble(),
+					  Math.acos(2.0*random.nextDouble()-1.0)));
+		  }
+		  dData=new DelaunayData(hes,Z_list,null);
+		  try {
+			  ProcessDelaunay.sphDelaunay(dData);
+		  } catch (Exception ex) {
+			  CirclePack.cpb.errMsg(
+					  "'ProcessDelaunay' exception for sphere: "+ex.getMessage());
+			  return null;
+		  }
+		  return dData.getTriangulation();
+	  }
+
+	  // ******* other cases: setup depending on situation *****
 	  boolean torus_flag=false;
 	  boolean noBdryPts=false;
-	  int bdryN=0;
+	  // usual number of added verts on bdry, if needed
+	  int bdryN=(int)(4.0*Math.sqrt((double)N)); 
 	  double Asp_x,Asp_y;
 	  Complex scaled_Tau=new Complex(1.0);
 	  double scaled_1=1.0;
-	  Complex []corner=new Complex[5];
 	  AffineTransform atrans=new AffineTransform();
-	  Vector<Complex> Z_list=new Vector<Complex>(0);
-	  Vector<Complex> Z_bdry=new Vector<Complex>(0);
-	  
-	  Random random=new Random();
-	  if (debug_flag) random.setSeed(1); // specific seed only when debugging (?? I think)
-	  if (N<12) N=12;
-	  bdryN=(int)(4.0*Math.sqrt((double)N)); // usual number of added vertices
 
-	  // setup depending on situation.
-//	  System.out.println("RANDTRI: in random_Triangulation");
-	  if (Tau!=null) { // torus? highest precedence
+	  // torus is highest precedence
+	  if (Tau!=null) { 
 		  if (Tau.y<=0.0)
 			  throw new DataException("Tau must be in upper half plane");
 		  torus_flag=true;
 		  Gamma=null;
-		  hes=0;
 		  
-		  // First, normalize: Want Tau to be in the fundamental domain for
-		  //   the moduli space of 1-tori: hence, real part
-		  //   between -.5 and .5, and above unit disc.
-		  Tau.x=Tau.x-Math.floor(Tau.x)-Math.floor(2*(Tau.x-Math.floor(Tau.x)));
-		  int hit=1;
-		  int count=0;
-		  Complex m_one=new Complex(1.0);
-		  while (hit!=0 && count < 100) {
-			  hit=0;
-			  if (Tau.y<Math.sqrt(1.0-Tau.x*Tau.x)) {
-				  hit=1;
-				  Tau=m_one.divide(Tau);
-				  Tau.x=Tau.x-Math.floor(Tau.x)-Math.floor(2*(Tau.x-Math.floor(Tau.x)));
-			  }
-			  count++;
-		  }
+		  // First, normalize: Want Tau to be in the fundamental 
+		  //   domain for the moduli space of 1-tori: hence, its
+		  //   real part is between -.5 and .5, and outside the 
+		  //   unit disc.
+		  Tau=TorusData.Teich2Tau(Tau);
 		  
-		  // Retool Gamma to define fundamental parallelogram in unit disc;
-		  //   translate/scale so parallelogram center is at origin
+		  // create Gamma as fundamental parallelogram in unit disc;
+		  //   translate/scale so center is at origin, result is
+		  //   <c1, c2, c3, c4> cclw from upper left corner.
 		  Complex htau=new Complex(Tau.x*.5,Tau.y*.5);
 		  Complex hf=new Complex(.5);
 		  Complex c1=htau.minus(hf);
 		  Complex c4=htau.add(hf);
 		  Complex c3=hf.minus(htau);
 		  Complex c2=new Complex(-c4.x,-c4.y);
+		  
+		  // scale to put in unit disc
 		  double maxdist=c1.abs();
 		  maxdist=(c2.abs()>maxdist) ? c2.abs() : maxdist;
 		  c1=c1.divide(maxdist);
@@ -216,37 +244,32 @@ public class RandomTriangulation {
 		  Gamma.lineTo(c3.x,c3.y);
 		  Gamma.lineTo(c4.x,c4.y);
 		  Gamma.closePath();
-
-		  bdryN=8*N;
-
+		  bdryN=8*N; // will be replicated to get 9 copies
 	  }
-	  else if (Gamma!=null) { /* Reset default affine transform to map random 
-		  	points of unit disc to random points in disc centered at bounding
-		  	box of Gamma and containing Gamma.*/
-		      double flatness=GenPathUtil.gpExtent(Gamma)*GenPathUtil.FLAT_FACTOR;
-		      double []cr=GenPathUtil.gpCentRad(Gamma,flatness);
+	  // Gamma case is next: Reset default affine transform to 
+	  //   later map random points of unit disc to random points 
+	  //   in disc centered at bounding box of Gamma containing 
+	  //   Gamma.
+	  else if (Gamma!=null) {
+		      double flatness=PathUtil.gpExtent(Gamma)*PathUtil.FLAT_FACTOR;
+		      double []cr=PathUtil.gpCentRad(Gamma,flatness);
 		      atrans= new AffineTransform(cr[2],0.0,0.0,cr[2],cr[0],cr[1]);
 	  }
-	  else if (hes>0) { // sphere
-		  bdryN=0;
-	  }
-	  else { // not torus, not path, not sphere: want rectangle; 
+	  
+	  // not torus, not path, not sphere: want rectangle; 
+	  else { 
 		  hes=0;
-		  if (Aspect<0.0) {
+		  if (Aspect<0.0) { // do without bdry
 			  bdryN=0;
 			  noBdryPts=true;
 			  Aspect=-1.0*Aspect; 
 		  }
-		  // put it in the unit disc, vert 1 as upper left corner.
+
+		  // define associated cclw Gamma in unit disc, centered 
+		  //    at origin, starting at upper left
 		  double a2=Aspect*Aspect;
 		  Asp_x=Math.sqrt((a2)/(a2+1.0));
 		  Asp_y=Math.sqrt(1.0/(a2+1.0));
-		  corner[1]=new Complex(-Asp_x,Asp_y);
-		  corner[2]=new Complex(-Asp_x,-Asp_y);
-		  corner[3]=new Complex(Asp_x,-Asp_y);
-		  corner[4]=new Complex(Asp_x,Asp_y);
-	    
-		  // define associated path
 		  Gamma=new Path2D.Double();
 		  Gamma.moveTo(-Asp_x,Asp_y);
 		  Gamma.lineTo(-Asp_x,-Asp_y);
@@ -261,11 +284,11 @@ public class RandomTriangulation {
 	  if (!torus_flag && Gamma!=null && !noBdryPts) { 
 		  Complex []bdry_points=null;
 	      try {
-	    	  bdry_points=RandomTriangulation.rand_bdry_pts(Gamma,bdryN);
+	    	  bdry_points=RandomTriangulation.rand_bdry_pts(Gamma,bdryN,debug_flag);
 	      } catch(DataException dex) {
 	    	  CirclePack.cpb.myErrorMsg("Random triangulation: error in "+
 			     "placing random points on region boundary.");
-		  return null;
+	    	  return null;
 	      }
 	      bdryN=bdry_points.length;
 	      for (int i=0;i<bdryN;i++) {
@@ -274,14 +297,16 @@ public class RandomTriangulation {
 	      bdryN=Z_bdry.size(); // these should already be equal
 	  }
 	  
-	  if (Gamma!=null) { // torus case generates Gamma, but doesn't put point on it
-		  // Note: 'atrans' should be set whether Gamma was provided or created.
+	  // torus case has generated Gamma without poknts on Gamma itself.
+	  // Note: 'atrans' should be set whether Gamma was provided or created.
+	  if (Gamma!=null) { 
 
 		  // Create N random points IN region
 		  int safety=0;
 		  int hits=1;
 		  Random CPrand=new Random();
-		  if (debug_flag) CPrand.setSeed(1); // for debugging
+		  if (debug_flag) 
+			  CPrand.setSeed(1); // for debugging
 		  Point2D.Double pt,apt;
 		  while (hits<=N && safety < 20*N) {
 			  Complex z=new Complex(2.0*CPrand.nextDouble()-1.0,2.0*CPrand.nextDouble()-1.0);
@@ -299,9 +324,9 @@ public class RandomTriangulation {
 		  }
 	  }
 	  
-	  // for torus, we replicate to get 9 copies of the original points.
-	  // Note that translated points should have indices differing by 0 mod N.
-	  if (torus_flag) { // torus
+	  // for torus, we replicate to get 9 copies of the original points;
+	  // translated points have indices differing by 0(mod N).
+	  if (torus_flag) { 
 		  Z_bdry=null;
 		  // now translate a copy left by scaled_1 
 		  for (int i=1;i<=N;i++) {
@@ -324,26 +349,10 @@ public class RandomTriangulation {
 			  Z_list.add(z.minus(scaled_Tau));
 		  }
 	  }
-
-	  // Sphere: By a result of Archimedes, randomize with
-	  //   respect to area by choosing theta uniformly 
-	  //   in [0,2pi) and z uniformly in [-1,1] to give phi=acos(z).
-	  if (hes>0) {
-		  Z_bdry=null;
-		  Random CPrand=new Random();
-		  if (debug_flag) CPrand.setSeed(1); // for debugging
-		  for (int j=1;j<=N;j++) {
-			  Z_list.add(new Complex(2*Math.PI*CPrand.nextDouble(),
-					  Math.acos(2.0*CPrand.nextDouble()-1.0)));
-		  }
-	  }
 	  
-	  // build DelaunayData
-	  
-	  // interior points indexed from 1 to intCount
+	  // interior points indexed from 1 to intCount; any bdry
+	  //   points indexed from iCount+1
 	  int iCount=Z_list.size();
-	  
-	  // if there's a boundary, indexes starting at iCount+1
 	  EdgeLink elink=null;
 	  if (Z_bdry!=null && Z_bdry.size()>0) {
 		  elink=new EdgeLink();
@@ -359,25 +368,16 @@ public class RandomTriangulation {
 		  // have to close up
 		  elink.add(new EdgeSimple(tickv,iCount+1));
 	  }
-	  
-	  DelaunayData dData=null;
+
+	  // ============= create dData and the triangulation
 	  try {
 		  dData=new DelaunayData(hes,Z_list,elink);
-		  try {
-			  dData = new DelaunayBuilder().apply(dData);
-		  } catch (Exception ex) {
-			  CirclePack.cpb.errMsg("'DelaunayBuilder' DelaunayException occurred: "+ex.getMessage());
-			  return null;
-		  } catch (Throwable tex) {
-			  CirclePack.cpb.errMsg("'DelaunayBuilder' Trowable exception: "+tex.getMessage());
-			  return null;
-		  }
-	  } catch (Exception ex) { // ex.printstacktrace();
-		  CirclePack.cpb.errMsg("randomHypTriangulation failed: "+ex.getMessage());
+		  ProcessDelaunay.planeDelaunay(dData);
+	  } catch (Exception ex) {
+		  CirclePack.cpb.errMsg(
+				  "'ProcessDelaunay' exception in planeDelaunay: "+ex.getMessage());
 		  return null;
 	  }
-	  
-	  // ============= create the triangulation
 	  
 	  Triangulation Tri = dData.getTriangulation();
 	  
@@ -431,16 +431,17 @@ public class RandomTriangulation {
 	}
 
 	/**
-	 * Given a polygon (non-closed list of corners), use a Poisson Point process
-	 * to choose N points inside, and use these along with the given 
-	 * vertices defining the polygon (no additional vertices added along
-	 * the boundary) to form a Delaunay triangulation. 
+	 * Given a polygon (non-closed list of corners), use a Poisson 
+	 * Point process to choose N points inside, and use these along 
+	 * with the given vertices defining the polygon (no additional 
+	 * vertices added along the boundary) to form a Delaunay 
+	 * triangulation. 
 	 * @param N int, N>=4
 	 * @param sS boolean, setSeed flag, not used yet
 	 * @param poly Complex[], list of corners, not closed (close it here)
 	 * @return Triangulation or null on error
 	 */
-	public static Triangulation randomPolyPts(int N,boolean sS,Complex []poly) {
+	public static Triangulation randomPolyPts(int N,boolean sS,Complex[] poly) {
 		setSeed=sS; // not sure this does anything yet
 		if (N<4 || poly==null || poly.length<3) 
 			return null;
@@ -459,8 +460,8 @@ public class RandomTriangulation {
 		/* Reset default affine transform to map random 
 		 * points of unit disc to random points in disc centered at bounding
 	  	 * box of polypath and containing polypath.*/
-		double flatness=GenPathUtil.gpExtent(polypath)*GenPathUtil.FLAT_FACTOR;
-		double []cr=GenPathUtil.gpCentRad(polypath,flatness);
+		double flatness=PathUtil.gpExtent(polypath)*PathUtil.FLAT_FACTOR;
+		double []cr=PathUtil.gpCentRad(polypath,flatness);
 		AffineTransform atrans= new AffineTransform(cr[2],0.0,0.0,cr[2],cr[0],cr[1]);
 		Random CPrand=new Random();
 		int hits=1;
@@ -475,7 +476,8 @@ public class RandomTriangulation {
 			safety++;
 		}
 		if (hits<=N) {
-			CirclePack.cpb.myErrorMsg("randomPolyPts: failed to get "+N+" points inside polygon.");
+			CirclePack.cpb.myErrorMsg(
+					"randomPolyPts: failed to get "+N+" points inside polygon.");
 			return null;
 		}
 
@@ -496,14 +498,13 @@ public class RandomTriangulation {
 		DelaunayData dData=null;
 		try {
 			dData=new DelaunayData(0,Z_list,elink);
-			dData=new DelaunayBuilder().apply(dData);
+			ProcessDelaunay.planeDelaunay(dData);
 		} catch (Exception ex) {
 			CirclePack.cpb.errMsg("randomHypTriangulation failed: "+ex.getMessage());
 			return null;
 		}
 		  
 		// ============= create the triangulation
-		  
 		return dData.getTriangulation();
 	}
 	
@@ -524,7 +525,8 @@ public class RandomTriangulation {
 	public static PackData randomHypKomplex(int N,boolean sS) {
 		setSeed=sS;
 		
-		if (N<4) return null;
+		if (N<4) 
+			return null;
 		
 		// set polygonal path enclosing disc for call
 		int bdryN=(int)(Math.PI*Math.sqrt((double)N));
@@ -547,10 +549,11 @@ public class RandomTriangulation {
 				return null;
 			}
 		} catch (Exception ex) {
-			throw new CombException("random_Triangulation error: "+ex.getMessage());
+			throw new CombException(
+					"random_Triangulation error: "+ex.getMessage());
 		}
 
-		// Want to eliminate faces containing any of the points on cirGamma (indices > N)
+		// eliminate faces containing points of cirGamma (indices > N)
 		Triangulation newTri=new Triangulation();
 		newTri.faces=new Face[Tri.faceCount+1];
 		int count=0;
@@ -562,7 +565,7 @@ public class RandomTriangulation {
 			u=face.vert[1];
 			w=face.vert[2];
 			if (v<=N && u<=N && w<=N) { // keep this face 
-				newTri.faces[++count]=new Face();
+				newTri.faces[++count]=new Face(3);
 				newTri.faces[count].vert=new int[3];
 				newTri.faces[count].vert[0]=v;
 				newTri.faces[count].vert[1]=u;
@@ -582,23 +585,10 @@ public class RandomTriangulation {
 				CirclePack.cpb.errMsg("tri_to_Complex has failed.");
 				return null;
 			}
-			p.setCombinatorics();
 			
-			// use 'cookie' to prune
-			CookieMonster cM=null;
-			int outcome=-1;
-			try {
-				cM=new CookieMonster(p,"b");
-				outcome=cM.goCookie();
-
-		  	  	// go new packing? swap it out
-				if (outcome>0) {
-					p=cM.getPackData();
-				}
-					
-				p.poisonVerts=null;
-				p.poisonEdges=null;
-			} catch (Exception ex) {}
+			// prune
+			CombDCEL.pruneDCEL(p.packDCEL);
+			p.packDCEL.fixDCEL(p);
 		} catch (Exception ex) {
 			throw new DataException("tri_to_Complex failed: "+ex.getMessage());
 		}
@@ -643,7 +633,7 @@ public class RandomTriangulation {
 		DelaunayData dData=new DelaunayData(0,zvec);
 		Triangulation SqTri= dData.getTriangulation();
 		
-		return CookieMonster.zigzag_cutter(SqTri,Gamma);
+		return Triangulation.zigzag_cutter(SqTri,Gamma);
 	}
 	
     /**
@@ -651,7 +641,7 @@ public class RandomTriangulation {
      * the unit square [0 1]x[0 1]. We must infer the form of the data:
      * 
      * (1) format for plane (2D) or sphere (3D):
-     *     3 {text} (input format for 'qhull' programs; this line may not be present)
+     *     3 {text} (input format for 'qhull'; this line may not be present)
      *     n (this line may not be present)
      *     x1 y1 (z1)
      *     ...
@@ -663,11 +653,11 @@ public class RandomTriangulation {
      *     ...
      *     n: xn yn zn 
      *    
-     * (3) 2D data in unit square: keyword UNIT_SQUARE: then points x y, (for now) 
-     *     just one per line.
+     * (3) 2D data in unit square: keyword UNIT_SQUARE: then points x y, 
+     *     (for now) just one per line.
      * 
-     * 'rtnFlag' = 1 (unit square), 2=2D, 3=3D; in 3D case, the points are projected
-     * to the unit sphere and have (theta,phi) form.
+     * 'rtnFlag' = 1 (unit square), 2=2D, 3=3D; in 3D case, the points 
+     * are projected to the unit sphere and put in (theta,phi) form.
      * 
      * @param fp open BufferedReader
      * @param uP, UtilPacket: contains vector of points, rtnFlag for type,

@@ -1,14 +1,13 @@
 package komplex;
 
-import math.Mobius;
-
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-
+import dcel.PackDCEL;
 import exceptions.DataException;
 import geometry.CommonMath;
-import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
+import math.Mobius;
 
 /**
  * A 'dual triangle' in a tangency packing is that formed by
@@ -17,34 +16,56 @@ import geometry.SphericalMath;
  * The dual triangle is computed based solely on the vertices of
  * the containing face --- namely, the resulting three points are the
  * points where the incircle is tangent to the edges. 
- * 
- * Note: TangPts[j] is on edge {v(j), v((j+1)%3)}.
+ * Note: Indexing corresponds to that of the face, and TangPts[j] 
+ * is on edge {v(j), v((j+1)%3)}.
  * @author kens, 4/2010
   */
 public class DualTri {
 	
 	public static double OKERR=.0000000001; 
 	public Complex []corners; // vertices
-	public Complex []TangPts;  // tangency points
+	public Complex []TangPts;  // incircle tangency points
 	int hes;
 
-	public DualTri(int hs,Complex z0,Complex z1,Complex z2) {
+	// constructors
+	public DualTri() {
+	}
+	
+	public DualTri(Complex z0,Complex z1,Complex z2,int hs) {
 		hes=hs;
 		corners=new Complex[3];
 		corners[0]=new Complex(z0);
 		corners[1]=new Complex(z1);
 		corners[2]=new Complex(z2);
 		TangPts=new Complex[3]; // filled in other calls
-		setTangPts();
+		setInCirclePts();
+	}
+	
+	public DualTri(PackDCEL pdcel,combinatorics.komplex.DcelFace face) {
+		super();
+		HalfEdge he=face.edge; // based on face edges
+		hes=pdcel.p.hes;
+		corners=new Complex[3];
+		corners[0]=pdcel.getVertCenter(he);
+		corners[1]=pdcel.getVertCenter(he.next);
+		corners[2]=pdcel.getVertCenter(he.next.next);
+		TangPts=new Complex[3]; // filled in other calls
+		setInCirclePts();
 	}
 	
 	/**
-	 * Compute/store the tangency points. The hyperbolic case
-	 * is somewhat complicated if one or more vertices is on
-	 * the unit circle. Set 'TangPts' to null if situation is
-	 * illegal.
+	 * Compute/store points where triangle incircle hits
+	 * edges, based solely on 'corners'; intended for cases 
+	 * when radii are not available, so hyperbolic case is 
+	 * somewhat complicated if one or more 'corners' is on 
+	 * the unit circle. Set 'TangPts' to null if situation is 
+	 * illegal. 
+	 * (Note: see 'PackDCEL.getTriIncircle', but this needs
+	 * radii in the hyperbolic case.)
+	 * Caution: In the sph case, can get the wrong distance between
+	 * 'corners'.
 	 */
-	public void setTangPts() {
+	public void setInCirclePts() {
 		double []len=new double[3];
 		double []r=new double[3];
 		double mindist;
@@ -240,17 +261,17 @@ public class DualTri {
 					r[j] = 2.0*r[j]*(1.0 - r[j]*(1.0-2.0*r[j]/3.0));
 			}
 		}
-		
+
 		// here's the actual computation
 		for (int j=0;j<3;j++) {
 				TangPts[j]=CommonMath.get_tang_pt(corners[j],corners[(j+1)%3],
 						r[j],r[(j+1)%3],hes);
 		}			
 		return;
-	}
-	
+	}		
+		
 	/**
-	 * Return the tangency point between centers {v(j),v((j+1)%3)}.
+	 * Get the tangency point between centers {v(j),v((j+1)%3)}.
 	 * @return new Complex, null if not set
 	 */
 	public Complex getTP(int j) {

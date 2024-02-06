@@ -1,5 +1,10 @@
 package rePack;
 
+import allMains.CPBase;
+import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
+import dcel.PackDCEL;
+import exceptions.PackingException;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
@@ -7,27 +12,28 @@ import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
 import packing.RData;
+import util.TriData;
 import util.UtilPacket;
-import JNI.JNIinit;
-import allMains.CPBase;
-import allMains.CirclePack;
-import exceptions.PackingException;
 
 /**
  * An abstract class to manage repacking in hyperbolic, euclidean, and
  * (eventually) spherical situations. Depending on performance issues, 
  * goal is to clone initial data for computations: 
- *  (1) allows the machine to run in a separate thread; but CAUTION: 
- *      KData remains with the parent packing, so it must not change. 
+ *  (1) allows the machine to run in a separate thread 
  *  (2) allows original centers/radii to be retained in case of failure. 
  *  (3) allows interruption and restarting of computations. 
  * 
- * In general, 'RePack' objects are to be released as garbage after 
- * computations are finished. However, perhaps we can replace original
- * RData with the local rdata: the only things missing are centers (which will
- * be outdated anyway) and curv (which may be out of date, too).
+ * Typically, 'RePack' objects are released after the computation. 
+ * However, may be able to keep it as long as we check that combinatorics
+ * don't change. 
+ * 
+ * NOTE: as of 3/2022, I've pulled the attempts to use calls to C
+ * programs. In particular, we as yet have no way to call Orick's 
+ * GOPack algorithm (though it is implemented in matlab). When this
+ * is available, we will need criteria/options for using it in place
+ * of current java code. 
+ * 
  * @author kens
- *
  */
 public abstract class RePacker {
 	
@@ -39,12 +45,27 @@ public abstract class RePacker {
 	public static final int LOADED=1;         // ready to initiate riffling
 	public static final int RIFFLE=2;         // ready to resume riffling
 	public static final int IN_THREAD=3;      // packing underway in some thread (e.g., native code)
+    
+	// aim less than this, treat as horocycle
+	public static final double AIM_THRESHOLD=.0001;  
+	// for smaller packs, default to Java
+	public static final int GOPACK_THRESHOLD=501; 
 
-	public static int MAX_ALLOWABLE_BAD_CUTS=300;
-	public static double TOLER=.00000000001;
-	public static int PASSLIMIT=1000;    // default upper bound, may be changed
+	public static int MAX_ALLOWABLE_BAD_CUTS=100;
+	public static double RP_TOLER=.00000000001;
+	public static double RP_OKERR=.000000001; 
+	public static int PASSLIMIT=2000;    // default upper bound, may be changed
 	
 	public PackData p;      // parent packing
+	public PackDCEL pdcel;  // prepare for DCEL version
+	
+	// create combo info to easily access triData
+	public int[] vNum;        // facecount for each vertex
+	public int[][] findices;  // face index flower for each vertex
+	public int[][] vindices;  // Coordinated with 'findices': this give, for
+							  //    each vert v the index of v in the corresponding
+							  //    entry of 'findices'.
+	
 	public int chkCount;    // minimal check on whether packing has been switched
 	
 	// status information
@@ -52,13 +73,9 @@ public abstract class RePacker {
 	public int passLimit;
 	public int totalPasses;		// cumulative since creation of this repacker
 	public int localPasses;		// during this run.
-	
-    boolean useSparseC;  // if true, use 'SolverFunction' lib when available and applicable
 
 	// main data
-	public RData []rdata;
-	public int []index;			// indices of adjustable radii
-	public TmpData []kdata;     // locally copy of needed part of p.kData.
+	public int[] index;			// indices of adjustable radii
 
 	// holding area for list
 	NodeLink holdv=null;
@@ -77,18 +94,27 @@ public abstract class RePacker {
 	public int sct;
 	public int fct;
 	public double m;
-	public double c0;
+	public double accumErr2;
 	public double ttoler;
+	public double []R0;
 	public double []R1;
 	public double []R2;
 	public UtilPacket utilPacket;
+
+	// When inv dist involved or optional, use old reliable 
+	public boolean oldReliable; 
 	
 	// Constructor: 
-	// NOTE: calling routine should kill if 'pd.status' is not positive
-	public RePacker(PackData pd,int pass_limit,boolean useC) {
+	// NOTE: inherited repackers call this first
+	public RePacker() {
+	}
+	
+	public RePacker(PackData pd,int pass_limit) {
 		p=pd;
-		if (pass_limit<0) passLimit=PASSLIMIT;
-		else passLimit=pass_limit;
+		if (pass_limit<0) 
+			passLimit=PASSLIMIT;
+		else 
+			passLimit=pass_limit;
 		status=load();  
 		if (status==LOADED) {
 			totalPasses=0;
@@ -97,18 +123,13 @@ public abstract class RePacker {
 			R2=new double[p.nodeCount+1];
 		}
 		utilPacket=new UtilPacket();
-		setSparseC(useC);
 	}
 	
 	// use default number of iterations
-	public RePacker(PackData pd,boolean useC) { 
-		this(pd,CPBase.RIFFLE_COUNT,useC);
+	public RePacker(PackData pd) { 
+		this(pd,CPBase.RIFFLE_COUNT);
 	}
 	
-	public RePacker(PackData pd) { // use default number of iterations
-		this(pd,CPBase.RIFFLE_COUNT,true);
-	}
-
 	// abstract methods -- these must be implemented in derived classes
 	public abstract int load(); // load initial data into local storage
 	
@@ -155,73 +176,23 @@ public abstract class RePacker {
 	public abstract void reapResults();
 	
 	/**
-	 * Determine whether SolverFunction lib is available/appropriate/requested.
-	 * NOTE: In repacking, GOpacker has code for Orick's methods, but also
-	 * the stand-alone super-step code (parallel to the Java code)
-	 * @param useC, true, then use the library if available
-	 */
-	public abstract void setSparseC(boolean useC);
-
-	/**
-	 * Check if GOpacker is appropriate. 'useC' is set
-	 * in 'setSparseC' and means SolverFunction routines are available.
-	 * @param useC, boolean; true = allow use of GOpacker if appropriate
-	 * @return boolean
-	 */
-	public boolean useSparseC(boolean useC) {
-		if (useC) { // requested to use 'SolverFunction' C lib routines if possible
-			if (p.overlapStatus) {
-//				CirclePack.cpb.msg("'SolverFunction' libs not used with inv. distances.");
-				return false;
-			}
-			if (p.euler!=1 || p.genus!=0) {
-//				CirclePack.cpb.msg("'SolverFunction' libs not applicable to multi-connected cases; "+
-//						"use Java repack routines");
-				return false;
-			}
-			if (!JNIinit.SparseStatus()) {
-//				CirclePack.cpb.msg("'SolverFunction' lib is not available; use Java repack routines");
-				return false;
-			}
-
-			// check for non-default aims
-			boolean hit=false;
-			for (int i=1;(!hit && i<=p.nodeCount);i++) {
-				if (p.kData[i].bdryFlag>0) {
-					if (p.rData[i].aim>0.0)	
-						hit=true;
-				}
-				else if (Math.abs(p.rData[i].aim-mp2)>.00000001) 
-					hit=true;
-			}
-			// encountered non-default aims, use Java routines
-			if (hit) 
-				return false;
-			
-			// seems we can go ahead based on general criteria
-			return true;
-		}
-		else // said 'no' to using GOpacker
-			return false;
-	}
-	
-	/**
 	 * Generic 'repack' call is for the (now) classical "riffle" 
 	 * methods, typically with supersteps, etc. Originally in C,
 	 * now implemented in Java. 
 	 * 
-	 * TODO: may want to reimplement in C library, could be part of standalone
-	 * code (and might be faster??).
+	 * TODO: may want to reimplement in C library, could be part 
+	 * of standalone code (and might be faster??).
 	 * 
 	 * On success, reap resulting radii; normally centers are computed 
 	 * in a separate call at user's discretion. 
 	 * 
 	 * Alternate methods: Orick's method and using GOpack for max 
 	 * packings (which by nature also computes centers); also 
-	 * 'oldReliable' is used, e.g., with inversive distances.
+	 * 'oldReliable' is used, e.g., when there are nontrivial 
+	 * inversive distances involved.
 	 * 
 	 * @param pass_limit
-	 * @return
+	 * @return int, 0 on error
 	 * @throws PackingException
 	 */
 	public int genericRePack(int pass_limit) throws PackingException {
@@ -260,52 +231,57 @@ public abstract class RePacker {
 			CirclePack.cpb.myErrorMsg("genericRePack: not in prepared status");
 			return 0;
 		}
-		if (status==LOADED) localPasses=startRiffle();
-		else localPasses=0;
+		if (status==LOADED) 
+			localPasses=startRiffle();
+		else 
+			localPasses=0;
 		totalPasses += localPasses;
 		if (continueRiffle(pass_limit)!=0) {  // successful?
-			reapResults();
 			return totalPasses;
 		}
 		return 0;
 	}
 
-	// Convenience: this is first thing called in 'load()' calls.
-	public int genericLoad() {
-		int num;
-		try {
-			rdata=new RData[p.nodeCount+1];  // TODO: can we save time with block transfer??
-			kdata=new TmpData[p.nodeCount+1];
-			for (int i=1;i<=p.nodeCount;i++) {
-				rdata[i]=new RData();
-				kdata[i]=new TmpData();
-				rdata[i].aim=p.rData[i].aim;
-				rdata[i].rad=p.rData[i].rad;
-				kdata[i].num=num=p.kData[i].num;
-				kdata[i].flower=new int[kdata[i].num+1];
-				for (int j=0;j<=num;j++) kdata[i].flower[j]=p.kData[i].flower[j];
-				if (p.overlapStatus) {
-					kdata[i].overlaps=new double[kdata[i].num+1];
-					for (int j=0;j<=num;j++) kdata[i].overlaps[j]=p.kData[i].overlaps[j];
-				}
+	/**
+	 * This is called in 'load()' to fill 'triData',
+	 * 'vNum', 'findices', and 'vindices'. Return true
+	 * if there are non-trivial inversive distances involved.
+	 * @return boolean
+	 */
+	public boolean prepData() {
+		boolean hit=false;
+		if (pdcel.triData==null) {
+			pdcel.triData=new TriData[pdcel.faceCount+1];
+			for (int f=1;f<=pdcel.faceCount;f++) {
+				pdcel.triData[f]=new TriData(pdcel,pdcel.faces[f]);
+				if (pdcel.triData[f].hasInvDist())
+					hit=true;
 			}
-			// load 'petallaps' (vectors of overlaps between successive petals of flowers)
-			if (p.overlapStatus) {
-				for (int i=1;i<=p.nodeCount;i++) {
-					kdata[i].petallaps=new double[kdata[i].num];
-					for (int j=0;j<kdata[i].num;j++) {
-						int v=kdata[i].flower[j];
-						int w=kdata[i].flower[j+1];
-						int k=p.nghb(w,v);
-						kdata[i].petallaps[j]=p.kData[w].overlaps[k];
-					}
-				}
-			}
-		} catch (Exception ex) {
-			CirclePack.cpb.myErrorMsg("The 'RePacker' has failed to load");
-			return FAILURE;
 		}
-		return 1;
+		else {
+			hit=pdcel.updateTriDataRadii();
+		}
+		
+		// create 'vNum', 'findices', 'vindices' after a minimal
+		//    check on whether they already exist
+		if (findices==null || findices.length!=p.nodeCount+1) {
+			vNum=new int[p.nodeCount+1];
+			findices=new int[p.nodeCount+1][];
+			vindices=new int[p.nodeCount+1][];
+			for (int v=1;v<=p.nodeCount;v++) {
+				vNum[v]=p.countFaces(v);
+				findices[v]=new int[vNum[v]];
+				vindices[v]=new int[vNum[v]];
+				HalfEdge he=pdcel.vertices[v].halfedge;
+				int tick=0;
+				do {
+					findices[v][tick]=he.face.faceIndx;
+					vindices[v][tick++]=he.face.getVertIndx(v);
+					he=he.prev.twin;
+				} while(he!=pdcel.vertices[v].halfedge && he.face.faceIndx>=0);
+			}
+		}
+		return hit;
 	}
 	
 	/**
@@ -319,8 +295,6 @@ public abstract class RePacker {
 			  holde=pd.elist.makeCopy();
 		  if (pd.flist!=null && pd.flist.size()>0)
 			  holdf=pd.flist.makeCopy();
-		  if (pd.glist!=null && pd.glist.size()>0)
-			  holdg=pd.glist.makeCopy();
 		  if (pd.vertexMap!=null && pd.vertexMap.size()>0)
 			  holdmap=pd.vertexMap.makeCopy();
 		  pd.vlist=null;
@@ -338,7 +312,6 @@ public abstract class RePacker {
 		  pd.vlist=holdv;
 		  pd.elist=holde;
 		  pd.flist=holdf;
-		  pd.glist=holdg;
 		  pd.vertexMap=holdmap;
 	}
 	   
@@ -361,15 +334,62 @@ public abstract class RePacker {
 	public void setPassLimit(int pl) {
 		if (pl>0) passLimit=pl;
 	}
-}
+	
+	// ========= routines used with 'TriData' structure ============
 
-/**
- * Internal class: temporary storage of version of KData
- * @author kstephe2
- */
-class TmpData {
-	int num;
-	int []flower;
-	double []overlaps;
-	double []petallaps;   // list of overlaps between petals
+	/**
+     * Compute the angle sum at 'v' using radius 'rad' at v.
+     * @param v int
+     * @param rad double
+     * @return double
+     */
+    public double compTriCurv(int v,double rad) {
+    	double curv=0;
+    	for (int j=0;j<findices[v].length;j++) {
+    		int k=vindices[v][j];
+    		double ang=pdcel.triData[findices[v][j]].compOneAngle(k,rad);
+    		curv += ang;
+    	}
+    	return curv;
+    }
+    
+    /**
+     * Get radius from first 'triData' containing 'v'
+     * @param v
+     * @return double
+     */
+    public double getTriRadius(int v) {
+    	return pdcel.triData[findices[v][0]].
+    			radii[vindices[v][0]];
+    }
+    
+    /**
+     * Given 'p' and 'triData', compute the angle sum at 'v' 
+     * face-by-face, in each face using factor*rad(v) as the 
+     * radius at v, where rad(v) is the current radius recorded 
+     * for 'v' in that face.
+     * @param v int
+     * @param factor double
+     * @return double
+     */
+    public double factorTriCurv(int v,double factor) {
+    	double curv=0;
+    	for (int j=0;j<findices[v].length;j++) {
+    		int k=vindices[v][j];
+    		curv += pdcel.triData[findices[v][j]].compFactorAngle(k,factor);
+    	}
+    	return curv;
+    }
+    
+    /**
+     * Put radius 'rad' into 'triData' spots for vertex v.
+     * @param v int
+     * @param rad double
+     */
+    public void setTriRadius(int v,double rad) {
+    	for (int j=0;j<findices[v].length;j++) {
+    		pdcel.triData[findices[v][j]].radii[vindices[v][j]]=rad;
+    	}
+    }
+
 }

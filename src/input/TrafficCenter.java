@@ -1,5 +1,6 @@
 package input;
 
+import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CPBase;
@@ -27,20 +28,26 @@ import util.StringUtil;
  * continue operating on its thread. Handles: 
  * 1) immediate GUI, housecleaning, etc. (where efficiency important)
  * 2) Main work, pick off individual commands from strings, and send
- *    them to 'CommandStrParser.jexecute'. Preprocessing includes:
+ *    them to 'CommandStrParser.jexecute'. 
+ *    
+ *    Preprocessing includes (can be sensitive to order of processing
+ *    and must avoid infinite recursion):
+ *    
  *    * resolving 'script' named commands
- *    * processes "-p?" packing flags
+ *    * finding double quoted strings
+ *    * processes "-p?" packing number flags
  *    * processes ":=" variable assignment
  *    * processes "_*" variable substitution
  *    * processes !! repeats, recursive calls
  *    * catches 'CirclePack' "for/FOR" loops
  *    * handles "delay" calls (in appropriate thread)
  *    * manages 'PackExtender' handoffs
+ *    
  * 3) "background" thread (or those likely to last long?)
  *    Might want separate progress indicator? stop button?
  * 
- * NOTE: Lots of issues on self/cross-reference, sequence of
- * execution, results reporting, etc.
+ * NOTE: Lots of issues on self/cross-reference, sequence of processing,
+ * sequence of execution, result/error reporting, history, etc.
  */
 public class TrafficCenter {
 
@@ -108,7 +115,7 @@ public class TrafficCenter {
 			});
 			workerThread.start();
 			
-//			System.out.println("cmd="+cmdf+". threadOK is"+threadOK);
+//			System.out.println("cmd="+cmdf+". threadOK is "+threadOK);
 			
 			// wait for thread to finish before continuing
 			if (!threadOK) { 
@@ -146,7 +153,30 @@ public class TrafficCenter {
 		PackControl.consoleActive.dispConsoleMsg("");
 		PackControl.consolePair.dispConsoleMsg("");
 		
-		String cmds[] = rP.origCmdString.split(";");
+		StringBuilder cmdbldr=new StringBuilder(rP.origCmdString);
+		String[] cmds=null;
+		
+		// Manage case of double-quoted strings: new as of 6/2020
+		if (cmdbldr.indexOf("\"")>=0) { // a double quote occurs
+			
+			// break into alternating unquoted/quoted segments
+			Vector<StringBuilder> sbvec=StringUtil.cmdSplitter(cmdbldr);
+			
+			if (sbvec==null || sbvec.size()==0) {
+				cmds = rP.origCmdString.split(";");
+			}
+			else {
+				cmds=new String[sbvec.size()];
+				Iterator<StringBuilder> sls=sbvec.iterator();
+				int tick=0;
+				while (sls.hasNext()) {
+					cmds[tick++]=sls.next().toString();
+				}
+			}
+		}
+		else {
+			cmds = rP.origCmdString.split(";");
+		}
 
 		// cycle through the individual commands.
 		for (int j = 0; j < cmds.length; j++) {
@@ -166,7 +196,7 @@ public class TrafficCenter {
 					System.out.println("new 'for' loop thread");
 					System.out.flush();
 				}
-				forWrapper(CPBase.pack[packnum].packData,wholeStr.toString(),mcs);
+				forWrapper(CPBase.cpDrawing[packnum].getPackData(),wholeStr.toString(),mcs);
 				cmdCount++;
 				break; // to break out of 'for' loop on cmd[j]
 			} // end of 'for' catch
@@ -176,7 +206,7 @@ public class TrafficCenter {
 				StringBuilder wholeStr=new StringBuilder(cmds[j]+";");
 				for (int J=j+1;J<cmds.length;J++)
 					wholeStr.append(cmds[J]+";");
-				int cmdadd=ifThenWrapper(CPBase.pack[packnum].packData,wholeStr.toString(),mcs,rP);
+				int cmdadd=ifThenWrapper(CPBase.cpDrawing[packnum].getPackData(),wholeStr.toString(),mcs,rP);
 				if (rP.interrupt) {
 					rP.msgs=new String("'IF' failed");
 					rP.cmdCount=cmdCount+cmdadd;
@@ -306,7 +336,7 @@ public class TrafficCenter {
 			//   'lastCmd' will remain unchanged, so !! can be used again.
 			if (cmds[j].charAt(0)=='!' && cmds[j].charAt(1)=='!') {
 				String redoCmd = new String(lastCmd);
-				ResultPacket rsP=new ResultPacket(CPBase.pack[newpnum].packData,redoCmd);
+				ResultPacket rsP=new ResultPacket(CPBase.cpDrawing[newpnum].getPackData(),redoCmd);
 				parseCmdSeq(rP,0,mcs);
 				int repeat_count=rsP.cmdCount;
 				lastCmd = new String(redoCmd);
@@ -326,13 +356,21 @@ public class TrafficCenter {
 				if (!CPBase.scriptManager.isScriptLoaded()) {
 					String fe = new String(
 							"error: '[.]' call fails, no script is loaded");
-					rP.errorMsgs=rP.errorMsgs.concat(fe);
+					if (rP.errorMsgs==null)
+						rP.errorMsgs=fe;
+					else 
+						rP.errorMsgs=rP.errorMsgs.concat(fe);
 					rP.cmdCount=-cmdCount;
 					return;
 				}
 				int k = cmds[j].indexOf(']');
 				if (k < 0) {
-					rP.errorMsgs=rP.errorMsgs.concat("cmd format error in '[.]': right bracket missing");
+					String fe="cmd format error in '[.]': "
+							+ "right bracket missing";
+					if(rP.errorMsgs==null)
+						rP.errorMsgs=fe;
+					else
+						rP.errorMsgs=rP.errorMsgs.concat(fe);
 					rP.cmdCount=-cmdCount;
 					return;
 				}
@@ -345,7 +383,10 @@ public class TrafficCenter {
 								"Command parsing error: "
 										+ "recursive search depth for command replacement exceeded.");
 						PackControl.consoleCmd.dispConsoleMsg(fe);
-						rP.errorMsgs=rP.errorMsgs.concat(fe);
+						if (rP.errorMsgs==null)
+							rP.errorMsgs=fe;
+						else
+							rP.errorMsgs=rP.errorMsgs.concat(fe);
 						rP.cmdCount=-cmdCount;
 						return;
 					}
@@ -360,19 +401,30 @@ public class TrafficCenter {
 						String fe = new String("Named script command [" + key
 								+ "] not found");
 						PackControl.consoleCmd.dispConsoleMsg(fe);
-						rP.errorMsgs=rP.errorMsgs.concat(fe);
+						if (rP.errorMsgs==null)
+							rP.errorMsgs=fe;
+						else 
+							rP.errorMsgs=rP.errorMsgs.concat(fe);
 						return;
 					}
 				}
 
 				// here's recursive call
-				ResultPacket uP=new ResultPacket(CPBase.pack[newpnum].packData,brktcmd);
+				ResultPacket uP=new ResultPacket(CPBase.cpDrawing[newpnum].getPackData(),brktcmd);
 				uP.memoryFlag=rP.memoryFlag;
 				parseCmdSeq(uP,depth+1,mcs);
-				if (uP.errorMsgs!=null && uP.errorMsgs.trim().length()>0)
-					rP.errorMsgs=rP.errorMsgs.concat(";"+uP.errorMsgs);
-				if (uP.msgs!=null && uP.msgs.trim().length()>0)
-					rP.msgs = rP.msgs.concat(";"+uP.msgs);
+				if (uP.errorMsgs!=null && uP.errorMsgs.trim().length()>0) {
+					if (rP.errorMsgs==null)
+						rP.errorMsgs=uP.msgs;
+					else
+						rP.errorMsgs=rP.errorMsgs.concat(";"+uP.errorMsgs);
+				}
+				if (uP.msgs!=null && uP.msgs.trim().length()>0) {
+					if (rP.msgs==null)
+						rP.msgs=uP.msgs;
+					else
+						rP.msgs = rP.msgs.concat(";"+uP.msgs);
+				}
 				cmdCount += uP.cmdCount; 
 				continue; // continue loop on cmds[j]
 			} // end of '[.]' catch
@@ -394,7 +446,7 @@ public class TrafficCenter {
 				PackExtender pXdr = null;
 				if (cmdcontent != null
 						&& cmdcontent[1].length() > 0
-						&& (pXdr = CPBase.pack[newpnum].packData
+						&& (pXdr = CPBase.cpDrawing[newpnum].getPackData()
 								.findXbyAbbrev(cmdcontent[0])) != null) {
 					int k = cmdcontent[1].indexOf(' ');
 					String cmd = null;
@@ -475,9 +527,9 @@ public class TrafficCenter {
 				try {
 					if (!valueCall) // this is the typical situation
 						count = CommandStrParser.jexecute(
-								CPBase.pack[newpnum].packData, cmds[j]);
+								CPBase.cpDrawing[newpnum].getPackData(), cmds[j]);
 					else { // this puts resulting value in 'CPcallPacket'
-						CPBase.CPcallPacket=CommandStrParser.valueExecute(CPBase.pack[newpnum].packData, cmds[j]);
+						CPBase.CPcallPacket=CommandStrParser.valueExecute(CPBase.cpDrawing[newpnum].getPackData(), cmds[j]);
 						if (CPBase.CPcallPacket==null || CPBase.CPcallPacket.error) {
 							rP.errorMsgs = new String("value computation, {..cmd..} failed");
 							rP.cmdCount=-cmdCount;
@@ -516,15 +568,16 @@ public class TrafficCenter {
 				} catch (JNIException jni) {
 					errMsg = new String("JNIException: "+jni.getMessage());
 				} catch (Exception ex) {
-					errMsg = new String("Exception: " // in " + cmds[j] + ": "
+					errMsg = new String("Exception: in " + cmds[j] + ": "
 							+ ex.getMessage() + "; ");
 				}
 				if (errMsg != null || count == 0) {
 					cmdCount += count;
 					if (errMsg != null) {
-						if (rP.errorMsgs!=null)
-							rP.errorMsgs=rP.errorMsgs.concat(errMsg);
-						else rP.errorMsgs=new String(errMsg);
+						if (rP.errorMsgs==null)
+							rP.errorMsgs=errMsg;
+						else 
+							rP.errorMsgs.concat(errMsg);
 					}
 					rP.cmdCount=-cmdCount;
 					return;
@@ -812,10 +865,9 @@ public class TrafficCenter {
 	
 	/**
 	 * Command that applies to the top level GUI -- as from menus and 
-	 * buttons. This run's in 'CirclePack's main thread, not the 
+	 * buttons. This runs in 'CirclePack's main thread, not the 
 	 * execution thread, and applies to the 'active' packing.
 	 * TODO: for efficiency, try to move some of these to direct action.
-	 * action.
 	 * @param cmd, single command
 	 * @return 
 	 */

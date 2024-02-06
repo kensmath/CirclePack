@@ -6,3 +6,48 @@ See TODO_old for earlier TODO's (most still awaiting attention).
 Many of these tasks and others are labeled as "TODO" in comments
 in the Java code itself.
 
+* Convert uses of double[3] to Point3D, especially in sph computations.
+
+* Complete separation of 'EdgeSimple' (for edges <v,w>) and 'GraphSimple' (for dual edges <f,g>)
+
+* Start whole MCV (model-controller-view) conversion: This may be good place to use modules.
+
+* 'TriAspect' is trying to play too many roles: simplify by creating some derived classes.
+
+* as of 7/2020, getting errors I can't trace which seem to relate to 'HoverFrame's. 
+  I'm currently trying to disable them by stopping mouse actions.
+  
+* Add "clear" / "reset numbering" buttons to screen shots window, reformat layout
+
+* Add screen shot directory to configuration options 
+
+* spanning tree needs work for multiply connected cases.
+
+* should allow negative euclidean radii for reverse oriented circle and be able to
+  draw with fill on the outside.
+  
+* Should rethink whole redchain business, perhaps reformulate using 'TriAspects'.
+
+* Compute side-pairing Mobius transformations in spherical case.
+  Probably first set up parallel structure and debug it before throwing out current.
+  
+ 
+* ==================================  major =========================================
+*
+* Three major structural changes are needed: MCV, standalone, and DCEL 
+  How to do these? while keeping CirclePack running? Which first? Should I also 
+  consider java modules? Can I possibly make it backward compatible so existing
+  scripts work?
+  
+  August 2020:
+  + Start with DCEL transition (since I want to use that with Schwarzians).
+    * Link in usual PackData, e.g. KData, RData, 
+    * Keep changes simple --- modify things, then go back and rebuild the DCEL
+    * adjust routines to see if DCEL is available and increasingly try to use it.
+    
+    
+* Need some new conventions for 'flower' or 'bouquet' since in the DCEL structure
+  a vertex can be repeated in different 'bdryFan's. 
+  We might convert to "POLYGONS" instead of "FLOWERS" as CirclePack's main
+  organizing principle. Big change!
+    

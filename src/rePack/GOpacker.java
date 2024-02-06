@@ -5,33 +5,38 @@ import java.util.Arrays;
 import java.util.Vector;
 
 import JNI.SolverData;
-import JNI.SolverFunction;
-import allMains.CPBase;
 import allMains.CirclePack;
 import complex.Complex;
-import complex.MathComplex;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.MiscException;
 import exceptions.ParserException;
+import geometry.CircleSimple;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.NSpole;
-import geometry.CircleSimple;
 import geometry.SphericalMath;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.PackLite;
-import util.UtilPacket;
 
 /**
- * This is intended to provide an implementation through java of 
- * Gerald Orick's method for computing circle packings via
- * an iterative routine using Tutte embeddings. These are being 
- * moved from matlab and C++ to mainly java, with calls to C++ sparse
- * matrix routines. (I can't seem to find a good java routine;
- * e.g., it appears that la4j is more about compact storage; it doesn't 
- * use the sparseness in solving systems.)
+ * NOTE: We no longer call this code because we don't have
+ * access to sparse matrix computations. 
+ * 
+ * This is intended in the future to provide an implementation 
+ * through java of Gerald Orick's method for computing circle 
+ * packings via an iterative routine using Tutte embeddings 
+ * (currently implemented only in GOPack package for Matlab).
+ * 
+ * Originally, the plan was to implement these methods in C and then
+ * make JNI calls. However, as of 3/2022, I've pulled all the JNI
+ * stuff. If we can implement in C, the plan now would be to transfer
+ * data in files and use ProcessBuilder to execute. I would hope to
+ * implement the GOPack methods in Java, but I can't find good 
+ * java sparce matric routines. (Caution: it appears that things
+ * like "la4j", for example, are more about compact storage and 
+ * doesn't implement sparseness in solving systems.)
  * 
  * When this class is instantiated, 'load' creates various 
  * persistent data objects. A key design feature is creation on
@@ -60,8 +65,8 @@ import util.UtilPacket;
  * * 'restartRiffle' sets radii to current values from myPLite.
  * * 'continueRiffle' continues with 'localradii' (even if the
  *   packing data has been updated).
- * * 'quality' returns L2 error in abstract (i.e., computed from radii,
- *   versus embedded (which is from Tutte-type layout).
+ * * 'quality' returns L2 error in abstract (i.e., computed from 
+ *   radii, versus embedded (which is from Tutte-type layout).
  * * 'reapRadii' puts 'localradii' and 'localcenters' into the myPLite
  * 
  * @author kstephe2, January 2014
@@ -123,7 +128,7 @@ public class GOpacker extends RePacker {
 	}
 	
 	public GOpacker(PackData pd,int pass_limit) { // default: max pack 
-		super(pd,pass_limit,true);
+		super(pd,pass_limit);
 		passes=pass_limit;
 		errtol=.001;
 		realLoad(null);
@@ -131,12 +136,10 @@ public class GOpacker extends RePacker {
 	}
 	
 	public GOpacker(PackData pd,NodeLink vint) { // specify interior
-		super(pd,30,true);
+		super(pd,30);
 		setMode(0); // NOT_YET_SET;
 		realLoad(vint);
 	}
-
-	public void setSparseC(boolean useC) {}; // not applicable for GOpacker
 	
 	/**
 	 * fake, do-nothing 'RePacker' abstract method. Have to make the 'realLoad' call
@@ -169,10 +172,7 @@ public class GOpacker extends RePacker {
 		setCorners(null,null);
 	
 		// create persistent 'PackLite', 'SolverData', and 'rhs' stuff
-		if (v_int!=null && v_int.size()>0)
-			myPLite=new PackLite(p,v_int);
-		else 
-			myPLite=new PackLite(p); 
+		PackLite myPLite=new PackLite(p);
 		origNodeCount=p.nodeCount;
 		
 		// what to do about aims? Let's reset to default, then change as
@@ -328,7 +328,7 @@ public class GOpacker extends RePacker {
 			return 0;
 		}
 		for (int k=1;k<=myPLite.vertCount;k++) 
-			myPLite.radii[k]=p.rData[myPLite.v2parent[k]].rad;
+			myPLite.radii[k]=p.getRadius(myPLite.v2parent[k]);
 		if (passNum<0)
 			passNum=passLimit;
 		else
@@ -472,7 +472,8 @@ public class GOpacker extends RePacker {
 	public int getTutteCenters(SolverData sD) {
 
 		try {
-			sData = new SolverFunction().apply(sData);
+// OBE: as of 3/2022 have deleted all the former JNI stuff			
+//			sData = new SolverFunction().apply(sData);
 		} catch (Exception ex) {
 			CirclePack.cpb.errMsg("SolverFunction UMFpackException occurred: "+ex.getMessage());
 			return 0;
@@ -498,7 +499,6 @@ public class GOpacker extends RePacker {
 //		}
 		
 		return 1;
-		
 	}
 	
 	/**
@@ -511,7 +511,6 @@ public class GOpacker extends RePacker {
 		
 		// update 
     	sectorTans=new double[myPLite.intVertCount+1][];
-    	UtilPacket up=new UtilPacket();
     	for (int v=1;v<=myPLite.intVertCount;v++) {
 //    		double ckangsum=0.0; // for debugging
     	    int []flower=myPLite.flowers[v];
@@ -519,8 +518,7 @@ public class GOpacker extends RePacker {
     	    for (int j=0;j<myPLite.vNum[v];j++) {
     	        int w=flower[j];
     	        int u=flower[j+1];
-    	        EuclMath.e_cos_overlap(myPLite.radii[v],myPLite.radii[w],myPLite.radii[u],up);
-    	        double cang=up.value;
+    	        double cang=EuclMath.e_cos_overlap(myPLite.radii[v],myPLite.radii[w],myPLite.radii[u]);
 //    	        ckangsum +=Math.acos(cang); // debugging: check angle sum
     	        data[j]=Math.sqrt((1.0-cang)/(1.0+cang)); // half angle formula
     	    }
@@ -761,16 +759,14 @@ public class GOpacker extends RePacker {
     public double []packQuality(double crit) {
     	double []ans=new double[2];
     	double sas=0.0;
-    	UtilPacket uP=new UtilPacket();
     	for (int k=1;k<=myPLite.intVertCount;k++) {
     		double r=myPLite.radii[k];
     		int num=myPLite.vNum[k];
 			int []flower=myPLite.flowers[k];
     		sas=-myPLite.aims[k];
     		for (int j=0;j<num;j++) {
-				EuclMath.e_cos_overlap(r,
-						myPLite.radii[flower[j]],myPLite.radii[flower[j+1]],uP);
-				sas += Math.acos(uP.value);
+    			sas += Math.acos(EuclMath.e_cos_overlap(r,
+						myPLite.radii[flower[j]],myPLite.radii[flower[j+1]]));
 			}
     		sas=Math.abs(sas);
     		if (sas>ans[0]) ans[0]=sas;
@@ -789,8 +785,8 @@ public class GOpacker extends RePacker {
 			for (int v=1;v<=p.nodeCount;v++) {
 				int k=myPLite.parent2v[v];
 				if (k>0) {
-					p.rData[v].rad=myPLite.radii[k];
-					p.rData[v].center=new Complex(myPLite.centers[k]);
+					p.setRadius(v,myPLite.radii[k]);
+					p.setCenter(v,new Complex(myPLite.centers[k]));
 				}
 			}
 			return;
@@ -800,8 +796,8 @@ public class GOpacker extends RePacker {
 				int k=myPLite.parent2v[v];
 				CircleSimple sc=SphericalMath.e_to_s_data(myPLite.centers[k],myPLite.radii[k]);
 				if (k>0) {
-					p.rData[v].center=new Complex(sc.center);
-					p.rData[v].rad=sc.rad;
+					p.setCenter(v,new Complex(sc.center));
+					p.setRadius(v,sc.rad);
 				}
 			}
 			
@@ -814,8 +810,8 @@ public class GOpacker extends RePacker {
 				int k=myPLite.parent2v[v];
 				CircleSimple sc=HyperbolicMath.e_to_h_data(myPLite.centers[k],myPLite.radii[k]);
 				if (k>0) {
-					p.rData[v].center=new Complex(sc.center);
-					p.rData[v].rad=sc.rad;
+					p.setCenter(v,new Complex(sc.center));
+					p.setRadius(v,sc.rad);
 				}
 			}
 			return;
@@ -1145,12 +1141,11 @@ public class GOpacker extends RePacker {
     	
     	return count;
     }
-
  
     /**
      * Given the corners, set up the 'sides', cclw lists of vertices 
      * forming the sides, including first and last vertex.
-     * @param crnrs []int, corner vertices, local indices
+     * @param crnrs[] int, corner vertices, local indices
      * @return
      */
     public int sideSetup(int []crnrs) {
@@ -1224,97 +1219,7 @@ public class GOpacker extends RePacker {
 
         return n;
     }
-    
-    /**
-     * Given eucl boundary radii, form bdry circles into a triangle
-     * <u,v,w>, with given angle at v.
-     * 
-     * Position v at origin, w on positive x-axis, u ccw
-     * @param v int, principal corner
-     * @param u int
-     * @param w int
-     * @param v_ang double, designated angle at v
-     * @return double, stretch required in edge <w,u>
-     */
-    public double triSet(int v,int u,int w,double v_ang) {
-    	if (p.kData[v].bdryFlag==0 || p.kData[u].bdryFlag==0 || 
-    			p.kData[w].bdryFlag==0 || v_ang<.01 || (v_ang-Math.PI)<.1)
-    		throw new DataException("corner or angle problem in 'triSet'");
-    	
-    	// get length of edges <v w>
-    	double leg_vw=myPLite.radii[myPLite.parent2v[v]]+myPLite.radii[myPLite.parent2v[w]];
-    	int next=v;
-    	while((next=p.kData[next].flower[0])!=w) {
-    		leg_vw += 2.0*myPLite.radii[myPLite.parent2v[next]];
-    	}
-    	
-    	// get length of edges <u v>
-    	double leg_uv=myPLite.radii[myPLite.parent2v[v]]+myPLite.radii[myPLite.parent2v[u]];
-    	next=u;
-    	while((next=p.kData[next].flower[0])!=v) {
-    		leg_uv += 2.0*myPLite.radii[myPLite.parent2v[next]];
-    	}
-    	
-    	// get length of opposite side (strictly between u and w) from radii
-    	double opp_mid=0.0;
-    	next=w;
-    	while((next=p.kData[next].flower[0])!=u) {
-    		opp_mid += 2.0*myPLite.radii[myPLite.parent2v[next]];
-    	}
-    	double addon=myPLite.radii[myPLite.parent2v[w]]+myPLite.radii[myPLite.parent2v[u]];
-    	
-    	// get intended length based on leg lengths and ang_v
-    	Complex wu_vector=MathComplex.exp(new Complex(Math.log(leg_uv),v_ang)).
-    			minus(new Complex(leg_vw,0.0));
-    	double d=wu_vector.abs()-addon;
-    	wu_vector=wu_vector.divide(wu_vector.abs()); // unit vector
-    	if (d<(0.5*(leg_uv+leg_vw)))
-    		throw new DataException("opposite side too restricted to adjust");
-    	
-    	// adjust 'radii' between to get intended length
-    	double factor=d/opp_mid;
-    	next=w;
-    	while ((next=p.kData[next].flower[0])!=u)
-    		myPLite.radii[myPLite.parent2v[next]] *= factor;
-    	
-    	// lay out the circles: 
-    	// v at origin, extend vw along x-axis
-    	myPLite.centers[myPLite.parent2v[v]]=new Complex(0.0);
-    	next=v;
-    	double dist=myPLite.radii[myPLite.parent2v[next]];
-    	while ((next=p.kData[next].flower[0])!=w) {
-    		int ni=myPLite.parent2v[next];
-    		dist +=myPLite.radii[ni];
-    		myPLite.centers[ni]=new Complex(dist);
-    		dist +=myPLite.radii[ni];
-    	
-    		myPLite.centers[myPLite.parent2v[w]]=new Complex(leg_vw);
-    	
-    		// u to v in opposite direction of v_ang
-    		Complex uv_vector=MathComplex.exp(new Complex(0.0,v_ang)); // unit vector
-    		myPLite.centers[myPLite.parent2v[u]]=new Complex(uv_vector).times(leg_uv);
-    		next=u;
-    		dist=leg_uv-myPLite.radii[myPLite.parent2v[u]];
-    		while ((next=p.kData[next].flower[0])!=v) {
-    			int nid=myPLite.parent2v[next];
-    			dist -=myPLite.radii[nid];
-    			myPLite.centers[nid]=uv_vector.times(dist);
-    			dist -=myPLite.radii[nid];
-    		}
-    
-    		// layout opposite side
-    		next=w;
-    		dist=myPLite.radii[myPLite.parent2v[next]];
-    		while ((next=p.kData[next].flower[0])!=u) {
-    			int nid=myPLite.parent2v[next];
-    			dist +=myPLite.radii[nid];
-    			myPLite.centers[nid]=wu_vector.times(dist);
-    			dist +=myPLite.radii[nid];
-    		}
-    	}
-   		return factor;
-    }
-    
+ 
     /**
      * Reset corner info for polygonal packings. This nulls out old info,
      * but new is set up elsewhere when the code sees that 'parentCorners' 
@@ -1357,23 +1262,6 @@ public class GOpacker extends RePacker {
     	setMode(POLY_PACK);
     	
     	return sideSetup(corners);
-    }
-    
-    /**
-     * Typically used in FIXED_BDRY case when the bdry radii and centers 
-     * are to remain fixed. Alternately, to initialize bdry data in a particular way.
-     * @return int count
-     */
-    public int setBdrys() {
-    	int count=0;
-    	for (int j=0;j<myPLite.bdryCount;j++) {
-    		int k=myPLite.intVertCount+1+j; // local index
-    		int w=myPLite.v2parent[k]; // parent index
-    		myPLite.centers[k]=new Complex(p.rData[w].center);
-    		myPLite.radii[k]=p.rData[w].rad;
-    		count++;
-    	}
-    	return count;
     }
     
     /**

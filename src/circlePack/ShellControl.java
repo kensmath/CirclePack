@@ -9,7 +9,6 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.Vector;
 
-import JNI.JNIinit;
 import allMains.CPBase;
 import allMains.CirclePack;
 import cpTalk.sockets.CPMultiServer;
@@ -17,11 +16,12 @@ import input.CPFileManager;
 import input.SocketSource;
 import packing.PackData;
 import panels.CPPreferences;
-import panels.CPScreen;
 import util.CPTimer;
 
 /**
- * Need a standalone version of CirclePack, to be run from a shell or remotely.
+ * Need a standalone version of CirclePack, to be run from a shell 
+ * or remotely. It will still generate images in a backing plane
+ * so it can generate an output jpg. 
  * 
  * @author kens, May 2019
  *
@@ -29,27 +29,26 @@ import util.CPTimer;
 
 public class ShellControl extends CPBase {
 	
-	static Date date=new Date();
 	public static String CPVersion= new String("CirclePack, "+circlePack.Version.version+", "+
-			DateFormat.getDateInstance(DateFormat.MEDIUM).format(date));
+			DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date()));
 	public static CPTimer cpTimer; // for crude timings
 	public static CPPreferences preferences; // user preferences
 
 	// Constructor
 	public ShellControl() {
 		socketActive=true;  // means that socket server will be started
-		cpSocketPort=3736;
 		cpSocketHost=null;
 		cpMultiServer=null;
 		socketSources=new Vector<SocketSource>();
 		
 		NUM_PACKS=3; // number of packings to maintain
+		FAUX_RAD=20000;
 		cpTimer=new CPTimer();
 	}
 	
 	/**
 	 * This actually starts ShellControl: initiate preferences,
-	 * start C libraries, create the pack[] vector of packings,
+	 * start C libraries, create the packings[] array,
 	 */
 	public void initShellControl() {
 		// look for preference directory/file in 'homeDirectory/myCirclePack';
@@ -76,11 +75,9 @@ public class ShellControl extends CPBase {
 					writer.newLine();
 					writer.write("PRINT_COMMAND lpr");
 					writer.newLine();
-//				writer.write("POSTSCRIPT_VIEWER gv");
-//				writer.newLine();
 					writer.write("WEB_URL_FILE web_URLs/");
 					writer.newLine();
-					writer.write("XMD_URL_FILE xmd_URLs/");
+					writer.write("SCRIPT_URL_FILE script_URLs/");
 					writer.newLine();
 					writer.write("ACTIVE_CANVAS_SIZE 650");
 					writer.newLine();
@@ -98,50 +95,18 @@ public class ShellControl extends CPBase {
 
 		preferences = new CPPreferences(); // pref stuff set here
 
-		// Init 'genericMain' C code for JNI calls to 'HeavyC_lib'
-		// TODO: how to catch exception if C calls fail in the native library
-		if (CPBase.attachCcode) {
-			try {
-//				System.out.println(System.getProperty("java.library.path"));
-//				java.io.File f=new File(System.getProperty("java.library.path")+
-//						File.separatorChar + "libHeavyC_lib.so");
-//				System.out.println(System.getenv().toString());
-
-				new JNIinit(); // try to start 'DelaunayBuild', 'SolverFunction' libs
-
-			} catch (Exception ex) {
-				System.err.println("Exception starting some shared C library;"
-						+ " this does not necessarily affect the use of 'CirclePack'");
-				System.err.println("System java library path is :" + System.getProperty("java.library.path"));
-			} catch (Error e) {
-				System.err.println("Error in starting some shared C library;"
-						+ " this does not necessarily affect the use of 'CirclePack'");
-			}
-		}
-
 		// Create the packing data memory storage areas
-		pack = new CPScreen[NUM_PACKS];
+		packings=new PackData[NUM_PACKS];
 		for (int i = 0; i < NUM_PACKS; i++) {
-			pack[i] = new CPScreen(i);
-			pack[i].circle.setParent(pack[i]);
-			pack[i].face.setParent(pack[i]);
-			pack[i].edge.setParent(pack[i]);
-			pack[i].trinket.setParent(pack[i]);
-			pack[i].realBox.setParent(pack[i]);
-			pack[i].sphView.setParent(pack[i]);
+			packings[i]=new PackData(i);
 		}
-		
+
+		// TODO: If we needed an image to use, we would instantiate it here
 		runSpinner=new ShellSpinner();
 	}
 	
-	// ================== abstract methods required by CPBase =============
+	// ============= abstract methods required by CPBase =============
 
-	/** do not instantiate 'frame'
-	 */
-	public boolean startHead() {
-		return false;
-	}
-		
 	/**
 	 * @param msgstr String
 	 */
@@ -164,22 +129,50 @@ public class ShellControl extends CPBase {
 		System.err.println(msgstr);
 	}
 	
-	/*
-	 * TODO: have to fix this
-	 */
 	public PackData getActivePackData() {
-		return null;
+		return packings[activePackNum];
 	}
 	
-	/*
-	 * TODO: have to finish this
-	 */
 	public int getActivePackNum() {
-		return 0;
+		return activePackNum;
+	}
+	
+	/**
+	 * Replace 'packings[pnum]' with new packing; old packing
+	 * is generally orphaned.
+	 * @param p PackData
+	 * @param pnum int
+	 * @param keepX boolean, keep current extenders
+	 * @return p, null on error
+	 */
+	public PackData swapPackData(PackData p,int pnum,boolean keepX) {
+		if (p==null)
+			return p;
+		
+		// before replacing, handle extension
+		if (keepX) { 
+			p.packExtensions=packings[pnum].packExtensions;
+			for (int x=0;x<p.packExtensions.size();x++)
+				p.packExtensions.get(x).packData=p;
+		}
+		
+//		CPBase.packings[pnum].cpDrawing=null; // detach from cpDrawing
+//		p.cpDrawing=CPBase.cpDrawing[pnum]; 
+//		p.cpDrawing.setPackData(p);
+		
+		CPBase.packings[pnum]=p; 
+		return p;
+	}
+	
+	// done with abstract methods
+	
+	public static void switchActivePack(int packnum) {
+		int old_pack = activePackNum;
+		if (packnum<0 || packnum>2 || old_pack==packnum) 
+			return;
+		activePackNum=packnum;
 	}
 			
-	// done with abstract methods
-		
 	/** 
 	 * Open a command socket at a given port, local host.
 	 * In future, may change host, may search for unused port,

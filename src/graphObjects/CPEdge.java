@@ -13,7 +13,7 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 
 import math.Point3D;
-import panels.CPScreen;
+import packing.CPdrawing;
 import util.ColorUtil;
 
 import complex.Complex;
@@ -36,7 +36,7 @@ public class CPEdge extends Complex {
 	// persistent instance object
 	private Line2D.Double line;
 	public Color old_color;
-	private CPScreen parent;
+	private CPdrawing parent;
 	private static Path2D.Double path = new Path2D.Double();
 	private int geometry; // eucl or hyperbolic; see SphCPCircle also
 
@@ -52,7 +52,7 @@ public class CPEdge extends Complex {
 		line = new Line2D.Double();
 	}
 
-	public void setParent(CPScreen par) {
+	public void setParent(CPdrawing par) {
 		parent = par;
 	}
 
@@ -142,10 +142,10 @@ public class CPEdge extends Complex {
 	 * Adds a spherical geodesic to an existing path
 	 * @param sg, SphGeodesic 
 	 * @param gpath, existing Path2D.Double
-	 * @param cpS, CPScreen
+	 * @param cpS, CPDrawing
 	 */
 	public static void sphCreateEdge(Path2D.Double gpath,
-			SphGeodesic sg,CPScreen cpS) {
+			SphGeodesic sg,CPdrawing cpS) {
 		if (!sg.isVisible()) return; // both are on back
 		if (sg.lineFlag) { // handle a straight line
 			Complex a=SphericalMath.sphToVisualPlane(sg.z1.x,sg.z1.y);

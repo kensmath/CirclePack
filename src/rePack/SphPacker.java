@@ -1,166 +1,110 @@
 package rePack;
 
-import java.io.IOException;
-
-import JNI.JNIinit;
-import allMains.CPBase;
-import exceptions.CombException;
+import allMains.CirclePack;
+import exceptions.PackingException;
 import input.CommandStrParser;
 import packing.PackData;
 
 /**
- * Spherical circle packing computations. 
+ * Spherical circle packing computations. Currently this is 
+ * only for maximal packing of a sphere. 
  * 
- * History: As of 4/08, there are still few methods available, and none 
- * intrinsic to spherical geometry. The only problems that can be solved 
- * routinely are maximal packings and a few special branched maximal packings, 
- * and even these are carried out in hyperbolic geometry. The complex is
- * punctured, the is max packed in the unit disc, the packing is projected 
- * to the sphere where the southern hemisphere is included for the missing
- * vertex, then some normalization may be applied (as with 'NSpole').
+ * As of 3/2023, changing from using euclidean packing to
+ * hyperbolic due to layout error with the former: 
+ * We "puncture" a vertex, max_pack that in the hyp plane,
+ * project to the sphere, project to the sphere, which also
+ * normalizes.
  * 
- * There are calls here to Orick's method, which computes the maximal
- * packing in the disc via interwoven iteration that gives both radii 
- * and centers. In particular, 'layout' calls must be avoided. Orick's
- * code uses sparse matrices and is implemented in GOpacker and SolverFunction lib
- * If that library is not available, computations default to the former
- * methods.
- * 
- * @author kens
+ * @author kens 1/2021 and 3/2023
  *
  */
 public class SphPacker extends RePacker {
 	
     public static final int SPH_GOPACK_THRESHOLD=501;  // for smaller packs, default to Java
+    public static final double MPI2=2.0*Math.PI;
+    int punc_vert; 
+    boolean swap=false;
 
-	// Constructors
-	public SphPacker(PackData pd,int pass_limit) { // pass_limit suggests using Java methods
-		super(pd,pass_limit,false);
+	// Constructor
+	public SphPacker(PackData pd,int p_vert,int pass_limit) { // pass_limit suggests using Java methods
+    	p=pd;
+    	pdcel=p.packDCEL;
+    	if (pass_limit<0) 
+    		passLimit=PASSLIMIT;
+		else 
+			passLimit=pass_limit; // passLimit=5000;
+    	punc_vert=p_vert;
+		punc_vert=load(); 
 	}
 
-	public SphPacker(PackData pd,boolean useC) {
-		super(pd,CPBase.RIFFLE_COUNT,useC);
-	}
-	
-	public SphPacker(PackData pd) {
-		super(pd,CPBase.RIFFLE_COUNT,true);
-	}
-	
 	/**
 	 * Abstract methods not yet used here.
 	 */
-	public int load() {return 1;}
-	public int startRiffle() {return 1;}
 	public int reStartRiffle(int passNum) {return 1;}
-	public int continueRiffle(int passNum) {return 1;}
 	public double l2quality(double crit) {return 1;}
-	public void reapResults() {};
-	
-	public void setSparseC(boolean useC) {
-		useSparseC=false;
-		if (useC) { // requested to use GOpacker routines if possible
-			if (p.nodeCount<SPH_GOPACK_THRESHOLD) { // for smaller packing, use Java
-				useSparseC=false;
-				return;
+	public int startRiffle() {return 1;}
+	public int restartRiffle(int passnum) {return 1;}
+	public int continueRiffle(int passNum) {return 1;}
+
+	/**
+	 * choose to puncture; if punc_vert is not zero, then
+	 * use that, else try max index, but if degree is less
+	 * than 6, then look petal vert with largest degree.
+	 * @return int, vert index
+	 */
+	public int load() {
+		int pv=punc_vert;
+		if (pv<=0 || (pv>0 && p.isBdry(pv))) {
+			pv=p.nodeCount;
+			int deg=p.packDCEL.vertices[pv].getNum();
+			if (deg<6) {
+				int[] flower=p.packDCEL.vertices[pv].getFlower(false);
+				for (int j=0;j<flower.length;j++) {
+					int d=p.packDCEL.vertices[flower[j]].getNum();
+					if (d>deg && !p.isBdry(flower[j])) 
+						pv=flower[j];
+				}
 			}
-			if (JNIinit.SparseStatus())
-				useSparseC=true;
 		}
-		return;
+		return pv;
 	}
-
+	
 	/**
-	 * Generic call: use Java or C depending on what's available and preferred.
-	 * @param puncture_v, vertex to puncture if Java is used; if <=0, default to 
-	 * antipodal to 'alpha'
-	 * @param puncture_v int; if -1, default
-	 * @param cycles, repacking cycles if Java is used 
+	 * puncture, max_pack in hyp plane, but move to sphere is in
+	 * 'reapResults', thus allowing chance to see intermediate stage.
+	 * @param pass_limit
 	 * @return
+	 * @throws PackingException
 	 */
-	public int maxPack(int puncture_v,int cycles) {
-		if (!useSparseC)
-			return maxPackJ_Sph(puncture_v,cycles);
-		return maxPackC_Sph();
+	public int maxPack(int pass_limit) throws PackingException {
+		passLimit=pass_limit; // passLimit=5000;
+		int ok=1;
+		if (punc_vert!=p.nodeCount) {
+			if (p.packDCEL.swapNodes(punc_vert,p.nodeCount)==0)
+				return 0;
+			swap=true;
+		}
+		ok *=p.puncture_vert(p.nodeCount);
+		if (ok!=0) {
+			ok *=CommandStrParser.jexecute(p,"max_pack "+passLimit);
+		}
+		if (ok==0)
+			return 0;
+		return 1;
 	}
 	
 	/**
-	 * Spherical repack in Java (used if packing small or there is
-	 * no C library). Caution: if puncture_v<=0, choose puncture antipodal
-	 * to alpha. NOTE: This can be poor choice, so try to set v if results
-	 * are bad.
-	 * @param puncture_v int, if <=0, choose antipodal to alpha
-	 * @param cycles int, repack cycles
-	 * @return cycle count.
+	 * Here we add the missing vertex back in, project to the sphere
+	 * and normalize, and swap if needed
 	 */
-	public int maxPackJ_Sph(int puncture_v,int cycles) {
-		p.hes=1;
-		if (puncture_v<=0) puncture_v=p.antipodal_vert(p.alpha);
-		if (puncture_v<=0) 
-			throw new CombException("improper puncturing vertex");
-		  
-		// save lists to restore later
-		holdLists(p);
-		  
-		  // Method: puncture, max_pack in unit disc, project, then 
-		  //   normalize. Note: swapping, so puncture is 'nodeCount', 
-		  //   allows indices to be kept in tact.
-		  if (puncture_v!=p.nodeCount) {
-			  p.swap_nodes(puncture_v,p.nodeCount);
-		  }
-		  if (p.puncture_vert(p.nodeCount)==0) { 
-			  throw new CombException("puncture failed");
-		  }
-
-		  // max_pack in the disc 
-		  p.geom_to_h();
-		  p.setGeometry(-1);
-		  p.setCombinatorics();
-		  p.set_aim_default();
-		  
-		  // set bdry radii to 5.0 (preferrable to -.1 which can
-		  //   mess up placement of degree 2 bdry circles.
-		  try {
-			  CommandStrParser.jexecute(p,"set_rad 5.0 b");
-		  } catch (Exception ex) {}
-		  int count=p.repack_call(cycles);
-		  p.fillcurves();
-		  try {
-			  p.comp_pack_centers(false,false,2,CommandStrParser.LAYOUT_THRESHOLD);
-		  } catch (IOException ex) {};
-		  
-		  // TODO: were should I (or should I?) apply NSpole
-		  
-		  // TODO: 6/17. Oops, I think these should be commented out in favor
-		  //       of the call to proj_max_to_s.
-//		  CommandStrParser.jexecute(p,"geom_to_s");
-//		  CommandStrParser.jexecute(p,"add_ideal");
-		  
-	   	  p.proj_max_to_s(0,1.0); // old action (but reliable)
-		  if (puncture_v != p.nodeCount) {
-			  p.swap_nodes(puncture_v,p.nodeCount);
-			  p.setCombinatorics();
-		  }
-		  restoreLists(p);
-		  return count;
-	}
-	
-	/**
-	 * Pack using Orick's code in C for maximal packing on sphere.
-	 * Result gives both centers and radii of packing, unnormalized.
-	 * TODO: get info on north/south pole vertices.
-	 * @return int
-	 */
-	public int maxPackC_Sph() {
-		GOpacker goPack=new GOpacker(p);
-		goPack.setMode(1); // max pack mode
-		goPack.startRiffle();
-		if (goPack.setSphBdry()>0) // these sets bdry rad/centers (if there are 3 bdry verts)
-			goPack.setMode(GOpacker.FIXED_BDRY);
-		int cnt=goPack.continueRiffle(30);
-		goPack=null; // close the GOpacker
-
-		p.fillcurves();
-		return cnt;
+	public void reapResults() {
+		if (CommandStrParser.jexecute(p,"proj")==0) {
+			CirclePack.cpb.errMsg("Opps, failed to convert back to sphere)");
+			return;
+		}
+		if (swap && p.packDCEL.swapNodes(punc_vert,p.nodeCount)==0)
+			CirclePack.cpb.errMsg("Opps, failed to swap vertices back");
+		return;
 	}
 	
 }

@@ -2,8 +2,7 @@ package util;
 
 import math.Matrix3D;
 import math.Point3D;
-import panels.CPScreen;
-
+import packing.CPdrawing;
 import complex.Complex;
 
 /**
@@ -15,7 +14,7 @@ import complex.Complex;
  */
 public class SphView {
 
-	CPScreen parent;    // parent canvas
+	CPdrawing parent;    // parent canvas
 	public Matrix3D viewMatrix;  // maintains information on current view of sphere 
 	
 	// Constructor
@@ -23,8 +22,8 @@ public class SphView {
 		defaultView(); 
 	}
 	
-	public void setParent(CPScreen cps) {
-		parent=cps;
+	public void setParent(CPdrawing cpd) {
+		parent=cpd;
 	}
 	
 	/**

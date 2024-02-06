@@ -5,7 +5,8 @@ import java.util.Vector;
 import exceptions.DataException;
 import geometry.HyperbolicMath;
 import math.Point3D;
-import panels.CPScreen;
+import util.ColorUtil;
+import util.RadIvdPacket;
 
 /**
  * Static methods for various colorizing actions --- wanted to move these
@@ -23,11 +24,12 @@ public class ColorCoding {
 	public static int face_area_comp(PackData p) {
 	    int flag=1;
 
-	    int mid=(int)(CPScreen.color_ramp_size/2);
+	    int mid=(int)(ColorUtil.color_ramp_size/2);
 	    double t=0.0;
+	    double b=0.0;
 	    // ??? I don't recall the reason for this call, p need not be hyperbolic
-	    double b=HyperbolicMath.h_area(p.rData[p.faces[1].vert[0]].rad,
-	    		p.rData[p.faces[1].vert[1]].rad,p.rData[p.faces[1].vert[2]].rad);
+//	    double b=HyperbolicMath.h_area(p.getRadius(p.faces[1].vert[0]),
+//	    		p.getRadius(p.faces[1].vert[1]),p.getRadius(p.faces[1].vert[2]));
 	    double []areas=new double[p.faceCount+1];
 	    for (int i=1;i<=p.faceCount;i++) {
 	  	  	areas[i]=p.faceArea(i);
@@ -37,9 +39,9 @@ public class ColorCoding {
 	    if (b==0.0) flag=0;
 	    if (t==0 || Math.abs(t-b)/t<.005)
 	      for (int i=1;i<=p.faceCount;i++) 
-	    	  p.faces[i].color=CPScreen.coLor(mid);
+	    	  p.setFaceColor(i,ColorUtil.cloneMe(ColorUtil.coLor(mid)));
 	    else for (int i=1;i<=p.faceCount;i++) 
-	        p.faces[i].color=CPScreen.coLor(1+(int)((mid-2)*(areas[i]-t)/(b-t)));
+	        p.setFaceColor(i,ColorUtil.cloneMe(ColorUtil.coLor(1+(int)((mid-2)*(areas[i]-t)/(b-t)))));
 	    return (flag);
 	  }
 	
@@ -56,7 +58,7 @@ public class ColorCoding {
 	    double b=1.0;
 	    double ratio=1.0;
 
-	    mid=(int)(CPScreen.color_ramp_size/2);
+	    mid=(int)(ColorUtil.color_ramp_size/2);
 	    node=(p.faceCount>q.faceCount) ? q.faceCount : p.faceCount;
 	    double []areas_p=new double[node+1];
 	    double []areas_q=new double[node+1];
@@ -71,13 +73,13 @@ public class ColorCoding {
 	    else {
 	        for (int v=1;v<=node;v++) {
 	  	  if ((ratio=areas_p[v]/areas_q[v])>1.0)
-	  	    p.faces[v].color=CPScreen.coLor((int)(mid+(mid-1)*(ratio-1.0)/(b-1.0)));
+	  	    p.setFaceColor(v,ColorUtil.cloneMe(ColorUtil.coLor((int)(mid+(mid-1)*(ratio-1.0)/(b-1.0)))));
 	  	  else 
-	  	    p.faces[v].color=CPScreen.coLor(1+(int)((mid-2)*(1.0-(1.0/ratio-1.0)/(b-1.0))));
+	  	    p.setFaceColor(v,ColorUtil.cloneMe(ColorUtil.coLor(1+(int)((mid-2)*(1.0-(1.0/ratio-1.0)/(b-1.0))))));
 	  	}
 	      }
 	    if (node<p.faceCount) for (int v=node+1;v<=p.faceCount;v++)
-	      p.faces[v].color=CPScreen.coLor(mid);
+	      p.setFaceColor(v,ColorUtil.cloneMe(ColorUtil.coLor(mid)));
 	    return (flag);
 	} 
 
@@ -94,37 +96,34 @@ public class ColorCoding {
 	    double b=1.0;
 	    double ratio=1.0;
 
-	    mid=(int)(CPScreen.color_ramp_size/2);
+	    mid=(int)(ColorUtil.color_ramp_size/2);
 	    node=(p.faceCount>q.faceCount) ? q.faceCount : p.faceCount;
 	    double []areas_p=new double[node+1];
 	    double []areas_q=new double[node+1];
-	    for (int v=1;v<=node;v++) {
-	        areas_p[v]=HyperbolicMath.h_area(p.rData[p.faces[v].vert[0]].rad,
-	  			p.rData[p.faces[v].vert[1]].rad,
-	  			p.rData[p.faces[v].vert[2]].rad);
-	        areas_q[v]=HyperbolicMath.h_area(q.rData[q.faces[v].vert[0]].rad,
-	  			q.rData[q.faces[v].vert[1]].rad,
-	  			q.rData[q.faces[v].vert[2]].rad);
-	        ratio=areas_q[v]/areas_p[v];
+	    for (int f=1;f<=node;f++) {
+	        areas_p[f]=HyperbolicMath.h_area(p,f);
+	        areas_q[f]=HyperbolicMath.h_area(q,f);
+	        ratio=areas_q[f]/areas_p[f];
 	        if (ratio>b) b=ratio;
 	        if ((1.0/ratio)>b) b=1.0/ratio;
 	    }
 	    if (Math.abs(b-1)<PackData.OKERR) { 
-	        for (int v=1;v<=p.faceCount;v++) p.faces[v].color=CPScreen.coLor(mid);
+	        for (int v=1;v<=p.faceCount;v++) 
+	        	p.setFaceColor(v,ColorUtil.cloneMe(ColorUtil.coLor(mid)));
 	    }
 	    else {
 	        for (int v=1;v<=node;v++) {
 	  	  if ((ratio=areas_p[v]/areas_q[v])>1.0) {
-	  		  p.faces[v].color=CPScreen.coLor((int)(mid+(mid-1)*(ratio-1.0)/(b-1.0)));
+	  		  p.setFaceColor(v,ColorUtil.cloneMe(ColorUtil.coLor((int)(mid+(mid-1)*(ratio-1.0)/(b-1.0)))));
 	  	  }
 	  	  else {
-	  	    p.faces[v].color=CPScreen.coLor(1+(int)((mid-2)*(1.0-(1.0/ratio-1.0)/(b-1.0))));
+	  	    p.setFaceColor(v,ColorUtil.cloneMe(ColorUtil.coLor(1+(int)((mid-2)*(1.0-(1.0/ratio-1.0)/(b-1.0))))));
 	  	  }
 	        }
 	    }
 	    if (node<p.faceCount) 
 	    	for (int v=node+1;v<=p.faceCount;v++)
-	    		p.faces[v].color=CPScreen.coLor(mid);
+	    		p.setFaceColor(v,ColorUtil.cloneMe(ColorUtil.coLor(mid)));
 	    return 1;
 	  } 
 	  
@@ -142,8 +141,9 @@ public class ColorCoding {
 		  p.utilDoubles=new Vector<Double>(p.faceCount+1);
 		  p.utilDoubles.add((Double)0.0); // empty 0th spot
 		  for (int f=1;f<=p.faceCount;f++) {
-			  Double dbl=Double.valueOf((double)Point3D.triArea(p.xyzpoint[p.faces[f].vert[0]],
-					  p.xyzpoint[p.faces[f].vert[1]],p.xyzpoint[p.faces[f].vert[2]]));
+			  int[] verts=p.packDCEL.faces[f].getVerts();
+			  Double dbl=Double.valueOf((double)Point3D.triArea(p.xyzpoint[verts[0]],
+					  p.xyzpoint[verts[1]],p.xyzpoint[verts[2]]));
 			  p.utilDoubles.add(dbl);
 			  count++;
 		  }

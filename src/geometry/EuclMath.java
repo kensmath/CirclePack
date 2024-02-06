@@ -1,19 +1,17 @@
 package geometry;
-import exceptions.DataException;
-
 import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CPBase;
 import baryStuff.BaryPoint;
-import komplex.EdgeSimple;
-import komplex.RedEdge;
-import komplex.RedList;
+import combinatorics.komplex.RedEdge;
+import complex.Complex;
+import dcel.PackDCEL;
+import exceptions.DataException;
+import math.Mobius;
 import math.Point3D;
 import packing.PackData;
-import util.UtilPacket;
-
-import complex.Complex;
+import util.RadIvdPacket;
 /**
  * Static methods for mathematical operations in euclidean geometry.
  */
@@ -24,143 +22,131 @@ public class EuclMath{
 
 	/**
 	 * Find eucl center/rad for circle thru 3 points in eucl plane.
+	 * Find intersection of perp bisector of two sides for 'cent',
+	 * then compute radius.
 	 * @param z1 Complex
 	 * @param z2 Complex
 	 * @param z3 Complex
-	 * @return SimpleCircle
+	 * @return CircleSimple
 	 */
 	public static CircleSimple circle_3(Complex z1, Complex z2, Complex z3) {
 		double a1 = z2.x-z1.x;
 		double a2 = z3.x-z2.x;
 		double b1 = z2.y-z1.y;
 		double b2 = z3.y-z2.y;
-		double det = 2.0 * (a1 * b2 - b1 * a2);
+		double det = (a1 * b2 - b1 * a2);
 		if (Math.abs(det) < 0.0000000000001) // return with radius 0.0
 			return new CircleSimple(false);
 
-		double dum = z2.abs();
-		dum = dum * dum;
-		double c1 = z1.abs();
-		c1 = (-c1 * c1);
-		c1 += dum;
-		double c2 = z3.abs();
-		c2 = c2 * c2;
-		c2 -= dum;
+		double dum = z2.absSq()/2.0;
+		double c1 = dum-z1.absSq()/2.0;
+		double c2 = z3.absSq()/2.0-dum;
 
-		double c_real = (b2 * c1 - b1 * c2) / det;
-		double c_imag = (a1 * c2 - a2 * c1) / det;
-		double c_rad=Math.sqrt((c_real-z1.x)*(c_real-z1.x)+(c_imag-z1.y)*(c_imag-z1.y));
-		return new CircleSimple(c_real, c_imag, c_rad, 1);
+		Complex cent=new Complex((b2*c1-b1*c2)/det,(a1*c2-a2*c1)/det);
+		double c_rad=cent.minus(z1).abs();
+		return new CircleSimple(cent,c_rad,1);
 	}
     
   /**
-	 * Given three eucl radii and inv distances of opposite edges, compute
-	 * up.value=cos(angle at e1). Recall: inv_dist tj in (-1,1) for overlap,
-	 * =1 for tangency (default), >1 for separation.
-	 * @param e1 double, eucl radii, etc
-	 * @param e2 double
-	 * @param e3, double
-	 * @param id1 double, inv distance of edge opposite radius e1, etc
-	 * @param id2 double
-	 * @param id3 double
-	 * @param up UtilPacket, instantiated by calling routine
-	 * @return boolean, true if seems okay, else set up.errval=|up.value|
-	 * for an incompatibility and up.rtnFlag=+-1 corresponding to up.value
-	 * 0 or PI, resp.
+	 * Given three eucl radii and edge inv distances, compute 
+	 * cosine of the angle at r0. Note: ivdj is the inversive 
+	 * distance for the edge with origin at rj, so edge 
+	 * opposite is index (j+1)%3.
+	 * @param r0 double
+	 * @param r1 double
+	 * @param r2, double
+	 * @param ivd0 double
+	 * @param ivd1 double
+	 * @param ivd2 double
+	 * @return double cosine of angle
 	 */
-	public static boolean e_cos_overlap(double e1, double e2, double e3,
-			double id1, double id2, double id3,UtilPacket up) {
+	public static double e_cos_overlap(double r0, double r1, double r2,
+			double ivd0, double ivd1, double ivd2) {
 
-		double e12 = e1 * e1;
-		double e22 = e2 * e2;
-		double e32 = e3 * e3;
-		double x3 = e1 * e2 * id3;
-		double x2 = e1 * e3 * id2;
-		double x1 = e2 * e3 * id1;
-		double l3 = e12 + e22 + 2 * x3;
-		double l2 = e12 + e32 + 2 * x2;
-		double sqrlen = up.value = (e12 + x2 + x3 - x1) / Math.sqrt(l2 * l3);
-		up.errval = 0.0;
-		up.rtnFlag=0;
-		if (up.value < -1.0) { // error?
-			if ((1.0-up.value)<OKERR) {
-				up.value=-1.0;
-				return true;
-			}
-			up.value = -1.0;
-			up.rtnFlag=-1;
-			up.errval = Math.abs(sqrlen);
-			return false;
+		if ((ivd0==1.0) && (ivd1==1.0) && (ivd2==1.0))
+			return e_cos_overlap(r0,r1,r2);
+		// squared radii
+		double e0sq = r0 * r0;
+		double e1sq = r1 * r1;
+		double e2sq = r2 * r2;
+		// edge lengths squared
+		double t0=2.0*r0*r1*ivd0;
+		double t1=2.0*r1*r2*ivd1;
+		double t2=2.0*r2*r0*ivd2;
+		double len0sq=e0sq+e1sq+t0;
+		double len1sq=e1sq+e2sq+t1;
+		double len2sq=e2sq+e0sq+t2;
+		double cos_ang=(len0sq+len2sq-len1sq)/(2.0*Math.sqrt(len0sq * len2sq));
+		if (cos_ang < -1.0 || cos_ang>1.0) { // error? 
+			if (cos_ang>1.0)
+				return .9999999999; 
+			if (cos_ang<-1.0)
+				return -.9999999999;
 		}
-		if (up.value > 1.0) { // error?
-			// extreme radius may give slightly larger value
-			if ((up.value-1.0)<OKERR) {
-				up.value=1.0;
-				return true;
-			}
-			
-			up.value = 1.0;
-			up.rtnFlag = 1;
-			up.errval = sqrlen;
-			return false;
-		}
-		return true;
+		return cos_ang;
 	}
 	
 	/**
-	 * Using law of cosines, compute up.value=cos(angle at e1) in
-	 * tangent triple with eucl radii e1,e2,e3 (i.e., inv distances = 1.0);
-	 * @param e1 double, eucl radii, etc
-	 * @param e2 double
-	 * @param e3 double
-	 * @param up UtilPacket, instantiated by calling routine
-	 * @return boolean, true if seems okay, else set up.errval=|up.value|
-	 * for an incompatibility and up.rtnFlag=+-1 corresponding to up.value
-	 * 0 or PI, resp.
+	 * Using law of cosines, compute cos(angle at e0) in
+	 * tangent triple with eucl radii r0,r1,r2 and all
+	 * inv distances = 1.0;
+	 * @param r0 double
+	 * @param r1 double
+	 * @param r2 double
+	 * @return double, cos(angle)
 	 */
-	public static boolean e_cos_overlap(double e1, double e2, double e3,UtilPacket up) {
-		double c=e2*e3;
-		up.value=1-2*c/(e1*e1+e1*(e2+e3)+c);
-		return true;
+	public static double e_cos_overlap(double r0, double r1, double r2) {
+		double c=r1*r2;
+		return 1-2*c/(r0*(r0+r1+r2)+c);
 	}
 	
 	/**
 	 * Use law of cosines, compute cos(angle at c1) in eucl
 	 * triangle with given corners.
-	 * @param c1 Complex, first corner, etc.
-	 * @param c2
-	 * @param c3
+	 * @param z0 Complex, first corner, etc.
+	 * @param z1
+	 * @param z2
 	 * @return double, cosine of angle
 	 */
-	public static double e_cos_corners(Complex c1,Complex c2,Complex c3) {
-		double l2=c2.minus(c1).abs();
-		double l3=c3.minus(c1).abs();
-		double l23=c3.minus(c2).abs();
-		double denom=2.0*l2*l3;
-		return (l2*l2+l3*l3-l23*l23)/denom;
+	public static double e_cos_corners(Complex z0,Complex z1,Complex z2) {
+		double l1=z1.minus(z0).abs();
+		double l2=z2.minus(z0).abs();
+		double l12=z2.minus(z1).abs();
+		double denom=2.0*l1*l2;
+		return (l1*l1+l2*l2-l12*l12)/denom;
 	}
 	
 	
 	/**
 	 * Using law of cosines, compute cos(angle at p1) in eucl 3D 
 	 * triangle with given corners in space.
+	 * @param p0 Point3D
 	 * @param p1 Point3D
 	 * @param p2 Point3D
-	 * @param p3 Point3D
 	 * @return double, cosine of angle
 	 */
-	public static double e_cos_3D(Point3D p1,Point3D p2,Point3D p3) {
-		double l2=Point3D.distance(p1, p2);
-		double l3=Point3D.distance(p1, p3);
-		double l23=Point3D.distance(p3, p2);
-		double denom=2.0*l2*l3;
-		return (l2*l2+l3*l3-l23*l23)/denom;
+	public static double e_cos_3D(Point3D p0,Point3D p1,Point3D p2) {
+		double l0=Point3D.distance(p0, p1);
+		double l2=Point3D.distance(p2, p0);
+		double l1=Point3D.distance(p1, p2);
+		double denom=2.0*l0*l2;
+		return (l0*l0+l2*l2-l1*l1)/denom;
+	}
+	
+	/**
+	 * Given face data in 'RadIvdPacket', return euclidean area
+	 * @param rip RadIvdPacket
+	 * @return double
+	 */
+	public static double eArea(RadIvdPacket rip) {
+		return eArea(rip.rad[0],rip.rad[1],rip.rad[2],
+				rip.ivd[0],rip.ivd[1],rip.ivd[2]);
 	}
 	
 	 /**
-	 * Given three eucl radii and cos's of opp overlap angles, compute
-	 * face area using Heron's Formula. 'tj' is overlap of edge opposite
-	 * to circle of radius 'rj'.
+	 * Given three eucl radii and edge inv distances, compute
+	 * face area using Heron's Formula. 'tj' is for the edge
+	 * <j,j+1>.
 	 * @param r0 double
 	 * @param r1 double
 	 * @param r2 double
@@ -171,9 +157,9 @@ public class EuclMath{
 	 */
 	public static double eArea(double r0,double r1,double r2,
 			double t0,double t1,double t2) {
-		double a=e_invdist_length(r0,r1,t2);
-		double b=e_invdist_length(r1,r2,t0);
-		double c=e_invdist_length(r2,r0,t1);
+		double a=e_ivd_length(r0,r1,t0);
+		double b=e_ivd_length(r1,r2,t1);
+		double c=e_ivd_length(r2,r0,t2);
 		return Math.sqrt((a+b+c)*(a+b-c)*(a+c-b)*(b+c-a))/4.0;
 	}
 	
@@ -216,9 +202,12 @@ public class EuclMath{
 	 */
 	public static boolean pt_in_eucl_tri(Complex p1,
 			Complex a,Complex b,Complex c) {
-		if ((a.x-p1.x)*(b.y-p1.y)-(b.x-p1.x)*(a.y-p1.y)<0) return false;
-		if ((b.x-p1.x)*(c.y-p1.y)-(c.x-p1.x)*(b.y-p1.y)<0) return false;
-		if ((c.x-p1.x)*(a.y-p1.y)-(a.x-p1.x)*(c.y-p1.y)<0) return false;
+		if ((a.x-p1.x)*(b.y-p1.y)-(b.x-p1.x)*(a.y-p1.y)<0) 
+			return false;
+		if ((b.x-p1.x)*(c.y-p1.y)-(c.x-p1.x)*(b.y-p1.y)<0) 
+			return false;
+		if ((c.x-p1.x)*(a.y-p1.y)-(a.x-p1.x)*(c.y-p1.y)<0) 
+			return false;
 		return true;
 	}
 	
@@ -227,26 +216,26 @@ public class EuclMath{
 	 * oriented triple. Note that the point need not be in the
 	 * triangle.
 	 * @param z Complex, given point
+	 * @param z0 Complex
 	 * @param z1 Complex
 	 * @param z2 Complex
-	 * @param z3 Complex
 	 * @return BaryPoint, null if corners colinear.
 	 */
 	public static BaryPoint e_pt_to_bary(Complex z,
-			Complex z1,Complex z2,Complex z3) {
+			Complex z0,Complex z1,Complex z2) {
 
 		// linear alg: 2x2 T
-		double a=z1.x-z3.x;
-		double b=z2.x-z3.x;
-		double c=z1.y-z3.y;
-		double d=z2.y-z3.y;
+		double a=z0.x-z2.x;
+		double b=z1.x-z2.x;
+		double c=z0.y-z2.y;
+		double d=z1.y-z2.y;
 		double det=a*d-b*c;
-		if (det<CPBase.GENERIC_TOLER) { // points colinear
+		if (Math.abs(det)<CPBase.GENERIC_TOLER) { // points colinear
 			// TODO: can find two non-zero corners, use them and origin
 			return null;
 		}
-		double x=z.x-z3.x;
-		double y=z.y-z3.y;
+		double x=z.x-z2.x;
+		double y=z.y-z2.y;
 		
 		// solve inv(T)(x,y) = (b1, b2)
 		return (new BaryPoint((d*x-b*y)/det,(-c*x+a*y)/det));
@@ -379,38 +368,39 @@ public class EuclMath{
 
 	/**
 	 * Compute barycenter of euclidean triangle from corners.
+	 * @param p0 Complex
 	 * @param p1 Complex
 	 * @param p2 Complex
-	 * @param p3 Complex
 	 * @return new Complex
 	 */
-	public static Complex eucl_tri_center(Complex p1,Complex p2,Complex p3) {
+	public static Complex eucl_tri_center(Complex p0,Complex p1,Complex p2) {
 		  Complex ctr =new Complex();
 	  	  
-		  ctr.x=(p1.x+p2.x+p3.x)*.333333333333;
-		  ctr.y=(p1.y+p2.y+p3.y)*.333333333333;
+		  ctr.x=(p0.x+p1.x+p2.x)*.333333333333;
+		  ctr.y=(p0.y+p1.y+p2.y)*.333333333333;
 		  return ctr;
 	}
 
 	/**
-	 * Return 'SimpleCircle' with rad/cent of inscribed circle
+	 * Return 'CircleSimple' with rad/cent of inscribed circle
 	 * for triangular face with given corners. Incenter has 
 	 * barycentric coords a/p, b/p, c/p, where a, b, c are 
 	 * opposite edge lengths, p is perimeter.
+	 * @param z0 Complex
 	 * @param z1 Complex
-	 * @param z2 Complex
-	 * @param z3 Complex, circle centers
-	 * @return SimpleCircle
+	 * @param z2 Complex, circle centers
+	 * @return CircleSimple
 	 */
-	public static CircleSimple eucl_tri_incircle(Complex z1,Complex z2,Complex z3) {
+	public static CircleSimple eucl_tri_incircle(Complex z0,
+			Complex z1,Complex z2) {
 		CircleSimple sc=new CircleSimple();
 
 		// side lengths
-		double a=z2.minus(z3).abs();
-	  	double b=z1.minus(z3).abs();
-	  	double c=z1.minus(z2).abs();
+		double a=z1.minus(z2).abs();
+	  	double b=z0.minus(z2).abs();
+	  	double c=z0.minus(z1).abs();
 	  	double p=a+b+c;
-	  	sc.center=z1.times(a/p).add(z2.times(b/p).add(z3.times(c/p)));
+	  	sc.center=z0.times(a/p).add(z1.times(b/p).add(z2.times(c/p)));
 		sc.rad=.5*Math.sqrt(((a+b-c)*(a+c-b)*(b+c-a))/p);
 		return sc;
 	}
@@ -446,50 +436,59 @@ public class EuclMath{
 	}
 
 	/**
-	 * Given centers/radii of circles 1 and 2 and rad of 3, and inv distances oj
-	 * (opposite zj), find eucl center of 3.
+	 * Given centers/radii of two circles and rad of third, and 
+	 * inv distances oj of edge <j,j+1>, find eucl center of circle 3.
+	 * Use lengths of a, b, c of sides, with a the length between
+	 * known centers. Get angle theta between sides a and c by law of
+	 * cosines.
+	 * @param z0 Complex
 	 * @param z1 Complex
-	 * @param z2 Complex
-	 * @param e1 double
-	 * @param e2 double
-	 * @param e3 double
-	 * @param o1 double
-	 * @param o2 double
-	 * @param o3 double
-	 * @return SimpleCircle
+	 * @param r0 double
+	 * @param r1 double
+	 * @param r2 double
+	 * @param ivd0 double
+	 * @param ivd1 double
+	 * @param ivd2 double
+	 * @return CircleSimple
 	 */
-	public static CircleSimple e_compcenter(Complex z1,Complex z2,double e1,
-			double e2,double e3,double o1,double o2,double o3) {
-		double l3 = e1 * e1 + e2 * e2 + 2 * e1 * e2 * o3;
-		double l2 = e1 * e1 + (e3) * (e3) + 2 * e1 * (e3) * o2;
-		double l1 = e2 * e2 + (e3) * (e3) + 2 * e2 * (e3) * o1;
-		double ld = 0.5 * (l2 + l3 - l1);
-		if ((ld * ld) > (l2 * l3))
+	public static CircleSimple e_compcenter(Complex z0,Complex z1,double r0,
+			double r1,double r2,double ivd0,double ivd1,double ivd2) {
+		// squared lengths of sides
+		double l0 = r0 * r0 + r1 * r1 + 2 * r0 * r1 * ivd0; // l0=a^2
+		double l1 = r1 * r1 + (r2) * (r2) + 2 * r1 * (r2) * ivd1; // l1=b^2
+		double l2 = r0 * r0 + (r2) * (r2) + 2 * r0 * (r2) * ivd2; // l2=c^2
+		 
+		double ld = 0.5 * (l2 + l0 - l1); // a c cos(theta)=(c^2+a^2-b^2)/2
+		if ((ld * ld) > (l2 * l0))
 			return new CircleSimple(false);
-		// ld/(2*sqrt(l2*l3)) = cos(angle)
-		Complex v = new Complex();
-		v.x = ld / Math.sqrt(l3);
-		v.y = Math.sqrt(l2 - v.x * v.x);
-		Complex w = z2.sub(z1);
+
+		// drop perp to side a, get base, height G, H 
+		double B = ld / Math.sqrt(l0); // v.x= c cos(theta)
+		double H = Math.sqrt(l2 - B*B);
+		Complex v = new Complex(B,H);
+		
+		// if a were laid out along x-axis, v is vector to center
+		Complex w = z1.sub(z0);
 		double s = w.abs();
 		if (s < 1.0e-30)
 			return new CircleSimple(false);
 		w = w.times(1 / s);
-		Complex z=new Complex((z1.x + w.x * v.x - w.y * v.y),
-				(z1.y + w.x * v.y + w.y * v.x));
-		return new CircleSimple(z, e3, 1);
+		// answer is z0+w*v
+		Complex z=new Complex((z0.x + w.x * v.x - w.y * v.y),
+				(z0.y + w.x * v.y + w.y * v.x));
+		return new CircleSimple(z, r2, 1);
 	}
 	
 	/**
 	 * Given two centers and three euclidean radii, compute third center. 
-	 * This is for tangency case. The 'SimpleCircle' class is
+	 * This is for tangency case. The 'CircleSimple' class is
 	 * simply for transferring data back.
 	 * @param z1 Complex
 	 * @param z2 Complex
 	 * @param e1 double
 	 * @param e2 double
 	 * @param e3 double
-	 * @return SimpleCircle
+	 * @return CircleSimple
 	*/
 	public static CircleSimple e_compcenter(Complex z1,Complex z2,double e1,
 			double e2,double e3) {
@@ -580,116 +579,35 @@ public class EuclMath{
 		       (xyz.y-XYZ.y)*(xyz.y-XYZ.y)+
 		       (xyz.z-XYZ.z)*(xyz.z-XYZ.z)));
 	}
-	
-	/** 
-	 * Distance in R^3 between points z, w (in spherical form)
-	 * @param z Complex
-	 * @param w Complex
-	 * @return double 
-	*/
-	public static double chordal_dist(Complex z,Complex w) {
-	  double []Z=new double[3];
-	  double []W=new double[3];
-	  
-	  Z=SphericalMath.s_pt_to_vec(z);
-	  W=SphericalMath.s_pt_to_vec(w);
-	  
-	  Z[0]=Z[0]-W[0];
-	  Z[1]=Z[1]-W[1];
-	  Z[2]=Z[2]-W[2];
-	  
-	  return (SphericalMath.vec_norm(Z));
-	}
-
-	/**
-	 * Given tangent circles v w and mutually tangent neighbors
-	 * vl, vr, in a euclidean packing, find their tangency points 
-	 * p0: <w vl>; p1: <vl v>; p2: <v vr>; p3 <vr w>
-	 * and return cross ratio (should be real)
-	 * [(p0-p1)/(p1-p2)]*[(p2-p3)/(p3-p0)].
-	 * TODO: done quickly at Brown Univ., 2017; probably needs work.
-	 * @param p
-	 * @param edge
-	 * @return
-	 */
-	public static Complex tang_cross_ratio(PackData p,EdgeSimple edge) {
-		Complex cr=null;
-		if (p.hes!=0 || edge==null)
-			return cr;
-		int []verts=new int[5];
-		Complex []cents=new Complex[5];
-		double []rads=new double[5];
-		
-		// treat w first
-		verts[0]=edge.w;
-		verts[4]=verts[0];
-		cents[0]=p.rData[verts[0]].center;
-		cents[4]=cents[0];
-		rads[0]=p.rData[verts[0]].rad;
-		rads[4]=rads[0];
-		
-		// then v 
-		verts[2]=edge.v;
-		cents[2]=p.rData[verts[2]].center;
-		rads[2]=p.rData[verts[2]].rad;
-		
-		// if bdry edge return null
-		int indxvw=p.nghb(verts[0],verts[2]);
-		int num=p.kData[verts[2]].num;
-		if (p.kData[verts[2]].bdryFlag==1 && (indxvw==0 || indxvw==num))
-				return null;
-		
-		// next is v
-		verts[1]=p.kData[verts[2]].flower[indxvw+1];
-		cents[1]=p.rData[verts[1]].center;
-		rads[1]=p.rData[verts[1]].rad;
-
-		// finally, vr
-		verts[3]=p.kData[verts[2]].flower[(indxvw-1+num)%num];
-		cents[3]=p.rData[verts[3]].center;
-		rads[3]=p.rData[verts[3]].rad;
-		
-		// find intersection points cclw: <w,vl>,<vl,v>,<v,vr>,<vr,w> 
-		Complex []pts=new Complex[5];
-		Complex []diffs=new Complex[4];
-		for (int j=0;j<4;j++) {
-			pts[j]=eucl_tangency(cents[j],cents[j+1],rads[j],rads[j+1]);
-		}
-		pts[4]=pts[0];
-		for (int j=0;j<4;j++) {
-			diffs[j]=pts[j].minus(pts[j+1]);
-		}
-		Complex ff=diffs[0].divide(diffs[1]);
-		Complex sf=diffs[2].divide(diffs[3]);
-		return ff.times(sf);
-	}
 
 	/** 
 	 * Euclidean circles determining 2 faces, with radii r1...r4
-	 * counterclockwise, r1, r3 at ends of common edge and overlaps, 
-	 * e5 for common edge, ej for edge from r_j to r_{j+1}. Compute
-	 * cross-ratio of circle centers.
+	 * counterclockwise, r1, r3 at ends of common edge and with 
+	 * overlaps, 'ivd_common' for common edge, 'ivdj' for edge 
+	 * <r_j, r_{j+1}>. Compute cross-ratio of circle centers.
 	 * @param r1 double
 	 * @param r2 double
 	 * @param r3 double
 	 * @param r4 double
-	 * @param e1 double
-	 * @param e2 double
-	 * @param e3 double
-	 * @param e4 double
-	 * @param e5 double
+	 * @param ivd1 double
+	 * @param ivd2 double
+	 * @param ivd3 double
+	 * @param ivd4 double
+	 * @param ivd_common double
 	 * @return Complex, cross ratio: (z1-z2)(z3-z4)/((z1-z4)(z3-z2)). 
 	*/
-	public static Complex quad_cross_ratio(double r1,double r2,double r3,double r4,
-					double e1,double e2,double e3,double e4,double e5) {
+	public static Complex quad_cross_ratio(
+			double r1,double r2,double r3,double r4,
+			double ivd1,double ivd2,double ivd3,double ivd4,
+			double ivd_common) {
 
 	  // compute edge lengths using radii/overlaps 
-	  double L5=r1*r1+r3*r3+2*r1*r3*e5;
+	  double L5=r1*r1+r3*r3+2*r1*r3*ivd_common;
 	  double l5=Math.sqrt(L5);
-	  double L1=r1*r1+r2*r2+2*r1*r2*e1;
-	  double L2=r2*r2+r3*r3+2*r2*r3*e2;
-	  double L3=r3*r3+r4*r4+2*r3*r4*e3;
-	  double L4=r4*r4+r1*r1+2*r1*r4*e4;
+	  double L1=r1*r1+r2*r2+2*r1*r2*ivd1;
+	  double L2=r2*r2+r3*r3+2*r2*r3*ivd2;
+	  double L3=r3*r3+r4*r4+2*r3*r4*ivd3;
+	  double L4=r4*r4+r1*r1+2*r1*r4*ivd4;
 
 	  Complex z1=new Complex(0.0);
 	  Complex z3=new Complex(l5);
@@ -713,14 +631,16 @@ public class EuclMath{
 	}
 
 	/** 
-	 * Return eucl length of edge with eucl radii r1, r2, and inv dist 'ovlap'.
+	 * Return eucl length l of edge between centers of eucl
+	 * circles of radii r1, r2, and inv dist 'ivd'. 
+	 * Then l*l=r1*r1+r2*r2+2*r1*r2*ivd;
 	 * @param r1 double
 	 * @param r2 double
-	 * @param ovlap double
+	 * @param ivd double
 	 * @return double
 	*/
-	public static double e_invdist_length(double r1,double r2,double ovlap) {
-		return (Math.sqrt(r1*r1+r2*r2+2.0*r1*r2*ovlap));
+	public static double e_ivd_length(double r1,double r2,double ivd) {
+		return (Math.sqrt(r1*r1+r2*r2+2.0*r1*r2*ivd));
 	}
 	
 	/** 
@@ -741,7 +661,7 @@ public class EuclMath{
 	} 
 	
 	/**
-	 * Find distance from z to a path. (See GenPathUtil.gpDistance
+	 * Find distance from z to a path. (See 'PathUtil.gpDistance'
 	 * for (signed) distance to Path2D.Double.)
 	 * @param z Complex z
 	 * @param plist Vector<Complex>
@@ -789,27 +709,69 @@ public class EuclMath{
 	}
 	
 	/**
+	 * Return the point on segment [z1,z2] which is closest to z; may
+	 * be a projection to interior point or may be an end point.
+	 * @param pt Point3D
+	 * @param z1 Point3D
+	 * @param z2 Point3D
+	 * @return Point3D, 
+	 */
+	public static Point3D proj_to_seg(Point3D pt,Point3D z1,Point3D z2) {
+		Point3D base=new Point3D(z2.x-z1.x,z2.y-z1.y,z2.z-z1.z);
+		if (base.norm()<OKERR) // z1 and z2 are too close together
+			return new Point3D(z1);
+		Point3D z1z=new Point3D(pt.x-z1.x,pt.y-z1.y,pt.z-z1.z);
+		Point3D proj=Point3D.proj_vector(z1z, base);
+		if (Point3D.DotProduct(proj,base)<=0.0) // z1 is closest
+			return new Point3D(z1);
+		if (proj.normSq()>base.normSq()) // z2 is closest
+			return new Point3D(z2);
+		return new Point3D(proj.x+base.x,proj.y+base.y,proj.z+base.z);
+	}	
+
+	/**
+	 * Return the point on segment [z1,z2] which is closest to z
+	 * @param pt Complex
+	 * @param z1 Complex
+	 * @param z2 Complex
+	 * @return Complex, null on error
+	 */
+	public static Complex proj_to_seg(Complex pt,Complex z1,Complex z2) {
+		Point3D pt3=new Point3D(pt.x,pt.y,0.0);
+		Point3D z13=new Point3D(z1.x,z1.y,0.0);
+		Point3D z23=new Point3D(z2.x,z2.y,0.0);
+		Point3D proj=proj_to_seg(pt3,z13,z23);
+		if (proj==null)
+			return null;
+		return new Complex(proj.x,proj.y);
+	}
+	
+	/**
 	 * The 'effective' eucl radii of a eucl triangulation is computed
 	 * by methods of Gerald Orick. We might add more options later.
 	 * Note: this just uses the centers, so it applies even if the
 	 * radii don't form a packing. 'radii' must be created in calling
 	 * routine: if null, radii recorded directly in p.rData.
 	 * @param p PackData
-	 * @param radii double[], if null, radii recorded directly in p.rData
+	 * @param radii double[], if null, use radii from p
 	 * @return 1
 	 */
 	public static int effectiveRad(PackData p,double []radii) {
 		for (int v=1;v<=p.nodeCount;v++) {
 			// for each node find the area sum and angle sum
-			Complex z=p.rData[v].center;
+			Complex z=p.getCenter(v);
 
 			double thsum = 0.0;
 			double asum = 0.0;
-			for (int j=0;j<p.kData[v].num;j++) {
-				Complex spoke0 = z.minus(p.rData[p.kData[v].flower[j]].center);
-				Complex spoke1 = z.minus(p.rData[p.kData[v].flower[j+1]].center);
-				Complex farside = (p.rData[p.kData[v].flower[j]].center).
-					minus(p.rData[p.kData[v].flower[j+1]].center);
+			int num=p.countFaces(v);
+			int[] flower=p.packDCEL.vertices[v].getFlower(true);
+			for (int j=0;j<num;j++) {
+				Complex spoke0 = 
+						z.minus(p.getCenter(flower[j]));
+				Complex spoke1 = 
+						z.minus(p.getCenter(flower[j+1]));
+				Complex farside = (p.getCenter(flower[j])).
+					minus(p.getCenter(flower[j+1]));
 				double a, b, c;
 				a = spoke0.abs(); b = farside.abs(); c = spoke1.abs();
 				double facerad = (a+c-b)/2.0;
@@ -818,73 +780,57 @@ public class EuclMath{
 				asum += facerad*facerad*th/2.0;
 			}
 			if (radii==null)
-				p.rData[v].rad = Math.sqrt(asum/(thsum/2.0));
+				p.setRadius(v,Math.sqrt(asum/(thsum/2.0)));
 			else radii[v]= Math.sqrt(asum/(thsum/2.0));
 		}
 		return 1;
 	}
 	
 	/**
-	 * return the 3D point in triangle 'p1','p2','p3' using barycentric
+	 * return the 3D point in triangle 'p0','p1','p2' using barycentric
 	 * coordinates of 'bp'. Can be used for plane points (third coord 0), 
 	 * but mainly intended for working with barycentric coords in hyp 
 	 * and sph geometry.
 	 * @param bp BaryPoint
+	 * @param p0 Point3D
 	 * @param p1 Point3D
 	 * @param p2 Point3D
-	 * @param p3 Point3D
 	 * @return Point3D
 	 */
-	public static Point3D getSpacePoint(BaryPoint bp,Point3D p1,Point3D p2,Point3D p3) {
+	public static Point3D getSpacePoint(BaryPoint bp,
+			Point3D p0,Point3D p1,Point3D p2) {
 		return new Point3D(
-				bp.b0*p1.x+bp.b1*p2.x+bp.b2*p3.x,
-				bp.b0*p1.y+bp.b1*p2.y+bp.b2*p3.y,
-				bp.b0*p1.z+bp.b1*p2.z+bp.b2*p3.z);
+				bp.b0*p0.x+bp.b1*p1.x+bp.b2*p2.x,
+				bp.b0*p0.y+bp.b1*p1.y+bp.b2*p2.y,
+				bp.b0*p0.z+bp.b1*p1.z+bp.b2*p2.z);
 	}
 	
 	/** 
 	 * Normalizes eucl data of pack p by putting point a at origin 
 	 * and g (if not too close to a) on the positive y-axis.
-	 * @param p PackData
+	 * @param p PackDCEL
 	 * @param a Complex (usually, a=alpha center)
 	 * @param g Complex (usually, g=gamma center)
-	 * @return 1 
+	 * @return the Mobius applied
 	*/
-	public static int e_norm_pack(PackData p,Complex a,Complex g) {
-	    int i;
-
-	    // set up rotation
-	    Complex w=g.sub(a);
-	    double argag=0.0;
-	    Complex z=new Complex(1.0); // default to z=1
-    	if (w.abs()>OKERR) {
-    		argag=Math.PI/2.0-w.arg();
-    		z=new Complex(0.0,argag).exp();
-    	}
-    	
-	    // translate and rotate
-	    for (i=1;i<=p.nodeCount;i++) 
-	    	p.rData[i].center=p.rData[i].center.sub(a).times(z);
-
-	    // normalize info in redchain as well
-	    RedList trace=p.redChain;
-	    if (trace!=null) {
-		    boolean keepon=true;
-	    	while (trace!=p.redChain  || keepon) {
-	    		keepon=false;
-	    		// debug help: LayoutBugs.pfacered(this);LayoutBugs.log_Red_Hash(this,trace,null);
-	    		if (trace.center!=null) 
-	    			trace.center=trace.center.sub(a).times(z);
-	    		
-	    		// if "blue", must fix second copy also
-	    		if (trace.next.face==trace.prev.face && trace instanceof RedEdge) {
-	    			RedEdge re=((RedEdge)trace).nextRed;
-	    			re.center=re.center.sub(a).times(z);
-	    		}	    		
-	    		trace=trace.next;
-	    	}
-	    }
-	    return 1;
+	public static Mobius e_norm_pack(PackDCEL pdcel,Complex a,Complex g) {
+		Mobius mob=Mobius.mobNormPlane(a,g);
+		if (Mobius.frobeniusNorm(mob)>Mobius.MOB_TOLER) {
+			// directly adjust in 'Vertex'
+			for (int v = 1; v <= pdcel.vertCount; v++) {
+				Complex z = pdcel.vertices[v].center;
+				pdcel.vertices[v].center = mob.apply(z);
+			}
+			// directly adjust in red chain
+			if (pdcel.redChain != null) {
+				RedEdge rtrace = pdcel.redChain;
+				do {
+					rtrace.setCenter(mob.apply(rtrace.getCenter()));
+					rtrace = rtrace.nextRed;
+				} while (rtrace != pdcel.redChain);
+			}
+		}
+		return mob;
 	} 
 	
 	/** 
@@ -941,7 +887,7 @@ public class EuclMath{
 	
 	/**
 	 * Data here is for a quad with eucl corners {vz, rz, wz,lz},
-	 * with {vz,vw} and edge. Return the 4 angles of the quad
+	 * with {vz,vw} being an edge. Return the 4 angles of the quad
 	 * @param vz Complex
 	 * @param rz Complex
 	 * @param wz Complex

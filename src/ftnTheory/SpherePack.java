@@ -3,11 +3,12 @@ package ftnTheory;
 import java.util.Iterator;
 import java.util.Vector;
 
+import auxFrames.SphWidget;
+import exceptions.MiscException;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
-import auxFrames.SphWidget;
 /**
  * This code incorporates old 'SpherePack' code as a
  * PackExtender. Goal is to allow the user to manually
@@ -57,16 +58,20 @@ public class SpherePack extends PackExtender {
 	public int cmdParser(String cmd, Vector<Vector<String>> flagSegs) {
 		Vector<String> items = null;
 	
+		try {
 		if (cmd.startsWith("update")) {
 			auxFrame.updateBars();
+			return 1;
 		}
 		
 		if (cmd.startsWith("open")) {
 			auxFrame.setVisible(true);
+			return 1;
 		}
 		
 		if (cmd.startsWith("close")) {
 			auxFrame.setVisible(false);
+			return 1;
 		}
 
 		if (cmd.startsWith("lock")) {
@@ -75,8 +80,12 @@ public class SpherePack extends PackExtender {
 			while (vlst.hasNext()) {
 				auxFrame.setLock(vlst.next());
 			}
+			return 1;
 		}
-		return super.cmdParser(cmd, flagSegs);
+		} catch(Exception ex) {
+			throw new MiscException("Some problem executing |sp| command "+cmd);
+		}
+		return 1;
 	}
 	
 	public void killMe() {

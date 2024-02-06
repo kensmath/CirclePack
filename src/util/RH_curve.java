@@ -6,9 +6,8 @@ import java.awt.geom.Path2D;
 import java.util.Iterator;
 import java.util.Vector;
 
-import panels.CPScreen;
-
 import complex.Complex;
+import packing.CPdrawing;
 
 /**
  * 'RH' refers to 'Riemann-Hilbert'. This class stores "restriction"
@@ -31,7 +30,7 @@ public class RH_curve {
 		center=new Complex(z);
 		rad=rd;
 		restCurve=null;
-		color=CPScreen.getFGColor();
+		color=ColorUtil.getFGColor();
 	}
 	
 	public RH_curve(Vector<Complex> path) {
@@ -51,7 +50,7 @@ public class RH_curve {
 			}
 			restCurve.closePath();
 		}
-		color=CPScreen.getFGColor();
+		color=ColorUtil.getFGColor();
 	}
 	
 	public RH_curve(Path2D.Double gpath) {
@@ -59,7 +58,7 @@ public class RH_curve {
 		center=null;
 		rad=0.0;
 		restCurve=new Path2D.Double(gpath);
-		color=CPScreen.getFGColor();
+		color=ColorUtil.getFGColor();
 	}
 	
 	/**
@@ -73,13 +72,13 @@ public class RH_curve {
 		return rhc;
 	}
 	
-	public void drawMe(CPScreen cps) {
+	public void drawMe(CPdrawing cpd) {
 		DispFlags dflags=new DispFlags("cfg");
 		if (isCircle) 
-			cps.drawCircle(center,rad,dflags);
+			cpd.drawCircle(center,rad,dflags);
 		else 
-			cps.drawShape((Shape)restCurve,color,
-				cps.imageContextReal.getStroke());
+			cpd.drawShape((Shape)restCurve,color,
+				cpd.imageContextReal.getStroke());
 	}
  
 }

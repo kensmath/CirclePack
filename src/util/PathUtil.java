@@ -1,485 +1,921 @@
 package util;
 
-import exceptions.CombException;
-import exceptions.DataException;
-import exceptions.ParserException;
-import geometry.EuclMath;
-
 import java.awt.geom.Path2D;
+import java.awt.geom.PathIterator;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
-import baryStuff.BaryPacket;
-import baryStuff.BaryPoint;
-import komplex.EdgeSimple;
-import komplex.Face;
-import listManip.BaryCoordLink;
-import listManip.EdgeLink;
-import listManip.FaceLink;
-import packing.PackData;
+import com.jimrolf.functionparser.FunctionParser;
 
+import allMains.CirclePack;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
+import dcel.CombDCEL;
+import dcel.PackDCEL;
+import dcel.SideData;
+import exceptions.CombException;
+import exceptions.DCELException;
+import geometry.EuclMath;
+import komplex.EdgeSimple;
+import listManip.HalfLink;
+import listManip.NodeLink;
 
 /**
- * Static methods to aid in working with euclidean paths,
- * especially via barycentric coordinates.
+ * Utility routines for working with 'Path2D.Double' objects: 
+ * finding length, max distance from the origin, output for 
+ * postscript, scaling, etc. Creating closed circle paths,
  * 
- * * Given seg [z1,z2], where, in barycentric coords,
- *   does the line enter/leave a given face?
- *   
+ * These are not so sophisticated. A key is 'getPathIterator'. If we get
+ * a 'FlatteningPathIterator', it gives lists of points to give a polygonal
+ * path approximating the path; we will just guess at a 'flatness' parameter
+ * to bound how far it drifts from the actual path.
+ * 
  * @author kens
  *
  */
 public class PathUtil {
+	public static final double FLAT_FACTOR=0.01; // typical: flatness=extent*FLAT_FACTOR
+
+	/**
+	 * Find largest of length and width; e.g., we use it to choose appropriate
+	 * 'flatness' parameter.
+	 * @param gpath
+	 * @return double
+	 */
+	public static double gpExtent(Path2D.Double gpath) {
+		   Rectangle2D rect2D=gpath.getBounds2D();
+		   double wide=rect2D.getWidth();
+		   double high=rect2D.getHeight();
+		   return (wide>high) ? wide : high;
+	}
 	
 	/**
-	 * Does euclidean segment {p1,p2} intersect triangle?
-	 * @param p1, p2
-	 * @param z1, z2, z3
-	 * @return 
+	 * get 'flatness' for interpolating with polygonal path.
+	 * @param gpath Path2D.Double
+	 * @return double
 	 */
-	public static boolean doesSegXTri(Complex p1,Complex p2,
-			Complex z1,Complex z2,Complex z3) {
-
-		// one point inside or on? 
-		BaryPoint bp1=EuclMath.e_pt_to_bary(p1, z1, z2, z3);
-		if (BaryPoint.baryPtInside(bp1)>=0) return true;
-		BaryPoint bp2=EuclMath.e_pt_to_bary(p2, z1, z2, z3);
-		if (BaryPoint.baryPtInside(bp2)>=0) return true;
-		
-		// thus, p1 or p2 must be on opposite side from some vert.
-		
-		// both on opposite of any one of edges?
-		if ((bp1.b0<0 && bp2.b0<0) || (bp1.b1<0 && bp2.b1<0) ||
-				(bp1.b2<0 && bp2.b2<0)) return false;
-		
-		// p1 must be on neg side of some edge, p2 across that edge.
-		double vx=p2.x-p1.x;
-		double vy=p2.y-p1.y;
-		double d1=(z1.x-p1.x)*vx+(z1.y-p1.y)*vy;
-		double d2=(z2.x-p1.x)*vx+(z2.y-p1.y)*vy;
-		double d3=(z3.x-p1.x)*vx+(z3.y-p1.y)*vy;
-		// if all dot products have same sign, false
-		if ((d1>=0 && d2>=0 && d3>=0) || (d1<=0 && d2<=0 && d3<=0))
-			return false;
-		return true;
-	}
-
-	/**
-	 * Given line seg, triangle (both oriented) that are KNOWN to
-	 * intersect, return BaryPoint's of first and last points on
-	 * segment inside triangle.
-	 * @param p1,p2, Complex segment ends
-	 * @param z1,z2,z3
-	 * @return BdryPoint[2], entry, exit points
-	 */
-	public static BaryPoint []hitPoints(Complex p1,Complex p2,
-			Complex z1,Complex z2,Complex z3) {
-		BaryPoint []barys=new BaryPoint[2];
-
-		// starts inside?
-		BaryPoint bp1=EuclMath.e_pt_to_bary(p1, z1, z2, z3);
-		BaryPoint bp2=EuclMath.e_pt_to_bary(p2, z1, z2, z3);
-		boolean p1_inside=false;
-		boolean p2_inside=false;
-		if (BaryPoint.baryPtInside(bp1)>=0)
-			p1_inside=true;
-		if (BaryPoint.baryPtInside(bp2)>=0) 
-			p2_inside=true;
-		if (p1_inside && p2_inside) {
-			barys[0]=bp1;
-			barys[1]=bp2;
-			return barys;
-		}
-		
-		Complex enty = null;
-		Complex ext = null;
-		// bp1 outside
-		if (p1_inside) 
-			enty=new Complex(p1);
-		else 
-			enty=EuclMath.firstHit(p1,p2,z1,z2,z3);
-		if (p2_inside)
-			ext=new Complex(p2);
-		else
-			ext=EuclMath.firstHit(p2,p1,z1,z2,z3);
-		if (enty==null || ext==null) 
-			throw new DataException("error hitting triangle");
-		barys[0]=EuclMath.e_pt_to_bary(enty, z1, z2, z3);
-		barys[1]=EuclMath.e_pt_to_bary(ext, z1, z2, z3);
-		return barys;
-	}
-		
-	/**
-	 * Build 'BaryLink' vector for pack p from given path: note path
-	 * may enter and leave carrier, so this returns a vector of non-
-	 * trivial segments.
-	 * @param p, PackData. 
-	 * @param path, Path2D.Double (may be multiple segments)
-	 * @return Vector<BaryLink> or null on error
-	 */
-	public static Vector<BaryCoordLink> fromPath(PackData p,Path2D.Double path) {
-		if (p.hes!=0) {
-			throw new ParserException("'BaryLink': only available in eucl case");
-		}
-		if (path==null) return null;
-		Vector<Vector<Complex>> zSegments=GenPathUtil.gpPolygon(path);
-		Vector<BaryCoordLink> Blinks=new Vector<BaryCoordLink>(1);
-
-		// iterate through the segments if 'path' has more than one.
-		for (int j=0;j<zSegments.size();j++) {
-			Vector<Complex> zPath =zSegments.get(j);
-			if (zPath!=null && zPath.size()>0) {
-				// cut out essentially repeated entries
-				for (int jj=0;jj<(zPath.size()-1);jj++) {
-					Complex z=zPath.get(jj);
-					while ((jj+1)<zPath.size() && 
-							zPath.get(jj+1).minus(z).abs()<.000001)
-						zPath.remove(jj+1);
-				}
-				if (zPath.size()>1) {
-					boolean healthy=true;
-					do {
-						segAnswer sAns=nextSegment(p,zPath);
-						if (sAns==null) 
-							healthy=false;
-						else if (sAns.blink!=null) {
-							healthy=sAns.healthy;
-							Blinks.add(sAns.blink);
-						}
-					} while (healthy && zPath.size()>0);
-				}
-			}
-		} // end of for
-		return Blinks;
+	public static double gpFlatness(Path2D.Double gpath) {
+		if (gpath==null) return 0.0;
+		double extent=gpExtent(gpath);
+		return extent*FLAT_FACTOR;
 	}
 	
 	/** 
-	 * Given path, find the next continuous segment actually
-	 * entering the packing carrier. 
-	 * @param p
-	 * @param healthy, return health: false if error encountered
-	 * @param zPath, returned with new starting spot if not used up
-	 * @return BaryLink, null if nothing found
-	 */
-	public static segAnswer nextSegment(PackData p,Vector<Complex> zPath) {
-		if (zPath==null || zPath.size()==0) 
-			return new segAnswer(true,null);
-		Complex start=zPath.remove(0);
-		BaryPacket currfbp=null;
-		Complex nextz=null;
-		Complex []z=new Complex[3];
-		int currFaceIndx=0;
-		Face currface;
-		int hitResult=0;
-		boolean gothit=false; // true only entering carrier and bdry edge is hit
-		boolean healthy=true;
-		
-		// finding a first face: can be tough
-		FaceLink flink=p.tri_search(start);
-		// not in face? must be outside carrier.
-		if (flink==null || flink.size()==0) { 
-			// We pass around bdry edges in order and use segIntersect
-			EdgeLink elink=new EdgeLink(p,"b");
-			if (elink==null || elink.size()==0)
-				return new segAnswer(healthy,null);
-			
-			// toss segments of zPath that don't get a hit
-			while (zPath.size()>0 && !gothit) {
-				double minDist=10000000;
-				nextz=zPath.remove(0);
-				double pathSegLength=start.minus(nextz).abs();
-				Iterator<EdgeSimple> elst=elink.iterator();
-				EdgeSimple holdEdge=null;
-				Complex holdStart=null;
-				while (elst.hasNext()) {
-					EdgeSimple edge=elst.next();
-					Complex a=new Complex(p.rData[edge.v].center);
-					Complex b=new Complex(p.rData[edge.w].center);
-					Complex hitPt=EuclMath.segIntersect(start,nextz,a,b);
-					if (hitPt!=null) {
-						double dist=start.minus(hitPt).abs();
-						if (dist<=pathSegLength && dist<minDist) {
-							holdEdge=new EdgeSimple(edge.v,edge.w);
-							holdStart=new Complex(hitPt);
-						}
-					}
-				} // end of pass through bdry edges
-				if (holdEdge!=null) { // success: now, which face?
-					start=new Complex(holdStart); // entry point
-					if (start.minus(nextz).abs()>EuclMath.OKERR*100) {
-						zPath.insertElementAt(nextz,0); // need to get 'nextz' later
-					}
-					else if (zPath.size()==0) { // only got one point
-						return new segAnswer(healthy,null);
-					}
-					// is 'start' an endpoint?
-					if (start.minus(p.rData[holdEdge.v].center).abs()<EuclMath.OKERR*10) {
-						currFaceIndx=faceFromZ(p,holdEdge.v,nextz);
-						start=new Complex(p.rData[holdEdge.v].center);
-					}
-					else if (start.minus(p.rData[holdEdge.w].center).abs()<EuclMath.OKERR*10) {
-						currFaceIndx=faceFromZ(p,holdEdge.w,nextz);
-						start=new Complex(p.rData[holdEdge.w].center);
-					} 
-					else currFaceIndx=p.kData[holdEdge.v].faceFlower[0]; // face
-					gothit=true;
-				}
-				else { // toss segment, try next
-					start=nextz;
-				}
-			} // end of outer while (trying new segments of the path against whole bdry)
-			
-			// never crossed the boundary? zPath should be empty
-			if (!gothit) 
-				return new segAnswer(healthy,null);
-			
-			// build FaceLink so we can continue
-			flink=new FaceLink(p);
-			flink.add(currFaceIndx);
-		}
-		
-		// 'start' should be in face(s) of this list; It might be 'nextz' 
-		do {
-			if (zPath.size()>0) 
-				nextz=zPath.remove(0);
-		} while (nextz!=null && start.minus(nextz).abs()<EuclMath.OKERR*10 && zPath.size()>0);
-		if (nextz!=null && start.minus(nextz).abs()<EuclMath.OKERR*10) {
-			return new segAnswer(healthy,null); // just one point
-		}
-		if (nextz==null)
-			return new segAnswer(healthy,null); 
-		
-		// find first with segment actually entering carrier
-		gothit=false;
-		int repeat=2;
-		while (repeat>0 && !gothit) {
-			Iterator<Integer> flst=flink.iterator();
-			while (flst.hasNext() && !gothit) {
-				currFaceIndx=flst.next();
-			
-				// check if segment [start,nextz] actually enters the face
-				currface=p.faces[currFaceIndx];
-				z[0]=new Complex(p.rData[currface.vert[0]].center);
-				z[1]=new Complex(p.rData[currface.vert[1]].center);
-				z[2]=new Complex(p.rData[currface.vert[2]].center);
-				currfbp=new BaryPacket(p,currFaceIndx);
-				currfbp.setStart(EuclMath.e_pt_to_bary(start, z[0],z[1],z[2]));
-				BaryPoint baryNext=EuclMath.e_pt_to_bary(nextz, z[0],z[1],z[2]);
-				
-				hitResult=currfbp.findEndPt(baryNext);
-				if (hitResult>=1)
-				gothit=true;
-			} // end of inner while
-
-			// didn't enter? It would appear that 'start' is on edge of some face, but
-			//   vector to 'nextz' points away. Need to shift 'start' toward 'nextz' 
-			//   a little and try once more.
-			if (!gothit) {
-				Complex vec=nextz.minus(start);
-				// move distance 1/100 toward 'nextz'
-				start=start.add(vec.times(.01/vec.abs()));
-				repeat--;
-			}
-		} // end of outer while
-
-		// no hit; put 'nextz' back in zPath another try for another segment
-		if (!gothit && start.minus(nextz).abs()>EuclMath.OKERR*100) {
-			zPath.insertElementAt(nextz,0);
-			return new segAnswer(healthy,null);
-		}
-		
-		// Reaching here, we have first BaryPacket: look for continuations
-		BaryCoordLink blk=new BaryCoordLink(p);
-		int safety=10*p.faceCount;
-		do {
-			blk.add(currfbp);
-			start=currfbp.getEndZ(p);
-			// did we (essentially) reach nextz?
-			if (start.minus(nextz).abs()<EuclMath.OKERR*100) {
-				if (zPath.size()==0) {
-					return new segAnswer(healthy,blk);
-				}
-				nextz=zPath.remove(0);
-			}
-			
-			// start new packet (even though start may be exit point)
-			currfbp=new BaryPacket(p,currFaceIndx);
-			currfbp.setStart(EuclMath.e_pt_to_bary(start,z[0],z[1],z[2]));
-			BaryPoint baryNext=EuclMath.e_pt_to_bary(nextz,z[0],z[1],z[2]);
-			
-			// find end in direction of 'baryNext'
-			int locCount=0;
-			while ((hitResult=currfbp.findEndPt(baryNext))<1) { // things to check
-				locCount++;
-//				System.out.println("goResult = "+ goResult);
-				if (hitResult==0) { // 'end' equals 'start'
-					if (zPath.size()==0) {
-						return new segAnswer(healthy,blk);
-					}	
-					// will try this face again with new 'nextz'
-					nextz=zPath.remove(0);
-					baryNext=EuclMath.e_pt_to_bary(nextz, z[0],z[1],z[2]);
-				}
-				else if (hitResult==-2) { // line misses: find new face
-					int code=currfbp.isStartOnEdge();
-					if (code==-1) { // error: start should be on some edge
-						healthy=false;
-						return new segAnswer(healthy,blk);
-					}
-					int holdFace=currFaceIndx;
-					currFaceIndx=PathUtil.getNextFace(p,holdFace,code,nextz);
-					if (currFaceIndx==holdFace) {
-						System.err.println("'fromPath':didn't get new face");
-						healthy=false;
-						return new segAnswer(healthy,blk);
-					}
-					
-					// no next face? exiting carrier, so finished
-					if (currFaceIndx==-1) {
-						return new segAnswer(healthy,blk);
-					}
-					
-					// else have our new face to try with same 'nextz'
-					currface=p.faces[currFaceIndx];
-					z[0]=new Complex(p.rData[currface.vert[0]].center);
-					z[1]=new Complex(p.rData[currface.vert[1]].center);
-					z[2]=new Complex(p.rData[currface.vert[2]].center);
-					currfbp=new BaryPacket(p,currFaceIndx);
-					currfbp.setStart(EuclMath.e_pt_to_bary(start,z[0],z[1],z[2]));
-					baryNext=EuclMath.e_pt_to_bary(nextz,z[0],z[1],z[2]);
-				}
-				if (locCount>2) {
-					System.err.println("currFaceIndx="+currFaceIndx+" nextz="+nextz+
-							" start="+start);
-				}
-			} // end of while
-			
-			// if 'nextBary' in closed triangle (= 'nextz') or close enough to 'nextz'
-			if (hitResult>=2 || 
-					currfbp.getEndZ(p).minus(nextz).abs()<EuclMath.OKERR*1000) { // 'end' strictly inside
-				if (zPath.size()==0) {
-					blk.add(currfbp);
-					return new segAnswer(healthy,blk);
-				}
-				nextz=zPath.remove(0);
-			}
-			// if 'end' came out on bdry
-//			else if (hitResult==1) {
-//				System.err.println("got 1, currFaceIndx="+currFaceIndx);
-//			}
-			safety--;
-		} while (safety>0);
-		
-		// shouldn't reach here
-		healthy=false;
-		return new segAnswer(healthy,blk);
-	}
-		
-    /**
-     * 
-     * @param f, current face index
-     * @param code, where previous pt situated
-     * code = 0,1,2 (at vert 0, 1, or 2)
-     *      = 12, 31, 23 (edge)
-     * @param nextz (only needed if at vertex)
-     * @return next face index
-     */
-    public static int getNextFace(PackData p,int f,int code,Complex p2) {
-    	Face face=p.faces[f];
-    	int v=0;
-    	int w=0;
-    	try {
-    	if (code<10) { // at corner
-    		v=face.vert[code];
-    		return faceFromZ(p,v,p2);
-    	}
-    	if (code==12) {
-    		w=face.vert[1];
-    		v=face.vert[0];
-    	}
-    	if (code==31) {
-    		w=face.vert[0];
-    		v=face.vert[2];
-    	}
-    	if (code==23) {
-    		w=face.vert[2];
-    		v=face.vert[1];
-    	}
-    	if (p.kData[v].bdryFlag==1 && w==p.kData[v].flower[0])
-    		return -1; 
-    	return p.kData[w].faceFlower[p.nghb(w,v)]; // to left of {w,v}
-    	} catch(Exception ex) {
-//    		System.out.println("w,v = "+w+" "+v);
-    		throw new CombException("hum??? bad code?");
-    	}
-    }
-	
-	/**
-	 * Return index of face in flower of v which the line from center 
-	 * to p2 enters. If none, return -1 (e.g., out of carrier)
-	 * @param p
-	 * @param v
-	 * @param p2
+	 * Returns length of 'Path2D.Double', flatness computed 
+	 * by 'gpFlatness'.
+	 * @param Path2D.Double gpath
 	 * @return
 	 */
-	public static int faceFromZ(PackData p,int v,Complex p2) {
-		int num=p.kData[v].num;
-		Complex me=p.rData[v].center;
-		Complex vp2=p2.minus(me);
-		double arg1;
-		double arg2=p.rData[p.kData[v].flower[0]].center.minus(me).divide(vp2).arg();
-		for (int j=1;j<=num;j++) {
-			arg1=arg2;
-			arg2=p.rData[p.kData[v].flower[j]].
-			center.minus(me).divide(vp2).arg();
-			if (arg1<=0 && arg2>0)
-				return p.kData[v].faceFlower[j-1];
+	public static double gpLength(Path2D.Double gpath) {
+		double flatness=gpFlatness(gpath);
+		return gpLength(gpath,flatness);
+	}
+	
+	/** 
+	 * Returns length of 'Path2D.Double' based on polygonal approximation
+	 * for given flatness parameter.
+	 * @param Path2D.Double gpath
+	 * @param double flatness
+	 * @return
+	 */
+	public static double gpLength(Path2D.Double gpath,double flatness) {
+		if (gpath==null) return 0.0;
+		PathIterator pit = gpath.getPathIterator(null, flatness);
+		double[] coords = new double[6]; // I think we only use first 2 entries
+		double lastX = 0, lastY = 0;
+		pit.currentSegment(coords); // the first point
+		double lastMovetoX=coords[0],lastMovetoY=coords[1];
+		double length = 0;
+		while(!pit.isDone()) {
+			int type = pit.currentSegment(coords);
+			switch(type) {
+			case PathIterator.SEG_MOVETO:
+				lastX = lastMovetoX=coords[0];
+				lastY = lastMovetoY=coords[1];
+				break;
+			case PathIterator.SEG_LINETO:
+				length += Point2D.distance(lastX, lastY, coords[0], coords[1]);
+				lastX = coords[0];
+				lastY = coords[1];
+				break;
+			case PathIterator.SEG_CLOSE: // closes up subpath to last 'moveto' segment
+				length += Point2D.distance(lastMovetoX,lastMovetoY,coords[0],coords[1]);
+				break;
+			default:
+				System.out.println("Unexpected type in 'PathIterator': " + type);
+			}
+			pit.next();
 		}
-		if (Math.abs(arg2)<EuclMath.OKERR)
-			return p.kData[v].faceFlower[num-1];
-		return -1;
+		return length;
 	}
 	
 	/**
-	 * For the given packing, convert BaryLink to Path2D.Double.
-	 * Note: I think this handles only paths with single component.
-	 * @param p
-	 * @param blk, BaryLink
-	 * @return null on error or empty path
+	 * Return distance from 'z' to the 'Path2D.Double', positive if 'z'
+	 * is inside, negative if 'z' is outside.
+	 * @param gpath
+	 * @param flatness
+	 * @return
 	 */
-	public static Path2D.Double baryLink2path(PackData p,BaryCoordLink blk) {
-		if (blk==null || blk.size()==0) 
-			return null;
-		Path2D.Double path=new Path2D.Double();
-		Iterator<BaryPacket> bit = blk.iterator();
-		BaryPacket bp=bit.next();
-		Complex z=bp.getStartZ(p);
-		if (z!=null)
-		path.moveTo(z.x,z.y);
-		z=bp.getEndZ(p);
-		if (z!=null)
-		path.lineTo(z.x,z.y);
-		while(bit.hasNext()) {
-			z=bit.next().getEndZ(p);
-			if (z==null) 
-				return path;
-			path.lineTo(z.x,z.y);
+	public static double gpDistance(Path2D.Double gpath,Complex z) {
+		double[] coords = new double[6]; // I think we only use first 2 entries
+		double lastX = 0, lastY = 0;
+		
+		double minDist=100000;
+		double dist;
+		PathIterator pit = gpath.getPathIterator(null, gpFlatness(gpath));
+		double lastMovetoX=coords[0],lastMovetoY=coords[1];
+		while(!pit.isDone()) {
+			int type = pit.currentSegment(coords);
+			switch(type) {
+			case PathIterator.SEG_MOVETO:
+				lastX = lastMovetoX=coords[0];
+				lastY = lastMovetoY=coords[1];
+				break;
+			case PathIterator.SEG_LINETO:
+				dist=EuclMath.dist_to_segment(z,new Complex(lastX,lastY),new Complex(coords[0],coords[1]));
+				minDist = (dist<minDist) ? dist:minDist;
+				lastX = coords[0];
+				lastY = coords[1];
+				break;
+			case PathIterator.SEG_CLOSE: // closes up subpath to last 'moveto' segment
+				dist=EuclMath.dist_to_segment(z,new Complex(lastX,lastY),
+						new Complex(lastMovetoX,lastMovetoY));
+				minDist = (dist<minDist) ? dist:minDist;
+				lastX = lastMovetoX;
+				lastY = lastMovetoY;
+				break;
+			default:
+//				System.out.println("Unexpected type: " + type);
+			}
+			pit.next();
 		}
+		
+		if (gpath.contains(z.x,z.y)) return minDist;
+		return -minDist;
+	}
+	
+	/**
+	 * Find the center and radius of the smallest euclidean disc containing
+	 * the bounding rectangle to a polygon approximating a Path2D.Double,
+	 * with 'flatness' parameter.
+	 * @param gpath
+	 * @param flatness
+	 * @return double[3] = [x,y,rad]
+	 */
+	public static double []gpCentRad(Path2D.Double gpath,double flatness) {
+		double []results=new double[3];
+		PathIterator pit = gpath.getPathIterator(null, flatness);
+		double[] coords = new double[6]; // I think we only use first 2 entries
+		double maxDist,dist;
+
+		Rectangle2D rect2D=gpath.getBounds2D();
+		double x=rect2D.getCenterX();
+		double y=rect2D.getCenterY();
+		maxDist=0.0; //rect2D.getHeight()+rect2D.getWidth();
+		
+		while(!pit.isDone()) {
+			pit.currentSegment(coords);
+			dist= Point2D.distance(x,y,coords[0],coords[1]);
+			maxDist=(dist>maxDist) ? dist : maxDist;
+			pit.next();
+		}
+		
+		results[0]=x;
+		results[1]=y;
+		results[2]=maxDist;
+		return results;
+	}
+	
+	/**
+	 * Return a vector of polygons (each a vector of Complex's) approximating 
+	 * the given 'Path2D.Double'. May have more than one polygon if path has 
+	 * components. Use this, e.g. when we want to put the path into postscript output.
+	 * @param Path2D.Double gpath, double flatness
+	 * @return Vector<Vector<Point2D.Double>>
+	 */
+	public static Vector<Vector<Complex>> gpPolygon(Path2D.Double gpath) {
+		double flatness = PathUtil.gpFlatness(gpath);
+		return gpPolygon(gpath,flatness);
+	}
+	
+	/**
+	 * Return a vector of polygons (each a vector of Complex's) approximating 
+	 * the given 'Path2D.Double'. May have more than one polygon if path has 
+	 * components. Use this, e.g. when we want to put the path into postscript output.
+	 * @param gpath Path2D.Double
+	 * @param flatness double
+	 * @return Vector<Vector<Point2D.Double>>
+	 */
+	public static Vector<Vector<Complex>> gpPolygon(Path2D.Double gpath,double flatness) {
+		Vector<Vector<Complex>> vec=new Vector<Vector<Complex>>(3);
+		Vector<Complex> poly=new Vector<Complex>();
+        double[] coords = new double[6];
+        boolean newpoly=false;  // to get through first pass; afterwards, true
+        						// means each SEG_MOVETO triggers a new poly vector
+        						// TODO: may not need this: perhaps first type
+        						// is always SEG_MOVETO.
+        
+        // get a FlatteningPathIterator.
+        PathIterator pit = gpath.getPathIterator(null, flatness);
+        if (pit.isDone()) return null;
+        
+        // find first point
+        int type=pit.currentSegment(coords);
+		double lastMovetoX=coords[0],lastMovetoY=coords[1];
+
+        while(!pit.isDone()) {
+            type = pit.currentSegment(coords);
+            if (type!=PathIterator.SEG_MOVETO && type!=PathIterator.SEG_LINETO
+            		&& type!=PathIterator.SEG_CLOSE)
+                System.out.println("Unexpected type: " + type);
+            else if (!newpoly) { // get started first time through only
+            	newpoly=true;
+            	poly.add(new Complex(coords[0],coords[1]));
+            }
+            else if (type==PathIterator.SEG_CLOSE) { // segment to last 'moveto' point
+            	if (lastMovetoX!=coords[0] || lastMovetoY!=coords[1])
+            		poly.add(new Complex(lastMovetoX,lastMovetoY));
+            }
+            else if (type==PathIterator.SEG_MOVETO) {
+            	vec.add(poly); // finished with this polygonal path; save and start the next
+            	poly=new Vector<Complex>();
+            	poly.add(new Complex(coords[0],coords[1]));
+            	lastMovetoX=coords[0];
+            	lastMovetoY=coords[1];
+            }
+            else {
+            	poly.add(new Complex(coords[0],coords[1]));
+            }            	
+            pit.next();
+        }
+        vec.add(poly);
+        return vec;
+	}
+	
+	/**
+	 * Return a Path2D.Double representing eucl circle (z,r) with
+	 * N (at least 4) segments. See 'CPCircle' for code source.
+	 * @param rad
+	 * @param z Complex
+	 * @param N
+	 * @return
+	 */
+	public static Path2D.Double getCirclePath(double radius,Complex z,int N) {
+		// hands-on drawing
+		Path2D.Double path= new Path2D.Double();
+		if (N<4) N=4;
+		path.moveTo(radius+z.x,z.y);
+		for (int i=1;i<N;i++) {
+			double ang=(double)i*2.0*Math.PI/(double)N;
+			path.lineTo(z.x+radius*Math.cos(ang),
+					z.y+radius*Math.sin(ang));
+		}
+		path.closePath();
 		return path;
 	}
 	
 	/**
-	 * Just to carry results back from nextSegment
-	 */
-	static class segAnswer {
-		public boolean healthy;
-		public BaryCoordLink blink;
-		
-		public segAnswer(boolean health,BaryCoordLink blk) {
-			healthy=health;
-			blink=blk;
+     * Create a Path2D.Double in the complex plane by parsing 
+     * the complex function described in 'path_text' in terms of
+     * real variable 't' for t in [0,1]. Default to 'N' points.
+     * description using real variable 't' for t in [0,1]. 
+     * @param path_text String
+     * @param N int
+     * @return Path2D.Double, null on error
+     */
+    public static Path2D.Double path_from_text(String path_text,int N) {
+    	if (path_text==null || path_text.length()==0)
+    		return null;
+		Path2D.Double closedPath=new Path2D.Double();
+		FunctionParser utilParser=new FunctionParser();
+		utilParser.setComplex(true);
+		utilParser.removeVariable("x");
+		utilParser.setVariable("t");
+		utilParser.parseExpression(path_text);
+		if (utilParser.funcHasError()) {
+			CirclePack.cpb.errMsg("Path description could not be parsed");
+			return null;
 		}
+		if (N<10)
+			N=10;
+		// create path, 200 segments
+		try {
+			for (int i=0;i<=N;i++) {
+				com.jimrolf.complex.Complex z=
+					new com.jimrolf.complex.Complex(((double)(i))/(double)N,0.0);
+				com.jimrolf.complex.Complex w=utilParser.evalFunc(z);
+				if (i==0)
+					closedPath.moveTo(w.re(),w.im());
+				else
+					closedPath.lineTo(w.re(),w.im());
+			}
+			closedPath.closePath();
+		} catch (Exception ex) {
+			CirclePack.cpb.errMsg("Failed creation of closed path");
+			return null;
+		}
+    	return closedPath;
+    }
+	
+    public static Path2D.Double path_from_text(String path_text) {
+    	return path_from_text(path_text,200);
+    }
+    
+	/**
+	 * Return the point on the (flattened) path which is closest to
+	 * the given point z.
+	 * @param z Complex
+	 * @param path Path2D.Double
+	 * @return Complex, null on error
+	 */
+	public static Complex getClosestPoint(Complex pt, Path2D.Double gpath) {
+		
+		Vector<Vector<Complex>> vec=gpPolygon(gpath);
+		Iterator<Vector<Complex>> polys=vec.iterator();
+		if (!polys.hasNext())
+			return null;
+		Complex bestz=null;
+		double bestsq=Double.MAX_VALUE; // best squared distance
+		while(polys.hasNext()) {
+			Vector<Complex> poly=polys.next();
+			Complex newz=getClosestPoint(pt,poly);
+			double dist2pt=newz.minus(pt).absSq();
+			if (dist2pt<bestsq) {
+				bestz=newz;
+				bestsq=dist2pt;
+			}
+		} // done with while through polygons
+			
+		return bestz;
 	}
+	
+	/**
+	 * Return the point on the polygonal path which is closest to
+	 * the given point z. The polygon is assumed to be closed.
+	 * @param z Complex
+	 * @param poly Vector<Complex>, the polygon
+	 * @return Complex, null on error
+	 */
+	public static Complex getClosestPoint(Complex pt, Vector<Complex> poly) {
+		Complex bestz=null;
+		double bestsq=Double.MAX_VALUE; // best squared distance
+		for (int i=0;i<poly.size();i++) {
+			Complex z1=poly.get(i);
+			Complex z2=poly.get((i+1)%poly.size());
+			Complex projz=EuclMath.proj_to_seg(pt, z1, z2);
+			double dist2pt=projz.minus(pt).absSq();
+			if (dist2pt<bestsq) {
+				bestz=projz;
+				bestsq=dist2pt;
+			}
+		} 
+		return bestz;
+	}
+
+	/**
+	   * Return the shortest closed interior edge path which
+	   * misses 'path' except for starting/ending at the origin
+	   * of 'seededge' (which must lie in 'path'). Note: 'path' 
+	   * may have multiple connected components, but it 'path' 
+	   * separates the complex, we get an exception. 
+	   * Normally 'path' either closed or with bdry endpoints;
+	   * its edges must be interior. We work by counting 
+	   * generations of interiors from 'seededge' on the left 
+	   * and right of 'path'.  
+	   * @param pdcel PackDCEL
+	   * @param path HalfLink
+	   * @param HalfEdge seededge, and edge of 'path'
+	   * @return PackDCEL or null on error
+	   */
+	  public static HalfLink getCutPath(PackDCEL pdcel,
+			  HalfLink path,HalfEdge seededge) {
+	
+		  if (path==null || path.size()==0 || seededge==null)
+			  return null;
+	
+		  // set all 'vutil' to bound = "untouched"
+		  int bound=pdcel.vertCount+1;
+		  for (int v=1;v<=pdcel.vertCount;v++) {
+			  pdcel.vertices[v].vutil=bound;
+		  }
+		  
+		  // zero 'vutil' on 'path', check for bdry edges
+		  Iterator<HalfEdge> pis=path.iterator();
+		  while (pis.hasNext()) {
+			  HalfEdge he=pis.next();
+			  if (pdcel.isBdryEdge(he))
+				  throw new DCELException("'getCutPath' error: edge "+
+						  he+" is a bdry edge");
+			  he.origin.vutil=0;
+		  }
+		  
+		  // zero out bdry 'vutil' so we don't try to cross bdry
+		  for (int i=1;i<=pdcel.idealFaceCount;i++) {
+			  HalfEdge stpe=pdcel.idealFaces[i].edge;
+			  HalfEdge he=stpe;
+			  do {
+				  he.origin.vutil=0;
+				  he=he.next;
+			  } while (he!=stpe);
+		  }
+	
+		  // find 'left/rightfan's of 'seededge'; used to get
+		  //   'vl' and 'vr'; also needed at to consider shortening
+		  ArrayList<Integer> leftfan=new ArrayList<Integer>(0);
+		  ArrayList<Integer> rightfan=new ArrayList<Integer>(0);
+		  HalfEdge he=seededge.prev.twin;
+		  while (he.twin.origin.vutil>0) {
+			  leftfan.add(he.twin.origin.vertIndx);
+			  he=he.prev.twin; // cclw
+		  }
+		  he=seededge.twin.next;
+		  while (he.twin.origin.vutil>0) {
+			  rightfan.add(he.twin.origin.vertIndx);
+			  he=he.twin.next; // clw
+		  }
+		  
+		  if (leftfan.size()==0 || rightfan.size()==0)
+			  throw new CombException("blue edge?? can't move to nghb on "+
+					  		"one side or other");
+		  int vl=leftfan.get(0); // left = plus side
+		  int vr=rightfan.get(0); // right = minus side
+		  int seedOrigin=seededge.origin.vertIndx;
+	
+		  // generation 1: 'vutil' +/- 1 on left/right of 'seededge'
+		  // two-list method to count successive generations (+/-)
+		  NodeLink currv=new NodeLink();
+		  NodeLink nextv=new NodeLink();
+		  boolean lhit=false;
+		  boolean rhit=false;
+		  if (pdcel.vertices[vl].vutil==bound) {
+			  pdcel.vertices[vl].vutil=1;
+			  nextv.add(vl);
+			  lhit=true;
+		  }
+		  if (pdcel.vertices[vr].vutil==bound) {
+			  pdcel.vertices[vr].vutil=-1;
+			  nextv.add(vr);
+			  rhit=true;
+		  }
+		  if (!lhit || !rhit) {
+			  throw new CombException("failed to get started with + or - vertices");
+		  }
+		  
+		  int safety=2*bound;
+		  int hitvert=0; // first vert with both + and - nghbs
+		  while (nextv.size()>0 && hitvert==0 && safety>0) {
+			  currv=nextv;
+			  nextv=new NodeLink();
+			  Iterator<Integer> cis=currv.iterator();
+			  while (cis.hasNext() && hitvert==0) {
+				  Vertex vert=pdcel.vertices[cis.next()];
+				  int myUtil=vert.vutil; // must already be on left or right
+				  int[] petals=vert.getPetals();
+				  for (int j=0;(j<petals.length && hitvert==0);j++) {
+					  Vertex wert=pdcel.vertices[petals[j]];
+					  if (wert.vutil>=bound) { // first touch?
+						  if (myUtil<0) // right side hit
+							  wert.vutil=myUtil-1;
+						  else { // left side hit
+							  wert.vutil=myUtil+1;
+						  }
+						  nextv.add(wert.vertIndx);
+					  }
+					  // are we done?
+					  else if (wert.vutil!=0) {  
+						  if ((myUtil<0 && wert.vutil>0) ||
+								  (myUtil>0 && wert.vutil<0)) { 
+							  hitvert=vert.vertIndx;
+						  }
+					  }
+				  } // done with 'petals'
+			  } // done with while on currv
+			  safety--;
+		  } // done with while on nextv
+		  
+		  if (safety<=0 || hitvert==0) {
+			  throw new DCELException("hum...? no collision "+
+					  "or overran safety in 'ShortCut'");
+		  }
+		  
+		  // build 'cutPath' from left side of 'seededge' to
+		  //   right side: get from 'hitvert' to 'vl', then
+		  //   from 'hitver' to 'vr'.
+		  HalfLink cutPath=new HalfLink();
+		  
+		  // find first + vert, first - vert.
+		  Vertex vert=pdcel.vertices[hitvert];
+		  int plus1=0;
+		  int minus1=0;
+		  if (vert.vutil<0) {
+			  minus1=vert.vertIndx;
+			  int[] petals=vert.getPetals();
+			  for (int j=0;(j<petals.length && plus1==0);j++) {
+				  if (pdcel.vertices[petals[j]].vutil>0) {
+					  plus1=petals[j];
+					  break;
+				  }
+			  }
+		  }
+		  else {
+			  plus1=vert.vertIndx;
+			  int[] petals=vert.getPetals();
+			  for (int j=0;(j<petals.length && minus1==0);j++) {
+				  if (pdcel.vertices[petals[j]].vutil<0) {
+					  minus1=petals[j];
+					  break;
+				  }
+			  }
+		  }
+	
+		  // get the plus side back to 'vl'.
+		  int newv=plus1;
+		  while (newv!=vl) {
+			  vert=pdcel.vertices[newv];
+			  int myUtil=vert.vutil; // should be positive
+			  int[] petals=vert.getPetals();
+			  for (int j=0;j<petals.length;j++) {
+				  int nutil=pdcel.vertices[petals[j]].vutil;
+				  if (nutil>0 && nutil<myUtil) {
+					  cutPath.add(pdcel.
+							  findHalfEdge(new EdgeSimple(petals[j],newv)));
+					  newv=petals[j];
+					  break;
+				  }
+			  }
+		  }
+		  if (newv!=vl) {
+			  throw new CombException("didn't reach 'vl' as expected");
+		  }
+		  cutPath.add(pdcel.findHalfEdge(
+				  new EdgeSimple(seedOrigin,vl)));
+		  
+		  // 'HalfEdges' are going right way, just reverse the list
+		  cutPath=HalfLink.reverseLink(cutPath);
+		  
+		  // here's the edge connecting plus to minus halves
+		  cutPath.add(pdcel.findHalfEdge(new EdgeSimple(plus1,minus1)));
+		  
+		  // now get path to 'vr'; make sure hitvert vutil is <0
+		  newv=minus1;
+		  HalfLink minushalf=new HalfLink();
+		  vert=pdcel.vertices[newv];
+		  while (newv!=vr) {
+			  vert=pdcel.vertices[newv];
+			  int myUtil=vert.vutil; // this is negative
+			  int[] petals=vert.getPetals();
+			  for (int j=0;j<petals.length;j++) {
+				  int nutil=pdcel.vertices[petals[j]].vutil;
+				  if (nutil<0 && nutil>myUtil) {
+					  cutPath.add(pdcel.
+							  findHalfEdge(new EdgeSimple(newv,petals[j])));
+					  newv=petals[j];
+					  break;
+				  }
+			  }
+		  }
+		  if (newv!=vr) {
+			  throw new CombException("didn't reach 'vr' as expected");
+		  }
+	
+		  minushalf.add(pdcel.findHalfEdge(
+				  new EdgeSimple(vr,seedOrigin)));
+		  
+		  cutPath.abutMore(minushalf);
+		  
+		  // May be able to shorten at beginning (plus side)
+		  int ed=cutPath.get(1).twin.origin.vertIndx;
+		  if (leftfan.contains(ed)) { // yes, can shortcut
+			  cutPath.remove(1); // remove first two
+			  cutPath.remove(0); 
+			  // replace first two steps by <seedOrigin,ed>
+			  cutPath.add(0,pdcel.findHalfEdge(seedOrigin,ed)); 
+		  }
+		  
+		  // and/or at end
+		  int sz=cutPath.size();
+		  ed = cutPath.get(sz-2).origin.vertIndx;
+		  if (rightfan.contains(ed)) { // yes, can shortcut
+			  cutPath.removeLast(); // remove last two
+			  cutPath.removeLast();
+			  // replace last two steps by <ed,seedOrigin>
+			  cutPath.add(pdcel.findHalfEdge(ed,seedOrigin));
+		  }
+		  
+		  // 'cutPath should start/stop at 'seedOrigin'
+		  return cutPath;
+	  }
+
+	/**
+	   * Using the red chain and 'pairLink', find a short 
+	   * non-separating path of interior edges which either
+	   * is closed or starts/ends on distinct boundary 
+	   * components. CAN NOT guarantee that it is minimal 
+	   * length in its homotopy class.
+	   * @param pdcel PackDCEL
+	   * @return HalfLink or null on failure
+	   */
+	  public static HalfLink getNonSeparating(PackDCEL pdcel) {
+		  
+		  if (pdcel.p.isSimplyConnected())
+			  throw new CombException("this complex is simply connected");
+		  
+		  // we depend on the red chain
+		  if (pdcel.redChain==null) {
+			  int ans=CombDCEL.redchain_by_edge(pdcel, null, null, false);
+			  if (ans==0)
+				  throw new CombException("No red chain, and failed to create one");
+			  CombDCEL.fillInside(pdcel); // this sets side-pairings
+		  }
+		  
+		  // first, check pairLink for shortest side which is either:
+		  //   * paired and closed, or
+		  //   * paired and starts ends on distinct bdry comps.
+		  int bestSide=-1;
+		  int shortest=10*pdcel.vertCount;
+		  int[] lengths=new int[pdcel.pairLink.size()]; // find lengths
+		  Iterator<SideData> dsp=pdcel.pairLink.iterator();
+		  dsp.next(); // first is empty
+		  while (dsp.hasNext()) {
+			  SideData sdata=dsp.next();
+			  int mIndx=sdata.mateIndex;
+			  if (mIndx>0) { // is paired
+				  RedEdge oppStart=pdcel.pairLink.get(mIndx).startEdge;
+				  int end1=sdata.startEdge.myEdge.origin.vertIndx;
+				  int end2=oppStart.myEdge.origin.vertIndx;
+				  
+				  // closed?
+				  if (end1==end2) {
+					  lengths[sdata.spIndex]=sdata.sideCount();
+					  if (lengths[sdata.spIndex]<shortest) {
+						  shortest=lengths[sdata.spIndex];
+						  bestSide=sdata.spIndex;
+					  }
+				  }
+				  
+				  // both ends on bdry?
+				  else if (oppStart.myEdge.origin.bdryFlag!=0 &&
+						  sdata.startEdge.myEdge.origin.bdryFlag!=0 &&
+						  !CombDCEL.onSameBdryComp(pdcel, end1, end2)) { 
+					  lengths[sdata.spIndex]=sdata.sideCount();
+					  if (lengths[sdata.spIndex]<shortest) {
+						  shortest=lengths[sdata.spIndex];
+						  bestSide=sdata.spIndex;
+					  }
+				  }
+			  }
+		  } // done finding qualifying lengths
+		  
+		  // found one?
+		  if (bestSide!=-1)
+			  return pdcel.pairLink.get(bestSide).sideHalfLink();
+		  
+		  // else, cycle through side 'startEdge's origins and find
+		  //    the one for which the count of edges between it
+		  //    and its first cclw repeat is shortest and those are
+		  //    all interior edges.
+		  dsp=pdcel.pairLink.iterator();
+		  dsp.next(); // first is null
+		  while (dsp.hasNext()) {
+			  SideData sdata=dsp.next();
+			  RedEdge rtrace=sdata.startEdge;
+			  int end1=rtrace.myEdge.origin.vertIndx;
+			  rtrace=rtrace.nextRed;
+			  int tick=0;
+			  RedEdge stopRed=sdata.startEdge.prevRed;
+			  INNER_WHILE: while (rtrace!=stopRed && tick>=0 && 
+					  rtrace.myEdge.origin.vertIndx!=end1) {
+				  HalfEdge he=rtrace.myEdge;
+				  if (he.twin.face!=null && he.twin.face.faceIndx<0) {
+					  tick=0;
+					  break INNER_WHILE;
+				  }
+				  tick++;
+				  rtrace=rtrace.nextRed;
+			  }
+			  if (tick>0) { // will this always happen? I think so
+				  lengths[sdata.spIndex]=tick;
+			  }
+		  } // done getting lengths between repeats
+	
+		  for (int j=1;j<lengths.length;j++) {
+			  if (lengths[j]<shortest) {
+				  shortest=lengths[j];
+				  bestSide=j;
+			  }
+		  }
+		  
+		  // I don't believe this can fail because one of the
+		  //   earlier paths would have necessarily succeeded
+		  //   (I think).
+		  if (bestSide==-1) {
+			  throw new DCELException("'getNonSeparating' error failed");
+		  }
+		  
+		  // return 
+		  HalfLink hlink=new HalfLink();
+		  RedEdge rtrace=pdcel.pairLink.get(bestSide).startEdge;
+		  int end1=rtrace.myEdge.origin.vertIndx;
+		  hlink.add(rtrace.myEdge);
+		  rtrace=rtrace.nextRed;
+		  while (rtrace.myEdge.origin.vertIndx!=end1) {
+			  hlink.add(rtrace.myEdge);
+			  rtrace=rtrace.nextRed;
+		  }
+		  
+		  return hlink;
+	  }
+
+	/**
+	   * Return 'HalfLink' path of interior edges which 
+	   * is among the shortest combinatorially starting 
+	   * and ending at an end of 'seed' edge without 
+	   * crossing 'path'. Make a small shift of ends
+	   * if it will close the path without lengthening it
+	   * else end with 'seed' itself to close up.
+	   * @param pdcel PackDCEL
+	   * @param path HalfLink
+	   * @param seed HalfLink
+	   * @return HalfLink
+	   */
+	  public static HalfLink getShortPath(PackDCEL pdcel,
+			  HalfLink path,HalfLink seed) {
+		  HalfLink link1=new HalfLink();
+		  int bound=pdcel.vertCount+1;
+		  
+		  // set all 'vutil' to bound = "untouched"
+		  for (int v=1;v<=pdcel.vertCount;v++) {
+			  pdcel.vertices[v].vutil=bound;
+		  }
+		  
+		  // two-list method to count generations (+/-)
+		  NodeLink currv=new NodeLink();
+		  NodeLink nextv=new NodeLink();
+	
+		  // set 'vutil' 0 on 'path'
+		  Iterator<HalfEdge> pis=path.iterator();
+		  while (pis.hasNext()) {
+			  HalfEdge he=pis.next();
+			  he.origin.vutil=0;
+			  he.twin.origin.vutil=0;
+		  }
+		  
+		  // set 'vutil' +/- on left/right of 'seed' edges
+		  boolean lhit=false;
+		  boolean rhit=false;
+		  Iterator<HalfEdge> sis=seed.iterator();
+		  while (sis.hasNext()) {
+			  HalfEdge he=sis.next();
+			  int vl=he.next.next.origin.vertIndx;
+			  int vr=he.twin.next.next.origin.vertIndx;
+			  if (pdcel.vertices[vl].vutil==bound) {
+				  pdcel.vertices[vl].vutil=1;
+				  nextv.add(vl);
+				  lhit=true;
+			  }
+			  if (pdcel.vertices[vr].vutil==bound) {
+				  pdcel.vertices[vr].vutil=-1;
+				  nextv.add(vr);
+				  rhit=true;
+			  }
+		  }
+		  if (!lhit || !rhit) {
+			  throw new CombException("failed to get started with + or - vertices");
+		  }
+		  
+		  int safety=2*bound;
+		  int hitvert=0; // first hit (has both + and - nghb)
+		  while (nextv.size()>0 && hitvert==0 && safety>0) {
+			  currv=nextv;
+			  nextv=new NodeLink();
+			  Iterator<Integer> cis=currv.iterator();
+			  while (cis.hasNext() && hitvert==0) {
+				  Vertex vert=pdcel.vertices[cis.next()];
+				  int myUtil=vert.vutil; // already on left or right
+				  int[] petals=vert.getPetals();
+				  for (int j=0;(j<petals.length && hitvert==0);j++) {
+					  Vertex wert=pdcel.vertices[petals[j]];
+					  if (wert.vutil>=bound) { // first touch?
+						  if (myUtil<0) // right side hit
+							  wert.vutil=myUtil-1;
+						  else { // left side hit
+							  wert.vutil=myUtil+1;
+						  }
+						  nextv.add(wert.vertIndx);
+					  }
+					  else { // wert was alreadly left or right
+						  
+						  // are we done?
+						  if ((myUtil<0 && wert.vutil>0) ||
+								  (myUtil>0 && wert.vutil<0)) { 
+							  hitvert=vert.vertIndx;
+						  }
+						  else
+							  nextv.add(wert.vertIndx);
+					  }
+				  } // done with 'petals'
+			  } // done with while on currv
+			  safety--;
+		  } // done with while on nextv
+		  
+		  if (safety<=0 || hitvert==0) {
+			  throw new DCELException("hum...? no collision "+
+					  "or overran safety in 'ShortCut'");
+		  }
+		  
+		  // +/- generations first collide at 'hitvert'
+		  // for 'HalfLink' from left side to right side 
+		  if (hitvert!=0) {
+			  
+			  // find +/- petals
+			  Vertex hitVert=pdcel.vertices[hitvert];
+			  int vneg=0;
+			  int vpos=0;
+			  int[] petals=hitVert.getPetals(); // open flower
+			  for (int j=0;(j<petals.length && (vneg==0 || vpos==0));j++) {
+				  int val=pdcel.vertices[petals[j]].vutil;
+				  if (vneg==0 && val<0) 
+					  vneg=petals[j];
+				  if (vpos==0 && val>0 && val<bound)
+					  vpos=petals[j];
+			  }
+			  if (vneg==0 || vpos==0) {
+				  throw new DCELException("not collision at "+hitvert+"??");
+			  }
+		  
+			  // walk back through increasingly smaller + generations
+			  link1.add(pdcel.findHalfEdge(new EdgeSimple(hitvert,vpos)));
+			  while (pdcel.vertices[vpos].vutil!=0) {
+				  HalfLink eflower=pdcel.vertices[vpos].getEdgeFlower();
+				  int myindx=pdcel.vertices[vpos].vutil;
+				  HalfEdge hhedge=null;
+				  Iterator<HalfEdge> eis=eflower.iterator();
+				  while (eis.hasNext() && hhedge==null) {
+					  HalfEdge he=eis.next();
+					  if (he.twin.origin.vutil==myindx-1)
+						  hhedge=he;
+				  }
+				  if (hhedge==null) {
+					  throw new DCELException("lost + generational link");
+				  }
+				  link1.add(hhedge);
+				  vpos=hhedge.twin.origin.vertIndx;
+			  }
+			  link1=HalfLink.reverseElements(link1);
+			  link1=HalfLink.reverseLink(link1);
+			  
+			  // now walk through increasingly less - generations
+			  while (pdcel.vertices[vneg].vutil!=0) {
+				  HalfLink eflower=pdcel.vertices[vneg].getEdgeFlower();
+				  int myindx=pdcel.vertices[vneg].vutil;
+				  HalfEdge hhedge=null;
+				  Iterator<HalfEdge> eis=eflower.iterator();
+				  while (eis.hasNext() && hhedge==null) {
+					  HalfEdge he=eis.next();
+					  if (he.twin.origin.vutil==(myindx+1))
+						  hhedge=he;
+				  }
+				  if (hhedge==null) {
+					  throw new DCELException("lost - generational link");
+				  }
+				  link1.add(hhedge);
+				  vneg=hhedge.twin.origin.vertIndx;
+			  }
+		  }
+		  
+		  // closed already?
+		  HalfEdge edgefirst=link1.get(0);
+		  HalfEdge edgelast=link1.getLast();
+		  int v=edgefirst.origin.vertIndx;
+		  int w=edgelast.twin.origin.vertIndx;
+		  if (v==w)
+			  return link1;
+		  
+		  // simple adjustment?
+		  if (edgefirst.next.next.origin.vertIndx==w) {
+			  link1.add(0,edgefirst.next.twin);
+			  return link1;
+		  }
+		  if (edgelast.prev.origin.vertIndx==w) {
+			  link1.add(0,edgefirst.next.next);
+			  return link1;
+		  }
+		  int lastIndx=link1.size()-1;
+		  if (edgelast.twin.prev.origin.vertIndx==v) {
+			  link1.add(lastIndx,edgelast.twin.next);
+			  return link1;
+		  }
+		  if (edgelast.next.origin.vertIndx==v) {
+			  link1.add(lastIndx,edgelast.twin.prev.twin);
+			  return link1;
+		  }
+	
+		  return link1;
+	  }
 	
 }

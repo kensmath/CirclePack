@@ -4,17 +4,20 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.Vector;
 
+import combinatorics.komplex.HalfEdge;
+import dcel.RawManip;
+import exceptions.CombException;
+import exceptions.DataException;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
+import util.ColorUtil;
 import util.FlipBot;
 import util.StringUtil;
-import exceptions.CombException;
-import exceptions.DataException;
 
 /**
  * Developing edge flip strategies in various settings.
@@ -34,7 +37,7 @@ public class FlipStrategy extends PackExtender {
 	int southPole;
 	int NStoggle;
 	Random rand;
-	EdgeSimple baseEdge;
+	HalfEdge baseEdge;
 	
 	// Constructor
 	public FlipStrategy(PackData p) {
@@ -57,9 +60,9 @@ public class FlipStrategy extends PackExtender {
 		// following if for 'flip algorithm' use
 		northPole=packData.nodeCount;
 		// check if northPole is tangent to all the others
-		if (packData.kData[northPole].num==packData.nodeCount-1) {
+		if (packData.countFaces(northPole)==packData.nodeCount-1) {
 			for (int i=1;i<packData.nodeCount;i++)
-				if (packData.kData[i].num==packData.nodeCount-1)
+				if (packData.countFaces(i)==packData.nodeCount-1)
 					northPole=i;
 			if (northPole==packData.nodeCount)
 				throw new DataException("can't find north pole candidate");
@@ -94,54 +97,33 @@ public class FlipStrategy extends PackExtender {
 		
 		// ===================== setedge ================
 		if (cmd.startsWith("setedg")) {
-			EdgeSimple baseedge=EdgeLink.grab_one_edge(packData, flagSegs);
-			if (baseedge==null || packData.nghb(baseedge.v, baseedge.w)<0)
+			HalfEdge baseedge=HalfLink.grab_one_edge(packData, flagSegs);
+			if (baseedge==null)
 				return 0;
 			baseEdge=baseedge;
 			return 1;
 		}
 		
 		// ===================== aflip =================
-		// Given oriented edge <v.w>, to two things: (1) advance in half-hex
+		// Given HalfEdge <v.w>, do two things: (1) advance in half-hex
 		// direction (pass two edges on left) for new 'baseEdge' and 
 		// (2) flip the next clockwise edge, if possible. return value is
 		// 0 if neither is possible, -1 if only advance is possible, and 1 if
 		// both are possible.
 		else if (cmd.startsWith("aflip")) {
-			if (baseEdge==null || packData.nghb(baseEdge.v, baseEdge.w)<0)
+			if (baseEdge==null)
 				return 0;
-			int v=baseEdge.w;
-			int w=baseEdge.v;
-			int indxvb=packData.nghb(v, w);
-			if (packData.kData[v].bdryFlag==1) { // bdry?
-				if (indxvb<3) { // can't advance to new edge; kill 'baseEdge'
-					baseEdge=null;
-					return 0;
-				}
-				baseEdge=new EdgeSimple(v,packData.kData[v].flower[indxvb-3]);
-				if (indxvb==3) { // can advance, but no flip
-					return -1; // advanced but no flip
-				}
-				int rslt=packData.flip_edge(v,packData.kData[v].flower[indxvb-4],2);
-				if (rslt==0)
-					return -1; // advanced but didn't flip
-				packData.setCombinatorics();
+			
+			HalfEdge[] ans=RawManip.flipAdvance_raw(packData.packDCEL,baseEdge);
+			if (ans==null)
+				return 0;
+			baseEdge=ans[0]; // the new hedge
+			if (ans[1]!=null) { // there was a flip
+				packData.packDCEL.fixDCEL(packData);
 				return 1;
 			}
-			int num=packData.kData[v].num;
-			if (num==3) { // interior of degree 3? just reverse edge to go other way
-				baseEdge=new EdgeSimple(v,w);
-				return -1; // no flip
-			}
-			int indxn=(indxvb-3+num)%num;
-			w=packData.kData[v].flower[indxn];
-			baseEdge=new EdgeSimple(v,w);
-			int k=(indxn-1)%num;
-			int rslt=packData.flip_edge(v,packData.kData[v].flower[k],2);
-			if (rslt==0)
-				return -1; // advanced but didn't flip
-			packData.setCombinatorics();
-			return 1; // advanced and flipped
+			else // only advanced
+				return -1;
 		}
 		
 		// ======================= bot ==================
@@ -197,8 +179,7 @@ public class FlipStrategy extends PackExtender {
 						// do we need to set 'previousHome'?
 						int pre=flipBot.getPrevious();
 						if (pre<=0 || packData.nghb(flipBot.getHomeVert(),pre)<0) {
-							int j=rand.nextInt(packData.kData[v].num+packData.kData[v].bdryFlag);
-							flipBot.setPrevious(packData.kData[v].flower[j]);
+							flipBot.setPrevious(packData.getLastPetal(v));
 						}
 						
 						break;
@@ -210,12 +191,12 @@ public class FlipStrategy extends PackExtender {
 						break;
 					}
 					case 'd': { // draw current edge (previousHome,homeVert)
-						int colindx=CPScreen.col_to_table(flipBot.getColor());
+						int colindx=ColorUtil.col_to_table(flipBot.getColor());
 						cpCommand(packData,"disp -ec"+colindx+"t8 "+flipBot.getPrevious()+" "+flipBot.getHomeVert()+" -cc"+colindx+"t8 "+flipBot.getHomeVert());
 						break;
 					}
 					case 'l': { // draw the last edge flipped
-						int colindx=CPScreen.col_to_table(flipBot.getColor());
+						int colindx=ColorUtil.col_to_table(flipBot.getColor());
 						EdgeSimple edge=flipBot.getLastFlipped();
 						if (edge!=null)
 							cpCommand(packData,"disp -ec"+colindx+"t4 "+edge.v+" "+edge.w);
@@ -232,8 +213,11 @@ public class FlipStrategy extends PackExtender {
 						if (edge!=null) {
 							flipBot.setOtherEnd(edge.w);
 							int rslt=0; 
-							int lv=packData.kData[edge.v].flower[packData.nghb(edge.v,edge.w)+1];
-							int rv=packData.kData[edge.w].flower[packData.nghb(edge.w,edge.v)+1];
+							// TODO: should be more efficient way
+							int[] flower=packData.getFlower(edge.v);
+							int lv=flower[packData.nghb(edge.v,edge.w)+1];
+							flower=packData.getFlower(edge.w);
+							int rv=flower[packData.nghb(edge.w,edge.v)+1];
 							outEdge=new EdgeSimple(lv,rv);
 							rslt=cpCommand("flip "+edge.v+" "+edge.w);
 							if (rslt!=0) { //
@@ -316,17 +300,19 @@ public class FlipStrategy extends PackExtender {
 			
 			int Ndegs=0;
 			int Nfours=0;
-			for (int j=0;j<packData.kData[northPole].num;j++) {
-				int k=packData.kData[northPole].flower[j];
-				int knum=packData.kData[k].num;
+			int[] petals=packData.getPetals(northPole);
+			for (int j=0;j<petals.length;j++) {
+				int k=petals[j];
+				int knum=packData.countFaces(k);
 				Ndegs+=knum;
 				if (knum==4) Nfours++;
 			}
 			int Sdegs=0;
 			int Sfours=0;
-			for (int j=0;j<packData.kData[southPole].num;j++) {
-				int k=packData.kData[southPole].flower[j];
-				int knum=packData.kData[k].num;
+			petals=packData.getPetals(southPole);
+			for (int j=0;j<packData.countFaces(southPole);j++) {
+				int k=petals[j];
+				int knum=packData.countFaces(k);
 				Sdegs+=knum;
 				if (knum==4) Sfours++;
 			}
@@ -342,13 +328,13 @@ public class FlipStrategy extends PackExtender {
 					else if (packData.nghb(v,northPole)>=0
 							&& packData.nghb(v,southPole)>=0) {
 						twicePolish++; // nghbs both poles
-						twoPoleCount +=packData.kData[v].num;
+						twoPoleCount +=packData.countFaces(v);
 					}
 				}
 			}
 			msg("\nStatus: N=v"+northPole+", degree "+
-					packData.kData[northPole].num+"; S=v"+southPole+
-					", degree "+packData.kData[southPole].num+"\n"+
+					packData.countFaces(northPole)+"; S=v"+southPole+
+					", degree "+packData.countFaces(southPole)+"\n"+
 					"   Total petal degrees, N/S: "+Ndegs+"/"+Sdegs+"\n"+
 					"   Degree 4 neighbors, N/S: "+Nfours+"/"+Sfours+"\n"+
 					"   Number neighboring neither/both poles: "+notPolish+"/"+twicePolish+"\n"+
@@ -363,8 +349,8 @@ public class FlipStrategy extends PackExtender {
 				cmd.startsWith("doS")) {
 			
 			// are we already done?
-			if (packData.kData[northPole].num==(packData.nodeCount-2) &&
-					packData.kData[southPole].num==(packData.nodeCount-2)) {
+			if (packData.countFaces(northPole)==(packData.nodeCount-2) &&
+					packData.countFaces(southPole)==(packData.nodeCount-2)) {
 				msg("Finished: the combinatorics are in final form");
 				return 1;
 			}
@@ -380,8 +366,8 @@ public class FlipStrategy extends PackExtender {
 			
 			// try N times, (or until both poles have nodeCount-2 petals)
 			int flipCount=0;
-			for (int i=1;(i<=N && (packData.kData[northPole].num!=(packData.nodeCount-2) ||
-					packData.kData[southPole].num!=(packData.nodeCount-2)));i++) {
+			for (int i=1;(i<=N && (packData.countFaces(northPole)!=(packData.nodeCount-2) ||
+					packData.countFaces(southPole)!=(packData.nodeCount-2)));i++) {
 				
 //System.out.println("i ="+i);		
 				int pole=northPole;
@@ -398,7 +384,7 @@ public class FlipStrategy extends PackExtender {
 				}
 				
 				// start with random petal of pole
-				int num=packData.kData[pole].num;
+				int num=packData.countFaces(pole);
 				int j=rand.nextInt(num);
 				
 				// I'm setting a saftey counter, so this 'while'
@@ -409,8 +395,8 @@ public class FlipStrategy extends PackExtender {
 				//   degree 4's tangent to unpole
 				int v=0;
 				int jjnum=0;
-				while (count>0 && ((jjnum=packData.kData[(v=packData.kData[pole].
-						flower[j])].num)<4 ||
+				int[] flower=packData.getFlower(pole);
+				while (count>0 && ((jjnum=packData.countFaces((v=flower[j])))<4 ||
 						(jjnum==4 && packData.nghb(v,unpole)>=0))) {
 					j=(j+1)%num;
 					count--;
@@ -419,27 +405,29 @@ public class FlipStrategy extends PackExtender {
 				// found one? 
 				v=0;
 				if (count!=0) {
-					v=packData.kData[pole].flower[j];
-					System.out.println("v = "+v);
+					v=flower[j];
+//					System.out.println("v = "+v);
 				}
 				
 				// process while we can keep flipping about v (interior)
 				boolean outerflip=true;
 				int vnum;
+				flower=packData.getFlower(v);
 				while (outerflip && v!=0 && 
-						(vnum=packData.kData[v].num)>4 &&
-						packData.kData[v].bdryFlag==0) {
+						(vnum=packData.countFaces(v))>4 &&
+						!packData.isBdry(v)) {
 					msg("target petal: v="+v+", pole="+pole);
 					outerflip=false;
 					int k=(packData.nghb(v,pole)-1+vnum)%vnum;
-					int w=packData.kData[v].flower[k];
+					int w=flower[k];
 					int m=(k-1+vnum)%vnum;
-					int nextw=packData.kData[v].flower[m];
+					int nextw=flower[m];
 					// try flipping first edge, if it doesn't connect poles
 					if (nextw!=unpole && cpCommand("flip "+v+" "+w)!=0) {
 						msg("  first flip succeeded: <"+v+" "+w+">");
 						outerflip=true;
 					}
+
 					
 					// else, search clockwise around v for flippable
 					//   edge whose other end is petal of pole and
@@ -447,11 +435,11 @@ public class FlipStrategy extends PackExtender {
 					int tick=vnum+1;
 					while (!outerflip && tick>0) {
 						k=(k-1+vnum)%vnum;
-						w=packData.kData[v].flower[k];
-						int cnl=packData.kData[v].flower[(k+1)%vnum];
-						int cnr=packData.kData[v].flower[(k-1+vnum)%vnum];
+						w=flower[k];
+						int cnl=flower[(k+1)%vnum];
+						int cnr=flower[(k-1+vnum)%vnum];
 //						m=(k-1+vnum)%vnum;
-//						nextw=packData.kData[v].flower[m];
+//						nextw=flower[m];
 						if (w!=unpole && packData.nghb(w,pole)>=0 &&
 								(cnl!=pole || cnl!=unpole || cnr!=pole || cnr!=unpole) && 
 								(packData.nghb(cnl,pole)<0 || packData.nghb(cnr,pole)<0) &&
@@ -481,8 +469,8 @@ public class FlipStrategy extends PackExtender {
 			} // end of 'for' loop
 
 			// report in Message window
-			if (packData.kData[northPole].num==(packData.nodeCount-2) &&
-					packData.kData[southPole].num==(packData.nodeCount-2)) {
+			if (packData.countFaces(northPole)==(packData.nodeCount-2) &&
+					packData.countFaces(southPole)==(packData.nodeCount-2)) {
 						if (flipCount>0)
 							msg("Did "+flipCount+" edge flips");
 						msg("Finished: the combinatorics are in final form");
@@ -495,8 +483,8 @@ public class FlipStrategy extends PackExtender {
 			}
 			else {
 				msg("Did "+flipCount+" edge flips");
-				msg("Northpole has degree "+packData.kData[northPole].num+
-						"; SouthPole, degree "+packData.kData[southPole].num);
+				msg("Northpole has degree "+packData.countFaces(northPole)+
+						"; SouthPole, degree "+packData.countFaces(southPole));
 				return flipCount;
 			}
 		} // end of 'doFlip'

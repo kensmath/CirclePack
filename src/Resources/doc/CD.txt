@@ -1250,14 +1250,18 @@ determines a simple
 	active packing's combinatorics. "Half-hex" means that at each
 	vertex v along the edgepath (except the first and last) there are 
 	2 edges	to the LEFT of the edgepath as you pass through v. 
-	(A "hex" edgepath would have 2 to the left AND 2 to the right.)
+	(Terminology: a "hex" edgepath would have 2 to the left AND 2 to the 
+	right. This has just two to the left (note the asymmetry).)
 	
 	The typical use of an half-hex path is to do a sequence of edge 
-	flips along its left side; namely, for edge e in the edgepath, the
-	counterclockwise edge ee must be "flipable" (see 'flip'). Additions 
+	flips along its right side; namely, for edge e in the edgepath, the
+	clockwise edge ee must be "flipable" (see 'flip'). Additions 
 	to the edgepath will stop when this fails, when certain other 
 	combinatoric conditions are encountered, or under some other stop 
 	conditions options as given below.
+	
+	The effect of flipping along a path is to shift the vertices to
+	the right sides one click back.
 </description>	
 <options> (default to -b -S -x)
 	<opt flag="-a"> append to given edgepath (i.e., {e} is a list {e..})</opt> 
@@ -1269,6 +1273,10 @@ determines a simple
 		   in this instance.)</opt>
 	<opt flag="-x"> stop when encountering vertex already hit by the path</opt>
 </options>
+<examples>
+	<instance text="flip -h elist[n]"> will flip the clockwise edge
+	from the next edge in 'elist', if flippable. </instance>
+</examples>
 </command>
 
 

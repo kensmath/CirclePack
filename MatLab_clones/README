@@ -1,0 +1,13 @@
+README:
+MatLab_clones directory, created 5/12/2020.
+
+I often need matlab code to help while debugging CirclePack. In
+various projects I've made matlab clones of many CirclePack Java
+routines. I'm going to gather them here so I don't keep reinventing
+the wheel.
+
+I plan to add routines as necessary (stealing some from, e.g.,
+GOPack), though I'll now try to consistently use the same method
+names, arguments, and return values as the Java versions.
+
+

@@ -1,9 +1,5 @@
 package ftnTheory;
 
-import geometry.HyperbolicMath;
-import geometry.SphericalMath;
-import input.CPFileManager;
-
 import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -11,17 +7,21 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.Vector;
 
-import listManip.NodeLink;
-import math.Point3D;
-import packing.PackData;
-import packing.PackExtender;
-import panels.CPScreen;
-import util.CmdStruct;
 import allMains.CPBase;
 import allMains.CirclePack;
 import exceptions.DataException;
 import exceptions.InOutException;
 import exceptions.ParserException;
+import geometry.HyperbolicMath;
+import geometry.SphericalMath;
+import input.CPFileManager;
+import listManip.NodeLink;
+import math.Point3D;
+import packing.PackData;
+import packing.PackExtender;
+import packing.ReadWrite;
+import util.CmdStruct;
+import util.ColorUtil;
 
 /**
  * Alternate procedure for laying out spherical circle packings:
@@ -90,7 +90,7 @@ public class SphereLayout extends PackExtender {
 		if (packData.hes<=0) {
 			cpCommand("geom_to_s");
 		}
-		if (packData.bdryCompCount>0 || packData.genus>0 || packData.euler!=2) {
+		if (packData.getBdryCompCount()>0 || packData.genus>0 || packData.euler!=2) {
 			CirclePack.cpb.msg("SL Warning: this does not seem to be a topological sphere");
 		}
 		if (running) {
@@ -152,8 +152,7 @@ public class SphereLayout extends PackExtender {
 			// record color in packData
 			// TODO: should be able to clone color more easily
 			for (int v=1;v<=packData.nodeCount;v++) {
-				packData.kData[v].color=new Color(vertGPS[v].color.getRed(),
-						vertGPS[v].color.getGreen(),vertGPS[v].color.getBlue());
+				packData.setCircleColor(v,ColorUtil.cloneMe(vertGPS[v].color));
 			}
 		}
 		
@@ -223,7 +222,7 @@ public class SphereLayout extends PackExtender {
 					try {
 						BufferedReader fp=
 							CPFileManager.openReadFP(dir,fname,false);
-						int flags=puncturedPack[n].readpack(fp,fname);
+						int flags=ReadWrite.readpack(fp,puncturedPack[n],fname);
 						// need combinatorics and radii at a minimum
 						if (flags<=0 || (flags & 00011)!=00011) 
 							gotThem=false;
@@ -244,14 +243,13 @@ public class SphereLayout extends PackExtender {
 //					CirclePack.cpb.msg("starting GPS for vert " + bea[b]);
 					puncturedPack[b] = packData.copyPackTo();
 					puncturedPack[b].puncture_vert(bea[b]);
-					puncturedPack[b].complex_count(false);
 					puncturedPack[b].geom_to_h();
 					puncturedPack[b].set_aim_default();
 					NodeLink blist = new NodeLink(puncturedPack[b], "b");
 					Iterator<Integer> blt = blist.iterator();
 					while (blt.hasNext()) {
 						int k = blt.next();
-						puncturedPack[b].setRadius(k, 10.0);
+						puncturedPack[b].setRadiusActual(k, 10.0);
 					}
 					int repackCount = puncturedPack[b].repack_call(cycles,false,
 							false);
@@ -261,8 +259,8 @@ public class SphereLayout extends PackExtender {
 						fname = new String("SL_pack" + b + ".p");
 						BufferedWriter fp = CPFileManager.openWriteFP(dir,
 								false, fname, false);
-						try {
-							puncturedPack[b].writePack(fp, 0017, false); // cgri options
+						try { // cgri options
+							ReadWrite.writePack(fp,puncturedPack[b],0017,false); 
 						} catch (Exception ex) {
 							throw new InOutException("write of 'wP' failed");
 						}
@@ -273,26 +271,26 @@ public class SphereLayout extends PackExtender {
 					// store the inversive distances
 					for (int v = 1; v < bea[b]; v++) {
 						vertGPS[v].coord[b] = HyperbolicMath
-								.x_rad2invdist(puncturedPack[b].rData[v].rad); 
+								.x_rad2invdist(puncturedPack[b].getRadius(v)); 
 					}
 					for (int v = bea[b] + 1; v <= nodes; v++) { // indices are
 																// shifted due
 																// to puncture
 						vertGPS[v].coord[b] = HyperbolicMath
-								.x_rad2invdist(puncturedPack[b].rData[v - 1].rad);
+								.x_rad2invdist(puncturedPack[b].getRadius(v-1));
 					}
 					vertGPS[bea[b]].coord[b] = -1.0;
 					for (int j = 0; j < 4; j++) {
 						if (j != b) {
 							if (bea[j] < bea[b]) {
 								bD[j][b] += HyperbolicMath
-										.x_rad2invdist(puncturedPack[b].rData[bea[j]].rad);
+										.x_rad2invdist(puncturedPack[b].getRadius(bea[j]));
 								if (Double.isNaN(bD[j][b]))
 									throw new DataException("bD[" + j + "]["
 											+ b + "] is NaN");
 							} else {
 								bD[j][b] += HyperbolicMath
-										.x_rad2invdist(puncturedPack[b].rData[bea[j] - 1].rad);
+										.x_rad2invdist(puncturedPack[b].getRadius(bea[j] - 1));
 								if (Double.isNaN(bD[j][b]))
 									throw new DataException("bD[" + j + "]["
 											+ b + "] is NaN");
@@ -368,8 +366,9 @@ public class SphereLayout extends PackExtender {
 			//   Dot product of b3 with a X b should be positive.
 			else {
 				int b3=beacons.get(3);
-				int v=packData.kData[beacons.get(3)].flower[0];
-				int w=packData.kData[beacons.get(3)].flower[1];
+				int[] flower=packData.getFlower(b3);
+				int v=flower[0];
+				int w=flower[1];
 				
 				// get center for b3
 				VertGPS gps=vertGPS[b3];
@@ -442,12 +441,12 @@ public class SphereLayout extends PackExtender {
 				
 				// store spherical centers, radii in layoutPack
 				double R=Math.sqrt(x*x+y*y+z*z);
-				layoutPack.rData[v].center=SphericalMath.proj_vec_to_sph(x,y,z);
+				layoutPack.setCenter(v,SphericalMath.proj_vec_to_sph(x,y,z));
 				double rho=Math.acos(t/R);
 				if (Double.isNaN(rho)) {
 					CirclePack.cpb.errMsg("vertex "+v+": t is "+t+" and R is "+R);
 				}
-				layoutPack.rData[v].rad=rho;
+				layoutPack.setRadius(v,rho);
 				count++;
 			}
 			
@@ -478,10 +477,7 @@ public class SphereLayout extends PackExtender {
 				int pnum=Integer.parseInt((String)items.get(0));
 				if (pnum==packData.packNum)
 					return 0;
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					cpS.swapPackData(layoutPack,false);
-				}
+				CirclePack.cpb.swapPackData(layoutPack,pnum,false);
 			} catch (Exception ex) {
 				return 0;
 			}
@@ -532,7 +528,7 @@ class VertGPS {
 		vert=v;
 		coord=new double[4];
 		colIntensity=new double[3];
-		color=CPScreen.getFGColor();
+		color=ColorUtil.getFGColor();
 	}
 	
 	public double getGPS(int j) {

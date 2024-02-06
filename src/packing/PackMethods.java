@@ -7,13 +7,12 @@ import java.util.Vector;
 
 import baryStuff.BaryPacket;
 import complex.Complex;
-import exceptions.DataException;
 import exceptions.InOutException;
 import komplex.EdgeSimple;
 import listManip.BaryCoordLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
-import util.PathUtil;
+import util.PathBaryUtil;
 
 /**
  * 'PackData' is bloated, so starting in 2020, I'm offloading some static
@@ -61,11 +60,11 @@ public class PackMethods {
 		while (dits.hasNext()) {
 			try {
 				EdgeSimple edge = dits.next();
-				Complex[] pts = p.ends_dual_edge(edge, null); // ends
+				Complex[] pts = p.ends_dual_edge(edge); // ends
 				Path2D.Double path = new Path2D.Double();
 				path.moveTo(pts[0].x, pts[0].y);
 				path.lineTo(pts[1].x, pts[1].y);
-				Vector<BaryCoordLink> barycoordlink = PathUtil.fromPath(bp, path);
+				Vector<BaryCoordLink> barycoordlink = PathBaryUtil.fromPath(bp, path);
 
 				// iterate through; there may be more than one barycoordlink
 				Iterator<BaryCoordLink> bclits = barycoordlink.iterator();
@@ -76,11 +75,10 @@ public class PackMethods {
 					Iterator<BaryPacket> bits = bcl.iterator();
 					while (bits.hasNext()) {
 						BaryPacket bpkt = bits.next();
-						int f = bpkt.faceIndx;
+						int[] verts=bp.getFaceVerts(bpkt.faceIndx);
 
 						// put in the three vertices of this face
-						fp.write(bp.faces[f].vert[0] + "   " + bp.faces[f].vert[1] + "   " + bp.faces[f].vert[2]
-								+ "\n   ");
+						fp.write(verts[0]+"   "+verts[1]+"   "+verts[2]+"\n   ");
 						fp.write(String.format("%.6f",bpkt.start.b0)+" "+
 								String.format("%.6f", bpkt.start.b1) + "\n   "+
 								String.format("%.6f", bpkt.end.b0)+" "+

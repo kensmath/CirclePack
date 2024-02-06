@@ -45,7 +45,7 @@ public class ACTIVEListener extends MyToolListener {
 			return;
 		}
 		else if (cname.equals("Show axes")) {
-			PackControl.activeFrame.getCPScreen().toggleAxisMode();
+			PackControl.activeFrame.getCPDrawing().toggleAxisMode();
 		}
 		else if (cname.equals("Map open")) {
 			PackControl.mapCanvasAction(true);

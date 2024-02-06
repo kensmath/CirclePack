@@ -4,8 +4,9 @@ import circlePack.PackControl;
 import circlePack.ShellControl;
 
 /**
- * Note that all 'CirclePack' actually does is start 'PackControl', 
- * which extends 'CPBase' and adds a few additional variables. 
+ * Note: all 'CirclePack' actually does is start 'PackControl'
+ * or 'ShellControl', which extend 'CPBase' and add additional 
+ * variables. 
  * 
  * 'PackControl' in turn kicks off various other objects. 
  * This is necessary, e.g., so the script frame is ready, and
@@ -23,7 +24,7 @@ public class CirclePack {
 	// Constructor(s)
 	public CirclePack(int mode) {
 		
-		if (mode==0) { // standalone, not GUI
+		if (mode==0) { // standalone, no GUI
 			
 			cpb=new ShellControl();
 			CPBase.GUImode=0;

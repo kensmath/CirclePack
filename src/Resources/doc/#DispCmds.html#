@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+<title>CirclePack  'disp' commands</title></head>
+
+  <body><center><h1><em><strong><big><big>Structure of <font color="blue">CirclePack</font></strong></em> display commands</big></big></h1></center>
+    <p>
+      The ability to display circles and other geometric objects in
+      canvases is central to the power of <font color="blue"><em>CirclePack</em></font>. Predefined display commands are available via right-mouse actions in
+      canvases. However, much more sophisticated actions are available in command lines and scripts using '<font color="blue">display</font>' commands, as illustrated in this example:
+<p>      
+<center><big><font color='blue'>disp -w -cf a(1 10) -df b -gt5c40</font>
+</big></center>
+<p>
+
+  The relevant commands are '<font color='blue'>display</font>' and
+  '<font color='blue'>Display</font>', with abbreviations
+  '<font color='blue'>disp</font>' and '<font color='blue'>Disp</font>'. The commands apply to the active packing's canvas or to a specified canvas. (Using the capital '<font color="blue">D</font>' makes the command persistent, meaning that it will be automatically reapplied whenever that canvas is redrawn. Persistant display commands can also we specified in the <font color='blue'>Screen -> Display Options</font> menu.)<p>
+
+    In this document we describe the display command structures available to the user. There are three components: First is the command '<font color="blue">disp</font>'; then an optional '-p{n}' to indicate the packing to which the command applies; and then a sequence of one or more "flag segments". The real action is in these flag segments.
+<p></p>
+  <center><h2>Flag Segment Structure</h2></center>
+
+Consider the display command shown above; it has four flag segments, as grouped here:<br>
+	 <p>      
+	 <center><big><font color='blue'>disp
+	 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    -w&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    -cf a(1 10)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    -df b&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-gt5c40</font>
+</big></center>
+<p>
+<p></p>
+					     Each is illustrative of general construction principles. Each segment begins with a dash '-' followed by a letter indicating the action or the object type. 
+<p></p>
+  <ul>
+    <li> <b>-w </b>: this clears the canvas</li>
+<p></p>
+<li> <b> -cf a(1 10)</b>:
+the 'c' indicates the objects are circles and attribute 'f' means circles filled with their recorded colors. The list of which circles to draw is given next: in this case 'a(1 10)' indicates all circles with indices from 1 to 10, inclusive.</li>
+<p></p>
+<li> <b>-df b </b>: 
+The 'd' indicates dual objects and in this case 'df' indicates dual faces. (If there were a further 'f', that would indicate to draw them as filled.) The 'b' gives the list of dual face indices, namely "boundary" dual faces in this case.</li>
+<p></p>
+<li><b>-gt5c40</b>: The 'g' tells <font color="blue"><em>CirclePack</em></font>to draw its currently stored closed path. The 't' is a thickness attribute, setting to '5' in this case, and 'c' is a color attribute, color code '40' in this case (light blue).</li>
+  </ul>
+  
+<p>The drawing actions specified by the flag segments are carried out in order first to last, and that order can make a difference in outcome, as later drawing can obscure early drawing, depending on 'transparency' settings. The specifications of lists used here are examples of the huge range available, as described in the <font color="blue">List Specs</font> tab in the <font color="blue">Help</font>. </p>
+<p></p>
+<h2>Further Segment Examples</h2>
+
+Every display call involves at least one flag segment. Only two of 
+
+																																																		   <p>Finally, observe that '<font color="blue">post</font>' commands, which add postscript objects to a postscript file, are nearly identical to '<font color="blue">disp</font>' commands.</p>
+
+ 
+Calls can be very simple:
+<font color='blue'>disp -w -c -f</font>
+will clear the canvas of the active packing, then draw the packing circles 
+and carrier faces. More complicated calls overload the command with numerous 
+options for objects, colors, line thicknesses, etc.<br><br>
+
+<font color='blue'>Overall Structure:</font> The basic format is 
+illustrated here:
+
+<center><font color='blue'>disp -w -cf a(1 10) -df b -gt5c40</font>
+</center>
+
+The <font color='blue'>disp</font> is followed by any number of 
+flag/data segments. A 'flag' string is a contiguous string of characters
+starting with '<font color='blue'>-</font>', a code for the type of object,
+and then optional modifiers. Following the flag string there may be a
+'data' string indicating which of these objects to display. See the
+<font color='blue'>List Specs</font> tab for the data string format 
+information. For example, '-cf a(1 10)' is a flag/data segment 
+calling for display of the filled circles numbered 1 through 10.
+<br>
+
+Flag strings can also carried compact coding for color and thickness,
+as in the flag '-gt5c40'. The '-g' calls for drawing the current 
+'closed path' (a global path maintained by <em>CirclePack</em>),
+the 't5' specifies line thickness 5 (default is 1) and the 'c40'
+indicates color code 40 (medium blue). <br>
+
+Notes: <br>
+
+The full range of options described here can also be prescribed 
+as the default via the "set_disp_text" command.<br>
+
+The 'post' command for generating PostScript images of the canvases is
+parallel to the 'disp' command in nearly all features.<br>
+
+<font color="blue"> Simple Commands:</font> disp -c, disp -
+<font color="blue"> Overall Structure:</font> A sample command
+
+</body>
+</html>

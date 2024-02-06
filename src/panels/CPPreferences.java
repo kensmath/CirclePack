@@ -48,11 +48,12 @@ private static final long
   public static boolean displayToolTips;
   private JTextField scriptDirText;
   private JTextField packingDirText;
+  private JTextField imageDirText;
   private JTextField toolDirText;
   private JTextField extenderDirText;  
   private JTextField gvCmdText;
   private JTextField webURLField;
-  private JTextField xmdURLField;
+  private JTextField scriptURLField;
   private JTextField cmdHistoryFile;
   private JTextField printCmdText;
   private JTextField canvasSizeText;
@@ -63,7 +64,8 @@ private static final long
 
   /*  This static block guarantees that all values are initialized and
    *  usable.  This block is executed when the class is loaded as opposed
-   *  to the constructor that is executed when an object is actually instantiated.
+   *  to the constructor that is executed when an object is actually 
+   *  instantiated.
    */
   static{
     draft = false;
@@ -76,21 +78,22 @@ private static final long
     File prefFile = CPBase.CPprefFile; // should have been set in 'initPackControl'
 
     // set defaults
-    scriptDirText = new JTextField(CPBase.PACKINGS_DIR,20);
+    scriptDirText = new JTextField(CPBase.SCRIPT_DIR,20);
     scriptDirText.setToolTipText("directory for your scripts");
-    packingDirText = new JTextField(CPBase.SCRIPT_DIR,20);
+    packingDirText = new JTextField(CPBase.PACKINGS_DIR,20);
     packingDirText.setToolTipText("directory for your circle packing files");
+    imageDirText = new JTextField(CPBase.IMAGE_DIR,20);
+    imageDirText.setToolTipText("directory for your screen shots");
     printCmdText = new JTextField(CPBase.PRINT_COMMAND,20);
     printCmdText.setToolTipText("system command to print something");
-//    gvCmdText = new JTextField(CPBase.POSTSCRIPT_VIEWER,20);
     toolDirText = new JTextField(CPBase.TOOL_DIR,20);
     toolDirText.setToolTipText("directory of your 'tools', icon-encapsulated command strings");
     extenderDirText = new JTextField(CPBase.EXTENDER_DIR,20);
     extenderDirText.setToolTipText("directory for 'PackExtender' inherited Java class files");
     webURLField= new JTextField(CPBase.WEB_URL_FILE,20);
     webURLField.setToolTipText("file containing most recently visited URLs");
-    xmdURLField= new JTextField(CPBase.XMD_URL_FILE,20);
-    xmdURLField.setToolTipText("file containing most recently loaded scripts");
+    scriptURLField= new JTextField(CPBase.SCRIPT_URL_FILE,20);
+    scriptURLField.setToolTipText("file containing most recently loaded scripts");
     canvasSizeText=new JTextField(CPBase.ACTIVE_CANVAS_SIZE,10);
     canvasSizeText.setToolTipText("Main packing canvas size, 200 to 1200 pixels");
     pairSizeText=new JTextField(CPBase.PAIR_CANVAS_SIZE,10);
@@ -100,7 +103,7 @@ private static final long
     
 	CPFileManager.ScriptDirectory = new File(System.getProperty("user.home"));
 	CPFileManager.PackingDirectory = new File(System.getProperty("user.home"));
-	CPFileManager.PostScriptDirectory = new File(System.getProperty("user.home"));
+	CPFileManager.ImageDirectory = new File(System.getProperty("user.home"));
 	
 	// this will force use of jar 'Resources' if not explicitly reset
 	CPFileManager.ToolDirectory= null; 
@@ -131,6 +134,18 @@ private static final long
        			}
             }
             
+            else if (keyword.equals("IMAGE_DIR")) {
+            	CPBase.IMAGE_DIR=value.toString().trim();
+       			scriptDirText.setText(CPBase.IMAGE_DIR);
+       			CPFileManager.ImageDirectory=adjustFileHome(CPBase.IMAGE_DIR);
+       			if (CPFileManager.ImageDirectory==null) {
+       				CPFileManager.ImageDirectory=new File(CPBase.IMAGE_DIR);
+       				if (!CPFileManager.ImageDirectory.exists()) // didn't find it? look in 'home'
+       					CPFileManager.ImageDirectory=
+       						new File(CPFileManager.CurrentDirectory,CPBase.SCRIPT_DIR);
+       			}
+            }
+
             else if (keyword.equals("SCRIPT_DIR")) {
             	CPBase.SCRIPT_DIR=value.toString().trim();
        			scriptDirText.setText(CPBase.SCRIPT_DIR);
@@ -168,11 +183,11 @@ private static final long
             	if (ff==null) ff=new File(CPFileManager.HomeDirectory,CPBase.WEB_URL_FILE);
             	webURLField.setText(ff.toString());
             }
-            else if (keyword.equals("XMD_URL_FILE")) {
-            	CPBase.XMD_URL_FILE=value.toString().trim();
-            	File ff=adjustFileHome(CPBase.XMD_URL_FILE);
-            	if (ff==null) ff=new File(CPFileManager.HomeDirectory,CPBase.XMD_URL_FILE);
-            	xmdURLField.setText(ff.toString());
+            else if (keyword.equals("SCRIPT_URL_FILE")) {
+            	CPBase.SCRIPT_URL_FILE=value.toString().trim();
+            	File ff=adjustFileHome(CPBase.SCRIPT_URL_FILE);
+            	if (ff==null) ff=new File(CPFileManager.HomeDirectory,CPBase.SCRIPT_URL_FILE);
+            	scriptURLField.setText(ff.toString());
             }
             else if(keyword.equals("PRINT_COMMAND")){
             	CPBase.PRINT_COMMAND=value.toString().trim()+" ";
@@ -291,6 +306,12 @@ private static final long
     mainPanel.add(panel);
 
     panel = new JPanel();
+    label = new JLabel("IMAGE_DIR");
+    panel.add(label);
+    panel.add(imageDirText);
+    mainPanel.add(panel);
+
+    panel = new JPanel();
     label = new JLabel("TOOL_DIR");
     panel.add(label);
     panel.add(toolDirText);
@@ -308,12 +329,6 @@ private static final long
     panel.add(printCmdText);
     mainPanel.add(panel);
 
-//    panel = new JPanel();
-//    label = new JLabel("POSTSCRIPT_VIEWER");
-//    panel.add(label);
-//    panel.add(gvCmdText);
-//    mainPanel.add(panel);
-
     panel = new JPanel();
     label = new JLabel("WEB_URL_FILE");
     panel.add(label);
@@ -323,7 +338,7 @@ private static final long
     panel = new JPanel();
     label = new JLabel("CMD_URL_FILE");
     panel.add(label);
-    panel.add(xmdURLField);
+    panel.add(scriptURLField);
     mainPanel.add(panel);
 
     panel = new JPanel();
@@ -378,17 +393,17 @@ private static final long
 		  writer.newLine();
 		  writer.write("SCRIPT_DIR "+scriptDirText.getText());
 		  writer.newLine();
+		  writer.write("IMAGE_DIR "+scriptDirText.getText());
+		  writer.newLine();
 		  writer.write("TOOL_DIR "+toolDirText.getText());
 		  writer.newLine();
 		  writer.write("EXTENDER_DIR "+extenderDirText.getText());
 		  writer.newLine();
 		  writer.write("PRINT_COMMAND "+printCmdText.getText());
 		  writer.newLine();
-//		  writer.write("POSTSCRIPT_VIEWER "+gvCmdText.getText());
-//		  writer.newLine();
 		  writer.write("WEB_URL_FILE "+webURLField.getText());
 		  writer.newLine();
-		  writer.write("XMD_URL_FILE "+xmdURLField.getText());
+		  writer.write("SCRIPT_URL_FILE "+scriptURLField.getText());
 		  writer.newLine();	
 		  writer.write("ACTIVE_CANVAS_SIZE "+canvasSizeText.getText());
 		  writer.newLine();	
@@ -421,6 +436,11 @@ private static final long
 		  if (file.exists())
 			  CPFileManager.PackingDirectory=file;
 		  else CPFileManager.PackingDirectory=CPFileManager.HomeDirectory;
+
+		  file=new File(imageDirText.getText());
+		  if (file.exists())
+			  CPFileManager.ImageDirectory=file;
+		  else CPFileManager.ImageDirectory=CPFileManager.HomeDirectory;
 
 		  file=new File(toolDirText.getText());
 		  if (file.exists())
@@ -500,7 +520,7 @@ private static final long
   }
 
   public String getCmdURLfile() {
-	  return xmdURLField.getText().trim();
+	  return scriptURLField.getText().trim();
   }
 
   public String getCmdHistoryFile() {
@@ -512,7 +532,7 @@ private static final long
   }
 
   public void setCmdURLfile(String webFile) {
-	  xmdURLField.setText(webFile);
+	  scriptURLField.setText(webFile);
   }
 
   public boolean getDisplayToolTips(){

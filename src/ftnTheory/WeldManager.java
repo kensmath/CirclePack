@@ -1,7 +1,5 @@
 package ftnTheory;
 
-import input.CPFileManager;
-
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Path2D;
 import java.awt.geom.PathIterator;
@@ -12,33 +10,36 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Vector;
 
+import allMains.CPBase;
+import allMains.CirclePack;
+import circlePack.PackControl;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
+import complex.Complex;
+import dcel.CombDCEL;
+import dcel.RawManip;
+import exceptions.DataException;
+import exceptions.InOutException;
+import exceptions.ParserException;
+import input.CPFileManager;
 import komplex.EdgeSimple;
 import komplex.Triangulation;
 import listManip.EdgeLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
-import listManip.VertList;
-import listManip.VertexMap;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import panels.PathManager;
 import random.RandomTriangulation;
 import util.CmdStruct;
 import util.RandPaths;
 import util.StringUtil;
-import allMains.CPBase;
-import allMains.CirclePack;
-import circlePack.PackControl;
-
-import complex.Complex;
-
-import exceptions.CombException;
-import exceptions.DataException;
-import exceptions.InOutException;
-import exceptions.ParserException;
 
 /** 
  * Extender for managing "conformal welding" manipulations.
+ * 
+ * TODO: currently converting to DCEL while also generalizing
+ * to work with non-simply connected situations. 1/2022.
  * 
  * To "weld" is to attach two packings to one another along 
  * part or all of their boundaries. The attachment rules
@@ -54,28 +55,31 @@ import exceptions.ParserException;
  * along more that one boundary component.
  * 
  * FOR NOW: 
- *  * packings need to be simply connected
- *  * welds occur along the whole of their boundaries
- *  * hyperbolic case: p1 and p2 must be max packs, and we use harmonic 
- *  *   measure w.r.t. the origin (i.e., arc length on the unit circle)
- *  * euclidean case: use euclidean edge length
+ *  * weld one component at a time
+ *  * welds occur along full boundary components
+ *  * eucl/sph case: use edge lengths
+ *  * hyperbolic case: bdry components must be fully 
+ *  *   ideal vertices or fully finite vertices. In the
+ *  *   former case, harmonic measure w.r.t. the origin 
+ *  *   (i.e., arc length on the unit circle)
  *  
  * Pasting requires alignment of the two boundary's 
  * vertices, so there is a process to match/add vertices.  
  * 
- * After the welding, one gets a combinatorial sphere with 
- * weld-vertices in vlist and elist. Depending on options, 
- * 'adjoin' is carried out here or one can call it separately 
- * now that bdrys have the same numbers of vertices.
+ * After the welding, weld-vertices are in vlist and elist. 
+ * Depending on options, 'adjoin' is carried out here or 
+ * one can call it separately now that bdrys have the same 
+ * numbers of vertices.
  * 
  * Objects involved:
  * 
  * We maintain local packings p1 and p2. We always weld p1 onto p2. 
- * That is, we assume the welding map 'h' takes the boundary 
- * of p1 onto the boundary of p2. Here p1 plays role of interior of unit 
- * disc, p2 the exterior, so the convention in the welding map
- * is counterclockwise around bdry of p1 and clockwise around p2
- * (opposite to the convention in 'adjoin').
+ * That is, we assume the welding map 'h' takes the bdry component 
+ * of p1 onto that of p2. In simply connected case, p1 plays 
+ * role of interior of unit disc, p2 the exterior. The 
+ * convention in the welding map is counterclockwise around 
+ * bdry of p1 and clockwise around p2 (opposite to the convention 
+ * in 'adjoin').
  * 
  * welding map: real function h:[0,1]-->[0,1] (reflecting a
  * homeomorphism of the circle).
@@ -83,40 +87,45 @@ import exceptions.ParserException;
  * welding list: Intermediate data which specifies how vertices 
  * on the two packings are matched/augmented. For now this is 
  * stored in '/tmp/weldList_xxxxx.w' Format: Vv Nv Vn Nn ... Vv 
- * (note: original two first verts should be identified, as 
- * should be original two last vertices). First column, 
- * capitalized, describes bdry of p, the second, lower case,
- * bdry of q. Letters V/v represent original verts, N/n represent 
- * new added verts.
+ * First character, capitalized, refers to bdry of p, the 
+ * second, lower case, bdry of q. Letters V/v represent 
+ * original verts, N/n represent new added verts.
  * 
- * So reading through the file, a 'Vv' means an existing vertex of p should
- * weld to an existing vertex of q. 'Nv' means a new vertex should be added
- * to p and welded to an existing vertex of q; conversely for 'Vn'.
+ * So reading through the file, a 'Vv' means an existing vertex 
+ * of p should weld to an existing vertex of q. 'Nv' means a 
+ * new vertex should be added to p and welded to an existing 
+ * vertex of q; conversely for 'Vn'. (note: original two 
+ * first verts should be identified, as should be original 
+ * two last vertices, so list should start Vv and end Vv.) 
  * 
  * Here are routines involved; some could be called for specific 
  * tasks, but generally they are parts underlying a single 
  * processing call.
  * 
- * weld_map_to_list: this is the main workhorse routine. It reads a
- * real-valued welding map from a file and stores the welding list of V's
- * and N's. readweldmap: read a welding map into a Pathlist variable
- * (generally temporary). Format for data is PATH x1 y1 x2 y2 ... xn yn END
+ * readweldmap: read a welding map into a Pathlist variable
+ * (generally temporary). Format for data is 
+ *      PATH x1 y1 x2 y2 ... xn yn END
+ *      
+ * weld_map_to_list: this is the main workhorse routine. 
+ * It reads a real-valued welding map from a file and stores 
+ * the welding list of V's and N's. 
  * 
- * weld: This actually walks around the boundaries and figures out how to
- * match/augment the vertices based on a given welding list.
+ * weld: This actually walks around the boundaries and 
+ * figures out how to match/augment the vertices based on 
+ * a given welding list.
  * 
- * add_between: utility to add verts when necessary, fix flowers, etc.
- * This actually changes its target packing, so if things go wrong,
- * packing may be damaged.
+ * add_between: utility to add verts when necessary, fix 
+ * flowers, etc. This actually changes its target packing, 
+ * so if things go wrong, that packing may be damaged.
  * 
- * weldUsingMap: function normally called to gather all these operations
- * together. Need to give it the filename for a welding map. It ends up
- * adjusting p and q; results land in p ('packData'), which thus should 
- * end up as a combinatorial sphere. 'vlist' gives the welded vertices.
+ * weldUsingMap: function normally called to gather all 
+ * these operations together. Need to give it the filename 
+ * for a welding map. It ends up adjusting p and q; results 
+ * land in p ('packData'). 'vlist' gives the welded vertices.
  * 
  * @author kens
- * This is based on Brock William's code, though conventions regarding the
- * maps have often been changed.
+ * This is based on Brock William's code, though conventions 
+ * regarding the maps have often been changed.
  *
  */
 public class WeldManager extends PackExtender {
@@ -125,8 +134,8 @@ public class WeldManager extends PackExtender {
 	PackData p2; // local copy, outside packing
 	PackData packOut; // holding results of various calls; 'copy' 
 	
-	public double []weldmapDomain;
-	public double []weldmapRange;
+	public double[] weldmapDomain;
+	public double[] weldmapRange;
 	String weldListFileName; // tmp "weldlist"
 	
 	// Constructor
@@ -173,10 +182,8 @@ public class WeldManager extends PackExtender {
 			Oops("findWeldMap: packings must be "
 					+ " topological discs in hyperbolic geometry");
 		}
-		if (V < 1 || V > p.nodeCount || 
-				p.kData[V].bdryFlag == 0 || 
-				W < 1 || W > q.nodeCount || 
-				q.kData[W].bdryFlag == 0) {
+		if (V < 1 || V > p.nodeCount ||	!p.isBdry(V) || 
+				W < 1 || W > q.nodeCount ||	!q.isBdry(W)) {
 			Oops("findWeldMap: given vertices are improper");
 		}
 
@@ -221,16 +228,16 @@ public class WeldManager extends PackExtender {
 
 		// normalize args in both p and q to start at zero
 		weldmapDomain[0] = 0.0;
-		p_arg0 = p.rData[V].center.arg();
+		p_arg0 = p.getCenter(V).arg();
 		count = 1;
 		Iterator<Integer> pl = p_blist.iterator();
 		int v = (Integer)pl.next();
 		while (pl.hasNext()) {
 			v = (Integer) pl.next();
-			weldmapDomain[count] = p.rData[v].center.arg() - p_arg0;
+			weldmapDomain[count] = p.getCenter(v).arg() - p_arg0;
 			while (weldmapDomain[count] < weldmapDomain[count - 1])
 				weldmapDomain[count] += 2.0 * Math.PI;
-			maxx = ((dist = Math.abs(1.0 - (p.rData[v].center).abs())) > maxx) ? dist
+			maxx = ((dist = Math.abs(1.0 - (p.getCenter(v)).abs())) > maxx) ? dist
 					: maxx;
 			if (maxx>.01) 
 				System.out.println("p "+v);
@@ -242,16 +249,16 @@ public class WeldManager extends PackExtender {
 		// reverse normalization for q (recall: ordering of q_blist already
 		// reversed)
 		weldmapRange[0] = 0.0;
-		q_arg0 = q.rData[W].center.arg();
+		q_arg0 = q.getCenter(W).arg();
 		count = 1;
 		Iterator<Integer> ql = q_blist.iterator();
 		v=(Integer)ql.next();
 		while (ql.hasNext()) {
 			v = (Integer) ql.next();
-			weldmapRange[count] = q_arg0 - q.rData[v].center.arg();
+			weldmapRange[count] = q_arg0 - q.getCenter(v).arg();
 			while (weldmapRange[count] < weldmapRange[count - 1])
 				weldmapRange[count] += 2.0 * Math.PI;
-			maxx = ((dist = Math.abs(1.0 - (q.rData[v].center).abs())) > maxx) ? dist
+			maxx = ((dist = Math.abs(1.0 - (q.getCenter(v)).abs())) > maxx) ? dist
 					: maxx;
 			if (maxx>.01) 
 				System.out.println("q "+v);
@@ -380,254 +387,89 @@ public class WeldManager extends PackExtender {
 	} 
 
 	/**
-	 * Goal is to create new complex q by cutting p in two
-	 * based on given closed edgepath --- this path plays the role of a 
-	 * "welding" curve to be analyzed. Can't use normal routines 
-	 * like 'cookie' because they may prune bdry verts to get a 
-	 * circle packing complex --- we need to keep the boundary 
-	 * intact. We just build the complexes directly so the edge 
-	 * path forms the boundary (and we build 'vertexMap'). 
-	 * Have to call this twice, once for inside, once for outside.
-	 * For outside we add ideal vertex. Swap nodes so that 2 is 
-	 * on bdry and becomes the 'gamma' vert.
+	 * Goal is to create new packing by splitting p along a
+	 * given closed oriented edgepath --- this path plays 
+	 * the role of a "welding" curve to be analyzed. If the
+	 * edgepath separates p, then return the complex to the
+	 * left of the path. 
 	 * 
-	 * @param isInside: boolean, cut to get "inside", else "outside"
+	 * Note that depending on combinatorics, our cookie method 
+	 * may do some unwanted pruning of faces in p.
+	 * @param p PackData
+	 * @param elist EdgeLink
 	 * @return PackData, null on error. 
-	 * 			
-	 * (Note: this call destroys whatever was in pack q and changes p.)
 	 */
-	public PackData unweld(PackData p,EdgeLink elist, boolean isInside) {
-		int v, vert, in_count, num;
-		int ind1, ind2, a = 0, b = 0, k, new_alp;
-		int[] newflower;
+	public PackData unweld(PackData p,EdgeLink elist) {
 
-		if (!p.status)
+		if (elist==null || elist.size()==0)
 			return null;
 		PackData q=p.copyPackTo();
+		HalfLink hlist=new HalfLink();
+		hlist.addSimpleEdges(q.packDCEL,elist);
 
-		// We mark in 'targ' all verts to the left of the given edgelist.
-		// TODO: May be easier method: e.g., see 'label_seed_generations'.
-		// TODO: have to be careful that edgelist doesn't pinch off small
-		//    peninsula, which then misleads us into thinking that we got
-		//    everything on one side.
-		int[] targ = new int[p.nodeCount + 2];
-		Iterator<EdgeSimple> el = elist.iterator();
-		EdgeSimple edge = null;
-		while (el.hasNext()) {
-			edge = (EdgeSimple) el.next();
-			b = edge.v;
-			targ[b] = targ[edge.w] = 1;
-		}
-		int last_v = b; // keep track of the last 'edge.v'.
-
-		el = elist.iterator();
-		VertList curlist;
-		VertList ctrace = curlist = new VertList();
-		while (el.hasNext()) {
-			edge = (EdgeSimple) el.next();
-			v = edge.v;
-			a = edge.w;
-			ind1 = p.nghb(v, a);
-			ind2 = p.nghb(v, b);
-			if (ind1 < 0 || ind2 < 0 || ind1 == ind2)
-				return null;
-			if (ind2 < ind1)
-				ind2 = ind2 + p.kData[v].num;
-			if (ind2 > ind1 + 1)
-				for (int j = ind1 + 1; j <= ind2; j++)
-					if (targ[(k = p.kData[v].flower[j
-							% p.kData[v].num])] == 0) {
-						targ[k] = 1;
-						ctrace = ctrace.next = new VertList(k);
-					}
-			b = v;
-		}
-		curlist = curlist.next; // first spot was empty
-
-		// keep alternating lists until old one is empty */
-		VertList oldlist = curlist;
-		VertList otrace;
-		while (oldlist != null && oldlist.v != 0) {
-			curlist = ctrace = new VertList();
-			otrace = oldlist;
-			while (otrace != null) {
-				for (int j = 0; j <= (p.kData[(v = otrace.v)].num + p.kData[otrace.v].bdryFlag); j++)
-					if (targ[(k = p.kData[v].flower[j
-							% p.kData[v].num])] == 0) {
-						targ[k] = 1;
-						ctrace = ctrace.next = new VertList(k);
-					}
-				otrace = otrace.next;
-			}
-
-			curlist = curlist.next; // first spot was empty
-			oldlist = curlist;
-		}
-
-		/* ------------------------------------------------------- */
-
-		// In case we want the outside instead of the inside:
-		if (!isInside) {
-			for (int j = 1; j <= p.nodeCount; j++) {
-				if (targ[j] != 0)
-					targ[j] = 0;
-				else
-					targ[j] = 1;
-			}
-			// include vertices along elist also
-			el = elist.iterator();
-			while (el.hasNext()) {
-				edge = (EdgeSimple) el.next();
-				targ[edge.v] = targ[edge.w] = 1;
-			}
-
-			// to get disc from outside, have to add an ideal vertex
-			if (p.bdryCompCount > 1) {
-				CirclePack.cpb.myErrorMsg("unweld: in 'outside' case, p must be "
-								+ "combinatorial.sphere or disc.");
-				return null;
-			}
-			if (p.bdryCompCount == 1) {
-				NodeLink nl = new NodeLink(p, p.bdryStarts[1]);
-				if (p.add_ideal(nl) == 0) {
-					CirclePack.cpb.myErrorMsg("unweld: outside case, failed to "
-									+ " add ideal vertex.");
+		// check that 'hlist' is simple and closed
+		int[] vhits=new int[q.nodeCount+1];
+		Iterator<HalfEdge> his=hlist.iterator();
+		int firstv=his.next().origin.vertIndx;
+		int lastv=firstv;
+		vhits[lastv]=-1; // on the path
+		NodeLink nghbs=new NodeLink();
+		while (his.hasNext()) {
+			HalfEdge he=his.next();
+			int v=he.origin.vertIndx;
+			if (v!=lastv || vhits[v]!=0) {
+				CirclePack.cpb.errMsg(
+					"unweld: closed path was not simple or not connected");
 					return null;
-				} else {
-					msg("unweld: Note that an "
-							+ " ideal vertex has been "
-							+ "added to the parent complex");
 				}
-				v = p.nodeCount;
-				targ[v] = 1;
-				p.rData[v].rad = 1.0;
-				p.rData[v].center.x = p.rData[v].center.y = 0.0;
-				p.kData[v].plotFlag = 1;
+			vhits[v]=-1;
+			
+			// catalog vertices to the left of 'hlist'
+			int w=he.prev.origin.vertIndx;
+			if (vhits[w]>=0 && !q.isBdry(w)) {
+				vhits[w]=1;
+				nghbs.add(w);
+			}
+			
+			lastv=v;
+		}
+		
+		if (lastv!=firstv) {
+			CirclePack.cpb.errMsg("unweld: path did not close up");
+			return null;
+		}
+		
+		// set alpha to be to the left of hlist
+		Iterator<Integer> nis=nghbs.iterator();
+		HalfEdge alp=null;
+		while (alp==null && nis.hasNext()) {
+			Vertex vert=q.packDCEL.vertices[nis.next()];
+			HalfLink spokes=vert.getSpokes(null);
+			Iterator<HalfEdge> sis=spokes.iterator();
+			while (alp==null && sis.hasNext()) {
+				HalfEdge he=sis.next();
+				int w=he.twin.origin.vertIndx;
+				if (vhits[w]==0 && !q.isBdry(w))
+					alp=he;
 			}
 		}
-
-		// At this point, inside or outside are set in 'targ'
-		/* -------------------------------------------------------- */
-
-		// give new index numbers to the marked vertices
-		in_count = 0;
-		for (int n = 1; n <= p.nodeCount; n++)
-			if (targ[n] != 0)
-				targ[n] = ++in_count;
-		if (!isInside)
-			new_alp = targ[p.nodeCount];
-		else
-			new_alp = targ[p.alpha];
-
-		q.alloc_pack_space(p.nodeCount, false);
-
-		q.nodeCount = in_count;
-		for (int n = 1; n <= q.nodeCount; n++)
-			q.kData[n].utilFlag = 0;
-
-		// create the flowers for q
-
-		/*
-		 * first, do those along edge -- sharp turns could yield illegal
-		 * combinatorics which will show up later
-		 */
-
-		int vv;
-		if (isInside)
-			b = last_v;
-		else
-			a = last_v;
-		el = elist.iterator();
-		while (el.hasNext()) {
-			edge = (EdgeSimple) el.next();
-			v = edge.v;
-			if (isInside)
-				a = edge.w;
-			else
-				b = edge.w;
-			ind1 = p.nghb(v, a);
-			ind2 = p.nghb(v, b);
-			if (ind1 < 0 || ind2 < 0 || ind1 == ind2) {
-				throw new CombException();
-			}
-			if (ind2 < ind1)
-				ind2 = ind2 + p.kData[v].num;
-			vv = targ[v];
-			q.kData[vv].num = num = ind2 - ind1;
-			q.kData[vv].bdryFlag = 1;
-			newflower = new int[num + 1];
-			for (int j = ind1; j <= ind2; j++) {
-				k = p.kData[v].flower[j % p.kData[v].num];
-				newflower[j - ind1] = targ[k];
-			}
-			q.kData[vv].flower = newflower;
-			q.kData[vv].utilFlag = 1;
-			if (isInside)
-				b = v;
-			else
-				a = v;
+		if (alp==null) {
+			CirclePack.cpb.errMsg(
+					"unweld: did not find an alpha left of path");
+			return null;
 		}
+		q.packDCEL.alpha=alp;
+		q.setAlpha(alp.origin.vertIndx);
 
-		// now do the rest, all should be interior
+		// cookie out by using 'hlist' as the new red chain
+		int ans=CombDCEL.redchain_by_edge(
+				q.packDCEL,hlist,q.packDCEL.alpha,false);
+		if (ans<=0)
+			CirclePack.cpb.errMsg("unweld: failed to get red chain");
 
-		for (int n = 1; n <= p.nodeCount; n++)
-			if ((vert = targ[n]) != 0 && q.kData[vert].utilFlag == 0) {
-				// this is one of the marked vertices but not on edge-list
-				if (p.kData[n].bdryFlag != 0) { // should be interior
-					throw new CombException();
-				}
-				newflower = new int[(num = p.kData[n].num) + 1];
-				for (int j = 0; j <= num; j++) {
-					k = targ[p.kData[n].flower[j]];
-					newflower[j] = k;
-				}
-				q.kData[vert].flower = newflower;
-				q.kData[vert].bdryFlag = 0;
-				q.kData[vert].num = p.kData[n].num;
-			} // end of if and for
-
-		/* -------------------------------------------------- */
-		// Now do the final details to get q in shape
-		// create the vertex_map for q
-		q.vertexMap = new VertexMap();
-		for (int n = 1; n <= p.nodeCount; n++)
-			if ((v = targ[n]) != 0) {
-				q.vertexMap.add(new EdgeSimple(v, n));
-			}
-
-		// set default data for q --- in preparation for max packing
-		q.status = true;
-		if (isInside)
-			q.fileName = new String("outside");
-		else
-			q.fileName = new String("inside");
-		q.hes = p.hes;
-		for (int n = 1; n <= p.nodeCount; n++)
-			if ((v = targ[n]) != 0) {
-				q.rData[v].rad = p.rData[n].rad;
-				q.rData[v].center = p.rData[n].center;
-				q.kData[v].plotFlag = 1;
-			}
-		edge = (EdgeSimple) elist.get(0);
-		v = targ[edge.v];
-		if (q.kData[v].flower[0] == q.kData[v].flower[q.kData[v].num]
-				|| q.swap_nodes(v, 2) == 0) {
-			CirclePack.cpb.myErrorMsg("unweld: some error with bdry vert "
-					+ v + " or 2.");
-		}
-		q.gamma = 2;
-		if (new_alp == 2)
-			q.chooseAlpha();
-		else {
-			q.alpha = new_alp;
-			q.chooseAlpha();
-		}
-		q.complex_count(true);
-		q.facedraworder(false);
-		q.set_aim_default();
+		q.packDCEL.fixDCEL(q);
 		return q;
-	} 
-
+	}		
 
 	/**
 	 * Reads 'weldmapfile' and writes "weld list" information
@@ -671,8 +513,7 @@ public class WeldManager extends PackExtender {
 		tolr = 0.1;
 
 		// TODO: should do more error checking
-		if ((p.kData[p_start_vert].bdryFlag == 0)
-				|| (q.kData[q_start_vert].bdryFlag == 0))
+		if (!p.isBdry(p_start_vert) || !q.isBdry(q_start_vert))
 			Oops("start vertices must be on the boundary");
 
 		// open temporary file for weld list
@@ -696,11 +537,11 @@ public class WeldManager extends PackExtender {
 			// find boundary counts
 			int p_hits = 0;
 			for (int vv = 1; vv <= p.nodeCount; vv++)
-				if (p.kData[vv].bdryFlag == 1)
+				if (p.isBdry(vv))
 					p_hits++;
 			int q_hits = 0;
 			for (int vv = 1; vv <= q.nodeCount; vv++)
-				if (q.kData[vv].bdryFlag == 1)
+				if (q.isBdry(vv))
 					q_hits++;
 
 			// create space
@@ -718,11 +559,11 @@ public class WeldManager extends PackExtender {
 			p_vert[0] = last = p_start_vert;
 			for (n = 1; n <= p_count; n++)
 				// p list positive (counterclockwise)
-				p_vert[n] = last = p.kData[last].flower[0];
+				p_vert[n] = last = p.getFirstPetal(last);
 			q_vert[0] = last = q_start_vert;
 			for (n = 1; n <= q_count; n++)
 				// Recall: q list must be clockwise.
-				q_vert[n] = last = q.kData[last].flower[q.kData[last].num];
+				q_vert[n] = last = q.getLastPetal(last);
 
 			// Use opt_flag here (TODO: expect more options eventually).
 			
@@ -745,11 +586,11 @@ public class WeldManager extends PackExtender {
 			double qmax=0.0;
 			if ((opt_flag & (0001 | 0002 | 0004)) == 0) { 
 				for (n = 0; n <= p_count; n++)
-					pmax = ((dist = Math.abs(1.0 - p.rData[p_vert[n]].center
-							.abs())) > pmax) ? dist : pmax;
+					pmax = ((dist = Math.abs(1.0 - p.getCenter(p_vert[n]).abs())) 
+							> pmax) ? dist : pmax;
 				for (n = 0; n <= q_count; n++)
-					qmax = ((dist = Math.abs(1.0 - q.rData[q_vert[n]].center
-							.abs())) > qmax) ? dist : qmax;
+					qmax = ((dist = Math.abs(1.0 - q.getCenter(q_vert[n]).abs())) 
+							> qmax) ? dist : qmax;
 
 				if (pmax > .01 || qmax > .01) {
 					Oops("weld_map: packings don't seem to be maximal.");
@@ -757,11 +598,11 @@ public class WeldManager extends PackExtender {
 
 				// put coords in vectors, normalize each to [0,1].
 				p_coord = new double[p_count + 1];
-				double p_ang0 = p.rData[p_vert[0]].center.arg();
+				double p_ang0 = p.getCenter(p_vert[0]).arg();
 				p_coord[0] = 0.0;
 				double p_arg;
 				for (n = 1; n <= p_count; n++) {
-					p_arg = p.rData[p_vert[n]].center.arg();
+					p_arg = p.getCenter(p_vert[n]).arg();
 					p_coord[n] = p_arg - p_ang0;
 					// make arguments monotone
 					while (p_coord[n] < p_coord[n - 1])
@@ -771,11 +612,11 @@ public class WeldManager extends PackExtender {
 					p_coord[n] /= p_coord[p_count];
 
 				q_coord = new double[q_count + 2];
-				double q_ang0 = q.rData[q_vert[0]].center.arg();
+				double q_ang0 = q.getCenter(q_vert[0]).arg();
 				q_coord[0] = 0.0;
 				double q_arg;
 				for (n = 1; n <= q_count; n++) {
-					q_arg = q.rData[q_vert[n]].center.arg();
+					q_arg = q.getCenter(q_vert[n]).arg();
 					q_coord[n] = q_ang0 - q_arg;
 					// make arguments monotone
 					while (q_coord[n] < q_coord[n - 1])
@@ -796,15 +637,15 @@ public class WeldManager extends PackExtender {
 				p_coord = new double[p_count + 2];
 				p_coord[0] = 0.0;
 				for (n = 1; n <= p_count; n++)
-					p_coord[n] = p_coord[n - 1] + p.rData[p_vert[n - 1]].rad
-							+ p.rData[p_vert[n]].rad;
+					p_coord[n] = p_coord[n - 1] + p.getRadius(p_vert[n - 1])
+							+ p.getRadius(p_vert[n]);
 				for (j = 1; j <= p_count; j++)
 					p_coord[j] /= p_coord[p_count]; // normalize
 				q_coord = new double[q_count + 2];
 				q_coord[0] = 0.0;
 				for (n = 1; n <= q_count; n++)
-					q_coord[n] = q_coord[n - 1] + q.rData[q_vert[n - 1]].rad
-							+ q.rData[q_vert[n]].rad;
+					q_coord[n] = q_coord[n - 1] + q.getRadius(q_vert[n - 1])
+							+ q.getRadius(q_vert[n]);
 				for (j = 1; j <= q_count; j++)
 					q_coord[j] /= q_coord[q_count]; // normalize
 			} // end of eucl case
@@ -1014,8 +855,7 @@ public class WeldManager extends PackExtender {
 		int w_orig = w;
 
 		if (!p.status || !q.status || (v > p.nodeCount) || (w > q.nodeCount)
-				|| v < 1 || w < 1 || p.kData[v].bdryFlag == 0
-				|| q.kData[w].bdryFlag == 0) {
+				|| v < 1 || w < 1 || !p.isBdry(v) || !q.isBdry(w)) {
 			Oops("weld: improper data; e.g., verts " + v + " and " + w
 					+ " cannot be used");
 		}
@@ -1033,19 +873,19 @@ public class WeldManager extends PackExtender {
 			if (!line.contains("V") || !line.contains("v")) {
 				Oops("weld list: first line must be 'Vv'.");
 			}
-			v_next = p.kData[v].flower[0];
-			w_next = q.kData[w].flower[q.kData[w].num];
+			v_next = p.getFirstPetal(v);
+			w_next = q.getLastPetal(w);
 			while ((line = StringUtil.ourNextLine(fpr)) != null) {
 				count = count + 1;
 
 				// check 'p' situation (upper case letters)
 				if (line.contains("V")) {
 					v = v_next;
-					v_next = p.kData[v].flower[0];
+					v_next = p.getFirstPetal(v);
 				} else if (line.contains("N")) {
 					if (add_between(p, v, v_next) == 0)
 						return (-1);
-					v = p.kData[v].flower[0];
+					v = p.getFirstPetal(v);
 					// v = newly added new vertex
 				} else { /* extraneous stuff? */
 					Oops("weld: weld file format problem, upper case");
@@ -1053,11 +893,11 @@ public class WeldManager extends PackExtender {
 
 				if (line.contains("v")) {
 					w = w_next;
-					w_next = q.kData[w].flower[q.kData[w].num];
+					w_next = q.getLastPetal(w);
 				} else if (line.contains("n")) {
 					if (add_between(q, w_next, w) == 0)
 						return -1;
-					w = q.kData[w].flower[q.kData[w].num];
+					w = q.getLastPetal(w);
 					// w = newly added new vertex
 				} else { /* extraneous stuff? */
 					Oops("weld: weld file format problem, lower case");
@@ -1067,22 +907,20 @@ public class WeldManager extends PackExtender {
 			throw new DataException("weld: problem reading list: "
 					+ ex.getMessage());
 		}
-		p.setCombinatorics();
-		q.setCombinatorics();
 
 		String buf = null;
-		if (v == p.kData[v_orig].flower[0]) {
+		if (v == p.getFirstPetal(v_orig)) {
 			buf = new String("b");
 		} else {
-			v = p.kData[v].flower[p.kData[v].num];
+			v = p.getLastPetal(v);
 			buf = new String("b(" + v_orig + " " + v + ")");
 		}
 		p.vlist = new NodeLink(p, buf);
 		p.elist = new EdgeLink(p, buf);
-		if (w == q.kData[w_orig].flower[q.kData[w_orig].num]) {
+		if (w == q.getLastPetal(w_orig)) {
 			buf = new String("b");
 		} else {
-			w = q.kData[w].flower[0];
+			w = q.getFirstPetal(w);
 			buf = new String("b(" + w + " " + w_orig + ")");
 		}
 		q.vlist = new NodeLink(q, buf);
@@ -1092,152 +930,72 @@ public class WeldManager extends PackExtender {
 		if (opt_flag>0) { 
 			q.bdryStarts[1] = w_orig;
 
-			if ((ans = p.adjoin(q, v_orig, w_orig, count)) != 0) {
+			p.packDCEL=CombDCEL.adjoin(p.packDCEL,
+				q.packDCEL, v_orig, w_orig, count);
+			p.packDCEL.fixDCEL(p);
 				// TODO: note that 'adjoin' pastes p clockwise, q
 				//   counterclockwise; no problem for full bdry, but 
 				//   with partial bdry's, have to do something else.
 				// TODO: use to pass back 'Oldnew' to define vertex_map of q.
-				for (v = 1; v <= p.nodeCount; v++)
-					p.kData[v].plotFlag = 1;
-			}
+			for (v = 1; v <= p.nodeCount; v++)
+				p.setPlotFlag(v,1);
 		} 
 		else {
 			msg("weld: two packs appear ready to adjoint:\n"
 					+ " designated bdry vertices are " + v + " and " + w
-					+ ", resp.," + " alpha vertex of outer pack is " + q.alpha);
+					+ ", resp.," + " alpha vertex of outer pack is " + q.getAlpha());
 		}
 		return ans;
 	} 
 
 	/**
-	 * Adds a new vert on boundary between v and v_next. Assumes both v, v_next
-	 * are on boundary and v_next=p.kData[v].flower[0]. Results in v_next +++++
-	 * newvert +++++ v ++ + ++ ++ + ++ ++ u ++
-	 * 
-	 * Special cases: if v or v_next lies in just one face, must add interior
-	 * vert to which new vert is attached; put it on opposite edge (???).
-	 * 
-	 * @param p
-	 * @param v,v_next
-	 * @return 0 on error or inappropriate
+	 * Adds a new vert on boundary between v and v_next. 
+	 * Assumes both v, v_next are on boundary and 
+	 * v_next=p.getFirstPetal(v). If v or v_next lies in 
+	 * just one face, must add interior vert on opposite
+	 * edge to which the new vert is attached.
+
+	 * @param p PackData
+	 * @param v int
+	 * @param v_next
+	 * @return 0 on error or inappropriate, else nodeCount
 	 */
 	public int add_between(PackData p, int v, int v_next) {
-		int a, b, i, j, k, u, w, y, num, indx, new_v;
-		int[] newflower = null;
-
 		// Basic checks
-		if (p.kData[v].bdryFlag == 0 || p.kData[v_next].bdryFlag == 0)
+		HalfEdge hedge=p.packDCEL.findHalfEdge(new EdgeSimple(v,v_next));
+		if (!p.isBdry(v) || !p.isBdry(v_next) || 
+				hedge==null || !hedge.isBdry()) {
+			CirclePack.cpb.errMsg(
+					"add_between: bad data");
 			return 0;
-
-		/*
-		 * if v or v_next has just one face --- no int nghbs. Put new interior
-		 * vertex in edge opposite v or v_next, then we can continue as normal.
-		 * label this way, X=new_v;
-		 * 
-		 * y ++ + ++ b ++++++ X ++++++ a ++ + ++ w
-		 */
-		if (p.kData[v].num == 1 || p.kData[v_next].num == 1) { // special: one
-																// face
-			if (p.kData[v].num == 1) {
-				a = p.kData[v].flower[1];
-				b = v_next;
-				y = v;
-			} else {
-				a = v;
-				b = p.kData[v_next].flower[0];
-				y = v_next;
-			}
-			if (p.kData[a].num <= 2 || p.kData[b].num <= 2)
-				return 0;
-			w = p.kData[a].flower[2];
-
-			if (p.nodeCount > (p.sizeLimit - 5))
-				p.alloc_pack_space(p.nodeCount + 100, true);
-			new_v = p.nodeCount + 1;
-
-			// fix a
-			p.kData[a].flower[1] = new_v;
-
-			// fix b
-			p.kData[b].flower[p.kData[b].num - 1] = new_v;
-
-			// fix y (v or v_next)
-			newflower = new int[4];
-			newflower[0] = b;
-			newflower[1] = new_v;
-			newflower[2] = a;
-			p.kData[y].flower = newflower;
-			p.kData[y].num = 2;
-			p.kData[y].plotFlag = 1;
-
-			// fix new_v
-			newflower = new int[5];
-			newflower[0] = newflower[4] = a;
-			newflower[1] = y;
-			newflower[2] = b;
-			newflower[3] = w;
-			p.kData[new_v].num = 4;
-			p.kData[new_v].bdryFlag = 0;
-			p.kData[new_v].flower = newflower;
-			p.kData[new_v].plotFlag = 1;
-			p.kData[new_v].color=CPScreen.getFGColor();
-			p.rData[new_v].rad = p.rData[v].rad;
-
-			// fix w
-			if ((indx = p.nghb(w, a)) < 0)
-				return 0;
-			newflower = new int[p.kData[w].num + 2];
-			for (j = 0; j <= indx; j++)
-				newflower[j] = p.kData[w].flower[j];
-			for (j = indx + 1; j <= p.kData[w].num; j++)
-				newflower[j + 1] = p.kData[w].flower[j];
-			newflower[indx + 1] = new_v;
-			p.kData[w].flower = newflower;
-			p.kData[w].num++;
-			p.kData[w].plotFlag = 1;
-
-			p.nodeCount++;
 		}
+		
+		if (hedge.face.faceIndx<0)
+			hedge=hedge.twin;
+		
+		// if no interior petal, have to split opposite edge first
+		if (hedge.next.isBdry()) {
+			HalfEdge opp=hedge.next.next;
+			if (opp.isBdry() || 
+					RawManip.splitEdge_raw(p.packDCEL,opp)==null) {
+				CirclePack.cpb.errMsg(
+						"add_between: opp edge is bdry or failed to split");
+				return 0;
+			}
+		}
+		
+		// add new vertex between v and v_next
+		if (RawManip.splitEdge_raw(p.packDCEL,hedge)==null) {
+			CirclePack.cpb.errMsg(
+					"add_between: failure in splitting "+hedge);
+			return 0;
+		}
+		
+		p.packDCEL.fixDCEL(p);
+		return p.nodeCount;
 
-		// proceed with new vert between v and v_next
-		if (p.nodeCount > (p.sizeLimit - 5))
-			p.alloc_pack_space(p.nodeCount + 100, true);// add to p
-		p.nodeCount += 1;
-		u = p.kData[v].flower[1];
-
-		// fix v and v_next
-
-		p.kData[v].flower[0] = p.nodeCount;
-		p.kData[v_next].flower[p.kData[v_next].num] = p.nodeCount;
-
-		// fix new node flower
-		i = p.nodeCount;
-
-		p.kData[i].flower = new int[4];
-		p.kData[i].flower[0] = v_next;
-		p.kData[i].flower[1] = u;
-		p.kData[i].flower[2] = v;
-		p.kData[i].num = 2;
-		p.kData[i].bdryFlag = 1;
-		p.kData[i].color=CPScreen.getFGColor();
-		p.rData[i].rad = p.rData[v].rad;
-		p.rData[i].center = new Complex(0.0);
-
-		// fix u
-
-		newflower = new int[p.kData[u].num + 2];
-		num = p.kData[u].num;
-		p.kData[u].num++;
-		indx = p.nghb(u, v);
-		for (k = 0; k <= indx; k++)
-			newflower[k] = p.kData[u].flower[k];
-		for (k = indx + 1; k <= num; k++)
-			newflower[k + 1] = p.kData[u].flower[k];
-		newflower[indx + 1] = p.nodeCount;
-		p.kData[u].flower = newflower;
-		return (1);
 	}
-	
+
 	/**
 	 * Most comprehensive of procedures: does all steps.
 	 * 
@@ -1268,14 +1026,12 @@ public class WeldManager extends PackExtender {
 				q_count, weldmapfile,script_flag, opt_flag) == 0)
 			return 0;
 		if ((ans = weld(p, q, p_start_vert, q_start_vert, opt_flag)) > 0) {
-			p.setCombinatorics();
-			q.setCombinatorics();
 			p.fillcurves();
 			q.fillcurves();
 			p.set_aim_default();
 			q.set_aim_default();
-			p.activeNode = p.gamma;
-			q.activeNode = q.gamma;
+			p.activeNode = p.getGamma();
+			q.activeNode = q.getGamma();
 			if (weldmapfile == null || weldmapfile.trim().length() < 2)
 				msg("weld_with_map: verts " + p_start_vert + " " + q_start_vert
 						+ " weldmap=identity map;");
@@ -1308,8 +1064,8 @@ public class WeldManager extends PackExtender {
 		  			case 'q': // get receiving pack
 		  			{
 		  				try {
-		  					p2=PackControl.pack[StringUtil.
-		  					         qFlagParse(str)].packData;
+		  					p2=PackControl.cpDrawing[StringUtil.
+		  					         qFlagParse(str)].getPackData();
 		  				} catch (Exception ex) {
 		  					throw new ParserException("Indicated weld partner "+
 		  							"pack is not valid");
@@ -1374,7 +1130,6 @@ public class WeldManager extends PackExtender {
 				}
 				p2.chooseAlpha();
 				p2.chooseGamma();
-				p2.setCombinatorics();
 				p2.set_aim_default();
 				p2.set_rad_default();
 
@@ -1404,7 +1159,7 @@ public class WeldManager extends PackExtender {
 		  			{
 		  				try {
 		  					qnum=StringUtil.qFlagParse(str);
-		  					p2=CPBase.pack[qnum].packData.copyPackTo();
+		  					p2=CPBase.cpDrawing[qnum].getPackData().copyPackTo();
 		  				} catch (Exception ex) {
 		  					throw new ParserException("Indicated weld partner "+
 		  							"pack is not valid");
@@ -1443,6 +1198,7 @@ public class WeldManager extends PackExtender {
 		
 		// ----------- unweld --------------
 		if (cmd.startsWith("unweld")) {
+			@SuppressWarnings("unused")
 			boolean wantInside=true;
 			EdgeLink elist=null;
 
@@ -1478,7 +1234,7 @@ public class WeldManager extends PackExtender {
 			} // end of segment while
 		
 			p1=packData.copyPackTo();
-			packOut=unweld(p1,elist,wantInside);
+			packOut=unweld(p1,elist);
 			if (packOut==null) {
 				Oops("unweld has failed");
 			}
@@ -1491,9 +1247,8 @@ public class WeldManager extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null && packOut!=null && packOut.nodeCount>0) {
-					cpS.swapPackData(packOut,false);
+				if (packOut!=null && packOut.nodeCount>0) {
+					CirclePack.cpb.swapPackData(packOut,pnum,false);
 				}
 				else return 0;
 			} catch (Exception ex) {
@@ -1501,9 +1256,6 @@ public class WeldManager extends PackExtender {
 			}
 			return packOut.nodeCount;
 		}	
-		
-		
-		
 		return super.cmdParser(cmd, flagSegs);
 	}
 	

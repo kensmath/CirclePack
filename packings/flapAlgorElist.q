@@ -1,0 +1,7 @@
+CHECKCOUNT: 42
+VERT_LIST:
+ 42
+ 1
+ (done)
+
+END

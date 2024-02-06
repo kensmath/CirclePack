@@ -1,0 +1,28 @@
+# square.poly
+#
+# A set of 10 points in 2D, no attributes, no boundary markers.
+10 2 0  0
+# And here are the ten points.
+ 1      0     .5
+ 2      -1.0  -1.0
+ 3     0.0    -1.0
+ 4     1.0    -1.0
+ 5     1.0    0.0
+ 6     1.0    1.0
+ 7     0.0    1.0
+ 8     -1.0   1.0
+ 9     -1.0   0.0
+ 10    -.5    0
+# segments 
+8 0
+1  2 3
+2  3 4
+3  4 5
+4  5 6
+5  6 7
+6  7 8
+7  8 9
+8  9 2
+
+# holes
+0

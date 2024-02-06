@@ -6,6 +6,7 @@ import java.util.Random;
 import java.util.Vector;
 
 import packing.PackData;
+import util.MathUtil;
 import util.StringUtil;
 import allMains.CPBase;
 import allMains.CirclePack;
@@ -53,7 +54,8 @@ public class PointLink extends LinkedList<Complex> {
 	public PointLink(PackData p,Complex z) {
 		super();
 		packData=p;
-		if (z!=null) add(z);
+		if (z!=null) 
+			add(z);
 	}
 	
 	public PointLink(Complex z) {
@@ -124,19 +126,73 @@ public class PointLink extends LinkedList<Complex> {
 			thereIsFlag=true;
 		}
 
-		if (str.startsWith("Zli")) {
-			abutMore(CPBase.Zlink);
-			return CPBase.Zlink.size();
-		}
-		else if (str.startsWith("zli")) {
-			if (packData==null)
-				throw new ParserException("no packdata with this 'zlist'");
-			if (packData.zlist==null)
-				return 0;
-			return abutMore(packData.zlist);
+		// self call if str is a variable
+		if (str.startsWith("_")) {
+			count+=addPointLinks(CPBase.varControl.getValue(str));
 		}
 
-		if (items==null || items.size()==0) // nothing to do?
+		// look for 'zlist' or 'Zlist'
+		else if (str.substring(1).startsWith("list")) {
+			PointLink zlink=null;
+
+			if ((str.startsWith("zli") && 
+					(zlink=packData.zlist)!=null && zlink.size()>0) ||
+				(str.startsWith("Zli") && 
+					(zlink=CPBase.Zlink)!=null && zlink.size()>0)) {
+				String[] b_string;
+				String brst;
+				String strdata=str.substring(5).trim(); // remove '?list'
+			
+				// check for parens listing range of indices 
+				int lsize=zlink.size()-1;
+				int[] irange=StringUtil.get_int_range(strdata, 0,lsize);
+				if (irange!=null) {
+					int aa=irange[0];
+					int bb=(irange[1]>lsize) ? lsize : irange[1]; 
+					for (int j=aa;j<=bb;j++) {
+						add(zlink.get(j));
+						count++;
+					}
+				}
+			
+				// else check for brackets
+				else if ((b_string=StringUtil.get_bracket_strings(strdata))!=null 
+						&& (brst=b_string[0])!=null) {
+					if (brst.startsWith("r")) { // rotate: copy first at end
+						zlink.add(zlink.getFirst());
+					}
+					if (brst.startsWith("r") 
+							|| brst.startsWith("n")) { // use an remove first
+						Complex z=zlink.removeFirst();
+						add(z);
+						count++;
+					}
+					if (brst.startsWith("l")) { // last
+						add(zlink.getLast());
+						count++;
+					}						
+					else { // else specified index
+						try{
+							int n=MathUtil.MyInteger(brst);
+							if (n>=0 && n<zlink.size()) {
+								add(zlink.get(n));
+								count++;
+							}
+						} catch (NumberFormatException nfe) {}
+					}
+				}
+				// else just adjoin the current list
+				else { 
+					int n=size();
+					addAll(n,zlink);
+					count +=zlink.size();
+				}
+			}
+			else // no appropriate list found
+				return count;
+		}
+
+		if (!thereIsFlag && (items==null || items.size()==0)) // nothing to do?
 			return 0;
 		
 		// If there is a flag, we get it, process, and return.
@@ -144,9 +200,11 @@ public class PointLink extends LinkedList<Complex> {
 			String str2=items.get(0);
 			char aa=str2.charAt(0);
 			
-			// because of recursion, must check for second flag: should be only points
-			if (StringUtil.isFlag(str2) || (aa!='-' && aa!='.' && !Character.isDigit(aa))) {
-				// have to check for 'Zlist' and 'zlist' again (since they may follow a flag 
+			// because of recursion, must check for second flag: 
+			//   should be only points
+			if (StringUtil.isFlag(str2) || (aa!='-' && aa!='.' && 
+					!Character.isDigit(aa))) {
+				// check for 'Zlist' and 'zlist' again (since they may follow a flag) 
 				if (str2.startsWith("Zli")) {
 					abutMore(CPBase.Zlink);
 					return CPBase.Zlink.size();
@@ -162,7 +220,8 @@ public class PointLink extends LinkedList<Complex> {
 				throw new ParserException("'PointLink' data can have only one flag");
 			}
 			
-			// recursive call to process the rest of the input (should be just x y pairs)
+			// recursive call to process the rest of the input 
+			//    (should be just x y pairs)
 			PointLink ptlink=new PointLink(items);
 			if (ptlink==null || ptlink.size()==0)
 				throw new ParserException("failed in getting complex points");
@@ -170,7 +229,7 @@ public class PointLink extends LinkedList<Complex> {
 			switch(a) {
 			case 'f': // run string through 'function', if defined in function window
 			{
-				if (PackControl.functionPanel.ftnField.getText().trim().length()==0) {
+				if (PackControl.newftnFrame.ftnField.getText().trim().length()==0) {
 					CirclePack.cpb.errMsg("'Function' frame is not set");
 					return 0;
 				}
@@ -178,15 +237,16 @@ public class PointLink extends LinkedList<Complex> {
 				Iterator<Complex> pts=ptlink.iterator();
 				while (pts.hasNext()) {
 					try {
-						if (add(PackControl.functionPanel.getFtnValue(pts.next())))
+						if (add(CirclePack.cpb.getFtnValue(pts.next())))
 							count++;
 					} catch (Exception ex) {}
 				}
 				break;
 			}
-			case 'g': // run string through 'parameter path', if define in function window
+			case 'g': // run string through 'parameter path', 
+						//  if defined in function window
 			{
-				if (PackControl.functionPanel.paramField.getText().trim().length()==0) {
+				if (PackControl.newftnFrame.paramField.getText().trim().length()==0) {
 					CirclePack.cpb.errMsg("'Parameter' field in Function Frame is not set");
 					return 0;
 				}
@@ -194,7 +254,7 @@ public class PointLink extends LinkedList<Complex> {
 				Iterator<Complex> pts=ptlink.iterator();
 				while (pts.hasNext()) {
 					try {
-						if (add(PackControl.functionPanel.getParamValue(pts.next().x)))
+						if (add(CirclePack.cpb.getParamValue(pts.next().x)))
 							count++;
 					} catch (Exception ex) {}
 				}
@@ -217,7 +277,7 @@ public class PointLink extends LinkedList<Complex> {
 				NodeLink vlit=new NodeLink(packData,items);
 				Iterator<Integer> vlt=vlit.iterator();
 				while (vlt.hasNext()) {
-					if (add(packData.rData[vlt.next()].center))
+					if (add(packData.getCenter(vlt.next())))
 						count++;
 				}
 				break;
@@ -389,4 +449,11 @@ public class PointLink extends LinkedList<Complex> {
     	return ptlist.get(n);
     }
 
+	 /**
+	  * Set 'packData' (which helps determine eligibility of entries)
+	  * @param p PackData
+	  */
+	 public void setPackData(PackData p) {
+		 packData=p;
+	 }
 }

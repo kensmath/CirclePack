@@ -82,13 +82,13 @@ public class SubdivisionRules {
 	// put 'TileRule's in a vector
 	public Vector<TileRule> tileRules;
 	
-	// use EdgeLink for pairs <tt,r>, tt>=4 is tile type, r>=0 is index
-	//   in 'tileRules' vector of applicable rule.
+	// use EdgeLink for pairs <tt,r>, tt>=4 is tile type, and 
+	//   r>=0 is index in 'tileRules' vector of applicable rule.
 	public EdgeLink type2Rule;
 	
-	// use EdgeLink for pairs <tt,n>, tt>=4 is tile type, n is number of
-	//   edges (and vertices) of this tile type. (For generic rules,
-	//   this will somehow be variable)
+	// use EdgeLink for pairs <tt,n>, tt>=4 is tile type, 
+	//   n is number of edges (and vertices) of this tile type. 
+	//   (For generic rules, this will somehow be variable)
 	public EdgeLink type2Size;
 	
 	// constructor
@@ -720,7 +720,7 @@ public class SubdivisionRules {
 								int next_edge = einfo[1];
 
 								// touch this tile for future processing
-								if (next_tile > 0 && next.containsV(next_tile) < 0)
+								if (next_tile>0 && next.containsV(next_tile)<0)
 									next.add(next_tile);
 
 								// proceed until reaching bdry edge or returning to base_tile across edge j
@@ -751,7 +751,7 @@ public class SubdivisionRules {
 									next_edge = einfo[1];
 
 									// touch this tile for future processing
-									if (next_tile > 0 && next.containsV(next_tile) < 0)
+									if (next_tile>0 && next.containsV(next_tile)<0)
 										next.add(next_tile);
 
 								} // done with while
@@ -768,7 +768,7 @@ public class SubdivisionRules {
 									next_edge = einfo[1];
 
 									// touch this tile for future processing
-									if (next_tile > 0 && next.containsV(next_tile) < 0)
+									if (next_tile>0 && next.containsV(next_tile)<0)
 										next.add(next_tile);
 
 									while (next_tile > 0) {
@@ -803,7 +803,7 @@ public class SubdivisionRules {
 										next_edge = einfo[1];
 
 										// touch this tile for future processing
-										if (next_tile > 0 && next.containsV(next_tile) < 0)
+										if (next_tile>0 && next.containsV(next_tile)<0)
 											next.add(next_tile);
 
 									} // done with while

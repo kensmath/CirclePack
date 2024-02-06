@@ -103,12 +103,19 @@
 </MyTool>
 
 <MyTool name="Add cursor" type="MAIN:" dropable="no" >
-  <iconname>main/enfold.png</iconname>
+  <iconname>main/add_bdry_cir.png</iconname>
   <cmd>add_cir z #XY;disp -wr</cmd>
-  <cmd_m2>enclose 0 z #XY;disp -wr</cmd_m2>
   <canvasmode>Add bdry circle</canvasmode>  
   <cursorpoint>2 20</cursorpoint>
   <tooltip>Add neighboring boundary circle (select: l-mouse)</tooltip>
+</MyTool>
+
+<MyTool name="CloseFlower" type="MAIN:" dropable="no" >
+  <iconname>main/enfold.png</iconname>
+  <cmd>enclose 0 z #XY;disp -wr</cmd>
+  <canvasmode>Close bdry flower</canvasmode>  
+  <cursorpoint>2 20</cursorpoint>
+  <tooltip>Enclose this bdry circle (select: l-mouse)</tooltip>
 </MyTool>
 
 <MyTool name="Delete cursor" type="MAIN:" dropable="no" >

@@ -7,15 +7,16 @@ import packing.PackData;
 import complex.Complex;
 
 /**
- * A class for computing various energies of point distributions, a principal
- * one being the 'coulomb' energy of points on the sphere. The class is created
- * when a '?energy' of 'energy' call is made and vanishes after the computation.
+ * A class for computing various energies of point distributions, 
+ * a principal one being the 'coulomb' energy of points on the 
+ * sphere. The class is created when a '?energy' of 'energy' 
+ * call is made and vanishes after the computation.
  * @author kens
- *
  */
 public class PointEnergies {
 	
-	public static double comp_energy(PackData packData,CommandStrParser.Energy eng) {
+	public static double comp_energy(PackData packData,
+			CommandStrParser.Energy eng) {
 		double sum=0.0,pwr=0.0,d;
 		Complex z;
 
@@ -26,9 +27,9 @@ public class PointEnergies {
 			double []W=new double[3];
 			double []D=new double[3];
 			for(int i=1;i<packData.nodeCount;i++) {
-				Z=SphericalMath.s_pt_to_vec(packData.rData[i].center); // load Z
+				Z=SphericalMath.s_pt_to_vec(packData.getCenter(i)); // load Z
 		  		for(int j=i+1;j<=packData.nodeCount;j++) {
-					W=SphericalMath.s_pt_to_vec(packData.rData[j].center); // load W
+					W=SphericalMath.s_pt_to_vec(packData.getCenter(j)); // load W
 					D[0]=Z[0]-W[0];
 					D[1]=Z[1]-W[1];
 					D[2]=Z[2]-W[2];
@@ -40,12 +41,11 @@ public class PointEnergies {
 			return sum;
 		}
 		
-		
 		// else eucl/hyperbolic
 		for(int i=1;i<packData.nodeCount;i++) {
-			z=packData.rData[i].center;
+			z=packData.getCenter(i);
 	  		for(int j=i+1;j<=packData.nodeCount;j++) {
-	  			d=z.minus(packData.rData[j].center).abs();
+	  			d=z.minus(packData.getCenter(j)).abs();
 				if (eng==CommandStrParser.Energy.LOG) 
 					sum += Math.log(1/d);
 				else sum += Math.pow(d,pwr);
@@ -88,8 +88,8 @@ public class PointEnergies {
 		if (packData.hes > 0) { // sphere
 			for (int i = 1; i < packData.nodeCount; i++) {
 				for (int j = i + 1; j <= packData.nodeCount; j++) {
-					d = SphericalMath.s_dist(packData.rData[i].center,
-							packData.rData[j].center);
+					d = SphericalMath.s_dist(packData.getCenter(i),
+							packData.getCenter(j));
 					min_s_dist = (d < min_s_dist) ? d : min_s_dist;
 				}
 			}
@@ -97,13 +97,12 @@ public class PointEnergies {
 		}
 		for (int i = 1; i < packData.nodeCount; i++) {
 			for (int j = i + 1; j <= packData.nodeCount; j++) {
-				d = packData.rData[i].center.minus(packData.rData[j].center)
+				d = packData.getCenter(i).minus(packData.getCenter(j))
 						.abs();
 				min_s_dist = (d < min_s_dist) ? d : min_s_dist;
 			}
 		}
 		return min_s_dist;
 	} 
-
 
 }

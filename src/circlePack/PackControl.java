@@ -1,18 +1,5 @@
 package circlePack;
 
-import handlers.MYTOOLHandler;
-import handlers.SCRIPTHandler;
-import images.CPIcon;
-import images.OwlSpinner;
-import input.CPFileManager;
-import input.CmdSource;
-import input.FileDialogs;
-import input.MyConsole;
-import input.ShellManager;
-import input.SocketSource;
-import input.TrafficCenter;
-import interfaces.IMessenger;
-
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -48,6 +35,35 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.WindowConstants;
 
+import allMains.CPBase;
+import allMains.CirclePack;
+import browser.BrowserFrame;
+import canvasses.CanvasReDrawManager;
+import canvasses.CursorCtrl;
+import canvasses.MainFrame;
+import cpTalk.sockets.CPMultiServer;
+import frames.AboutFrame;
+import frames.FtnFrame;
+import frames.HelpHover;
+import frames.HoverPanel;
+import frames.MessageHover;
+import frames.MobiusFrame;
+import frames.OutputFrame;
+import frames.PairedFrame;
+import frames.ScreenCtrlFrame;
+import frames.TabbedPackDataHover;
+import handlers.MYTOOLHandler;
+import handlers.SCRIPTHandler;
+import images.CPIcon;
+import images.OwlSpinner;
+import input.CPFileManager;
+import input.CmdSource;
+import input.FileDialogs;
+import input.MyConsole;
+import input.ShellManager;
+import input.SocketSource;
+import input.TrafficCenter;
+import interfaces.IMessenger;
 import listManip.BaryCoordLink;
 import listManip.BaryLink;
 import listManip.EdgeLink;
@@ -58,9 +74,10 @@ import listManip.PointLink;
 import listManip.TileLink;
 import math.Mobius;
 import mytools.MyTool;
+import packing.CPdrawing;
 import packing.PackData;
 import panels.CPPreferences;
-import panels.CPScreen;
+import panels.CPcanvas;
 import panels.SmallCanvasPanel;
 import posting.PostManager;
 import script.ScriptBundle;
@@ -69,31 +86,13 @@ import script.ScriptManager;
 import script.VertScriptBar;
 import util.CPTimer;
 import util.PopupBuilder;
-import JNI.JNIinit;
-import allMains.CPBase;
-import allMains.CirclePack;
-import browser.BrowserFrame;
-import canvasses.CanvasReDrawManager;
-import canvasses.CursorCtrl;
-import canvasses.MainFrame;
-import cpTalk.sockets.CPMultiServer;
-import frames.AboutFrame;
-import frames.FunctionHover;
-import frames.HelpHover;
-import frames.HoverPanel;
-import frames.MessageHover;
-import frames.MobiusFrame;
-import frames.OutputFrame;
-import frames.PairedFrame;
-import frames.ScreenCtrlFrame;
-import frames.TabbedPackDataHover;
 
 /**
  * 'PackControl' populates the principal JFrame 'CPBase.frame' for 
  * the CirclePack package.
  */
-public class PackControl extends CPBase implements MouseMotionListener, 
-FocusListener {
+public class PackControl extends CPBase implements 
+MouseMotionListener,FocusListener {
 
 	// get computer's display dimensions
 	public static Dimension displayDimension=Toolkit.getDefaultToolkit().getScreenSize();
@@ -104,9 +103,8 @@ FocusListener {
 	public static PairedFrame mapPairFrame=null;
 	public static HoverPanel controlPanel;
 	public static CanvasReDrawManager canvasRedrawer; // for repainting various canvasses
-	static Date date=new Date();
 	public static String CPVersion= new String("CirclePack, "+circlePack.Version.version+", "+
-			DateFormat.getDateInstance(DateFormat.MEDIUM).format(date));
+			DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date()));
 	public static boolean MapCanvasMode; // true: 'PairedFrame" shows, else 'MainFrame'
 	public static boolean AdvancedMode; // true: 'PackControl' open 
 	
@@ -174,8 +172,8 @@ FocusListener {
 	public static HelpHover helpHover;
 	public static ScriptHover scriptHover;
 	public static MobiusFrame mobiusFrame;
-	public static FunctionHover functionPanel;
 	public static BrowserFrame browserFrame;
+	public static FtnFrame newftnFrame;
 	public static OutputFrame outputFrame;
 	public static TabbedPackDataHover packDataHover; 
 	public static ScreenCtrlFrame screenCtrlFrame;
@@ -190,8 +188,11 @@ FocusListener {
 	
 	// Constructor
 	public PackControl() {
+		
+// debugging
+//System.out.println("enter PackControl");
+
 		socketActive=true;  // means that socket server will be started
-		cpSocketPort=3736;
 		cpSocketHost=null;
 		cpMultiServer=null;
 		socketSources=new Vector<SocketSource>();
@@ -200,13 +201,25 @@ FocusListener {
 		AdvancedMode=true; // default to 'advanced' mode (so 'frame' shows)
 		prefFrame=null; // only when called
 		NUM_PACKS=3; // number of packings to maintain
+		FAUX_RAD=20000;
+
+// debugging
+//System.out.println("start CPTimer");
+
 		cpTimer=new CPTimer();
 		defaultCPIcon=new CPIcon("GUI/default_icon.jpg");
+		
+// debugging
+//System.out.println("done with PackControl");
+
+//    	System.out.println("temp directory is: "+System.getProperty("java.io.tmpdir"));
+//    	System.out.println("user home directory is: "+System.getProperty("user.home"));
+
 	}
 	
 	/**
 	 * This actually starts PackControl: initiate preferences,
-	 * start C libraries, create the pack[] vector of packings,
+	 * start C libraries, create packings[] vector of 'PackData's,
 	 * create the interfaces frames and windows, pack 'frame',
 	 * call initGUI, etc.
 	 */
@@ -237,11 +250,9 @@ FocusListener {
 					writer.newLine();
 					writer.write("PRINT_COMMAND lpr");
 					writer.newLine();
-//				writer.write("POSTSCRIPT_VIEWER gv");
-//				writer.newLine();
 					writer.write("WEB_URL_FILE web_URLs");
 					writer.newLine();
-					writer.write("XMD_URL_FILE xmd_URLs");
+					writer.write("SCRIPT_URL_FILE script_URLs"); 
 					writer.newLine();
 					writer.write("ACTIVE_CANVAS_SIZE 650");
 					writer.newLine();
@@ -259,41 +270,34 @@ FocusListener {
 
 		preferences = new CPPreferences(); // pref stuff set here
 
-		// Init 'genericMain' C code for JNI calls to 'HeavyC_lib'
-		// TODO: how to catch exception if C calls fail in the native library
-		if (CPBase.attachCcode) {
-			try {
-//				System.out.println(System.getProperty("java.library.path"));
-//				java.io.File f=new File(System.getProperty("java.library.path")+
-//						File.separatorChar + "libHeavyC_lib.so");
-//				System.out.println(System.getenv().toString());
-
-				new JNIinit(); // try to start 'DelaunayBuild', 'SolverFunction' libs
-
-			} catch (Exception ex) {
-				System.err.println("Exception starting some shared C library;"
-						+ " this does not necessarily affect the use of 'CirclePack'");
-				System.err.println("System java library path is :" + System.getProperty("java.library.path"));
-			} catch (Error e) {
-				System.err.println("Error in starting some shared C library;"
-						+ " this does not necessarily affect the use of 'CirclePack'");
-			}
+		// Create the packing data memory storage areas
+		packings=new PackData[NUM_PACKS];
+		for (int i = 0; i < NUM_PACKS; i++) {
+			packings[i]=new PackData(i);
 		}
 
 		// Create the packing data memory storage areas
-		pack = new CPScreen[NUM_PACKS];
+		cpDrawing = new CPdrawing[NUM_PACKS];
+		cpCanvas=new CPcanvas[NUM_PACKS];
 		for (int i = 0; i < NUM_PACKS; i++) {
-			pack[i] = new CPScreen(i);
-			pack[i].circle.setParent(pack[i]);
-			pack[i].face.setParent(pack[i]);
-			pack[i].edge.setParent(pack[i]);
-			pack[i].trinket.setParent(pack[i]);
-			pack[i].realBox.setParent(pack[i]);
-			pack[i].sphView.setParent(pack[i]);
+			cpCanvas[i]=new CPcanvas(i); // needed for GUI
+			CPdrawing cpS=cpDrawing[i] = new CPdrawing(i);
+			
+			// 'PackData' and 'CPDrawing' must handshake
+			cpS.packData=packings[i];
+			packings[i].cpDrawing=cpS;
+			
+			// prepare display objects
+			cpS.circle.setParent(cpS);
+			cpS.face.setParent(cpS);
+			cpS.edge.setParent(cpS);
+			cpS.trinket.setParent(cpS);
+			cpS.realBox.setParent(cpS);
+			cpS.sphView.setParent(cpS);
 		}
 
 		// Create the screen thumbnail panel
-		smallCanvasPanel = new SmallCanvasPanel(pack);
+		smallCanvasPanel = new SmallCanvasPanel(cpDrawing);
 
 		// Create the 'ShellManager' to handle history
 		shellManager = new ShellManager();
@@ -327,7 +331,7 @@ FocusListener {
 		basicMyTFile = CPFileManager.getMyTFile("basic.myt");
 
 		// Start the active canvas window (and listener for size changes?)
-		activeFrame = new MainFrame(pack[0], mainMyTFile, mainCursorFile);
+		activeFrame = new MainFrame(cpDrawing[0], mainMyTFile, mainCursorFile);
 
 		// create the script stuff: manager, bar, frame, vertical bar
 		scriptManager = new ScriptManager();
@@ -392,7 +396,6 @@ FocusListener {
 		int high = frame.getHeight();
 		scriptHover.XLoc = ControlLocation.x;
 		scriptHover.YLoc = ControlLocation.y + high - 78;
-//		scriptFrame.setLocation(,ControlLocation.y+high-78);
 		vertScriptBar.scriptTools.add(scriptHover.scriptToolHandler.toolBar);
 		frame.setVisible(false);
 		resetDisplay(-1.0);
@@ -618,6 +621,11 @@ FocusListener {
 		browserFrame = new BrowserFrame(messenger, historyFile);
 		browserFrame.setLocation(ptX, ptY + ControlDim2.height + 90);
 		browserFrame.setVisible(browserStart);
+		
+		newftnFrame=new FtnFrame();
+		newftnFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		newftnFrame.setLocation(ptX,ptY+ControlDim2.height+20);
+		newftnFrame.setVisible(false);
 
 		outputFrame=new OutputFrame();
 		outputFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
@@ -672,7 +680,8 @@ FocusListener {
 
 		// Button to bring up Browser
 		JButton wwwButton=new JButton("Browser");
-		wwwButton.setFont(new Font(wwwButton.getFont().toString(),Font.ROMAN_BASELINE+Font.BOLD,10));
+		wwwButton.setFont(new Font(wwwButton.getFont().toString(),
+				Font.ROMAN_BASELINE+Font.BOLD,10));
 		wwwButton.setToolTipText("Open/Close web browser window");
 		wwwButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -683,21 +692,20 @@ FocusListener {
 			}
 		});
 		
-		// Button to bring up function frame
-		JButton ftnButton=new JButton("Function");
-		ftnButton.setFont(new Font(ftnButton.getFont().toString(),Font.ROMAN_BASELINE+Font.BOLD,10));
-		functionPanel=new FunctionHover();
-		ftnButton.addMouseListener(functionPanel);
-		ftnButton.addActionListener(new ActionListener() {
+		// TODO: toss hoverframe, revert to simple frame
+		JButton newftnButton=new JButton("Function");
+		newftnButton.setFont(new Font(newftnButton.getFont().toString(),
+				Font.ROMAN_BASELINE+Font.BOLD,10));
+		newftnButton.setToolTipText("Open/Close the 'function' window");
+		newftnButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (functionPanel.isLocked()) {
-					functionPanel.lockedFrame.setVisible(false);
-					functionPanel.loadHover();
-					functionPanel.locked=false;
-				}
+				if (newftnFrame.isVisible()) 
+					newftnFrame.setVisible(false); 
 				else {
-					functionPanel.lockframe();
+					newftnFrame.setVisible(true);
+					newftnFrame.setState(Frame.NORMAL);
 				}
+					
 			}
 		});
 		
@@ -746,7 +754,7 @@ FocusListener {
 		JPanel callStack=new JPanel(new GridLayout(1,6));
 		callStack.add(msgButton);
 		callStack.add(mobButton);
-		callStack.add(ftnButton);
+		callStack.add(newftnButton);
 		callStack.add(configButton);
 		callStack.add(wwwButton);
 //		callStack.add(pairButton);
@@ -850,10 +858,10 @@ FocusListener {
 	
 	/**
 	 * Return pointer to currently active pack
-	 * @return CPScreen
+	 * @return CPDrawing
 	 */
-	public static CPScreen getActiveCPScreen() {
-		return activeFrame.getCPScreen();
+	public static CPdrawing getActiveCPDrawing() {
+		return activeFrame.getCPDrawing();
 	}
 
 	
@@ -923,14 +931,16 @@ FocusListener {
 	 * @param packnum int, 
 	 */
 	public static void switchActivePack(int packnum) {
-		int old_pack = activeFrame.getActivePackNum();
-		if (packnum<0 || packnum>2 || old_pack==packnum) return;
+		int old_pack = activePackNum;
+		if (packnum<0 || packnum>2 || old_pack==packnum) 
+			return;
+		activePackNum=packnum;
 		smallCanvasPanel.changeActive(packnum);
 		canvasRedrawer.changeActive(packnum);
 		screenCtrlFrame.displayPanel.update(old_pack,packnum);
 		screenCtrlFrame.setTitle("CirclePack Screen Options, p"+packnum);
 		outputFrame.outPanel.update(old_pack);
-		activeFrame.setCPScreen(CPBase.pack[packnum]);
+		activeFrame.setCPDrawing(CPBase.cpDrawing[packnum]);
 		activeFrame.activeScreen.setDefaultMode();
 		activeFrame.updateTitle();
 		activeFrame.activeScreen.repaint();
@@ -941,7 +951,7 @@ FocusListener {
 		activeFrame.repaint();
 		
 		// AF: Send the new pack data to the pack info frame.
-		packDataHover.update(activeFrame.getPackData());
+		packDataHover.update(CirclePack.cpb.getActivePackData());
 	}
 	
 	/** 
@@ -1052,7 +1062,7 @@ FocusListener {
 	 * @return int
 	 */
 	public int getActivePackNum() {
-		return activeFrame.getActivePackNum();
+		return activePackNum;
 	}
 	
 	/**
@@ -1060,9 +1070,42 @@ FocusListener {
 	 * @return PackData
 	 */
 	public PackData getActivePackData() {
-		return activeFrame.getPackData();
+		return packings[activePackNum];
 	}
 
+	/**
+	 * Install packing 'p' in place of 'packings[pnum]'; 
+	 * former 'packings[pnum]' is generally orphaned. 
+	 * TODO: This replaced 'CPDrawing.swapPackData' and 
+	 * there may be problems in some cases when 'packData'
+	 * didn't have a 'packNum'.
+	 * @param p PackData, new data
+	 * @param pnum int
+	 * @param keepX boolean, keep current 'packings[pnum]' extenders
+	 * @return p, null on error
+	 */
+	public PackData swapPackData(PackData p,int pnum,boolean keepX) {
+		if (p==null || pnum<0 || pnum>=CPBase.NUM_PACKS) {
+			CirclePack.cpb.errMsg("packing null or has improper packing index");
+			return p;
+		}
+		
+		// first, fix packData pointers in any packExtenders
+		if (keepX) {
+			p.packExtensions=packings[pnum].packExtensions;
+			for (int x=0;x<p.packExtensions.size();x++)
+				p.packExtensions.get(x).packData=p;
+		}
+		CPBase.packings[pnum].cpDrawing=null; // detach from cpDrawing
+		
+		// install in 'packings' and handshake with 'cpDrawing's
+		p.packNum=pnum;
+		CPBase.packings[pnum]=p; 
+		p.cpDrawing=CPBase.cpDrawing[pnum]; 
+		p.cpDrawing.setPackData(p);
+		return p;
+	}
+	
 	// done with abstract methods
 	
 	/** 
@@ -1112,8 +1155,8 @@ FocusListener {
 				File scriptFile;
 				if ((scriptFile = FileDialogs.saveDialog(FileDialogs.SCRIPT, true)) != null) {
 					scriptManager.tnWriter.Write_from_TN(scriptFile);
-					if (scriptFile.getName().equals("new_script.xmd")) {
-						CirclePack.cpb.errMsg("Not allowed to save as \"new_script.xmd\".");
+					if (scriptFile.getName().startsWith("new_script.")) {
+						CirclePack.cpb.errMsg("Not allowed to save as \"new_script.*\".");
 						return;
 					}
 					

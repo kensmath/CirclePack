@@ -1,36 +1,41 @@
 package geometry;
 
+import allMains.CirclePack;
+import baryStuff.BaryPacket;
+import baryStuff.BaryPoint;
+import combinatorics.komplex.HalfEdge;
+import complex.Complex;
+import exceptions.DataException;
+import komplex.EdgeSimple;
 import listManip.BaryCoordLink;
 import listManip.FaceLink;
 import math.Point3D;
 import packing.PackData;
-import allMains.CirclePack;
-import baryStuff.BaryPacket;
-import baryStuff.BaryPoint;
-import complex.Complex;
-
-import exceptions.DataException;
 
 /**
- * A class for creating streamlines, a la curvature flow lines. 
- * These are associated with a packing and represented in 'BaryLink's of
- * of 'BaryPacket's, hence in barycentric coordinates.
+ * A class for creating streamlines, a la curvature flow lines, 
+ * as Chuck Collins did using matlab in joint paper with me and
+ * Toby Driscoll.
+ *  
+ * Steamlines are associated with a packing and are represented 
+ * in 'BaryLink's of of 'BaryPacket's, hence in barycentric 
+ * coordinates.
  * 
- * The 'basePack' is euclidean, contains the combinatorics and vertex
- * locations. This typically provides a way to plot the streamlines, since
- * the packing used to create them may not have a convenient layout.
+ * The 'basePack' is euclidean, contains the combinatorics and 
+ * vertex locations. The basePack typically provides a way to 
+ * plot the streamlines, since the packing used to create them 
+ * may not have a convenient layout.
  * 
  * @author kstephe2
  *
  */
 public class StreamLiner {
 	PackData basePack;		// copy for combinatorics and centers 
-	double []dataValues;	// values engendering the streamlines
-	Point3D []normals;		// normals to the faces (ccw oriented)
+	double[] dataValues;	// values engendering the streamlines
+	Point3D[] normals;		// normals to the faces (ccw oriented)
 	
 	public StreamLiner(PackData p) {
 		basePack=p.copyPackTo();
-		basePack.complex_count(false);
 		dataValues=null;
 	}
 	
@@ -51,14 +56,15 @@ public class StreamLiner {
 		FaceLink flk=basePack.tri_search(pt);
 		if (flk==null || flk.size()==0)
 			return null;
-		int face=flk.get(0);
-		Complex v0=basePack.rData[basePack.faces[face].vert[0]].center;
-		Complex v1=basePack.rData[basePack.faces[face].vert[1]].center;
-		Complex v2=basePack.rData[basePack.faces[face].vert[2]].center;
+		combinatorics.komplex.DcelFace face=basePack.packDCEL.faces[flk.get(0)];
+		int[] vert=face.getVerts();
+		Complex v0=basePack.getCenter(vert[0]);
+		Complex v1=basePack.getCenter(vert[1]);
+		Complex v2=basePack.getCenter(vert[2]);
 
 		// find the first 'BaryPoint'
 		BaryPoint startBpt=BaryPoint.complex2bp(basePack.hes, pt, v0, v1, v2);
-		startBpt.face=face;
+		startBpt.face=face.faceIndx;
 		
 		// chase along 
 		int safety=1000;
@@ -108,10 +114,11 @@ public class StreamLiner {
 		Complex grad=new Complex(-normals[spt.face].x,-normals[spt.face].y);
 		if (!uphill) 
 			grad=grad.times(-1.0);
-		int []vert=basePack.faces[spt.face].vert;
+		combinatorics.komplex.DcelFace face=basePack.packDCEL.faces[spt.face];
+		int[] vert=face.getVerts();
 		
-		Complex vec=BaryPoint.vec2simplex(grad,basePack.rData[vert[0]].center,
-				basePack.rData[vert[1]].center,basePack.rData[vert[2]].center);
+		Complex vec=BaryPoint.vec2simplex(grad,basePack.getCenter(vert[0]),
+				basePack.getCenter(vert[1]),basePack.getCenter(vert[2]));
 		double []baryc=BaryPoint.upGrad(spt.b0,spt.b1,vec);
 		if (baryc==null)
 			return null;
@@ -140,14 +147,17 @@ public class StreamLiner {
 //		}
 		normals=new Point3D[basePack.faceCount+1];
 		for (int f=1;f<=basePack.faceCount;f++) {
-			int []v=basePack.faces[f].vert;
-			Complex z0=basePack.rData[v[0]].center;
-			Complex z1=basePack.rData[v[1]].center;
-			Complex z2=basePack.rData[v[2]].center;
+			combinatorics.komplex.DcelFace face=basePack.packDCEL.faces[f];
+			int[] v=face.getVerts();
+			Complex z0=basePack.getCenter(v[0]);
+			Complex z1=basePack.getCenter(v[1]);
+			Complex z2=basePack.getCenter(v[2]);
 			
 			// get the sides as 3 vectors
-			Point3D side01=new Point3D(z1.x-z0.x,z1.y-z0.y,dataValues[v[1]]-dataValues[v[0]]);
-			Point3D side12=new Point3D(z2.x-z1.x,z2.y-z1.y,dataValues[v[2]]-dataValues[v[1]]);
+			Point3D side01=new Point3D(z1.x-z0.x,z1.y-z0.y,
+					dataValues[v[1]]-dataValues[v[0]]);
+			Point3D side12=new Point3D(z2.x-z1.x,z2.y-z1.y,
+					dataValues[v[2]]-dataValues[v[1]]);
 			normals[f]=Point3D.CrossProduct(side01,side12);
 			double nm=normals[f].norm();
 			if (nm<.00000001 && nm<.000001*side01.norm()*side12.norm()) // should not be so small
@@ -184,8 +194,8 @@ public class StreamLiner {
 	/**
 	 * Given BaryPoint 'inpt' as starting point, return new
 	 * BaryPoint with 'face' properly set (i.e., we are determining 
-	 * which face the streamline goes into next). Other routines will find
-	 * where it goes in that face.
+	 * which face the streamline goes into next). Other routines 
+	 * will find where it goes in that face.
 	 * 
 	 * If 'inpt' is interior, return this face or possibly not move 
 	 * at all. If on edge interior, might stay in this face (generally
@@ -213,24 +223,23 @@ public class StreamLiner {
 		
 		// at vertex?
 		if (ins<4) {
-			int v=basePack.faces[inpt.face].vert[ins-1];
-			
+			int v=basePack.packDCEL.faces[inpt.face].getVerts()[ins-1];
 			// if boundary vertex, stop
-			if (basePack.kData[v].bdryFlag==1)
+			if (basePack.isBdry(v))
 				return null;
 			
-			int num=basePack.kData[v].num;
-			int []flower=basePack.kData[v].flower;
+			int num=basePack.countFaces(v);
+			int[] flower=basePack.getFlower(v);
 			Complex []edgevec=new Complex[num+1];
 			for (int j=0;j<num;j++) {
-				edgevec[j]=basePack.rData[flower[j]].center.minus(basePack.rData[v].center);
+				edgevec[j]=basePack.getCenter(flower[j]).minus(basePack.getCenter(v));
 			}
 			edgevec[num]=edgevec[0];
 			
 			// what is the largest gradient that goes into its face?
 			int bestindx=-1;
 			double bestgrad=-1.0;
-			int []faceFlower=basePack.kData[v].faceFlower;
+			int[] faceFlower=basePack.getFaceFlower(v);
 			for (int j=0;j<num;j++) {
 				Complex grad=new Complex(-normals[faceFlower[j]].x,-normals[faceFlower[j]].y);
 				if (!uphill)
@@ -262,7 +271,7 @@ public class StreamLiner {
 			// did we find some direction to go?
 			if (bestgrad>0.0 && bestindx>=0) {
 				int bestface=faceFlower[bestindx];
-				int vindx=basePack.faces[bestface].vertIndx(v);
+				int vindx=basePack.packDCEL.faces[bestface].getVertIndx(v);
 				double b1=0.0;
 				double b2=0.0;
 				if (vindx==0)
@@ -280,7 +289,8 @@ public class StreamLiner {
 		
 		// on edge? 
 		if (ins>10) {
-			int []vert=basePack.faces[inpt.face].vert;
+			combinatorics.komplex.DcelFace face=basePack.packDCEL.faces[inpt.face];
+			int []vert=face.getVerts();
 			int v=-1;
 			int w=-1;
 			int v_indx; // which index in 'vert'?
@@ -301,15 +311,14 @@ public class StreamLiner {
 			}
 			
 			// stop if this is boundary edge
-			if (basePack.kData[v].bdryFlag==1 && basePack.kData[w].bdryFlag==1)
+			if (basePack.isBdry(v) && basePack.isBdry(w))
 				return null;
 
 			// inpt.face is on the left of vw_edge
-			int vw_indx=basePack.nghb(v, w);
-			int num=basePack.kData[v].num;
 			int face_l=inpt.face;
-			int face_r=basePack.kData[v].faceFlower[(vw_indx-1+num)%num];
-			Complex vw_edge=basePack.rData[w].center.minus(basePack.rData[v].center);
+			HalfEdge vwhe=basePack.packDCEL.findHalfEdge(new EdgeSimple(v,w));
+			int face_r=vwhe.twin.face.faceIndx;
+			Complex vw_edge=basePack.getCenter(w).minus(basePack.getCenter(v));
 			
 			// have to decide if going left (this same face) or going right (neighboring
 			//   face) are viable, then compare them.
@@ -342,7 +351,7 @@ public class StreamLiner {
 			}
 			
 			// right is our choice; must adjust face
-			vert=basePack.faces[face_r].vert;
+			vert=basePack.packDCEL.faces[face_r].getVerts();
 			int k=-1;
 			for (int j=0;(j<3 && k<0);j++) {
 				if (vert[j]==w)

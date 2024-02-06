@@ -184,4 +184,11 @@ public class BaryCoordLink extends LinkedList<BaryPacket> {
 		return path;
 	}
 	
+	 /**
+	  * Set 'packData' (which helps determine eligibility of entries)
+	  * @param p PackData
+	  */
+	 public void setPackData(PackData p) {
+		 packData=p;
+	 }
 }

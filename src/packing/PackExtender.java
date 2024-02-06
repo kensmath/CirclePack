@@ -15,13 +15,13 @@ import javax.swing.ImageIcon;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
+import dcel.PackDCEL;
 import exceptions.ExtenderException;
 import exceptions.PackingException;
 import images.CPIcon;
 import input.CommandStrParser;
 import input.MyConsole;
 import mytools.MyTool;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.PopupBuilder;
 import util.UtilPacket;
@@ -43,10 +43,11 @@ import util.UtilPacket;
  *
  */
 public abstract class PackExtender {
-	public String extensionType; // type of 'PackExtender', e.g., RIEMANN-HILBERT
+	public String extensionType; // 'PackExtender' type, e.g., RIEMANN-HILBERT
 	public String extensionAbbrev; // Abbreviation, e.g.,'RH','rh', used in commands
-	public CPScreen cpScreen;  // keep cpScreen because 'PackData' can get swapped out.
+	public CPdrawing cpDrawing;  // keep cpDrawing because 'PackData' can get swapped out.
 	public PackData packData;  // every 'PackExtender' is associated with a single packing
+	public PackDCEL pdc;       // convenience
 	public String iconName="GUI/Xtender.png";  // Extender icon in Resources/Icon
 	public MyTool XtenderTool;
 	public String toolTip;  // for icon and startup message
@@ -58,7 +59,8 @@ public abstract class PackExtender {
 	// Constructor
 	public PackExtender(PackData p) {
 		packData=p;
-		cpScreen=p.cpScreen;
+		pdc=p.packDCEL;
+		cpDrawing=p.cpDrawing;
 		running=false;
 		toolTip="No startup information provided on this PackExtender";
 		XtenderTool=null;
@@ -86,10 +88,10 @@ public abstract class PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
+				CPdrawing cpS=CPBase.cpDrawing[pnum];
 				if (cpS!=null) {
 					PackData p=packData.copyPackTo();
-					return cpS.swapPackData(p,false);
+					return CirclePack.cpb.swapPackData(p, pnum, false).nodeCount;
 				}
 			} catch (Exception ex) {}
 			return 0;
@@ -111,25 +113,29 @@ public abstract class PackExtender {
 	}
 	
 	/**
-	 * Replace 'this.packData' with a copy of 'newPD'. Maintain 
-	 * 'this' as PackExtension, but no others. The particular PackExtender 
-	 * may have additional cleanup to do.
+	 * Replace 'this.packData' and 'this.pdc' with data from 'newPD', 
+	 * (including possibly a copy of 'tileData'). Maintain 'this' as 
+	 * PackExtension, but discard others. 
+	 * Note: particular PackExtenders may need additional cleanup clean
+	 * up actions.
 	 * @param newPD PackData
-	 * @return NodeCount, 0 on error
+	 * @return int, packData.nodeCount, 0 on error
 	 */
-	public int swapPackData(PackData newPD) {
+	public int swapExtenderPD(PackData newPD) {
 		if (newPD==null)
 			return 0;
-		CPScreen holdcpS=packData.cpScreen;
+		
+		CPdrawing holdcpS=packData.cpDrawing;
 		packData=newPD.copyPackTo();
 		packData.packExtensions=new Vector<PackExtender>(1);
 		packData.packExtensions.add(this);
+		pdc=newPD.packDCEL;
 		
 		// reconnect pack and screen
-		packData.cpScreen=holdcpS;
-		holdcpS.packData=packData;
-		packData.packNum=holdcpS.getPackNum();
-		packData.setGeometry(packData.hes);
+		packData.cpDrawing=holdcpS;
+		holdcpS.setPackData(packData);
+		packData.packNum=newPD.packNum;
+		packData.setGeometry(newPD.hes);
 
 		return packData.nodeCount;
 	}

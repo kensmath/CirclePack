@@ -1,128 +1,124 @@
 package util;
 
 import allMains.CPBase;
+import combinatorics.komplex.DcelFace;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
-import geometry.EuclMath;
+import dcel.PackDCEL;
 import geometry.CircleSimple;
+import geometry.CommonMath;
+import geometry.EuclMath;
+import geometry.HyperbolicMath;
+import geometry.SphericalMath;
 import komplex.DualTri;
-import komplex.RedList;
 import math.Mobius;
 
 /**
- * Utility class holding geometric info localized to faces of 
- * some parent circle packing. Used, e.g., with projective
- * and affine structures and with discrete Schwarzians. 
- * Geometry depends on parent packing.
+ * Utility class holding geometric info localized to triangular
+ * faces of some parent circle packing. Used, e.g., with 
+ * projective and affine structures and with discrete 
+ * Schwarzians. Geometry depends on parent packing.
  * 
  * TODO: some routines assume eucl data; trying to update as needed
  * 
- * Vector 'labels' typically represents radii localized to this face, 
+ * Vector 'labels' typically represent radii localized to this face, 
  * often (but not automatically) in eucl case, are represented as
  * homogeneous coords r0:r1:r2. In some cases these are, in fact, 
  * radii and will be used (e.g. to set the 'rad' entry in redChain 
  * faces), but often are local only (hence, the same vertex v might 
  * have different labels in different faces).
  * 
- * Likewise, 'sides' typically represents edge lengths, often in
- * eucl case, in homogeneous coordinates; note that 
+ * Likewise, 'sidelengths' typically represents edge lengths, 
+ * often in eucl case in homogeneous coordinates; note that 
+ * given the array 'vert' of vertex indices, 
  *    sides[j]=length of edge <vert[j],vert[(j+1)%3]>
  *  
  * We also keep track of which vertices are 'red' (on the
  * outside of the redChain). Their local radii may be kept 
  * here in 'labels' or 'radii'.
  * 
- * For use with Schwarzian derivative, we store Mobius of an
- * equilateral face to this face. The "base" equilateral face
- * is formed by tangent triple of eucl circles of radius 
- * sqrt(3), symmetric w.r.t. the origin, and with tangeny 
- * points at the cube roots of unity (which are also the outward
- * unit normals of the 0, 1, 2 edges, resp. Also, circle centers are
- * center[0]=1-sqrt(3)i, center[1]=1+sqrt(3)i, center[2]=-2.
+ * For use with Schwarzian derivative, we store the Mobius
+ * map FROM the "base equilateral" to this face. 
+ * 
+ * NOTE: The "base equilateral" face is formed by tangent 
+ * triple of eucl circles of radius sqrt(3), symmetric 
+ * w.r.t. the origin, and with tangency points at the cube 
+ * roots of unity (which are also the outward unit normals 
+ * of the 0, 1, 2 edges, resp.)
+ * The circle centers are:
+ *    center[0]=1-sqrt(3)i, 
+ *    center[1]=1+sqrt(3)i, 
+ *    center[2]=-2.
  *  
  * @author kens
  */
-public class TriAspect {
+public class TriAspect extends TriData {
 	
-	public int hes;  // geometry, passed on creation from parent packing
-	public RedList redList; // 'redChain' entry for this face (generally 'null')
+	boolean need_update; // signal when data changes require update
 	
-	// Various triples:
-	public int face;  // index of this face
-	public int []vert;     // 'Face.vert' vector (as ordered in packdata 'faces')
-	public boolean []redFlags; // true if vertex is on outside of redChain
+	// various triples of data (other data in 'TriData' super, eg. radii)
+	public Complex[] center;    // centers of circles
+	public double[] schwarzian; // signed scalar coeffs for schwarzian 
+	public Complex[] tanPts;  // tangency points, if saved
+	public double[] sidelengths; // edge lengths, [j] = <v[j],v[j+1]>
 	
-	// radii/centers: when changed, need to update things
-	boolean needupdate;
-	Complex []center;  // centers of circles
-	public Complex []tanPts;  // tangency points, if saved
-	
-	double []radii;  // concrete numbers representing labels
-	public double []labels; // labels for verts: often, treated as homogeneous coords
-	public double []sides; // edge lengths, [j] = <v[j],v[j+1]>
-	public double []t_vals;  // label ratios: t_vals[j]=labels[(j+1)%3]/labels[j]
-	
-	// Base data is determined by centers and radii; relate the actual face to
-	//   the "base" equilateral. 
+	// Base data is determined by centers and radii and relate the actual 
+	//   face to the "base" equilateral. 
 	public Mobius baseMobius; 
-	public double []baseSchwarz;  
+	public double[] baseSchwarz;  
 	
-	// store data for use in, e.g., 'Schwarzian.java'
-	public Mobius []MobDeriv; // directed edge Mobius derivative
-	public double []sch_coeffs; // signed scalar coeffs for schwarzian derivative 
+	// store data for use in, e.g., 'dcel.schwarzian.java'
+	public Mobius[] MobDeriv; // directed edge Mobius derivative
 	
 	// constructor(s)
 	public TriAspect() { // default euclidean
-		this(0);
+		super();
 	}
 	
 	public TriAspect(int geom) {
-		this(geom,(RedList)null);
-	}
-
-	public TriAspect(int geom,RedList rl) {
+		super();
 		hes=geom;
-		if (rl!=null) {
-			face=rl.face;
-		}
-		redList=rl;
-		vert=new int[3];
-		redFlags=new boolean[3];
-		center=new Complex[3];
 		tanPts=null;
-		radii=new double[3];
 		labels=new double[3];
-		sides=new double[3];
-		t_vals=new double[3];
+		sidelengths=new double[3];
 		baseMobius=new Mobius();
-		baseSchwarz=new double[3];
-		MobDeriv=null;
-		needupdate=true;
-		
-		for (int j=0;j<3;j++) center[j]=null;
+		need_update=true;
+		allocCenters();
+		schwarzian=new double[3];
+	}
+	
+	public TriAspect(PackDCEL pdcel,DcelFace face) {
+		super(pdcel,face);
+		center=new Complex[3];
+		center[0]=pdcel.getVertCenter(baseEdge);
+		center[1]=pdcel.getVertCenter(baseEdge.next);
+		center[2]=pdcel.getVertCenter(baseEdge.next.next);
+		invDist=new double[3];
+		invDist[0]=baseEdge.getInvDist();
+		invDist[1]=baseEdge.next.getInvDist();
+		invDist[2]=baseEdge.next.next.getInvDist();
 	}
 	
 	// clone
 	public TriAspect(TriAspect asp) {
-		this(asp.hes,asp.redList);
-		face=asp.face;
+		this(asp.hes);
+		baseEdge=asp.baseEdge; // note: same object
+		faceIndx=baseEdge.face.faceIndx;
 		for (int j=0;j<3;j++) {
 			vert[j]=asp.vert[j];
 			center[j]=asp.getCenter(j);
 			radii[j]=asp.getRadius(j);
 			labels[j]=asp.labels[j];
-			sides[j]=asp.sides[j];
-			redFlags[j]=asp.redFlags[j];
-			t_vals[j]=asp.t_vals[j];
+			sidelengths[j]=asp.sidelengths[j];
+			setInvDist(j,asp.getInvDist(j));
+			schwarzian[j]=asp.schwarzian[j];
 		}
-		if (asp.baseMobius!=null) {
+		
+		if (asp.baseMobius!=null) 
 			baseMobius=new Mobius(asp.baseMobius);
-			for (int j=0;j<3;j++)
-				baseSchwarz[j]=asp.baseSchwarz[j];
-		}
-		else {
+		else 
 			baseMobius=new Mobius();
-			baseSchwarz=new double[3];
-		}
+
 		if (asp.MobDeriv!=null) {
 			MobDeriv = new Mobius[3];
 			for (int j=0;j<3;j++) 
@@ -137,103 +133,261 @@ public class TriAspect {
 	
 	public void allocCenters() {
 		center=new Complex[3];
+		for (int j=0;j<3;j++)
+			center[j]=new Complex(0.0);
 	}
-	
+
 	public void setRadius(double r,int j) {
 		radii[j]=r;
-		needupdate=true;
-	}
-	
-	public double getRadius(int j) {
-		return radii[j];
+		need_update=true;
 	}
 	
 	public void setCenter(Complex z,int j) {
+		if (center==null)
+			allocCenters();
 		center[j]=new Complex(z);
-		needupdate=true;
+		need_update=true;
 	}
 	
-	public Complex getCenter(int j) {
-		return new Complex(center[j]);
+	public void setCircleData(int j,CircleSimple cs) {
+		if (center==null)
+			allocCenters();
+		center[j]=cs.center;
+		radii[j]=cs.rad;
+	}
+	
+	public CircleSimple getCircleData(int j) {
+		return new CircleSimple(center[j],radii[j]);
 	}
 	
 	/**
-	 * Compute 'baseMobius' based on current 'tanPts'. This is
-	 * Mobius mapping FROM base equilateral TO this face. 
+	 * Find the incircle. For eucl/sph, just use centers; 
+	 * for hyp case, use 3 generalized tangency points.
+	 * @param faceIndx Face
+	 * @return CircleSimple
 	 */
-	public void setBaseMob() {
-		Complex rt3=new Complex(-.5,CPBase.sqrt3by2);
-		baseMobius=Mobius.mob_xyzXYZ(new Complex(1.0),rt3,rt3.conj(),
-				tanPts[0],tanPts[1],tanPts[2],0,hes);
+	public CircleSimple getFaceIncircle() {
+		CircleSimple c0=new CircleSimple(center[0],radii[0]);
+		CircleSimple c1=new CircleSimple(center[1],radii[1]);
+		CircleSimple c2=new CircleSimple(center[2],radii[2]);
+		return PackDCEL.getTriIncircle(c0,c1,c2,hes);
 	}
 	
+	/**
+	 * Compute the circle opposite edge (j,j+1) using
+	 * centers, radii, and inv distances.
+	 * @param j int
+	 * @param useLabels boolean
+	 * @return CircleSimple
+	 */
+	public CircleSimple compOppCircle(int j,boolean useLabels) {
+		if (useLabels)
+			return CommonMath.comp_any_center(center[j],
+					center[(j+1)%3],labels[j],labels[(j+1)%3],labels[(j+2)%3],
+					invDist[j],invDist[(j+1)%3],invDist[(j+2)%3],hes);
+		return CommonMath.comp_any_center(center[j],
+					center[(j+1)%3],radii[j],radii[(j+1)%3],radii[(j+2)%3],
+					invDist[j],invDist[(j+1)%3],invDist[(j+2)%3],hes);
+	}
+	
+	public Complex getTangPt(int j) {
+		if (hes < 0)
+			return HyperbolicMath.hyp_tangency(center[j],center[(j+1)%3],
+					radii[j],radii[(j+1)%3]);
+		if (hes > 0)
+			return SphericalMath.sph_tangency(center[j],center[(j+1)%3],
+					radii[j],radii[(j+1)%3]);
+		return EuclMath.eucl_tangency(center[j],center[(j+1)%3],
+					radii[j],radii[(j+1)%3]);
+	}
+	
+	public CircleSimple compIncircle() {
+		return CommonMath.tri_incircle(center[0],center[1],center[2],hes);
+	}
+
+	/**
+	 * Copy cent/radii by edge to pdcel
+	 * @param pdcel PackDCEL
+	 */
+	public void data2pdcel(PackDCEL pdcel) {
+		HalfEdge he=baseEdge;
+		for (int j=0;j<3;j++) {
+			pdcel.setCent4Edge(he,center[j]);
+			pdcel.setRad4Edge(he,radii[j]);
+			he=he.next;
+		}
+	}
 		
 	/**
-	 * Compute and store the tangency points based on current
-	 * centers (computation assumes the radii are those of a tangent 
-	 * triple with the given centers).
+	 * Compute/store "tangency" points based on current
+	 * centers. Actually these are points where the incircle
+	 * of the triangle formed by the centers hits the edges.
+	 * (These points are conformally invariant under mobius
+	 * mob, unlike the centers themselves. i.e., 
+	 * apply mob to circles and use the new centers.)
 	 */
 	public void setTanPts() {
-		DualTri dtri=new DualTri(hes,center[0],center[1],center[2]);
+		DualTri dtri=new DualTri(center[0],center[1],center[2],hes);
 		tanPts=new Complex[3];
 		for (int j=0;j<3;j++) 
 			tanPts[j]=dtri.getTP(j);
 	}
 	
-	/** 
-	 * Find local index (0,1, or 2) for vertex v in this 
-	 * triangle; return -1 if v is not among its vertices.
-	 * @param v int
-	 * @return int, local index or -1 on failure
+	/**
+	 * Return index of initial vertex of first shared edge 
+	 * of 'this' with 'ntri', if it exists.
+	 * @param ntri TriAspect
+	 * @return int index, -1 on failure
 	 */
-	public int vertIndex(int v) {
-		for (int j=0;j<3;j++)
-			if (vert[j]==v) return j;
+	public int nghb_Tri(TriAspect ntri) {
+		int[] nverts=ntri.vert;
+		for (int j=0;j<3;j++) {
+			int v=nverts[j];
+			int w=nverts[(j+1)%3];
+			if (vertIndex(v)>=0 && vertIndex(w)>=0) { // shared edge
+				return vertIndex(w);
+			}
+		}
 		return -1;
 	}
 	
 	/**
-	 * Compute the centers in normalized position (v0 at origin,
-	 * v1 on positive real, v2 in upper half plane) using 'labels' 
-	 * entries as the current euclidean radii.
-	 *
+	 * Compute the eucl centers in normalized position 
+	 * (v0 at origin, v1 on positive real, v2 in upper half 
+	 * plane) using 'labels' as the current eucl radii.
 	 * @return true; no checks yet implemented
 	 */
-	public boolean setCenters() {
+	public boolean setCents_by_label() {
+		double baselength=EuclMath.e_ivd_length(labels[0],labels[1],
+				getInvDist(0));
 		center[0]=new Complex(0.0);
-		center[1]=new Complex(labels[0]+labels[1]);
-		center[2]=new Complex(0.0);
+		center[1]=new Complex(baselength);
 		CircleSimple sp=new CircleSimple();
 		sp=EuclMath.e_compcenter(center[0],center[1],
-				labels[0],labels[1],labels[2],1.0,1.0,1.0);
+				labels[0],labels[1],labels[2],
+				getInvDist(0),getInvDist(1),getInvDist(2));
 		center[2]=sp.center;
 		return true;
 	}
 	
 	/**
-	 * Compute the Mobius that would align this 'TriAspect' 
-	 * with the 'TriAspect' across edge <v,w>. Return identity on error 
-	 * @param indx int, index of v for my oriented edge <v,w> 
-	 * @param across TriAspect, face across edge <v,w>
-	 * @return Mobius
+	 * Get the center as new Complex.
+	 * @param j int, index in 'vert'
+	 * @return new Complex
 	 */
-	public Mobius alignMe(int indx,TriAspect across) {
+	public Complex getCenter(int j) {
+		return new Complex(center[j]);
+	}
+	
+	public double getSchwarzian(int j) {
+		return schwarzian[j];
+	}
 
-		int v=vert[indx];
-		int w=vert[(indx+1)%3];
-		int windx=across.vertIndex(w);
-		
-		// mobius identifying circles
-		Mobius mob=Mobius.mob_tang_circles(center[indx], radii[indx],
-				center[(indx+1)%3], radii[(indx+1)%3],
-				across.center[(windx+1)%3],across.radii[(windx+1)%3],
-				across.center[windx],across.radii[windx],
-				hes,across.hes);
-		return mob;
+	public void setSchwarzian(int j, double sch) {
+		schwarzian[j]=sch;
+	}
+
+
+	/**
+	 * Utility routine: only use 'TriAspect' to hold rad/cent data.
+	 * Create a baseEquilateral in geometry 'hes'. In eucl and spherical 
+	 * case, the edge tangency points are at the cube roots of unity
+	 * on the unit circle, with the 0th edge tangency point at z=1. 
+	 * In hyp case, shrink this down by euclidean factor .05.
+	 * @return TriAspect, null on error
+	 */
+	public static TriAspect baseEquilateral(int hes) {
+		TriAspect tri=new TriAspect(hes);
+		CircleSimple cS=new CircleSimple();
+		for (int j=0;j<3;j++) {
+			Complex rot=new Complex(1.0,-CPBase.sqrt3);
+			cS.center=CPBase.omega3[j].times(rot);  // rotate clw by pi/3 or 2pi/3
+			cS.rad=CPBase.sqrt3;
+			if (hes<0)  // shrink factor .05, convert
+				cS=HyperbolicMath.e_to_h_data(cS.center.times(0.05), cS.rad*0.05);
+			else if (hes>0)  // sph, convert
+			cS=SphericalMath.e_to_s_data(cS.center, cS.rad);
+			tri.setRadius(cS.rad, j);
+			tri.setCenter(cS.center, j);
+		}
+		return tri;
 	}
 	
 	/**
-	 * Assume 'center's give euclidean face in normalized position 
+	 * Compute the Mobius that would align 'this' with 
+	 * 'acrossTri', the 'TriAspect' across 'edge'. 
+	 * Mode determines what to align: 
+	 *    mode 1: use 'radii' 
+	 *    mode 2: use 'labels' in place of radii
+	 *    mode 3: use 'sidelengths'
+	 * Return identity on error. 
+	 * 
+	 * TODO: compare to 'propogateMe', which recomputes and
+	 * aligns.
+	 * 
+	 * @param acrossTri TriAspect
+	 * @param HalfEdge edge, edge in 'this'
+	 * @param mode int
+	 * @return Mobius
+	 */
+	public Mobius alignMe(TriAspect acrossTri,HalfEdge edge,int mode) {
+
+		int indx=edgeIndex(edge);
+		int windx=acrossTri.edgeIndex(edge.twin);
+		
+		// mobius identifying circles
+		if (mode==2) // use 'labels'
+			return Mobius.mob_MatchCircles(center[indx], labels[indx],
+					center[(indx+1)%3], labels[(indx+1)%3],
+					acrossTri.center[(windx+1)%3],acrossTri.labels[(windx+1)%3],
+					acrossTri.center[windx],acrossTri.labels[windx],
+					hes,acrossTri.hes);
+		if (mode==3) { // use sidelengths
+			if (hes==0 && acrossTri.hes==0) {
+				double factor=acrossTri.sidelengths[windx]/sidelengths[indx];
+				Mobius mob=new Mobius();
+				mob.a=new Complex(factor);
+				mobiusMe(mob);
+				Complex a=center[indx];
+				Complex b=center[(indx+1)%3];
+				Complex A=acrossTri.center[(windx+1)%3];
+				Complex B=acrossTri.center[windx];
+				return Mobius.mob_abAB(a, b, A, B);
+			}
+			
+			// TODO: not yet ready in sph/hyp cases
+			
+			return new Mobius();
+		}
+
+		// else assume mode==1, use radii
+		return Mobius.mob_MatchCircles(center[indx], radii[indx],
+				center[(indx+1)%3], radii[(indx+1)%3],
+				acrossTri.center[(windx+1)%3],acrossTri.radii[(windx+1)%3],
+				acrossTri.center[windx],acrossTri.radii[windx],
+				hes,acrossTri.hes);
+
+	}
+	
+	/**
+	 * Apply a Mobius transformation to my centers/radii.
+	 * Note: other data, eg. labels, sides, tangPts, are NOT adjusted
+	 * @param mob Mobius
+	 */
+	public void mobiusMe(Mobius mob) {
+		if (Mobius.frobeniusNorm(mob)>.00001) {
+			CircleSimple sC=new CircleSimple();
+			for (int j=0;j<3;j++) {
+				Mobius.mobius_of_circle(mob,hes,
+					getCenter(j),getRadius(j), sC,true);
+				setCenter(sC.center, j);
+				setRadius(sC.rad, j);
+			}
+		}
+	}
+	
+	/**
+	 * Assume 'center's give eucl face in normalized position 
 	 * based on current 'labels'. Given vert v2 and centers of 
 	 * opposite edge e, adjust 'center', 'labels', and 'sides' data
 	 * so centers of e match given centers. (Used to layout this face 
@@ -241,8 +395,9 @@ public class TriAspect {
 	 * 
 	 * TODO: use the newer 'alignMe' code here
 	 * 
-	 * @param v2 vertex to be placed 
-	 * @param c0 c1 centers of edge for <v0,v1>.
+	 * @param v2 int, vertex to be placed 
+	 * @param c0 Complex 
+	 * @param c1 Complex, centers of for <v0,v1> of this face
 	 * @return true if it seems to work
 	 */
 	public boolean adjustData(int v2,Complex c0,Complex c1) {
@@ -317,25 +472,29 @@ public class TriAspect {
 			return;
 		}
 		for (int j=0;j<3;j++) 
-			sides[j]=tmp[j];
+			sidelengths[j]=tmp[j];
 	}
 	
 	/**
 	 * Sets homogeneous 'labels' based on current 'sides' data. 
 	 * In particular, value at corner a is (B+C-A)/2, where A, B, C 
 	 * are the side lengths.
+	 * 
+	 * TODO: have to adjust for invDist
 	 */
 	public void sides2Labels() {
 		for (int j=0;j<3;j++) 
-			labels[j]=(0.5)*(sides[j]+sides[(j+2)%3]-sides[(j+1)%3]);
+			labels[j]=(0.5)*(sidelengths[j]+sidelengths[(j+2)%3]-sidelengths[(j+1)%3]);
 	}
 	
 	/**
-	 * Sets homogeneous 'sides' based on current 'labels' data. 
+	 * Sets homogeneous 'sides' based on current 'labels' and
+	 * 'invDist' data. 
 	 */
 	public void labels2Sides() {
 		for (int j=0;j<3;j++)
-			sides[j]=labels[j]+labels[(j+1)%3];
+			sidelengths[j]=EuclMath.e_ivd_length(labels[j],labels[(j+1)%3],
+					getInvDist(j));
 	}
 	
 	/**
@@ -358,8 +517,7 @@ public class TriAspect {
 	}
 	
 	/**
-	 * Normalize the 'labels' vector so the max entry
-	 * is 1.0.
+	 * Normalize 'labels' vector so the max entry is 1.0.
 	 */
 	public void normRatio() {
 		int n=0;
@@ -372,21 +530,6 @@ public class TriAspect {
 			n=2;
 		for (int j=0;j<3;j++)
 			labels[j] /= labels[n];
-	}
-	
-	/**
-	 * Given vertex 'v' (from parent packing) of this face, 
-	 * return the 2-vector of other entries in 'labels' after 
-	 * scaling so value at 'v' is 1.0.
-	 * @param v, vertex from parent packing
-	 * @return double[2] of other labels, null on error.
-	 */
-	public double []getRatio(int v) {
-		int k=vertIndex(v);
-		if (k<0) return null;
-		double []newRatio = new double[2];
-		newRatio[0]=labels[(k+1)%3]/labels[k];
-		return newRatio;
 	}
 	
 	/**
@@ -420,19 +563,16 @@ public class TriAspect {
 	 * @param t double, by which 'labels' at v is scaled.
 	 * @return double[2]: [0]=angle sum, [1]=derivative, null on error
 	 */
-	public double []angleV(int v,double t) {
+	public double[] angleV(int v,double t) {
 		int k=vertIndex(v);
 		if (k<0) 
 			return null;
-		UtilPacket up=new UtilPacket();
 		double r1=labels[k];
 		double r2=labels[(k+1)%3];
 		double r3=labels[(k+2)%3];
 		// TODO: adjust for inv distances
-		if (!EuclMath.e_cos_overlap(r1*t,r2,r3,up)) 
-			return null;
 		double []ans=new double[2];
-		ans[0]=Math.acos(up.value);
+		ans[0]=Math.acos(EuclMath.e_cos_overlap(r1*t,r2,r3));
 		ans[1]=EuclMath.Fx(r1*t,r2,r3)*r1;
 		return ans;
 	}
@@ -465,5 +605,6 @@ public class TriAspect {
 				center[(j+2)%3].minus(center[(j+1)%3]).abs());
 		return (0.5*r*r*angleV(v,1.0)[0]);
 	}
+
 
 }

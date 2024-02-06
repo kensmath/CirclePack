@@ -19,7 +19,7 @@
 </MyTool>
 
 <MyTool type="MYTOOL:" dropable="yes">
-  <cmd>add_gen 1 6;disp -wr;</cmd>
+  <cmd>add_gen 1 6;rld;</cmd>
   <iconname>tool/add_layer_icon.png</iconname>
   <tooltip>Add a degree 6 boundary layer</tooltip>
 </MyTool>

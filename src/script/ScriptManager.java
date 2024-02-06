@@ -71,8 +71,8 @@ import input.CPFileManager;
 import input.FileDialogs;
 import mytools.MyTool;
 import mytools.MyToolEditor;
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
 import util.StringUtil;
 
 public class ScriptManager implements ActionListener {
@@ -817,7 +817,7 @@ public class ScriptManager implements ActionListener {
 		 File f=null;
 		 try {
 			 f = new File(System.getProperty("java.io.tmpdir"),
-					 new String("new_script.xmd"));
+					 new String("new_script.cps"));
 			 f.deleteOnExit();
 
 			 BufferedWriter writer = new BufferedWriter(new FileWriter(f));
@@ -851,7 +851,8 @@ public class ScriptManager implements ActionListener {
 	  * @param cpTN CPTreeNode
 	  */
 	 public void resetNextCmdNode(CPTreeNode cpTN) {
-		 if (rootNode==null) return;
+		 if (rootNode==null) 
+			 return;
 
 		 CPTreeNode firstCmdNode=null;
 		 Enumeration<TreeNode> tEnum=rootNode.preorderEnumeration();
@@ -1085,7 +1086,7 @@ public class ScriptManager implements ActionListener {
 
 	 /**
 	  * Use: Loads script 'name' from file or from the web; if 'keepName'
-	  * true, adds name to the 'xmd_URLs' file. Attempt to set stackScroll
+	  * true, adds name to the 'script_URLs' file. Attempt to set stackScroll
 	  * bar in the right spot.
 	  * @param name String, may be temp name (e.g., loaded from web)
 	  * @param oridName String, name to save under
@@ -1300,8 +1301,8 @@ public class ScriptManager implements ActionListener {
 		 Component myComp=e.getComponent();
 		 if (cmd==null || !(myComp instanceof ActiveWrapper)) return;
 		 ActiveWrapper aWrapper=(ActiveWrapper)myComp;
-		 CPScreen cpS=aWrapper.getCPScreen();
-		 PackData thePack=cpS.packData;
+		 CPdrawing cpS=aWrapper.getCPDrawing();
+		 PackData thePack=cpS.getPackData();
 
 		 // check command for variables '#..': Currently check only ' #XY'
 		 if (cmd.contains(" #XY") || cmd.contains(" #xy")) { // command requires mouse location;
@@ -1570,7 +1571,7 @@ public class ScriptManager implements ActionListener {
 			 // first search among script's file
 			 try {
 				 for (int j=includedFiles.size()-1;j>=0;j--) {
-					 IncludedFile iFile=(IncludedFile)includedFiles.get(j);
+					 IncludedFile iFile=includedFiles.get(j);
 					 if (iFile.origName.equals(tagname)) 
 						 url=new URL("file://"+iFile.tmpFile);
 				 }
@@ -1692,7 +1693,7 @@ public class ScriptManager implements ActionListener {
 		 File aboutFile=null;
 		 try {
 			 for (int j=includedFiles.size()-1;j>=0;j--) {
-				 IncludedFile iFile=(IncludedFile)includedFiles.get(j);
+				 IncludedFile iFile=includedFiles.get(j);
 				 if (iFile.origName.startsWith("AboutImage")) {
 					 aboutFile=iFile.tmpFile;
 					 if (aboutFile.exists())

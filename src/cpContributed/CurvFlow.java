@@ -1,27 +1,24 @@
 package cpContributed;
 
-import exceptions.ParserException;
-import geometry.EuclMath;
-import geometry.StreamLiner;
-
 import java.util.Iterator;
 import java.util.Vector;
 
+import allMains.CPBase;
+import allMains.CirclePack;
+import canvasses.DisplayParser;
+import circlePack.PackControl;
+import complex.Complex;
+import exceptions.ParserException;
+import geometry.EuclMath;
+import geometry.StreamLiner;
 import listManip.BaryCoordLink;
 import listManip.FaceLink;
 import listManip.NodeLink;
 import listManip.PointLink;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.StringUtil;
-import allMains.CPBase;
-import allMains.CirclePack;
-import canvasses.DisplayParser;
-import circlePack.PackControl;
-
-import complex.Complex;
 
 /**
  * "Curvature Flow" originated in a paper by Stephenson, Collins, Driscoll.
@@ -63,8 +60,8 @@ public class CurvFlow extends PackExtender {
 		try {
 			domainData=p.copyPackTo();
 			
-			// TODO: used to store euclidean version of max packing, but problems
-			//   have been encountered with max packing code.
+			// TODO: used to store euclidean version of max packing, 
+			//       but problems have been encountered with max packing code.
 //			cpCommand(domainData,"max_pack 10000");
 			cpCommand(domainData,"geom_to_e");
 			domainData.fillcurves();
@@ -154,11 +151,13 @@ public class CurvFlow extends PackExtender {
 			if (flink!=null && flink.size()>0) {
 				Iterator<Integer> flst=flink.iterator();
 				while (flst.hasNext()) {
-					int f=flst.next();
-					int []vert=domainData.faces[f].vert;
+					combinatorics.komplex.DcelFace face=packData.packDCEL.faces[flst.next()];
+					int[] vert=face.getVerts();
 					// put face barycenter in the list
-					zlink.add(EuclMath.eucl_tri_center(domainData.rData[vert[0]].center,
-							domainData.rData[vert[1]].center,domainData.rData[vert[2]].center));
+					zlink.add(EuclMath.eucl_tri_center(
+							domainData.getCenter(vert[0]),
+							domainData.getCenter(vert[1]),
+							domainData.getCenter(vert[2])));
 				}
 			}
 
@@ -167,15 +166,18 @@ public class CurvFlow extends PackExtender {
 				streamLiner=new StreamLiner(domainData);
 				int numb=streamLiner.setDataValues(logmod);
 				if (numb<0)
-					throw new ParserException("problem setting 'streamLiner.dataValues'");
+					throw new ParserException(
+							"problem setting 'streamLiner.dataValues'");
 				streamLiner.setNormals();
 
 				// old data is lost
 				curveVector=new Vector<BaryCoordLink>();
 			}
 			
-			if (streamLiner==null || curveVector==null || zlink==null || zlink.size()==0)
-				throw new ParserException("'streamliner missing or no data given");
+			if (streamLiner==null || curveVector==null || 
+					zlink==null || zlink.size()==0)
+				throw new ParserException(
+						"'streamliner missing or no data given");
 			
 			
 			// go through list of points
@@ -207,8 +209,6 @@ public class CurvFlow extends PackExtender {
 					char c=items.get(0).charAt(1);
 					switch(c) {
 					case 'y': // deprecated, fall through
-					{
-					}
 					case 'u': // get from packData.UtilDouble
 					{
 						if (packData.utilDoubles==null)
@@ -221,8 +221,10 @@ public class CurvFlow extends PackExtender {
 					}
 					case 'q':
 					{ // compare to another packing
-						return setRadRatio(packData,
-								PackControl.pack[StringUtil.qFlagParse(items.get(0))].packData);
+						int qnum=StringUtil.qFlagParse(items.get(0));
+						if (qnum<0)
+							throw new ParserException("failed to read 'q' flag");
+						return setRadRatio(packData,PackControl.packings[qnum]);
 					}
 					} // end of switch
 				}
@@ -239,13 +241,13 @@ public class CurvFlow extends PackExtender {
 					rad1=new double[domainData.nodeCount+1];
 					for (int v=1;v<=packData.nodeCount;v++) 
 						if (v<=domainData.nodeCount)
-							rad1[v]=packData.rData[v].rad;
+							rad1[v]=packData.getRadius(v);
 				}
 				else {
 					rad2=new double[domainData.nodeCount+1];
 					for (int v=1;v<=packData.nodeCount;v++) 
 						if (v<=domainData.nodeCount)
-							rad2[v]=packData.rData[v].rad;
+							rad2[v]=packData.getRadius(v);
 				}
 				return 1;
 			} catch (Exception ex) {
@@ -281,7 +283,8 @@ public class CurvFlow extends PackExtender {
 				aimdata=true;
 			}
 			
-			if ((angdata && anglesumDiff!=null) || (raddata && radRatio!=null) ||
+			if ((angdata && anglesumDiff!=null) || 
+					(raddata && radRatio!=null) ||
 					aimdata && aimDiff!=null) { 
 				packData.utilDoubles=new Vector<Double>(packData.nodeCount);
 				for (int v=1;v<=packData.nodeCount;v++) {
@@ -306,12 +309,10 @@ public class CurvFlow extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					PackData p=domainData.copyPackTo();
-					return cpS.swapPackData(p,false);
-				}
+				PackData p=domainData.copyPackTo();
+				CirclePack.cpb.swapPackData(p,pnum,false);
 				msg("put 'domainPack' in pack p"+pnum);
+				return p.nodeCount; 
 			} catch (Exception ex) {}
 			return 0;
 		}
@@ -323,16 +324,19 @@ public class CurvFlow extends PackExtender {
 			@SuppressWarnings("unused")
 			double radsum=0.0;
 			for (int v=1;v<=packData.nodeCount;v++) {
-				if (packData.kData[v].bdryFlag>0) {
-					radsum += packData.rData[v].rad;
+				if (packData.isBdry(v)) {
+					radsum += packData.getRadius(v);
 				}
 			}
 
-			// adjust each by proportion that that radius forms of radsum
+			// adjust each radius by moderated proportion that 
+			//     that radius forms of total
 			for (int v=1;v<=packData.nodeCount;v++) {
-				if (packData.kData[v].bdryFlag>0) {
-					double factor=.1;
-					packData.rData[v].rad += (-1.0)*factor*(bdryCurv[v]/total)*packData.rData[v].rad;
+				if (packData.isBdry(v)) {
+					double factor=.1; // moderating factor
+					double prad=packData.getRadius(v);
+					double adjustment=(-1.0)*(bdryCurv[v]/total)*prad;
+					packData.setRadius(v,prad+ factor*adjustment);
 				}
 			}
 			
@@ -388,8 +392,9 @@ public class CurvFlow extends PackExtender {
 					}			
 					case 'u': // use 'utilDoubles' vector
 					{
-						if (packData.utilDoubles==null || packData.utilDoubles.size()!=packData.nodeCount) {
-							errorMsg("'utilDoubles' vector is empty or size is wrong");
+						if (packData.utilDoubles==null || 
+								packData.utilDoubles.size()!=packData.nodeCount) {
+							errorMsg("'utilDoubles' vector empty or wrong size");
 							return 0;
 						}
 						useUtilDoubles=true;
@@ -410,9 +415,9 @@ public class CurvFlow extends PackExtender {
 				v=(Integer)vlist.next();
 				double curraim=0.0;
 				if (incremental) 
-					curraim=packData.rData[v].aim;
+					curraim=packData.getAim(v);
 				else
-					curraim=domainData.rData[v].aim;
+					curraim=domainData.getAim(v);
 				// what data are we using? does it exist?
 				if ((!useUtilDoubles && v<aimDiff.length) ||
 						(useUtilDoubles && v<=packData.utilDoubles.size())) {
@@ -423,7 +428,7 @@ public class CurvFlow extends PackExtender {
 						term=aimDiff[v];
 					
 					// apply
-					packData.rData[v].aim=curraim+x*(term);
+					packData.setAim(v,curraim+x*(term));
 					count++;
 				}
 			} // end of while
@@ -493,8 +498,8 @@ public class CurvFlow extends PackExtender {
 			int v=1;
 			while (vlist.hasNext()) {
 				v=(Integer)vlist.next();
-				double rad=domainData.rData[v].rad;
-				if (incremental) rad=packData.rData[v].rad;
+				double rad=domainData.getRadius(v);
+				if (incremental) rad=packData.getRadius(v);
 					
 				// what data are we using? does it exist?
 				if ((!useUtilDoubles && v<radRatio.length) ||
@@ -504,7 +509,7 @@ public class CurvFlow extends PackExtender {
 						factor=packData.utilDoubles.get(v-1);
 
 					// apply
-					packData.rData[v].rad=rad*(Math.exp(x*Math.log(factor)));
+					packData.setRadius(v,rad*(Math.exp(x*Math.log(factor))));
 					count++;
 				}
 			} // end of while
@@ -527,8 +532,6 @@ public class CurvFlow extends PackExtender {
 					char c=items.get(0).charAt(1);
 					switch(c) {
 					case 'y': // deprecated, fall through to 'u'
-					{
-					}
 					case 'u':
 					{ // get from packData.UtilDouble
 						if (packData.utilDoubles==null)
@@ -541,8 +544,10 @@ public class CurvFlow extends PackExtender {
 					}
 					case 'q':
 					{ // compare to another packing
-						return setAngDiff(packData,
-								PackControl.pack[StringUtil.qFlagParse(items.get(0))].packData);
+						int qnum=StringUtil.qFlagParse(items.get(0));
+						if (qnum<0)
+							throw new ParserException("failed to read 'q' flag");
+						return setAngDiff(packData,PackControl.packings[qnum]);
 					}
 					} // end of switch
 				}
@@ -565,8 +570,6 @@ public class CurvFlow extends PackExtender {
 					char c=items.get(0).charAt(1);
 					switch(c) {
 					case 'y': // deprecated, fall through to 'u'
-					{
-					}
 					case 'u':
 					{ // get from packData.UtilDouble
 						if (packData.utilDoubles==null)
@@ -579,9 +582,10 @@ public class CurvFlow extends PackExtender {
 					}
 					case 'q':
 					{ // compare to another packing
-						int ans=setAimDiff(packData,
-								PackControl.pack[StringUtil.qFlagParse(items.get(0))].packData);
-						return ans;
+						int qnum=StringUtil.qFlagParse(items.get(0));
+						if (qnum<0)
+							throw new ParserException("failed to read 'q' flag");
+						return setAimDiff(packData,PackControl.packings[qnum]);
 					}
 					} // end of switch
 				}
@@ -659,12 +663,12 @@ public class CurvFlow extends PackExtender {
 		
 		// collect info
 		for (int v=1;v<=p.nodeCount;v++) {
-			if (p.kData[v].bdryFlag>0) {
-				bdryCurv[v]=Math.PI-p.rData[v].curv;
+			if (p.isBdry(v)) {
+				bdryCurv[v]=Math.PI-p.getCurv(v);
 				accum += Math.abs(bdryCurv[v]);
 			}
 			else {
-				int n=(int)((p.rData[v].aim+.01)/(2.0*Math.PI));
+				int n=(int)((p.getAim(v)+.01)/(2.0*Math.PI));
 				if (n>1)
 					branchOrder += n-1;
 			}
@@ -696,7 +700,7 @@ public class CurvFlow extends PackExtender {
 		q.fillcurves();
 		anglesumDiff=new double[p.nodeCount+1];
 		for (int v=1;v<=p.nodeCount;v++) {
-			anglesumDiff[v]=p.rData[v].curv-q.rData[v].curv;
+			anglesumDiff[v]=p.getCurv(v)-q.getCurv(v);
 		}
 		return 1;
 	}
@@ -724,7 +728,7 @@ public class CurvFlow extends PackExtender {
 		// update angle sums 
 		aimDiff=new double[p.nodeCount+1];
 		for (int v=1;v<=p.nodeCount;v++) {
-			aimDiff[v]=p.rData[v].aim-q.rData[v].aim;
+			aimDiff[v]=p.getAim(v)-q.getAim(v);
 		}
 		return 1;
 	}
@@ -750,7 +754,7 @@ public class CurvFlow extends PackExtender {
 			return 0;
 		}
 		for (int v=1;v<=p.nodeCount;v++) {
-			radRatio[v]=p.rData[v].rad/q.rData[v].rad;
+			radRatio[v]=p.getRadius(v)/q.getRadius(v);
 		}
 		NodeLink bdry=new NodeLink(q,"b");
 		drSize=bdry.size()+1;
@@ -761,8 +765,8 @@ public class CurvFlow extends PackExtender {
 		int count=0;
 		while (blist.hasNext()) {
 			w=(int)blist.next();
-			domArgs[count]=q.rData[w].center.arg();
-			rangeZ[count]=new Complex(p.rData[w].rad/q.rData[w].rad);
+			domArgs[count]=q.getCenter(w).arg();
+			rangeZ[count]=new Complex(p.getRadius(w)/q.getRadius(w));
 			count++;
 		}
 		// close up

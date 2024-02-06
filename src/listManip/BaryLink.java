@@ -4,18 +4,16 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Vector;
 
-import komplex.EdgeSimple;
-import komplex.Face;
-import packing.PackData;
-import util.StringUtil;
 import allMains.CPBase;
 import baryStuff.BaryPoint;
 import complex.Complex;
-
 import exceptions.ParserException;
+import geometry.CircleSimple;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
-import geometry.CircleSimple;
+import packing.PackData;
+import util.MathUtil;
+import util.StringUtil;
 
 /**
  * Linked list of barycentric coordinate 'BaryPoint's 
@@ -60,6 +58,8 @@ public class BaryLink extends LinkedList<BaryPoint> {
 	}
 	
 	public boolean add(BaryPoint bp) {
+		if (bp==null)
+			return false;
 		return super.add(bp);
 	}
 	
@@ -83,19 +83,68 @@ public class BaryLink extends LinkedList<BaryPoint> {
 			str=str.substring(1);
 		}
 		
-		if (str.contains("Bli")) {
-			abutMore(CPBase.Blink);
-			return CPBase.Blink.size();
-		}
-		else if (str.contains("bli")) {
-			if (packData==null) 
-				throw new ParserException("no packing associated with this BaryLink");
-			abutMore(packData.blist);
-			return packData.blist.size();
+		// check for Blink or blist
+		if (str.substring(1).startsWith("list")) {
+			BaryLink blink=null;
+
+			if ((str.contains("Bli") &&
+					(blink=CPBase.Blink)!=null && blink.size()>0) ||
+				(str.contains("Bli") &&
+					(blink=CPBase.Blink)!=null && blink.size()>0)) {
+
+				String[] b_string;
+				String brst;
+
+				String strdata=str.substring(5).trim(); // remove '?list'
+				
+				// check for parens listing range of indices 
+				int lsize=blink.size()-1;
+				int[] irange=StringUtil.get_int_range(strdata, 0,lsize);
+				if (irange!=null) {
+					int a=irange[0];
+					int b=(irange[1]>lsize) ? lsize : irange[1]; 
+					for (int j=a;j<=b;j++) {
+						add(blink.get(j));
+						count++;
+					}
+				}
+				// else check for brackets
+				else if ((b_string=StringUtil.get_bracket_strings(strdata))!=null 
+						&& (brst=b_string[0])!=null) {
+					if (brst.startsWith("r")) { // rotate: copy first at end
+						blink.add(blink.getFirst());
+					}
+					if (brst.startsWith("r") 
+							|| brst.startsWith("n")) { // use an remove first
+						add(blink.removeFirst());
+						count++;
+					}
+					if (brst.startsWith("l")) { // last
+						add(blink.getLast());
+						count++;
+					}						
+					else { // else specified index
+						try{
+							int n=MathUtil.MyInteger(brst);
+							if (n>=0 && n<blink.size()) {
+								add(blink.get(n));
+								count++;
+							}
+						} catch (NumberFormatException nfe) {}
+					}
+				}
+				else {
+					abutMore(CPBase.Blink);
+					return CPBase.Blink.size();
+				}
+			}
+			else // there was no appropriate list
+				return count;
 		}
 		
 		// If there is a flag, we get it, process, and return. 
-		if (StringUtil.isFlag(str) || (str.charAt(0)!='-' && !Character.isDigit(str.charAt(0)) && str.charAt(0)!='.')) {
+		if (StringUtil.isFlag(str) || (str.charAt(0)!='-' && 
+				!Character.isDigit(str.charAt(0)) && str.charAt(0)!='.')) {
 			items.remove(0); // toss, but still held in str
 			if (items==null || items.size()==0)
 				return 0;
@@ -104,7 +153,8 @@ public class BaryLink extends LinkedList<BaryPoint> {
 			case 'f': // faces
 			{
 				if (packData==null) {
-					throw new ParserException("there is no PackData for this BaryLink");
+					throw new ParserException(
+							"there is no PackData for this BaryLink");
 				}
 				
 				// get x y points from rest of strings
@@ -118,15 +168,19 @@ public class BaryLink extends LinkedList<BaryPoint> {
 					Iterator<Integer> fcs=faces.iterator();
 					while (fcs.hasNext()) {
 						int f=fcs.next();
-						int []verts=packData.faces[f].vert;
+						int[] verts=packData.packDCEL.faces[f].getVerts();
 						BaryPoint bp=null;
 						if (packData.hes==0) { // eucl
-							bp=EuclMath.e_pt_to_bary(z,packData.rData[verts[0]].center,
-									packData.rData[verts[1]].center,packData.rData[verts[2]].center);
+							bp=EuclMath.e_pt_to_bary(z,
+									packData.getCenter(verts[0]),
+									packData.getCenter(verts[1]),
+									packData.getCenter(verts[2]));
 						}
 						else if (packData.hes<0) { // hyp
-							bp=HyperbolicMath.h_pt_to_bary(z,packData.rData[verts[0]].center,
-									packData.rData[verts[1]].center,packData.rData[verts[2]].center);
+							bp=HyperbolicMath.h_pt_to_bary(z,
+									packData.getCenter(verts[0]),
+									packData.getCenter(verts[1]),
+									packData.getCenter(verts[2]));
 						}
 						if (bp!=null) {
 							bp.face=f;
@@ -140,11 +194,12 @@ public class BaryLink extends LinkedList<BaryPoint> {
 			case 'i': // interstice
 			{
 				if (packData==null) {
-					throw new ParserException("there is no PackData for this BaryLink");
+					throw new ParserException(
+							"there is no PackData for this BaryLink");
 				}
-				
 				if (packData.hes>0) {
-					throw new ParserException("spherical interstice barycentric coods not yet computed");
+					throw new ParserException(
+							"spherical interstice barycentric coods not yet computed");
 				}
 
 				// get x y points from rest of strings
@@ -158,15 +213,15 @@ public class BaryLink extends LinkedList<BaryPoint> {
 					Iterator<Integer> fcs=faces.iterator();
 					while (fcs.hasNext()) {
 						int f=fcs.next();
-						Face face=packData.faces[f];
+						combinatorics.komplex.DcelFace face=packData.packDCEL.faces[f];
 						Complex []m=new Complex[3];
 						
 						// find tangency points (m[j] opposite to w[j]) 
-						m[2]=packData.tangencyPoint(new EdgeSimple(face.vert[0],face.vert[1]));
-						m[0]=packData.tangencyPoint(new EdgeSimple(face.vert[1],face.vert[2]));
-						m[1]=packData.tangencyPoint(new EdgeSimple(face.vert[2],face.vert[0]));
+						m[2]=packData.tangencyPoint(face.edge);
+						m[0]=packData.tangencyPoint(face.edge.next);
+						m[1]=packData.tangencyPoint(face.edge.next.next);
 						
-						// eucl circle through them: map this and points to the unit disc
+						// eucl circle through them: map to the unit disc
 						CircleSimple incir=EuclMath.circle_3(m[0],m[1],m[2]);
 						Complex []nz=new Complex[3];
 						for (int j=0;j<3;j++) {
@@ -175,9 +230,11 @@ public class BaryLink extends LinkedList<BaryPoint> {
 						}
 						Complex Z=z.minus(incir.center).divide(incir.rad);
 						
-						// now find angle-type barycentric coords for z relative to ideal triangle
+						// now find angle-type barycentric coords for z 
+						//   relative to ideal triangle
 						try {
-							BaryPoint bpt=HyperbolicMath.ideal_bary(Z, nz[0],nz[1], nz[2]);
+							BaryPoint bpt=HyperbolicMath.ideal_bary(Z,
+									nz[0],nz[1], nz[2]);
 							bpt.face=f;
 							
 							// check that pt is in the closed interstice
@@ -188,7 +245,6 @@ public class BaryLink extends LinkedList<BaryPoint> {
 						} catch (Exception ex) {}
 					} // end of while for faces
 				} // end of while for points
-				
 
 				break;
 			}
@@ -279,4 +335,11 @@ public class BaryLink extends LinkedList<BaryPoint> {
 		return ticks;
 	}
 
+	 /**
+	  * Set 'packData' (which helps determine eligibility of entries)
+	  * @param p PackData
+	  */
+	 public void setPackData(PackData p) {
+		 packData=p;
+	 }
 }

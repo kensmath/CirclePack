@@ -70,18 +70,20 @@ public class Embedder {
 					// finalize this match
 					vstat[v]=V;
 					Vstat[V]=v;
-					num=p1.kData[v].num;
-					Num=p2.kData[V].num;
+					num=p1.countFaces(v);
+					int[] flower1=p1.getFlower(v);
+					Num=p2.countFaces(V);
+					int[] flower2=p2.getFlower(V);
 					jspot=result[0];
 					Jspot=result[1];
 						
 					// Now, make new matches and put in 'news'
 					
 					// v/V both interior (hence num=Num)
-					if (p1.kData[v].bdryFlag==0 && p2.kData[V].bdryFlag==0) { 
-						for (int j=1;j<p1.kData[v].num;j++) {
-							k=p1.kData[v].flower[(jspot+j)%num];
-							K=p2.kData[V].flower[(Jspot+j)%Num];
+					if (!p1.isBdry(v) && !p2.isBdry(V)) { 
+						for (int j=1;j<p1.countFaces(v);j++) {
+							k=flower1[(jspot+j)%num];
+							K=flower2[(Jspot+j)%Num];
 							if (vstat[k]==0) { // not yet matched
 								news.add(k); // want to revisit this
 								
@@ -93,11 +95,11 @@ public class Embedder {
 					}
 					
 					// v interior, V bdry (hence num>Num)
-					else if (p1.kData[v].bdryFlag==0)  {
+					else if (!p1.isBdry(v))  {
 						for (int j=0;j<Num;j++) {
-							K=p2.kData[V].flower[j];
+							K=flower2[j];
 							int kspot=(jspot-Jspot+2*num)%num;
-							k=p1.kData[v].flower[(kspot+j)%num];
+							k=flower1[(kspot+j)%num];
 							if (vstat[k]==0) { // not yet matched
 								news.add(k); // want to revisit this
 								
@@ -110,11 +112,11 @@ public class Embedder {
 					}
 					
 					// V interior, v bdry (hence Num>num)
-					else if (p2.kData[V].bdryFlag==0) {
+					else if (!p2.isBdry(V)) {
 						for (int j=0;j<num;j++) {
-							k=p1.kData[v].flower[j];
+							k=flower1[j];
 							int Kspot=(Jspot-jspot+2*Num)%Num;
-							K=p2.kData[V].flower[(Kspot+j)%Num];
+							K=flower2[(Kspot+j)%Num];
 							if (vstat[k]==0) { // not yet matched
 								news.add(k); // want to revisit this
 								
@@ -132,8 +134,8 @@ public class Embedder {
 						int jmax=num-jspot;
 						jmax= ((Num-Jspot)<jmax) ? (Num-Jspot) : jmax;
 						for (int j=-jmin;j<=jmax;j++) {
-							k=p1.kData[v].flower[jspot+j];
-							K=p2.kData[V].flower[Jspot+j];
+							k=flower1[jspot+j];
+							K=flower2[Jspot+j];
 							if (vstat[k]==0) { // not yet matched
 								news.add(k); // want to revisit this
 							
@@ -176,13 +178,13 @@ public class Embedder {
 	public static boolean embedable(PackData q1,PackData q2,int v,int j,int V,int J) {
 		if (v<1 || v>q1.nodeCount || V<1 || V>q2.nodeCount) // improper vertices 
 			return false;
-		int num=q1.kData[v].num;
-		int Num=q2.kData[V].num;
+		int num=q1.countFaces(v);
+		int Num=q2.countFaces(V);
 		if (j<0 || j>num || J<0 || J>Num) // improper indices
 			return false;
-		if ((q1.kData[v].bdryFlag==0 && q2.kData[V].bdryFlag==0 && num!=Num)
-				|| (q1.kData[v].bdryFlag==0 && q2.kData[V].bdryFlag!=0 && num<Num+1)
-				|| (q1.kData[v].bdryFlag!=0 && q2.kData[V].bdryFlag==0 && Num<num+1))
+		if ((!q1.isBdry(v) && !q2.isBdry(V) && num!=Num)
+				|| (!q1.isBdry(v) && q2.isBdry(V) && num<Num+1)
+				|| (q1.isBdry(v) && !q2.isBdry(V) && Num<num+1))
 			return false;
 		return true;
 	}
@@ -201,8 +203,10 @@ public class Embedder {
 	 */
 	public static int []consistent(PackData q1,PackData q2,int v,int V,int hint) 
 	throws DataException {
-		int num=q1.kData[v].num;
-		int Num=q2.kData[V].num;
+		int num=q1.countFaces(v);
+		int[] flower=q1.getFlower(v);
+		int Num=q2.countFaces(V);
+		int[] Flower=q2.getFlower(V);
 		int jspot=-1; 
 		int Jspot=-1;
 		int k,K;
@@ -214,15 +218,15 @@ public class Embedder {
 			
 		// find first match among petals, using 'hint' if nonnegative
 		if (hint>=0 && hint<=num) {  // hint is supposed to point out an existing match
-			k=q1.kData[v].flower[hint];
+			k=flower[hint];
 			K=Math.abs(vstat[k]);
 			if (K==0 || Math.abs(Vstat[K])!=k|| (Jspot=q2.nghb(V,K))<0) 
 				throw new DataException();
 			jspot=hint;
 		}
 		else { // must search for an existing match
-			for (int j=0;(j<(num+q1.kData[v].bdryFlag) && jspot<0);j++) {
-				k=q1.kData[v].flower[j];
+			for (int j=0;(j<(num+q1.getBdryFlag(v)) && jspot<0);j++) {
+				k=flower[j];
 				K=Math.abs(vstat[k]);
 				if (K!=0) { // there seems to be a match to k
 					if ((Math.abs(Vstat[K])!=k) || (Jspot=q2.nghb(V,K))<0)
@@ -231,20 +235,22 @@ public class Embedder {
 				}
 			}
 		}
-		if (jspot<0) return null;
+		if (jspot<0) 
+			return null;
 		
 		// should have jspot and Jspot indices pointing to match.
 		// Check that v is embedable at V
-		if (!embedable(q1,q2,v,jspot,V,Jspot)) return null;
+		if (!embedable(q1,q2,v,jspot,V,Jspot)) 
+			return null;
 		
 		// Now, main work is checking that any further existing matches are 
 		//   consistent with the jspot/Jspot match.
 		int W,w;
 		// v/V both interior (hence same petal count)
-		if (q1.kData[v].bdryFlag==0 && q2.kData[V].bdryFlag==0) { 
-			for (int j=1;j<q1.kData[v].num;j++) {
-				k=q1.kData[v].flower[(jspot+j)%num];
-				K=q2.kData[V].flower[(Jspot+j)%Num];
+		if (!q1.isBdry(v) && !q2.isBdry(V)) { 
+			for (int j=1;j<q1.countFaces(v);j++) {
+				k=flower[(jspot+j)%num];
+				K=Flower[(Jspot+j)%Num];
 				W=Math.abs(vstat[k]);
 				w=Math.abs(Vstat[K]);
 				if ((W!=0 && W!=K) || (w!=0 && w!=k) 
@@ -258,11 +264,11 @@ public class Embedder {
 		}
 		
 		// v interior, V bdry (hence num>Num)
-		if (q1.kData[v].bdryFlag==0)  {
+		if (!q1.isBdry(v))  {
 			for (int j=0;j<Num;j++) {
-				K=q2.kData[V].flower[j];
+				K=Flower[j];
 				int kspot=(jspot-Jspot+2*num)%num;
-				k=q1.kData[v].flower[(kspot+j)%num];
+				k=flower[(kspot+j)%num];
 				W=Math.abs(vstat[k]);
 				w=Math.abs(Vstat[K]);
 				if ((W!=0 && W!=K) || (w!=0 && w!=k) 
@@ -276,11 +282,11 @@ public class Embedder {
 		}
 		
 		// V interior, v bdry (hence Num>num)
-		if (q2.kData[V].bdryFlag==0) {
+		if (!q2.isBdry(V)) {
 			for (int j=0;j<num;j++) {
-				k=q1.kData[v].flower[j];
+				k=flower[j];
 				int Kspot=(Jspot-jspot+2*Num)%Num;
-				K=q2.kData[V].flower[(Kspot+j)%Num];
+				K=Flower[(Kspot+j)%Num];
 				W=Math.abs(vstat[k]);
 				w=Math.abs(Vstat[K]);
 				if ((W!=0 && W!=K) || (w!=0 && w!=k) 
@@ -299,8 +305,8 @@ public class Embedder {
 		int jmax=num-jspot;
 		jmax= ((Num-Jspot)<jmax) ? (Num-Jspot) : jmax;
 		for (int j=-jmin;j<=jmax;j++) {
-			k=q1.kData[v].flower[jspot+j];
-			K=q2.kData[V].flower[Jspot+j];
+			k=flower[jspot+j];
+			K=Flower[Jspot+j];
 			W=Math.abs(vstat[k]);
 			w=Math.abs(Vstat[K]);
 			if ((W!=0 && W!=K) || (w!=0 && w!=k) 

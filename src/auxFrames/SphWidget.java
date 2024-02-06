@@ -21,8 +21,8 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 
+import packing.CPdrawing;
 import packing.PackData;
-import panels.CPScreen;
 import util.UtilPacket;
 import allMains.CirclePack;
 
@@ -31,17 +31,17 @@ public class SphWidget extends JFrame implements ActionListener {
 	private static final long 
 	serialVersionUID = 1L;
 
-	CPScreen cpScreen;
+	CPdrawing cpDrawing;
 	PackData packData;
 	
-	static final int BAR_FOOTPRINT=25; // horizontal footprint of each bar
-	static final int TEXT_PADDING=60; // padding on left for scale text
-	static final int BAR_PADDING=50; // space above/below bars
-	static final int BAR_DROP=30; // how far bar top is below panel top
-	static final int RAD_BAR_HEIGHT=270;
-	static final int ANG_BAR_HEIGHT=200;
-	static final int INDX_HEIGHT=50;
-	static final double RAD_BAR_POWER=9.0;
+	public static final int BAR_FOOTPRINT=25; // horizontal footprint of each bar
+	public static final int TEXT_PADDING=60; // padding on left for scale text
+	public static final int BAR_PADDING=50; // space above/below bars
+	public static final int BAR_DROP=30; // how far bar top is below panel top
+	public static final int RAD_BAR_HEIGHT=270;
+	public static final int ANG_BAR_HEIGHT=200;
+	public static final int INDX_HEIGHT=50;
+	public static final double RAD_BAR_POWER=9.0;
 
 	JPanel controlPanel; // option buttons, readouts
 	JScrollPane mainScroll; // contains barsPanel, scroll for larger packings
@@ -182,37 +182,37 @@ public class SphWidget extends JFrame implements ActionListener {
 		indexPanel.setLayout(null);
 		JLabel indexLabel;
 		// set radius bars (checking for illegal situations)
-		for (int j=1;j<=packData.nodeCount;j++) {
-			double rad=packData.rData[j].rad;
-			double mx=SphericalMath.sph_rad_max(packData,j);
+		for (int v=1;v<=packData.nodeCount;v++) {
+			double rad=packData.getRadius(v);
+			double mx=SphericalMath.sph_rad_max(packData,v);
 			if (rad>=mx) {
 				CirclePack.cpb.msg("Illegal radius encountered");
 			}
-			int startX=TEXT_PADDING+BAR_FOOTPRINT*(j-1);
+			int startX=TEXT_PADDING+BAR_FOOTPRINT*(v-1);
 			int startY=BAR_DROP;
 			// set radius
-			radBars[j]=new DisplayBar(this,j,true,packData.rData[j].rad);
-			radBars[j].setBounds(startX,startY,BAR_FOOTPRINT,RAD_BAR_HEIGHT+BAR_PADDING);
-			radPanel.add(radBars[j]);
-			radBars[j].barArea.setVisible(true);
-			radBars[j].placePointer(SphericalMath.sph_rad_max(packData,j));
-			if (lock[j]) radBars[j].barArea.setBackground(Color.blue);//new Color(220,220,255));
+			radBars[v]=new DisplayBar(this,v,true,packData.getRadius(v));
+			radBars[v].setBounds(startX,startY,BAR_FOOTPRINT,RAD_BAR_HEIGHT+BAR_PADDING);
+			radPanel.add(radBars[v]);
+			radBars[v].barArea.setVisible(true);
+			radBars[v].placePointer(SphericalMath.sph_rad_max(packData,v));
+			if (lock[v]) radBars[v].barArea.setBackground(Color.blue);//new Color(220,220,255));
 			
 			// compute, set angle sum
 			UtilPacket uP=new UtilPacket();
-			if (packData.s_anglesum(j,packData.rData[j].rad,uP)) {
-				packData.rData[j].curv=uP.value;
+			if (packData.s_anglesum(v,packData.getRadius(v),uP)) {
+				packData.setCurv(v,uP.value);
 			}
-			else packData.rData[j].curv=0.0;
-			angsumBars[j]=new DisplayBar(this,j,false,packData.rData[j].curv);
-			angsumBars[j].setBounds(startX,startY,BAR_FOOTPRINT,ANG_BAR_HEIGHT+BAR_PADDING);
-			angsumPanel.add(angsumBars[j]);
-			angsumBars[j].barArea.setVisible(true);
-			if (!lock[j]) // only set initially for unlocked vertices 
-				angsumBars[j].placePointer(packData.rData[j].aim);
+			else packData.setCurv(v,0.0);
+			angsumBars[v]=new DisplayBar(this,v,false,packData.getCurv(v));
+			angsumBars[v].setBounds(startX,startY,BAR_FOOTPRINT,ANG_BAR_HEIGHT+BAR_PADDING);
+			angsumPanel.add(angsumBars[v]);
+			angsumBars[v].barArea.setVisible(true);
+			if (!lock[v]) // only set initially for unlocked vertices 
+				angsumBars[v].placePointer(packData.getAim(v));
 			
 			// enter indices
-			indexLabel=new JLabel(Integer.toString(j),JLabel.LEFT);
+			indexLabel=new JLabel(Integer.toString(v),JLabel.LEFT);
 			indexLabel.setBounds(startX,0,16,15);
 			indexPanel.add(indexLabel);
 			
@@ -228,13 +228,13 @@ public class SphWidget extends JFrame implements ActionListener {
 		int hit=0;
 		double aimSum=0.0;
 		for (int k=1;k<=packData.nodeCount;k++) {
-			if (packData.kData[k].bdryFlag!=0) hit++;
-			aimSum+=packData.rData[k].aim-2*Math.PI;
+			if (packData.getBdryFlag(k)!=0) hit++;
+			aimSum+=packData.getAim(k)-2*Math.PI;
 		}
 		if (hit>0) areaField.setVisible(false);
 		else {
 			double targetArea=4*Math.PI+aimSum;
-			double curArea=packData.complexArea();
+			double curArea=packData.carrierArea();
 			areaField.setText(String.format("%.6e",(double)((curArea-targetArea)/Math.PI)));
 			areaField.setVisible(true);
 		}
@@ -245,41 +245,42 @@ public class SphWidget extends JFrame implements ActionListener {
 	 */
 	public void updateBars() {
 		for (int v=1;v<=packData.nodeCount;v++) {
-			radBars[v].setBarHeight(packData.rData[v].rad);
+			radBars[v].setBarHeight(packData.getRadius(v));
 			radBars[v].placePointer(SphericalMath.sph_rad_max(packData,v));
 			if (lock[v]) radBars[v].barArea.setBackground(Color.blue);//new Color(220,220,255));
 			UtilPacket uP=new UtilPacket();
-			packData.s_anglesum(v,packData.rData[v].rad,uP);
+			packData.s_anglesum(v,packData.getRadius(v),uP);
 			angsumBars[v].setBarHeight(uP.value);
-			angsumBars[v].placePointer(packData.rData[v].aim);
+			angsumBars[v].placePointer(packData.getAim(v));
 		}
 	}
 	
 	public void displayRad(int vert) {
 		radiusField.setText(String.format("%.6e",
-				(double)(packData.rData[vert].rad/Math.PI)));
+				(double)(packData.getRadius(vert)/Math.PI)));
 	}
 	
 	public void displayAngSum(int vert) {
 		angsumField.setText(String.format("%.6e",
-				(double)(packData.rData[vert].curv/Math.PI)));
+				(double)(packData.getCurv(vert)/Math.PI)));
 		// display sum of signed errors of (interior) curvatures
 		double accum=0.0;
-		if (packData.kData[vert].bdryFlag==0) 
-			accum=packData.rData[vert].curv-packData.rData[vert].aim;
-		for (int j=0;j<packData.kData[vert].num;j++) {
-			int k=packData.kData[vert].flower[j];
-			if (packData.kData[k].bdryFlag==0)
-				accum += Math.abs(packData.rData[k].curv-packData.rData[k].aim);
+		if (packData.getBdryFlag(vert)==0) 
+			accum=packData.getCurv(vert)-packData.getAim(vert);
+		int[] petals=packData.getPetals(vert);
+		for (int j=0;j<petals.length;j++) {
+			int k=petals[j];
+			if (!packData.isBdry(k))
+				accum += Math.abs(packData.getCurv(k)-packData.getAim(k));
 		}
 		angError.setText(String.format("%.6e",(double)(accum/Math.PI)));
 	}
 	
 	public void displayArea() {
-		double area=packData.complexArea();
+		double area=packData.carrierArea();
 		double aimSum=0.0;
 		for (int k=1;k<=packData.nodeCount;k++) {
-			aimSum+=packData.rData[k].aim-2*Math.PI;
+			aimSum+=packData.getAim(k)-2*Math.PI;
 		}
 		areaField.setText(String.format("%.6e",
 				(double)(area-4*Math.PI-aimSum/Math.PI)));
@@ -304,8 +305,9 @@ public class SphWidget extends JFrame implements ActionListener {
 		displayRad(vertnum);
 		displayAngSum(vertnum);
 		
-		for (int j=0;j<=packData.kData[vertnum].num;j++) {
-			int v=packData.kData[vertnum].flower[j];
+		int[] flower=packData.getFlower(vertnum);
+		for (int j=0;j<=flower.length;j++) {
+			int v=flower[j];
 			radBars[v].setBarGreen();
 			angsumBars[v].setBarGreen();
 		}			
@@ -323,20 +325,22 @@ public class SphWidget extends JFrame implements ActionListener {
 		if (mode) { // radii; new: treat value as logarithmic factor.
 			double angsum;
                             // was value*radius -- multiplier each time? 
-			packData.rData[vert].rad=value;
+			packData.setRadius(vert,value);
 			UtilPacket uP=new UtilPacket();
-			if (packData.s_anglesum(vert,packData.rData[vert].rad,uP)) {
-				packData.rData[vert].curv=angsum=uP.value;
+			if (packData.s_anglesum(vert,packData.getRadius(vert),uP)) {
+				packData.setCurv(vert,uP.value);
+				angsum=uP.value;
 				angsumBars[vert].setBarHeight(angsum);
 				radBars[vert].placePointer(SphericalMath.sph_rad_max(packData,vert));
 			}
-			int num=packData.kData[vert].num;
 			// update petals
-			for (int k=0;k<=num;k++) {
-				int v=packData.kData[vert].flower[k];
+			int[] petals=packData.getPetals(vert);
+			for (int k=0;k<petals.length;k++) {
+				int v=petals[k];
 				uP=new UtilPacket();
-				if (packData.s_anglesum(v,packData.rData[v].rad,uP)) {
-					packData.rData[v].curv=angsum=uP.value;
+				if (packData.s_anglesum(v,packData.getRadius(v),uP)) {
+					packData.setCurv(v,uP.value);
+					angsum=uP.value;
 					angsumBars[v].setBarHeight(angsum);
 					radBars[v].placePointer(SphericalMath.sph_rad_max(packData,v));
 				}
@@ -345,7 +349,7 @@ public class SphWidget extends JFrame implements ActionListener {
 			displayAngSum(vert);
 		}
 		else { // just record chosen aim
-			packData.rData[vert].aim=value;
+			packData.setAim(vert,value);
 		}
 	}
 	
@@ -378,16 +382,16 @@ public class SphWidget extends JFrame implements ActionListener {
 
 		else if (cmd.equals("cache radii")) {
 			for (int j=1;j<=packData.nodeCount;j++)
-				holdRadii[j]=packData.rData[j].rad;
+				holdRadii[j]=packData.getRadius(j);
 		}
 		else if (cmd.equals("reset radii") && holdRadii!=null) {
 			for (int j=1;j<=packData.nodeCount;j++) {
-				packData.rData[j].rad=holdRadii[j];
-				radBars[j].setBarHeight(packData.rData[j].rad);
+				packData.setRadius(j,holdRadii[j]);
+				radBars[j].setBarHeight(packData.getRadius(j));
 				UtilPacket uP=new UtilPacket();
-				if (packData.s_anglesum(j,packData.rData[j].rad,uP)) {
-					packData.rData[j].curv=uP.value;
-					angsumBars[j].setBarHeight(packData.rData[j].curv);
+				if (packData.s_anglesum(j,packData.getRadius(j),uP)) {
+					packData.setCurv(j,uP.value);
+					angsumBars[j].setBarHeight(packData.getCurv(j));
 				}
 			}
 		}
@@ -395,22 +399,25 @@ public class SphWidget extends JFrame implements ActionListener {
 		else if (cmd.startsWith("Increase") || cmd.startsWith("Decrease")) {
 			for (int j=1;j<=packData.nodeCount;j++) {
 				if (!lock[j]) {
+					double jrad=packData.getRadius(j);
 					if (cmd.equals("Increase1"))
-						packData.rData[j].rad *=1.01;
+						jrad *=1.01;
 					else if (cmd.equals("Increase1.1"))
-						packData.rData[j].rad *=1.001;
+						jrad *=1.001;
 					else if (cmd.equals("Increase1.01"))
-						packData.rData[j].rad *=1.0001;
+						jrad *=1.0001;
 					else if (cmd.equals("Decrease1"))
-						packData.rData[j].rad *=.99;
+						jrad *=.99;
 					else if (cmd.equals("Decrease1.1"))
-						packData.rData[j].rad *=.999;
+						jrad *=.999;
 					else if (cmd.equals("Decrease1.01"))
-						packData.rData[j].rad *=.9999;
-					radBars[j].setBarHeight(packData.rData[j].rad);
+						jrad *=.9999;
+					packData.setRadius(j, jrad);
+					
+					radBars[j].setBarHeight(packData.getRadius(j));
 					UtilPacket uP=new UtilPacket();
-					if (packData.s_anglesum(j,packData.rData[j].rad,uP)) {
-						packData.rData[j].curv=uP.value;
+					if (packData.s_anglesum(j,packData.getRadius(j),uP)) {
+						packData.setCurv(j,uP.value);
 						angsumBars[j].setBarHeight(uP.value);
 					}
 				}

@@ -13,7 +13,7 @@ import complex.Complex;
  * @author kens
  */
 public class FaceParam {
-	public int face;  // face index
+	public int faceIndx;  // face index
 	public Complex Z;  // point on path
 	public double param;  // associated real parameter value
 	public boolean firm;  // if true, then this link should not be pruned

@@ -6,7 +6,7 @@ import java.awt.EventQueue;
  * This version of CirclePack is to be run from a shell. There is
  * no GUI, but the intention is that one can still draw to an
  * image and save that image. 'CirclePack' is initiated in a 
- * static call, but then 'initCirclePack' gets things going.
+ * static call, but then 'startCirclePack' gets things going.
  */
 public class CP_standalone {
 	
@@ -24,9 +24,6 @@ public class CP_standalone {
 				else if (args[j].startsWith("-scr") && args.length>j+1) {
 					CPBase.initialScript=args[j+1];
 					j++;
-				}
-				else if (args[j].equals("-no_C")) { // don't try to attach C libraries
-					CPBase.attachCcode=false;
 				}
 				else if (args[j].equals("-socket")) { // want a command socket 
 					CPBase.socketActive=true;

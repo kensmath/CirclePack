@@ -5,8 +5,7 @@ import java.awt.geom.Point2D;
 import java.util.Vector;
 
 import math.Point3D;
-import panels.CPScreen;
-
+import packing.CPdrawing;
 import complex.Complex;
 import complex.MathComplex;
 
@@ -159,23 +158,27 @@ public class CircleList {
 		}
 	}
 	/**
+	 * Start or continue circle list in gp (instantiated Path2D).
 	 * Cent is Point3D center of spherical circle, {A,B,Cent} is 
 	 * right-hand orthonormal system of Point3D vectors, 'sphrad' is 
 	 * spherical radius. end1 and end2 are Point3D endpoints of the 
 	 * desired arc. If end1=null, want full circle, otherwise we
 	 * assume end1 and end2 are on the horizon and positively 
 	 * oriented (as viewed from Cent direction). 
-	 * @param {A,B,Cent} RHR orthonormal system
-	 * @param sphrad, spherical radius 
-	 * @param end1, end2 Point3D ends
-	 * @param gp existing Path2D.Double
-	 * @param start=true ==> clear/restart gp
-	 * @param N number of steps in drawing full circle by matrix 
+	 * @param A Point3D, {A,B,Cent} RHR orthonormal system
+	 * @param B Point3D
+	 * @param Cent Point3D
+	 * @param sphrad double, spherical radius 
+	 * @param end1 Point3D
+	 * @param end2 Point3D
+	 * @param gp Path2D.Double, already instantiated
+	 * @param start boolean,true ==> clear/restart gp
+	 * @param N int, number of steps in drawing full circle by matrix 
 	 *  propogation
 	 */
 	public static void buildSphList(Point3D A,Point3D B,Point3D Cent,
 			double sphrad,Point3D end1,Point3D end2,Path2D.Double gp,
-			boolean start,int N,CPScreen cpS) {
+			boolean start,int N,CPdrawing cpS) {
 		
 		double a1,extent;
 		
@@ -192,7 +195,6 @@ public class CircleList {
 			extent=MathComplex.radAngDiff(a1,a2);
 		}
 		double rad=Math.sin(sphrad);
-//		int N=getNumSteps(rad*6.0/wwidth);
 		// Here's a 2D circle in AB-coords as seen from Cent direction:
 		Vector<Point2D.Double> vec=
 			CircleList.getArcList(MathComplex.ZERO,rad,a1,extent,N);
@@ -207,7 +209,8 @@ public class CircleList {
 		double Cz=cosr*Cent.z;
 		if (start) { // gp is to be reset and started again
 			gp.reset();
-			if (sz==0) return;
+			if (sz==0) 
+				return;
 			else { // set first point
 				Point2D.Double pt=(Point2D.Double)vec.get(0);
 				Y=Cy+pt.x*A.y+pt.y*B.y;
@@ -222,7 +225,6 @@ public class CircleList {
 			Z=Cz+pt.x*A.z+pt.y*B.z;
 			gp.lineTo(cpS.toPixX(Y),cpS.toPixY(Z));
 		}
-//		gp.closePath();
 	}
 	
 	/**
@@ -232,7 +234,7 @@ public class CircleList {
 	 * @param gp, created in calling routine.
 	 */
 	public static void circlePoints(Vector<Point2D.Double> vec,
-			Path2D.Double gp,boolean start,CPScreen cpS) {
+			Path2D.Double gp,boolean start,CPdrawing cpS) {
 		int sz=vec.size();
 		if (sz==0) return;
 		if (start) {
@@ -262,7 +264,7 @@ public class CircleList {
 	 *  propogation
 	 */
 	public static void sphGeodesicList(SphGeodesic sg,Path2D.Double gp,
-			boolean start,int N,CPScreen cpS) {
+			boolean start,int N,CPdrawing cpS) {
 		if (start) gp.reset();
 		if (sg.lineFlag) {
 			Complex a=SphericalMath.sphToVisualPlane(sg.z1.x,sg.z1.y);

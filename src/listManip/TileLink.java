@@ -7,6 +7,7 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
+import exceptions.ParserException;
 import ftnTheory.ConformalTiling;
 import input.SetBuilderParser;
 import packing.PackData;
@@ -15,6 +16,7 @@ import tiling.TileData;
 import util.MathUtil;
 import util.SelectSpec;
 import util.StringUtil;
+import util.UtilPacket;
 
 public class TileLink extends LinkedList<Integer> {
 	
@@ -78,6 +80,8 @@ public class TileLink extends LinkedList<Integer> {
 	}
 	
 	public boolean add(Integer v) {
+		if (v==null)
+			return false;
 		return add(v.intValue());
 	}
 	
@@ -142,7 +146,7 @@ public class TileLink extends LinkedList<Integer> {
 			if (str.length()==0)
 				str="a";
 			
-			if (str.startsWith("tlist") || str.startsWith("Tlist")) {
+			if (str.substring(1).startsWith("list")) {
 				int t;
 				TileLink tlink=null;
 				boolean ck=false;
@@ -153,8 +157,27 @@ public class TileLink extends LinkedList<Integer> {
 								&& CPBase.Tlink.size()>0)) {
 					if (str.startsWith("T")) // v legal tile for packData?
 						ck=true;
+					
+					String strdata=str.substring(5).trim(); // remove '?list'
+					
+					// check for parens listing range of indices 
+					int lsize=tlink.size()-1;
+					int[] irange=StringUtil.get_int_range(strdata, 0,lsize);
+					if (irange!=null) {
+						int a=irange[0];
+						int b=(irange[1]>lsize) ? lsize : irange[1]; 
+						for (int j=a;j<=b;j++) {
+							t=tlink.get(j);
+							if (ck && t>myTD.tileCount) {}
+							else {
+								add(t);
+								count++;
+							}
+						}
+					}
+					
 					// check for brackets first
-					String brst=StringUtil.brackets(str);
+					String brst=StringUtil.get_bracket_strings(str)[0];
 					if (brst!=null) {
 						if (brst.startsWith("r")) { // rotate list
 							tlink.add(tlink.getFirst());
@@ -209,6 +232,8 @@ public class TileLink extends LinkedList<Integer> {
 						}
 					}
 				}	
+				else // no appropriate list found
+					return count;
 			}
 			
 			/******************************************************
@@ -222,8 +247,8 @@ public class TileLink extends LinkedList<Integer> {
 			{
 				int first=1;
 				int last=myTD.tileCount;
-				String []pair_str=StringUtil.parens_parse(str); // get two strings
-				if (pair_str!=null) { // must have 2 strings
+				String []pair_str=StringUtil.get_paren_range(str); // get two strings
+				if (pair_str!=null && pair_str.length==2) { // must have 2 strings
 					int a,b;
 					if ((a=NodeLink.grab_one_vert(myTD.packData,pair_str[0]))!=0) first=a;
 					if ((b=NodeLink.grab_one_vert(myTD.packData,pair_str[1]))!=0) last=b;
@@ -259,7 +284,7 @@ public class TileLink extends LinkedList<Integer> {
 					Tile tile=myTD.myTiles[t];			
 					int hit=0;
 					for (int j=0;(j<tile.vertCount && hit==0);j++)
-						if (myTD.packData.kData[tile.vert[j]].bdryFlag!=0) {
+						if (myTD.packData.isBdry(tile.vert[j])) {
 							add(t);
 							count++;
 							hit=1;
@@ -273,7 +298,7 @@ public class TileLink extends LinkedList<Integer> {
 				NodeLink rawlist=new NodeLink(myTD.packData,items);
 				if (rawlist.size()>0) {
 					for (int t=1;t<=myTD.tileCount;t++) 
-						if (rawlist.containsV(myTD.myTiles[t].baryVert)>0) {
+						if (rawlist.containsV(myTD.myTiles[t].baryVert)>=0) {
 							add(t); 
 							count++;
 						}
@@ -342,7 +367,7 @@ public class TileLink extends LinkedList<Integer> {
 					Tile tile=myTD.myTiles[t];			
 					int hit=0;
 					for (int j=0;(j<=tile.vertCount && hit==0);j++)
-						if (myTD.packData.kData[tile.vert[j]].bdryFlag!=0) {
+						if (myTD.packData.isBdry(tile.vert[j])) {
 							hit=1;
 						}
 					if (hit==0) {
@@ -363,9 +388,9 @@ public class TileLink extends LinkedList<Integer> {
 				try {	// use those marked in another packing? pack[q]?
 					int qnum;
 					if (str.contains("q") && (qnum=Integer.parseInt(str.substring(str.length()-2)))>=0
-							&& qnum<3 && PackControl.pack[qnum].packData.status
-							&& PackControl.pack[qnum].packData.tileData!=null) {
-						qackTD=PackControl.pack[qnum].packData.tileData;
+							&& qnum<3 && PackControl.cpDrawing[qnum].getPackData().status
+							&& PackControl.cpDrawing[qnum].getPackData().tileData!=null) {
+						qackTD=PackControl.cpDrawing[qnum].getPackData().tileData;
 					}
 					if (qackTD==null || (qtilecount=qackTD.tileCount)<=0)
 						return count;
@@ -436,11 +461,12 @@ public class TileLink extends LinkedList<Integer> {
 			}
 			case '{': // set-builder notation; reap results
 			{
-				SetBuilderParser sbp=new SetBuilderParser(myTD.packData,str,04);
-				if (!sbp.isOkay()) return 0;
+				SetBuilderParser sbp=new SetBuilderParser(myTD.packData,str,'t');
+				if (!sbp.isOkay()) 
+					return 0;
 				Vector<SelectSpec> specs=sbp.getSpecVector();
 				PackData qackData=sbp.packData;
-				TileLink nl=qackData.tileSpecs(specs);
+				TileLink nl=tileSpecs(qackData,specs);
 				if (nl!=null && nl.size()>0) {
 					this.addAll(nl);
 					count+=nl.size();
@@ -488,13 +514,102 @@ public class TileLink extends LinkedList<Integer> {
 	 * @return 0 on failure
 	 */
 	public static int grab_one_tile(TileData td,Vector<Vector<String>> flagsegs) {
-		try {
-			Vector<String> its=(Vector<String>)flagsegs.get(0);
-			TileLink tlk=new TileLink(td,its);
-			return tlk.getFirst();
-		} catch (Exception ex) {
+		if (flagsegs==null || flagsegs.size()==0)
 			return 0;
-		}
+		return grab_one_tile(td,StringUtil.reconItem(flagsegs.get(0)));
 	}
+
+	/**
+	 * Is 't' an entry?
+	 * @param t int
+	 * @return int, index of t or -1 on error or not found
+	 */
+	public int containsV(int t) {
+		for (int j=0;j<this.size();j++)
+			if ((int)this.get(j)==t)
+				return j;
+		return -1;
+	}
+
+	/**
+	 * Make up list by looking through SetBuilder specs 
+	 * (from {..} set-builder notation). Use 'tmpFlag' to 
+	 * collect information before creating the TileLink for return.
+	 * @param p PackData
+	 * @param specs Vector<SelectSpec>
+	 * @return TileLink list of specified tiles.
+	 */
+	public static TileLink tileSpecs(PackData p,Vector<SelectSpec> specs) {
+		if (specs==null || specs.size()==0 || p.tileData==null) 
+			return null;
+		SelectSpec sp=null;
+		int count=0;
+
+		// will store results in 'tmpFlag'
+		int[] tmpUtil=new int[p.tileData.tileCount+1];
+		// loop through all the specifications: these should alternate
+		//   between 'specifications' and 'connectives', starting with 
+		//   the former, although typically there will be just one 
+		//   specification in the vector and no connective.
+		UtilPacket uPx=null;
+		UtilPacket uPy=null;
+		boolean isAnd=false; // true for '&&' connective, false for '||'.
+		for (int j=0;j<specs.size();j++) {
+			sp=(SelectSpec)specs.get(j);
+			if (sp.object!='t') 
+				throw new ParserException(); // spec must be for tiles
+			try {
+				for (int t=1;t<=p.tileData.tileCount;t++) {
+					
+					// success?
+					boolean outcome=false;
+					uPx=sp.node_to_value(p,t,0);
+					if (sp.unary) {
+						if (uPx.rtnFlag!=0)
+							outcome=sp.comparison(uPx.value,0);
+					}
+					else {
+						uPy=sp.node_to_value(p,t,1);
+						if (uPy.rtnFlag!=0)
+							outcome=sp.comparison(uPx.value, uPy.value);
+					}
+					if (outcome) { // yes, this value satisfies condition
+						if (!isAnd && tmpUtil[t]==0) { // 'or' situation
+							tmpUtil[t]=1;
+							count++;
+						}
+					}
+					else { // no, fails this condition
+						if (isAnd && tmpUtil[t]!=0) { // 'and' situation
+							tmpUtil[t]=0;
+							count--;
+						}
+					}
+				}
+			} catch (Exception ex) {
+				throw new ParserException();
+			}
+			
+			// if specs has 2 or more additional specifications, the next must
+			//    be a connective. Else, finish loop.
+			if ((j+2)<specs.size()) {
+				sp=(SelectSpec)specs.get(j+1);
+				if (!sp.isConnective) 
+					throw new ParserException();
+				isAnd=sp.isAnd; 
+				j++;
+			}
+			else j=specs.size(); // kick out of loop
+		}
+		
+		if (count>0) {
+			TileLink nl=new TileLink(p.tileData);
+			for (int t=1;t<=p.tileData.tileCount;t++)
+				if (tmpUtil[t]!=0) nl.add(t);
+			return nl;
+		}
+		else return null;
+	}
+	
 	
 }

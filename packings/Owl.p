@@ -6,7 +6,7 @@ ALPHA/BETA/GAMMA:   8  80  26
 
 PACKNAME: Owl.p
 
-FLOWERS: 
+BOUQUET: 
 
 1 5   74 73 6 4 2 58 
 2 8   1 4 7 5 3 56 57 58 1 

@@ -20,11 +20,10 @@ import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.DispFlags;
-import util.GenPathUtil;
+import util.PathUtil;
 import util.RH_curve;
 import util.StringUtil;
 
@@ -34,9 +33,10 @@ public class RiemHilbert extends PackExtender {
 	
 	public static final int THICKNESS=3;
 	public int bdryCount;
-	public Vector<RH_curve> restCurves;     // vector of curves 
-	public VertexMap vertCurve;             // 'edge' {v,j} simply associates curve j with vertex v
-	public static RH_curve defaultCurve=new RH_curve(new Complex(0.0),1.0); // default is unit circle
+	public Vector<RH_curve> restCurves; // vector of curves 
+	public VertexMap vertCurve;        // 'edge' {v,j}, associate curve j with 'v'
+	public static RH_curve defaultCurve= // default is unit circle
+			new RH_curve(new Complex(0.0),1.0); 
 	
 	// Constructor
 	public RiemHilbert(PackData p) {
@@ -171,21 +171,24 @@ public class RiemHilbert extends PackExtender {
 		Iterator<Integer> vlist=vertlist.iterator();
 		RH_curve rc=null;
 		int v;
-		int orig_thickness=packData.cpScreen.linethickness;
-		packData.cpScreen.setLineThickness(THICKNESS);
+		int orig_thickness=packData.cpDrawing.linethickness;
+		packData.cpDrawing.setLineThickness(THICKNESS);
 		while(vlist.hasNext()) {
 			v=(Integer)vlist.next();
 			rc=curveForVert(v);
-			rc.drawMe(packData.cpScreen);
+			rc.drawMe(packData.cpDrawing);
 			count++;
 		}
-		packData.cpScreen.setLineThickness(orig_thickness);
+		packData.cpDrawing.setLineThickness(orig_thickness);
 		PackControl.activeFrame.activeScreen.repaint();
 		return count;
 	}
 	
 	/**
-	 * Signed distance from center to curve: >=0 if bdry vert 'v' has center inside/on 
+	 * TODO: Not used; would need work, esp. in sph case
+	 * 
+	 * Signed distance from center of 'v' to curve:
+	 * >=0 if bdry vert 'v' has center inside/on 
 	 * its restriction curve; else < 0.
 	 * @param v bdry vertex
 	 * @return double signed distance
@@ -195,19 +198,20 @@ public class RiemHilbert extends PackExtender {
 		Complex cent=null;
 		if (packData.hes<0) {
 			CircleSimple sc =HyperbolicMath.h_to_e_data(
-					packData.rData[v].center,packData.rData[v].rad);
+					packData.getCenter(v),packData.getRadius(v));
+			// what if sc.flag==-1? outside as disc
 			cent=sc.center;
 		}
 		else if (packData.hes>0) {
 			CircleSimple sc =SphericalMath.s_to_e_data(
-					packData.rData[v].center,packData.rData[v].rad);
+					packData.getCenter(v),packData.getRadius(v));
 			cent=sc.center;
 		}
-		else cent=new Complex(packData.rData[v].center);
+		else cent=packData.getCenter(v);
 		if (rhc.isCircle) {
 			return rhc.rad-rhc.center.minus(cent).abs();
 		}
-		double dist=GenPathUtil.gpDistance(rhc.restCurve,cent);
+		double dist=PathUtil.gpDistance(rhc.restCurve,cent);
 		if (rhc.restCurve.contains(cent.x,cent.y)) return dist;
 		return -dist;
 	}
@@ -215,7 +219,7 @@ public class RiemHilbert extends PackExtender {
 	/**
 	 * Signed distance from circle to its curve. Plus: lies inside curve,
 	 * minimum distance. Negative: negative of (roughly) max distance to
-	 * @param v
+	 * @param v int
 	 * @return signed distance
 	 */
 	public double circleDistance(int v) {
@@ -223,22 +227,23 @@ public class RiemHilbert extends PackExtender {
 		Complex cent=null;
 		if (packData.hes<0) {
 			CircleSimple sc =HyperbolicMath.h_to_e_data(
-					packData.rData[v].center,packData.rData[v].rad);
+					packData.getCenter(v),packData.getRadius(v));
 			cent=sc.center;
 		}
 		else if (packData.hes>0) {
 			CircleSimple sc =SphericalMath.s_to_e_data(
-					packData.rData[v].center,packData.rData[v].rad);
+					packData.getCenter(v),packData.getRadius(v));
+			// what if sc.flag==-1? outside as disc
 			cent=sc.center;
 		}
-		else cent=new Complex(packData.rData[v].center);
-		double radius=packData.rData[v].rad;
+		else cent=packData.getCenter(v);
+		double radius=packData.getRadius(v);
 		double dist;
 		if (rhc.isCircle) {
 			dist=radius+rhc.center.minus(cent).abs();
 			return rhc.rad-dist;
 		}
-		dist=GenPathUtil.gpDistance(rhc.restCurve,cent);
+		dist=PathUtil.gpDistance(rhc.restCurve,cent);
 		if (dist>=0.0) return dist-radius;
 		return dist-radius;
 	}
@@ -265,7 +270,7 @@ public class RiemHilbert extends PackExtender {
 			restCurves=new Vector<RH_curve>(50);
 			restCurves.add(defaultCurve);
 		}
-		if (v<0 || v>packData.nodeCount || packData.kData[v].bdryFlag==0) {
+		if (v<0 || v>packData.nodeCount || !packData.isBdry(v)) {
 			v=packData.bdryStarts[1];
 		}
 
@@ -278,11 +283,11 @@ public class RiemHilbert extends PackExtender {
 		int num=restCurves.size();
 		while (blist.hasNext()) {
 			w=(Integer)blist.next();
-			packData.kData[w].color=ColorUtil.spreadColor(count%16);
+			packData.setCircleColor(w,ColorUtil.spreadColor(count%16));
 			if (count>=num) // need to clone to get new 'RH_curve's
 				restCurves.add(restCurves.get(count%num).clone());
 			vertCurve.add(new EdgeSimple(w,count));
-			Color col=packData.kData[w].color;
+			Color col=packData.getCircleColor(w);
 			restCurves.get(count).color=new Color(col.getRed(),col.getGreen(),col.getBlue());
 			count++;
 		}
@@ -349,6 +354,7 @@ public class RiemHilbert extends PackExtender {
 	 * outside of the curve, blue that it lies fully inside. The
 	 * darker the shading, the further out/in (using radius as a
 	 * reference). Circle bdry color is that of its curve.
+	 * TODO: not dependable in spherical geometry.
 	 * @param vertlist
 	 * @return
 	 */
@@ -359,43 +365,43 @@ public class RiemHilbert extends PackExtender {
 			int v;
 			Color col;
 			double sdist, rad;
-			int old_thickness=packData.cpScreen.linethickness;
-			packData.cpScreen.setLineThickness(THICKNESS);
+			int old_thickness=packData.cpDrawing.linethickness;
+			packData.cpDrawing.setLineThickness(THICKNESS);
 			DispFlags dflags=new DispFlags("fc");
 			while (vlist.hasNext()) {
 				v = (Integer) vlist.next();
-				if (packData.kData[v].bdryFlag == 0)
+				if (!packData.isBdry(v))
 					break;
 				sdist = circleDistance(v);
-				rad = packData.rData[v].rad;
+				rad = packData.getRadius(v);
 				// lies inside? shade of blue, further=darker
 				if (sdist > 0) {
 					if (sdist > rad)
 						sdist = rad;
-					col = CPScreen.coLor((int) (1 + 99 * (1.0 - sdist / rad)));
+					col = ColorUtil.coLor((int) (1 + 99 * (1.0 - sdist / rad)));
 				}
 				// hits outside? shade of red, further=darker
 				else {
 					if (-sdist > rad)
 						sdist = -rad;
-					col = CPScreen.coLor((int) (100 + 99 * (-sdist / rad)));
+					col = ColorUtil.coLor((int) (100 + 99 * (-sdist / rad)));
 				}
 
 				// do the fill first
 				dflags.setColor(col);
-				packData.cpScreen.drawCircle(packData.rData[v].center, 
-						packData.rData[v].rad, dflags);
+				packData.cpDrawing.drawCircle(packData.getCenter(v),
+						packData.getRadius(v), dflags);
 				
 				// change color for the bdry
-				dflags.setColor(packData.kData[v].color);
+				dflags.setColor(packData.getCircleColor(v));
 				dflags.fill=false;
 				dflags.draw=true;
 				dflags.colBorder=true;
-				packData.cpScreen.drawCircle(packData.rData[v].center, 
-						packData.rData[v].rad, dflags);
+				packData.cpDrawing.drawCircle(packData.getCenter(v),
+						packData.getRadius(v), dflags);
 				count++;
 			}
-			packData.cpScreen.setLineThickness(old_thickness);
+			packData.cpDrawing.setLineThickness(old_thickness);
 			PackControl.activeFrame.activeScreen.repaint();
 		} catch (Exception ex) {
 		}
@@ -436,7 +442,7 @@ public class RiemHilbert extends PackExtender {
 			int v;
 			try {
 				v=NodeLink.grab_one_vert(packData,flagSegs);
-				if (v!=0 && packData.kData[v].bdryFlag!=0)
+				if (v!=0 && packData.isBdry(v))
 					return linkPackCurves(v);
 			} catch (Exception ex) {}
 			return linkPackCurves(packData.bdryStarts[1]);

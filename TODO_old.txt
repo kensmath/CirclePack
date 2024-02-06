@@ -328,7 +328,7 @@ These are things to work on for release of CirclePack java version ???:
   easily swap the packing. Need to consider alternatives. 
     * Maybe just save the pack extenders to the new replacement packing ---
   	  that could screw some things up.
-  	* Maybe the Extender should be attached to CPScreen instead?
+  	* Maybe the Extender should be attached to CPDrawing instead?
   	* Need a listener to know when packextender is out of sync?
 
 * computing "area" was giving an error in DateTree updating.
@@ -563,15 +563,15 @@ titlebar.
 
 * Allow *.png, *.gif output?
 
-* Regarding drawing ops: 'imageContextReal' is set with creation of 'CPScreen's,
+* Regarding drawing ops: 'imageContextReal' is set with creation of 'CPDrawing's,
 and points to 'packImage' (a 'BufferedImage').
 Where are paint operations?
   + 'MainFrame.reDisplay'
-  + 'CPScreen.paintComponent'
+  + 'CPDrawing.paintComponent'
   + 'ActiveWrapper.paintComponent'
   + 'PairWrapper.paintComponent'
 Where is 'packImage' referred to?
-  + 'CPScreen.getThumbnailImage'
+  + 'CPDrawing.getThumbnailImage'
   + 'ImagePanel.storeCPImage'
   + 'PostPanel.canvas2JPG' call
 look for key word 'GRAPHICS' to see the major changes
@@ -714,7 +714,7 @@ problems.
 * When opening Mobius tool frame, need to select appropriate tab:
   SO(3), disc, or general?
   
-* Note: CPScreen.mobius is not currently use.
+* Note: CPDrawing.mobius is not currently use.
 
 * call to 'set_mobius' should put the result in the "general" mobius
   vector (where is that?) and put icon out in "mobius" window.
@@ -767,8 +767,8 @@ But need conversion software.)
 * Fix standardize 'footprint' computations that determine how many
 division to use in drawing arcs.
 
-* Make variable 'pack[]' into 'PackData' instead of 'CPScreen'; i.e., 
-flip roles of PackData and CPScreen, making the former more central.
+* Make variable 'pack[]' into 'PackData' instead of 'CPDrawing'; i.e., 
+flip roles of PackData and CPDrawing, making the former more central.
 ** Related: split out code to make libraries less interconnected, 
 easier to use in separate packages.
 
@@ -836,7 +836,7 @@ needed; do we need to store data there, or is it still in place when we
 restart the computation?
 
 * "Screen" settings (opacity, etc) aren't being reset on reads and
-  on changes such as 'setFillOpacity' in CPScreen.
+  on changes such as 'setFillOpacity' in CPDrawing
 
 * In 'string_tokenizer', there should be a 'complexvalue' type
 and routines for identifying and reading an input string as a

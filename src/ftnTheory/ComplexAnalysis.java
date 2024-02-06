@@ -1,16 +1,16 @@
 package ftnTheory;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CPBase;
 import allMains.CirclePack;
-import circlePack.PackControl;
 import complex.Complex;
 import exceptions.DataException;
 import exceptions.ParserException;
-import geometry.EuclMath;
 import geometry.CircleSimple;
+import geometry.EuclMath;
 import geometry.SphericalMath;
 import komplex.DualTri;
 import komplex.EdgeSimple;
@@ -19,9 +19,9 @@ import listManip.FaceLink;
 import listManip.NodeLink;
 import math.Mobius;
 import math.group.GroupElement;
+import packing.CPdrawing;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.DispFlags;
@@ -96,13 +96,13 @@ public class ComplexAnalysis extends PackExtender {
 	public double []LaplaceIt(double []values) {
 		double []lp=new double[packData.nodeCount+1];
 		for (int v=1;v<=packData.nodeCount;v++) {
-			
+			int[] flower=packData.getFlower(v);
 			double tot=0.0;
-			for (int j=0;j<packData.kData[v].num+packData.kData[v].bdryFlag;j++) 
+			for (int j=0;j<flower.length;j++) 
 				tot += conductance[v][j];
 			double avg=0.0;
-			for (int j=0;j<packData.kData[v].num+packData.kData[v].bdryFlag;j++) 
-				avg += values[packData.kData[v].flower[j]]*conductance[v][j]/tot;
+			for (int j=0;j<flower.length;j++) 
+				avg += values[flower[j]]*conductance[v][j]/tot;
 			lp[v]=avg-values[v];
 		}
 		return lp;
@@ -117,15 +117,15 @@ public class ComplexAnalysis extends PackExtender {
 		domTPs=new DualTri[domainData.faceCount+1];
 		ranTPs=new DualTri[rangeData.faceCount+1];
 		for (int f=1;f<=domainData.faceCount;f++) {
-			int []verts=domainData.faces[f].vert;
-			domTPs[f]=new DualTri(domainData.hes,
-					domainData.rData[verts[0]].center,
-					domainData.rData[verts[1]].center,
-					domainData.rData[verts[2]].center);
-			ranTPs[f]=new DualTri(rangeData.hes,
-					rangeData.rData[verts[0]].center,
-					rangeData.rData[verts[1]].center,
-					rangeData.rData[verts[2]].center);
+			int []verts=domainData.packDCEL.faces[f].getVerts();
+			domTPs[f]=new DualTri(
+					domainData.getCenter(verts[0]),
+					domainData.getCenter(verts[1]),
+					domainData.getCenter(verts[2]),domainData.hes);
+			ranTPs[f]=new DualTri(
+					rangeData.getCenter(verts[0]),
+					rangeData.getCenter(verts[1]),
+					rangeData.getCenter(verts[2]),rangeData.hes);
 		}
 		return true;
 	}
@@ -174,7 +174,7 @@ public class ComplexAnalysis extends PackExtender {
 		//   window using 'faceMobs' (full, numerators, or denominators).
 		if (cmd.startsWith("ddtr")) {
 			int count=0;
-			CPScreen cpScreen=packData.cpScreen; // default
+			CPdrawing cpDrawing=packData.cpDrawing; // default
 			boolean dots=false;
 			FaceLink facelist=null;
 			DispFlags dflags=null;
@@ -197,7 +197,7 @@ public class ComplexAnalysis extends PackExtender {
 						{
 							if ((qnum=StringUtil.qFlagParse(str))<0)
 								qnum=packData.packNum;
-							cpScreen=CPBase.pack[qnum];
+							cpDrawing=CPBase.cpDrawing[qnum];
 							break;
 						}
 						case 'n': // numerator: if Mob=[a b;c d], then use az+b
@@ -265,7 +265,7 @@ public class ComplexAnalysis extends PackExtender {
 			while (flist.hasNext()) {
 				int f=flist.next();
 				count++;
-				int hes=cpScreen.packData.hes; // use geom of target screen
+				int hes=cpDrawing.getGeom(); // use geom of target screen
 				Complex []tps=new Complex[3]; 
 				for (int j=0;j<3;j++) {
 					tps[j]=domTPs[f].getTP(j);
@@ -301,22 +301,23 @@ public class ComplexAnalysis extends PackExtender {
 				// draw dots at tangency points?
 				if (dots) {
 					DispFlags tmpflags=new DispFlags("");
-					cpScreen.drawTrinket(0,tps[0],tmpflags);
-					cpScreen.drawTrinket(0,tps[1],tmpflags);
-					cpScreen.drawTrinket(0,tps[2],tmpflags);
+					cpDrawing.drawTrinket(0,tps[0],tmpflags);
+					cpDrawing.drawTrinket(0,tps[1],tmpflags);
+					cpDrawing.drawTrinket(0,tps[2],tmpflags);
 				}
 				
 				// actually draw the triangles
 				if (!dflags.colorIsSet)
-					dflags.setColor(domainData.faces[f].color);
+					dflags.setColor(domainData.getFaceColor(f));
 				if (dflags.label)
 					dflags.setLabel(Integer.toString(f));
-				cpScreen.drawFace(tps[0],tps[1],tps[2],null,null,null,dflags);
+				cpDrawing.drawFace(tps[0],tps[1],tps[2],null,null,null,dflags);
 				count++;
 			} // end of while
 
 			// repaint the canvas
-			CPBase.pack[qnum].repaint();
+			if (CPBase.GUImode!=0)
+				CPBase.cpDrawing[qnum].repaint();
 			return count;
 		}
 		
@@ -340,8 +341,8 @@ public class ComplexAnalysis extends PackExtender {
 			int tick=0;
 			while(blst.hasNext()) {
 				int b=blst.next();
-				circlePts[tick]=domainData.rData[b].center.arg();
-				moddiv[tick]=rangeData.rData[b].rad/domainData.rData[b].rad;
+				circlePts[tick]=domainData.getCenter(b).arg();
+				moddiv[tick]=rangeData.getRadius(b)/domainData.getRadius(b);
 				tick++;
 			}
 			return cnt;
@@ -354,11 +355,11 @@ public class ComplexAnalysis extends PackExtender {
 				Oops("perhaps 'set_div' first?");
 			
 			// what packing to apply to? default to active
-			PackData toPack=CPBase.pack[PackControl.activeFrame.getActivePackNum()].packData;
+			PackData toPack=CirclePack.cpb.getActivePackData();
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
-				toPack=CPBase.pack[pnum].packData;
+				toPack=CPBase.cpDrawing[pnum].getPackData();
 			} catch(Exception ex) {}
 
 			// set up complex ftn vector and interpolator
@@ -373,9 +374,9 @@ public class ComplexAnalysis extends PackExtender {
 			Iterator<Integer> blst=bdry.iterator();
 			while (blst.hasNext()) {
 				int v=blst.next();
-				double s=toPack.rData[v].center.arg();
+				double s=toPack.getCenter(v).arg();
 				double ftnvalue=finterp.interpValue(s).x;
-				toPack.rData[v].rad *= ftnvalue;
+				toPack.setRadius(v,toPack.getRadius(v)*ftnvalue);
 			}
 			return cnt;
 		}
@@ -403,17 +404,17 @@ public class ComplexAnalysis extends PackExtender {
 			double []logr=new double[packData.nodeCount+1];
 			double []laplace=new double[packData.nodeCount+1];
 			for (int v=1;v<=packData.nodeCount;v++) 
-				logr[v]=Math.log(rangeData.rData[v].rad)-Math.log(domainData.rData[v].rad);
+				logr[v]=Math.log(rangeData.getRadius(v))-Math.log(domainData.getRadius(v));
 			laplace=LaplaceIt(logr);
-			Vector<Double> data=new Vector<Double>(packData.nodeCount);
+			ArrayList<Double> data=new ArrayList<Double>(packData.nodeCount);
 			for (int v=1;v<=packData.nodeCount;v++)
 				data.add(Double.valueOf(laplace[v]));
-			Vector<Integer> colors=new Vector<Integer>(packData.nodeCount);
-			colors=ColorUtil.blue_red_diff_ramp(data);
-			
-			// record in 'rData' of 'packData'
+			ArrayList<Integer> colors=new ArrayList<Integer>(packData.nodeCount);
+			colors=ColorUtil.blue_red_color_ramp(data);
+
+			// record in face
 			for (int v=1;v<=packData.nodeCount;v++)
-				packData.kData[v].color=CPScreen.coLor((int)colors.get(v-1));
+				packData.setFaceColor(v,ColorUtil.coLor((int)colors.get(v-1)));
 			
 			double miN=0.0;
 			double maX=0.0;
@@ -426,14 +427,11 @@ public class ComplexAnalysis extends PackExtender {
 		}
 		
 		// ========== copy <pnum> 
-		if (cmd.startsWith("copy")) { // copy 'outputData' in some pack
+		if (cmd.startsWith("copy")) { // copy 'outputData' to some pack
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					return cpS.swapPackData(outputData,false);
-				}
+				return CirclePack.cpb.swapPackData(outputData, pnum,false).nodeCount;
 			} catch (Exception ex) {
 				return 0;
 			}
@@ -444,13 +442,13 @@ public class ComplexAnalysis extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS.packData.nodeCount!=domainData.nodeCount) {
+				CPdrawing cpS=CPBase.cpDrawing[pnum];
+				if (cpS.getPackData().nodeCount!=domainData.nodeCount) {
 					errorMsg("getDom: range packing complex must match domain");
 					return 0;
 				}
-				domainData=cpS.packData.copyPackTo();
-				outputData=cpS.packData.copyPackTo();
+				domainData=cpS.getPackData().copyPackTo();
+				outputData=cpS.getPackData().copyPackTo();
 				conductance=setConductances(domainData);
 			} catch (Exception ex) {
 				return 0;
@@ -473,12 +471,12 @@ public class ComplexAnalysis extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.valueOf((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS.packData.nodeCount!=domainData.nodeCount) {
+				CPdrawing cpS=CPBase.cpDrawing[pnum];
+				if (cpS.getPackData().nodeCount!=domainData.nodeCount) {
 					errorMsg("getRan: range packing complex must match domain");
 					return 0;
 				}
-				rangeData=cpS.packData.copyPackTo();
+				rangeData=cpS.getPackData().copyPackTo();
 			} catch (Exception ex) {
 				return 0;
 			}
@@ -538,18 +536,18 @@ public class ComplexAnalysis extends PackExtender {
 	 */
 	public int SR_parameterize(double aparam) {
 		for (int v=1;v<=packData.nodeCount;v++) {
-			double r=domainData.rData[v].rad;
+			double r=domainData.getRadius(v);
 			double expal;
 			//  at z=0 replace |f(z)/z| by |f'(z)| (typically, 1)
-			if (domainData.rData[v].center.abs()<.0000001) {
-				expal=Math.exp(aparam*Math.log(packData.rData[v].rad/r)); 
+			if (domainData.getCenter(v).abs()<.0000001) {
+				expal=Math.exp(aparam*Math.log(packData.getRadius(v)/r)); 
 			}
 			else {
-				double rc_dc=packData.rData[v].center.
-					divide(domainData.rData[v].center).abs();
+				double rc_dc=packData.getCenter(v).
+					divide(domainData.getCenter(v)).abs();
 				expal=Math.exp(aparam*Math.log(rc_dc));
 			}
-			outputData.rData[v].rad=packData.rData[v].rad/expal;
+			outputData.setRadius(v,packData.getRadius(v)/expal);
 		}
 		return 1;
 	}
@@ -565,57 +563,59 @@ public class ComplexAnalysis extends PackExtender {
 	 * @param 'PackData' domData
 	 * @return
 	 */
-	public static double [][]setConductances(PackData domData) {
+	public static double[][] setConductances(PackData domData) {
 		if (domData==null || domData.nodeCount<=0 || domData.hes!=0 
 				|| domData.status==false) {
 			throw new ParserException("packing not set or not suitable");
 		}
-		double []spokes=null;
-		Complex []inCenters=null;
-		double [][]conductance=new double[domData.nodeCount+1][];
+		double[] slengths=null; // spoke lengths
+		Complex[] inCenters=null;
+		double[][] conductance=new double[domData.nodeCount+1][];
 		Complex f1=null;
 		Complex f2=null;
 		for (int v=1;v<=domData.nodeCount;v++) {
-			int num=domData.kData[v].num;
-			Complex z=domData.rData[v].center;
-			spokes=new double[num+1];
+			int[] flower=domData.getFlower(v);
+			int num=domData.countFaces(v);
+			Complex z=domData.getCenter(v);
+			slengths=new double[num+1];
 			inCenters=new Complex[num];
 
-			conductance[v]=new double[num+1];
+			// closed for interior v
+			conductance[v]=new double[num+1]; 
 
 			// store edge lengths, incenters
-			f2=domData.rData[domData.kData[v].flower[0]].center;
-			spokes[0]=z.minus(f2).abs();
+			f2=domData.getCenter(flower[0]);
+			slengths[0]=z.minus(f2).abs();
 			CircleSimple sc=null;
 			for (int j=1;j<=num;j++) {
 				f1=f2;
-				f2=domData.rData[domData.kData[v].flower[j]].center;
+				f2=domData.getCenter(flower[j]);
 				sc=EuclMath.eucl_tri_incircle(z,f1,f2);
-				spokes[j]=z.minus(f2).abs();
+				slengths[j]=z.minus(f2).abs();
 				inCenters[j-1]=sc.center;
 			}
 
 			// store conductances
 			
 			// for bdry, use ratio of inRad/length for first and last edges
-			if (domData.kData[v].bdryFlag!=0) {
-				f1=domData.rData[domData.kData[v].flower[0]].center;
-				f2=domData.rData[domData.kData[v].flower[1]].center;
-				double inRad=EuclMath.eucl_tri_inradius(spokes[0],spokes[1],f1.minus(f2).abs());
-				conductance[v][0]=inRad/spokes[0];
-				f1=domData.rData[domData.kData[v].flower[num-1]].center;
-				f2=domData.rData[domData.kData[v].flower[num]].center;
-				inRad=EuclMath.eucl_tri_inradius(spokes[num-1],spokes[num],f1.minus(f2).abs());
-				conductance[v][num]=inRad/spokes[num];
+			if (domData.isBdry(v)) {
+				f1=domData.getCenter(flower[0]);
+				f2=domData.getCenter(flower[1]);
+				double inRad=EuclMath.eucl_tri_inradius(slengths[0],slengths[1],f1.minus(f2).abs());
+				conductance[v][0]=inRad/slengths[0];
+				f1=domData.getCenter(flower[num-1]);
+				f2=domData.getCenter(flower[num]);
+				inRad=EuclMath.eucl_tri_inradius(slengths[num-1],slengths[num],f1.minus(f2).abs());
+				conductance[v][num]=inRad/slengths[num];
 			}
 			else { // interior: first conductance repeated in last
 				conductance[v][0]=
-					conductance[v][num]=inCenters[num-1].minus(inCenters[0]).abs()/spokes[0];
+					conductance[v][num]=inCenters[num-1].minus(inCenters[0]).abs()/slengths[0];
 			}
 			
 			// now the rest
 			for (int j=1;j<num;j++) {
-				conductance[v][j]=inCenters[j-1].minus(inCenters[j]).abs()/spokes[j];
+				conductance[v][j]=inCenters[j-1].minus(inCenters[j]).abs()/slengths[j];
 			}
 		} // end of loop on v
 		return conductance;
@@ -640,21 +640,20 @@ public class ComplexAnalysis extends PackExtender {
 			errorMsg("conductances are not set");
 			return 0;
 		}
-		Complex z,w,deriv;
 		Complex []domSpokes=null;
 		Complex []ranSpokes=null;
 		try {
 		for (int v=1;v<=dData.nodeCount;v++) {
 			
 			// data at v
-			int num=dData.kData[v].num;
-			z=dData.rData[v].center;
-			w=rData.rData[v].center;
+			int num=dData.countFaces(v);
+			Complex z=dData.getCenter(v);
+			Complex w=rData.getCenter(v);
 
 			// check if packings match here
-			if (num!=rData.kData[v].num || num!=dData.kData[v].num  
-					|| dData.kData[v].bdryFlag!=rData.kData[v].bdryFlag
-					|| dData.kData[v].bdryFlag!=rData.kData[v].bdryFlag)
+			if (num!=rData.countFaces(v) || num!=dData.countFaces(v)
+					|| dData.getBdryFlag(v)!=rData.getBdryFlag(v)
+					|| dData.getBdryFlag(v)!=rData.getBdryFlag(v))
 				throw new DataException("combinatorics of packings do not agree");
 			// for the data
 			domSpokes=new Complex[num+1];
@@ -662,17 +661,19 @@ public class ComplexAnalysis extends PackExtender {
 
 			double totalWeight=0.0;
 
-			// store complex edge vectors
-			for (int j=0;j<dData.kData[v].num+dData.kData[v].bdryFlag;j++) {
-				domSpokes[j]=z.minus(dData.rData[dData.kData[v].flower[j]].center);
-				ranSpokes[j]=w.minus(rData.rData[rData.kData[v].flower[j]].center);
+			// store complex edge vectors, compute node conductance
+			int[] petals=dData.getPetals(v);
+			for (int j=0;j<petals.length;j++) {
+				domSpokes[j]=z.minus(dData.getCenter(petals[j]));
+				ranSpokes[j]=w.minus(rData.getCenter(petals[j]));
 				totalWeight+=conductance[v][j];
 			}
 
-			deriv=new Complex(0.0);
-			for (int j=0;j<num+dData.kData[v].bdryFlag;j++) 
-				deriv=deriv.add(ranSpokes[j].divide(domSpokes[j]).times(conductance[v][j]));
-			outputData.rData[v].center=deriv.divide(totalWeight);
+			Complex deriv=new Complex(0.0);
+			for (int j=0;j<petals.length;j++) 
+				deriv=deriv.add(ranSpokes[j].divide(domSpokes[j]).
+						times(conductance[v][j]));
+			outputData.setCenter(v,deriv.divide(totalWeight));
 		}
 		} catch(Exception ex) {
 			errorMsg("error in computing derivative: "+ex.getMessage());
@@ -684,64 +685,6 @@ public class ComplexAnalysis extends PackExtender {
 			errorMsg("error in setting 'effective' radii.");
 		}
 		return 1;
-	}
-
-
-	
-	public int oldComputeDerivative(int mode) {
-		for (int v=1;v<=packData.nodeCount;v++) {
-			double totalWeight=0.0;
-			
-			// data at v
-			int num=packData.kData[v].num;
-			double rad=packData.rData[v].rad;
-			Complex z=packData.rData[v].center;
-			Complex w=rangeData.rData[v].center;
-
-			// check if packings match here
-			if (num!=rangeData.kData[v].num 
-					|| packData.kData[v].bdryFlag!=rangeData.kData[v].bdryFlag)
-				throw new DataException("combinatorics of packings are not the same");
-			// for the data
-			double []weights=new double[num+1];
-			Complex []domSpokes=new Complex[num+1];
-			Complex []ranSpokes=new Complex[num+1];
-
-			// compute the 'weights'
-			// compute for first edge
-			double rad1=packData.rData[packData.kData[v].flower[0]].rad;
-			double rad2=packData.rData[packData.kData[v].flower[1]].rad;
-			double inRad=EuclMath.eucl_tri_inradius(rad+rad1,rad+rad2,rad1+rad2);
-			domSpokes[0]=z.minus(packData.rData[packData.kData[v].flower[0]].center);
-			domSpokes[1]=z.minus(packData.rData[packData.kData[v].flower[1]].center);
-			ranSpokes[0]=w.minus(rangeData.rData[rangeData.kData[v].flower[0]].center);
-			ranSpokes[1]=w.minus(rangeData.rData[rangeData.kData[v].flower[1]].center);
-			weights[0]=inRad/domSpokes[0].abs();
-			totalWeight=weights[0];
-			weights[1]=inRad/domSpokes[1].abs();
-			
-			// compute for remaining edges
-			// Note: for interior v, weight = weights[0]+weights[num]
-			for (int j=1;j<packData.kData[v].num;j++) {
-				rad1=rad2;
-				rad2=packData.rData[packData.kData[v].flower[j+1]].rad;
-				inRad=EuclMath.eucl_tri_inradius(rad+rad1,rad+rad2,rad1+rad2);
-				domSpokes[j+1]=z.minus(packData.rData[packData.kData[v].flower[j+1]].center);
-				ranSpokes[j+1]=w.minus(rangeData.rData[rangeData.kData[v].flower[j+1]].center);
-				weights[j]+=inRad/domSpokes[j].abs(); // for this edge
-				weights[j+1]=inRad/domSpokes[j+1].abs(); // add to next weight
-				totalWeight+=weights[j];
-			}
-			totalWeight+=weights[num];
-
-			Complex deriv=new Complex(0.0);
-			for (int j=0;j<=num;j++) 
-				deriv=deriv.add(ranSpokes[j].divide(domSpokes[j]).times(weights[j]));
-			outputData.rData[v].center=deriv.divide(totalWeight);
-		}
-		
-		EuclMath.effectiveRad(outputData,null);
-		return	1;
 	}
 	
 	public void initCmdStruct() {

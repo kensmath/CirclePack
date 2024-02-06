@@ -1,22 +1,22 @@
 package cpContributed;
 
-import packing.PackData;
-import packing.PackExtender;
-import util.CmdStruct;
-
-import circlePack.PackControl;
-import complex.Complex;
-
-import java.util.Iterator;
-import java.util.Vector;
-
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Toolkit;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.awt.Dimension;
+import java.util.Iterator;
+import java.util.Vector;
+
+import allMains.CPBase;
+import allMains.CirclePack;
+import circlePack.PackControl;
+import complex.Complex;
+import packing.PackData;
+import packing.PackExtender;
+import util.CmdStruct;
 
 public class HilbertTransform extends PackExtender 
 {
@@ -24,6 +24,7 @@ public class HilbertTransform extends PackExtender
 	private int sz_bndry; // how many boundary circles
 	private Complex[] cz_hyper; // hyperbolic centers of boundary circles
 	
+	@SuppressWarnings("unused")
 	private String var; // independent variable
 	private String fct; // function to be transformed
 	
@@ -36,8 +37,6 @@ public class HilbertTransform extends PackExtender
 	public HilbertTransform(PackData p) 
 	{
 		super(p);
-		// TODO Auto-generated constructor stub
-		
 		extensionType = "Hilbert_Transform";
 		extensionAbbrev = "HT";
 		toolTip = "'Hilbert Transform' for computing the Hilbert transform of a given function";
@@ -51,10 +50,10 @@ public class HilbertTransform extends PackExtender
 		sz_bndry = 0;
 		for(int k = 1; k <= packData.nodeCount; k++)
 		{
-			if (packData.kData[k].bdryFlag >= 1)
+			if (packData.isBdry(k))
 			{
 				temp_bndry[sz_bndry] = k; 
-				temp_cz[sz_bndry] = packData.rData[k].center;
+				temp_cz[sz_bndry] = packData.getCenter(k);
 				sz_bndry++;
 			}
 		}
@@ -117,10 +116,12 @@ public class HilbertTransform extends PackExtender
 				}
 			}
 			
+			CirclePack.cpb.FtnSpecification=new StringBuilder(fct);
 			return 1;
 		}
 		
-		else if (cmd.startsWith("calc_Hilbert_transform") || cmd.startsWith("calc_HT"))
+		else if (cmd.startsWith("calc_Hilbert_transform")
+				|| cmd.startsWith("calc_HT"))
 		{
 			// calculate the Hilbert transform
 			// is there a lambda given?
@@ -141,23 +142,17 @@ public class HilbertTransform extends PackExtender
 			
 			// create a copy of the packing
 			PackData newPack = packData.copyPackTo();
-			PackControl.pack[1].swapPackData(newPack, false);
-			
-			// replace the variable t with z if necessary
-			String temp_fct = fct;
-			if (var.compareTo("t") == 0)
-			{
-				temp_fct = temp_fct.replaceAll("t", "z");
-			}
+			CirclePack.cpb.swapPackData(newPack, 1, false);
 			
 			// modify the radii of the boundary circles
-			PackControl.functionPanel.setFunctionText(temp_fct);
+			if (CPBase.GUImode!=0)
+				PackControl.newftnFrame.setFunctionText();
 			Complex val;
-			//values_fct = new double[sz_bndry];
 			for(int k = 0; k < sz_bndry; k++)
 			{
-				val = PackControl.functionPanel.getFtnValue(cz_hyper[k]);
-				newPack.rData[bndry[k]].rad *= Math.exp(lambda * val.real());
+				val = CirclePack.cpb.getFtnValue(cz_hyper[k]);
+				double krad=newPack.getRadius(k);
+				newPack.setRadius(bndry[k],krad* Math.exp(lambda * val.real()));
 				values_fct[k] = val.real();
 			}
 			
@@ -178,11 +173,11 @@ public class HilbertTransform extends PackExtender
 			for(int k = 0; k < sz_bndry; k++)
 			{
 				if (k <= 0)
-					z1 = packData.rData[bndry[sz_bndry - 1]].center;
+					z1 = packData.getCenter(bndry[sz_bndry - 1]);
 				else
-					z1 = packData.rData[bndry[k - 1]].center;
-				z2 = packData.rData[bndry[k]].center;
-				z3 = packData.rData[bndry[(k + 1) % sz_bndry]].center;
+					z1 = packData.getCenter(bndry[k - 1]);
+				z2 = packData.getCenter(bndry[k]);
+				z3 = packData.getCenter(bndry[(k + 1) % sz_bndry]);
 				
 				z = z1.minus(z2);
 				w = z3.minus(z2);
@@ -194,11 +189,11 @@ public class HilbertTransform extends PackExtender
 				arg1 = Math.atan2(Math.sin(arg1), Math.cos(arg1)); // normalize to [-pi, pi]
 				
 				if (k <= 0)
-					w1 = newPack.rData[bndry[sz_bndry - 1]].center;
+					w1 = newPack.getCenter(bndry[sz_bndry - 1]);
 				else
-					w1 = newPack.rData[bndry[k - 1]].center;
-				w2 = newPack.rData[bndry[k]].center;
-				w3 = newPack.rData[bndry[(k + 1) % sz_bndry]].center;
+					w1 = newPack.getCenter(bndry[k - 1]);
+				w2 = newPack.getCenter(bndry[k]);
+				w3 = newPack.getCenter(bndry[(k + 1) % sz_bndry]);
 				
 				z = w1.minus(w2);
 				w = w3.minus(w2);
@@ -312,26 +307,22 @@ public class HilbertTransform extends PackExtender
 	{
 		// determine which neighbor of vert belongs to the boundary
 		int[] nb = new int[2];
-		int[] flwr;
 		int sz_flwr;
 		int count = 0;
 		
-		flwr = packData.kData[vert].flower;
-		if (packData.kData[vert].bdryFlag >= 1)
+		int[] flwr = packData.getFlower(vert);
+		if (packData.isBdry(vert))
 			// vert is a boundary vertex
 			sz_flwr = flwr.length;
 		else
 			sz_flwr = flwr.length - 1;
 		
-		for(int k = 0; k < sz_flwr; k++)
-		{
-			if (packData.kData[flwr[k]].bdryFlag >= 1)
-			{
+		for(int k = 0; k < sz_flwr; k++) {
+			if (packData.isBdry(flwr[k])) {
 				nb[count] = flwr[k];
 				count++;
 			}
 		}
-		
 		return nb;
 	}
 	

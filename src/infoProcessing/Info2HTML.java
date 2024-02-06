@@ -1,5 +1,6 @@
 package infoProcessing;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileWriter;
@@ -37,26 +38,8 @@ public class Info2HTML {
 			int idx=htmlname.indexOf('.');
 			if (idx>0)
 				htmlname=htmlname.substring(0,idx); // hold this for later use
-//			cmdName=new String(htmlname+".html");
-//			URL output=Info2HTML.class.getClassLoader().getResource("Resources/doc/CmdDetails.html");
-//			cmdfile=new File(output.toString());
-			
-//			cmdfile=new File("../JavaCode/src/Resources/doc/",cmdName);
-	    	//fp = new BufferedWriter(new FileWriter(cmdfile,false));
 	    	fp = new StringWriter(); 
-	    		
-	    	// index file
-//	    	indexName=new String("CmdIndex.html");
-	    	
-//	    	/JavaCode/src/Resources/doc/",indexName);
-	    	//indxfp=new BufferedWriter(new FileWriter(indexfile,false));
 	    	indxfp = new StringWriter();
-	    	
-	    	// completion file
-	    	
-//	    	completionfile=new File("../JavaCode/src/Resources/doc/",compName);
-	    	//
-	    	//compfp=new BufferedWriter(new FileWriter(completionfile,false));
 	    	compfp = new StringWriter();
 	    	
 		} catch(Exception ex) {
@@ -299,52 +282,56 @@ public class Info2HTML {
 		
 		} // end of loop for 'CPdoc'
 		
-		
-		
-		
 		try
 		{
-			//cmdfile=new File();
-	    	//indexfile=new File("/tmp/CmdIndex.html");
-	    	//completionfile=new File("/tmp/CmdCompletion.txt");
-	    	
-			
-
-			
 			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 			dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
 			DocumentBuilder builder = dbf.newDocumentBuilder();
 			
-			
 			System.out.println("Checking parsing");
 			builder.parse(new ByteArrayInputStream(fp.toString().getBytes()));
-			//builder.parse(new ByteArrayInputStream(indxfp.toString().getBytes()));
-			//builder.parse(new ByteArrayInputStream(compfp.toString().getBytes()));
 			System.out.println("Done parsing");
-			System.out.println("after parsing, directory is: "+System.getProperty("user.dir"));
-
+//			System.out.println("after parsing, 'user.dir' is: "+System.getProperty("user.dir"));
 			
-			File outfile=new File("CirclePack/src/Resources/doc/CmdDetails.html");
-			if (!outfile.exists())
-				System.err.println("'CirclePack/src/Resources/doc/CmdDetails.html' doesn't see to exist");
-			
-			FileWriter fw = new FileWriter("CirclePack/src/Resources/doc/CmdDetails.html", false);
+			// save 'CmdDetails.html'
+			File detailFile=new File( System.getProperty("user.dir")+
+					"/CirclePack/src/Resources/doc/CmdDetails.html");
+			BufferedWriter fw = new BufferedWriter(
+					new FileWriter(detailFile,false));
 	    	fw.write(fp.toString());
 	    	fw.flush();
 	    	fw.close();
-	    	
-	    	fw = new FileWriter("CirclePack/src/Resources/doc/CmdIndex.html", false);
+			if (!detailFile.exists()) {
+				System.err.println("seems we could not write to "+detailFile.getPath());
+			}
+			else 
+		    	System.out.println("   Have written: "+detailFile.getPath());
+
+			// save 'CmdIndex.html'
+			File indexFile=new File( System.getProperty("user.dir")+
+					"/CirclePack/src/Resources/doc/CmdIndex.html");					
+	    	fw = new BufferedWriter(new FileWriter(indexFile, false));
 	    	fw.write(indxfp.toString());
 	    	fw.flush();
 	    	fw.close();
-	    	
-	    	fw = new FileWriter("CirclePack/src/Resources/doc/CmdCompletion.txt", false);
+			if (!indexFile.exists()) {
+				System.err.println("seems we could not write to "+indexFile.getPath());
+			}
+			else 
+		    	System.out.println("   Have written: "+indexFile.getPath());
+
+			// save "CmdCompletion.txt'
+			File completionFile=new File( System.getProperty("user.dir")+
+					"/CirclePack/src/Resources/doc/CmdCompletion.txt");
+	    	fw = new BufferedWriter(new FileWriter(completionFile, false));
 	    	fw.write(compfp.toString());
 	    	fw.flush();
 	    	fw.close();
-	    	System.out.println("Have written: \n   'CirclePack/src/Resources/doc/CmdIndex.html' and\n"+
-	    			"   'CirclePack/src/Resources/doc/CmdCompletion.txt'.");
-	    	
+			if (!completionFile.exists()) {
+				System.err.println("seems we could not write to "+completionFile.getPath());
+			}
+			else
+		    	System.out.println("   Have written: "+completionFile.getPath());
 
 		}catch(IOException e)
 		{
@@ -371,14 +358,13 @@ public class Info2HTML {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 		
-		
-		// what is the current directory?
-		System.out.println("user directory is: "+System.getProperty("user.dir"));
+		// check some directories
+		System.out.println("Info2HTML: user.dir is "+System.getProperty("user.dir"));
+//		System.out.println("Info2HTML: user.home is "+System.getProperty("user.home"));
 		
 		// create new file
-		infofile=new File("CirclePack/src/Resources/doc/CmdDetails.txt");
+		infofile=new File(System.getProperty("user.dir")+"/CirclePack/src/Resources/doc/CmdDetails.txt");
 		if (!infofile.exists())
 			System.err.println("'"+infofile.toString()+"' doesn't seem to exist");
 			

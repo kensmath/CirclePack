@@ -6,29 +6,37 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
+import combinatorics.komplex.DcelFace;
+import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.RedEdge;
 import complex.Complex;
+import dataObject.EdgeData;
+import dataObject.FaceData;
+import dataObject.NodeData;
+import dataObject.TileData;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
 import ftnTheory.PointEnergies;
-import geometry.EuclMath;
+import geometry.CommonMath;
+import geometry.SphericalMath;
 import input.CommandStrParser.Energy;
 import komplex.EdgeSimple;
-import listManip.EdgeLink;
 import listManip.FaceLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import listManip.TileLink;
 import math.Matrix3D;
 import math.Mobius;
 import packing.PackData;
-import panels.CPScreen;
 import util.CallPacket;
 import util.StringUtil;
 import util.ViewBox;
 
 public class QueryParser {
 	
-	public static int processQuery(PackData p,String queryStr,boolean forMsg) {
+	public static int processQuery(PackData p,
+			String queryStr,boolean forMsg) {
 		StringBuilder strbld=new StringBuilder(queryStr);
 		
 		// remove the '?'
@@ -59,19 +67,22 @@ public class QueryParser {
 	}
 	
 	/**
-	 * Return a String in response to a query. This may have three parts: 'words',
-	 * 'ans', and 'suffix'. 'ans' may represent a value, list, etc, and generally 
-	 * can be used as a variable value in commands (in string form). 
+	 * Return a String in response to a query. This may have 
+	 * three parts: 'words', 'ans', and 'suffix'. 'ans' may 
+	 * represent (in 'String' form) a value, list, etc, and 
+	 * generally can be used as a variable value in commands.
 	 * 
-	 * If 'forMsg' is true, query is intended as a message, so 'words' is prepended.
-	 * Note that 'words' defaults to "query (p*) = "; may want to change this if it
-	 * doesn't depend on the current packing (e.g., 'Vlist') 
+	 * If 'forMsg' is true, query is intended as a message, so 
+	 * 'words' is prepended. Note that 'words' defaults to 
+	 * "query (p*) = "; may want to change this if it doesn't 
+	 * depend on the current packing (e.g., '?Vlist'). 
 	 * 
-	 * Also, if 'forMsg', then some lists may be limited to 12 items, 
-	 * e.g. if vertex list is longer, put in '...' via a
-	 * 'suffix' string. Long strings are likewise truncated.
+	 * Also, if 'forMsg', then some lists may be limited 
+	 * to 12 items, e.g. if vertex list is longer, put in 
+	 * '...' via a 'suffix' string. Long strings are likewise 
+	 * truncated.
 	 * 
-	 * TODO: add functionality as needed 
+	 * TODO: add additional queries and functionality as needed 
 	 * 
 	 * @param query, String of '?<query>' type: the '?' is gone,
 	 *    string should have been trimmed already 
@@ -80,16 +91,17 @@ public class QueryParser {
 	 *        rather than used for something else, like setting a variable.
 	 * @return String representation of result, null on error
 	 */
-	public static String queryParse(PackData p,String query,Vector<Vector<String>> flagSegs,boolean forMsg) {
+	public static String queryParse(PackData p,String query,
+			Vector<Vector<String>> flagSegs,boolean forMsg) {
 		StringBuilder ans=new StringBuilder(""); // result of the query alone
 		// some utility variables
-		NodeLink vertlist=null;
 	  	int v;
 		String firststr=null;
 		// by default,  to use if 'forMsg'
 		StringBuilder words=new StringBuilder(query+" (p"+p.packNum+") "); 
 		String suffix=null;
 		boolean gotone=false;
+		String exception_words=null; // words when an exception is caught
 		
 		// utility: note first set of strings and its first string
 		Vector<String> items=null;
@@ -105,9 +117,52 @@ public class QueryParser {
 			
 			// handle any 'list' requests first: limit is 1000 or
 			//    12 if intended as a message.
-			if (query.length()>=5 && query.substring(1,5).equalsIgnoreCase("list")) {
+			if (query.length()>=5 && 
+					query.substring(1,5).equalsIgnoreCase("list")) {
 				int n=0;
 				switch(c) {
+				case 'h': {
+					if (p.hlist==null || p.hlist.size()==0) {
+						if (forMsg)
+							ans.append("empty");
+						break;
+					}
+					gotone=true;
+					n=p.hlist.size();
+					if (forMsg && n>12) {
+						n=12;
+		  	      		suffix=" ... ";
+					}
+					n=(n>1000)? 1000:n;
+					Iterator<HalfEdge> hlst=p.hlist.iterator();
+					int click=0;
+					while (hlst.hasNext() && click<n) {
+						HalfEdge edge=hlst.next();
+						ans.append(" "+edge+"  ");
+					}
+					break;
+				} 
+				case 'H': {
+					if (CPBase.Hlink==null || CPBase.Hlink.size()==0) {
+						if (forMsg)
+							ans.append("empty");
+						break;
+					}
+					gotone=true;
+					n=CPBase.Hlink.size();
+					if (forMsg && n>12) {
+						n=12;
+		  	      		suffix=" ... ";
+					}
+					n=(n>1000)? 1000:n;
+					Iterator<HalfEdge> hlst=PackControl.Hlink.iterator();
+					int click=0;
+					while (hlst.hasNext() && click<n) {
+						HalfEdge edge=hlst.next();
+						ans.append(" "+edge+"  ");
+					}
+					break;
+				}
 				case 'e': {
 					if (p.elist==null || p.elist.size()==0) {
 						if (forMsg)
@@ -368,23 +423,100 @@ public class QueryParser {
 			// now process the rest
 			else switch(c) {
 			
-			// NOTE: as queries are added, they should be added to 'CmdCompletion.txt'
+			// NOTE: as queries added, also add to 'CmdCompletion.txt'
 			
 			case 'a': { // --------------------------------------------------------
 			
 				// angle aim/pi (just one)
 				if (query.startsWith("aim")) {
 					v=NodeLink.grab_one_vert(p,flagSegs);
-					ans.append(Double.toString(p.rData[v].aim/Math.PI));
+					ans.append(Double.toString(p.getAim(v)/Math.PI));
 					gotone=true;
+				}
+				
+				// list all (non-ideal) face angles (NOT divided by PI) 
+				//   at given v. Assume packing is laid out so we can
+				//   return actual angles computed from centers,
+				//   along with angles computed from radii
+				else if (query.startsWith("angles_at")) {
+					v=NodeLink.grab_one_vert(p,flagSegs);
+					if (v!=0) {
+						words.append("vert "+v+", faces: ");
+						int[] fflower=p.getFaceFlower(v);
+						int n=fflower.length;
+						double angsum=0.0;
+						double intsum=0.0;
+						if (!p.packDCEL.vertices[v].isBdry())
+							n=n-1; // remove the repeat
+						for (int k=0;k<n;k++) {
+							DcelFace face=p.packDCEL.faces[fflower[k]];
+							int[] verts=face.getVerts(v);
+							
+							// Compute actual (i.e., based on centers)
+							Complex z0=p.getCenter(verts[0]);
+							Complex z1=p.getCenter(verts[1]);
+							Complex z2=p.getCenter(verts[2]);
+							double ang=0.0;
+							if (p.hes<0) { // hyperbolic
+								if (p.getRadius(verts[0])>0) {
+									Mobius mob=Mobius.mobNormDisc(z0,z1);
+									Complex newz2=mob.apply(z2); 
+									// mob.apply(z0);
+									// mob.apply(z1); 
+									// mob.apply(z2).arg();
+									double arg2=newz2.arg();
+									if (arg2<=0)
+										arg2+=2.0*Math.PI;
+									ang=arg2-Math.PI/2;
+								}
+							}
+							else if (p.hes==0) { // eucl
+								ang=z2.minus(z0).divide(z1.minus(z0)).arg();
+							}
+							else { // sph -- may be ambiguous, not checked
+								double[] tanvec1=SphericalMath.sph_tangent(z0,z1);
+								double[] tanvec2=SphericalMath.sph_tangent(z0,z2);
+								ang=Math.acos(SphericalMath.dot_prod(tanvec1, tanvec2));
+							}
+							angsum+=ang;
+							
+							// Compute intneded (i.e., based on radii)
+							
+							// find inv distances
+							HalfEdge he=face.edge;
+							HalfEdge startedge=null;
+							for (int j=0;j<3 && (startedge==null);j++) {
+								if (he.origin.vertIndx==v)
+									startedge=he;
+								he=he.next;
+							}
+							double ivd0=startedge.getInvDist();
+							double ivd1=startedge.next.getInvDist();
+							double ivd2=startedge.next.next.getInvDist();
+							double r0=p.getRadius(verts[0]);
+							double r1=p.getRadius(verts[1]);
+							double r2=p.getRadius(verts[2]);
+							double intang=CommonMath.get_face_angle(r0, r1, r2, ivd0,ivd1,ivd2,p.hes);
+							intsum +=intang;
+							
+							// insert results
+							words.append(face.faceIndx+",");
+							ans.append(ang+" ("+intang+")  ");
+							gotone=true;
+						} // end of if
+						words.append("; actual (intended) angles: ");
+						ans.append("; actual (intended) angle sum= "+angsum+" ("+intsum+")");
+					}
+					else
+						CirclePack.cpb.errMsg("Usage: ?angle_at {v}");
 				}
 				
 				// angle sum/pi (just one)
 				else if (query.startsWith("anglesum")) {
 					v=NodeLink.grab_one_vert(p,flagSegs);
 					if (v!=0) {
-						ans.append(Double.toString(p.rData[v].curv/Math.PI));
-						if (forMsg)
+						ans.append(Double.toString(p.getCurv(v)/Math.PI));
+						if (forMsg) 
 							words.append("v"+v+": ");
 						gotone=true;
 					}
@@ -394,8 +526,9 @@ public class QueryParser {
 					NodeLink vlist=new NodeLink(p,items);
 					if (vlist!=null) {
 						ans.append(p.gen_mark(vlist,-1,false));
-						if (forMsg) 
+						if (forMsg) { 
 							words.append("(furthest away): ");
+						}
 						gotone=true;
 					}
 				}
@@ -428,7 +561,7 @@ public class QueryParser {
 				if (query.startsWith("cent")) {
 					v=NodeLink.grab_one_vert(p,flagSegs);
 					if (v!=0) {
-						Complex z=p.rData[v].center;
+						Complex z=p.getCenter(v);
 						ans.append(z.x+" "+z.y);
 						if (forMsg)
 							words.append(" for v"+v+" ");
@@ -447,6 +580,19 @@ public class QueryParser {
 				break;
 			} //end of 'c'
 				
+			case 'd': 
+			case 'D': 
+			{
+				if (query.toLowerCase().startsWith("dce")) {
+					if (p.packDCEL!=null)
+						words.append("yes, DCEL exists");
+					else
+						words.append("no, DCEL does NOT exist");
+					gotone=true;
+				}
+				break;
+			} // end of 'd', 'D'
+			
 			case 'e': { // --------------------------------------------------------
 				
 				// "energy"; items should be the only flag sequence
@@ -470,54 +616,29 @@ public class QueryParser {
 						energy=PointEnergies.comp_energy(p,Energy.MIN_DIST);
 						words.append(", Min_distance");
 					}
-					else 
-						throw new ParserException("energy: valid type not indcated");
+					else {
+						exception_words="?energy usage: valid type not indicated";
+						throw new ParserException("");
+					}
 					// TODO: could consider negative infinity energy (e.g., power -100)
 					
 					ans.append(energy);
 					gotone=true;
 				}
-				
-				else if (query.startsWith("edge_x")) { // cross-ration of edge
-					int j,k,v1,v3;
-					words=new StringBuilder("Edge cross_ratios (p"+p.packNum);
-					EdgeLink edgelist=new EdgeLink(p,flagSegs.get(0));
-					Iterator<EdgeSimple> elist=edgelist.iterator();
-					EdgeSimple edge=null;
-					int count=0;
-					if (!forMsg) // just return value
-						count=11;
-					while(elist.hasNext() && ((!forMsg || count<12) || count<1000)) {
-						edge=(EdgeSimple)elist.next();
-						if ((j=p.nghb((v1=edge.v),(v3=edge.w)))>=0 
-								&& (k=p.nghb(v3,v1))>=0 && j!=p.kData[v1].num && k!=p.kData[v3].num) {
-
-							// TODO: what about case of inv distances/overlaps?
-							
-							Complex z=EuclMath.tang_cross_ratio(p, edge);
-							if (!forMsg) {
-								ans.append("edge <"+edge.v+" "+edge.w+"> cross-ratio is "+z.x+" "+z.y+"i");
-								count++;
-							}
-							else { // create message along the way
-								words.append(" edge ("+edge.v+" "+edge.w+"): cross_ratio = ("+
-										z.x+" i "+z.y+" ");
-								count++;
-			  			  	}
-						}
-						else {
-							throw new ParserException("error in list of edges.");
-						}
-						gotone=true;
-					} // end of while
-					
-					// return from here
-					if (!forMsg) 
-						return ans.toString();
-					else
+				else if(query.startsWith("edge")) {
+					forMsg=true; // only do this as a message
+					HalfEdge he=HalfLink.grab_one_edge(p,
+							StringUtil.reconItem(items));
+					if (he!=null) {
+						EdgeData eData=new EdgeData(p,he);
+						words.append("p"+p.packNum+"; edge ("+eData.edgeStr+
+								"); inv distance="+eData.invDist+
+								"; Schwarzian="+eData.schwarzian+"; edgelength="+
+								eData.edgelength+"; intended edgelength="+
+								eData.intended);
 						return words.toString();
+					}
 				}
-				
 				break;
 			} // end of 'e'
 			
@@ -529,24 +650,26 @@ public class QueryParser {
 					try {
 						vv=NodeLink.grab_one_vert(p,items.get(0));
 					} catch (Exception ex) {
-						throw new ParserException("usage: 'v'");
+						exception_words="?flower usage: 'v'";
+						throw new ParserException("");
 					}
 					words.append(" v"+vv); // show which vert
-					int n=p.kData[vv].num;
-					if (forMsg && n>12) {
-						n=12;
+					int num=p.countFaces(vv);
+					if (forMsg && num>12) {
+						num=12;
 		  	      		suffix=" ... ";
 					}
 					int j=0;
-					while (j<=n) {
-						ans.append(Integer.toString(p.kData[vv].flower[j])+" ");
+					int[] flower=p.packDCEL.vertices[vv].getFlower(true);
+					while (j<=num) {
+						ans.append(Integer.toString(flower[j])+" ");
 						j++;
 					}
 					gotone=true;
 				}
 				
 				// return f(z)
-				if (query.startsWith("f(z)")) {
+				else if (query.startsWith("f(z)")) {
 					double x=0;
 					double y=0;
 					try { // one (real) or two (complex)
@@ -555,14 +678,32 @@ public class QueryParser {
 							y=Double.parseDouble(items.get(1));
 						} catch (Exception ex) {}
 					} catch (Exception ex) {
-						throw new ParserException("usage: 'x [y]' for complex argument");
+						exception_words="?f(z) usage: 'x [y]' for complex argument";
+						throw new ParserException("");
 					}
-					Complex w=PackControl.functionPanel.getFtnValue(new Complex(x,y));
+					Complex w=CirclePack.cpb.getFtnValue(new Complex(x,y));
 					if (Math.abs(y)<CPBase.GENERIC_TOLER) // if real, suppress the y
 						ans.append(Double.toString(w.x));
 					else 
 						ans.append(new String(w.x+" "+w.y));
 					gotone=true;
+				}
+				
+				// face data
+				else if (query.startsWith("face")) {
+					forMsg=true; // only do this as a message
+					FaceData fData;
+					try { // one integer
+						int f=Integer.parseInt(items.get(0));
+						fData=new FaceData(p,f);
+					} catch (Exception ex) {
+						exception_words="?face <f> needs 'f'";
+						throw new ParserException("");
+					}
+					words.append("p"+p.packNum+"; face "+fData.findx+
+							"; vertices={"+fData.vertsStr+"}; colorcode="+
+							fData.colorCode+"; mark="+fData.mark);
+					return words.toString();
 				}
 				break;
 			} // end of 'f'
@@ -575,9 +716,10 @@ public class QueryParser {
 					try { // one real
 						t=Double.parseDouble(items.get(0));
 					} catch (Exception ex) {
-						throw new ParserException("usage: 't' for real argument");
+						exception_words="?gam(t) usage: 't' for real argument";
+						throw new ParserException("");
 					}
-					Complex w=PackControl.functionPanel.getParamValue(t);
+					Complex w=CirclePack.cpb.getParamValue(t);
 					ans.append(new String(w.x+" "+w.y));
 					gotone=true;
 				}
@@ -602,12 +744,58 @@ public class QueryParser {
 			
 			case 'm': {} // fall through
 			case 'M': {
-				
+
+				// vertex_map inverse
+				if (query.startsWith("map_i")) {
+					if (p.vertexMap==null) {
+						exception_words="?vertexMap usage: packing has no vertex map";
+						throw new ParserException("");
+					}
+					NodeLink vlist=new NodeLink(p,items);
+					int N=vlist.size();
+					int count=0;
+					Iterator<Integer> vlst=vlist.iterator();
+					while (vlst.hasNext() && ((!forMsg || count<12) || count<1000)) {
+						int w=vlst.next();
+						int vv=p.vertexMap.findV(w);
+						if (vv>0) {
+							ans.append("{"+vv+" , "+w+"} ");
+							count++;
+						}
+					}
+		  	      	if (count<N)
+		  	      		suffix=" ... ";
+					gotone=true;
+				}
+
+				// vertex_map
+				else if (query.startsWith("map")) {
+					if (p.vertexMap==null) {
+						exception_words="?vertexMap usage: packing has no vertex map";
+						throw new ParserException("");
+					}
+					NodeLink vlist=new NodeLink(p,items);
+					int N=vlist.size();
+					int count=0;
+					Iterator<Integer> vlst=vlist.iterator();
+					while (vlst.hasNext() && ((!forMsg || count<12) || count<1000)) {
+						int vv=vlst.next();
+						int w=p.vertexMap.findW(vv);
+						if (w>0) {
+							ans.append("{"+vv+" , "+w+"} ");
+							count++;
+						}
+					}
+		  	      	if (count<N)
+		  	      		suffix=" ... ";
+					gotone=true;
+				}
+
 				// Mobius
-				if (query.toLowerCase().startsWith("mob")) {
+				else if (query.toLowerCase().startsWith("mob")) {
 					forMsg=true;
 					
-					// side pairing of with some label?
+					// side pairing with some label?
 					if (items!=null && items.size()>0) {
 						Iterator<String> iit=items.iterator();
 						while (iit.hasNext()) {
@@ -615,7 +803,7 @@ public class QueryParser {
 							Mobius mb=p.namedSidePair(label);
 							if (mb!=null) {
 								StringBuilder mobwords=mb.mob2String();
-								mobwords.insert(0,new String("Mobius '"+label+":"+System.lineSeparator()+" "));
+								mobwords.insert(0,new String("Mobius '"+label+"':"+System.lineSeparator()+" "));
 								words.append(mobwords.toString());
 								gotone=true;
 							}
@@ -648,7 +836,7 @@ public class QueryParser {
 						{
 							v=FaceLink.grab_one_face(p,items.get(0));
 							if (v!=0) {
-								ans.append(p.faces[v].mark);
+								ans.append(p.getFaceMark(v));
 								if (forMsg) 
 									words.append(" f"+v);
 								gotone=true;
@@ -660,7 +848,7 @@ public class QueryParser {
 								break;
 							v=TileLink.grab_one_tile(p.tileData,items.get(0));
 							if (v!=0) {
-								ans.append(p.faces[v].mark);
+								ans.append(p.getFaceMark(v));
 								if (forMsg) 
 									words.append(" t"+v);
 								gotone=true;
@@ -670,7 +858,7 @@ public class QueryParser {
 						{
 							v=NodeLink.grab_one_vert(p,items.get(0));
 							if (v!=0) {
-								ans.append(p.kData[v].mark);
+								ans.append(p.getVertMark(v));
 								if (forMsg) 
 									words.append(" v"+v);
 								gotone=true;
@@ -718,26 +906,20 @@ public class QueryParser {
 			
 			case 'R': { // --------------------------------------------------------
 				if (query.startsWith("Redchai")) {
-					FaceLink redlink=new FaceLink(p,"R");
-					int n;
-					if (redlink==null || (n=redlink.size())==0)
-						throw new CombException("redchain seems to be empty");
-					int firstf=redlink.get(0);
-					if (forMsg && n>50) {
-						n=50;
-	  	      			suffix=" ... ";
+					if (p.packDCEL.redChain==null) {
+						exception_words="?Redchain usage: appears to be empty";
+						throw new CombException("");
 					}
-					n=(n>1000)? 1000:n;
-					Iterator<Integer> rlk=redlink.iterator();
+					RedEdge rtrace=p.packDCEL.redChain;
 					int click=0;
-					while (rlk.hasNext() && click<n) {
-						ans.append(" "+rlk.next());
-					}
-					if (!rlk.hasNext()) // if done, close with first face
-						ans.append(" "+firstf);
+					do {
+						ans.append(" <"+rtrace.myEdge+">");
+						rtrace=rtrace.nextRed;
+					} while (rtrace!=p.packDCEL.redChain && click<12);
+					if (click==12) // if done, close with first face
+						ans.append(" ... ");
 					gotone=true;
 				}
-
 				break;
 			}
 			
@@ -747,7 +929,7 @@ public class QueryParser {
 				if (query.startsWith("rad")) {
 					v=NodeLink.grab_one_vert(p, flagSegs);
 					if (v!=0) {
-						ans.append(p.getRadius(v));
+						ans.append(p.getActualRadius(v));
 						if (forMsg) 
 							words.append(" v"+v);
 						gotone=true;
@@ -780,15 +962,15 @@ public class QueryParser {
 				// screen dimensions
 				else if (query.startsWith("screen")) {
 					forMsg=true;
-					ViewBox vB=p.cpScreen.realBox;
+					ViewBox vB=p.cpDrawing.realBox;
 					words=new StringBuilder("Screen for p"+p.packNum+":");
 						words.append(System.lineSeparator());
 						words.append(" \r\nset_screen -b "+String.format("%." + 4 + "e", vB.lz.x)+" "+
 							String.format("%." + 4 + "e", vB.lz.y)+" "+
 							String.format("%." + 4 + "e", vB.rz.x)+" "+
 							String.format("%." + 4 + "e", vB.rz.y));
-					if (p.hes>0 && p.cpScreen.sphView.viewMatrix!=null) {
-						Matrix3D m=p.cpScreen.sphView.viewMatrix;
+					if (p.hes>0 && p.cpDrawing.sphView.viewMatrix!=null) {
+						Matrix3D m=p.cpDrawing.sphView.viewMatrix;
 						words.append(String.format("%n","")+"               set_sv -t "+
 								String.format("%." + 4 + "e", m.m00)+"  "+
 								String.format("%." + 4 + "e", m.m01)+"  "+
@@ -811,81 +993,76 @@ public class QueryParser {
 						words.append(" is ");
 					gotone=true;
 				}
-				else if (query.startsWith("schw")) {
-					EdgeSimple edge=EdgeLink.grab_one_edge(p, flagSegs);
-					if (edge!=null) {
-						try {
-							int indx=p.nghb(edge.v,edge.w);
-							ans.append(String.format("%.6f",p.kData[edge.v].schwarzian[indx]));
-						} catch (Exception ex) {
-							throw new DataException("query usage: 'schwarzian' is not allocated");
-						}
-						if (forMsg) 
-							words.append(" <v,w>"+edge.v+" "+edge.w);
-						gotone=true;
-					}
-				}
 				else if (query.startsWith("sch_flo")) { // add schwarzians around a vertex
 					int vv=NodeLink.grab_one_vert(p,flagSegs);
 					if (vv!=0) {
 						try {
 							double accum=0.0;
-							for (int j=0;j<p.kData[vv].num;j++)
-								accum += p.kData[vv].schwarzian[j];
+							HalfLink spokes=p.packDCEL.vertices[vv].getEdgeFlower();
+							Iterator<HalfEdge> sis=spokes.iterator();
+							while (sis.hasNext()) {
+								HalfEdge he=sis.next();
+								accum+=he.getSchwarzian();
+							}
 							ans.append(String.format("%.6f",accum));
 						} catch (Exception ex) {
-							throw new DataException("query usage: 'schwarzian' may not be allocated");
+							throw new DataException("");
 						}
 						if (forMsg)
 							words.append(" for vert "+vv);
 						gotone=true;
 					}	
 				}
+				else if (query.startsWith("sch")) {
+					HalfLink hlink=new HalfLink(p,flagSegs.get(0));
+					int tick=0;
+					Iterator<HalfEdge> his=hlink.iterator();
+					while (tick<10 && his.hasNext()) {
+						HalfEdge edge=his.next();
+						if (edge!=null) {
+							try {
+								ans.append(String.format(" %.6f ",edge.getSchwarzian()));
+							} catch (Exception ex) {
+								throw new DataException("");
+							}
+							if (forMsg) 
+								words.append(" <v,w>"+edge);
+							gotone=true;
+						}
+					}
+				}
 				break;
 			} // end of 's'
 			
-			case 'v': { // --------------------------------------------------------
-
-				if (query.startsWith("vertexMap")) {
-					if (p.vertexMap==null)
-						throw new ParserException("packing doesn't have a vertex map");
-					int N=p.vertexMap.size();
-					Iterator<EdgeSimple> vm=p.vertexMap.iterator();
-					int count=0;
-					while (vm.hasNext() && (!forMsg || count<12) || count<1000) {
-						EdgeSimple edge=vm.next();
-						ans.append(edge.v+" "+edge.w+"  ");
-						count++;
-					}
-		  	      	if (count<N)
-		  	      		suffix=" ... ";
-					gotone=true;
+			
+			case 't': { // ----------------------------------------
+				if (query.startsWith("tile") && p.tileData!=null) {
+					forMsg=true; // only do this as a message
+					int t=TileLink.grab_one_tile(p.tileData,StringUtil.reconItem(items));
+		  	      	TileData tData=new TileData(p,t);
+		  	      	words.append("p"+p.packNum+"; tile indx="+tData.tindx+
+		  	      			"; degree="+tData.degree+"; tileflower={"+
+		  	      			tData.nghbStr+"}; mark="+tData.mark+
+		  	      			"; colorCode="+tData.colorCode);
+		  	      	return words.toString();
 				}
+				break;
+			}
+			
+			case 'v': { // --------------------------------------------------------
 				
 				// vert info
-				else if (query.startsWith("vertInfo")) {
+				if (query.startsWith("vert")) {
 					forMsg=true; // only do this as a message
-		  	      	vertlist=new NodeLink(p,items);
-		  	      	int N=vertlist.size();
-		  	      	Iterator<Integer> vlist=vertlist.iterator();
-		  	      	int count=0;
-		  	      	while (vlist.hasNext() && count<5) {
-		  	      		v=(Integer)vlist.next();
-		  	      		words.append("\n vert#"+v+", p"+p.packNum+": rad="+p.getRadius(v)+
-		  	      				", center=("+p.rData[v].center.x+","+p.rData[v].center.y+")"+
-		  	      				", ang sum="+p.rData[v].curv/Math.PI+
-		  	      				" Pi, aim="+p.rData[v].aim/Math.PI+
-		  	      				" Pi, boundaryFlag="+p.kData[v].bdryFlag+
-		  	      				", star="+p.kData[v].num+
-		  	      				", mark="+p.kData[v].mark+
-		  	      				", plotFlag="+p.kData[v].plotFlag+
-		  	      				", color="+CPScreen.col_to_table(p.kData[v].color));
-		  	      		count++;
-		  	      	}
-		  	      	if (count<N) {
-		  	      		words.append(" ... ");
-		  	      	}
-	  	      		gotone=true;
+					v=NodeLink.grab_one_vert(p,StringUtil.reconItem(items));
+	  	      		NodeData vData=new NodeData(p,v);
+	  	      		words.append("p"+p.packNum+"; vert="+vData.vindx+
+	  	      				"; rad="+vData.rad+"; center=("+vData.center+
+	  	      				"); flower={"+vData.flowerStr+"}; sum="+
+	  	      				vData.angsum/Math.PI+" Pi; aim="+vData.aim/Math.PI+
+	  	      				" Pi; boundary?="+vData.bdryflag+
+	  	      				"; degree="+vData.degree+"; mark="+vData.mark+
+	  	      				"; colorCode="+vData.colorCode);
 		  	      	return words.toString();
 				}
 				break;
@@ -894,16 +1071,20 @@ public class QueryParser {
 			{
 				forMsg=true; // can only go to message
 				int k=query.indexOf(" ");
-				if (query.length()<=1 || k==1)
-					throw new ParserException("No variable name was given");
+				if (query.length()<=1 || k==1) {
+					exception_words="?_<variable> usage: No variable name was given";
+					throw new ParserException("");
+				}
 				String vkey;
 				if (k<0)
 					vkey=query.substring(1);
 				else
 					vkey=query.substring(1,k);
 				String varValue=PackControl.varControl.getValue(vkey);
-				if (varValue==null || varValue.length()==0)
-					throw new ParserException("variable '"+vkey+"' has no stored value");
+				if (varValue==null || varValue.length()==0) {
+					exception_words="?_<variable> usage: variable '\"+vkey+\"' has no stored value";
+					throw new ParserException("");
+				}
 				if (varValue.length()>100) {
 					varValue=varValue.substring(0,100);
 					suffix=new String(" ... ");
@@ -914,6 +1095,7 @@ public class QueryParser {
 				break;
 			}
 			default: {
+				exception_words="? no valid query key word";
 				throw new ParserException("");
 			}
 			
@@ -925,7 +1107,9 @@ public class QueryParser {
 				}
 			
 		} catch (Exception ex) {
-			throw new ParserException("Query '"+query+"' has error or was not recognized: "+ex.getMessage());
+			if (exception_words!=null) 
+				throw new ParserException(" Query problem: "+exception_words);
+			throw new ParserException("Query '"+query+"' has error or was not recognized: ");
 		}
 		
 		// generic return method: note, string depends on 'forMsg'
@@ -946,24 +1130,14 @@ public class QueryParser {
 //	  		  return jexecute(p,"extender ?");
 //	  	  }
 //	  	  if (query.startsWith("param")) {}
-//	  	  if (query.startsWith("flower")) {}
-//	  	  if (query.startsWith("ang_sum")) {}
-//	  	  if (query.startsWith("aim")) {}
-//	  	  if (query.startsWith("face")) {}
-//	  	  if (query.startsWith("over")) {}
 //	  	  if (query.startsWith("alt_rad")) {}
 //	  	  if (query.startsWith("kap")) {}
-//	  	  if (query.startsWith("antip")) {}
-//	  	  if (query.startsWith("screen")) {}
 //	  	  if (query.startsWith("pk_stat")) {}
 //	  	  if (query.startsWith("bdry_dist")) {}
-//	  	  if (query.startsWith("edge_p")) {}
 //	  	  if (query.startsWith("ratio_ftn")) {}
 //	  	  if (query.startsWith("conduct")) {}
 //	  	  if (query.startsWith("bdry_length")) {}
 //	  	  if (query.startsWith("script")) {}
-//	  	  if (query.startsWith("map_rev")) {}
-//	  	  if (query.startsWith("map")) {}
 
 	}
 	

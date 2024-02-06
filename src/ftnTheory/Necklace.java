@@ -6,18 +6,20 @@ import java.util.Random;
 import java.util.Vector;
 
 import allMains.CPBase;
+import allMains.CirclePack;
+import dcel.CombDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.ParserException;
 import komplex.EdgeSimple;
-import komplex.PackCreation;
 import listManip.EdgeLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
+import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
-import panels.CPScreen;
 import util.CmdStruct;
+import util.ColorUtil;
 import util.StringUtil;
 
 /**
@@ -150,15 +152,15 @@ public class Necklace extends PackExtender {
 				Oops("'topPack' or 'bottomPack' is null");
 			
 			// center vert of face #1 edge in axis (3 or 5)
-			int topOrigin=topPack.gamma;
-			int bottomOrigin=bottomPack.gamma;
+			int topOrigin=topPack.getGamma();
+			int bottomOrigin=bottomPack.getGamma();
 			
 			// check util_A, util_B
-			if (topPack.kData[topPack.util_A].bdryFlag==0 ||
-					topPack.kData[topPack.util_A].bdryFlag==0)
+			if (!topPack.isBdry(topPack.util_A) ||
+					!topPack.isBdry(topPack.util_A))
 				Oops("Problem with 'topPack.util_A' or 'util_B'");
-			if (bottomPack.kData[bottomPack.util_A].bdryFlag==0 ||
-					bottomPack.kData[bottomPack.util_A].bdryFlag==0)
+			if (!bottomPack.isBdry(bottomPack.util_A) ||
+					!bottomPack.isBdry(bottomPack.util_A))
 				Oops("Problem with 'bottomPack.util_A' or 'util_B'");
 			
 			// get NodeLinks for topBlue, topRed, bottomBlue, bottomRed
@@ -203,17 +205,15 @@ public class Necklace extends PackExtender {
 			CPBase.Elink=new EdgeLink(topPack,"b("+topleftend+" "+vtop+")");
 
 			// ------------------ now, do the adjoin 
-			int rslt=topPack.adjoin(bottomPack,vtop,vbottom,length);
-			if (rslt<=0)
-				Oops("problem with adjoin");
+			topPack.packDCEL=CombDCEL.adjoin(topPack.packDCEL,
+					bottomPack.packDCEL,vtop,vbottom,length);
+			topPack.packDCEL.fixDCEL(topPack);
 			
 			// save the resulting packing as the parent packing
-			CPScreen cpS=packData.cpScreen;
-			cpS.swapPackData(topPack,false);
-			packData=cpS.packData;
+			int pnum=packData.packNum;
+			packData=CirclePack.cpb.swapPackData(topPack,pnum,false);
 			
 			// do some fixup
-			packData.setCombinatorics();
 			packData.setAlpha(topOrigin);
 			packData.vlist=pasteVerts;
 			
@@ -224,20 +224,23 @@ public class Necklace extends PackExtender {
 			// transfer colors, marks
 			for (int v=1;v<=bottomPack.nodeCount;v++) {
 				int newv=packData.vertexMap.findW(v);
-				Color col=bottomPack.kData[v].color;
-				packData.kData[newv].color=new Color(col.getRed(),col.getGreen(),col.getBlue());
-				packData.kData[newv].mark=bottomPack.kData[v].mark;
+				Color col=bottomPack.getCircleColor(v);
+				packData.setCircleColor(newv,new Color(col.getRed(),
+						col.getGreen(),col.getBlue()));
+				packData.setVertMark(newv,bottomPack.getVertMark(v));
 			}
 
 			// create 'elist' to hold edges not connected to
 	 		//  face center vertices --- i.e. the graph edges
 	 		packData.elist=new EdgeLink(packData);
 	 		for (int v=1;v<=packData.nodeCount;v++) {
-	 			if (packData.kData[v].mark!=1)
-	 				for (int j=0;j<packData.kData[v].num+packData.kData[v].bdryFlag;j++) {
-	 					int k=packData.kData[v].flower[j];
-	 					if (k>v && packData.kData[k].mark!=1)
+	 			if (packData.getVertMark(v)!=1) {
+	 				int[] petals=packData.packDCEL.vertices[v].getPetals();
+	 				for (int j=0;j<petals.length;j++) {
+	 					int k=petals[j];
+	 					if (k>v && packData.getVertMark(k)!=1)
 	 						packData.elist.add(new EdgeSimple(v,k));
+	 				}
 	 			}
 	 		}			
 			
@@ -251,13 +254,10 @@ public class Necklace extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				CPScreen cpS=CPBase.pack[pnum];
-				if (cpS!=null) {
-					if (cmd.length()==4 || cmd.charAt(4)=='B' || cmd.charAt(4)=='b')
-						cpS.swapPackData(bottomPack,false);
-					else
-						cpS.swapPackData(topPack,false);
-				}
+				if (cmd.length()==4 || cmd.charAt(4)=='B' || cmd.charAt(4)=='b')
+					CirclePack.cpb.swapPackData(bottomPack,pnum,false);
+				else
+					CirclePack.cpb.swapPackData(topPack,pnum,false);
 			} catch (Exception ex) {
 				return 0;
 			}
@@ -279,17 +279,11 @@ public class Necklace extends PackExtender {
 		
 		// ========================= save ========================
 		else if (cmd.startsWith("save")) {
-			CPScreen cpS=packData.cpScreen;
-			if (cpS==null) 
-				Oops("problem saving");
-			if (cmd.charAt(4)=='B' || cmd.charAt(4)=='b') {
-				cpS.swapPackData(bottomPack,false);
-				packData=cpS.packData;
-			}
-			else {
-				cpS.swapPackData(topPack,false);
-				packData=cpS.packData;
-			}
+			int pnum=packData.packNum;
+			if (cmd.charAt(4)=='B' || cmd.charAt(4)=='b') 
+				CirclePack.cpb.swapPackData(bottomPack,pnum,false);
+			else 
+				CirclePack.cpb.swapPackData(topPack,pnum,false);
 			return 1;
 		}
 		
@@ -316,17 +310,17 @@ System.err.println("starting bottomHemi:");
 			int k=2*rand.nextInt(7);
 			int b=2;
 			for (int j=0;j<k;j++)
-				b=bottomHemi.kData[b].flower[0];
-			
-			topHemi.adjoin(bottomHemi,2,b,N*2);
-			topHemi.setCombinatorics();
+				b=bottomHemi.getFirstPetal(b);
+
+			topHemi.packDCEL=CombDCEL.adjoin(topHemi.packDCEL,
+					bottomHemi.packDCEL,2,b,N*2);
+			topHemi.packDCEL.fixDCEL(topHemi);
+
 			cpCommand(topHemi,"max_pack");
 			
 			// save the resulting packing as the parent packing
-			CPScreen cpS=packData.cpScreen;
-			cpS.swapPackData(topHemi,false);
-			packData=cpS.packData;
-			
+			int pnum=packData.packNum;
+			packData=CirclePack.cpb.swapPackData(topHemi,pnum,false);
 			return packData.nodeCount;
 		}
 
@@ -363,17 +357,17 @@ System.err.println("starting bottomHemi:");
 		
 		// This is the packing we are growing.
 		PackData myPacking=PackCreation.seed(6,-1);
-		myPacking.kData[1].mark=-1;
-		myPacking.kData[3].mark=-2;
-		myPacking.kData[5].mark=-2;
-		myPacking.kData[7].mark=-2;
-		myPacking.kData[1].color=CPScreen.coLor(190);
-		myPacking.kData[2].color=CPScreen.coLor(10);
-		myPacking.kData[4].color=CPScreen.coLor(10);
-		myPacking.kData[6].color=CPScreen.coLor(10);
-		myPacking.kData[3].color=CPScreen.coLor(100);
-		myPacking.kData[5].color=CPScreen.coLor(100);
-		myPacking.kData[7].color=CPScreen.coLor(100);
+		myPacking.setVertMark(1,-1);
+		myPacking.setVertMark(3,-2);
+		myPacking.setVertMark(5,-2);
+		myPacking.setVertMark(7,-2);
+		myPacking.setCircleColor(1,ColorUtil.coLor(190));
+		myPacking.setCircleColor(2,ColorUtil.coLor(10));
+		myPacking.setCircleColor(4,ColorUtil.coLor(10));
+		myPacking.setCircleColor(6,ColorUtil.coLor(10));
+		myPacking.setCircleColor(3,ColorUtil.coLor(100));
+		myPacking.setCircleColor(5,ColorUtil.coLor(100));
+		myPacking.setCircleColor(7,ColorUtil.coLor(100));
 
 		if (n==3) {
 			// start single face
@@ -443,8 +437,10 @@ System.err.println("starting bottomHemi:");
 				if (rightPack.vertexMap.findW(bn)==u)
 					rightIndx=bn;
 			}
-System.err.println("adjoining right");			
-			myPacking.adjoin(rightPack,2,rightIndx,2);
+//System.err.println("adjoining right");
+			myPacking.packDCEL=CombDCEL.adjoin(myPacking.packDCEL,
+					rightPack.packDCEL,2,rightIndx,2);
+			myPacking.packDCEL.fixDCEL(myPacking);
 			
 			// save original index info
 			Iterator<EdgeSimple> vM=rightPack.vertexMap.iterator();
@@ -470,7 +466,9 @@ System.err.println("adjoining right");
 			}
 			System.err.println("adjoining left");			
 
-			myPacking.adjoin(leftPack,6,leftIndx,2);
+			myPacking.packDCEL=CombDCEL.adjoin(myPacking.packDCEL,
+					leftPack.packDCEL,6,leftIndx,2);
+			myPacking.packDCEL.fixDCEL(myPacking);
 
 			// save original index infor
 			Iterator<EdgeSimple> vM=leftPack.vertexMap.iterator();
