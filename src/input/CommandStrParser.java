@@ -1010,6 +1010,7 @@ public class CommandStrParser {
 		  else if (cmd.startsWith("create")) {
 			  int mode=1;
 			  int param=0;
+			  flagSegs.remove(0);
 			  String type = null;
 			  try {
 				  type=items.remove(0);
@@ -1068,7 +1069,36 @@ public class CommandStrParser {
 			  switch (mode) {
 			  case 1: // seed
 			  {
-				  newPack=PackCreation.seed(param,0);
+				  // -s flag? create from schwarzians
+				  if (flagSegs==null || flagSegs.size()==0
+						  || !(items=flagSegs.remove(0)).remove(0).startsWith("-s"))
+					  newPack=PackCreation.seed(param,0);
+				  else {
+					  Vector<Double> schvec=new Vector<Double>();
+					  // get as many schwarzians as available
+					  while (items.size()>0) {
+						  String numstr=items.remove(0);
+						  try {
+							  Double dbl=Double.parseDouble(numstr);
+							  schvec.add(dbl);
+						  } catch(Exception iex) {
+							  CirclePack.cpb.errMsg("seed -s: schwarzian failure");
+							  break;
+						  }
+					  }
+					  int sz=schvec.size();
+					  int szp=sz+1;
+					  if (szp<param+1) 
+						  szp=param+1;
+					  double[] schlist=new double[szp];
+					  int tick=1;
+					  Iterator<Double> sst=schvec.iterator();
+					  while (sst.hasNext() && tick<=param) {
+						  schlist[tick++]=(double)sst.next();
+					  }
+					  
+					  newPack=PackCreation.seed(param,0,schlist);
+				  }
 				  break;
 			  }
 			  case 2: // hex/Hex
@@ -4604,7 +4634,13 @@ public class CommandStrParser {
 		  // get the 'TriAspect
 		  TriAspect ftri=new TriAspect(packData.packDCEL,he.face);
 		  TriAspect gtri=new TriAspect(packData.packDCEL,he.twin.face);
-		  int ans=workshops.LayoutShop.schwPropogate(ftri,gtri,he,s,1);
+		  int ans=0;
+		  try {
+			  ans=workshops.LayoutShop.schwPropogate(ftri,gtri,he,s,1);
+		  } catch(Exception ex) {
+			  CirclePack.cpb.errMsg("T_s_prop, sch propogate failed.");
+			  return 0;
+		  }
 		  if (ans<0)
 			  return 0;
 		  

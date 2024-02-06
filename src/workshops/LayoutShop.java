@@ -11,6 +11,8 @@ import complex.Complex;
 import dcel.PackDCEL;
 import dcel.Schwarzian;
 import exceptions.CombException;
+import exceptions.DataException;
+import exceptions.MobException;
 import exceptions.ParserException;
 import geometry.CircleSimple;
 import listManip.FaceLink;
@@ -156,14 +158,15 @@ public class LayoutShop {
 	}
 
 	/**
-	 * Recompute centers along list of faces; only do contiguous faces, and assume
-	 * first is already in place.
+	 * Recompute centers along list of faces; only do 
+	 * contiguous faces, and assume first already placed.
 	 * 
 	 * @param pdcel    PackDCEL
 	 * @param facelist FaceLink
 	 * @param hes      int
-	 * @param useSchw  boolean, true, use schwarzians instead of radii
-	 * @return int last face index, 0 on failure
+	 * @param useSchw  boolean, true, use schwarzians 
+	 * instead of radii @return int last face index, 
+	 * 0 on failure
 	 */
 	public static int layoutFaceList(PackDCEL pdcel,FaceLink facelist,
 			int hes,boolean useSchw) {
@@ -171,15 +174,17 @@ public class LayoutShop {
 			return 0;
 		Iterator<Integer> fis = facelist.iterator();
 		DcelFace last_face = pdcel.faces[fis.next()];
+		DcelFace next_face =last_face;
 		while (fis.hasNext()) {
+			last_face=next_face;
 			int g = fis.next(); // next face
-			DcelFace next_face = pdcel.faces[g];
+			next_face = pdcel.faces[g];
 			HalfEdge he = last_face.faceNghb(next_face).twin;
 
 			// shuck non-neighbors
 			while (he == null && fis.hasNext()) {
 				next_face = pdcel.faces[fis.next()];
-				he = last_face.faceNghb(next_face);
+				he = next_face.faceNghb(last_face);
 			}
 
 			// note order: we use centers for 'he' as an edge
@@ -197,8 +202,12 @@ public class LayoutShop {
 				int ans=-1;
 				if (useSchw) {
 					double s=he.getSchwarzian();
-					ans=workshops.LayoutShop.schwPropogate(ftri, gtri,
-							he,s,1);
+					try {
+						ans=workshops.LayoutShop.schwPropogate
+							(ftri, gtri,he,s,1);
+					} catch (Exception ex) {
+						throw new DataException(ex.getMessage());
+					}
 				}
 				else {
 					double rad=pdcel.getVertRadius(he.twin.prev);
@@ -207,9 +216,9 @@ public class LayoutShop {
 				}
 				
 				if (ans>0) {
-					int j=gtri.vertIndex(he.twin.prev.origin.vertIndx);
-					pdcel.setCent4Edge(he.twin.next.next, gtri.center[j]);
-					pdcel.setRad4Edge(he.twin.next.next, gtri.radii[j]);
+					int j=gtri.vertIndex(he.prev.origin.vertIndx);
+					pdcel.setCent4Edge(he.next.next, gtri.center[j]);
+					pdcel.setRad4Edge(he.next.next, gtri.radii[j]);
 				}
 			}
 		} // end of while
@@ -303,12 +312,12 @@ public class LayoutShop {
 			HalfEdge fedge,double s, int mode) {
 		if (fedge.isBdry())
 			return -1;
-		int fv = ftri.edgeIndex(fedge);
+		int fv = ftri.edgeIndex(fedge.twin);
 		if (fv < 0)
 			throw new ParserException("TriAspect does not contain given "
 					+ "HalfEdge " + fedge);
 		int fw = (fv+1)%3;
-		int gw=gtri.edgeIndex(fedge.twin);
+		int gw=gtri.edgeIndex(fedge);
 		int gv=(gw+1)%3;
 		int gopp=(gw+2)%3;
 
@@ -324,10 +333,15 @@ public class LayoutShop {
 
 		// update tang pts, compute map FROM "base equilateral"
 		ftri.setTanPts();
-		Mobius bm_f = Mobius.mob_xyzXYZ(
+		Mobius bm_f=new Mobius();
+		try {
+			bm_f = Mobius.mob_xyzXYZ(
 				CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
 				ftri.tanPts[0],ftri.tanPts[1],ftri.tanPts[2],
 				0, ftri.hes);
+		} catch (MobException mex) {
+			throw new MobException(mex.getMessage());
+		}
 
 		// compute the target circle
 		CircleSimple sC = Schwarzian.getThirdCircle(s, fv, bm_f, ftri.hes);
@@ -341,13 +355,16 @@ public class LayoutShop {
 	}
 
 	/**
-	 * Given HalfEdge (v,w) with faces f and g (left/right resp.), compute the
-	 * center of vert opposite (w,v) in face g based on data in 'tri_f': either
-	 * centers for v and w and the radius for the opposite vertex or the schwarzian
+	 * Given HalfEdge (v,w) with faces f and g 
+	 * (left/right resp.), compute the center of vert 
+	 * opposite (w,v) in face g based on data in 
+	 * 'tri_f': either centers for v and w and the 
+	 * radius for the opposite vertex or the schwarzian
 	 * of the edge if 'useSchw' is true.
 	 * 
-	 * Note that the new data (including for v,w) is in the returned 'TriAspect', so
-	 * the user may have to save what is needed on return.
+	 * Note that the new data (including for v,w) 
+	 * is in the returned 'TriAspect', so the user 
+	 * may have to save what is needed on return.
 	 * 
 	 * @param pdcel   PackDCEL
 	 * @param fedge   HalfEdge, edge of face f

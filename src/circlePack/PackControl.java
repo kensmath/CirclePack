@@ -1074,11 +1074,11 @@ MouseMotionListener,FocusListener {
 	}
 
 	/**
-	 * Install packing 'p' in place of 'packings[pnum]'; former 
-	 * 'packings[pnum]' is generally orphaned. 
-	 * TODO: This replaced 'CPDrawing.swapPackData' and there may
-	 * be problems in some cases when 'packData' didn't have a
-	 * 'packNum'.
+	 * Install packing 'p' in place of 'packings[pnum]'; 
+	 * former 'packings[pnum]' is generally orphaned. 
+	 * TODO: This replaced 'CPDrawing.swapPackData' and 
+	 * there may be problems in some cases when 'packData'
+	 * didn't have a 'packNum'.
 	 * @param p PackData, new data
 	 * @param pnum int
 	 * @param keepX boolean, keep current 'packings[pnum]' extenders

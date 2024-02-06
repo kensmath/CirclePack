@@ -738,8 +738,12 @@ public class PackDCEL {
 	    		gtri=new TriAspect(this,he.face);
 	    		prev_g=gtri.faceIndx;
 	    		int ans=-1;
-	    		ans= workshops.LayoutShop.schwPropogate(ftri,gtri,he.twin,
+	    		try {
+	    			ans= workshops.LayoutShop.schwPropogate(ftri,gtri,he.twin,
 	    				he.getSchwarzian(),1);
+	    		} catch (Exception ex) {
+	    			throw new DataException(ex.getMessage());
+	    		}
 	    	
 	    		// get new data
 	    		if (ans>=0) {
@@ -855,8 +859,12 @@ public class PackDCEL {
 	    		gtri=new TriAspect(this,he.face);
 	    		prev_g=gtri.faceIndx;
 	    		int ans=-1;
-	    		ans= workshops.LayoutShop.schwPropogate(ftri,gtri,he.twin,
+	    		try {
+	    			ans= workshops.LayoutShop.schwPropogate(ftri,gtri,he.twin,
 	    				he.getSchwarzian(),1);
+	    		} catch (Exception ex) {
+	    			throw new DataException(ex.getMessage());
+	    		}
 		    	if (V!=null && V==he.next.next.origin) // add new location
 		    		centlist.add(getVertCenter(he.next.next));
 	    	

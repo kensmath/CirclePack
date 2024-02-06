@@ -233,52 +233,7 @@ public class Schwarzian {
 		} // end of while
 		return count;
 	}
-
-	/**
-	 * Given centers for oriented face <v,w,a>, center for b in 
-	 * oriented face <w,v,b>, and geometry, find schwarzian for <v,w>.
-	 * Note, we assume tangency.
-	 * @param Z Complex[4]
-	 * @param hes int, geometry
-	 * @return double
-	 * @throws DataException
-	 */
-	public static double cents_to_schwarzian(Complex[] Z,int hes) {
-		// compute the face tangency points, then face mobius, i.e.,
-		//    the mobius maps FROM the base equilateral to the face
-		DualTri dtri=new DualTri(Z[0],Z[1],Z[2],hes); // <v,w,u>
-		Complex []tanPts=new Complex[3];
-		for (int j=0;j<3;j++)
-			tanPts[j]=new Complex(dtri.TangPts[j]);
-		Mobius fbase=Mobius.mob_xyzXYZ(
-			CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
-			tanPts[0],tanPts[1],tanPts[2],0,hes);
-			
-		dtri=new DualTri(Z[1],Z[0],Z[3],hes); // <w,v,b>
-		for (int j=0;j<3;j++)
-			tanPts[j]=new Complex(dtri.TangPts[j]);
-		Mobius gbase=Mobius.mob_xyzXYZ(
-				CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
-				tanPts[0],tanPts[1],tanPts[2],0,hes);
-
-		Mobius dMob = Schwarzian.getIntrinsicSch(fbase,gbase,0,0);
-		return dMob.c.x;
-	}
-	
-	public static double cents_to_schwarzian(PackData p,HalfEdge edge) {
-		if (edge.isBdry())
-			return 1.0;
-		Complex[] cents=new Complex[4];
-		HalfEdge he=edge;
-		int tick=0;
-		do {
-			cents[tick++]=p.packDCEL.getVertCenter(he);
-			he=he.next;
-		} while (tick<=3);
-		cents[4]=p.packDCEL.getVertCenter(edge.twin.next.next);
-		return cents_to_schwarzian(cents,p.hes);
-	}
-	
+		
 	/**
 	 * Given radii (r0,r1,r2) for oriented face {v,w,a},
 	 * radius r4 for b in the oriented face {w,v,b}, and
@@ -354,7 +309,13 @@ public class Schwarzian {
 			tick++;
 		} while (tick<=3);
 		rads[3]=p.packDCEL.getVertRadius(edge.twin.next.next);
-		return rad_to_schwarzian(rads,p.hes);
+		double ans=0;
+		try {
+			ans=rad_to_schwarzian(rads,p.hes);
+		} catch(Exception ex) {
+			throw new DataException(ex.getMessage());
+		}
+		return ans; 
 	}
 	
 	/**
@@ -517,6 +478,7 @@ public class Schwarzian {
 			tpts[j]=CommonMath.get_tang_pt(z1, z2, r1, r2, p.hes);
 		}
 
+		// this may throw exception
 		Mobius tmpMob=Mobius.mob_xyzXYZ(CPBase.omega3[0],
 				CPBase.omega3[1],CPBase.omega3[2],
 				tpts[0],tpts[1],tpts[2],0,p.hes);

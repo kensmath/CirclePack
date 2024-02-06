@@ -174,7 +174,8 @@ public class TriAspect extends TriData {
 	}
 	
 	/**
-	 * Compute the circle opposite edge (j,j+1).
+	 * Compute the circle opposite edge (j,j+1) using
+	 * centers, radii, and inv distances.
 	 * @param j int
 	 * @param useLabels boolean
 	 * @return CircleSimple

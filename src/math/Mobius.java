@@ -678,6 +678,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 */
 	public static Mobius mob_xyzXYZ(Complex x, Complex y, Complex z, Complex X,
 			Complex Y, Complex Z,int hes,int Hes) {
+		if (X==null || Y==null || Z==null)
+			throw new MobException("failed to get face Mobius");
 		if (hes>0) {
 			x=SphericalMath.s_pt_to_plane(x);
 			y=SphericalMath.s_pt_to_plane(y);

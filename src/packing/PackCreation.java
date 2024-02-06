@@ -22,10 +22,13 @@ import exceptions.ParserException;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
+import listManip.FaceLink;
+import listManip.HalfLink;
 import listManip.NodeLink;
 import tiling.Tile;
 import tiling.TileData;
 import util.ColorUtil;
+import workshops.LayoutShop;
 
 /**
  * Various static routines for building new packings.
@@ -249,6 +252,74 @@ public class PackCreation {
 			p.geom_to_e();
 		p.setName("Seed "+n);
 	
+		return p;
+	}
+	
+	/** 
+	 * Create a 'seed' packing as above, but now only
+	 * euclidean and use given schwarzians. Normalize
+	 * so center has max degree, gamma=1, scaled so
+	 * gamma is centered at z=i. Note we only use
+	 * schwarzians s_2,...,s_{n-1}, so there may be
+	 * problems: c_n may not fit with c_1, petals
+	 * may wrap too far, etc.
+	 * @param n int, number of petals
+	 * @param heS int, final geometry
+	 * @param schvec int[], schwarzians
+	 * @return @see PackData or null on error
+	 */
+	public static PackData seed(int n,int heS,double[] schvec) {
+		PackData p=seed(n,heS);
+		  	if (p==null) 
+		  		throw new CombException("seed via schwarzians failed");
+		  	
+		  	// give center the max degree
+		  	p.swap_nodes(1,n+1);
+		  	p.packDCEL.setAlpha(n+1, null,false);
+		  	p.packDCEL.setGamma(1);
+		  	for (int j=1;j<=n;j++) {
+		  		HalfEdge he=p.packDCEL.findHalfEdge(new EdgeSimple(n+1,j));
+		  		p.setSchwarzian(he,schvec[j]);
+		  	}
+		  	HalfLink flow=new HalfLink(p,"-Iv "+(n+1));
+		  	flow.add(0,flow.removeLast()); // put (n+1,1)edge first
+		  	FaceLink facelink=new FaceLink(p);
+		  	Iterator<HalfEdge> lyst=flow.iterator();
+		  	while(lyst.hasNext()) {
+		  		facelink.add(lyst.next().face.faceIndx);
+		  	}
+
+		  	// position first face: first 2 radii of 
+		  	//   uniform n-flower, scaled so c_1 centered = 1
+		  	double rho=Math.sin(Math.PI/n); // unif petal rad
+		  	
+		  	// center at 0, radius 1-rho so c_1 is center = 1
+		  	int v=flow.get(0).origin.vertIndx;
+		  	p.packDCEL.setVertCenter(v, new Complex(0.0));
+		  	p.packDCEL.setVertRadii(v,1.0-rho);
+
+		  	// petal 1
+		  	int w=flow.get(0).twin.origin.vertIndx;
+		  	p.packDCEL.setVertRadii(w,rho);
+		  	p.packDCEL.setVertCenter(w, new Complex(0.0,1.0));
+		  	
+		  	// petal 2, center at exp(i(pi/2+2*pi/n)
+		  	int u=flow.get(1).twin.origin.vertIndx;
+		  	p.packDCEL.setVertRadii(u,rho);
+		  	Complex cent2=new Complex(0,Math.PI/2+2.0*Math.PI/n);
+		  	p.packDCEL.setVertCenter(u, cent2.exp());
+		  	
+		  	// set 'TriAspect', load schwarzians
+		  	Iterator<HalfEdge> fls=flow.iterator();
+		  	while (fls.hasNext()) {
+		  		HalfEdge he=fls.next();
+		  		int vv=he.twin.origin.vertIndx;
+		  		he.setSchwarzian(schvec[vv]);
+		  	}
+
+		  	// now lay out using schwarzians
+		  	LayoutShop.layoutFaceList
+		  		(p.packDCEL,facelink,0,true);
 		return p;
 	}
 

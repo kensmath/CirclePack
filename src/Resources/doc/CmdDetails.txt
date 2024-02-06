@@ -635,6 +635,10 @@ does not eliminate redundancies, as other counts do.)
     the type, there may be special numbering or marking of 
     vertices and/or edges.
     
+    The "seed" construction builds an n-flower; -s flag
+    means to use given list of implicit schwarzians,
+    defaulting to 0's.
+    
     The "hex_torus" construction builds a regular parallelogram-like
     hex torus with given w/h for width/height.
     

@@ -5576,8 +5576,8 @@ public class PackData{
 			if (dtri.TangPts!=null) {
 				for (int j=0;j<3;j++)
 					ta.tanPts[j]=new Complex(dtri.TangPts[j]);
+				count++;
 			}
-			count++;
 		}
 
 /* OBE???		
