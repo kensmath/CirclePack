@@ -91,7 +91,11 @@ public class EuclPacker extends RePacker {
     				if (f>0) {
     					TriData trid=pdcel.triData[f];
     					int j=trid.vertIndex(v);
-    					HalfEdge he=trid.getHalfEdge(j);
+    					HalfEdge he=trid.baseEdge;
+    					if (j==1)
+    						he=he.next;
+    					else if (j==2)
+    						he=he.next.next;
     					pdcel.setRad4Edge(he,trid.radii[j]);
     					p.packDCEL.vertices[v].rad=trid.radii[j];
     				}

@@ -88,4 +88,21 @@ public class CircleSimple{
 	  }
 	  return flag; 
   }
+  
+  /**
+   * Check equality of this and cs. Calling routine checks
+   * that geometries are the same. Tolerance is .001*rad.
+   * radius.
+   * @param cs CircleSimple
+   * @return true if equal
+   */
+  public boolean isEqual(CircleSimple cs) {
+	  double tol=.001*Math.abs(rad);
+	  if (Math.abs(rad-cs.rad)>tol)
+		  return false;
+	  if (cs.center.minus(center).abs()>tol)
+		  return false;
+	  return true;
+  }
+
 }

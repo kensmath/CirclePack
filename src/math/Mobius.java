@@ -230,6 +230,18 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		b = new Complex(c);
 		c = tmp;
 	}
+	
+	/**
+	 * Return the derivative of this Mobius at z.
+	 * @param z Complex
+	 * @return Complex
+	 */
+	public Complex deriveMob(Complex z) {
+		Complex det=this.det();
+		Complex denom=this.c.times(z).add(this.d);
+		denom=denom.times(denom);
+		return det.divide(denom);
+	}
 
 	/**
 	 * Return new Mobius, scale and/or rotate this by argument
@@ -298,16 +310,6 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			type = "Loxodromic";
 		return type;
 	}
-
-	// public void addFixedPoints() {
-	// Complex sqdisc = ( ( (d.minus(a)).times(d.minus(a))).plus( (b.times(c)).
-	// times(4f))).sqrt();
-	// Complex z1 = ( ( (a.minus(d)).plus(sqdisc)).divide(c)).times(.5);
-	// Complex z2 = ( ( (a.minus(d)).minus(sqdisc)).divide(c)).times(.5);
-	// ManagerMobius.fixedPoints.addElement(z1);
-	// ManagerMobius.fixedPoints.addElement(z2);
-	// }
-	
 	
 	public String toString() {
 		// return a.toString() + "   " + b.toString() + "   " + c.toString() +
@@ -341,61 +343,6 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	public Complex getD() {
 		return d;
 	}
-
-	// public CPCircle applyToCircle(CPCircle circle) {
-	// Complex center = circle;
-	// double radius = circle.getRadius();
-	// Complex Q;
-	// double s;
-	// if (!isAffine()) {
-	// something is wrong in this code!!!! (Fedor)
-	// Complex z = circle.minus( ( ( (circle.plus(d.divide(c))).conj()).
-	// reciprocal()).times(radius * radius));
-	// Q = ( (a.times(z)).plus(b)).divide( (c.times(z)).plus(d));
-	// s = (Q.minus( ( (a.times(circle.plus(radius))).plus(b)).
-	// divide( (c.times(circle.plus(radius))).plus(d)))).abs();
-	// Complex toCenter = circle.getPoint(1).sub(circle.getCenter());
-	// Complex point2 = circle.getCenter().sub(toCenter);
-	// Complex im1 = this.apply(circle.getPoint(1)); // a point on the image
-	// Complex im2 = this.apply(point2); // a point on the image
-	// Complex temp = im2.sub(im1);
-	// s = .5*temp.abs();
-	// Q = (im1.plus(im2)).times(.5);
-	// Complex z1=z;
-	// z1=z1.add(r);
-	// Complex z2=z;
-	// z2.setImaginary(z2.getImaginary()+r);
-	// z3=z;z3.re -= r;
-	// tmp1=mobius(Mob,z1,flag);
-	// tmp2=mobius(Mob,z2,flag);
-	// tmp3=mobius(Mob,z3,flag);
-	// circle_3(tmp1,tmp2,tmp3,newz,newr);
-
-	/*
-	 * find out if point mapped to infinity is inside the circle
-	 */
-	// if (cAbs(Mob.c)<m_toler) /* infinity is fixed */
-	// {
-	// if (r<0) (*newr) *= -1;
-	// return 1;
-	// }
-	// nd.re=-Mob.d.re;nd.im=-Mob.d.im;
-	// new_inf=cdiv(nd,Mob.c);
-	// dist=cAbs(csub(z,new_inf));
-	// if ((r<0 && (dist+r)>0.0) /* it is, so we want outside of circle */
-	// || (r>0 && dist<r))
-	// (*newr) *= -1;
-	// return 1;
-	// }
-	// else {
-	// Q = ( (a.times(circle)).plus(b)).divide(d);
-	// s = (Q.minus( ( (a.times(circle.plus(radius))).plus(b)).
-	// divide(d))).abs();
-	// }
-	// CPCircle r = new CPCircle(Q.x,Q.y,s);
-	// r.finalizeColor(circle,this.getLevel());
-	// return r;
-	// }
 
 	/**
 	 * Find fixed point by quadratic formula; use '+' sign
@@ -512,43 +459,17 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 	
 	/**
-	 * Create Mobius mapping first pair of circles to second 
-	 * pair. Project to eucl data if in other geometries. 
-	 * Idea is to match 3 points: circle 1 and 2 centers, and
-	 * point on boundary of circle 1 in direction opposite 
-	 * to circle 2 center (making it unique in all geometries).
+	 * Create Mobius mapping first ordered pair of 
+	 * circles to second ordered pair. First check
+	 * that alignment is needed. If so, project to 
+	 * eucl data if in other geometries. Idea is to 
+	 * match 3 points: circle 1 and 2 centers, and
+	 * point on boundary of circle 1 in direction 
+	 * opposite to circle 2 center (making it unique 
+	 * in all geometries).
 	 * 
-	 * TODO: Migrate to version using CircleSimple's
-	 *  
-	 * @param cent1 Complex // first pair
-	 * @param rad1 double
-	 * @param cent2 Complex
-	 * @param rad2 double
-	 * @param Cent1 Complex // second pair
-	 * @param Rad1 double
-	 * @param Cent2 Complex
-	 * @param Rad2 double
-	 * @param hes1 int
-	 * @param hes2 int
-	 * @return Mobius, identity on error
-	 */
-	public static Mobius mob_MatchCircles(Complex cent1,double rad1,
-			Complex cent2,double rad2,Complex Cent1,double Rad1,
-			Complex Cent2,double Rad2,int hes1,int hes2) {
-		return mob_MatchCircles(new CircleSimple(cent1,rad1),
-				new CircleSimple(cent2,rad2),new CircleSimple(Cent1,Rad1),
-				new CircleSimple(Cent2,Rad2),hes1,hes2);
-	}
-	
-	/**
-	 * Create Mobius mapping first pair of circles to second 
-	 * pair. Project to eucl data if in other geometries. 
-	 * Idea is to match 3 points: circle 1 and 2 centers, and
-	 * point on boundary of circle 1 in direction opposite 
-	 * to circle 2 center (making it unique in all geometries).
-	 * 
-	 * TODO: Perhaps not very robust for spherical circles around or 
-	 * containing infinity.
+	 * TODO: Perhaps not very robust for spherical 
+	 * circles around or containing infinity.
 	 *  
 	 * @param cs1 CircleSimple
 	 * @param cs2 CircleSimple
@@ -1239,9 +1160,6 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 	
 	/**
-	 */
-
-	/**
 	 * Apply mobius ('oriented' true) or inverse ('oriented' false) 
 	 * to a single circle. Both csIn and csOut are in the specified 
 	 * geometry.
@@ -1325,15 +1243,6 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		}
 	}
  
-	/**
-	 * Find the orthogonal 
-	 * @param axis
-	 * @return
-	 */
-//	public static Mobius rotateAxis(Point3D axis) {
-		
-//	}
-	
 	/**
 	 * Given intended north and south pole spherical circle data, (zN,rN) and
 	 * (zS,rS), return the Mobius transformation centering them at N and S

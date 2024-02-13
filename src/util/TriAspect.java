@@ -37,8 +37,16 @@ import math.Mobius;
  * outside of the redChain). Their local radii may be kept 
  * here in 'labels' or 'radii'.
  * 
- * For use with Schwarzian derivative, we store the Mobius
- * map FROM the "base equilateral" to this face. 
+ * Use this class heavily in studying the discrete Schwarzian
+ * derivative. We store the Mobius map FROM the 
+ * "base equilateral" TO this face. The three edge
+ * 'schwarzian' elements are the real coefficients of
+ * the edge's complex schwarzian derivatives. These are
+ * only used when this data is part of a mapping between
+ * circle packings. If eta is outward normal for an edge,
+ * then complex Schwarzian derivative is coeff*conj(eta).
+ * (Note: don't confuse with 'intrinsic schwarzian' which
+ * is stored in 'HalfEdge.schwarzian'.)   
  * 
  * NOTE: The "base equilateral" face is formed by tangent 
  * triple of eucl circles of radius sqrt(3), symmetric 
@@ -58,14 +66,14 @@ public class TriAspect extends TriData {
 	
 	// various triples of data (other data in 'TriData' super, eg. radii)
 	public Complex[] center;    // centers of circles
-	public double[] schwarzian; // signed scalar coeffs for schwarzian 
+	public double[] schwarzian; // scalar coeff for compltex schwarzian deriv
 	public Complex[] tanPts;  // tangency points, if saved
 	public double[] sidelengths; // edge lengths, [j] = <v[j],v[j+1]>
 	
-	// Base data is determined by centers and radii and relate the actual 
-	//   face to the "base" equilateral. 
-	public Mobius baseMobius; 
-	public double[] baseSchwarz;  
+	// Mobius FROM "base" equilateral TO this face; 
+	//   determined by centers/radii; 1 mapped to 
+	//   tangency point of first edge of 'this'
+	Mobius baseMobius; 
 	
 	// store data for use in, e.g., 'dcel.schwarzian.java'
 	public Mobius[] MobDeriv; // directed edge Mobius derivative
@@ -81,7 +89,7 @@ public class TriAspect extends TriData {
 		tanPts=null;
 		labels=new double[3];
 		sidelengths=new double[3];
-		baseMobius=new Mobius();
+		baseMobius=null;
 		need_update=true;
 		allocCenters();
 		schwarzian=new double[3];
@@ -190,6 +198,20 @@ public class TriAspect extends TriData {
 					invDist[j],invDist[(j+1)%3],invDist[(j+2)%3],hes);
 	}
 	
+	public void setBaseMobius() {
+		if (tanPts==null)
+			setTanPts();
+		baseMobius=Mobius.mob_xyzXYZ(
+				CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
+				tanPts[0],tanPts[1],tanPts[2],0,this.hes);
+	}
+	
+	public Mobius getBaseMobius() {
+		if (baseMobius==null)
+			setBaseMobius();
+		return baseMobius;
+	}
+	
 	public Complex getTangPt(int j) {
 		if (hes < 0)
 			return HyperbolicMath.hyp_tangency(center[j],center[(j+1)%3],
@@ -234,8 +256,8 @@ public class TriAspect extends TriData {
 	}
 	
 	/**
-	 * Return index of initial vertex of first shared edge 
-	 * of 'this' with 'ntri', if it exists.
+	 * Return index k in 'this' of first edge 'this' shares
+	 * with 'ntri', if it exists.
 	 * @param ntri TriAspect
 	 * @return int index, -1 on failure
 	 */
@@ -244,6 +266,7 @@ public class TriAspect extends TriData {
 		for (int j=0;j<3;j++) {
 			int v=nverts[j];
 			int w=nverts[(j+1)%3];
+			// is edge <v,w> of ntri also an edge of 'this'?
 			if (vertIndex(v)>=0 && vertIndex(w)>=0) { // shared edge
 				return vertIndex(w);
 			}
@@ -289,11 +312,13 @@ public class TriAspect extends TriData {
 
 
 	/**
-	 * Utility routine: only use 'TriAspect' to hold rad/cent data.
-	 * Create a baseEquilateral in geometry 'hes'. In eucl and spherical 
-	 * case, the edge tangency points are at the cube roots of unity
-	 * on the unit circle, with the 0th edge tangency point at z=1. 
-	 * In hyp case, shrink this down by euclidean factor .05.
+	 * Utility routine: only use 'TriAspect' to 
+	 * hold rad/cent data. Create a baseEquilateral 
+	 * in geometry 'hes'. In eucl and spherical 
+	 * case, the edge tangency points are at the 
+	 * cube roots of unity on the unit circle, with 
+	 * the 0th edge tangency point at z=1. In hyp 
+	 * case, shrink this down by euclidean factor .05.
 	 * @return TriAspect, null on error
 	 */
 	public static TriAspect baseEquilateral(int hes) {
@@ -315,32 +340,30 @@ public class TriAspect extends TriData {
 	
 	/**
 	 * Compute the Mobius that would align 'this' with 
-	 * 'acrossTri', the 'TriAspect' across 'edge'. 
+	 * 'acrossTri' (the 'TriAspect' across 'edge'). 
 	 * Mode determines what to align: 
-	 *    mode 1: use 'radii' 
+	 *    mode 1: use 'radii' (typical, default)
 	 *    mode 2: use 'labels' in place of radii
 	 *    mode 3: use 'sidelengths'
 	 * Return identity on error. 
-	 * 
-	 * TODO: compare to 'propogateMe', which recomputes and
-	 * aligns.
-	 * 
 	 * @param acrossTri TriAspect
 	 * @param HalfEdge edge, edge in 'this'
 	 * @param mode int
-	 * @return Mobius
+	 * @return Mobius, identity on error
 	 */
-	public Mobius alignMe(TriAspect acrossTri,HalfEdge edge,int mode) {
+	public Mobius alignMe(TriAspect acrossTri,
+			HalfEdge myEdge,int mode) {
 
-		int indx=edgeIndex(edge);
-		int windx=acrossTri.edgeIndex(edge.twin);
+		int indx=edgeIndex(myEdge);
+		int windx=acrossTri.edgeIndex(myEdge.twin);
 		
 		// mobius identifying circles
 		if (mode==2) // use 'labels'
-			return Mobius.mob_MatchCircles(center[indx], labels[indx],
-					center[(indx+1)%3], labels[(indx+1)%3],
-					acrossTri.center[(windx+1)%3],acrossTri.labels[(windx+1)%3],
-					acrossTri.center[windx],acrossTri.labels[windx],
+			return Mobius.mob_MatchCircles(
+					new CircleSimple(center[indx],labels[indx]),
+					new CircleSimple(center[(indx+1)%3],labels[(indx+1)%3]),
+					new CircleSimple(acrossTri.center[(windx+1)%3],acrossTri.labels[(windx+1)%3]),
+					new CircleSimple(acrossTri.center[windx],acrossTri.labels[windx]),
 					hes,acrossTri.hes);
 		if (mode==3) { // use sidelengths
 			if (hes==0 && acrossTri.hes==0) {
@@ -360,18 +383,21 @@ public class TriAspect extends TriData {
 			return new Mobius();
 		}
 
-		// else assume mode==1, use radii
-		return Mobius.mob_MatchCircles(center[indx], radii[indx],
-				center[(indx+1)%3], radii[(indx+1)%3],
-				acrossTri.center[(windx+1)%3],acrossTri.radii[(windx+1)%3],
-				acrossTri.center[windx],acrossTri.radii[windx],
+		// else assume mode==1, use radii; do we need to adjust?
+		CircleSimple csMe_v=new CircleSimple(center[indx], radii[indx]);
+		CircleSimple csMe_w=new CircleSimple(center[(indx+1)%3], radii[(indx+1)%3]);
+		CircleSimple cs_v=new CircleSimple(acrossTri.center[(windx+1)%3],acrossTri.radii[(windx+1)%3]);
+		CircleSimple cs_w=new CircleSimple(acrossTri.center[windx],acrossTri.radii[windx]);
+		if (!csMe_v.isEqual(cs_v) || !csMe_w.isEqual(cs_w))
+			return Mobius.mob_MatchCircles(csMe_v,csMe_w,cs_v,cs_w,
 				hes,acrossTri.hes);
-
+		return new Mobius(); // identity
 	}
 	
 	/**
 	 * Apply a Mobius transformation to my centers/radii.
-	 * Note: other data, eg. labels, sides, tangPts, are NOT adjusted
+	 * Note: other data, eg. labels, sides, tangPts, 
+	 * are NOT adjusted
 	 * @param mob Mobius
 	 */
 	public void mobiusMe(Mobius mob) {
@@ -387,11 +413,13 @@ public class TriAspect extends TriData {
 	}
 	
 	/**
-	 * Assume 'center's give eucl face in normalized position 
-	 * based on current 'labels'. Given vert v2 and centers of 
-	 * opposite edge e, adjust 'center', 'labels', and 'sides' data
-	 * so centers of e match given centers. (Used to layout this face 
-	 * based on contiguous face across e already in place.)
+	 * Assume 'center's give eucl face in normalized 
+	 * position based on current 'labels'. Given vert 
+	 * v2 and centers of opposite edge e, adjust 
+	 * 'center', 'labels', and 'sides' data so 
+	 * centers of e match given centers. (Used to 
+	 * layout this face based on contiguous face 
+	 * across e already in place.)
 	 * 
 	 * TODO: use the newer 'alignMe' code here
 	 * 
@@ -418,9 +446,10 @@ public class TriAspect extends TriData {
 	}
 	
 	/** 
-	 * Assume 'center's have been computed in normalized position
-	 * from 'labels'. Adjust the data so the face aligns with 
-	 * that across edge opposite to v2.
+	 * Assume 'center's have been computed in 
+	 * normalized position* from 'labels'. Adjust 
+	 * the data so the face aligns with that across 
+	 * edge opposite to v2.
 	 * 
 	 * TODO: use the newer 'alignMe' code here
 	 * 
@@ -533,17 +562,18 @@ public class TriAspect extends TriData {
 	}
 	
 	/**
-	 * Given vertex 'v' (from parent packing) of this face, return
-	 * the skew, log(left/right side lengths) (as seen from v), with 
-	 * label for v scaled by 't'. Also return the derivative with respect
-	 * to t. I.e., returns 
+	 * Given vertex 'v' (from parent packing) of 
+	 * this face, return the skew, log(left/right 
+	 * side lengths) (as seen from v), with label 
+	 * for v scaled by 't'. Also return the 
+	 * derivative with respect to t. I.e., returns 
 	 * log((ta+c)/(ta+b)) and t*(b-c)/((ta+c)(ta+b)),
 	 * where (a,b,c) are the labels (a is at v).
 	 * @param v int, vert in parent
 	 * @param t double, scale for label at v
 	 * @return double, [0]=log, [1]=derivative
 	 */ 
-	public double []skew(int v,double t) {
+	public double[] skew(int v,double t) {
 		int k=vertIndex(v);
 		if (k<0) return null;
 		double []newRatio = new double[2];
@@ -556,9 +586,10 @@ public class TriAspect extends TriData {
 	}
 
 	/**
-	 * Return the angle at v, but with the recorded eucl label
-	 * at v multiplied by 't'. Thus, for t=1 this just computes 
-	 * the angle. Also, return the derivative w.r.t. t.
+	 * Return the angle at v, but with the recorded 
+	 * eucl label at v multiplied by 't'. Thus, for 
+	 * t=1 this just computes the angle. Also, 
+	 * return the derivative w.r.t. t.
 	 * @param v int, vertex in parent packing
 	 * @param t double, by which 'labels' at v is scaled.
 	 * @return double[2]: [0]=angle sum, [1]=derivative, null on error
@@ -578,7 +609,8 @@ public class TriAspect extends TriData {
 	}
 	
 	/**
-	 * Find the eucl area of the sector at 'v' based on the labels
+	 * Find the eucl area of the sector at 'v' 
+	 * based on the labels
 	 * @param v int, parent index of 'v'
 	 * @return double, rad at 'v' times angle at 'v'
 	 */
@@ -590,11 +622,12 @@ public class TriAspect extends TriData {
 	}
 	
 	/**
-	 * Using center data, compute the area of eucl face 'sector' at v.
-	 * Assume angles already in 'angleV'.
-	 * The 'sector' is the sector of the circle at v going through
-	 * the points of tangency of the face incircle with the sides
-	 * from v.
+	 * Using center data, compute the area of 
+	 * eucl face 'sector' at v. Assume angles 
+	 * already in 'angleV'. The 'sector' is the 
+	 * sector of the circle at v going through
+	 * the points of tangency of the face 
+	 * incircle with the sides from v.
 	 * @param v, vert index in parent packing 
 	 * @return area, or -1 on error
 	 */

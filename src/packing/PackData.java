@@ -5566,7 +5566,8 @@ public class PackData{
 		int count=0;
 		while (his.hasNext()) {
 			DcelFace face=his.next().face;
-			TriAspect ta=aspect[face.faceIndx]=new TriAspect(pdcel,face);
+			TriAspect ta=aspect[face.faceIndx]=
+					new TriAspect(pdcel,face);
 			// compute/store the tangency points
 			DualTri dtri=new DualTri(
 					ta.getCenter(0),
@@ -5578,135 +5579,8 @@ public class PackData{
 					ta.tanPts[j]=new Complex(dtri.TangPts[j]);
 				count++;
 			}
+			ta.setBaseMobius();
 		}
-
-/* OBE???		
-		int count=1; 
-		boolean ivds=p.haveInvDistances();
-		boolean schws=p.haveSchwarzians();
-		TriAspect[] aspect=new TriAspect[p.faceCount+1];
-		
-		// assume first face is in place
-		HalfEdge he=pdcel.fullOrder.get(0); // should be 'alpha'
-		int next_face=he.face.faceIndx;
-		int last_face=next_face;
-		int[] mv=pdcel.faces[next_face].getVerts();
-		aspect[next_face]=new TriAspect(p.hes);
-		aspect[next_face].faceIndx=next_face;
-		aspect[next_face].vert=mv;
-		aspect[next_face].allocCenters();
-		
-		aspect[next_face].setCenter(new Complex(p.getCenter(mv[0])),0);
-		aspect[next_face].setCenter(new Complex(p.getCenter(mv[1])),1);
-		aspect[next_face].setCenter(new Complex(p.getCenter(mv[2])),2);
-		aspect[next_face].setRadius(p.getRadius(mv[0]),0);
-		aspect[next_face].setRadius(p.getRadius(mv[1]),1);
-		aspect[next_face].setRadius(p.getRadius(mv[2]),2);
-		
-		if (ivds || schws) {
-			he=pdcel.fullOrder.get(0);
-			int tick=0;
-			do {
-				if (ivds)
-					aspect[next_face].setInvDist(tick,he.getInvDist());
-				if (schws)
-					aspect[next_face].schwarzian[tick]=he.getSchwarzian();
-				he=he.next;
-				tick++;
-			} while (he!=pdcel.alpha);
-		}
-		
-		// compute/store the tangency points
-		DualTri dtri=new DualTri(
-				aspect[next_face].getCenter(0),
-				aspect[next_face].getCenter(1),
-				aspect[next_face].getCenter(2),p.hes);
-		aspect[next_face].tanPts=new Complex[3];
-		for (int j=0;j<3;j++)
-			aspect[next_face].tanPts[j]=new Complex(dtri.TangPts[j]);
-
-		Iterator<HalfEdge> elist = p.packDCEL.fullOrder.iterator();
-		elist.next(); // first entry already used
-		while (elist.hasNext()) {
-			HalfEdge edge = elist.next();
-			last_face=edge.twin.face.faceIndx;
-			next_face=edge.face.faceIndx;
-				
-			// create TriAspect 
-			aspect[next_face]=new TriAspect(p.hes);
-			aspect[next_face].faceIndx=next_face;
-			mv=pdcel.faces[next_face].getVerts();
-			aspect[next_face].vert=mv;
-			aspect[next_face].allocCenters();
-			aspect[next_face].radii=new double[3];
-
-			// store any inv distances or schwarzians
-			if (ivds || schws) {
-				he=edge.face.edge;
-				int tick=0;
-				do {
-					if (ivds)
-						aspect[next_face].setInvDist(tick,he.getInvDist());
-					if (schws)
-						aspect[next_face].schwarzian[tick]=he.getSchwarzian();
-					he=he.next;
-					tick++;
-				} while (he!=edge.face.edge);
-			}
-
-			// set rad/centers of next_face based on last_face
-			int v=edge.origin.vertIndx;
-			int last_indx=aspect[last_face].vertIndex(v);
-			int next_indx=aspect[next_face].vertIndex(v);
-			// get data for v
-			aspect[next_face].setCenter(
-					aspect[last_face].getCenter(last_indx),next_indx);
-			aspect[next_face].setRadius( 
-					aspect[last_face].getRadius(last_indx),next_indx);
-			// get data for other end of 'edge'
-			aspect[next_face].setCenter( // other end of 'edge'
-					aspect[last_face].getCenter((last_indx+2)%3),
-					(next_indx+1)%3);
-			aspect[next_face].setRadius(
-					aspect[last_face].getRadius((last_indx+2)%3),
-					(next_indx+1)%3);
-			// get radius for opposite vertex, compute center
-			aspect[next_face].setRadius(
-					aspect[last_face].getRadius((last_indx+1)%3),
-					(next_indx+2)%3);
-
-			// compute new center for aspect for next_face
-			CircleSimple sc;
-			Complex zv=aspect[last_face].getCenter(last_indx);
-			double rv=aspect[last_face].getRadius(last_indx);
-			Complex zw=aspect[last_face].getCenter((last_indx+2)%3);
-			double rw=aspect[last_face].getRadius((last_indx+2)%3);
-			double ropp=aspect[next_face].getRadius((next_indx+2)%3);
-			if (ivds) { // get inv distances
-				double ivd0=aspect[next_face].getInvDist(next_indx);
-				double ivd1=aspect[next_face].getInvDist((next_indx+1)%3);
-				double ivd2=aspect[next_face].getInvDist((next_indx+2)%3);
-				sc = CommonMath.comp_any_center(zv,zw,rv,rw,ropp,
-						ivd0,ivd1,ivd2,p.hes);
-			} 
-			else {
-				sc = CommonMath.comp_any_center(zv,zw,rv,rw,ropp,p.hes);
-			}
-			aspect[next_face].setCenter(sc.center,(next_indx+2)%3);
-			
-			// compute/store the tangency points
-			dtri=new DualTri(
-				aspect[next_face].getCenter(0),
-				aspect[next_face].getCenter(1),
-				aspect[next_face].getCenter(2),p.hes);
-			aspect[next_face].tanPts=new Complex[3];
-			for (int j=0;j<3;j++)
-				aspect[next_face].tanPts[j]=new Complex(dtri.TangPts[j]);
-			
-			count++;
-		} // end of while through edgelist
-*/		
-		
 		if (count!=p.faceCount) {
 			throw new CombException(
 					"didn't get all faces in building 'TriAspect'");

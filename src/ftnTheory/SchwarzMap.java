@@ -16,13 +16,11 @@ import dcel.Schwarzian;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.MiscException;
-import exceptions.MobException;
 import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import input.CPFileManager;
-import input.CommandStrParser;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.HalfLink;
@@ -34,6 +32,7 @@ import packing.PackExtender;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.DispFlags;
+import util.SchwarzData;
 import util.StringUtil;
 import util.TriAspect;
 import widgets.RadiiSliders;
@@ -48,53 +47,59 @@ import widgets.SchwarzSliders;
  * along with an "intrinsic" schwarzian associated with maps
  * from a standardized "base equilateral". 
  * 
+ * DISCRETE SCHWARZIAN DERIVATIVE:
  * The concern is with maps between tangency circle packings 
- * sharing the same combinatorics. A "circle packing quadrangle" 
- * refers to two faces sharing an edge e. Given map phi:P --> P' 
+ * sharing the same combinatorics. A circle packing "patch" 
+ * refers to two faces sharing an edge e, thus sharing two
+ * neighboring circles Cv, Cw. Given map phi:P --> P' 
  * between circle packings, for each face f and f'=phi(f), M(f) 
- * is the "face Mobius map" of f onto f' which identifies 
- * corresponding tangency points. (These face mappings were 
+ * is the "face Mobius map" of f onto f'. This identifies 
+ * corresponding tangency points and hence maps one triple of
+ * circles to the other. (These face mappings were 
  * pieced together, along with extensions to circle interiors,
  * by He/Schramm to define point mappings between circle packing
- * carriers and was used to prove convergence results.) 
+ * carriers and was used by them to prove convergence results.) 
  * 
- * **** CONVENTION: Given directed edge {v,w} shared by faces f and g, 
- * we reverse Orick's convention and let f be the face on the LEFT of 
- * {v,w}, g the face on the RIGHT. Note that the ordered pair {f,g} is 
- * the "dual" edge to {v,w} and geometrically ends up clockwise 
- * perpendicular to {v,w}, so it points out of f.
+ * **** CONVENTION: Given directed edge {v,w} shared by 
+ * faces f and g, we reverse Orick's convention and let f 
+ * be the face on the LEFT of {v,w}, g the face on the RIGHT. 
+ * Note that the ordered pair {f,g} is the "dual" edge to 
+ * {v,w} and geometrically ends up clockwise perpendicular 
+ * to {v,w}, so it points out of f.
  * 
- * For each interior edge e sharing faces f and g, define the "directed 
- * Mobius edge derivative" by dM(e)=M(g)^{-1}.M(f). This is invariant: 
- * dM(e) is unchanged if we replace P' by P" = m(P'), m a Mobius map. 
+ * For each interior edge e sharing faces f and g, define 
+ * the "directed Mobius edge derivative" by dM(e)=M(g)^{-1}.M(f). 
+ * This is invariant: dM(e) is unchanged if we replace P' by 
+ * P" = m(P'), m a Mobius map. 
  * 
- * The Mobius maps dM(e) fix the tangency point within e and are always 
- * parabolic, and we normalize so trace(dM(e))=2 and det(dM(e))=1. If
- * dM(e) ~ [a b | c d], then the complex entry c is the "(complex 
- * discrete) Schwarzian" as defined by Orick. More precisely, if 
- * z is the tangency point in the edge e then dM(e) has the form
+ * The Mobius maps dM(e) fix the tangency point within e 
+ * and are always parabolic, and we normalize so 
+ * trace(dM(e))=2 and det(dM(e))=1. If dM(e) ~ [a b ; c d], 
+ * then the entry c is the "(complex discrete) Schwarzian" 
+ * as defined by Orick. More precisely, if z is the tangency 
+ * point in the edge e then dM(e) has the form
  *      dM(e)= [1 + c*z,-c*z^2; c, 1-c*z]
- * Moreover, c = s*i*conj(delta), where delta = exp{i theta} gives the
- * direction of the directed edge e and s is some real scalar. If
- * eta is the normal to e directed outward from f (so eta=-i*delta),
- * then c=s*conj(eta). Note that the complex schwarzian for -e is -c.
- * (This real number s is distinct from the intrinsic schwarzian we 
- * generally work with;see below.) 
- * 
- * In contrast to complex schwarzians related to mappings between
- * TWO packings, I am introducing intrinsic schwarzians associated 
- * with edges of a SINGLE tangency packing P. The "schwarzian" 
- * element of an edge of P is this intrinsic schwarzian, a real 
- * number defined as above for maps from a "base equilateral". 
- * This base equilateral is centered at the origin and has its edge 
- * midpoints (tangency points of its circles) at the cube roots of 
- * unity.
- * 
- * One of our main goals is to understand conditions on those
- * assignments of schwarzians which correspond to circle packings.
- * Also, to understand the relationship between the intrinsic
- * schwarzians of P and P' when considering a mapping. See
- * 'dcel.schwarzian.java'. 
+ * Moreover, c = s*i*conj(delta), where delta = exp{i theta} 
+ * gives the direction of the directed edge e and s is some 
+ * real scalar. If eta is the normal to e directed outward 
+ * from f (so eta=-i*delta), then c=s*conj(eta). Note that 
+ * the complex schwarzian for -e is -c. (This real number s 
+ * is distinct from the intrinsic schwarzian discussed below.)
+
+ * INTRINSIC SCHWARZIANS:
+ * In contrast to complex schwarzians related to mappings 
+ * between TWO packings, I am introducing intrinsic schwarzians 
+ * associated with edges of a SINGLE tangency packing P. 
+ * The "schwarzian" element stored with an edge of P is this 
+ * intrinsic schwarzian, a real number defined as above for 
+ * maps from a "base equilateral". This base equilateral is 
+ * centered at the origin and has its edge midpoints (tangency 
+ * points of its circles) at the cube roots of unity. One of 
+ * our main goals is to understand conditions on those 
+ * assignments of schwarzians which correspond to circle 
+ * packings. Also, to understand the relationship between 
+ * the intrinsic schwarzians of P and P' when considering 
+ * a mapping. See 'dcel.schwarzian.java'. 
  * 
  * This extender is mainly about the mapping case and we 
  * store data for both domain and range packing, each having 
@@ -132,6 +137,8 @@ public class SchwarzMap extends PackExtender {
 	
 	public RadiiSliders radSliders; // for opening radius slider window
 	public SchwarzSliders schSliders; // for opening schwarzian slider window
+	
+	// for 'flower' mode:
 	public int flowerDegree; // 0 if not in flower mode
 	public double[] schvector; // in flower mode, vector of schwarzians
 	public int[] petalticks; // which petals are in place
@@ -150,22 +157,26 @@ public class SchwarzMap extends PackExtender {
 		}
 		// default: look at 'set_domain' call
 		try {
-			domainTri=setupTri(packData);
+			domainTri=PackData.getTriAspects(packData);
 		} catch (Exception ex) {
 			CirclePack.cpb.errMsg("failed to set up domain triangle data");
 		}
 		
 		Schwarzian.comp_schwarz(packData,new HalfLink(packData,"i"));
 		
-		// range default: look at 'set_range' call
-		try {
-			rangeTri=setupTri(packData);
-		} catch (Exception ex) {
-			CirclePack.cpb.errMsg("failed to set up range triangle data");
-		}			
-		rangePackNum=packData.packNum;
-		// may be reset when rangeTri is filled.
+		rangeTri=null;
+		rangePackNum=-1;
 		rangeHes=packData.hes;
+		
+		// range default: look at 'set_range' call
+//		try {
+//			rangeTri=PackData.getTriAspects(packData);
+//		} catch (Exception ex) {
+//			CirclePack.cpb.errMsg("failed to set up range triangle data");
+//		}			
+//		rangePackNum=packData.packNum;
+		// may be reset when rangeTri is filled.
+//		rangeHes=packData.hes;
 		
 		// are we working in flower mode?
 		flowerDegree=0;
@@ -1245,10 +1256,6 @@ public class SchwarzMap extends PackExtender {
 
 		// ======= get ===============
 		else if (cmd.startsWith("get")) {
-			Mobius []faceMobs=setFaceMobs();
-			if (faceMobs==null || flagSegs==null || flagSegs.size()==0) {
-				Oops("problem with 'faceMobs' or missing specified edges");
-			}
 			EdgeLink elink=new EdgeLink(packData,flagSegs.get(0));
 			if (elink==null || elink.size()==0)
 				Oops("usage: get {v w ..}");
@@ -1258,85 +1265,22 @@ public class SchwarzMap extends PackExtender {
 				EdgeSimple edge=elst.next();
 				int v=edge.v;
 				int w=edge.w;
+				int f=packData.face_right_of_edge(w,v);
+				int g=packData.face_right_of_edge(v,w);
 				try {
-					int f=packData.face_right_of_edge(w,v);
-					int g=-1;
-					if ((g=packData.face_right_of_edge(v,w))>=0) {
-								
-						// Mobius of g to align it with f along <v,w> 
-						//   in the domain
-						Mobius domainalign=new Mobius();
-						Complex fvz=domainTri[f].getCenter(
-								domainTri[f].vertIndex(v));
-						Complex fwz=domainTri[f].getCenter(
-								domainTri[f].vertIndex(w));
-						Complex gvz=domainTri[g].getCenter(
-								domainTri[g].vertIndex(v));
-						Complex gwz=domainTri[g].getCenter(
-								domainTri[g].vertIndex(w));
-						double eror=fvz.minus(gvz).abs()+fwz.minus(gwz).abs();
-						if (eror>0.001*domainTri[f].getRadius(
-								domainTri[f].vertIndex(v))) {
-							Complex ftanz=
-								domainTri[f].tanPts[domainTri[f].vertIndex(v)];
-							Complex gtanz=
-								domainTri[g].tanPts[domainTri[g].vertIndex(w)];
-							try {
-								domainalign=Mobius.mob_xyzXYZ(gvz, gtanz, gwz,
-									fvz, ftanz,fwz,packData.hes,packData.hes);
-							} catch(MobException mex) {
-								Oops(mex.getMessage());
-							}
-						}
-						
-						// Mobius of image of g to align with image of f 
-						//    along <v,w> (in range)
-						fvz=rangeTri[f].getCenter(rangeTri[f].vertIndex(v));
-						fwz=rangeTri[f].getCenter(rangeTri[f].vertIndex(w));
-						gvz=rangeTri[g].getCenter(rangeTri[g].vertIndex(v));
-						gwz=rangeTri[g].getCenter(rangeTri[g].vertIndex(w));
-						Complex ftanz=rangeTri[f].tanPts[rangeTri[f].vertIndex(v)];
-						Complex gtanz=rangeTri[g].tanPts[rangeTri[g].vertIndex(w)];
-								
-						Mobius galign=new Mobius();
-						try{
-							galign=Mobius.mob_xyzXYZ(gvz, gtanz, gwz,
-								fvz, ftanz,fwz,rangeHes,rangeHes);
-						} catch (Exception mex) {
-							Oops(mex.getMessage());
-						}
-						Mobius newg=(Mobius)(faceMobs[g]).
-								lmult(galign).rmult(domainalign.inverse());
-						
-						Mobius edgeMob=(Mobius)newg.lmult(faceMobs[f].inverse());
-								
-						// seem to need this normalization to get trace=+2.0;
-						Complex tc=edgeMob.a.plus(edgeMob.d);
-						if (tc.x<0.0) {
-							edgeMob.a=edgeMob.a.times(-1.0);
-							edgeMob.b=edgeMob.b.times(-1.0);
-							edgeMob.c=edgeMob.c.times(-1.0);
-							edgeMob.d=edgeMob.d.times(-1.0);
-							tc=tc.times(-1.0);
-						}
-								
-						// show results
-						Complex detdM=edgeMob.det();
-						System.out.println("Edge <"+v+","+w+
-							"> ; Schwarzian trace is "+
-							String.format("%.6f",edgeMob.c.x)+" "+
-							String.format("%.6f", edgeMob.c.y)+"; det(dM) = "+
-							String.format("%.6f",detdM.x)+" "+
-							String.format("%.6f", detdM.y));
-					}
-					
+					SchwarzData sD=Schwarzian.getSchData(
+							domainTri[f],domainTri[g],
+							rangeTri[f],rangeTri[g]);
+					CirclePack.cpb.msg("SchData, <"+v+","+w+
+							": sd="+sD.Schw_Deriv+"; coeff="+sD.Schw_coeff+
+							"; s's="+sD.domain_schwarzian+","+
+							sD.range_schwarzian);
 					count=count+1;
 				} catch(Exception ex) {
 					Oops("failed to compute Schwarzian for edge <"+
 							v+","+w+">");
 				}
-			}
-			
+			} // end of while
 			return count;
 		}
 		
@@ -1359,7 +1303,7 @@ public class SchwarzMap extends PackExtender {
 			if (flagSegs!=null && flagSegs.size()>0) {
 				items=flagSegs.get(0);
 				int qnum=StringUtil.qItemParse(items);
-				if (qnum>=0) {
+				if (qnum>=0) { // CPBase.packings
 					pd=CPBase.cpDrawing[qnum].getPackData();
 					rangePackNum=pd.packNum;
 				}
@@ -1368,7 +1312,7 @@ public class SchwarzMap extends PackExtender {
 			// initiate the TriAspects (or get from an extender)
 			TriAspect[] ourTri;
 			try {
-				ourTri=setupTri(pd);
+				ourTri=PackData.getTriAspects(pd);
 			} catch(Exception ex) {
 				CirclePack.cpb.errMsg("failed to set triangle data");
 				return 0;
@@ -1388,9 +1332,10 @@ public class SchwarzMap extends PackExtender {
 		}
 		
 		// ========== go ===== 
-		// Compute schwarzian data for all faces f; following our notation
-		//   conventions, for each positively oriented edge e of f, the 
-		//   derivative is dM(e)= mob_g^{-1}(mob_f), g the face across e. 
+		// Compute Schwarzian derivatives for all faces f; 
+		//   following our notation conventions, for each 
+		//   positively oriented edge e of f, the derivative 
+		//   is dM(e)= mob_g^{-1}(mob_f),g the face across e. 
 		if (cmd.startsWith("go")) {
 			
 			boolean debug=false;
@@ -1418,8 +1363,10 @@ public class SchwarzMap extends PackExtender {
 							int jg1=(jg+1)%3;
 							
 							// Recall that the packings may not be planar, 
-							//   so we want to align the neighboring faces 
-							//   before computing
+							//   e.g., packing of a torus with faces on
+							//   opposite sides of a cut.
+							//   Thus we want to align as geometrically
+							//   neighboring faces before computing
 							
 							// Mobius of g to align it with f along <v,w>
 							Mobius domainalign=new Mobius(); // identity
@@ -1433,11 +1380,11 @@ public class SchwarzMap extends PackExtender {
 							if ((fvz.minus(gvz).abs()+
 									fwz.minus(gwz).abs()>
 										0.001*domainTri[f].getRadius(jf))) {
-								domainalign=Mobius.mob_MatchCircles(gvz,
-										domainTri[g].getRadius(jg1), 
-										gwz, domainTri[g].getRadius(jg),
-										fvz,domainTri[f].getRadius(jf), 
-										fwz, domainTri[f].getRadius(jf1),
+								domainalign=Mobius.mob_MatchCircles(
+										new CircleSimple(gvz,domainTri[g].getRadius(jg1)), 
+										new CircleSimple(gwz, domainTri[g].getRadius(jg)),
+										new CircleSimple(fvz,domainTri[f].getRadius(jf)), 
+										new CircleSimple(fwz, domainTri[f].getRadius(jf1)),
 										packData.hes,packData.hes);
 								// old method
 //								Complex ftanz=domainTri[f].tanPts[jf];
@@ -1458,11 +1405,11 @@ public class SchwarzMap extends PackExtender {
 							if ((fvz.minus(gvz).abs()+
 									fwz.minus(gwz).abs()>
 										0.001*rangeTri[f].getRadius(jf))) {
-								domainalign=Mobius.mob_MatchCircles(gvz,
-										rangeTri[g].getRadius(jg1), 
-										gwz, rangeTri[g].getRadius(jg),
-										fvz,rangeTri[f].getRadius(jf), 
-										fwz, rangeTri[f].getRadius(jf1),
+								domainalign=Mobius.mob_MatchCircles(
+										new CircleSimple(gvz,rangeTri[g].getRadius(jg1)), 
+										new CircleSimple(gwz, rangeTri[g].getRadius(jg)),
+										new CircleSimple(fvz,rangeTri[f].getRadius(jf)), 
+										new CircleSimple(fwz, rangeTri[f].getRadius(jf1)),
 										rangeHes,rangeHes);
 							}
 							
@@ -1670,19 +1617,19 @@ public class SchwarzMap extends PackExtender {
 	} // end of 'cmdParser'
 
 	/**
-	 * Get the schwarzian coefficient and tangency point for edge <v,w>
+	 * Return the schwarzian coefficient and tangency point for edge <v,w>
 	 * @param v int
 	 * @param w int
 	 * @return double[] = {coeff, x, y} 
 	 */
-	public double []get_s_coeff(int v,int w) {
+	public double[] get_s_coeff(int v,int w) {
 		HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
 		if (he==null)
 			CirclePack.cpb.errMsg("something wrong with edge v or w");
 		int f=he.face.faceIndx;
 		if (domainTri[f].schwarzian==null || domainTri[f].tanPts==null)
 			CirclePack.cpb.errMsg("'sch_coeffs' of 'tanPts' do not exist");
-		double []ans=new double[3];
+		double[] ans=new double[3];
 		int j=domainTri[f].vertIndex(v);
 		ans[0]=domainTri[f].schwarzian[j];
 		ans[1]=domainTri[f].tanPts[j].x;
@@ -1693,7 +1640,7 @@ public class SchwarzMap extends PackExtender {
 	/**
 	 * Store schwarzian for oriented edge <v,w> and <w,v> in
 	 * their face TriAspect's. Note that faces f/g are 
-	 * left/right of <v,w>, resp.
+	 * left/right of <v,w>, resp. 
 	 * @param v int
 	 * @param w int
 	 * @param schw double
@@ -1717,13 +1664,14 @@ public class SchwarzMap extends PackExtender {
 	}
 	
 	/**
-	 * If 'domainTri' and 'rangeTri' have data, then use the tangency 
-	 * points to compute the Mobius maps for all the faces. So faceMobs[f]
-	 * maps domain face f to range face f. 
+	 * If 'domainTri' and 'rangeTri' have data, then for 
+	 * each face, use the tangency points to compute the 
+	 * Mobius map. So faceMobs[f] maps domain face f to 
+	 * range face f. 
 	 * TODO: in process 1/2020 in converting to use 'baseMobius' instead.
 	 * @return Mobius[] or null on error
 	 */
-	public Mobius []setFaceMobs() {
+	public Mobius[] setFaceMobs() {
 		if (domainTri==null || rangeTri==null) {
 			CirclePack.cpb.errMsg("'domainTri', 'rangeTri' must "+
 					"have data to construct face Mobius maps");
@@ -1743,27 +1691,6 @@ public class SchwarzMap extends PackExtender {
 		} 
 		
 		return faceMobs;
-	}
-
-	/**
-	 * Get 'TriAspect's for given packing so tanPts are updated
-	 * and 'baseMobius' are computed.
-	 * @param pd PackData
-	 * @return TriAspet[]
-	 */
-	public TriAspect[] setupTri(PackData pd) {
-	
-		TriAspect[] ourTri=PackData.getTriAspects(pd);
-		
-		// set Mobius maps FROM "base equilateral" to faces
-		for (int f=1;f<=pd.faceCount;f++) {
-			ourTri[f].baseMobius=Mobius.mob_xyzXYZ(
-					CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
-					ourTri[f].tanPts[0],ourTri[f].tanPts[1],ourTri[f].tanPts[2],
-					0,pd.hes);
-		}
-		
-		return ourTri;
 	}
 
 	/** 

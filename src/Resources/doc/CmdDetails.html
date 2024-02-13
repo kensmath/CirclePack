@@ -666,6 +666,10 @@ does not eliminate redundancies, as other counts do.)
     the type, there may be special numbering or marking of 
     vertices and/or edges.
     
+    The "seed" construction builds an n-flower; -s flag
+    means to use given list of implicit schwarzians,
+    defaulting to 0's.
+    
     The "hex_torus" construction builds a regular parallelogram-like
     hex torus with given w/h for width/height.
     
@@ -3367,8 +3371,8 @@ script and append it to 'ClosedPath'.</td></tr>
 <blockquote>
 <strong>Description: </strong>
 	For single d-flower, append N lines to
-	'filename', wach a string of d reals which are the 
-	schwarzians for the spokes of a d-flower repacked with 
+	'filename', each a string of d reals which are the 
+	intrinsic schwarzians for the spokes of a d-flower repacked with 
 	random boundary radii in range [.33333, 3.0]. 
 	The "-r" flag says to replace d in each of the N runs with a
 	random integer in range [3,15]. The "-c" flag says to 
@@ -4281,7 +4285,7 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 <blockquote>
 <strong>Description: </strong>
 	Compute and store the intrinsic schwarzians for given edges, 
-	defaulting to 'all'. See 'dcel.schwarzian.java' for more details
+	defaulting to 'all'. See 'dcel.Schwarzian.java' for more details
 	and the PackExtender 'SchwarzMap.java' for related methods.
 	If double x is given, then set specified schwarzians to x. 
 	Else compute the schwarzians using current radii. This 

@@ -10,9 +10,11 @@ import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import exceptions.DataException;
+import exceptions.MiscException;
 import exceptions.MobException;
 import geometry.CircleSimple;
 import geometry.CommonMath;
+import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import komplex.DualTri;
 import listManip.EdgeLink;
@@ -23,7 +25,9 @@ import math.Mobius;
 import packing.PackData;
 import util.ColorUtil;
 import util.DispFlags;
+import util.SchwarzData;
 import util.StringUtil;
+import util.TriAspect;
 
 /**
  * These are static routines for working with discrete Schwarzian 
@@ -49,6 +53,15 @@ import util.StringUtil;
  * @author kens, January 2020
  */
 public class Schwarzian {
+	
+	// positioning face g may require pre-rotatin about 0
+	//   then pre-rotation about 1: z->1-z rotates about 1
+	final static Mobius gFix1=
+			new Mobius(CPBase.omega3[1].times(-1.0),CPBase.omega3[1].times(2.0),
+					new Complex(0.0),new Complex(1.0));
+	final static Mobius gFix2=
+			new Mobius(CPBase.omega3[2].times(-1.0),CPBase.omega3[2].times(2.0),
+					new Complex(0.0),new Complex(1.0));
 	
 	/**
 	 * Concerns intrinsic schwarzians in normalized flower
@@ -111,7 +124,7 @@ public class Schwarzian {
 	 * 
 	 * Multi-connected cases are more complicated for interior
 	 * red edges (i.e., with red twins; e.g., keep affine tori 
-	 * in mind.)
+	 * in mind.) Even more complicated for projective structures.
 	 * @param p PackData
 	 * @param hlink HalfLink, default to all
 	 * @return count, 0 on error
@@ -142,7 +155,7 @@ public class Schwarzian {
 			HalfEdge edge=null;
 			while (hlst.hasNext()) {
 				edge=hlst.next();
-				if (edge.eutil==-1)
+				if (edge.eutil==-1) // bdry edge
 					edge.setSchwarzian(0.0);
 				else if (edge.eutil>0) {
 					double[] rad = new double[4];
@@ -622,7 +635,7 @@ public class Schwarzian {
 	
 	/**
 	 * Compute the directed Mobius edge derivative (essentially as 
-	 * defined by Orick). Calling routine must align f and g to 
+	 * defined by Orick). Calling routine must align f and g 
 	 * and F and G to share common edge, before providing the
 	 * base2face Mobius maps. Note that the complex Schwarzian is
 	 * the 2,1 entry of this matrix. 
@@ -689,5 +702,151 @@ public class Schwarzian {
 		System.out.println("  domain z and r: "+z.toString()+" "+r+
 				"   range z and r: "+sC.center.toString()+" "+sC.rad);
 	}
+	
+	public static SchwarzData getSchData(TriAspect domf,TriAspect domg,
+			TriAspect rngF,TriAspect rngG) {
+		Mobius dmf=domf.getBaseMobius();
+		Mobius dmg=domg.getBaseMobius();
+		Mobius rmF=rngF.getBaseMobius();
+		Mobius rmG=rngG.getBaseMobius();
+		if (dmf==null || dmg==null || rmF==null || rmG==null)
+			return null;
+		
+		// Find shared edge index for g, align g to f if necessary
+		int indx_g=domg.nghb_Tri(domf);
+		HalfEdge g_he=domg.baseEdge;
+		if (indx_g==1)
+			g_he=g_he.next;
+		else if (indx_g==2)
+			g_he=g_he.next.next;
+//		HalfEdge g_he=domg.getHalfEdge(indx_g);
+		dmg=(Mobius)dmg.lmult(domg.alignMe(domf, g_he, 1));
+	
+		// Find shared edge index for G, align G to F if necessary
+		int indx_G=rngG.nghb_Tri(rngF);
+		HalfEdge G_he=rngG.baseEdge;
+		if (indx_G==1)
+			G_he=G_he.next;
+		else if (indx_G==2)
+			G_he=G_he.next.next;
+		// TODO: very mysterious fail on this call:
+		//   code usines domg instead of rngG
+//			HalfEdge G_he=rngG.getHalfEdge(indx_G);
+		rmG=(Mobius)rmG.lmult(rngG.alignMe(rngF, G_he, 1));
+		
+		// Find shared edge indices for f/F
+		int indx_f=domf.nghb_Tri(domg);
+		HalfEdge f_he=domf.baseEdge;
+		if (indx_f==1)
+			f_he=f_he.next;
+		else if (indx_f==2)
+			f_he=f_he.next.next;
+		int indx_F=rngF.nghb_Tri(rngG);
+		
+		// get started: assume verts indices agree in domain/range
+		SchwarzData schData=new SchwarzData(
+				f_he.origin.vertIndx,f_he.next.origin.vertIndx);
+		
+		// msut pre-rotate all 'baseMob's so shared edge
+		//   corresponds to base edge through 1
+		dmf.a=dmf.a.times(CPBase.omega3[indx_f]);
+		dmf.d=dmf.d.times(CPBase.omega3[indx_f]);
+		
+		rmF.a=rmF.a.times(CPBase.omega3[indx_F]);
+		rmF.d=rmF.d.times(CPBase.omega3[indx_F]);
+		
+		dmg.a=dmg.a.times(CPBase.omega3[indx_g]);
+		dmg.d=dmg.d.times(CPBase.omega3[indx_g]);
+		
+		rmG.a=rmG.a.times(CPBase.omega3[indx_G]);
+		rmG.d=rmG.d.times(CPBase.omega3[indx_G]);
+		
+		Mobius mf=(Mobius)rmF.lmult(dmf.inverse());
+		Mobius mg=(Mobius)rmG.lmult(dmg.inverse());
+		Mobius mgimf=(Mobius)mg.inverse().rmult(mf);
+		mgimf.normalize();
+		schData.Schw_Deriv=mgimf.c;
 
+		// unit outward normal eta; depends on geom 
+		Complex cv=domf.getCenter(indx_f);
+		Complex cw=domf.getCenter((indx_f+1)%3);
+		if (domf.hes>0) { // sph
+			CircleSimple sC1=SphericalMath.s_to_e_data(cv,
+				domf.getRadius(indx_f));
+			cv=sC1.center;
+			CircleSimple sC2=SphericalMath.s_to_e_data(cw,
+				domf.getRadius((indx_f+1)%3));
+			cw=sC2.center;
+			if (sC1.flag==-1 || sC2.flag==-1)
+				throw new MiscException("A disc contains "+
+						"infinity: Schwarz not ready "+
+						"for this.");
+		}
+		if (domf.hes<0) { // hyp
+			CircleSimple sC=HyperbolicMath.h_to_e_data(cv,
+					domf.getRadius(indx_f));
+			cv=sC.center;
+			sC=HyperbolicMath.h_to_e_data(cw,
+					domf.getRadius((indx_f+1)%3));
+			cw=sC.center;
+		}
+		
+		// get outward unit normal
+		Complex eta=cw.minus(cv).times(new Complex(0,-1));
+		eta=eta.divide(eta.abs());
+
+		Complex tmp=schData.Schw_Deriv.divide(eta.conj());
+		schData.Schw_coeff=tmp.x;
+		
+		// this should be real; if not, set flag
+		if (Math.abs(schData.Schw_Deriv.y)>.001)
+			schData.flag=1;
+		
+		// get intrinsic schwarzians for domain/range pairs
+		schData.domain_schwarzian=getIntrinsicSch(domf,domg);
+		schData.range_schwarzian=getIntrinsicSch(rngF,rngG);
+		
+		return schData;
+	}
+
+	/**
+	 * Compute the INtrinsic Schwarzian for edge shared by 
+	 * two face. 
+	 * @param tri_f TriAspect
+	 * @param tri_g TriAspect
+	 * @return Double, null if 'baseMob's not set
+	 */
+	public static Double getIntrinsicSch(TriAspect tri_f,TriAspect tri_g) {
+		Mobius dmf=tri_f.getBaseMobius();
+		Mobius dmg=tri_g.getBaseMobius();
+		if (dmf==null || dmg==null)
+			return null;
+		
+		// Find shared edges
+		int indx_f=tri_f.nghb_Tri(tri_g);
+		int indx_g=tri_g.nghb_Tri(tri_f);
+		
+		// modify dmf; pre-rotate base by omega[indx_f]
+		if (indx_f>0) { 
+			dmf.a.times(CPBase.omega3[indx_f]);
+			dmf.c.times(CPBase.omega3[indx_f]);
+		}
+
+		// modify dmg; pre-rotate, then pre-compose
+		//   by rotation about 1 (so map is from equilateral
+		//   across edge through 1).
+		if (indx_g==1)
+			dmg=(Mobius)dmg.rmult(gFix1);
+		else if (indx_g==2)
+			dmg=(Mobius)dmg.rmult(gFix2);
+		
+		// our definition uses dmg^{-1}.dmf
+		Mobius dom_sch=(Mobius)dmg.inverse().rmult(dmf);
+		dom_sch.normalize();
+		Complex c=dom_sch.c;
+		if (Math.abs(c.y)>.001) 
+			throw new MobException("intrinsic schwarzian has complex part");
+		return (Double)c.x;
+	}
+	
 }

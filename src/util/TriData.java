@@ -130,19 +130,6 @@ public class TriData {
 	}
 
 	/**
-	 * Find the 'HalfEdge' with index j.
-	 * @param j int, 0, 1, or 2
-	 * @return
-	 */
-	public HalfEdge getHalfEdge(int j) {
-		if (j==0)
-			return baseEdge;
-		if (j==1)
-			return baseEdge.next;
-		return baseEdge.next.next;
-	}
-	
-	/**
 	 * are there any non-trivial inversive distances for 
 	 * this face?
 	 * @return boolean
