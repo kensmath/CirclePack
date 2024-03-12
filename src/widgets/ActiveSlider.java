@@ -81,24 +81,37 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	}
 	
 	/**
-	 * Just refresh the slider location, don't trigger 
-	 * chgCmd; e.g., when min or max changes
+	 * Just refresh the slider location and text field;
+	 * but don't trigger chgCmd; e.g., when min or max 
+	 * changes
 	 */
 	public void refreshValue() {
 		boolean holdck=sfparent.changeCheck.isSelected();
 		sfparent.changeCheck.setSelected(false);
-		slider.setMyValue(value);
+		double val=1.0-sfparent.getParentValue(index);
+		slider.setMyValue(val); // to integer first
+		valueField.setValue(val);
 		sfparent.changeCheck.setSelected(holdck);
 	}
 	
 	/**
-	 * set value for slider 
+	 * set value for slider; this triggers change event
 	 * @param val
 	 */
 	public void setValue(double val) {
 		value=val;
 		slider.setMyValue(val);  // set slider
 		valueField.setValue(val); // set field
+	}
+	
+	/**
+	 * update value without change event
+	 * @param val
+	 */
+	public void updateValue(double val) {
+		value=val;
+		slider.setMyValue(val); // convert to integer
+		valueField.setValue(val);
 	}
 	
 	public String getLabel() {
@@ -115,7 +128,7 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	 */
 	public void changeReaction() {
 		double val=slider.getCurrentValue();
-		setValue(val);
+		updateValue(val);
 		sfparent.upValue(index); // change PackData after 'this.value' is set 
 		sfparent.changeAction(index); // there may be commands to execute
 	}

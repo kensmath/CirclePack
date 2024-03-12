@@ -116,7 +116,7 @@ public class DualTri {
 					Mobius psi=new Mobius(new Complex(0,a),new Complex(0,b),
 							new Complex(0.0),new Complex(1.0));
 					// Here's m
-					Mobius m=(Mobius)rot.lmult(phi.lmult(psi).lmult(phi.inverse()));
+					Mobius m=(Mobius)rot.lmultby(phi.lmultby(psi).lmultby(phi.inverse()));
 					Mobius m_inv=(Mobius)m.inverse();
 					double c=1-1/Math.sqrt(2);
 					TangPts[0]=m_inv.apply(new Complex(c,c));
@@ -147,7 +147,7 @@ public class DualTri {
 					double ag=nz2.arg()/2.0;
 					Mobius rot=new Mobius(new Complex(Math.cos(ag),Math.sin(-ag)),
 							new Complex(0.0),new Complex(0.0),new Complex(1.0));
-					Mobius m=(Mobius)phi.lmult(rot);
+					Mobius m=(Mobius)phi.lmultby(rot);
 					Mobius m_inv=(Mobius)m.inverse();
 					// Mobius m maps z0 to origin, z1, z2 equidistant from 1
 					

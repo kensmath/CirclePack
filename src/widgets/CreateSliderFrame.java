@@ -38,6 +38,9 @@ public class CreateSliderFrame {
 			p.radiiSliders.setVisible(true);
 			return p.radiiSliders.sliderCount;
 		}
+		
+/* Have changed SchwarSliders to work with flowers;
+ * See SchwarzMap.		
 		if (type == 1) { // schwarzians
 			if (p.schwarzSliders != null) {
 				p.schwarzSliders.dispose();
@@ -47,6 +50,7 @@ public class CreateSliderFrame {
 			p.schwarzSliders.setVisible(true);
 			return p.schwarzSliders.sliderCount;
 		}
+*/		
 		if (type == 2) { // angle sums
 			if (p.angSumSliders != null) {
 				p.angSumSliders.dispose();
@@ -183,6 +187,8 @@ public class CreateSliderFrame {
 			p.radiiSliders.setVisible(true);
 			return p.radiiSliders.sliderCount;
 		}
+		
+/* suspended since schwarzsliders are only for flowers now		
 		if (type == 1) { // schwarzians
 			if (p.schwarzSliders != null) {
 				p.schwarzSliders.dispose();
@@ -194,6 +200,7 @@ public class CreateSliderFrame {
 			p.schwarzSliders.setVisible(true);
 			return p.schwarzSliders.sliderCount;
 		}
+*/		
 		if (type == 2) { // angle sums
 			if (p.angSumSliders != null) {
 				p.angSumSliders.dispose();

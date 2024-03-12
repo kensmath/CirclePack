@@ -148,7 +148,7 @@ public class ComplexAnalysis extends PackExtender {
 			Mobius m=Mobius.standard3Point(a, b, c);
 			Mobius M=Mobius.standard3Point(A,B,C);
 			GroupElement  MInverse=(GroupElement)M.inverse();
-			faceMobs[f]=(Mobius)m.lmult(MInverse);
+			faceMobs[f]=(Mobius)m.lmultby(MInverse);
 		}
 		return true;
 	}	

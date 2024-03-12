@@ -136,7 +136,16 @@ public class AngSumSliders extends SliderFrame {
 		this.repaint();
 		return hit;
 	}
-		
+	
+	/**
+	 * abstract method, not yet used here. Intention
+	 * is to have data values held by Double[] pointer
+	 * 'parentValues' to the parent's data. 
+	 */
+	public double getParentValue(int indx) {
+		return 0.0;
+	}
+	
 	/**
 	 * when a slider changes, it sends the new value to packData
 	 */
@@ -145,10 +154,11 @@ public class AngSumSliders extends SliderFrame {
 	}
 	
 	/**
-	 * Set slider value from packing data
+	 * Set slider value from packing data without
+	 * causing change event
 	 */
 	public void downValue(int indx) {
-		mySliders[indx].setValue(packData.getCurv(verts.get(indx))/Math.PI);
+		mySliders[indx].updateValue(packData.getCurv(verts.get(indx))/Math.PI);
 	}
 	
 	/**

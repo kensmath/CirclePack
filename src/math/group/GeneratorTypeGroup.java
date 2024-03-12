@@ -109,7 +109,7 @@ public class GeneratorTypeGroup {
     GroupElement element = new Mobius();
     for(int i=0;i<size;i++) {
       String gen = new String()+s.charAt(i);
-      element = element.rmult(getGenerator(gen));
+      element = element.rmultby(getGenerator(gen));
     }
     return element;
   }
@@ -154,7 +154,7 @@ public class GeneratorTypeGroup {
           String genKey = (String) generatorKeys.get(j);
           if (isIrreducible(key, genKey)) {
             groupKeys.add(key + genKey);
-            GroupElement newWord = word.rmult(gen);
+            GroupElement newWord = word.rmultby(gen);
             newWord.setLevel(word.getLevel()+1);
             groupValues.add(newWord);
             count++;

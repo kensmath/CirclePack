@@ -660,6 +660,11 @@ public class PackDCEL {
 	 * Layout can be based on radii or (in tangency setting) using 
 	 * schwarzians. Side-pairing maps are updated.
 	 * 
+	 * TODO: when using schwarzians, the sphere is the
+	 * native environment. Should we convert the packing?
+	 * perhaps after seeing if some circle hits or encloses
+	 * infinity?
+	 * 
 	 * Note: this command modifies the recorded centers.
 	 * 
 	 * @param hlink HalfLink

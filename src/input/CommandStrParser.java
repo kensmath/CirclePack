@@ -5841,8 +5841,18 @@ public class CommandStrParser {
 	  case 'D': // fall through
 	  case 'd':
 	  {
-		  
-/* TODO: have to redo this without a dual graph of the old style.
+
+			// =============== dual_layout (replaced 'sch_layout')
+			if (cmd.startsWith("dual_lay")) {
+				
+				// use 'layoutOrder' and across one edge, 
+				//   not average across all available edges.
+				int ans=packData.packDCEL.layoutPacking(
+					packData.packDCEL.layoutOrder,true,null);
+				return ans;
+			}
+			
+/* TODO: OBE have to redo this without a dual graph of the old style.
  * 		  
 			// =============== dual_layout (replaced 'sch_layout')
 			if (cmd.startsWith("dual_lay")) {
@@ -8871,10 +8881,10 @@ public class CommandStrParser {
 				case 'S': // start for schwarzians
 				{
 					type = 1;
-					if (!packData.haveSchwarzians()) {
-						if (CommandStrParser.jexecute(packData,"set_sch")<=0)
-							throw new DataException("failed to compute schwarzians");
-					}
+//					if (!packData.haveSchwarzians()) {
+//						if (CommandStrParser.jexecute(packData,"set_sch")<=0)
+//							throw new DataException("failed to compute schwarzians");
+//					}
 					break;
 				}
 				case 'A': // start for angle sum sliders
@@ -9348,6 +9358,16 @@ public class CommandStrParser {
     						  items.remove(0);
     						  try {
     		   					  sch_value=Double.parseDouble(items.get(0));
+    		   					  givenx=true;
+    		   					  items.remove(0);
+    		   				  } catch (Exception ex) {
+    		   					  throw new ParserException("usage: set_schw -s {x} {v w ..}");
+    		   				  }
+    					  }
+    					  else if (items.get(0).startsWith("-u")) {
+    						  items.remove(0);
+    						  try {
+    		   					  sch_value=1.0-Double.parseDouble(items.get(0));
     		   					  givenx=true;
     		   					  items.remove(0);
     		   				  } catch (Exception ex) {

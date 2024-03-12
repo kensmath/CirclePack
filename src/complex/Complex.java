@@ -301,7 +301,7 @@ public class Complex {
 	}
 
 	/** 
-	 * Returns a String representation of this complex number in form x+yi 
+	 * Get String of this complex number in form x+yi 
 	 * @return String
 	 */
 	public String toString() {
@@ -335,7 +335,8 @@ public class Complex {
 	}
 
 	/** 
-	 * Returns a String representation of this complex number in form (x,y) 
+	 * Returns a String representation of this 
+	 * complex number in form (x,y) 
 	 */
 	public String toString2() {
 		return "(" + MathUtil.d2String(x) + "," + MathUtil.d2String(y) + ")";
@@ -343,7 +344,7 @@ public class Complex {
 
 	/**
 	 * Returns a String representation in form x y
-	 * @return
+	 * @return String
 	 */
 	public String toString3() {
 		return x + " " + y;

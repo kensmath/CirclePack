@@ -4,8 +4,8 @@ import complex.Complex;
 
 /**
  * Temporary holder for data related to Schwarzian 
- * for a given edge <v,w>. Associated packing(s) 
- * depend on context. 
+ * related data for a given edge <v,w>. Associated 
+ * packing(s) depend on context. 
  * @author kensm
  *
  */
@@ -22,6 +22,11 @@ public class SchwarzData {
 	// intrinsic schwarzians
 	public double domain_schwarzian;
 	public double range_schwarzian;
+	
+	// derivative at 1 of adjusted map from 
+	//    base equilateral to face f,
+	//    1/(c+d)^2.
+	public Complex dmf_deriv;
 
 	// Constructor
 	public SchwarzData() {

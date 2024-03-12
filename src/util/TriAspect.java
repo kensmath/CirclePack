@@ -10,8 +10,10 @@ import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
+import input.CommandStrParser;
 import komplex.DualTri;
 import math.Mobius;
+import packing.PackData;
 
 /**
  * Utility class holding geometric info localized to triangular
@@ -81,6 +83,14 @@ public class TriAspect extends TriData {
 	// constructor(s)
 	public TriAspect() { // default euclidean
 		super();
+		schwarzian=new double[3];
+		sidelengths=new double[3];
+		center=new Complex[3];
+		tanPts=new Complex[3];
+		for (int j=0;j<3;j++) {
+			center[j]=new Complex(0.0);
+			tanPts[j]=new Complex(0.0);
+		}
 	}
 	
 	public TriAspect(int geom) {
@@ -116,10 +126,13 @@ public class TriAspect extends TriData {
 			vert[j]=asp.vert[j];
 			center[j]=asp.getCenter(j);
 			radii[j]=asp.getRadius(j);
-			labels[j]=asp.labels[j];
-			sidelengths[j]=asp.sidelengths[j];
+			if (asp.labels!=null)
+				labels[j]=asp.labels[j];
+			if (asp.sidelengths!=null)
+				sidelengths[j]=asp.sidelengths[j];
 			setInvDist(j,asp.getInvDist(j));
-			schwarzian[j]=asp.schwarzian[j];
+			if (asp.schwarzian!=null)
+				schwarzian[j]=asp.schwarzian[j];
 		}
 		
 		if (asp.baseMobius!=null) 
@@ -198,12 +211,13 @@ public class TriAspect extends TriData {
 					invDist[j],invDist[(j+1)%3],invDist[(j+2)%3],hes);
 	}
 	
-	public void setBaseMobius() {
+	public Mobius setBaseMobius() {
 		if (tanPts==null)
 			setTanPts();
 		baseMobius=Mobius.mob_xyzXYZ(
 				CPBase.omega3[0],CPBase.omega3[1],CPBase.omega3[2],
 				tanPts[0],tanPts[1],tanPts[2],0,this.hes);
+		return baseMobius;
 	}
 	
 	public Mobius getBaseMobius() {
@@ -349,7 +363,7 @@ public class TriAspect extends TriData {
 	 * @param acrossTri TriAspect
 	 * @param HalfEdge edge, edge in 'this'
 	 * @param mode int
-	 * @return Mobius, identity on error
+	 * @return Mobius, null on error
 	 */
 	public Mobius alignMe(TriAspect acrossTri,
 			HalfEdge myEdge,int mode) {
@@ -380,7 +394,7 @@ public class TriAspect extends TriData {
 			
 			// TODO: not yet ready in sph/hyp cases
 			
-			return new Mobius();
+			return null;
 		}
 
 		// else assume mode==1, use radii; do we need to adjust?
@@ -391,7 +405,7 @@ public class TriAspect extends TriData {
 		if (!csMe_v.isEqual(cs_v) || !csMe_w.isEqual(cs_w))
 			return Mobius.mob_MatchCircles(csMe_v,csMe_w,cs_v,cs_w,
 				hes,acrossTri.hes);
-		return new Mobius(); // identity
+		return null; // identity
 	}
 	
 	/**
@@ -639,5 +653,61 @@ public class TriAspect extends TriData {
 		return (0.5*r*r*angleV(v,1.0)[0]);
 	}
 
+	/**
+	 * For help when debugging Schwarzian code. This
+	 * displaye rgb dots at corners of this face base
+	 * on the Mobius transformation from the base 
+	 * equilateral (fface=true) or its companion 
+	 * equilateral (fface=false) across vertical edge.
+	 * Also, prints corners so they can be copied
+	 * into matlab.
+	 * @param mb Mobius
+	 * @param fface boolean, true for f face, false for g face
+	 * @return
+	 */
+	public void deBugHelp(Mobius mb,boolean fface) {
+		PackData p=pdc.p;
+		
+		// print info
+		StringBuilder strbld=new StringBuilder(vert[0]+" "+
+				vert[1]+" "+vert[2]+" >\n");
+		strbld.append("[ "+tanPts[0]+","+tanPts[1]+
+				","+tanPts[2]+"]\n");
+		System.out.println(strbld.toString());
+		
+		// get images of three tangency points from base
+		Complex[] spots=new Complex[3];
+		if (fface)
+			for (int j=0;j<3;j++) { 
+				spots[j]=mb.apply(CPBase.omega3[j]);
+			}
+		// for g face, have to rotate about 1 to because
+		//    mb is from companion to base equilateral
+		else 
+			// rotate by z->2-z
+			for (int j=0;j<3;j++) { 
+				spots[j]=mb.apply(new Complex(2.0).minus(CPBase.omega3[j]));
+			}
 
+		strbld=new StringBuilder("disp -f "+faceIndx+
+					" -tft1c195 z "+spots[0].x+" "+spots[0].y+
+					" -tft1c218 z "+spots[1].x+" "+spots[1].y+
+					" -tft1c5 z "+spots[2].x+" "+spots[2].y);
+
+		CommandStrParser.jexecute(p,strbld.toString());
+	}
+	
+	/**
+	 * Return vector of complex tanPts, e.g. for matlab.
+	 * @return String
+	 */
+	public String tanPts2Str() {
+		if (tanPts==null)
+			return "";
+		StringBuilder strbld=new StringBuilder("[");
+		strbld.append(tanPts[0].toString()+", ");
+		strbld.append(tanPts[1].toString()+", ");
+		strbld.append(tanPts[2].toString()+"]");
+		return strbld.toString();
+	}
 }

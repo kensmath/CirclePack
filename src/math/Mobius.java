@@ -267,7 +267,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 * @param left GroupElement
 	 * @return GroupElement
 	 */
-	public GroupElement lmult(GroupElement left) {
+	public GroupElement lmultby(GroupElement left) {
 		return new Mobius((a.times(((Mobius) left).a)).plus(c
 				.times(((Mobius) left).b)), (b.times(((Mobius) left).a)).plus(d
 				.times(((Mobius) left).b)), (a.times(((Mobius) left).c)).plus(c
@@ -281,7 +281,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 * @param left GroupElement
 	 * @return GroupElement
 	 */
-	public GroupElement rmult(GroupElement right) {
+	public GroupElement rmultby(GroupElement right) {
 		Mobius M = new Mobius(
 				(a.times(((Mobius) right).a)).plus(b.times(((Mobius) right).c)),
 				(a.times(((Mobius) right).b)).plus(b.times(((Mobius) right).d)),
@@ -317,6 +317,19 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		return a.toString3() + " " + b.toString3() + " " + c.toString3() + " "
 				+ d.toString3() + " ";
 
+	}
+	
+	/**
+	 * Form string for matlab input [a,b;c,d].
+	 * @return String
+	 */
+	public String toMatlabString() {
+		StringBuilder strbld=new StringBuilder("[");
+		strbld.append(a.toString()+",");
+		strbld.append(b.toString()+";");
+		strbld.append(c.toString()+",");
+		strbld.append(d.toString()+"]");
+		return strbld.toString();
 	}
 	
 	/**
@@ -616,7 +629,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		GroupElement MInverse = (GroupElement) M.inverse();
 		
 		// normalize
-		Mobius outmob=(Mobius)m.lmult(MInverse);
+		Mobius outmob=(Mobius)m.lmultby(MInverse);
 		outmob.normalize();
 		return outmob;
 	}
@@ -678,7 +691,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		mobrot.c=new Complex(0.0);
 		mobrot.d=new Complex(1.0);
 		
-		mob=(Mobius)mob.lmult(mobrot);
+		mob=(Mobius)mob.lmultby(mobrot);
 		return mob;
 	}
 	
@@ -707,7 +720,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		mobrot.c=new Complex(0.0);
 		mobrot.d=new Complex(1.0);
 		
-		mob=(Mobius)mob.lmult(mobrot);
+		mob=(Mobius)mob.lmultby(mobrot);
 		return mob;
 	}
 	
@@ -746,8 +759,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		
 		// return inv(M)*scaler*M
 		Mobius invM=(Mobius)M.inverse();
-		Mobius SM=(Mobius)(M.lmult(scaler));
-		Mobius ans=(Mobius)SM.lmult(invM);
+		Mobius SM=(Mobius)(M.lmultby(scaler));
+		Mobius ans=(Mobius)SM.lmultby(invM);
 		
 		// debug=true;
 		if (debug) {
@@ -904,7 +917,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			Mobius M1 = standard_mob(a, b);
 			Mobius M2 = standard_mob(A, B);
 			M2.inverse();
-			mob = (Mobius) M2.rmult(M1); // M = M2 * M1
+			mob = (Mobius) M2.rmultby(M1); // M = M2 * M1
 
 			// if we switch, have to switch back
 			if (aa >= MOD1)
@@ -930,7 +943,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 				return mob;
 			}
 			M2 = (Mobius) tmp.inverse();
-			mob = (Mobius) M2.rmult(M1); // M = M2 * M1
+			mob = (Mobius) M2.rmultby(M1); // M = M2 * M1
 			mob.error = B.sub(mob.apply(b)).abs();
 			mob.normalize();
 			return mob;
@@ -986,7 +999,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 			throw new MobException("'norm_abc' error: " + mex.getMessage());
 		}
 		// the result we want: inv(M2)*M1
-		mob = (Mobius) M2.inverse().rmult(M1);
+		mob = (Mobius) M2.inverse().rmultby(M1);
 		mob.normalize();
 		return mob;
 	}
@@ -1071,13 +1084,13 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		// T translates by -img to put image of B at 0.
 		T = new Mobius(One, new Complex(0.0, -img.y), new Complex(0.0), One);
 		// compose these
-		M = (Mobius) T.rmult(R);
+		M = (Mobius) T.rmultby(R);
 		// scale by reciprocal of image of c
 		M = (Mobius) M.scale(M.apply(c).reciprocal());
 		// W maps back to the disc: 1->0, 0->-1,infty->1; ie. z->(z-1)/(z+1)
 		W = new Mobius(One, new Complex(-1.0), One, One);
 		// compose for final map
-		return (Mobius) W.rmult(M);
+		return (Mobius) W.rmultby(M);
 	}
 	
 	/**
@@ -1459,7 +1472,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 						M2.oriented = true;
 						M2.normalize();
 
-						MM = (Mobius) M2.rmult(M1); // M2*M1
+						MM = (Mobius) M2.rmultby(M1); // M2*M1
 					}
 				} else {
 					if (Srad > 0) { /*
@@ -1483,7 +1496,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 					M2.d = new Complex(1.0);
 					M2.oriented = true;
 					M2.normalize();
-					MM = (Mobius) M2.rmult(M1); // M2*M1
+					MM = (Mobius) M2.rmultby(M1); // M2*M1
 				}
 			} else { // generic case; move Nctr to origin, Sctr to infty
 				MM.a = new Complex(1.0);
@@ -1553,7 +1566,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		M1.oriented = true;
 		M1.normalize();
 
-		return (Mobius) M1.rmult(MM);
+		return (Mobius) M1.rmultby(MM);
 	}
 
 	/**
@@ -1589,7 +1602,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		// need affine c1 to c2, then invert in c2 
 		if (CPrad1<0.0) { // note: CPrad2<0
 			Mobius toU=Mobius.mob_abAB(ctr2,b,new Complex(0.0),new Complex(1.0));
-			return (Mobius)toU.inverse().rmult(Mobius.recip_mob().rmult(toU));
+			return (Mobius)toU.inverse().rmultby(Mobius.recip_mob().rmultby(toU));
 		}
 		
 		// inversion in c2 with center/rad (c.r) given by z -->
@@ -1597,7 +1610,7 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		Complex w = ctr2.times(ctr2);
 		mob2 = new Mobius(ctr2, new Complex(CPrad2 * CPrad2 - w.x, -w.y),
 				new Complex(1.0), new Complex(-ctr2.x, -ctr2.y));
-		return (Mobius) mob2.rmult(mob1);
+		return (Mobius) mob2.rmultby(mob1);
 	}
 
 	/**

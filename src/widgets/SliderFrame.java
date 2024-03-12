@@ -53,9 +53,10 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	public static final int DEFAULT_HEIGHT=300; 
 	
 	// abstract methods that must be implemented by derived classes
+	public abstract double getParentValue(int indx); // retrieve value held by parent
 	public abstract void populate(); // create and add the 'ActiveBar's
 	public abstract void downValue(int indx); // from packing to slider
-	public abstract void upValue(int indx); // send slider value to packing
+	public abstract void upValue(int indx); // send slider value up to packing
 	public abstract void createSliderPanel(); // may want, e.g., special border
 	public abstract void setChangeField(String cmd); // set optional command with value change
 	public abstract void setMotionField(String cmd); // set optional command on motion into slider
@@ -67,6 +68,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	public abstract void killMe(); // to call CirclePack to kill this frame
 	public abstract void initRange(); // set the initial slider ranges
 	
+	public Double[] parentValues; // parent may hold the values
 	public int type;  // 0=radii, 1=schwarzians, 2=angle sums
 	public int sliderCount;
 	public double val_min;
@@ -344,7 +346,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	
 	public void valueField_action(double val, int indx) {
 		mySliders[indx].value=val;
-		upValue(indx);
+		upValue(indx); // send value up to packing
 		mySliders[indx].refreshValue();
 		changeAction(indx);
 	}
@@ -382,11 +384,13 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	}
 
 	/**
-	 * Update all slider values from PackData
+	 * Update all slider values and slider field
+	 * values from PackData without triggering
+	 * change action.
 	 */
 	public void downloadData() {
 		for (int j=0;j<sliderCount;j++) {
-			downValue(j);
+			mySliders[j].refreshValue();
 		}
 		this.repaint();
 	}

@@ -312,12 +312,12 @@ public class LayoutShop {
 			HalfEdge fedge,double s, int mode) {
 		if (fedge.isBdry())
 			return -1;
-		int fv = ftri.edgeIndex(fedge.twin);
+		int fv = ftri.edgeIndex(fedge);
 		if (fv < 0)
 			throw new ParserException("TriAspect does not contain given "
 					+ "HalfEdge " + fedge);
 		int fw = (fv+1)%3;
-		int gw=gtri.edgeIndex(fedge);
+		int gw=gtri.edgeIndex(fedge.twin);
 		int gv=(gw+1)%3;
 		int gopp=(gw+2)%3;
 

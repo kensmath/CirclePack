@@ -16,7 +16,7 @@ public interface GroupElement {
    * @return GroupElement
    * @param g GroupElement
    */
-  public GroupElement lmult(GroupElement g);
+  public GroupElement lmultby(GroupElement g);
 
   /**
    * Multiplies the current element by g from the right
@@ -24,7 +24,7 @@ public interface GroupElement {
    * @return GroupElement
    * @param g GroupElement
    */
-  public GroupElement rmult(GroupElement g);
+  public GroupElement rmultby(GroupElement g);
  /**
   * Returns the inverse of the element
   * @return GroupElement

@@ -100,7 +100,7 @@ public class Quaternion  implements GroupElement {
 	/**
 	 * multiply 'this' on the left by g
 	 */
-	public GroupElement lmult(GroupElement g) {
+	public GroupElement lmultby(GroupElement g) {
 		Quaternion G=(Quaternion)g;
 		return new Quaternion(
 				G.q1*q1-G.q2*q2-G.q3*q3-G.q4*q4,
@@ -113,7 +113,7 @@ public class Quaternion  implements GroupElement {
 	/**
 	 * multiply 'this' on right by g
 	 */
-	public GroupElement rmult(GroupElement g) {
+	public GroupElement rmultby(GroupElement g) {
 		Quaternion G=(Quaternion)g;
 		return new Quaternion(
 				q1*G.q1-q2*G.q2-q3*G.q3-q4*G.q4,

@@ -525,7 +525,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			{
 				break;
 			}
-			case 'i': // interior
+			case 'i': // interior (at least one end interior)
 			{
 				for (int v=1;v<=pdc.vertCount;v++) {
 					Vertex vert=pdc.vertices[v];
@@ -535,13 +535,20 @@ public class HalfLink extends LinkedList<HalfEdge> {
 					Iterator<HalfEdge> hits=hlink.iterator();
 					while (hits.hasNext()) {
 						HalfEdge he=hits.next();
-						if (he.myRedEdge!=null) {
+						if (he.myRedEdge!=null) { // red interior
 							add(he);
 							count++;
 						}
-						else if (he.twin.origin.vertIndx>v) {
-							add(he);
-							count++;
+						else {
+							Vertex wert=he.twin.origin;
+							if (wert.isBdry()) { // other end is bdry
+								add(he);
+								count++;
+							}
+							else if (wert.vertIndx>v) {
+								add(he);
+								count++;
+							}
 						}
 					}
 				}

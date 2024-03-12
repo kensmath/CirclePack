@@ -141,6 +141,16 @@ public class RadiiSliders extends SliderFrame {
 	}
 		
 	/**
+	 * abstract method, not yet used here. Intention
+	 * is to have data values held by Double[] pointer
+	 * 'parentValues' to the parent's data. 
+	 */
+	public double getParentValue(int indx) {
+		return 0.0;
+	}
+
+	
+	/**
 	 * when a slider changes, it sends the new value to packData
 	 */
 	public void upValue(int indx) {
@@ -149,11 +159,12 @@ public class RadiiSliders extends SliderFrame {
 	}
 	
 	/**
-	 * Set slider value from packing data
+	 * Set slider value from packing data without
+	 * causing change event
 	 */
 	public void downValue(int indx) {
 		int v=verts.get(indx);
-		mySliders[indx].setValue(packData.getRadius(v));
+		mySliders[indx].updateValue(packData.getRadius(v));
 	}
 	
 	/**

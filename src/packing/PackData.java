@@ -5566,6 +5566,7 @@ public class PackData{
 		int count=0;
 		while (his.hasNext()) {
 			DcelFace face=his.next().face;
+
 			TriAspect ta=aspect[face.faceIndx]=
 					new TriAspect(pdcel,face);
 			// compute/store the tangency points
