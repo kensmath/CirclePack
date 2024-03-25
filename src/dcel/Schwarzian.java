@@ -132,9 +132,9 @@ public class Schwarzian {
 	 * involved, find the base Mobius transformations and 
 	 * compute the schwarzian. 
 	 * 
-	 * Multi-connected cases are more complicated if side-pairing
-	 * maps are not isometries --- e.g. for projective structures
-	 * such as affine tori.
+	 * Multi-connected cases are more complicated if 
+	 * side-pairing maps are not isometries --- 
+	 * e.g. for projective structures such as affine tori.
 	 * @param p PackData
 	 * @param hlink HalfLink, default to all
 	 * @return count, 0 on error
@@ -373,28 +373,7 @@ public class Schwarzian {
 			throw new DataException("error: Schwarzian is not real");
 		return dMob.c.x;
 	}
-
-	public static double rad_to_schwarzian(PackData p,HalfEdge edge) {
-		double[] rads=new double[4];
-		HalfEdge he=edge;
-		HalfEdge htw=edge.twin;
-		int tick=0;
-		do {
-			rads[tick]=p.packDCEL.getVertRadius(he);
-			he=he.next;
-			htw=htw.next;
-			tick++;
-		} while (tick<=3);
-		rads[3]=p.packDCEL.getVertRadius(edge.twin.next.next);
-		double ans=0;
-		try {
-			ans=rad_to_schwarzian(rads,p.hes);
-		} catch(Exception ex) {
-			throw new DataException(ex.getMessage());
-		}
-		return ans; 
-	}
-	
+		
 	/**
 	 * Compute intrinsic schwarzian mobius transformation 
 	 * for edge between f and g via 'baseMobius's, ensuring 
@@ -520,61 +499,6 @@ public class Schwarzian {
 	}
 	
 	/**
-	 * Compute Mobius mapping FROM "base equilateral" TO the 
-	 * face associated with 'edge'. 
-	 * @param p CirclePack
-	 * @param edge HalfEdge
-	 * @return Mobius, return null if 'edge.face' is ideal face
-	 */
-	public static Mobius base2faceMob(PackData p,HalfEdge edge) {
-		if (edge.face!=null && edge.face.faceIndx<0)
-			return null;
-		Complex[] Z=new Complex[3];
-		double[] rads=new double[3]; 
-		int tick=0;
-		do {
-			rads[tick]=p.packDCEL.getVertRadius(edge);
-			Z[tick]=p.packDCEL.getVertCenter(edge);
-			tick++;
-			edge=edge.next;
-		} while (tick<3);
-		if (p.hes > 0) { // sph? check for circles containing infinity
-			for (int j=0;j<3;j++) {
-				if ((Z[j].y+rads[j])>Math.PI)
-					Z[j]=SphericalMath.getAntipodal(Z[j]);
-			}
-		}
-		
-		// find tangency points
-		Complex []tpts=new Complex[3];
-		for (int j=0;j<3;j++) {
-			Complex z1=Z[j];
-			Complex z2=Z[(j+1)%3];
-			double r1=rads[j];
-			double r2=rads[(j+1)%3];
-			tpts[j]=CommonMath.get_tang_pt(z1, z2, r1, r2, p.hes);
-		}
-
-		// this may throw exception
-		Mobius tmpMob=Mobius.mob_xyzXYZ(CPBase.omega3[0],
-				CPBase.omega3[1],CPBase.omega3[2],
-				tpts[0],tpts[1],tpts[2],0,p.hes);
-		
-		boolean debug=false; // debug=true;
-		if (debug) {
-			Complex tp0=SphericalMath.proj_pt_to_sph(
-					tmpMob.apply(CPBase.omega3[0])).minus(tpts[0]);
-			Complex tp1=SphericalMath.proj_pt_to_sph(
-					tmpMob.apply(CPBase.omega3[1])).minus(tpts[1]);
-			Complex tp2=SphericalMath.proj_pt_to_sph(
-					tmpMob.apply(CPBase.omega3[2])).minus(tpts[2]);
-			System.err.println("check: "+tp0+" "+tp1+" "+tp2);
-		}
-		
-		return tmpMob;
-	}
-
-	/**
 	 * Develop various schemes to help understand schwarzians: e.g., 
 	 * draw circles with color blue-to-red based on sum of 
 	 * schwarzians; draw edges blue-to-red based on schwarzians.
@@ -697,60 +621,6 @@ public class Schwarzian {
 		return count;
 	}
 	
-	/**
-	 * Compute the directed Mobius edge derivative (essentially as 
-	 * defined by Orick). Calling routine must align f and g 
-	 * and F and G to share common edge, before providing the
-	 * base2face Mobius maps. Note that the complex Schwarzian is
-	 * the 2,1 entry of this matrix. 
-	 * @param bm_f Mobius
-	 * @param bm_g Mobius
-	 * @param bm_F Mobius
-	 * @param bm_G Mobius
-	 * @param indx_fg int, index in f of shared edge with g
-	 * @param indx_gf int, 
-	 * @param indx_FG int, index in F of shared edge woth G
-	 * @param indx_GF int
-	 * @return Mobius
-	 */
-	public static Mobius edgeMobDeriv(
-			Mobius bm_f,Mobius bm_g,Mobius bm_F, Mobius bm_G,
-			int indx_fg,int indx_gf,int indx_FG,int indx_GF) {
-	
-		// precompose each Mobius so it identifies the 0 edge
-		//    of the base equilateral with appropriate indexed 
-		//    edge of the face itself
-		Mobius pre_mob=new Mobius(CPBase.omega3[indx_fg],
-				new Complex(0.0),new Complex(0.0),new Complex(1.0));
-		Mobius mu_f=(Mobius)bm_f.rmultby(pre_mob);
-
-		pre_mob=new Mobius(CPBase.omega3[indx_gf],
-				new Complex(0.0),new Complex(0.0),new Complex(1.0));
-		Mobius mu_g=(Mobius)bm_g.rmultby(pre_mob);
-
-		pre_mob=new Mobius(CPBase.omega3[indx_FG],
-				new Complex(0.0),new Complex(0.0),new Complex(1.0));
-		Mobius mu_F=(Mobius)bm_F.rmultby(pre_mob);
-
-		pre_mob=new Mobius(CPBase.omega3[indx_GF],
-				new Complex(0.0),new Complex(0.0),new Complex(1.0));
-		Mobius mu_G=(Mobius)bm_G.rmultby(pre_mob);
-		
-		// Compose to get Mobius face maps mob_fF and mob_gG
-		Mobius mob_fF=(Mobius)mu_F.rmultby(mu_f.inverse());
-		Mobius mob_gG=(Mobius)mu_G.rmultby(mu_g.inverse());
-		
-		// resulting directed Mobius edge derivative is
-		//    inv(mob_gG).mob_fF
-		Mobius dMob=(Mobius)mob_gG.inverse().rmultby(mob_fF);
-		dMob.normalize();
-		
-		if (dMob.a.add(dMob.d).minus(2.0).abs()>.0001)
-			throw new MobException("the trace should be 2.0");
-
-		return dMob;
-	}
-
 	/**
 	 * For debugging: print center of circle and of image 
 	 * circle under a Mobius.

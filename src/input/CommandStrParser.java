@@ -3818,16 +3818,18 @@ public class CommandStrParser {
 	      // ========= set_brush ============
     	  if (cmd.startsWith("brush")) {
 	    	  int n=1;
-    		  try {
+	    	  if (items!=null && items.size()>0) {
+	    		  try {
 //        		  items=(Vector<String>)flagSegs.get(0); // 
     			  String str=(String)items.get(0);
     			  n=Integer.parseInt(str);
-    		  } catch(ParserException pex) {}
-    		 if (n<0 || n>24) n=1; // 0-25 are values for LineThick slider in ScreenPanel. 
-    		 packData.cpDrawing.setLineThickness(n+1);
-    		 if (CPBase.GUImode!=0)
-    			 PackControl.screenCtrlFrame.screenPanel.setLine(n+1);
-    		 return 1;
+	    		  } catch(ParserException pex) {}
+	    	  }
+	    	  if (n<0 || n>24) n=1; // 0-25 are values for LineThick slider in ScreenPanel. 
+	    	  packData.cpDrawing.setLineThickness(n+1);
+	    	  if (CPBase.GUImode!=0)
+	    		  PackControl.screenCtrlFrame.screenPanel.setLine(n+1);
+	    	  return 1;
     	  }
 	    	  
     	  // ========= set_ps_brush ======== (goes in postscript file, if open)
