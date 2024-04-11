@@ -351,7 +351,8 @@ public class DoubleLink extends LinkedList<Double> {
 	 */
 	public DoubleLink reverseMe() {
 	    DoubleLink qtmp=new DoubleLink();
-	    if (this.size()==0) return null;
+	    if (this.size()==0) 
+	    	return null;
 	    Iterator<Double> it=this.iterator();
 	    while (it.hasNext()) {
 	    	qtmp.add(0,Double.valueOf(it.next()));
