@@ -6688,6 +6688,21 @@ public class PackData{
 			setRadius(v,newrad);
 		return count;
 	}
+	
+	public int adjust_uzian(HalfEdge edge,double factor) {
+		if (factor==1.0)
+			return 1;
+		if (factor<=0.0) 
+			return 0;
+		double newsch;
+		int count=0;
+		double uzian=1.0-getSchwarzian(edge);
+			newsch=1-uzian*factor;
+			count++;
+		if (count>0) 
+			this.setSchwarzian(edge, newsch);
+		return count;
+	}
 
 	/**
 	 * create a circular spoke/circle grid from {cent,rad}, filling 

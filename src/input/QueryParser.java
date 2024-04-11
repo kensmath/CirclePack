@@ -393,6 +393,26 @@ public class QueryParser {
 					}
 					break;
 				}
+				case 'D': {
+					if (CPBase.Dlink==null || CPBase.Dlink.size()==0) {
+						if (forMsg)
+							ans.append("empty");
+						break;
+					}
+					gotone=true;
+					n=CPBase.Dlink.size();
+					if (forMsg && n>12) {
+						n=12;
+		  	      		suffix=" ... ";
+					}
+					n=(n>1000)? 1000:n;
+					Iterator<Double> vlst=CPBase.Dlink.iterator();
+					int click=0;
+					while (vlst.hasNext() && click<n) {
+						ans.append(" "+vlst.next().toString());
+					}
+					break;
+				}
 				case 'Z': {
 					if (CPBase.Zlink==null || CPBase.Zlink.size()==0) {
 						if (forMsg)
@@ -1012,6 +1032,15 @@ public class QueryParser {
 							words.append(" for vert "+vv);
 						gotone=true;
 					}	
+				}
+				else if (query.startsWith("uerr")) {
+					int vv=NodeLink.grab_one_vert(p,flagSegs);
+					
+					// TODO: finish this; need code in
+					// 'schwarzian.java' for checking schwarzian
+					// packing condition at interior vertex.
+					
+					break;
 				}
 				else if (query.startsWith("sch")) {
 					HalfLink hlink=new HalfLink(p,flagSegs.get(0));

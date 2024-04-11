@@ -112,7 +112,7 @@ public class FaceLink extends LinkedList<Integer> {
 	/**
 	 * Add links to this list (only if it is associated with PackData?)
 	 * @param datastr
-	 * @return
+	 * @return int
 	 */
 	public int addFaceLinks(Vector<String> items) {
 		int count=0;

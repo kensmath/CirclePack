@@ -66,6 +66,7 @@ import input.TrafficCenter;
 import interfaces.IMessenger;
 import listManip.BaryCoordLink;
 import listManip.BaryLink;
+import listManip.DoubleLink;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
@@ -366,6 +367,7 @@ MouseMotionListener,FocusListener {
 		Elink = (EdgeLink) null;
 		Tlink = (TileLink) null;
 		Glink = (GraphLink) null;
+		Dlink = (DoubleLink) null;
 		Zlink = (PointLink) null;
 		Blink = (BaryLink) null;
 		ClosedPath = (Path2D.Double) null;

@@ -46,14 +46,19 @@ import util.TriAspect;
  * 
  * Here we also work with parameters associated with edges in 
  * packing complexes, the "intrinsic" schwarzians. These are 
- * stored in in 'HalfEdge.schwarzian', defaulting to 0.0. The 
+ * stored in 'HalfEdge.schwarzian', defaulting to 0.0. The 
  * methods here are for creating, analyzing, manipulating this 
  * data. To start we restrict to tangency packings, and some 
  * routines do not apply in the hyperbolic setting since layouts 
  * can leave the disc. The "normalized" presentation of a flower
- * puts the center (index 1) as the upper half plane, its 
- * halfedge neighbor c_1 as half plane y <= -2, and petal
- * c_2 as tangent at 0, radius 1. 
+ * puts the center as the upper half plane, its 
+ * halfedge neighbor c_n as half plane y <= -2, and petal
+ * c_1 as tangent at 0, radius 1. 
+ * 
+ * The variable preferred for formulas is u=1-s, where s is the
+ * intrinsic schwarzian, and is called a "uzian". The uzian u is
+ * positive, while s lies in (-infty,1).
+ *  
  * 
  * @author kens, January 2020
  */
@@ -73,11 +78,13 @@ public class Schwarzian {
 			new Mobius(CPBase.omega3[2].times(-1.0),CPBase.omega3[2].times(2.0),
 					new Complex(0.0),new Complex(1.0));
 	
+	final static double oosq3=1/Math.sqrt(3);
+	
 	/**
 	 * Concerns intrinsic schwarzians in normalized flower
 	 * presentation.
 	 * 
-	 * Given schwarzian s for edge (C,c_1), return distance
+	 * Given schwarzian s for edge (C,c_n), return distance
 	 * t between the first and last petal tangency points to
 	 * upper half plane, which is C.
 	 * @param s double
@@ -93,7 +100,7 @@ public class Schwarzian {
 	 * presentation.
 	 * 
 	 * Given schwarzian s for edge (C,c_1), return distance X
-	 * between 0 and tangency point of c_2, radius r of c_3. 
+	 * between 0 and tangency point of c_2, radius r of c_2. 
 	 * @param s double
 	 * @return double[2]: X,r
 	 */
@@ -120,14 +127,14 @@ public class Schwarzian {
 		double[] ans;
 		ans=new double[2];
 		double num=2.0*R;
-		double denom=Math.sqrt(3)*(1.0-s)-Math.sqrt(R/r);
+		double denom=Math.sqrt(3)*(1.0-s)-Math.sqrt(R/r); // may be <= 0
 		ans[0]=num/denom;
 		ans[1]=0.25*ans[0]*ans[0]/R;
 		return ans;
 	}
 
 	/**
-	 * Compute intrinsic schwarzians for given interior edges 
+	 * Compute and set intrinsic schwarzians for given interior edges 
 	 * based only on radii. For each edge, find the 4 radii 
 	 * involved, find the base Mobius transformations and 
 	 * compute the schwarzian. 
@@ -264,7 +271,7 @@ public class Schwarzian {
 	
 	/**
 	 * Get 4 radii for edge to use in calculating schwarzian.
-	 * Ordinary becasue there are no complication due to 
+	 * Ordinary because there are no complications due to 
 	 * multi-connectedness.
 	 * @param p PackData
 	 * @param edge HalfEdge
@@ -309,6 +316,74 @@ public class Schwarzian {
 		}
 		return rad;
 	}
+	
+	/**
+	 * Given first m=n-3 uzians (1-schwarians),
+	 * find remaining 3 uzians. Return full list.
+	 * @param uzians
+	 * @return double[], full list of uzians
+	 * 
+	 * TODO: compute formulas for larger n-flowers
+	 * 
+	 */
+	public static double[] final_three(double[] uzians) {
+		int m=uzians.length;
+		int n=m+3;
+		// return originals and add the last 3
+		double[] fl=new double[n];
+		for (int j=0;j<m;j++) {
+			fl[j]=uzians[j];
+		}
+		if (n==3) { // 3-flower
+			fl[m]=fl[m+1]=fl[m+2]=oosq3;
+			return fl;
+		}
+		if (n==4) { // 4-flower
+			fl[m]=fl[m+2]=2.0/(3.0*fl[0]);
+			fl[2]=fl[0];
+			return fl;
+		}
+		if (n==5) { // 5-flower
+			for (int k=0;k<3;k++) {
+				fl[m+k]=
+					(fl[k]-oosq3)/(3*fl[k]*fl[k+1]-1.0);
+			}
+			return fl;
+		}
+		if (n==6) { // 6-flower
+			for (int k=0;k<3;k++) {
+				double num=fl[0+k]*fl[1+k];
+				double denom=3.0*fl[0+k]*fl[1+k]*fl[2+k]-fl[0+k]-fl[2+k];
+				fl[m+k]=num/denom;
+			}
+			return fl;
+		}			
+		if (n==7) { // 7-flower
+			for (int k=0;k<3;k++) {
+				double num=3.0*(3.0*fl[0+k]*fl[1+k]*fl[2+k]-fl[0+k]-fl[2+k])+oosq3;
+				double denom=3.0*(3.0*fl[0+k]*fl[1+k]*fl[2+k]*fl[3+k]-
+						fl[0+k]*fl[1+k]-fl[0+k]*fl[3+k]-fl[2+k]*fl[3+k])+1.0;
+				fl[m+k]=num/denom;
+			}
+			return fl;
+		}
+		if (n==8) { // 8-flower
+			for (int k=0;k<3;k++) {
+				double num=3.0*(3.0*fl[0+k]*fl[1+k]*fl[2+k]*fl[3+k]-
+						fl[0+k]*fl[1+k]-fl[0+k]*fl[3+k]-fl[2+k]*fl[3+k])+2.0;
+				double denom=27.0*fl[0+k]*fl[1+k]*fl[2+k]*fl[3+k]*fl[4+k]-
+						9.0*(fl[0+k]*fl[1+k]*fl[2+k]+fl[0+k]*fl[1+k]*fl[4+k]-fl[2+k]*fl[3+k]*fl[4+k])-
+						3.0*(fl[0+k]+fl[2+k]-fl[4+k]);
+				fl[m+k]=num/denom;
+			}
+			return fl;
+		}
+
+		else {
+			throw new DataException("No formulas next schwarzian for degree > 8");
+		}
+	}
+	
 		
 	/**
 	 * Given radii (r0,r1,r2) for oriented face {v,w,a},
@@ -742,7 +817,7 @@ public class Schwarzian {
 	}
 	
 	/** 
-	 * This creates 'SchwaraData', but only omputes 'Sch_Deriv'.
+	 * This creates 'SchwaraData', but only computes 'Sch_Deriv'.
 	 * @param domf TriAspects
 	 * @param domg
 	 * @param rngF
@@ -919,6 +994,23 @@ public class Schwarzian {
 		if (Math.abs(c.y)>.001) 
 			throw new MobException("intrinsic schwarzian has complex part");
 		return (Double)c.x;
+	}
+
+	/**
+	 * The 'uzian' is 1-s where s the intrinsic
+	 * schwarzian for some edge. The uzian is better
+	 * in many formulas. Typically, schvector is length
+	 * n for an n-flower, but often only need n-3 
+	 * schwarzians. 
+	 * @param schvector double[];
+	 * @return double[], same length as input
+	 */
+	public double[] uzianFunction(double[] schvector) {
+		int N=schvector.length-1;
+		double[] uzian=new double [N+1];
+		for (int j=1;j<=N;j++)
+			uzian[j]=1.0-schvector[j];
+		return uzian;
 	}
 	
 }

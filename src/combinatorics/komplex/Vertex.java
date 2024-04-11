@@ -59,7 +59,9 @@ public class Vertex {
 	}
 
 	/**
-	 * Get usual number of faces (not counting ideal)
+	 * Get usual number of faces (not counting ideal).
+	 * This = degree for interior, and = (degree-1)
+	 * for bdry.
 	 * @return int
 	 */
 	public int getNum() {

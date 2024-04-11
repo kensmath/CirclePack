@@ -89,6 +89,7 @@ import komplex.HexPaths;
 import komplex.Triangulation;
 import listManip.BaryCoordLink;
 import listManip.BaryLink;
+import listManip.DoubleLink;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
@@ -4311,7 +4312,7 @@ public class CommandStrParser {
         	  // TODO: want to be able to change the 'PackingDirectory'
           }
           
-          // ========== set_?list (VEFGT only) =========
+          // ========== set_?list (VEFGTDZ only) =========
     	  if (cmd.substring(1).startsWith("list")) {
     		  char c=cmd.charAt(0);
     		  try { // just one flag sequence
@@ -4378,6 +4379,18 @@ public class CommandStrParser {
     			  else {
     				  CPBase.Glink=new GraphLink(packData,items);
     				  count=CPBase.Glink.size();
+    			  }
+    			  break;
+    		  }
+    		  case 'D': // linked list of Doubles
+    		  {
+    			  if (items==null) {
+    				  CPBase.Dlink=null;
+    				  count=1;
+    			  }
+    			  else {
+    				  CPBase.Dlink=new DoubleLink(items);
+    				  count=CPBase.Dlink.size();
     			  }
     			  break;
     		  }
@@ -5132,7 +5145,34 @@ public class CommandStrParser {
 	    	  packData.fillcurves();
 	    	  return count;
 	      }
-	      
+
+	      // =========== adjust_sch =======
+	      if (cmd.startsWith("adjust_sch")) {
+	    	  double factor=1.0;
+	    	  try {
+	    		  items=(Vector<String>)flagSegs.get(0); 
+	    		  factor=Double.parseDouble((String)items.get(0));
+	    		  items.remove(0);
+	    	  } catch (Exception ex) {
+	    		  throw new ParserException("usage: {x} {v w ..}");
+	    	  }
+	    	  HalfLink edgelist=new HalfLink(packData,items);
+	    	  if (factor<=0.0 || edgelist==null || edgelist.size()==0) 
+	    		  return count;
+	    	  Iterator<HalfEdge> elist=edgelist.iterator();
+
+	    	  while (elist.hasNext()) 
+	    		  count +=packData.adjust_uzian(
+	    				  (HalfEdge)elist.next(), factor);
+	    	  if (count<=0) {
+	    		  CirclePack.cpb.myErrorMsg("adjust_sch: "+
+	    				  "no schwarzians were adjusted.");
+	    		  return 0;
+	    	  }
+	    	  packData.fillcurves();
+	    	  return count;
+	      }
+
 	      // =========== add_ideal =========  
 	      else if (cmd.startsWith("add_ideal")) {
 	    	  
@@ -5847,10 +5887,22 @@ public class CommandStrParser {
 			// =============== dual_layout (replaced 'sch_layout')
 			if (cmd.startsWith("dual_lay")) {
 				
+				// always convert to euclidean; if you
+				// don't want this, make call via "layout -s".
+				jexecute(packData,"geom_to_s");
+				HalfEdge firsthe=packData.packDCEL.layoutOrder.get(0);
+				double base_rad=.25;
+				packData.packDCEL.setRad4Edge(firsthe,base_rad);
+				packData.packDCEL.setRad4Edge(firsthe.next,base_rad);
+				packData.packDCEL.setRad4Edge(firsthe.next.next,base_rad);
+				
+				// lay out first face.
+				packData.packDCEL.placeFirstEdge(firsthe);
+				
 				// use 'layoutOrder' and across one edge, 
 				//   not average across all available edges.
 				int ans=packData.packDCEL.layoutPacking(
-					packData.packDCEL.layoutOrder,true,null);
+					packData.packDCEL.layoutOrder,true,firsthe);
 				return ans;
 			}
 			
@@ -10132,6 +10184,18 @@ public class CommandStrParser {
 	    			  else {
 	    				  packData.zlist=new PointLink(items);
 	    				  count=packData.zlist.size();
+	    			  }
+	    			  break;
+	    		  }
+	    		  case 'D':
+	    		  {
+	    			  if (items==null) {
+	    				  CPBase.Dlink=null;
+	    				  count=1;
+	    			  }
+	    			  else {
+	    				  CPBase.Dlink=new DoubleLink(items);
+	    				  count=CPBase.Dlink.size();
 	    			  }
 	    			  break;
 	    		  }

@@ -22,6 +22,7 @@ import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import input.CPFileManager;
 import komplex.EdgeSimple;
+import listManip.DoubleLink;
 import listManip.EdgeLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
@@ -32,6 +33,7 @@ import packing.PackExtender;
 import util.CmdStruct;
 import util.ColorUtil;
 import util.DispFlags;
+import util.SchFlowerData;
 import util.SchwarzData;
 import util.StringUtil;
 import util.TriAspect;
@@ -226,112 +228,57 @@ public class SchwarzMap extends PackExtender {
 					case 'f': // full: layout using initial flowerDegree-3
 						// schwarzians, then compute the final 3 schwarzians.
 					{
-						double[] ts=new double[fd+1]; // tangency of petal
-						double[] rads=new double[fd+1]; // radius of petal
-						ts[1]=0;
-						rads[1]=1.0; // radius of c_1 is 1
-						
-						// compute c_2
-						double[] sit2=
-								Schwarzian.situationInitial((double)schvalues[1]);
-						ts[2]=sit2[0];
-						rads[2]=sit2[1];
-						packData.packDCEL.setVertCenter(2,
-							new Complex(ts[2],-rads[2]));
-						packData.packDCEL.setVertRadii(2,rads[2]);
-						hit++;
-						
-						// lay out c_3 through c_{fd-1}
-						for (int j=3;j<fd-1;j++) {
-							double t=packData.packDCEL.vertices[j-1].center.x;
-							double r=packData.packDCEL.vertices[j-2].rad;
-							double R=packData.packDCEL.vertices[j-1].rad;
-							double[] sit3=
-									Schwarzian.situationGeneric(
-										(Double)schvalues[j-1],r,R);
-							ts[j]=t+sit3[0];
-							rads[j]=sit3[1];
+						double[] uzian=new double[schvalues.length];
+						for (int j=1;j<=flowerDegree;j++)
+							uzian[j]=1.0-schvalues[j];
+						SchFlowerData sfd=new SchFlowerData(uzian);
+
+						// store radii/centers
+						for (int j=1;j<=flowerDegree-1;j++) {
 							packData.packDCEL.setVertCenter(j,
-									new Complex(ts[j],-rads[j]));
-							packData.packDCEL.setVertRadii(j,rads[j]);
-							if (rads[j]>=1.0)
-								msg("Petal "+j+" has radius > 1; rad = "+rads[j]);
-							hit++;
+									new Complex(sfd.t[j],-sfd.radius[j]));
+								packData.packDCEL.setVertRadii(j,sfd.radius[j]);
+								hit++;
+							if (sfd.radius[j]>1.0)
+								msg("Petal "+j+" has radius > 1; rad = "+sfd.radius[j]);
 						}
-						
-						// place the last petal, c_{fd-1}, forcing radius 1,
-						double r=packData.packDCEL.vertices[fd-3].rad;
-						double R=packData.packDCEL.vertices[fd-2].rad;
-						
-						// sidetrack: see computed value first using s_{fd-2}
-						double[] sit3=
-								Schwarzian.situationGeneric(
-									(Double)schvalues[fd-2],r,R);
-						if (Math.abs(1.0-sit3[1])>.01)
-							msg("Final petal computed radius is not 1; rad = "+sit3[1]);
 
-						// force rad of fd-1 to be 1; place c_{fd-2}
-						rads[fd-1]=1.0;
-						double delt=2.0*Math.sqrt(rads[fd-2]);
-						ts[fd-1]=ts[fd-2]+delt;
-						packData.packDCEL.setVertCenter(fd-1,
-								new Complex(ts[fd-1],-rads[fd-1]));
-						packData.packDCEL.setVertRadii(fd-1,1.0); // force rad 1
-
-						// compute s_{fd-2} based on previous radii, 
-						//   formula (R3)
-						r=rads[fd-3];
-						R=rads[fd-2];
-						schvalues[fd-2]=(Double)(1.0-(Math.sqrt(R*r)+Math.sqrt(R))/
-								(CPBase.sqrt3*Math.sqrt(r)));
-//						if (packData.schwarzSliders!=null) 
-//							packData.schwarzSliders.downValue(fd-3);
-						
-						// compute s_[fd-1] using delt; formula (S2)
-						schvalues[fd-1]=(Double)(1.0-2/(CPBase.sqrt3*delt));
-//						if (packData.schwarzSliders!=null) 
-//							packData.schwarzSliders.downValue(fd-2);
-						
-						// compute s_{fd} using t_{fd-1}; formula (S1)
-						schvalues[fd]=(Double)(1.0-ts[fd-1]/(2*CPBase.sqrt3));
-//						if (packData.schwarzSliders!=null) 
-//							packData.schwarzSliders.downValue(fd-1);
-
+						// set last 3 schwarzians, possibly new
+						for (int j=0;j<3;j++) {
+							int k=flowerDegree-j;
+							schvalues[k]=1.0-sfd.uzian[k];
+						}
 						cpCommand(packData,"disp -wr");
-						hit++;
 						break;
 					}
 					case 's': // read vector of schwarzians; see also 'u'
 					{
 						items.remove(0);
-						int len=items.size();
-						if (len>flowerDegree) {
-							Oops("Too many schwarzians");
+						DoubleLink dlink=new DoubleLink(packData,items);
+						if (dlink.size()>flowerDegree) {
+							Oops("Too many u-variables");
 						}
-						try { // Note: s_j is j entry
-							for (int j=1;j<=len;j++) {
-								schvalues[j]=Double.parseDouble(items.get(j-1));
-								hit++;
-							}
-						} catch(Exception ex) {
-							throw new ParserException("problem reading schwarzian");
+						Iterator<Double> dls=dlink.iterator();
+						int tick=1;
+						while(dls.hasNext()) {
+							schvalues[tick++]=dls.next();
+							hit++;
 						}
 						break;
 					}
-					case 'u': // read vector of u-varuable for schwarzians; see also 's'
+					case 'u': // read vector of u-variable for uzians; 
+							  // see also 's'
 					{
 						items.remove(0);
-						int len=items.size();
-						if (len>flowerDegree) {
+						DoubleLink dlink=new DoubleLink(packData,items);
+						if (dlink.size()>flowerDegree) {
 							Oops("Too many u-variables");
 						}
-						try { // Note: s_j is j entry
-							for (int j=1;j<=len;j++) {
-								schvalues[j]=1.0-Double.parseDouble(items.get(j-1));
-								hit++;
-							}
-						} catch(Exception ex) {
-							throw new ParserException("problem reading u-variables");
+						Iterator<Double> dls=dlink.iterator();
+						int tick=1;
+						while(dls.hasNext()) {
+							schvalues[tick++]=1.0-dls.next();
+							hit++;
 						}
 						break;
 					}
@@ -433,12 +380,31 @@ public class SchwarzMap extends PackExtender {
 						hit++;
 						break;
 					}
-					case 'l': // show schvector in copyable form
+					case 'l': // show data, with schvector in copyable form
 					{
+						double[] uzian=new double[schvalues.length];
+						CPBase.Dlink=new DoubleLink();
+						for (int j=1;j<=flowerDegree;j++) {
+							uzian[j]=1.0-schvalues[j];
+							CPBase.Dlink.add(uzian[j]);
+						}
+						SchFlowerData sfd=new SchFlowerData(uzian);
+
 						StringBuilder strbld=new StringBuilder();
 						for (int v=1;v<=fd;v++) 
-							strbld.append(schvalues[v]+"  ");
-						msg("schwarzians: "+ strbld.toString());
+							strbld.append((sfd.uzian[v])+"  ");
+						msg("uzians (1-schwarzians): ");
+						msg(strbld.toString());
+						strbld=new StringBuilder();
+						for (int v=1;v<fd;v++)
+							strbld.append(sfd.t[v]+"  ");
+						msg("tangencies: ");
+						msg(strbld.toString());
+						strbld=new StringBuilder();
+						for (int v=1;v<fd;v++)
+							strbld.append(sfd.radius[v]+"  ");
+						msg("radii: ");
+						msg(strbld.toString());
 						hit++;
 						break;
 					}
@@ -517,6 +483,7 @@ public class SchwarzMap extends PackExtender {
    		  		spokes[j]=packData.packDCEL.findHalfEdge(new EdgeSimple(flowerDegree+1,j));
    		  	}
    		  	schvalues=new Double[M];
+   			Schwarzian.comp_schwarz(packData,new HalfLink(packData,"i"));
    		  	for (int j=1;j<M;j++)
    		  		schvalues[j]=(Double)packData.getSchwarzian(spokes[j]);
    		  	

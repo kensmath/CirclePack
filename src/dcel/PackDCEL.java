@@ -669,7 +669,7 @@ public class PackDCEL {
 	 * 
 	 * @param hlink HalfLink
 	 * @param useSchw boolean
-	 * @param firstRE HalfEdge
+	 * @param firstRE HalfEdge, if not null, first face is laid out
 	 * @return int count
 	 */
 	public int layoutPacking(HalfLink hlink,boolean useSchw, HalfEdge firstHE) {

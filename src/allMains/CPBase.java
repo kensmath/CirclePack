@@ -22,6 +22,7 @@ import input.SocketSource;
 import input.TrafficCenter;
 import listManip.BaryCoordLink;
 import listManip.BaryLink;
+import listManip.DoubleLink;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.GraphLink;
@@ -116,7 +117,8 @@ public abstract class CPBase {
 	public static HalfLink Hlink; 
 	public static TileLink Tlink; 
 	public static GraphLink Glink; 
-	public static PointLink Zlink;
+	public static DoubleLink Dlink; // doubles
+	public static PointLink Zlink; // complexes
 	public static BaryLink Blink;
 	public static Path2D.Double ClosedPath; // closed path (real world data, transform to draw) 
 	public static Vector<BaryCoordLink> gridLines; // bary-coord encoded paths, usually for grids

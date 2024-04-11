@@ -17,11 +17,13 @@ import complex.Complex;
 import exceptions.ParserException;
 
 /**
- * This is a linked list for 'Complex' numbers. Such lists are used,
- * for example, to collect location information from canvas mouse 
- * clicks, also from things like circle centers or dual centers,
- * or complex values run through the current 'function' or 'parametric
- * path' in the Function Window.
+ * This is a linked list for 'Complex' numbers. 
+ * Such lists are used, e.g., to collect location 
+ * information from canvas mouse clicks, also 
+ * from things like circle centers or dual 
+ * centers, or complex values run through 
+ * the current 'function' or 'parametric path' 
+ * in the Function Window.
  * 
  * NOTE: z may be point of plane or a point (theta,phi) of the sphere;
  * conversions are not implemented, so a change in geometry can invalidate
@@ -335,7 +337,7 @@ public class PointLink extends LinkedList<Complex> {
 	/**
 	 * Make a distinct copy of this linked list; no check
 	 * of validity of the entries.
-	 * @return NodeLink
+	 * @return PointLink
 	 */
 	public PointLink makeCopy() {
 		Iterator<Complex> zlist=this.iterator();

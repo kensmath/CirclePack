@@ -238,6 +238,15 @@ In euclidean geometry,
 </seealso>
 </command>
 
+<command cmd="adjust_sch" flags="{f} {v w..}">
+<description>Adjust the uzians (1-schwarzians) of the 
+	given edges by factor 'f'.
+</description>
+<seealso>
+<see>dual_layout</see>
+<see>set_schwarzian</see>
+</seealso>
+</command>
 
 <command cmd="alpha" flags="{v}">
 <description>
@@ -3475,6 +3484,17 @@ enters two BaryPoints</instance>
 </examples>
 </command>
 
+<command cmd="set_Dlist" flags="[x ..]">
+<description>
+	Stores real values in a global linked list.
+	Used, e.g., to transfer schwarzians between
+	commands.
+</description>
+<examples>
+<instance text="set_Dlist .34 1.6 -7.2"> Store these values</instance>
+</examples>
+</command>	
+
 <command cmd="set_dump_format" flags="[format]">
 <description>
 	Resets the format for 'screendump'. The choices currently are "jpg",
@@ -5107,7 +5127,7 @@ a negative value means this vertex is not adjusted during repacking</opt>
 <opt flag="?screen">		  report screen size, then can use 'set_screen -b ....'</opt>
 <opt flag="?socket">		  was CirclePack started with a socket for command input? 
 								If yes, this gives the host and port number</opt>
-<opt flag="?*list*">		  for vlist, elist, flist or Vlist, Elist, Flist</opt>
+<opt flag="?*list*">		  for vlist, elist, flist or Vlist, Elist, Flist, Dlist</opt>
 <opt flag="?_*">			  report the value of a variable</opt>
 <opt flag="?vert {v}">		  Accumulated data: cent/rad, mark, flower, etc</opt>
 <opt flag="?face {f}">        Accumulated data: vertices, color, etc</opt> 
