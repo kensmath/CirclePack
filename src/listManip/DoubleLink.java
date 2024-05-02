@@ -8,6 +8,7 @@ import java.util.Vector;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
+import combinatorics.komplex.HalfEdge;
 import complex.Complex;
 import exceptions.ParserException;
 import packing.PackData;
@@ -85,7 +86,7 @@ public class DoubleLink extends LinkedList<Double> {
 	}
 	
 	/**
-	 * Add links to this list. 
+	 * Add linked list at end of this list. 
 	 * @param datastr
 	 * @return
 	 */	
@@ -109,8 +110,9 @@ public class DoubleLink extends LinkedList<Double> {
 		String str=items.get(0);
 		boolean thereIsFlag=false;
 		
-		// check for flag; only first entry can be flag.
-		// if there is an accidental '-', remove it
+		// check for single-letter flag; only 
+		//   first entry can be flag. if there is 
+		//   an accidental '-', remove it
 		char a=str.charAt(0);
 		if (StringUtil.isFlag(str)) { 
 			str=str.substring(1);
@@ -118,14 +120,15 @@ public class DoubleLink extends LinkedList<Double> {
 			items.remove(0);
 			thereIsFlag=true;
 		}
-		else if (a!='-' && a!='.' && !Character.isDigit(a)) {
+		else if (a!='-' && a!='.' && a!='+' && !Character.isDigit(a)) {
 			items.remove(0);
 			thereIsFlag=true;
 		}
 
-		// self call if str is a variable
+		// self call if str is a variable with value a double
 		if (str.startsWith("_")) {
 			count+=addDoubleLinks(CPBase.varControl.getValue(str));
+			return count;
 		}
 
 		// look for 'Dlist'
@@ -182,48 +185,30 @@ public class DoubleLink extends LinkedList<Double> {
 					addAll(n,dlink);
 					count +=dlink.size();
 				}
+				return count;
 			}
 			else // no appropriate list found
 				return count;
-		}
+		} // done with 'Dlist' processing
 
 		if (!thereIsFlag && (items==null || items.size()==0)) // nothing to do?
 			return 0;
 		
 		// If there is a flag, we get it, process, and return.
 		if (thereIsFlag) {
-			String str2=items.get(0);
-			char aa=str2.charAt(0);
-			
-			// because of recursion, must check for second flag: 
-			//   should be only points
-			if (StringUtil.isFlag(str2) || (aa!='-' && aa!='.' && 
-					!Character.isDigit(aa))) {
-				// check for 'Dlist' again (since it may follow a flag) 
-				if (str2.startsWith("Dli")) {
-					abutMore(CPBase.Dlink);
-					return CPBase.Dlink.size();
-				}
-				
-				// else, failure
-				throw new ParserException("'DoubleLink' data can have only one flag");
-			}
-			
-			// recursive call to process the rest of the input 
-			//    (should be just x y pairs)
-			DoubleLink dlink=new DoubleLink(items);
-			if (dlink==null || dlink.size()==0)
-				throw new ParserException("failed in getting Doubles");
-				
 			switch(a) {
-			case 'f': // run string through 'function', if defined in function window
-				// CAUTION: only add real part of function output
+			case 'f': // run string through 'function', 
+				// if defined in function window. CAUTION: 
+				// only add real part of function output
 			{
 				if (PackControl.newftnFrame.ftnField.getText().trim().length()==0) {
 					CirclePack.cpb.errMsg("'Function' frame is not set");
 					return 0;
 				}
 
+				DoubleLink dlink=new DoubleLink(items);
+				if (dlink==null || dlink.size()==0)
+					throw new ParserException("failed in getting Doubles");
 				Iterator<Double> dts=dlink.iterator();
 				while (dts.hasNext()) {
 					try {
@@ -234,8 +219,25 @@ public class DoubleLink extends LinkedList<Double> {
 				}
 				break;
 			}
+			case 's': // schwarzians for given list of edges
+			case 'u':
+			{
+				HalfLink elist=new HalfLink(packData,items);
+				if (elist==null || elist.size()==0)
+					return count;
+				Iterator<HalfEdge> elst=elist.iterator();
+				while(elst.hasNext()) {
+					HalfEdge he=elst.next();
+					double s=he.getSchwarzian();
+					if (a=='s')
+						add(s);
+					if (a=='u')
+						add(1.0-s);
+					count++;
+				}
+				break;
+			}
 			} // end of switch
-			
 			return count;
 		} // end of flag processing
 		

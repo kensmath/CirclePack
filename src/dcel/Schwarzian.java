@@ -96,44 +96,6 @@ public class Schwarzian {
 	}
 	
 	/**
-	 * Concerns intrinsic schwarzians in normalized flower
-	 * presentation.
-	 * 
-	 * Given schwarzian s for edge (C,c_1), return distance X
-	 * between 0 and tangency point of c_2, radius r of c_2. 
-	 * @param s double
-	 * @return double[2]: X,r
-	 */
-	public static double[] situationInitial(double s) {
-		double[] ans;
-		ans=new double[2];
-		ans[0]=2.0/(Math.sqrt(3)*(1.0-s));
-		ans[1]=(ans[0]*ans[0])/4.0;
-		return ans;
-	}
-	
-	/**
-	 * Concerns intrinsic schwarzians in normalized flower
-	 * presentation.
-	 * 
-	 * Given schwarzian s for generic situation, where circle
-	 * c_j has radius R and edge (C,c_j) has schwarzian s, 
-	 * nghb petal c_{j-1} has radius r, return displacement X
-	 * of tangency point and radius of c_{j+1}.
-	 * @param s double
-	 * @return double[2]: X,r
-	 */
-	public static double[] situationGeneric(double s,double r,double R) {
-		double[] ans;
-		ans=new double[2];
-		double num=2.0*R;
-		double denom=Math.sqrt(3)*(1.0-s)-Math.sqrt(R/r); // may be <= 0
-		ans[0]=num/denom;
-		ans[1]=0.25*ans[0]*ans[0]/R;
-		return ans;
-	}
-
-	/**
 	 * Compute and set intrinsic schwarzians for given interior edges 
 	 * based only on radii. For each edge, find the 4 radii 
 	 * involved, find the base Mobius transformations and 

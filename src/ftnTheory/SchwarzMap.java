@@ -285,7 +285,7 @@ public class SchwarzMap extends PackExtender {
 					case 'r': // reset
 					{
 						petalticks=new int[flowerDegree+1]; // indexed from 1
-						petalticks[1]=petalticks[2]=1;
+						petalticks[1]=1;
 						// set rest along real axis, radius .025
 						for (int v=2;v<flowerDegree;v++) {
 							double x=(v-2)*.2;
@@ -298,54 +298,100 @@ public class SchwarzMap extends PackExtender {
 					}
 					case 'n': // draw next {n} petals 
 					{
-						// The 'indx>=3' petal is the first not computed and
-						//    needs schvector[indx-1].
-						int vertindx=0;
+						// Find the 'indx' of petal to compute next 
+						int vindx=0;
 						int tick=2;
+						petalticks[1]=1;
 						while (tick<flowerDegree) {
-							if(petalticks[tick]==0) {
-								vertindx=tick;
+							if(petalticks[tick]==0) { // not yet computed
+								vindx=tick;
 								break;
 							}
 							tick++;
 						}
-						if (vertindx==0) // didn't find petal to place
-							break;
-						
+						if (vindx==0) { // didn't find petal to place
+							Oops("sch -n: all petals already laid out");
+						}
+						 
+						// is schwarzian of preceding petal given? 
+						//    default to schvalues[vindx-1]; 
 						items.remove(0);
-						
-						// is preceeding schwarzian given? 
-						//    else try schvalues[indx-1]; 
 						if(items.size()>0) {
 							try {
-								schvalues[vertindx-1]=Double.parseDouble(items.get(0));
+								schvalues[vindx-1]=Double.parseDouble(items.get(0));
 							} catch(Exception ex) {
 								Oops("failed to get schwarzian");
 							}
 						}
 						
-						// compute new petal c_{vertindx}
-						if (vertindx==2) { // initial case for c_2
-							double[] sit2=
-								Schwarzian.situationInitial(
-										schvalues[vertindx-1]);
-							packData.packDCEL.setVertCenter(vertindx,
-									new Complex(sit2[0],-sit2[1]));
-							packData.packDCEL.setVertRadii(vertindx,sit2[1]);
-							petalticks[vertindx]=1;
+						// compute new petal c_{indx}. There are
+						//   several s situations for the results of
+						//   the current petal; these are coded in
+						//   'petalticks':
+						//   + 0: not yet computed
+						//   + 1: computed in typical way, sit2 or sit3
+						//   + 2: displacement negative, but finite
+						//   + 3: displacement negative infty: is halfplane
+						double u=1.0-schvalues[vindx-1]; // uzian
+						if (vindx==2) { // initial case for c_2
+							double sit2[]=SchFlowerData.Sit2(u);
+							double r=1/(sit2[1]*sit2[1]);
+							packData.packDCEL.setVertCenter(vindx,
+									new Complex(sit2[0],-r));
+							packData.packDCEL.setVertRadii(vindx,r);
+							petalticks[vindx]=1;
 							hit++;
 						}
-						else if (vertindx<flowerDegree) { // generic case
-							double t=packData.packDCEL.vertices[vertindx-1].center.x;
-							double r=packData.packDCEL.vertices[vertindx-2].rad;
-							double R=packData.packDCEL.vertices[vertindx-1].rad;
-							double[] sit3=
-									Schwarzian.situationGeneric(
-											schvalues[vertindx-1],r,R);
-							packData.packDCEL.setVertCenter(vertindx,
-									new Complex(t+sit3[0],-sit3[1]));
-							packData.packDCEL.setVertRadii(vertindx,sit3[1]);
-							petalticks[vertindx]=1;
+						else {
+							double t=packData.packDCEL.vertices[vindx-1].center.x;
+							double isqr=Math.sqrt(1/packData.packDCEL.vertices[vindx-2].rad);
+							double isqR=Math.sqrt(1/packData.packDCEL.vertices[vindx-1].rad);
+							// need to check if nghb is in branch situation
+							double prevt=packData.packDCEL.vertices[vindx-2].center.x;
+							
+							// if petal vindx-2 was a halfplane; use Sit2 scaled by R
+							if (vindx>3 && petalticks[vindx-2]==3) {
+								double R=packData.packDCEL.vertices[vindx-1].rad;
+								double[] sit2=SchFlowerData.Sit2(u);
+								double dspmt=sit2[0]*R;
+								double r=R/(sit2[0]*sit2[0]);
+								packData.packDCEL.setVertCenter(vindx,
+										new Complex(t+dspmt,-r));
+								packData.packDCEL.setVertRadii(vindx,r);
+								petalticks[vindx]=1;
+							}
+							// else if precious was negative displacement (branching)
+							else if (petalticks[vindx-1]>1) {
+								isqR *=-1.0;
+								double[] sit4=SchFlowerData.Sit4(u,isqr,isqR);
+								double dspmt=t+sit4[0];
+								double r=1/(sit4[1]*sit4[1]);
+								packData.packDCEL.setVertCenter(vindx,
+										new Complex(dspmt,-r));
+								packData.packDCEL.setVertRadii(vindx, r);
+								// Note: sit4[1] will be negative
+								petalticks[vindx]=1;
+							}
+							else {
+								double[] sit3=SchFlowerData.Sit3(u, isqr, isqR); 
+								double r=1/(sit3[1]*sit3[1]);
+								// Is this tangent to center at infinity?
+								if (sit3[0]<-200) {
+									double R=20000.0-2*packData.packDCEL.vertices[vindx-1].rad;
+									packData.packDCEL.setVertCenter(vindx,
+										new Complex(t-.1,-20000.0)); // left of previous t
+									packData.packDCEL.setVertRadii(vindx,R);
+									petalticks[vindx]=3;
+								}
+								else {
+									packData.packDCEL.setVertCenter(vindx,new Complex(t+sit3[0],-r));
+									packData.packDCEL.setVertRadii(vindx,r);
+									if (sit3[0]<0)
+										petalticks[vindx]=2;
+									else 
+										petalticks[vindx]=1;
+								}
+							}
 							hit++;
 						}
 						
@@ -497,13 +543,13 @@ public class SchwarzMap extends PackExtender {
 			//   * first petal, c_1 has radius 1, center -i
 			//   * remaining petals small, spread out along x-axis
 			packData.packDCEL.setVertCenter(M,
-					new Complex(1.8019377358e+00,1.7355349565e+04));
+					new Complex(0.0,20000.0));
 			packData.packDCEL.setVertCenter(flowerDegree,
-					new Complex(1.8019377359e+00,-1.7355349565e+04));
+					new Complex(0.0,-20000.0));
+			packData.packDCEL.setVertRadii(M, 20000.0);
+			packData.packDCEL.setVertRadii(flowerDegree,19998.0);
 			packData.packDCEL.setVertCenter(1,
 					new Complex(0.0,-1.0));
-			packData.packDCEL.setVertRadii(M,1.735534956e+04);
-			packData.packDCEL.setVertRadii(flowerDegree,1.735334956e+04);
 			packData.packDCEL.setVertRadii(1,1.0);
 			
 			// set rest to center at origin, radius .025

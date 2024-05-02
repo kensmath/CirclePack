@@ -814,6 +814,26 @@ public class DisplayParser {
 			}
 			case 's': // shape defined by comb geodesics through vert list 
 			{
+				if (sub_cmd.length()>0 && sub_cmd.charAt(0)=='z') {
+					sub_cmd=sub_cmd.substring(1); // remove this letter
+					dispFlags=new DispFlags(sub_cmd,cpDrawing.fillOpacity);
+					PointLink zlist=new PointLink(flagSegs.get(0));
+					if (zlist==null || zlist.size()==0)
+						break;
+					int lnum=zlist.size();
+					double[] corners = new double[2 * (lnum+1)];
+					int tick=0;
+					Iterator<Complex> zl=zlist.iterator();
+					while (zl.hasNext()) {
+						z=zl.next();
+						corners[tick*2]=z.x;
+						corners[tick*2+1]=z.y;
+						tick++;
+					}
+					cpDrawing.drawClosedPoly(lnum,corners,dispFlags);
+					count++;
+					break;
+				}
 				NodeLink vertlist = new NodeLink(p, items);
 				if (vertlist.size()==0)
 					break;

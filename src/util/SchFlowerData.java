@@ -1,8 +1,5 @@
 package util;
 
-import dcel.Schwarzian;
-import exceptions.LayoutException;
-
 /**
  * For working with individual closed flowers 
  * in normalized setting: Center C is upper half 
@@ -41,11 +38,13 @@ import exceptions.LayoutException;
  *
  */
 public class SchFlowerData {
-	final static double oosq3=1/Math.sqrt(3);
+	final static double sqrt3=Math.sqrt(3);
+	final static double oosq3=1/sqrt3;
 
 	public int N; // number of faces (degree for interior)
 	public double[] uzian; // typically u_1,..,u_{n-3} are data
 	public double[] radius; // eucl radii r_j, j=1,..,n-1 (r_1=r_{n-1}=1
+	public double[] invSqRad; // recip sqroot, possibly neg or 0
 	public double[] t; // tangency points
 	public int branchDeg; // 0 unless branched
 	int status; // 1 if simple flower, -1 if branched,
@@ -57,6 +56,7 @@ public class SchFlowerData {
 		N=uzs.length-1;
 		uzian=new double[N+1]; // indexed from 1
 		radius=new double[N+1]; // indexed from 1
+		invSqRad=new double[N+1]; // indexed from 1
 		t=new double[N+1]; // indexed from 1
 		for (int j=1;j<=N;j++)
 			uzian[j]=uzs[j];
@@ -71,73 +71,75 @@ public class SchFlowerData {
 	/**
 	 * The uzians must be set and we do computations 
 	 * based on the first n-3 of them, then recompute
-	 * the remaining 3. There can be problems for 
-	 * branched flowers.  
-	 * 
-	 * (The uzians are stored in 'CPBase.Dlink' for
-	 * possible use in other calls.)
-	 * @return int, 
+	 * the remaining 3. 
+	 * @return int, 1 for simple flower, -n for branching 
 	 */
 	public int compute() {
 		int[] hits=new int[N+1]; // mark when computed
 		t[1]=0.0;
-		radius[1]=radius[N-1]=1.0;
+		radius[1]=radius[N-1]=invSqRad[1]=invSqRad[N-1]=1.0;
 		hits[1]=1;
 		branchDeg=0; // at end, branch degree
-		boolean right=true; // true: moving right, else left
 		
 		// compute data for c_2
 		if (N>3) {
-			double[] Xr=Schwarzian.situationInitial(1.0-uzian[1]);
-			t[2]=Xr[0];
-			radius[2]=Xr[1];
+			double[] tdata=Sit2(uzian[1]);
+			t[2]=t[1]+tdata[0];
+			radius[2]=1/(tdata[1]*tdata[1]);
+			invSqRad[2]=tdata[1];
 			hits[2]=1;
 		}
 		
-		// compute as generic up to N-3; change
-		//   course if we hit first negative displacement
-		double[] Xr=null;
+		// compute as generic up to N-3 or until dspmt is
+		//   negative or 0
+		double[] tdata=null;
 		double dspmt;
 		for (int j=3;j<=(N-2);j++) {
-			Xr=Schwarzian.situationGeneric
-					(1.0-uzian[j-1],radius[j-2],radius[j-1]);
-			dspmt=Xr[0];
+			tdata=Sit3(uzian[j-1],invSqRad[j-2],invSqRad[j-1]);
+			dspmt=tdata[0];
+			invSqRad[j]=tdata[1];
 			
-			// if displacement is negative, break out
-			if (dspmt<0.0) {
-				if (right) {
-					status=-j; // this is first neg displacement
-					right=false;
-					branchDeg += 1;
-					// badly ambiguous situation
-					if (Xr[0]<-200.0) { // petal j is huge, close
-						// to being equal to c_n (half-plane)
-						t[j]=Xr[0];
+			// if displacement is zero or negative, then
+			//    we've reached a branch event and special
+			//    procedures apply:
+			//    * place this petal, c_{j};
+			//    * then go on to compute c_{j+1}: 
+			//      the invSqRad[j] will be negative, so we 
+			//      have to negate it to compute c_{j+1}.
+			//    * Then have to increment j before continuing.
+			if (Math.abs(dspmt)<.00001) { // essentially <= 0
+				branchDeg++;
+				if (dspmt>-.00001) { // essentially 0, 
+					// c_j is half plane; need fake data
+					t[j]=t[j-1];
+					radius[j]=10000.0;
+					invSqRad[j]=0.0;
+					hits[j]=-1;
 					
-						// TODO: finish this from computations
-					}
-					else {
-						radius[j]=Xr[1];
-						t[j]=t[j-1]+dspmt;
-						hits[j]=1;
-					}
-				} // done if were moving right
+					// next petal uses Situation 1
+					j=j+1;
+					double r=1/(invSqRad[j-2]*invSqRad[j-2]); // rad of previous
+					t[j]=t[j-1]-2.0*uzian[j-1]*sqrt3*r; // to left of previous 
+					invSqRad[j]=invSqRad[j-2];
+					hits[j]=1;
+				}
 				else {
-					right=true;
-					if (dspmt>0)
-						throw new LayoutException(
-								"Opps; should be negative "+
-								"after moving left");
-					dspmt=-1*dspmt;
-					radius[j]=Xr[1];
-					t[j]=t[j-1]-dspmt;
+					t[j]=t[j-1]+dspmt; // tangency moves left
+					radius[j]=1/(invSqRad[j]*invSqRad[j]);
+					
+					// next petal moves right again
+					j=j+1;
+					// CAUTION: invSqRad[j-1] will be negative;
+					tdata=Sit4(uzian[j-1],invSqRad[j-2],-1.0*invSqRad[j-1]);
+					t[j]=t[j-1]+tdata[0];
+					invSqRad[j]=tdata[1];
+					radius[j]=1/(tdata[1]*tdata[1]);
 					hits[j]=1;
 				}
 			}
-			else {
-				radius[j]=Xr[1];
+			else {  // regular move to right
 				t[j]=t[j-1]+dspmt;
-				hits[j]=1;
+				radius[j]=1/(tdata[1]*tdata[1]);
 			}
 		}
 		
@@ -161,5 +163,54 @@ public class SchFlowerData {
 			return 1;
 		else
 			return -branchDeg;
+	}
+	
+	/**
+	 * Situation 2: find petal c2; no radii data needed
+	 * @param u double
+	 * @return double[2], delta, recip sqrt of radius
+	 */
+	public static double[] Sit2(double u) {
+		double[] tdata=new double[2];
+	    tdata[0]=2/(sqrt3*u);
+	    tdata[1]=sqrt3*u;
+	    return tdata;
+	}
+
+	/**
+	 * The generic situation as we place successive 
+	 * petals. Note that tdata[1] returned may be
+	 * negative when this placement shows branching.
+	 * @param u double
+	 * @param isqr double
+	 * @param isqR double
+	 * @return double[2], delta, recip of sqrt of radius
+	 */
+	public static double[] Sit3(double u,double isqr,double isqR) {
+		double[] tdata=new double[2];
+	    tdata[0]=2/(isqR*isqR*sqrt3*u-isqR*isqr);
+	    tdata[1]=sqrt3*u*isqR-isqr;
+	    return tdata;
+	}
+	
+	/**
+	 * This takes care of the next petal after one 
+	 * involved in branching. The situation when 
+	 * isqR is <= 0. Note that tdata[1] will be
+	 * negative again, which calling routine must
+	 * adjust.
+	 * @param u double
+	 * @param isqr double
+	 * @param isqR double
+	 * @return double[2], delta, recip of sqrt of radius
+	 */
+	public static double[] Sit4(double u,double isqr,double isqR) {
+		double [] tdata=new double[2];
+		if (Math.abs(isqR)<.008) { // nghb tangent to center at infinity
+			tdata[0]=-2*sqrt3*u/(isqr*isqr);
+	        tdata[1]=isqr;
+	        return tdata;
+		}
+		return Sit3(u,isqr,isqR);
 	}
 }

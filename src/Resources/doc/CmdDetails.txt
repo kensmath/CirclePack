@@ -872,7 +872,7 @@ points with nghbs</opt>
 	<opt flag="-ee {v w..}"> extended edges; travel thru up to 16 hex
 			vertices from v to w (for hex_refined packs). </opt>
 	<opt flag="-gi"> draw path and the circles inside it</opt>
-	<opt flag="-nl {v} {st}"> >display string "st" at center of 
+	<opt flag="-nl {v} {st}"> display string "st" at center of 
 	circle v </opt>
 	<opt flag="-nz {x y} {st}"> display string "st" at location x+iy</opt>
 	<opt flag="-rc"> draw "red" circles using the redfaces data, 
@@ -890,6 +890,8 @@ points with nghbs</opt>
 				matching mate</opt>
 	<opt flag="-s {v..}"> closed polygon between centers of listed 
 	vertices (no interpolation of vertices between)</opt>
+	<opt flag="-sz {z..}"> closed polygon between centers of listed
+	complex numbers</opt>
 	<opt flag="-sfg {v..}"> </opt>
 	<opt flag="-sbg {v..}"> </opt>
 	<opt flag="-t* {v..}"> * is a 'trinket': 0=dot (default),
@@ -3282,7 +3284,7 @@ thickness 3</instance>
 </examples> 
 </command>
 
-<command cmd="seed" flags="[-q] [n]">
+<command cmd="seed" flags="[-qm] [n]">
 <description>
 	This replaces the active pack by a single "flower" consisting of a
 	central circle and n (>=3) "petals". (Limit is 1000 petals.)
@@ -3291,6 +3293,12 @@ thickness 3</instance>
 	command-line arguments,	so original data in active pack will 
 	be lost.
 </description>
+<options>
+	<opt flag="-q"> do not automatically display 
+	after creation</opt>
+	<opt flag="-m"> swap nodes so M (max index circle) is
+	at the center and petal n is the gamma vertex.</opt>
+</options>
 </command>
 
 <command cmd="set_accur" flags="{x}">
@@ -3484,14 +3492,21 @@ enters two BaryPoints</instance>
 </examples>
 </command>
 
-<command cmd="set_Dlist" flags="[x ..]">
+<command cmd="set_Dlist" flags="-[options] [x ..]">
 <description>
 	Stores real values in a global linked list.
 	Used, e.g., to transfer schwarzians between
 	commands.
 </description>
+<options>
+<opt flag='f [x...]'> add double values f(x) if
+the function f is set.</opt>
+<opt flag='s [v w ..]'> get schwarzians for give edges.</opt>
+<opt flag='u [v w ..]'> get u values (1-schwarzian) for give edges.</opt>
+</options>
 <examples>
 <instance text="set_Dlist .34 1.6 -7.2"> Store these values</instance>
+<instance test="set_Dlist -s elist"> store schwarzians for these edges</instance>
 </examples>
 </command>	
 

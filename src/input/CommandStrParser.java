@@ -3693,6 +3693,7 @@ public class CommandStrParser {
 	    	  int hes=0;
 	    	  int n=6;
 	      	  int item_index=0;
+	      	  boolean swap=false; 
 	     	  Iterator<Vector<String>> nextFlag=flagSegs.iterator();
 	     	  while (nextFlag.hasNext() && (items=nextFlag.next()).size()>0) {
 	     		  if (StringUtil.isFlag(items.elementAt(0))) {
@@ -3710,6 +3711,10 @@ public class CommandStrParser {
 	       			  }
 	       			  case 's': { 
 	       				  hes=1;
+	       				  break;
+	       			  }
+	       			  case 'm': { // swap 1 and M
+	       				  swap=true;
 	       				  break;
 	       			  }
 	   		  	  	} // end of flag switch
@@ -3738,6 +3743,16 @@ public class CommandStrParser {
 	     	  } catch(Exception ex) {
 	     		  throw new ParserException(" "+ex.getMessage());
 	     	  }
+
+	     	  // shall we swap so center is index M?
+	     	  //   also, set gamma to n and redo layout
+	     	  if (swap) {
+	     		  packData.swap_nodes(1, n+1);
+	     		  packData.setAlpha(n+1);
+	     		  packData.setGamma(n);
+	     		  jexecute(packData,"layout");
+	     	  }
+	     	  
 	     	  return packData.nodeCount;
 	      } // end of 'seed'
 	      
@@ -7803,7 +7818,7 @@ public class CommandStrParser {
 	      h: rotate so designated verts in horizontal line
 	      i: scale/rotate to center designated vert at z=i.
 	      m: apply trans. locating u,v at z1 z2
-	      s: special for Schwarzian, to normalize to half planes
+	      s: special for schwarzian, to normalize to half planes
 	      t: torus: normalize fundamental domain, report tau.
 	      u: designated vert on unit circle 
 	      U: scale down (only) to fit packing in unit disc
@@ -7938,12 +7953,12 @@ public class CommandStrParser {
 	    			  return (packData.apply_Mobius(mymob,
 	    					  new NodeLink(packData,"a")));
 	    		  }
-	    		  case 's': // normalize for Schwarzian experiments
+	    		  case 's': // normalize a la schwarzian flowers
 	    		  {
 	    			  if (packData.hes!=0)
 	    		    	  CommandStrParser.jexecute(packData,"geom_to_e");
-	    	    	  CommandStrParser.jexecute(packData,"norm_scale -c 1 1.0");
-	    	    	  double r=packData.packDCEL.vertices[1].rad;
+	    	    	  CommandStrParser.jexecute(packData,"norm_scale -c M 1.0");
+	    	    	  double r=packData.packDCEL.vertices[packData.getGamma()].rad;
 	    	    	  double a=2*r/(1.0+r);
 	    	    	  Mobius smob=new Mobius(new Complex(0.0,-a),new Complex(a,0.0),
 	    	    			  new Complex(1.0),new Complex(0.0,-1.0));
@@ -7951,11 +7966,12 @@ public class CommandStrParser {
 	    			  // apply this mobius to the packing
 	    	    	  packData.apply_Mobius(smob,new NodeLink(packData,"a"));
 
-	    	    	  // translate to put next petal at origin
-	    	    	  int j=packData.packDCEL.vertices[1].halfedge.next.twin.origin.vertIndx;
-	    	    	  double x=packData.packDCEL.vertices[j].center.x;
+	    	    	  // put next petal at origin, set its radius to 1
+	    	    	  int nextpetal=packData.packDCEL.vertices[packData.getGamma()].halfedge.twin.origin.vertIndx;
+	    	    	  double x=packData.packDCEL.vertices[nextpetal].center.x;
+	    	    	  r=packData.packDCEL.vertices[nextpetal].rad;
 	    	    	  smob=new Mobius(new Complex(1.0),new Complex(-x,0.0),
-	    	    			  new Complex(0.0),new Complex(1.0));
+	    	    			  new Complex(0.0),new Complex(1.0,0.0));
 	    			  int ans=packData.apply_Mobius(smob,
 	    					  new NodeLink(packData,"a"));
 	    			  return ans;
@@ -9415,7 +9431,7 @@ public class CommandStrParser {
     		   					  givenx=true;
     		   					  items.remove(0);
     		   				  } catch (Exception ex) {
-    		   					  throw new ParserException("usage: set_schw -s {x} {v w ..}");
+    		   					  throw new ParserException("usage: set_schw -[su] {x} {v w ..}");
     		   				  }
     					  }
     					  else if (items.get(0).startsWith("-u")) {
@@ -9429,7 +9445,7 @@ public class CommandStrParser {
     		   				  }
     					  }
     					  else
-    						  throw new ParserException("usage: set_schw -s ..");
+    						  throw new ParserException("usage: set_schw -[su] ..");
     				  }
     				  if (items.size()==0)
         				  hlink=new HalfLink(packData,"a");
@@ -10194,7 +10210,7 @@ public class CommandStrParser {
 	    				  count=1;
 	    			  }
 	    			  else {
-	    				  CPBase.Dlink=new DoubleLink(items);
+	    				  CPBase.Dlink=new DoubleLink(packData,items);
 	    				  count=CPBase.Dlink.size();
 	    			  }
 	    			  break;
