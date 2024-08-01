@@ -5911,13 +5911,10 @@ public class CommandStrParser {
 				packData.packDCEL.setRad4Edge(firsthe.next,base_rad);
 				packData.packDCEL.setRad4Edge(firsthe.next.next,base_rad);
 				
-				// lay out first face.
-				packData.packDCEL.placeFirstEdge(firsthe);
-				
-				// use 'layoutOrder' and across one edge, 
+				// use 'layoutOrder' and use single edge, 
 				//   not average across all available edges.
 				int ans=packData.packDCEL.layoutPacking(
-					packData.packDCEL.layoutOrder,true,firsthe);
+					packData.packDCEL.layoutOrder,true,true);
 				return ans;
 			}
 			
@@ -8198,6 +8195,12 @@ public class CommandStrParser {
 	    	  int rslt=CombDCEL.pruneDCEL(packData.packDCEL);
 	    	  if (rslt>0) {
 	    		  packData.packDCEL.fixDCEL(packData);
+	    		  
+	    		  // store new-to-old indices in 'vertexMap'.
+	    		  EdgeLink newold=(EdgeLink)packData.packDCEL.oldNew;
+	    		  newold.flipEdgeEntries();
+	    		  packData.vertexMap=(VertexMap)newold;
+	    		  
 	    		  return rslt;
 	    	  }
 	    	  return 1;

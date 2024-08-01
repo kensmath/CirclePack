@@ -611,35 +611,58 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Use 'layoutOrder' and radii to recompute centers. 
-	 * Default to using 'layoutOrder' and not using Schwarzians.
-	 * However, in some case (e.g. for debugging), may use
-	 * other 'HalfLink' orders.
+	 * Use 'layoutOrder' and radii to recompute centers 
+	 * using 'layoutOrder' and normalizing to put alpha
+	 * at the origin and gamma on the positive y-axis. 
 	 * @return int count
 	 */
 	public int layoutPacking() {
-		return layoutPacking(null,false,null);
+		return layoutPacking(null,false,true);
 	}
 	
+	/**
+	 * Use and radii to recompute centers using 
+	 * 'layoutOrder'. However, first face in layout
+	 * order is already in position. Do not normallize.
+	 * @param firstHE HalfEdge
+	 * @return int count
+	 */
 	public int layoutPacking(HalfEdge firstHE) {
-		return layoutPacking(null,false,firstHE);
+		return layoutPacking(null,false,false);
 	}
 	
-	public int layoutPacking(boolean useSchw) {
-		return layoutPacking(null,useSchw,null);
-	}
-	
+	/**
+	 * Use radii to recompute centers using 'hlink',
+	 * starting by laying out the first face in normalized
+	 * position and ending by rotating so gamma is on the
+	 * positive y-axis. 
+	 * @param hlink EdgeLink
+	 * @return int count
+	 */
 	public int layoutPacking(HalfLink hlink) {
-		return layoutPacking(hlink,false,null);
+		return layoutPacking(hlink,false,true);
+	}
+	
+	/**
+	 * Use schwarzians to recompute centers using
+	 * 'layoutOrder', starting by laying out the first 
+	 * face in normalized position and ending by rotating 
+	 * so gamma is on the positive y-axis. 
+	 * @param useSchw boolean
+	 * @return int count
+	 */public int layoutPacking(boolean useSchw) {
+		return layoutPacking(null,useSchw,true);
 	}
 	  
 	/**
-	 * Use 'hlink' (default to 'layoutOrder') to compute
-	 * centers, laying the first (generally 'alpha') edge 
-	 * in normalized position (namely, from 0 to point on 
-	 * positive y-axis). Then computing faces for successive
-	 * 'hlink' entries. Finally, rotate so 'gamma' is on
-	 * positive y-axis.
+	 * Use 'hlink' for 'order' (default to 'layoutOrder') 
+	 * to compute centers. If 'fixFirst' is false, then
+	 * the first face (generally 'alpha') is already laid
+	 * out, so layout remaining in order. If 'fixFirst' is
+	 * true, then put first edge in normalized position 
+	 * (namely, from 0 to point on positive y-axis). Also, 
+	 * if 'fixFirst' is true, then finish by rotating 
+	 * so 'gamma' is on positive y-axis.
 	 * 
 	 * If 'hlink' is null, use 'layoutOrder', and compute 
 	 * successive centers as averages using all opposite 
@@ -653,12 +676,8 @@ public class PackDCEL {
 	 * jumbles, not forming any appropriate face. E.g., 'seed'
 	 * with wrong radii.
 	 * 
-	 * If 'hlink' is null but 'firstHE' is not, then leave 
-	 * 'firstHE' fixed in current position and do full 
-	 * layout and do not rotate at end.
-	 *  
-	 * Layout can be based on radii or (in tangency setting) using 
-	 * schwarzians. Side-pairing maps are updated.
+	 * Layout can be based on radii or (in tangency setting) 
+	 * using schwarzians. Side-pairing maps are updated.
 	 * 
 	 * TODO: when using schwarzians, the sphere is the
 	 * native environment. Should we convert the packing?
@@ -669,36 +688,30 @@ public class PackDCEL {
 	 * 
 	 * @param hlink HalfLink
 	 * @param useSchw boolean
-	 * @param firstRE HalfEdge, if not null, first face is laid out
+	 * @param fixFirst boolean, if true, lay out the first 
+	 * 	face and also rotate to put gamma on the y-axis.
 	 * @return int count
 	 */
-	public int layoutPacking(HalfLink hlink,boolean useSchw, HalfEdge firstHE) {
+	public int layoutPacking(HalfLink hlink,boolean useSchw,boolean fixFirst) {
 	    int count=1;
-	    boolean face_only=false;
-	    boolean fixFirst=false;	    
-	    HalfEdge firsthe=null;
+	    boolean face_only=false; // default to layout using average position
 	    HalfLink order=layoutOrder;
+	    HalfEdge firsthe=order.getFirst();
 
 	    if (hlink!=null) {
 	    	order=hlink;
-	    	face_only=true; // use only one face to layout
+	    	face_only=true; // use single face to layout each circle
 		    firsthe=order.getFirst();
 	    }
-	    else if (firstHE!=null) {
-	    	fixFirst=true;
-	    	firsthe=firstHE;
-	    }
-	    else firsthe=order.getFirst();
 	    
-	    // eutil>0 means we expect ends to be in proper relative locations.
+	    // eutil>0? expect ends are in proper relative locations.
     	zeroEUtil();
 	    
-	    boolean debug=false;
-//	    boolean debug=true;
+	    boolean debug=false; // boolean debug=true;
 	    int prev_g=-1;
 	    
 	    // first face is that of given firstHE?
-	    if (!fixFirst) {
+	    if (fixFirst) {
 	    	placeFirstEdge(firsthe); // from 0 to point on positive y-axis
 	    }
 	    firsthe.eutil=firsthe.next.eutil=firsthe.next.next.eutil=1;
@@ -722,10 +735,6 @@ public class PackDCEL {
 		hit.next(); // remove first, already laid out
 	    while (hit.hasNext()) {
 	    	HalfEdge he=hit.next();
-	    	
-// debugging
-//	    	System.out.println("he="+he);
-	    	
 	    	if (!useSchw) {
 	    		if (face_only)
 	    			cs=d_compOppCenter(he);
@@ -764,11 +773,12 @@ public class PackDCEL {
 
 	    }
 	    
-	    // if not leaving first edge in place, then we
-	    //    rotate so gamma is on positive y-axis
-	    if (!fixFirst && gamma!=null) {
-	    	try {
-	    		double gammaarg=getVertCenter(gamma).arg();
+	    // if we fixed the first face, rotate so gamma 
+	    //   is on positive y-axis.
+	    if (fixFirst && gamma!=null) {
+    		Complex z=getVertCenter(gamma);
+	    	if (this.p.hes<=0) {
+	    		double gammaarg=z.arg();
 	    		Complex rot=new Complex(0,Math.PI/2.0-gammaarg).exp();
 	    		
 	    		if (Math.abs(gammaarg-Math.PI/2.0)>.001) {
@@ -782,8 +792,22 @@ public class PackDCEL {
 	    				} while (rtrace!=redChain);
 	    			}
 	    		}
-	    	} catch (Exception ex) {}
-	    			
+	    	}
+	    	else {
+	    		double theta=z.x;
+	    		
+    			for (int v=1;v<=vertCount;v++) 
+    				vertices[v].center.x -= theta;
+	    		if (redChain!=null) {
+	    			RedEdge rtrace=redChain;
+	    			do {
+	    				Complex zz=rtrace.getCenter();
+	    				zz.x -= theta;
+	    				rtrace.setCenter(zz);
+	    				rtrace=rtrace.nextRed;
+	    			} while (rtrace!=redChain);
+	    		}
+	    	}
 	    }
 
 		updatePairMob();

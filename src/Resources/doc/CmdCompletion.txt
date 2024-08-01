@@ -9,6 +9,7 @@ add_layer [-dt] {n} v w
 adjacency [-t] {file} 
 adjoin {p q v w n} [or: {p q v w (v,u)}] 
 adjust_rad {f} {v..} 
+adjust_sch {f} {v w..} 
 alpha {v} 
 alt_rect {v0..v3} 
 aspect {a b c d} 
@@ -158,7 +159,7 @@ sch_data [d] [-rc] N -a {filename}
 sch_report -[[ce]{flags}] {..} 
 screendump [-m -d -b -n] 
 script [filename] 
-seed [-q] [n] 
+seed [-qm] [n] 
 set_accur {x} 
 set_active {v} 
 set_aim [{a v..} -[cdx%] 
@@ -171,6 +172,7 @@ set_cycle {n}
 set_dir {dir_name} 
 set_disp_flags {flags} 
 set_display [-m] 
+set_Dlist -[options] [x ..] 
 set_dump_format [format] 
 set_elist {e..} 
 set_Elist {e..} 

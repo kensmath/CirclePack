@@ -1271,18 +1271,19 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	}	
 	
 	/**
-	 * Return a new 'EdgeLink' with same order, but edges 
-	 * are each reversed.
+	 * Return a new 'EdgeLink' with same order, 
+	 * but edges are each reversed. E.g., converting
+	 * 'oldNew' list to 'newOld' list.
 	 * @return new 'EdgeLink', possibly empty.
 	 */
-	public EdgeLink flipEachEntry() {
+	public EdgeLink flipEdgeEntries() {
 		EdgeLink rL=new EdgeLink(packData);
 	    if (this.size()==0) return rL;
 		Iterator<EdgeSimple> el=this.iterator();
 		EdgeSimple edge=null;
 		while (el.hasNext()) {
 			edge=(EdgeSimple)el.next();
-			super.add(new EdgeSimple(edge.w,edge.v));
+			rL.add(new EdgeSimple(edge.w,edge.v));
 		}
 		return rL;
 	}

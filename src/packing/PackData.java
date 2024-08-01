@@ -5694,7 +5694,7 @@ public class PackData{
 			source_p=q;
 			target_p=this;
 			if (vertexMap!=null && vertexMap.size()>0)
-				vMap=vertexMap.flipEachEntry();
+				vMap=(VertexMap)vertexMap.flipEdgeEntries();
 		}
 		int count=0;
 		

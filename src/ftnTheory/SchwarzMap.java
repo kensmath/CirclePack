@@ -271,6 +271,7 @@ public class SchwarzMap extends PackExtender {
 					{
 						items.remove(0);
 						DoubleLink dlink=new DoubleLink(packData,items);
+
 						if (dlink.size()>flowerDegree) {
 							Oops("Too many u-variables");
 						}

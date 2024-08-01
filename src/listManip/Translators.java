@@ -138,9 +138,9 @@ public class Translators {
 	public static VertexMap composeVMs(VertexMap vm1,boolean rev1,VertexMap vm2,boolean rev2) {
 		if (vm1==null || vm2==null || vm1.size()==0 || vm2.size()==0) return null;
 		VertexMap Vm1,Vm2;
-		if (rev1) Vm1=vm1.flipEachEntry();
+		if (rev1) Vm1=(VertexMap)vm1.flipEdgeEntries();
 		else Vm1=vm1;
-		if (rev2) Vm2=vm2.flipEachEntry();
+		if (rev2) Vm2=(VertexMap)vm2.flipEdgeEntries();
 		else Vm2=vm2;
 		VertexMap vm_out=new VertexMap();
 		Iterator<EdgeSimple> vmit=Vm1.iterator();

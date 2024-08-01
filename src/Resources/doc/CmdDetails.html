@@ -244,6 +244,14 @@ In euclidean geometry,
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="set_rad">set_rad</a>&nbsp;&nbsp; <a href="set_random">set_random</a>&nbsp;&nbsp; 
 <br/><br/>
+<font size="+1" color="blue"><strong><a name="adjust_sch">adjust_sch</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{f} {v w..}&nbsp;&nbsp; </font>
+<blockquote>
+<strong>Description: </strong>Adjust the uzians (1-schwarzians) of the 
+	given edges by factor 'f'.
+</blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="dual_layout">dual_layout</a>&nbsp;&nbsp; <a href="set_schwarzian">set_schwarzian</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="alpha">alpha</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
@@ -957,7 +965,7 @@ points with nghbs</td></tr>
 <tr><td width="25%" valign="top">-gi</td>
 <td width="65%" align="left"> draw path and the circles inside it</td></tr>
 <tr><td width="25%" valign="top">-nl {v} {st}</td>
-<td width="65%" align="left"> >display string "st" at center of 
+<td width="65%" align="left"> display string "st" at center of 
 	circle v </td></tr>
 <tr><td width="25%" valign="top">-nz {x y} {st}</td>
 <td width="65%" align="left"> display string "st" at location x+iy</td></tr>
@@ -979,6 +987,9 @@ points with nghbs</td></tr>
 <tr><td width="25%" valign="top">-s {v..}</td>
 <td width="65%" align="left"> closed polygon between centers of listed 
 	vertices (no interpolation of vertices between)</td></tr>
+<tr><td width="25%" valign="top">-sz {z..}</td>
+<td width="65%" align="left"> closed polygon between centers of listed
+	complex numbers</td></tr>
 <tr><td width="25%" valign="top">-sfg {v..}</td>
 <td width="65%" align="left"> </td></tr>
 <tr><td width="25%" valign="top">-sbg {v..}</td>
@@ -2882,10 +2893,18 @@ bottom of postscript file.</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="prune">prune</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
-<strong>Description: </strong>If the active packing has a DCEL structure,
-	then this command will prune any boundary vertices
-	which do not have an interior neighbor.
+<strong>Description: </strong>This command will prune (delete)
+every boundary vertex which do not have an  
+interior neighbor. Note that the indices are
+typically changed; the packing's 'vertexMap'
+contains the new-old information which can be
+written using the '-v' flag. So the pairing
+'(n,k)' means that the new vertex n originally
+had index k. 
 </blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href=" write">write</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="puncture">puncture</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[{v}] [-f {f}]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>Remove one vertex v or one face f from the packing's 
@@ -3484,7 +3503,7 @@ thickness 3</td></tr>
 <tr><td width="30%"><font color="blue">script</font></td>
 <td width="68%">absent filename, a dialog box should appear</td></tr>
 </table></blockquote>
-<font size="+1" color="blue"><strong><a name="seed">seed</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-q] [n]&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="seed">seed</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-qm] [n]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
 	This replaces the active pack by a single "flower" consisting of a
@@ -3494,6 +3513,16 @@ thickness 3</td></tr>
 	command-line arguments,	so original data in active pack will 
 	be lost.
 </blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
+<blockquote>
+<table>
+<tr><td width="25%" valign="top">-q</td>
+<td width="65%" align="left"> do not automatically display 
+	after creation</td></tr>
+<tr><td width="25%" valign="top">-m</td>
+<td width="65%" align="left"> swap nodes so M (max index circle) is
+	at the center and petal n is the gamma vertex.</td></tr>
+</table></blockquote>
 <font size="+1" color="blue"><strong><a name="set_accur">set_accur</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{x}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
@@ -3701,6 +3730,32 @@ enters two BaryPoints</td></tr>
 <table>
 <tr><td width="30%"><font color="blue">set_display -m .5</font></td>
 <td width="68%"> Reset to 1/2 of the maximal size</td></tr>
+</table></blockquote>
+<font size="+1" color="blue"><strong><a name="set_Dlist">set_Dlist</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[options] [x ..]&nbsp;&nbsp; </font>
+<blockquote>
+<strong>Description: </strong>
+	Stores real values in a global linked list.
+	Used, e.g., to transfer schwarzians between
+	commands.
+</blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
+<blockquote>
+<table>
+<tr><td width="25%" valign="top">f [x...]</td>
+<td width="65%" align="left"> add double values f(x) if
+the function f is set.</td></tr>
+<tr><td width="25%" valign="top">s [v w ..]</td>
+<td width="65%" align="left"> get schwarzians for give edges.</td></tr>
+<tr><td width="25%" valign="top">u [v w ..]</td>
+<td width="65%" align="left"> get u values (1-schwarzian) for give edges.</td></tr>
+</table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
+<blockquote>
+<table>
+<tr><td width="30%"><font color="blue">set_Dlist .34 1.6 -7.2</font></td>
+<td width="68%"> Store these values</td></tr>
+<tr><td width="30%"></td>
+<td width="68%"> store schwarzians for these edges</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="set_dump_format">set_dump_format</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[format]&nbsp;&nbsp; </font>
 <blockquote>
@@ -5224,8 +5279,16 @@ Any combination of these:
 <blockquote>
 <strong>Description: </strong>
 	Same as "write", except default path is not prepended to
-	filename.
+	filename. Note that '~
 </blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
+<blockquote>
+<table>
+<tr><td width="30%"><font color="blue">Write -cgrz ~/packings/example.p</font></td>
+<td width="68%"> This write 
+default data to a folder in the the user's home directory.
+</td></tr>
+</table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="write">write</a>&nbsp;&nbsp; <a href="write_carrier">write_carrier</a>&nbsp;&nbsp; 
 <br/><br/>
@@ -5483,7 +5546,7 @@ a negative value means this vertex is not adjusted during repacking</td></tr>
 <td width="65%" align="left">		  was CirclePack started with a socket for command input? 
 								If yes, this gives the host and port number</td></tr>
 <tr><td width="25%" valign="top">?*list*</td>
-<td width="65%" align="left">		  for vlist, elist, flist or Vlist, Elist, Flist</td></tr>
+<td width="65%" align="left">		  for vlist, elist, flist or Vlist, Elist, Flist, Dlist</td></tr>
 <tr><td width="25%" valign="top">?_*</td>
 <td width="65%" align="left">			  report the value of a variable</td></tr>
 <tr><td width="25%" valign="top">?vert {v}</td>

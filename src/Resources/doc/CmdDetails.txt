@@ -1853,6 +1853,7 @@ the new path.</opt>
 <seealso>
 <see>alpha</see>
 <see>gamma</see> 
+<see>dual_layout</see>
 <see>set_poison</see>
 <see>set_plot_flags</see>
 </seealso>
@@ -2696,10 +2697,18 @@ bottom of postscript file.</opt>
 
 
 <command cmd="prune">
-<description>If the active packing has a DCEL structure,
-	then this command will prune any boundary vertices
-	which do not have an interior neighbor.
+<description>This command will prune (delete)
+every boundary vertex which does not have an  
+interior neighbor. Note that the indices are
+typically changed; the packing's 'vertexMap'
+contains the new-old information which can be
+written using the '-v' flag. So the pairing
+'(n,k)' means that the new vertex n originally
+had index k. 
 </description>
+<seealso>
+<see> write</see>
+</seealso>
 </command>
 	
 <command cmd="puncture" flags="[{v}] [-f {f}]">
@@ -4902,8 +4911,13 @@ does 'repack', then reports the elapsed time.
 <command cmd="Write" flags="-[AcgirzavloftTmMy] {filename}">
 <description>
 	Same as "write", except default path is not prepended to
-	filename.
+	filename. Note that '~
 </description>
+<examples>
+<instance text="Write -cgrz ~/packings/example.p"> This write 
+default data to a folder in the the user's home directory.
+</instance>
+</examples> 
 <seealso>
 <see>write</see>
 <see>write_carrier</see>

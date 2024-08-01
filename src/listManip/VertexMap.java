@@ -50,15 +50,6 @@ public class VertexMap extends EdgeLink {
 		return newlist;
 	}
 	
-	/** interchange entries of each 'EdgeSimple'. 
-	 * Used, e.g., to convert 'oldnew' to 'newold'
-	 * or vice-verse. 
-	 */
-	public VertexMap flipEachEntry() {
-		EdgeLink el=(EdgeLink)this;
-		return (VertexMap)el.flipEachEntry();
-	}
-	
 	/**
 	 * In many situations, we do repeated adjustments in DCEL and
 	 * need to connect a final new index with its original from 

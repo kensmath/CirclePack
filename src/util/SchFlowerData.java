@@ -187,9 +187,9 @@ public class SchFlowerData {
 	 * @return double[2], delta, recip of sqrt of radius
 	 */
 	public static double[] Sit3(double u,double isqr,double isqR) {
-		double[] tdata=new double[2];
+		double[] tdata=new double[2]; // isqR*=-1;
 	    tdata[0]=2/(isqR*isqR*sqrt3*u-isqR*isqr);
-	    tdata[1]=sqrt3*u*isqR-isqr;
+	    tdata[1]=sqrt3*u*isqR-isqr; // tdata[1]=sqrt3*u*isqR-isqr;
 	    return tdata;
 	}
 	
