@@ -36,8 +36,10 @@ import util.ViewBox;
 public class QueryParser {
 	
 	public static int processQuery(PackData p,
-			String queryStr,boolean forMsg) {
-		StringBuilder strbld=new StringBuilder(queryStr);
+			Vector<String> queryStr,boolean forMsg) {
+		StringBuilder strbld=new StringBuilder();
+		for (int j=0;j<queryStr.size();j++)
+			strbld.append((String)queryStr.get(j));
 		
 		// remove the '?'
 		strbld.deleteCharAt(0); 
@@ -67,43 +69,51 @@ public class QueryParser {
 	}
 	
 	/**
-	 * Return a String in response to a query. This may have 
-	 * three parts: 'words', 'ans', and 'suffix'. 'ans' may 
-	 * represent (in 'String' form) a value, list, etc, and 
-	 * generally can be used as a variable value in commands.
+	 * Return a String in response to a query. 
+	 * This may have three parts: 'words', 'ans', 
+	 * and 'suffix'. 'ans' may represent (in 'String' 
+	 * form) a value, list, etc, and generally can 
+	 * be used as a variable value in commands.
 	 * 
-	 * If 'forMsg' is true, query is intended as a message, so 
-	 * 'words' is prepended. Note that 'words' defaults to 
-	 * "query (p*) = "; may want to change this if it doesn't 
-	 * depend on the current packing (e.g., '?Vlist'). 
+	 * If 'forMsg' is true, query is intended as a 
+	 * message, so 'words' is prepended. Note that 
+	 * 'words' defaults to "query (p*) = "; may want 
+	 * to change this if it doesn't depend on the 
+	 * current packing (e.g., '?Vlist'). 
 	 * 
 	 * Also, if 'forMsg', then some lists may be limited 
 	 * to 12 items, e.g. if vertex list is longer, put in 
-	 * '...' via a 'suffix' string. Long strings are likewise 
-	 * truncated.
+	 * '...' via a 'suffix' string. Long strings are 
+	 * likewise truncated.
 	 * 
-	 * TODO: add additional queries and functionality as needed 
+	 * TODO: add additional queries and functionality 
+	 * as needed 
 	 * 
 	 * @param query, String of '?<query>' type: the '?' is gone,
 	 *    string should have been trimmed already 
 	 * @param flagSegs, usual sequence of flag segments
-	 * @param forMsg: true if the result will be reported as a message
-	 *        rather than used for something else, like setting a variable.
-	 * @return String representation of result, null on error
+	 * @param forMsg boolean: true if result will be 
+	 * 		reported as a message rather than used 
+	 * 		for something else, like setting a variable.
+	 * @return String representation of result, null 
+	 * 		on error
 	 */
-	public static String queryParse(PackData p,String query,
-			Vector<Vector<String>> flagSegs,boolean forMsg) {
+	public static String queryParse(PackData p,
+			String query,Vector<Vector<String>> flagSegs,
+			boolean forMsg) {
 		StringBuilder ans=new StringBuilder(""); // result of the query alone
 		// some utility variables
 	  	int v;
 		String firststr=null;
 		// by default,  to use if 'forMsg'
-		StringBuilder words=new StringBuilder(query+" (p"+p.packNum+") "); 
+		StringBuilder words=
+			new StringBuilder(query+" (p"+p.packNum+") "); 
 		String suffix=null;
 		boolean gotone=false;
 		String exception_words=null; // words when an exception is caught
 		
-		// utility: note first set of strings and its first string
+		// utility: note first set of strings and 
+		// 	its first string
 		Vector<String> items=null;
 		try {
 			items=(Vector<String>)flagSegs.get(0); 
@@ -115,10 +125,11 @@ public class QueryParser {
 		try {
 			char c=query.charAt(0);
 			
-			// handle any 'list' requests first: limit is 1000 or
-			//    12 if intended as a message.
-			if (query.length()>=5 && 
-					query.substring(1,5).equalsIgnoreCase("list")) {
+			// handle any 'list' requests first: 
+			//    limit is 1000 or 12 if intended 
+			//    as a message.
+			if (query.length()>=5 && query.substring(1,5).
+					equalsIgnoreCase("list")) {
 				int n=0;
 				switch(c) {
 				case 'h': {
@@ -436,7 +447,7 @@ public class QueryParser {
 				
 				// TODO: have to add BaryLink queries, Blink, blist
 				
-				} // end of switch
+				} // end of switch for "list" entries
 				
 			}
 
@@ -445,7 +456,7 @@ public class QueryParser {
 			
 			// NOTE: as queries added, also add to 'CmdCompletion.txt'
 			
-			case 'a': { // --------------------------------------------------------
+			case 'a': { // -----------------------------------
 			
 				// angle aim/pi (just one)
 				if (query.startsWith("aim")) {
@@ -1034,7 +1045,7 @@ public class QueryParser {
 					}	
 				}
 				else if (query.startsWith("uerr")) {
-					int vv=NodeLink.grab_one_vert(p,flagSegs);
+					// int vv=NodeLink.grab_one_vert(p,flagSegs);
 					
 					// TODO: finish this; need code in
 					// 'schwarzian.java' for checking schwarzian
@@ -1121,6 +1132,17 @@ public class QueryParser {
 				words=new StringBuilder("variable '"+vkey+"' ");
 				ans.append("\""+varValue.trim()+"\"");
   	      		gotone=true;
+				break;
+			}
+			case '$': // enclosed to be sent for math evaluation
+			{
+				try {
+					ans.append(StringUtil.getMathString(query));
+					gotone=true;
+				} catch(Exception ex) {
+					exception_words="$ no valid math expression";
+					throw new ParserException("");
+				}
 				break;
 			}
 			default: {

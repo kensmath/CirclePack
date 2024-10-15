@@ -38,6 +38,7 @@ import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
+import input.CommandStrParser;
 import komplex.DualTri;
 import komplex.EdgeSimple;
 import komplex.Triangulation;
@@ -3210,6 +3211,7 @@ public class PackData{
 	  public int proj_max_to_s(int E,double ratio) {
 	    double lam=1.0,cabs,rad;
 	    Complex factor=new Complex(1.0);
+	    boolean debug=false;
 
 	    geom_to_e();
 	    if (E<=0 && ratio<=0.0) {
@@ -3228,12 +3230,22 @@ public class PackData{
 	        factor=new Complex(lam,0);
 	        E=0;
 	    }
+	    
+// debugging: copy to p2 and display the packing -- should
+//	    be a max packing of the disc.
+		if (debug) { // debug=true;
+		  	CommandStrParser.jexecute(this,"copy 1");
+		  	CommandStrParser.jexecute(CirclePack.cpb.packings[2],"disp -w -c");
+		}
 
 	    for (int j=1;j<=nodeCount;j++) { // scale, rotate
 	    	Complex zz=getCenter(j);
 	    	setCenter(j,zz.times(factor));
 	    	setRadius(j,lam*getRadius(j));
 	    }
+	    
+	    
+	    
 	    geom_to_s(); // project to sphere 
   	  	setGeometry(1);
 

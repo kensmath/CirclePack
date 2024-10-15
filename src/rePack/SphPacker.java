@@ -90,7 +90,7 @@ public class SphPacker extends RePacker {
 		}
 		if (ok==0)
 			return 0;
-		return 1;
+		return ok;
 	}
 	
 	/**

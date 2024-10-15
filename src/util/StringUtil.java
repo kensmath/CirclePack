@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.util.Iterator;
 import java.util.Vector;
 
+import com.jimrolf.functionparser.FunctionParser;
+
 import allMains.CPBase;
 import exceptions.ParserException;
 
@@ -211,9 +213,11 @@ public class StringUtil {
 		}
 		String []sendbacks=new String[2];
 		sendbacks[0]=str.substring(1,k).toLowerCase(); // abbrev, lower case
-		StringBuilder sbld=new StringBuilder(str.substring(k+1).trim());
+		StringBuilder sbld=
+			new StringBuilder(str.substring(k+1).trim());
 		
-		// want to pick off command, send rest to varSub if '_' occurs
+		// want to pick off command, send rest to 
+		//    varSub if '_' occurs
 		k=sbld.indexOf(" ");
 		if (k<=0 || sbld.indexOf("_",k+1)<=0) {
 			sendbacks[1]=sbld.toString(); 
@@ -526,13 +530,15 @@ public class StringUtil {
 	}
 	
 	/**
-	 * Break a string into vector of 'flag segment' vectors, groups between successive
-	 * command flags; thus all except possibly the first element will start with a flag.
-	 * @param str
-	 * @return always return a vector, even if empty
+	 * Break a string into vector of 'flag segment' vectors, 
+	 * groups between successive command flags; thus all 
+	 * except possibly the first element will start with a 
+	 * flag.
+	 * @param str String
+	 * @return return a Vector<Vector<String>, even if empty
 	 */
 	public static Vector<Vector<String>> flagSeg(String str) {
-		Vector<String> vec=string2vec(str);
+		Vector<String> vec=string2vec(str,false);
 		return flagSeg(vec);
 	}
 	
@@ -656,19 +662,45 @@ public class StringUtil {
 	}
 	
 	/** 
-	 * Utility to convert string into vector of substrings (by whitespace).
-	 * Return empty vector if nothing is found. Reassemble substrings
-	 * occurring between matching parens, curly brackets, or double quotes
-	 * which are inadvertently separated in call to 'string2vec'.
-	 * (TODO: not very sophisticated; can't handle nesting, etc.)
+	 * Utility to convert string into vector of substrings 
+	 * (by whitespace). Return empty vector if nothing is 
+	 * found. Reassemble substrings occurring between 
+	 * matching parens, curly brackets, or double quotes
+	 * which are inadvertently separated in call 
+	 * to 'string2vec'.
+	 * (TODO: not sophisticated; can't handle nesting, etc.)
 	 * @param str String
-	 * @param bfix boolean, true, then reattach
+	 * @param bfix boolean: true, then reattach
 	 * @return Vector<String>, empty on error or nothing found
 	 */
 	public static Vector<String> string2vec(String str,boolean bfix) {
-		
-		// first, split into vector of strings by whitespace
-		Vector<String> vec= string2vec(str);
+
+		Vector<String> vec= new Vector<String>(0);
+
+		// split the string at whitespace, eliminate blanks
+		String strFrags[]=str.split("\\s+"); // split at ' ' (spaces)
+		// check each strFrag for variables and substitute.
+		for (int m=0;m<strFrags.length;m++) {
+			strFrags[m]=strFrags[m].trim();
+			int k=0;
+			StringBuilder tmpbuf=new StringBuilder(strFrags[m]);
+			while ((k=tmpbuf.indexOf("_",k))>=0) {
+				// have to bypass command strings with '_'
+				if (k>0 && Character.isLetter(tmpbuf.charAt(k-1)))
+					break;
+				String varstr=StringUtil.getLetterStr(tmpbuf,k+1);
+				String rstg=null;
+				if (varstr==null)
+					break;
+				int e=k+1+varstr.length();
+				if (e>(k+1)) 
+					rstg=(String)CPBase.varControl.getValue(varstr);
+				if (rstg==null)
+					throw new ParserException("variable '_"+varstr+"' is not defined");
+				tmpbuf.replace(k,e,rstg);
+			}
+			vec.add(tmpbuf.toString());
+		}
 
 		// Reattaching order: (), then {}, then finally "". 
 		if (bfix) {
@@ -678,72 +710,16 @@ public class StringUtil {
 		}
 		return vec;
 	}		  
-		  
-	/** 
-	 * Utility to convert string into vector of substrings (by whitespace).
-	 * Return empty vector if nothing is found. see also 'string2vec(String,boolean)' 
-	 * (TODO: not very sophisticated; can't handle nesting, etc.)
-	 * @param str String
-	 * @return Vector<String>, empty on error or nothing found
-	 */
-	  public static Vector<String> string2vec(String str) {
-		  Vector<String> vec= new Vector<String>(10);
-		  if (str!=null) {
-
-			  // expand any variable expressions: indicated by " _{vname}"
-			  if (str.length()>0 && (str.charAt(0)=='_' || str.indexOf(" _")>=0)) {
-				  StringBuilder sbuf=new StringBuilder(str);
-				  int k=-1;
-				  int m=-1;
-				  // recursive search for variables
-				  int safety=6; 
-				  while (safety>0 && 
-						  (sbuf.charAt(0)=='_' || (k=sbuf.indexOf(" _")+1)>=1)) {
-					  safety--;
-					  // first character
-					  if (sbuf.charAt(0)=='_')
-						  k=0;
-					  // last character? just remove
-					  if (k==sbuf.length()-1)
-						  sbuf.deleteCharAt(k);
-					  else { // name ends with space or end of string
-						  m=sbuf.indexOf(" ",k+1);
-						  if (m<0)
-							  m=sbuf.length();
-						  if (m==(k+1)) // just toss
-							  sbuf.replace(k,k+1," ");
-						  String instr=sbuf.substring(k+1,m);
-						  // may have repeat '_' due to user misuse
-						  while (instr.length()>0 && instr.charAt(0)=='_')
-							  instr=instr.substring(1);
-						  String rstg=null;
-						  if (instr.length()>0) 
-							  rstg=(String)CPBase.varControl.getValue(instr);
-						  if (rstg==null)
-							  throw new ParserException("variable '_"+instr+"' is not defined");
-						  sbuf.replace(k,m,rstg);
-					  }
-				  } // end of while
-				  str=sbuf.toString();
-			  }
-			  
-			  // split the string at whitespace, eliminate blanks
-			  String strFrags[]=str.split("\\s+"); // split at ' ' (spaces)
-			  for (int m=0;m<strFrags.length;m++) {
-				  if (strFrags[m].trim().length()>0)
-					  vec.add(strFrags[m].trim());
-			  }
-		  }
-		  return vec; 
-	  }
 	  
 	  /**
-	   * Get initial string and convert to an integer. Throw DataException.
-	   * In future, may have alternative ways to indicate integer.  
-	   * @param str
-	   * @return
+	   * Get initial string and convert to an integer. 
+	   * In future, may have alternative ways to indicate 
+	   * integer.  
+	   * @param str String
+	   * @return int
 	   */
-	  public static int getOneInt(String str) throws ParserException {
+	  public static int getOneInt(String str) 
+			  throws ParserException {
 		  String []pstr=str.split("[ ]"); // split on 'space'
 		  int n;
 		  try {
@@ -852,9 +828,10 @@ public class StringUtil {
 	  }
 	  
 	/**
-	 * This finds and trims string strictly between outermost curly 
-	 * braces '{string}', null on syntax error, eg., mismatch, faulty 
-	 * nesting, etc. Returned string may be empty; calling routine 
+	 * This finds and trims string strictly between 
+	 * outermost curly braces '{string}', null on 
+	 * syntax error, eg., mismatch, faulty nesting, 
+	 * etc. Returned string may be empty; calling routine 
 	 * has to decide if that's okay.
 	 * @param orig_str String
 	 * @return String between '{' and '}', null on matching error
@@ -884,6 +861,53 @@ public class StringUtil {
 		return null; // didn't find matching '{..}'
 	}
 	  
+	/**
+	 * This parses first occurring math expression 
+	 * strictly between '$' symbols, '$string$'; 
+	 * null on error, may return empty string.
+	 * Returning string should be ready for math
+	 * 'FunctionParser' with, e.g., any variable 
+	 * substitutions.
+	 * @param orig_str String
+	 * @return String for math package, or null
+	 */
+	public static String getMathString(String str) {
+		int firstl = str.indexOf('$');
+		int last=str.indexOf('$',firstl+1);
+		if (last<0) // no ending '$'
+			last=str.length()-1;
+		if (firstl>=0 && last>firstl) { 
+			String newstr=str.substring(firstl+1,last).trim();
+			
+			// search out and get value for variables
+			String[] pieces=newstr.split(" ");
+			StringBuilder getit=new StringBuilder();
+			int k=pieces.length;
+			for (k=0;k<pieces.length;k++) {
+				String pcs=pieces[k].trim();
+				char c=pcs.charAt(0);
+				if (c=='_') {
+					pieces[k]=CPBase.varControl.getValue(str);
+					if (pieces[k]==null)
+						pieces[k]=" ";
+				}
+				getit.append(" ");
+				getit.append(pieces[k]);
+			}
+			
+			// evaluate the expression (don't expect there
+			//   to be any variable 'x' or 'z'.
+			FunctionParser expParser=new FunctionParser();
+			expParser.setComplex(true);
+			expParser.parseExpression(getit.toString());
+			if (expParser.funcHasError()) {
+				return null;
+			}
+			String fstr=(Double.toString(expParser.evalFunc(0.0)));
+			return fstr;
+		}
+		return null;
+	}
 	/**
 	 * Categorize a trimmed line as null or error (0), or first substring is 
 	 * non-digit (1), integer (2), or float (3)
@@ -1326,9 +1350,11 @@ public class StringUtil {
 	   * @return pack number, -1 on error
 	   */
 	  public static int qFlagParse(String str) {
-		  if (!str.startsWith("-q")) return -1;
+		  if (!str.startsWith("-q")) 
+			  return -1;
 		  // might be old form
-		  if (str.length()<3) return -2;
+		  if (str.length()<3) 
+			  return -2;
     	  int qnum=Integer.parseInt(str.substring(2));
     	  if (qnum<0 || qnum>=CPBase.NUM_PACKS) {
     		  return -1;
@@ -1351,7 +1377,8 @@ public class StringUtil {
 			  return segs;
 		  }
 		  char c=str.charAt(0);
-		  if (c=='&' || c=='|') return null; // can't start with connective
+		  if (c=='&' || c=='|') 
+			  return null; // can't start with connective
 		  while (str.contains("&&") || str.contains("||")) {
 			  int a=str.indexOf("&&",2);
 			  int b=str.indexOf("||",2);
@@ -1374,9 +1401,9 @@ public class StringUtil {
 	  /** 
 	   * Return substring of contiguous digits in 'str' starting
 	   * at 'startIndx'. 'null' if no digits.
-	   * @param strb, source StringBuilder
+	   * @param strb StringBuilder
 	   * @param startIndx
-	   * @return substring or null on error of no digits
+	   * @return substring or null on error or no digits
 	   */
 	  public static String getDigitStr(StringBuilder strb,int startIndx) {
 		  int k=startIndx;
@@ -1387,7 +1414,30 @@ public class StringUtil {
 				  break;
 			  k++;
 		  }
-		  if (k==startIndx) return null;
+		  if (k==startIndx) 
+			  return null;
+		  return strb.substring(startIndx,k);
+	  }
+	  
+	  /** 
+	   * Return substring of contiguous letters 
+	   * in 'str' starting at 'startIndx'. 'null' 
+	   * if no letters.
+	   * @param strb StringBuilder
+	   * @param startIndx
+	   * @return substring or null on error or no letters
+	   */
+	  public static String getLetterStr(StringBuilder strb,int startIndx) {
+		  int k=startIndx;
+		  if (strb==null || k<0 || strb.length()<=k) 
+			  return null;
+		  while (k<strb.length()) {
+			  if (!Character.isLetter(strb.charAt(k)))
+				  break;
+			  k++;
+		  }
+		  if (k==startIndx) 
+			  return null;
 		  return strb.substring(startIndx,k);
 	  }
 	  

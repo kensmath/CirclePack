@@ -129,11 +129,13 @@ public class TrafficCenter {
 	}
 
 	/**
-	 * Parse a sequence of command strings, call for successive execution of
-	 * individual commands, reap results, messages, etc. 
+	 * Parse a sequence of command strings, call 
+	 * for successive execution of individual commands, 
+	 * reap results, messages, etc. 
 	 * 
-	 * 'ResultPacket' is provided by the calling routine for carrying
-	 * information both ways: command string, command count, error messages,
+	 * 'ResultPacket' is provided by the calling 
+	 * routine for carrying information both ways: 
+	 * command string, command count, error messages,
 	 * memoryFlag, packing, etc. 
 	 * @param rP ResultPacket
 	 * @param depth int; used in recursive calls

@@ -168,7 +168,8 @@ public class CommandStrParser {
 	 * This is where individual commands are analyzed and sent 
 	 * to appropriate Java routines. 
 	 * 
-	 * Commands arriving are individual commands: preprocessing leaves
+	 * Commands arriving are individual commands: 
+	 * preprocessing leaves
 	 *   no ';' separators:
 	 *   no 'for' or 'FOR' loops:
 	 *   no 'delay's:
@@ -189,29 +190,30 @@ public class CommandStrParser {
 	 * @return 0 on error or no action
 	 */
   public static int jexecute(PackData packData, String cmdstr) {
+	  
+	  // initial checks
 	  if (cmdstr==null) 
 		  return 0;
-	  int count=0;
-	  String cmd=null;
-
-	  if (cmdstr.contains("-p")) {
+	  if (cmdstr.contains("-p")) 
 		  throw new ParserException("'jexecute': '-p' flag "
 		  		+ "should have been handled before the call");
-	  }
 
+	  // catch variables, reconstitute parens/brackets, etc.
+	  Vector<String> allitems=StringUtil.string2vec(cmdstr,true);
+	  String cmd=(String)allitems.get(0);
+	  
       // split off processing for query messages
-      if (cmdstr.charAt(0)=='?') {
-    	  return QueryParser.processQuery(packData,cmdstr,true);
+      if (cmd.charAt(0)=='?') {
+    	  return QueryParser.processQuery(packData,allitems,true);
       }
       
-	  // Note: 'string2vec' catches variables, reconstitutes parens/brackets
-	  Vector<String> allitems=StringUtil.string2vec(cmdstr,true);
-	  cmd=(String)allitems.remove(0);
-	  
-	  /* NOTE: Vector 'flagSegs' will hold only the flag strings 
-	   * occurring after the command --- the command itself is 'cmd' */
+	  /* NOTE: Vector 'flagSegs' will hold only the flag 
+	   * strings occurring after the command --- the 
+	   * command itself is 'cmd' */
+      allitems.remove(0); // 'cmd' is separated off
 	  Vector<Vector<String>> flagSegs=StringUtil.flagSeg(allitems);
 	  Vector<String> items=new Vector<String>(0);
+	  int count=0;
       if (flagSegs.size()>0)
     	  items=flagSegs.get(0);
 
@@ -2959,7 +2961,9 @@ public class CommandStrParser {
 				  else 
 					  items.remove(0);
 				  String st=(String)items.get(0);
-				  qackData=PackControl.cpDrawing[StringUtil.qFlagParse(st)].getPackData();
+				  qackData=PackControl.
+					cpDrawing[StringUtil.qFlagParse(st)].
+					getPackData();
 				  qCPS=qackData.cpDrawing;
 				  if (qackData==null || qCPS==null)
 					  throw new ParserException();
@@ -2977,17 +2981,23 @@ public class CommandStrParser {
 			  // No flag strings? use dispOptions 
 			  // (DisplayPanel (checkboxes or tailored string))
 			  if (flagSegs==null || flagSegs.size()==0) {
-				  Vector<String> all=StringUtil.string2vec(packData.cpDrawing.dispOptions.toString());
-				  Vector<Vector<String>> flgseg=StringUtil.flagSeg(all);
-				  count +=DisplayParser.dispParse(packData,qCPS,flgseg);
+				  Vector<String> all=StringUtil.
+					string2vec(packData.cpDrawing.
+							dispOptions.toString(),false);
+				  Vector<Vector<String>> flgseg=StringUtil.
+						  flagSeg(all);
+				  count +=DisplayParser.
+						  dispParse(packData,qCPS,flgseg);
 			  }
 			  
 			  // send for parsing/execution
 			  else { 
-				  count +=DisplayParser.dispParse(packData,qCPS,flagSegs);
+				  count +=DisplayParser.
+						  dispParse(packData,qCPS,flagSegs);
 			  }
 			  if (count>0) 
-				  PackControl.canvasRedrawer.paintMyCanvasses(qackData,false);
+				  PackControl.canvasRedrawer.
+				  paintMyCanvasses(qackData,false);
 			  return count;
 		  }
 	      break;
@@ -11199,26 +11209,29 @@ public static CallPacket valueExecute(PackData packData,
 	{
 		break;
 	}
-	case '?': // return first string of query result, and then only if it's
-			// a number or true/false.
+	case '?': // return first string of query result, 
+			// and then only if it's a number or true/false.
 	{
 		String query=cmd.substring(1);
 		if (query.length()<=0)
 			return null;
 		
 		// we only use first string from 'ans'
-		String ans=StringUtil.grabNext(QueryParser.queryParse(packData, query, flagSegs, false));
+		String ans=StringUtil.grabNext(QueryParser.
+				queryParse(packData, query, flagSegs, false));
 		if (ans==null || ans.length()==0)
 			return null;
 		
-		// only return via 'strValue' if 'ans' represents a double (or integer) or true/false.
+		// only return via 'strValue' if 'ans' represents a 
+		//   double (or integer) or true/false.
 		rtnCp=new CallPacket(query);
 		try {
 			Double.valueOf(ans); // if not a double, should throw exception here
 			rtnCp.strValue=new String(ans);
 			return rtnCp;
 		} catch(Exception ex) {
-			if (ans.equalsIgnoreCase("true") || ans.equalsIgnoreCase("false")) {
+			if (ans.equalsIgnoreCase("true") || 
+					ans.equalsIgnoreCase("false")) {
 				rtnCp.strValue=new String(ans);
 				return rtnCp;
 			}

@@ -1801,14 +1801,14 @@ the new path.</opt>
 	<opt flag="-a"> set "aims" to their defaults</opt>
 	<opt flag="-c[cdfs]"> recompute pack centers.
 		added options follow (allow no spaces between):</opt>
-		<opt flag="      c {x}"> set decimal number 'x' as threshold for 
+		<opt flag="      -cc {x}"> set decimal number 'x' as threshold for 
 		   placement accuracy; e.g., x=.00001 for 5-decimal places.</opt>
-		<opt flag="      d"> create "layout.log" diagnostic file in the temporary
+		<opt flag="      -cd"> create "layout.log" diagnostic file in the temporary
 		   directory to check for layout errors</opt>
-		<opt flag="      f"> plot only circles with placement errors less
+		<opt flag="      -cf"> plot only circles with placement errors less
 		   than assigned threshold, set 'plot_flag' appropriately
 		   (as in '-l' option below)</opt>
-		<opt flag="      s"> use single face for each new circle (ie straight
+		<opt flag="      -cs"> use single face for each new circle (ie straight
 		   from drawing-order) (Note: default is now to find
 		   center by averaging computations from all available plotted neighbors.</opt>
 	<opt flag="-d [v]"> comp centers using current draw order; report 

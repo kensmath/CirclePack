@@ -295,12 +295,14 @@ public class MyConsole extends CmdSource implements KeyListener { // ActionListe
 	public void keyTyped(KeyEvent evt) {}
 
 	/** 
-	 * try tab-completion on substring starting at last ';'. For strings
-	 * starting with '|', modify the first 5 characters, e.g., '|CA| '.
-	   * @param command string containing command to complete
-	   * @returns str[0] = command string with new text appended (if found)
-	   *          str[1] = text list of possible commands
-	   */
+	 * try tab-completion on substring starting 
+	 * at last ';'. For strings starting with '|', 
+	 * modify the first 5 characters, e.g., '|CA| '.
+	 * @param command string; containing command to complete
+	 * @returns str[0] = command string with new text 
+	 * 					 appended (if found)
+	 *          str[1] = text list of possible commands
+	 */
 	public String []complete(String command) {
 		  int nFound=0;
 		  String newcmd=null;
@@ -362,11 +364,13 @@ public class MyConsole extends CmdSource implements KeyListener { // ActionListe
 	  }
 	
 	  /**
-	   * Add to the command completion hash table 'commandMap'
+	   * Add to the command completion hash table
+	   * 'commandMap'
 	   * @param str
 	   */
 	  public static void add2CmdCompletion(String str) {
-		  if (str==null || str.trim().length()==0) return;
+		  if (str==null || str.trim().length()==0) 
+			  return;
 		  String newstr=str.trim();
 		  
 		  int k=str.indexOf(' ');

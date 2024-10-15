@@ -11,7 +11,7 @@
 	<classpathentry kind="lib" path="jars/DJEP2.4.0Minimal.jar"/>
 	<classpathentry kind="lib" path="jars/FunctionChoiceBox.jar"/>
 	<classpathentry kind="lib" path="jars/FunctionField.jar"/>
-	<classpathentry kind="lib" path="jars/FunctionParser.jar"/>
+	<classpathentry kind="lib" path="jars/FunctionParser.jar" sourcepath="jars/FunctionParser.jar"/>
 	<classpathentry kind="lib" path="jars/javabuilder.jar"/>
 	<classpathentry kind="lib" path="jars/jbcl.jar"/>
 	<classpathentry kind="lib" path="jars/PackCircle.jar"/>

@@ -399,13 +399,14 @@ public class Complex {
 	 *     but that for imaginary part could be in various 
 	 *     locations --- may have no space before or after,
 	 *     there may or may not be a '+' sign
-	 *   * whole or one or both parts may be variables ('_' designation)
+	 *   * whole or one or both parts may be 
+	 *     variables ('_' designation)
 	 *   * lead '-' may indicate a flag instead of a sign
 	 *   * '-' may occur for exponent in scientific notation
 	 *   * may need to eat '+' or '*' signs
 	 *   
-	 * NOT YET allowing any special formats, such as (<x>,<y>), etc.
-	 * Recall that variable notation is '_<name> ' with
+	 * NOT YET allowing any special formats, such as (<x>,<y>), 
+	 * etc. Recall that variable notation is '_<name> ' with
 	 *    no spaces, but ending with blank or end of string.   
 	 * TODO: I'm building this as I go; will add more processing
 	 *    as I find it is needed. 
@@ -414,9 +415,11 @@ public class Complex {
 	 * @return Complex
 	 * @throws VarException
 	 */
-	public static Complex string2Complex(String str) throws VarException {
+	public static Complex string2Complex(String str) 
+			throws VarException {
 		if (str.charAt(0)=='-' && StringUtil.isFlag(str))
-			throw new VarException("this seems to be a flag, not a complex number");
+			throw new VarException(
+				"this seems to be a flag, not a complex number");
 		if (str.charAt(0)=='+') // this should preclude '_' at start
 			str=str.substring(1).trim();
 		boolean minusflag=false;

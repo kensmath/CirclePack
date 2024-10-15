@@ -8,8 +8,9 @@ import util.StringUtil;
 public class GetValue {
 	
 	/**
-	 * Find the double value specified by a string. It may be a normal
-	 * signed numerical value (included an integer) or a variable.
+	 * Find the double value specified by a string. 
+	 * It may be a normal signed numerical value 
+	 * (included an integer) or a variable.
 	 * @param str, trimmed String
 	 * @return Double, null on error.
 	 * @throws VarException 

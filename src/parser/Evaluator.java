@@ -9,10 +9,12 @@ import complex.MathComplex;
 import exceptions.ParserException;
 
 /**
- * The evaluator contains the 'dictionary' and 'values' hashmaps for
- * evaluating functions of a complex variable. The dictionary should
- * have only objects implementing the 'word' interface so that they
- * have a complex 'evaluate' method.
+ * The evaluator contains the 'dictionary' and 
+ * 'values' hashmaps for evaluating functions of 
+ * a complex variable. The dictionary should
+ * have only objects implementing the 'word' 
+ * interface so that they have a complex 
+ * 'evaluate' method.
  */
 
 public class Evaluator {
