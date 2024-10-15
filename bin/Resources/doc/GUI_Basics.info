@@ -1,0 +1,93 @@
+How to work with CirclePack.
+(Note: Version 0.0.1 is a beta, beta version)
+
+CirclePack provides a Java GUI (graphical user interface) for working with circle packings. There are several ways to interact with the software, from very basic to very sophisticated. These are discussed below. [Data storage and packing manipulations are largely carried out with native calls to "CPack", a library of C++ routines. So, when the user is clicking buttons and menus, Java is typically forming a command string which it then executes with a call to CPack. Full functionality comes only with a knowledge of these commands, a knowledge that the user will have to pick up over time.]
+
+Before looking at modes of operation, here is a brief description of the windows you should see when you start CirclePack:
+
+=========== The GUI Layout ===============
+
+* The main canvas on the left displays the "active" circle packing. CirclePack maintains up to three packings at any one time and any one can become the active one. (Note: all packings start out empty.)
+
+* Below are three smaller canvasses; the slightly shaded one is active, so its contents mirror those in the large canvas. You can activate any of the three packings by double clicking (l-mouse) on its small canvas.
+
+* Above and below the main canvas are toolbars with "tool" icons. 
+
+  * The tools above apply to the active packing (in the main canvas)
+    via l-mouse clicks. They typically change the main canvas cursor to
+    reflect their function --- e.g. to remove a boundary circle, click the
+    "lightning" icon, then click l-mouse on the circle you want to remove.
+
+  * The tools on the lower tool bar are "drag & drop" style. In other words,
+    the user drags one with l-mouse to any of the canvasses and its 
+    command(s)will be applied to that packing.
+
+* On the right side are: 
+
+  1. 'Command' window where the user can type explicit commands to
+     send to CPack. This is useful only as the user learns the commands
+     and their syntax; see the 'Cmd Details' tab.
+
+  2. Toolbar with icons for loading and running 'scripts' (see below).
+
+  3. Tabbed pane with message, scratch, and script tabs.
+
+  4. Tabbed pane with controls for several operations; many of these
+     reflect information or operations applying to the currently active
+     packing.
+
+     + "Display": what to display.
+
+     + "Data": information on the active packing, such as node count,
+       geometry, genus.
+
+     + "Lists": for maintaining lists of vertices, edges. and faces of
+       the active packing.
+
+     + "Screen": Screen setting for the active canvas, such as line
+       thickness, color opacity.
+
+     + "Mobius": for maintaining mobius transformations applying to
+       the active packing.
+
+     + "Function": An editing line to describe a complex function; 'z' is
+	treated as the variable. (Functions are used only in conjunction 
+        with certain CPack commands.)
+
+     + "Write": used for saving packings to files.
+
+     + "PostScript": used for saving PostScript images of packings.
+
+  5. A display line. On the left are the coordinates of the cursor in
+     the active canvas.
+
+* There is a vertical toolbar down the middle of the screen which is populated with tool icons when a script is loaded; more on scripts below.
+
+
+========= How to actually DO things ========
+
+There are three ways of carrying out operations in CirclePack; from simplest to most sophisticated, they are:
+
+1. Use Tools from the tool bars: *********************************
+
+Tool icons execute commands when you click on them or when you drag & drop them in a packing canvas. For example, at startup, the "basic" tools are loaded in the toolbar below the main canvas. Drag the leftmost tool into the main canvas and CirclePack will create and display a "seed" paking --- this a simple flower having 6 petals. (Note: a tool tip will generally appear when you hover over a tool icon; it may be a description of what the tool does, or it may show the command that will be sent to CPack.) You can now use that packing to try out other operations --- change geometries, display faces instead of circles, compute the maximal packing, etc.
+
+Tools provide the simplest mode of operation, but also initially the most limited. However, the user can create, save, read in, new tools, so they can become as sophisticated as the user desires. For instance, click r-mouse on the lower toolbar and you can bring up an editor to create a new tool and choose its icon.
+
+2. Use prepared "scripts": ***************************************
+
+A script is an XML-structure document which contains text for reading and strings of commands to be executed by CirclePack. One simply loads a script and then presses the green "NEXT" icon on the script toolbar to execute successive commands. If someone gives you a script, this is the easiest possible way to run CirclePack. You can treat the script (whose text and commands appear in the "Script" tab) as a narrative describing the action as you click through the commands.
+
+Prepared scripts are also a good way to learn the command structure. The user can modify the behavior by adding, deleting, or editing the commands in the script.
+
+3. Enter and execute explicit commands: **************************
+
+The greatest control is provided through the "command" window --- the text window on the top right. The user simply enters individual commands or strings of commands separated by semi-colons, presses 'enter' and CirclePack executes the command(s). The command structure is extensive and complicated --- commands involve key words, unix-style flags, and structured lists giving vertex, edge, or face indices. For instance: "disp -w -cf a(10, 20)" will cause the active canvas to "clear" (the -w flag) and then display filled circles (-cf) associated with all vertices numbered 10 to 20 inclusive.
+
+How to learn commands? (*) Look at prepared scripts, (*) look at tool tips for tool provided with CirclePack or by others, (*) read the "Cmd Details" help file, (*) modify known commands.
+
+4. Program new code: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+If CirclePack doesn't have the commands to do what you want, then perhaps you can learn how to program new procedures in C++ to become part of the library.
+
+

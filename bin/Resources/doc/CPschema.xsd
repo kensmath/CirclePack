@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<!-- This schema developed for use with CirclePack, copyright 2005 -->
+
+<xs:element name="CP_Scriptfile">	
+  <xs:complexType>
+    <xs:sequence>
+	<xs:element name="CPscript">	
+	  <xs:complexType mixed="true">
+	    <xs:sequence>
+		<xs:element name="header" type="xs:string" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="Section" minOccurs="0">
+  		  <xs:complexType mixed="true">
+		    	<xs:attribute name="type">
+			  <xs:simpleType>
+	  		    <xs:restriction base="xs:string">
+    				<xs:enumeration value="title"/>
+    				<xs:enumeration value="section"/>
+    				<xs:enumeration value="subsection"/>
+  			    </xs:restriction>
+			  </xs:simpleType>
+			</xs:attribute>		
+  		  </xs:complexType>
+		</xs:element>
+		<xs:element name="cmd" minOccurs="0" maxOccurs="100">
+  		  <xs:complexType mixed="true">
+			<xs:attribute name="name" type="xs:string" use="optional"/>
+			<xs:attribute name="inline" default="yes">
+		  	  <xs:simpleType>
+    			    <xs:restriction base="xs:string">
+      				<xs:pattern value="yes|no"/>
+    			    </xs:restriction>
+  			  </xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="hint" type="xs:string" use="optional"/>
+  		  </xs:complexType>
+		</xs:element>
+	    </xs:sequence>
+	  </xs:complexType>
+	</xs:element>
+	<xs:element name="CPdata">	
+	  <xs:complexType>
+	    <xs:sequence>
+		<xs:element name="name" type="xs:string" min0ccurs="0"/> 
+                  <!-- 'name' no longer used; now use 'name' attrib -->
+		<xs:element name="circlepacking" minOccurs="0"/>
+		    <xs:attribute name="name" type="xs:string" use="optional"/>
+		<xs:element name="commands" minOccurs="0"/>
+		    <xs:attribute name="name" type="xs:string" use="optional"/>
+		<xs:element name="path" minOccurs="0"/>
+		    <xs:attribute name="name" type="xs:string" use="optional"/>
+		<xs:element name="xyzData" minOccurs="0"/>
+		    <xs:attribute name="name" type="xs:string" use="optional"/>
+		<xs:element name="rawdata" minOccurs="0"/>
+		    <xs:attribute name="name" type="xs:string" use="optional"/>
+	    </xs:sequence>
+	  </xs:complexType>
+	</xs:element>
+    </xs:sequence>
+  </xs:complexType>
+</xs:element>
+
+</xs:schema>
+
+			
