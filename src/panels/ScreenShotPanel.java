@@ -40,7 +40,8 @@ import frames.AboutFrame;
 
 /**
  * Class for organizing screenshots; thumbnails, name, 
- * vectors of images in /tmp, etc. Image format is 'CPBase.IMG'.
+ * vectors of images in /tmp, etc. Image format is 
+ * 'CPBase.IMG', which is typically 'jpg'.
  * @author kens
  *
  */
@@ -92,7 +93,8 @@ public class ScreenShotPanel extends JPanel implements ActionListener, ImageObse
 
 	/**
 	 * Store the screen as a CPBase.IMG file (default jpg).
-	 * @param p PackData (null in case we want pair double screen)
+	 * @param p PackData (null in case we want pair 
+	 * 		double screen)
 	 * @return boolean
 	 */
 	public boolean storeCPImage(PackData p) {

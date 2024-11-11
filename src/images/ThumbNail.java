@@ -16,9 +16,10 @@ import javax.swing.JPopupMenu;
 import exceptions.InOutException;
 
 /**
- * Container for images on 'ImagePanel'; contains thumbnail image,
- * name of actual file (with thumb index, 'id', '.*' extension), name
- * for label, attach menu for actions, movement.
+ * Container for images on 'ImagePanel'; contains 
+ * thumbnail image, name of actual file (with thumb 
+ * index, 'id', '.*' extension), name for label, 
+ * attach menu for actions, movement.
  * @author kens
  *
  */

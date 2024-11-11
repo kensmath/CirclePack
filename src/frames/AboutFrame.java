@@ -16,12 +16,27 @@ import javax.swing.JTextPane;
 import javax.swing.border.EmptyBorder;
 
 import allMains.CPBase;
+import circlePack.PackControl;
 
 /**
- * When Opening CirclePack in "minimal" mode (just the main
- * or paired frame), an "About" frame should automatically
- * popup. It displays the current script "description" and
- * image, a way to give new users a place to start with the GUI.
+ * The 'AboutFrame' contains text on the left and 
+ * an image on the right; it automatically pops up 
+ * when loading a script that is NOT in 'advanced' 
+ * mode. It also pops up with the "About" button 
+ * on the control panel or with 'open about'. 
+ * 
+ * The text area show "About: <script title>".
+ * If the script has a "description", then that 
+ * is shown. (This can give new users a place to 
+ * start with the GUI.) If there is no description,
+ * then this is shown
+ * 
+ * "Edit script title to add an "About" 'description'"
+ * 
+ * If the script contains an 'AboutImage.*', then 
+ * that image is shown on the right; otherwise, the
+ * CirclePack owl image is shown
+
  * @author kens
  *
  */
@@ -32,6 +47,8 @@ public class AboutFrame extends JFrame {
 
 	public JTextPane infoPane;
 	public JTextPane aboutPane;
+	public JTextPane versionPane;
+	
 	JScrollPane aboutScroller;
 	public static int ABOUTWIDTH=250;
 	public static int ABOUTHEIGHT=250;
@@ -89,8 +106,16 @@ public class AboutFrame extends JFrame {
 	public void openAbout(int X,int Y) {
 		Container pane=this.getContentPane();
 		pane.removeAll();
+		
+		// 'panel' will hold contentPanel and versionPanel
 		JPanel panel=new JPanel();
-		panel.setLayout(new BoxLayout(panel,BoxLayout.LINE_AXIS));
+		panel.setLayout(new BoxLayout(
+				panel,BoxLayout.PAGE_AXIS));
+		
+		// top panel has description and image
+		JPanel contentPanel=new JPanel();
+		contentPanel.setLayout(new BoxLayout(
+				contentPanel,BoxLayout.LINE_AXIS));
 		
 		// Put in pane for description
 		aboutPane=new JTextPane();
@@ -101,18 +126,17 @@ public class AboutFrame extends JFrame {
 		// add the script name and description in html
 		StringBuilder aboutText=new StringBuilder("<html>");
 		aboutText.append("<body>");
-//		aboutText.append("<basefont size=\"2\">");
 		aboutText.append("<h2><em><strong><font color=\"blue\">"+
 				"About:  </font></strong>"+
 				CPBase.scriptManager.scriptName+"</em></h2>");
 		if (CPBase.scriptManager.scriptDescription==null || 
 				CPBase.scriptManager.scriptDescription.trim().length()==0)
-			aboutText.append("no script 'description' is available<br>");
+			aboutText.append("To create a description, edit the script title's \"About\" item<br>");
 		else
 			aboutText.append(CPBase.scriptManager.scriptDescription.replace("\n","<br>")+"<br>");
 		aboutText.append("</body></html>");
 		
-		// put in aboutPane
+		// put text in aboutPane
 		aboutPane.setText(aboutText.toString());
 		aboutScroller = new JScrollPane(aboutPane);
 		aboutScroller.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -121,7 +145,7 @@ public class AboutFrame extends JFrame {
 		aboutScroller.setMaximumSize(new Dimension(ABOUTWIDTH,ABOUTHEIGHT));
 		aboutScroller.setMinimumSize(new Dimension(ABOUTWIDTH,ABOUTHEIGHT));
 		aboutScroller.setAlignmentX(0.5f);
-		panel.add(aboutScroller);
+		contentPanel.add(aboutScroller);
 		
 		// add the image
 		int wide=-1;
@@ -136,8 +160,9 @@ public class AboutFrame extends JFrame {
 		if (wide<=0 || high<=0) // no image? just display the tag file name
 			button=new JButton(CPBase.scriptManager.scriptTagname);
 		else {
-			ImageIcon iI=new ImageIcon(util.GetScaleImage.scaleBufferedImage((BufferedImage)CPBase.scriptManager.myScriptTag.getImage(),
-					AboutFrame.ABOUTWIDTH,AboutFrame.ABOUTHEIGHT));
+			ImageIcon iI=new ImageIcon(util.GetScaleImage.scaleBufferedImage(
+					(BufferedImage)CPBase.scriptManager.myScriptTag.getImage(),
+					ABOUTWIDTH,ABOUTHEIGHT));
 			button=new JButton(iI);
 //			button=new JButton(CPBase.scriptManager.myScriptTag);
 //			button.setPreferredSize(new Dimension(wide,high));
@@ -147,10 +172,24 @@ public class AboutFrame extends JFrame {
 //			button.setMinimumSize(new Dimension(ABOUTWIDTH,ABOUTHEIGHT));
 		}
 		button.setAlignmentX(0.5f);
-		panel.add(button);
+		contentPanel.add(button);
+		
+		// Put in panel for copyright, date
+		versionPane=new JTextPane();
+		versionPane.setBorder(new EmptyBorder(new Insets(0,6,0,6)));
+		versionPane.setPreferredSize(new Dimension(ABOUTWIDTH,35));
+		versionPane.setContentType("text/plain");
+		versionPane.setText("   "+PackControl.CPVersion+"   ");
+		versionPane.setEditable(false);
 
 		// finish frame setup
+		panel.add(contentPanel);
+		JPanel versionPanel=new JPanel();
+		versionPanel.setPreferredSize(new Dimension(ABOUTWIDTH,30));
+		versionPanel.add(versionPane);
+		panel.add(versionPanel);
 		pane.add(panel);
+		
 		setVisible(true);
 		setState(Frame.NORMAL); // in case it's iconified
 		pack();

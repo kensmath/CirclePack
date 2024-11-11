@@ -16,18 +16,19 @@ import javax.swing.SwingUtilities;
 import circlePack.PackControl;
 
 /**
- * HoverPanel is a JPanel which resides in one of two frames 
- * that it creates, one for hovering, one for locking. 
- * Typically, buttons or other objects create this for its
- * contents and add this as a mouse listener for hover/lock 
- * actions. E.g., a mouse hover displays a frame without border 
- * having this as its sole panel. Moving the mouse into the 
- * hovering frame locks it in place; this panel is moved (and 
- * possibly changed) to that frame and the frame gets a border. 
- * If the frame is already locked (or iconified), the hover 
- * will bring it to the top (or open it). Clicking the button 
- * may toggle the frame between locked/visible and 
- * unlocked/invisible.
+ * HoverPanel is a JPanel which resides in one of 
+ * two frames that it creates, one for hovering, 
+ * one for locking. Typically, buttons or other 
+ * objects create this for its contents and add this 
+ * as a mouse listener for hover/lock actions. 
+ * E.g., a mouse hover displays a frame without border 
+ * having this as its sole panel. Moving the mouse 
+ * into the hovering frame locks it in place; this 
+ * panel is moved (and possibly changed) to that frame 
+ * and the frame gets a border. If the frame is already 
+ * locked (or iconified), the hover will bring it to 
+ * the top (or open it). Clicking the button may toggle 
+ * the frame between locked/visible and unlocked/invisible.
  * @author kstephe2 and Alex Fawkes
  *
  */

@@ -1,6 +1,5 @@
 package circlePack;
 
-import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -28,9 +27,7 @@ import java.util.Date;
 import java.util.Vector;
 
 import javax.swing.JButton;
-import javax.swing.JDialog;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.WindowConstants;
@@ -166,7 +163,6 @@ MouseMotionListener,FocusListener {
 	public static MessageHover msgHover;
 	
 	// Various auxiliary frames
-	private AboutDialog aboutDialog;
 	public static CPPreferences preferences; // user preferences
 	public static JFrame prefFrame; 
 	public static AboutFrame aboutFrame;
@@ -571,10 +567,11 @@ MouseMotionListener,FocusListener {
 	}
 	
 	/**
-	 * Create auxiliary frames/panels: 'helpFrame, 'mapPairFrame',
-	 * 'mobiusFrame','functionFrame','packDataFrame','mbarPanel',
-	 * 'outputFrame','packdataFrame','screenCtrlFrame','messageFrame',
-	 * 'browserFrame','PrefFrame'. 
+	 * Create auxiliary frames/panels: 'helpFrame, 
+	 * 'mapPairFrame','mobiusFrame','functionFrame',
+	 * 'packDataFrame','mbarPanel','outputFrame',
+	 * 'packdataFrame','screenCtrlFrame','messageFrame',
+	 * 'browserFrame','PrefFrame','AboutFrame'. 
 	 */
 	private void startFramesPanels() {
 		Point mainUL=new Point(ControlLocation);
@@ -795,9 +792,7 @@ MouseMotionListener,FocusListener {
 		button.setFont(new Font(button.getFont().toString(),Font.ROMAN_BASELINE+Font.BOLD,10));
 		button.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (aboutDialog==null) // first time
-					aboutDialog=new AboutDialog(frame);
-				aboutDialog.setVisible(true);
+				  PackControl.aboutFrame.openAbout();
 			}
 		});
 		ourBar.add(button);
@@ -1245,45 +1240,3 @@ MouseMotionListener,FocusListener {
 	}
 	   
 }
-
-/**
-A modal dialog that displays the "About" message and
-waits for the user to click the Ok button.
-*/
-class AboutDialog extends JDialog {
-
-	private static final long 
-	serialVersionUID = 1L;
-	
-	public AboutDialog(JFrame owner)
-	{
-		super(owner, "About CirclePack Software", true);
-		Container contentPane = getContentPane();
-
-		// add HTML label to center
-
-		contentPane.add(new JLabel(
-				"<HTML><center><H3><I>"+PackControl.CPVersion+"</I></H3></center><HR>"
-				+ "<center>By Ken Stephenson, copyright 1995--</center></HTML>"),
-				BorderLayout.CENTER);
-
-		// Ok button closes the dialog
-
-		JButton ok = new JButton("Ok");
-		ok.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent evt) {
-				setVisible(false);
-			}
-		});
-
-		// add Ok button to southern border
-
-		JPanel panel = new JPanel();
-		panel.add(ok);
-		contentPane.add(panel, BorderLayout.SOUTH);
-
-		setSize(300, 150);
-	}
-	
-}
-
