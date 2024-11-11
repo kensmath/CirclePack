@@ -3,13 +3,14 @@
 <CPdocs type="CmdDetails">
    
 
-<command cmd="act" flags="{p}">
+<command cmd="act" flags="{x}">
 <description>
-This makes p (0,1, or 2) the "active" pack. Many actions from
-menus or command lines apply to the active pack, so it is
-important to be aware of which pack is active: in the panel
-with thumbnails of the three packings, the active packing has the
-read title box.
+This makes x (0,1, or 2) the "active" pack. By default, actions from
+menus or command lines apply to the active pack; to apply a command
+to a specific pack, include a "-p{x}" flag. When there's a single canvas
+diaplayed, it will show the active pack; in side-by-side canvasses, 
+the active pack has the green border; in the panel
+of 3 thumbnails, the active pack has the green title box.
 </description>
 </command>
 
@@ -38,18 +39,27 @@ packings by repeatedly adding barycenters to all interstices
 	active pack; the new circle neighbors v and its clockwise 
 	boundary neighbor. Its initial radius is that of v.
 </description>
+<examples>
+<instance text="add_cir b(2 6)"> Add a circle to each boundary circle between 
+vertices 2 and 6.</instance>
+</examples>
+<seealso>
+<see> enclose</see>
+<see> add_face_triple</see>
+</seealso>
 </command>
 
 
-<command cmd="add_edge" flags="{v1 w2  v2 w2 ..}">
+<command cmd="add_edge" flags="{v1 w1  v2 w2 ..}">
 <description> Given a list of vertices, we pick off successive pairs
-	{v,w}. We stop unless v and w are bdry vertices sharing one 
+	{v,w}. Continue while v and w are boundary vertices sharing one 
 	(resp. two) common neighbor(s). In this case we create a new edge {v w}
-	and one (resp. two) new faces. Note that successive pairs may 
+	and one (resp. two) new faces. Stop when successive pairs v and w 
+	don't share a common neighbor, but note that successive pairs may 
 	become eligible as earlier edges are added. If two faces are 
-	added, this means the vertices were part of a 4-edge bdry component;
-	this bdry disappears, as the two new faces formed will be interior.
-	See also "enclose 0 u ", where u is the common neighbor.
+	added, this means that v and w  were part of a 4-edge boundary component;
+	this boundary disappears, as the two new faces formed will be interior.
+	(See also "enclose 0 u ", where u is the common neighbor.)
 </description>
 <seealso>
 <see> enclose</see>
@@ -81,14 +91,16 @@ this generalized 'Apollonian' packing</instance>
 
 <command cmd="add_gen" flags="{n} [{d}] [-dt] [-b {w..}]">
 <description>	n (>0) successive generations of new circles are added to 
-	the current boundary, making the current boundary vertices interior
-	There are various options for how circles are added.
+	the current boundary, making the current boundary vertices interior.
+	There are various options for how circles are added. A 'tent' means
+	adding a circle to each pair of contiguous boundary circles, whereas
+	a 'duplicate' adds a circle to each current boundary circle. 
 </description>
 	  
 <options>
 	<opt flag="{n}"> adds n 'tent' generations,	without regard to degree. 
 	Note that after the first level
-	is added, the remainder will be degree 6 vertices.
+	is added, the remainder levels lead to degree 6 vertices.
 	(Deprecated: "{n} -t")</opt> 
 	<opt flag="{n} {d}"> this adds n generations so that at each step
 	  the previous boundary vertices are of degree d (>3) (with a
@@ -98,13 +110,10 @@ this generalized 'Apollonian' packing</instance>
       	   components the command applies to (default being
                all). List vertices {w..} on the boundary components
 	         you want (e.g., you can get the 'start' vertices from
-	   	   the pack "Info" frame).</opt>
+	   	   the "Pack Info" frame).</opt>
 	<opt flag="n -d"> Duplicate circles, adding bearing circles to the
 	resulting quad interstices.</opt>
 </options>
-<seealso>
-<see> add_layer</see>
-</seealso>
 <examples>
 <instance text="add_gen 4"> adds 4 generations, circle-for-circle, 
 to every boundary component; those after the first generation will 
@@ -112,8 +121,11 @@ be degree 6.</instance>
 <instance text="add_gen 2 -d -b 65"> adds two "duplicate" generations
 to the boundary component containing vertex 65</instance>
 </examples>
-</command>
 
+<seealso>
+<see> add_layer</see>
+</seealso>
+</command>
 
 <command cmd="add_ideal" flags="[-fs] {v..}">
 <description>Given one or more boundary vertices v, add an ideal
@@ -126,11 +138,14 @@ to the boundary component containing vertex 65</instance>
     new vertices are required.   
 </description>
 <options>
-<opt text="{v..}"> default: add ideal vertices to each bdry component 
+<opt flag="{v..}"> default: add ideal vertices to each bdry component 
 containing one of vertices v.</opt>
-<opt text="-f {v..}">  add ideal face to each bdry component containing one a v</opt>
-<opt text="-s {v w}">  add ideal vertices neighboring boundary segment from v to w.</opt>
+<opt flag="-f {v..}">  add ideal face to each bdry component containing one a v</opt>
+<opt flag="-s {v w}">  add ideal vertices neighboring boundary segment from v to w.</opt>
 </options>
+<seealso>
+<see>puncture</see>
+</seealso>
 <examples>
 <instance text="add_ideal"> add an ideal vertex for every boundary 
 component</instance>
@@ -141,9 +156,6 @@ has 3 vertices</instance>
 <instance text="add_ideal -s 4 23"> if 4 and 23 are in the same bdry component, add a new vertex 
 neighboring the segment of bdry vertices from 4 to 23, inclusive</instance>
 </examples>
-<seealso>
-<see>puncture</see>
-</seealso>
 </command>
 
 
@@ -173,6 +185,7 @@ neighboring the segment of bdry vertices from 4 to 23, inclusive</instance>
 </options>
 <seealso>
 <see>add_gen</see>
+<see>add_ideal</see>
 </seealso>
 <examples>
 <instance text="add_layer 6 340 340"> add a layer to convert to degree
@@ -185,7 +198,7 @@ boundary vertices 26 and 39</instance>
 
 <command cmd="adjacency" flags="[-t] {file}">
 <description>
-For packings of less than 10000 vertices, this stores the adjacency 
+For packings of less than 10,000 vertices, this stores the adjacency 
 matrix for a packing complex in {file} using matlab format. 
 </description>
 <options>
@@ -200,20 +213,22 @@ matrix for a packing complex in {file} using matlab format.
 
 <command cmd="adjoin" flags="{p q v w n} [or: {p q v w (v,u)}]">
 <description>
-	This allows the joining of two packs by an identification 
-	of specified boundary circles (and edges). The packs affected are p
-	and q, with results put into p. n boundary edges of p are
-	identified with n boundary edges of q, starting with circle v of p
-	and proceeding clockwise and with circle w of q and proceeding
-	counterclockwise (directions are IMPORTANT). If n is negative 
-	then that full boundary component  is pasted to q. 
+	This is the only way CirclePack can join two packings, and involves
+	an identification of specified boundary circles (and edges). 
+	The packs affected are p and q, with results put into p. This
+	identifies n boundary edges of p with n boundary edges of q, 
+	starting with circle v of p	and proceeding clockwise and with 
+	circle w of q and proceeding counterclockwise (directions are 
+	IMPORTANT). If n is negative then that full boundary component 
+	of p is is identified with that of q, and requires that the
+	boundary edges have the same number of edges.
 	If 'n' is replaced by '(v,u)', then the edges from v 
 	clockwise to u on the boundary of p are pasted to the same number 
 	of edges counterclockwise on q, starting with w.
 
 	It is legal to have p=q, resulting in the identification of edges 
 	from the same pack. In this case, if v=w, then n edges starting 
-	from v=w are identified like a "zipper". 
+	from v=w are identified, analogous to a "zipper". 
 	
 	NOTE: there's an attempt to save 'overlap', 'vlist', and 'elist' 
 	info, if set, but face information is corrupted, so 'flist' is 
@@ -222,6 +237,12 @@ matrix for a packing complex in {file} using matlab format.
 	NOTE: The 'vertexMap' of p should contain pairs {o,m}, where o is
 	the original index in q and m is its new index in p.
 </description>
+<examples>
+<instance text="adjoin 0 2 52 13 20"> Pack p2 is attached to p0 along
+20 boundary edges, results ending up in p0.</instance>
+<instance text="adjoin 1 1 14 14 5"> Zip together the 5 boundary edges 
+on either side of boundary vertex 14.</instance> 
+</examples> 
 </command>
 
 
@@ -236,6 +257,10 @@ In euclidean geometry,
 <see>set_rad</see>
 <see>set_random</see>
 </seealso>
+<examples>
+<instance text="adjust_rad 1.25 b"> For a euclidean packing, boundary radii
+are increased by 25%</instance>
+</examples>
 </command>
 
 <command cmd="adjust_sch" flags="{f} {v w..}">
@@ -264,22 +289,22 @@ In euclidean geometry,
 
 
 <command cmd="alt_rect" flags="{v0..v3}">
-<description>Pack a combinatorial quadrilateral INSIDE a rectangle (as compared
-	to using angle sums to get carrier to be a rectangle). Packing
-	must be simply connected and {v0,v1,v2,v3} must be oriented list
-	of boundary vertices, each side {v(i),v(i+1)} should have at
-	least three edges. If successful, the packing should be converted
-	to euclidean and have radii set. The calling program will need
-	to normalize and find the corners of the rectangle. If it fails,
-	the packing should be unchanged.
+<description>NOT YET IMPLEMENTED. Treat the packing complex as a combinatorial quadrilateral
+with counterclockwise corners v0 to v3 and repack it INSIDE a rectangle 
+(as compared to using angle sums to repack so that the carrier is a rectangle). 
+The complex must be simply connected, and each side {v(i),v(i+1)} should 
+have at	least three edges. If successful, the result will be a euclidean
+packing. The user will need to normalize and find the corners 
+of the rectangle. If the command fails, the packing should be unchanged.
 </description>
 </command>
 
 
 <command cmd="aspect" flags="{a b c d}">
-<description>For euclidean rectangular packings with corner vertices 
-{a b c d} in counterclockwise order starting with upper-left corner a,
-give the extremal length, namely, length/height, (aspect ratio).
+<description>This applies to rectangular packings with corner vertices 
+{a b c d} in counterclockwise order starting with upper-left corner a.
+It computes the extremal length, namely, length/height, (aspect ratio);
+see the result in the "Messages" window.
 </description>
 <seealso>
 <see> polypack</see>
@@ -300,10 +325,11 @@ give the extremal length, namely, length/height, (aspect ratio).
 
 
 <command cmd="beta" flags="{v}">
-<description>	This is more-or-less defunct designation. Formerly, 
-it was required to be a boundary vertex, but now it can be used
-	for other purposes, which may be useful since it is stored 
-	along with alpha and gamma in the packing files.
+<description> A defunct vertex designation. Formerly, 
+	it was required to be a boundary vertex, but now it 
+	can be used for other purposes, which may be useful 
+	since it is stored along with alpha and gamma in 
+	the packing files.
 </description>
 <seealso>
 <see> alpha</see>
@@ -323,67 +349,45 @@ it was required to be a boundary vertex, but now it can be used
 </command>
 
 <command cmd="blend" flags="-q{qnum} v n">
-<description>(Not maintained robustly) "Blend" pack q (qnum) 
-	with the active pack p. q overlaps p
-	-- as when the q is an island of the active pack. Typically
-	q has taken its bdry radii from p (though these values may 
-	have originate with yet another packing), q has already been
-	repacked with these bdry radii, and q has a vertex_map to p.
+<description>(Not maintained robustly) "Blend" pack 
+	q(qnum) with the active pack p. q overlaps p
+	-- as when the q is an island of the active pack. 
+	Typically q has taken its bdry radii from p (though 
+	these values may have originated with yet another 
+	packing), q has already been repacked with these 
+	bdry radii, and q has a vertex_map to p.
 	
-	This call uses a bdry vertex v of q (it's often convenient 
-	to indicate 'b' in place of a specific v, so that a boundary 
-	vertex will automatically be chosen), generates an antipodal 
-	bdry vert, and uses these two to carry q via a Mobius
-	transformation into registry with p. The centers are blended 
-	to a depth of n. In other words, a bdry annulus of q overlaps 
-	part of p and we adjust the centers of these circles using 
-	convex combinations of their centers from the two packings: 
-	the bdry circles of q take their centers entirely from p, 
-	but the centers from q weight more and more heavily as the 
-	generations from bdry q grow.
+	This call uses a bdry vertex v of q (it's often 
+	convenient to indicate 'b' in place of a specific v, 
+	so that a boundary vertex will automatically be 
+	chosen), generates an antipodal	bdry vert, and 
+	uses these two to carry q via a Mobius
+	transformation into registry with p. The centers 
+	are blended	to a depth of n. In other words, a 
+	bdry annulus of q overlaps part of p and we 
+	adjust the centers of these circles using 
+	convex combinations of their centers from the two 
+	packings: the bdry circles of q take their centers 
+	entirely from p, but the centers from q weight 
+	more and more heavily as the generations within 
+	bdry q grow.
 
 	Notes: If n is negative, the depth is taken as large 
 	as possible; n = 1 and q is simply moved to put it in 
-	register with p; v = 0 and a boundary vert is chosen 
+	register with p; v = 0 and a boundary vertex is chosen 
 	automatically.
 </description>
-<seealso>
-<see>blend</see>
-</seealso>
 </command>
 
 
 <command cmd="break">
 <description> In a command string, this stops execute of the 
-    remaining commands. It is built to prepare for "if-then"
-    structures (6/2015).
+    remaining commands. Useful in "if-then" structures.
 </description>
+<seealso>
+<see>IF</see>
+</seealso>
 </command>
-
-    
-<command cmd="brooks" flags="[OPTIONS] {VH...} ('BQ' pack extension)">
-<description>This creates a persistent 'pack extension' class 'BQ'
-	which attaches to this packing and handles "Brooks' 
-	quadrilateral" constructions. Commands can be directed
-	to that class with prefix '|BQ|'
-	Brooks quadrilateral packings involve addition
-	of 'vertical' and 'horizontal' circles to a quadrilateral
-	interstice. After opening the packing, sequences of
-	V's and H's direct the construction. Details elsewhere
-	(e.g., in my book).
-</description>
-
-<options>
-	<opt flag="-o">	Create a new Brooks' quadrilateral class in the
-			default mode (i.e., Brooks' protocol for adding
-			vertical and horizontal circles.</opt>
-	<opt flag="-oa">Alternate mode, Use 'alternating' protocol for 
-			locating new circles.</opt>
-	<opt flag="-x">	Close the Brooks pack extension; the packing
-			itself should remain in tact.</opt>
-</options>
-</command>	
-
 
 <command cmd="cd" flags="{..}">
 <description>Change the working directory. Can use "pwd" to find the
@@ -399,11 +403,15 @@ it was required to be a boundary vertex, but now it can be used
 
 
 <command cmd="center_point" flags="{x y}">
-<description>Recomputes the centers of the active pack, putting (x,y) at the
-	origin. In euclidean case, this is a translation, but in the
-	hyperbolic case, a Mobius transformation (automorphism of the
-	hyperbolic plane) is applied.  NOTE: This is distinct than 
-	'focus', which just changes the view presented on the canvas.
+<description>Recomputes the centers of the active pack, 
+	putting (x,y) at the origin. In the euclidean case, 
+	this is a translation; in the hyperbolic case it
+	applies	a Mobius transformation (automorphism of the
+	hyperbolic plane) when (x,y) is interior to the 
+	unit disc. This does not apply in the spherical 
+	setting.  NOTE: This is distinct from
+	'focus', which just changes the view presented on 
+	the canvas.
 </description>
 <seealso>
 <see>center_vert</see>
@@ -414,8 +422,9 @@ it was required to be a boundary vertex, but now it can be used
 
 
 <command cmd="center_vert" flags="{v}">
-<description>Same as 'center_point', except that the center (euclidean 
- or hyperbolic, as appropriate) of circle v is used in place of (x,y)
+<description>Same as 'center_point', except that the 
+	center (euclidean or hyperbolic, as appropriate) 
+	of circle v is used in place of (x,y)
 </description>
 <seealso>
 <see>center_point</see>
@@ -424,8 +433,8 @@ it was required to be a boundary vertex, but now it can be used
 </command>
 
 <command cmd="chgP" flags="{n}">
-<description>Change the paired canvasses to size n-by-n, with
-	n in range [200,800].
+<description>Change the paired canvasses to size n-by-n, 
+	with n in range [200,800].
 </description>
 <seealso>
 <see>set_display</see>
@@ -434,8 +443,8 @@ it was required to be a boundary vertex, but now it can be used
 </command>
 
 <command cmd="chgS" flags="{n}">
-<description>Change the active canvas to size n-by-n, with
-	n in range [200,1200].
+<description>Change the active canvas to size n-by-n, 
+	with n in range [200,1200].
 </description>
 <seealso>
 <see>set_display</see>
@@ -470,7 +479,8 @@ center from the origin (when |z| is non-zero).
 </command>
 
 <command cmd="Cleanse">
-<description> This applies 'cleanse' to all packings. 
+<description> Upper case 'C' means this applies 
+'cleanse' to all packings. 
 </description>
 <seealso>
 <see>cleanse</see>
@@ -478,9 +488,10 @@ center from the origin (when |z| is non-zero).
 </command>
 
 <command cmd="cleanse">
-<description>This empties a packing, clears its canvas, resets
-    various options for display and screen control. Caution, there
-	is no verification and all packing data is lost.
+<description>This empties a packing, clears its 
+	canvas, resets various options for display and 
+	screen control. Caution, there is no verification 
+	and all packing data is lost.
 </description>
 <seealso>
 <see>Cleanse</see>
@@ -495,23 +506,23 @@ center from the origin (when |z| is non-zero).
     particularly useful in demonstrating features of CirclePack. 
 </description>
 <options>
-<opt flag="Active"> Frame displaying the 'active' packing, the main single-canvas window</opt>
-<opt flag="Paired"> Frame displaying side-by-side packings (perhaps neither the active pack)</opt>
-<opt flag="Advanced"> Control frame, droppable icons and small views of all three packings</opt>
+<opt flag="Act"> Frame displaying the 'active' packing, the main single-canvas window</opt>
+<opt flag="Pair"> Frame displaying side-by-side packings (perhaps neither the active pack)</opt>
+<opt flag="Advan"> Control frame, droppable icons and small views of all three packings</opt>
 <opt flag="Script"> Frame with current 'Script' for running CirclePack</opt>
 <opt flag="www"> Browser window, good for loading scripts from the web or files</opt>
-<opt flag="Message"> Frame with Messages, Scratch area, Command line</opt>
+<opt flag="Mess"> Frame with Messages, Scratch area, Command line</opt>
 <opt flag="Help"> Help frame</opt>
-<opt flag="Mobius"> Frame for managing Mobius transformations</opt>
+<opt flag="Mob"> Frame for managing Mobius transformations</opt>
 <opt flag="Function"> Frame for setting a function and parameterized path</opt>
 <opt flag="Save"> Frame with save operations</opt>
 <opt flag="Screen"> Frame with screen snapshots, display settings</opt>
-<opt flag="Information"> Frame with pack information</opt> 
-<opt flag="Configure"> Frame with Configuration settings</opt> 
+<opt flag="Info"> Frame with pack information</opt> 
+<opt flag="Config"> Frame with Configuration settings</opt> 
 <opt flag="About"> Frame showing 'About Script' info (if a script is loaded)</opt>
 </options>
 <examples>
-<instance text="close Script Save"> Close the Script frame and the frame for Save operations</instance>
+<instance text="close Script Info"> Close the Script frame and the frame for Save operations</instance>
 </examples> 
 <seealso>
 <see>open</see>
@@ -519,21 +530,39 @@ center from the origin (when |z| is non-zero).
 </seealso>
 </command>
 
-<command cmd="color" flags="-[cfe] [options]">
-<description>Color specifications affect the display of filled 
-	circles, faces, edges, or tiles only -- "-T" "-D" "-Q" for 
-	tiles, dual tiles, quad tiles.
+<command cmd="color" flags="-[cfeTDQ] [options]">
+<description>Color specifications record colors of
+	specified objects for optional use in display:
+	circles, faces, edges, or tiles ("-T" "-D" "-Q" 
+	for tiles, dual tiles, quad tiles). 
+	
+	Color codes are in [0,255): 0 is foreground (gray);
+	[1 199] is a color ramp from blue, though 100 (white),
+	to red; remainder give a selection. Read in 
+	"color_wheel.p" to see the association of colors 
+	and codes.
+	
+	A color maybe be used in filled or open objects; 
+	e.g., for a	circle, the color of the circle itself 
+	is slightly	darker than the fill color of its interior.
+	
+	Some colors may blend with background, which can be
+	confusing, but also useful if you wish to hide an
+	object.
+	
+	NOTE: colors can be specified on the fly in 'disp' 
+	commands; these are not recorded for the objects.
 </description>
 <options> (one only)
-	<opt flag="bg {i..}"> background color for selected objects</opt>
-	<opt flag="fg {i..}"> foreground color</opt>
+	<opt flag="bg {i..}"> set background color for selected objects</opt>
+	<opt flag="fg {i..}"> set foreground color</opt>
 	<opt flag="{c} c {i..}"> c is a color code (in [0,39]), blue 
 to red ramp</opt>
 	<opt flag="p{p} {i..}"> copies colors from pack p 
 (deprecated: '-p')</opt>
 	<opt flag="area (all faces)"> blue color ramp based on face 
 areas, all faces</opt>
-	<opt flag="rad  (all circles)"> blue color ramp based on radii</opt>
+	<opt flag="rad (all circles)"> blue color ramp based on radii</opt>
 	<opt flag="q{p} {v..}"> blue-red color ramp rad/area compared 
 to pack p; (deprecated: '-q')</opt>
 	<opt flag="q{p} angsum {v..}"> blue-red color ramp comparing angle 
@@ -545,8 +574,6 @@ among 16 distinct colors starting at random point</opt>
 	<opt flag="S {i..}"> same as 's', except same color for the full list</opt>
 	<opt flag="s0 {i..}"> same as 's', but start at 0 point</opt> 
 	<opt flag="S0 {i..}"> same as 'S', but start at 0 point</opt> 
-	<opt flag="-k {x}"> (not currently implemented) 
-         (circles only) blue-red, compare model curvature to x.</opt>
 	<opt flag="x {f..}"> (faces) compare 3D/2D eucl area (if 'xyz' data exists).</opt>
 	<opt flag="v {f..}"> (faces) use vertex colors: majority wins, 
 		 else first vert's color. (deprecated: '-v')</opt>
@@ -569,7 +596,13 @@ among 16 distinct colors starting at random point</opt>
 	<opt flag="z {v w ...}"> (edges only) based on schwarzian</opt>
 	<opt flag="r"> (edge only) reset all to foreground</opt>
 </options>
+<seealso>
+<see> disp</see>
+<see> Disp</see>
+</seealso>
 <examples>
+<instance text="color -c S a(1 10)"> color the first 10
+circles with the next random color.</instance>
 <instance text="color -f qc q1 -m 1.5 a">color by 
 quasiconformal dilatation, compared to p1</instance>
 <instance text="color -D d a">color 
@@ -583,28 +616,33 @@ schwarzians</instance>
 <description>A portion of the packing is "cookied" out, giving a 
 	new packing that replaces the original, the rest of the original 
 	being discarded. Caution: This may not do exactly what is expected
-	since some pruning may occur to avoid pathologies: in particular, the 
-	new packing must have connected interior and each of its
-	boundary vertices must have an interior neighbor.
+	since some pruning may occur to avoid pathologies.
 	
 	The 'vertexMap' of the new packing contains pairs {m,n},
 	where n is the new index for the circle having original
 	index m.
 
-	The cookie strategy based on designate 'poison' vertices; 
-	the new	complex is that component of the complement of these poison
-	vertices which contains the alpha vertex (or a substitute, see -v
-	option below). If vertices {v..} are listed in the command,
-	then they comprise the poison vertices; otherwise (assuming
-	the packing is hyperbolic or euclidean) the poison vertices
-	are determined by the current "path", if there is one.
-
-	NOTE: various information is lost, including 'flist', perhaps some
-	overlap angles, etc.
+	The cookie strategy is based on a designed 'seed' vertex
+	and designated 'forbidden' edges; the subcomplex contains
+	the seed and all faces that can be reached from the seed
+	without crossing any forbidden edges. The seed defaults
+	to the 'alpha' vertex, but can be specified instead using
+	the '-v' flag. The forbidden edges may be specified using
+	the '-e' flag. 
 	
-	DCEL version: based on list of 'forbidden' halfedges. This does
-	not (yet) guarantee that every vertex has an interior neighbor.
-	 
+	There are two other specifications: Using the '-n' flag,
+	one can designate 'non-include' vertices, which may remain
+	in the boundary of the new subcomplex, but not in the
+	interior. One can also specify 'poison' vertices which 
+	must be excised; these may be specified explicitly by 
+	listing them after the 'cookie' command. Alternately, if
+	the '-e' and '-n' flags are missing and not poison vertices
+	are specified, then cookie uses the current 'path'. Any
+	vertices outside the path (meaning, not in the complementary 
+	component containing the seed) will be designated as poison.
+	
+	NOTE: various information for the packing is lost, including 
+	'flist', perhaps some overlap angles, etc.
 </description>
 <options>
 	<opt flag="-v {v}"> Use v instead of alpha as the 'seed' vertex.</opt>
@@ -615,20 +653,32 @@ schwarzians</instance>
 <seealso>
 <see>set_poison</see>
 </seealso>
+<examples>
+<instance text="cookie -v 10"> Treat vertex 10 as seed,
+excise all vertices across the current path.</instance>
+<instance text="cookie a(230 500) -v 10">This excises poison vertices
+with indices from 230 to 500 and treats 10 as the seed.</instance>
+<instance text="cookie -e 20 21 21 34 34 32 32 20"> {20,21}, {21,34}, ...
+are forbidden edges.</instance>
+</examples> 
 </command>
 
-<command cmd="copy" flags="{p}">
-<description>The active pack is copied into pack p.  CAUTION: No 
-confirmation is requested for command-line arguments, so original 
-data in p will be lost.
+<command cmd="copy" flags="{q}">
+<description>The active pack is copied into pack q.  CAUTION: No 
+confirmation is requested, so the original packing in q will be lost.
 </description>
+<examples>
+<instance text="copy -p0 2"> this puts a copy of pack 0 into pack 2.
+</instance>
+</examples>
 </command>
 
-<command cmd="count" flags="-[vef] {..}">
-<description>Count a list of circles, edges, or faces (specify -v, 
--e, -f, respectively) with usual specification, as in vlist, etc.
-The result appears in the "Message" window.	(Note: edge counting 
-does not eliminate redundancies, as other counts do.)
+<command cmd="count" flags="-[veft] {..}">
+<description>Count a list of circles, edges, faces, or tiles 
+(specify -v, -e, -f, -t respectively) with usual specification, 
+as in vlist, etc. The result appears in the "Messages" window.
+(Note: edge counting does not eliminate redundancies, as other 
+counts do.)
 </description>
 <examples>
 	<instance text="count -v b"> will count the boundary vertices
@@ -658,7 +708,7 @@ does not eliminate redundancies, as other counts do.)
 	determined by the angles.
 	
 	The "j_ftn" is associated with a triangle group (0 a b). It
-	is similar to a dessin d'enfants with branch multiplicities
+	is similar to a dessin d'enfants with integer branch multiplicities
 	a and b over 0 and 1, respectively, but logarithmic branching
 	over infinity. Default to a=2 and b=3, the classical 
 	j-function associated with the modular group. 
@@ -666,71 +716,54 @@ does not eliminate redundancies, as other counts do.)
 	The "Kagome" construction builds the packing for a tiling in
 	the famous Kagome latttice pattern.
 	
-	The Fibonacci tilings are "fusion" type of Frank and Sadun.
-	Parameters W H X determine combinatorial edge lengths, 
+	The Fibonacci tilings are "fusion" type due to N. Frank and L. Sadun.
+	Integers W H X determine combinatorial edge lengths, 
 	defaulting to 1 1 1.
 	
-	A regular "tetrahedron" on there sphere; 4 circles, each of radius
+	A regular "tetrahedron" on the sphere; 4 circles, each of radius
 	arcsin(sqrt(2/3)).
 	
 	Additional types can be anticipated, potentially with further
 	required options.
 </description>
-<examples>
-	<instance text="hex_torus 3 6"> 
-	build 3-by-6 hex torus</instance>
-	<instance text="create hex 23"> 
-	hexagonal packing of 23 generations</instance>
-	<instance text="create sq_grid 4"> 
-	'square grid' pattern from 4 quadruplings of a 4-flower</instance>
-	<instance text="create tri_group 8 2 3 5"> 
-	8 generations of the (2 3 5) triangle group on
-	the sphere.</instance>
-	<instance text="create j_ftn 8"> 
-	8 generations of the classical j-function.</instance>
-	<instance text="create Kag 4"> 
-	4 layers of Kagome lattice about a central hexagon</instance>
-	<instance text="create pent 5">
-	5 generations of regular pentagonal tiling</instance>
-	<instance text="create pent3 3"> 
-	3 generations of pent tiling centered on triple point</instance>
-	<instance text="create pent4 3"> 
-	3 generations of pent tiling centered on quad point</instance>
-	<instance text="create dyadic 6"> 
-	6 generations of Penrose's hyperbolic tiling (Carleson squares in the limit)</instance>
-	<instance text="create fib 5 6 3 2"> 
-	5 generations of Fibonnacci-related tiling, W=6,H=3,X=2.</instance>
-	<instance text="tetra"> 
-	regular tetrahedron on the sphere</instance>
-</examples>
 <seealso>
 <see>seed</see>
 <see>pave</see>
 </seealso>
+<examples>
+	<instance text="hex_torus 3 6"> build 3-by-6 hex torus</instance>
+	<instance text="create hex 23"> hexagonal packing of 23 generations</instance>
+	<instance text="create sq_grid 4"> 'square grid' pattern from 4 quadruplings 
+	of a 4-flower</instance>
+	<instance text="create tri_group 8 2 3 5"> 8 generations of the (2 3 5) 
+	triangle group on the sphere.</instance>
+	<instance text="create j_ftn 8"> 8 generations of the classical 
+	j-function.</instance>
+	<instance text="create Kag 4"> 4 layers of Kagome lattice about a 
+	central hexagon</instance>
+	<instance text="create dyadic 6"> 6 generations of Penrose's hyperbolic 
+	tiling (Carleson squares in the limit)</instance>
+	<instance text="create fib 5 6 3 2"> 5 generations of Fibonnacci-related 
+	tiling, W=6,H=3,X=2.</instance>
+	<instance text="tetra"> regular tetrahedron on the sphere</instance>
+	<instance text="create pent 5">	5 generations of pent (regular 
+	pentagonal) tiling</instance>
+	<instance text="create pent3 3"> 3 generations of pent tiling 
+	centered on triple point</instance>
+	<instance text="create pent4 3"> 3 generations of pent tiling 
+	centered on quad point</instance>
+</examples>
 </command>
 
-<command cmd="DCEL" flags="[options]">
-<description> DCEL is a halfedge based model for storing 
-graph combinatorics. Starting in June 2016 I have begun testing
-this approach as a possible replacement for current methods. 
-Current commands are temporary; look in 'CommandStrParser.java'
-for details. 
-</description>
-<options>
-<opt> dcel	Create the dcel structure for the active pack</opt>
-</options>
-</command> 
-
-
-<command cmd="debug" flags="[drsex]">
+<command cmd="debug" flags="[dsrex]">
 <description>Various debug helpers. Some put results in a file in the
 default temporary directory (see 'Messages'), others print something.
 </description>
 <options>
 <opt flag="-d"> (default) generates tmp file 'faceOrder_xxxx_log'</opt>  
-<opt flag="-r"> generates file 'RedList_xxxxx_log' of the 'red' faces</opt>
 <opt flag="-s"> prints size/location info on 'StackBox's in the script</opt>
-<opt flag="-e"> print commands to stderr to debug threads and lock ups</opt>
+<opt flag="-r"> generates file 'RedList_xxxxx_log' of the 'red' faces</opt>
+<opt flag="-e"> print commands to stderr to debug threads and lockups</opt>
 <opt flag="-x"> turn off -e option</opt>
 </options>
 </command>
@@ -784,26 +817,28 @@ default temporary directory (see 'Messages'), others print something.
 
 <command cmd="disp" flags="[options ... ] (also 'Disp')">
 <description>
-	This is the command for actually displaying the active packing and 
-	associated objects on its canvas (or canvasses). There are numerous
-	options as described below, but the key ones are '-c', '-f', and
-	'-e' for circles, faces, and edges, respectively. The commands have
-	default color, fill, and thickness options, but these can be modified.
-	See the "'disp' options" tab in the Help Window for full details.
+	This is the command for displaying objects of the 
+	active packing on its canvas (or canvasses). There 
+	are numerous options as	described below, but the key 
+	ones are '-c', '-f', and '-e' for circles, faces, and 
+	edges, respectively. The commands have default color, 
+	fill, and thickness options, but these can be modified.
+	See the "'disp' options" tab in the "Help" window for 
+	full details.
 
-    The "Screen, Display Options" panel allows one to specify the default 
-	drawing options or give a user-defined string of commands as described 
+    The "Screen, Display Options" panel allows one to 
+    specify the default	drawing options or give a 
+    user-defined string of commands as described 
 	below (see 'set_disp_flags'). 
 	
-	"Disp" (with upper case 'D') will both display the indicated objects
-	and store that specification as in 'set_disp_flags'. This is very
-	useful: these display options will be used when mouse and menu actions
-	cause the screen to redisplay or when "disp -wr" is called.
-
-	CAUTION: When the pack has been laid out using 'layout -l', plot 
-	flags are set only for circles/faces which seem properly placed 
-	(i.e., consistently with neighbors) and only those are drawn in
-	the display. See 'set_plot_flags' to override.
+	'Disp' (with upper case 'D') will both display the 
+	indicated objects and store that specification as in 
+	'set_disp_flags'. This is very useful: these display 
+	options will be used when mouse and menu actions
+	cause the screen to redisplay or when "disp -wr" is 
+	called. Also, 'dISp' and 'DISp' (with upper case 'IS')
+	will suppress redisplay of the small canvasses of
+	the control panel, saving some display time.
 </description>
 <options heading="Common Options">
 	<opt flag="-w"> clear the canvas</opt>
@@ -818,7 +853,7 @@ points with nghbs</opt>
 	<opt flag="-nc {v..}"> label circles</opt>
 	<opt flag="-nf {f..}"> label faces</opt>
 	<opt flag="-B"> all faces and circles, recomp'd by drawing order</opt>
-	<opt flag="-C"> all circles, recomp'd by drawing order </opt>
+	<opt flag="-C"> all circles, recomputed by drawing order </opt>
 	<opt flag="-D"> all dual faces, recomputed by drawing order (eucl only)</opt>
     <opt flag="-F {f..}"> ``chained'' faces, recompute centers in order</opt>
 	<opt flag="-Bs"> all faces and circles, recomp'd by drawing order using schwarzians</opt>
@@ -899,12 +934,13 @@ points with nghbs</opt>
 	<opt flag="-tc* {v..}"> ditto, but using circles' colors</opt>
 	<opt flag="-T {t..}"> closed polygonal tiles (if the packing has tiling data)</opt>
 </options>	
-     NOTE: Under many options (e.g., c,f,F,cf,e,fn,Ff,T), no
+<note>
+	Under many options (e.g., c,f,F,cf,e,fn,Ff,T), no
 	indices specified is equivalent to 'all', so "-c a" and 
 	"-c" have same effect.
-
-     NOTE on the -F option:
-	This is like the -f option (and takes the same added
+</note>
+<note>
+    The -F option is like the -f (and takes the same added
 	sub-options), but it will recompute circles as it goes along.
 	Suppose "disp -F 3 8 12 2" is the command: it will draw face 3,
 	then if face 8 shares an edge with 3 it will use the two circles
@@ -917,15 +953,30 @@ points with nghbs</opt>
 	start with a face having vertex alpha. 2) In order to
 	extend a chain of faces from a former display command,
 	repeat its last face as the first in the new list.
-
-     CAUTION: Some objects may be too large to display correctly
+</note>
+<caution>
+    Some objects may be too large to display correctly
 	and so may be disregarded or may appear incorrectly. E.g. arcs
 	of very large circles.
-
+</caution>
+<caution>When the pack has been laid out using 
+	'layout -l', plot flags are set only for circles/faces 
+	which seem properly placed (i.e., consistently with 
+	neighbors) and only those are drawn in the display. 
+	See 'set_plot_flags' to override.
+</caution>
 <seealso>
 <see>set_disp_flags</see>
 <see>set_plot_flags</see>
 </seealso>
+<examples>
+<instance text="disp -w -c"> clear the canvas and draw all 
+circles (equivalent to "disp -w -c a").</instance>
+<instance text="disp -ffc5 6 9"> draw faces 6 and 9, filled
+with blue color.</instance>
+<instance text="disp -w -ff 6 9 -ct5 b"> Note several flag sequences: 
+filled faces 6 and 9; boundary circles with thickness 5.</instance>    
+</examples>
 </command>
 
 
@@ -966,14 +1017,17 @@ points with nghbs</opt>
 	the center of the packing begins to approximate the coherent
 	Doyle spiral with related parameters p, q.
 
-	CAUTION: These values of p and q are not always the same ones
+</description>
+<caution>
+	These values of p and q are not always the same ones
 	used in defining Doyle spirals (see command "spiral"); e.g., 
 	replacing q with q-p is another option. The direction of spiral
 	may also be backwards, in which case, use "reorient".
-
-        CAUTION: Adding too many generations can easily lead to radii
-	that are so small as to lead to layout errors.
-</description>	
+</caution>
+<caution>
+    Adding too many generations can easily lead to radii
+	too small layout properly.
+</caution>
 <seealso>
 <see>spiral</see>
 </seealso>
@@ -996,18 +1050,19 @@ points with nghbs</opt>
 
 <command cmd="dual_layout" flags="-[c{flags}] -[f{flags}] [{f1 g1 ...}]">
 <description>
-	This is for laying out a circle packing using schwarzians of
-	its edges (if they are set). The layout order is associated
+	This is for laying out a circle packing using the intrinsic 
+	schwarzians of edges (if they are set). The layout order is associated
 	with the given list of dual edges specified by pairs (f,g) of
 	contiguous faces --- often a directed tree and by default,
-	a dual spanning tree. We assume f is in place and use the 
-	real schwarzian for the	common edge to place the opposite 
-	circle of g. This is used only in spherical or euclidean 
-	geometry. See 'dcel.schwarzian.java' for details. Also, all vertex 
-	angle sums (ie. 'curv')	are set to and new angles accumulate
-	at vertices as successive faces are laid out.
+	part of a dual spanning tree. By default, we use the internal
+	'layoutOrder'. Otherwise, we assume f1 is in place and use the 
+	intrinsic schwarzian for the common edge with g1 to place the 
+	opposite circle of g1. This command is used only in spherical 
+	or euclidean geometry. See 'dcel.schwarzian.java' for details. 
+	Also, all vertex angle sums (ie. 'curv') are set, with new angles 
+	accumulating at vertices as successive faces are laid out.
 	
-	If the first pair has form (0,f) (as when created as a dual 
+	If the first pair (f1,g1) has form (0,f) (as when created as a dual 
 	spanning tree), then f is designated as base face to be laid
 	out first. This face is our 'base equilateral' face, meaning
 	it is an equilateral triangle formed by three circles of (eucl)
@@ -1020,6 +1075,7 @@ points with nghbs</opt>
 <opt flag="c"> draw each new circle with usual display options</opt>
 </options>
 <seealso>
+<see>layout -s</see>
 <see>sch_report</see>
 <see>set_schwarzian</see>
 </seealso>
@@ -1027,7 +1083,9 @@ points with nghbs</opt>
 
 
 <command cmd="elist" flags="[options]">
-<description>A utility "edge list" attached to a particular packing; 
+<description>Used with other commands to invoke a utility 
+	list of edges (called 'elist) which is attached 
+	to a particular packing; 
 	can be read in and stored with packing data. Set with 
 	'set_elist'. Can be used whereever a list of edges is 
 	called for, e.g., in disp and post calls. 
@@ -1035,7 +1093,7 @@ points with nghbs</opt>
 	to a packing; it provides a general utility list.
 
      FORMS: (also apply to Elist)
-	elist		produces whole list.
+	elist		produces the full list (possibly empty)
 	elist[{i}]	produces the i_th edge in the list, if
 			there is one.
 	elist[r]	produces the first edge of the list
@@ -1043,12 +1101,18 @@ points with nghbs</opt>
 	elist[n] 	produces the "next" edge of the list 
 			and then removes it from the list.
 </description>
+<seealso>
+<see>set_elist</see>
+</seealso>
+<examples>
+<instance text="disp -e elist"> display the edges in 'elist'</instance>
+</examples>
 </command>
 
 
 <command cmd="elist_to_path">
 <description>Given an edge-path this resets the active path to follow 
-	the edge-path (and close up). If the active pack is 
+	the edge-path (and to close up). If the active pack is 
 	spherical, this gives its stereographic projection to 
 	the plane.
 </description>
@@ -1056,11 +1120,13 @@ points with nghbs</opt>
 
 
 <command cmd="embed" flags="-q{q} a b A B">
-<description>Check extent to which active pack can be embedded in pack q, 
-	starting by identifying neighbors a and b with A and B in q.
-	a and A must be interior vertices and have the same degree.
-	The identifications (i.e., a->A, b->B, etc) are (upon some
-	success) put in 'vertex_map' for the active pack.
+<description>Check extent to which active pack can be 
+	embedded as a subcomplex in pack q,	starting by 
+	identifying neighbors a and b with A and B, 
+	respectively, in q.	Vertices a and A must be interior 
+	and have the same degree. The identifications 
+	(i.e., a->A, b->B, etc) are (upon some success) 
+	put in 'vertex_map' for the active pack.
 </description>
 </command>
 
@@ -1083,14 +1149,26 @@ points with nghbs</opt>
 
 
 <command cmd="enclose" flags="-[t] n {v..}">
-<description>For each circle v, if on the boundary, add n circles 
+<description>For each circle v on the boundary, add n circles 
 as neighbors (or bring degree to n) and closed up to make v interior.
 The -t option does not always succeed due to combinatorial influences.
 </description>
 <options>
 <opt flag="n {v..}"> add n circles to the flower of each v</opt>
 <opt flag="-t n {v..}"> add enough circles to bring each v to degree n</opt>
-</options> 
+</options>
+<seealso>
+<see>add_cir</see>
+<see>add_layer</see>
+<see>add_gen</see>
+<see>add_ideal</see>
+</seealso> 
+<examples>
+<instance text="enclose 0 13 45">enclose bdry vertices 13 45 
+with no added vertices.</instance>
+<instance text="enclose -t 6 13 45">enclose bdry vertices 13 45
+with enough added vertices to end up with degree 6.</instance>
+</examples>
 </command>
 
 
@@ -1100,18 +1178,9 @@ The -t option does not always succeed due to combinatorial influences.
 	n=2 is "error function". There is a domain packing p1 
 	and a range p2. Normally the domain is euclidean and 
 	univalent; it is copied to p2 and each boundary radius 
-	of p2 is set to e^{z^n}*r, where r is its radius, z its 
+	of p2 is set to e^{z^n}*r, where r is its radius and z its 
 	center in p1. The calling program them repacks p2 to get
 	an analogue of the function F whose derivative is e^{z^n}.
-</description>
-</command>
-
-
-<command cmd="eucl_write" flags="{file}">
-<description>	The data in the active pack is converted to euclidean (if
-	hyperbolic) and the data is stored sequentially in the specified
-	file. First, the total node count, then the data in form "x-coord
-	y-cood radius".
 </description>
 </command>
 
@@ -1186,7 +1255,7 @@ class.)</opt>
    	<opt flag="-x [{typ}]"> close extenders of the specified type, or
 all extenders if the type is omitted.</opt>
     <opt flag="-r {typ}"> close any extenders of type 'typ' and then 
-    start an extender of this type.</opt>
+    start an extender of this same type.</opt>
 </options>
 <examples> 
 <instance text="extender cf"> would start a "CurvatureFlow" pack
@@ -1199,56 +1268,33 @@ for this packing and start a new one.</instance>
 
 
 <command cmd="face_err" flags="x {f..}">
-<description>	Given a threshold x>1.0, this reports the number of faces
-	from the given list whose layout's have errors (interpreted
-	as [dist between circles]/[intended dist between circles])
+<description>	Given a threshold x>1.0, this 
+	reports the number of faces	from the given list 
+	whose layout's have errors (interpreted as
+	[dist between circles]/[intended dist between circles])
 	lying outside the interval [1/x,x].
-</description>	
+</description>
+<seealso>
+<see>set_accur</see>
+<see>layout</see>
+</seealso>	
 </command>
 
 <command cmd="fexec" flags="[-s] {filename}">
-<description>Reads and executes commands in {filename}. Can be used as
-	method of transferring data from remote routines. 
+<description>Reads and immediately begins executing
+command lines in file {filename}. It does not stop 
+on command failures; works in main thread, so there
+can be normal processing delays. This command can be 
+usefule for transferring data from remote routines. 
 </description>	
 <options>
-	<opt flag="-s"> read from open script</opt>
+	<opt flag="-s"> execute all command lines from the
+	open script</opt>
 </options>
 </command>
 	     
-
-<command cmd="f_index" flags="{f j ..}">
-<description>(Technical) Data is a string of pairs: a face index and j = 0, 1, or 2.
-	Command tells face f which of its neighbors is first when
-	this f is to be drawn. This is to ensure that correct pair
-	of neighbors are used when computing the center of the third
-	neighbor.
-</description>
-</command>
-
-
-<command cmd="f_next" flags="{f g ..}">
-<description>(Technical) Data is a string of face index pairs. Command tells face f 
-	that face g is next in drawing order. When f=0, g is set as 
-	the first face and gets drawn at the origin. (Default is the 
-	alpha vertex.) The last face drawn MUST point to the first
-	face in the drawing order.
-</description>
-</command>
-
-<command cmd="f_red" flags="{f i..}">
-<description>(Technical) Sets rwb_flag of faces.
-</description>
-</command>
-
-
-<command cmd="f_rnext" flags="{f g..}">
-<description>(Technical) Sets next_face index of faces.
-</description>
-</command>
-
-
 <command cmd="fix" flags="[options]">
-<description>(Deprecated: preferred command is "layout"). 
+<description>(Deprecated: replaced by 'layout'). 
 </description>
 <seealso>
 <see>layout</see>
@@ -1257,7 +1303,7 @@ for this packing and start a new one.</instance>
 
 
 <command cmd="Fix"> 
-<description>(Deprecated: replaced by "layout -F".)
+<description>(Deprecated: replaced by 'layout -F'.)
 </description>
 <seealso>
 <see>layout</see>
@@ -1274,17 +1320,25 @@ for this packing and start a new one.</instance>
 </description>
 </command>
 
-<command cmd="flip" flags="{v w..}">
-<description>An interior edge bounds two faces. This command 'flips' 
-	the edge; that is, the edge {v w} is removed and a new 
-	one created connecting the two common neighbors of v and w.
-	This is called a "Whitehead" move.
+<command cmd="flip" flags="-[chr] {v w..}">
+<description>An interior edge bounds two faces. This 
+	command flips the edge; that is, the edge {v w} is 
+	removed and a new one created connecting the two 
+	common neighbors of v and w. This is sometimes 
+	called a "Whitehead" move. Options include a random
+	choice of edge, flipping cclw/clw edge, or preparing
+	for a chain of flips.
 </description>
 <options>
-	<opt flag="-cc"> flip counterclockwise edge to each edge in the list (until a flip fails)</opt>
-	<opt flag="-cw"> flip clockwise edge to each edge in the list (until a flip fails)</opt>
-	<opt flag="-r"> flip one random edge from random interior vertex.
-	       (ignore rest of the input string.)</opt>
+	<opt flag="-cc"> flip counterclockwise edge to 
+	each edge in the list (until a flip fails)</opt>
+	<opt flag="-cw"> flip clockwise edge to each edge 
+	in the list (until a flip fails)</opt>
+	<opt flag="-h {v w}"> store half-hex edge {w u} following
+	edge {v w} in 'elist', then flip edge from v clockwise
+	from {v w}.</opt>
+	<opt flag="-r"> flip one random edge from random 
+	interior vertex. (ignore rest of the input string.)</opt>
 </options>
 <seealso>
 <see>unflip</see>
@@ -1292,11 +1346,12 @@ for this packing and start a new one.</instance>
 </command>
 
 <command cmd="flip_priority" flags="[options]">
-<description>This is a specialized routine for putting edges of a
-	closed complex in some priority order for consideration
-	of flipping them --- aim being to make complex more
-	hexagonal. The list is put in the packings 'elist'
-	and info is provided on the top few of the list.
+<description>This is a specialized routine for putting 
+	edges of a closed complex in some priority order 
+	for consideration of flipping them --- aim being 
+	to make complex more hexagonal. The list is put in 
+	the packings 'elist' and info is provided on the 
+	top few of the list.
 </description>
 <option>
 	<opt flag="1"> lowest degree, then largest avg of contiguous
@@ -1313,15 +1368,15 @@ for this packing and start a new one.</instance>
 <command cmd="flist" flags="[options]">
 <description>A utility "face list" attached to a particular packing; 
 	can be read in and stored with packing data. Set with 
-	'set_flist'. Can be used whereever a list of faces is 
-	called for, e.g., in disp and post calls. 
-	NOTE: Flist is the same thing, only it's not attached
+	'set_flist'. Can be used wherever a list of faces is 
+	called for, e.g., in 'disp' and 'post' calls. 
+	'Flist' is the same thing, only it's not attached
 	to a packing; it provides a general utility list.
 </description>
-<options special="Forms"> (also apply to Flist)
+<options special="Forms"> (also apply to 'Flist')
 	<opt flag="flist"> produces whole list.</opt>
-	<opt flag="flist[{i}]"> produces the i_th face in the list, 
-	if there is one.</opt>
+	<opt flag="flist[{i}]"> produces the i_th face in the list;
+	indexing is from 0.</opt>
 	<opt flag="flist[r]"> produces the first face of the list and 
 	then moves it to the end of the list.</opt>
 	<opt flag="flist[n]"> produces the "next" face of the list 
@@ -1355,11 +1410,13 @@ for this packing and start a new one.</instance>
 	iteration starts at integer n and ends with integer m. 
 	As safety measure, limit is 10 iterations unless command 'FOR' is used.
 	The return value is the number of iterations completed. Execution ends 
-	on any error. 
-	CAUTION: the 'for' command must be the last in any 
+	on any error.
+</description>	
+<caution>	 
+	The 'for' command must be the last in any 
 	command string: all subsequent commands are taken as part of
 	the string subject to iteration.
-</description>	
+</caution>
 <options>
 	<opt flag="FOR"> Remove the 10 iteration limit.</opt>
 	<opt flag="-d {x}"> impose a x second delay between iterations</opt>
@@ -1388,11 +1445,13 @@ circles from 1 to 39.</instance>
     A list of vertices must be provided. A barycenter is added to each
 	face neighboring one of these vertices, then the new barycenter 
 	vertices about any of the given vertices v are connected to form a 
-	flower around v, while any former edges from v are remove. 
-	Caution: adjustment for neighboring vertices in the list will
+	flower around v, while any former edges from v are remove.
+</description>
+<caution>	 
+	Adjustment for neighboring vertices in the list will
 	interfer with one another, and results are difficult to predict.
 	The user will typically repack, layout, and display.
-</description>
+</caution>
 <seealso>
 <see>hex_refine</see>
 <see>add_bary</see>
@@ -1784,31 +1843,32 @@ the new path.</opt>
 
 
 <command cmd="layout" flags="-[ac[cdfs]defFKlrstT]">
-<description>Along with "repack", this is one of the key commands in CirclePack:
-    it recomputes the centers of the circles of the active pack. Generally called
-    immediately after "repack", which changes radii but does not compute new centers.
-    CirclePack has standard methods of specifying layout order, with 
-    an "alpha" circle placed at the origin and a "gamma" circle is rotated to be on 
-    the positive imaginary axis. Under the '-c' flag, various alternatives are
-    offered. 
-	Note: If the radii have not been adjusted to meet the packing condition, 
-	then the configuration may not be cohesive -- intended neighbors may not 
-	be contiguous, there may be isolated circles, etc. In fact, locations 
-	will be dependent on the "drawingorder" which has been set for the circles. 
-	(Replaces deprecated "fix" command)
+<description>Along with 'repack', this is one of the key commands in CirclePack:
+    'repack' computes radii, but not centers, so it is generally followed
+    by 'layout' (For convenience, see 'rld'). CirclePack has standard methods for specifying
+    an internal 'layoutOrder', with 'alpha' placed at the origin and 'gamma'
+    rotated to be centered on the positive imaginary axis. Under the '-c' flag, 
+    various alternatives are offered. ('layout' replaces the deprecated 'fix' 
+    command.)
 </description>
+<caution>
+    If the radii have not been adjusted to meet the packing condition, 
+	then the configuration may not be cohesive -- intended neighbors may not 
+	be contiguous, there may be isolated circles, etc., depending on
+	the layout order.
+</caution>
 <options> (one of)
 	<opt flag="-a"> set "aims" to their defaults</opt>
 	<opt flag="-c[cdfs]"> recompute pack centers.
 		added options follow (allow no spaces between):</opt>
-		<opt flag="      c {x}"> set decimal number 'x' as threshold for 
+		<opt flag="      -cc {x}"> set decimal number 'x' as threshold for 
 		   placement accuracy; e.g., x=.00001 for 5-decimal places.</opt>
-		<opt flag="      d"> create "layout.log" diagnostic file in the temporary
+		<opt flag="      -cd"> create "layout.log" diagnostic file in the temporary
 		   directory to check for layout errors</opt>
-		<opt flag="      f"> plot only circles with placement errors less
+		<opt flag="      -cf"> plot only circles with placement errors less
 		   than assigned threshold, set 'plot_flag' appropriately
 		   (as in '-l' option below)</opt>
-		<opt flag="      s"> use single face for each new circle (ie straight
+		<opt flag="      -cs"> use single face for each new circle (ie straight
 		   from drawing-order) (Note: default is now to find
 		   center by averaging computations from all available plotted neighbors.</opt>
 	<opt flag="-d [v]"> comp centers using current draw order; report 
@@ -1826,14 +1886,15 @@ the new path.</opt>
 		  and faces, set corresponding flags appropriately.</opt>
 	<opt flag="-r {f..}"> recompute centers along given chain of faces</opt>
 	<opt flag="-s"> recompute angle sums</opt>
-	<opt flag="-t"> compute centers from 'tailored' drawing order; marked 
-		  vertices will not (to extent possible) be used in drawing 
-		  order.</opt>
-	<opt flag="-T"> same as -t, but routine will NOT use the marked 
+	<opt flag="-t"> compute centers from 'tailored' drawing order;
+		see 'mark'. The marked vertices will not (to extent possible) 
+		be used in drawing order.</opt>
+	<opt flag="-T"> same as -t, but routine will definitely NOT use the marked 
 	vertices; it will stop once it has done all it can without them.</opt>	
 	<opt flag="default"> recompute angle sums and centers.</opt>
+</options>
 
-     DETAILS:
+<note>
 	The -cf option sets flags for circles and faces which affects
 	whether they are shown in display and postscript operations and
 	whether they are used for later placements in the layout process.
@@ -1844,29 +1905,37 @@ the new path.</opt>
 	set and will not be drawn in display operations. Similarly,
 	if the three circles of a face cannot be placed in a
 	proper relationship, then the face will not be drawn in
-	display operations. CAUTION: fix -cf is probably not 
-	appropriate for nonsimply connected complexes, since 
-	placement always leaves some faces incompatibly with neighbors.
-	Doing 'fix' without the -l flag will allow display regardless 
+	display operations. 
+</note>
+<caution>
+	The command 'layout -cf' is probably not appropriate for 
+	nonsimply connected complexes, since some faces placement
+	will always be incompatible with some neighbors.
+	Doing 'layout' without the -l flag will allow display regardless 
 	of proper placement.
-</options>
+</caution>
 <seealso>
+<see>rld</see>
 <see>alpha</see>
 <see>gamma</see> 
 <see>dual_layout</see>
 <see>set_poison</see>
 <see>set_plot_flags</see>
+<see>mark</see>
+<see>set_aim -d</see>
 </seealso>
 </command>
 
 <command cmd="legal" flags="[options] [{e..}]">
-<description>A interior edge in a euclidean triangulation is "illegal" 
-	by the Delaunay criterion when a circle containing the three 
-	vertices of the face on one side encloses the face on the 
-	other. (For plane graphs, there is a "Delaunay" triangulation, 
-	which is one having no illegal edges.)
+<description>An interior edge in a euclidean triangulation 
+	is "illegal" (violates the Delaunay criterion) 
+	when a circle containing the three vertices of the 
+	face on one side encloses the face on the 
+	other, i.e., contains the common neighboring vertex
+	on the other. (For plane graphs, a "Delaunay" triangulation
+	is one having no illegal interior edges.)
 
- 	This command lists "illegal" edges in the utility list 
+ 	This command enters "illegal" edges in the utility list 
 	'Elist' (previous contents discarded) based on various 
 	optional criteria, including Delaunay, and imposes various 
 	possible orders on Elist; if list {e..} is specified, it 
@@ -1882,14 +1951,15 @@ the new path.</opt>
 		  i    most negative imaginary part
 		  h {t}  by distance from "hex" ideal (which is
 		       -1/2 + sqrt(3)/2 i = -0.5 + i 0.866025),
-		       with threshold t>0.</opt>
-
+		       with threshold t (positive).</opt>
 </options>
 <examples>
-	<instance text="legal -c i -f i"> will give Elist of interior edges
-	illegal by Delaunay criterion (imaginary part .lt. 0) and will 
-	order them by most negative imaginary part. </instance>
-	<instance text="legal -c a -f h .1"> will list those with d=[(x-ratio)-(hex_ratio)} greater than 0.1 from the
+	<instance text="legal -c i -f i"> will give Elist of 
+	interior edges illegal by Delaunay criterion (imaginary 
+	part .lt. 0) and will order them by most negative 
+	imaginary part. </instance>
+	<instance text="legal -c a -f h .1"> will list those 
+	with d=[(x-ratio)-(hex_ratio)} greater than 0.1 from the
 	largest value of d.</instance>
 </examples>
 </command>
@@ -2116,6 +2186,9 @@ these packings and the corresponding object is displayed in both.
 </seealso>
 </command>
 
+
+
+
 <command cmd="migrate" flags="v w">
 <description>This operation is designed for migrating branch points. 
 	A branch point is often created geometrically by slitting 
@@ -2183,7 +2256,52 @@ these packings and the corresponding object is displayed in both.
 </options>
 </command>
 
+<command cmd="motion" flags="-[dn] {cmd}">
+<description>
+	This provides an animated movement between a
+	packing before and after a string of commands
+	(surrounded by '"') is executed. The initial 
+	packing should be displayed, setting the 
+	desired display flags, then the commands 
+	should apply to this same packing, should not 
+	change the number of vertices or the geometry, 
+	and should include all actions needed to obtain 
+	the final packing, e.g., 'repack' (or 'max_pack'),
+	'layout', etc.
+	The new packing should not be displayed, as the
+	'motion' command will move toward that in stages.
+	 
+	For straightforward	situations, the idea is 
+	to help the viewer follow the action visually:
+	A sequence of canvas updates using the current 
+	display options	shows movement from the initial	
+	to the final packing. Specific examples include 
+	'flip' and 'unflip' commands, changes in boundary
+	angle sums, etc., but other cases may occur to the
+	user. Try it and see what happens.
+</description>
+<options>
+<opt flag="-d {x}">(Optional) This specifies the time delay
+between redrawing; default is x=.004.</opt>
+<opt flag="-n {k}">(Optional) This sets the number of steps
+of interpolation between the initial and final packing;
+default is k=75.</opt>
+<opt flag="cmd">Give any command string applying
+to the same packing which does not change its node count
+or geometry.</opt>
+</options>
+<seealso>
+<see>flip</see>
+<see>unflip</see>
+</seealso>
+<examples>
+<instance text=
+"motion -d .01 \"flip {v w};set_disp_flags -cf -f;max_pack;color -c d;\"></instance>
+<instance text="motion \"set_rad .1 b;repack;layout\""></instance>
 
+</examples> 
+</command>
+	
 <command cmd="msg" flags="{text}">
 <description>The text is sent to the "Messages" window.  This
 	       is useful when running a prepared "script".
@@ -2305,7 +2423,7 @@ two side-pairings</opt>
 <opt flag="Advanced"> Control frame, droppable icons and small views of all three packings</opt>
 <opt flag="Script"> Frame with current 'Script' for running CirclePack</opt>
 <opt flag="www"> Browser window, good for loading scripts from the web or files</opt>
-<opt flag="Message"> Frame with Messages, Scratch area, Command line</opt>
+<opt flag="Messages"> Frame with Messages, Scratch area, Command line</opt>
 <opt flag="Help"> Help frame</opt>
 <opt flag="Mobius"> Frame for managing Mobius transformations</opt>
 <opt flag="Function"> Frame for setting a function and parameterized path</opt>
@@ -4722,6 +4840,9 @@ does 'repack', then reports the elapsed time.
 	the common neighbors of a, b. To undo this, you call 
 	"unflip a b" (same as "flip c d").
 </description>
+<seealso>
+<see>flip</see>
+</seealso>
 </command>
 
 
@@ -5195,7 +5316,20 @@ these or other functionality)</opt>
 </examples>
 </command>
 
+<command cmd="$">
+<description>
+	CirclePack has a limited ability to do numerical computations.
+	Currently, this is available in limited ways, setting variables
+	and inquiries, as illustrated below.
+</description>	
 <command cmd="#XY">
+<examples>
+<instance text="X:=$sin(pi/4)$"> Sets 'X' variable to 0.7071067811865475.</instance>
+<instance text="?$cos(pi/4)+tan(3.0)$"> Displays the results in "Messages".</instance>
+</examples>
+</command>    
+
+
 <description>
 	For use in 'mytools' that can be drag/dropped onto packing 
 	canvasses or have a key assigned: the mouse location is converted 

@@ -783,7 +783,7 @@ easier to use in separate packages.
 	* mutually orthogonal circle to triple (all geometries)
 	
 * want to set 'screenshot' basename in JTextField from the 
-script (like 'set_disp_text')
+script (like 'set_disp_flags')
 
 * For 'PackExtenders' (like Brooks, RiemHilbert, etc.) might not only
 have an icon attached to the canvas, but have an optional command

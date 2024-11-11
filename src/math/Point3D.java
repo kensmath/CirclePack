@@ -50,7 +50,8 @@ public class Point3D {
   }
   
   /** 
-   * return 'theta' value for projection of (x,y,z) onto the unit sphere
+   * return 'theta' value for projection of (x,y,z) 
+   * onto the unit sphere
    * @return double theta
    */
   public double getTheta() {
@@ -58,7 +59,8 @@ public class Point3D {
   }
   
   /** 
-   * Get the 'phi' value for projection of (x,y,z) onto the unit sphere
+   * Get the 'phi' value for projection of (x,y,z) 
+   * onto the unit sphere
    * @return double phi
    */
   public double getPhi() {

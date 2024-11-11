@@ -2614,7 +2614,7 @@ public class CombDCEL {
 	 *   
 	 * Note: difference between 'poison' (vertices to be excised)
 	 * and 'non-keepers': the latter may remain in the boundary of 
-	 * the excised DCEL structure.
+	 * the excised structure.
      *
 	 * If no forbidden edges are specified then use 
 	 * 'CPBase.ClosedPath' (if not null); points on the side 
@@ -2622,8 +2622,8 @@ public class CombDCEL {
 	 * by default.
 	 * 
 	 * Return 'HalfLink' of forbidden edges which are actually
-	 * encountered, which can 
-	 * then be used, with alpha, to create a red chain.
+	 * encountered, which can then be used, with alpha, to 
+	 * create a red chain.
 	 *   
 	 * @param p PackData
 	 * @param flags Vector<Vector<String>>; may be null

@@ -2,15 +2,16 @@
 <title>CirclePack command details</title></head>
 
 <body><center><h1><em><strong><font color="blue">CirclePack</font></strong></em> command details</h1></center>
-Here is an alphabetic listing of all the commands which the user can issue to <em>CirclePack</em> via its <strong>command</strong> line or in its scripts, along with their various flags and options.<br/><br/>
-<font size="+1" color="blue"><strong><a name="act">act</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{p}&nbsp;&nbsp; </font>
+Here is an alphabetic listing of all the commands which the user can issue to <em>CirclePack</em> via its <strong>command</strong> line or in its scripts, along with their various flags and options. Commands, command strings, any command output, and a count of successfully executed commands will appear in the <strong>Messages</strong> frame. In a command string, a failed command will abort the remainder of the commands.<br/><br/>
+<font size="+1" color="blue"><strong><a name="act">act</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{x}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
-This makes p (0,1, or 2) the "active" pack. Many actions from
-menus or command lines apply to the active pack, so it is
-important to be aware of which pack is active: in the panel
-with thumbnails of the three packings, the active packing has the
-read title box.
+This makes x (0,1, or 2) the "active" pack. By default, actions from
+menus or command lines apply to the active pack; to apply a command
+to a specific pack, include a "-p{x}" flag. When there's a single canvas
+diaplayed, it will show the active pack; in side-by-side canvasses, 
+the active pack has the green border; in the panel
+of 3 thumbnails, the active pack has the green title box.
 </blockquote>
 <font size="+1" color="blue"><strong><a name="add_bary">add_bary</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{f..}&nbsp;&nbsp; </font>
 <blockquote>
@@ -23,8 +24,8 @@ read title box.
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">add_bary a</font></td>
-<td width="68%"> One can generate "Apollonian"-type
+<tr><td width="35%"><font color="blue">add_bary a</font></td>
+<td width="63%"> One can generate "Apollonian"-type
 packings by repeatedly adding barycenters to all interstices
 </td></tr>
 </table></blockquote>
@@ -37,16 +38,27 @@ packings by repeatedly adding barycenters to all interstices
 	active pack; the new circle neighbors v and its clockwise 
 	boundary neighbor. Its initial radius is that of v.
 </blockquote>
-<font size="+1" color="blue"><strong><a name="add_edge">add_edge</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v1 w2  v2 w2 ..}&nbsp;&nbsp; </font>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
+<blockquote>
+<table>
+<tr><td width="35%"><font color="blue">add_cir b(2 6)</font></td>
+<td width="63%"> Add a circle to each boundary circle between 
+vertices 2 and 6.</td></tr>
+</table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href=" enclose">enclose</a>&nbsp;&nbsp; <a href=" add_face_triple">add_face_triple</a>&nbsp;&nbsp; 
+<br/><br/>
+<font size="+1" color="blue"><strong><a name="add_edge">add_edge</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v1 w1  v2 w2 ..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong> Given a list of vertices, we pick off successive pairs
-	{v,w}. We stop unless v and w are bdry vertices sharing one 
+	{v,w}. Continue while v and w are boundary vertices sharing one 
 	(resp. two) common neighbor(s). In this case we create a new edge {v w}
-	and one (resp. two) new faces. Note that successive pairs may 
+	and one (resp. two) new faces. Stop when successive pairs v and w 
+	don't share a common neighbor, but note that successive pairs may 
 	become eligible as earlier edges are added. If two faces are 
-	added, this means the vertices were part of a 4-edge bdry component;
-	this bdry disappears, as the two new faces formed will be interior.
-	See also "enclose 0 u ", where u is the common neighbor.
+	added, this means that v and w  were part of a 4-edge boundary component;
+	this boundary disappears, as the two new faces formed will be interior.
+	(See also "enclose 0 u ", where u is the common neighbor.)
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href=" enclose">enclose</a>&nbsp;&nbsp; <a href=" split_edge">split_edge</a>&nbsp;&nbsp; <a href=" meld_edge">meld_edge</a>&nbsp;&nbsp; 
@@ -66,8 +78,8 @@ packings by repeatedly adding barycenters to all interstices
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">add_face_triple a</font></td>
-<td width="68%">Repeating this will generate stages of
+<tr><td width="35%"><font color="blue">add_face_triple a</font></td>
+<td width="63%">Repeating this will generate stages of
 this generalized 'Apollonian' packing</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -76,8 +88,10 @@ this generalized 'Apollonian' packing</td></tr>
 <font size="+1" color="blue"><strong><a name="add_gen">add_gen</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{n} [{d}] [-dt] [-b {w..}]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>	n (>0) successive generations of new circles are added to 
-	the current boundary, making the current boundary vertices interior
-	There are various options for how circles are added.
+	the current boundary, making the current boundary vertices interior.
+	There are various options for how circles are added. A 'tent' means
+	adding a circle to each pair of contiguous boundary circles, whereas
+	a 'duplicate' adds a circle to each current boundary circle. 
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
@@ -85,7 +99,7 @@ this generalized 'Apollonian' packing</td></tr>
 <tr><td width="25%" valign="top">{n}</td>
 <td width="65%" align="left"> adds n 'tent' generations,	without regard to degree. 
 	Note that after the first level
-	is added, the remainder will be degree 6 vertices.
+	is added, the remainder levels lead to degree 6 vertices.
 	(Deprecated: "{n} -t")</td></tr>
 <tr><td width="25%" valign="top">{n} {d}</td>
 <td width="65%" align="left"> this adds n generations so that at each step
@@ -98,25 +112,25 @@ this generalized 'Apollonian' packing</td></tr>
       	   components the command applies to (default being
                all). List vertices {w..} on the boundary components
 	         you want (e.g., you can get the 'start' vertices from
-	   	   the pack "Info" frame).</td></tr>
+	   	   the "Pack Info" frame).</td></tr>
 <tr><td width="25%" valign="top">n -d</td>
 <td width="65%" align="left"> Duplicate circles, adding bearing circles to the
 	resulting quad interstices.</td></tr>
 </table></blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href=" add_layer">add_layer</a>&nbsp;&nbsp; 
-<br/><br/>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">add_gen 4</font></td>
-<td width="68%"> adds 4 generations, circle-for-circle, 
+<tr><td width="35%"><font color="blue">add_gen 4</font></td>
+<td width="63%"> adds 4 generations, circle-for-circle, 
 to every boundary component; those after the first generation will 
 be degree 6.</td></tr>
-<tr><td width="30%"><font color="blue">add_gen 2 -d -b 65</font></td>
-<td width="68%"> adds two "duplicate" generations
+<tr><td width="35%"><font color="blue">add_gen 2 -d -b 65</font></td>
+<td width="63%"> adds two "duplicate" generations
 to the boundary component containing vertex 65</td></tr>
 </table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href=" add_layer">add_layer</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="add_ideal">add_ideal</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-fs] {v..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>Given one or more boundary vertices v, add an ideal
@@ -131,26 +145,33 @@ to the boundary component containing vertex 65</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
 <table>
-</table></blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
-<blockquote>
-<table>
-<tr><td width="30%"><font color="blue">add_ideal</font></td>
-<td width="68%"> add an ideal vertex for every boundary 
-component</td></tr>
-<tr><td width="30%"><font color="blue">add_ideal 8</font></td>
-<td width="68%"> add an ideal vertex for the boundary 
-component containing vertex 8</td></tr>
-<tr><td width="30%"><font color="blue">add_ideal -f v</font></td>
-<td width="68%"> add an ideal face to the bdry component containing v if it
-has 3 vertices</td></tr>
-<tr><td width="30%"><font color="blue">add_ideal -s 4 23</font></td>
-<td width="68%"> if 4 and 23 are in the same bdry component, add a new vertex 
-neighboring the segment of bdry vertices from 4 to 23, inclusive</td></tr>
+<tr><td width="25%" valign="top">{v..}</td>
+<td width="65%" align="left"> default: add ideal vertices to each bdry component 
+containing one of vertices v.</td></tr>
+<tr><td width="25%" valign="top">-f {v..}</td>
+<td width="65%" align="left">  add ideal face to each bdry component containing one a v</td></tr>
+<tr><td width="25%" valign="top">-s {v w}</td>
+<td width="65%" align="left">  add ideal vertices neighboring boundary segment from v to w.</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="puncture">puncture</a>&nbsp;&nbsp; 
 <br/><br/>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
+<blockquote>
+<table>
+<tr><td width="35%"><font color="blue">add_ideal</font></td>
+<td width="63%"> add an ideal vertex for every boundary 
+component</td></tr>
+<tr><td width="35%"><font color="blue">add_ideal 8</font></td>
+<td width="63%"> add an ideal vertex for the boundary 
+component containing vertex 8</td></tr>
+<tr><td width="35%"><font color="blue">add_ideal -f v</font></td>
+<td width="63%"> add an ideal face to the bdry component containing v if it
+has 3 vertices</td></tr>
+<tr><td width="35%"><font color="blue">add_ideal -s 4 23</font></td>
+<td width="63%"> if 4 and 23 are in the same bdry component, add a new vertex 
+neighboring the segment of bdry vertices from 4 to 23, inclusive</td></tr>
+</table></blockquote>
 <font size="+1" color="blue"><strong><a name="add_layer">add_layer</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-dt] {n} v w&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>A single layer of new vertices is added to the boundary from
@@ -179,22 +200,22 @@ neighboring the segment of bdry vertices from 4 to 23, inclusive</td></tr>
 	  Here v and w become interior vertices.</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="add_gen">add_gen</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href="add_gen">add_gen</a>&nbsp;&nbsp; <a href="add_ideal">add_ideal</a>&nbsp;&nbsp; 
 <br/><br/>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">add_layer 6 340 340</font></td>
-<td width="68%"> add a layer to convert to degree
+<tr><td width="35%"><font color="blue">add_layer 6 340 340</font></td>
+<td width="63%"> add a layer to convert to degree
 6 on the full boundary component containing vert 340</td></tr>
-<tr><td width="30%"></td>
-<td width="68%"> add a duplicate layer between 
+<tr><td width="35%"></td>
+<td width="63%"> add a duplicate layer between 
 boundary vertices 26 and 39</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="adjacency">adjacency</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-t] {file}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
-For packings of less than 10000 vertices, this stores the adjacency 
+For packings of less than 10,000 vertices, this stores the adjacency 
 matrix for a packing complex in {file} using matlab format. 
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
@@ -211,20 +232,22 @@ matrix for a packing complex in {file} using matlab format.
 <font size="+1" color="blue"><strong><a name="adjoin">adjoin</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{p q v w n} [or: {p q v w (v,u)}]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
-	This allows the joining of two packs by an identification 
-	of specified boundary circles (and edges). The packs affected are p
-	and q, with results put into p. n boundary edges of p are
-	identified with n boundary edges of q, starting with circle v of p
-	and proceeding clockwise and with circle w of q and proceeding
-	counterclockwise (directions are IMPORTANT). If n is negative 
-	then that full boundary component  is pasted to q. 
+	This is the only way CirclePack can join two packings, and involves
+	an identification of specified boundary circles (and edges). 
+	The packs affected are p and q, with results put into p. This
+	identifies n boundary edges of p with n boundary edges of q, 
+	starting with circle v of p	and proceeding clockwise and with 
+	circle w of q and proceeding counterclockwise (directions are 
+	IMPORTANT). If n is negative then that full boundary component 
+	of p is is identified with that of q, and requires that the
+	boundary edges have the same number of edges.
 	If 'n' is replaced by '(v,u)', then the edges from v 
 	clockwise to u on the boundary of p are pasted to the same number 
 	of edges counterclockwise on q, starting with w.
 
 	It is legal to have p=q, resulting in the identification of edges 
 	from the same pack. In this case, if v=w, then n edges starting 
-	from v=w are identified like a "zipper". 
+	from v=w are identified, analogous to a "zipper". 
 	
 	NOTE: there's an attempt to save 'overlap', 'vlist', and 'elist' 
 	info, if set, but face information is corrupted, so 'flist' is 
@@ -233,6 +256,16 @@ matrix for a packing complex in {file} using matlab format.
 	NOTE: The 'vertexMap' of p should contain pairs {o,m}, where o is
 	the original index in q and m is its new index in p.
 </blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
+<blockquote>
+<table>
+<tr><td width="35%"><font color="blue">adjoin 0 2 52 13 20</font></td>
+<td width="63%"> Pack p2 is attached to p0 along
+20 boundary edges, results ending up in p0.</td></tr>
+<tr><td width="35%"><font color="blue">adjoin 1 1 14 14 5</font></td>
+<td width="63%"> Zip together the 5 boundary edges 
+on either side of boundary vertex 14.</td></tr>
+</table></blockquote>
 <font size="+1" color="blue"><strong><a name="adjust_rad">adjust_rad</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{f} {v..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>Adjust the specified radii by factor f greater than 0. 
@@ -244,6 +277,13 @@ In euclidean geometry,
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="set_rad">set_rad</a>&nbsp;&nbsp; <a href="set_random">set_random</a>&nbsp;&nbsp; 
 <br/><br/>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
+<blockquote>
+<table>
+<tr><td width="35%"><font color="blue">adjust_rad 1.25 b</font></td>
+<td width="63%"> For a euclidean packing, boundary radii
+are increased by 25%</td></tr>
+</table></blockquote>
 <font size="+1" color="blue"><strong><a name="adjust_sch">adjust_sch</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{f} {v w..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>Adjust the uzians (1-schwarzians) of the 
@@ -267,20 +307,20 @@ In euclidean geometry,
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="alt_rect">alt_rect</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v0..v3}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Pack a combinatorial quadrilateral INSIDE a rectangle (as compared
-	to using angle sums to get carrier to be a rectangle). Packing
-	must be simply connected and {v0,v1,v2,v3} must be oriented list
-	of boundary vertices, each side {v(i),v(i+1)} should have at
-	least three edges. If successful, the packing should be converted
-	to euclidean and have radii set. The calling program will need
-	to normalize and find the corners of the rectangle. If it fails,
-	the packing should be unchanged.
+<strong>Description: </strong>NOT YET IMPLEMENTED. Treat the packing complex as a combinatorial quadrilateral
+with counterclockwise corners v0 to v3 and repack it INSIDE a rectangle 
+(as compared to using angle sums to repack so that the carrier is a rectangle). 
+The complex must be simply connected, and each side {v(i),v(i+1)} should 
+have at	least three edges. If successful, the result will be a euclidean
+packing. The user will need to normalize and find the corners 
+of the rectangle. If the command fails, the packing should be unchanged.
 </blockquote>
 <font size="+1" color="blue"><strong><a name="aspect">aspect</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{a b c d}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>For euclidean rectangular packings with corner vertices 
-{a b c d} in counterclockwise order starting with upper-left corner a,
-give the extremal length, namely, length/height, (aspect ratio).
+<strong>Description: </strong>This applies to rectangular packings with corner vertices 
+{a b c d} in counterclockwise order starting with upper-left corner a.
+It computes the extremal length, namely, length/height, (aspect ratio);
+see the result in the "Messages" window.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href=" polypack">polypack</a>&nbsp;&nbsp; 
@@ -297,10 +337,11 @@ give the extremal length, namely, length/height, (aspect ratio).
 </blockquote>
 <font size="+1" color="blue"><strong><a name="beta">beta</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>	This is more-or-less defunct designation. Formerly, 
-it was required to be a boundary vertex, but now it can be used
-	for other purposes, which may be useful since it is stored 
-	along with alpha and gamma in the packing files.
+<strong>Description: </strong> A defunct vertex designation. Formerly, 
+	it was required to be a boundary vertex, but now it 
+	can be used for other purposes, which may be useful 
+	since it is stored along with alpha and gamma in 
+	the packing files.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href=" alpha">alpha</a>&nbsp;&nbsp; <a href=" gamma">gamma</a>&nbsp;&nbsp; 
@@ -317,65 +358,42 @@ it was required to be a boundary vertex, but now it can be used
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="blend">blend</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-q{qnum} v n&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>(Not maintained robustly) "Blend" pack q (qnum) 
-	with the active pack p. q overlaps p
-	-- as when the q is an island of the active pack. Typically
-	q has taken its bdry radii from p (though these values may 
-	have originate with yet another packing), q has already been
-	repacked with these bdry radii, and q has a vertex_map to p.
+<strong>Description: </strong>(Not maintained robustly) "Blend" pack 
+	q(qnum) with the active pack p. q overlaps p
+	-- as when the q is an island of the active pack. 
+	Typically q has taken its bdry radii from p (though 
+	these values may have originated with yet another 
+	packing), q has already been repacked with these 
+	bdry radii, and q has a vertex_map to p.
 	
-	This call uses a bdry vertex v of q (it's often convenient 
-	to indicate 'b' in place of a specific v, so that a boundary 
-	vertex will automatically be chosen), generates an antipodal 
-	bdry vert, and uses these two to carry q via a Mobius
-	transformation into registry with p. The centers are blended 
-	to a depth of n. In other words, a bdry annulus of q overlaps 
-	part of p and we adjust the centers of these circles using 
-	convex combinations of their centers from the two packings: 
-	the bdry circles of q take their centers entirely from p, 
-	but the centers from q weight more and more heavily as the 
-	generations from bdry q grow.
+	This call uses a bdry vertex v of q (it's often 
+	convenient to indicate 'b' in place of a specific v, 
+	so that a boundary vertex will automatically be 
+	chosen), generates an antipodal	bdry vert, and 
+	uses these two to carry q via a Mobius
+	transformation into registry with p. The centers 
+	are blended	to a depth of n. In other words, a 
+	bdry annulus of q overlaps part of p and we 
+	adjust the centers of these circles using 
+	convex combinations of their centers from the two 
+	packings: the bdry circles of q take their centers 
+	entirely from p, but the centers from q weight 
+	more and more heavily as the generations within 
+	bdry q grow.
 
 	Notes: If n is negative, the depth is taken as large 
 	as possible; n = 1 and q is simply moved to put it in 
-	register with p; v = 0 and a boundary vert is chosen 
+	register with p; v = 0 and a boundary vertex is chosen 
 	automatically.
 </blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="blend">blend</a>&nbsp;&nbsp; 
-<br/><br/>
 <font size="+1" color="blue"><strong><a name="break">break</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
 <strong>Description: </strong> In a command string, this stops execute of the 
-    remaining commands. It is built to prepare for "if-then"
-    structures (6/2015).
+    remaining commands. Useful in "if-then" structures.
 </blockquote>
-<font size="+1" color="blue"><strong><a name="brooks">brooks</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[OPTIONS] {VH...} ('BQ' pack extension)&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong>This creates a persistent 'pack extension' class 'BQ'
-	which attaches to this packing and handles "Brooks' 
-	quadrilateral" constructions. Commands can be directed
-	to that class with prefix '|BQ|'
-	Brooks quadrilateral packings involve addition
-	of 'vertical' and 'horizontal' circles to a quadrilateral
-	interstice. After opening the packing, sequences of
-	V's and H's direct the construction. Details elsewhere
-	(e.g., in my book).
-</blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
-<blockquote>
-<table>
-<tr><td width="25%" valign="top">-o</td>
-<td width="65%" align="left">	Create a new Brooks' quadrilateral class in the
-			default mode (i.e., Brooks' protocol for adding
-			vertical and horizontal circles.</td></tr>
-<tr><td width="25%" valign="top">-oa</td>
-<td width="65%" align="left">Alternate mode, Use 'alternating' protocol for 
-			locating new circles.</td></tr>
-<tr><td width="25%" valign="top">-x</td>
-<td width="65%" align="left">	Close the Brooks pack extension; the packing
-			itself should remain in tact.</td></tr>
-</table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="IF">IF</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="cd">cd</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>Change the working directory. Can use "pwd" to find the
@@ -384,43 +402,48 @@ it was required to be a boundary vertex, but now it can be used
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">cd ~</font></td>
-<td width="68%"> change to the user's home directory</td></tr>
+<tr><td width="35%"><font color="blue">cd ~</font></td>
+<td width="63%"> change to the user's home directory</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="pwd">pwd</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="center_point">center_point</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{x y}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Recomputes the centers of the active pack, putting (x,y) at the
-	origin. In euclidean case, this is a translation, but in the
-	hyperbolic case, a Mobius transformation (automorphism of the
-	hyperbolic plane) is applied.  NOTE: This is distinct than 
-	'focus', which just changes the view presented on the canvas.
+<strong>Description: </strong>Recomputes the centers of the active pack, 
+	putting (x,y) at the origin. In the euclidean case, 
+	this is a translation; in the hyperbolic case it
+	applies	a Mobius transformation (automorphism of the
+	hyperbolic plane) when (x,y) is interior to the 
+	unit disc. This does not apply in the spherical 
+	setting.  NOTE: This is distinct from
+	'focus', which just changes the view presented on 
+	the canvas.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="center_vert">center_vert</a>&nbsp;&nbsp; <a href="set_screen">set_screen</a>&nbsp;&nbsp; <a href="focus">focus</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="center_vert">center_vert</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Same as 'center_point', except that the center (euclidean 
- or hyperbolic, as appropriate) of circle v is used in place of (x,y)
+<strong>Description: </strong>Same as 'center_point', except that the 
+	center (euclidean or hyperbolic, as appropriate) 
+	of circle v is used in place of (x,y)
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="center_point">center_point</a>&nbsp;&nbsp; <a href="focus">focus</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="chgP">chgP</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{n}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Change the paired canvasses to size n-by-n, with
-	n in range [200,800].
+<strong>Description: </strong>Change the paired canvasses to size n-by-n, 
+	with n in range [200,800].
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="set_display">set_display</a>&nbsp;&nbsp; <a href="chgS {n}">chgS {n}</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="chgS">chgS</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{n}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Change the active canvas to size n-by-n, with
-	n in range [200,1200].
+<strong>Description: </strong>Change the active canvas to size n-by-n, 
+	with n in range [200,1200].
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="set_display">set_display</a>&nbsp;&nbsp; <a href="chgP {n}">chgP {n}</a>&nbsp;&nbsp; 
@@ -453,16 +476,18 @@ center from the origin (when |z| is non-zero).
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="Cleanse">Cleanse</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
-<strong>Description: </strong> This applies 'cleanse' to all packings. 
+<strong>Description: </strong> Upper case 'C' means this applies 
+'cleanse' to all packings. 
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="cleanse">cleanse</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="cleanse">cleanse</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
-<strong>Description: </strong>This empties a packing, clears its canvas, resets
-    various options for display and screen control. Caution, there
-	is no verification and all packing data is lost.
+<strong>Description: </strong>This empties a packing, clears its 
+	canvas, resets various options for display and 
+	screen control. Caution, there is no verification 
+	and all packing data is lost.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="Cleanse">Cleanse</a>&nbsp;&nbsp; 
@@ -478,21 +503,21 @@ center from the origin (when |z| is non-zero).
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
 <table>
-<tr><td width="25%" valign="top">Active</td>
+<tr><td width="25%" valign="top">Act</td>
 <td width="65%" align="left"> Frame displaying the 'active' packing, the main single-canvas window</td></tr>
-<tr><td width="25%" valign="top">Paired</td>
+<tr><td width="25%" valign="top">Pair</td>
 <td width="65%" align="left"> Frame displaying side-by-side packings (perhaps neither the active pack)</td></tr>
-<tr><td width="25%" valign="top">Advanced</td>
+<tr><td width="25%" valign="top">Advan</td>
 <td width="65%" align="left"> Control frame, droppable icons and small views of all three packings</td></tr>
 <tr><td width="25%" valign="top">Script</td>
 <td width="65%" align="left"> Frame with current 'Script' for running CirclePack</td></tr>
 <tr><td width="25%" valign="top">www</td>
 <td width="65%" align="left"> Browser window, good for loading scripts from the web or files</td></tr>
-<tr><td width="25%" valign="top">Message</td>
+<tr><td width="25%" valign="top">Mess</td>
 <td width="65%" align="left"> Frame with Messages, Scratch area, Command line</td></tr>
 <tr><td width="25%" valign="top">Help</td>
 <td width="65%" align="left"> Help frame</td></tr>
-<tr><td width="25%" valign="top">Mobius</td>
+<tr><td width="25%" valign="top">Mob</td>
 <td width="65%" align="left"> Frame for managing Mobius transformations</td></tr>
 <tr><td width="25%" valign="top">Function</td>
 <td width="65%" align="left"> Frame for setting a function and parameterized path</td></tr>
@@ -500,9 +525,9 @@ center from the origin (when |z| is non-zero).
 <td width="65%" align="left"> Frame with save operations</td></tr>
 <tr><td width="25%" valign="top">Screen</td>
 <td width="65%" align="left"> Frame with screen snapshots, display settings</td></tr>
-<tr><td width="25%" valign="top">Information</td>
+<tr><td width="25%" valign="top">Info</td>
 <td width="65%" align="left"> Frame with pack information</td></tr>
-<tr><td width="25%" valign="top">Configure</td>
+<tr><td width="25%" valign="top">Config</td>
 <td width="65%" align="left"> Frame with Configuration settings</td></tr>
 <tr><td width="25%" valign="top">About</td>
 <td width="65%" align="left"> Frame showing 'About Script' info (if a script is loaded)</td></tr>
@@ -510,25 +535,43 @@ center from the origin (when |z| is non-zero).
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">close Script Save</font></td>
-<td width="68%"> Close the Script frame and the frame for Save operations</td></tr>
+<tr><td width="35%"><font color="blue">close Script Info</font></td>
+<td width="63%"> Close the Script frame and the frame for Save operations</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="open">open</a>&nbsp;&nbsp; <a href="Map">Map</a>&nbsp;&nbsp; 
 <br/><br/>
-<font size="+1" color="blue"><strong><a name="color">color</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[cfe] [options]&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="color">color</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[cfeTDQ] [options]&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Color specifications affect the display of filled 
-	circles, faces, edges, or tiles only -- "-T" "-D" "-Q" for 
-	tiles, dual tiles, quad tiles.
+<strong>Description: </strong>Color specifications record colors of
+	specified objects for optional use in display:
+	circles, faces, edges, or tiles ("-T" "-D" "-Q" 
+	for tiles, dual tiles, quad tiles). 
+	
+	Color codes are in [0,255): 0 is foreground (gray);
+	[1 199] is a color ramp from blue, though 100 (white),
+	to red; remainder give a selection. Read in 
+	"color_wheel.p" to see the association of colors 
+	and codes.
+	
+	A color maybe be used in filled or open objects; 
+	e.g., for a	circle, the color of the circle itself 
+	is slightly	darker than the fill color of its interior.
+	
+	Some colors may blend with background, which can be
+	confusing, but also useful if you wish to hide an
+	object.
+	
+	NOTE: colors can be specified on the fly in 'disp' 
+	commands; these are not recorded for the objects.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
 <table>
 <tr><td width="25%" valign="top">bg {i..}</td>
-<td width="65%" align="left"> background color for selected objects</td></tr>
+<td width="65%" align="left"> set background color for selected objects</td></tr>
 <tr><td width="25%" valign="top">fg {i..}</td>
-<td width="65%" align="left"> foreground color</td></tr>
+<td width="65%" align="left"> set foreground color</td></tr>
 <tr><td width="25%" valign="top">{c} c {i..}</td>
 <td width="65%" align="left"> c is a color code (in [0,39]), blue 
 to red ramp</td></tr>
@@ -538,7 +581,7 @@ to red ramp</td></tr>
 <tr><td width="25%" valign="top">area (all faces)</td>
 <td width="65%" align="left"> blue color ramp based on face 
 areas, all faces</td></tr>
-<tr><td width="25%" valign="top">rad  (all circles)</td>
+<tr><td width="25%" valign="top">rad (all circles)</td>
 <td width="65%" align="left"> blue color ramp based on radii</td></tr>
 <tr><td width="25%" valign="top">q{p} {v..}</td>
 <td width="65%" align="left"> blue-red color ramp rad/area compared 
@@ -558,9 +601,6 @@ among 16 distinct colors starting at random point</td></tr>
 <td width="65%" align="left"> same as 's', but start at 0 point</td></tr>
 <tr><td width="25%" valign="top">S0 {i..}</td>
 <td width="65%" align="left"> same as 'S', but start at 0 point</td></tr>
-<tr><td width="25%" valign="top">-k {x}</td>
-<td width="65%" align="left"> (not currently implemented) 
-         (circles only) blue-red, compare model curvature to x.</td></tr>
 <tr><td width="25%" valign="top">x {f..}</td>
 <td width="65%" align="left"> (faces) compare 3D/2D eucl area (if 'xyz' data exists).</td></tr>
 <tr><td width="25%" valign="top">v {f..}</td>
@@ -590,17 +630,23 @@ among 16 distinct colors starting at random point</td></tr>
 <tr><td width="25%" valign="top">r</td>
 <td width="65%" align="left"> (edge only) reset all to foreground</td></tr>
 </table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href=" disp">disp</a>&nbsp;&nbsp; <a href=" Disp">Disp</a>&nbsp;&nbsp; 
+<br/><br/>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">color -f qc q1 -m 1.5 a</font></td>
-<td width="68%">color by 
+<tr><td width="35%"><font color="blue">color -c S a(1 10)</font></td>
+<td width="63%"> color the first 10
+circles with the next random color.</td></tr>
+<tr><td width="35%"><font color="blue">color -f qc q1 -m 1.5 a</font></td>
+<td width="63%">color by 
 quasiconformal dilatation, compared to p1</td></tr>
-<tr><td width="30%"><font color="blue">color -D d a</font></td>
-<td width="68%">color 
+<tr><td width="35%"><font color="blue">color -D d a</font></td>
+<td width="63%">color 
 dual tiles based on number of edges (if dual tiling exists).</td></tr>
-<tr><td width="30%"><font color="blue">color -e z a</font></td>
-<td width="68%">color all interior edges base on their 
+<tr><td width="35%"><font color="blue">color -e z a</font></td>
+<td width="63%">color all interior edges base on their 
 schwarzians</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="cookie">cookie</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[option] {v..}&nbsp;&nbsp; </font>
@@ -608,28 +654,33 @@ schwarzians</td></tr>
 <strong>Description: </strong>A portion of the packing is "cookied" out, giving a 
 	new packing that replaces the original, the rest of the original 
 	being discarded. Caution: This may not do exactly what is expected
-	since some pruning may occur to avoid pathologies: in particular, the 
-	new packing must have connected interior and each of its
-	boundary vertices must have an interior neighbor.
+	since some pruning may occur to avoid pathologies.
 	
 	The 'vertexMap' of the new packing contains pairs {m,n},
 	where n is the new index for the circle having original
 	index m.
 
-	The cookie strategy based on designate 'poison' vertices; 
-	the new	complex is that component of the complement of these poison
-	vertices which contains the alpha vertex (or a substitute, see -v
-	option below). If vertices {v..} are listed in the command,
-	then they comprise the poison vertices; otherwise (assuming
-	the packing is hyperbolic or euclidean) the poison vertices
-	are determined by the current "path", if there is one.
-
-	NOTE: various information is lost, including 'flist', perhaps some
-	overlap angles, etc.
+	The cookie strategy is based on a designed 'seed' vertex
+	and designated 'forbidden' edges; the subcomplex contains
+	the seed and all faces that can be reached from the seed
+	without crossing any forbidden edges. The seed defaults
+	to the 'alpha' vertex, but can be specified instead using
+	the '-v' flag. The forbidden edges may be specified using
+	the '-e' flag. 
 	
-	DCEL version: based on list of 'forbidden' halfedges. This does
-	not (yet) guarantee that every vertex has an interior neighbor.
-	 
+	There are two other specifications: Using the '-n' flag,
+	one can designate 'non-include' vertices, which may remain
+	in the boundary of the new subcomplex, but not in the
+	interior. One can also specify 'poison' vertices which 
+	must be excised; these may be specified explicitly by 
+	listing them after the 'cookie' command. Alternately, if
+	the '-e' and '-n' flags are missing and not poison vertices
+	are specified, then cookie uses the current 'path'. Any
+	vertices outside the path (meaning, not in the complementary 
+	component containing the seed) will be designated as poison.
+	
+	NOTE: various information for the packing is lost, including 
+	'flist', perhaps some overlap angles, etc.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
@@ -645,24 +696,44 @@ schwarzians</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="set_poison">set_poison</a>&nbsp;&nbsp; 
 <br/><br/>
-<font size="+1" color="blue"><strong><a name="copy">copy</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{p}&nbsp;&nbsp; </font>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
-<strong>Description: </strong>The active pack is copied into pack p.  CAUTION: No 
-confirmation is requested for command-line arguments, so original 
-data in p will be lost.
-</blockquote>
-<font size="+1" color="blue"><strong><a name="count">count</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[vef] {..}&nbsp;&nbsp; </font>
+<table>
+<tr><td width="35%"><font color="blue">cookie -v 10</font></td>
+<td width="63%"> Treat vertex 10 as seed,
+excise all vertices across the current path.</td></tr>
+<tr><td width="35%"><font color="blue">cookie a(230 500) -v 10</font></td>
+<td width="63%">This excises poison vertices
+with indices from 230 to 500 and treats 10 as the seed.</td></tr>
+<tr><td width="35%"><font color="blue">cookie -e 20 21 21 34 34 32 32 20</font></td>
+<td width="63%"> {20,21}, {21,34}, ...
+are forbidden edges.</td></tr>
+</table></blockquote>
+<font size="+1" color="blue"><strong><a name="copy">copy</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{q}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Count a list of circles, edges, or faces (specify -v, 
--e, -f, respectively) with usual specification, as in vlist, etc.
-The result appears in the "Message" window.	(Note: edge counting 
-does not eliminate redundancies, as other counts do.)
+<strong>Description: </strong>The active pack is copied into pack q.  CAUTION: No 
+confirmation is requested, so the original packing in q will be lost.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">count -v b</font></td>
-<td width="68%"> will count the boundary vertices
+<tr><td width="35%"><font color="blue">copy -p0 2</font></td>
+<td width="63%"> this puts a copy of pack 0 into pack 2.
+</td></tr>
+</table></blockquote>
+<font size="+1" color="blue"><strong><a name="count">count</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[veft] {..}&nbsp;&nbsp; </font>
+<blockquote>
+<strong>Description: </strong>Count a list of circles, edges, faces, or tiles 
+(specify -v, -e, -f, -t respectively) with usual specification, 
+as in vlist, etc. The result appears in the "Messages" window.
+(Note: edge counting does not eliminate redundancies, as other 
+counts do.)
+</blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
+<blockquote>
+<table>
+<tr><td width="35%"><font color="blue">count -v b</font></td>
+<td width="63%"> will count the boundary vertices
 	</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="create">create</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{type} [options]&nbsp;&nbsp; </font>
@@ -688,7 +759,7 @@ does not eliminate redundancies, as other counts do.)
 	determined by the angles.
 	
 	The "j_ftn" is associated with a triangle group (0 a b). It
-	is similar to a dessin d'enfants with branch multiplicities
+	is similar to a dessin d'enfants with integer branch multiplicities
 	a and b over 0 and 1, respectively, but logarithmic branching
 	over infinity. Default to a=2 and b=3, the classical 
 	j-function associated with the modular group. 
@@ -696,73 +767,57 @@ does not eliminate redundancies, as other counts do.)
 	The "Kagome" construction builds the packing for a tiling in
 	the famous Kagome latttice pattern.
 	
-	The Fibonacci tilings are "fusion" type of Frank and Sadun.
-	Parameters W H X determine combinatorial edge lengths, 
+	The Fibonacci tilings are "fusion" type due to N. Frank and L. Sadun.
+	Integers W H X determine combinatorial edge lengths, 
 	defaulting to 1 1 1.
 	
-	A regular "tetrahedron" on there sphere; 4 circles, each of radius
+	A regular "tetrahedron" on the sphere; 4 circles, each of radius
 	arcsin(sqrt(2/3)).
 	
 	Additional types can be anticipated, potentially with further
 	required options.
 </blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
-<blockquote>
-<table>
-<tr><td width="30%"><font color="blue">hex_torus 3 6</font></td>
-<td width="68%"> 
-	build 3-by-6 hex torus</td></tr>
-<tr><td width="30%"><font color="blue">create hex 23</font></td>
-<td width="68%"> 
-	hexagonal packing of 23 generations</td></tr>
-<tr><td width="30%"><font color="blue">create sq_grid 4</font></td>
-<td width="68%"> 
-	'square grid' pattern from 4 quadruplings of a 4-flower</td></tr>
-<tr><td width="30%"><font color="blue">create tri_group 8 2 3 5</font></td>
-<td width="68%"> 
-	8 generations of the (2 3 5) triangle group on
-	the sphere.</td></tr>
-<tr><td width="30%"><font color="blue">create j_ftn 8</font></td>
-<td width="68%"> 
-	8 generations of the classical j-function.</td></tr>
-<tr><td width="30%"><font color="blue">create Kag 4</font></td>
-<td width="68%"> 
-	4 layers of Kagome lattice about a central hexagon</td></tr>
-<tr><td width="30%"><font color="blue">create pent 5</font></td>
-<td width="68%">
-	5 generations of regular pentagonal tiling</td></tr>
-<tr><td width="30%"><font color="blue">create pent3 3</font></td>
-<td width="68%"> 
-	3 generations of pent tiling centered on triple point</td></tr>
-<tr><td width="30%"><font color="blue">create pent4 3</font></td>
-<td width="68%"> 
-	3 generations of pent tiling centered on quad point</td></tr>
-<tr><td width="30%"><font color="blue">create dyadic 6</font></td>
-<td width="68%"> 
-	6 generations of Penrose's hyperbolic tiling (Carleson squares in the limit)</td></tr>
-<tr><td width="30%"><font color="blue">create fib 5 6 3 2</font></td>
-<td width="68%"> 
-	5 generations of Fibonnacci-related tiling, W=6,H=3,X=2.</td></tr>
-<tr><td width="30%"><font color="blue">tetra</font></td>
-<td width="68%"> 
-	regular tetrahedron on the sphere</td></tr>
-</table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="seed">seed</a>&nbsp;&nbsp; <a href="pave">pave</a>&nbsp;&nbsp; 
 <br/><br/>
-<font size="+1" color="blue"><strong><a name="DCEL">DCEL</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options]&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong> DCEL is a halfedge based model for storing 
-graph combinatorics. Starting in June 2016 I have begun testing
-this approach as a possible replacement for current methods. 
-Current commands are temporary; look in 'CommandStrParser.java'
-for details. 
-</blockquote>
-<strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
+<tr><td width="35%"><font color="blue">hex_torus 3 6</font></td>
+<td width="63%"> build 3-by-6 hex torus</td></tr>
+<tr><td width="35%"><font color="blue">create hex 23</font></td>
+<td width="63%"> hexagonal packing of 23 generations</td></tr>
+<tr><td width="35%"><font color="blue">create sq_grid 4</font></td>
+<td width="63%"> 'square grid' pattern from 4 quadruplings 
+	of a 4-flower</td></tr>
+<tr><td width="35%"><font color="blue">create tri_group 8 2 3 5</font></td>
+<td width="63%"> 8 generations of the (2 3 5) 
+	triangle group on the sphere.</td></tr>
+<tr><td width="35%"><font color="blue">create j_ftn 8</font></td>
+<td width="63%"> 8 generations of the classical 
+	j-function.</td></tr>
+<tr><td width="35%"><font color="blue">create Kag 4</font></td>
+<td width="63%"> 4 layers of Kagome lattice about a 
+	central hexagon</td></tr>
+<tr><td width="35%"><font color="blue">create dyadic 6</font></td>
+<td width="63%"> 6 generations of Penrose's hyperbolic 
+	tiling (Carleson squares in the limit)</td></tr>
+<tr><td width="35%"><font color="blue">create fib 5 6 3 2</font></td>
+<td width="63%"> 5 generations of Fibonnacci-related 
+	tiling, W=6,H=3,X=2.</td></tr>
+<tr><td width="35%"><font color="blue">tetra</font></td>
+<td width="63%"> regular tetrahedron on the sphere</td></tr>
+<tr><td width="35%"><font color="blue">create pent 5</font></td>
+<td width="63%">	5 generations of pent (regular 
+	pentagonal) tiling</td></tr>
+<tr><td width="35%"><font color="blue">create pent3 3</font></td>
+<td width="63%"> 3 generations of pent tiling 
+	centered on triple point</td></tr>
+<tr><td width="35%"><font color="blue">create pent4 3</font></td>
+<td width="63%"> 3 generations of pent tiling 
+	centered on quad point</td></tr>
 </table></blockquote>
-<font size="+1" color="blue"><strong><a name="debug">debug</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[drsex]&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="debug">debug</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[dsrex]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>Various debug helpers. Some put results in a file in the
 default temporary directory (see 'Messages'), others print something.
@@ -772,12 +827,12 @@ default temporary directory (see 'Messages'), others print something.
 <table>
 <tr><td width="25%" valign="top">-d</td>
 <td width="65%" align="left"> (default) generates tmp file 'faceOrder_xxxx_log'</td></tr>
-<tr><td width="25%" valign="top">-r</td>
-<td width="65%" align="left"> generates file 'RedList_xxxxx_log' of the 'red' faces</td></tr>
 <tr><td width="25%" valign="top">-s</td>
 <td width="65%" align="left"> prints size/location info on 'StackBox's in the script</td></tr>
+<tr><td width="25%" valign="top">-r</td>
+<td width="65%" align="left"> generates file 'RedList_xxxxx_log' of the 'red' faces</td></tr>
 <tr><td width="25%" valign="top">-e</td>
-<td width="65%" align="left"> print commands to stderr to debug threads and lock ups</td></tr>
+<td width="65%" align="left"> print commands to stderr to debug threads and lockups</td></tr>
 <tr><td width="25%" valign="top">-x</td>
 <td width="65%" align="left"> turn off -e option</td></tr>
 </table></blockquote>
@@ -833,12 +888,12 @@ default temporary directory (see 'Messages'), others print something.
 <font size="+1" color="blue"><strong><a name="disp">disp</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options ... ] (also 'Disp')&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
-	This is the command for actually displaying the active packing and 
-	associated objects on its canvas (or canvasses). There are numerous
-	options as described below, but the key ones are '-c', '-f', and
+	This is the command for displaying objects of the active packing
+	on its canvas (or canvasses). There are numerous options as 
+	described below, but the key ones are '-c', '-f', and
 	'-e' for circles, faces, and edges, respectively. The commands have
 	default color, fill, and thickness options, but these can be modified.
-	See the "'disp' options" tab in the Help Window for full details.
+	See the "'disp' options" tab in the "Help" window for full details.
 
     The "Screen, Display Options" panel allows one to specify the default 
 	drawing options or give a user-defined string of commands as described 
@@ -881,7 +936,7 @@ points with nghbs</td></tr>
 <tr><td width="25%" valign="top">-B</td>
 <td width="65%" align="left"> all faces and circles, recomp'd by drawing order</td></tr>
 <tr><td width="25%" valign="top">-C</td>
-<td width="65%" align="left"> all circles, recomp'd by drawing order </td></tr>
+<td width="65%" align="left"> all circles, recomputed by drawing order </td></tr>
 <tr><td width="25%" valign="top">-D</td>
 <td width="65%" align="left"> all dual faces, recomputed by drawing order (eucl only)</td></tr>
 <tr><td width="25%" valign="top">-F {f..}</td>
@@ -1002,9 +1057,50 @@ points with nghbs</td></tr>
 <tr><td width="25%" valign="top">-T {t..}</td>
 <td width="65%" align="left"> closed polygonal tiles (if the packing has tiling data)</td></tr>
 </table></blockquote>
+<blockquote>
+<strong>Note: </strong>
+	Under many options (e.g., c,f,F,cf,e,fn,Ff,T), no
+	indices specified is equivalent to 'all', so "-c a" and 
+	"-c" have same effect.
+</blockquote>
+<blockquote>
+<strong>Note: </strong>
+    The -F option is like the -f (and takes the same added
+	sub-options), but it will recompute circles as it goes along.
+	Suppose "disp -F 3 8 12 2" is the command: it will draw face 3,
+	then if face 8 shares an edge with 3 it will use the two circles
+	for that edge, but recompute the center of its third circle
+	before plotting. Similarly, if 12 shares an edge with 8, its
+	third circle will be recomputed. And so forth. 
+
+	A couple of things to note here: 1) Try to pick the first
+	face so its circles are mutually tangent; e.g., after "layout",
+	start with a face having vertex alpha. 2) In order to
+	extend a chain of faces from a former display command,
+	repeat its last face as the first in the new list.
+</blockquote>
+<blockquote>
+<strong>CAUTION: </strong>
+    Some objects may be too large to display correctly
+	and so may be disregarded or may appear incorrectly. E.g. arcs
+	of very large circles.
+</blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="set_disp_flags">set_disp_flags</a>&nbsp;&nbsp; <a href="set_plot_flags">set_plot_flags</a>&nbsp;&nbsp; 
 <br/><br/>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
+<blockquote>
+<table>
+<tr><td width="35%"><font color="blue">disp -w -c</font></td>
+<td width="63%"> clear the canvas and draw all 
+circles (equivalent to "disp -w -c a").</td></tr>
+<tr><td width="35%"><font color="blue">disp -ffc5 6 9</font></td>
+<td width="63%"> draw faces 6 and 9, filled
+with blue color.</td></tr>
+<tr><td width="35%"><font color="blue">disp -w -ff 6 9 -ct5 b</font></td>
+<td width="63%"> Note several flag sequences: 
+filled faces 6 and 9; boundary circles with thickness 5.</td></tr>
+</table></blockquote>
 <font size="+1" color="blue"><strong><a name="double">double</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{b..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
@@ -1041,13 +1137,18 @@ points with nghbs</td></tr>
 	the center of the packing begins to approximate the coherent
 	Doyle spiral with related parameters p, q.
 
-	CAUTION: These values of p and q are not always the same ones
+</blockquote>
+<blockquote>
+<strong>CAUTION: </strong>
+	These values of p and q are not always the same ones
 	used in defining Doyle spirals (see command "spiral"); e.g., 
 	replacing q with q-p is another option. The direction of spiral
 	may also be backwards, in which case, use "reorient".
-
-        CAUTION: Adding too many generations can easily lead to radii
-	that are so small as to lead to layout errors.
+</blockquote>
+<blockquote>
+<strong>CAUTION: </strong>
+    Adding too many generations can easily lead to radii
+	too small layout properly.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="spiral">spiral</a>&nbsp;&nbsp; 
@@ -1254,13 +1355,13 @@ all extenders if the type is omitted.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">extender cf</font></td>
-<td width="68%"> would start a "CurvatureFlow" pack
+<tr><td width="35%"><font color="blue">extender cf</font></td>
+<td width="63%"> would start a "CurvatureFlow" pack
 extender.</td></tr>
-<tr><td width="30%"><font color="blue">extender -x</font></td>
-<td width="68%"> would close all extenders for this packing.</td></tr>
-<tr><td width="30%"><font color="blue">extender -r ct</font></td>
-<td width="68%"> would close any current 'ConformalTiling' extenders 
+<tr><td width="35%"><font color="blue">extender -x</font></td>
+<td width="63%"> would close all extenders for this packing.</td></tr>
+<tr><td width="35%"><font color="blue">extender -r ct</font></td>
+<td width="63%"> would close any current 'ConformalTiling' extenders 
 for this packing and start a new one.</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="face_err">face_err</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">x {f..}&nbsp;&nbsp; </font>
@@ -1281,33 +1382,9 @@ for this packing and start a new one.</td></tr>
 <tr><td width="25%" valign="top">-s</td>
 <td width="65%" align="left"> read from open script</td></tr>
 </table></blockquote>
-<font size="+1" color="blue"><strong><a name="f_index">f_index</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{f j ..}&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong>(Technical) Data is a string of pairs: a face index and j = 0, 1, or 2.
-	Command tells face f which of its neighbors is first when
-	this f is to be drawn. This is to ensure that correct pair
-	of neighbors are used when computing the center of the third
-	neighbor.
-</blockquote>
-<font size="+1" color="blue"><strong><a name="f_next">f_next</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{f g ..}&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong>(Technical) Data is a string of face index pairs. Command tells face f 
-	that face g is next in drawing order. When f=0, g is set as 
-	the first face and gets drawn at the origin. (Default is the 
-	alpha vertex.) The last face drawn MUST point to the first
-	face in the drawing order.
-</blockquote>
-<font size="+1" color="blue"><strong><a name="f_red">f_red</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{f i..}&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong>(Technical) Sets rwb_flag of faces.
-</blockquote>
-<font size="+1" color="blue"><strong><a name="f_rnext">f_rnext</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{f g..}&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong>(Technical) Sets next_face index of faces.
-</blockquote>
 <font size="+1" color="blue"><strong><a name="fix">fix</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options]&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>(Deprecated: preferred command is "layout"). 
+<strong>Description: </strong>(Deprecated: replaced by "layout"). 
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="layout">layout</a>&nbsp;&nbsp; 
@@ -1330,32 +1407,39 @@ for this packing and start a new one.</td></tr>
 </blockquote>
 <font size="+1" color="blue"><strong><a name="flip">flip</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v w..}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>An interior edge bounds two faces. This command 'flips' 
-	the edge; that is, the edge {v w} is removed and a new 
-	one created connecting the two common neighbors of v and w.
-	This is called a "Whitehead" move.
+<strong>Description: </strong>An interior edge bounds two faces. This command 
+    flips the edge; that is, the edge {v w} is removed and a 
+    new	one created connecting the two common neighbors of v 
+    and w. This is sometimes called a "Whitehead" move.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
 <table>
 <tr><td width="25%" valign="top">-cc</td>
-<td width="65%" align="left"> flip counterclockwise edge to each edge in the list (until a flip fails)</td></tr>
+<td width="65%" align="left"> flip counterclockwise edge to 
+	each edge in the list (until a flip fails)</td></tr>
 <tr><td width="25%" valign="top">-cw</td>
-<td width="65%" align="left"> flip clockwise edge to each edge in the list (until a flip fails)</td></tr>
+<td width="65%" align="left"> flip clockwise edge to each edge 
+	in the list (until a flip fails)</td></tr>
+<tr><td width="25%" valign="top">-h {v w}</td>
+<td width="65%" align="left"> store half-hex edge {w u} following
+	edge {v w} in 'elist', then flip edge from v clockwise
+	from {v w}.</td></tr>
 <tr><td width="25%" valign="top">-r</td>
-<td width="65%" align="left"> flip one random edge from random interior vertex.
-	       (ignore rest of the input string.)</td></tr>
+<td width="65%" align="left"> flip one random edge from random 
+	interior vertex. (ignore rest of the input string.)</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="unflip">unflip</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="flip_priority">flip_priority</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options]&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>This is a specialized routine for putting edges of a
-	closed complex in some priority order for consideration
-	of flipping them --- aim being to make complex more
-	hexagonal. The list is put in the packings 'elist'
-	and info is provided on the top few of the list.
+<strong>Description: </strong>This is a specialized routine for putting 
+	edges of a closed complex in some priority order 
+	for consideration of flipping them --- aim being 
+	to make complex more hexagonal. The list is put in 
+	the packings 'elist' and info is provided on the 
+	top few of the list.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="flip">flip</a>&nbsp;&nbsp; <a href="unflip">unflip</a>&nbsp;&nbsp; 
@@ -1364,9 +1448,9 @@ for this packing and start a new one.</td></tr>
 <blockquote>
 <strong>Description: </strong>A utility "face list" attached to a particular packing; 
 	can be read in and stored with packing data. Set with 
-	'set_flist'. Can be used whereever a list of faces is 
-	called for, e.g., in disp and post calls. 
-	NOTE: Flist is the same thing, only it's not attached
+	'set_flist'. Can be used wherever a list of faces is 
+	called for, e.g., in 'disp' and 'post' calls. 
+	'Flist' is the same thing, only it's not attached
 	to a packing; it provides a general utility list.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
@@ -1375,8 +1459,8 @@ for this packing and start a new one.</td></tr>
 <tr><td width="25%" valign="top">flist</td>
 <td width="65%" align="left"> produces whole list.</td></tr>
 <tr><td width="25%" valign="top">flist[{i}]</td>
-<td width="65%" align="left"> produces the i_th face in the list, 
-	if there is one.</td></tr>
+<td width="65%" align="left"> produces the i_th face in the list;
+	indexing is from 0.</td></tr>
 <tr><td width="25%" valign="top">flist[r]</td>
 <td width="65%" align="left"> produces the first face of the list and 
 	then moves it to the end of the list.</td></tr>
@@ -1413,8 +1497,11 @@ for this packing and start a new one.</td></tr>
 	iteration starts at integer n and ends with integer m. 
 	As safety measure, limit is 10 iterations unless command 'FOR' is used.
 	The return value is the number of iterations completed. Execution ends 
-	on any error. 
-	CAUTION: the 'for' command must be the last in any 
+	on any error.
+</blockquote>
+<blockquote>
+<strong>CAUTION: </strong>	 
+	The 'for' command must be the last in any 
 	command string: all subsequent commands are taken as part of
 	the string subject to iteration.
 </blockquote>
@@ -1429,11 +1516,11 @@ for this packing and start a new one.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">for 12:20 disp -F flist[n]</font></td>
-<td width="68%"> layout and display 9 faces 
+<tr><td width="35%"><font color="blue">for 12:20 disp -F flist[n]</font></td>
+<td width="63%"> layout and display 9 faces 
 from the current flist.</td></tr>
-<tr><td width="30%"><font color="blue">FOR (v:=1,40,2) disp -p1 -c _v</font></td>
-<td width="68%"> this displays odd-indexed 
+<tr><td width="35%"><font color="blue">FOR (v:=1,40,2) disp -p1 -c _v</font></td>
+<td width="63%"> this displays odd-indexed 
 circles from 1 to 39.</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="gamma">gamma</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v}&nbsp;&nbsp; </font>
@@ -1451,8 +1538,11 @@ circles from 1 to 39.</td></tr>
     A list of vertices must be provided. A barycenter is added to each
 	face neighboring one of these vertices, then the new barycenter 
 	vertices about any of the given vertices v are connected to form a 
-	flower around v, while any former edges from v are remove. 
-	Caution: adjustment for neighboring vertices in the list will
+	flower around v, while any former edges from v are remove.
+</blockquote>
+<blockquote>
+<strong>CAUTION: </strong>	 
+	Adjustment for neighboring vertices in the list will
 	interfer with one another, and results are difficult to predict.
 	The user will typically repack, layout, and display.
 </blockquote>
@@ -1494,11 +1584,11 @@ circles from 1 to 39.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">gen_mark A</font></td>
-<td width="68%">mark vertices with their combinatorial distance
+<tr><td width="35%"><font color="blue">gen_mark A</font></td>
+<td width="63%">mark vertices with their combinatorial distance
 from the alpha vertex</td></tr>
-<tr><td width="30%"><font color="blue">F:={gen_mark -f b}</font></td>
-<td width="68%"> will set variable 'F' to the index of
+<tr><td width="35%"><font color="blue">F:={gen_mark -f b}</font></td>
+<td width="63%"> will set variable 'F' to the index of
 the face furthest from the boundary faces</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -1620,17 +1710,17 @@ the face furthest from the boundary faces</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">get_data -q2 -t -crz b</font></td>
-<td width="68%">Copy (translated) centers
+<tr><td width="35%"><font color="blue">get_data -q2 -t -crz b</font></td>
+<td width="63%">Copy (translated) centers
 	and radii from p2 for all bdry vertices of the active pack.</td></tr>
-<tr><td width="30%"><font color="blue">get_data -q2 -ems</font></td>
-<td width="68%">Copy all edge marks and schwarzians
+<tr><td width="35%"><font color="blue">get_data -q2 -ems</font></td>
+<td width="63%">Copy all edge marks and schwarzians
     from p2 to the active packing for all edges.</td></tr>
-<tr><td width="30%"><font color="blue">get_data -q2 -fm {f...} -cz {v...}</font></td>
-<td width="68%"> Combined call with
+<tr><td width="35%"><font color="blue">get_data -q2 -fm {f...} -cz {v...}</font></td>
+<td width="63%"> Combined call with
 	lists specified for each flag.</td></tr>
-<tr><td width="30%"><font color="blue">get_data -q2 -ca {c:a.gt.3.0}</font></td>
-<td width="68%"> Aims for circles with
+<tr><td width="35%"><font color="blue">get_data -q2 -ca {c:a.gt.3.0}</font></td>
+<td width="63%"> Aims for circles with
     aim greater than 3.0*Pi.</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -1706,11 +1796,11 @@ the face furthest from the boundary faces</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">GOpack -m</font></td>
-<td width="68%"> computes the max packing with default number
+<tr><td width="35%"><font color="blue">GOpack -m</font></td>
+<td width="63%"> computes the max packing with default number
     of iterations</td></tr>
-<tr><td width="30%"><font color="blue">GOpack -b4 2 3 7 33 .25 .75 .25 .75</font></td>
-<td width="68%"> Using bdry radii, 
+<tr><td width="35%"><font color="blue">GOpack -b4 2 3 7 33 .25 .75 .25 .75</font></td>
+<td width="63%"> Using bdry radii, 
     form a parallelogram with given corner vertices, and corner angles/pi 
     (default values would be 1/4).
     </td></tr>
@@ -1793,8 +1883,8 @@ the face furthest from the boundary faces</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">flip -h elist[n]</font></td>
-<td width="68%"> will flip the clockwise edge
+<tr><td width="35%"><font color="blue">flip -h elist[n]</font></td>
+<td width="63%"> will flip the clockwise edge
 	from the next edge in 'elist', if flippable. </td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="holonomy_trace">holonomy_trace</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{f..} [[-fas] {filename}]&nbsp;&nbsp; </font>
@@ -1835,15 +1925,15 @@ NOTE: not yet operational in spherical geometry.
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">IF ?status THEN disp -w -cf</font></td>
-<td width="68%"> If the active packing is
+<tr><td width="35%"><font color="blue">IF ?status THEN disp -w -cf</font></td>
+<td width="63%"> If the active packing is
     non-empty, then run this display command</td></tr>
-<tr><td width="30%"><font color="blue">IF {count -c b}.ge.3 THEN double;max_pack;Disp -w -c</font></td>
-<td width="68%"> If the
+<tr><td width="35%"><font color="blue">IF {count -c b}.ge.3 THEN double;max_pack;Disp -w -c</font></td>
+<td width="63%"> If the
     active packing has at least 3 boundary vertices, then double it and
     compute/display the max packing.</td></tr>
-<tr><td width="30%"><font color="blue">IF {qual b}.gt.0.1 THEN rld ELSE layout;disp -wr</font></td>
-<td width="68%">If the quality of
+<tr><td width="35%"><font color="blue">IF {qual b}.gt.0.1 THEN rld ELSE layout;disp -wr</font></td>
+<td width="63%">If the quality of
     the active packing, based on boundary radii, is too large, then repack, layout,
     display, else just layout and display.</td></tr>
 </table></blockquote>
@@ -1891,18 +1981,20 @@ the new path.</td></tr>
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="layout">layout</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[ac[cdfs]defFKlrstT]&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Along with "repack", this is one of the key commands in CirclePack:
-    it recomputes the centers of the circles of the active pack. Generally called
-    immediately after "repack", which changes radii but does not compute new centers.
-    CirclePack has standard methods of specifying layout order, with 
-    an "alpha" circle placed at the origin and a "gamma" circle is rotated to be on 
-    the positive imaginary axis. Under the '-c' flag, various alternatives are
-    offered. 
-	Note: If the radii have not been adjusted to meet the packing condition, 
+<strong>Description: </strong>Along with 'repack', this is one of the key commands in CirclePack:
+    'repack' computes radii, but not centers, so it is generally followed
+    by 'layout' (For convenience, see 'rld'). CirclePack has standard methods for specifying
+    an internal 'layoutOrder', with 'alpha' placed at the origin and 'gamma'
+    rotated to be centered on the positive imaginary axis. Under the '-c' flag, 
+    various alternatives are offered. ('layout' replaces the deprecated 'fix' 
+    command.)
+</blockquote>
+<blockquote>
+<strong>CAUTION: </strong>
+    If the radii have not been adjusted to meet the packing condition, 
 	then the configuration may not be cohesive -- intended neighbors may not 
-	be contiguous, there may be isolated circles, etc. In fact, locations 
-	will be dependent on the "drawingorder" which has been set for the circles. 
-	(Replaces deprecated "fix" command)
+	be contiguous, there may be isolated circles, etc., depending on
+	the layout order.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
@@ -1912,17 +2004,17 @@ the new path.</td></tr>
 <tr><td width="25%" valign="top">-c[cdfs]</td>
 <td width="65%" align="left"> recompute pack centers.
 		added options follow (allow no spaces between):</td></tr>
-<tr><td width="25%" valign="top">c {x}</td>
+<tr><td width="25%" valign="top">-cc {x}</td>
 <td width="65%" align="left"> set decimal number 'x' as threshold for 
 		   placement accuracy; e.g., x=.00001 for 5-decimal places.</td></tr>
-<tr><td width="25%" valign="top">d</td>
+<tr><td width="25%" valign="top">-cd</td>
 <td width="65%" align="left"> create "layout.log" diagnostic file in the temporary
 		   directory to check for layout errors</td></tr>
-<tr><td width="25%" valign="top">f</td>
+<tr><td width="25%" valign="top">-cf</td>
 <td width="65%" align="left"> plot only circles with placement errors less
 		   than assigned threshold, set 'plot_flag' appropriately
 		   (as in '-l' option below)</td></tr>
-<tr><td width="25%" valign="top">s</td>
+<tr><td width="25%" valign="top">-cs</td>
 <td width="65%" align="left"> use single face for each new circle (ie straight
 		   from drawing-order) (Note: default is now to find
 		   center by averaging computations from all available plotted neighbors.</td></tr>
@@ -1960,8 +2052,30 @@ the new path.</td></tr>
 <tr><td width="25%" valign="top">default</td>
 <td width="65%" align="left"> recompute angle sums and centers.</td></tr>
 </table></blockquote>
+<blockquote>
+<strong>Note: </strong>
+	The -cf option sets flags for circles and faces which affects
+	whether they are shown in display and postscript operations and
+	whether they are used for later placements in the layout process.
+	(fix -cc {value} lets you set the threshold for this.)
+	For instance, if the radii are not correct, some circles 
+	cannot	be placed consistently with all the mandated 
+	neighbor relationships; these will not have their flags
+	set and will not be drawn in display operations. Similarly,
+	if the three circles of a face cannot be placed in a
+	proper relationship, then the face will not be drawn in
+	display operations. 
+</blockquote>
+<blockquote>
+<strong>CAUTION: </strong>
+	The command 'layout -cf' is probably not appropriate for 
+	nonsimply connected complexes, since some faces placement
+	will always be incompatible with some neighbors.
+	Doing 'layout' without the -l flag will allow display regardless 
+	of proper placement.
+</blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="alpha">alpha</a>&nbsp;&nbsp; <a href="gamma">gamma</a>&nbsp;&nbsp; <a href="dual_layout">dual_layout</a>&nbsp;&nbsp; <a href="set_poison">set_poison</a>&nbsp;&nbsp; <a href="set_plot_flags">set_plot_flags</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href="rld">rld</a>&nbsp;&nbsp; <a href="alpha">alpha</a>&nbsp;&nbsp; <a href="gamma">gamma</a>&nbsp;&nbsp; <a href="dual_layout">dual_layout</a>&nbsp;&nbsp; <a href="set_poison">set_poison</a>&nbsp;&nbsp; <a href="set_plot_flags">set_plot_flags</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="legal">legal</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options] [{e..}]&nbsp;&nbsp; </font>
 <blockquote>
@@ -1996,12 +2110,12 @@ the new path.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">legal -c i -f i</font></td>
-<td width="68%"> will give Elist of interior edges
+<tr><td width="35%"><font color="blue">legal -c i -f i</font></td>
+<td width="63%"> will give Elist of interior edges
 	illegal by Delaunay criterion (imaginary part .lt. 0) and will 
 	order them by most negative imaginary part. </td></tr>
-<tr><td width="30%"><font color="blue">legal -c a -f h .1</font></td>
-<td width="68%"> will list those with d=[(x-ratio)-(hex_ratio)} greater than 0.1 from the
+<tr><td width="35%"><font color="blue">legal -c a -f h .1</font></td>
+<td width="63%"> will list those with d=[(x-ratio)-(hex_ratio)} greater than 0.1 from the
 	largest value of d.</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="load_pack">load_pack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[f]&nbsp;&nbsp; </font>
@@ -2088,14 +2202,14 @@ these packings and the corresponding object is displayed in both.
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">map a(1,10)</font></td>
-<td width="68%"> This will store the translated 
+<tr><td width="35%"><font color="blue">map a(1,10)</font></td>
+<td width="63%"> This will store the translated 
 	indices of circles 1-10 of the active pack in Vlist.</td></tr>
-<tr><td width="30%"></td>
-<td width="68%"> Store reverse translated indices of
+<tr><td width="35%"></td>
+<td width="63%"> Store reverse translated indices of
 	all circlesin Vlist.</td></tr>
-<tr><td width="30%"><font color="blue">map -p1 -f -q2 b</font></td>
-<td width="68%"> This will store the bdry 
+<tr><td width="35%"><font color="blue">map -p1 -f -q2 b</font></td>
+<td width="63%"> This will store the bdry 
 	face indices of p1 into Flist, but will translate them to 
 	face indices of pack q (as far as this is possible).</td></tr>
 </table></blockquote>
@@ -2445,7 +2559,7 @@ two side-pairings</td></tr>
 <td width="65%" align="left"> Frame with current 'Script' for running CirclePack</td></tr>
 <tr><td width="25%" valign="top">www</td>
 <td width="65%" align="left"> Browser window, good for loading scripts from the web or files</td></tr>
-<tr><td width="25%" valign="top">Message</td>
+<tr><td width="25%" valign="top">Messages</td>
 <td width="65%" align="left"> Frame with Messages, Scratch area, Command line</td></tr>
 <tr><td width="25%" valign="top">Help</td>
 <td width="65%" align="left"> Help frame</td></tr>
@@ -2467,8 +2581,8 @@ two side-pairings</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">open Script Save</font></td>
-<td width="68%"> Close the Script frame and the frame for Save operations</td></tr>
+<tr><td width="35%"><font color="blue">open Script Save</font></td>
+<td width="63%"> Close the Script frame and the frame for Save operations</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="close">close</a>&nbsp;&nbsp; <a href="Map">Map</a>&nbsp;&nbsp; 
@@ -2529,8 +2643,8 @@ two side-pairings</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">output %centers\nC=[ :: VZ 'quote'\n'quote' :: b :: ] -f dummy.m</font></td>
-<td width="68%">	creates matlab file 'dummy.m' with 2 x n matrix C of centers for boundary vertices.
+<tr><td width="35%"><font color="blue">output %centers\nC=[ :: VZ 'quote'\n'quote' :: b :: ] -f dummy.m</font></td>
+<td width="63%">	creates matlab file 'dummy.m' with 2 x n matrix C of centers for boundary vertices.
 </td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="overlay">overlay</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-q{q} {options}&nbsp;&nbsp; </font>
@@ -2545,8 +2659,8 @@ two side-pairings</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">overlay -q2 -cf b</font></td>
-<td width="68%"> displays filled boundary circles
+<tr><td width="35%"><font color="blue">overlay -q2 -cf b</font></td>
+<td width="63%"> displays filled boundary circles
 of the active packing on the canvas for packing p2</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -2576,8 +2690,8 @@ of the active packing on the canvas for packing p2</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">pair_mob B</font></td>
-<td width="68%"> applies side-pairing 'B' to the packing; the
+<tr><td width="35%"><font color="blue">pair_mob B</font></td>
+<td width="63%"> applies side-pairing 'B' to the packing; the
 	user must do any desired redrawing.
 </td></tr>
 </table></blockquote>
@@ -2615,8 +2729,8 @@ of the active packing on the canvas for packing p2</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">path_c -i 23 57 3 3 3 ...</font></td>
-<td width="68%">In a hex packing, this defines 
+<tr><td width="35%"><font color="blue">path_c -i 23 57 3 3 3 ...</font></td>
+<td width="63%">In a hex packing, this defines 
 		a combinatorially straight path.</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -2924,12 +3038,12 @@ had index k.
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">puncture</font></td>
-<td width="68%"> by default, puncture vertex of maximal index</td></tr>
-<tr><td width="30%"><font color="blue">puncture 4</font></td>
-<td width="68%"> puncture vertex 4</td></tr>
-<tr><td width="30%"><font color="blue">puncture -f 4</font></td>
-<td width="68%"> puncture face 4</td></tr>
+<tr><td width="35%"><font color="blue">puncture</font></td>
+<td width="63%"> by default, puncture vertex of maximal index</td></tr>
+<tr><td width="35%"><font color="blue">puncture 4</font></td>
+<td width="63%"> puncture vertex 4</td></tr>
+<tr><td width="35%"><font color="blue">puncture -f 4</font></td>
+<td width="63%"> puncture face 4</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="add_ideal">add_ideal</a>&nbsp;&nbsp; <a href="rm_cir">rm_cir</a>&nbsp;&nbsp; <a href="rm_bary">rm_bary</a>&nbsp;&nbsp; <a href="rm_edge">rm_edge</a>&nbsp;&nbsp; <a href="rm_quad">rm_quad</a>&nbsp;&nbsp; 
@@ -2998,13 +3112,13 @@ had index k.
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">qual </font></td>
-<td width="68%">Worst visual error on all edges</td></tr>
-<tr><td width="30%"><font color="blue">qual -e b</font></td>
-<td width="68%">Worst relative error over on boundary 
+<tr><td width="35%"><font color="blue">qual </font></td>
+<td width="63%">Worst visual error on all edges</td></tr>
+<tr><td width="35%"><font color="blue">qual -e b</font></td>
+<td width="63%">Worst relative error over on boundary 
 edges</td></tr>
-<tr><td width="30%"></td>
-<td width="68%">Worst angle sum error at interior 
+<tr><td width="35%"></td>
+<td width="63%">Worst angle sum error at interior 
 vertices</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="quit">quit</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
@@ -3191,8 +3305,8 @@ vertices</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">read_path -as mypathname</font></td>
-<td width="68%"> read 'mypathname' data from the
+<tr><td width="35%"><font color="blue">read_path -as mypathname</font></td>
+<td width="63%"> read 'mypathname' data from the
 script and append it to 'ClosedPath'.</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="Read_path">Read_path</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{filename}&nbsp;&nbsp; </font>
@@ -3348,8 +3462,8 @@ script and append it to 'ClosedPath'.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">rotate -.5</font></td>
-<td width="68%"> rotate clockwise about the origin by Pi/2.</td></tr>
+<tr><td width="35%"><font color="blue">rotate -.5</font></td>
+<td width="63%"> rotate clockwise about the origin by Pi/2.</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="norm_scale">norm_scale</a>&nbsp;&nbsp; 
@@ -3412,11 +3526,11 @@ script and append it to 'ClosedPath'.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"></td>
-<td width="68%"> Store 1000 random
+<tr><td width="35%"></td>
+<td width="63%"> Store 1000 random
 hex flower schwarzians</td></tr>
-<tr><td width="30%"></td>
-<td width="68%"> Store 1000 random
+<tr><td width="35%"></td>
+<td width="63%"> Store 1000 random
 flower schwarzians with random degrees and random central radii</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="sch_report">sch_report</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[[ce]{flags}] {..}&nbsp;&nbsp; </font>
@@ -3447,13 +3561,13 @@ to draw selected edges</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">sch_report -c</font></td>
-<td width="68%"> set all the colors, but don't draw</td></tr>
-<tr><td width="30%"><font color="blue">sch_report -ccnt4 {v..}</font></td>
-<td width="68%"> set all, draw selected in color,
+<tr><td width="35%"><font color="blue">sch_report -c</font></td>
+<td width="63%"> set all the colors, but don't draw</td></tr>
+<tr><td width="35%"><font color="blue">sch_report -ccnt4 {v..}</font></td>
+<td width="63%"> set all, draw selected in color,
 labeled, thickness 4</td></tr>
-<tr><td width="30%"><font color="blue">sch_report -et3 {e..}</font></td>
-<td width="68%"> compute all edge colors, draw selected,
+<tr><td width="35%"><font color="blue">sch_report -et3 {e..}</font></td>
+<td width="63%"> compute all edge colors, draw selected,
 thickness 3</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="screendump">screendump</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-m -d -b -n]&nbsp;&nbsp; </font>
@@ -3500,8 +3614,8 @@ thickness 3</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">script</font></td>
-<td width="68%">absent filename, a dialog box should appear</td></tr>
+<tr><td width="35%"><font color="blue">script</font></td>
+<td width="63%">absent filename, a dialog box should appear</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="seed">seed</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-qm] [n]&nbsp;&nbsp; </font>
 <blockquote>
@@ -3543,10 +3657,10 @@ thickness 3</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_active 20</font></td>
-<td width="68%"> sets 20 as the active vertex</td></tr>
-<tr><td width="30%"><font color="blue">disp -cf v</font></td>
-<td width="68%"> if 20 is active, this displaced it as 
+<tr><td width="35%"><font color="blue">set_active 20</font></td>
+<td width="63%"> sets 20 as the active vertex</td></tr>
+<tr><td width="35%"><font color="blue">disp -cf v</font></td>
+<td width="63%"> if 20 is active, this displaced it as 
 a filled circle</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="set_aim">set_aim</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[{a v..} -[cdx%]&nbsp;&nbsp; </font>
@@ -3614,14 +3728,14 @@ in any interstices to which they belong.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_blist 10 .5 .3333 34 .0 1.0</font></td>
-<td width="68%"> removes the former list, 
+<tr><td width="35%"><font color="blue">set_blist 10 .5 .3333 34 .0 1.0</font></td>
+<td width="63%"> removes the former list, 
 enters two BaryPoints</td></tr>
-<tr><td width="30%"><font color="blue">set_blist blist 10 .5 .33333</font></td>
-<td width="68%"> appends these to the existing 'blist'
+<tr><td width="35%"><font color="blue">set_blist blist 10 .5 .33333</font></td>
+<td width="63%"> appends these to the existing 'blist'
 </td></tr>
-<tr><td width="30%"><font color="blue">set_blist f Zlist</font></td>
-<td width="68%"> create BaryPoints for the faces containing the points in 'Zlist'
+<tr><td width="35%"><font color="blue">set_blist f Zlist</font></td>
+<td width="63%"> create BaryPoints for the faces containing the points in 'Zlist'
 </td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -3702,8 +3816,8 @@ enters two BaryPoints</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_disp_flags -w -cf</font></td>
-<td width="68%">clear screen, show filled circles on default redraw
+<tr><td width="35%"><font color="blue">set_disp_flags -w -cf</font></td>
+<td width="63%">clear screen, show filled circles on default redraw
 </td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="set_display">set_display</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-m]&nbsp;&nbsp; </font>
@@ -3728,8 +3842,8 @@ enters two BaryPoints</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_display -m .5</font></td>
-<td width="68%"> Reset to 1/2 of the maximal size</td></tr>
+<tr><td width="35%"><font color="blue">set_display -m .5</font></td>
+<td width="63%"> Reset to 1/2 of the maximal size</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="set_Dlist">set_Dlist</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[options] [x ..]&nbsp;&nbsp; </font>
 <blockquote>
@@ -3752,10 +3866,10 @@ the function f is set.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_Dlist .34 1.6 -7.2</font></td>
-<td width="68%"> Store these values</td></tr>
-<tr><td width="30%"></td>
-<td width="68%"> store schwarzians for these edges</td></tr>
+<tr><td width="35%"><font color="blue">set_Dlist .34 1.6 -7.2</font></td>
+<td width="63%"> Store these values</td></tr>
+<tr><td width="35%"></td>
+<td width="63%"> store schwarzians for these edges</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="set_dump_format">set_dump_format</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[format]&nbsp;&nbsp; </font>
 <blockquote>
@@ -3766,8 +3880,8 @@ the function f is set.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_dump_format GIF</font></td>
-<td width="68%"> Screendumps saved as "gif" files</td></tr>
+<tr><td width="35%"><font color="blue">set_dump_format GIF</font></td>
+<td width="63%"> Screendumps saved as "gif" files</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="screendump">screendump</a>&nbsp;&nbsp; 
@@ -3782,11 +3896,11 @@ the function f is set.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_elist 1 3  75 4  17 3</font></td>
-<td width="68%"> removes the former list, 
+<tr><td width="35%"><font color="blue">set_elist 1 3  75 4  17 3</font></td>
+<td width="63%"> removes the former list, 
 enters these pairs in order</td></tr>
-<tr><td width="30%"><font color="blue">set_elist elist 1 3  75 4  17 3</font></td>
-<td width="68%"> appends these to the existing 'elist'
+<tr><td width="35%"><font color="blue">set_elist elist 1 3  75 4  17 3</font></td>
+<td width="63%"> appends these to the existing 'elist'
 </td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -3801,11 +3915,11 @@ enters these pairs in order</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_Elist 1 3  75 4  17 3</font></td>
-<td width="68%"> removes the former list, 
+<tr><td width="35%"><font color="blue">set_Elist 1 3  75 4  17 3</font></td>
+<td width="63%"> removes the former list, 
 enters these pairs in order</td></tr>
-<tr><td width="30%"><font color="blue">set_Elist Elist 1 3  75 4  17 3</font></td>
-<td width="68%"> appends these to the existing 'Elist'
+<tr><td width="35%"><font color="blue">set_Elist Elist 1 3  75 4  17 3</font></td>
+<td width="63%"> appends these to the existing 'Elist'
 </td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -3831,11 +3945,11 @@ enters these pairs in order</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_flist 1 75 3</font></td>
-<td width="68%"> removes the former list, 
+<tr><td width="35%"><font color="blue">set_flist 1 75 3</font></td>
+<td width="63%"> removes the former list, 
 enters these in order</td></tr>
-<tr><td width="30%"><font color="blue">set_flist flist 1 75 3</font></td>
-<td width="68%"> appends these to the existing 'flist'
+<tr><td width="35%"><font color="blue">set_flist flist 1 75 3</font></td>
+<td width="63%"> appends these to the existing 'flist'
 </td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -3850,11 +3964,11 @@ enters these in order</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_Flist 1 75 3</font></td>
-<td width="68%"> removes the former list, 
+<tr><td width="35%"><font color="blue">set_Flist 1 75 3</font></td>
+<td width="63%"> removes the former list, 
 enters these in order</td></tr>
-<tr><td width="30%"><font color="blue">set_Flist Flist 1 75 3</font></td>
-<td width="68%"> appends these to the existing 'Flist'
+<tr><td width="35%"><font color="blue">set_Flist Flist 1 75 3</font></td>
+<td width="63%"> appends these to the existing 'Flist'
 </td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -3872,8 +3986,8 @@ enters these in order</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_function_text 1+sin(3*arg(z))</font></td>
-<td width="68%">
+<tr><td width="35%"><font color="blue">set_function_text 1+sin(3*arg(z))</font></td>
+<td width="63%">
 </td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -3913,12 +4027,12 @@ face drawing order.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"></td>
-<td width="68%">dual spanning tree starting with face 10</td></tr>
-<tr><td width="30%"><font color="blue">set_glist 5 12 18 7</font></td>
-<td width="68%"> list of faces </td></tr>
-<tr><td width="30%"><font color="blue">set_glist glist 5 12 18 7 </font></td>
-<td width="68%"> appends these to the existing 'glist'
+<tr><td width="35%"></td>
+<td width="63%">dual spanning tree starting with face 10</td></tr>
+<tr><td width="35%"><font color="blue">set_glist 5 12 18 7</font></td>
+<td width="63%"> list of faces </td></tr>
+<tr><td width="35%"><font color="blue">set_glist glist 5 12 18 7 </font></td>
+<td width="63%"> appends these to the existing 'glist'
 </td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -3966,8 +4080,8 @@ face drawing order.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_grid -r -1 -1 1 1 -n 17</font></td>
-<td width="68%"> 18 horizontal/vertical lines</td></tr>
+<tr><td width="35%"><font color="blue">set_grid -r -1 -1 1 1 -n 17</font></td>
+<td width="63%"> 18 horizontal/vertical lines</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="disp -b">disp -b</a>&nbsp;&nbsp; 
@@ -3982,11 +4096,11 @@ face drawing order.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_hlist 1 3  75 4  17 3</font></td>
-<td width="68%"> removes the former list, 
+<tr><td width="35%"><font color="blue">set_hlist 1 3  75 4  17 3</font></td>
+<td width="63%"> removes the former list, 
 enters legal halfedges from the list</td></tr>
-<tr><td width="30%"><font color="blue">set_hlist hlist 1 3  75 4  17 3</font></td>
-<td width="68%"> appends these to the existing 'elist'
+<tr><td width="35%"><font color="blue">set_hlist hlist 1 3  75 4  17 3</font></td>
+<td width="63%"> appends these to the existing 'elist'
 </td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -4001,14 +4115,14 @@ enters legal halfedges from the list</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_Hlist 1 3  75 4  17 3</font></td>
-<td width="68%"> removes the former list, 
+<tr><td width="35%"><font color="blue">set_Hlist 1 3  75 4  17 3</font></td>
+<td width="63%"> removes the former list, 
 enters these pairs in order</td></tr>
-<tr><td width="30%"><font color="blue">set_Hlist Hlist 1 3  75 4  17 3</font></td>
-<td width="68%"> appends these to 
+<tr><td width="35%"><font color="blue">set_Hlist Hlist 1 3  75 4  17 3</font></td>
+<td width="63%"> appends these to 
 the existing 'Hlist'</td></tr>
-<tr><td width="30%"><font color="blue">set_Hlist hlist</font></td>
-<td width="68%"> appends hlist items to 
+<tr><td width="35%"><font color="blue">set_Hlist hlist</font></td>
+<td width="63%"> appends hlist items to 
 the existing 'Hlist'</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -4064,13 +4178,13 @@ the existing 'Hlist'</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"></td>
-<td width="68%"> Set all to default</td></tr>
-<tr><td width="30%"><font color="blue">set_invdist 0.5 7 10</font></td>
-<td width="68%"> If {7 10} is an edge, then its overlap 
+<tr><td width="35%"></td>
+<td width="63%"> Set all to default</td></tr>
+<tr><td width="35%"><font color="blue">set_invdist 0.5 7 10</font></td>
+<td width="63%"> If {7 10} is an edge, then its overlap 
 	angle is set to acos(0.5) = Pi/3</td></tr>
-<tr><td width="30%"><font color="blue">set_invdist 1.25 i</font></td>
-<td width="68%"> The inversive distances for all interior 
+<tr><td width="35%"><font color="blue">set_invdist 1.25 i</font></td>
+<td width="63%"> The inversive distances for all interior 
 	edges are set to 1.25</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -4103,12 +4217,12 @@ the existing 'Hlist'</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_Mobius 0.0 0.0 1.0 0.0 1.0 0.0 0.0 0.0</font></td>
-<td width="68%"> specifies reciprocation, z maps to 1/z</td></tr>
-<tr><td width="30%"><font color="blue">set_Mobius 2.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0</font></td>
-<td width="68%"> specifies z maps to 2*z</td></tr>
-<tr><td width="30%"><font color="blue">set_Mobius 1.0 0.0 0.0 -0.5 0.0 0.5 1.0 0.0</font></td>
-<td width="68%"> specifies the disc automorphism (z-i/2)/(z*i/2+1)</td></tr>
+<tr><td width="35%"><font color="blue">set_Mobius 0.0 0.0 1.0 0.0 1.0 0.0 0.0 0.0</font></td>
+<td width="63%"> specifies reciprocation, z maps to 1/z</td></tr>
+<tr><td width="35%"><font color="blue">set_Mobius 2.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0</font></td>
+<td width="63%"> specifies z maps to 2*z</td></tr>
+<tr><td width="35%"><font color="blue">set_Mobius 1.0 0.0 0.0 -0.5 0.0 0.5 1.0 0.0</font></td>
+<td width="63%"> specifies the disc automorphism (z-i/2)/(z*i/2+1)</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href=" set_hlist">set_hlist</a>&nbsp;&nbsp; 
@@ -4133,12 +4247,12 @@ the existing 'Hlist'</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_overlap 0.0 6 12</font></td>
-<td width="68%"> specifies that circles 6
+<tr><td width="35%"><font color="blue">set_overlap 0.0 6 12</font></td>
+<td width="63%"> specifies that circles 6
 and 12 be tangent (equivalent to "set_invdist 1.0 6 12")
 </td></tr>
-<tr><td width="30%"><font color="blue">set_overlap 0.333333 17 4</font></td>
-<td width="68%"> specifies angle Pi/3
+<tr><td width="35%"><font color="blue">set_overlap 0.333333 17 4</font></td>
+<td width="63%"> specifies angle Pi/3
 between 17 and 4 (equivalent to "set_invdist .5 17 4")
 </td></tr>
 </table></blockquote>
@@ -4156,8 +4270,8 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_path+text (1+exp(i*pi*2.0*t))^2</font></td>
-<td width="68%">
+<tr><td width="35%"><font color="blue">set_path+text (1+exp(i*pi*2.0*t))^2</font></td>
+<td width="63%">
 </td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -4182,11 +4296,11 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_path exp(i*2.0*pi*z)</font></td>
-<td width="68%">Stores the unit circle as the closed path
+<tr><td width="35%"><font color="blue">set_path exp(i*2.0*pi*z)</font></td>
+<td width="63%">Stores the unit circle as the closed path
 </td></tr>
-<tr><td width="30%"><font color="blue">set_path (1-z)*(1-i)+z*i</font></td>
-<td width="68%">Stores the segment from 1-i to i (and closes it)
+<tr><td width="35%"><font color="blue">set_path (1-z)*(1-i)+z*i</font></td>
+<td width="63%">Stores the segment from 1-i to i (and closes it)
 </td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -4208,8 +4322,8 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_plot_flags 1 a</font></td>
-<td width="68%"> 
+<tr><td width="35%"><font color="blue">set_plot_flags 1 a</font></td>
+<td width="63%"> 
 	reset all plot flags to 1</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="set_poison">set_poison</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-e {e..}] {v..}&nbsp;&nbsp; </font>
@@ -4321,16 +4435,16 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_random -r .5 1.2 -f b</font></td>
-<td width="68%"> 
+<tr><td width="35%"><font color="blue">set_random -r .5 1.2 -f b</font></td>
+<td width="63%"> 
 	   will multiply each boundary radius by a factor uniformly 
 	   distributed between .5 and 1.2.</td></tr>
-<tr><td width="30%"><font color="blue">set_random i</font></td>
-<td width="68%"> 
+<tr><td width="35%"><font color="blue">set_random i</font></td>
+<td width="63%"> 
 	   will randomly set all interior radii to random values between 
 	   (about) 0.005 and 5.0 (the default range).</td></tr>
-<tr><td width="30%"><font color="blue">set_rand -o -r .1 10 a</font></td>
-<td width="68%">  
+<tr><td width="35%"><font color="blue">set_rand -o -r .1 10 a</font></td>
+<td width="63%">  
 	   sets overlaps between .1 (overlap)and 10 (inversive distance).</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -4426,10 +4540,10 @@ for a canvas
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_sphere_view 0.0 0.0 0.0</font></td>
-<td width="68%"> will put z-axis vertical, x-axis directly towards the viewer.</td></tr>
-<tr><td width="30%"><font color="blue">set_sphere_view -i .5 0.0 .5</font></td>
-<td width="68%"> will add a rotation by pi/2 about the z-axis, followed by pi/2 about the (new) x-axis,
+<tr><td width="35%"><font color="blue">set_sphere_view 0.0 0.0 0.0</font></td>
+<td width="63%"> will put z-axis vertical, x-axis directly towards the viewer.</td></tr>
+<tr><td width="35%"><font color="blue">set_sphere_view -i .5 0.0 .5</font></td>
+<td width="63%"> will add a rotation by pi/2 about the z-axis, followed by pi/2 about the (new) x-axis,
 		   to the current matrix.</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="set_sph_opacity">set_sph_opacity</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{t}&nbsp;&nbsp; </font>
@@ -4492,10 +4606,10 @@ tree also have that mark</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">disp -Tf tlist</font></td>
-<td width="68%"> Display tiles in the list as filled</td></tr>
-<tr><td width="30%"><font color="blue">|ct| set_tlist -c 2 7</font></td>
-<td width="68%"> Loads indices of child tiles (in a subdivions scheme) of tiles 2 and 7</td></tr>
+<tr><td width="35%"><font color="blue">disp -Tf tlist</font></td>
+<td width="63%"> Display tiles in the list as filled</td></tr>
+<tr><td width="35%"><font color="blue">|ct| set_tlist -c 2 7</font></td>
+<td width="63%"> Loads indices of child tiles (in a subdivions scheme) of tiles 2 and 7</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="set_Tlist">set_Tlist</a>&nbsp;&nbsp; 
@@ -4531,18 +4645,18 @@ See ':=' for more examples.
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_var R 2.3</font></td>
-<td width="68%"> Variable 'R' is created with value 2.3</td></tr>
-<tr><td width="30%"><font color="blue">A:=[SLIDER -m 2 -M 6 -cmd [h] -ftn z*pi] 2.0</font></td>
-<td width="68%"> Variable 'A' is 
+<tr><td width="35%"><font color="blue">set_var R 2.3</font></td>
+<td width="63%"> Variable 'R' is created with value 2.3</td></tr>
+<tr><td width="35%"><font color="blue">A:=[SLIDER -m 2 -M 6 -cmd [h] -ftn z*pi] 2.0</font></td>
+<td width="63%"> Variable 'A' is 
 	created with a slider, min/max 2 to 6, command '[h]', values multiplied
 	by Pi.</td></tr>
-<tr><td width="30%"><font color="blue">LA:={aspect 11 9 13 2}</font></td>
-<td width="68%"> Run the "aspect" command with the given
+<tr><td width="35%"><font color="blue">LA:={aspect 11 9 13 2}</font></td>
+<td width="63%"> Run the "aspect" command with the given
     corner vertices, get a double, set variable "LA" to that value (as a string).
     </td></tr>
-<tr><td width="30%"><font color="blue">write -s packing[_N].p</font></td>
-<td width="68%"> Suppose variable N is "3.0", then this
+<tr><td width="35%"><font color="blue">write -s packing[_N].p</font></td>
+<td width="63%"> Suppose variable N is "3.0", then this
     command saves to the file named 'packing3.p'; so '3.0' converts to integer
     and brackets are removed.</td></tr>
 </table></blockquote>
@@ -4578,11 +4692,11 @@ should be taken.)
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_vlist 10 7 33</font></td>
-<td width="68%"> removes the former list, 
+<tr><td width="35%"><font color="blue">set_vlist 10 7 33</font></td>
+<td width="63%"> removes the former list, 
 enters these in order</td></tr>
-<tr><td width="30%"><font color="blue">set_vlist vlist 10 7 32</font></td>
-<td width="68%"> appends these to the existing 'vlist'
+<tr><td width="35%"><font color="blue">set_vlist vlist 10 7 32</font></td>
+<td width="63%"> appends these to the existing 'vlist'
 </td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -4597,11 +4711,11 @@ enters these in order</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_Vlist 1 75 3</font></td>
-<td width="68%"> removes the former list, 
+<tr><td width="35%"><font color="blue">set_Vlist 1 75 3</font></td>
+<td width="63%"> removes the former list, 
 enters these in order</td></tr>
-<tr><td width="30%"><font color="blue">set_Vlist Vlist 1 75 3</font></td>
-<td width="68%"> appends these to the existing 'Vlist'
+<tr><td width="35%"><font color="blue">set_Vlist Vlist 1 75 3</font></td>
+<td width="63%"> appends these to the existing 'Vlist'
 </td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
@@ -4710,13 +4824,13 @@ enclosed by double quotes</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">slider -R {v...}</font></td>
-<td width="68%"> sliders for selected vertices</td></tr>
-<tr><td width="30%"><font color="blue">slider -R -c ''rld'' a</font></td>
-<td width="68%"> sliders for all radii, execute 'rld'
+<tr><td width="35%"><font color="blue">slider -R {v...}</font></td>
+<td width="63%"> sliders for selected vertices</td></tr>
+<tr><td width="35%"><font color="blue">slider -R -c ''rld'' a</font></td>
+<td width="63%"> sliders for all radii, execute 'rld'
 on change in any slider</td></tr>
-<tr><td width="30%"><font color="blue">slider -S -m  ''disp w -c -et5c5 Obj'' {f g ..}</font></td>
-<td width="68%"> sliders 
+<tr><td width="35%"><font color="blue">slider -S -m  ''disp w -c -et5c5 Obj'' {f g ..}</font></td>
+<td width="63%"> sliders 
 for selected edge schwarzians, which motion in slider causing redisplay
 of circles with that particular edge displayed.</td></tr>
 </table></blockquote>
@@ -4818,45 +4932,45 @@ of circles with that particular edge displayed.</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
   Generate several generations of hexagonal combinatorics,  using, e.g., the commands 'seed -q;geom_to_e;add_gen 6 6;'  and then applying 'spiral {a b}' for some of these pairs a b.  Modify the a and/or b slightly to see de-coherence.  Note: the p and q have (generically) to do with steps in the hex   pattern; check that a^p divided by b^q is approximately 1.<table>
-<tr><td width="30%"><font color="blue">spiral 1 9.9</font></td>
-<td width="68%"> p=q=3</td></tr>
-<tr><td width="30%"><font color="blue">spiral 1 4.61</font></td>
-<td width="68%"> p=q=4</td></tr>
-<tr><td width="30%"><font color="blue">spiral 1 3.2205</font></td>
-<td width="68%"> p=q=5</td></tr>
-<tr><td width="30%"><font color="blue">spiral 1 2.59</font></td>
-<td width="68%"> p=q=6</td></tr>
-<tr><td width="30%"><font color="blue">spiral 1 2.2365</font></td>
-<td width="68%"> p=q=7</td></tr>
-<tr><td width="30%"><font color="blue">spiral 1 2.01</font></td>
-<td width="68%"> p=q=8</td></tr>
-<tr><td width="30%"><font color="blue">spiral 4.82374 1.87652</font></td>
-<td width="68%"> p=2, q=8</td></tr>
-<tr><td width="30%"><font color="blue">spiral 3.45903 1.51236</font></td>
-<td width="68%"> p=2, q=10</td></tr>
-<tr><td width="30%"><font color="blue">spiral 2.22209 1.30493</font></td>
-<td width="68%"> p=3, q=15</td></tr>
-<tr><td width="30%"><font color="blue">spiral 3.459050632 1.512350036</font></td>
-<td width="68%"> p=4, q=6</td></tr>
-<tr><td width="30%"><font color="blue">spiral 1.218 .67407066</font></td>
-<td width="68%"> p=4, q=8</td></tr>
-<tr><td width="30%"><font color="blue">spiral 2.222084374 1.304928925</font></td>
-<td width="68%"> p=6, q=9</td></tr>
-<tr><td width="30%"><font color="blue">spiral 1.807161471 1.218051525</font></td>
-<td width="68%"> p=8, q=12</td></tr>
-<tr><td width="30%"><font color="blue">spiral 2.89 24.137569</font></td>
-<td width="68%"> p=2, q=3</td></tr>
-<tr><td width="30%"><font color="blue">spiral 8.352410036 24.13891302</font></td>
-<td width="68%">Coxeter 
+<tr><td width="35%"><font color="blue">spiral 1 9.9</font></td>
+<td width="63%"> p=q=3</td></tr>
+<tr><td width="35%"><font color="blue">spiral 1 4.61</font></td>
+<td width="63%"> p=q=4</td></tr>
+<tr><td width="35%"><font color="blue">spiral 1 3.2205</font></td>
+<td width="63%"> p=q=5</td></tr>
+<tr><td width="35%"><font color="blue">spiral 1 2.59</font></td>
+<td width="63%"> p=q=6</td></tr>
+<tr><td width="35%"><font color="blue">spiral 1 2.2365</font></td>
+<td width="63%"> p=q=7</td></tr>
+<tr><td width="35%"><font color="blue">spiral 1 2.01</font></td>
+<td width="63%"> p=q=8</td></tr>
+<tr><td width="35%"><font color="blue">spiral 4.82374 1.87652</font></td>
+<td width="63%"> p=2, q=8</td></tr>
+<tr><td width="35%"><font color="blue">spiral 3.45903 1.51236</font></td>
+<td width="63%"> p=2, q=10</td></tr>
+<tr><td width="35%"><font color="blue">spiral 2.22209 1.30493</font></td>
+<td width="63%"> p=3, q=15</td></tr>
+<tr><td width="35%"><font color="blue">spiral 3.459050632 1.512350036</font></td>
+<td width="63%"> p=4, q=6</td></tr>
+<tr><td width="35%"><font color="blue">spiral 1.218 .67407066</font></td>
+<td width="63%"> p=4, q=8</td></tr>
+<tr><td width="35%"><font color="blue">spiral 2.222084374 1.304928925</font></td>
+<td width="63%"> p=6, q=9</td></tr>
+<tr><td width="35%"><font color="blue">spiral 1.807161471 1.218051525</font></td>
+<td width="63%"> p=8, q=12</td></tr>
+<tr><td width="35%"><font color="blue">spiral 2.89 24.137569</font></td>
+<td width="63%"> p=2, q=3</td></tr>
+<tr><td width="35%"><font color="blue">spiral 8.352410036 24.13891302</font></td>
+<td width="63%">Coxeter 
 		  loxodromic spiral: p=3, q=2: (Here t=g+sqrt(g)=2.890053638, 
 		  g is the golden ratio g=1.618033989; a=t^2, b=t^3.)</td></tr>
-<tr><td width="30%"><font color="blue">spiral 2.890053638   8.352410031</font></td>
-<td width="68%">Related neat spiral: 
+<tr><td width="35%"><font color="blue">spiral 2.890053638   8.352410031</font></td>
+<td width="63%">Related neat spiral: 
 		  (unknown connection): p=2, q=4: (Here a=g+sqrt(g), b=a^2. 
 		  From symmetry, geometric series, and pythagoras, find a 
 		  is root of 1-2*a-2*a^2-2*a^3+a^4=0.)</td></tr>
-<tr><td width="30%"><font color="blue">spiral 1.623 6.939</font></td>
-<td width="68%">Brooks' spiral: p=4, q=1: 
+<tr><td width="35%"><font color="blue">spiral 1.623 6.939</font></td>
+<td width="63%">Brooks' spiral: p=4, q=1: 
 		  (Comes from Brooks quad with parameter g. Don't
 		  know exact values.)</td></tr>
 </table></blockquote>
@@ -5026,8 +5140,8 @@ stopwatch is off, this starts it. To ensure a new timer, use "-s" option.
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">timer -s;repack;timer</font></td>
-<td width="68%"> Starts a fresh time, 
+<tr><td width="35%"><font color="blue">timer -s;repack;timer</font></td>
+<td width="63%"> Starts a fresh time, 
 does 'repack', then reports the elapsed time.
 </td></tr>
 </table></blockquote>
@@ -5270,8 +5384,8 @@ Any combination of these:
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">write -s packing[_N].p</font></td>
-<td width="68%"> Suppose variable N is "3.0", then this
+<tr><td width="35%"><font color="blue">write -s packing[_N].p</font></td>
+<td width="63%"> Suppose variable N is "3.0", then this
     command saves to the file named 'packing3.p'; i.e., '3.0' converts to integer
     and brackets are removed.</td></tr>
 </table></blockquote>
@@ -5284,8 +5398,8 @@ Any combination of these:
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">Write -cgrz ~/packings/example.p</font></td>
-<td width="68%"> This write 
+<tr><td width="35%"><font color="blue">Write -cgrz ~/packings/example.p</font></td>
+<td width="63%"> This write 
 default data to a folder in the the user's home directory.
 </td></tr>
 </table></blockquote>
@@ -5462,23 +5576,23 @@ faces. Puts out face centers and pairs of indices forming edges</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">r:= 1.4</font></td>
-<td width="68%"> This sets variable 'r' to "1.4" (as a
+<tr><td width="35%"><font color="blue">r:= 1.4</font></td>
+<td width="63%"> This sets variable 'r' to "1.4" (as a
 string).</td></tr>
-<tr><td width="30%"><font color="blue">set_rad _r b</font></td>
-<td width="68%"> If 'r' is set to value "1.4", this
+<tr><td width="35%"><font color="blue">set_rad _r b</font></td>
+<td width="63%"> If 'r' is set to value "1.4", this
 command will set all boundary radii to 1.4.</td></tr>
-<tr><td width="30%"><font color="blue">set_var N 20</font></td>
-<td width="68%"> Create variable 'N', value '20'</td></tr>
-<tr><td width="30%"><font color="blue">n:=12;seed _n</font></td>
-<td width="68%"> create a seed with 12 petals</td></tr>
-<tr><td width="30%"><font color="blue">id:=?invdist 13 45</font></td>
-<td width="68%"> sets 'id' to the inversive distance 
+<tr><td width="35%"><font color="blue">set_var N 20</font></td>
+<td width="63%"> Create variable 'N', value '20'</td></tr>
+<tr><td width="35%"><font color="blue">n:=12;seed _n</font></td>
+<td width="63%"> create a seed with 12 petals</td></tr>
+<tr><td width="35%"><font color="blue">id:=?invdist 13 45</font></td>
+<td width="63%"> sets 'id' to the inversive distance 
 	between circles for v13 and v45.</td></tr>
-<tr><td width="30%"><font color="blue">Y:=[slider] 3.14</font></td>
-<td width="68%"> Variable 'Y' created with a slider.</td></tr>
-<tr><td width="30%"><font color="blue">A:=[SLIDER -m 2 -M 6 -cmd [h] -ftn z*pi] 2.0</font></td>
-<td width="68%"> Variable 'A' is 
+<tr><td width="35%"><font color="blue">Y:=[slider] 3.14</font></td>
+<td width="63%"> Variable 'Y' created with a slider.</td></tr>
+<tr><td width="35%"><font color="blue">A:=[SLIDER -m 2 -M 6 -cmd [h] -ftn z*pi] 2.0</font></td>
+<td width="63%"> Variable 'A' is 
 	created with a slider, min/max 2 to 6, command '[h]', values multiplied
 	by Pi.</td></tr>
 </table></blockquote>
@@ -5597,17 +5711,23 @@ these or other functionality)</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">?rad 17</font></td>
-<td width="68%"> prints the radius in "Messages"</td></tr>
-<tr><td width="30%"><font color="blue">R:=?rad 17</font></td>
-<td width="68%"> Sets variable 'R' to the radius of v17.</td></tr>
-<tr><td width="30%"><font color="blue">v:=?vlist;disp -c _v</font></td>
-<td width="68%"> stores and then displays the active pack's 'vlist' 
+<tr><td width="35%"><font color="blue">?rad 17</font></td>
+<td width="63%"> prints the radius in "Messages"</td></tr>
+<tr><td width="35%"><font color="blue">R:=?rad 17</font></td>
+<td width="63%"> Sets variable 'R' to the radius of v17.</td></tr>
+<tr><td width="35%"><font color="blue">v:=?vlist;disp -c _v</font></td>
+<td width="63%"> stores and then displays the active pack's 'vlist' 
 (stopping at 1000 entries)</td></tr>
-<tr><td width="30%"><font color="blue">?_v</font></td>
-<td width="68%"> reports the string represented by variable 'v'</td></tr>
+<tr><td width="35%"><font color="blue">?_v</font></td>
+<td width="63%"> reports the string represented by variable 'v'</td></tr>
 </table></blockquote>
-<font size="+1" color="blue"><strong><a name="#XY">#XY</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
+<font size="+1" color="blue"><strong><a name="$">$</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
+<blockquote>
+<strong>Description: </strong>
+	CirclePack has a limited ability to do numerical computations.
+	Currently, this is available in limited ways, setting variables
+	and inquiries, as illustrated below.
+</blockquote>
 <blockquote>
 <strong>Description: </strong>
 	For use in 'mytools' that can be drag/dropped onto packing 
@@ -5618,8 +5738,8 @@ these or other functionality)</td></tr>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
-<tr><td width="30%"><font color="blue">set_elist z #XY;flip elist[0]</font></td>
-<td width="68%">  This chooses an edge closest to
+<tr><td width="35%"><font color="blue">set_elist z #XY;flip elist[0]</font></td>
+<td width="63%">  This chooses an edge closest to
 xy-coords of the mouse, then executes the 'flip' command for the resulting edge.
 </td></tr>
 </table></blockquote>

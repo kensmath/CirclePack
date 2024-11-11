@@ -212,7 +212,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 		imageContextReal.setColor(CPBase.defaultCircleColor);
 		
 		// GUI
-		// reset disp_text in "Screen" panel
+		// reset 'flagField' in "Screen" panel
         // if this is active, reset current settings
 		if (!startup && CPBase.GUImode!=0) { 
 			setPackName();

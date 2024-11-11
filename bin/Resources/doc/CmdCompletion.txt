@@ -1,7 +1,7 @@
-act {p} 
+act {x} 
 add_bary {f..} 
 add_cir {v..} 
-add_edge {v1 w2  v2 w2 ..} 
+add_edge {v1 w1  v2 w2 ..} 
 add_face_triple {f..} 
 add_gen {n} [{d}] [-dt] [-b {w..}] 
 add_ideal [-fs] {v..} 
@@ -9,6 +9,7 @@ add_layer [-dt] {n} v w
 adjacency [-t] {file} 
 adjoin {p q v w n} [or: {p q v w (v,u)}] 
 adjust_rad {f} {v..} 
+adjust_sch {f} {v w..} 
 alpha {v} 
 alt_rect {v0..v3} 
 aspect {a b c d} 
@@ -17,7 +18,6 @@ beta {v}
 BeurlingFlow ('BF' PackExtender) 
 blend -q{qnum} v n 
 break 
-brooks [OPTIONS] {VH...} ('BQ' pack extension) 
 cd {..} 
 center_point {x y} 
 center_vert {v} 
@@ -28,13 +28,12 @@ cir_invert [-u] {v} {w}
 Cleanse 
 cleanse 
 close [window list] 
-color -[cfe] [options] 
+color -[cfeTDQ] [options] 
 cookie [option] {v..} 
-copy {p} 
-count -[vef] {..} 
+copy {q} 
+count -[veft] {..} 
 create {type} [options] 
-DCEL [options] 
-debug [drsex] 
+debug [dsrex] 
 delaunay -[cfgs] 
 Disp [options ...] (see 'disp') 
 disp [options ... ] (also 'Disp') 
@@ -48,16 +47,10 @@ embed -q{q} a b A B
 encircle {v..} 
 enclose -[t] n {v..} 
 erf_ftn {p1 p2 n} 
-eucl_write {file} 
-exec [-n {moniker}] {command} 
 exit 
 extender  -[xr] {type} 
 face_err x {f..} 
 fexec [-s] {filename} 
-f_index {f j ..} 
-f_next {f g ..} 
-f_red {f i..} 
-f_rnext {f g..} 
 fix [options] 
 Fix 
 flat_hex {v..} 
@@ -158,7 +151,7 @@ sch_data [d] [-rc] N -a {filename}
 sch_report -[[ce]{flags}] {..} 
 screendump [-m -d -b -n] 
 script [filename] 
-seed [-q] [n] 
+seed [-qm] [n] 
 set_accur {x} 
 set_active {v} 
 set_aim [{a v..} -[cdx%] 
@@ -171,6 +164,7 @@ set_cycle {n}
 set_dir {dir_name} 
 set_disp_flags {flags} 
 set_display [-m] 
+set_Dlist -[options] [x ..] 
 set_dump_format [format] 
 set_elist {e..} 
 set_Elist {e..} 
@@ -282,6 +276,6 @@ zip n v
 ?bdry_length {v} 
 ?script name 
 ?map_rev {v} 
-#XY 
+$ 
 [{script cmd}] 
 {..cmd..} 

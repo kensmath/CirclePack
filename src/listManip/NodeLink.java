@@ -113,9 +113,10 @@ public class NodeLink extends LinkedList<Integer> {
 	}
 	
 	/**
-	 * Add links to this list (if it is associated with PackData). Note
-	 * that argument should not be empty since 'a" would have been
-	 * added as default.
+	 * Add links to this list (if it is associated 
+	 * with PackData). Note that argument should not 
+	 * be empty since 'a" would have been added 
+	 * as default.
 	 * @param datastr String
 	 * @return int, count
 	 */	

@@ -145,8 +145,9 @@ public class TrafficCenter {
 
 		int cmdCount = 0;
 		
-		// CAUTION: 'packnum' is overall pack number; commands can change 
-		//    it globally or can change it temporarily just for itself.
+		// CAUTION: 'packnum' is overall pack number; 
+		// commands can change it globally or can 
+		// change it temporarily just for itself.
 		int packnum = rP.packData.packNum;
 		int newpnum = packnum;
 
@@ -293,7 +294,7 @@ public class TrafficCenter {
 			//   since here we just change 'cmds[j]' to 'set_variable'
 			if (cmds[j].contains(":=")) {
 				int k = cmds[j].indexOf(":=");
-				if (k < 1) {
+				if (k<=0 ) {
 					rP.errorMsgs = new String("malformed ':=' attempt");
 					rP.msgs = new String("-" + cmdCount);
 					return;
@@ -304,8 +305,9 @@ public class TrafficCenter {
 				if (m > 0)
 					vname = vname.substring(m + 1);
 				
-				// common mistake: first char might be '_' (which should be used 
-				//     only for referring to existing variable)
+				// common mistake: first char might be '_' 
+				//   (which should be used only for referring 
+				//   to an existing variable)
 				if (vname.charAt(0)=='_') { 
 					if (vname.length()==1) {
 						rP.errorMsgs = new String("malformed ':=' attempt. Extraneous '_' perhaps?");
@@ -314,10 +316,13 @@ public class TrafficCenter {
 					}
 					vname=vname.substring(1); // omit the '_' symbol
 				}
-				
 				k +=2; // move beyond ":="
+				
+				// make sure name contains only letters
+				//   and digits
 					
-				// rest = string value of this variable, may have variables itself 
+				// rest = string value of this variable, 
+				//    may have variables itself 
 				if (k>=cmds[j].length() || cmds[j].substring(k).trim().length()==0)
 					continue; 
 				String valu = StringUtil.varSub(cmds[j].substring(k).trim());

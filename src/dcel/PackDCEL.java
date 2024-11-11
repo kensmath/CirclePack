@@ -220,6 +220,7 @@ public class PackDCEL {
 		vertices=new_vs;
 		return sizeLimit;
 	}
+	
 	/**
 	 * Create and populate 'triData[]'. This loads 'radii', 
 	 * 'invDist's, 'aim'.
@@ -1319,14 +1320,14 @@ public class PackDCEL {
 	 * with 'twinRed', then compute location g would have if it
 	 * shared edge (v,w) with f and go from g to f. 
 	 * @param he HalfEdge
-	 * @return Complex[2] or null
+	 * @return Complex[2], entries may be null
 	 */
 	public Complex[] getDualEdgeEnds(HalfEdge he) {
 		Complex[] pts=new Complex[2];
 		DcelFace f=he.face;
 		DcelFace g=he.twin.face;
 		if (f.faceIndx<0) 
-			return null;
+			return pts;
 		
 		pts[1]=getFaceCenter(f).center;
 		
@@ -1461,8 +1462,8 @@ public class PackDCEL {
 	/**
 	 * Find the official rad/cent for the origin of the 
 	 * given 'HalfEdge'. If the origin is 'RedVertex', 
-	 * then look clw for first 'RedEdge'. If normal 
-	 * 'Vertex', then data is stored in 'PackData.vData'. 
+	 * then look clw for first 'RedEdge'. If normal non-red, 
+	 * then data is stored in 'PackData.vertices[]'. 
 	 * @return CircleSimple
 	 */
 	public CircleSimple getVertData(HalfEdge edge) {
@@ -1553,9 +1554,9 @@ public class PackDCEL {
 	}
 	
 	/**
-	 * Set center for v in all locations and in any associated 
-	 * 'RedEdges'. (Compare with 'setCent4Edge' which only set's 
-	 * the value associated with one edge.)
+	 * Set center for v in all locations and in any 
+	 * associated 'RedEdges'. (Compare with 'setCent4Edge' 
+	 * which only set's the value associated with one edge.)
 	 * @param v int
 	 * @param z Complex
 	 */

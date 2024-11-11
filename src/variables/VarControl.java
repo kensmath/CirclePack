@@ -127,7 +127,7 @@ public class VarControl {
 		// this is form '{..cmd..}', so do a 'valueExecute', 
 		if (c=='{') {
 			theStuff=StringUtil.
-					getBracesString(StringUtil.reconstitute(flagSegs));
+				getBracesString(StringUtil.reconstitute(flagSegs));
 			CallPacket cP=CommandStrParser.valueExecute(p,theStuff);
 			if (cP==null || cP.error)
 				return false;
@@ -138,6 +138,17 @@ public class VarControl {
 					varModel.put(vkey,cP.double_vec.get(0).toString());
 				else if (cP.int_vec!=null)
 					varModel.put(vkey,cP.int_vec.get(0).toString());
+				return true;
+			} catch (Exception ex) {
+				return false;
+			}
+		}
+		
+		// math comp case
+		if (c=='$') {
+			theStuff=StringUtil.getMathString(StringUtil.reconstitute(flagSegs));
+			try {
+				varModel.put(vkey, theStuff);
 				return true;
 			} catch (Exception ex) {
 				return false;

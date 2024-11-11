@@ -1534,11 +1534,11 @@ public class FaceLink extends LinkedList<Integer> {
 	/**
 	 * Make up list by looking through SetBuilder specs 
 	 * (from {..} set-builder notation). Use 'tmpUtil' 
-	 * to collect information before creating the NodeLink 
+	 * to collect information before creating the FaceLink 
 	 * for return.
 	 * @param p PackData
 	 * @param specs Vector<SelectSpec>
-	 * @return NodeLink list of specified faces.
+	 * @return FaceLink list of specified faces.
 	 */
 	public static FaceLink facesSpecs(PackData p,Vector<SelectSpec> specs) {
 		if (specs==null || specs.size()==0) 

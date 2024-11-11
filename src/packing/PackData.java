@@ -717,8 +717,8 @@ public class PackData{
 	}
 	
 	/**
-	 * Return center as a new 'Complex'; if v is red, this 
-	 * may be stored in nearest clw red edge.
+	 * Return center as a new 'Complex'; if v is red, 
+	 * this may be stored in nearest clw red edge.
 	 * @param v int
 	 * @return new Complex
 	 */
@@ -727,7 +727,17 @@ public class PackData{
 		z=packDCEL.getVertCenter(packDCEL.vertices[v].halfedge);
 		return z;
 	}
-	
+
+	/**
+	 * Return 'CircleSimple'; if v is red, this may be 
+	 * stored in nearest clw red edge.
+	 * @param v int
+	 * @return new CircleSimple
+	 */
+	public CircleSimple getData(int v) {
+		return new CircleSimple(getCenter(v),getRadius(v));
+	}
+
 	/**
 	 * Get clone of face color
 	 * @param f int
@@ -844,10 +854,10 @@ public class PackData{
 	}
 	
 	/**
-	 * Return the stored radius; if v is a red vertex, this may be
-	 * stored in a red edge. This means in the hyp case,
-	 * return the x-radius. (See 'getActualRadius' to instead
-	 * convert x-radius to actual hyp radius.).
+	 * Return the stored radius; if v is a red vertex, 
+	 * this may be stored in a red edge. In the hyp
+	 * case, return the x-radius. (See 'getActualRadius' 
+	 * to instead convert x-radius to actual hyp radius.).
 	 * @param v int
 	 * @return double
 	 */
@@ -857,11 +867,12 @@ public class PackData{
 	  
 	/**
 	 * Store given radius 'r' in internal form. Only 
-	 * issue is in hyp case: when r>8.0, treat as horocycle,
+	 * issue is hyp case: when r>8.0, treat as horocycle,
 	 * when 'r' is the actual hyperbolic radius, 
 	 * it is converted to x_radius for storage.  
-	 * For numerical reasons, small hyp radii 'r' is converted 
-	 * to x=2*r*(2-r*(1-2*r/3)). (Recall x=1-exp(-2h)=1-s^2.)
+	 * For numerical reasons, small hyp radii 'r' is 
+	 * converted to x=2*r*(2-r*(1-2*r/3)). 
+	 * (Recall x=1-exp(-2h)=1-s^2.)
 	 * @param v int
 	 * @param r double
 	 */
@@ -3235,7 +3246,7 @@ public class PackData{
 //	    be a max packing of the disc.
 		if (debug) { // debug=true;
 		  	CommandStrParser.jexecute(this,"copy 1");
-		  	CommandStrParser.jexecute(CirclePack.cpb.packings[2],"disp -w -c");
+		  	CommandStrParser.jexecute(CPBase.packings[2],"disp -w -c");
 		}
 
 	    for (int j=1;j<=nodeCount;j++) { // scale, rotate
@@ -3244,10 +3255,10 @@ public class PackData{
 	    	setRadius(j,lam*getRadius(j));
 	    }
 	    
-	    
-	    
 	    geom_to_s(); // project to sphere 
   	  	setGeometry(1);
+  	  	cpDrawing.setPackName();
+
 
   		try { 
   			packDCEL.redChain=null;
@@ -4767,9 +4778,10 @@ public class PackData{
 	  }
 	  
 	  /**
-	   * We are operating on this packing. Each edge gets new vertex, 
-	   * each face broken into 4 faces. Try to propagate old centers/radii,
-	   * overlaps, schwarzians to new edges. Return 0 on failure.
+	   * We are operating on this packing. Each edge 
+	   * gets new vertex, each face broken into 4 faces. 
+	   * Try to propagate old centers/radii, overlaps, 
+	   * schwarzians to new edges. Return 0 on failure.
 	  */
 	  public int hex_refine() {
 		  RawManip.hexBaryRefine_raw(packDCEL,false);

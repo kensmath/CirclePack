@@ -103,6 +103,7 @@ import math.Mobius;
 import microLattice.MicroGrid;
 import microLattice.Smoother;
 import packing.CPdrawing;
+import packing.Interpolator;
 import packing.PackCreation;
 import packing.PackData;
 import packing.PackExtender;
@@ -132,6 +133,7 @@ import util.StringUtil;
 import util.TriAspect;
 import util.UtilPacket;
 import util.ViewBox;
+import util.ZRhold;
 import widgets.CreateSliderFrame;
 import widgets.SliderFrame;
 import workshops.LayoutShop;
@@ -165,8 +167,8 @@ public class CommandStrParser {
   }
   
   /**
-	 * This is where individual commands are analyzed and sent 
-	 * to appropriate Java routines. 
+	 * This is where individual commands are analyzed 
+	 * and sent to appropriate Java routines. 
 	 * 
 	 * Commands arriving are individual commands: 
 	 * preprocessing leaves
@@ -178,11 +180,12 @@ public class CommandStrParser {
 	 *   no '|pe|' 'PackExtender' calls:
 	 *   no '-p' flag (already caught):
 	 *   
-	 * This routine handles housekeeping, separating cmd and
-	 * flag sequences, then catching a small number of certain
-	 * commands. Note that there is a call to 'packExecute' 
-	 * for commands requiring pack status. Commands not
-	 * requiring pack status, are then processed in a switch 
+	 * This routine handles housekeeping, separating 
+	 * cmd and flag sequences, then catching a small 
+	 * number of certain commands. Note that there 
+	 * is a call to 'packExecute' for commands 
+	 * requiring pack status. Commands not requiring 
+	 * pack status, are then processed in a switch 
 	 * based on the command's first letter. 
 	 * 
 	 * @param PackData packData
@@ -290,7 +293,8 @@ public class CommandStrParser {
 	  } // done with screen size changes
 	  
 	  /* =============================================================
-	   * First, check for certain commands with multiple names
+	   * First, check for certain commands with 
+	   * multiple names
 	   */
 	  
 	  // 
@@ -2704,6 +2708,8 @@ public class CommandStrParser {
 			  return count;
 		  }
 		  
+
+			  
 	      // ============ mode_change =============
 		  else if (cmd.startsWith("mode_chan")) {
 	    	  String str=null;
@@ -2721,6 +2727,23 @@ public class CommandStrParser {
 			  PackControl.activeFrame.mainToolHandler.setCanvasMode(ActiveWrapper.defaultMode);
 			  return 1;
 	      }
+	      // ============ msg =============
+		  else if (cmd.startsWith("msg") || 
+				  cmd.startsWith("messa")) {
+			  if (flagSegs.size()>0) {
+				  StringBuilder strbld=
+					new StringBuilder();				  items=flagSegs.get(0);
+				  for (int j=0;j<items.size();j++) {
+					  strbld.append(items.get(j));
+					  strbld.append(" ");
+				  }
+				  
+				  CirclePack.cpb.msg(strbld.toString());
+				  return 1;
+			  }
+			  return 0;
+		  }
+		  
 	      break;
 	  }
 	  case 'M':
@@ -4113,11 +4136,10 @@ public class CommandStrParser {
           }// done with 'set_screen' (with 'status' false)
     	  
     	  // ========= set_disp_flags =============
-          if (cmd.startsWith("disp_str") || cmd.startsWith("disp_fla") || 
-        		  cmd.startsWith("disp_text")) {
+          if (cmd.startsWith("disp_fla")) {
         	  /* CirclePack sends a string to put in DispOptions of 
         	   * designated packing; if this is the active pack, the 
-        	   * string is displayed as dispText and checkbox is set.
+        	   * string is displayed as 'dispText' and checkbox is set.
         	   */
         	  // Reconstitute the string from flag segments, with 
         	  //    separating spaces
@@ -4294,15 +4316,23 @@ public class CommandStrParser {
           }	
           
           // ========== set_variable ================
-          // NOTE: may be reconstructed from ":=" command, see 'TrafficCenter'
+          // NOTE: may be constructed from ":=" command, 
+          //   see 'TrafficCenter'
           
-          // TODO: two forms, vname:=?querystring and vname:={..cmd..} should trigger
-          //       calls to commands returning values, as in 'valueExecute'.
+          // TODO: two forms, vname:=?querystring and 
+          //   vname:={..cmd..} should trigger calls 
+          //   to commands returning values, as in 
+          //   'valueExecute'.
           if (cmd.startsWith("var")) {
         	  String vname=null;
-        	  try {
-//        		  items=flagSegs.get(0);
-        		  vname=items.remove(0); // no white space allowed in name
+        	  try { // only letters/digits allowed in name
+        		  StringBuilder nbld=
+        			new StringBuilder(items.remove(0));
+        		  for (int j=0;j<nbld.length();j++) {
+        			  if (!Character.isLetterOrDigit(nbld.charAt(j)))
+        				  throw new ParserException("");
+        		  }
+        		  vname=nbld.toString();
         	  } catch (Exception ex) {
         		  throw new ParserException("problem getting variable name");
         	  }
@@ -5017,8 +5047,9 @@ public class CommandStrParser {
   
   
   /**
-   * internally called to handle packings with 'status' true.
-   * @param packData @see PackData
+   * internally called to handle packings with 'status' 
+   * true.
+   * @param packData PackData
    * @param cmd String
    * @param flagSegs Vector<Vector<String>>
    * @return int
@@ -5741,7 +5772,7 @@ public class CommandStrParser {
 	        if (StringUtil.isFlag(str)) {
 	            if (!str.startsWith("-u")) 
 	            	throw new ParserException(
-	            			"usage: must start with -u");
+	            			"usage: only flag is -u");
 	            ctr2=new Complex(0.0);
 	            CPrad2=1.0;
 	            u_flag=true;
@@ -5912,11 +5943,13 @@ public class CommandStrParser {
 			// =============== dual_layout (replaced 'sch_layout')
 			if (cmd.startsWith("dual_lay")) {
 				
-				// always convert to euclidean; if you
+				// always convert to spherical; if you
 				// don't want this, make call via "layout -s".
 				jexecute(packData,"geom_to_s");
 				HalfEdge firsthe=packData.packDCEL.layoutOrder.get(0);
 				double base_rad=.25;
+				
+				// first face is an equilateral triangle
 				packData.packDCEL.setRad4Edge(firsthe,base_rad);
 				packData.packDCEL.setRad4Edge(firsthe.next,base_rad);
 				packData.packDCEL.setRad4Edge(firsthe.next.next,base_rad);
@@ -6278,21 +6311,26 @@ public class CommandStrParser {
 		  
 		  // ========= disp (and dISp) ======== 
 	      // 'dISp' is used internally: just paint active, not secondary canvasses
-	      if (cmd.startsWith("dISp") || cmd.startsWith("disp")
-	    		  || cmd.startsWith("DISp") || cmd.startsWith("Disp")) {
+	      if (cmd.startsWith("disp") || cmd.startsWith("Disp")
+	    		  || cmd.startsWith("dISp") || cmd.startsWith("DISp")) {
 	    	  String setText=null;
 	    	  if (cmd.charAt(0)=='D')
 	    		  setText=StringUtil.reconstitute(flagSegs);
 	    	  boolean dispLite=false; // disp only the active canvas?
 	    	  if (cmd.charAt(1)=='I') dispLite=true; // yes, only active
 			  
-			  // No flag strings? use dispOptions 
+			  // No flag strings? Use dispOptions, else no action 
 			  // (DisplayPanel (checkboxes or tailored string))
 			  if (flagSegs==null || flagSegs.size()==0) {
-				  String tmpstr=new String("disp -wr");
-				  jexecute(packData,tmpstr);
+				  String tmpstr=packData.cpDrawing.dispOptions.toString().trim();
+				  if (tmpstr.length()==0)
+					  return 1; // no error, but no action
+				  StringBuilder strbld=new StringBuilder(cmd);
+				  strbld.append(" ");
+				  strbld.append(tmpstr);
+				  jexecute(packData,strbld.toString());
 				  if (setText!=null && !dispLite) // record as display text?
-					  jexecute(packData,new String("set_disp_text "+setText));
+					  jexecute(packData,new String("set_disp_flags "+setText));
 				  return 1;
 			  }
 			  
@@ -6305,7 +6343,7 @@ public class CommandStrParser {
 					  String tmpstr=packData.cpDrawing.dispOptions.toString().trim();
 					  if (tmpstr.equals("-w"))
 						  return jexecute(packData,cmd+" ");
-					  // remove redund -w (or -wr)
+					  // remove redundant -w (or -wr)
 					  if (tmpstr.startsWith("-w"))
 						  tmpstr=tmpstr.substring(3); 
 					  return jexecute(packData,cmd+" "+tmpstr);
@@ -6347,7 +6385,7 @@ public class CommandStrParser {
 				  PackControl.canvasRedrawer.
 				  	paintMyCanvasses(packData,dispLite);
 			  if (setText!=null && !dispLite) // record as display text?
-				  jexecute(packData,new String("set_disp_text "+setText));
+				  jexecute(packData,new String("set_disp_flags "+setText));
 			  return count;
 		  } 
 	      break;
@@ -6525,10 +6563,11 @@ public class CommandStrParser {
 	    	  if (StringUtil.isFlag(items.get(0))) 
 	    		  fstr=items.remove(0).substring(1);
 	    	  
-	    	  // Check for 'h' flag first, to project forward to 
-	    	  // next (half-hex) edge, then flip clockwise edge 
-	    	  // from that. The next edge itself is stored in 'elist'
-	    	  // in case this is called again.
+	    	  // Check for 'h' flag first: project edge {v,w} 
+	    	  //   forward to next (half-hex) edge {w,u}, then 
+	    	  //   flip the edge at v clockwise from {v,w}.
+	    	  //   The next edge {w,u} itself is stored in 'elist'
+	    	  //   to prepare next call.
 
     		  if (fstr.charAt(0)=='h') { 
     			  HalfLink hlink=new HalfLink(packData,flagSegs.get(0));
@@ -7196,7 +7235,7 @@ public class CommandStrParser {
 	      /* 
 	       * Various layout functions, ie., locating circles based on 
 	       * radii and combinatorics; also checking/updating data on
-	       * combinatorics of layout and values of angle sums, etc.
+	       * packing combinatorics, layout order, values of angle sums, etc.
 	       * 
 	       * NOTE: some options change the information held in faces
 	       * about the drawing order, others use various info to
@@ -7218,15 +7257,14 @@ public class CommandStrParser {
 	       *    		  locations of corner.
 	       *    -F        redo everything
 	       *    -h vwn    drawing order by 'hex_walk' routine (not active)
-	       *    -K        redo combinatorics
+	       *    -K        redo combinatorics and dcel
 	       *    -r {f..}  recompute (don't draw) centers along given facelist
 	       *    -s        recompute angle sums
 	       *    -l        suppress poorly placed circles 
 	       *    		  (better to use -cf option above)
 	       *    -t        compute centers from 'tailored' drawing order; 
-	       *              vertices with 'mark'
-	       *              set will not (to extent possible) be used 
-	       *              in drawing order.
+	       *              vertices with 'mark' set will not (to extent 
+	       *              possible) be used in drawing order.
 	       *    -T        same as -t, but routine will NOT use the 
 	       *    		  vertices with 'mark' set; it will simply stop 
 	       *    		  once it has done all it can without them.
@@ -7300,7 +7338,7 @@ public class CommandStrParser {
 	    				  if (packData.genus!=1 || packData.getBdryCompCount()!=0) {
 	    					  CirclePack.cpb.errMsg(
 	    							  "usage: 'layout -dt' only applies to "+
-	    							  "complex that is a torus.");
+	    							  "complex that is a 1-torus.");
 	    					  break;
 	    				  }
 		    				
@@ -7812,6 +7850,71 @@ public class CommandStrParser {
 	    	  packData.packDCEL.fixDCEL(packData);
 	    	  return rslt;
 	      }
+		  
+		  // ============ motion =============10/2024
+		  else if (cmd.startsWith("moti")) {
+			  // capture the initial centers/radii
+			  ArrayList<ZRhold> bottom=Interpolator.loadZR(packData);
+			  int N=75; //default
+			  double delay=.004;
+			  StringBuilder quoted;
+			  
+			  // quoted string is last string of last entry
+			  int fn=flagSegs.size();
+			  int in=flagSegs.get(fn-1).size();
+			  quoted=new StringBuilder(
+				  flagSegs.get(fn-1).remove(in-1).trim());
+			  if (quoted.charAt(0)!='\"')
+				  throw new ParserException("motion usage: missing commands");
+			  
+			  // are there any flags?
+			  Iterator<Vector<String>> fit=flagSegs.iterator();
+			  while (fit.hasNext()) {
+				  items=fit.next();
+				  if (items.size()==2)
+				  try {
+					  if (items.get(0).startsWith("-d")) {
+						  double d=Double.parseDouble(items.remove(1));
+						  delay=d;
+					  }
+					  else if (items.get(0).startsWith("-n")) {
+						  int n=Integer.parseInt(items.remove(1));
+						  if (n>1)
+							  N=n;
+					  }		
+				  } catch(Exception ex) {
+					  throw new ParserException(
+						  "motion usage: motion -d {x} -n {k} cmds");
+				  }
+			  }
+
+			  quoted.deleteCharAt(0);
+			  int k=quoted.indexOf("\"");
+			  quoted.deleteCharAt(k);
+					  
+			  String cmds=quoted.toString();
+
+			  ResultPacket rP=new ResultPacket(CirclePack.cpb.
+					  getActivePackData(),cmds);
+			  CPBase.trafficCenter.parseCmdSeq(rP,0,null);
+			  int ans=Integer.valueOf(rP.cmdCount);
+			  if (ans==0) // if it failed
+				  return 0;
+
+			  // now interpolate: 'bottom' --> new packing
+			  Interpolator inlator=new Interpolator(bottom,packData,N);
+			  for (int jj=1;jj<=N;jj++) {
+				  ArrayList<ZRhold> zrh=inlator.get(jj);
+				  Interpolator.restoreZR(packData,zrh);
+				  jexecute(packData,"disp");
+				  try {
+					  Thread.sleep((long) (delay * 1000.0));
+				  } catch (InterruptedException ie) {}
+				  count++;
+			  }
+			  jexecute(packData,"disp -wr");
+			  return count;
+		  }
 		  break;
 	  } // end of 'm' and 'M'
 	  case 'n': // fall through
@@ -8281,7 +8384,7 @@ public class CommandStrParser {
 	    		   -t x   dilation amount; sets ratio of spherical radii, alpha/S.
 	    		          default is "-t 1" (equal radii at N and S). */   	  
 	    	  if (packData.hes>=0 || packData.getBdryCompCount()!=1) {
-	    		  throw new ParserException("invalid packing, check conditions");
+	    		  throw new ParserException("packing must be hyperbolic");
 	    	  }
 
 	    	  // find vertex to be put at 1 on equator
@@ -10875,7 +10978,7 @@ public static CallPacket valueExecute(PackData packData,
 		    		NodeLink vertlist=new NodeLink(packData,items);
 		    		count=NodeLink.countMe(vertlist);
 		    		if (count==0) {
-		    			CirclePack.cpb.msg("count: no vertices specified");
+		    			CirclePack.cpb.msg("count -v: no vertices specified");
 		    			return null;
 		    		}
 		    		CirclePack.cpb.msg("count of vertices: "+count);
@@ -10893,7 +10996,7 @@ public static CallPacket valueExecute(PackData packData,
 		    			FaceLink facelist=new FaceLink(packData,items);
 		    			count=FaceLink.countMe(facelist);
 		    			if (count==0) {
-		    				CirclePack.cpb.msg("count: no faces specified");
+		    				CirclePack.cpb.msg("count -f: no faces specified");
 		    				return null;
 			    		}
 			    		CirclePack.cpb.msg("count of faces: "+count);
@@ -10906,7 +11009,7 @@ public static CallPacket valueExecute(PackData packData,
 		    		{
 		    			EdgeLink edgelist=new EdgeLink(packData,items);
 		    			if (edgelist==null || (count=edgelist.size())==0) {
-		    				CirclePack.cpb.msg("count: no edges specified");
+		    				CirclePack.cpb.msg("count -e: no edges specified");
 		        			return null;
 		    			}
 		    			CirclePack.cpb.msg("count of edges: "+count+
@@ -10916,15 +11019,30 @@ public static CallPacket valueExecute(PackData packData,
 			    		rtnCp.int_vec.add(count);
 			    		return rtnCp;
 		    		}
-		    		
-		    		// TODO: might want 't' option for tiles
+		    		case 't': // tiles (if they exist)
+		    		{
+		    			if (packData.tileData==null)
+		    				return null;
+		    			TileLink tilelist=new TileLink(packData.tileData,items);
+		    			if (tilelist==null || (count=tilelist.size())==0) {
+		    				CirclePack.cpb.msg("count -t: no tiles specified");
+		        			return null;
+		    			}
+		    			CirclePack.cpb.msg("count of tiles: "+count+
+		    					"(with possible redundancies, orientations) ");
+			    		rtnCp=new CallPacket("count");
+			    		rtnCp.int_vec=new Vector<Integer>();
+			    		rtnCp.int_vec.add(count);
+			    		return rtnCp;
+		    			
+		    		}
 		    		
 		    		default: // default to vertices
 		    		{
 		    			NodeLink vertlist=new NodeLink(packData,items);
 			    		count=NodeLink.countMe(vertlist);
 			    		if (count==0) {
-			    			CirclePack.cpb.msg("count: no vertices specified");
+			    			CirclePack.cpb.msg("count -v: no vertices specified");
 			    			return null;
 			    		}
 			    		CirclePack.cpb.msg("count of vertices: "+count);

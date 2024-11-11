@@ -1,5 +1,6 @@
 package infoProcessing;
 
+import java.awt.Frame;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -88,7 +89,12 @@ public class Info2HTML {
 				fp.write("Here is an alphabetic listing of all the commands "+
 						"which the user can issue to <em>CirclePack</em> via "+
 						"its <strong>command</strong> line or in its scripts, "+
-						"along with their various flags and options.<br/><br/>\n");
+						"along with their various flags and options. "+
+						"Commands, command strings, any command output, and "+
+						"a count of successfully executed commands will appear "+
+						"in the <strong>Messages</strong> frame. "+
+						"In a command string, a failed command will abort the "+
+						"remainder of the commands.<br/><br/>\n");
 						
 				NodeList cmdNodes=mainNode.getChildNodes();
 				for (int j=0;j<cmdNodes.getLength();j++) {
@@ -231,15 +237,15 @@ public class Info2HTML {
 										if (txt.getNodeName().equals("instance")) {
 											NamedNodeMap exMap=txt.getAttributes();
 											if ((explain=exMap.getNamedItem("text"))!=null) {
-												fp.write("<tr><td width=\"30%\"><font color=\"blue\">"
+												fp.write("<tr><td width=\"35%\"><font color=\"blue\">"
 														+explain.getNodeValue()+"</font></td>\n");
 											}
 											else // no text
-												fp.write("<tr><td width=\"30%\"></td>\n");
+												fp.write("<tr><td width=\"35%\"></td>\n");
 											String expl=null;
 											if (txt.getFirstChild()!=null 
 													&& (expl=txt.getFirstChild().getNodeValue())!=null);
-											fp.write("<td width=\"68%\">"+expl+"</td>");
+											fp.write("<td width=\"63%\">"+expl+"</td>");
 											fp.write("</tr>\n");
 										}
 									} // cycle through instances
@@ -270,6 +276,20 @@ public class Info2HTML {
 									fp.write(strbuf.toString() + "<br/><br/>\n"); //"<blockquote>\n");
 								}
 							} // done with 'seealso'
+							else if (word.equals("note")) {
+								String str=null;
+								if (next.getFirstChild()!=null 
+										&& (str=next.getFirstChild().getNodeValue())!=null);
+									fp.write("<blockquote>\n"+"<strong>Note: "+
+											"</strong>"+str+"</blockquote>\n");
+							} // done with 'note'
+							else if (word.equals("caution")) {
+								String str=null;
+								if (next.getFirstChild()!=null 
+										&& (str=next.getFirstChild().getNodeValue())!=null);
+									fp.write("<blockquote>\n"+"<strong>CAUTION: "+
+											"</strong>"+str+"</blockquote>\n");
+							} // done with 'caution'
 						}
 						//fp.write("</blockquote><br/>\n");
 					}

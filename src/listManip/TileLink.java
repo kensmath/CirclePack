@@ -107,7 +107,8 @@ public class TileLink extends LinkedList<Integer> {
 	public int addTileLinks(Vector<String> items) {
 		int count=0;
 	
-		if (myTD==null || myTD.tileCount<=0) return -1;
+		if (myTD==null || myTD.tileCount<=0) 
+			return -1;
 		int tilecount=myTD.tileCount;
 		
 		Iterator<String> its=items.iterator();

@@ -1702,10 +1702,10 @@ public class RawManip {
 	  }
 	  
 	  /**
-	   * Given initial HalfEdge <v.w>, do two things: 
+	   * Given initial HalfEdge {v.w}, do two things: 
 	   * (1) advance in half-hex direction (pass two edges on left) 
-	   * for new 'baseEdge' <w,u> and
-	   * (2) flip the next clw edge about v, <v,c>, if possible.
+	   * for new 'baseEdge' {w,u} and
+	   * (2) flip the next clw edge about v, {v,c}, if possible.
 	   * Return two 'HalfEdge's: [0] is new 'baseEdge' and
 	   * [1] is the edge resulting from the flip. If we can't
 	   * advance, then return null. If we an advance, [1] may
@@ -1850,30 +1850,33 @@ public class RawManip {
 	  }
 
 	  /**
-	   * Either hex or bary refine the given DCEL. Start either
-	   * process by first dividing each edge in half. Then either 
-	   * add edges between the new edge vertices (hex refining)
-	   * or add a barycenter and new edges (bary refining). We
-	   * return 'ArrayList<Integer>': in baryrefine case, this
-	   * list all the new barycenters, in hexrefine case, it is
-	   * not null but is empty.  
-	   * The 'pdcel.redChain' should remain in tact, but is subdivided 
-	   * to get the new red chain. All original vertices have their 
-	   * original 'halfedge's, 'vutil' holds index of reference 
+	   * Either hex or bary refine the given DCEL. 
+	   * Start either process by first dividing each 
+	   * edge in half. Then either add edges between 
+	   * the new edge vertices (hex refining) or add 
+	   * a barycenter and new edges (bary refining). 
+	   * We return 'ArrayList<Integer>': in baryrefine 
+	   * case, this lists all the new barycenters, in 
+	   * hexrefine case, it is not null but is empty.  
+	   * The 'pdcel.redChain' should remain in tact, 
+	   * but is subdivided to get the new red chain. 
+	   * All original vertices have their original 
+	   * 'halfedge's, 'vutil' holds index of reference 
 	   * verts (see 'reapVUtils').
-	   * Process involves cycling original spokes of original 
-	   * vertices. At the end, 'vertices' is up to date, 'faces' 
-	   * and 'edges' are outdated, but ideal faces and their 
-	   * indices should remain.
+	   * Process involves cycling original spokes of 
+	   * original vertices. At the end, 'vertices' is 
+	   * up to date, 'faces' and 'edges' are outdated, 
+	   * but ideal faces and their indices should remain.
 	   * CAUTION: Here 'pdcel.vertices' will be extended
-	   * as necessary; in 'attachDCEL', pack 'sizeLimit' should
-	   * get adjusted to accommodate.
+	   * as necessary; in 'attachDCEL', pack 'sizeLimit' 
+	   * should get adjusted to accommodate.
 	   * 
 	   * (Nominally works for non-triangular faces, but that has
 	   * not been tested.)
 	   *  
 	   * @param pdcel  PackDCEL
-	   * @param baryFlag boolean; true, then do bary refine, else hex
+	   * @param baryFlag boolean; true, then do 
+	   *     bary refine, else hex
 	   * @return ArrayList<Integer>, may be empty
 	   */
 		public static ArrayList<Integer> hexBaryRefine_raw(PackDCEL pdcel,
@@ -1992,6 +1995,7 @@ public class RawManip {
 							n_midVert.aim=2.0*Math.PI;
 					    pdcel.alloc_vert_space(pdcel.vertCount+10,true);
 					    pdcel.vertCount++;
+					    pdcel.alloc_vert_space(pdcel.vertCount+100,true);
 						pdcel.vertices[pdcel.vertCount] = n_midVert;
 						n_midVert.halfedge = n_newEdge;
 						n_newEdge.origin = n_midVert;
@@ -2099,6 +2103,8 @@ public class RawManip {
 								n_midVert.aim=Math.PI;
 							}
 							else n_midVert.aim=2.0*Math.PI;
+							// to make sure there's space
+						    pdcel.alloc_vert_space(pdcel.vertCount+100,true);
 							pdcel.vertices[pdcel.vertCount] = n_midVert;
 							n_midVert.halfedge = n_newEdge;
 							n_newEdge.origin = n_midVert;
@@ -2201,7 +2207,8 @@ public class RawManip {
 						// new bary center vertex
 						Vertex baryCent=new Vertex(++pdcel.vertCount);
 						barycents.add(pdcel.vertCount); 
-						pdcel.vertices[pdcel.vertCount]=baryCent;
+					    pdcel.alloc_vert_space(pdcel.vertCount+100,true);
+					    pdcel.vertices[pdcel.vertCount]=baryCent;
 						baryCent.cloneData(spoke.origin);
 						baryCent.aim=2.0*Math.PI;
 							

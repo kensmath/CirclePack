@@ -596,10 +596,10 @@ public class GraphLink extends LinkedList<EdgeSimple> {
 							}
 						}
 					}
-				} // end of handling '?list'
+				} 
 				else // no appropriate list
 					return count;
-			}
+			} // end of handling '?list'
 			
 			/* Now parse remaining options based on first character;
 	 		default case, just try to read off pairs of numbers. */

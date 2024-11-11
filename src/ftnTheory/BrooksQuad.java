@@ -99,7 +99,7 @@ public class BrooksQuad extends PackExtender {
 		packData.set_aim_default();
 		normalize();
 		cpCommand("set_screen -d");
-		cpCommand("set_disp_text -w -cf");
+		cpCommand("set_disp_flags -w -cf");
 		draw();
 	}
 	

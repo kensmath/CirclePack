@@ -382,8 +382,11 @@ public class Complex {
 		return x * c.x + y * c.y;
 	}
 
-	/** Convenience routine: treating this complex number as
-	 * (theta,phi) for the sphere, return the associated 3D point.
+	/** 
+	 * Convenience routine: treating this complex 
+	 * number as (theta,phi) for the sphere, return 
+	 * the associated 3D point.
+	 * @return Point3D
 	 */
 	public Point3D getAsPoint() {
 		return new Point3D(Math.sin(y) * Math.cos(x),

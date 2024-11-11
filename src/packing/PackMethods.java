@@ -23,9 +23,9 @@ import util.PathBaryUtil;
 public class PackMethods {
 	
 	/** 
-	 * Specialized routine for sending paths in barycentric coordinates
-	 * to a file, part of the work with John Bowers for 3D printing 
-	 * software. 
+	 * Specialized routine for sending paths in barycentric 
+	 * coordinates to a file, part of the work with John 
+	 * Bowers for 3D printing software. 
 	 * 
 	 * We write the dual graph of 'p' to a file. The path is 
 	 * represented as a chain of face/start bary/end bary groups
@@ -95,8 +95,9 @@ public class PackMethods {
 	}
 
 	/**
-	 * For eucl packing with 'xyzpoint' data, this computes the ratios 3D/2D.
-	 * The first spot is unused. The 3D areas are stored in p.utilDoubles
+	 * For eucl packing with 'xyzpoint' data, this 
+	 * computes the ratios 3D/2D. The first spot is 
+	 * unused. The 3D areas are stored in p.utilDoubles
 	 * @param p PackData
 	 * @return Vector<Double>, null on error
 	 */

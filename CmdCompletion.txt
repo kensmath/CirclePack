@@ -48,16 +48,10 @@ embed -q{q} a b A B
 encircle {v..} 
 enclose -[t] n {v..} 
 erf_ftn {p1 p2 n} 
-eucl_write {file} 
-exec [-n {moniker}] {command} 
 exit 
 extender  -[xr] {type} 
 face_err x {f..} 
 fexec [-s] {filename} 
-f_index {f j ..} 
-f_next {f g ..} 
-f_red {f i..} 
-f_rnext {f g..} 
 fix [options] 
 Fix 
 flat_hex {v..} 

@@ -28,9 +28,9 @@ brooks {}		cir_invert {v w}
 color			create_parent 		delay {t}
 diagnostics		double			draw_order
 embed {}		elist			encircle
-erf {p1 p2 n}		eucl_write {file}	
+erf {p1 p2 n}			
 flist			fexec {file}		f_index {f j..}
-flat_hex {v}		flip {v w..}		f_next {f g..}
+flat_hex {v}		flip {v w..}	
 gen_cut {v} {n}		gen_islands {v}		gen_mark
 get_data 		hex_refine 		h_dist {z w}
 h_g_bar

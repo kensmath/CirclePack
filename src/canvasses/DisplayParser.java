@@ -53,9 +53,10 @@ import workshops.LayoutShop;
 public class DisplayParser {
 	
 	/**
-	 * Display objects from packing p on its own @see CPDrawing
-	 * based on flag segments given in 'flagSegs' 
-	 * @param p @see PackData
+	 * Display objects from packing p on its own 
+	 * 'CPDrawing' based on flag segments 
+	 * given in 'flagSegs' 
+	 * @param p PackData
 	 * @param flagSegs
 	 * @return int, count of display actions
 	 */
@@ -64,10 +65,11 @@ public class DisplayParser {
 	}
 	
 	/**
-	 * Display objects from packing p on designated @see CPDrawing
-	 * based on flag segments given in 'flagSegs' 
-	 * @param p @see PackData
-	 * @param cpDrawing @see CPDrawing
+	 * Display objects from packing p on designated 
+	 * 'CPDrawing' based on flag segments given in 
+	 * 'flagSegs' 
+	 * @param p PackData
+	 * @param cpDrawing CPDrawing
 	 * @param flagSegs
 	 * @return int, count of display actions
 	 */
@@ -81,8 +83,8 @@ public class DisplayParser {
 		Iterator<Vector<String>> its = flagSegs.iterator();
 
 		while (its.hasNext()) {
-			Vector<String> items = (Vector<String>) its.next();
-			if (!StringUtil.isFlag(items.get(0)))
+			Vector<String> items = (Vector<String>)its.next();
+			if (!StringUtil.isFlag(items.get(0))) // must have a flag
 				return count;
 
 			/* ============ the work is in processing ======== */
@@ -94,7 +96,8 @@ public class DisplayParser {
 			
 			// first, those cases NOT using 'DispFlags' options
 			if (c == 'n' || c == 'x') {
-				if (c == 'n') { // various labels
+				// various labels
+				if (c == 'n') { 
 					if (sub_cmd.length() == 0)
 						break;
 					char sc = sub_cmd.charAt(0);
@@ -125,8 +128,8 @@ public class DisplayParser {
 					}
 				} // end of 'n'
 
-				else if (c == 'x') { // set display/undisplay mode for coord
-										// axes
+				// set display/undisplay mode for coord axes
+				else if (c == 'x') { 
 					if (sub_cmd.length() > 0 && sub_cmd.charAt(0) == 'u')
 						cpDrawing.setAxisMode(false);
 					else
@@ -392,7 +395,8 @@ public class DisplayParser {
 						z = p.getCenter(v);
 
 						// color? label?
-						if (!dispFlags.colorIsSet && (dispFlags.fill || dispFlags.colBorder))
+						if (!dispFlags.colorIsSet && (dispFlags.fill || 
+								dispFlags.colBorder))
 							dispFlags.setColor(p.getCircleColor(v));
 						if (dispFlags.label)
 							dispFlags.setLabel(Integer.toString(v));
@@ -689,7 +693,7 @@ public class DisplayParser {
 					count++;
 				}
 				break;
-			}
+			} // done with 'h'
 			case 'P': // pavers --- i.e., polygons defined by outer edges of
 				// faces sharing specified vertices (see 'pave' command);
 			{
@@ -811,7 +815,7 @@ public class DisplayParser {
 					}
 				}
 				break;
-			}
+			} // done with 'R'
 			case 's': // shape defined by comb geodesics through vert list 
 			{
 				if (sub_cmd.length()>0 && sub_cmd.charAt(0)=='z') {
@@ -868,7 +872,7 @@ public class DisplayParser {
 				cpDrawing.drawClosedPoly(lnum,corners,dispFlags);
 				count++;
 				break;
-			}
+			} // done with 's'
 			case 't': // trinket (i.e., dots, crosses, etc.) at given points
 				// note: trinkets also used with 'd' dual calls, e.g., at tangency pts
 			{
@@ -1034,7 +1038,7 @@ public class DisplayParser {
 				cpDrawing.drawCircle(cz, rad, dispFlags);
 				count++;
 				break;
-			}
+			} // done with 'u'
 			case 'y': // circles defined by face centers 
 				//  (as in Delaunay triangulations)
 			{
@@ -1074,7 +1078,7 @@ public class DisplayParser {
 					}
 				}
 				break;
-			}
+			} // done with 'y'
 			} // end of main switch
 
 			// if thickness changed, reset it

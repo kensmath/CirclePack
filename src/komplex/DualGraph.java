@@ -44,7 +44,8 @@ public class DualGraph {
 	 * @param poison EdgeLink, poison, don't cross (may be null)
 	 * @return GraphLink
 	 */
-	public static GraphLink buildDualGraph(PackData p,int startface,EdgeLink poison) {
+	public static GraphLink buildDualGraph(PackData p,
+			int startface,EdgeLink poison) {
 		GraphLink dlink=new GraphLink();
 		if (startface<=0 || startface>p.faceCount)
 			startface=p.packDCEL.alpha.face.faceIndx;

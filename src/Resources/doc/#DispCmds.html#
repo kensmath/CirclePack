@@ -84,7 +84,7 @@ indicates color code 40 (medium blue). <br>
 Notes: <br>
 
 The full range of options described here can also be prescribed 
-as the default via the "set_disp_text" command.<br>
+as the default via the "set_disp_flags" command.<br>
 
 The 'post' command for generating PostScript images of the canvases is
 parallel to the 'disp' command in nearly all features.<br>

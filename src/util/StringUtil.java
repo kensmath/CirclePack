@@ -688,7 +688,7 @@ public class StringUtil {
 				// have to bypass command strings with '_'
 				if (k>0 && Character.isLetter(tmpbuf.charAt(k-1)))
 					break;
-				String varstr=StringUtil.getLetterStr(tmpbuf,k+1);
+				String varstr=StringUtil.getLorDStr(tmpbuf,k+1);
 				String rstg=null;
 				if (varstr==null)
 					break;
@@ -873,8 +873,10 @@ public class StringUtil {
 	 */
 	public static String getMathString(String str) {
 		int firstl = str.indexOf('$');
+		if (firstl<0)
+			return null;
 		int last=str.indexOf('$',firstl+1);
-		if (last<0) // no ending '$'
+		if (last<0) // no ending '$'? use to end
 			last=str.length()-1;
 		if (firstl>=0 && last>firstl) { 
 			String newstr=str.substring(firstl+1,last).trim();
@@ -983,14 +985,16 @@ public class StringUtil {
 	  }
 	  
 	  /**
-	   * For breaking incoming string into command segments. The
-	   * returned strings must be non-empty and lie between ';'s, 
-	   * but we keep quoted substrings in tact. So, e.g., a quoted 
-	   * substring may have ';'s which are shielded from the splitting 
-	   * operation. We also catch things like repeated ';'s, empty
-	   * commands; we 'trim' the command strings, but put a space 
-	   * before abutting a quoted string. This code is 
-	   * sensitive, so on some error, just abandon by returning null.
+	   * For breaking incoming string into command segments. 
+	   * The returned strings must be non-empty and lie 
+	   * between ';'s, but we keep quoted substrings in tact. 
+	   * So, e.g., a quoted substring may have ';'s which 
+	   * are shielded from the splitting operation. We 
+	   * also catch things like repeated ';'s, empty 
+	   * commands; we 'trim' the command strings, but 
+	   * put a space before abutting a quoted string. 
+	   * This code is sensitive, so on some error, just 
+	   * abandon by returning null.
 	   * @param origStr StringBuilder
 	   * @return Vector<StringBuilder>, null on error
 	   */
@@ -1134,6 +1138,8 @@ public class StringUtil {
 				  tmpbld.append(";");
 				  if (lead_semicolon)
 					  tmpbld.insert(0, ";");
+				  if (tmpbld.length()>0)
+					  ansvec.add(tmpbld);
 				  spot=hit+1;
 			  }
 			  else { // must be last segment
@@ -1149,20 +1155,24 @@ public class StringUtil {
 	  }
 	  
 	  /**
-	   * Analyze at string with respect to substrings delineated
-	   * by double quotes, '"'. Note that we ignore escaped quotes, 
-	   * '\"', but accept '""' as delineating an empty string.
+	   * Analyze at string with respect to substrings 
+	   * delineated by double quotes, '"'. Note that 
+	   * we ignore escaped quotes, '\"', but accept 
+	   * '""' as delineating an empty string.
 	   * Note: nested quotes can lead to errors.
-	   * Return a vector of maximal substrings delineated by quotes
-	   * (and include the quotes themselves) or before/after/between 
-	   * those. 
-	   * Note: one should be able to reconstruct the full original 
-	   * by concatenating the strings of the returned vector, so we
-	   * do not trim. (e.g., if no quotes, get single original string in returned 
-	   * vector; so, e.g., we do not 'trim' the unquoted segments)
+	   * Return a vector of maximal substrings delineated by 
+	   * quotes (and include the quotes themselves) or 
+	   * before/after/between those. 
+	   * Note: one should be able to reconstruct the full 
+	   * original by concatenating the strings of the 
+	   * returned vector, so we do not trim. (e.g., if 
+	   * no quotes, get single original string in returned 
+	   * vector; so, e.g., we do not 'trim' the unquoted 
+	   * segments)
 	   * @param inbld StringBuilder
-	   * @return new Vector<StringBuilder>, null on error such as 
-	   * inconsistent use of quotes, e.g. odd number of quotes.
+	   * @return new Vector<StringBuilder>, null on error 
+	   * such as inconsistent use of quotes, e.g. odd 
+	   * number of quotes.
 	   */
 	  public static Vector<StringBuilder> quoteAnalyzer(StringBuilder inbld) {
 		  Vector<StringBuilder> vec=new Vector<StringBuilder>(0);
@@ -1420,19 +1430,19 @@ public class StringUtil {
 	  }
 	  
 	  /** 
-	   * Return substring of contiguous letters 
-	   * in 'str' starting at 'startIndx'. 'null' 
-	   * if no letters.
+	   * Return substring of contiguous letters and/or 
+	   * digits in 'str' starting at 'startIndx'. 'null' 
+	   * if no letters/digits.
 	   * @param strb StringBuilder
 	   * @param startIndx
 	   * @return substring or null on error or no letters
 	   */
-	  public static String getLetterStr(StringBuilder strb,int startIndx) {
+	  public static String getLorDStr(StringBuilder strb,int startIndx) {
 		  int k=startIndx;
 		  if (strb==null || k<0 || strb.length()<=k) 
 			  return null;
 		  while (k<strb.length()) {
-			  if (!Character.isLetter(strb.charAt(k)))
+			  if (!Character.isLetterOrDigit(strb.charAt(k)))
 				  break;
 			  k++;
 		  }

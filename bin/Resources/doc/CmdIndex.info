@@ -35,11 +35,8 @@ empty
 encircle
 enclose {n v..}
 erf {p1 p2 n}
-eucl_write {file}
 exit
 extender {name}
-f_index {f j..}
-f_next {f g..}
 fexec {file}
 fix
 Fix
@@ -115,8 +112,7 @@ set_brush {k}
 set_center {x y v}
 set_custom {name}
 set_cycle {n}
-set_disp_flags c f
-set_disp_str flags
+set_disp_flags
 set_[ev]list
 set_fill_opacity {t}
 set_function_text {text}

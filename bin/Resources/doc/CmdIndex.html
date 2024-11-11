@@ -1,13 +1,13 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <style llink="text/css">
 A:link {text_decoration: none}</style>
-<strong> <font size="-2"><a class="llink" href="act">act</a></strong></font><font face="sans-serif" size="-1">&nbsp; {p}</font><br/>
+<strong> <font size="-2"><a class="llink" href="act">act</a></strong></font><font face="sans-serif" size="-1">&nbsp; {x}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="add_bary">add_bary</a></strong></font><font face="sans-serif" size="-1">&nbsp; {f..}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="add_cir">add_cir</a></strong></font><font face="sans-serif" size="-1">&nbsp; {v..}</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="add_edge">add_edge</a></strong></font><font face="sans-serif" size="-1">&nbsp; {v1 w2  v2 w2 ..}</font><br/>
+<strong> <font size="-2"><a class="llink" href="add_edge">add_edge</a></strong></font><font face="sans-serif" size="-1">&nbsp; {v1 w1  v2 w2 ..}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="add_face_triple">add_face_triple</a></strong></font><font face="sans-serif" size="-1">&nbsp; {f..}</font><br/>
 
@@ -22,6 +22,8 @@ A:link {text_decoration: none}</style>
 <strong> <font size="-2"><a class="llink" href="adjoin">adjoin</a></strong></font><font face="sans-serif" size="-1">&nbsp; {p q v w n} [or: {p q v w (v,u)}]</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="adjust_rad">adjust_rad</a></strong></font><font face="sans-serif" size="-1">&nbsp; {f} {v..}</font><br/>
+
+<strong> <font size="-2"><a class="llink" href="adjust_sch">adjust_sch</a></strong></font><font face="sans-serif" size="-1">&nbsp; {f} {v w..}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="alpha">alpha</a></strong></font><font face="sans-serif" size="-1">&nbsp; {v}</font><br/>
 
@@ -38,8 +40,6 @@ A:link {text_decoration: none}</style>
 <strong> <font size="-2"><a class="llink" href="blend">blend</a></strong></font><font face="sans-serif" size="-1">&nbsp; -q{qnum} v n</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="break">break</a></strong></font><font face="sans-serif" size="-1"></font><br/>
-
-<strong> <font size="-2"><a class="llink" href="brooks">brooks</a></strong></font><font face="sans-serif" size="-1">&nbsp; [OPTIONS] {VH...} ('BQ' pack extension)</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="cd">cd</a></strong></font><font face="sans-serif" size="-1">&nbsp; {..}</font><br/>
 
@@ -61,19 +61,17 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="close">close</a></strong></font><font face="sans-serif" size="-1">&nbsp; [window list]</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="color">color</a></strong></font><font face="sans-serif" size="-1">&nbsp; -[cfe] [options]</font><br/>
+<strong> <font size="-2"><a class="llink" href="color">color</a></strong></font><font face="sans-serif" size="-1">&nbsp; -[cfeTDQ] [options]</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="cookie">cookie</a></strong></font><font face="sans-serif" size="-1">&nbsp; [option] {v..}</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="copy">copy</a></strong></font><font face="sans-serif" size="-1">&nbsp; {p}</font><br/>
+<strong> <font size="-2"><a class="llink" href="copy">copy</a></strong></font><font face="sans-serif" size="-1">&nbsp; {q}</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="count">count</a></strong></font><font face="sans-serif" size="-1">&nbsp; -[vef] {..}</font><br/>
+<strong> <font size="-2"><a class="llink" href="count">count</a></strong></font><font face="sans-serif" size="-1">&nbsp; -[veft] {..}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="create">create</a></strong></font><font face="sans-serif" size="-1">&nbsp; {type} [options]</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="DCEL">DCEL</a></strong></font><font face="sans-serif" size="-1">&nbsp; [options]</font><br/>
-
-<strong> <font size="-2"><a class="llink" href="debug">debug</a></strong></font><font face="sans-serif" size="-1">&nbsp; [drsex]</font><br/>
+<strong> <font size="-2"><a class="llink" href="debug">debug</a></strong></font><font face="sans-serif" size="-1">&nbsp; [dsrex]</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="delaunay">delaunay</a></strong></font><font face="sans-serif" size="-1">&nbsp; -[cfgs]</font><br/>
 
@@ -112,14 +110,6 @@ A:link {text_decoration: none}</style>
 <strong> <font size="-2"><a class="llink" href="face_err">face_err</a></strong></font><font face="sans-serif" size="-1">&nbsp; x {f..}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="fexec">fexec</a></strong></font><font face="sans-serif" size="-1">&nbsp; [-s] {filename}</font><br/>
-
-<strong> <font size="-2"><a class="llink" href="f_index">f_index</a></strong></font><font face="sans-serif" size="-1">&nbsp; {f j ..}</font><br/>
-
-<strong> <font size="-2"><a class="llink" href="f_next">f_next</a></strong></font><font face="sans-serif" size="-1">&nbsp; {f g ..}</font><br/>
-
-<strong> <font size="-2"><a class="llink" href="f_red">f_red</a></strong></font><font face="sans-serif" size="-1">&nbsp; {f i..}</font><br/>
-
-<strong> <font size="-2"><a class="llink" href="f_rnext">f_rnext</a></strong></font><font face="sans-serif" size="-1">&nbsp; {f g..}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="fix">fix</a></strong></font><font face="sans-serif" size="-1">&nbsp; [options]</font><br/>
 
@@ -321,7 +311,7 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="script">script</a></strong></font><font face="sans-serif" size="-1">&nbsp; [filename]</font><br/>
 
-<strong> <font size="-2"><a class="llink" href="seed">seed</a></strong></font><font face="sans-serif" size="-1">&nbsp; [-q] [n]</font><br/>
+<strong> <font size="-2"><a class="llink" href="seed">seed</a></strong></font><font face="sans-serif" size="-1">&nbsp; [-qm] [n]</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="set_accur">set_accur</a></strong></font><font face="sans-serif" size="-1">&nbsp; {x}</font><br/>
 
@@ -346,6 +336,8 @@ A:link {text_decoration: none}</style>
 <strong> <font size="-2"><a class="llink" href="set_disp_flags">set_disp_flags</a></strong></font><font face="sans-serif" size="-1">&nbsp; {flags}</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="set_display">set_display</a></strong></font><font face="sans-serif" size="-1">&nbsp; [-m]</font><br/>
+
+<strong> <font size="-2"><a class="llink" href="set_Dlist">set_Dlist</a></strong></font><font face="sans-serif" size="-1">&nbsp; -[options] [x ..]</font><br/>
 
 <strong> <font size="-2"><a class="llink" href="set_dump_format">set_dump_format</a></strong></font><font face="sans-serif" size="-1">&nbsp; [format]</font><br/>
 
@@ -519,7 +511,7 @@ A:link {text_decoration: none}</style>
 
 <strong> <font size="-2"><a class="llink" href="?{*}">?{*}</a></strong></font><font face="sans-serif" size="-1"></font><br/>
 
-<strong> <font size="-2"><a class="llink" href="#XY">#XY</a></strong></font><font face="sans-serif" size="-1"></font><br/>
+<strong> <font size="-2"><a class="llink" href="$">$</a></strong></font><font face="sans-serif" size="-1"></font><br/>
 
 <strong> <font size="-2"><a class="llink" href="[{script cmd}]">[{script cmd}]</a></strong></font><font face="sans-serif" size="-1"></font><br/>
 
