@@ -24,8 +24,9 @@ import circlePack.PackControl;
 import exceptions.InOutException;
 
 /**
- * Extends 'ComboBox' for situations where file/web addresses are 
- * maintained and stored in lists and startup files. 
+ * Extends 'ComboBox' for situations where file/web 
+ * addresses are maintained and stored in lists and 
+ * startup files. 
  * @author kens
  *
  */

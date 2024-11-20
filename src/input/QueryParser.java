@@ -38,8 +38,9 @@ public class QueryParser {
 	public static int processQuery(PackData p,
 			Vector<String> queryStr,boolean forMsg) {
 		StringBuilder strbld=new StringBuilder();
-		for (int j=0;j<queryStr.size();j++)
-			strbld.append((String)queryStr.get(j));
+		for (int j=0;j<queryStr.size();j++) 
+			strbld.append((String)queryStr.get(j)+" ");
+			
 		
 		// remove the '?'
 		strbld.deleteCharAt(0); 

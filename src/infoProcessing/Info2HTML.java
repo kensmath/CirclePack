@@ -1,7 +1,7 @@
 package infoProcessing;
 
-import java.awt.Frame;
 import java.io.BufferedWriter;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileWriter;
@@ -16,7 +16,12 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-
+/**
+ * Independent java code that creates the 'CmdDetails.html'
+ * and 'CmdIndex.html' files that appear with the 'Help'
+ * from from 'txt' files.
+ * @author ken
+ */
 public class Info2HTML {
 	public static File infofile; // input file, XML format
 	public static File cmdfile; // file of command details in html for "Help" frame
@@ -381,7 +386,6 @@ public class Info2HTML {
 		
 		// check some directories
 		System.out.println("Info2HTML: user.dir is "+System.getProperty("user.dir"));
-//		System.out.println("Info2HTML: user.home is "+System.getProperty("user.home"));
 		
 		// create new file
 		infofile=new File(System.getProperty("user.dir")+"/CirclePack/src/Resources/doc/CmdDetails.txt");

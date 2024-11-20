@@ -86,20 +86,8 @@ public class HelpHover extends HoverPanel implements HyperlinkListener {
 	public void initComponents() {
 		this.setLayout(new BoxLayout(this, BoxLayout.LINE_AXIS));
 
-		// Here are the various tabs (so far)
-		JTextPane aboutArea=new JTextPane();
-		aboutArea.setContentType("text/html");
-		aboutArea.addHyperlinkListener(new IndexHyperlinkListener());
-		aboutArea.setBorder(new EmptyBorder(new Insets(5,10,5,10)));
-		aboutArea.setEditable(false);
-		aboutArea.addFocusListener(new util.NavFocusListener(aboutArea));
-		try {
-			aboutArea.setPage(CPBase.getResourceURL("/doc/About.html"));
-		} catch (Exception ex) {}
-		JScrollPane aboutScroller = new JScrollPane(aboutArea);
-		helpTabbedPane.add(aboutScroller,"About");
-
-		// need to know the name of the "CmdDetail" tab
+		// Here are the various tabs (so far); tabs seem
+		//   to be arranged in the order they're added
 		detailArea=new JTextPane();
 		detailArea.setContentType("text/html");
 		detailArea.addHyperlinkListener(new IndexHyperlinkListener());
@@ -153,12 +141,24 @@ public class HelpHover extends HoverPanel implements HyperlinkListener {
 		extenderScroller = new JScrollPane(extenderArea);
 		helpTabbedPane.add(extenderScroller,"Pack Extenders");
 
+		JTextPane aboutArea=new JTextPane();
+		aboutArea.setContentType("text/html");
+		aboutArea.addHyperlinkListener(new IndexHyperlinkListener());
+		aboutArea.setBorder(new EmptyBorder(new Insets(5,10,5,10)));
+		aboutArea.setEditable(false);
+		aboutArea.addFocusListener(new util.NavFocusListener(aboutArea));
+		try {
+			aboutArea.setPage(CPBase.getResourceURL("/doc/About.html"));
+		} catch (Exception ex) {}
+		JScrollPane aboutScroller = new JScrollPane(aboutArea);
+		helpTabbedPane.add(aboutScroller,"About");
+
 		JTextPane miscArea=new JTextPane();
 		miscArea.setContentType("text/html");
 		miscArea.addHyperlinkListener(new IndexHyperlinkListener());
 		miscArea.setBorder(new EmptyBorder(new Insets(5,10,5,10)));
 		miscArea.setEditable(false);
-		miscArea.addFocusListener(new util.NavFocusListener(aboutArea));
+		miscArea.addFocusListener(new util.NavFocusListener(miscArea));
 		try {
 			miscArea.setPage(CPBase.getResourceURL("/doc/MiscInfo.html"));
 		} catch (Exception ex) {}
@@ -170,7 +170,7 @@ public class HelpHover extends HoverPanel implements HyperlinkListener {
 		myNotesArea.addHyperlinkListener(new IndexHyperlinkListener());
 		myNotesArea.setBorder(new EmptyBorder(new Insets(5, 10, 5, 10)));
 		myNotesArea.setEditable(true);
-		myNotesArea.addFocusListener(new util.NavFocusListener(aboutArea));
+		myNotesArea.addFocusListener(new util.NavFocusListener(myNotesArea));
 
 		// AF: MyNotes saved as <user.home>/myCirclePack/myNotes.txt
 		File myNotesFile = new File(CPFileManager.HomeDirectory.toString() + File.separator + "myCirclePack" + File.separator + "myNotes.txt");
@@ -192,6 +192,8 @@ public class HelpHover extends HoverPanel implements HyperlinkListener {
 			}
 		}
 		
+		// TODO: for some reason this "error" doesn't
+		//   interfere with running the code
 		try {
 			// AF: Set the MyNotes text pane to the MyNotes file.
 			myNotesArea.setPage(myNotesFile.toURI().toURL());

@@ -675,6 +675,7 @@ public class StringUtil {
 	 */
 	public static Vector<String> string2vec(String str,boolean bfix) {
 
+		str=str.trim();
 		Vector<String> vec= new Vector<String>(0);
 
 		// split the string at whitespace, eliminate blanks

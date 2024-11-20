@@ -348,7 +348,6 @@ public class SchwarzMap extends PackExtender {
 							double isqr=Math.sqrt(1/packData.packDCEL.vertices[vindx-2].rad);
 							double isqR=Math.sqrt(1/packData.packDCEL.vertices[vindx-1].rad);
 							// need to check if nghb is in branch situation
-							double prevt=packData.packDCEL.vertices[vindx-2].center.x;
 							
 							// if petal vindx-2 was a halfplane; use Sit2 scaled by R
 							if (vindx>3 && petalticks[vindx-2]==3) {
@@ -1748,8 +1747,12 @@ public class SchwarzMap extends PackExtender {
         TriAspect ftri=domainTri[f];
         TriAspect gtri=domainTri[g];		
         int jf=ftri.vertIndex(v);
+        if (ftri.schwarzian==null)
+        	ftri.schwarzian=new double[3];
         ftri.schwarzian[jf]=schw;
         int jg=gtri.vertIndex(w);
+        if (gtri.schwarzian==null)
+        	gtri.schwarzian=new double[3];
         gtri.schwarzian[jg]=schw;
         return true;
 	}

@@ -1535,6 +1535,17 @@ public class CommandStrParser {
 	    	  } // end of switch
 			  return 0;
 		  }
+		  else if (cmd.startsWith("dela")) { // delay
+			  double dy=0.001;
+			  try {
+				  items=flagSegs.get(0);
+				  dy=Double.parseDouble(items.get(0));
+				  Thread.sleep((long) (dy * 1000.0));
+			  } catch (InterruptedException ie) {
+				  throw new ParserException("usage: delay <seconds>");
+			  }
+			  return 1;
+		  }
 	      break;
 	  } // end of 'd'
 	  case 'e':

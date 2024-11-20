@@ -35,6 +35,7 @@ count -[veft] {..}
 create {type} [options] 
 debug [dsrex] 
 delaunay -[cfgs] 
+delay {s} 
 Disp [options ...] (see 'disp') 
 disp [options ... ] (also 'Disp') 
 double {b..} 
@@ -47,6 +48,7 @@ embed -q{q} a b A B
 encircle {v..} 
 enclose -[t] n {v..} 
 erf_ftn {p1 p2 n} 
+exec [-n {moniker}] {command} 
 exit 
 extender  -[xr] {type} 
 face_err x {f..} 
@@ -54,7 +56,7 @@ fexec [-s] {filename}
 fix [options] 
 Fix 
 flat_hex {v..} 
-flip {v w..} 
+flip -[chr] {v w..} 
 flip_priority [options] 
 flist [options] 
 focus [options] {v} 
@@ -94,6 +96,7 @@ migrate v w
 Mobius [s] {v..} (or Mobius_inv [s] {v..}) 
 mode_change {toolname} 
 molify_centers [option] {v..} 
+motion -[dn] {cmd} 
 msg {text} 
 msg_remote {pid or moniker} {msg} 
 nan {filename} 

@@ -874,6 +874,10 @@ default temporary directory (see 'Messages'), others print something.
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="random_triangulation">random_triangulation</a>&nbsp;&nbsp; <a href="random_pack">random_pack</a>&nbsp;&nbsp; 
 <br/><br/>
+<font size="+1" color="blue"><strong><a name="delay">delay</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{s}&nbsp;&nbsp; </font>
+<blockquote>
+<strong>Description: </strong>Delay execution by 's' seconds
+</blockquote>
 <font size="+1" color="blue"><strong><a name="Disp">Disp</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options ...] (see 'disp')&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>"Disp" (with upper case 'D') calls "disp" with the given
@@ -888,26 +892,28 @@ default temporary directory (see 'Messages'), others print something.
 <font size="+1" color="blue"><strong><a name="disp">disp</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options ... ] (also 'Disp')&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
-	This is the command for displaying objects of the active packing
-	on its canvas (or canvasses). There are numerous options as 
-	described below, but the key ones are '-c', '-f', and
-	'-e' for circles, faces, and edges, respectively. The commands have
-	default color, fill, and thickness options, but these can be modified.
-	See the "'disp' options" tab in the "Help" window for full details.
+	This is the command for displaying objects of the 
+	active packing on its canvas (or canvasses). There 
+	are numerous options as	described below, but the key 
+	ones are '-c', '-f', and '-e' for circles, faces, and 
+	edges, respectively. The commands have default color, 
+	fill, and thickness options, but these can be modified.
+	See the "'disp' options" tab in the "Help" window for 
+	full details.
 
-    The "Screen, Display Options" panel allows one to specify the default 
-	drawing options or give a user-defined string of commands as described 
+    The "Screen, Display Options" panel allows one to 
+    specify the default	drawing options or give a 
+    user-defined string of commands as described 
 	below (see 'set_disp_flags'). 
 	
-	"Disp" (with upper case 'D') will both display the indicated objects
-	and store that specification as in 'set_disp_flags'. This is very
-	useful: these display options will be used when mouse and menu actions
-	cause the screen to redisplay or when "disp -wr" is called.
-
-	CAUTION: When the pack has been laid out using 'layout -l', plot 
-	flags are set only for circles/faces which seem properly placed 
-	(i.e., consistently with neighbors) and only those are drawn in
-	the display. See 'set_plot_flags' to override.
+	'Disp' (with upper case 'D') will both display the 
+	indicated objects and store that specification as in 
+	'set_disp_flags'. This is very useful: these display 
+	options will be used when mouse and menu actions
+	cause the screen to redisplay or when "disp -wr" is 
+	called. Also, 'dISp' and 'DISp' (with upper case 'IS')
+	will suppress redisplay of the small canvasses of
+	the control panel, saving some display time.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Common Options:</strong>
 <blockquote>
@@ -1085,6 +1091,13 @@ points with nghbs</td></tr>
 	and so may be disregarded or may appear incorrectly. E.g. arcs
 	of very large circles.
 </blockquote>
+<blockquote>
+<strong>CAUTION: </strong>When the pack has been laid out using 
+	'layout -l', plot flags are set only for circles/faces 
+	which seem properly placed (i.e., consistently with 
+	neighbors) and only those are drawn in the display. 
+	See 'set_plot_flags' to override.
+</blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="set_disp_flags">set_disp_flags</a>&nbsp;&nbsp; <a href="set_plot_flags">set_plot_flags</a>&nbsp;&nbsp; 
 <br/><br/>
@@ -1169,18 +1182,19 @@ filled faces 6 and 9; boundary circles with thickness 5.</td></tr>
 <font size="+1" color="blue"><strong><a name="dual_layout">dual_layout</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[c{flags}] -[f{flags}] [{f1 g1 ...}]&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
-	This is for laying out a circle packing using schwarzians of
-	its edges (if they are set). The layout order is associated
+	This is for laying out a circle packing using the intrinsic 
+	schwarzians of edges (if they are set). The layout order is associated
 	with the given list of dual edges specified by pairs (f,g) of
 	contiguous faces --- often a directed tree and by default,
-	a dual spanning tree. We assume f is in place and use the 
-	real schwarzian for the	common edge to place the opposite 
-	circle of g. This is used only in spherical or euclidean 
-	geometry. See 'dcel.schwarzian.java' for details. Also, all vertex 
-	angle sums (ie. 'curv')	are set to and new angles accumulate
-	at vertices as successive faces are laid out.
+	part of a dual spanning tree. By default, we use the internal
+	'layoutOrder'. Otherwise, we assume f1 is in place and use the 
+	intrinsic schwarzian for the common edge with g1 to place the 
+	opposite circle of g1. This command is used only in spherical 
+	or euclidean geometry. See 'dcel.schwarzian.java' for details. 
+	Also, all vertex angle sums (ie. 'curv') are set, with new angles 
+	accumulating at vertices as successive faces are laid out.
 	
-	If the first pair has form (0,f) (as when created as a dual 
+	If the first pair (f1,g1) has form (0,f) (as when created as a dual 
 	spanning tree), then f is designated as base face to be laid
 	out first. This face is our 'base equilateral' face, meaning
 	it is an equilateral triangle formed by three circles of (eucl)
@@ -1197,11 +1211,13 @@ filled faces 6 and 9; boundary circles with thickness 5.</td></tr>
 <td width="65%" align="left"> draw each new circle with usual display options</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="sch_report">sch_report</a>&nbsp;&nbsp; <a href="set_schwarzian">set_schwarzian</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href="layout -s">layout -s</a>&nbsp;&nbsp; <a href="sch_report">sch_report</a>&nbsp;&nbsp; <a href="set_schwarzian">set_schwarzian</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="elist">elist</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options]&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>A utility "edge list" attached to a particular packing; 
+<strong>Description: </strong>Used with other commands to invoke a utility 
+	list of edges (called 'elist) which is attached 
+	to a particular packing; 
 	can be read in and stored with packing data. Set with 
 	'set_elist'. Can be used whereever a list of edges is 
 	called for, e.g., in disp and post calls. 
@@ -1209,7 +1225,7 @@ filled faces 6 and 9; boundary circles with thickness 5.</td></tr>
 	to a packing; it provides a general utility list.
 
      FORMS: (also apply to Elist)
-	elist		produces whole list.
+	elist		produces the full list (possibly empty)
 	elist[{i}]	produces the i_th edge in the list, if
 			there is one.
 	elist[r]	produces the first edge of the list
@@ -1217,20 +1233,31 @@ filled faces 6 and 9; boundary circles with thickness 5.</td></tr>
 	elist[n] 	produces the "next" edge of the list 
 			and then removes it from the list.
 </blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="set_elist">set_elist</a>&nbsp;&nbsp; 
+<br/><br/>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
+<blockquote>
+<table>
+<tr><td width="35%"><font color="blue">disp -e elist</font></td>
+<td width="63%"> display the edges in 'elist'</td></tr>
+</table></blockquote>
 <font size="+1" color="blue"><strong><a name="elist_to_path">elist_to_path</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
 <strong>Description: </strong>Given an edge-path this resets the active path to follow 
-	the edge-path (and close up). If the active pack is 
+	the edge-path (and to close up). If the active pack is 
 	spherical, this gives its stereographic projection to 
 	the plane.
 </blockquote>
 <font size="+1" color="blue"><strong><a name="embed">embed</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-q{q} a b A B&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Check extent to which active pack can be embedded in pack q, 
-	starting by identifying neighbors a and b with A and B in q.
-	a and A must be interior vertices and have the same degree.
-	The identifications (i.e., a->A, b->B, etc) are (upon some
-	success) put in 'vertex_map' for the active pack.
+<strong>Description: </strong>Check extent to which active pack can be 
+	embedded as a subcomplex in pack q,	starting by 
+	identifying neighbors a and b with A and B, 
+	respectively, in q.	Vertices a and A must be interior 
+	and have the same degree. The identifications 
+	(i.e., a->A, b->B, etc) are (upon some success) 
+	put in 'vertex_map' for the active pack.
 </blockquote>
 <font size="+1" color="blue"><strong><a name="encircle">encircle</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v..}&nbsp;&nbsp; </font>
 <blockquote>
@@ -1248,7 +1275,7 @@ filled faces 6 and 9; boundary circles with thickness 5.</td></tr>
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="enclose">enclose</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[t] n {v..}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>For each circle v, if on the boundary, add n circles 
+<strong>Description: </strong>For each circle v on the boundary, add n circles 
 as neighbors (or bring degree to n) and closed up to make v interior.
 The -t option does not always succeed due to combinatorial influences.
 </blockquote>
@@ -1260,6 +1287,19 @@ The -t option does not always succeed due to combinatorial influences.
 <tr><td width="25%" valign="top">-t n {v..}</td>
 <td width="65%" align="left"> add enough circles to bring each v to degree n</td></tr>
 </table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="add_cir">add_cir</a>&nbsp;&nbsp; <a href="add_layer">add_layer</a>&nbsp;&nbsp; <a href="add_gen">add_gen</a>&nbsp;&nbsp; <a href="add_ideal">add_ideal</a>&nbsp;&nbsp; 
+<br/><br/>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
+<blockquote>
+<table>
+<tr><td width="35%"><font color="blue">enclose 0 13 45</font></td>
+<td width="63%">enclose bdry vertices 13 45 
+with no added vertices.</td></tr>
+<tr><td width="35%"><font color="blue">enclose -t 6 13 45</font></td>
+<td width="63%">enclose bdry vertices 13 45
+with enough added vertices to end up with degree 6.</td></tr>
+</table></blockquote>
 <font size="+1" color="blue"><strong><a name="erf_ftn">erf_ftn</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{p1 p2 n}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>Set the boundary radii of packing p2 based on the 
@@ -1267,16 +1307,9 @@ The -t option does not always succeed due to combinatorial influences.
 	n=2 is "error function". There is a domain packing p1 
 	and a range p2. Normally the domain is euclidean and 
 	univalent; it is copied to p2 and each boundary radius 
-	of p2 is set to e^{z^n}*r, where r is its radius, z its 
+	of p2 is set to e^{z^n}*r, where r is its radius and z its 
 	center in p1. The calling program them repacks p2 to get
 	an analogue of the function F whose derivative is e^{z^n}.
-</blockquote>
-<font size="+1" color="blue"><strong><a name="eucl_write">eucl_write</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{file}&nbsp;&nbsp; </font>
-<blockquote>
-<strong>Description: </strong>	The data in the active pack is converted to euclidean (if
-	hyperbolic) and the data is stored sequentially in the specified
-	file. First, the total node count, then the data in form "x-coord
-	y-cood radius".
 </blockquote>
 <font size="+1" color="blue"><strong><a name="exec">exec</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-n {moniker}] {command}&nbsp;&nbsp; </font>
 <blockquote>
@@ -1350,7 +1383,7 @@ class.)</td></tr>
 all extenders if the type is omitted.</td></tr>
 <tr><td width="25%" valign="top">-r {typ}</td>
 <td width="65%" align="left"> close any extenders of type 'typ' and then 
-    start an extender of this type.</td></tr>
+    start an extender of this same type.</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
@@ -1366,32 +1399,40 @@ for this packing and start a new one.</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="face_err">face_err</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">x {f..}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>	Given a threshold x>1.0, this reports the number of faces
-	from the given list whose layout's have errors (interpreted
-	as [dist between circles]/[intended dist between circles])
+<strong>Description: </strong>	Given a threshold x>1.0, this 
+	reports the number of faces	from the given list 
+	whose layout's have errors (interpreted as
+	[dist between circles]/[intended dist between circles])
 	lying outside the interval [1/x,x].
 </blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="set_accur">set_accur</a>&nbsp;&nbsp; <a href="layout">layout</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="fexec">fexec</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-s] {filename}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Reads and executes commands in {filename}. Can be used as
-	method of transferring data from remote routines. 
+<strong>Description: </strong>Reads and immediately begins executing
+command lines in file {filename}. It does not stop 
+on command failures; works in main thread, so there
+can be normal processing delays. This command can be 
+usefule for transferring data from remote routines. 
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
 <table>
 <tr><td width="25%" valign="top">-s</td>
-<td width="65%" align="left"> read from open script</td></tr>
+<td width="65%" align="left"> execute all command lines from the
+	open script</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="fix">fix</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options]&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>(Deprecated: replaced by "layout"). 
+<strong>Description: </strong>(Deprecated: replaced by 'layout'). 
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="layout">layout</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="Fix">Fix</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
 <blockquote>
-<strong>Description: </strong>(Deprecated: replaced by "layout -F".)
+<strong>Description: </strong>(Deprecated: replaced by 'layout -F'.)
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="layout">layout</a>&nbsp;&nbsp; 
@@ -1405,12 +1446,15 @@ for this packing and start a new one.</td></tr>
 	neighbor. Results in a flat edge (angle sum pi) at v if
 	radii of v and neighbors are all identical.
 </blockquote>
-<font size="+1" color="blue"><strong><a name="flip">flip</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v w..}&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="flip">flip</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[chr] {v w..}&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>An interior edge bounds two faces. This command 
-    flips the edge; that is, the edge {v w} is removed and a 
-    new	one created connecting the two common neighbors of v 
-    and w. This is sometimes called a "Whitehead" move.
+<strong>Description: </strong>An interior edge bounds two faces. This 
+	command flips the edge; that is, the edge {v w} is 
+	removed and a new one created connecting the two 
+	common neighbors of v and w. This is sometimes 
+	called a "Whitehead" move. Options include a random
+	choice of edge, flipping cclw/clw edge, or preparing
+	for a chain of flips.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
@@ -2043,11 +2087,11 @@ the new path.</td></tr>
 <tr><td width="25%" valign="top">-s</td>
 <td width="65%" align="left"> recompute angle sums</td></tr>
 <tr><td width="25%" valign="top">-t</td>
-<td width="65%" align="left"> compute centers from 'tailored' drawing order; marked 
-		  vertices will not (to extent possible) be used in drawing 
-		  order.</td></tr>
+<td width="65%" align="left"> compute centers from 'tailored' drawing order;
+		see 'mark'. The marked vertices will not (to extent possible) 
+		be used in drawing order.</td></tr>
 <tr><td width="25%" valign="top">-T</td>
-<td width="65%" align="left"> same as -t, but routine will NOT use the marked 
+<td width="65%" align="left"> same as -t, but routine will definitely NOT use the marked 
 	vertices; it will stop once it has done all it can without them.</td></tr>
 <tr><td width="25%" valign="top">default</td>
 <td width="65%" align="left"> recompute angle sums and centers.</td></tr>
@@ -2075,17 +2119,19 @@ the new path.</td></tr>
 	of proper placement.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="rld">rld</a>&nbsp;&nbsp; <a href="alpha">alpha</a>&nbsp;&nbsp; <a href="gamma">gamma</a>&nbsp;&nbsp; <a href="dual_layout">dual_layout</a>&nbsp;&nbsp; <a href="set_poison">set_poison</a>&nbsp;&nbsp; <a href="set_plot_flags">set_plot_flags</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href="rld">rld</a>&nbsp;&nbsp; <a href="alpha">alpha</a>&nbsp;&nbsp; <a href="gamma">gamma</a>&nbsp;&nbsp; <a href="dual_layout">dual_layout</a>&nbsp;&nbsp; <a href="set_poison">set_poison</a>&nbsp;&nbsp; <a href="set_plot_flags">set_plot_flags</a>&nbsp;&nbsp; <a href="mark">mark</a>&nbsp;&nbsp; <a href="set_aim -d">set_aim -d</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="legal">legal</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[options] [{e..}]&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>A interior edge in a euclidean triangulation is "illegal" 
-	by the Delaunay criterion when a circle containing the three 
-	vertices of the face on one side encloses the face on the 
-	other. (For plane graphs, there is a "Delaunay" triangulation, 
-	which is one having no illegal edges.)
+<strong>Description: </strong>An interior edge in a euclidean triangulation 
+	is "illegal" (violates the Delaunay criterion) 
+	when a circle containing the three vertices of the 
+	face on one side encloses the face on the 
+	other, i.e., contains the common neighboring vertex
+	on the other. (For plane graphs, a "Delaunay" triangulation
+	is one having no illegal interior edges.)
 
- 	This command lists "illegal" edges in the utility list 
+ 	This command enters "illegal" edges in the utility list 
 	'Elist' (previous contents discarded) based on various 
 	optional criteria, including Delaunay, and imposes various 
 	possible orders on Elist; if list {e..} is specified, it 
@@ -2105,17 +2151,19 @@ the new path.</td></tr>
 		  i    most negative imaginary part
 		  h {t}  by distance from "hex" ideal (which is
 		       -1/2 + sqrt(3)/2 i = -0.5 + i 0.866025),
-		       with threshold t>0.</td></tr>
+		       with threshold t (positive).</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
 <blockquote>
 <table>
 <tr><td width="35%"><font color="blue">legal -c i -f i</font></td>
-<td width="63%"> will give Elist of interior edges
-	illegal by Delaunay criterion (imaginary part .lt. 0) and will 
-	order them by most negative imaginary part. </td></tr>
+<td width="63%"> will give Elist of 
+	interior edges illegal by Delaunay criterion (imaginary 
+	part .lt. 0) and will order them by most negative 
+	imaginary part. </td></tr>
 <tr><td width="35%"><font color="blue">legal -c a -f h .1</font></td>
-<td width="63%"> will list those with d=[(x-ratio)-(hex_ratio)} greater than 0.1 from the
+<td width="63%"> will list those 
+	with d=[(x-ratio)-(hex_ratio)} greater than 0.1 from the
 	largest value of d.</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="load_pack">load_pack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[f]&nbsp;&nbsp; </font>
@@ -2418,6 +2466,57 @@ these packings and the corresponding object is displayed in both.
 <table>
 <tr><td width="25%" valign="top">-i n</td>
 <td width="65%" align="left"> n iterative passes through circles via drawing order or specified list.</td></tr>
+</table></blockquote>
+<font size="+1" color="blue"><strong><a name="motion">motion</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[dn] {cmd}&nbsp;&nbsp; </font>
+<blockquote>
+<strong>Description: </strong>
+	This provides an animated movement between a
+	packing before and after a string of commands
+	(surrounded by '"') is executed. The initial 
+	packing should be displayed, setting the 
+	desired display flags, then the commands 
+	should apply to this same packing, should not 
+	change the number of vertices or the geometry, 
+	and should include all actions needed to obtain 
+	the final packing, e.g., 'repack' (or 'max_pack'),
+	'layout', etc.
+	The new packing should not be displayed, as the
+	'motion' command will move toward that in stages.
+	 
+	For straightforward	situations, the idea is 
+	to help the viewer follow the action visually:
+	A sequence of canvas updates using the current 
+	display options	shows movement from the initial	
+	to the final packing. Specific examples include 
+	'flip' and 'unflip' commands, changes in boundary
+	angle sums, etc., but other cases may occur to the
+	user. Try it and see what happens.
+</blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
+<blockquote>
+<table>
+<tr><td width="25%" valign="top">-d {x}</td>
+<td width="65%" align="left">(Optional) This specifies the time delay
+between redrawing; default is x=.004.</td></tr>
+<tr><td width="25%" valign="top">-n {k}</td>
+<td width="65%" align="left">(Optional) This sets the number of steps
+of interpolation between the initial and final packing;
+default is k=75.</td></tr>
+<tr><td width="25%" valign="top">cmd</td>
+<td width="65%" align="left">Give any command string applying
+to the same packing which does not change its node count
+or geometry.</td></tr>
+</table></blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="flip">flip</a>&nbsp;&nbsp; <a href="unflip">unflip</a>&nbsp;&nbsp; 
+<br/><br/>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; Examples:</strong>
+<blockquote>
+<table>
+<tr><td width="35%"><font color="blue">motion -d .01 ''flip {v w};set_disp_flags -cf -f;max_pack;color -c d;''</font></td>
+<td width="63%">Circles move to account for flip</td></tr>
+<tr><td width="35%"><font color="blue">motion ''set_rad .1 b;repack;layout''</font></td>
+<td width="63%">Circles move to form new packing.</td></tr>
 </table></blockquote>
 <font size="+1" color="blue"><strong><a name="msg">msg</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{text}&nbsp;&nbsp; </font>
 <blockquote>
@@ -5187,6 +5286,9 @@ does 'repack', then reports the elapsed time.
 	the common neighbors of a, b. To undo this, you call 
 	"unflip a b" (same as "flip c d").
 </blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="flip">flip</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="unweld">unweld</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-q{p} [-o] {e..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>

@@ -8,14 +8,16 @@ import java.util.Iterator;
 import java.util.Scanner;
 
 /**
- * This standalone code generates 'ScriptList.html' in the
- * directory specified by the argument to the call. it is
- * run via 'ScriptLister.jar'.
+ * This can be standalone or (TODO) called from Circlepack.
+ * The code generates 'ScriptList.html' in the
+ * directory specified by the argument to the call. 
+ * (For standalone, run via 'ScriptLister.jar' and
+ * specify a directory as the argument.)
  * 
  * The resulting html file lists all its CirclePack *.cps 
  * (or deprecated *.xmd, *.cmd) script files. When loaded in 
  * the CirclePack 'WWW' window, this html file provides 
- * info on each script and links that load then into the
+ * info on each script and links that load them into the
  * CirclePack script window.
  * 
  * In the html file there is a <table>...</table> entry
@@ -28,8 +30,33 @@ import java.util.Scanner;
  * Note that the link may have to be adjusted depending on
  * where the script is stored.
  * 
- * @author kensm, February 2023
- *
+ * TODO: 
+ * + Arrange to call this from within CirclePack,
+ *   have it appear in the www frame. Where to call
+ *   it from??
+ * + Need to be able to run it on remote directories
+ *   that are on the web; so it needs a temporary
+ *   location for the html output file.
+ * + might prefer a more compact listing, which 
+ *   doesn't have the "description", just a floating layout
+ *   of AboutImage's captioned with linked script name.
+ *   Would default to "owl" jpg if there's no 'AboutImage'.
+ *   Html file would have this style section so that
+ *   resulting images "float". 
+ *       fp.write("<style>\r\n"
+				+ "* {\r\n"
+				+ "  box-sizing: flow-box;\r\n"
+				+ "}\r\n"
+				+ "\r\n"
+				+ ".column {\r\n"
+				+ "  float: left;\r\n"
+				+ "  width=200;\r\n"
+				+ "  padding: 5px;\r\n"
+				+ "}\r\n"
+				+ "</style>\r\n"
+				+ "\r\n");
+ * 
+ * @author kensm, February 2023 and Nov. 2024
  */
 public class ScriptLister {
 
@@ -44,6 +71,9 @@ public class ScriptLister {
 	public ScriptLister(String dir_name) {
 		
 		CurrentDirectory=new File(dir_name);
+		
+// debugging
+		System.out.println(System.getProperty("user.home"));
 		
 		File[] paths=CurrentDirectory.listFiles();
 		

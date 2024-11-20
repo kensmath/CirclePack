@@ -802,6 +802,11 @@ default temporary directory (see 'Messages'), others print something.
 </seealso>
 </command>
 
+<command cmd="delay" flags="{s}">
+<description>Delay execution by 's' seconds
+</description>
+</command>
+
 <command cmd="Disp" flags="[options ...] (see 'disp')">
 <description>"Disp" (with upper case 'D') calls "disp" with the given
 	options, but also stores those options with this canvas (as in
@@ -2295,10 +2300,8 @@ or geometry.</opt>
 <see>unflip</see>
 </seealso>
 <examples>
-<instance text=
-"motion -d .01 \"flip {v w};set_disp_flags -cf -f;max_pack;color -c d;\"></instance>
-<instance text="motion \"set_rad .1 b;repack;layout\""></instance>
-
+<instance text="motion -d .01 ''flip {v w};set_disp_flags -cf -f;max_pack;color -c d;''">Circles move to account for flip</instance>
+<instance text="motion ''set_rad .1 b;repack;layout''">Circles move to form new packing.</instance>
 </examples> 
 </command>
 	
