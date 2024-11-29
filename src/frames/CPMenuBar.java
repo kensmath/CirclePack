@@ -45,10 +45,6 @@ public class CPMenuBar extends JMenuBar implements ActionListener {
 		loadAction.setActionCommand("loadpack");
 		loadAction.addActionListener(this);
 
-		JMenuItem aboutAction = new JMenuItem("About Current Script");
-		aboutAction.setActionCommand("aboutCP");
-		aboutAction.addActionListener(this);
-
 		JMenuItem newScriptAction = new JMenuItem("Load Script");
 		newScriptAction.setActionCommand("loadnewScript");
 		newScriptAction.addActionListener(this);
@@ -58,7 +54,6 @@ public class CPMenuBar extends JMenuBar implements ActionListener {
 		exitAction.addActionListener(this);
 
 		fileMenu.add(loadAction);
-		fileMenu.add(aboutAction);
 		fileMenu.add(newScriptAction);
 		fileMenu.add(exitAction);
 
@@ -69,7 +64,7 @@ public class CPMenuBar extends JMenuBar implements ActionListener {
 		savePackAction.setActionCommand("savePack");
 		savePackAction.addActionListener(this);
 
-		JMenuItem savePostAction=new JMenuItem("Save Image");
+		JMenuItem savePostAction=new JMenuItem("Export Image");
 		savePostAction.setActionCommand("savePost");
 		savePostAction.addActionListener(this);
 
@@ -123,11 +118,6 @@ public class CPMenuBar extends JMenuBar implements ActionListener {
 	public void actionPerformed(ActionEvent evt) {
 		String acmd=evt.getActionCommand();
 
-		if (acmd.equals("aboutCP")) {
-			PackControl.aboutFrame.openAbout();
-			return;
-		}
-
 		if (acmd.equals("loadpack")) {
 			try {
 				TrafficCenter.cmdGUI("load_pac");
@@ -158,9 +148,9 @@ public class CPMenuBar extends JMenuBar implements ActionListener {
 
 		if (acmd.startsWith("save")) {
 			int tab=0; // default, "savePack"
-			if (acmd.equals("savePost")) 
-				tab=1;
 			if (acmd.equals("saveOutput")) 
+				tab=1;
+			if (acmd.equals("savePost")) 
 				tab=2;
 			PackControl.outputFrame.setTab(tab);
 			PackControl.outputFrame.setVisible(true);

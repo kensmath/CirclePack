@@ -90,6 +90,7 @@ public abstract class CPBase {
 	public static CPTimer cpTimer; // for crude timings
 	public static RunProgress runSpinner;  // progress indicator
 	public static String IMG="jpg"; // extension for screen shot images
+	public static File ScriptList; // html file, see 'ScriptLister.java'  
 	
 	// ------------- debug: commands to strerr
 	public static boolean cmdDebug=false;

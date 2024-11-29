@@ -43,7 +43,7 @@ public class OutputFrame extends javax.swing.JFrame {
 				}
 				{
 					postPanel = new PostPanel();
-					OutputTabbing.addTab("Save Image", null, postPanel, null);
+					OutputTabbing.addTab("Export Image", null, postPanel, null);
 				}
 				this.add(OutputTabbing);
 			}

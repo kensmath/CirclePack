@@ -16,6 +16,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Stack;
 
@@ -38,6 +39,7 @@ import javax.swing.text.Document;
 
 import allMains.CPBase;
 import allMains.CirclePack;
+import allMains.ScriptLister;
 import circlePack.PackControl;
 import exceptions.ParserException;
 import input.CommandStrParser;
@@ -49,8 +51,9 @@ import previewimage.PreviewImageHyperlinkListener;
 import util.MemComboBox;
 
 /**
- * BrowserFrame is a simple web browser. It has integrated functionality
- * to handle CirclePack XMD scripts and P and Q packing data files.
+ * BrowserFrame is a simple web browser. It has 
+ * functionality to handle CirclePack XMD scripts 
+ * and P and Q packing data files. 
  * 
  * @author kens
  * @author Alex Fawkes
@@ -66,11 +69,12 @@ public class BrowserFrame extends JFrame implements ActionListener {
 	protected JButton backButton; // Button to navigate the browser back.
 	protected JButton forwardButton; // Button to navigate the browser forward.
 	protected JButton refreshButton; // Button to refresh the current page.
+	protected JButton htmlButton; // create Script List for a directory
 	protected JLabel statusLabel; // Label to display the URL of the current moused over hyperlink.
 	protected String loadedUrl; // The URL currently loaded by this instance.
 	protected IMessenger messenger; // The message output interface, received from instantiator.
-	protected Stack<String> backHistory; // The stack of URLs that have been navigated away from.
-	protected Stack<String> forwardHistory; // The stack of URLs that have been navigated away from by the back button.
+	protected Stack<String> backHistory; // stack of URLs that have been navigated away from.
+	protected Stack<String> forwardHistory; // stack of URLs navigated away from by the back button.
 
 	/**
 	 * Initialize a new BrowserFrame with no message output functionality and
@@ -118,7 +122,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		ImageIcon backIcon = new ImageIcon(getClass().getResource("/Resources/Icons/main/previous.png"));
 		ImageIcon forwardIcon = new ImageIcon(getClass().getResource("/Resources/Icons/main/forward.png"));
 		ImageIcon refreshIcon = new ImageIcon(getClass().getResource("/Resources/Icons/main/reload.png"));
-
+		ImageIcon htmlIcon = new ImageIcon(getClass().getResource("/Resources/Icons/GUI/hoverH.png"));
 		/*
 		 * 
 		 * Initialize navigation controls.
@@ -205,6 +209,34 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		urlComboBox.setMinimumSize(new Dimension(0, backButton.getPreferredSize().height));
 		urlComboBox.setMaximumSize(new Dimension(Integer.MAX_VALUE, backButton.getPreferredSize().height));
 
+		htmlButton = new JButton(htmlIcon);
+		htmlButton.setMargin(new Insets(0, 0, 0, 0)); // No big blank margins around icons.
+		htmlButton.setFocusable(false); // No dotted selection indicator for buttons.
+		htmlButton.setEnabled(true); // Don't enable until history exists.
+		htmlButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// The button has been pressed.
+				
+				// is window showing a directory
+				if (loadedUrl.length()==0)
+					return;
+				File whatsloaded=new File(loadedUrl);// (new URL(loadedUrl).getFile());
+				URL asURL=null;
+				try {
+					asURL=new URL(loadedUrl);
+				} catch (MalformedURLException mex) {
+					
+				}
+				ScriptLister scriptLister=
+					new ScriptLister(asURL,0,whatsloaded.getName());
+				File listFile=scriptLister.go();
+				if (listFile!=null) {
+					load("file:/"+listFile.toString());
+				}
+			}
+		});
+
 		// Set up the navigation bar along the top of the frame.
 		JPanel navigationPanel = new JPanel();
 		navigationPanel.setLayout(new BoxLayout(navigationPanel, BoxLayout.LINE_AXIS));
@@ -212,6 +244,9 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		navigationPanel.add(forwardButton);
 		navigationPanel.add(refreshButton);
 		navigationPanel.add(urlComboBox);
+		navigationPanel.add(htmlButton);
+
+
 
 		// Set up the pane that displays the content of URLs.
 		pageDisplayPane = new JEditorPane();
@@ -340,7 +375,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 	 * * 3 for *.xmd script or *.cps script
 	 * * 4 for packing
 	 * @param url a <code>String</code> representation of the URL to load
-	 * @return int
+	 * @return int, 0 on failure
 	 */
 	protected int load(String url) {
 		// Return if URL is null.
@@ -349,7 +384,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		
 		// Return if the URL is invalid.
 		final URL enteredUrl = BrowserUtilities.parseURL(url);
-		if (enteredUrl == null) 
+		if (enteredUrl == null) // enteredUrl.getProtocol();
 			return 0;
 
 		// Return if the URL is already loaded.
@@ -360,9 +395,10 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 		activityIndicator.setIndeterminate(true);
 
-		// ================== If the URL is an CPS (or XMD) script:
-		if (enteredUrl.getFile().toLowerCase().endsWith(".xmd") ||
-				enteredUrl.getFile().toLowerCase().endsWith(".cps")) {
+		// ================== If the URL is an CPS (or XMD or CMD) script:
+		if (enteredUrl.getFile().toLowerCase().endsWith(".cps") ||
+				enteredUrl.getFile().toLowerCase().endsWith(".xmd") ||
+				enteredUrl.getFile().toLowerCase().endsWith(".cmd")) {
 			// If the URL is a file URL:
 			if (enteredUrl.getProtocol().toLowerCase().equals("file")) {
 				// Since this is a local file, there is no need to thread.
@@ -445,7 +481,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 				activityIndicator.setIndeterminate(false);
 				return 3;
 			}
-		} // end of processing for *.cps (or *.xmd) files
+		} // end of processing for *.cps (or *.xmd or *.cmd) files
 
 		// ================= If the URL is a .p or .q packing file:
 		if (enteredUrl.getFile().toLowerCase().endsWith(".p") || 
@@ -549,6 +585,8 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		} // end of processing p, q, pl files
 
 		// ================== If the URL is a local directory:
+		// NOTE: URL's do not allow spaces, so %20 is used 
+		//   (20 being the hexidecimal for 32, which is a space).
 		if (enteredUrl.getProtocol().toLowerCase().equals("file") && 
 			new File(enteredUrl.getFile().replace("%20", " ")).isDirectory()) {
 			
@@ -623,13 +661,19 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		if (e.getActionCommand().equals("comboBoxChanged")
 				|| e.getActionCommand().equals("comboBoxEdited")) {
 
-			// Check if the URL is invalid or already loaded. This can happen when a hyperlink is clicked,
-			// changing the current selection of the combo box and triggering this event.
+			// Check if the URL is invalid or already loaded. 
+			//   This can happen when a hyperlink is clicked,
+			//   changing the current selection of the combo box 
+			//   and triggering this event.
 			String url = (String) urlComboBox.getSelectedItem();
-			boolean validAndNovelURL = url != null && !url.trim().isEmpty() && !url.trim().equals(loadedUrl.trim());
-			if (!validAndNovelURL) return; // Return if the URL is not valid and novel.
+			boolean validAndNovelURL = url != null && 
+					!url.trim().isEmpty() && 
+					!url.trim().equals(loadedUrl.trim());
+			if (!validAndNovelURL) 
+				return; // Return if the URL is not valid and novel.
 
-			// try loading; only push successful script or web page onto the history stack.
+			// try loading; only push successful script or 
+			//   web page onto the history stack.
 			String in_loadedUrl=new String(loadedUrl);
 			int rslt=load(url); // 0=failure, -1=already loaded, 1=web,2=directory,3=xml,4=packing
 			
@@ -665,6 +709,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 			throw new ParserException("failed to load 'Welcome.html' page into browser");
 		}
 	}
+   
 } 
 
 // AF: The commenting below was part of earlier browser changes and is kept for

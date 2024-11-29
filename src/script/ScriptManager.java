@@ -1558,7 +1558,7 @@ public class ScriptManager implements ActionListener {
 	  * 
 	  * Then 
 	  * (4) see if there's an 'AboutImage', empty 'scriptTagname'.
-	  * (4) settle for default 'myCPtag.jpg' and error msg.
+	  * (5) settle for default 'myCPtag.jpg' and error msg.
 
 	  * @param tagname
 	  * @return, @see ImageIcon, null on error

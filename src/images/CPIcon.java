@@ -17,7 +17,8 @@ import allMains.CirclePack;
 import exceptions.ParserException;
 
 /**
- * An icon object for CirclePack; connects file name with ImageIcon.
+ * An icon object for CirclePack; connects file name 
+ * with ImageIcon.
  * @author kens
   */
 public class CPIcon {

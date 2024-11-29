@@ -12,6 +12,8 @@ import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Map;
 
+import util.FileUtil;
+
 /**
  * Starting CirclePack as a 'jar' file is complicated. Two main 
  * issues: (1) need to store C libraries appropriate to the system,
@@ -88,7 +90,7 @@ class RunCirclePack
 		File dir = new File(tempDir);
 		
 		/* Gets a list of all the child files and deletes them */
-		File[] files = dir.listFiles();
+		File[] files = FileUtil.getFileList(dir);
 		
 		for(int i=0; i<files.length; i++)
 		{

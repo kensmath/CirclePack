@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -12,6 +13,9 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+
+import exceptions.ParserException;
+import util.FileUtil;
 
 /**
  * BrowserUtilities is a static utility class containing convenience methods
@@ -28,9 +32,10 @@ public class BrowserUtilities {
 	private BrowserUtilities() {}
 
 	/**
-	 * Attempt to parse a valid URL from a string. This method will attempt
-	 * to guess the correct protocol if one is not explicitly stated and
-	 * fix common syntax errors.
+	 * Attempt to parse a valid URL from a string. This 
+	 * method will attempt to guess the correct protocol 
+	 * if one is not explicitly stated and will fix common 
+	 * syntax errors.
 	 * 
 	 * @param url a <code>String</code> representation of a potential URL
 	 * @return a syntactically valid <code>URL</code> object (may not point
@@ -51,7 +56,8 @@ public class BrowserUtilities {
 		// was at the bottom of the method.
 		if (url.startsWith("file")) {
 			url = url.substring(4);
-			while (url.startsWith("/") || url.startsWith(":")) url = url.substring(1);
+			while (url.startsWith("/") || url.startsWith(":")) 
+				url = url.substring(1).trim();
 			try {
 				parsedUrl = new URL("file:///" + url);
 				return parsedUrl;
@@ -64,8 +70,8 @@ public class BrowserUtilities {
 			return parsedUrl;
 		} catch (MalformedURLException e) {}
 
-		// Assume the protocol is missing and HTTP protocol is intended,
-		// then check for validity.
+		// Assume the protocol is missing and HTTP protocol 
+		//   is intended, then check for validity.
 		try {
 			parsedUrl = new URL("http://" + url);
 			return parsedUrl;
@@ -74,7 +80,7 @@ public class BrowserUtilities {
 		// Wrong number of slashes is fairly common. First check for
 		// leading symbol errors.
 		try {
-			while (url.startsWith("/") || url.startsWith(":")) url = url.substring(1);
+			while (url.startsWith("/") || url.startsWith(":")) url = url.substring(1).trim();
 			parsedUrl = new URL("http://" + url);
 			return parsedUrl;
 		} catch (MalformedURLException e) {}
@@ -83,7 +89,7 @@ public class BrowserUtilities {
 		// initial slashes.
 		if (url.startsWith("http")) {
 			url = url.substring(4);
-			while (url.startsWith("/") || url.startsWith(":")) url = url.substring(1);
+			while (url.startsWith("/") || url.startsWith(":")) url = url.substring(1).trim();
 			try {
 				parsedUrl = new URL("http://" + url);
 				return parsedUrl;
@@ -95,8 +101,9 @@ public class BrowserUtilities {
 	}
 
 	/**
-	 * Downloads a file to disk which will be deleted when the Java Virtual Machine
-	 * terminates. This method will block until the download is complete.
+	 * Downloads a file to disk which will be deleted when 
+	 * the Java Virtual Machine terminates. This method will 
+	 * block until the download is complete.
 	 * 
 	 * @param target a <code>URL</code> of the temporary file to download
 	 * @return a <code>File</code> object pointing to the successfully downloaded
@@ -121,12 +128,14 @@ public class BrowserUtilities {
 
 		// Delete the temporary file and create a directory in its place. If
 		// an error occurs, throw an exception up.
-		if (!temporaryDirectory.delete()) throw new IOException("Failed to delete temporary file " + temporaryDirectory
+		if (!temporaryDirectory.delete()) throw new IOException(
+				"Failed to delete temporary file " + temporaryDirectory
 				+ " in preparation for temporary directory creation!");
-		if (!temporaryDirectory.mkdir()) throw new IOException("Failed to create temporary directory " + temporaryDirectory + "!");
+		if (!temporaryDirectory.mkdir()) throw new IOException(
+				"Failed to create temporary directory " + temporaryDirectory + "!");
 
-		// Get a handle to our new temporary file, and mark both the directory
-		// and the file for deletion on exit.
+		// Get a handle to our new temporary file, and mark both 
+		//   the directory and the file for deletion on exit.
 		File temporaryFile = new File(temporaryDirectory, targetName);
 		temporaryDirectory.deleteOnExit();
 		temporaryFile.deleteOnExit();
@@ -188,15 +197,18 @@ public class BrowserUtilities {
 	}
 
 	/**
-	 * Returns an HTML representation of a directory. This representation is similar
-	 * to Apache web server's directory view.
-	 * 
-	 * @param directoryPath the path of the directory to render in HTML
-	 * @return HTML page representing the directory, or <code>null</code> on failure
+	 * Returns an HTML representation of a directory on
+	 * the local file system. This representation is 
+	 * similar to Apache web server's directory view.
+	 * @param directoryPath String, render files in HTML
+	 * @return resulting HTML page, null on failure 
 	 */
 	public static String pageForDirectory(String directoryPath) {
 		File directory = new File(directoryPath);
-		if (!directory.exists()) return null;
+		if (!directory.exists()) 
+			return null;
+		if (!directory.isDirectory())
+			return null;
 
 		// Build an HTML page.
 		StringBuilder pageText = new StringBuilder();
@@ -257,7 +269,8 @@ public class BrowserUtilities {
 		}
 
 		// Get a list of the contents of this directory.
-		File[] directoriesAndFiles = directory.listFiles();
+		File[] directoriesAndFiles = 
+				FileUtil.getFileList(directory);
 		if (directoriesAndFiles != null) {
 			// The directory exists and has contents.
 			
@@ -266,7 +279,8 @@ public class BrowserUtilities {
 			ArrayList<File> files = new ArrayList<File>();
 			for (File directoryOrFile : directoriesAndFiles) {
 				// Don't include hidden directories or files.
-				if (directoryOrFile.isHidden()) continue;
+				if (directoryOrFile.isHidden()) 
+					continue;
 				
 				if (directoryOrFile.isDirectory())
 					directories.add(directoryOrFile);
@@ -342,6 +356,24 @@ public class BrowserUtilities {
 	}
 	
 	/**
+	 * Check this string to see if it's a directory (versus a file)
+	 * @param urls String
+	 * @return boolean
+	 */
+	public static boolean URLisDirectory(String urls) {
+		URL resourceUrl=parseURL(urls);
+		try {
+			if ("file".equals(resourceUrl.getProtocol())
+					&& new File(resourceUrl.toURI()).isDirectory()) {
+				return true;
+			}
+			return false;
+		}catch(URISyntaxException ux) {
+			throw new ParserException("URI syntax err: asking if "+urls+" is a directory");
+		}
+	}
+		
+	/**
 	 * Convert a file size to a nicely formatted string. The string will be formatted
 	 * similar to the file sizes in the Apache web server directory view.
 	 * 
@@ -358,8 +390,9 @@ public class BrowserUtilities {
 	}
 	
 	/**
-	 * Convert a Unix time stamp to a nicely formatted string. The string will be formatted
-	 * similar to the time stamps in the Apache web server directory view.
+	 * Convert a Unix time stamp to a nicely formatted string. 
+	 * The formating is similar to the time stamps in the Apache 
+	 * web server directory view.
 	 * 
 	 * @param time in milliseconds since the epoch
 	 * @return <code>String</code> equivalent of time stamp formatted for human readability

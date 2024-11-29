@@ -1410,8 +1410,8 @@ public class StringUtil {
 	  }
 	  
 	  /** 
-	   * Return substring of contiguous digits in 'str' starting
-	   * at 'startIndx'. 'null' if no digits.
+	   * Return substring of contiguous digits in 'str' 
+	   * starting at 'startIndx'. 'null' if no digits.
 	   * @param strb StringBuilder
 	   * @param startIndx
 	   * @return substring or null on error or no digits
@@ -1522,9 +1522,9 @@ public class StringUtil {
 	  }
 	  
 	/**
-	   * Check if flag sequence has filename-type flags as last sequence;
-	   * that is, last sequence starts with '-f', '-a', or '-s' for
-	   * file, append, or script.
+	   * Check if flag sequence has filename-type flags 
+	   * as last sequence; that is, last sequence starts 
+	   * with '-f', '-a', or '-s' for file, append, or script.
 	   * 
 	   * See 'CPFileManager.trailingFile' for getting filenames.
 	   * 
@@ -1540,4 +1540,6 @@ public class StringUtil {
 			  return true;
 		  return false;
 	  }
+	  
+
 }

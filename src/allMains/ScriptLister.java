@@ -3,119 +3,168 @@ package allMains;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Scanner;
 
+import org.apache.commons.codec.binary.Base64;
+
+import browser.BrowserUtilities;
+import exceptions.InOutException;
+import util.Base64InOut;
+
 /**
- * This can be standalone or (TODO) called from Circlepack.
- * The code generates 'ScriptList.html' in the
- * directory specified by the argument to the call. 
- * (For standalone, run via 'ScriptLister.jar' and
- * specify a directory as the argument.)
+ * This can be standalone or called from Circlepack.
+ * It generates 'html' files that accumulate CirclePack 
+ * *.cps (or deprecated *.xmd and *.cmd) script files
+ * in "{parentdirectoryname}.html". This *.html file
+ * is stored in the parent directory if it is local
+ * or in the java.io.tmpdir if on a web site. 
+ * The code operates in one of two modes:
  * 
- * The resulting html file lists all its CirclePack *.cps 
- * (or deprecated *.xmd, *.cmd) script files. When loaded in 
- * the CirclePack 'WWW' window, this html file provides 
- * info on each script and links that load them into the
- * CirclePack script window.
+ * (1) Can be run standalone with a given URL and file
+ * name (optional). (For standalone, 
+ * run via 'ScriptLister.jar' and specify a url
+ * as the argument.) When the *html file is loaded 
+ * into the CirclePack 'WWW' window, it provides 
+ * info on each script and links for the full path 
+ * to load it into the CirclePack script window.
  * 
- * In the html file there is a <table>...</table> entry
- * for each script. It formats 4 pieces of data from the 
- * XML-encoded script file:
+ * In this form of html file there is a 
+ * <table>...</table> entry for each script. It formats 
+ * 4 pieces of data from the XML-encoded script file:
  * + Script Name, entered as html comment preceding the table
  * + Script header text description (if it exists)
- * + Script ABOUT_IMAGE: (if it exists)
- * + link url (if it exists; default to current directory)
+ * + Script ABOUT_IMAGE: (if it exists) and link url 
+ * (if it exists; default to current directory).
  * Note that the link may have to be adjusted depending on
  * where the script is stored.
  * 
- * TODO: 
- * + Arrange to call this from within CirclePack,
- *   have it appear in the www frame. Where to call
- *   it from??
- * + Need to be able to run it on remote directories
- *   that are on the web; so it needs a temporary
- *   location for the html output file.
- * + might prefer a more compact listing, which 
- *   doesn't have the "description", just a floating layout
- *   of AboutImage's captioned with linked script name.
- *   Would default to "owl" jpg if there's no 'AboutImage'.
- *   Html file would have this style section so that
- *   resulting images "float". 
- *       fp.write("<style>\r\n"
-				+ "* {\r\n"
-				+ "  box-sizing: flow-box;\r\n"
-				+ "}\r\n"
-				+ "\r\n"
-				+ ".column {\r\n"
-				+ "  float: left;\r\n"
-				+ "  width=200;\r\n"
-				+ "  padding: 5px;\r\n"
-				+ "}\r\n"
-				+ "</style>\r\n"
-				+ "\r\n");
+ * (2) When a directory is showing in the WWW window,
+ * the "H" button will generate a floating style listing 
+ * of the scripts with just the AboutImage and name and
+ * active link to load. In this case, if the output cannot 
+ * be stored in an *.html file (i.e., if it's a remote 
+ * directory), then it will reside in a file in the
+ * java.io.tmpdir.
  * 
- * @author kensm, February 2023 and Nov. 2024
+ * @author kensm, February 2023 and November 2024
  */
 public class ScriptLister {
 
-	public File CurrentDirectory=new File(System.getProperty("user.dir"));
+	public URL theURL;
+	public File theDirectory;
+	public String theFilename;
+	public String protocol;
 
-	StringBuilder header;
-	StringBuilder footer;
-	StringBuilder htmlContents;
-	ArrayList<StringBuilder> tables;
+	// mode 1 = standalone format; 0 = directory style
+	int mode; 
+
+	// get directory's files and their contents
+	ArrayList<URL> cpsFiles;
+	ArrayList<StringBuilder> scriptnames;
+	ArrayList<StringBuilder> descriptions;
+	ArrayList<StringBuilder> aboutImages;
 	
-	// constructor
-	public ScriptLister(String dir_name) {
+	// constructors
+	public ScriptLister() { 
+		this(null,0,null);
+	}
+	
+	public ScriptLister(URL dir_name) {
+		this(dir_name,0,null);
+	}
+	
+	public ScriptLister(String outname) {
+		this(null,0,outname);
+	}
+	
+	public ScriptLister(URL dir_name,String outname) {
+		this(dir_name,0,outname);
+	}
+	
+	public ScriptLister(URL dir_name, int m, String outname) {
+		theURL=dir_name;
+		if (theURL==null) {
+			try {
+				theURL=new URL("file:/"+System.getProperty("user.dir"));
+				protocol="file:/";
+			} catch(MalformedURLException mex) {
+				throw new InOutException("?? getting 'user.dir' should not fail");
+			}
+		}
+
+		// figure out whether it is a directory 
+		theURL=BrowserUtilities.parseURL(dir_name.toString());
+		protocol=theURL.getProtocol();
+		File gotfile=new File(theURL.getFile().replace("%20", " "));
+		if (!(gotfile.isDirectory()))
+			System.exit(0);
+		theDirectory=new File(theURL.getFile().replace("%20", " "));
 		
-		CurrentDirectory=new File(dir_name);
+		// set name for the html file
+		if (outname!=null && outname.length()>0)
+			theFilename=outname+".html";
+		else
+			theFilename=gotfile.getName()+".html";
+
+		// set mode
+		mode=m;
 		
 // debugging
-		System.out.println(System.getProperty("user.home"));
+		System.out.println("from "+theDirectory+", into "+theFilename);
+	}
 		
-		File[] paths=CurrentDirectory.listFiles();
-		
+	public File go() {
+		File[] paths=theDirectory.listFiles();
 		int n=paths.length;
-		
 		if (n>0) {
-			ArrayList<File> cpsFiles=new ArrayList<File>();
-			int tick=0;
+			cpsFiles=new ArrayList<URL>();
 			for (int j=0;j<n;j++) {
 				File file=paths[j];
 				String pname=file.getAbsolutePath();
 				if (pname.endsWith(".xmd") || pname.endsWith(".cmd") || 
 						pname.endsWith(".cps")) {
-					cpsFiles.add(file);
-					tick++;
-				}
-			}
-			if (tick>0) {
-				tables=new ArrayList<StringBuilder>();
-				Iterator<File> flst=cpsFiles.iterator();
-				while (flst.hasNext()) {
-					StringBuilder strbld=tableText(flst.next());
-					if (strbld!=null) {
-						tables.add(strbld);
+					try {
+						cpsFiles.add(new URL(protocol+":/"+file.getPath()));
+					} catch(MalformedURLException mlx) {
+						System.err.println("malformed URL; "+mlx.getMessage());
 					}
 				}
-				fillHTML();
-			}
-			else {
-				System.out.println(dir_name+" contains no files");
 			}
 		}
-		else { 
-			System.out.println(dir_name+" contains no files");
+		
+		if (cpsFiles.size()==0) {
+			System.out.println(theDirectory+" contains no files");
+			System.exit(0);
 		}
 
+		// gather the contents
+		scriptnames=new ArrayList<StringBuilder>();
+		descriptions=new ArrayList<StringBuilder>();
+		aboutImages=new ArrayList<StringBuilder>();
+		Iterator<URL> flst=cpsFiles.iterator();
+		while (flst.hasNext()) {
+			getContent(flst.next());
+		}
+
+		// now put in file
+		return fillHTML();
 	}
 	
-	public static StringBuilder tableText(File file) {
+	/**
+	 * This simply finds the title, description,
+	 * and aboutImage. If all three exist, then 
+	 * they are added to their individual ArrayList's.
+	 * @param file
+	 * @return true on success
+	 */
+	public boolean getContent(URL url) {
 		
-		// name comment for searching
-		StringBuilder contents=new StringBuilder("\n<!--"+file.getName()+"-->\n");
+		File file=new File(url.getFile().replace("%20", " "));
 		
 		// open the cps file for reading
 		Scanner scanner=null;
@@ -123,14 +172,16 @@ public class ScriptLister {
 			scanner=new Scanner(file);
 		} catch (Exception iox) {
 			System.err.println("Failed to open cps file "+file.getPath()+" for precessing or to start a file 'scanner'");
-			return contents;
+			scanner.close();
+			return false;
 		}
+
+		// get the title code
+		StringBuilder title=new StringBuilder("\n<!--"+file.getName()+"-->\n");
+		title.append("<a href="+url.toString()+">"
+				+"<b>"+file.getName()+"</b></a>");
 		
-		// form 
-		StringBuilder linkheader=new StringBuilder("<a href="+file.getPath()+">");
-		
-		// first find line numbers for first and last 
-		//    lines of data targets.
+		// find line nums, first/last lines of data targets.
 		int des_a=-1;
 		int des_b=-1;
 		int about_a=-1;
@@ -157,7 +208,7 @@ public class ScriptLister {
 				scanner=new Scanner(file);
 			} catch (Exception iox) {
 				System.err.println("Failed to open cps file "+file.getPath()+" for precessing or to start a file 'scanner'");
-				return contents;
+				return false;
 			}
 			int tick=1;
 			while (tick<des_a) {
@@ -192,141 +243,255 @@ public class ScriptLister {
 				}
 			}
 		} // done with 'description', but may be empty
+		if (description.length()==0)
+			description.append("No description provided");
 		
-		// next check for AboutImage
+		// next get AboutImage
 		StringBuilder aboutImage=new StringBuilder();
 		if (about_a>0 && about_b>about_a) {
 			try {
 				scanner.close();
-				scanner=new Scanner(file);
+				scanner=new Scanner(file); // reopen
 			} catch (Exception iox) {
 				System.err.println("Failed to open cps file "+file.getPath()+" for precessing or to start a file 'scanner'");
-				return contents;
+				return false;
 			}
+			// skip to actual image
 			int tick=0;
 			while (tick<about_a) {
 				scanner.nextLine();
 				tick++;
 			}
-			String about=scanner.nextLine();
+			String about=scanner.nextLine(); // this is the image
 			if (about.length()>0) {
-				aboutImage.append("<a href=\"+file.getPath()+\"> \n");
+				aboutImage.append("<a href="+file.getPath()+"> \n");
 				aboutImage.append("<img src=\"data:image/jpeg;base64,");
 				aboutImage.append(about);
-				aboutImage.append("\" alt=\"HTML5\" style=\"width:140px;height:auto\"></a>");
+				if (mode==1) // standalone mode size
+					aboutImage.append("\" alt=\"HTML5\" style=\"width:140px;height:auto\"></a>");
+				else // directory mode size
+					aboutImage.append("\" alt=\"HTML5\" style=\"width:100px;height:auto\"></a>");
 			}
 		}
+		// TODO: may want to specify a different image as default
+		if (aboutImage.length()==0) {
+//			URL url=CPBase.getResourceURL("/Icons/tags/myCPtag.jpg");
+			File defaultOwl=new File("C:/Users/kensm/Documents/Owl_250x250.jpg");
+			byte[] by=Base64InOut.getBytesFromFile(defaultOwl);
+			byte[] outbytes=Base64.encodeBase64(by);
+			String str = new String(outbytes,StandardCharsets.UTF_8);
+			aboutImage.append("<a href="+file.getPath()+"> \n");
+			aboutImage.append("<img src=\"data:image/jpeg;base64,");
+			aboutImage.append(str);
+			aboutImage.append("\" alt=\"HTML5\" style=\"width:100px;height:auto\"></a>");
+		}
 
-		// start <table>
-		contents.append("<table>\n  <tr>\n");
+		if (title.length()>0 && description.length()>0 &&
+				aboutImage.length()>0) {
+			scriptnames.add(title);
+			descriptions.add(description);
+			aboutImages.add(aboutImage);
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Create new html file, form depending on 'mode'.
+	 * If directory is on the web, must save resulting
+	 * 'outfile' to "java.io.tmpdir"
+	 * @return file, null on error
+	 */
+	public File fillHTML() {
 		
-		// smaller vertical size for title-only entries
-		contents.append("    <td  style=\"text-align: left;padding: 10px;"
-				+ "width:auto;height:auto\">\n\n");
-		contents.append("<p>"+linkheader.toString()+"<b>"+file.getName()
-				+ "</b></a></p>\n");
+		if (!protocol.startsWith("file"))
+			theDirectory=
+			new File(System.getProperty("java.io.tmpdir"));
 		
-		// if there's a description, with or without image
-		if (description.length()>0) {
-			contents.append("<p>"+description.toString()+"</p>");
-			if (aboutImage.length()==0) {
-				contents.append("</td>\n");
-				contents.append("<td style=\"text-align:center;padding:10px;width:140px\">\n"
-						+"<p>No Image</p></td>\n");
+		// if file already exists, delete it
+		File outfile=new File(theDirectory,theFilename);
+		if (outfile.exists()) {
+			if (!outfile.delete()) { 
+				System.err.println("Cannot delete "+theFilename);
+				System.exit(0);
 			}
 			else
-				contents.append("</td>\n");
+				outfile=new File(theDirectory,theFilename);
 		}
-		
-		// if there's an image
-		if (aboutImage.length()>0) {
-			contents.append("<td style=\"text-align: center;padding:10px;width:140px\">\n");
-			contents.append(aboutImage.toString());
-			contents.append("</td>\n");
-		}
-		contents.append("  </tr>\n"
-				+ "</table>\n");
-		
-		scanner.close();
-		return contents;
-	}
-	
-	/**
-	 * Fill in the html <table> item for this script
-	 * @return boolean
-	 */
-	public boolean fillHTML() {
+
 		// header
-		header=new StringBuilder("<!doctype html>\n"
+		StringBuilder header=new StringBuilder(
+				"<!doctype html>\n"
 				+ "<html lang=\"en\">\n\n"
 				+ "<head>\n\n"
-				+ "<title>ScriptList.html, "
-				+java.time.LocalDate.now());    
-
-		header.append("</title>\n"
+				+ "<title>currentDirectory.toString()"
+				+ "+/+theFilename, "
+				+ java.time.LocalDate.now()
+				+ "</title>\n"
 				+ "<meta charset=\"utf-8\">\n"
 				+ "<meta name=\"viewport\" content=\"width=device-width, initial=scale=3\">\n"
-				+ "<link href=\"style.css\" rel=\"stylesheet\">\n"
-				+ "<style>\n\n"
-				+ "  p {\n"
-				+ "      font-size: 1.0em;\n"
-				+ "  }\n\n"
-				+ "  body {\n"
-				+ "      font-family: Arial, Helvetica, sans-serif;\n"
-				+ "  }\n\n"
-				+ "  table {\n"
+				+ "<link href=\"style.css\" rel=\"stylesheet\">\n");
+		
+		if (mode==1) { // standalone version
+			
+			header.append(
+					"<style>\n\n"
+					+ "  p {\n"
+					+ "      font-size: 1.0em;\n"
+					+ "  }\n\n"
+					+ "  body {\n"
+					+ "      font-family: Arial, Helvetica, sans-serif;\n"
+					+ "  }\n\n");
+
+			header.append("  table {\n"
 				+ "      width: 70%;\n"
 				+ "  }\n\n"
 				+ "  td {\n"
 				+ "      border:1px solid black;\n"
 				+ "      text-align: center;\n"
-				+ "  }\n\n"
-				+ "</style>\n"
-				+ "</head>\n"
+				+ "  }\n\n");
+		}
+		
+		else { // directory version, mode==0
+			header.append(
+					"<style>\r\n"
+					+"div {\n\rfloat:left;\n\rpadding: 5px;\n}\n");
+		}
+		
+		header.append("\n</style>\n");
+		
+		header.append(
+				"</head>\n"
 				+ "<body>\n"
-				+ "<h4><em><b>CirclePack</b></em> Scripts in "
-				+ "<a href=\""+CurrentDirectory+"\">"+CurrentDirectory+"</a></h4>"
-				+ "<!-- "+java.time.LocalDate.now()+" -->\n");
+				+ "<div>"
+				+ "<h4><em><b>CirclePack</b></em> Scripts in the "
+				+ "<a href=\""+theDirectory+"\">"
+				+ theDirectory.getName()+"</a>"
+				+" directory</h4>+ <!-- "+java.time.LocalDate.now()+" -->\n");
 		
 		// footer
-		footer=new StringBuilder("<p><b><em>CirclePack</em></b>"); 
+		StringBuilder footer=new StringBuilder("</div>\n"); // end the main division
+		footer.append("<p><b><em>CirclePack</em></b>"); 
 		footer.append(" software is available <a href=\"https://github.com/kensmath/CirclePack\">");
 		footer.append(" here</z></p>\n");
 		footer.append("</body>\n</html>\n\n");
 		
 		// Build full file
-		htmlContents=new StringBuilder(header.toString());
-		
-		int count=0;
-		Iterator<StringBuilder> sblst=tables.iterator();
-		while (sblst.hasNext()) {
-			htmlContents.append(sblst.next().toString());
-			count++;
-		}
+		StringBuilder htmlContents=new StringBuilder(header.toString());
+
+		// start the main division
+		htmlContents.append("<div>\n");
+
+		int N;
+		if (scriptnames==null || (N=scriptnames.size())==0)
+			return null;
+		for (int k=0;k<N;k++) {
+			if (mode==1) { // standalone
+				// start <table>
+				htmlContents.append("<table>\n  <tr>\n");
+				
+				// smaller vertical size for title-only entries
+				htmlContents.append(
+						"    <td  style=\"text-align: left;padding: 10px;"
+						+ "width:auto;height:auto\">\n\n");
+				htmlContents.append(
+						"<p>"+scriptnames.get(k).toString()+"</p>\n");
+				
+				htmlContents.append("<p>"+descriptions.get(k).toString()+"</p>");
+
+				htmlContents.append("<td style=\"text-align: center;padding:10px;width:140px\">\n");
+				htmlContents.append(aboutImages.get(k).toString());
+				htmlContents.append("</td>\n");
+				htmlContents.append("  </tr>\n</table>\n");
+			}
+			// directory version
+			else {
+				htmlContents.append("<div>\n");
+				htmlContents.append(aboutImages.get(k).toString()+"\n");
+				htmlContents.append("<figcaption style=\"center\">"
+						+ "<small>"+
+						scriptnames.get(k).toString()
+						+"</small>\n<p></figcaption>\n");
+				htmlContents.append("</div>\n");
+			}
+		} // done with all entries
 		
 		htmlContents.append(footer.toString());
 
-		// save
-
-		File outfile=null;
+		// save; have to save to temp file if the
+		//   CurrentDirectory is a web site
+		if (theDirectory.getPath().startsWith("htt"))
+			theDirectory=new File(System.getProperty("java.io.tmpdir"));
 		BufferedWriter fp=null;
 		try {
-			outfile=new File(CurrentDirectory,"ScriptList.html");
 			fp = new BufferedWriter(new FileWriter(outfile,false));
 			fp.write(htmlContents.toString());
 			fp.flush();
 			fp.close();
 		} catch(Exception iox) {
 			System.err.println("failed to write "+outfile);
+			return null;
 		}
-		System.out.println("ScriptLister listed "+count+" scripts in "+outfile);
-		return true;
+		System.out.println("ScriptLister listed "+N+" scripts in "+outfile);
+		return outfile;
 	}
 	
 	public static void main(String[] args) {
-
-		ScriptLister obj = new ScriptLister(args[0]);
 		
+		// default directory to get files from
+		String myDirectory=System.getProperty("user.dir");
+		// default script file name
+		String outfileName=null;
+		// default mode: short directory style
+		int mode=0;
+		
+		int N=args.length;
+		for (int j=0;j<N;j++) {
+			String arg=args[j];
+			
+			// look for flags -f and -m
+			if (arg.startsWith("-")) {
+				// filename to put list into; needs to be '.html'
+				if (arg.startsWith("-f")) {
+					j++;
+					outfileName=args[j];
+				}
+			
+				// mode: larger (1) or directory style (0)
+				else if (arg.startsWith("-m")) {
+					j++;
+					try {
+						mode=Integer.parseInt(args[j]);
+					}catch (Exception ex) {
+						System.err.println("ScriptList failed to get 'mode'");
+					}
+				}
+			}
+
+			// this should usually be the last argument
+			else {
+				myDirectory=new String(arg);
+			}
+		} // end of for loop
+		
+		// what type of directory is this?
+		String protocol="";
+		if (!myDirectory.startsWith("htt") &&
+				!myDirectory.startsWith("www"))
+			protocol="file:/";
+		String myDir=protocol+myDirectory;
+		URL myURL;
+		try {
+			myURL=new URL(myDir);
+		} catch(MalformedURLException mex) {
+			throw new InOutException("malformed URL; "+mex.getMessage());
+		}
+
+		// run
+		ScriptLister obj = new ScriptLister(myURL,mode,outfileName);
+		File theFile=obj.go();
+		System.out.println("ScriptList file "+theFile+" has been saved");
+
 	}
 
 }

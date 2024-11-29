@@ -12,21 +12,22 @@ import org.apache.commons.codec.binary.Base64;
 import exceptions.InOutException;
 
 /**
- * Binary files (currently, just image files) need to be stored in base64
- * encoded form in scripts. This class has routines for en/decoding files.
+ * Binary files (currently, just image files) need to be 
+ * stored in base64 encoded form in scripts. This class has 
+ * routines for en/decoding files.
  * Code mostly stolen from web.
  * @author kstephe2
  */
 public class Base64InOut {
 	
 	/**
-	 * encode a file (presumably binary, e.g. 'jpg' or 'png') in base64
-	 * for inclusion in script. File name is unchanged. 
+	 * encode a file (presumably binary, e.g. 'jpg' or 'png') 
+	 * in base64 for inclusion in script. File name is unchanged. 
 	 * @param file (File created/checked by calling routine)
 	 */
 	public static void fileInto64(File file) {
-		byte []by=getBytesFromFile(file);
-		byte []outbytes=Base64.encodeBase64(by);
+		byte[] by=getBytesFromFile(file);
+		byte[] outbytes=Base64.encodeBase64(by);
 		String filename=null;
 		try {
 			filename=file.getCanonicalPath();
@@ -47,8 +48,8 @@ public class Base64InOut {
 	 * @param file (File created/checked by calling routine)
 	 */
 	public static File fileOutof64(File file) {
-		byte []by=getBytesFromFile(file);
-		byte []outbytes=Base64.decodeBase64(by);
+		byte[] by=getBytesFromFile(file);
+		byte[] outbytes=Base64.decodeBase64(by);
 		String filename=null;
 		try {
 			filename=file.getCanonicalPath();
@@ -74,7 +75,7 @@ public class Base64InOut {
 	 * @throws IOException
 	 */
 	public static byte[] getBytesFromFile(File file) {
-		byte []bytes=null;
+		byte[] bytes=null;
 		InputStream is=null;
 		try {
 			is = new FileInputStream(file);

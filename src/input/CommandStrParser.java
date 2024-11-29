@@ -4146,8 +4146,8 @@ public class CommandStrParser {
     	  return count;
           }// done with 'set_screen' (with 'status' false)
     	  
-    	  // ========= set_disp_flags =============
-          if (cmd.startsWith("disp_fla")) {
+    	  // ========= set_disp_flags (dep: disp_text) ==
+          if (cmd.startsWith("disp_fla") || cmd.startsWith("disp_tex")) {
         	  /* CirclePack sends a string to put in DispOptions of 
         	   * designated packing; if this is the active pack, the 
         	   * string is displayed as 'dispText' and checkbox is set.

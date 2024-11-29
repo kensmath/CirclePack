@@ -120,6 +120,7 @@ public class MyCanvasMode extends MyTool {
 	}
 
 	public void setCmd(String cmdstr) {
+		if (cmdstr!=null) {
 		try {
 			cmdstr=cmdstr.trim();
 			if (cmdstr.length()==0)
@@ -128,9 +129,11 @@ public class MyCanvasMode extends MyTool {
 		} catch (Exception ex) {
 			this.setCommand(null);
 		}
+		}
 	}
 	
 	public void setCmd2(String cd2) {
+		if (cd2!=null) {
 		try {
 			cmd2=new String(cd2.trim());
 			if (cmd2.length()==0)
@@ -138,15 +141,18 @@ public class MyCanvasMode extends MyTool {
 		} catch (Exception ex) {
 			cmd2=null;
 		}
+		}
 	}
 	
 	public void setCmd3(String cd3) {
+		if (cd3!=null) {
 		try {
 			cmd3=new String(cd3.trim());
 			if (cmd3.length()==0)
 				cmd3=null;
 		} catch (Exception ex) {
 			cmd3=null;
+		}
 		}
 	}
 	
