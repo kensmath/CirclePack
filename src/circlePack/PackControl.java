@@ -386,7 +386,7 @@ MouseMotionListener,FocusListener {
 		frame.pack();
 		frame.setLocation(ControlLocation);
 		if (browserStart) {
-			browserFrame.setWelcomePage();
+//			browserFrame.setWelcomePage();
 			browserStart = false;
 		}
 

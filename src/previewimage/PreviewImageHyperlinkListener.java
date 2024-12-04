@@ -73,7 +73,9 @@ public class PreviewImageHyperlinkListener implements HyperlinkListener {
 		// If a hyperlink has been entered (moused over)...
 		if (e.getEventType().equals(HyperlinkEvent.EventType.ENTERED)) {
 			// If the hyperlink points to an XMD script...
-			if (e.getURL().getPath().endsWith(".xmd")) {
+			if (e.getURL().getPath().endsWith(".cps") ||
+					e.getURL().getPath().endsWith(".xmd") ||
+					e.getURL().getPath().endsWith(".cmd")) {
 				// Spin a thread to parse out the image and display it in a tooltip.
 				new Thread() {
 					@Override

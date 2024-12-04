@@ -13,7 +13,6 @@ import java.util.Scanner;
 import org.apache.commons.codec.binary.Base64;
 
 import browser.BrowserUtilities;
-import exceptions.InOutException;
 import util.Base64InOut;
 
 /**
@@ -74,42 +73,32 @@ public class ScriptLister {
 		this(null,0,null);
 	}
 	
-	public ScriptLister(URL dir_name) {
+	public ScriptLister(String dir_name) {
 		this(dir_name,0,null);
 	}
 	
-	public ScriptLister(String outname) {
-		this(null,0,outname);
-	}
-	
-	public ScriptLister(URL dir_name,String outname) {
+	public ScriptLister(String dir_name,String outname) {
 		this(dir_name,0,outname);
 	}
 	
-	public ScriptLister(URL dir_name, int m, String outname) {
-		theURL=dir_name;
-		if (theURL==null) {
-			try {
-				theURL=new URL("file:/"+System.getProperty("user.dir"));
-				protocol="file:/";
-			} catch(MalformedURLException mex) {
-				throw new InOutException("?? getting 'user.dir' should not fail");
-			}
-		}
+	public ScriptLister(String dir_name, int m, String outname) {
+
+		if (dir_name==null || dir_name.length()==0) 
+			dir_name="file:/"+System.getProperty("user.dir");
 
 		// figure out whether it is a directory 
-		theURL=BrowserUtilities.parseURL(dir_name.toString());
-		protocol=theURL.getProtocol();
-		File gotfile=new File(theURL.getFile().replace("%20", " "));
-		if (!(gotfile.isDirectory()))
+		String ourUrl=BrowserUtilities.parseURL(dir_name);
+		if (ourUrl==null || !BrowserUtilities.URLisDirectory(ourUrl))
 			System.exit(0);
-		theDirectory=new File(theURL.getFile().replace("%20", " "));
+		theDirectory=new File(ourUrl);
 		
 		// set name for the html file
 		if (outname!=null && outname.length()>0)
-			theFilename=outname+".html";
-		else
-			theFilename=gotfile.getName()+".html";
+			theFilename=outname+"_scripts.html";
+		else {
+			if (!theDirectory.getName().endsWith(".html"))
+				theFilename=theDirectory.getName()+"_scripts.html";
+		}
 
 		// set mode
 		mode=m;
@@ -119,6 +108,16 @@ public class ScriptLister {
 	}
 		
 	public File go() {
+		
+// debugging
+		try {
+			URL dummy=new URL(theDirectory.toString());
+			theDirectory=new File(dummy.getPath());
+			protocol=dummy.getProtocol();
+		} catch (MalformedURLException mex) {
+			System.err.println("'theDirectory' listing fails");
+		}
+		
 		File[] paths=theDirectory.listFiles();
 		int n=paths.length;
 		if (n>0) {
@@ -129,7 +128,7 @@ public class ScriptLister {
 				if (pname.endsWith(".xmd") || pname.endsWith(".cmd") || 
 						pname.endsWith(".cps")) {
 					try {
-						cpsFiles.add(new URL(protocol+":/"+file.getPath()));
+						cpsFiles.add(new URL(protocol+":"+file.getPath()));
 					} catch(MalformedURLException mlx) {
 						System.err.println("malformed URL; "+mlx.getMessage());
 					}
@@ -473,22 +472,9 @@ public class ScriptLister {
 				myDirectory=new String(arg);
 			}
 		} // end of for loop
-		
-		// what type of directory is this?
-		String protocol="";
-		if (!myDirectory.startsWith("htt") &&
-				!myDirectory.startsWith("www"))
-			protocol="file:/";
-		String myDir=protocol+myDirectory;
-		URL myURL;
-		try {
-			myURL=new URL(myDir);
-		} catch(MalformedURLException mex) {
-			throw new InOutException("malformed URL; "+mex.getMessage());
-		}
 
 		// run
-		ScriptLister obj = new ScriptLister(myURL,mode,outfileName);
+		ScriptLister obj = new ScriptLister(myDirectory,mode,outfileName);
 		File theFile=obj.go();
 		System.out.println("ScriptList file "+theFile+" has been saved");
 
