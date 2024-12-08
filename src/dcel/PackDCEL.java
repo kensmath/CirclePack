@@ -2716,6 +2716,7 @@ public class PackDCEL {
 		File file=null;
 		try {
 			file=new File(filename);
+			file.createNewFile();
 			String dir=CPFileManager.PackingDirectory.toString();
 			fp=CPFileManager.openWriteFP(new File(dir),
 					false,file.getName(),false);

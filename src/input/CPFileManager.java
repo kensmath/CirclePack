@@ -535,14 +535,16 @@ public class CPFileManager {
 	}
 	
 	/**
-	 * Open a BufferedWriter for a named file, either append or overwrite.
-	 * If script_flag is true, then it is written to the script (if it's open), 
+	 * Open a BufferedWriter for a named file, either 
+	 * append or overwrite. If script_flag is true, 
+	 * then it is written to the script (if it's open), 
 	 * else to the given directory or to CurrentDirectory.
 	 * Return null on error.
-	 * @param File dir (specified directory); if null (and !script_flag), currentDirectory
+	 * @param dir File, (specified directory); if null (and !script_flag), currentDirectory
 	 * @param append (append to file)
 	 * @param filename
-	 * @param script_flag (file is for script)
+	 * @param script_flag boolean, true if file intended for
+	 *   the script window
 	 * @return
 	 */
 	public static BufferedWriter openWriteFP(File dir,boolean append,String filename,
@@ -578,7 +580,8 @@ public class CPFileManager {
 		}
 			
 		try {
-	    	fp = new BufferedWriter(new FileWriter(file,append));
+			FileWriter fw=new FileWriter(file,append);
+	    	fp = new BufferedWriter(fw);
 		} catch(Exception ex) {
 			CirclePack.cpb.myErrorMsg("Failed to open "+filename+" for writing data");
 			return null;

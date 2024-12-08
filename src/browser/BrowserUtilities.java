@@ -4,14 +4,11 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -36,31 +33,29 @@ public class BrowserUtilities {
 	private BrowserUtilities() {}
 
 	/**
-	 * Attempt to parse a valid URL from a string. This 
-	 * method will attempt to guess the correct protocol 
-	 * if one is not explicitly stated and will fix common 
-	 * syntax errors. We check on returned string to 
-	 * ensure it is not MalformedURL.
+	 * Attempt to parse a valid URL from 
+	 * 'urlString'. This method will attempt to 
+	 * guess the correct protocol if one is not 
+	 * explicitly stated and will fix common 
+	 * syntax errors. We check the most common 
+	 * permutations of a valid URL in order of 
+	 * likelihood. The function should exit fastest
+	 * for the most common errors.
 	 * 
 	 * TODO: want to have a check for user input of 
 	 * file name without explicitly writing "file:/"
 	 * at beginning. E.g., look for "~/" or add 
 	 * 
-	 * @param urlString String, potential URL representation
+	 * @param urlString String, potential URL
 	 * @return a valid string for a URL (may not point
 	 * to a valid resource), or null on failure
 	 */
-	public static String parseURL(String urlString) {
-		/*
-		 * Here we'll check the most common permutations of a valid URL
-		 * in order of likelihood. The function will exit fastest for
-		 * the most common errors.
-		 */
+	public static URL parseURL(String urlString) {
 
 		// NOTE: URL's do not allow spaces, so %20 is used 
 		//   (20 being the hexidecimal for 32, which is a space).
 		urlString = urlString.trim().replace("%20", " ");
-		
+
 		// one without protocol, try 'HomeDirectory' 
 		if (!urlString.startsWith("file") && 
 				!urlString.startsWith("htt")) {
@@ -74,9 +69,8 @@ public class BrowserUtilities {
 				}
 			}
 			try {
-				@SuppressWarnings("unused")
 				URL dummy=new URL("file:" + urlString);
-				return "file:" + urlString;
+				return dummy;
 			} catch (MalformedURLException e) {
 				return null;
 			}
@@ -94,9 +88,8 @@ public class BrowserUtilities {
 			while (urlString.startsWith("/") || urlString.startsWith(":")) 
 				urlString = urlString.substring(1).trim();
 			try {
-				@SuppressWarnings("unused")
-				URL dummy=new URL("file:/" + urlString);
-				return "file:/" + urlString;
+				URL dummy=new URL("file:" + urlString);
+				return dummy;
 			} catch (MalformedURLException e) {
 				return null;
 			}
@@ -104,9 +97,8 @@ public class BrowserUtilities {
 		
 		// If initially valid, return
 		try {
-			@SuppressWarnings("unused")
 			URL dummy=new URL(urlString);
-			return urlString;
+			return dummy;
 		} catch (MalformedURLException e) {	
 			// fall through if not already a valid url string
 		}
@@ -114,9 +106,8 @@ public class BrowserUtilities {
 		// Reaching here, assume the protocol is missing and 
 		//   HTTP protocol is intended, then check for validity.
 		try {
-			@SuppressWarnings("unused")
 			URL dummy = new URL("http://" + urlString);
-			return "http://"+urlString;
+			return dummy;
 		} catch (MalformedURLException e) {
 			// fall through
 		}
@@ -127,9 +118,8 @@ public class BrowserUtilities {
 		try {
 			while (urlString.startsWith("/") || urlString.startsWith(":")) 
 				urlString = urlString.substring(1).trim();
-			@SuppressWarnings("unused")
 			URL dummy = new URL("http://" + urlString);
-			return "http://"+urlString;
+			return dummy;
 		} catch (MalformedURLException e) {
 			// fall through
 		}
@@ -141,9 +131,8 @@ public class BrowserUtilities {
 			while (urlString.startsWith("/") || urlString.startsWith(":")) 
 				urlString = urlString.substring(1).trim();
 			try {
-				@SuppressWarnings("unused")
 				URL dummy = new URL("http://" + urlString);
-				return "http://" + urlString;
+				return dummy;
 			} catch (MalformedURLException e) {
 				// fall through in case we add other checks
 			}
@@ -166,7 +155,7 @@ public class BrowserUtilities {
 		throws IOException { 
 
 		// Get the name of the file to download.
-		String target=parseURL(tar);
+		String target=parseURL(tar).getPath();
 		String targetName = new File(target).getName();
 
 		// Get a unique temporary file and use that name to create a unique
@@ -253,34 +242,21 @@ public class BrowserUtilities {
 	}
 
 	/**
-	 * Returns the URL string for a temporary file with HTML 
+	 * Returns the URL temporary file with HTML 
 	 * representation of a directory, similar to Apache 
-	 * web server's directory view. 
-	 * @param directoryPath String, render files in HTML
+	 * web server's directory view. The directory
+	 * may be local or on the web.
+	 * @param directoryURL URL, source URL
 	 * @return URL, null on failure 
 	 */
-	public static String pageForDirectory(String directoryPath) {
+	public static URL pageForDirectory(URL directoryURL) {
 
-		File directory = new File(directoryPath);
-		if (!directory.exists()) 
-			return null;
+		File directory = new File(directoryURL.getFile());
+		if (!directory.exists()) // directory.getPath()
+			return null; // directory.getPath();
 		if (!directory.isDirectory())
 			return null;
 
-		// get parent directory, if parent exists.
-		File parentDir=null;
-		if (directory.getParent() != null) {
-			parentDir = new File(directory.getParent());
-		}
-		else {
-			parentDir = new File(System.getProperty("user.home"));
-		}
-
-		// set up file to hold results 
-		String tmpfile=System.getProperty("java.io.tmpdir")+
-				"\\"+parentDir.toString()+"\\directory.html";
-		Path path = Paths.get(tmpfile);
-		
 		// Build an HTML page.
 		StringBuilder pageText = new StringBuilder();
 		pageText.append("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">");
@@ -288,7 +264,7 @@ public class BrowserUtilities {
 		pageText.append("<head>");
 		pageText.append("<title>");
 		pageText.append("Index of ");
-		pageText.append(directoryPath);
+		pageText.append(directoryURL.toString());
 		pageText.append("</title>");
 		pageText.append("<style>");
 		pageText.append(".type_label {");
@@ -300,7 +276,7 @@ public class BrowserUtilities {
 		pageText.append("<body>");
 		pageText.append("<h1>");
 		pageText.append("Index of ");
-		pageText.append(directoryPath);
+		pageText.append(directoryURL.toString());
 		pageText.append("</h1>");
 		pageText.append("<table>");
 		pageText.append("<tr>");
@@ -313,26 +289,22 @@ public class BrowserUtilities {
 		pageText.append("<th colspan=\"4\"><hr></th>");
 		pageText.append("</tr>");
 
-		try {
-			String href = parentDir.toURI().toURL().toString();
+		String href = directoryURL.toString();
 				
-			pageText.append("<tr>");
-			pageText.append("<td class=\"type_label\">[DIR]</td>");
-			pageText.append("<td>");
-			pageText.append("<a href=\"");
-			pageText.append(href);
-			pageText.append("\">");
-			pageText.append("Parent Directory");
-			pageText.append("</a>");
-			pageText.append("</td>");
-			// No modified date for directories.
-			pageText.append("<td></td>");
-			// No file size for directories.
-			pageText.append("<td>-</td>");
-			pageText.append("</tr>");
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		}
+		pageText.append("<tr>");
+		pageText.append("<td class=\"type_label\">[DIR]</td>");
+		pageText.append("<td>");
+		pageText.append("<a href=\"");
+		pageText.append(href);
+		pageText.append("\">");
+		pageText.append("Parent Directory");
+		pageText.append("</a>");
+		pageText.append("</td>");
+		// No modified date for directories.
+		pageText.append("<td></td>");
+		// No file size for directories.
+		pageText.append("<td>-</td>");
+		pageText.append("</tr>");
 
 		// Get a list of the contents of this directory.
 		File[] directoriesAndFiles = 
@@ -360,54 +332,46 @@ public class BrowserUtilities {
 
 			// Display links to all directories in the current directory.
 			for (File currentDirectory : directories) {
-				try {
-					String href = currentDirectory.toURI().toURL().toString();
+
+				href = currentDirectory.toString();
 					
-					pageText.append("<tr>");
-					pageText.append("<td class=\"type_label\">[DIR]</td>");
-					pageText.append("<td>");
-					pageText.append("<a href=\"");
-					pageText.append(href);
-					pageText.append("\">");
-					pageText.append(currentDirectory.getName());
-					pageText.append("</a>");
-					pageText.append("</td>");
-					// No modified date for directories.
-					pageText.append("<td></td>");
-					// No file size for directories.
-					pageText.append("<td>-</td>");
-					pageText.append("</tr>");
-				} catch (MalformedURLException e) {
-					e.printStackTrace();
-					continue;
-				}
+				pageText.append("<tr>");
+				pageText.append("<td class=\"type_label\">[DIR]</td>");
+				pageText.append("<td>");
+				pageText.append("<a href=\"");
+				pageText.append(href);
+				pageText.append("\">");
+				pageText.append(currentDirectory.getName());
+				pageText.append("</a>");
+				pageText.append("</td>");
+				// No modified date for directories.
+				pageText.append("<td></td>");
+				// No file size for directories.
+				pageText.append("<td>-</td>");
+				pageText.append("</tr>");
 			}
 			
 			// Display links to all files in the current directory.
 			for (File currentFile : files) {
-				try {
-					String href = currentFile.toURI().toURL().toString();
 
-					pageText.append("<tr>");
-					pageText.append("<td class=\"type_label\">[FILE]</td>");
-					pageText.append("<td>");
-					pageText.append("<a href=\"");
-					pageText.append(href);
-					pageText.append("\">");
-					pageText.append(currentFile.getName());
-					pageText.append("</a>");
-					pageText.append("</td>");
-					pageText.append("<td>");
-					pageText.append(readableTimeStamp(currentFile.lastModified()));
-					pageText.append("</td>");
-					pageText.append("<td>");
-					pageText.append(readableFileSize(currentFile.length()));
-					pageText.append("</td>");
-					pageText.append("</tr>");
-				} catch (MalformedURLException e) {
-					e.printStackTrace();
-					continue;
-				}
+				href = currentFile.toString();
+
+				pageText.append("<tr>");
+				pageText.append("<td class=\"type_label\">[FILE]</td>");
+				pageText.append("<td>");
+				pageText.append("<a href=\"");
+				pageText.append(href);
+				pageText.append("\">");
+				pageText.append(currentFile.getName());
+				pageText.append("</a>");
+				pageText.append("</td>");
+				pageText.append("<td>");
+				pageText.append(readableTimeStamp(currentFile.lastModified()));
+				pageText.append("</td>");
+				pageText.append("<td>");
+				pageText.append(readableFileSize(currentFile.length()));
+				pageText.append("</td>");
+				pageText.append("</tr>");
 			}
 		}
 
@@ -419,10 +383,20 @@ public class BrowserUtilities {
 		pageText.append("</body>");
 		pageText.append("</html>");
 
-		// put into prepared file
-		BufferedWriter writer = null;		
+		// put into file
+		BufferedWriter writer=null;
+		String filename="myScripts.html";
+		File dir=null;
 		try {
-			writer = new BufferedWriter( new FileWriter(tmpfile));
+			dir=new File(System.getProperty("java.io.tmpdir"),
+					directory.getName()); // dir.exists()
+			if (dir.exists()) {
+				dir.delete();
+			}
+			dir.mkdir();
+	
+			writer = CPFileManager.
+			openWriteFP(dir,false,filename,false);
 			writer.write(pageText.toString());
 		} catch (IOException ex) {
 			// Print messqage exception occurred as
@@ -431,39 +405,22 @@ public class BrowserUtilities {
 			return null;
 		}
 		try {
-			if (writer!=null)
+			if (writer!=null) {
+				writer.flush();
 				writer.close();
+			}
 		} catch(IOException ex) {
 			System.err.println("problem with 'writer': "+ex.getMessage());
 		}
 
-		return "file:"+path.toString();
-	}
-	
-	/**
-	 * Check this string to see if it's a directory 
-	 * (versus a file), either locally or on the web.
-	 * @param urlString String
-	 * @return boolean
-	 */
-	public static boolean URLisDirectory(String urlString) {
-		
-		URL resourceUrl=null;
+		URL outURL=null;
 		try {
-			resourceUrl=new URL(parseURL(urlString));
-		} catch (MalformedURLException mex) {
-			System.err.println("'parseURL' seems to have failed "
-					+"to get a valid url string");
-			return false;
+			outURL=new URL("file://"+dir.getPath()+"/"+filename);
+		} catch (MalformedURLException e) {
+			System.err.println("failed to save directory results");
 		}
-//		try { // I hope this should work whether local or remote
-			if ((new File(resourceUrl.getFile())).isDirectory()) {
-				return true;
-			}
-			return false;
-//		}catch(IOException ux) {
-//			throw new ParserException("URI syntax err: asking if "+urlString+" is a directory");
-//		}
+		
+		return outURL;
 	}
 		
 	/**

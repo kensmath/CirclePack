@@ -12,7 +12,6 @@ import java.util.Scanner;
 
 import org.apache.commons.codec.binary.Base64;
 
-import browser.BrowserUtilities;
 import util.Base64InOut;
 
 /**
@@ -73,28 +72,35 @@ public class ScriptLister {
 		this(null,0,null);
 	}
 	
-	public ScriptLister(String dir_name) {
-		this(dir_name,0,null);
+	public ScriptLister(URL dirURL) {
+		this(dirURL,0,null);
 	}
 	
-	public ScriptLister(String dir_name,String outname) {
-		this(dir_name,0,outname);
+	public ScriptLister(URL dirURL,String outname) {
+		this(dirURL,0,outname);
 	}
 	
-	public ScriptLister(String dir_name, int m, String outname) {
+	public ScriptLister(URL dirURL, int m, String outname) {
 
-		if (dir_name==null || dir_name.length()==0) 
-			dir_name="file:/"+System.getProperty("user.dir");
+		if (dirURL==null) {
+			try {
+				dirURL=new URL("file://"+System.getProperty("user.dir"));
+			} catch (MalformedURLException e) {
+				System.err.println("failed to creat URL for ScriptLister");
+			}
+		}
 
 		// figure out whether it is a directory 
-		String ourUrl=BrowserUtilities.parseURL(dir_name);
-		if (ourUrl==null || !BrowserUtilities.URLisDirectory(ourUrl))
+		if (!(new File(dirURL.getFile())).isDirectory()) {
+			System.err.println("'dir_name' is not a directory");
 			System.exit(0);
-		theDirectory=new File(ourUrl);
+		}
+
+		theDirectory=new File(dirURL.getFile());
 		
 		// set name for the html file
 		if (outname!=null && outname.length()>0)
-			theFilename=outname+"_scripts.html";
+			theFilename=outname+".html";
 		else {
 			if (!theDirectory.getName().endsWith(".html"))
 				theFilename=theDirectory.getName()+"_scripts.html";
@@ -108,16 +114,7 @@ public class ScriptLister {
 	}
 		
 	public File go() {
-		
-// debugging
-		try {
-			URL dummy=new URL(theDirectory.toString());
-			theDirectory=new File(dummy.getPath());
-			protocol=dummy.getProtocol();
-		} catch (MalformedURLException mex) {
-			System.err.println("'theDirectory' listing fails");
-		}
-		
+			
 		File[] paths=theDirectory.listFiles();
 		int n=paths.length;
 		if (n>0) {
@@ -438,7 +435,13 @@ public class ScriptLister {
 	public static void main(String[] args) {
 		
 		// default directory to get files from
-		String myDirectory=System.getProperty("user.dir");
+		URL myDirectory=null;
+		try {
+			myDirectory = new URL("file://"+System.getProperty("user.dir"));
+		} catch (MalformedURLException e) {
+			System.err.println("Failed default 'myDirectory'");
+		}
+		
 		// default script file name
 		String outfileName=null;
 		// default mode: short directory style
@@ -465,12 +468,16 @@ public class ScriptLister {
 						System.err.println("ScriptList failed to get 'mode'");
 					}
 				}
+			} 
+			
+			else {
+				try {
+					myDirectory=new URL("file://"+arg);
+				} catch (MalformedURLException e) {
+					System.err.println("Failed to set 'myDirectory'");
+				}
 			}
 
-			// this should usually be the last argument
-			else {
-				myDirectory=new String(arg);
-			}
 		} // end of for loop
 
 		// run

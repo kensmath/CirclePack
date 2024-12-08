@@ -1096,12 +1096,14 @@ public class ScriptManager implements ActionListener {
 	 public int loadNamedScript(String name,String origName,boolean keepName) {
 		 if (name==null) return 0;
 		 URL url=getScriptURL(name);
-		 if (url==null) return 0;
+		 if (url==null) 
+			 return 0;
 		 int result=0;
 		 if (hasChanged) { // has there been editing in current script?
 			 result=queryUserForSave();
 		 }
-		 if (result<0) return 0; // closed or cancelled
+		 if (result<0) 
+			 return 0; // closed or cancelled
 		 String endname=url.toString(); // Note: seems to convert separator to standard '/'
 		 int k=endname.lastIndexOf('/');
 		 if (k>0 && k<endname.length())
@@ -1146,13 +1148,14 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * Given script filename (or name from pop up dialog, or file chosen in browser),
-	  * read in script and search for/execute 'EOL' command (execute on load).
+	  * Given script filename (or name from pop up dialog, 
+	  * or file chosen in browser), read in script and search 
+	  * for/execute 'EOL' command (execute on load).
 	  * Note: filename may be temp file (e.g. if file is downloaded from the web),
 	  * so we provide 'origName' to saving in the list.
-	  * @param filename <code>String</code>
-	  * @param origName <code>String</code>, name to save under
-	  * @param keepname <code>boolean</code>: true, then store in list of names.
+	  * @param filename String
+	  * @param origName String, name to save under
+	  * @param keepname boolean: true, then store in list of names.
 	  * @return int, 0 = on failure. 
 	  */
 	 public int getScript(String filename,String origName,boolean keepname) {
