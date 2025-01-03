@@ -238,7 +238,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 					new ScriptLister(loadedUrl,0,dummy.getName());
 				File listFile=scriptLister.go();
 				if (listFile!=null) {
-					loadPage(5,"file:/"+listFile.toString());
+					loadPage(5,"file:///"+listFile.toString());
 				}
 			}
 		});
@@ -437,7 +437,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		
 		// ================= If URL is a page to load
 		else 
-			return 2;
+			return 1;
 		
 	}
 	

@@ -15,7 +15,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Stack;
 
@@ -47,6 +46,7 @@ import interfaces.IMessenger;
 import packing.PackData;
 import packing.ReadWrite;
 import previewimage.PreviewImageHyperlinkListener;
+import util.FileUtil;
 import util.MemComboBox;
 
 /**
@@ -73,7 +73,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 	protected JButton backButton; // Button to navigate the browser back.
 	protected JButton forwardButton; // Button to navigate the browser forward.
 	protected JButton refreshButton; // Button to refresh the current page.
-	protected JButton htmlButton; // Button for directory scriptLister output.
+ 	protected JButton htmlButton; // Button for directory scriptLister output.
 	protected JLabel statusLabel; // Label to display the URL of the current moused over hyperlink.
 	protected IMessenger messenger; // The message output interface, received from instantiator.
 	protected Stack<URL> backHistory; // The stack of URLs that have been navigated away from.
@@ -84,19 +84,19 @@ public class BrowserFrame extends JFrame implements ActionListener {
 	protected URL webURL; // processed, ready to load into web page
 
 	/**
-	 * Initialize a new BrowserFrame with no message output functionality and
-	 * no persistent storage of URLs.
+	 * Initialize a new BrowserFrame with no message output 
+	 * functionality and no persistent storage of URLs.
 	 */
 	public BrowserFrame() {
 		this(null, null);
 	}
 
 	/**
-	 * Initialize a new BrowserFrame with persistent storage of URLs and message
-	 * output functionality.
+	 * Initialize a new BrowserFrame with persistent 
+	 * storage of URLs and message output functionality.
 	 * 
-	 * @param messenger the <code>IMessenger</code> to use for output, or
-	 * <code>null</code> for no output
+	 * @param messenger the <code>IMessenger</code> to 
+	 * use for output, or null for no output.
 	 * @param historyFile the file path to use for persistent URL storage, or
 	 * <code>null</code> for no persistent storage
 	 */
@@ -151,7 +151,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 					// top URL in the back history.
 					forwardHistory.push(loadedURL);
 					forwardButton.setEnabled(true);
-					load(backHistory.pop());
+					loadKnownURL(backHistory.pop());
 				}
 
 				// If there's nothing left in the back history, disable the button.
@@ -173,7 +173,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 					// the top URL in the forward history.
 					backHistory.push(loadedURL);
 					backButton.setEnabled(true);
-					load(forwardHistory.pop());
+					loadKnownURL(forwardHistory.pop());
 				}
 
 				// If there's nothing left in the forward history, disable the button.
@@ -196,19 +196,16 @@ public class BrowserFrame extends JFrame implements ActionListener {
 
 					// Empty the loaded URL so load will work correctly.
 					URL loadedUrlTemp=null;
-					try {
-						loadedUrlTemp = new URL(loadedURL.toString());
-					} catch (MalformedURLException e1) {
-						e1.printStackTrace();
-					}
-					loadedURL = null;
+					if ((loadedUrlTemp=FileUtil.tryURL(loadedURL.toString()))!=null) {
+						loadedURL = null;
 					
-					// Reload the page.
-					load(loadedUrlTemp);
+						// Reload the page.
+						loadKnownURL(loadedUrlTemp);
+					}
 				}
 			}
 		});
-		
+
 		htmlButton = new JButton(htmlIcon);
 		htmlButton.setMargin(new Insets(0, 0, 0, 0)); // No big blank margins around icons.
 		htmlButton.setFocusable(false); // No dotted selection indicator for buttons.
@@ -216,7 +213,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		htmlButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// The button has been pressed.
+//				 The button has been pressed.
 				
 				// is window showing a directory
 				File loaded=new File(loadedURL.getFile());
@@ -229,16 +226,13 @@ public class BrowserFrame extends JFrame implements ActionListener {
 				File listFile=scriptLister.go();
 				if (listFile!=null) {
 					URL dirURL=null;
-					try {
-						dirURL = new URL("file:/"+listFile.toString());
-					} catch (MalformedURLException e1) {
-						e1.printStackTrace();
+					if ((dirURL=FileUtil.tryURL("file:///"+listFile.toString()))!=null) {
+						loadAction(2,dirURL);
 					}
-					loadAction(2,dirURL);
 				}
 			}
 		});
-
+		
 		File file=new File(historyFile);
 		try {
 			file.createNewFile(); // finds or creates 
@@ -259,6 +253,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		navigationPanel.add(forwardButton);
 		navigationPanel.add(refreshButton);
 		navigationPanel.add(urlComboBox);
+		navigationPanel.add(htmlButton);
 
 		// Set up the pane that displays the content of URLs.
 		pageDisplayPane = new JEditorPane();
@@ -326,9 +321,11 @@ public class BrowserFrame extends JFrame implements ActionListener {
 	}
 
 	/**
-	 * NavigationHyperlinkListener will navigate the browser to new URLs in response
-	 * to hyperlink activations. If the user clicks a hyperlink in the browser, it will
-	 * be activated, and the browser will navigate to the represented URL.
+	 * NavigationHyperlinkListener will navigate the browser 
+	 * to new URLs in response to hyperlink activations. 
+	 * If the user clicks a hyperlink in the browser, it will
+	 * be activated, and the browser will navigate to the 
+	 * represented URL.
 	 * 
 	 * @author kens
 	 * @author Alex Fawkes
@@ -350,13 +347,44 @@ public class BrowserFrame extends JFrame implements ActionListener {
 				}
 
 				// check the URL represented by the activated hyperlink.
-				URL enteredURL=BrowserUtilities.parseURL(e.getURL().toString());
+				URL url=FileUtil.parseURL(e.getURL().toString());
 
-				if (enteredURL!=null) {
-					
+				if (url==null || url.equals(loadedURL))
+					return; // url=null;
+				
+				// process sets 'webURL' 
+				int action=processURL(url); // File.separator;
+				
+				// failed?
+				if (action<=0 || webURL==null)
+					return;
+				
+				// script?
+				else if (action==3 && loadScript(webURL)==0) {
+					System.err.println("failed to load script '"+webURL.toString()+"'");
+					return;
 				}
-
+				
+				// packing?
+				else if (action==4 && loadPacking(webURL)==0) {
+					System.err.println("failed to load packing '"+webURL.toString()+"'");
+					return;
+				}
+				
+				// only 1 and 2 require something to be loaded
+				if ((action!=1 && action!=2))
+					return; 
+				
+				int rslt=loadAction(action,webURL);
+				
+				if (rslt>0)  // success
+					urlComboBox.setSuccess();
+				else if (rslt==0)
+					urlComboBox.setFailure();
+				else 
+					urlComboBox.setNeutral();
 			}
+
 		}
 	}
 
@@ -402,7 +430,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 			return 0;
 
 		// Check the Return if entereedURL is null.
-		URL enteredURL=BrowserUtilities.parseURL(url.toString());
+		URL enteredURL=FileUtil.parseURL(url.toString());
 		
 		// Return if the URL is invalid.
 		if (enteredURL == null) // failure 
@@ -412,15 +440,14 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		if (enteredURL.equals(loadedURL)) 
 			return -1;
 		
-		try {
-			webURL=new URL(enteredURL.toString());
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		}		
-
+		if ((webURL=FileUtil.tryURL(enteredURL.toString()))==null) {
+			System.err.println("failed to set 'webURL'");
+			return 0;
+		}
+		
 		// ========== if URL is a directory
 		File webFile=new File(webURL.getFile());
-		if (webFile.isDirectory())
+		if (webFile.isDirectory() && loadDirectory(webURL)!=0)
 			return 2;
 
 		// ======= If the URL is an *.cps (or *.xmd or *.cmd) script:
@@ -568,12 +595,9 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		
 		if (url==null)
 			return 0;
-		URL targetFile;
-		try {
-			targetFile = new URL(url.toString());
-		} catch (MalformedURLException e) {
+		URL targetFile=null;
+		if ((targetFile=FileUtil.tryURL(url.toString()))==null)
 			return 0;
-		}
 		
 		activityIndicator.setIndeterminate(true);
 		webURL=null;
@@ -685,7 +709,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 	 * @param url URL
 	 * @return int, 0 on failure
 	 */
-	protected int load(URL url) {
+	protected int loadKnownURL(URL url) {
 		// Return if URL is null.
 		if (url == null)
 			return 0;
@@ -722,11 +746,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 
 		URL hold_loadedURL=null;
 		// try loading; only push successful script or web page onto the history stack.
-		try {
-			hold_loadedURL=new URL(loadedURL.toString());
-		} catch(MalformedURLException mex) {
-			System.err.println(mex.getMessage());
-		}
+		hold_loadedURL=FileUtil.tryURL(loadedURL.toString());
 		
 		loadedURL=url;
 		// Add loadedURL to the back history stack and 
@@ -755,10 +775,18 @@ public class BrowserFrame extends JFrame implements ActionListener {
 	 * @return 0 on failure
 	 */
 	public int loadPage(URL newURL) {
+		boolean debug=false;
 		try {
 			refreshButton.setEnabled(true);
+			
+// debugging: try to change to known file to see it loads
+			if (debug) // debug=true;
+				newURL=FileUtil.tryURL("file:///Users/kensm/Documents/CmdDetails.html");
+			
 			pageDisplayPane.setPage(newURL);
-			loadedURL = new URL(newURL.toString());
+			loadedURL = FileUtil.tryURL(newURL.toString());
+			if (loadedURL==null)
+				return 0;
 			urlComboBox.add2List(loadedURL.toString(),false);
 			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 			activityIndicator.setIndeterminate(false);
@@ -780,16 +808,17 @@ public class BrowserFrame extends JFrame implements ActionListener {
 	}
 
 	/**
-	 * Monitor combo box events to respond to changes in the current URL. 
-	 * If the user enters or selects a new or different URL from the combo box, 
+	 * Monitor combo box events to respond to changes 
+	 * in the current URL. If the user enters or 
+	 * selects a new or different URL from the combo box, 
 	 * this listener will navigate the browser to it.
 	 * 
 	 * @author kens
 	 * @author Alex Fawkes
 	 */
 	public void actionPerformed(ActionEvent e) { 
-		if (e.getActionCommand().equals("comboBoxChanged")
-				|| e.getActionCommand().equals("comboBoxEdited")) {
+		if (e.getActionCommand().equals("comboBoxEdited")
+				|| e.getActionCommand().equals("comboBoxChanged")) {
 
 			// Check if the URL is invalid or already loaded. 
 			// This can happen when a hyperlink is clicked,
@@ -797,31 +826,31 @@ public class BrowserFrame extends JFrame implements ActionListener {
 			// and triggering this event.
 			String urlString = (String) urlComboBox.getSelectedItem();
 			
-			URL url=BrowserUtilities.parseURL(urlString);
+			URL url=FileUtil.parseURL(urlString);
 			if (url==null || url.equals(loadedURL))
-				return;
+				return; // url.getPath();
 			
 			// process sets 'webURL' 
-			int action=processURL(url); 
+			int action=processURL(url); // File.separator;
 			
 			// failed?
 			if (action<=0 || webURL==null)
 				return;
 			
 			// directory?
-			if (action==2 && loadDirectory(webURL)==0) {
-				System.err.println("failed to load directory '"+webURL.toString()+"'");
-				return;
-			}
+//			else if (action==2 && loadDirectory(webURL)==0) {
+//				System.err.println("failed to load directory '"+webURL.toString()+"'");
+//				return;
+//			}
 			
 			// script?
-			if (action==3 && loadScript(webURL)==0) {
+			else if (action==3 && loadScript(webURL)==0) {
 				System.err.println("failed to load script '"+webURL.toString()+"'");
 				return;
 			}
 			
 			// packing?
-			if (action==4 && loadPacking(webURL)==0) {
+			else if (action==4 && loadPacking(webURL)==0) {
 				System.err.println("failed to load packing '"+webURL.toString()+"'");
 				return;
 			}

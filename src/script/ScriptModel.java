@@ -21,6 +21,7 @@ import exceptions.ParserException;
 import input.CPFileManager;
 import input.FileDialogs;
 import util.Base64InOut;
+import util.FileUtil;
 
 /**
  * This is the model behind CirclePack scripts. It loads script
@@ -78,7 +79,10 @@ public class ScriptModel {
 				CirclePack.cpb.errMsg("Encountered error in loading the script.");
 				return null;
 			}
-			URL workingURL=new URL("file:"+ workingFile.getCanonicalPath());
+			URL workingURL=FileUtil.tryURL("file:"+ workingFile.getCanonicalPath());
+			if (workingURL==null)
+				return null;
+			
 			DOMParser parser = new DOMParser();
 			newDoc=null;
 			try {
@@ -410,11 +414,10 @@ public class ScriptModel {
 			 if (nameonly.length()==0)
 				 return null;
 		 }
-		 try {
-			 // AF:
-			 url= new URL(name);
-		 } catch(IOException ioe) {
-			 String errmsg=new String("IOException in finding "+name+": "+ioe.getMessage());
+
+		 // AF:
+		 if ((url=FileUtil.tryURL(name))==null) { 
+			 String errmsg=new String("failed to create URL for "+name);
 			 CirclePack.cpb.myErrorMsg(errmsg);
 			 url=null;
 		 }

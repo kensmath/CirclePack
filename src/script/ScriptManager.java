@@ -73,6 +73,7 @@ import mytools.MyTool;
 import mytools.MyToolEditor;
 import packing.CPdrawing;
 import packing.PackData;
+import util.FileUtil;
 import util.StringUtil;
 
 public class ScriptManager implements ActionListener {
@@ -939,11 +940,12 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * Compute the height of a node in stack area for stackScroll
-	  * display. Use 'preorder' (reverse of depth first) enumeration,
-	  * which is the display order.
-	  * @param tnode
-	  * @return
+	  * Compute the height of a node in stack area 
+	  * for stackScroll display. Use 'preorder' (reverse 
+	  * of depth first) enumeration, which is the 
+	  * display order.
+	  * @param tnode CPTreeNode
+	  * @return int, 0 on error
 	  */
 	 public int getBoxPoint(CPTreeNode cpTN) {
 		 int height=0;
@@ -951,7 +953,7 @@ public class ScriptManager implements ActionListener {
 		 if (cpTN==null) 
 			 return (0);
 
-		 Enumeration<TreeNode> tEnum=rootNode.preorderEnumeration();
+		Enumeration<TreeNode> tEnum=rootNode.preorderEnumeration();
 
 		 // add heights until you reach given node
 		 CPTreeNode node=cpTN;
@@ -1072,15 +1074,14 @@ public class ScriptManager implements ActionListener {
 			 if (nameonly.length()==0)
 				 return null;
 		 }
-		 try {
-			 // AF:
-			 url= new URL(name);
-		 } catch(IOException ioe) {
-			 String errmsg=new String("IOException in finding "+name+": "+ioe.getMessage());
+		 // AF:
+		 if ((url= FileUtil.tryURL(name))==null) {
+			 String errmsg=new String("IOException in finding "+name);
 			 PackControl.consoleCmd.dispConsoleMsg(errmsg);
 			 PackControl.shellManager.recordError(errmsg);
 			 url=null;
 		 }
+
 		 return url;
 	 }
 
@@ -1503,7 +1504,7 @@ public class ScriptManager implements ActionListener {
 			 else if (command.equals("SCRIPT:open browser")) {
 				 PackControl.browserFrame.setVisible(true);
 				 PackControl.browserFrame.setState(Frame.NORMAL);
-			 } 
+			 }
 			 else if (command.equals("SCRIPT:New script")) {
 				 String tmpname=createDefaultScript();
 				 if (tmpname!=null) {
@@ -1576,7 +1577,7 @@ public class ScriptManager implements ActionListener {
 				 for (int j=includedFiles.size()-1;j>=0;j--) {
 					 IncludedFile iFile=includedFiles.get(j);
 					 if (iFile.origName.equals(tagname)) 
-						 url=new URL("file://"+iFile.tmpFile);
+						 url=new URL("file:///"+iFile.tmpFile);
 				 }
 			 } catch(Exception ex) {
 				 CirclePack.cpb.errMsg("Problem getting 'tag' file from script");

@@ -35,6 +35,7 @@ import javax.swing.WindowConstants;
 import allMains.CPBase;
 import allMains.CirclePack;
 import browser.BrowserFrame;
+import browser.FXWebBrowser;
 import canvasses.CanvasReDrawManager;
 import canvasses.CursorCtrl;
 import canvasses.MainFrame;
@@ -169,7 +170,7 @@ MouseMotionListener,FocusListener {
 	public static HelpHover helpHover;
 	public static ScriptHover scriptHover;
 	public static MobiusFrame mobiusFrame;
-	public static BrowserFrame browserFrame;
+	public static FXWebBrowser browserFrame;
 	public static FtnFrame newftnFrame;
 	public static OutputFrame outputFrame;
 	public static TabbedPackDataHover packDataHover; 
@@ -617,7 +618,7 @@ MouseMotionListener,FocusListener {
 		if (historyFile.startsWith("~/"))
 			historyFile = CPFileManager.HomeDirectory + File.separator + historyFile.substring(2);
 		
-		browserFrame = new BrowserFrame(messenger, historyFile);
+		browserFrame = new FXWebBrowser(messenger, historyFile);
 		browserFrame.setLocation(ptX, ptY + ControlDim2.height + 90);
 		browserFrame.setVisible(browserStart);
 		
@@ -755,7 +756,9 @@ MouseMotionListener,FocusListener {
 		callStack.add(mobButton);
 		callStack.add(newftnButton);
 		callStack.add(configButton);
+/*		
 		callStack.add(wwwButton);
+*/		
 //		callStack.add(pairButton);
 		
 		return callStack;

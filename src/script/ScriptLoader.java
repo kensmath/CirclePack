@@ -17,9 +17,11 @@ import org.w3c.dom.NodeList;
 
 import allMains.CirclePack;
 import circlePack.PackControl;
+import exceptions.InOutException;
 import exceptions.ScriptException;
 import input.CPFileManager;
 import util.Base64InOut;
+import util.FileUtil;
 
 /**
  * Methods for loading CirclePack XML "scripts"
@@ -39,9 +41,10 @@ public class ScriptLoader {
 	}
 
 	/**
-	 * This loads from a file (generally 'manager.scriptFile').
-	 * This is only called after user has chance to save the current 
-	 * script (if it has changed).
+	 * This loads from a file (generally 
+	 * 'manager.scriptFile'). This is only called after 
+	 * user has chance to save the current script 
+	 * (if it has changed).
 	 * @param url URL of script
 	 * @return true if the load seemed to work.
 	 */
@@ -54,12 +57,15 @@ public class ScriptLoader {
 				CirclePack.cpb.errMsg("Encountered error in loading the script.");
 				return false;
 			}
-			URL workingURL=new URL("file:"+
+			URL workingURL=FileUtil.tryURL("file:"+
 					manager.workingFile.getCanonicalPath());
+			if (workingURL==null)
+				throw new InOutException("failed on 'workingURL'");
+			
 			DOMParser parser = new DOMParser();
 			org.w3c.dom.Document doc=null;
 			try {
-				parser.parse(workingURL.toString());
+				parser.parse(workingURL.getFile());
 				doc = parser.getDocument();
 			} catch(Exception ex) {
 				if (PackControl.consoleCmd!=null) // this happens during startup

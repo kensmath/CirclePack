@@ -3,7 +3,6 @@ package allMains;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -13,6 +12,7 @@ import java.util.Scanner;
 import org.apache.commons.codec.binary.Base64;
 
 import util.Base64InOut;
+import util.FileUtil;
 
 /**
  * This can be standalone or called from Circlepack.
@@ -83,11 +83,8 @@ public class ScriptLister {
 	public ScriptLister(URL dirURL, int m, String outname) {
 
 		if (dirURL==null) {
-			try {
-				dirURL=new URL("file://"+System.getProperty("user.dir"));
-			} catch (MalformedURLException e) {
+			if ((dirURL=FileUtil.tryURL("file:///"+System.getProperty("user.dir")))==null)
 				System.err.println("failed to creat URL for ScriptLister");
-			}
 		}
 
 		// figure out whether it is a directory 
@@ -122,13 +119,12 @@ public class ScriptLister {
 			for (int j=0;j<n;j++) {
 				File file=paths[j];
 				String pname=file.getAbsolutePath();
-				if (pname.endsWith(".xmd") || pname.endsWith(".cmd") || 
-						pname.endsWith(".cps")) {
-					try {
-						cpsFiles.add(new URL(protocol+":"+file.getPath()));
-					} catch(MalformedURLException mlx) {
-						System.err.println("malformed URL; "+mlx.getMessage());
-					}
+				if (pname.endsWith(".cps") || pname.endsWith(".xmd") || 
+						pname.endsWith(".cmd")) {
+					URL dummy=FileUtil.tryURL(protocol+":"+file.getPath());
+					if (dummy==null)
+						System.err.println("malformed URL for "+pname);
+					else this.cpsFiles.add(dummy);
 				}
 			}
 		}
@@ -436,11 +432,9 @@ public class ScriptLister {
 		
 		// default directory to get files from
 		URL myDirectory=null;
-		try {
-			myDirectory = new URL("file://"+System.getProperty("user.dir"));
-		} catch (MalformedURLException e) {
+		if ((myDirectory=FileUtil.tryURL("file:///"+System.getProperty("user.dir")))==null)
 			System.err.println("Failed default 'myDirectory'");
-		}
+		
 		
 		// default script file name
 		String outfileName=null;
@@ -471,11 +465,8 @@ public class ScriptLister {
 			} 
 			
 			else {
-				try {
-					myDirectory=new URL("file://"+arg);
-				} catch (MalformedURLException e) {
+				if ((myDirectory=FileUtil.tryURL("file:///"+arg))==null)
 					System.err.println("Failed to set 'myDirectory'");
-				}
 			}
 
 		} // end of for loop

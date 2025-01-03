@@ -58,7 +58,6 @@ public class ThumbNail extends JPanel implements MouseListener {
 	public ImageIcon loadThumbImage(File file) {
 		ImageIcon tmp=null;
 		try {
-//			URL url = new URL(file.getName());
 			Image image=ImageIO.read(file);
 			return new ImageIcon(image.getScaledInstance(100,-1,4));
 		} catch (Exception e) {
