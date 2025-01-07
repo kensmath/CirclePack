@@ -1,7 +1,6 @@
 package browser;
 
-import javax.swing.event.HyperlinkEvent;
-import javax.swing.event.HyperlinkListener;
+import java.net.URL;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -20,6 +19,7 @@ import javafx.scene.Scene;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
+import util.FileUtil;
 
 public class WebViewRenderer extends JFXPanel {
 	
@@ -31,7 +31,7 @@ public class WebViewRenderer extends JFXPanel {
 
     protected WebView webView;
     protected Stage webStage;
-    public WebEngine webEngine;
+    protected WebEngine webEngine;
     
     // constructor
     public WebViewRenderer() {
@@ -43,11 +43,11 @@ public class WebViewRenderer extends JFXPanel {
             	setScene(new Scene(webView));
             	webView.setVisible(true);
                 initListener();
-                            }
+            }
         });
     }
     
-    private void initListener() {
+    protected void initListener() {
         webEngine.getLoadWorker().stateProperty().addListener(new ChangeListener<State>() {
             @Override
             public void changed(ObservableValue ov, State oldState, State newState) {
@@ -60,8 +60,13 @@ public class WebViewRenderer extends JFXPanel {
                             //System.err.println("EventType: " + domEventType);
                             if (domEventType.equals(EVENT_TYPE_CLICK)) {
                                 String href = ((Element)ev.getTarget()).getAttribute("href");
+                                System.out.println("in WebViewRenderer, href = "+href);
                                 
-                                System.out.println(href);
+                                URL theURL=null;
+                                if ((theURL=FileUtil.tryURL(href))==null)
+                                	return;
+        
+//                                FXWebBrowser.processLink(theURL);
                                 
                                 ////////////////////// 
                                 // here do what you want with that clicked event 
@@ -83,14 +88,20 @@ public class WebViewRenderer extends JFXPanel {
         });
     }
     
-    public void loadPage(String url) {
+    public void loadWebPage(String url) {
         Platform.runLater(() -> {
-            webEngine.load(url);
-            webView.setVisible(true);
-        });
+        	if (FileUtil.isLocal(url)) {
+           		String newurl=FileUtil.parseURL(url).toString();
+           		webEngine.load(newurl);
+           	}
+        	else
+        		webEngine.load(url);
+        	webView.setVisible(true);
+        }); // 
     }
     
-    public void addHyperlinkListener(HyperlinkListener listener) {
+/*
+	public void addHyperlinkListener(HyperlinkListener listener) {
         listenerList.add(HyperlinkListener.class, listener);
     }
  
@@ -111,4 +122,5 @@ public class WebViewRenderer extends JFXPanel {
             }
         }
     }
+*/    
 }

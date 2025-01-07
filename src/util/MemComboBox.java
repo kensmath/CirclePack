@@ -126,10 +126,11 @@ public class MemComboBox extends JComboBox<String>
 			model.insertElementAt(itemname,0); 
 			hit=0;
 		}
-		save(hit); // saving each time isn't efficient, but when else??
-//		String getOb=(String)model.getElementAt(0);
-//		if (getOb==null || !getOb.equals(itemname))
-//			model.insertElementAt((Object)itemname,0);
+		save(hit); // saving each time isn't efficient, 
+		// but when else??
+		// String getOb=(String)model.getElementAt(0);
+		//	if (getOb==null || !getOb.equals(itemname))
+		//	model.insertElementAt((Object)itemname,0);
 		// setting selection triggers reading of the file if loadOK true
 		addOKflag=loadOK;
 		model.setSelectedItem((Object)itemname);
@@ -139,8 +140,9 @@ public class MemComboBox extends JComboBox<String>
 	}
 
 	/**
-	 * Saves the URL's entered in this combobox in the designated file,
-	 * putting the element of index 'hitindx' at the top.
+	 * Saves the URL's entered in this combobox in the 
+	 * designated file, putting the element of index 
+	 * 'hitindx' at the top.
 	 * @param hit int
 	 */
 	public void save(int hitindx) {
@@ -167,7 +169,8 @@ public class MemComboBox extends JComboBox<String>
 	}
 
 	/** 
-	 * returns the entry in the combobox edit line, suitably adjusted
+	 * returns the entry in the combobox edit line, 
+	 * suitably adjusted
 	 * @return String
 	 */
 	public String getURLstring() { // add 'http://' if needed
@@ -178,7 +181,8 @@ public class MemComboBox extends JComboBox<String>
 	}
 	
 	public void setURLstring(String urlstr) { 
-			m_editor.setText(urlstr.trim());
+//			m_editor.setText(urlstr.trim());
+			model.setSelectedItem((Object)urlstr);
 	}
 	
 	/**

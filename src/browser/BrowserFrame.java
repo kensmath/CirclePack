@@ -1,6 +1,5 @@
 package browser;
 
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Font;
@@ -22,30 +21,41 @@ import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
-import javax.swing.JScrollPane;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.SoftBevelBorder;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
-import javax.swing.text.Document;
+
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.events.Event;
+import org.w3c.dom.events.EventListener;
+import org.w3c.dom.events.EventTarget;
 
 import allMains.CPBase;
 import allMains.CirclePack;
 import allMains.ScriptLister;
 import circlePack.PackControl;
-import exceptions.ParserException;
 import input.CommandStrParser;
 import input.TrafficCenter;
 import interfaces.IMessenger;
+import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.concurrent.Worker;
+import javafx.concurrent.Worker.State;
+import javafx.embed.swing.JFXPanel;
+import javafx.scene.Scene;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
+import javafx.stage.Stage;
 import packing.PackData;
 import packing.ReadWrite;
-import previewimage.PreviewImageHyperlinkListener;
 import util.FileUtil;
 import util.MemComboBox;
 
@@ -66,8 +76,8 @@ public class BrowserFrame extends JFrame implements ActionListener {
 	// Regenerate this every time fields or methods change.
 	private static final long serialVersionUID = 7248705697046383784L;
 	
-	protected JPanel browserPanel; // The main panel of this frame.
-	protected JEditorPane pageDisplayPane; // Actually holds and displays the current page.
+	protected JFXPanel browserPanel; // The main panel of this frame.
+//	protected JEditorPane pageDisplayPane; // Actually holds and displays the current page.
 	protected MemComboBox urlComboBox; // ComboBox for storing and selecting URLs.
 	protected JProgressBar activityIndicator; // Progress bar activated when loading a page.
 	protected JButton backButton; // Button to navigate the browser back.
@@ -79,6 +89,12 @@ public class BrowserFrame extends JFrame implements ActionListener {
 	protected Stack<URL> backHistory; // The stack of URLs that have been navigated away from.
 	protected Stack<URL> forwardHistory; // The stack of URLs that have been navigated away from by the back button.
 
+	// javaFX stuff 
+    protected JFXPanel webViewPanel;
+    protected WebView webView;
+    protected Stage webStage;
+    protected WebEngine webEngine;
+    
 	// URL's
 	protected URL loadedURL; // currently loaded by this instance.
 	protected URL webURL; // processed, ready to load into web page
@@ -192,7 +208,8 @@ public class BrowserFrame extends JFrame implements ActionListener {
 				if (loadedURL!=null) {
 					// Clear the stream description property for the document underlying the
 					// page display pane. This will allow us to load the same URL again.
-					pageDisplayPane.getDocument().putProperty(Document.StreamDescriptionProperty, null);
+					webEngine.load("about:blank"); 
+//					pageDisplayPane.getDocument().putProperty(Document.StreamDescriptionProperty, null);
 
 					// Empty the loaded URL so load will work correctly.
 					URL loadedUrlTemp=null;
@@ -256,7 +273,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		navigationPanel.add(htmlButton);
 
 		// Set up the pane that displays the content of URLs.
-		pageDisplayPane = new JEditorPane();
+/*		pageDisplayPane = new JEditorPane();
 		pageDisplayPane.setEditable(false); // Editable hyperlinks can't be clicked to navigate.
 		pageDisplayPane.addHyperlinkListener(new NavigationHyperlinkListener()); // Load clicked hyperlinks.
 		pageDisplayPane.addHyperlinkListener(new StatusHyperlinkListener()); // Show current moused over URL in a label.
@@ -264,6 +281,17 @@ public class BrowserFrame extends JFrame implements ActionListener {
 
 		// Page display pane should be scrollable, so put it in a scroll pane.
 		JScrollPane scrollPane = new JScrollPane(pageDisplayPane);
+*/
+		
+	    // Create WebView panel
+        browserPanel = new JFXPanel();
+        Platform.runLater(() -> {
+            webView = new WebView();
+            webEngine = webView.getEngine();
+            webViewPanel.setScene(new Scene(webView));
+            webView.setVisible(true);
+            initWebListener();
+        });
 
 		// Set up the current moused over URL display label.
 		// WARNING: This block is EXTREMELY sensitive to the order of the code. The label will size differently
@@ -289,7 +317,8 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		 * This next bit of code should disable the activity indicator whenever a page
 		 * loads or fails to load. There should be no need to do it manually.
 		 */
-		pageDisplayPane.addPropertyChangeListener(new PropertyChangeListener() {
+//		pageDisplayPane.addPropertyChangeListener(new PropertyChangeListener() {
+		browserPanel.addPropertyChangeListener(new PropertyChangeListener() {
 			@Override
 			public void propertyChange(PropertyChangeEvent e) {
 				if (e.getPropertyName().equals("page") || e.getPropertyName().equals("editorKit")) {
@@ -306,19 +335,62 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		statusPanel.add(activityIndicator);
 
 		// Create the main browser panel to pack into this frame.
-		browserPanel = new JPanel();
-		browserPanel.setLayout(new BoxLayout(browserPanel, BoxLayout.PAGE_AXIS));
-		browserPanel.add(navigationPanel);
-		browserPanel.add(scrollPane);
-		browserPanel.add(statusPanel);
+//		browserPanel = new JPanel();
+//		browserPanel.setLayout(new BoxLayout(browserPanel, BoxLayout.PAGE_AXIS));
+//		browserPanel.add(navigationPanel);
+//		browserPanel.add(scrollPane);
+//		browserPanel.add(statusPanel);
 
 		// Set up this frame, but don't display it.
 		this.setTitle("Web Browser");
 		this.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+		this.setLayout(new BoxLayout(this,BoxLayout.PAGE_AXIS));
 		this.setPreferredSize(new Dimension(600, 400));
+		this.add(navigationPanel);
 		this.add(browserPanel);
+		this.add(statusPanel);
 		this.pack();
 	}
+	
+	/**
+	 * This catches hyperlink clicks on the loaded web
+	 * page and processes them.
+	 */
+	private void initWebListener() {
+		webEngine.getLoadWorker().stateProperty().addListener(new ChangeListener<State>() {
+			@Override
+			public void changed(ObservableValue ov, State oldState, State newState) {
+				if (newState == Worker.State.SUCCEEDED) {
+					EventListener listener = new EventListener() {
+						@Override
+						public void handleEvent(Event ev) {
+							String domEventType = ev.getType();
+							// System.err.println("EventType: " + domEventType);
+							if (domEventType.equals("click")) {
+								String href = ((Element)ev.getTarget()).getAttribute("href");
+	                                
+								System.out.println("This was clicked on:" +href);
+	                                
+	                                ////////////////////// 
+	                                // here do what you want with that clicked event 
+	                                // and the content of href 
+	                                //////////////////////                               
+							} 
+						}
+					};
+
+					org.w3c.dom.Document doc = webView.getEngine().getDocument();
+					NodeList nodeList = doc.getElementsByTagName("a");
+					for (int i = 0; i < nodeList.getLength(); i++) {
+						((EventTarget) nodeList.item(i)).addEventListener("click", listener, false);
+						//((EventTarget) nodeList.item(i)).addEventListener(EVENT_TYPE_MOUSEOVER, listener, false);
+						//((EventTarget) nodeList.item(i)).addEventListener(EVENT_TYPE_MOUSEOUT, listener, false);
+					}
+				}
+			}
+		});
+	}
+	    
 
 	/**
 	 * NavigationHyperlinkListener will navigate the browser 
@@ -506,7 +578,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 				PackControl.scriptHover.stackScroll.getViewport().setViewPosition(new Point(0, 0));
 
 			// Update the cursor and activity indicator and exit.
-			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+//			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 			activityIndicator.setIndeterminate(false);
 			if (gotNewScript)
 				return 3;
@@ -571,7 +643,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 							setViewPosition(new Point(0, 0));
 
 							// Update the cursor and activity indicator and exit.
-							pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+//							pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 							activityIndicator.setIndeterminate(false);
 							return;			
 						}
@@ -579,7 +651,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 				}
 			}.start();
 			
-			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+//			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 			activityIndicator.setIndeterminate(false);
 			return 3;
 		} // end of else thread
@@ -629,13 +701,13 @@ public class BrowserFrame extends JFrame implements ActionListener {
 			} catch (FileNotFoundException e) {
 				// Notify CirclePack of the error.
 				this.messenger.sendErrorMessage("Failed to open " + url.toString() + ".");
-				pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+//				pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 				activityIndicator.setIndeterminate(false);
 				return 0;
 			}
 				
 			// On either success or failure, update the GUI 
-			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+//			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 			activityIndicator.setIndeterminate(false);
 			return 4;			
 		}
@@ -675,7 +747,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 					} catch (FileNotFoundException e) {
 						messenger.sendErrorMessage("Failed to open " + url.toString() + ".");
 
-						pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+//						pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 						activityIndicator.setIndeterminate(false);
 						return;
 					} 
@@ -689,14 +761,14 @@ public class BrowserFrame extends JFrame implements ActionListener {
 							if (CirclePack.cpb.getActivePackData().getDispOptions != null)
 								CommandStrParser.jexecute(CirclePack.cpb.getActivePackData(), "disp -wr");
 					
-							pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+//							pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 							activityIndicator.setIndeterminate(false);
 							return;
 						}
 					});
 				}
 			}.start();
-			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+//			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 			activityIndicator.setIndeterminate(false);
 			return 1;
 		} // end of loading from web
@@ -719,7 +791,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 			return -1;
 
 		// Indicate that we are loading something.
-		pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+//		pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 		activityIndicator.setIndeterminate(true);
 		
 		int rslt=loadPage(url);
@@ -783,23 +855,23 @@ public class BrowserFrame extends JFrame implements ActionListener {
 			if (debug) // debug=true;
 				newURL=FileUtil.tryURL("file:///Users/kensm/Documents/CmdDetails.html");
 			
-			pageDisplayPane.setPage(newURL);
+//			pageDisplayPane.setPage(newURL);
 			loadedURL = FileUtil.tryURL(newURL.toString());
 			if (loadedURL==null)
 				return 0;
 			urlComboBox.add2List(loadedURL.toString(),false);
-			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+//			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 			activityIndicator.setIndeterminate(false);
 			messenger.sendOutputMessage("Browser loaded " + newURL.toString() + ".");
 			// Don't update the activity indicator here. The property change listener should
 			// handle it when the threaded setPage() method finishes.
 			return 1;
-		} catch (IOException e) {
+		} catch (Exception e) {
 			// "\n" is not a cross-platform newline character.
 			// To get the appropriate newline character for the platform, use
 			// String.format("%n") or System.getProperty("line.separator").
 			String errorMessage = "Browser failed to load " + String.format("%n") + newURL.toString() + String.format("%n") + e;
-			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+//			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 			activityIndicator.setIndeterminate(false);
 			messenger.sendErrorMessage(errorMessage);
 			return 0;
@@ -870,6 +942,7 @@ public class BrowserFrame extends JFrame implements ActionListener {
 		}
 	}
 	
+/*	TODO: may want to reimplement this
 	public void setWelcomePage() {
 		pageDisplayPane.setContentType("text/html");
 		try {
@@ -879,6 +952,8 @@ public class BrowserFrame extends JFrame implements ActionListener {
 			throw new ParserException("failed to load 'Welcome.html' page into browser");
 		}
 	}
+*/
+	
 } 
 
 // AF: The commenting below was part of earlier browser changes and is kept for

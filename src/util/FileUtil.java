@@ -7,6 +7,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
@@ -25,24 +27,26 @@ public class FileUtil {
 	 * TODO: this is clutzy, not sure it will work
 	 * on other operating system.
 	 * 
-	 * What is the proper separator? '/' or '\' ?
+	 * Always stick with separator '/'
 	 * 
 	 * Idea is to form link addresses that are
 	 * relative to "user.home"
+	 * @param origstr String
+	 * @return String
 	 */
 	public static String exciseHome(String origstr) {
-		String newstr=origstr.toLowerCase().replace("/","\\");
+		String newstr=origstr.toLowerCase().replace("\\","/");
 		String home=System.getProperty("user.home").
-				toLowerCase().replace("/","\\");
-		int k=home.indexOf(File.separator);
+				toLowerCase().replace("\\","/");
+		int k=home.indexOf('/');
 		if (k>0 && k<home.length()-1)
 			home=home.substring(k);
 		k=newstr.indexOf(":");
 		if (k>0 && k<newstr.length()-1)
 			newstr=newstr.substring(k+1);
-		while (newstr.startsWith("\\"))
+		while (newstr.startsWith("/"))
 			newstr=newstr.substring(1);
-		while (home.startsWith("\\"))
+		while (home.startsWith("/"))
 			home=home.substring(1);
 		if (newstr.startsWith(home))
 			newstr=newstr.substring(home.length());
@@ -116,33 +120,40 @@ public class FileUtil {
 	 */
 	public static URL parseURL(String urlString) {
 
-		URL dummy=null;
-		String home=System.getProperty("user.home");
-		
 		// okay as is?
+		URL dummy=null;
 		if ((dummy=tryURL(urlString))!=null)
 			return dummy;
-		
+
+		// prepare input
+		String inStr=urlString.replace("%20", " ").trim();
+		inStr=inStr.replace("\\","/");
+		inStr=inStr.toLowerCase();
+
+		String home=System.getProperty(
+				"user.home").replace("\\","/");
+
+		inStr=cleardotdot(inStr);
+
 		// no protocol? try 'file' with home directory. 
-		if (!urlString.startsWith("file") && 
-				!urlString.startsWith("htt") &&
-				!urlString.startsWith("www")) {
+		if (!inStr.startsWith("file") && 
+				!inStr.startsWith("htt") &&
+				!inStr.startsWith("www")) {
 			
 			// should be local file; start with HomeDirectory
-			if (urlString.startsWith("~")) {
-				urlString=home+urlString.substring(1);
+			if (inStr.startsWith("~")) {
+				inStr=home+inStr.substring(1);
 			}
 			else {
 				// clean beginning of urlString
-				urlString=FileUtil.exciseHome(urlString);
-				while (urlString.startsWith("/") || 
-						urlString.startsWith(":") ||
-						urlString.startsWith("\\")) {
-					urlString = urlString.substring(1).trim();
+				inStr=FileUtil.exciseHome(inStr);
+				while (inStr.startsWith("/") || 
+						inStr.startsWith(":")) {
+					inStr = inStr.substring(1).trim();
 				}
-				urlString=home+File.separator+urlString;
+				inStr=home+"/"+inStr;
 			}
-			return dummy=FileUtil.tryURL("file:///" + urlString);
+			return dummy=FileUtil.tryURL("file:///" + inStr);
 		}
 
 		// Quick and dirty: first, check for wrong 
@@ -152,56 +163,77 @@ public class FileUtil {
 		//   so this method wasn't catching that error 
 		//   when this next block was at the bottom of 
 		//   the method.
-		if (urlString.startsWith("file")) { 
-			urlString = urlString.substring(4);
-			while (urlString.startsWith("/") || 
-					urlString.startsWith(":") ||
-					urlString.startsWith("\\"))
-				urlString = urlString.substring(1).trim();
-			urlString=FileUtil.exciseHome(urlString);
+		if (inStr.startsWith("file")) { 
+			inStr = inStr.substring(4);
+			while (inStr.startsWith("/") || 
+					inStr.startsWith(":"))		
+				inStr = inStr.substring(1).trim();
+			inStr=FileUtil.exciseHome(inStr);
 			
 			return dummy=FileUtil.tryURL(
-					"file:///" + home + urlString);
+					"file:///" + home + inStr);
 		}
 		
 		// Reaching here, assume the protocol is missing and 
 		//   HTTP protocol is intended, then check for validity.
 
-		if ((dummy=FileUtil.tryURL("http://" + urlString))!=null)
+		if ((dummy=FileUtil.tryURL("http://" + inStr))!=null)
 			return dummy;
 
 		// else fall through
 		// Reaching here, might be wrong number of slashes,
 		//   which is fairly common. First check for leading 
 		//   symbol errors.
-		while (urlString.startsWith("/") || urlString.startsWith(":")) 
-			urlString = urlString.substring(1).trim();
-			if ((dummy =FileUtil.tryURL("http://" + urlString))!=null)
+		while (inStr.startsWith("/") || inStr.startsWith(":")) 
+			inStr = inStr.substring(1).trim();
+			if ((dummy =FileUtil.tryURL("http://" + inStr))!=null)
 				return dummy;
 
 		// else fall through
 		// Now check for indicated HTTP protocol, but 
 		//  wrong number of initial slashes.
-		if (urlString.startsWith("htt") ||
-				urlString.startsWith("www")) {
-			if (urlString.startsWith("http")) {
-				urlString = urlString.substring(4);
-				if (urlString.startsWith("s")) 
-					urlString=urlString.substring(1);
+		if (inStr.startsWith("htt") ||
+				inStr.startsWith("www")) {
+			if (inStr.startsWith("http")) {
+				inStr = inStr.substring(4);
+				if (inStr.startsWith("s")) 
+					inStr=inStr.substring(1);
 			}
 		}
 
-		while (urlString.startsWith("/") || urlString.startsWith(":")) 
-			urlString = urlString.substring(1).trim();
-		if ((dummy =FileUtil.tryURL("http://" + urlString))!=null)
+		while (inStr.startsWith("/") || inStr.startsWith(":")) 
+			inStr = inStr.substring(1).trim();
+		
+		// check if url seems valid
+		if ((dummy =FileUtil.tryURL("http://" + inStr))!=null)
 			return dummy;
 
-		// else fall through in case we add other checks
-		
 		// Who knows what the user did: failure, return null
 		return null;
 	}
 
+	/**
+	 * Clean up directory names by removing trailing
+	 * '/..' and '/'
+	 * @param str
+	 * @return
+	 */
+	public static String cleardotdot(String string) {
+		String str=string.replace("\\","/");
+		while (str.endsWith("/..")) {
+			while (str.endsWith("/..")) 
+				str=str.substring(0,str.length()-3);
+			while (str.endsWith("/"))
+				str=str.substring(0,str.length()-1);
+			int k=str.lastIndexOf("/");
+			if (k>0)
+				str=str.substring(0,k);
+			while (str.endsWith("/"))
+				str=str.substring(0,str.length()-1);
+		}
+		return str;
+	}
+	
 	/**
 	 * Return the path to a local file when given
 	 * a url starting with 'file'.
@@ -230,11 +262,14 @@ public class FileUtil {
 	 */
 	public static File clearPreName(File directory) {
 		String str=directory.getPath();
-		if (str.startsWith("file:\\")) 
+		if (str.startsWith("file:\\") || 
+				str.startsWith("file://")) 
 			str=str.substring(6);
-		else if (str.startsWith("http:\\"))
+		else if (str.startsWith("http:\\") ||
+			str.startsWith("http://"))
 			str=str.substring(7);
-		else if (str.startsWith("https:\\"))
+		else if (str.startsWith("https:\\") ||
+				str.startsWith("https://"))
 			str=str.substring(8);
 		
 		File newfile;

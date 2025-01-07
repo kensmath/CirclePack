@@ -146,28 +146,35 @@ public class BrowserUtilities {
 		// could let server handle this automatically for
 		//   non-local directories. But let's try to do
 		//   that internally.
-		if (!directoryURL.getProtocol().startsWith("file"))
-			return directoryURL; // formated by server
+//		if (!directoryURL.getProtocol().startsWith("file"))
+//			return directoryURL; // formated by server
 		
-		// check for readable directory 
+		// check for directory 
 		File directory = new File(directoryURL.getFile());
 		if (!directory.exists() || !directory.isDirectory())
 			return null;
-		
-// debugging: my use of 'Paths' and 'Files' routines seems
-// to fail all the time
-		// is it readable?
-//		if (!Files.isReadable(Paths.get(directoryURL.toString()))) {
-//			System.out.println(directoryURL.toString()+ " did not "+
-//					"exist or was not readable");
-//			return null;
-//		}
-		
-		// Build an HTML page.
-		StringBuilder pageText = new StringBuilder();
-		String dirPath=directoryURL.getPath();
-//		dirPath=FileUtil.exciseHome(dirPath);
 
+		// clean up the name of the directory
+		String dirPath=directoryURL.getPath();
+		int n=dirPath.indexOf(":");
+		if (n>0 && dirPath.startsWith("/")) // annoying leading /
+			dirPath=dirPath.substring(1);
+
+		// get name of the parent directory
+		String parentPath=dirPath;
+		parentPath=FileUtil.cleardotdot(dirPath);
+		while (parentPath.endsWith("/"))
+			parentPath=parentPath.substring(0,parentPath.length()-1);
+		n=parentPath.indexOf(":");
+		if (n>0 && parentPath.startsWith("/")) // annoying leading /
+			parentPath=parentPath.substring(1);
+		n=parentPath.lastIndexOf("/");
+		parentPath=parentPath.substring(0,n);
+		if (parentPath.charAt(parentPath.length()-1)!='/')
+			parentPath=parentPath+"/";
+
+		// Build the HTML page.
+		StringBuilder pageText = new StringBuilder();
 		pageText.append("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">\n");
 		pageText.append("<html>\n");
 		
@@ -371,8 +378,8 @@ public class BrowserUtilities {
 		// set the top header line
 		pageText.append("\t<h1 id=\"header\">Index of "+dirPath+"</h1>\n"
 				+ "\t\t<div id=\"parentDirLinkBox\" style=\"display: block;\">\n"
-				+ "\t\t\t<a id=\"parentDirLink\" class=\"icon back\" href=\""+dirPath+"/..\">\n"
-				+ "\t\t\t<span id=\"parentDirText\">[parent directory]</span>\n"
+				+ "\t\t\t<a id=\"parentDirLink\" class=\"icon back\" href=\""+parentPath+"\">\n"
+//				+ "\t\t\t<span id=\"parentDirText\">[parent directory]</span>\n"
 				+ "\t\t\t</a>\n"
 				+ "\t\t</div>\n\n");
 		
@@ -465,207 +472,12 @@ public class BrowserUtilities {
 		int t=Integer.valueOf(type);
 		String fsize=FileUtil.readableFileSize((long)file.length());
 		String mtime=FileUtil.readableTimeStamp((long)file.lastModified());
-		String icontype="icon folder";
-		if (type==0)
-			icontype="icon file";
-		
-//      first tried using <script>...</script> elements, but
-//          caused problems.  
  
-/* 		StringBuilder stbld=new StringBuilder("<script>addRow(");
+ 		StringBuilder stbld=new StringBuilder("<script>addRow(");
 		stbld.append("\""+file.getName()+"\",\""+file.getName()+"\","+t
 				+ ","+flong+",\""+fsize+"\","+ftime+",\""+mtime+"\");</script>");
-*/		
- 		StringBuilder stbld=new StringBuilder("\t<tr>\n");
- 		stbld.append("\t\t<td data-value=\"file.getName()\">\n");
- 		stbld.append("\t\t\t<a class=\""+icontype+"\" draggable=\"true\" "
- 				+ "href=\""+file.getPath()+"\">"+file.getName()+"</a>\n");
- 		stbld.append("\t\t</td>\n");
- 		stbld.append("\t\t<td class=\"detailsColumn\" data-value=\""
- 				+ flong+"\">"+fsize+"</td>\n");
- 		stbld.append("\t\t<td class=\"detailsColumn\" data-value=\""
- 				+ ftime+"\">"+mtime+"</td>\n");
- 		stbld.append("\t</tr>\n");
+ 		
 		return stbld.toString();
-	}
-
-	
- 	public static URL pageForDirectory_old(URL directoryURL) {
-
-//		if (!directoryURL.getProtocol().startsWith("file"))
-//			return directoryURL; // formated by server
-		
-		// check for readable directory 
-		File directory = new File(directoryURL.getFile());
-		if (!directory.exists() || !directory.isDirectory())
-			return null;
-		
-// debugging: my use of 'Paths' and 'Files' routines seems
-// to fail all the time
-		// is it readable?
-		if (!Files.isReadable(Paths.get(directoryURL.toString()))) {
-			System.out.println(directoryURL.toString()+ " did not "+
-					"exist or was not readable");
-			return null;
-		}
-		
-		// Build an HTML page.
-		StringBuilder pageText = new StringBuilder();
-		pageText.append("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">");
-		pageText.append("<html>");
-		pageText.append("<head>");
-		pageText.append("<title>");
-		pageText.append("Index of ");
-		pageText.append(directoryURL.toString());
-		pageText.append("</title>");
-		pageText.append("<style>");
-		pageText.append(".type_label {");
-		pageText.append("font-size: 0.9em;");
-		pageText.append("font-weight: bold;");
-		pageText.append("}");
-		pageText.append("</style>");
-		pageText.append("</head>");
-		pageText.append("<body>");
-		pageText.append("<h1>");
-		pageText.append("Index of ");
-		pageText.append(directoryURL.toString());
-		pageText.append("</h1>");
-		pageText.append("<table>");
-		pageText.append("<tr>");
-		pageText.append("<td></td>");
-		pageText.append("<td>Name</td>");
-		pageText.append("<td>Last modified</td>");
-		pageText.append("<td>Size</td>");
-		pageText.append("</tr>");
-		pageText.append("<tr>");
-		pageText.append("<th colspan=\"4\"><hr></th>");
-		pageText.append("</tr>");
-
-		String href = directoryURL.toString();
-				
-		pageText.append("<tr>");
-		pageText.append("<td class=\"type_label\">[DIR]</td>");
-		pageText.append("<td>");
-		pageText.append("<a href=\"");
-		pageText.append(href);
-		pageText.append("\">");
-		pageText.append("Parent Directory");
-		pageText.append("</a>");
-		pageText.append("</td>");
-		// No modified date for directories.
-		pageText.append("<td></td>");
-		// No file size for directories.
-		pageText.append("<td>-</td>");
-		pageText.append("</tr>");
-
-		// Get a list of the contents of this directory.
-		File[] directoriesAndFiles = 
-				FileUtil.getFileList(directory);
-		if (directoriesAndFiles != null) {
-			// The directory exists and has contents.
-			
-			// Sort out directories and files.
-			ArrayList<File> directories = new ArrayList<File>();
-			ArrayList<File> files = new ArrayList<File>();
-			for (File directoryOrFile : directoriesAndFiles) {
-				// Don't include hidden directories or files.
-				if (directoryOrFile.isHidden()) 
-					continue;
-				
-				if (directoryOrFile.isDirectory())
-					directories.add(directoryOrFile);
-				else
-					files.add(directoryOrFile);
-			}
-
-			// TODO: Alphabetize? Implement this (should already 
-			//   happen under most operating systems, but 
-			//   it isn't guaranteed).
-
-			// Display links to all directories in the current directory.
-			for (File currentDirectory : directories) {
-
-				href = currentDirectory.toString();
-					
-				pageText.append("<tr>");
-				pageText.append("<td class=\"type_label\">[DIR]</td>");
-				pageText.append("<td>");
-				pageText.append("<a href=\"");
-				pageText.append(href);
-				pageText.append("\">");
-				pageText.append(currentDirectory.getName());
-				pageText.append("</a>");
-				pageText.append("</td>");
-				// No modified date for directories.
-				pageText.append("<td></td>");
-				// No file size for directories.
-				pageText.append("<td>-</td>");
-				pageText.append("</tr>");
-			}
-			
-			// Display links to all files in the current directory.
-			for (File currentFile : files) {
-
-				href = currentFile.toString();
-
-				pageText.append("<tr>");
-				pageText.append("<td class=\"type_label\">[FILE]</td>");
-				pageText.append("<td>");
-				pageText.append("<a href=\"");
-				pageText.append(href);
-				pageText.append("\">");
-				pageText.append(currentFile.getName());
-				pageText.append("</a>");
-				pageText.append("</td>");
-				pageText.append("<td>");
-				pageText.append(FileUtil.readableTimeStamp(currentFile.lastModified()));
-				pageText.append("</td>");
-				pageText.append("<td>");
-				pageText.append(FileUtil.readableFileSize(currentFile.length()));
-				pageText.append("</td>");
-				pageText.append("</tr>");
-			}
-		}
-
-		pageText.append("<tr>");
-		pageText.append("<th colspan=\"4\"><hr></th>");
-		pageText.append("</tr>");
-		pageText.append("</table>");
-		pageText.append("<address>Local File System</address>");
-		pageText.append("</body>");
-		pageText.append("</html>");
-
-		// put into file
-		BufferedWriter writer=null;
-		String filename="myScripts.html";
-		File dir=null;
-		try {
-			dir=new File(System.getProperty("java.io.tmpdir"),
-					directory.getName()); // dir.exists()
-			if (dir.exists()) {
-				dir.delete();
-			}
-			dir.mkdir();
-	
-			writer = CPFileManager.
-			openWriteFP(dir,false,filename,false);
-			writer.write(pageText.toString());
-		} catch (IOException ex) {
-			// Print messqage exception occurred as
-			// invalid. directory local path is passed
-			System.err.print("save problems: "+ex.getMessage());
-			return null;
-		}
-		try {
-			if (writer!=null) {
-				writer.flush();
-				writer.close();
-			}
-		} catch(IOException ex) {
-			System.err.println("problem with 'writer': "+ex.getMessage());
-		}
-
-		return FileUtil.tryURL("file:///"+dir.getPath()+"/"+filename);
 	}
 
 }

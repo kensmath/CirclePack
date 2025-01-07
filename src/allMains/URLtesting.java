@@ -1,10 +1,12 @@
 package allMains;
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+import browser.BrowserUtilities;
 import util.FileUtil;
 
 /** 
@@ -21,12 +23,49 @@ public class URLtesting {
 
 	public URLtesting() {	
 		
-		testInput="file://C:/users/kensm/Documents/testscripts";
+		URL url1=null;
+		URL url2=null;
+		URL url3=null;
+		URL url4=null;
+		try {
+			url1=new URL("file:///C:/users/kensm/");
+			url2=new URL("file:/C:/users/kensm/");
+			url3=new URL("file:///C:/users/kensm");
+			url4=new URL("file:/C:/users/kensm");
+		} catch (MalformedURLException mu) {
+			System.out.println("Error: "+url1+"\n"+url2+"\n"+url3+"\n"+url4);
+		}
+		System.out.println(url1+"\n"+url2+"\n"+url3+"\n"+url4);
 
-//		testInput="http://localhost:/Users/kensm/Documents/testscripts";
+		url1.equals(url2);
+		url1.equals(url3);
+		File file1=new File(url1.getFile()+"/");
+		File file3=new File(url3.getFile());
+		file1.isDirectory();
+		file3.isDirectory();
+//		url3.equals(url4);
+//		url2.equals(url3);
+		
+		
+		testInput="file:///C:/users/kensm/Documents/smalltest";
+		testURL=FileUtil.parseURL(testInput);
+		System.out.println("testInput = "+testInput+"\nAfter call, result is = "+
+				testURL.toString());
+		
+		URL outURL=BrowserUtilities.pageForDirectory(testURL);
+		System.out.println("tmp directory html page is:\n"+outURL.toString());
+
+		testInput="http://circlepack.com";
+		System.out.println("testInput = "+testInput+"\nAfter call, result is = "+
+				FileUtil.parseURL(testInput));
+
+		testInput="C:/users/kensm/Documents";
+		
+		System.out.println("testInput = "+testInput+"\nAfter call, result is = "+
+				FileUtil.parseURL(testInput));
 
 		URL testURL=FileUtil.parseURL(testInput);
-
+// System.getProperty("user.home").toLowerCase().replace("\\","/");
 		int k=0;
 		while((k=testInput.indexOf(":"))>0 && k<(testInput.length()-1))
 			testInput=testInput.substring(k+1);
@@ -111,7 +150,6 @@ public class URLtesting {
 		System.out.println("file path: "+file.getPath());
 		System.out.println("file parent: "+file.getParent());
 	}
-	
 	
 	public static void main(String[] args) {
 		@SuppressWarnings("unused")

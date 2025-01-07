@@ -4,8 +4,8 @@ import java.io.File;
 import java.util.Scanner;
 
 /**
- * static method to build a section of <table> html code describing 
- * a script file. See 
+ * static method to build a section of <table> html 
+ * code describing a script file. See 
  * @author kensm, February 2023
  *
  */

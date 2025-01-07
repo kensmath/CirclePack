@@ -28,16 +28,30 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.SoftBevelBorder;
-import javax.swing.event.HyperlinkEvent;
-import javax.swing.event.HyperlinkListener;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.events.Event;
+import org.w3c.dom.events.EventListener;
+import org.w3c.dom.events.EventTarget;
 
 import allMains.CPBase;
 import allMains.CirclePack;
-import allMains.ScriptLister;
 import circlePack.PackControl;
 import input.CommandStrParser;
 import input.TrafficCenter;
 import interfaces.IMessenger;
+import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.concurrent.Worker;
+import javafx.concurrent.Worker.State;
+import javafx.embed.swing.JFXPanel;
+import javafx.scene.Scene;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
+import javafx.stage.Stage;
 import packing.PackData;
 import packing.ReadWrite;
 import util.FileUtil;
@@ -45,17 +59,16 @@ import util.MemComboBox;
 
 public class FXWebBrowser extends JFrame implements ActionListener {
 
-	// Regenerate this every time fields or methods change.
 	private static final long serialVersionUID = 7248705697046383784L;
 	
 	protected JPanel browserPanel; // The main panel of this frame.
-	protected WebViewRenderer webViewRenderer;
+	protected JFXPanel jfxPanel;
 	protected MemComboBox urlComboBox; // ComboBox for storing and selecting URLs.
 	protected JProgressBar activityIndicator; // Progress bar activated when loading a page.
 	protected JButton backButton; // Button to navigate the browser back.
 	protected JButton forwardButton; // Button to navigate the browser forward.
 	protected JButton refreshButton; // Button to refresh the current page.
- 	protected JButton htmlButton; // Button for directory scriptLister output.
+// 	protected JButton htmlButton; // Button for directory scriptLister output.
 	protected JLabel statusLabel; // Label to display the URL of the current moused over hyperlink.
 	protected IMessenger messenger; // The message output interface, received from instantiator.
 	protected Stack<URL> backHistory; // The stack of URLs that have been navigated away from.
@@ -64,7 +77,17 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 	// URL's
 	protected URL loadedURL; // currently loaded by this instance.
 	protected URL webURL; // processed, ready to load into web page
+	protected URL dirURL; // hold directory URL for use in history 
+	
+    public static final String EVENT_TYPE_CLICK = "click";
+    public static final String EVENT_TYPE_MOUSEOVER = "mouseover";
+    public static final String EVENT_TYPE_MOUSEOUT = "mouseout";
 
+    // for JFXpanel
+    protected WebView webView;
+    protected Stage webStage;
+    protected WebEngine webEngine;
+    
 	/**
 	 * Initialize a new BrowserFrame with no message output functionality and
 	 * no persistent storage of URLs.
@@ -111,7 +134,7 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 		ImageIcon backIcon = new ImageIcon(getClass().getResource("/Resources/Icons/main/previous.png"));
 		ImageIcon forwardIcon = new ImageIcon(getClass().getResource("/Resources/Icons/main/forward.png"));
 		ImageIcon refreshIcon = new ImageIcon(getClass().getResource("/Resources/Icons/main/reload.png"));
-		ImageIcon htmlIcon = new ImageIcon(getClass().getResource("/Resources/Icons/GUI/hoverH.png"));
+//		ImageIcon htmlIcon = new ImageIcon(getClass().getResource("/Resources/Icons/GUI/hoverH.png"));
 
 		/*
 		 * 
@@ -127,17 +150,11 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				// The button has been pressed.
-				if (!backHistory.empty()) {
-					// There's something in the back history. Push the loaded URL onto
-					// the forward history and enable the forward button. Then load the
-					// top URL in the back history.
-					forwardHistory.push(loadedURL);
-					forwardButton.setEnabled(true);
-					loadKnownURL(backHistory.pop());
+				if (!backHistory.empty()) { 
+					URL popper=backHistory.pop();
+					backHistory.push(popper);
+					urlComboBox.add2List(popper.toString(),false);
 				}
-
-				// If there's nothing left in the back history, disable the button.
-				if (backHistory.empty()) backButton.setEnabled(false);
 			}
 		});
 
@@ -150,16 +167,10 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 			public void actionPerformed(ActionEvent e) {
 				// The button has been pressed.
 				if (!forwardHistory.empty()) {
-					// There's something in the forward history. Push the loaded URL
-					// onto the back history and enable the back button. Then load
-					// the top URL in the forward history.
-					backHistory.push(loadedURL);
-					backButton.setEnabled(true);
-					loadKnownURL(forwardHistory.pop());
+					URL popper=forwardHistory.pop();
+					forwardHistory.push(popper);
+					urlComboBox.add2List(popper.toString(),false);
 				}
-
-				// If there's nothing left in the forward history, disable the button.
-				if (forwardHistory.empty()) forwardButton.setEnabled(false);
 			}
 		});
 
@@ -172,23 +183,20 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 			public void actionPerformed(ActionEvent e) {
 				// The button has been pressed. Only continue if the loaded URL is not empty.
 				if (loadedURL!=null) {
-					// Clear the stream description property for the document underlying the
-					// page display pane. This will allow us to load the same URL again.
-//					((Document)webViewRenderer.webEngine.getDocument()).
-//						putProperty(Document.StreamDescriptionProperty, null);
-
-					// Empty the loaded URL so load will work correctly.
 					URL loadedUrlTemp=null;
 					if ((loadedUrlTemp=FileUtil.tryURL(loadedURL.toString()))!=null) {
-						loadedURL = null;
-					
-						// Reload the page.
-						loadKnownURL(loadedUrlTemp);
+						// Empty the page.
+						loadWebPage("about:blank");
+//						urlComboBox.add2List(loadedUrlTemp.toString(),false);
 					}
 				}
 			}
 		});
 
+/* TODO: I'm removing the htmlButton for now (1/2025)
+         because it needs more sophisticated methods 
+         in creation to includ 'AboutImage's.
+         
 		htmlButton = new JButton(htmlIcon);
 		htmlButton.setMargin(new Insets(0, 0, 0, 0)); // No big blank margins around icons.
 		htmlButton.setFocusable(false); // No dotted selection indicator for buttons.
@@ -215,6 +223,7 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 				}
 			}
 		});
+*/		
 		
 		File file=new File(historyFile);
 		try {
@@ -236,7 +245,7 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 		navigationPanel.add(forwardButton);
 		navigationPanel.add(refreshButton);
 		navigationPanel.add(urlComboBox);
-		navigationPanel.add(htmlButton);
+//		navigationPanel.add(htmlButton);
 
 		// Set up the current moused over URL display label.
 		// WARNING: This block is EXTREMELY sensitive to the order of the code. The label will size differently
@@ -264,17 +273,27 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 		statusPanel.add(statusLabel);
 		statusPanel.add(activityIndicator);
 
-		// create the webViewBrowser
-		webViewRenderer=new WebViewRenderer();
+		// create the webViewBrowser, and JFXPanel.
+		jfxPanel=new JFXPanel();
+	      Platform.runLater(new Runnable() {
+	            @Override
+	            public void run() {
+	            	webView=new WebView();
+	            	webEngine=webView.getEngine();
+	            	jfxPanel.setScene(new Scene(webView));
+	            	webView.setVisible(true);
+	            	initListener();
+	            }
+	        });
 				
 		// Create the main browser panel to pack into this frame.
 		browserPanel = new JPanel();
 		browserPanel.setLayout(new BoxLayout(browserPanel, BoxLayout.PAGE_AXIS));
 		browserPanel.add(navigationPanel);
-		browserPanel.add(webViewRenderer);
+		browserPanel.add(jfxPanel);
 		browserPanel.add(statusPanel);
 
-		webViewRenderer.addPropertyChangeListener(new PropertyChangeListener() {
+		jfxPanel.addPropertyChangeListener(new PropertyChangeListener() {
 			@Override
 			public void propertyChange(PropertyChangeEvent e) {
 				if (e.getPropertyName().equals("page") || e.getPropertyName().equals("editorKit")) {
@@ -284,199 +303,207 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 			}
 		});
 		
-		// Set up this frame, but don't display it.
+		// Set up this frame, but don't display it until asked.
 		this.setTitle("CirclePack Web Browser");
 		this.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		this.setPreferredSize(new Dimension(600, 400));
 		this.add(browserPanel);
-		webViewRenderer.setVisible(true);
+		jfxPanel.setVisible(true);
 		this.pack();
-	}
-
-	/**
-	 * NavigationHyperlinkListener will navigate the browser 
-	 * to new URLs in response to hyperlink activations. 
-	 * If the user clicks a hyperlink in the browser, it will
-	 * be activated, and the browser will navigate to the 
-	 * represented URL.
-	 * 
-	 * @author kens
-	 * @author Alex Fawkes
-	 */
-	protected class NavigationHyperlinkListener implements HyperlinkListener {
-		@Override
-		public void hyperlinkUpdate(HyperlinkEvent e) {
-			if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
-				// A hyperlink has been activated, generally by clicking from the user.
-				if (loadedURL!=null) {
-					// Push the loaded URL onto the back history and enable the back button.
-					backHistory.push(loadedURL);
-					backButton.setEnabled(true);
-
-					// Clear the forward history and disable the forward button. Navigating
-					// to a new page means there is nothing "forward" from it.
-					forwardHistory.clear();
-					forwardButton.setEnabled(false);
-				}
-
-				// check the URL represented by the activated hyperlink.
-				URL url=FileUtil.parseURL(e.getURL().toString());
-
-				if (url==null || url.equals(loadedURL))
-					return; // url=null;
-				
-				// process sets 'webURL' 
-				int action=processURL(url); // File.separator;
-				
-				// failed?
-				if (action<=0 || webURL==null)
-					return;
-				
-				// directory?
-//				else if (action==2 && loadDirectory(webURL)==0) {
-//					System.err.println("failed to load directory '"+webURL.toString()+"'");
-//					return;
-//				}
-				
-				// script?
-				else if (action==3 && loadScript(webURL)==0) {
-					System.err.println("failed to load script '"+webURL.toString()+"'");
-					return;
-				}
-				
-				// packing?
-				else if (action==4 && loadPacking(webURL)==0) {
-					System.err.println("failed to load packing '"+webURL.toString()+"'");
-					return;
-				}
-				
-				// only 1 and 2 require something to be loaded
-				if ((action!=1 && action!=2))
-					return; 
-				
-				int rslt=loadAction(action,webURL);
-				
-				if (rslt>0)  // success
-					urlComboBox.setSuccess();
-				else if (rslt==0)
-					urlComboBox.setFailure();
-				else 
-					urlComboBox.setNeutral();
-			}
-
-		}
-	}
-
-	/**
-	 * StatusHyperlinkListener updates the current URL status label in the
-	 * browser to whatever the user is currently mousing over. If the user
-	 * is not currently mousing over a hyperlink, the label will be cleared.
-	 * 
-	 * @author kens
-	 * @author Alex Fawkes
-	 */
-	protected class StatusHyperlinkListener implements HyperlinkListener {
-		@Override
-		public void hyperlinkUpdate(HyperlinkEvent e) {
-			if (e.getEventType() == HyperlinkEvent.EventType.ENTERED) {
-				// A hyperlink has been entered. Get the URL and set the status label
-				// to its string representation.
-				statusLabel.setText(e.getURL().toString());
-			} else if (e.getEventType() == HyperlinkEvent.EventType.EXITED) {
-				// A hyperlink has been exited. Clear the status label.
-				statusLabel.setText(null);
-			}
-		}
 	}
 	
 	/**
-	 * Preprocess the given URL, which should be valid.
-	 * If there's a file to load into the web page, 
-	 * local or web, set 'webURL'. Return int value 
-	 * depending on outcome:
-	 * * 0 for failure
-	 * * -1: is already loaded
-	 * * 1: web page to be displayed (goes into list)
-	 * * 2: directory to display
-	 * * 3: *.cps script (or *.xmd or *.cmd)
-	 * * 4: *.p, *.q packing
+	 * Process the given URL, which should be valid.
+	 * Classify the type of file, take appropriate
+	 * action for packings, scripts, directories (2),
+	 * files and sites (1), then call for loading if 
+	 * type 1 or 2. Types are these:
+	 *   * 0 for failure
+	 *   * -1: is already loaded
+	 *   * 1: link to be displayed
+	 *   * 2: directory to display
+	 *   * 3: *.cps script (or *.xmd or *.cmd)
+	 *   * 4: *.p, *.q packing
+	 * Also call to load the file and manage activity
+	 * indicator.
 	 * @param url URL,
 	 * @return int, 0 on failure
 	 */
-	protected int processURL(URL url) {
-		webURL=null;
-		if (url == null) 
-			return 0;
-
-		// Check the Return if entereedURL is null.
-		URL enteredURL=FileUtil.parseURL(url.toString());
+	protected int processLink(URL url) {
+		int action=0;
 		
-		// Return if the URL is invalid.
-		if (enteredURL == null) // failure 
-			return 0;
-
 		// Return if the URL is already loaded.
-		if (enteredURL.equals(loadedURL)) 
-			return -1;
-		
-		if ((webURL=FileUtil.tryURL(enteredURL.toString()))==null) {
-			System.err.println("failed to set 'webURL'");
+		if (url == null || url.equals(loadedURL)) 
 			return 0;
-		}
+		activityIndicator.setIndeterminate(true);
+
+		// clear any previous directory URL;
+		//   gets set iff url is a directory
+		//   and *.html was successfully created.
+		dirURL=null; 
 		
 		// ========== if URL is a directory
+		webURL=url;
 		File webFile=new File(webURL.getFile());
-		if (webFile!=null && webFile.getPath()!=null
-				&& webFile.isDirectory() && loadDirectory(webURL)!=0)
-			return 2;
+		if (webFile!=null && 
+				webFile.isDirectory()) {
+			// Recall that 'loadDirectory' will reset 'webURL'
+			if (loadDirectory(webURL)==0) {
+				CirclePack.cpb.errMsg("Failed creation of directory *.html");
+				activityIndicator.setIndeterminate(false);
+				return 0;
+			}
+			else {
+				dirURL=FileUtil.tryURL(url.toString());
+				action=2;
+			}
+		}
 
 		// ======= If the URL is an *.cps (or *.xmd or *.cmd) script:
-		String chkurl=enteredURL.toExternalForm().toLowerCase();
-		if (chkurl.endsWith(".cps") ||
+		String chkurl=webURL.toExternalForm().toLowerCase().trim();
+		if (action==0 && (chkurl.endsWith(".cps") ||
 				chkurl.endsWith(".xmd") ||
-				chkurl.endsWith(".cmd")) 
-			return 3;
-
+				chkurl.endsWith(".cmd"))) {
+			if (loadScript(webURL)!=0)
+				action=3;
+			else {
+				activityIndicator.setIndeterminate(false);
+				return 0;
+			}
+		}
+		
 		// ================= If the URL is a *.p or *.q packing file:
-		else if (chkurl.endsWith(".p") || 
-				chkurl.endsWith(".q")) 
-			return 4;
+		else if (action==0 &&
+				(chkurl.endsWith(".p") || 
+				chkurl.endsWith(".q"))) {
+			if (loadPacking(webURL)!=0)
+				action=4;
+			else {
+				activityIndicator.setIndeterminate(false);
+				return 0;
+			}
+		}
 		
 		// ================= If URL is a page to load
-		else 
-			return 1;
+		if (action==0 && webURL!=null)
+			action=1;
+
+		// only 1 and 2 require something to be loaded
+		if ((action!=1 && action!=2)) {
+			activityIndicator.setIndeterminate(false);
+			return action;
+		}
+		
+		int rslt=0;
+		if (action>0) {
+			rslt=loadAction(action,webURL);
+		}
+		activityIndicator.setIndeterminate(false);
+		if (rslt>0)
+			return action;
+		return rslt;
 	}
 	
 	/**
+	 * called only for loading web and directory 
+	 * instances. Update 'loadedURL' and add urls 
+	 * to history. New web pages (action==1) also
+	 * clear the forward list. 
+	 * @param action int
+	 * @param url URL
+	 * @return 0 on failure
+	 */
+	public int loadAction(int action,URL url) {
+		int rslt=0;
+		if ((rslt=loadPage(url))==0) // failure to load 
+			return 0;
+
+		// Note: in directory case, url is the tmp 
+		//   html file, but the directory itself 
+		//   becomes 'loadedURL' and so it can go 
+		//   into the history
+		loadedURL=FileUtil.tryURL(url.toString());
+		if (action==2) {
+			loadedURL=FileUtil.tryURL(dirURL.toString());
+		}
+		return rslt; 
+	}
+
+	/**
+	 * This loads the page, sets 'loadedURL'
+	 * @param newURL URL
+	 * @return 0 on failure
+	 */
+	public int loadPage(URL newURL) {
+		refreshButton.setEnabled(true);
+		
+		// loading occurs on the javafx thread 
+		loadWebPage(newURL.toString());
+
+		loadedURL = FileUtil.tryURL(newURL.toString());
+		if (loadedURL==null) 
+			return 0;
+		return 1;
+	}
+
+	/**
+	 * load webView on the javafx thread
+	 * @param url String
+	 */
+    public void loadWebPage(String url) {
+        Platform.runLater(() -> {
+        	if (FileUtil.isLocal(url)) {
+           		String newurl=FileUtil.parseURL(url).toString();
+           		webEngine.load(newurl);
+           	}
+        	else
+        		webEngine.load(url);
+        	webView.setVisible(true);
+        }); 
+    }
+
+	/**
 	 * Prepare a directory in *.html form to load;
 	 * 'url' is already confirmed and is a directory.
-	 * Do not put list for past loads.
 	 * @param url URL
 	 * @return int, 0 on failure
 	 */
 	public int loadDirectory(URL url) {
-// change for FXWebBrowser
 		webURL=url;
-//		webURL = BrowserUtilities.pageForDirectory(url);
-		if (webURL == null) 
-			return 0;			
+		webURL = BrowserUtilities.pageForDirectory(url);
+		if (webURL == null) {
+			CirclePack.cpb.errMsg("failed to format directory as *.html");
+			return 0;
+		}
 		
-		// webURL is the html page ready to load
+		// webURL is the *html page ready to load
 		return 2;
 	}
 
 	/**
+	 * This should only be called after checking
+	 * that this is a *cps, *xmd, or *cmd file.
 	 * Loading a script does not require loading 
-	 * the web page and does not affect 'loadedUrl'
+	 * the web page and does not affect 'loadedURL'
 	 * @param url URL
 	 * @return int, 0 on failure
 	 */
 	public int loadScript(URL url) {
-		activityIndicator.setIndeterminate(true);
 		webURL=null;
+		URL tmpurl=FileUtil.parseURL(url.toString());
+		
+		if ((tmpurl)==null)
+			return 0;
+				
+		// Prompt the user to confirm loading a new script:
+		String confirmDialogText = "Load new script?"; 
+		int result = JOptionPane.showConfirmDialog(null, 
+				confirmDialogText, "Confirm", JOptionPane.YES_NO_OPTION);
+		if (result != JOptionPane.YES_OPTION) 
+			return 0;
 		
 		// If a local file:
-		if (url.toString().toLowerCase().startsWith("file")) {
+		if (url.toString().startsWith("file")) {
 			// Since this is a local file, there is no need to thread.
 			
 			// Load the script.
@@ -487,8 +514,6 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 				PackControl.scriptHover.stackScroll.getViewport().setViewPosition(new Point(0, 0));
 
 			// Update the cursor and activity indicator and exit.
-//			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-			activityIndicator.setIndeterminate(false);
 			if (gotNewScript)
 				return 3;
 			else
@@ -525,10 +550,6 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 						EventQueue.invokeLater(new Runnable() {
 							public void run() {
 								messenger.sendErrorMessage("Could not download file " + url.toString() + ".");
-								
-								// Update the cursor and activity indicator and exit.
-//								pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-								activityIndicator.setIndeterminate(false);
 								return;	
 							}
 						});
@@ -550,18 +571,11 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 							if (newScript) 
 								PackControl.scriptHover.stackScroll.getViewport().
 							setViewPosition(new Point(0, 0));
-
-							// Update the cursor and activity indicator and exit.
-//							pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-							activityIndicator.setIndeterminate(false);
 							return;			
 						}
 					});
 				}
 			}.start();
-			
-//			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-			activityIndicator.setIndeterminate(false);
 			return 3;
 		} // end of else thread
 	} // end of processing for *.cps (or *.xmd or *.cmd) files
@@ -579,12 +593,10 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 		URL targetFile=null;
 		if ((targetFile=FileUtil.tryURL(url.toString()))==null)
 			return 0;
-		
-		activityIndicator.setIndeterminate(true);
 		webURL=null;
 		
 		// Prompt the user to confirm loading the packing:
-		String confirmDialogText = "Load into pack " + 
+		String confirmDialogText = "Load new packing into p" + 
 				CirclePack.cpb.getActivePackData().packNum + "?";
 		int result = JOptionPane.showConfirmDialog(null, 
 				confirmDialogText, "Confirm", JOptionPane.YES_NO_OPTION);
@@ -610,14 +622,8 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 			} catch (FileNotFoundException e) {
 				// Notify CirclePack of the error.
 				this.messenger.sendErrorMessage("Failed to open " + url.toString() + ".");
-//				pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-				activityIndicator.setIndeterminate(false);
 				return 0;
 			}
-				
-			// On either success or failure, update the GUI 
-//			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-			activityIndicator.setIndeterminate(false);
 			return 4;			
 		}
 
@@ -634,9 +640,6 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 						EventQueue.invokeLater(new Runnable() {
 							public void run() {
 								messenger.sendErrorMessage("Could not download file " + url.toString() + ".");
-								
-//								pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-								activityIndicator.setIndeterminate(false);
 								return;			
 							}
 						});
@@ -655,9 +658,6 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 						bufferedReader = new BufferedReader(new FileReader(localPackingFile));
 					} catch (FileNotFoundException e) {
 						messenger.sendErrorMessage("Failed to open " + url.toString() + ".");
-
-//						pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-						activityIndicator.setIndeterminate(false);
 						return;
 					} 
 
@@ -669,117 +669,17 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 							ReadWrite.readpack(bufferedReader,tmppd,localPackingFile.toString());
 							if (CirclePack.cpb.getActivePackData().getDispOptions != null)
 								CommandStrParser.jexecute(CirclePack.cpb.getActivePackData(), "disp -wr");
-					
-//							pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-							activityIndicator.setIndeterminate(false);
 							return;
 						}
 					});
 				}
 			}.start();
-//			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-			activityIndicator.setIndeterminate(false);
 			return 1;
 		} // end of loading from web
 	}
-		
-	/**
-	 * Loads the page specified by the given URL.
-	 * This is a known page --- e.g. from history.
-	 * Return value depends on objects: 
-	 * @param url URL
-	 * @return int, 0 on failure
-	 */
-	protected int loadKnownURL(URL url) {
-		// Return if URL is null.
-		if (url == null)
-			return 0;
-
-		// Return if the URL is already loaded.
-		if (url.equals(loadedURL)) 
-			return -1;
-
-		// Indicate that we are loading something.
-//		pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-		activityIndicator.setIndeterminate(true);
-		
-		int rslt=loadPage(url);
-		activityIndicator.setIndeterminate(false);
-		return rslt;
-	}
 	
-	/**
-	 * called only for loading web and directory 
-	 * instances. Update 'loadedURL' and add urls 
-	 * to history. New web pages (action==1) also
-	 * clear the forward list. 
-	 * @param action int
-	 * @param url URL
-	 * @return 0 on failure
-	 */
-	public int loadAction(int action,URL url) {
-		int rslt=0;
-		
-		if ((rslt=loadPage(url))==0) // failure 
-			return 0;
-
-		// TODO: not getting right behavior on forward/back buttons
-
-		URL hold_loadedURL=null;
-		// try loading; only push successful script or web page onto the history stack.
-		hold_loadedURL=FileUtil.tryURL(loadedURL.toString());
-		
-		loadedURL=url;
-		// Add loadedURL to the back history stack and 
-		//    enable the back button.
-		if (!loadedURL.equals(hold_loadedURL)) {
-			backHistory.push(loadedURL);
-			backButton.setEnabled(true);
-
-			// If this is a new page, not a directory,
-			// we clear the forward history and disable 
-			// the forward button. There is no "forward" 
-			// pages when a new page is loaded.
-			if (action==1) {
-				forwardHistory.clear();
-				forwardButton.setEnabled(false);
-			}
-		}
-		
-		return rslt; 
-	}
 
 
-	/**
-	 * This is the actual call to load the page.
-	 * @param newURL URL
-	 * @return 0 on failure
-	 */
-	public int loadPage(URL newURL) {
-		boolean debug=false;
-		refreshButton.setEnabled(true);
-		
-// debugging: try to change to known file to see it loads
-		if (debug) // debug=true;
-			newURL=FileUtil.tryURL("file:/C:/Users/kensm/Documents/CmdDetails.html");
-		
-		webViewRenderer.loadPage(newURL.toString());
-//		com.sun.webkit.dom.HTMLDocumentImpl webdoc=(com.sun.webkit.dom.HTMLDocumentImpl)(webViewRenderer.webEngine).getDocument();
-//       	if (webdoc==null)
-//       		System.err.println("no document for '"+newURL+"'");
-
-		loadedURL = FileUtil.tryURL(newURL.toString());
-		if (loadedURL==null) 
-			return 0;
-		urlComboBox.add2List(loadedURL.toString(),false);
-//			pageDisplayPane.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-		activityIndicator.setIndeterminate(false);
-		messenger.sendOutputMessage("Browser loaded " + newURL.toString() + ".");
-		// Don't update the activity indicator here. The property change listener should
-		// handle it when the threaded setPage() method finishes.
-		return 1;
-		
-	}
 
 	/*
 	 * This next bit of code should disable the activity indicator whenever a page
@@ -802,42 +702,75 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 			// This can happen when a hyperlink is clicked,
 			// changing the current selection of the combo box 
 			// and triggering this event.
-			String urlString = (String) urlComboBox.getSelectedItem();
+			String urlString = (String)(urlComboBox.getSelectedItem());
 			
 			URL url=FileUtil.parseURL(urlString);
 			if (url==null || url.equals(loadedURL))
 				return; // url.getPath();
+			URL cur_loadedURL=null;
+			if (loadedURL!=null)
+				cur_loadedURL=FileUtil.parseURL(loadedURL.toString());
 			
-			// process sets 'webURL' 
-			int action=processURL(url); // File.separator;
+			int rslt=processLink(url);
 			
-			// failed?
-			if (action<=0 || webURL==null)
-				return;
-			
-			// directory?
-//			else if (action==2 && loadDirectory(webURL)==0) {
-//				System.err.println("failed to load directory '"+webURL.toString()+"'");
-//				return;
-//			}
-			
-			// script?
-			else if (action==3 && loadScript(webURL)==0) {
-				System.err.println("failed to load script '"+webURL.toString()+"'");
-				return;
+			// if we load a script or packing, we don't want
+			//    to display that in combobox.
+			if (rslt>0 && rslt!=1 && rslt!=2) {
+				if (cur_loadedURL!=null)
+					urlComboBox.setURLstring(cur_loadedURL.toString());
+				else
+					urlComboBox.setURLstring(" ");
 			}
 			
-			// packing?
-			else if (action==4 && loadPacking(webURL)==0) {
-				System.err.println("failed to load packing '"+webURL.toString()+"'");
-				return;
+			// if successful with site or directory, adjust histories
+			if ((rslt==1 || rslt==2) && cur_loadedURL!=null) {
+				
+				boolean back_reload=false;
+				boolean fore_reload=false;
+				// Is this a reload from back/fore? 
+				if (!backHistory.empty()) {
+					URL popped=backHistory.pop();
+					if (!popped.equals(loadedURL)) {
+						backHistory.push(popped);
+						backHistory.push(cur_loadedURL);
+					}
+					else 
+						back_reload=true;
+				}
+				else {
+					backHistory.push(cur_loadedURL);
+					backButton.setEnabled(true);
+				}
+					
+				if (!forwardHistory.empty()) {
+					URL popped=forwardHistory.pop();
+					if (!popped.equals(loadedURL))  
+						forwardHistory.push(popped);
+					else
+						fore_reload=true;
+				}
+				
+				// are we shifting one way or another
+				if (fore_reload) { // move fore to back
+					backHistory.push(cur_loadedURL);
+					backButton.setEnabled(true);
+				}
+				if (back_reload) { // move from back to fore
+					forwardHistory.push(cur_loadedURL);
+					forwardButton.setEnabled(true);
+				}
+				
+				// a new site should wipe out forward history
+				if (rslt==1 && !back_reload && !fore_reload) {
+					forwardHistory.clear();
+					forwardButton.setEnabled(false);
+				}
 			}
-			
-			// only 1 and 2 require something to be loaded
-			if ((action!=1 && action!=2))
-				return; 
-			
-			int rslt=loadAction(action,webURL);
+				
+			if (backHistory.empty())
+				backButton.setEnabled(false);
+			if (forwardHistory.empty())
+				forwardButton.setEnabled(false);
 			
 			if (rslt>0)  // success
 				urlComboBox.setSuccess();
@@ -847,5 +780,79 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 				urlComboBox.setNeutral();
 		}
 	}
+	
+	/**
+	 * This is a hyperlink listener for javaFX WebView.
+	 */
+	protected void initListener() {
+		webEngine.getLoadWorker().stateProperty().addListener(new ChangeListener<State>() {
+			@Override
+			public void changed(ObservableValue ov, State oldState, State newState) {
+				if (newState == Worker.State.SUCCEEDED) {
+					EventListener listener = new EventListener() {
+						@Override
+						public void handleEvent(Event ev) {
+							String domEventType = ev.getType();
+							if (domEventType.equals(EVENT_TYPE_CLICK)) {
+								String href = ((Element)ev.getTarget()).getAttribute("href");
+								mouseWebClick(href);
+							} 
+							else if (domEventType.equals(EVENT_TYPE_MOUSEOVER)) {
+								String href = ((Element)ev.getTarget()).getAttribute("href");
+								mouseWebEnter(href);
+							} 
+							else if (domEventType.equals(EVENT_TYPE_MOUSEOUT)) {
+								String href = ((Element)ev.getTarget()).getAttribute("href");
+								mouseWebOut(href);
+							} 
+						}
+					};
 
-} 
+					Document doc = webView.getEngine().getDocument();
+					NodeList nodeList = doc.getElementsByTagName("a");
+					for (int i = 0; i < nodeList.getLength(); i++) {
+						((EventTarget) nodeList.item(i)).addEventListener(EVENT_TYPE_CLICK, listener, false);
+						((EventTarget) nodeList.item(i)).addEventListener(EVENT_TYPE_MOUSEOVER, listener, false);
+						((EventTarget) nodeList.item(i)).addEventListener(EVENT_TYPE_MOUSEOUT, listener, false);
+					}
+				}
+			}
+		});
+	}
+	
+	/**
+	 * WebView hypertext listener calls this if the
+	 * mouse is clicked on a link.
+	 * @param href String
+	 * @return int, 0 on failure
+	 */
+	public int mouseWebClick(String href) {
+		URL theURL=null;
+		if ((theURL=FileUtil.parseURL(href))==null)
+			return 0;
+		urlComboBox.add2List(theURL.toString(),false);
+		return 1;
+	}
+	
+	/**
+	 * TODO: WebView hypertext listener calls this
+	 * when mouse enters a link.
+	 * @param href
+	 * @return
+	 */
+	public int mouseWebEnter(String href) {
+		statusLabel.setText(href);
+		return 1;
+	}
+	
+	/**
+	 * TODO: WebView hypertext listener calls this
+	 * when mouse leaves a link.
+	 * @param href
+	 * @return
+	 */
+	public int mouseWebOut(String href) {
+		statusLabel.setText(null);
+		return 1;
+	}
+}
