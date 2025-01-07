@@ -57,6 +57,14 @@ import packing.ReadWrite;
 import util.FileUtil;
 import util.MemComboBox;
 
+/**
+ * FXWebBrowser is a simple web browser using javaFX.
+ * It has integrated functionality to handle CirclePack 
+ * scripts *.cps (and *.xmd and *.cmd), *.p and *.q 
+ * packing data files, and local and remote files.
+ * 
+ * @author kens, 
+*/
 public class FXWebBrowser extends JFrame implements ActionListener {
 
 	private static final long serialVersionUID = 7248705697046383784L;
@@ -187,7 +195,7 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 					if ((loadedUrlTemp=FileUtil.tryURL(loadedURL.toString()))!=null) {
 						// Empty the page.
 						loadWebPage("about:blank");
-//						urlComboBox.add2List(loadedUrlTemp.toString(),false);
+						urlComboBox.add2List(loadedUrlTemp.toString(),false);
 					}
 				}
 			}

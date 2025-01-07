@@ -1058,7 +1058,7 @@ public class ScriptManager implements ActionListener {
 			 if (temp==null || !temp.exists()) {
 				 // next, try in 'ScriptDirectory':
 				 temp=new File(CPFileManager.ScriptDirectory,name);
-				 if (temp.exists() == false) {
+				 if (!temp.exists()) {
 					 String errmsg=new String("Requested script '"+namE+"' not found");
 					 PackControl.consoleCmd.dispConsoleMsg(errmsg);
 					 PackControl.shellManager.recordError(errmsg);
@@ -1095,7 +1095,8 @@ public class ScriptManager implements ActionListener {
 	  * @return 0 on failure
 	  */
 	 public int loadNamedScript(String name,String origName,boolean keepName) {
-		 if (name==null) return 0;
+		 if (name==null) 
+			 return 0;
 		 URL url=getScriptURL(name);
 		 if (url==null) 
 			 return 0;
@@ -1375,8 +1376,6 @@ public class ScriptManager implements ActionListener {
 		 resetNextCmdNode(nextCmdNode);
 	 }
 
-
-
 	 /**
 	  * Find the tree path to given CPTreeNode.
 	  * @param node
@@ -1422,8 +1421,6 @@ public class ScriptManager implements ActionListener {
 			 .treeNodesInserted(evt);
 		 }
 	 }
-
-
 
 	 /**
 	  * Notify listeners that the path given has had a child deleted. path is the
@@ -1484,8 +1481,8 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * Actions initiated in the 'scriptAction' panel and button presses
-	  * come through this method.
+	  * Actions initiated in the 'scriptAction' panel 
+	  * and button presses come through this method.
 	  */
 	 public void actionPerformed(ActionEvent e) {
 		 String command = e.getActionCommand();
@@ -1689,8 +1686,8 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * Check for 'About' image in the includedFiles and return the
-	  * temporary File where it's stored.
+	  * Check for 'About' image in the includedFiles and 
+	  * return the temporary File where it's stored.
 	  * @return File or null on error
 	  */
 	 public File getAboutTmpFile() {

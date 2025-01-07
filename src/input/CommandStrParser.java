@@ -983,11 +983,11 @@ public class CommandStrParser {
 				  else if (windStr.startsWith("mob")) {
 					  PackControl.mobiusFrame.setVisible(false);
 				  }
-/* BOMBIN
+
 				  else if (windStr.startsWith("www") || windStr.startsWith("bro")) {
 					  PackControl.browserFrame.setVisible(false);
 				  }
-*/				  
+
 				  else if (windStr.startsWith("abo")) {
 					  PackControl.aboutFrame.setVisible(false);
 				  }

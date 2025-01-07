@@ -34,7 +34,6 @@ import javax.swing.WindowConstants;
 
 import allMains.CPBase;
 import allMains.CirclePack;
-import browser.BrowserFrame;
 import browser.FXWebBrowser;
 import canvasses.CanvasReDrawManager;
 import canvasses.CursorCtrl;

@@ -45,11 +45,24 @@ public class ScriptLoader {
 	 * 'manager.scriptFile'). This is only called after 
 	 * user has chance to save the current script 
 	 * (if it has changed).
-	 * @param url URL of script
+	 * @param urlin URL of script
 	 * @return true if the load seemed to work.
 	 */
-	public boolean loadScriptURL(URL url) {
+	public boolean loadScriptURL(URL urlin) {
 
+		URL url=FileUtil.parseURL(urlin.toString().trim());
+		
+		// is this a script?
+		String urlstr=url.toString();
+		if (!urlstr.endsWith("cps") &&
+				!urlstr.endsWith("xmd") &&
+				!urlstr.endsWith("cmd")) {
+			int len=urlstr.length();
+			CirclePack.cpb.errMsg("\""+urlstr.substring(0,10)+
+				"....."+urlstr.substring(len-5,len)+"\" is not a script");
+			return false;
+		}
+					
 		try {
 			
 			// create working copy 'manager.workingFile', pick off included data files
@@ -75,7 +88,6 @@ public class ScriptLoader {
 				return false;
 			} 
 
-//			viewSerializedTree(doc); // for debugging
 			processXMLDocument(doc);
 			
 			// set description, tag, load AboutImage

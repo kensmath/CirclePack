@@ -1,8 +1,5 @@
 package script;
 
-import images.CPIcon;
-import input.CPFileManager;
-
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -19,6 +16,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -32,13 +30,16 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.EtchedBorder;
 
-import mytools.MyTool;
-import util.MemComboBox;
 import allMains.CPBase;
 import allMains.CirclePack;
 import circlePack.PackControl;
 import dragdrop.EditTransferable;
 import dragdrop.ToolDragSourceListener;
+import images.CPIcon;
+import input.CPFileManager;
+import mytools.MyTool;
+import util.FileUtil;
+import util.MemComboBox;
 
 /**
  * This is the bundle of buttons, file chooser, edit bar
@@ -55,7 +56,7 @@ public class ScriptBundle extends JPanel implements ActionListener {
 	public static MemComboBox   m_locator;
 	protected JLabel        m_status;
 	protected boolean isInProcess=false; // help prevent extraneous load actions
-	public String loadedXmd=""; // currently loaded script
+	public String loadedCPS=""; // currently loaded script
 
 	public static ScriptManager manager;
 	public static JPanel scriptEditBar; // contains add_above/below buttons
@@ -300,8 +301,8 @@ public class ScriptBundle extends JPanel implements ActionListener {
 	}
 
 	/**
-	 * For comboBox change events in 'scriptBar' (bottom of 'PackControl'
-	 * or top of 'ScriptFrame')
+	 * For comboBox change events in 'scriptBar' 
+	 * (bottom of 'PackControl' or top of 'ScriptFrame')
 	 */
 	public void actionPerformed(ActionEvent evt) { 
 		if (evt.getActionCommand().equals("comboBoxChanged")
@@ -316,20 +317,18 @@ public class ScriptBundle extends JPanel implements ActionListener {
 			
 			// else, load the script
 			isInProcess=true;
-			String sUrl = (String)m_locator.getSelectedItem();
+			String sUrl = ((String)m_locator.getSelectedItem()).trim();
+			URL url=FileUtil.parseURL(sUrl);
+			URL oldurl=FileUtil.parseURL(loadedCPS);
+			
 			// this file is already loaded -- likely, an erroneous duplicate event
-			if (sUrl == null || sUrl.trim().length() == 0 || sUrl.trim().equals(loadedXmd)) {
+			if (url == null || url.equals(oldurl)) {
 				isInProcess=false;
 				return;
 			}
 
-			// if www
-			if (sUrl.startsWith("www.")) {
-				sUrl=new String("http://"+sUrl);
-				sUrl.replace("%7E","~");		
-			}
-
 			// load the script
+			sUrl=url.toString();
 			if (manager.getScript(sUrl,sUrl,false)!=0) { // success
 				isInProcess=false;
 				m_locator.setSuccess();
@@ -353,10 +352,11 @@ public class ScriptBundle extends JPanel implements ActionListener {
 	}
 
 	/**
-	 * A single ScriptBar is created in PackControl but used
-	 * both in the PackControl and Script frames. Move from
-	 * frame contentPane to 'scriptPanel' of scriptFrame.
-	 * In the former, the editBar is invisible.
+	 * A single ScriptBar is created in PackControl 
+	 * but used both in the PackControl and Script 
+	 * frames. Move from frame contentPane to 
+	 * 'scriptPanel' of scriptFrame. In the former, 
+	 * the editBar is invisible.
 	 * @param attach2Script, boolean: editBar into Script frame
 	 */
 	public void swapScriptBar(boolean attach2Script) {
