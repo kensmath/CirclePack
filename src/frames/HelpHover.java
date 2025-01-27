@@ -48,9 +48,10 @@ import allMains.CirclePack;
 import circlePack.PackControl;
 
 /**
- * Constructs a hover version of the Help frame with various 
- * help info in tabbed panes. In the future, should add search 
- * and other capabilities, improve formating, add tabs such as:
+ * Constructs a hover version of the Help frame,
+ * which holds various help info in tabbed panes. 
+ * In the future, should add search and other 
+ * capabilities, improve formating, add tabs such as:
  * * functional grouping of commands
  * * illustrations (jpg's) of display options.
  * @author kens
@@ -391,12 +392,14 @@ public class HelpHover extends HoverPanel implements HyperlinkListener {
 	}
 
 	/**
-	 * Given a word, this looks for it in "CmdDetail"; if found,
-	 * we select the "CmdDetail" tab and mark/position word.
+	 * Given a word, this looks for it in "CmdDetail"; 
+	 * if found, we select the "CmdDetail" tab and 
+	 * mark/position the word.
 	 * @param word
 	 */
 	public void positionCmd(String word) {
-		if (word==null || word.length()==0) return;
+		if (word==null || word.length()==0) 
+			return;
 		Document cmd_doc=detailArea.getDocument();
 		Pattern pattern = Pattern.compile(word);
 		try {
@@ -436,11 +439,13 @@ public class HelpHover extends HoverPanel implements HyperlinkListener {
 	}
 
 	/**
-	 * Select CmdDetail tab and position it at command 'cmd'
+	 * Select 'CmdDetail' tab and position it at 
+	 * the command 'cmd'. Note: 'CmdDetail' index
+	 * is now 0.
 	 * @param str
 	 */
 	public static void placeCmd(String cmd) {
-		helpTabbedPane.setSelectedIndex(1);
+		helpTabbedPane.setSelectedIndex(0);
 		try {
 			detailArea.scrollToReference(cmd); 
 		} catch (Exception ex){

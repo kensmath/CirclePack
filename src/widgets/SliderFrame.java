@@ -51,6 +51,9 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	// try to starting with these sizes
 	public static final int DEFAULT_WIDTH=420; 
 	public static final int DEFAULT_HEIGHT=300; 
+	public final int RADSLIDER=0;
+	public final int SCHFLOWER=1;
+	public final int ANGLESUM=2;
 	
 	// abstract methods that must be implemented by derived classes
 	public abstract double getParentValue(int indx); // retrieve value held by parent
@@ -69,7 +72,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	public abstract void initRange(); // set the initial slider ranges
 	
 	public Double[] parentValues; // parent may hold the values
-	public int type;  // 0=radii, 1=schwarzians, 2=angle sums
+	public int type;  // 0=radii, 1=intrinsic schwarzians, 2=angle sums
 	public int sliderCount;
 	public double val_min;
 	public double val_max;
@@ -184,29 +187,36 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		
 		JPanel addremovePanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
 		
-		button = new JButton("+");
-		button.setBorderPainted(false);
-		button.setMargin(new Insets(2,6,2,6));
-		button.addActionListener(this);
-		button.setPreferredSize(new Dimension(25,20));
-		button.setActionCommand("add object");
-		button.setToolTipText("Add a new object");
-		addField=new JTextField(3);
-		addField.setEditable(true);
-		addremovePanel.add(button);
-		addremovePanel.add(addField);
-		
-		button = new JButton("-");
-		button.setBorder(null);
-		button.setMargin(new Insets(2,2,2,2));
-		button.addActionListener(this);
-		button.setPreferredSize(new Dimension(25,20));
-		button.setActionCommand("remove object");
-		button.setToolTipText("Remove an object");
-		removeField=new JTextField(3);
-		removeField.setEditable(true);
-		addremovePanel.add(button);
-		addremovePanel.add(removeField);
+		if (type!=SCHFLOWER) {
+			button = new JButton("+");
+			button.setBorderPainted(false);
+			button.setMargin(new Insets(2,6,2,6));
+			button.addActionListener(this);
+			button.setPreferredSize(new Dimension(25,20));
+			button.setActionCommand("add object");
+			button.setToolTipText("Add a new object");
+			addField=new JTextField(3);
+			addField.setEditable(true);
+			addremovePanel.add(button);
+			addremovePanel.add(addField);
+			
+			button = new JButton("-");
+			button.setBorder(null);
+			button.setMargin(new Insets(2,2,2,2));
+			button.addActionListener(this);
+			button.setPreferredSize(new Dimension(25,20));
+			button.setActionCommand("remove object");
+			button.setToolTipText("Remove an object");
+			removeField=new JTextField(3);
+			removeField.setEditable(true);
+			addremovePanel.add(button);
+			addremovePanel.add(removeField);
+		}
+		else { // SCHFLOWER: use this as error window
+			addField=new JTextField(25);
+			addField.setEditable(false);
+			addremovePanel.add(addField);
+		}
 		
 		topPanel.add(addremovePanel);
 		
@@ -311,6 +321,17 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	 */
 	public void setHelpText(StringBuilder strbld) {
 		helpInfo=strbld;
+	}
+	
+	/**
+	 * Only for SCHFLOWER, print or clear error in 'addField'
+	 * @param errstr String
+	 */
+	public void setErrorText(String errstr) {
+		addField.setText(errstr);
+	}
+	public void clearError() {
+		setErrorText("");
 	}
 	
 	/**
@@ -428,10 +449,10 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		else if (cmd.equals("Update")) {
 			downloadData();
 		}
-		else if (cmd.equals("add object")) {
+		else if (type!=SCHFLOWER && cmd.equals("add object")) {
 			addObject(addField.getText().trim());
 		}
-		else if (cmd.equals("remove object")) {
+		else if (type!=SCHFLOWER && cmd.equals("remove object")) {
 			removeObject(removeField.getText().trim());
 		}
 		else if (cmd.equals("set minimum")) {

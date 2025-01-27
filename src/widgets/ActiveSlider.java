@@ -50,10 +50,11 @@ public class ActiveSlider extends JPanel implements MouseListener,
 		active=actv;
 		
 		slider=new IndexedJSlider(sfparent,val,index);
-		slider.addChangeListener(sfparent.listener);
+		if (active)
+			slider.addChangeListener(sfparent.listener);
 		labelField=new JTextField(label,6);
 		labelField.setEditable(false);
-		valueField=new xNumField("",9);
+		valueField=new xNumField("",7);
 		valueField.addActionListener(new ActionListener() {
 			  public void actionPerformed(ActionEvent event) {
 			    sfparent.changeValueField_action(valueField.getValue(),index);
@@ -88,7 +89,7 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	public void refreshValue() {
 		boolean holdck=sfparent.changeCheck.isSelected();
 		sfparent.changeCheck.setSelected(false);
-		double val=1.0-sfparent.getParentValue(index);
+		double val=sfparent.getParentValue(index);
 		slider.setMyValue(val); // to integer first
 		valueField.setValue(val);
 		sfparent.changeCheck.setSelected(holdck);
@@ -141,23 +142,14 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	}
 
 	// rest of needed mouse calls
-	public void mouseReleased(MouseEvent evt) {
-	}
-
-	public void mousePressed(MouseEvent evt) {
-	}
-
-	public void mouseExited(MouseEvent evt) {
-	}
-	
-	public void mouseDragged(MouseEvent evt) {
-	}
-
+	public void mouseReleased(MouseEvent evt) {}
+	public void mousePressed(MouseEvent evt) {}
+	public void mouseExited(MouseEvent evt) {}
+	public void mouseDragged(MouseEvent evt) {}
+	public void mouseClicked(MouseEvent arg0) {}
 	public void mouseMoved(MouseEvent evt) {
 //		sfparent.mouse_entry_action(index);
 	}
 
-	public void mouseClicked(MouseEvent arg0) {
-	}
 
 }

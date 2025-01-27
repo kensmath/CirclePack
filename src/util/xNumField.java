@@ -65,7 +65,7 @@ public class xNumField extends JPanel {
 		xField.setText("");
 
 		// estimate width of number
-		width=8*(digits+4); 
+		width=10*(digits+4); 
 
 		// find width of label, if titled
 		if (titled) {
@@ -82,7 +82,7 @@ public class xNumField extends JPanel {
 			setPreferredSize(new Dimension(width+2,32));
 		}
 		else {
-			xField.setBounds(0,0,width,16);
+			xField.setBounds(0,0,width,20);
 			setPreferredSize(new Dimension(width+2,18));
 		}
 			

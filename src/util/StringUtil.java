@@ -488,19 +488,21 @@ public class StringUtil {
 	}
 	
 	/**
-	 * Get bracketed strings, eg, as in vlist[4], flist[n], etc. 
-	 * Return array of strings split by whitespaces; calling routine 
-	 * must check the returned strings --- int, string, etc. Normally,
-	 * only the first string has been used. Return null if paired 
-	 * brackets not found or contain
-	 * only whitespace.
+	 * Get bracketed strings, eg, as in vlist[4], f
+	 * list[n], etc. Return array of strings split by 
+	 * whitespaces; calling routine must check the 
+	 * returned strings --- int, string, etc. Normally,
+	 * only the first string has been used. Return null 
+	 * if paired brackets not found or contain only 
+	 * whitespace.
 	 * @param str String
 	 * @return String[]
 	 */
 	public static String[] get_bracket_strings(String str) {
 		int a,b;
 		String[] bracket_str= {null,null};
-		if ((a=str.indexOf('['))==-1 || (b=str.indexOf(']'))==-1 || b<(a+2))
+		if ((a=str.indexOf('['))==-1 || 
+				(b=str.indexOf(']'))==-1 || b<(a+2))
 			return bracket_str;
 		bracket_str=str.substring(a+1,b).split("\\s+");
 		if (bracket_str==null) {

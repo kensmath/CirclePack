@@ -594,7 +594,7 @@ look for key word 'GRAPHICS' to see the major changes
 
 * when saving script, name (if new) should be added to 
   load window and address history. (Also, may want to
-  catch /tmp/new_script.xmd and NOT add to history.)
+  catch /tmp/new_script.cps and NOT add to history.)
 
 * Need a generic "histogram" call that pops up histogram window
   for generic read data and can be iconified somewhere.

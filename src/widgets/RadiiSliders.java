@@ -31,7 +31,7 @@ public class RadiiSliders extends SliderFrame {
 
 	public RadiiSliders(PackData p,String chgcmd,String movcmd,NodeLink vlist) {
 		super(p,chgcmd,movcmd);
-		type=0;
+		type=RADSLIDER;
 		
 		// throw back to CirclePack to kill this window
 		this.addWindowListener(new WindowAdapter(){  

@@ -29,7 +29,7 @@ public class AngSumSliders extends SliderFrame {
 
 	public AngSumSliders(PackData p,String chgcmd,String movcmd,NodeLink vlist) {
 		super(p,chgcmd,movcmd);
-		type=2;
+		type=ANGLESUM;
 		
 		// throw back to CirclePack to kill this window
 		this.addWindowListener(new WindowAdapter(){  

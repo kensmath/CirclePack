@@ -905,9 +905,9 @@ public class CPdrawing extends JPanel implements MouseListener {
 				packData.radiiSliders.dispose();
 				packData.radiiSliders=null;
 			}
-			if (packData.schwarzSliders!=null) {
-				packData.schwarzSliders.dispose();
-				packData.schwarzSliders=null;
+			if (packData.schFlowerSliders!=null) {
+				packData.schFlowerSliders.dispose();
+				packData.schFlowerSliders=null;
 			}
 			if (packData.angSumSliders!=null) {
 				packData.angSumSliders.dispose();

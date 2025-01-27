@@ -4162,22 +4162,27 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 </command>
 
 
-<command cmd="set_schwarzian" flags="-[x] {v w ...}]">
+<command cmd="set_schwarzian" flags="-[su {x}] {v w ...}">
 <description>
 	Compute and store the intrinsic schwarzians for given edges, 
-	defaulting to 'all'. See 'dcel.Schwarzian.java' for more details
-	and the PackExtender 'SchwarzMap.java' for related methods.
-	If double x is given, then set specified schwarzians to x. 
-	Else compute the schwarzians using current radii. This 
-	"intrinsic" schwarzian is based on 'baseMobius' transforms and 
-	with layoutOrder can be used to layout a packing determined 
-	up to Mobius transformation by the layout of the first face. 
-	(Layout works in spherical or euclidean geometry, but not 
-	hyperbolic.) 
+	defaulting to 'all' edges. The -s {x} and -u {x} flags indicate
+	set the schwarzians. With -s {x} flag, set specified schwarzians 
+	s to value x. However, an alternate parameter u=1-s is often 
+	preferred, so the -u {x} flag sets u to the value x 
+	(meaning it sets s=1-x). If no such flags are given,
+	the command computes and stores the schwarzians using current 
+	radii. This "intrinsic" schwarzian is based on 'baseMobius' 
+	transforms and with layoutOrder can be used to layout a packing 
+	determined up to Mobius transformation by the layout of the 
+	first face.	(Layout works in spherical or euclidean geometry, 
+	but not hyperbolic.) See 'dcel.Schwarzian.java' for more 
+	details and the PackExtender 'SchwarzMap.java' for related 
+	methods.
 </description>
 <options>
 <opt flag="{v w ...}"> Set based on current radii.</opt>
 <opt flag="-s {x} {v w ...}"> schwarzians set to double value x</opt>
+<opt flag="-u {x} {v w ...}"> schwarzians set to double value 1-x</opt>
 </options>
 <seealso>
 <see>dual_layout</see>

@@ -75,7 +75,7 @@ import util.TriAspect;
 import util.UtilPacket;
 import widgets.AngSumSliders;
 import widgets.RadiiSliders;
-import widgets.SchwarzSliders;
+import widgets.SchFlowerSliders;
 
 /**
  * This is the fundamental data repository for a circle packing and is
@@ -158,7 +158,7 @@ public class PackData{
     public String getDispOptions; // if not null, was set on readpack with 'DISP_FLAGS:'
     
     public RadiiSliders radiiSliders;
-    public SchwarzSliders schwarzSliders;
+    public SchFlowerSliders schFlowerSliders;
     public AngSumSliders angSumSliders;
     
     public Smoother smoother;    // 6/2020. add a smoother

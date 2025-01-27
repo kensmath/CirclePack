@@ -55,9 +55,9 @@ public class CirclePack {
 			if (CPBase.initialScript!=null) {
 				int reslt=CPBase.scriptManager.getScript(CPBase.initialScript,
 						CPBase.initialScript,true);
-				if (reslt==0) {
+				if (reslt==0) {// load default script
 					String tmpname=CPBase.scriptManager.createDefaultScript();
-					reslt=CPBase.scriptManager.loadNamedScript(tmpname,tmpname,true); 
+					reslt=CPBase.scriptManager.loadNamedScript(tmpname,tmpname,false); 
 				}
 			}
 

@@ -63,6 +63,21 @@ public class MemComboBox extends JComboBox<String>
 		} catch (Exception e) {
 		}
 	}
+	
+	/**
+	 * Get an entry from 'urlVector'
+	 * @param indx int
+	 * @return String
+	 */
+	public String getScriptURL(int indx) {
+		String name="";
+		try {
+			name=urlVector.get(indx);
+			return name;
+		} catch(Exception ex) {
+			return "";
+		}
+	}
 
 	/**
 	 * Loads 'urlVector' of saved URL's from a named file
@@ -100,15 +115,16 @@ public class MemComboBox extends JComboBox<String>
 	}
 	
 	/**
-	 * Add 'itemname' to stored list held for this combo box; 
-	 * name moves (or is added) to stored list so it comes
-	 * up first next time CirclePack is run. However, there are
-	 * problems moving it in the model's element list (since
-	 * that triggers reloading actions), so we just fix the
-	 * saved list.
+	 * Add 'itemname' to stored list held for this 
+	 * combo box; name moves (or is added) to stored 
+	 * list so it comes up first next time CirclePack 
+	 * is run. Don't move it into the model's element 
+	 * list since that triggers reloading actions. 
+	 * Just fix up the saved list.
 	 * @param itemname String,
-	 * @param loadOK boolean: false, don't actually load this file,
-	 * just put it in list (e.g., for name of script when saved).
+	 * @param loadOK boolean: false, don't actually 
+	 *    load this file, just put it in list (e.g., 
+	 *    for name of script when saved).
 	 */
 	public void add2List(String itemname,boolean loadOK) {
 		if (model==null) return;
@@ -122,7 +138,7 @@ public class MemComboBox extends JComboBox<String>
 		}
 		
 		// not there? insert at top of list
-		if (hit<0 && !itemname.endsWith("new_script.xmd")) {
+		if (hit<0 && !itemname.endsWith("new_script.cps")) {
 			model.insertElementAt(itemname,0); 
 			hit=0;
 		}

@@ -110,12 +110,17 @@ public class ScriptHover extends HoverPanel {
 	/**
 	 * Set title on the Script Frame.
 	 * @param title 
-	 * @param hasChanged: true, add star
+	 * @param hasChanged: true, add star to indicated editing
 	 */
 	public void scriptTitle(String title,boolean hasChanged) {
 		if (hasChanged)
 			lockedFrame.setTitle("CirclePack Script: "+title+"*");  
-		else lockedFrame.setTitle("CirclePack Script: "+title);
+		else {
+			if (!title.startsWith("new_script"))
+				lockedFrame.setTitle("CirclePack Script: "+title);
+			else
+				lockedFrame.setTitle(ScriptBundle.m_locator.getScriptURL(0));
+		}
 	}
 	
 	/** 

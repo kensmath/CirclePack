@@ -190,13 +190,14 @@ public class LineSBox extends StackBox {
 	public void deleteNode() {
 		//AF>>>//
 		// Lock the viewport so GUI changes don't jitter and relocate.
-		((LockableJViewport) PackControl.scriptHover.stackScroll.getViewport()).setLocked(true);
+//		((LockableJViewport) PackControl.scriptHover.stackScroll.getViewport()).setLocked(true);
 		//<<<AF//
 		
 		deleteChildNodes();
 		CPTreeNode parTN=(CPTreeNode)tNode.getParent();
 		try{
-			parTN.remove((MutableTreeNode)tNode);
+			if (parTN!=null)
+				parTN.remove((MutableTreeNode)tNode);
 		} catch(NullPointerException npe){
 			//AF>>>//
 			// Throwing an exception here seems to be preventing the caller from releasing
@@ -204,13 +205,13 @@ public class LineSBox extends StackBox {
 			// NullPointerException is fixed, I'm putting this kludge here to prevent that
 			// lock up from occurring.
 			// TODO: Fix the NullPointerException and remove this.
-			EventQueue.invokeLater(new Runnable() {
-				public void run() {
-					LockableJViewport viewport = (LockableJViewport) PackControl.scriptHover.stackScroll.getViewport();
-					viewport.locked = false;
-					viewport.lockCount = 0;
-				}
-			});
+//			EventQueue.invokeLater(new Runnable() {
+//				public void run() {
+//					LockableJViewport viewport = (LockableJViewport) PackControl.scriptHover.stackScroll.getViewport();
+//					viewport.locked = false;
+//					viewport.lockCount = 0;
+//				}
+//			});
 			//<<<AF//
 			throw new MiscException("error in deleting LineSBox");
 		}

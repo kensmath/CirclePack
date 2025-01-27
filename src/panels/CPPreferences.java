@@ -120,7 +120,8 @@ private static final long
           if(s.trim().length()>0 && s.charAt(0)!='#' && tok.countTokens() >= 2){
             String keyword = tok.nextToken().trim();
             StringBuilder value=new StringBuilder(tok.nextToken().trim());
-            while (tok.hasMoreTokens()) value.append(" "+tok.nextToken().trim());
+            while (tok.hasMoreTokens()) 
+            	value.append(" "+tok.nextToken().trim());
 
             if (keyword.equals("PACKINGS_DIR")) {
             	CPBase.PACKINGS_DIR=value.toString().trim();
@@ -180,13 +181,15 @@ private static final long
             else if (keyword.equals("WEB_URL_FILE")) {
             	CPBase.WEB_URL_FILE=value.toString().trim();
             	File ff=adjustFileHome(CPBase.WEB_URL_FILE);
-            	if (ff==null) ff=new File(CPFileManager.HomeDirectory,CPBase.WEB_URL_FILE);
+            	if (ff==null) 
+            		ff=new File(CPFileManager.HomeDirectory,CPBase.WEB_URL_FILE);
             	webURLField.setText(ff.toString());
             }
             else if (keyword.equals("SCRIPT_URL_FILE")) {
             	CPBase.SCRIPT_URL_FILE=value.toString().trim();
             	File ff=adjustFileHome(CPBase.SCRIPT_URL_FILE);
-            	if (ff==null) ff=new File(CPFileManager.HomeDirectory,CPBase.SCRIPT_URL_FILE);
+            	if (ff==null) 
+            		ff=new File(CPFileManager.HomeDirectory,CPBase.SCRIPT_URL_FILE);
             	scriptURLField.setText(ff.toString());
             }
             else if(keyword.equals("PRINT_COMMAND")){

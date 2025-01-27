@@ -143,8 +143,9 @@ public class ScriptManager implements ActionListener {
 	}
 
 	/**
-	 * Used only when new script is loaded; this is 'repopulateRecurse'
-	 * from the top nodes, 'cpScriptNode' and 'cpDataNode'.
+	 * Used only when new script is loaded; this 
+	 * is 'repopulateRecurse' from the top nodes, 
+	 * 'cpScriptNode' and 'cpDataNode'.
 	 */
 	public void populateDisplay() {
 		if (rootNode==null) return;
@@ -242,17 +243,21 @@ public class ScriptManager implements ActionListener {
 	}
 
 	/**
-	 * Use: Creates a new CPTreeNode wrapping the given domNode. 
-	 * Note: this is only used when creating a new script from a file.
+	 * Use: Creates a new CPTreeNode wrapping 
+	 * the given domNode. Note: this is only used 
+	 * when creating a new script from a file.
 	 * Caution: may return null.
+	 * @return CPTreeNode
 	 */
 	protected CPTreeNode initCPTreeNode(Node domNode) {
 		CPIcon cpIcon;
 		boolean isDropable=false;
 
-		// Misc stuff: don't want to use, but may want to pass along when
-		//   script is saved. Caution: I don't know proper way to handle
-		//   most of these DOM types. But, we shouldn't encounter them.
+		// Misc stuff: don't want to use, but may 
+		//   want to pass along when script is saved. 
+		//   Caution: I don't know proper way to handle
+		//   most of these DOM types. But, we shouldn't 
+		//   encounter them.
 		short ntype=domNode.getNodeType();
 		if (ntype==Node.COMMENT_NODE || ntype==Node.ATTRIBUTE_NODE ||
 				ntype==Node.NOTATION_NODE || ntype==Node.PROCESSING_INSTRUCTION_NODE) {
@@ -526,12 +531,15 @@ public class ScriptManager implements ActionListener {
 	}
 
 	/**
-	 * Create command CPTreeNode and its MyTool; only called when reading
-	 * new script.
-	 * MyTools created from scripts are executed first based on 'name',
-	 * if given, forcing standard handling, e.g. 'infile_' substitutions,
-	 * etc. Otherwise, the command string is executed as with other MyTool's.
-	 * (see MyToolListener 'actionPerformed' to see if this is handled correctly.)
+	 * Create command CPTreeNode and its MyTool; 
+	 * only called when reading new script.
+	 * MyTools created from scripts are executed 
+	 * first based on 'name', if given, forcing 
+	 * standard handling, e.g. 'infile_' substitutions,
+	 * etc. Otherwise, the command string is 
+	 * executed as with other MyTool's. (see 
+	 * MyToolListener 'actionPerformed' to see if 
+	 * this is handled correctly.)
 	 * @return
 	 */
 	public CPTreeNode initCmdTN(String cmd_text,String name_text,
@@ -567,8 +575,8 @@ public class ScriptManager implements ActionListener {
 	}
 
 	/**
-	 * Create mode CPTreeNode and its MyCanvasMode; only called 
-	 * when reading new script.
+	 * Create mode CPTreeNode and its MyCanvasMode; 
+	 * only called when reading new script.
 	 * @return, CPTreeNode
 	 */	public CPTreeNode initModeTN(String modename,CPIcon cpIcon,
 			 Point hotPt,String cmd_text,String cmd2_text,
@@ -611,7 +619,7 @@ public class ScriptManager implements ActionListener {
 	 /**
 	  * Create section CPTreeNode, possibly with title
 	  * @param title
-	  * @return
+	  * @return CPTreeNode
 	  */
 	 protected CPTreeNode initSectionTN(String title) {
 		 if (title==null || title.trim().length()==0)
@@ -620,11 +628,12 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * Create text CPTreeNode; text is trimmed, stripped of \n. If text was
-	  * all whitespace, then return null. This is called only when loading a
-	  * new script.
-	  * @param text
-	  * @return
+	  * Create text CPTreeNode; text is trimmed, 
+	  * stripped of \n. If text was all whitespace, 
+	  * then return null. This is called only when 
+	  * loading a new script.
+	  * @param text String
+	  * @return CPTreeNode
 	  */
 	 protected CPTreeNode initTextTN(String text) {
 		 if (text==null || text.trim().length()==0) return null;
@@ -635,16 +644,17 @@ public class ScriptManager implements ActionListener {
 
 	 /**
 	  * Create "OTHER" catchall CPTreeNode.
-	  * @param contentStr
-	  * @return
+	  * @param contentStr String
+	  * @return CPTreeNode
 	  */
 	 protected CPTreeNode initOtherTN(String contentStr) {
 		 return new CPTreeNode(contentStr,CPTreeNode.OTHER,null);
 	 }
 
 	 /**
-	  * Called when creating new command node; it opens in edit mode.
-	  * @return
+	  * Called when creating new command node; 
+	  * it opens in edit mode.
+	  * @return CPTreeNode
 	  */
 	 public CPTreeNode createNEWCmdTN() {
 		 MyTool myTool=new MyTool(getNextIcon(),"",null,null,null,"SCRIPT:",
@@ -653,10 +663,11 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * Called when creating new file CPTreeNode and its MyTool;
-	  * caution, may return null if filename is null or empty.
+	  * Called when creating new file CPTreeNode and 
+	  * its MyTool; caution, may return null if 
+	  * filename is null or empty.
 	  * @param filename
-	  * @return
+	  * @return CPTreeNode
 	  */
 	 protected CPTreeNode createNEWFileTN(String filename) {
 		 if (filename==null || filename.trim().length()==0) return null;
@@ -664,11 +675,11 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * Create a new CPTreeNode of given type above (abbel=0) or below
-	  * (abbel=1) the refNode in its parent's list. Redisplay handled
-	  * elsewhere.
+	  * Create a new CPTreeNode of given type above 
+	  * (abbel=0) or below (abbel=1) the refNode in 
+	  * its parent's list. Redisplay handled elsewhere.
 	  * @param refNode, CPTreeNode reference node
-	  * @param type
+	  * @param type int
 	  * @param abbel: create 0=above, 1=below
 	  */
 	 public void insertNewTN(CPTreeNode refNode,int type,int abbel) {
@@ -774,8 +785,10 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * Searches for and deletes reference to an included file;
-	  * the given name is that held by the file's CPTreeNode.
+	  * Searches for and deletes reference to an 
+	  * included file; the given name is that held 
+	  * by the file's CPTreeNode.
+	  * @param orig_name String
 	  */
 	 public void removeIncludedFile(String orig_name) {
 		 if (orig_name==null || orig_name.trim().length()==0
@@ -799,8 +812,9 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * Finds the next icon (based on 'cmdCount') in 'theCPIcons' list.
-	  * @return
+	  * Finds the next icon (based on 'cmdCount') 
+	  * in 'theCPIcons' list.
+	  * @return CPIcon
 	  */
 	 public CPIcon getNextIcon() {
 		 CPIcon icon=(CPIcon)PackControl.scriptToolHandler.toolEditor.theCPIcons.get(
@@ -811,8 +825,9 @@ public class ScriptManager implements ActionListener {
 
 
 	 /**
-	  * Creates the default "starter" script file and returns a string 
-	  * giving its path.
+	  * Creates the default "starter" script file 
+	  * and returns a string giving its path.
+	  * @return String
 	  */
 	 public String createDefaultScript() {
 		 File f=null;
@@ -842,13 +857,17 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * Creates depthfirst enumeration, finds cpTN, then sets 'nextCmdNode' to
-	  * next inline command (strictly) downstream. (Note: probably easiest
-	  * to redo enumeration each time.) If cpTN is null, this will initialize
-	  * 'nextCmdNode'. If cpTN isn't in tree or has no inline command after
-	  * it, then nextCmdNode is set to null (which should be okay).
-	  * Caution: right now, can pick up command node being edited; may have
-	  * to put more effort into this.
+	  * Creates depthfirst enumeration, finds cpTN, 
+	  * then sets 'nextCmdNode' to next inline 
+	  * command (strictly) downstream. (Note: probably 
+	  * easiest to redo enumeration each time.) If 
+	  * cpTN is null, this will initialize 
+	  * 'nextCmdNode'. If cpTN isn't in tree or has 
+	  * no inline command after it, then nextCmdNode 
+	  * is set to null (which should be okay). 
+	  * Caution: right now, can pick up command node 
+	  * being edited; may have to put more effort into 
+	  * this.
 	  * @param cpTN CPTreeNode
 	  */
 	 public void resetNextCmdNode(CPTreeNode cpTN) {
@@ -975,8 +994,10 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * Returns the string for the current command node if it is active. (I think
-	  * it's active unless it's the last one and has already been executed.)
+	  * Returns the string for the current command 
+	  * node if it is active. (I think it's active 
+	  * unless it's the last one and has already 
+	  * been executed.)
 	  * @return String
 	  */
 	 public String getCommandString() {
@@ -986,7 +1007,8 @@ public class ScriptManager implements ActionListener {
 	 }
 	 
 	 /**
-	  * Return index into 'includedFiles' if 'filename' is found.
+	  * Return index into 'includedFiles' if 
+	  * 'filename' is found.
 	  * @param filename String, assume trimmed
 	  * @return int, index (first encountered) or -1 on not found
 	  */
@@ -1013,8 +1035,9 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * When saving, need to first resolve all open edit decisions; for now,
-	  * accept them all. May want to rethink this later.
+	  * When saving, need to first resolve all open 
+	  * edit decisions; for now, accept them all. 
+	  * May want to rethink this later.
 	  */
 	 public void acceptAllEdits() {
 		 if (rootNode==null) return;
@@ -1026,9 +1049,11 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * Sets up the URL for script based on 'namE'. If it starts with
-	  * 'htt' then it's assumed to be web address, else look for file
-	  * in file system, first by 'namE' alone, then in 'ScriptDirectory'.
+	  * Sets up the URL for script based on 'namE'. 
+	  * If it starts with 'htt' then it's assumed 
+	  * to be web address, else look for file in file 
+	  * system, first by 'namE' alone, then in 
+	  * 'ScriptDirectory'.
 	  * @param namE String
 	  * @return URL or null on error or failure
 	  */
@@ -1086,15 +1111,19 @@ public class ScriptManager implements ActionListener {
 	 }
 
 	 /**
-	  * Use: Loads script 'name' from file or from the web; if 'keepName'
-	  * true, adds name to the 'script_URLs' file. Attempt to set stackScroll
-	  * bar in the right spot.
-	  * @param name String, may be temp name (e.g., loaded from web)
+	  * Use: Loads script 'name' from file or from 
+	  * the web; if 'keepName' true, adds name to 
+	  * the 'script_URLs' file. Attempt to set 
+	  * stackScroll bar in the right spot.
+	  * @param name String, may be temp name 
+	  * 	(e.g., loaded from web)
 	  * @param oridName String, name to save under
-	  * @param keepName boolean: true, then record origName in maintained list
-	  * @return 0 on failure
+	  * @param keepName boolean: true, then record 
+	  * 	origName in maintained list.
+	  * @return int, 0 on failure
 	  */
-	 public int loadNamedScript(String name,String origName,boolean keepName) {
+	 public int loadNamedScript(String name,
+			 String origName,boolean keepName) {
 		 if (name==null) 
 			 return 0;
 		 URL url=getScriptURL(name);
@@ -1106,13 +1135,16 @@ public class ScriptManager implements ActionListener {
 		 }
 		 if (result<0) 
 			 return 0; // closed or cancelled
-		 String endname=url.toString(); // Note: seems to convert separator to standard '/'
-		 int k=endname.lastIndexOf('/');
-		 if (k>0 && k<endname.length())
-			 endname=endname.substring(k+1);
-		 scriptName=endname;
+		 File fle=new File(url.getPath());
+		 scriptName=fle.getName();
+//		 String endname=url.toString(); // Note: seems to convert separator to standard '/'
+//		 int k=endname.lastIndexOf('/');
+//		 if (k>0 && k<endname.length())
+//			 endname=endname.substring(k+1);
+//		 scriptName=endname;
 
-		 // TODO: Alex, how do I find if this is a file? If it is (and name is not 'new_script'),
+		 // TODO: Alex, how do I find if this is a file? 
+		 //    If it is (and name is not 'new_script'),
 		 //    may want to change 'scriptDirectory'.
 		 // here is actual loading
 		 if (scriptLoader.loadScriptURL(url)) {
@@ -1133,7 +1165,11 @@ public class ScriptManager implements ActionListener {
 				 throw new InOutException("exception in saving script file name");
 			 }
 			 CirclePack.cpb.msg("Loaded script: "+name);
-			 PackControl.scriptHover.scriptTitle(scriptName,false);
+			 if (!scriptName.startsWith("new_script"))
+				 PackControl.scriptHover.scriptTitle(scriptName,false);
+			 else
+				 PackControl.scriptHover.scriptTitle(scriptName,true);
+				 
 			 resetNextCmdNode(null);
 			 // Tell Swing to redo the layout because it has changed.
 			 PackControl.scriptHover.revalidate();

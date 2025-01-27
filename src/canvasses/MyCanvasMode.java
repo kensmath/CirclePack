@@ -255,13 +255,13 @@ public class MyCanvasMode extends MyTool {
 	}
 
 	/**
-	 * Default mouse1 action: execute 'cpCommand'. If this is
-	 * null, display circle number(s). 
+	 * Default mouse1 action: execute 'cpCommand'. 
+	 * If this is null, display circle number(s). 
 	 */
 	public void clicked1(ActiveWrapper aW,MouseEvent e) {
 		String cmdstr=this.getCommand();
 		Point point=e.getPoint();
-		if (cmdstr!=null) {
+		if (cmdstr!=null && cmdstr.length()>0) {
 			execute(cmdstr,aW,point);
 			return;
 		}

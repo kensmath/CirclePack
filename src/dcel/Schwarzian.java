@@ -79,22 +79,7 @@ public class Schwarzian {
 					new Complex(0.0),new Complex(1.0));
 	
 	final static double oosq3=1/Math.sqrt(3);
-	
-	/**
-	 * Concerns intrinsic schwarzians in normalized flower
-	 * presentation.
-	 * 
-	 * Given schwarzian s for edge (C,c_n), return distance
-	 * t between the first and last petal tangency points to
-	 * upper half plane, which is C.
-	 * @param s double
-	 * @return double t
-	 */
-	public static double situationMax(double s) {
-		double t=2.0*Math.sqrt(3)*(1.0-s);
-		return t;
-	}
-	
+		
 	/**
 	 * Compute and set intrinsic schwarzians for given interior edges 
 	 * based only on radii. For each edge, find the 4 radii 

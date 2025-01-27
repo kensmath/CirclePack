@@ -24,11 +24,13 @@ import util.Base64InOut;
 import util.FileUtil;
 
 /**
- * This is the model behind CirclePack scripts. It loads script
- * files, storing the data files, creating the workingFile, 
- * setting up the DOM document.
- * For GUI creation and interaction, see 'ScriptManager'.
- * TODO: various actions need both standalone and GUI versions.
+ * This is the model behind CirclePack scripts. 
+ * It loads script files, storing the data files, 
+ * creating the workingFile, setting up the DOM 
+ * document. For GUI creation and interaction, 
+ * see 'ScriptManager'.
+ * TODO: various actions need both standalone a
+ * nd GUI versions.
  * @author kens
  */
 public class ScriptModel {
@@ -62,8 +64,9 @@ public class ScriptModel {
 	}
 	
 	/**
-	 * This loads from a file (generally 'manager.scriptFile').
-	 * This is only called after user has chance to save the current 
+	 * This loads from a file (generally 
+	 * 'manager.scriptFile'). This is only 
+	 * called after user has chance to save the current 
 	 * script (if it has changed).
 	 * @param url URL of script
 	 * @return true if the load seemed to work.
@@ -101,14 +104,16 @@ public class ScriptModel {
 		}
 
 		// if appropriate, reset 'scriptDirectory'
-		// TODO: past (?) problem: resets based on default loading of 'new_script.xmd'
+		// TODO: past (?) problem: resets based on 
+		//   default loading of 'new_script.cps'
 		if (url.getProtocol().equals("file")) { 
-			String cpath=url.getPath();
-			int k=cpath.lastIndexOf('/');
-			if (!cpath.contains("new_script.xmd") && k>0) {
+			File cfile=new File(url.getFile());
+			File cpath=new File(url.getPath());
+			String cdir=url.getPath();
+			if (!cfile.getName().startsWith("new_script")) {
 				// change if it is not just /tmp
-				if (!cpath.substring(0,k).startsWith(System.getProperty("java.io.tmpdir")))  
-					CPFileManager.ScriptDirectory =new File(cpath);
+				if (!cdir.startsWith(System.getProperty("java.io.tmpdir")))  
+					CPFileManager.ScriptDirectory =cpath;
 			}
 		}
 		
@@ -116,10 +121,13 @@ public class ScriptModel {
 	}
 	
 	/**
-	 * Use: Copy the original script file or web data into a working file 
-	 * in XML format. The original is unaltered until a save action takes place. 
-	 * This method calls processIncludedFiles() when the data section has been
-	 * reached so that the included files can be exported for later reinclusion.
+	 * Use: Copy the original script file or web 
+	 * data into a working file in XML format. The 
+	 * original is unaltered until a save action takes 
+	 * place. This method calls processIncludedFiles() 
+	 * when the data section has been reached so that 
+	 * the included files can be exported for later 
+	 * reinclusion.
 	 * @param url URL
 	 * @return 0 on error.
 	 */
@@ -296,8 +304,9 @@ public class ScriptModel {
 	} 
 	
 	/**
-	 * After included files have been processed, this writes their filenames 
-	 * into the CPdata section of workingFile.
+	 * After included files have been processed, this 
+	 * writes their filenames into the CPdata section 
+	 * of workingFile.
 	 * @param writer
 	 * @throws IOException
 	 */
@@ -310,14 +319,14 @@ public class ScriptModel {
 	}
 
 	/**
-	 * Creates the default "starter" script file and returns a string 
-	 * giving its path.
+	 * Creates the default "starter" script file and 
+	 * returns a string giving its path.
 	 */
 	public String createDefaultScript() {
 		File f=null;
 		try {
 			f = new File(System.getProperty("java.io.tmpdir"),
-					 new String("new_script.xmd"));
+					 new String("new_script.cps"));
 			f.deleteOnExit();
 
 			BufferedWriter writer = new BufferedWriter(new FileWriter(f));
@@ -340,7 +349,8 @@ public class ScriptModel {
 	}
 
 	/**
-	 * Return index into 'includedFiles' if 'filename' is found.
+	 * Return index into 'includedFiles' if 'filename' 
+	 * is found.
 	 * @param filename String, assume trimmed
 	 * @return int, index (first encountered) or -1 on not found
 	 */
@@ -354,7 +364,8 @@ public class ScriptModel {
 	 /**
 	  * Get 'tmpFile' for an included 'filename'.
 	  * @param filename String, base name
-	  * @return File with 'tmpFile' name, null if not found
+	  * @return File with 'tmpFile' name, null if 
+	  * 	not found
 	  */
 	 public File getTrueIncluded(String filename) {
 		 Iterator<IncludedFile> itf=includedFiles.iterator();
@@ -367,9 +378,11 @@ public class ScriptModel {
 	 }
 
 	 /**
-	  * Sets up the URL for script based on 'namE'. If it starts with
-	  * 'htt' then it's assumed to be web address, else look for file
-	  * in file system, first by 'namE' alone, then in 'ScriptDirectory'.
+	  * Sets up the URL for script based on 'namE'. 
+	  * If it starts with 'htt' then it's assumed to 
+	  * be web address, else look for file in file 
+	  * system, first by 'namE' alone, then in 
+	  * 'ScriptDirectory'.
 	  * @param namE String
 	  * @return URL or null on error or failure
 	  */
@@ -425,10 +438,13 @@ public class ScriptModel {
 	 }
 
 	 /**
-	  * Given script filename (or name from pop up dialog, or file chosen in browser),
-	  * read in script and search for/execute 'EOL' command (execute on load).
-	  * Note: filename may be temp file (e.g. if file is downloaded from the web),
-	  * so we provide 'origName' to saving in the list.
+	  * Given script filename (or name from pop up 
+	  * dialog, or file chosen in browser), read in 
+	  * the script and search for/execute 'EOL' 
+	  * command (execute on load).
+	  * Note: filename may be temp file (e.g. if file 
+	  * is downloaded from the web), so we provide 
+	  * 'origName' to saving in the list.
 	  * @param filename <code>String</code>
 	  * @param origName <code>String</code>, name to save under
 	  * @param keepname <code>boolean</code>: true, then store in list of names.
@@ -493,6 +509,7 @@ public class ScriptModel {
 	 }
 
 	 /**
+	  * Is there a loaded script
 	  * @return boolean
 	  */
 	 public boolean isScriptLoaded() {

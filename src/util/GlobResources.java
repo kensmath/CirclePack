@@ -54,8 +54,8 @@ public class GlobResources {
 	}
 
 	/**
-	 * Convert a list of glob pattern strings into a list of regular
-	 * expression pattern strings.
+	 * Convert a list of glob pattern strings into 
+	 * a list of regular expression pattern strings.
 	 * 
 	 * @param globs glob patterns to convert
 	 * @return new List<String> containing the regular expressions
@@ -71,11 +71,12 @@ public class GlobResources {
 	/**
 	 * Convert a glob pattern into a regular expression.
 	 * 
-	 * NOTE: The only special characters recognized are '*' for "match any
-	 * sequence of characters" and '?' for "match any one character.  Also,
-	 * these characters cannot be escaped in the pattern.  This keeps the 
-	 * code below much simpler, and it seems unlikely that such escaping 
-	 * would be useful.
+	 * NOTE: The only special characters recognized 
+	 * are '*' for "match any sequence of characters" 
+	 * and '?' for "match any one character.  Also,
+	 * these characters cannot be escaped in the pattern.
+	 * This keeps the code below much simpler, and it 
+	 * seems unlikely that such escaping would be useful.
 	 * 
 	 * @param g glob pattern to convert
 	 * @return String containing the equivalent regular expression.
@@ -152,8 +153,9 @@ public class GlobResources {
 	}
 
 	/**
-	 * Return a list of the base file names that match the given patterns and
-	 * can be found in the directory indicated by the given file URL.
+	 * Return a list of the base file names that 
+	 * match the given patterns and can be found 
+	 * in the directory indicated by the given file URL.
 	 * 
 	 * @param url jar protocol URL (e.g. "file:/foo/bar/baz/")
 	 * @param patterns glob patterns (e.g. ("*.png"))

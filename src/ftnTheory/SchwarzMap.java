@@ -38,7 +38,7 @@ import util.SchwarzData;
 import util.StringUtil;
 import util.TriAspect;
 import widgets.RadiiSliders;
-import widgets.SchwarzSliders;
+import widgets.SchFlowerSliders;
 
 /** 
  * This is code for exploring discrete Schwarzian derivatives.
@@ -141,7 +141,7 @@ public class SchwarzMap extends PackExtender {
 	public int flowerDegree; // 0 if not in flower mode
 	public int[] petalticks; // which petals are in place
 	public HalfEdge[] spokes; // convenience 
-	Double[] schvalues;
+
 	
 	// Constructor
 	public SchwarzMap(PackData p) {
@@ -168,16 +168,6 @@ public class SchwarzMap extends PackExtender {
 		rangePackNum=-1;
 		rangeHes=packData.hes;
 		
-		// range default: look at 'set_range' call
-//		try {
-//			rangeTri=PackData.getTriAspects(packData);
-//		} catch (Exception ex) {
-//			CirclePack.cpb.errMsg("failed to set up range triangle data");
-//		}			
-//		rangePackNum=packData.packNum;
-		// may be reset when rangeTri is filled.
-//		rangeHes=packData.hes;
-		
 		// are we working in flower mode?
 		flowerDegree=0;
 	}
@@ -189,7 +179,8 @@ public class SchwarzMap extends PackExtender {
 		Vector<String> items = null;
 		
 		// separate command options once in flower mode
-		if (flowerDegree>0 && cmd.startsWith("sch")) {
+		if (flowerDegree>0 && cmd.startsWith("sch") &&
+				cmd.length()==3) {
 			if (flagSegs==null || flagSegs.size()==0)
 				Oops("no 'sch' command strings given");
 			int fd=flowerDegree;
@@ -201,37 +192,32 @@ public class SchwarzMap extends PackExtender {
 				String str=items.get(0);
 				if (StringUtil.isFlag(str)) {
 					switch (str.charAt(1)) {
-					case 'b':  // schwarz slider for domain
-					{
-						if (packData.schwarzSliders!=null)
-							packData.schwarzSliders.dispose();
-
-						HalfLink hlink=new HalfLink(packData,"Iv M");
-						packData.schwarzSliders=new widgets.SchwarzSliders(packData,
-								"|sm| sch -f;|sm| sch -v;","",
-								hlink,schvalues);
-						hit++;
-
-						packData.schwarzSliders.setVisible(true);
-
-						break;
-					}
+					
 					case 'c': // cycle the sequence of schwarzians
 					{
-						double hold=schvalues[1];
-						for (int j=1;j<fd;j++)
-							schvalues[j]=(Double)(schvalues[j+1]);
-						schvalues[fd]=(Double)(hold);
+						double hold=packData.getSchwarzian(spokes[1]);
+						for (int j=1;j<fd;j++) {
+							packData.setSchwarzian(spokes[j],
+								(Double)(packData.getSchwarzian(spokes[j+1])));
+						}
+						packData.setSchwarzian(spokes[fd],(Double)hold);
 						hit++;
 						break;
 					}
-					case 'f': // full: layout using initial flowerDegree-3
-						// schwarzians, then compute the final 3 schwarzians.
+					case 'f': // full: recompute all using initial fd-3
+						// schwarzians, and computing the final 3.
 					{
-						double[] uzian=new double[schvalues.length];
-						for (int j=1;j<=flowerDegree;j++)
-							uzian[j]=1.0-schvalues[j];
-						SchFlowerData sfd=new SchFlowerData(uzian);
+						double[] uzian=new double[fd+1];
+						for (int j=1;j<=fd;j++)
+							uzian[j]=1.0-packData.getSchwarzian(spokes[j]);
+						SchFlowerData sfd=null;
+						try {
+							sfd=new SchFlowerData(uzian);
+						} catch (DataException dex) {
+							Oops(dex.getMessage());
+							sfd=null;
+							return hit;
+						}
 
 						// store radii/centers
 						for (int j=1;j<=flowerDegree-1;j++) {
@@ -239,30 +225,36 @@ public class SchwarzMap extends PackExtender {
 									new Complex(sfd.t[j],-sfd.radius[j]));
 								packData.packDCEL.setVertRadii(j,sfd.radius[j]);
 								hit++;
-							if (sfd.radius[j]>1.0)
-								msg("Petal "+j+" has radius > 1; rad = "+sfd.radius[j]);
+//							if (sfd.radius[j]>1.0)
+//								msg("Petal "+j+" has radius > 1; rad = "+sfd.radius[j]);
 						}
 
-						// set last 3 schwarzians, possibly new
+						// store last 3 schwarzians, possibly new from sfd
 						for (int j=0;j<3;j++) {
 							int k=flowerDegree-j;
-							schvalues[k]=1.0-sfd.uzian[k];
+							packData.setSchwarzian(spokes[k],1.0-sfd.uzian[k]);
 						}
 						cpCommand(packData,"disp -wr");
 						break;
 					}
-					case 's': // read vector of schwarzians; see also 'u'
+					case 's': // read/store schwarzians; see also 'u'
 					{
 						items.remove(0);
 						DoubleLink dlink=new DoubleLink(packData,items);
 						if (dlink.size()>flowerDegree) {
-							Oops("Too many u-variables");
+							Oops("Too many s-variables");
 						}
 						Iterator<Double> dls=dlink.iterator();
 						int tick=1;
 						while(dls.hasNext()) {
-							schvalues[tick++]=dls.next();
+							packData.setSchwarzian(spokes[tick],dls.next());
+							tick++;
 							hit++;
+						}
+						
+						// updata sliders
+						if (packData.schFlowerSliders!=null) {
+							packData.schFlowerSliders.downloadData();
 						}
 						break;
 					}
@@ -278,12 +270,17 @@ public class SchwarzMap extends PackExtender {
 						Iterator<Double> dls=dlink.iterator();
 						int tick=1;
 						while(dls.hasNext()) {
-							schvalues[tick++]=1.0-dls.next();
+							packData.setSchwarzian(spokes[tick],1.0-dls.next());
+							tick++;
 							hit++;
+						}
+						// updata sliders
+						if (packData.schFlowerSliders!=null) {
+							packData.schFlowerSliders.downloadData();
 						}
 						break;
 					}
-					case 'r': // reset
+					case 'r': // reset, showing just c1
 					{
 						petalticks=new int[flowerDegree+1]; // indexed from 1
 						petalticks[1]=1;
@@ -314,12 +311,12 @@ public class SchwarzMap extends PackExtender {
 							Oops("sch -n: all petals already laid out");
 						}
 						 
-						// is schwarzian of preceding petal given? 
-						//    default to schvalues[vindx-1]; 
+						// Is a schwarzian provided?
 						items.remove(0);
 						if(items.size()>0) {
 							try {
-								schvalues[vindx-1]=Double.parseDouble(items.get(0));
+								Double newSch=Double.parseDouble(items.get(0));
+								packData.setSchwarzian(spokes[vindx-1],newSch);
 							} catch(Exception ex) {
 								Oops("failed to get schwarzian");
 							}
@@ -333,7 +330,7 @@ public class SchwarzMap extends PackExtender {
 						//   + 1: computed in typical way, sit2 or sit3
 						//   + 2: displacement negative, but finite
 						//   + 3: displacement negative infty: is halfplane
-						double u=1.0-schvalues[vindx-1]; // uzian
+						double u=1.0-packData.getSchwarzian(spokes[vindx-1]); // uzian
 						if (vindx==2) { // initial case for c_2
 							double sit2[]=SchFlowerData.Sit2(u);
 							double r=1/(sit2[1]*sit2[1]);
@@ -401,13 +398,11 @@ public class SchwarzMap extends PackExtender {
 						}
 						break;
 					}
-					case 'm': // Place last petal based on s_1
+					case 'm': // Place last petal based on s_n
 					{
 						int vertindx=flowerDegree-1;
-						 // petal c_n schwarzian
-						double tn=Schwarzian.situationMax(
-								schvalues[flowerDegree]);
-						packData.packDCEL.setVertCenter(vertindx,new Complex(tn,-1.0));
+						double[] tn=SchFlowerData.Sit1(1.0-packData.getSchwarzian(spokes[fd]));
+						packData.packDCEL.setVertCenter(vertindx,new Complex(tn[0],-1.0));
 						packData.packDCEL.setVertRadii(vertindx,1.0);
 						
 						// display in red
@@ -415,31 +410,40 @@ public class SchwarzMap extends PackExtender {
 						hit++;
 						break;
 					}
-					case 'v': // store schwarzians and update sliders
+					case 'v': // update sliders
 					{
-						for (int j=1;j<flowerDegree;j++) 
-							packData.setSchwarzian(spokes[j],schvalues[j]);
-							
-						if (packData.schwarzSliders!=null) {
-							packData.schwarzSliders.downloadData();
+						if (packData.schFlowerSliders!=null) {
+							packData.schFlowerSliders.downloadData();
 						}
 						hit++;
 						break;
 					}
-					case 'l': // show data, with schvector in copyable form
+					case 'l': // recompute and send schwarzians, tangencies,
+						// and radii to "Messages" in copyable form.
+						// also store schwarzians in 'Dlink' for possible
+						// use.
 					{
-						double[] uzian=new double[schvalues.length];
 						CPBase.Dlink=new DoubleLink();
-						for (int j=1;j<=flowerDegree;j++) {
-							uzian[j]=1.0-schvalues[j];
+						double[] uzian=new double[fd+1];
+						for (int j=1;j<=fd;j++) {
+							uzian[j]=1.0-packData.getSchwarzian(spokes[j]);
 							CPBase.Dlink.add(uzian[j]);
 						}
-						SchFlowerData sfd=new SchFlowerData(uzian);
+						
+						// recompute data
+						SchFlowerData sfd=null;
+						try {
+							sfd=new SchFlowerData(uzian);
+						} catch (DataException dex) {
+							Oops(dex.getMessage());
+							sfd=null;
+							return hit;
+						}
 
 						StringBuilder strbld=new StringBuilder();
 						for (int v=1;v<=fd;v++) 
-							strbld.append((sfd.uzian[v])+"  ");
-						msg("uzians (1-schwarzians): ");
+							strbld.append((1.0-sfd.uzian[v])+"  ");
+						msg("schwarzians: ");
 						msg(strbld.toString());
 						strbld=new StringBuilder();
 						for (int v=1;v<fd;v++)
@@ -472,7 +476,7 @@ public class SchwarzMap extends PackExtender {
 						StringBuilder strbld=new StringBuilder("create seed "+
 								flowerDegree+" -s ");
 						for (int j=1;j<=flowerDegree;j++)
-							strbld.append(" "+schvalues[j]);
+							strbld.append(" "+packData.getSchwarzian(spokes[j]));
 						cpCommand(CPBase.packings[qnum],
 							strbld.toString());
 						cpCommand(CPBase.packings[qnum],"disp -w -cn");
@@ -484,8 +488,7 @@ public class SchwarzMap extends PackExtender {
 						flowerDegree=0;
 						spokes=null;
 						petalticks=null;
-						if (packData.schwarzSliders!=null)
-							packData.schwarzSliders=null;
+						packData.schFlowerSliders=null;
 						hit++;
 						break;
 					}
@@ -519,23 +522,22 @@ public class SchwarzMap extends PackExtender {
    		  	if (newData==null) 
    		  		throw new CombException("seed has failed");
    		  	packData=CirclePack.cpb.swapPackData(newData,packData.packNum,true);
+   		  	packData.intNodeCount=1;
    		  	packData.swap_nodes(1,M);
    		  	for (int j=1;j<flowerDegree;j++)
    		  		packData.swap_nodes(j,j+1);
    		  	
-   		  	// set up spokes and vector for quick storage of schwarzians
+   		  	// set up 'spokes', indexed from 1
    		  	spokes=new HalfEdge[flowerDegree+1];
    		  	for (int j=1;j<M;j++) {
    		  		spokes[j]=packData.packDCEL.findHalfEdge(new EdgeSimple(flowerDegree+1,j));
    		  	}
-   		  	schvalues=new Double[M];
+   		  	
+   		  	// compute/store initial schwarzians
    			Schwarzian.comp_schwarz(packData,new HalfLink(packData,"i"));
-   		  	for (int j=1;j<M;j++)
-   		  		schvalues[j]=(Double)packData.getSchwarzian(spokes[j]);
    		  	
    		  	cpCommand(packData,"disp -w");
 			petalticks=new int[flowerDegree+1]; // indexed from 1
-			petalticks[1]=1;
 			
 			// put in normalized setup; 
 			//   * center is upper half plane
@@ -551,8 +553,9 @@ public class SchwarzMap extends PackExtender {
 			packData.packDCEL.setVertCenter(1,
 					new Complex(0.0,-1.0));
 			packData.packDCEL.setVertRadii(1,1.0);
+			petalticks[1]=1;
 			
-			// set rest to center at origin, radius .025
+			// set rest to center along x-axis, radius .025
 			for (int v=2;v<flowerDegree;v++) {
 				double x=(v-1)*.2;
 				packData.packDCEL.setVertCenter(v, new Complex(x));
@@ -574,7 +577,7 @@ public class SchwarzMap extends PackExtender {
 			cpCommand(packData,"Disp -w -c "+flowerDegree+" 1 -cf a(1,100)");
 			
 			return 1;
-		}
+		} // done with flower construction and now in flower mode
 		
 		// ======= s_layout =============
 		
@@ -770,25 +773,24 @@ public class SchwarzMap extends PackExtender {
 			qData.radiiSliders.setVisible(true);
 		}
 		
-		// ======= open schSlider ============
+		// ======= open schFlowerSlider ============
 		else if (cmd.startsWith("schS")) {
-			if (rangePackNum<0) {
-				this.errorMsg("range packing is not set");
-				return 0;
+			
+			// in 'flower' mode, we display intrinsic
+			//    schwarzians in the slider
+			if (this.flowerDegree==0) {
+				Oops("Schwarzian sliders implemented only for flowers");
 			}
-			PackData qData=CPBase.packings[rangePackNum];
-			HalfLink hlink=null;
-			try {
-				items=flagSegs.get(0);
-				hlink=new HalfLink(qData,items);
-			} catch(Exception ex) {
-				hlink=new HalfLink(qData,"i");
-			}
-			qData.schwarzSliders=
-					new SchwarzSliders(qData,"","",hlink,schvalues);
-			if (qData.schwarzSliders==null)
+		
+			Double[] tmpsch=new Double[flowerDegree+1];
+			for (int j=1;j<=flowerDegree;j++)
+				tmpsch[j]=(Double)packData.getSchwarzian(spokes[j]);
+			packData.schFlowerSliders=
+				new SchFlowerSliders(packData,tmpsch);
+			if (packData.schFlowerSliders==null)
 				return 0;
-			qData.schwarzSliders.setVisible(true);
+			packData.schFlowerSliders.setVisible(true);
+			return 1;
 		}
 
 		// ======= put ===========

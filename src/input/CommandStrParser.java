@@ -9069,7 +9069,6 @@ public class CommandStrParser {
 					CirclePack.cpb.errMsg("usage: 'slider' must start with -[RSA] flag");
 					return 0;
 				}
-
 				char c = items.remove(0).charAt(1);
 				switch (c) {
 				case 'R': // start for radii
@@ -9077,13 +9076,13 @@ public class CommandStrParser {
 					type = 0;
 					break;
 				}
-				case 'S': // start for schwarzians
+				case 'S': // start for flower schwarzians
 				{
 					type = 1;
-//					if (!packData.haveSchwarzians()) {
-//						if (CommandStrParser.jexecute(packData,"set_sch")<=0)
-//							throw new DataException("failed to compute schwarzians");
-//					}
+					if (!packData.haveSchwarzians()) {
+						if (CommandStrParser.jexecute(packData,"set_sch")<=0)
+							throw new DataException("failed to compute schwarzians");
+					}
 					break;
 				}
 				case 'A': // start for angle sum sliders
@@ -9099,7 +9098,7 @@ public class CommandStrParser {
 				
 				SliderFrame generic=packData.radiiSliders;
 				if (type==1) 
-					generic=packData.schwarzSliders;
+					generic=packData.schFlowerSliders;
 				else if (type==2)
 					generic=packData.angSumSliders;
 								
@@ -9122,7 +9121,7 @@ public class CommandStrParser {
 						return CreateSliderFrame.createSliderFrame(packData,type,strbld);
 					}
 
-					if (generic==null) { 
+					if (generic==null && !items.get(0).equals("-x")) { 
 						throw new ParserException("expected sliderframe does not exist.");
 					}
 						
@@ -9179,14 +9178,11 @@ public class CommandStrParser {
 							}
 							break;
 						}
-						case 'a': // add object
+						case 'a': // add object; for radii and ang sliders only
 						{
 							items.remove(0);
 							if (type == 0 && packData.radiiSliders != null) {
 								hits +=packData.radiiSliders.addObject(
-										StringUtil.reconItem(items));
-							} else if (type == 1 && packData.schwarzSliders != null) {
-								hits +=packData.schwarzSliders.addObject(
 										StringUtil.reconItem(items));
 							} else if (type == 2 && packData.angSumSliders != null) {
 								hits +=packData.angSumSliders.addObject(
@@ -9195,16 +9191,13 @@ public class CommandStrParser {
 
 							break;
 						}
-						case 'r': // remove object
+						case 'r': // remove object; for radii and ang sliders only
 						{
 							items.remove(0);
 							if (type == 0 && packData.radiiSliders != null) {
 								hits +=packData.radiiSliders.removeObject(
 										StringUtil.reconItem(items));
-							} else if (type == 1 && packData.schwarzSliders != null) {
-								hits +=packData.schwarzSliders.removeObject(
-										StringUtil.reconItem(items));
-							} else if (type == 1 && packData.schwarzSliders != null) {
+							} else if (type == 1 && packData.schFlowerSliders != null) {
 								hits +=packData.angSumSliders.removeObject(
 										StringUtil.reconItem(items));
 							}
@@ -9228,7 +9221,7 @@ public class CommandStrParser {
 							hits++;
 							break;
 						}
-						case 'u': // set lower (min) value for sliders
+						case 'u': // set upper (max) value for sliders
 						{
 							double max=0.0;
 							try {
@@ -9248,9 +9241,9 @@ public class CommandStrParser {
 								packData.radiiSliders=null;
 							}
 							else if (type==1) {
-								if (packData.schwarzSliders!=null)
-									packData.schwarzSliders.dispose();
-								packData.schwarzSliders=null;
+								if (packData.schFlowerSliders!=null)
+									packData.schFlowerSliders.dispose();
+								packData.schFlowerSliders=null;
 							}
 							else if (type==2) {
 								if (packData.angSumSliders!=null)
@@ -10874,11 +10867,13 @@ public class CommandStrParser {
   } // end of 'packExecute'
   
 /**
- * Execute commands that return a value of some type. This handles
- * just a single call (one command with accompanying flags) and is 
- * called when 'jexecute' encounters a command in braces, '{cmd..}' 
- * (e.g., after '?' or ':=') or directly from 'TrafficCenter.parseValueCall'.
- * In either case, preprocessing leaves
+ * Execute commands that return a value of some type. 
+ * This handles just a single call (one command with 
+ * accompanying flags) and is called when 'jexecute' 
+ * encounters a command in braces, '{cmd..}' (e.g., 
+ * after '?' or ':=') or directly from 
+ * 'TrafficCenter.parseValueCall'. In either case, 
+ * preprocessing leaves
 	 *   no ';' separators:
 	 *   no 'for' or 'FOR' loops:
 	 *   no 'delay's:
@@ -10888,12 +10883,14 @@ public class CommandStrParser {
 * TODO: We do have to catch possible '|pe|' 'PackExtender' calls, as was
 * done in 'TrafficCenter.parseCmdSeq'.
 *   
-* This routine handles housekeeping, separating cmd and
-* flag sequences. Flow splits to handle those cases where the packing 
-* and its status are important, then the remaining commands. 
+* This routine handles housekeeping, separating cmd 
+* and flag sequences. Flow splits to handle those 
+* cases where the packing and its status are important, 
+* then the remaining commands. 
 * 
-* TODO: move commands here as we decide that we need to catch
-* their return values for some purpose -- e.g., writing to a file.
+* TODO: move commands here as we decide that we need 
+* to catch their return values for some purpose -- 
+* e.g., writing to a file.
 * 
 * @param packData PackData, possibly null
 * @param cmdstr String; command string
