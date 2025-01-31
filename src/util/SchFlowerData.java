@@ -164,23 +164,20 @@ public class SchFlowerData {
 				radius[j]=1/(tdata[1]*tdata[1]);
 			}
 		}
-		
-		// Now mandate that c(n-1) radius is 1;
-		//   we can compute last tangency point
-		double delta=2.0*Math.sqrt(radius[N-2]);
-		t[N-1]=t[N-2]+delta;
-		radius[N-1]=1.0;
-		
+
 		// now, compute the last three uzians
 		if (N==3) { 
 			uzian[1]=uzian[2]=uzian[3]=oosq3;
 			return 1;
 		}
-		
-		uzian[N-2]=oosq3*(Math.sqrt(radius[N-2])+
-				Math.sqrt(radius[N-2]/radius[N-3]));
-		uzian[N-1]=2.0*oosq3/(delta);
-		uzian[N]=t[N-1]*oosq3/2.0;
+
+		// Now mandate c(n-1)= 1, compute last data
+		radius[N-1]=1.0;
+		double[] lastdata=compLast(t[N-2],radius[N-3],radius[N-2]);
+		t[N-1]=lastdata[0];
+		uzian[N-2]=lastdata[1];
+		uzian[N-1]=lastdata[2];
+		uzian[N]=lastdata[3];
 		
 		if (uzian[N]<0)
 			throw new DataException("Flower illigitimate as s_{n}>1.");
@@ -189,6 +186,27 @@ public class SchFlowerData {
 			return 1;
 		else
 			return -branchDeg;
+	}
+
+	/**
+	 * Given the tangency point of c_{n-2} and the
+	 * radii of c_{n-3} and c_{n-2}, we can compute
+	 * the tangency point of c_{n-1} and the 3 
+	 * final uzians, u_{n-2}, u_{n-1}, and u_n.
+	 * (Recall, r_{n-1}=1).
+	 * @param tang double, c_{n-2} tangency point
+	 * @param rm3 double, r_{n-3}
+	 * @param rm2 double, r_{n-2}
+	 * @return double[4], t,um2,um1,u
+	 */
+	public static double[] compLast(double tang,double rm3,double rm2) {
+		double[] answers=new double[4];
+		double delta=2.0*Math.sqrt(rm2);
+		answers[0]=tang+delta;
+		answers[1]=oosq3*(Math.sqrt(rm2)+Math.sqrt(rm2/rm3));
+		answers[2]=2.0*oosq3/(delta);
+		answers[3]=answers[0]*oosq3/2.0;
+		return answers;
 	}
 	
 	/**

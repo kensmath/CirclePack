@@ -121,7 +121,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 	
 	/**
-	 * Given spherical point (theta,phi), apply mobius and return sph pt.
+	 * Given spherical point (theta,phi), apply mobius and 
+	 * return sph pt.
 	 * @param z Complex, spherical point
 	 * @return Complex, spherical point
 	 */
@@ -143,8 +144,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/**
-	 * Return new Complex number by applying this Mobius (or inverse) to z.
-	 * 
+	 * Return new Complex number by applying this Mobius 
+	 * (or inverse) to z.
 	 * @param z Complex
 	 * @param oriented boolean, if false use inverse
 	 * @return Complex
@@ -190,8 +191,9 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/**
-	 * Return new Complex giving trace-squared of this Mobius transformation:
-	 * (Recall; must adjust so determinant is 1, so result is (a+d)^2/det^2.)
+	 * Return new Complex giving trace-squared of this 
+	 * Mobius transformation: (Recall; must adjust so 
+	 * determinant is 1, so result is (a+d)^2/det^2.)
 	 * @return Complex
 	 */
 	public Complex getTraceSqr() {
@@ -291,7 +293,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/**
-	 * Type of Mobius is Parabolic, elliptic, hyperbolic, or loxodromic
+	 * Type of Mobius is Parabolic, elliptic, hyperbolic, 
+	 * or loxodromic
 	 * @return String
 	 */
 	public String getType() {
@@ -392,7 +395,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 
 	/**
-	 *  true if essentially affine (i.e., |c| < 'almostAffine' (threshold))
+	 *  true if essentially affine (i.e., |c| < 'almostAffine' 
+	 *  (threshold))
 	 *  @return boolean
 	 */
 	public boolean isAffine() {

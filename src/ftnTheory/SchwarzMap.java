@@ -252,7 +252,23 @@ public class SchwarzMap extends PackExtender {
 							hit++;
 						}
 						
-						// updata sliders
+						// recompute
+						double[] uzian=new double[fd+1];
+						for (int j=1;j<=fd;j++)
+							uzian[j]=1.0-packData.getSchwarzian(spokes[j]);
+						SchFlowerData sfd=null;
+						try {
+							sfd=new SchFlowerData(uzian);
+						} catch (DataException dex) {
+							Oops(dex.getMessage());
+							sfd=null;
+							return hit;
+						}
+						// store schwarzians of last 3
+						for (int j=fd-2;j<=fd;j++)
+							packData.setSchwarzian(spokes[j],1.0-uzian[j]);
+						
+						// update sliders
 						if (packData.schFlowerSliders!=null) {
 							packData.schFlowerSliders.downloadData();
 						}
@@ -274,7 +290,24 @@ public class SchwarzMap extends PackExtender {
 							tick++;
 							hit++;
 						}
-						// updata sliders
+						
+						// recompute
+						double[] uzian=new double[fd+1];
+						for (int j=1;j<=fd;j++)
+							uzian[j]=1.0-packData.getSchwarzian(spokes[j]);
+						SchFlowerData sfd=null;
+						try {
+							sfd=new SchFlowerData(uzian);
+						} catch (DataException dex) {
+							Oops(dex.getMessage());
+							sfd=null;
+							return hit;
+						}
+						// store schwarzians of last 3
+						for (int j=fd-2;j<=fd;j++)
+							packData.setSchwarzian(spokes[j],1.0-uzian[j]);
+						
+						// update sliders
 						if (packData.schFlowerSliders!=null) {
 							packData.schFlowerSliders.downloadData();
 						}

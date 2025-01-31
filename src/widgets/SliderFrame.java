@@ -83,9 +83,10 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	JPanel topPanel;  // top of controlPanel
 	JPanel bottomPanel;  // bottom of controlPanel
 	JPanel sliderPanel;  // scale lines and 'myBars' go here
+	JPanel optionalPanel; // null unless created by inherited class
 	JPanel commandPanel;  // bottom panel for command string
 	JScrollPane sliderScroll;   // contains sliderPanel
-	public xNumField minValue;  // 
+	public xNumField minValue;  
 	public xNumField maxValue;
 	public JTextField changeCmdField; // optional command: execute on slider change
 	public JCheckBox changeCheck;  // whether to apply change command
@@ -100,6 +101,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 
 	public SliderFrame(PackData p) {
 		super();
+		optionalPanel=null;
 		
 		// throw back to CirclePack to kill this window
 		this.addWindowListener(new WindowAdapter(){  
@@ -259,13 +261,16 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 		createSliderPanel();
 		sliderPanel.setLayout(new BoxLayout(sliderPanel,BoxLayout.PAGE_AXIS));
 		populate();
+
+		// there may be an optional panel
+		if (optionalPanel!=null)
+			sliderPanel.add(optionalPanel);
 		
 		sliderScroll=new JScrollPane(sliderPanel,
 				JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
 				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		sliderScroll.setPreferredSize(new Dimension(DEFAULT_WIDTH,DEFAULT_HEIGHT));
 		add(sliderScroll,BorderLayout.CENTER);
-
 		
 		// Command string options at bottom
 		commandPanel=new JPanel(new FlowLayout(FlowLayout.LEADING));
@@ -330,6 +335,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	public void setErrorText(String errstr) {
 		addField.setText(errstr);
 	}
+	
 	public void clearError() {
 		setErrorText("");
 	}

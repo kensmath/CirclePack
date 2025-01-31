@@ -1,5 +1,6 @@
 package util;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionListener;
@@ -20,6 +21,8 @@ public class xNumField extends JPanel {
 	private static final long 
 	serialVersionUID = 1L;
 	
+	private final Color bgColor=new Color(211,211,211);
+	private final Color errColor=new Color(255,100,100);
 	private JTextField xField;
 	private boolean titled;
 	private String title;
@@ -63,6 +66,7 @@ public class xNumField extends JPanel {
 		// field for number
 		xField = new JTextField(digits+7);
 		xField.setText("");
+		xField.setBackground(bgColor);
 
 		// estimate width of number
 		width=10*(digits+4); 
@@ -108,6 +112,20 @@ public class xNumField extends JPanel {
 		} catch (Exception ex) {
 			return 1.0;
 		}
+	}
+	
+	/**
+	 * Set background color, e.g. to indicate improper value
+	 */
+	public void setErrColor() {
+		setBackground(errColor);
+	}
+	
+	/**
+	 * reset to original light grey
+	 */
+	public void origColor() {
+		this.setBackground(bgColor);
 	}
 	
 	/**
