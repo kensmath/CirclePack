@@ -213,7 +213,7 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	}
 	
 	/**
-	 * Remove occurances of 'edge', irrespective of order
+	 * Remove occurrences of 'edge', irrespective of order
 	 * @param edge EdgeSimple
 	 * @return int count
 	 */
@@ -454,9 +454,9 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			else {
 			switch(str.charAt(0)) {
 			
-			// "all" includes all red edges (whether twinned or not)
-			//    and one of each pair of edges, namely, the edge
-			//    <v,w> with v<w.
+			// "all" includes all red edges (whether 
+			//    twinned or not) and one of each pair of 
+			//    edges, namely, the edge <v,w> with v<w.
 			case 'a': 
 			{
 				// organize via vertices -- more rational order?

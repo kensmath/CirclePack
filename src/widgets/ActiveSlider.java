@@ -29,7 +29,7 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	int index;       // index in 'mySliders' of object for this bar (e.g., vert index)
 	
 	String label;    // string describing the object: v, v w, f
-	double value;    // current value is kept here only
+	public double value;    // current value is kept here only
 
 	boolean active;  // true if mouse movement over slider triggers action
 	

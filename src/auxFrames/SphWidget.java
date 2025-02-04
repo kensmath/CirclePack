@@ -26,7 +26,8 @@ import packing.PackData;
 import util.UtilPacket;
 import allMains.CirclePack;
 
-public class SphWidget extends JFrame implements ActionListener {
+public class SphWidget extends JFrame 
+	implements ActionListener {
 
 	private static final long 
 	serialVersionUID = 1L;

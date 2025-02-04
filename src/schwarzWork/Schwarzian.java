@@ -1,4 +1,4 @@
-package dcel;
+package schwarzWork;
 
 import java.awt.Color;
 import java.io.BufferedWriter;
@@ -12,6 +12,8 @@ import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.RedEdge;
 import combinatorics.komplex.Vertex;
 import complex.Complex;
+import dcel.PackDCEL;
+import dcel.SideData;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.MiscException;
@@ -30,35 +32,36 @@ import math.Mobius;
 import packing.PackData;
 import util.ColorUtil;
 import util.DispFlags;
-import util.SchwarzData;
 import util.StringUtil;
 import util.TriAspect;
 
 /**
- * These are static routines for working with discrete Schwarzian 
- * derivatives and intrinsic schwarzians, which are associated 
- * with tangency packings based on identification of faces with 
- * the "base equilateral"; namely, the tangent triple of circles 
- * of radius sqrt(3), symmetric w.r.t. the origin, and having its 
- * first edge vertical through z=1. See "ftnTheory.SchwarzMap.java"
- * for related work in the setting of maps based on the original 
+ * Static routines for working with discrete Schwarzian 
+ * derivatives and intrinsic schwarzians. These are for
+ * tangency packings: Schwarzian Derivative is associated
+ * with discrete mappings between packings for the same 
+ * complex, which intrinsice schwarzians are associated 
+ * with individual packing based on identification of 
+ * faces with the "base equilateral"; namely, the tangent 
+ * triple of circles of radius sqrt(3), symmetric w.r.t. 
+ * the origin, and having its first edge vertical through 
+ * z=1. See "ftnTheory.SchwarzMap.java" for related work 
+ * in the setting of maps based on the original 
  * notions in Gerald Orick's thesis.
  * 
- * Here we also work with parameters associated with edges in 
- * packing complexes, the "intrinsic" schwarzians. These are 
- * stored in 'HalfEdge.schwarzian', defaulting to 0.0. The 
- * methods here are for creating, analyzing, manipulating this 
- * data. To start we restrict to tangency packings, and some 
- * routines do not apply in the hyperbolic setting since layouts 
- * can leave the disc. The "normalized" presentation of a flower
- * puts the center as the upper half plane, its 
+ * The "intrinsic" schwarzians are real numbers stored 
+ * in 'HalfEdge.schwarzian', defaulting to 0.0. The 
+ * methods here are for creating, analyzing, manipulating 
+ * this data. Some routines do not apply in the hyperbolic 
+ * setting since layouts can leave the disc. The 
+ * "normalized" presentation of a flower puts the center 
+ * as the upper half plane, its 
  * halfedge neighbor c_n as half plane y <= -2, and petal
  * c_1 as tangent at 0, radius 1. 
  * 
- * The variable preferred for formulas is u=1-s, where s is the
- * intrinsic schwarzian, and is called a "uzian". The uzian u is
- * positive, while s lies in (-infty,1).
- *  
+ * The variable preferred for formulas is u=1-s, 
+ * where s is the intrinsic schwarzian; 'u' is called 
+ * a "uzian". We restict to u positive, so s in (-infty,1).
  * 
  * @author kens, January 2020
  */

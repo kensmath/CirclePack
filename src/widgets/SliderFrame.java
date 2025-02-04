@@ -79,13 +79,13 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	public String holdChangeCmd;
 	public String holdMotionCmd;
 	
-	JPanel controlPanel; // option buttons, readouts
-	JPanel topPanel;  // top of controlPanel
-	JPanel bottomPanel;  // bottom of controlPanel
-	JPanel sliderPanel;  // scale lines and 'myBars' go here
-	JPanel optionalPanel; // null unless created by inherited class
-	JPanel commandPanel;  // bottom panel for command string
-	JScrollPane sliderScroll;   // contains sliderPanel
+	public JPanel controlPanel; // option buttons, readouts
+	public JPanel topPanel;  // top of controlPanel
+	public JPanel bottomPanel;  // bottom of controlPanel
+	public JPanel sliderPanel;  // scale lines and 'myBars' go here
+	public JPanel optionalPanel; // null unless created by inherited class
+	public JPanel commandPanel;  // bottom panel for command string
+	public JScrollPane sliderScroll;   // contains sliderPanel
 	public xNumField minValue;  
 	public xNumField maxValue;
 	public JTextField changeCmdField; // optional command: execute on slider change

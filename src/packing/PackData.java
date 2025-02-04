@@ -62,6 +62,7 @@ import posting.PostFactory;
 import rePack.EuclPacker;
 import rePack.HypPacker;
 import rePack.RePacker;
+import schwarzWork.SchFlowerSliders;
 import tiling.Tile;
 import tiling.TileData;
 import util.ColorUtil;
@@ -75,7 +76,6 @@ import util.TriAspect;
 import util.UtilPacket;
 import widgets.AngSumSliders;
 import widgets.RadiiSliders;
-import widgets.SchFlowerSliders;
 
 /**
  * This is the fundamental data repository for a circle packing and is

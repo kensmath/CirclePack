@@ -9,7 +9,6 @@ import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.Vertex;
 import complex.Complex;
 import dcel.PackDCEL;
-import dcel.Schwarzian;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.MobException;
@@ -18,6 +17,7 @@ import geometry.CircleSimple;
 import listManip.FaceLink;
 import listManip.HalfLink;
 import math.Mobius;
+import schwarzWork.Schwarzian;
 import util.TriAspect;
 
 /**

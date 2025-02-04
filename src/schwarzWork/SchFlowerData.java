@@ -1,5 +1,6 @@
-package util;
+package schwarzWork;
 
+import allMains.CirclePack;
 import exceptions.DataException;
 
 /**
@@ -15,7 +16,7 @@ import exceptions.DataException;
  * 
  * Easy to encounter errors or improper values
  * in computations: e.g., if some u becomes negative.
- * We throw and 'DataException' (and generally
+ * We throw a 'DataException' (and generally
  * catch this for some tailored reaction).
  * 
  * CAUTION: Major difficulties with branching:
@@ -37,7 +38,8 @@ import exceptions.DataException;
  * Variables are indexed from 1 so they correspond to
  * normal petal indexing from 1 to n, so argument 
  * 'uzs' in constructor is length N+1. The
- * last 3 uzians in 'uzs' will be recomputed.
+ * last 3 uzians in 'uzs' may be recomputed to
+ * complete a packing (edge) label. 
  * 
  * 'status'
  * 
@@ -68,21 +70,24 @@ public class SchFlowerData {
 		for (int j=1;j<=N;j++)
 			uzian[j]=uzs[j];
 		branchDeg=0;
+		
 		for (int j=0;(j<=N-3 && status==0);j++)
 			if (uzian[j]<0) 
 				status =-j;
 		if (status==0)
-			status=compute();
+			status=compute(); // fills uzian[] and sets branchDeg
+		status=1;
 	}
 	
 	/**
 	 * The uzians must be set and we do computations 
 	 * based on the first n-3 of them, then recompute
 	 * the remaining 3, watching for out-of-bounds values
-	 * @return int, 1 for simple flower, -n for branching 
+	 * @return int 1 if okay, -n if branching of order n,
+	 * 0 on failure (due to exceptions).
 	 */
 	public int compute() {
-		
+
 		// initialize
 		int[] hits=new int[N+1]; // mark when computed
 		t[1]=0.0;
@@ -100,74 +105,41 @@ public class SchFlowerData {
 		}
 		
 		// compute as generic up to and including N-2;
-		//   watch for dspmt to be negative or 0, which
+		//   watch for dspmt very large, negative, or 0, which
 		//   means there's branching.
 		double[] tdata=null;
 		double dspmt;
 		for (int j=3;j<=(N-2);j++) {
-			tdata=Sit3(uzian[j-1],recipSqRad[j-2],recipSqRad[j-1]);
-			dspmt=tdata[0];
-			recipSqRad[j]=tdata[1];
-			
-			// if displacement is zero or negative, then
-			//    we've reached a branch event and special
-			//    procedures apply:
-			//    * recipSqRad[j] will be negative or zero
-			//    * place this petal, c_{j}; it may be a
-			//      a half plane, hence tangency at infinity
-			//    * then go on to compute c_{k}, k=j+1: 
-			//      the recipSqRad[j] will be negative, so we 
-			//      have to negate it to compute c_{k}.
-			//    * Then have to increment j before continuing.
-			if (Math.abs(dspmt)<.00001) { // essentially <= 0
-				branchDeg++;
-				// if essentially 0, c(j) is half plane.
-				if (dspmt>-.00001) { 
-
-					// c(n-2) a half plane means placing c(n-1) is
-					//   either impossible or ambiguous, so we
-					//   throw an exception.
-					if (j==N-2)
-						throw new DataException("Can't complete a flower "+
-								"since c_{n-2} is a halfplane");
-					t[j]=t[j-1]; 
-					radius[j]=100000.0;
-					recipSqRad[j]=0.0;
-					hits[j]=-1;
-					
-					// place next petal, too; use modified Situation 1
-					int k=j+1;
-					double r=1/(recipSqRad[k-2]*recipSqRad[k-2]); // same rad as previous
-					t[k]=t[j-1]-2.0*uzian[k-1]*sqrt3*r; // but to left of c(j-1)
-					recipSqRad[k]=recipSqRad[k-2];
-					hits[k]=1;
+			if (recipSqRad[j-1]==0) {
+				if (j==N-2) {
+					CirclePack.cpb.errMsg("Can't complete a flower "+
+							"since c_{n-2} is a halfplane");
+					return 0;
 				}
-				else { // dspmt definitely negative
-					t[j]=t[j-1]+dspmt; // tangency moves left
-					radius[j]=1/(recipSqRad[j]*recipSqRad[j]);
-					
-					// place next petal, too; moves right again
-					int k=j+1;
-					// CAUTION: invSqRad[k-1] will be negative;
-					tdata=Sit4(uzian[k-1],recipSqRad[k-2],-1.0*recipSqRad[k-1]);
-					t[k]=t[k-1]+tdata[0];
-					recipSqRad[k]=tdata[1];
-					radius[k]=1/(tdata[1]*tdata[1]);
-					hits[k]=1;
-				}
-				j=j+1; // increment j
-			} // done with dspmt <= 0
-			
-			// normal move to right
-			else {  
+				double r=1/(recipSqRad[j-2]*recipSqRad[j-2]); // same rad as previous
+				t[j]=t[j-2]-2.0*uzian[j]*sqrt3*r; // but to left of c(j-1)
+				recipSqRad[j]=recipSqRad[j-2];
+				hits[j]=1;
+			}
+			else if (recipSqRad[j-1]<0) {
+				tdata=Sit4(uzian[j-1],recipSqRad[j-2],recipSqRad[j-1]);
+				t[j]=t[j-1]+tdata[0];
+				recipSqRad[j]=tdata[1];
+				radius[j]=1/(tdata[1]*tdata[1]);
+				hits[j]=1;
+			}
+			else {
+				tdata=Sit3(uzian[j-1],recipSqRad[j-2],recipSqRad[j-1]);
+				dspmt=tdata[0];
+				recipSqRad[j]=tdata[1];
 				t[j]=t[j-1]+dspmt;
 				radius[j]=1/(tdata[1]*tdata[1]);
 			}
 		}
 
 		// now, compute the last three uzians
-		if (N==3) { 
-			uzian[1]=uzian[2]=uzian[3]=oosq3;
+		if (N==3) {
+			uzian[N-2]=uzian[N-1]=uzian[N]=oosq3;
 			return 1;
 		}
 
@@ -180,7 +152,7 @@ public class SchFlowerData {
 		uzian[N]=lastdata[3];
 		
 		if (uzian[N]<0)
-			throw new DataException("Flower illigitimate as s_{n}>1.");
+			throw new DataException("Flower illigitimate as s_{N}>1.");
 
 		if (branchDeg==0)
 			return 1;
@@ -237,7 +209,7 @@ public class SchFlowerData {
 
 	/**
 	 * The generic situation as we place successive 
-	 * petals. Note that tdata[1] returned may be
+	 * petals. Note that tdata[0] and tdata[1] may be
 	 * negative when this placement shows branching.
 	 * @param u double
 	 * @param isqr double
@@ -245,30 +217,29 @@ public class SchFlowerData {
 	 * @return double[2], delta, recip of sqrt of radius
 	 */
 	public static double[] Sit3(double u,double isqr,double isqR) {
-		double[] tdata=new double[2]; // isqR*=-1;
+		double[] tdata=new double[2];
 	    tdata[0]=2/(isqR*isqR*sqrt3*u-isqR*isqr);
-	    tdata[1]=sqrt3*u*isqR-isqr; // tdata[1]=sqrt3*u*isqR-isqr;
+	    tdata[1]=sqrt3*u*isqR-isqr; 
 	    return tdata;
 	}
 	
 	/**
 	 * This takes care of the next petal after one 
-	 * involved in branching. The situation when 
-	 * isqR is <= 0. Note that tdata[1] will be
-	 * negative again, which calling routine must
-	 * adjust.
+	 * leading to branching. The situation occurs when 
+	 * isqR is <= 0 (though ==0 should generally be
+	 * handled separately).
 	 * @param u double
 	 * @param isqr double
-	 * @param isqR double
+	 * @param isqR double, negative
 	 * @return double[2], delta, recip of sqrt of radius
 	 */
 	public static double[] Sit4(double u,double isqr,double isqR) {
 		double [] tdata=new double[2];
 		if (Math.abs(isqR)<.008) { // nghb tangent to center at infinity
-			tdata[0]=-2*sqrt3*u/(isqr*isqr);
+			tdata[0]=2*sqrt3*u/(isqr*isqr);
 	        tdata[1]=isqr;
 	        return tdata;
 		}
-		return Sit3(u,isqr,isqR);
+		return Sit3(u,-isqr,-isqR);
 	}
 }

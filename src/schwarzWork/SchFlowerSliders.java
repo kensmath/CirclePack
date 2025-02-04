@@ -1,4 +1,4 @@
-package widgets;
+package schwarzWork;
 
 import java.awt.Color;
 import java.util.Iterator;
@@ -12,6 +12,8 @@ import input.CommandStrParser;
 import listManip.HalfLink;
 import packing.PackData;
 import util.xNumField;
+import widgets.ActiveSlider;
+import widgets.SliderFrame;
 
 /**
  * A Frame for sliders controlling specified 

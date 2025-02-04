@@ -7,16 +7,16 @@ import allMains.CirclePack;
 import combinatorics.komplex.RedEdge;
 import complex.Complex;
 import complex.MathComplex;
-import dcel.Schwarzian;
 import exceptions.DataException;
 import exceptions.MobException;
-import ftnTheory.SchwarzMap;
 import geometry.CircleSimple;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
 import math.group.ComplexTransformation;
 import math.group.GroupElement;
 import packing.PackData;
+import schwarzWork.SchwarzMap;
+import schwarzWork.Schwarzian;
 
 /**
  * Mobius transformations of the sphere are represented by 

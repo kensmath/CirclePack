@@ -48,6 +48,7 @@ public class Vertex {
 	public int vutil;
 	public HalfEdge[] spokes;
 	
+	// Constructor
 	public Vertex(int v) {
 		vertIndx=v;
 		halfedge=null;
@@ -163,11 +164,12 @@ public class Vertex {
 	
 	/**
 	 * Return normal cclw flower of nghb indices.
-	 * Get it by chasing spokes, which will close up whether bdry or
-	 * interior, so have to use 'bdryFlag'.
-	 * If this is a 'RedVertex', call 'getRedFlower'; it may be interior
-	 * or boundary. If not a 'RedVertex', it should be interior and we
-	 * get the flower in the usual way, starting with 'halfedge'.
+	 * Get it by chasing spokes, which will close up 
+	 * whether bdry or interior, so have to use 'bdryFlag'.
+	 * If this is a 'RedVertex', call 'getRedFlower'; 
+	 * it may be interior or boundary. If not a 'RedVertex', 
+	 * it should be interior and we get the flower in the 
+	 * usual way, starting with 'Vertex.halfedge'.
 	 * @param closeInt boolean; true, then close up if interior
 	 * @return int[]
 	 */
