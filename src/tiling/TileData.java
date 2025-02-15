@@ -1279,6 +1279,7 @@ public class TileData {
 			newTile.tileIndex=t;
 			newTile.baryVert=tile.baryVert;
 			newTile.mark=tile.mark;
+			newTile.tileFlower=tile.tileFlower;
 			outTD.myTiles[t]=newTile;
 		}
 		return outTD;
@@ -1434,8 +1435,9 @@ public class TileData {
 	}
 
 	/**
-	 * Fill in the tileFlower information. Main complications
-	 * are due to possible unigons and digons.
+	 * Fill in the tileFlower information. Main 
+	 * complications are due to possible unigons 
+	 * and digons.
 	 * @param tData TileData
 	 * @return int count
 	 */

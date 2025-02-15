@@ -1,5 +1,7 @@
 package schwarzWork;
 
+import java.util.ArrayList;
+
 import allMains.CirclePack;
 import exceptions.DataException;
 
@@ -241,5 +243,53 @@ public class SchFlowerData {
 	        return tdata;
 		}
 		return Sit3(u,-isqr,-isqR);
+	}
+	
+	/**
+	 * Compute N-1 "constraint" functions C_j, j=1,...,(n-1)
+	 * based on given N uzians u0,u1,...,u(n-1). If positive,
+	 * C_j is the reciprocal root of radius r_j. We also
+	 * define C_1=1 and C_{n-1}=1. Convention in the paper 
+	 * on schwarzians is that constraint C_j has j-1 
+	 * arguments u1,...,u{j-1} for j>=2. Observe that 
+	 * we compute C_2=sqrt3*u_1. Thereafter use recursive 
+	 * computation:
+	 * 
+	 * (+) C_{j+1}=sqrt{3}*u_j*C_j=C_{j-1} for 2<= j <=N-3.
+	 * 
+	 * NOTE: We can compute everyting we need from the C_j:
+	 * 		r_j=1/(C_j)^2 and 
+	 * 		displacement delta_j=2/(C_j*C_{j+1})
+	 * 		u_{n-2}=(1+C_{n-3})/(sqrt3*C_{n-2}) (which is (+))
+	 * 
+	 * @param uz uzians, indexed from 0
+	 * @return ArrayList: <u_{n-2},C_1,C_2,...,C_{n-2}>
+	 */
+	public static ArrayList<Double> Constraints(double[] uz) {
+		ArrayList<Double> cons=new ArrayList<Double>(3);
+		int N=uz.length;
+		if (N<4)
+			return null;
+		
+		// start with C1, C2
+		double Cjm1=1.0;
+		cons.add(Double.valueOf(Cjm1)); // C_1 (convention)
+		double Cj=sqrt3*uz[1];
+		cons.add(Double.valueOf(Cj)); // C_2
+		
+		// recursively define C_{j+1} for j=2,...,(n-3)
+		for (int j=2;j<=(N-3);j++) {
+			double cjp1=sqrt3*uz[j]*Cj-Cjm1;
+			cons.add(Double.valueOf(cjp1));
+			Cjm1=Cj;
+			Cj=cjp1;
+		}
+
+		// compute u_{n-2}, store as first entry
+		double unm2=(1+Cjm1)/(sqrt3*Cj);
+		cons.add(0,Double.valueOf(unm2));
+		
+		cons.add(N-1,Double.valueOf(1.0));
+		return cons;
 	}
 }

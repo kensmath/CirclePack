@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Stack;
 
@@ -105,15 +106,17 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 	}
 
 	/**
-	 * Initialize a new BrowserFrame with persistent storage of URLs and message
-	 * output functionality.
+	 * Initialize a new BrowserFrame with persistent storage 
+	 * of URLs and message output functionality.
 	 * 
-	 * @param messenger the <code>IMessenger</code> to use for output, or
-	 * <code>null</code> for no output
-	 * @param historyFile the file path to use for persistent URL storage, or
-	 * <code>null</code> for no persistent storage
+	 * @param messenger the <code>IMessenger</code> to use 
+	 *   for output, or null for no output
+	 * @param historyFile the file path to use for 
+	 *   persistent URL storage, or null for no persistent 
+	 *   storage
 	 */
-	public FXWebBrowser(IMessenger messenger, String historyFile) {
+	public FXWebBrowser(IMessenger messenger, 
+			String historyFile) {
 		super();
 
 		// No URL is currently loaded. Initialize to use without checking for null.
@@ -350,10 +353,18 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 		//   and *.html was successfully created.
 		dirURL=null; 
 		
-		// ========== if URL is a directory
-		webURL=url;
-		File webFile=new File(webURL.getFile());
-		if (webFile!=null && 
+		boolean isRemote=false;
+		File webFile=null;
+		
+		// ========== 
+		webURL=url; 
+       	String protocol=url.getProtocol().toLowerCase();
+       	if (protocol.startsWith("http"))
+   			isRemote=true;
+		webFile=new File(webURL.getFile());
+		
+		// remote will already be formated as directory (??)
+		if (webFile!=null && !isRemote &&
 				webFile.isDirectory()) {
 			// Recall that 'loadDirectory' will reset 'webURL'
 			if (loadDirectory(webURL)==0) {
@@ -690,8 +701,9 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 
 
 	/*
-	 * This next bit of code should disable the activity indicator whenever a page
-	 * loads or fails to load. There should be no need to do it manually.
+	 * This next bit of code should disable the activity 
+	 * indicator whenever a page loads or fails to load. 
+	 * There should be no need to do it manually.
 	 */
 
 	/**
@@ -812,7 +824,7 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 							else if (domEventType.equals(EVENT_TYPE_MOUSEOUT)) {
 								String href = ((Element)ev.getTarget()).getAttribute("href");
 								mouseWebOut(href);
-							} 
+							}
 						}
 					};
 
@@ -836,10 +848,26 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 	 */
 	public int mouseWebClick(String href) {
 		URL theURL=null;
-		if ((theURL=FileUtil.parseURL(href))==null)
+
+		// if this link is from remote page, may
+		//    need to append it to loadedURL.
+		if (loadedURL!=null) {
+			String protocol=loadedURL.getProtocol().toLowerCase();
+			if (protocol.startsWith("http")) {
+				try {
+					String str=loadedURL.toString()+"/"+href;
+					theURL=new URL(str);
+				} catch (MalformedURLException e) {
+					return 0;
+				}
+			}
+		}
+		else if ((theURL=FileUtil.parseURL(href))==null)
 			return 0;
-		urlComboBox.add2List(theURL.toString(),false);
-		return 1;
+		int rslt=processLink(theURL);
+		if (rslt==1 || rslt==2)
+			urlComboBox.add2List(theURL.toString(),false);
+		return rslt;
 	}
 	
 	/**
@@ -863,4 +891,5 @@ public class FXWebBrowser extends JFrame implements ActionListener {
 		statusLabel.setText(null);
 		return 1;
 	}
+
 }

@@ -480,6 +480,7 @@ public class ReadWrite {
 						p.blist = null;
 						p.vertexMap = null;
 						p.xyzpoint = null;
+						gotFlowers=true;
 					} // done with "FLOWERS", "BOUQUET", or "TILES"
 					else if (state == PackState.TRIANGULATION && !gotFlowers) {
 						Triangulation tri = new Triangulation();
@@ -550,11 +551,9 @@ public class ReadWrite {
 						p.flashError("failed somehow in 'tiles2packing'");
 						return -1;
 					}
+		   		  	p=CirclePack.cpb.swapPackData(newPack,p.packNum,true);
 					p.status = true;
 					p.packExtensions = new Vector<PackExtender>(2); // trash extenders
-					p.nodeCount = newPack.nodeCount;
-					p.hes = newPack.hes;
-					p.intrinsicGeom = newPack.intrinsicGeom;
 					p.vertexMap = null;
 					p.xyzpoint = null;
 					p.vlist = null;
@@ -564,8 +563,6 @@ public class ReadWrite {
 					p.glist = null;
 					p.tlist = null;
 					p.zlist = null;
-					p.tileData = newPack.tileData;
-
 					flags |= 020001;
 					return flags;
 				}

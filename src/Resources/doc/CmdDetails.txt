@@ -2263,11 +2263,12 @@ these packings and the corresponding object is displayed in both.
 
 <command cmd="motion" flags="-[dn] {cmd}">
 <description>
-	This provides an animated movement between a
-	packing before and after a string of commands
-	(surrounded by '"') is executed. The initial 
-	packing should be displayed, setting the 
-	desired display flags, then the commands 
+	This provides an animated movement between the
+	existing packing and a new version of the same
+	packing that is created by executing the string
+	of commands provided between '"' marke.
+	The initial	packing should be displayed using the 
+	desired display flags; the quoted command string 
 	should apply to this same packing, should not 
 	change the number of vertices or the geometry, 
 	and should include all actions needed to obtain 
@@ -2276,12 +2277,14 @@ these packings and the corresponding object is displayed in both.
 	The new packing should not be displayed, as the
 	'motion' command will move toward that in stages.
 	 
-	For straightforward	situations, the idea is 
-	to help the viewer follow the action visually:
+	For straightforward	situations to help the viewer 
+	follow the action visually:
 	A sequence of canvas updates using the current 
 	display options	shows movement from the initial	
-	to the final packing. Specific examples include 
-	'flip' and 'unflip' commands, changes in boundary
+	to the final packing. Note, however, that this
+	is simply linear interpolation, so intermediate
+	stages such as "repack" are carried out. Specific 
+	examples include 'flip'/'unflip', changes in boundary
 	angle sums, etc., but other cases may occur to the
 	user. Try it and see what happens.
 </description>
