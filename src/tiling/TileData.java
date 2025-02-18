@@ -47,7 +47,7 @@ import packing.PackData;
  * Tiledata to some subdivision depth using subdivision rules. 
  * The construction then gives a hierarchy of tilings, stored 
  * in 'gradedTileData'. This depends on 'buildMode', which records 
- * the 'mode' setting of the stored structure and be redone if 
+ * the 'mode' setting of the stored structure, and must be redone if 
  * mode is changed. 'gradedTileData' is kept ONLY in 
  * 'canonicalPack.tileData'; other instances of 'TileData' will 
  * have 'gradedTileData' set to null. When some depth of a tiling

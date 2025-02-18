@@ -1036,9 +1036,7 @@ public class ConformalTiling extends PackExtender {
 			if (theFile!=null) {
 				
 				try {
-					BufferedReader tfp=SubdivisionRules.
-							getBufferedReader(dir,
-							theFile.getName(), script_flag);
+					BufferedReader tfp=CPFileManager.openReadFP(dir,theFile.getName(),script_flag);
 					subdivRules=SubdivisionRules.
 							readRulesFile(tfp,theFile.getName());
 					depthPackings=new Vector<Vector<PackData>>(5); // types starts at 4
@@ -2039,7 +2037,7 @@ public class ConformalTiling extends PackExtender {
 			Tile tile=td.myTiles[t];
 			int bary=tile.baryVert;
 			
-			// proceding around tile.vert, even
+			// proceeding around tile.vert, even
 			//   entries should alternate type 2/3
 			for (int j=0;j<tile.vertCount;j++) {
 				int a=tile.augVert[4*j];

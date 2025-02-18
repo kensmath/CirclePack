@@ -99,26 +99,6 @@ public class SubdivisionRules {
 		type2Size=new EdgeLink();
 	}
 	
-	/** 
-	 * Utility routine to open a specified file
-	 * @param dir File
-	 * @param filename String
-	 * @return BufferedReader, null on error (and 'fp' closed)
-	 */
-	public static BufferedReader getBufferedReader(File dir,String filename,boolean script_flag) {
-		BufferedReader fp=null;
-        try {
-        	fp=CPFileManager.openReadFP(dir,filename,script_flag);
-        } catch (Exception ex) {
-        	try {
-        		fp.close();
-        	} catch (Exception exx) {
-        		fp=null;
-        	}
-        }
-        return fp;
-	}
-	
 	/**
 	 * This routine is for reading Cannon/Floyd/Parry subdivision rules 
 	 * *.r files. The 'getRulesTD' routine is then needed to create the

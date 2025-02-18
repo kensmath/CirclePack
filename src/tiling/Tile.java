@@ -521,42 +521,42 @@ public class Tile extends Face {
 		indx=Math.abs(indx)%vertCount;
 		int v=vert[indx];
 		int w=vert[(indx+1)%vertCount];
+		
 		NodeLink out=new NodeLink();
 		
-		// no 'augVert'?
+		// no 'augVert'? just return v,w
 		if (augVert==null) {
 			out.add(v);
 			out.add(w);
 			return out;
 		}
 		
-		// find first occurrence of 'v'
-		int indV=-1;
-		for (int j=0;(j<augVertCount && indV<0);j++)
-			if (augVert[j]==v)
-				indV=j;
-		// start there and find first occurrence of 'w' (even if equal to v)
-		int indW=-1;
-		for (int j=indV+1;(j<augVertCount && indW<0);j++)
-			if (augVert[j]==w)
-				indW=j;
-		
-		// might wrap to the end, but shouldn't have to look further
-		if (indW<0 && augVert[0]==w)
-			indW=augVertCount;
-
-		if (indV<0 || indW<0)
-			throw new CombException("didn't find augmented edge from "+v+" to "+w);
-		
-		// add to list 
-		for (int j=indV;j<indW;j++)
+		// Because vert indices can be repeated, we
+		//   have to identify indices of edge starts from
+		//   0th edge up until we reach indx edge.
+		int[] starts=new int[vertCount]; // indices of edge starts
+		starts[0]=0;
+		int tick=0;
+		while (tick<indx) {
+			int hit=vert[(tick+1)%vertCount];
+			int k=starts[tick]+1;
+			while (k<augVertCount) {
+				if (augVert[k]==hit) {
+					tick++;
+					starts[tick]=k;
+					break;
+				}
+				k++;
+			}
+		}
+		int j=starts[tick];
+		int ticker=(tick+1)%vertCount; // last edge, have to wrap to 0
+		while (j<augVertCount && 
+				augVert[j]!=vert[ticker]) {
 			out.add(augVert[j]);
-		
-		// add end vertex
-		if (indW==augVertCount)
-			indW=0;
-		out.add(augVert[indW]);
-		
+			j++;
+		}
+		out.add(vert[ticker]); // add the last one
 		return out;
 	}
 
