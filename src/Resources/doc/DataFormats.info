@@ -146,23 +146,21 @@ make a difference: formats below indicate when data must be on separate lines.
 		...
 		yn		
 	DISP_FLAGS:     (optional, sets screen display options)
-		Disp -w -cf -f     	  
-	TILES: N          (optional for tilings)
+		Disp -w -cf -f     
+	
+	(Two options for tilings: TILES: or TILEFLOWERS:)	  
+	TILES: N ty1 ty2 ... (types of tiles) 
 		t1 n1 v_0 v_1 ... v_(n1-1)
 		t2 n2 ..
 		...
 		(t=tile index, n=# of edges, v_j=list of n corners)
-	TILES: (augmented) N (optional for tilings with extra edge vertices
-	     t1 n1 v_0 w_1 w_2 w_3 v_1 .... w_(n-1)
-	     t2 n2 ..
-	     ...
-		(t=tile index, n=# of edges, v_j= n corners, w_k = 3 intervening)
-	TILEFLOWERS: N     (optional for tilings -- don't use with 'TILES')
+	TILEFLOWERS: N  ty1 ty2 ...  (types of tiles) 
 	     t1 n1  t_0 e_0  t_1 e_1  t_2 e_2  ... t_(n1-1) e_(n1-1)
 	     t2 n2 ..
 	     ...
 	     (t=tile index, n=# of edges, t_j=neighbor tile on edge j, 
 	      e_j=index of edge of t_j shared with t)
+	      
 	BARY_VECTOR:	(optional: lists of curves (in barycentric coords))
 		BARYLIST:
 			v0 v1 v2 sb0 sb1 eb0 eb1 (verts, start/end barycoords)

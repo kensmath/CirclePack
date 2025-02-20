@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.StringTokenizer;
 import java.util.Vector;
@@ -107,10 +108,6 @@ public class ReadWrite {
 	public static int readpack(BufferedReader fp,
 			PackData p,String filename) {
 		readOldNew = null;
-		try {
-			fp.mark(1000); // mark, only needed for Lite form
-		} catch (Exception ex) {
-		} // proceed anyway
 		p.getDispOptions = null;
 		int newAlpha = -1;
 		int newGamma = -1;
@@ -124,7 +121,8 @@ public class ReadWrite {
 		boolean col_f_flag = false;
 		boolean gotAims=false;
 		EdgeLink vertMarks = null; // holds optional marks
-//	        boolean dcelread=false; // true, dcel data, triggered by key "BOUQUET:"
+		int[] tileTypes=null;
+		int dataN=-1; // various counts, as with tiles
 
 		PackState state = PackState.INITIAL;
 		String line;
@@ -140,13 +138,13 @@ public class ReadWrite {
 						newPacking = true;
 						p.fileName = "";
 						p.hes = 0;
-						int intdata = Integer.parseInt(tok.nextToken());
-						if (intdata < 3) {
+						dataN = Integer.parseInt(tok.nextToken());
+						if (dataN < 3) {
 							// TODO: error message
 							return 0;
 						}
-						p.reset_pack_space(intdata);
-						p.nodeCount = intdata;
+						p.reset_pack_space(dataN);
+						p.nodeCount = dataN;
 						p.tileData = null;
 						state = PackState.NODECOUNT;
 					} else if (mainTok.equals("CHECKCOUNT:")) {
@@ -158,8 +156,8 @@ public class ReadWrite {
 						// sometimes we want to proceed even if counts don't match
 						try {
 							mainTok = tok.nextToken();
-							int intdata = Integer.parseInt(mainTok);
-							if (intdata != p.nodeCount) {
+							dataN = Integer.parseInt(mainTok);
+							if (dataN != p.nodeCount) {
 								p.flashError("CHECKCOUNT failed to match 'nodeCount'");
 								return -1;
 							}
@@ -167,26 +165,27 @@ public class ReadWrite {
 							p.flashError("CHECKCOUNT w/o number: proceed with reading");
 						}
 						state = PackState.CHECKCOUNT;
-					} else if (mainTok.equals("TILECOUNT:")) {
+					} 
+					else if (mainTok.equals("TILECOUNT:")) {
 						flags |= 0001;
 						flags |= 020000;
 						newPacking = true;
 						p.fileName = "";
 						p.hes = 0;
-						String chaug = tok.nextToken();
-						int intdata = -1;
-
-						// my have " (augmented) " before count
-						if (chaug.startsWith("(aug"))
-							intdata = Integer.parseInt(tok.nextToken());
-						else
-							intdata = Integer.parseInt(chaug);
-						if (intdata < 1) {
-							// TODO: error message
-							return 0;
+						dataN = Integer.parseInt(tok.nextToken());
+						
+						// get tile types
+						int tick=0;
+						tileTypes=new int[dataN+1];
+						while (tok.hasMoreElements()) {
+							tileTypes[++tick]=Integer.parseInt(tok.nextToken());
 						}
-						p.reset_pack_space(intdata);
-						p.tileData = new TileData(p,intdata,3); // default to tile mode 3
+						if (tick<dataN)
+							for (int j=tick+1;j<=dataN;j++)
+								tileTypes[++tick]=4;
+						
+						p.reset_pack_space(dataN);
+						p.tileData = new TileData(p,dataN,3); // default to tile mode 3
 						p.nodeCount = 0; // this should be updated with FLOWERS processing
 						state = PackState.TILECOUNT;
 					} else if (mainTok.startsWith("TRIANGULATION")) {
@@ -223,7 +222,7 @@ public class ReadWrite {
 				}
 			} // end of while for various 'PackState's
 		} catch (Exception ex) {
-			CirclePack.cpb.errMsg("Exception in reading '" + filename + "'.");
+			CirclePack.cpb.errMsg("Reading exception: '"+ filename + "'."+ex.getMessage());
 			return -1;
 		}
 
@@ -237,7 +236,8 @@ public class ReadWrite {
 		// Reaching here, state must be NODECOUNT, CHECKCOUNT, TILECOUNT,
 		// TRIANGULATION or NEUTRAL
 		// If NODECOUNT, must get FLOWERS next (can pick up PACKNAME,
-		// ALPHA..,, GEOM along the way); if TILECOUNT, must get TILES.
+		// ALPHA..,, GEOM along the way); if TILECOUNT, must get tiles
+		// via either TILES: or TILEFLOWER: key word
 		try {
 			while (newPacking && !gotFlowers && (line = StringUtil.ourNextLine(fp)) != null) {
 				StringTokenizer tok = new StringTokenizer(line);
@@ -347,17 +347,13 @@ public class ReadWrite {
 							}
 						}
 
-						// else TILECOUNT: two options, TILES: or TILEFLOWERS:
+						// else TILECOUNT: two options only, TILES: or TILEFLOWERS:
 						else {
-							if (mainTok.equals("TILES:")) { // don't know 'nodeCount', and indices may not be
-								// in sequence; find largest index for now, handled in 'tiles2packing'
-
+							if (mainTok.equals("TILES:")) { 
+								// don't know 'nodeCount', 
+								// and indices may not be in sequence; find largest 
+								// index for now, handled in 'tiles2packing'
 								try {
-									boolean augmented = false;
-									if (tok.hasMoreTokens()) {
-										if (tok.nextToken().startsWith("(aug"))
-											augmented = true;
-									}
 									int tick = 1;
 									p.nodeCount = 0;
 									// TILES data lines: 't n v_0 v_1 ... v_(n-1)' where
@@ -366,25 +362,25 @@ public class ReadWrite {
 									// If "augmented", there are three vertices added between
 									// each pair of corners.
 									// Note: tiles from 1 to tileCount, irrespective of given t.
-									while (tick <= p.tileData.tileCount && (line = StringUtil.ourNextLine(fp)) != null) {
+									while (tick <= p.tileData.tileCount && 
+											(line = StringUtil.ourNextLine(fp)) != null) {
 										StringTokenizer loctok = new StringTokenizer(line);
 										@SuppressWarnings("unused")
 										int t = Integer.valueOf(loctok.nextToken()); // disregard t
 										int num = Integer.valueOf(loctok.nextToken());
 										if (num <= 0)
 											throw (new Exception()); // bomb out
+										
 										p.tileData.myTiles[tick] = new Tile(p, p.tileData, num);
 										p.tileData.myTiles[tick].tileIndex = tick;
-										if (augmented) {
-											p.tileData.myTiles[tick].augVertCount = 4 * num;
-											p.tileData.myTiles[tick].augVert = new int[4 * num];
-										}
+										p.tileData.myTiles[tick].tileType=tileTypes[tick];
 										for (int i = 0; i < num; i++) {
 											int nextp = Integer.valueOf(loctok.nextToken());
 											p.nodeCount = (nextp > p.nodeCount) ? nextp : p.nodeCount;
 											p.tileData.myTiles[tick].vert[i] = nextp;
 											// if augmented, there are 3 augVerts between each pair of verts
-											if (augmented) {
+											int ltnum=loctok.countTokens();
+											if (ltnum==4*num) {
 												p.tileData.myTiles[tick].augVert[4 * i] = nextp;
 												for (int ii = 1; ii <= 3; ii++) {
 													nextp = Integer.valueOf(loctok.nextToken());
@@ -414,11 +410,14 @@ public class ReadWrite {
 								try {
 									int tick = 1;
 									p.nodeCount = 0;
-									// TILEFLOWERS: data lines: 't n t0 e0 t1 e1 t2 e2 ... t(n-1) e(n-1)'
-									// t=tile number (1 to tileCount); n=number of edges;
-									// and list of pairs, tj = index of tile across (or 0) and ej is the index
-									// in tile tj of its corresponding edge shared with t.
-									// This allows for multiple edges or sharing edges with itself
+									// TILEFLOWERS: data lines: 
+									//   't n t0 e0 t1 e1 t2 e2 ... t(n-1) e(n-1)'
+									//   t=tile number (1 to tileCount); n=number of edges;
+									//   and list of pairs, tj = index of tile across (or 0) 
+									//   and ej is the index in tile tj of its corresponding 
+									//   edge shared with t.
+									//   This allows for multiple edges or sharing edges 
+									//   with itself.
 									// Note: tiles from 1 to tileCount, given 't' value is ignored
 									while (tick <= p.tileData.tileCount && 
 											(line = StringUtil.ourNextLine(fp)) != null) {
@@ -436,11 +435,12 @@ public class ReadWrite {
 										p.tileData.myTiles[tick] = tile;
 										tile.tileIndex = tick;
 										tile.tileFlower = new int[vCount][2];
+										p.tileData.myTiles[tick].tileType=tileTypes[tick];
 
 										// read off the t e pairs:
 										// We may want to read just a portion of the tiling,
 										// so we zero out (make into bdry) any tj ej pair
-										// with tj greater thatn tileCount
+										// with tj greater than tileCount
 										for (int i = 0; i < vCount; i++) {
 											int tt = Integer.valueOf(loctok.nextToken());
 											int te = Integer.valueOf(loctok.nextToken());

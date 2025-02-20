@@ -188,12 +188,12 @@ public class TileData {
 	}
 
 	/**
-	 * Create the minimal packing based on 'myTiles' data, as when
-	 * reading from a TILECOUNT file. There are two types of data 
-	 * input files: 'TILES:' and 'TILEFLOWERS:' (mutually exclusive). 
-	 * Normally, need 'TILEFLOWERS:' if there are unigons, digons, 
-	 * slits, and/or self-neighboring (so some vertex occurs multiple
-	 * times around a tile).
+	 * Create the minimal packing based on 'myTiles' data, 
+	 * as when reading from a TILECOUNT file. There are 
+	 * two types of data input files: 'TILES:' and 'TILEFLOWERS:' (mutually exclusive). 
+	 * Normally, need 'TILEFLOWERS:' if there are unigons, 
+	 * digons, slits, and/or self-neighboring (so some vertex 
+	 * occurs multiple times around a tile).
 	 * 
 	 * Under 'TILES:', vertices are built from the tile corners,
 	 * then a baryCenter vert is added for each tile. A clone of
@@ -210,7 +210,7 @@ public class TileData {
 			throw new CombException(
 					"Tile data doesn't seem to have vertices or tileFlowers");
 
-		// in 'TILEFLOWERS' case, we need to set consistent vert lists first
+		// in 'TILEFLOWERS' case, need to set consistent vert lists first
 		if (td.myTiles[1].vert[0]<=0) {
 			try {
 				if (TileBuilder.tileflowers2verts(td)<=0)
@@ -220,7 +220,7 @@ public class TileData {
 			}
 		}
 		
-		// Are there unigons, digons, slits, self-neighboring? 
+		// Are there unigons, digons, slits, self-pasting? 
 		boolean special=false;
 		for (int t=1;t<=td.tileCount && !special;t++) {
 			Tile tile=td.myTiles[t];
@@ -228,15 +228,28 @@ public class TileData {
 				int v=tile.vert[j];
 				if (tile.vertCount==1 || tile.vertCount==2) // uni/digon?
 					special=true;
-				else { // repeat vertex?
-					for (int k=0;k<j;k++)
-						if (tile.vert[k]==v)
+			}
+			// any self-pasting, repeated verts?
+			if (!special) { 
+				int vcnt=tile.vertCount;
+				for (int k=0;(k<vcnt && !special);k++) {
+					// slit? i.e., successive edges self-pasting
+					if (tile.tileFlower[k][0]==tile.tileIndex)
 							special=true;
+				}
+				if (!special) {
+					for (int k=0;(k<vcnt && !special);k++) {
+						int v=tile.vert[k];
+						for (int j=1;(j<vcnt && !special);j++)
+							if (tile.vert[(k+j)%vcnt]==v)
+								special=true;
+					}
 				}
 			}
 		}
-		
-		if (special) { // need full barycentric refinement
+
+		// if yes, then need full barycentric refinement
+		if (special) { 
 			TileBuilder tileBuilder=new TileBuilder(td);
 			PackData p=tileBuilder.fullfromFlowers();
 			if (p==null || p.tileData==null || p.nodeCount<=0)
