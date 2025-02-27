@@ -11,9 +11,8 @@ import packing.PackData;
  * 
  * As of 3/2023, changing from using euclidean packing to
  * hyperbolic due to layout error with the former: 
- * We "puncture" a vertex, max_pack that in the hyp plane,
- * project to the sphere, project to the sphere, which also
- * normalizes.
+ * We "puncture" a vertex, max_pack in the hyp plane, and
+ * project to the sphere, which also normalizes.
  * 
  * @author kens 1/2021 and 3/2023
  *

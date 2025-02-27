@@ -288,10 +288,10 @@ public class LayoutShop {
 	}
 
 	/**
-	 * Update given 'gtri' g using nghb'ing 'ftri' and the
-	 * schwarzian for 'edge' (which is an edge of f). 'gtri' is
-	 * updated with data with f and with new data for opposite
-	 * vertex.
+	 * Update given 'gtri' g using nghb'ing 'ftri' and 
+	 * the schwarzian for shared 'edge' (which is an 
+	 * oriented edge of f). 'gtri' is updated with 
+	 * data with f and with new data for opposite vertex.
 	 * 
 	 * Notes: 
 	 *   + if 'edge' is red with twinred, then the data on
@@ -305,7 +305,7 @@ public class LayoutShop {
 	 * @param gtri TriAspect
 	 * @param fedge HalfEdge, edge of face f
 	 * @param s double, schwarzian
-	 * @param mode int, mode=2 use 'labels'
+	 * @param mode int, mode: 1 = use radii; 2 = use 'labels'
 	 * @return int, -1 on error, 1 on success
 	 */
 	public static int schwPropogate(TriAspect ftri,TriAspect gtri,

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Random;
+import java.util.Vector;
 
 import allMains.CirclePack;
 import combinatorics.komplex.HalfEdge;
@@ -19,15 +20,19 @@ import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.DCELException;
 import exceptions.ParserException;
+import geometry.CircleSimple;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
+import schwarzWork.SchFlowerData;
+import schwarzWork.Schwarzian;
 import tiling.Tile;
 import tiling.TileData;
 import util.ColorUtil;
+import util.TriAspect;
 import workshops.LayoutShop;
 
 /**
@@ -256,70 +261,137 @@ public class PackCreation {
 	}
 	
 	/** 
-	 * Create a 'seed' packing as above, but now only
-	 * euclidean and use given schwarzians. Normalize
-	 * so center has max degree, gamma=1, scaled so
-	 * gamma is centered at z=i. Note we only use
-	 * schwarzians s_2,...,s_{n-1}, so there may be
-	 * problems: c_n may not fit with c_1, petals
-	 * may wrap too far, etc.
-	 * @param n int, number of petals
-	 * @param heS int, final geometry
-	 * @param schvec int[], schwarzians
-	 * @return @see PackData or null on error
+	 * Create a euclidean 'seed' packing but using given 
+	 * n intrinsic schwarzians. Normalize so center has 
+	 * max degree, gamma=1; at the end scaled so gamma is 
+	 * centered at z=i. 
+	 * 
+	 * Must be given 'schvec' of n intrinsic schwarzians. 
+	 * Rotate until first entry is closest to the schwarzian 
+	 * for a uniform n-flower. Start with petals c1, cn
+	 * in place with radii of a uniform n-flower.
+	 * Note, we only use schwarzians s_1,...,s_{n-1}.
+	 * This means there may be problems: computed c_n
+	 * may not match c_n at start, petals may wrap too 
+	 * far, etc. We recompute c_n at end and put result
+	 * in 'cp', so calling routine can use it. 
+	 * @param schvec Vector<Double>, intrinsic schwarzians
+	 * @param homecs CircleSimple, instantiated by calling routine
+	 * @param order int, =0 if unbranched (default)
+	 * @return PackData, complex "error" is in homecp.center.
 	 */
-	public static PackData seed(int n,int heS,double[] schvec) {
-		PackData p=seed(n,heS);
+	public static PackData seed(Vector<Double> schvec,CircleSimple homecs,int order) {
+		int n=schvec.size();
+		PackData p=seed(n,0);
 		  	if (p==null) 
 		  		throw new CombException("seed via schwarzians failed");
 		  	
-		  	// give center the max degree
-		  	p.swap_nodes(1,n+1);
-		  	p.packDCEL.setAlpha(n+1, null,false);
-		  	p.packDCEL.setGamma(1);
-		  	for (int j=1;j<=n;j++) {
-		  		HalfEdge he=p.packDCEL.findHalfEdge(new EdgeSimple(n+1,j));
-		  		p.setSchwarzian(he,schvec[j]);
-		  	}
-		  	HalfLink flow=new HalfLink(p,"-Iv "+(n+1));
-		  	flow.add(0,flow.removeLast()); // put (n+1,1)edge first
-		  	FaceLink facelink=new FaceLink(p);
-		  	Iterator<HalfEdge> lyst=flow.iterator();
-		  	while(lyst.hasNext()) {
-		  		facelink.add(lyst.next().face.faceIndx);
-		  	}
+	  	// set up structure, center of max index, spokes,
+		//   record schwarzians, etc.
+	  	p.swap_nodes(1,n+1);
+	  	for (int j=1;j<n;j++)
+	  		p.swap_nodes(j, j+1);
+	  	HalfEdge nhe=p.packDCEL.findHalfEdge(new EdgeSimple(n+1,1));
+		// set up 'spokes', indexed from 1
+		HalfEdge[] spokes=new HalfEdge[n+1]; // indexed from 1
+		spokes[1]=nhe;
+		HalfEdge he=spokes[2]=nhe.prev.twin;
+		int tick=2;
+		while (he!=nhe) {
+			spokes[tick++]=he;
+			he=he.prev.twin;
+		}
+	  	p.packDCEL.vertices[n+1].halfedge=nhe;
+	  	p.packDCEL.setAlpha(n+1, null,false);
+	  	p.packDCEL.setGamma(1);
+	  	
+	  	// get schwarzian closest to uniform n-flower
+	  	double aim=(order+1)*2.0*Math.PI;
+		double unifS=SchFlowerData.uniformS(n,aim); // uniform schwarzian
+		// find edge with schwarzian closest to uniform
+		tick=0;
+		double bestdiff=Math.abs(schvec.get(0)-unifS);
+		for (int j=1;j<n;j++) {
+			double diff=Math.abs(schvec.get(j)-unifS);
+			if (diff<bestdiff) {
+				bestdiff=diff;
+				tick=j;
+			}
+		}
+		int bests=tick;
 
-		  	// position first face: first 2 radii of 
-		  	//   uniform n-flower, scaled so c_1 centered = 1
-		  	double rho=Math.sin(Math.PI/n); // unif petal rad
-		  	
-		  	// center at 0, radius 1-rho so c_1 is center = 1
-		  	int v=flow.get(0).origin.vertIndx;
-		  	p.packDCEL.setVertCenter(v, new Complex(0.0));
-		  	p.packDCEL.setVertRadii(v,1.0-rho);
+		// set all edge schwarzians, with c1 having
+		//    the closest we found above
+		for (int j=0;j<n;j++)
+			spokes[j+1].setSchwarzian(schvec.get((j+bests)%n));
 
-		  	// petal 1
-		  	int w=flow.get(0).twin.origin.vertIndx;
-		  	p.packDCEL.setVertRadii(w,rho);
-		  	p.packDCEL.setVertCenter(w, new Complex(0.0,1.0));
-		  	
-		  	// petal 2, center at exp(i(pi/2+2*pi/n)
-		  	int u=flow.get(1).twin.origin.vertIndx;
-		  	p.packDCEL.setVertRadii(u,rho);
-		  	Complex cent2=new Complex(0,Math.PI/2+2.0*Math.PI/n);
-		  	p.packDCEL.setVertCenter(u, cent2.exp());
-		  	
-		  	// set 'TriAspect', load schwarzians
-		  	Iterator<HalfEdge> fls=flow.iterator();
-		  	while (fls.hasNext()) {
-		  		HalfEdge he=fls.next();
-		  		int vv=he.twin.origin.vertIndx;
-		  		he.setSchwarzian(schvec[vv]);
-		  	}
+		// initialize TriAspect
+		TriAspect ftri=new TriAspect();
+		ftri.hes=0;
+		ftri.allocCenters();
+		double a=aim/(2.0*(double)n);
+		double b=Math.sin(a);
+		double r=b/(1.0-b); // uniform radius
+		double len=(1+r);
 
-		  	// now lay out using schwarzians
-		  	LayoutShop.layoutFaceList
-		  		(p.packDCEL,facelink,0,true);
+		// center at origin, radius 1
+		p.packDCEL.setVertCenter(n+1,new Complex(0.0));
+		p.packDCEL.setVertRadii(n+1,1.0);
+
+		// these won't change
+		ftri.center[0]=new Complex(0.0);
+		ftri.radii[0]=1.0;
+		
+		ftri.center[1]=new Complex(len*Math.cos(2.0*a),len*Math.sin(-2.0*a));
+		ftri.center[2]=new Complex(len); // on x-axis
+
+		ftri.radii[1]=r;
+		ftri.radii[2]=r;
+		ftri.setTanPts();
+		ftri.setBaseMobius();
+		
+		// store c1 and cn data
+		p.packDCEL.setVertCenter(1,new Complex(ftri.center[2]));
+		p.packDCEL.setVertRadii(1,ftri.radii[2]);
+		p.packDCEL.setVertCenter(n,new Complex(ftri.center[1]));
+		p.packDCEL.setVertRadii(n,ftri.radii[1]);
+
+		// start accumulating face angles
+		double anglesum=2.0*a; 
+		CircleSimple cs=null;
+		for (int j=1;j<n-1;j++) {
+			double s=spokes[j].getSchwarzian();
+			he=spokes[j+1];
+			// get next face angle
+			cs=Schwarzian.getThirdCircle(s,2,ftri.getBaseMobius(),0);
+			p.packDCEL.setVertCenter(he.twin.origin.vertIndx,cs.center);
+			p.packDCEL.setVertRadii(he.twin.origin.vertIndx,cs.rad);
+			double faceangle=cs.center.divide(ftri.center[2]).arg();
+			anglesum +=faceangle;
+			
+			// shift data for next edge
+			ftri.radii[1]=ftri.radii[2];
+			ftri.center[1]=ftri.center[2];
+			ftri.radii[2]=cs.rad;
+			ftri.center[2]=cs.center;
+			ftri.setTanPts();
+			ftri.setBaseMobius();
+		}
+		
+		// layout c_n again, don't record in packdata
+		he=spokes[n-1];
+		// get next face angle
+		cs=Schwarzian.getThirdCircle(he.getSchwarzian(),2,ftri.getBaseMobius(),0);
+		anglesum +=cs.center.divide(ftri.center[2]).arg();
+		
+		// the 'error' records x=error in radii of c_n, and
+		//    y=error in angle sum
+		Complex error=new Complex(Math.abs(r-cs.rad),Math.abs(anglesum-aim));
+		homecs.center=error;
+		
+		// rotate by pi/2 to put gamma on y-axis
+		CommandStrParser.jexecute(p,"rotate 0.5");
+		CommandStrParser.jexecute(p,"scale "+1/(1+r));
 		return p;
 	}
 

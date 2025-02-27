@@ -3,7 +3,10 @@ package schwarzWork;
 import java.util.ArrayList;
 
 import allMains.CirclePack;
+import complex.Complex;
 import exceptions.DataException;
+import geometry.CircleSimple;
+import util.TriAspect;
 
 /**
  * Work with intrinsic schwarzians of individual 
@@ -16,6 +19,13 @@ import exceptions.DataException;
  * schwarzian. Uzians u should be restricted
  * to be positive.
  * 
+ * CAUTION: In my paper on schwarzians, indexing
+ * is from zero, e.g. uzians are {u_0,u_1,...u_{n-1}}
+ * and in normalization, c_0 is the half plane
+ * y<=-2i. However, in the code indexing is from 1,
+ * so c_0 is c_n. However, in both the paper and
+ * the code, the n-3 parameters are u_1,...,u_{n-3}.
+ * 
  * Easy to encounter errors or improper values
  * in computations: e.g., if some u becomes negative.
  * We throw a 'DataException' (and generally
@@ -23,7 +33,7 @@ import exceptions.DataException;
  * 
  * CAUTION: Major difficulties with branching:
  *  + methods (e.g., function f) for finding
- *    the n-2 schwarzians only for un-branche
+ *    the n-2 schwarzians only for un-branched
  *  + direction reverses: one step left, 
  *    then adjust next step to be sure it 
  *    goes right. Displacement can be negative
@@ -246,50 +256,153 @@ public class SchFlowerData {
 	}
 	
 	/**
-	 * Compute N-1 "constraint" functions C_j, j=1,...,(n-1)
-	 * based on given N uzians u0,u1,...,u(n-1). If positive,
-	 * C_j is the reciprocal root of radius r_j. We also
-	 * define C_1=1 and C_{n-1}=1. Convention in the paper 
-	 * on schwarzians is that constraint C_j has j-1 
-	 * arguments u1,...,u{j-1} for j>=2. Observe that 
-	 * we compute C_2=sqrt3*u_1. Thereafter use recursive 
-	 * computation:
+	 * Compute full array of "constraint" functions C_j,
+	 * j=0,...,(N-1) based on given N uzians 
+	 * {u0,u1,...,u(n-1)}. We set C_0=0.0, C_1=1.0, and
+	 * C_{n-1}=1.0 in advance and compute the rest 
+	 * recursively. As long as the C_k, 2<=k<j, are 
+	 * positive, then C_j is the reciprocal root of 
+	 * radius r_j, j=2,..., N-2. Use this recursive 
+	 * formula:
 	 * 
-	 * (+) C_{j+1}=sqrt{3}*u_j*C_j=C_{j-1} for 2<= j <=N-3.
+	 * (+) C_{j+1}=sqrt{3}*u_j*C_j - C_{j-1} for 1<= j <=N-2.
 	 * 
-	 * NOTE: We can compute everyting we need from the C_j:
-	 * 		r_j=1/(C_j)^2 and 
-	 * 		displacement delta_j=2/(C_j*C_{j+1})
-	 * 		u_{n-2}=(1+C_{n-3})/(sqrt3*C_{n-2}) (which is (+))
+	 * Convention in the paper on schwarzians is that 
+	 * constraint C_j has j-1 arguments u1,...,u{j-1}, 
+	 * for 2<=j<=N-2. If some C_j is negative, then the
+	 * flower is branched and (+) may not hold, but
+	 * we continue anyway.
 	 * 
-	 * @param uz uzians, indexed from 0
-	 * @return ArrayList: <u_{n-2},C_1,C_2,...,C_{n-2}>
+	 * NOTE: Often we call this with uzians indices
+	 * shifted; calling routine takes care of this
+	 * on input and output.
+	 * 
+	 * NOTE: If C_j are positive, the flower is un-branched
+	 * and we can compute everything we need from the C_j:
+	 * 	+	r_j=1/(C_j)^2 and 
+	 * 	+	displacement delta_j=2/(C_j*C_{j+1}), 1<=j<=n-2
+	 * 	+	u_{n-2}=(1+C_{n-3})/(sqrt3*C_{n-2}) (which is (+))
+	 * 
+	 * @param uz uzians, indexed from 1
+	 * @return ArrayList: <0.0,1.0,C_2,...,C_{n-2},C_{n-1}>
 	 */
-	public static ArrayList<Double> Constraints(double[] uz) {
-		ArrayList<Double> cons=new ArrayList<Double>(3);
-		int N=uz.length;
+	public static ArrayList<Double> constraints(double[] uz) { 
+		int N=uz.length-1;
 		if (N<4)
 			return null;
-		
-		// start with C1, C2
-		double Cjm1=1.0;
-		cons.add(Double.valueOf(Cjm1)); // C_1 (convention)
-		double Cj=sqrt3*uz[1];
-		cons.add(Double.valueOf(Cj)); // C_2
-		
+
+		ArrayList<Double> cons=new ArrayList<Double>(3);
+		cons.add(0,Double.valueOf(0.0));
+		cons.add(1,Double.valueOf(1.0));
+		double Cj=1.0;
+		double Cjm1=0.0;
 		// recursively define C_{j+1} for j=2,...,(n-3)
-		for (int j=2;j<=(N-3);j++) {
+		// keep going even if a negative is encountered
+		for (int j=1;j<(N-1);j++) {
 			double cjp1=sqrt3*uz[j]*Cj-Cjm1;
 			cons.add(Double.valueOf(cjp1));
 			Cjm1=Cj;
 			Cj=cjp1;
 		}
-
-		// compute u_{n-2}, store as first entry
-		double unm2=(1+Cjm1)/(sqrt3*Cj);
-		cons.add(0,Double.valueOf(unm2));
-		
 		cons.add(N-1,Double.valueOf(1.0));
 		return cons;
 	}
+	
+	/**
+	 * Compute the anglesum A if given uzians are laid
+	 * out as a euclidean n-flower around the unit disc. 
+	 *   + Desired angle sum is Theta = m*2*Pi, where
+	 *     m is the multiplicity (1 for un-branched).
+	 *   + Given uzians for flower, find the index of 
+	 *     the uzian closest to the uniform uzian for a 
+	 *     flower of that degree and aim Theta.
+	 *   + Find the radius r of this uniform petal and form 
+	 *     triple of unit disc and contiguous petals of 
+	 *     radius r. The first face angle is a0=Theta/n.
+	 *   + Layout the rest using n-1 uzians to compute
+	 *     and accumulate the n face angles a1,.. a{n-1}. 
+	 *     Note that we get a new radius R for the first
+	 *     peal. 
+	 *   + return Complex x+iy, where x is the error in
+	 *     radii x=|R-r|, and y is the error in the
+	 *     angle sum y=|A-Theta|.
+	 *     
+	 * The uzians form an actual closed flower iff result
+	 * is zero. Note that we only use n-1 uzians, so if
+	 * result is zero, the final one can be computed.
+	 * 
+	 * Note: if a = half of face angle in uniform 
+	 * N-flower with anglesum = m*2*pi (multiplicity m),
+	 * then r=b/(1-b), where b=sin(m*pi/N).
+	 * @param uzians double[]
+	 * @param order int
+	 * @return Complex 
+	 */
+	public static Complex euclFlower(double[] uzians,int order) {
+		int deg=uzians.length;
+		int mult=order+1;
+		double aim=mult*2.0*Math.PI;
+		double unifUzian=1.0-uniformS(deg,aim); // uniform schwarzian
+		
+		// find edge with uzian closest to uniform
+		int tick=0;
+		double bestdiff=Math.abs(uzians[0]-unifUzian);
+		for (int j=1;j<deg;j++) {
+			double diff=Math.abs(uzians[j]-unifUzian);
+			if (diff<bestdiff) {
+				bestdiff=diff;
+				tick=j;
+			}
+		}
+		
+		// need uzians starting with the best edge;
+		//   but note that we won't use the best
+		//   edge itself.
+		double[] uz=new double[deg-1];
+		for (int j=0;j<deg;j++)
+			uz[j]=uzians[(tick+j)%deg];
+
+		// initialize TriAspect
+		TriAspect ftri=new TriAspect();
+		ftri.hes=0;
+		ftri.allocCenters();
+		double a=mult*Math.PI/deg;
+		double b=Math.sin(a);
+		double r=b/(1.0-b);
+		double len=(1+r);
+		ftri.center[1]=new Complex(len*Math.cos(2.0*a),len*Math.sin(-2.0*a));
+		ftri.center[2]=new Complex(len); // on x-axis
+		ftri.radii[0]=1.0;
+		ftri.radii[1]=r;
+		ftri.radii[2]=r;
+		ftri.getBaseMobius();
+
+		// start accumulating face angles
+		double anglesum=2.0*a; 
+		CircleSimple cs=null;
+		for (int j=1;j<deg;j++) {
+			// get next face angle
+			cs=Schwarzian.getThirdCircle(uz[j],2,ftri.getBaseMobius(),0);
+			anglesum +=cs.center.abs();
+			
+			// set up for next
+			ftri.center[1]=ftri.center[2];
+			ftri.center[2]=cs.center;
+			ftri.setBaseMobius();
+		}
+		return new Complex(Math.abs(r-cs.rad),Math.abs(anglesum-aim));
+	}
+	
+	/**
+	 * Compute the intrinsic schwarzians for a uniform flower 
+	 * of N petals with 'anglesum'. Typically, anglesum will be
+	 * a multiple of 2*pi.
+	 * @param N int
+	 * @param anglesum double
+	 * @return double
+	 */
+	public static double uniformS(int N,double anglesum) {
+		return 1.0-(2.0*Math.cos(anglesum/(2.0*N))/sqrt3);
+	}
+			
 }

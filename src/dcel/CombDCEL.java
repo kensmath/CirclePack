@@ -38,8 +38,8 @@ import util.StringUtil;
  * chain cannot be modified, then 'redChain' is set to null and
  * calling routine would run 'redchain_by_edge'. See 'fixDCEL'.
  * 
- * TODO: Routines are gathered from earlier work, so all needs careful 
- * debugging. 
+ * TODO: Routines are gathered from earlier work, so all need
+ * careful debugging. 
 */
 public class CombDCEL {
 
@@ -2364,6 +2364,39 @@ public class CombDCEL {
 					return j;
 		} catch(Exception ex) {}
 		return -1;
+	}
+	
+	/**
+	 * Find the index of 'edge' (or 'edge.twin') in the
+	 * flower of Vertex V
+	 * @param edge HalfEdge
+	 * @param V Vertex
+	 * @return Integer or null on error
+	 */
+	public static Integer indxEdgeOfVert(HalfEdge edge,Vertex V) {
+		// check the data
+		if (edge.origin!=V)
+			edge=edge.twin;
+		if (edge.origin!=V)
+			return null;
+		// number N of vertices in the flower
+		int N=V.getNum();
+		if (V.isBdry())
+			N++;
+		// is it the first edge?
+		HalfEdge he=V.halfedge;
+		if (he==edge)
+			return (Integer)0;
+		// else look through edges
+		he=he.prev.twin;
+		int indx=1;
+		while (he!=V.halfedge && indx<N) {
+			if (he==edge)
+				return (Integer)indx;
+			he=he.prev.twin;
+			indx++;
+		}
+		return null;
 	}
 	
 	/**

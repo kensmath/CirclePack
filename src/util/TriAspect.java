@@ -152,6 +152,9 @@ public class TriAspect extends TriData {
 		}
 	}
 	
+	/**
+	 * allocate center array and set to 0.0
+	 */
 	public void allocCenters() {
 		center=new Complex[3];
 		for (int j=0;j<3;j++)

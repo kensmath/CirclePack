@@ -1428,7 +1428,8 @@ public class NodeLink extends LinkedList<Integer> {
      * @return -1 on error
      */
     public static int randVert(NodeLink vertlist) {
-    	if (vertlist==null || vertlist.size()==0) return -1;
+    	if (vertlist==null || vertlist.size()==0) 
+    		return -1;
     	int n=new Random().nextInt(vertlist.size());
     	return vertlist.get(n);
     }

@@ -80,8 +80,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	public HalfLink(PackData p,Vector<String> items,boolean xtd) {
 		super();
 		packData=p;
-		pdc=p.packDCEL;
-		if (items==null || items.size()==0) { // default to 'a' (all edges)
+		pdc=p.packDCEL; 
+		if (items==null || items.get(0).length()==0) { // default to 'a' (all edges)
 			items=new Vector<String>(1);
 			items.add("a");
 		}
@@ -247,10 +247,10 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	
 	/**
 	 * Add links to this list (if it is associated with PackData).
-	 * Don't have much to do now, since we don't have string representation
-	 * of 'HalfEdge's.
+	 * Don't have much to do now, since we don't have string 
+	 * representation of 'HalfEdge's.
 	 * @param items Vector<String>
-	 * @param xtd boolean, true==>allow 'extended' edges
+	 * @param xtd boolean, true ==> allow 'extended' edges
 	 * @return int count
 	 */
 	public int addHalfLink(Vector<String> items,boolean xtd) {
@@ -514,6 +514,31 @@ public class HalfLink extends LinkedList<HalfEdge> {
 						}
 					}
 				}
+				break;
+			}
+			case 'r': // random edge
+			{
+				boolean interior=false;
+				if (str.length()>1 && str.charAt(1)=='i')
+					interior=true;
+				NodeLink nlk=null;
+				if (interior)
+					nlk=new NodeLink(packData,"i");
+				else 
+					nlk=new NodeLink(packData,"a");
+				Vertex vert=packData.packDCEL.vertices[NodeLink.randVert(nlk)];
+				int m=vert.getNum();
+				if (vert.isBdry())
+					m++;
+		    	int n=new Random().nextInt(m); // in (0,m-1)
+		    	HalfEdge he=vert.halfedge;
+		    	int tick=0;
+		    	while (tick!=n) {
+		    		tick++;
+		    		he=he.prev.twin;
+		    	}
+		    	add(he);
+		    	count++;
 				break;
 			}
 			case 'F': // 'layoutOrder

@@ -70,7 +70,6 @@ import ftnTheory.RationalMap;
 import ftnTheory.RiemHilbert;
 import ftnTheory.ShapeShifter;
 import ftnTheory.SphereLayout;
-import ftnTheory.SpherePack;
 import ftnTheory.TileColoring;
 import ftnTheory.TorusEnergy;
 import ftnTheory.WeldManager;
@@ -120,6 +119,7 @@ import rePack.GOpacker;
 import rePack.HypPacker;
 import rePack.SphPacker;
 import schwarzWork.SchwarzMap;
+import schwarzWork.SchwarzPack;
 import schwarzWork.Schwarzian;
 import script.ScriptBundle;
 import tiling.TileData;
@@ -1096,17 +1096,14 @@ public class CommandStrParser {
 						  }
 					  }
 					  int sz=schvec.size();
-					  int szp=sz+1;
-					  if (szp<param+1) 
-						  szp=param+1;
-					  double[] schlist=new double[szp];
-					  int tick=1;
-					  Iterator<Double> sst=schvec.iterator();
-					  while (sst.hasNext() && tick<=param) {
-						  schlist[tick++]=(double)sst.next();
+					  if (sz<param) {
+						  for (int j=1;j<=(param-sz);j++)
+							  schvec.add(1.0);
 					  }
 					  
-					  newPack=PackCreation.seed(param,0,schlist);
+					  CircleSimple cs=new CircleSimple();
+					  newPack=PackCreation.seed(schvec,cs,0);
+					  CirclePack.cpb.msg("seed layout by schwarzian error: "+cs.center);
 				  }
 				  break;
 			  }
@@ -1926,7 +1923,7 @@ public class CommandStrParser {
 	    	  else if (str.equalsIgnoreCase("sp")) {
 	    		  if (!packData.status || packData.nodeCount==0) 
 	    			  return 0;
-	    		  SpherePack px=new SpherePack(packData);
+	    		  SchwarzPack px=new SchwarzPack(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
 		    				  ": started "+px.extensionAbbrev+" extender");
@@ -3784,18 +3781,23 @@ public class CommandStrParser {
 	     		  PackData newData=PackCreation.seed(n,hes);
 	     		  if (newData==null) 
 	     			  throw new CombException("seed has failed");
+	     		  newData.intNodeCount=1;
 	     		  packData=CirclePack.cpb.swapPackData(newData,pnum,false);
 	     		  jexecute(packData,"disp -w -c");
 	     	  } catch(Exception ex) {
 	     		  throw new ParserException(" "+ex.getMessage());
 	     	  }
 
-	     	  // shall we swap so center is index M?
-	     	  //   also, set gamma to n and redo layout
+	     	  // Shall we swap so center is index M,
+	     	  //   flower starts with 1, alpha=n+1,
+	     	  //   gamma =1; redo layout
+
 	     	  if (swap) {
 	     		  packData.swap_nodes(1, n+1);
+	     		  for (int j=1;j<n;j++)
+	     			  packData.swap_nodes(j, j+1);
 	     		  packData.setAlpha(n+1);
-	     		  packData.setGamma(n);
+	     		  packData.setGamma(1);
 	     		  jexecute(packData,"layout");
 	     	  }
 	     	  
@@ -8078,21 +8080,29 @@ public class CommandStrParser {
 	    		  }
 	    		  case 's': // normalize a la schwarzian flowers
 	    		  {
+	    			  // must be a flower, max index at center,
+	    			  // center at origin
+	    			  if (packData.intNodeCount!=1)
+	    				  return 0;
 	    			  if (packData.hes!=0)
 	    		    	  CommandStrParser.jexecute(packData,"geom_to_e");
 	    	    	  CommandStrParser.jexecute(packData,"norm_scale -c M 1.0");
-	    	    	  double r=packData.packDCEL.vertices[packData.getGamma()].rad;
+	    	    	  // center's halfedge should point to "c_1"
+	    	    	  HalfEdge he=packData.packDCEL.vertices[packData.nodeCount].halfedge;
+	    	    	  Vertex c1=he.twin.origin; // should act as "c1"
+	    	    	  Vertex cn=he.twin.next.twin.origin; // should act as lower halfplane
+	    	    	  double rot=.5-cn.center.arg()/Math.PI; // rotate to center cn on y-axis
+	    	    	  CommandStrParser.jexecute(packData,"rotate "+rot);
+	    	    	  double r=cn.rad;
 	    	    	  double a=2*r/(1.0+r);
+	    	    	  // apply Mobius so cn is halfplane y<=-2i
 	    	    	  Mobius smob=new Mobius(new Complex(0.0,-a),new Complex(a,0.0),
 	    	    			  new Complex(1.0),new Complex(0.0,-1.0));
-	    	    	  
-	    			  // apply this mobius to the packing
 	    	    	  packData.apply_Mobius(smob,new NodeLink(packData,"a"));
 
-	    	    	  // put next petal at origin, set its radius to 1
-	    	    	  int nextpetal=packData.packDCEL.vertices[packData.getGamma()].halfedge.twin.origin.vertIndx;
-	    	    	  double x=packData.packDCEL.vertices[nextpetal].center.x;
-	    	    	  r=packData.packDCEL.vertices[nextpetal].rad;
+	    	    	  // put next c1 at origin, set its radius to 1
+	    	    	  double x=c1.center.x;
+	    	    	  c1.rad=1.0;
 	    	    	  smob=new Mobius(new Complex(1.0),new Complex(-x,0.0),
 	    	    			  new Complex(0.0),new Complex(1.0,0.0));
 	    			  int ans=packData.apply_Mobius(smob,

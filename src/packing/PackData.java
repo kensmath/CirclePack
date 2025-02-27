@@ -4285,6 +4285,15 @@ public class PackData{
 		  p.hes=hes;
 		  PackDCEL pdcel=CombDCEL.cloneDCEL(packDCEL);
 		  pdcel.fixDCEL(p);
+		  
+		  // TODO: check more stuff to copy over
+		  p.intNodeCount=intNodeCount;
+		  p.euler=euler;
+		  p.genus=genus;
+		  p.intrinsicGeom=intrinsicGeom;
+		  p.activeNode=activeNode;
+		  
+		  
 			  
 		  // copy tile data, if it exists
 		  if (keepTD && tileData!=null && tileData.tileCount>0) {

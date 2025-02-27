@@ -5279,7 +5279,7 @@ a negative value means this vertex is not adjusted during repacking</opt>
 <opt flag="?f(z) {x [y]}">	  value of current function at real [or complex] value</opt>
 <opt flag="?gam(t) {t}">	  value of current parameterized path at real t</opt>
 <opt flag="?invdist {v w}">   inv dist/overlap between any two circles</opt>
-<opt flag="?schwarz {v w}">   real schwarzian for this edge (if allocated)</opt>
+<opt flag="?sch {v w ..}">    intrinsic schwarzian for this edge (if allocated)</opt>
 <opt flag="?mark -[vft] {.}"> mark for vert, face, or tile</opt>
 <opt flag="?nodecount">       number of vertices in the packing</opt>
 <opt flag="?pnum"> 			  pack number (0, 1, or 2)</opt>

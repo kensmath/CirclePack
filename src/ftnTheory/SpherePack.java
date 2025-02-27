@@ -10,8 +10,15 @@ import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
 /**
+ * 
+ * OBE: This approach to computing sphere packings did
+ * not seem to work out. As of early 2025 I am shifting
+ * to try the use of intrinsic schwarzians. The
+ * extender "SchwarzPack" will take over the "SP"
+ * name. I'll leave this as dead code as of 2/2025.
+ * 
  * This code incorporates old 'SpherePack' code as a
- * PackExtender. Goal is to allow the user to manually
+ * PackExtender. Goal was to allow the user to manually
  * adjust spherical radii to try to get a spherical
  * packing or branched packing, with various feedback
  * and manipulation features to help. On request, an

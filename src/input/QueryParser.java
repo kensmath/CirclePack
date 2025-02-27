@@ -22,6 +22,7 @@ import geometry.CommonMath;
 import geometry.SphericalMath;
 import input.CommandStrParser.Energy;
 import komplex.EdgeSimple;
+import listManip.EdgeLink;
 import listManip.FaceLink;
 import listManip.HalfLink;
 import listManip.NodeLink;
@@ -119,6 +120,8 @@ public class QueryParser {
 		try {
 			items=(Vector<String>)flagSegs.get(0); 
 			firststr=items.get(0); // sometimes will want to remove this
+			if (firststr.length()==0)
+				firststr=null;
 		} catch(Exception ex) { // some commands don't need anything
 			firststr=null;
 		}
@@ -1055,7 +1058,11 @@ public class QueryParser {
 					break;
 				}
 				else if (query.startsWith("sch")) {
-					HalfLink hlink=new HalfLink(p,flagSegs.get(0));
+					HalfLink hlink=null;
+					if (firststr==null)
+						hlink=new HalfLink(p,"i");
+					else
+						hlink=new HalfLink(p,firststr);
 					int tick=0;
 					Iterator<HalfEdge> his=hlink.iterator();
 					while (tick<10 && his.hasNext()) {

@@ -3,6 +3,7 @@ package schwarzWork;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.StringTokenizer;
 import java.util.Vector;
@@ -174,7 +175,7 @@ public class SchwarzMap extends PackExtender {
 	public int cmdParser(String cmd, Vector<Vector<String>> flagSegs) {
 		Vector<String> items = null;
 		
-		// separate command options once in flower mode
+		// NOTE: separate command once in "flower" mode
 		if (flowerDegree>0 && cmd.startsWith("sch") &&
 				cmd.length()==3) {
 			if (flagSegs==null || flagSegs.size()==0)
@@ -200,7 +201,8 @@ public class SchwarzMap extends PackExtender {
 						hit++;
 						break;
 					}
-					case 'f': // full: recompute all using initial fd-3
+					case 'f': // full: recompute all using initial 
+						// intrinsic schwarzians {s_1,...s_{fd-3}}.
 						// schwarzians, and computing the final 3.
 					{
 						double[] uzian=new double[fd+1];
@@ -526,7 +528,7 @@ public class SchwarzMap extends PackExtender {
 							strbld.append(" "+packData.getSchwarzian(spokes[j]));
 						cpCommand(CPBase.packings[qnum],
 							strbld.toString());
-						cpCommand(CPBase.packings[qnum],"disp -w -cn");
+						cpCommand(CPBase.packings[qnum],"Disp -w -cn -cf A");
 						hit++;
 						break;
 					}
@@ -538,6 +540,61 @@ public class SchwarzMap extends PackExtender {
 						packData.schFlowerSliders=null;
 						hit++;
 						break;
+					}
+					case 't': // test: print out a bunch of info
+					{
+						// uzians indexed from 1 (so first entry ignored)
+						double[] uz=new double[flowerDegree+1];
+						for (int j=1;j<=flowerDegree;j++) 
+							uz[j]=1.0-spokes[j].getSchwarzian();
+						ArrayList<Double> conarray=SchFlowerData.constraints(uz);
+						
+						msg("Uzians: ");
+						StringBuilder strbld=new StringBuilder("uz=[");
+						for (int j=1;j<flowerDegree;j++) 
+							strbld.append(uz[j]+" ");
+						strbld.append(", "+uz[flowerDegree]+"];");
+						msg(strbld.toString());
+						
+						msg("Constraints: ");
+						strbld=new StringBuilder();
+						Iterator<Double> cis=conarray.iterator();
+						cis.next();
+						while (cis.hasNext()) 
+							strbld.append((double)cis.next()+", ");
+						msg(strbld.toString());
+						
+						msg("Radii: r_1,...,r_{n-1}");
+						ArrayList<Double> radii=new ArrayList<Double>();
+						cis=conarray.iterator();
+//						cis.next(); // shuck the first
+						while (cis.hasNext()) {
+							double con=cis.next();
+							radii.add(1/(con*con));
+						}
+						radii.remove(radii.size()-1);
+						strbld=new StringBuilder();
+						Iterator<Double> ris=radii.iterator();
+						ris.next();
+						while (ris.hasNext())
+							strbld.append(ris.next()+", ");
+						msg(strbld.toString());
+						
+						msg("tangency pts: j=1,...,n-2: ");
+						strbld=new StringBuilder();
+						double tang=0.0;
+						strbld.append("0.0, ");
+						for (int j=1;j<flowerDegree-1;j++) {
+							tang +=2.0/(conarray.get(j)*conarray.get(j+1));
+							strbld.append(tang+", ");
+						}
+						msg(strbld.toString());
+						
+						// do we get uzian n-2 right?
+						double comp=(1.0+conarray.get(flowerDegree-3))/(Math.sqrt(3.0)*conarray.get(flowerDegree-2));
+						msg("Initial u_{n-2} = "+uz[flowerDegree-2]+
+								"; computed by formula = "+comp);
+						return 1;
 					}
 					} // end of switch
 				} // done with next flag
@@ -577,20 +634,20 @@ public class SchwarzMap extends PackExtender {
    		  	// set up 'spokes', indexed from 1
    		  	spokes=new HalfEdge[flowerDegree+1];
    		  	for (int j=1;j<M;j++) {
-   		  		spokes[j]=packData.packDCEL.findHalfEdge(new EdgeSimple(flowerDegree+1,j));
+   		  		spokes[j]=packData.packDCEL.findHalfEdge(new EdgeSimple(M,j));
    		  	}
    		  	
    		  	// compute/store initial schwarzians
    			Schwarzian.comp_schwarz(packData,new HalfLink(packData,"i"));
    		  	
    		  	cpCommand(packData,"disp -w");
-			petalticks=new int[flowerDegree+1]; // indexed from 1
+			petalticks=new int[M]; // indexed from 1
 			
 			// put in normalized setup; 
 			//   * center is upper half plane
 			//   * last petal, c_n is half plane {y<=-2*i}
 			//   * first petal, c_1 has radius 1, center -i
-			//   * remaining petals small, spread out along x-axis
+			//   * rest small to start -- spread out along x-axis
 			packData.packDCEL.setVertCenter(M,
 					new Complex(0.0,20000.0));
 			packData.packDCEL.setVertCenter(flowerDegree,
@@ -602,7 +659,7 @@ public class SchwarzMap extends PackExtender {
 			packData.packDCEL.setVertRadii(1,1.0);
 			petalticks[1]=1;
 			
-			// set rest to center along x-axis, radius .025
+			// set rest to start with centers on x-axis, radius .025
 			for (int v=2;v<flowerDegree;v++) {
 				double x=(v-1)*.2;
 				packData.packDCEL.setVertCenter(v, new Complex(x));
@@ -1756,7 +1813,8 @@ public class SchwarzMap extends PackExtender {
 	} // end of 'cmdParser'
 
 	/**
-	 * Return the schwarzian coefficient and tangency point for edge <v,w>
+	 * Return the schwarzian coefficient and tangency point 
+	 * for edge <v,w>
 	 * @param v int
 	 * @param w int
 	 * @return double[] = {coeff, x, y} 
