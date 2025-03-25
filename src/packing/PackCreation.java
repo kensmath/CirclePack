@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Random;
-import java.util.Vector;
 
 import allMains.CirclePack;
 import combinatorics.komplex.HalfEdge;
@@ -24,8 +23,6 @@ import geometry.CircleSimple;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
-import listManip.FaceLink;
-import listManip.HalfLink;
 import listManip.NodeLink;
 import schwarzWork.SchFlowerData;
 import schwarzWork.Schwarzian;
@@ -33,7 +30,6 @@ import tiling.Tile;
 import tiling.TileData;
 import util.ColorUtil;
 import util.TriAspect;
-import workshops.LayoutShop;
 
 /**
  * Various static routines for building new packings.
@@ -230,9 +226,10 @@ public class PackCreation {
 	}
 
 	/** 
-	 * Create a 'seed' packing from scratch (with CPDrawing=null)
-	 * NOTE: 'PackData.seed' call does the same, but within existing
-	 * PackData object.
+	 * Create a 'seed' packing from scratch 
+	 * (with CPDrawing=null)
+	 * NOTE: 'PackData.seed' call does the same, but 
+	 * within existing PackData object.
 	 * @param n int, number of petals
 	 * @param heS int, final geometry
 	 * @return @see PackData or null on error
@@ -262,29 +259,44 @@ public class PackCreation {
 	
 	/** 
 	 * Create a euclidean 'seed' packing but using given 
-	 * n intrinsic schwarzians. Normalize so center has 
-	 * max degree, gamma=1; at the end scaled so gamma is 
-	 * centered at z=i. 
+	 * n intrinsic schwarzians. Normalize combinatorics so center has 
+	 * max degree and gamma=1; scale and rotate so gamma
+	 * is centered at z=i.
+	 * 
+	 * Additional normalization is an issue. I hope 
+	 * to use the "error" in angle to petal c_1
+	 * when laying out to guide schwarzian adjustment.
+	 * However, if the angle error is not 0,
+	 * then via Mobius transformations, one can get 
+	 * just about any angle: consider the tangency points
+	 * on the unit circle: two that are not equal can be
+	 * moved to any two via a Mobius of the unit circle.
+	 * Might try a normalization which puts the centroid
+	 * of the tangency points at the origin. 
 	 * 
 	 * Must be given 'schvec' of n intrinsic schwarzians. 
 	 * Rotate until first entry is closest to the schwarzian 
 	 * for a uniform n-flower. Start with petals c1, cn
 	 * in place with radii of a uniform n-flower.
 	 * Note, we only use schwarzians s_1,...,s_{n-1}.
-	 * This means there may be problems: computed c_n
+	 * This means there may be problems: computed c_1
 	 * may not match c_n at start, petals may wrap too 
-	 * far, etc. We recompute c_n at end and put result
-	 * in 'cp', so calling routine can use it. 
-	 * @param schvec Vector<Double>, intrinsic schwarzians
+	 * far, etc. We recompute c_n at end and return it in
+	 * 'homecs' for the user. 'layoutErr' is a complex
+	 * error in two layouts of c_n.
+	 * @param schvec ArrayList<Double>, intrinsic schwarzians, indexed from 0.
 	 * @param homecs CircleSimple, instantiated by calling routine
 	 * @param order int, =0 if unbranched (default)
-	 * @return PackData, complex "error" is in homecp.center.
+	 * @param layoutErr Complex, instantiated by calling routine
+	 * @return PackData, new c_n is in homecs and 
+	 *         complex "error" is in 'layoutError'
 	 */
-	public static PackData seed(Vector<Double> schvec,CircleSimple homecs,int order) {
+	public static PackData seed(ArrayList<Double> schvec,
+			CircleSimple homecs,Complex layoutErr,int order) {
 		int n=schvec.size();
-		PackData p=seed(n,0);
-		  	if (p==null) 
-		  		throw new CombException("seed via schwarzians failed");
+		PackDCEL pdcel=RawManip.seed_raw(n);
+		PackData p=new PackData(null);
+		pdcel.fixDCEL(p);
 		  	
 	  	// set up structure, center of max index, spokes,
 		//   record schwarzians, etc.
@@ -318,80 +330,125 @@ public class PackCreation {
 				tick=j;
 			}
 		}
-		int bests=tick;
+		int B=tick;
+		if (B==0) // need room for petal clw from B
+			B=1;
+		
+		// We're indexing everything from 0 during
+		//   layout; will adjust for vert indices 
+		//   as needed.
+		// start layout with B edge centered on 
+		//   positive axis, B-1 edge clw next to it,
+		//   both with radius of uniform n-flower.
+		// Then layout clw until 0 edge is in place,
+		//   then cclw until new 0 edge is computed.
 
-		// set all edge schwarzians, with c1 having
-		//    the closest we found above
-		for (int j=0;j<n;j++)
-			spokes[j+1].setSchwarzian(schvec.get((j+bests)%n));
-
-		// initialize TriAspect
+		// initialize 2 TriAspect's
 		TriAspect ftri=new TriAspect();
-		ftri.hes=0;
+		TriAspect gtri=new TriAspect();
+		ftri.hes=gtri.hes=0;
 		ftri.allocCenters();
+		gtri.allocCenters();
 		double a=aim/(2.0*(double)n);
 		double b=Math.sin(a);
 		double r=b/(1.0-b); // uniform radius
 		double len=(1+r);
 
-		// center at origin, radius 1
-		p.packDCEL.setVertCenter(n+1,new Complex(0.0));
-		p.packDCEL.setVertRadii(n+1,1.0);
-
 		// these won't change
 		ftri.center[0]=new Complex(0.0);
+		gtri.center[0]=new Complex(0.0);
 		ftri.radii[0]=1.0;
-		
+		gtri.radii[0]=1.0;
+
+		// these will be repeatedly updated
 		ftri.center[1]=new Complex(len*Math.cos(2.0*a),len*Math.sin(-2.0*a));
+		gtri.center[1]=new Complex(len*Math.cos(2.0*a),len*Math.sin(-2.0*a));
 		ftri.center[2]=new Complex(len); // on x-axis
-
-		ftri.radii[1]=r;
-		ftri.radii[2]=r;
+		gtri.center[2]=new Complex(len); // on x-axis
+		ftri.radii[1]=ftri.radii[2]=r;
+		gtri.radii[2]=gtri.radii[2]=r;
 		ftri.setTanPts();
+		gtri.setTanPts();
 		ftri.setBaseMobius();
+		gtri.setBaseMobius();
 		
-		// store c1 and cn data
-		p.packDCEL.setVertCenter(1,new Complex(ftri.center[2]));
-		p.packDCEL.setVertRadii(1,ftri.radii[2]);
-		p.packDCEL.setVertCenter(n,new Complex(ftri.center[1]));
-		p.packDCEL.setVertRadii(n,ftri.radii[1]);
+		// store center, B, and B-1 data in p
+		p.packDCEL.setVertCenter(n+1,new Complex(0.0));
+		p.packDCEL.setVertRadii(n+1,1.0);
+		p.packDCEL.setVertCenter(B+1,new Complex(ftri.center[2]));
+		p.packDCEL.setVertRadii(B+1,ftri.radii[2]);
+		p.packDCEL.setVertCenter(B,new Complex(ftri.center[1]));
+		p.packDCEL.setVertRadii(B,ftri.radii[1]);
 
-		// start accumulating face angles
-		double anglesum=2.0*a; 
 		CircleSimple cs=null;
-		for (int j=1;j<n-1;j++) {
-			double s=spokes[j].getSchwarzian();
-			he=spokes[j+1];
-			// get next face angle
-			cs=Schwarzian.getThirdCircle(s,2,ftri.getBaseMobius(),0);
-			p.packDCEL.setVertCenter(he.twin.origin.vertIndx,cs.center);
-			p.packDCEL.setVertRadii(he.twin.origin.vertIndx,cs.rad);
-			double faceangle=cs.center.divide(ftri.center[2]).arg();
-			anglesum +=faceangle;
+		double anglesum=2.0*a; // for accumulating total angle
+		int clwMoves=B-1;
+
+		// cross clwMoves edges clockwise
+		if (B>1) {
+			for (int j=1;j<=clwMoves;j++) {
+				double s=schvec.get(B-j);
+				// get next face angle
+				cs=Schwarzian.getThirdCircle(s,0,gtri.getBaseMobius(),0);
+				int v=B-j;
+				p.packDCEL.setVertCenter(v,cs.center);
+				p.packDCEL.setVertRadii(v,cs.rad);
+				double faceangle=gtri.center[1].divide(cs.center).arg();
+				anglesum +=faceangle;
 			
-			// shift data for next edge
-			ftri.radii[1]=ftri.radii[2];
-			ftri.center[1]=ftri.center[2];
-			ftri.radii[2]=cs.rad;
-			ftri.center[2]=cs.center;
-			ftri.setTanPts();
-			ftri.setBaseMobius();
+				// shift data preparing for next edge
+				gtri.radii[2]=gtri.radii[1];
+				gtri.center[2]=gtri.center[1];
+				gtri.radii[1]=cs.rad;
+				gtri.center[1]=cs.center;
+				gtri.setTanPts();
+				gtri.setBaseMobius();
+			} 
 		}
 		
-		// layout c_n again, don't record in packdata
-		he=spokes[n-1];
-		// get next face angle
-		cs=Schwarzian.getThirdCircle(he.getSchwarzian(),2,ftri.getBaseMobius(),0);
-		anglesum +=cs.center.divide(ftri.center[2]).arg();
+		// next cross edge 2 of ftri until done
+		//   with edge n-2.
+		if (B<(n-1)) {
+			for (int j=B;j<n-1;j++) {
+				double s=schvec.get(j);
+				// get next face angle
+				cs=Schwarzian.getThirdCircle(s,2,ftri.getBaseMobius(),0);
+				int v=j+2;
+				p.packDCEL.setVertCenter(v,cs.center);
+				p.packDCEL.setVertRadii(v,cs.rad);
+				double faceangle=cs.center.divide(ftri.center[2]).arg();
+				anglesum +=faceangle;
+			
+				// shift data preparing for next edge
+				ftri.radii[1]=ftri.radii[2];
+				ftri.center[1]=ftri.center[2];
+				ftri.radii[2]=cs.rad;
+				ftri.center[2]=cs.center;
+				ftri.setTanPts();
+				ftri.setBaseMobius();
+			} 
+		}
+		// layout c_1 again, based on c_{n-2} and c_{n-1},
+		//     but do not record in packdata
+		double s=schvec.get(n-1); // cs.center.arg() ftri.center[2].arg();
+		CircleSimple tmpcs=Schwarzian.getThirdCircle(s,2,ftri.getBaseMobius(),0);
+		double lastangle=tmpcs.center.divide(ftri.center[2]).arg();
+		anglesum +=lastangle;
 		
 		// the 'error' records x=error in radii of c_n, and
 		//    y=error in angle sum
-		Complex error=new Complex(Math.abs(r-cs.rad),Math.abs(anglesum-aim));
-		homecs.center=error;
+		layoutErr.x=(tmpcs.rad-r);
+		layoutErr.y=(anglesum-aim);
 		
-		// rotate by pi/2 to put gamma on y-axis
-		CommandStrParser.jexecute(p,"rotate 0.5");
+		// rotate by pi/2 to put c_1 on y-axis, center 
+		//   on unit circle
+		double rot=p.packDCEL.vertices[1].center.arg();
+		r=p.packDCEL.vertices[1].rad;
+		CommandStrParser.jexecute(p,"rotate "+(0.5-rot/Math.PI));
 		CommandStrParser.jexecute(p,"scale "+1/(1+r));
+		tmpcs.center=tmpcs.center.times(new Complex(0.0,Math.PI/2.0-rot).exp());
+		homecs.center=tmpcs.center.times(1.0/(1.0+r));
+		homecs.rad=tmpcs.rad/(1.0+r);
 		return p;
 	}
 
@@ -1110,6 +1167,34 @@ public class PackCreation {
 		}
 		
 		return centerV; 
+	}
+	
+	/**
+	 * Create an n-tile that has been barycentrically
+	 * subdivided and then its faces hex subdivided.
+	 * The center vert is 1, the n tile vertices are 
+	 * indexed 2,4,..2n, the mid vertices of the bdry
+	 * edges are 3,5,7,.. 
+	 * @param n int, n>=2
+	 * @return PackData
+	 */
+	public static PackData tileHexed(int n) {
+		if (n<2)
+			return null;
+		Tile tile=new Tile(n);
+		PackData p=tile.singleCanonical(3);
+		p.setAlpha(1);
+		p.setGamma(2);
+		p.setGeometry(0);;
+		p.set_aim_default();
+		CommandStrParser.jexecute(p,"set_rad .05 a");
+		CommandStrParser.jexecute(p,"set_aim 1.0 b");
+		double tang=Math.PI*(1.0-2.0/((double)n));
+		for (int m=1;m<=n;m++)
+			p.packDCEL.vertices[2*m].aim=tang;
+		CommandStrParser.jexecute(p,"repack");
+		CommandStrParser.jexecute(p,"layout");
+		return p;
 	}
 	
 	/**

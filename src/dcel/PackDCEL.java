@@ -949,7 +949,6 @@ public class PackDCEL {
 			Color ecol,int thickness) {
 		SideData epair=null;
 		
-// debugging		
 		boolean debug=false; // debug=true;
 	  
 		if (pairLink==null || n<1 || n>pairLink.size() 

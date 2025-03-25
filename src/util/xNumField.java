@@ -10,10 +10,12 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 /**
- * A JTextField for entering/displaying formated real values. 
- * Can specify 3 to 15 digit length (default 8) and specify a
- * title that goes above the field. If no title is given, this
- * just serves to format a number.
+ * A JTextField for entering/displaying formated real 
+ * values. Can specify 3 to 15 digit length (default 8) 
+ * and specify a title that goes above the field. 
+ * If no title is given, this just serves to format 
+ * a number. This field allows formulas in $..$ format.
+
  * @author kens
  */
 public class xNumField extends JPanel {

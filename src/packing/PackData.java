@@ -67,6 +67,7 @@ import tiling.Tile;
 import tiling.TileData;
 import util.ColorUtil;
 import util.DispFlags;
+import util.MathUtil;
 import util.PathBaryUtil;
 import util.PathUtil;
 import util.RadIvdPacket;
@@ -1937,7 +1938,8 @@ public class PackData{
 
 		uP.value=0.0;
 		for (int v=1;v<=nodeCount;v++) {
-			if (!CommonMath.get_anglesum(this,v,0.0,uP)) 
+			double rad=getRadius(v);
+			if (!CommonMath.get_anglesum(this,v,rad,uP)) 
 				throw new DataException("failed to compute angle sum for "+v);
 			setCurv(v,uP.value);
 	    }
@@ -4292,9 +4294,7 @@ public class PackData{
 		  p.genus=genus;
 		  p.intrinsicGeom=intrinsicGeom;
 		  p.activeNode=activeNode;
-		  
-		  
-			  
+		    
 		  // copy tile data, if it exists
 		  if (keepTD && tileData!=null && tileData.tileCount>0) {
 			  p.tileData=tileData.copyMyTileData();
@@ -7055,24 +7055,6 @@ public class PackData{
 	}
 	
 	/**
-	 * check for any non-trivial 'schwarzian's 
-	 * @return boolean
-	 */
-	public boolean haveSchwarzians() {
-		boolean schflag=false;
-		for (int v=1;(v<=nodeCount && !schflag);v++) {
-			HalfLink spokes=packDCEL.vertices[v].getSpokes(null);
-			Iterator<HalfEdge> sis=spokes.iterator();
-			while(sis.hasNext() ) {
-				HalfEdge he=sis.next();
-				if (he.getSchwarzian()!=0.0)
-					schflag=true;
-			}
-		}
-		return schflag;
-	}
-	
-	/**
 	 * Are there any non-trivial inversive distances?
 	 * @return boolean
 	 */
@@ -7194,6 +7176,38 @@ public class PackData{
 					  endZ[0],endZ[1],endZ[2],1,1);
 		  }
 		  return mob;
+	}
+	
+	/**
+	 * Generate a euclidean flower packing based on 'vert'
+	 * but using only its intrinsic schwarzians and recover
+	 * the 'error' in layout of the last petal. See 
+	 * 'PackCreation.seed' for description. 
+	 * Comparing initial/final layouts of cn lead to 
+	 * the 'err'=x+iy, where:
+	 *   x = new minus original radius of cn
+	 *   y = total angle generated minus vert.aim
+	 * 'cs' contains the new data for cn in case the user
+	 * wants to use it.
+	 * @param vert Vertex
+	 * @param err Complex, instantiated by calling routine
+	 * @param cs CircleSimple, instantiated by calling routine
+	 * @return PackData,
+	 */
+	public static PackData schFlowerErr(Vertex vert,Complex err,CircleSimple cs) {
+		if (vert.isBdry())
+			return null;
+		ArrayList<Double> schvals=new ArrayList<Double>();
+		HalfEdge he=vert.halfedge;
+		schvals.add(he.getSchwarzian());
+		he=he.prev.twin;
+		while(he!=vert.halfedge) {
+			schvals.add(he.getSchwarzian());
+			he=he.prev.twin;
+		}
+		int order=MathUtil.getOrder(vert.aim);
+		PackData p=PackCreation.seed(schvals,cs,err,order);
+		return p;
 	}
 	
 		

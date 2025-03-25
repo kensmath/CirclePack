@@ -153,7 +153,7 @@ public class RadiiSliders extends SliderFrame {
 	/**
 	 * when a slider changes, it sends the new value to packData
 	 */
-	public void upValue(int indx) {
+	public void valueToPacking(int indx) {
 		int v=verts.get(indx);
 		packData.setRadius(v,mySliders[indx].value);
 	}
@@ -162,7 +162,7 @@ public class RadiiSliders extends SliderFrame {
 	 * Set slider value from packing data without
 	 * causing change event
 	 */
-	public void downValue(int indx) {
+	public void valueFromPacking(int indx) {
 		int v=verts.get(indx);
 		mySliders[indx].updateValue(packData.getRadius(v));
 	}

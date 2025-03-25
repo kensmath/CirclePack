@@ -10,9 +10,10 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 /**
- * RealField is a panel-contained text field for displaying real
- * values and optionally includes a text label title. It is intended
- * as a re-sizable replacement for the <code>xNumField</code> class.
+ * RealField is a panel-contained text field for 
+ * displaying real values and optionally includes a 
+ * text label title. It is intended as a re-sizable 
+ * replacement for the <code>xNumField</code> class.
  * 
  * @author kens
  * @author Alex Fawkes
@@ -58,8 +59,8 @@ public class RealField extends JPanel {
 	}
 	
 	/**
-	 * Lay out the interface. The title is displayed as a label over the text
-	 * field below.
+	 * Lay out the interface. The title is displayed 
+	 * as a label over the text field below.
 	 */
 	protected void createGUI() {
 		this.setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));

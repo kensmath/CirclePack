@@ -1066,6 +1066,9 @@ public class CommandStrParser {
 				  else if (type.startsWith("Kag")) {
 					  mode=14;
 				  }
+				  else if (type.startsWith("tilebary")) {
+					  mode=15;
+				  }
 			  } catch (Exception ex) {
 				  throw new ParserException("usage: create "+type+" {n}");
 			  }
@@ -1083,7 +1086,7 @@ public class CommandStrParser {
 						  || !(items=flagSegs.remove(0)).remove(0).startsWith("-s"))
 					  newPack=PackCreation.seed(param,0);
 				  else {
-					  Vector<Double> schvec=new Vector<Double>();
+					  ArrayList<Double> schvec=new ArrayList<Double>();
 					  // get as many schwarzians as available
 					  while (items.size()>0) {
 						  String numstr=items.remove(0);
@@ -1102,8 +1105,9 @@ public class CommandStrParser {
 					  }
 					  
 					  CircleSimple cs=new CircleSimple();
-					  newPack=PackCreation.seed(schvec,cs,0);
-					  CirclePack.cpb.msg("seed layout by schwarzian error: "+cs.center);
+					  Complex err=new Complex();
+					  newPack=PackCreation.seed(schvec,cs,err,0);
+					  CirclePack.cpb.msg("flower via schwarzian err: "+err);
 				  }
 				  break;
 			  }
@@ -1340,6 +1344,11 @@ public class CommandStrParser {
 			  case 14: // Kagome lattice
 			  {
 				  newPack=PackCreation.buildKagome(param);
+				  break;
+			  }
+			  case 15: // hex refined tile
+			  {
+				  newPack=PackCreation.tileHexed(param);
 				  break;
 			  }
 			  } // end of switch
@@ -9089,10 +9098,8 @@ public class CommandStrParser {
 				case 'S': // start for flower schwarzians
 				{
 					type = 1;
-					if (!packData.haveSchwarzians()) {
-						if (CommandStrParser.jexecute(packData,"set_sch")<=0)
+					if (CommandStrParser.jexecute(packData,"set_sch")<=0)
 							throw new DataException("failed to compute schwarzians");
-					}
 					break;
 				}
 				case 'A': // start for angle sum sliders
@@ -9547,7 +9554,7 @@ public class CommandStrParser {
 	    	  if (cmd.startsWith("sch")) { 
     			  HalfLink hlink=null; 
     			  boolean givenx=false; 
-    			  double sch_value=0.0;
+    			  double sch_value=0.0; // default
 
     			  if (flagSegs==null || flagSegs.size()==0 || 
     					  flagSegs.get(0).size()==0) {
@@ -10761,6 +10768,7 @@ public class CommandStrParser {
 	  	     			  case 't': {act |= 010000;break;} // triangles
 	  	     			  case 'T': {act |= 020000;break;} // tiles (if 'TileData' exists)
 	  	     			  case 'F': {act |= 0200000;break;} // dual faces as a tiling
+	  	     			  case 'h': {act |= 020000000;break;} // intrinsic schwarzians
 	  	     			  case 's': { // write to the script file
 	  	     				  if (cmd.charAt(0)=='W') {
 	  	     					  CirclePack.cpb.myErrorMsg("Can't 'Write' (cap 'W') to script");

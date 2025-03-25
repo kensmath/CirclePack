@@ -1,11 +1,14 @@
 package tiling;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 
 import allMains.CirclePack;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.Vertex;
 import dcel.CombDCEL;
+import dcel.PackDCEL;
+import deBugging.DCELdebug;
 import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.ParserException;
@@ -83,12 +86,14 @@ public class TileBuilder {
 	/**
 	 * Build associated full barycentric complex for origTD: 
 	 * that is, every n-tile is barycentrically subdivided to 
-	 * form 2n triangles, and these are then barycentrically 
-	 * subdivided. (This is required, e.g., to handle unigons, 
-	 * digons, and slits.) Vertices get marks {1,2,3} if they 
+	 * form 2n triangles, and these are then hex subdivided.
+	 * (This is required, e.g., to handle, digons, slits, and
+	 * some self-pastings. We have no consistent way to handle
+	 * uniqons, so things will fail there.) 
+	 * Vertices get 'mark's {1,2,3} if they 
 	 * are, resp, baryVert, original corner, edge barycenter 
-	 * (for Belyi map values {infty, 0,1}). Also, barycenter 
-	 * of each hex face is marked -1.
+	 * (for Belyi map values {infty, 0,1}, resp). Also, 
+	 * barycenter of each hex face is marked -1.
 	 * 
 	 * Strategy:
 	 * * we work purely from 'tileFlower' data, so we discard and 
@@ -433,10 +438,219 @@ public class TileBuilder {
 	}
 	
 	/**
+	 * Try to replace 'fullfronmFlowers' because it seemed
+	 * to fail for tiled surfaces, such as genus2. Some of
+	 * this copies 'PackData.adjoinCall'.
+	 * @return PackData
+	 */
+	public PackData newfromFlowers() {
+
+		boolean debug=false; // debug=true;
+		
+		// check that all tiles have 'tileFlower's
+		boolean noflower=false;
+		for (int t=1;(t<=origTD.tileCount && !noflower);t++) {
+			Tile otile = origTD.myTiles[t];
+			if (otile.tileFlower==null)
+				noflower=true;
+		}
+		if (noflower) {
+			TileData.setTileFlowers(origTD); // DebugHelp.printtileflowers(origTD);
+		}
+
+		// Problems working only with DCEL structures, so we
+		//   keep recreating 'newPack' as we go
+		PackData newPack=null;
+		
+		// In case some tiles are null, we need to 
+		//   reindex the tiles and put them in 
+		//   order in 'tmpTiles'
+		PackDCEL[] tileDCELs=new PackDCEL[origCount+1];
+		int newindx=1;
+		for (int j=1;j<=origCount;j++) {
+			Tile tile=origTD.myTiles[j];
+			if (tile!=null) {
+				int[][] holdflower=tile.tileFlower;
+				PackData pd=tile.singleCanonical(3);
+				tileDCELs[newindx]=pd.packDCEL;
+				origTD.myTiles[j]=pd.tileData.myTiles[1];
+				origTD.myTiles[j].tileIndex=newindx;
+				origTD.myTiles[j].tileFlower=holdflower;
+				newindx++;
+			}
+		}
+		origTD.tileCount=newindx-1;
+
+		// do pasting of all sides for each tile when it is
+		//   attached to masterDCEL
+		// 'touchedTiles[]' is 0 until tile has been
+		//   attached. Then it is 1. After all its
+		//   edges are done, it is set to 2.
+		int[] touchedTiles=new int[origCount+1];
+		PackDCEL masterDCEL=tileDCELs[1];
+		touchedTiles[1]=1;
+		
+		// two lists of tiles: attach all from 'curr' 
+		//   and complete all edge pastings. Add
+		//   new times encountered to 'next'
+		ArrayList<Integer> curr=new ArrayList<Integer>();
+		ArrayList<Integer> next=new ArrayList<Integer>();
+		next.add(1);
+		while (!next.isEmpty()) {
+			curr=next;
+			next=new ArrayList<Integer>();
+			
+			while (!curr.isEmpty()) {
+				Tile currT=origTD.myTiles[curr.remove(0)];
+				if (touchedTiles[currT.tileIndex]==2)
+					continue; // already done
+				
+				// find sides to paste; each has 4 edges.
+				// after sides are pasted, indicate by 
+				// setting tileFlower[c][0] negative.
+				int cvc=currT.vertCount;
+				int v=-1;
+				int w=-1;
+				for (int c=0;c<cvc;c++) {
+					int[] cLeaf=currT.tileFlower[c];
+					if (cLeaf[0]<=0)
+						continue; // already pasted or bdry
+					Tile nghbT=origTD.myTiles[cLeaf[0]];
+					boolean selfadjoin=true;
+					if (touchedTiles[nghbT.tileIndex]==0) // 'nghbT' not yet attached
+						selfadjoin=false;
+					int side=cLeaf[1];
+
+					// we work with clones
+					PackDCEL pdc1=CombDCEL.cloneDCEL(masterDCEL);
+					int vertCount1=pdc1.vertCount;
+					PackDCEL pdc2=CombDCEL.cloneDCEL(tileDCELs[nghbT.tileIndex]);
+					int vertCount2=pdc2.vertCount;
+					// for adjoining, need far end of side of currT
+					v=currT.vert[(c+1)%currT.vertCount];
+					w=nghbT.vert[side];
+					
+// debugging
+//System.out.println("next pasting: "+currT.tileIndex+"/"+c
+//		+" to "+nghbT.tileIndex+"/"+side+"; vertices v = "+v+" to w = "+w);
+					if (debug) { // debug=true; 
+						return newPack;
+					}
+
+					// do the pasting
+					if (!selfadjoin) {
+						masterDCEL=CombDCEL.adjoin(pdc1,pdc2,v,w,4);
+					}
+					else {
+						masterDCEL=CombDCEL.adjoin(pdc1,pdc1,v,w,4);
+					}
+					
+					VertexMap oldnew=masterDCEL.oldNew;
+					CombDCEL.redchain_by_edge(masterDCEL, null, null, selfadjoin);
+					CombDCEL.fillInside(masterDCEL);
+					masterDCEL.oldNew=oldnew;
+					newPack=new PackData(null);
+					newPack.attachDCEL(masterDCEL);
+					newPack.tileData=origTD;
+					newPack.tileData.packData=newPack;
+					PackDCEL pdcel=newPack.packDCEL;
+					newPack.vertexMap=masterDCEL.oldNew;
+					newPack.status=true;
+					
+// debugging
+//DCELdebug.printVertexMap(newPack.vertexMap);
+
+					// record touch?
+					if (touchedTiles[nghbT.tileIndex]==0) {
+						touchedTiles[nghbT.tileIndex]=1;
+						next.add(nghbT.tileIndex);
+					}
+
+					// adjust various 'Tile.vert' entries using oldNew
+					
+					// if a new tile is being added, only adjust it
+					if (!selfadjoin) { // DCELdebug.printVertexMap(newPack.vertexMap);
+						
+// debugging
+//printTileVerts(nghbT);
+		   				for (int k=0;k<nghbT.vertCount;k++) {
+		   					int nv=newPack.vertexMap.findW(nghbT.vert[k]);
+		   					if (nv!=0)
+		   						nghbT.vert[k]=nv;
+		   				}
+		   				for (int k=0;k<nghbT.augVertCount;k++) {
+		   					int nv=newPack.vertexMap.findW(nghbT.augVert[k]);
+		   					if (nv!=0)
+		   						nghbT.augVert[k]=nv;
+		   				}
+		   				int mv=newPack.vertexMap.findW(nghbT.baryVert);
+		   				if (mv!=0)
+		   					nghbT.baryVert=mv;
+// debugging
+//printTileVerts(nghbT);
+					}
+					
+					// else, look through all touched tiles
+					else {
+						for (int t=1;t<=origTD.tileCount;t++) {
+							Tile ttile=origTD.myTiles[t];
+							if (touchedTiles[t]>0) {
+
+// debugging
+//printTileVerts(ttile);
+								for (int k=0;k<ttile.vertCount;k++) {
+									int nv=newPack.vertexMap.findW(ttile.vert[k]);
+									if (nv!=0)
+										ttile.vert[k]=nv;
+								}
+								for (int k=0;k<ttile.augVertCount;k++) {
+									int nv=newPack.vertexMap.findW(ttile.augVert[k]);
+									if (nv!=0)
+										ttile.augVert[k]=nv;
+								}
+								int mv=newPack.vertexMap.findW(ttile.baryVert);
+								if (mv!=0)
+									ttile.baryVert=mv;
+// debugging
+//printTileVerts(ttile);
+							}
+						}
+					}
+
+// debugging					
+//System.out.println("after pasting, tile baryverts "+currT.baryVert
+//					+ " pasted to "+nghbT.baryVert+"\n");
+
+					// indicate these sides are done
+					cLeaf[0]=-cLeaf[0]; // show it's been used
+					int[] nLeaf=nghbT.tileFlower[side];
+					nLeaf[0]=-nLeaf[0];
+				} // done with all sides of this tile
+				touchedTiles[currT.tileIndex]=2;
+			} // done with all tiles in 'curr'
+		} // continue until 'next' is empty
+
+		// make tileFlowers entries non-negative
+		for (int t=1;t<=origTD.tileCount;t++) {
+			Tile tile=origTD.myTiles[t];
+			int[][] tf=tile.tileFlower;
+			for (int j=0;j<tile.vertCount;j++)
+				if (tf[j][0]<0)
+					tf[j][0]=-tf[j][0];
+		}
+			
+		newPack.tileData=origTD;
+		newPack.tileData.packData=newPack;
+		newPack.set_aim_default();
+		newPack.status=true;
+		return newPack;
+	}
+	
+	/**
 	 * Start with packing for barycentric subdivision of tiling. 
 	 * The packing has 'tileData' and vertices are marked: 
 	 * 1 = tile baryVert, 2 = tile corner, 3 = tile edge barycenter. 
-	 * Barycenters of hex-refined faces are marked -1. All tiles 
+	 * Barycenters of bary-refined faces are marked -1. All tiles 
 	 * have 'augVert's.
 	 * 
 	 * Here we build 'dual', 'quad', and all white/grey tilings. 
@@ -487,8 +701,10 @@ public class TileBuilder {
 				}
 				he=he.prev.twin; // cclw
 			} while (wanthe==null && he!=vert.halfedge);
-			if (wanthe==null)
-				throw new CombException("didn't find edge toward vert[0]");
+			if (wanthe==null) {
+				CirclePack.cpb.errMsg("didn't find edge toward vert[0]");
+				return 0;
+			}
 			vert.halfedge=wanthe;
 			int[] myflower=p.getFlower(bv);
 
@@ -558,8 +774,8 @@ public class TileBuilder {
 						//   edge barycenter, then closes up to start (v is not
 						//   a corner of the dual, but acts as barycenter).
 						// Use sides of wgtile tiles opposite to v
-						int []augvert=new int[num+4];
-						int []vert=new int[num/4+1];
+						int[] augvert=new int[num+4];
+						int[] vert=new int[num/4+1];
 						dtile.wgIndices=new int[num/2];
 						dtile.baryVert=v;
 						
@@ -1121,14 +1337,14 @@ public class TileBuilder {
 	/**
 	 * This routine adds tile vertices to tiles of 'td'
 	 * based entirely on 'td's tileFlowers. This accommodates
-	 * cases, such as existence of uniqons, digons, slits, 
+	 * cases, such as existence of digons, slits, 
 	 * or self-pastings (e.g., perhaps non-simply connected 
 	 * surfaces), where we must specify the tiling using 
 	 * 'tileFlower' information (as when it was read from a 
 	 * file with data in form 'TILEFLOWERS:'). 
 	 * 
-	 * Return nodecount, -1 on failure (e.g., if 'tileflowers' are 
-	 * not set in 'td');
+	 * Return nodecount, -1 on failure (e.g., if 'tileflowers' 
+	 * are not set in 'td');
 
 	 * @param td TileData
 	 * @return int, nodecount, -1 on error
@@ -1241,4 +1457,10 @@ public class TileBuilder {
 		return tick-1;
 	}
 	
+	public void printTileVerts(Tile tile) {
+		StringBuilder strbld=new StringBuilder("Tile: "+tile.tileIndex+" baryVert = "+tile.baryVert+"; disp -cfn  ");
+		for (int j=0;j<tile.vertCount;j++)
+			strbld.append(tile.vert[j]+"  ");
+		System.out.println(strbld.toString());
+	}
 }

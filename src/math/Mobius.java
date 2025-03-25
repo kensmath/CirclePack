@@ -171,8 +171,10 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 */
 	public void normalize() {
 		Complex dett = det();
-		if (dett.abs() < .000000001)
-			throw new MobException("Mobius: det too small to trust");
+		if (dett.abs() < .000000001) {
+			CirclePack.cpb.errMsg("Mobius: det too small to trust");
+			return;
+		}
 		if (dett.sub(new Complex(1.0)).abs() > .0000001) {
 			Complex detSqrt = dett.sqrt().reciprocal();
 			a = a.times(detSqrt);

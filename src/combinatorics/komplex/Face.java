@@ -5,14 +5,15 @@ import java.awt.Color;
 import util.ColorUtil;
 
 /**
- * Structure for face information; this was designed for triangular faces,
- * later modified for more general polygonal faces. Note that in CirclePack,
- * face indices are not persistent but created on the fly.
+ * Structure for face information; this was designed for 
+ * triangular faces, later modified for more general 
+ * polygonal faces. Note that in CirclePack, face indices 
+ * are not persistent but created on the fly.
  * @author kens
  *
  */
 public class Face{
-     public int vert[];      // ordered tuple of vertices 
+     public int vert[];      // ordered list of vertices 
      						 //   Note: first index is not repeated at end
      public int vertCount;	 // number of vertices (default 3)
      public int indexFlag;   // which circles to use for drawing? use verts

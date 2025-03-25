@@ -3,8 +3,8 @@ package widgets;
 import javax.swing.JSlider;
 
 /**
- * This extension of JSLider holds an index and uses doubles for
- * min, max, and value. 
+ * This extension of JSlider holds an index and uses 
+ * doubles for min, max, and value. 
  * ken, 6/2020
  */
 public class IndexedJSlider extends JSlider {
@@ -13,7 +13,7 @@ public class IndexedJSlider extends JSlider {
 	static final int MIN_VALUE=0;
 	static final int MAX_VALUE=1000;
 	
-	int myIndx; // holds the user-rescribed index 
+	int myIndx; // holds the user-prescribed index 
 	SliderFrame sfparent; // slider frame parent
 	
 	public IndexedJSlider(SliderFrame sfp,int indx) {
@@ -29,7 +29,7 @@ public class IndexedJSlider extends JSlider {
 		setMyValue(val);
 		this.fireStateChanged();
 	}
-	
+
 	public int getIndex() {
 		return myIndx;
 	}
@@ -53,7 +53,7 @@ public class IndexedJSlider extends JSlider {
 	}
 	
 	/**
-	 * For JSlider, have to convert to integer
+	 * For JSlider, have to convert value to integer
 	 * @param x double
 	 */
 	public void setMyValue(double x) {

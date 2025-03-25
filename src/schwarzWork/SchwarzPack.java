@@ -4,36 +4,39 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
+import allMains.CPBase;
+import allMains.CirclePack;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.Vertex;
 import complex.Complex;
 import dcel.CombDCEL;
+import exceptions.CombException;
+import geometry.CircleSimple;
+import input.CommandStrParser;
 import listManip.HalfLink;
 import listManip.NodeLink;
 import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
+import util.StringUtil;
 
 /**
  * This class is for experimenting with use of
  * intrinsic schwarzians in computing circle
  * packings, particularly on the sphere or 
- * on projective surfaces. (We work with 'uzians'
- * instead, with u=1-s.) After initializing the
- * uzians, they are updated locally and in the
- * parent packing.
+ * on projective surfaces. The intrinsic schwarzians
+ * and the aims are maintained in the packing 
+ * (though schwarzians are sometimes converted 
+ * to 'uzians' for computations).
  * 
- * I am first going to try a randomized approach.
- * I need routines
- *  + Set initial uzian guess (modes?)
- *  + pick random interior edge
- *  + get preceeding n-3 schwarzians
- *  + check labels: un-branched? full? branched
- *  + compute new uzian.
- *  + apply adjustment strategy (modes?)
- *  + remove/replace degree 3 (iteratively)
- *  + need status computation: perhaps layout as euclidean
- *    and use angle sum.
+ * The code maintains 'currentErrors' which is one way
+ * to measure the quality of a potential packing. Each
+ * time an adjustment to an edge schwarzian is made,
+ * the errors of its two ends must be updated.
+ * 
+ * I am first going to try a randomized approach:
+ * random edge, apply adjustment strategy (modes?),
+ * check status (perhaps look for worst edges), etc.
  * 
  * @author ken stephenson, February 2025
  * 
@@ -41,9 +44,8 @@ import util.CmdStruct;
 public class SchwarzPack extends PackExtender {
 	final static double sqrt3=Math.sqrt(3);
 
-	double[][] uzianArray; // uzians[node][petal]
-	ArrayList<Integer> branchVertices; // for now, at most simple branching
-	int test_mode;
+	Complex[] currentErrors; // latest errors for all vertices
+	int test_mode; // mode for making adjustments
 
 	// Constructors
 	public SchwarzPack(PackData p) {
@@ -58,9 +60,9 @@ public class SchwarzPack extends PackExtender {
 		test_mode=1; // default
 		try {
 			this.cpCommand("set_sch");
-			uzianArray=uziansFromPack(packData);
+			currentErrors=setCurrentErrors();
 		} catch (Exception ex) {
-			Oops("Failed to form 'uzianArray'");
+			Oops("Failed in computing errors");
 			running=false;
 		}
 		if (running) {
@@ -82,6 +84,7 @@ public class SchwarzPack extends PackExtender {
 			}
 			return 1;
 		}
+
 		else if (cmd.startsWith("status")) {
 			NodeLink vlink=null;
 			if (flagSegs!=null && (items=flagSegs.get(0)).size()>0)
@@ -90,16 +93,53 @@ public class SchwarzPack extends PackExtender {
 				vlink=new NodeLink(packData,"i");
 			Iterator<Integer> vlt=vlink.iterator();
 			int count=0;
-			while (vlt.hasNext() && count<5) { // at most 5
+			while (vlt.hasNext()) {
 				Vertex vert=packData.packDCEL.vertices[vlt.next()];
-				Complex err=errorAtVert(vert);
-				if (err==null)
-					Oops("error in errorAtVert for v"+vert.vertIndx);
 				this.msg("status of vert "+vert.vertIndx+
-						": error is "+err.abs());
+						": error is "+currentErrors[vert.vertIndx]);
 				count++;
 			}
 			return count;
+		}
+	
+		// show eucl flower in other window; form eflo -q{q} v
+		else if (cmd.startsWith("eflo")) { 
+
+			// choose packing and vertex: 
+			//    default to next pack, mod 3 and first interior
+			//    vertex
+			int qnum=(packData.packNum+1)%CPBase.NUM_PACKS;
+			int vindx=NodeLink.grab_one_vert(packData,"i");
+			try {
+				items=flagSegs.get(0);
+				String str=items.get(0);
+				if (StringUtil.isFlag(str)) {
+					 int qq=StringUtil.qFlagParse(str);
+					 if (qq>0 && qq!=packData.packNum)
+						 qnum=qq;
+					 items.remove(0);
+				}
+				vindx=NodeLink.grab_one_vert(packData,items.get(0));
+			} catch(Exception ex) {
+				Oops("eflower: |sm| sch -q{x} v"+ex.getMessage());
+			}
+
+			Vertex vert=packData.packDCEL.vertices[vindx];
+			if (vert.isBdry())
+				return 0;
+			Complex err=new Complex(0.0);
+			CircleSimple cs=new CircleSimple();
+			PackData newData=PackData.schFlowerErr(vert, err, cs);
+  		  	if (newData==null) 
+   		  		throw new CombException("|sp| eflower has failed");
+  		  	int nDn=newData.nodeCount;
+   		  	CPBase.packings[qnum]=CirclePack.cpb.swapPackData(newData,qnum,false);
+   		  	CommandStrParser.jexecute(CPBase.packings[qnum],"Disp -w -c");
+   		  	// also draw new last petal.
+   		  	CPBase.packings[qnum].packDCEL.vertices[nDn].setCircleSimple(cs);
+   		  	CommandStrParser.jexecute(CPBase.packings[qnum],"disp -cc195 "+nDn);
+			msg("Layout error in p"+qnum+" for flower "+vindx+" is "+err); // this contains the error
+			return 1;
 		}
 		else if (cmd.startsWith("run")) {
 			int N=1000; // default number of runs
@@ -127,8 +167,55 @@ public class SchwarzPack extends PackExtender {
 					" and uzB = "+cresults.uzB);
 			return 1;
 		}
+		else if (cmd.startsWith("one")) { // one edge
+			HalfEdge he=null;
+			try {
+				items=flagSegs.get(0);
+				HalfLink nlink=new HalfLink(packData,items);
+				he=nlink.get(0);
+			} catch(Exception ex) {
+				return 0;
+			}
+			CompResults cresults=compEdgeUzians(he);
+			msg("one: "+he+": original = "+he.getSchwarzian()+
+					" computed = "+(1.0-cresults.newUzian(test_mode)));
+			return 1;
+		}
 		
-		return 1;
+		// recompute entries for currentErrors. This may be due
+		//   to computational drift or to the fact that new
+		//   schwarzians have been set in 'packData'.
+		else if (cmd.startsWith("reset")) { 
+			currentErrors=setCurrentErrors();
+			return 1;
+		}
+
+		else if (cmd.startsWith("worst")) {
+			int[] errV=worstErrors();
+			double rplus=0.0;
+			double rminus=0.0;
+			double aplus=0.0;
+			double aminus=0.0;
+			if (errV[0]!=0)
+				rplus=currentErrors[errV[0]].x;
+			if (errV[1]!=0)
+				rminus=currentErrors[errV[1]].x;
+			if (errV[2]!=0)
+				aplus=currentErrors[errV[2]].y;
+			if (errV[3]!=0)
+				aminus=currentErrors[errV[3]].y;
+			msg("Worst errors, radii/angles, positive/negative:");
+			if (errV[0]>0)
+				msg("Positive radius error = "+rplus+" at v"+errV[0]);
+			if (errV[1]>0)
+				msg("Negative radius error = "+rminus+" at v"+errV[1]);
+			if (errV[2]>0)
+				msg("Positive angle error = "+aplus+" at v"+errV[2]);
+			if (errV[3]>0)
+				msg("Negative angle error = "+aminus+" at v"+errV[3]);
+			return 1;
+		}
+		return 0;
 	}
 	
 	public int runTrials(int N) {
@@ -143,19 +230,75 @@ public class SchwarzPack extends PackExtender {
 	}
 	
 	/**
-	 * Find the complex error when this flower is laid out
-	 * using uzians.
-	 * @param vert Vertex
-	 * @return Complex x+iy, x=error in radii, y=error in angle
+	 * Initiate persistent array of "errors" at
+	 * the vertices based on current schwarzians.
+	 * This should be called on loading and if
+	 * necessary when lots of new schwarzians are
+	 * set. Otherwise, it should be updated for the
+	 * two end vertices whenever an edge has its
+	 * schwarzian adjusted. Entry is null for bdry
+	 * vertices.
+	 * @return ArrayList<Complex>
 	 */
-	public Complex errorAtVert(Vertex vert) {
-		if (vert.isBdry())
-			return null;
-		int order=0;
-		if (branchVertices.contains(vert.vertIndx))
-			order=1;
-		double[] uz=getUzians(vert);
-		return SchFlowerData.euclFlower(uz,order);
+	public Complex[] setCurrentErrors() {
+		NodeLink nlink=new NodeLink(packData,"a");
+		Complex[] cE=new Complex[packData.nodeCount+1];
+		Iterator<Integer> nls=nlink.iterator();
+		while (nls.hasNext()) {
+			int v=nls.next();
+			Vertex vert=packData.packDCEL.vertices[v];
+			if (vert.isBdry())
+				cE[v]=null;
+			else {
+				CircleSimple cs=new CircleSimple();
+				Complex err=new Complex(0.0);
+				PackData.schFlowerErr(vert, err, cs);
+				cE[v]=err;
+			}
+		}
+		return cE;
+	}
+
+	/**
+	 * Identify the vertices with the worst errors in
+	 * four categories: 
+	 *   ans[0]: most positive radius error
+	 *   ans[1]: most negative radius error
+	 *   ans[2]: most positive angle error
+	 *   ans[3]: most negative angle error
+	 * ans[.]=0 means there were no instances of that
+	 * comparison.
+	 * @return int[4]
+	 */
+	public int[] worstErrors() {
+		int[] ans=new int[4];
+		double radplus=0.0;
+		double radminus=0.0;
+		double angplus=0.0;
+		double angminus=0.0;
+		for (int v=1;v<=packData.nodeCount;v++) {
+			Complex err=currentErrors[v];
+			double r=err.x;
+			double a=err.y;
+			
+			if (r>radplus) {
+				ans[0]=v;
+				radplus=r;
+			}
+			if (r<radminus) {
+				ans[1]=v;
+				radminus=r;
+			}
+			if (a>angplus) {
+				ans[2]=v;
+				angplus=a;
+			}
+			if (a<angminus) {
+				ans[3]=v;
+				angminus=a;
+			}
+		}
+		return ans;
 	}
 	
 	// ---------------- static routines ----------------------
@@ -177,64 +320,7 @@ public class SchwarzPack extends PackExtender {
 			return null;
 		return he;
 	}
-	
-	/**
-	 * Get the closed list of uzians for interior 
-	 * vertices from the packing. Boundary vert will
-	 * have null list. 
-	 * @param packData PackData
-	 * @return double[v][j] or null for bdry verts
-	 */
-	public static double[][] uziansFromPack(PackData packData) {
-		double[][] uarray=new double[packData.nodeCount+1][];
-		for (int v=1;v<=packData.nodeCount;v++) {
-			Vertex vert=packData.packDCEL.vertices[v];
-			int n=vert.getNum();
-			if (vert.isBdry()) {
-				uarray[v]=null;
-				continue;
-			}
-			uarray[v]=new double[n+1];
 			
-			HalfEdge he=vert.halfedge;
-			uarray[v][0]=1.0-he.getSchwarzian();
-			he=he.prev.twin;
-			int tick=1;
-			while (he!=vert.halfedge) {
-				uarray[v][tick++]=1.0-he.getSchwarzian();
-				he=he.prev.twin;
-			}
-			uarray[v][n]=uarray[v][0]; // close up
-		}
-		return uarray;
-	}
-	
-	/**
-	 * Store schwarzians of interior vertices of
-	 * the packing from given array. 
-	 * @param packData PackData
-	 * @param uarray double[][]
-	 * @return int count
-	 */
-	public static int schwarzians2packing(PackData packData,double[][] uarray) {
-		int tick=1;
-		for (int v=1;v<=packData.nodeCount;v++) {
-			Vertex vert=packData.packDCEL.vertices[v];
-			if (vert.isBdry()) {
-				uarray[v]=null;
-				continue;
-			}
-			HalfEdge he=vert.halfedge;
-			he.setSchwarzian(1.0-uarray[v][0]);
-			he=he.prev.twin;
-			while (he!=vert.halfedge) {
-				he.setSchwarzian(1.0-uarray[v][tick++]);
-				he=he.prev.twin;
-			}
-		}
-		return tick;
-	}
-	
 	/**
 	 * Given edge, compute for each end Vertex the 
 	 * edge's uzian based on the previous n-3 flower
@@ -254,10 +340,11 @@ public class SchwarzPack extends PackExtender {
 		int nB=cresults.degB;
 		ArrayList<Double> uarray;
 		if (!cresults.endA.isBdry()) {
-			HalfEdge he=edge.prev.next.prev.next;
-			double[] uz=new double[nA];
-			int tick=0;
-			while (tick<nA) {
+			// get uzians starting 3 edges cclw
+			HalfEdge he=edge.prev.twin.prev.twin.prev.twin;
+			double[] uz=new double[nA+1];
+			int tick=1; // uzians indexed from 1
+			while (tick<=nA) {
 				uz[tick++]=1.0-he.getSchwarzian();
 				he=he.prev.twin;
 			}
@@ -266,9 +353,10 @@ public class SchwarzPack extends PackExtender {
 					(sqrt3*uarray.get(nA-2)));
 		}
 		if (!cresults.endB.isBdry()) {
-			HalfEdge he=edge.twin.prev.next.prev.next;
-			double[] uz=new double[nB];
-			int tick=0;
+			// get uzians starting 3 edges cclw
+			HalfEdge he=edge.twin.prev.twin.prev.twin.prev.twin;
+			double[] uz=new double[nB+1];
+			int tick=1; // uzians indexed from 1
 			while (tick<nB) {
 				uz[tick++]=1.0-he.getSchwarzian();
 				he=he.prev.twin;
@@ -290,14 +378,12 @@ public class SchwarzPack extends PackExtender {
 		he=he.prev.twin;
 		int tick=1;
 		while (he!=vert.halfedge) {
-			uzians[tick++]=he.getSchwarzian();
+			uzians[tick++]=1.0-he.getSchwarzian();
 			he=he.prev.twin;
 		}
 		return uzians;
 	}
-	
-
-	
+		
 	// -------------------- command explanations --------
 	public void initCmdStruct() {
 		super.initCmdStruct();
@@ -311,6 +397,14 @@ public class SchwarzPack extends PackExtender {
 				"Run trial with N iterations, default to 1000"));
 		cmdStruct.add(new CmdStruct("status","{v ..}",null,
 				"check the packing status of give vertices."));
+		cmdStruct.add(new CmdStruct("eflow","-q{p} v",null,
+				"construct flower for vertex v from schwarzians, put in "+
+						"pack p and display --- note that indices will not "+
+						"agree with original"));
+		cmdStruct.add(new CmdStruct("reset",null,null,
+				"recompute the 'currentErrors' for all interior vertices"));
+		cmdStruct.add(new CmdStruct("worst",null,null,
+				"Report worst pos/neg radius and angle errors."));
 //		cmdStruct.add(new CmdStruct(""))
 	}
 	

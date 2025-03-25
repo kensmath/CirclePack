@@ -7,7 +7,9 @@ import javax.swing.BoxLayout;
 import javax.swing.JPanel;
 
 import combinatorics.komplex.HalfEdge;
+import complex.Complex;
 import exceptions.DataException;
+import geometry.CircleSimple;
 import input.CommandStrParser;
 import listManip.HalfLink;
 import packing.PackData;
@@ -20,8 +22,18 @@ import widgets.SliderFrame;
  * intrinsic schwarzians s for flowers -- see 
  * "flower" command in 'SchwarzMap.java'. 
  * Note: often computations use the u-variable,
- * u=1-s, see "SchFlowerData", but this slider 
- * controls s itself.
+ * u=1-s, see "SchFlowerData", but these sliders 
+ * controls the s's themselves.
+ * 
+ * Display will also so the "errors" in the effect
+ * of the current schwarzians, see 'SchFlowerData.
+ * euclFlower'.
+ * 
+ * CAUTION: the 'errors' depend on layout process: we
+ * start layout using the edge schwarzian closest to 
+ * the uniform for an n-flower. Starting with a 
+ * different edge could give different errors. Fortunately,
+ * error = 0 is independent of layout process.
  * 
  * @author kstephe2, June 2020
  *
@@ -33,17 +45,15 @@ public class SchFlowerSliders extends SliderFrame {
 	private static final double min_s_variable=-2.0;
 	private static final double max_s_variable=1.0;
 	
-	// fields for last 3 computed schwarzians
-	private xNumField field_nm2; 
-	private xNumField field_nm1; 
-	private xNumField field_n; 
+	private xNumField angError;
+	private xNumField radError;
 			
-	HalfLink hedges; // flower edges for the widget
+	HalfLink hedges; // flower edges, indexed from 0
 	public int flowerDegree;
 	
 	// constructors
 	public SchFlowerSliders(PackData p,Double[] schval) {
-		this(p,"|sm| sch -r;|sm| sch -f","",schval);
+		this(p,"|sm| sch -r;|sm| sch -e","",schval);
 	}
 
 	public SchFlowerSliders(PackData p,String chgcmd,
@@ -61,7 +71,7 @@ public class SchFlowerSliders extends SliderFrame {
 		flowerDegree=hedges.size();
 		
 		// Note: schwarzians are same for edge and their twins
-		sliderCount=flowerDegree-3;
+		sliderCount=flowerDegree;
 		setTitle("Schwarzians for p"+packData.packNum);
 		setHelpText(new StringBuilder("These sliders control selected "
 				+ "edge intrinsic schwarzians s. "
@@ -84,24 +94,13 @@ public class SchFlowerSliders extends SliderFrame {
 	
 	/**
 	 * Get schwarzian directly from packData
-	 * @param indx int, starting at 0
+	 * @param indx int, indexing starting at 0
 	 * @return double
 	 */
 	public double getParentValue(int indx) {
 		return packData.getSchwarzian(hedges.get(indx));
 	}
 	
-	/**
-	 * When an adjustment goes wrong, this puts an
-	 * error message in the  
-	 * @param errstr
-	 */
-	public void showSchError(String errstr) {
-		if (type!=SCHFLOWER)
-			return;
-		
-	}
-
 	// ============= abstract methods ==================
 	
 	public void populate() {
@@ -121,8 +120,9 @@ public class SchFlowerSliders extends SliderFrame {
 			}
 			String str=new String(vv+" "+ww);
 			double sch=getParentValue(tick);
-			tmpSliders[tick]=
-			new ActiveSlider(this,tick,str,sch,true);
+			if (tick<sliderCount)
+				tmpSliders[tick]=
+					new ActiveSlider(this,tick,str,sch,true);
 			tick++;
 		}
 
@@ -145,7 +145,7 @@ public class SchFlowerSliders extends SliderFrame {
 	 * @param indx integer
 	 * @return
 	 */
-	public void downValue(int indx) {
+	public void valueFromPacking(int indx) {
 		double val=getParentValue(indx);
 		mySliders[indx].updateValue(val);
 	}
@@ -153,13 +153,15 @@ public class SchFlowerSliders extends SliderFrame {
 	/**
 	 * Stores schwarzian in packData
 	 */
-	public void upValue(int indx) {
+	public void valueToPacking(int indx) {
 		packData.setSchwarzian(hedges.get(indx),(Double)(mySliders[indx].value));
+		this.updateErrorFields();
 	}
 	
 	/**
-	 * Done here to embellish with displays of the
-	 * last 3 schwarzians (computed from the others).
+	 * This is done here to embellish with displays of
+	 * the "error" in radii and angle when laying out
+	 * a flower.
 	 */
 	public void createSliderPanel() {
 		sliderPanel=new JPanel();
@@ -168,13 +170,10 @@ public class SchFlowerSliders extends SliderFrame {
 		optionalPanel=new JPanel();
         optionalPanel.setBackground(new Color(200,230,255));
 		optionalPanel.setLayout(new BoxLayout(optionalPanel,BoxLayout.LINE_AXIS));
-		int M=flowerDegree+1;
-		field_nm2=new xNumField((flowerDegree-2)+" "+M,7);
-		field_nm1=new xNumField((flowerDegree-1)+" "+M,7);
-		field_n=new xNumField(flowerDegree+" "+M,7);
-		optionalPanel.add(field_nm2);
-		optionalPanel.add(field_nm1);
-		optionalPanel.add(field_n);
+		angError=new xNumField("angle 'error': ",7);
+		radError=new xNumField("radium 'error': ",7);
+		optionalPanel.add(angError);
+		optionalPanel.add(radError);
 	}
 	
 	public void setChangeField(String cmd) {
@@ -193,8 +192,18 @@ public class SchFlowerSliders extends SliderFrame {
 		motionAction(indx); // see if there's a motion command to execute
 	}
 	
+	// recompute/display errors
+	public void updateErrorFields() {
+		CircleSimple cs=new CircleSimple();
+		Complex err=new Complex(0.0);
+		PackData.schFlowerErr(packData.packDCEL.vertices[packData.nodeCount],err,cs);
+		radError.setValue(err.x);
+		angError.setValue(err.y);
+	}
+	
 	/**
-	 * triggers change action
+	 * Triggered by value field changes, kick back
+	 * to 'SliderFrame'.
 	 */
 	public void changeValueField_action(double val, int indx) {
 		valueField_action(val,indx);

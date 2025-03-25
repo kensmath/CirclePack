@@ -248,10 +248,13 @@ public class TileData {
 			}
 		}
 
-		// if yes, then need full barycentric refinement
+		// if yes, then need full barycentric refinement;
+		// NOTE: If there are unigons, this will fail, as we
+		//    have no consistent way to handle them.
 		if (special) { 
 			TileBuilder tileBuilder=new TileBuilder(td);
-			PackData p=tileBuilder.fullfromFlowers();
+//			PackData p=tileBuilder.fullfromFlowers();
+			PackData p=tileBuilder.newfromFlowers();
 			if (p==null || p.tileData==null || p.nodeCount<=0)
 				throw new CombException(
 					"'tileBuilder' seems to have failed in 'tile2packing'");
@@ -515,23 +518,24 @@ public class TileData {
 
 	/**
 	 * Create a fully realized (builtMode 3) packing for 
-	 * given 'TileData'. This is a barycentric refinement 
-	 * of the barycentric refinement of the original tiles: 
-	 * that is,
+	 * given 'TileData'. This is a hex refinement of the 
+	 * barycentric refinement of the original tiles: that is,
 	 * 
 	 * (1) start with tiles as ordered lists of vertices;
 	 * (2) get triangulation by adding a barycenter to each 
 	 *     tile and a barycenter to each tile edge.
-	 * (3) bary_refine: barycentrically subdivide resulting 
+	 * (3) bary_refine: hexrefine the resulting 
 	 *     triangles.
 	 *  
 	 * This seems complicated, but contends with two problems:
 	 * 
 	 * (I)  Otherwise some vertices would have only 2 neighbors.
-	 *      Now we can handle all tilings from "drawings", e.g. dessins
-	 * (II) We now have enough data to follow the tile edges; without
-	 *      the extra vertices, combinatorial geodesics are ambiguous
-	 *      due to the bary_refine of the faces in step (3).
+	 *      Now we can handle all tilings from "drawings", 
+	 *      e.g. dessins
+	 * (II) We now have enough data to follow the tile edges; 
+	 *      without the extra vertices, combinatorial geodesics 
+	 *      are ambiguous due to the bary_refine of the faces 
+	 *      in step (3).
 	 * 
 	 * A clone of 'tileData' with augmented vertices is attached 
 	 * to the final packing. 
@@ -560,10 +564,12 @@ public class TileData {
 		if (td==null || td.tileCount<=0) 
 			return null;
 
-		// do we have vertices that are indexed? May not, eg., when
-		//   data was read in 'TILEFLOWERS:' form.
-		// This call indexes the vertices from 'tileFlowers'. Throw
-		//   exception if these don't exist or give exception
+		// do we have vertices that are indexed? 
+		//    May not, eg., when data was read in 
+		//    'TILEFLOWERS:' form.
+		// This call indexes the vertices from 'tileFlowers'. 
+		//   Throw exception if these don't exist or give 
+		//   exception
 		if (td.myTiles[1].vert[0]<=0) {
 			try {
 				if (TileBuilder.tileflowers2verts(td)<=0)
@@ -1243,9 +1249,10 @@ public class TileData {
 	}
 
 	/**
-	 * Clone 'tileData'; 'packData' and 'parentTile' set to null and 
-	 * may need to be set by calling routine. Also, 'subRule' and 
-	 * 'vertMap' must be updated separately.
+	 * Clone 'tileData'; 'packData' and 'parentTile' 
+	 * set to null and may need to be set by calling 
+	 * routine. Also, 'subRule' and 'vertMap' must be 
+	 * updated separately.
 	 * @return new TileData
 	 */
 	public TileData copyMyTileData() {

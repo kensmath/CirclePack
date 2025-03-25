@@ -4,8 +4,6 @@ import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
 
 import javax.swing.BorderFactory;
 import javax.swing.JPanel;
@@ -17,8 +15,8 @@ import util.xNumField;
  * Part of the structure for general purpose groups of sliders.
  * This JPanel contains an object label, a slider, and a value field.
  */
-public class ActiveSlider extends JPanel implements MouseListener,
-		MouseMotionListener {
+public class ActiveSlider extends JPanel {
+//	MouseListener,MouseMotionListener {
 
 	private static final long 
 	serialVersionUID = 1L;
@@ -49,9 +47,10 @@ public class ActiveSlider extends JPanel implements MouseListener,
 		value=val;
 		active=actv;
 		
-		slider=new IndexedJSlider(sfparent,val,index);
-		if (active)
+		if (active) {
+			slider=new IndexedJSlider(sfparent,val,index);
 			slider.addChangeListener(sfparent.listener);
+		}
 		labelField=new JTextField(label,6);
 		labelField.setEditable(false);
 		valueField=new xNumField("",7);
@@ -67,7 +66,7 @@ public class ActiveSlider extends JPanel implements MouseListener,
 		add(valueField);
 		
 		if (active) {
-			labelField.addMouseListener(this);
+//			labelField.addMouseListener(this);
 //			labelField.addMouseMotionListener(this);
 		}
 	}
@@ -130,16 +129,18 @@ public class ActiveSlider extends JPanel implements MouseListener,
 	public void changeReaction() {
 		double val=slider.getCurrentValue();
 		updateValue(val);
-		sfparent.upValue(index); // change PackData after 'this.value' is set 
+		sfparent.valueToPacking(index); // change PackData after 'this.value' is set 
 		sfparent.changeAction(index); // there may be commands to execute
 	}
 	
 	/**
-	 * Notify parent when mouse enters this slider's zone
+	 * Notify parent when mouse enters this slider's zone.
+	 * Hum???? seems to be tripped only in the text box
+	 * on left.
 	 */
-	public void mouseEntered(MouseEvent evt) {
-		sfparent.mouse_entry_action(index);
-	}
+	public void mouseEntered(MouseEvent evt) {}
+//		sfparent.mouse_entry_action(index);
+//	}
 
 	// rest of needed mouse calls
 	public void mouseReleased(MouseEvent evt) {}

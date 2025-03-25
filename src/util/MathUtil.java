@@ -3,7 +3,8 @@ import java.awt.Color;
 
 /**
  * Miscellaneous math utilities. 
- * As of December 2012, many of number formatting methods seem to be OBE and are not called.
+ * As of December 2012, many of number formatting methods seem to 
+ * be OBE and are not called.
  * @author kstephe2
  */
 
@@ -229,6 +230,30 @@ public class MathUtil {
 		else
 			return false;
 	}
+	
+	/**
+	 * Given double 'aim' (e.g., intended angle sum
+	 * for a vertex), return integer 'order' of 
+	 * branching that aim reflects. 0 for unbranched.
+	 * @param aim double
+	 * @return int order, 0 for 'unbranched'
+	 */
+	public static int getOrder(double aim) {
+		if (aim>2.1*Math.PI) {
+			if (aim<4.1*Math.PI)
+				return 1;
+			else if (aim<6.1*Math.PI)
+				return 2;
+			else if (aim<8.1*Math.PI)
+				return 3;
+			else if (aim<10.1*Math.PI)
+				return 4;
+			else if (aim<12.1*Math.PI)
+				return 5;
+		}
+		return 0; // default, unbranched
+	}
+
 
 	/**
 	 * Converting string to int when string might be a double

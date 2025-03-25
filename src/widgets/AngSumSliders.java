@@ -149,7 +149,7 @@ public class AngSumSliders extends SliderFrame {
 	/**
 	 * when a slider changes, it sends the new value to packData
 	 */
-	public void upValue(int indx) {
+	public void valueToPacking(int indx) {
 		packData.setCurv(verts.get(indx),(mySliders[indx].value)*Math.PI);
 	}
 	
@@ -157,7 +157,7 @@ public class AngSumSliders extends SliderFrame {
 	 * Set slider value from packing data without
 	 * causing change event
 	 */
-	public void downValue(int indx) {
+	public void valueFromPacking(int indx) {
 		mySliders[indx].updateValue(packData.getCurv(verts.get(indx))/Math.PI);
 	}
 	

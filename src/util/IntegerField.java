@@ -10,9 +10,10 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 /**
- * IntegerField is a panel-contained text field for displaying integer
- * values and optionally includes a text label title. It is intended as a
- * re-sizable replacement for the <code>intNumField</code> class.
+ * IntegerField is a panel-contained text field for 
+ * displaying integer values and optionally includes 
+ * a text label title. It is intended as a re-sizable 
+ * replacement for the <code>intNumField</code> class.
  * 
  * @author kens
  * @author Alex Fawkes
@@ -20,14 +21,18 @@ import javax.swing.JTextField;
  */
 public class IntegerField extends JPanel {
 	/*
-	 * Regenerate serialVersionUID whenever the nature of this class's fields change
-	 * so that this class may be flattened. As background, serialization provides a
-	 * unified interface for writing and reading an instance's current state to and
-	 * from the file system. The value of serialVersionUID is used to ensure that an
-	 * instance state being read from the file system is compatible.
+	 * Regenerate serialVersionUID whenever the nature 
+	 * of this class's fields change so that this class 
+	 * may be flattened. As background, serialization 
+	 * provides a unified interface for writing and 
+	 * reading an instance's current state to and from 
+	 * the file system. The value of serialVersionUID 
+	 * is used to ensure that an instance state being 
+	 * read from the file system is compatible.
 	 * 
-	 * Note that we are sub-classing a class that implements serialization (JPanel),
-	 * so we must respect that in our implementation.
+	 * Note that we are sub-classing a class that implements 
+	 * serialization (JPanel), so we must respect that 
+	 * in our implementation.
 	 */
 	private static final long serialVersionUID = 6873576610896669987L;
 	
@@ -74,7 +79,8 @@ public class IntegerField extends JPanel {
 		
 		integerField = new JTextField();
 		integerField.setAlignmentX(Box.LEFT_ALIGNMENT);
-		// Let the field grow horizontally without bounds, but cap the height. We don't want a tall field.
+		// Let the field grow horizontally without bounds, 
+		//   but cap the height. We don't want a tall field.
 		integerField.setMaximumSize(new Dimension(integerField.getMaximumSize().width, integerField.getPreferredSize().height));
 		this.add(integerField);
 	}
@@ -96,8 +102,8 @@ public class IntegerField extends JPanel {
 	}
 	
 	/**
-	 * Get the integer value currently displayed by this instance; any 
-	 * variables are interpreted.
+	 * Get the integer value currently displayed by this 
+	 * instance; any variables are interpreted.
 	 * 
 	 * @return the <code>int</code> 
 	 */
@@ -123,9 +129,10 @@ public class IntegerField extends JPanel {
 	}
 
 	/**
-	 * Determine whether or not the associated text field is editable.
-	 * 
-	 * @return a <code>boolean</code> value representing whether or not the text field is editable
+	 * Determine whether or not the associated text 
+	 * field is editable.
+	 * @return a <code>boolean</code> value representing 
+	 * whether or not the text field is editable
 	 */
 	public boolean isEditable() {
 		return integerField.isEditable();
@@ -133,7 +140,6 @@ public class IntegerField extends JPanel {
 	
 	/**
 	 * Set the action command of the associated text field.
-	 * 
 	 * @param actionCommand the action command to set
 	 */
 	public void setActionCommand(String actionCommand) {

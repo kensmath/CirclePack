@@ -867,28 +867,32 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		
 		public void putVertMark(PackData p) {
 			int vert = NodeLink.grab_one_vert(p, vertexChoiceField.getText());
-			if (vert==0) return;
+			if (vert==0) 
+				return;
 			p.setVertMark(vert,vertMarkField.getValue());
 			vertMarkField.setValue(p.getVertMark(vert));
 		}
 		
 		public void putFaceColor(PackData p) {
 			int face = NodeLink.grab_one_vert(p, faceChoiceField.getText());
-			if (face==0) return;
+			if (face==0) 
+				return;
 			p.setFaceColor(face,ColorUtil.coLor(faceColorField.getValue()));
 			faceColorField.setValue(ColorUtil.col_to_table(p.getFaceColor(face)));
 		}
 		
 		public void putFaceMark(PackData p) {
 			int face = NodeLink.grab_one_vert(p, faceChoiceField.getText());
-			if (face==0) return;
+			if (face==0) 
+				return;
 			p.setFaceMark(face,faceMarkField.getValue());
 			faceMarkField.setValue(p.getFaceMark(face));
 		}
 		
 		public void putTileColor(PackData p) {
 			int tindx = NodeLink.grab_one_vert(p, tileChoiceField.getText());
-			if (tindx==0) return;
+			if (tindx==0) 
+				return;
 			p.tileData.myTiles[tindx].color=
 					ColorUtil.coLor(tileColorField.getValue());
 			tileColorField.setValue(
@@ -897,7 +901,8 @@ public class TabbedPackDataHover extends FluidHoverPanel implements ActionListen
 		
 		public void putTileMark(PackData p) {
 			int tindx = NodeLink.grab_one_vert(p, tileChoiceField.getText());
-			if (tindx==0) return;
+			if (tindx==0) 
+				return;
 			p.tileData.myTiles[tindx].mark=(int)tileMarkField.getValue();
 			tileMarkField.setValue(p.tileData.myTiles[tindx].mark);
 		}

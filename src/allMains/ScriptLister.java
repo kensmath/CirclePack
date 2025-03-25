@@ -107,7 +107,7 @@ public class ScriptLister {
 		mode=m;
 		
 // debugging
-		System.out.println("from "+theDirectory+", into "+theFilename);
+//		System.out.println("from "+theDirectory+", into "+theFilename);
 	}
 		
 	public File go() {

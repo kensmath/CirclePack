@@ -24,6 +24,7 @@ import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.CPdrawing;
 import packing.PackData;
+import tiling.Tile;
 import util.DispFlags;
 
 public class DCELdebug {
@@ -947,4 +948,19 @@ public class DCELdebug {
 		strbld.append("\n");
 		System.err.println(strbld.toString());
 	}
+	
+	/**
+	 * Print edges from given VertexMap
+	 * @param vmap VertexMap
+	 */
+	public static void printVertexMap(VertexMap vmap) {
+		StringBuilder strbld=new StringBuilder("VertexMap: (size "
+				+vmap.size()+")\n");
+		for (int j=0;j<vmap.size();j++) {
+			EdgeSimple edge=vmap.get(j);
+			strbld.append(edge.v+","+edge.w+"  ");
+		}
+		System.out.println(strbld.toString());
+	}
+
 }

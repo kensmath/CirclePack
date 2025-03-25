@@ -1062,7 +1062,7 @@ public class QueryParser {
 					if (firststr==null)
 						hlink=new HalfLink(p,"i");
 					else
-						hlink=new HalfLink(p,firststr);
+						hlink=new HalfLink(p,items);
 					int tick=0;
 					Iterator<HalfEdge> his=hlink.iterator();
 					while (tick<10 && his.hasNext()) {

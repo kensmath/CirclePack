@@ -149,7 +149,7 @@ public class ConformalTiling extends PackExtender {
 	// To save recomputation in recursive construction of tilings 
 	//    at various depths, on reading a rules file, we save the 
 	//    'TileData' for the subdivision of each tile type in a vector.
-	// 'topTileData(j) has subdivision TileData for tile type j 
+	// 'topTileData(j)' has subdivision TileData for tile type j 
 	//     (recall types start at 4).
 	Vector<TileData> topTileData;
 	// As packings are built 'depthPackings(j)' stores vector of 
@@ -196,6 +196,8 @@ public class ConformalTiling extends PackExtender {
 		
 		// ============ subtile ===============
 		if (cmd.startsWith("subti")) {
+			if (packData.genus>0 && packData.tileData.tileCount>1)
+				Oops("'subtile' can't be called for genus > 0.");
 
 			// first, pick off the tile type
 			int type=0;
@@ -539,7 +541,7 @@ public class ConformalTiling extends PackExtender {
 		
 		
 		// ================ set_flowers =====
-		// very unreliable due to unigons, digons, self-pastings
+		// very unreliable due to digons, self-pastings
 		else if (cmd.startsWith("set_tf")) { 
 			if (packData.tileData==null || packData.tileData.tileCount<=0)
 				throw new ParserException("packing has no 'tileData'");
@@ -885,9 +887,9 @@ public class ConformalTiling extends PackExtender {
 				
 			// create the parent packing
 			
-			// first build 'newPD', with 'newPD.tileData' equal to the
-			//     original tileData (though with additional pointers 
-			//     to subtilings)
+			// first build 'newPD', with 'newPD.tileData' 
+			//   equal to the original tileData (though 
+			//   with additional pointers to subtilings)
 			targetDepth=-1;
 			PackData newPD=build2Depth(packData.tileData,
 					depth,mode,topTileData,depthPackings);
@@ -1497,8 +1499,9 @@ public class ConformalTiling extends PackExtender {
 			}
 			
 			int pnum=packData.packNum;
-			packData=CirclePack.cpb.swapPackData(canonicalPack, pnum,true);
-			packData.tileData=canonicalPack.tileData.copyBareBones();
+			PackData tmpData=canonicalPack.copyPackTo();
+			packData=CirclePack.cpb.swapPackData(tmpData, pnum,true);
+//			packData.tileData=canonicalPack.tileData.copyBareBones();
 			return packData.tileData.tileCount; 
 		}
 		
@@ -1711,7 +1714,7 @@ public class ConformalTiling extends PackExtender {
 	 * tiling data is in place: 'dual', 'quad', and 'wg'
 	 * tilings.
 	 * 
-	 * In order to accommodate unigons, digons, slits, and
+	 * In order to accommodate digons, slits, and
 	 * self-pastings of tiles, we construct the packing
 	 * by adjoining a tile at a time.
 	 * 
@@ -1729,13 +1732,17 @@ public class ConformalTiling extends PackExtender {
 		// build the packing by pasting packings for the
 		//   individual tiles together.
 		TileBuilder tileBuilder=new TileBuilder(td);
-		PackData np=tileBuilder.fullfromFlowers();
+//		PackData np=tileBuilder.fullfromFlowers();
+		PackData np=tileBuilder.newfromFlowers();
 		if (np==null || np.tileData==null || np.nodeCount<=0)
 			throw new CombException("'tileBuilder' seems to have failed");
 		
 		// also create the 'dual', 'quad', and 'wg' tilings
-		if (TileBuilder.prepCanonical(np)<=0)
+		
+		if (TileBuilder.prepCanonical(np)<=0) {
+			CirclePack.cpb.errMsg("'prepCanonical' failed");
 			throw new CombException("'prepCanonical' seems to have failed");
+		}
 		newPack=np; // DCELdebug.printBouquet(np.packDCEL);
 
 		// complete packing adjustments
@@ -1845,7 +1852,6 @@ public class ConformalTiling extends PackExtender {
 		dualPD.tileData.dualTileData=null;
 		return dualPD;
 	}
-	
 	
 	/**
 	 * Create a packing with the quad tiling associated to given

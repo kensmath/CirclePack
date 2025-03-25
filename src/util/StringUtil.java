@@ -407,8 +407,9 @@ public class StringUtil {
 	}
 	
 	/**
-	 * search for variable substrings, replace them by their
-	 * string values. Recurse. 
+	 * search for variable substrings, replace them by 
+	 * their string values. Recurse. 
+	 * TODO: maybe I should resolve $..$ expressions here?
 	 * @param str String
 	 * @return String
 	 */
@@ -689,8 +690,12 @@ public class StringUtil {
 			StringBuilder tmpbuf=new StringBuilder(strFrags[m]);
 			while ((k=tmpbuf.indexOf("_",k))>=0) {
 				// have to bypass command strings with '_'
-				if (k>0 && Character.isLetter(tmpbuf.charAt(k-1)))
+				if (k>0) {
+					char c=tmpbuf.charAt(k-1);
+					if (Character.isLetter(c) ||
+							Character.isDigit(c))
 					break;
+				}
 				String varstr=StringUtil.getLorDStr(tmpbuf,k+1);
 				String rstg=null;
 				if (varstr==null)

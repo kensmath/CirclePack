@@ -60,44 +60,53 @@ public class ReadWrite {
 	 * 
 	 * @return bit-coded integer for what was read as follows:
 	 * 
-	 *         1: 00001 basic combinatorics (new pack) 2: 00002 geometry 3: 00004
-	 *         non-default inv_dist & aimsinv_dist
+	 *         1: 00001 basic combinatorics (new pack) 
+	 *         2: 00002 geometry 
+	 *         3: 00004 non-default inv_dist & aimsinv_dist
+	 *         4: 00010 radii 
+	 *         5: 00020 centers 
+	 *         6: 00040 angle sums
+	 *         7: 00100 vertex_map (if it exists) 
+	 *         8: 00200 non-empty lists vlist/flist/elist 
+	 *         9: 00400 colors (circle or face, non-default)
+	 *        10: 01000 vertex/face plotFlags 
+	 *        11: 02000 xyz points 
+	 *        12: 04000 edge-pairing Mobius transformations
+	 *        13: 010000 triangles 
+	 *        14: 020000 tiling data 
+	 *        15: 040000 display flags
+	 *        16: 0100000 non-empty global lists Vlist/Flist/Elist 
+	 *        17: 0200000 dual tiling (only, and as 'TILECOUNT:' file) 
+	 *        18: 0400000 misc other: interactions
+	 *        19: 01000000 utility integers 
+	 *        20: 02000000 utility double values 
+	 *        21: 04000000 utility complex values
+     *        22: 010000000 neutral, 
+     *            and used so we can return non-zero 'flags'
 	 * 
-	 *         4: 00010 radii 5: 00020 centers 6: 00040 angle sums
+	 *         CAUTION: responsibility of calling routine 
+	 *         to update pack info (eg., aims, centers, etc) 
+	 *         based on bits set in return value. For a new
+	 *         pack, reading vertex_map, lists, or colors 
+	 *         causes defaults to be set before info is 
+	 *         read in. When pack is not new pack 
+	 *         (CHECKCOUNT case), the info read in 
+	 *         supercedes that in pack.
 	 * 
-	 *         7: 00100 vertex_map (if it exists) 8: 00200 non-empty lists
-	 *         vlist/flist/elist 9: 00400 colors (circle or face, non-default)
+	 *         CAUTION: this may be instanceof 'TileData' 
+	 *                  without being a tiling.
 	 * 
-	 *         10: 01000 vertex/face plotFlags 11: 02000 xyz points 12: 04000
-	 *         edge-pairing Mobius transformations
-	 * 
-	 *         13: 010000 triangles 14: 020000 tiling data 15: 040000 display flags
-	 * 
-	 *         16: 0100000 non-empty global lists Vlist/Flist/Elist 17: 0200000 dual
-	 *         tiling (only, and as 'TILECOUNT:' file) 18: 0400000 misc other:
-	 *         interactions
-	 * 
-	 *         19: 01000000 utility integers 20: 02000000 utility double values 21:
-	 *         04000000 utility complex values
-	 * 
-	 *         22: 010000000 neutral, and used so we can return non-zero 'flags'
-	 * 
-	 *         CAUTION: responsibility of calling routine to update pack info (eg.,
-	 *         aims, centers, etc) based on bits set in return value. For a new
-	 *         pack, reading vertex_map, lists, or colors causes defaults to be set
-	 *         before info is read in. When pack is not new pack (CHECKCOUNT case),
-	 *         the info read in supercedes that in pack.
-	 * 
-	 *         CAUTION: this may be instanceof 'TileData' without being a tiling.
-	 * 
-	 *         In CHECKCOUNT case, return 0 if checkcount exceeds nodeCount; if
-	 *         checkcount <= nodeCount, then FLOWER info could be inconsistent with
+	 *         In CHECKCOUNT case, return 0 if checkcount 
+	 *         exceeds nodeCount; if checkcount <= nodeCount,
+	 *         then FLOWER info could be inconsistent with
 	 *         the packing.
 	 * 
-	 *         NEUTRAL is for data that doesn't depend on nodeCount match.
+	 *         NEUTRAL is for data that doesn't depend on 
+	 *         nodeCount match.
 	 * 
-	 *         4/2021: Processing dcel structure changes vertex indices, so 
-	 *         we use 'readOldNew[]' and call 'rON' to read data based on 
+	 *         4/2021: Processing dcel structure changes 
+	 *         vertex indices, so we use 'readOldNew[]' 
+	 *         and call 'rON' to read data based on 
 	 *         old indices into appropriate new indices.
 	 *         
 	 * @param fp BufferedReader, (opened by calling routine)
@@ -881,8 +890,8 @@ public class ReadWrite {
 						}
 						flags |= 0040;
 					}
-					// 'real' Schwarzian for edges, see 'dcel.Schwarzian.java'
-					// TODO: Have to adjust for dcel structures.
+					// intrinsic Schwarzian for edges, see 
+					// 'dcel.Schwarzian.java'
 					// data: v w schw
 					else if (mainTok.equals("SCHWARZIANS:")) {
 						state = PackState.SCHWARZIAN;
@@ -1767,7 +1776,7 @@ public class ReadWrite {
 			file.write("\n\n");
 		}
 
-		else if (act == 020000000) { // real schwarzians
+		else if ((act & 020000000) == 020000000) { // intrinsic schwarzians
 			String hitstr=new String("SCHWARZIANS:\n");
 			boolean hitflag=false;
 			double schw;

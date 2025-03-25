@@ -482,12 +482,16 @@ public class CombDCEL {
 					HalfEdge spktrace=upspoke;
 					if (vstat[v]==1) {
 						redge=isMyEdge(pdcel.redChain,spktrace);
+						int safety=10000;
 						while (spktrace!=downspoke && redge==null && 
-								spktrace.eutil>=0) {
+								spktrace.eutil>=0 && safety>0) {
+							safety--;
 							spktrace=spktrace.prev.twin; // cclw
 							redge=isMyEdge(
 									pdcel.redChain,spktrace);
 						}
+						if (safety<=0)
+							throw new CombException("can't enclose "+v);
 						if (redge==currRed && redge.myEdge.eutil>=0) // yes, can close up
 							canclose=true;
 					}
@@ -3469,7 +3473,7 @@ public class CombDCEL {
 	   * put new index in 'vutil'.
 	   * 
 	   * Call 'wrapAdjoin' to wrap up before returning; this
-	   * creates 'oldNew'. Calling routine only needs to 'attachDCEL', 
+	   * creates 'oldNew'. Calling routine only needs 'attachDCEL', 
 	   * but may have some updating because of new indexing, saving
 	   * lists, etc.
 	   * 
@@ -3491,8 +3495,8 @@ public class CombDCEL {
 		  RedEdge red1=he1.myRedEdge;
 		  RedEdge red2=he2.myRedEdge;
 		  
-//		  if (red1==null || red2==null)
-//			  throw new CombException("edges should hare red edges");
+		  if (red1==null || red2==null)
+			  throw new CombException("edges should have red edges");
 
 		  // store original vert indices in 'vutil'
 		  for (int v=1;v<=pdc1.vertCount;v++) 
@@ -3655,7 +3659,8 @@ public class CombDCEL {
 		  } catch (Exception ex) {
 			  throw new CombException("zipping problem: "+ex.getMessage());
 		  }
-		  // DCELdebug.printRedChain(ansDCEL.redChain);
+//		   DCELdebug.printVertexMap(ansDCEL.oldNew);
+//		   DCELdebug.printRedChain(ansDCEL.redChain);
 		  return ansDCEL;   // ansDCEL.vertices[10].getFlower();
 	  }
 	  
@@ -3745,7 +3750,7 @@ public class CombDCEL {
 			  vert.vertIndx=++vtick; // 'vutil' still has old index
 			  pdc1.vertices[vtick]=vert;
 		  }
-		  
+		  // DCELdebug.printVertexMap(pdc1.oldNew);
 		  return pdc1;
 	  }
 	  

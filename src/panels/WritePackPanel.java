@@ -52,6 +52,7 @@ public class WritePackPanel extends javax.swing.JPanel {
 	private JCheckBox vertMapBox;
 	private JCheckBox dispFlagsBox;
 	private JCheckBox tileBox;
+	private JCheckBox schwarzBox;
 	private JCheckBox angsumBox;
 	private JCheckBox aimBox;
 	private JRadioButton writeButton;
@@ -196,9 +197,12 @@ public class WritePackPanel extends javax.swing.JPanel {
 		if (edgeBox.isSelected()) flags.append("e");
 		if (plotBox.isSelected()) flags.append("f");
 		if (xyzBox.isSelected()) flags.append("x");
+		if (schwarzBox.isSelected()) flags.append("h");
 		
-		if (flags.length()>1) return new String(flags.toString());
-		else return null;
+		if (flags.length()>1) 
+			return new String(flags.toString());
+		else 
+			return null;
 	}
 	
 	private JButton getJButton1() {
@@ -360,6 +364,12 @@ public class WritePackPanel extends javax.swing.JPanel {
 				jPanel3.add(tileBox);
 				tileBox.setText("Tiling");
 				tileBox.setSelected(false);
+			}
+			{
+				schwarzBox=new JCheckBox();
+				jPanel3.add(schwarzBox);
+				schwarzBox.setText("Schwarzians");
+				schwarzBox.setSelected(false);
 			}
 		}
 		return jPanel3;

@@ -12,7 +12,9 @@ import allMains.CPBase;
 import allMains.CirclePack;
 import combinatorics.komplex.DcelFace;
 import combinatorics.komplex.HalfEdge;
+import combinatorics.komplex.Vertex;
 import complex.Complex;
+import dcel.PackDCEL;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.MiscException;
@@ -235,6 +237,33 @@ public class SchwarzMap extends PackExtender {
 						cpCommand(packData,"disp -wr");
 						break;
 					}
+					case 'e': // draw eucl flower based on schwarzians  
+					{
+						CircleSimple cs=new CircleSimple();
+						Complex err=new Complex(0.0);
+						PackData newP=PackData.schFlowerErr(
+							packData.packDCEL.vertices[packData.nodeCount], err, cs);
+						PackDCEL ncel=newP.packDCEL;
+						PackDCEL dcel=packData.packDCEL;
+						int n=packData.nodeCount-1;
+						for (int v=1;v<=packData.nodeCount;v++) {
+							Vertex vert=ncel.vertices[v];
+							Complex cent=vert.center;
+							double rad=vert.rad;
+							dcel.setVertCenter(v,cent);
+							dcel.setVertRadii(v, rad);
+						}
+						
+						// get two positions for c_1
+						int nc=packData.nodeCount;
+						cpCommand(packData,"Disp -w -c -cfc5 1 -ec5t3 1 "+nc);
+						dcel.setVertCenter(1,cs.center);
+						dcel.setVertRadii(1, cs.rad);
+						cpCommand(packData,"disp -cfc195 1 -ec195t2 1 "+nc);
+						msg("Flower error:  radius "+String.format("%.6e",err.x)+";   angle "+String.format("%.6e",err.y));
+						hit++;
+						break;
+					}
 					case 's': // read/store schwarzians; see also 'u'
 					{
 						items.remove(0);
@@ -311,7 +340,7 @@ public class SchwarzMap extends PackExtender {
 						}
 						break;
 					}
-					case 'r': // reset, showing just c1
+					case 'r': // reset, showing just half planes and c1
 					{
 						petalticks=new int[flowerDegree+1]; // indexed from 1
 						petalticks[1]=1;
@@ -881,7 +910,7 @@ public class SchwarzMap extends PackExtender {
 		else if (cmd.startsWith("schS")) {
 			
 			// in 'flower' mode, we display intrinsic
-			//    schwarzians in the slider
+			//    schwarzians in a slider widget
 			if (this.flowerDegree==0) {
 				Oops("Schwarzian sliders implemented only for flowers");
 			}
@@ -1117,7 +1146,6 @@ public class SchwarzMap extends PackExtender {
 		// ======= s_map =============
 		else if (cmd.startsWith("s_map")) {
 			
-			// debugging the layouts
 			boolean debug=false; // debug=true;
 
 			PackData qData=packData;

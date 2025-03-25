@@ -115,23 +115,25 @@ public class Tile extends Face {
 	}
 	
 	/**
-	 * Create the canonical packing for this single tile in one
-	 * of three modes: simple mode, mode=1, provides an n-flower
-	 * for an n-sided tile; mode=2 adds a barycenter to each edge;
-	 * mode=3 also barycentrically subdivides each triangle. 
+	 * Create the canonical packing for this single 
+	 * tile in one of three modes: simple mode, mode=1, 
+	 * provides an n-flower for an n-sided tile; mode=2 
+	 * adds a barycenter to each edge; mode=3 also 
+	 * barycentrically subdivides each triangle. 
 	 * 
 	 * In mode 3, vertex 'mark's are set to {1,2,3}: 1 = tile 
 	 * baryVert (value infty); 2 = original tile corner (value 0); 
-	 * 3 = edge barycenter (value 1). Hex centers of barycentrically
-	 * subdivided faces are marked -1. 
+	 * 3 = edge barycenter (value 1). Hex centers of 
+	 * barycentrically subdivided faces are marked -1. 
 	 * We attach corresponding 'TileData'. 
 	 * 
 	 * The 'p.vertexMap' is non-standard: 'vert' entries are changed,
 	 * and <tindx,v> in 'vertexMap' shows that the tile corner 
 	 * 'vert[tindx]' is now represented by the circle 'v' of the packing. 
 	 * 
-	 * We do NOT make any edge or vertex self-identifications, that 
-	 * will be done elsewhere, if needed. Vertex indices are distinct.
+	 * We do NOT make any edge or vertex self-identifications, 
+	 * that will be done elsewhere, if needed. Vertex indices
+	 * are distinct.
 	 * 
 	 * @param mode int: 
 	 * @return 'PackData' with new 'TileData'
@@ -187,7 +189,8 @@ public class Tile extends Face {
 
 		// else mode==3, more complicated combinatorics
 		
-		// is this a uni-gon?
+		// is this a uni-gon? It is not consistent with
+		//   the construction of other tiles.
 		if (vertCount==1) {
 			
 			// build bouquet

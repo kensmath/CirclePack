@@ -6,7 +6,7 @@ import allMains.CirclePack;
 import complex.Complex;
 import exceptions.DataException;
 import geometry.CircleSimple;
-import util.TriAspect;
+import packing.PackCreation;
 
 /**
  * Work with intrinsic schwarzians of individual 
@@ -309,88 +309,30 @@ public class SchFlowerData {
 	}
 	
 	/**
-	 * Compute the anglesum A if given uzians are laid
+	 * Compute the "error" if given uzians are laid
 	 * out as a euclidean n-flower around the unit disc. 
-	 *   + Desired angle sum is Theta = m*2*Pi, where
-	 *     m is the multiplicity (1 for un-branched).
-	 *   + Given uzians for flower, find the index of 
-	 *     the uzian closest to the uniform uzian for a 
-	 *     flower of that degree and aim Theta.
-	 *   + Find the radius r of this uniform petal and form 
-	 *     triple of unit disc and contiguous petals of 
-	 *     radius r. The first face angle is a0=Theta/n.
-	 *   + Layout the rest using n-1 uzians to compute
-	 *     and accumulate the n face angles a1,.. a{n-1}. 
-	 *     Note that we get a new radius R for the first
-	 *     peal. 
-	 *   + return Complex x+iy, where x is the error in
-	 *     radii x=|R-r|, and y is the error in the
-	 *     angle sum y=|A-Theta|.
-	 *     
+	 * Use the 'seed' call from 'PackCreation'; we 
+	 * don't need the packing, but CircleSimple.center
+	 * contains the complex error x+iy, where x is the 
+	 * error in radii x=r-R, and y is the error in the
+	 * angle sum y=Theta-A|.
 	 * The uzians form an actual closed flower iff result
 	 * is zero. Note that we only use n-1 uzians, so if
 	 * result is zero, the final one can be computed.
-	 * 
-	 * Note: if a = half of face angle in uniform 
-	 * N-flower with anglesum = m*2*pi (multiplicity m),
-	 * then r=b/(1-b), where b=sin(m*pi/N).
-	 * @param uzians double[]
+	 * @param uzians double[], will convert to schwarzians
 	 * @param order int
-	 * @return Complex 
+	 * @return Complex
 	 */
-	public static Complex euclFlower(double[] uzians,int order) {
-		int deg=uzians.length;
-		int mult=order+1;
-		double aim=mult*2.0*Math.PI;
-		double unifUzian=1.0-uniformS(deg,aim); // uniform schwarzian
-		
-		// find edge with uzian closest to uniform
-		int tick=0;
-		double bestdiff=Math.abs(uzians[0]-unifUzian);
-		for (int j=1;j<deg;j++) {
-			double diff=Math.abs(uzians[j]-unifUzian);
-			if (diff<bestdiff) {
-				bestdiff=diff;
-				tick=j;
-			}
-		}
-		
-		// need uzians starting with the best edge;
-		//   but note that we won't use the best
-		//   edge itself.
-		double[] uz=new double[deg-1];
-		for (int j=0;j<deg;j++)
-			uz[j]=uzians[(tick+j)%deg];
-
-		// initialize TriAspect
-		TriAspect ftri=new TriAspect();
-		ftri.hes=0;
-		ftri.allocCenters();
-		double a=mult*Math.PI/deg;
-		double b=Math.sin(a);
-		double r=b/(1.0-b);
-		double len=(1+r);
-		ftri.center[1]=new Complex(len*Math.cos(2.0*a),len*Math.sin(-2.0*a));
-		ftri.center[2]=new Complex(len); // on x-axis
-		ftri.radii[0]=1.0;
-		ftri.radii[1]=r;
-		ftri.radii[2]=r;
-		ftri.getBaseMobius();
-
-		// start accumulating face angles
-		double anglesum=2.0*a; 
-		CircleSimple cs=null;
-		for (int j=1;j<deg;j++) {
-			// get next face angle
-			cs=Schwarzian.getThirdCircle(uz[j],2,ftri.getBaseMobius(),0);
-			anglesum +=cs.center.abs();
-			
-			// set up for next
-			ftri.center[1]=ftri.center[2];
-			ftri.center[2]=cs.center;
-			ftri.setBaseMobius();
-		}
-		return new Complex(Math.abs(r-cs.rad),Math.abs(anglesum-aim));
+	public static Complex euclFlower(double[] uzians,
+			int order) {
+		int n=uzians.length;
+		ArrayList<Double> schvec=new ArrayList<Double>(n);
+		for (int j=0;j<n;j++)
+			schvec.add(1.0-uzians[j]);
+		CircleSimple cs=new CircleSimple();
+		Complex layoutErr=new Complex(0.0);
+		PackCreation.seed(schvec,cs,layoutErr,order);
+		return layoutErr; // this contains the error
 	}
 	
 	/**

@@ -723,6 +723,10 @@ counts do.)
 	A regular "tetrahedron" on the sphere; 4 circles, each of radius
 	arcsin(sqrt(2/3)).
 	
+	"tilebary" produces an n-tile that is barycentrically and
+	then each of the 2n faces is barycentrically subdivided
+	again
+	
 	Additional types can be anticipated, potentially with further
 	required options.
 </description>
@@ -4169,9 +4173,9 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 <description>
 	Compute and store the intrinsic schwarzians for given edges, 
 	defaulting to 'all' edges. The -s {x} and -u {x} flags indicate
-	set the schwarzians. With -s {x} flag, set specified schwarzians 
-	s to value x. However, an alternate parameter u=1-s is often 
-	preferred, so the -u {x} flag sets u to the value x 
+	set the schwarzians. With -s {x} flag, set specified edge
+	schwarzians to value x. However, an alternate parameter u=1-s 
+	is often used, so the -u {x} flag sets u parameter to the value x 
 	(meaning it sets s=1-x). If no such flags are given,
 	the command computes and stores the schwarzians using current 
 	radii. This "intrinsic" schwarzian is based on 'baseMobius' 
@@ -5004,7 +5008,7 @@ does 'repack', then reports the elapsed time.
 	<opt flag="-d"> display options (to set on reading) </opt>
 	<opt flag="-g"> geometry (needed by calls for data r and z) </opt>
 	<opt flag="-i"> non-default inv_dist and aims</opt>
-	<opt flag="-S"> Schwarzians, if they are recorded</opt>
+	<opt flag="-h"> intrinsic schwarzians</opt>
 	<opt flag="-r"> radii</opt>
 	<opt flag="-z"> centers</opt>
 	<opt flag="-a"> angle sums</opt>

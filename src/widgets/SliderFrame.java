@@ -58,8 +58,8 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	// abstract methods that must be implemented by derived classes
 	public abstract double getParentValue(int indx); // retrieve value held by parent
 	public abstract void populate(); // create and add the 'ActiveBar's
-	public abstract void downValue(int indx); // from packing to slider
-	public abstract void upValue(int indx); // send slider value up to packing
+	public abstract void valueFromPacking(int indx); // from packing to slider
+	public abstract void valueToPacking(int indx); // send slider value up to packing
 	public abstract void createSliderPanel(); // may want, e.g., special border
 	public abstract void setChangeField(String cmd); // set optional command with value change
 	public abstract void setMotionField(String cmd); // set optional command on motion into slider
@@ -373,7 +373,7 @@ public abstract class SliderFrame extends JFrame implements ActionListener {
 	
 	public void valueField_action(double val, int indx) {
 		mySliders[indx].value=val;
-		upValue(indx); // send value up to packing
+		valueToPacking(indx); // send value up to packing
 		mySliders[indx].refreshValue();
 		changeAction(indx);
 	}
