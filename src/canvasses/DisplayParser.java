@@ -15,6 +15,7 @@ import combinatorics.komplex.HalfEdge;
 import complex.Complex;
 import dcel.PackDCEL;
 import dcel.SideData;
+import deBugging.DCELdebug;
 import exceptions.ParserException;
 import geometry.CircleSimple;
 import geometry.EuclMath;
@@ -932,7 +933,7 @@ public class DisplayParser {
 				// extender has more complete options)
 			{
 				if (p.tileData!=null && p.tileData.tileCount>0) {
-					// default to 'all'
+					// default to 'all' // DCELdebug.tileAugVerts(1);
 					TileLink tileLink=new TileLink(p.tileData,items);
 					if (tileLink==null || tileLink.size()==0)
 						for (int t=1;t<=p.tileData.tileCount;t++)
@@ -955,7 +956,8 @@ public class DisplayParser {
 							}
 							
 							// get list of tile border and make axis-extended edgelist
-							NodeLink cornlist=tile.tileBorderLink();
+							NodeLink cornlist=tile.tileBorderLink(); 
+							// DCELdebug.tileAugVerts(tile);
 							HalfLink halfedges=
 									HalfLink.verts2edges(p.packDCEL,cornlist,true);
 							ArrayList<Complex> Zlist=

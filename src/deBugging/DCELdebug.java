@@ -15,6 +15,7 @@ import dcel.SideData;
 import dcel.PackDCEL;
 import exceptions.CombException;
 import exceptions.DCELException;
+import geometry.CircleSimple;
 import input.CPFileManager;
 import input.CommandStrParser;
 import komplex.EdgeSimple;
@@ -31,6 +32,15 @@ public class DCELdebug {
 	
 	static File tmpdir=new File(System.getProperty("java.io.tmpdir"));
 	static int rankStamp=1; // progressive number to distinguish file instances
+	
+	public static void tileAugVerts(Tile tile) {
+		StringBuilder strbld=new StringBuilder("Augmented tile ");
+		if (tile==null || tile.augVert==null) 
+			strbld.append(tile.tileIndex+": ");
+		for (int j=0;j<tile.augVertCount;j++) 
+			strbld.append(tile.augVert[j]+" ");
+		System.out.println(strbld.toString());
+	}
 	
 	public static void rededgecenters(PackDCEL pdcel) {
 		if (pdcel.redChain==null) 
@@ -520,6 +530,8 @@ public class DCELdebug {
 		Complex z2=pdcel.getVertCenter(hfe.next);
 		DispFlags dispflags=new DispFlags("t5c5");
 		pdcel.p.cpDrawing.drawEdge(z1,z2,dispflags);
+	    CircleSimple cs=pdcel.d_compOppCenter(hfe);
+	    pdcel.setCent4Edge(hfe.prev, cs.center);
 		CommandStrParser.jexecute(pdcel.p,"disp -ffc120 "+hfe.face.faceIndx);
 		if (CPBase.GUImode!=0)
 			pdcel.p.cpDrawing.rePaintAll();

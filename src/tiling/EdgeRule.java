@@ -9,17 +9,20 @@ package tiling;
  * clockwise along edge 1, you encounter edge 2 of subtile 1,
  * then edge 1 of subtile 1, and finally edge 3 of subtile 0. 
  * CAUTION: listed "clockwise" not "counterclockwise".
+ * CAUTION: subtile indices are changed to start at 1.
  * 
  * Store: subedges are indexed from 0.
- *  * 'tileedge[j][0]' = tile index of 'j'_th tile t along this edge.
- *  * 'tileedge[j][1]' = the index in 't.vert' of the first ccw vertex 
- *     in the side of t which lies along this parent edge.
+ *  * 'tileedge[j][0]' = tile index of 'j'_th child tile t 
+ *    clockwise along this edge.
+ *  * 'tileedge[j][1]' = the index in 't.vert' of the 
+ *     first cclw vertex in the side of t which lies 
+ *     along this parent edge.
  *     
  * @author kens
  */
 public class EdgeRule {
-	int subEdgeCount;		// how many edges this is broken into
-	int [][]tileedge;		// for each subedge, gives child tile index/edge index
+	public int subEdgeCount;		// how many edges this is broken into
+	public int[][] tileedge;		// for each subedge, gives child tile index/edge index
 	public int mark;        // integer mark, new data info in *.r files
 		
 	public EdgeRule(int count) {

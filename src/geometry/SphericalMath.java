@@ -984,15 +984,17 @@ public static double vec_norm(double X[]){
 	}
 	
 	/**
-	 * Find centroid in 3-space of points in the plane stereo projected
-	 * to the sphere after application of a transformation z --> a*z+b+c*i.
-	 * If 'sPole' is true, then assume one more point located at infinity.
+	 * Find centroid in 3-space of points in the plane 
+	 * stereo projected to the sphere after application 
+	 * of a transformation z --> a*z+b+c*i. If 'sPole' 
+	 * is true, assume one more point located at infinity.
 	 * @param P Complex[], points in the plane (indexed from 1)
 	 * @param trans double[3], {a,b,c} coeff for transfomation
-	 * @param sPole boolean: true -> include point at south pole (infinity)
+	 * @param sPole boolean: include south pole (pt at infinity)?
 	 * @return Point3D, centroid location
 	 */
-	public static Point3D transCentroid(Complex []P,double []trans,boolean sPole) {
+	public static Point3D transCentroid(Complex []P,
+			double []trans,boolean sPole) {
 		int N=P.length-1;
 		double X=0;
 		double Y=0;
@@ -1017,7 +1019,8 @@ public static double vec_norm(double X[]){
 	}
 			
 	/**
-	 * Given a list of sph points, (theta,phi), find their 3-space centroid
+	 * Given a list of sph points, (theta,phi), find their 3-space 
+	 * centroid
 	 * @param pts Complex[] (theta,phi) form
 	 * @return Point3D, null on error
 	 */

@@ -19,6 +19,8 @@ import exceptions.ParserException;
 import komplex.EdgeSimple;
 import packing.PackData;
 import packing.QualMeasures;
+import tiling.Tile;
+import tiling.TileData;
 import util.FaceParam;
 import util.MathUtil;
 import util.PathInterpolator;
@@ -123,6 +125,47 @@ public class HalfLink extends LinkedList<HalfEdge> {
 			DcelFace face=p.packDCEL.faces[flst.next()];
 			add(face.edge);
 		}
+	}
+	
+	/**
+	 * Return closed redChain comprising the augmented
+	 * edges of the given tile, starting with the 
+	 * given tile vertex.
+	 * @param p PackData
+	 * @param tdata TileData
+	 * @param tileindx int
+	 * @param vertindx int
+	 * @return RedEdge
+	 */
+	public static RedEdge tileAugChain(PackData p,
+			TileData tdata,int tileindx,int vertindx) {
+		Tile tile=tdata.myTiles[tileindx];
+		int aindx=-1;
+		int v=tile.vert[vertindx]; // starting vertex
+		int[] newlist=new int[tile.augVertCount];
+		for (int j=0;(j<tile.augVertCount && aindx<0);j++) 
+			if (tile.augVert[j]==v)
+				aindx=j;
+		NodeLink nlink=new NodeLink(p);
+		for (int j=0;j<tile.augVertCount;j++)
+			nlink.add(tile.augVert[(j+aindx)%tile.augVertCount]);
+		nlink.add(v); // to close up
+		HalfLink hlink=verts2edges(p.packDCEL,nlink,false);
+		
+		Iterator<HalfEdge> hlt=hlink.iterator();
+		RedEdge newRed=new RedEdge(hlt.next());
+		RedEdge rtrace=newRed;
+		RedEdge ntrace=null;
+		while (hlt.hasNext()) {
+			HalfEdge nhe=hlt.next();
+			ntrace=new RedEdge(nhe);
+			ntrace.prevRed=rtrace;
+			rtrace.nextRed=ntrace;
+			rtrace=ntrace;
+		}
+		rtrace.nextRed=newRed;
+		newRed.prevRed=rtrace;
+		return newRed;
 	}
 	
 	/**

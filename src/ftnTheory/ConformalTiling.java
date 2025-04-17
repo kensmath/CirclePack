@@ -14,6 +14,7 @@ import dcel.CombDCEL;
 import dcel.PackDCEL;
 import dcel.RawManip;
 import deBugging.DCELdebug;
+import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
@@ -32,6 +33,7 @@ import listManip.VertexMap;
 import packing.PackData;
 import packing.PackExtender;
 import posting.PostFactory;
+import tiling.EdgeRule;
 import tiling.SubdivisionRules;
 import tiling.Tile;
 import tiling.TileBuilder;
@@ -256,6 +258,135 @@ public class ConformalTiling extends PackExtender {
 			return cmdParser("build_sub",flgS);
 		}
 
+		// ============ build_sub ==========
+		else if (cmd.startsWith("build_sub")) {
+			if (packData.tileData==null) {
+				errorMsg("no 'TileData'");
+				return 0;
+			}
+			if (packData.tileData.subRules==null) {
+				if (subdivRules==null) {
+					errorMsg("no 'subRules' and no 'subdivRule' specified");
+					return 0;
+				}
+				// inherit 'subdivRules'
+				else
+					packData.tileData.subRules=subdivRules;
+			}
+			
+			// depth gives the number of recursions; 0 means do no 
+			// subdivisions. In any case, end up replacing 'packData' 
+			// with the cannonical packing for the given level of 
+			// subdivisions. Also have the various TileData for 
+			// subtiles at various levels which are built up to 
+			// give 'packData'.
+			int depth=0; // default = none: (cannonical packing for 'TileData')
+			Iterator<Vector<String>> fsegs=flagSegs.iterator();
+			while (fsegs.hasNext()) {
+				items=fsegs.next();
+				String str=items.get(0);
+				if (StringUtil.isFlag(str)) {
+					items.remove(0);
+					char c=str.charAt(1);
+					switch(c) {
+					case 'd': // given depth
+					{
+						if (str.length()>2)
+							depth=Integer.parseInt(str.substring(2));
+						if (items.size()>0)
+							depth=Integer.parseInt(items.get(0));
+						if (depth<0)
+							Oops("depth negative ???");
+						if (depth>50) {
+							msg("recuvsive depth limited to 50");
+							depth=5;
+						}
+						break;
+					}
+					} // end of switch
+					
+				}
+			} // end of while and flag processing
+				
+			// create the parent packing
+			
+			// first build 'newPD', with 'newPD.tileData' 
+			//   equal to the original tileData (though 
+			//   with additional pointers to subtilings)
+			targetDepth=-1;
+			PackData newPD=build2Depth(packData.tileData,
+					depth,mode,topTileData,depthPackings);
+			if (newPD==null) {
+				errorMsg("failed to build subdivided packing to depth "+depth);
+				targetDepth=-1;
+				return 0;
+			}
+			targetDepth=-1;
+			
+			// need to reindex tiles for 'TileData's at 
+			//   various depths and save in 'gradedTileData'.
+			Vector<TileData> gradedTileData=new Vector<TileData>();
+			if (depth>0) 
+				for (int d=0;d<depth;d++) {
+					TileData dTD=consolidateTiling(newPD.tileData,d);
+					dTD.subRules=newPD.tileData.subRules;
+					gradedTileData.add(dTD);
+					dTD.gradedTileData=null;
+				}
+			// also handle deepest tiling
+			TileData deepestTD=consolidateTiling(newPD.tileData,depth);
+			deepestTD.subRules=newPD.tileData.subRules;
+			if (!gradedTileData.isEmpty()) {
+				// must update 'myTileData' entries
+				for (int d=0;d<depth;d++) {
+					TileData td=gradedTileData.get(d);
+					for (int t=1;t<=td.tileCount;t++)
+						td.myTiles[t].TDparent=td;
+				}
+				deepestTD.gradedTileData=gradedTileData;
+			}
+			else 
+				deepestTD.gradedTileData=null;
+			
+			// Store in 'canonicalPack' with full 'TileData' tree.
+			newPD.tileData=null;
+			canonicalPack=newPD.copyPackTo();
+			canonicalPack.tileData=deepestTD;
+			deepestTD.packData=canonicalPack;
+			
+			// max_pack the cannonicalPacking
+			canonicalPack.set_aim_default();
+			if (cpCommand(canonicalPack,"max_pack")<=0) 
+				errorMsg("failed in max packing new canonicalPack");
+			else
+				msg("'canonicalPack' is set");
+			
+			// make a copy to replace 'this.packData' with only
+			//   this as extension
+			int pnum=packData.packNum;
+			swapExtenderPD(newPD);
+			
+			// put this in 'packings[pnum]'
+			CirclePack.cpb.swapPackData(packData,pnum,false);
+			packData.cpDrawing.setPackData(packData);
+			
+			// 'this.packData' gets a bare-bones copy of the deepest TileData
+			packData.tileData=deepestTD.copyBareBones();
+			packData.tileData.subRules=deepestTD.subRules;
+			packData.tileData.packData=packData;
+
+			// if top is a single tile, put 'vert's in 'vlist'
+			TileData canTD=canonicalPack.tileData.gradedTileData.get(0);
+			if (canTD!=null && canTD.tileCount==1) {
+				Tile tile=canTD.myTiles[1]; // the lone tile
+				packData.vlist=new NodeLink(packData);
+				for (int j=0;j<tile.vertCount;j++)
+					packData.vlist.add(tile.vert[j]);
+			}
+			
+			return packData.nodeCount;
+		}
+		
 		// ================ set_tlist (set_Tlist) ==============
 		//  PackData must have 'TileData'. However, we try to use the
 		//    corresponding 'TileData' from canonicalPack if available so
@@ -835,127 +966,6 @@ public class ConformalTiling extends PackExtender {
 			return count;
 		}
 		
-		// ============ build_sub ==========
-		else if (cmd.startsWith("build_sub")) {
-			if (packData.tileData==null) {
-				errorMsg("no 'TileData'");
-				return 0;
-			}
-			if (packData.tileData.subRules==null) {
-				if (subdivRules==null) {
-					errorMsg("no 'subRules' and no 'subdivRule' specified");
-					return 0;
-				}
-				// inherit 'subdivRules'
-				else
-					packData.tileData.subRules=subdivRules;
-			}
-			
-			// depth gives the number of recursions; 0 means do no 
-			// subdivisions. In any case, end up replacing 'packData' 
-			// with the cannonical packing for the given level of 
-			// subdivisions. Also have the various TileData for 
-			// subtiles at various levels which are built up to 
-			// give 'packData'.
-			int depth=0; // default = none: (cannonical packing for 'TileData')
-			Iterator<Vector<String>> fsegs=flagSegs.iterator();
-			while (fsegs.hasNext()) {
-				items=fsegs.next();
-				String str=items.get(0);
-				if (StringUtil.isFlag(str)) {
-					items.remove(0);
-					char c=str.charAt(1);
-					switch(c) {
-					case 'd': // given depth
-					{
-						if (str.length()>2)
-							depth=Integer.parseInt(str.substring(2));
-						if (items.size()>0)
-							depth=Integer.parseInt(items.get(0));
-						if (depth<0)
-							Oops("depth negative ???");
-						if (depth>50) {
-							msg("recuvsive depth limited to 50");
-							depth=5;
-						}
-						break;
-					}
-					} // end of switch
-					
-				}
-			} // end of while and flag processing
-				
-			// create the parent packing
-			
-			// first build 'newPD', with 'newPD.tileData' 
-			//   equal to the original tileData (though 
-			//   with additional pointers to subtilings)
-			targetDepth=-1;
-			PackData newPD=build2Depth(packData.tileData,
-					depth,mode,topTileData,depthPackings);
-			if (newPD==null) {
-				errorMsg("failed to build subdivided packing to depth "+depth);
-				targetDepth=-1;
-				return 0;
-			}
-			targetDepth=-1;
-			
-			// now generate the consolidated 'TileData' structures
-			TileData deepestTD=consolidateTiling(newPD.tileData,depth);
-			if (depth>0) {
-				deepestTD.gradedTileData=new Vector<TileData>(depth);
-				for (int d=0;d<depth;d++)
-					deepestTD.gradedTileData.add(consolidateTiling(newPD.tileData,d));
-			}
-			else
-				deepestTD.gradedTileData=null;
-			
-			// Store in 'canonicalPack' with full 'TileData' tree.
-			newPD.tileData=null;
-			canonicalPack=newPD.copyPackTo();
-			canonicalPack.tileData=deepestTD;
-			deepestTD.packData=canonicalPack;
-			
-			// max_pack the cannonicalPacking
-			canonicalPack.set_aim_default();
-			if (cpCommand(canonicalPack,"max_pack")<=0) 
-				errorMsg("failed in max packing new canonicalPack");
-			else
-				msg("'canonicalPack' is set");
-			
-			// make a copy to replace 'this.packData' with only
-			//   this as extension
-			int pnum=packData.packNum;
-			swapExtenderPD(newPD);
-			
-			// put this in 'packings[pnum]'
-			CirclePack.cpb.swapPackData(packData,pnum,false);
-			packData.cpDrawing.setPackData(packData);
-			
-			// 'this.packData' gets a bare-bones copy of the deepest TileData
-			packData.tileData=deepestTD.copyBareBones();
-			packData.tileData.packData=packData;
-
-			// if top is a single tile, set_vlist to its 'vert's
-			if (canonicalPack.tileData.gradedTileData!=null && 
-					canonicalPack.tileData.gradedTileData.get(0).tileCount==1) {
-				Tile tile=canonicalPack.tileData.
-						gradedTileData.get(0).myTiles[1];
-				packData.vlist=new NodeLink(packData);
-				for (int j=0;j<tile.vertCount;j++)
-					packData.vlist.add(tile.vert[j]);
-			}
-			else if (canonicalPack.tileData!=null && 
-					canonicalPack.tileData.tileCount==1) {
-				Tile tile=canonicalPack.tileData.myTiles[1];
-				packData.vlist=new NodeLink(packData);
-				for (int j=0;j<tile.vertCount;j++)
-					packData.vlist.add(tile.vert[j]);
-			}
-			
-			return packData.nodeCount;
-		}
-
 		// ============ subtile vertlist =============
 		else if (cmd.startsWith("stvl")) {
 			if (canonicalPack.tileData==null || 
@@ -1711,12 +1721,12 @@ public class ConformalTiling extends PackExtender {
 	 * This means that the tiles are barycentrically 
 	 * subdivided, each n-tile into 2n triangular faces, 
 	 * then those are barycentrically subdivided. Full
-	 * tiling data is in place: 'dual', 'quad', and 'wg'
-	 * tilings.
+	 * tiling data is put in place: 'dual', 'quad', 
+	 * and 'wg' tilings.
 	 * 
 	 * In order to accommodate digons, slits, and
 	 * self-pastings of tiles, we construct the packing
-	 * by adjoining a tile at a time.
+	 * by adjoining one tile at a time.
 	 * 
 	 * TODO: Restore the original indices of original verts
 	 *  
@@ -1732,7 +1742,6 @@ public class ConformalTiling extends PackExtender {
 		// build the packing by pasting packings for the
 		//   individual tiles together.
 		TileBuilder tileBuilder=new TileBuilder(td);
-//		PackData np=tileBuilder.fullfromFlowers();
 		PackData np=tileBuilder.newfromFlowers();
 		if (np==null || np.tileData==null || np.nodeCount<=0)
 			throw new CombException("'tileBuilder' seems to have failed");
@@ -2373,9 +2382,9 @@ public class ConformalTiling extends PackExtender {
      
 	/**
 	 * If 'tData' has 'subRules' and appropriate 'tileType's, then 
-	 * build the cannonical circle packing for 'tData' recursively 
+	 * build the canonical circle packing for 'tData' recursively 
 	 * to the given 'depth', attaching 'tData' as its 'tileData'. 
-	 * Note that depth=0 is just the cannonical tiling for 'tData'.
+	 * Note that depth=0 is just the canonical tiling for 'tData'.
 	 * 
 	 * This builds a new PackData and updates and attaches 'tData' 
 	 * based on 'tData's initial TileData structure. 'tData' must 
@@ -2446,6 +2455,7 @@ public class ConformalTiling extends PackExtender {
 							tData.myTiles[1].vertCount+" edges");
 					return null;
 				}
+				tile.tileType=tt;
 			}
 			if (buildDeBug) {
 				System.out.println("  one tile, type "+tile.tileType);
@@ -2493,15 +2503,23 @@ public class ConformalTiling extends PackExtender {
 					PackData savePD=tmpPD.copyPackTo();
 					vpd.setElementAt(savePD,depth);
 					needsave=false;
+					
+// debugging					
 //					CirclePack.cpb.msg("added depth "+depth+", type "+tt);
 				}
 				
 				tile.TDparent=tData;
 				tmpPD.tileData=tData;
+				
+				if (buildDeBug) { // buildDeBug=true;
+					DebugHelp.debugPackDisp(tmpPD,2,"max_pack");
+					buildDeBug=false;
+				}
+				
 				return tmpPD;
 			}
 			
-			// else depth>0
+			// just one tile, but depth>0
 			if (depth==(targetDepth-1)) // show that we're nearing target depth 
 				System.out.println("at depth "+depth);
 			
@@ -2532,11 +2550,7 @@ public class ConformalTiling extends PackExtender {
 //				tData.myTiles[1].myTileData.myTiles[j].TDparent=
 //				     tData.myTiles[1].myTileData;
 			tData.myTiles[1].myTileData.parentTile=tData.myTiles[1];
-			tData.createAugBorder(1);
-			
-			// TODO: for single tile, would like top level vertices to be
-			//       set to 1,2,...,n, but will have to recursively change in
-			//       all deeper vert and augVert lists. 
+			tData.newVertAug(1);
 			
 			// Do we need a copy of the one just built
 			Vector<PackData> vpd=null;
@@ -2555,32 +2569,38 @@ public class ConformalTiling extends PackExtender {
 			
 			// return new packing with original 'tData' attached
 			tmpPD.tileData=tData;
+			
+			if (buildDeBug) { // buildDeBug=true;
+				int qnum=2; // qnum=1;
+				DebugHelp.debugPackDisp(tmpPD,qnum,"max_pack");
+				buildDeBug=false;
+			}
+			
 			return tmpPD;
 		} // end of single tile case
 		
 		// *************** else, multiple tile types **********
-		
-		// maintain 2 lists; indices of current tiles, new ones 
-		//    that are touched
-		Vector<Integer> curr=null; 
-		Vector<Integer> next= new Vector<Integer>();
 
 		if (depth==(targetDepth-1)) // show that we're nearing target depth 
 			System.out.println("at depth "+depth);
 		
-		// 'tileFlower' entries not yet pasted are set negative
-		for (int t=1;t<=tData.tileCount;t++) {
-			Tile tile=tData.myTiles[t];
-			for (int j=0;j<tile.vertCount;j++) // set tileFlower entries negative
-				tile.tileFlower[j][0]=-Math.abs(tile.tileFlower[j][0]);
-		}
-		
-		// track tiles whose packings are created, and those with pasting done
+		// track tiles having packings and those whose 
+		//   edges have all been pasted.
 		int []tilehaspack=new int[tData.tileCount+1];
 		int []tiledone=new int[tData.tileCount+1];
 		
+		// keep track of which edges are already pasted:
+		//   [tileIndex][0]=edge number
+		//   [tileIndex][1]=1 if already pasted
+		int[][] pastingStatus=new int[tData.tileCount+1][];
+		for (int k=1;k<=tData.tileCount;k++) {
+			Tile tk=tData.myTiles[k];
+			pastingStatus[tk.tileIndex]=new int[tk.vertCount];
+		}
+		
+		
 		// 'p' = parent packing we are building, while 
-		//    'tilePack' is current tile packing
+		//    'tilePack' is current individual tile packing
 		PackData p=null; 
 		PackData tilePack=null;
 		
@@ -2638,7 +2658,7 @@ public class ConformalTiling extends PackExtender {
 			tile.TDparent=tData;
 			// TODO: must we update 'tileFlower's ?
 		}
-		// else depth>0, we must create the subdivision 'TileData'
+		// else depth>0, we must create subdivision 'TileData'
 		else { 
 			int tt=tData.myTiles[1].tileType;
 			
@@ -2667,7 +2687,7 @@ public class ConformalTiling extends PackExtender {
 			tData.myTiles[1].myTileData.parentTile=tData.myTiles[1];
 			for (int j=1;j<=tData.myTiles[1].myTileData.tileCount;j++)
 				tData.myTiles[1].myTileData.myTiles[j].TDparent=tData.myTiles[1].myTileData;
-			tData.createAugBorder(1); // tData.myTiles[1].debugPrint();
+			tData.newVertAug(1); // tData.myTiles[1].debugPrint();
 			
 			// Do we need a copy of the one just built
 			Vector<PackData> vpd=null;
@@ -2678,17 +2698,23 @@ public class ConformalTiling extends PackExtender {
 					vpd.setSize(depth+1);
 				PackData savePD=p.copyPackTo();
 				vpd.setElementAt(savePD,depth);
+				
+// debugging				
 //				String fdbk="added depth "+depth+", type "+tt;
 //				CirclePack.cpb.msg(fdbk);
 //				System.out.println(fdbk);
 				needsave=false;
 			}
 		}
-
-		next.add(1); // put in list for later processing
 		tilehaspack[1]=1;
 		
-		// now cycle between 'curr' and 'next'		
+		// ------ have started with p, now add on -----
+
+		// maintain 2 lists; indices of current tiles, new ones 
+		//    that have been touched
+		Vector<Integer> curr=null; 
+		Vector<Integer> next= new Vector<Integer>();
+		next.add(1); // put firt tile in list 
 		int safety=100*tData.tileCount;
 		while (next.size()>0) {
 			curr=next;
@@ -2708,10 +2734,11 @@ public class ConformalTiling extends PackExtender {
 				if (tiledone[t]!=0) 
 					break;
 
-				// go through the as yet unpasted edges
+				// go through as-yet-unpasted edges, create new 
+				//   packings when needed
 				for (int ti=0;ti<tile.vertCount;ti++) {
-					if (tile.tileFlower[ti][0]<0) {
-						int nghbJ=Math.abs(tile.tileFlower[ti][0]);
+					int nghbJ=tile.tileFlower[ti][0];
+					if (nghbJ>0 && pastingStatus[tile.tileIndex][ti]==0) {
 						Tile nghbTile=tData.myTiles[nghbJ]; // nghbTile.debugPrint();
 						int tt=tData.myTiles[nghbJ].tileType;
 						
@@ -2786,7 +2813,7 @@ public class ConformalTiling extends PackExtender {
 								nghbTile.myTileData.parentTile=nghbTile;
 								for (int j=1;j<=nghbTile.myTileData.tileCount;j++)
 									nghbTile.myTileData.myTiles[j].TDparent=nghbTile.myTileData;
-								tData.createAugBorder(nghbJ);
+								tData.newVertAug(nghbJ);
 								
 								// Do we need a copy of the one just built
 								Vector<PackData> vpd=null;
@@ -2848,6 +2875,16 @@ public class ConformalTiling extends PackExtender {
 						p.vertexMap=pdcel.oldNew;
 						pdcel.fixDCEL(null);
 						
+						if (buildDeBug) { // buildDeBug=true;
+							int qnum=2; // qnum=1;
+							DebugHelp.debugPackDisp(p,qnum,"max_pack;Disp -w -c -cc5t4 {c:m.eq.2}");
+							buildDeBug=false;
+						}
+						
+						// record pastings
+						pastingStatus[tile.tileIndex][ti]=1;
+						pastingStatus[nghbJ][nti]=1;
+						
 						if (debug) { // debug=true;
 							CPBase.packings[2].attachDCEL(pdcel);
 							debug=false;
@@ -2859,10 +2896,6 @@ public class ConformalTiling extends PackExtender {
 //						p.attachDCEL(pdcel);
 //						pdcel.oldNew=null; 
 
-						// reset info
-						tile.tileFlower[ti][0]=Math.abs(tile.tileFlower[ti][0]);
-						nghbTile.tileFlower[nti][0]=tile.tileIndex;
-						
 						// recursively update vertices
 						if (isnew) { // reset just for this new tile
 							tData.myTiles[nghbJ].updateMyVerts(p.vertexMap);
@@ -2873,7 +2906,6 @@ public class ConformalTiling extends PackExtender {
 									tData.myTiles[j].updateMyVerts(p.vertexMap);
 							}
 						}
-
 					}
 				} // done pasting tile's edges
 				tiledone[tile.tileIndex]=1;
@@ -2887,17 +2919,12 @@ public class ConformalTiling extends PackExtender {
 	}
 	
 	/**
-	 * Given 'tData' must represent a tiling tree structure, 
-	 * meaning that its 'myTiles' are pointers to tilings in 
-	 * a hierarchy. This command consolidates the tiling tree 
-	 * into a single tiling by tiles at a given 'depth' (the 
-	 * original 'tData' being depth 0).
-	 * 
-	 * The consolidated tiles remain as pointers to the tiles at the 
-	 * designated depth.
+	 * This creates a new 'TileData' for given 'depth' 
+	 * with tiles reindexed from 1 and updates 
+	 * 'tileFlowers' The given 'tData' is depth 0.
 	 * @param tData TileData, 
 	 * @param depth int, set large to get max depth
-	 * @return TileData
+	 * @return TileData, new TileData new updated indexing
 	 */
 	public static TileData consolidateTiling(TileData tData,int depth) {
 		
@@ -2918,20 +2945,83 @@ public class ConformalTiling extends PackExtender {
 			outData.myTiles[++tick]=tV.next();
 			outData.myTiles[tick].tileIndex=tick;
 		}
+		
+		if (depth==0)
+			return outData;
+		
+		// update 'tileFlower's for two issues:
+		//    indices and 'tileFlower's
+		
+		// First, update indices
+		for (int t=1;t<=outData.tileCount;t++) {
+			Tile tile=outData.myTiles[t];
+			for (int j=0;j<tile.vertCount;j++) {
+				// tile across edge j
+				int indx=tile.tileFlower[j][0];
+				if (indx!=0) 
+					tile.tileFlower[j][0]=outData.myTiles[indx].tileIndex;
+			}
+		}
+		
+		//  Next step is more complicated: go through tiles
+		//    of 'TDparent' to fix 'tileFlower's for those
+		//    subtiles that are pasted across the parent
+		//    tile's sides
+		TileData parentTileData=outData.myTiles[1].TDparent.parentTile.TDparent;
+		for (int t=1;t<=parentTileData.tileCount;t++) {
+			Tile parentT=parentTileData.myTiles[t];
+			int[][] pflower=parentT.tileFlower;
+			// find pastings along sides
+			for (int s=0;s<parentT.vertCount;s++) {
+				int ngindx=pflower[s][0];
+				if (ngindx==0)
+					continue;
+				// get my edgeRule
+				int tpe=parentTileData.subRules.type2Rule.findW(parentT.tileType);
+				TileRule parentRule=parentTileData.subRules.tileRules.get(tpe);
+				EdgeRule parentEdgeRule=parentRule.edgeRule[s];
+					
+				// get cross edge neighbor edgeRule
+				Tile parentNghb=parentTileData.myTiles[ngindx];
+				tpe=parentTileData.subRules.type2Rule.findW(parentNghb.tileType);
+				TileRule nghbRule=parentTileData.subRules.tileRules.get(tpe);
+				EdgeRule nghbEdgeRule=nghbRule.edgeRule[pflower[s][1]];
+					
+				// go along the pasted edge and find subtile pastings
+				int ecount=parentEdgeRule.subEdgeCount;
+				int[][] pEdgePairs=parentEdgeRule.tileedge;
+				int[][] nEdgePairs=nghbEdgeRule.tileedge;
+				for (int m=0;m<ecount;m++) {
+					int nm=ecount-m-1;
+					// subtiles clw along parent; cclw along nghb
+					Tile p_edgetile=outData.myTiles[pEdgePairs[m][0]];
+					Tile n_edgetile=outData.myTiles[nEdgePairs[nm][0]];
+					int p_edgeIndx=pEdgePairs[m][1];
+					int n_edgeIndx=nEdgePairs[nm][1];
+						
+					// if this subtile edge not already updated
+					if (p_edgetile.tileFlower[p_edgeIndx][0]==0) {
+						p_edgetile.tileFlower[p_edgeIndx][0]=n_edgetile.tileIndex;
+						n_edgetile.tileFlower[n_edgeIndx][0]=p_edgetile.tileIndex;
+					}
+				} // done with subtiles along this side
+			} // done with all sides
+		} // done with all parent tiles
+		
 		return outData;
 	}
 
 	/**
-	 * Return vector of tiles at 'depth' obtained recursively starting
-	 * with given 'tile'.
+	 * Return vector of tiles at 'depth' obtained 
+	 * recursively starting with given 'tile'.
 	 * @param tile Tile 
-	 * @param int depth; -1 is full depth
+	 * @param int depth; large value gives maximal depth
 	 * @return Vector<Tile>, may be empty
 	 */
 	public static Vector<Tile> accumTiles(Tile tile,int depth) {
 		Vector<Tile> tVec=new Vector<Tile>();
 		
-		// in some cases return this tile itself
+		// return this tile itself when it has no subtiles
 		if (depth==0 || tile.myTileData==null || tile.myTileData.tileCount<1) {
 			tVec.add(tile);
 			return tVec;

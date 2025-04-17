@@ -183,12 +183,13 @@ public class ReadWrite {
 						p.hes = 0;
 						dataN = Integer.parseInt(tok.nextToken());
 						
-						// get tile types
+						// there may be tile types, in order
 						int tick=0;
 						tileTypes=new int[dataN+1];
 						while (tok.hasMoreElements()) {
 							tileTypes[++tick]=Integer.parseInt(tok.nextToken());
 						}
+						// default to type=4
 						if (tick<dataN)
 							for (int j=tick+1;j<=dataN;j++)
 								tileTypes[++tick]=4;
@@ -996,12 +997,12 @@ public class ReadWrite {
 								vlist = new NodeLink();
 								for (int n = 0; n <= tc; n++)
 									vlist.add(Integer.parseInt((String) loctok.nextToken()));
-								int tileindx = p.tileData.whichTile(vlist);
-								if (tileindx >= 0) {
+								int tdex = p.tileData.whichTile(vlist);
+								if (tdex >= 0) {
 									int rd = Integer.parseInt((String) loctok.nextToken());
 									int gn = Integer.parseInt((String) loctok.nextToken());
 									int bl = Integer.parseInt((String) loctok.nextToken());
-									p.tileData.myTiles[tileindx].color = new Color(rd, gn, bl);
+									p.tileData.myTiles[tdex].color = new Color(rd, gn, bl);
 								}
 							} catch (Exception ex) {
 								state = PackState.INITIAL;

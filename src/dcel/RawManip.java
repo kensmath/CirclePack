@@ -3166,6 +3166,8 @@ public class RawManip {
 	 * @return int count if seems successful, -count if problem
 	 */
 	public static int wipeRedChain(PackDCEL pdcel,RedEdge redchain) {
+		if (redchain==null)
+			return 0;
 		int count=0;
 		RedEdge rtrace=redchain;
 		RedEdge hold=null;

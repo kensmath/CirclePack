@@ -132,14 +132,11 @@ public class SubdivisionRules {
     				gotCount=true;
         			subRules=new SubdivisionRules();
         			
-        			// dump next line "Size_..."
+        			// dump next line "Size_(i.e.,_number_of_edges)_of_each_of_these_types:"
         			line=StringUtil.ourNextLine(fp,true);
-        			
-        			// Note: the 'types' start at 4 and are sequential.
-        			// Read the numbers of edges of the child tiles:
         			line=StringUtil.ourNextLine(fp,true);
     				String []numbs=line.split("\\s+");
-        			for (int j=0;j<ruleCount;j++) { // type starts at 4
+        			for (int j=0;j<ruleCount;j++) { // type starts at 4, sequential
         				int n=Integer.parseInt(numbs[j]);
         				subRules.tileRules.add(new TileRule(4+j,n));
         				// careful, have to allow j=0 entry
@@ -157,20 +154,19 @@ public class SubdivisionRules {
         		int myType=-1;
         		TileRule myRule;
 
-       			// flush next line, "Type_number" and get the number itself
+       			// flush next line, "Type_number_..." and get the number itself,
+        		//   then instantiate the corresponding rule
        			line=StringUtil.ourNextLine(fp,true);
        			myType=Integer.parseInt(StringUtil.ourNextLine(fp,true));
        			myRule=subRules.tileRules.get(subRules.type2Rule.findW(myType));
         			
-       			// flush next line, "Numer_of_tiles_into_which ..."
+       			// flush next line, "Numer_of_tiles_into_which_that_tile_type_is_subdivided:"
        			line=StringUtil.ourNextLine(fp,true);
-
-       			// get the number
         		myRule.childCount=Integer.parseInt(StringUtil.ourNextLine(fp,true));
         		myRule.childType=new int[myRule.childCount+1];
         		myRule.childMark=new int[myRule.childCount+1];
         			
-        		// flush next line, "Type_of_each_of_these..."
+        		// flush next line, "Type_of_each_of_these_tiles_in_the_subdivision:"
         		line=StringUtil.ourNextLine(fp,true);
         			
         		// keep reading until we get 'childCount' types:
@@ -190,7 +186,7 @@ public class SubdivisionRules {
         			tmpFlower.add(new Vector<int[]>(0));
         		}
 
-        		// flush next line, "Tile-ids_--_Adjacent_tiles_.."
+        		// flush next line, "Tile-ids_--_Adjacent_tiles_(in_correct_order_according_to_edge_number):"
         		line=StringUtil.ourNextLine(fp,true);
 
         		// get the neighbors across edges for each subtile; 
@@ -202,7 +198,7 @@ public class SubdivisionRules {
         		tick=0;
         		int mxsize=0;
         		while (tick<myRule.childCount && (line=StringUtil.ourNextLine(fp,true))!=null) {
-        			String []numbs=line.split("\\s+");
+        			String[] numbs=line.split("\\s+");
         			int ci=Integer.parseInt(numbs[0]); 
         			if (ci!=tick)
         				throw new DataException("missing/scrambled list for 'Tile-ids'");
@@ -212,7 +208,7 @@ public class SubdivisionRules {
         			if ((numbs.length-1)==readlength) {
         				int click=0;
         				for (int j=1;j<=readlength;j++) {
-        					int []ei=new int[2];
+        					int[] ei=new int[2];
         					ei[0]=Integer.parseInt(numbs[j])+1;  // we are adding 1 to Floyd's indexing
         					ei[1]=-2; // default to -2 when these entries are not provided
         					tmpFlower.get(ci).add(ei);
@@ -259,7 +255,7 @@ public class SubdivisionRules {
         		// flush next line, "Corresponding_boundary-tiling:"
         		line=StringUtil.ourNextLine(fp,true);
 
-        		// Then flush "Boundary_of_type_number.." 
+        		// Then flush "Boundary_of_type_number..." 
         		line=StringUtil.ourNextLine(fp,true);
 
         		// now the type itself is given and must be 'myType'
@@ -286,22 +282,22 @@ public class SubdivisionRules {
         			}
         		}
         		if (tick<myRule.edgeCount) 
-        		throw new DataException("missing edges for type "+myRule.targetType);
+        			throw new DataException("missing edges for type "+myRule.targetType);
         			
-        		// flush "Original_edgeid_-_numbers_in_pairs ... (tileno_edgeno)"
+        		// flush "Original_edgeid_-_numbers_in_pairs_for_subdivision_edges_(tileno_edgeno)"
         		line=StringUtil.ourNextLine(fp,true);
         			
         		int etick=0;
         		while (etick<myRule.edgeCount && (line=StringUtil.ourNextLine(fp,true))!=null) {
-        			String []numbs=line.split("\\s+");
+        			String[] numbs=line.split("\\s+");
 
         			// first get index of this edge, allocate space
         			int ei=Integer.parseInt(numbs[0]); 
         			int seCount=myRule.edgeRule[ei].subEdgeCount;
-        			myRule.edgeRule[ei].tileedge=new int[seCount][2];
         			
-        			// Get n pairs: tile number of tile along this edge, and index in 
-        			//   its bdry where the subedge in this edge starts.
+        			// Get seCount pairs: tile number of subtile along 
+        			//   this edge, and index in its bdry where the 
+        			//   subedge starts.
         			// CAUTION: these are listed "clockwise" along the edge, not
         			//   "counterclockwise".
         			Vector<Integer> pairs=new Vector<Integer>(numbs.length);
@@ -310,6 +306,7 @@ public class SubdivisionRules {
         				pairs.add(Integer.parseInt(numbs[j]));
         				setick++;
         			}
+        			// there may need to be more than one line
         			while (setick<seCount && (line=StringUtil.ourNextLine(fp,true))!=null) {
         				numbs=line.split("\\s");
             			for (int j=0;j<numbs.length;j=j++) {
@@ -324,7 +321,7 @@ public class SubdivisionRules {
         			Iterator<Integer> pl=pairs.iterator();
         			setick=0;
         			while (pl.hasNext()) {
-        				myRule.edgeRule[ei].tileedge[setick][0]=pl.next()+1;
+        				myRule.edgeRule[ei].tileedge[setick][0]=pl.next()+1; // children indexed from 1
         				myRule.edgeRule[ei].tileedge[setick][1]=pl.next();
         				setick++;
         			}
@@ -336,7 +333,7 @@ public class SubdivisionRules {
         			
         		tiletick++;
         		if (tiletick<ruleCount)
-        			// get next line
+        			// get next line to go through again
             		line=StringUtil.ourNextLine(fp,true);
         			
         	} // end of while through "Subdivision-tiling:" sections
@@ -556,26 +553,29 @@ public class SubdivisionRules {
     	} catch (Exception ex) {}
 
         
-        // complete the 'childFlower' info for each rule
+        // complete the 'childFlower' info for each 'TileRule'
         for (int r=0;r<ruleCount;r++) {
         	TileRule trule=subRules.tileRules.get(r);
         	for (int t=1;t<=trule.childCount;t++) {
-        		int [][]myflower=trule.childFlower[t];
-        		int []hts=new int[myflower.length];
+        		int[][] myflower=trule.childFlower[t];
+        		int[] hts=new int[myflower.length];
         		for (int j=0;j<myflower.length;j++) {
         			if (hts[j]==0) {
         				int ngt=myflower[j][0]; 
         				if (ngt>0) {
-        					int [][]nghbflower=trule.childFlower[ngt];
+        					int[][] nghbflower=trule.childFlower[ngt];
         					Vector<EdgeSimple> tvec=Tile.tile2tileMatch(myflower,t,nghbflower,ngt);
         					Iterator<EdgeSimple> tv=tvec.iterator();
         					while (tv.hasNext()) {
         						EdgeSimple cc=tv.next();
-        						myflower[cc.v][1]=cc.w; // -3 if we failured in 'tile2tileMatch'
+        						myflower[cc.v][1]=cc.w; // -3 if we failed in 'tile2tileMatch'
         						hts[cc.v]=1;
         					}
         				}
-        				else hts[j]=1;
+        				else {
+//        					myflower[j][1]=0; // change -2 entry
+        					hts[j]=1;
+        				}
         			}
         		}
         	}
@@ -808,7 +808,7 @@ public class SubdivisionRules {
 		//    Get this from tile/edge info for last entry
 		for (int e=1;e<=tRule.edgeCount;e++) {
 			EdgeRule erule=tRule.edgeRule[e-1];
-			int []info=erule.tileedge[erule.subEdgeCount-1];
+			int[] info=erule.tileedge[erule.subEdgeCount-1];
 			Tile vTile=tileData.myTiles[info[0]];
 			int iv=vTile.vert[info[1]];
 			if (iv!=e) { // apply new a permutation

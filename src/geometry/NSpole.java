@@ -92,7 +92,7 @@ public class NSpole {
 				return cnt;
 			}
 			
-			// typical: tangency points (since they are Mobius invariant)
+			// typical: tangency points (as they're Mobius invariant)
 			int rslt=0;
 			for (int rep=1;rep<=1;rep++) {
 				Complex []T=loadTangency();
@@ -304,19 +304,16 @@ public class NSpole {
 	}
 
 	/**
-	 * Given vector of points in the plane, return a Mobius transformation that
-	 * puts the centroid of their stereo projections to the sphere close to the 
-	 * origin in 3-space. Return null on error. Note that the resulting Mobius
-	 * is linear (fixes infinity). If 'sPole' is true, then we include a point
-	 * located at infinity.
+	 * Given vector of points in the plane, return a Mobius 
+	 * transformation that puts the centroid of their stereo 
+	 * projections to the sphere close to the origin in 3-space. 
+	 * Return null on error. Note that the resulting Mobius
+	 * is linear (fixes infinity). If 'sPole' is true, then 
+	 * we include a point located at infinity.
 	 * 		
-	 * TODO: eucl centers are not projections of spherical
-	 *   centers, so may improve by using points that better 
-	 *   approximate sph centers.
-	 *
 	 * @param pts Complex[], plane points
 	 * @param cycles int, iterative cycles
-	 * @param sPole boolean: true->include a point at south pole (infinity)
+	 * @param sPole boolean: include point at infinity
 	 * @param debug boolean
 	 * @return Mobius, null on failure to converge
 	 */
@@ -327,12 +324,15 @@ public class NSpole {
 		double []p0 = new double[3];
 		double []accP = new double[3];
 		p0[0]=accP[0]=1.0;
-		double bestsq = SphericalMath.transCentroid(pts,p0,sPole).normSq();
+		double bestsq = SphericalMath.transCentroid(
+				pts,p0,sPole).normSq();
 		if (debug)
-			System.out.println("starting 'bestsq' = "+String.format("%.6f",bestsq));
+			System.out.println("starting 'bestsq' = "+
+					String.format("%.6f",bestsq));
 
-		// Nested 'while' loops; after an inner loop, adjustments are applied
-		//   to 'pts' and the mobius is accumulated in 'accP'.
+		// Nested 'while' loops; after an inner loop, 
+		//   adjustments are applied to 'pts' and the 
+		//   Mobius are accumulated in 'accP'.
 		int outercount=0;
 		while (bestsq > N_TOLER && outercount < cycles) {
 			if (debug)
@@ -366,7 +366,8 @@ public class NSpole {
 					}
 				}
 
-				// if moving in 6 directions didn't improve, then cut delt
+				// if moving in 6 directions didn't improve, 
+				//   then cut 'delt'
 				if (gotOne == 0)
 					delt = delt / 2;
 				// else success: which change was the best?
@@ -406,16 +407,21 @@ public class NSpole {
 
 			// check if we're done
 			if (bestsq<N_TOLER) {
-				// apply new 'p0' to previously accumulated transformations in 'accP'
+				// apply new 'p0' to accumulated transforms in 'accP'
 				accP[0] =p0[0]*accP[0];
 				accP[1] =p0[0]*accP[1]+p0[1];
 				accP[2] =p0[0]*accP[2]+p0[2];
 				if (debug) {
-					System.out.println("A, B, C = " + String.format("%.6f", accP[0]) + " " + String.format("%.6f", accP[1])
+					System.out.println("A, B, C = " + 
+							String.format("%.6f", accP[0]) + " " + 
+							String.format("%.6f", accP[1])
 							+ " " + String.format("%.6f", accP[2]));
-					System.out.println("end 'bestsq' = "+String.format("%.6f",bestsq));
+					System.out.println("end 'bestsq' = "+
+							String.format("%.6f",bestsq));
 				}
-				return new Mobius(new Complex(accP[0]), new Complex(accP[1], accP[2]), new Complex(0.0), new Complex(1.0));
+				return new Mobius(new Complex(accP[0]), 
+						new Complex(accP[1], accP[2]), 
+						new Complex(0.0), new Complex(1.0));
 			}
 
 			// else, apply the new transformation to 'pts'
@@ -433,11 +439,16 @@ public class NSpole {
 		} // end outer while
 			
 		if (debug) {
-			System.out.println("A, B, C = " + String.format("%.6f", accP[0]) + " " + String.format("%.6f", accP[1])
+			System.out.println("A, B, C = " + 
+					String.format("%.6f", accP[0]) + " " + 
+					String.format("%.6f", accP[1])
 					+ " " + String.format("%.6f", accP[2]));
-			System.out.println("end 'bestsq' = "+String.format("%.6f",bestsq));
+			System.out.println("end 'bestsq' = "+
+					String.format("%.6f",bestsq));
 		}
-		return new Mobius(new Complex(accP[0]), new Complex(accP[1], accP[2]), new Complex(0.0), new Complex(1.0));
+		return new Mobius(new Complex(accP[0]), 
+				new Complex(accP[1], accP[2]), 
+				new Complex(0.0), new Complex(1.0));
 	}
 
 	public int setEdgeCount() {

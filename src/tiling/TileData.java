@@ -253,7 +253,6 @@ public class TileData {
 		//    have no consistent way to handle them.
 		if (special) { 
 			TileBuilder tileBuilder=new TileBuilder(td);
-//			PackData p=tileBuilder.fullfromFlowers();
 			PackData p=tileBuilder.newfromFlowers();
 			if (p==null || p.tileData==null || p.nodeCount<=0)
 				throw new CombException(
@@ -594,7 +593,7 @@ public class TileData {
 		}
 		if (special) {
 			TileBuilder tileBuilder=new TileBuilder(td);
-			PackData p=tileBuilder.fullfromFlowers();
+			PackData p=tileBuilder.newfromFlowers();
 			if (p==null || p.tileData==null || p.nodeCount<=0)
 				throw new CombException("'tileBuilder' seems to have failed");
 			// see 'slitSpecial' for one case
@@ -1345,61 +1344,52 @@ public class TileData {
 		return petals;
 	}
 	
-
 	/**
-	 * Given 'tIndx', create the 'augVert' list around the full
-	 * tile boundary. The initial vert does NOT get repeated at 
-	 * the end. 
-	 * 
-	 * If this tile is not subdivided, then 'augVert' should 
-	 * already be in place. If it is subdivided, assume the 
-	 * subtiles have 'augVert'
-	 * 
-	 * Return 0 on failure: e.g., if there's no subdivision
-	 * but 'augVert' is not set
-	 * 
-	 * @param tIndx int, index of the tile
-	 * @return int, count, 0 on error, -1 if augVert is missing
+	 * Use 'subdivisionRule' info to tile 'vert' and 
+	 * 'augVert' data for the specified tile
+	 * @param tIndx int, tile index
+	 * @return int
 	 */
-	public int createAugBorder(int tIndx) {
-
+	public int newVertAug(int tIndx) {
 		Tile tile=myTiles[tIndx];
+		if (subRules==null || tile.myTileData==null || subRules.tileRules==null)
+			throw new CombException("Info missing for "+
+					"'vert'/'augVert' for tile "+tIndx);
+		TileRule myRule=subRules.tileRules.get(subRules.type2Rule.findW(tile.tileType));
+		NodeLink bdrylink=new NodeLink();
 		
-		// if not subdivided, 'augVert' should be in place, 'vert' should be OK.
-		if ((subRules==null || tile.myTileData==null) && tile.augVert==null) {
-			throw new CombException("'augVert' is missing for tile "+tIndx);
+		tile.vert=new int[tile.vertCount];
+		for (int ej=0;ej<myRule.edgeCount;ej++) {
+			EdgeRule myEdgeRule=myRule.edgeRule[ej];
+			int mec=myEdgeRule.subEdgeCount-1;
+			// recall tileedge are listed clockwise
+			for (int k=mec;k>=0;k--) {
+				int[] tileedge=myEdgeRule.tileedge[k];
+				NodeLink sublink=tile.myTileData.getEdgeVerts(tileedge[0],tileedge[1]);
+				sublink.remove(sublink.size()-1); // remove entry
+				if (k==mec)
+					tile.vert[ej]=sublink.get(0);
+				bdrylink.abutMore(sublink);
+			}
 		}
-		
-		int n=myTiles[tIndx].vertCount;
-		int []newVerts=new int[n];
-		NodeLink list=new NodeLink();
-		for (int j=0;j<n;j++) {
-			NodeLink elink=getEdgeVerts(tIndx,j);
-			elink.remove(elink.size()-1); // remove last index
-			list.abutMore(elink);
-			newVerts[j]=elink.get(0); // first goes into 'vert'
-		}
-		
-		tile.augVert=new int[list.size()];
-		Iterator<Integer> lst=list.iterator();
+		tile.augVertCount=bdrylink.size();
+		tile.augVert=new int[tile.augVertCount];
 		int tick=0;
-		while (lst.hasNext()) {
-			tile.augVert[tick++]=lst.next();
-		}
+		Iterator<Integer> bls=bdrylink.iterator();
+		while (bls.hasNext())
+			tile.augVert[tick++]=bls.next();
 		
-		tile.augVertCount=tick;
-		tile.vert=newVerts;
-		return tick;
+		return tile.augVertCount;
 	}
-	
+
 	/**
 	 * Given 'tIndx' tile index and 'eIndx' edge index, 
-	 * return the 'augVert' list along that edge, including
+	 * return the 'augVert' list cclw along that edge, including
 	 * both first and last vertex.
 	 * 
 	 * If this tile is not subdivided, then 'augVert' should 
 	 * already be in place. If it is subdivided, make
-	 * recursive call along edge subtiles.
+	 * recursive call along edge subedges.
 	 * 
 	 * @param tIndx int, tile index 
 	 * @param eIndx int, edge index in that tile

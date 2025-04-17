@@ -21,18 +21,18 @@ import math.Point3D;
  */
 public class TileRule {
 
-	public int targetType;  // the 'type' (>= 4) of tile this rule applies to
+	public int targetType;  // 'type' (>= 4) of tile this rule applies to
 		
 	// broken into child tiles
 	public int childCount;    			// number of tiles in subdivision
-	public int []childType;   			// types start at 4; indexed from 1
+	public int[] childType;   			// types start at 4; indexed from 1
 	// rules file may give a marking to some subtiles.
 	// CAUTION: independent of type; used as 'Tile.mark' (i.e., inherited from 'Face.mark')
 	//     at creation; could be corrupted if marks are reset, then can't be recovered.
-	int []childMark; 
+	int[] childMark; 
 	
 	// note: children are indexed starting at 1 (indexing of Floyd starts with 0)
-	int [][][]childFlower;  	// for each child, indices of nghbs (-1 if none) and
+	int[][][] childFlower;  	// for each child, indices of nghbs (-1 if none) and
 								//   indices within that nghb of corresponding edges.
 								//   temp standing for 'Tile.tileFlower'.
 	// e.g. childFlower[3][2][0]=4 means child 3 is pasted to child 4 across edge 2
@@ -40,14 +40,14 @@ public class TileRule {
 	
 	// edges broken into child edges 
 	public int edgeCount; 		// number of edges
-	public EdgeRule []edgeRule;	// number each original edge is broken into, indexed from 0
+	public EdgeRule[] edgeRule;	// number each original edge is broken into, indexed from 0
 	// Optional: corners when in 'standard' position: first edge = [0,1].
-	public Complex []stdCorners;
+	public Complex[] stdCorners;
 	// further option: normal to plane of the face in 3D: face lies in plane
 	//    determined by first edge and this normal.
 	public Point3D stdNormal;
 	// Optional: base edges of subtiles vis-a-vis standard position.
-	public Complex [][]tileBase; // indexed from 1 (as with 'childType')
+	public Complex[][] tileBase; // indexed from 1 (as with 'childType')
 	
 	// constructor
 	public TileRule(int tt,int ecount) {

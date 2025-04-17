@@ -77,15 +77,15 @@ public class Tile extends Face {
 								//   then the 'e_j' are determined and 
 								//   consistency checked.
 	
-	// this tile may be a tiling itself --- as with subdivision rules
+	// this tile may be a tiling itself after subdivision
 	public TileData myTileData; // null by default
 	
 	// for edge-tracing during displays, augment border vertex list;
 	public int augVertCount; // -1 on startup
 	// these are generally null by default
-	public int []augVert;    // null until created: augVert[0] always 
+	public int[] augVert;    // null until created: augVert[0] always 
 							 //     equals vert[0]
-	public int []wgIndices;  // null until created: each n-gon breaks 
+	public int[] wgIndices;  // null until created: each n-gon breaks 
 							 //   into 2n wg (white/grey) 
 							 //   triangular tiles stored in 'tileData.wgTiles'.
 							 //   Each wg tile has 'mark' set: 
@@ -116,10 +116,11 @@ public class Tile extends Face {
 	
 	/**
 	 * Create the canonical packing for this single 
-	 * tile in one of three modes: simple mode, mode=1, 
-	 * provides an n-flower for an n-sided tile; mode=2 
-	 * adds a barycenter to each edge; mode=3 also 
-	 * barycentrically subdivides each triangle. 
+	 * tile, almost always in mode=3. However, there
+	 * are three modes: simple mode, mode=1, provides 
+	 * an n-flower for an n-sided tile; mode=2 adds a 
+	 * barycenter to each edge; mode=3 barycentrically 
+	 * subdivides each triangle from mode 2.
 	 * 
 	 * In mode 3, vertex 'mark's are set to {1,2,3}: 1 = tile 
 	 * baryVert (value infty); 2 = original tile corner (value 0); 
@@ -306,6 +307,9 @@ public class Tile extends Face {
 		} while (rtrace!=p.packDCEL.redChain);
 		
 		p.tileData.myTiles[1]=tile;
+		if (tile.tileFlower==null) {
+			tile.tileFlower=new int[tile.vertCount][2];
+		}
 		return p;
 	}
 	
@@ -484,9 +488,10 @@ public class Tile extends Face {
 	}
 
 	/**
-	 * Return the cclw closed list of augmented vertices forming the boundary
-	 * of this tile. If there are no augmented vertices, then just
-	 * return the closed vertex list. 
+	 * Return the cclw closed list of augmented vertices 
+	 * forming the boundary of this tile. If there are 
+	 * no augmented vertices, then just return the closed 
+	 * vertex list. 
 	 * 
 	 * @return NodeLink or null on error.
 	 */
@@ -564,9 +569,10 @@ public class Tile extends Face {
 	}
 
     /** 
-     * Build new 'Tile' object whose data duplicates this. However, 'myTileData' 
-     * is set to null and, if needed, must be copied separately and attached.
-     * (This prevents recursion).
+     * Build new 'Tile' object whose data duplicates this. 
+     * However, 'myTileData' is set to null and, if needed, 
+     * must be copied separately and attached. (This prevents 
+     * recursion).
      * @param tdparent TileData; set the parent TileData
      * @return new Tile
      */
@@ -660,7 +666,7 @@ public class Tile extends Face {
     }
     
     /**
-     * Given lists int[][2] 't' and 'nt', return vector of 
+     * Given lists int[][2], 't', and 'nt', return vector of 
      * EdgeSimple's (myindex,nghbindex): entry 'myindex' of 't' 
      * is matched to entry 'nghbindex' of 'nt'.  
      * 
@@ -672,12 +678,13 @@ public class Tile extends Face {
      *   should be; we'll use and check that.
      * 
      * If there aren't errors, we might guess to resolve ambiguity, but 
-     * it's best if the user provides the expected 'nghbindex'.
+     * it's best if the user provides the expected 'nghbindex' in
+     * the rules file.
      * 
      * Errors lead to Exceptions (hopefully helpful ones). 
      * 
      * Note:
-     * * 't' and 'nt' first components may be same (e.g. from same tile)
+     * * 't' and 'nt' first components may be same (e.g. same tile)
      * * matches may be contiguous in one list, but non-contiguous in
      *   the other
      * * whole list may be a match -- e.g. tile complementing a tree
@@ -692,8 +699,8 @@ public class Tile extends Face {
      * @param ntindx int, index (e.g. tile index) associated with 'nt' list
      * @return Vector<int[][]>, null if none found, exceptions on error
      */
-    public static Vector<EdgeSimple> tile2tileMatch(int [][]t,
-    		int tindx,int [][]nt,int ntindx) {
+    public static Vector<EdgeSimple> tile2tileMatch(int[][] t,
+    		int tindx,int[][] nt,int ntindx) {
     	
     	// check hints for minimal consistency
     	boolean hints=false; 

@@ -8,6 +8,7 @@ import allMains.CirclePack;
 import exceptions.DataException;
 import exceptions.InOutException;
 import input.CPFileManager;
+import input.CommandStrParser;
 import math.Mobius;
 import packing.PackData;
 import packing.ReadWrite;
@@ -23,6 +24,23 @@ import tiling.TileData;
 public class DebugHelp {
 	
 	public static File tmpdir=new File(System.getProperty("java.io.tmpdir"));
+
+	/**
+	 * When you want to display an intermediate packing
+	 * during testing. This loads it into one of the
+	 * 'CPBase.packings' and applies the given commands,
+	 * typically, 'repack', 'layout', 'disp', etc.
+	 * CAUTION: current contents of 'pnum' are replaced.
+	 * @param p PackData
+	 * @param pnum int, 0,1,2
+	 * @param cmds String
+	 * @return nodeCount
+	 */
+	public static int debugPackDisp(PackData p,int pnum,String cmds) {
+		CirclePack.cpb.swapPackData(p, pnum,false);
+		CommandStrParser.jexecute(p, cmds);
+		return p.nodeCount;
+	}
 	
 	/**
 	 * For debugging SolveData usage: create *.m 'matlab' file in the default

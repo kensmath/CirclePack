@@ -658,8 +658,8 @@ public class CommandStrParser {
 					CirclePack.cpb.msg("Have read '" + filename
 							+"' as a triangulation");
 				else {
-					throw new InOutException("failed to read " + filename
-						+ " as packing or triangulation. Check its format.");
+					throw new InOutException("couldn't read " + filename
+						+ " as packing/triangulation/tiling. Check format.");
 				}
 			} catch (IOException iox) {
 				try {
@@ -7477,9 +7477,14 @@ public class CommandStrParser {
 		    		  count++;
 		    		  break;
 	    		  }
-	    		  case 'T': // tailored (falls through to 't')
+	    		  case 'T': // respecting tiles
 	    		  {
-	    			  tflag=true;
+    	    		  if (packData.tileData==null || packData.tileData.tileCount==0)
+    	    			  break;
+	    		  	  CombDCEL.redchain_by_tile(packData,packData.tileData);
+	    		  	  pdc.fixDCEL(packData);
+	    		  	  count++;
+	    			  break;
 	    		  }
 	    		  case 't': // tailored
 	    		  {

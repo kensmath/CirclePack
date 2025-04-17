@@ -33,7 +33,6 @@ public class RedEdge {
 	// Constructor
 	public RedEdge(HalfEdge he) {
 		myEdge=he;
-		nextRed=null;
 		prevRed=null;
 		nextRed=null;
 		mobIndx=0;
@@ -45,13 +44,13 @@ public class RedEdge {
 			center=new Complex(0.0);
 			rad=.04;
 		}
-		redutil=0;
+		
 		// set 'redutil' if ideal face is across myEdge;
 		//    this is used in 'd_redChainBuilder'
+		redutil=0;
 		if (he.twin!=null && he.twin.face!=null && 
 				he.twin.face.faceIndx<0)
 			redutil=1;
-		
 	}
 
 	/**

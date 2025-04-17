@@ -24,6 +24,8 @@ import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
 import panels.PathManager;
+import tiling.Tile;
+import tiling.TileData;
 import util.ColorUtil;
 import util.PathUtil;
 import util.StringUtil;
@@ -504,11 +506,10 @@ public class CombDCEL {
 							cclw.nextRed=new RedEdge(spktrace.next);
 							cclw.nextRed.prevRed=cclw;
 							
-/* debugging							
- DCELdebug.edge2face(spktrace);
- DCELdebug.edgeConsistency(pdcel,spktrace).toString();
- System.out.println(DCELdebug.vertConsistency(pdcel,115).toString());
-*/ 
+// debugging							
+// DCELdebug.edge2face(spktrace);
+// DCELdebug.edgeConsistency(pdcel,spktrace).toString();
+// System.out.println(DCELdebug.vertConsistency(pdcel,115).toString());
 							
 							markFaceUtils(spktrace);	
 							
@@ -763,8 +764,8 @@ public class CombDCEL {
 		// If an edge and twin are both red, then we decide
 		//   whether these should be red twins. 
 		// Also, mark all redChain vertices as done. 
-		// The 'redChain' is not changed by this or subsequent operations,
-		//   though it may gain new red vertices.
+		// The 'redChain' is not changed by this or subsequent 
+		// operations, though it may gain new red vertices.
 		// Set 'myRedEdge's
 
 		nxtre=redchain;
@@ -1032,7 +1033,8 @@ public class CombDCEL {
 		pdcel.vertices=newVertices;
 		pdcel.oldNew=oldnew; // Note: old is original; original may still
 							 // exist, but may have new index.		
-		pdcel.redChain=redchain;
+		pdcel.redChain=redchain; // DCELdebug.printRedChain(pdcel.redChain,null);
+
 
 		// debugging: // stopblue=true;		
 		boolean stopblue=false; 
@@ -1172,16 +1174,15 @@ public class CombDCEL {
 	 */
 	public static void fillInside(PackDCEL pdcel) {
 		boolean debug=false; // debug=true;
-		// NOTE about debugging: Many debug routines depend on
-		//      original vertex indices, which might be found in
-		//      pdcel.oldNew.
+		// NOTE on debugging: debug routines may use original 
+		//   vert indices, which might be found in pdcel.oldNew.
 		
 		// ============ initialize various variables =============
 		
 		pdcel.triData=null;  // filled when needed for repacking
 		// DCELdebug.printRedChain(pdcel.redChain);
-		// we prefer that 'alpha' be set already with non-red origin; 
-		//    else choose an edge with non-red origin.
+		// we prefer that 'alpha' be set already with non-red 
+		//   origin; else choose an edge with non-red origin.
 		if (pdcel.alpha!=null && pdcel.alpha.origin.redFlag)
 			pdcel.alpha=null;
 		if (pdcel.alpha==null) {
@@ -1197,10 +1198,11 @@ public class CombDCEL {
 			throw new CombException(
 					"'alpha' is missing and 'fillInside' failed to set it");
 		
-		// zero out 'HalfEdge.eutil' and 'Vertex.vutil' to be used
-		//    to keep track during processing.
+		// zero out 'HalfEdge.eutil' and 'Vertex.vutil' to 
+		//  keep track during processing. Clean out 'redFlag's
 		for (int v=1;v<=pdcel.vertCount;v++) {
 			pdcel.vertices[v].vutil=0;
+			pdcel.vertices[v].redFlag=false;
 			HalfEdge edge=pdcel.vertices[v].halfedge; 
 			// DCELdebug.edgeFlowerUtils(pdcel,pdcel.vertices[11]);
 			HalfEdge trace=edge;
@@ -1223,6 +1225,7 @@ public class CombDCEL {
 			do {
 				safety--;
 				rtrace.redutil=0;
+				rtrace.myEdge.origin.redFlag=true;
 				rtrace=rtrace.nextRed;
 			} while (rtrace!=pdcel.redChain && safety>0);
 			if (safety==0) {
@@ -1261,6 +1264,11 @@ public class CombDCEL {
 		// (A) ----------------------------------------------
 		// put alpha in first and mark edges around its face
 		orderEdges.add(pdcel.alpha);
+		
+// debugging		
+		if (debug) {
+			DCELdebug.drawEdgeFace(pdcel,pdcel.alpha);
+		}
 		ordertick++; 
 		HalfEdge tr=pdcel.alpha;
 		do { 
@@ -1307,6 +1315,11 @@ public class CombDCEL {
 					do {
 						if (he.next.twin.eutil!=0 && he.next.myRedEdge==null) {
 							orderEdges.add(he.next);
+// debugging		
+							if (debug) {
+								DCELdebug.drawEdgeFace(pdcel,pdcel.alpha);
+							}
+
 							ordertick++;
 							tr=he.next;
 							do {
@@ -1332,14 +1345,19 @@ public class CombDCEL {
 				do {
 					if (he.eutil==0 && he.myRedEdge==null && he.twin.eutil==1) {
 						orderEdges.add(he);
+						// debugging		
+						if (debug) {
+							DCELdebug.drawEdgeFace(pdcel,he);
+						}
 						ordertick++;
 						
 						// consider adding to 'nxtv'
 						Vertex nv=he.next.twin.origin; // next vert in flower
-						if (!nv.redFlag && vhits[nv.vertIndx]==0)
+						if (!nv.redFlag && vhits[nv.vertIndx]==0) 
 							nxtv.add(nv);
-						nv=he.next.twin.prev.origin; // across outer edge
-						if (!nv.redFlag && vhits[nv.vertIndx]==0)
+						HalfEdge hout=he.next.twin;
+						nv=hout.prev.origin; // across outer edge
+						if (hout.myRedEdge==null && !nv.redFlag && vhits[nv.vertIndx]==0) 
 							nxtv.add(nv);
 
 						// mark face edges
@@ -1405,6 +1423,10 @@ public class CombDCEL {
 					
 				pdcel.redChain=goodRed;
 				orderEdges.add(goodEdge);
+// debugging		
+				if (debug) {
+					DCELdebug.drawEdgeFace(pdcel,goodEdge);
+				}
 				ordertick++;
 					
 				// mark all the edges
@@ -1437,6 +1459,10 @@ public class CombDCEL {
 					}
 					else { // add to 'orderEdges' and mark edges
 						orderEdges.add(tr);
+// debugging		
+						if (debug) {
+							DCELdebug.drawEdgeFace(pdcel,tr);
+						}
 						ordertick++;
 						HalfEdge ntr=tr;
 						do {
@@ -1494,6 +1520,10 @@ public class CombDCEL {
 					do {
 						if (he.eutil==0 && he.myRedEdge==null && he.twin.eutil==1) {
 							orderEdges.add(he);
+// debugging		
+							if (debug) {
+								DCELdebug.drawEdgeFace(pdcel,he);
+							}
 							ordertick++;
 							
 							// consider adding to 'nxtv'
@@ -1520,7 +1550,7 @@ public class CombDCEL {
 		if (debug) // debug=true;
 			System.out.println("ordertick = "+ordertick);
 			
-		debug=false; // debug=true;
+//		debug=false; // debug=true;
 		
 		// ============== Faces and Edges: ==================================
 
@@ -1528,12 +1558,14 @@ public class CombDCEL {
 		//   edges face by face, including the ideal faces later, and we create 
 		//   new faces (most will be garbage'd) 
 				
-		// Use 'orderEdges' (which should be unchanged with redChain work): 
+		// Use 'orderEdges' (which should be unchanged with 
+		//   redChain work): 
 		//    * index interior faces, 
 		//    * catalog and re-index all edges, face=by=face
-		//    * add faces to 'LayoutOrder' only if opposite vert not hit
-		//    * find first face that places a 'RedVertex'; this will be 
-		//      the packings 'redChain'
+		//    * add faces to 'LayoutOrder' only if opposite 
+		//      vert not hit
+		//    * find first face that places a 'RedVertex'; 
+		//      this will be the packings 'redChain'
 		ArrayList<HalfEdge> tmpEdges=new ArrayList<HalfEdge>();
 		tmpEdges.add(null); // null in first spot
 		ArrayList<DcelFace> tmpFaceList=new ArrayList<DcelFace>();
@@ -2008,6 +2040,153 @@ public class CombDCEL {
 		if (newRedChain!=null)
 			pdcel.redChain=newRedChain;
 		return;
+	}
+	
+	/**
+	 * This applies only when 'TileData' is  available.
+	 * The idea is to keep tiles in one piece during
+	 * layout and is particularly valuable for tilings
+	 * of surfaces.
+	 * This is normally called using the level 0 base
+	 * 'TileData' when there is a tree of subdivided
+	 * tilings. (E.g., this 'TileData' should be available
+	 * in the 'canonicalPacking' fo extender 'ConformalTiling'.)
+	 * @param p PackData
+	 * @param tData TileData
+	 * @return tile layout count, 0 on error
+	 */
+	public static int redchain_by_tile(PackData p,TileData tData) {
+		if (!p.status || tData==null || tData.tileCount==0) {
+			CirclePack.cpb.errMsg("packing does not have a tiling");
+			return 0;
+		}
+		PackDCEL pdcel=p.packDCEL;
+		
+		int[] donetiles=new int[tData.tileCount+1];
+		RawManip.wipeRedChain(pdcel,pdcel.redChain);
+		pdcel.redChain=null;
+		
+		// start redchain with edges surrounding the 
+		//   first tile, starting with its first vertex.
+		// zip in case of self-pasted slit(s)
+		Tile ctile=tData.myTiles[1];
+		RedEdge addRed=HalfLink.tileAugChain(p,tData,ctile.tileIndex,0);
+		pdcel.redChain=zipRedChain(addRed);
+		donetiles[1]=1; 
+		// DCELdebug.printRedChain(pdcel.redChain,null);
+
+		// Continue by alternating between curr/next lists
+		int[][] tflower=ctile.tileFlower;
+		ArrayList<Integer> curr=new ArrayList<Integer>();
+		ArrayList<Integer> next=new ArrayList<Integer>();
+		for (int j=0;j<ctile.vertCount;j++) {
+			int t=tflower[j][0];
+			if (t!=0 && t!=ctile.tileIndex && donetiles[t]==0)
+				next.add(t);
+		}
+		
+		while (!next.isEmpty()) {
+			curr=next;
+			next=new ArrayList<Integer>();
+			
+			while (!curr.isEmpty()) {
+				ctile=tData.myTiles[curr.remove(0)];
+				if (donetiles[ctile.tileIndex]>0)
+					continue;
+				for (int j=0;j<ctile.vertCount;j++) {
+					int t=tflower[j][0];
+					if (t!=0 && t!=ctile.tileIndex && donetiles[t]==0)
+						next.add(t);
+				}
+				
+				// find a neighbor already done; side
+				//   chit of ctile to be pasted to side
+				//   nhit of neighbor.
+				tflower=ctile.tileFlower;
+				Tile ntile=null;
+				int chit=-1;
+				for (int k=0;(k<ctile.vertCount && ntile==null);k++) {
+					int nt=tflower[k][0];
+					if (nt!=0 && nt!=ctile.tileIndex && donetiles[nt]>0) {
+						ntile=tData.myTiles[nt];
+						chit=k;
+					}
+				}
+				if (ntile==null) // shouldn't happen
+					continue;
+
+				// find redchain about ctile, note first
+				//   edge, and zip in case of slit.
+				RedEdge cRedEdge=HalfLink.tileAugChain(p, 
+						tData, ctile.tileIndex,chit);
+				RedEdge cstart=cRedEdge; // DCELdebug.printRedChain(cstart,null);
+				cRedEdge=zipRedChain(cRedEdge);
+				
+				// find edge of pdcel.redChain that will
+				//   be pasted to cstart.
+				HalfEdge cedge=cstart.myEdge.twin;
+				RedEdge ntrace=null;
+				RedEdge rtrace=pdcel.redChain;
+				HalfEdge nedge=rtrace.myEdge;
+				if (cedge==nedge)
+					ntrace=pdcel.redChain;
+				while (ntrace==null) {
+					rtrace=rtrace.nextRed;
+					if (rtrace.myEdge==cedge)
+						ntrace=rtrace;
+				}
+				RedEdge cback=cstart.prevRed;
+				RedEdge cfore=cstart.nextRed;
+				RedEdge nback=ntrace.prevRed;
+				RedEdge nfore=ntrace.nextRed;
+				
+				// abandon these two redEdgess
+				cstart.myEdge.myRedEdge=null;
+				ntrace.myEdge.myRedEdge=null;
+					
+				// patch rest together
+				nback.nextRed=cfore;
+				cfore.prevRed=nback;
+				cback.nextRed=nfore;
+				nfore.prevRed=cback;
+				
+				donetiles[ctile.tileIndex]=1;
+			} // while on 'curr'
+		} // while on 'next'
+		
+		pdcel.redChain=zipRedChain(pdcel.redChain);
+		// DCELdebug.printRedChain(pdcel.redChain,null);
+		return finishRedChain(pdcel, pdcel.redChain);
+	}
+
+	/**
+	 * scan through redChain for any redEdge where
+	 * we can "zip"; meaning its 'myEdge.twin' is
+	 * equal to 'nextRed.myEdge'. Repeatedly shorten
+	 * the redChain as long as possible.
+	 * @param rchain RedEdge
+	 * @return new redEdge
+	 */
+	public static RedEdge zipRedChain(RedEdge rchain) {
+
+		// marked spot that remains on redchain; 
+		//   move this back if it gets zipped
+		RedEdge redspot=rchain; 
+		RedEdge rtrace=rchain;
+		do {
+			while (rtrace.myEdge.twin==rtrace.nextRed.myEdge) {
+				RedEdge ctrace=rtrace.prevRed;			
+				ctrace.nextRed=rtrace.nextRed.nextRed;
+				rtrace.nextRed.nextRed.prevRed=ctrace;
+				rtrace.myEdge.myRedEdge=null;
+				rtrace.myEdge.twin.myRedEdge=null;
+				if (rtrace==redspot)
+					redspot=ctrace;
+				rtrace=ctrace; // zipping might continue
+			}
+			rtrace=rtrace.nextRed;
+		} while (rtrace!=redspot);
+		return redspot;
 	}
 	
 	/**
