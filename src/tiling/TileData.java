@@ -77,7 +77,7 @@ public class TileData {
 	// see info above about full tiling hierarchy, kept only by 'canonicalPack'.
 	public int builtMode;   	 // the 'mode' in effect when constructed
 	public Vector<TileData> gradedTileData; // tilings in hierarchy;
-								 // only for 'canonicalPack', 'deepestTD'
+								 // only held by 'canonicalPack', the 'deepestTD'
 	public SubdivisionRules subRules;  // subdivision rules; may be null
 	public int tileCount;        // number of tiles
 	public Tile[] myTiles;       // array of tiles, index starts at 1

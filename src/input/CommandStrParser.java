@@ -7301,9 +7301,8 @@ public class CommandStrParser {
 			  
 			  // most typical call, no flags
 	    	  if (flagSegs.size()==0) {
-	    		  pdc.layoutPacking();
-	    		  packData.fillcurves();
-	    		  return 1;
+    			  pdc.layoutPacking();
+    			  return 1;
 	    	  }
 
 	    	  items=flagSegs.get(0);
@@ -7477,13 +7476,26 @@ public class CommandStrParser {
 		    		  count++;
 		    		  break;
 	    		  }
-	    		  case 'T': // respecting tiles
+	    		  case 'T': // respecting top level tiles
 	    		  {
     	    		  if (packData.tileData==null || packData.tileData.tileCount==0)
     	    			  break;
-	    		  	  CombDCEL.redchain_by_tile(packData,packData.tileData);
-	    		  	  pdc.fixDCEL(packData);
-	    		  	  count++;
+    	    		  PackExtender ex=null;
+    	    		  TileData tData=null;
+    	  			  for (int x=0;x<packData.packExtensions.size();x++) {
+    	  				  ex=packData.packExtensions.get(x);
+    	  				  if (ex.getAbbrev().equalsIgnoreCase("ct")) {
+    	  					  ConformalTiling ct=(ConformalTiling)ex;
+    	  					  PackData cPack=ct.getCanonicalPack();
+    	  					  if (cPack!=null && cPack.nodeCount==packData.nodeCount) {
+    	  						  tData=cPack.tileData.gradedTileData.get(0);
+    	  						  CombDCEL.redchain_by_tile(packData,tData);
+    	  						  pdc.fixDCEL(packData);
+    	  						  count++;
+    	  						  break;
+    	  					  }
+    	  				  }
+    	  			  }
 	    			  break;
 	    		  }
 	    		  case 't': // tailored

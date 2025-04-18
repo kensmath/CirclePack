@@ -43,6 +43,25 @@ public class DebugHelp {
 	}
 	
 	/**
+	 * See if there's an error in a tileFlower
+	 * @param tileData TileData
+	 */
+	public static int tFlowerCk(TileData tileData) {
+		for (int t=1;t<=tileData.tileCount;t++) {
+			Tile tile=tileData.myTiles[t];
+			if (tile!=null) {
+				int[][] tflower=tile.tileFlower;
+				for (int i=0;i<tile.vertCount;i++) {
+					if (tflower[i][0]!=0 && tflower[i][1]<0)
+						System.err.println("bad flower: tile "+t+" and side "+i);
+					return 1;
+				}
+			}
+		}
+		return 0;
+	}
+	
+	/**
 	 * For debugging SolveData usage: create *.m 'matlab' file in the default
 	 * diretory. This gets size info, and various matrices Aentries, Ai, Ap, etc., 
 	 * and applies matlab code to reconstitute and then solve the resulting 

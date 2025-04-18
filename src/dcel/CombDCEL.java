@@ -1265,8 +1265,7 @@ public class CombDCEL {
 		// put alpha in first and mark edges around its face
 		orderEdges.add(pdcel.alpha);
 		
-// debugging		
-		if (debug) {
+		if (debug) { // debug=true
 			DCELdebug.drawEdgeFace(pdcel,pdcel.alpha);
 		}
 		ordertick++; 
@@ -1315,8 +1314,7 @@ public class CombDCEL {
 					do {
 						if (he.next.twin.eutil!=0 && he.next.myRedEdge==null) {
 							orderEdges.add(he.next);
-// debugging		
-							if (debug) {
+							if (debug) { // debug=true;
 								DCELdebug.drawEdgeFace(pdcel,pdcel.alpha);
 							}
 
@@ -1345,8 +1343,7 @@ public class CombDCEL {
 				do {
 					if (he.eutil==0 && he.myRedEdge==null && he.twin.eutil==1) {
 						orderEdges.add(he);
-						// debugging		
-						if (debug) {
+						if (debug) { // debug=true;
 							DCELdebug.drawEdgeFace(pdcel,he);
 						}
 						ordertick++;
@@ -1423,8 +1420,7 @@ public class CombDCEL {
 					
 				pdcel.redChain=goodRed;
 				orderEdges.add(goodEdge);
-// debugging		
-				if (debug) {
+				if (debug) { // debug=true;
 					DCELdebug.drawEdgeFace(pdcel,goodEdge);
 				}
 				ordertick++;
@@ -1459,8 +1455,7 @@ public class CombDCEL {
 					}
 					else { // add to 'orderEdges' and mark edges
 						orderEdges.add(tr);
-// debugging		
-						if (debug) {
+						if (debug) { // debug=true;
 							DCELdebug.drawEdgeFace(pdcel,tr);
 						}
 						ordertick++;
@@ -1520,8 +1515,8 @@ public class CombDCEL {
 					do {
 						if (he.eutil==0 && he.myRedEdge==null && he.twin.eutil==1) {
 							orderEdges.add(he);
-// debugging		
-							if (debug) {
+
+							if (debug) { // debug=true;
 								DCELdebug.drawEdgeFace(pdcel,he);
 							}
 							ordertick++;

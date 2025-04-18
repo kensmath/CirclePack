@@ -1898,8 +1898,8 @@ the new path.</opt>
 	<opt flag="-t"> compute centers from 'tailored' drawing order;
 		see 'mark'. The marked vertices will not (to extent possible) 
 		be used in drawing order.</opt>
-	<opt flag="-T"> same as -t, but routine will definitely NOT use the marked 
-	vertices; it will stop once it has done all it can without them.</opt>	
+	<opt flag="-T"> based on top level tiles if a tiling exists;
+	    attempt to keep each top level tile in one piece.</opt>	
 	<opt flag="default"> recompute angle sums and centers.</opt>
 </options>
 

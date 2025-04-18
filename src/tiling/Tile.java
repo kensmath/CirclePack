@@ -10,6 +10,7 @@ import combinatorics.komplex.RedEdge;
 import dcel.CombDCEL;
 import dcel.PackDCEL;
 import dcel.RawManip;
+import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.DataException;
 import komplex.EdgeSimple;
@@ -392,64 +393,6 @@ public class Tile extends Face {
 			return Math.abs(tileFlower[indx-1][0]);
 		return 
 			Math.abs(tileFlower[indx][0]);
-	}
-	
-	/**
-	 * This method needs 'tileFlower', which lists the tiles 
-	 * neighboring 'this' tile. 
-	 * Find vector of contiguous cclw indices of edges shared
-	 * with 't'. Each n-edge chain leads to n+1 indices, since
-	 * we add in the last vertex.
-	 * Return null on error, meaning 't' doesn't occur as neighbor 
-	 * @param t int, tile index
-	 * @return Vector<Vector<Integer>> or null on error
-	 */
-	public Vector<Integer> matchTileIndices(int t) {
-		int hit=-1;
-		int tick=0;
-		
-		// mark edge shared with 't'
-		int []hits=new int[vertCount];
-		for (int i=0;i<vertCount;i++)
-			if (tileFlower[i][0]==t) {
-				hits[i]=1;
-				tick++;
-			}
-		
-		// any hits?
-		if (tick==0)
-			return null;
-		
-		// find first hit
-		while (hit<0 && tick<vertCount) {
-			if (tileFlower[tick][0]==t)
-				hit=tick;
-			tick++;
-		}
-		if (hit<0) return null;
-		
-		// wrap around? check for earlier hit
-		if (hit==0) {
-			int bhit=hit;
-			int safety=vertCount-1;
-			while (tileFlower[(bhit=(hit-1+vertCount)%vertCount)][0]==t && safety>0) {
-				hit=bhit;
-				safety--;
-			}
-		}
-		
-		Vector<Integer> vec=new Vector<Integer>();
-		int vindx=-1;
-		int lasti=hit;
-		for (int j=0;j<vertCount;j++) {
-			vindx=(hit+j)%vertCount;
-			if (tileFlower[vindx][0]==t) {
-				vec.add(vindx);
-				lasti=vindx;
-			}
-		}
-		vec.add((lasti+1)%vertCount); // add the end of last edge
-		return vec;
 	}
 	
 	/**

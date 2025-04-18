@@ -276,11 +276,11 @@ public class ConformalTiling extends PackExtender {
 			
 			// depth gives the number of recursions; 0 means do no 
 			// subdivisions. In any case, end up replacing 'packData' 
-			// with the cannonical packing for the given level of 
+			// with the canonical packing for the given level of 
 			// subdivisions. Also have the various TileData for 
-			// subtiles at various levels which are built up to 
-			// give 'packData'.
-			int depth=0; // default = none: (cannonical packing for 'TileData')
+			// subtiles at various levels which are built up in
+			// the construction of 'packData'.
+			int depth=0; // default = none: (canonical packing for 'TileData')
 			Iterator<Vector<String>> fsegs=flagSegs.iterator();
 			while (fsegs.hasNext()) {
 				items=fsegs.next();
@@ -354,7 +354,7 @@ public class ConformalTiling extends PackExtender {
 			canonicalPack.tileData=deepestTD;
 			deepestTD.packData=canonicalPack;
 			
-			// max_pack the cannonicalPacking
+			// max_pack the canonicalPacking
 			canonicalPack.set_aim_default();
 			if (cpCommand(canonicalPack,"max_pack")<=0) 
 				errorMsg("failed in max packing new canonicalPack");
@@ -2427,7 +2427,7 @@ public class ConformalTiling extends PackExtender {
 	 */
 	public static PackData build2Depth(TileData tData,int depth,int mode,
 			Vector<TileData> topTD,Vector<Vector<PackData>> depthPD) {
-		
+
 		if (buildDeBug) { // buildDeBug=true;
 			int pTt=-1;
 			if (tData.parentTile!=null)
@@ -2444,6 +2444,7 @@ public class ConformalTiling extends PackExtender {
 		
 		// ************************ only 1 tile?
 		if (tData.tileCount==1) {
+			
 			Tile tile=tData.myTiles[1];
 			int tt=tData.myTiles[1].tileType;
 			
@@ -2520,8 +2521,8 @@ public class ConformalTiling extends PackExtender {
 			}
 			
 			// just one tile, but depth>0
-			if (depth==(targetDepth-1)) // show that we're nearing target depth 
-				System.out.println("at depth "+depth);
+//			if (depth==(targetDepth-1)) // show that we're nearing target depth 
+//				System.out.println("at depth "+depth);
 			
 			// otherwise, we must get stored subdivision 'TileData'
 			TileData tmpTD=topTD.get(tt).copyMyTileData();
@@ -2575,8 +2576,8 @@ public class ConformalTiling extends PackExtender {
 				DebugHelp.debugPackDisp(tmpPD,qnum,"max_pack");
 				buildDeBug=false;
 			}
-			
 			return tmpPD;
+
 		} // end of single tile case
 		
 		// *************** else, multiple tile types **********
@@ -2920,13 +2921,15 @@ public class ConformalTiling extends PackExtender {
 	
 	/**
 	 * This creates a new 'TileData' for given 'depth' 
-	 * with tiles reindexed from 1 and updates 
-	 * 'tileFlowers' The given 'tData' is depth 0.
+	 * with tiles reindexed from 1. The given 'tData' 
+	 * is depth 0.
 	 * @param tData TileData, 
 	 * @param depth int, set large to get max depth
 	 * @return TileData, new TileData new updated indexing
 	 */
 	public static TileData consolidateTiling(TileData tData,int depth) {
+		
+		boolean debug=false;
 		
 		// recursively accumulate a vector of all leaf tiles 
 		Vector<Tile> tVec=new Vector<Tile>();
@@ -2948,7 +2951,8 @@ public class ConformalTiling extends PackExtender {
 		
 		if (depth==0)
 			return outData;
-		
+
+/* ---------- misguided effort to fix tileFlowers ----		
 		// update 'tileFlower's for two issues:
 		//    indices and 'tileFlower's
 		
@@ -2971,6 +2975,7 @@ public class ConformalTiling extends PackExtender {
 		for (int t=1;t<=parentTileData.tileCount;t++) {
 			Tile parentT=parentTileData.myTiles[t];
 			int[][] pflower=parentT.tileFlower;
+
 			// find pastings along sides
 			for (int s=0;s<parentT.vertCount;s++) {
 				int ngindx=pflower[s][0];
@@ -3007,6 +3012,7 @@ public class ConformalTiling extends PackExtender {
 				} // done with subtiles along this side
 			} // done with all sides
 		} // done with all parent tiles
+*/
 		
 		return outData;
 	}
