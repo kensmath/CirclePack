@@ -71,8 +71,10 @@ import packing.PackData;
 public class TileData {
 	
 	// parent? either 'PackData' or 'Tile' (not both) or null
-	public PackData packData;    // parent 'PackData'
+	PackData packData;    // parent 'PackData'
 	public Tile parentTile;		 // parent 'Tile'
+	
+	int depth; // tilings start at depth 0; depth goes up only with subdivision
 	
 	// see info above about full tiling hierarchy, kept only by 'canonicalPack'.
 	public int builtMode;   	 // the 'mode' in effect when constructed
@@ -105,6 +107,7 @@ public class TileData {
 		tileMap=null;
 		subRules=null;
 		builtMode=mode;
+		depth=-1; // needs to be set by calling routine
 	}
 	
 	public TileData(PackData p,int mode) { // 'myTiles' remains null
@@ -133,6 +136,25 @@ public class TileData {
 	 */
 	public void setParent(PackData p) {
 		packData=p;
+	}
+	
+	public PackData getParent() {
+		return packData;
+	}
+	
+	/**
+	 * Tilings start at depth 0. Depth increases by 1 upon
+	 * subdivision, as in the extender 'ConformalTiling'.
+	 * CAUTION: this is not used much as of 4/2025, but
+	 * may be needed.
+	 * @param d int
+	 */
+	public void setDepth(int d) {
+		depth=d;
+	}
+	
+	public int getDepth() {
+		return depth;
 	}
 	
 	/**
@@ -1222,12 +1244,14 @@ public class TileData {
 	}
 	
 	/** 
-	 * Recursively copy 'TileData' tree: go recursively through 'myTiles' and their 
-	 * 'myTileData's, recursively set 'packData' if 'parentPD' is given, set 'parentTile' 
-	 * if given (e.g., when copying 'myTileData'). 'dualTileData' and 'quadTileData' are
-	 * set to null.
+	 * Recursively copy 'TileData' tree: go recursively through 
+	 * 'myTiles' and their 'myTileData's, recursively set 
+	 * 'packData' if 'parentPD' is given, set 'parentTile' 
+	 * if given (e.g., when copying 'myTileData'). 'dualTileData' 
+	 * and 'quadTileData' are set to null.
 	 * @param tData TileData, original
-	 * @param parentPD PackData, original PackData, passed recursively, may be null
+	 * @param parentPD PackData, original PackData, passed 
+	 *   recursively, may be null
 	 * @param parentTile Tile, may be null at top level
 	 * @return new TileData
 	 */
@@ -1345,7 +1369,7 @@ public class TileData {
 	}
 	
 	/**
-	 * Use 'subdivisionRule' info to tile 'vert' and 
+	 * Use 'subdivisionRule' info to set 'vert' and 
 	 * 'augVert' data for the specified tile
 	 * @param tIndx int, tile index
 	 * @return int
@@ -1362,12 +1386,11 @@ public class TileData {
 		for (int ej=0;ej<myRule.edgeCount;ej++) {
 			EdgeRule myEdgeRule=myRule.edgeRule[ej];
 			int mec=myEdgeRule.subEdgeCount-1;
-			// recall tileedge are listed clockwise
-			for (int k=mec;k>=0;k--) {
+			for (int k=0;k<=mec;k++) {
 				int[] tileedge=myEdgeRule.tileedge[k];
 				NodeLink sublink=tile.myTileData.getEdgeVerts(tileedge[0],tileedge[1]);
 				sublink.remove(sublink.size()-1); // remove entry
-				if (k==mec)
+				if (k==0)
 					tile.vert[ej]=sublink.get(0);
 				bdrylink.abutMore(sublink);
 			}
@@ -1424,8 +1447,8 @@ public class TileData {
 	}
 
 	/**
-	 * Recursively set 'packData' element of 'TileData' and of its
-	 * tile's 'myTileData'. Also do same for dual and quad TileData. 
+	 * set 'packData' element of 'TileData' and of its
+	 * dual and quad TileData. 
 	 * @param td TileData
 	 * @param p PackData, may be null
 	 * @return int 0 if 'td' is null 

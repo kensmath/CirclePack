@@ -152,7 +152,7 @@ public class TileLink extends LinkedList<Integer> {
 				TileLink tlink=null;
 				boolean ck=false;
 				
-				if ((str.startsWith("t") && (tlink=myTD.packData.tlist)!=null
+				if ((str.startsWith("t") && (tlink=myTD.getParent().tlist)!=null
 						&& tlink.size()>0) ||
 						(str.startsWith("T") && (tlink=CPBase.Tlink)!=null
 								&& CPBase.Tlink.size()>0)) {
@@ -251,8 +251,8 @@ public class TileLink extends LinkedList<Integer> {
 				String []pair_str=StringUtil.get_paren_range(str); // get two strings
 				if (pair_str!=null && pair_str.length==2) { // must have 2 strings
 					int a,b;
-					if ((a=NodeLink.grab_one_vert(myTD.packData,pair_str[0]))!=0) first=a;
-					if ((b=NodeLink.grab_one_vert(myTD.packData,pair_str[1]))!=0) last=b;
+					if ((a=NodeLink.grab_one_vert(myTD.getParent(),pair_str[0]))!=0) first=a;
+					if ((b=NodeLink.grab_one_vert(myTD.getParent(),pair_str[1]))!=0) last=b;
 				}
 				for (int i=first;i<=last;i++) {
 					add(i);
@@ -285,7 +285,7 @@ public class TileLink extends LinkedList<Integer> {
 					Tile tile=myTD.myTiles[t];			
 					int hit=0;
 					for (int j=0;(j<tile.vertCount && hit==0);j++)
-						if (myTD.packData.isBdry(tile.vert[j])) {
+						if (myTD.getParent().isBdry(tile.vert[j])) {
 							add(t);
 							count++;
 							hit=1;
@@ -296,7 +296,7 @@ public class TileLink extends LinkedList<Integer> {
 			
 			case 'B': // convert 'baryVert's to tile indices
 			{
-				NodeLink rawlist=new NodeLink(myTD.packData,items);
+				NodeLink rawlist=new NodeLink(myTD.getParent(),items);
 				if (rawlist.size()>0) {
 					for (int t=1;t<=myTD.tileCount;t++) 
 						if (rawlist.containsV(myTD.myTiles[t].baryVert)>=0) {
@@ -317,7 +317,7 @@ public class TileLink extends LinkedList<Integer> {
 				{
 					if (items.size()==0 || items.get(0).length()==0)
 						break;
-				    NodeLink vertlist=new NodeLink(myTD.packData,items);
+				    NodeLink vertlist=new NodeLink(myTD.getParent(),items);
 					its=null; // eat rest of items
 					if (vertlist==null || vertlist.size()==0) break;
 				    Iterator<Integer> vlist=vertlist.iterator();
@@ -368,7 +368,7 @@ public class TileLink extends LinkedList<Integer> {
 					Tile tile=myTD.myTiles[t];			
 					int hit=0;
 					for (int j=0;(j<=tile.vertCount && hit==0);j++)
-						if (myTD.packData.isBdry(tile.vert[j])) {
+						if (myTD.getParent().isBdry(tile.vert[j])) {
 							hit=1;
 						}
 					if (hit==0) {
@@ -413,7 +413,7 @@ public class TileLink extends LinkedList<Integer> {
 				boolean marked=true;
 				if (str.contains("c")) 
 					marked=false;
-				PackData p=myTD.packData;
+				PackData p=myTD.getParent();
 				
 				
 				ConformalTiling ct=(ConformalTiling)p.findXbyAbbrev("ct");
@@ -462,7 +462,7 @@ public class TileLink extends LinkedList<Integer> {
 			}
 			case '{': // set-builder notation; reap results
 			{
-				SetBuilderParser sbp=new SetBuilderParser(myTD.packData,str,'t');
+				SetBuilderParser sbp=new SetBuilderParser(myTD.getParent(),str,'t');
 				if (!sbp.isOkay()) 
 					return 0;
 				Vector<SelectSpec> specs=sbp.getSpecVector();

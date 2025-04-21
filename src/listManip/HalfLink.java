@@ -139,7 +139,8 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	 */
 	public static RedEdge tileAugChain(PackData p,
 			TileData tdata,int tileindx,int vertindx) {
-		Tile tile=tdata.myTiles[tileindx];
+		Tile tile=tdata.myTiles[tileindx]; 
+//		deBugging.DCELdebug.augVerts2Vlist(tile);
 		int aindx=-1;
 		int v=tile.vert[vertindx]; // starting vertex
 		int[] newlist=new int[tile.augVertCount];

@@ -837,9 +837,9 @@ public class WeldManager extends PackExtender {
 	} 
 
 	/**
-	 * Go counterclockwise around p, clockwise around q, starting at v and w,
-	 * resp, until pasting directions in '/tmp/weldListFileName' are all 
-	 * completed.
+	 * Go counterclockwise around p, clockwise around q, 
+	 * starting at v and w, resp, until pasting directions 
+	 * in '/tmp/weldListFileName' are all completed.
 	 * @param p,q
 	 * @param v,w
 	 * @param opt_flag:
@@ -854,8 +854,9 @@ public class WeldManager extends PackExtender {
 		int v_orig = v;
 		int w_orig = w;
 
-		if (!p.status || !q.status || (v > p.nodeCount) || (w > q.nodeCount)
-				|| v < 1 || w < 1 || !p.isBdry(v) || !q.isBdry(w)) {
+		if (!p.status || !q.status || (v > p.nodeCount) || 
+				(w > q.nodeCount) || v < 1 || w < 1 || 
+				!p.isBdry(v) || !q.isBdry(w)) {
 			Oops("weld: improper data; e.g., verts " + v + " and " + w
 					+ " cannot be used");
 		}

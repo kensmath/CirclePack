@@ -473,6 +473,15 @@ public class DCELdebug {
 		System.out.println("done");
 	}
 	
+	public static void augVerts2Vlist(Tile tile) {
+		StringBuilder strbld=new StringBuilder("set_Vlist ");
+		if (tile.augVert==null)
+			return;
+		for (int j=0;j<tile.augVertCount;j++)
+			strbld.append(tile.augVert[j]+" ");
+		CommandStrParser.jexecute(strbld.toString());
+	}
+	
 	public static void edgeFlowerUtils(PackDCEL pdcel,Vertex vert) {
 		HalfEdge he=vert.halfedge;
 		do {
@@ -532,7 +541,7 @@ public class DCELdebug {
 		pdcel.p.cpDrawing.drawEdge(z1,z2,dispflags);
 	    CircleSimple cs=pdcel.d_compOppCenter(hfe);
 	    pdcel.setCent4Edge(hfe.prev, cs.center);
-		CommandStrParser.jexecute(pdcel.p,"disp -ffc120 "+hfe.face.faceIndx);
+	    CommandStrParser.jexecute(pdcel.p,"disp -ffc120 "+hfe.face.faceIndx);
 		if (CPBase.GUImode!=0)
 			pdcel.p.cpDrawing.rePaintAll();
 	}
@@ -648,22 +657,22 @@ public class DCELdebug {
 	}
 
 	public static void printRedChain(RedEdge redge,VertexMap vmap) {
-		StringBuilder sb=new StringBuilder("vertices are:\n");
+		StringBuilder sb=new StringBuilder("vertices in order:\n");
 		StringBuilder sbold=new StringBuilder("old indices:\n");
 		RedEdge nxtre=redge;
 		int safety=1010;
 		do {
 			safety--;
-			sb.append(" -> "+nxtre.myEdge.origin.vertIndx);
+			sb.append(" "+nxtre.myEdge.origin.vertIndx);
 			if (vmap!=null)
-				sbold.append(" -> "+vmap.findW(nxtre.myEdge.origin.vertIndx));
+				sbold.append(" "+vmap.findW(nxtre.myEdge.origin.vertIndx));
 			nxtre=nxtre.nextRed;
 		} while (nxtre!=redge && safety>0);
 		if (safety==0) 
 			System.err.println("debug routine 'printRedChain' safetied out");
 		sb.append(" -> "+nxtre.myEdge.origin.vertIndx);
 		if (vmap!=null)
-			sbold.append(" -> "+vmap.findW(nxtre.myEdge.origin.vertIndx));
+			sbold.append(" "+vmap.findW(nxtre.myEdge.origin.vertIndx));
 		System.out.println(sb.toString());
 		if (vmap!=null)
 			System.out.println(sbold.toString());

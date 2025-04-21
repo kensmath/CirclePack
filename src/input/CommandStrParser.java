@@ -514,7 +514,7 @@ public class CommandStrParser {
     			  		+ "packing from 'read_CT'");
     			  return 0;
     		  }
-    		  td.packData=packData;
+    		  td.setParent(packData);
     		  packData.tileData=td;
 //    		  CommandStrParser.jexecute(packData,"layout -F");
     		  packData.set_aim_default();
@@ -3070,7 +3070,7 @@ public class CommandStrParser {
     		  TileData td=TileData.paveMe(packData,V);
     		  if (td==null)
     			  return 0;
-    		  td.packData=packData;
+    		  td.setParent(packData);
     		  packData.tileData=td;
     		  return td.tileCount;
 	      }

@@ -1149,6 +1149,25 @@ public class NodeLink extends LinkedList<Integer> {
 					throw new ParserException("failed to get or convert path");
 				}
 			}
+			case 'T': // tile augmented vertices
+			{
+				if (packData.tileData==null || items==null)
+					return 0;
+				int tIndx=1;
+				try {
+					tIndx=Integer.parseInt((String)items.remove(0));
+					if (tIndx<1 || tIndx>packData.tileData.tileCount)
+						throw new ParserException("usage: T {t}");
+				} catch (Exception ex) {
+					throw new ParserException(ex.getMessage());
+				}
+				Tile tile=packData.tileData.myTiles[tIndx];
+				for (int j=0;j<tile.augVertCount;j++) {
+					add(tile.augVert[j]);
+					count++;
+				}
+				break;
+			}
 			case '{': // set-builder notation; reap results
 			{
 				SetBuilderParser sbp=new SetBuilderParser(packData,str,'c');

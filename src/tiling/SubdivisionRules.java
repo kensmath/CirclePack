@@ -106,10 +106,6 @@ public class SubdivisionRules {
 	 * minimal 'TileData' associated with the subdivision for each tile
 	 * type. Note that the 'mode' 1, 2, 3, determines the construction,
 	 * with 3 (default) being the most complicated. 
-
-	 * PROBLEM: We interpret the rule's data as counterclockwise, so the
-	 * results are mirror images of those of CFP. (may have fixed this??)
-	 *  
 	 * @param fp BufferedReader, opened by calling routine, closed here
 	 * @param filename String, just to use as name of these rules
 	 * @return SubdivisionRules or throw an exception

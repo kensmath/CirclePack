@@ -2125,11 +2125,15 @@ public class CombDCEL {
 				HalfEdge nedge=rtrace.myEdge;
 				if (cedge==nedge)
 					ntrace=pdcel.redChain;
-				while (ntrace==null) {
+				int safety=10*pdcel.vertCount;
+				while (ntrace==null && safety>0) {
+					safety--;
 					rtrace=rtrace.nextRed;
 					if (rtrace.myEdge==cedge)
 						ntrace=rtrace;
 				}
+				if (safety==0)
+					throw new CombException("violated safety for red edge");
 				RedEdge cback=cstart.prevRed;
 				RedEdge cfore=cstart.nextRed;
 				RedEdge nback=ntrace.prevRed;
