@@ -1302,7 +1302,8 @@ public class TileData {
 	 * Create new 'TileData' with copies of 'this' tiles,
 	 * but only copy 'vert', 'vertCount','augVert','augVertCount,
 	 * 'tileType', 'baryVert', 'mark'.
-	 * Thus, no 'myTileData', 'TDparent', 'utilFlag', or 'wgInidces'.
+	 * Thus, no 'subRules', 'myTileData', 'TDparent', 
+	 * 'utilFlag', or 'wgInidces'.
 	 * @return TileData
 	 */
 	public TileData copyBareBones() {
@@ -1370,7 +1371,9 @@ public class TileData {
 	
 	/**
 	 * Use 'subdivisionRule' info to set 'vert' and 
-	 * 'augVert' data for the specified tile
+	 * 'augVert' data for the specified tile.
+	 * Caution: tileedges are given in rules files
+	 * in clockwise direction (not counterclockwise).
 	 * @param tIndx int, tile index
 	 * @return int
 	 */
@@ -1386,11 +1389,12 @@ public class TileData {
 		for (int ej=0;ej<myRule.edgeCount;ej++) {
 			EdgeRule myEdgeRule=myRule.edgeRule[ej];
 			int mec=myEdgeRule.subEdgeCount-1;
-			for (int k=0;k<=mec;k++) {
+			// apply in reverse to go cclw.
+			for (int k=mec;k>=0;k--) {
 				int[] tileedge=myEdgeRule.tileedge[k];
 				NodeLink sublink=tile.myTileData.getEdgeVerts(tileedge[0],tileedge[1]);
 				sublink.remove(sublink.size()-1); // remove entry
-				if (k==0)
+				if (k==mec)
 					tile.vert[ej]=sublink.get(0);
 				bdrylink.abutMore(sublink);
 			}

@@ -147,7 +147,7 @@ public class SphericalMath{
    * @return the Mobius applied
    */
   public static Mobius s_norm_pack(PackDCEL pdcel,Complex a,Complex g) {
-	  Mobius mob=Mobius.rigidAlphaGamma(a, g);
+	  Mobius mob=Mobius.mobNormSphere(a, g);
 	  if (Mobius.frobeniusNorm(mob)>.0001) {
 		  // directly adjust in 'Vertex'
 		  for (int v=1;v<=pdcel.vertCount;v++) {

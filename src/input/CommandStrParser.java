@@ -76,6 +76,7 @@ import ftnTheory.WeldManager;
 import ftnTheory.WordWalker;
 import ftnTheory.iGame;
 import geometry.CircleSimple;
+import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.NSpole;
@@ -7496,6 +7497,9 @@ public class CommandStrParser {
     	  					  }
     	  				  }
     	  			  }
+    	  			  // normalize
+    	  			  count += CommonMath.normAlphaGamma(packData,
+    	  					  packData.getAlpha(), packData.getGamma());
 	    			  break;
 	    		  }
 	    		  case 't': // tailored

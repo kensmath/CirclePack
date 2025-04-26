@@ -190,10 +190,11 @@ public class ConformalTiling extends PackExtender {
 					running=false;
 				else {
 					canonicalPack.tileData.gradedTileData=new Vector<TileData>();
+					canonicalPack.tileData.setDepth(0);
 					canonicalPack.tileData.gradedTileData.add(canonicalPack.tileData);
-					packData.packExtensions.add(this);
 				}
 			}
+			packData.packExtensions.add(this);
 		}
 		
 		mode=3; // default standard: an n tile is 2n barycentrically subdivided triangles
@@ -333,21 +334,35 @@ public class ConformalTiling extends PackExtender {
 			// need to reindex tiles for 'TileData's at 
 			//   various depths and save in 'gradedTileData'.
 			Vector<TileData> gradedTileData=new Vector<TileData>();
-			TileData dTD=packData.tileData.copyBareBones();
-			dTD.subRules=packData.tileData.subRules;
-			gradedTileData.add(dTD);
 			if (depth>0) {
 				for (int d=0;d<depth;d++) {
-					dTD=consolidateTiling(newPD.tileData,d);
+					TileData dTD=consolidateTiling(newPD.tileData,d);
+					dTD.subRules=packData.tileData.subRules;
+					dTD.setDepth(depth);
 					gradedTileData.add(dTD);
 					for (int t=1;t<=dTD.tileCount;t++)
 						dTD.myTiles[t].TDparent=dTD;
 					dTD.gradedTileData=null;
 				}
 			}
+			else {
+				TileData dTD=packData.tileData.copyBareBones();
+				dTD.subRules=packData.tileData.subRules;
+				dTD.setDepth(0);
+				gradedTileData.add(dTD);
+			}
 			// also handle deepest tiling
-			TileData deepestTD=consolidateTiling(newPD.tileData,depth);
-			deepestTD.gradedTileData=gradedTileData;
+			TileData deepestTD=null;
+			if (depth>0) {
+				deepestTD=consolidateTiling(newPD.tileData,depth);
+				deepestTD.subRules=packData.tileData.subRules;
+				deepestTD.gradedTileData=gradedTileData;
+			}
+			else {
+				deepestTD=packData.tileData;
+				deepestTD.gradedTileData=null;
+			}
+			deepestTD.setDepth(depth);
 			
 			// Store in 'canonicalPack' with deepest tileData.
 			newPD.tileData=null;
@@ -356,6 +371,13 @@ public class ConformalTiling extends PackExtender {
 			for (int t=1;t<=deepestTD.tileCount;t++)
 				deepestTD.myTiles[t].TDparent=deepestTD;
 			deepestTD.setParent(canonicalPack);
+			
+			// set alpha, gamma, and layout via tiles
+			TileData baseTD=deepestTD.gradedTileData.get(0);
+			canonicalPack.setAlpha(baseTD.myTiles[1].baryVert);
+			canonicalPack.setGamma(baseTD.myTiles[1].vert[1]);
+			CombDCEL.redchain_by_tile(canonicalPack,baseTD);
+			canonicalPack.packDCEL.fixDCEL(canonicalPack);
 			
 			// max_pack the canonicalPacking
 			canonicalPack.set_aim_default();
@@ -370,13 +392,14 @@ public class ConformalTiling extends PackExtender {
 			swapExtenderPD(newPD);
 			
 			// put this in 'packings[pnum]'
-			CirclePack.cpb.swapPackData(packData,pnum,false);
-			packData.cpDrawing.setPackData(packData);
+			CirclePack.cpb.swapPackData(canonicalPack,pnum,false);
+			packData.cpDrawing.setPackData(CPBase.packings[pnum]);
 			
 			// 'this.packData' gets a bare-bones copy of the deepest TileData
 			packData.tileData=deepestTD.copyBareBones();
 			packData.tileData.subRules=deepestTD.subRules;
 			packData.tileData.setParent(packData);
+			packData.set_aim_default();
 
 			// if top is a single tile, put 'vert's in 'vlist'
 			TileData canTD=canonicalPack.tileData.gradedTileData.get(0);
@@ -691,7 +714,7 @@ public class ConformalTiling extends PackExtender {
 			if (canonicalPack.tileData==null)
 				throw new ParserException("feedback: 'canonicalPack' has no 'TileData'");
 			if (canonicalPack.tileData.gradedTileData!=null)
-				depth=canonicalPack.tileData.gradedTileData.size();
+				depth=canonicalPack.tileData.gradedTileData.size()+1;
 			TileData tdata1=canonicalPack.tileData;
 			TileData tdata2=canonicalPack.tileData;
 
@@ -1496,6 +1519,7 @@ public class ConformalTiling extends PackExtender {
 			if (canonicalPack==null || canonicalPack.tileData==null)
 				return 0;
 			canonicalPack.tileData.gradedTileData=new Vector<TileData>();
+			canonicalPack.tileData.setDepth(0);
 			canonicalPack.tileData.gradedTileData.add(canonicalPack.tileData);
 			return canonicalPack.nodeCount;
 		}
@@ -1591,7 +1615,9 @@ public class ConformalTiling extends PackExtender {
 				if (canonicalPack==null || canonicalPack.tileData==null)
 					return 0;
 				canonicalPack.tileData.gradedTileData=new Vector<TileData>();
-				canonicalPack.tileData.gradedTileData.add(canonicalPack.tileData);
+				TileData tmpTD=canonicalPack.tileData.copyBareBones();
+				tmpTD.setDepth(0);
+				canonicalPack.tileData.gradedTileData.add(tmpTD);
 			}
 			return packData.nodeCount; 
 		}
@@ -2032,7 +2058,9 @@ public class ConformalTiling extends PackExtender {
 		if (newPD==null || newPD.tileData==null)
 			return null;
 		newPD.tileData.gradedTileData=new Vector<TileData>();
-		newPD.tileData.gradedTileData.add(newPD.tileData.copyBareBones());
+		TileData sTD=newTD.copyBareBones();
+		sTD.setDepth(0);
+		newPD.tileData.gradedTileData.add(sTD);
 		return newPD;
 	}
 
@@ -2107,7 +2135,9 @@ public class ConformalTiling extends PackExtender {
 		if (newPD==null || newPD.tileData==null)
 			return null;
 		newPD.tileData.gradedTileData=new Vector<TileData>();
-		newPD.tileData.gradedTileData.add(newPD.tileData.copyBareBones());		
+		TileData newTD=newPD.tileData.copyBareBones();
+		newTD.setDepth(0);
+		newPD.tileData.gradedTileData.add(newTD);		
 		return newPD;
 	}
 

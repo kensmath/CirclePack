@@ -5,6 +5,8 @@ import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.Vertex;
 import complex.Complex;
 import exceptions.DataException;
+import exceptions.ParserException;
+import listManip.NodeLink;
 import math.Mobius;
 import packing.PackData;
 import util.UtilPacket;
@@ -38,6 +40,33 @@ public class CommonMath {
 			CircleSimple sC2,int hes) {
 		double[] invD= {1.0,1.0,1.0};
 		return placeOneFace(sC0,sC1,sC2,invD,hes);
+	}
+	
+	/**
+	 * Given a and g, apply a Mobius transformatin
+	 * that places a at the origin and g on the 
+	 * positive imaginary axis.
+	 * @param p PackData
+	 * @param a int, interior, e.g., alpha
+	 * @param g int, e.g., gamma
+	 * @return int
+	 */
+	public static int normAlphaGamma(PackData p,int a,int g) {
+		Mobius mob=new Mobius();
+		Vertex alpvert=p.packDCEL.vertices[a];
+		if (alpvert.isBdry())
+			throw new ParserException("Vertex "+a+" is not interior");
+		Vertex gamvert=p.packDCEL.vertices[g];		
+		if (p.hes<0) { // hyperbolic
+			mob=Mobius.mobNormDisc(alpvert.center,gamvert.center);
+		}
+		else if (p.hes>0) { // eucl
+			mob=Mobius.mobNormSphere(alpvert.center,gamvert.center);
+		}
+		else { // spherical, rigid motino
+			mob=Mobius.mobNormPlane(alpvert.center,gamvert.center);
+		}
+		return p.apply_Mobius(mob,new NodeLink(p,"a"));
 	}
 
 	/** 

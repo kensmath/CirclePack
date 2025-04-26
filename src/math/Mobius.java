@@ -731,6 +731,34 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	}
 	
 	/**
+	 * Return a rigid motion of the sphere that maps 'alpha' to
+	 * the origin and 'gamma' (if not null) to the positive imaginary axis.
+	 * @param alpha Complex
+	 * @param gamma Complex, may be null
+	 * @return new Mobius
+	 */
+	public static Mobius mobNormSphere(Complex alpha,Complex gamma) {
+		Mobius mob1=null;
+		if (alpha.abs()>100000) // essentially infinite: [0 1;1 0]
+			mob1=new Mobius(new Complex(0.0),new Complex(1.0),
+					new Complex(1.0),new Complex(0.0));
+		else 
+			mob1=new Mobius(new Complex(1.0),alpha.times(-1.0),alpha.conj(),new Complex(1.0));
+		
+		// mob1 should map alpha to the origin
+		if (gamma==null)
+			return mob1;
+		
+		// else apply subsequent rotation
+		Complex newGamma=mob1.apply(gamma);
+		Complex lambda=new Complex(0.0,Math.PI/2.0-newGamma.arg()).exp(); 
+		mob1.a=mob1.a.times(lambda);
+		mob1.b=mob1.b.times(lambda);
+		
+		return mob1;
+	}
+
+	/**
 	 * Given 3D point interior to unit sphere, create the Mobius in 3-space
 	 * which maps the sphere to itself, the point to the origin, while 
 	 * fixing the endpoints on the sphere of the vector through the point. 
@@ -833,34 +861,6 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 		return new Mobius(z,w,w.conj().times(-1.0),z.conj());
 	}
 	
-	/**
-	 * Return a rigid motion of the sphere that maps 'alpha' to
-	 * the origin and 'gamma' (if not null) to the positive imaginary axis.
-	 * @param alpha Complex
-	 * @param gamma Complex, may be null
-	 * @return new Mobius
-	 */
-	public static Mobius rigidAlphaGamma(Complex alpha,Complex gamma) {
-		Mobius mob1=null;
-		if (alpha.abs()>100000) // essentially infinite: [0 1;1 0]
-			mob1=new Mobius(new Complex(0.0),new Complex(1.0),
-					new Complex(1.0),new Complex(0.0));
-		else 
-			mob1=new Mobius(new Complex(1.0),alpha.times(-1.0),alpha.conj(),new Complex(1.0));
-		
-		// mob1 should map alpha to the origin
-		if (gamma==null)
-			return mob1;
-		
-		// else apply subsequent rotation
-		Complex newGamma=mob1.apply(gamma);
-		Complex lambda=new Complex(0.0,Math.PI/2.0-newGamma.arg()).exp(); 
-		mob1.a=mob1.a.times(lambda);
-		mob1.b=mob1.b.times(lambda);
-		
-		return mob1;
-	}
-
 	/**
 	 * Create Mobius (det=1) for rotation by angle ang*Pi, fixing 0, infty.
 	 * @param ang double; multiply by Pi to get radians
