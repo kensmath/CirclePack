@@ -41,7 +41,7 @@ public class RiemHilbert extends PackExtender {
 	// Constructor
 	public RiemHilbert(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="RIEMANN_HILBERT";
 		extensionAbbrev="RH";
 		toolTip="'RiemHilbert': for manipulating packings "+
@@ -51,7 +51,7 @@ public class RiemHilbert extends PackExtender {
 		restCurves.add(defaultCurve);
 		vertCurve=null;
 		registerXType();
-		packData.packExtensions.add(this);
+		extenderPD.packExtensions.add(this);
 	}
 	
 	/**
@@ -155,7 +155,7 @@ public class RiemHilbert extends PackExtender {
 	 * @return RH_curve associated with 'v'
 	 */
 	public RH_curve curveForVert(int v) {
-		if (vertCurve==null	|| vertCurve.size()==0 || !packData.status) return null; 
+		if (vertCurve==null	|| vertCurve.size()==0 || !extenderPD.status) return null; 
 		Iterator<EdgeSimple> vc=vertCurve.iterator();
 		EdgeSimple edge=null;
 		while (vc.hasNext()) {
@@ -171,15 +171,15 @@ public class RiemHilbert extends PackExtender {
 		Iterator<Integer> vlist=vertlist.iterator();
 		RH_curve rc=null;
 		int v;
-		int orig_thickness=packData.cpDrawing.linethickness;
-		packData.cpDrawing.setLineThickness(THICKNESS);
+		int orig_thickness=extenderPD.cpDrawing.linethickness;
+		extenderPD.cpDrawing.setLineThickness(THICKNESS);
 		while(vlist.hasNext()) {
 			v=(Integer)vlist.next();
 			rc=curveForVert(v);
-			rc.drawMe(packData.cpDrawing);
+			rc.drawMe(extenderPD.cpDrawing);
 			count++;
 		}
-		packData.cpDrawing.setLineThickness(orig_thickness);
+		extenderPD.cpDrawing.setLineThickness(orig_thickness);
 		PackControl.activeFrame.activeScreen.repaint();
 		return count;
 	}
@@ -196,18 +196,18 @@ public class RiemHilbert extends PackExtender {
 	public double centerDistance(int v) {
 		RH_curve rhc=curveForVert(v);
 		Complex cent=null;
-		if (packData.hes<0) {
+		if (extenderPD.hes<0) {
 			CircleSimple sc =HyperbolicMath.h_to_e_data(
-					packData.getCenter(v),packData.getRadius(v));
+					extenderPD.getCenter(v),extenderPD.getRadius(v));
 			// what if sc.flag==-1? outside as disc
 			cent=sc.center;
 		}
-		else if (packData.hes>0) {
+		else if (extenderPD.hes>0) {
 			CircleSimple sc =SphericalMath.s_to_e_data(
-					packData.getCenter(v),packData.getRadius(v));
+					extenderPD.getCenter(v),extenderPD.getRadius(v));
 			cent=sc.center;
 		}
-		else cent=packData.getCenter(v);
+		else cent=extenderPD.getCenter(v);
 		if (rhc.isCircle) {
 			return rhc.rad-rhc.center.minus(cent).abs();
 		}
@@ -225,19 +225,19 @@ public class RiemHilbert extends PackExtender {
 	public double circleDistance(int v) {
 		RH_curve rhc=curveForVert(v);
 		Complex cent=null;
-		if (packData.hes<0) {
+		if (extenderPD.hes<0) {
 			CircleSimple sc =HyperbolicMath.h_to_e_data(
-					packData.getCenter(v),packData.getRadius(v));
+					extenderPD.getCenter(v),extenderPD.getRadius(v));
 			cent=sc.center;
 		}
-		else if (packData.hes>0) {
+		else if (extenderPD.hes>0) {
 			CircleSimple sc =SphericalMath.s_to_e_data(
-					packData.getCenter(v),packData.getRadius(v));
+					extenderPD.getCenter(v),extenderPD.getRadius(v));
 			// what if sc.flag==-1? outside as disc
 			cent=sc.center;
 		}
-		else cent=packData.getCenter(v);
-		double radius=packData.getRadius(v);
+		else cent=extenderPD.getCenter(v);
+		double radius=extenderPD.getRadius(v);
 		double dist;
 		if (rhc.isCircle) {
 			dist=radius+rhc.center.minus(cent).abs();
@@ -249,7 +249,7 @@ public class RiemHilbert extends PackExtender {
 	}
 	
 	public int linkPackCurves() {
-		return linkPackCurves(packData.bdryStarts[1]);
+		return linkPackCurves(extenderPD.bdryStarts[1]);
 	}
 	
 	/**
@@ -261,7 +261,7 @@ public class RiemHilbert extends PackExtender {
 	 */
 	public int linkPackCurves(int v) {
 		NodeLink bdrylist=null;
-		if (!packData.status || (bdrylist=new NodeLink(packData,"b"))==null) {
+		if (!extenderPD.status || (bdrylist=new NodeLink(extenderPD,"b"))==null) {
 			CirclePack.cpb.myErrorMsg("RiemHilbert: the packing does not have boundary");
 			return 0;
 		}
@@ -270,8 +270,8 @@ public class RiemHilbert extends PackExtender {
 			restCurves=new Vector<RH_curve>(50);
 			restCurves.add(defaultCurve);
 		}
-		if (v<0 || v>packData.nodeCount || !packData.isBdry(v)) {
-			v=packData.bdryStarts[1];
+		if (v<0 || v>extenderPD.nodeCount || !extenderPD.isBdry(v)) {
+			v=extenderPD.bdryStarts[1];
 		}
 
 		/* proceed around the boundary; use as many curves as needed, clone
@@ -283,11 +283,11 @@ public class RiemHilbert extends PackExtender {
 		int num=restCurves.size();
 		while (blist.hasNext()) {
 			w=(Integer)blist.next();
-			packData.setCircleColor(w,ColorUtil.spreadColor(count%16));
+			extenderPD.setCircleColor(w,ColorUtil.spreadColor(count%16));
 			if (count>=num) // need to clone to get new 'RH_curve's
 				restCurves.add(restCurves.get(count%num).clone());
 			vertCurve.add(new EdgeSimple(w,count));
-			Color col=packData.getCircleColor(w);
+			Color col=extenderPD.getCircleColor(w);
 			restCurves.get(count).color=new Color(col.getRed(),col.getGreen(),col.getBlue());
 			count++;
 		}
@@ -365,15 +365,15 @@ public class RiemHilbert extends PackExtender {
 			int v;
 			Color col;
 			double sdist, rad;
-			int old_thickness=packData.cpDrawing.linethickness;
-			packData.cpDrawing.setLineThickness(THICKNESS);
+			int old_thickness=extenderPD.cpDrawing.linethickness;
+			extenderPD.cpDrawing.setLineThickness(THICKNESS);
 			DispFlags dflags=new DispFlags("fc");
 			while (vlist.hasNext()) {
 				v = (Integer) vlist.next();
-				if (!packData.isBdry(v))
+				if (!extenderPD.isBdry(v))
 					break;
 				sdist = circleDistance(v);
-				rad = packData.getRadius(v);
+				rad = extenderPD.getRadius(v);
 				// lies inside? shade of blue, further=darker
 				if (sdist > 0) {
 					if (sdist > rad)
@@ -389,19 +389,19 @@ public class RiemHilbert extends PackExtender {
 
 				// do the fill first
 				dflags.setColor(col);
-				packData.cpDrawing.drawCircle(packData.getCenter(v),
-						packData.getRadius(v), dflags);
+				extenderPD.cpDrawing.drawCircle(extenderPD.getCenter(v),
+						extenderPD.getRadius(v), dflags);
 				
 				// change color for the bdry
-				dflags.setColor(packData.getCircleColor(v));
+				dflags.setColor(extenderPD.getCircleColor(v));
 				dflags.fill=false;
 				dflags.draw=true;
 				dflags.colBorder=true;
-				packData.cpDrawing.drawCircle(packData.getCenter(v),
-						packData.getRadius(v), dflags);
+				extenderPD.cpDrawing.drawCircle(extenderPD.getCenter(v),
+						extenderPD.getRadius(v), dflags);
 				count++;
 			}
-			packData.cpDrawing.setLineThickness(old_thickness);
+			extenderPD.cpDrawing.setLineThickness(old_thickness);
 			PackControl.activeFrame.activeScreen.repaint();
 		} catch (Exception ex) {
 		}
@@ -429,7 +429,7 @@ public class RiemHilbert extends PackExtender {
 				BufferedReader fp=CPFileManager.openReadFP(new File(dir),file.getName(),script_flag);
 				count=readCurves(fp,false); // for now, overwrite previous curves.
 				fp.close();
-				if (count>0 && packData.status) linkPackCurves();
+				if (count>0 && extenderPD.status) linkPackCurves();
 				return count;
 			} catch (Exception ex) {
 				return 0;
@@ -441,27 +441,27 @@ public class RiemHilbert extends PackExtender {
 		else if (cmd.startsWith("link")) {
 			int v;
 			try {
-				v=NodeLink.grab_one_vert(packData,flagSegs);
-				if (v!=0 && packData.isBdry(v))
+				v=NodeLink.grab_one_vert(extenderPD,flagSegs);
+				if (v!=0 && extenderPD.isBdry(v))
 					return linkPackCurves(v);
 			} catch (Exception ex) {}
-			return linkPackCurves(packData.bdryStarts[1]);
+			return linkPackCurves(extenderPD.bdryStarts[1]);
 		}
 		
 		// ============= draw_curves ===========
 		else if (cmd.startsWith("draw_cur")) {
 			if (flagSegs==null || flagSegs.size()==0)  
-				return drawRestCurves(new NodeLink(packData,"b")); // default to all
+				return drawRestCurves(new NodeLink(extenderPD,"b")); // default to all
 			items=(Vector<String>)flagSegs.get(0);
-			return drawRestCurves(new NodeLink(packData,items));
+			return drawRestCurves(new NodeLink(extenderPD,items));
 		}
 		
 		// ============= shade =========
 		else if (cmd.startsWith("shade")) {
 			if (flagSegs==null || flagSegs.size()==0)  
-				return shadeCircles(new NodeLink(packData,"b")); // default to all
+				return shadeCircles(new NodeLink(extenderPD,"b")); // default to all
 			items=(Vector<String>)flagSegs.get(0);
-			return shadeCircles(new NodeLink(packData,items));
+			return shadeCircles(new NodeLink(extenderPD,items));
 		}
 		
 		// ============= scale =========
@@ -472,8 +472,8 @@ public class RiemHilbert extends PackExtender {
 				factor=Double.parseDouble((String)items.remove(0));
 				if (factor<=0) return 0;
 				if (items.size()>0) 
-					return scaleCurves(new NodeLink(packData,items),factor);
-				else return scaleCurves(new NodeLink(packData,"b"),factor);
+					return scaleCurves(new NodeLink(extenderPD,items),factor);
+				else return scaleCurves(new NodeLink(extenderPD,"b"),factor);
 			} catch (Exception ex) {}
 		}
 		
@@ -485,8 +485,8 @@ public class RiemHilbert extends PackExtender {
 			try {
 				arg=Double.parseDouble((String)items.remove(0));
 				if (items.size()>0) 
-					return rotateCurves(new NodeLink(packData,items),arg);
-				else return rotateCurves(new NodeLink(packData,"b"),arg);
+					return rotateCurves(new NodeLink(extenderPD,items),arg);
+				else return rotateCurves(new NodeLink(extenderPD,"b"),arg);
 			} catch (Exception ex) {}
 			return 0;
 		}

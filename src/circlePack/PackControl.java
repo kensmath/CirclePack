@@ -281,7 +281,7 @@ MouseMotionListener,FocusListener {
 			CPdrawing cpS=cpDrawing[i] = new CPdrawing(i);
 			
 			// 'PackData' and 'CPDrawing' must handshake
-			cpS.packData=packings[i];
+			cpS.drawingPD=packings[i];
 			packings[i].cpDrawing=cpS;
 			
 			// prepare display objects
@@ -1093,7 +1093,7 @@ MouseMotionListener,FocusListener {
 		if (keepX) {
 			p.packExtensions=packings[pnum].packExtensions;
 			for (int x=0;x<p.packExtensions.size();x++)
-				p.packExtensions.get(x).packData=p;
+				p.packExtensions.get(x).extenderPD=p;
 		}
 		CPBase.packings[pnum].cpDrawing=null; // detach from cpDrawing
 		

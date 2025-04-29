@@ -40,7 +40,7 @@ public class BeurlingFlow extends PackExtender {
 		try {
 			domainData=p.copyPackTo();
 			// Note: convert parent to euclidean
-			cpCommand(packData,"geom_to_e"); // 
+			cpCommand(extenderPD,"geom_to_e"); // 
 			cpCommand(domainData,"max_pack 10000");
 			cpCommand(domainData,"geom_to_e");
 			domainData.fillcurves();
@@ -49,7 +49,7 @@ public class BeurlingFlow extends PackExtender {
 			running=false;
 		}
 		if (running) { 
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 	}
 			
@@ -177,27 +177,27 @@ public class BeurlingFlow extends PackExtender {
 		Complex z;
 
 		// cycle through bdry pr 
-		for (int v=1;v<=packData.nodeCount;v++) {
-			if (packData.isBdry(v)) {
-				z=packData.getCenter(v);
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
+			if (extenderPD.isBdry(v)) {
+				z=extenderPD.getCenter(v);
 				e_rad=domainData.getRadius(v);
 				CPhz=evaluate_h(z);
 	  
 				// Set the new radius 
 				if (xpnt!=1.0) CPhz=Math.exp(xpnt*Math.log(CPhz));
-				cur=packData.getRadius(v)/e_rad;
+				cur=extenderPD.getRadius(v)/e_rad;
 				factor=Math.exp(t*Math.log(CPhz/cur));
-				double vrad=packData.getRadius(v);
+				double vrad=extenderPD.getRadius(v);
 				if (option==1) {
 					if (factor>1.0) // increases only
-						packData.setRadius(v,factor*vrad);
+						extenderPD.setRadius(v,factor*vrad);
 				}
 				else if (option==2) {
 					if (factor<1.0) // decreases only 
-						packData.setRadius(v,factor*vrad);
+						extenderPD.setRadius(v,factor*vrad);
 				}
 				else
-					packData.setRadius(v,factor*vrad);
+					extenderPD.setRadius(v,factor*vrad);
 				count++;
 			}
 		} // end of for loop

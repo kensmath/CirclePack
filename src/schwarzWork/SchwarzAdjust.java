@@ -44,7 +44,7 @@ public class SchwarzAdjust extends PackExtender {
 	// Constructor
 	public SchwarzAdjust(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="SCHWARZADJUST";
 		extensionAbbrev="SA";
 		toolTip="'SchwarzAdjust' is a test bench "+
@@ -55,10 +55,10 @@ public class SchwarzAdjust extends PackExtender {
 		
 		int rslt=1;
 		try {
-			if (!packData.status || packData.nodeCount<4)
+			if (!extenderPD.status || extenderPD.nodeCount<4)
 				rslt=0;
-			else if (packData.hes<=0) 
-				rslt=cpCommand(packData,"geom_to_s");
+			else if (extenderPD.hes<=0) 
+				rslt=cpCommand(extenderPD,"geom_to_s");
 		} catch(Exception ex) {
 			errorMsg("SA: failed converting to sph geom, or "
 					+ "other problem");
@@ -69,7 +69,7 @@ public class SchwarzAdjust extends PackExtender {
 		
 		// start with some basic checking:
 		if (running) {
-			if (rslt!=0 && packData.nodeCount>25) {
+			if (rslt!=0 && extenderPD.nodeCount>25) {
 				CirclePack.cpb.errMsg("SchwarzAdjust: "
 						+"currently limited to nodecounts < 26)");
 				rslt=0;
@@ -77,7 +77,7 @@ public class SchwarzAdjust extends PackExtender {
 			if (rslt!=0) {
 				initEdgeList("a");
 			}
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 	}
 
@@ -107,8 +107,8 @@ public class SchwarzAdjust extends PackExtender {
 				}
 				mode=tmode;
 			}
-			for (int j=1;j<=packData.nodeCount;j++) {
-				Vertex v=packData.packDCEL.vertices[j];
+			for (int j=1;j<=extenderPD.nodeCount;j++) {
+				Vertex v=extenderPD.packDCEL.vertices[j];
 				if (mode==STANDARD) {
 					if (!v.isBdry()) {
 						HalfLink flower=v.getEdgeFlower();
@@ -123,8 +123,8 @@ public class SchwarzAdjust extends PackExtender {
 				//       on some edges.
 				count++;
 			}
-			for (int j=1;j<=packData.nodeCount;j++) {
-				Vertex v=packData.packDCEL.vertices[j];
+			for (int j=1;j<=extenderPD.nodeCount;j++) {
+				Vertex v=extenderPD.packDCEL.vertices[j];
 				if (v.getNum()==3) {
 					HalfLink flower=v.getEdgeFlower();
 					Iterator<HalfEdge> fits=flower.iterator();
@@ -160,7 +160,7 @@ public class SchwarzAdjust extends PackExtender {
 	 * @return HalfLink
 	 */
 	public void initEdgeList(String spec) {
-		HalfLink tmpnl=new HalfLink(packData,spec);
+		HalfLink tmpnl=new HalfLink(extenderPD,spec);
 		adjEdges=null;
 		Iterator<HalfEdge> hel=tmpnl.iterator();
 		while (hel.hasNext()) {

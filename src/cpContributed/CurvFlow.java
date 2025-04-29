@@ -70,11 +70,11 @@ public class CurvFlow extends PackExtender {
 			running=false;
 		}
 		if (running) {
-			anglesumDiff=new double[packData.nodeCount+1];
-			radRatio=new double[packData.nodeCount+1];
-			if (setAngDiff(domainData,packData)==0 || setRadRatio(domainData,packData)==0)
+			anglesumDiff=new double[extenderPD.nodeCount+1];
+			radRatio=new double[extenderPD.nodeCount+1];
+			if (setAngDiff(domainData,extenderPD)==0 || setRadRatio(domainData,extenderPD)==0)
 				errorMsg("CF: failed to initialize 'domainPack'");
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 		rad1=null;
 		rad2=null;
@@ -131,7 +131,7 @@ public class CurvFlow extends PackExtender {
 							}
 							case 'f': // faces
 							{
-								flink=new FaceLink(packData,items);
+								flink=new FaceLink(extenderPD,items);
 								break;
 							}
 							} // end of switch
@@ -144,14 +144,14 @@ public class CurvFlow extends PackExtender {
 			
 			// no flags, default to bdry faces
 			else {
-				flink=new FaceLink(packData,"Iv b");
+				flink=new FaceLink(extenderPD,"Iv b");
 			}
 			
 			// get list of points
 			if (flink!=null && flink.size()>0) {
 				Iterator<Integer> flst=flink.iterator();
 				while (flst.hasNext()) {
-					combinatorics.komplex.DcelFace face=packData.packDCEL.faces[flst.next()];
+					combinatorics.komplex.DcelFace face=extenderPD.packDCEL.faces[flst.next()];
 					int[] vert=face.getVerts();
 					// put face barycenter in the list
 					zlink.add(EuclMath.eucl_tri_center(
@@ -201,7 +201,7 @@ public class CurvFlow extends PackExtender {
 		else if (cmd.startsWith("set_rad_rat")) {
 			// default: compare to 'domainPack'
 			if (flagSegs==null || flagSegs.size()==0) { 
-				return setRadRatio(packData,domainData);
+				return setRadRatio(extenderPD,domainData);
 			}
 			try { // try to read -q{p} flag
 				items=(Vector<String>)flagSegs.get(0);
@@ -211,11 +211,11 @@ public class CurvFlow extends PackExtender {
 					case 'y': // deprecated, fall through
 					case 'u': // get from packData.UtilDouble
 					{
-						if (packData.utilDoubles==null)
+						if (extenderPD.utilDoubles==null)
 							Oops("'utilDoubles' was null");
-						for (int v=1;v<=packData.nodeCount;v++) {
-							if (v<=packData.utilDoubles.size())
-									radRatio[v]=packData.utilDoubles.get(v-1);
+						for (int v=1;v<=extenderPD.nodeCount;v++) {
+							if (v<=extenderPD.utilDoubles.size())
+									radRatio[v]=extenderPD.utilDoubles.get(v-1);
 						}
 						return 1;
 					}
@@ -224,7 +224,7 @@ public class CurvFlow extends PackExtender {
 						int qnum=StringUtil.qFlagParse(items.get(0));
 						if (qnum<0)
 							throw new ParserException("failed to read 'q' flag");
-						return setRadRatio(packData,PackControl.packings[qnum]);
+						return setRadRatio(extenderPD,PackControl.packings[qnum]);
 					}
 					} // end of switch
 				}
@@ -239,15 +239,15 @@ public class CurvFlow extends PackExtender {
 				int wr=Integer.parseInt(items.get(0));
 				if (wr==1) {
 					rad1=new double[domainData.nodeCount+1];
-					for (int v=1;v<=packData.nodeCount;v++) 
+					for (int v=1;v<=extenderPD.nodeCount;v++) 
 						if (v<=domainData.nodeCount)
-							rad1[v]=packData.getRadius(v);
+							rad1[v]=extenderPD.getRadius(v);
 				}
 				else {
 					rad2=new double[domainData.nodeCount+1];
-					for (int v=1;v<=packData.nodeCount;v++) 
+					for (int v=1;v<=extenderPD.nodeCount;v++) 
 						if (v<=domainData.nodeCount)
-							rad2[v]=packData.getRadius(v);
+							rad2[v]=extenderPD.getRadius(v);
 				}
 				return 1;
 			} catch (Exception ex) {
@@ -261,7 +261,7 @@ public class CurvFlow extends PackExtender {
 					rad2==null || rad2.length<domainData.nodeCount+1)
 				throw new ParserException("rad1/rad2 don't have right size");
 			logmod=new double[domainData.nodeCount+1];
-			for (int v=1;v<=packData.nodeCount;v++)
+			for (int v=1;v<=extenderPD.nodeCount;v++)
 				if (v<=domainData.nodeCount)
 					logmod[v]=(rad2[v]-rad1[v])/rad1[v];
 			return logmod.length;
@@ -286,8 +286,8 @@ public class CurvFlow extends PackExtender {
 			if ((angdata && anglesumDiff!=null) || 
 					(raddata && radRatio!=null) ||
 					aimdata && aimDiff!=null) { 
-				packData.utilDoubles=new Vector<Double>(packData.nodeCount);
-				for (int v=1;v<=packData.nodeCount;v++) {
+				extenderPD.utilDoubles=new Vector<Double>(extenderPD.nodeCount);
+				for (int v=1;v<=extenderPD.nodeCount;v++) {
 					double data=0.0;
 					
 					if (raddata)
@@ -297,7 +297,7 @@ public class CurvFlow extends PackExtender {
 					else
 						data=anglesumDiff[v];
 					
-					packData.utilDoubles.add(Double.valueOf(data));
+					extenderPD.utilDoubles.add(Double.valueOf(data));
 					count++;
 				}
 			}
@@ -320,23 +320,23 @@ public class CurvFlow extends PackExtender {
 		// =========== move by mean curvature ============
 		else if (cmd.startsWith("mmc")) {
 			// TODO: want to provide more options
-			double total=fillBdryCurv(packData);
+			double total=fillBdryCurv(extenderPD);
 			@SuppressWarnings("unused")
 			double radsum=0.0;
-			for (int v=1;v<=packData.nodeCount;v++) {
-				if (packData.isBdry(v)) {
-					radsum += packData.getRadius(v);
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
+				if (extenderPD.isBdry(v)) {
+					radsum += extenderPD.getRadius(v);
 				}
 			}
 
 			// adjust each radius by moderated proportion that 
 			//     that radius forms of total
-			for (int v=1;v<=packData.nodeCount;v++) {
-				if (packData.isBdry(v)) {
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
+				if (extenderPD.isBdry(v)) {
 					double factor=.1; // moderating factor
-					double prad=packData.getRadius(v);
+					double prad=extenderPD.getRadius(v);
 					double adjustment=(-1.0)*(bdryCurv[v]/total)*prad;
-					packData.setRadius(v,prad+ factor*adjustment);
+					extenderPD.setRadius(v,prad+ factor*adjustment);
 				}
 			}
 			
@@ -381,9 +381,9 @@ public class CurvFlow extends PackExtender {
 						
 						// get vertices
 						if (items.size()==0) { // no vertices given
-							vertlist=new NodeLink(packData,"a");
+							vertlist=new NodeLink(extenderPD,"a");
 						}
-						else vertlist=new NodeLink(packData,items);
+						else vertlist=new NodeLink(extenderPD,items);
 						if (vertlist==null || vertlist.size()==0) {
 							errorMsg("no vertices specified");
 							return 0;
@@ -392,8 +392,8 @@ public class CurvFlow extends PackExtender {
 					}			
 					case 'u': // use 'utilDoubles' vector
 					{
-						if (packData.utilDoubles==null || 
-								packData.utilDoubles.size()!=packData.nodeCount) {
+						if (extenderPD.utilDoubles==null || 
+								extenderPD.utilDoubles.size()!=extenderPD.nodeCount) {
 							errorMsg("'utilDoubles' vector empty or wrong size");
 							return 0;
 						}
@@ -415,20 +415,20 @@ public class CurvFlow extends PackExtender {
 				v=(Integer)vlist.next();
 				double curraim=0.0;
 				if (incremental) 
-					curraim=packData.getAim(v);
+					curraim=extenderPD.getAim(v);
 				else
 					curraim=domainData.getAim(v);
 				// what data are we using? does it exist?
 				if ((!useUtilDoubles && v<aimDiff.length) ||
-						(useUtilDoubles && v<=packData.utilDoubles.size())) {
+						(useUtilDoubles && v<=extenderPD.utilDoubles.size())) {
 					double term=0.0;
 					if (useUtilDoubles)
-						term=packData.utilDoubles.get(v-1);
+						term=extenderPD.utilDoubles.get(v-1);
 					else 
 						term=aimDiff[v];
 					
 					// apply
-					packData.setAim(v,curraim+x*(term));
+					extenderPD.setAim(v,curraim+x*(term));
 					count++;
 				}
 			} // end of while
@@ -467,9 +467,9 @@ public class CurvFlow extends PackExtender {
 						
 						// get vertices
 						if (items.size()==0) { // no vertices given
-							vertlist=new NodeLink(packData,"a");
+							vertlist=new NodeLink(extenderPD,"a");
 						}
-						else vertlist=new NodeLink(packData,items);
+						else vertlist=new NodeLink(extenderPD,items);
 						if (vertlist==null || vertlist.size()==0) {
 							errorMsg("no vertices specified");
 							return 0;
@@ -478,7 +478,7 @@ public class CurvFlow extends PackExtender {
 					}			
 					case 'u': // use 'utilDoubles' vector
 					{
-						if (packData.utilDoubles==null || packData.utilDoubles.size()!=packData.nodeCount) {
+						if (extenderPD.utilDoubles==null || extenderPD.utilDoubles.size()!=extenderPD.nodeCount) {
 							errorMsg("'utilDoubles' vector is empty or size is too small");
 							return 0;
 						}
@@ -499,17 +499,17 @@ public class CurvFlow extends PackExtender {
 			while (vlist.hasNext()) {
 				v=(Integer)vlist.next();
 				double rad=domainData.getRadius(v);
-				if (incremental) rad=packData.getRadius(v);
+				if (incremental) rad=extenderPD.getRadius(v);
 					
 				// what data are we using? does it exist?
 				if ((!useUtilDoubles && v<radRatio.length) ||
-						(useUtilDoubles && v<=packData.utilDoubles.size())) {
+						(useUtilDoubles && v<=extenderPD.utilDoubles.size())) {
 					double factor=radRatio[v];
 					if (useUtilDoubles)
-						factor=packData.utilDoubles.get(v-1);
+						factor=extenderPD.utilDoubles.get(v-1);
 
 					// apply
-					packData.setRadius(v,rad*(Math.exp(x*Math.log(factor))));
+					extenderPD.setRadius(v,rad*(Math.exp(x*Math.log(factor))));
 					count++;
 				}
 			} // end of while
@@ -524,7 +524,7 @@ public class CurvFlow extends PackExtender {
 		else if (cmd.startsWith("set_ang_dif")) {
 			// default: compare to 'domainPack' comparison
 			if (flagSegs==null || flagSegs.size()==0) { 
-				return setAngDiff(packData,domainData);
+				return setAngDiff(extenderPD,domainData);
 			}
 			try { // try to read -q{p} flag
 				items=(Vector<String>)flagSegs.get(0);
@@ -534,11 +534,11 @@ public class CurvFlow extends PackExtender {
 					case 'y': // deprecated, fall through to 'u'
 					case 'u':
 					{ // get from packData.UtilDouble
-						if (packData.utilDoubles==null)
+						if (extenderPD.utilDoubles==null)
 							Oops("'utilDoubles' was null");
-						for (int v=1;v<=packData.nodeCount;v++) {
-							if (v<=packData.utilDoubles.size())
-								anglesumDiff[v]=packData.utilDoubles.get(v-1);
+						for (int v=1;v<=extenderPD.nodeCount;v++) {
+							if (v<=extenderPD.utilDoubles.size())
+								anglesumDiff[v]=extenderPD.utilDoubles.get(v-1);
 						}
 						return 1;
 					}
@@ -547,7 +547,7 @@ public class CurvFlow extends PackExtender {
 						int qnum=StringUtil.qFlagParse(items.get(0));
 						if (qnum<0)
 							throw new ParserException("failed to read 'q' flag");
-						return setAngDiff(packData,PackControl.packings[qnum]);
+						return setAngDiff(extenderPD,PackControl.packings[qnum]);
 					}
 					} // end of switch
 				}
@@ -562,7 +562,7 @@ public class CurvFlow extends PackExtender {
 		else if (cmd.startsWith("set_aim_dif")) {
 			// default: compare to 'domainPack' comparison
 			if (flagSegs==null || flagSegs.size()==0) { 
-				return setAimDiff(packData,domainData);
+				return setAimDiff(extenderPD,domainData);
 			}
 			try { // try to read -q{p} flag
 				items=(Vector<String>)flagSegs.get(0);
@@ -572,11 +572,11 @@ public class CurvFlow extends PackExtender {
 					case 'y': // deprecated, fall through to 'u'
 					case 'u':
 					{ // get from packData.UtilDouble
-						if (packData.utilDoubles==null)
+						if (extenderPD.utilDoubles==null)
 							Oops("'utilDoubles' was null");
-						for (int v=1;v<=packData.nodeCount;v++) {
-							if (v<=packData.utilDoubles.size())
-								aimDiff[v]=packData.utilDoubles.get(v-1);
+						for (int v=1;v<=extenderPD.nodeCount;v++) {
+							if (v<=extenderPD.utilDoubles.size())
+								aimDiff[v]=extenderPD.utilDoubles.get(v-1);
 						}
 						return 1;
 					}
@@ -585,7 +585,7 @@ public class CurvFlow extends PackExtender {
 						int qnum=StringUtil.qFlagParse(items.get(0));
 						if (qnum<0)
 							throw new ParserException("failed to read 'q' flag");
-						return setAimDiff(packData,PackControl.packings[qnum]);
+						return setAimDiff(extenderPD,PackControl.packings[qnum]);
 					}
 					} // end of switch
 				}
@@ -691,7 +691,7 @@ public class CurvFlow extends PackExtender {
 		if (q==null)
 			q=domainData;
 		if (q==null || p==null || !q.status || !p.status || q.hes!=0 || p.hes!=0 ||
-				q.nodeCount!=packData.nodeCount || q.nodeCount!=packData.nodeCount) {
+				q.nodeCount!=extenderPD.nodeCount || q.nodeCount!=extenderPD.nodeCount) {
 			Oops("CF: set_ang_diff: nodeCount's not matching (or some other problem)");
 		}
 		
@@ -721,7 +721,7 @@ public class CurvFlow extends PackExtender {
 		if (q==null)
 			q=domainData;
 		if (q==null || p==null || !q.status || !p.status || q.hes!=0 || p.hes!=0 ||
-				q.nodeCount!=packData.nodeCount || q.nodeCount!=packData.nodeCount) {
+				q.nodeCount!=extenderPD.nodeCount || q.nodeCount!=extenderPD.nodeCount) {
 			Oops("CF: set_ang_diff: nodeCount's not matching (or some other problem)");
 		}
 		
@@ -749,7 +749,7 @@ public class CurvFlow extends PackExtender {
 		if (q==null)
 			q=domainData;
 		if (q==null || p==null || !q.status || !p.status || q.hes!=0 || p.hes!=0 ||
-				q.nodeCount!=packData.nodeCount || q.nodeCount!=packData.nodeCount) {
+				q.nodeCount!=extenderPD.nodeCount || q.nodeCount!=extenderPD.nodeCount) {
 			errorMsg("CF: set_rad_rat: nodeCount's not matching or other problem");
 			return 0;
 		}
@@ -798,8 +798,8 @@ public class CurvFlow extends PackExtender {
 		if (b_hit && curveVector!=null && curveVector.size()>0) {
 			Vector<BaryCoordLink> holdVector=CPBase.gridLines;
 			CPBase.gridLines=curveVector;
-			if ((count=DisplayParser.dispParse(packData,flagSegs))>0)
-				PackControl.canvasRedrawer.paintMyCanvasses(packData,false);
+			if ((count=DisplayParser.dispParse(extenderPD,flagSegs))>0)
+				PackControl.canvasRedrawer.paintMyCanvasses(extenderPD,false);
 			CPBase.gridLines=holdVector;
 		}
 		return count;

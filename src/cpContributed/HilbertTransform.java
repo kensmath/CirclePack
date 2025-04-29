@@ -43,17 +43,17 @@ public class HilbertTransform extends PackExtender
 		registerXType();
 		
 		// max pack the packing p
-		cpCommand(packData, "max_pack");
+		cpCommand(extenderPD, "max_pack");
 		// store the boundary centers in hyperbolic metric
-		int[] temp_bndry = new int[packData.nodeCount + 1]; // not the right size
-		Complex[] temp_cz = new Complex[packData.nodeCount + 1]; // not the right size
+		int[] temp_bndry = new int[extenderPD.nodeCount + 1]; // not the right size
+		Complex[] temp_cz = new Complex[extenderPD.nodeCount + 1]; // not the right size
 		sz_bndry = 0;
-		for(int k = 1; k <= packData.nodeCount; k++)
+		for(int k = 1; k <= extenderPD.nodeCount; k++)
 		{
-			if (packData.isBdry(k))
+			if (extenderPD.isBdry(k))
 			{
 				temp_bndry[sz_bndry] = k; 
-				temp_cz[sz_bndry] = packData.getCenter(k);
+				temp_cz[sz_bndry] = extenderPD.getCenter(k);
 				sz_bndry++;
 			}
 		}
@@ -67,9 +67,9 @@ public class HilbertTransform extends PackExtender
 		// sort the vertices such that bndry[k] and bndry[k+1] are neighbors
 		sortBoundary();
 		// convert to euclidean metric
-		cpCommand(packData, "geom_to_e");
+		cpCommand(extenderPD, "geom_to_e");
 		// show maximal packing
-		cpCommand(packData, "disp -w -c");
+		cpCommand(extenderPD, "disp -w -c");
 		
 		// default function
 		var = "t";
@@ -82,7 +82,7 @@ public class HilbertTransform extends PackExtender
 		
 		if (running)
 		{
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 	}
 	
@@ -141,7 +141,7 @@ public class HilbertTransform extends PackExtender
 			}
 			
 			// create a copy of the packing
-			PackData newPack = packData.copyPackTo();
+			PackData newPack = extenderPD.copyPackTo();
 			CirclePack.cpb.swapPackData(newPack, 1, false);
 			
 			// modify the radii of the boundary circles
@@ -161,7 +161,7 @@ public class HilbertTransform extends PackExtender
 			cpCommand(newPack, "layout");
 			cpCommand(newPack, "set_screen -a");
 			cpCommand(newPack, "disp -w -c");
-			cpCommand(packData, "Map 0 1 -o");
+			cpCommand(extenderPD, "Map 0 1 -o");
 			
 			// calculate the change of the angle of the boundary edges
 			Complex z1, z2, z3, w1, w2, w3, z, w;
@@ -173,11 +173,11 @@ public class HilbertTransform extends PackExtender
 			for(int k = 0; k < sz_bndry; k++)
 			{
 				if (k <= 0)
-					z1 = packData.getCenter(bndry[sz_bndry - 1]);
+					z1 = extenderPD.getCenter(bndry[sz_bndry - 1]);
 				else
-					z1 = packData.getCenter(bndry[k - 1]);
-				z2 = packData.getCenter(bndry[k]);
-				z3 = packData.getCenter(bndry[(k + 1) % sz_bndry]);
+					z1 = extenderPD.getCenter(bndry[k - 1]);
+				z2 = extenderPD.getCenter(bndry[k]);
+				z3 = extenderPD.getCenter(bndry[(k + 1) % sz_bndry]);
 				
 				z = z1.minus(z2);
 				w = z3.minus(z2);
@@ -310,15 +310,15 @@ public class HilbertTransform extends PackExtender
 		int sz_flwr;
 		int count = 0;
 		
-		int[] flwr = packData.getFlower(vert);
-		if (packData.isBdry(vert))
+		int[] flwr = extenderPD.getFlower(vert);
+		if (extenderPD.isBdry(vert))
 			// vert is a boundary vertex
 			sz_flwr = flwr.length;
 		else
 			sz_flwr = flwr.length - 1;
 		
 		for(int k = 0; k < sz_flwr; k++) {
-			if (packData.isBdry(flwr[k])) {
+			if (extenderPD.isBdry(flwr[k])) {
 				nb[count] = flwr[k];
 				count++;
 			}

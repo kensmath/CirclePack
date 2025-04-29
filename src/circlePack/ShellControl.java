@@ -153,7 +153,7 @@ public class ShellControl extends CPBase {
 		if (keepX) { 
 			p.packExtensions=packings[pnum].packExtensions;
 			for (int x=0;x<p.packExtensions.size();x++)
-				p.packExtensions.get(x).packData=p;
+				p.packExtensions.get(x).extenderPD=p;
 		}
 		
 //		CPBase.packings[pnum].cpDrawing=null; // detach from cpDrawing

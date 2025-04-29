@@ -70,20 +70,20 @@ public class JammedPack extends PackExtender {
 		
 		// the packing should have 'original vertices' marked; if not, fail
 		int markCount=0;
-		for (int v=1;v<=packData.nodeCount;v++) 
-			if (packData.getVertMark(v)==1) {
+		for (int v=1;v<=extenderPD.nodeCount;v++) 
+			if (extenderPD.getVertMark(v)==1) {
 				markCount++;
 			}
 		
 		// small checks on data
-		if (markCount==0 || markCount==packData.nodeCount) {
+		if (markCount==0 || markCount==extenderPD.nodeCount) {
 			errorMsg("'JammedPack' extender failed: packing no "+
 					"or all vertices marked");
 			running=false;
 		}
 		
-		iNum=packData.nodeCount-markCount;
-		homePack=packData.copyPackTo(); // reference, never changes
+		iNum=extenderPD.nodeCount-markCount;
+		homePack=extenderPD.copyPackTo(); // reference, never changes
 		iFlowers=new int[iNum+1][]; // indexed from 1
 		istices=new int[iNum+1];
 		int tick=0;
@@ -103,10 +103,10 @@ public class JammedPack extends PackExtender {
 			}
 		}
 		cpCommand(homePack,"color -c s a");
-		cpCommand(packData,"color -c s a");
+		cpCommand(extenderPD,"color -c s a");
 			
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 
 	}
@@ -118,18 +118,18 @@ public class JammedPack extends PackExtender {
 		// ========= split =========
 		if (cmd.startsWith("spli")) {
 			if (flagSegs!=null && (items=flagSegs.get(0)).size()>0) {
-				EdgeLink elist=new EdgeLink(packData,items);
+				EdgeLink elist=new EdgeLink(extenderPD,items);
 				Iterator<EdgeSimple> elst=elist.iterator();
 				while(elst.hasNext()) {
 					EdgeSimple edge=elst.next();
 					// neither should be degree 3
-					if (packData.countFaces(edge.v)==3 || packData.countFaces(edge.w)==3)
+					if (extenderPD.countFaces(edge.v)==3 || extenderPD.countFaces(edge.w)==3)
 						return count;
 					// both can't be original
 					if ((edge.v<=homePack.nodeCount && homePack.getVertMark(edge.v)<0) &&
 							(edge.w<=homePack.nodeCount && homePack.getVertMark(edge.w)<0))
 						return count;
-					count += cpCommand(packData,"split_edge "+edge.v+" "+edge.w);
+					count += cpCommand(extenderPD,"split_edge "+edge.v+" "+edge.w);
 				}
 			}
 			return count;
@@ -147,7 +147,7 @@ public class JammedPack extends PackExtender {
 						StringBuilder stb=new StringBuilder("set_vlist vlist ");
 						for (int j=0;j<N;j++)
 							stb.append(iFlowers[i][j]+" ");
-						cpCommand(packData,stb.toString());
+						cpCommand(extenderPD,stb.toString());
 						count++;
 					}
 				}
@@ -166,13 +166,13 @@ public class JammedPack extends PackExtender {
 					// find centroid of rim centers
 					Complex centd=new Complex(0.0);
 					for (int j=0;j<N;j++)
-						centd=centd.add(packData.getCenter(iFlowers[i][j]));
+						centd=centd.add(extenderPD.getCenter(iFlowers[i][j]));
 					centd=centd.divide((double)N);
 					
 					// find max radius to encircle centers
 					double maxR=0.0;
 					for (int j=0;j<N;j++) {
-						double dist=centd.sub(packData.getCenter(iFlowers[i][j])).abs();
+						double dist=centd.sub(extenderPD.getCenter(iFlowers[i][j])).abs();
 						maxR=(dist>maxR) ? dist:maxR;
 					}
 					maxR=maxR*2;
@@ -181,7 +181,7 @@ public class JammedPack extends PackExtender {
 					double ly=centd.y-maxR;
 					double uy=centd.y+maxR;
 					
-					cpCommand(packData,"set_screen -b "+lx+" "+ly+" "+ux+" "+uy);
+					cpCommand(extenderPD,"set_screen -b "+lx+" "+ly+" "+ux+" "+uy);
 					return 1;
 			}
 
@@ -201,7 +201,7 @@ public class JammedPack extends PackExtender {
 						double sqrs=0.0;
 						int N=iflower.length;
 						for (int j=0;j<N;j++) {
-							double r=packData.getRadius(iflower[j]);
+							double r=extenderPD.getRadius(iflower[j]);
 							sqrs=sqrs+r*r;
 							mean=mean+r;
 						}
@@ -220,7 +220,7 @@ public class JammedPack extends PackExtender {
 		else if (cmd.startsWith("crum")) {
 			int v=-1;
 			if (flagSegs!=null && (items=flagSegs.get(0)).size()>0 &&
-					(v=NodeLink.grab_one_vert(packData,items.get(0)))>0 &&
+					(v=NodeLink.grab_one_vert(extenderPD,items.get(0)))>0 &&
 					homePack.getVertMark(v)<0) {  // original vert?
 				
 				// already have one end
@@ -262,7 +262,7 @@ public class JammedPack extends PackExtender {
 				return 0;
 			}
 			
-			if (packData.packDCEL.findHalfEdge(new EdgeSimple(v,w))!=null) {
+			if (extenderPD.packDCEL.findHalfEdge(new EdgeSimple(v,w))!=null) {
 				errorMsg("vertices "+v+" and "+w+" already share an edge");
 				return 0;
 			}
@@ -288,23 +288,23 @@ public class JammedPack extends PackExtender {
 				return 0;
 			
 			// save for undo
-			PackData holdpack=packData.copyPackTo();
+			PackData holdpack=extenderPD.copyPackTo();
 
 			// add an edge from v to w;
-			packData.tileData=null; // toss the old
+			extenderPD.tileData=null; // toss the old
 			if (addEdge(v,w,bary)==null) {
-				packData=holdpack;   // restore
+				extenderPD=holdpack;   // restore
 				return 0;
 			}
 			
 			// fix the packing
-			packData.packDCEL.fixDCEL(packData);
+			extenderPD.packDCEL.fixDCEL(extenderPD);
 			cpCommand("pave "+bary); // repave
 				
 			// prepare in case of 'undo'
 			addrmPack=holdpack;
 			
-			return packData.nodeCount;
+			return extenderPD.nodeCount;
 		} // end of add_e
 		
 		// ======= rm_e ===================
@@ -315,7 +315,7 @@ public class JammedPack extends PackExtender {
 			
 
 			// read and process listed edges
-			HalfLink hlink=new HalfLink(packData,items);
+			HalfLink hlink=new HalfLink(extenderPD,items);
 			if (hlink==null || hlink.size()==0) {
 				errorMsg("no edge specified in "+StringUtil.reconItem(items));
 				return 0;
@@ -335,14 +335,14 @@ public class JammedPack extends PackExtender {
 			
 				// want every network node to have at least three network edges
 				int vmark=0;
-				int[] flower=packData.getFlower(v);
-				int num=packData.countFaces(v);
+				int[] flower=extenderPD.getFlower(v);
+				int num=extenderPD.countFaces(v);
 				for (int j=0;j<num;j++)
 					if (homePack.getVertMark(flower[j])<0)
 							vmark++;
 				int wmark=0;
-				flower=packData.getFlower(w);
-				num=packData.countFaces(w);
+				flower=extenderPD.getFlower(w);
+				num=extenderPD.countFaces(w);
 				for (int j=0;j<num;j++)
 					if (homePack.getVertMark(flower[j])<0) // original vert?
 							wmark++;
@@ -353,27 +353,27 @@ public class JammedPack extends PackExtender {
 				}
 					
 			    // prepare for restore
-				int pnum=packData.packNum;
-				holdpack=packData.copyPackTo();
+				int pnum=extenderPD.packNum;
+				holdpack=extenderPD.copyPackTo();
 				
 				// try to remove the edge
-				packData.tileData=null;
-				int bary=RawManip.rmEdge_raw(packData.packDCEL,edge);
+				extenderPD.tileData=null;
+				int bary=RawManip.rmEdge_raw(extenderPD.packDCEL,edge);
 				if (bary>0) {
-					packData.packDCEL.fixDCEL(packData);
+					extenderPD.packDCEL.fixDCEL(extenderPD);
 					cpCommand("pave "+bary); // repave
-					addrmPack=packData.copyPackTo();
+					addrmPack=extenderPD.copyPackTo();
 					count += 1;
 				}
 				else { // restore 
-					packData=CirclePack.cpb.swapPackData(holdpack,pnum,true);
+					extenderPD=CirclePack.cpb.swapPackData(holdpack,pnum,true);
 				}
 			} // end of while through the list of edges
 
 			if (count==0)
 				return 0;
 			
-			return packData.nodeCount;
+			return extenderPD.nodeCount;
 		}
 		
 		// ============== undo =====================
@@ -381,28 +381,28 @@ public class JammedPack extends PackExtender {
 		else if (cmd.startsWith("undo")) {
 			if (flagSegs!=null && flagSegs.size()>0) { // call to use 'backpack'
 				if (backPack!=null) {
-					int pnum=packData.packNum;
-					packData=CirclePack.cpb.swapPackData(backPack,pnum,true);
-					swapExtenderPD(packData);
+					int pnum=extenderPD.packNum;
+					extenderPD=CirclePack.cpb.swapPackData(backPack,pnum,true);
+					swapExtenderPD(extenderPD);
 					addrmPack=null; // outdated
-					return packData.nodeCount;
+					return extenderPD.nodeCount;
 				}
 				CirclePack.cpb.errMsg("No general backup in place");
 			}
 			else {
 				
 				// restore 'addrmPack' if available, else 'backpack' if available
-				int pnum=packData.packNum;
+				int pnum=extenderPD.packNum;
 				if (addrmPack!=null) { // leave 'backpack' in place
-					packData=CirclePack.cpb.swapPackData(addrmPack,pnum,true);
-					swapExtenderPD(packData);
-					return packData.nodeCount;
+					extenderPD=CirclePack.cpb.swapPackData(addrmPack,pnum,true);
+					swapExtenderPD(extenderPD);
+					return extenderPD.nodeCount;
 				}
 				if (backPack!=null) {
-					packData=CirclePack.cpb.swapPackData(backPack,pnum,true);
-					swapExtenderPD(packData);
+					extenderPD=CirclePack.cpb.swapPackData(backPack,pnum,true);
+					swapExtenderPD(extenderPD);
 					addrmPack=null; // outdated
-					return packData.nodeCount;
+					return extenderPD.nodeCount;
 				}
 				CirclePack.cpb.errMsg("No backups in place");
 			}
@@ -412,7 +412,7 @@ public class JammedPack extends PackExtender {
 		
 		// ============ backup ================
 		else if (cmd.startsWith("backu")) {
-			backPack=packData.copyPackTo(); // put a general backup in place
+			backPack=extenderPD.copyPackTo(); // put a general backup in place
 			return 1;
 		}
 		
@@ -430,10 +430,10 @@ public class JammedPack extends PackExtender {
 	 */
 	public HalfEdge addEdge(int v,int w,int b) {
 		if (v==w || homePack.getVertMark(v)>=0 || homePack.getVertMark(w)>=0 || 
-				homePack.getVertMark(b)<0 || packData.isBdry(b))
+				homePack.getVertMark(b)<0 || extenderPD.isBdry(b))
 			return null;
 		
-		PackDCEL pdcel=packData.packDCEL;
+		PackDCEL pdcel=extenderPD.packDCEL;
 		// if red chain runs through 'b', then toss it
 		if (pdcel.vertices[b].redFlag)
 			pdcel.redChain=null;

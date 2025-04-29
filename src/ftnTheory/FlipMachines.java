@@ -15,16 +15,16 @@ public class FlipMachines extends PackExtender {
 	public FlipMachines(PackData p) {
 		super(p);
 		rand = new Random(1); // random with seed; remove seed for truly random
-		packData=p;
+		extenderPD=p;
 		extensionType="FLIPMACHINES";
 		extensionAbbrev="BOT";
 		toolTip="'FlipMachines' hosts flipbots that carry out autonomous "+
 			"edge flip strategies";
 		registerXType();
-		if (packData.nodeCount<5) 
+		if (extenderPD.nodeCount<5) 
 			throw new DataException("packing must have >= 5 vertices");
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}	
 	}
 	/**

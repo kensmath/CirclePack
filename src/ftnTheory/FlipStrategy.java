@@ -48,44 +48,44 @@ public class FlipStrategy extends PackExtender {
 		toolTip="'FlipStrategy' is for trying automatic "+
 			"edge flip choice strategies";
 		registerXType();
-		if (packData.nodeCount<5) 
+		if (extenderPD.nodeCount<5) 
 			throw new DataException("packing must have >= 5 vertices");
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}	
 
 		// for flipbot use
 		flipBots=new Vector<FlipBot>(1);
 		
 		// following if for 'flip algorithm' use
-		northPole=packData.nodeCount;
+		northPole=extenderPD.nodeCount;
 		// check if northPole is tangent to all the others
-		if (packData.countFaces(northPole)==packData.nodeCount-1) {
-			for (int i=1;i<packData.nodeCount;i++)
-				if (packData.countFaces(i)==packData.nodeCount-1)
+		if (extenderPD.countFaces(northPole)==extenderPD.nodeCount-1) {
+			for (int i=1;i<extenderPD.nodeCount;i++)
+				if (extenderPD.countFaces(i)==extenderPD.nodeCount-1)
 					northPole=i;
-			if (northPole==packData.nodeCount)
+			if (northPole==extenderPD.nodeCount)
 				throw new DataException("can't find north pole candidate");
 			else { // nodeCount index didn't work; swap one that does with it
 				if (cpCommand("swap M "+northPole)!=0)
-					northPole=packData.nodeCount;
+					northPole=extenderPD.nodeCount;
 				else
 					throw new CombException("failed to swap M for "+northPole);
 			}
 		}
 		southPole=0;
-		for (int i=1;(i<packData.nodeCount && southPole==0);i++) {
-			if (packData.nghb(i,northPole)<0) 
+		for (int i=1;(i<extenderPD.nodeCount && southPole==0);i++) {
+			if (extenderPD.nghb(i,northPole)<0) 
 				southPole=i;
 		}
 		if (southPole==0) 
 			throw new DataException("can't find pole candidates");
 		cpCommand("alpha "+southPole); // make southPole the alpha vert
 		NStoggle=0;
-		packData.vlist=null;
-		packData.vlist=new NodeLink(packData);
-		packData.vlist.add(northPole); // use 'max_pack -r vlist[0]' 
-		packData.vlist.add(southPole);
+		extenderPD.vlist=null;
+		extenderPD.vlist=new NodeLink(extenderPD);
+		extenderPD.vlist.add(northPole); // use 'max_pack -r vlist[0]' 
+		extenderPD.vlist.add(southPole);
 		baseEdge=null;
 	}
 	
@@ -97,7 +97,7 @@ public class FlipStrategy extends PackExtender {
 		
 		// ===================== setedge ================
 		if (cmd.startsWith("setedg")) {
-			HalfEdge baseedge=HalfLink.grab_one_edge(packData, flagSegs);
+			HalfEdge baseedge=HalfLink.grab_one_edge(extenderPD, flagSegs);
 			if (baseedge==null)
 				return 0;
 			baseEdge=baseedge;
@@ -114,12 +114,12 @@ public class FlipStrategy extends PackExtender {
 			if (baseEdge==null)
 				return 0;
 			
-			HalfEdge[] ans=RawManip.flipAdvance_raw(packData.packDCEL,baseEdge);
+			HalfEdge[] ans=RawManip.flipAdvance_raw(extenderPD.packDCEL,baseEdge);
 			if (ans==null)
 				return 0;
 			baseEdge=ans[0]; // the new hedge
 			if (ans[1]!=null) { // there was a flip
-				packData.packDCEL.fixDCEL(packData);
+				extenderPD.packDCEL.fixDCEL(extenderPD);
 				return 1;
 			}
 			else // only advanced
@@ -146,7 +146,7 @@ public class FlipStrategy extends PackExtender {
 			if (flipBot==null) {
 				items=flagSegs.remove(0);
 				if (items.get(0).equals("-c")) { // create new one
-					flipBot=new FlipBot(packData,name);
+					flipBot=new FlipBot(extenderPD,name);
 					flipBot.setColor(flipBots.size()); // set color based on index in vector
 					flipBots.add(flipBot);
 				}
@@ -178,28 +178,28 @@ public class FlipStrategy extends PackExtender {
 						
 						// do we need to set 'previousHome'?
 						int pre=flipBot.getPrevious();
-						if (pre<=0 || packData.nghb(flipBot.getHomeVert(),pre)<0) {
-							flipBot.setPrevious(packData.getLastPetal(v));
+						if (pre<=0 || extenderPD.nghb(flipBot.getHomeVert(),pre)<0) {
+							flipBot.setPrevious(extenderPD.getLastPetal(v));
 						}
 						
 						break;
 					}
 					case 'e': { // setedge (previous, home)
-						EdgeSimple edge=EdgeLink.grab_one_edge(packData,StringUtil.reconItem(items));
+						EdgeSimple edge=EdgeLink.grab_one_edge(extenderPD,StringUtil.reconItem(items));
 						flipBot.setHomeVert(edge.w);
 						flipBot.setPrevious(edge.v);
 						break;
 					}
 					case 'd': { // draw current edge (previousHome,homeVert)
 						int colindx=ColorUtil.col_to_table(flipBot.getColor());
-						cpCommand(packData,"disp -ec"+colindx+"t8 "+flipBot.getPrevious()+" "+flipBot.getHomeVert()+" -cc"+colindx+"t8 "+flipBot.getHomeVert());
+						cpCommand(extenderPD,"disp -ec"+colindx+"t8 "+flipBot.getPrevious()+" "+flipBot.getHomeVert()+" -cc"+colindx+"t8 "+flipBot.getHomeVert());
 						break;
 					}
 					case 'l': { // draw the last edge flipped
 						int colindx=ColorUtil.col_to_table(flipBot.getColor());
 						EdgeSimple edge=flipBot.getLastFlipped();
 						if (edge!=null)
-							cpCommand(packData,"disp -ec"+colindx+"t4 "+edge.v+" "+edge.w);
+							cpCommand(extenderPD,"disp -ec"+colindx+"t4 "+edge.v+" "+edge.w);
 						break;
 					}
 					case 't': { // tick of the clock: i.e. go
@@ -214,10 +214,10 @@ public class FlipStrategy extends PackExtender {
 							flipBot.setOtherEnd(edge.w);
 							int rslt=0; 
 							// TODO: should be more efficient way
-							int[] flower=packData.getFlower(edge.v);
-							int lv=flower[packData.nghb(edge.v,edge.w)+1];
-							flower=packData.getFlower(edge.w);
-							int rv=flower[packData.nghb(edge.w,edge.v)+1];
+							int[] flower=extenderPD.getFlower(edge.v);
+							int lv=flower[extenderPD.nghb(edge.v,edge.w)+1];
+							flower=extenderPD.getFlower(edge.w);
+							int rv=flower[extenderPD.nghb(edge.w,edge.v)+1];
 							outEdge=new EdgeSimple(lv,rv);
 							rslt=cpCommand("flip "+edge.v+" "+edge.w);
 							if (rslt!=0) { //
@@ -269,11 +269,11 @@ public class FlipStrategy extends PackExtender {
 		// ======================= setNS =========================
 		if (cmd.startsWith("setNS")) {
 			items=flagSegs.get(0);
-			NodeLink vlist=new NodeLink(packData,items);
+			NodeLink vlist=new NodeLink(extenderPD,items);
 			int n=1;
-			int s=packData.nodeCount;
+			int s=extenderPD.nodeCount;
 			if (vlist==null || vlist.size()<2 || (n=vlist.get(0))==(s=vlist.get(1))
-					|| packData.nghb(n,s)>=0)
+					|| extenderPD.nghb(n,s)>=0)
 				Oops("supposed to give distinct non-neighbors n and s");
 			northPole=n;
 			southPole=s;
@@ -300,19 +300,19 @@ public class FlipStrategy extends PackExtender {
 			
 			int Ndegs=0;
 			int Nfours=0;
-			int[] petals=packData.getPetals(northPole);
+			int[] petals=extenderPD.getPetals(northPole);
 			for (int j=0;j<petals.length;j++) {
 				int k=petals[j];
-				int knum=packData.countFaces(k);
+				int knum=extenderPD.countFaces(k);
 				Ndegs+=knum;
 				if (knum==4) Nfours++;
 			}
 			int Sdegs=0;
 			int Sfours=0;
-			petals=packData.getPetals(southPole);
-			for (int j=0;j<packData.countFaces(southPole);j++) {
+			petals=extenderPD.getPetals(southPole);
+			for (int j=0;j<extenderPD.countFaces(southPole);j++) {
 				int k=petals[j];
-				int knum=packData.countFaces(k);
+				int knum=extenderPD.countFaces(k);
 				Sdegs+=knum;
 				if (knum==4) Sfours++;
 			}
@@ -320,21 +320,21 @@ public class FlipStrategy extends PackExtender {
 			int notPolish=0;
 			int twicePolish=0;
 			int twoPoleCount=0;
-			for (int v=1;v<=packData.nodeCount;v++) {
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
 				if (v!=northPole && v!=southPole) {
-					if (packData.nghb(v,northPole)<0 &&
-							packData.nghb(v,southPole)<0)
+					if (extenderPD.nghb(v,northPole)<0 &&
+							extenderPD.nghb(v,southPole)<0)
 						notPolish++; // doesn't nghb either pole
-					else if (packData.nghb(v,northPole)>=0
-							&& packData.nghb(v,southPole)>=0) {
+					else if (extenderPD.nghb(v,northPole)>=0
+							&& extenderPD.nghb(v,southPole)>=0) {
 						twicePolish++; // nghbs both poles
-						twoPoleCount +=packData.countFaces(v);
+						twoPoleCount +=extenderPD.countFaces(v);
 					}
 				}
 			}
 			msg("\nStatus: N=v"+northPole+", degree "+
-					packData.countFaces(northPole)+"; S=v"+southPole+
-					", degree "+packData.countFaces(southPole)+"\n"+
+					extenderPD.countFaces(northPole)+"; S=v"+southPole+
+					", degree "+extenderPD.countFaces(southPole)+"\n"+
 					"   Total petal degrees, N/S: "+Ndegs+"/"+Sdegs+"\n"+
 					"   Degree 4 neighbors, N/S: "+Nfours+"/"+Sfours+"\n"+
 					"   Number neighboring neither/both poles: "+notPolish+"/"+twicePolish+"\n"+
@@ -349,8 +349,8 @@ public class FlipStrategy extends PackExtender {
 				cmd.startsWith("doS")) {
 			
 			// are we already done?
-			if (packData.countFaces(northPole)==(packData.nodeCount-2) &&
-					packData.countFaces(southPole)==(packData.nodeCount-2)) {
+			if (extenderPD.countFaces(northPole)==(extenderPD.nodeCount-2) &&
+					extenderPD.countFaces(southPole)==(extenderPD.nodeCount-2)) {
 				msg("Finished: the combinatorics are in final form");
 				return 1;
 			}
@@ -366,8 +366,8 @@ public class FlipStrategy extends PackExtender {
 			
 			// try N times, (or until both poles have nodeCount-2 petals)
 			int flipCount=0;
-			for (int i=1;(i<=N && (packData.countFaces(northPole)!=(packData.nodeCount-2) ||
-					packData.countFaces(southPole)!=(packData.nodeCount-2)));i++) {
+			for (int i=1;(i<=N && (extenderPD.countFaces(northPole)!=(extenderPD.nodeCount-2) ||
+					extenderPD.countFaces(southPole)!=(extenderPD.nodeCount-2)));i++) {
 				
 //System.out.println("i ="+i);		
 				int pole=northPole;
@@ -384,7 +384,7 @@ public class FlipStrategy extends PackExtender {
 				}
 				
 				// start with random petal of pole
-				int num=packData.countFaces(pole);
+				int num=extenderPD.countFaces(pole);
 				int j=rand.nextInt(num);
 				
 				// I'm setting a saftey counter, so this 'while'
@@ -395,9 +395,9 @@ public class FlipStrategy extends PackExtender {
 				//   degree 4's tangent to unpole
 				int v=0;
 				int jjnum=0;
-				int[] flower=packData.getFlower(pole);
-				while (count>0 && ((jjnum=packData.countFaces((v=flower[j])))<4 ||
-						(jjnum==4 && packData.nghb(v,unpole)>=0))) {
+				int[] flower=extenderPD.getFlower(pole);
+				while (count>0 && ((jjnum=extenderPD.countFaces((v=flower[j])))<4 ||
+						(jjnum==4 && extenderPD.nghb(v,unpole)>=0))) {
 					j=(j+1)%num;
 					count--;
 				}
@@ -412,13 +412,13 @@ public class FlipStrategy extends PackExtender {
 				// process while we can keep flipping about v (interior)
 				boolean outerflip=true;
 				int vnum;
-				flower=packData.getFlower(v);
+				flower=extenderPD.getFlower(v);
 				while (outerflip && v!=0 && 
-						(vnum=packData.countFaces(v))>4 &&
-						!packData.isBdry(v)) {
+						(vnum=extenderPD.countFaces(v))>4 &&
+						!extenderPD.isBdry(v)) {
 					msg("target petal: v="+v+", pole="+pole);
 					outerflip=false;
-					int k=(packData.nghb(v,pole)-1+vnum)%vnum;
+					int k=(extenderPD.nghb(v,pole)-1+vnum)%vnum;
 					int w=flower[k];
 					int m=(k-1+vnum)%vnum;
 					int nextw=flower[m];
@@ -440,9 +440,9 @@ public class FlipStrategy extends PackExtender {
 						int cnr=flower[(k-1+vnum)%vnum];
 //						m=(k-1+vnum)%vnum;
 //						nextw=flower[m];
-						if (w!=unpole && packData.nghb(w,pole)>=0 &&
+						if (w!=unpole && extenderPD.nghb(w,pole)>=0 &&
 								(cnl!=pole || cnl!=unpole || cnr!=pole || cnr!=unpole) && 
-								(packData.nghb(cnl,pole)<0 || packData.nghb(cnr,pole)<0) &&
+								(extenderPD.nghb(cnl,pole)<0 || extenderPD.nghb(cnr,pole)<0) &&
 								cpCommand("flip "+v+" "+w)!=0) {
 							msg("  another flip succeeded: <"+v+" "+w+">");
 							outerflip=true;
@@ -469,8 +469,8 @@ public class FlipStrategy extends PackExtender {
 			} // end of 'for' loop
 
 			// report in Message window
-			if (packData.countFaces(northPole)==(packData.nodeCount-2) &&
-					packData.countFaces(southPole)==(packData.nodeCount-2)) {
+			if (extenderPD.countFaces(northPole)==(extenderPD.nodeCount-2) &&
+					extenderPD.countFaces(southPole)==(extenderPD.nodeCount-2)) {
 						if (flipCount>0)
 							msg("Did "+flipCount+" edge flips");
 						msg("Finished: the combinatorics are in final form");
@@ -483,8 +483,8 @@ public class FlipStrategy extends PackExtender {
 			}
 			else {
 				msg("Did "+flipCount+" edge flips");
-				msg("Northpole has degree "+packData.countFaces(northPole)+
-						"; SouthPole, degree "+packData.countFaces(southPole));
+				msg("Northpole has degree "+extenderPD.countFaces(northPole)+
+						"; SouthPole, degree "+extenderPD.countFaces(southPole));
 				return flipCount;
 			}
 		} // end of 'doFlip'

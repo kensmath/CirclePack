@@ -35,14 +35,14 @@ public class HypDensity extends PackExtender {
 		toolTip="'Hyperbolic Density': experiment with reductions in combinatorical" +
 				"complexity in conformal mapping";
 		registerXType();
-		if (packData.hes>0) {
+		if (extenderPD.hes>0) {
 			CirclePack.cpb.errMsg("SC Warning: packing should not be spherical");
 		}
 		if (CPBase.ClosedPath==null) {
 			CirclePack.cpb.msg("HD Warning: you should fill 'ClosedPath'");
 		}
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 		
 		// default parameters
@@ -68,8 +68,8 @@ public class HypDensity extends PackExtender {
 			}
 			complexity=n; // update (if changed)
 
-			cpCommand(packData,"random_triangulation -N "+complexity+" -g");
-			cpCommand(packData,"disp -w -t");
+			cpCommand(extenderPD,"random_triangulation -N "+complexity+" -g");
+			cpCommand(extenderPD,"disp -w -t");
 			return 1;
 		}
 		
@@ -84,22 +84,22 @@ public class HypDensity extends PackExtender {
 			int n=(int)(((1/r)-1.0)/2.0); // number of generations to fill unit disc
 			
 			// cookie out from the regular hex and display
-			return cpCommand(packData,"seed;add_gen "+n+" 6;gamma 10;"+
+			return cpCommand(extenderPD,"seed;add_gen "+n+" 6;gamma 10;"+
 					"set_rad "+r+" a;layout;cookie;disp -w -c -g");
 		}
 		
 		// ----- choose ---
 		else if (cmd.startsWith("choose")) {
-			theChosen=PackData.resample(packData,CPBase.ClosedPath,mode, maxThin);
+			theChosen=PackData.resample(extenderPD,CPBase.ClosedPath,mode, maxThin);
 			if (theChosen==null)
 				throw new ParserException("filed to choose 'theChosen'");
-			packData.vlist=theChosen.makeCopy();
+			extenderPD.vlist=theChosen.makeCopy();
 			return theChosen.size();
 		}
 		
 		// ------ pack
 		else if (cmd.startsWith("pack")) {
-			outputData=PackData.sampledSubPack(packData,theChosen);
+			outputData=PackData.sampledSubPack(extenderPD,theChosen);
 			if (outputData==null)
 				return 0;
 			return outputData.nodeCount;
@@ -110,7 +110,7 @@ public class HypDensity extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				if (pnum==packData.packNum)
+				if (pnum==extenderPD.packNum)
 					return 0;
 				CirclePack.cpb.swapPackData(outputData,pnum,false);
 			} catch (Exception ex) {

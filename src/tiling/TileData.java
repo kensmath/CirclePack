@@ -1300,10 +1300,10 @@ public class TileData {
 	
 	/**
 	 * Create new 'TileData' with copies of 'this' tiles,
-	 * but only copy 'vert', 'vertCount','augVert','augVertCount,
-	 * 'tileType', 'baryVert', 'mark'.
-	 * Thus, no 'subRules', 'myTileData', 'TDparent', 
-	 * 'utilFlag', or 'wgInidces'.
+	 * but only copy 'vert', 'vertCount','augVert',
+	 * 'augVertCount, 'tileType', 'baryVert', 'mark', and 
+	 * 'subRules'.
+	 * Thus, no 'myTileData', 'TDparent', 'utilFlag', 'wgInidces'.
 	 * @return TileData
 	 */
 	public TileData copyBareBones() {
@@ -1325,6 +1325,7 @@ public class TileData {
 			newTile.mark=tile.mark;
 			newTile.tileFlower=tile.tileFlower;
 			outTD.myTiles[t]=newTile;
+			outTD.subRules=subRules;
 		}
 		return outTD;
 	}

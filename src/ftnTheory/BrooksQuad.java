@@ -72,7 +72,7 @@ public class BrooksQuad extends PackExtender {
 			int dum=T;T=B;B=dum;dum=L;L=R;R=dum;
 		}
 		hvList=new StringBuilder();
-		packData.packExtensions.add(this);
+		extenderPD.packExtensions.add(this);
 	}
 	
 	public BrooksQuad(PackData p) {
@@ -88,15 +88,15 @@ public class BrooksQuad extends PackExtender {
 		PackData newData=PackCreation.seed(4,0);
 		if (newData==null)
 			Oops("Failed to build initial seed.");
-		packData=CirclePack.cpb.swapPackData(newData,packData.packNum,true);
-		RawManip.swapNodes_raw(packData.packDCEL,1,5);
+		extenderPD=CirclePack.cpb.swapPackData(newData,extenderPD.packNum,true);
+		RawManip.swapNodes_raw(extenderPD.packDCEL,1,5);
 		for (int v=1;v<=4;v++) {
-			packData.setCircleColor(v,ColorUtil.coLor(208)); // line green
+			extenderPD.setCircleColor(v,ColorUtil.coLor(208)); // line green
 		}
-		packData.setCircleColor(5,ColorUtil.getBGColor());
-		packData.setAlpha(5);
-		packData.setGamma(1);
-		packData.set_aim_default();
+		extenderPD.setCircleColor(5,ColorUtil.getBGColor());
+		extenderPD.setAlpha(5);
+		extenderPD.setGamma(1);
+		extenderPD.set_aim_default();
 		normalize();
 		cpCommand("set_screen -d");
 		cpCommand("set_disp_flags -w -cf");
@@ -132,34 +132,34 @@ public class BrooksQuad extends PackExtender {
 		h_mode=0;
 		v_mode=1;
 
-		HalfEdge PL=packData.packDCEL.findHalfEdge(new EdgeSimple(P,L));
+		HalfEdge PL=extenderPD.packDCEL.findHalfEdge(new EdgeSimple(P,L));
 		
 		// split the edge from P (plug) to L (left) and fix
-		RawManip.splitEdge_raw(packData.packDCEL, PL);
+		RawManip.splitEdge_raw(extenderPD.packDCEL, PL);
 				
 		// switch new vertex with old plug
-		int pnc=packData.packDCEL.vertCount;
-		Vertex newv=packData.packDCEL.vertices[pnc]; 
-		Vertex oldP=packData.packDCEL.vertices[pnc-1];
+		int pnc=extenderPD.packDCEL.vertCount;
+		Vertex newv=extenderPD.packDCEL.vertices[pnc]; 
+		Vertex oldP=extenderPD.packDCEL.vertices[pnc-1];
 		newv.vertIndx=pnc-1;
 		oldP.vertIndx=pnc;
-		packData.packDCEL.vertices[pnc]=oldP;
-		packData.packDCEL.vertices[pnc-1]=newv;
+		extenderPD.packDCEL.vertices[pnc]=oldP;
+		extenderPD.packDCEL.vertices[pnc-1]=newv;
 
 		// process and attach 
-		packData.packDCEL.fixDCEL(packData);
+		extenderPD.packDCEL.fixDCEL(extenderPD);
 
 		// set the colors
-		packData.setCircleColor(packData.nodeCount-1,
+		extenderPD.setCircleColor(extenderPD.nodeCount-1,
 				new Color(cLrCode.getRed(),cLrCode.getGreen(),
 						cLrCode.getBlue())); // red 149 or 151 
-		packData.setCircleColor(packData.nodeCount,ColorUtil.getBGColor());
+		extenderPD.setCircleColor(extenderPD.nodeCount,ColorUtil.getBGColor());
 		hvList.append("v");
 
 		L=pnc-1; // N is the new 'left' of interstice
 		P=pnc; // new plug index
 
-		packData.set_aim_default();
+		extenderPD.set_aim_default();
 		hvList.append("v");
 	}
 	
@@ -192,31 +192,31 @@ public class BrooksQuad extends PackExtender {
 		v_mode=0;
 		h_mode=1;
 		  
-		HalfEdge PT=packData.packDCEL.findHalfEdge(new EdgeSimple(P,T));
+		HalfEdge PT=extenderPD.packDCEL.findHalfEdge(new EdgeSimple(P,T));
 		
 		// split the edge from P (plug) to T (top) and fix
-		RawManip.splitEdge_raw(packData.packDCEL, PT);
+		RawManip.splitEdge_raw(extenderPD.packDCEL, PT);
 			
 		// switch new vertex with old plug
-		int pnc=packData.packDCEL.vertCount;
-		Vertex newv=packData.packDCEL.vertices[pnc]; 
-		Vertex oldP=packData.packDCEL.vertices[pnc-1];
+		int pnc=extenderPD.packDCEL.vertCount;
+		Vertex newv=extenderPD.packDCEL.vertices[pnc]; 
+		Vertex oldP=extenderPD.packDCEL.vertices[pnc-1];
 		newv.vertIndx=pnc-1;
 		oldP.vertIndx=pnc;
-		packData.packDCEL.vertices[pnc]=oldP;
-		packData.packDCEL.vertices[pnc-1]=newv;
+		extenderPD.packDCEL.vertices[pnc]=oldP;
+		extenderPD.packDCEL.vertices[pnc-1]=newv;
 
-		packData.packDCEL.fixDCEL(packData);
+		extenderPD.packDCEL.fixDCEL(extenderPD);
 
 		// set the colors
-		packData.setCircleColor(packData.nodeCount-1,
+		extenderPD.setCircleColor(extenderPD.nodeCount-1,
 				new Color(cLrCode.getRed(),cLrCode.getGreen(),
 						cLrCode.getBlue())); // blue 49 or 51
-		packData.setCircleColor(packData.nodeCount,ColorUtil.getBGColor());
+		extenderPD.setCircleColor(extenderPD.nodeCount,ColorUtil.getBGColor());
 
 		T=pnc-1;
 		P=pnc; // new plug index
-		packData.set_aim_default();
+		extenderPD.set_aim_default();
 		hvList.append("h");
 	}
 
@@ -226,13 +226,13 @@ public class BrooksQuad extends PackExtender {
 		if (cmd.startsWith("remat")) {
 			if (flagSegs==null || flagSegs.size()==0 || (items=flagSegs.get(0)).size()<6)
 				Oops("usage: rematch v u w V U W");
-			Mobius mob=Mobius.mob_vuwVUW(packData,Integer.parseInt(items.get(0)),
+			Mobius mob=Mobius.mob_vuwVUW(extenderPD,Integer.parseInt(items.get(0)),
 					Integer.parseInt(items.get(1)),Integer.parseInt(items.get(2)),
 					Integer.parseInt(items.get(3)),Integer.parseInt(items.get(4)),
 									Integer.parseInt(items.get(5)));
 			Mobius hold=CPBase.Mob;
 			CPBase.Mob=mob;
-			int ans=cpCommand(packData,"mobius");
+			int ans=cpCommand(extenderPD,"mobius");
 			if (hold!=null) {
 				CPBase.Mob=hold;
 			}
@@ -317,8 +317,8 @@ public class BrooksQuad extends PackExtender {
 	
 	public void draw() {
 		try {
-			String str=new String("disp -w -cf a(1,"+(packData.nodeCount-1)+") -c M");
-			cpCommand(packData,str);
+			String str=new String("disp -w -cf a(1,"+(extenderPD.nodeCount-1)+") -c M");
+			cpCommand(extenderPD,str);
 		} catch(Exception ex) {
 			Oops(ex.getMessage());
 		}

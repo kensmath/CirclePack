@@ -50,7 +50,7 @@ public class SchwarzPack extends PackExtender {
 	// Constructors
 	public SchwarzPack(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="SCHWARZPACK";
 		extensionAbbrev="SP";
 		toolTip="'SchwarzPack' allows for experiments in using "+
@@ -66,7 +66,7 @@ public class SchwarzPack extends PackExtender {
 			running=false;
 		}
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 	}
 	
@@ -88,13 +88,13 @@ public class SchwarzPack extends PackExtender {
 		else if (cmd.startsWith("status")) {
 			NodeLink vlink=null;
 			if (flagSegs!=null && (items=flagSegs.get(0)).size()>0)
-				vlink=new NodeLink(packData,items);
+				vlink=new NodeLink(extenderPD,items);
 			else
-				vlink=new NodeLink(packData,"i");
+				vlink=new NodeLink(extenderPD,"i");
 			Iterator<Integer> vlt=vlink.iterator();
 			int count=0;
 			while (vlt.hasNext()) {
-				Vertex vert=packData.packDCEL.vertices[vlt.next()];
+				Vertex vert=extenderPD.packDCEL.vertices[vlt.next()];
 				this.msg("status of vert "+vert.vertIndx+
 						": error is "+currentErrors[vert.vertIndx]);
 				count++;
@@ -108,23 +108,23 @@ public class SchwarzPack extends PackExtender {
 			// choose packing and vertex: 
 			//    default to next pack, mod 3 and first interior
 			//    vertex
-			int qnum=(packData.packNum+1)%CPBase.NUM_PACKS;
-			int vindx=NodeLink.grab_one_vert(packData,"i");
+			int qnum=(extenderPD.packNum+1)%CPBase.NUM_PACKS;
+			int vindx=NodeLink.grab_one_vert(extenderPD,"i");
 			try {
 				items=flagSegs.get(0);
 				String str=items.get(0);
 				if (StringUtil.isFlag(str)) {
 					 int qq=StringUtil.qFlagParse(str);
-					 if (qq>0 && qq!=packData.packNum)
+					 if (qq>0 && qq!=extenderPD.packNum)
 						 qnum=qq;
 					 items.remove(0);
 				}
-				vindx=NodeLink.grab_one_vert(packData,items.get(0));
+				vindx=NodeLink.grab_one_vert(extenderPD,items.get(0));
 			} catch(Exception ex) {
 				Oops("eflower: |sm| sch -q{x} v"+ex.getMessage());
 			}
 
-			Vertex vert=packData.packDCEL.vertices[vindx];
+			Vertex vert=extenderPD.packDCEL.vertices[vindx];
 			if (vert.isBdry())
 				return 0;
 			Complex err=new Complex(0.0);
@@ -152,10 +152,10 @@ public class SchwarzPack extends PackExtender {
 			return ans;
 		}
 		else if (cmd.startsWith("cons")) { // constraints
-			HalfEdge target=packData.packDCEL.
-					vertices[packData.getAlpha()].halfedge;
+			HalfEdge target=extenderPD.packDCEL.
+					vertices[extenderPD.getAlpha()].halfedge;
 			try {
-				HalfLink flink=new HalfLink(packData,
+				HalfLink flink=new HalfLink(extenderPD,
 						flagSegs.get(0));
 				if (flink!=null && flink.size()>0)
 					target=flink.get(0);
@@ -171,7 +171,7 @@ public class SchwarzPack extends PackExtender {
 			HalfEdge he=null;
 			try {
 				items=flagSegs.get(0);
-				HalfLink nlink=new HalfLink(packData,items);
+				HalfLink nlink=new HalfLink(extenderPD,items);
 				he=nlink.get(0);
 			} catch(Exception ex) {
 				return 0;
@@ -221,7 +221,7 @@ public class SchwarzPack extends PackExtender {
 	public int runTrials(int N) {
 		int count=0;
 		for (int j=1;j<=N;j++) {
-			HalfEdge target=getRandEdge(packData);
+			HalfEdge target=getRandEdge(extenderPD);
 			CompResults cresults=compEdgeUzians(target);
 			target.setSchwarzian(cresults.newUzian(test_mode));
 			count++;
@@ -241,12 +241,12 @@ public class SchwarzPack extends PackExtender {
 	 * @return ArrayList<Complex>
 	 */
 	public Complex[] setCurrentErrors() {
-		NodeLink nlink=new NodeLink(packData,"a");
-		Complex[] cE=new Complex[packData.nodeCount+1];
+		NodeLink nlink=new NodeLink(extenderPD,"a");
+		Complex[] cE=new Complex[extenderPD.nodeCount+1];
 		Iterator<Integer> nls=nlink.iterator();
 		while (nls.hasNext()) {
 			int v=nls.next();
-			Vertex vert=packData.packDCEL.vertices[v];
+			Vertex vert=extenderPD.packDCEL.vertices[v];
 			if (vert.isBdry())
 				cE[v]=null;
 			else {
@@ -276,7 +276,7 @@ public class SchwarzPack extends PackExtender {
 		double radminus=0.0;
 		double angplus=0.0;
 		double angminus=0.0;
-		for (int v=1;v<=packData.nodeCount;v++) {
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
 			Complex err=currentErrors[v];
 			double r=err.x;
 			double a=err.y;

@@ -87,19 +87,19 @@ public class SphereLayout extends PackExtender {
 		toolTip="'Sphere Layout': experiment with an alternate method for "+
 			"computing sphere layouts, quadrangulating using inversive distances";
 		registerXType();
-		if (packData.hes<=0) {
+		if (extenderPD.hes<=0) {
 			cpCommand("geom_to_s");
 		}
-		if (packData.getBdryCompCount()>0 || packData.genus>0 || packData.euler!=2) {
+		if (extenderPD.getBdryCompCount()>0 || extenderPD.genus>0 || extenderPD.euler!=2) {
 			CirclePack.cpb.msg("SL Warning: this does not seem to be a topological sphere");
 		}
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 		
 		// initiate with 4 random beacons, starting with 1. Can reset at will
-		beacons=packData.antipodal_verts(null,4);
-		packData.vlist=beacons.makeCopy();
+		beacons=extenderPD.antipodal_verts(null,4);
+		extenderPD.vlist=beacons.makeCopy();
 		bD=new double[4][4];
 		debug=true;
 	}
@@ -118,7 +118,7 @@ public class SphereLayout extends PackExtender {
 			// get rescale info: minima=1, get max for each beacon
 			double []Max=new double[3];
 			double gps=-1.0;
-			for (int v=1;v<=packData.nodeCount;v++) {
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
 				for (int j=0;j<3;j++) {
 					if ((gps=vertGPS[v].coord[j])>Max[j])
 						Max[j]=gps;
@@ -129,14 +129,14 @@ public class SphereLayout extends PackExtender {
 			double []div=new double[3];
 			for (int j=0;j<3;j++)
 				div[j]=1.0/(Max[j]-1.0);
-			for (int v=1;v<=packData.nodeCount;v++) {
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
 				for (int j=0;j<3;j++)
 					vertGPS[v].colIntensity[j]=(Max[j]-vertGPS[v].coord[j])*div[j];
 			}
 			
 			// ================ choice of colors ===================
 			// adjust to combine: E.g. set b = 255*sqrt{(1-r)*(1-g)*b}
-			for (int v=1;v<=packData.nodeCount;v++) {
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
 				double []tmpI=vertGPS[v].colIntensity;
 				int r=(int)(255.0*Math.sqrt((1.0-tmpI[1])*(1.0-tmpI[2])*vertGPS[v].colIntensity[0]));
 				int g=(int)(255.0*Math.sqrt((1.0-tmpI[0])*(1.0-tmpI[2])*vertGPS[v].colIntensity[1]));
@@ -151,24 +151,24 @@ public class SphereLayout extends PackExtender {
 			
 			// record color in packData
 			// TODO: should be able to clone color more easily
-			for (int v=1;v<=packData.nodeCount;v++) {
-				packData.setCircleColor(v,ColorUtil.cloneMe(vertGPS[v].color));
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
+				extenderPD.setCircleColor(v,ColorUtil.cloneMe(vertGPS[v].color));
 			}
 		}
 		
 		if (cmd.startsWith("set_beac")) {
 			NodeLink bcns=null;
 			if (items!=null) {
-				bcns=new NodeLink(packData,items);
+				bcns=new NodeLink(extenderPD,items);
 				if (bcns.size()>4)
 					bcns=null;
 			}
 			
-			beacons=packData.antipodal_verts(bcns,4);
+			beacons=extenderPD.antipodal_verts(bcns,4);
 			vertGPS=null;
 			M=null;
 			bD=null;
-			packData.vlist=beacons.makeCopy();
+			extenderPD.vlist=beacons.makeCopy();
 			return 1;
 		}
 		
@@ -201,13 +201,13 @@ public class SphereLayout extends PackExtender {
 			
 			// prepare storage space
 			vertGPS=null;
-			vertGPS=new VertGPS[packData.nodeCount+1];
-			for (int v=1;v<=packData.nodeCount;v++)
+			vertGPS=new VertGPS[extenderPD.nodeCount+1];
+			for (int v=1;v<=extenderPD.nodeCount;v++)
 				vertGPS[v]=new VertGPS(v);
 			// may want to re-establish old results to do further computation
 			
 			// Now fill in the 'coord' data
-			int nodes=packData.nodeCount;
+			int nodes=extenderPD.nodeCount;
 			bD=new double[4][4];
 			
 			// Now either READ 4 punctured packings or compute them
@@ -241,7 +241,7 @@ public class SphereLayout extends PackExtender {
 
 				for (int b = 0; b < 4; b++) {
 //					CirclePack.cpb.msg("starting GPS for vert " + bea[b]);
-					puncturedPack[b] = packData.copyPackTo();
+					puncturedPack[b] = extenderPD.copyPackTo();
 					puncturedPack[b].puncture_vert(bea[b]);
 					puncturedPack[b].geom_to_h();
 					puncturedPack[b].set_aim_default();
@@ -366,7 +366,7 @@ public class SphereLayout extends PackExtender {
 			//   Dot product of b3 with a X b should be positive.
 			else {
 				int b3=beacons.get(3);
-				int[] flower=packData.getFlower(b3);
+				int[] flower=extenderPD.getFlower(b3);
 				int v=flower[0];
 				int w=flower[1];
 				
@@ -414,10 +414,10 @@ public class SphereLayout extends PackExtender {
 			int count=0;
 			// set our matrix
 			cmdParser("set_M",null);
-			layoutPack=packData.copyPackTo();
+			layoutPack=extenderPD.copyPackTo();
 			
 			// read desired vertices, default to 'all'
-			NodeLink vertlist=new NodeLink(packData,items);
+			NodeLink vertlist=new NodeLink(extenderPD,items);
 			Iterator<Integer> vlst=vertlist.iterator();
 
 			// compute circle rep as (t,x,y,z) and store sph centers/radii
@@ -475,7 +475,7 @@ public class SphereLayout extends PackExtender {
 			try {
 				items=(Vector<String>)flagSegs.get(0);
 				int pnum=Integer.parseInt((String)items.get(0));
-				if (pnum==packData.packNum)
+				if (pnum==extenderPD.packNum)
 					return 0;
 				CirclePack.cpb.swapPackData(layoutPack,pnum,false);
 			} catch (Exception ex) {

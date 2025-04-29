@@ -4277,7 +4277,8 @@ public class PackData{
 	  }
 	  
 	  /**
-	   * Same as 'copyPackTo', but option whether to keep 'TileData'
+	   * Same as 'copyPackTo', but option whether to 
+	   * keep 'TileData'
 	   * @param keepTD boolean; true, then recursively copy 'tileData'
 	   * @return new PackData clone
 	  */

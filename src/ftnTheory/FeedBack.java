@@ -51,7 +51,7 @@ public class FeedBack extends PackExtender {
 			maxEucl=p.copyPackTo();
 			cpCommand(maxEucl,"max_pack 10000");
 			cpCommand(maxEucl,"geom_to_e");
-			cpCommand(packData,"geom_to_e");
+			cpCommand(extenderPD,"geom_to_e");
 			running=true;
 		} catch (Exception ex) {
 			errorMsg("FeedBack: error in preparing 'maxPack'");
@@ -59,8 +59,8 @@ public class FeedBack extends PackExtender {
 		}
 		// count boundary vertices
 		bdryCount=0;
-		for (int v=1;v<=packData.nodeCount;v++)
-			if (packData.isBdry(v))
+		for (int v=1;v<=extenderPD.nodeCount;v++)
+			if (extenderPD.isBdry(v))
 				bdryCount++;
 		if (bdryCount==0) {
 			errorMsg("FeedBack: packing has no boundary");
@@ -69,7 +69,7 @@ public class FeedBack extends PackExtender {
 		
 		// yes, seems okay
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 			depMatrix=new Vector<FeedPacket>(1);
 		}
 	}
@@ -103,11 +103,11 @@ public class FeedBack extends PackExtender {
 					String lead=items.get(0);
 					if (lead.equals("-s")) {
 						items.remove(0);
-						sourceVerts=new NodeLink(packData,items);
+						sourceVerts=new NodeLink(extenderPD,items);
 					}
 					else if (lead.equals("-t")) {
 						items.remove(0);
-						targetVerts=new NodeLink(packData,items);
+						targetVerts=new NodeLink(extenderPD,items);
 					}
 				}
 			} catch (Exception ex) {
@@ -121,7 +121,7 @@ public class FeedBack extends PackExtender {
 			for (int i=0;i<min;i++) {
 				int v=sourceVerts.get(i);
 				int w=targetVerts.get(i);
-				packData.setRadius(w,x*packData.getRadius(v));
+				extenderPD.setRadius(w,x*extenderPD.getRadius(v));
 				count++;
 			}
 			return count;
@@ -130,7 +130,7 @@ public class FeedBack extends PackExtender {
 		// ============ set Radii ========================
 		else if (cmd.startsWith("setRadii")) {
 			boolean useRatio=false;
-			double []newRad=new double[packData.nodeCount+1];
+			double []newRad=new double[extenderPD.nodeCount+1];
 			
 			// check for 'r' flag to use ratios of radii; this is
 			//    analogous to modifying the modulus of the derivative.
@@ -151,16 +151,16 @@ public class FeedBack extends PackExtender {
 				w=packet.fromVert;
 				x=packet.coeff;
 				if (useRatio)  
-					newRad[v] +=x*packData.getRadius(w)/maxEucl.getRadius(w);
+					newRad[v] +=x*extenderPD.getRadius(w)/maxEucl.getRadius(w);
 				else 
-					newRad[v] +=x*packData.getRadius(w);
+					newRad[v] +=x*extenderPD.getRadius(w);
 			}
 			
 			// apply feedback
 			int icount=0;
-			for (int i=1;i<=packData.nodeCount;i++) {
+			for (int i=1;i<=extenderPD.nodeCount;i++) {
 				if (newRad[i]>0) {
-					packData.setRadius(i,newRad[i]);
+					extenderPD.setRadius(i,newRad[i]);
 					icount++;
 				}
 			}
@@ -173,14 +173,14 @@ public class FeedBack extends PackExtender {
 			double x=0.0;
 			try {
 				items=flagSegs.get(0);
-				v=NodeLink.grab_one_vert(packData,items.get(0));
-				w=NodeLink.grab_one_vert(packData,items.get(1));
+				v=NodeLink.grab_one_vert(extenderPD,items.get(0));
+				w=NodeLink.grab_one_vert(extenderPD,items.get(1));
 				x=Double.parseDouble(items.get(2));
 			} catch (Exception ex) {
 				Oops("usage: setVW v w {x}");
 			}
 			if (x<0.0 || v<1 || w<1 || 
-					v>packData.nodeCount || w>packData.nodeCount) {
+					v>extenderPD.nodeCount || w>extenderPD.nodeCount) {
 				Oops("usage: setDep v w x (x>=0.0)");
 			}
 
@@ -198,14 +198,14 @@ public class FeedBack extends PackExtender {
 			double x=0.0;
 			try {
 				items=flagSegs.get(0);
-				v=NodeLink.grab_one_vert(packData,items.get(0));
-				w=NodeLink.grab_one_vert(packData,items.get(1));
+				v=NodeLink.grab_one_vert(extenderPD,items.get(0));
+				w=NodeLink.grab_one_vert(extenderPD,items.get(1));
 				x=Double.parseDouble(items.get(2));
 			} catch (Exception ex) {
 				Oops("usage: setDep v w {x}");
 			}
 			if (x<0.0 || v<1 || w<1 || 
-					v>packData.nodeCount || w>packData.nodeCount) {
+					v>extenderPD.nodeCount || w>extenderPD.nodeCount) {
 				Oops("usage: setDep v w x (x>=0.0)");
 			}
 			

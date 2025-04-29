@@ -29,7 +29,7 @@ public class ShapeShifter extends PackExtender {
 	// Constructor
 	public ShapeShifter(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="ShapeShifter";
 		extensionAbbrev="SS";
 		toolTip="'ShapeShifter': for creating eucl packings with "+
@@ -38,7 +38,7 @@ public class ShapeShifter extends PackExtender {
 
 		int rslt;
 		try {
-			rslt=cpCommand(packData,"geom_to_e");
+			rslt=cpCommand(extenderPD,"geom_to_e");
 		} catch(Exception ex) {
 			rslt=0;
 		}
@@ -47,9 +47,9 @@ public class ShapeShifter extends PackExtender {
 			running=false;
 		}
 		if (running) {
-			baseData=packData.copyPackTo();
+			baseData=extenderPD.copyPackTo();
 			pathList=setPathList();
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 	}
 	

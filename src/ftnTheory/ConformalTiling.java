@@ -33,7 +33,6 @@ import listManip.VertexMap;
 import packing.PackData;
 import packing.PackExtender;
 import posting.PostFactory;
-import tiling.EdgeRule;
 import tiling.SubdivisionRules;
 import tiling.Tile;
 import tiling.TileBuilder;
@@ -180,12 +179,12 @@ public class ConformalTiling extends PackExtender {
 		subdivRules=null;
 		
 		if (running) {
-			if (packData.tileData==null || packData.tileData.tileCount<=0) {
+			if (extenderPD.tileData==null || extenderPD.tileData.tileCount<=0) {
 				msg("No tiling data in this packing: read tiling data");
 				canonicalPack=null;
 			}
 			else {
-				canonicalPack=buildMode3(packData.tileData);
+				canonicalPack=buildMode3(extenderPD.tileData);
 				if (canonicalPack==null || canonicalPack.tileData==null)
 					running=false;
 				else {
@@ -194,7 +193,7 @@ public class ConformalTiling extends PackExtender {
 					canonicalPack.tileData.gradedTileData.add(canonicalPack.tileData);
 				}
 			}
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 		
 		mode=3; // default standard: an n tile is 2n barycentrically subdivided triangles
@@ -206,7 +205,7 @@ public class ConformalTiling extends PackExtender {
 		
 		// ============ subtile ===============
 		if (cmd.startsWith("subti")) {
-			if (packData.genus>0 && packData.tileData.tileCount>1)
+			if (extenderPD.genus>0 && extenderPD.tileData.tileCount>1)
 				Oops("'subtile' can't be called for genus > 0.");
 
 			// first, pick off the tile type
@@ -258,9 +257,9 @@ public class ConformalTiling extends PackExtender {
 			}
 			if (newData==null)
 				Oops("Failed to build initial seed.");
-			int pnum=packData.packNum;
-			packData=CirclePack.cpb.swapPackData(newData,pnum,true);
-  		  	packData.tileData.myTiles[1].tileType=type;
+			int pnum=extenderPD.packNum;
+			extenderPD=CirclePack.cpb.swapPackData(newData,pnum,true);
+  		  	extenderPD.tileData.myTiles[1].tileType=type;
   		  	
   		  	// now build subdivision tiling to depth, specified now in 'flgS'
 			return cmdParser("build_sub",flgS);
@@ -268,18 +267,18 @@ public class ConformalTiling extends PackExtender {
 
 		// ============ build_sub ==========
 		else if (cmd.startsWith("build_sub")) {
-			if (packData.tileData==null) {
+			if (extenderPD.tileData==null) {
 				errorMsg("no 'TileData'");
 				return 0;
 			}
-			if (packData.tileData.subRules==null) {
+			if (extenderPD.tileData.subRules==null) {
 				if (subdivRules==null) {
 					errorMsg("no 'subRules' and no 'subdivRule' specified");
 					return 0;
 				}
 				// inherit 'subdivRules'
 				else
-					packData.tileData.subRules=subdivRules;
+					extenderPD.tileData.subRules=subdivRules;
 			}
 			
 			// depth gives the number of recursions; 0 means do no 
@@ -322,7 +321,7 @@ public class ConformalTiling extends PackExtender {
 			//   equal to the original tileData (though 
 			//   with additional pointers to subtilings)
 			targetDepth=-1;
-			PackData newPD=build2Depth(packData.tileData,
+			PackData newPD=build2Depth(extenderPD.tileData,
 					depth,mode,topTileData,depthPackings);
 			if (newPD==null) {
 				errorMsg("failed to build subdivided packing to depth "+depth);
@@ -337,7 +336,7 @@ public class ConformalTiling extends PackExtender {
 			if (depth>0) {
 				for (int d=0;d<depth;d++) {
 					TileData dTD=consolidateTiling(newPD.tileData,d);
-					dTD.subRules=packData.tileData.subRules;
+					dTD.subRules=extenderPD.tileData.subRules;
 					dTD.setDepth(depth);
 					gradedTileData.add(dTD);
 					for (int t=1;t<=dTD.tileCount;t++)
@@ -346,8 +345,7 @@ public class ConformalTiling extends PackExtender {
 				}
 			}
 			else {
-				TileData dTD=packData.tileData.copyBareBones();
-				dTD.subRules=packData.tileData.subRules;
+				TileData dTD=extenderPD.tileData.copyBareBones();
 				dTD.setDepth(0);
 				gradedTileData.add(dTD);
 			}
@@ -355,62 +353,61 @@ public class ConformalTiling extends PackExtender {
 			TileData deepestTD=null;
 			if (depth>0) {
 				deepestTD=consolidateTiling(newPD.tileData,depth);
-				deepestTD.subRules=packData.tileData.subRules;
-				deepestTD.gradedTileData=gradedTileData;
+				deepestTD.subRules=extenderPD.tileData.subRules;
+				deepestTD.setDepth(depth);
 			}
 			else {
-				deepestTD=packData.tileData;
-				deepestTD.gradedTileData=null;
+				deepestTD=extenderPD.tileData;
+				deepestTD.setDepth(0);
 			}
-			deepestTD.setDepth(depth);
+			deepestTD.gradedTileData=gradedTileData;
 			
-			// Store in 'canonicalPack' with deepest tileData.
-			newPD.tileData=null;
-			canonicalPack=newPD.copyPackTo();
+			// fix up newPD, which will replace extenderPD
+			//   and then be put into packings[pnum]
+			int pnum=extenderPD.packNum;
+			newPD.tileData=deepestTD.copyBareBones();
+			for (int t=1;t<=deepestTD.tileCount;t++) 
+				newPD.tileData.myTiles[t].TDparent=newPD.tileData;
+			newPD.tileData.setParent(newPD);
+			newPD.setAlpha(newPD.tileData.myTiles[1].baryVert);
+			newPD.setGamma(newPD.tileData.myTiles[1].vert[1]);
+			TileData baseTD=deepestTD; // use 0 depth TileData
+			if (deepestTD.gradedTileData!=null && deepestTD.gradedTileData.size()>0)
+				baseTD=deepestTD.gradedTileData.get(0);
+			CombDCEL.redchain_by_tile(newPD,baseTD);
+			newPD.packDCEL.fixDCEL(newPD);
+			newPD.set_aim_default();
+
+			// max_pack newPD
+			if (cpCommand(newPD,"max_pack")<=0) 
+				errorMsg("failed in max packing newPD");
+			else
+				msg("'newPD' is max_pack'ed");
+
+			// copy of newPD goes into canonicalPack
+			canonicalPack=newPD.copyPackTo(false);
 			canonicalPack.tileData=deepestTD;
-			for (int t=1;t<=deepestTD.tileCount;t++)
+			for (int t=1;t<=deepestTD.tileCount;t++) 
 				deepestTD.myTiles[t].TDparent=deepestTD;
 			deepestTD.setParent(canonicalPack);
-			
-			// set alpha, gamma, and layout via tiles
-			TileData baseTD=deepestTD.gradedTileData.get(0);
-			canonicalPack.setAlpha(baseTD.myTiles[1].baryVert);
-			canonicalPack.setGamma(baseTD.myTiles[1].vert[1]);
-			CombDCEL.redchain_by_tile(canonicalPack,baseTD);
-			canonicalPack.packDCEL.fixDCEL(canonicalPack);
-			
-			// max_pack the canonicalPacking
-			canonicalPack.set_aim_default();
-			if (cpCommand(canonicalPack,"max_pack")<=0) 
-				errorMsg("failed in max packing new canonicalPack");
-			else
-				msg("'canonicalPack' is set");
-			
-			// make a copy to replace 'this.packData' with only
-			//   this as extension
-			int pnum=packData.packNum;
-			swapExtenderPD(newPD);
-			
-			// put this in 'packings[pnum]'
-			CirclePack.cpb.swapPackData(canonicalPack,pnum,false);
-			packData.cpDrawing.setPackData(CPBase.packings[pnum]);
-			
-			// 'this.packData' gets a bare-bones copy of the deepest TileData
-			packData.tileData=deepestTD.copyBareBones();
-			packData.tileData.subRules=deepestTD.subRules;
-			packData.tileData.setParent(packData);
-			packData.set_aim_default();
 
-			// if top is a single tile, put 'vert's in 'vlist'
-			TileData canTD=canonicalPack.tileData.gradedTileData.get(0);
-			if (canTD!=null && canTD.tileCount==1) {
-				Tile tile=canTD.myTiles[1]; // the lone tile
-				packData.vlist=new NodeLink(packData);
-				for (int j=0;j<tile.vertCount;j++)
-					packData.vlist.add(tile.vert[j]);
-			}
+			// replace extenderPD and put into 'packings[pnum]'
+			extenderPD=newPD;
+			CirclePack.cpb.swapPackData(extenderPD,pnum,false);
+			swapExtenderPD(CPBase.packings[pnum]);
 			
-			return packData.nodeCount;
+			// if top is a single tile, put 'vert's in 'vlist'
+			baseTD=canonicalPack.tileData;
+			if (deepestTD.gradedTileData!=null && deepestTD.gradedTileData.size()>0)
+				baseTD=deepestTD.gradedTileData.get(0);
+			if (baseTD!=null && baseTD.tileCount==1) {
+				Tile tile=baseTD.myTiles[1]; // the lone tile
+				extenderPD.vlist=new NodeLink(extenderPD);
+				for (int j=0;j<tile.vertCount;j++)
+					extenderPD.vlist.add(tile.vert[j]);
+			}
+
+			return extenderPD.nodeCount;
 		}
 		
 		// ================ set_tlist (set_Tlist) ==============
@@ -423,7 +420,7 @@ public class ConformalTiling extends PackExtender {
 			char c=cmd.charAt(4);
 			if (c!='t' && c!='T')
 				throw new ParserException("'set_???' call malformed");
-			if (packData.tileData==null)
+			if (extenderPD.tileData==null)
 				throw new ParserException("pack has no 'TileData' to use");
 			boolean locallist=true;
 			if (c=='T')
@@ -437,7 +434,7 @@ public class ConformalTiling extends PackExtender {
 			else // there should be at most one flag segment
 				items=flagSegs.get(0);
 
-			TileData currTD=packData.tileData;
+			TileData currTD=extenderPD.tileData;
 			TileLink nextLink=null;
 			
 			// -P{n} current tiles whose parents n levels up are in the list
@@ -503,8 +500,8 @@ public class ConformalTiling extends PackExtender {
 					} //while though 'currLink', build 'nextLink'
 				} // done with for loop through depths
 				if (locallist) {
-					packData.tlist=nextLink;
-					return packData.tlist.size();
+					extenderPD.tlist=nextLink;
+					return extenderPD.tlist.size();
 				}
 				else { 
 					CPBase.Tlink=nextLink;
@@ -514,8 +511,8 @@ public class ConformalTiling extends PackExtender {
 			} // done with special '-P' flag to get children
 
 			if (locallist) { // note: may be illegal tile numbs until 'TileData' reset
-				packData.tlist=new TileLink(currTD,items);
-				return packData.tlist.size();
+				extenderPD.tlist=new TileLink(currTD,items);
+				return extenderPD.tlist.size();
 			}
 			else {
 				CPBase.Tlink=new TileLink(currTD,items);
@@ -535,7 +532,7 @@ public class ConformalTiling extends PackExtender {
 		//   development (1/2018).
 		if (cmd.startsWith("store_eucl")) {
 			if (subdivRules==null ||
-					packData.tileData==null || packData.tileData.tileCount<=0)
+					extenderPD.tileData==null || extenderPD.tileData.tileCount<=0)
 				throw new ParserException("packing has no 'tileData' or no subdivision rules");
 			for (int j=4;j<subdivRules.tileRules.size();j++) 
 				if (subdivRules.tileRules.get(j).stdCorners==null)
@@ -554,9 +551,9 @@ public class ConformalTiling extends PackExtender {
 			topbase[1]=new Complex(toprule.stdCorners[1]);
 			
 			// initial 'mark's = -1, recursively set to depth; all radii = .025
-			for (int v=1;v<=packData.nodeCount;v++) {
-				packData.setVertMark(v,-1);
-				packData.setRadius(v,0.025);
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
+				extenderPD.setVertMark(v,-1);
+				extenderPD.setRadius(v,0.025);
 			}
 			
 			// go to depth of current subdivision grading
@@ -568,7 +565,7 @@ public class ConformalTiling extends PackExtender {
 //	      	Complex []initBase=new Complex[2];
 //	      	initBase[0]=new Complex(0.0);
 //	      	initBase[1]=new Complex(1.0);
-	      	int count=setEuclRecurs(packData,subdivRules, toptile,topbase,depth);
+	      	int count=setEuclRecurs(extenderPD,subdivRules, toptile,topbase,depth);
 	      	if (count==0)
 	      		throw new InOutException("failed in setting eucl locations");
       			      	
@@ -585,7 +582,7 @@ public class ConformalTiling extends PackExtender {
 				throw new CombException("canonicalPack is null");
 
 			DispFlags dispFlags=new DispFlags(null);
-			TileLink tileLink=new TileLink(packData.tileData,"a"); // default to all tiles
+			TileLink tileLink=new TileLink(extenderPD.tileData,"a"); // default to all tiles
 			int count=0;
 			
 			// flags '-d {d}' for depth, '-xxx' for displayflags, and 't...' for tiles
@@ -602,17 +599,17 @@ public class ConformalTiling extends PackExtender {
 					
 					// remaining should only be 
 					if (items.size()>0) 
-						tileLink=new TileLink(packData.tileData,items);
+						tileLink=new TileLink(extenderPD.tileData,items);
 				}
 			}
 
 			Iterator<Integer> tlink=tileLink.iterator();
 			while (tlink.hasNext()) {
-				Tile tile=packData.tileData.myTiles[tlink.next()];
+				Tile tile=extenderPD.tileData.myTiles[tlink.next()];
 				count+=recurseDrawTile(tile,dispFlags);
 			}
 			
-			PackControl.canvasRedrawer.paintMyCanvasses(packData,false);
+			PackControl.canvasRedrawer.paintMyCanvasses(extenderPD,false);
 			
 			return count;
 		}
@@ -620,7 +617,7 @@ public class ConformalTiling extends PackExtender {
 		// ================ print eucl ==================
 		if (cmd.startsWith("write_eucl")) {
 			if (subdivRules==null ||
-					packData.tileData==null || packData.tileData.tileCount<=0)
+					extenderPD.tileData==null || extenderPD.tileData.tileCount<=0)
 				throw new ParserException("packing has no 'tileData' or no subdivision rules");
 			for (int j=4;j<subdivRules.tileRules.size();j++) 
 				if (subdivRules.tileRules.get(j).stdCorners==null)
@@ -629,7 +626,7 @@ public class ConformalTiling extends PackExtender {
 			// Will have just one top level tile; default to first tile type
 			// TODO: might add optional user-specified top type
 			
-			int toptype=packData.tileData.myTiles[1].tileType;
+			int toptype=extenderPD.tileData.myTiles[1].tileType;
 			toptype=canonicalPack.tileData.gradedTileData.get(0).myTiles[1].tileType;
 			Complex []topbase=new Complex[2];
 			TileRule toprule=subdivRules.tileRules.get(toptype-4);
@@ -655,10 +652,10 @@ public class ConformalTiling extends PackExtender {
 			Complex lz=new Complex(minx-margin,miny-margin);
 			Complex rz=new Complex(minx+len+margin,miny+len+margin);
 			
-			ViewBox holdVB=packData.cpDrawing.realBox;
+			ViewBox holdVB=extenderPD.cpDrawing.realBox;
 			ViewBox tmpVB=new ViewBox();
 			tmpVB.setView(lz, rz);
-			packData.cpDrawing.realBox=tmpVB;
+			extenderPD.cpDrawing.realBox=tmpVB;
 			
 			// go to depth of current subdivision grading
 			int depth=0;
@@ -676,7 +673,7 @@ public class ConformalTiling extends PackExtender {
 	      		fname=new String("eucl_tiling.ps");
 	      	
 	      	// open a postscript file
-	      	if (CommandStrParser.jexecute(packData,new String("post -o "+fname))==0) {
+	      	if (CommandStrParser.jexecute(extenderPD,new String("post -o "+fname))==0) {
 	      		CirclePack.cpb.errMsg("posting of eucl tiles failed");
 	      		return 0;
 	      	}
@@ -689,9 +686,9 @@ public class ConformalTiling extends PackExtender {
 	      	if (count==0)
 	      		throw new InOutException("failed posting eucl tiling");
 
-	      	CommandStrParser.jexecute(packData,new String("post -x"));
+	      	CommandStrParser.jexecute(extenderPD,new String("post -x"));
 	      	CirclePack.cpb.msg("posted eucl tiling to "+fname);
-	      	packData.cpDrawing.realBox=holdVB; // reset the original realBox
+	      	extenderPD.cpDrawing.realBox=holdVB; // reset the original realBox
       			      	
 	      	return count;
 		}
@@ -700,9 +697,9 @@ public class ConformalTiling extends PackExtender {
 		// ================ set_flowers =====
 		// very unreliable due to digons, self-pastings
 		else if (cmd.startsWith("set_tf")) { 
-			if (packData.tileData==null || packData.tileData.tileCount<=0)
+			if (extenderPD.tileData==null || extenderPD.tileData.tileCount<=0)
 				throw new ParserException("packing has no 'tileData'");
-			return TileData.setTileFlowers(packData.tileData);
+			return TileData.setTileFlowers(extenderPD.tileData);
 		}
 		
 		// ================ feedback ===========
@@ -770,7 +767,7 @@ public class ConformalTiling extends PackExtender {
 					throw new ParserException("feedback problem: tile vertCounts don't match");
 			
 				// compute bdry angles of augVert vertices in 'fromtile'.
-				double []cornerAngles=tileCornerAngles(packData,fromtile);
+				double []cornerAngles=tileCornerAngles(extenderPD,fromtile);
 				
 				// match these to augmented bdry vertices of totile
 				int M=totile.augVertCount/fromtile.augVertCount;
@@ -783,7 +780,7 @@ public class ConformalTiling extends PackExtender {
 				Iterator<VertAim> va=newVAs.iterator();
 				while (va.hasNext()) {
 					VertAim vertaim=va.next();
-					if (packData.isBdry(vertaim.vert)) // is it in bdry?
+					if (extenderPD.isBdry(vertaim.vert)) // is it in bdry?
 						feedbackVec.add(vertaim);
 				}
 			}	
@@ -792,19 +789,19 @@ public class ConformalTiling extends PackExtender {
 			// 1. We set all boundary aims to 1.0, 
 			// 2. get list of bdry verts occuring in feedbackVec, set their aims to 0.
 			// 3. accumulate the aims at each bdry vert in this list.
-			int []hits=new int[packData.nodeCount+1]; // which ones will be adjusted?
-			cpCommand(packData,"set_aim 1.0 b");
+			int []hits=new int[extenderPD.nodeCount+1]; // which ones will be adjusted?
+			cpCommand(extenderPD,"set_aim 1.0 b");
 			Iterator<VertAim> fbv=feedbackVec.iterator();
 			while (fbv.hasNext()) {
 				VertAim vertaim=fbv.next();
 				hits[vertaim.vert]=1;
-				packData.setAim(vertaim.vert,0.0);
+				extenderPD.setAim(vertaim.vert,0.0);
 			}
 			fbv=feedbackVec.iterator();
 			int count=0;
 			while (fbv.hasNext()) {
 				VertAim vertaim=fbv.next();
-				packData.setAim(vertaim.vert, packData.getAim(vertaim.vert)+vertaim.aim);
+				extenderPD.setAim(vertaim.vert, extenderPD.getAim(vertaim.vert)+vertaim.aim);
 				// may be more than one angle to add in
 				count++;
 			}
@@ -859,7 +856,7 @@ public class ConformalTiling extends PackExtender {
 			} catch(Exception ex) {
 				throw new ParserException("usage: ?{query} {t} requires a tile number 't'");
 			}
-			if (packData.tileData==null || tn<1 || tn>packData.tileData.tileCount)
+			if (extenderPD.tileData==null || tn<1 || tn>extenderPD.tileData.tileCount)
 				return 0;
 			
 			StringBuilder strb=new StringBuilder("Query, tile "+tn+": ");
@@ -868,7 +865,7 @@ public class ConformalTiling extends PackExtender {
 			switch(c) {
 			case 'a': // indices and angles at vertices of tile
 			{
-				Tile tile=packData.tileData.myTiles[tn];
+				Tile tile=extenderPD.tileData.myTiles[tn];
 				strb.append("vert angle/PI");
 				
 				for (int i=0;i<tile.vertCount;i++) {
@@ -884,18 +881,18 @@ public class ConformalTiling extends PackExtender {
 					int cwv=tile.augVert[(hit-1+tile.augVertCount)%tile.augVertCount];
 					int ccwv=tile.augVert[(hit+1)%tile.augVertCount];
 					
-					int num=packData.countFaces(v);
-					int[] flower=packData.getFlower(v);
-					double vrad=packData.getRadius(v);
-					double rad1=packData.getRadius(ccwv);
+					int num=extenderPD.countFaces(v);
+					int[] flower=extenderPD.getFlower(v);
+					double vrad=extenderPD.getRadius(v);
+					double rad1=extenderPD.getRadius(ccwv);
 					double rad2=rad1;
-					int ccwv_indx=packData.nghb(v, ccwv);
-					int indxdiff=(packData.nghb(v, cwv)-ccwv_indx+num)%num;
-					int hes=packData.hes;
+					int ccwv_indx=extenderPD.nghb(v, ccwv);
+					int indxdiff=(extenderPD.nghb(v, cwv)-ccwv_indx+num)%num;
+					int hes=extenderPD.hes;
 					double angsum=0.0;
 					for (int k=1;k<=indxdiff;k++) {
 						rad1=rad2;
-						rad2=packData.getRadius(flower[(ccwv_indx+k)%num]);
+						rad2=extenderPD.getRadius(flower[(ccwv_indx+k)%num]);
 						if (hes<0) { // hyp
 							angsum+=HyperbolicMath.h_comp_cos(vrad,rad1,rad2,1.0,1.0,1.0);
 						}
@@ -923,8 +920,8 @@ public class ConformalTiling extends PackExtender {
 
 			// no graded tiling data
 			if (canonicalPack.tileData.gradedTileData==null) {
-				packData.tileData=canonicalPack.tileData;
-				TileData.setPackings(packData.tileData,packData);
+				extenderPD.tileData=canonicalPack.tileData;
+				TileData.setPackings(extenderPD.tileData,extenderPD);
 				return 1;
 			}
 			
@@ -947,12 +944,12 @@ public class ConformalTiling extends PackExtender {
 			} catch(Exception ex) {}
 			
 			if (depth>=canonicalPack.tileData.gradedTileData.size())
-				packData.tileData=canonicalPack.tileData;
+				extenderPD.tileData=canonicalPack.tileData;
 			else if (depth>=0)
-				packData.tileData=canonicalPack.tileData.
+				extenderPD.tileData=canonicalPack.tileData.
 					gradedTileData.get(depth).copyBareBones();
-			TileData.setPackings(packData.tileData,packData);
-			return packData.tileData.tileCount;
+			TileData.setPackings(extenderPD.tileData,extenderPD);
+			return extenderPD.tileData.tileCount;
 		}
 		
 		
@@ -973,11 +970,11 @@ public class ConformalTiling extends PackExtender {
 				errorMsg("usage: {x} -t {t ..}");
 				return 0;
 			}
-			TileLink tlink=new TileLink(packData.tileData,items);
+			TileLink tlink=new TileLink(extenderPD.tileData,items);
 			Iterator<Integer> tlk=tlink.iterator();
 			while (tlk.hasNext()) {
 				int t=tlk.next();
-				Tile tile=packData.tileData.myTiles[t];
+				Tile tile=extenderPD.tileData.myTiles[t];
 				if (tile.vertCount!=edgecount) {
 					errorMsg("some tiles have wrong vertCount for type "+type);
 					return 0;
@@ -986,7 +983,7 @@ public class ConformalTiling extends PackExtender {
 			tlk=tlink.iterator();
 			int count=0;
 			while (tlk.hasNext()) {
-				packData.tileData.myTiles[tlk.next()].tileType=type;
+				extenderPD.tileData.myTiles[tlk.next()].tileType=type;
 				count++;
 			}
 			return count;
@@ -1015,7 +1012,7 @@ public class ConformalTiling extends PackExtender {
 			}
 			Tile tile=canonicalPack.tileData.myTiles[tileno];
 			int n=Math.abs(Integer.parseInt(items.get(1)));
-			NodeLink thelist=new NodeLink(packData);
+			NodeLink thelist=new NodeLink(extenderPD);
 			
 			// search upward at most n levels
 			boolean deadend=false;
@@ -1037,8 +1034,8 @@ public class ConformalTiling extends PackExtender {
 						thelist.add(tile.vert[j]);
 			}
 
-			packData.vlist=thelist;
-			return packData.vlist.size();
+			extenderPD.vlist=thelist;
+			return extenderPD.vlist.size();
 		}
 		
 		// ============ load_rules ===========
@@ -1134,13 +1131,13 @@ public class ConformalTiling extends PackExtender {
 			int count=0;
 			if (canonicalPack==null)
 				return 0;
-			for (int v=1;v<=packData.nodeCount;v++) {
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
 				if (v<=canonicalPack.nodeCount) {
-					packData.setVertMark(v,canonicalPack.getVertMark(v));
+					extenderPD.setVertMark(v,canonicalPack.getVertMark(v));
 					count++;
 				}
 				else  
-					packData.setVertMark(v,0);
+					extenderPD.setVertMark(v,0);
 			}
 			return count; 
 		}
@@ -1200,7 +1197,7 @@ public class ConformalTiling extends PackExtender {
 					return 0;
 			}
 				
-			NodeLink outlist=new NodeLink(packData);
+			NodeLink outlist=new NodeLink(extenderPD);
 				
 			if (mode==2 && canonicalPack.tileData.dualTileData==null)
 				throw new DataException("dual tiling data not available");
@@ -1243,8 +1240,8 @@ public class ConformalTiling extends PackExtender {
 		else if (cmd.startsWith("disp") || cmd.startsWith("Disp")) {
 			if (flagSegs==null || flagSegs.size()==0) 
 				return cpCommand("disp -wr");
-			TileData targetTiling=packData.tileData; // default to 'tileData'
-			if (packData.tileData==null || packData.tileData.tileCount==0) {
+			TileData targetTiling=extenderPD.tileData; // default to 'tileData'
+			if (extenderPD.tileData==null || extenderPD.tileData.tileCount==0) {
 				targetTiling=canonicalPack.tileData;
 			}
 			if (targetTiling==null)
@@ -1282,8 +1279,8 @@ public class ConformalTiling extends PackExtender {
 					switch(c) {
 					case 'D': // dual tiles
 					{
-						if (packData.tileData.dualTileData!=null)
-							targetTiling=packData.tileData.dualTileData;
+						if (extenderPD.tileData.dualTileData!=null)
+							targetTiling=extenderPD.tileData.dualTileData;
 						else if (canonicalPack.tileData.dualTileData!=null) // dual tiles
 							targetTiling=canonicalPack.tileData.dualTileData;
 						else 
@@ -1293,8 +1290,8 @@ public class ConformalTiling extends PackExtender {
 					}
 					case 'Q': // quad tiles
 					{
-						if (packData.tileData.quadTileData!=null)
-							targetTiling=packData.tileData.quadTileData;
+						if (extenderPD.tileData.quadTileData!=null)
+							targetTiling=extenderPD.tileData.quadTileData;
 						else if (canonicalPack.tileData.quadTileData!=null) // quad tiles
 							targetTiling=canonicalPack.tileData.quadTileData;
 						else 
@@ -1345,7 +1342,7 @@ public class ConformalTiling extends PackExtender {
 						Tile tile=null;
 						int tindx=tlk.next();
 						try {
-							tile=packData.tileData.myTiles[tindx];
+							tile=extenderPD.tileData.myTiles[tindx];
 						} catch(Exception ex) {
 							Oops("illegal tile number "+tindx);
 						}
@@ -1354,7 +1351,7 @@ public class ConformalTiling extends PackExtender {
 						for (int e=0;e<tr.edgeCount;e++) {
 							if(tr.edgeRule[e].mark==mark) {
 								EdgeLink elink=
-									EdgeLink.verts2edges(packData.packDCEL,
+									EdgeLink.verts2edges(extenderPD.packDCEL,
 											tile.findAugEdge(e),true);
 								StringBuilder strb=new StringBuilder("disp -e"+
 											df.reconstitute()+" ");
@@ -1363,7 +1360,7 @@ public class ConformalTiling extends PackExtender {
 									EdgeSimple edge=elk.next();
 									strb.append(edge.v+" "+edge.w+" ");
 								}
-								count += cpCommand(packData,strb.toString());
+								count += cpCommand(extenderPD,strb.toString());
 							}
 						}
 					} // end of while through tiles
@@ -1381,7 +1378,7 @@ public class ConformalTiling extends PackExtender {
 							Oops("illegal tile index, or missing marked corner");
 						}
 					};
-					count +=cpCommand(packData,strb.toString());
+					count +=cpCommand(extenderPD,strb.toString());
 				}
 				
 				// else, get indices of tiles to draw
@@ -1432,7 +1429,7 @@ public class ConformalTiling extends PackExtender {
 								for (int m=0;m<nm;m++) {
 									Tile tle=canonicalPack.tileData.wgTiles[tile.wgIndices[m]];
 									if ((tle.mark==-1 && wg==0) || (tle.mark==1 && wg==1)) // grey
-										count+=cpCommand(packData,"disp -s"+df.reconstitute()+
+										count+=cpCommand(extenderPD,"disp -s"+df.reconstitute()+
 												" "+tle.tileBorderLink().toString());
 								}
 							}
@@ -1466,15 +1463,15 @@ public class ConformalTiling extends PackExtender {
 							else if (canonicalPack.getCircleColor(tile.baryVert)!=null)
 								df.setColor(ColorUtil.cloneMe(canonicalPack.
 										getCircleColor(tile.baryVert)));
-							count += cpCommand(packData,"disp -s"+df.reconstitute()+" "+
+							count += cpCommand(extenderPD,"disp -s"+df.reconstitute()+" "+
 										flwr.toString());
 							df.setColor(null);
 						}
 						else 
-							count += cpCommand(packData,"disp -s"+df.reconstitute()+" "+
+							count += cpCommand(extenderPD,"disp -s"+df.reconstitute()+" "+
 						flwr.toString());
 						if (df.label) { // want label
-							packData.cpDrawing.drawIndex(packData.getCenter(tile.baryVert),
+							extenderPD.cpDrawing.drawIndex(extenderPD.getCenter(tile.baryVert),
 									tile.tileIndex, 1);
 						}
 					}
@@ -1504,18 +1501,18 @@ public class ConformalTiling extends PackExtender {
 				return 0;
 			}
 			
-			int pnum=packData.packNum;
+			int pnum=extenderPD.packNum;
 			PackData tmpData=canonicalPack.copyPackTo();
-			packData=CirclePack.cpb.swapPackData(tmpData, pnum,true);
+			extenderPD=CirclePack.cpb.swapPackData(tmpData, pnum,true);
 //			packData.tileData=canonicalPack.tileData.copyBareBones();
-			return packData.tileData.tileCount; 
+			return extenderPD.tileData.tileCount; 
 		}
 		
 		// ============= put_canonical ===========
 		else if (cmd.startsWith("put_can")) {
 			// generate/save 'canonicalPack' based on 'packData.tileData';
 			//    'packData' remains unchanged.
-			canonicalPack=buildMode3(packData.tileData);
+			canonicalPack=buildMode3(extenderPD.tileData);
 			if (canonicalPack==null || canonicalPack.tileData==null)
 				return 0;
 			canonicalPack.tileData.gradedTileData=new Vector<TileData>();
@@ -1589,13 +1586,13 @@ public class ConformalTiling extends PackExtender {
 			if (flagSegs!=null && flagSegs.size()>0) {
 				addstr=new String("pave "+StringUtil.reconItem(flagSegs.get(0)));
 			}
-			return cpCommand(packData,addstr);
+			return cpCommand(extenderPD,addstr);
 		}
 
 		// ============= godual ==========
 		else if (cmd.startsWith("godual")) {
-			if (packData==null || packData.tileData==null || 
-					packData.tileData.tileCount==0) {
+			if (extenderPD==null || extenderPD.tileData==null || 
+					extenderPD.tileData.tileCount==0) {
 				errorMsg("parent packing does not have tile data");
 				return 0;
 			}
@@ -1605,13 +1602,13 @@ public class ConformalTiling extends PackExtender {
 				if (items.get(0).contains("x"))
 					put_bp=true;
 			} catch(Exception ex) {}
-			PackData mydual=getMyDual(packData.tileData);
-			packData=CirclePack.cpb.swapPackData(mydual,packData.packNum,true);
-			int ans=swapExtenderPD(packData);
+			PackData mydual=getMyDual(extenderPD.tileData);
+			extenderPD=CirclePack.cpb.swapPackData(mydual,extenderPD.packNum,true);
+			int ans=swapExtenderPD(extenderPD);
 			if (ans<=0)
 				return 0;
 			if (put_bp) {
-				canonicalPack=buildMode3(packData.tileData);
+				canonicalPack=buildMode3(extenderPD.tileData);
 				if (canonicalPack==null || canonicalPack.tileData==null)
 					return 0;
 				canonicalPack.tileData.gradedTileData=new Vector<TileData>();
@@ -1619,7 +1616,7 @@ public class ConformalTiling extends PackExtender {
 				tmpTD.setDepth(0);
 				canonicalPack.tileData.gradedTileData.add(tmpTD);
 			}
-			return packData.nodeCount; 
+			return extenderPD.nodeCount; 
 		}
 
 		// ============== subdivide ==========
@@ -1684,8 +1681,8 @@ public class ConformalTiling extends PackExtender {
 			} // end of switch
 			
 			if (workPack!=null) {
-				packData=CirclePack.cpb.swapPackData(workPack,packData.packNum,true);
-				canonicalPack=packData.copyPackTo();
+				extenderPD=CirclePack.cpb.swapPackData(workPack,extenderPD.packNum,true);
+				canonicalPack=extenderPD.copyPackTo();
 				return canonicalPack.nodeCount; 
 			}
 			return 0;
@@ -2256,21 +2253,21 @@ public class ConformalTiling extends PackExtender {
 		int cwv=tile.augVert[(av-1+tile.augVertCount)%tile.augVertCount];
 		int ccwv=tile.augVert[(av+1)%tile.augVertCount];
 		
-		int num=packData.countFaces(v);
-		int[] flower=packData.getFlower(v);
-		double vrad=packData.getRadius(v);
-		double rad1=packData.getRadius(ccwv);
+		int num=extenderPD.countFaces(v);
+		int[] flower=extenderPD.getFlower(v);
+		double vrad=extenderPD.getRadius(v);
+		double rad1=extenderPD.getRadius(ccwv);
 		double rad2=rad1;
-		int ccwv_indx=packData.nghb(v, ccwv);
-		int indxdiff=(packData.nghb(v, cwv)-ccwv_indx+num)%num;
+		int ccwv_indx=extenderPD.nghb(v, ccwv);
+		int indxdiff=(extenderPD.nghb(v, cwv)-ccwv_indx+num)%num;
 		double angsum=0.0;
 		for (int k=1;k<=indxdiff;k++) {
 			rad1=rad2;
-			rad2=packData.getRadius(flower[(ccwv_indx+k)%num]);
-			if (packData.hes<0) { // hyp
+			rad2=extenderPD.getRadius(flower[(ccwv_indx+k)%num]);
+			if (extenderPD.hes<0) { // hyp
 				angsum+=HyperbolicMath.h_comp_cos(vrad,rad1,rad2,1.0,1.0,1.0);
 			}
-			else if (packData.hes>0) { // sph
+			else if (extenderPD.hes>0) { // sph
 				angsum+=Math.acos(SphericalMath.s_comp_cos(vrad,rad1,rad2));
 				
 			}
@@ -2301,13 +2298,13 @@ public class ConformalTiling extends PackExtender {
 		int n=tile.vertCount;
 		double []stdC=new double[2*n];
 		for (int j=0;j<n;j++) {
-			Complex z=packData.getCenter(tile.vert[j]);
+			Complex z=extenderPD.getCenter(tile.vert[j]);
 			stdC[2*j]=z.x;
 			stdC[2*j+1]=z.y;
 		}
 		count++;
 		
-		packData.cpDrawing.drawClosedPoly(n,stdC,dflags);
+		extenderPD.cpDrawing.drawClosedPoly(n,stdC,dflags);
 		if (tile.myTileData!=null) {
 			for (int t=1;t<=tile.myTileData.tileCount;t++) {
 				Tile mytile=tile.myTileData.myTiles[t];
@@ -2975,21 +2972,21 @@ public class ConformalTiling extends PackExtender {
 	 */
 	public Vector<Integer> listMarkedTiles(boolean marked) {
 		Vector<Integer> vecans=new Vector<Integer>(0);
-		if (packData==null || packData.tileData==null || packData.tileData.tileCount==0)
+		if (extenderPD==null || extenderPD.tileData==null || extenderPD.tileData.tileCount==0)
 			return vecans;
 		
 		// if no hierarchy, just look at current tiles
 		if (canonicalPack==null || canonicalPack.tileData==null || 
 				canonicalPack.tileData.gradedTileData==null) {
-			for (int t=1;t<=packData.tileData.tileCount;t++) {
-				Tile tile=packData.tileData.myTiles[t];
+			for (int t=1;t<=extenderPD.tileData.tileCount;t++) {
+				Tile tile=extenderPD.tileData.myTiles[t];
 				if ((tile.mark!=0 && marked) ||	(tile.mark==0 && !marked))
 					vecans.add(tile.tileIndex);
 			}
 			return vecans;
 		}
 		
-		int depth=whatDepth(packData);
+		int depth=whatDepth(extenderPD);
 		if (depth<0)
 			return vecans;
 		

@@ -85,15 +85,15 @@ public class ProjStruct extends PackExtender {
 	// Constructor
 	public ProjStruct(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="PROJSTRUCT";
 		extensionAbbrev="PS";
 		toolTip="'ProjStruct' is for handling discrete projective structures, "+
 			"that is, projective structures associated with circle packings.";
 		registerXType();
 		if (running) {
-			aspects=setupAspects(packData);
-			packData.packExtensions.add(this);
+			aspects=setupAspects(extenderPD);
+			extenderPD.packExtensions.add(this);
 		}
 	}
 	
@@ -109,13 +109,13 @@ public class ProjStruct extends PackExtender {
 		if (cmd.startsWith("torAB")) {
 			// this routine is tailored for tori: specify side-pair
 			// scaling in an attempt to build general affine tori
-			if (aspects==null || aspects.length!=(packData.faceCount+1))
-				aspects=setupAspects(packData);
+			if (aspects==null || aspects.length!=(extenderPD.faceCount+1))
+				aspects=setupAspects(extenderPD);
 
-			if (packData.genus != 1 || packData.getBdryCompCount()>0) {
+			if (extenderPD.genus != 1 || extenderPD.getBdryCompCount()>0) {
 				int cnt=0;
 				msg("Simply connected case: 'affine' defaults to all 'labels' 1");
-				for (int f=1;f<=packData.faceCount;f++) {
+				for (int f=1;f<=extenderPD.faceCount;f++) {
 					for (int j=0;j<3;j++) 
 						aspects[f].labels[j]=1.0;
 					cnt++;
@@ -133,7 +133,7 @@ public class ProjStruct extends PackExtender {
 			} catch (Exception ex) {
 			}
 
-			boolean result = affineSet(packData,aspects,A, B);
+			boolean result = affineSet(extenderPD,aspects,A, B);
 			if (!result)
 				Oops("torAB has failed");
 			msg("Affine data set: A = " + A + " B = " + B);
@@ -149,11 +149,11 @@ public class ProjStruct extends PackExtender {
 			} catch(Exception ex) {
 				passes=-1;
 			}
-			EuclPacker e_packer=new EuclPacker(packData,-1);
+			EuclPacker e_packer=new EuclPacker(extenderPD,-1);
 			
 			// set 'triData' to 'aspects' and repack using 'labels'
 			e_packer.pdcel.triData=aspects;
-			EuclPacker.affinePack(packData,passes);
+			EuclPacker.affinePack(extenderPD,passes);
 			
 			// store results as radii
 			NodeLink vlist=new NodeLink();
@@ -161,8 +161,8 @@ public class ProjStruct extends PackExtender {
 	    		vlist.add(e_packer.index[i]);
 		   	}
 		    // store local 'radii' in 'PackDCEL.triData' as radii 
-			TriData.reapRadii(packData,vlist,1);
-			return packData.packDCEL.layoutPacking();
+			TriData.reapRadii(extenderPD,vlist,1);
+			return extenderPD.packDCEL.layoutPacking();
 		}
 		
 		// ======== weak_rif ===========
@@ -172,20 +172,20 @@ public class ProjStruct extends PackExtender {
 			// are vertices specified?
 			try {
 				items=flagSegs.get(0);
-				vlink=new NodeLink(packData,items);
+				vlink=new NodeLink(extenderPD,items);
 			} catch (Exception ex) {
 				vlink=null;
 			}
 			
 			// first, riffle to get weak consistency
-			count = ProjStruct.vertRiffle(packData, aspects,2,PASSES,vlink);
+			count = ProjStruct.vertRiffle(extenderPD, aspects,2,PASSES,vlink);
 			if (count < 0) {
 				Oops("weak riffle seems to have failed");
 				return 0;
 			}
 			
 			// next, riffle to get angle sums (which should preserve weak consistency)
-			count = ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
+			count = ProjStruct.vertRiffle(extenderPD, aspects,1,PASSES,vlink);
 			if (count < 0) {
 				Oops("riffle for aims seems to have failed");
 				return 0;
@@ -197,9 +197,9 @@ public class ProjStruct extends PackExtender {
 						+ CPBase.debugID + "_log"), false);
 				try {
 					dbw.write("anglesum:\n\n");
-					for (int v = 1; v <= packData.nodeCount; v++) {
+					for (int v = 1; v <= extenderPD.nodeCount; v++) {
 						dbw.write("vertex " + v + ": " + 
-								ProjStruct.angSumTri(packData,v,1.0,aspects)[0] + "\n");
+								ProjStruct.angSumTri(extenderPD,v,1.0,aspects)[0] + "\n");
 					}
 					dbw.flush();
 					dbw.close();
@@ -216,7 +216,7 @@ public class ProjStruct extends PackExtender {
 		else if (cmd.startsWith("tD")) {
 			TorusData torusData;
 			try {
-				torusData=new TorusData(packData);
+				torusData=new TorusData(extenderPD);
 			} catch (Exception ex) {
 				throw new CombException("failed to instantiate 'TorusData'");
 			}
@@ -265,19 +265,19 @@ public class ProjStruct extends PackExtender {
 						switch(c) {
 						case 's': // strong consistency: (t.t') for edges
 						{
-							HalfLink hlist=new HalfLink(packData,items);
+							HalfLink hlist=new HalfLink(extenderPD,items);
 							if (hlist!=null && hlist.size()>0) {
 								HalfEdge edge=hlist.get(0);
 								msg("Edge <"+edge+">, t*t' = "+
 									String.format("%.8e",
-									edgeRatioError(packData,aspects,edge)));
+									edgeRatioError(extenderPD,aspects,edge)));
 								return 1;
 							}
 							break;
 						}
 						case 'c': // curvature error (angle sum-aim)
 						{
-							vlist=new NodeLink(packData,items);
+							vlist=new NodeLink(extenderPD,items);
 							if (vlist!=null && vlist.size()>0) {
 								int v=(int)vlist.get(0);
 								msg("Angle sum error of "+v+" is "+
@@ -295,7 +295,7 @@ public class ProjStruct extends PackExtender {
 			// if no flags?
 			
 			// find sum[angsum-aim]^2 (for verts with aim>0)
-			for (int v=1;v<=packData.nodeCount;v++) {
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
 				double diff=angsumError(v);
 				Angsum_err += diff*diff;
 			}
@@ -354,12 +354,12 @@ public class ProjStruct extends PackExtender {
 					// do what's ordered
 					if (circs || facs) {
 						DispFlags dispFlags=new DispFlags(str.substring(2),
-								packData.cpDrawing.fillOpacity); // cut out -?
+								extenderPD.cpDrawing.fillOpacity); // cut out -?
 						FaceLink facelist;
 						if (items==null || items.size()==0) // do all
-							facelist = new FaceLink(packData, "F");
+							facelist = new FaceLink(extenderPD, "F");
 						else 
-							facelist=new FaceLink(packData,items);
+							facelist=new FaceLink(extenderPD,items);
 						try {
 							Iterator<Integer> flst = facelist.iterator();
 							boolean first_face = true;
@@ -376,20 +376,20 @@ public class ProjStruct extends PackExtender {
 							
 										if (!dispFlags.colorIsSet && 
 												(dispFlags.fill || dispFlags.colBorder))
-											dispFlags.setColor(packData.getCircleColor(v));
+											dispFlags.setColor(extenderPD.getCircleColor(v));
 										if (dispFlags.label)
 											dispFlags.setLabel(Integer.toString(v));
-										packData.cpDrawing.drawCircle(z, rad,dispFlags);
+										extenderPD.cpDrawing.drawCircle(z, rad,dispFlags);
 										count++;
 									}
 								}
 								if (facs) {
 									if (!dispFlags.colorIsSet && 
 											(dispFlags.fill || dispFlags.colBorder))
-										dispFlags.setColor(packData.getFaceColor(fnum));
+										dispFlags.setColor(extenderPD.getFaceColor(fnum));
 									if (dispFlags.label)
 										dispFlags.setLabel(Integer.toString(fnum));
-									packData.cpDrawing.drawFace(tasp.getCenter(0),
+									extenderPD.cpDrawing.drawFace(tasp.getCenter(0),
 											tasp.getCenter(1),tasp.getCenter(2),
 											null,null,null,dispFlags);
 									count++;
@@ -398,7 +398,7 @@ public class ProjStruct extends PackExtender {
 							} // end of while 
 
 							PackControl.canvasRedrawer.
-								paintMyCanvasses(packData,false);
+								paintMyCanvasses(extenderPD,false);
 						} catch (Exception ex) {
 							Oops("affine drawing error");
 						}
@@ -410,7 +410,7 @@ public class ProjStruct extends PackExtender {
 
 		// ======== error ============
 		else if (cmd.startsWith("error")) {
-			double []wsa_error=getErrors(packData,aspects);
+			double []wsa_error=getErrors(extenderPD,aspects);
 			msg("Errors: weak, strong, angle sum: (l^2 and max):");
 			msg(" weak: ("+String.format("%.6e",wsa_error[0])+
 					", "+String.format("%.6e",wsa_error[1])+")");
@@ -428,8 +428,8 @@ public class ProjStruct extends PackExtender {
 			BufferedWriter dbw = CPFileManager.openWriteFP(logfile,false,false);
 			try {
 				dbw.write("labels:\n\n");
-				for (int f = 1; f <= packData.faceCount; f++) {
-					int[] verts=packData.packDCEL.faces[f].getVerts();
+				for (int f = 1; f <= extenderPD.faceCount; f++) {
+					int[] verts=extenderPD.packDCEL.faces[f].getVerts();
 					dbw.write("face " + f + ": <" + verts[0] + ","
 							+ verts[1] + "," + verts[2] + ">   "
 							+ "labels: <" + (double) aspects[f].labels[0] + ","
@@ -447,7 +447,7 @@ public class ProjStruct extends PackExtender {
 		
 		// ========== equiSides ==========
 		else if (cmd.startsWith("equiSid")) {
-			for (int f=1;f<=packData.faceCount;f++) {
+			for (int f=1;f<=extenderPD.faceCount;f++) {
 				for (int j=0;j<3;j++)
 					aspects[f].sidelengths[j]=1.0;
 			}
@@ -456,7 +456,7 @@ public class ProjStruct extends PackExtender {
 		
 		// ======== set_eff =========
 		else if (cmd.startsWith("set_eff")) {
-			if (setEffective(packData,aspects)<0)
+			if (setEffective(extenderPD,aspects)<0)
 				Oops("Error in setting effective radii.");
 			return 1;
 		}
@@ -469,14 +469,14 @@ public class ProjStruct extends PackExtender {
 			
 			// store data for qualifying edges in vector
 			ArrayList<Double> edata=new ArrayList<Double>();
-			for (int v=1;v<=packData.nodeCount;v++) {
-				HalfLink spokes=packData.packDCEL.vertices[v].getEdgeFlower();
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
+				HalfLink spokes=extenderPD.packDCEL.vertices[v].getEdgeFlower();
 				Iterator<HalfEdge> sis=spokes.iterator();
 				while (sis.hasNext()) {
 					HalfEdge he=sis.next();
 					int w=he.twin.origin.vertIndx;
 					if (w>v && !he.isBdry()) 
-						edata.add(ProjStruct.logEdgeTs(packData,
+						edata.add(ProjStruct.logEdgeTs(extenderPD,
 								he,aspects));
 				}
 			}
@@ -485,14 +485,14 @@ public class ProjStruct extends PackExtender {
 			
 			// draw (same order)
 			int spot=0;
-			for (int v=1;v<=packData.nodeCount;v++) {
-				HalfLink spokes=packData.packDCEL.vertices[v].getEdgeFlower();
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
+				HalfLink spokes=extenderPD.packDCEL.vertices[v].getEdgeFlower();
 				Iterator<HalfEdge> sis=spokes.iterator();
 				while (sis.hasNext()) {
 					HalfEdge he=sis.next();
 					int w=he.twin.origin.vertIndx;
 					if (w>v) {
-						if (packData.isBdry(v) && packData.isBdry(w))
+						if (extenderPD.isBdry(v) && extenderPD.isBdry(w))
 							cpCommand("disp -e "+v+" "+w);
 						else {
 							cpCommand("disp -ec"+(int)ccodes.get(spot)+" "+v+" "+w);
@@ -507,8 +507,8 @@ public class ProjStruct extends PackExtender {
 		// ======== Lface ==========
 		else if (cmd.startsWith("Lface")) {
 			DispFlags dflags=new DispFlags("");
-			for (int f=1;f<=packData.faceCount;f++) {
-				packData.cpDrawing.drawFace(aspects[f].getCenter(0),
+			for (int f=1;f<=extenderPD.faceCount;f++) {
+				extenderPD.cpDrawing.drawFace(aspects[f].getCenter(0),
 						aspects[f].getCenter(1),
 						aspects[f].getCenter(2),null,null,null,dflags);
 			}
@@ -518,11 +518,11 @@ public class ProjStruct extends PackExtender {
 		
 		// ======== LinCircs ========
 		if (cmd.startsWith("LinC")) {
-			for (int f=1;f<=packData.faceCount;f++) {
+			for (int f=1;f<=extenderPD.faceCount;f++) {
 				CircleSimple sc=EuclMath.eucl_tri_incircle(aspects[f].getCenter(0),
 						aspects[f].getCenter(1),aspects[f].getCenter(2));
 				DispFlags dflags=new DispFlags("cc20");
-				packData.cpDrawing.drawCircle(sc.center,sc.rad,dflags); // blue
+				extenderPD.cpDrawing.drawCircle(sc.center,sc.rad,dflags); // blue
 			}
 			repaintMe();
 			return 1;
@@ -544,7 +544,7 @@ public class ProjStruct extends PackExtender {
 				Complex wc=sc.center;
 				DispFlags df=new DispFlags(null);
 				df.setColor(Color.green);
-				packData.cpDrawing.drawEdge(vc,wc,df);
+				extenderPD.cpDrawing.drawEdge(vc,wc,df);
 			}
 			repaintMe();
 			return 1;
@@ -569,9 +569,9 @@ public class ProjStruct extends PackExtender {
 					char c=str.charAt(1);
 					// get facelist iterator
 					if (items==null || items.size()==0) // do all
-						facelist = new FaceLink(packData, "a");
+						facelist = new FaceLink(extenderPD, "a");
 					else 
-						facelist=new FaceLink(packData,items);
+						facelist=new FaceLink(extenderPD,items);
 					Iterator<Integer> flt=facelist.iterator();
 					
 					switch(c) {
@@ -581,7 +581,7 @@ public class ProjStruct extends PackExtender {
 							HalfEdge he=aspects[f].baseEdge;
 							int j=0;
 							do {
-								aspects[f].labels[j]=packData.packDCEL.getVertRadius(he);
+								aspects[f].labels[j]=extenderPD.packDCEL.getVertRadius(he);
 								j++;
 								he=he.next;
 							} while (j<3);
@@ -622,7 +622,7 @@ public class ProjStruct extends PackExtender {
 				if (StringUtil.isFlag(str)) {
 					char c=str.charAt(1);
 					items.remove(0);
-					FaceLink flist=new FaceLink(packData,items);
+					FaceLink flist=new FaceLink(extenderPD,items);
 					Iterator<Integer> fls=flist.iterator();
 					switch(c) {
 					case 's': // update sides using packData centers  
@@ -655,15 +655,15 @@ public class ProjStruct extends PackExtender {
 			// are vertices specified?
 			try {
 				items=flagSegs.get(0);
-				vlink=new NodeLink(packData,items);
+				vlink=new NodeLink(extenderPD,items);
 			} catch (Exception ex) {}
 			
 			// riffle to get side lengths
-			int its=sideRiffle(packData,aspects,2000,vlink);
+			int its=sideRiffle(extenderPD,aspects,2000,vlink);
 			msg("'sideRif' iterations: "+its);
 			
 			// reset 'labels' vector from 'sides'
-			for (int f=1;f<=packData.faceCount;f++) 
+			for (int f=1;f<=extenderPD.faceCount;f++) 
 				aspects[f].sides2Labels();
 			return 1;
 		}
@@ -675,7 +675,7 @@ public class ProjStruct extends PackExtender {
 			double mnY=100000.0;
 			double mxY=-100000.0;
 			double pr;
-			for (int f = 1; f <= packData.faceCount; f++)
+			for (int f = 1; f <= extenderPD.faceCount; f++)
 				for (int j = 0; j < 3; j++) {
 					pr=aspects[f].getCenter(j).x-aspects[f].labels[j];
 					mnX = (pr<mnX) ? pr : mnX; 
@@ -684,7 +684,7 @@ public class ProjStruct extends PackExtender {
 					mxY = (pr>mxY) ? pr : mxY; 
 				}
 			cpCommand("set_screen -b "+mnX+" "+mnY+" "+mxX+" "+mxY);
-			packData.cpDrawing.repaint();
+			extenderPD.cpDrawing.repaint();
 			return 1;
 		}
 				
@@ -797,10 +797,10 @@ public class ProjStruct extends PackExtender {
 	 * @return double, abs(error); 0 if 'aim' <=0
 	 */
 	public double angsumError(int v) {
-		if (packData.getAim(v)<=0)
+		if (extenderPD.getAim(v)<=0)
 			return 0;
-		return Math.abs(angSumTri(packData,v,1.0,
-				aspects)[0]-packData.getAim(v));
+		return Math.abs(angSumTri(extenderPD,v,1.0,
+				aspects)[0]-extenderPD.getAim(v));
 	}
 	
 	/**

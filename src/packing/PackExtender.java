@@ -46,7 +46,7 @@ public abstract class PackExtender {
 	public String extensionType; // 'PackExtender' type, e.g., RIEMANN-HILBERT
 	public String extensionAbbrev; // Abbreviation, e.g.,'RH','rh', used in commands
 	public CPdrawing cpDrawing;  // keep cpDrawing because 'PackData' can get swapped out.
-	public PackData packData;  // every 'PackExtender' is associated with a single packing
+	public PackData extenderPD;  // every 'PackExtender' is associated with a single packing
 	public PackDCEL pdc;       // convenience
 	public String iconName="GUI/Xtender.png";  // Extender icon in Resources/Icon
 	public MyTool XtenderTool;
@@ -58,7 +58,7 @@ public abstract class PackExtender {
 	
 	// Constructor
 	public PackExtender(PackData p) {
-		packData=p;
+		extenderPD=p;
 		pdc=p.packDCEL;
 		cpDrawing=p.cpDrawing;
 		running=false;
@@ -90,7 +90,7 @@ public abstract class PackExtender {
 				int pnum=Integer.parseInt((String)items.get(0));
 				CPdrawing cpS=CPBase.cpDrawing[pnum];
 				if (cpS!=null) {
-					PackData p=packData.copyPackTo();
+					PackData p=extenderPD.copyPackTo();
 					return CirclePack.cpb.swapPackData(p, pnum, false).nodeCount;
 				}
 			} catch (Exception ex) {}
@@ -125,19 +125,20 @@ public abstract class PackExtender {
 		if (newPD==null)
 			return 0;
 		
-		CPdrawing holdcpS=packData.cpDrawing;
-		packData=newPD.copyPackTo();
-		packData.packExtensions=new Vector<PackExtender>(1);
-		packData.packExtensions.add(this);
+		CPdrawing holdcpS=extenderPD.cpDrawing;
+		int holdpnum=extenderPD.packNum;
+		extenderPD=newPD.copyPackTo();
+		extenderPD.packNum=holdpnum;
+		extenderPD.packExtensions=new Vector<PackExtender>(1);
+		extenderPD.packExtensions.add(this);
 		pdc=newPD.packDCEL;
 		
 		// reconnect pack and screen
-		packData.cpDrawing=holdcpS;
-		holdcpS.setPackData(packData);
-		packData.packNum=newPD.packNum;
-		packData.setGeometry(newPD.hes);
+		extenderPD.cpDrawing=holdcpS;
+		holdcpS.setPackData(extenderPD);
+		extenderPD.setGeometry(newPD.hes);
 
-		return packData.nodeCount;
+		return extenderPD.nodeCount;
 	}
 
 	/**
@@ -165,12 +166,12 @@ public abstract class PackExtender {
 	 *   commands to command completion hash table.
 	 */
 	public void registerXType() {
-		Iterator<PackExtender> pXs=packData.packExtensions.iterator();
+		Iterator<PackExtender> pXs=extenderPD.packExtensions.iterator();
 		while (pXs.hasNext()) {
 			PackExtender pext=(PackExtender)pXs.next();
 			if (pext.extensionAbbrev==this.extensionAbbrev) {
 				running=false;
-				throw new PackingException("Packing "+packData.packNum+
+				throw new PackingException("Packing "+extenderPD.packNum+
 						" already has a PackExtender "+"'"+this.extensionAbbrev+"'");
 			}
 		}
@@ -248,7 +249,7 @@ public abstract class PackExtender {
 	 * Then the calling routine can set the extender to null.
 	 */
 	public void killMe() {
-		packData.packExtensions.remove((Object)this);
+		extenderPD.packExtensions.remove((Object)this);
 	}
 	
 	/**
@@ -262,7 +263,7 @@ public abstract class PackExtender {
 	 * Save the handle to this packExtender: eg, so not lost with copy
 	 */
 	public PackExtender transfer(int nodecount) {
-		if (nodecount!=packData.nodeCount) {
+		if (nodecount!=extenderPD.nodeCount) {
 			errorMsg("Note: "+extensionAbbrev+" 'PackExtender' is lost due to nodeCount mismatch");
 			return null;
 		}
@@ -273,7 +274,7 @@ public abstract class PackExtender {
 	 * Refresh the canvas(es) for the parent packing.
 	 */
 	public void repaintMe() {
-		PackControl.canvasRedrawer.paintMyCanvasses(packData,false);	
+		PackControl.canvasRedrawer.paintMyCanvasses(extenderPD,false);	
 	}
 	
 	/**
@@ -285,7 +286,7 @@ public abstract class PackExtender {
 	public int cpCommand(String cmdstr) {
 		int count=0;
 		try {
-			count=CommandStrParser.jexecute(packData,cmdstr);
+			count=CommandStrParser.jexecute(extenderPD,cmdstr);
 		} catch (Exception ex) {
 			Oops(ex.getMessage());
 		}
@@ -322,14 +323,14 @@ public abstract class PackExtender {
 	 * Error message
 	 */
 	public void errorMsg(String errmsg) {
-		CirclePack.cpb.myErrorMsg(extensionAbbrev+" p"+packData.packNum+" error: "+errmsg);
+		CirclePack.cpb.myErrorMsg(extensionAbbrev+" p"+extenderPD.packNum+" error: "+errmsg);
 	}
 	
 	/**
 	 * Regular message
 	 */
 	public void msg(String msG) {
-		CirclePack.cpb.myMsg(extensionAbbrev+" p"+packData.packNum+": "+msG);
+		CirclePack.cpb.myMsg(extensionAbbrev+" p"+extenderPD.packNum+": "+msG);
 	}
 
 	// Can be overridden to give general info on the extender; 

@@ -153,7 +153,7 @@ public class RationalMap extends PackExtender {
 	// Constructor
 	public RationalMap(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="RATIONAL_MAP";
 		extensionAbbrev="RM";
 		toolTip="'RationalMap' builds discrete meromorphic mappings "+
@@ -163,12 +163,12 @@ public class RationalMap extends PackExtender {
 		numSlits=numSheets=baseSheet=numCodes=pasteCount=0;
 		
 		// parent packing 'rangePack' and also utility 'slitPack',
-		rangePack=packData.copyPackTo();
-		slitPack=packData.copyPackTo();
+		rangePack=extenderPD.copyPackTo();
+		slitPack=extenderPD.copyPackTo();
 		
 		// init 'slitMap': tracks original vertex index from 'rangePack'
 		slitPack.vertexMap=new VertexMap();
-		for (int v=1;v<=packData.nodeCount;v++) {
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
 			slitPack.vertexMap.add(new EdgeSimple(v,v));
 		}
 		slitMap=slitPack.vertexMap.makeCopy();
@@ -178,7 +178,7 @@ public class RationalMap extends PackExtender {
 			rmState=RANGE;
 		else rmState=ERROR;
 		branchList=null;
-		packData.packExtensions.add(this);
+		extenderPD.packExtensions.add(this);
 	}
 	
 	public int cmdParser(String cmd,Vector<Vector<String>> flagSegs) {
@@ -470,19 +470,19 @@ public class RationalMap extends PackExtender {
 			case 'z': // zero verts
 			{
 				zoib=new String(" zero ");
-				vlist=new NodeLink(packData,"Z 0.0 0.0");
+				vlist=new NodeLink(extenderPD,"Z 0.0 0.0");
 				break;
 			}
 			case 'o': // one verts
 			{
 				zoib=new String(" one ");
-				vlist=new NodeLink(packData,"Z 0.0 "+Math.PI/2.0);
+				vlist=new NodeLink(extenderPD,"Z 0.0 "+Math.PI/2.0);
 				break;
 			}
 			case 'i': // infinity verts
 			{
 				zoib=new String(" infinity ");
-				vlist=new NodeLink(packData,"Z 0.0 "+Math.PI);
+				vlist=new NodeLink(extenderPD,"Z 0.0 "+Math.PI);
 				break;
 			}
 			case 'b': // branch vertices and siblings

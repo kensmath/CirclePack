@@ -41,7 +41,7 @@ public class MeanMove extends PackExtender {
 	
 	public MeanMove(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="MOTION_BY_MEAN_CURVATURE";
 		extensionAbbrev="MC";
 		toolTip="Motion by mean curvature test bench";
@@ -49,13 +49,13 @@ public class MeanMove extends PackExtender {
 		@SuppressWarnings("unused")
 		int rslt;
 		try {
-			rslt=cpCommand(packData,"geom_to_e");
+			rslt=cpCommand(extenderPD,"geom_to_e");
 			normalize(0);
 		} catch(Exception ex) {
 			rslt=0;
 		}		
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 		quality=-1;
 		pro_K=.05;
@@ -77,7 +77,7 @@ public class MeanMove extends PackExtender {
 		int count=0;
 		for (int i=0;i<N;i++) {
 			int v=bdryVerts[i];
-			double []curvdata=getCurvature(packData,v,bdryRads[i]);
+			double []curvdata=getCurvature(extenderPD,v,bdryRads[i]);
 			if (curvdata==null)
 				Oops("Curvature accumulsation failed");
 			double C=curvdata[0];
@@ -93,7 +93,7 @@ public class MeanMove extends PackExtender {
 		// only now do we store the new radii
 		for (int i=0;i<N;i++) {
 			int v=bdryVerts[i];
-			packData.setRadius(v,bdryRads[i]);
+			extenderPD.setRadius(v,bdryRads[i]);
 		}
 //		packData.fillcurves();
 
@@ -113,7 +113,7 @@ public class MeanMove extends PackExtender {
 	 * @return
 	 */
 	public int update() {
-		NodeLink bdry=new NodeLink(packData,"b");
+		NodeLink bdry=new NodeLink(extenderPD,"b");
 		int N=0;
 		if (bdry==null || (N=bdry.size())<3)
 			return 0;
@@ -121,12 +121,12 @@ public class MeanMove extends PackExtender {
 		bdryRads=new double[N];
 		bdryAngSums=new double[N];
 		
-		packData.fillcurves();
+		extenderPD.fillcurves();
 		for (int j=0;j<N;j++) {
 			int v=bdry.get(j);
 			bdryVerts[j]=v;
-			bdryRads[j]=packData.getRadius(v);
-			bdryAngSums[j]=packData.getCurv(v);
+			bdryRads[j]=extenderPD.getRadius(v);
+			bdryAngSums[j]=extenderPD.getCurv(v);
 		}
 		
 		return N;
@@ -222,7 +222,7 @@ public class MeanMove extends PackExtender {
 		
 		if (cmd.startsWith("qual")) {
 			qualColors();
-			return this.cpCommand(packData,"disp -cf b");
+			return this.cpCommand(extenderPD,"disp -cf b");
 		}
 		
 		if (cmd.startsWith("move")) {
@@ -350,7 +350,7 @@ public class MeanMove extends PackExtender {
 		if (bdryVerts==null) {
 			update();
 		}
-		HalfLink hlink=new HalfLink(packData,"b");
+		HalfLink hlink=new HalfLink(extenderPD,"b");
 		
 		// TODO: what are alternative normalizations? 
 		switch(normmode){
@@ -361,7 +361,7 @@ public class MeanMove extends PackExtender {
 			double maxdist=0.0;
 			Iterator<HalfEdge> hlst=hlink.iterator();
 			while (hlst.hasNext()) {
-				double dist=packData.tangencyPoint(hlst.next()).abs();
+				double dist=extenderPD.tangencyPoint(hlst.next()).abs();
 				maxdist=(dist>maxdist) ? dist: maxdist;
 			}
 			cpCommand("scale "+1/maxdist);
@@ -381,12 +381,12 @@ public class MeanMove extends PackExtender {
 		ArrayList<Double> curvatures=new ArrayList<Double>(N);
 		for (int i=0;i<N;i++) {
 			int v=bdryVerts[i];
-			curvatures.add((Double)getCurvature(packData,v,this.bdryRads[i])[0]);
+			curvatures.add((Double)getCurvature(extenderPD,v,this.bdryRads[i])[0]);
 		}
 		
 		ArrayList<Integer> curvIndx=ColorUtil.blue_red_color_ramp(curvatures);
 		for (int i=0;i<N;i++)
-			packData.packDCEL.vertices[bdryVerts[i]].setColor(ColorUtil.coLor(curvIndx.get(i)));
+			extenderPD.packDCEL.vertices[bdryVerts[i]].setColor(ColorUtil.coLor(curvIndx.get(i)));
 	}
 	
 	public void initCmdStruct() {

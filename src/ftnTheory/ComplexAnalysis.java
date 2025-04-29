@@ -56,7 +56,7 @@ public class ComplexAnalysis extends PackExtender {
 	// Constructor
 	public ComplexAnalysis(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="COMPLEXANALYSIS";
 		extensionAbbrev="CA";
 		toolTip="'ComplexAnalysis' provides discrete versions of "+
@@ -68,8 +68,8 @@ public class ComplexAnalysis extends PackExtender {
 		moddiv=null;
 		int rslt=1;
 		try {
-			if (packData.hes!=0)
-				rslt=cpCommand(packData,"geom_to_e");
+			if (extenderPD.hes!=0)
+				rslt=cpCommand(extenderPD,"geom_to_e");
 		} catch(Exception ex) {
 			rslt=0;
 		}
@@ -78,10 +78,10 @@ public class ComplexAnalysis extends PackExtender {
 			running=false;
 		}
 		if (running) {
-			domainData=packData.copyPackTo();
-			outputData=packData.copyPackTo();
+			domainData=extenderPD.copyPackTo();
+			outputData=extenderPD.copyPackTo();
 			conductance=setConductances(domainData);
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 	}
 	
@@ -94,9 +94,9 @@ public class ComplexAnalysis extends PackExtender {
 	 * @return
 	 */
 	public double []LaplaceIt(double []values) {
-		double []lp=new double[packData.nodeCount+1];
-		for (int v=1;v<=packData.nodeCount;v++) {
-			int[] flower=packData.getFlower(v);
+		double []lp=new double[extenderPD.nodeCount+1];
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
+			int[] flower=extenderPD.getFlower(v);
 			double tot=0.0;
 			for (int j=0;j<flower.length;j++) 
 				tot += conductance[v][j];
@@ -174,13 +174,13 @@ public class ComplexAnalysis extends PackExtender {
 		//   window using 'faceMobs' (full, numerators, or denominators).
 		if (cmd.startsWith("ddtr")) {
 			int count=0;
-			CPdrawing cpDrawing=packData.cpDrawing; // default
+			CPdrawing cpDrawing=extenderPD.cpDrawing; // default
 			boolean dots=false;
 			FaceLink facelist=null;
 			DispFlags dflags=null;
 			
 			int mflag=1; // 1=full mob, 2=num, 3=donom
-			int qnum=packData.packNum; // default screen
+			int qnum=extenderPD.packNum; // default screen
 			try {
 				Iterator<Vector<String>> fls = flagSegs.iterator();
 				while (fls.hasNext()) {
@@ -196,7 +196,7 @@ public class ComplexAnalysis extends PackExtender {
 						case 'q': // in which pack to display? 
 						{
 							if ((qnum=StringUtil.qFlagParse(str))<0)
-								qnum=packData.packNum;
+								qnum=extenderPD.packNum;
 							cpDrawing=CPBase.cpDrawing[qnum];
 							break;
 						}
@@ -401,24 +401,24 @@ public class ComplexAnalysis extends PackExtender {
 				errorMsg("rangeData has not been loaded");
 				return 0;
 			}
-			double []logr=new double[packData.nodeCount+1];
-			double []laplace=new double[packData.nodeCount+1];
-			for (int v=1;v<=packData.nodeCount;v++) 
+			double []logr=new double[extenderPD.nodeCount+1];
+			double []laplace=new double[extenderPD.nodeCount+1];
+			for (int v=1;v<=extenderPD.nodeCount;v++) 
 				logr[v]=Math.log(rangeData.getRadius(v))-Math.log(domainData.getRadius(v));
 			laplace=LaplaceIt(logr);
-			ArrayList<Double> data=new ArrayList<Double>(packData.nodeCount);
-			for (int v=1;v<=packData.nodeCount;v++)
+			ArrayList<Double> data=new ArrayList<Double>(extenderPD.nodeCount);
+			for (int v=1;v<=extenderPD.nodeCount;v++)
 				data.add(Double.valueOf(laplace[v]));
-			ArrayList<Integer> colors=new ArrayList<Integer>(packData.nodeCount);
+			ArrayList<Integer> colors=new ArrayList<Integer>(extenderPD.nodeCount);
 			colors=ColorUtil.blue_red_color_ramp(data);
 
 			// record in face
-			for (int v=1;v<=packData.nodeCount;v++)
-				packData.setFaceColor(v,ColorUtil.coLor((int)colors.get(v-1)));
+			for (int v=1;v<=extenderPD.nodeCount;v++)
+				extenderPD.setFaceColor(v,ColorUtil.coLor((int)colors.get(v-1)));
 			
 			double miN=0.0;
 			double maX=0.0;
-			for (int v=1;v<=packData.nodeCount;v++) {
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
 				miN = (laplace[v]<miN) ? laplace[v] : miN;
 				maX = (laplace[v]>maX) ? laplace[v] : maX;
 			}
@@ -535,19 +535,19 @@ public class ComplexAnalysis extends PackExtender {
 	 * @return 0 on error
 	 */
 	public int SR_parameterize(double aparam) {
-		for (int v=1;v<=packData.nodeCount;v++) {
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
 			double r=domainData.getRadius(v);
 			double expal;
 			//  at z=0 replace |f(z)/z| by |f'(z)| (typically, 1)
 			if (domainData.getCenter(v).abs()<.0000001) {
-				expal=Math.exp(aparam*Math.log(packData.getRadius(v)/r)); 
+				expal=Math.exp(aparam*Math.log(extenderPD.getRadius(v)/r)); 
 			}
 			else {
-				double rc_dc=packData.getCenter(v).
+				double rc_dc=extenderPD.getCenter(v).
 					divide(domainData.getCenter(v)).abs();
 				expal=Math.exp(aparam*Math.log(rc_dc));
 			}
-			outputData.setRadius(v,packData.getRadius(v)/expal);
+			outputData.setRadius(v,extenderPD.getRadius(v)/expal);
 		}
 		return 1;
 	}

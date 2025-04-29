@@ -93,7 +93,7 @@ public abstract class GenBrModPt {
 	
 	// Constructor
 	public GenBrModPt(GenModBranching gmb,int bID,double aim) {
-		p=gmb.packData;
+		p=gmb.extenderPD;
 		pdc=p.packDCEL; 
 		branchID=bID;
 		myAim=aim;

@@ -64,7 +64,7 @@ public class BeltramiFlips extends PackExtender {
 		registerXType();
 		int rslt;
 		try {
-			rslt=cpCommand(packData,"geom_to_e");
+			rslt=cpCommand(extenderPD,"geom_to_e");
 		} catch(Exception ex) {
 			rslt=0;
 		}
@@ -73,7 +73,7 @@ public class BeltramiFlips extends PackExtender {
 			running=false;
 		}
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 			rand=new Random(1); // seed for debugging
 		}
 		edgeData=null;
@@ -107,7 +107,7 @@ public class BeltramiFlips extends PackExtender {
 			int count=0;
 			if (flagSegs!=null && flagSegs.size()>0) {
 				items=flagSegs.get(0);
-				EdgeLink elist=new EdgeLink(packData,items);
+				EdgeLink elist=new EdgeLink(extenderPD,items);
 				if (elist!=null && elist.size()>0) {
 					Iterator<EdgeSimple> elst=elist.iterator();
 					while(elst.hasNext()) {
@@ -141,7 +141,7 @@ public class BeltramiFlips extends PackExtender {
 				throw new ParserException("Problem with 'goOrder'");
 			}
 			if (count>0) {
-				packData.packDCEL.fixDCEL(packData);
+				extenderPD.packDCEL.fixDCEL(extenderPD);
 				// resort the edges
 				double []iln=sortEdges();
 				CirclePack.cpb.msg(iln[0]+" illegal edges, norm "+iln[1]);
@@ -158,7 +158,7 @@ public class BeltramiFlips extends PackExtender {
 	 * @return, double[2]: number of positive illegalities, L2 norm
 	 */
 	public double []sortEdges() {
-		EdgeLink elist=new EdgeLink(packData,"a"); 
+		EdgeLink elist=new EdgeLink(extenderPD,"a"); 
 		double l2error=0.0;
 		int count=0;
 		edgeData =new EdgeData[elist.size()];
@@ -200,7 +200,7 @@ public class BeltramiFlips extends PackExtender {
 				
 		double []ans=new double[2];
 		ans[0]=(double)count;
-		ans[1]=Math.sqrt(l2error/packData.nodeCount);
+		ans[1]=Math.sqrt(l2error/extenderPD.nodeCount);
 		return ans;
 	}
 	
@@ -211,14 +211,14 @@ public class BeltramiFlips extends PackExtender {
 	public int gogo(int N) {
 		int count=0;
 		int flipCount=0;
-		int node=packData.nodeCount;
+		int node=extenderPD.nodeCount;
 		while (count<N) {
 			// random vert, random petal
 			int v=rand.nextInt(node)+1;
 			int j=-1;
-			int[] petals=packData.packDCEL.vertices[v].getPetals();
+			int[] petals=extenderPD.packDCEL.vertices[v].getPetals();
 			int num=petals.length;
-			if (packData.isBdry(v)) { // degree must be >3 for interior, >2 for bdry
+			if (extenderPD.isBdry(v)) { // degree must be >3 for interior, >2 for bdry
 
 				if (num<3)
 					continue;
@@ -246,11 +246,11 @@ public class BeltramiFlips extends PackExtender {
 		if (edgeData==null) sortEdges();
 		N = (edgeData.length<N) ? edgeData.length : N;
 		int tick=0;
-		while (count<N && tick<packData.nodeCount &&
+		while (count<N && tick<extenderPD.nodeCount &&
 				edgeData[tick].illegality>0) {
 			int v=edgeData[tick].edge.v;
 			int w=edgeData[tick].edge.w;
-			if (packData.flipable(v,w)) {
+			if (extenderPD.flipable(v,w)) {
 				flipCount += flip2Legal(v,w);
 			}
 			count++;
@@ -285,13 +285,13 @@ public class BeltramiFlips extends PackExtender {
 	 * @return double[4]: v, r, w, l angles, null on error
 	 */
 	public double[] getQuadAngles(int v,int w) {
-		if ((packData.isBdry(v) && packData.isBdry(w)) ||
-				packData.nghb(v,w)<0)
+		if ((extenderPD.isBdry(v) && extenderPD.isBdry(w)) ||
+				extenderPD.nghb(v,w)<0)
 			return null;
 		int []corn_vert=new int[4];
 		
-		HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
-		if (he==null || packData.packDCEL.isBdryEdge(he))
+		HalfEdge he=extenderPD.packDCEL.findHalfEdge(new EdgeSimple(v,w));
+		if (he==null || extenderPD.packDCEL.isBdryEdge(he))
 			return null;
 		corn_vert[0]=v;
 		corn_vert[1]=he.twin.next.twin.origin.vertIndx; // clw edge
@@ -299,15 +299,15 @@ public class BeltramiFlips extends PackExtender {
 		corn_vert[3]=he.prev.origin.vertIndx; // cclw edge
 		
 		// affine map based on Beltrami coeff at centroid of these 4 verts  
-		Complex midZ=packData.getCenter(v).add(packData.getCenter(corn_vert[1])).
-		add(packData.getCenter(w)).add(packData.getCenter(corn_vert[3]));
+		Complex midZ=extenderPD.getCenter(v).add(extenderPD.getCenter(corn_vert[1])).
+		add(extenderPD.getCenter(w)).add(extenderPD.getCenter(corn_vert[3]));
 		midZ=midZ.times(0.25);
 
 		// get 2x2 real matrix
 		double []affine=getAffine(getCoefficient(midZ));
 		Complex []corner=new Complex[4];
 		for (int i=0;i<4;i++) {
-			Complex Z=packData.getCenter(corn_vert[i]);
+			Complex Z=extenderPD.getCenter(corn_vert[i]);
 			// apply affine
 			double x=affine[0]*Z.x+affine[1]*Z.y;
 			double y=affine[2]*Z.x+affine[3]*Z.y;
@@ -324,18 +324,18 @@ public class BeltramiFlips extends PackExtender {
 	 * @return 0 if bdry edge, failed to flip, or flip not warranted
 	 */
 	public int flip2Legal(int v,int w) {
-		if ((packData.isBdry(v) && packData.isBdry(w)) ||
-				packData.nghb(v,w)<0)
+		if ((extenderPD.isBdry(v) && extenderPD.isBdry(w)) ||
+				extenderPD.nghb(v,w)<0)
 			return 0;
 		double x=getLegality(v,w);
 		if (x>0) {
-			HalfEdge he=packData.packDCEL.findHalfEdge(new EdgeSimple(v,w));
+			HalfEdge he=extenderPD.packDCEL.findHalfEdge(new EdgeSimple(v,w));
 			if (he==null)
 				return 0;
-			HalfEdge newhe=RawManip.flipEdge_raw(packData.packDCEL, null);
+			HalfEdge newhe=RawManip.flipEdge_raw(extenderPD.packDCEL, null);
 			if (newhe==null)
 				return 0;
-			packData.packDCEL.fixDCEL(packData);
+			extenderPD.packDCEL.fixDCEL(extenderPD);
 			return 1;
 		} 
 		return 0;

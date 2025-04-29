@@ -26,7 +26,7 @@ public class BoundaryValueProblems extends PackExtender
 		
 		if (running)
 		{
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 	}
 	

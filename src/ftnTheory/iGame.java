@@ -32,14 +32,14 @@ public class iGame extends PackExtender {
 	// Constructor
 	public iGame(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="IGAME";
 		extensionAbbrev="IG";
 		toolTip="'iGame' for developing iPhone games ";
 		registerXType();
 		int rslt;
 		try {
-			rslt=cpCommand(packData,"geom_to_e");
+			rslt=cpCommand(extenderPD,"geom_to_e");
 		} catch(Exception ex) {
 			rslt=0;
 		}
@@ -49,7 +49,7 @@ public class iGame extends PackExtender {
 		}
 		if (running) {
 			GameAspect=.75;  //  9.0/16.0; 
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 		player=null;
 		playerCOlor=null;
@@ -79,23 +79,23 @@ public class iGame extends PackExtender {
 	 */
 	public void set4Aspect() {
 		// get 'factor' for multiplying imaginary part
-		double wide=(packData.getCenter(corner[1])).minus(packData.getCenter(corner[0])).abs();
-		double high=(packData.getCenter(corner[2])).minus(packData.getCenter(corner[1])).abs();
+		double wide=(extenderPD.getCenter(corner[1])).minus(extenderPD.getCenter(corner[0])).abs();
+		double high=(extenderPD.getCenter(corner[2])).minus(extenderPD.getCenter(corner[1])).abs();
 		double factor=wide/(high*GameAspect);
 		
 		// find average of 4 corner locations
-		Complex c0=packData.getCenter(corner[0]);
-		Complex c1=packData.getCenter(corner[1]);
-		Complex c2=packData.getCenter(corner[2]);
-		Complex c3=packData.getCenter(corner[3]);
+		Complex c0=extenderPD.getCenter(corner[0]);
+		Complex c1=extenderPD.getCenter(corner[1]);
+		Complex c2=extenderPD.getCenter(corner[2]);
+		Complex c3=extenderPD.getCenter(corner[3]);
 		Complex mid=c0.add(c1).add(c2).add(c3);
 		mid=mid.times(.25);
 		
 		// adjust all centers
-		for (int v=1;v<=packData.nodeCount;v++) {
-			Complex z=packData.getCenter(v).minus(mid);
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
+			Complex z=extenderPD.getCenter(v).minus(mid);
 			z.y*=factor;
-			packData.setCenter(v,z);
+			extenderPD.setCenter(v,z);
 		}
 
 	}
@@ -123,9 +123,9 @@ public class iGame extends PackExtender {
 	public int randNonPlayer(int playerNum) {
 		int safety=5000;
 		while (safety>0) {
-			int v=(int)(1+Math.random()*packData.nodeCount+.4);
-			if (v>packData.nodeCount) v=packData.nodeCount;
-			if (!packData.isBdry(v) && 
+			int v=(int)(1+Math.random()*extenderPD.nodeCount+.4);
+			if (v>extenderPD.nodeCount) v=extenderPD.nodeCount;
+			if (!extenderPD.isBdry(v) && 
 					(playerNum<0 || v!=player[playerNum])) 
 				return v;
 			safety--;
@@ -148,13 +148,13 @@ public class iGame extends PackExtender {
 		int oldV=t;
 		if (p>t) 
 			oldV=p;
-		if (packData.nghb(p,t)>=0) {
-			HalfEdge edge=packData.packDCEL.findHalfEdge(p,t);
-			int rslt=RawManip.meldEdge_raw(packData.packDCEL,edge);
+		if (extenderPD.nghb(p,t)>=0) {
+			HalfEdge edge=extenderPD.packDCEL.findHalfEdge(p,t);
+			int rslt=RawManip.meldEdge_raw(extenderPD.packDCEL,edge);
 			if (rslt<=0) 
 				return -1;
-			packData.packDCEL.fixDCEL(packData);
-			packData.fillcurves();
+			extenderPD.packDCEL.fixDCEL(extenderPD);
+			extenderPD.fillcurves();
 			
 			// which vertex survives?
 			int fused=t; 
@@ -168,7 +168,7 @@ public class iGame extends PackExtender {
 			for (int i=0;i<4;i++)
 				if (corner[i]>oldV) corner[i]--;
 			Color col=playerCOlor[playerNum];
-			packData.setCircleColor(player[playerNum],new Color(col.getRed(),col.getGreen(),col.getBlue()));
+			extenderPD.setCircleColor(player[playerNum],new Color(col.getRed(),col.getGreen(),col.getBlue()));
 			return fused;
 		}
 		return -1;
@@ -181,13 +181,13 @@ public class iGame extends PackExtender {
 	 * @return int, 0 on error
 	 */
 	public int crunchEdge(int v,int u) {
-		HalfEdge edge=packData.packDCEL.findHalfEdge(v,u);
+		HalfEdge edge=extenderPD.packDCEL.findHalfEdge(v,u);
 		if (edge==null || 
-			(packData.isBdry(v) && packData.isBdry(u)))
+			(extenderPD.isBdry(v) && extenderPD.isBdry(u)))
 			return 0;
-		int rslt=RawManip.meldEdge_raw(packData.packDCEL,edge);
+		int rslt=RawManip.meldEdge_raw(extenderPD.packDCEL,edge);
 		if (rslt!=0)
-			packData.packDCEL.fixDCEL(packData);
+			extenderPD.packDCEL.fixDCEL(extenderPD);
 		return rslt;
 	}
 	
@@ -268,14 +268,14 @@ public class iGame extends PackExtender {
 		if (cmd.startsWith("rmT")) {
 			int v=0;
 			try {
-				v=NodeLink.grab_one_vert(packData,flagSegs);
-				if (v==0 || packData.isBdry(v) || packData.getVertMark(v)>=0)
+				v=NodeLink.grab_one_vert(extenderPD,flagSegs);
+				if (v==0 || extenderPD.isBdry(v) || extenderPD.getVertMark(v)>=0)
 					throw new ParserException("vertex is one of designated");
 			} catch (Exception ex) {
 				Oops("not valid for removal: "+ex.getMessage());
 			}
-			if (v<=0 || v>packData.nodeCount || !packData.isBdry(v) ||
-					packData.countFaces(v)!=3)
+			if (v<=0 || v>extenderPD.nodeCount || !extenderPD.isBdry(v) ||
+					extenderPD.countFaces(v)!=3)
 				Oops("invalid choice");
 			cpCommand("rm_cir "+v);
 			return 1;
@@ -285,7 +285,7 @@ public class iGame extends PackExtender {
 		if (cmd.startsWith("addT")) {
 			int f=0;
 			try {
-				f=FaceLink.grab_one_face(packData,flagSegs);
+				f=FaceLink.grab_one_face(extenderPD,flagSegs);
 			} catch (Exception ex) {}
 			if (f>0)
 				cpCommand("add_bary "+f);
@@ -296,15 +296,15 @@ public class iGame extends PackExtender {
 		if (cmd.startsWith("move")) {
 			int v=0;
 			try {
-				v=NodeLink.grab_one_vert(packData,flagSegs);
+				v=NodeLink.grab_one_vert(extenderPD,flagSegs);
 			} catch (Exception ex) {
 				Oops("need index of bdry vert next to a corner");
 			}
-			if (v<=0 || v>packData.nodeCount || !packData.isBdry(v))
+			if (v<=0 || v>extenderPD.nodeCount || !extenderPD.isBdry(v))
 				Oops("invalid choice");
 			boolean gotit=false;
 			for (int j=0;(!gotit && j<4);j++) {
-				if (packData.nghb(v,corner[j])>=0) {
+				if (extenderPD.nghb(v,corner[j])>=0) {
 					corner[j]=v;
 					gotit=true;
 				}
@@ -328,7 +328,7 @@ public class iGame extends PackExtender {
 		if (cmd.startsWith("eat")) {
 			try {
 				items=flagSegs.get(0);
-				EdgeSimple edge=EdgeLink.grab_one_edge(packData,flagSegs);
+				EdgeSimple edge=EdgeLink.grab_one_edge(extenderPD,flagSegs);
 				if (edge==null)
 					throw new DataException("");
 			} catch (Exception ex) {
@@ -342,7 +342,7 @@ public class iGame extends PackExtender {
 			EdgeSimple edge=null;
 			try {
 				items=flagSegs.get(0);
-				edge=EdgeLink.grab_one_edge(packData,flagSegs);
+				edge=EdgeLink.grab_one_edge(extenderPD,flagSegs);
 				if (edge==null)
 					throw new DataException("");
 			} catch (Exception ex) {
@@ -353,7 +353,7 @@ public class iGame extends PackExtender {
 			else if (edge.w==player[currentPlayer])
 				player[currentPlayer]=edge.v;
 			Color col=playerCOlor[currentPlayer];
-			packData.setCircleColor(player[currentPlayer],new Color(col.getRed(),col.getGreen(),col.getBlue()));
+			extenderPD.setCircleColor(player[currentPlayer],new Color(col.getRed(),col.getGreen(),col.getBlue()));
 			return 1;
 		}
 		
@@ -375,8 +375,8 @@ public class iGame extends PackExtender {
 		
 		// ======== players ========
 		if (cmd.startsWith("play")) {
-			for (int vv=1;vv<=packData.nodeCount;vv++)
-				packData.setVertMark(vv,-1);
+			for (int vv=1;vv<=extenderPD.nodeCount;vv++)
+				extenderPD.setVertMark(vv,-1);
 			try {
 				items=flagSegs.get(0);
 				playerCount=items.size();
@@ -388,14 +388,14 @@ public class iGame extends PackExtender {
 					player[j]=Integer.parseInt((String)items.get(j));
 					playerCOlor[j]=ColorUtil.spreadColor(j%16);
 					targets[j]=randNonPlayer(player[j]);
-					if (player[j]<=0 || player[j]>=packData.nodeCount || 
-							packData.isBdry(player[j])) {
+					if (player[j]<=0 || player[j]>=extenderPD.nodeCount || 
+							extenderPD.isBdry(player[j])) {
 						player=null;
 						playerCOlor=null;
 						targets=null;
 						Oops("improper player specified");
 					}
-					packData.setVertMark(player[j],j);
+					extenderPD.setVertMark(player[j],j);
 				}
 			} catch (Exception ex) {
 				player=null;

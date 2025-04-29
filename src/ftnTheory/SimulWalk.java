@@ -17,13 +17,13 @@ public class SimulWalk extends PackExtender {
 	// Constructor
 	public SimulWalk(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="SIMULWALK";
 		extensionAbbrev="SW";
 		toolTip="'SimulWalk' is for manipulating 'Simultaneous' coverings";
 		registerXType();
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}	
 	}
 	

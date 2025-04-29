@@ -1758,8 +1758,8 @@ public class Mobius extends ComplexTransformation implements GroupElement {
 	 */
 	public void debugMob(SchwarzMap schwarzMap, int f, int v, int w) {
 		System.out.println("Face "+f+": First circle "+v);
-		Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.getRadius(v),schwarzMap.packData.getCenter(v));
+		Schwarzian.CirMobCir(this,schwarzMap.extenderPD.hes,schwarzMap.extenderPD.getRadius(v),schwarzMap.extenderPD.getCenter(v));
 		System.out.println("Second circle "+w);
-		Schwarzian.CirMobCir(this,schwarzMap.packData.hes,schwarzMap.packData.getRadius(w),schwarzMap.packData.getCenter(w));
+		Schwarzian.CirMobCir(this,schwarzMap.extenderPD.hes,schwarzMap.extenderPD.getRadius(w),schwarzMap.extenderPD.getCenter(w));
 	}
 }

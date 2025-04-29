@@ -87,12 +87,12 @@ public class GenModBranching extends PackExtender {
 		registerXType();
 		if (running) {
 			poisonHEdges=null;
-			refPack=packData.copyPackTo(); // maintains original
-			packData.packExtensions.add(this);
+			refPack=extenderPD.copyPackTo(); // maintains original
+			extenderPD.packExtensions.add(this);
 		}
 		
 		// initialize 'holoBorder' along full red chain
-		holoBorder=HalfLink.HoloHalfLink(packData.packDCEL,-1);
+		holoBorder=HalfLink.HoloHalfLink(extenderPD.packDCEL,-1);
 		branchPts=new Vector<GenBrModPt>(3);
 		branchPts.add((GenBrModPt)null); // index 0 empty; number from 1
 	}
@@ -156,12 +156,12 @@ public class GenModBranching extends PackExtender {
 			if (cmdBranchPt!=null)
 				gbp=cmdBranchPt;
 
-			if (packData.elist==null)
-				packData.elist=new EdgeLink();
+			if (extenderPD.elist==null)
+				extenderPD.elist=new EdgeLink();
 			Iterator<HalfEdge> bis=gbp.eventHorizon.iterator();
 			while (bis.hasNext()) {
 				HalfEdge he=bis.next();
-				packData.elist.add(new EdgeSimple(he.origin.vertIndx,
+				extenderPD.elist.add(new EdgeSimple(he.origin.vertIndx,
 						he.twin.origin.vertIndx));
 			}
 			return 1;
@@ -216,25 +216,25 @@ public class GenModBranching extends PackExtender {
 				FaceLink flink=null;
 								
 				// handle wipeouts first
-				if (mode<0 || mode>3 || indx<=0 || indx>packData.nodeCount) 
+				if (mode<0 || mode>3 || indx<=0 || indx>extenderPD.nodeCount) 
 					return 0;
 
 				// wipe out contiguous branch points 
 				//    (including, possibly the current circle)
 				if (localWipe) {
 					if (mode>1) // circle case
-						nlink=new NodeLink(packData,"Iv "+indx);
+						nlink=new NodeLink(extenderPD,"Iv "+indx);
 					else // face case
-						nlink=new NodeLink(packData,"If "+indx);
+						nlink=new NodeLink(extenderPD,"If "+indx);
 					Vector<Integer> vIDs=bps4verts(nlink);
 					Iterator<Integer> vs=vIDs.iterator();
 					while (vs.hasNext())
 						deleteBP(vs.next());
 					
 					if (mode>1)
-						flink=new FaceLink(packData,"Iv "+indx);
+						flink=new FaceLink(extenderPD,"Iv "+indx);
 					else
-						flink=new FaceLink(packData,"If "+indx);
+						flink=new FaceLink(extenderPD,"If "+indx);
 					vIDs=bps4faces(flink);
 					vs=vIDs.iterator();
 					while (vs.hasNext())
@@ -243,7 +243,7 @@ public class GenModBranching extends PackExtender {
 				else if (fullWipe) {
 					branchPts=new Vector<GenBrModPt>(3);
 					branchPts.add((GenBrModPt)null);
-					packData.set_aim_default();
+					extenderPD.set_aim_default();
 				}
 				
 				// circle?
@@ -301,7 +301,7 @@ public class GenModBranching extends PackExtender {
 		if (cmd.startsWith("holon")) {
 			// Idea is to use holoBorder to check holonomy of full packing
 			// Note: this does not actually change any centers
-			Mobius holomob=PackData.holonomyMobius(packData,holoBorder);
+			Mobius holomob=PackData.holonomyMobius(extenderPD,holoBorder);
 			double frobNorm=Mobius.frobeniusNorm(holomob);
 			if (frobNorm<0)
 				return 0;
@@ -411,7 +411,7 @@ public class GenModBranching extends PackExtender {
 		// =========== branch point status =================
 		else if (cmd.startsWith("statu")) {
 			if (branchPts.size()<2) { // first index is empty
-				msg("Pack p"+packData.packNum+" has no branch points");
+				msg("Pack p"+extenderPD.packNum+" has no branch points");
 				count++;
 			}
 			else if (cmdBranchPt!=null) {
@@ -423,12 +423,12 @@ public class GenModBranching extends PackExtender {
 				count++;
 			}
 			
-			msg("parent anglesum error: "+packData.angSumError());
+			msg("parent anglesum error: "+extenderPD.angSumError());
 		}
 		
 		// ============ anglesum error
 		else if (cmd.startsWith("angsum_err")) {
-			double tmp=packData.angSumError();
+			double tmp=extenderPD.angSumError();
 			msg("anglesum l^2 error = "+tmp);
 		}
 		
@@ -455,7 +455,7 @@ public class GenModBranching extends PackExtender {
 					case 'v': // OBE: deprecated
 					case 'i': // index of vertex
 					{
-						NodeLink vl=new NodeLink(packData,items);
+						NodeLink vl=new NodeLink(extenderPD,items);
 						getV=vl.get(0);
 						count++;
 						break;
@@ -473,14 +473,14 @@ public class GenModBranching extends PackExtender {
 			}
 
 			// match against 'exclusions'.
-			HalfLink hlink=packData.packDCEL.vertices[getV].getOuterEdges();
+			HalfLink hlink=extenderPD.packDCEL.vertices[getV].getOuterEdges();
 			Iterator<HalfEdge> his=hlink.iterator();
 			boolean hitx=false;
 			if (exclusions!=null) {
 				while (his.hasNext() && !hitx) {
 					if (exclusions.contains(his.next().origin))
 						hitx=true;
-					if (exclusions.contains(packData.packDCEL.vertices[getV]))
+					if (exclusions.contains(extenderPD.packDCEL.vertices[getV]))
 						hitx=true;
 				}
 			}
@@ -517,7 +517,7 @@ public class GenModBranching extends PackExtender {
 					}
 					case 'b': // 'BaryLink' processing
 					{
-						BaryLink bl=new BaryLink(packData,items);
+						BaryLink bl=new BaryLink(extenderPD,items);
 						if (bl.size()==0)
 							break;
 						BaryPoint bp=bl.get(0);
@@ -533,7 +533,7 @@ public class GenModBranching extends PackExtender {
 					case 'f': // OBE: deprecated
 					case 'i': // index of face
 					{
-						FaceLink fl=new FaceLink(packData,items);
+						FaceLink fl=new FaceLink(extenderPD,items);
 						getF=fl.get(0);
 						count++;
 						break;
@@ -558,11 +558,11 @@ public class GenModBranching extends PackExtender {
 								ex.getMessage());
 			}
 			
-			if (getF<1 || getF>packData.faceCount)
+			if (getF<1 || getF>extenderPD.faceCount)
 				throw new ParserException("singular face missing or inappropriate");
 			
 			// match again 'exclusions'.
-			combinatorics.komplex.DcelFace singFace=packData.packDCEL.faces[getF];
+			combinatorics.komplex.DcelFace singFace=extenderPD.packDCEL.faces[getF];
 			HalfEdge he=singFace.edge;
 			boolean hitx=false;
 			do {
@@ -621,7 +621,7 @@ public class GenModBranching extends PackExtender {
 					case 'v': // OBE: deprecated
 					case 'i': // index of vertex
 					{
-						NodeLink nl=new NodeLink(packData,items);
+						NodeLink nl=new NodeLink(extenderPD,items);
 						getV=nl.get(0);
 						count++;
 						break;
@@ -641,23 +641,23 @@ public class GenModBranching extends PackExtender {
 								ex.getMessage());
 			}
 			
-			if (getV<1 || getV>packData.nodeCount) // packData.vert_isPoison(1);
+			if (getV<1 || getV>extenderPD.nodeCount) // packData.vert_isPoison(1);
 				throw new ParserException("chaperone vertex missing or inappropriate");
 			if (getW1<0 || getW2<0) { // default settings
-				int[] flower=packData.getFlower(getV);
+				int[] flower=extenderPD.getFlower(getV);
 				getW1=flower[1];
 				getW2=flower[3];
 			}
 			
 			// match against 'exclusions'.
-			HalfLink hlink=packData.packDCEL.vertices[getV].getOuterEdges();
+			HalfLink hlink=extenderPD.packDCEL.vertices[getV].getOuterEdges();
 			Iterator<HalfEdge> his=hlink.iterator();
 			boolean hitx=false;
 			if (exclusions!=null) {
 				while (his.hasNext() && !hitx) {
 					if (exclusions.contains(his.next().origin))
 						hitx=true;
-					if (exclusions.contains(packData.packDCEL.vertices[getV]))
+					if (exclusions.contains(extenderPD.packDCEL.vertices[getV]))
 						hitx=true;
 				}
 			}
@@ -698,20 +698,20 @@ public class GenModBranching extends PackExtender {
 		updateExclusions(); // update poisons and vertex exclusions
 		
 		// reset parent's 'alpha' if necessary
-		Vertex alph=packData.packDCEL.alpha.origin;
+		Vertex alph=extenderPD.packDCEL.alpha.origin;
 		if (exclusions!=null && alph!=null && exclusions.contains(alph)) {
 			NodeLink vlist=new NodeLink();
 			Iterator<Vertex> vis=exclusions.iterator();
 			while (vis.hasNext()) 
 				vlist.add(vis.next().vertIndx);
-			packData.packDCEL.setAlpha(0, vlist,false);
+			extenderPD.packDCEL.setAlpha(0, vlist,false);
 		}
 		
 		// update the packing/dcel first
-		packData.packDCEL.fixDCEL(packData);
+		extenderPD.packDCEL.fixDCEL(extenderPD);
 
 		// first get the layout circumventing the branch points
-		HalfLink outerOrder=CombDCEL.partialTree(packData.packDCEL,
+		HalfLink outerOrder=CombDCEL.partialTree(extenderPD.packDCEL,
 				poisonHEdges); // allMains.CPBase.Hlink=partOrder;
 
 		// throw in 'layoutAddons' from branch points
@@ -721,7 +721,7 @@ public class GenModBranching extends PackExtender {
 		}
 
 		// record
-		packData.packDCEL.layoutOrder=outerOrder;
+		extenderPD.packDCEL.layoutOrder=outerOrder;
 	}
 
 	/**
@@ -757,7 +757,7 @@ public class GenModBranching extends PackExtender {
 			GenBrModPt gbp=bps.next();
 			if (gbp!=null && gbp.myType==type) {
 				if (type==GenBrModPt.SINGULAR) {
-					combinatorics.komplex.DcelFace face=packData.packDCEL.faces[j];
+					combinatorics.komplex.DcelFace face=extenderPD.packDCEL.faces[j];
 					HalfEdge he=face.edge;
 					do {
 						if (he==gbp.myEdge) {
@@ -866,7 +866,7 @@ public class GenModBranching extends PackExtender {
 	 * @return NodeLink, empty if none found
 	 */
 	public NodeLink getBPverts() {
-		NodeLink nlink=new NodeLink(packData);
+		NodeLink nlink=new NodeLink(extenderPD);
 		if (branchPts==null || branchPts.size()<=1)
 			return nlink;
 		for (int j=1;j<branchPts.size();j++) {
@@ -883,7 +883,7 @@ public class GenModBranching extends PackExtender {
 	 * @return FaceLink, empty if none found
 	 */
 	public FaceLink getBPfaces() {
-		FaceLink flink=new FaceLink(packData);
+		FaceLink flink=new FaceLink(extenderPD);
 		if (branchPts==null || branchPts.size()<=1)
 			return flink;
 		for (int j=1;j<branchPts.size();j++) {
@@ -1189,9 +1189,9 @@ public class GenModBranching extends PackExtender {
 		branchPts.add(null); // first spot empty
 		exclusions=new ArrayList<Vertex>();
 		PackData newCopy=refPack.copyPackTo();
-		packData=CirclePack.cpb.swapPackData(newCopy,packData.packNum,true);
-		packData.set_aim_default();
-		packData.set_invD_default();
+		extenderPD=CirclePack.cpb.swapPackData(newCopy,extenderPD.packNum,true);
+		extenderPD.set_aim_default();
+		extenderPD.set_invD_default();
 	}
 		
 	/** 

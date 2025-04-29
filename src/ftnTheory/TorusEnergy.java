@@ -30,7 +30,7 @@ public class TorusEnergy extends PackExtender {
 	
 	public TorusEnergy(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		try {
 			torusData=new TorusData(p);
 		} catch (Exception ex) {
@@ -41,16 +41,16 @@ public class TorusEnergy extends PackExtender {
 		toolTip="Manipulate torus combinatorics to study packing energy ";
 		registerXType();
 		if (running) {
-			homePack=packData.copyPackTo();
-			packData.packExtensions.add(this);
+			homePack=extenderPD.copyPackTo();
+			extenderPD.packExtensions.add(this);
 		}
 		temp=100; // starting temp
 		
 		// create oriented edge list (will get shuffled)
-		edgeList=new EdgeLink(packData);
-		for (int v=1;v<=packData.nodeCount;v++) {
-			int[] flower=packData.getFlower(v);
-			for (int j=1;j<=packData.countFaces(v);j++)
+		edgeList=new EdgeLink(extenderPD);
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
+			int[] flower=extenderPD.getFlower(v);
+			for (int j=1;j<=extenderPD.countFaces(v);j++)
 				if (flower[j]>v)
 					edgeList.add(new EdgeSimple(v,flower[j]));
 		}
@@ -64,15 +64,15 @@ public class TorusEnergy extends PackExtender {
 		
 		if (cmd.startsWith("status")) {
 			reset(false);
-			StringBuilder stbld=new StringBuilder("TE status, p"+packData.packNum+":\n");
-			stbld.append("  Energy ="+String.format("%.10f",getEnergy(packData))+
+			StringBuilder stbld=new StringBuilder("TE status, p"+extenderPD.packNum+":\n");
+			stbld.append("  Energy ="+String.format("%.10f",getEnergy(extenderPD))+
 					"; Temp = "+String.format("%.4f",temp)+"; Cutoff = "+String.format("%.4f", cutoff)+";\n");
 
 			// list the various degrees (counts)
 			int top=0;
-			int []bin=new int[packData.nodeCount+1];
-			for (int v=1;v<=packData.nodeCount;v++) {
-				int num=packData.countFaces(v);
+			int []bin=new int[extenderPD.nodeCount+1];
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
+				int num=extenderPD.countFaces(v);
 				bin[num]=bin[num]+1;
 				top=(num>top)?num:top;
 			}
@@ -139,7 +139,7 @@ public class TorusEnergy extends PackExtender {
 			int hits=0;
 			while (tick<2*fcount && hits<fcount) {
 				EdgeSimple edge=edgeList.get(rand.nextInt(edgeList.size()));
-				int rslt=cpCommand(packData,"flip "+edge.v+" "+edge.w);
+				int rslt=cpCommand(extenderPD,"flip "+edge.v+" "+edge.w);
 				if (rslt>0)
 					hits++;
 				tick++;
@@ -153,15 +153,15 @@ public class TorusEnergy extends PackExtender {
 			} catch(Exception ex) {
 				fcount=1;
 			}
-			energy=getEnergy(packData);
+			energy=getEnergy(extenderPD);
 			int tick=0;
 			int hits=0;
 			while (tick<2*fcount && hits<fcount) {
 				EdgeSimple edge=edgeList.get(rand.nextInt(edgeList.size()));
 				double compEnergy=compareEnergy(edge.v,edge.w);
 				if (tmpPack!=null && (compEnergy<energy || Math.exp(-(compEnergy-energy)/temp)>cutoff)) {
-					int pnum=packData.packNum;
-					packData=CirclePack.cpb.swapPackData(tmpPack,pnum,true);
+					int pnum=extenderPD.packNum;
+					extenderPD=CirclePack.cpb.swapPackData(tmpPack,pnum,true);
 					hits++;
 				}
 				tick++;
@@ -202,14 +202,14 @@ public class TorusEnergy extends PackExtender {
 	 */
 	public int reset(boolean flag) {
 //		packData.setCombinatorics(); // do we need this?
-		packData.repack_call(1000,true,false); // use oldreliable
+		extenderPD.repack_call(1000,true,false); // use oldreliable
 		normalize();
-		cpCommand(packData,"color -c d");
-		energy=getEnergy(packData);
+		cpCommand(extenderPD,"color -c d");
+		energy=getEnergy(extenderPD);
 		if (flag) {
-			packData.fillcurves(); 
+			extenderPD.fillcurves(); 
 			try {
-				packData.packDCEL.layoutPacking(); 
+				extenderPD.packDCEL.layoutPacking(); 
 			} catch(Exception ex) {}
 			cpCommand("set_screen -a");
 			cpCommand("disp -wr");
@@ -251,18 +251,18 @@ public class TorusEnergy extends PackExtender {
 	 */
 	public int normalize() {
 		double area=0;
-		for (int f=1;f<=packData.faceCount;f++) {
-			int []verts=packData.packDCEL.faces[f].getVerts();
+		for (int f=1;f<=extenderPD.faceCount;f++) {
+			int []verts=extenderPD.packDCEL.faces[f].getVerts();
 		
 			// assume tangency
-			double r0=packData.getRadius(verts[0]);
-			double r1=packData.getRadius(verts[1]);
-			double r2=packData.getRadius(verts[2]);
+			double r0=extenderPD.getRadius(verts[0]);
+			double r1=extenderPD.getRadius(verts[1]);
+			double r2=extenderPD.getRadius(verts[2]);
 			area += EuclMath.eArea(r0,r1,r2,1.0,1.0,1.0);
 		}
 		double factor=Math.sqrt(area);
-		for (int v=1;v<=packData.nodeCount;v++) 
-			packData.setRadius(v,packData.getRadius(v)/factor);
+		for (int v=1;v<=extenderPD.nodeCount;v++) 
+			extenderPD.setRadius(v,extenderPD.getRadius(v)/factor);
 		return 1;
 	}
 
@@ -275,7 +275,7 @@ public class TorusEnergy extends PackExtender {
 	 * @return double, -1 on failure
 	 */
 	public double compareEnergy(int v,int w) {
-		tmpPack=packData.copyPackTo();
+		tmpPack=extenderPD.copyPackTo();
 		int rslt=cpCommand(tmpPack,"flip "+v+" "+w);
 		if (rslt<=0) {
 			tmpPack=null;

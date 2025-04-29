@@ -37,12 +37,12 @@ public class WordWalker extends PackExtender {
 	// Constructor
 	public WordWalker(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="WORD_WALKER";
 		extensionAbbrev="WW";
 		toolTip="'WordWalker': manipulate walks on trivalent triangulations"; 
 		registerXType();
-		packData.packExtensions.add(this);
+		extenderPD.packExtensions.add(this);
 	}
 	
 	public int cmdParser(String cmd,Vector<Vector<String>> flagSegs) {
@@ -57,14 +57,14 @@ public class WordWalker extends PackExtender {
 			// TODO: may want option to use schwarzians
 			try {
 				items=(Vector<String>)flagSegs.get(0);
-				FaceLink facelink=new FaceLink(packData,items);
+				FaceLink facelink=new FaceLink(extenderPD,items);
 				if (facelink!=null && facelink.size()>0) {
 					int firstface=(int)facelink.remove(0);
 					int lastface=(int)facelink.get(facelink.size()-1);
 					imprintFace(firstface);
 					count++;
 					HalfLink hlink=null;
-					PackDCEL pdcel=packData.packDCEL;
+					PackDCEL pdcel=extenderPD.packDCEL;
 					if (facelink.size()>1 && 
 							(hlink=facelink.getHalfLink(pdcel))!=null) {
 						Integer []codes=new Integer[3];
@@ -95,15 +95,15 @@ public class WordWalker extends PackExtender {
 	 */
 	public void imprintFace(int f) {
 		Complex[] c=new Complex[3];
-			c=packData.packDCEL.getFaceCorners(packData.packDCEL.faces[f]);
-		Complex cc=packData.getFaceCenter(f);
+			c=extenderPD.packDCEL.getFaceCorners(extenderPD.packDCEL.faces[f]);
+		Complex cc=extenderPD.getFaceCenter(f);
 		DispFlags dflags=new DispFlags("f");
 		dflags.setColor(ColorUtil.coLor(232));
-		packData.cpDrawing.drawFace(c[0],c[1],cc,null,null,null,dflags);
+		extenderPD.cpDrawing.drawFace(c[0],c[1],cc,null,null,null,dflags);
 		dflags.setColor(ColorUtil.coLor(218));
-		packData.cpDrawing.drawFace(c[1],c[2],cc,null,null,null,dflags);
+		extenderPD.cpDrawing.drawFace(c[1],c[2],cc,null,null,null,dflags);
 		dflags.setColor(ColorUtil.coLor(1));
-		packData.cpDrawing.drawFace(c[2],c[0],cc,null,null,null,dflags);
+		extenderPD.cpDrawing.drawFace(c[2],c[0],cc,null,null,null,dflags);
 	}
 	
 	public void helpInfo() {

@@ -104,7 +104,7 @@ public class Graphene extends PackExtender {
 
 		registerXType();
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}	
 		
 		// initial parameters: bond and angle are roughly
@@ -114,7 +114,7 @@ public class Graphene extends PackExtender {
 		angleParam=25;
 		planarParam=100; // 
 		
-		colorVec=new ArrayList<Integer>(packData.nodeCount+1);
+		colorVec=new ArrayList<Integer>(extenderPD.nodeCount+1);
 		uPkt=new UtilPacket();
 		createCarbons();
 		
@@ -127,9 +127,9 @@ public class Graphene extends PackExtender {
 	 * create and fill 'carbonEnergies' vector and update it
 	 */
 	public void createCarbons() {
-		carbonEnergies=new Vector<CarbonEnergy>(packData.faceCount+1);
+		carbonEnergies=new Vector<CarbonEnergy>(extenderPD.faceCount+1);
 		carbonEnergies.add(0,null);
-		for (int f=1;f<=packData.faceCount;f++) 
+		for (int f=1;f<=extenderPD.faceCount;f++) 
 			carbonEnergies.add(new CarbonEnergy(f));
 		updateData();
 	}
@@ -317,7 +317,7 @@ public class Graphene extends PackExtender {
 						}
 						} // end of switch
 					}
-					int v=NodeLink.grab_one_vert(packData,items.get(0));
+					int v=NodeLink.grab_one_vert(extenderPD,items.get(0));
 					if (v==northpole) 
 						stitVec.add(new Stitch("N"+type));
 					else if (v==southpole)  
@@ -402,13 +402,13 @@ public class Graphene extends PackExtender {
 				// adjust r to r-eps*grad (leave bdry unchanged)
 				double []grad=energyGrad();
 				double gradNorm=0.0;
-				for (int v=1;v<=packData.nodeCount;v++) {
+				for (int v=1;v<=extenderPD.nodeCount;v++) {
 					gradNorm += grad[v]*grad[v];
-					if (!packData.isBdry(v)) { // leave bdry unchanged
-						double newrad=packData.getRadius(v)-eps*grad[v];
+					if (!extenderPD.isBdry(v)) { // leave bdry unchanged
+						double newrad=extenderPD.getRadius(v)-eps*grad[v];
 						if (newrad<=0)
-							newrad=packData.getRadius(v)/2.0;
-						packData.setRadius(v,newrad);
+							newrad=extenderPD.getRadius(v)/2.0;
+						extenderPD.setRadius(v,newrad);
 					}
 				}
 				gradNorm=Math.sqrt(gradNorm);
@@ -439,14 +439,14 @@ public class Graphene extends PackExtender {
 			FaceLink flist=null;
 			try {
 				items=flagSegs.get(0);
-				flist=new FaceLink(packData,items);
+				flist=new FaceLink(extenderPD,items);
 			} catch(Exception ex) {}
 			
 			if (flist==null || flist.size()<2)
 				return 0;
 			int f=flist.get(0);
 			int g=flist.get(1);
-			EdgeSimple duale=packData.reDualEdge(f,g);
+			EdgeSimple duale=extenderPD.reDualEdge(f,g);
 			if (duale==null)
 				return 0;
 			int ans=cpCommand("flip "+duale.v+" "+duale.w);
@@ -476,8 +476,8 @@ public class Graphene extends PackExtender {
 				msg("energy: error in reading one of the parameters");
 			}
 			msg("Total Energy: "+String.format("%.8e", totalEnergy()));
-			for (int v=1;v<=packData.nodeCount;v++)
-				packData.setCircleColor(v,ColorUtil.coLor(colorVec.get(v)));
+			for (int v=1;v<=extenderPD.nodeCount;v++)
+				extenderPD.setCircleColor(v,ColorUtil.coLor(colorVec.get(v)));
 			return 1;
 		}
 		
@@ -490,8 +490,8 @@ public class Graphene extends PackExtender {
 			} catch(Exception ex){
 				rad=CPBase.sqrt3by2;
 			}
-			for (int v=1;v<=packData.nodeCount;v++)
-				packData.setRadius(v,rad);
+			for (int v=1;v<=extenderPD.nodeCount;v++)
+				extenderPD.setRadius(v,rad);
 			
 			return 1;
 		}
@@ -501,9 +501,9 @@ public class Graphene extends PackExtender {
 			int count=0;
 			EdgeLink edges=null;
 			try {
-				edges=new EdgeLink(packData,flagSegs.get(0));
+				edges=new EdgeLink(extenderPD,flagSegs.get(0));
 			} catch(Exception ex) {
-				edges=new EdgeLink(packData,"a");
+				edges=new EdgeLink(extenderPD,"a");
 			}
 			Iterator<EdgeSimple> list=edges.iterator();
 			while (list.hasNext()) {
@@ -514,11 +514,11 @@ public class Graphene extends PackExtender {
 					w=v;
 					v=edge.w;
 				}
-				EdgeSimple dual=packData.dualEdge(v,w);
+				EdgeSimple dual=extenderPD.dualEdge(v,w);
 				if (dual!=null) {
 					int fa=dual.v;
 					CarbonEnergy carbon=carbonEnergies.get(fa);
-					int k=packData.packDCEL.faces[fa].getVertIndx(v);
+					int k=extenderPD.packDCEL.faces[fa].getVertIndx(v);
 					int colindx=ColorUtil.col_to_table(carbon.bondColors[k]); // get index
 					cpCommand("disp -det4c"+colindx+" "+v+" "+w);
 					count++;
@@ -535,7 +535,7 @@ public class Graphene extends PackExtender {
 	 * then update their bond, angle, and energy data.
 	 */
 	public void updateData() {
-		for (int f=1;f<=packData.faceCount;f++) {
+		for (int f=1;f<=extenderPD.faceCount;f++) {
 			carbonEnergies.get(f).update();
 		}
 	}
@@ -548,22 +548,22 @@ public class Graphene extends PackExtender {
 	 */
 	public void updateColors() {
 		// for carbons
-		Vector<Double> carbs=new Vector<Double>(packData.faceCount+1);
+		Vector<Double> carbs=new Vector<Double>(extenderPD.faceCount+1);
 		carbs.add(0,null); // first spot unused
-		for (int f=1;f<=packData.faceCount;f++)
+		for (int f=1;f<=extenderPD.faceCount;f++)
 			carbs.add(carbonEnergies.get(f).atomEnergy());
 		Vector<Color> carbColors=ColorUtil.richter_red_ramp(carbs); // first spot also unused
-		for (int f=1;f<=packData.faceCount;f++) {
+		for (int f=1;f<=extenderPD.faceCount;f++) {
 			Color colf=carbColors.get(f);
 			carbonEnergies.get(f).atomColor=colf;
-			packData.setFaceColor(f,new Color(colf.getRed(),colf.getGreen(),colf.getBlue()));
+			extenderPD.setFaceColor(f,new Color(colf.getRed(),colf.getGreen(),colf.getBlue()));
 		}
 		
 		// edges, but stored in 'carbonEnergies' --- interior edges
 		//   are included twice.
-		Vector<Double> edgeE=new Vector<Double>(3*packData.faceCount+1);
+		Vector<Double> edgeE=new Vector<Double>(3*extenderPD.faceCount+1);
 		edgeE.add(0,null); // first spot unused
-		for (int f=1;f<=packData.faceCount;f++) {
+		for (int f=1;f<=extenderPD.faceCount;f++) {
 			CarbonEnergy cE=carbonEnergies.get(f);
 			for (int j=0;j<3;j++) {
 				edgeE.add(cE.bondLengths[j]*cE.bondLengths[j]-1.0);
@@ -571,7 +571,7 @@ public class Graphene extends PackExtender {
 		}
 		Vector<Color> edgeColors=ColorUtil.richter_red_ramp(edgeE); // first spot also unused
 		int tick=1;
-		for (int f=1;f<=packData.faceCount;f++) {
+		for (int f=1;f<=extenderPD.faceCount;f++) {
 			CarbonEnergy cE=carbonEnergies.get(f);
 			for (int j=0;j<3;j++) {
 				Color cole=edgeColors.get(tick++);
@@ -580,15 +580,15 @@ public class Graphene extends PackExtender {
 		}
 
 		// ring energies to color the vertices
-		Vector<Double> ringEnergies=new Vector<Double>(packData.nodeCount+1);
+		Vector<Double> ringEnergies=new Vector<Double>(extenderPD.nodeCount+1);
 		ringEnergies.add(0,null); // first spot unused
-		for (int v=1;v<=packData.nodeCount;v++) {
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
 			ringEnergies.add(ringEnergy(v));
 		}
 		Vector<Color> vertColors=ColorUtil.richter_red_ramp(ringEnergies); // first spot also unused
-		for (int v=1;v<=packData.nodeCount;v++) {
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
 			Color col=vertColors.get(v);
-			packData.setCircleColor(v,new Color(col.getRed(),col.getGreen(),col.getBlue()));
+			extenderPD.setCircleColor(v,new Color(col.getRed(),col.getGreen(),col.getBlue()));
 		}
 	}
 
@@ -601,7 +601,7 @@ public class Graphene extends PackExtender {
 	 */
 	public double quickEnergy() {
 		double totalE=0.0;
-		for (int v=1;v<=packData.nodeCount;v++) 
+		for (int v=1;v<=extenderPD.nodeCount;v++) 
 			totalE += ringEnergy(v);
 		return totalE;
 	}
@@ -625,7 +625,7 @@ public class Graphene extends PackExtender {
 		double topAngSumE=0.0;
 		EdgeSimple topBondEdge=new EdgeSimple(0,0);
 
-		for (int f = 1; f <= packData.faceCount; f++) {
+		for (int f = 1; f <= extenderPD.faceCount; f++) {
 			CarbonEnergy cE = carbonEnergies.get(f);
 			double newC = cE.atomEnergy();
 
@@ -637,10 +637,10 @@ public class Graphene extends PackExtender {
 
 			int k = -1;
 			int myf=cE.faceIndx;
-			int[] verts=packData.packDCEL.faces[myf].getVerts();
+			int[] verts=extenderPD.packDCEL.faces[myf].getVerts();
 			for (int j = 0; (j < 3 && k < 0); j++) {
 				int vj = verts[j];
-				int oppf = packData.face_opposite(myf, vj);
+				int oppf = extenderPD.face_opposite(myf, vj);
 				if (oppf >= 0) { // ignore phantom bonds
 					double L = cE.bondLengths[j];
 					L = L * L;
@@ -655,12 +655,12 @@ public class Graphene extends PackExtender {
 		}
 
 		// identify largest ring, angle sum energy and its vert
-		for (int v = 1; v <= packData.nodeCount; v++) {
+		for (int v = 1; v <= extenderPD.nodeCount; v++) {
 			double newE = ringEnergy(v);
 			double newASE=0.0;
-			if (!packData.isBdry(v)) {
-				Vertex vert=packData.packDCEL.vertices[v];
-				double angsum=packData.packDCEL.getVertAngSum(vert);
+			if (!extenderPD.isBdry(v)) {
+				Vertex vert=extenderPD.packDCEL.vertices[v];
+				double angsum=extenderPD.packDCEL.getVertAngSum(vert);
 				double term=2.0*Math.PI-angsum;
 				newASE=planarParam*term*term;
 			}
@@ -668,7 +668,7 @@ public class Graphene extends PackExtender {
 				topRingE = newE;
 				topRingV = v;
 			}
-			if (!packData.isBdry(v) && (newASE>topAngSumE)) {
+			if (!extenderPD.isBdry(v) && (newASE>topAngSumE)) {
 				topAngSumE=newASE;
 				topAngSumV=v;
 			}
@@ -697,9 +697,9 @@ public class Graphene extends PackExtender {
 	 */
 	public double totalEnergy() {
 		double TE=0.0;
-		ArrayList<Double> vertEnergy=new ArrayList<Double>(packData.nodeCount+1);
+		ArrayList<Double> vertEnergy=new ArrayList<Double>(extenderPD.nodeCount+1);
 		vertEnergy.add(0,null);
-		for (int v=1;v<=packData.nodeCount;v++) {
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
 			double rE=ringEnergy(v);
 			vertEnergy.add(Double.valueOf(rE));
 			TE+=rE;
@@ -720,20 +720,20 @@ public class Graphene extends PackExtender {
 	 * @return double energy
 	 */
 	public double ringEnergy(int v) {
-		int[] fflower=packData.getFaceFlower(v);
+		int[] fflower=extenderPD.getFaceFlower(v);
 		double bondE=0.0;
 		double angE=0.0;
-		for (int j=0;j<packData.countFaces(v);j++) {
+		for (int j=0;j<extenderPD.countFaces(v);j++) {
 			CarbonEnergy cE=carbonEnergies.get(fflower[j]);
-			if (j>0 || !packData.isBdry(v)) {// skip first for bdry
+			if (j>0 || !extenderPD.isBdry(v)) {// skip first for bdry
 				bondE+=cE.getBondEnergy(v)/2.0;
 			}
 			angE += cE.getAngleEnergy(v);
 		}
 		double planarE=0.0;
-		if (!packData.isBdry(v)) { // interior?
-			Vertex vert=packData.packDCEL.vertices[v];
-			double angsum=packData.packDCEL.getVertAngSum(vert);
+		if (!extenderPD.isBdry(v)) { // interior?
+			Vertex vert=extenderPD.packDCEL.vertices[v];
+			double angsum=extenderPD.packDCEL.getVertAngSum(vert);
 			double angleErr=Math.PI*2-angsum;
 			planarE=planarParam*(angleErr*angleErr);
 		}
@@ -869,8 +869,8 @@ public class Graphene extends PackExtender {
 	
 	// Angle Sum energy
 	public double phi(int v,double r) {
-		Vertex vert=packData.packDCEL.vertices[v];
-		return packData.packDCEL.getVertAngSum(vert);
+		Vertex vert=extenderPD.packDCEL.vertices[v];
+		return extenderPD.packDCEL.getVertAngSum(vert);
 	}
 	
 	public double dphidr(double r,double t,double u) {
@@ -892,28 +892,28 @@ public class Graphene extends PackExtender {
 	 * @return double[nodeCount+1]
 	 */
 	public double []energyGrad() {
-		double []grad=new double[packData.nodeCount+1];
-		for (int vertindx=1;vertindx<=packData.nodeCount;vertindx++) {
-			int num=packData.countFaces(vertindx);
-			double r=packData.getRadius(vertindx);
-			boolean bdryvert=packData.isBdry(vertindx);
+		double []grad=new double[extenderPD.nodeCount+1];
+		for (int vertindx=1;vertindx<=extenderPD.nodeCount;vertindx++) {
+			int num=extenderPD.countFaces(vertindx);
+			double r=extenderPD.getRadius(vertindx);
+			boolean bdryvert=extenderPD.isBdry(vertindx);
 			
 			// each contribution due to anglesums = ASfactor*partial.
-			double angsum=packData.packDCEL.getVertAngSum(
-					packData.packDCEL.vertices[vertindx],r);
+			double angsum=extenderPD.packDCEL.getVertAngSum(
+					extenderPD.packDCEL.vertices[vertindx],r);
 			double ASfactor=(-2.0)*planarParam*(Math.PI*2.0-angsum);
 			
 			// Find radii of t
 			// get data for faces {r,s,t}, {r,t,u}, and {r,u,v}
 			for (int j=0;j<num;j++) {
-				int sv=packData.getPetal(vertindx,(j-1+num)%num);
-				double s=packData.getRadius(sv);
-				int tv=packData.getPetal(vertindx,j);
-				double t=packData.getRadius(tv);
-				int uv=packData.getPetal(vertindx,(j+1)%num);
-				double u=packData.getRadius(uv);
-				int vv=packData.getPetal(vertindx,(j+2)%num);
-				double v=packData.getRadius(vv);
+				int sv=extenderPD.getPetal(vertindx,(j-1+num)%num);
+				double s=extenderPD.getRadius(sv);
+				int tv=extenderPD.getPetal(vertindx,j);
+				double t=extenderPD.getRadius(tv);
+				int uv=extenderPD.getPetal(vertindx,(j+1)%num);
+				double u=extenderPD.getRadius(uv);
+				int vv=extenderPD.getPetal(vertindx,(j+2)%num);
+				double v=extenderPD.getRadius(vv);
 
 				if (j==0 && bdryvert) { 
 					s=u; // reflected data for phantom bond
@@ -972,52 +972,52 @@ public class Graphene extends PackExtender {
 			v=northpole;
 		else if (stitch.getKey()=='S')
 			v=southpole;
-		packData.vertexMap=null;
+		extenderPD.vertexMap=null;
 		switch (stitch.getMode()) {
 		case 0: // close flower by identifying
 		{
-			int origv=packData.getFirstPetal(v);
-			CombDCEL.adjoin(packData.packDCEL,packData.packDCEL,v,v,1);
+			int origv=extenderPD.getFirstPetal(v);
+			CombDCEL.adjoin(extenderPD.packDCEL,extenderPD.packDCEL,v,v,1);
 			
 			// fix up numbering
-			newIndx=packData.packDCEL.oldNew.findW(origv);
+			newIndx=extenderPD.packDCEL.oldNew.findW(origv);
 			break;
 		}	
 		case 1: // close flower with edge, choose left as pole
 		{
-			int w=packData.getFirstPetal(v);
+			int w=extenderPD.getFirstPetal(v);
 			cpCommand("enclose 0 "+v);
 			newIndx=w;
 			break;
 		}
 		case 2: // close flower with edge, choose right as pole
 		{
-			int u=packData.getLastPetal(v);
+			int u=extenderPD.getLastPetal(v);
 			cpCommand("enclose 0 "+v);
 			newIndx=u;
 			break;
 		}
 		case 3: // enclose with 1 new circle
 		{
-			int lft=packData.getFirstPetal(v);
-			int rght=packData.getLastPetal(v);
+			int lft=extenderPD.getFirstPetal(v);
+			int rght=extenderPD.getLastPetal(v);
 			cpCommand("enclose 1 "+v);
 			cpCommand("enclose 0 "+lft);
 			cpCommand("enclose 0 "+rght);
-			newIndx=packData.nodeCount;
+			newIndx=extenderPD.nodeCount;
 			break;
 		}
 		} // end of switch
 		
 		if (newIndx==0)
 			throw new CombException("stitch failed at "+v);
-		if (packData.vertexMap!=null) {
+		if (extenderPD.vertexMap!=null) {
 			NodeLink nwNL=new NodeLink();
 			Iterator<Integer> stv=stitchVerts.iterator();
 			while (stv.hasNext()) 
-				nwNL.add(packData.vertexMap.findW(stv.next()));
-			northpole=packData.vertexMap.findW(northpole);
-			southpole=packData.vertexMap.findW(southpole);
+				nwNL.add(extenderPD.vertexMap.findW(stv.next()));
+			northpole=extenderPD.vertexMap.findW(northpole);
+			southpole=extenderPD.vertexMap.findW(southpole);
 			stitchVerts=nwNL;
 		}
 		if (v==oldnorth) {
@@ -1038,8 +1038,8 @@ public class Graphene extends PackExtender {
 		int count=0;
 		try {
 			// combinatorics, aims
-			packData.packDCEL.fixDCEL(packData);
-			packData.set_aim_default();
+			extenderPD.packDCEL.fixDCEL(extenderPD);
+			extenderPD.set_aim_default();
 			
 			// set boundary, pole radii
 			count=cpCommand("set_rad .075 b");
@@ -1048,10 +1048,10 @@ public class Graphene extends PackExtender {
 			
 			// need better control on the edges of the slits
 			count += cpCommand("set_aim 1.75 "+southpole+" "+northpole);
-			int su=packData.getFirstPetal(southpole);
-			int sd=packData.getLastPetal(southpole);
-			int nu=packData.getFirstPetal(northpole);
-			int nd=packData.getFirstPetal(northpole);
+			int su=extenderPD.getFirstPetal(southpole);
+			int sd=extenderPD.getLastPetal(southpole);
+			int nu=extenderPD.getFirstPetal(northpole);
+			int nd=extenderPD.getFirstPetal(northpole);
 			count += cpCommand("set_aim 1.0 "+su+" "+sd+" "+nu+" "+nd);
 			
 			// repack, layout, color by degree
@@ -1060,8 +1060,8 @@ public class Graphene extends PackExtender {
 			count += cpCommand("color -c d");
 			
 			// display stitched edges, graph, dots
-			packData.elist=
-				EdgeLink.verts2edges(packData.packDCEL,stitchVerts,false);
+			extenderPD.elist=
+				EdgeLink.verts2edges(extenderPD.packDCEL,stitchVerts,false);
 			count += cpCommand("Disp -w -f -tf b -t1ft3 "+northpole+" -t2ft3 "+southpole+" -cf i -et8 elist");
 		} catch (Exception ex) {
 			errorMsg("Graphene: problem with 'fixUp'");
@@ -1227,8 +1227,8 @@ public class Graphene extends PackExtender {
 			newPaste=true;
 			
 	  	  	// copy to packData
-			int pnum=packData.packNum;
-			packData=CirclePack.cpb.swapPackData(stitchBase,pnum,true);
+			int pnum=extenderPD.packNum;
+			extenderPD=CirclePack.cpb.swapPackData(stitchBase,pnum,true);
 		}
 		
 		// no more?
@@ -1333,7 +1333,7 @@ public class Graphene extends PackExtender {
   	  	// do we need to find an appropriate bdry vert?
 		if (!is1good) {
   	  		double dist=newPack.getCenter(1).abs();
-  	  		if (dist>packData.getRadius(1)) { // no, so search for new 1
+  	  		if (dist>extenderPD.getRadius(1)) { // no, so search for new 1
   	  			// find bdry closest to the origin; may be origin 1  	  		
   	  			double mindist=1000000.0;
   	  			int minIndx=-1;
@@ -1472,7 +1472,7 @@ public class Graphene extends PackExtender {
 
 		// Constructor
 		public CarbonEnergy(int f) {
-			face=packData.packDCEL.faces[f];
+			face=extenderPD.packDCEL.faces[f];
 			verts=face.getVerts();
 			bondColors=new Color[3];
 			for (int j=0;j<3;j++)
@@ -1489,13 +1489,13 @@ public class Graphene extends PackExtender {
 			
 			// update radii and overlaps (for opposite edges)
 			HalfEdge he=face.edge;
-			rad[0]=packData.packDCEL.getVertRadius(he);
+			rad[0]=extenderPD.packDCEL.getVertRadius(he);
 			invdist[0]=he.getInvDist();
 			he=he.next;
-			rad[1]=packData.packDCEL.getVertRadius(he);
+			rad[1]=extenderPD.packDCEL.getVertRadius(he);
 			invdist[1]=he.getInvDist();
 			he=he.next;
-			rad[2]=packData.packDCEL.getVertRadius(he);
+			rad[2]=extenderPD.packDCEL.getVertRadius(he);
 			invdist[2]=he.getInvDist();
 
 			// compute and store the angles. Recall, the j
@@ -1511,15 +1511,15 @@ public class Graphene extends PackExtender {
 			
 			// store bond lengths: j length is for bond opposite j vert
 			for (int j=0;j<3;j++) {
-				Complex[] Z=packData.packDCEL.getFaceCorners(face);
+				Complex[] Z=extenderPD.packDCEL.getFaceCorners(face);
 				CircleSimple cs=CommonMath.tri_incircle(Z[0],Z[1],Z[2],0);
 				bondLengths[j]=cs.rad;
-				int opface=packData.face_opposite(faceIndx,verts[j]);
-				combinatorics.komplex.DcelFace face_opp=packData.packDCEL.faces[opface];
+				int opface=extenderPD.face_opposite(faceIndx,verts[j]);
+				combinatorics.komplex.DcelFace face_opp=extenderPD.packDCEL.faces[opface];
 				if (face_opp.faceIndx<=0) // bdry edge
 					bondLengths[j] *= 2.0;
 				else {
-					Z=packData.packDCEL.getFaceCorners(face_opp);
+					Z=extenderPD.packDCEL.getFaceCorners(face_opp);
 					cs=CommonMath.tri_incircle(Z[0],Z[1],Z[2],0);
 					bondLengths[j] +=cs.rad;
 				}

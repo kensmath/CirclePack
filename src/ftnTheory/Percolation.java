@@ -87,7 +87,7 @@ public class Percolation extends PackExtender {
 		
 		// convert packData to euclidean, record its maximal packing
 		try {
-			cpCommand(packData,"geom_to_e");
+			cpCommand(extenderPD,"geom_to_e");
 			running=true;
 		} catch (Exception ex) {
 			errorMsg("Percolation: error in geom_to_e");
@@ -95,12 +95,12 @@ public class Percolation extends PackExtender {
 		}
 		// yes, seems okay
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 
 		// initialize colors
-		for (int v=1;v<=packData.nodeCount;v++) {
-			packData.setCircleColor(v,ColorUtil.cloneMe(ColorUtil.getFGColor()));
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
+			extenderPD.setCircleColor(v,ColorUtil.cloneMe(ColorUtil.getFGColor()));
 		}
 		
 		bdryArcs=null;
@@ -111,7 +111,7 @@ public class Percolation extends PackExtender {
 		rand=new Random();
 		
 		// Create storage area for petal probabilities
-		petalTrans=new PetalTrans[packData.nodeCount+1];
+		petalTrans=new PetalTrans[extenderPD.nodeCount+1];
 		successCount=failureCount=0;
 		
 		// modes:
@@ -158,7 +158,7 @@ public class Percolation extends PackExtender {
 						switch(c) {
 						case 'c': // give 3 corners
 						{
-							verts3=new NodeLink(packData,items);
+							verts3=new NodeLink(extenderPD,items);
 							break;
 						}
 						case 'N': // number of iterations
@@ -185,10 +185,10 @@ public class Percolation extends PackExtender {
 			if (verts3.size()<3)
 				Oops("don't have enough corner verts");
 			if (verts3.size()>3)
-				verts3=new NodeLink(packData,new String(verts3.get(0)+" "+verts3.get(1)+" "+verts3.get(2)));
+				verts3=new NodeLink(extenderPD,new String(verts3.get(0)+" "+verts3.get(1)+" "+verts3.get(2)));
 			
 			// run the trials
-			StringBuilder strBuild=runBigData(packData,N,verts3);
+			StringBuilder strBuild=runBigData(extenderPD,N,verts3);
 			
 			try {
 				fp.append(strBuild.toString());
@@ -271,9 +271,9 @@ public class Percolation extends PackExtender {
 		if (cmd.startsWith("mania")) {
 			simpleWalk=false;
 			completed=0;
-			for (int v=1;v<=packData.nodeCount;v++) {
-				if (!packData.isBdry(v))
-					packData.setCircleColor(v,ColorUtil.getFGColor());
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
+				if (!extenderPD.isBdry(v))
+					extenderPD.setCircleColor(v,ColorUtil.getFGColor());
 			}
 			
 			// see if corners are specified
@@ -291,14 +291,14 @@ public class Percolation extends PackExtender {
 			prepConductances();
 			
 			// set up vector of interiors
-			NodeLink intV=new NodeLink(packData,"i");
+			NodeLink intV=new NodeLink(extenderPD,"i");
 			openVerts=new Vector<Integer>(intV.size());
 			Iterator<Integer> iV=intV.iterator();
 			while (iV.hasNext())
 				openVerts.add(iV.next());
 			
 			// calculate conductances
-			conductances=random.Conductance.setConductances(packData);
+			conductances=random.Conductance.setConductances(extenderPD);
 			
 			// set petalTrans
 			setPetalTrans();
@@ -369,13 +369,13 @@ public class Percolation extends PackExtender {
 				sbd.append(split[j]);
 				sbd.append(" ");
 			}
-			nlink=new NodeLink(packData,sbd.toString());
+			nlink=new NodeLink(extenderPD,sbd.toString());
 			if (nlink==null || nlink.size()!=3)
 				return null;
-			Complex leftEnd=packData.getCenter(nlink.get(2));
-			Complex rightEnd=packData.getCenter(nlink.get(0));
+			Complex leftEnd=extenderPD.getCenter(nlink.get(2));
+			Complex rightEnd=extenderPD.getCenter(nlink.get(0));
 			Complex spot=leftEnd.times(1.0-x).add(rightEnd.times(x));
-			NodeLink closest=new NodeLink(packData,"-c "+spot.x+" "+spot.y+" b");
+			NodeLink closest=new NodeLink(extenderPD,"-c "+spot.x+" "+spot.y+" b");
 			if (closest==null || closest.size()==0)
 				return null;
 			int v=closest.get(0);
@@ -385,7 +385,7 @@ public class Percolation extends PackExtender {
 				return null;
 			}
 		}
-		return new NodeLink(packData,str);
+		return new NodeLink(extenderPD,str);
 	}
 	
 	/**
@@ -449,8 +449,8 @@ public class Percolation extends PackExtender {
 	 */
 	public void prepConductances() {
 		if (simpleWalk)
-			conductances=random.Conductance.setSimpleConductances(packData);
-		else conductances=random.Conductance.setConductances(packData);
+			conductances=random.Conductance.setSimpleConductances(extenderPD);
+		else conductances=random.Conductance.setConductances(extenderPD);
 		setPetalTrans();
 	}
 	
@@ -468,7 +468,7 @@ public class Percolation extends PackExtender {
 //			corners[i]=corns.get(i);
 //		if (setCorners(corners)==0)
 //			Oops("failed to set corners");
-		NodeLink intV=new NodeLink(packData,"i");
+		NodeLink intV=new NodeLink(extenderPD,"i");
 		int intCount=intV.size();
 		
 
@@ -476,9 +476,9 @@ public class Percolation extends PackExtender {
 		boolean stop=false;
 		while (count<N && !stop) {
 			completed=0;
-			for (int v=1;v<=packData.nodeCount;v++) {
-				if (!packData.isBdry(v)) 
-					packData.setCircleColor(v,ColorUtil.getFGColor());
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
+				if (!extenderPD.isBdry(v)) 
+					extenderPD.setCircleColor(v,ColorUtil.getFGColor());
 			}
 			openVerts=new Vector<Integer>(intV.size());
 			Iterator<Integer> iV=intV.iterator();
@@ -554,14 +554,14 @@ public class Percolation extends PackExtender {
 			}
 			
 			int myColor = ans;
-			packData.setCircleColor(nextv,ColorUtil.coLor(ans));
+			extenderPD.setCircleColor(nextv,ColorUtil.coLor(ans));
 
 			// look to see if vert can be infected by a petal
 			int infectedPetal = 0;
-			int[] petals=packData.packDCEL.vertices[nextv].getPetals();
+			int[] petals=extenderPD.packDCEL.vertices[nextv].getPetals();
 			for (int j = 0; (j < petals.length && infectedPetal == 0); j++) {
 				int k = petals[j];
-				int m = ColorUtil.col_to_table(packData.getCircleColor(k));
+				int m = ColorUtil.col_to_table(extenderPD.getCircleColor(k));
 				// is this petal infected by same color
 				if ((myColor == 244 && m > 0 && m < 100)
 						|| (myColor == 243 && m > 100 && m < 200))
@@ -588,18 +588,18 @@ public class Percolation extends PackExtender {
 		if (areWeDone(v)!=0)
 			return completed;
 		int count=0;
-		int m=ColorUtil.col_to_table(packData.getCircleColor(v));
+		int m=ColorUtil.col_to_table(extenderPD.getCircleColor(v));
 		int lookfor=0;
 		if (m>0 && m <100)
 			lookfor=244;
 		else if (m>100 && m<200)
 			lookfor=243;
-		int num=packData.countFaces(v);
-		int[] flower=packData.getFlower(v);
+		int num=extenderPD.countFaces(v);
+		int[] flower=extenderPD.getFlower(v);
 		for (int j=0;(j<num && completed==0);j++) {
 			int k=flower[j];
-			if (ColorUtil.equalColors(packData.getCircleColor(k),ColorUtil.coLor(lookfor))) { 
-				packData.setCircleColor(k,ColorUtil.coLor(m));
+			if (ColorUtil.equalColors(extenderPD.getCircleColor(k),ColorUtil.coLor(lookfor))) { 
+				extenderPD.setCircleColor(k,ColorUtil.coLor(m));
 				count +=spreadInfection(k);
 			}
 		}
@@ -612,7 +612,7 @@ public class Percolation extends PackExtender {
 	 * @return 'completed' if yes; 0 if no.
 	 */
 	public int areWeDone(int v) {
-		int mark=ColorUtil.col_to_table(packData.getCircleColor(v));
+		int mark=ColorUtil.col_to_table(extenderPD.getCircleColor(v));
 		int opposite=0;
 		switch (mark) {
 		case 1: {opposite=2;break;}
@@ -620,10 +620,10 @@ public class Percolation extends PackExtender {
 		case 198: {opposite=199;break;}
 		case 199: {opposite=198;break;}
 		}
-		int[] petals=packData.packDCEL.vertices[v].getPetals();
+		int[] petals=extenderPD.packDCEL.vertices[v].getPetals();
 		for (int j=0;j<petals.length;j++) {
 			int k=petals[j];
-			if (ColorUtil.col_to_table(packData.getCircleColor(k))==opposite) {
+			if (ColorUtil.col_to_table(extenderPD.getCircleColor(k))==opposite) {
 				completed=mark;
 				return completed;
 			}
@@ -657,36 +657,36 @@ public class Percolation extends PackExtender {
 		if (corners==null || corners.length!=4)
 			return 0;
 		bdryArcs=new Vector<NodeLink>(4);
-		bdryArcs.add(new NodeLink(packData,"b("+corners[0]+","+corners[1]+")"));
-		bdryArcs.add(new NodeLink(packData,"b("+corners[1]+","+corners[2]+")"));
-		bdryArcs.add(new NodeLink(packData,"b("+corners[2]+","+corners[3]+")"));
-		int v=packData.getLastPetal(corners[0]);
-		bdryArcs.add(new NodeLink(packData,"b("+corners[3]+","+v+")"));
+		bdryArcs.add(new NodeLink(extenderPD,"b("+corners[0]+","+corners[1]+")"));
+		bdryArcs.add(new NodeLink(extenderPD,"b("+corners[1]+","+corners[2]+")"));
+		bdryArcs.add(new NodeLink(extenderPD,"b("+corners[2]+","+corners[3]+")"));
+		int v=extenderPD.getLastPetal(corners[0]);
+		bdryArcs.add(new NodeLink(extenderPD,"b("+corners[3]+","+v+")"));
 		
 		// mark the points on the various boundary arcs.
 		Iterator<Integer> arc=bdryArcs.get(0).iterator();
 		while (arc.hasNext()) {
 			int w=arc.next();
-			packData.setCircleColor(w,ColorUtil.coLor(1));
+			extenderPD.setCircleColor(w,ColorUtil.coLor(1));
 		}
 		arc=bdryArcs.get(1).iterator();
 		while (arc.hasNext()) {
 			int w=arc.next();
-			packData.setCircleColor(w,ColorUtil.coLor(199));
+			extenderPD.setCircleColor(w,ColorUtil.coLor(199));
 		}
 		arc=bdryArcs.get(2).iterator();
 		while (arc.hasNext()) {
 			int w=arc.next();
-			packData.setCircleColor(w,ColorUtil.coLor(2));
+			extenderPD.setCircleColor(w,ColorUtil.coLor(2));
 		}
 		arc=bdryArcs.get(3).iterator();
 		while (arc.hasNext()) {
 			int w=arc.next();
-			packData.setCircleColor(w,ColorUtil.coLor(198));
+			extenderPD.setCircleColor(w,ColorUtil.coLor(198));
 		}
 		
 		// set packing 'vlist'
-		packData.vlist=new NodeLink(packData,
+		extenderPD.vlist=new NodeLink(extenderPD,
 				new String(corners[0]+" "+corners[1]+" "+corners[2]+" "+corners[3]));
 		return corners[3];
 	}
@@ -698,23 +698,23 @@ public class Percolation extends PackExtender {
 	 * @return 0 on failure, 
 	 */
 	public int runWalker(int v) {
-		int[] flower=packData.getFlower(v);
+		int[] flower=extenderPD.getFlower(v);
 		int mySpot=v;
 
 		// is initial vertex already pinned?
-		if (!ColorUtil.equalColors(packData.getCircleColor(mySpot),ColorUtil.FG_Color))
+		if (!ColorUtil.equalColors(extenderPD.getCircleColor(mySpot),ColorUtil.FG_Color))
 			return 0;
 		
 		// run the walk; inherit the mark of first hit
-		while (ColorUtil.equalColors(packData.getCircleColor(mySpot),ColorUtil.FG_Color)) {
+		while (ColorUtil.equalColors(extenderPD.getCircleColor(mySpot),ColorUtil.FG_Color)) {
 			double x=rand.nextDouble();
 			mySpot=flower[petalTrans[mySpot].whichPetal(x)];
 		}
-		int	hitColor=ColorUtil.col_to_table(packData.getCircleColor(mySpot));
+		int	hitColor=ColorUtil.col_to_table(extenderPD.getCircleColor(mySpot));
 		
 		// hit fresh vert? use same color
 		if (hitColor>200) { 
-			packData.setCircleColor(v,ColorUtil.coLor(hitColor));
+			extenderPD.setCircleColor(v,ColorUtil.coLor(hitColor));
 			return hitColor;
 		}
 			
@@ -739,7 +739,7 @@ public class Percolation extends PackExtender {
 		}
 		} // end of switch
 
-		packData.setCircleColor(v,ColorUtil.cloneMe(ColorUtil.coLor(myColor)));
+		extenderPD.setCircleColor(v,ColorUtil.cloneMe(ColorUtil.coLor(myColor)));
 		return myColor;
 	}
 	
@@ -752,8 +752,8 @@ public class Percolation extends PackExtender {
 	 * @return
 	 */
 	public void setPetalTrans() {
-		for (int v=1;v<=packData.nodeCount;v++) {
-			int num=packData.countFaces(v)+packData.getBdryFlag(v)-1;
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
+			int num=extenderPD.countFaces(v)+extenderPD.getBdryFlag(v)-1;
 //System.out.println(" vert "+v+" num "+num);			
 			petalTrans[v]=new PetalTrans(num);
 

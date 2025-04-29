@@ -65,7 +65,7 @@ public class AffinePack extends PackExtender {
 		registerXType();
 		int rslt;
 		try {
-			rslt=cpCommand(packData,"geom_to_e");
+			rslt=cpCommand(extenderPD,"geom_to_e");
 		} catch(Exception ex) {
 			rslt=0;
 		}
@@ -73,13 +73,13 @@ public class AffinePack extends PackExtender {
 			errorMsg("AP: failed to convert to euclidean");
 			running=false;
 		}
-		if (packData.getBdryCompCount()>0 || packData.genus!=1) {
+		if (extenderPD.getBdryCompCount()>0 || extenderPD.genus!=1) {
 			errorMsg("AP: failed, packing is not a torus");
 			running=false;
 		}
 		if (running) {
 			resetAspects();
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 			rand=new Random(0); // seed for debugging
 		}
 	}
@@ -90,20 +90,20 @@ public class AffinePack extends PackExtender {
 	 */
 	public void resetAspects() {
 		// create vector of 'TriAspect's, one for each face
-		aspects=new TriAspect[packData.faceCount+1];
-		for (int f=1;f<=packData.faceCount;f++) {
-			aspects[f]=new TriAspect(packData.hes);
+		aspects=new TriAspect[extenderPD.faceCount+1];
+		for (int f=1;f<=extenderPD.faceCount;f++) {
+			aspects[f]=new TriAspect(extenderPD.hes);
 			TriAspect tas=aspects[f];
 			tas.baseEdge=pdc.faces[f].edge;
 			tas.faceIndx=tas.baseEdge.face.faceIndx;
-			int[] verts=packData.packDCEL.faces[f].getVerts();
+			int[] verts=extenderPD.packDCEL.faces[f].getVerts();
 			for (int j=0;j<3;j++) {
 				int v=verts[j];
 				tas.vert[j]=v;
 				// set 'labels'
-				tas.labels[j]=packData.getRadius(v);
+				tas.labels[j]=extenderPD.getRadius(v);
 				// set 'centers'
-				tas.setCenter(new Complex(packData.getCenter(v)),j);
+				tas.setCenter(new Complex(extenderPD.getCenter(v)),j);
 			}
 			// set 'sides' from 'center's
 			tas.centers2Sides();
@@ -1990,12 +1990,12 @@ public class AffinePack extends PackExtender {
 	public EdgeSimple worstEdge() {
 		double maxwe=0.0;
 		EdgeSimple maxES=null;
-		for (int v=1;v<=packData.nodeCount;v++) {
-			int[] flower=packData.getFlower(v);
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
+			int[] flower=extenderPD.getFlower(v);
 			for (int j=0;j<flower.length;j++) {
 				int w=flower[j];
-				if ((!packData.isBdry(v) || !packData.isBdry(w)) && w>v) {
-					double ere=Math.abs(Math.log(edgeRatioError(packData,new EdgeSimple(v,w),aspects)));
+				if ((!extenderPD.isBdry(v) || !extenderPD.isBdry(w)) && w>v) {
+					double ere=Math.abs(Math.log(edgeRatioError(extenderPD,new EdgeSimple(v,w),aspects)));
 					if (ere>maxwe) {
 						maxwe=ere;
 						maxES=new EdgeSimple(v,w);
@@ -2024,7 +2024,7 @@ public class AffinePack extends PackExtender {
 	public StringBuilder runGridData(int N,double []grid) {
 		
 		StringBuilder output=new StringBuilder("%%Affine packing data from CirclePack run: \n" +
-				"%% nodeCount="+packData.nodeCount+";"+
+				"%% nodeCount="+extenderPD.nodeCount+";"+
 				"grid from ("+grid[0]+","+grid[1]+") to ("+grid[2]+","+grid[3]+"), (N+1)x(N+1) with N="+
 				N+"; A=e^x, B=e^y.\n");
 		output.append("%%  matlab vector of data:\n");
@@ -2033,7 +2033,7 @@ public class AffinePack extends PackExtender {
 		output.append("\nRunData = [\n");
 		
 		// check that 'aspects' is ready
-		if (aspects==null || aspects.length!=(packData.faceCount+1))
+		if (aspects==null || aspects.length!=(extenderPD.faceCount+1))
 			resetAspects();
 		
 		boolean okay=true;
@@ -2045,7 +2045,7 @@ public class AffinePack extends PackExtender {
 				double B=Math.exp(grid[1]+(grid[3]-grid[1])*j/N);
 				
 				// set affine data
-				boolean result = ProjStruct.affineSet(packData,aspects,A, B);
+				boolean result = ProjStruct.affineSet(extenderPD,aspects,A, B);
 				if (!result) {
 					msg("affine has failed for A, B = "+A+","+B);
 					okay=false;
@@ -2053,8 +2053,8 @@ public class AffinePack extends PackExtender {
 				}
 				
 				// do affpack
-				NodeLink vlink=new NodeLink(packData,"a");
-				int count = ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
+				NodeLink vlink=new NodeLink(extenderPD,"a");
+				int count = ProjStruct.vertRiffle(extenderPD, aspects,1,PASSES,vlink);
 				if (count < 0) {
 					msg("affpack seems to have failed");
 					okay=false;
@@ -2062,7 +2062,7 @@ public class AffinePack extends PackExtender {
 				}
 				
 				// gather torus data
-				TorusData torusData=new TorusData(packData);
+				TorusData torusData=new TorusData(extenderPD);
 				if (torusData==null) {
 					msg("failed to get torus data");
 					okay=false;
@@ -2071,16 +2071,16 @@ public class AffinePack extends PackExtender {
 				
 				// on last run, center the data
 				if (i==N && j==N) {
-					RedEdge rtrace=packData.packDCEL.redChain;
+					RedEdge rtrace=extenderPD.packDCEL.redChain;
 					double rad=rtrace.getRadius();
 					Complex cent=rtrace.getCenter();
-					int safety=packData.faceCount+1;
+					int safety=extenderPD.faceCount+1;
 					double minx=cent.x-rad;
 					double miny=cent.y-rad;
 					double maxx=cent.x+rad;
 					double maxy=cent.y+rad;
 					rtrace=rtrace.nextRed;
-					while (rtrace!=packData.packDCEL.redChain && safety>0) {
+					while (rtrace!=extenderPD.packDCEL.redChain && safety>0) {
 						rad=rtrace.getRadius();
 						cent=rtrace.getCenter();
 						minx=((cent.x-rad)<minx) ? (cent.x-rad) : minx;
@@ -2129,14 +2129,14 @@ public class AffinePack extends PackExtender {
 		
 		// ======= colorV =================
 		if (cmd.startsWith("colorV")) {
-			Vector<Double> data=new Vector<Double>(packData.nodeCount);
-			for (int v=1;v<=packData.nodeCount;v++) 
-				data.add(v,ProjStruct.weakConError(packData,aspects,v));
+			Vector<Double> data=new Vector<Double>(extenderPD.nodeCount);
+			for (int v=1;v<=extenderPD.nodeCount;v++) 
+				data.add(v,ProjStruct.weakConError(extenderPD,aspects,v));
 			Vector<Color> colIndices=ColorUtil.blue_red_diff_ramp_Color(data);
 
-			for (int v=1;v<=packData.nodeCount;v++) {
+			for (int v=1;v<=extenderPD.nodeCount;v++) {
 				Color coLor=colIndices.get(v);
-				packData.setCircleColor(v,new Color(
+				extenderPD.setCircleColor(v,new Color(
 						coLor.getRed(),coLor.getGreen(),coLor.getBlue()));
 			}
 			return 1;
@@ -2160,7 +2160,7 @@ public class AffinePack extends PackExtender {
 					items=flagSegs.remove(0);
 					if (items.get(0).equals("-v")) {
 						items.remove(0);
-						vlink=new NodeLink(packData,items);
+						vlink=new NodeLink(extenderPD,items);
 						
 					}
 					else
@@ -2170,7 +2170,7 @@ public class AffinePack extends PackExtender {
 				throw new ParserException("usage: riffle {m}: 1=ang sum, 2=weak, 3=effective, 4=side");
 			}
 			if (mode==1 || mode == 2) { // ang sum or weak
-				int count = ProjStruct.vertRiffle(packData, aspects,mode,PASSES,vlink);
+				int count = ProjStruct.vertRiffle(extenderPD, aspects,mode,PASSES,vlink);
 				if (count < 0) {
 					Oops("riffle for aims seems to have failed");
 					return 0;
@@ -2183,7 +2183,7 @@ public class AffinePack extends PackExtender {
 			else if (mode==4) { // sides
 			// TODO: 	
 			// reset 'labels' vector from 'sides'
-			for (int f=1;f<=packData.faceCount;f++) 
+			for (int f=1;f<=extenderPD.faceCount;f++) 
 				aspects[f].sides2Labels();
 			}
 		}
@@ -2204,13 +2204,13 @@ public class AffinePack extends PackExtender {
 					}
 					else if (items.get(0).equals("-f")) {
 						items.remove(0);
-						flink=new FaceLink(packData,items);
+						flink=new FaceLink(extenderPD,items);
 					}
 				}
 			} catch (Exception ex) {}
 			
 			if (flink==null)
-				flink=new FaceLink(packData,"a");
+				flink=new FaceLink(extenderPD,"a");
 			
 			Iterator<Integer> fl=flink.iterator();
 			while (fl.hasNext()) {
@@ -2328,7 +2328,7 @@ public class AffinePack extends PackExtender {
 			Complex [][]z2=new Complex[An+2][Bn+2];
 			Complex [][]z3=new Complex[An+2][Bn+2];
 			Complex [][]z4=new Complex[An+2][Bn+2];
-			NodeLink vlink=new NodeLink(packData,"a");
+			NodeLink vlink=new NodeLink(extenderPD,"a");
 			
 			for (int a=1;a<=An+1;a++) {
 				for (int b=1;b<=Bn+1;b++) {
@@ -2336,12 +2336,12 @@ public class AffinePack extends PackExtender {
 					double B=Bdata[b];
 					
 					// set affine parameters
-					boolean result = ProjStruct.affineSet(packData,aspects,A, B);
+					boolean result = ProjStruct.affineSet(extenderPD,aspects,A, B);
 					if (!result)
 						Oops("affine has failed in 'matdat', A="+A+", B="+B);
 					
 					// repack
-					int count = ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
+					int count = ProjStruct.vertRiffle(extenderPD, aspects,1,PASSES,vlink);
 					if (count < 0)
 						Oops("affpack seems to have failed in 'matdat'");
 						
@@ -2350,7 +2350,7 @@ public class AffinePack extends PackExtender {
 //					ProjStruct.treeLayout(packData,dTree,aspects);
 					
 					// compute data
-					TorusData tD=new TorusData(packData);
+					TorusData tD=new TorusData(extenderPD);
 					if (tD==null) 
 						Oops("failed to compute 'TorusData' in 'matdat'");
 					
@@ -2374,7 +2374,7 @@ public class AffinePack extends PackExtender {
 				
 				// header
 				bw.write("%% matdat run output for matlab: nodecount="+
-						packData.nodeCount+"\n");
+						extenderPD.nodeCount+"\n");
 				
 				// A values
 				bw.write(" A=[\n");
@@ -2519,12 +2519,12 @@ public class AffinePack extends PackExtender {
 			// are vertices specified?
 			try {
 				items=flagSegs.get(0);
-				vlink=new NodeLink(packData,items);
+				vlink=new NodeLink(extenderPD,items);
 			} catch (Exception ex) {
-				vlink=new NodeLink(packData,"a");
+				vlink=new NodeLink(extenderPD,"a");
 			}
 			
-			int count = ProjStruct.vertRiffle(packData, aspects,1,PASSES,vlink);
+			int count = ProjStruct.vertRiffle(extenderPD, aspects,1,PASSES,vlink);
 			if (count < 0) {
 				Oops("affpack seems to have failed");
 				return 0;
@@ -2537,10 +2537,10 @@ public class AffinePack extends PackExtender {
 			// this routine is tailored for tori: specify side-pair
 			// scaling in an attempt to build general affine tori
 
-			if (packData.genus != 1 || packData.getBdryCompCount()>0) {
+			if (extenderPD.genus != 1 || extenderPD.getBdryCompCount()>0) {
 				int count=0;
 				msg("Simply connected case: 'affine' defaults to all 'labels' 1");
-				for (int f=1;f<=packData.faceCount;f++) {
+				for (int f=1;f<=extenderPD.faceCount;f++) {
 					for (int j=0;j<3;j++) 
 						aspects[f].labels[j]=1.0;
 					count++;
@@ -2548,7 +2548,7 @@ public class AffinePack extends PackExtender {
 				return count;
 			}
 
-			if (aspects==null || aspects.length!=(packData.faceCount+1))
+			if (aspects==null || aspects.length!=(extenderPD.faceCount+1))
 				resetAspects();
 			
 			// get the user-specified
@@ -2561,7 +2561,7 @@ public class AffinePack extends PackExtender {
 			} catch (Exception ex) {
 			}
 
-			boolean result = ProjStruct.affineSet(packData,aspects,A, B);
+			boolean result = ProjStruct.affineSet(extenderPD,aspects,A, B);
 			if (!result)
 				Oops("affine has failed");
 			msg("Affine data set: A = " + A + " B = " + B);
@@ -2579,8 +2579,8 @@ public class AffinePack extends PackExtender {
 			FaceLink flist=null;
 			LinkedList<TriAspect> aspList=null;
 			try {
-				flist = new FaceLink(packData,items);
-				aspList=ProjStruct.layout_facelist(packData,aspects,flist);
+				flist = new FaceLink(extenderPD,items);
+				aspList=ProjStruct.layout_facelist(extenderPD,aspects,flist);
 				if (aspList==null) 
 					Oops("didn't get TriAspect linked list");
 			} catch(Exception ex) {
@@ -2597,7 +2597,7 @@ public class AffinePack extends PackExtender {
 			if (circFlags==null && faceFlags==null)
 				return 0; // options 'c', 'f', or 'b' for both
 
-			int count=ProjStruct.dispFaceChain(packData,aspList,true,faceFlags,circFlags);
+			int count=ProjStruct.dispFaceChain(extenderPD,aspList,true,faceFlags,circFlags);
 			
 			repaintMe();
 			return count;
@@ -2610,8 +2610,8 @@ public class AffinePack extends PackExtender {
 			BufferedWriter dbw = CPFileManager.openWriteFP(logfile,false,false);
 			try {
 				dbw.write("labels:\n\n");
-				for (int f = 1; f <= packData.faceCount; f++) {
-					int[] verts=packData.packDCEL.faces[f].getVerts();
+				for (int f = 1; f <= extenderPD.faceCount; f++) {
+					int[] verts=extenderPD.packDCEL.faces[f].getVerts();
 					dbw.write("face " + f + ": <" + verts[0] + ","
 							+ verts[1] + "," + verts[2] + ">   "
 							+ "labels: <" + (double) aspects[f].labels[0] + ","
@@ -2631,7 +2631,7 @@ public class AffinePack extends PackExtender {
 		else if (cmd.startsWith("we")) {
 			
 			EdgeSimple maxES=worstEdge();
-			double ere=Math.abs(Math.log(edgeRatioError(packData,maxES,aspects)));
+			double ere=Math.abs(Math.log(edgeRatioError(extenderPD,maxES,aspects)));
 			msg("Max edge ratio is "+String.format("%.6e",ere)+" at edge <"+maxES.v+" "+maxES.w+">");
 			return 1;
 		}
@@ -2639,8 +2639,8 @@ public class AffinePack extends PackExtender {
 		// ======== Lface ==========
 		if (cmd.startsWith("Lface")) {
 			DispFlags dflags=new DispFlags("");
-			for (int f=1;f<=packData.faceCount;f++) {
-				packData.cpDrawing.drawFace(aspects[f].getCenter(0),
+			for (int f=1;f<=extenderPD.faceCount;f++) {
+				extenderPD.cpDrawing.drawFace(aspects[f].getCenter(0),
 						aspects[f].getCenter(1),aspects[f].getCenter(2),null,null,null,dflags);
 			}
 			repaintMe();
@@ -2649,7 +2649,7 @@ public class AffinePack extends PackExtender {
 		
 		// ======== Ltree ==========
 		else if (cmd.startsWith("Ltree")) {
-			Iterator<HalfEdge> ft=packData.packDCEL.layoutOrder.iterator(); 
+			Iterator<HalfEdge> ft=extenderPD.packDCEL.layoutOrder.iterator(); 
 			while (ft.hasNext()) {
 				HalfEdge he=ft.next();
 				int f=he.face.faceIndx;
@@ -2664,7 +2664,7 @@ public class AffinePack extends PackExtender {
 					Complex wc=sc.center;
 					DispFlags df=new DispFlags(null);
 					df.setColor(Color.green);
-					packData.cpDrawing.drawEdge(vc,wc,df);
+					extenderPD.cpDrawing.drawEdge(vc,wc,df);
 				}
 			}
 			repaintMe();
@@ -2690,18 +2690,18 @@ public class AffinePack extends PackExtender {
 					char c=str.charAt(1);
 					// get facelist iterator
 					if (items==null || items.size()==0) // do all
-						facelist = new FaceLink(packData, "a");
-					else facelist=new FaceLink(packData,items);
+						facelist = new FaceLink(extenderPD, "a");
+					else facelist=new FaceLink(extenderPD,items);
 					Iterator<Integer> flt=facelist.iterator();
 					
 					switch(c) {
 					case 'r':  { // use current radii
 						while (flt.hasNext()) {
-							combinatorics.komplex.DcelFace face=packData.packDCEL.faces[flt.next()];
+							combinatorics.komplex.DcelFace face=extenderPD.packDCEL.faces[flt.next()];
 							int[] verts=face.getVerts();
 							for (int j = 0; j < 3; j++)
 								aspects[face.faceIndx].labels[j]=
-									packData.getRadius(verts[j]);
+									extenderPD.getRadius(verts[j]);
 							count++;
 						}
 						break;
@@ -2737,7 +2737,7 @@ public class AffinePack extends PackExtender {
 			double mnY=100000.0;
 			double mxY=-100000.0;
 			double pr;
-			for (int f = 1; f <= packData.faceCount; f++)
+			for (int f = 1; f <= extenderPD.faceCount; f++)
 				for (int j = 0; j < 3; j++) {
 					mnX = ((pr=aspects[f].getCenter(j).x-aspects[f].labels[j])<mnX) ? pr : mnX; 
 					mxX = ((pr=aspects[f].getCenter(j).x+aspects[f].labels[j])>mxX) ? pr : mxX; 
@@ -2745,7 +2745,7 @@ public class AffinePack extends PackExtender {
 					mxY = ((pr=aspects[f].getCenter(j).y+aspects[f].labels[j])>mxY) ? pr : mxY; 
 				}
 			cpCommand("set_screen -b "+mnX+" "+mnY+" "+mxX+" "+mxY);
-			packData.cpDrawing.repaint();
+			extenderPD.cpDrawing.repaint();
 			return 1;
 		}
 		
@@ -2757,13 +2757,13 @@ public class AffinePack extends PackExtender {
 			// are vertices specified?
 			try {
 				items=flagSegs.get(0);
-				vlink=new NodeLink(packData,items);
+				vlink=new NodeLink(extenderPD,items);
 			} catch (Exception ex) {
-				vlink=new NodeLink(packData,"a");
+				vlink=new NodeLink(extenderPD,"a");
 			}
 			
 			// riffle side lengths to get target angle sums
-			int its=ProjStruct.sideRiffle(packData,aspects,2000,vlink);
+			int its=ProjStruct.sideRiffle(extenderPD,aspects,2000,vlink);
 			msg("'sideRif' iterations: "+its);
 			
 			
@@ -2803,10 +2803,10 @@ public class AffinePack extends PackExtender {
 		// ========== rand_ad ============
 		else if (cmd.startsWith("rand_ad")) {
 			
-			rectAd1(packData, aspects);
+			rectAd1(extenderPD, aspects);
 			
 			// reset 'labels' vector from 'sides'
-			for (int f=1;f<=packData.faceCount;f++){ 
+			for (int f=1;f<=extenderPD.faceCount;f++){ 
 				aspects[f].sides2Labels();
 				}
 			
@@ -2822,13 +2822,13 @@ public class AffinePack extends PackExtender {
 				defaultits=Integer.parseInt(items.get(0));
 			} catch (Exception ex) {}
 			
-			int[] its=rectAdjust(packData, aspects, defaultits);
+			int[] its=rectAdjust(extenderPD, aspects, defaultits);
 			msg("'sc' iterations: "+its[0]);
 			msg("edge iterations: "+its[2]);
 			msg("'sc' adjustments: "+its[1]);
 			
 			// reset 'labels' vector from 'sides'
-			for (int f=1;f<=packData.faceCount;f++){ 
+			for (int f=1;f<=extenderPD.faceCount;f++){ 
 				aspects[f].sides2Labels();
 				}
 			
@@ -2852,9 +2852,9 @@ public class AffinePack extends PackExtender {
 							factor=Double.parseDouble(items.get(0));
 							items.remove(0);
 						} catch (Exception ex) {}
-						EdgeLink elist=new EdgeLink(packData,items);
+						EdgeLink elist=new EdgeLink(extenderPD,items);
 						if (elist==null || elist.size()==0) return 0;
-						edgeAdjust(packData,elist.get(0),factor,aspects);
+						edgeAdjust(extenderPD,elist.get(0),factor,aspects);
 						break;
 					}
 					} // end of switch
@@ -2875,12 +2875,12 @@ public class AffinePack extends PackExtender {
 				v=Integer.parseInt(items.get(0));
 			} catch (Exception ex) {}
 			
-			packData.setCenter(v,NewCenter(packData,aspects,v));
-			int[] faceFlower=packData.getFaceFlower(v);
-			for (int j=0;j<packData.countFaces(v);j++){
+			extenderPD.setCenter(v,NewCenter(extenderPD,aspects,v));
+			int[] faceFlower=extenderPD.getFaceFlower(v);
+			for (int j=0;j<extenderPD.countFaces(v);j++){
 				int f=faceFlower[j];
 				w=aspects[f].vertIndex(v);
-				aspects[f].setCenter(NewCenter(packData,aspects,v),w);
+				aspects[f].setCenter(NewCenter(extenderPD,aspects,v),w);
 				aspects[f].centers2Labels();
 			}
 			
@@ -2894,20 +2894,20 @@ public class AffinePack extends PackExtender {
 			int N=0;
 			
 			while (N<1){
-				int n = packData.nodeCount;
+				int n = extenderPD.nodeCount;
 				int r = (int)(Math.floor(1+n*rand.nextDouble()));
-				if (!packData.isBdry(r)) {
+				if (!extenderPD.isBdry(r)) {
 					N=1;
 					v=r;
 				}
 			}
 			
-			packData.setCenter(v,NewCenter(packData,aspects,v));
-			int[] faceFlower=packData.getFaceFlower(v);
-			for (int j=0;j<packData.countFaces(v);j++){
+			extenderPD.setCenter(v,NewCenter(extenderPD,aspects,v));
+			int[] faceFlower=extenderPD.getFaceFlower(v);
+			for (int j=0;j<extenderPD.countFaces(v);j++){
 				int f=faceFlower[j];
 				w=aspects[f].vertIndex(v);
-				aspects[f].setCenter(NewCenter(packData,aspects,v),w);
+				aspects[f].setCenter(NewCenter(extenderPD,aspects,v),w);
 				aspects[f].centers2Labels();
 			}
 			
@@ -2917,7 +2917,7 @@ public class AffinePack extends PackExtender {
 		// ========== incMC ==================
 		else if (cmd.startsWith("incMC")) {
 			
-			int its=IncNC(packData, aspects);
+			int its=IncNC(extenderPD, aspects);
 			msg(its+" iterations");
 			
 			return 1;
@@ -2927,25 +2927,25 @@ public class AffinePack extends PackExtender {
 		// ========== edge ==================
 		else if (cmd.startsWith("edge")) {
 			
-			double [] info12=Edge12(packData,aspects);
+			double [] info12=Edge12(extenderPD,aspects);
 			msg("combinatorial length 1-2 edge: "+info12[0]);
 			msg("effective length 1-2 edge: "+info12[1]);
 			msg("edge count 1-2 edge: "+info12[2]);
 			msg("length 1-2 edge: "+info12[3]);
 			
-			double [] info34=Edge34(packData,aspects);
+			double [] info34=Edge34(extenderPD,aspects);
 			msg("combinatorial length 3-4 edge: "+info34[0]);
 			msg("effective length 3-4 edge: "+info34[1]);
 			msg("edge count 3-4 edge: "+info34[2]);
 			msg("length 3-4 edge "+info34[3]);
 			
-			double [] info23=Edge23(packData,aspects);
+			double [] info23=Edge23(extenderPD,aspects);
 			msg("combinatorial length 2-3 edge: "+info23[0]);
 			msg("effective length 2-3 edge: "+info23[1]);
 			msg("edge count 2-3 edge: "+info23[2]);
 			msg("length 2-3 edge "+info23[3]);
 			
-			double [] info41=Edge41(packData,aspects);
+			double [] info41=Edge41(extenderPD,aspects);
 			msg("combinatorial length 4-1 edge: "+info41[0]);
 			msg("effective length 4-1 edge: "+info41[1]);
 			msg("edge count 4-1 edge: "+info41[2]);
@@ -2959,7 +2959,7 @@ public class AffinePack extends PackExtender {
 		// ========== AdjBd ==================
 		else if (cmd.startsWith("AdjBd")){
 			
-			AdjBd(packData,aspects);
+			AdjBd(extenderPD,aspects);
 			
 			return 1;
 			
@@ -2968,7 +2968,7 @@ public class AffinePack extends PackExtender {
 		// ========== adjBd ==================
 		else if (cmd.startsWith("adjBd")){
 			
-			adjBd(packData,aspects);
+			adjBd(extenderPD,aspects);
 			
 			return 1;
 			

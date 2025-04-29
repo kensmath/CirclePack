@@ -18,7 +18,7 @@ public class NestPack extends PackExtender {
 		registerXType();
 		int rslt;
 		try {
-			rslt=cpCommand(packData,"geom_to_e");
+			rslt=cpCommand(extenderPD,"geom_to_e");
 		} catch(Exception ex) {
 			rslt=0;
 		}
@@ -27,7 +27,7 @@ public class NestPack extends PackExtender {
 			running=false;
 		}
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 	}
 	

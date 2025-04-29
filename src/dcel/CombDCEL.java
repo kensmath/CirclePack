@@ -3288,7 +3288,7 @@ public class CombDCEL {
     	// reset vertex 'halfedge's
     	for (int v=1;v<=pdc.vertCount;v++) {
     		pdcel.vertices[v].halfedge=
-    				pdcel.edges[pdc.vertices[v].halfedge.edgeIndx];
+    			pdcel.edges[pdc.vertices[v].halfedge.edgeIndx];
     	}
     	
     	// note: there may be no faces/idealfaces

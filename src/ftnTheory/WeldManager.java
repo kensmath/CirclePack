@@ -147,9 +147,9 @@ public class WeldManager extends PackExtender {
 		weldListFileName=new String("weldList_"+CPBase.debugID+".w");
 		registerXType();
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
-		p1=packData.copyPackTo(); // local copy
+		p1=extenderPD.copyPackTo(); // local copy
 	}
 	
 	/** 
@@ -1231,10 +1231,10 @@ public class WeldManager extends PackExtender {
 				} // end of flag processing
 
 				if (!its.hasNext()) // last flag segment has the edges
-					elist=new EdgeLink(packData,items);
+					elist=new EdgeLink(extenderPD,items);
 			} // end of segment while
 		
-			p1=packData.copyPackTo();
+			p1=extenderPD.copyPackTo();
 			packOut=unweld(p1,elist);
 			if (packOut==null) {
 				Oops("unweld has failed");

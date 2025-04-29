@@ -24,7 +24,7 @@ public class Surface3D extends PackExtender {
 		registerXType();
 		basePack=p.copyPackTo();
 		if (running)
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		gridGen=genN; // number of generations of hex
 	}
 	

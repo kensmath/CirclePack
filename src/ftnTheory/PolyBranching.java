@@ -17,7 +17,7 @@ public class PolyBranching extends PackExtender {
 	// Constructor
 	public PolyBranching(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="POLYBRANCHING";
 		extensionAbbrev="PB";
 		toolTip="'POLYBRANCHING': for manipulation of discrete "+
@@ -27,7 +27,7 @@ public class PolyBranching extends PackExtender {
 		rangePack=null;
 		setBranching();
 		running=true;
-		packData.packExtensions.add(this);
+		extenderPD.packExtensions.add(this);
 	}
 	
 	public int cmdParser(String cmd,Vector<Vector<String>> flagSegs) {
@@ -38,7 +38,7 @@ public class PolyBranching extends PackExtender {
 		}
 		if (cmd.startsWith("copy")) { // copy 'rangeData' to some pack
 			if (rangePack==null || !rangePack.status ||
-					rangePack.nodeCount!=packData.nodeCount) {
+					rangePack.nodeCount!=extenderPD.nodeCount) {
 				errorMsg("abort copy: 'rangePack' doesn't agree with parent packing");
 				return 0;
 			}
@@ -59,7 +59,7 @@ public class PolyBranching extends PackExtender {
 			try {
 
 				// copy packData (which may have been changed) to 'rangePack'
-				rangePack=packData.copyPackTo();
+				rangePack=extenderPD.copyPackTo();
 				
 				// make 'rangePack' into branched max packing
 				cpCommand(rangePack,"set_aim -d");
@@ -73,7 +73,7 @@ public class PolyBranching extends PackExtender {
 				cpCommand(rangePack,"layout");
 
 				// max pack the domain
-				cpCommand(packData,"max_pack");
+				cpCommand(extenderPD,"max_pack");
 			} catch (Exception ex) {
 				throw new ParserException(ex.getMessage());
 			}
@@ -85,8 +85,8 @@ public class PolyBranching extends PackExtender {
 			double imageScale=sc.rad;
 				
 			sc =HyperbolicMath.h_to_e_data(
-					packData.getCenter(packData.getAlpha()),
-					packData.getRadius(packData.getAlpha()));
+					extenderPD.getCenter(extenderPD.getAlpha()),
+					extenderPD.getRadius(extenderPD.getAlpha()));
 			double domainScale=sc.rad;
 				
 			Vector<Double> objectives=new Vector<Double>(branchVerts.size());
@@ -96,7 +96,7 @@ public class PolyBranching extends PackExtender {
 						rangePack.getCenter(v),rangePack.getRadius(v));
 				double rangeAbs=sc.center.abs()/imageScale;
 				sc=HyperbolicMath.h_to_e_data(
-						packData.getCenter(v),packData.getRadius(v));
+						extenderPD.getCenter(v),extenderPD.getRadius(v));
 				double domainAbs=sc.center.abs()/domainScale;
 				objectives.add(rangeAbs/domainAbs);
 			}
@@ -134,10 +134,10 @@ public class PolyBranching extends PackExtender {
 	 */
 	public void setBranching() {
 		branchVerts=new Vector<Integer>(5);
-		for (int v=1;v<=packData.nodeCount;v++) {
+		for (int v=1;v<=extenderPD.nodeCount;v++) {
 			int i=1;
-			while (!packData.isBdry(v) && 
-					packData.getAim(v)>(2*i+1)*Math.PI) {
+			while (!extenderPD.isBdry(v) && 
+					extenderPD.getAim(v)>(2*i+1)*Math.PI) {
 				branchVerts.add(v);
 				i++;
 			}
@@ -148,7 +148,7 @@ public class PolyBranching extends PackExtender {
 			return;
 		}
 		StringBuilder strb=new StringBuilder("PolyBranching p"+
-				packData.packNum+": vertices ");
+				extenderPD.packNum+": vertices ");
 		for (int j=0;j<cnt;j++) {
 			strb.append(" "+branchVerts.get(j));
 		}

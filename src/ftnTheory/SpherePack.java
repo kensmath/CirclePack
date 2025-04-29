@@ -32,7 +32,7 @@ public class SpherePack extends PackExtender {
 	// Constructor
 	public SpherePack(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="SPHEREPACK";
 		extensionAbbrev="SP";
 		toolTip="'SpherePack' provides tools to manually adjust "+
@@ -41,12 +41,12 @@ public class SpherePack extends PackExtender {
 		registerXType();
 		int rslt=1;
 		try {
-			if (!packData.status || packData.nodeCount<4)
+			if (!extenderPD.status || extenderPD.nodeCount<4)
 				rslt=0;
-			else if (packData.hes<=0) 
-				rslt=cpCommand(packData,"geom_to_s");
+			else if (extenderPD.hes<=0) 
+				rslt=cpCommand(extenderPD,"geom_to_s");
 			if (rslt==1) {
-				auxFrame=new SphWidget(packData);
+				auxFrame=new SphWidget(extenderPD);
 				if (auxFrame==null) rslt=0;
 			}
 
@@ -58,7 +58,7 @@ public class SpherePack extends PackExtender {
 			running=false;
 		}
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 	}
 
@@ -82,7 +82,7 @@ public class SpherePack extends PackExtender {
 		}
 
 		if (cmd.startsWith("lock")) {
-			NodeLink vlist=new NodeLink(packData,items);
+			NodeLink vlist=new NodeLink(extenderPD,items);
 			Iterator<Integer> vlst=vlist.iterator();
 			while (vlst.hasNext()) {
 				auxFrame.setLock(vlst.next());

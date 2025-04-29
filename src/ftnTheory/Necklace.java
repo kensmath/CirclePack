@@ -48,13 +48,13 @@ public class Necklace extends PackExtender {
 
 	public Necklace(PackData p) {
 		super(p);
-		packData=p;
+		extenderPD=p;
 		extensionType="NECKLACE";
 		extensionAbbrev="NK";
 		toolTip="'Necklace' provides for creation of necklace-type random packings";
 		registerXType();
 		if (running) {
-			packData.packExtensions.add(this);
+			extenderPD.packExtensions.add(this);
 		}
 		buildN=10;
 	}
@@ -210,12 +210,12 @@ public class Necklace extends PackExtender {
 			topPack.packDCEL.fixDCEL(topPack);
 			
 			// save the resulting packing as the parent packing
-			int pnum=packData.packNum;
-			packData=CirclePack.cpb.swapPackData(topPack,pnum,false);
+			int pnum=extenderPD.packNum;
+			extenderPD=CirclePack.cpb.swapPackData(topPack,pnum,false);
 			
 			// do some fixup
-			packData.setAlpha(topOrigin);
-			packData.vlist=pasteVerts;
+			extenderPD.setAlpha(topOrigin);
+			extenderPD.vlist=pasteVerts;
 			
 			// by default, result is max_pack'ed
 			if (max_it)
@@ -223,23 +223,23 @@ public class Necklace extends PackExtender {
 			
 			// transfer colors, marks
 			for (int v=1;v<=bottomPack.nodeCount;v++) {
-				int newv=packData.vertexMap.findW(v);
+				int newv=extenderPD.vertexMap.findW(v);
 				Color col=bottomPack.getCircleColor(v);
-				packData.setCircleColor(newv,new Color(col.getRed(),
+				extenderPD.setCircleColor(newv,new Color(col.getRed(),
 						col.getGreen(),col.getBlue()));
-				packData.setVertMark(newv,bottomPack.getVertMark(v));
+				extenderPD.setVertMark(newv,bottomPack.getVertMark(v));
 			}
 
 			// create 'elist' to hold edges not connected to
 	 		//  face center vertices --- i.e. the graph edges
-	 		packData.elist=new EdgeLink(packData);
-	 		for (int v=1;v<=packData.nodeCount;v++) {
-	 			if (packData.getVertMark(v)!=1) {
-	 				int[] petals=packData.packDCEL.vertices[v].getPetals();
+	 		extenderPD.elist=new EdgeLink(extenderPD);
+	 		for (int v=1;v<=extenderPD.nodeCount;v++) {
+	 			if (extenderPD.getVertMark(v)!=1) {
+	 				int[] petals=extenderPD.packDCEL.vertices[v].getPetals();
 	 				for (int j=0;j<petals.length;j++) {
 	 					int k=petals[j];
-	 					if (k>v && packData.getVertMark(k)!=1)
-	 						packData.elist.add(new EdgeSimple(v,k));
+	 					if (k>v && extenderPD.getVertMark(k)!=1)
+	 						extenderPD.elist.add(new EdgeSimple(v,k));
 	 				}
 	 			}
 	 		}			
@@ -279,7 +279,7 @@ public class Necklace extends PackExtender {
 		
 		// ========================= save ========================
 		else if (cmd.startsWith("save")) {
-			int pnum=packData.packNum;
+			int pnum=extenderPD.packNum;
 			if (cmd.charAt(4)=='B' || cmd.charAt(4)=='b') 
 				CirclePack.cpb.swapPackData(bottomPack,pnum,false);
 			else 
@@ -319,9 +319,9 @@ System.err.println("starting bottomHemi:");
 			cpCommand(topHemi,"max_pack");
 			
 			// save the resulting packing as the parent packing
-			int pnum=packData.packNum;
-			packData=CirclePack.cpb.swapPackData(topHemi,pnum,false);
-			return packData.nodeCount;
+			int pnum=extenderPD.packNum;
+			extenderPD=CirclePack.cpb.swapPackData(topHemi,pnum,false);
+			return extenderPD.nodeCount;
 		}
 
 		return 0;

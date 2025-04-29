@@ -92,7 +92,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 	// default PostScript file chosen for this packing; may be null.
 	public String customPS; 
 
-	public PackData packData;
+	public PackData drawingPD;
 	int screenNum; // normally aligns with packData.packNum
 	
 	// instance variables
@@ -349,7 +349,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 		if (msg_flag == 2 || msg_flag == 3)
 			circlePack.PackControl.displayScratch(N.toString());
 		if (msg_flag == 1 || msg_flag == 3) {
-			if (packData.hes>0) { // sph
+			if (drawingPD.hes>0) { // sph
 				z=sphView.toApparentSph(z);
 				if (Math.cos(z.x)<0) return; // on back
 				z=SphView.s_pt_to_visual_plane(z); 
@@ -359,7 +359,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 			imageContextReal.drawString(N.toString(),
 					real_to_pix_x(z.x), real_to_pix_y(z.y));
 			imageContextReal.setColor(tmpcolor);
-			if (packData.packNum==CirclePack.cpb.getActivePackNum())
+			if (drawingPD.packNum==CirclePack.cpb.getActivePackNum())
 				PackControl.activeFrame.reDisplay();
 			else repaint();
 		}
@@ -375,7 +375,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 	 * @param str String
 	 */
 	public void drawStr(Complex z,String str) {
-		if (packData.hes>0) { // sph
+		if (drawingPD.hes>0) { // sph
 			z=sphView.toApparentSph(z);
 			if (Math.cos(z.x)<0) return; // on back
 			z=SphView.s_pt_to_visual_plane(z); 
@@ -387,7 +387,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 		imageContextReal.drawString(str.substring(0,len),
 				real_to_pix_x(z.x), real_to_pix_y(z.y));
 		imageContextReal.setColor(tmpcolor);
-		if (packData.packNum==CirclePack.cpb.getActivePackNum())
+		if (drawingPD.packNum==CirclePack.cpb.getActivePackNum())
 			  PackControl.activeFrame.reDisplay();
 		else repaint();
 	}
@@ -397,17 +397,17 @@ public class CPdrawing extends JPanel implements MouseListener {
 	 * @param repaint boolean
 	 */
 	public void clearCanvas(boolean repaint) {
-		if (packData.hes==0) imageContextReal.setColor(Color.white);
+		if (drawingPD.hes==0) imageContextReal.setColor(Color.white);
 		else imageContextReal.setColor(CPBase.DEFAULT_SphDisc_BACKGROUND);
 		imageContextReal.fill(canvasRect);
-		if (packData.hes!=0) circle.drawSphDisc(true); // blank the sphere/disc
+		if (drawingPD.hes!=0) circle.drawSphDisc(true); // blank the sphere/disc
 		imageContextReal.setColor(Color.black);
 		if (repaint) {
-			if (packData.packNum==CirclePack.cpb.getActivePackNum())
+			if (drawingPD.packNum==CirclePack.cpb.getActivePackNum())
 				PackControl.activeFrame.reDisplay();
-			if (packData.packNum==PackControl.mapPairFrame.getDomainNum())
+			if (drawingPD.packNum==PackControl.mapPairFrame.getDomainNum())
 				PackControl.mapPairFrame.domainScreen.repaint();
-			if (packData.packNum==PackControl.mapPairFrame.getRangeNum())
+			if (drawingPD.packNum==PackControl.mapPairFrame.getRangeNum())
 				PackControl.mapPairFrame.rangeScreen.repaint();
 		}
 	}
@@ -422,7 +422,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 	 */
 	public void drawArc(Complex z,double rad,double ang1,
 			double extent,DispFlags dflags) {
-		if (packData.hes!=0)
+		if (drawingPD.hes!=0)
 			return;
 		try {
 		circle.x=z.x;
@@ -467,7 +467,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 	public void drawCircle(CircleSimple cs,DispFlags dflags) {
 		Complex z=cs.center;
 		try {
-			if (packData.hes>0)
+			if (drawingPD.hes>0)
 				z=sphView.toApparentSph(z);
 			circle.x = z.x;
 			circle.y = z.y;
@@ -495,8 +495,8 @@ public class CPdrawing extends JPanel implements MouseListener {
 			// label?
 			if (dflags!=null && dflags.label && dflags.getLabel()!= null) {
 
-				if (packData.hes <= 0 || Math.cos(z.x) >= 0) {
-					if (packData.hes > 0)
+				if (drawingPD.hes <= 0 || Math.cos(z.x) >= 0) {
+					if (drawingPD.hes > 0)
 						z = SphView.s_pt_to_visual_plane(z);
 					tmpcolor = imageContextReal.getColor();
 					imageContextReal.setColor(Color.BLUE);
@@ -527,7 +527,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 	public void drawFace(Complex z0,Complex z1,Complex z2,
 			Double r0,Double r1,Double r2,DispFlags dflags) {
 		try {
-			if (packData.hes > 0) {
+			if (drawingPD.hes > 0) {
 				z0 = sphView.toApparentSph(z0);
 				z1 = sphView.toApparentSph(z1);
 				z2 = sphView.toApparentSph(z2);
@@ -561,16 +561,16 @@ public class CPdrawing extends JPanel implements MouseListener {
 			// label?
 			if (dflags.label && dflags.getLabel()!= null) {
 				CircleSimple sc=null;
-				if (packData.hes<0)
+				if (drawingPD.hes<0)
 					sc=HyperbolicMath.hyp_tang_incircle(z0,z1,z2,r0,r1,r2);
 //					sc=HyperbolicMath.hyp_tri_incircle(z1,z2,z3);
-				else if (packData.hes>0) 
+				else if (drawingPD.hes>0) 
 					sc=SphericalMath.sph_tri_incircle(z0,z1,z2);
 				else 
 					sc=EuclMath.eucl_tri_incircle(z0,z1,z2);
 				Complex z=sc.center;
-				if (packData.hes <= 0 || Math.cos(z.x) >= 0) {
-					if (packData.hes > 0)
+				if (drawingPD.hes <= 0 || Math.cos(z.x) >= 0) {
+					if (drawingPD.hes > 0)
 						z = SphView.s_pt_to_visual_plane(z);
 					tmpcolor = imageContextReal.getColor();
 					imageContextReal.setColor(Color.BLUE);
@@ -596,7 +596,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 	public void drawClosedPoly(int N, double[] corners, DispFlags dflags) {
 		try {
 			face.setData(N, corners);
-			if (packData.hes > 0) {
+			if (drawingPD.hes > 0) {
 				for (int j = 0; j < N; j++) {
 					Complex z = sphView.
 							toApparentSph(new Complex(corners[j * 2],
@@ -657,7 +657,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 	 */
 	public void drawEdge(Complex z1,Complex z2,DispFlags dflags) {
 		try {
-		if (packData.hes>0) {
+		if (drawingPD.hes>0) {
 			z1=sphView.toApparentSph(z1);
 			z2=sphView.toApparentSph(z2);
 		}
@@ -692,7 +692,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 	 */
 	public void drawTrinket(int trinkIndx,Complex z,DispFlags dflags) {
 		try {
-			if (packData.hes>0) { 
+			if (drawingPD.hes>0) { 
 				z=sphView.toApparentSph(z);
 				if (Math.cos(z.x)<0.0) return; // on back
 				// conversion to visual plane is in 'drawIt'
@@ -887,7 +887,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 	 * @return PackData
 	 */
 	public PackData getPackData() {
-		return packData;
+		return drawingPD;
 	}
 	
 	/**
@@ -900,27 +900,27 @@ public class CPdrawing extends JPanel implements MouseListener {
 	 */
 	public int setPackData(PackData p) {
 		p.packNum=screenNum;
-		if (packData!=null && packData!=p) { // a different packing?
-			if (packData.radiiSliders!=null) {
-				packData.radiiSliders.dispose();
-				packData.radiiSliders=null;
+		if (drawingPD!=null && drawingPD!=p) { // a different packing?
+			if (drawingPD.radiiSliders!=null) {
+				drawingPD.radiiSliders.dispose();
+				drawingPD.radiiSliders=null;
 			}
-			if (packData.schFlowerSliders!=null) {
-				packData.schFlowerSliders.dispose();
-				packData.schFlowerSliders=null;
+			if (drawingPD.schFlowerSliders!=null) {
+				drawingPD.schFlowerSliders.dispose();
+				drawingPD.schFlowerSliders=null;
 			}
-			if (packData.angSumSliders!=null) {
-				packData.angSumSliders.dispose();
-				packData.angSumSliders=null;
+			if (drawingPD.angSumSliders!=null) {
+				drawingPD.angSumSliders.dispose();
+				drawingPD.angSumSliders=null;
 			}			
-			packData.smoother=null;
+			drawingPD.smoother=null;
 		}
 		// handshake
-		packData=p;
+		drawingPD=p;
 		p.cpDrawing=this;
 		this.setGeometry(p.hes);
 		this.setPackName();
-		return packData.nodeCount;
+		return drawingPD.nodeCount;
 	}
 	
 	/**
@@ -936,7 +936,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 			scp.cpInfo[pnum].remove(1);
 		scp.cpInfo[pnum].revalidate();
 		// re-add those for this packing
-		Vector<PackExtender> Xvec=packData.packExtensions;
+		Vector<PackExtender> Xvec=drawingPD.packExtensions;
 		for (int i=0;i<Xvec.size();i++) {
 			PackExtender pX=Xvec.get(i);
 			MyTool Xtool=pX.XtenderTool;
@@ -964,7 +964,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 	 * @return String
 	 */
 	public String getGeomAbbrev(){
-		switch (packData.hes) {
+		switch (drawingPD.hes) {
 			case -1: return new String(" (hyp)");
 			case 0:	return new String(" (eucl)");
 			default: return new String(" (sph)");
@@ -976,7 +976,7 @@ public class CPdrawing extends JPanel implements MouseListener {
 	 * @return
 	 */
 	public int getGeom(){
-		return packData.hes;
+		return drawingPD.hes;
 	}
 	
 
@@ -986,11 +986,11 @@ public class CPdrawing extends JPanel implements MouseListener {
 	 * Update small canvas pack label using 'packData.fileName'.
 	 */
 	public void setPackName() {
-		if (packData.fileName== null || packData.fileName.trim().length()==0) 
-			packData.setName("NoName");
+		if (drawingPD.fileName== null || drawingPD.fileName.trim().length()==0) 
+			drawingPD.setName("NoName");
 		PackControl.smallCanvasPanel.packName[getPackNum()].
 				setText("P"+getPackNum()+" "+
-						packData.fileName+geomAbbrev[packData.hes+1]);
+						drawingPD.fileName+geomAbbrev[drawingPD.hes+1]);
 	}
 
 	/**
@@ -1009,9 +1009,9 @@ public class CPdrawing extends JPanel implements MouseListener {
 	 * @return int
 	 */
 	public int getPackNum() {
-		if (packData==null)
+		if (drawingPD==null)
 			return -1;
-		return packData.packNum;
+		return drawingPD.packNum;
 	}
 	
 	/**
