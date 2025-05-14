@@ -8,11 +8,8 @@ import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.Vertex;
 import dcel.CombDCEL;
 import dcel.PackDCEL;
-import deBugging.DCELdebug;
-import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.ParserException;
-import listManip.EdgeLink;
 import listManip.NodeLink;
 import listManip.VertexMap;
 import packing.PackData;
@@ -330,11 +327,12 @@ public class TileBuilder {
 	}
 	
 	/**
-	 * Start with packing for barycentric subdivision of tiling. 
-	 * The packing has 'tileData' and vertices are marked: 
-	 * 1 = tile baryVert, 2 = tile corner, 3 = tile edge barycenter. 
-	 * Barycenters of bary-refined faces are marked -1. All tiles 
-	 * have 'augVert's.
+	 * Start with packing for barycentric subdivision of 
+	 * tiling. The packing has 'tileData' and vertices 
+	 * are marked: 1 = tile baryVert, 2 = tile corner, 
+	 * 3 = tile edge barycenter. Barycenters of 
+	 * bary-refined faces are marked -1. All tiles have 
+	 * 'augVert's.
 	 * 
 	 * Here we build 'dual', 'quad', and all white/grey tilings. 
 	 * 
@@ -657,8 +655,8 @@ public class TileBuilder {
 	}
 	
 	/**
-	 * After doing some pasting, we need to update the tile.vert[] vectors
-	 * of tileData 'td'. 
+	 * After doing some pasting, we need to update 
+	 * the tile.vert[] vectors of tileData 'td'. 
 	 * @param td TileData
 	 * @param vmap VertexMap
 	 */
@@ -760,9 +758,11 @@ public class TileBuilder {
 	}
 
 	/**
-	 * Look through masterPack for tile edges which are in the boundary
-	 * and can swallow an unattached tile. Adjoin and adjust accordingly. 
-	 * (So, looking for edge having same vert at each end in origTD.)
+	 * Look through masterPack for tile edges which 
+	 * are in the boundary and can swallow an 
+	 * unattached tile. Adjoin and adjust accordingly. 
+	 * (So, looking for edge having same vert at each 
+	 * end in origTD.)
 	 * @return boolean, false if none swallowed
 	 */
 	public boolean swallowOneUnigon() {
@@ -863,8 +863,8 @@ public class TileBuilder {
 	}
 	
 	/**
-	 * Given a tile and edge of origTD, determine if the ends 
-	 * of the edge are the same vertex.
+	 * Given a tile and edge of origTD, determine if 
+	 * the ends of the edge are the same vertex.
 	 * @param tileIndex
 	 * @param edgeIndex
 	 * @return boolean, true if this edge is a loop
@@ -894,22 +894,25 @@ public class TileBuilder {
 	 * follows the orientation conventions of 'adjoin' when 
 	 * adjoining t2 to t1.)
 	 *   
-	 * Note that t1 and t2 may be the same tile, but we can handle
-	 * only the limited case of pasting associated with a single slit.
+	 * Note that t1 and t2 may be the same tile, but we 
+	 * can handle only the limited case of pasting 
+	 * associated with a single slit.
 	 * 
-	 * TODO: we are not ready for cases of ambiguity, which may
-	 * have to be resolved using 'tData' and topological 
-	 * considerations. E.g. t1=t2 and sharing non-contiguous
-	 * edges, t1 and t2 hitting multiple times, etc.
+	 * TODO: we are not ready for cases of ambiguity, 
+	 * which may have to be resolved using 'tData' and 
+	 * topological considerations. E.g. t1=t2 and 
+	 * sharing non-contiguous edges, t1 and t2 hitting 
+	 * multiple times, etc.
 	 * 
-	 * If problems come up, throw 'DataException' or return null.
+	 * If problems come up, throw 'DataException' or 
+	 * return null.
 	 * 
 	 * @param tData TileData
 	 * @param t1 Tile
 	 * @param t2 Tile
 	 * @return int[4], null if t1/t2 don't share any edges,
-	 *         negative entries in problem cases. Null if 'tileFlower'
-	 *         info is not set.
+	 *         negative entries in problem cases. Null 
+	 *         if 'tileFlower' info is not set.
 	 */
 	public static int []tilePastings(TileData tData,Tile t1,Tile t2) {
 		int []ans=new int[4];		

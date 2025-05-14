@@ -4170,9 +4170,9 @@ public class CombDCEL {
 	public static int zipEdge(PackDCEL pdcel,Vertex vert) {
 		if (vert.bdryFlag==0) // nothing to zip
 			return 1;
-		if (!vert.redFlag)
-			throw new CombException("Vertex "+vert.vertIndx+
-					" is not on the red chain");
+		if (vert.halfedge.myRedEdge==null)
+			throw new CombException("Vertex "+vert.halfedge+
+					" is not in the red chain");
 	
 		// edges to be kept; these become twins
 		HalfEdge outedge=vert.halfedge;

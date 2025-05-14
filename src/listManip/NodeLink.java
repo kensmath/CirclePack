@@ -1669,5 +1669,24 @@ public class NodeLink extends LinkedList<Integer> {
 		}
 		else return null;
 	}
+	
+	/**
+	 * print the vertex list for debugging.
+	 * @return int count
+	 */
+	public int printMe() {
+		int count=0;
+		CirclePack.cpb.msg("print out a NodeLink");
+		StringBuilder strbld=new StringBuilder();
+		Iterator<Integer> nlst=this.iterator();
+		while(nlst.hasNext()) {
+			int v=nlst.next();
+			strbld.append(v+" ");
+			count++;
+		}
+		if (count>0)
+			System.out.println(strbld.toString());
+		return count;
+	}
 		
 }

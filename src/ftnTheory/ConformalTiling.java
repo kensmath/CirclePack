@@ -11,10 +11,7 @@ import circlePack.PackControl;
 import combinatorics.komplex.HalfEdge;
 import complex.Complex;
 import dcel.CombDCEL;
-import dcel.PackDCEL;
 import dcel.RawManip;
-import deBugging.DCELdebug;
-import deBugging.DebugHelp;
 import exceptions.CombException;
 import exceptions.DataException;
 import exceptions.InOutException;
@@ -33,6 +30,7 @@ import listManip.VertexMap;
 import packing.PackData;
 import packing.PackExtender;
 import posting.PostFactory;
+import tiling.DepthBuilder;
 import tiling.SubdivisionRules;
 import tiling.Tile;
 import tiling.TileBuilder;
@@ -162,7 +160,6 @@ public class ConformalTiling extends PackExtender {
 	//    depthPackings(j)(d) if it exists, else create/save for
 	//    later use. 
 	Vector<Vector<PackData>> depthPackings;
-	static int targetDepth;         // used only by 'build2Depth'
 	
 //	static boolean buildDeBug=true; 
 	static boolean buildDeBug=false;
@@ -197,7 +194,6 @@ public class ConformalTiling extends PackExtender {
 		}
 		
 		mode=3; // default standard: an n tile is 2n barycentrically subdivided triangles
-		targetDepth=-1;
 	}
 	
 	public int cmdParser(String cmd,Vector<Vector<String>> flagSegs) {
@@ -205,8 +201,6 @@ public class ConformalTiling extends PackExtender {
 		
 		// ============ subtile ===============
 		if (cmd.startsWith("subti")) {
-			if (extenderPD.genus>0 && extenderPD.tileData.tileCount>1)
-				Oops("'subtile' can't be called for genus > 0.");
 
 			// first, pick off the tile type
 			int type=0;
@@ -320,15 +314,14 @@ public class ConformalTiling extends PackExtender {
 			// first build 'newPD', with 'newPD.tileData' 
 			//   equal to the original tileData (though 
 			//   with additional pointers to subtilings)
-			targetDepth=-1;
-			PackData newPD=build2Depth(extenderPD.tileData,
+			DepthBuilder dbuilder=new DepthBuilder(extenderPD.tileData,
 					depth,mode,topTileData,depthPackings);
+			dbuilder.buildDeBug=false; // dbuilder.buildDeBug=true;
+			PackData newPD=dbuilder.build2Depth();
 			if (newPD==null) {
 				errorMsg("failed to build subdivided packing to depth "+depth);
-				targetDepth=-1;
 				return 0;
 			}
-			targetDepth=-1;
 			
 			// need to reindex tiles for 'TileData's at 
 			//   various depths and save in 'gradedTileData'.
@@ -1078,10 +1071,12 @@ public class ConformalTiling extends PackExtender {
 					
 					// store a packing (depth 0) for each tile type
 					Iterator<TileRule> rls=subdivRules.tileRules.iterator();
+					int ttick=1;
 					while (rls.hasNext()) {
 						// TODO: rules <-> types currently in 1-to-1 corres.
 						TileRule trule=rls.next(); 
 						Tile tile=new Tile(trule.edgeCount);
+						tile.tileIndex=ttick++;
 						tile.tileType=trule.targetType;
 						PackData tmpPD=tile.singleCanonical(mode); 
 						
@@ -2366,543 +2361,7 @@ public class ConformalTiling extends PackExtender {
 		
 		return count;
 	}
-     
-	/**
-	 * If 'tData' has 'subRules' and appropriate 'tileType's, then 
-	 * build the canonical circle packing for 'tData' recursively 
-	 * to the given 'depth', attaching 'tData' as its 'tileData'. 
-	 * Note that depth=0 is just the canonical tiling for 'tData'.
-	 * 
-	 * This builds a new PackData and updates and attaches 'tData' 
-	 * based on 'tData's initial TileData structure. 'tData' must 
-	 * have the tiles, with consistent 'tile.vert's, and must have 
-	 * 'tileFlower's. (Note, eg, that for subdivision rules, may 
-	 * have to run 'SubdivsionRules.getRulesTD' to set consistent
-	 * vertex indices.) If the tiles have non-null 'myTileData', 
-	 * then they themselves represent tilings (as when we build 
-	 * from subdivision rules).
-	 *
-	 * Therefore, this is a recursive construction: At a given level, 
-	 * a tiling is created one tile at a time with its associated packing;
-	 * this is pasted onto a growing global packing (for this level) and
-	 * the TileData tiles are updated, with 'augmented' vertices from 
-	 * the local packing; as that is absorbed into the growing global 
-	 * packing, we update 'vert' and 'augVert' indices to the parent 
-	 * packing and then discard the local packing to save space (but the 
-	 * local 'TileData' is now part of the parent's TileData). 
-	 *
-	 * We do not build a global 'TileData' that has tiles down to
-	 * the finest level. Instead, each 'Tile' at level j>0 contains 
-	 * 'TileData' for j-1 level tiles.
-	 * 
-	 * TODO: build a "collapse" method that builds the tiling down to
-	 * the finest level for purposes of saving it. 
-	 * 
-	 * When 'depth' is 0, return canonical packing for 'tData' with
-	 * 'tData' as it 'tileData'. This happens, e.g., at the bottom of 
-	 * every recursion cycle.
-	 * 
-	 * We save/use prepared packings as we go in 'depthPD'. When this is
-	 * not null, then if depthPD(tt)(d) exists, it holds PackData for tile
-	 * type tt at subdivision depth d (in mode=3 form).
-	 *  
-	 * @param tData TileData
-	 * @param depth int, (depth = 0 for no subdivision)
-	 * @param mode int: 1=simple, 2=edge barycenters, 3=full barycentric (default)
-	 * @param depthPD Vector<Vector<PackData>>: pre-stored packdata
-	 * @return PackData (holding also its 'tileData') or null on error
-	 */
-	public static PackData build2Depth(TileData tData,int depth,int mode,
-			Vector<TileData> topTD,Vector<Vector<PackData>> depthPD) {
-
-		if (buildDeBug) { // buildDeBug=true;
-			int pTt=-1;
-			if (tData.parentTile!=null)
-				pTt=tData.parentTile.tileType;
-			System.out.println("enter 'build2Depth': tileCount = "+
-				tData.tileCount+", depth ="+depth+", parent tile type = "+pTt);
-		}
-		
-		if (depth>0 && tData.subRules==null) // buildDeBug=true;
-			throw new DataException("no subdivision rules are specified");
-
-		if (depth>targetDepth)
-			targetDepth=depth;
-		
-		// ************************ only 1 tile?
-		if (tData.tileCount==1) {
-			
-			Tile tile=tData.myTiles[1];
-			int tt=tData.myTiles[1].tileType;
-			
-			// type not set? choose first one that has right size
-			if (tt==0) {
-				tt=tData.subRules.getPossibleType(tData.myTiles[1].vertCount);
-				if (tt<0) {
-					CirclePack.cpb.myErrorMsg("No tile type with "+
-							tData.myTiles[1].vertCount+" edges");
-					return null;
-				}
-				tile.tileType=tt;
-			}
-			if (buildDeBug) {
-				System.out.println("  one tile, type "+tile.tileType);
-			}
-			PackData tmpPD=null;
-			boolean needsave=false;
-			
-			// depth 0?
-			if (depth==0) {
-				
-				// this packing should have been created when 
-				// the rules were loaded
-				if (depthPD!=null) {
-					tmpPD=copyDepthPacking(depthPD,tt,depth);
-				}
-				
-				// didn't have one to copy? build the packing
-				if (tmpPD==null) {
-					tmpPD=tData.myTiles[1].singleCanonical(mode);
-					needsave=true;
-				}
-				
-				// transfer new data to original tile
-				tile.augVertCount=tmpPD.tileData.myTiles[1].augVertCount;
-				tile.augVert=new int[tile.augVertCount];
-				for (int si=0;si<tile.augVertCount;si++)
-					tile.augVert[si]=tmpPD.tileData.myTiles[1].augVert[si];
-				tile.vert=new int[tile.vertCount];
-				for (int si=0;si<tile.vertCount;si++)
-					tile.vert[si]=tmpPD.tileData.myTiles[1].vert[si];
-				tile.baryVert=tmpPD.tileData.myTiles[1].baryVert;
-				
-				// no neighbors, so all zeros
-				tile.tileFlower=new int[tile.vertCount][2];
-				for (int i=0;i<tile.vertCount;i++)
-					tile.tileFlower[i][0]=0;
-				
-				// Do we need a copy of that just built (should not at depth=0)
-				Vector<PackData> vpd=null;
-				if (needsave && tt>=4 && depthPD!=null && 
-						(vpd=depthPD.get(tt))!=null && (vpd.size()<=depth || 
-						vpd.get(depth)==null)) {
-					if (vpd.size()<=depth)
-						vpd.setSize(depth+1);
-					PackData savePD=tmpPD.copyPackTo();
-					vpd.setElementAt(savePD,depth);
-					needsave=false;
-					
-// debugging					
-//					CirclePack.cpb.msg("added depth "+depth+", type "+tt);
-				}
-				
-				tile.TDparent=tData;
-				tmpPD.tileData=tData;
-				
-				if (buildDeBug) { // buildDeBug=true;
-					DebugHelp.debugPackDisp(tmpPD,2,"max_pack");
-					buildDeBug=false;
-				}
-				
-				return tmpPD;
-			}
-			
-			// just one tile, but depth>0
-//			if (depth==(targetDepth-1)) // show that we're nearing target depth 
-//				System.out.println("at depth "+depth);
-			
-			// otherwise, we must get stored subdivision 'TileData'
-			TileData tmpTD=topTD.get(tt).copyMyTileData();
-			tmpTD.subRules=tData.subRules;
-			
-			// now see if we've done this packing, 
-			//   else recurse to get the associated packing
-			if (depthPD!=null && depthPD.get(tt).size()>depth) {
-				tmpPD=copyDepthPacking(depthPD,tt,depth);
-				needsave=false;
-			}
-			
-			// didn't have one to copy? build the packing
-			if (tmpPD==null) {
-				tmpPD=build2Depth(tmpTD,depth-1,mode,topTD,depthPD);
-				if (tmpPD==null) {
-					System.out.println("failed 'build2Depth' at "+(depth-1));
-					return null;
-				}
-				needsave=true;
-			}
-			
-			// fix up our one tile, create augmented vertices
-			tData.myTiles[1].myTileData=tmpPD.tileData;
-			tData.myTiles[1].myTileData.parentTile=tData.myTiles[1];
-			tData.newVertAug(1);
-			
-			// Do we need a copy of the one just built
-			Vector<PackData> vpd=null;
-			if (needsave && depthPD!=null &&
-					(vpd=depthPD.get(tt))!=null && 
-					(vpd.size()<=depth || vpd.get(depth)==null)) {
-				if (vpd.size()<=depth)
-					vpd.setSize(depth+1);
-				PackData savePD=tmpPD.copyPackTo();
-				vpd.setElementAt(savePD,depth);
-				needsave=false;
-//				String fdbk="added depth "+depth+", type "+tt;
-//				CirclePack.cpb.msg(fdbk);
-//				System.out.println(fdbk);
-			}
-			
-			// return new packing with original 'tData' attached
-			tmpPD.tileData=tData;
-			
-			if (buildDeBug) { // buildDeBug=true;
-				int qnum=2; // qnum=1;
-				DebugHelp.debugPackDisp(tmpPD,qnum,"max_pack");
-				buildDeBug=false;
-			}
-			return tmpPD;
-
-		} // end of single tile case
-		
-		// *************** else, multiple tile types **********
-
-//		if (depth==(targetDepth-1)) // show that we're nearing target depth 
-//			System.out.println("at depth "+depth);
-		
-		// track tiles having packings and those whose 
-		//   edges have all been pasted.
-		int []tilehaspack=new int[tData.tileCount+1];
-		int []tiledone=new int[tData.tileCount+1];
-		
-		// keep track of which edges are already pasted:
-		//   [tileIndex][0]=edge number
-		//   [tileIndex][1]=1 if already pasted
-		int[][] pastingStatus=new int[tData.tileCount+1][];
-		for (int k=1;k<=tData.tileCount;k++) {
-			Tile tk=tData.myTiles[k];
-			pastingStatus[tk.tileIndex]=new int[tk.vertCount];
-		}
-		
-		
-		// 'p' = parent packing we are building, while 
-		//    'tilePack' is current individual tile packing
-		PackData p=null; 
-		PackData tilePack=null;
-		
-		// start 'p' with first tile
-		Tile tile=tData.myTiles[1]; // tile.debugPrint();
-		boolean needsave=false;
-		if (depth==0) {
-			int tt=tile.tileType;
-			
-			// type not set? choose first one that has right size
-			if (tt==0) {
-				tt=tData.subRules.getPossibleType(tData.myTiles[1].vertCount);
-				if (tt<0) {
-					CirclePack.cpb.myErrorMsg("No tile type with "+
-							tData.myTiles[1].vertCount+" edges");
-					return null;
-				}
-			}
-			
-			if (depthPD!=null && depthPD.get(tt).size()>depth) {
-				p=copyDepthPacking(depthPD,tt,depth);
-			}
-			
-			// didn't have one to copy? build the packing
-			if (p==null) {
-				p=tile.singleCanonical(mode);
-				needsave=true;
-			}
-			// DCELdebug.augVerts2Vlist(tile);
-			// transfer new data to original tile
-			tile.augVertCount=p.tileData.myTiles[1].augVertCount;
-			tile.augVert=new int[p.tileData.myTiles[1].augVertCount];
-			for (int si=0;si<tile.augVertCount;si++)
-				tile.augVert[si]=p.tileData.myTiles[1].augVert[si];
-			tile.vert=new int[p.tileData.myTiles[1].vertCount];
-			for (int si=0;si<tile.vertCount;si++)
-				tile.vert[si]=p.tileData.myTiles[1].vert[si];
-			tile.baryVert=p.tileData.myTiles[1].baryVert;
-			
-			// Do we need a copy of the one just built
-			Vector<PackData> vpd=null;
-			if (depthPD!=null && needsave &&
-					(vpd=depthPD.get(tt))!=null && 
-					(vpd.size()<=depth || vpd.get(depth)==null)) {
-				if (vpd.size()<=depth)
-					vpd.setSize(depth+1);
-				PackData savePD=p.copyPackTo();
-				vpd.setElementAt(savePD,depth);
-//				String fdbk="added depth "+depth+", type "+tt;
-//				CirclePack.cpb.msg(fdbk);
-//				System.out.println(fdbk);
-				needsave=false;
-			}
-			
-			tile.TDparent=tData;
-			// TODO: must we update 'tileFlower's ?
-		}
-		// else depth>0, we must create subdivision 'TileData'
-		else { 
-			int tt=tData.myTiles[1].tileType;
-			
-			// type not set? error
-			if (tt==0) 
-				throw new CombException("should have tile type at this point");
-
-			// we must get stored subdivision 'TileData'
-			TileData tmpTD=topTD.get(tt).copyMyTileData();
-			tmpTD.subRules=tData.subRules;
-			
-			// see if we've done this packing, else recurse 
-			//   to get the associated packing
-			if (depthPD!=null && depthPD.get(tt).size()>depth) {
-				p=copyDepthPacking(depthPD,tt,depth);
-			}
-			
-			// didn't have one to copy? build the packing
-			if (p==null) {
-				p=build2Depth(tmpTD,depth-1,mode,topTD,depthPD);
-				needsave=true;
-			}
-
-			// fix this tile, create augmented vertices
-			tData.myTiles[1].myTileData=p.tileData;
-			tData.myTiles[1].myTileData.parentTile=tData.myTiles[1];
-			for (int j=1;j<=tData.myTiles[1].myTileData.tileCount;j++)
-				tData.myTiles[1].myTileData.myTiles[j].TDparent=tData.myTiles[1].myTileData;
-			tData.newVertAug(1); // tData.myTiles[1].debugPrint();
-			
-			// Do we need a copy of the one just built
-			Vector<PackData> vpd=null;
-			if (depthPD!=null && needsave &&
-					(vpd=depthPD.get(tt))!=null && (vpd.size()<=depth || 
-					vpd.get(depth)==null)) {
-				if (vpd.size()<=depth)
-					vpd.setSize(depth+1);
-				PackData savePD=p.copyPackTo();
-				vpd.setElementAt(savePD,depth);
-				
-// debugging				
-//				String fdbk="added depth "+depth+", type "+tt;
-//				CirclePack.cpb.msg(fdbk);
-//				System.out.println(fdbk);
-				needsave=false;
-			}
-		}
-		tilehaspack[1]=1;
-		
-		// ------ have started with p, now add on -----
-
-		// maintain 2 lists; indices of current tiles, new ones 
-		//    that have been touched
-		Vector<Integer> curr=null; 
-		Vector<Integer> next= new Vector<Integer>();
-		next.add(1); // put firt tile in list 
-		int safety=100*tData.tileCount;
-		while (next.size()>0) {
-			curr=next;
-			next=new Vector<Integer>();
-			while (curr.size()>0 && safety>0) {
-				safety--;
-				int t=curr.remove(0); // get the next tile
-				tile=tData.myTiles[t];
-				
-				// entries go into 'next' (and later into 'curr') as their 
-				//    packings are generated and pasted to growing pack 'p'.
-				
-				// go around tileFlower to paste (or create and paste) tiles;
-				//    self-pastings of edges may occur. Identification of 
-				//    vertices is not needed, as they will eventuate when 
-				//    further pasting is done.
-				if (tiledone[t]!=0) 
-					break;
-
-				// go through as-yet-unpasted edges, create new 
-				//   packings when needed
-				for (int ti=0;ti<tile.vertCount;ti++) {
-					int nghbJ=tile.tileFlower[ti][0];
-					if (nghbJ>0 && pastingStatus[tile.tileIndex][ti]==0) {
-						Tile nghbTile=tData.myTiles[nghbJ]; // nghbTile.debugPrint();
-						int tt=tData.myTiles[nghbJ].tileType;
-						
-						// type not set? error
-						if (tt==0) 
-							throw new CombException("should have tile type at this point");
-						
-						boolean isnew=false;
-						
-						// do we need to create?
-						if (tilehaspack[nghbJ]==0) {
-							tilePack=null;
-							isnew=true;
-
-							if (depth==0) { 
-								if (depthPD!=null && depthPD.get(tt).size()>depth) {
-									tilePack=copyDepthPacking(depthPD,tt,depth);
-								}
-								
-								// didn't have one to copy? build the packing
-								if (tilePack==null) {
-									tilePack=nghbTile.singleCanonical(mode);
-									needsave=true;
-								}
-								
-								// transfer new data to original tile
-								nghbTile.augVertCount=tilePack.tileData.myTiles[1].augVertCount;
-								nghbTile.augVert=
-										new int[tilePack.tileData.myTiles[1].augVertCount];
-								for (int si=0;si<nghbTile.augVertCount;si++)
-									nghbTile.augVert[si]=tilePack.tileData.myTiles[1].augVert[si];
-								nghbTile.vert=
-										new int[tilePack.tileData.myTiles[1].vertCount];
-								for (int si=0;si<nghbTile.vertCount;si++)
-									nghbTile.vert[si]=tilePack.tileData.myTiles[1].vert[si];
-								nghbTile.baryVert=tilePack.tileData.myTiles[1].baryVert;
-								
-								// Do we need a copy of the one just built
-								Vector<PackData> vpd=null;
-								if (depthPD!=null && needsave &&
-										(vpd=depthPD.get(tt))!=null && (vpd.size()<=depth || 
-										vpd.get(depth)==null)) {
-									if (vpd.size()<=depth)
-										vpd.setSize(depth+1);
-									PackData savePD=tilePack.copyPackTo();
-									vpd.setElementAt(savePD,depth);
-//									String fdbk="added depth "+depth+", type "+tt;
-//									CirclePack.cpb.msg(fdbk);
-//									System.out.println(fdbk);
-									needsave=false;
-								}
-								
-								nghbTile.TDparent=tData;
-							}
-							// else depth>0
-							else {
-								TileData tmpTD=topTD.get(tt).copyMyTileData();
-								tmpTD.subRules=tData.subRules;
-								
-								if (depthPD!=null && depthPD.get(tt).size()>depth) {
-									tilePack=copyDepthPacking(depthPD,tt,depth);
-								}
-								
-								// didn't have one to copy? build the packing
-								if (tilePack==null) {
-									tilePack=build2Depth(tmpTD,depth-1,mode,topTD,depthPD);
-									needsave=true;
-								}
-								
-								// update this tile, create its augmented vertices
-								nghbTile.myTileData=tilePack.tileData;
-								nghbTile.myTileData.parentTile=nghbTile;
-								for (int j=1;j<=nghbTile.myTileData.tileCount;j++)
-									nghbTile.myTileData.myTiles[j].TDparent=nghbTile.myTileData;
-								tData.newVertAug(nghbJ);
-								
-								// Do we need a copy of the one just built
-								Vector<PackData> vpd=null;
-								if (depthPD!=null && needsave &&
-										(vpd=depthPD.get(tt))!=null && (vpd.size()<=depth || 
-										vpd.get(depth)==null)) {
-									if (vpd.size()<=depth)
-										vpd.setSize(depth+1);
-									PackData savePD=tilePack.copyPackTo();
-									vpd.setElementAt(savePD,depth);
-//									String fdbk="added depth "+depth+", type "+tt;
-//									CirclePack.cpb.msg(fdbk);
-//									System.out.println(fdbk);
-									needsave=false;
-								}
-								
-								tilePack.tileData=null;  
-							}
-							
-							tilehaspack[nghbJ]=1;
-							next.add(Integer.valueOf(nghbJ));
-						}
-						// else already attached, so this is self-pasting 
-						else { 
-							tilePack=p;
-						}
-						
-						// find how to paste 'nghbTile' to 'tile' (may be self-pasting)
-						int nti=tile.tileFlower[ti][1];
-						if (tile.tileFlower[ti][0]>0 && tile.tileFlower[ti][0]!=nghbJ)
-							throw new CombException("not the nghb tile expected");
-						
-						// get the list of vertices defining the edges
-						NodeLink tedge=tile.findAugEdge(ti);
-						NodeLink nghbedge=nghbTile.findAugEdge(nti);
-						int n=tedge.size()-1;
-						if ((nghbedge.size()-1)!=n)
-							throw new CombException("edge sizes don't match");
-
-						int v=tedge.get(n);
-						int w=nghbedge.get(0);
-			
-						PackDCEL pdc1=p.packDCEL;
-						PackDCEL pdc2=tilePack.packDCEL;
-						
-						boolean debug=false; // debug=true;
-						if (debug) {
-							DCELdebug.printRedChain(pdc1.redChain);
-							DCELdebug.printRedChain(pdc2.redChain);
-							pdc1.fixDCEL(CPBase.packings[1]);
-							CPBase.packings[1].attachDCEL(pdc1);
-							pdc2.fixDCEL(CPBase.packings[2]);
-							CPBase.packings[2].attachDCEL(pdc2);
-
-							debug=false;
-						} // return null;
-						
-						PackDCEL pdcel=CombDCEL.adjoin(pdc1, pdc2, v, w, n);
-						p.vertexMap=pdcel.oldNew;
-						pdcel.fixDCEL(null);
-						
-						if (buildDeBug) { // buildDeBug=true;
-							int qnum=2; // qnum=1;
-							DebugHelp.debugPackDisp(p,qnum,"max_pack;Disp -w -c -cc5t4 {c:m.eq.2}");
-							buildDeBug=false;
-						}
-						
-						// record pastings
-						pastingStatus[tile.tileIndex][ti]=1;
-						pastingStatus[nghbJ][nti]=1;
-						
-						if (debug) { // debug=true;
-							CPBase.packings[2].attachDCEL(pdcel);
-							debug=false;
-							return null;
-						}
-						
-//						CombDCEL.redchain_by_edge(pdcel, null, pdcel.alpha,false);
-						// DCELdebug.printRedChain(pdcel.redChain);
-//						p.attachDCEL(pdcel);
-//						pdcel.oldNew=null; 
-
-						// recursively update vertices
-						if (isnew) { // reset just for this new tile
-							tData.myTiles[nghbJ].updateMyVerts(p.vertexMap);
-						}
-						else { // self pasting of p; adjust all attached tiles
-							for (int j=1;j<=tData.tileCount;j++) {
-								if (tilehaspack[j]==1)
-									tData.myTiles[j].updateMyVerts(p.vertexMap);
-							}
-						}
-					}
-				} // done pasting tile's edges
-				tiledone[tile.tileIndex]=1;
-			} // end of while on 'curr'
-		} // end of while on 'next'
-		
-		// attach updated 'tData'
-		p.packDCEL.fixDCEL(p);
-		p.tileData=tData;
-		return p;
-	}
-	
+   	
 	/**
 	 * This creates a new 'TileData' for given 'depth' 
 	 * with tiles reindexed from 1. The given 'tData' 

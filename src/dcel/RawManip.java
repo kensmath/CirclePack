@@ -2410,7 +2410,7 @@ public class RawManip {
 				u=clwedge.twin.origin.vertIndx;
 				count++;
 				if (debug)
-					DCELdebug.redConsistency(pdcel.redChain);
+					DCELdebug.redConsistency(pdcel);
 			} 
 			if (pdcel.redChain==null) { // have closed up
 				newV.bdryFlag=0;

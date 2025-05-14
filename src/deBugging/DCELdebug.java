@@ -282,18 +282,32 @@ public class DCELdebug {
 	}
 	
 	
-	public static int redConsistency(RedEdge redchain) {
+	public static int redConsistency(PackDCEL pdcel) {
 		int count=0;
+		RedEdge redchain=pdcel.redChain;
 		if (redchain==null) {
 			System.err.println(" redConsistency failed: no 'redchain' given");
 			return 0;
 		}
+		
+		int hit=0;
+		for (int v=1;(v<=pdcel.vertCount && hit==0);v++) {
+			Vertex vert=pdcel.vertices[v];
+			if (vert.bdryFlag>0 && !vert.redFlag)
+				hit=v;
+		}
+		if (hit>0)
+			System.out.println("vert "+hit+" is bdry but 'redflag' is false");
 		
 		RedEdge rhe=redchain;
 		System.out.println("redConsistency check: first edge "+rhe.myEdge);
 		int safety=3000;
 		do {
 			safety--;
+			if (!rhe.myEdge.origin.redFlag) {
+				System.err.println("origin 'redFlag' not set: "+rhe);
+				count++;
+			}
 			if (rhe.twinRed!=null) {
 				RedEdge rtwin=rhe.twinRed;
 				if (rtwin.twinRed!=rhe) {
@@ -657,7 +671,7 @@ public class DCELdebug {
 	}
 
 	public static void printRedChain(RedEdge redge,VertexMap vmap) {
-		StringBuilder sb=new StringBuilder("vertices in order:\n");
+		StringBuilder sb=new StringBuilder("RedChain in order:\n");
 		StringBuilder sbold=new StringBuilder("old indices:\n");
 		RedEdge nxtre=redge;
 		int safety=1010;
@@ -670,7 +684,7 @@ public class DCELdebug {
 		} while (nxtre!=redge && safety>0);
 		if (safety==0) 
 			System.err.println("debug routine 'printRedChain' safetied out");
-		sb.append(" -> "+nxtre.myEdge.origin.vertIndx);
+		sb.append(" "+nxtre.myEdge.origin.vertIndx);
 		if (vmap!=null)
 			sbold.append(" "+vmap.findW(nxtre.myEdge.origin.vertIndx));
 		System.out.println(sb.toString());

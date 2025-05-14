@@ -282,6 +282,7 @@ public class Tile extends Face {
 		p.tileData=new TileData(1,3);
 		Tile tile=new Tile(p.tileData,vertCount);
 		tile.tileType=tileType;
+		tile.tileIndex=1;
 		tile.baryVert=1;
 		for (int j=0;j<vertCount;j++) {
 			tile.vert[j]=2+2*j;
@@ -782,7 +783,19 @@ public class Tile extends Face {
     		}
     		return ans;
     	}
-    	    	
+
     }
+    
+	/**
+	 * for debugging
+	 */
+	public void printAugVert() {
+		StringBuilder strbld=new StringBuilder("AugVerts for tile "+this.tileIndex+"\n");
+		for (int v=0;v<this.augVertCount;v++) {
+			strbld.append(this.augVert[v]+" ");
+		}
+		System.out.println(strbld.toString());
+		return;
+	}
     
 }

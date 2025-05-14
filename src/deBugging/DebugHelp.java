@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 
 import JNI.SolverData;
+import allMains.CPBase;
 import allMains.CirclePack;
 import exceptions.DataException;
 import exceptions.InOutException;
@@ -38,7 +39,7 @@ public class DebugHelp {
 	 */
 	public static int debugPackDisp(PackData p,int pnum,String cmds) {
 		CirclePack.cpb.swapPackData(p, pnum,false);
-		CommandStrParser.jexecute(p, cmds);
+		CommandStrParser.jexecute(CPBase.packings[pnum],cmds);
 		return p.nodeCount;
 	}
 	

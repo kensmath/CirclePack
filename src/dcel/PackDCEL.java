@@ -181,7 +181,7 @@ public class PackDCEL {
 		try {
 		  // may need new red chain
 		  if (redChain==null) {
-			  CombDCEL.redchain_by_edge(this, null, this.alpha,prune);
+			  CombDCEL.redchain_by_edge(this,null,this.alpha,prune);
 		  } // DCELdebug.rededgecenters(this);
 		  // redChain should now exist, but can be in error, so take 
 		  //     two trys
