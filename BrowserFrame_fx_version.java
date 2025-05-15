@@ -56,7 +56,6 @@ import util.MemComboBox;
  * *p, *q packing data files, web/file pages, and 
  * directories. 
  * 
- * @author Alex Fawkes
  * @author kens, JavaFX introduced 12/2024
  */
 public class BrowserFrame extends JFrame implements ActionListener {

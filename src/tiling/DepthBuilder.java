@@ -97,7 +97,7 @@ public class DepthBuilder {
 	public PackData build2Depth() {
 		
 // debugging
-System.out.println("build2Depth: tData.tileCount="+tData.tileCount+"; depth="+depth);		
+//System.out.println("build2Depth: tData.tileCount="+tData.tileCount+"; depth="+depth);		
 
 		if (buildDeBug) { // buildDeBug=true;
 			int pTt=-1;
@@ -164,7 +164,7 @@ System.out.println("build2Depth: tData.tileCount="+tData.tileCount+"; depth="+de
 		PackData tilePack=null;
 		
 // debugging
-System.out.println("enter multi-tile");		
+//System.out.println("enter multi-tile");		
 		
 		// maintain 2 lists; indices of current tiles, new ones 
 		//    that have been touched
@@ -229,7 +229,7 @@ System.out.println("enter multi-tile");
 						
 						// get the list of vertices defining the edges
 						NodeLink tedge=tile.findAugEdge(ti);
-						NodeLink nghbedge=nghbTile.findAugEdge(nti);
+						NodeLink nghbedge=nghbTile.findAugEdge(nti); // tile.printAugVert();
 						int n=tedge.size()-1;
 						if ((nghbedge.size()-1)!=n)
 							throw new CombException("edge sizes don't match");
@@ -257,7 +257,8 @@ System.out.println("enter multi-tile");
 						}
 
 // debugging  before pasting
-						if (debug) {  // debug=true;
+//						debug=true;
+						if (debug) {
 						  debug=false;
 						  System.out.println("\nGetting ready to paste 'debugpack_"+
 								  p.nodeCount+".p', pasting v="+v+" to w="+w+" along "+n+" edges");
@@ -284,10 +285,10 @@ System.out.println("enter multi-tile");
 						pdcel.redChain=null;
 						pdcel.fixDCEL(null);
 // debugging
-DCELdebug.printRedChain(pdcel.redChain);
-DCELdebug.redConsistency(pdcel);
+//DCELdebug.printRedChain(pdcel.redChain);
+//DCELdebug.redConsistency(pdcel);
 
-p.vertexMap=pdcel.oldNew=oldnew;
+						p.vertexMap=pdcel.oldNew=oldnew;
 						p.attachDCEL(pdcel);
 						
 // debugging
@@ -333,7 +334,7 @@ p.vertexMap=pdcel.oldNew=oldnew;
 	public PackData oneTileDepth0(Tile tile,int tt) {
 		
 // debugging
-System.out.println("oneTileDepth0: tileIndex="+tile.tileIndex);		
+//System.out.println("oneTileDepth0: tileIndex="+tile.tileIndex);		
 		
 		PackData tmpPD=null;
 		boolean needsave=false;
@@ -384,7 +385,8 @@ System.out.println("oneTileDepth0: tileIndex="+tile.tileIndex);
 	public PackData oneTileDepthPos(Tile tile,int tt) {
 		
 // debugging
-System.out.println("oneTileDepthPos: tileIndex="+tile.tileIndex+"; depth="+depth);
+//System.out.println("oneTileDepthPos: tileIndex="+tile.tileIndex+"; depth="+depth);
+
 		PackData tmpPD=null;
 		boolean needsave=false;
 		TileData tmpTD=topTD.get(tt).copyMyTileData();
@@ -406,11 +408,12 @@ System.out.println("oneTileDepthPos: tileIndex="+tile.tileIndex+"; depth="+depth
 		}
 		
 		// fix up our one tile, create augmented vertices
-		tData.myTiles[1].myTileData=tmpPD.tileData;
-		tData.myTiles[1].myTileData.parentTile=tData.myTiles[1];
-		for (int j=1;j<=tData.myTiles[1].myTileData.tileCount;j++)
-			tData.myTiles[1].myTileData.myTiles[j].TDparent=tmpPD.tileData;
-		tData.newVertAug(1);
+		int tindx=tile.tileIndex;
+		tData.myTiles[tindx].myTileData=tmpPD.tileData;
+		tData.myTiles[tindx].myTileData.parentTile=tData.myTiles[tindx];
+		for (int j=1;j<=tData.myTiles[tindx].myTileData.tileCount;j++)
+			tData.myTiles[tindx].myTileData.myTiles[j].TDparent=tmpPD.tileData;
+		tData.newVertAug(tindx);
 		
 		// Do we need a copy of the one just built
 		Vector<PackData> vpd=null;
@@ -426,7 +429,6 @@ System.out.println("oneTileDepthPos: tileIndex="+tile.tileIndex+"; depth="+depth
 			if (buildDeBug) {
 				System.out.println("stored depth "+depth+", type "+tt);
 			}
-
 		}
 		
 		// return new packing with original 'tData' attached
@@ -450,7 +452,7 @@ System.out.println("oneTileDepthPos: tileIndex="+tile.tileIndex+"; depth="+depth
 	public PackData packAtDepth(TileData td,int d,int m,boolean debug) {
 		
 // debugging
-System.out.println("packAtDepth: tileCount="+td.tileCount+"; depth="+d);
+//System.out.println("packAtDepth: tileCount="+td.tileCount+"; depth="+d);
 
 		DepthBuilder dBuilder=new DepthBuilder(td,d,m,topTD,depthPD);
 		dBuilder.buildDeBug=debug;
