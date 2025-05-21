@@ -18,6 +18,7 @@ beta {v}
 BeurlingFlow ('BF' PackExtender) 
 blend -q{qnum} v n 
 break 
+canonical 
 cd {..} 
 center_point {x y} 
 center_vert {v} 
@@ -194,7 +195,7 @@ set_ps {name}
 set_rad [options] [{r v..}] 
 set_ratio p0 p1 
 set_random [options] {v..} 
-set_schwarzian -[x] {v w ...}] 
+set_schwarzian -[su {x}] {v w ...} 
 set_screen [options] 
 set_sphere_view [options] {a b c} (abbrev: set_sv) 
 set_sph_opacity {t} 
@@ -263,7 +264,7 @@ zip n v
 ?f(z) {x [y]} 
 ?gam(t) {t} 
 ?invdist {v w} 
-?schwarz {v w} 
+?sch {v w ..} 
 ?mark -[vft] {.} 
 ?rad {v} 
 ?vert {v} 

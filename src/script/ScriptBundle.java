@@ -110,15 +110,16 @@ public class ScriptBundle extends JPanel implements ActionListener {
 		JPanel topPanel=new JPanel();//new FlowLayout(FlowLayout.LEADING));
 		topPanel.setLayout(new BoxLayout(topPanel,BoxLayout.LINE_AXIS));
 
+		// TODO: suppress until new browser is working
 		// "www" icon
-		MyTool mytool=new MyTool(new CPIcon("script/www_icon.png"),null,
-				"open browser",null,"Open browser to load scripts/packings from the web",
-				"SCRIPT:",false,manager);
-		StackBox.setFixedSizes(mytool,30,24);
-		topPanel.add(mytool);
+//		MyTool mytool=new MyTool(new CPIcon("script/www_icon.png"),null,
+//				"open browser",null,"Open browser to load scripts/packings from the web",
+//				"SCRIPT:",false,manager);
+//		StackBox.setFixedSizes(mytool,30,24);
+//		topPanel.add(mytool);
 
 		// "open" folder
-		mytool=new MyTool(new CPIcon("script/folder_yellow_open.png"),null,
+		MyTool mytool=new MyTool(new CPIcon("script/folder_yellow_open.png"),null,
 				"Load script file",null,"Load new script from a file",
 				"SCRIPT:",false,manager);
 		StackBox.setFixedSizes(mytool,30,24);

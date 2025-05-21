@@ -394,6 +394,21 @@ see the result in the "Messages" window.
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="IF">IF</a>&nbsp;&nbsp; 
 <br/><br/>
+<font size="+1" color="blue"><strong><a name="canonical">canonical</a></strong></font>&nbsp;&nbsp; <font face="sans-serif"></font>
+<blockquote>
+<strong>Description: </strong> This applies only to genus 0 multiply 
+    connected complexes. Instead of the usual maximal
+    packing in the unit disc, this gives a euclidean
+    packing in a "circle domain"; that is, the packing
+    lies in the unit disc and its holes bound ideal
+    circles that have been deleted. For example, a
+    combintorial annulus gives a packing that fills
+    the annulus between a circle centered at the
+    origin and the unit circle.
+</blockquote>
+<strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
+&nbsp;&nbsp;&nbsp; <a href="max_pack">max_pack</a>&nbsp;&nbsp; 
+<br/><br/>
 <font size="+1" color="blue"><strong><a name="cd">cd</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{..}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>Change the working directory. Can use "pwd" to find the
@@ -773,6 +788,10 @@ counts do.)
 	
 	A regular "tetrahedron" on the sphere; 4 circles, each of radius
 	arcsin(sqrt(2/3)).
+	
+	"tilebary" produces an n-tile that is barycentrically and
+	then each of the 2n faces is barycentrically subdivided
+	again
 	
 	Additional types can be anticipated, potentially with further
 	required options.
@@ -2091,8 +2110,8 @@ the new path.</td></tr>
 		see 'mark'. The marked vertices will not (to extent possible) 
 		be used in drawing order.</td></tr>
 <tr><td width="25%" valign="top">-T</td>
-<td width="65%" align="left"> same as -t, but routine will definitely NOT use the marked 
-	vertices; it will stop once it has done all it can without them.</td></tr>
+<td width="65%" align="left"> based on top level tiles if a tiling exists;
+	    attempt to keep each top level tile in one piece.</td></tr>
 <tr><td width="25%" valign="top">default</td>
 <td width="65%" align="left"> recompute angle sums and centers.</td></tr>
 </table></blockquote>
@@ -2306,19 +2325,21 @@ these packings and the corresponding object is displayed in both.
 </blockquote>
 <font size="+1" color="blue"><strong><a name="max_pack">max_pack</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">[-v{v}] [k]&nbsp;&nbsp; </font>
 <blockquote>
-<strong>Description: </strong>Carry out the operations needed to move the packing to its
-	"intrinsic" geometry (the one where it's maximal packing
-	will live), reset its aims to default, repack, and layout. 
-	Note that you must issue separate commands to display the 
-	results.
+<strong>Description: </strong>Carry out the operations needed to move the 
+	packing to its "intrinsic" geometry (the one where 
+	it's maximal packing will live), reset its aims to 
+	default, repack, and layout. Note that you must 
+	issue separate commands to display the results.
 
 	Hyperbolic case (most common): Boundary radii are set to 
-	5.0 (which is essentially infinity) because setting them
-	to infinity (i.e., to any negative value) often results in
-	layout errors due to sensitivity of horocycle layouts.
+	5.0, which is essentially infinity. (Setting them to
+	infinity, i.e., to any negative value, often results in
+	layout errors due to sensitivity in horocycle layouts.)
 
-	Euclidean case: This only occurs when the packing's complex
-	triangulates a 1-torus.
+	Euclidean case: This only occurs when the 
+	packing's complex triangulates a 1-torus. 
+	(But see "canonical" for optional multiply connected,
+	genus 0 eucl packings.)
 
 	Spherical case: Puncture, max_pack in the hyperbolic 
 	setting, then project back to the sphere. 
@@ -2360,7 +2381,7 @@ these packings and the corresponding object is displayed in both.
      		'alpha' to be a non-neighbor, if necessary).</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
-&nbsp;&nbsp;&nbsp; <a href="repack">repack</a>&nbsp;&nbsp; <a href="perp_pack">perp_pack</a>&nbsp;&nbsp; <a href="set_radii">set_radii</a>&nbsp;&nbsp; 
+&nbsp;&nbsp;&nbsp; <a href="repack">repack</a>&nbsp;&nbsp; <a href="perp_pack">perp_pack</a>&nbsp;&nbsp; <a href="set_radii">set_radii</a>&nbsp;&nbsp; <a href="canon">canon</a>&nbsp;&nbsp; 
 <br/><br/>
 <font size="+1" color="blue"><strong><a name="meld_edge">meld_edge</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">{v w ..}&nbsp;&nbsp; </font>
 <blockquote>
@@ -2470,11 +2491,12 @@ these packings and the corresponding object is displayed in both.
 <font size="+1" color="blue"><strong><a name="motion">motion</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[dn] {cmd}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
-	This provides an animated movement between a
-	packing before and after a string of commands
-	(surrounded by '"') is executed. The initial 
-	packing should be displayed, setting the 
-	desired display flags, then the commands 
+	This provides an animated movement between the
+	existing packing and a new version of the same
+	packing that is created by executing the string
+	of commands provided between '"' marke.
+	The initial	packing should be displayed using the 
+	desired display flags; the quoted command string 
 	should apply to this same packing, should not 
 	change the number of vertices or the geometry, 
 	and should include all actions needed to obtain 
@@ -2483,12 +2505,14 @@ these packings and the corresponding object is displayed in both.
 	The new packing should not be displayed, as the
 	'motion' command will move toward that in stages.
 	 
-	For straightforward	situations, the idea is 
-	to help the viewer follow the action visually:
+	For straightforward	situations to help the viewer 
+	follow the action visually:
 	A sequence of canvas updates using the current 
 	display options	shows movement from the initial	
-	to the final packing. Specific examples include 
-	'flip' and 'unflip' commands, changes in boundary
+	to the final packing. Note, however, that this
+	is simply linear interpolation, so intermediate
+	stages such as "repack" are carried out. Specific 
+	examples include 'flip'/'unflip', changes in boundary
 	angle sums, etc., but other cases may occur to the
 	user. Try it and see what happens.
 </blockquote>
@@ -4549,19 +4573,23 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="adjust_rad">adjust_rad</a>&nbsp;&nbsp; <a href="set_rad">set_rad</a>&nbsp;&nbsp; 
 <br/><br/>
-<font size="+1" color="blue"><strong><a name="set_schwarzian">set_schwarzian</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[x] {v w ...}]&nbsp;&nbsp; </font>
+<font size="+1" color="blue"><strong><a name="set_schwarzian">set_schwarzian</a></strong></font>&nbsp;&nbsp; <font face="sans-serif">-[su {x}] {v w ...}&nbsp;&nbsp; </font>
 <blockquote>
 <strong>Description: </strong>
 	Compute and store the intrinsic schwarzians for given edges, 
-	defaulting to 'all'. See 'dcel.Schwarzian.java' for more details
-	and the PackExtender 'SchwarzMap.java' for related methods.
-	If double x is given, then set specified schwarzians to x. 
-	Else compute the schwarzians using current radii. This 
-	"intrinsic" schwarzian is based on 'baseMobius' transforms and 
-	with layoutOrder can be used to layout a packing determined 
-	up to Mobius transformation by the layout of the first face. 
-	(Layout works in spherical or euclidean geometry, but not 
-	hyperbolic.) 
+	defaulting to 'all' edges. The -s {x} and -u {x} flags indicate
+	set the schwarzians. With -s {x} flag, set specified edge
+	schwarzians to value x. However, an alternate parameter u=1-s 
+	is often used, so the -u {x} flag sets u parameter to the value x 
+	(meaning it sets s=1-x). If no such flags are given,
+	the command computes and stores the schwarzians using current 
+	radii. This "intrinsic" schwarzian is based on 'baseMobius' 
+	transforms and with layoutOrder can be used to layout a packing 
+	determined up to Mobius transformation by the layout of the 
+	first face.	(Layout works in spherical or euclidean geometry, 
+	but not hyperbolic.) See 'dcel.Schwarzian.java' for more 
+	details and the PackExtender 'SchwarzMap.java' for related 
+	methods.
 </blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; Options:</strong>
 <blockquote>
@@ -4570,6 +4598,8 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 <td width="65%" align="left"> Set based on current radii.</td></tr>
 <tr><td width="25%" valign="top">-s {x} {v w ...}</td>
 <td width="65%" align="left"> schwarzians set to double value x</td></tr>
+<tr><td width="25%" valign="top">-u {x} {v w ...}</td>
+<td width="65%" align="left"> schwarzians set to double value 1-x</td></tr>
 </table></blockquote>
 <strong>&nbsp;&nbsp;&nbsp;&nbsp; See Also:</strong>
 &nbsp;&nbsp;&nbsp; <a href="dual_layout">dual_layout</a>&nbsp;&nbsp; <a href="sch_report">sch_report</a>&nbsp;&nbsp; 
@@ -5435,8 +5465,8 @@ Any combination of these:
 <td width="65%" align="left"> geometry (needed by calls for data r and z) </td></tr>
 <tr><td width="25%" valign="top">-i</td>
 <td width="65%" align="left"> non-default inv_dist and aims</td></tr>
-<tr><td width="25%" valign="top">-S</td>
-<td width="65%" align="left"> Schwarzians, if they are recorded</td></tr>
+<tr><td width="25%" valign="top">-h</td>
+<td width="65%" align="left"> intrinsic schwarzians</td></tr>
 <tr><td width="25%" valign="top">-r</td>
 <td width="65%" align="left"> radii</td></tr>
 <tr><td width="25%" valign="top">-z</td>
@@ -5744,8 +5774,8 @@ a negative value means this vertex is not adjusted during repacking</td></tr>
 <td width="65%" align="left">	  value of current parameterized path at real t</td></tr>
 <tr><td width="25%" valign="top">?invdist {v w}</td>
 <td width="65%" align="left">   inv dist/overlap between any two circles</td></tr>
-<tr><td width="25%" valign="top">?schwarz {v w}</td>
-<td width="65%" align="left">   real schwarzian for this edge (if allocated)</td></tr>
+<tr><td width="25%" valign="top">?sch {v w ..}</td>
+<td width="65%" align="left">    intrinsic schwarzian for this edge (if allocated)</td></tr>
 <tr><td width="25%" valign="top">?mark -[vft] {.}</td>
 <td width="65%" align="left"> mark for vert, face, or tile</td></tr>
 <tr><td width="25%" valign="top">?nodecount</td>

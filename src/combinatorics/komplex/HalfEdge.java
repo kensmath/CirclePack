@@ -124,7 +124,7 @@ public class HalfEdge {
 	public int getCycleCount() {
 		int count=0;
 		HalfEdge he=this;
-		int safety=1000;
+		int safety=50000;
 		do {
 			count++;
 			safety--;

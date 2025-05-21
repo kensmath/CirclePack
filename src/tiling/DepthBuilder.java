@@ -136,8 +136,13 @@ public class DepthBuilder {
 		
 		// ************************ only 1 tile?
 		if (tData.tileCount==1) {
-			return p;
+			if (tData.myTiles[1].tileFlower==null) 
+				return p;
+			// check for self pastings
+			
 		}
+		
+		// check for self-pastings of 
 		
 		// *************** else, multiple tile types **********
 		

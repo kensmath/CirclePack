@@ -1655,7 +1655,7 @@ public class PackData{
 	 * This sets 'bdryFlag's, 'bdryCompCount', and 'bdryStarts[]'.
 	 * (Formerly done in complex_count; separated to use 
 	 * during constructions.)
-	 * @return int, count of bdry edges
+	 * @return int, count of bdry components
 	 */
 	public int setBdryFlags() {
 		bdryStarts=new int[MAX_COMPONENTS];
@@ -1675,11 +1675,13 @@ public class PackData{
 			}
 		}
 		
-		// each time we encounter a new bdry vert, process its whole component
+		// each time we encounter a new bdry vert, 
+		//   process its whole component
 		for (int i=1;i<=nodeCount;i++) {
 			
 			// debug
-			if (debug) System.err.println("index i: "+i);
+			if (debug) 
+				System.err.println("index i: "+i);
 			
 			if (getVertUtil(i)==0) {
 				if (getFirstPetal(i)==getLastPetal(i)) {

@@ -815,10 +815,12 @@ public class PackCreation {
 	}
 	
 	/**
-	 * Specialized routine to expand a pentagonal complex having 
-	 * equally spaced vertices 1 2 3 4 5 on its bdry and 6 at its
-	 * center by adjoining 5 copies of itself to form a new complex 
-	 * with the same property (after renumbering).
+	 * Specialized routine to expand a pentagonal 
+	 * complex having equally spaced vertices 
+	 * 1 2 3 4 5 on its bdry and 6 at its center by 
+	 * adjoining 5 copies of itself to form a new 
+	 * complex with the same property (after 
+	 * renumbering).
 	 * @param p @see PackData, 
 	 * @param sidelength int, number of edges in each side
 	 * @return @see PackData

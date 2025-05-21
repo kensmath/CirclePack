@@ -6,7 +6,6 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import browser.BrowserUtilities;
 import util.FileUtil;
 
 /** 
@@ -52,8 +51,8 @@ public class URLtesting {
 		System.out.println("testInput = "+testInput+"\nAfter call, result is = "+
 				testURL.toString());
 		
-		URL outURL=BrowserUtilities.pageForDirectory(testURL);
-		System.out.println("tmp directory html page is:\n"+outURL.toString());
+//		URL outURL=BrowserUtilities.pageForDirectory(testURL);
+//		System.out.println("tmp directory html page is:\n"+outURL.toString());
 
 		testInput="http://circlepack.com";
 		System.out.println("testInput = "+testInput+"\nAfter call, result is = "+

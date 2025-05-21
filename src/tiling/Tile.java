@@ -501,7 +501,9 @@ public class Tile extends Face {
 				k++;
 			}
 		}
-		int j=starts[tick];
+		int j=starts[tick]; 
+		out.add(augVert[j]);
+		j++;// next possible edge starting
 		int ticker=(tick+1)%vertCount; // last edge, have to wrap to 0
 		while (j<augVertCount && 
 				augVert[j]!=vert[ticker]) {

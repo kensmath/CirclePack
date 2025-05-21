@@ -389,6 +389,22 @@ see the result in the "Messages" window.
 </seealso>
 </command>
 
+<command cmd="canonical">
+<description> This applies only to genus 0 multiply 
+    connected complexes. Instead of the usual maximal
+    packing in the unit disc, this gives a euclidean
+    packing in a "circle domain"; that is, the packing
+    lies in the unit disc and its holes bound ideal
+    circles that have been deleted. For example, a
+    combintorial annulus gives a packing that fills
+    the annulus between a circle centered at the
+    origin and the unit circle.
+</description>
+<seealso>
+<see>max_pack</see>
+</seealso>
+</command> 
+
 <command cmd="cd" flags="{..}">
 <description>Change the working directory. Can use "pwd" to find the
 	current directory.
@@ -2089,19 +2105,21 @@ these packings and the corresponding object is displayed in both.
 
 	
 <command cmd="max_pack" flags="[-v{v}] [k]">
-<description>Carry out the operations needed to move the packing to its
-	"intrinsic" geometry (the one where it's maximal packing
-	will live), reset its aims to default, repack, and layout. 
-	Note that you must issue separate commands to display the 
-	results.
+<description>Carry out the operations needed to move the 
+	packing to its "intrinsic" geometry (the one where 
+	it's maximal packing will live), reset its aims to 
+	default, repack, and layout. Note that you must 
+	issue separate commands to display the results.
 
 	Hyperbolic case (most common): Boundary radii are set to 
-	5.0 (which is essentially infinity) because setting them
-	to infinity (i.e., to any negative value) often results in
-	layout errors due to sensitivity of horocycle layouts.
+	5.0, which is essentially infinity. (Setting them to
+	infinity, i.e., to any negative value, often results in
+	layout errors due to sensitivity in horocycle layouts.)
 
-	Euclidean case: This only occurs when the packing's complex
-	triangulates a 1-torus.
+	Euclidean case: This only occurs when the 
+	packing's complex triangulates a 1-torus. 
+	(But see "canonical" for optional multiply connected,
+	genus 0 eucl packings.)
 
 	Spherical case: Puncture, max_pack in the hyperbolic 
 	setting, then project back to the sphere. 
@@ -2143,6 +2161,7 @@ these packings and the corresponding object is displayed in both.
 <see>repack</see>
 <see>perp_pack</see>
 <see>set_radii</see>
+<see>canon</see>
 </seealso>
 </command>
 

@@ -985,9 +985,10 @@ public class CommandStrParser {
 					  PackControl.mobiusFrame.setVisible(false);
 				  }
 
-				  else if (windStr.startsWith("www") || windStr.startsWith("bro")) {
-					  PackControl.browserFrame.setVisible(false);
-				  }
+				  // TODO: suspend until browser is fixed
+//				  else if (windStr.startsWith("www") || windStr.startsWith("bro")) {
+//					  PackControl.browserFrame.setVisible(false);
+//				  }
 
 				  else if (windStr.startsWith("abo")) {
 					  PackControl.aboutFrame.setVisible(false);
@@ -1002,9 +1003,10 @@ public class CommandStrParser {
 				  else if (windStr.startsWith("inf")) { // info frame
 					  PackControl.packDataHover.setLocked(false);
 				  }
-				  else if (windStr.startsWith("www") || windStr.startsWith("bro")) {
-					  PackControl.browserFrame.setVisible(false);
-				  }
+				  // TODO: suspend until browser is fixed
+//				  else if (windStr.startsWith("www") || windStr.startsWith("bro")) {
+//					  PackControl.browserFrame.setVisible(false);
+//				  }
 				  else if (windStr.startsWith("abo")) {
 					  PackControl.aboutFrame.setVisible(false);
 					  PackControl.aboutFrame=null;
@@ -2976,10 +2978,11 @@ public class CommandStrParser {
 					  PackControl.mobiusFrame.setVisible(true);
 					  PackControl.mobiusFrame.setState(Frame.NORMAL);
 				  }
-				  else if (windStr.startsWith("www") || windStr.startsWith("bro")) {
-					  PackControl.browserFrame.setVisible(true);
-					  PackControl.browserFrame.setState(Frame.NORMAL);
-				  }
+				  // TODO: suspend until browser is fixed
+//				  else if (windStr.startsWith("www") || windStr.startsWith("bro")) {
+//					  PackControl.browserFrame.setVisible(true);
+//					  PackControl.browserFrame.setState(Frame.NORMAL);
+//				  }
 				  else if (windStr.startsWith("abo")) {
 					  PackControl.aboutFrame.openAbout();
 				  }
@@ -5771,6 +5774,65 @@ public class CommandStrParser {
 	  case 'c':
 	  {
 		  
+		  // =========== canonical ===========
+		  if (cmd.startsWith("canon")) {
+
+    		  // is it an multiply connected plane surface?
+    		  if (packData.intrinsicGeom==0 && 
+    				  packData.packDCEL.idealFaceCount>=2) {
+
+    			  // find shortest bdry and add ideal vertex
+    			  int bnum=packData.getBdryCompCount();
+    			  int[] bstarts=new int[bnum+1];
+    			  int[] bcounts=new int[bnum+1];
+    			  int bb=0;
+    			  int bB=0;
+    			  int bshort=packData.nodeCount;
+    			  int blong=0;
+    			  for (int i=1;i<=bnum;i++) {
+    				  bstarts[i]=packData.getBdryStart(i);
+    				  bcounts[i]=packData.bdry_comp_count(bstarts[i]);
+    				  if (bcounts[i]>blong) {
+    					  blong=bcounts[i];
+    					  bB=i;
+    				  }
+    				  if (bcounts[i]<bshort) {
+    					  bshort=bcounts[i];
+    					  bb=i;
+    				  }
+    			  }
+    			  
+    			  // add_ideal to all but bB and bb
+    			  int alpha_hold=packData.getAlpha();
+    			  int node_hold=packData.nodeCount;
+    			  for (int j=1;j<=bnum;j++) {
+    				  if (j!=bb && j!=bB)
+	    				  jexecute(packData,"add_ideal "+bstarts[j]);
+    			  }
+    			  
+    			  // last added goes in smallest bdry comp
+    			  jexecute(packData,"add_ideal "+bstarts[bb]);
+    			  packData.packDCEL.setAlpha(packData.nodeCount,null,true);
+    			  
+    			  // now a comb disc, so pack hyperbolically
+    			  count=jexecute(packData,"max_pack");
+    			  
+    			  // puncture added vertices
+    			  for (int j=packData.nodeCount;j>node_hold;j--)
+    				  packData.puncture_vert(packData.nodeCount);
+    			  
+    			  // convert to euclidean
+    			  packData.geom_to_e();
+    			  packData.setGeometry(0);
+    			  packData.set_aim_default();
+    			  
+    			  return count;
+    		  }
+    		  // otherwise, usual max_pack
+    		  else
+    			  return jexecute(packData,"max_pack");
+    	  } // done with 'canon'
+		  
 	      // =========== cookie ===========
 	      if (cmd.startsWith("cookie")) {
 	    	  
@@ -7826,9 +7888,10 @@ public class CommandStrParser {
 	    	  } catch(Exception ex) {}
 	    	  }
 
+	    	  // hyperbolic is most common
 	    	  if ((packData.intrinsicGeom==0 && 
-	    			  packData.packDCEL.idealFaceCount>0) || 
-	    			  packData.intrinsicGeom < 0) { // hyperbolic case 
+	    			  packData.packDCEL.idealFaceCount>0) ||
+	    			  packData.intrinsicGeom<0) {
 	    		  if (packData.hes >=0) {
 	    			  packData.geom_to_h();
 	    			  packData.setGeometry(-1);
@@ -7841,9 +7904,10 @@ public class CommandStrParser {
 	    		  HypPacker h_packer=new HypPacker(packData,-1);
     			  count=h_packer.maxPack(cycles);
 	    	  }
-	    	  else if (packData.intrinsicGeom == 0) { // must be 1-torus 
+	    	  else if (packData.intrinsicGeom==0) { // can only be 1-torus
 	    		  if (packData.hes !=0) {
-	    			  jexecute(packData,"geom_to_e");
+	    			  packData.geom_to_e();
+	    			  packData.setGeometry(0);
 	    		  }	
 	    		  packData.set_aim_default(); // Orick's code, if available
 	    		  EuclPacker e_packer=new EuclPacker(packData,-1);

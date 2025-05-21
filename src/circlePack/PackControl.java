@@ -34,7 +34,6 @@ import javax.swing.WindowConstants;
 
 import allMains.CPBase;
 import allMains.CirclePack;
-import browser.FXWebBrowser;
 import canvasses.CanvasReDrawManager;
 import canvasses.CursorCtrl;
 import canvasses.MainFrame;
@@ -169,7 +168,8 @@ MouseMotionListener,FocusListener {
 	public static HelpHover helpHover;
 	public static ScriptHover scriptHover;
 	public static MobiusFrame mobiusFrame;
-	public static FXWebBrowser browserFrame;
+	// TODO: suspend until browser is fixed
+//	public static FXWebBrowser browserFrame;
 	public static FtnFrame newftnFrame;
 	public static OutputFrame outputFrame;
 	public static TabbedPackDataHover packDataHover; 
@@ -617,9 +617,9 @@ MouseMotionListener,FocusListener {
 		if (historyFile.startsWith("~/"))
 			historyFile = CPFileManager.HomeDirectory + File.separator + historyFile.substring(2);
 		
-		browserFrame = new FXWebBrowser(messenger, historyFile);
-		browserFrame.setLocation(ptX, ptY + ControlDim2.height + 90);
-		browserFrame.setVisible(browserStart);
+//		browserFrame = new FXWebBrowser(messenger, historyFile);
+//		browserFrame.setLocation(ptX, ptY + ControlDim2.height + 90);
+//		browserFrame.setVisible(browserStart);
 		
 		newftnFrame=new FtnFrame();
 		newftnFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
@@ -677,19 +677,20 @@ MouseMotionListener,FocusListener {
 			}
 		});
 
+		// TODP: suspend until javafx is fixed
 		// Button to bring up Browser
-		JButton wwwButton=new JButton("Browser");
-		wwwButton.setFont(new Font(wwwButton.getFont().toString(),
-				Font.ROMAN_BASELINE+Font.BOLD,10));
-		wwwButton.setToolTipText("Open/Close web browser window");
-		wwwButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				if (browserFrame.isVisible()) 
-					browserFrame.setVisible(false); 
-				else 
-					browserFrame.setVisible(true);
-			}
-		});
+//		JButton wwwButton=new JButton("Browser");
+//		wwwButton.setFont(new Font(wwwButton.getFont().toString(),
+//				Font.ROMAN_BASELINE+Font.BOLD,10));
+//		wwwButton.setToolTipText("Open/Close web browser window");
+//		wwwButton.addActionListener(new ActionListener() {
+//			public void actionPerformed(ActionEvent e) {
+//				if (browserFrame.isVisible()) 
+//					browserFrame.setVisible(false); 
+//				else 
+//					browserFrame.setVisible(true);
+//			}
+//		});
 		
 		// TODO: toss hoverframe, revert to simple frame
 		JButton newftnButton=new JButton("Function");
