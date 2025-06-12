@@ -173,21 +173,21 @@ public class SchFlowerData {
 	}
 
 	/**
-	 * Given the tangency point of c_{n-2} and the
-	 * radii of c_{n-3} and c_{n-2}, we can compute
-	 * the tangency point of c_{n-1} and the 3 
-	 * final uzians, u_{n-2}, u_{n-1}, and u_n.
-	 * (Recall, r_{n-1}=1).
-	 * @param tang double, c_{n-2} tangency point
+	 * Given the tangency point of c_{n-3} and the
+	 * radii of c_{n-4} and c_{n-3}, we can compute
+	 * the tangency point of c_{n-2} and the 3 
+	 * final uzians, u_{n-3}, u_{n-2}, and u_{n-1}.
+	 * (Recall, r_{n-2}=1).
+	 * @param tang double, c_{n-3} tangency point
+	 * @param rm4 double, r_{n-4}
 	 * @param rm3 double, r_{n-3}
-	 * @param rm2 double, r_{n-2}
 	 * @return double[4], t,um2,um1,u
 	 */
-	public static double[] compLast(double tang,double rm3,double rm2) {
+	public static double[] compLast(double tang,double rm4,double rm3) {
 		double[] answers=new double[4];
-		double delta=2.0*Math.sqrt(rm2);
+		double delta=2.0*Math.sqrt(rm3);
 		answers[0]=tang+delta;
-		answers[1]=oosq3*(Math.sqrt(rm2)+Math.sqrt(rm2/rm3));
+		answers[1]=oosq3*(Math.sqrt(rm3)+Math.sqrt(rm3/rm4));
 		answers[2]=2.0*oosq3/(delta);
 		answers[3]=answers[0]*oosq3/2.0;
 		return answers;
@@ -195,7 +195,7 @@ public class SchFlowerData {
 	
 	/**
 	 * Situation 1: Find the tangency point of the
-	 * last petal c_{n-1}. Radius 1 is mandated.
+	 * last petal c_{n-2}. Radius 1 is mandated.
 	 * @param u double
 	 * @return
 	 */
@@ -207,8 +207,8 @@ public class SchFlowerData {
 	}
 	
 	/**
-	 * Situation 2: find petal c2; no radii data needed
-	 * since c1 is always radius 1.
+	 * Situation 2: find petal c1; no radii data needed
+	 * since c0 is always radius 1.
 	 * @param u double
 	 * @return double[2], displacement, recip sqrt of radius
 	 */
@@ -256,49 +256,53 @@ public class SchFlowerData {
 	}
 	
 	/**
-	 * Compute full array of "constraint" functions C_j,
-	 * j=0,...,(N-1) based on given N uzians 
-	 * {u0,u1,...,u(n-1)}. We set C_0=0.0, C_1=1.0, and
-	 * C_{n-1}=1.0 in advance and compute the rest 
-	 * recursively. As long as the C_k, 2<=k<j, are 
-	 * positive, then C_j is the reciprocal root of 
-	 * radius r_j, j=2,..., N-2. Use this recursive 
-	 * formula:
+	 * Compute full array of "constraint" functions 
+	 * C_j, j=0,...,(N-1), based on given N uzians 
+	 * {u0,u1,...,u(N-1)}. We set C_0=0.0, C_1=1.0, and
+	 * C_{N-1}=1.0 in advance and compute the rest 
+	 * recursively, j=2,...,N-2. As long as the 
+	 * C_k, 2<=k<j, are positive, then C_j is the 
+	 * reciprocal root of radius r_j, j=2,..., N-2,
+	 * in the normalized layout. Use this recursive:
 	 * 
-	 * (+) C_{j+1}=sqrt{3}*u_j*C_j - C_{j-1} for 1<= j <=N-2.
+	 * (*) C_{j+1}=sqrt{3}*u_j*C_j - C_{j-1} 
+	 *     for 1<= j <=N-2.
 	 * 
 	 * Convention in the paper on schwarzians is that 
 	 * constraint C_j has j-1 arguments u1,...,u{j-1}, 
 	 * for 2<=j<=N-2. If some C_j is negative, then the
-	 * flower is branched and (+) may not hold, but
+	 * flower is branched and (*) may not hold, but
 	 * we continue anyway.
 	 * 
 	 * NOTE: Often we call this with uzians indices
 	 * shifted; calling routine takes care of this
 	 * on input and output.
 	 * 
-	 * NOTE: If C_j are positive, the flower is un-branched
-	 * and we can compute everything we need from the C_j:
+	 * NOTE: If C_j are positive, the flower is 
+	 * un-branched and we can compute everything 
+	 * in the half-plane normalization from the C_j:
 	 * 	+	r_j=1/(C_j)^2 and 
-	 * 	+	displacement delta_j=2/(C_j*C_{j+1}), 1<=j<=n-2
-	 * 	+	u_{n-2}=(1+C_{n-3})/(sqrt3*C_{n-2}) (which is (+))
+	 * 	+	displacement delta_j=2/(C_j*C_{j+1}), 
+	 *      1<=j<=N-2
+	 * 	+	u_{N-2}=(1+C_{N-3})/(sqrt3*C_{N-2}) 
+	 *      (which is (*))
 	 * 
 	 * @param uz uzians, indexed from 1
-	 * @return ArrayList: <0.0,1.0,C_2,...,C_{n-2},C_{n-1}>
+	 * @return ArrayList: <0.0,1.0,C_2,...,C_{N-2},C_{N-1}>
 	 */
 	public static ArrayList<Double> constraints(double[] uz) { 
 		int N=uz.length-1;
 		if (N<4)
 			return null;
 
-		ArrayList<Double> cons=new ArrayList<Double>(3);
+		ArrayList<Double> cons=new ArrayList<Double>(0);
 		cons.add(0,Double.valueOf(0.0));
 		cons.add(1,Double.valueOf(1.0));
 		double Cj=1.0;
 		double Cjm1=0.0;
-		// recursively define C_{j+1} for j=2,...,(n-3)
+		// recursively define C_{j+1} for j=1,...,(n-3)
 		// keep going even if a negative is encountered
-		for (int j=1;j<(N-1);j++) {
+		for (int j=1;j<=(N-3);j++) {
 			double cjp1=sqrt3*uz[j]*Cj-Cjm1;
 			cons.add(Double.valueOf(cjp1));
 			Cjm1=Cj;
@@ -318,7 +322,7 @@ public class SchFlowerData {
 	 * angle sum y=Theta-A|.
 	 * The uzians form an actual closed flower iff result
 	 * is zero. Note that we only use n-1 uzians, so if
-	 * result is zero, the final one can be computed.
+	 * 'layoutErr' is zero, the final uzian can be computed.
 	 * @param uzians double[], will convert to schwarzians
 	 * @param order int
 	 * @return Complex
@@ -336,9 +340,9 @@ public class SchFlowerData {
 	}
 	
 	/**
-	 * Compute the intrinsic schwarzians for a uniform flower 
-	 * of N petals with 'anglesum'. Typically, anglesum will be
-	 * a multiple of 2*pi.
+	 * Compute the intrinsic schwarzians for a 
+	 * uniform flower of N petals with 'anglesum'. 
+	 * Typically, anglesum = multiple of 2*pi.
 	 * @param N int
 	 * @param anglesum double
 	 * @return double

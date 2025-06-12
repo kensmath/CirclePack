@@ -58,12 +58,13 @@ public class ColorUtil {
 	}
 
     /** 
-     * Note user has to set color_ramp_size, default generally 
-     * COLOR_RAMP. Here we set up color ramp, starting with dark 
-     * blue, ending with dark red. Index color_ramp_size/2 is white.
-     * @param flag, int. If not zero do ramp only, and not the 
-     *    'other' colors; caution, other colors are specified based 
-     *    on color_ramp_size=200. 
+     * Note user has to set color_ramp_size, default 
+     * generally COLOR_RAMP. Here we set up color ramp, 
+     * starting with dark blue, ending with dark red. 
+     * Index color_ramp_size/2 is white.
+     * @param flag, int. If not zero do ramp only, and 
+     *    not the 'other' colors; caution, other colors 
+     *    are specified based on color_ramp_size=200. 
      */
  	public static void blue_to_red_ramp(int flag) {
       int i,mid,col_factor=0;
@@ -154,8 +155,9 @@ public class ColorUtil {
 	} /* blue_to_red_ramp */
  
 	/**
-	 * There's a standard color wheel for the complex argument
-	 * (used, eg., by Elias Wegert). This code returns that color.
+	 * There's a standard color wheel for the complex 
+	 * argument (used, eg., by Elias Wegert). This 
+	 * code returns that color.
 	 * @param tha double, argument in radians
 	 * @param alpha double, 
 	 * @return new Color object
@@ -207,9 +209,9 @@ public class ColorUtil {
 	}
 	
 	/**
-	 * There's a standard color wheel for the complex argument
-	 * (used, eg., by Elias Wegert). This code returns that color
-	 * with alpha set to 1.0.
+	 * There's a standard color wheel for the complex 
+	 * argument (used, eg., by Elias Wegert). This 
+	 * code returns that color with alpha set to 1.0.
 	 * @param tha double, argument in radians
 	 * @return new Color object
 	 */
@@ -218,10 +220,12 @@ public class ColorUtil {
 	}
 
 	/**
-	 * Converts normal to "washed out" colors for use on back of the sphere 
-	 * when it is not completely opaque. 
+	 * Converts normal to "washed out" colors for 
+	 * use on back of the sphere when it is not 
+	 * completely opaque. 
 	 * @param color_in Color
-	 * @param lambda double, 'lambda' is typically 'cpDrawing.sphereOpacity/255'.
+	 * @param lambda double, 'lambda' is typically 
+	 *         'cpDrawing.sphereOpacity/255'.
 	 * @return 'Color' with 'alpha' set.
 	 */
 	public static Color ColorWash(Color color_in,double lambda) {
@@ -231,9 +235,9 @@ public class ColorUtil {
 	}
 	
 	/**
-	 * Color tables have 16 fairly distinguishable colors to use
-	 * as a spread. Return new 'Color' object for one of colors 
-	 * indexed in [232,248).
+	 * Color tables have 16 fairly distinguishable 
+	 * colors to use as a spread. Return new 'Color' 
+	 * object for one of colors indexed in [232,248).
 	 * @param i int
 	 * @return new Color
 	 */
@@ -243,9 +247,10 @@ public class ColorUtil {
 	}
 	
 	/**
-	 * given a vector of real ratios between positive quantities
-	 * (e.g., radii of p compared to q) determine color ramp and 
-	 * return an equal sized vector of color indices.
+	 * given a vector of real ratios between positive 
+	 * quantities (e.g., radii of p compared to q) 
+	 * determine color ramp and return an equal sized 
+	 * vector of color indices.
 	 * TODO: should one take log and then interpolate?
 	 * @param data Vector<Double>
 	 * @return Vector<Integer>
@@ -330,12 +335,14 @@ public class ColorUtil {
 	}
 	
 	/**
-	 * Given vector of doubles, create vector of graduated color codes
-	 * for a balanced blue-to-red ramp; more negative = more blue (down to 1), 
-	 * more positive = more red (up to 199). Zero is white. 
-	 * Balanced means equal numerical gradations on blue and red sides,
-	 * regardless of comparison of min and max. Note: there might be no 
-	 * negatives, etc.
+	 * Given vector of doubles, create vector of 
+	 * graduated color codes for a balanced 
+	 * blue-to-red ramp; more negative = more blue 
+	 * (down to 1), more positive = more red (up to 199). 
+	 * Zero is white. Balanced means equal numerical 
+	 * gradations on blue and red sides, regardless of 
+	 * comparison of min and max. Note: there might 
+	 * be no negatives, etc.
 	 * @param data ArrayList<Double>
 	 * @return ArrayList<Integer> in same order
 	 */
@@ -374,12 +381,14 @@ public class ColorUtil {
 	}
 	
 	/**
-	 * Given vector of doubles, return parallel vector of 'Color'
-	 * objects, blue ramp for negative values, red ramp for positive: 
-	 * more negative = more blue (down to 1), more positive = more 
-	 * red (up to 199). Closer to 0, color closer to white. Note this 
-	 * is not "balanced", so numerical gradations may differ on blue 
-	 * and red sides. See 'blue_red_color_ramp' for balance.
+	 * Given vector of doubles, return parallel vector 
+	 * of 'Color' objects, blue ramp for negative values, 
+	 * red ramp for positive: more negative = more blue 
+	 * (down to 1), more positive = more red (up to 199). 
+	 * Closer to 0, color closer to white. Note this 
+	 * is not "balanced", so numerical gradations may 
+	 * differ on blue and red sides. See 
+	 * 'blue_red_color_ramp' for balance.
 	 * @param data Vector of Double
 	 * @return Vector of Color objects in same order
 	 */
@@ -423,13 +432,15 @@ public class ColorUtil {
 	}
 	
 	/**
-	 * Richter-type (logarithmic) red color ramp for real data.
-	 * Transform data to x in [0,M], ramp on values log(x+1)/log(M+1). 
-	 * Outputs [0.0,0.01] set to white, 1.0 set to full red. 
+	 * Richter-type (logarithmic) red color ramp 
+	 * for real data. Transform data to x in [0,M], 
+	 * ramp on values log(x+1)/log(M+1). Outputs 
+	 * [0.0,0.01] set to white, 1.0 set to full red. 
 	 * NOTES: 
-	 *  * If M<0.0001, return all white (not enough variation?).
-	 *  * vector(0) entry is ignored, but all other entries of
-	 *    data should have valid data.
+	 *  * If M<0.0001, return all white (not enough 
+	 *    variation?).
+	 *  * vector(0) entry is ignored, but all other 
+	 *    entries of data should have valid data.
 	 * @param data Vector<Double> (first spot unused)
 	 * @return Vector<Integer>, codes in [100,195] (white to red) (first unused)
 	 */
@@ -466,10 +477,11 @@ public class ColorUtil {
 	}
 	
 	/** 
-	 * For converting r g b (0-255) colors into index of "closest" 
-	 * color in current colortable. 
+	 * For converting r g b (0-255) colors into 
+	 * index of "closest" color in current colortable. 
 	 *
-	 * TODO: This is temporary (9/05) until I get rid of colortables 
+	 * TODO: This is temporary (9/05) until I get 
+	 * rid of colortables 
 	 * 
 	 * @param rd int
 	 * @param gn int
@@ -501,8 +513,8 @@ public class ColorUtil {
 	} 
 	
 	/**
-	 * Colors chosen for each integer n=2,....,12 (e.g. for degree
-	 * or number of sides of tile, etc.)
+	 * Colors chosen for each integer n=2,....,12 
+	 * (e.g. for degree or number of sides of tile, etc.)
 	 * TODO: should extend the range beyond 12
 	 * @param n int
 	 * @return new Color
@@ -537,7 +549,8 @@ public class ColorUtil {
 	}
 	
 	/**
-	 * Compare rgb components of two 'Color's; 'alpha' is ignored.
+	 * Compare rgb components of two 'Color's; 
+	 * 'alpha' is ignored.
 	 * @param c1 Color
 	 * @param c2 Color
 	 * @return true if rgb all equal.
@@ -560,7 +573,8 @@ public class ColorUtil {
 	}
 
 	/**
-	 * Create Color object using index to color table and opacity
+	 * Create Color object using index to color table 
+	 * and opacity
 	 * @param indx int, in [0,255]
 	 * @param opacity
 	 * @return Color
@@ -572,7 +586,8 @@ public class ColorUtil {
 	}
 
 	/**
-	 * Create actual 'Color' object using CirclePack index to color table 
+	 * Create actual 'Color' object using CirclePack 
+	 * index to color table 
 	 * @param indx int, in [0,255]
 	 * @return Color
 	 */
@@ -583,13 +598,59 @@ public class ColorUtil {
 	}
 
 	/**
-	 * Create 'Color' using Integer (versus int) index to color table 
+	 * Create 'Color' using Integer (versus int) index 
+	 * to color table 
 	 * @param indx, Integer 
 	 * @return Color, default to FG_Color
 	 */
 	public static Color coLor(Integer indx) {
 		int val=indx.intValue();
 		return coLor(val);
+	}
+	
+	/** 
+	 * given x in [0,1], return the corresponding
+	 * red color between white and deep red.
+	 * @param x double
+	 * @return Color
+	 */
+	public static Color red_interp(double x) {
+		if (x<0.0)
+			x=0.0;
+		if (x>1.0)
+			x=1.0;
+		int k=(int)((1.0-x)*255);
+		return new Color(255,k,k);
+	}
+
+	/** 
+	 * given x in [0,1], return the corresponding
+	 * green color between white and deep green.
+	 * @param x double
+	 * @return Color
+	 */
+	public static Color green_interp(double x) {
+		if (x<0.0)
+			x=0.0;
+		if (x>1.0)
+			x=1.0;
+		int k=(int)((1.0-x)*255);
+		return new Color(k,255,k);
+	}
+	
+	/** 
+	 * given x in [0,1], return the corresponding
+	 * blue color between white and deep blue.
+	 * @param x double
+	 * @return Color
+	 */
+	public static Color blue_interp(double x) {
+		if (x<0.0)
+			x=0.0;
+		if (x>1.0)
+			x=1.0;
+		int k=(int)((1.0-x)*255);
+		return new Color(k,k,255);
 	}
 	
 } 

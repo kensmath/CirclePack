@@ -812,7 +812,7 @@ public class CPCircle extends Complex {
 			if (Math.abs(C.x)<.0001) { 
 				path.moveTo(cpS.toPixX(centx),cpS.toPixY(sinr));
 				path.lineTo(cpS.toPixX(centx),cpS.toPixY(-sinr));
-				t0=Math.PI/2.0;
+				t0=CPBase.piby2;
 			}
 			
 			//  X > 0: starting angle: t0, extent: 2(pi-t0) */
@@ -839,7 +839,7 @@ public class CPCircle extends Complex {
 			 *  if r > Pi/2, set c = Pi-c;      
 			 *  Arc of horizon starts at -c and has extent 2*c.*/
 				double c=rad2deg*Math.asin(Math.sin(t0)*sinr);
-				if (r>Math.PI/2.0) c=180-c;
+				if (r>CPBase.piby2) c=180-c;
 				Shape unitarc=new Arc2D.Double(cpS.toPixX(-1.0),
 						cpS.toPixY(1.0),cpS.pixFactor*2.0,
 						cpS.pixFactor*2.0,

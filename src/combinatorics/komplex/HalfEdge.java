@@ -31,11 +31,12 @@ public class HalfEdge {
 	// TODO: figure out how to transfer this info as edges change.
 	double invDist;  // inversive distance assigned, default 1.0 (tangency)
 	double schwarzian; // see 'dcel.Schwarzian.java'
-	Color color;  // not used much yet.
+	Color color;  
 	
 	// for temporary use only
 	public int eutil; 
-	Complex genTang;  // "general tangency" point; not yet used/maintained
+	Complex genTang;  // "general tangency" point; 
+					  // not yet used/maintained
 
 	// constructor(s)
 	public HalfEdge() {
@@ -233,8 +234,8 @@ public class HalfEdge {
 	}
 	
 	/**
-	 * set schwarzian of this edge; user must handle setting of
-	 * twin edge.
+	 * set schwarzian of this edge; user must 
+	 * handle setting of twin edge.
 	 * @param sch double
 	 */
 	public void setSchwarzian(double sch) {

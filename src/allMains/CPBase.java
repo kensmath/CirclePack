@@ -56,7 +56,9 @@ public abstract class CPBase {
 	public static File TempDirectory=new File(System.getProperty("java.io.tmpdir"));
 	public static File ScreenShotDirectory=new File(System.getProperty("java.io.tmpdir"));
 		
-	// Some useful stuff for schwarzian work
+	// Useful constants
+	public static final double pi2=Math.PI*2.0;
+	public static final double piby2=Math.PI/2.0;
 	public static final double sqrt3=Math.sqrt(3);           // sqrt{3}
 	public static final double sqrt3by2=Math.sqrt(3)/2.0;    // sqrt{3}/2
 	// 3rd roots of unity; unit normals to base equilateral triangle edges

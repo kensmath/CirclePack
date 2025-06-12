@@ -6,13 +6,13 @@ import input.CommandStrParser;
 import packing.PackData;
 
 /**
- * Spherical circle packing computations. Currently this is 
- * only for maximal packing of a sphere. 
+ * Spherical circle packing computations. Currently 
+ * this is only for maximal packing of a sphere. 
  * 
- * As of 3/2023, changing from using euclidean packing to
- * hyperbolic due to layout error with the former: 
- * We "puncture" a vertex, max_pack in the hyp plane, and
- * project to the sphere, which also normalizes.
+ * As of 3/2023, changing from using euclidean packing 
+ * to hyperbolic due to layout error with the former: 
+ * We "puncture" a vertex, max_pack in the hyp plane, 
+ * and project to the sphere, which also normalizes.
  * 
  * @author kens 1/2021 and 3/2023
  *

@@ -4,6 +4,7 @@ import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.util.Vector;
 
+import allMains.CPBase;
 import math.Point3D;
 import packing.CPdrawing;
 import complex.Complex;
@@ -17,7 +18,6 @@ import complex.MathComplex;
  */
 public class CircleList {
 	static double m2pi=2.0*Math.PI;
-	static double piby2=Math.PI/2.0;
 	static double[] A,B,C,Chat; 
 	static Vector<Point2D.Double> vec;
 	// unit circle case, static
@@ -298,7 +298,7 @@ public class CircleList {
 				
 				// create path
 				CircleList.buildSphList(A,B,new Point3D(0,0,0),
-						piby2,end1,end2,gp,start,N,cpS);
+						CPBase.piby2,end1,end2,gp,start,N,cpS);
 			}
 		}
 	}

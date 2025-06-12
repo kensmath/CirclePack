@@ -9,7 +9,6 @@ import allMains.CirclePack;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.Vertex;
 import complex.Complex;
-import dcel.CombDCEL;
 import exceptions.CombException;
 import geometry.CircleSimple;
 import input.CommandStrParser;
@@ -18,6 +17,7 @@ import listManip.NodeLink;
 import packing.PackData;
 import packing.PackExtender;
 import util.CmdStruct;
+import util.ColorUtil;
 import util.StringUtil;
 
 /**
@@ -43,8 +43,16 @@ import util.StringUtil;
  */
 public class SchwarzPack extends PackExtender {
 	final static double sqrt3=Math.sqrt(3);
+	final static double S3=1.0-1.0/sqrt3; // schwarzian of degree 3.
 
-	Complex[] currentErrors; // latest errors for all vertices
+	// store 'SchEdgeData' array for edges
+	//    subject to adjustment; 'theEdges[j]' holds
+	//    index of edge j in 'edgeData' or -1.
+	ArrayList<SchEdgeData> edgeData; // first entry null
+	int[] theEdges; 
+
+
+	Complex[] vertErrors; // latest errors at vertices
 	int test_mode; // mode for making adjustments
 
 	// Constructors
@@ -59,8 +67,9 @@ public class SchwarzPack extends PackExtender {
 		registerXType();
 		test_mode=1; // default
 		try {
-			this.cpCommand("set_sch");
-			currentErrors=setCurrentErrors();
+			vertErrors=new Complex[extenderPD.nodeCount+1];
+			initiateEdgeData();
+			updateErrors();
 		} catch (Exception ex) {
 			Oops("Failed in computing errors");
 			running=false;
@@ -70,11 +79,129 @@ public class SchwarzPack extends PackExtender {
 		}
 	}
 	
+	/**
+	 * Set up 'edgeData' array. Note that if edge's
+	 * index is j, then 'theEdges[j]' is either 0 
+	 * or the edge's array index within 'edgeData'.
+	 */
+	public void initiateEdgeData() {
+		edgeData=new ArrayList<SchEdgeData>(1);
+		edgeData.add(0,(SchEdgeData)null);
+		theEdges=new int[extenderPD.packDCEL.edgeCount+1];
+		NodeLink intv=new NodeLink(extenderPD,"i");
+		int tick=1;
+		Iterator<Integer> ilst=intv.iterator();
+		while (ilst.hasNext()) {
+			Vertex vert=extenderPD.packDCEL.vertices[ilst.next()];
+			HalfEdge htrace=vert.halfedge;
+			if (vert.getNum()==3) {
+				htrace.setSchwarzian(S3);
+				htrace=htrace.prev.twin;
+				htrace.setSchwarzian(S3);
+				htrace=htrace.prev.twin;
+				htrace.setSchwarzian(S3);
+				continue;
+			}
+			do {
+				Vertex oppv=htrace.twin.origin;
+				if (oppv.getNum()!=3 || oppv.isBdry()) {
+					SchEdgeData sed=new SchEdgeData(htrace);
+					edgeData.add(tick,sed);
+					theEdges[htrace.edgeIndx]=tick;
+					tick++;
+				}
+				htrace=htrace.prev.twin; // cclw
+			} while (htrace!=vert.halfedge);
+		} // done with all interior vertices
+	}
+	
+	/**
+	 * Update errors and colors for 'vert' and its
+	 * edges.
+	 * @param vert Vertex
+	 * @param print boolean; print errors
+	 * @return int
+	 */
+	public int updateVert(Vertex vert,boolean print) {
+		int count=0;
+		HalfEdge he=vert.halfedge;
+		StringBuilder strbld=null;
+		if (print)
+			strbld=new StringBuilder(" Errors for vert "+vert.vertIndx+":\n");
+		do {
+			SchEdgeData sed=edgeData.get(theEdges[he.edgeIndx]);
+			sed.colorEdge();
+			if (print)
+				strbld.append("edge errors"+sed.myHEdge+
+						": cclw="+sed.errorCCLW+"; clw="+
+						sed.errorCLW+"\n");
+			he=he.prev.twin;
+			count++;
+		} while(he!=vert.halfedge);
+		
+		// error for the vertex itself
+		vertErrors[vert.vertIndx]=getVertErr(vert);
+				
+		if (print) {
+			strbld.append("\n  vert error = "+vertErrors[vert.vertIndx]);
+			System.out.println(strbld.toString());
+		}
+		
+		return count;
+	}
+	
 	public int cmdParser(String cmd,Vector<Vector<String>> flagSegs) {
 		Vector<String> items=null;
+		int count=0;
+		
+		// ============ analyze edge origin ========
+		if (cmd.startsWith("anal")) {
+			HalfEdge edge=HalfLink.grab_one_edge(extenderPD, flagSegs);
+			Vertex vert=edge.origin;
+			double eSch=edge.getSchwarzian();
+			int eindx=edge.edgeIndx;
+			SchEdgeData sed=edgeData.get(theEdges[eindx]);
+			StringBuilder strbld=
+				new StringBuilder("Analyze "+edge+
+					" with schwarzian "+eSch+"\n");
+			
+			// show computed schwarzians, cclw/clw
+			sed.setEdgeErrors();
+			strbld.append("\n  Computed schwarzians: cclw="
+					+String.format("%.8e",eSch+(sed.errorCCLW))+"; clw="
+					+String.format("%.8e",eSch+(sed.errorCLW)));
+			
+			// n-3 previous schwarzians
+			strbld.append("\n  "+(sed.myN-3)+" cclw schwarzians: ");
+			HalfEdge he=sed.startCCLW;
+			for (int j=1;j<=sed.myN-3;j++) {
+				strbld.append(String.format("%.8e",he.getSchwarzian())+"; ");
+				he=he.prev.twin;
+			}
+			
+			// n-3 following schwarzians
+			he=sed.startCLW;
+			strbld.append("\n  "+(sed.myN-3)+" clw schwarzians: ");
+			for (int j=1;j<=sed.myN-3;j++) {
+				strbld.append(String.format("%.8e",he.getSchwarzian())+"; ");
+				he=he.twin.next;
+			}
+			
+			// show error at vertex
+			CircleSimple cs=new CircleSimple();
+			Complex err=new Complex(0.0);
+			PackData.schFlowerErr(vert, err, cs);
+			vertErrors[vert.vertIndx]=new Complex(err);
+			strbld.append("\n  Vertex error = "+err+"\n");
+			
+			// ??? other stuff to show?
+			
+			System.out.println(strbld.toString());
+			return 1;
+		}
 		
 		// ============ set test mode =================
-		if (cmd.startsWith("test_m")) {
+		else if (cmd.startsWith("test_m")) {
 			test_mode=1;
 			try {
 				test_mode=Integer.parseInt(flagSegs.remove(0).get(0));
@@ -86,17 +213,33 @@ public class SchwarzPack extends PackExtender {
 		}
 
 		else if (cmd.startsWith("status")) {
+			
+			// find list of edges
 			NodeLink vlink=null;
 			if (flagSegs!=null && (items=flagSegs.get(0)).size()>0)
 				vlink=new NodeLink(extenderPD,items);
 			else
 				vlink=new NodeLink(extenderPD,"i");
+	
+			// color vert and its edges, give vert error
 			Iterator<Integer> vlt=vlink.iterator();
-			int count=0;
 			while (vlt.hasNext()) {
 				Vertex vert=extenderPD.packDCEL.vertices[vlt.next()];
+				updateVert(vert,false);
 				this.msg("status of vert "+vert.vertIndx+
-						": error is "+currentErrors[vert.vertIndx]);
+						": error is "+vertErrors[vert.vertIndx]);
+				count++;
+			}
+			return count;
+		}
+		
+		// draw halfedges from 'edgeData' in color
+		else if (cmd.startsWith("edge")) {
+			Iterator<SchEdgeData> elst=edgeData.iterator();
+			elst.next(); // first entry is null
+			while (elst.hasNext()) {
+				HalfEdge he=elst.next().myHEdge;
+				CommandStrParser.jexecute(extenderPD,"disp -rft8 "+he);
 				count++;
 			}
 			return count;
@@ -105,7 +248,7 @@ public class SchwarzPack extends PackExtender {
 		// show eucl flower in other window; form eflo -q{q} v
 		else if (cmd.startsWith("eflo")) { 
 
-			// choose packing and vertex: 
+			// choose packing for image and vertex: 
 			//    default to next pack, mod 3 and first interior
 			//    vertex
 			int qnum=(extenderPD.packNum+1)%CPBase.NUM_PACKS;
@@ -130,6 +273,7 @@ public class SchwarzPack extends PackExtender {
 			Complex err=new Complex(0.0);
 			CircleSimple cs=new CircleSimple();
 			PackData newData=PackData.schFlowerErr(vert, err, cs);
+			vertErrors[vert.vertIndx]=new Complex(err);
   		  	if (newData==null) 
    		  		throw new CombException("|sp| eflower has failed");
   		  	int nDn=newData.nodeCount;
@@ -151,42 +295,25 @@ public class SchwarzPack extends PackExtender {
 			int ans=runTrials(N);
 			return ans;
 		}
-		else if (cmd.startsWith("cons")) { // constraints
-			HalfEdge target=extenderPD.packDCEL.
-					vertices[extenderPD.getAlpha()].halfedge;
-			try {
-				HalfLink flink=new HalfLink(extenderPD,
-						flagSegs.get(0));
-				if (flink!=null && flink.size()>0)
-					target=flink.get(0);
-			} catch (Exception ex) {
-				Oops("usage: constraints {v w} to specify edge");
-			}
-			CompResults cresults=compEdgeUzians(target);
-			msg("edge "+target+": uzA = "+cresults.uzA+
-					" and uzB = "+cresults.uzB);
-			return 1;
-		}
 		else if (cmd.startsWith("one")) { // one edge
 			HalfEdge he=null;
 			try {
-				items=flagSegs.get(0);
-				HalfLink nlink=new HalfLink(extenderPD,items);
-				he=nlink.get(0);
+				he=HalfLink.grab_one_edge(extenderPD,flagSegs);
 			} catch(Exception ex) {
 				return 0;
 			}
-			CompResults cresults=compEdgeUzians(he);
-			msg("one: "+he+": original = "+he.getSchwarzian()+
-					" computed = "+(1.0-cresults.newUzian(test_mode)));
+			double factor=.1;
+			he.setSchwarzian(newSchwarzian(he,factor,true));
+			vertErrors[he.origin.vertIndx]=
+					new Complex(getVertErr(he.origin));
+			vertErrors[he.twin.origin.vertIndx]=
+					new Complex(getVertErr(he.twin.origin));
 			return 1;
 		}
 		
-		// recompute entries for currentErrors. This may be due
-		//   to computational drift or to the fact that new
-		//   schwarzians have been set in 'packData'.
+		// update all vert/edge errors and colors.
 		else if (cmd.startsWith("reset")) { 
-			currentErrors=setCurrentErrors();
+			updateErrors();
 			return 1;
 		}
 
@@ -197,22 +324,22 @@ public class SchwarzPack extends PackExtender {
 			double aplus=0.0;
 			double aminus=0.0;
 			if (errV[0]!=0)
-				rplus=currentErrors[errV[0]].x;
+				rplus=vertErrors[errV[0]].x;
 			if (errV[1]!=0)
-				rminus=currentErrors[errV[1]].x;
+				rminus=vertErrors[errV[1]].x;
 			if (errV[2]!=0)
-				aplus=currentErrors[errV[2]].y;
+				aplus=vertErrors[errV[2]].y;
 			if (errV[3]!=0)
-				aminus=currentErrors[errV[3]].y;
+				aminus=vertErrors[errV[3]].y;
 			msg("Worst errors, radii/angles, positive/negative:");
 			if (errV[0]>0)
-				msg("Positive radius error = "+rplus+" at v"+errV[0]);
+				msg("Positive radius error = "+rplus+" at v="+errV[0]);
 			if (errV[1]>0)
-				msg("Negative radius error = "+rminus+" at v"+errV[1]);
+				msg("Negative radius error = "+rminus+" at v="+errV[1]);
 			if (errV[2]>0)
-				msg("Positive angle error = "+aplus+" at v"+errV[2]);
+				msg("Positive angle error = "+aplus+" at v="+errV[2]);
 			if (errV[3]>0)
-				msg("Negative angle error = "+aminus+" at v"+errV[3]);
+				msg("Negative angle error = "+aminus+" at v="+errV[3]);
 			return 1;
 		}
 		return 0;
@@ -222,41 +349,101 @@ public class SchwarzPack extends PackExtender {
 		int count=0;
 		for (int j=1;j<=N;j++) {
 			HalfEdge target=getRandEdge(extenderPD);
-			CompResults cresults=compEdgeUzians(target);
-			target.setSchwarzian(cresults.newUzian(test_mode));
+			double factor=.1;
+			target.setSchwarzian(newSchwarzian(target,factor,false));
 			count++;
 		}
+		updateErrors(); // this also sets vert colors
 		return count;
 	}
 	
 	/**
-	 * Initiate persistent array of "errors" at
-	 * the vertices based on current schwarzians.
-	 * This should be called on loading and if
-	 * necessary when lots of new schwarzians are
-	 * set. Otherwise, it should be updated for the
-	 * two end vertices whenever an edge has its
-	 * schwarzian adjusted. Entry is null for bdry
-	 * vertices.
-	 * @return ArrayList<Complex>
+	 * If 'target' is an adjustable edge, return
+	 * a new schwarzian that moves towards a
+	 * computed schwarzian by the given factor 
+	 * times the average of the cclw and clw 
+	 * computed errors for both end vertices.
+	 *    new = current + factor * error
+	 * @param target HalfEdge
+	 * @param factor double
+	 * @param print boolean, print errors
+	 * @return Double, null for non-adjustable edge
 	 */
-	public Complex[] setCurrentErrors() {
-		NodeLink nlink=new NodeLink(extenderPD,"a");
-		Complex[] cE=new Complex[extenderPD.nodeCount+1];
-		Iterator<Integer> nls=nlink.iterator();
-		while (nls.hasNext()) {
-			int v=nls.next();
-			Vertex vert=extenderPD.packDCEL.vertices[v];
-			if (vert.isBdry())
-				cE[v]=null;
-			else {
-				CircleSimple cs=new CircleSimple();
-				Complex err=new Complex(0.0);
-				PackData.schFlowerErr(vert, err, cs);
-				cE[v]=err;
-			}
+	public double newSchwarzian(HalfEdge target,
+			double factor,boolean print) {
+		int aindx=theEdges[target.edgeIndx];
+		int twindx=theEdges[target.twin.edgeIndx];
+		double currSch=target.getSchwarzian();
+		if (aindx==0)
+			return currSch;
+		SchEdgeData sed=edgeData.get(aindx);
+		sed.colorEdge(); // computes errors and color 
+		double scherr=sed.errorCCLW+sed.errorCLW;
+		if (twindx!=0) {
+			sed=edgeData.get(twindx);
+			sed.colorEdge(); // computes errors and color 
+			scherr=(scherr+sed.errorCCLW+sed.errorCLW)/4.0;
 		}
-		return cE;
+		else
+			scherr=scherr/2.0;
+		
+		double newSch=currSch+factor*scherr;
+		StringBuilder strbld=null;
+		
+//debugging
+if (print) {		
+	strbld=new StringBuilder(" Next adjustment:");
+	strbld.append("  target="+target);
+	strbld.append(": original="+currSch+"; new="+newSch);
+}
+
+		// too small to change?
+		if (Math.abs(scherr)<.00000000001)
+			return currSch;
+		
+		// else, return new value
+		
+// debugging		
+if (print)
+	System.out.println(strbld.toString());
+
+		return newSch;
+	}
+
+	/**
+	 * Recompute all vertex and edge errors and set
+	 * appropriate colors.
+	 */
+	public void updateErrors() {
+		NodeLink vlist=new NodeLink(extenderPD,"i");
+		Iterator<Integer> vlt=vlist.iterator();
+		while (vlt.hasNext()) 
+			updateVert(extenderPD.packDCEL.vertices[vlt.next()],false);
+	}
+		
+	/**
+	 * Compute the "error" for the given 'vert' and
+	 * set the vertex color based on the anglesum 
+	 * (imaginary part) of the error; error is 
+	 * anglesum-aim. Red for anglesum too large,
+	 * blue for too small.
+	 * @param vert Vertex
+	 * @return Complex error
+	 */
+	public Complex getVertErr(Vertex vert) {
+		if (vert.isBdry())
+			return null;
+		CircleSimple cs=new CircleSimple();
+		Complex err=new Complex(0.0);
+		PackData.schFlowerErr(vert, err, cs);
+		// color vert based on anglesum error
+		//   based on [-pi/2,pi/2]
+		double x=err.y/CPBase.piby2;
+		if (x>0.0)
+			vert.color=ColorUtil.red_interp(x);
+		else
+			vert.color=ColorUtil.blue_interp(-1.0*x);
+		return err;
 	}
 
 	/**
@@ -277,7 +464,9 @@ public class SchwarzPack extends PackExtender {
 		double angplus=0.0;
 		double angminus=0.0;
 		for (int v=1;v<=extenderPD.nodeCount;v++) {
-			Complex err=currentErrors[v];
+			Complex err=vertErrors[v];
+			if (err==null)
+				continue;
 			double r=err.x;
 			double a=err.y;
 			
@@ -320,54 +509,7 @@ public class SchwarzPack extends PackExtender {
 			return null;
 		return he;
 	}
-			
-	/**
-	 * Given edge, compute for each end Vertex the 
-	 * edge's uzian based on the previous n-3 flower
-	 * uzians. Results are in 'CompResults' and a
-	 * computed uzian will be null if that end is a
-	 * boundary vertex. At least one end should be
-	 * interior and if both are interior, degrees
-	 * should both be > 3.
-	 * 
-	 * @param edge HalfEdge
-	 * @return CompResults for holding results
-	 */
-	public static CompResults compEdgeUzians(HalfEdge edge) {
-		CompResults cresults=new CompResults(edge);
-		cresults.initialUzian=1.0-edge.getSchwarzian();
-		int nA=cresults.degA;
-		int nB=cresults.degB;
-		ArrayList<Double> uarray;
-		if (!cresults.endA.isBdry()) {
-			// get uzians starting 3 edges cclw
-			HalfEdge he=edge.prev.twin.prev.twin.prev.twin;
-			double[] uz=new double[nA+1];
-			int tick=1; // uzians indexed from 1
-			while (tick<=nA) {
-				uz[tick++]=1.0-he.getSchwarzian();
-				he=he.prev.twin;
-			}
-			uarray=SchFlowerData.constraints(uz);
-			cresults.uzA=(Double)((1.0+uarray.get(nA-3))/
-					(sqrt3*uarray.get(nA-2)));
-		}
-		if (!cresults.endB.isBdry()) {
-			// get uzians starting 3 edges cclw
-			HalfEdge he=edge.twin.prev.twin.prev.twin.prev.twin;
-			double[] uz=new double[nB+1];
-			int tick=1; // uzians indexed from 1
-			while (tick<nB) {
-				uz[tick++]=1.0-he.getSchwarzian();
-				he=he.prev.twin;
-			}
-			uarray=SchFlowerData.constraints(uz);
-			cresults.uzB=(Double)((1.0+uarray.get(nB-3))/
-					(sqrt3*uarray.get(nB-2)));
-		}
-		return cresults;
-	}
-	
+
 	public static double[] getUzians(Vertex vert) {
 		if (vert.isBdry())
 			return null;
@@ -387,12 +529,18 @@ public class SchwarzPack extends PackExtender {
 	// -------------------- command explanations --------
 	public void initCmdStruct() {
 		super.initCmdStruct();
+		cmdStruct.add(new CmdStruct("analyze","v w",null,
+				"update and show data on origin of edge v w"));
 		cmdStruct.add(new CmdStruct("test_mode","[mode]",null,
 				"modes will (hopefully) emerge."));
 		cmdStruct.add(new CmdStruct("rand","[type]",null,
 				"Initiate random edge schwarzians"));
-		cmdStruct.add(new CmdStruct("cons","{v w}",null,
-				"compute uzians of ends of {v w}."));
+		cmdStruct.add(new CmdStruct("edge",null,null,
+				"update computed schwarzians and display "+
+						"in color"));
+		cmdStruct.add(new CmdStruct("one","{v w}",null,
+				"adjust schwarzian of a single edge, "+
+				" given the current mode"));
 		cmdStruct.add(new CmdStruct("run","[N}",null,
 				"Run trial with N iterations, default to 1000"));
 		cmdStruct.add(new CmdStruct("status","{v ..}",null,
@@ -402,7 +550,7 @@ public class SchwarzPack extends PackExtender {
 						"pack p and display --- note that indices will not "+
 						"agree with original"));
 		cmdStruct.add(new CmdStruct("reset",null,null,
-				"recompute the 'currentErrors' for all interior vertices"));
+				"update all vert/edge errors and colors"));
 		cmdStruct.add(new CmdStruct("worst",null,null,
 				"Report worst pos/neg radius and angle errors."));
 //		cmdStruct.add(new CmdStruct(""))
@@ -410,59 +558,5 @@ public class SchwarzPack extends PackExtender {
 	
 }
 
-class CompResults {
-	public double initialUzian;
-	boolean branched=false;
-	public Vertex endA;
-	public Vertex endB;
-	int degA;
-	int degB;
-	public int indxA;
-	public int indxB;
-	public Double uzA;
-	public Double uzB;
-	
-	public CompResults(HalfEdge he) {
-		endA=he.origin;
-		endB=he.twin.origin;
-		degA=endA.getNum();
-		degB=endB.getNum();
-		indxA=(int)CombDCEL.indxEdgeOfVert(he,endA);
-		indxB=(int)CombDCEL.indxEdgeOfVert(he,endB);
-	}
-	
-	public double newUzian(int mode) {
-		double diffA=initialUzian-uzA;
-		double diffB=initialUzian-uzB;
-		double threshold;
-		switch(mode) {
-		case 1:{ // default, 10% at most
-			threshold=0.1; // how much change to allow
-			if (diffA>=0 && diffB>=0) { // both lower, so decrease
-				double smallest=(diffA<diffB) ? diffA : diffB;
-				return initialUzian-threshold*smallest;
-			}
-			if (diffA<=0 && diffB<=0) { // both lower, so increase
-				double largest=(diffA>diffB) ? diffA : diffB;
-				return initialUzian+threshold*largest;
-			}
-			if (Math.abs(diffA)<.001 && Math.abs(diffB)<.001)
-				return initialUzian;
-			if ((diffA<=0 && diffB>=0) || (diffB<=0 && diffB<=0)) {
-				double avgdiff=initialUzian-((diffA+diffB)/2.0);
-				if (Math.abs(avgdiff)<.001)
-					return initialUzian;
-				if (avgdiff<0) // avg lower, so decrease
-					return initialUzian-threshold*avgdiff;
-				if (avgdiff>0) // avg lower, so increase
-					return initialUzian+threshold*avgdiff;
-			}
-			break;
-		}
-		} // end of switch
-		return initialUzian;
-	}
-	
-}
 
 

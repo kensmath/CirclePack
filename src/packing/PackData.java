@@ -7182,20 +7182,21 @@ public class PackData{
 	}
 	
 	/**
-	 * Generate a euclidean flower packing based on 'vert'
-	 * but using only its intrinsic schwarzians and recover
-	 * the 'error' in layout of the last petal. See 
+	 * Generate a euclidean flower packing based 
+	 * on 'vert' but using only its intrinsic 
+	 * schwarzians and recover the 'error' in 
+	 * layout of the last petal. See 
 	 * 'PackCreation.seed' for description. 
 	 * Comparing initial/final layouts of cn lead to 
 	 * the 'err'=x+iy, where:
-	 *   x = new minus original radius of cn
-	 *   y = total angle generated minus vert.aim
+	 *   x = (newrad - rad)/rad for cn
+	 *   y = (anglechange - aim)/aim
 	 * 'cs' contains the new data for cn in case the user
 	 * wants to use it.
 	 * @param vert Vertex
 	 * @param err Complex, instantiated by calling routine
 	 * @param cs CircleSimple, instantiated by calling routine
-	 * @return PackData,
+	 * @return PackData, null for bdry vertex
 	 */
 	public static PackData schFlowerErr(Vertex vert,Complex err,CircleSimple cs) {
 		if (vert.isBdry())

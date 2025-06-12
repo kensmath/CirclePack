@@ -6,13 +6,10 @@ import exceptions.DataException;
 import geometry.HyperbolicMath;
 import math.Point3D;
 import util.ColorUtil;
-import util.RadIvdPacket;
 
 /**
- * Static methods for various colorizing actions --- wanted to move these
- * out of 'PackData'.
+ * Static methods for various colorizing actions.
  * @author kens 2/2020
- *
  */
 public class ColorCoding {
 
@@ -27,7 +24,8 @@ public class ColorCoding {
 	    int mid=(int)(ColorUtil.color_ramp_size/2);
 	    double t=0.0;
 	    double b=0.0;
-	    // ??? I don't recall the reason for this call, p need not be hyperbolic
+	    // ??? I don't recall the reason for this call, 
+	    //  p need not be hyperbolic
 //	    double b=HyperbolicMath.h_area(p.getRadius(p.faces[1].vert[0]),
 //	    		p.getRadius(p.faces[1].vert[1]),p.getRadius(p.faces[1].vert[2]));
 	    double []areas=new double[p.faceCount+1];
@@ -72,14 +70,15 @@ public class ColorCoding {
 	    if (Math.abs(b-1)<PackData.OKERR) flag=0;
 	    else {
 	        for (int v=1;v<=node;v++) {
-	  	  if ((ratio=areas_p[v]/areas_q[v])>1.0)
-	  	    p.setFaceColor(v,ColorUtil.cloneMe(ColorUtil.coLor((int)(mid+(mid-1)*(ratio-1.0)/(b-1.0)))));
-	  	  else 
-	  	    p.setFaceColor(v,ColorUtil.cloneMe(ColorUtil.coLor(1+(int)((mid-2)*(1.0-(1.0/ratio-1.0)/(b-1.0))))));
-	  	}
-	      }
-	    if (node<p.faceCount) for (int v=node+1;v<=p.faceCount;v++)
-	      p.setFaceColor(v,ColorUtil.cloneMe(ColorUtil.coLor(mid)));
+	        	if ((ratio=areas_p[v]/areas_q[v])>1.0)
+	        		p.setFaceColor(v,ColorUtil.cloneMe(ColorUtil.coLor((int)(mid+(mid-1)*(ratio-1.0)/(b-1.0)))));
+	        	else 
+	        		p.setFaceColor(v,ColorUtil.cloneMe(ColorUtil.coLor(1+(int)((mid-2)*(1.0-(1.0/ratio-1.0)/(b-1.0))))));
+	        }
+	    }
+	    if (node<p.faceCount) 	
+	    	for (int v=node+1;v<=p.faceCount;v++)
+	    		p.setFaceColor(v,ColorUtil.cloneMe(ColorUtil.coLor(mid)));
 	    return (flag);
 	} 
 

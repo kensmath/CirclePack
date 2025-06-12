@@ -1,4 +1,5 @@
 package complex;
+import allMains.CPBase;
 import graphObjects.CPCircle;
 /**
  * <p>Title: Class for Complex Numbers with Static Functions</p>
@@ -228,9 +229,9 @@ public class MathComplex {
           phi = Math.atan(t.imag()/t.real()) + Math.PI;
     else {
       if (t.real() > 0)
-        phi = Math.PI/2.0;
+        phi = CPBase.piby2;
       if (t.real() < 0)
-        phi = 3 * Math.PI/2.0;
+        phi = 3 * CPBase.piby2;
     }
     return new Complex(tempx, phi);
   }

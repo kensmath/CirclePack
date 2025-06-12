@@ -18,6 +18,7 @@ import dcel.SideData;
 import deBugging.DCELdebug;
 import exceptions.ParserException;
 import geometry.CircleSimple;
+import geometry.CommonMath;
 import geometry.EuclMath;
 import geometry.HyperbolicMath;
 import geometry.SphericalMath;
@@ -614,6 +615,38 @@ public class DisplayParser {
 				}
 				break;
 			} // finished with 'e'
+			case 'r': // halfedge, radial segment
+			{
+				HalfLink helist=new HalfLink(p);
+				// axis extended edges? 
+				if (sub_cmd.length() > 0 && sub_cmd.charAt(0) == 'e'
+						&& items.size() > 0) {
+					helist.addHalfLink(items, true);
+				} 
+				// else if description empty, default to all
+				else { 
+					helist.addHalfLink(items, false);
+				}
+				if (helist != null && helist.size() > 0) {
+					Iterator<HalfEdge> his = helist.iterator();
+					HalfEdge edge = null;
+					while (his.hasNext()) {
+						edge = (HalfEdge) his.next();
+						double rad1=p.getRadius(edge.origin.vertIndx);
+						double rad2=p.getRadius(edge.twin.origin.vertIndx);
+						Complex []pts=new Complex[2];
+						pts[0]=p.getCenter(edge.origin.vertIndx);
+						pts[1]=p.getCenter(edge.twin.origin.vertIndx);
+						// assume this is a tangency packing
+						pts[1]=CommonMath.get_tang_pt(pts[0],pts[1],rad1,rad2,p.hes);
+						if (dispFlags.fill)
+							dispFlags.setColor(edge.getColor());
+						cpDrawing.drawEdge(pts[0],pts[1],dispFlags);
+						count++; // cpDrawing.rePaintAll();
+					}
+				}
+				break;
+			} // finished with 'r'
 			case 'f': { // faces
 				int f;
 				boolean circleToo=false;
@@ -1036,7 +1069,7 @@ public class DisplayParser {
 				Complex cz = new Complex(0.0);
 				double rad=1.0;
 				if (p.hes > 0) 
-					rad=Math.PI/2.0;
+					rad=CPBase.piby2;
 				cpDrawing.drawCircle(cz, rad, dispFlags);
 				count++;
 				break;

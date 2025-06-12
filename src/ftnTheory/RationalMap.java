@@ -476,7 +476,7 @@ public class RationalMap extends PackExtender {
 			case 'o': // one verts
 			{
 				zoib=new String(" one ");
-				vlist=new NodeLink(extenderPD,"Z 0.0 "+Math.PI/2.0);
+				vlist=new NodeLink(extenderPD,"Z 0.0 "+CPBase.piby2);
 				break;
 			}
 			case 'i': // infinity verts

@@ -1,4 +1,5 @@
 package geometry;
+import allMains.CPBase;
 import baryStuff.BaryPoint;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.RedEdge;
@@ -521,13 +522,13 @@ public class HyperbolicMath{
 		// Cases: 
 		
 		// z0, z1 essentially antipodal
-		if (Math.abs(theta-Math.PI/2.0)<.000001) {
+		if (Math.abs(theta-CPBase.piby2)<.000001) {
 			x=z0.times(1+2*x0);  // recall eucl rad is -x0
 		}
 		else {
 			// if arc (z0,z1) is greater than pi, then interchange
 			//   first and second
-			if ((theta-Math.PI/2)>.000001) {
+			if ((theta-CPBase.piby2)>.000001) {
 				way=1.0;
 				double hold=x0;
 				x0=x1;

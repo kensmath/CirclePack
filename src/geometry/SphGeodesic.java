@@ -1,4 +1,5 @@
 package geometry;
+import allMains.CPBase;
 import complex.Complex;
 import math.Matrix3D;
 import math.Point3D;
@@ -222,7 +223,7 @@ public class SphGeodesic{
 		}
 
 		// straight line cases? antipodal horizon points or containing plane is xz-plane.
-		if (lineFlag || Math.abs(center.x-Math.PI/2.0)<.00001 || Math.abs(center.x+Math.PI/2.0)<.00001) {
+		if (lineFlag || Math.abs(center.x-CPBase.piby2)<.00001 || Math.abs(center.x+CPBase.piby2)<.00001) {
 			strbuf.append(String.format("%.6e", xy1.x)+" "+String.format("%.6e", xy1.y)+" l ");
 			strbuf.append(String.format("%.6e", xy2.x)+" "+String.format("%.6e", xy2.y)+" l ");
 			return strbuf.toString();

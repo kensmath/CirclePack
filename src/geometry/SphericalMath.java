@@ -314,7 +314,7 @@ public class SphericalMath{
   	double p=(AxB[0]*AxB[0]+AxB[1]*AxB[1]+AxB[2]*AxB[2]);
   	double d=(CxAxB[0]*CxAxB[0]+CxAxB[1]*CxAxB[1]+CxAxB[2]*CxAxB[2]);
   	// d=p*Math.sin(theta)
-  	return Math.PI/2.0-Math.asin(Math.sqrt(d/p)); // distance is Pi/2-theta.
+  	return CPBase.piby2-Math.asin(Math.sqrt(d/p)); // distance is Pi/2-theta.
   }
 
   /**
@@ -465,12 +465,14 @@ public static double vec_norm(double X[]){
   }
   
   /**
-   * Given two sph circles which are (supposed to be) tangent, find the 
-   * tangency point on the geodesic between them. Actually, returns
-   * pt with distances from z1, z2 having proportions r1, r2.
-   * If z1 and z2 essentially antipodal, then result is numerically
-   * unstable. If r1+r2 > Pi, then have to distinguish which way to
-   * go from z1 toward z2.
+   * Given two sph circles which are (supposed to be) 
+   * tangent, find the tangency point on the geodesic 
+   * between them. Actually, returns pt with distances 
+   * from z1, z2 having proportions r1, r2.
+   * If z1 and z2 essentially antipodal, then result 
+   * is numerically unstable. If r1+r2 > Pi, then 
+   * have to distinguish which way to go from z1 
+   * toward z2.
    * @param z1 Complex (theta,phi)
    * @param z2 Complex (theta,phi)
    * @param r1 double
@@ -494,8 +496,8 @@ public static double vec_norm(double X[]){
 	  if (err2<S_TOLER) // looks good 
 		  return tp2;
 	  
-	  // else, take the one with the smallest error
-	  if (err1<=err2)
+	  // Should be tp1
+	  if (err1<=10000.0*err2)
 		  return tp1;
 	  return tp2;
   }
@@ -562,8 +564,9 @@ public static double vec_norm(double X[]){
   }
   
   /**
-   * Given z, w on sphere, return the sph point which is distance 'dist'
-   * (in radians) from z in direction of w. 
+   * Given z, w on sphere, return the sph point 
+   * which is distance 'dist' (in radians) from 
+   * z in direction of w. 
    * @param ctr1 (theta,phi)
    * @param ctr2 (theta,phi)
    * @param dist double (radians)
@@ -571,16 +574,17 @@ public static double vec_norm(double X[]){
    */
   public static Complex s_shoot(Complex z,Complex w,double dist) {
 	  // if very close, just return z
-	  if (Math.abs(dist)<S_TOLER) return new Complex(z);
+	  if (Math.abs(dist)<S_TOLER) 
+		  return new Complex(z);
 	  
 	  // adjust mod 2*pi until dist lies in [0,2*pi]
 	  double pi2=2.0*Math.PI;
 	  while (dist<0) dist+=pi2;
 	  while (dist>pi2) dist -=pi2;
 	  
-	  double []T=sph_tangent(z,w);
-	  double []V=s_pt_to_vec(z);
-	  double []A=new double[3];
+	  double[] T=sph_tangent(z,w);
+	  double[] V=s_pt_to_vec(z);
+	  double[] A=new double[3];
 	  double cosd=Math.cos(dist);
 	  double sind=Math.sin(dist);
 	  A[0]=cosd*V[0]+sind*T[0];
@@ -599,8 +603,8 @@ public static double vec_norm(double X[]){
    * @return new Complex (theta,phi)
    */
   public static Complex sph_shoot(Complex z,Point3D T,double dist) {
-	  double []V=s_pt_to_vec(z);
-	  double []A=new double[3];
+	  double[] V=s_pt_to_vec(z);
+	  double[] A=new double[3];
 	  double cosd=Math.cos(dist);
 	  double sind=Math.sin(dist);
 	  A[0]=cosd*V[0]+sind*T.x;
@@ -625,10 +629,10 @@ public static double vec_norm(double X[]){
    */
   public static double[] sph_tangent(Complex ctr1,Complex ctr2) {
     double d,vn;
-    double []A;
-    double []B;
-    double []P=new double[3];
-    double []T=new double[3];
+    double[] A;
+    double[] B;
+    double[] P=new double[3];
+    double[] T=new double[3];
 
     A=s_pt_to_vec(ctr1);
     B=s_pt_to_vec(ctr2);
@@ -783,7 +787,7 @@ public static double vec_norm(double X[]){
   public static CircleSimple e_to_s_data(Complex ez,double er) {
 	  
       Complex sz=new Complex(0.0); // will be sph center
-      double []P3=new double[3]; // 3D point on sphere
+      double[] P3=new double[3]; // 3D point on sphere
 
       double rr=Math.abs(er); // note, r negative handled later
       
@@ -810,12 +814,12 @@ public static double vec_norm(double X[]){
       // General strategy: project 3 equally spaced points of the
       //   euclidean circle to 3 points on the sphere.
       
-      Complex []epts=new Complex[3];
+      Complex[] epts=new Complex[3];
       epts[0]=ez.plus(rr);
       epts[1]=ez.plus(CPBase.omega3[1].times(rr));
       epts[2]=ez.plus(CPBase.omega3[2].times(rr));
       
-      Complex []spts=new Complex[3];
+      Complex[] spts=new Complex[3];
       for (int j=0;j<3;j++) 
     	  spts[j]=proj_pt_to_sph(epts[j]);
       
@@ -844,11 +848,11 @@ public static double vec_norm(double X[]){
    */
   public static boolean pt_in_sph_tri(Complex sph_pt,
 		  Complex z1,Complex z2,Complex z3) {
-  	    double []X;
-	    double []Y;
-	    double []Z;
-	    double []P;
-	    double []C;
+  	    double[] X;
+	    double[] Y;
+	    double[] Z;
+	    double[] P;
+	    double[] C;
 	    P=s_pt_to_vec(sph_pt);
 	    X=s_pt_to_vec(z1);
 	    Y=s_pt_to_vec(z2);
@@ -899,7 +903,7 @@ public static double vec_norm(double X[]){
     if (xx<0) {
         return new UtilPacket(0,0.0,0.0);
     }
-    double []V=new double[3];
+    double[] V=new double[3];
     V[0]=xx;
     V[1]=pt.x;
     V[2]=pt.y;

@@ -29,7 +29,6 @@ import complex.MathComplex;
  */
 
 public class CPEdge extends Complex {
-	static double piby2=Math.PI/2.0;
 
 	private static final double rad2deg=180.0/Math.PI;
 	

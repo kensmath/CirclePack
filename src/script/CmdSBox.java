@@ -96,6 +96,7 @@ public class CmdSBox extends StackBox implements ItemListener, KeyListener {
 	JPanel tipEolPanel; // contains Tip and EOL checkboxes
 
 	JPanel accCanPanel;
+	JPanel tryPanel;
 	JPanel tipPanel;
 	JEditorPane cmdEditor;
 	JPanel upperPanel;
@@ -189,33 +190,37 @@ public class CmdSBox extends StackBox implements ItemListener, KeyListener {
 		accCanPanel.add(cancelButton);
 
 		// "try" it button
-		tryButton.setBounds(72,7,22,22);
-		accCanPanel.add(tryButton);
+		tryPanel=new JPanel(null);
+		tryPanel.setBackground(Color.white);
+		tryButton.setBounds(16,6,22,22);
+		tryPanel.add(tryButton);
+		tryPanel.setPreferredSize(tryPanel.getPreferredSize());
 
 		// inline checkbox
 		inline=tNode.isInline();
 		inlineBox.setToolTipText("Executes inline? (with 'NEXT') ");
-		inlineBox.setBounds(94,2,20,14);
+		inlineBox.setBounds(72,2,20,14);
 		accCanPanel.add(inlineBox);
 
 		// dropable checkbox
 		dropable=tNode.isDropable();
 		dropBox.setToolTipText("Allow for drag/drop? ");
-		dropBox.setBounds(94,18,20,14);
+		dropBox.setBounds(72,18,20,14);
 		accCanPanel.add(dropBox);
 
 		// cursor checkbox
 		cursorBox.setToolTipText("Should this be an active cursor?");
-		cursorBox.setBounds(110,2,20,14);
+		cursorBox.setBounds(88,2,20,14);
 		accCanPanel.add(cursorBox);
 
 		// handy checkbox (can only be true if cursor is true)
 		isHandy=tNode.isHandy();
 		handyBox.setToolTipText("With cursor, should mouse drag image?");
-		handyBox.setBounds(110,18,20,14);
+		handyBox.setBounds(88,18,20,14);
 		accCanPanel.add(handyBox);
 
-		setFixedSizes(accCanPanel,140,32); // a little longer to give space
+		accCanPanel.add(tryPanel);
+		setFixedSizes(accCanPanel,110,32); // a little longer to give space
 
 		// command name stuff
 		nameLabel=new JLabel("  name? ");
@@ -399,6 +404,8 @@ public class CmdSBox extends StackBox implements ItemListener, KeyListener {
 		}
 		else { // edit mode. horizontal layout
 			upperPanel.add(accCanPanel);
+			
+			upperPanel.add(tryPanel);
 
 			// nextButton; visibility is turned on/off
 			upperPanel.add(nextButton);

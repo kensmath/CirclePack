@@ -1132,7 +1132,7 @@ public class PostFactory {
 	 * 'gr', 'fill', or 'stroke' are included. For a closed path
 	 * (which would include horizon arcs), use 'sph_closed_Poly'
 	 * @param []crns corners
-	 * @param N number of corners
+	 * @param myN number of corners
 	 * @param cp, boolean, true==>close the path
 	 * @return Vector<String> with visual edge segments; length 0 for
 	 * no visual segments; may be entirely visible, but calling

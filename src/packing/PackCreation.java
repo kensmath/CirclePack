@@ -259,20 +259,23 @@ public class PackCreation {
 	
 	/** 
 	 * Create a euclidean 'seed' packing but using given 
-	 * n intrinsic schwarzians. Normalize combinatorics so center has 
-	 * max degree and gamma=1; scale and rotate so gamma
-	 * is centered at z=i.
+	 * n intrinsic schwarzians. Normalize combinatorics so 
+	 * center has max index and gamma=1; scale and rotate 
+	 * so gamma is centered at z=i.
 	 * 
-	 * Additional normalization is an issue. I hope 
-	 * to use the "error" in angle to petal c_1
-	 * when laying out to guide schwarzian adjustment.
-	 * However, if the angle error is not 0,
-	 * then via Mobius transformations, one can get 
-	 * just about any angle: consider the tangency points
-	 * on the unit circle: two that are not equal can be
-	 * moved to any two via a Mobius of the unit circle.
-	 * Might try a normalization which puts the centroid
-	 * of the tangency points at the origin. 
+	 * TODO: Additional normalization is an issue. 
+	 * I hope vertex "error" to help guide schwarzian 
+	 * adjustment. Our error is z=x+iy, where x is
+	 * the change in radius of the first/last as a
+	 * fraction of the initial radius, while y is 
+	 * the anglesum error as a proportion of the aim. 
+	 * Note that if anglesum error is not 0, it is
+	 * not invariant. If less than 2pi, for example,
+	 * one can get just about any anglesum error:
+	 * consider the tangency points of the first and
+	 * last petals on the unit circle: if not equal 
+	 * they can be to any two points via a Mobius
+	 * of the unit disc.
 	 * 
 	 * Must be given 'schvec' of n intrinsic schwarzians. 
 	 * Rotate until first entry is closest to the schwarzian 
@@ -435,10 +438,11 @@ public class PackCreation {
 		double lastangle=tmpcs.center.divide(ftri.center[2]).arg();
 		anglesum +=lastangle;
 		
-		// the 'error' records x=error in radii of c_n, and
-		//    y=error in angle sum
-		layoutErr.x=(tmpcs.rad-r);
-		layoutErr.y=(anglesum-aim);
+		// the 'error' is complex:
+		//   * x = relative change in radius
+		//   * y= relative change angle sum
+		layoutErr.x=(tmpcs.rad-r)/r;
+		layoutErr.y=(anglesum-aim)/aim;
 		
 		// rotate by pi/2 to put c_1 on y-axis, center 
 		//   on unit circle

@@ -52,12 +52,12 @@ import util.TriAspect;
  * The "intrinsic" schwarzians are real numbers stored 
  * in 'HalfEdge.schwarzian', defaulting to 0.0. The 
  * methods here are for creating, analyzing, manipulating 
- * this data. Some routines do not apply in the hyperbolic 
- * setting since layouts can leave the disc. The 
- * "normalized" presentation of a flower puts the center 
- * as the upper half plane, its 
- * halfedge neighbor c_n as half plane y <= -2, and petal
- * c_1 as tangent at 0, radius 1. 
+ * this data. Some routines do not apply in the 
+ * hyperbolic setting since layouts can leave the disc. 
+ * The "normalized" presentation of a flower puts 
+ * the center as the upper half plane, its 
+ * halfedge neighbor c_{n-1} as half plane y <= -2, 
+ * and petal c_0 as tangent at 0, radius 1. 
  * 
  * The variable preferred for formulas is u=1-s, 
  * where s is the intrinsic schwarzian; 'u' is called 
@@ -84,10 +84,11 @@ public class Schwarzian {
 	final static CirMatrix fourthCircle=new CirMatrix(new CircleSimple(new Complex(4.0),Math.sqrt(3.0)));
 		
 	/**
-	 * Compute and set intrinsic schwarzians for given interior edges 
-	 * based only on radii. For each edge, find the 4 radii 
-	 * involved, find the base Mobius transformations and 
-	 * compute the schwarzian. 
+	 * Compute and set intrinsic schwarzians for 
+	 * given interior edges based only on radii. For 
+	 * each edge, find the 4 radii involved, find the 
+	 * base Mobius transformations and compute the 
+	 * schwarzian. 
 	 * 
 	 * Multi-connected cases are more complicated if 
 	 * side-pairing maps are not isometries --- 
@@ -551,7 +552,7 @@ public class Schwarzian {
 			// TODO: might add typical 'DispFlag' options to call, then
 			//    could have immediate drawing as one option with -c flag
 			switch(c) {
-			// color vertices by schwarzian sum: blue <0, red > 0; 
+			// color vertices by schwarzian sum: blue<0, red>0; 
 			//   don't display
 			case 'c': {
 				

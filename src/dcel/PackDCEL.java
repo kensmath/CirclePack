@@ -460,7 +460,7 @@ public class PackDCEL {
 		double invd=edge.getInvDist();
 		double dist=CommonMath.ivd_edge_length(r0,r1,invd,p.hes);
 		if (p.hes>0) // sph
-			setCent4Edge(edge.next,new Complex(Math.PI/2.0,dist));
+			setCent4Edge(edge.next,new Complex(CPBase.piby2,dist));
 		else if (p.hes<0){ // hyp
 			if (dist<0) { // horocycle?
 				dist=1;
@@ -780,9 +780,9 @@ public class PackDCEL {
     		Complex z=getVertCenter(gamma);
 	    	if (this.p.hes<=0) {
 	    		double gammaarg=z.arg();
-	    		Complex rot=new Complex(0,Math.PI/2.0-gammaarg).exp();
+	    		Complex rot=new Complex(0,CPBase.piby2-gammaarg).exp();
 	    		
-	    		if (Math.abs(gammaarg-Math.PI/2.0)>.001) {
+	    		if (Math.abs(gammaarg-CPBase.piby2)>.001) {
 	    			for (int v=1;v<=vertCount;v++) 
 	    				vertices[v].center=vertices[v].center.times(rot);
 	    			if (redChain!=null) {
@@ -914,7 +914,7 @@ public class PackDCEL {
 	    	Mobius mob=new Mobius();
 	    	Complex g=getVertCenter(gamma);
 	    	if (place_first) { // just need to rotate
-	    		double ang=-g.arg()+Math.PI/2.0;
+	    		double ang=-g.arg()+CPBase.piby2;
 	    		mob=Mobius.rotation(ang/Math.PI);
     			p.rotate(ang); // usual normalization
 	    	}

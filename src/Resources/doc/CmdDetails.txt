@@ -877,6 +877,7 @@ default temporary directory (see 'Messages'), others print something.
 points with nghbs</opt>
 	<opt flag="-nc {v..}"> label circles</opt>
 	<opt flag="-nf {f..}"> label faces</opt>
+	<opt flag="-r {v w ..}"> radius segment in direction of edges
 	<opt flag="-B"> all faces and circles, recomp'd by drawing order</opt>
 	<opt flag="-C"> all circles, recomputed by drawing order </opt>
 	<opt flag="-D"> all dual faces, recomputed by drawing order (eucl only)</opt>
@@ -4190,8 +4191,9 @@ between 17 and 4 (equivalent to "set_invdist .5 17 4")
 
 <command cmd="set_schwarzian" flags="-[su {x}] {v w ...}">
 <description>
-	Compute and store the intrinsic schwarzians for given edges, 
-	defaulting to 'all' edges. The -s {x} and -u {x} flags indicate
+	Compute and store or report the intrinsic schwarzians 
+	for given edges, defaulting to 'all' edges. 
+	The -s {x} and -u {x} flags indicate
 	set the schwarzians. With -s {x} flag, set specified edge
 	schwarzians to value x. However, an alternate parameter u=1-s 
 	is often used, so the -u {x} flag sets u parameter to the value x 
@@ -5355,8 +5357,7 @@ these or other functionality)</opt>
 	CirclePack has a limited ability to do numerical computations.
 	Currently, this is available in limited ways, setting variables
 	and inquiries, as illustrated below.
-</description>	
-<command cmd="#XY">
+</description>
 <examples>
 <instance text="X:=$sin(pi/4)$"> Sets 'X' variable to 0.7071067811865475.</instance>
 <instance text="?$cos(pi/4)+tan(3.0)$"> Displays the results in "Messages".</instance>
@@ -5364,6 +5365,7 @@ these or other functionality)</opt>
 </command>    
 
 
+<command cmd="#XY">
 <description>
 	For use in 'mytools' that can be drag/dropped onto packing 
 	canvasses or have a key assigned: the mouse location is converted 
@@ -5383,7 +5385,8 @@ xy-coords of the mouse, then executes the 'flip' command for the resulting edge.
 	such as 'start' or '5'. From the command line or in a script, 
 	the command '[start]' or '[5]' will execute that command.
 	Empty brackets [] from the command line or script will execute 
-	the next command of the script (if one is loaded). 
+	the next command of the script (if a script is loaded and the 
+	named command is not being edited). 
 </description>
 </command>
 

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
+import allMains.CPBase;
 import combinatorics.komplex.HalfEdge;
 import geometry.EuclMath;
 import input.CPFileManager;
@@ -330,7 +331,7 @@ public class MeanMove extends PackExtender {
 		double []results=new double[2];
 		
 		// curvature zero?
-		if (Math.abs(t2-Math.PI/2.0)<.0001) {
+		if (Math.abs(t2-CPBase.piby2)<.0001) {
 			results[0]=0.0;
 			results[1]=0.0;
 		}

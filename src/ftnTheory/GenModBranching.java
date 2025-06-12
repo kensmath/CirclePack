@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
+import allMains.CPBase;
 import allMains.CirclePack;
 import baryStuff.BaryPoint;
 import branching.ChapBrModPt;
@@ -1012,9 +1013,9 @@ public class GenModBranching extends PackExtender {
 		ClickModValue centClick=
 				petalClicks(c2pt_arg,petalAngs); // click data for pt itself
 		ClickModValue maxUpClick=
-				petalClicks(c2pt_arg-Math.PI/2.0,petalAngs); // pi/2 clw
+				petalClicks(c2pt_arg-CPBase.piby2,petalAngs); // pi/2 clw
 		ClickModValue maxDownClick=
-				petalClicks(c2pt_arg+Math.PI/2.0,petalAngs); // pi/2 cclw
+				petalClicks(c2pt_arg+CPBase.piby2,petalAngs); // pi/2 cclw
 		
 		// move one petal upstream, one petal downstream
 		ClickModValue minUpClick=
