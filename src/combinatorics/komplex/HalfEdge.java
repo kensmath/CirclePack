@@ -224,15 +224,7 @@ public class HalfEdge {
 	public RedEdge getRedEdge() {
 		return myRedEdge;
 	}
-	
-	/**
-	 * set the 'myRedEdge' pointer 
-	 * @param redE
-	 */
-	public void setRedEdge(RedEdge redE) {
-		myRedEdge=redE;
-	}
-	
+
 	/**
 	 * set schwarzian of this edge; user must 
 	 * handle setting of twin edge.

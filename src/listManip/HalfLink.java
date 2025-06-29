@@ -155,11 +155,13 @@ public class HalfLink extends LinkedList<HalfEdge> {
 		
 		Iterator<HalfEdge> hlt=hlink.iterator();
 		RedEdge newRed=new RedEdge(hlt.next());
+		newRed.myEdge.myRedEdge=newRed;
 		RedEdge rtrace=newRed;
 		RedEdge ntrace=null;
 		while (hlt.hasNext()) {
 			HalfEdge nhe=hlt.next();
 			ntrace=new RedEdge(nhe);
+			ntrace.myEdge.myRedEdge=ntrace;
 			ntrace.prevRed=rtrace;
 			rtrace.nextRed=ntrace;
 			rtrace=ntrace;

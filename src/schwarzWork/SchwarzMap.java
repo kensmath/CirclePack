@@ -576,7 +576,8 @@ public class SchwarzMap extends PackExtender {
 						double[] uz=new double[flowerDegree+1];
 						for (int j=1;j<=flowerDegree;j++) 
 							uz[j]=1.0-spokes[j].getSchwarzian();
-						ArrayList<Double> conarray=SchFlowerData.constraints(uz);
+						Boolean allPos=Boolean.valueOf(true);
+						ArrayList<Double> conarray=SchFlowerData.constraints(uz,allPos);
 						
 						msg("Uzians: ");
 						StringBuilder strbld=new StringBuilder("uz=[");

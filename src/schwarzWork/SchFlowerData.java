@@ -266,7 +266,7 @@ public class SchFlowerData {
 	 * in the normalized layout. Use this recursive:
 	 * 
 	 * (*) C_{j+1}=sqrt{3}*u_j*C_j - C_{j-1} 
-	 *     for 1<= j <=N-2.
+	 *     for 1 <= j <= N-2.
 	 * 
 	 * Convention in the paper on schwarzians is that 
 	 * constraint C_j has j-1 arguments u1,...,u{j-1}, 
@@ -276,7 +276,7 @@ public class SchFlowerData {
 	 * 
 	 * NOTE: Often we call this with uzians indices
 	 * shifted; calling routine takes care of this
-	 * on input and output.
+	 * on input and output. 
 	 * 
 	 * NOTE: If C_j are positive, the flower is 
 	 * un-branched and we can compute everything 
@@ -288,9 +288,11 @@ public class SchFlowerData {
 	 *      (which is (*))
 	 * 
 	 * @param uz uzians, indexed from 1
+	 * @param allpos Boolean, true=all positive; instantiate by calling 
 	 * @return ArrayList: <0.0,1.0,C_2,...,C_{N-2},C_{N-1}>
 	 */
-	public static ArrayList<Double> constraints(double[] uz) { 
+	public static ArrayList<Double> constraints(double[] uz,Boolean allpos) {
+		allpos=true;
 		int N=uz.length-1;
 		if (N<4)
 			return null;
@@ -304,6 +306,8 @@ public class SchFlowerData {
 		// keep going even if a negative is encountered
 		for (int j=1;j<=(N-3);j++) {
 			double cjp1=sqrt3*uz[j]*Cj-Cjm1;
+			if (cjp1<=0.0) 
+				allpos=false;
 			cons.add(Double.valueOf(cjp1));
 			Cjm1=Cj;
 			Cj=cjp1;

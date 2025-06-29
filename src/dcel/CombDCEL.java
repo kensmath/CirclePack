@@ -31,7 +31,8 @@ import util.PathUtil;
 import util.StringUtil;
 
 /**
- * Static combinatorial routines for working with DCEL structures.
+ * Static combinatorial routines for working with 
+ * DCEL (directed half-edge) structures.
  * 
  * The "*_raw" methods typically work just with combinatorics
  * (no rad/cents, little or no dependence on PackData parent).
@@ -39,22 +40,21 @@ import util.StringUtil;
  * 'fillInside' and then 'attachDCEL' to the packing. If red 
  * chain cannot be modified, then 'redChain' is set to null and
  * calling routine would run 'redchain_by_edge'. See 'fixDCEL'.
- * 
- * TODO: Routines are gathered from earlier work, so all need
- * careful debugging. 
 */
 public class CombDCEL {
 
 	/**
-	 * Starting with 'pdcel' structure, extract new DCEL avoiding the
-	 * forbidden edges in 'hlink'. Start based on 'alphaEdge', but if
-	 * this is null, use 'pdcel.alpha'.
+	 * Starting with 'pdcel' structure, extract new DCEL 
+	 * avoiding the forbidden edges in 'hlink'. Start 
+	 * based on 'alphaEdge', but if this is null, use 
+	 * 'pdcel.alpha'.
 	 * @param pdcel packDCEL
 	 * @param hlink HalfLink
 	 * @param alphaEdge HalfEdge
 	 * @return PackDCEL
 	 */
-	public static PackDCEL extractDCEL(PackDCEL pdcel,HalfLink hlink,HalfEdge alphaEdge) {
+	public static PackDCEL extractDCEL(PackDCEL pdcel,
+			HalfLink hlink,HalfEdge alphaEdge) {
 		try {
 			CombDCEL.redchain_by_edge(pdcel,hlink,alphaEdge,false);
 			CombDCEL.fillInside(pdcel);
@@ -269,8 +269,8 @@ public class CombDCEL {
 	 * given 'alphaEdge' and not crossing any edge in 'hlink'.
 	 * Face and edge indexing are no longer reliable. After
 	 * building the red chain, continue processing with
-	 * 'finishRedChain', which organizes vertex indexing and
-	 * builds 'oldNew'. See more details there.
+	 * 'finishRedChain', which organizes vertex indexing, 
+	 * 'myRedEdge's, and builds 'oldNew'. See more details there.
 	 * After 'finishRedChain', the calling routine should call
 	 * 'fillInside' to complete processing.  
 	 * The 'prune' flag true means every bdry vertex must have an 
@@ -388,10 +388,11 @@ public class CombDCEL {
 			DCELdebug.drawTmpRedChain(pdcel.p,pdcel.redChain);
 		}
 
-		// identify vertices that are done: all spokes are forbidden
-		//    or have been handled. Recall that v can be hit from two
-		//    sides by two segments of redchain, so even if ultimately
-		//    encircled, that may take several passes.
+		// identify vertices that are done: all spokes are 
+		//   forbidden or have been handled. Recall that v 
+		//   can be hit from two sides by two segments of 
+		//   redchain, so even if ultimately encircled, that 
+		//   may take several passes.
 		boolean[] doneV=new boolean[vertcount+1];
 		
 		// ======================= main loop ==============
@@ -444,8 +445,6 @@ public class CombDCEL {
 				if (upspoke==downspoke && vstat[v]==1 && upspoke.eutil!=-1) {
 					currRed.prevRed.prevRed.nextRed=currRed.nextRed;
 					currRed.nextRed.prevRed=currRed.prevRed.prevRed;
-					upspoke.myRedEdge=null;
-					downspoke.myRedEdge=null;
 					doneV[v]=true;
 				}
 				
@@ -631,8 +630,6 @@ public class CombDCEL {
 						
 					}
 					RedEdge rhold=rtrace.prevRed;
-					rtrace.myEdge.myRedEdge=null;
-					rtrace.nextRed.myEdge.myRedEdge=null;
 					rtrace.prevRed.nextRed=rtrace.nextRed.nextRed;
 					rtrace.nextRed.nextRed.prevRed=rtrace.prevRed;
 					rtrace=rhold;
@@ -649,7 +646,6 @@ public class CombDCEL {
 		 // DCELdebug.redChainEnds(pdcel.redChain);
   		 // DCELdebug.redConsistency(pdcel);
 		
-		
 		return finishRedChain(pdcel, pdcel.redChain);
 	}
 
@@ -661,14 +657,14 @@ public class CombDCEL {
 	 * 'RedEdge's, reset 'Vertex.redFlag's, also check 
 	 * 'HalfEdge.eutil'. (if 'eutil' is negative, then we
 	 * don't allow that edge to be red-twinned.)
-	 * Here preRedVertices are created and processed (to form new
-	 * vertices, if necessary), surviving and new vertices are
-	 * identified, 'vertCount' and 'vertices' are reset.
-	 * Vertex count typically changes, but I've tried to 
-	 * save indexing as much as possible. In 'pdcel.oldNew'
-	 * we have pairs {v,w} only if w is a new index, e.g.,
-	 * a changed index for original v or index for a new vertex
-	 * originating from original v.
+	 * Here preRedVertices are created and processed 
+	 * (to form new vertices, if necessary), surviving 
+	 * and new vertices are identified, 'vertCount' and 
+	 * 'vertices' are reset. Vertex count typically changes, 
+	 * but I've tried to save indexing as much as possible. 
+	 * In 'pdcel.oldNew' we have pairs {v,w} only if w is 
+	 * a new index, e.g., a changed index for original v 
+	 * or index for a new vertex originating from original v.
 	 * @param pdcel PackDCEL
 	 * @param redchain RedEdge
 	 * @return int, new vertCount
@@ -684,7 +680,7 @@ public class CombDCEL {
 		// ensure 'myRedEdge's are set and consistent
 		RedEdge nxtre=redchain;
 		do {
-			nxtre.myEdge.setRedEdge(nxtre);
+			nxtre.myEdge.myRedEdge=nxtre;
 			nxtre=nxtre.nextRed;
 			
 		} while (nxtre!=redchain);
@@ -1226,6 +1222,7 @@ public class CombDCEL {
 				safety--;
 				rtrace.redutil=0;
 				rtrace.myEdge.origin.redFlag=true;
+				rtrace.myEdge.myRedEdge=rtrace;
 				rtrace=rtrace.nextRed;
 			} while (rtrace!=pdcel.redChain && safety>0);
 			if (safety==0) {
@@ -2045,7 +2042,7 @@ public class CombDCEL {
 	 * This is normally called using the level 0 base
 	 * 'TileData' when there is a tree of subdivided
 	 * tilings. (E.g., this 'TileData' should be available
-	 * in the 'canonicalPacking' fo extender 'ConformalTiling'.)
+	 * in the 'canonicalPacking' of extender 'ConformalTiling'.)
 	 * @param p PackData
 	 * @param tData TileData
 	 * @return tile layout count, 0 on error
@@ -2139,7 +2136,10 @@ public class CombDCEL {
 				RedEdge nback=ntrace.prevRed;
 				RedEdge nfore=ntrace.nextRed;
 				
-				// abandon these two redEdgess
+				// abandon these two redEdges; don't abandon redChain
+				if (pdcel.redChain==cstart.myEdge.myRedEdge ||
+						pdcel.redChain==ntrace.myEdge.myRedEdge)
+					pdcel.redChain=pdcel.redChain.nextRed;
 				cstart.myEdge.myRedEdge=null;
 				ntrace.myEdge.myRedEdge=null;
 					
@@ -2148,6 +2148,7 @@ public class CombDCEL {
 				cfore.prevRed=nback;
 				cback.nextRed=nfore;
 				nfore.prevRed=cback;
+				pdcel.redChain=zipRedChain(pdcel.redChain);
 				
 				donetiles[ctile.tileIndex]=1;
 			} // while on 'curr'
@@ -2172,19 +2173,22 @@ public class CombDCEL {
 		//   move this back if it gets zipped
 		RedEdge redspot=rchain; 
 		RedEdge rtrace=rchain;
+		int safety=10000;
 		do {
+			safety--;
 			while (rtrace.myEdge.twin==rtrace.nextRed.myEdge) {
 				RedEdge ctrace=rtrace.prevRed;			
 				ctrace.nextRed=rtrace.nextRed.nextRed;
-				rtrace.nextRed.nextRed.prevRed=ctrace;
+				ctrace.nextRed.prevRed=ctrace;
+				if (redspot==rtrace || 
+						redspot==rtrace.myEdge.twin.myRedEdge)
+					redspot=ctrace;
 				rtrace.myEdge.myRedEdge=null;
 				rtrace.myEdge.twin.myRedEdge=null;
-				if (rtrace==redspot)
-					redspot=ctrace;
 				rtrace=ctrace; // zipping might continue
-			}
+			}	// DCELdebug.printRedChain(redspot,null);
 			rtrace=rtrace.nextRed;
-		} while (rtrace!=redspot);
+		} while (rtrace!=redspot && safety>0);
 		return redspot;
 	}
 	
@@ -4034,7 +4038,8 @@ public class CombDCEL {
 	   * CAUTION: 'myEdges' are set, but not 'myRedEdge's,
 	   * in order that old data can be cleared out on return. 
 	   * The calling routine must also call 'fillInside', 
-	   * repack, layout, etc. (see former 'ProjStruct.torus4layout')
+	   * repack, layout, etc. 
+	   * (see former 'ProjStruct.torus4layout')
 	   * @param pdcel PackDCEL
 	   * @return RedEdge, linked list
 	   */

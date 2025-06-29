@@ -1,6 +1,5 @@
 package schwarzWork;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
 
@@ -48,11 +47,13 @@ public class SchwarzPack extends PackExtender {
 	// store 'SchEdgeData' array for edges
 	//    subject to adjustment; 'theEdges[j]' holds
 	//    index of edge j in 'edgeData' or -1.
-	ArrayList<SchEdgeData> edgeData; // first entry null
-	int[] theEdges; 
+	SchEdgeData[] edgeData; // first entry null
 
-
-	Complex[] vertErrors; // latest errors at vertices
+	// maintain updated lists of "errors", but only
+	//   for vertices/edges subject ot adjustment
+	Complex[] vertErrors; 
+	double[][] edgeErrors; // cclw/clw errors, on
+	
 	int test_mode; // mode for making adjustments
 
 	// Constructors
@@ -67,7 +68,10 @@ public class SchwarzPack extends PackExtender {
 		registerXType();
 		test_mode=1; // default
 		try {
+			int ecount=extenderPD.packDCEL.edgeCount;
 			vertErrors=new Complex[extenderPD.nodeCount+1];
+			edgeErrors=new double[ecount+1][2];
+			edgeData=new SchEdgeData[ecount+1];
 			initiateEdgeData();
 			updateErrors();
 		} catch (Exception ex) {
@@ -85,16 +89,15 @@ public class SchwarzPack extends PackExtender {
 	 * or the edge's array index within 'edgeData'.
 	 */
 	public void initiateEdgeData() {
-		edgeData=new ArrayList<SchEdgeData>(1);
-		edgeData.add(0,(SchEdgeData)null);
-		theEdges=new int[extenderPD.packDCEL.edgeCount+1];
-		NodeLink intv=new NodeLink(extenderPD,"i");
-		int tick=1;
+		NodeLink intv=new NodeLink(extenderPD,"a");
 		Iterator<Integer> ilst=intv.iterator();
 		while (ilst.hasNext()) {
 			Vertex vert=extenderPD.packDCEL.vertices[ilst.next()];
+			if (vert.isBdry()) {
+				continue;
+			}
 			HalfEdge htrace=vert.halfedge;
-			if (vert.getNum()==3) {
+			if (vert.getNum()==3) { // not subject to adjustment
 				htrace.setSchwarzian(S3);
 				htrace=htrace.prev.twin;
 				htrace.setSchwarzian(S3);
@@ -106,9 +109,7 @@ public class SchwarzPack extends PackExtender {
 				Vertex oppv=htrace.twin.origin;
 				if (oppv.getNum()!=3 || oppv.isBdry()) {
 					SchEdgeData sed=new SchEdgeData(htrace);
-					edgeData.add(tick,sed);
-					theEdges[htrace.edgeIndx]=tick;
-					tick++;
+					edgeData[htrace.edgeIndx]=sed;
 				}
 				htrace=htrace.prev.twin; // cclw
 			} while (htrace!=vert.halfedge);
@@ -129,12 +130,14 @@ public class SchwarzPack extends PackExtender {
 		if (print)
 			strbld=new StringBuilder(" Errors for vert "+vert.vertIndx+":\n");
 		do {
-			SchEdgeData sed=edgeData.get(theEdges[he.edgeIndx]);
-			sed.colorEdge();
+			SchEdgeData sed=edgeData[he.edgeIndx];
+			sed.colorEdge(test_mode);
+			edgeErrors[he.edgeIndx][0]=sed.newSch_cclw[0];
+			edgeErrors[he.edgeIndx][1]=sed.newSch_clw[0];
 			if (print)
 				strbld.append("edge errors"+sed.myHEdge+
-						": cclw="+sed.errorCCLW+"; clw="+
-						sed.errorCLW+"\n");
+						": cclw="+sed.newSch_cclw[0]+"; clw="+
+						sed.newSch_clw[0]+"\n");
 			he=he.prev.twin;
 			count++;
 		} while(he!=vert.halfedge);
@@ -160,16 +163,15 @@ public class SchwarzPack extends PackExtender {
 			Vertex vert=edge.origin;
 			double eSch=edge.getSchwarzian();
 			int eindx=edge.edgeIndx;
-			SchEdgeData sed=edgeData.get(theEdges[eindx]);
+			SchEdgeData sed=edgeData[eindx];
 			StringBuilder strbld=
 				new StringBuilder("Analyze "+edge+
 					" with schwarzian "+eSch+"\n");
 			
 			// show computed schwarzians, cclw/clw
-			sed.setEdgeErrors();
 			strbld.append("\n  Computed schwarzians: cclw="
-					+String.format("%.8e",eSch+(sed.errorCCLW))+"; clw="
-					+String.format("%.8e",eSch+(sed.errorCLW)));
+					+String.format("%.8e",eSch+(sed.newSch_cclw[0]))+"; clw="
+					+String.format("%.8e",eSch+(sed.newSch_clw[0])));
 			
 			// n-3 previous schwarzians
 			strbld.append("\n  "+(sed.myN-3)+" cclw schwarzians: ");
@@ -188,11 +190,7 @@ public class SchwarzPack extends PackExtender {
 			}
 			
 			// show error at vertex
-			CircleSimple cs=new CircleSimple();
-			Complex err=new Complex(0.0);
-			PackData.schFlowerErr(vert, err, cs);
-			vertErrors[vert.vertIndx]=new Complex(err);
-			strbld.append("\n  Vertex error = "+err+"\n");
+			strbld.append("\n  Vertex error = "+vertErrors[vert.vertIndx]);
 			
 			// ??? other stuff to show?
 			
@@ -235,12 +233,12 @@ public class SchwarzPack extends PackExtender {
 		
 		// draw halfedges from 'edgeData' in color
 		else if (cmd.startsWith("edge")) {
-			Iterator<SchEdgeData> elst=edgeData.iterator();
-			elst.next(); // first entry is null
-			while (elst.hasNext()) {
-				HalfEdge he=elst.next().myHEdge;
-				CommandStrParser.jexecute(extenderPD,"disp -rft8 "+he);
-				count++;
+			for (int e=1;e<=extenderPD.packDCEL.edgeCount;e++) {
+				SchEdgeData sed=edgeData[e];
+				if (sed!=null) {
+					CommandStrParser.jexecute(extenderPD,"disp -rft8 "+sed.myHEdge);
+					count++;
+				}
 			}
 			return count;
 		}
@@ -362,7 +360,7 @@ public class SchwarzPack extends PackExtender {
 	 * a new schwarzian that moves towards a
 	 * computed schwarzian by the given factor 
 	 * times the average of the cclw and clw 
-	 * computed errors for both end vertices.
+	 * computed errors the edge and its twin.
 	 *    new = current + factor * error
 	 * @param target HalfEdge
 	 * @param factor double
@@ -371,23 +369,30 @@ public class SchwarzPack extends PackExtender {
 	 */
 	public double newSchwarzian(HalfEdge target,
 			double factor,boolean print) {
-		int aindx=theEdges[target.edgeIndx];
-		int twindx=theEdges[target.twin.edgeIndx];
 		double currSch=target.getSchwarzian();
-		if (aindx==0)
+		SchEdgeData sed1=edgeData[target.edgeIndx];
+		SchEdgeData sed2=edgeData[target.twin.edgeIndx];
+		if (sed1==null && sed2==null)
 			return currSch;
-		SchEdgeData sed=edgeData.get(aindx);
-		sed.colorEdge(); // computes errors and color 
-		double scherr=sed.errorCCLW+sed.errorCLW;
-		if (twindx!=0) {
-			sed=edgeData.get(twindx);
-			sed.colorEdge(); // computes errors and color 
-			scherr=(scherr+sed.errorCCLW+sed.errorCLW)/4.0;
-		}
-		else
-			scherr=scherr/2.0;
 		
-		double newSch=currSch+factor*scherr;
+		// scherr will be thw average of cclw and clw
+		//   errors for one or both HalfEdges.
+		double scherr=0.0;
+		double denom=0.0;
+		if (sed1!=null) {
+			scherr=sed1.newSch_cclw[0]+sed1.newSch_clw[0];
+			denom=2.0;
+		}
+		
+		if (sed2!=null) {
+			scherr=scherr+sed1.newSch_cclw[0]+sed1.newSch_clw[0];
+			if (denom>0.0)
+				denom=4.0;
+			else
+				denom=2.0;
+		}
+		
+		double newSch=currSch+factor*scherr/denom;
 		StringBuilder strbld=null;
 		
 //debugging
@@ -398,7 +403,7 @@ if (print) {
 }
 
 		// too small to change?
-		if (Math.abs(scherr)<.00000000001)
+		if (Math.abs(scherr)<.0000000001)
 			return currSch;
 		
 		// else, return new value

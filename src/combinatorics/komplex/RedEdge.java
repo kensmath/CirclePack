@@ -4,14 +4,16 @@ import complex.Complex;
 import geometry.CircleSimple;
 
 /**
- * After processing a dcel (see 'CombDCEL.redcookie'), there is, except
- * in the case of a topological sphere, a 'redChain', which is a closed
- * linked list of 'RedEdge's surrounding a simply connected patch of
- * interior faces. In non-simply connected cases, segments of red edges
- * may be identified. Outside the redChain are one or more ideal faces.
- * NOTE: the dcel structure still lies with the 'HalfEdge's via 'myEdge'.
- * This is not persistent data; these edges change, e.g., when we change
- * the DCEL.
+ * After processing a dcel (see 'CombDCEL.redcookie'), 
+ * there is (except in the case of a topological sphere) 
+ * a 'redChain', a closed linked list of 'RedEdge's
+ * surrounding a simply connected patch of interior faces. 
+ * In non-simply connected cases, segments of red edges
+ * may be identified. Outside the redChain are one or more 
+ * ideal faces.
+ * NOTE: the dcel structure still lies with the 'HalfEdge's 
+ * via 'myEdge'. This is not persistent data; these edges 
+ * change, e.g., when we change the DCEL. (?? 6/2025 ??)
  * TODO: do we need to save data when changing the DCEL?
  * @author kstephe2, 7/2020
  *
@@ -23,14 +25,15 @@ public class RedEdge {
 	public RedEdge twinRed; // across a red edge
 	public int mobIndx;      // index into sidepair Mobius maps
 	
-	// The 'origin' for this red edge may have several other red edges
-	//    with different cent/rad's
+	// The 'origin' for this red edge may have several other 
+	//   red edges with different cent/rad's
 	Complex center;
 	double rad;
 	
 	public int redutil; // for temporary use only
 
-	// Constructor
+	// Constructor: note, does not set 'he.myRedEdge', see
+	//   'createRedEdge' below
 	public RedEdge(HalfEdge he) {
 		myEdge=he;
 		prevRed=null;
@@ -51,6 +54,18 @@ public class RedEdge {
 		if (he.twin!=null && he.twin.face!=null && 
 				he.twin.face.faceIndx<0)
 			redutil=1;
+	}
+	
+	/**
+	 * Create a new RedEdge with 'myEdge' so 'myEdge.myRedEdge'
+	 * is set as well.
+	 * @param edge HalfEdge
+	 * @return RedEdge
+	 */
+	public static RedEdge createRedEdge(HalfEdge edge) {
+		RedEdge rded=new RedEdge(edge);
+		edge.myRedEdge=rded;
+		return rded;
 	}
 
 	/**
@@ -120,7 +135,6 @@ public class RedEdge {
 		rhe.prevRed=prevRed;
 		rhe.twinRed=twinRed;
 		rhe.mobIndx=mobIndx;
-		rhe.myEdge=myEdge;
 		rhe.center=new Complex(center);
 		rhe.rad=rad;
 		rhe.redutil=redutil;
