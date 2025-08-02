@@ -45,8 +45,8 @@ import util.UtilPacket;
  * state of the regular hex) associated with the carbons 
  * consisting of bond energies and angle energies. We will
  * also impose an anglesum energy --- think of it as reflecting
- * lack of planarity. Outcome depending of the relative weights alpha, 
- * beta, gamma given to these energies.
+ * lack of planarity. Outcome depending of the relative 
+ * weights alpha, beta, gamma given to these energies.
  * 
  * NOTE: for computational convenience, we assume the relaxed
  * bond length (for regular hex carbon sheet) is 1, making the

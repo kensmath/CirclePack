@@ -285,14 +285,15 @@ public abstract class RePacker {
 	}
 	
 	/**
-	 * Convenience: hold various lists during repacking, see 'restoreLists' 
+	 * Convenience: hold various lists during repacking, 
+	 * see 'restoreLists' 
 	 * @param pd, PackData
 	 */
 	public void holdLists(PackData pd) {
 		if (pd.vlist!=null && pd.vlist.size()>0)
 			  holdv=pd.vlist.makeCopy();
 		  if (pd.elist!=null && pd.elist.size()>0)
-			  holde=pd.elist.makeCopy();
+			  holde=pd.elist.makeCopy(false);
 		  if (pd.flist!=null && pd.flist.size()>0)
 			  holdf=pd.flist.makeCopy();
 		  if (pd.vertexMap!=null && pd.vertexMap.size()>0)

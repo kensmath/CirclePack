@@ -245,7 +245,6 @@ public class SchwarzMap extends PackExtender {
 							extenderPD.packDCEL.vertices[extenderPD.nodeCount], err, cs);
 						PackDCEL ncel=newP.packDCEL;
 						PackDCEL dcel=extenderPD.packDCEL;
-						int n=extenderPD.nodeCount-1;
 						for (int v=1;v<=extenderPD.nodeCount;v++) {
 							Vertex vert=ncel.vertices[v];
 							Complex cent=vert.center;

@@ -1,11 +1,13 @@
 package packing;
 
 import java.awt.Color;
+import java.awt.geom.Path2D;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Random;
 
+import allMains.CPBase;
 import allMains.CirclePack;
 import combinatorics.komplex.HalfEdge;
 import combinatorics.komplex.RedEdge;
@@ -36,7 +38,129 @@ import util.TriAspect;
  * @author kens
  */
 public class PackCreation {
+	
+	/**
+	 * Create combinatorics for n>=3 generations 
+	 * of hex cylinder with p,q combinatorics.
+	 * Need p>=q and n>=3.
+	 * @param p int, count in horizontal direction
+	 * @param q int, count in northeast direction
+	 * @param n int, number of levels
+	 * @return
+	 */
+	public static PackData hexCylinder(int p,int q,int n) {
+		
+		boolean debug=false;
+		
+		// make sure p>=q, n>=3
+		if (p<q) {
+			int hold=p;
+			p=q;
+			q=hold;
+		}
+		if (n<3)
+			n=3;
 
+		// generate a large enough hex with radii 1/2
+		int gen=n+p+q;
+		PackData packData=hexBuild(gen);
+		CommandStrParser.jexecute(packData,"set_rad 0.5 a");
+		CommandStrParser.jexecute(packData,"layout");
+		CommandStrParser.jexecute(packData,"rotate .5");
+
+		// complex constants for defining cut path
+		Complex u=new Complex(0.5,-1.0*CPBase.sqrt3by2);
+		Complex v=new Complex(1.0);
+		Complex w=new Complex(0.5,CPBase.sqrt3by2);
+		
+		// Define corners of cut path
+		Complex A=new Complex(-3.25,3.0*CPBase.sqrt3by2/2.0);
+		Complex B=A.add(u.times((double)n));
+		Complex C=B.add(v.times((double)p+0.5));
+		Complex D=C.add(w.times((double)q+.5));
+		Complex E=D.minus(u.times((double)n));
+		Complex F=E.minus(w.times((double)q+.5));
+		
+		Path2D.Double gpath=new Path2D.Double();
+		gpath.moveTo(A.x,A.y);
+		gpath.lineTo(B.x,B.y);
+		if (q>0) { // kinks needed
+			gpath.lineTo(C.x,C.y);
+			gpath.lineTo(D.x,D.y);
+			gpath.lineTo(E.x,E.y);
+		}
+		else {
+			gpath.lineTo(C.x+.5,C.y);
+			gpath.lineTo(F.x+.5,F.y);
+		}
+		gpath.lineTo(F.x,F.y);
+		gpath.closePath();
+		CPBase.ClosedPath=gpath;
+		
+		// debugging: return here to see if path is correct
+		if (debug) // debug=true;
+			return packData;
+
+		// cookie out
+		CommandStrParser.jexecute(packData,"cookie");
+
+		// sharp corners require adding circles:
+		//  * upper left circle is lost
+		//  * if q>0, corresponding circle on right is lost
+		//  * if q=0, lower right circle is lost
+		// need points to find vertices used to add circles
+		Complex vleft=new Complex(-2.0);
+		Complex vright=null;
+		if (q>0) {
+			Complex tmp=new Complex(0.5,Math.sqrt(3));
+			vright=E.minus(tmp);
+		}
+		else {
+			Complex tmp=new Complex(-0.5,CPBase.sqrt3by2);
+			vright=C.add(tmp.times(3/2));
+		}
+		
+		// find vert close to top left; add circle
+		StringBuilder stbld=new StringBuilder("-c ");
+		stbld.append(vleft.x+" "+vleft.y);
+		int vl=NodeLink.grab_one_vert(packData,stbld.toString());
+		stbld=new StringBuilder("add_cir ");
+		stbld.append(vl);
+		CommandStrParser.jexecute(packData,stbld.toString());
+		
+		// find vert close to right (depending on q); add circle
+		stbld=new StringBuilder("-c ");
+		stbld.append(vright.x+" "+vright.y);
+		int vr=NodeLink.grab_one_vert(packData,stbld.toString());
+		stbld=new StringBuilder("add_cir ");
+		stbld.append(vr);
+		CommandStrParser.jexecute(packData,stbld.toString());
+
+		// for pasting, need to identify lside, rside
+		stbld=new StringBuilder("-c ");
+		stbld.append(B.x+" "+B.y);
+		int lside=NodeLink.grab_one_vert(packData,stbld.toString());
+		int rside;
+		if (q>0) { // close to D
+			stbld=new StringBuilder("-c ");
+			stbld.append(D.x+" "+D.y);
+			rside=NodeLink.grab_one_vert(packData,stbld.toString());
+		}
+		else { // last vert added
+			rside=packData.nodeCount;
+		}
+		
+		// adjoin opposite edges
+		PackData newPack=
+			PackData.adjoinCall(packData,packData,lside,rside,n-1);
+  	  	if (newPack==null) {
+			  CirclePack.cpb.errMsg("pasting edges of hex cylinder failed: ");
+			  return null;
+  	  	}
+  	  	CommandStrParser.jexecute(newPack,"layout");
+  	  	return newPack;
+	}
+	
 	/**
 	 * Create a symmetric tetrahedron on the sphere,
 	 * all radii arcsin(sqrt(2/3)).

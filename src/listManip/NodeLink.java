@@ -91,6 +91,17 @@ public class NodeLink extends LinkedList<Integer> {
 	}
 	
 	/**
+	 * vertices of 'HalfLink' in order 
+	 * @param hlink
+	 */
+	public NodeLink(HalfLink hlink) {
+		super();
+		Iterator<HalfEdge> hlk=hlink.iterator();
+		while (hlk.hasNext())
+			add(hlk.next().origin.vertIndx);
+	}
+	
+	/**
 	 * Initiate empty list
 	 * @param p
 	 */

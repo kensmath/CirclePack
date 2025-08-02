@@ -83,12 +83,18 @@ public class SchFlowerData {
 			uzian[j]=uzs[j];
 		branchDeg=0;
 		
-		for (int j=0;(j<=N-3 && status==0);j++)
+		// are there any negative uzians?
+		int neg=0; 
+		for (int j=0;(j<=N-3 && neg==0);j++)
 			if (uzian[j]<0) 
-				status =-j;
-		if (status==0)
-			status=compute(); // fills uzian[] and sets branchDeg
-		status=1;
+				neg=-j;
+		
+		// if not, compute data, set 'branchDeg', compute
+		//    and store last three uzians.
+		if (neg==0)
+			status=compute(); 
+		else
+			status=0;
 	}
 	
 	/**
@@ -102,6 +108,15 @@ public class SchFlowerData {
 
 		// initialize
 		int[] hits=new int[N+1]; // mark when computed
+		
+		// want to track constraints to see how to
+		//   adjust for branching: recursion for j<=N-3;
+		//   straints[j+1]=sqrt3*uzian[j]*straints[j]-straints[j-1], 
+		double[] straints=new double[N+1];
+		straints[0]=0.0;
+		straints[1]=1.0;
+		straints[2]=sqrt3*uzian[1];
+		
 		t[1]=0.0;
 		radius[1]=radius[N-1]=recipSqRad[1]=recipSqRad[N-1]=1.0;
 		hits[1]=1; // c_1 is in place to start
@@ -122,7 +137,7 @@ public class SchFlowerData {
 		double[] tdata=null;
 		double dspmt;
 		for (int j=3;j<=(N-2);j++) {
-			if (recipSqRad[j-1]==0) {
+			if (recipSqRad[j-1]==0) { // get a halfplane.
 				if (j==N-2) {
 					CirclePack.cpb.errMsg("Can't complete a flower "+
 							"since c_{n-2} is a halfplane");
@@ -131,13 +146,16 @@ public class SchFlowerData {
 				double r=1/(recipSqRad[j-2]*recipSqRad[j-2]); // same rad as previous
 				t[j]=t[j-2]-2.0*uzian[j]*sqrt3*r; // but to left of c(j-1)
 				recipSqRad[j]=recipSqRad[j-2];
+				straints[j]=straints[j-2];
 				hits[j]=1;
 			}
-			else if (recipSqRad[j-1]<0) {
+			else if (recipSqRad[j-1]<0) { // branching event
 				tdata=Sit4(uzian[j-1],recipSqRad[j-2],recipSqRad[j-1]);
 				t[j]=t[j-1]+tdata[0];
 				recipSqRad[j]=tdata[1];
 				radius[j]=1/(tdata[1]*tdata[1]);
+				straints[j]=(-1.0)*(sqrt3*uzian[j-1]*straints[j-1]-straints[j-2]);
+				branchDeg++;
 				hits[j]=1;
 			}
 			else {
@@ -146,6 +164,8 @@ public class SchFlowerData {
 				recipSqRad[j]=tdata[1];
 				t[j]=t[j-1]+dspmt;
 				radius[j]=1/(tdata[1]*tdata[1]);
+				straints[j]=sqrt3*uzian[j-1]*straints[j-1]-straints[j-2];
+				hits[j]=1;
 			}
 		}
 
@@ -162,6 +182,12 @@ public class SchFlowerData {
 		uzian[N-2]=lastdata[1];
 		uzian[N-1]=lastdata[2];
 		uzian[N]=lastdata[3];
+
+// debugging
+// alternate computation of u_{n-2}
+//		double unm2=(1+straints[N-3])/(sqrt3*straints[N-2]);
+//		System.out.println("u_{n-2} by 'compLast' is "+uzian[N-2]+
+//				"; and with constraints is "+unm2);
 		
 		if (uzian[N]<0)
 			throw new DataException("Flower illigitimate as s_{N}>1.");
@@ -306,8 +332,10 @@ public class SchFlowerData {
 		// keep going even if a negative is encountered
 		for (int j=1;j<=(N-3);j++) {
 			double cjp1=sqrt3*uz[j]*Cj-Cjm1;
-			if (cjp1<=0.0) 
+			if (cjp1<=0.0) {
 				allpos=false;
+				cjp1 *=-1.0;
+			}
 			cons.add(Double.valueOf(cjp1));
 			Cjm1=Cj;
 			Cj=cjp1;

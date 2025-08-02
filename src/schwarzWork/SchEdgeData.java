@@ -119,10 +119,6 @@ public class SchEdgeData {
 			uz[j]=uzians[j];
 		
 		ArrayList<Double> uarray=SchFlowerData.constraints(uz,pflag);
-		if (!pflag)
-			return null;
-		
-		// else constraints should remain positive
 		double compU=((1.0+uarray.get(myN-3))/
 			(sqrt3*uarray.get(myN-2)));
 		// put this in the list of uzians

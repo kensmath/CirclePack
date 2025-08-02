@@ -1380,8 +1380,9 @@ public class HalfLink extends LinkedList<HalfEdge> {
 	}
 
 	/**
-	 * Reverse each element, but keep list in same
-	 * order (see 'reverseLink' to reverse list order)
+	 * Replace each HalfEdge by its twin, but 
+	 * keep list in same order (see 'reverseLink' to 
+	 * reverse list order)
 	 * @param hlink HalfLink
 	 * @return HalfLink, possibly null
 	 */

@@ -52,6 +52,7 @@ import ftnTheory.BeurlingFlow;
 import ftnTheory.BrooksQuad;
 import ftnTheory.ComplexAnalysis;
 import ftnTheory.ConformalTiling;
+import ftnTheory.CylinderSpheres;
 import ftnTheory.Erf_function;
 import ftnTheory.Exponential;
 import ftnTheory.FeedBack;
@@ -1072,6 +1073,9 @@ public class CommandStrParser {
 				  else if (type.startsWith("tilebary")) {
 					  mode=15;
 				  }
+				  else if (type.startsWith("cyl")) {
+					  mode=16;
+				  }
 			  } catch (Exception ex) {
 				  throw new ParserException("usage: create "+type+" {n}");
 			  }
@@ -1352,6 +1356,23 @@ public class CommandStrParser {
 			  case 15: // hex refined tile
 			  {
 				  newPack=PackCreation.tileHexed(param);
+				  break;
+			  }
+			  case 16: // hex cylinder packing
+			  {
+				  int p;
+				  int q;
+				  int n;
+				  try {
+					  p=param;
+					  q=Integer.parseInt(items.get(0));
+					  n=Integer.parseInt(items.get(1));
+				  } catch (Exception ex) { // go with defaults
+					  p=6;
+					  q=6;
+					  n=4;
+				  }
+				  newPack=PackCreation.hexCylinder(p, q, n);
 				  break;
 			  }
 			  } // end of switch
@@ -1837,6 +1858,17 @@ public class CommandStrParser {
 	    		  if (!packData.status || packData.nodeCount==0) 
 	    			  return 0;
 	    		  ComplexAnalysis px=new ComplexAnalysis(packData);
+	    		  if (px.running) {
+		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
+		    				  ": started "+px.extensionAbbrev+" extender");
+	    			  px.StartUpMsg();
+	    			  returnVal=1;
+		    	  }
+	    	  }
+	    	  else if (str.equalsIgnoreCase("cs")) {
+	    		  if (!packData.status || packData.nodeCount==0) 
+	    			  return 0;
+	    		  CylinderSpheres px=new CylinderSpheres(packData);
 	    		  if (px.running) {
 		    		  CirclePack.cpb.msg("Pack "+packData.packNum+
 		    				  ": started "+px.extensionAbbrev+" extender");
@@ -5803,7 +5835,6 @@ public class CommandStrParser {
     			  }
     			  
     			  // add_ideal to all but bB and bb
-    			  int alpha_hold=packData.getAlpha();
     			  int node_hold=packData.nodeCount;
     			  for (int j=1;j<=bnum;j++) {
     				  if (j!=bb && j!=bB)

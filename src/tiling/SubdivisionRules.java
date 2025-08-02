@@ -1,16 +1,13 @@
 package tiling;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.util.Iterator;
 import java.util.Vector;
 
 import allMains.CirclePack;
 import complex.Complex;
-import deBugging.DebugHelp;
 import exceptions.DataException;
 import exceptions.InOutException;
-import input.CPFileManager;
 import komplex.EdgeSimple;
 import listManip.EdgeLink;
 import listManip.NodeLink;

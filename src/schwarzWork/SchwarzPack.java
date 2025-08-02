@@ -199,7 +199,12 @@ public class SchwarzPack extends PackExtender {
 		}
 		
 		// ============ set test mode =================
+		// 1: random edge, move part way toward average of
+		//    2 computations for each end.
+		// 2: ??
+		//
 		else if (cmd.startsWith("test_m")) {
+			
 			test_mode=1;
 			try {
 				test_mode=Integer.parseInt(flagSegs.remove(0).get(0));

@@ -227,7 +227,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	}
 	
 	/**
-	 * Remove occurances of 'edge', irrespective of order
+	 * Remove repeat occurances of 'edge', irrespective 
+	 * of order of entries.
 	 * @param edge EdgeSimple
 	 * @return int count
 	 */
@@ -236,7 +237,7 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 		for (int k=this.size();k>0;k--) {
 			EdgeSimple thisedge=this.get(k-1);
 			if ((thisedge.v==edge.v && thisedge.w==edge.w) ||
-					(thisedge.v==edge.w&& thisedge.w==edge.v)) {
+					(thisedge.v==edge.w && thisedge.w==edge.v)) {
 				this.remove(k-1);
 				count++;
 			}
@@ -245,7 +246,8 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	}
 	
 	/**
-	 * Remove all edges in the given list, either order.
+	 * Remove repeat edges in the given list, either 
+	 * order.
 	 * @param edgelist EdgeLink, can be null
 	 * @return int count
 	 */
@@ -1057,15 +1059,24 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	}
 	
 	/**
-	 * Make a distinct copy of this linked list, checking against
-	 * the current edgelist's packData setting.
+	 * Make a distinct copy of this linked list, 
+	 * checking against the current edgelist's 
+	 * packData setting. If 'unordered' is true,
+	 * then only put one of <v,w> or <w,v> in
+	 * the new EdgeLink. Otherwise, make full 
+	 * copy, including redundancies.
+	 * @param unordered boolean
 	 * @return new @see EdgeLink
 	 */
-	public EdgeLink makeCopy() {
+	public EdgeLink makeCopy(boolean unordered) {
 		Iterator<EdgeSimple> elist=this.iterator();
 		EdgeLink newlist=new EdgeLink(packData);
 		while (elist.hasNext()) {
-			newlist.add(new EdgeSimple(elist.next()));
+			EdgeSimple es=elist.next();
+			// don't put unordered repeats
+			if (unordered && newlist.isThereVW(es.v,es.w,unordered)>0)
+				continue;
+			newlist.add(new EdgeSimple(es));
 		}
 		return newlist;
 	}
@@ -1192,18 +1203,34 @@ public class EdgeLink extends LinkedList<EdgeSimple> {
 	}
 
 	/**
-	 * Is <v,w> an edge in the list?
+	 * Is <v,w> an edge in the list? if 'unordered' is
+	 * true, then also check for <w,v>.
 	 * @param v int
 	 * @param w int
+	 * @param unordered boolean; true, then either order
 	 * @return int, first index for edge or -1 if not found
 	 */
-	public int isThereVW(int v,int w) {
+	public int isThereVW(int v,int w,boolean unordered) {
 		for (int j=0;j<this.size();j++) {
 			EdgeSimple edge=this.get(j);
-			if (edge.v==v && edge.w==w) return j;
+			if (edge.v==v && edge.w==w) 
+				return j; // found <v,w>
+			if (unordered && (edge.v==w && edge.w==v))
+				return j; // found <w,v>
 		}
 		return -1;
 	}
+	
+	/**
+	 * Is <v,w> in the list?
+	 * @param v int
+	 * @param w int
+	 * @return first index or -1 if not found
+	 */
+	public int isThereVW(int v,int w) {
+		return isThereVW(v,w,false);
+	}
+
 	
 	/** 
 	 * count unoriented edges, without repeats.

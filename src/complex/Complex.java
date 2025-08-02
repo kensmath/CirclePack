@@ -53,7 +53,11 @@ public class Complex {
 		y = 0.;
 	}
 
-	/** Constructs Complex from the given real and imaginary parts */
+	/** 
+	 * Constructs Complex from the given real and 
+	 * imaginary parts. Caution: call such as
+	 * "new Complex(1/2,3.0)" may round 1/2 to 0.0. 
+	 */
 	public Complex(double t1, double t2) {
 		x = t1;
 		y = t2;
