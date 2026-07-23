@@ -4,12 +4,15 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.geom.Path2D;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Hashtable;
 import java.util.Random;
 import java.util.Vector;
+
+import org.cef.CefApp;
 
 import com.jimrolf.functionparser.FunctionParser;
 
@@ -32,6 +35,9 @@ import listManip.NodeLink;
 import listManip.PointLink;
 import listManip.TileLink;
 import math.Mobius;
+import me.friwi.jcefmaven.CefAppBuilder;
+import me.friwi.jcefmaven.CefInitializationException;
+import me.friwi.jcefmaven.UnsupportedPlatformException;
 import mytools.MyTool;
 import packing.CPdrawing;
 import packing.PackData;
@@ -196,6 +202,27 @@ public abstract class CPBase {
 	public static String[] tooltypes = 
 		{"MAIN:","BASIC:","MYTOOL:","SCRIPT:","MOBIUS:","SIDEPAIR:"};
 
+	private static CefApp cefApp;
+
+	public static synchronized CefApp getCefApp() {
+	    if (cefApp == null) {
+	        try {
+	            CefAppBuilder builder = new CefAppBuilder();
+	            builder.getCefSettings().windowless_rendering_enabled = false;
+	            cefApp = builder.build();
+	        } catch (IOException | InterruptedException | UnsupportedPlatformException | CefInitializationException e) {
+	            throw new RuntimeException("Failed to initialize embedded browser engine", e);
+	        }
+	    }
+	    return cefApp;
+	}
+
+	public static synchronized void shutdownCef() {
+	    if (cefApp != null) {
+	        cefApp.dispose();
+	        cefApp = null;
+	    }
+	}	
 	/**
 	 * For finding correct path to 'Resources' directory in jar file
 	 * @param path, String 
@@ -298,6 +325,7 @@ public abstract class CPBase {
 	 * triangle.exe used for Delaunay triangulations.
      * TODO: have to generate and load executables 
      * for other operating systems, e.g., mac.
+     * 
      * @param destDir destination directory.
      * @param execName filename
      * @return boolean

@@ -39,6 +39,7 @@ import canvasses.CursorCtrl;
 import canvasses.MainFrame;
 import cpTalk.sockets.CPMultiServer;
 import frames.AboutFrame;
+import frames.BrowserFrame;
 import frames.FtnFrame;
 import frames.HelpHover;
 import frames.HoverPanel;
@@ -168,8 +169,7 @@ MouseMotionListener,FocusListener {
 	public static HelpHover helpHover;
 	public static ScriptHover scriptHover;
 	public static MobiusFrame mobiusFrame;
-	// TODO: suspend until browser is fixed
-//	public static FXWebBrowser browserFrame;
+	public static BrowserFrame browserFrame;
 	public static FtnFrame newftnFrame;
 	public static OutputFrame outputFrame;
 	public static TabbedPackDataHover packDataHover; 
@@ -587,8 +587,6 @@ MouseMotionListener,FocusListener {
 //		helpFrame.setLocation(ptX,ptY+ControlDim.height-60);
 //		helpFrame.setVisible(false);
 		
-		
-		
 		mapPairFrame= new PairedFrame(0,1);
 		mapPairFrame.setVisible(false);
 	
@@ -617,9 +615,11 @@ MouseMotionListener,FocusListener {
 		if (historyFile.startsWith("~/"))
 			historyFile = CPFileManager.HomeDirectory + File.separator + historyFile.substring(2);
 		
-//		browserFrame = new FXWebBrowser(messenger, historyFile);
-//		browserFrame.setLocation(ptX, ptY + ControlDim2.height + 90);
-//		browserFrame.setVisible(browserStart);
+		// TODO: need to add messenger, historyFile, 
+		//   also figure out how to catch *.p, *.q, *.cps, etd.
+		browserFrame = new BrowserFrame("www.circlepack.com"); // messenger, historyFile);
+		browserFrame.setLocation(ptX, ptY + ControlDim2.height + 90);
+		browserFrame.setVisible(browserStart); // browserStart=true;
 		
 		newftnFrame=new FtnFrame();
 		newftnFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
@@ -677,20 +677,20 @@ MouseMotionListener,FocusListener {
 			}
 		});
 
-		// TODP: suspend until javafx is fixed
+		// TODP: suspend until browser is fixed
 		// Button to bring up Browser
-//		JButton wwwButton=new JButton("Browser");
-//		wwwButton.setFont(new Font(wwwButton.getFont().toString(),
-//				Font.ROMAN_BASELINE+Font.BOLD,10));
-//		wwwButton.setToolTipText("Open/Close web browser window");
-//		wwwButton.addActionListener(new ActionListener() {
-//			public void actionPerformed(ActionEvent e) {
+		JButton wwwButton=new JButton("Browser");
+		wwwButton.setFont(new Font(wwwButton.getFont().toString(),
+				Font.ROMAN_BASELINE+Font.BOLD,10));
+		wwwButton.setToolTipText("Open/Close web browser window");
+		wwwButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
 //				if (browserFrame.isVisible()) 
 //					browserFrame.setVisible(false); 
 //				else 
 //					browserFrame.setVisible(true);
-//			}
-//		});
+			}
+		});
 		
 		// TODO: toss hoverframe, revert to simple frame
 		JButton newftnButton=new JButton("Function");
@@ -1137,11 +1137,12 @@ MouseMotionListener,FocusListener {
 	}
 	
 	/**
-	 * Prompt the user to exit CirclePack. If the user confirms the exit,
-	 * CirclePack will exit. The user may also cancel the process, in which
-	 * case this function will return. If the current script has not been
-	 * saved since the last edit, the user will be prompted to save the
-	 * script.
+	 * Prompt the user to exit CirclePack. If the user 
+	 * confirms the exit, CirclePack will exit. The user 
+	 * may also cancel the process, in which case this 
+	 * function will return. If the current script has 
+	 * not been saved since the last edit, the user 
+	 * will be prompted to save the script.
 	 */
 	public void queryUserForQuit() {
 		if (scriptManager.hasChanged) {
@@ -1168,11 +1169,13 @@ MouseMotionListener,FocusListener {
 				scriptManager.hasChanged = false;
 				scriptHover.scriptTitle(scriptManager.scriptName, false);
 				exit();
-			} else if (result == JOptionPane.NO_OPTION) exit();
+			} else if (result == JOptionPane.NO_OPTION) 
+				exit();
 		} else {
 			// The script hasn't changed.
-			int result = JOptionPane.showConfirmDialog(null, "Exit CirclePack?", "Exit?", JOptionPane.YES_NO_OPTION);
-			if (result == JOptionPane.YES_OPTION) exit();
+			int result = JOptionPane.showConfirmDialog(null,"Exit CirclePack?", "Exit?", JOptionPane.YES_NO_OPTION);
+			if (result == JOptionPane.YES_OPTION) 
+				exit();
 		}
 	}
 	
@@ -1180,20 +1183,22 @@ MouseMotionListener,FocusListener {
 	 * Gracefully exit CirclePack.
 	 */
 	protected void exit() {
-		// AF: Dispose of all frames, at which point Swing will exit.
-		Frame[] frames = Frame.getFrames();
-		for (Frame frame : frames) frame.dispose();
-		
-		/*
-		 * AF: If any user threads need to be notified that they should exit when
-		 * possible, do it here. The JVM will not exit until all user threads have
-		 * exited. Generally, you should avoid this situation by refactoring
-		 * long-running threads as daemon threads, and have those daemon threads
-		 * spawn short-running user threads to accomplish tasks that should not
-		 * be interrupted.
-		 */
-	}
- 
+	    // Dispose of all frames, then Swing will exit.
+	    Frame[] frames = Frame.getFrames();
+	    for (Frame frame : frames) {
+	        if (frame instanceof BrowserFrame) {
+	            ((BrowserFrame) frame).closeBrowser(); // release this window's CEF browser/client first
+	        }
+	        frame.dispose();
+	    }
+
+	    // All browser windows' CEF resources are 
+	    // released now — safe to shut down the 
+	    // shared engine.
+	    shutdownCef();
+	    System.exit(0);
+	}	
+	
 	// MouseMotionListener 
 	public void mouseDragged(MouseEvent e) {}
 

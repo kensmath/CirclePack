@@ -3,6 +3,7 @@ package script;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.EventQueue;
+import java.awt.Frame;
 import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -1534,10 +1535,10 @@ public class ScriptManager implements ActionListener {
 				 }
 			 } 
 			 // TODO: suspend until browser is fixed
-//			 else if (command.equals("SCRIPT:open browser")) {
-//				 PackControl.browserFrame.setVisible(true);
-//				 PackControl.browserFrame.setState(Frame.NORMAL);
-//			 }
+			 else if (command.equals("SCRIPT:open browser")) {
+				 PackControl.browserFrame.setVisible(true);
+				 PackControl.browserFrame.setState(Frame.NORMAL);
+			 }
 			 else if (command.equals("SCRIPT:New script")) {
 				 String tmpname=createDefaultScript();
 				 if (tmpname!=null) {

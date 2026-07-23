@@ -379,9 +379,10 @@ public class MainFrame extends JFrame {
 	}
 	
 	/**
-     * For closing the activeFrame; if 'PackControl' isn't open,
-     * then call for exit; 'no' response, then make PackControl visible
-     * and make activeFrame invisible.
+     * For closing the activeFrame; if 'PackControl' 
+     * isn't open, then call for exit; 'no' response, 
+     * then make PackControl visible and make 
+     * activeFrame invisible.
     */
 	class AFdapter extends WindowAdapter {
 	   	public void windowClosing(WindowEvent wevt) {
