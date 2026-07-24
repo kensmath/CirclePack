@@ -38,16 +38,26 @@ public class CirclePackMain {
             SwingWorker<CirclePack, ProgressUpdate> worker = new SwingWorker<>() {
                 @Override
                 protected CirclePack doInBackground() throws Exception {
-                    publish(new ProgressUpdate("Starting CirclePack...", 40));
+                    // "new CirclePack(1)" (-> PackControl.initPackControl())
+                    // is one long, uninstrumented block of setup work with
+                    // no natural percentage checkpoints inside it - that's
+                    // the ~12 seconds users actually wait through. Reporting
+                    // it as "busy" keeps the bar visibly animating for that
+                    // whole stretch instead of sitting frozen at 40%.
+                    publish(ProgressUpdate.busy("Starting CirclePack..."));
                     CirclePack circlePack = new CirclePack(1);
-                    publish(new ProgressUpdate("Loading script...", 80));
+                    publish(ProgressUpdate.at("Loading script...", 80));
                     return circlePack;
                 }
 
                 @Override
                 protected void process(List<ProgressUpdate> chunks) {
                     ProgressUpdate latest = chunks.get(chunks.size() - 1);
-                    splash.setStatus(latest.message(), latest.percent());
+                    if (latest.busy()) {
+                        splash.setBusy(latest.message());
+                    } else {
+                        splash.setStatus(latest.message(), latest.percent());
+                    }
                 }
 
                 @Override
@@ -57,11 +67,12 @@ public class CirclePackMain {
                         System.out.println("CirclePack started\n");
                         circlePack.startCirclePack();
                         PackControl.scriptManager.populateDisplay();
+                        splash.setStatus("Ready", 100);
                     } catch (Exception e) {
                         e.printStackTrace();
                         // TODO: show an error dialog rather than failing silently
                     } finally {
-                        // after the window is actually populated, the splash comes down. 
+                        // after the window is actually populated, the splash comes down.
                         splash.dispose();
                     }
                 }
@@ -97,5 +108,13 @@ public class CirclePackMain {
         }
     }
 
-    private record ProgressUpdate(String message, int percent) {}
+    /** percent is meaningless (and ignored) when busy is true. */
+    private record ProgressUpdate(String message, int percent, boolean busy) {
+        static ProgressUpdate at(String message, int percent) {
+            return new ProgressUpdate(message, percent, false);
+        }
+        static ProgressUpdate busy(String message) {
+            return new ProgressUpdate(message, 0, true);
+        }
+    }
 }

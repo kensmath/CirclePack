@@ -35,13 +35,15 @@ import mytools.MyTool;
 import util.StringUtil;
 
 /**
- * Create consoles which handle user entry of CirclePack commands:
+ * Create consoles which handle user entry of CirclePack 
+ * commands:
  *  (1) Package commands to send to 'commandStrParser',
  *  (2) Maintain a "Command:" line for user entry of commands, 
- *    with command completion, emacs keys.
+ *      with command completion, emacs keys.
  *  (3) If desired, maintain the one-line success count/message line 
- *    below the command window.
- *  (4) if desired, call 'LockingShell' hover (developed by Alex Fawkes)
+ *      below the command window.
+ *  (4) if desired, call 'LockingShell' hover (developed 
+ *      by Alex Fawkes)
  * @author kens
  */
 public class MyConsole extends CmdSource implements KeyListener { // ActionListener,
@@ -195,7 +197,8 @@ public class MyConsole extends CmdSource implements KeyListener { // ActionListe
 	}
 
 	/**
-	 * Have to wait for 'ssPanel' to be created to add listener
+	 * Have to wait for 'ssPanel' to be created to 
+	 * add listener
 	 */
 	public void setMouseLtnr() {
 		tipHover.addMouseListener(PackControl.msgHover);
@@ -218,7 +221,8 @@ public class MyConsole extends CmdSource implements KeyListener { // ActionListe
 			CPBase.trafficCenter.parseWrapper(cmd,CirclePack.cpb.getActivePackData(),
 					true,true,0,this);
 
-			// leave and select the command for changes or to replace with new typing
+			// leave and select the command for changes or 
+			//    to replace with new typing
 			cmdline.selectAll();
 			break;
 		}
@@ -273,7 +277,8 @@ public class MyConsole extends CmdSource implements KeyListener { // ActionListe
 			cmdline.setText(hold+cmd+postCaret);
 			cmdline.setCaretPosition(hold.length()+cmd.length());
 
-			// creates a tooltip and places it directly below the cmdline box
+			// creates a tooltip and places it directly below 
+			//    the cmdline box
 			JToolTip tip = cmdline.createToolTip();
 			tip.setTipText("<html>" + resp[1] + "</html>");
 			Rectangle rect = cmdline.getBounds();

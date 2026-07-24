@@ -20,7 +20,6 @@ public class OwlSplashScreen extends JWindow {
 
     public OwlSplashScreen() {
         JPanel content = new JPanel(new BorderLayout());
-//      content.setBorder(BorderFactory.createLineBorder(new Color(0, 0, 180), 2));
         content.setBackground(Color.WHITE);
 
         content.add(buildImagePanel(), BorderLayout.CENTER);
@@ -28,7 +27,6 @@ public class OwlSplashScreen extends JWindow {
         // --- bottom status strip ---
         JPanel statusPanel = new JPanel(new BorderLayout(0, 4));
         statusPanel.setBorder(BorderFactory.createLineBorder(new Color(0, 0, 180), 2));
-//        statusPanel.setBorder(BorderFactory.createEmptyBorder(6, 12, 8, 12));
         statusPanel.setBackground(Color.WHITE);
 
         statusLabel = new JLabel("Starting...");
@@ -82,8 +80,26 @@ public class OwlSplashScreen extends JWindow {
         };
     }
 
+    /**
+     * Shows a known percentage of progress (0-100) with the given status
+     * message. Cancels indeterminate ("busy") mode if it was active.
+     */
     public void setStatus(String message, int percent) {
         statusLabel.setText(message);
+        progressBar.setIndeterminate(false);
         progressBar.setValue(percent);
+    }
+
+    /**
+     * Shows the given status message with the bar animating in
+     * indeterminate ("busy"/barber-pole) mode, for stretches of work with
+     * no natural percentage checkpoints to report (e.g. PackControl's
+     * initialization, which is one long uninstrumented call) — so the bar
+     * visibly keeps moving instead of sitting frozen at whatever the last
+     * setStatus(..., percent) value was for however long that work takes.
+     */
+    public void setBusy(String message) {
+        statusLabel.setText(message);
+        progressBar.setIndeterminate(true);
     }
 }
